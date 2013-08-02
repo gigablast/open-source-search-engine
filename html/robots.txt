@@ -1,0 +1,29 @@
+User-Agent: googlebot
+Disallow: /search
+Disallow: /?clockset
+Disallow: *clockset=1*
+
+User-Agent: bingbot
+Disallow: /search
+Disallow: /?clockset
+Disallow: *clockset=1*
+
+User-Agent: msnbot
+Disallow: /search
+Disallow: /?clockset
+Disallow: *clockset=1*
+
+User-Agent: slurp
+Disallow: /search
+Disallow: /?clockset
+Disallow: *clockset=1*
+
+User-Agent: gigabot
+Disallow: /search
+Disallow: /?clockset
+Disallow: *clockset=1*
+
+User-Agent: *
+Disallow: /
+
+Sitemap: http://www.eventguru.com/sitemap.xml

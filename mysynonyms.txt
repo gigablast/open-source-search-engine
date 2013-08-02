@@ -1,0 +1,644 @@
+# fix bye<->by is annoying. makes all pages match queries. like "bye world"
+en|by
+en|bye,byes
+
+# fix "a,aes,a's"
+en|a,a's
+en|aes
+
+# fix "nos,no,noes"
+# shit, it hurts queries like "no nos"
+en|no,noes
+en|nos
+
+# fix "at,ats"
+en|at
+en|ats
+
+
+en|sunday,sundays,sun
+en|mon,monday,mondays
+en|tues,tue,tuesday,tuesdays
+en|wed,wednesday,wednesdays
+en|thu,thurs,thursday,thursdays
+en|fri,friday,fridays
+en|sat,saturday,saturdays
+
+# times
+en|evening,night,evenings,nights
+en|noon,twelve o clock 
+
+# add approximately
+en|approximately,approximate,approx,approximated,approximated,approximates
+
+en|we,us,our,ours
+
+# country related
+en|united states,u.s.,usa,united states of america,america,american
+en|theus,unitedstates
+en|america,american,americans
+en|africa,african,africans
+en|europe,europeans,european
+# british? NO! british columbia/brit virg islands
+en|uk,britain,united kingdom 
+en|chinese,china
+en|french,france
+en|german,germans,germany,deutschland
+en|canada,canadian,canadians
+en|american,americans,north american,north americans,america
+en|mexico,mejico,mexican
+en|brazil,brasil,brazilian
+
+
+# add "against"
+en|vs,against,versus,v
+
+# add "was" and "were"
+en|be,is,am,are,was,were,being,been
+
+# add "got"
+en|have,has,had,having,got
+
+# add "worser" and "bad"
+en|worse,worser,worst,bad
+
+# add "excellent"
+en|good,better,best,great,excellent
+
+# fix "well,wells,better,..." on wiktionary for 'matt wells' query
+en|wells,well
+en|well,good
+
+# stop "yous", add "your" and "yours"
+en|you,your,yours 
+
+# stop "the y" as in "the ymca"
+en|+they,them,theirs
+
+# possessive 3rd person
+en|she,he,his,hers,him,her
+
+# add laid
+en|lie,lay,lies,laid,lain,laying,lying
+
+# 'baby names that begin/start with the letter j'
+en|begin,begins,begun,beginning,began,start,starts,starting,started
+
+# add adorable
+en|adore,adores,adored,adoring,adorable
+
+# add exporation(s)
+en|explore,explores,exploring,explored,exploration,explorations
+
+# add boredom
+en|boring,bore,bored,boredom
+
+# add savory
+en|savor,savors,savored,savoring,savory
+
+# add notworking
+en|break,breaks,broke,breaking,broken,notworking,notwork,notworked
+
+# add close, nearer,nearest,nearby,nearly
+en|near,nearer,nearest,close,nearby,nearing,neared,nearly
+
+# month abbreviations
+en|jan,january,januaries,januarys
+en|feb,february,februaries,februarys
+en|mar,march,marches,marchs
+en|apr,april,aprils
+en|jun,june,junes
+en|jul,july,julys,julies
+en|aug,august,augusts
+en|sep,september,septembers,sept
+en|oct,october,octobers
+en|nov,november,novembers
+en|dec,december,decembers
+
+# contractions
+en|won't,willnot
+en|hasn't,hasnot,hadn't,hadnot
+en|shouldn't,should not
+en|couldn't,could not
+en|wouldn't,would not
+en|i'd,i would
+en|you'd,you would
+en|we'd,we would
+en|they'd,they would
+en|he'd,he would
+en|she'd,he would
+en|i'll,i will
+en|you'll,you will
+en|we'll,we will
+en|they'll,they will
+en|he'll,he will
+en|she'll,she will
+en|there'll,there will
+en|i'm,i am
+en|he's,he is
+en|she's,she is
+en|it's,it is
+en|you're,you are
+en|your,yours
+en|we're,we are
+en|they're,they are
+en|i've,i have
+en|we've,we have
+en|you've,you have
+en|they've,they have
+en|didn't,did not
+en|isn't,is not
+en|aren't,are not
+en|don't,do not
+en|let's,lets,let us
+en|what's,what is
+en|who's,who is
+en|where's,where is
+en|how's,how is
+en|how're,how are
+en|thatis,that's
+en|where's,where is
+
+
+en|small,tiny,little,smaller,smallest,tinier,tiniest,littler,littlest
+
+# company names
+en|netscape,netscape corp,netscape corporation,netscape inc
+en|microsoft,microsoft corp,microsoft corporation,microsoft inc
+
+en|i,me,mine,my
+
+# add party
+en|fiesta,fiestas,party,parties
+
+en|gallery,galleries,artwork,artworks,art
+
+en|r\xc3\xa8sum\xc3\xa8,r\xc3\xa8sum\xc3\xa8s,r\xc3\xa9sum\xc3\xa9,r\xc3\xa9sum\xc3\xa9s,resume,resumes
+
+en|porno,pornographic,pornography
+en|tech,technology,technologies,technological
+en|car,auto,automobile,cars,autos,automobiles
+en|electric,electrical
+en|dinner,dining,dined,dines,food
+en|lunch,food
+en|breakfast,food
+en|restaurant,restaurants,restarant,restarants,diner,cafe,cafes,caf\xc3\xa9,caf\xc3\xa9s,caf\xc3\xa8,caf\xc3\xa8s
+en|breakfast,food
+en|lunch,food
+en|dine,dines,dined,dining,eat,eats,eating,ate
+
+en|website,web site,websites,web sites,webpage,web page,webpages,web pages,homepage,home page,homepages,home pages,site,sites
+
+en|understand,understands,understood,understanding,comprehend,comprehends,comprehended,comprehending
+
+# added attaching, not in wikitionary for some reason
+en|attach,attaches,attached,attaching
+
+en|hi tech,hi technology,high tech,high technology
+en|hidef,hi def,highdef,high def,hidefinition,hi definition,highdefinition,high definition,hdef,hiresolution,hi resolution,highresolution,high resolution,hi res,highres,high res
+
+en|exercise,physicalactivity
+en|instruction,class,lesson,instructions,classes,lessons,education
+
+# added inexpensive
+en|cheap,inexpensive,cheaper,cheapest
+
+en|calendar,schedule,calendars,schedules
+
+# added tv
+en|tv,television,televisions,tvs
+
+en|food,foods,nourishment,nourishments
+
+# flower shop san francisco should match 'flower store'
+en|shop,shops,shopping,store,stores
+
+# trigram
+en|nfl,national football league,football leauge
+
+en|celebration,celebrations,bash,bashes,party,parties,partying
+en|rave,raves,party,parties,partying
+
+en|rock groups,rock group,band,bands
+en|music groups,music group,band,bands
+
+en|suite,ste,suites,stes
+
+# abbreviations 
+en|saint,st.
+en|gm,genetically modified,genetically engineered
+en|gm,general motors
+en|car company,car manufacturer,car companies,car manufacturers
+en|mins,minutes,min,mins
+en|autobiography,autobigraphies,autobiographical,bio
+en|bio,bios,biography,biographies,biographical
+en|mi,miles,mile
+en|dept,department,departments,depts
+en|choose,chooses,chose,chosing,chosen,choice,choices
+en|pres,president
+en|nra,national rifle association
+en|pst,pacific standard time
+en|est,eastern standard time
+en|mst,mountain standard time
+en|cst,central standard time
+en|mgmt,management
+en|gov't,gov,govt,government,governments
+en|doctor,dr,doctors,physician,physicians
+
+
+en|age,ages,aged,aging
+
+en|a lot of,lots of,many
+en|mr,mister
+en|mrs,ms,miss
+
+# state abbreviations
+en|al,alabama,ala
+en|ak,alaska,alas
+en|az,arizona,ariz
+en|ar,arkansas,ark
+en|ca,california,calif
+en|co,colorado,colo
+en|ct,connecticut,conn
+en|de,delaware,del
+en|dc,district of columbia
+en|fl,florida,fla
+en|ga,georgia
+en|hi,hawaii,hawai'i
+en|id,idaho,ida
+en|il,illinois,ill
+en|in,indiana,ind
+en|ia,iowa
+en|ks,kansas,kan
+en|ky,kentucky
+en|la,louisiana
+en|me,maine
+en|md,maryland
+en|ma,massachusetts,mass
+en|mi,michigan,mich
+en|mn,minnesota,minn
+en|ms,mississippi,miss
+en|mo,missouri
+en|mt,montana,mont
+en|ne,nebraska,nebr
+en|nv,nevada,nev
+en|nh,new hampshire
+en|nj,new jersey
+en|nm,new mexico
+en|ny,new york
+en|nc,north carolina
+en|nd,north dakota
+en|oh,ohio
+en|ok,oklahoma,okla
+en|or,oregon,ore
+en|pa,pennsylvania,penn
+en|ri,rhode island
+en|sc,south carolina
+en|sd,south dakota
+en|tn,tennessee,tenn
+en|tx,texas,tex
+en|ut,utah
+en|vt,vermont
+en|va,virginia,virg
+en|verterans affairs,va
+en|wa,washington,wash
+en|wv,west virginia
+en|wi,wisconsin,wis
+en|wy,wyoming,wyo
+
+# streets
+en|1st,first
+en|2nd,second
+en|3rd,third
+en|4th,fourth
+en|5th,fifth
+en|6th,sixth
+en|7th,seventh
+en|8th,eighth
+en|9th,ninth
+en|10th,tenth
+en|11th,eleventh
+en|12th,twelfth
+
+# directions
+en|ne,northeast,north east
+en|se,southeast,south east
+en|nw,northwest,north west
+en|sw,southwest,south west
+
+# from http:#www.usps.com/ncsc/lookups/usps_abbreviations.html
+# cat usps_abbreviations.html | grep  v "*"  | grep  v "back to" | awk '{print "\""$2"\\""$1"\,,' > foo
+# cat usps_abbreviations.html | grep  v "*"  | grep  v "back to" | awk '{print "\""$3"\\""$1"\,,' >> foo
+# cat foo | sort | uniq >> Address.cpp
+en|allee,alley,ally,aly,alleys
+en|ally,allies
+en|anex,annx,anx,annexes
+en|arc,arcade,arcards
+en|av,avenue,ave,aven,avenu,avn,avnue,avenues
+en|bayou,bayoo,bayous
+en|bch,beach,beaches
+en|bg,burg,bgs,burgs
+en|blf,bluff,blfs,bluffs
+en|bnd,bend
+en|bend,bends,bent,bending
+en|bottm,bottom,btm,bot
+en|bot
+en|boul,boulv,blvd,boulevard,bouldevards
+en|br,branch
+en|brdge,brg,bridge,bridges
+en|brk,brook,brks,brooks
+en|brnch,branch,branches
+en|burg,burgs
+en|bypa,bypass,bypas,byp,byps,bypasses
+en|byu,bayoo
+en|camp,camp
+en|canyn,canyon,canyons,canyns,cyn
+en|causway,causeway,causeways,cswy,cswys
+en|cen,center,cent,centr,centre,centers,centres,ctr,ctrs
+en|cent,cents
+en|circ,circle,cir,cicl,circles,circls
+en|clb,club,clubs
+en|clf,cliff,clfs,cliffs
+en|cmn,common,cmns,commons
+en|camp,camps,camped,camping
+en|cmp,camp,camps
+en|cor,corner,corners,cors
+en|court,courts,ct,cts
+en|ct
+en|cpe,cape,capes
+en|creek,crk,creeks
+en|crescent,crescents,cres
+en|crest,crest,crst
+en|crossing,xing,crossings,xings,crssing,crssng
+en|crossroad,crossroads
+en|crse,course,courses
+en|crsent,crescent,crescents,crsnt
+en|ct,court
+en|curv,curve,curves
+en|cv,cove,cvs,coves
+en|div,divide,division,divides,dv
+en|dl,dale,dales
+en|dm,dam,dams
+en|drive,drives,driving,drove
+en|dr,drive,drives,driv,drv
+en|ests,estates,estate,est
+en|exp,expressway,express,expr,expw,expy,expressways
+en|extension,extensions,ext,extn,extnsn,exts
+en|fall,falls,fell,falling,fallen
+en|fall,falls,fls
+en|field,fields,fielded,fielding
+en|fld,field,fields,flds
+en|flt,flat,flats,flts
+en|forge,forges,forged,forging
+en|forg,forge,forges
+en|freeway,freeways,frway,fwy,frwy
+en|fork,forks,forked,forking
+en|frk,fork,forks,frks
+en|ferry,ferries,ferried,ferrying
+en|frry,ferry,ferries,fry
+en|frst,forest,forests
+en|frt,fort,forts,ft
+en|garden,gardens,gardn,gdn,gdns,grden,grdn,grdns
+en|gateway,gateway,gatway,gtway,gtwy
+en|glen,glens,gln,glns
+en|green,greens,grn,grns
+en|green,grn
+en|grove,groves,grov,grv,grvs
+en|harb,harbor
+en|harbr,harbor,harbors,hbr,hrbor
+en|highway,highway,hiway,highways,hiways
+en|hl,hill,hills,hls
+en|hllw,hollow,hollows,holw,holws
+en|hts,ht,heights
+en|hvn,haven,havens
+en|inlt,inlet,inlets
+en|island,islands,isle,isles,islnd,islnds
+en|jction,junction,jct,jctns,junctions,jcts,junctn,juncton
+en|knl,knoll,knls,knolls
+en|ky,key
+en|kys,keys,key
+en|lck,lock,locks,lcks
+en|ldge,lodge,lodges,ldg,lodg
+en|lf,loaf,loaves
+en|lk,lake,lks,lakes
+en|lndg,landing,landings,lndng
+en|ln,lane,lanes
+en|mdw,meadow,meadows,mdsw,medows,medow
+en|missn,mission,missions
+en|ml,mill,mls,mills
+en|mnr,manor,manors,mnrs
+en|mtwy,motorway,motorways
+en|nck,neck,necks
+en|opas,overpass,overpasses
+en|orch,orchard,orchrd,orchards
+en|ovl,oval,ovals
+en|parkwy,parkway,parkways,parkwys,pkway,pkwy,pkwys,pky
+en|passage,passages,pass,passing,passes,passed,psge
+en|pln,plain,plns,plains
+en|pl,place
+en|plza,plaza,plazas
+en|pne,pine,pines,pnes
+en|prk,park,parks,parked,parking
+en|parking,parkinglot,parkinglots
+en|pr,prairie,prr,prairies
+en|prt,port,prts,ports
+en|pt,point,points,pts
+en|radiel,radial,radials,radl
+en|rdge,ridge,ridges,rdgs
+en|rd,road,rds,roads
+en|riv,river,rivers,rivr,rvr
+en|rnch,ranch,ranches,rnchs
+en|rpd,rapid,rapids,rpds
+en|rte,route,rt,routes,rts
+en|shl,shoal,soals,shls
+en|shoar,shore,shoars,shores,shr,shrs
+en|skwy,skyway,skyways,skwys
+en|smt,summit,summits
+en|spg,spring,spgs,springs,spng,spngs
+en|sqre,square,squares,sqrs,sqs,squ
+en|sta,station,stations,statn,stn
+en|stra,stravenue,stravenues,straven,strav,strvn,strvnue
+en|strm,stream,streams
+en|str,street,streets,strt,sts,st
+en|terr,terrace,terraces,ter
+en|tpke,turnpike,turnpikes,tpkes
+en|trfy,trafficway,trafficways
+en|trks,track,trk,tacks,tracking,tracked
+en|trlrs,trailer,trlr,trailers,trls
+en|trl,trail,trails,trailed,trailing
+en|trnpk,turnpike,turnpikes,turnpk
+en|trwy,throughway,throughways,trwys
+en|tunls,tunnel,tunnels,tunl,tunnl
+en|upas,underpass,underpasses
+
+# cities
+# 'abq marathon' was matching som strange alb results, so i took out alb
+en|abq,qtown,albq,albuq,albuquerque
+en|cinti,cincy,cincinnati
+en|LA,L.A.,los angeles,city of angeles
+en|city,town
+
+# common words
+en|make,makes,made,making,create,creates,created,creating,build,builds,built,building,construct,constructs,constructed,constructing,manufacture,manufactures,manufactured,manufacturing
+en|bike,bikes,biked,biking,bicycle,bicycles,bicycled,bicycling
+
+# male names
+en|dave,david
+en|matt,matthew
+en|tim,timothy
+en|tony,anthony
+en|pat,patrick
+en|bob,rob,robert,bobby
+en|charles,charlie,chuck
+en|tom,thomas
+en|doug,douglas
+en|mike,michael
+en|openmike,openmic,openmicrophone,microphone,mic
+en|nate,nathan
+en|zachary,zak
+en|jim,james
+
+# fix wiktionary from mapping "will" >"William,..."
+en|billy,bill,william,will,willy
+en|will,wills,willing,willed
+
+en|andy,andrew
+en|abe,abraham
+en|ray,raymond
+en|sam,samuel
+en|ken,kenny,kenneth
+en|pete,peter
+en|nick,nic,nicolas,nicholas
+en|mick,mickey
+en|darrell,daryl
+en|joe,joey,joseph
+en|steve,stephen,steven
+en|dan,daniel
+en|ron,ronald
+en|don,donald
+en|louis,lou,louie
+en|ben,benny
+en|larry,lawrence
+en|reginald,reggie
+en|bart,bartholomew
+en|richard,rich,dick,ricky,rick
+en|issac,zak,zak,man
+en|christopher,chris
+en|john,johnathan,jon,jonathan
+
+en|feces,faeces
+
+# increasing/improving foot circulation (bing)
+en|increase,increases,increasing,increased,improve,improves,improving,improved
+
+# female names
+en|marge,margarie,margerie,margaret
+en|sue,susan
+en|jenny,jennifer,jen
+en|jenniferlopez,jlo
+en|steph,stephanie
+en|steph,stef,stephanie
+en|bekah,rebekah
+en|ana,anna
+en|deb,deborah
+en|elizabeth,liz,beth
+en|tricia,patricia
+en|kim,kimberly
+en|murhpy,murph
+en|christina,chris,chrissy,chrisy,crissy
+
+# the "man" or "woman" terms above should expand to these now!
+en|man,men,male,males
+en|woman,women,female,females
+
+# numbers
+en|0,zero
+en|1,one
+en|2,two,ii
+en|3,three,iii
+en|4,four,iv
+en|5,five,v
+en|6,six,vi
+en|7,seven,vii
+en|8,eight,viii
+en|9,nine,ix
+en|10,ten
+en|11,eleven,xi
+en|12,twelve,xii
+en|13,thirteen,xiii
+en|14,fourteen,xiv
+en|15,fifteen,xv
+en|16,sixteen,xvi
+en|17,seventeen,xvii
+en|18,eighteen,xviii
+en|19,nineteen,xix
+en|20,twenty,xx
+en|21,twentyone,xxi
+en|22,twentytwo,xxii
+en|23,twentythree,xxiii
+en|24,twentyfour,xxiv
+
+en|tournament,tournaments,competition,competitions,compete,competes
+
+en|mntain,mountain,mtn,mnt,mount,mntn,mntns,mountains,mountin,mtin,mt,mtns
+
+en|lacrosse,lacross
+en|nba,national basketball association
+en|ncaa,nation collegiate association of athletics
+en|mlb,major league baseball
+
+en|beer,beers,alcohol
+en|wine,wines,alcohol
+en|alcohol,booze,alcoholic beverage,alcoholic beverages
+
+en|ping pong,table tennis
+
+# warner bros
+en|brothers,bros,brother,br,bro
+
+# chemistry
+en|br,bromine
+
+en|fast,faster,fastest,quick,quicker,quickest,quickly
+
+en|dj,disc jockey,djs,disc jockeys,disk jockey,disk jockeys
+
+en|nude,naked,nudes,nuder,nudest,nudist,nudists
+
+en|expo,exposition,expos,expositions
+
+# animals
+en|canine,canines,dog,dogs
+en|feline,felines,cat,cats
+
+
+en|dance,dances,dancer,dancers,danced,dancing
+
+#
+# PRE SET CATEGORIES
+#
+
+# RELIGION CATEGORY
+en|atheist,atheism,atheists
+en|synogogue,synogogues,temple,temples
+en|cathedral,cathedrals,church,churches,monastery,monasteries
+
+
+# trigrams
+en|jcc,jewish community center
+
+# list this after buy,purchase,sell will not map to "shopping" but
+# "forsale" will map to shopping as well as buy,purchase,sell
+en|buy,buys,purchase,purchases,buying,purchasing,bought,purchased
+
+# FAMILY CATEGORY
+en|kids,kid,child,children,youth,youngsters,youngster
+en|all ages,any age,every age
+en|disney,walt disney
+en|teen,teens,teenager,teenagers
+
+en|spirituality,spiritual
+
+en|max,maximum
+en|min,minimum
+

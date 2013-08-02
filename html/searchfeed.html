@@ -1,0 +1,605 @@
+<html>
+<head>
+<title>Gigablast XML Web Search Feed</title>
+
+<body>
+
+<center>
+<a href=/>
+<img src=http://www.gigablast.com/logo-med.jpg height=122 width=500>
+</a>
+</center>
+<br>
+
+
+<table width=100% cellpadding="5" cellspacing="0" border="0">
+<tr bgcolor="#0340fd">
+<th colspan="2"><font color=33dcff>
+XML Search Feed</font> 
+</th>
+  </tr>
+
+<tr><td><br>
+
+<center>
+<table width=650px>
+<tr>
+<td>
+<ul>
+<li>Purchase access to Gigablast's index on a cost per usage basis.
+<br><br>
+<li>The cost is $2.50 for every 1000 (one thousand) queries performed on the precise search engine.
+<br><br>
+<li>The cost is $1.00 for every 1000 (one thousand) queries performed on the fast search engine.
+<br><br>
+<li>The XML search feed searches over 1 billion of the top pages on the web.
+<br><br>
+<li><a href="#cached">Cached web pages</a> (archived copies) are provided
+as part of the feed service and the retrieval of one archived page
+counts as a single query.
+<br><br>
+<!--<li>Gigablast has many powerful <a href="/features.html">features</a>.
+<br><br>-->
+<li><a href=https://www.gigablast.com/account.html>Sign up now</a> to start accessing the feed.
+</ul>
+<br><br>
+</td>
+</tr>
+</table>
+</center>
+
+</td></tr>
+</table>
+
+<br>
+
+<table width=100% cellpadding="5" cellspacing="0" border="0">
+<tr bgcolor="#0340fd">
+<th colspan="2">
+<a name="input">
+<font color=33dcff>Search Feed Input</font> </th>
+</tr>
+
+<tr><td>
+
+<center>
+<table width=650px cellpadding=5>
+
+<tr><td colspan="2">
+<br>
+To get search results from Gigablast use a url like:<br />
+<strong><a href="http://www.gigablast.com/search?q=test&xml=1">http://www.gigablast.com/search?q=test&xml=1&userid=123456&code=abcd123</a></strong> where:<br><br>
+</td></tr>
+
+<tr><td bgcolor="#eeeeee"><strong><font color=red>userid=X</font></strong></td>
+<td bgcolor="#eeeeee">X is the secret <i>User ID</i> you were issued when making a successful deposit into your <a href=https://www.gigablast.com/account.html>account</a>. This is required.</td></tr>
+
+<tr><td bgcolor="#eeeeee"><strong><font color=red>code=X</font></strong></td>
+<td bgcolor="#eeeeee">X is the secret <i>XML Feed Code</i> you were issued when making a successful deposit into your <a href=https://www.gigablast.com/account.html>account</a>. This is required.</td></tr>
+
+<tr><td bgcolor="#eeeeee"><strong><font color=red>q=X</font></strong></td>
+<td bgcolor="#eeeeee">X is the query in UTF-8. See some <a href=/help.html>examples of queries and special operators</a>.</td></tr>
+
+<tr><td bgcolor="#eeeeee"><strong><font color=red>precise=1</font></strong></td>
+<td bgcolor="#eeeeee">Specify precise=1 to use the more accurate, but slower, index. If you do not specify precise=1 as a cgi parameter, then the faster, but less accurate, index is used by default.</td></tr>
+
+<tr><td><strong><font color=red>xml=1</font></strong></td>
+<td>Use this to request the XML feed, otherwise you will get HTML.</td></tr>
+
+
+
+<tr><td bgcolor="#eeeeee"><strong>n=X</strong></td>
+<td bgcolor="#eeeeee">returns X search results. Default is 10. Max is 50.</td></tr>
+
+<tr><td><strong>s=X</strong></td>
+<td>returns results starting at result #X. The first result is result #0. Default is 0. Max is 499.</td></tr>
+
+<tr><td height="28" bgcolor="#eeeeee"><strong>ns=X</strong></td>
+<td bgcolor="#eeeeee">returns X <strong>summary excerpts</strong> in the summary of each search result.</td></tr>
+
+<tr><td><strong>site=X</strong></td>
+<td>returned results will have URLs from the site, X.</td></tr>
+
+<tr><td bgcolor="#eeeeee"><strong>sites=X</strong></td>
+<td bgcolor="#eeeeee">returned results will have URLs from the space-separated list of sites, X. X can be up to 500 sites. A site can include sub folders. This allows you to build a <a href="cts.html" target="_top">Custom Topic Search Engine</a>.</td></tr>
+
+<tr><td><strong>plus=X</strong></td>
+<td>returned results will have all words in X. Like a default AND.</td></tr>
+
+<tr><td bgcolor="#eeeeee"><strong>minus=X</strong></td>
+<td bgcolor="#eeeeee">returned results will not have any words in X.</td></tr>
+
+<!--<tr><td><strong>rat=1</strong></td>
+<td>returned results will have ALL query terms. This is also known as a <em>default and</em> search. <em>rat</em> means Require All Terms. </td></tr>-->
+
+<tr><td bgcolor="#eeeeee"><strong>sc=X</strong></td>
+<td bgcolor="#eeeeee">X can be 0 or 1 to respectively disable or enable <a href="#siteclustering"><strong>site clustering</strong></a>. Default is 1.<!--, but 0 if the <em>raw</em> parameter is used.--></td></tr>
+
+<tr><td><strong>dr=X</strong></td>
+<td>X can be 0 or 1 to respectively disable or enable <a href="#dupremoval"><strong>duplicate result removal</strong></a>. Default is 1.<!--, but 0 if the <em>raw</em> parameter is used.--></td></tr>
+
+<tr><td bgcolor="#eeeeee"><strong>psc=X</strong></td>
+<td bgcolor="#eeeeee">X ranges from 0 to 100 and is the 'percent similar cutoff' such that a search result that is X% similar to a search result above it will be hidden from view. <em>psc</em> is only valid when <em>dr</em> is set to 1 (see above). If <em>psc</em> is 100 then only documents that are exactly alike are deduped. Default is 80, but 0 if the <em>raw</em> parameter is used.</td></tr>
+
+<tr><td><strong>qh=X</strong></td>
+<td>X can be 0 or 1 to respectively disable or enable <strong>highlighting</strong> of query terms in the titles and summaries. Default is 1, but 0 if the <em>raw</em> parameter is used.</td></tr>
+
+<!--<tr><td bgcolor="#eeeeee"><strong>bq=X</strong></td>
+<td bgcolor="#eeeeee">X can be 0 or 1 or 2. 0 means the query is NOT boolean, 1 means the query is boolean and 2 means to auto-detect. Default is 2.</td></tr>-->
+
+<tr><td><strong>dt=X</strong></td>
+<td>X is a space-separated string of <strong>meta tag names</strong>. Do not forget to url-encode the spaces to +'s or %%20's. Gigablast will extract the contents of these specified meta tags out of the pages listed in the search results and display that content after each summary. i.e. <em>&dt=description</em> will display the meta description of each search result. <em>&dt=description:32+keywords:64</em> will display the meta description and meta keywords of each search result and limit the fields to 32 and 64 characters respectively. When used in an XML feed the <em>&lt;display name="meta_tag_name"&gt;meta_tag_content&lt;/&gt;</em> XML tag will be used to convey each requested meta tag's content.</td></tr>
+
+<a name="spell" id="spell"></a>
+<tr><td bgcolor="#eeeeee"><strong>spell=X</strong></td>
+<td bgcolor="#eeeeee">X can be 0 or 1 to respectively disable or enable <strong>spell checking</strong>. If enabled while using the XML feed, when Gigablast finds a spelling recommendation it will be included in the XML <spell> tag. Default is 0 if using an XML feed, 1 otherwise.</td></tr>
+
+<tr><td align="top"><strong>nrt=X</td>
+<a name="topics" id="topics"></a>
+<td>X is the maximum number of related topics, also known as GigaBits, to be displayed.</td></tr>
+
+
+<!--
+<tr><td align="top"><strong><font color="red">sdate=1</td>
+<td>Sort results by date.</td></tr>
+
+<tr><td align="top"><strong><font color="red">date1=X</td>
+<td>X is the minimum publish date to be returned in the search results. Documents with publish dates before X will be removed from the search results.</td></tr>
+
+<tr><td align="top"><strong><font color="red">date2=X</td>
+<td>X is the maximum publish date to be returned in the search results. Documents with publish dates after X will be removed from the search results.</td></tr>
+
+<tr><td align="top"><strong><font color="red">iu=X</td>
+<td>X is the url of an image to co-brand on the search results page.</td></tr>
+
+<tr><td align="top"><strong><font color="red">iw=X</td>
+<td>X is the width of the image in pixels on the search results page.</td></tr>
+
+<tr><td align="top"><strong><font color="red">ih=X</td>
+<td>X is the height of the image in pixels on the search results page.</td></tr>
+-->
+
+<tr><td align="top"><strong>qlang=X</td>
+<td>X is a typically two letter language identifier, like <i>en</i> for English, <i>de</i> for German, or <i>fr</i> for French, etc. It will give heavy penalties to documents known to be in a different language than the one specified. The default is English.</td></tr>
+
+<!--
+<tr><td align="top" bgcolor="#eeeeee"><strong>qcs=X</td>
+<td bgcolor="#eeeeee">Content encoding of the provided query (the <i>q</i> parm). The default is "utf-8". You can also use "iso-8859-1" or any other official character set name.</td></tr>
+-->
+
+<tr><td bgcolor="#eeeeee" align="top"><strong>ff=X</td>
+<td bgcolor="#eeeeee">X is 1 to enable family filter, 0 otherwise.</td></tr>
+
+</table>
+</center>
+
+</td></tr>
+
+</table>
+
+<center>
+<table cellpadding=5 width=650px>
+<tr><td>
+<br>
+<h4><a name="siteclustering" id="siteclustering"></a>Site Clustering</h4>
+<p>It is often undesirable to have many results listed from the same site. 
+Site Clustering will essentially limit the number returned results from any 
+given site to two, but it will provide a link which says "more results from 
+this site" in case the searcher wishes it.</p>
+
+<h4><a name="dupremoval" id="dupremoval"></a>Duplicate Results Removal</h4>
+<p>
+When dup results removal is enabled Gigablast will remove 
+results that have the exact same content as other results. 
+The <em>psc</em> parameter can be used to dedup documents 
+with similar content.</p>
+</td></tr>
+</table>
+</center>
+<br>
+
+<table width=100% cellpadding="5" cellspacing="0" border="0">
+<tr bgcolor="#0340fd">
+<th colspan="2">
+<font color=33dcff>
+<a name=cached>Cached Web Page Input</a></font> </th>
+</tr>
+
+<tr><td>
+
+<center>
+<table width=650px cellpadding=5>
+
+<tr><td colspan=2>
+<br>
+To get a cached web page from Gigablast use a url like:<br>
+<strong><a href="http://www.gigablast.com/get?d=266571445106&ih=1&q=test">http://www.gigablast.com/get?d=266571445106&ih=1&q=test&c=main</a></strong> &nbsp; where:</p>
+<br>
+</td></tr>
+
+
+<tr><td bgcolor="#eeeeee"><strong>d=X</strong></td>
+<td bgcolor="#eeeeee">X is the docId of the page you want returned. DocIds are 64-bit, so you'll need 8 bytes to hold one. DocIds can be harvested from the XML search feed <a href="#output">output</a>.</td></tr>
+
+<tr><td bgcolor="#eeeeee"><strong>c=X</strong></td>
+<td bgcolor="#eeeeee">X is collection that contains the document. Usually this is <i>main</i>.</td></tr>
+
+<tr><td><strong>ih=X</strong></td>
+<td>X is 1 to include the Gigablast header in the returned page, and 0 to exclude it.</td></tr>
+
+<tr><td bgcolor="#eeeeee"><strong>ibh=X</strong></td>
+<td bgcolor="#eeeeee">X is 1 to include the Gigablast BASE HREF tag in the cached page. The default is 1.</td></tr>
+
+<tr><td><strong>q=X</strong></td>
+<td>X is the the query that, when present, will cause Gigablast to highlight the query terms on the returned page.</td></tr>
+
+<tr><td bgcolor="#eeeeee"><strong>cas=X</strong></td>
+
+<td bgcolor="#eeeeee">
+X can be 0 or 1 to respectively disable or enable click and scroll. Default is 1.</td></tr>
+
+<tr><td><strong>strip=X</strong></td>
+<td>
+X can be 0, 1, 2 or 3. If X is 0 then no stripping is performed. If X is 1 then image and other tags are removed. An X of 2 is another form of removing tags. If X is 3 then all tags are removed. Default is 0.
+</td></tr>
+</table>
+</center>
+
+</table>
+
+
+
+<br><br>
+
+<table width=100% cellpadding="5" cellspacing="0" border="0">
+<tr bgcolor="#0340fd">
+<th colspan="2">
+<font color=33dcff>
+<a name="output" id="output"></a>The Output</font> </th>
+  </tr>
+
+</table>
+
+<center>
+<table width=650px cellpadding=5>
+<tr><td>
+
+<br>
+<p>
+Gigablast allows you to receive the search results in a number of formats useful for interfacing to your program. Here is an <strong><a href="http://www.gigablast.com/search?q=test&xml=1">example</a></strong> of the XML feed.</p>
+
+<p>
+We plan for the output of the precise search engine to have all the same output fields as the fast search engine, but for now it is missing some because the code was significantly overhauled for the new search algorithm and we are still putting pieces back together.</p>
+
+<div style=width:10px;height:10px;display:inline-block;background-color:green;></div> output only from precise search engine (&amp;precise=1) is in green
+<br>
+<div style=width:10px;height:10px;display:inline-block;background-color:red;></div> output only from fast search engine (&amp;precise=0) is in red
+
+
+<p>The XML reply has the following format (but without the comments):</p>
+<hr>
+
+<pre>
+<!--
+# The XML reply uses the Latin-1 Character Set (ISO 8859-1) when using raw=8
+<strong>&lt;?xml version="1.0" encoding="ISO-8859-1" ?&gt;</strong>
+-->
+<strong>&lt;?xml version="1.0" encoding="utf-8" ?&gt;</strong>
+
+# It consists of one, and only one, response.
+<strong>&lt;response&gt;</strong>
+
+  <font color=green># the current time on the search engine
+  <strong>&lt;currentTimeUTC&gt;1373944554&lt;/currentTimeUTC&gt;</strong></font>
+
+  <font color=green># How long in milliseconds to compute these results?
+  <strong>&lt;responseTimeMS&gt;2373&lt;/responseTimeMS&gt;</strong></font>
+
+  <font color=green># Total number of documents in the collection being searched.
+  <strong>&lt;docsInCollection&gt;2060245584&lt;/docsInCollection&gt;</strong></font>
+
+  # If any error was received in processing the request, it will be here.
+  <strong>&lt;error&gt;&lt;![CDATA[Out of memory]]&gt;&lt/error&gt;</strong>
+  # The numeric code of the error, if any, goes here. If no error, this is 0.
+  <strong>&lt;errno&gt;32790&lt/errno&gt;</strong>
+
+  # Total number of search results for the query. This is an exact count
+  # for the precise search engine, but an approximation for the fast search
+  # engine.
+  <strong>&lt;hits&gt;4838158&lt;/hits&gt;</strong>
+
+  # This is "1" if more results are available after these, "0" if not.
+  <strong>&lt;moreResultsFollow&gt;1&lt;/moreResultsFollow&gt;</strong>
+
+  <font color=red># If present and value is 1, some words in the query was censored for 
+  # adult content. Only used if &ff=1 is specified. (Family Filter)
+  <strong>&lt;queryCensored&gt;1&lt;/queryCensored&gt;</strong></font>
+
+  <font color=red># If present, the value is the number of results that were censored for 
+  # adult content. Only used if &ff=1 is specified. (Family Filter)
+  <strong>&lt;resultsCensored&gt;3&lt;/resultsCensored&gt;</strong></font>
+
+  <font color=red># If this tag is present, it will hold an alternate spelling recommendation 
+  # for the query. The &spell=1 parameter must be present in the query url,
+  # however, for you to get a spelling recommendation back.
+  <strong>&lt;spell&gt;&lt;![CDATA[nose]]&gt;&lt;/spell&gt;</strong></font>
+
+  # If this tag is present, it contains the list of query words that were 
+  # ignored as individual words, but not necessarily as part of a phrase
+  <strong>&lt;ignoredWords&gt;&lt;![CDATA[the in of]]&gt;&lt;/ignoredWords&gt;</strong>
+<!--
+  # This is how many of the search results contain ALL of the query terms.
+  # It is only used for printing the "blue bar" for doing <a href="/superRecall.html">SuperRecall</a>
+  <strong>&lt;minNumExactMatches&gt;300&lt;/minNumExactMatches&gt;</strong>
+-->
+<!--
+  # The list of related topics, each enclosed by &lt;topic&gt; tags. 
+  # You must provide a <i>topics</i> parameter to the query url to get topics.
+  <strong>&lt;topic&gt;</strong>
+    # Each topic has a score. A score of 50% or more is considered pretty good.
+    <strong>&lt;score&gt;63&lt;/score&gt;</strong>
+    # Out of the documents scanned, how many contain this topic.
+    <strong>&lt;docCount&gt;4&lt;/docCount&gt;</strong>
+    # The docIds of the documents scanned that contain this topic.
+    <strong>&lt;docId&gt;9030668134&lt;/docId&gt;</strong>
+    <strong>&lt;docId&gt;265962215563&lt;/docId&gt;</strong>
+    <strong>&lt;docId&gt;43940265200&lt;/docId&gt;</strong>
+    <strong>&lt;docId&gt;264861015824&lt;/docId&gt;</strong>
+    # The topic name.
+    <strong>&lt;name&gt;&lt;![CDATA[Race Cars]]&gt;&lt;/name&gt;</strong>
+    # And OPTIONALLY the name of the meta tag it was derived from.
+    <strong>&lt;from&gt;keywords&lt;/from&gt;</strong>
+  <strong>&lt;/topic&gt;</strong>
+-->
+  # The list of search results, each one enclosed in a &lt;result&gt; tag.
+  <strong>&lt;result&gt;</strong>
+
+    # Each result has a title. This may be empty if none was found on the page.
+    <strong>&lt;title&gt;&lt;![CDATA[My Homepage]]&gt;&lt;/title&gt;</strong>
+
+    # Each result has a summary. This may be empty. The summary is generated 
+    # so as to contain the query terms if possible.
+    <strong>&lt;sum&gt;&lt;![CDATA[All about my interests and hobbies]]&gt;&lt;/sum&gt;</strong>
+
+    <font color=red># If this result is categorized under the DMOZ Directory, data about each
+    # category it is in will be enclosed in a &lt;dmoz&gt; tag.
+    <strong>&lt;dmoz&gt;</strong>
+      # The category ID number of this category.
+      <strong>&lt;dmozCatId&gt;172&lt;/dmozCatId&gt;</strong>
+      # The path of this category in the directory.
+      <strong>&lt;dmozCat&gt;&lt;![CDATA[Health: Dentistry]]&gt;&lt;/dmozCat&gt;</strong>
+      # Title of this result as listed in the directory.
+      <strong>&lt;dmozTitle&gt;&lt;![CDATA[My Homepage]]&gt;&lt;/dmozTitle&gt;</strong>
+      # Description of this page as listed in the directory.
+      <strong>&lt;dmozDesc&gt;&lt;![CDATA[A Dentist's Home Page]]&gt;&lt;/dmozDesc&gt;</strong>
+    <strong>&lt;/dmoz&gt;</strong>
+    # If the directory is being given along with the results, this is the number of
+    # stars given to this page based on its quality.
+    <strong>&lt;stars&gt;3&lt;/stars&gt;</strong></font>
+
+    # Each result may have a sequence of &lt;display&gt; tags if the feed input
+    # contained a <a href=#input>dt</a> parameter. This allows you to extract
+    # information contained in meta tags in the content of each search result.
+    # To obtain the contents of the author meta tag, you would need to pass in
+    # dt=author.
+    <strong>&lt;display name="author"&gt;&lt;![CDATA[Contents of the meta author tag]]&gt;&lt/display&gt;</strong>
+
+    # Each result has a URL. This should never be empty.
+    <strong>&lt;url&gt;&lt;![CDATA[http://www.mydomain.com/mypage.html]]&gt;&lt;/url&gt;</strong>
+
+    # The size of the page in kilobytes. Accurate to the tenth of a kilobyte.
+    <strong>&lt;size&gt;5.6&lt;/size&gt;</strong>
+
+    <font color=red># The time the page was LAST indexed. It may not have been indexed in a 
+    # long time if the page's content has not changed. The time is expressed 
+    # in seconds since the epoch. (Jan 1, 1969)
+    <strong>&lt;indexed&gt;1064367311&lt;/indexed&gt;</strong></font>
+
+    <font color=green># The time the page was FIRST indexed. Expressed in UTC 
+    # in seconds since the epoch. (Jan 1, 1969)
+    <strong>&lt;firstIndexedDateUTC&gt;1064367311&lt;/firstIndexedDate&gt;</strong></font>
+
+    <font color=red># The time the page was published.
+    <strong>&lt;pubDate&gt;1058477041&lt;/pubDate&gt;</strong>
+
+    # if the pubDate above is really the last modified date then this is 1. 
+    # This is taken from the HTTP reply of the web server when downloading 
+    # the page. The time is expressed in seconds since the epoch (Jan 1, 1969)
+    # and is in UTC.
+    <strong>&lt;isModDate&gt;1&lt;/isModDate&gt;</strong></font>
+
+    # The assigned docid for this page. This number is unique and used 
+    # internally by Gigablast to identify this page. It is used to retrieve the
+    # "cached copy" of the page.
+    <strong>&lt;docId&gt;65990704587&lt;/docId&gt;</strong>
+
+    # The site the result is from. A site is a measure of control.
+    <strong>&lt;site&gt;&lt;![CDATA[mydomain.com/]]&gt;&lt;/site&gt;</strong>
+
+    # When it was last spidered, a UTC timestamp
+    <strong>&lt;spidered&gt;1064367311&lt;/docId&gt;</strong>
+
+    <font color=red># When doing site clustering, this tag will be present if the result is 
+    # from the same hostname as a previous result for the same query. It 
+    # indicates that you might want to indent the result. Any further results 
+    # from this same hostname will be stripped from the feed.
+    <strong>&lt;clustered&gt;1&lt;/clustered&gt;</strong></font>
+<!--
+    # When Topic Clustering is being used, these will display results which 
+    # are considered similar to this result and have been clustered under it. 
+    # Each similar result is enclosed in a &lt;similar&gt; tag. 
+    <strong>&lt;similar&gt;</strong>
+      # The url for the similar result.
+      <strong>&lt;url&gt;&lt;![CDATA[http://www.similar.com/]]&gt;&lt;/url&gt;</strong>
+      # The title of the similar result.
+      <strong>&lt;title&gt;&lt;![CDATA[A similar topic]]&gt;&lt;/title&gt;</strong>
+    <strong>&lt;/similar&gt;</strong>
+    # If this is present and set to 1, there are more similar results beyond 
+    # those given here. 
+    <strong>&lt;moreSimilar&gt;1&lt;/moreSimilar&gt;</strong>
+-->
+    # This is a standard HTTP MIME content classification of the result. It is 
+    # not present if the page is text/html. Otherwise, it will be one of the
+    # following: text/plain
+    #            text/xml
+    #            application/pdf
+    #            application/msword
+    #            application/vnd.ms-excel
+    #            application/mspowerpoint
+    #            application/postscript
+    <strong>&lt;contentType&gt;&lt;![CDATA[text/plain]]&gt;&lt;/contentType&gt;</strong>
+
+    # This is the language the page was detected as.
+    <strong>&lt;language&gt;&lt;![CDATA[English]]&gt;&lt;/language&gt;</strong>
+<!--
+    # The quality of the document as determined by Gigablast. Ranges from 0 to 100.
+    <strong>&lt;quality&gt;80&lt;/quality&gt;</strong>
+-->
+    # The character set this page was originally encoded in. 
+    <strong>&lt;charset&gt;&lt;![CDATA[utf-8]]&gt;&lt;/charset&gt;</strong>
+
+  <strong>&lt;/result&gt;</strong>
+
+  <strong>&lt;result&gt;</strong>
+
+  ...
+  <strong>&lt;/result&gt;</strong>
+
+  ...
+<!--
+  # If the directory has been requested, this node will include the directory
+  # structure for the requested category.  Typically this is above the results.
+  <strong>&lt;directory&gt;</strong>
+    # Category ID for the displayed directory structure.
+    <strong>&lt;dirId&gt;172&lt;/dirId&gt;</strong>
+    # Directory path of this category listing.
+    <strong>&lt;dirName&gt;Health: Dentistry&lt;/dirName&gt;</strong>
+
+    # Specifies if the directory listing is displayed in a Right-To-Left format.
+    <strong>&lt;dirIsRTL&gt;1&lt;/dirIsRTL&gt;</strong>
+    # Sub-Categories listed as letters meant to be displayed as a letter bar.
+    # Each sub-category will be enclosed in a &lt;letterbar&gt; tag.
+    <strong>&lt;letterbar&gt;&lt;![CDATA[Health/Dentistry/A]]&gt;</strong>    
+    # Every sub category will include a count of how many urls are listed under it.
+      <strong>&lt;urlcount&gt;5&lt;urlcount&gt;</strong>
+
+    <strong>&lt;/letterbar&gt;</strong>
+    # Normal sub-categories listed in groups.  These are listed in order of group
+    # and alphabetically within each group. Each sub-category is enclosed in a
+    # &lt;narrow2&gt;, &lt;narrow1&gt;, or &lt;narrow&gt; tag.
+    <strong>&lt;narrow2&gt;&lt;![CDATA[Health/Dentistry/Regional]]&gt;</strong>
+      <strong>&lt;urlcount&gt;0&lt;urlcount&gt;</strong>
+
+    <strong>&lt;/narrow2&gt;</strong>
+    <strong>&lt;narrow1&gt;&lt;![CDATA[Health/Dentistry/Association]]&gt;</strong>
+      <strong>&lt;urlcount&gt;122&lt;urlcount&gt;</strong>
+    <strong>&lt;/narrow1&gt;</strong>
+    <strong>&lt;narrow&gt;&lt;![CDATA[Health/Dentistry/Children]]&gt;</strong>
+
+      <strong>&lt;urlcount&gt;24&lt;urlcount&gt;</strong>
+    <strong>&lt;/narrow&gt;</strong>
+    # Symbolically linked sub-categories physically under a different category.
+    # These will be interwoven alphabetically within the respective narrow groups.
+    # The name listed before the path is the symbolic name.  
+    # Each symbolically linked
+    # sub-category is enclosed in a &lt;symbolic2&gt;, &lt;symbolic1&gt;, or 
+    # &lt;symbolic&gt; tag.
+    <strong>&lt;symbolic2&gt;&lt;![CDATA[Dentophobia:Health/Mental_Health/Disorders/Anxiety/Phobias/Dentophobia]]&gt;</strong>
+
+      <strong>&lt;urlcount&gt;2&lt;urlcount&gt;</strong>
+    <strong>&lt;/symbolic2&gt;</strong>
+    <strong>&lt;symbolic1&gt;&lt;![CDATA[Dental_Laboratories:Buisness/Healthcare/Products_and_Services/Dentistry/]]&gt;</strong>
+      <strong>&lt;urlcount&gt;71&lt;urlcount&gt;</strong>
+
+    <strong>&lt;/symbolic1&gt;</strong>
+    <strong>&lt;symbolic&gt;&lt;![CDATA[Products:Shopping/Health/Dental]]&gt;</strong>
+      <strong>&lt;urlcount&gt;71&lt;urlcount&gt;</strong>
+    <strong>&lt;/symbolic&gt;</strong>
+    # Seperate categories in the directory which are related to this one.
+    <strong>&lt;related&gt;&lt;![CDATA[Society/Issues/Health/Dentistry]]&gt;</strong>
+
+      <strong>&lt;urlcount&gt;4&lt;/urlcount&gt;</strong>
+    <strong>&lt;/related&gt;</strong>
+    # This category in other languages in the directory.
+    <strong>&lt;altlang&gt;&lt;![CDATA[Basque:World/Euskara/Osasuna/Odontologia]]&gt;</strong>
+      <strong>&lt;urlcount&gt;7&lt;/urlcount&gt;</strong>
+
+    <strong>&lt;/altlang&gt;</strong>
+  <strong>&lt;/directory&gt;</strong>
+-->
+<strong>&lt;/response&gt;</strong>
+</pre>
+
+</td></tr>
+</table>
+</center>
+  
+
+<a name=errors></a>
+<table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
+<tr><td><center><b><font color=#ffffff size=+1>Error Codes
+</td></tr></table>
+<br><br>
+<ul><li>In all cases Gigablast may return an error in the usual HTTP fashion, where the HTTP reply has a format like:<br>
+<b>
+HTTP xxx (yyy)
+</b><br>
+Where <i>xxx</i> is 200 on success and 500 on error and <i>yyy</i> is the textual error message, as printed out by the strerror() function or equivalent. The error message will be from one in the table below.<br><br>
+
+<li>When adding or deleting documents via Gigablast's injection interface, errors can also be returned as stated at the end of the <a href=#ireply>Injecting Documents</a> section. In these cases the HTTP status is still 200.<br><br>
+
+<li>When obtaining search results via the <a href=#output>XML feed</a>, the error message, and possibly error number, can be contained in the &lt;error&gt; and &lt;errno&gt; tags respectively. When this happens search results are still often presented, with an HTTP status of 200, although the error might have caused the results to be different than what they should have been. For instance, if corrupted data prevented from one particular result from being displayed.<br><br>
+
+</ul><br>
+<table cellpadding=2><tr><td collspan=2><b>Key</b></td></tr>
+<tr><td>a</td><td>Error used by an add or delete collection operation.</td></tr>
+<tr><td>i</td><td>Error used by an inject (or delete) operation.</td></tr>
+<tr><td>s</td><td>Error used by a search operation.</td></tr>
+</table>
+
+
+<table cellpadding=2>
+<tr><td colspan=3><b>C error codes</b></td></tr>
+<tr bgcolor=#eeeeee><td>1</td><td>Operation not permitted</td><td>a - Did not have permission in the working dir to create/delete the collection subdir.</td></tr>
+<tr bgcolor=#ffffff><td>2</td><td>No such file or directory</td><td>a - When creating the subdir for the collection in the working dir, a directory component in pathname does not exist or is a dangling symbolic link.</td></tr>
+<tr bgcolor=#eeeeee><td>5</td><td>Input/output error</td><td>a,i,s - There was an error writing or reading data to or from the disk, most likely due to a hardware failure.</td></tr>
+<tr bgcolor=#ffffff><td>9</td><td>Bad file descriptor</td><td>a,i,s - Read or write on a bad file descriptor. This should not happen.</td></tr>
+<tr bgcolor=#eeeeee><td>12</td><td>Cannot allocate memory</td><td>a,i,s - Out of memory.</td></tr>
+<tr bgcolor=#ffffff><td>13</td><td>Permission denied</td><td>a,i - The working directory, or its parent does not allow write permission.</td></tr>
+<tr bgcolor=#eeeeee><td>17</td><td>File exists</td><td>a - The collection subdir already exists in the working dir.</td></tr>
+<tr bgcolor=#ffffff><td>28</td><td>No space left on device</td><td>a,i - There is no room on the drive to write data because the drive is full, or the user's disk quota is exhausted.</td></tr>
+<tr bgcolor=#eeeeee><td>105</td><td>No buffer space available</td><td>a - Collection name limit of 16 is exceeded.</td></tr>
+<tr><td colspan=3><b>Gigablast error codes</b></td></tr><br><br>
+<tr bgcolor=#ffffff><td>32769</td><td>Try doing it again</td><td>a,i,s - Resources temporarily unavailable.</td></tr>
+<tr bgcolor=#eeeeee><td>32770</td><td>Add denied, db is closing</td><td>i - Gigablast is shutting down, so the inject failed.</td></tr>
+<tr bgcolor=#ffffff><td>32771</td><td>Record not found</td><td>i - When looking up old document for injected URL it was not found when it should have been. This is due to data corruption.</td></tr>
+<tr bgcolor=#eeeeee><td>32775</td><td>Could not get the default tagdb record</td><td>i - The default tagdb*.xml (ruleset) file was not found. Make sure that the ruleset used by tagdb or by the Url Filters page for this url is present in the working dir.</td></tr>
+<tr bgcolor=#ffffff><td>32777</td><td>Something is wrong with reply</td><td>i - Received bad internal reply. You should never see this error.</td></tr>
+<tr bgcolor=#eeeeee><td>32784</td><td>Bad engineer</td><td>a - Collection name being added contains an illegal character, or an empty name was provided, or the name is more than 64 characters.<br>i - No URL was provided, or URL has no hostname. Or provided URL is currently being injected. Or 500 injects are currently in progress.</td></tr>
+<tr bgcolor=#ffffff><td>32785</td><td>Can not add because db is closing</td><td>i - Gigablast is shutting down, so the inject failed.</td></tr>
+<tr bgcolor=#eeeeee><td>32789</td><td>Buf too small</td><td>i - Injected URL was longer than 1024 characters. Or the injected document was too big to fit in memory, so consider increasing <titledbMaxTreeMem> in gb.conf.</td></tr>
+<tr bgcolor=#ffffff><td>32792</td><td>Bad cached document</td><td>i,s - A cached document was corrupt on disk.</td></tr>
+<tr bgcolor=#eeeeee><td>32793</td><td>Document is missing query terms</td><td>s - A document in the search results did not contain all the query terms.</td></tr>
+<tr bgcolor=#ffffff><td>32795</td><td>No docid</td><td>i - No docids were available to inject the URL. The database has reached its limit.</td></tr>
+<tr bgcolor=#eeeeee><td>32797</td><td>No udp slots available</td><td>a,i,s - There was a shortage of sockets, please try again.</td></tr>
+<tr bgcolor=#ffffff><td>32811</td><td>Doc bad content type</td><td>i - The URL's file extension is not recognized as an indexable file type.</td></tr>
+<tr bgcolor=#eeeeee><td>32842</td><td>Query too big</td><td>s - Query was too long.</td></tr>
+<tr bgcolor=#ffffff><td>32843</td><td>Query was truncated</td><td>s - Query was truncated.</td></tr>
+<tr bgcolor=#eeeeee><td>32844</td><td>Boolean query has too many operands</td><td>s - Query has too many operands.</td></tr>
+<tr bgcolor=#ffffff><td>32849</td><td>Bad mime</td><td>i - The provided HTTP mime (if the <a href=#injecting>hasmime flag</a> was set) was not present or illegal.</td></tr>
+<tr bgcolor=#eeeeee><td>32855</td><td>DNS sent an unknown response code</td><td>i - DNS error</td></tr>
+<tr bgcolor=#ffffff><td>32856</td><td>DNS refused to talk</td><td>i - DNS error</td></tr>
+<tr bgcolor=#eeeeee><td>32858</td><td>DNS timed out</td><td>i - DNS error</td></tr>
+<tr bgcolor=#ffffff><td>32863</td><td>No collection record</td><td>a,i,s - Referenced collection does not exist.</td></tr>
+<tr bgcolor=#eeeeee><td>32864</td><td>Shutting down the server</td><td>i - Gigablast is shutting down, so the inject failed.</td></tr>
+</table>
+
+
+
+
+<center>
+Copyright &copy; 2013. All rights reserved.
+</center>
+
+</body>
+</html>

@@ -1,4 +1,4 @@
 open-source-search-engine
 =========================
 
-An open source search engine written in C/C++ for Linux on Intel/AMD. From gigablast dot com. See the README file below for instructions!!!
+An open source web and enterprise search engine. As can be seen http://www.gigablast.com/ 

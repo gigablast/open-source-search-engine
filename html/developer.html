@@ -1,0 +1,2683 @@
+<html> 
+<title>Gigablast Engineering Overview</title>
+
+<body text=#000000 bgcolor=#ffffff link=#000000 vlink=#000000 alink=#000000><style><!--body,td,a,p,.h{font-family:arial,sans-serif; font-size: 15px;}//--></style>
+
+<center>
+
+<img border=0 width=500 height=122 src=http://www.gigablast.com/logo-med.jpg>
+<br><br>
+</center>
+
+<h1>Gigablast Developer Documentation</h1>
+
+Administration documentation is <a href=/admin.html>here</a>.
+<br><br>
+
+<!--- TABLE OF CONTENTS-->
+
+<h1>Table of Contents</h1>
+
+<table cellpadding=3 border=0>
+
+<tr><td>I.</td><td><a href="#started">Getting Started</a> - Setting up your PC for Gigablast development.</td></tr>
+<!--subtable-->
+<tr><td></td><td><table cellpadding=3>
+
+<tr><td valign=top>A.</td><td><a href="#ssh">SSH</a> - A brief introduction to setting up ssh</td></tr>
+</table></td></tr>
+
+<tr><td>II.</td><td><a href="#shell">Using the Shell</a> - Some common shell commands.</td></tr>
+
+<tr><td>III.</td><td><a href="#git">Using GIT</a> - Source code management.</td></tr>
+
+<tr><td>IV.</td><td><a href="#hardware">Hardware Administration</a> - Gigablast hardware resources.</td></tr>
+
+<tr><td>V.</td><td><a href="#dirstruct">Directory Structure</a> - How files are laid out.</td></tr>
+
+<tr><td>VI.</td><td><a href="#kernels">Kernels</a> - Kernels used by Gigablast.</td></tr>
+
+<tr><td>VII.</td><td><a href="#coding">Coding Conventions</a> - The coding style used at Gigablast.</td></tr>
+
+<tr><td>VIII.</td><td><a href="#debug">Debugging Gigablast</a> - How to debug gb.</td></tr>
+
+
+<tr><td>IX.</td><td><a href="#code">Code Overview</a> - Basic layers of the code.</td></tr>
+
+<!--subtable1-->
+<tr><td></td><td><table cellpadding=3>
+
+<tr><td valign=top>A.</td><td><a href="#loop">The Control Loop Layer</a><br>
+
+<tr><td valign=top>B.</td><td><a href="#database">The Database Layer</a><br>
+
+<!--subtable2-->
+<tr><td></td><td><table cellpadding=3>
+
+
+<tr><td>1.</td><td><a href="#dbclasses">Associated Classes</a></td></tr>
+<tr><td>2.</td><td><a href="#database">Rdb</a> - The core database class.</td></tr>
+<!--subtable3-->
+<tr><td></td><td><table cellpadding=3>
+<td><td>a.</td><td><a href="#addingrecs">Adding Records</a></td></tr>
+<td><td>b.</td><td><a href="#mergingfiles">Merging Rdb Files</a></td></tr>
+<td><td>c.</td><td><a href="#deletingrecs">Deleting Records</a></td></tr>
+<td><td>d.</td><td><a href="#readingrecs">Reading Records</a></td></tr>
+<td><td>e.</td><td><a href="#errorcorrection">Error Correction</a> - How Rdb deals with corrupted data on disk.</td></tr>
+<td><td>f.</td><td><a href="#netadds">Adding Records over the Net</a></td></tr>
+<td><td>g.</td><td><a href="#netreads">Reading Records over the Net</a></td></tr>
+<td><td>i.</td><td><a href="#varkeysize">Variable Key Sizes</a></td></tr>
+<td><td>j.</td><td><a href="#rdbcache">Caching Records</a></td></tr>
+</table></tr>
+<!--subtable3end-->
+
+
+<tr><td>3.</td><td><a href="#indexdb">Indexdb</a> - The search index Rdb.</td></tr>
+<tr><td>4.</td><td><a href="#datedb">Datedb</a> - For returning search results constrained or sorted by date.</td></tr>
+<tr><td>5.</td><td><a href="#titledb">Titledb</a> - Holds the cached web pages.</td></tr>
+<tr><td>6.</td><td><a href="#spiderdb">Spiderdb</a> - Holds the urls to be spidered, sorted by spider date.</td></tr>
+<tr><td>7.</td><td><a href="#urldb">Urldb</a> - Tells us if a url is in spiderdb or where it is in titledb.</td></tr>
+<tr><td>8.</td><td><a href="#checksumdb">Checksumdb</a> - Each record is a hash of the document content. Used for deduping.</td></tr>
+<tr><td>9.</td><td><a href="#sitedb">Sitedb</a> - Used for mapping a url or site to a ruleset.</td></tr>
+<tr><td>10.</td><td><a href="#clusterdb">Clusterdb</a> - Used for doing site clustering and dupplicate search result removal.</td></tr>
+<tr><td>11.</td><td><a href="#catdb">Catdb</a> - Used to hold DMOZ.</td></tr>
+<tr><td>12.</td><td><a href="#robotdb">Robotdb</a> - Just a cache for robots.txt files.</td></tr>
+
+
+</table></tr>
+<!--subtable2end-->
+
+
+<tr><td valign=top>C.</td><td><a href="#networklayer">The Network Layer</a><br>
+
+<!--subtable2-->
+<tr><td></td><td><table cellpadding=3>
+<tr><td>1.</td><td><a href="#netclasses">Associated Classes</a></td></tr>
+<tr><td>2.</td><td><a href="#udpserver">Udp server</a> - Used for internal communication.</td></tr>
+
+<!--subtable3-->
+<tr><td></td><td><table cellpadding=3>
+<td><td>a.</td><td><a href="#multicasting">Multicasting</a></td></tr>
+<td><td>b.</td><td><a href="#msgclasses">Message Classes</a></td></tr>
+</table></tr>
+<!--subtable3end-->
+
+
+<tr><td>3.</td><td><a href="#tcpserver">TCP server</a> - Used by the HTTP server.</td></tr>
+<tr><td>4.</td><td><a href="#tcpserver">HTTP server</a> - The web server.</td></tr>
+<tr><td>5.</td><td><a href="#dns">DNS Resolver</a></td></tr>
+
+</table></tr>
+<!--subtable2end-->
+
+
+<tr><td valign=top>D.</td><td><a href="#buildlayer">The Build Layer</a><br>
+
+<!--subtable2-->
+<tr><td></td><td><table cellpadding=3>
+
+<tr><td>1.</td><td><a href="#buildclasses">Associated Classes</a></td></tr>
+<tr><td>2.</td><td><a href="#spiderloop">The Spider Loop</a> - Start of the pipeline.</td></tr>
+<tr><td>3.</td><td><a href="#spidercache">The Spider Cache</a> - Caches urls from spiderdb.</td></tr>
+<tr><td>4.</td><td><a href="#msg14">Msg14</a> - Indexes a url.</td></tr>
+<tr><td>5.</td><td><a href="#msg15">Msg15</a> - Sets the old IndexList.</td></tr>
+<tr><td>6.</td><td><a href="#msg16">Msg16</a> - Sets the new IndexList.</td></tr>
+<tr><td>7.</td><td><a href="#doc">The Doc Class</a> - Converts document to an IndexList.</td></tr>
+<tr><td>8.</td><td><a href="#linkanalysis">Link Analysis</a></td></tr>
+<tr><td>9.</td><td><a href="#robotdb">Robots.txt</a></td></tr>
+<tr><td>10.</td><td><a href="#termtable">The TermTable</a></td></tr>
+<tr><td>11.</td><td><a href="#indexlist">The IndexList</a></td></tr>
+<tr><td>12.</td><td><a href="#samplevector">The Sample Vector</a> - Used for removing similar search results.</td></tr>
+<tr><td>13.</td><td><a href="#gigabitvector">The Gigabit Vector</a> - Used for clustering results by topic.</td></tr>
+<tr><td>14.</td><td><a href="#deduping">Deduping</a> - Preventing the index of duplicate pages.</td></tr>
+<tr><td>15.</td><td><a href="#indexcode">Indexing Error Codes</a> - Reasons why a document failed to be indexed.</td></tr>
+<tr><td>16.</td><td><a href="#docids">DocIds</a> - How DocIds are assigned.</td></tr>
+<tr><td>17.</td><td><a href="#docidscaling">Scaling To Many DocIds</a> - How we scale to many DocIds.</td></tr>
+
+</table></tr>
+<!--subtable2end-->
+
+<tr><td valign=top>E.</td><td><a href="#searchresultslayer">The Search Results Layer</a><br>
+
+<!--subtable2-->
+<tr><td></td><td><table cellpadding=3>
+
+<tr><td>1.</td><td><a href="#queryclasses">Associated Classes</a></td></tr>
+<tr><td>1.</td><td><a href="#query">The Query Parser</a></td></tr>
+<tr><td>2.</td><td>Getting the Termlists</td></tr>
+<tr><td>3.</td><td>Intersecting the Termlists</a></td></tr>
+<tr><td>4.</td><td><a href="#raiding">Raiding Termlist Intersections</a></td></tr>
+<tr><td>5.</td><td>The Search Results Cache</a></td></tr>
+<tr><td>6.</td><td>Site Clustering</a></td></tr>
+<tr><td>7.</td><td>Deduping</a></td></tr>
+<tr><td>8.</td><td>Family Filter</a></td></tr>
+<tr><td>9.</td><td>Gigabits</a></td></tr>
+<tr><td>10.</td><td>Topic Clustering</a></td></tr>
+<tr><td>11.</td><td>Related and Reference Pages</a></td></tr>
+<tr><td>12.</td><td><a href="#spellchecker">The Spell Checker</a></td></tr>
+
+</table></tr>
+<!--subtable2end-->
+
+
+<tr><td valign=top>F.</td><td><a href="#adminlayer">The Administration Layer</a><br>
+
+<!--subtable2-->
+<tr><td></td><td><table cellpadding=3>
+<tr><td>1.</td><td><a href="#adminclasses">Associated Classes</a></td></tr>
+<tr><td>2.</td><td><a href="#collections">Collections</a></td></tr>
+<tr><td>3.</td><td><a href="#parms">Parameters and Controls</a></td></tr>
+<tr><td>4.</td><td><a href="#log">The Log System</a></td></tr>
+<tr><td>5.</td><td><a href="#clusterswitch">Changing Live Clusters</a></td></tr>
+</table>
+
+
+<tr><td valign=top>G.</td><td><a href="#corelayer">The Core Functions Layer</a><br>
+<!--subtable2-->
+<tr><td></td><td><table cellpadding=3>
+<tr><td>1.</td><td><a href="#coreclasses">Associated Classes</a></td></tr>
+<tr><td>2.</td><td><a href="#files"></a>Files</td></tr>
+<tr><td>3.</td><td><a href="#threads"></a>Threads</td></tr>
+</table>
+
+<tr><td valign=top>H.</td><td><a href="#filelist">File List</a> - List of all source code files with brief descriptions.</a><br>
+
+</table>
+
+<tr><td>XIV.</td><td><a href="#spam">Fighting Spam</a> - Search engine spam identification.</td></tr>
+
+</table>
+
+<br><br>
+
+
+<a name="started"></a>
+<hr><h1>Getting Started</h1>
+
+Welcome to Gigablast. Thanks for supporting this open source software.
+
+<a name="ssh"></a>
+<br><br>
+<h2>SSH - A Brief Introduction</h2>
+Gigablast uses SSH extensively to administer and develop its software.  SSH is a secure shell
+connection that helps protect sensitive information over an insecure network.  Internally, we 
+access our 3 development machines (voyager, voyager2, and voyager3) with SSH, but being prompted
+for a password when logging in between machines can become tiresome as well as development gb
+processes will not execute unless you can ssh without a password.  This is where our authorized
+keys file comes in.  In your user directory you have a .ssh directory and inside of that directory
+there lies an authorized_keys and known_hosts file.  Now what we first have to do is generate a 
+key for your user on the current machine you are on.  Remember to press &lt;Enter&gt; when asked for a 
+passphrase, otherwise you will still have to login.<br>
+<code><i> ssh-keygen -t dsa </i></code><br>
+Now that should have generated an id_dsa.pub and an id_dsa file.  Since you now have a key, we need to
+let all of our trusted hosts know that key.  Luckily ssh provides a simple way to copy your key into 
+the appropriate files.  When you perform this command the machine will ask you to login.<br>
+<code><i> ssh-copy-id -i ~/.ssh/id_dsa.pub destHost</i></code><br>
+Perform this operation to all of our development machines by replacing destHost with the appropriate
+machine name.  Once you have done this, try sshing into each machine.  You should no longer be 
+prompted for a password. If you were requested to enter a password/phrase, go through this section again, 
+but DO NOT ENTER A PASSPHRASE when ssh-keygen requests one. <b>NOTE:  Make sure to copy the id to the 
+same machine you generated the key on.  This is important for running gigablast since it requires to ssh 
+freely.</b>
+<br>
+<br>
+<i>Host Key Has Changed and Now I Can Not Access the Machine</i><br>
+This is easily remedied.  If a machine happens to crash and the OS needs to be replaced for whatever
+reason, the SSH host key for that machine will change, but your known_hosts file will still have the
+old host key.  This is to prevent man-in-the-middle attacks, but when we know this is a rebuilt machine
+we can simply correct the problem.  Just open the ~/.ssh/known_hosts file with your favorite editor.  
+Find the line with the name or ip address of the offending machine and delete the entire line (the 
+known_hosts file separates host keys be newlines).<br>
+<br><br>
+
+<a name="shell"></a>
+<hr><h1>Using the Shell</h1>
+
+Everyone uses the bash shell. The navigation keystrokes work in emacs, too. Here are the common commands:
+<br><br>
+
+<table cellpadding=3 border=1>
+<tr><td>Command</td><td>Description</td></tr>
+<tr><td><nobr>export LD_PATH=/home/mwells/dynamicslibs/</nobr></td><td>Export the LD_PATH variable, used to tell the OS where to look for dynamic libraries.</td></tr>
+<tr><td>Ctrl+p</td><td>Show the previously executed command.</td></tr>
+<tr><td>Ctrl+n</td><td>Show the next executed command.</td></tr>
+<tr><td>Ctrl+f</td><td>Move cursor forward.</td></tr>
+<tr><td>Ctrl+b</td><td>Move cursor backward.</td></tr>
+<tr><td>Ctrl+a</td><td>Move cursor to start of line.</td></tr>
+<tr><td>Ctrl+e</td><td>Move cursor to end of line.</td></tr>
+<tr><td>Ctrl+k</td><td>Cut buffer from cursor forward.</td></tr>
+<tr><td>Ctrl+y</td><td>Yank (paste) buffer at cursor location.</td></tr>
+<tr><td>Ctrl+Shift+-</td><td>Undo last keystrokes.</td></tr>
+<tr><td>history</td><td>Show list of last commands executed. Edit /home/username/.bashrc to change the number of commands stored in the history. All are stored in /home/username/.history file.</td></tr>
+<tr><td>!xxx</td><td>Execute command #xxx, where xxx is a number shown from the 'history' command.</td></tr>
+<tr><td>ps auxww</td><td>Show all processes.</td></tr>
+<tr><td>ls -latr</td><td>Show all files reverse sorted by time.</td></tr>
+<tr><td>ls -larS</td><td>Show all files reverse sorted by size.</td></tr>
+<tr><td>ln -s &lt;x&gt; &lt;y&gt;</td><td>Make directory or file y a symbolic link to x.</td></tr>
+<tr><td>cat xxx | awk -F":" '{print $1}'</td><td>Show contents of file xxx, but for each line, use : as a delimeter and print out the first token.</td></tr>
+<tr><td>dsh -c -f hosts 'cat /proc/scsi/scsi'</td><td>Show all hard drives on all machines listed in the file <i>hosts</i>. -c means to execute this command concurrently on all those machines. dsh must be installed with <i>apt-get install dsh</i> for this to work. You can use double quotes in a single quoted dsh command without problems, so you can grep for a phrase, for instance.</td></tr>
+<tr><td>apt-cache search xxx</td><td>Search for a package to install. xxx is a space separated list of keywords. Debian only.</td></tr>
+<tr><td>apt-cache show xxx</td><td>Show details of the package named xxx. Debian only.</td></tr>
+<tr><td>apt-get install xxx</td><td>Installs a package named xxx. Must be root to do this. Debian only.</td></tr>
+<tr><td>adduser xxx</td><td>Add a new user to the system with username xxx.</td></tr>
+</table>
+
+<br>
+
+
+<a name="git"></a>
+<hr><h1>Using Git</h1>
+
+Git is what we use to do source code control. Git allows us to have many engineers making changes to a common set of files. The basic commands are the following:<br><br>
+<table border=1 cellpadding=3>
+<tr>
+<td><nobr>git clone &lt;srcdir&gt; &lt;destDit&gt;</nobr></td>
+<td>This will copy the git repository to the destination directory.</td>
+</tr>
+
+<tr>
+<td colspan=2><nobr>More information available at <a href=http://www.github.com/>github.com</a></nobr></td>
+
+</tr>
+
+
+</table>
+
+<br><br>
+
+<a name="hardware"></a>
+<hr><h1>Hardware Administration</h1>
+
+<h2>Hardware Failures</h2>
+If a machine has a bunch of I/O errors in the log or the gb process is at a standstill, login and type "dmesg" to see the kernel's ring buffer. The error that means the hard drive is fried is something like this:<br>
+<pre>
+mwells@gf36:/a$ dmesg | tail -3
+scsi5: ERROR on channel 0, id 0, lun 0, CDB: Read (10) 00 13 89 68 82 00 00 18 00 
+Info fld=0x1389688b, Current sd08:34: sense key Medium Error
+ I/O error: dev 08:34, sector 323627528
+</pre>
+If you do a <i>cat /proc/scsi/scsi</i> you can see what type of hard drives are in the server:<br>
+<pre>
+mwells@gf36:/a$ cat /proc/scsi/scsi 
+Attached devices: 
+Host: scsi2 Channel: 00 Id: 00 Lun: 00
+  Vendor: Hitachi  Model: HDS724040KLSA80  Rev: KFAO
+  Type:   Direct-Access                    ANSI SCSI revision: 03
+Host: scsi3 Channel: 00 Id: 00 Lun: 00
+  Vendor: Hitachi  Model: HDS724040KLSA80  Rev: KFAO
+  Type:   Direct-Access                    ANSI SCSI revision: 03
+Host: scsi4 Channel: 00 Id: 00 Lun: 00
+  Vendor: Hitachi  Model: HDS724040KLSA80  Rev: KFAO
+  Type:   Direct-Access                    ANSI SCSI revision: 03
+Host: scsi5 Channel: 00 Id: 00 Lun: 00
+  Vendor: Hitachi  Model: HDS724040KLSA80  Rev: KFAO
+  Type:   Direct-Access                    ANSI SCSI revision: 03
+</pre>
+So for this error we should replace the <b>rightmost</b> hard drive with a spare hard drive. Usually we have spare hard drives floating around. You will know by looking at colo.html where all the equipment is stored.
+<br><br>
+If a drive is not showing up in /proc/scsi/scsi when it should be, it may be a bad sata channel on the motherboard, but sometimes you can see it again if you reboot a few times. 
+<br><br>
+Often, if a motherboard failures, or a machine just stops responding to pings and cannot be revived, we designate it as a junk machine and replace its good hard drives with bad ones from other machines. Then we just need to fix the junk machine.
+<br><br>
+At some point we email John Wang from TwinMicro, or Nick from ACME Micro to fix/RMA the gb/g/gf machines and gk machines respectively. We have to make sure there are plenty of spares to deal with spikes in the hardware failure rate.
+<br><br>
+Sometimes you can not ssh to a machine but you can rsh to it. This is usually because the a drive is bad and ssh can not access some files it needs to log you in. And sometimes you can ping a machine but cannot rsh or ssh to it, for the same reason. Recently we had some problems with some machines not coming back up after reboot, that was due to a flaky 48-port NetGear switch.
+<br><br>
+<h2>Replacing a Hard Drive</h2>
+When a hard drive goes bad, make sure it is labelled as such so we don't end up reusing it. If it is the leftmost drive slot (drive #0) then the OS will need to be reinstalled using a boot cd. Otherwise, we can just <b>umount /dev/md0</b> as root and rebuild ext2 using the command in /home/mwells/gbsetup2, <b>mke2fs -b4096 -m0 -N20000 -R stride=32 /dev/md0</b>. And to test the hard drives thoroughly, after the mke2fs, <i>nohup badblocks -b4096 -p0 -c10000 -s -w -o/home/mwells/badblocks /dev/md0 >& /home/mwells/bbout </i>. Sometimes you might even need to rebuild the software raid with <b>mkraid -c /etc/raidtab --really-force /dev/md0</b> before you do that. Once the raid is repaired, mount /dev/md0 and copy over the data from its twin to it. On the newly repaired host use <b>nohup rcp -r gbXX:/a/* /a/ &</b> where gbXX is its twin that has all the data still. DO NOT ERASE THE TWIN'S DATA. You will also have to do <b>rcp -r gbXX:/a/.antiword /a/</b> because rcp does not pick that directory up.
+<br><br>
+<h2>Measuring Drive Performance</h2>
+Slow drives are sometimes worse than broken drives. Run <b>./gb thrutest &lt;directoryToWriteTo&gt; 10000000000</b> to make gigablast write out 10GB of files and then read from them. This is also a good test for checking a drive for errors. Each drive should have a write speed of about 39MB/s for a HITACHI, so the whole raid should be doing 150MB/s write, and close to 200MB/s for reading. Fuller drives will not do so well because of fragmentation. If the performance is less than what it should, then try mounting each drive individually and seeing what speed you get to isolate the culprit. Sometimes you can have the drive re-seated (just pulling it out and plugging it back in) and that does the trick. A soft reboot does not seem to work. I don't know if a power cycle works yet or not.
+<br><br>
+<h2>Measuring Memory Performance</h2>
+Run <b>membustest 50000000 50</b> to read 50MB from main memory 50 times to see how fast the memory bus is. It should be at least 2000MB/sec, and 2500MB/sec for the faster servers. Partap also wrote <b>gb memtest</b> to see the maximum amount of memory that can be allocated, in addition to testing memory bus speeds. The max memory that can be allocated seems to be about 3GB on our 2.4.31 kernel.
+<br><br>
+<h2>Measuring Network Performance</h2>
+Use <b>thunder 50000000</b> on the server with ip address a.b.c.d and <b>thunder 50000000 a.b.c.d</b> on the client to see how fast the client can read UDP packets from the server. Gigablast needs about a Gigabit between all machines, and they must all be on a Gigabit switch. Sometimes the 5013CM-T resets the Gigabit to 100Mbps and causes Gigablast to basically come to a hault. You can detect that by doing a <b>dmesg | grep e1000 | tail -1</b> on each machine to see what speed its network interface is running at.
+<br><br>
+
+<a name="kernels"></a>
+<hr><h1>Kernels</h1>
+Gigablast runs well on the Linux 2.4.31 kernel which resides in /gb/kernels/2.4.31/. The .config file is in that directory and named <b>dotconfig</b>. It does have the marvel patch, mvsata340_2.4.patch.bz2 applied so Linux can see the Marvel chip that drives the 4 sata devices on our SuperMicro 5013CM-T 1U servers. In addition we comment out the 3 'offline' statements in drives/scsi/scsi_error.c in the kernel source, and raised the 3 TIMEOUT to 30. These changes allow the kernel to deal with the 'drive offlined' messages that the Hitachi drives SCSI interface give every now and then. We still set the 'ghost lun' think in the kernel source to 10, but I am not sure if this actually helps, though.
+<br><br>
+Older kernels had problems with unncessary swapping and also with crashing, most likely due to the e1000 driver, which drives the 5013CM-T's Gigabit ethernet functionality. All issues seem to be worked out at this point, so any kernel crash is likely due to a hardware failure, like bad memory, or disk.
+<br><br>
+I would like to have larger block sizes on the ext2fs filesystem, because 4KB is just not good for fragmentation purposes. We use mostly huge files on our partitions, raid-0'ed across 4 400GB Sata drives, so it would help if we could use a block size of a few Megabytes even. I've contacted Theodore T'so, the guy he wrote e2fs, and he may do it for a decent chunk of cash.
+<br><br>
+
+
+
+<a name="coding"></a>
+<hr><h1>Coding Conventions</h1>
+
+When editing the source please do not wrap lines passed 80 columns. Also, 
+please make an effort to avoid excessive nesting, it makes for hard-to-read 
+code and can almost always be avoided.
+<br><br>
+Classes and files are almost exclusively named using Capitalized letters for
+the beginning of each word, like MyClass.cpp. Global variables start with g_,
+static variables start with s_ and member variables start with m_. In order
+to save vertical space and make things more readable, left curly brackets ({'s)
+are always placed on the same line as the class, function or loop declaration.
+In pointer declations, the * sticks to the variable name, not the type as
+in void *ptr.  All variables are to be named in camel case as in lowerCamelCase.
+Underscores in variable names are forbidden, with the exception of the g_, s_ and m_ prefixes, of course.  
+<br><br>
+And try to avoid lots of nested curly brackets. Usually you do not have to nest
+more than 3 levels deep if you write the code correctly.
+<br><br>
+Using the *p, p++ and p < pend mechanisms is generally preferred to using the 
+p[i], i++ and i < n mechanisms. So stick to that whenever possible.
+<br><br>
+Using ?'s in the code, like a = b ? d : e; is also forbidden because it is too cryptic and easy to mess up.
+<br><br>
+Upon error, g_errno is set and the conditions causing the error are logged.
+Whenever possible, Gigablast should recover after error and continue running 
+gracefully.
+<br><br>
+Gigablast uses many non-blocking functions that return false if they block,
+or true if they do not block. These type of functions will often set the 
+g_errno global error variable on error. These type of functions almost always
+take a pointer to the callback function and the callback state as arguments.
+The callback function will be called upon completion of the function.
+<br><br>
+Gigablast no longer uses Xavier Leroy's pthread library (LinuxThreads) because
+it was buggy. Instead, the Linux clone() system call is used. That function
+is pretty much exclusively Linux, and was the basis for pthreads anyway. It
+uses an older version of libc which does not contain thread support for the
+errno variable, so, like the old pthreads library, Gigablast's Threads.cpp 
+class has implemented the _errno_location() function to work around that. This
+function provides a pointer to a separate thread's (process's) own errno 
+location so we do not contend for the same errno.
+<br><br>
+We also make an effort to avoid deep subroutine calls. Having to trace the
+IP stack down several functions is time-consuming and should be avoided.
+<br><br>
+Gigablast also tries to make a consistent distinction between size and length. 
+Length usually refers to a string length (like strlen()) and does not include 
+the NULL terminator, if any. Size is the overall size of a data blob, 
+and includes everything.
+<br><br>
+When making comments please do not insert the "//" at the very first character
+of the line in the first column of the screen.  It should be indented just
+like any other line.
+<br><br>
+Whenver possible, please mimice the currently used styles and conventions 
+and please avoid using third party libraries. Even the standard template 
+library has serious performance/scalability issues and should be avoided.
+<br><br>
+
+<a name="debug"></a>
+<hr><h1>Debugging Gigablast</h1>
+
+<h2>General Procedure</h2>
+When Gigablast cores you generally want to use gdb to look at the core and see where it happened. You can use BitKeeper's <b>bk revtool &lt;filename&gt;</b> to see if the class or file that cored was recently edited. You may be looking at a bug that was already fixed and only need to update to the latest version.
+
+<h2>Using GDB</h2>
+
+<p>We generally use gdb to debug Gigablast. If you are running gb, the gigablast process, under gdb, and it receives a signal, gdb will break and you have to tell it to ignore the signal from now now by typing <b>handle SIG39 nostop noprint</b> for signal 39, at least, and then continue execution by typing 'c' and enter. When debugging a core on a customer's machine you might have to copy your versino of gdb over to it, if they don't have one installed.</p>
+
+<p>There is also a /gb/bin/gdbserver that you can use to debug a remote gb process, although no one really uses this except Partap used it a few times. </p>
+
+<p>The most common way to use gdb is:
+<ul>
+<li><b>gdb ./gb</b> to start up gdb.
+<li><b>run -c ./hosts.conf 0</b> to run gb under gdb.
+<li><b>Ctrl-C</b> to break gb
+<li><b>where</b> to make gdb print out the ip stack
+<li><b>break MyClass.cpp:123</b> to break gb at line 123 in MyClass.cpp.
+<li><b>print &lt;variableName&gt;</b> to print out the value of a variable.
+<li><b>watch &lt;variableName&gt;</b> to set a watchpoint so gdb breaks if the variable changes value.
+<li><b>set &lt;variableName&gt; &lt;value&gt;</b> to set the value of a variable.
+<li><b>set print elements 100000</b> to tell gdb to print out the first 100000 bytes when printing strings, as opposed to limiting it to the default 200 or so bytes. 
+</ul>
+</p>
+
+<p>You can also use gdb to do <i>poor man's profiling</i> by repeatedly attaching gdb to the gb pid like <b>gdb ./gb &lt;pid&gt;</b> and seeing where it is spending its time. This is a fairly effective random sampling technique.</p>
+
+<p>If a gb process goes into an infinite loop you can get it to save its in-memory data by attaching gdb to its pid and typing <b>print mainShutdown(1)</b> which will tell gdb to run that function which will save all gb's data to disk so you don't end up losing data.</p>
+
+<p>To debug a core type <b>gdb ./gb &lt;coreFilename&gt;</b> Then you can examine why gb core dumped. Please copy the gb binary and move the core to another filename if you want to preserve the core for another engineer to look at. You need to use the exact gb that produced the core in order to analyze it properly.
+</p>
+
+<p>It is useful to have the following .gdbinit file in your home directory:
+<pre>
+set print elements 100000
+handle SIG32 nostop noprint
+handle SIG35 nostop noprint
+handle SIG39 nostop noprint
+set overload-resolution off
+</pre>
+The overload-resolution gets in the way when tring to print the return value of some functions, like uccDebug() for instance.
+</p>
+
+<h2>Using Git to Help Debug</h2>
+<a href="#git">Git</a> can be a useful debugging aid. By doing <b>git log</b> You can see what the latest changes made to gb were. This may allow you to isolate the bug. <b>bk diff HEAD~1 HEAD~0</b> will actually list the files that were changed from the last commit, instead of just the changesets. Substituting '1' with '2' will show the changes from the last two commits, etc.
+
+<h2>Memory Leaks</h2>
+All memory allocations, malloc, calloc, realloc and new, go through Gigablast's Mem.cpp class. That class has a hash table of pointers to any outstanding allocated memory, including the size of the allocation. When Gigablast allocates memory it will allocate a little more than requested so it can pad the memory with special bytes, called magic characters, that are verified when the memory is freed to see if the buffer was overwritten or underwritten. In addition to doing these boundary checks, Gigablast will also print out all the unfreed memory at exit. This allows you to detect memory leaks. The only way we can leak memory without detection now is if it is leaked in a third party library which Gigablast links to. 
+
+<h2>Random Memory Writes</h2>
+This is the hardest problem to track down. Where did that random memory write come from? Usually, RdbTree.cpp, uses the most memory, so if the write happens it will corrupt the tree. To fight this you can turn <i>protect</i> the RdbTree by forcing RdbTree::m_useProtection to true in RdbTree::set(). This will make Gigablast protect the memory when not being accessed explicitly by RdbTree.cpp code. It does this by calling mprotect(), which can slow things down quite a bit.
+
+<h2>Corrupted Data In Memory</h2>
+Try to reproduce it under gdb immediately before the corruption occurs, then set a watchpoint on some memory that was getting corrupted.  Try to determine the start of the corruption in memory. This may lead you to a buffer that was overflowing. Often times, a gb process will core in RdbTree.cpp which never happens unless the machine has bad RAM. Bad RAM also causes gb to go into an infinite loop in Msg3.cpp's RdbMap logic. In these cases try replacing the memory or using another machine.
+
+<h2>Common Core Dumps</h2>
+<table>
+<tr><td>Problem</td><td>Cause</td></tr>
+<tr><td>Core in RdbTree</td><td>Probably bad ram</td></tr>
+</table>
+
+<h2>Common Coding Mistakes</h2>
+<table>
+<tr><td>1.</td><td>Calling atoip() twice or more in the same printf() statement. atoip() outputs into a single static buffer and can not be shared this way.</td></tr>
+<tr><td>2.</td><td>Not calling class constructors and destructors when mallocing/freeing class objects.  Need to allow class to initialize properly after allocation and free any allocated memory before it is freed.</td></tr>
+</table>
+
+
+
+<br><br>
+<a name="sa"></a>
+<hr><h1>System Administration</h1>
+
+
+
+
+
+<a name="code"></a>
+<hr><h1>Code Overview</h1>
+Gigablast consists of about 200,000 lines of C++ source. The latest gb version being developed as of this writing is /gb/datil/. Gigablast is a single executable, gb, that contains all the functionality needed to run a search engine. Gigablast attempts to uniformly distribute every function amongst all hosts in the network. Please see <a href="overview.html">overview.html</a> to get a general overview of the search engine from a USER perspective.
+<br><br>
+Matt started writing Gigablast in 2000, with the intention of making it the most efficient search engine in the world. A lot of attention was paid to making every piece of the code fast and scalable, while still readable.
+<br><br>
+<hr>
+
+<a name="loop"></a>
+<h1>The Control Loop Layer</h1>
+Gigablast uses a <b>signal-based</b> architecture, as opposed to a thread-based architecture. At the heart of the Gigablast process is the I/O control loop, contained in the <a href="../latest/src/Loop.cpp">Loop.cpp</a> file. Gigablast sits in an idle state until it receives a signal on a file or socket descriptor, or a "thread" exits and sends a signal to be cleaned up. Threads are only used when necessary, which is currently for performing disk I/O, intersecting long lists of docIds to generate search results (which can block the CPU for a while) and merging database data from multiple files into a single list.
+<br><br>
+<a href="#threads">Threads</a> are not only hard to debug, but can make everything more latent. If you have 10 requests coming in, each one requiring 1 second of CPU time, if you thread them all it will take 10 seconds until each query can be satisfied and the results returned, but if you handle them FIFO (one at a time) then the first request is satisfied in 1 second, the second in two seconds, etc. The Threads.cpp class handles the use of threads and uses the Linux clone() call. Xavier Leroy's pthreads were found to be too buggy at the time.
+<br><br>
+Loop.cpp also allows other classes to call its registerCallback() function which takes a file or socket descriptor and when call a given callback when data is ready for reading or writing on that file descriptor. Gigablast accomplishes this with Linux's fcntl() call which you can use to tell the kernel to connect a particular file descriptor to a signal. The heart of gb is really sigtimedwait() which sits there idle waiting for signals. When one arrives it breaks out and the callback responsible for the associated file descriptor is called.
+<br><br>
+In the event that the queue of ready file descriptors is full, the kernel will deliver a SIGIO to the gb process, which performs a poll over all the registered file descriptors.
+<br><br>
+Gigablast will also catch other signals, like segmentation faults and HUP signals and save the data to disk before exiting. That way we do not lose data because of a core dump or an accidental HUP signal.
+<br><br>
+Using a signal based architecture means that we have to work with callbacks a lot. Everything is triggered by an <i>event</i> similar to GUIs, but our events are not mouse related, but disk and network. This naturally leads to the concept of a callback, which is a function to be called when a task is completed.
+So you might call a function like <b>readData ( myCallback , myState , readbuf , bytesToRead )</b> and gigablast will perform the requested read operation and call <b>myCallback ( myState )</b> when it is done. This means you have to worry about state, whereas, in a thread-based architecture you do not.
+<br><br>
+Furthermore, all callbacks must be expressed as pointers to <b>C</b> functions, not C++ functions. So we call these C functions wrapper functions and have them immediately call their C++ counterparts. You'll see these wrapper functions clearly illustrated throughout the code.
+<br><br>
+Gigablast also has support for asynchronous signals. You can tell the kernel to deliver you an asynchronous signal in an I/O event, and that signal, also known as an interrupt, will interrupt whatever the CPU is doing and call gb's signal handler, sigHandlerRT(). Be careful, you cannot allocate memory when in a real-time/asynchronous signal handler. You should only call function names ending in _ass, which stands for asychronous-signal safe. The global instance of the UdpServer called g_udpServer2 is based on these asynchronous signals, mostly set up for doing fast pings without having to worry about what the CPU is doing at the time, but it really does not interrupt like it should most likely due to kernel issues. It doesn't seem any faster than the non-asynchronouys UDP server, g_udpServer.
+<br><br>This signal-based architecture also makes a lot of functions return false if they block, meaning they never completed because they have to wait on I/O, or return true and set g_errno on error. So if a function returns false on you, generally, you should return false, too.
+<br><br>
+The Loop class is primarily responsible for calling callbacks when an event
+occurs on a file/socket descriptor. Loop.cpp also calls callbacks that
+registered with it from calling registerSleepCallback(). Those sleep callbacks
+are called every X milliseconds, or more than X milliseconds if load is 
+extreme.  Loop also responds to SIGCHLD signals which are called when a thread
+exits. The only socket descriptor related callbacks are for TcpServer and
+for UdpServer. UdpServer and TcpServer each have their own routine for calling
+callbacks for an associated socket descriptor. But when the system is under
+heavy load we must be careful with what callbacks we call. We should call the
+highest priority (lowest niceness) callbacks before calling any of the 
+lowest priority (highest niceness) callbacks. 
+To solve this problem we require that every callback registered with Loop.cpp
+return after 2 ms or more have elapsed if possible. If they still need to
+be called by Loop.cpp to do more work they should return true at that time,
+otherwise they should return false. We do this in order to give higher priority
+callbacks a chance to be called. This is similar to the low latency patch in
+the Linux kernel. Actually, low priority callbacks will try to break out after 
+2 ms or more, but high priority callbacks will not. Loop::doPoll() just calls
+low priority 
+
+
+
+<a name="database"></a>
+<hr><h1>The Database Layer</h2>
+Gigablast has the following databases which each contain an instance of the 
+Rdb class: 
+<pre>
+Indexdb     - Used to hold the index.
+Datedb      - Like indexdb, but its scores are dates.
+Titledb     - Used to hold cached web pages.
+Spiderdb    - Used to hold urls sorted by their scheduled time to be spidered.
+Urldb       - Used to map a docid to a Titledb file.
+Checksumdb  - Used for preventing spidering of duplicate pages.
+Sitedb      - Used for classifying webpages. Maps webpages to rulesets.
+Clusterdb   - Used to hold the site hash, family filter bit, language id of a document.
+Catdb       - Used to classify a document using DMOZ.
+</pre>
+
+<a name="rdb"></a>
+<h2>Rdb</h2>
+<b>Rdb.cpp</b> is a record-based database. Each record has a key, and optional 
+blob of data and an optional long (4 bytes) that holds the size of the blob of 
+data. If present, the size of the blob is specified right after the key. The 
+key is 12 bytes and of type key_t, as defined in the types.h file.
+
+<a name="dbclasses"></a>
+<h3>Associated Classes (.cpp and .h files)</h3>
+
+<table cellpadding=3 border=1>
+<tr><td>Checksumdb</td><td>DB</td><td>Rdb that maps a docId to a checksum for an indexed document. Used to dedup same content from the same hostname at build time.</td></tr>
+<tr><td>Clusterdb</td><td>DB</td><td>Rdb that maps a docId to the hash of a site and its family filter bit and, optionally, a sample vector used for deduping search results. Used for site clustering, family filtering and deduping at query time. </td></tr>
+<tr><td>Datedb</td><td>DB</td><td>Like indexdb, but its <i>scores</i> are 4-byte dates.</td></tr>
+<tr><td>Indexdb</td><td>DB</td><td>Rdb that maps a termId to a score and docId pair. The search index is stored in Indexdb.</td></tr>
+<tr><td>MemPool</td><td>DB</td><td>Used by RdbTree to add new records to tree without having to do an individual malloc.</td></tr>
+<tr><td>MemPoolTree</td><td>DB</td><td>Unused. Was our own malloc routine.</td></tr>
+<tr><td>Msg0</td><td>DB</td><td>Fetches an RdbList from across the network.</td></tr>
+<tr><td>Msg1</td><td>DB</td><td>Adds all the records in an RdbList to various hosts in the network.</td></tr>
+<tr><td>Msg3</td><td>DB</td><td>Reads an RdbList from several consecutive files in a particular Rdb.</td></tr>
+<tr><td>Msg34</td><td>DB</td><td>Determines least loaded host in a group of hosts.</td></tr>
+<tr><td>Msg35</td><td>DB</td><td>Merge token managament functions. Currently does not work.</td></tr>
+<tr><td>Msg5</td><td>DB</td><td>Uses Msg3 to read RdbLists from multiple files and then merges those lists into a single RdbList. Does corruption detection and repiar. Intergrates list from RdbTree into the single RdbList.</td></tr>
+<tr><td>MsgB</td><td>DB</td><td>Unused. A distributed cache for caching anything.</td></tr>
+<tr><td>Rdb</td><td>DB</td><td>The core database class from which all are derived.</td></tr>
+<tr><td>RdbBase</td><td>DB</td><td>Each Rdb has an array of RdbBases, one for each collection. Each RdbBase has an array of BigFiles for that collection.</td></tr>
+<tr><td>RdbCache</td><td>DB</td><td>Can cache RdbLists or individual Rdb records.</td></tr>
+<tr><td>RdbDump</td><td>DB</td><td>Dumps the RdbTree to an Rdb file. Also is used by RdbMerge to dump the merged RdbList to a file.</td></tr>
+<tr><td>RdbList</td><td>DB</td><td>A list of Rdb records.</td></tr>
+<tr><td>RdbMap</td><td>DB</td><td>Maps an Rdb key to an offset into an RdbFile.</td></tr>
+<tr><td>RdbMem</td><td>DB</td><td>Memory manager for RdbTree so it does not have to allocate space for every record in the three.</td></tr>
+<tr><td>RdbMerge</td><td>DB</td><td>Merges multiple Rdb files into one Rdb file. Uses Msg5 and RdbDump to do reading and writing respectively.</td></tr>
+<tr><td>RdbScan</td><td>DB</td><td>Reads an RdbList from an RdbFile, used by Msg3.</td></tr>
+<tr><td>RdbTree</td><td>DB</td><td>A binary tree of Rdb records. All collections share a single RdbTree, so the collection number is specified for each node in the tree.</td></tr>
+<tr><td>SiteRec</td><td>DB</td><td>A record in Sitedb.</td></tr>
+<tr><td>Sitedb</td><td>DB</td><td>An Rdb that maps a url to a Sitedb record which contains a ruleset to be used to parse and index that url.</td></tr>
+<tr><td>SpiderRec</td><td>DB</td><td>A record in spiderdb.</td></tr>
+<tr><td>Spiderdb</td><td>DB</td><td>An Rdb whose records are urls sorted by times they should be spidered. The key contains other information like if the url is <i>old</i> or <i>new</i> to the index, and the priority of the url, currently from 0 to 7.</td></tr>
+<tr><td>TitleRec</td><td>DB</td><td>A record in Titledb.</td></tr>
+<tr><td>Titledb</td><td>DB</td><td>An Rdb where the records are basically compressed web pages, along with other info like the quality of the page. Contains an instance of the LinkInfo class.</td></tr>
+<tr><td>Urldb</td><td>DB</td><td>An Rdb whose records indicate if a url is in spiderdb or what particular Titledb BigFile contains the url.</td></tr>
+</table>
+
+<br><br>
+
+<a name="addingrecs"></a>
+<h3>Adding a Record to Rdb</h3>
+<a name="rdbtree"></a>
+When a record is added to an Rdb it is housed in a binary tree, 
+<b>RdbTree.cpp</b>,
+whose size is configurable via gb.conf. For example, &lt;indexdbMaxTreeSize&gt;
+specified how much memory in bytes that the tree for Indexdb can use. When the 
+tree is 90% full it is dumped to a file on disk. The records are dumped in 
+order of their keys. When enough files have accrued on disk, a merge is 
+performed to keep the number of files down and responsiveness up. 
+<br><br>
+Each file, called a BigFile and defined by BigFile.h, can actually consist of 
+multiple physical files, each limited in size to 512MB. In this manner 
+Gigablast overcomes the 2GB file limit imposed by some kernels or disk systems.
+Each physical file in a BigFile, after the first file, has a ".partX" 
+extension added to its filename, where X ranges from 1 to infinity. Throughout
+this document, "BigFile" is used interchangably with "file".
+<br><br>
+If the tree can not accomodate a record add, it will return an ETRYAGAIN error.
+Typically, most Gigablast routines will wait one second before retrying the
+add.
+<br>
+
+<h3>Dumping an Rdb Tree</h3>
+The RdbDump class is responsible for dumping the RdbTree class to disk. It
+dumps a little bit of the tree at a time because it can take a few hundred
+milliseconds seconds to gather a large list of records from the tree, 
+especially when the records are dataless (just keys). Since RdbTree::getList() 
+is not threaded it is important that RdbDump gets a little bit at a time so 
+it does not block other operations.
+<br>
+
+<a name="mergingfiles"></a>
+<a name="rdbmerge"></a>
+<h3>Merging Rdb Files</h3>
+Rdb merges just enough files as to keep the number of files at or below the 
+threshold specified in gb.conf, which is &lt;indexdbMaxFilesToMerge&gt; for 
+Indexdb, for example. <b>RdbMerge.cpp</b> is used to control the merge logic. 
+The merge chooses which files to merge so as to minimize 
+the amount of disk writing for the long term. It is important to keep the 
+number of files low, because any time a key range of records is requested, the
+number of disk seeks will be low and the database will be responsive.
+<br><br>
+When too many files have accumulated on disk, the database will enter "urgent 
+merge mode". It will show this in the log when it happens. When that happens, 
+Gigablast will not dump the corresponding RdbTree to disk because
+it will create too many files.  If the RdbTree is full then any
+attempts to add data to it when Gigablast is in "urgent merge mode" will fail
+with an ETRYAGAIN error. These error replies are counted on a per host basis
+and displayed in the Hosts table. At this point the host is considered to be
+a spider bottleneck, and most spiders will be stuck waiting to add data to
+the host.
+<br><br>
+If Gigablast is configured to "use merge tokens", (which no longer works for some reason and has since been disabled) then any file merge operation
+may be postponed if another instance of Gigablast is performing a merge on the
+same computer's IDE bus, or if the twin of the host is merging. This is done
+mostly for performance reasons. File merge operations tend to decrease disk
+access times, so having a handy twin and not bogging down an IDE bus allows
+Gigablast's load balancing algorithms to redirect requests to hosts that are
+not involved with a big file merge.
+<br>
+
+<a name="deletingrecs"></a>
+<h3>Deleting Rdb Records</h3>
+The last bit of the 12 bytes key, key_t, is called the delbit. It is 0 if the
+key is a "negative key", it is 1 if the key is a "positive key". When 
+performing a merge, a negative key may collide with its positive counterpart
+thus annihilating one another. Therefore, deletes are performed by taking the
+key of the record you want to delete, changing the low bit from a 1 to a 0,
+and then adding that key to the database. Negative keys are always dataless.
+<br>
+
+<a name="readingrecs"></a>
+<h3>Reading a List of Rdb Records</h3>
+When a user requests a list of records, Gigablast will read the records
+in the key range from each file. If no more than X bytes of records are
+requested, then Gigablast will read no more than X bytes from each file. After
+the reading, it merges the lists from each file into a final list. During this
+phrase it will also annihilate positive keys with their negative counterparts.
+<br><br>
+<a name="rdbmap"></a>
+In order to determine where to start reading in each file for the database,
+Gigablast uses a "map file". The map file, encompassed by <b>RdbMap.cpp</b>,  
+records the key of the first record
+that occurs on each disk page. Each disk page is PAGE_SIZE bytes, currently,
+16k. In addition to recording the key of the first record that start on
+each page, it records a 2 byte offset of the key into that page. The map file
+is represented by the RdbMap class.
+<br><br>
+The Msg3::readList() routine is used retrieve a list of Rdb records from 
+a local Rdb. Like most Msg classes, it allows you to specify a callback
+function and callback data in case it blocks. The Msg5 class contains the Msg3
+class and extends it with the error correction (discussed below) and caching
+capabilities. Calling Msg5::getList() also allows you to incorporate the
+lists from the RdbTree in order to get realtime data. Msg3 is used mostly
+by the file merge operation.
+<br>
+
+<a name="errorcorrection"></a>
+<h3>Rdb Error Correction</h3>
+Every time a list of records is read, either for answering a query or for
+doing a file merge operation, it is checked for corruption. Right now
+just the order of the keys of the records, and if those keys are out of the
+requested key range, are checked. Later, checksums may
+be implemented as well. If some keys are found to be out of order or out
+of the requested key range, the request
+for the list is forwared to that host's twin. The twin is a mirror image. 
+If the twin has the data intact, it returns its data across the network,  
+but the twin will return all keys it has in that range, not just necessarily from a single file, thus we can end up patching the corrupted data with a list that is hundreds of times bigger.
+Since this
+procedure also happens during a file merge operation, merging is a way of
+correcting the data.
+<br><br>
+If there is no twin available, or the twin's data is corrupt as well, then
+Gigablast attempts to excise the smallest amount of data so as to regain
+integrity. Any time corruption is encountered it is noted in the log with
+a message like:
+<pre>
+1145413139583 81 WARN  db     [31956]  Key out of order in list of records.
+1145413139583 81 WARN  db     [31956]  Corrupt filename is indexdb1215.dat.
+1145413139583 81 WARN  db     [31956]  startKey.n1=af6da55 n0=14a9fe4f69cd6d46 endKey.n1=b14e5d0 n0=8d4cfb0deeb52cc3
+1145413139729 81 WARN  db     [31956]  Removed 0 bytes of data from list to make it sane.
+1145413139729 81 WARN  db     [31956]  Removed 6 recs to fix out of order problem.
+1145413139729 81 WARN  db     [31956]  Removed 12153 recs to fix out of range problem.
+1145413139975 81 WARN  net     Encountered a corrupt list.
+1145413139975 81 WARN  net     Getting remote list from twin instead.
+1145413139471 81 WARN  net     Received good list from twin. Requested 5000000 bytes and got 5000010. startKey.n1=af6cc0e n0=ae7dfec68a44a788 endKey.n1=ffffffffffffffff n0=ffffffffffffffff
+</pre>
+<br>
+
+<a name="netreads"></a>
+<a name="msg0"></a>
+<h3>Getting a List of Records from Rdb in a Network</h3>
+<b>Msg0.cpp</b> is used to retrieve a list of Rdb records from an abritrary
+host. Indexdb is currently the only database where lists of records are
+needed. All the other databases pretty much just do single key lookups. Each
+database chooses how to partition its records based on the key across the
+many hosts in a network. For the most part, the most significant bits of the
+key are used to determine which host is responsible for storing that record.
+This is why Gigablast is currently limited to running on 2, 4, 8, 16 ... or 
+2^n machines. Msg0 should normally be used to get records, not Msg5 or Msg3.
+<br>
+
+<a name="netadds"></a>
+<a name="msg1"></a>
+<h3>Adding a Record to Rdb in a Network</h3>
+You can add record to a local instance of Rdb by using Rdb::addRecord() and
+you can use Rdb::deleteRecord() to delete records. But in order to add a
+record to a remote host you must use <b>Msg1.cpp</b>. This class
+will use the key of the record to determine which host or hosts in the network
+are responsible for storing the record. It will continue to send the add
+request to each host until it receives a positive reply. If the host receiving
+the record is down, the add operation will not complete, and will keep
+retrying forever.
+<br>
+
+
+<a name="varkeysize"></a>
+<h3>Variable Key Size</h3>
+As of June 2005, Rdb supports a variable key size. Before, the key was always of class <i>key_t</i> as defined in types.h as being 12 bytes. Now the key can be 16 bytes as well. The key size, either 12 or 16 bytes, is passed into the Rdb::init() function. MAX_KEY_BYTES is currently #define'd as being 16, so if you ever use a key bigger than 16 bytes that must be updated. Furthermore, the functions for operating on key_t's, while still available, have been generalized to accept a key size parameter. These functions are in types.h as well, and the more popular ones are KEYSET() and KEYCMP() for setting and comparing variable sized keys.
+<br><br>
+To convert the Rdb files from a fixed-size key to a variable-sized one required modifying the files of the Associated Classes (listed above). Essentially, all variables of type key_t were changed to character pointers (char *), and all key assignment and comparison operators (and others) were changed to use the more general KEYSET() and KEYCMP() functions in types.h. To maintain backwards compatibility and ease migration, all Rdb associated classes still accept key_t parameters, but now they also accept character pointer parameters for passing in keys.
+<br><br>
+Some of the more common bugs from this change: since the keys are now character pointers, data owned by one class often got overwritten by another, therefore you have to remember to copy the key using KEYSET() rather than just operator on the key that the pointer points to. Another common mistake is using the KEYCMP() function without having a comparison operator immediately following in, such as < > = or !=. Also tossing the variable key size, m_ks, around and keeping it in agreement is another weak point. There were some cases of leaving a statement like <i>(char *)&key</i> alone when it should have been changed to just <i>key</i> since it was made into a <i>(char *)</i> from a <i>key_t</i>. And a case of not dealing with the 6-byte compression correctly, like replacing <i>6</i> with <i>m_ks-6</i> when we should not have, like in RdbList::constrain_r(). Whenever possible, the original code was left intact and simply commented out to aid in future debugging.
+<br>
+
+
+<a name="indexdb"></a>
+<a name="indexlist"></a>
+<h2>Indexdb</h2>
+The key for an Indexdb record has the following bitmap:
+
+<pre>
+tttttttt tttttttt tttttttt tttttttt  t = termid (48bits)
+tttttttt tttttttt ssssssss dddddddd  s = ~score
+dddddddd dddddddd dddddddd dddddd0Z  d = docId (38 bits)  Z = delbit
+</pre>
+
+When Rdb::m_useHalfKeys is on and the preceeding key as the same 6 bytes as
+the following key, then the following key, called a half key, only requires 
+6 bytes, therefore, has the following bitmap:
+
+<pre>
+ssssssss dddddddd dddddddd dddddddd  d = docId, s = ~score
+dddddddd dddddd1Z                    Z = delbit
+</pre>
+
+Every term that Gigablast indexes, be it a word or phrase, is hashed using
+the hash64() routine in the hash.h. This is a very fast and effective hashing
+function. The resulting hash of the term is called the termid. It is 
+constrained to 48 bits.  
+<br><br>
+Next, the score of that term is computed. Generally, the more times the term 
+occurs in the document the higher the score. Other factors, like incoming 
+links and link text and quality of the document, may contribute to the score 
+of the term. The score is 4 bytes but is logarithmically mapped into 8 bits, 
+and complemented, so documents with higher scores appear above those with 
+lower scores, since the Rdb is sorted in ascending order. 
+<br><br>
+The &lt;indexdbTruncationLimit&gt; parameter in gb.conf, reflected as 
+Conf::m_indexdbTruncationLimit, allows you to specify the maximum 
+number of docids allowed per termid. This allows you to save disk space. Right 
+now it is set to 5 million, a fairly hefty number. The merge routine,
+RdbList::indexMerge_r() will ensure that no returned Indexdb list violates
+this truncation limit. This routine is used for reading data for resolving
+queries as well as doing file merge operations.
+A list of Indexdb records all with the same termid, is called a termlist or
+indexlist.
+<br><br>
+
+<a name="datedb"></a>
+<h2>Datedb</h2>
+The key for an Datedb record has the following 16-byte bitmap:
+
+<pre>
+tttttttt tttttttt tttttttt tttttttt  t = termId (48bits)
+tttttttt tttttttt DDDDDDDD DDDDDDDD  D = ~date
+DDDDDDDD DDDDDDDD ssssssss dddddddd  s = ~score
+dddddddd dddddddd dddddddd dddddd0Z  d = docId (38 bits)
+
+And, similar to indexdb, datedb also has a half bit for compression down to 10 bytes:
+
+                  DDDDDDDD DDDDDDDD  D = ~date
+DDDDDDDD DDDDDDDD ssssssss dddddddd  s = ~score
+dddddddd dddddddd dddddddd dddddd1Z  d = docId (38 bits)
+
+</pre>
+Datedb was added along with variable-sized keys (mentioned above). It is basically the same as indexdb, but has a 4-byte date field inserted. IndexTable.cpp was modified slightly to treat dates as scores in order to provide sort by date functionality. By setting the sdate=1 cgi parameter, Gigablast should limit the termlist lookups to Datedb. Using date1=X and date2=Y cgi parameters will tell Gigablast to constrain the termlist by those dates. date1 and date2 are currently seconds since the epoch. Gigablast will search for the date of a document in this order, stopping at the first non-zero date value:<br>
+1. &lt;meta name=datenum content=123456789&gt;<br>
+2. &lt;meta name=date content="Dec 1 2006"&gt;<br>
+3. The last modified date in the HTTP mime that the web server returns.
+<br><br>
+
+<a name="titledb"></a>
+<a name="titlerec"></a>
+<h2>Titledb</h2>
+Titledb holds a cached copy of every web page in the index. The TitleRec
+class is used to serialize and deserialize the information from an Rdb record
+into something more useful. It also uses the freely available zlib library
+to compress web pages to about 1/5th of their size. Depending on the word
+density on a page and the truncation limit, Titledb is usually slightly bigger
+than Indexdb. See TitleRec.h to see what kind of information is contained
+in a TitleRec.
+<br><br>
+The key of a Titledb record, a TitleRec, has the following bitmap:
+
+<pre>
+dddddddd dddddddd dddddddd dddddddd  d = docId
+dddddddd hhhhhhhh hhhhhhhh hhhhhhhh  h = hash of site name
+hhcccccc cccccccc cccccccc cccccccD  c = content hash, D = delbit
+</pre>
+
+The low bits of the top 31 bits of the docId are used to determine which
+host in the network stores the Titledb record. See Titledb::getGroupId().
+<br><br>
+The hash of the sitename is used for doing site clustering. The hash of the
+content is used for deduping identical pages from the search results.
+<br><br>
+<b>IMPORTANT:</b> Any time you change TITLEREC_VERSION in Titledb.h or make 
+any parsing change to TitleRec.cpp, you must also change it in all parent bk 
+respositories to keep things backwards compatible. We need to ensure that
+newer versions of gb can parse the Titledb records of older versions. Because
+if you increment TITLEREC_VERSION in the newer repository and then someone
+else increments it for a different reason in the parent repository, then you
+end up having a conflict as to what the latest version number actually stands
+for. So versions need to be immediately propagated both ways to avoid this.
+<a name="spiderdb"></a>
+<h2>Spiderdb</h2>
+Spiderdb is responsible for the spidering schedule. Every url in spiderdb is
+either old or new. If it is already in the index, it is old, otherwise, it is
+new. The urls in Spiderdb are further categorized by a priority from 0 to 7.
+If there are urls ready to be spidered in the priority 7 queue, then they
+take precedence over urls in the priority 6 queue. 
+<br><br>
+All the urls in Spiderdb priority queue are sorted by the date they are
+scheduled to be spidered. Typically, a url will not be spidered before its
+time, but you can tweak the window in the Spider Controls page. Furthermore,
+you can turn the spidering of new or old urls on and off, in addition to
+disabling spidering based on the priority level. Link harvesting can also be
+toggled based on the spider queue. This way you can harvest links only from
+higher priority spider queues.
+<br><br>
+<a name="pagereindex"></a>
+Some spiderdb records are docid based only and will not have an associated url.
+These records were usually added from the <b>PageReindex.cpp</b> tool which 
+allows the user to store the docids of a bunch of search results directly into 
+spiderdb for respidering.
+<br><br>
+The bitmap of a key in Spiderdb:
+
+<pre>
+00000000 00000000 00000000 pppNtttt  t = time to spider, p = ~ of priority
+tttttttt tttttttt tttttttt ttttRRf0  R = retry #, f = forced?
+dddddddd dddddddd dddddddd dddddddD  d = top 32 bits of docId, D = delbit
+                                     N = 1 iff url not in titledb (isNew)
+</pre>
+
+Each Spiderdb record also records the number of times the url was tried and
+failed. In the Spider Controls you can specify how many until Gigablast gives
+up and deletes the url from Spiderdb, and possibly from the other databases
+if it was indexed.
+<br><br>
+If a url was "forced", then it was added to Spiderdb even though it was 
+detected as already being in there. Urldb lets us know if a url is in Spiderdb
+or not. So if the url is added to Spiderdb even though it is in there already
+it is called "forced" url. Once a forced url is spidered then that Spiderdb
+record is discarded. Otherwise, if the url was spidered and was not forced,
+it is rescheduled for a future spidering, and the old Spiderdb record is
+deleted and a new one is added.
+<br><br>
+Gigablast attempts to determine if the url changed since its last spidering.
+If it has, then it will try to decrease the time between spiderings, otherwise
+it will try to increase that time. The min and max respider times can be
+specified in the Spider Controls page, so you can ensure Gigablast does not
+wait long enough or ensure it does not wait too long between respiderings.
+<br><br>
+For more about the spider process see <a href="#buildlayer">The Build Layer</a>.
+
+
+<br><br>
+
+
+<a name="urldb"></a>
+<h2>Urldb</h2>
+Urldb is like a map file. A record in urldb has this bitmap:
+
+<pre>
+00000000 00000000 00000000 00000000  H = half bit
+00000000 dddddddd dddddddd dddddddd  d = 36 bit docId
+dddddddd ddddddee eeeeefff fffffCHD  e = url hash ext, f = title file # (tfn)
+                                     C = clean bit , D = delbit
+</pre>
+
+When a caller requests the cached web page for a docid they are essentially requesting the TitleRec for that docid. We have to read the TitleRec from a Titledb file. Because there can be hundreds of titledb files, checking
+each one is a burden. Therefore, we ask urldb which one has it. If the title
+file number (tfn) is 255, that means the url is just in the Spiderdb OR the TitleRec is in Titledb's RdbTree. The tfn is a secondary numeric identifier present in the actual filename of each titledb file. Only titledb files have this seconday id and it is the number immediately following the hyphen.
+<br><br>
+The purpose of urldb originally grew from the fact that looking up an old titlerec for re-spidering purposes would require looking in a few files. This was a big bottleneck for the spidering process and also made it harder to handle large query volumes while spidering in the background. Furthermore, much merging was required to keep the number of titledb big files down to a respectable few. Urldb solves this problem by mapping each docid directly to a single titledb file.
+<br><br>
+Urldb also greatly complicates things. It has to remain in perfect sync with titledb. Every time titledb files are merged the tfn of each TitleRec involved is changed. So right after we dump out the titledb list we add a urldb list to urldb that has the new tfns for the titledbs in that list. This is done in RdbDump::updateUrldbLoop(). Furthermore, since we often merge titledb files in a somewhat random nature, we can not just override the urldb rec for each TitleRec involved in that merge, because a more uptodate TitleRec for the same docid may be in another titledb file. Therefore, we must also read the corresponding urldb lists for the titledb lists involved in the merge, and lookup the uptodate tfn of each TitleRec. If it is indeed a match for the file being merged, then we can do the urldb override.
+<br><br>
+When a new url is added to the spider queue, via Msg10, we first check urldb to see if it's already in there. We extend the probable docid of the url with the 7-bit hash extension (the number of bits is now #defined as URLDB_EXTBITS in Urldb.h so we can use 23 bits for massive collections) to help reduce collisions and/or false positives. We lookup a range of urldb records, corresponding to all the possible actual docids that that url might have taken if it was indexed earlier. This list is looked up in Msg10::addUrlLoop(). The keys defining the list are uk1 and uk2. If any urldb record in that list has the same hash extension as the url being added then we consider the url to already be in the index or in a spider queue, even though it may not. The probability is low.
+<br><br>
+If the url is determined not to be in urldb then it is added to spiderdb and also to urldb. We use the same probable docid and hash extension when adding it to urldb, and we use a tfn of 255 to indicate that it is in a spider queue only. (NOTE: this can also mean it is indexed, and its TitleRec is in the tree in memory as well). When we finally index a new url we actually do not add its urldb record to urldb since Msg22 will check the RdbTree first for any titleRec before even bothering with urldb. However, if the actual docid of the new url turns out to be different because it collided with the actual docid of an existing, indexed url, then we remove its old record from urldb, and we do add the new record with the actual docid (TODO). This logic is contained in Msg14::addUrlRecs().
+<br><br>
+If reindexing an old url, we do not re-add the urldb record with a tfn of 255 because it is not efficient and because Msg22 will check the RdbTree for the titleRec before consulting Titledb.
+<br><br>
+When merging urldb lists in RdbList::indexMerge_r() we ignore the tfn bits. That allows the tfns of newer urldb recs to override those of older urldb recs. The tfns are really not meant to be part of the key, they are just data that we never need to sort by, but we cram them into the key to save space.
+<br><br>
+We try to keep all of the Urldb records in memory. Not necessarily in the RdbTree, but in a disk page cache. Therefore, try to keep urldbMaxDiskPageCacheMem bigenough to hold the entire Urldb in memory. This speeds up things a good bit. Urldb also takes heavy advantage of using half keys for compression, as described above under Indexdb. Urldb's disk page cache is also biased, that is, lower docids are looked up on one host, and higher docids are looked up on that host's twin. This split, or biases, the cache making it twice as effective. If more than two hosts are in a group, then it will split the cache across all of them equally. This logic is in Msg22.cpp. (search for "bias" in that file).
+<br><br>
+Everytime Titledb files are merged, the affected docids must be updated in 
+Urldb, but because Urldb is so much smaller than Titledb, it does not inhibit
+performance.
+<br><br>
+Msg14::addUrlRecs() will update urldb directly via Msg1 when Msg14 deletes, adds or updates a titledb record.
+<br><br>
+In conclusion, Urldb is for the performance benefit of Msg22 (used to lookup a TitleRec from a docid or url) and Msg10 (used to add a url to a spider queue). Without it, things would be *much* slower. Hooray for Urldb.
+<br><br>
+<a name="checksumdb"></a>
+<h2>Checksumdb</h2>
+<pre>
+cccccccc hhhhhhhh hhhhhhhh cccccccc  h = host name hash
+cccccccc cccccccc cccccccc cddddddd  c = content, collection and host hash
+dddddddd dddddddd dddddddd dddddddD  d = docId , D = delbit
+</pre>
+
+<a name="sitedb"></a>
+<a name="siterec"></a>
+<a name="msg8"></a>
+<a name="msg9"></a>
+<h2>Sitedb</h2>
+<pre>
+dddddddd dddddddd dddddddd dddddddd  d = domain hash (w/ collection)
+uuuuuuuu uuuuuuuu uuuuuuuu uuuuuuuu  u = special url hash
+uuuuuuuu uuuuuuuu uuuuuuuu uuuuuuuu  
+</pre>
+
+Sitedb maps a url to a site file number (sfn). The site file is now called
+a <a href="overview.html#ruleset">ruleset</a> file and has the name sitedbN.xml in the 
+working directory.  All rulesets must be archived in the Bitkeeper repository at /gb/conf/. Therefore, all gb clusters share the same ruleset name space. <b>Msg8.cpp</b> and <b>Msg9.cpp</b> are used to 
+respectively get and set sitedb records.
+
+<a name="catdb"></a>
+<h2>Catdb</h2>
+
+<pre>
+dddddddd dddddddd dddddddd dddddddd  d = domain hash
+uuuuuuuu uuuuuuuu uuuuuuuu uuuuuuuu  u = special url hash
+uuuuuuuu uuuuuuuu uuuuuuuu uuuuuuuu
+
+Data Block:
+ . number of catides (1 byte)
+ . list of catids    (4 bytes each)
+ . sitedb file #     (3 bytes)
+ . sitedb version #  (1 byte)
+ . siteUrl (remaining bytes)
+</pre>
+
+Catdb is a special implementation of Sitedb.  While it is similar in that
+a single record is stored per url and the keys are created using the same
+hashes, the record stores additional category information about the url.
+This includes how many categories the url is in and which categories it is in
+(their ids).  Like sitedb, Msg8 and Msg9 are used to get and set catdb.  Msg2a
+is used to generate a full catdb using directory information and calling Msg9.
+<br><br>
+Catdb is only used at spider time for the spider to lookup urls
+and see if they are in the directory and which categories they are under.
+A url's category information is stored in its TitleRec and is also indexed
+using special terms (see below).
+
+<h3>dmozparse</h3>
+The program "dmozparse" is implemented individually and allows for the
+creation of proprietary data files using the RDF data available from DMOZ.
+Dmozparse will create two main data files, gbdmoz.content.dat and
+gbdmoz.structure.dat.  gbdmoz.content.dat stores a list of url strings and
+their associated category IDs.  This is used to populate catdb.
+gbdmoz.structure.dat stores and list of category names, their IDs, their
+parent IDs, their offsets into the original RDF files, and the number of urls
+present in each category.  The offsets are used to lookup more complex
+information about the categories, such as sub-category lists and titles and
+summaries for urls.
+See the Overview for proper use of dmozparse.
+
+<h3>Msg2a</h3>
+<a name="msg2a"></a>
+Catdb is generated using Msg2a, which reads the gbdmoz.content.dat file
+generated by dmozparse and sets the Catdb records accordingly with Msg9.
+Msg2a is also used to update Catdb when new data is available.
+See the Overview for proper building and updating of Catdb.
+
+<h3>Categories</h3>
+The Categories class is used to store the Directory's hierarchy and provide
+general functionality when dealing with the directory.  It is instanced
+as the global "g_categories".  The hierarchy is loaded from the
+gbdmoz.structure.dat file when Gigablast starts.  Categories provides an
+interface to lookup and print category names based on their ID.  Titles
+and Summaries for a given url in a category may also be looked up.  Categories
+also provides the ability to generate a list of sub-categories for a given
+categories, which is used by Msg2b (see below).
+
+<a name="msg2b"></a>
+<h3>Msg2b</h3>
+Msg2b is used to generate and sort a category's directory listing.  This
+includes the sub-categories, related categories, and other languages of the
+given category.  Input is given as the category ID to generate the directory
+listing for.  Msg2b will store the listing internally.  This is primarily used
+by PageResults to make a DMOZ style directory which can be browsed by users.
+
+<h3>Indexed Catids, Direct and Indirect</h3>
+When a url that is in the directory gets spidered, the IDs of the categories
+the url is in are indexed.  For the exact categories the url appears in,
+the prefix "gbdcat" is hashed with the category id.  For all parent
+categories of these categories, the prefix "gbpdcat" is used.  The base
+categores the url is in will also be indexed with "gbpdcat".  These are
+considered "direct" catids.
+<br><br>
+All urls which are under a sub-url that is in the directory will have
+category IDs indexed as "indirect" catids.  All of the direct catids
+associated with the sub-url will be indexed using the prefixes "gbicat"
+and "gbpicat".
+<br><br>
+Indexing the direct catids allows for a fast lookup of all the urls under a
+category.  Searches can also be restricted to single categories, either the
+base category itself or the inclusion of all sub-categories.  Indirect
+catids allows pages under those listed in a category to be searched as well.
+
+
+
+
+<hr>
+
+
+
+<a name="networklayer"></a>
+<h1>The Network Layer</h1>
+The network code consists of 5 parts:
+<br>
+1. The UDP Server<br>
+2. The Multicast class<br>
+3. The Message Classes<br>
+4. The TCP Server<br>
+5. The HTTP Server<br>
+<br>
+
+<a name="udpserver"></a>
+<a name="udpprotocol"></a>
+<a name="udpslot"></a>
+<br><br>
+
+<a name="netclasses"></a>
+<h2>Associated Classes (.cpp and .h files)</h2>
+<table cellpadding=3 border=1>
+<tr><td>Dns</td><td>Net</td><td>A DNS client built on top of the UdpServer class.</td></tr>
+<tr><td>DnsProtocol</td><td>Net</td><td>Uses UdpServer to make a protocol for talking to DNS servers. Used by Dns class.</td></tr>
+<tr><td>HttpMime</td><td>Net</td><td>Creates and parses an HTTP MIME header.</td></tr>
+<tr><td>HttpRequest</td><td>Net</td><td>Creates and parses an HTTP request.</td></tr>
+<tr><td>HttpServer</td><td>Net</td><td>Gigablast's highly efficient web server, contains a TcpServer class.</td></tr>
+<tr><td>Multicast</td><td>Net</td><td>Used to reroute a request if it fails to be answered in time. Also used to send a request to multiple hosts in the cluster, usually to a group for data storage purposes.</td></tr>
+<tr><td>TcpServer</td><td>Net</td><td>A TCP server which contains an array of TcpSockets.</td></tr>
+<tr><td>TcpSockets</td><td>Net</td><td>A C++ wrapper for a TCP socket.</td></tr><tr><td>UdpServer</td><td>Net</td><td>A reliable UDP server that uses non-blocking sockets and calls handlers  recieving a message. The handle called depends on that message's type. The handler is UdpServer::m_handlers[msgType].</td></tr>
+<tr><td>UdpSlot</td><td>Net</td><td>Basically a "socket" for the UdpServer. The UdpServer contains an array of a few thousand of these. When none are available to conduct receive a request, the dgram is dropped and will later be resent by the requester in a back-off fashion.</td></tr>
+</table>
+<br><br>
+
+<h2>The UDP Server</h2>
+The <b>UdpServer.cpp</b>, <b>UdpSlot.cpp</b> and <b>UdpProtocol.h</b> 
+classes constitute the framework
+for Gigablast's UDP server, a fast and reliable method for transmitting data
+between hosts in a Gigablast network.
+<br><br>
+Gigablast uses two instances of the UdpServer class. One of them,
+g_udpServer2, uses asynchronous signals to reply to received dgrams by
+interrupting the current process. g_udpServer is not asynchronous. The asynchronous instance is not really used any more since the 2.4.31 kernel does not seem to really support it because ping replies were not instant under heavy load.
+<br><br>
+The way it works is that the caller calls g_udpServer.sendRequest ( ... )
+to send a message. The receiving host will get a signal that the udp socket
+descriptor is ready for reading. It will then peek at the datagram using the
+read ( ... , MSG_PEEK , ... ) call to get the transid (transaction id) from 
+the datagram. The transid is either associated with an existing UdpSlot or a
+new UdpSlot is created to handle the transaction. The UdpSlots are stored in
+a fixed-size array, so if you run out of them, the incoming datagram will
+be silently dropped and will be re-sent later.
+<br><br>
+When a UdpSlot is selected to receive a datagram, it then calls 
+UdpSlot::sendAck() to send back an ACK datagram packet. When the sender
+receives the ACK it sets a bit in UdpSlot::m_readAckBits[] to indicate it has 
+done so. Likewise, UdpSlot::m_sendAckBits[] are updated on the machine 
+receving the message, and m_readBits[] and m_sendBits[] are used to keep track
+of what non-ACK datagrams have been read or sent respectively.
+<br><br>
+Gigablast will send up to ACK_WINDOW_SIZE (defined in UdpSlot.cpp as 12) 
+non-ACK datagrams before it requires an ACK to send more. If doing a local send
+then Gigablast will send up to ACK_WINDOW_SIZE_LB (loopback) datagrams.
+<br><br>
+If the sending host has not received an ACK datagram within RESEND_0 
+(defined to be 33 in UdpSlot.cpp) milliseconds, it will resend the datagrams 
+that have not been ACKed. If the host is sending on g_udpServer, then RESEND_1
+(defined to be 100 in UdpSlot.cpp) milliseconds is used. If sending a short
+message (under one datagram in size) then RESEND_0_SHORT (33 ms) is used. The
+resends are taken care of in in UdpServer::timePoll() which is called every
+20ms for g_udpServer2 (defined in main.cpp) and every 60ms for g_udpServer.
+<br><br>
+Each datagram can be up to DGRAM_SIZE bytes. You can make this up to 64k
+and let the kernel deal with chopping the datagrams up into IP packets that
+fit under the MTU, but unfortunately, the new 2.6 kernel does not allow you
+to send datagrams larger than the MTU over the loopback device. Datagrams
+sent over the loopback device can be up to DGRAM_SIZE_LB bytes, and datagrams
+used by the Dns class can be up to DGRAM_SIZE_DNS bytes.
+<br><br>
+The UdpProtocol class is used to define and parse the header used by each 
+datagram. The Dns class derives its DnsProtocl class from UdpProtocol in
+order to use the proper DNS headers.
+<br><br>
+The bitmap of the header used by the UdpProtocol class is the following:
+<pre>
+REtttttt ACNnnnnn nnnnnnnn nnnnnnnn  R = is Reply?, E = hadError? N=nice
+iiiiiiii iiiiiiii iiiiiiii iiiiiiii  t = msgType, A = isAck?, n = dgram #
+ssssssss ssssssss ssssssss ssssssss  i = transId C = cancelTransAck
+dddddddd dddddddd dddddddd dddddddd  s = msgSize (iff !ack) (w/o hdrs!)
+dddddddd ........ ........ ........  d = msg content ...
+</pre>
+
+The niceness (N bit) of a datagram can be either 0 or 1. If it is 0 (not nice)
+then it will take priority over a datagram with a niceness of 1. This just 
+means that we will call the handlers for it first. It's not a very big deal.
+<br><br>
+The datagram number (n bits) are used to number the datagrams so we can
+re-assemble them in the correct order.
+<br><br>
+The message type corresponds to all of the Msg*.cpp classes you see in the
+source tree. The message type also maps to a pointer to a function, called the 
+handler function, which generates and sends back a reply. This map (array) of 
+pointers to handler functions is UdpServer::m_handlers[]. Each Msg*.cpp class
+must call g_udpServer2.registerHandler() to register its handler function for
+its message type. Its handler function will be called when a complete request of its message type (msgType) is received.
+<br><br>
+The handler function must set the UdpSlot's (UDP socket) m_requestBuf to NULL if it does not want UdpServer to free it. More likely, however, is that when receiving a <b>reply</b> from the UdpServer you will want to set UdpSlot::m_readBuf to NULL so the UdpServer doesn't free it, but then, of course, you are responsible for freeing it.
+<br><br>
+
+
+<a name="multicasting"></a>
+<a name="multicast"></a>
+<h2>Multicasting</h2>
+The <b>Multicast.cpp</b> class is also considered part of the network layer. 
+It takes a request and broadcasts it to a set of twin hosts. It can do this in 
+one of two ways. One way is to send the request to a set of twin hosts and 
+not complete until all hosts have sent back a reply. This method 
+is used when adding data. Gigablast needs to add data to a host and all of 
+its mirrors for the add to be considered a success. So if one host crashes 
+and is not available to receive the data, the requester will keep re-sending 
+the request to that host until it comes back online. 
+<br><br>
+The second broadcast method employed by Multicast.cpp is used mainly for 
+reading data. If m_loadBalancing is true, it will send an asynchronous
+request to each host (using Msg34.cpp) in a set of twin hosts to determine the load on each host.
+Once it knows the load of each host, the multicast will forward the request to 
+the least loaded host. If, for some reason, the selected host does not reply 
+within a set amount of time (depends on the message type -- see Multicast.cpp) 
+then the request will be re-routed to another host in the set of twins.
+
+<a name="msgclasses"></a>
+<h2>The Msg classes</h2>
+All of the Msg*.cpp files correspond to network messages. Most of them are
+requests. See the classes that start with Msg* for explanations in the 
+<a href="#filelist">File List</a>.
+<br><br>
+
+<a name="tcpserver"></a>
+<h2>The TCP Server</h2>
+<br>
+
+
+<a name="httpserver"></a>
+<h2>The HTTP Server</h2>
+<br>
+
+
+<a name="dns"></a>
+<h2>The DNS Resolver</h2>
+<br>
+Originally Dns.cpp was built to interface with servers running the bind9 
+DNS program. A query containing the hostname would be sent to a bind9 process
+(which was selected based on the hash of the hostname)
+and the bind9 process would
+perform the recursive DNS lookups and return the final answer, the IP address
+of that hostname.
+<br><br>
+However, since the advent of the 256 node cluster, we've had to run multiple
+instances of bind9, like about 10 of them, just to support the spider load.
+Rather than have to worry about if these processes or servers go down, or 
+if the processes get terminated, or contend too much for memory or cpu with
+the Gigablast processes they share the server with, we decided to just replace
+bind9's recursive lookup functionality with about 400 lines of additional
+code the Dns.cpp. This also serves to make the code base more independent.
+<br><br>Dns::getIp() is the entry point to Dns.cpp's functionality. It will
+create a UDP datagram query and send it to a nameserver (DNS server). It
+will expect to get back the IP address of the hostname in the query or receive
+an error packet, or timeout. Now, since bind9 is out of the loop, we have
+to direct the request to a root DNS server. The root servers will refer us
+to TLD root servers which will then refer us to others, etc. Sometimes 
+the nameservers we are referred to do not have their IPs listed in the reply
+and so we have to look those up on the side. Also, we often are referred to
+a list of servers to ask, and so if any of those timeout we have to move to
+the next in the list. This explains the nature of the DnsState
+class which is used to keep our information persistent as we wait for replies.
+<br><br>
+DnsState has an m_depth member which is 0 when we ask the root servers,
+1 when we ask the TLD root servers, etc. m_depth is used to offset us into
+an array of DNS IPs, m_dnsIps[], and an array of DNS names, m_dnsNames[], which
+unfortunately do not have IPs included and most be looked up should we need 
+to ask them. Furthermore, at each depth we are limited to MAX_DNS_IPS IP
+addresses and MAX_DNS_IPS DNS names. So if we get referred to more than
+that many IP addesses we will truncate the list. This value is a hefty 32 right
+now, and that is per depth level. MAX_DEPTH is about 7. That is how many times
+we can be referred to other nameservers before giving up and returning
+ETIMEDOUT. We also avoid asking the same IP address twice by keeping a list
+of m_triedIps in the DnsState. And DnsState has an m_buf buffer that is used
+for allocating extra DnsStates for doing IP lookups on nameservers we are 
+referred to but have no IPs given in the response. We can use m_buf to 
+recursively create
+up to 3 DnsStates before giving up. For instance, if we are trying to get
+the IP of a nameserver, and we are referred to 2 more nameservers, without IPs,
+so we must use the DnsState, etc.
+<br><br>
+To avoid duplicate parallel IP lookups we use s_table, which is a hashtable
+using the HashTableT.cpp class in which each bucket is a CallbackEntry, which
+consists of a callback function and a state. So Dns::getIp() will use the 
+hostname you want to get an IP for as the key into this hash table. If there
+is a CallbackEntry for that key then you must wait in line because someone
+has already sent out a request for that hostname. The line is kept in the form
+of a linked list. Each CallbackEntry has an m_nextKey member, too, which
+refers to the key of the next CallbackEntry in s_table waiting on that same
+hostname. However, the people that are not first in line use a s_bogus for
+their key, since all keys in the hash table must be unique. And s_bogus key
+is a long long that is incremented each time so it is used, so it should never
+ever wrap, since a long long is absolutely huge, like beyond astronomical.
+<br><br>
+We also cache timeouts into the RdbCache for about a day. That way we do not
+bottleneck on them forever. Other errors were always cached, but not timeouts
+until now. 
+We now also support a TTL in the cache. Every DNS reply has a TTL
+which specifies for how long the IP is good for and we put that into the
+cache. We actually limit it to MAX_DNS_CACHE_AGE which is currently set to
+2 days (it is in seconds).
+We may want to cache some resource records, so, for instance, we do
+not have to keep asking the root servers for the TLD servers if we know what
+they are. 
+And along the lines of future performance enhancements, 
+we may want to consider asking
+multiple nameservers, launching the requests within about a second of each
+other. And, if a reply comes back for a slot that was timedout, we should 
+probably still entertain it as a late reply.
+<br><br>
+DNS debug messages can be turned on at any time from the log tab. It is often
+helpful to use dig to assist you. like
+<i>dig @1.2.3.4 xyz.com +norecurse</i> will show you DNS 1.2.3.4 server's
+response to a request for the IP of xyz.com. And <i>dig xyz.com +trace</i>
+will show you all the servers and replies dig communes with to resolve a
+hostname to its IP address. dig also seems to get IPv6 IP addresses whereas
+the Gigablast resolver does not work on. This may be something to support 
+later.
+<a name="layer3"></a>
+<h2></h2>
+<a name="layer4"></a>
+<h2></h2>
+<a name="layer5"></a>
+<h2></h2>
+<a name="layer6"></a>
+<h2></h2>
+<a name="layer7"></a>
+<h2></h2>
+
+
+<br><br>
+
+
+
+<a name="buildlayer"></a>
+<a name="pageinject"></a>
+<hr><h1>The Build Layer</h1>
+This section describes how Gigablast downloads, parses, scores and indexes documents. <b>SpiderLoop.cpp</b>'s spiderUrl() routine is called every 30ms or so by Loop.cpp to spider a new url. If spiders are deactivated then it just returns, otherwise, it tries to get a url from <a href="#spiderdb">spiderdb</a> to spider. If successful, it allocates a new Msg14 class and passes the url to that. Msg14 downloads, parses and scores the document, and ultimately adds records to indexdb, titledb, clusterdb and checksumdb for that document. Alternately, urls and their corresponding content can be directly injected using the injection interface, <b>PageInject.cpp</b>, which calls a Msg14 directly.
+<br><br>
+This table illustrates the path of control:
+<br><br>
+<table cellpadding=3 border=1>
+<td><td>1.</td><td>Loop.cpp calls SpiderLoop::spiderUrl() every ~30ms.</td></tr>
+<td><td>2.</td><td>SpiderLoop::spiderUrl() calls SpiderCache::getNextSpiderRec() to get a <a href="#spiderdb">spiderdb</a> record which contains a url to spider.</td></tr>
+<td><td>3.</td><td>SpiderLoop allocates a new Msg14 and stores the pointer in the array of Msg14 pointers.
+</td></tr>
+<td><td>4.</td><td>SpiderLoop calls Msg14::spiderUrl() with a pointer to that Spiderdb record.</td></tr>
+<td><td>5.</td><td>Msg14 downloads, parses and scores the document.</td></tr>
+<td><td>6.</td><td>Msg14 adds/deletes records to/from <a href="#indexdb">Indexdb</a>, <a href="#titledb">Titledb</a>, <a href="#checksumdb">Checksumdb</a> and <a href="#clusterdb">Clusterdb</a>.</td></tr>
+<td><td>7.</td><td>Msg14 calls Msg10 to add links to spiderdb.</td></tr>
+<td><td>8.</td><td>Msg14 calls SpiderLoop::doneSpider().</td></tr>
+<td><td>9.</td><td>This loop is repeated starting at step 1.</td></tr>
+</table>
+<br><br>
+
+
+<a name="buildclasses"></a>
+<h2>Associated Classes (.cpp and .h files)</h2>
+<table cellpadding=3 border=1>
+<tr><td>AdultBit</td><td>Build</td><td>Used to detect if document content is naughty.</td></tr>
+<tr><td>Bits</td><td>Build</td><td>Sets descriptor bits for each word in a Words class.</td></tr>
+<tr><td>Categories</td><td>Build</td><td>Stores DMOZ categories in a hiearchy.</td></tr>
+<tr><td>DateParse</td><td>Build</td><td>Extracts the publish date from a document.</td></tr>
+<tr><td>Doc</td><td>Build</td><td>A container class to store the titleRec and siteRec and other classes associated with a document.</td></tr>
+<tr><td>Lang</td><td>Build</td><td>Unused.</td></tr>
+<tr><td>Language.h</td><td>Build</td><td>Enumerates the various languages supported by Gigablast's language detector.</td></tr>
+<tr><td>LangList</td><td>Build</td><td>Interface to the language-specific dictionaries used for language identification by XmlDoc::getLanguage().</td></tr>
+<tr><td>LinkInfo</td><td>Build</td><td>Used by the link analysis routine. Contains an array of LinkTexts.</td></tr>
+<tr><td>LinkText</td><td>Build</td><td>Contains the link information for a specific document that links to a specific url, such as quality, IP address, number of total outgoing links, and the link text for that url.</td></tr>
+<tr><td>Links</td><td>Build</td><td>Parses out all the outgoing links in a document.</td></tr>
+<tr><td>Msg10</td><td>Build</td><td>Adds a list of urls to spiderdb for spidering.</td></tr>
+<tr><td>Msg13</td><td>Build</td><td>Tells a server to download robots.txt (or get from cache) and report if Gigabot has permission to download it.</td></tr>
+<tr><td>Msg14</td><td>Build</td><td>The core class for indexing a document.</td></tr>
+<tr><td>Msg15</td><td>Build</td><td>Called by Msg14 to set the Doc class from the previously indexed TitleRec.</td></tr>
+<tr><td>Msg16</td><td>Build</td><td>Called by Msg14 to download the document and create a new titleRec to set the Doc class with.</td></tr>
+<tr><td>Msg18</td><td>Build</td><td>Unused. Was used for supporting soft banning.</td></tr>
+<tr><td>Msg19</td><td>Build</td><td>Determine if a document is a duplicate of a document already indexed from that same hostname.</td></tr>
+<tr><td>Msg23</td><td>Build</td><td>Get the link text in a document that links to a specified url. Also returns other info besides that link text.</td></tr>
+<tr><td>Msg8</td><td>Build</td><td>Gets the Sitedb record given a url.</td></tr><tr><td>Msg9</td><td>Build</td><td>Adds a Sitedb record to Sitedb for a given site/url.</td></tr>
+<tr><td>PageAddUrl</td><td>Build</td><td>HTML page to add a url or file of urls to spiderdb.</td></tr>
+<tr><td>PageInject</td><td>Build</td><td>HTML page to inject a page directly into the index.</td></tr>
+<tr><td>Phrases</td><td>Build</td><td>Generates phrases for every word in a Words class. Uses the Bits class.</td></tr>
+<tr><td>Pops</td><td>Build</td><td>Computes popularity for each word in a Words class. Uses the dictionary files in the dict subdirectory.</td></tr>
+<tr><td>Pos</td><td>Build</td><td>Computes the character position of each word in a Words class. HTML entities count as a single character. So do back-to-back spaces.</td></tr>
+<tr><td>Robotdb</td><td>Build</td><td>Caches and parses robots.txt files. Used by Msg13.</td></tr>
+<tr><td>Scores</td><td>Build</td><td>Computes the score of each word in a Words class. Used to weight the final score of a term being indexed in TermTable::hash().</td></tr>
+<tr><td>Spam</td><td>Build</td><td>Computes the probability a word is spam for every word in a Words class.</td></tr>
+<tr><td>SpamContainer</td><td>Build</td><td>Used to remove spam from the index using Msg1c and Msg1d.</td></tr>
+<tr><td>SpiderCache</td><td>Build</td><td>Spiderdb records are preloaded in this cache so SpiderLoop::spiderUrl() can get urls to spider as fast as possible.</td></tr>
+<tr><td>SpiderLoop</td><td>Build</td><td>The heart of the spider process. Continually gets urls from the SpiderCache and calls Msg14::spiderUrl() on them.</td></tr>
+<tr><td>Stemmer</td><td>Build</td><td>Unused. Given a word, computes its stem.</td></tr>
+<tr><td>StopWords</td><td>Build</td><td>A table of stop words, used by Bits to see if a word is a stop word.</td></tr>
+<tr><td>TermTable</td><td>Build</td><td>A hash table of terms from a document. Consists of termIds and scores. Used to accumulate scores. TermTable::hash() is arguably a heart of the build process.</td></tr>
+<tr><td>Url2</td><td>Build</td><td>For hashing/indexing a url.</td></tr>
+<tr><td>Words</td><td>Build</td><td>Breaks a document up into "words", where each word is a sequence of alphanumeric characters, a sequence of non-alphanumeric characters, or a single HTML/XML tag. A heart of the build process.</td></tr>
+<tr><td>Xml</td><td>Build</td><td>Breaks a document up into XmlNodes where each XmlNode is a tag or a sequence of characters which are not a tag.</td></tr>
+<tr><td>XmlDoc</td><td>Build</td><td>XmlDoc::hash() hashes a TitleRec (and SiteRec which indicates the ruleset to use) into a TermTable. Another heart of the build process.</td></tr>
+<tr><td>XmlNode</td><td>Build</td><td>Xml classes has an array of these. Each is either a tag or a sequence of characters that are between tags (or beginning/end of the document).</td></tr>
+<tr><td>dmozparse</td><td>Build</td><td>Creates the necessary dmoz files Gigablast needs from those files downloadable from DMOZ.</td></tr>
+</table>
+
+<a name="spiderloop"></a>
+<h2>The Spider Loop</h2>
+<b>SpiderLoop</b>'s spiderUrl() routine is called every 30ms or so by Loop.cpp in order to spider a url. If spiders are activated it will create a new 
+Msg14 class to spider that url. MAX_SPIDERS is currently limited to 300
+(or 500 for some versions) but that can be bumped up. When Msg14 returns, 
+the Spider Loop is responsible for logging that status of the spidering as 
+well as adding and/or deleting the record for that url to/from 
+<a href="#spiderdb">spiderdb</a>. Also, it will call spiderUrl() again after
+a Msg14 has completed in an attempt to immediately launch another spider.
+<br><br>
+
+<a name="spidercache"></a>
+<a name="spidercollection"></a>
+<a name="spiderqueue"></a>
+<h2>The Spider Cache</h2>
+To avoid doing a disk seek into spiderdb in an attempt to get a url to spider, 
+Gigablast preloads the urls from spiderdb into its Spider Cache, as defined
+in <b>SpiderCache.cpp</b>. It uses a global instance, g_spiderCache, for all
+collections.  The Spider Cache will store the spider records it
+loads in an instance of <a href="#rdbtree">RdbTree</a> called s_tree. 
+It basically uses the same
+key in s_tree as it does in spiderdb, but it changes the timestamp in the key
+so as to
+fill the tree with as diverse a selection as domains as possible, to avoid
+one domain from dominating the tree, and thereby blocking urls from the other
+domains from getting indexed. A count of each domain added to s_tree is 
+recorded in a hash table, and that count is multiplied by the 
+<i>sameDomainWait</i> parm to come up with a new timestamp for the s_tree key.
+Other than that, the s_tree key is the same as the spiderdb key.
+<br><br>
+<i>sameIpWait</i> is similar to <i>sameDomainWait</i> but is based on IP,
+and is mainly used to prevent Gigabot from hammering websites with multiple
+domains hounsed under a single IP address. Since IP addresses are not 
+currently stored
+in a Spiderdb record, Gigablast will perform the IP lookup at spider time
+and cache it in SpiderCache::s_localDnsCache so it can quickly check that
+IP cache when it is loading the urls from disk. Additionally, SpiderCache
+uses s_domWaitTable and s_ipWaitTable to record the last download times
+of a url from a particular domain or IP.
+<br><br>
+SpiderCache is divided into a SpiderCollection class for every collection and
+SpiderCollection is divided into 16 SpiderQueue classes, one for each possible
+spider queue. Remember, there are 8 spider priorities and a spider queue can
+contain either old or new urls. SpiderCache::sync() is called to sync up the
+SpiderCollections with the actual collections should a collection be added
+or deleted. SpiderCache::addSpiderRec() is called to try to add a Spiderdb
+record to the cache, actually an RdbTree called s_tree. 
+SpiderCache::getNextSpiderRec() is called to a get a Spiderdb record for
+spidering. And SpiderCache::doneSpidering() is called when a Spiderdb record
+is done being spidered and should be removed from the cache.
+SpiderCache::loadLoop() loads records from Spiderdb on disk for spider queues
+that are active. It can only be loading one spider queue at a time; this is
+ensured by the s_gettingList flag.
+<br><br>
+SpiderCache uses s_tree, an RdbTree, to hold all of the Spiderdb records that
+it contains. SpiderCache does not use a record's Spiderdb key as the key
+for s_tree,
+rather it uses a specially computed cache key. This cache key is essentially
+the same as the spiderdb record key, but the time stamp is changed to reflect a
+score. 
+This score is essentially linear, starting with 0, but it is increased by 
+1000 for every successive url it loads from the same domain or IP address.
+This makes getting the next url to spider faster. Also, if a url is not
+slated to be spidered until the future then the score is the scheduled time
+in seconds since the epoch, the same value that was in the Spiderdb record.
+The score is visible in the Spider Queue control.
+<br><br>
+When looking at the Spider Queue control in Gigablast's web GUI you will note
+that there is a "in cache" or "not in cache" control that you can toggle.
+Select it to "in cache" and then click on a <i>priority</i> and you will see 
+all of the urls in s_tree for that
+spider queue. Once there you will note some parameters in the
+first row of the table. One is the <i>water</i> parameter. That is how many
+urls, max, were loaded into the cache for that spider queue during the last
+load time. The <i>loading</i> flag is 1 if Gigablast is currently loading
+urls for that spider queue, 0 otherwise. The <i>scanned</i> parameter is
+how many bytes have been read trying to load urls for that spider queue, and
+<i>elapsed</i> is how much time as elapsed since the start or end of the load,
+depending on if the load is in progress or not. <i>bubbles</i> represents
+how many attempts were made to get a url to spider from that spider queue, 
+but a url was not available from that spider queue. Typically, bubbles are bad
+because you always want to give the spider something to do. When a spider queue
+bubbles it is often because there are not enough urls available, a load is
+going on and needs some more time to load more urls or most of the urls that 
+are available are all from the same few domains or IPs and Gigablast does not
+want to hammer any particular server because of the "same domain wait" and
+"same IP wait" controls. <i>hits</i> is the counterpart of <i>bubbles</i> and
+is how many urls were returned for spidering from that spider queue. And 
+<i>cached</i> is how many urls are current in s_tree for that spider queue.
+<br><br>
+Gigablast will only attempt to reload a spider queue when it bubbles and is 
+unable to return a url to spider through a call to 
+SpiderQueue::getNextSpiderRec(). It will never attempt the reload that
+spider queue if less
+than SPIDER_RELOAD_RATE seconds have elapsed since the last reload time. 
+Currently this is #defined to be 8 minutes. But it can reload without
+waiting SPIDER_RELOAD_RATE seconds if the number of urls currently in the
+cache for that spider queue are less than half of the water mark for that
+spider queue. These 
+criteria prevent Gigablast from constantly trying to reload a spider queue
+just because it consists of, say, 100,000 urls from the same domain and is
+constantly bubbling.
+<br><br>
+When loading spider records, SpiderCache::addSpiderRec() is called for every
+spider record loaded. All of the filtering logic is in there. Each spider queue
+can have up to MAX_CACHED_URLS_PER_QUEUE urls in its part of the s_tree cache.
+Currently this is #defined to be 50000. If you try to add a Spiderdb record
+to a spider queue cache that is at this limit, then Gigablast will score that
+spider record and attempt to kick out a lower scoring spider record if 
+possible. When links are spidered, Msg10 will often call 
+g_spiderCache::addSpiderRec() to attempt
+to add the new links to the appropriate cached spider queue and take advantage
+of this kick-out logic.
+<br><br>
+When loading urls from spiderdb into s_tree,
+Gigablast will scan all the urls in spiderdb
+for that spider queue in order to get the best possible sampling of domains.
+When adding new records to s_tree it may kick out old ones that have a lower
+key in order to stay below the 30,000 max url limit per spider priority.
+<br><br>
+SpiderCache is responsible for adhering to the Conf::m_maxIncomingKbps
+and Conf::m_maxPagesPerSecond parameters reflected in the gb.conf file and
+the Master Controls web page. It keeps track of the average page size so
+that urls that are being fetched, if they haven't already been downloaded,
+are assumed to be downloading a page with that average page size. In this
+manner Gigablast does a very good job of obeying bandwidth limitations. These
+two contraints are also settable on a per collection basis as well.
+<br><br>
+SpiderCache juggles between various collections. When multiple collections
+are being spidered SpiderCache will use the SpiderCache::getRank() function
+to determine which collection should provide the next url. This is based on
+how long it has been since the collection downloaded a url and on that
+collection's CollectionRec::m_maxKbps and CollectionRec::m_maxPagesPerSecond
+parameters. If either of these parameters is -2 it means it is unbounded.
+<br><br>
+
+
+<a name="msg14"></a>
+<h2>Msg14</h2>
+After the Spider Cache provides a url to spider, Spider Loop allocates a new
+Msg14 and passes the url to it for indexing. 
+The Spider Loop will call either Msg14::spiderUrl() or Msg14::injectUrl() to
+kick off the indexing process. These routines are basically different start
+points for the same process, they just initialize a few parameters differently.
+<br><br>
+
+
+<a name="msg15"></a>
+<h2>Msg15</h2>
+Next Msg14 will call Msg15 which calls Msg22::getTitleRec() which will
+attempt to load the old <a href="#titledb">titledb</a> record 
+from the provided url or docid.
+The titledb record, defined by <b>TitleRec.cpp</b>, is contained in
+Msg14::m_oldDoc::m_titleRec.
+Msg15 will also set Msg14::m_oldDoc::m_siteRec, a <a href="#sitedb">sitedb</a>
+ record, from the site file number contained in that titledb record. 
+The site file number, also known as the ruleset number,
+corresponds to the <a href="overview.html#ruleset">ruleset</a> that was used to index the
+document the last time. The same ruleset number from any gigablast cluster should always correspond to the same sitedb*.xml file in order to avoid namespace collisions. We keep all sitedb*.xml files in /gb/conf/ under Bitkeeper control.
+<br><br>
+If the <a href="#spiderdb">spiderdb</a> record of the url being spidered 
+is marked as "old" but
+Msg15 failed to load the old titledb record, then Msg14 will complain in the
+log, but keep going regardless. Similarly, if it was marked as "new" in the
+spiderdb record, but was found in titledb.
+For new urls, urls that are being spidered and are not already in the index,
+Msg22 will contain the new actual docid for the url, as described in the 
+<a href="#docids">DocIds</a> section. Ultimately, Msg15 will set 
+Msg14::m_oldDoc, an instance of the <a href="#doc">Doc</a> class, 
+which is central to the parser. 
+<br><br>
+
+<a name="msg16"></a>
+<h2>Msg16</h2>
+In a similar manner, Msg16 will set Msg14::m_newDoc, but Msg16 will actually
+download the document, not take it from titledb, unless <i>recycle content</i>
+is marked as true on the Spider Controls page. If Msg16 fails to download the
+document because of a timeout or other similar error, Msg14 will delete the
+document from the index and from spiderdb after <i>max retries</i> times, where
+<i>max retries</i> is set from the Spider Controls page and can be as big as 
+three. 
+<br><br>
+Msg16 may end up using a different ruleset to parse the document and set
+the Doc class, and ending up with an IndexList a lot different than Msg15's
+ruleset.
+A ruleset is an XML document describing how to parse and score a document, 
+as further described in the
+<a href="overview.html#ruleset">Overview</a> document.
+<br><br>
+Msg16 is also responsible for setting the <a href="#linkinfo">LinkInfo.cpp</a> class. That class is set by Msg25 and is used to increase the link-adjusted
+quality of a document based on the number of incoming linkers, as can be seen
+on the <a href="pageparser">Page Parser</a> page.
+<br><br>
+
+<a name="doc"></a>
+<h2>The Doc Class</h2>
+Msg15 and Msg16 both set a different instance of the <b>Doc</b> class.
+The idea behind the Doc class is that it is ultimately a way to convert an
+arbitrary document into an IndexList, defined by <b>IndexList.cpp</b>, 
+which is an RdbList of Indexdb records.  Indexlist will convert a 
+<a href="#termtable">TermTable</a> class into an <a href="#rdblist">RdbList</a>
+format. The TermTable is just a hash
+table containing all of the term from the document that are to be indexed.
+<br><br>
+
+
+<a name="linkanalysis"></a>
+<a name="linkinfo"></a>
+<a name="linktext"></a>
+<a name="msg25"></a>
+<a name="msg23"></a>
+<a name="pageparser"></a>
+<h2>Link Analysis</h2>
+Msg16 calls <b>Msg25</b> to set the LinkInfo class for a document. The 
+LinkInfo class is stored in the titledb record (the TitleRec) and can be
+recycled if <i>recycle link info</i> is enabled in the Spider Controls.
+LinkInfo contains an array of <b>LinkText</b> classes. 
+Each LinkText class corresponds
+to a document that links to the url being spidered, and has an IP address,
+a link-adjusted quality and docid of the linker, optional hyperlink text,
+a log-spam bit, and the total number of outgoing links the linker has.
+Exactly how the incoming link text is indexed and how the linkers affect the
+link-adjusted quality of the url being indexed can be easily seen on the
+Page Parser tool available through the administrative section or by clicking
+on the [analyze] link next to a search result.
+<br><br>
+Each LinkText is set by the <b>Msg23</b> class, which acts like 
+<a href="#msg20">Msg20</a>, in that it
+sends a request to the machine that has the linking document in its 
+<a href="#titledb">titledb</a>. The handler loads the titledb record using
+Msg22, and then extracts the relevant link text using the <b>Links.cpp</b>
+class, and packages that up with the quality and docid of the linker in the
+reply.
+<br><br>
+
+<a name="msg18"></a>
+<a name="robotdb"></a>
+<h2>Robots.txt</h2>
+Msg16 uses <b>Msg18</b> to get the robots.txt page for a url. This request 
+uses a
+distributed cache, so the request is actually forwarded to a host based on
+the hash of the hostname of the url. <b>Robotdb.cpp</b> is used to handle the
+caching logic, and the parsing of the robots.txt page. We recently added
+support for the Crawl-Delay: directive.
+<br><br>
+
+<a name="termtable"></a>
+<h2>The TermTable</h2>
+This is a big hash table that contains all the terms to be indexed. It is
+generated by XmlDoc::set() which essentially takes a titledb record (TitleRec)
+and a sitedb record (SiteRec) as input and sets the TermTable as output. Msg14
+uses the XmlDoc classes contained in Msg14::m_oldDoc and Msg14::m_newDoc
+respectively, setting each with the appropriate TitleRec.
+<br><br>
+An IndexList can be set from the old and new TermTables using 
+IndexList::set(). It essentially subtracts
+the two if <i>incremental indexing</i> is enabled in the Master Controls or
+gb.conf. That way it will only add new terms or terms that have different 
+scores compared to the old TitleRec.
+
+
+<a name="samplevector"></a>
+<h2>The Sample Vector</h2>
+After downloading the page, Msg14 will use g_clusterdb to generate a sample
+vector for the document. This vector is formed by getting the top 32 or so 
+terms from the new TermTable sorted by their termId, a hash of each term. 
+This vector is stored in the TitleRec and used do dedup search results at
+query time using Clusterdb::getSampleSimilarity() which takes two sample
+vectors as input. The similarity threshold can be controlled from the 
+Search Controls' <i>percent similar dedup default</i> and it can also be
+explicitly specified using the <i>psc</i> cgi parameter.
+<br><br>
+
+<a name="gigabitvector"></a>
+<h2>The Gigabit Vector</h2>
+Like the Sample Vector, the Gigabit Vector is a sample of the terms in a 
+document, but the terms are sorted by scores which are based on the popularity
+of the term and on the frequency of the term in the document. 
+XmlDoc::getGigabitVector() computes that vector for a TitleRec and makes use
+of the <a href="#msg24">Msg24</a> class which gets the gigabits for a document.
+The resulting vector is stored in the TitleRec and used to do topic clustering.
+<i>cluster by topic</i> can be enabled in the Search Controls, and 
+<i>percent similar topic default</i> can be used to tune the clustering
+sensitivity so that documents in the search results are only clustered together
+if their Gigabit Vectors are X% similar or more. 
+<a href="#msg38">Msg38</a> calls Clusterdb::getGigabitSimilarity() 
+to compute the similarity of two Gigabit Vectors.
+<br><br>
+
+<a name="deduping"></a>
+<h2>Deduping</h2>
+Msg16 calls g_checksumdb::makeDedupKey() to set Msg16::m_dupKey from the hash
+of the content of the document. That hash is computed by
+g_checksumdb.getContentHash() which takes the content as input. Basically,
+it is a direct hash, but tags are ignored, unless they are frame or iframe
+tags and the pure text is hashed as lower cases alnum so that punctuation
+and spaces are ignored. This key is then added to checksumdb if and only if
+it is different than what the old TitleRec contained, if any. If incremental
+indexing is disabled, then the key is always added to checksumdb.
+<br><br>
+<a name="msg19"></a>
+Before indexing the document, though, Msg16 will call Msg19 to see if the
+url is a dup of another from the same hostname. If it is then the index will
+fail with EDOCDUP.
+<br><br>
+<a name="loosechecksum"></a>
+As of 2006, Gigablast can support <i>loose checksums</i>, which exclude what
+Gigablast deems to be menu text when computing the hash. This hash is computed
+by XmlDoc::set1() by just XORing all of the word hashes in the doucment 
+together, provided they are not a part of a menu, and therefore should have
+positive scores. To implement loose checksums you must have 
+<i>useLooseChecksums</i> set to true in the ruleset.
+<br><br>
+
+
+<a name="indexcode"></a>
+<h2>Indexing Error Codes</h2>
+Msg16, and sometimes Msg14, will set Msg16::m_indexCode to various things to 
+indicate conditions as to why the document did not get indexed. These error 
+codes are all in <a href="#errno">Errno.h</a>.
+<br><br>
+<table cellpadding=3 border=1>
+<tr><td>EBADTITLEREC</td><td>Document's TitleRec is corrupted and can not be read.</td></tr>
+<tr><td>EURLHASNOIP</td><td>Url has no ip.</td></tr>
+<tr><td>EDOCCGI</td><td>Document has CGI parms in url and <i>allowCgiUrls</i> is specified as false in the ruleset.</td></tr>
+<tr><td>EDOCURLIP</td><td>Document is an IP-based url and <i>allowIpUrls</i> is specified as false in the ruleset.</td></tr>
+<tr><td>EDOCBANNED</td><td>Document's ruleset has <i>banned</i> set to true.</td></tr>
+<tr><td>EDOCDISALLOWED</td><td>Robots.txt forbids this document to be indexed. But, if it has incoming link text, Gigablast will index it anyway, but just index the link text.</td></tr>
+<tr><td>EDOCURLSPAM</td><td>The url itself contains naughty words and the <i>do url sporn checking</i> is enabled in the Spider Controls.</td></tr>
+<tr><td>EDOCQUOTABREECH</td><td>The quota for this site has been exceeded. Quotas is based on quality of the url. See the quota section in the <a href="overview.html#quotas">Overview</a> file.</td></tr>
+<tr><td>EDOCBADCONTENTTYPE</td><td>Content type, as returned in the mime reply and parsed out by HttpMime.cpp, is not supported for indexing</td></tr>
+<tr><td>EDOCBADHTTPSTATUS</td><td>Http status was 404 or some other bad stats.</td></tr>
+<tr><td>EDOCNOTMODIFIED</td><td>Spider Controls have <i>use IfModifiedSince</i> enabled and document was not modified since the last time we indexed it.</td></tr>
+<tr><td>EDOCREDIRECTSTOSELF</td><td>The mime redirects to itself.</td></tr>
+<tr><td>EDOCTOOMANYREDIRECTS</td><td>Url had more than 6 redirects.</td></tr>
+<tr><td>EDOCBADREDIRECTURL</td><td>The redirect url was empty.</td></tr>
+<tr><td>EDOCSIMPLIFIEDREDIR</td><td>The document redirected to a simpler url, which had less path components, did not have cgi, or for whatever reason was prettier to look at. The current url will be discarded and the redirect url will be added to spiderdb.</td></tr>
+<tr><td>EDOCNODOLLAR</td><td>Document did not contain a dollar sign followed by a price. Used for building shopping indexes.</td></tr>
+<tr><td>EDOCHASBADRSS</td><td>This should not happen.</td></tr>
+<tr><td>EDOCISANCHORRSS</td><td>This should not happen.</td></tr>
+<tr><td>EDOCHASRSSFEED</td><td><i>only index documents from rss feeds</i> is true in the Spider Controls, and the document indicates it is part of an RSS feed, and does not currently have an RSS feed linking to it in the index. Gigablast will discard the document, and add the url of the RSS feed to spiderdb. When that is spidered the url should be picked up again.</td></tr>
+<tr><td>EDOCNOTRSS</td><td>If the Spider Controls specify <i>only index articles from rss feeds</i> as true and the document is not part of an RSS feed.</td></tr>
+<tr><td>EDOCDUP</td><td>According to checksumdb, a document already exists from this hostname with the same checksumdb hash. See <a href="#deduping">Deduping</a> section.</td></tr>
+<tr><td>EDOCDUPWWW</td><td>According to urldb, this url already exists in the index but with a "www." prepended to it. This prevents us from indexing both http://mysite.com/ and http://www.mysite.com/ because they are almost always the same thing.</td></tr>
+<tr><td>EDOCTOOOLD</td><td>Document's last modified date is before the <i>maxLastModifiedDate</i> specified in the ruleset.</td></tr>
+<tr><td>EDOCLANG</td><td>The document does not match the language given in the Spider Controls.</td></tr>
+<tr><td>EDOCADULT</td><td>Document was detected as adult and adult documents are forbidden in the Spider Controls.</td></tr>
+<tr><td>EDOCNOINDEX</td><td>Document has a noindex meta tag.</td></tr>
+<tr><td>EDOCNOINDEX2</td><td>Document's ruleset (SiteRec) says not to index it using the &lt;indexDoc&gt; tag. Probably used to just harvest links then.</td></tr>
+<tr><td>EDOCBINARY</td><td>Document is detected as a binary file.</td></tr>
+<tr><td>EDOCTOONEW</td><td>Document is after the <i>minLastModifiedDate</i> specified in the ruleset.</td></tr>
+<tr><td>EDOCTOOBIG</td><td>Document size is bigger than <i>maxDocSize</i> specified in the ruleset.</td></tr>
+<tr><td>EDOCTOOSMALL</td><td>Document size is smaller than <i>minDocSize</i> specified in the ruleset.</td></tr>
+</table>
+<br><br>
+The following error codes just set g_errno. Like if the error is an internet
+error, or something on our side. These errors are also in Errno.h.
+<br><br>
+<table cellpadding=3 border=1>
+<tr><td>ETTRYAGAIN</td><td>&nbsp;</td></tr>
+<tr><td>ENOMEM</td><td>We ran out of memory.</td></tr>
+<tr><td>ENOSLOTS</td><td>We ran out of UDP sockets.</td></tr>
+<tr><td>ECANCELLED</td><td>An administrator disabled spidering in the Master Controls thereby cancelling all outstanding spiders.</td></tr>
+<tr><td>EBADIP</td><td>Unable to get IP address of url.</td></tr>
+<tr><td>EBADENGINEER</td><td>&nbsp;</td></tr>
+<tr><td>EIPHAMMER</td><td>We would hit the IP address too hard, violating <i>sameIpWait</i> in the Spider Controls if we were to download this document.</td></tr>
+<tr><td>ETIMEDOUT</td><td>If we timed out downloading the document.</td></tr>
+<tr><td>EDNSTIMEDOUT</td><td>If we timed out looking up the IP of the url.</td></tr>
+<tr><td>EBADREPLY</td><td>DNS server sent us a bad reply.</td></tr>
+<tr><td>EDNSDEAD</td><td>DNS server was dead</td></tr>
+</table>
+
+<br><br>
+
+<a name="xmldoc"></a>
+<h2>XmlDoc: The Heart of the Parser</h2>
+Once Msg16 downloads the document, it calls XmlDoc::set(). Actually, 
+Msg16 calls XmlDoc::set1() and then XmlDoc::set2() which are the same thing
+as calling XmlDoc::set() used to be. It is now broken up into two stages so we 
+can support the new <a href="#loosechecksum">loose checksum</a> feature.
+XmlDoc::set() will set the following classes, all members of XmlDoc:
+<ul>
+<li>m_xml (Xml.cpp)
+<li>m_links (Links.cpp)
+<li>m_words (Words.cpp)
+<li>m_scores (Scores.cpp)
+<li>m_adultBit (AdultBit.cpp)
+</ul>
+<br>
+XmlDoc::hash() is responsible for setting the 
+<a href="#termtable">TermTable</a> which is used to set the 
+<a href="#indexlist">IndexList</a>. If you want to add new things to be indexed
+then this is the place to start looking.
+<br><br>
+
+<a name="xml"></a>
+<h2>Xml</h2>
+The Xml class is Gigablast's XML parsing class. You can set it by passing it
+a pointer to HTML or XML content along with a content length. If you pass it 
+some strange character set, it will convert it to UTF-16 and use that to set 
+its nodes. Each node is a tag or a non-tag. It uses the XmlNode
+class to tokenize the content into these nodes.
+<br><br>
+
+<a name="links"></a>
+<h2>Links</h2>
+The Links class is set by XmlDoc::set1() and gets all the links in a document.
+Links::hash(), called by XmlDoc::hash(), will index all the link:, ilink: or 
+links: terms.
+It is also used to get link text by the <a href="#linktext">LinkText</a> class.
+<br><br>
+
+<a name="words"></a>
+<h2>Words</h2>
+All text documents can be broken up into "words". Gigablast's definition of a 
+word is slight different than normal. A word is defined as a sequence of
+alphanumeric characters, a sequence of non-alphanumeric characters. An HTML
+or XML tag is also considered to be an individual word. Words for Japanese
+or other similar languages are determined by a tokenizer Partap integrated.
+<br><br>
+The Phrases, Bits, Spam and Scores classes all contain arrays which are 1-1
+with the Words class they were set from. 
+<br><br>
+The Words class is primarily used by TermTable::set() which takes a string,
+breaks it down into words and phrases and hash them word and phrase ids into
+the hash table.
+<br><br>
+
+<a name="phrases"></a>
+<h2>Phrases</h2>
+Gigablast implements phrase searching by stringing words together and hashing
+them as a single unit. It uses the Phrases and Bits class to generate phrases
+from a Words class. Basically, every pair of words is considered a phrase,
+but phrases can consist of more than two words if there are 
+<a href="#stopwords">stop words</a> in the middle, as so identified by the
+Bits class. 
+<br><br>
+
+<a name="bits"></a>
+<h2>Bits</h2>
+Before phrases can be generated from a Words class, Gigblast must set 
+descriptor bits. Each word has a corresponding character in the Bits class
+that sets flags depending on different properties of the word. These bits
+are used for generating <a href="#phrases">phrases</a>.
+<br><br>
+
+<a name="scores"></a>
+<h2>Scores</h2>
+A more recent addition to Gigablast is the Scores class. It was written to
+extract the beefy content of a page, and exclude, or reduce the impact of,
+menu text. Words with scores of 0 or less are not indexed. The ruleset controls
+if and how the Scores class is used to index documents.
+<br><br>
+
+<a name="msg10"></a>
+<h2>Msg10</h2>
+Msg14 calls Msg10 after updating all the Rdbs. Msg10 adds the links harvested
+from the page. It does this using the <a href="#msg1">Msg1</a> class, but it
+must also check to ensure that the links are not already in spiderdb by 
+checking to see if they are in <a href="#urldb">Urldb</a>. 
+Unless a link is <i>forced</i> then it
+will not be added to spiderdb if it is already in Urldb.
+Msg10 is also used by PageAddUrl to add submitted links or files that contain
+a bunch of links to be added.
+<br><br>
+
+<a name="gbfilter"></a>
+<h2>Content Filtering</h2>
+Gigablast supports multiple document types by saving the downloaded mime and 
+content to a file, then calling the <i>gbfilter</i> program (gbfilter.cpp) 
+which based on the content type in the mime will call pdftohtml, antiword,
+pstotext, etc. and send the html/text content back to gb via stdout.
+<br><br>
+
+<a name="docids"></a>
+<a name="msg22"></a>
+<h2>DocIds</h2>
+Every document indexed by Gigablast has a unique document id, called a docid. The docid is usually just the hash of the url it represents. Titledb::getProbableDocId() takes the url as a parameter and returns the probable docid for that url. The reason the docid is <i>probable</i> is that it may collide with the docid of an existing url and therefore will have to be changed. When we index a document, Msg14, the Msg class which is primarily responsible for indexing a document, calls Msg15::getOldDoc() to  retrieve the TitleRec (record in Titledb) for the supplied url (the url being indexed). Msg15 will then call Msg22::getTitleRec() to actually get the TitleRec for that url. If a TitleRec is not found for the given url then <b>Msg22.cpp</b> will sets its m_availDocId so Msg14 will know which available docid it can use for that url. 
+<br><br>
+Msg22 will actually load a list of TitleRecs from titledb corresponding to all the possible actual docids for the url. When the probable docid for a new url collides with the docid of an existing url, as evidenced by the TitleRec list, then Gigablast increments the new url's docid by one. Gigablast will only change the last six bits (bits 0-5) of a docid for purposes of collision resolution and it will wrap the docid if it tops out (see Msg22::gotUrlListWrapper). Titledb::getFirstProbableDocId() and Titledb::getLastProbableDocId() define the range of actual docids available given a probable docid by masking out or adding bits 0-5.  Bits 7 and up of the docid are used to determine which host in the network is responsible for storing the TitleRec for that docid, as illustrated in Titledb::getGroupId(). That is why collision resolution is limited to the lower six bits, because we don't want to, through collision resolution, resolve a TitleRec to another host, we want to keep it local. We also do not want the high bits of the docid being used for determining the group which stores that docId because when reading the termlist of linkers to a particular url, they are sorted by docId, which means we end up hitting one particular host in the network much harder than the rest when we attempt to extract the link text. If we have to increase these 6 bits in the future, then we may consider using some higher bits, like maybe bits 12 and up or something to avoid messing with the bits that control what hosts stores the TitleRec.
+<br><br>
+When Msg15 asks Msg22 for the TitleRec of a url being indexed, Msg22 will either return the TitleRec or, if the TitleRec does not exist for that url, it will set Msg22::m_availDocId to an available docid for that url to use. When looking up a TitleRec from a url, the first thing Msg22 does is define a startKey and endKey for a fetch of records from Urldb. Urldb consists of a bunch of dataless keys. Each of these keys consist of a docid, a hash extension and a file number.
+<br><br>
+If the file number in a Urldb record <b>is 255</b> then the corresponding docid is a <i>probable</i> docid (just a hash of the url as computed in Titledb::getProbableDocId()) and that the TitleRec is either in Titledb's RdbTree or that the TitleRec does not exist, but that url is slated for spidering and is contained in Spiderdb. This makes it easy to avoid adding duplicate urls to Spiderdb. Because different urls in Spiderdb may have the same probable docid, each Urldb record contains an 7-bit hash extension of the url used to reduce the chance of collision. The 38-bit docid hash plus this 7-bit extension gives an effective docid of 45 bits. Unfortunately, if a url has the same 45-bit hash as another different url it will not be permitted into Spiderdb and therefore will not be indexed. We have to rely on the extended hash thing because we cannot store the actual url in every Urldb record because keeping Urldb mostly in memory is very important for performance reasons.
+<br><br>
+If the file number in a Urldb record <b>is not 255</b>, then it refers to the particular Titledb file that contains the TitleRec for the corresponding docid. In this case, the docid in the Urldb record is the <i>actual</i> docid of the url, not the probable docid. In most cases the actual docid is the same as the probable docid, but when two different urls hash to the same probable docid, Msg22 will increment the actual docid of the url being added until it finds an unused actual docid.
+<br><br>
+The startKey and endKey for this particular Urldb request are constructed using the lowest and highest <i>actual</i> docids possible for the url. Because we only know the probable docid for that url, we have to assume that its lower six bits were changed in order to form its actual docid. Once we get back the list of records from Urldb we compute the extended hash of the url we are looking up and we scan through the list of records to see if any have the same extended hash. If a Urldb record in the list has the same extended hash, then we can extract the file number and consult the corresponding Titledb file to get the TitleRec. If the file number is 255 then we check for the TitleRec in Titledb's tree. If not in the tree, then url is probably slated for spidering but not yet in the index, so we conclude the TitleRec does not exist.
+<br><br>
+If we do not find a TitleRec for the url then we must return an available actual docid for the url, so the caller can index the url. In this case, in Msg22::gotUrlListWrapper() [line 292 in Msg22.cpp], we assume the probable docid is the actual docid. This assumption is a bug, because the probable docid may have been present in one of the Urldb records in the list, but the extended hash may not have matched the extended hash of the url. So this needs to be fixed. 
+<br><br>
+SIDE NOTE: To avoid having to lookup urls associated with each docid, a Query Reindex request will populate Spiderdb with docid-based records, rather than the typical url-based records. In this case, Msg15 can pass the exact docid to Msg22, so Msg22 does not have to worry about collisions and having to scan through a list of TitleRecs.
+<br><br>
+
+
+<a name="docidscaling">
+<h2>Scaling to Many Docids</h2></a>
+
+Currently, we are using 38 bit docids which allows for over 270 billion docids. Using the lower 6 bits of each docid for the chaning purposes as described above, means that there will be a problem if a probable docid is unable to be turned into an available actual docid by only changing the lower 6 bits of the probable docid because all the possible actual docids are occupied. These 6 bits correspond to 32 different values, therefore if we think of the range of possible actual docids being divided up into buckets, where each bucket is 32 consecutive docids, we might ask: what number of <i>full</i> buckets can we expect? Once a bucket is full we will have to turn away any url that hashes into that bucket. It turns out that when we have 128 billion documents the expected number of full buckets is only 29.80.
+<br><br>
+If we have 128 billion pages out of a possible 256 billion, each docid has a 50% probability of being used. Therefore, the probability of 32 consecutive used docids is (.5)^32 and the expected number of full buckets is (.5)^32 * 128 billion which is 29.80. If we have 16 billion pages out of the 256 billion the number of expected full buckets is a very tiny fraction. This is all assuming we have a uniformly distributed hash function.
+<br><br>
+The next scaling problem is that of urldb. Urldb enhances the probable docid with a 7-bit extension. The probability that a url's probable docid collides with another url's actual docid is fairly good in a 16 billion page index, it is 1/16. But then we multiply by 128 to get 1 in 2048, which is lousy. Therefore we should grow the extended bits by 16 so it is at least 1 in 134 million for a 16 billion page index which is ok because that means only about 100 urls will not be able to be indexed because of a collision in urldb. And with this 16-bit growth, we should still get decent compression for large indexes. That is, if we have 130 million pages per server, we'd have 1<<24 bits of the docid in the upper 6 bytes of the urldb key. That means we'd expect about 7 keys on average to share the same 6 bytes, (130,000,000/(1<<24)) = 7.74. That would still constitute about a 12% growth over current urldb sizes, though.
+<br><br>
+
+<hr>
+<a name="searchresultslayer"></a>
+<h1>The Search Results Layer</h1>
+This layer is responsible for taking a query url as input and returning
+search results. Gigablast is capable of doing a few queries for every server
+in the cluster. So if you double the number of servers you double the 
+query throughput. 
+<br><br>
+Gigablast uses the <a href="#query">Query</a> class to break a query up into 
+termIds. Each termId is a hash of a word or phrase in the query. Then the <a href="#indexlist">IndexList</a> for each termId is loaded and they are all 
+intersected (by docId) in a hash table, and their scores are mapped and 
+accumulated as well. Msg39 computes the top X docIds and then uses Msg38 to
+get the site cluster hash and possibly the sample vector of each top docId. 
+Clustered 
+and duplicate results (docIds) are removed and if the total remaining is less 
+than what
+was requested, Msg39 redoes the intersection to try to get more docIds to
+compensate. The final docIds are returned to Msg40 which uses Msg20 to fetch
+a summary for each docId. Then PageResults display the final search results.
+
+
+<br><br>
+<a name="queryclasses"></a>
+<h2>Associated Classes (.cpp and .h files)</h2>
+<table cellpadding=3 border=1>
+<tr><td>Ads</td><td>Search</td><td>Interface to third party ad server.</td></tr><tr><td>Highlight</td><td>Search</td><td>Highlights query terms in a document or summary.</td></tr>
+<tr><td>IndexList</td><td>Search</td><td>Derived from RdbList. Used specifically for processing Indexdb RdbLists.</td></tr>
+<tr><td>IndexReadInfo</td><td>Search</td><td>Tells Gigablast how much of what IndexLists to read from Indexdb to satisfy a query.</td></tr>
+<tr><td>IndexTable</td><td>Search</td><td>Intersects IndexLists to get the final docIds to satisfy a query.</td></tr>
+<tr><td>Matches</td><td>Search</td><td>Identifies words in a document or string that match supplied query terms. Used by Highlight.</td></tr>
+<tr><td>Msg17</td><td>Search</td><td>Used by Msg40 for distributed caching of search result pages.</td></tr>
+<tr><td>Msg1a</td><td>Search</td><td>Get the reference pages from a set of search results.</td></tr>
+<tr><td>Msg1b</td><td>Search</td><td>Get the related pages from a set of search results and reference pages.</td></tr>
+<tr><td>Msg2</td><td>Search</td><td>Given a list of termIds, download their respective IndexLists.</td></tr>
+<tr><td>Msg20</td><td>Search</td><td>Given a docId and query, return a summary or or document excerpt. Used by Msg40.</td></tr>
+<tr><td>Msg33</td><td>Search</td><td>Unused. Did raid stuff.</td></tr>
+<tr><td>Msg36</td><td>Search</td><td>Gets the length of an IndexList for determining query term weights.</td></tr>
+<tr><td>Msg37</td><td>Search</td><td>Calls a Msg36 for each term in the query.</td></tr>
+<tr><td>Msg38</td><td>Search</td><td>Returns the Clusterdb record for a docId. May also get for Titledb record if its key is in the RdbMap.</td></tr>
+<tr><td>Msg39</td><td>Search</td><td>Intersects IndexLists to get list of docIds satisfying query. Uses Msg38 to cluster away dups and same-site results. Re-intersects lists to get more docIds if too many were removed. Uses Msg2, Msg38, IndexReadInfo, IndexTable. This and IndexTable are the heart of the query resolution process.</td></tr>
+<tr><td>Msg3a</td><td>Search</td><td>Calls multiple Msg39s to distribute the query based on docId parity. One host computes the even docId search results, the other the odd. And so on for different parity levels. Merges the docIds into a final list.</td></tr>
+<tr><td>Msg40</td><td>Search</td><td>Uses Msg20 to get the summaries for the final list of docIds returned from Msg3a.</td></tr>
+<tr><td>Msg40Cache</td><td>Search</td><td>Used by Msg17 to cache search results pages. Basically, caching serialized Msg40s.</td></tr>
+<tr><td>Msg41</td><td>Search</td><td>Queries multiple clusters and merges the results.</td></tr>
+<tr><td>PageDirectory</td><td>Search</td><td>HTML page to display a DMOZ directory page.</td></tr>
+<tr><td>PageGet</td><td>Search</td><td>HTML page to display a cached web page from titledb with optional query term highlighting.</td></tr>
+<tr><td>PageResults</td><td>Search</td><td>HTML/XML page to display the search results.</td></tr>
+<tr><td>PageRoot</td><td>Search</td><td>HTML page to display the root page.</td></tr>
+<tr><td>Query</td><td>Search</td><td>Parses a query up into QueryWords which are then parsed into QueryTerms. Makes a boolean truth table for boolean queries.</td></tr>
+<tr><td>SearchInput</td><td>Search</td><td>Used to parse, contain and manage all parameters passed in for doing a query.</td></tr>
+<tr><td>Speller</td><td>Search</td><td>Performs spell checking on a query. Returns a single recommended spelling of the query.</td></tr>
+<tr><td>Summary</td><td>Search</td><td>Generates a summary given a document and a query.</td></tr>
+<tr><td>Title</td><td>Search</td><td>Generates a title for a document. Usually just the &lt;title&gt; tag.</td></tr>
+<tr><td>TopTree</td><td>Search</td><td>A balanced binary tree used for getting the top-scoring X search results from intersecting IndexLists in IndexTable, where X is a large number. Normally we just do a linear scan to find the minimum scoring docId and replace him with a higher scoring docid, but when X is large this linear scan process is too slow.</td></tr>
+</table>
+
+
+<br><br>
+<a name="query"></a>
+<h2>The Query Parser</h2>
+The query syntax is described on <a href="http://www.gigablast.com/help.html">gigablast.com</a>. The Query class is responsible for converting a query into a list of termIds which are used to look up
+<br><br>
+
+<a name="raiding"></a>
+<h2>Raiding TermList Intersections</h2>
+An option for improving efficiency and parallelization is to "raid" term list disk reads and intersections.  There are multiple layers of "raiding" to distribute both disk reads and CPU use.  One level of disk raiding, called Indexdb Splitting, is implemented durring indexing.  Indexdb term lists are split between multiple hosts so that smaller parts of the full list may be read in parallel.  Another level of raiding splits the term list intersection between multiple "mercenary" hosts.  This can be done using Msg33 which replaces the functionality typically performed by Msg2 and some of that performed by Msg39.  An additional level of raiding may be performed by Msg33 to further split term list reads between twins.
+<br><br>
+Indexdb Splitting is enabled in the code by defining the SPLIT_INDEXDB #define.  The number splits to make is set with the INDEXDB_SPLIT #define.  For a single given term list, this will split which group the each term/docid entry is stored on based on the docid.  The seperate pieces of one term list will be retrieved and combined in one of two ways.  For general purpose access, a single Msg0 call may be made the same way it would normally be done without splitting.  Msg0 will then forward the request to all hosts storing a split piece of the desired list.  When each piece is collected, Msg0 will merge them together into one list.  Alternately, for queries, Msg33 may be used to take further advantage of the splitting (see below).
+<br><br>
+The primary function of Msg33 is to split term lists apart so that the intersection can be done in parallel.  Msg33 actually consists of multiple stages.  In the initial stage, "stage 0", the host processing Msg39 will create a Msg33 and allow it to retrieve the docids required.  This Msg33 will choose a number of hosts to act as "mercenary" machines, hosts which will recieve a piece of each term list and intersect those pieces together.  The number of mercenaries is either set as a parm or forced to the number of Indexdb Splits when using Indexdb Splitting.  Each mercenary is essentially responsible for a set of docids.
+<br>
+When not using Indexdb Splitting, the stage0 Msg33 will then call another Msg33 to each term list host, one for every term, executing "stage 1".  When using Indexdb Splitting, a Msg33 will be sent to each host containing a split piece for every term list.
+<br>
+The stage1 Msg33 on each term list host will read its specific term list.  When not using Indexdb Splitting, that term list will then be broken apart and sent with another Msg33 call to every mercenary machine which will perform intersection, executing "stage 2".  When using Indexdb Splitting, the term lists are effectively already aplit up and the piece read by stage1 will be sent as a whole to the one mercenary machine responisble for that set of docids.
+<br>
+The stage2 Msg33 on each mercenary machine will wait for all the requests from each stage1 host to be recieved, storing each in a global queue.  When all requests have been recieved, stage2 will intersect the term lists together, generating a partial set of final docids.  These final docids will then be sent with another Msg33 back to the original host (the one Msg39 is being processed on), executing "stage 3".
+<br>
+Like stage2, the stage3 Msg33 (also the stage0 Msg33) waits for all sets of docids to be recieved from each mercenary.  Once all have been recieved, stage3 will merge them together and create a true final set of docids to be used by Msg39.  Msg39 is allowed to continue before replies are sent back down the chain Msg33s to complete the entire process.
+<br>
+The entire Msg33 chain may be called multiple times (preserving the same stage0/3 and stage2 Msg33s) for each tier that is required by the Query.  Replies are not sent and the entire process in not cleaned up until the last tier has finished.
+<br><br>
+An additional ability of Msg33 is to further split the term list reads up amongst twins durring stage1.  Each twin will read a seperate half of the desired term list and set that half to the mercenaries, where all pieces will eventually be collected.
+<br><br>
+
+<a name="spellchecker"></a>
+<h2>The Spell Checker</h2>
+Spell checking is done by the Speller class. At startup the Speller class, the global g_speller, loads in a set of files, called dictionary files. These files are contained in the 'dict' subdirectory in the working directory of the Gigablast process. Each letter of the alphabet, and each digit, has its own dictionary file which exclusively contains the most popular words and phrases that beging with that particular letter (or digit). Each of these files contain one word or phrase per line, in addition to a score, which preceeds each word or phrase. This score is representative of how popular that word or phrase is.
+<br><br>
+Using 'gb gendicts' on the command line, you can tell Gigablast to generate these dictionary files from the titledb files. The entry routine for this is Speller::generateDicts(numWordsToDump). It will scan through titledb getting each titleRec and storing the words (parsed out from Xml.cpp and Words.cpp classes) and phrases it find from each titleRec into several temporary dictionary files. A word that starts with the letter 'a', for instance, will be stored in a different temporary dictionary file than a word that starts with the letter 'b'. Gigablast will stop scanning titleRecs once it has dumped out numWordsToDump words.
+<br><br>
+After storing numWordsToDump words into the temporary dictionary files, Gigablast sorts each file by making a system call to 'sort'. Then it converts each temporary dictionary file into another temporary file by scoring each word. Since each temporary dictionary file is sorted, scoring each word is simple. The score is just the number of times a particular word or phrase occurred throughout the titledb scan. Lastly, that second temporary file is sorted by score to get the actual dictionary file. Gigablast will throw away words or phrases with a score less than MIN_DOCS, currently #define'd to 3.
+<br><br>
+At startup, Gigablast loads all of the words and phrases from all of the dictionary files. It finds the highest score and normalizes all words and phrases by that score so that the normalized scores range from 1 to 10000, where 10000 is the most popular word or phrase. Furthermore, Gigablast loads a file called 'words', also contained in the 'dict' subdirectory, which is more or less a copy of /usr/share/dict/words. A lot of times during a titledb scan Gigablast will not pick up all the words that a dictionary has, so Gigablast will augment each dict file with the words from this 'words' files. It is a convenient way of adding any words, that begin with any letter, to Gigablast's spell checker.
+<br><br>
+Next, for each letter <i>x</i>, Gigablast computes a linked list for every pair of letters that start with the letter <i>x</i>. So, when <i>x</i> is <b>c</b> the linked list for the letters 'a' and 't', for example, would contain pointers to the words "cat", "carat" and "crate". So when it comes to spell checking you can fetch such a linked list for each pair of adjacent letters for the word in question, and intersect those lists to get spelling recommendations. But before doing that Gigablast also hashes each word from the dictionary files into a hashtable (Speller::makeHashTable()), so if the word in questions matches a word in the hashtable then no recommendation is computed.
+<br><br>
+As a memory saving procedure, which may now be somewhat unnecessary, Gigablast converts each letter in every word to a "dictionary character" using the to_dict_char() function. There are currently 40 (see #define for NUM_CHARS) dictionary characters, essentially just a-z and 0-9 plus a few punctuation marks (see Speller.h). This normalization procedure means that Gigablast can deal with less possible letter pairs and save some memory. This will present problems when trying to spell check Unicode characters, of course, and really, the whole letter pair thing may not be that applicable to Unicode, but it should still word in utf-8 at least, although spelling recommendations might be a little strange sometimes.
+<br><br>
+Besides computing spelling recommendations, dictionary files files are used to quickly measure a word's popularity. Before you can get the popularity of a word or phrase, unfortunately, it is currently converted into dictionary characters before it is hashed. This process is used extensively by the Gigabits generation code. It is essential that we know the popularity/score of a word or phrase. When getting the popularity of a Unicode word or phrase, converting it to dictionary characters may not be the best thing to do. So, all-in-all, if we can get rid of the dictionary character conversion requirements, i think getting the score of a Unicode word will work much better. 
+<br><br>
+Increasing NUM_CHARS to 256 may be a good idea, but there is long Speller::m_table[NUM_CHARS][NUM_CHARS][NUM_CHARS] which will jump from 256k to 67MB if we raise NUM_CHARS from 40 to 256. The first component in m_table is the letter that the possible misspelled word starts with, and the second and third indices are letter pairs in the word. (m_table is how we map a particular letter pair to a linked list of words that have that adjacent letter pair.) This means that all spelling recommendations for a word will start with the same letter as that word. It was done to speed things up and is definitely a bad short cut to take. But, since Gigablast computes the "edit distance" between the word in question and every word in the linked list, making the linked list about 1/40th the size really speeds up the computation.
+<br><br>
+I'm not too concerned with spell checking Unicode words right now, but I would like to have Unicode Gigabits. So if we could hash the words from the dictionary files without converting them to "dictionary characters" but just converting them to "lower case" I think we could handle Unicode words as far as getting their popularities is concerned. We could reserve dictionary characters for computing spelling recommendations only. Any ideas?
+<br><br>
+
+<hr>
+<a name="adminlayer"></a>
+<h1>The Administrative Layer</h1>
+<br>
+
+<a name="adminclasses"></a>
+<h3>Associated Classes (.cpp and .h files)</h3>
+<table cellpadding=3 border=1>
+<tr><td>AutoBan</td><td>Admin</td><td>Automatically bans IP addresses that exceed daily and minute query quotas.</td></tr>
+<tr><td>CollectionRec</td><td>Admin</td><td>Holds all of the parameters for a particular search collection.</td></tr>
+<tr><td>Collectiondb</td><td>Admin</td><td>Manages all the CollectionRecs.</td></tr>
+<tr><td>Conf</td><td>Admin</td><td>Holds all of the parameters not collection specific (Collectiondb does that). Like maximum memory for the gb process to use, for instance. Corresponds to gb.conf file.</td></tr>
+<tr><td>Hostdb</td><td>Admin</td><td>Contains the array of Hosts in the network. Each Host has various stats, like ping time and IP addresses.</td></tr>
+<tr><td>Msg1c</td><td>Admin</td><td>Perform spam analysis on an IP.</td></tr>
+<tr><td>Msg1d</td><td>Admin</td><td>Ban documents identified as spam.</td></tr>
+<tr><td>Msg30</td><td>Admin</td><td>Unused.</td></tr>
+<tr><td>PageAddColl</td><td>Admin</td><td>HTML page to add a new collection.</td></tr>
+<tr><td>PageHosts</td><td>Admin</td><td>HTML page to display all the hosts in the cluster. Shows ping times for each host.</td></tr>
+<tr><td>PageLogin</td><td>Admin</td><td>HTML page to login as master admin or as a collection's admin.</td></tr>
+<tr><td>PageOverview</td><td>Admin</td><td>HTML page to present the help section.</td></tr>
+<tr><td>PagePerf</td><td>Admin</td><td>HTML page to show the performance graph.</td></tr>
+<tr><td>PageSockets</td><td>Admin</td><td>HTML page for showing existing network connections for both TCP and UDP servers.</td></tr>
+<tr><td>PageStats</td><td>Admin</td><td>HTML page for showing various server statistics.</td></tr>
+<tr><td>Pages</td><td>Admin</td><td>Framework for displaying generic HTML pages as described by Parms.cpp.</td></tr>
+<tr><td>Parms</td><td>Admin</td><td>All of the control parameters for the gb process or for a particular collection are stored in this file. Some controls are assigned to a specific <i>page id</i> so Pages.cpp can generate the HTML page automatically for controlling those parameters.</td></tr>
+<tr><td>PingServer</td><td>Admin</td><td>Does round-robin pinging of every host in the cluster. Ping times are displayed on PageHosts.</td></tr>
+<tr><td>Stats</td><td>Admin</td><td>Holds various statistics that PagePerf displays.</td></tr>
+<tr><td>Sync</td><td>Admin</td><td>Unused. Syncs to twins Rdbs together.</td></tr>
+</table>
+
+<a name="collections"></a>
+<h2>Collections</h2>
+Gigablast can support multiple collections. Each collection is essentially
+a sub-index. You can create a collection, index urls into it, and just search
+those urls. Each collection also has its own set of configurable parameters 
+specified in the CollectionRec class. Collectiondb contains the array of
+CollectionRecs and is used to map a collection name to a CollectionRec.
+<br><br>
+Currently, Gigablast uses just one Indexdb (Titledb, etc.) to hold data for 
+all of the searchable collections. When constructing the key of a record to 
+be added to the Rdb of a particular collection, the collection name itself will
+be used, often, by just hashing it into the current key. In this manner, the 
+probability of intercollection key collisions are made highly unlikely.
+<br><br>
+A defect of this model is that deleting a collection in its entirety
+is not easy since its records are intermixed with records from other 
+collections in Indexdb, Titledb, Urldb, Spiderdb and Checksumdb. Therefore,
+we are moving away from this model and creating a different directory for each
+collection and storing that collection's records just in its directory.
+This new model requires that the RdbTree class be modified to hold the 
+collection number of each record. Also, RdbDump must be modified to dump each 
+record into
+the file in the proper directory, as determined by the collection. We can still
+just use one instance of Indexdb, Titledb, etc., but we should add an extra
+dimension to the Rdb class's "BigFile *m_files[];" array for the extra 
+collections we have. When performing an kind of operation, the Rdb class should
+select the appopriate files based on the supplied collection number. When a 
+collection is deleted we must also remember to remove its records from the
+RdbTree, in addition to removing the directory for that collection. Once 
+implemented, this new model will vastly increase the value of
+the Gigablast search product and make people much happier.
+<br><br>
+
+<a name="parms"></a>
+<h2>Parameters and Controls</h2>
+
+
+The CollectionRec class houses all of the configuration parameters used to
+customize how a particular <a href="#collections">collection</a> is managed, 
+how its search results are
+displayed and how it indexes documents. There is one instance of the 
+CollectionRec class per collection. 
+<br><br>
+The Conf class
+houses all of the configuration parameters for things that are 
+collection-independent, like the maximum amount of memory the process can use, 
+for instance.
+<br><br>
+ Each CollectionRec has a xml-based configuration file called 
+"coll.conf" stored in the collections' subdirectory. The Conf class is 
+instantiated globally as g_conf and is initialized from the xml-based file
+named "gb.conf", as described in the <a href="./overview.html#config">
+user-based overview</a>.
+<br><br>
+All of the configuration parameters in these two classes are describe in an
+array call m_parms which is contained in the Parms class.
+Each element in this array is a Parm class. Each element has the following 
+members:
+<ul>
+<li>a cgi variable name for setting the parameter from a browser HTTP request, 
+<li>a title and description, for displaying the parameter on a web-based admin 
+page
+<li>an xml name, for loading/saving the parameter from/to an xml config file, 
+<li>a "cast" setting, which is 1 if the parameter's value change should be 
+broadcast to all hosts in the network,
+<li>the type of parameter, like boolean, float or string,
+<li>the size of the parameter, like 4 bytes for a float, X for a string,
+<li>the offset of the parameter in Conf or CollectionRec,
+<li>the maximum number of elements, if an array, of that parameter,
+<li>and many more. See Pages.h and Pages.cpp.
+</ul>
+The Parms class automates the display and control of all configuration 
+parameters through unified mechanisms. This allows the easy addition and 
+removal of parameters, makes it easy to read and save parameters to an 
+xml-based config file, and makes it easy to set parameters from a browser 
+HTTP request.
+<br><br>
+
+<a name="log"></a>
+<h2>The Log System</h2>
+
+Logging is done with a command like:
+<pre>
+log(LOG_DEBUG,"query: a query debug message #%li.",n);
+</pre>
+The first parameter to the log() subroutine is the <i>type</i> of log message.
+These types are defined in Log.h.<br><br>
+The second parameter is a format string. The first word in the format string 
+is the <i>subtype</i> of the log message. The subtype must be preceeded by a 
+colon and be a particular word as already used in the source code. Please do 
+not make up your own. The subtypes (take from Log.h) are as follows:<br><br>
+<table cellpadding=3 border=1>
+<tr><td><b>Subtype</b></td><td><b>Description</b></td></tr>
+<tr><td>addurls</td><td> related to adding urls</td></tr>
+<tr><td>admin</td><td>   related to administrative things, sync file, collections</td></tr>
+<tr><td>build</td><td>   related to indexing (high level)</td></tr>
+<tr><td>conf</td><td>    configuration issues</td></tr>
+<tr><td>disk</td><td>    disk reads and writes</td></tr>
+<tr><td>dns</td><td>     dns networking</td></tr>
+<tr><td>http</td><td>    http networking</td></tr>
+<tr><td>loop</td><td>
+<tr><td>net</td><td>     network later: multicast pingserver. sits atop udpserver.</td></tr>
+<tr><td>query</td><td>   related to querying (high level)</td></tr>
+<tr><td>rdb</td><td>     generic rdb things</td></tr>
+<tr><td>spcache</td><td> related to determining what urls to spider next</td></tr>
+<tr><td>speller</td><td> query spell checking</td></tr>
+<tr><td>thread</td><td>  calling threads</td></tr>
+<tr><td>topics</td><td>  related topics</td></tr>
+<tr><td>udp</td><td>     udp networking</td></tr>
+<tr><td>uni</td><td>     unicode parsing</td></tr>
+</table>
+<br>
+These various types and subtypes can be toggled on and off in the Log control
+page via the administrative web GUI. To force a message to be logged
+despite the control setting, use logf().<br><br>
+
+All log messages are currently logged to stderr but may use a rotating file
+scheme in the future.
+
+<a name="clusterswitch"></a>
+<h2>Changing Live Clusters</h2>
+This is a brief overview of how to switch the live www.gigablast.com site from one cluster to another, what changes are required, and what things to keep in mind.  The cluster which is to become live will be refered to as the "new cluster" and the one which is to be replaced will be refered to as the "old cluster".
+<br><br>
+Diff the gb.conf and coll.conf(s) between the new cluster and old cluster to check for undesired differences.  If no real-time spidering will be done, the readOnlyMode option should be set to 1 in the new cluster's gb.conf.  Additionally, blaster the new cluster to check for potential bugs with a new version of gb.  Now leave the new cluster on and ready to serve queries.
+<br><br>
+On both the primary and secondary dns servers, edit /etc/bind/db.gigablast.com.  Comment out the "www","dir","gov","@", and any other hostnames currently pointing to the old cluster.  Replicate these lines (or uncomment old existing lines) and point them to the ip of the new cluster.  Kill and restart named using: "killall -9 named ; /etc/rc3.d/S15bind9 start".  If everything is working correctly, traffic will begin to shift over to the new cluster.  Both should be left running until the old cluster is no longer seeing any traffic.
+<br><br>
+Something to watch for is that port 80 on the new cluster is correctly mapped to port 8000.  Check in /etc/rcS.d/S99local near the bottom for the line:
+<pre>
+/sbin/iptables -t nat -A PREROUTING -p tcp -m tcp --dport 80 -j DNAT --to-destination 64.62.168.XX:8000
+</pre> 
+This command should be executed at startup to perform the mapping.
+<br><br>
+After waiting a couple of days, force the traffic that hard-coded the IP for gigablast.com to start using the new cluster by running the following commands as root on host #0 on the old cluster, for instance, this is for gf0 (64.62.168.3), if gf0 were host #0 of the old cluster, and gb1 (64.62.168.52) is host #0 of the new cluster:
+<pre>
+gf0:/a# echo 1 > /proc/sys/net/ipv4/ip_forward 
+gf0:/a# /sbin/iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j DNAT --to 64.62.168.52:8000
+gf0:/a# /sbin/iptables -t nat -A POSTROUTING -d 64.62.168.52 -p tcp --dport 8000 -j SNAT --to 64.62.168.3
+</pre>
+
+
+<br>
+<hr>
+<a name="corelayer"></a>
+<h1>The Core Layer</h1>
+<br>
+
+<a name="coreclasses"></a>
+<h3>Associated Classes (.cpp and .h files)</h3>
+<table cellpadding=3 border=1>
+<tr><td>BigFile</td><td>Core</td><td>A virtual file class that allows virtual files bigger than 2GB by using smaller 512MB files.</td></tr>
+<tr><td>Dir</td><td>Core</td><td>Used to read the files in a directory.</td></tr>
+<tr><td>DiskPageCache</td><td>Core</td><td>Used by BigFile to read and write from/to a page cache.</td></tr>
+<tr><td>Domains</td><td>Core</td><td>Used to extract the Top Level Domain (TLD) from a url.</td></tr>
+<tr><td>Entities</td><td>Core</td><td>List of all the various HTML entities.</td></tr>
+<tr><td>Errno</td><td>Core</td><td>List of all the error codes and their associated error messages. Used by mstrerror().</td></tr>
+<tr><td>File</td><td>Core</td><td>A basic file class that recycles file descriptors to get around the 1024 limit.</td></tr>
+<tr><td>HashTable</td><td>Core</td><td>A basic hashtable that grows automatically.</td></tr>
+<tr><td>HashTableT</td><td>Core</td><td>A templatized version of HashTable.cpp.</td></tr>
+<tr><td>Log</td><td>Core</td><td>Used to log messages.</td></tr>
+<tr><td>Loop</td><td>Core</td><td>Used to control the flow of execution. Reacts to signals.</td></tr>
+<tr><td>Mem</td><td>Core</td><td>A malloc and <i>new</i> wrapper that helps isolate memory leaks, prevent double frees and identify overflows and underflows as well as track and limit memory consumption.</td></tr>
+<tr><td>Mime</td><td>Core</td><td>Unused.</td></tr>
+<tr><td>Strings</td><td>Core</td><td>Unused.</td></tr>
+<tr><td>Threads</td><td>Core</td><td>Gigablast's own threads class which uses the Linux clone() call to do its own LWP threads.</td></tr>
+<tr><td>Unicode</td><td>Core</td><td>Unicode support.</td></tr>
+<tr><td>UnicodeProperties</td><td>Core</td><td>Unicode support.</td></tr>
+<tr><td>Url</td><td>Core</td><td>For breaking a url up into its various components.</td></tr>
+<tr><td>Vector</td><td>Core</td><td>Unused.</td></tr>
+<tr><td>blaster</td><td>Core</td><td>Download the urls listed in a file in parallel. Very useful for testing query performance.</td></tr>
+<tr><td>create_ucd_tables</td><td>Core</td><td>Unicode support.</td></tr>
+<tr><td>dnstest</td><td>Core</td><td>Test dns server by sending it a bunch of lookup requests.</td></tr>
+<tr><td>fctypes</td><td>Core</td><td>Various little functions.</td></tr>
+<tr><td>gbfilter</td><td>Core</td><td>Called via a system call by Gigabot to convert pdfs, Microsoft Word documents, PowerPoint documents, etc. to HTML.</td></tr>
+<tr><td>hash</td><td>Core</td><td>Contains a bunch of fast and convenient hashing functions.</td></tr>
+<tr><td>iana_charset</td><td>Core</td><td>Unicode support. Autogenerated.</td></tr>
+<tr><td>ip</td><td>Core</td><td>Routines for manipulating IP addresses.</td></tr>
+<tr><td>main</td><td>Core</td><td>The main.cpp file.</td></tr>
+<tr><td>monitor</td><td>Core</td><td>Monitors an external gb process and sends an email alert on 3 failed queries in a row.</td></tr>
+<tr><td>thunder</td><td>Core</td><td>Tests UDP throughput between two machines.</td></tr>
+<tr><td>types</td><td>Core</td><td>Defines the well used key_t type, a 12-byte key, and some functions for 16-byte keys.</td></tr>
+<tr><td>uniq2</td><td>Core</td><td>Like the 'uniq' command but also counts the occurences and prints those out.</td></tr>
+<tr><td>urlinfo</td><td>Core</td><td>Displays information for a url given through stdin.</td></tr>
+</table>
+
+<br>
+<hr>
+<a name="filelist"></a>
+<h1>File List</h1>
+<br>
+Here is a list and description of all the source code files.
+<br><br>
+<table cellpadding=3 border=1>
+<tr><td><b>File</b> (.cpp or .h)</td><td><b>Layer</b></td><td><b>Description</b></td></tr>
+
+<tr><td>Ads</td><td>Search</td><td>Interface to third party ad server.</td></tr>
+<tr><td>AdultBit</td><td>Build</td><td>Used to detect if document content is naughty.</td></tr>
+<tr><td>AutoBan</td><td>Admin</td><td>Automatically bans IP addresses that exceed daily and minute query quotas.</td></tr>
+<tr><td>BigFile</td><td>Core</td><td>A virtual file class that allows virtual files bigger than 2GB by using smaller 512MB files.</td></tr>
+<tr><td>Bits</td><td>Build</td><td>Sets descriptor bits for each word in a Words class.</td></tr>
+<tr><td>Categories</td><td>Build</td><td>Stores DMOZ categories in a hiearchy.</td></tr>
+<tr><td>Checksumdb</td><td>DB</td><td>Rdb that maps a docId to a checksum for an indexed document. Used to dedup same content from the same hostname at build time.</td></tr>
+<tr><td>Clusterdb</td><td>DB</td><td>Rdb that maps a docId to the hash of a site and its family filter bit and, optionally, a sample vector used for deduping search results. Used for site clustering, family filtering and deduping at query time. </td></tr>
+<tr><td>CollectionRec</td><td>Admin</td><td>Holds all of the parameters for a particular search collection.</td></tr>
+<tr><td>Collectiondb</td><td>Admin</td><td>Manages all the CollectionRecs.</td></tr>
+<tr><td>Conf</td><td>Admin</td><td>Holds all of the parameters not collection specific (Collectiondb does that). Like maximum memory for the gb process to use, for instance. Corresponds to gb.conf file.</td></tr>
+<tr><td>DateParse</td><td>Build</td><td>Extracts the publish date from a document.</td></tr>
+<tr><td>Datedb</td><td>DB</td><td>Like indexdb, but its <i>scores</i> are 4-byte dates.</td></tr>
+<tr><td>Dir</td><td>Core</td><td>Used to read the files in a directory.</td></tr>
+<tr><td>DiskPageCache</td><td>Core</td><td>Used by BigFile to read and write from/to a page cache.</td></tr>
+<tr><td>Dns</td><td>Net</td><td>A DNS client built on top of the UdpServer class.</td></tr>
+<tr><td>DnsProtocol</td><td>Net</td><td>Uses UdpServer to make a protocol for talking to DNS servers. Used by Dns class.</td></tr>
+<tr><td>Doc</td><td>Build</td><td>A container class to store the titleRec and siteRec and other classes associated with a document.</td></tr>
+<tr><td>Domains</td><td>Core</td><td>Used to extract the Top Level Domain (TLD) from a url.</td></tr>
+<tr><td>Entities</td><td>Core</td><td>List of all the various HTML entities.</td></tr>
+<tr><td>Errno</td><td>Core</td><td>List of all the error codes and their associated error messages. Used by mstrerror().</td></tr>
+<tr><td>File</td><td>Core</td><td>A basic file class that recycles file descriptors to get around the 1024 limit.</td></tr>
+<tr><td>HashTable</td><td>Core</td><td>A basic hashtable that grows automatically.</td></tr>
+<tr><td>HashTableT</td><td>Core</td><td>A templatized version of HashTable.cpp.</td></tr>
+<tr><td>Highlight</td><td>Search</td><td>Highlights query terms in a document or summary.</td></tr>
+<tr><td>Hostdb</td><td>Admin</td><td>Contains the array of Hosts in the network. Each Host has various stats, like ping time and IP addresses.</td></tr>
+<tr><td>HttpMime</td><td>Net</td><td>Creates and parses an HTTP MIME header.</td></tr>
+<tr><td>HttpRequest</td><td>Net</td><td>Creates and parses an HTTP request.</td></tr>
+<tr><td>HttpServer</td><td>Net</td><td>Gigablast's highly efficient web server, contains a TcpServer class.</td></tr>
+<tr><td>IndexList</td><td>Search</td><td>Derived from RdbList. Used specifically for processing Indexdb RdbLists.</td></tr>
+<tr><td>IndexReadInfo</td><td>Search</td><td>Tells Gigablast how much of what IndexLists to read from Indexdb to satisfy a query.</td></tr>
+<tr><td>IndexTable</td><td>Search</td><td>Intersects IndexLists to get the final docIds to satisfy a query.</td></tr>
+<tr><td>Indexdb</td><td>DB</td><td>Rdb that maps a termId to a score and docId pair. The search index is stored in Indexdb.</td></tr>
+<tr><td>Lang</td><td>Build</td><td>Unused.</td></tr>
+<tr><td>Language.h</td><td>Build</td><td>Enumerates the various languages supported by Gigablast's language detector.</td></tr>
+<tr><td>LangList</td><td>Build</td><td>Interface to the language-specific dictionaries used for language identification by XmlDoc::getLanguage().</td></tr>
+<tr><td>LinkInfo</td><td>Build</td><td>Used by the link analysis routine. Contains an array of LinkTexts.</td></tr>
+<tr><td>LinkText</td><td>Build</td><td>Contains the link information for a specific document that links to a specific url, such as quality, IP address, number of total outgoing links, and the link text for that url.</td></tr>
+<tr><td>Links</td><td>Build</td><td>Parses out all the outgoing links in a document.</td></tr>
+<tr><td>Log</td><td>Core</td><td>Used to log messages.</td></tr>
+<tr><td>Loop</td><td>Core</td><td>Used to control the flow of execution. Reacts to signals.</td></tr>
+<tr><td>Matches</td><td>Search</td><td>Identifies words in a document or string that match supplied query terms. Used by Highlight.</td></tr>
+<tr><td>Mem</td><td>Core</td><td>A malloc and <i>new</i> wrapper that helps isolate memory leaks, prevent double frees and identify overflows and underflows as well as track and limit memory consumption.</td></tr>
+<tr><td>MemPool</td><td>DB</td><td>Used by RdbTree to add new records to tree without having to do an individual malloc.</td></tr>
+<tr><td>MemPoolTree</td><td>DB</td><td>Unused. Was our own malloc routine.</td></tr>
+<tr><td>Mime</td><td>Core</td><td>Unused.</td></tr>
+<tr><td>Msg0</td><td>DB</td><td>Fetches an RdbList from across the network.</td></tr>
+<tr><td>Msg1</td><td>DB</td><td>Adds all the records in an RdbList to various hosts in the network.</td></tr>
+<tr><td>Msg10</td><td>Build</td><td>Adds a list of urls to spiderdb for spidering.</td></tr>
+<tr><td>Msg13</td><td>Build</td><td>Tells a server to download robots.txt (or get from cache) and report if Gigabot has permission to download it.</td></tr>
+<tr><td>Msg14</td><td>Build</td><td>The core class for indexing a document.</td></tr>
+<tr><td>Msg15</td><td>Build</td><td>Called by Msg14 to set the Doc class from the previously indexed TitleRec.</td></tr>
+<tr><td>Msg16</td><td>Build</td><td>Called by Msg14 to download the document and create a new titleRec to set the Doc class with.</td></tr>
+<tr><td>Msg17</td><td>Search</td><td>Used by Msg40 for distributed caching of search result pages.</td></tr>
+<tr><td>Msg18</td><td>Build</td><td>Unused. Was used for supporting soft banning.</td></tr>
+<tr><td>Msg19</td><td>Build</td><td>Determine if a document is a duplicate of a document already indexed from that same hostname.</td></tr>
+<tr><td>Msg1a</td><td>Search</td><td>Get the reference pages from a set of search results.</td></tr>
+<tr><td>Msg1b</td><td>Search</td><td>Get the related pages from a set of search results and reference pages.</td></tr>
+<tr><td>Msg1c</td><td>Admin</td><td>Perform spam analysis on an IP.</td></tr>
+<tr><td>Msg1d</td><td>Admin</td><td>Ban documents identified as spam.</td></tr>
+<tr><td>Msg2</td><td>Search</td><td>Given a list of termIds, download their respective IndexLists.</td></tr>
+<tr><td>Msg20</td><td>Search</td><td>Given a docId and query, return a summary or or document excerpt. Used by Msg40.</td></tr>
+<tr><td>Msg22</td><td>Search/Build</td><td>Return the TitleRec for a docId or url.</td></tr>
+<tr><td>Msg23</td><td>Build</td><td>Get the link text in a document that links to a specified url. Also returns other info besides that link text.</td></tr>
+<tr><td>Msg24</td><td>search</td><td>Get the gigabits (aka related topics) for a query.</td></tr>
+<tr><td>Msg25</td><td>build</td><td>Set the LinkInfo class for a document.</td></tr>
+<tr><td>Msg28</td><td>admin</td><td>Set a particular parm or set of parms on all hosts in the cluster.</td></tr>
+<tr><td>Msg2a</td><td>admin</td><td>Makes catdb, for assigning documents to a category in DMOZ.</td></tr>
+<tr><td>Msg2b</td><td>admin</td><td>Makes catdb, for assigning documents to a category in DMOZ.</td></tr>
+<tr><td>Msg3</td><td>DB</td><td>Reads an RdbList from several consecutive files in a particular Rdb.</td></tr>
+<tr><td>Msg30</td><td>Admin</td><td>Unused.</td></tr>
+<tr><td>Msg33</td><td>Search</td><td>Unused. Did raid stuff.</td></tr>
+<tr><td>Msg34</td><td>DB</td><td>Determines least loaded host in a group of hosts.</td></tr>
+<tr><td>Msg35</td><td>DB</td><td>Merge token managament functions. Currently does not work.</td></tr>
+<tr><td>Msg36</td><td>Search</td><td>Gets the length of an IndexList for determining query term weights.</td></tr>
+<tr><td>Msg37</td><td>Search</td><td>Calls a Msg36 for each term in the query.</td></tr>
+<tr><td>Msg38</td><td>Search</td><td>Returns the Clusterdb record for a docId. May also get for Titledb record if its key is in the RdbMap.</td></tr>
+<tr><td>Msg39</td><td>Search</td><td>Intersects IndexLists to get list of docIds satisfying query. Uses Msg38 to cluster away dups and same-site results. Re-intersects lists to get more docIds if too many were removed. Uses Msg2, Msg38, IndexReadInfo, IndexTable. This and IndexTable are the heart of the query resolution process.</td></tr>
+<tr><td>Msg3a</td><td>Search</td><td>Calls multiple Msg39s to distribute the query based on docId parity. One host computes the even docId search results, the other the odd. And so on for different parity levels. Merges the docIds into a final list.</td></tr>
+<tr><td>Msg40</td><td>Search</td><td>Uses Msg3a to get final docIds in search results. Uses Msg20 to get the summaries for these docIds.</td></tr>
+<tr><td>Msg40Cache</td><td>Search</td><td>Used by Msg17 to cache search results pages. Basically, caching serialized Msg40s.</td></tr>
+<tr><td>Msg41</td><td>Search</td><td>Sends Msg40s to multiple clusters and merges the results.</td></tr>
+<tr><td>Msg5</td><td>DB</td><td>Uses Msg3 to read RdbLists from multiple files and then merges those lists into a single RdbList. Does corruption detection and repiar. Intergrates list from RdbTree into the single RdbList.</td></tr>
+<tr><td>Msg7</td><td>build</td><td>Injects a url into the index using Msg14.</td></tr>
+<tr><td>Msg8</td><td>Build</td><td>Gets the Sitedb record given a url.</td></tr>
+<tr><td>Msg9</td><td>Build</td><td>Adds a Sitedb record to Sitedb for a given site/url.</td></tr>
+<tr><td>MsgB</td><td>DB</td><td>Unused. A distributed cache for caching anything.</td></tr>
+<tr><td>Multicast</td><td>Net</td><td>Used to reroute a request if it fails to be answered in time. Also used to send a request to multiple hosts in the cluster, usually to a group for data storage purposes.</td></tr>
+<tr><td>PageAddColl</td><td>Admin</td><td>HTML page to add a new collection.</td></tr>
+<tr><td>PageAddUrl</td><td>Build</td><td>HTML page to add a url or file of urls to spiderdb.</td></tr>
+<tr><td>PageCatdb</td><td>Admin/Build</td><td>HTML page to lookup the categories of a url in catdb.</td></tr>
+<tr><td>PageDirectory</td><td>Search</td><td>HTML page to display a DMOZ directory page.</td></tr>
+<tr><td>PageGet</td><td>Search</td><td>HTML page to display a cached web page from titledb with optional query term highlighting.</td></tr>
+<tr><td>PageHosts</td><td>Admin</td><td>HTML page to display all the hosts in the cluster. Shows ping times for each host.</td></tr>
+<tr><td>PageIndexdb</td><td>Admin/Search</td><td>HTML page to display an IndexList for a given query term or termId. Can also add or delete individual Indexdb records.</td></tr>
+<tr><td>PageInject</td><td>Build</td><td>HTML page to inject a page directly into the index.</td></tr>
+<tr><td>PageLogin</td><td>Admin</td><td>HTML page to login as master admin or as a collection's admin.</td></tr>
+<tr><td>PageOverview</td><td>Admin</td><td>HTML page to present the help section.</td></tr>
+<tr><td>PageParser</td><td>Admin/Build</td><td>HTML page to show how a document is analyzed, parsed and its terms are scored and indexed.</td></tr>
+<tr><td>PagePerf</td><td>Admin</td><td>HTML page to show the performance graph.</td></tr>
+<tr><td>PageReindex</td><td>Admin/Build</td><td>HTML page to reindex or delete the search results for a single term query.</td></tr>
+<tr><td>PageResults</td><td>Search</td><td>HTML/XML page to display the search results.</td></tr>
+<tr><td>PageRoot</td><td>Search</td><td>HTML page to display the root page.</td></tr>
+<tr><td>PageSitedb</td><td>Admin/Build</td><td>HTML page to allow urls or sites to be entered into Sitedb, for assigning spidered urls to a ruleset.</td></tr>
+<tr><td>PageSockets</td><td>Admin</td><td>HTML page for showing existing network connections for both TCP and UDP servers.</td></tr>
+<tr><td>PageSpamr</td><td>Admin/Build</td><td>HTML page for removing spam from the index.</td></tr>
+<tr><td>PageSpiderdb</td><td>Admin/Build</td><td>HTML page for showing status of spiders and what is in spiderdb.</td></tr>
+<tr><td>PageStats</td><td>Admin</td><td>HTML page for showing various server statistics.</td></tr>
+<tr><td>PageTitledb</td><td>Admin/Build</td><td>HTML page for show a Titledb record for a given docId.</td></tr>
+<tr><td>Pages</td><td>Admin</td><td>Framework for displaying generic HTML pages as described by Parms.cpp.</td></tr>
+<tr><td>Parms</td><td>Admin</td><td>All of the control parameters for the gb process or for a particular collection are stored in this file. Some controls are assigned to a specific <i>page id</i> so Pages.cpp can generate the HTML page automatically for controlling those parameters.</td></tr>
+<tr><td>Phrases</td><td>Build</td><td>Generates phrases for every word in a Words class. Uses the Bits class.</td></tr>
+<tr><td>PingServer</td><td>Admin</td><td>Does round-robin pinging of every host in the cluster. Ping times are displayed on PageHosts.</td></tr>
+<tr><td>Pops</td><td>Build</td><td>Computes popularity for each word in a Words class. Uses the dictionary files in the dict subdirectory.</td></tr>
+<tr><td>Pos</td><td>Build</td><td>Computes the character position of each word in a Words class. HTML entities count as a single character. So do back-to-back spaces.</td></tr>
+<tr><td>Query</td><td>Search</td><td>Parses a query up into QueryWords which are then parsed into QueryTerms. Makes a boolean truth table for boolean queries.</td></tr>
+<tr><td>Rdb</td><td>DB</td><td>The core database class from which all are derived.</td></tr>
+<tr><td>RdbBase</td><td>DB</td><td>Each Rdb has an array of RdbBases, one for each collection. Each RdbBase has an array of BigFiles for that collection.</td></tr>
+<tr><td>RdbCache</td><td>DB</td><td>Can cache RdbLists or individual Rdb records.</td></tr>
+<tr><td>RdbDump</td><td>DB</td><td>Dumps the RdbTree to an Rdb file. Also is used by RdbMerge to dump the merged RdbList to a file.</td></tr>
+<tr><td>RdbList</td><td>DB</td><td>A list of Rdb records.</td></tr>
+<tr><td>RdbMap</td><td>DB</td><td>Maps an Rdb key to an offset into an RdbFile.</td></tr>
+<tr><td>RdbMem</td><td>DB</td><td>Memory manager for RdbTree so it does not have to allocate space for every record in the three.</td></tr>
+<tr><td>RdbMerge</td><td>DB</td><td>Merges multiple Rdb files into one Rdb file. Uses Msg5 and RdbDump to do reading and writing respectively.</td></tr>
+<tr><td>RdbScan</td><td>DB</td><td>Reads an RdbList from an RdbFile, used by Msg3.</td></tr>
+<tr><td>RdbTree</td><td>DB</td><td>A binary tree of Rdb records. All collections share a single RdbTree, so the collection number is specified for each node in the tree.</td></tr>
+<tr><td>Robotdb</td><td>Build</td><td>Caches and parses robots.txt files. Used by Msg13.</td></tr>
+<tr><td>SafeBuf</td><td>General</td><td>Used to print messages safely into a buffer without worrying about overflow. Will automatically reallocate the buffer if necessary.</td></tr>
+<tr><td>Scores</td><td>Build</td><td>Computes the score of each word in a Words class. Used to weight the final score of a term being indexed in TermTable::hash().</td></tr>
+<tr><td>SearchInput</td><td>Search</td><td>Used to parse, contain and manage all parameters passed in for doing a query.</td></tr>
+<tr><td>SiteRec</td><td>DB</td><td>A record in Sitedb.</td></tr>
+<tr><td>Sitedb</td><td>DB</td><td>An Rdb that maps a url to a Sitedb record which contains a ruleset to be used to parse and index that url.</td></tr>
+<tr><td>Spam</td><td>Build</td><td>Computes the probability a word is spam for every word in a Words class.</td></tr>
+<tr><td>SpamContainer</td><td>Build</td><td>Used to remove spam from the index using Msg1c and Msg1d.</td></tr>
+<tr><td>Speller</td><td>Search</td><td>Performs spell checking on a query. Returns a single recommended spelling of the query.</td></tr>
+<tr><td>SpiderCache</td><td>Build</td><td>Spiderdb records are preloaded in this cache so SpiderLoop::spiderUrl() can get urls to spider as fast as possible.</td></tr>
+<tr><td>SpiderLoop</td><td>Build</td><td>The heart of the spider process. Continually gets urls from the SpiderCache and calls Msg14::spiderUrl() on them.</td></tr>
+<tr><td>SpiderRec</td><td>DB</td><td>A record in spiderdb.</td></tr>
+<tr><td>Spiderdb</td><td>DB</td><td>An Rdb whose records are urls sorted by times they should be spidered. The key contains other information like if the url is <i>old</i> or <i>new</i> to the index, and the priority of the url, currently from 0 to 7.</td></tr>
+<tr><td>Stats</td><td>Admin</td><td>Holds various statistics that PagePerf displays.</td></tr>
+<tr><td>Stemmer</td><td>Build</td><td>Unused. Given a word, computes its stem.</td></tr>
+<tr><td>StopWords</td><td>Build</td><td>A table of stop words, used by Bits to see if a word is a stop word.</td></tr>
+<tr><td>Strings</td><td>Core</td><td>Unused.</td></tr>
+<tr><td>Summary</td><td>Search</td><td>Generates a summary given a document and a query.</td></tr>
+<tr><td>Sync</td><td>Admin</td><td>Unused. Syncs to twins Rdbs together.</td></tr>
+<tr><td>TcpServer</td><td>Net</td><td>A TCP server which contains an array of TcpSockets.</td></tr>
+<tr><td>TcpSockets</td><td>Net</td><td>A C++ wrapper for a TCP socket.</td></tr>
+<tr><td>TermTable</td><td>Build</td><td>A hash table of terms from a document. Consists of termIds and scores. Used to accumulate scores. TermTable::hash() is arguably a heart of the build process.</td></tr>
+<tr><td>Threads</td><td>Core</td><td>Gigablast's own threads class which uses the Linux clone() call to do its own LWP threads.</td></tr>
+<tr><td>Title</td><td>Search</td><td>Generates a title for a document. Usually just the &lt;title&gt; tag.</td></tr>
+<tr><td>TitleRec</td><td>DB</td><td>A record in Titledb.</td></tr>
+<tr><td>Titledb</td><td>DB</td><td>An Rdb where the records are basically compressed web pages, along with other info like the quality of the page. Contains an instance of the LinkInfo class.</td></tr>
+<tr><td>TopTree</td><td>Search</td><td>A balanced binary tree used for getting the top-scoring X search results from intersecting IndexLists in IndexTable, where X is a large number. Normally we just do a linear scan to find the minimum scoring docId and replace him with a higher scoring docid, but when X is large this linear scan process is too slow.</td></tr>
+<tr><td>UCNormalizer</td><td>General</td><td>Unicode support.</td></tr>
+<tr><td>UCPropTable</td><td>General</td><td>Unicode support.</td></tr>
+<tr><td>UCWordIterator</td><td>General</td><td>For iterating over Unicode characters.</td></tr>
+<tr><td>UdpServer</td><td>Net</td><td>A reliable UDP server that uses non-blocking sockets and calls handlers  recieving a message. The handle called depends on that message's type. The handler is UdpServer::m_handlers[msgType].</td></tr>
+<tr><td>UdpSlot</td><td>Net</td><td>Basically a "socket" for the UdpServer. The UdpServer contains an array of a few thousand of these. When none are available to conduct receive a request, the dgram is dropped and will later be resent by the requester in a back-off fashion.</td></tr>
+<tr><td>Unicode</td><td>Core</td><td>Unicode support.</td></tr>
+<tr><td>UnicodeProperties</td><td>Core</td><td>Unicode support.</td></tr>
+<tr><td>Url</td><td>Core</td><td>For breaking a url up into its various components.</td></tr>
+<tr><td>Url2</td><td>Build</td><td>For hashing/indexing a url.</td></tr>
+<tr><td>Urldb</td><td>DB</td><td>An Rdb whose records indicate if a url is in spiderdb or what particular Titledb BigFile contains the url.</td></tr>
+<tr><td>Vector</td><td>Core</td><td>Unused.</td></tr>
+<tr><td>Words</td><td>Build</td><td>Breaks a document up into "words", where each word is a sequence of alphanumeric characters, a sequence of non-alphanumeric characters, or a single HTML/XML tag. A heart of the build process.</td></tr>
+<tr><td>Xml</td><td>Build</td><td>Breaks a document up into XmlNodes where each XmlNode is a tag or a sequence of characters which are not a tag.</td></tr>
+<tr><td>XmlDoc</td><td>Build</td><td>XmlDoc::hash() hashes a TitleRec (and SiteRec which indicates the ruleset to use) into a TermTable. Another heart of the build process.</td></tr>
+<tr><td>XmlNode</td><td>Build</td><td>Xml classes has an array of these. Each is either a tag or a sequence of characters that are between tags (or beginning/end of the document).</td></tr>
+<tr><td>blaster</td><td>Core</td><td>Download the urls listed in a file in parallel. Very useful for testing query performance.</td></tr>
+<tr><td>create_ucd_tables</td><td>Core</td><td>Auto generated. Used by Unicode stuff.</td></tr>
+<tr><td>dmozparse</td><td>Build</td><td>Creates the necessary dmoz files Gigablast needs from those files downloadable from DMOZ.</td></tr>
+<tr><td>dnstest</td><td>Core</td><td>Test dns server by sending it a bunch of lookup requests.</td></tr>
+<tr><td>fctypes</td><td>Core</td><td>Various little functions.</td></tr>
+<tr><td>gbfilter</td><td>Core</td><td>Called via a system call by Gigabot to convert pdfs, Microsoft Word documents, PowerPoint documents, etc. to HTML.</td></tr>
+<tr><td>hash</td><td>Core</td><td>Contains a bunch of fast and convenient hashing functions.</td></tr>
+<tr><td>iana_charset</td><td>Core</td><td>Unicode support.</td></tr>
+<tr><td>ip</td><td>Core</td><td>Routines for manipulating IP addresses.</td></tr>
+<tr><td>main</td><td>Core</td><td>The main.cpp file.</td></tr>
+<tr><td>monitor</td><td>Core</td><td>Monitors an external gb process and sends an email alert on 3 failed queries in a row.</td></tr>
+
+<tr><td>thunder</td><td>Core</td><td>Tests UDP throughput between two machines.</td></tr>
+<tr><td>types</td><td>Core</td><td>Defines the well used key_t type, a 12-byte key, and some functions for 16-byte keys.</td></tr>
+<tr><td>uniq2</td><td>Core</td><td>Like the 'uniq' command but also counts the occurences and prints those out.</td></tr>
+<tr><td>urlinfo</td><td>Core</td><td>Displays information for a url given through stdin.</td></tr>
+</table>
+
+<br>
+<hr>
+
+<a name="spam"></a>
+<h1>Fighting Spam</h1>
+Spam is perhaps the leading issue in quality control. How do we remove undesirable and useless pages from the search results? Fighting spammers is like an endless cat and mouse game. Before we discuss any more, we must ask ourselves, <i>What is spam?</i> 
+<br><br>
+A spam page consists of a bunch of links and generated content.  The generated content uses various sources as the basis for the content generation.  These sources include other static web pages, search results pages, resources like dictionaries, dmoz, query logs, and databases from shopping sites like amazon, ebay, allposters or zappos. The exact sources of input used by the generating function is not always clear.
+<!--
+<br><br>
+The ideal spam-fighting algorithm may be a deduping algorithm in combination with a nonsense detector. Zak, how can we write a global fuzzy deduper? This deduper could be used to reduce the quality, and therefore page quota, of individual IPs and domains. If a domain consists mostly of generated content its quality should be reduced in sitedb.
+-->
+<br><br>
+To fight spam using a different approach, we have devised a quality-determination algorithm which uses a point-based system.  Our base measure of quality is based upon offsite factors, such as number of incoming links weighted by the quality of those incoming links.  The spam detector then looks at onsite factors such as the fingerprints of content entirely generated automatically, links to affiliate moneymaking sites, or irregular language model, and adds a negative quality proportional to the number of questionable practices the page engages in.  The total quality of a page is the sum of the link-adjusted quality and the negative spam quality.
+<br><br>
+Our attributes for spam detection have been gleaned from examining thousands of spam and non-spam documents.  The weights are adjustable, and have been manually tuned to provide good spam detection, while minimizing false positives.  The points for each attribute is multiplied by the number of times the attribute occured in the document.  The total points for each attribute are then added for a raw total of points.  The raw total is then multiplied by a force multiplier.  The force multiplier is calculated by .01 * the number of attributes had a non-zero number of points.  This provides a much heavier weight for pages which have many 'spammy' qualities, while reducing false positives for pages which have lots of points in a single category.  This produces a small integer which is capped at MaxQuality points and comprises the negative quality weight.  
+<br><br>
+<table width="100%" border="1" bgcolor=#999999><tr><td><b>Spam Scores</b></td><td><b>Points</b></td><td><b>Occurences</b></td><td><b>Total</b></td></tr><tr><td>url has - or _ or a digit in the domain</td><td>20</td><td>0</td><td>0</td></tr><tr><td>tld is info or biz</td><td>20</td><td>0</td><td>0</td></tr><tr><td>tld is gov,edu, or mil</td><td>-20</td><td>0</td><td>0</td></tr><tr><td>title has spammy words</td><td>20</td><td>0</td><td>0</td></tr><tr><td>page has img src to other domains</td><td>5</td><td>1</td><td>5</td></tr><tr><td>page contains spammy words</td><td>5</td><td>3</td><td>15</td></tr><tr><td>consecutive link text has the same word</td><td>10</td><td>0</td><td>0</td></tr><tr><td>links to amazon, allposters, or zappos</td><td>10</td><td>0</td><td>0</td></tr><tr><td>has 'affiliate' in the links</td><td>40</td><td>0</td><td>0</td></tr><tr><td>has an iframe to amazon</td><td>30</td><td>0</td><td>0</td></tr><tr><td>links to urls > 128 chars long</td><td>5</td><td>0</td><td>0</td></tr><tr><td>links have ?q= or &q=</td><td>5</td><td>0</td><td>0</td></tr><tr><td>page has google ads</td><td>15</td><td>0</td><td>0</td></tr><tr><td>Raw Total</td><td></td><td></td><td>20</td><tr><td>Force Multiplier</td><td></td><td></td><td>0.020000</td><tr><td>Final Score</td><td></td><td></td><td>0</td></table>
+<!-- Some of these algorithms determine the quality of a site or IP address, and some the individual page. The algorithms that operate on the site or IP address need to run in batch mode and will add entries to sitedb. The algorithms that score individual pages can be run right after the url is downloaded. This algorithm could be used in combination with the global fuzzy deduper to get even better results.
+
+<br><br>
++30 If domain is very bushy. like an N-to-N graph.
+-->
+
+<br><br>
+<h2>Search engine results pages (SERPS)</h2>
+Many pages indexed by search engines are themselves search engine pages.  This could be because of a misconfigured robots.txt which fails to tell search engines not to index their results pages, or they could be included by a php script by a search engine spammer because they will include keywords which are close in relevency to a query term.  In any case, they are useless content.  In order to detect these pages, we use a points system which looks for the structure of title - summary - url several times in a row, as well as things like next and prev links, and queries in the url.  These points are added together and normalized between 0 and 100 to give a likelihood that the page is a serp.
+<br><br>
+<!--
+<hr><h1>Procedures to Explain</h1>
+
+<ul>
+<li>How a Page is Delivered to the Browser
+<li>How Configurable Parameters are Handled via the Browser or Xml File
+<li>Site Clustering
+<li>Dup Removal From search results
+<li>Dup Removal At Spider Time
+</ul>-->
+
+<br><br>
+<br>
+<center>
+<font size=-1>
+<b>
+<a href=/products.html>products</a> &nbsp; &nbsp;
+<a href=/help.html>help</a> &nbsp; &nbsp;
+<a href=/addurl>add a url</a> &nbsp; &nbsp;
+<a href=/press.html>Press</a> &nbsp; &nbsp; <a href="/press.html">Press</a> &nbsp; &nbsp; 
+<a href=/contact.html>contact</a>
+</b>
+</font>
+</html>
+
+<!--INSTALLATION INSTRUCTIONS FOR BACKUP SOLUTION
+========================================================
+WRITTEN BY: Matt Sabino 04/03/06
+NOTE: The > is used to show a command prompt.
+      Also, any user defined information in commands are shown through the 
+      <user defined information> notation.
+
+
+[Getting Started]
+------------------
+
+In order to install the backup solution, there must be some prerequisite installs.  Assuming we 
+are running on a Debian linux kernel as root, these prerequisites can be gotten through 
+'apt-get'.  We need the following packages:
+
+	 =================================
+	 = PACKAGE		VERSION	 =
+	 =-------------------------------=
+	 = ssh			 3.8.1p1 =
+	 = gnupg		 1.4.2.2 =
+	 = duplicity		 0.4.1   =
+	 = backupninja		 0.9.3-4 =
+	 =================================
+
+First me must update our cache with the following command:
+	> apt-get update
+Now search for the appropriate package names:
+	> apt-cache search <pkgName>
+Assuming all package were found verify that the versions match or exceed the above list:
+	> apt-cache showpkg <pkgName>
+Assuming all is well, we shall begin installation.
+	> apt-get install <pkgName>
+Now that we have our programs installed, we need to configure them.
+
+[SSH]
+-----------------
+To begin using a backup client across a network, we must have ssh working where no 
+passwords/phrases are used.  Remember to press <Enter> when asked for a passphrase, as using a 
+passphrase will cause confusion during backupninja configuration.  To do this we first generate 
+a key for the source host (still in root):
+	> ssh-keygen -t dsa
+Now that we have our keys stored under the /root/.ssh, we need to supply the public key to our 
+destination host:
+	> ssh-copy-id -i /root/.ssh/id_dsa.pub <destUser>@<destHost>
+Now attempt to ssh into the destination host machine:
+	> ssh <destUser>@<destHost>
+If you were able to ssh without the use of a password/phrase successfully, we may now go onto 
+the next step.  If you had problems, make sure your host is entered into your /etc/hosts file 
+and that all spellings were correct.  
+
+
+[GPG]
+-----------------
+Without GPG keys in place, duplicity will fail quite violently when encryption is attempted.  
+Therefore we shall begin by generating the key for the root at the source host:
+	> gpg --gen-key
+Follow the prompts and enter for a 'DSA and ElGamal' with 2048 keysize.  Now for practical 
+purposes, such as losing the gpg files for bad drives, virii, corruption, etc, we are going to 
+export both the public and private key so that we may print them out or move them to a secure 
+location:
+        > gpg --armor --export root > public_key.gpg.asc
+	> gpg --armor --export-secret-subkeys root > secret_key.gpg.asc
+
+GPG is now in place and can be used to encrypt our backup files and send them across the 
+network.  We will need to come back to GPG and obtain the source host's root public key if we 
+wish to encrypt any duplicity actions.  This can be done by executing:       
+        > gpg --list-keys
+	/root/.gnupg/pubring.gpg
+	------------------------
+	pub  1024D/B036117C 2006-03-29 [expires: 2007-03-29]
+	uid		    Administrator (GPG for Backup) <root@<srcHost>.com>
+	sub  1024g/5D2059A1 2006-03-29 [expires: 2007-03-29]
+Now we find that the public key is "B036117C" for the root on the source host.  We will hold 
+on to that string of hex characters, so that we can setup backupninja.
+
+
+[duplicity]
+-----------------
+At this time, I believe duplicity is fully configurable through backupninja and therefore does 
+not need any configuration to operate properly.
+
+
+[backupninja]
+-----------------
+In order to configure backupninja, there are 2 types of config files, global and local.  The 
+global configuration file should reside at /etc/backupninja.conf.  The global file doesn't have 
+too many settings to manipulate and is commented which should make it fairly straight forward.  
+However, a sample configuration is supplied below:
+	 #
+	 #                          |\_
+	 # B A C K U P N I N J A   /()/
+	 #                         `\|
+	 # main configuration file
+	 #
+	 
+	 # how verbose to make the logs
+	 # 5 -- Debugging messages     (and below)
+	 # 4 -- Informational messages (and below)
+	 # 3 -- Warnings               (and below)
+	 # 2 -- Errors                 (and below)
+	 # 1 -- Fatal errors           (only)
+	 loglevel = 5
+	 # send a summary of the backup status to
+	 # this email address:
+	 reportemail = msabino@gigablast.com
+	 
+	 # if set to 'yes', a report email will be generated
+	 # even if all modules reported success. (default = yes)
+	 reportsuccess = yes
+	 
+	 # if set to 'yes', a report email will be generated
+	 # even if there was no error. (default = yes)
+	 reportwarning = yes
+	 
+	 #######################################################
+	 # for most installations, the defaults below are good #
+	 #######################################################
+	 
+	 # where to log:
+	 logfile = /var/log/backupninja.log
+	 
+	 # directory where all the backup configuration files live
+	 configdirectory = /etc/backup.d
+	 
+	 # where backupninja helper scripts are found
+	 scriptdirectory = /usr/share/backupninja
+	 
+	 # where backupninja libs are found
+	 libdirectory = /usr/lib/backupninja
+	 
+	 # whether to use colors in the log file
+	 usecolors = yes
+	 
+	 # default value for 'when'
+	 when = everyday at 01:00
+	 
+	 # if running vservers, set to yes
+	 vservers = no
+
+	 # programs paths
+	 # SLAPCAT=/usr/sbin/slapcat
+	 # LDAPSEARCH=/usr/bin/ldapsearch
+	 # RDIFFBACKUP=/usr/bin/rdiff-backup
+	 # MYSQL=/usr/bin/mysql
+	 # MYSQLHOTCOPY=/usr/bin/mysqlhotcopy
+	 # MYSQLDUMP=/usr/bin/mysqldump
+	 # PGSQLDUMP=/usr/bin/pg_dump
+	 # PGSQLDUMPALL=/usr/bin/pg_dumpall
+	 # GZIP=/bin/gzip
+	 # RSYNC=/usr/bin/rsync
+	 # VSERVERINFO=/usr/sbin/vserver-info
+	 # VSERVER=/usr/sbin/vserver
+Scheduling can be changed to any time that can be expressed under these examples (taken from 
+backupninja's website):
+	   when = sundays at 02:00
+	   when = 30th at 22
+	   when = 30 at 22:00
+	   when = everyday at 01 <-- the default
+	   when = Tuesday at 05:00
+	   when = hourly
+For additional information please refer to:  http://dev.riseup.net/backupninja/configuration/
+
+Backupninja is also setup to send emails to the administrator upon problems arising with backup.
+For backupninja to be able to email, postfix needs to be installed and configured.  There is 
+another document that should be referenced in regards to this.
+
+Local configuration files are used to specify saving which files, emails, databases, etc.  These
+files are located at /etc/backup.d and are not provided for you.  Symbolic links to 
+/etc/backup.d does not work for backupninja configuration files.  Out of the box, backupninja 
+supports the following configuration files:
+      .dup	    handler for backing up with duplicity
+      .ldap	    handler for backing up ldap databases
+      .maildir	    handler to incrementally backup maildirs
+      .mysql	    handler for backing up mysql databases
+      .pgsql	    handler for backing up PostgreSQL databases
+      .rdiff	    handler for keeping remote, incremental copies of specified 
+		    portions of the file system
+      .sh	    run the configuration file as a shell script
+      .svn	    handler to backup subversion repositories
+      .sys	    handler for recording miscallaneous and useful system and hardware data
+Additional configuration files may be created to handle different types of files by creating 
+bash scripts in the /usr/share/backupninja directory.  For more details, refer to:  
+http://dev.riseup.net/backupninja/handlers/
+
+If working with the configuration files feels intimidating, have no fear, a gui utility has been
+made.  The utility is called ninjahelper and provideds a graphical interface that the user 
+answers questions to build their backup actions.
+
+Continuing with the configuration files, there is not too much documentation other than what is 
+provided in the sample scripts at http://dev.riseup.net/backupninja/handlers/.  All of the 
+scripts have been copied into the examplebk directory with their proper extensions for the 
+readers review.
+
+Some minor details regarding the configuration files:
+     -files MUST be owned, readable and writable ONLY by root
+     -each file MAY have a different 'when' statement, which takes precedence over the 
+      global 'when'
+     -files are executed in alphabetical order
+     -duplicity requires user to input public GPG key (even though script says it shouldnt)
+      SEE SECTION [GPG] above for further information
+     -note what time your server is running at, UTC != MST and set your when accordingly
+     -currently quickbooks is giving backupninja permission fits
+
+
+[Restoring Backup]
+-------------------
+For restoration from backup, duplicity must be used.  There isn't too much to know other than 
+how your ssh is handled and where you want your backup to be restored to.
+     > duplicity --scp-command 'scp -i /root/.ssh/<id_dsa private file>' 
+       --ssh-command 'ssh -i /root/.ssh/<id_dsa private file>' 
+       scp://<backupUser>@<backupHost>//<backupDir> <restoreDir>
+Example, currently the backup system on voyager is setup, so a proper resstore command might
+look like this:
+     > duplicity --scp-command 'scp -i /root/.ssh/id_dsa_duplicity' 
+       --ssh-command 'ssh -i /root/.ssh/id_dsa_duplicity' 
+       scp://backupuser@voyager2//sata/backup /sata/backup/duplicity_test
+
+
+[RESOURCES]
+-----------------
+http://www.openssh.org/
+http://kimmo.suominen.com/docs/ssh/
+http://www.gnupg.org/
+http://www.nongnu.org/duplicity/index.html
+http://dev.riseup.net/backupninja/
+http://projects.cretin.net/backup/-->
