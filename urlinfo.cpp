@@ -16,6 +16,8 @@
 bool mainShutdown ( bool urgent ) { return true; }
 bool closeAll ( void *state , void (* callback)(void *state) ) {return true;}
 bool allExit ( ) { return true; }
+long g_qbufNeedSave = false;
+SafeBuf g_qbuf;
 
 int main ( int argc , char *argv[] ) {
 	bool addWWW = true;
