@@ -489,7 +489,8 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	// use the default agent unless scraping
 	// force to event guru bot for now
 	//char *agent = "Mozilla/5.0 (compatible; ProCogSEOBot/1.0; +http://www.procog.com/ )";
-	char *agent = "Mozilla/5.0 (compatible; GigaBot/1.0; +http://www.gigablast.com/ )";
+	//char *agent = "Mozilla/5.0 (compatible; GigaBot/1.0; +http://www.gigablast.com/ )";
+	char *agent = g_conf.m_spiderUserAgent;
 	if ( r->m_isScraping )
 		agent = "Mozilla/4.0 "
 			"(compatible; MSIE 6.0; Windows 98; "
