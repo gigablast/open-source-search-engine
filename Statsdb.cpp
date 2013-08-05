@@ -571,8 +571,8 @@ bool Statsdb::gifLoop ( ) {
 		if ( ! processList() ) return true;
 	}
 
-	// define time delta
-	long dt = m_t2 - m_t1;
+	// define time delta - commented out because it's currently not used.
+	//long dt = m_t2 - m_t1;
 
 #ifdef _USEPLOTTER_
 
@@ -1018,8 +1018,8 @@ void Statsdb::drawHR ( float z ,
 	z2 += 0.5;
 	// for adjusatmnet
 	float ptsPerPixel = (ymax-ymin)/ (float)DY;
-	// make an adjustment to the label then!
-	float zadj = zoff * ptsPerPixel;
+	// make an adjustment to the label then! -- Commented out because it's currently not used.
+	//float zadj = zoff * ptsPerPixel;
 
 #ifdef _USEPLOTTER_
 
