@@ -201,7 +201,7 @@ Welcome to Gigablast. Thanks for supporting this open source software.
 <h2>SSH - A Brief Introduction</h2>
 Gigablast uses SSH extensively to administer and develop its software.  SSH is a secure shell
 connection that helps protect sensitive information over an insecure network.  Internally, we 
-access our 3 development machines (voyager, voyager2, and voyager3) with SSH, but being prompted
+access our development machines with SSH, but being prompted
 for a password when logging in between machines can become tiresome as well as development gb
 processes will not execute unless you can ssh without a password.  This is where our authorized
 keys file comes in.  In your user directory you have a .ssh directory and inside of that directory
@@ -232,7 +232,8 @@ known_hosts file separates host keys be newlines).<br>
 
 <a name="shell"></a>
 <hr><h1>Using the Shell</h1>
-
+<!-- I'd like to nominate to remove a majority of this section - if you need help with bash at this point, you probably
+   	shouldn't be poking around in the code... Maybe just keep the dsh and export command descriptions? SCC -->
 Everyone uses the bash shell. The navigation keystrokes work in emacs, too. Here are the common commands:
 <br><br>
 
@@ -274,15 +275,34 @@ Git is what we use to do source code control. Git allows us to have many enginee
 <td><nobr>git clone &lt;srcdir&gt; &lt;destDit&gt;</nobr></td>
 <td>This will copy the git repository to the destination directory.</td>
 </tr>
-
-<tr>
-<td colspan=2><nobr>More information available at <a href=http://www.github.com/>github.com</a></nobr></td>
-
-</tr>
-
-
 </table>
 
+<p>More information available at <a href=http://www.github.com/>github.com</a></p>
+<br/>
+<h3>Setting up GitHub on a Linux Box</h3>
+To make things easier, you can set up github access via ssh. Here's a quick list of commands to run:
+(assuming Ubuntu/Debian)
+<pre>
+sudo apt-get install git-core git-doc
+git config --global user.name "Your Name"
+git config --global user.email "your@email.com"
+git config --global color.ui true
+ssh-keygen -t rsa -C "your@email.com" -f ~/.ssh/git_rsa
+cat ~/.ssh/git_rsa.pub
+</pre>
+Copy and paste the ssh-rsa output from the above command into your Github profile's list of SSH Keys.
+<pre>
+ssh-add ~/.ssh/git_rsa
+</pre>
+If that gives you an error about inability to connect to ssh agent, run:
+<pre>
+eval `ssh-agent -a`
+</pre>
+Then test and clone!
+<pre>
+ssh -T git@github.com
+git clone git@github.com:gigablast/open-source-search-engine
+</pre>
 <br><br>
 
 <a name="hardware"></a>
@@ -313,6 +333,7 @@ Host: scsi5 Channel: 00 Id: 00 Lun: 00
   Vendor: Hitachi  Model: HDS724040KLSA80  Rev: KFAO
   Type:   Direct-Access                    ANSI SCSI revision: 03
 </pre>
+<!-- Should most of the following be kept internally at GB? Not sure it would help with open-source users... SCC -->
 So for this error we should replace the <b>rightmost</b> hard drive with a spare hard drive. Usually we have spare hard drives floating around. You will know by looking at colo.html where all the equipment is stored.
 <br><br>
 If a drive is not showing up in /proc/scsi/scsi when it should be, it may be a bad sata channel on the motherboard, but sometimes you can see it again if you reboot a few times. 
@@ -487,9 +508,9 @@ Try to reproduce it under gdb immediately before the corruption occurs, then set
 
 <a name="code"></a>
 <hr><h1>Code Overview</h1>
-Gigablast consists of about 200,000 lines of C++ source. The latest gb version being developed as of this writing is /gb/datil/. Gigablast is a single executable, gb, that contains all the functionality needed to run a search engine. Gigablast attempts to uniformly distribute every function amongst all hosts in the network. Please see <a href="overview.html">overview.html</a> to get a general overview of the search engine from a USER perspective.
+Gigablast consists of about 500,000 lines of C++ source. The latest gb version being developed as of this writing is /gb/datil/. Gigablast is a single executable, gb, that contains all the functionality needed to run a search engine. Gigablast attempts to uniformly distribute every function amongst all hosts in the network. Please see <a href="overview.html">overview.html</a> to get a general overview of the search engine from a USER perspective.
 <br><br>
-Matt started writing Gigablast in 2000, with the intention of making it the most efficient search engine in the world. A lot of attention was paid to making every piece of the code fast and scalable, while still readable.
+Matt started writing Gigablast in 2000, with the intention of making it the most efficient search engine in the world. A lot of attention was paid to making every piece of the code fast and scalable, while still readable. In July, 2013, the majority of the search engine source code was open sourced. Gigablast continues to develop and expand the software, as well as offers consulting services for companies wishing to run their own search engine.
 <br><br>
 <hr>
 
