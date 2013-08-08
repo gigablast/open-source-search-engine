@@ -367,6 +367,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		// skip spaces after hostid/port/spare keyword
 		while ( is_wspace_a(*p) ) p++;
 
+		/*
 		// if proxy get proxy id
 		if ( ! ( h->m_type & HT_GRUNT ) ) {
 			// get the hostid
@@ -376,6 +377,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 			// skip spaces after it
 			while ( is_wspace_a(*p) ) p++;
 		}			
+		*/
 
 		long port1 = 6002;
 		long port2 = 7002;
@@ -383,9 +385,9 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		long port4 = 9002;
 
 		// support old format "000 gk0" and use default ports above
-		if ( p[0] == 'g' && p[1] == 'k' ) goto skip;
+		//if ( p[0] == 'g' && p[1] == 'k' ) goto skip;
 		// sp1 is the proxy
-		if ( p[0] == 's' && p[1] == 'p' ) goto skip;
+		//if ( p[0] == 's' && p[1] == 'p' ) goto skip;
 			
 
 		// now the four ports
@@ -413,7 +415,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		// skip spaces after it
 		while ( is_wspace_a(*p) ) p++;
 
-	skip:
+		//skip:
 
 		// set our ports
 		h->m_dnsClientPort = port1; // 6000
@@ -478,7 +480,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		h->m_ip = ip;
 		
 		// get possible 2nd hostname
-		p++;
+		//p++;
 		// skip spaces or until \n
 		for ( ; *p == ' ' ; p++ );
 		// must be a 2nd hostname
@@ -514,18 +516,21 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 			return false;
 		}
 		// a direct ip address?
-		memcpy ( h->m_hostname2,hostname2,hlen2);
-		h->m_hostname2[hlen2] = '\0';
-		ip2 = atoip ( h->m_hostname2 );
-		if ( ! ip2 ) {
+		if ( hostname2 ) {
+			memcpy ( h->m_hostname2,hostname2,hlen2);
+			h->m_hostname2[hlen2] = '\0';
+			ip2 = atoip ( h->m_hostname2 );
+		}
+		if ( ! ip2 && hostname2 ) {
 			// set this ip
 			//long nextip;
 			// now that must have the eth1 ip in /etc/hosts
 			key_t k = hash96 ( h->m_hostname2 , hlen2 );
 			// get eth1 ip of hostname in /etc/hosts
 			if ( ! g_dns.isInFile ( k , &ip2 ) ) {
-				log("admin: host %s in hosts.conf "
-				    "not in /etc/hosts. Using eth1 ip "
+				log("admin: secondary host %s in hosts.conf "
+				    "not in /etc/hosts. Using secondary "
+				    "ethernet (eth1) ip "
 				    "of %s",hostname2,iptoa(ip));
 				//nextip = ip;
 				// just use the old ip then!
@@ -1102,7 +1107,8 @@ bool Hostdb::hashHosts ( ) {
 	//   the hosts.conf i guess
 	long lbip = atoip("127.0.0.1");
 	Host *hxx = getHost ( lbip , m_myHost->m_port );
-	if ( ! hxx ) {
+	// only do this if not explicitly assigned to 127.0.0.1 in hosts.conf
+	if ( ! hxx && (long)m_myHost->m_ip != lbip ) {
 		long loopbackIP = atoip("127.0.0.1",9);
 		if ( ! hashHost(1,m_myHost,loopbackIP,m_myHost->m_port)) 
 			return false;
