@@ -19,3 +19,11 @@ See html/developer.html for all code documentation.
 
 Alternatively, visit http://www.gigablast.com/developer.html
 
+
+CONTACT
+-------
+
+Contact me for feature requests or help in general. I will work for free
+for good use cases. mattdwells@hotmail.com.
+
+
