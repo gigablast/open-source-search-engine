@@ -1017,7 +1017,7 @@ void Statsdb::drawHR ( float z ,
 	// round off error
 	z2 += 0.5;
 	// for adjusatmnet
-	float ptsPerPixel = (ymax-ymin)/ (float)DY;
+	//float ptsPerPixel = (ymax-ymin)/ (float)DY;
 	// make an adjustment to the label then! -- Commented out because it's currently not used.
 	//float zadj = zoff * ptsPerPixel;
 
