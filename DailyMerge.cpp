@@ -119,7 +119,7 @@ void DailyMerge::dailyMergeLoop ( ) {
 		// . comma separated list is ok ("0,1, 6")
 		// . leave blank or at least no numbers to do every day
 		char *s = cr->m_dailyMergeDOWList;
-		char dowCounts[7];
+		char dowCounts[8];
 		memset(dowCounts,0,8);
 		for ( ; *s ; s++ ) {
 			if ( ! is_digit(*s) ) continue;

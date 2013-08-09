@@ -11178,7 +11178,7 @@ uint64_t  getAddressHash ( Place *street ,
 	ch ^= street->m_streetNumHash;
 	ch ^= street->m_streetIndHash;
 	// adm1
-	char *adm1Str ;
+	char *adm1Str = NULL;
 	if      ( adm1 ) adm1Str = adm1->m_adm1;
 	else if ( zip  ) adm1Str = zip->m_adm1;
 	else if ( city && city->m_adm1[0] ) adm1Str = city->m_adm1;
@@ -15959,7 +15959,7 @@ key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
 	//h = hash64 ( (long long)m_adm1.m_crid , h );
 	// adm1
 	// get the two-letter state abbreviation code (nm = new mexico)
-	char *adm1Str ;
+	char *adm1Str = NULL;
 	if      ( m_adm1 ) adm1Str = m_adm1->m_adm1;
 	else if ( m_zip  ) adm1Str = m_zip->m_adm1;
 	// unique cities like "Albuquerque" imply a state
@@ -15967,7 +15967,7 @@ key128_t Address::makePlacedbKey (long long docId,bool useName1,bool useName2){
 	else               { char *xx=NULL;*xx=0; }
 	h = hash64 ( (long long)(*(uint16_t *)adm1Str) , h );
 	// city
-	long long cityHash ;
+	long long cityHash = 0LL;
 	if      ( m_city ) cityHash = m_city->m_hash;
 	else if ( m_zip  ) cityHash = m_zip->m_cityHash;
 	else              { char *xx=NULL;*xx=0; }
@@ -19643,7 +19643,7 @@ PlaceMem::PlaceMem() {
 	m_numPlacePtrs = 0;
 	m_numPoolPtrsAllocated = 0;
 	m_numPlacePtrsAllocated = 0;
-	m_stack = false;
+	m_stack = NULL;//false;
 }
 
 PlaceMem::~PlaceMem() {

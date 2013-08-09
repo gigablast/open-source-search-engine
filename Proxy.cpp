@@ -690,7 +690,8 @@ bool Proxy::handleRequest (TcpSocket *s){
 		}
 		// check funds. m_pending is a positive amount, so is price.
 		// accountBalance is how much money they have in their acct
-		float cur = ui->m_accountBalance - ui->m_pending - price;
+		float cur = 0.0;
+		if ( ui ) cur = ui->m_accountBalance - ui->m_pending - price;
 		if ( ui && cur < 0.0 && 
 		     // we do not use the new system to track ...
 		     // we still need to bill them the old way

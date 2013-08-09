@@ -207,7 +207,7 @@ void printXmlDiff(Xml *xml1, Xml *xml2, DiffOpt *argOpt){
 			if (editLoc > lastC){ 
 				char name[1024];
 				name[0] = '\0';
-				long namelen;
+				long namelen = 0;
 				//namelen = xml1->getCompoundName
 				//	(editLoc,name,1024);
 				buf.safePrintf("@@@ node %li: ",
