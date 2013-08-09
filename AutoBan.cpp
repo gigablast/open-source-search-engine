@@ -1529,10 +1529,11 @@ bool AutoBan::restore() {
 		return false;
 	char* buf = (char*) p.getBufStart();
 	char* bufEnd = (char*) p.getBufEnd();
- catLoop:
+	// catLoop:
 	long numEntries = *(long*)buf;
 	buf += sizeof(long);
 	for(long i = 0; i < numEntries; i++) {
+		if ( buf + 4 > bufEnd ) break;
 		long ip = *(long*)buf;
 		buf += sizeof(long);
 		addKey(ip, (DetectVal*)buf);
@@ -1541,8 +1542,9 @@ bool AutoBan::restore() {
 	}
 	log("autoban: read %li entries",numEntries);
 	// more to read? return no if not
-	if ( buf < bufEnd && numEntries )
-		goto catLoop;
+	// this was  a hack when catting two autoban-saved.dat files together
+	//if ( buf + 4 < bufEnd && numEntries )
+	//	goto catLoop;
 	// all done
 	return true;
 }

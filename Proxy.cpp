@@ -382,7 +382,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 
 
 	if ( redirLen > 0 && redir ) {
-	redirect:
+		//redirect:
 		HttpMime m;
 		m.makeRedirMime (redir,redirLen);
 		// . move the reply to a send buffer
@@ -508,6 +508,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 	if ( tcp == &g_httpServer.m_ssltcp ) max = g_conf.m_httpsMaxSockets;
 	else                                 max = g_conf.m_httpMaxSockets;
 
+#ifdef _HTTPS_REDIR_
 	// if hitting root page then tell them to go to https
 	// if not autobanned... but if it is an autobanned request on root
 	// page it should have go the turing test above!
@@ -529,7 +530,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 		redirLen = gbstrlen(redir);
 		goto redirect;
 	}
-
+#endif
 
 
 	// . page addurl uses the udpserver to send the addurl stuff to one of
@@ -1212,6 +1213,9 @@ bool Proxy::forwardRequest ( StateControl *stC ) {
 	if ( precise == 0 ) sendToNewEngine = false;
 	// if no code (not a search feed) then do new engine
 	//if ( ! stC->m_ch ) sendToNewEngine = true;
+#ifndef _USE_GK144_
+	sendToNewEngine = false;
+#endif
 
 	//
 	// . HACK: always send to gk144 unless code= is specified
@@ -1638,8 +1642,9 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 	long newReplySize = size;
 	char *newReply = reply;
 
-	// do not print login bars in the xml!!
-	if ( ! stC->m_raw )
+	// do not print login bars in the xml!! do not print for ixquick
+	// which gets results in html...
+	if ( ! stC->m_raw && ! stC->m_ch )
 		newReply = storeLoginBar ( reply , 
 					   size ,  // transmit size
 					   size , // allocsize
@@ -5041,6 +5046,7 @@ char *Proxy::storeLoginBar ( char *reply ,
 	sb.safeMemcpy ( p , contentEnd - p );
 	// then the \0 i guess
 	//sb.addSilentNull();
+	//sb.reserve ( 1 );
 
 	// all done. +1 for the \0
 	mfree ( reply , replyAllocSize , "prrepl");
@@ -5050,8 +5056,10 @@ char *Proxy::storeLoginBar ( char *reply ,
 	*newReplySize = sb.length();
 	sb.detachBuf();
 
+	// fix overreading!
 	// fix the fucking content-length in the mime...
-	char *mp = strstr(newReply,"Content-Length:");
+	char *mp = strnstr(newReply,"Content-Length:",*newReplySize);
+	if ( ! mp ) mp = strnstr(newReply,"Content-length:",*newReplySize);
 	if ( ! mp ) {
 		log("proxy: fuck, no content-length: in mime");
 		long len = *newReplySize;
