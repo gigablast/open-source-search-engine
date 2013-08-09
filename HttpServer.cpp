@@ -1356,9 +1356,9 @@ bool HttpServer::sendReply2 ( char *mime,
 							 mimeLen,
 							 &newReplySize,
 							 hr );
-		// different?
-		if ( newReply != sendBuf )
-			mfree ( sendBuf , sendBufSize ,"sbufa" );
+		// different? no, we free it in storeloginbar
+		//if ( newReply != sendBuf )
+		//	mfree ( sendBuf , sendBufSize ,"sbufa" );
 		// and do it
 		sendBuf      = newReply;
 		sendBufSize  = newReplySize;
