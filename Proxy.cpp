@@ -2382,10 +2382,18 @@ SummaryRec *Proxy::getSummaryRec ( long userId32 , char accessType ) {
 	h64 |= t;
 
 	// use hashtable of summary rec ptrs
-	SummaryRec **srp = (SummaryRec **)m_srht.getValue ( &h64 );
+	long *sumOffPtr;
+	sumOffPtr = (long *)m_srht.getValue ( &h64 );
+	//SummaryRec **srp = (SummaryRec **)m_srht.getValue ( &h64 );
 
 	// if there, return it!
-	if ( srp  ) return *srp;
+	//if ( srp  ) return *srp;
+	if ( sumOffPtr ) {
+		SummaryRec *sr;
+		sr = (SummaryRec *)(m_sumBuf.getBufStart() + *sumOffPtr);
+		return sr;
+	}
+
 
 	//
 	// otherwise, we gotta make one!
@@ -2411,8 +2419,10 @@ SummaryRec *Proxy::getSummaryRec ( long userId32 , char accessType ) {
 	// advance it
 	m_sumBuf.incrementLength ( sizeof(SummaryRec) );
 
+	long sumOff = (long)(((char *)sr) - m_sumBuf.getBufStart());
+
 	// hash it
-	if ( ! m_srht.addKey ( &h64 , &sr ) )
+	if ( ! m_srht.addKey ( &h64 , &sumOff ) )
 		return NULL;
 				
 	return sr;
@@ -4227,6 +4237,8 @@ bool Proxy::loadUserBufs ( ) {
 	for ( long i = 0 ; i < ns ; i++ ) {
 		// shortcut
 		SummaryRec *sr = &ss[i];
+		// get the offset
+		long sumOff = ((char *)sr) - m_sumBuf.getBufStart();
 		// make key
 		unsigned long long h64 = (unsigned long)sr->m_userId32;
 		unsigned long t = sr->m_year;
@@ -4239,7 +4251,7 @@ bool Proxy::loadUserBufs ( ) {
 		h64 <<= 32;
 		h64 |= t;
 		// add it
-		if ( ! m_srht.addKey ( &h64 , &sr ) ) {
+		if ( ! m_srht.addKey ( &h64 , &sumOff ) ) { // sr ) ) {
 			log("proxy: failed to load user bufs");
 			return false;
 		}
