@@ -1,10 +1,10 @@
 #include "gb-include.h"
 
 #include "Msg51.h"
-#include "Msg24.h"
+//#include "Msg24.h"
 #include "Query.h"
 #include "Msg20.h"
-#include "TermTable.h"
+//#include "TermTable.h"
 #include "Words.h"
 #include "Speller.h"
 #include <math.h>
