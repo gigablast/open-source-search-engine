@@ -581,7 +581,7 @@ const char *HttpMime::getContentEncodingFromExtension ( char *ext ) {
 // make a redirect mime
 void HttpMime::makeRedirMime ( char *redir , long redirLen ) {
 	char *p = m_buf;
-	memcpy ( p , "HTTP/1.1 302 RD\r\nLocation: " , 27 );
+	memcpy ( p , "HTTP/1.0 302 RD\r\nLocation: " , 27 );
 	p += 27;
 	if ( redirLen > 600 ) redirLen = 600;
 	memcpy ( p , redir , redirLen );
@@ -687,7 +687,7 @@ void HttpMime::makeMime  ( long    totalContentLen    ,
 		if ( ! charset ) charset = "utf-8";
 		//sprintf ( m_buf , 
 		p += sprintf ( p,
-			  "HTTP/1.1 %li%s\r\n"
+			  "HTTP/1.0 %li%s\r\n"
 			  "Date: %s\r\n"
 			       //"P3P: CP=\"CAO PSA OUR\"\r\n"
 			  "Server: Gigablast/1.0\r\n"
@@ -715,7 +715,7 @@ void HttpMime::makeMime  ( long    totalContentLen    ,
 		if ( ! charset ) charset = "utf-8";
 		//sprintf ( m_buf , 
 		p += sprintf( p,
-			      "HTTP/1.1 %li Partial content\r\n"
+			      "HTTP/1.0 %li Partial content\r\n"
 			      "%s"
 			      "Content-Length: %li\r\n"
 			      "Content-Range: %li-%li(%li)\r\n"// added "bytes"
@@ -745,7 +745,7 @@ void HttpMime::makeMime  ( long    totalContentLen    ,
 		if ( httpStatus == 200 ) smsg = " OK";
 		//sprintf ( m_buf , 
 		p += sprintf( p,
-			      "HTTP/1.1 %li%s\r\n"
+			      "HTTP/1.0 %li%s\r\n"
 			      // make it at least 4 spaces so we can change
 			      // the length of the content should we insert
 			      // a login bar in Proxy::storeLoginBar()

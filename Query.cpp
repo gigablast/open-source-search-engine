@@ -2660,7 +2660,12 @@ bool Query::setQWords ( char boolFlag ,
 		if ( pid ) {
 			long nw = phrases.getNumWordsInPhrase2(i);
 			long j;
-			for ( j = i ; j < i + nw ; j++ ) {
+			// search up to this far
+			long maxj = i + nw;
+			// but not past our truncated limit
+			if ( maxj > MAX_QUERY_WORDS ) maxj = MAX_QUERY_WORDS;
+
+			for ( j = i ; j < maxj ; j++ ) {
 				// skip punct
 				if ( words.isPunct(j)         ) continue;
 				// break out if not a stop word
@@ -2670,12 +2675,12 @@ bool Query::setQWords ( char boolFlag ,
 			}
 			// if everybody in phrase #i was a signless stopword
 			// and the phrase was signless, make it have a '*' sign
-			if ( j >= i + nw && m_qwords[i].m_phraseSign == '\0' ) 
+			if ( j >= maxj && m_qwords[i].m_phraseSign == '\0' ) 
 				m_qwords[i].m_phraseSign = '*';
 			// . if a constituent has a - sign, then the whole 
 			//   phrase becomes negative, too
 			// . fixes 'apple -computer' truncation problem
-			for ( long j = i ; j < i + nw ; j++ )
+			for ( long j = i ; j < maxj ; j++ )
 				if ( m_qwords[j].m_wordSign == '-' )
 					qw->m_phraseSign = '-';
 		}
