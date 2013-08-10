@@ -2603,9 +2603,14 @@ bool Query::setQWords ( char boolFlag ,
 			qw->m_ignorePhrase = 0;
 			// set our rightPhraseEnd point
 			//qw->m_rightPhraseEnd = i + phrases.getNumWords(i);
+			// leave it as 0 if it got truncated i guess by the
+			// MAX_QUERY_WORDS of 320
+			qw->m_rightRawWordId = 0LL;
 			// store left and right raw word ids 
-			//long nwp = phrases.getNumWordsInPhrase(i);
-			qw->m_rightRawWordId = m_qwords[i+nwp-1].m_rawWordId;
+			long ni = i + nwp - 1;
+			if ( ni >= m_numWords )
+				qw->m_rightRawWordId = 
+					m_qwords[i+nwp-1].m_rawWordId;
 		}
 
 
