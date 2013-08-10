@@ -2608,9 +2608,8 @@ bool Query::setQWords ( char boolFlag ,
 			qw->m_rightRawWordId = 0LL;
 			// store left and right raw word ids 
 			long ni = i + nwp - 1;
-			if ( ni >= m_numWords )
-				qw->m_rightRawWordId = 
-					m_qwords[i+nwp-1].m_rawWordId;
+			if ( ni < m_numWords )
+				qw->m_rightRawWordId=m_qwords[ni].m_rawWordId;
 		}
 
 
