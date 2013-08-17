@@ -59,7 +59,7 @@
 <td>
 <b>./gb inject &lt;filename&gt; 127.0.0.1:8000</b>
 <br>
-Each page in the file must be delineated by <u><b>+++URL:http://myurl.com/xxx\n</b></u>. Use the supplied file <i>injectme3</i> which has 454 HTML docs in it for testing. i.e. Start up a gigablast instance and type <i>./gb inject injectme3 127.0.0.1:8000</i> to see it in action. It currently only reads up to 1MB at a time so you will have to change doInject() in main.cpp if you have larger html documents than that in the file.
+Each page in the file must be delineated by <u><b>+++URL:http://myurl.com/xxx\n</b></u>. Use the supplied file <i>injectme3</i> which has 454 HTML docs in it for testing. i.e. Start up a gigablast instance and type <i>./gb inject injectme3 127.0.0.1:8000</i> to see it in action. It currently only reads up to 1MB at a time so you will have to change doInject() in main.cpp if you have larger html documents than that in the file. It took me 23.8 seconds to inject all 454 documents on a single core Xeon @2400MHz and everything in memory.
 </td>
 
 <!--solr-->
