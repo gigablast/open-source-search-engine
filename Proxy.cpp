@@ -1642,6 +1642,18 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 	long newReplySize = size;
 	char *newReply = reply;
 
+	// make sure it is HTTP/1.0 not HTTP/1.1
+	if ( reply[0] == 'H' &&
+	     reply[1] == 'T' &&
+	     reply[2] == 'T' &&
+	     reply[3] == 'P' &&
+	     reply[4] == '/' &&
+	     reply[5] == '1' &&
+	     reply[6] == '.' &&
+	     reply[7] == '1' )
+		reply[7] = '0';
+	     
+
 	// do not print login bars in the xml!! do not print for ixquick
 	// which gets results in html...
 	if ( ! stC->m_raw && ! stC->m_ch )
@@ -4991,6 +5003,8 @@ char *Proxy::storeLoginBar ( char *reply ,
 	long maxLen = 3000;
 	if ( contentLen < maxLen ) maxLen = contentLen;
 	char *pend = content + maxLen;
+	// not necessarily \0 terminated, so do not over-scan
+	pend -= 10;
 	for ( ; p < pend ; p++ ) {
 		if ( p[0] != '<' ) continue;
 		if ( p[1] != 'b' ) continue;
