@@ -1,0 +1,51 @@
+<html>
+<title>LIVE Interactive Comparison of Gigablast vs SOLR vs ElasticSearch Open Source Search Engines</title>
+
+
+
+<table cellspacing=10 border=1 width=1000px>
+<tr><td></td><td><b><a href=http://www.gigablast.com/>Gigablast</a></b></td><td><b><a href=http://lucene.apache.org/solr/>SOLR</a></b></td><td><b><a href=http://www.elasticsearch.org/>ElasticSearch</a></b></td></tr>
+
+<tr valign=top>
+<td><b>Installation</b></td>
+
+<!-- gb install -->
+<td>
+<ul>
+<li>apt-get install make
+<li>apt-get install g++
+<li>apt-get install libssl-dev
+<li>apt-get install git
+<li>git clone https://github.com/gigablast/open-source-search-engine.git ./gb
+<li>cd gb
+<li>make
+<li>edit hosts.conf to set working-dir
+<li>./gb 0
+<li>wait for binary data files to build
+<li>./gb 0
+<li>point browser to http://127.0.0.1:8000/
+<li>config (gb.conf hosts.conf) and index stored in current working dir
+</td>
+
+<!-- solr install-->
+<td>
+<li>sudo apt-get install solr-tomcat <i>(188MB of additional space)</i>
+<li>sudo service tomcat6 start
+<li>point browser to http://127.0.0.1:8080/solr
+<li>config and index stored at /usr/share/solr
+</td>
+
+<!-- elastic search install-->
+<td>
+<ul>
+<li>wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-0.90.3.zip
+<li>unzip elasticsearch-0.90.3.zip
+<li>cd elasticsearch-0.90.3
+<li>cd bin
+<li>./elasticsearch -f
+<li>curl -X GET http://localhost:9200/
+</ul>
+</td>
+
+
+</table>
