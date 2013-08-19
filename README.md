@@ -11,6 +11,10 @@ the quick start instructions.
 
 Alternatively, visit http://www.gigablast.com/admin.html
 
+See html/compare.html for a comparison of Gigablast to SOLR. Although this
+is very sparse right now, it does include some useful commands.
+
+
 
 CODE ARCHITECTURE
 -----------------
@@ -18,6 +22,7 @@ CODE ARCHITECTURE
 See html/developer.html for all code documentation.
 
 Alternatively, visit http://www.gigablast.com/developer.html
+
 
 
 CONTACT
