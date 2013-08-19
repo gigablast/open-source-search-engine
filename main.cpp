@@ -1372,7 +1372,7 @@ int main ( int argc , char *argv[] ) {
 		long i=cmdarg+1;
 		bool isLogFile=false;
 		bool injectUrl=false;
-		long wait;
+		long wait = 0;
 		
 		if ( strcmp (argv[i],"-l") == 0 ){
 			isLogFile=true;
