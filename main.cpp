@@ -556,11 +556,13 @@ int main ( int argc , char *argv[] ) {
 			" use the proxy server\n\t"
 			"on gk10, use -p\n\n"
 
-			"blaster [-l] <file> <maxNumThreads> <wait>\n"
+			"blaster [-l|-i] <file> <maxNumThreads> <wait>\n"
 			"\tget documents from the urls given in file. The "
 			"-l argument is to\n\t"
 			"automatically get documents "
-			"from the gigablast log file.\n\tmaxNumThreads is the"
+			"from the gigablast log file.\n"
+			"\t-i means to inject/index the url into gb.\n"
+			"\tmaxNumThreads is the"
 			" number of concurrent threads at one time and wait "
 			"\n\tis the time to wait between threads.\n\n"
 
@@ -581,11 +583,12 @@ int main ( int argc , char *argv[] ) {
 
 			// gb inject <file> <ip:port> [startdocid]
 			// gb inject titledb <newhosts.conf> [startdocid]
-			"inject <file> <ip:port>\n"
-			//"inject titledb <newhosts.conf> [startdocid]\n"
-			"\tSend all documents in <file> to the supplied "
-			"ip:port. See the file\n\tinjectme3 to see the format "
-			"of documents.\n\n"
+			"inject <file> <ip:port> [startdocid]\n"
+			"inject titledb <newhosts.conf> [startdocid]\n"
+			"\tInject all documents in <file> into [hostId]. If "
+			"[hostId] not given,\n\t0 is assumed. Each document "
+			"must be preceeded by a valid HTTP mime with\n\t"
+			"a Content-Length: field.\n\n"
 
 			"injecttest <requestLen> [hostId]\n"
 			"\tinject random documents into [hostId]. If [hostId] "
@@ -1368,12 +1371,18 @@ int main ( int argc , char *argv[] ) {
   	if ( strcmp ( cmd , "blaster" ) == 0 ) {
 		long i=cmdarg+1;
 		bool isLogFile=false;
+		bool injectUrl=false;
 		long wait;
 		
 		if ( strcmp (argv[i],"-l") == 0 ){
 			isLogFile=true;
 			i++;
 		}
+		if ( strcmp (argv[i],"-i") == 0 ){
+			injectUrl=true;
+			i++;
+		}
+
 		char *filename = argv[i];
 		long maxNumThreads=1;
 		if (argv[i+1])  maxNumThreads=atoi(argv[i+1]);
@@ -1383,7 +1392,8 @@ int main ( int argc , char *argv[] ) {
 		if (wait<1000) wait=10;
 		g_blaster.runBlaster (filename,NULL,
 					      maxNumThreads,wait,
-					      isLogFile,false,false,false);
+					      isLogFile,false,false,false,
+				      injectUrl);
 		// disable any further logging so final log msg is clear
 		g_log.m_disabled = true;
 		return 0;
@@ -13365,7 +13375,6 @@ int injectFile ( char *filename , char *ips ,
 	}
 	else {
 		// open file
-	        log("build: opening file %s",filename);
 		s_file.set ( filename );
 		if ( ! s_file.open ( O_RDONLY ) )
 			return log("build: inject: Failed to open file %s "
@@ -13569,7 +13578,7 @@ void doInject ( int fd , void *state ) {
 			    "%lli", s_file.getFilename(), s_off);
 			exit(0);
 		}
-		log("build: read %li bytes",bytesRead);
+
 		char *fend = buf + toRead;
 
 		char *pbuf = buf;
@@ -13587,12 +13596,6 @@ void doInject ( int fd , void *state ) {
 		char *url = pbuf + 8; // NULL;
 		// skip over url
 		pbuf = strchr(pbuf,'\n');
-		// sanity check
-		if ( pbuf && *pbuf && strncmp(pbuf+1,"HTTP/1",6)!=0 ) {
-		  log("inject: alarm. false delimeter does not have "
-		      "\nHTTP/1 following it.");
-		  exit(0);
-		}
 		// null term url
 		*pbuf = '\0';
 		// log it

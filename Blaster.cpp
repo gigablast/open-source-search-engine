@@ -111,7 +111,8 @@ bool Blaster::init(){
 void Blaster::runBlaster(char *file1,char *file2,
 			 long maxNumThreads, long wait, bool isLogFile,
 			 bool verbose,bool justDisplay,
-			 bool useProxy) {
+			 bool useProxy ,
+			 bool injectUrl ) {
 	if (!init())
 		return;
 	m_blasterDiff=true;
@@ -133,6 +134,7 @@ void Blaster::runBlaster(char *file1,char *file2,
 	// store a \0 at the end
 	long m_bufSize1 = fileSize1 + 1;
 
+	m_doInjection = injectUrl;
 
 	// make buffers to hold all
 	m_buf1 = (char *) mmalloc ( m_bufSize1 , "blaster1" );
@@ -372,6 +374,25 @@ void Blaster::startBlastering(){
 		// make into a url class. Set both u1 and u2 here.
 		//st->m_u1.set ( m_p1 , gbstrlen(m_p1) );
 		st->m_u1 = m_p1;
+		// is it an injection url
+		if ( m_doInjection ) {
+			// get host #0 i guess
+			Host *h0 = g_hostdb.getHost(0);
+			if ( ! h0 ) { char *xx=NULL;*xx=0; }
+			static bool s_flag = true;
+			if ( s_flag ) {
+				s_flag = false;
+				log("blaster: injecting to host #0 at %s on "
+				    "http/tcp port %li",
+				    iptoa(h0->m_ip),
+				    (long)h0->m_httpPort);
+			}
+			st->m_injectUrl.safePrintf("http://127.0.0.1:8000/"
+					       "admin/inject?u=");
+			st->m_injectUrl.urlEncode(m_p1);
+			st->m_injectUrl.pushChar('\0');
+			st->m_u1 = st->m_injectUrl.getBufStart();
+		}
 		// skip to next url
 		m_p1 += gbstrlen ( m_p1 ) + 1;
 		if (m_blasterDiff){

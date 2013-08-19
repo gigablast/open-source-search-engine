@@ -18,6 +18,7 @@ struct StateBD {
 	long m_buf1MaxLen;
 	long m_numUrlDocsSent;
 	long m_numUrlDocsReceived;
+	SafeBuf m_injectUrl;
 };
 
 struct StateBD2 {
@@ -40,7 +41,8 @@ class Blaster {
 			long maxNumThreads, long wait, 
 			bool isLogFile,
 			bool verbose,bool justDisplay,
-			bool useProxy);
+			bool useProxy,
+			bool injectUrl = false );
 
 	void startBlastering();
 
@@ -55,6 +57,8 @@ class Blaster {
 	void gotDoc4 ( void *state, TcpSocket *s);
 
 	void processLogFile(void *state);
+
+	bool m_doInjection;
 
  protected:
 	long  m_maxNumThreads;

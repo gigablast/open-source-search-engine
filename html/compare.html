@@ -1,41 +1,33 @@
 <html>
-<title>LIVE Interactive Comparison of Gigablast vs SOLR vs ElasticSearch Open Source Search Engines</title>
+<title>LIVE Interactive Comparison of Gigablast vs SOLR Open Source Search Engine</title>
 
 
 
 <table cellspacing=10 border=1 width=1000px>
-<tr><td></td><td><b><a href=http://www.gigablast.com/>Gigablast</a></b></td><td><b><a href=http://lucene.apache.org/solr/>SOLR</a></b></td><td><b><a href=http://www.elasticsearch.org/>ElasticSearch</a></b></td></tr>
+<tr><td></td><td><b><a href=http://www.gigablast.com/>Gigablast</a></b></td><td><b><a href=http://lucene.apache.org/solr/>SOLR</a></b></td>
+<!--
+<td><b><a href=http://www.elasticsearch.org/>ElasticSearch</a></b></td>-->
+</tr>
 
 <tr valign=top>
-<td><b>Installation</b></td>
+<td><b>Package Installation</b></td>
 
 <!-- gb install -->
-<td>
-<ul>
-<li>apt-get install make
-<li>apt-get install g++
-<li>apt-get install libssl-dev
-<li>apt-get install git
-<li>git clone https://github.com/gigablast/open-source-search-engine.git ./gb
-<li>cd gb
-<li>make
-<li>edit hosts.conf to set working-dir
-<li>./gb 0
-<li>wait for binary data files to build
-<li>./gb 0
-<li>point browser to http://127.0.0.1:8000/
-<li>config (gb.conf hosts.conf) and index stored in current working dir
+<td>Not currently available.
 </td>
 
 <!-- solr install-->
 <td>
+<ul>
 <li>sudo apt-get install solr-tomcat <i>(188MB of additional space)</i>
 <li>sudo service tomcat6 start
-<li>point browser to http://127.0.0.1:8080/solr
-<li>config and index stored at /usr/share/solr
+<li>point browser to <a href=http://127.0.0.1:8080/solr>http://127.0.0.1:8080/solr</a>
+<li>configuration files and the index are stored in /usr/share/solr
+</ul>
 </td>
 
 <!-- elastic search install-->
+<!--
 <td>
 <ul>
 <li>wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-0.90.3.zip
@@ -46,29 +38,512 @@
 <li>curl -X GET http://localhost:9200/
 </ul>
 </td>
+-->
 
+</tr>
+
+
+
+
+<tr valign=top>
+<td><b>Source Installation</b></td>
+<!-- gb install -->
+<td>
+<ul>
+<li>apt-get install make
+<li>apt-get install g++
+<li>apt-get install libssl-dev
+<li>apt-get install git
+<li>git clone https://github.com/gigablast/open-source-search-engine.git ./gb
+<li>cd gb
+<li>make
+<li>edit hosts.conf to set <i>working-dir</i> to your current working directory
+<li>./gb 0
+<li>wait for binary data files to build
+<li>./gb 0 >& log0 &
+<li>If your web browser resides on a different machine than the gb process, then, on the browser machine, do an ssh tunnel like <i>ssh -L 8000:1.2.3.4:8000</i> where 1.2.3.4 is the IP address of the machine running gb. Then any request sent to port 8000 on your local machine will be port-forwarded over ssh to the machine running gb.
+<li>point browser to <a href=http://127.0.0.1:8000/>http://127.0.0.1:8000/</a> 
+<li>the two configuration files, gb.conf and hosts.conf, and the index itself are stored in <i>working-dir</i> or sub directories thereof.
+</ul>
+</td>
+<!-- solr install-->
+<td>
+<ul>
+<li>select a mirror from <a href=http://www.apache.org/dyn/closer.cgi/lucene/solr>here</a>
+<li>example: <b>wget "http://apache.cs.utah.edu/lucene/solr/4.4.0/solr-4.4.0-src.tgz"</b>
+<li>gunzip solr-4.4.0-src.tgz
+<li>tar -xvf solr-4.4.0-src.tar
+<li>cd solr-4.4.0
+<li>hack your system so <i>ant</i> can find <i>lib/tools.jar</i>: <b>ln -s /usr/lib/jvm/java-1.5.0-gcj-4.6/lib/ /usr/lib/jvm/java-6-openjdk-i386/</b> (or make sure that <i>ant test</i> can find tools.jar.
+<li>ant ivy-bootstrap
+<li>ant compile
+<li>etc. etc.
+</ul>
+</td>
+<!-- elastic search install-->
+<!--
+<td>
+<ul>
+<li>wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-0.90.3.zip
+<li>unzip elasticsearch-0.90.3.zip
+<li>cd elasticsearch-0.90.3
+<li>cd bin
+<li>./elasticsearch -f
+<li>curl -X GET http://localhost:9200/
+</ul>
+</td>
+-->
+</tr>
+
+
+
+
+<tr>
+<td>
+<b>Indexing Spider Logs via cmdline</b>
+</td>
+<!--gigablast-->
+<td>
+<b>./gb inject &lt;filename&gt; 127.0.0.1:8000</b>
+<br>
+Each HTML page in the file must be preceeded by <u><b>+++URL:http://myurl.com/xxx\n</b></u>. Use the supplied file <i>injectme3</i> which has 454 HTML docs in it for testing. i.e. Start up a gigablast instance and then type <b>./gb inject injectme3 127.0.0.1:8000</b> to see it in action. It currently just injects into the collection named <i>main</i>. It currently only reads up to 1MB at a time so you will have to change doInject() in main.cpp if you have larger html documents than that in the file. It took me 23.8 seconds to inject all 454 documents on a single core Xeon @2400MHz and everything in memory.
+</td>
+<!--solr-->
+<td>
+unsupported
+</td>
 </tr>
 
 
 <tr>
 <td>
-<b>Injecting documents via cmdline</b>
+<b>Indexing an Individual File via cmdline</b>
 </td>
-
 <!--gigablast-->
 <td>
-<b>./gb inject &lt;filename&gt; 127.0.0.1:8000</b>
-<br>
-Each page in the file must be delineated by <u><b>+++URL:http://myurl.com/xxx\n</b></u>. Use the supplied file <i>injectme3</i> which has 454 HTML docs in it for testing. i.e. Start up a gigablast instance and type <i>./gb inject injectme3 127.0.0.1:8000</i> to see it in action. It currently only reads up to 1MB at a time so you will have to change doInject() in main.cpp if you have larger html documents than that in the file. It took me 23.8 seconds to inject all 454 documents on a single core Xeon @2400MHz and everything in memory.
+unsupported
 </td>
+<!--solr-->
+<td>
+You can index individual local files as such:
+<b>curl "http://127.0.0.1:8080/solr/update" --data-binary @myfile.html -H 'Content-type: text/html'</b>
+ but it does not seem to work unless your HTML meets stringent requirements for some reason.
+</td>
+</tr>
 
+
+<tr>
+<td>
+<b>Indexing an Individual URL via cmdline</b>
+</td>
+<!--gigablast-->
+<td>
+You can inject an individual url into the collection <i>main</i> like:
+<b>curl "http://127.0.0.1:8000/inject?u=www.somedomain.com/somepath&c=main"</b> . You must be coming from an internal IP address for permission purposes.
+</td>
 <!--solr-->
 <td>
 </td>
+</tr>
 
+
+<tr>
+<td>
+<b>Indexing a File of URLs via cmdline</b>
+</td>
+<!--gigablast-->
+<td>
+You can inject a file of URLs into the collection <i>main</i> like:
+<b>./gb blaster -i <filename> <maxThreadsToUse></b> . You must be coming from an internal IP address for permission purposes. The file of URLs is just a \n separated list of URLs you want to index. It will basically use the the same "inject" HTML interface you can see <a href=/admin/inject>here</a> .
+</td>
+<!--solr-->
 <td>
 </td>
-
 </tr>
+
+
+
+
+<tr>
+<td>
+<b>Deleting Documents via cmdline</b>
+</td>
+<!--gigablast-->
+<td>
+This is the same procedure as the above cmdline injection, but use the command <i>reject</i> instead of <i>inject</i>: <b>./gb reject injectme3 127.0.0.1:8000</b>. It will suffice that the provided file is a simple \n delimited list of URLs to delete. Deleting by query is covered below.
+</td>
+<!--solr-->
+<td>
+You can delete individual documents by specifying queries that match just those documents:
+<b>java -Dcommit....</b>
+</td>
+</tr>
+
+
+
+
+<tr>
+<td><b>Getting Results via cmdline</b></td>
+<td>
+In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/search?q=test&xml=1">show</a>). More details at <a href="/searchfeed.html">searchfeed.html</a>.
+</td>
+<td>
+</td>
+</tr>
+
+
+<tr>
+<td><b>Faceted Search</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+
+<tr>
+<td><b>Numeric Fields</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+
+<tr>
+<td><b>Boolean Search</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<!-- title: inurl: -->
+<tr>
+<td><b>Searchable Fields</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<!-- CTS -->
+<tr>
+<td><b>Site Restricted Searches</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Spell Checker</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Language Identification</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<!-- gigabits -->
+<tr>
+<td><b>Related Concepts</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+
+<tr>
+<td><b>Synonyms</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Query Expansion</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Cached Pages</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+
+<tr>
+<td><b>RESTful/XML APIs</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Schema Handling</b></td>
+<td>Gigablast finds schemas confusing and unnecessary.
+</td>
+<td>
+</td>
+</tr>
+
+
+
+<tr>
+<td><b>Spidering</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Document Filters</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Scalability</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Performance</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Configuration Files and Descriptions</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Duplicate Content</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Duplicate Sections</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<!-- fancy bits -->
+<tr>
+<td><b>Section Classification</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Phrases</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Query Weighting</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Index Layout</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Ranking Alogrithm</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Scoring Explanations</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+
+<tr>
+<td><b>Inlink Text</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+
+<tr>
+<td><b>Page Rank</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>On Page Spam</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Reliability</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Administration</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>File Descriptions</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Developer Documentation</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Graphing</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Monitoring</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Geospatial</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Summaries</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+
+<tr>
+<td><b>Site Clustering</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>More Like This</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Sort by Date</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Query Completion</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+<tr>
+<td><b>Document Collections</b></td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+
+
+
+
+
 
 </table>
