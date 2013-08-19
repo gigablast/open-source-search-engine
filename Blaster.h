@@ -42,6 +42,7 @@ class Blaster {
 			bool isLogFile,
 			bool verbose,bool justDisplay,
 			bool useProxy,
+			bool injectUrlWithLinks = false ,
 			bool injectUrl = false );
 
 	void startBlastering();
@@ -59,6 +60,7 @@ class Blaster {
 	void processLogFile(void *state);
 
 	bool m_doInjection;
+	bool m_doInjectionWithLinks;
 
  protected:
 	long  m_maxNumThreads;

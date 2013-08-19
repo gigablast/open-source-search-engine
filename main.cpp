@@ -556,12 +556,16 @@ int main ( int argc , char *argv[] ) {
 			" use the proxy server\n\t"
 			"on gk10, use -p\n\n"
 
-			"blaster [-l|-i] <file> <maxNumThreads> <wait>\n"
+			"blaster [-l|-u|-i] <file> <maxNumThreads> <wait>\n"
 			"\tget documents from the urls given in file. The "
 			"-l argument is to\n\t"
 			"automatically get documents "
 			"from the gigablast log file.\n"
-			"\t-i means to inject/index the url into gb.\n"
+			"\t-u means to inject/index the url into gb.\n"
+			"\t-i means to inject/index the url into gb AND "
+			"add all of its outlinks to\n"
+			"\tspiderdb for spidering, "
+			"which also entails a DNS lookup on each outlink.\n"
 			"\tmaxNumThreads is the"
 			" number of concurrent threads at one time and wait "
 			"\n\tis the time to wait between threads.\n\n"
@@ -1371,6 +1375,7 @@ int main ( int argc , char *argv[] ) {
   	if ( strcmp ( cmd , "blaster" ) == 0 ) {
 		long i=cmdarg+1;
 		bool isLogFile=false;
+		bool injectUrlWithLinks=false;
 		bool injectUrl=false;
 		long wait = 0;
 		
@@ -1379,6 +1384,10 @@ int main ( int argc , char *argv[] ) {
 			i++;
 		}
 		if ( strcmp (argv[i],"-i") == 0 ){
+			injectUrlWithLinks=true;
+			i++;
+		}
+		if ( strcmp (argv[i],"-u") == 0 ){
 			injectUrl=true;
 			i++;
 		}
@@ -1393,6 +1402,7 @@ int main ( int argc , char *argv[] ) {
 		g_blaster.runBlaster (filename,NULL,
 					      maxNumThreads,wait,
 					      isLogFile,false,false,false,
+				      injectUrlWithLinks,
 				      injectUrl);
 		// disable any further logging so final log msg is clear
 		g_log.m_disabled = true;

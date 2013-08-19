@@ -112,6 +112,7 @@ void Blaster::runBlaster(char *file1,char *file2,
 			 long maxNumThreads, long wait, bool isLogFile,
 			 bool verbose,bool justDisplay,
 			 bool useProxy ,
+			 bool injectUrlWithLinks ,
 			 bool injectUrl ) {
 	if (!init())
 		return;
@@ -134,6 +135,7 @@ void Blaster::runBlaster(char *file1,char *file2,
 	// store a \0 at the end
 	long m_bufSize1 = fileSize1 + 1;
 
+	m_doInjectionWithLinks = injectUrlWithLinks;
 	m_doInjection = injectUrl;
 
 	// make buffers to hold all
@@ -375,7 +377,7 @@ void Blaster::startBlastering(){
 		//st->m_u1.set ( m_p1 , gbstrlen(m_p1) );
 		st->m_u1 = m_p1;
 		// is it an injection url
-		if ( m_doInjection ) {
+		if ( m_doInjection || m_doInjectionWithLinks ) {
 			// get host #0 i guess
 			Host *h0 = g_hostdb.getHost(0);
 			if ( ! h0 ) { char *xx=NULL;*xx=0; }
@@ -392,8 +394,12 @@ void Blaster::startBlastering(){
 			// will have to do a dns lookup on the domain of every
 			// outlink.
 			st->m_injectUrl.safePrintf("http://127.0.0.1:8000/"
-					       "admin/inject?spiderlinks=1&"
-						   "u=");
+						   "admin/inject?");
+			if ( m_doInjectionWithLinks )
+				st->m_injectUrl.safePrintf("spiderlinks=1&");
+			else
+				st->m_injectUrl.safePrintf("spiderlinks=0&");
+			st->m_injectUrl.safePrintf("u=");
 			st->m_injectUrl.urlEncode(m_p1);
 			st->m_injectUrl.pushChar('\0');
 			st->m_u1 = st->m_injectUrl.getBufStart();

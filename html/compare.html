@@ -154,7 +154,7 @@ You can inject an individual url into the collection <i>main</i> like:
 <!--gigablast-->
 <td>
 You can inject a file of URLs into the collection <i>main</i> like:
-<b>./gb blaster -i <filename> <maxThreadsToUse></b> . You must be coming from an internal IP address for permission purposes. The file of URLs is just a \n separated list of URLs you want to index. It will basically use the the same "inject" HTML interface you can see <a href=/admin/inject>here</a> with spiderlinks=1. So it will add the outlinks from each page to spiderdb for spidering. This will cause it to be a little slower because it will do a DNS lookup on the subdomain of each outlink if not already in the DNS cache. Look for <i>spiderlinks</i> in the Blaster.cpp file to find that code.
+<b>./gb blaster -u <filename> <maxThreadsToUse></b> . You must be coming from an internal IP address for permission purposes. The file of URLs is just a \n separated list of URLs you want to index. It will basically use the the same "inject" HTML interface you can see <a href=/admin/inject>here</a>. If you use <b>-i<b> instead of -u then it will add the outlinks from each URL to spiderdb for spidering. This will cause it to be a little slower because it will do a DNS lookup on the subdomain of each outlink if not already in the DNS cache. Look for <i>spiderlinks</i> in the Blaster.cpp file to find that code.
 </td>
 <!--solr-->
 <td>
