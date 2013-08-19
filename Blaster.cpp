@@ -387,8 +387,13 @@ void Blaster::startBlastering(){
 				    iptoa(h0->m_ip),
 				    (long)h0->m_httpPort);
 			}
+			// use spiderlinks=1 so we add the outlinks to spiderdb
+			// but that will slow the spider rate down since it 
+			// will have to do a dns lookup on the domain of every
+			// outlink.
 			st->m_injectUrl.safePrintf("http://127.0.0.1:8000/"
-					       "admin/inject?u=");
+					       "admin/inject?spiderlinks=1&"
+						   "u=");
 			st->m_injectUrl.urlEncode(m_p1);
 			st->m_injectUrl.pushChar('\0');
 			st->m_u1 = st->m_injectUrl.getBufStart();
