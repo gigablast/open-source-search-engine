@@ -139,7 +139,7 @@ bool HttpServer::getDoc ( char   *url      ,
 		if (!m_ssltcp.m_ready) {
 			// TODO: set an error here
 			log("https: Trying to get HTTPS site when SSL "
-			    "TcpServer not ready.");
+			    "TcpServer not ready: %s",url);
 			g_errno = ESSLNOTREADY;
 			return true;
 		}
