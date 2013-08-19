@@ -61,7 +61,7 @@
 <li>./gb 0
 <li>wait for binary data files to build
 <li>./gb 0 >& log0 &
-<li>If your web browser resides on a different machine than the gb process, then, on the browser machine, do an ssh tunnel like <i>ssh -L 8000:1.2.3.4:8000</i> where 1.2.3.4 is the IP address of the machine running gb. Then any request sent to port 8000 on your local machine will be port-forwarded over ssh to the machine running gb.
+<li>If your web browser resides on a different machine than the gb process, then, on the browser machine, do an ssh tunnel like <i>ssh -L 8001:127.0.0.1:8000 1.2.3.4</i> where 1.2.3.4 is the IP address of the machine running gb. Then any request sent to port 8001 on your local machine will be port-forwarded over ssh to the machine running gb on port 8000.
 <li>point browser to <a href=http://127.0.0.1:8000/>http://127.0.0.1:8000/</a> 
 <li>the two configuration files, gb.conf and hosts.conf, and the index itself are stored in <i>working-dir</i> or sub directories thereof.
 </ul>
