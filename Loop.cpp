@@ -648,8 +648,16 @@ bool Loop::init ( ) {
 	//   fcntl(fd,SET_SIG,GB_SIGRTMIN) so we're notified with that signal
 	// . this returns -1 and sets g_errno on error
 	// . TODO: is this the SOURCE signal or the altered signal?
+#ifdef _OLDSTUFF_
+	// i think this was supposed to be sent when the signal queue was
+	// overflowing so we needed to do a poll operation when we got this
+	// signal, however, newer kernel seems to throw this signal all the
+	// time when it just gets IO causing cpu to be 100% floored!
+	// i'm afraid without this code we might miss data on a socket
+	// or not read it promptly, but let's see how it goes.
 	if ( sigaction ( SIGIO, &sa, 0 ) < 0 ) g_errno = errno;
 	if ( g_errno ) log("loop: sigaction SIGIO: %s.", mstrerror(errno));
+#endif
 
 
 	// handle HUP signals gracefully by saving and shutting down
