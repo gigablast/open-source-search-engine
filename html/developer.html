@@ -125,23 +125,27 @@ Administration documentation is <a href=/admin.html>here</a>.
 <!--subtable2-->
 <tr><td></td><td><table cellpadding=3>
 
-<tr><td>1.</td><td><a href="#buildclasses">Associated Classes</a></td></tr>
-<tr><td>2.</td><td><a href="#spiderloop">The Spider Loop</a> - Start of the pipeline.</td></tr>
+<tr><td>1.</td><td><a href="#buildclasses">Associated Files</a></td></tr>
+<tr><td>2.</td><td><a href="#spiderloop">Spiderdb.cpp</a> - Most of the spider code.</td></tr>
+<!--
 <tr><td>3.</td><td><a href="#spidercache">The Spider Cache</a> - Caches urls from spiderdb.</td></tr>
 <tr><td>4.</td><td><a href="#msg14">Msg14</a> - Indexes a url.</td></tr>
 <tr><td>5.</td><td><a href="#msg15">Msg15</a> - Sets the old IndexList.</td></tr>
 <tr><td>6.</td><td><a href="#msg16">Msg16</a> - Sets the new IndexList.</td></tr>
 <tr><td>7.</td><td><a href="#doc">The Doc Class</a> - Converts document to an IndexList.</td></tr>
-<tr><td>8.</td><td><a href="#linkanalysis">Link Analysis</a></td></tr>
-<tr><td>9.</td><td><a href="#robotdb">Robots.txt</a></td></tr>
+-->
+
+<tr><td>3.</td><td><a href="#linkanalysis">Link Analysis</a></td></tr>
+<!--<tr><td>9.</td><td><a href="#robotdb">Robots.txt</a></td></tr>
 <tr><td>10.</td><td><a href="#termtable">The TermTable</a></td></tr>
-<tr><td>11.</td><td><a href="#indexlist">The IndexList</a></td></tr>
-<tr><td>12.</td><td><a href="#samplevector">The Sample Vector</a> - Used for removing similar search results.</td></tr>
-<tr><td>13.</td><td><a href="#gigabitvector">The Gigabit Vector</a> - Used for clustering results by topic.</td></tr>
-<tr><td>14.</td><td><a href="#deduping">Deduping</a> - Preventing the index of duplicate pages.</td></tr>
-<tr><td>15.</td><td><a href="#indexcode">Indexing Error Codes</a> - Reasons why a document failed to be indexed.</td></tr>
-<tr><td>16.</td><td><a href="#docids">DocIds</a> - How DocIds are assigned.</td></tr>
-<tr><td>17.</td><td><a href="#docidscaling">Scaling To Many DocIds</a> - How we scale to many DocIds.</td></tr>
+<tr><td>11.</td><td><a href="#indexlist">The IndexList</a></td></tr>-->
+<tr><td>4.</td><td><a href="#samplevector">The Sample Vector</a> - Used for deduping at spider time.</td></tr>
+<tr><td>5.</td><td><a href="#summaryvector">The Summary Vector</a> - Used for removing similar search results.</td></tr>
+<tr><td>6.</td><td><a href="#gigabitvector">The Gigabit Vector</a> - Used for clustering results by topic.</td></tr>
+<tr><td>7.</td><td><a href="#deduping">Deduping</a> - Preventing the index of duplicate pages.</td></tr>
+<tr><td>8.</td><td><a href="#indexcode">Indexing Error Codes</a> - Reasons why a document failed to be indexed.</td></tr>
+<tr><td>9.</td><td><a href="#docids">DocIds</a> - How DocIds are assigned.</td></tr>
+<tr><td>10.</td><td><a href="#docidscaling">Scaling To Many DocIds</a> - How we scale to many DocIds.</td></tr>
 
 </table></tr>
 <!--subtable2end-->
@@ -933,7 +937,7 @@ end up having a conflict as to what the latest version number actually stands
 for. So versions need to be immediately propagated both ways to avoid this.
 <a name="spiderdb"></a>
 <h2>Spiderdb</h2>
-NOTE: this description of spiderdb is very outdate! - matt Aug 2013.
+NOTE: this description of spiderdb is very outdated! - matt Aug 2013.
 <br><br>
 Spiderdb is responsible for the spidering schedule. Every url in spiderdb is
 either old or new. If it is already in the index, it is old, otherwise, it is
@@ -1389,7 +1393,9 @@ later.
 <a name="buildlayer"></a>
 <a name="pageinject"></a>
 <hr><h1>The Build Layer</h1>
-This section describes how Gigablast downloads, parses, scores and indexes documents. <b>SpiderLoop.cpp</b>'s spiderUrl() routine is called every 30ms or so by Loop.cpp to spider a new url. If spiders are deactivated then it just returns, otherwise, it tries to get a url from <a href="#spiderdb">spiderdb</a> to spider. If successful, it allocates a new Msg14 class and passes the url to that. Msg14 downloads, parses and scores the document, and ultimately adds records to indexdb, titledb, clusterdb and checksumdb for that document. Alternately, urls and their corresponding content can be directly injected using the injection interface, <b>PageInject.cpp</b>, which calls a Msg14 directly.
+This section describes how Gigablast downloads, parses, scores and indexes documents. 
+
+<!--<b>SpiderLoop.cpp</b>'s spiderUrl() routine is called every 30ms or so by Loop.cpp to spider a new url. If spiders are deactivated then it just returns, otherwise, it tries to get a url from <a href="#spiderdb">spiderdb</a> to spider. If successful, it allocates a new Msg14 class and passes the url to that. Msg14 downloads, parses and scores the document, and ultimately adds records to indexdb, titledb, clusterdb and checksumdb for that document. Alternately, urls and their corresponding content can be directly injected using the injection interface, <b>PageInject.cpp</b>, which calls a Msg14 directly.
 <br><br>
 This table illustrates the path of control:
 <br><br>
@@ -1406,23 +1412,20 @@ This table illustrates the path of control:
 <td><td>9.</td><td>This loop is repeated starting at step 1.</td></tr>
 </table>
 <br><br>
-
+-->
 
 <a name="buildclasses"></a>
-<h2>Associated Classes (.cpp and .h files)</h2>
+<h2>Associated Files</h2>
 <table cellpadding=3 border=1>
-<tr><td>AdultBit</td><td>Build</td><td>Used to detect if document content is naughty.</td></tr>
-<tr><td>Bits</td><td>Build</td><td>Sets descriptor bits for each word in a Words class.</td></tr>
-<tr><td>Categories</td><td>Build</td><td>Stores DMOZ categories in a hiearchy.</td></tr>
-<tr><td>DateParse</td><td>Build</td><td>Extracts the publish date from a document.</td></tr>
-<tr><td>Doc</td><td>Build</td><td>A container class to store the titleRec and siteRec and other classes associated with a document.</td></tr>
-<tr><td>Lang</td><td>Build</td><td>Unused.</td></tr>
-<tr><td>Language.h</td><td>Build</td><td>Enumerates the various languages supported by Gigablast's language detector.</td></tr>
-<tr><td>LangList</td><td>Build</td><td>Interface to the language-specific dictionaries used for language identification by XmlDoc::getLanguage().</td></tr>
-<tr><td>LinkInfo</td><td>Build</td><td>Used by the link analysis routine. Contains an array of LinkTexts.</td></tr>
-<tr><td>LinkText</td><td>Build</td><td>Contains the link information for a specific document that links to a specific url, such as quality, IP address, number of total outgoing links, and the link text for that url.</td></tr>
-<tr><td>Links</td><td>Build</td><td>Parses out all the outgoing links in a document.</td></tr>
-<tr><td>Msg10</td><td>Build</td><td>Adds a list of urls to spiderdb for spidering.</td></tr>
+<tr><td>AdultBit.cpp</td><td>Build</td><td>Used to detect if document content is naughty.</td></tr>
+<tr><td>Bits.cpp</td><td>Build</td><td>Sets descriptor bits for each word in a Words class.</td></tr>
+<tr><td>Categories.cpp</td><td>Build</td><td>Stores DMOZ categories in a hiearchy.</td></tr>
+<!--<tr><td>DateParse</td><td>Build</td><td>Extracts the publish date from a document.</td></tr>-->
+<tr><td>Lang.cpp</td><td>Build</td><td>Unused.</td></tr>
+<tr><td>Language.cpp</td><td>Build</td><td>Enumerates the various languages supported by Gigablast's language detector.</td></tr>
+<tr><td>LangList.cpp</td><td>Build</td><td>Interface to the language-specific dictionaries used for language identification by XmlDoc::getLanguage().</td></tr>
+<tr><td>Linkdb.cpp</td><td>Build</td><td>Functions to perform link analysis on a docid/url. Computes a LinkInfo class for the docId. LinkInfo class contains Inlink classes serialized into it for each non-spammy inlink detected. Also contains a Links class that parses out all the outlinks in a document.</td></tr>
+<!--<tr><td>Msg10</td><td>Build</td><td>Adds a list of urls to spiderdb for spidering.</td></tr>
 <tr><td>Msg13</td><td>Build</td><td>Tells a server to download robots.txt (or get from cache) and report if Gigabot has permission to download it.</td></tr>
 <tr><td>Msg14</td><td>Build</td><td>The core class for indexing a document.</td></tr>
 <tr><td>Msg15</td><td>Build</td><td>Called by Msg14 to set the Doc class from the previously indexed TitleRec.</td></tr>
@@ -1431,39 +1434,34 @@ This table illustrates the path of control:
 <tr><td>Msg19</td><td>Build</td><td>Determine if a document is a duplicate of a document already indexed from that same hostname.</td></tr>
 <tr><td>Msg23</td><td>Build</td><td>Get the link text in a document that links to a specified url. Also returns other info besides that link text.</td></tr>
 <tr><td>Msg8</td><td>Build</td><td>Gets the Sitedb record given a url.</td></tr><tr><td>Msg9</td><td>Build</td><td>Adds a Sitedb record to Sitedb for a given site/url.</td></tr>
-<tr><td>PageAddUrl</td><td>Build</td><td>HTML page to add a url or file of urls to spiderdb.</td></tr>
-<tr><td>PageInject</td><td>Build</td><td>HTML page to inject a page directly into the index.</td></tr>
-<tr><td>Phrases</td><td>Build</td><td>Generates phrases for every word in a Words class. Uses the Bits class.</td></tr>
-<tr><td>Pops</td><td>Build</td><td>Computes popularity for each word in a Words class. Uses the dictionary files in the dict subdirectory.</td></tr>
-<tr><td>Pos</td><td>Build</td><td>Computes the character position of each word in a Words class. HTML entities count as a single character. So do back-to-back spaces.</td></tr>
-<tr><td>Robotdb</td><td>Build</td><td>Caches and parses robots.txt files. Used by Msg13.</td></tr>
-<tr><td>Scores</td><td>Build</td><td>Computes the score of each word in a Words class. Used to weight the final score of a term being indexed in TermTable::hash().</td></tr>
+-->
+<tr><td>PageAddUrl.cpp</td><td>Build</td><td>HTML page to add a url or file of urls to spiderdb.</td></tr>
+<tr><td>PageInject.cpp</td><td>Build</td><td>HTML page to inject a page directly into the index.</td></tr>
+<tr><td>Phrases.cpp</td><td>Build</td><td>Generates phrases for every word in a Words class. Uses the Bits class.</td></tr>
+<tr><td>Pops.cpp</td><td>Build</td><td>Computes popularity for each word in a Words class. Uses the dictionary files in the dict subdirectory.</td></tr>
+<tr><td>Pos.cpp</td><td>Build</td><td>Computes the character position of each word in a Words class. HTML entities count as a single character. So do back-to-back spaces.</td></tr>
+<!--<tr><td>Robotdb.cpp</td><td>Build</td><td>Caches and parses robots.txt files. Used by Msg13.</td></tr>-->
+<!--<tr><td>Scores</td><td>Build</td><td>Computes the score of each word in a Words class. Used to weight the final score of a term being indexed in TermTable::hash().</td></tr>-->
 <tr><td>Spam</td><td>Build</td><td>Computes the probability a word is spam for every word in a Words class.</td></tr>
-<tr><td>SpamContainer</td><td>Build</td><td>Used to remove spam from the index using Msg1c and Msg1d.</td></tr>
-<tr><td>SpiderCache</td><td>Build</td><td>Spiderdb records are preloaded in this cache so SpiderLoop::spiderUrl() can get urls to spider as fast as possible.</td></tr>
-<tr><td>SpiderLoop</td><td>Build</td><td>The heart of the spider process. Continually gets urls from the SpiderCache and calls Msg14::spiderUrl() on them.</td></tr>
-<tr><td>Stemmer</td><td>Build</td><td>Unused. Given a word, computes its stem.</td></tr>
-<tr><td>StopWords</td><td>Build</td><td>A table of stop words, used by Bits to see if a word is a stop word.</td></tr>
-<tr><td>TermTable</td><td>Build</td><td>A hash table of terms from a document. Consists of termIds and scores. Used to accumulate scores. TermTable::hash() is arguably a heart of the build process.</td></tr>
-<tr><td>Url2</td><td>Build</td><td>For hashing/indexing a url.</td></tr>
-<tr><td>Words</td><td>Build</td><td>Breaks a document up into "words", where each word is a sequence of alphanumeric characters, a sequence of non-alphanumeric characters, or a single HTML/XML tag. A heart of the build process.</td></tr>
-<tr><td>Xml</td><td>Build</td><td>Breaks a document up into XmlNodes where each XmlNode is a tag or a sequence of characters which are not a tag.</td></tr>
-<tr><td>XmlDoc</td><td>Build</td><td>XmlDoc::hash() hashes a TitleRec (and SiteRec which indicates the ruleset to use) into a TermTable. Another heart of the build process.</td></tr>
+<!--<tr><td>SpamContainer</td><td>Build</td><td>Used to remove spam from the index using Msg1c and Msg1d.</td></tr>-->
+<tr><td>Spider.cpp</td><td>Build</td><td>Has most of the code used by the spidering process. SpiderLoop is a class in there that is the heart of the spider. It is the control loop that launches spiders.</td></tr>
+<!--<tr><td>Stemmer</td><td>Build</td><td>Unused. Given a word, computes its stem.</td></tr>-->
+<tr><td>StopWords.cpp</td><td>Build</td><td>A table of stop words, used by Bits to see if a word is a stop word.</td></tr>
+<!--<tr><td>TermTable</td><td>Build</td><td>A hash table of terms from a document. Consists of termIds and scores. Used to accumulate scores. TermTable::hash() is arguably a heart of the build process.</td></tr>-->
+<!--<tr><td>Url2</td><td>Build</td><td>For hashing/indexing a url.</td></tr>-->
+<tr><td>Words.cpp</td><td>Build</td><td>Breaks a document up into "words", where each word is a sequence of alphanumeric characters, a sequence of non-alphanumeric characters, or a single HTML/XML tag. A heart of the build process.</td></tr>
+<tr><td>Xml.cpp</td><td>Build</td><td>Breaks a document up into XmlNodes where each XmlNode is a tag or a sequence of characters which are not a tag.</td></tr>
+<tr><td>XmlDoc.cpp</td><td>Build</td><td>The main document parsing class. A huge file, pretty much does all the parsing.</td></tr>
 <tr><td>XmlNode</td><td>Build</td><td>Xml classes has an array of these. Each is either a tag or a sequence of characters that are between tags (or beginning/end of the document).</td></tr>
 <tr><td>dmozparse</td><td>Build</td><td>Creates the necessary dmoz files Gigablast needs from those files downloadable from DMOZ.</td></tr>
 </table>
 
 <a name="spiderloop"></a>
 <h2>The Spider Loop</h2>
-<b>SpiderLoop</b>'s spiderUrl() routine is called every 30ms or so by Loop.cpp in order to spider a url. If spiders are activated it will create a new 
-Msg14 class to spider that url. MAX_SPIDERS is currently limited to 300
-(or 500 for some versions) but that can be bumped up. When Msg14 returns, 
-the Spider Loop is responsible for logging that status of the spidering as 
-well as adding and/or deleting the record for that url to/from 
-<a href="#spiderdb">spiderdb</a>. Also, it will call spiderUrl() again after
-a Msg14 has completed in an attempt to immediately launch another spider.
+<b>SpiderLoop.cpp</b> finds what URLs in <a href="#spiderdb">spiderdb</a> to spider next. It is based on the URL filters table that you can specify in the admin interface. It calls XmlDoc::index() to download and index the URL.
 <br><br>
 
+<!--
 <a name="spidercache"></a>
 <a name="spidercollection"></a>
 <a name="spiderqueue"></a>
@@ -1588,8 +1586,8 @@ how long it has been since the collection downloaded a url and on that
 collection's CollectionRec::m_maxKbps and CollectionRec::m_maxPagesPerSecond
 parameters. If either of these parameters is -2 it means it is unbounded.
 <br><br>
-
-
+-->
+<!--
 <a name="msg14"></a>
 <h2>Msg14</h2>
 After the Spider Cache provides a url to spider, Spider Loop allocates a new
@@ -1657,7 +1655,7 @@ which is an RdbList of Indexdb records.  Indexlist will convert a
 format. The TermTable is just a hash
 table containing all of the term from the document that are to be indexed.
 <br><br>
-
+-->
 
 <a name="linkanalysis"></a>
 <a name="linkinfo"></a>
@@ -1666,7 +1664,7 @@ table containing all of the term from the document that are to be indexed.
 <a name="msg23"></a>
 <a name="pageparser"></a>
 <h2>Link Analysis</h2>
-Msg16 calls <b>Msg25</b> to set the LinkInfo class for a document. The 
+XmlDoc calls <b>Msg25</b> to set the LinkInfo class for a document. The 
 LinkInfo class is stored in the titledb record (the TitleRec) and can be
 recycled if <i>recycle link info</i> is enabled in the Spider Controls.
 LinkInfo contains an array of <b>LinkText</b> classes. 
@@ -1679,15 +1677,16 @@ link-adjusted quality of the url being indexed can be easily seen on the
 Page Parser tool available through the administrative section or by clicking
 on the [analyze] link next to a search result.
 <br><br>
-Each LinkText is set by the <b>Msg23</b> class, which acts like 
-<a href="#msg20">Msg20</a>, in that it
-sends a request to the machine that has the linking document in its 
+Msg25 uses 
+<a href="#msg20">Msg20</a> to get information about an inlinker.
+It sends a Msg20 request to the machine that has the linking document in its 
 <a href="#titledb">titledb</a>. The handler loads the titledb record using
 Msg22, and then extracts the relevant link text using the <b>Links.cpp</b>
 class, and packages that up with the quality and docid of the linker in the
 reply.
 <br><br>
 
+<!--
 <a name="msg18"></a>
 <a name="robotdb"></a>
 <h2>Robots.txt</h2>
@@ -1712,19 +1711,23 @@ IndexList::set(). It essentially subtracts
 the two if <i>incremental indexing</i> is enabled in the Master Controls or
 gb.conf. That way it will only add new terms or terms that have different 
 scores compared to the old TitleRec.
-
+-->
 
 <a name="samplevector"></a>
 <h2>The Sample Vector</h2>
-After downloading the page, Msg14 will use g_clusterdb to generate a sample
+After downloading the page, XmlDoc::getPageSampleVector() generates a sample
 vector for the document. This vector is formed by getting the top 32 or so 
 terms from the new TermTable sorted by their termId, a hash of each term. 
-This vector is stored in the TitleRec and used do dedup search results at
-query time using Clusterdb::getSampleSimilarity() which takes two sample
+This vector is stored in the TitleRec and used for deduping.
+<br><br>
+
+<a name="summaryvector"></a>
+<h2>The Summary Vector</h2>
+Deduping search results at query time is based partly on how similar the summaries are. We use XmlDoc::getSummaryVector() which takes two sample
 vectors as input. The similarity threshold can be controlled from the 
 Search Controls' <i>percent similar dedup default</i> and it can also be
 explicitly specified using the <i>psc</i> cgi parameter.
-<br><br>
+
 
 <a name="gigabitvector"></a>
 <h2>The Gigabit Vector</h2>
@@ -1829,23 +1832,7 @@ error, or something on our side. These errors are also in Errno.h.
 
 <a name="xmldoc"></a>
 <h2>XmlDoc: The Heart of the Parser</h2>
-Once Msg16 downloads the document, it calls XmlDoc::set(). Actually, 
-Msg16 calls XmlDoc::set1() and then XmlDoc::set2() which are the same thing
-as calling XmlDoc::set() used to be. It is now broken up into two stages so we 
-can support the new <a href="#loosechecksum">loose checksum</a> feature.
-XmlDoc::set() will set the following classes, all members of XmlDoc:
-<ul>
-<li>m_xml (Xml.cpp)
-<li>m_links (Links.cpp)
-<li>m_words (Words.cpp)
-<li>m_scores (Scores.cpp)
-<li>m_adultBit (AdultBit.cpp)
-</ul>
-<br>
-XmlDoc::hash() is responsible for setting the 
-<a href="#termtable">TermTable</a> which is used to set the 
-<a href="#indexlist">IndexList</a>. If you want to add new things to be indexed
-then this is the place to start looking.
+Spider.cpp ultimately calls XmlDoc::index() to download and index the specified URL. 
 <br><br>
 
 <a name="xml"></a>
@@ -1859,7 +1846,7 @@ class to tokenize the content into these nodes.
 
 <a name="links"></a>
 <h2>Links</h2>
-The Links class is set by XmlDoc::set1() and gets all the links in a document.
+The Links class is set by XmlDoc and gets all the links in a document.
 Links::hash(), called by XmlDoc::hash(), will index all the link:, ilink: or 
 links: terms.
 It is also used to get link text by the <a href="#linktext">LinkText</a> class.
@@ -1885,10 +1872,7 @@ the hash table.
 <h2>Phrases</h2>
 Gigablast implements phrase searching by stringing words together and hashing
 them as a single unit. It uses the Phrases and Bits class to generate phrases
-from a Words class. Basically, every pair of words is considered a phrase,
-but phrases can consist of more than two words if there are 
-<a href="#stopwords">stop words</a> in the middle, as so identified by the
-Bits class. 
+from a Words class. Basically, every pair of words is considered a phrase. So if it sees "cd rom" in the document it will index the bigram "cdrom". It can easily be modified to index trigrams and quadgrams as well, but that will bloat the index somewhat.
 <br><br>
 
 <a name="bits"></a>
@@ -1899,6 +1883,7 @@ that sets flags depending on different properties of the word. These bits
 are used for generating <a href="#phrases">phrases</a>.
 <br><br>
 
+<!--
 <a name="scores"></a>
 <h2>Scores</h2>
 A more recent addition to Gigablast is the Scores class. It was written to
@@ -1906,6 +1891,7 @@ extract the beefy content of a page, and exclude, or reduce the impact of,
 menu text. Words with scores of 0 or less are not indexed. The ruleset controls
 if and how the Scores class is used to index documents.
 <br><br>
+-->
 
 <!--
 <a name="msg10"></a>
