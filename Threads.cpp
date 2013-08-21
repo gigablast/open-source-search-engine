@@ -29,6 +29,21 @@ int pthread_mutex_unlock (pthread_mutex_t *t ) { return 0; }
 pthread_attr_t s_attr;
 #endif
 
+// main process id (or thread id if using pthreads)
+static pid_t  s_pid    = (pid_t) -1;
+
+pid_t getpidtid() {
+#ifdef _PTHREADS_
+	// gettid() is a bit newer so not in our libc32...
+	// so kinda fake it. return the "thread" id, not process id.
+	// Threads::amThread() should still work based on thread ids because
+	// the main process has a unique thread id as well.
+	return (pid_t)pthread_self();
+#else
+	return getpid();
+#endif
+}
+
 
 
 // BIG PROBLEM:
@@ -53,8 +68,6 @@ pthread_attr_t s_attr;
 // a global class extern'd in .h file
 Threads g_threads;
 
-// main process id
-static pid_t  s_pid    = (pid_t) -1;
 
 // . call this before calling a ThreadEntry's m_startRoutine
 // . allows us to set the priority of the thread
@@ -70,7 +83,7 @@ static void makeCallback ( ThreadEntry *t ) ;
 // is the caller a thread?
 bool Threads::amThread () {
 	if ( s_pid == -1 ) return false;
-	return ( getpid() != s_pid );
+	return ( getpidtid() != s_pid );
 }
 
 #ifndef _PTHREADS_
@@ -164,8 +177,26 @@ bool Threads::init ( ) {
 	m_needsCleanup = false;
 	//m_needBottom = false;
 
-	// set the main process id
+	// sanity check
+	if ( sizeof(pthread_t) > sizeof(pid_t) ) { char *xx=NULL;*xx=0; }
+
+	// set s_pid to the main process id
+#ifdef _PTHREADS_
+	s_pid = pthread_self();
+	log("threads: main process THREAD id = %lu",(long unsigned)s_pid);
+	pthread_t tid = pthread_self();
+	sched_param param;
+	int policy;
+	// scheduling parameters of target thread
+	pthread_getschedparam ( tid, &policy, &param);
+	log("threads: min/max thread priority settings = %li/%li (policy=%li)",
+	    (long)sched_get_priority_min(policy),
+	    (long)sched_get_priority_max(policy),
+	    (long)policy);
+#else
 	s_pid = getpid();
+#endif
+
 
 #ifdef _STACK_GROWS_UP
 	return log("thread: Stack growing up not supported.");
@@ -2113,7 +2144,11 @@ int startUp ( void *state ) {
 	// ignore the real time signal, man...
 	//sigaddset(&set, GB_SIGRTMIN);
 	//pthread_sigmask(SIG_BLOCK, &set, NULL);
+#ifndef _PTHREADS_
 	sigprocmask(SIG_BLOCK, &set, NULL);
+#else
+	pthread_sigmask(SIG_BLOCK,&set,NULL);
+#endif
 	// . what this lwp's priority be?
 	// . can range from -20 to +20
 	// . the lower p, the more cpu time it gets
@@ -2128,19 +2163,23 @@ int startUp ( void *state ) {
 	// debug
 	if ( g_conf.m_logDebugThread ) 
 		log(LOG_DEBUG,"thread: [%lu] in startup pid=%li pppid=%li",
-		    (long)t,(long)getpid(),(long)getppid());
+		    (long)t,(long)getpidtid(),(long)getppid());
 	// debug msg
 	//fprintf(stderr,"new thread tid=%li pid=%li\n",
 	//	(long)t->m_tid,(long)t->m_pid);
 	// . set this process's priority
 	// . setpriority() is only used for SCHED_OTHER threads
-	if ( setpriority ( PRIO_PROCESS, getpid() , p ) < 0 ) {
+#ifdef _PTHREADS_
+	if ( pthread_setschedprio ( getpidtid() , p ) ) {
+#else
+	if ( setpriority ( PRIO_PROCESS, getpidtid() , p ) < 0 ) {
+#endif
 		// do we even support logging from a thread?
 		if ( s_firstTime ) {
-			log("thread: Call to setpriority(%i) in thread "
+			log("thread: Call to setpriority(%lu,%i) in thread "
 			    "failed: %s. This "
 			    "message will not be repeated.",
-			    p,mstrerror(errno));
+			    (unsigned long)getpidtid(),p,mstrerror(errno));
 			s_firstTime = false;
 		}
 		errno = 0;
@@ -2181,7 +2220,7 @@ int startUp ( void *state ) {
 	if ( g_conf.m_logDebugThread ) {
 
 		log(LOG_DEBUG,"thread: [%lu] done with startup pid=%li",
-		    (long)t,(long)getpid());
+		    (long)t,(long)getpidtid());
 	}
 
 	// . now mark thread as ready for removal

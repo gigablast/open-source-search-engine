@@ -599,6 +599,15 @@ bool Loop::init ( ) {
 	sigaddset   ( &sigs , GB_SIGRTMIN + 2 );
 	sigaddset   ( &sigs , GB_SIGRTMIN + 3 );
 	sigaddset   ( &sigs , SIGCHLD      );
+
+#ifdef _PTHREADS_
+	// now since we took out SIGIO... (see below)
+	// we should ignore this signal so it doesn't suddenly stop the gb
+	// process since we took out the SIGIO handler because newer kernels
+	// were throwing SIGIO signals ALL the time, on every datagram
+	// send/receive it seemed and bogged us down.
+	sigaddset   ( &sigs , SIGIO );
+#endif
 	// . block on any signals in this set (in addition to current sigs)
 	// . use SIG_UNBLOCK to remove signals from block list
 	// . this returns -1 and sets g_errno on error
@@ -648,7 +657,8 @@ bool Loop::init ( ) {
 	//   fcntl(fd,SET_SIG,GB_SIGRTMIN) so we're notified with that signal
 	// . this returns -1 and sets g_errno on error
 	// . TODO: is this the SOURCE signal or the altered signal?
-#ifdef _OLDSTUFF_
+
+#ifndef _PTHREADS_
 	// i think this was supposed to be sent when the signal queue was
 	// overflowing so we needed to do a poll operation when we got this
 	// signal, however, newer kernel seems to throw this signal all the

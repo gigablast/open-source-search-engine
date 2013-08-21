@@ -13097,7 +13097,7 @@ int my_system_r ( char *cmd , long timeout ) ;
 // sets m_errno on error
 void XmlDoc::filterStart_r ( bool amThread ) {
 	// get thread id
-	long id = getpid();
+	long id = getpidtid();
 	// sanity check
 	if ( ! m_contentTypeValid ) { char *xx=NULL;*xx=0; }
 	// shortcut

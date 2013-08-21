@@ -10,6 +10,9 @@
 
 #include <sys/types.h>  // pid_t
 
+// if we are a thread this gets the threadid, otherwise, the main process id
+pid_t getpidtid();
+
 // user-defined thread types
 #define DISK_THREAD      0
 #define MERGE_THREAD     1

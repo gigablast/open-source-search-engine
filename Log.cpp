@@ -5,6 +5,7 @@
 #include "Loop.h"
 #include "Conf.h"
 #include "Process.h"
+#include "Threads.h" // getpidtid()
 
 // a global class extern'd in Log.h
 Log g_log;
@@ -50,7 +51,7 @@ void Log::reset ( ) {
 
 bool Log::init ( char *filename ) {
 	// set the main process id
-	s_pid = getpid();
+	s_pid = getpidtid();
 	// init these
 	m_numErrors =  0;
 	m_bufPtr    =  0;
@@ -193,7 +194,7 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	// chop off any spaces at the end of the msg.
 	while ( is_wspace_a ( msg [ msgLen - 1 ] ) && msgLen > 0 ) msgLen--;
 	// get this pid
-	pid_t pid = getpid();
+	pid_t pid = getpidtid();
 	// a tmp buffer
 	char tt [ MAX_LINE_LEN ];
 	char *p    = tt;
