@@ -80,7 +80,8 @@ Administration documentation is <a href=/admin.html>here</a>.
 <!--subtable3end-->
 
 
-<tr><td>3.</td><td><a href="#indexdb">Indexdb</a> - The search index Rdb.</td></tr>
+<tr><td>3. a.</td><td><a href="#posdb">Posdb</a> - The new word-position storing search index Rdb.</td></tr>
+<tr><td>3. b.</td><td><a href="#indexdb">Indexdb</a> - The retired/unused tf/idf search index Rdb.</td></tr>
 <tr><td>4.</td><td><a href="#datedb">Datedb</a> - For returning search results constrained or sorted by date.</td></tr>
 <tr><td>5.</td><td><a href="#titledb">Titledb</a> - Holds the cached web pages.</td></tr>
 <tr><td>6.</td><td><a href="#spiderdb">Spiderdb</a> - Holds the urls to be spidered, sorted by spider date.</td></tr>
@@ -792,11 +793,50 @@ To convert the Rdb files from a fixed-size key to a variable-sized one required 
 Some of the more common bugs from this change: since the keys are now character pointers, data owned by one class often got overwritten by another, therefore you have to remember to copy the key using KEYSET() rather than just operator on the key that the pointer points to. Another common mistake is using the KEYCMP() function without having a comparison operator immediately following in, such as < > = or !=. Also tossing the variable key size, m_ks, around and keeping it in agreement is another weak point. There were some cases of leaving a statement like <i>(char *)&key</i> alone when it should have been changed to just <i>key</i> since it was made into a <i>(char *)</i> from a <i>key_t</i>. And a case of not dealing with the 6-byte compression correctly, like replacing <i>6</i> with <i>m_ks-6</i> when we should not have, like in RdbList::constrain_r(). Whenever possible, the original code was left intact and simply commented out to aid in future debugging.
 <br>
 
+<a name="posdb"</a>
+<h2>Posdb</h2>
+Indexdb was replaced with Posdb in 2012 in order to store <b>word position</b> information as well as what <b>field</b> the word was contained in. Word position information is basically the position of the word in the document and starts at position <i>0</i>. A sequence of whitespace is counted as one, and a sequence of punctuation containing a comma or something else is counted as 2. An alphanumeric word is counted as one. So in the sentence "The quick, brown" the word <i>brown</i> would have a word position of 5. The <b>field</b> of the word in the document could be the title, a heading, a meta tag, the text of an inlink or just the plain document body. 
+<br><br>
+
+The 18-byte key for an Posdb record has the following bitmap:
+
+<pre>
+tttttttt tttttttt tttttttt tttttttt  t = termId (48bits)
+tttttttt tttttttt dddddddd dddddddd  d = docId (38 bits)
+dddddddd dddddddd dddddd0r rrrggggg  r = siterank, g = langid
+wwwwwwww wwwwwwww wwGGGGss ssvvvvFF  w = word postion , s = wordspamrank
+pppppb1M MMMMLZZD                    v = diversityrank, p = densityrank
+                                     M = unused, b = in outlink text
+                                     L = langIdShiftBit (upper bit for langid)
+                                     Z = compression bits. can compress to
+                                         12 or 6 bytes keys.
+G: 0 = body 
+   1 = intitletag 
+   2 = inheading 
+   3 = inlist 
+   4 = inmetatag
+   5 = inlinktext
+   6 = tag
+   7 = inneighborhood
+   8 = internalinlinktext
+   9 = inurl
+
+F: 0 = original term
+   1 = conjugate/sing/plural
+   2 = synonym
+   3 = hyponym
+</pre>
+
+<br>
+Posdb.cpp tries to rank documents highest that have the query terms closest together. If most terms are close together in the body, but one term is in the title, then there is a slight penalty. This penalty as well as the weights applied to the different density ranks, siteranks, etc are in the Posdb.h and Posdb.cpp files.
+<br><br>
+
+
 
 <a name="indexdb"></a>
 <a name="indexlist"></a>
 <h2>Indexdb</h2>
-The key for an Indexdb record has the following bitmap:
+Indexdb has been replaced by <a href="#posdb">Posdb</a>, but the key for an Indexdb record has the following bitmap:
 
 <pre>
 tttttttt tttttttt tttttttt tttttttt  t = termid (48bits)
