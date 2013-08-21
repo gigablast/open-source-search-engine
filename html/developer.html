@@ -85,7 +85,7 @@ Administration documentation is <a href=/admin.html>here</a>.
 <tr><td>4.</td><td><a href="#datedb">Datedb</a> - For returning search results constrained or sorted by date.</td></tr>
 <tr><td>5.</td><td><a href="#titledb">Titledb</a> - Holds the cached web pages.</td></tr>
 <tr><td>6.</td><td><a href="#spiderdb">Spiderdb</a> - Holds the urls to be spidered, sorted by spider date.</td></tr>
-<tr><td>7.</td><td><a href="#urldb">Urldb</a> - Tells us if a url is in spiderdb or where it is in titledb.</td></tr>
+<!--<tr><td>7.</td><td><a href="#urldb">Urldb</a> - Tells us if a url is in spiderdb or where it is in titledb.</td></tr>-->
 <tr><td>8.</td><td><a href="#checksumdb">Checksumdb</a> - Each record is a hash of the document content. Used for deduping.</td></tr>
 <tr><td>9.</td><td><a href="#sitedb">Sitedb</a> - Used for mapping a url or site to a ruleset.</td></tr>
 <tr><td>10.</td><td><a href="#clusterdb">Clusterdb</a> - Used for doing site clustering and dupplicate search result removal.</td></tr>
@@ -574,7 +574,6 @@ Indexdb     - Used to hold the index.
 Datedb      - Like indexdb, but its scores are dates.
 Titledb     - Used to hold cached web pages.
 Spiderdb    - Used to hold urls sorted by their scheduled time to be spidered.
-Urldb       - Used to map a docid to a Titledb file.
 Checksumdb  - Used for preventing spidering of duplicate pages.
 Sitedb      - Used for classifying webpages. Maps webpages to rulesets.
 Clusterdb   - Used to hold the site hash, family filter bit, language id of a document.
@@ -621,7 +620,7 @@ key is 12 bytes and of type key_t, as defined in the types.h file.
 <tr><td>Spiderdb</td><td>DB</td><td>An Rdb whose records are urls sorted by times they should be spidered. The key contains other information like if the url is <i>old</i> or <i>new</i> to the index, and the priority of the url, currently from 0 to 7.</td></tr>
 <tr><td>TitleRec</td><td>DB</td><td>A record in Titledb.</td></tr>
 <tr><td>Titledb</td><td>DB</td><td>An Rdb where the records are basically compressed web pages, along with other info like the quality of the page. Contains an instance of the LinkInfo class.</td></tr>
-<tr><td>Urldb</td><td>DB</td><td>An Rdb whose records indicate if a url is in spiderdb or what particular Titledb BigFile contains the url.</td></tr>
+<!--<tr><td>Urldb</td><td>DB</td><td>An Rdb whose records indicate if a url is in spiderdb or what particular Titledb BigFile contains the url.</td></tr>-->
 </table>
 
 <br><br>
@@ -934,6 +933,8 @@ end up having a conflict as to what the latest version number actually stands
 for. So versions need to be immediately propagated both ways to avoid this.
 <a name="spiderdb"></a>
 <h2>Spiderdb</h2>
+NOTE: this description of spiderdb is very outdate! - matt Aug 2013.
+<br><br>
 Spiderdb is responsible for the spidering schedule. Every url in spiderdb is
 either old or new. If it is already in the index, it is old, otherwise, it is
 new. The urls in Spiderdb are further categorized by a priority from 0 to 7.
@@ -987,7 +988,7 @@ For more about the spider process see <a href="#buildlayer">The Build Layer</a>.
 
 <br><br>
 
-
+<!--
 <a name="urldb"></a>
 <h2>Urldb</h2>
 Urldb is like a map file. A record in urldb has this bitmap:
@@ -1025,6 +1026,7 @@ Msg14::addUrlRecs() will update urldb directly via Msg1 when Msg14 deletes, adds
 <br><br>
 In conclusion, Urldb is for the performance benefit of Msg22 (used to lookup a TitleRec from a docid or url) and Msg10 (used to add a url to a spider queue). Without it, things would be *much* slower. Hooray for Urldb.
 <br><br>
+-->
 <a name="checksumdb"></a>
 <h2>Checksumdb</h2>
 <pre>
@@ -1794,7 +1796,7 @@ codes are all in <a href="#errno">Errno.h</a>.
 <tr><td>EDOCHASRSSFEED</td><td><i>only index documents from rss feeds</i> is true in the Spider Controls, and the document indicates it is part of an RSS feed, and does not currently have an RSS feed linking to it in the index. Gigablast will discard the document, and add the url of the RSS feed to spiderdb. When that is spidered the url should be picked up again.</td></tr>
 <tr><td>EDOCNOTRSS</td><td>If the Spider Controls specify <i>only index articles from rss feeds</i> as true and the document is not part of an RSS feed.</td></tr>
 <tr><td>EDOCDUP</td><td>According to checksumdb, a document already exists from this hostname with the same checksumdb hash. See <a href="#deduping">Deduping</a> section.</td></tr>
-<tr><td>EDOCDUPWWW</td><td>According to urldb, this url already exists in the index but with a "www." prepended to it. This prevents us from indexing both http://mysite.com/ and http://www.mysite.com/ because they are almost always the same thing.</td></tr>
+<!--<tr><td>EDOCDUPWWW</td><td>According to urldb, this url already exists in the index but with a "www." prepended to it. This prevents us from indexing both http://mysite.com/ and http://www.mysite.com/ because they are almost always the same thing.</td></tr>-->
 <tr><td>EDOCTOOOLD</td><td>Document's last modified date is before the <i>maxLastModifiedDate</i> specified in the ruleset.</td></tr>
 <tr><td>EDOCLANG</td><td>The document does not match the language given in the Spider Controls.</td></tr>
 <tr><td>EDOCADULT</td><td>Document was detected as adult and adult documents are forbidden in the Spider Controls.</td></tr>
@@ -1905,6 +1907,7 @@ menu text. Words with scores of 0 or less are not indexed. The ruleset controls
 if and how the Scores class is used to index documents.
 <br><br>
 
+<!--
 <a name="msg10"></a>
 <h2>Msg10</h2>
 Msg14 calls Msg10 after updating all the Rdbs. Msg10 adds the links harvested
@@ -1916,6 +1919,7 @@ will not be added to spiderdb if it is already in Urldb.
 Msg10 is also used by PageAddUrl to add submitted links or files that contain
 a bunch of links to be added.
 <br><br>
+-->
 
 <a name="gbfilter"></a>
 <h2>Content Filtering</h2>
@@ -2107,7 +2111,7 @@ probability of intercollection key collisions are made highly unlikely.
 <br><br>
 A defect of this model is that deleting a collection in its entirety
 is not easy since its records are intermixed with records from other 
-collections in Indexdb, Titledb, Urldb, Spiderdb and Checksumdb. Therefore,
+collections in Indexdb, Titledb, Spiderdb and Checksumdb. Therefore,
 we are moving away from this model and creating a different directory for each
 collection and storing that collection's records just in its directory.
 This new model requires that the RdbTree class be modified to hold the 
@@ -2448,7 +2452,6 @@ Here is a list and description of all the source code files.
 <tr><td>UnicodeProperties</td><td>Core</td><td>Unicode support.</td></tr>
 <tr><td>Url</td><td>Core</td><td>For breaking a url up into its various components.</td></tr>
 <tr><td>Url2</td><td>Build</td><td>For hashing/indexing a url.</td></tr>
-<tr><td>Urldb</td><td>DB</td><td>An Rdb whose records indicate if a url is in spiderdb or what particular Titledb BigFile contains the url.</td></tr>
 <tr><td>Vector</td><td>Core</td><td>Unused.</td></tr>
 <tr><td>Words</td><td>Build</td><td>Breaks a document up into "words", where each word is a sequence of alphanumeric characters, a sequence of non-alphanumeric characters, or a single HTML/XML tag. A heart of the build process.</td></tr>
 <tr><td>Xml</td><td>Build</td><td>Breaks a document up into XmlNodes where each XmlNode is a tag or a sequence of characters which are not a tag.</td></tr>
