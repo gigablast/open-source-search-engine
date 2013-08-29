@@ -20,12 +20,12 @@
 //#define _PTHREADS_
 
 // use these stubs so libplotter.a works
-#include <pthread.h>
 
 #ifndef _PTHREADS_
 int pthread_mutex_lock   (pthread_mutex_t *t ) { return 0; }
 int pthread_mutex_unlock (pthread_mutex_t *t ) { return 0; }
 #else
+#include <pthread.h>
 pthread_attr_t s_attr;
 #endif
 
