@@ -1,7 +1,8 @@
 // Matt Wells, copyright Jul 2001
 
-#ifndef _ABBREVIATIONS_H_
-#define _ABBREVIATIONS_H_
+// i guess _ABBREVIATIONS_H_ is reserved, so prepend _GB
+#ifndef _GB_ABBREVIATIONS_H_
+#define _GB_ABBREVIATIONS_H_
 
 #include "Unicode.h"
 

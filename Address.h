@@ -1,5 +1,6 @@
-#ifndef _ADDRESS_H_
-#define _ADDRESS_H_
+// i guess _ADDRESS_H_ is reserved, so prepend _GB
+#ifndef _GB_ADDRESS_H_
+#define _GB_ADDRESS_H_
 
 // values for Place::m_bits
 //#define PLF_PARTIAL  0x001 // hash in the next word and try again!
