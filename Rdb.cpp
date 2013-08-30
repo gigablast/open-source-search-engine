@@ -2147,10 +2147,15 @@ bool Rdb::addRecord ( collnum_t collnum,
 			// if added positive key is before cursor, update curso
 			if ( KEYCMP((char *)key,
 				    (char *)&sc->m_nextKeys[pri],
-				    sizeof(key_t)) < 0 )
+				    sizeof(key_t)) < 0 ) {
 				KEYSET((char *)&sc->m_nextKeys[pri],
 				       (char *)key,
 				       sizeof(key_t) );
+				// debug log
+				if ( g_conf.m_logDebugSpider )
+					log("rdb: cursor reset pri=%li to %s",
+					    pri,KEYSTR(key,12));
+			}
 			// that's it for doledb mods
 			return true;
 		}

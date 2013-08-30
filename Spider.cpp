@@ -3251,8 +3251,11 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( g_conf.m_logDebugSpider ) {
 		m_doleStart = gettimeofdayInMillisecondsLocal();
 		// 12 byte doledb keys
-		logf(LOG_DEBUG,"spider: loading list from doledb startkey=%s",
-		     KEYSTR(&m_sc->m_nextDoledbKey,12));
+		long pri = g_doledb.getPriority(&m_sc->m_nextDoledbKey);
+		logf(LOG_DEBUG,"spider: loading list from doledb startkey=%s "
+		     "pri=%li",
+		     KEYSTR(&m_sc->m_nextDoledbKey,12),
+		     pri);
 	}
 
 	// get a spider rec for us to spider from doledb
@@ -3346,6 +3349,9 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	// bail if list is empty
 	if ( m_list.getListSize() <= 0 ) {
+		if ( g_conf.m_logDebugSpider )
+			log("spider: resetting doledb priority pri=%li",
+			    m_sc->m_pri);
 		// trigger a reset
 		m_sc->m_pri = -1;
 		// . let the sleep timer init the loop again!
@@ -3409,9 +3415,12 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// get priority from doledb key
 	long pri = g_doledb.getPriority ( doledbKey );
 
+	if ( g_conf.m_logDebugSpider )
+		log("spider: setting pri=%li nextkey to %s",
+		    m_sc->m_pri,KEYSTR(&m_sc->m_nextDoledbKey,12));
+
 	// update next doledbkey for this priority
-	if ( pri == m_sc->m_pri )
-		m_sc->m_nextKeys [ m_sc->m_pri ] = m_sc->m_nextDoledbKey;
+	m_sc->m_nextKeys [ m_sc->m_pri ] = m_sc->m_nextDoledbKey;
 
 	// sanity
 	if ( pri < 0 || pri >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
