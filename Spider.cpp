@@ -1251,6 +1251,15 @@ void SpiderColl::reset ( ) {
 	m_waitingTable.reset();
 	m_waitingTree .reset();
 	m_waitingMem  .reset();
+
+	// each spider priority in the collection has essentially a cursor
+	// that references the next spider rec in doledb to spider. it is
+	// used as a performance hack to avoid the massive positive/negative
+	// key annihilations related to starting at the top of the priority
+	// queue every time we scan it, which causes us to do upwards of
+	// 300 re-reads!
+	for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ )
+		m_nextKeys[i] =	g_doledb.makeFirstKey2 ( i );
 }
 
 bool SpiderColl::updateSiteNumInlinksTable ( long siteHash32, 
@@ -3144,6 +3153,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 			// can't get spidered until the one that is doled does.
 			if ( g_conf.m_testSpiderEnabled ) maxSpiders = 6;
 		}
+		// debug log
+		if ( g_conf.m_logDebugSpider )
+			log("spider: has %li spiders out",m_sc->m_spidersOut);
 		// obey max spiders per collection too
 		if ( m_sc->m_spidersOut >= maxSpiders ) continue;
 		// ok, we are good to launch a spider for coll m_cri
@@ -3203,8 +3215,13 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		m_sc->m_didRound = true;
 		// reset for next coll
 		m_sc->m_pri = MAX_SPIDER_PRIORITIES - 1;
-		// reset key now too since this coll was exhausted  WE HIT HERE!!!
-		m_sc->m_nextDoledbKey = g_doledb.makeFirstKey2 ( m_sc->m_pri );
+		// reset key now too since this coll was exhausted
+		//m_sc->m_nextDoledbKey=g_doledb.makeFirstKey2 ( m_sc->m_pri );
+		// we can't keep starting over because there are often tons
+		// of annihilations between positive and negative keys
+		// and causes massive disk slow down because we have to do
+		// like 300 re-reads or more of about 2k each on coeus
+		m_sc->m_nextDoledbKey = m_sc->m_nextKeys [ m_sc->m_pri ];
 		// and go up top
 		goto collLoop;
 	}
@@ -3229,8 +3246,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		m_sc->m_pri--;
 		// set the new key for this priority if valid
 		if ( m_sc->m_pri >= 0 )
-			m_sc->m_nextDoledbKey = 
-				g_doledb.makeFirstKey2(m_sc->m_pri);
+			//m_sc->m_nextDoledbKey = 
+			//	g_doledb.makeFirstKey2(m_sc->m_pri);
+			m_sc->m_nextDoledbKey = m_sc->m_nextKeys [m_sc->m_pri];
 		// and try again
 		goto loop;
 	}
@@ -3239,8 +3257,15 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	m_gettingDoledbList = true;
 
 	// log this now
-	//if ( g_conf.m_logDebugSpider ) 
-	//	logf(LOG_DEBUG,"spider: loading list from doledb");
+	if ( g_conf.m_logDebugSpider ) {
+		m_doleStart = gettimeofdayInMillisecondsLocal();
+		// 12 byte doledb keys
+		long pri = g_doledb.getPriority(&m_sc->m_nextDoledbKey);
+		logf(LOG_DEBUG,"spider: loading list from doledb startkey=%s "
+		     "pri=%li",
+		     KEYSTR(&m_sc->m_nextDoledbKey,12),
+		     pri);
+	}
 
 	// get a spider rec for us to spider from doledb
 	if ( ! m_msg5.getList ( RDB_DOLEDB      ,
@@ -3254,6 +3279,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 				// we need to read in a lot because we call
 				// "goto listLoop" below if the url we want
 				// to dole is locked.
+				// seems like a ton of negative recs
 				2000            , // minRecSizes
 				true            , // includeTree
 				false           , // addToCache
@@ -3309,6 +3335,16 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// unlock
 	m_gettingDoledbList = false;
 
+
+	// log this now
+	if ( g_conf.m_logDebugSpider ) {
+		long long now = gettimeofdayInMillisecondsLocal();
+		long long took = now - m_doleStart;
+		logf(LOG_DEBUG,"spider: GOT list from doledb in %llims "
+		     "size=%li bytes",
+		     took,m_list.getListSize());
+	}
+
 	// bail instantly if in read-only mode (no RdbTrees!)
 	if ( g_conf.m_readOnlyMode ) return false;
 	// or if doing a daily merge
@@ -3322,6 +3358,9 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	// bail if list is empty
 	if ( m_list.getListSize() <= 0 ) {
+		if ( g_conf.m_logDebugSpider )
+			log("spider: resetting doledb priority pri=%li",
+			    m_sc->m_pri);
 		// trigger a reset
 		m_sc->m_pri = -1;
 		// . let the sleep timer init the loop again!
@@ -3384,6 +3423,14 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	// get priority from doledb key
 	long pri = g_doledb.getPriority ( doledbKey );
+
+	if ( g_conf.m_logDebugSpider )
+		log("spider: setting pri=%li nextkey to %s",
+		    m_sc->m_pri,KEYSTR(&m_sc->m_nextDoledbKey,12));
+
+	// update next doledbkey for this priority
+	m_sc->m_nextKeys [ m_sc->m_pri ] = m_sc->m_nextDoledbKey;
+
 	// sanity
 	if ( pri < 0 || pri >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
 	// skip the priority if we already have enough spiders on it
@@ -3411,7 +3458,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// all done if priority is negative
 		if ( m_sc->m_pri < 0 ) return true;
 		// set to next priority otherwise
-		m_sc->m_nextDoledbKey = g_doledb.makeFirstKey2 ( m_sc->m_pri );
+		//m_sc->m_nextDoledbKey=g_doledb.makeFirstKey2 ( m_sc->m_pri );
+		m_sc->m_nextDoledbKey = m_sc->m_nextKeys [m_sc->m_pri];
 		// and load that list
 		return true;
 	}

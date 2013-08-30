@@ -2163,7 +2163,8 @@ bool Rdb::addRecord ( collnum_t collnum,
 	}
 	else if ( (tn=m_tree.addNode ( collnum, key , data , dataSize ))>=0) {
 		// if adding to spiderdb, add to cache, too
-		if ( m_rdbId != RDB_SPIDERDB ) return true;
+		if ( m_rdbId != RDB_SPIDERDB || m_rdbId != RDB_DOLEDB ) 
+			return true;
 		// or if negative key
 		if ( KEYNEG(key) ) return true;
 		// . this will create it if spiders are on and its NULL
@@ -2172,6 +2173,27 @@ bool Rdb::addRecord ( collnum_t collnum,
 		SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
 		// skip if not there
 		if ( ! sc ) return true;
+		// if doing doledb...
+		if ( m_rdbId == RDB_DOLEDB ) {
+			long pri = g_doledb.getPriority((key_t *)key);
+			// skip over corruption
+			if ( pri < 0 || pri >= MAX_SPIDER_PRIORITIES )
+				return true;
+			// if added positive key is before cursor, update curso
+			if ( KEYCMP((char *)key,
+				    (char *)&sc->m_nextKeys[pri],
+				    sizeof(key_t)) < 0 ) {
+				KEYSET((char *)&sc->m_nextKeys[pri],
+				       (char *)key,
+				       sizeof(key_t) );
+				// debug log
+				if ( g_conf.m_logDebugSpider )
+					log("rdb: cursor reset pri=%li to %s",
+					    pri,KEYSTR(key,12));
+			}
+			// that's it for doledb mods
+			return true;
+		}
 		// . ok, now add that reply to the cache
 		// . g_now is in milliseconds!
 		//long nowGlobal = localToGlobalTimeSeconds ( g_now/1000 );

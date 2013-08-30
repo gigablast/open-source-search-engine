@@ -702,8 +702,9 @@ ThreadEntry *ThreadQueue::addEntry ( long   niceness                     ,
 	if ( i == m_top ) m_top++;
 	// debug msg
 	if ( g_conf.m_logDebugThread )
-		log(LOG_DEBUG,"thread: [%lu] queued %s thread. "
-		    "niceness=%lu. ", (long)t,getThreadType(), niceness );
+		log(LOG_DEBUG,"thread: [t=0x%lx] queued %s thread for launch. "
+		    "niceness=%lu. ", (unsigned long)t,
+		    getThreadType(), niceness );
 	// success
 	return t;
 }
@@ -889,6 +890,12 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 		  log("threads: pthread_join %li = %s (%li)",
 		      (long)t->m_joinTid,mstrerror(status),status);
 		}
+		// debug msg
+		if ( g_conf.m_logDebugThread )
+			log(LOG_DEBUG,"thread: joined1 with t=0x%lx "
+			    "jointid=0x%lx.",
+			    (long)t,(long)t->m_joinTid);
+
 #else
 
 	again:
@@ -897,8 +904,8 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 		int err = errno;
 		// debug the waitpid
 		if ( g_conf.m_logDebugThread || g_process.m_exiting ) 
-			log(LOG_DEBUG,"thread: Waiting for t=%lu pid=%li.",
-			    (long)t,(long)t->m_pid);
+			log(LOG_DEBUG,"thread: Waiting for t=0x%lx pid=%li.",
+			    (unsigned long)t,(long)t->m_pid);
 		// bitch and continue if join failed
 		if ( pid != t->m_pid ) {
 			// waitpid() gets interrupted by various signals so
@@ -924,13 +931,13 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 		// re-protect this stack
 		mprotect ( t->m_stack + GUARDSIZE , STACK_SIZE - GUARDSIZE, 
 			   PROT_NONE );
-#endif
-
 		// debug msg
 		if ( g_conf.m_logDebugThread )
 			log(LOG_DEBUG,"thread: joined with pid=%li pid=%li.",
 			    (long)t->m_pid,(long)t->m_pid);
 
+
+#endif
 
 		// we may get cleaned up and re-used and our niceness reassignd
 		// right after set m_isDone to true, so save niceness
@@ -1025,17 +1032,7 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 		//only allow a quickpoll if we are nice.
 		//g_loop.canQuickPoll(t->m_niceness);
 
-		// log it now
-		if ( g_conf.m_logDebugLoop )
-			log(LOG_DEBUG,"loop: enter thread callback type=%s "
-			    "nice=%li",getThreadType(),(long)t->m_niceness);
-
 		makeCallback ( t );
-
-		// log it now
-		if ( g_conf.m_logDebugLoop )
-			log(LOG_DEBUG,"loop: exit thread callback type=%s "
-			    "nice=%li", getThreadType(),(long)t->m_niceness);
 
  		//long long took = gettimeofdayInMilliseconds()-startTime;
  		//if(took > 8 && maxNiceness > 0) {
@@ -1053,13 +1050,13 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 
 		if ( g_conf.m_logDebugThread ) {
 			long long now = gettimeofdayInMilliseconds();
-			log(LOG_DEBUG,"thread: [%lu] %s done. "
+			log(LOG_DEBUG,"thread: [t=0x%lx] %s done1. "
 			    "active=%li "
 			    "time since queued = %llu ms  "
 			    "time since launch = %llu ms  "
 			    "time since pre-exit = %llu ms  "
 			    "time since exit = %llu ms",
-			    (long)t, 
+			    (unsigned long)t, 
 			    getThreadType() ,
 			    (long)(m_launched - m_returned) ,
 			    now - t->m_queuedTime,
@@ -1087,6 +1084,17 @@ void makeCallback ( ThreadEntry *t ) {
 	// save it
 	long saved = g_niceness;
 
+	// log it now
+	if ( g_conf.m_logDebugLoop || g_conf.m_logDebugThread )
+		log(LOG_DEBUG,"thread: enter thread callback t=0x%lx "
+		    //"type=%s "
+		    "state=0x%lx "
+		    "nice=%li",
+		    (long)t,
+		    //getThreadType(),
+		    (long)t->m_state,
+		    (long)t->m_niceness);
+
 	// time it?
 	long long start;
 	if ( g_conf.m_maxCallbackDelay >= 0 ) 
@@ -1108,6 +1116,16 @@ void makeCallback ( ThreadEntry *t ) {
 			    elapsed,(long)saved);
 	}
 
+
+	// log it now
+	if ( g_conf.m_logDebugLoop || g_conf.m_logDebugThread )
+		log(LOG_DEBUG,"loop: exit thread callback t=0x%lx "
+		    //"type=%s "
+		    "nice=%li", 
+		    (long)t,
+		    //getThreadType(),
+		    (long)t->m_niceness);
+	
 
 	// restore global niceness
 	g_niceness = saved;
@@ -1199,6 +1217,12 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 		  log("threads: pthread_join2 %li = %s (%li)",
 		      (long)t->m_joinTid,mstrerror(status),status);
 		}
+		// debug msg
+		if ( g_conf.m_logDebugThread )
+			log(LOG_DEBUG,"thread: joined2 with t=0x%lx "
+			    "jointid=0x%lx.",
+			    (long)t,(long)t->m_joinTid);
+
 #else
 
 	again:
@@ -1207,7 +1231,7 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 		int err = errno;
 		// debug the waitpid
 		if ( g_conf.m_logDebugThread ) 
-			log(LOG_DEBUG,"thread: Waiting for t=%lu pid=%li.",
+			log(LOG_DEBUG,"thread: Waiting for t=0x%lx pid=%li.",
 			    (long)t,(long)t->m_pid);
 		// bitch and continue if join failed
 		if ( pid != t->m_pid ) {
@@ -1362,20 +1386,9 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 		//g_threads.launchThreads();
 
 
-		// log it now
-		if ( g_conf.m_logDebugLoop )
-			log(LOG_DEBUG,"loop: enter thread callback type=%s",
-			    getThreadType());
-		
 		g_errno = 0; 
 
 		makeCallback ( t );
-
-		// log it now
-		if ( g_conf.m_logDebugLoop )
-			log(LOG_DEBUG,"loop: exit thread callback type=%s",
-			    getThreadType());
-
 
 // 		long long took = gettimeofdayInMilliseconds()-startTime;
 // 		if(took > 8 && maxNiceness > 0) {
@@ -1393,13 +1406,13 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 
 		if ( g_conf.m_logDebugThread ) {
 			long long now = gettimeofdayInMilliseconds();
-			log(LOG_DEBUG,"thread: [%lu] %s done. "
+			log(LOG_DEBUG,"thread: [t=0x%lx] %s done2. "
 			    "active=%li "
 			    "time since queued = %llu ms  "
 			    "time since launch = %llu ms  "
 			    "time since pre-exit = %llu ms  "
 			    "time since exit = %llu ms",
-			    (long)t, 
+			    (unsigned long)t, 
 			    getThreadType() ,
 			    (long)(m_launched - m_returned) ,
 			    now - t->m_queuedTime,
@@ -1438,13 +1451,13 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 	if ( g_conf.m_logDebugThread ) {
 		long long now = gettimeofdayInMilliseconds();
 		for ( long i = 0 ; i < numCallbacks ; i++ ) 
-			log(LOG_DEBUG,"thread: [%lu] %s done. "
+			log(LOG_DEBUG,"thread: [tid=%lu] %s done3. "
 			    "active=%li "
 			    "time since queued = %llu ms  "
 			    "time since launch = %llu ms  "
 			    "time since pre-exit = %llu ms  "
 			    "time since exit = %llu ms",
-			    (long)tids[i], 
+			    (unsigned long)tids[i], 
 			    getThreadType() ,
 			    (long)(m_launched - m_returned) ,
 			    now - times [i],
@@ -1923,9 +1936,10 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	if ( g_conf.m_logDebugThread ) {
 		active = m_launched - m_returned ;		
 		long long now = gettimeofdayInMilliseconds();
-		log(LOG_DEBUG,"thread: [%lu] launched %s thread. active=%lli "
+		log(LOG_DEBUG,"thread: [t=0x%lx] launched %s thread. "
+		    "active=%lli "
 		     "niceness=%lu. waited %llu ms in queue.",
-		     (long)t, getThreadType(), active, realNiceness,
+		     (unsigned long)t, getThreadType(), active, realNiceness,
 		     now - t->m_queuedTime);
 	}
 	// be lazy with this since it uses a significant amount of cpu
@@ -1998,7 +2012,7 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 
 	// we're back from pthread_create
 	if ( g_conf.m_logDebugThread ) 
-		log(LOG_DEBUG,"thread: Back from clone t=%lu pid=%li.",
+		log(LOG_DEBUG,"thread: Back from clone t=0x%lx pid=%li.",
 		    (long)t,(long)pid);
 
 
@@ -2162,8 +2176,8 @@ int startUp ( void *state ) {
 	//t->m_tid = pthread_self();
 	// debug
 	if ( g_conf.m_logDebugThread ) 
-		log(LOG_DEBUG,"thread: [%lu] in startup pid=%li pppid=%li",
-		    (long)t,(long)getpidtid(),(long)getppid());
+		log(LOG_DEBUG,"thread: [t=0x%lx] in startup pid=%li pppid=%li",
+		    (unsigned long)t,(long)getpidtid(),(long)getppid());
 	// debug msg
 	//fprintf(stderr,"new thread tid=%li pid=%li\n",
 	//	(long)t->m_tid,(long)t->m_pid);
@@ -2219,8 +2233,8 @@ int startUp ( void *state ) {
 	t->m_exitTime    = now;
 	if ( g_conf.m_logDebugThread ) {
 
-		log(LOG_DEBUG,"thread: [%lu] done with startup pid=%li",
-		    (long)t,(long)getpidtid());
+		log(LOG_DEBUG,"thread: [t=0x%lx] done with startup pid=%li",
+		    (unsigned long)t,(long)getpidtid());
 	}
 
 	// . now mark thread as ready for removal
@@ -2299,7 +2313,7 @@ void ThreadQueue::print ( ) {
 		// print it
 		log(LOG_INIT,"thread: address=%lu pid=%u state=%lu "
 		    "occ=%i done=%i lnch=%i",
-		     (long)t , t->m_pid , 
+		     (unsigned long)t , t->m_pid , 
 		     (unsigned long)t->m_state , t->m_isOccupied , t->m_isDone ,
 		     t->m_isLaunched );
 	}
@@ -2411,17 +2425,7 @@ void ThreadQueue::removeThreads ( BigFile *bf ) {
 		// keep track
 		maxi = i;
 
-		// log it now
-		if ( g_conf.m_logDebugLoop )
-			log(LOG_DEBUG,"loop: enter thread callback2 type=%s",
-			    getThreadType());
-		
 		makeCallback ( t );
-
-		// log it now
-		if ( g_conf.m_logDebugLoop )
-			log(LOG_DEBUG,"loop: exit thread callback2 type=%s",
-			    getThreadType());
 
 	}
 	// do we have to decrement top
