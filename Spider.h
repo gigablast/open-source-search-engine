@@ -869,6 +869,9 @@ class SpiderColl {
 				   SpiderReply *srep,
 				   uint64_t nowGlobalMS);
 
+	// doledb cursor keys for each priority to speed up performance
+	key_t m_nextKeys[MAX_SPIDER_PRIORITIES];
+
 	// maps priority to first ufn that uses that
 	// priority. map to -1 if no ufn uses it. that way when we scan
 	// priorities for spiderrequests to dole out we can start with

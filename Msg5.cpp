@@ -820,7 +820,7 @@ bool Msg5::needsRecall ( ) {
 	// the disk... we should really keep stats on this...
 	logIt = true;
 	// seems to be very common for doledb, so don't log unless extreme
-	if ( m_rdbId == RDB_DOLEDB && m_round < 15 ) logIt = false;
+	//if ( m_rdbId == RDB_DOLEDB && m_round < 15 ) logIt = false;
 	if ( logIt )
 		logf(LOG_DEBUG,"db: Reading %li again from %s (need %li total "
 		     "got %li) this=0x%lx round=%li.", 
