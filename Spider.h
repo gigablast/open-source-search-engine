@@ -1123,6 +1123,8 @@ class SpiderLoop {
 	// for round robining in SpiderLoop::doleUrls(), etc.
 	long m_cri;
 
+	long long m_doleStart;
+
 	long m_processed;
 };
 

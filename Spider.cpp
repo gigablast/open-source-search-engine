@@ -3135,6 +3135,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 			// can't get spidered until the one that is doled does.
 			if ( g_conf.m_testSpiderEnabled ) maxSpiders = 6;
 		}
+		// debug log
+		if ( g_conf.m_logDebugSpider )
+			log("spider: has %li spiders out",m_sc->m_spidersOut);
 		// obey max spiders per collection too
 		if ( m_sc->m_spidersOut >= maxSpiders ) continue;
 		// ok, we are good to launch a spider for coll m_cri
@@ -3230,8 +3233,12 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	m_gettingDoledbList = true;
 
 	// log this now
-	//if ( g_conf.m_logDebugSpider ) 
-	//	logf(LOG_DEBUG,"spider: loading list from doledb");
+	if ( g_conf.m_logDebugSpider ) {
+		m_doleStart = gettimeofdayInMillisecondsLocal();
+		// 12 byte doledb keys
+		logf(LOG_DEBUG,"spider: loading list from doledb startkey=%s",
+		     KEYSTR(&m_sc->m_nextDoledbKey,12));
+	}
 
 	// get a spider rec for us to spider from doledb
 	if ( ! m_msg5.getList ( RDB_DOLEDB      ,
@@ -3245,6 +3252,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 				// we need to read in a lot because we call
 				// "goto listLoop" below if the url we want
 				// to dole is locked.
+				// seems like a ton of negative recs
 				2000            , // minRecSizes
 				true            , // includeTree
 				false           , // addToCache
@@ -3299,6 +3307,16 @@ void gotDoledbListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) {
 bool SpiderLoop::gotDoledbList2 ( ) {
 	// unlock
 	m_gettingDoledbList = false;
+
+
+	// log this now
+	if ( g_conf.m_logDebugSpider ) {
+		long long now = gettimeofdayInMillisecondsLocal();
+		long long took = now - m_doleStart;
+		logf(LOG_DEBUG,"spider: GOT list from doledb in %llims "
+		     "size=%li bytes",
+		     took,m_list.getListSize());
+	}
 
 	// bail instantly if in read-only mode (no RdbTrees!)
 	if ( g_conf.m_readOnlyMode ) return false;
