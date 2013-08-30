@@ -220,7 +220,7 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	// thread id if in "thread"
 	if ( pid != s_pid && s_pid != -1 ) {
 		//sprintf ( p , "[%li] " , (long)getpid() );
-		sprintf ( p , "[%li] " , (long)pid );
+		sprintf ( p , "[%lu] " , (unsigned long)pid );
 		p += gbstrlen ( p );
 	}
 	// then message itself

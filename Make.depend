@@ -670,7 +670,7 @@ Log.o: Log.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h UCNormalizer.h hash.h Errno.h \
  Log.h Mem.h Conf.h Xml.h XmlNode.h Lang.h Iso8859.h iana_charset.h \
  File.h Loop.h ip.h Hostdb.h HttpRequest.h SafeBuf.h Url.h TcpSocket.h \
- Collectiondb.h Process.h Msg28.h
+ Collectiondb.h Process.h Msg28.h Threads.h
 Loop.o: Loop.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h UCNormalizer.h hash.h Errno.h \
  Log.h Loop.h Mem.h Conf.h Xml.h XmlNode.h Lang.h Iso8859.h \
