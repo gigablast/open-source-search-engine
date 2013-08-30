@@ -25,6 +25,7 @@
 #include "Spider.h"
 #include "Revdb.h"
 #include "hash.h"
+#include "CollectionRec.h"
 
 void attemptMergeAll ( int fd , void *state ) ;
 
@@ -32,9 +33,9 @@ void attemptMergeAll ( int fd , void *state ) ;
 //static key_t s_tfndbOppKey    ;
 
 Rdb::Rdb ( ) {
-	m_numBases = 0;
+	//m_numBases = 0;
 	m_inAddList = false;
-	memset ( m_bases , 0 , sizeof(RdbBase *) * MAX_COLLS );
+	//memset ( m_bases , 0 , sizeof(RdbBase *) * MAX_COLLS );
 	reset();
 }
 
@@ -44,6 +45,7 @@ void Rdb::reset ( ) {
 	//	char *xx = NULL; *xx = 0;
 	//	return;
 	//}
+	/*
 	for ( long i = 0 ; i < m_numBases ; i++ ) {
 		if ( ! m_bases[i] ) continue;
 		mdelete ( m_bases[i] , sizeof(RdbBase) , "Rdb Coll" );
@@ -51,6 +53,7 @@ void Rdb::reset ( ) {
 		m_bases[i] = NULL;
 	}
 	m_numBases = 0;
+	*/
 	// reset tree and cache
 	m_tree.reset();
 	m_buckets.reset();
@@ -68,6 +71,20 @@ void Rdb::reset ( ) {
 Rdb::~Rdb ( ) {
 	reset();
 }
+
+RdbBase *Rdb::getBase ( collnum_t collnum )  {
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	if ( ! cr ) return NULL;
+	return cr->m_bases[(unsigned char)m_rdbId];
+}
+
+void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	if ( ! cr ) return;
+	if ( cr->m_bases[(unsigned char)m_rdbId] ) { char *xx=NULL;*xx=0; }
+	cr->m_bases[(unsigned char)m_rdbId] = base;
+}
+
 
 // JAB: warning abatement
 //static bool g_init = false;
@@ -263,18 +280,6 @@ bool Rdb::init ( char          *dir                  ,
 	// add the single dummy collection for catdb
 	//if ( g_catdb.getRdb() == this ) //||
 	//	return g_catdb.addColl ( NULL );
-	if ( g_statsdb.getRdb() == this ) 
-		return g_statsdb.addColl ( NULL );
-	if ( g_cachedb.getRdb() == this ) 
-		return g_cachedb.addColl ( NULL );
-	if ( g_serpdb.getRdb() == this ) 
-		return g_serpdb.addColl ( NULL );
-	//else if ( g_accessdb.getRdb() == this ) 
-	//	return g_accessdb.addColl ( NULL );
-	//else if ( g_facebookdb.getRdb() == this ) 
-	//	return g_facebookdb.addColl ( NULL );
-	else if ( g_syncdb.getRdb() == this ) 
-		return g_syncdb.addColl ( NULL );
 
 	// set this for use below
 	//*(long long *)m_gbcounteventsTermId =
@@ -424,12 +429,15 @@ bool Rdb::addColl ( char *coll ) {
 	// ensure no max breech
 	if ( collnum < (collnum_t) 0 ) {
 		g_errno = ENOBUFS;
+		long long maxColls = 1LL << (sizeof(collnum_t)*8);
 		return log("db: %s: Failed to add collection #%i. Would "
-			   "breech maximum number of collections, %li.",
-			   m_dbname,collnum,(long)MAX_COLLS);
+			   "breech maximum number of collections, %lli.",
+			   m_dbname,collnum,maxColls);
 	}
-	// ensure no previous one exists
-	if ( m_bases [ collnum ] ) {
+	// . ensure no previous one exists
+	// . well it will be there but will be uninitialized, m_rdb will b NULL
+	RdbBase *base = getBase ( collnum );
+	if ( base ) { // m_bases [ collnum ] ) {
 		g_errno = EBADENGINEER;
 		return log("db: %s: Rdb for collection \"%s\" exists.",
 			   m_dbname,coll);
@@ -444,7 +452,11 @@ bool Rdb::addColl ( char *coll ) {
 			   m_dbname,(long)sizeof(Rdb),coll);
 	}
 	mnew(newColl, sizeof(RdbBase), "Rdb Coll");
-	m_bases [ collnum ] = newColl;
+	//m_bases [ collnum ] = newColl;
+
+	base = newColl;
+	// add it to CollectionRec::m_bases[] base ptrs array
+	addBase ( collnum , newColl );
 
 	RdbTree    *tree = NULL;
 	RdbBuckets *buckets = NULL;
@@ -452,7 +464,7 @@ bool Rdb::addColl ( char *coll ) {
 	else          buckets = &m_buckets;
 
 	// init it
-	if ( ! m_bases[collnum]->init ( m_dir.getDir() ,
+	if ( ! base->init ( m_dir.getDir() ,
 					m_dbname        ,
 					m_dedup         ,
 					m_fixedDataSize ,
@@ -475,7 +487,7 @@ bool Rdb::addColl ( char *coll ) {
 		exit(-1);
 		return false;
 	}
-	if ( (long)collnum >= m_numBases ) m_numBases = (long)collnum + 1;
+	//if ( (long)collnum >= m_numBases ) m_numBases = (long)collnum + 1;
 	// Success
 	return true;
 }
@@ -483,15 +495,21 @@ bool Rdb::addColl ( char *coll ) {
 // returns false and sets g_errno on error, returns true on success
 bool Rdb::delColl ( char *coll ) {
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
+	RdbBase *base = getBase ( collnum );
 	// ensure its there
-	if ( collnum < (collnum_t)0 || ! m_bases [ collnum ] ) {
+	if ( collnum < (collnum_t)0 || ! base ) { // m_bases [ collnum ] ) {
 		g_errno = EBADENGINEER;
 		return log("db: %s: Failed to delete collection #%i. Does "
 			   "not exist.", m_dbname,collnum);
 	}
-	mdelete (m_bases[collnum], sizeof(RdbBase), "Rdb Coll");
-	delete  (m_bases[collnum]);
-	m_bases[collnum] = NULL;
+	mdelete (base, sizeof(RdbBase), "Rdb Coll");
+	delete  (base);
+	CollectionRec *cr = g_collectiondb.getRec(collnum);
+	//m_bases[collnum] = NULL;
+
+	// NULL it out...
+	cr->m_bases[(unsigned char)m_rdbId] = NULL;
+	
 	// remove these collnums from tree
 	if(m_useTree) m_tree.delColl    ( collnum );
 	else          m_buckets.delColl ( collnum );
@@ -500,7 +518,7 @@ bool Rdb::delColl ( char *coll ) {
 	// and from cache, just clear everything out
 	//m_cache.clear ( collnum );
 	// decrement m_numBases if we need to
-	while ( ! m_bases[m_numBases-1] ) m_numBases--;
+	//while ( ! m_bases[m_numBases-1] ) m_numBases--;
 	return true;
 }
 
@@ -519,7 +537,7 @@ bool Rdb::close ( void *state , void (* callback)(void *state ), bool urgent ,
 	// reset g_errno
 	g_errno = 0;
 	// return true if no RdbBases in m_bases[] to close
-	if ( m_numBases <= 0 ) return true;
+	if ( getNumBases() <= 0 ) return true;
 	// return true if already closed
 	if ( m_isClosed ) return true;
 	// don't call more than once
@@ -603,8 +621,16 @@ bool Rdb::close ( void *state , void (* callback)(void *state ), bool urgent ,
 	// try to save the cache, may not save
 	//if ( m_isReallyClosing&&m_cache.useDisk() ) m_cache.save ( m_dbname);
 	if ( m_isReallyClosing ) {
-		for ( long i = 0 ; i < m_numBases ; i++ )
-			if ( m_bases[i] ) m_bases[i]->closeMaps ( m_urgent );
+		// now loop over bases
+		for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+			//CollectionRec *cr = g_collectiondb.m_recs[i];
+			// there can be holes if one was deleted
+			//if ( ! cr ) continue;
+			// shut it down
+			RdbBase *base = getBase ( i );
+			//if ( m_bases[i] ) m_bases[i]->closeMaps ( m_urgent );
+			if ( base ) base->closeMaps ( m_urgent );
+		}
 		//for ( long i = 0 ; i < m_numFiles ; i++ )
 		//	// this won't write it if it doesn't need to
 		//	if ( m_maps[i] ) m_maps[i]->close ( m_urgent );
@@ -783,8 +809,15 @@ bool Rdb::saveTree ( bool useThread ) {
 }
 
 bool Rdb::saveMaps ( bool useThread ) {
-	for ( long i = 0 ; i < m_numBases ; i++ )
-		if ( m_bases[i] ) m_bases[i]->saveMaps ( useThread );
+	//for ( long i = 0 ; i < m_numBases ; i++ )
+	//	if ( m_bases[i] ) m_bases[i]->saveMaps ( useThread );
+	// now loop over bases
+	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+		// shut it down
+		RdbBase *base = getBase(i);
+		//if ( m_bases[i] ) m_bases[i]->closeMaps ( m_urgent );
+		if ( base ) base->closeMaps ( m_urgent );
+	}
 	return true;
 }
 
@@ -975,9 +1008,10 @@ bool Rdb::dumpTree ( long niceness ) {
 	if ( m_isTitledb && max > 240 ) max = 240;
 	// . keep the number of files down
 	// . dont dump all the way up to the max, leave one open for merging
-	for ( long i = 0 ; i < m_numBases ; i++ ) {
-		if (m_bases[i] && m_bases[i]->m_numFiles >= max ) {
-			m_bases[i]->attemptMerge (1,false);//niceness,forced?
+	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+		RdbBase *base = getBase(i);
+		if ( base && base->m_numFiles >= max ) {
+			base->attemptMerge (1,false);//niceness,forced?
 			g_errno = ETOOMANYFILES;
 			break;
 		}
@@ -1119,7 +1153,7 @@ bool Rdb::dumpCollLoop ( ) {
 	// the only was g_errno can be set here is from a previous dump
 	// error?
 	if ( g_errno ) {
-		RdbBase *base = m_bases[m_dumpCollnum];
+		RdbBase *base = getBase(m_dumpCollnum);
 		log("build: Error dumping collection: %s.",mstrerror(g_errno));
 		// if we wrote nothing, remove the file
 		if ( ! base->m_files[m_fn]->doesExist() ||
@@ -1138,12 +1172,12 @@ bool Rdb::dumpCollLoop ( ) {
 	// advance
 	m_dumpCollnum++;
 	// advance m_dumpCollnum until we have a non-null RdbBase
-	while ( m_dumpCollnum < m_numBases && ! m_bases[m_dumpCollnum] )
+	while ( m_dumpCollnum < getNumBases() && ! getBase(m_dumpCollnum) )
 		m_dumpCollnum++;
 	// if no more, we're done...
-	if ( m_dumpCollnum >= m_numBases ) return true;
+	if ( m_dumpCollnum >= getNumBases() ) return true;
 
-	RdbBase *base = m_bases[m_dumpCollnum];
+	RdbBase *base = getBase(m_dumpCollnum);
 
 	// before we create the file, see if tree has anything for this coll
 	//key_t k; k.setMin();
@@ -1306,7 +1340,7 @@ void Rdb::doneDumping ( ) {
 	// . on g_errno the dumped file will be removed from "sync" file and
 	//   from m_files and m_maps
 	// . TODO: move this logic into RdbDump.cpp
-	//for ( long i = 0 ; i < m_numBases ; i++ ) {
+	//for ( long i = 0 ; i < getNumBases() ; i++ ) {
 	//	if ( m_bases[i] ) m_bases[i]->doneDumping();
 	//}
 	// if we're closing shop then return
@@ -1371,9 +1405,10 @@ void attemptMergeAll ( int fd , void *state ) {
 
 // called by main.cpp
 void Rdb::attemptMerge ( long niceness , bool forced , bool doLog ) {
-	for ( long i = 0 ; i < m_numBases ; i++ ) {
-		if ( ! m_bases[i] ) continue;
-	       m_bases[i]->attemptMerge(niceness,forced,doLog);
+	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+		RdbBase *base = getBase(i);
+		if ( ! base ) continue;
+		base->attemptMerge(niceness,forced,doLog);
 	}
 }
 
@@ -1382,7 +1417,7 @@ void Rdb::attemptMerge ( long niceness , bool forced , bool doLog ) {
 bool Rdb::addList ( collnum_t collnum , RdbList *list,
 		    long niceness/*, bool isSorted*/ ) {
 	// pick it
-	if ( collnum < 0 || collnum > m_numBases || ! m_bases[collnum] ) {
+	if ( collnum < 0 || collnum > getNumBases() || ! getBase(collnum) ) {
 		g_errno = ENOCOLLREC;
 		return log("db: %s bad collnum of %i.",m_dbname,collnum);
 	}
@@ -1707,7 +1742,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		      //key_t &key , char *data , long dataSize ){
 		      char *key , char *data , long dataSize,
 		      long niceness){
-	if ( ! m_bases[collnum] ) {
+	if ( ! getBase(collnum) ) {
 		g_errno = EBADENGINEER;
 		log(LOG_LOGIC,"db: addRecord: collection #%i is gone.",
 		    collnum);
@@ -2041,7 +2076,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		//   i commented this out.
 		//if ( m_fixedDataSize == 0 ) return true;
 		// return if all data is in the tree
-		if ( m_bases[collnum]->m_numFiles == 0 ) return true;
+		if ( getBase(collnum)->m_numFiles == 0 ) return true;
 		// . otherwise, assume we match a positive...
 		// . datedb special counting of events
 		// . check termid quickly
@@ -2231,9 +2266,9 @@ long long Rdb::getListSize ( char *coll ,
 			long long oldTruncationLimit ) {
 	// pick it
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
-	if ( collnum < 0 || collnum > m_numBases || ! m_bases[collnum] )
+	if ( collnum < 0 || collnum > getNumBases() || ! getBase(collnum) )
 		return log("db: %s bad collnum of %i",m_dbname,collnum);
-	return m_bases[collnum]->getListSize(startKey,endKey,max,
+	return getBase(collnum)->getListSize(startKey,endKey,max,
 					    oldTruncationLimit);
 }
 
@@ -2244,8 +2279,10 @@ long long Rdb::getNumGlobalRecs ( ) {
 // . return number of positive records - negative records
 long long Rdb::getNumTotalRecs ( ) {
 	long long total = 0;
-	for ( long i = 0 ; i < m_numBases ; i++ ) {
-		if ( m_bases[i] ) total += m_bases[i]->getNumTotalRecs();
+	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+		RdbBase *base = getBase(i);
+		if ( ! base ) continue;
+		total += base->getNumTotalRecs();
 	}
 	// . add in the btree
 	// . TODO: count negative and positive recs in the b-tree
@@ -2258,37 +2295,52 @@ long long Rdb::getNumTotalRecs ( ) {
 // . we have one map per file
 long long Rdb::getMapMemAlloced () {
 	long long total = 0;
-	for ( long i = 0 ; i < m_numBases ; i++ )
-		if ( m_bases[i] ) total += m_bases[i]->getMapMemAlloced();
+	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+		RdbBase *base = getBase(i);
+		if ( ! base ) continue;
+		total += base->getMapMemAlloced();
+	}
 	return total;
 }
 
 // sum of all parts of all big files
 long Rdb::getNumSmallFiles ( ) {
 	long total = 0;
-	for ( long i = 0 ; i < m_numBases ; i++ )
-		if ( m_bases[i] ) total += m_bases[i]->getNumSmallFiles();
+	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+		RdbBase *base = getBase(i);
+		if ( ! base ) continue;
+		total += base->getNumSmallFiles();
+	}
 	return total;
 }
 
 // sum of all parts of all big files
 long Rdb::getNumFiles ( ) {
 	long total = 0;
-	for ( long i = 0 ; i < m_numBases ; i++ )
-		if ( m_bases[i] ) total += m_bases[i]->getNumFiles();
+	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+		RdbBase *base = getBase(i);
+		if ( ! base ) continue;
+		total += base->getNumFiles();
+	}
 	return total;
 }
 
 long long Rdb::getDiskSpaceUsed ( ) {
 	long long total = 0;
-	for ( long i = 0 ; i < m_numBases ; i++ )
-		if ( m_bases[i] ) total += m_bases[i]->getDiskSpaceUsed();
+	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+		RdbBase *base = getBase(i);
+		if ( ! base ) continue;
+		total += base->getDiskSpaceUsed();
+	}
 	return total;
 }
 
 bool Rdb::isMerging ( ) {
-	for ( long i = 0 ; i < m_numBases ; i++ )
-		if ( m_bases[i] && m_bases[i]->isMerging() ) return true;
+	for ( long i = 0 ; i < getNumBases() ; i++ ) {
+		RdbBase *base = getBase(i);
+		if ( ! base ) continue;
+		if ( base->isMerging() ) return true;
+	}
 	return false;
 }
 	
@@ -2534,7 +2586,8 @@ RdbBase *getRdbBase ( uint8_t rdbId , char *coll ) {
 	else    
 		collnum = g_collectiondb.getCollnum ( coll );
 	if(collnum == -1) return NULL;
-	return rdb->m_bases [ collnum ];
+	//return rdb->m_bases [ collnum ];
+	return rdb->getBase(collnum);
 }
 
 // get group responsible for holding record with this key

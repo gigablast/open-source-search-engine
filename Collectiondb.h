@@ -2,14 +2,16 @@
 
 // maintains a simple array of CollectionRecs
 
-#ifndef _COLLECTIONDB_H_
-#define _COLLECTIONDB_H_
+#ifndef COLLECTIONDB_H
+#define COLLECTIONDB_H
 
 // . max # of collections we're serving
 // . may have to update if business gets going (or make dynamic)
 // . lowered to 16 to save some mem
-#define MAX_COLL_RECS 16 // 256
-#define MAX_COLLS (MAX_COLL_RECS)
+//#define MAX_COLL_RECS 16 // 256
+//#define MAX_COLLS (MAX_COLL_RECS)
+
+#include "SafeBuf.h"
 
 class Collectiondb  {
 
@@ -86,7 +88,13 @@ class Collectiondb  {
 
 	// . keep up to 128 of them, these reference into m_list
 	// . COllectionRec now includes m_needsSave and m_lastUpdateTime
-	class CollectionRec  *m_recs           [ MAX_COLLS ];
+	class CollectionRec  **m_recs;//           [ MAX_COLLS ];
+
+	// now m_recs[] points into a safebuf that is just an array
+	// of collectionrec ptrs. so we have to grow that safebuf possibly
+	// in order to add a new collection rec ptr to m_recs
+	SafeBuf m_recPtrBuf;
+
 	//bool            m_needsSave      [ MAX_COLLS ];
 	//long long       m_lastUpdateTime [ MAX_COLLS ];
 	long            m_numRecs;

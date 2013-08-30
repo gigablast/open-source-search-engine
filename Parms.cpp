@@ -215,7 +215,9 @@ unsigned long Parms::calcChecksum() {
 		if ( m->m_type == TYPE_STRING         ) size = m->m_size;
 		if ( m->m_type == TYPE_STRINGBOX      ) size = m->m_size;
 		if ( m->m_type == TYPE_STRINGNONEMPTY ) size = m->m_size;
+		if ( m->m_type == TYPE_SAFEBUF        ) size = m->m_size;
 		if ( m->m_type == TYPE_SITERULE       ) size = 4;
+
 
 		// if we have an array
 		long cnt = 1;
@@ -238,6 +240,12 @@ unsigned long Parms::calcChecksum() {
 						 cnt,
 						 m->m_size );
 			}
+			else if ( m->m_type == TYPE_SAFEBUF ) {
+				uint16_t *p2;
+				SafeBuf *sb2 = (SafeBuf *)p;
+				p2 = (uint16_t *)sb2->getBufStart();
+				cs.addIn( p2 , sb2->length() );
+			}
 			else {
 				cs.addIn( p, size );
 			}
@@ -253,6 +261,12 @@ unsigned long Parms::calcChecksum() {
 					cs.addInStrings( p, 
 							 cnt,
 							 m->m_size );
+				}
+				else if ( m->m_type == TYPE_SAFEBUF ) {
+					uint16_t *p2;
+					SafeBuf *sb2 = (SafeBuf *)p;
+					p2 = (uint16_t *)sb2->getBufStart();
+					cs.addIn( p2 , sb2->length() );
 				}
 				else {
 					cs.addIn( p, size );
@@ -2156,7 +2170,7 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 		// cast it
 		CollectionRec *cr = (CollectionRec *)THIS;
 		// get it
-		SpiderColl *sc = g_spiderCache.m_spiderColls[cr->m_collnum];
+		SpiderColl *sc = cr->m_spiderColl;
 		// right now we blindly force a reload of this spider cache
 		// since the url filters might have MATERIALLY changed, 
 		// although later on we might want to check for that.
@@ -2579,6 +2593,37 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 			return;
 		*(long long *)(THIS + m->m_off + 8*j) = strtoull(s,NULL,10);
 		goto changed; }
+	// like TYPE_STRING but dynamically allocates
+	else if ( t == TYPE_SAFEBUF ) {
+		long len = gbstrlen(s);
+		// no need to truncate since safebuf is dynamic
+		//if ( len >= m->m_size ) len = m->m_size - 1; // truncate!!
+		//char *dst = THIS + m->m_off + m->m_size*j ;
+		// point to the safebuf, in the case of an array of
+		// SafeBufs "j" is the # in the array, starting at 0
+		SafeBuf *sb = (SafeBuf *)(THIS+m->m_off+(j*sizeof(SafeBuf)) );
+		long oldLen = sb->length();
+		// why was this commented out??? we need it now that we
+		// send email alerts when parms change!
+		if ( fromRequest &&
+		     ! isHtmlEncoded && oldLen == len &&
+		     memcmp ( sb->getBufStart() , s , len ) == 0 ) 
+			return;
+		// this means that we can not use string POINTERS as parms!!
+		if ( ! isHtmlEncoded ) sb->safeMemcpy ( s , len ); 
+		else                   len = sb->htmlDecode (s,len,false,0);
+		// null term it all
+		//dst[len] = '\0';
+		sb->reserve ( 1 );
+		// null terminate but do not include as m_length so the
+		// memcmp() above still works right
+		sb->m_buf[sb->m_length] = '\0';
+		// . might have to set length
+		// . used for CollectionRec::m_htmlHeadLen and m_htmlTailLen
+		//if ( m->m_plen >= 0 ) 
+		//	*(long *)(THIS + m->m_plen) = len ;
+		goto changed; 
+	}
 	else if ( t == TYPE_STRING         || 
 		  t == TYPE_STRINGBOX      || 
 		  t == TYPE_STRINGNONEMPTY ||
@@ -10405,6 +10450,7 @@ void Parms::init ( ) {
 	//m->m_spriv = 1;
 	//m++;
 
+	/*
 	m->m_title = "dictionary site";
 	m->m_desc  = "Where do we send requests for definitions of search "
 		"terms. Set to the empty string to turn this feature off.";
@@ -10414,6 +10460,7 @@ void Parms::init ( ) {
 	m->m_size  = SUMMARYHIGHLIGHTTAGMAXSIZE;
 	m->m_def   = "http://www.answers.com/";
 	m++;
+	*/
 
 	m->m_title = "ip restriction for topics";
 	m->m_desc  = "Should Gigablast only get one document per IP domain "
@@ -11483,6 +11530,7 @@ void Parms::init ( ) {
         m->m_group = 0;
         m++;
 
+	/*
         m->m_title = "data feed server collection";
         m->m_desc  = "The collection on the Gigablast data feed server to "
                 "retrieve customer account information from.";
@@ -11493,6 +11541,7 @@ void Parms::init ( ) {
         m->m_def   = "customers";
         m->m_group = 0;
         m++;
+	*/
 
 	//
 	// not sure cols=x goes here or not
@@ -11529,6 +11578,7 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	/*
 	m->m_title = "collection hostname";
 	m->m_desc  = "Hostname that will default to this collection. Blank"
 		     " for none or default collection.";
@@ -11560,6 +11610,7 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m->m_group = 0;
 	m++;
+	*/
 
 	/*
 	m->m_title = "html head";
@@ -11820,6 +11871,7 @@ void Parms::init ( ) {
 	// ACCESS CONTROLS
 	///////////////////////////////////////////
 
+	/*
 	// ARRAYS
 	// each will have its own table, title will be in first row
 	// of that table, 2nd row is description, then one row per
@@ -11905,6 +11957,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m->m_def   = "";
 	m++;
+	*/
 
 	///////////////////////////////////////////
 	// URL FILTERS
@@ -11983,8 +12036,10 @@ void Parms::init ( ) {
 	m->m_cgi   = "fe";
 	m->m_xml   = "filterExpression";
 	m->m_max   = MAX_FILTERS;
+	// array of safebufs i guess...
 	m->m_off   = (char *)cr.m_regExs - x;
-	m->m_type  = TYPE_STRINGNONEMPTY;
+	// this is a safebuf, dynamically allocated string really
+	m->m_type  = TYPE_SAFEBUF;//STRINGNONEMPTY
 	m->m_size  = MAX_REGEX_LEN+1;
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1; // if we START a new row
@@ -14792,6 +14847,7 @@ void Parms::init ( ) {
 
 		// comments and commands do not control underlying variables
 		if ( size == 0 && t != TYPE_COMMENT && t != TYPE_CMD &&
+		     t != TYPE_SAFEBUF  &&
 		     t != TYPE_CONSTANT &&
 		     t != TYPE_MONOD2   &&
 		     t != TYPE_MONOM2     ) {
@@ -14807,6 +14863,7 @@ void Parms::init ( ) {
 		if ( t == TYPE_CONSTANT ) continue;
 		if ( t == TYPE_MONOD2   ) continue;
 		if ( t == TYPE_MONOM2   ) continue;
+		if ( t == TYPE_SAFEBUF  ) continue;
 		// search parms do not need an offset
 		if ( m_parms[i].m_off == -1 && m_parms[i].m_sparm == 0 ) {
 			log(LOG_LOGIC,"conf: Parm #%li \"%s\" has no offset.",

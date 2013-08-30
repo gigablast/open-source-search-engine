@@ -87,6 +87,7 @@ bool RdbCache::init ( long  maxMem        ,
 	// don't use more mem than this
 	m_maxMem     = maxMem;
 
+	m_maxColls = (1LL << (sizeof(collnum_t)*8));
 
 	RdbCache *robots = Msg13::getHttpCacheRobots();
 	RdbCache *others = Msg13::getHttpCacheOthers();
@@ -740,7 +741,7 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 
 	//long long startTime = gettimeofdayInMillisecondsLocal();
 	if ( collnum < (collnum_t)0) {char *xx=NULL;*xx=0; }
-	if ( collnum >= MAX_COLLS  ) {char *xx=NULL;*xx=0; }
+	if ( collnum >= m_maxColls ) {char *xx=NULL;*xx=0; }
 	// bail if cache empty
 	if ( m_totalBufSize <= 0 ) return true;
 	// debug msg
@@ -977,7 +978,7 @@ bool RdbCache::deleteRec ( ) {
 	// I think that the data here is corrupted or not pointed right
 	
 	// collnum can be 0 in case we have to go to next buffer
-	if ( collnum != 0 && ( collnum >= MAX_COLLS || collnum < 0 || 
+	if ( collnum != 0 && ( collnum >= m_maxColls || collnum < 0 || 
 			       !g_collectiondb.m_recs[collnum] ) ) {
 		log (LOG_WARN,"db: cache: deleteRec: possible "
 		     "corruption, start=%lx collNum=%li "
@@ -1706,7 +1707,7 @@ void RdbCache::verify(){
 		 // get collnum
 		 collnum_t collnum = *(collnum_t *)p; p += sizeof(collnum_t);
 		 // collnum can be 0 in case we have to go to next buffer
-		 if ( collnum != 0 && ( collnum >= MAX_COLLS || collnum < 0 || 
+		 if ( collnum != 0 && ( collnum >= m_maxColls || collnum < 0 ||
 					!g_collectiondb.m_recs[collnum] ) ) {
 			 char *xx = NULL; *xx = 0;
 		 }

@@ -33,7 +33,7 @@ OBJS =  Tfndb.o UdpSlot.o \
 	HttpMime.o Hostdb.o \
 	Highlight.o File.o Errno.o Entities.o \
 	Dns.o Dir.o Conf.o Bits.o \
-	Stats.o BigFile.o AdultBit.o Ads.o Msg17.o \
+	Stats.o BigFile.o AdultBit.o Msg17.o \
 	Speller.o DiskPageCache.o \
 	PingServer.o StopWords.o TopTree.o \
 	Parms.o Pages.o Msg28.o Msg30.o \

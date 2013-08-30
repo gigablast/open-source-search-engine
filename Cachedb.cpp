@@ -83,7 +83,8 @@ bool Cachedb::addColl ( char *coll, bool doVerify ) {
 }
 
 bool Cachedb::verify ( char *coll ) {
-	log ( LOG_INFO, "db: Verifying %s for coll %s...", coll,m_name );
+	// coll is NULL here methinks
+	log ( LOG_INFO, "db: Verifying %s...",m_name );
 	g_threads.disableThreads();
 
 	Msg5 msg5;

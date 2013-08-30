@@ -50,7 +50,9 @@ enum {
 	TYPE_MONOD2         ,
 	TYPE_MONOM2         ,
 	TYPE_LONG_CONST     ,
-	TYPE_SITERULE       };
+	TYPE_SITERULE       ,
+	TYPE_SAFEBUF
+};
 
 //forward decls to make compiler happy:
 class HttpRequest;

@@ -678,7 +678,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 			break;
 		case ENOBUFS :
 			p += sprintf(p,"a - Collection name limit of %li is "
-				     "exceeded.",(long)MAX_COLLS);
+				     "exceeded.",(long)MAX_COLL_LEN);
 			break;
 		case ENOMEM: 
 			p += sprintf(p,"a,i,s - Out of memory."); 

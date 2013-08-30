@@ -10,13 +10,22 @@
 
 static CollectionRec g_default;
 
+
 CollectionRec::CollectionRec() {
-	m_numSearchPwds = 0;
-	m_numBanIps     = 0;
-	m_numSearchIps  = 0;
-	m_numSpamIps    = 0;
-	m_numAdminPwds  = 0;
-	m_numAdminIps   = 0;
+	//m_numSearchPwds = 0;
+	//m_numBanIps     = 0;
+	//m_numSearchIps  = 0;
+	//m_numSpamIps    = 0;
+	//m_numAdminPwds  = 0;
+	//m_numAdminIps   = 0;
+	memset ( m_bases , 0 , 4*RDB_END );
+	// how many keys in the tree of each rdb? we now store this stuff
+	// here and not in RdbTree.cpp because we no longer have a maximum
+	// # of collection recs... MAX_COLLS. each is a 32-bit "long" so
+	// it is 4 * RDB_END...
+	memset ( m_numNegKeysInTree , 0 , 4*RDB_END );
+	memset ( m_numPosKeysInTree , 0 , 4*RDB_END );
+	m_spiderColl = NULL;
 	// for Url::getSite()
 	m_updateSiteRulesTable = 1;
 	m_lastUpdateTime = 0LL;
@@ -34,21 +43,21 @@ CollectionRec::CollectionRec() {
 	memset( m_spiderPriorities, 0, 
 		MAX_FILTERS*sizeof(*m_spiderPriorities) );
 	//memset( m_rulesets, 0, MAX_FILTERS*sizeof(*m_rulesets) );
-	for ( int i = 0; i < MAX_SEARCH_PASSWORDS; i++ ) {
-		*(m_searchPwds[i]) = '\0';
-	}
-	for ( int i = 0; i < MAX_ADMIN_PASSWORDS; i++ ) {
-		*(m_adminPwds[i]) = '\0';
-	}
-	memset( m_banIps, 0, MAX_BANNED_IPS*sizeof(*m_banIps) );
-	memset( m_searchIps, 0, MAX_SEARCH_IPS*sizeof(*m_searchIps) );
-	memset( m_spamIps, 0, MAX_SPAM_IPS*sizeof(*m_spamIps) );
-	memset( m_adminIps, 0, MAX_ADMIN_IPS*sizeof(*m_adminIps) );
+	//for ( int i = 0; i < MAX_SEARCH_PASSWORDS; i++ ) {
+	//	*(m_searchPwds[i]) = '\0';
+	//}
+	//for ( int i = 0; i < MAX_ADMIN_PASSWORDS; i++ ) {
+	//	*(m_adminPwds[i]) = '\0';
+	//}
+	//memset( m_banIps, 0, MAX_BANNED_IPS*sizeof(*m_banIps) );
+	//memset( m_searchIps, 0, MAX_SEARCH_IPS*sizeof(*m_searchIps) );
+	//memset( m_spamIps, 0, MAX_SPAM_IPS*sizeof(*m_spamIps) );
+	//memset( m_adminIps, 0, MAX_ADMIN_IPS*sizeof(*m_adminIps) );
 
-	for ( int i = 0; i < MAX_FILTERS; i++ ) {
-		//m_pRegExParser[i] = NULL;
-		*(m_regExs[i]) = '\0';
-	}
+	//for ( int i = 0; i < MAX_FILTERS; i++ ) {
+	//	//m_pRegExParser[i] = NULL;
+	//	*(m_regExs[i]) = '\0';
+	//}
 	m_numRegExs = 0;
 	// add default reg ex if we do not have one
 	fixRec();
@@ -231,7 +240,8 @@ void CollectionRec::fixRec ( ) {
 
 	long n = 0;
 
-	strcpy(m_regExs   [n],"default");
+	//strcpy(m_regExs   [n],"default");
+	m_regExs[n].set("default");
 	m_numRegExs++;
 
 	m_spiderFreqs     [n] = 30; // 30 days default
@@ -288,9 +298,9 @@ bool CollectionRec::hasPermission ( HttpRequest *r , TcpSocket *s ) {
 // . does this password work for this collection?
 bool CollectionRec::isAssassin ( long ip ) {
 	// ok, make sure they came from an acceptable IP
-	for ( long i = 0 ; i < m_numSpamIps ; i++ ) 
-		// they also have a matching IP, so they now have permission
-		if ( m_spamIps[i] == ip ) return true;
+	//for ( long i = 0 ; i < m_numSpamIps ; i++ ) 
+	//	// they also have a matching IP, so they now have permission
+	//	if ( m_spamIps[i] == ip ) return true;
 	return false;
 }
 
@@ -321,9 +331,9 @@ bool CollectionRec::hasPermission ( char *p, long plen , long ip ) {
 	//if ( m_numPasswords > 0 ) return false;
 	// checkIp:
 	// ok, make sure they came from an acceptable IP
-	for ( long i = 0 ; i < m_numAdminIps ; i++ ) 
-		// they also have a matching IP, so they now have permission
-		if ( m_adminIps[i] == ip ) return true;
+	//for ( long i = 0 ; i < m_numAdminIps ; i++ ) 
+	//	// they also have a matching IP, so they now have permission
+	//	if ( m_adminIps[i] == ip ) return true;
 	// if no security, allow all NONONONONONONONONO!!!!!!!!!!!!!!
 	//if ( m_numAdminPwds == 0 && m_numAdminIps == 0 ) return true;
 	// if they did not match an ip or password, even if both lists
@@ -345,6 +355,7 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 	// and top 2 bytes for the israel isp that has this huge block
 	long ipt = 0; if ( s ) ipt = iptop ( s->m_ip );
 	// is it in the ban list?
+	/*
 	for ( long i = 0 ; i < m_numBanIps ; i++ ) {
 		if ( isIpTop ( m_banIps[i] ) ) {
 			if ( m_banIps[i] == ipt ) return false;
@@ -358,10 +369,12 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 		// otherwise it's just a single banned ip
 		if ( m_banIps[i] == ip ) return false;
 	}
+	*/
 	// check the encapsulate ip if any
 	// 1091771468731 0 Aug 05 23:51:08 63.236.25.77 GET 
 	// /search?code=mammaXbG&uip=65.87.190.39&n=15&raw=8&q=farm+insurance
 	// +nj+state HTTP/1.0
+	/*
 	if ( encapIp ) {
 		ipd = ipdom ( encapIp );
 		ip  = encapIp;
@@ -377,7 +390,10 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 			if ( m_banIps[i] == ip ) return false;
 		}
 	}
+	*/
 
+	return true;
+	/*
 	// do we have an "only" list?
 	if ( m_numSearchIps == 0 ) return true;
 	// it must be in that list if we do
@@ -390,6 +406,8 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 		// otherwise it's just a single ip
 		if ( m_searchIps[i] == ip ) return true;
 	}
+	*/
+
 	// otherwise no permission
 	return false;
 }

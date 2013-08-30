@@ -30,7 +30,7 @@
 
 //static void gotSpellingWrapper ( void *state ) ;
 static void gotResultsWrapper  ( void *state ) ;
-static void gotAdsWrapper      ( void *state ) ;
+//static void gotAdsWrapper      ( void *state ) ;
 static void gotState           ( void *state ) ;
 static bool gotResults         ( void *state ) ;
 
@@ -42,7 +42,7 @@ public:
 	TcpSocket   *m_socket;
 	Msg0         m_msg0;
 	long long    m_startTime;
-	Ads          m_ads;
+	//Ads          m_ads;
 	bool         m_gotAds;
 	bool         m_gotResults;
 	char         m_spell  [MAX_FRAG_SIZE]; // spelling recommendation
@@ -578,6 +578,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// . don't get ads if we're not on the first page of results
 	// . query must be NULL terminated
 	st->m_gotAds = true;
+	/*
 	if (si->m_adFeedEnabled && ! si->m_xml && si->m_docsWanted > 0) {
                 long pageNum = (si->m_firstResultNum/si->m_docsWanted) + 1;
 		st->m_gotAds = st->m_ads.
@@ -589,6 +590,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			       st                    , //state
 			       gotAdsWrapper         );//clbk
         }
+	*/
 
 	// LAUNCH SPELLER
 	// get our spelling correction if we should (spell checker)
@@ -660,7 +662,7 @@ void gotResultsWrapper ( void *state ) {
 	gotState (st);
 }
 
-
+/*
 void gotAdsWrapper ( void *state ) {
 	// cast our State0 class from this
 	State0 *st = (State0 *) state;
@@ -672,6 +674,7 @@ void gotAdsWrapper ( void *state ) {
 	g_errno = 0;
 	gotState (st);;
 }
+*/
 
 void gotState ( void *state ){
 	// cast our State0 class from this
@@ -1249,10 +1252,10 @@ bool gotResults ( void *state ) {
 	}
 
 	// . Wrap results in a table if we are using ads. Easier to display.
-	Ads *ads = &st->m_ads;
-	if ( ads->hasAds() )
-                sb.safePrintf("<table width=\"100%%\">\n"
-                              "<tr><td style=\"vertical-align:top;\">\n");
+	//Ads *ads = &st->m_ads;
+	//if ( ads->hasAds() )
+        //        sb.safePrintf("<table width=\"100%%\">\n"
+        //                    "<tr><td style=\"vertical-align:top;\">\n");
 
 	// debug
 	if ( si->m_debug )

@@ -977,8 +977,10 @@ class SpiderCache {
 	// . each one stores the collNum of the collection name it represents,
 	//   and has a ptr to it, m_cr, that is updated by sync()
 	//   when the Collectiondb is updated
-	SpiderColl *m_spiderColls [ MAX_COLL_RECS ];
-	long        m_numSpiderColls;
+	// . NOW, this is a ptr in the CollectionRec.. only new'd if
+	//   in use, and deleted if not being used...
+	//SpiderColl *m_spiderColls [ MAX_COLL_RECS ];
+	//long        m_numSpiderColls;
 };
 
 extern class SpiderCache g_spiderCache;

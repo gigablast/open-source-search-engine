@@ -201,8 +201,8 @@ void RdbTree::reset ( ) {
 	// clear counts
 	m_numNegativeKeys = 0;
 	m_numPositiveKeys = 0;
-	memset ( m_numNegKeysPerColl , 0 , 4*MAX_COLLS );
-	memset ( m_numPosKeysPerColl , 0 , 4*MAX_COLLS );
+	//memset ( m_numNegKeysPerColl , 0 , 4*MAX_COLLS );
+	//memset ( m_numPosKeysPerColl , 0 , 4*MAX_COLLS );
 	m_isSaving        = false;
 	m_isLoading       = false;
 	m_isWritable      = true;
@@ -256,8 +256,14 @@ long RdbTree::clear ( ) {
 	// clear counts
 	m_numNegativeKeys = 0;
 	m_numPositiveKeys = 0;
-	memset ( m_numNegKeysPerColl , 0 , 4*MAX_COLLS );
-	memset ( m_numPosKeysPerColl , 0 , 4*MAX_COLLS );
+
+	// clear tree counts for all collections!
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		CollectionRec *cr = g_collectiondb.getRec(i);
+		if ( ! cr ) continue;
+		cr->m_numNegKeysInTree[(unsigned char)m_rdbId] = 0;
+		cr->m_numPosKeysInTree[(unsigned char)m_rdbId] = 0;
+	}
 
 	return count;
 }
@@ -519,8 +525,10 @@ long RdbTree::addNode ( collnum_t collnum ,
 		// ensure these are right
 		m_numNegativeKeys = 0;
 		m_numPositiveKeys = 0;
-		m_numNegKeysPerColl[collnum] = 0;
-		m_numPosKeysPerColl[collnum] = 0;
+		g_collectiondb.m_recs[collnum]->
+			m_numNegKeysInTree[(unsigned char)m_rdbId] =0;
+		g_collectiondb.m_recs[collnum]->
+			m_numPosKeysInTree[(unsigned char)m_rdbId] =0;
 	}
 
 	// stick ourselves in the next available node, "m_nextNode"
@@ -591,11 +599,15 @@ long RdbTree::addNode ( collnum_t collnum ,
 	// update sign counts
 	if ( KEYNEG(key) ) {
 		m_numNegativeKeys++;
-		m_numNegKeysPerColl[collnum]++;
+		//m_numNegKeysPerColl[collnum]++;
+		g_collectiondb.m_recs[collnum]->
+			m_numNegKeysInTree[(unsigned char)m_rdbId]++;
 	}
 	else {
 		m_numPositiveKeys++;
-		m_numPosKeysPerColl[collnum]++;
+		//m_numPosKeysPerColl[collnum]++;
+		g_collectiondb.m_recs[collnum]->
+			m_numPosKeysInTree[(unsigned char)m_rdbId]++;
 	}
 	// debug2 msg
 	// fprintf(stderr,"+ #%li %lli %li\n",i,key.n0,iparent);
@@ -786,11 +798,15 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	// update sign counts
 	if ( KEYNEG(m_keys,i,m_ks) ) {
 		m_numNegativeKeys--;
-		m_numNegKeysPerColl[m_collnums[i]]--;
+		//m_numNegKeysPerColl[m_collnums[i]]--;
+		g_collectiondb.m_recs[m_collnums[i]]->
+			m_numPosKeysInTree[(unsigned char)m_rdbId]--;
 	}
 	else {
 		m_numPositiveKeys--;
-		m_numPosKeysPerColl[m_collnums[i]]--;
+		//m_numPosKeysPerColl[m_collnums[i]]--;
+		g_collectiondb.m_recs[m_collnums[i]]->
+			m_numPosKeysInTree[(unsigned char)m_rdbId]--;
 	}
 	// debug step -- check chain from iparent down making sure that
 	//printTree();
@@ -813,8 +829,14 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	// ensure these are right
 	m_numNegativeKeys = 0;
 	m_numPositiveKeys = 0;
-	m_numNegKeysPerColl[m_collnums[i]] = 0;
-	m_numPosKeysPerColl[m_collnums[i]] = 0;
+	//m_numNegKeysPerColl[m_collnums[i]] = 0;
+	//m_numPosKeysPerColl[m_collnums[i]] = 0;
+	g_collectiondb.m_recs[m_collnums[i]]->
+		m_numNegKeysInTree[(unsigned char)m_rdbId] = 0;
+	g_collectiondb.m_recs[m_collnums[i]]->
+		m_numPosKeysInTree[(unsigned char)m_rdbId] = 0;
+
+
 	return;
 	// . now replace node #i with node #j
 	// . i should not equal j at this point
@@ -875,11 +897,15 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	// update sign counts
 	if ( KEYNEG(m_keys,i,m_ks) ) {
 		m_numNegativeKeys--;
-		m_numNegKeysPerColl[m_collnums[i]]--;
+		//m_numNegKeysPerColl[m_collnums[i]]--;
+		g_collectiondb.m_recs[m_collnums[i]]->
+			m_numNegKeysInTree[(unsigned char)m_rdbId]--;
 	}
 	else {
 		m_numPositiveKeys--;
-		m_numPosKeysPerColl[m_collnums[i]]--;
+		//m_numPosKeysPerColl[m_collnums[i]]--;
+		g_collectiondb.m_recs[m_collnums[i]]->
+			m_numPosKeysInTree[(unsigned char)m_rdbId]--;
 	}
 	// debug step -- check chain from iparent down making sure that
 	// all kids don't have -2 for their parent... seems to be a rare bug
@@ -2649,6 +2675,8 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 	// if the data is actually stored in the data ptrs, just save those
 	if ( m_dataInPtrs ) {
 		f->read ( &m_data[start] , n * 4 , offset); offset += n * 4; }
+	// sanity
+	if ( m_rdbId < 0 || m_rdbId > RDB_END ) { char *xx=NULL;*xx=0; }
 	// return false on read error
 	if ( g_errno ) {
 		log("db: Failed to read %s: %s.",
@@ -2658,9 +2686,11 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 	// get valid collnum ranges
 	long max  = g_collectiondb.m_numRecs;
 	// sanity check
-	if ( max >= MAX_COLLS ) { char *xx = NULL; *xx = 0; }
+	//if ( max >= MAX_COLLS ) { char *xx = NULL; *xx = 0; }
 	// define ending node for all loops
 	long end = start + n ;
+	// shortcut
+	CollectionRec **recs = g_collectiondb.m_recs;
 	// store into tree in the appropriate nodes
 	for ( long i = start ; i < end ; i++ ) {
 		// skip if empty
@@ -2675,11 +2705,13 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 		m_numUsedNodes++;
 		if   ( KEYNEG(m_keys,i,m_ks) ) {
 			m_numNegativeKeys++;
-			m_numNegKeysPerColl[c]++;
+			//m_numNegKeysPerColl[c]++;
+			recs[c]->m_numNegKeysInTree[(unsigned char)m_rdbId]++;
 		}
 		else {
 			m_numPositiveKeys++;
-			m_numPosKeysPerColl[c]++;
+			//m_numPosKeysPerColl[c]++;
+			recs[c]->m_numPosKeysInTree[(unsigned char)m_rdbId]++;
 		}
 		m_memOccupied += m_overhead;
 	}
@@ -2920,7 +2952,7 @@ long RdbTree::oldLoadBlock ( BigFile *f, long remainingNodes , RdbMem *stack,
 }
 */
 
-void RdbTree::cleanTree ( char **bases ) {
+void RdbTree::cleanTree ( ) { // char **bases ) {
 
 	// the liberation count
 	long count = 0;
@@ -2959,3 +2991,14 @@ void RdbTree::cleanTree ( char **bases ) {
 	     "collections\" interface because it also removes records from "
 	     "memory, too.");
 }
+
+long  RdbTree::getNumNegativeKeys ( collnum_t collnum ) { 
+	return g_collectiondb.m_recs[collnum]->
+			m_numNegKeysInTree[m_rdbId]; 
+}
+
+long  RdbTree::getNumPositiveKeys ( collnum_t collnum ) { 
+	return g_collectiondb.m_recs[collnum]->
+		m_numPosKeysInTree[m_rdbId]; 
+}
+

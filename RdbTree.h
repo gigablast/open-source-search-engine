@@ -104,7 +104,7 @@ class RdbTree {
 
 	// remove recs from tree that have invalid collnums. this is done
 	// at load time. i dunno why it happens. it should never!
-	void cleanTree ( char **bases );
+	void cleanTree ( ); // char **bases );
 
 	void delColl ( collnum_t collnum ) ;
 
@@ -222,10 +222,9 @@ class RdbTree {
 	// negative and postive counts
 	long  getNumNegativeKeys ( ) { return m_numNegativeKeys; };
 	long  getNumPositiveKeys ( ) { return m_numPositiveKeys; };
-	long  getNumNegativeKeys ( collnum_t collnum ) { 
-		return m_numNegKeysPerColl[collnum]; };
-	long  getNumPositiveKeys ( collnum_t collnum ) { 
-		return m_numPosKeysPerColl[collnum]; };
+
+	long  getNumNegativeKeys ( collnum_t collnum ) ;
+	long  getNumPositiveKeys ( collnum_t collnum ) ;
 
 	// how much mem, including data, is used by this class?
 	long getMemAlloced       ( ) { return m_memAlloced;  };
@@ -469,8 +468,8 @@ class RdbTree {
 
 	long m_corrupt;
 
-	long m_numPosKeysPerColl[MAX_COLL_RECS];
-	long m_numNegKeysPerColl[MAX_COLL_RECS];
+	//long m_numPosKeysPerColl[MAX_COLL_RECS];
+	//long m_numNegKeysPerColl[MAX_COLL_RECS];
 };
 
 #endif

@@ -63,6 +63,13 @@ struct SafeBuf {
 	void truncLen ( long newLen ) {
 		if ( m_length > newLen ) m_length = newLen; };
 
+
+	bool set ( char *str ) {
+		purge();
+		if ( ! str ) return true;
+		return safeStrcpy ( str );
+	};
+
 	//MUTATORS
 #ifdef _CHECK_FORMAT_STRING_
 	bool  safePrintf(char *formatString, ...)
@@ -178,9 +185,16 @@ struct SafeBuf {
 	bool  htmlEncode(char *s, long len,bool encodePoundSign,
 			 long niceness=0);
 	bool  javascriptEncode(char *s, long len );
+
 	//bool convertUtf8CharsToEntity = false ) ;
 	// html-encode any of the last "len" bytes that need it
 	bool htmlEncode(long len,long niceness=0);
+
+	bool htmlDecode (char *s,
+			 long len,
+			 bool doSpecial = false,
+			 long niceness = 0 );
+
 	//bool  htmlEncode(long niceness );
 	bool  dequote ( char *t , long tlen );
 	bool  escapeJS ( char *s , long slen ) ;

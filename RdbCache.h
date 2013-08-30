@@ -373,6 +373,8 @@ class RdbCache {
 	char m_needsSave;
 
 	char m_corruptionDetected;
+
+	long long m_maxColls;
 };	
 
 #endif

@@ -317,6 +317,9 @@ bool Conf::save ( ) {
 //   will look for the hostname in each collection for a match
 //   no match defaults to default collection
 char *Conf::getDefaultColl ( char *hostname, long hostnameLen ) {
+	// just use default coll for now to keep things simple
+	return m_defaultColl;
+	/*
 	// return defaultColl for empty hostname
 	if (!hostname || hostnameLen <= 0)
 		return m_defaultColl;
@@ -353,4 +356,5 @@ char *Conf::getDefaultColl ( char *hostname, long hostnameLen ) {
 	}
 	// no match, return default coll
 	return m_defaultColl;
+	*/
 }

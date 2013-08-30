@@ -575,7 +575,7 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 			// if 5 minutes, issue reload if in our group
 			for ( long i = 0 ; i < nc && delta > 2*60*1000 ; i++ ){
 				// get coll
-				SpiderColl *sc=g_spiderCache.m_spiderColls[i];
+				SpiderColl *sc=g_spiderCache.getSpiderColl(i);
 				// skip if empty
 				if ( ! sc ) continue;
 				// flag it

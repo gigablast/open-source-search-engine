@@ -2849,3 +2849,25 @@ void SafeBuf::sortLongs( long niceness ) {
 	long np = m_length / 4;
 	gbqsort ( m_buf , np , 4 , longcmp4 , niceness );
 }
+
+bool SafeBuf::htmlDecode ( char *src,
+			   long srcLen,
+			   bool doSpecial ,
+			   long niceness ) {
+	// in case we were in use
+	purge();
+	// make sure we have enough room
+	if ( ! reserve ( srcLen + 1 ) ) return false;
+	// . just decode buffer into our m_buf that we reserved
+	// . it puts a \0 at the end and returns the LENGTH of the string
+	//   it put into m_buf, not including the \0
+	long newLen = ::htmlDecode ( m_buf ,
+				     src,
+				     srcLen,
+				     false ,
+				     niceness );
+	// assign that length then
+	m_length = newLen;
+	// good to go
+	return true;
+}

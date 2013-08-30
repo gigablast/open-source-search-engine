@@ -32,18 +32,18 @@
 //#define MAX_PRIORITY_QUEUES MAX_SPIDER_PRIORITIES * 2//each can be old or new
 #define MAX_REGEX_LEN  256 // each regex can be up to this many bytes
 // max html head length
-#define MAX_HTML_LEN (4*1024)
+//#define MAX_HTML_LEN (4*1024)
 // max chars the executable path+name can be
 #define MAX_FILTER_LEN 64
 // max length of a tagdb filter, typically just a domain/site
 //#define MAX_TAG_FILTER_LEN 128
 
-#define MAX_SEARCH_PASSWORDS 5
-#define MAX_BANNED_IPS       400
-#define MAX_SEARCH_IPS       32
-#define MAX_SPAM_IPS         5
-#define MAX_ADMIN_IPS        15
-#define MAX_ADMIN_PASSWORDS  10
+//#define MAX_SEARCH_PASSWORDS 5
+//#define MAX_BANNED_IPS       400
+//#define MAX_SEARCH_IPS       32
+//#define MAX_SPAM_IPS         5
+//#define MAX_ADMIN_IPS        15
+//#define MAX_ADMIN_PASSWORDS  10
 //#define MAX_SITEDB_FILTERS 256
 
 #define MAX_AD_FEEDS         10
@@ -53,8 +53,8 @@
 #define SUMMARYHIGHLIGHTTAGMAXSIZE 128
 
 // max length of a sitedb filter, typically just a domain/site
-#define MAX_SITE_EXPRESSION_LEN 128
-#define MAX_SITE_EXPRESSIONS    256
+//#define MAX_SITE_EXPRESSION_LEN 128
+//#define MAX_SITE_EXPRESSIONS    256
 
 //#include "regex.h"
 
@@ -67,6 +67,8 @@
 #include "HashTable.h"
 #include "HashTableX.h"
 #include "RdbList.h"
+#include "Rdb.h" // for RdbBase
+
 
 class CollectionRec {
 
@@ -75,6 +77,10 @@ class CollectionRec {
 	// these just set m_xml to NULL
 	CollectionRec();
 	virtual ~CollectionRec();
+	
+	// now chuck this into CollectionRec instead of having a fixed
+	// array of them in Rdb.h called m_bases[]
+	RdbBase *m_bases[RDB_END];
 
 	// . set ourselves from serialized raw binary
 	// . returns false and sets errno on error
@@ -358,7 +364,10 @@ class CollectionRec {
 	//   include a count because Parms.cpp expects a count before each
 	//   array since it handle them each individually
 	long      m_numRegExs  ;
-	char      m_regExs           [ MAX_FILTERS ] [ MAX_REGEX_LEN+1 ];
+	// make this now use g_collectiondb.m_stringBuf safebuf and
+	// make Parms.cpp use that stringbuf rather than store into here...
+	//char      m_regExs           [ MAX_FILTERS ] [ MAX_REGEX_LEN+1 ];
+	SafeBuf   m_regExs           [ MAX_FILTERS ];
 
 	long      m_numRegExs2 ; // useless, just for Parms::setParm()
 	float     m_spiderFreqs      [ MAX_FILTERS ];
@@ -440,34 +449,34 @@ class CollectionRec {
 
 	// . http header and tail for search results page for this collection
 	// . allows custom html wraps around search results for your collection
-	char  m_htmlHead [ MAX_HTML_LEN + 1 ];
-	char  m_htmlTail [ MAX_HTML_LEN + 1 ];
-	char  m_htmlRoot [ MAX_HTML_LEN + 1 ];
-	long  m_htmlHeadLen;
-	long  m_htmlTailLen;
-	long  m_htmlRootLen;
+	//char  m_htmlHead [ MAX_HTML_LEN + 1 ];
+	//char  m_htmlTail [ MAX_HTML_LEN + 1 ];
+	//char  m_htmlRoot [ MAX_HTML_LEN + 1 ];
+	//long  m_htmlHeadLen;
+	//long  m_htmlTailLen;
+	//long  m_htmlRootLen;
 
 	// . some users allowed to access this collection parameters
 	// . TODO: have permission bits for various levels of access
 	// . email, phone #, etc. can be in m_description
-	long  m_numSearchPwds;
-	char  m_searchPwds [ MAX_SEARCH_PASSWORDS ][ PASSWORD_MAX_LEN+1 ];
+	//long  m_numSearchPwds;
+	//char  m_searchPwds [ MAX_SEARCH_PASSWORDS ][ PASSWORD_MAX_LEN+1 ];
 
-	long  m_numBanIps;
-	long  m_banIps [ MAX_BANNED_IPS ];
+	//long  m_numBanIps;
+	//long  m_banIps [ MAX_BANNED_IPS ];
 
-	long  m_numSearchIps;
-	long  m_searchIps [ MAX_SEARCH_IPS ];
+	//long  m_numSearchIps;
+	//long  m_searchIps [ MAX_SEARCH_IPS ];
 
 	// spam assassin
-	long  m_numSpamIps;
-	long  m_spamIps [ MAX_SPAM_IPS ];
+	//long  m_numSpamIps;
+	//long  m_spamIps [ MAX_SPAM_IPS ];
 	
-	long  m_numAdminPwds;
-	char  m_adminPwds [ MAX_ADMIN_PASSWORDS ][ PASSWORD_MAX_LEN+1 ];
+	//long  m_numAdminPwds;
+	//char  m_adminPwds [ MAX_ADMIN_PASSWORDS ][ PASSWORD_MAX_LEN+1 ];
 
-	long  m_numAdminIps;
-	long  m_adminIps [ MAX_ADMIN_IPS ];
+	//long  m_numAdminIps;
+	//long  m_adminIps [ MAX_ADMIN_IPS ];
 
 	// match this content-type exactly (txt/html/pdf/doc)
 	char  m_filter [ MAX_FILTER_LEN + 1 ];
@@ -475,12 +484,12 @@ class CollectionRec {
 	// append to the turk query, something like gbcity:albuquerque, to
 	// restrict what we turk on! like if we just want to turk a city
 	// or something
-	char  m_supplementalTurkQuery [ 512 ];
+	//char  m_supplementalTurkQuery [ 512 ];
 
 	// more control
 	long m_maxSearchResultsPerQuery;
 	long m_maxSearchResultsPerQueryForClients; // more for paying clients
-
+	/*
 	long  m_tierStage0;
 	long  m_tierStage1;
 	long  m_tierStage2;
@@ -490,9 +499,10 @@ class CollectionRec {
 	long  m_tierStage0RawSite;
 	long  m_tierStage1RawSite;
 	long  m_tierStage2RawSite;
+	*/
 	long  m_compoundListMaxSize;
         //dictionary lookup controls
-        char m_dictionarySite[SUMMARYHIGHLIGHTTAGMAXSIZE];
+        //char m_dictionarySite[SUMMARYHIGHLIGHTTAGMAXSIZE];
 
 	// . related topics control
 	// . this can all be overridden by passing in your own cgi parms
@@ -534,6 +544,14 @@ class CollectionRec {
 	long  m_refs_docsToScanCeiling;
 	long  m_refs_maxLinkersCeiling;
 	float m_refs_additionalTRFetchCeiling;
+
+	// each Rdb has a tree, so keep the pos/neg key count here so
+	// that RdbTree does not have to have its own array limited by
+	// MAX_COLLS which we did away with because we made this dynamic.
+	long m_numPosKeysInTree[RDB_END];
+	long m_numNegKeysInTree[RDB_END];
+
+	class SpiderColl *m_spiderColl;
 
 	// . related pages parameters
 	// . copied from Parms.cpp
@@ -648,7 +666,7 @@ class CollectionRec {
 	// turk tags 
 	// for asking question on that tag
 	// comma seperated list of tags, no space allowed
-	char m_turkTags [256];
+	//char m_turkTags [256];
 
 	// collection name in the other/external cluster from which we
 	// fetch related pages titleRecs. (gov.gigablast.com)
@@ -694,9 +712,9 @@ class CollectionRec {
 	long m_maxRealTimeInlinks;
 
 	// collection hostname
-	char m_collectionHostname  [ MAX_URL_LEN ];
-	char m_collectionHostname1 [ MAX_URL_LEN ];
-	char m_collectionHostname2 [ MAX_URL_LEN ];
+	//char m_collectionHostname  [ MAX_URL_LEN ];
+	//char m_collectionHostname1 [ MAX_URL_LEN ];
+	//char m_collectionHostname2 [ MAX_URL_LEN ];
 
 	// . cut off age in number of days old 
 	// . if pub date is older than this we do not add to datedb
@@ -715,12 +733,12 @@ class CollectionRec {
         char m_useDFAcctServer; 
         long m_dfAcctIp;
         long m_dfAcctPort;
-        char m_dfAcctColl[MAX_COLL_LEN];
+        //char m_dfAcctColl[MAX_COLL_LEN];
 
 	// ad feed parms
 	long m_adFeedServerIp;
 	long m_adFeedServerPort;
-	char m_adFeedCgiParms[MAX_URL_LEN];
+	//char m_adFeedCgiParms[MAX_URL_LEN];
 	long m_adFeedNumAds;
 	long m_adFeedTimeOut;
 
@@ -758,6 +776,7 @@ class CollectionRec {
 	//regex_t* m_pRegExParser  [ MAX_FILTERS ];
        
         // . ad parameters
+	/*
         long m_adPINumAds;
         char m_adPIEnable;
         char m_adPIFormat   [MAX_HTML_LEN + 1];
@@ -774,7 +793,8 @@ class CollectionRec {
         char m_adDescXml    [MAX_AD_FEEDS][MAX_XML_LEN];
         char m_adLinkXml    [MAX_AD_FEEDS][MAX_XML_LEN];
         char m_adUrlXml     [MAX_AD_FEEDS][MAX_XML_LEN];
-        
+        */
+
 	// . do not keep in ruleset, store in title rec at time of parsing
 	// . allows admin to quickly and easily change how we parse docs
 	long  m_titleWeight;
@@ -833,11 +853,13 @@ class CollectionRec {
 	float m_pqr_demFactCommonInlinks;
 
         // sitedb filters
+	/*
 	long m_numSiteExpressions;
 	char m_siteExpressions[MAX_SITE_EXPRESSIONS]
 		[MAX_SITE_EXPRESSION_LEN+1];
 	long m_numSiteFilters2;
 	long m_siteRules[MAX_SITE_EXPRESSIONS];
+	*/
 
         // lookup table for sitedb filter
 	char      m_updateSiteRulesTable;

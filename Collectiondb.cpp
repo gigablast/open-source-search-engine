@@ -23,6 +23,8 @@
 #include "Repair.h"
 #include "Users.h"
 
+HashTableX g_collTable;
+
 // a global class extern'd in .h file
 Collectiondb g_collectiondb;
 
@@ -43,6 +45,7 @@ void Collectiondb::reset() {
 	}
 	m_numRecs     = 0;
 	m_numRecsUsed = 0;
+	g_collTable.reset();
 }
 
 bool Collectiondb::init ( bool isDump ) {
@@ -126,12 +129,12 @@ bool Collectiondb::load ( bool isDump ) {
 	//r = g_indexdb.getRdb();
 	//r->m_tree.cleanTree    ((char **)r->m_bases);
 	r = g_posdb.getRdb();
-	r->m_tree.cleanTree    ((char **)r->m_bases);
+	r->m_tree.cleanTree    ();//(char **)r->m_bases);
 	//r = g_datedb.getRdb();
 	//r->m_tree.cleanTree    ((char **)r->m_bases);
 
 	r = g_titledb.getRdb();
-	r->m_tree.cleanTree    ((char **)r->m_bases);
+	r->m_tree.cleanTree    ();//(char **)r->m_bases);
 	//r = g_revdb.getRdb();
 	//r->m_tree.cleanTree    ((char **)r->m_bases);
 	//r = g_sectiondb.getRdb();
@@ -141,9 +144,9 @@ bool Collectiondb::load ( bool isDump ) {
 	//r = g_tfndb.getRdb();
 	//r->m_tree.cleanTree    ((char **)r->m_bases);
 	r = g_spiderdb.getRdb();
-	r->m_tree.cleanTree    ((char **)r->m_bases);
+	r->m_tree.cleanTree    ();//(char **)r->m_bases);
 	r = g_doledb.getRdb();
-	r->m_tree.cleanTree    ((char **)r->m_bases);
+	r->m_tree.cleanTree    ();//(char **)r->m_bases);
 	// success
 	return true;
 }
@@ -158,6 +161,11 @@ void Collectiondb::updateTime() {
 	// we need a save
 	m_needsSave = true;
 }
+
+#include "Statsdb.h"
+#include "Cachedb.h"
+#include "Syncdb.h"
+
 
 // . MDW: TODO: bring this back when we have a subdir for each collection
 // . add a new rec
@@ -191,10 +199,11 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	if ( collnum >= 0 ) i = (long)collnum;
 	else for ( i = 0 ; i < m_numRecs ; i++ ) if ( ! m_recs[i] ) break;
 	// ceiling?
-	if ( i >= MAX_COLLS ) {
+	long long maxColls = 1LL<<(sizeof(collnum_t)*8);
+	if ( i >= maxColls ) {
 		g_errno = ENOBUFS;
-		return log("admin: Limit of %li collection reached. "
-			   "Collection not created.",(long)MAX_COLLS);
+		return log("admin: Limit of %lli collection reached. "
+			   "Collection not created.",maxColls);
 	}
 	// if empty... bail, no longer accepted, use "main"
 	if ( ! coll || !coll[0] ) {
@@ -226,6 +235,16 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 		return log("admin: Trying to create collection %s but "
 			   "directory %s already exists on disk.",coll,dname);
 	}
+
+	// grow the ptr buf if we could not plug a hole and it has not the
+	// capacity for us already...
+	if ( i >= m_numRecs && 
+	     (i+1)*4 > m_recPtrBuf.getCapacity() &&
+	     ! m_recPtrBuf.reserve ( 120 ) ) 
+		return log("admin: error growing rec ptr buf");
+	// re-ref it in case it is different
+	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
+
 	//char fname[512];
 	// ending '/' is ALWAYS included in g_hostdb.m_dir
 	//sprintf ( fname , "%s%li.%s.conf",g_hostdb.m_dir,i,coll);
@@ -276,9 +295,9 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 		// OK - done with cleaning up...
 		// but never copy over the collection hostname, that is
 		// problematic
-		m_recs[i]->m_collectionHostname [0] = '\0';
-		m_recs[i]->m_collectionHostname1[0] = '\0';
-		m_recs[i]->m_collectionHostname2[0] = '\0';
+		//m_recs[i]->m_collectionHostname [0] = '\0';
+		//m_recs[i]->m_collectionHostname1[0] = '\0';
+		//m_recs[i]->m_collectionHostname2[0] = '\0';
 	}
 
 	// set coll id and coll name for coll id #i
@@ -352,13 +371,30 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	//m_recs[i]->m_queryExpansion = false;
 	// reserve it
 	if ( i >= m_numRecs ) m_numRecs = i + 1;
+
+	bool verify = true;
+	long long h64;
+
+	// first time init?
+	if ( g_collTable.m_numSlots == 0 )
+		// the hash table that maps name to collnum
+		if(!g_collTable.set(8,sizeof(collnum_t), 256,NULL,0,
+				    false,0,"nhshtbl"))
+			goto hadError;
+
+
+	// add to hash table to map name to collnum_t
+	h64 = hash64n(coll);
+	if ( ! g_collTable.addKey ( &h64 , &i ) ) 
+		goto hadError;
+
+
 	// count it
 	m_numRecsUsed++;
 	// update the time
 	updateTime();
 	// if we are doing a dump from the command line, skip this stuff
 	if ( isDump ) return true;
-	bool verify = true;
 	if(isNew) verify = false;
 	// tell rdbs to add one, too
 	//if ( ! g_indexdb.addColl    ( coll, verify ) ) goto hadError;
@@ -376,6 +412,22 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	//if ( ! g_tfndb.addColl      ( coll, verify ) ) goto hadError;
 	if ( ! g_clusterdb.addColl  ( coll, verify ) ) goto hadError;
 	if ( ! g_linkdb.addColl     ( coll, verify ) ) goto hadError;
+
+
+	// if first time adding a collrec, initialize the collectionless
+	// rdbs so they call Rdb::addColl() which makes a new RdbBase for them
+	// and stores ptr to that base in CollectionRec::m_bases[]
+	if ( m_numRecsUsed <= 1 ) {
+		g_statsdb.addColl ( NULL );
+		g_cachedb.addColl ( NULL );
+		g_serpdb.addColl ( NULL );
+		//return g_accessdb.addColl ( NULL );
+		//return g_facebookdb.addColl ( NULL );
+		g_syncdb.addColl ( NULL );
+	}
+
+
+
 	// debug message
 	log ( LOG_INFO, "admin: added collection \"%s\" (%li).",coll,(long)i);
 	// tell SpiderCache about this collection, it will create a 
@@ -543,6 +595,11 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	// dec counts
 	m_numRecsUsed--;
 	while ( ! m_recs[m_numRecs-1] ) m_numRecs--;
+
+	// remove it from the hashtable that maps name to collnum too
+	long long h64 = hash64n(coll);
+	g_collTable.removeKey ( &h64 );
+
 	// update the time
 	updateTime();
 	// done
@@ -701,37 +758,75 @@ char *Collectiondb::getCollName ( collnum_t collnum ) {
 }
 
 collnum_t Collectiondb::getCollnum ( char *coll ) {
+
 	if ( ! coll ) coll = "";
+
+	// This is necessary for Statsdb to work, as it is
+	// not associated with any collection. Is this
+	// necessary for Catdb?
+	if ( coll[0]=='s' && coll[1] =='t' &&
+	     strcmp ( "statsdb\0", coll ) == 0) 
+		return 0;
+	if ( coll[0]=='f' && coll[1]=='a' &&
+	     strcmp ( "facebookdb\0", coll ) == 0) 
+		return 0;
+	if ( coll[0]=='a' && coll[1]=='c' &&
+	     strcmp ( "accessdb\0", coll ) == 0) 
+		return 0;
+
+	// because diffbot may have thousands of crawls/collections
+	// let's improve the speed here. try hashing it...
+	long long h64 = hash64n(coll);
+	void *vp = g_collTable.getValue ( &h64 );
+	if ( ! vp ) return -1; // not found
+	return *(collnum_t *)vp;
+
+	/*
 	for ( long i = 0 ; i < m_numRecs ; i++ ) {
 		if ( ! m_recs[i] ) continue;
 		if ( m_recs[i]->m_coll[0] != coll[0] ) continue;
 		if ( strcmp ( m_recs[i]->m_coll , coll ) == 0 ) return i;
 	}
-	// This is necessary for Statsdb to work, as it is
-	// not associated with any collection. Is this
-	// necessary for Catdb?
-	if ( strcmp ( "statsdb\0", coll ) == 0) return 0;
-	if ( strcmp ( "facebookdb\0", coll ) == 0) return 0;
-	if ( strcmp ( "accessdb\0", coll ) == 0) return 0;
 	//if ( strcmp ( "catdb\0", coll ) == 0) return 0;
 	return (collnum_t)-1; // not found
+	*/
 }
 
 collnum_t Collectiondb::getCollnum ( char *coll , long clen ) {
+
+	// This is necessary for Statsdb to work, as it is
 	if ( ! coll ) coll = "";
+
+	// not associated with any collection. Is this
+	// necessary for Catdb?
+	if ( coll[0]=='s' && coll[1] =='t' &&
+	     strcmp ( "statsdb\0", coll ) == 0) 
+		return 0;
+	if ( coll[0]=='f' && coll[1]=='f' &&
+	     strcmp ( "facebookdb\0", coll ) == 0) 
+		return 0;
+	if ( coll[0]=='a' && coll[1]=='c' &&
+	     strcmp ( "accessdb\0", coll ) == 0) 
+		return 0;
+
+
+	// because diffbot may have thousands of crawls/collections
+	// let's improve the speed here. try hashing it...
+	long long h64 = hash64(coll,clen);
+	void *vp = g_collTable.getValue ( &h64 );
+	if ( ! vp ) return -1; // not found
+	return *(collnum_t *)vp;
+
+	/*
 	for ( long i = 0 ; i < m_numRecs ; i++ ) {
 		if ( ! m_recs[i] ) continue;
 		if ( m_recs[i]->m_collLen != clen ) continue;
 		if ( strncmp(m_recs[i]->m_coll,coll,clen) == 0 ) return i;
 	}
-	// This is necessary for Statsdb to work, as it is
-	// not associated with any collection. Is this
-	// necessary for Catdb?
-	if ( strncmp ( "statsdb\0", coll, clen ) == 0) return 0;
-	if ( strcmp ( "facebookdb\0", coll ) == 0) return 0;
-	if ( strncmp ( "accessdb\0", coll, clen ) == 0) return 0;
+
 	//if ( strncmp ( "catdb\0", coll, clen ) == 0) return 0;
 	return (collnum_t)-1; // not found
+	*/
 }
 
 collnum_t Collectiondb::getNextCollnum ( collnum_t collnum ) {

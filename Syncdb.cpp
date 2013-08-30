@@ -1303,10 +1303,12 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	if ( ! rdb ) continue;
 
 	// get coll
-	for ( long j = 0 ; j < rdb->m_numBases ; j++ ) {
+	for ( long j = 0 ; j < rdb->getNumBases() ; j++ ) {
 
-	// get that base
-	RdbBase *base = rdb->m_bases[j];
+		// get that base
+		RdbBase *base = rdb->getBase(j);//m_bases[j];
+		if ( ! base ) continue;
+
 	// get coll
 	char *coll = base->m_coll;
 	// and num

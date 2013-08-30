@@ -182,7 +182,10 @@ class Rdb {
 	void enableWrites  ();
 
 
-	RdbBase *getBase ( collnum_t collnum ) { return m_bases[collnum]; }
+	RdbBase *getBase ( collnum_t collnum ) ;
+	long getNumBases ( ) { 	return g_collectiondb.m_numRecs; };
+	void addBase ( collnum_t collnum , class RdbBase *base ) ;
+
 
 	// how much mem is alloced for our maps?
 	long long getMapMemAlloced ();
@@ -335,8 +338,9 @@ class Rdb {
 	//RdbMap   *m_maps      [ MAX_RDB_FILES ];
 	//long      m_numFiles;
 
-	class RdbBase *m_bases [ MAX_COLLS ];
-	long       m_numBases;
+	// just put this into CollectionRec so we are not limited to MAX_COLLS
+	//class RdbBase *m_bases [ MAX_COLLS ];
+	//long       m_numBases;
 
 	bool      m_dedup;
 	long      m_fixedDataSize;

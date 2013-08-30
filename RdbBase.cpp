@@ -42,6 +42,7 @@ class RdbMerge g_merge2;
 
 RdbBase::RdbBase ( ) {
 	m_numFiles  = 0;
+	m_rdb = NULL;
 	//m_dummy = NULL;
 	reset();
 }

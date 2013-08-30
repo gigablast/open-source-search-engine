@@ -693,15 +693,15 @@ bool Doledb::addColl ( char *coll, bool doVerify ) {
 SpiderCache g_spiderCache;
 
 SpiderCache::SpiderCache ( ) {
-	m_numSpiderColls   = 0;
+	//m_numSpiderColls   = 0;
 	//m_isSaving = false;
 }
 
 // returns false and set g_errno on error
 bool SpiderCache::init ( ) {
 
-	for ( long i = 0 ; i < MAX_COLL_RECS ; i++ )
-		m_spiderColls[i] = NULL;
+	//for ( long i = 0 ; i < MAX_COLL_RECS ; i++ )
+	//	m_spiderColls[i] = NULL;
 
 	// success
 	return true;
@@ -746,8 +746,8 @@ void SpiderCache::save ( bool useThread ) {
 	// assume saving
 	//m_isSaving = true;
 	// loop over all SpiderColls and get the best
-	for ( long i = 0 ; i < m_numSpiderColls ; i++ ) {
-		SpiderColl *sc = m_spiderColls[i];
+	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+		SpiderColl *sc = getSpiderColl(i);//m_spiderColls[i];
 		if ( ! sc ) continue;
 		RdbTree *tree = &sc->m_waitingTree;
 		char *filename = "waitingtree";
@@ -796,8 +796,8 @@ void SpiderCache::save ( bool useThread ) {
 }
 
 bool SpiderCache::needsSave ( ) {
-	for ( long i = 0 ; i < m_numSpiderColls ; i++ ) {
-		SpiderColl *sc = m_spiderColls[i];
+	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+		SpiderColl *sc = getSpiderColl(i);//m_spiderColls[i];
 		if ( ! sc ) continue;
 		if ( sc->m_waitingTree.m_needsSave ) return true;
 		// also the doleIpTable
@@ -808,29 +808,34 @@ bool SpiderCache::needsSave ( ) {
 
 void SpiderCache::reset ( ) {
 	// loop over all SpiderColls and get the best
-	for ( long i = 0 ; i < m_numSpiderColls ; i++ ) {
-		SpiderColl *sc = m_spiderColls[i];
+	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+		SpiderColl *sc = getSpiderColl(i);
 		if ( ! sc ) continue;
 		sc->reset();
 		mdelete ( sc , sizeof(SpiderColl) , "SpiderCache" );
 		delete ( sc );
-		m_spiderColls[i] = NULL;
+		//m_spiderColls[i] = NULL;
+		CollectionRec *cr = g_collectiondb.getRec(i);
+		cr->m_spiderColl = NULL;
 	}
-	m_numSpiderColls = 0;
+	//m_numSpiderColls = 0;
 }
 
 // get SpiderColl for a collection
 SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	// return it if non-NULL
-	if ( m_spiderColls [ collnum ] ) return m_spiderColls [ collnum ];
+	//if ( m_spiderColls [ collnum ] ) return m_spiderColls [ collnum ];
 	// if spidering disabled, do not bother creating this!
 	//if ( ! g_conf.m_spideringEnabled ) return NULL;
 	// shortcut
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	// return it if non-NULL
+	SpiderColl *sc = cr->m_spiderColl;
+	if ( sc ) return sc;
 	// if spidering disabled, do not bother creating this!
 	//if ( ! cr->m_spideringEnabled ) return NULL;
 	// cast it
-	SpiderColl *sc;
+	//SpiderColl *sc;
 	// make it
 	try { sc = new(SpiderColl); }
 	catch ( ... ) {
@@ -841,10 +846,11 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	// register it
 	mnew ( sc , sizeof(SpiderColl), "spcoll" );
 	// store it
-	m_spiderColls [ collnum ] = sc;
+	//m_spiderColls [ collnum ] = sc;
+	cr->m_spiderColl = sc;
 	// update this
-	if ( m_numSpiderColls < collnum + 1 )
-		m_numSpiderColls = collnum + 1;
+	//if ( m_numSpiderColls < collnum + 1 )
+	//	m_numSpiderColls = collnum + 1;
 	// set this
 	sc->m_collnum = collnum;
 	// save this
@@ -3026,8 +3032,11 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	// because we might have had a lock collision
 	long nc = g_collectiondb.m_numRecs;
 	for ( long i = 0 ; i < nc ; i++ ) {
+		// get collectionrec
+		CollectionRec *cr = g_collectiondb.getRec(i);
+		if ( ! cr ) continue;
 		// get it
-		SpiderColl *sc = g_spiderCache.m_spiderColls[i];
+		SpiderColl *sc = cr->m_spiderColl;
 		// skip if none
 		if ( ! sc ) continue;
 		// also scan spiderdb to populate waiting tree now but
@@ -3962,7 +3971,7 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	// get coll
 	collnum_t collnum = g_collectiondb.getCollnum ( xd->m_coll );
 	// get it
-	SpiderColl *sc = g_spiderCache.m_spiderColls[collnum];
+	SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
 	// decrement this
 	sc->m_spidersOut--;
 	// get the original request from xmldoc
@@ -6472,7 +6481,9 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		// breathe
 		QUICKPOLL ( niceness );
 		// get the ith rule
-		char *p = cr->m_regExs[i];
+		SafeBuf *sb = &cr->m_regExs[i];
+		//char *p = cr->m_regExs[i];
+		char *p = sb->getBufStart();
 
 	checkNextRule:
 

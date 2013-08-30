@@ -8387,7 +8387,7 @@ void removeDocIds  ( char *coll , char *filename ) {
 	Rdb *r = g_indexdb.getRdb();
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
 	// do not start if any indexdb recs in tree or more than 1 disk file
-	RdbBase *base = r->m_bases[collnum];
+	RdbBase *base = r->getBase(collnum);
 	if ( base->getNumFiles() > 1 ) {
 		log("db: More than 1 indexdb file. Please tight merge.");
 		return;
