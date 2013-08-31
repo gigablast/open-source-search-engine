@@ -5851,11 +5851,13 @@ void dumpDoledb (char *coll,long startFileNum,long numFiles,bool includeTree){
 		// get spider rec in it
 		char *srec = drec + 12 + 4;
 		// print doledb info first then spider request
-		fprintf(stdout,"dolekey=%s "
+		fprintf(stdout,"dolekey=%s (n1=%lu n0=%llu) "
 			"pri=%li "
 			"spidertime=%lu "
 			"uh48=0x%llx\n",
 			KEYSTR(&k,12),
+			k.n1,
+			k.n0,
 			(long)g_doledb.getPriority(&k),
 			g_doledb.getSpiderTime(&k),
 			g_doledb.getUrlHash48(&k));
