@@ -3295,6 +3295,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// . if priority is -1 that means try next priority
 		// . DO NOT reset the whole scan. that was what was happening
 		//   when we just had "goto loop;" here
+		// . this means a reset above!!!
 		if ( m_sc->m_pri == -1 ) return;
 		// bail if waiting for lock reply, no point in reading more
 		if ( m_msg12.m_gettingLocks ) return;
@@ -3349,13 +3350,25 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	// bail if list is empty
 	if ( m_list.getListSize() <= 0 ) {
-		if ( g_conf.m_logDebugSpider )
-			log("spider: resetting doledb priority pri=%li",
-			    m_sc->m_pri);
+		//if ( g_conf.m_logDebugSpider )
+		//	log("spider: resetting doledb priority pri=%li",
+		//	    m_sc->m_pri);
 		// trigger a reset
-		m_sc->m_pri = -1;
+		//m_sc->m_pri = -1;
 		// . let the sleep timer init the loop again!
 		// . no, just continue the loop
+		//return true;
+		// this priority is EMPTY, try next
+		m_sc->m_pri = m_sc->m_pri - 1;
+		// how can this happen?
+		if ( m_sc->m_pri < -1 ) m_sc->m_pri = -1;
+		// all done if priority is negative, it will start over
+		// at the top most priority, we've completed a round
+		if ( m_sc->m_pri < 0 ) return true;
+		// set to next priority otherwise
+		//m_sc->m_nextDoledbKey=g_doledb.makeFirstKey2 ( m_sc->m_pri );
+		m_sc->m_nextDoledbKey = m_sc->m_nextKeys [m_sc->m_pri];
+		// and load that list from doledb for that priority
 		return true;
 	}
 
