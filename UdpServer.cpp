@@ -1025,7 +1025,11 @@ void UdpServer::process_ass ( long long now , long maxNiceness) {
 	// bail if no main sock
 	if ( m_sock < 0 ) return ;
 
-	long long startTimer = gettimeofdayInMillisecondsLocal();
+	// if we call this while in the sighandler it crashes since
+	// gettimeofdayInMillisecondsLocal() is not async safe
+	long long startTimer;
+	if ( ! g_inSigHandler )
+		startTimer = gettimeofdayInMillisecondsLocal();
  bigloop:
 	// . if we're real time, and not in a sig handler, turn 'em off
 	// . readSock() and doSending() are not Async Signal Safe (ass)
@@ -1088,7 +1092,11 @@ void UdpServer::process_ass ( long long now , long maxNiceness) {
 	}
  callBottom:
 	if(maxNiceness < 1) return;
-	long long elapsed = gettimeofdayInMillisecondsLocal() - startTimer;
+	// if we call this while in the sighandler it crashes since
+	// gettimeofdayInMillisecondsLocal() is not async safe
+	long long elapsed = 0;
+	if ( ! g_inSigHandler )
+		elapsed = gettimeofdayInMillisecondsLocal() - startTimer;
 	if(elapsed < 10) {
 		// we did not call any, so resort to nice callbacks
 		makeCallbacks_ass ( /*niceness level*/ 1 ) ;
