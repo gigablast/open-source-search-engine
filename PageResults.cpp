@@ -285,6 +285,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// show gigabits?
 		long gb = hr->getLong("gigabits",0);
 		if ( gb >= 1 ) sb.safePrintf("&gigabits=%li",gb);
+		// forward the "ff" family filter as well
+		long ff = hr->getLong("ff",0);
+		if ( ff ) sb.safePrintf("&ff=%li",ff);
 		// provide hash of the query so clients can't just pass in
 		// a bogus id to get search results from us
 		unsigned long h32 = hash32n(qstr);
