@@ -978,6 +978,10 @@ bool Msg3a::mergeLists ( ) {
 	     // or whatever, so let it through regardless
 	     ksPtr[maxj]->n0 != 0LL && 
 	     ksPtr[maxj]->n1 != 0   ) {
+		// if family filter on and is adult...
+		if ( m_r->m_familyFilter && 
+		     g_clusterdb.hasAdultContent((char *)ksPtr[maxj]) )
+			goto skip;
 		// get the hostname hash, a long long
 		long sh = g_clusterdb.getSiteHash26 ((char *)ksPtr[maxj]);
 		// do we have enough from this hostname already?

@@ -497,6 +497,7 @@ bool Msg40::getDocIds ( bool recall ) {
 	m_r.m_debug                     = m_si->m_debug          ;
 	m_r.m_getDocIdScoringInfo       = m_si->m_getDocIdScoringInfo;
 	m_r.m_doSiteClustering          = m_si->m_doSiteClustering    ;
+	m_r.m_familyFilter              = m_si->m_familyFilter;
 	m_r.m_useMinAlgo                = m_si->m_useMinAlgo;
 	m_r.m_useNewAlgo                = m_si->m_useNewAlgo;
 	m_r.m_doMaxScoreAlgo            = m_si->m_doMaxScoreAlgo;
