@@ -2128,7 +2128,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 	}
 	else if ( (tn=m_tree.addNode ( collnum, key , data , dataSize ))>=0) {
 		// if adding to spiderdb, add to cache, too
-		if ( m_rdbId != RDB_SPIDERDB || m_rdbId != RDB_DOLEDB ) 
+		if ( m_rdbId != RDB_SPIDERDB && m_rdbId != RDB_DOLEDB ) 
 			return true;
 		// or if negative key
 		if ( KEYNEG(key) ) return true;
