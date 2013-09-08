@@ -141,6 +141,7 @@ void setS99Local () {
 	// make raid and mount if not already mounted
 	// a lot of times after reboot something fails!
 	fprintf(fd,
+		"raidstop /dev/md0\n"
 		"mkraid -c /etc/raidtab --really-force /dev/md0\n"
 		"mount /dev/md0\n"
 		"\n"
@@ -725,7 +726,7 @@ void setEtcNetworkInterfaces() {
 		return;
 	}
 
-	fprintf("ip for %s is %s\n",g_name,ips);
+	fprintf(stderr,"ip for %s is %s\n",g_name,ips);
 
 	fprintf ( fd ,
 		  "auto lo\n"

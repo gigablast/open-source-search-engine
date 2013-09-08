@@ -2712,7 +2712,7 @@ void checkKernelErrors( int fd, void *state ){
 void PingServer::sendEmailMsg ( long *lastTimeStamp , char *msg ) {
 	// leave if we already sent and alert within 5 mins
 	//static long s_lasttime = 0;
-	long now = getTimeGlobal();
+	long now = getTimeGlobalNoCore();
 	if ( now - *lastTimeStamp < 5*60 ) return;
 	// prepare msg to send
 	//Host *h0 = g_hostdb.getHost ( 0 );

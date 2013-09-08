@@ -78,7 +78,7 @@ HOST=$(shell hostname)
 # we can only build a 32-bit binary, so we have to use the 32-bit libraries
 # provided for now.
 ifeq ("titan","$(HOST)")
-CPPFLAGS = -D_PRIVATESTUFF_ -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static	
+CPPFLAGS = -DPRIVATESTUFF -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static	
 LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
 OBJS:=$(OBJS) seo.o
 $(shell rm seo.o)

@@ -66,7 +66,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		//addCheckboxSpan ( uh64 , divTag , addNum );
 		// make basic reply
 		char *reply;
-		reply = "HTTP/1.1 200 OK\r\n"
+		reply = "HTTP/1.0 200 OK\r\n"
 			"Connection: Close\r\n";
 		// that is it! send a basic reply ok
 		bool status = g_httpServer.sendDynamicPage( s , 

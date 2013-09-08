@@ -196,7 +196,7 @@ static char *s_langAbbr[] = {
 };
 
 // fix bug:
-//#ifndef _PRIVATESTUFF_
+//#ifndef PRIVATESTUFF
 #define csISOLatin6 cslatin6
 //#endif
 
