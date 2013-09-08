@@ -833,9 +833,9 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 
 	// if we missed to many, then dump core
 	if ( g_niceness == 1 && g_missedQuickPolls >= 4 ) {
-		g_inSigHandler = true;
+		//g_inSigHandler = true;
 		log("loop: missed quickpoll");
-		g_inSigHandler = false;
+		//g_inSigHandler = false;
 		// seems to core a lot in gbcompress() we need to
 		// put a quickpoll into zlib deflate() or
 		// deflat_slot() or logest_match() function
@@ -1594,7 +1594,10 @@ void sigHandlerRT ( int x , siginfo_t *info , void *v ) {
 	}
 	//fprintf (stderr,"in rt handler\n");
 	// let everyone know it
-	g_inSigHandler = true;
+	// MDW: turn this off for now, how is it getting set? we dont use
+	// real time signals any more. maybe a pthread is getting such
+	// a signal?
+	//g_inSigHandler = true;
 	// debug msg
 	//if ( g_conf.m_timingDebugEnabled ) 
 	//	log("sigHandlerRT entered");
