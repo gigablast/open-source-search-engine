@@ -189,3 +189,10 @@ third-party archives.
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+10. Exclusions
+
+The SEO (Search Engine Optimiazation) functionality is provided in a separate file named "seo.cpp", and is not included in this license. If you would like to license that then you can arrange a licensing agreement with Matt Wells.
+
+Likewise, the Event datamining logic is in Events.cpp and must be separately licensed as well.
+
