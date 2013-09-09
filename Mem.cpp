@@ -163,7 +163,7 @@ static bool   s_initialized = 0;
 
 // our own memory manager
 //static MemPoolVar s_pool;
-void operator delete (void *ptr) throw (std::bad_alloc) {
+void operator delete (void *ptr) throw () {
 	// now just call this
 	g_mem.gbfree ( (char *)ptr , -1 , NULL );
 }
