@@ -210,8 +210,8 @@ inline bool relabel   ( void *ptr , long size , const char *note ) {
 //#define delete(X) { delete X; g_mem.m_freed += sizeof(*X); }
 //#endif
 //#ifndef DMALLOC
-void operator delete ( void *p ) ;
-void * operator new (size_t size) throw (std::bad_alloc);
+void operator delete ( void *p ) throw(std::bad_alloc);
+void * operator new (size_t size) throw ();
 // you MUST call mmalloc, mcalloc and mrealloc!!
 #define malloc coreme 
 #define calloc coreme 
