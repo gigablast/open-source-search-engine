@@ -376,7 +376,8 @@ fctypes.o: fctypes.cpp gb-include.h types.h fctypes.h Unicode.h \
  TcpSocket.h Collectiondb.h Entities.h UCWordIterator.h Timedb.h Rdb.h \
  RdbBase.h RdbScan.h BigFile.h RdbMap.h RdbList.h RdbDump.h RdbTree.h \
  RdbMem.h RdbBuckets.h RdbCache.h Msg5.h Msg3.h HashTableX.h RdbMerge.h \
- Dir.h Titledb.h DiskPageCache.h CollectionRec.h Parms.h HashTable.h
+ Dir.h Titledb.h DiskPageCache.h CollectionRec.h Parms.h HashTable.h \
+ Threads.h
 File.o: File.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h UCNormalizer.h hash.h Errno.h \
  Log.h File.h Mem.h Conf.h Xml.h XmlNode.h Lang.h Iso8859.h \
@@ -1536,19 +1537,19 @@ PageStats.o: PageStats.cpp gb-include.h types.h fctypes.h Unicode.h \
  Msge0.h Msge1.h Msg8b.h SiteGetter.h Title.h Address.h Placedb.h
 PageStatsdb.o: PageStatsdb.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h UCNormalizer.h hash.h Errno.h \
- Log.h plotter.h iostream.h streambuf.h CollectionRec.h Url.h ip.h \
- Parms.h Xml.h XmlNode.h Lang.h Iso8859.h iana_charset.h SafeBuf.h \
- HttpRequest.h Mem.h Conf.h File.h Loop.h Hostdb.h TcpSocket.h \
- Collectiondb.h HashTable.h HashTableX.h RdbList.h Pages.h HttpServer.h \
- TcpServer.h MsgC.h UdpServer.h UdpSlot.h UdpProtocol.h Dns.h \
- DnsProtocol.h RdbCache.h Multicast.h Threads.h Rdb.h RdbBase.h RdbScan.h \
- BigFile.h RdbMap.h RdbDump.h RdbTree.h RdbMem.h RdbBuckets.h Msg5.h \
- Msg3.h RdbMerge.h Dir.h HttpMime.h Statsdb.h zlib.h zconf.h Stats.h \
- IndexReadInfo.h Query.h IndexList.h Indexdb.h DiskPageCache.h Titledb.h \
- Msg1.h Msg0.h Clusterdb.h Linkdb.h Msg2.h Msg20.h Summary.h matches.h \
- Words.h StopWords.h Bits.h Pos.h Matches.h HashTableT.h Domains.h \
- CountryCode.h Tagdb.h Events.h Sections.h Dates.h Msg22.h CatRec.h \
- Categories.h Catdb.h Datedb.h Msg4.h Process.h Msg28.h SafeList.h
+ Log.h CollectionRec.h Url.h ip.h Parms.h Xml.h XmlNode.h Lang.h \
+ Iso8859.h iana_charset.h SafeBuf.h HttpRequest.h Mem.h Conf.h File.h \
+ Loop.h Hostdb.h TcpSocket.h Collectiondb.h HashTable.h HashTableX.h \
+ RdbList.h Pages.h HttpServer.h TcpServer.h MsgC.h UdpServer.h UdpSlot.h \
+ UdpProtocol.h Dns.h DnsProtocol.h RdbCache.h Multicast.h Threads.h Rdb.h \
+ RdbBase.h RdbScan.h BigFile.h RdbMap.h RdbDump.h RdbTree.h RdbMem.h \
+ RdbBuckets.h Msg5.h Msg3.h RdbMerge.h Dir.h HttpMime.h Statsdb.h zlib.h \
+ zconf.h Stats.h IndexReadInfo.h Query.h IndexList.h Indexdb.h \
+ DiskPageCache.h Titledb.h Msg1.h Msg0.h Clusterdb.h Linkdb.h Msg2.h \
+ Msg20.h Summary.h matches.h Words.h StopWords.h Bits.h Pos.h Matches.h \
+ HashTableT.h Domains.h CountryCode.h Tagdb.h Events.h Sections.h Dates.h \
+ Msg22.h CatRec.h Categories.h Catdb.h Datedb.h Msg4.h Process.h Msg28.h \
+ SafeList.h
 PageSubmit.o: PageSubmit.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h UCNormalizer.h hash.h Errno.h \
  Log.h XmlDoc.h Lang.h Iso8859.h iana_charset.h Words.h Xml.h XmlNode.h \
@@ -2116,17 +2117,17 @@ Stats.o: Stats.cpp gb-include.h types.h fctypes.h Unicode.h \
  ip.h Hostdb.h HttpRequest.h Url.h TcpSocket.h Collectiondb.h IndexList.h \
  RdbList.h Indexdb.h Rdb.h RdbBase.h RdbScan.h BigFile.h RdbMap.h \
  RdbDump.h RdbTree.h RdbMem.h RdbBuckets.h RdbCache.h Msg5.h Msg3.h \
- HashTableX.h RdbMerge.h Dir.h DiskPageCache.h Titledb.h plotter.h \
- iostream.h streambuf.h PingServer.h Repair.h Msg1.h UdpServer.h \
- UdpSlot.h Multicast.h Threads.h Msg0.h Clusterdb.h Linkdb.h Msg2.h \
- Msg20.h Summary.h matches.h Words.h StopWords.h Bits.h Pos.h Matches.h \
- HashTableT.h Domains.h CountryCode.h Tagdb.h CollectionRec.h Parms.h \
- HashTable.h Events.h Sections.h Dates.h Msg22.h CatRec.h Categories.h \
- Catdb.h Datedb.h Msg4.h XmlDoc.h Phrases.h LangList.h Images.h Msg36.h \
- Msg13.h Msge0.h Msge1.h MsgC.h Dns.h DnsProtocol.h Msg8b.h SearchInput.h \
- Msg40.h Msg39.h Msg37.h Posdb.h TopTree.h IndexTable2.h Msg51.h Msg17.h \
- Msg2b.h Msg3a.h PostQueryRerank.h Sanity.h SiteGetter.h Title.h \
- Address.h zlib.h zconf.h Spider.h HttpMime.h
+ HashTableX.h RdbMerge.h Dir.h DiskPageCache.h Titledb.h PingServer.h \
+ Repair.h Msg1.h UdpServer.h UdpSlot.h Multicast.h Threads.h Msg0.h \
+ Clusterdb.h Linkdb.h Msg2.h Msg20.h Summary.h matches.h Words.h \
+ StopWords.h Bits.h Pos.h Matches.h HashTableT.h Domains.h CountryCode.h \
+ Tagdb.h CollectionRec.h Parms.h HashTable.h Events.h Sections.h Dates.h \
+ Msg22.h CatRec.h Categories.h Catdb.h Datedb.h Msg4.h XmlDoc.h Phrases.h \
+ LangList.h Images.h Msg36.h Msg13.h Msge0.h Msge1.h MsgC.h Dns.h \
+ DnsProtocol.h Msg8b.h SearchInput.h Msg40.h Msg39.h Msg37.h Posdb.h \
+ TopTree.h IndexTable2.h Msg51.h Msg17.h Msg2b.h Msg3a.h \
+ PostQueryRerank.h Sanity.h SiteGetter.h Title.h Address.h zlib.h zconf.h \
+ Spider.h HttpMime.h
 Statsdb.o: Statsdb.cpp Conf.h Xml.h XmlNode.h gb-include.h types.h \
  fctypes.h Unicode.h UnicodeProperties.h UCPropTable.h iconv.h \
  UCNormalizer.h hash.h Errno.h Log.h Lang.h Iso8859.h iana_charset.h \
