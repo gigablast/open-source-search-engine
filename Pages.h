@@ -358,7 +358,7 @@ enum {
 	PAGE_REINDEX     ,	
 	PAGE_INJECT      , 
 	//PAGE_KEYWORDS    ,
-#ifdef _PRIVATESTUFF_
+#ifdef PRIVATESTUFF
 	PAGE_SEO         ,
 #endif
 	PAGE_ACCESS      ,  //40	

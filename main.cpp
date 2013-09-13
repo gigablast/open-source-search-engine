@@ -2781,7 +2781,7 @@ int main ( int argc , char *argv[] ) {
 	}
 
 	// the query log split
-#ifdef _PRIVATESTUFF_
+#ifdef PRIVATESTUFF
 	if ( ! loadQueryLog() ) return 1;
 #endif
 
@@ -3105,7 +3105,7 @@ int main ( int argc , char *argv[] ) {
 		log("db: Failed to init merge sleep callback.");
 
 	// SEO MODULE
-#ifdef _PRIVATESTUFF_
+#ifdef PRIVATESTUFF
 	if ( ! g_loop.registerSleepCallback(2000,(void *)1,runSEOQueryLoop))
 		log("db: Failed to register seo query loop");
 #endif
@@ -4802,7 +4802,7 @@ bool registerMsgHandlers1(){
 // to make things compile we need to declare this stuff since the seo
 // module is not in the open source version
 //
-#ifndef _PRIVATESTUFF_
+#ifndef PRIVATESTUFF
 SafeBuf    g_qbuf;
 long       g_qbufNeedSave = false;
 bool sendPageSEO(TcpSocket *, HttpRequest *) {	return true;}
@@ -4835,7 +4835,7 @@ bool registerMsgHandlers2(){
 
 	if ( ! registerHandler4  () ) return false;
 
-#ifdef _PRIVATESTUFF_
+#ifdef PRIVATESTUFF
 	// seo module handlers
 	if(! g_udpServer.registerHandler(0x8e,handleRequest8e)) return false;
 	if(! g_udpServer.registerHandler(0x4f,handleRequest4f)) return false;
@@ -5851,6 +5851,18 @@ void dumpDoledb (char *coll,long startFileNum,long numFiles,bool includeTree){
 		if ( (drec[0] & 0x01) == 0x00 ) {char *xx=NULL;*xx=0; }
 		// get spider rec in it
 		char *srec = drec + 12 + 4;
+		// print doledb info first then spider request
+		fprintf(stdout,"dolekey=%s (n1=%lu n0=%llu) "
+			"pri=%li "
+			"spidertime=%lu "
+			"uh48=0x%llx\n",
+			KEYSTR(&k,12),
+			k.n1,
+			k.n0,
+			(long)g_doledb.getPriority(&k),
+			g_doledb.getSpiderTime(&k),
+			g_doledb.getUrlHash48(&k));
+		fprintf(stdout,"spiderkey=");
 		// print it
 		g_spiderdb.print ( srec );
 		// the \n

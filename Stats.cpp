@@ -3,7 +3,7 @@
 #include <errno.h>
 #include "Stats.h"
 #define X_DISPLAY_MISSING 1
-#include <plotter.h>
+//#include <plotter.h>
 #include <math.h>
 #include "Conf.h"
 #include "PingServer.h"

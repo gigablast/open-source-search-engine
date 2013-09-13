@@ -1,7 +1,7 @@
 #include "gb-include.h"
 
 #define X_DISPLAY_MISSING 1
-#include <plotter.h>
+//#include <plotter.h>
 //#include <fstream.h>
 #include <math.h>
 
@@ -109,7 +109,7 @@ bool sendPageStatsdb ( TcpSocket *s, HttpRequest *r ) {
 	//	st->m_columns = DEF_COLUMNS;
 
 	if ( st->m_now )
-		st->m_startDate = (time_t)getTimeGlobal();
+		st->m_startDate = (time_t)getTimeGlobalNoCore();
 
 	st->m_startDateR = st->m_startDate;
 	st->m_endDateR   = st->m_endDate; 

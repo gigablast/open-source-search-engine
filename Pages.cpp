@@ -220,7 +220,7 @@ static WebPage s_pages[] = {
 	//  "get queries a url matches",
 	//  sendPageMatchingQueries   , 2 } ,
 
-#ifdef _PRIVATESTUFF_
+#ifdef PRIVATESTUFF
 	{ PAGE_SEO, "seo",0,"seo" ,  0 , 0 ,
 	  "SEO info",
 	  sendPageSEO   , 2 } ,
@@ -415,7 +415,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	if ( page == PAGE_ROOT ) publicPage = true;
 	// do not deny /NM/Albuquerque urls
 	if ( page == PAGE_RESULTS ) publicPage = true;
-#ifdef _PRIVATESTUFF_
+#ifdef PRIVATESTUFF
 	if ( page == PAGE_SEO ) publicPage = true;
 #endif
 	if ( page == PAGE_ADDURL ) publicPage = true;

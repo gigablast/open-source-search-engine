@@ -39,10 +39,29 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 // There are SpiderRequests and SpiderReplies in Spiderdb. they now use
 // 16 byte keys (key128_t). when a new spiderdb rec is added to spiderdb
 // in Rdb.cpp we call addSpiderRequest() or addSpiderReply(). then
-// that rec might be added to the waiting tree. then the waiting tree
+// that rec might be added to the waiting tree. the waiting tree
 // is scanned for IPs that have a SpiderRequest whose spiderTime is
-// <= now and we grab ONE from spiderdb and add to doledb. any host
-// in our group can spider a request in doledb, but they must lock it
+// <= now and we grab ONE from spiderdb and add to doledb. we try to
+// store every IP (firstIp) we have in Spiderdb into the waiting tree,
+// but the IP is also paired up with a spider priority representing a
+// SpiderRequest in that priority from that IP. then the entries in
+// waiting tree are sorted by scheduled spider time. waiting tree does not
+// even store the SpiderRequest, but just the scheduling info for each
+// ip/priority pair. then we can quickly scan waiting tree to find
+// the next ip/priority ready for spidering, so we read the SpiderRequest
+// from spiderdb for the ip/priority/time we choose and add that 
+// SpiderRequest to doledb to be spidered.
+//
+// The waiting tree is populated at
+// startup by scanning spiderdb, which might take a while to complete, 
+// so it is running in the background while the gb server is up. it will
+// log "10836674298 spiderdb bytes scanned for waiting tree re-population"
+// periodically in the log as it tries to do a complete spiderdb scan 
+// every 24 hours. it should not be necessary to scan spiderdb more than
+// once, but it seems we are leaking ips somehow so we do the follow-up
+// scans for now. (see populateWaitingTreeFromSpiderdb() in Spider.cpp)
+//
+// any host in our group can spider a request in doledb, but they must lock it
 // by calling getLocks() first and all hosts in the group must grant
 // them the lock for that url otherwise they remove all the locks and
 // try again on another spiderRequest in doledb.

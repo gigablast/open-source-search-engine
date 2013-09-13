@@ -678,6 +678,8 @@ bool Proxy::handleRequest (TcpSocket *s){
 			userId32b = ui->m_userId32;
 			break;
 		}
+		// code is invalid if is not for an old client
+		if ( userId32b == 0 ) code = NULL;
 	}
 	// if we have both a code and userid, check to see if it is correct
 	if ( code ) {
@@ -3545,7 +3547,7 @@ bool Proxy::hitCreditCard ( StateUser *su ) {
 	//
 	// INSERT YOUR secret transaction/api key for authorize.net
 	//
-#ifdef _PRIVATESTUFF_
+#ifdef PRIVATESTUFF
 	url.safePrintf("&x_tran_key=%s",g_secret_tran_key);
 	url.safePrintf("&x_login=%s",g_secret_api_key);
 #else

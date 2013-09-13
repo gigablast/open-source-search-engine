@@ -289,6 +289,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		long clen;
 		char *coll = hr->getString("c",&clen,"",NULL);
 		if ( coll ) sb.safePrintf("&c=%s",coll);
+		// forward the "ff" family filter as well
+		long ff = hr->getLong("ff",0);
+		if ( ff ) sb.safePrintf("&ff=%li",ff);
 		// provide hash of the query so clients can't just pass in
 		// a bogus id to get search results from us
 		unsigned long h32 = hash32n(qstr);
@@ -343,7 +346,11 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			      " &nbsp;&nbsp;&nbsp;&nbsp; "
 
 				  /*  SEO functionality not included yet - so redir to gigablast. */				  
+#ifdef PRIVATESTUFF
+			      "<a title=\"Rank higher in Google\" href='/seo'>"
+#else
 			      "<a title=\"Rank higher in Google\" href='https://www.gigablast.com/seo'>"
+#endif
 			      "seo"
 			      "</a>"
 
@@ -356,6 +363,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 
 			      " &nbsp;&nbsp;&nbsp;&nbsp; "
 
+			      // i'm not sure why this was removed. perhaps
+			      // because it is not working yet because of
+			      // some bugs...
 			      "<!-- <a title=\"Advanced web search\" "
 			      "href=/adv.html>"
 			      "advanced"
@@ -2071,7 +2081,11 @@ static int printResult ( SafeBuf &sb,
 		//	      "c=%s&\">scoring</a>",
 		//	      coll );
 		//sb.safePrintf(" - <a href=\"/print?c=%s&",coll);
+#ifdef PRIVATESTUFF
+		sb.safePrintf(" - <a href=\"/seo?");//c=%s&",coll);
+#else
 		sb.safePrintf(" - <a href=\"https://www.gigablast.com/seo?");//c=%s&",coll);
+#endif
 		//sb.safePrintf("d=%lli",mr->m_docId);
 		sb.safePrintf("u=");
 		sb.urlEncode ( url , gbstrlen(url) , false );
@@ -3238,7 +3252,11 @@ bool printPairScore ( SafeBuf &sb , SearchInput *si , PairScore *ps ,
 	sb.safePrintf("<td>"
 		      //"<a href=\"/print?d="
 		      //"&page=4&recycle=1&"
+#ifdef PRIVATESTUFF
+		      "<a href=\"/seo?d="
+#else
 		      "<a href=\"https://www.gigablast.com/seo?d="
+#endif
 		      "%lli"
 		      "&page=sections&"
 		      "hipos=%li&c=%s\">"
@@ -3316,7 +3334,11 @@ bool printPairScore ( SafeBuf &sb , SearchInput *si , PairScore *ps ,
 		      //"<a href=\"/print?d="
 		      //"%lli"
 		      //"&page=4&recycle=1&"
+#ifdef PRIVATESTUFF
+		      "<a href=\"/seo?d="
+#else
 		      "<a href=\"https://www.gigablast.com/seo?d="
+#endif
 		      "%lli"
 		      "&page=sections&"
 		      "hipos=%li&c=%s\">"

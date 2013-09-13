@@ -1715,6 +1715,23 @@ bool Rdb::needsDump ( ) {
 	if ( m_useTree) {if(m_tree.is90PercentFull() ) return true;}
 	else            if(m_buckets.needsDump() )     return true;
 
+	// if adding to doledb and it has been > 1 day then force a dump
+	// so that all the negative keys in the tree annihilate with the
+	// keys on disk to make it easier to read a doledb list
+	if ( m_rdbId != RDB_DOLEDB ) return false;
+
+	// set this if not valid
+	//static long s_lastDumpTryTime = -1;
+	//if ( s_lastDumpTryTime == -1 )
+	//	s_lastDumpTryTime = getTimeLocal();
+	// try to dump doledb every 24 hrs
+	//long now = getTimeLocal();
+	//if ( now - s_lastDumpTryTime >= 3600*24 ) return true;
+
+	// or dump doledb if a ton of negative recs...
+	if ( m_tree.getNumNegativeKeys() > 50000 ) return true;
+
+	// otherwise, no need to dump doledb just yet
 	return false;
 }
 

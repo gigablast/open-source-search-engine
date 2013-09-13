@@ -7995,6 +7995,10 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m++;
 
+	/*
+
+	  MDW: use the "onsite" directive in the url filters page now...
+
 	m->m_title = "only spider links from same host";
 	m->m_desc  = "If this is true the spider will only harvest links "
 		"to pages that are contained on the same host as the page "
@@ -8012,6 +8016,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_group = 0;
 	m++;
+	*/
 
 	m->m_title = "do not re-add old outlinks more than this many days";
 	m->m_desc  = "If less than this many days have elapsed since the "

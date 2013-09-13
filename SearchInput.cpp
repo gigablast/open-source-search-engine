@@ -797,6 +797,7 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	}
 
 
+	m_familyFilter = r->getLong("ff",0);
 
 	long codeLen;
 	char *code = r->getString ("code",&codeLen,NULL);

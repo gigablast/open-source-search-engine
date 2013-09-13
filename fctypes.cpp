@@ -1817,10 +1817,15 @@ long long gettimeofdayInMillisecondsGlobal() {
 	return gettimeofdayInMillisecondsSynced();
 }
 
+#include "Threads.h"
+
 long long gettimeofdayInMillisecondsSynced() {
 	// if in a sig handler then return g_now
 	//if ( g_inSigHandler ) return g_nowGlobal;
-	if ( g_inSigHandler ) { char *xx = NULL; *xx = 0; }
+	// i find that a pthread can call this function even though
+	// a signal handler is underway in the main thread!
+	if ( g_inSigHandler && ! g_threads.amThread() ) { 
+		char *xx = NULL; *xx = 0; }
 	// sanity check
 	if ( ! isClockInSync() ) { char *xx = NULL; *xx = 0; }
 	//if ( ! g_clockInSync ) 
@@ -1841,7 +1846,10 @@ long long gettimeofdayInMillisecondsSynced() {
 long long gettimeofdayInMillisecondsGlobalNoCore() {
 	// if in a sig handler then return g_now
 	//if ( g_inSigHandler ) return g_nowGlobal;
-	if ( g_inSigHandler ) { char *xx = NULL; *xx = 0; }
+	// i find that a pthread can call this function even though
+	// a signal handler is underway in the main thread!
+	if ( g_inSigHandler && ! g_threads.amThread() ) { 
+		char *xx = NULL; *xx = 0; }
 	// sanity check
 	//if ( ! g_clockInSync ) { char *xx = NULL; *xx = 0; }
 	//if ( ! g_clockInSync ) 
@@ -1873,7 +1881,10 @@ uint64_t gettimeofdayInMicroseconds(void) {
 long long gettimeofdayInMilliseconds() {
 	// if in a sig handler then return g_now
 	//if ( g_inSigHandler ) return g_now;
-	if ( g_inSigHandler ) { char *xx = NULL; *xx = 0; }
+	// i find that a pthread can call this function even though
+	// a signal handler is underway in the main thread!
+	if ( g_inSigHandler && ! g_threads.amThread() ) { 
+		char *xx = NULL; *xx = 0; }
 	// this isn't async signal safe...
 	struct timeval tv;
 	//g_loop.disableTimer();
@@ -1900,7 +1911,10 @@ time_t getTime () {
 time_t getTimeLocal () {
 	// if in a sig handler then return g_now/1000
 	//if ( g_inSigHandler ) return (time_t)(g_now / 1000);
-	if ( g_inSigHandler ) { char *xx = NULL; *xx = 0; }
+	// i find that a pthread can call this function even though
+	// a signal handler is underway in the main thread!
+	if ( g_inSigHandler && ! g_threads.amThread() ) { 
+		char *xx = NULL; *xx = 0; }
 	// get time now
 	unsigned long now = gettimeofdayInMilliseconds() / 1000;
 	// and adjust it
