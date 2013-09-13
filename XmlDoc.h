@@ -1502,6 +1502,8 @@ class XmlDoc {
 	bool doesUrlMatchDiffbotProcessPattern() ;
 	bool doesPageContentMatchDiffbotProcessPattern() ;
 	char *hashJSON ( HashTableX *table );
+	long *nukeJSONObjects ( ) ;
+	long m_joc;
 
 
 	//

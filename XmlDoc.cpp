@@ -15697,7 +15697,8 @@ bool XmlDoc::logIt ( ) {
 
 
 	if ( g_conf.m_useDiffbot )
-		sb.safePrintf("diffbotjsonobjects=%li ",m_diffbotJSONCount);
+		sb.safePrintf("diffbotjsonobjects=%li ",
+			      (long)m_diffbotJSONCount);
 
 	if ( m_siteValid )
 		sb.safePrintf("site=%s ",ptr_site);
@@ -16771,6 +16772,123 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 			    &m_diffbotPageProcessPatternMatchValid);
 }
 
+// . returns ptr to status
+// . diffbot uses this to remove the indexed json pages associated with
+//   a url. each json object is basically its own url. a json object
+//   url is the parent page's url with a -diffbot-%li appended to it
+//   where %li is the object # starting at 0 and incrementing from there.
+// . XmlDoc::m_diffbotJSONCount is how many json objects the parent url had.
+long *XmlDoc::nukeJSONObjects ( ) {
+	// use this
+	static long s_return = 1;
+	// if none, we are done
+	if ( m_diffbotJSONCount <= 0 ) return &s_return;
+
+	// new guy here
+	if ( ! m_dx ) {
+		try { m_dx = new ( XmlDoc ); }
+		catch ( ... ) {
+			g_errno = ENOMEM;
+			log("xmldoc: failed to alloc m_dx");
+			return NULL;
+		}
+		mnew ( m_dx , sizeof(XmlDoc),"xmldocdx");
+		//
+		// reset count for for loop below
+		//
+		m_joc = 0;
+	}
+
+
+	// scan down each
+	for ( ; m_joc < m_diffbotJSONCount ; ) {
+		// if m_dx has no url set, call set4 i guess
+		if ( ! m_dx->m_firstUrlValid ) {
+			// make the fake url for this json object for indexing
+			SafeBuf fakeUrl;
+			fakeUrl.set ( m_firstUrl.getUrl() );
+			// append -diffbot-0 etc. for fake url
+			fakeUrl.safePrintf("-diffbot-%li",m_joc);
+			// this can go on the stack since set4() copies it
+			SpiderRequest sreq;
+			sreq.reset();
+			// string ptr
+			char *url = fakeUrl.getBufStart();
+			// use this as the url
+			strcpy( sreq.m_url, url );
+			// parentdocid of 0
+			long firstIp = hash32n ( url );
+			if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
+			sreq.setKey( firstIp,0LL, false );
+			sreq.m_isInjecting   = 1; 
+			sreq.m_isPageInject  = 1;
+			sreq.m_hopCount      = 0;
+			sreq.m_hopCountValid = 1;
+			sreq.m_fakeFirstIp   = 1;
+			sreq.m_firstIp       = firstIp;
+			// set this
+			if (!m_dx->set4 ( &sreq       ,
+					  NULL        ,
+					  m_coll  ,
+					  NULL        , // pbuf
+					  // give it a niceness of 1, we have 
+					  // to be careful since we are a 
+					  // niceness of 0!!!!
+					  m_niceness, // 1 , 
+					  // inject this content
+					  NULL,//m_diffbotObj, // content ,
+					  //
+					  // DELETE IT
+					  //
+					  true, // deleteFromIndex ,!!!!
+					  0, // forcedIp ,
+					  CT_JSON, // contentType ,
+					  0, // lastSpidered ,
+					  false )) // hasMime
+				// g_errno should be set!
+				return NULL;
+			// we are indexing json objects, don't use all these
+			m_dx->m_useClusterdb  = false;
+			m_dx->m_useSpiderdb   = false;
+			m_dx->m_useTagdb      = false;
+			m_dx->m_usePlacedb    = false;
+			m_dx->m_useLinkdb     = false;
+			//m_dx->m_isDiffbotJSONObject = true;
+		}
+
+		// when the indexdoc completes, or if it blocks, call us!
+		// we should just pass through here
+		m_dx->setCallback ( m_masterState , m_masterLoop );
+
+		// . inject the content of the json using this fake url
+		// . return -1 if this blocks
+		// . if m_dx got its msg4 reply it ends up here, in which
+		//   case do NOT re-call indexDoc() so check for
+		//   m_listAdded.
+		if ( ! m_dx->m_listAdded && ! m_dx->indexDoc ( ) ) 
+			return (long *)-1; 
+		// critical error on our part trying to index it?
+		// does not include timeouts or 404s, etc. mostly just
+		// OOM errors.
+		if ( g_errno ) return NULL;
+		// but gotta set this crap back
+		//log("diffbot: resetting %s",m_dx->m_firstUrl.m_url);
+		// clear for next guy if there is one. clears 
+		// m_dx->m_contentValid so the set4() can be called again above
+		m_dx->reset();
+		// try to do more json objects indexed from this parent doc
+		m_joc++;
+	}
+
+	// nuke it
+	mdelete ( m_dx , sizeof(XmlDoc), "xddx" );
+	delete  ( m_dx );
+	m_dx = NULL;
+
+	return &s_return;
+}
+
+
 void getMetaListWrapper ( void *state ) {
 	XmlDoc *THIS = (XmlDoc *)state;
 	// make sure has not been freed from under us!
@@ -17471,7 +17589,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			SafeBuf fakeUrl;
 			fakeUrl.set ( m_firstUrl.getUrl() );
 			// append -diffbot-0 etc. for fake url
-			fakeUrl.safePrintf("-diffbot-%li",m_diffbotJSONCount);
+			fakeUrl.safePrintf("-diffbot-%li",
+					   (long)m_diffbotJSONCount);
 			m_diffbotJSONCount++;
 			// this can go on the stack since set4() copies it
 			SpiderRequest sreq;
