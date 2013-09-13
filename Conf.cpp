@@ -158,10 +158,13 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	g_conf.m_indexDeletes = true;
 
 	// leave it turned off for diffbot since it always needs to be crawling
-#ifndef DIFFBOT
-	// these off
+#ifdef DIFFBOT
+	// force spiders on
+	g_conf.m_spideringEnabled = true;
+#else
+	// always force off on startup if not diffbot
 	g_conf.m_spideringEnabled = false;
-#endif
+#end
 	// this off
 	g_conf.m_repairingEnabled = false;
 	// make this 1 day for now (in seconds)

@@ -11808,6 +11808,14 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
+	// empty content, do not send to diffbot then
+	char **u8 = getUtf8Content();
+	if ( ! u8 || u8 == (char **)-1 ) return (SafeBuf *)u8;
+	if ( ! *u8 ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
 	// do not send to diffbot if its binary!
 	char *ib = getIsBinary();
 	if ( ! ib || ib == (void *)-1 ) return (SafeBuf *)ib;
@@ -13165,6 +13173,10 @@ char *XmlDoc::getIsBinary ( ) {
 	char *send = s + size_utf8Content - 1;
 	// for now just count the binary chars
 	long count = 0;
+
+	// no content?
+	if ( ! s ) return &m_isBinary;
+
 	for ( ; s < send ; s += getUtf8CharSize(s) ) {
 		// yield
 		QUICKPOLL(m_niceness);
@@ -13274,7 +13286,7 @@ char **XmlDoc::getFilteredContent ( ) {
 	if ( *ct == CT_PPT ) filterable = true;
 	if ( *ct == CT_PS  ) filterable = true;
 
-	// if its a jpeg, gif, etc. bail now
+	// if its a jpeg, gif, text/css etc. bail now 
 	if ( ! filterable ) {
 		m_filteredContent      = NULL;
 		m_filteredContentLen   = 0;
@@ -14122,7 +14134,9 @@ char **XmlDoc::getUtf8Content ( ) {
 	}
 
 	// recycle?
-	if ( m_cr->m_recycleContent || m_recycleContent ) {
+	if ( m_cr->m_recycleContent || m_recycleContent ||
+	     // if trying to delete from index, load from old titlerec
+	     m_deleteFromIndex ) {
 		// get the old xml doc from the old title rec
 		XmlDoc **pod = getOldXmlDoc ( );
 		if ( ! pod || pod == (void *)-1 ) return (char **)pod;
@@ -14143,7 +14157,9 @@ char **XmlDoc::getUtf8Content ( ) {
 		}
 		// if could not find title rec and we are docid-based then
 		// we can't go any further!!
-		if ( m_setFromDocId ) {
+		if ( m_setFromDocId ||
+		     // it should be there if trying to delete as well!
+		     m_deleteFromIndex ) {
 			log("xmldoc: null utf8 content for docid-based "
 			    "titlerec lookup which was not found");
 			ptr_utf8Content = NULL;
@@ -15672,7 +15688,12 @@ bool XmlDoc::logIt ( ) {
 	// . in PageInject.cpp we do not have a valid priority without
 	//   blocking because we did a direct injection!
 	//   so ignore this!!
-	if ( ! getIsInjecting() ) {
+	// . a diffbot json object, an xmldoc we set from a json object
+	//   in a diffbot reply, is a childDoc (m_isChildDoc) is true 
+	//   and does not have a spider priority. only the parent doc
+	//   that we used to get the diffbot reply (array of json objects)
+	//   will have the spider priority
+	if ( ! getIsInjecting() && ! m_isDiffbotJSONObject ) {
 		long *priority = getSpiderPriority();
 		if ( ! priority || priority==(void *)-1){char *xx=NULL;*xx=0;}
 		if ( m_priorityValid )
@@ -16813,7 +16834,9 @@ long *XmlDoc::nukeJSONObjects ( ) {
 			m_dx->m_useLinkdb     = false;
 			m_dx->m_isChildDoc    = true;
 			m_dx->m_deleteFromIndex = true;
-			//m_dx->m_isDiffbotJSONObject = true;
+			// we need this because only m_dx->m_oldDoc will
+			// load from titledb and have it set
+			m_dx->m_isDiffbotJSONObject = true;
 		}
 
 		// when the indexdoc completes, or if it blocks, call us!
@@ -16964,6 +16987,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		m_langId = 1;
 		m_siteNumInlinksValid = true;
 		m_siteNumInlinks = 0;
+		m_isIndexed = true;
+		m_isIndexedValid = true;
 	}
 
 	// get our checksum
