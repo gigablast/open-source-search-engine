@@ -196,6 +196,9 @@ class SearchInput *g_si = NULL;
 
 bool SearchInput::set ( TcpSocket *sock , HttpRequest *r , Query *q ) {
 
+	// save it now
+	m_socket = sock;
+
 	// get coll rec
 	long  collLen;
 	char *coll = r->getString ( "c" , &collLen );

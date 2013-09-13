@@ -285,6 +285,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// show gigabits?
 		long gb = hr->getLong("gigabits",0);
 		if ( gb >= 1 ) sb.safePrintf("&gigabits=%li",gb);
+		// propagate collection
+		long clen;
+		char *coll = hr->getString("c",&clen,"",NULL);
+		if ( coll ) sb.safePrintf("&c=%s",coll);
 		// provide hash of the query so clients can't just pass in
 		// a bogus id to get search results from us
 		unsigned long h32 = hash32n(qstr);
@@ -390,8 +394,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		       );
 		// contents of search box
 		sb.htmlEncode ( qstr , qlen , false );
-		sb.safePrintf ("\">"
-			       "<input type=submit value=\"Search\" border=0>"
+		sb.safePrintf ("\">");
+		// propagate collection on subsequent searches
+		sb.safePrintf("<input name=c type=hidden value=\"%s\">",coll);
+		sb.safePrintf("<input type=submit value=\"Search\" border=0>"
 			       "<br>"
 			       "<br>"
 			       "Try your search (not secure) on: &nbsp;&nbsp; "
@@ -1186,7 +1192,7 @@ bool gotResults ( void *state ) {
 		// print the word
 		char *t    = qw->m_word; 
 		long  tlen = qw->m_wordLen;
-		sb.utf8Encode ( t , tlen );
+		sb.utf8Encode2 ( t , tlen );
 		sb.safePrintf (" ");
 	}
 	// print tail if we had ignored terms
@@ -1246,7 +1252,7 @@ bool gotResults ( void *state ) {
 			       qe2 );
 		// close it up
 		sb.safePrintf ("\"><i><b>");
-		sb.utf8Encode(st->m_spell, len);
+		sb.utf8Encode2(st->m_spell, len);
 		// then finish it off
 		sb.safePrintf ("</b></i></a></font>\n<br><br>\n");
 	}
@@ -1830,13 +1836,13 @@ static int printResult ( SafeBuf &sb,
 				backTag,
 				0,
 				0 ); // niceness
-		//if (!sb.utf8Encode(tt, hlen)) return false;
+		//if (!sb.utf8Encode2(tt, hlen)) return false;
 		if ( ! sb.brify ( tt,hlen,0,cols) ) return false;
 	}
 	else if ( str && strLen ) {
 		// determine if TiTle wraps, if it does add a <br> count for
 		// each wrap
-		//if (!sb.utf8Encode(str , strLen )) return false;
+		//if (!sb.utf8Encode2(str , strLen )) return false;
 		if ( ! sb.brify ( str,strLen,0,cols) ) return false;
 	}
 	// . use "UNTITLED" if no title

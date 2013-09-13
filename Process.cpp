@@ -1396,7 +1396,7 @@ void Process::disableTreeWrites ( ) {
 	}
 	// disable all spider trees and tables
 	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
-		SpiderColl *sc = g_spiderCache.getSpiderColl(i);
+		SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(i);
 		if ( ! sc ) continue;
 		sc->m_waitingTree .disableWrites();
 		sc->m_waitingTable.disableWrites();
@@ -1413,7 +1413,7 @@ void Process::enableTreeWrites ( ) {
 	}
 	// enable all waiting trees
 	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
-		SpiderColl *sc = g_spiderCache.getSpiderColl(i);
+		SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(i);
 		if ( ! sc ) continue;
 		sc->m_waitingTree .enableWrites();
 		sc->m_waitingTable.enableWrites();

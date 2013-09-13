@@ -24,6 +24,13 @@
 #include "Msg4.h"
 #include "hash.h"
 
+// for diffbot, this is for xmldoc.cpp to update CollectionRec::m_crawlInfo
+// which has m_pagesCrawled and m_pagesProcessed.
+bool updateCrawlInfo ( CollectionRec *cr , 
+		       void *state ,
+		       void (* callback)(void *state) ,
+		       bool useCache = true ) ;
+
 ///////////////////////////////////////
 //
 // QUICK OVERVIEW
@@ -828,6 +835,8 @@ class SpiderColl {
 
 	bool      load();
 
+	long getTotalOutstandingSpiders ( ) ;
+
 	key128_t m_firstKey;
 	// spiderdb is now 128bit keys
 	key128_t m_nextKey;
@@ -966,6 +975,8 @@ class SpiderCache {
 	// what SpiderColl does a SpiderRec with this key belong?
 	SpiderColl *getSpiderColl ( collnum_t collNum ) ;
 
+	SpiderColl *getSpiderCollIffNonNull ( collnum_t collNum ) ;
+
 	// called by main.cpp on exit to free memory
 	void reset();
 
@@ -1024,7 +1035,7 @@ class Msg12 {
 };
 
 void handleRequest12 ( UdpSlot *udpSlot , long niceness ) ;
-
+void handleRequestc1 ( UdpSlot *slot , long niceness ) ;
 
 // . the spider loop
 // . it gets urls to spider from the SpiderCache global class, g_spiderCache

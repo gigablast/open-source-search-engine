@@ -44,6 +44,7 @@
 #include "Highlight.h"
 #include "Wiktionary.h"
 #include "seo.h" // Msg99Request etc.
+#include <regex.h>
 
 #define MAXDOCLEN (1024*1024)
 
@@ -97,6 +98,8 @@ static bool getWordPosVec ( Words *words ,
 
 static void getMetaListWrapper ( void *state ) ;
 
+char *getNextJSONObject ( char *p ) ;
+
 XmlDoc::XmlDoc() { 
 	for ( long i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
 	m_freed = false;
@@ -108,6 +111,7 @@ XmlDoc::XmlDoc() {
 	//m_contactDoc = NULL;
 	m_rootDoc    = NULL;
 	m_oldDoc     = NULL;
+	m_dx = NULL;
 	// reset all *valid* flags to false
 	void *p    = &m_VALIDSTART;
 	void *pend = &m_VALIDEND;
@@ -172,6 +176,21 @@ XmlDoc::~XmlDoc() {
 static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
+
+	m_diffbotReplyError = 0;
+
+	m_downloadAttempted = false;
+
+	m_incrementedAttemptsCount = false;
+
+	if ( m_dx ) {
+		mdelete ( m_dx , sizeof(XmlDoc), "xddx" );
+		delete  ( m_dx );
+		m_dx = NULL;
+		//log("diffbot: deleting m_dx2");
+	}
+
+	m_isDiffbotJSONObject = false;
 
 	m_tlbufTimer = 0LL;
 	m_gsbuf.reset();
@@ -1791,6 +1810,70 @@ bool XmlDoc::indexDoc ( ) {
 		m_masterState = this;
 	}
 
+	// ensure that CollectionRec::m_globalCrawlInfo (spider stats)
+	// is at least 1 minute in sync with counts of
+	// all hosts in network. this returns false if it sent  out requests
+	// to update the counts from all the hosts in the network, and
+	// when it updates CollectionRec::m_crawlInfoGlobal with all the
+	// requests from each hosts in the network it will call the
+	// specified callback, m_masterLoop with m_masterState. this code
+	// is all in Spider.cpp.
+	setStatus ( "updating crawl info" );
+	if ( ! updateCrawlInfo ( m_cr , m_masterState , m_masterLoop ) )
+		return false;
+
+
+
+	// if diffbot, count as crawled now
+	if ( g_conf.m_useDiffbot && 
+	     ! m_isDiffbotJSONObject && 
+	     ! m_incrementedAttemptsCount ) {
+		// do not repeat
+		m_incrementedAttemptsCount = true;
+		// this is just how many urls we tried to index
+		m_cr->m_localCrawlInfo.m_pageIndexAttempts++;
+		// need to save collection rec now during auto save
+		m_cr->m_needsSave = true;
+		// update this just in case we are the last url crawled
+		long long now = gettimeofdayInMillisecondsGlobal();
+		m_cr->m_diffbotCrawlEndTime = now;
+	}
+
+
+	// if we are being called from Spider.cpp and we met our max
+	// to crawl requirement, then bail out on this. this might
+	// become true when we are in the middle of processing this url...
+	if ( g_conf.m_useDiffbot &&
+	     ! m_isDiffbotJSONObject &&
+	     // this is just for this collection, from all hosts in network
+	     m_cr->m_globalCrawlInfo.m_pageDownloadAttempts >=
+	     m_cr->m_diffbotMaxToCrawl ) {
+		m_cr->m_spideringEnabled = false;
+		log("diffbot: abandoning url because we hit crawl limit "
+		    "of %lli. Disabling spiders.",m_cr->m_diffbotMaxToCrawl);
+		m_indexCode = EABANDONED;
+		m_indexCodeValid = true;
+		g_errno = m_indexCode;
+		return true;
+	}
+
+	// likewise if we hit the max processing limit...
+	if ( g_conf.m_useDiffbot &&
+	     ! m_isDiffbotJSONObject &&
+	     m_cr->m_globalCrawlInfo.m_pageProcessAttempts >=
+	     m_cr->m_diffbotMaxToProcess ) {
+		m_cr->m_spideringEnabled = false;
+		log("diffbot: abandoning url because we hit process limit "
+		    "of %lli. Disabling spiders.",m_cr->m_diffbotMaxToProcess);
+		m_indexCode = EABANDONED;
+		m_indexCodeValid = true;
+		g_errno = m_indexCode;
+		return true;
+	}
+
+
+	setStatus("indexing doc");
+
 	// maybe a callback had g_errno set?
 	if ( g_errno ) return true;
 
@@ -2198,7 +2281,8 @@ long *XmlDoc::getIndexCode ( ) {
 	}
 	*/
 
-	// TCPTIMEDOUT, NOROUTETOHOST, etc.
+	// . TCPTIMEDOUT, NOROUTETOHOST, etc.
+	// . this will be the reply from diffbot.com if using diffbot
 	long *dstatus = getDownloadStatus();
 	if ( ! dstatus || dstatus == (void *)-1 ) return (long *)dstatus;
 	if ( *dstatus ) {
@@ -2307,6 +2391,13 @@ long *XmlDoc::getIndexCode ( ) {
 		return &m_indexCode;
 	}
 		
+	// debug point
+	//if ( m_cr->m_localCrawlInfo.m_pageDownloadAttempts >= 2 ) {
+	//	m_indexCode = ETCPTIMEDOUT;
+	//	m_indexCodeValid = true;
+	//	return &m_indexCode;
+	//}
+
 	// if this page is hijacked, toss it!
 	char *hj = getIsHijacked();
 	if ( ! hj || hj == (char *)-1 ) return (long *)hj;
@@ -2458,6 +2549,16 @@ long *XmlDoc::getIndexCode ( ) {
 	}
 	if ( *priority  == SPIDER_PRIORITY_BANNED ) {
 		m_indexCode      = EDOCBANNED;
+		m_indexCodeValid = true;
+		return &m_indexCode;
+	}
+
+	// if using diffbot and the diffbot reply had a time out error
+	// or otherwise... diffbot failure demands a re-try always i guess
+	SafeBuf *dbr = getDiffbotReply();
+	if ( ! dbr || dbr == (void *)-1 ) return (long *)dbr;
+	if ( m_diffbotReplyValid && m_diffbotReplyError ) {
+		m_indexCode= m_diffbotReplyError;
 		m_indexCodeValid = true;
 		return &m_indexCode;
 	}
@@ -3989,13 +4090,12 @@ char *XmlDoc::getIsRSS ( ) {
 	return &m_isRSS2;
 }
 
-//
-// . get and set the parser classes and other parameters on demand
-// . makes it easy to keep things valid and deal with order dependencies in
-//   the most efficient way possible
-//
-
+// . this function should really be called getTagTokens() because it mostly
+//   works on HTML documents, not XML, and just sets an array of ptrs to
+//   the tags in the document, including ptrs to the text in between
+//   tags. 
 Xml *XmlDoc::getXml ( ) {
+
 	// return it if it is set
 	if ( m_xmlValid ) return &m_xml;
 
@@ -11604,6 +11704,209 @@ long *XmlDoc::getSiteHash32 ( ) {
 
 
 
+
+void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
+
+	XmlDoc *THIS = (XmlDoc *)state;
+
+	// wha?
+	if ( g_errno ) {
+		log("diffbot: http error2 %s",mstrerror(g_errno));
+		THIS->m_diffbotReplyError = g_errno;
+	}
+
+	//char *buf = s->m_readBuf;
+	// do not allow TcpServer.cpp to free it since m_diffbotReply
+	// is now responsible for that
+	//s->m_readBuf = NULL;
+
+	bool hadError = false;
+
+	// set the mime
+	HttpMime mime;
+	if ( s->m_readOffset>0 && 
+	     // set location url to "null"
+	     ! mime.set ( s->m_readBuf , s->m_readOffset , NULL ) ) {
+		// g_errno should be set
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		// note it
+		log("xmldoc: error setting diffbot mime");
+		THIS->m_diffbotReplyError = EDIFFBOTMIMEERROR;
+	}
+
+	// check the status
+	if ( ! hadError && mime.getHttpStatus() != 200 ) {
+		THIS->m_diffbotReplyError = EDIFFBOTBADHTTPSTATUS;
+		log("xmldoc: diffbot reply mime was %li",
+		    mime.getHttpStatus());
+	}
+
+
+	// get page content
+	char *page = NULL;
+	long  pageLen = 0;
+	if ( ! hadError && mime.getMimeLen() >= 0 )  {
+		page = s->m_readBuf + mime.getMimeLen();
+		char *end = s->m_readBuf + s->m_readOffset;
+		pageLen = end - page;
+	}
+
+	// "-1" means diffbot had an error
+	if ( page &&
+	     page[0] == '-' &&
+	     page[1] == '1' ) {
+		log("xmldoc: diffbot reply was -1");
+		THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
+	}
+
+	// reply is now valid but might be empty
+	THIS->m_diffbotReplyValid = true;
+
+	// increment this counter on a successful reply from diffbot
+	if ( ! THIS->m_diffbotReplyError ) {
+		//THIS->m_cr->m_localCrawlInfo.m_pagesProcessed++;
+		// log it
+		log("build: processed page %s",THIS->m_firstUrl.m_url);
+		// sanity!
+		// crap, this can happen if we try to get the metalist
+		// of an old page for purposes of incremental indexing or
+		// deletion. we do not re-download it, but it seems we try
+		// to re-process it...
+		if ( THIS->m_cr->m_localCrawlInfo.m_pageProcessAttempts >
+		     THIS->m_cr->m_localCrawlInfo.m_pageDownloadAttempts ) {
+			char *xx=NULL;*xx=0; }
+		// need to save collection rec now during auto save
+		THIS->m_cr->m_needsSave = true;
+		// set the reply properly
+		if ( ! THIS->m_diffbotReply.reserve ( pageLen + 1 ) ) 
+			goto skip;
+		THIS->m_diffbotReply.safeMemcpy ( page , pageLen );
+		// tack on a \0 but don't increment m_length
+		THIS->m_diffbotReply.nullTerm();
+		// convert the \u1f23 to utf8 (\n and \r as well)
+		THIS->m_diffbotReply.decodeJSONToUtf8 ( THIS->m_niceness );
+		THIS->m_diffbotReply.nullTerm();
+	}
+
+skip:	     
+	// resume. this checks g_errno for being set.
+	THIS->m_masterLoop ( THIS->m_masterState );
+}
+
+// the diffbot reply will be a list of json objects we want to index
+SafeBuf *XmlDoc::getDiffbotReply ( ) {
+
+	// if not connecting with diffbot, then just return an empty safebuf
+	if ( ! g_conf.m_useDiffbot ) 
+		return &m_diffbotReply;
+
+	if ( m_isDiffbotJSONObject )
+		return &m_diffbotReply;
+
+	if ( m_diffbotReplyValid )
+		return &m_diffbotReply;
+
+	// when respidering an "old" doc, never call this. we already
+	// have the diffbot replies xyz.com/-diffbot-0 and xyz.com/-diffbot-1
+	// etc.
+	//if ( m_setFromTitleRec ) { char *xx = NULL; *xx = 0; }
+
+	// sanity check
+	if ( strstr(m_firstUrl.m_url,"-diffbot-") ) {
+		char *xx=NULL; *xx = 0; }
+
+	// we should not "process" (i.e. send to diffbot) urls that do
+	// not match the supplied CollectionRec::m_diffbotUrlProcessPattern
+	if ( ! doesUrlMatchDiffbotProcessPattern() ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
+	// or if original page content matches the page regex dont hit diffbot
+	if ( ! doesPageContentMatchDiffbotProcessPattern() ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
+	// do not send to diffbot if its binary!
+	char *ib = getIsBinary();
+	if ( ! ib || ib == (void *)-1 ) return (SafeBuf *)ib;
+	if ( *ib ) {
+		log("diffbot: skipping binary page %s",m_firstUrl.m_url);
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
+
+	setStatus("getting diffbot reply");
+
+	char *path = "api";
+	if ( strcmp(m_cr->m_diffbotApi.getBufStart(),"product") == 0 )
+		path = "v2";
+	
+	//
+	// DIFFBOT injection interface TODO
+	//
+	// if we are intercepting a direct injection diffbot request
+	// then we will probably take the exact same parms provided and
+	// just relay them to diffbot here. maybe Diffbot.cpp can set
+	// the original diffbot.com request url in this xmldoc class that
+	// is being inject using the url encoded in that request.
+	//
+
+
+
+	// url can be on the stack since httpserver.cpp makes an http mime
+	// from this url
+	SafeBuf diffbotUrl;
+	// TODO: make sure "api" works as hostname for not just product...
+	diffbotUrl.safePrintf("http://www.diffbot.com/api/%s?token=%s&url="
+	//diffbotUrl.safePrintf("http://54.212.86.74/api/%s?token=%s&u="
+			      // this is like "article" or "product" etc.
+			      , m_cr->m_diffbotApi.getBufStart()
+			      , m_cr->m_diffbotToken.getBufStart()
+			      );
+
+	// give diffbot the url to process
+	diffbotUrl.urlEncode ( m_firstUrl.getUrl() );
+	// append this just in case the next thing doesn't have it.
+	if ( m_cr->m_diffbotApiQueryString.length() &&
+	     m_cr->m_diffbotApiQueryString.getBufStart()[0] != '&' ) 
+		diffbotUrl.pushChar('&');
+	// then user provided parms that are dependent on if it is an
+	// article, product, etc. like "&dontstripads=1" or whatever
+	diffbotUrl.safeStrcpy ( m_cr->m_diffbotApiQueryString.getBufStart());
+	// null term it
+	diffbotUrl.nullTerm();
+
+	log("diffbot: getting %s",diffbotUrl.getBufStart());
+	
+	// count it for stats
+	m_cr->m_localCrawlInfo.m_pageProcessAttempts++;
+
+	if ( ! g_httpServer.getDoc ( diffbotUrl.getBufStart() ,
+				     0 , // ip
+				     0 , // offset
+				     -1 , // size
+				     0 , // ifmodifiedsince
+				     this , // state
+				     gotDiffbotReplyWrapper ,
+				     90*1000, // 90 sec timeout
+				     0,//proxyip
+				     0,//proxyport
+				     10000,//maxtextdoclen
+				     10000,//maxotherdoclen
+				     g_conf.m_spiderUserAgent ) )
+		// return -1 if blocked
+		return (SafeBuf *)-1;
+	// error?
+	if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+	// wha?
+	log("diffbot: http error %s",mstrerror(g_errno));
+	// had an error!
+	return NULL;
+}
+
 char **XmlDoc::getHttpReply ( ) {
 	// both must be valid now
 	if ( m_redirUrlValid && m_httpReplyValid ) {
@@ -11709,6 +12012,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 
 	// if ip is bogus, we are done
 	if ( *ip == 0 || *ip == -1 ) {
+		log("xmldoc: ip is bogus 0 or -1 for %s. skipping download",
+		    m_firstUrl.getUrl());
 		m_httpReplyValid          = true;
 		m_isContentTruncated      = false;
 		m_isContentTruncatedValid = true;
@@ -11765,6 +12070,11 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// validate m_firstIpValid
 	long *pfip = getFirstIp();
 	if ( ! pfip || pfip == (void *)-1 ) return (char **)pfip;
+
+	// robots.txt and css files etc should have m_isChildDoc as true
+	if ( ! m_downloadAttempted && ! m_isChildDoc )
+		// keep track of spider stats
+		m_cr->m_localCrawlInfo.m_pageDownloadAttempts++;
 
 	// we made an attempt to download, so mark it
 	m_downloadAttempted = true;
@@ -12964,6 +13274,8 @@ char **XmlDoc::getFilteredContent ( ) {
 	if ( *ct == CT_JS      ) return &m_filteredContent;
 	if ( m_contentLen == 0 ) return &m_filteredContent;
 
+	// we now support JSON for diffbot
+	if ( *ct == CT_JSON    ) return &m_filteredContent;
 
 	// unknown content types are 0 since it is probably binary... and
 	// we do not want to parse it!!
@@ -13396,6 +13708,9 @@ char **XmlDoc::getRawUtf8Content ( ) {
 	m_rawUtf8ContentSize      = m_filteredContentLen + 1;
 	m_rawUtf8ContentAllocSize = 0;
 
+	// silly json says it is csASCII but it encodes unicode chars like
+	// /u23ef
+
 	// if we are not ascii or utf8 already, encode it into utf8
 	if ( m_rawUtf8ContentSize > 1 && 
 	     csName &&
@@ -13804,7 +14119,11 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 // . get the final utf8 content of the document
 // . all html entities are replaced with utf8 chars
 // . all iframes are expanded
+// . if we are using diffbot then getting the utf8 content should return
+//   the json which is the output from the diffbot api. UNLESS we are getting
+//   the webpage itself for harvesting outlinks to spider later.
 char **XmlDoc::getUtf8Content ( ) {
+
 	// if we already computed it, return that
 	if ( m_utf8ContentValid ) return &ptr_utf8Content;
 
@@ -14031,6 +14350,8 @@ char **XmlDoc::getUtf8Content ( ) {
 	// sanity
 	if ( m_expandedUtf8Content[n] != '\0' ) { char *xx=NULL;*xx=0; }
 
+
+
 	// finally transform utf8 apostrophe's into regular apostrophes
 	// to make parsing easier
 	uint8_t *p   = (uint8_t *)m_expandedUtf8Content;
@@ -14125,8 +14446,11 @@ char **XmlDoc::getUtf8Content ( ) {
 			continue;
 		}
 		// double quotes in utf8
+		// DO NOT do this if type JSON!! json uses quotes as
+		// control characters
 		if ( p[0] == 0xe2 &&
-		     p[1] == 0x80 ) {
+		     p[1] == 0x80 &&
+		     m_contentType != CT_JSON ) {
 			if (p[2] == 0x9c ) {
 				*dst++ = '\"';
 				continue;
@@ -15371,6 +15695,10 @@ bool XmlDoc::logIt ( ) {
 	if ( m_urlFilterNumValid )
 		sb.safePrintf("urlfilternum=%li ",(long)m_urlFilterNum);
 
+
+	if ( g_conf.m_useDiffbot )
+		sb.safePrintf("diffbotjsonobjects=%li ",m_diffbotJSONCount);
+
 	if ( m_siteValid )
 		sb.safePrintf("site=%s ",ptr_site);
 
@@ -16372,6 +16700,76 @@ bool XmlDoc::hashMetaList ( HashTableX *ht        ,
 	return true;
 }
 
+bool checkRegex ( SafeBuf *regex , 
+		  char    *target ,
+		  bool    *boolVal ,
+		  bool    *boolValValid ,
+		  long    *compileError ) {
+	
+	if ( compileError ) *compileError = false;
+
+	if ( *boolValValid ) 
+		return *boolVal;
+
+	// if not using diffbot or there is no regex, it is ok
+	if ( ! g_conf.m_useDiffbot || regex->length() <= 0 ) {
+		*boolVal = true;
+		*boolValValid = true;
+		return boolVal;
+	}
+
+	// whip out the regex shit i guess...
+	regex_t buf;
+	// this will store the compiled regular expression into "buf"
+	long ret = regcomp ( &buf ,
+			     // the actual regular expression to compile
+			     regex->getBufStart() ,
+			     // some flags
+			     REG_EXTENDED|REG_ICASE|REG_NEWLINE|REG_NOSUB);
+	
+	if ( ret ) {
+		//g_errno = ret;
+		if ( compileError ) *compileError = errno;
+		log("xmldoc: diffbot regcomp failed: %s. This should have "
+		    "been tested before crawl was started. Ignoring.",
+		    mstrerror(errno));
+		return true;
+	}
+
+	// now see if it is a match
+	if ( regexec(&buf,target,0,NULL,0) ) *boolVal = true;
+	else                                 *boolVal = false;
+
+	*boolValValid = true;
+	return boolVal;
+}
+
+// . should we send this url off to diffbot or processing?
+// . if the url's downloaded content does not match the provided regex
+//   in m_diffbotPageProcessPattern, then we do not send the url to diffbot
+//   for processing
+// . make sure this regex is pre-tested before starting the crawl
+//   so we know it compiles
+bool XmlDoc::doesUrlMatchDiffbotCrawlPattern() {
+	return checkRegex ( &m_cr->m_diffbotUrlCrawlPattern ,
+			    m_firstUrl.m_url ,
+			    &m_diffbotUrlCrawlPatternMatch,
+			    &m_diffbotUrlCrawlPatternMatchValid);
+}
+
+bool XmlDoc::doesUrlMatchDiffbotProcessPattern() {
+	return checkRegex ( &m_cr->m_diffbotUrlProcessPattern ,
+			    m_firstUrl.m_url ,
+			    &m_diffbotUrlProcessPatternMatch,
+			    &m_diffbotUrlProcessPatternMatchValid);
+}
+bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
+	if ( ! m_utf8ContentValid ) { char *xx=NULL;*xx=0; }
+	return checkRegex ( &m_cr->m_diffbotPageProcessPattern ,
+			    ptr_utf8Content,
+			    &m_diffbotPageProcessPatternMatch,
+			    &m_diffbotPageProcessPatternMatchValid);
+}
 
 void getMetaListWrapper ( void *state ) {
 	XmlDoc *THIS = (XmlDoc *)state;
@@ -16435,15 +16833,37 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// returning from a handler that had an error?
 	if ( g_errno ) return NULL;
 
-
 	// any other indexing issue? hey! g_errno might not be set here
 	//if ( m_indexCode ) { g_errno = m_indexCode; return NULL; }
 
 	// a hacky thing
 	//XmlDoc *od = (XmlDoc *)1;
 
+	bool diffbotEmptyReply = false;
+
+	// fake this for diffbot?
+	if ( g_conf.m_useDiffbot && 
+	     ! m_isDiffbotJSONObject &&
+	     ! doesUrlMatchDiffbotCrawlPattern() ) {
+		// flag it so we only add the SpiderReply to spiderdb and bail
+		diffbotEmptyReply = true;
+		// we should not delete the json objects for this url
+		// from the index just because the user decided to remove
+		// it from her crawl
+		m_isIndexedValid = true;
+		m_isIndexed      = false;
+		m_oldDocValid    = true;
+		m_oldDoc         = NULL;
+	}
+		
+
 	// if "rejecting" from index fake all this stuff
-	if ( m_deleteFromIndex ) {
+	if ( m_deleteFromIndex ||
+	     // if we are using diffbot api and diffbot found no json objects
+	     // or we never even processed the url, we really just want to
+	     // add the SpiderReply for this url to spiderdb and nothing more
+	     diffbotEmptyReply ) {
+		// set these things to bogus values since we don't need them
 		m_contentHash32Valid = true;
 		m_contentHash32 = 0;
 		m_httpStatusValid = true;
@@ -16524,6 +16944,14 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		return m_metaList;
 	}
 
+	// if diffbot reply is empty, don't bother adding anything except
+	// for the spider reply... reply might be "-1" too!
+	if ( g_conf.m_useDiffbot && 
+	     ! m_isDiffbotJSONObject &&
+	     m_diffbotReplyValid &&
+	     m_diffbotReply.length() <= 3 )
+		diffbotEmptyReply = true;
+
 	// . some index code warrant retries, like EDNSTIMEDOUT, ETCPTIMEDOUT,
 	//   etc. these are deemed temporary errors. other errors basically
 	//   indicate a document that will never be indexable and should,
@@ -16535,6 +16963,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	     || *indexCode == EDNSDEAD
 	     || *indexCode == ENETUNREACH
 	     || *indexCode == EHOSTUNREACH
+		// . rejected from a diffbot regex url crawl filter?
+		// . or no json objects returned from diffbot?
+		// . or rejected from the processign regex filter?
+		// . then just add the SpiderReply to avoid respidering
+		|| diffbotEmptyReply
 	     // . treat this as a temporary error i guess
 	     // . getNewSpiderReply() below will clear the error in it and
 	     //   copy stuff over from m_oldsr and m_oldDoc for this case
@@ -16666,15 +17099,34 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	}
 
+	// if using diffbot do not index the content of the web page we
+	// got the json objects from, although, do keep it cached in titledb
+	// because that can be useful
+	if ( g_conf.m_useDiffbot && ! m_isDiffbotJSONObject ) {
+		m_usePosdb      = false;
+		m_useClusterdb  = false;
+	}
+
+
 	// get the old meta list if we had an old doc
 	char *oldList = NULL;
 	long  oldListSize = 0;
-	if ( od ) {
+	if ( od && ! g_conf.m_useDiffbot ) {
 		od->m_useSpiderdb = false;
 		od->m_useTagdb    = false;
 		oldList = od->getMetaList ( true );
 		oldListSize = od->m_metaListSize;
 		if ( ! oldList || oldList ==(void *)-1) return (char *)oldList;
+	}
+
+	// we can't really get the meta list of each json object we may
+	// have indexed in od's diffbot reply buffer because they all
+	// were indexed with their own docids in the "m_dx" code below. so
+	// just delete them and we'll re-add from this doc's diffbot reply.
+	if ( od && g_conf.m_useDiffbot ) {
+		// this returns false if it blocks
+		long *status = od->nukeJSONObjects();
+		if ( ! status || status == (void *)-1) return (char *)status;
 	}
 
 	// . need this if useTitledb is true
@@ -16966,6 +17418,146 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( ! linkSiteHashes || linkSiteHashes == (void *)-1 )
 			return (char *)linkSiteHashes;
 	}
+
+
+	// test json parser
+	//
+	/*
+	char *json = "{\"icon\":\"http://www.pixar.com/sites/default/files/pixar_2012_favicon_0.ico\",\"text\":\"\",\"title\":\"Pixar\",\"type\":\"article\",\"media\":[{\"primary\":\"true\",\"link\":\"http://www.pixar.com/sites/default/files/home_billboard_v7.jpg\",\"type\":\"image\"},{\"link\":\"http://www.pixar.com/sites/default/files/roz1_0.jpg\",\"type\":\"image\"},{\"link\":\"http://www.pixar.com/sites/default/files/home_bu-thumb_v1.jpg\",\"type\":\"image\"},{\"link\":\"http://www.pixar.com/sites/default/files/mu_home_thumb.jpg\",\"type\":\"image\"},{\"link\":\"http://www.pixar.com/sites/default/files/brenda_homepage.jpg\",\"type\":\"image\"}],\"url\":\"http://www.pixar.com/\"}";
+	char *dd = getNextJSONObject ( json );
+	if ( *dd ) { char *xx=NULL;*xx=0; }
+	*/
+
+	///////////
+	//
+	// BEGIN the diffbot json object index hack
+	//
+	// if we are using diffbot, then each json object in the diffbot reply
+	// should be indexed as its own document.
+	//
+	///////////
+	if ( g_conf.m_useDiffbot && ! m_isDiffbotJSONObject ) {
+		// get the reply of json objects from diffbot
+		SafeBuf *dbr = getDiffbotReply();
+		if ( ! dbr || dbr == (void *)-1 ) return (char *)dbr;
+		// make sure diffbot reply is valid for sure
+		if ( ! m_diffbotReplyValid ) { char *xx=NULL;*xx=0; }
+		// if reply is empty, we have no json objects. or if reply
+		// is "-1"
+		if ( m_diffbotReply.length() <= 3 ) goto bustOut;
+		// new guy here
+		if ( ! m_dx ) {
+			try { m_dx = new ( XmlDoc ); }
+			catch ( ... ) {
+				g_errno = ENOMEM;
+				log("xmldoc: failed to alloc m_dx");
+				return NULL;
+			}
+			mnew ( m_dx , sizeof(XmlDoc),"xmldocdx");
+			// init cursor to first json object
+			m_diffbotObj       = m_diffbotReply.getBufStart();
+			m_diffbotJSONCount = 0;
+			// set end of it
+			m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj );
+			// temp null it
+			m_diffbotSavedChar = *m_diffbotObjEnd;
+			*m_diffbotObjEnd = '\0';
+		}
+		// loop back up here to process next json object from below
+	jsonloop:
+		// if m_dx has no url set, call set4 i guess
+		if ( ! m_dx->m_contentValid ) {
+			// make the fake url for this json object for indexing
+			SafeBuf fakeUrl;
+			fakeUrl.set ( m_firstUrl.getUrl() );
+			// append -diffbot-0 etc. for fake url
+			fakeUrl.safePrintf("-diffbot-%li",m_diffbotJSONCount);
+			m_diffbotJSONCount++;
+			// this can go on the stack since set4() copies it
+			SpiderRequest sreq;
+			sreq.reset();
+			// string ptr
+			char *url = fakeUrl.getBufStart();
+			// use this as the url
+			strcpy( sreq.m_url, url );
+			// parentdocid of 0
+			long firstIp = hash32n ( url );
+			if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
+			sreq.setKey( firstIp,0LL, false );
+			sreq.m_isInjecting   = 1; 
+			sreq.m_isPageInject  = 1;
+			sreq.m_hopCount      = 0;
+			sreq.m_hopCountValid = 1;
+			sreq.m_fakeFirstIp   = 1;
+			sreq.m_firstIp       = firstIp;
+			// set this
+			if (!m_dx->set4 ( &sreq       ,
+					  NULL        ,
+					  m_coll  ,
+					  NULL        , // pbuf
+					  // give it a niceness of 1, we have 
+					  // to be careful since we are a 
+					  // niceness of 0!!!!
+					  m_niceness, // 1 , 
+					  // inject this content
+					  m_diffbotObj, // content ,
+					  false, // deleteFromIndex ,
+					  0, // forcedIp ,
+					  CT_JSON, // contentType ,
+					  0, // lastSpidered ,
+					  false )) // hasMime
+				// g_errno should be set!
+				return NULL;
+			// we are indexing json objects, don't use all these
+			m_dx->m_useClusterdb  = false;
+			m_dx->m_useSpiderdb   = false;
+			m_dx->m_useTagdb      = false;
+			m_dx->m_usePlacedb    = false;
+			m_dx->m_useLinkdb     = false;
+
+			m_dx->m_isDiffbotJSONObject = true;
+		}
+
+		// when the indexdoc completes, or if it blocks, call us!
+		// we should just pass through here
+		//xd->setCallback ( this , getMetaListWrapper );
+		m_dx->setCallback ( m_masterState , m_masterLoop );
+
+		// . inject the content of the json using this fake url
+		// . return -1 if this blocks
+		// . if m_dx got its msg4 reply it ends up here, in which
+		//   case do NOT re-call indexDoc() so check for
+		//   m_listAdded.
+		if ( ! m_dx->m_listAdded && ! m_dx->indexDoc ( ) ) 
+			return (char *)-1; 
+		// critical error on our part trying to index it?
+		// does not include timeouts or 404s, etc. mostly just
+		// OOM errors.
+		if ( g_errno ) return NULL;
+		// undo the \0 termination we did above
+		*m_diffbotObjEnd = m_diffbotSavedChar;
+		// we successfully index the json object, skip to next one
+		m_diffbotObj = m_diffbotObjEnd;
+		// point to next json object again
+		m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj );
+		// re-save
+		m_diffbotSavedChar = *m_diffbotObjEnd;
+		// but gotta set this crap back
+		log("diffbot: resetting %s",m_dx->m_firstUrl.m_url);
+		// clear for next guy if there is one. clears 
+		// m_dx->m_contentValid so the set4() can be called again above
+		m_dx->reset();
+		// if more json... this will not be \0
+		if ( *m_diffbotObj ) goto jsonloop;
+	}
+ bustOut:
+	/////
+	//
+	// END the diffbot json object index hack
+	//
+	/////
+
+
 
 	//
 	// CAUTION
@@ -20246,6 +20838,12 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 
 	// reset distance cursor
 	m_dist = 0;
+
+	// hash diffbot's json output here
+	uint8_t *ct = getContentType();
+	if ( ! ct ) return NULL;
+	if ( *ct == CT_JSON ) return hashJSON ( table ); 
+
 
 	// hash the body of the doc first so m_dist is 0 to match
 	// the rainbow display of sections
@@ -25213,8 +25811,11 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 	if ( hi->m_prefix ) plen = gbstrlen ( hi->m_prefix );
 	if ( hi->m_prefix && plen ) {
 		prefixHash = hash64 ( hi->m_prefix , plen );
-		// sanity test, make sure it is in supported list
-		if ( getFieldCode3 ( prefixHash ) == FIELD_GENERIC ) { 
+		// . sanity test, make sure it is in supported list
+		// . hashing diffbot json output of course fails this so
+		//   skip in that case if diffbot
+		if ( ! m_isDiffbotJSONObject &&
+		     getFieldCode3 ( prefixHash ) == FIELD_GENERIC ) { 
 			if (hi->m_desc&&strcmp(hi->m_desc,"custom meta tag")) {
 				char *xx=NULL;*xx=0; }
 		}
@@ -40556,3 +41157,216 @@ SafeBuf *XmlDoc::getQueryLinkBuf(SafeBuf *docIdList, bool doMatchingQueries) {
 // containing a query term...
 //void XmlDoc::getGigabitExcerpts ( ) {
 //}
+
+// . advance p to skip over the json object it is pointing to and return 
+//   ptr to the following json object
+// . deal with nested {}'s
+// . basically skips over current json object in a list of json objects to
+//   point to the next brother object
+char *getNextJSONObject ( char *p ) {
+	// otherwise, *p must be {
+	for ( ; *p && *p != '{' ; p++ );
+	// empty?
+	if ( ! *p ) return p;
+	// count the nests
+	long nest = 0;
+	// skip first {
+	p++;
+	// keep track of in a quote or not
+	bool inQuotes = false;
+	// scan
+	for ( ; *p ; p++ ) {
+		// escaping a quote? ignore quote then.
+		if ( *p == '/' && p[1] == '\"' ) {
+			// skip two bytes then..
+			p++;
+			continue;
+		}
+		// a quote?
+		if ( *p == '\"' ) {
+			inQuotes = ! inQuotes;
+			continue;
+		}
+		// if in a quote, ignore {} in there
+		if ( inQuotes ) continue;
+		// skip if no {}'s
+		if ( *p != '{' && *p !='}' ) continue;
+		// otherwise, check for { or }
+		if ( *p == '{' ) { nest++; continue; }
+		// otherwise, it must be a }
+		nest--;
+		// if we hit the } corresponding to the first }
+		// then stop!
+		if ( nest == -1 ) break;
+	}
+	// done?
+	if ( ! *p ) return p;
+	// must be this then
+	if ( *p != '}' ) { char *xx=NULL;*xx=0; }
+	// skip that
+	p++;
+	// skip til next {
+	for ( ; *p && *p != '{' ; p++ );
+	// done
+	return p;
+}	
+
+char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
+	// get length
+	long fieldLen = gbstrlen(field);
+	// keep track of in a quote or not
+	bool inQuotes = false;
+	char *stringStart = NULL;
+	char *p = json;
+	bool gotOne = false;
+	// scan
+	for ( ; *p ; p++ ) {
+		// escaping a quote? ignore quote then.
+		if ( *p == '/' && p[1] == '\"' ) {
+			// skip two bytes then..
+			p++;
+			continue;
+		}
+		// a quote?
+		if ( *p == '\"' ) {
+			inQuotes = ! inQuotes;
+			// set start of the string if quote is beginning
+			if ( inQuotes ) stringStart = p + 1;
+			// if quote is ending and a colon follows then
+			// it was a json field name. so if it matches the
+			// field we want return the following field for it.
+			else if ( ! inQuotes && 
+				  ! gotOne &&
+				  p[1] == ':' &&
+				  stringStart &&
+				  p - stringStart == fieldLen &&
+				  strncmp(field,stringStart,fieldLen)==0 ) {
+				// now, the next time we set stringStart
+				// it will be set to the VALUE of this field
+				// assuming the field is a STRING!!!!
+				gotOne = true;
+				// return after the quote
+				//return p + 2;
+			}
+			// ok, we got the string after the field string...
+			else if ( ! inQuotes && gotOne ) {
+				if ( valueLen ) *valueLen = p - stringStart;
+				return stringStart;
+			}
+			// keep chugging
+			continue;
+		}
+	}
+	// done, not found
+	return NULL;
+}	
+
+
+// . returns -1 if blocked, returns NULL and sets g_errno on error
+// . hash each json VALUE (not FIELD) ... AND ... hash each json
+//   VALUE with its FIELD like "title:cool" or "description:whatever"
+// . example:
+//   [{"id":"b7df5d33-3fe5-4a6c-8ad4-dad495b586cd","finish":1378322570280,"matched":64,"status":"Stopped","start":1378322184332,"token":"poo","parameterMap":{"token":"poo","seed":"www.alleyinsider.com","api":"article"},"crawled":64},{"id":"830e0584-7f69-4bdd-
+char *XmlDoc::hashJSON ( HashTableX *table ) {
+
+	setStatus ( "hashing json" );
+
+	char **pp = getUtf8Content();
+	if ( ! pp || pp == (void *)-1 ) return (char *)pp;
+
+	// point to the json
+	char *p = *pp;
+
+	HashInfo hi;
+	hi.m_tt        = table;
+	hi.m_desc      = "json object";
+
+	//
+	// just do a linear scan keeping track of nested field names as we go
+	//
+
+	char *field;
+	long  fieldLen;
+	long  size;
+	// scan
+	for ( ; *p ; p += size ) {
+		// get size
+		size = getUtf8CharSize ( p );
+		// a quote?
+		if ( *p == '\"' ) {
+			// find end of quote
+			char *end = p + 1;
+			for ( ; *end ; end++ ) 
+				if ( *end == '\"' && end[-1] != '\"' ) break;
+			// field?
+			char *x = end + 1;
+			// skip spaces
+			for ( ; *x && is_wspace_a(*x) ; x++ );
+			// define the string
+			char *str  = p + 1;
+			long  slen = end - str;
+			// . if a colon follows, it was a field
+			// . if a comma or 
+			if ( *x == ':' ) {
+				field    = str;
+				fieldLen = slen;
+			}
+			// . otherwise, it was field value, so index it
+			// . TODO: later make field names compounded to
+			//   better represent nesting?
+			else {
+				// 
+				// DIFFBOT special field hacks
+				//
+				hi.m_hashGroup = HASHGROUP_BODY;
+				if ( strcmp(field,"title") == 0 )
+					hi.m_hashGroup = HASHGROUP_TITLE;
+				if ( strcmp(field,"url") == 0 )
+					hi.m_hashGroup = HASHGROUP_INURL;
+				if ( strcmp(field,"resolved_url") == 0 )
+					hi.m_hashGroup = HASHGROUP_INURL;
+				if ( strcmp(field,"tags") == 0 )
+					hi.m_hashGroup = HASHGROUP_INTAG;
+				if ( strcmp(field,"meta") == 0 )
+					hi.m_hashGroup = HASHGROUP_INMETATAG;
+				// index like "title:whatever"
+				hi.m_prefix = field;
+				char tmp = field[fieldLen];
+				field[fieldLen] = '\0';
+				hashString ( str , slen , &hi );
+				field[fieldLen] = tmp;
+				// hash without the field name as well
+				hi.m_prefix = NULL;
+				hashString ( str , slen , &hi );
+			}
+			// skip over the string
+			size = 1;
+			p    = x;
+			continue;
+		}
+		// if we hit a digit they might not be in quotes like
+		// "crawled":123
+		if ( is_digit ( *p ) ) {
+			// find end of the number
+			char *end = p + 1;
+			for ( ; *end && is_digit(*p) ; end++ ) ;
+			// define the string
+			char *str  = p + 1;
+			long  slen = end - str;
+			// TODO: later make field names compounded to
+			// better represent nesting?
+			hi.m_prefix = field;
+			hi.m_hashGroup = HASHGROUP_BODY;
+			char tmp = field[fieldLen];
+			field[fieldLen] = '\0';
+			hashString ( str , slen , &hi );
+			field[fieldLen] = tmp;
+			// skip over the string
+			size = 1;
+			p    = end;
+			continue;
+		}
+	}
+
+	return (char *)0x01;
+}

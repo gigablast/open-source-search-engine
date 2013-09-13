@@ -118,6 +118,9 @@ class HttpRequest {
 					  char *defaultString = NULL , 
 					  long *next=NULL);
 	
+
+	bool hasField ( char *field );
+
 	// are we a redir? if so return non-NULL
 	char      *getRedir    ( ) { return m_redir;    };
 	long       getRedirLen ( ) { return m_redirLen; };

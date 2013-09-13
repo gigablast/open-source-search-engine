@@ -59,6 +59,10 @@ CollectionRec::CollectionRec() {
 	//	*(m_regExs[i]) = '\0';
 	//}
 	m_numRegExs = 0;
+
+	// for diffbot caching the global spider stats
+	reset();
+
 	// add default reg ex if we do not have one
 	fixRec();
 }
@@ -74,12 +78,22 @@ void CollectionRec::setToDefaults ( ) {
 	fixRec ();
 }
 
+void CollectionRec::reset() {
+	m_localCrawlInfo.reset();
+	m_globalCrawlInfo.reset();
+	m_globalCrawlInfoUpdateTime = 0;
+	m_requests = 0;
+	m_replies = 0;
+}
+
 // . load this data from a conf file
 // . values we do not explicitly have will be taken from "default",
 //   collection config file. if it does not have them then we use
 //   the value we received from call to setToDefaults()
 // . returns false and sets g_errno on load error
 bool CollectionRec::load ( char *coll , long i ) {
+	// also reset some counts not included in parms list
+	reset();
 	// before we load, set to defaults in case some are not in xml file
 	g_parms.setToDefault ( (char *)this );
 	// get the filename with that id
@@ -110,6 +124,47 @@ bool CollectionRec::load ( char *coll , long i ) {
 
 	// add default reg ex
 	fixRec ();
+
+	//
+	// LOAD the crawlinfo class in the collectionrec for diffbot
+	//
+	if ( g_conf.m_useDiffbot ) {
+		// LOAD LOCAL
+		sprintf ( tmp1 , "%scoll.%s.%li/localcrawlinfo.txt",
+			  g_hostdb.m_dir , m_coll , (long)m_collnum );
+		log("coll: loading %s",tmp1);
+		SafeBuf sb;
+		// fillfromfile returns 0 if does not exist, -1 on read error
+		if ( sb.fillFromFile ( tmp1 ) > 0 )
+			sscanf ( sb.getBufStart() ,
+				 "indexAttempts:%lli\n"
+				 "processAttempts:%lli\n"
+				 "downloadAttempts:%lli\n"
+				 , &m_localCrawlInfo.m_pageIndexAttempts
+				 , &m_localCrawlInfo.m_pageProcessAttempts
+				 , &m_localCrawlInfo.m_pageDownloadAttempts
+				 );
+		// LOAD GLOBAL
+		sprintf ( tmp1 , "%scoll.%s.%li/globalcrawlinfo.txt",
+			  g_hostdb.m_dir , m_coll , (long)m_collnum );
+		log("coll: loading %s",tmp1);
+		sb.reset();
+		if ( sb.fillFromFile ( tmp1 ) > 0 )
+			sscanf ( sb.getBufStart() ,
+				 "indexAttempts:%lli\n"
+				 "processAttempts:%lli\n"
+				 "downloadAttempts:%lli\n"
+				 "lastupdate:%lu\n"
+				 , &m_globalCrawlInfo.m_pageIndexAttempts
+				 , &m_globalCrawlInfo.m_pageProcessAttempts
+				 , &m_globalCrawlInfo.m_pageDownloadAttempts
+				 , &m_globalCrawlInfoUpdateTime 
+				 );
+		// ignore errors i guess
+		g_errno = 0;
+	}
+
+
 
 	// always turn on distributed spider locking because otherwise
 	// we end up calling Msg50 which calls Msg25 for the same root url
@@ -242,6 +297,7 @@ void CollectionRec::fixRec ( ) {
 
 	//strcpy(m_regExs   [n],"default");
 	m_regExs[n].set("default");
+	m_regExs[n].nullTerm();
 	m_numRegExs++;
 
 	m_spiderFreqs     [n] = 30; // 30 days default
@@ -281,6 +337,50 @@ bool CollectionRec::save ( ) {
 	if ( ! g_parms.saveToXml ( (char *)this , tmp ) ) return false;
 	// log msg
 	log (LOG_INFO,"db: Saved %s.",tmp);//f.getFilename());
+
+	//
+	// save the crawlinfo class in the collectionrec for diffbot
+	//
+	if ( g_conf.m_useDiffbot ) {
+		// SAVE LOCAL
+		sprintf ( tmp , "%scoll.%s.%li/localcrawlinfo.txt",
+			  g_hostdb.m_dir , m_coll , (long)m_collnum );
+		log("coll: saving %s",tmp);
+		SafeBuf sb;
+		sb.safePrintf("indexAttempts:%lli\n"
+			      "processAttempts:%lli\n"
+			      "downloadAttempts:%lli\n"
+			      , m_localCrawlInfo.m_pageIndexAttempts
+			      , m_localCrawlInfo.m_pageProcessAttempts
+			      , m_localCrawlInfo.m_pageDownloadAttempts
+			      );
+		if ( sb.dumpToFile ( tmp ) == -1 ) {
+			log("coll: failed to save file %s : %s",
+			    tmp,mstrerror(g_errno));
+			g_errno = 0;
+		}
+		// SAVE GLOBAL
+		sprintf ( tmp , "%scoll.%s.%li/globalcrawlinfo.txt",
+			  g_hostdb.m_dir , m_coll , (long)m_collnum );
+		log("coll: saving %s",tmp);
+		sb.reset();
+		sb.safePrintf("indexAttempts:%lli\n"
+			      "processAttempts:%lli\n"
+			      "downloadAttempts:%lli\n"
+			      "lastupdate:%lu\n"
+			      , m_globalCrawlInfo.m_pageIndexAttempts
+			      , m_globalCrawlInfo.m_pageProcessAttempts
+			      , m_globalCrawlInfo.m_pageDownloadAttempts
+			      , m_globalCrawlInfoUpdateTime 
+			      );
+		if ( sb.dumpToFile ( tmp ) == -1 ) {
+			log("coll: failed to save file %s : %s",
+			    tmp,mstrerror(g_errno));
+			g_errno = 0;
+		}
+						 
+	}
+
 	// do not need a save now
 	m_needsSave = false;
 	return true;

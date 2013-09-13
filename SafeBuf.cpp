@@ -680,7 +680,7 @@ bool SafeBuf::setEncoding(short cs) {
 	return true;
 }
 
-bool  SafeBuf::utf8Encode(char *s, long len, bool encodeHTML,long niceness) {
+bool  SafeBuf::utf8Encode2(char *s, long len, bool encodeHTML,long niceness) {
 	long tmp = m_length;
 	if ( m_encoding == csUTF8 ) {
 		if (! safeMemcpy(s,len)) return false;
@@ -1786,6 +1786,7 @@ bool SafeBuf::htmlEncodeXmlTags ( char *s , long slen , long niceness ) {
 }
 
 bool  SafeBuf::safeStrcpy ( char *s ) {
+	if ( ! s ) return true;
 	long slen = gbstrlen(s);
 	return safeMemcpy(s,slen); 
 }
@@ -2491,6 +2492,182 @@ bool SafeBuf::decodeJSON ( long niceness ) {
 
 	return true;
 }
+
+bool SafeBuf::decodeJSONToUtf8 ( long niceness ) {
+
+	//char *x = strstr(m_buf,"Chief European");
+	//if ( x )
+	//	log("hey");
+
+	// count how many \u's we got
+	long need = 0;
+	char *p = m_buf;
+	for ( ; *p ; p++ ) 
+		// for the 'x' and the ';'
+		if ( *p == '\\' && p[1] == 'u' ) need += 2;
+
+	// reserve a little extra if we need it
+	SafeBuf dbuf;
+	dbuf.reserve ( need + m_length + 1);
+
+	char *src = m_buf;
+	char *dst = dbuf.m_buf;
+	for ( ; *src ; ) {
+		QUICKPOLL(niceness);
+		if ( *src == '\\' ) {
+			// \n? (from json.org homepage)
+			if ( src[1] == 'n' ) {
+				*dst++ = '\n';
+				src += 2;
+				continue;
+			}
+			if ( src[1] == 'r' ) {
+				*dst++ = '\r';
+				src += 2;
+				continue;
+			}
+			if ( src[1] == 't' ) {
+				*dst++ = '\t';
+				src += 2;
+				continue;
+			}
+			if ( src[1] == 'b' ) {
+				*dst++ = '\b';
+				src += 2;
+				continue;
+			}
+			if ( src[1] == 'f' ) {
+				*dst++ = '\f';
+				src += 2;
+				continue;
+			}
+			// a "\\" is an encoded backslash
+			if ( src[1] == '\\' ) {
+				*dst++ = '\\';
+				src += 2;
+				continue;
+			}
+			// a "\/" is an encoded forward slash
+			if ( src[1] == '/' ) {
+				*dst++ = '/';
+				src += 2;
+				continue;
+			}
+			// utf8? if not, just skip the slash
+			if ( src[1] != 'u'  ) { src++; continue; }
+			// otherwise, decode. can do in place like this...
+			char *p = src + 2;
+			if ( ! is_hex(p[0]) ) continue;
+			if ( ! is_hex(p[1]) ) continue;
+			if ( ! is_hex(p[2]) ) continue;
+			if ( ! is_hex(p[3]) ) continue;
+			// TODO: support surrogate pairs in utf16?
+			UChar32 uc = 0;
+			// store the 16-bit number in lower 16 bits of uc...
+			hexToBin ( p   , 2 , ((char *)&uc)+1 );
+			hexToBin ( p+2 , 2 , ((char *)&uc)+0 );
+			//buf[2] = '\0';
+			long size = ::utf8Encode ( (UChar32)uc , (char *)dst );
+			// a quote??? not allowed in json!
+			if ( size == 1 && dst[0] == '\"' ) {
+				size = 2;
+				dst[0] = '\\';
+				dst[1] = '\"';
+			}
+			//short = ahextoshort ( p );
+			dst += size;
+			// skip over /u and 4 digits
+			src += 6;
+			continue;
+		}
+		*dst++ = *src++;
+	}
+	*dst = '\0';
+	dbuf.m_length = dst - dbuf.m_buf;
+
+	// purge ourselves
+	purge();
+
+	// and steal dbuf's m_buf
+	m_buf        = dbuf.m_buf;
+	m_length     = dbuf.m_length;
+	m_capacity   = dbuf.m_capacity;
+	m_usingStack = dbuf.m_usingStack;
+
+	// detach from dbuf so he does not free it
+	dbuf.detachBuf();
+
+	return true;
+}
+
+// . REALLY just a print vanity function. makes json output prettier
+//
+// . after converting JSON to utf8 above we sometimes want to go back.
+// . just print that out. encode \n's and \r's back to \\n \\r
+//   and backslash to a \\ ... etc.
+// . but if they originally had a \u<backslash> encoding and we decoded
+//   it to a backslash, here it will be re-encoded as (double backslash)
+// . like wise if that originally had a \u<quote> encoding we should
+//   have decoded it as a \"!
+// . this does not need to be super fast because it will be used for
+//   showing cached pages or dumping out the json objects from a crawl for
+//   diffbot
+// . really we could leave the newlines decoded etc, but it is prettier
+//   for printing
+bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
+	// how much space do we need?
+	// each single byte \t char for instance will need 2 bytes
+	long need = gbstrlen(decodedJson) * 2 + 1;
+	if ( ! reserve ( need ) ) return false;
+	// scan and copy
+	char *src = decodedJson;
+	// concatenate to what's already there
+	char *dst = m_buf + m_length;
+	for ( ; *src ; src++ ) {
+
+		if ( *src == '\t' ) {
+			*dst++ = '\\';
+			*dst++ = 't';
+			continue;
+		}
+		if ( *src == '\n' ) {
+			*dst++ = '\\';
+			*dst++ = 'n';
+			continue;
+		}
+		if ( *src == '\r' ) {
+			*dst++ = '\\';
+			*dst++ = 'r';
+			continue;
+		}
+		if ( *src == '\f' ) {
+			*dst++ = '\\';
+			*dst++ = 'f';
+			continue;
+		}
+		if ( *src == '\\' ) {
+			*dst++ = '\\';
+			*dst++ = '\\';
+			continue;
+		}
+		//if ( *src == '\/' ) {
+		//	*dst++ = '\\';
+		//	*dst++ = '/';
+		//	continue;
+		//}
+
+		*dst++ = *src;
+
+	}
+	// null term
+	*dst = '\0';
+
+	m_length = dst - m_buf;
+
+	return true;
+}
+
+
 		
 bool SafeBuf::linkify ( long niceness , long startPos ) {
 

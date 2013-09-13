@@ -92,7 +92,8 @@ bool RdbTree::set ( long fixedDataSize ,
 		    char *dbname       ,
 		    char  keySize      ,
 		    bool  useProtection ,
-		    bool  allowDups     ) {
+		    bool  allowDups     ,
+		    char  rdbId ) {
 	reset();
 	m_fixedDataSize   = fixedDataSize; 
 	m_doBalancing     = doBalancing;
@@ -120,9 +121,9 @@ bool RdbTree::set ( long fixedDataSize ,
 	if ( dbname ) strncpy ( p , dbname    , 8 ); p += 8;
 	*p++ = '\0';
 	// set rdbid
-	m_rdbId = -1;
+	m_rdbId = rdbId; // -1;
 	// if its doledb, set it
-	if ( dbname && strcmp(dbname,"doledb") == 0 ) m_rdbId = RDB_DOLEDB;
+	//if ( dbname && strcmp(dbname,"doledb") == 0 ) m_rdbId = RDB_DOLEDB;
 	// adjust m_maxMem to virtual infinity if it was -1
 	if ( m_maxMem < 0 ) m_maxMem = 0x7fffffff;
 	// . compute each node's memory overhead
@@ -2994,11 +2995,11 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 
 long  RdbTree::getNumNegativeKeys ( collnum_t collnum ) { 
 	return g_collectiondb.m_recs[collnum]->
-			m_numNegKeysInTree[m_rdbId]; 
+		m_numNegKeysInTree[(unsigned char)m_rdbId]; 
 }
 
 long  RdbTree::getNumPositiveKeys ( collnum_t collnum ) { 
 	return g_collectiondb.m_recs[collnum]->
-		m_numPosKeysInTree[m_rdbId]; 
+		m_numPosKeysInTree[(unsigned char)m_rdbId]; 
 }
 

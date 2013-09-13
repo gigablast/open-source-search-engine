@@ -69,6 +69,15 @@
 #include "RdbList.h"
 #include "Rdb.h" // for RdbBase
 
+// used by diffbot to control spidering per collection
+class CrawlInfo {
+ public:
+	long long m_pageIndexAttempts;
+	long long m_pageProcessAttempts;
+	long long m_pageDownloadAttempts;
+	void reset() { memset ( this , 0 , sizeof(CrawlInfo) ); };
+};
+
 
 class CollectionRec {
 
@@ -136,6 +145,7 @@ class CollectionRec {
 	bool      m_needsSave;
 
 	bool      load ( char *coll , long collNum ) ;
+	void reset();
 
 	void fixRec ( );
 
@@ -354,6 +364,40 @@ class CollectionRec {
 
 	// priority of urls being retried, usually higher than normal
 	char  m_retryPriority; 
+
+	// new diffbot parms
+	SafeBuf m_diffbotToken;
+	SafeBuf m_diffbotSeed;
+	SafeBuf m_diffbotApi;
+	SafeBuf m_diffbotApiQueryString;
+	SafeBuf m_diffbotUrlCrawlPattern;
+	SafeBuf m_diffbotUrlProcessPattern;
+	SafeBuf m_diffbotPageProcessPattern;
+	SafeBuf m_diffbotClassify;
+	// format of output. "csv" or "xml" or "json" or null
+	SafeBuf m_diffbotFormat;
+	// what fields to return in the json output: (api dependent)
+	SafeBuf m_diffbotFields;
+	long long m_diffbotMaxToCrawl;
+	long long m_diffbotMaxToProcess;
+	long long m_diffbotCrawlStartTime;
+	long long m_diffbotCrawlEndTime;
+
+	// for testing their regexes etc...
+	char m_isDiffbotTestCrawl;
+
+	// our local crawling stats
+	CrawlInfo m_localCrawlInfo;
+	// total crawling stats summed up from all hosts in network
+	CrawlInfo m_globalCrawlInfo;
+	// last time we computed global crawl info
+	time_t m_globalCrawlInfoUpdateTime;
+	// for counting replies
+	long m_replies;
+	long m_requests;
+	// for storing callbacks waiting in line for freshest crawl info
+	SafeBuf m_callbackQueue;
+	
 
 	// . now the url regular expressions
 	// . we chain down the regular expressions

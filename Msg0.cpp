@@ -198,8 +198,12 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 	// . groupMask must turn on higher bits first (count downwards kinda)
 	// . titledb and spiderdb use special masks to get groupId
 
+	// if diffbot.cpp is reading spiderdb from each shard we have to
+	// get groupid from hostid here lest we core in getGroupId() below
+	if ( hostId >= 0 && m_rdbId == RDB_SPIDERDB )
+		m_groupId = 0;
 	// did they force it? core until i figure out what this is
-	if ( forceParitySplit >= 0 ) 
+	else if ( forceParitySplit >= 0 ) 
 		m_groupId =  g_hostdb.getGroupId ( forceParitySplit );
 	else
 		m_groupId = getGroupId ( m_rdbId , startKey , ! noSplit );

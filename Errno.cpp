@@ -156,6 +156,9 @@ case	EDOCIDCOLLISION  : return "DocId collision in titledb";
 case	ESSLERROR        : return "SSL error of some kind";
 case    EPERMDENIED      : return "Permission denied";
 case    ENOFUNDS         : return "Not enough funds in account";
+case	EDIFFBOTINTERNALERROR: return "Diffbot internal error";
+case    EDIFFBOTMIMEERROR: return "Diffbot mime error";
+case    EDIFFBOTBADHTTPSTATUS: return "Diffbot reply bad http status";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );

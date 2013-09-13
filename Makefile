@@ -60,7 +60,7 @@ OBJS =  Tfndb.o UdpSlot.o \
 	Users.o Images.o Wiki.o Wiktionary.o Scraper.o \
 	Dates.o Sections.o SiteGetter.o Syncdb.o \
 	Placedb.o Address.o Test.o GeoIP.o GeoIPCity.o Synonyms.o \
-	Cachedb.o Monitordb.o dlstubs.o
+	Cachedb.o Monitordb.o dlstubs.o Diffbot.o
 
 CHECKFORMATSTRING = -D_CHECK_FORMAT_STRING_
 
@@ -70,6 +70,7 @@ HOST=$(shell hostname)
 
 #print_vars:
 #	$(HOST)
+
 
 # force 32-bit mode using -m32 (apt-get install gcc-multilib to ensure works)
 # and -m32 should use /usr/lib32/ as the library path.
@@ -84,6 +85,13 @@ OBJS:=$(OBJS) seo.o
 $(shell rm seo.o)
 else
 CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -D_PTHREADS_ -Wno-unused-but-set-variable
+LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread 
+endif
+
+
+# special diffbot compiling case to default g_conf.m_useDiffbot to true
+ifeq ("neo","$(HOST)")
+CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -D_PTHREADS_ -Wno-unused-but-set-variable -DDIFFBOT
 LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread 
 endif
 
@@ -285,8 +293,8 @@ RdbBuckets.o:
 Linkdb.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
 
-XmlDoc.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+#XmlDoc.o:
+#	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
 
 seo.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 

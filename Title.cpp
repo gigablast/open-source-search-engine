@@ -103,6 +103,35 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 
 	long long startTime = gettimeofdayInMilliseconds();
 
+	// . reset so matches.cpp using this does not core
+	// . assume no title tag
+	m_titleTagStart = -1;
+	m_titleTagEnd   = -1;
+
+	// if we are a json object
+	if ( ! xd->m_contentTypeValid ) { char *xx=NULL;*xx=0; }
+	char *val = NULL;
+	long vlen;
+	// look for the "title:" field in json then use that
+	if ( xd->m_contentType == CT_JSON )
+		val = getJSONFieldValue ( xd->ptr_utf8Content,"title",&vlen);
+	// if we had a title: field in the json...
+	if ( val ) {
+		char *dst = NULL;
+		m_titleBytes = vlen;
+		if ( m_titleBytes+1 <  TITLE_LOCAL_SIZE )
+			dst = m_localBuf;
+		else {
+			dst = (char *)mmalloc ( m_titleBytes+1,"titdst" );
+			if ( ! dst ) return false;
+		}
+		m_title = dst;
+		memcpy ( dst , val , m_titleBytes );
+		dst[m_titleBytes] = '\0';
+		return true;
+	}
+
+
 	bool status = setTitle4 ( xd ,
 				  xml ,
 				  words ,

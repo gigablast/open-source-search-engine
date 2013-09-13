@@ -746,14 +746,21 @@ void HttpMime::makeMime  ( long    totalContentLen    ,
 		//sprintf ( m_buf , 
 		p += sprintf( p,
 			      "HTTP/1.0 %li%s\r\n"
-			      // make it at least 4 spaces so we can change
-			      // the length of the content should we insert
-			      // a login bar in Proxy::storeLoginBar()
-			      "Content-Length: %04li\r\n"
+			      , httpStatus , smsg );
+		// if content length is not known, as in diffbot.cpp, then
+		// do not print it into the mime
+		if ( totalContentLen >= 0 )
+			p += sprintf ( p , 
+				       // make it at least 4 spaces so we can
+				       // change the length of the content 
+				       // should we insert a login bar in 
+				       // Proxy::storeLoginBar()
+				       "Content-Length: %04li\r\n"
+				       , totalContentLen );
+		p += sprintf ( p ,
 			      "%s"
 			      "Content-Type: %s",
-			      httpStatus , smsg ,
-			      totalContentLen , enc , contentType );
+			       enc , contentType );
 		if ( charset ) p += sprintf ( p , "; charset=%s", charset );
 		p += sprintf ( p , "\r\n");
 		p += sprintf ( p ,

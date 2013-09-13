@@ -747,7 +747,7 @@ void SpiderCache::save ( bool useThread ) {
 	//m_isSaving = true;
 	// loop over all SpiderColls and get the best
 	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
-		SpiderColl *sc = getSpiderColl(i);//m_spiderColls[i];
+		SpiderColl *sc = getSpiderCollIffNonNull(i);//m_spiderColls[i];
 		if ( ! sc ) continue;
 		RdbTree *tree = &sc->m_waitingTree;
 		char *filename = "waitingtree";
@@ -797,7 +797,7 @@ void SpiderCache::save ( bool useThread ) {
 
 bool SpiderCache::needsSave ( ) {
 	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
-		SpiderColl *sc = getSpiderColl(i);//m_spiderColls[i];
+		SpiderColl *sc = getSpiderCollIffNonNull(i);//m_spiderColls[i];
 		if ( ! sc ) continue;
 		if ( sc->m_waitingTree.m_needsSave ) return true;
 		// also the doleIpTable
@@ -809,7 +809,7 @@ bool SpiderCache::needsSave ( ) {
 void SpiderCache::reset ( ) {
 	// loop over all SpiderColls and get the best
 	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
-		SpiderColl *sc = getSpiderColl(i);
+		SpiderColl *sc = getSpiderCollIffNonNull(i);
 		if ( ! sc ) continue;
 		sc->reset();
 		mdelete ( sc , sizeof(SpiderColl) , "SpiderCache" );
@@ -819,6 +819,13 @@ void SpiderCache::reset ( ) {
 		cr->m_spiderColl = NULL;
 	}
 	//m_numSpiderColls = 0;
+}
+
+SpiderColl *SpiderCache::getSpiderCollIffNonNull ( collnum_t collnum ) {
+	// shortcut
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	// return it if non-NULL
+	return cr->m_spiderColl;
 }
 
 // get SpiderColl for a collection
@@ -867,6 +874,8 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	sc->m_cr = cr;
 	// sanity check
 	if ( ! cr ) { char *xx=NULL;*xx=0; }
+	// note it!
+	log("spider: adding new spider collection for %s",cr->m_coll);
 	// that was it
 	return sc;
 }
@@ -892,6 +901,13 @@ SpiderColl::SpiderColl () {
 	reset();
 	// reset this
 	memset ( m_outstandingSpiders , 0 , 4 * MAX_SPIDER_PRIORITIES );
+}
+
+long SpiderColl::getTotalOutstandingSpiders ( ) {
+	long sum = 0;
+	for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ )
+		sum += m_outstandingSpiders[i];
+	return sum;
 }
 
 // load the tables that we set when m_doInitialScan is true
@@ -937,6 +953,8 @@ bool SpiderColl::load ( ) {
 	// . try going to 20M now since we hit it again...
 	if (!m_waitingTree.set(0,-1,true,20000000,true,"waittree2",
 			       false,"waitingtree",sizeof(key_t)))return false;
+	// prevent core with this
+	m_waitingTree.m_rdbId = RDB_NONE;
 
 	// make dir
 	char dir[500];
@@ -2326,7 +2344,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		if ( sreq->m_url[0] != 'h' &&
 		     // might be a docid from a pagereindex.cpp
 		     ! is_digit(sreq->m_url[0]) ) { 
-			log("spider: got corrupt 1 spiderRequest in scan");
+			log("spider: got corrupt 1 spiderRequest in scan "
+			    "because url is %s",sreq->m_url);
 			continue;
 		}
 
@@ -7813,4 +7832,145 @@ void dedupSpiderdbList ( RdbList *list , long niceness , bool removeNegRecs ) {
 	if ( lastKey ) KEYSET(list->m_lastKey,lastKey,list->m_ks);
 
 	//mfree ( oldbuf , oldSize, "oldspbuf");
+}
+
+///////
+//
+// diffbot uses these for limiting crawls in a collection
+//
+///////
+
+void gotCrawlInfoReply ( void *state , UdpSlot *slot);
+
+class CallbackEntry2 {
+public:
+	void *m_state;
+	void (* m_callback ) ( void *state );
+};
+
+// . get total # of pages crawled in this collection over whole network
+// . returns false if blocked
+// . returns true and sets g_errno on error
+bool updateCrawlInfo ( CollectionRec *cr , 
+		       void *state ,
+		       void (* callback)(void *state) ,
+		       bool useCache ) {
+
+	long now = getTimeLocal();
+	if ( useCache && now - cr->m_globalCrawlInfoUpdateTime  < 60 )
+		return true;
+
+	// wait in line if reply is pending
+	//if ( cr->m_replies < cr->m_requests || ) {
+	// . returns false and sets g_errno on error
+	// . this will store state/callback into a safebuf queue
+	CallbackEntry2 ce2;
+	ce2.m_state = state;
+	ce2.m_callback = callback;
+	if ( ! cr->m_callbackQueue.safeMemcpy ( &ce2, sizeof(CallbackEntry2)) )
+		return true;
+
+	// if we were not the first, we do not initiate it, we just wait
+	// for all the replies to come back
+	if ( cr->m_replies < cr->m_requests ) return false;
+
+	cr->m_globalCrawlInfo.reset();
+
+	cr->m_replies  = 0;
+	cr->m_requests = 0;
+
+	// request is just the collnum
+	char *request = (char *)&cr->m_collnum;
+	long requestSize = sizeof(collnum_t);
+
+	// send out the msg request
+	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		Host *h = g_hostdb.getHost(i);
+		// skip if dead
+		if ( g_hostdb.isDead(i) ) continue;
+		// count it as launched
+		cr->m_requests++;
+		if ( ! g_udpServer.sendRequest ( request,
+						 requestSize,
+						 0xc1 , // msgtype
+						 h->m_ip      ,
+						 h->m_port    ,
+						 h->m_hostId  ,
+						 NULL, // retslot
+						 cr , // state
+						 gotCrawlInfoReply ) ) {
+			log("spider: error sending c1 request: %s",
+			    mstrerror(g_errno));
+			cr->m_replies++;
+		}
+	}
+
+	// return false if we blocked awaiting replies
+	if ( cr->m_replies < cr->m_requests ) return false;
+
+	// somehow we did not block... hmmmm...
+	gotCrawlInfoReply( cr , NULL );
+
+	// we did not block...
+	return true;
+}
+
+void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
+	// cast it
+	CollectionRec *cr = (CollectionRec *)state;
+	// inc it
+	cr->m_replies++;
+
+	// the sendbuf should never be freed! it points into collrec
+	slot->m_sendBufAlloc = NULL;
+
+	// add it in to the stats
+	if ( slot ) {
+		CrawlInfo *stats = (CrawlInfo *)(slot->m_readBuf);
+		cr->m_globalCrawlInfo.m_pageIndexAttempts +=
+			stats->m_pageIndexAttempts;
+		cr->m_globalCrawlInfo.m_pageProcessAttempts +=
+			stats->m_pageProcessAttempts;
+		cr->m_globalCrawlInfo.m_pageDownloadAttempts +=
+			stats->m_pageDownloadAttempts;
+	}
+	// return if still waiting on more to come in
+	if ( cr->m_replies < cr->m_requests ) return;
+
+	// update cache time
+	cr->m_globalCrawlInfoUpdateTime = getTime();
+
+	// make it save to disk i guess
+	cr->m_needsSave = true;
+
+	// call all callbacks
+	long nc = cr->m_callbackQueue.length() / sizeof(CallbackEntry2);
+	char *p = cr->m_callbackQueue.getBufStart();
+	for ( long i = 0 ; i < nc ; i++ ) {
+		CallbackEntry2 *ce2 = (CallbackEntry2 *)p;
+		p += sizeof(CallbackEntry2);
+		// clear g_errno just in case
+		g_errno = 0;
+		// call that callback waiting in the queue
+		ce2->m_callback ( ce2->m_state );
+	}
+
+	// save the mem!
+	cr->m_callbackQueue.purge();
+}
+
+void handleRequestc1 ( UdpSlot *slot , long niceness ) {
+	char *request = slot->m_readBuf;
+	// just a single collnum
+	if ( slot->m_readBufSize != sizeof(collnum_t) ) { char *xx=NULL;*xx=0;}
+	collnum_t collnum = *(collnum_t *)request;
+	CollectionRec *cr = g_collectiondb.getRec(collnum);
+	char *reply = slot->m_tmpBuf;
+	if ( TMPBUFSIZE < sizeof(CrawlInfo) ) { char *xx=NULL;*xx=0; }
+	memcpy ( reply , &cr->m_localCrawlInfo , sizeof(CrawlInfo) );
+	g_udpServer.sendReply_ass ( reply , 
+				    sizeof(CrawlInfo) ,
+				    reply , // alloc
+				    sizeof(CrawlInfo) , //alloc size
+				    slot );
 }

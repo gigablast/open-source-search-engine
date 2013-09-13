@@ -354,6 +354,8 @@ class Hostdb {
 
 	long long getNumGlobalEvents ( );
 
+	Host *getLiveHostInGroup ( long groupId );
+
 	// . returns false if blocks and will call your callback later
 	// . returns true if doesn't block
 	// . sets errno on error

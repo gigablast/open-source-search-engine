@@ -31,7 +31,7 @@ enum {
 	TYPE_FLOAT          ,
 	TYPE_IP             ,
 	TYPE_LONG           ,
-	TYPE_LONG_LONG      ,
+	TYPE_LONG_LONG      , // 10
 	TYPE_NONE           ,
 	TYPE_PRIORITY       ,
 	TYPE_PRIORITY2      ,
@@ -41,7 +41,7 @@ enum {
 	TYPE_STRINGBOX      ,
 	TYPE_STRINGNONEMPTY ,
 	TYPE_TIME           ,
-	TYPE_DATE2          ,
+	TYPE_DATE2          , // 20
 	TYPE_DATE           ,
 	TYPE_RULESET        ,
 	TYPE_FILTER         ,
@@ -50,7 +50,7 @@ enum {
 	TYPE_MONOD2         ,
 	TYPE_MONOM2         ,
 	TYPE_LONG_CONST     ,
-	TYPE_SITERULE       ,
+	TYPE_SITERULE       , // 29
 	TYPE_SAFEBUF
 };
 
@@ -147,7 +147,7 @@ class Parm {
 	char * getValueAsString ( class SearchInput *si ) ;	
 };
 
-#define MAX_PARMS 840
+#define MAX_PARMS 940
 
 #define MAX_XML_CONF (200*1024)
 
@@ -171,15 +171,16 @@ class Parms {
 				long page , char *coll , char *pwd ) ;
 
 
-	char *printParms (char *p, char *pend, TcpSocket *s , HttpRequest *r );
+	//char *printParms (char *p, char *pend, TcpSocket *s, HttpRequest *r);
 	bool printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r );
 
-	char *printParms (char *p,char *pend,long page,char *username,
-	                  void *THIS, char *coll , char *pwd , 
-			  long nc , long pd ) ;
+	//char *printParms (char *p,char *pend,long page,char *username,
+	//                  void *THIS, char *coll , char *pwd , 
+	//		  long nc , long pd ) ;
 	bool printParms (SafeBuf* sb, long page,char *username,void *THIS,
-			  char *coll , char *pwd , long nc , long pd ) ;
+			 char *coll , char *pwd , long nc , long pd );
 
+	/*
 	char *printParm ( char *p    , 
 			  char *pend ,
 			  //long  user ,
@@ -194,6 +195,8 @@ class Parms {
 			  char *bg   ,
 			  long  nc   ,
 			  long  pd   ) ;
+	*/
+
 	bool printParm ( SafeBuf* sb,
 			 //long  user ,
 			  char *username,
@@ -206,7 +209,8 @@ class Parms {
 			  char *pwd  ,
 			  char *bg   ,
 			  long  nc   ,
-			  long  pd   ) ;
+			 long  pd   ,
+			 bool lastRow ) ;
 
 	char *getTHIS ( HttpRequest *r , long page ) ;
 

@@ -91,7 +91,8 @@ class RdbTree {
 		   bool dataInPtrs = false ,
 		   char *dbname = NULL , char keySize = 12 ,
 		   bool useProtection = false ,
-		   bool allowDups     = false );
+		   bool allowDups     = false ,
+		   char rdbId = -1 );
 
 	// . frees the used memory, etc.
 	// . override so derivatives can free up extra header arrays

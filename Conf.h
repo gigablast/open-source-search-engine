@@ -183,6 +183,10 @@ class Conf {
 	long  m_clusterdbMinFilesToMerge;
 	bool  m_clusterdbSaveCache;
 
+	// if this is true, all collections index into the "main" collection
+	// but keep their own spiderdb in their collection.
+	bool m_useDiffbot;
+
 	//bool  m_indexEventsOnly;
 
 	// linkdb for storing linking relations

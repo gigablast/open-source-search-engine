@@ -401,6 +401,8 @@ class SearchInput {
 	// make a cookie from parms with m_flags of PF_COOKIE set
 	SafeBuf m_cookieBuf;
 
+	TcpSocket *m_socket;
+
 	//char           m_urlParms  [ MAX_URLPARMS_LEN ];
 	//char           m_postParms [ MAX_URLPARMS_LEN ];
 

@@ -91,7 +91,15 @@ bool setLangVec ( class Words *words ,
 		  class Sections *sections ,
 		  long niceness ) ;
 
+char *getJSONFieldValue ( char *json, char *field , long *valueLen ) ;
+
 bool logQueryLogs ( );
+
+bool checkRegex ( SafeBuf *regex , 
+		  char    *target ,
+		  bool    *boolVal ,
+		  bool    *boolValValid ,
+		  long    *compileError = NULL ) ;
 
 // Address.cpp calls this to make a vector from the "place name" for comparing
 // to other places in placedb using the computeSimilarity() function. if
@@ -283,7 +291,13 @@ class XmlDoc {
 	char      m_reserved3b;
 	uint16_t  m_reserved4;//externalLinkTextWeight;
 	uint16_t  m_reserved5;//internalLinkTextWeight;
-	uint16_t  m_reserved6;//conceptWeight;
+
+	// a new parm from reserved6. need to know the count so we can
+	// delete the json objects derived from this page if we want to
+	// delete this page. or if this page is respidered then we get the
+	// json objects for it, REject the old json object urls, and inject
+	// the new ones i guess.
+	uint16_t  m_diffbotJSONCount;
 
 	// these do not include header/footer (dup) addresses
 	//int16_t   m_numAddresses;
@@ -311,7 +325,24 @@ class XmlDoc {
 	uint16_t  m_hasSiteVenue:1;
 	uint16_t  m_hasContactInfo:1;
 	uint16_t  m_isSiteRoot:1;
-	uint16_t  m_reserved8;
+
+	uint16_t  m_isDiffbotJSONObject:1;
+	uint16_t  m_reserved802:1;
+	uint16_t  m_reserved803:1;
+	uint16_t  m_reserved804:1;
+	uint16_t  m_reserved805:1;
+	uint16_t  m_reserved806:1;
+	uint16_t  m_reserved807:1;
+	uint16_t  m_reserved808:1;
+	uint16_t  m_reserved809:1;
+	uint16_t  m_reserved810:1;
+	uint16_t  m_reserved811:1;
+	uint16_t  m_reserved812:1;
+	uint16_t  m_reserved813:1;
+	uint16_t  m_reserved814:1;
+	uint16_t  m_reserved815:1;
+	uint16_t  m_reserved816:1;
+
 
 	char      *ptr_firstUrl;
 	char      *ptr_redirUrl;
@@ -1205,6 +1236,11 @@ class XmlDoc {
 	bool m_numOutlinksAddedValid;
 	bool m_baseUrlValid;
 	bool m_replyValid;
+	bool m_diffbotReplyValid;
+	bool m_diffbotUrlCrawlPatternMatchValid;
+	bool m_diffbotUrlProcessPatternMatchValid;
+	bool m_diffbotPageProcessPatternMatchValid;
+	bool m_crawlInfoValid;
 	bool m_isPageParserValid;
 	bool m_imageUrlValid;
 	bool m_matchOffsetsValid;
@@ -1416,6 +1452,7 @@ class XmlDoc {
 	long m_siteHash32;
 	char *m_httpReply;
 	char m_downloadAttempted;
+	char m_incrementedAttemptsCount;
 	char m_redirectFlag;
 	//char m_isScraping;
 	//char m_throttleDownload;
@@ -1446,6 +1483,25 @@ class XmlDoc {
 	// this points into m_msge1 i guess
 	//long *m_outlinkIpVector;
 	Msge1 m_msge1;
+
+	//
+	// diffbot parms for indexing diffbot's json output
+	//
+	XmlDoc *m_dx;
+	char *m_diffbotObj;
+	char *m_diffbotObjEnd;
+	char  m_diffbotSavedChar;
+	SafeBuf m_diffbotReply;
+	long m_diffbotReplyError;
+	bool m_diffbotUrlCrawlPatternMatch;
+	bool m_diffbotUrlProcessPatternMatch;
+	bool m_diffbotPageProcessPatternMatch;
+
+	SafeBuf *getDiffbotReply ( ) ;
+	bool doesUrlMatchDiffbotCrawlPattern() ;
+	bool doesUrlMatchDiffbotProcessPattern() ;
+	bool doesPageContentMatchDiffbotProcessPattern() ;
+	char *hashJSON ( HashTableX *table );
 
 
 	//

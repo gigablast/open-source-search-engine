@@ -1624,6 +1624,81 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		*/
 	}
 	sb->safePrintf("</center><br/>" );
+
+	if ( top ) return status;
+
+	//
+	// if diffbot give the crawlbot api here mostly for testing
+	//
+	char *hyphen = NULL;
+	if ( g_conf.m_useDiffbot ) 
+		hyphen = strchr ( coll , '-');
+
+	if ( g_conf.m_useDiffbot ) {
+		sb->safePrintf("<br>"
+			       "<center>"
+			       "Diffbot API: &nbsp; " );
+		// /api/startcrawl
+		sb->safePrintf(" <a href=/dev/crawl>startcrawl</a>");
+	}
+
+	if ( hyphen ) {
+
+		// /api/stopcrawl
+		sb->safePrintf("&nbsp; <a href=/api/stopcrawl?token=");
+		sb->safeMemcpy ( coll, hyphen - coll );
+		sb->safePrintf("&id=%s>stopcrawl</a>"
+			       ,hyphen+1);
+
+		// /api/resumecrawl
+		sb->safePrintf("&nbsp; <a href=/api/resumecrawl?token=");
+		sb->safeMemcpy ( coll, hyphen - coll );
+		sb->safePrintf("&id=%s>resumecrawl</a>"
+			       ,hyphen+1);
+
+		// crawls
+		sb->safePrintf(" &nbsp; <a href=/api/crawls?token=");
+		sb->safeMemcpy ( coll, hyphen - coll );
+		sb->safePrintf(" title=\"show all crawl collections\">"
+			       "crawls</a>");
+
+		// activecrawls
+		sb->safePrintf(" &nbsp; <a href=/api/activecrawls?id=%s ",
+			       hyphen+1);
+		sb->safePrintf(" title=\"show stats on one crawl\">"
+			       "activecrawls</a>");
+
+
+		// downloadurls
+		sb->safePrintf(" &nbsp; <a href=/api/downloadurls?id=%s ",
+			       hyphen+1);
+		sb->safePrintf(" title=\"download urls in a crawl's "
+			       "spiderdb\">downloadurls</a>");
+
+		// download crawl urls
+		sb->safePrintf(" &nbsp; <a href=/api/downloadcrawl?id=%s ",
+			       hyphen+1);
+		sb->safePrintf(" title=\"download urls from crawl\">"
+			       "downloadcrawl (urls)</a>");
+
+
+		// download json objects
+		sb->safePrintf(" &nbsp; <a href=/api/downloadcrawl?"
+			       "id=%s&format=json ",
+			       hyphen+1);
+		sb->safePrintf(" title=\"download urls from crawl\">"
+			       "downloadcrawl (json)</a>");
+
+	}
+
+	if ( g_conf.m_useDiffbot ) {
+		sb->safePrintf("</center>\n");
+		sb->safePrintf("<br>");
+	}
+
+
+
+
 	//sprintf(p,"</font>\n" );
 	//p += gbstrlen(p);
 	return status;

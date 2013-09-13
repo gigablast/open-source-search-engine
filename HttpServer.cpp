@@ -9,6 +9,7 @@
 #include "XmlDoc.h" // gbzip
 #include "UdpServer.h"
 #include "Proxy.h"
+#include "Diffbot.h"
 
 // a global class extern'd in .h file
 HttpServer g_httpServer;
@@ -128,6 +129,11 @@ bool HttpServer::getDoc ( char   *url      ,
 			  char    *proto ,
 			  bool     doPost ,
 			  char    *cookie ) { 
+	// sanity
+	if ( ip == -1 ) 
+		log("http: you probably didn't mean to set ip=-1 did you? "
+		    "try setting to 0.");
+
 	//log(LOG_WARN, "http: get doc %s", url->getUrl());
 	// use the HttpRequest class
 	HttpRequest r;
@@ -886,6 +892,22 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 			return sendErrorReply(s,404,"bad request");
 
 
+	// . if we get a request for this then allow Diffbot.cpp to
+	//   handle it and send back the right stuff
+	if ( strcmp ( path , "/dev/crawl" ) == 0 ||
+	     strcmp ( path , "/dev/crawl/" ) == 0 )
+		// this will call g_httpServer.sendDynamicPage() to send
+		// back the reply when it is done generating the reply.
+		// this function is in Diffbot.cpp.
+		return printCrawlBotPage ( s , r );
+
+	// . is it a diffbot api request, like "GET /api/*"
+	// . ie "/api/startcrawl" or "/api/stopcrawl" etc.?
+	if ( strncmp ( path , "/api/" , 5 ) == 0 )
+		// this will call g_httpServer.sendDynamicPage() to send
+		// back the reply when it is done generating the reply.
+		// this function is in Diffbot.cpp.
+		return handleDiffbotRequest ( s , r );
 
 
 	// for adding to browser list of search engines

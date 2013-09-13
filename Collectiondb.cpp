@@ -396,28 +396,30 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	// if we are doing a dump from the command line, skip this stuff
 	if ( isDump ) return true;
 	if(isNew) verify = false;
+
+
 	// tell rdbs to add one, too
 	//if ( ! g_indexdb.addColl    ( coll, verify ) ) goto hadError;
 	if ( ! g_posdb.addColl    ( coll, verify ) ) goto hadError;
 	//if ( ! g_datedb.addColl     ( coll, verify ) ) goto hadError;
-
+	
 	if ( ! g_titledb.addColl    ( coll, verify ) ) goto hadError;
 	//if ( ! g_revdb.addColl      ( coll, verify ) ) goto hadError;
 	//if ( ! g_sectiondb.addColl  ( coll, verify ) ) goto hadError;
 	if ( ! g_tagdb.addColl      ( coll, verify ) ) goto hadError;
 	//if ( ! g_catdb.addColl      ( coll, verify ) ) goto hadError;
 	//if ( ! g_checksumdb.addColl ( coll, verify ) ) goto hadError;
-	if ( ! g_spiderdb.addColl   ( coll, verify ) ) goto hadError;
-	if ( ! g_doledb.addColl     ( coll, verify ) ) goto hadError;
 	//if ( ! g_tfndb.addColl      ( coll, verify ) ) goto hadError;
 	if ( ! g_clusterdb.addColl  ( coll, verify ) ) goto hadError;
 	if ( ! g_linkdb.addColl     ( coll, verify ) ) goto hadError;
+	if ( ! g_spiderdb.addColl   ( coll, verify ) ) goto hadError;
+	if ( ! g_doledb.addColl     ( coll, verify ) ) goto hadError;
 
 
 	// if first time adding a collrec, initialize the collectionless
 	// rdbs so they call Rdb::addColl() which makes a new RdbBase for them
 	// and stores ptr to that base in CollectionRec::m_bases[]
-	if ( m_numRecsUsed <= 1 ) {
+	if ( m_numRecsUsed == 1 ) {
 		g_statsdb.addColl ( NULL );
 		g_cachedb.addColl ( NULL );
 		g_serpdb.addColl ( NULL );
@@ -505,12 +507,12 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	deleteTurkdb = true;
 	// no spiders can be out. they may be referencing the CollectionRec
 	// in XmlDoc.cpp... quite likely.
-	if ( g_conf.m_spideringEnabled ||
-	     g_spiderLoop.m_numSpidersOut > 0 ) {
-		log("admin: Can not delete collection while "
-		    "spiders are enabled or active.");
-		return false;
-	}
+	//if ( g_conf.m_spideringEnabled ||
+	//     g_spiderLoop.m_numSpidersOut > 0 ) {
+	//	log("admin: Can not delete collection while "
+	//	    "spiders are enabled or active.");
+	//	return false;
+	//}
 	// do not allow this if in repair mode
 	if ( g_repairMode > 0 ) {
 		log("admin: Can not delete collection while in repair mode.");
@@ -531,6 +533,16 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	}
 	CollectionRec *cr = m_recs [ collnum ];
 	if ( ! cr ) return log("admin: Collection id problem. Delete failed.");
+	// spiders off
+	if ( cr->m_spiderColl &&
+	     cr->m_spiderColl->getTotalOutstandingSpiders() > 0 ) {
+		log("admin: Can not delete collection while "
+		    "spiders are oustanding for collection. Turn off "
+		    "spiders and wait for them to exit.");
+		return false;
+	}
+	// note it
+	log("coll: deleting coll %s",cr->m_coll);
 	// we need a save
 	m_needsSave = true;
 	// nuke it on disk

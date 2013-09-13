@@ -57,6 +57,7 @@ struct SafeBuf {
 	bool truncateLongWords ( char *src, long srcLen , long minmax );
 	bool safeTruncateEllipsis ( char *src , long maxLen );
 	bool convertJSONtoXML ( long niceness , long startConvertPos );
+	bool decodeJSONToUtf8 ( long niceness );
 	bool decodeJSON ( long niceness );
 	bool linkify ( long niceness , long startPos );
 
@@ -68,6 +69,13 @@ struct SafeBuf {
 		purge();
 		if ( ! str ) return true;
 		return safeStrcpy ( str );
+	};
+
+	void removeLastChar ( char lastChar ) {
+		if ( m_length <= 0 ) return;
+		if ( m_buf[m_length-1] != lastChar ) return;
+		m_length--;
+		m_buf[m_length] = '\0';
 	};
 
 	//MUTATORS
@@ -83,6 +91,7 @@ struct SafeBuf {
 	bool  safeMemcpy(SafeBuf *c){return safeMemcpy(c->m_buf,c->m_length);};
 	bool  safeMemcpy ( class Words *w , long a , long b ) ;
 	bool  safeStrcpy ( char *s ) ;
+	bool  safeStrcpyPrettyJSON ( char *decodedJson ) ;
 	//bool  pushLong ( long val ) { return safeMemcpy((char *)&val,4); }
 	bool  cat(SafeBuf& c);
 	// . only cat the sections/tag that start with "tagFilter"
@@ -96,7 +105,11 @@ struct SafeBuf {
 	bool  reserve(long i, char *label=NULL);
 	bool  reserve2x(long i);
 	bool  inlineStyleTags();
-	void  incrementLength(long i) { m_length += i; }
+	void  incrementLength(long i) { 
+		m_length += i; 
+		// watch out for negative i's
+		if ( m_length < 0 ) m_length = 0; 
+	};
 	void  setLength(long i) { m_length = i; };
 	char *getNextLine ( char *p ) ;
 	long  catFile(char *filename) ;
@@ -172,9 +185,9 @@ struct SafeBuf {
 
 	//insert strings in their native encoding
 	bool  encode ( char *s , long len , long niceness=0) {
-		return utf8Encode(s,len,false,niceness); };
+		return utf8Encode2(s,len,false,niceness); };
 	// htmlEncode default = false
-	bool  utf8Encode(char *s, long len, bool htmlEncode=false, 
+	bool  utf8Encode2(char *s, long len, bool htmlEncode=false, 
 			 long niceness=0);
 	bool  latin1Encode(char *s, long len, bool htmlEncode=false,
 			   long niceness=0);
@@ -229,6 +242,16 @@ struct SafeBuf {
 	bool htmlEncodeXmlTags ( char *s , long slen , long niceness ) ;
 
 	bool  cdataEncode ( char *s ) ;
+
+	// . append a \0 but do not inc m_length
+	// . for null terminating strings
+	bool nullTerm ( ) {
+		if(m_length >= m_capacity && !reserve(m_capacity + 1) )
+			return false;
+		m_buf[m_length] = '\0';
+		return true;
+	};
+
 
 	bool  safeCdataMemcpy(char *s, long len);
 	bool  pushChar (char i) {

@@ -1204,7 +1204,8 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 				status &=printParm ( sb, username,&m_parms[i],i,
 						     j, jend, (char *)THIS,
 						     coll,NULL,
-						     bg,nc,pd);
+						     bg,nc,pd,
+						     false);
 			continue;
 		}
 		// if not first in a row, skip it, we printed it already
@@ -1222,7 +1223,7 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 			      k++ )
 				status &=printParm(sb,username,&m_parms[k],k,
 					    newj,jend,(char *)THIS,coll,NULL,bg,
-					    nc,pd);
+						   nc,pd, j==size-1);
 		}
 		// end array table
 		//if ( m->m_max > 1 ) {
@@ -1656,7 +1657,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			char *pwd  ,
 			char *bg   ,
 			long  nc   ,
-			long  pd   ) {
+			long  pd   ,
+			bool lastRow ) {
 	bool status = true;
 	// do not print if no permissions
 	if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
@@ -1864,8 +1866,14 @@ bool Parms::printParm ( SafeBuf* sb,
 	else if ( t == TYPE_CHECKBOX ) {
 		char *ddd = "";
 		if ( *s ) ddd = " checked";
-		sb->safePrintf("<center>"
-			       "<input type=checkbox ");
+		// this is part of the "HACK" fix below. you have to
+		// specify the cgi parm in the POST request, and unchecked
+		// checkboxes are not included in the POST request.
+		if ( lastRow && m->m_page == PAGE_FILTERS ) 
+			sb->safePrintf("<center><input type=hidden ");
+		else
+			sb->safePrintf("<center>"
+				       "<input type=checkbox ");
 		if ( m->m_page == PAGE_FILTERS)
 			sb->safePrintf("id=id_%s ",cgi);
 
@@ -1931,6 +1939,22 @@ bool Parms::printParm ( SafeBuf* sb,
 		sb->safePrintf ("<input type=text name=%s size=%li value=\"",
 				cgi,size);
 		sb->dequote ( s , gbstrlen(s) );
+		sb->safePrintf ("\">");
+	}
+	else if ( t == TYPE_SAFEBUF ) {
+		long size = m->m_size;
+		// give regular expression box on url filters page more room
+		if ( m->m_page == PAGE_FILTERS ) {
+			if ( size > REGEX_TXT_MAX ) size = REGEX_TXT_MAX;
+		}
+		else {
+			if ( size > 20 ) size = 20;
+		}
+		sb->safePrintf ("<input type=text name=%s size=%li value=\"",
+				cgi,size);
+		//sb->dequote ( s , gbstrlen(s) );
+		SafeBuf *sx = (SafeBuf *)s;
+		sb->dequote ( sx->getBufStart() , sx->length() );
 		sb->safePrintf ("\">");
 	}
 	else if ( t == TYPE_STRINGBOX ) {
@@ -2505,12 +2529,21 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	}
 
 	// if we are setting a guy in an array AND he is NOT the first
-	// in his row, ensure the guy before has a count of j+1 or more
+	// in his row, ensure the guy before has a count of j+1 or more.
+	//
+	// crap, on the url filters page if you do not check "spidering 
+	// enabled" checkbox when adding a new rule at the bottom of the
+	// table, , then the spidering enabled parameter does not transmit so
+	// the "respider frequency" ends up checking the "spider enabled"
+	// array whose "count" was not incremented like it should have been.
+	// HACK: make new line at bottom always have spidering enabled
+	// checkbox set and make it impossible to unset.
 	if ( m->m_max > 1 && m->m_rowid >= 0 && mm > 0 &&
 	     m_parms[mm-1].m_rowid == m->m_rowid ) {
 		char *pos =  (char *)THIS + m_parms[mm-1].m_off - 4 ;
 		long maxcount = *(long *)pos;
 		if ( j >= maxcount ) {
+			log("admin: parm before \"m\" is limiting us");
 			//log("admin: try nuking the url filters or whatever "
 			//    "and re-adding");
 			return;
@@ -2609,15 +2642,19 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		     ! isHtmlEncoded && oldLen == len &&
 		     memcmp ( sb->getBufStart() , s , len ) == 0 ) 
 			return;
+		// nuke it
+		sb->purge();
 		// this means that we can not use string POINTERS as parms!!
 		if ( ! isHtmlEncoded ) sb->safeMemcpy ( s , len ); 
 		else                   len = sb->htmlDecode (s,len,false,0);
+		// ensure null terminated
+		sb->nullTerm();
 		// null term it all
 		//dst[len] = '\0';
-		sb->reserve ( 1 );
+		//sb->reserve ( 1 );
 		// null terminate but do not include as m_length so the
 		// memcmp() above still works right
-		sb->m_buf[sb->m_length] = '\0';
+		//sb->m_buf[sb->m_length] = '\0';
 		// . might have to set length
 		// . used for CollectionRec::m_htmlHeadLen and m_htmlTailLen
 		//if ( m->m_plen >= 0 ) 
@@ -2891,6 +2928,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		// now, extricate from the <![CDATA[ ... ]]> tag if we need to
 		if ( m->m_type == TYPE_STRING         || 
 		     m->m_type == TYPE_STRINGBOX      ||
+		     m->m_type == TYPE_SAFEBUF        ||
 		     m->m_type == TYPE_STRINGNONEMPTY   ) {
 			char *oldv    = v;
 			long  oldvlen = vlen;
@@ -3210,6 +3248,10 @@ skip2:
 		}
 		*/
 
+		// debug point
+		//if ( m->m_type == TYPE_SAFEBUF )
+		//	log("hey");
+
 		// loop over all in this potential array
 		for ( j = 0 ; j < count ; j++ ) {
 			// the xml
@@ -3219,6 +3261,7 @@ skip2:
 			// print CDATA if string
 			if ( m->m_type == TYPE_STRING         || 
 			     m->m_type == TYPE_STRINGBOX      ||
+			     m->m_type == TYPE_SAFEBUF        ||
 			     m->m_type == TYPE_STRINGNONEMPTY   ) {
 				sprintf ( p , "<![CDATA[" );
 				p += gbstrlen ( p );
@@ -3233,6 +3276,7 @@ skip2:
 			// print CDATA if string
 			if ( m->m_type == TYPE_STRING         || 
 			     m->m_type == TYPE_STRINGBOX      ||
+			     m->m_type == TYPE_SAFEBUF        ||
 			     m->m_type == TYPE_STRINGNONEMPTY   ) {
 				sprintf ( p , "]]>" );
 				p += gbstrlen ( p );
@@ -3343,6 +3387,14 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 		sprintf (p,"%li",*(long *)s);
 	else if ( t == TYPE_LONG_LONG )
 		sprintf (p,"%lli",*(long long *)s);
+	else if ( t == TYPE_SAFEBUF ) {
+		SafeBuf *sb = (SafeBuf *)s;
+		p = htmlEncode ( p , 
+				 pend , 
+				 sb->getBufStart(),
+				 sb->getBufStart() + sb->length(),
+				 true ); // #?*
+	}
 	else if ( t == TYPE_STRING         || 
 		  t == TYPE_STRINGBOX      ||
 		  t == TYPE_STRINGNONEMPTY ||
@@ -3434,6 +3486,7 @@ bool Parms::serialize( char *buf, long *bufSize ) {
 		if ( m->m_type == TYPE_STRING         ) size = m->m_size;
 		if ( m->m_type == TYPE_STRINGBOX      ) size = m->m_size;
 		if ( m->m_type == TYPE_STRINGNONEMPTY ) size = m->m_size;
+		if ( m->m_type == TYPE_SAFEBUF        ) size = m->m_size;
 		if ( m->m_type == TYPE_SITERULE       ) size = 4;
 
 		// . set size to the total size of array
@@ -3573,6 +3626,7 @@ bool Parms::serializeConfParm( Parm *m, long i, char **p, char *end,
 	return false;
 }
 
+// TODO: add TYPE_SAFEBUF support
 bool Parms::serializeCollParm( CollectionRec *cr,
 			       Parm *m, long i, char **p, char *end,
 			       long size, long cnt,
@@ -5102,7 +5156,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "seatonep";
 	m->m_off   = (char *)&g_conf.m_sendParmChangeAlertsToEmail1 - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_priv  = 2;
 	m->m_group = 0;
 	m++;
@@ -5156,7 +5210,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "seattwop";
 	m->m_off   = (char *)&g_conf.m_sendParmChangeAlertsToEmail2 - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_priv  = 2;
 	m->m_group = 0;
 	m++;
@@ -5210,7 +5264,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "seatthreep";
 	m->m_off   = (char *)&g_conf.m_sendParmChangeAlertsToEmail3 - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_priv  = 2;
 	m->m_group = 0;
 	m++;
@@ -5265,7 +5319,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "seatfourp";
 	m->m_off   = (char *)&g_conf.m_sendParmChangeAlertsToEmail4 - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_priv  = 2;
 	m->m_group = 0;
 	m++;
@@ -7659,6 +7713,105 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	/////////////////////
+	//
+	// DIFFBOT CRAWLBOT PARMS
+	//
+	//////////////////////
+
+	m->m_cgi   = "dbseed";
+	m->m_xml   = "diffbotSeed";
+	m->m_off   = (char *)&cr.m_diffbotSeed - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
+	m->m_cgi   = "dbtoken";
+	m->m_xml   = "diffbotToken";
+	m->m_off   = (char *)&cr.m_diffbotToken - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+	m->m_cgi   = "dbapi";
+	m->m_xml   = "diffbotApi";
+	m->m_off   = (char *)&cr.m_diffbotApi - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+	m->m_cgi   = "dbapiqs";
+	m->m_xml   = "diffbotApiQueryString";
+	m->m_off   = (char *)&cr.m_diffbotApiQueryString - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+	m->m_cgi   = "dbucp";
+	m->m_xml   = "diffbotUrlCrawlPattern";
+	m->m_off   = (char *)&cr.m_diffbotUrlCrawlPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+	m->m_cgi   = "dbupp";
+	m->m_xml   = "diffbotUrlProcessPattern";
+	m->m_off   = (char *)&cr.m_diffbotUrlProcessPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+	m->m_cgi   = "dbppp";
+	m->m_xml   = "diffbotPageProcessPattern";
+	m->m_off   = (char *)&cr.m_diffbotPageProcessPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+	m->m_cgi   = "dbclassify";
+	m->m_xml   = "diffbotClassify";
+	m->m_off   = (char *)&cr.m_diffbotClassify - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+	m->m_cgi   = "dbmaxtocrawl";
+	m->m_xml   = "diffbotMaxToCrawl";
+	m->m_off   = (char *)&cr.m_diffbotMaxToCrawl - x;
+	m->m_type  = TYPE_LONG_LONG;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+	m->m_cgi   = "dbmaxtoprocess";
+	m->m_xml   = "diffbotMaxToProcess";
+	m->m_off   = (char *)&cr.m_diffbotMaxToProcess - x;
+	m->m_type  = TYPE_LONG_LONG;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+	m->m_cgi   = "dbcrawlstarttime";
+	m->m_xml   = "diffbotCrawlStartTime";
+	m->m_off   = (char *)&cr.m_diffbotCrawlStartTime - x;
+	m->m_type  = TYPE_LONG_LONG;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+	m->m_cgi   = "dbcrawlendtime";
+	m->m_xml   = "diffbotCrawlEndTime";
+	m->m_off   = (char *)&cr.m_diffbotCrawlEndTime - x;
+	m->m_type  = TYPE_LONG_LONG;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+	m->m_cgi   = "isdbtestcrawl";
+	m->m_xml   = "isDiffbotTestCrawl";
+	m->m_off   = (char *)&cr.m_isDiffbotTestCrawl - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+
 	///////////////////////////////////////////
 	// SPIDER CONTROLS
 	///////////////////////////////////////////
@@ -7678,7 +7831,7 @@ void Parms::init ( ) {
 	m->m_cgi  = "cse";
 	m->m_off   = (char *)&cr.m_spideringEnabled - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_def   = "1";
 	m++;
 
 	/*
@@ -12040,7 +12193,8 @@ void Parms::init ( ) {
 	m->m_off   = (char *)cr.m_regExs - x;
 	// this is a safebuf, dynamically allocated string really
 	m->m_type  = TYPE_SAFEBUF;//STRINGNONEMPTY
-	m->m_size  = MAX_REGEX_LEN+1;
+	// the size of each element in the array:
+	m->m_size  = sizeof(SafeBuf);//MAX_REGEX_LEN+1;
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1; // if we START a new row
 	m->m_def   = "";
@@ -15096,6 +15250,8 @@ void Parms::overlapTest ( char step ) {
 			    m_parms[i].m_desc);
 	}
 
+	log("conf: try including \"m->m_obj = OBJ_COLL;\" or "
+	    "\"m->m_obj   = OBJ_CONF;\" in your parm definitions");
 	log("conf: failed overlap test. exiting.");
 	exit(-1);
 

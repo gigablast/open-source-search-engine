@@ -229,7 +229,9 @@ bool Rdb::init ( char          *dir                  ,
 			    m_dbname       ,
 			    m_ks           ,
 			    // make useProtection true for debugging
-			    false          ) ) // use protection?
+				    false          , // use protection?
+				    false , // alowdups?
+				    m_rdbId ) )
 			return false;
 	}
 	else {
@@ -244,7 +246,9 @@ bool Rdb::init ( char          *dir                  ,
 			    m_dbname       ,
 			    m_ks           ,
 			    // make useProtection true for debugging
-			    false          ); // use protection?
+				     false          , // use protection?
+				     false , // alowdups?
+				     m_rdbId );
 		}
 		// set this then
 		sprintf(m_treeName,"buckets-%s",m_dbname);
@@ -846,7 +850,8 @@ bool Rdb::loadTree ( ) {
 	//log (0,"Rdb::loadTree: loading %s",filename);
 	// set a BigFile to this filename
 	BigFile file;
-	file.set ( getDir() , filename , NULL ); // getStripeDir() );
+	char *dir = getDir();
+	file.set ( dir , filename , NULL ); // getStripeDir() );
 	bool treeExists = file.doesExist() > 0;
 	bool status = false ;
 	if ( treeExists ) {
@@ -2163,7 +2168,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 	}
 	else if ( (tn=m_tree.addNode ( collnum, key , data , dataSize ))>=0) {
 		// if adding to spiderdb, add to cache, too
-		if ( m_rdbId != RDB_SPIDERDB || m_rdbId != RDB_DOLEDB ) 
+		if ( m_rdbId != RDB_SPIDERDB && m_rdbId != RDB_DOLEDB ) 
 			return true;
 		// or if negative key
 		if ( KEYNEG(key) ) return true;

@@ -156,8 +156,12 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	if ( g_conf.m_isLive ) g_conf.m_doConsistencyTesting = false;
 	// and this on
 	g_conf.m_indexDeletes = true;
+
+	// leave it turned off for diffbot since it always needs to be crawling
+#ifndef DIFFBOT
 	// these off
 	g_conf.m_spideringEnabled = false;
+#endif
 	// this off
 	g_conf.m_repairingEnabled = false;
 	// make this 1 day for now (in seconds)
@@ -203,7 +207,15 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	// and always keep a decent site quality cache of at least 3M
 	if ( g_conf.m_siteQualityMaxCacheMem < 3000000 )
 		g_conf.m_siteQualityMaxCacheMem = 3000000;
-	
+
+
+	m_useDiffbot = false;
+
+#ifdef DIFFBOT	
+	// make sure all collections index into a single unified collection
+	m_useDiffbot = true;
+#endif
+
 	// HACK: set this now
 	setRootIps();
 

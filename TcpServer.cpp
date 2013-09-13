@@ -1425,6 +1425,9 @@ void writeSocketWrapper ( int sd , void *state ) {
 	}
 	// if socket has nothing to send yet cuz we're waiting, wait...
 	if ( s->m_sendBufUsed == 0 ) return;
+
+ sendAgain:
+
 	// . writeSocket returns false if blocked, true otherwise
 	// . it also sets g_errno on errro
 	// . don't call it if we have g_errno set, however
@@ -1435,8 +1438,16 @@ void writeSocketWrapper ( int sd , void *state ) {
 	if ( status == 1  &&  ! s->m_readBuf ) return;
 	// good?
 	g_errno = 0;
-	// otherwise, call callback on done reading or error
+	// otherwise, call callback on done writing or error
 	THIS->makeCallback ( s );
+
+	// if callback changed socket status to ST_SEND_AGAIN 
+	// then let's send the new buffer that it has. Diffbot.cpp uses this.
+	if ( s->m_sockState == ST_SEND_AGAIN ) {
+		s->m_sockState = ST_WRITING;
+		goto sendAgain;
+	}
+
 	// . destroy the socket on error, recycle on transaction completion
 	// . this will also unregister all our callbacks for the socket
 	if      ( status == -1 ) THIS->destroySocket ( s );

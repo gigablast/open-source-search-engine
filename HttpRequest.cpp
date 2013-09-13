@@ -614,6 +614,11 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 // procog's ip
 	 // if ( sock && strncmp(iptoa(sock->m_ip),"216.168.36.21",13) == 0) 
 	 //	 m_isLocal = true;
+#ifdef DIFFBOT
+	 // diffbot comcast
+	 if ( sock && strncmp(iptoa(sock->m_ip),"50.168.3.61",11) == 0) 
+	 	 m_isLocal = true;
+#endif
 
 	 // roadrunner ip
 	 // if ( sock && strncmp(iptoa(sock->m_ip),"66.162.42.131",13) == 0) 
@@ -1022,9 +1027,9 @@ long HttpRequest::getLong ( char *field , long defaultLong ) {
 		 if ( i >= len || !is_digit(value[i]) ) return defaultLong;
 	 }
 	 return res;
- }
+}
 
- long long HttpRequest::getLongLong   ( char *field , 
+long long HttpRequest::getLongLong   ( char *field , 
 					long long defaultLongLong ) {
 	 long len;
 	 char *value = getValue ( field, &len, NULL );
@@ -1043,7 +1048,7 @@ long HttpRequest::getLong ( char *field , long defaultLong ) {
 		 if ( i >= len || !is_digit(value[i]) ) return defaultLongLong;
 	 }
 	 return res;
- }
+}
 
 float HttpRequest::getFloat   ( char *field , double defaultFloat ) {
 	 long len;
@@ -1090,6 +1095,22 @@ double HttpRequest::getDouble ( char *field , double defaultDouble ) {
 	 }
 	 return res;
 }
+
+
+bool HttpRequest::hasField ( char *field ) {
+	// how long is it?
+	long fieldLen = gbstrlen ( field );
+	// scan the field table directly
+	long i = 0;
+	for (  ; i < m_numFields ; i++ ) {
+		if ( fieldLen != m_fieldLens[i]                    ) continue; 
+		if ( strncmp ( field, m_fields[i], fieldLen ) != 0 ) continue;
+		// got a match return the true
+		return true;
+	}
+	return false;
+}
+
 
 char *HttpRequest::getValue ( char *field , long *len, long *next ) {
 	// how long is it?
@@ -1146,8 +1167,21 @@ void HttpRequest::parseFields ( char *s , long slen ) {
 		m_fields [ n ] = s;
 		// point to = sign
 		char *equal = strchr ( s , '=' );
-		// try next field if none here
-		if ( ! equal ) { s += gbstrlen ( s ) + 1; continue; }
+		// if no equal sign, maybe it is one of diffbot's valueless
+		// fields, so support that now
+		if ( ! equal ) { 
+			// just set value to NULL
+			char *end = strchr(s,'&');
+			long len = end - s;
+			if ( ! end ) len = gbstrlen(s);
+			m_fieldLens[n] = len;
+			s[len] = '\0';
+			m_fieldValues[n] = NULL;
+			n++;
+			// skip over the '&' too
+			s += len + 1; 
+			continue; 
+		}
 		// set field len
 		m_fieldLens [ n ] = equal - s;
 		// set = to \0 so getField() returns NULL terminated field name

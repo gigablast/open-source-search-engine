@@ -1434,6 +1434,22 @@ unsigned long Hostdb::makeGroupMask ( long numGroups ) {
 	return makeGroupId ( numGroups - 1 , numGroups );
 }
 
+// return first alive host in a group/shard
+Host *Hostdb::getLiveHostInGroup ( long groupId ) {
+	Host *group = getGroup ( groupId );
+	Host *live = NULL;
+	for ( long i = 0 ; i < m_numHostsPerGroup ; i++ ) {
+		// get it
+		Host *h = &group[i];
+		// skip if dead
+		if ( isDead(h->m_hostId) ) continue;
+		// return it if alive
+		return h;
+	}
+	// return first one if all dead
+	return &group[0];
+}
+
 // . get the Hosts in group with "groupId"
 Host *Hostdb::getGroup ( unsigned long groupId , long *numHosts ) {
 	// set hosts per group
