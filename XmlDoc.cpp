@@ -11849,10 +11849,31 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// from this url
 	SafeBuf diffbotUrl;
 	// TODO: make sure "api" works as hostname for not just product...
-	diffbotUrl.safePrintf("http://www.diffbot.com/api/%s?token=%s&url="
+	diffbotUrl.safePrintf("http://www.diffbot.com/api/");
+
+	// . m_diffbotApi Is like "article" or "product" etc.
+	// . if classify is true we always return the classification 
+	//   of the page in the JSON. like "type":"frontpage" regardless
+	//   of the "api" specified.
+	// . otherwise, if classify is false empty json will be returned
+	//   if there is no json objects of the specified page type, "api"
+	// . BUT if api is "all" return all types of json objects
+	// . TODO: add "all" to the drop down list
+	if ( strcmp(m_cr->m_diffbotApi.getBufStart(),"all") == 0 )
+		diffbotUrl.safePrintf("analyze?mode=auto&" );
+	// . SHOULD we return "type" in the json output?
+	else if ( m_cr->m_diffbotClassify )
+		diffbotUrl.safePrintf("analyze?mode=%s&"
+				      , m_cr->m_diffbotApi.getBufStart() 
+				      );
+	else
+		diffbotUrl.safePrintf("%s?"
+				      , m_cr->m_diffbotApi.getBufStart()
+				      );
+
+
+	diffbotUrl.safePrintf("token=%s&url="
 	//diffbotUrl.safePrintf("http://54.212.86.74/api/%s?token=%s&u="
-			      // this is like "article" or "product" etc.
-			      , m_cr->m_diffbotApi.getBufStart()
 			      , m_cr->m_diffbotToken.getBufStart()
 			      );
 
