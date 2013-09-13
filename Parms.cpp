@@ -2511,8 +2511,10 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 
 	if ( ! s ) {
 		s = "0";
+		char *tit = m->m_title;
+		if ( ! tit || ! tit[0] ) tit = m->m_xml;
 		log(LOG_LOGIC,"admin: Parm \"%s\" had NULL default value.",
-		    m->m_title);
+		    tit);
 		//char *xx = NULL; *xx = 0;
 	}
 
@@ -7097,6 +7099,7 @@ void Parms::init ( ) {
 	m->m_page = PAGE_SECURITY;
 	m++;
 
+	/*
 	m->m_title = "Users";
 	m->m_desc = "Add users here. The format is "
 		"collection:ip:username:password:relogin:pages:tagnames"
@@ -7126,6 +7129,7 @@ void Parms::init ( ) {
 	m->m_plen = (char *)&g_conf.m_usersLen - g;
 	m->m_page = PAGE_SECURITY;
 	m++;
+	*/
 
 	/*m->m_title = "Master Passwords";
 	m->m_desc  = "Passwords allowed to change Gigablast's general "
@@ -7725,6 +7729,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
 	m++;
 
 	m->m_cgi   = "dbtoken";
@@ -7732,6 +7737,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_diffbotToken - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
 	m++;
 
 	m->m_cgi   = "dbapi";
@@ -7739,6 +7745,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_diffbotApi - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
 	m++;
 
 	m->m_cgi   = "dbapiqs";
@@ -7746,6 +7753,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_diffbotApiQueryString - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
 	m++;
 
 	m->m_cgi   = "dbucp";
@@ -7753,6 +7761,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_diffbotUrlCrawlPattern - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
 	m++;
 
 	m->m_cgi   = "dbupp";
@@ -7760,6 +7769,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_diffbotUrlProcessPattern - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
 	m++;
 
 	m->m_cgi   = "dbppp";
@@ -7767,13 +7777,15 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_diffbotPageProcessPattern - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
 	m++;
 
 	m->m_cgi   = "dbclassify";
 	m->m_xml   = "diffbotClassify";
 	m->m_off   = (char *)&cr.m_diffbotClassify - x;
-	m->m_type  = TYPE_SAFEBUF;
+	m->m_type  = TYPE_CHAR;
 	m->m_page  = PAGE_NONE;
+	m->m_def   = "0";
 	m++;
 
 	m->m_cgi   = "dbmaxtocrawl";
@@ -7781,6 +7793,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_diffbotMaxToCrawl - x;
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
 	m++;
 
 	m->m_cgi   = "dbmaxtoprocess";
@@ -7788,8 +7801,10 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_diffbotMaxToProcess - x;
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
 	m++;
 
+	/*
 	m->m_cgi   = "dbcrawlstarttime";
 	m->m_xml   = "diffbotCrawlStartTime";
 	m->m_off   = (char *)&cr.m_diffbotCrawlStartTime - x;
@@ -7810,6 +7825,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_NONE;
 	m++;
+	*/
 
 
 	///////////////////////////////////////////

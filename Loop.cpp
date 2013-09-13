@@ -600,7 +600,7 @@ bool Loop::init ( ) {
 	sigaddset   ( &sigs , GB_SIGRTMIN + 3 );
 	sigaddset   ( &sigs , SIGCHLD      );
 
-#ifdef _PTHREADS_
+#ifdef PTHREADS
 	// now since we took out SIGIO... (see below)
 	// we should ignore this signal so it doesn't suddenly stop the gb
 	// process since we took out the SIGIO handler because newer kernels
@@ -658,7 +658,7 @@ bool Loop::init ( ) {
 	// . this returns -1 and sets g_errno on error
 	// . TODO: is this the SOURCE signal or the altered signal?
 
-#ifndef _PTHREADS_
+#ifndef PTHREADS
 	// i think this was supposed to be sent when the signal queue was
 	// overflowing so we needed to do a poll operation when we got this
 	// signal, however, newer kernel seems to throw this signal all the

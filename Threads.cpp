@@ -17,11 +17,11 @@
 #include "Process.h"
 
 // try using pthreads again
-//#define _PTHREADS_
+//#define PTHREADS
 
 // use these stubs so libplotter.a works
 
-#ifndef _PTHREADS_
+#ifndef PTHREADS
 int pthread_mutex_lock   (pthread_mutex_t *t ) { return 0; }
 int pthread_mutex_unlock (pthread_mutex_t *t ) { return 0; }
 #else
@@ -33,7 +33,7 @@ pthread_attr_t s_attr;
 static pid_t  s_pid    = (pid_t) -1;
 
 pid_t getpidtid() {
-#ifdef _PTHREADS_
+#ifdef PTHREADS
 	// gettid() is a bit newer so not in our libc32...
 	// so kinda fake it. return the "thread" id, not process id.
 	// Threads::amThread() should still work based on thread ids because
@@ -86,14 +86,14 @@ bool Threads::amThread () {
 	return ( getpidtid() != s_pid );
 }
 
-#ifndef _PTHREADS_
+#ifndef PTHREADS
 static long s_bad    = 0;
 static long s_badPid = -1;
 #endif
 
 #define MAX_PID 32767
 
-#ifndef _PTHREADS_
+#ifndef PTHREADS
 
 static int  s_errno ;
 static int  s_errnos [ MAX_PID + 1 ];
@@ -139,7 +139,7 @@ int *__errno_location (void) {
 static char *s_stackAlloc = NULL;
 static long  s_stackAllocSize;
 
-#ifndef _PTHREADS_
+#ifndef PTHREADS
 static char *s_stack      = NULL;
 static long  s_stackSize;
 static char *s_stackPtrs [ MAX_STACKS ];
@@ -181,7 +181,7 @@ bool Threads::init ( ) {
 	if ( sizeof(pthread_t) > sizeof(pid_t) ) { char *xx=NULL;*xx=0; }
 
 	// set s_pid to the main process id
-#ifdef _PTHREADS_
+#ifdef PTHREADS
 	s_pid = pthread_self();
 	log("threads: main process THREAD id = %lu",(long unsigned)s_pid);
 	pthread_t tid = pthread_self();
@@ -254,9 +254,11 @@ bool Threads::init ( ) {
 	// . priority of threads with niceness 2  will be 20
 	// . see 'man sched_setscheduler' for detail scheduling info
 	// . no need to call getpid(), 0 for pid means the current process
+#ifndef PTHREADS
 	if ( setpriority ( PRIO_PROCESS, getpid() , 0 ) < 0 ) 
 		log("thread: Call to setpriority failed: %s.",
 		    mstrerror(errno));
+#endif
 
 	// make multiplier higher for raids, can do more seeks
 	//long m = 1;
@@ -302,7 +304,7 @@ bool Threads::init ( ) {
 	if ( ! g_threads.registerType (GENERIC_THREAD,100/*maxThreads*/,100) ) 
 		return log("thread: Failed to register thread type." );
 
-#ifndef _PTHREADS_
+#ifndef PTHREADS
 
 	// sanity check
 	if ( GUARDSIZE >= STACK_SIZE )
@@ -866,7 +868,7 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 		//   set so t->m_pid was a bogus value
 		// . thread may have seg faulted, in which case sigbadhandler()
 		//   in Loop.cpp will get it and set errno to 0x7fffffff
-#ifndef _PTHREADS_
+#ifndef PTHREADS
 		// MDW: i hafta take this out because the errno_location thing
 		// is not working on the newer gcc
 		if ( ! t->m_isDone && t->m_pid >= 0 && 
@@ -880,7 +882,7 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 		// skip if not done yet
 		if ( ! t->m_isDone     ) continue;
 
-#ifdef _PTHREADS_		
+#ifdef PTHREADS		
 
 		// . join up with that thread
 		// . damn, sometimes he can block forever on his
@@ -1192,7 +1194,7 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 		//   set so t->m_pid was a bogus value
 		// . thread may have seg faulted, in which case sigbadhandler()
 		//   in Loop.cpp will get it and set errno to 0x7fffffff
-#ifndef _PTHREADS_
+#ifndef PTHREADS
 		// MDW: i hafta take this out because the errno_location thing
 		// is not working on the newer gcc
 		if ( ! t->m_isDone && t->m_pid >= 0 && 
@@ -1207,7 +1209,7 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 		if ( ! t->m_isDone     ) continue;
 
 
-#ifdef _PTHREADS_		
+#ifdef PTHREADS		
 
 		// . join up with that thread
 		// . damn, sometimes he can block forever on his
@@ -1951,7 +1953,7 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	long  count = 0;
 	pid_t pid;
 
-#ifndef _PTHREADS_
+#ifndef PTHREADS
 
 	//int status;
 	//int ret;
@@ -2042,7 +2044,7 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 		log("thread: Call to clone was interrupted. Trying again.");
 		goto loop;
 	}
-#ifndef _PTHREADS_
+#ifndef PTHREADS
  hadError:
 #endif
 	// it didn't launch, did it? dec the count.
@@ -2129,7 +2131,9 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	return true; // false;
 }
 
+#ifndef PTHREADS
 static bool s_firstTime = true;
+#endif
 
 // threads start up with cacnellation deferred until pthreads_testcancel()
 // is called, but we never call that
@@ -2142,7 +2146,7 @@ int startUp ( void *state ) {
 	//t->m_pid = getpid();
 	// . sanity check
 	// . a thread can NOT call this
-#ifndef _PTHREADS_
+#ifndef PTHREADS
 	if ( getpid() == s_pid )
 		log("thread: Thread has same pid %i as main process.",s_pid);
 #endif
@@ -2158,7 +2162,7 @@ int startUp ( void *state ) {
 	// ignore the real time signal, man...
 	//sigaddset(&set, GB_SIGRTMIN);
 	//pthread_sigmask(SIG_BLOCK, &set, NULL);
-#ifndef _PTHREADS_
+#ifndef PTHREADS
 	sigprocmask(SIG_BLOCK, &set, NULL);
 #else
 	pthread_sigmask(SIG_BLOCK,&set,NULL);
@@ -2183,11 +2187,9 @@ int startUp ( void *state ) {
 	//	(long)t->m_tid,(long)t->m_pid);
 	// . set this process's priority
 	// . setpriority() is only used for SCHED_OTHER threads
-#ifdef _PTHREADS_
-	if ( pthread_setschedprio ( getpidtid() , p ) ) {
-#else
+	//if ( pthread_setschedprio ( getpidtid() , p ) ) {
+#ifndef PTHREADS
 	if ( setpriority ( PRIO_PROCESS, getpidtid() , p ) < 0 ) {
-#endif
 		// do we even support logging from a thread?
 		if ( s_firstTime ) {
 			log("thread: Call to setpriority(%lu,%i) in thread "
@@ -2198,6 +2200,7 @@ int startUp ( void *state ) {
 		}
 		errno = 0;
 	}
+#endif
 	/*
 	sched_param sp;
 	int         pp;
