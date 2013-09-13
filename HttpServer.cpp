@@ -894,7 +894,8 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 
 	// . if we get a request for this then allow Diffbot.cpp to
 	//   handle it and send back the right stuff
-	if ( strcmp ( path , "/dev/crawl" ) == 0 ||
+	if ( strcmp ( path , "/crawlbot"   ) == 0 ||
+	     strcmp ( path , "/dev/crawl"  ) == 0 ||
 	     strcmp ( path , "/dev/crawl/" ) == 0 )
 		// this will call g_httpServer.sendDynamicPage() to send
 		// back the reply when it is done generating the reply.

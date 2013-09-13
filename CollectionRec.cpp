@@ -527,3 +527,10 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 	// otherwise no permission
 	return false;
 }
+
+char *CollectionRec::getDiffbotToken ( long *tokenLen ) {
+	char *s = strchr ( m_coll , '-' );
+	if ( ! s ) return NULL;
+	*tokenLen = s - m_coll;
+	return m_coll;
+}

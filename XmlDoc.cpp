@@ -11871,12 +11871,12 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 				      , m_cr->m_diffbotApi.getBufStart()
 				      );
 
-
-	diffbotUrl.safePrintf("token=%s&url="
 	//diffbotUrl.safePrintf("http://54.212.86.74/api/%s?token=%s&u="
-			      , m_cr->m_diffbotToken.getBufStart()
-			      );
-
+	long tokenLen;
+	char *token = m_cr->getDiffbotToken ( &tokenLen );
+	diffbotUrl.safePrintf("token=");
+	diffbotUrl.safeMemcpy(token,tokenLen);
+	diffbotUrl.safePrintf("&url=");
 	// give diffbot the url to process
 	diffbotUrl.urlEncode ( m_firstUrl.getUrl() );
 	// append this just in case the next thing doesn't have it.

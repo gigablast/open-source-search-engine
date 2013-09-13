@@ -93,6 +93,8 @@ class CollectionRec {
 	// array of them in Rdb.h called m_bases[]
 	RdbBase *m_bases[RDB_END];
 
+	char *getDiffbotToken ( long *tokenLen );
+
 	// . set ourselves from serialized raw binary
 	// . returns false and sets errno on error
 	bool set ( char *data , long dataSize );
@@ -368,7 +370,7 @@ class CollectionRec {
 	char  m_retryPriority; 
 
 	// new diffbot parms
-	SafeBuf m_diffbotToken;
+	//SafeBuf m_diffbotToken;
 	SafeBuf m_diffbotSeed;
 	SafeBuf m_diffbotApi;
 	SafeBuf m_diffbotApiQueryString;
@@ -387,7 +389,7 @@ class CollectionRec {
 	long long m_diffbotCrawlEndTime;
 
 	// for testing their regexes etc...
-	char m_isDiffbotTestCrawl;
+	//char m_isDiffbotTestCrawl;
 
 	// our local crawling stats
 	CrawlInfo m_localCrawlInfo;

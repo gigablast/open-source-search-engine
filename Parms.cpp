@@ -7732,6 +7732,8 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
+	/*
+	  this is in the collection name, no need for it here
 	m->m_cgi   = "dbtoken";
 	m->m_xml   = "diffbotToken";
 	m->m_off   = (char *)&cr.m_diffbotToken - x;
@@ -7739,6 +7741,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
 	m++;
+	*/
 
 	m->m_cgi   = "dbapi";
 	m->m_xml   = "diffbotApi";
