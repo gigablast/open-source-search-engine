@@ -433,6 +433,11 @@ class XmlDoc {
 
 	void print   ( );
 
+	bool set1 ( char *url ,
+		    char *coll,
+		    SafeBuf *pbuf ,
+		    long niceness );
+
 
 	bool set2 ( char *titleRec,
 		    long maxSize, 
@@ -1135,7 +1140,7 @@ class XmlDoc {
 	bool m_utf8ContentValid;
 	bool m_isAllowedValid;
 	//bool m_tryAgainTimeDeltaValid;
-	bool m_eliminateMenusValid;
+	//bool m_eliminateMenusValid;
 	bool m_redirUrlValid;
 	bool m_metaRedirUrlValid;
 	bool m_statusMsgValid;

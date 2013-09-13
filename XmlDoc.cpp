@@ -803,7 +803,6 @@ void XmlDoc::reset ( ) {
 //   the hop count
 // . they might also want to skip deduping, or any algo deemed unnecessary
 //   by setting, for instance, m_isDupValid = true, or something
-/*
 bool XmlDoc::set1 ( char    *url         , 
 		    char    *coll        , 
 		    SafeBuf *pbuf        , 
@@ -820,7 +819,7 @@ bool XmlDoc::set1 ( char    *url         ,
 	m_version  = TITLEREC_CURRENT_VERSION;
 
 	// sanity check
-	if ( xxm_niceness == 0 ) { char *xx=NULL; *xx=0; }
+	if ( m_niceness == 0 ) { char *xx=NULL; *xx=0; }
 
 	// copy this in case collection gets deleted i guess...
 	//m_forceDelete = forceDelete;
@@ -835,30 +834,11 @@ bool XmlDoc::set1 ( char    *url         ,
 
 	setFirstUrl ( url , false );
 
-	// solidify some parms
-	m_eliminateMenus      = m_cr->m_eliminateMenus;
-	m_eliminateMenusValid = true;
-
-	// validate these here too
-	m_titleWeight            = m_cr->m_titleWeight;
-	m_headerWeight           = m_cr->m_headerWeight;
-	m_urlPathWeight          = m_cr->m_urlPathWeight;
-	m_externalLinkTextWeight = m_cr->m_externalLinkTextWeight;
-	m_internalLinkTextWeight = m_cr->m_internalLinkTextWeight;
-	m_conceptWeight          = m_cr->m_conceptWeight;
-
-	m_titleWeightValid            = true;
-	m_headerWeightValid           = true;
-	m_urlPathWeightValid          = true;
-	m_externalLinkTextWeightValid = true;
-	m_internalLinkTextWeightValid = true;
-	m_conceptWeightValid          = true;
-
-	setSpideredTime();
+	//setSpideredTime();
 
 	return true;
 }
-*/
+
 
 char *XmlDoc::getTestDir ( ) {
 	// return NULL if we are not the "test" collection
@@ -12242,6 +12222,13 @@ char **XmlDoc::getHttpReply2 ( ) {
 		char *xx=NULL;*xx=0; 
 	}
 
+	// sanity check
+	if ( m_deleteFromIndex ) {
+		log("xmldoc: trying to download page to delete");
+		char *xx=NULL;*xx=0; 
+	}
+
+
 	if ( ! m_msg13.getDoc ( r , isTestColl,this , gotHttpReplyWrapper ) )
 		// return -1 if blocked
 		return (char **)-1;
@@ -12294,7 +12281,9 @@ char **XmlDoc::gotHttpReply ( ) {
 	// breathe
 	QUICKPOLL ( m_niceness );
 
-	// sanity test -- only if not the test collection
+	// . sanity test -- only if not the test collection
+	// . i.e. what are you doing downloading the page if there was
+	//   a problem with the page we already know about
 	if ( m_indexCode && m_indexCodeValid &&
 	     strcmp(m_coll,"test") ) { char *xx=NULL;*xx=0; }
 
@@ -16809,42 +16798,11 @@ long *XmlDoc::nukeJSONObjects ( ) {
 			fakeUrl.set ( m_firstUrl.getUrl() );
 			// append -diffbot-0 etc. for fake url
 			fakeUrl.safePrintf("-diffbot-%li",m_joc);
-			// this can go on the stack since set4() copies it
-			SpiderRequest sreq;
-			sreq.reset();
-			// string ptr
-			char *url = fakeUrl.getBufStart();
-			// use this as the url
-			strcpy( sreq.m_url, url );
-			// parentdocid of 0
-			long firstIp = hash32n ( url );
-			if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
-			sreq.setKey( firstIp,0LL, false );
-			sreq.m_isInjecting   = 1; 
-			sreq.m_isPageInject  = 1;
-			sreq.m_hopCount      = 0;
-			sreq.m_hopCountValid = 1;
-			sreq.m_fakeFirstIp   = 1;
-			sreq.m_firstIp       = firstIp;
-			// set this
-			if (!m_dx->set4 ( &sreq       ,
-					  NULL        ,
-					  m_coll  ,
-					  NULL        , // pbuf
-					  // give it a niceness of 1, we have 
-					  // to be careful since we are a 
-					  // niceness of 0!!!!
-					  m_niceness, // 1 , 
-					  // inject this content
-					  NULL,//m_diffbotObj, // content ,
-					  //
-					  // DELETE IT
-					  //
-					  true, // deleteFromIndex ,!!!!
-					  0, // forcedIp ,
-					  CT_JSON, // contentType ,
-					  0, // lastSpidered ,
-					  false )) // hasMime
+			// set url of new xmldoc
+			if ( ! m_dx->set1 ( fakeUrl.getBufStart(),
+					    m_coll ,
+					    NULL , // pbuf
+					    m_niceness ) )
 				// g_errno should be set!
 				return NULL;
 			// we are indexing json objects, don't use all these
@@ -16853,6 +16811,8 @@ long *XmlDoc::nukeJSONObjects ( ) {
 			m_dx->m_useTagdb      = false;
 			m_dx->m_usePlacedb    = false;
 			m_dx->m_useLinkdb     = false;
+			m_dx->m_isChildDoc    = true;
+			m_dx->m_deleteFromIndex = true;
 			//m_dx->m_isDiffbotJSONObject = true;
 		}
 
@@ -16860,8 +16820,9 @@ long *XmlDoc::nukeJSONObjects ( ) {
 		// we should just pass through here
 		m_dx->setCallback ( m_masterState , m_masterLoop );
 
-		// . inject the content of the json using this fake url
-		// . return -1 if this blocks
+		// . this should ultimately load from titledb and not
+		//   try to download the page since m_deleteFromIndex is
+		//   set to true
 		// . if m_dx got its msg4 reply it ends up here, in which
 		//   case do NOT re-call indexDoc() so check for
 		//   m_listAdded.
@@ -16976,11 +16937,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		
 
 	// if "rejecting" from index fake all this stuff
-	if ( m_deleteFromIndex ||
+	if ( m_deleteFromIndex ) {
 	     // if we are using diffbot api and diffbot found no json objects
 	     // or we never even processed the url, we really just want to
-	     // add the SpiderReply for this url to spiderdb and nothing more
-	     diffbotEmptyReply ) {
+	     // add the SpiderReply for this url to spiderdb and nothing more.
+		// NO! we still want to store the page content in titledb
+		// so we can see if it has changed i guess
+	     //diffbotEmptyReply ) {
 		// set these things to bogus values since we don't need them
 		m_contentHash32Valid = true;
 		m_contentHash32 = 0;
@@ -17633,6 +17596,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			m_dx->m_useTagdb      = false;
 			m_dx->m_usePlacedb    = false;
 			m_dx->m_useLinkdb     = false;
+			m_dx->m_isChildDoc    = true;
 
 			m_dx->m_isDiffbotJSONObject = true;
 		}
