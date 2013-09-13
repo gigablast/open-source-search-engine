@@ -164,7 +164,7 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 #else
 	// always force off on startup if not diffbot
 	g_conf.m_spideringEnabled = false;
-#end
+#endif
 	// this off
 	g_conf.m_repairingEnabled = false;
 	// make this 1 day for now (in seconds)

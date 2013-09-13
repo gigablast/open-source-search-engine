@@ -7940,12 +7940,16 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// add it in to the stats
 	if ( slot ) {
 		CrawlInfo *stats = (CrawlInfo *)(slot->m_readBuf);
-		cr->m_globalCrawlInfo.m_pageIndexAttempts +=
-			stats->m_pageIndexAttempts;
+		cr->m_globalCrawlInfo.m_urlsConsidered +=
+			stats->m_urlsConsidered;
 		cr->m_globalCrawlInfo.m_pageProcessAttempts +=
 			stats->m_pageProcessAttempts;
 		cr->m_globalCrawlInfo.m_pageDownloadAttempts +=
 			stats->m_pageDownloadAttempts;
+		cr->m_globalCrawlInfo.m_pageProcessSuccesses +=
+			stats->m_pageProcessSuccesses;
+		cr->m_globalCrawlInfo.m_pageDownloadSuccesses +=
+			stats->m_pageDownloadSuccesses;
 	}
 	// return if still waiting on more to come in
 	if ( cr->m_replies < cr->m_requests ) return;

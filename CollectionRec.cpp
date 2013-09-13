@@ -137,12 +137,16 @@ bool CollectionRec::load ( char *coll , long i ) {
 		// fillfromfile returns 0 if does not exist, -1 on read error
 		if ( sb.fillFromFile ( tmp1 ) > 0 )
 			sscanf ( sb.getBufStart() ,
-				 "indexAttempts:%lli\n"
-				 "processAttempts:%lli\n"
+				 "urlsConsidered:%lli\n"
 				 "downloadAttempts:%lli\n"
-				 , &m_localCrawlInfo.m_pageIndexAttempts
-				 , &m_localCrawlInfo.m_pageProcessAttempts
+				 "downloadSuccesses:%lli\n"
+				 "processAttempts:%lli\n"
+				 "processSuccesses:%lli\n"
+				 , &m_localCrawlInfo.m_urlsConsidered
 				 , &m_localCrawlInfo.m_pageDownloadAttempts
+				 , &m_localCrawlInfo.m_pageDownloadSuccesses
+				 , &m_localCrawlInfo.m_pageProcessAttempts
+				 , &m_localCrawlInfo.m_pageProcessSuccesses
 				 );
 		// LOAD GLOBAL
 		sprintf ( tmp1 , "%scoll.%s.%li/globalcrawlinfo.txt",
@@ -151,13 +155,17 @@ bool CollectionRec::load ( char *coll , long i ) {
 		sb.reset();
 		if ( sb.fillFromFile ( tmp1 ) > 0 )
 			sscanf ( sb.getBufStart() ,
-				 "indexAttempts:%lli\n"
-				 "processAttempts:%lli\n"
+				 "urlsConsidered:%lli\n"
 				 "downloadAttempts:%lli\n"
+				 "downloadSuccesses:%lli\n"
+				 "processAttempts:%lli\n"
+				 "processSuccesses:%lli\n"
 				 "lastupdate:%lu\n"
-				 , &m_globalCrawlInfo.m_pageIndexAttempts
-				 , &m_globalCrawlInfo.m_pageProcessAttempts
+				 , &m_globalCrawlInfo.m_urlsConsidered
 				 , &m_globalCrawlInfo.m_pageDownloadAttempts
+				 , &m_globalCrawlInfo.m_pageDownloadSuccesses
+				 , &m_globalCrawlInfo.m_pageProcessAttempts
+				 , &m_globalCrawlInfo.m_pageProcessSuccesses
 				 , &m_globalCrawlInfoUpdateTime 
 				 );
 		// ignore errors i guess
@@ -347,12 +355,16 @@ bool CollectionRec::save ( ) {
 			  g_hostdb.m_dir , m_coll , (long)m_collnum );
 		log("coll: saving %s",tmp);
 		SafeBuf sb;
-		sb.safePrintf("indexAttempts:%lli\n"
-			      "processAttempts:%lli\n"
+		sb.safePrintf("urlsConsidered:%lli\n"
 			      "downloadAttempts:%lli\n"
-			      , m_localCrawlInfo.m_pageIndexAttempts
-			      , m_localCrawlInfo.m_pageProcessAttempts
+			      "downloadSuccesses:%lli\n"
+			      "processAttempts:%lli\n"
+			      "processSuccesses:%lli\n"
+			      , m_localCrawlInfo.m_urlsConsidered
 			      , m_localCrawlInfo.m_pageDownloadAttempts
+			      , m_localCrawlInfo.m_pageDownloadSuccesses
+			      , m_localCrawlInfo.m_pageProcessAttempts
+			      , m_localCrawlInfo.m_pageProcessSuccesses
 			      );
 		if ( sb.dumpToFile ( tmp ) == -1 ) {
 			log("coll: failed to save file %s : %s",
@@ -364,13 +376,17 @@ bool CollectionRec::save ( ) {
 			  g_hostdb.m_dir , m_coll , (long)m_collnum );
 		log("coll: saving %s",tmp);
 		sb.reset();
-		sb.safePrintf("indexAttempts:%lli\n"
-			      "processAttempts:%lli\n"
+		sb.safePrintf("urlsConsidered:%lli\n"
 			      "downloadAttempts:%lli\n"
+			      "downloadSuccesses:%lli\n"
+			      "processAttempts:%lli\n"
+			      "processSuccesses:%lli\n"
 			      "lastupdate:%lu\n"
-			      , m_globalCrawlInfo.m_pageIndexAttempts
-			      , m_globalCrawlInfo.m_pageProcessAttempts
+			      , m_globalCrawlInfo.m_urlsConsidered
 			      , m_globalCrawlInfo.m_pageDownloadAttempts
+			      , m_globalCrawlInfo.m_pageDownloadSuccesses
+			      , m_globalCrawlInfo.m_pageProcessAttempts
+			      , m_globalCrawlInfo.m_pageProcessSuccesses
 			      , m_globalCrawlInfoUpdateTime 
 			      );
 		if ( sb.dumpToFile ( tmp ) == -1 ) {

@@ -72,9 +72,11 @@
 // used by diffbot to control spidering per collection
 class CrawlInfo {
  public:
-	long long m_pageIndexAttempts;
-	long long m_pageProcessAttempts;
+	long long m_urlsConsidered;
 	long long m_pageDownloadAttempts;
+	long long m_pageDownloadSuccesses;
+	long long m_pageProcessAttempts;
+	long long m_pageProcessSuccesses;
 	void reset() { memset ( this , 0 , sizeof(CrawlInfo) ); };
 };
 

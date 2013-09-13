@@ -1811,7 +1811,7 @@ bool XmlDoc::indexDoc ( ) {
 		// do not repeat
 		m_incrementedAttemptsCount = true;
 		// this is just how many urls we tried to index
-		m_cr->m_localCrawlInfo.m_pageIndexAttempts++;
+		m_cr->m_localCrawlInfo.m_urlsConsidered++;
 		// need to save collection rec now during auto save
 		m_cr->m_needsSave = true;
 		// update this just in case we are the last url crawled
@@ -1826,7 +1826,7 @@ bool XmlDoc::indexDoc ( ) {
 	if ( g_conf.m_useDiffbot &&
 	     ! m_isDiffbotJSONObject &&
 	     // this is just for this collection, from all hosts in network
-	     m_cr->m_globalCrawlInfo.m_pageDownloadAttempts >=
+	     m_cr->m_globalCrawlInfo.m_pageDownloadSuccesses >= //Attempts >=
 	     m_cr->m_diffbotMaxToCrawl ) {
 		m_cr->m_spideringEnabled = false;
 		log("diffbot: abandoning url because we hit crawl limit "
@@ -1840,7 +1840,7 @@ bool XmlDoc::indexDoc ( ) {
 	// likewise if we hit the max processing limit...
 	if ( g_conf.m_useDiffbot &&
 	     ! m_isDiffbotJSONObject &&
-	     m_cr->m_globalCrawlInfo.m_pageProcessAttempts >=
+	     m_cr->m_globalCrawlInfo.m_pageProcessSuccesses >= // Attempts >=
 	     m_cr->m_diffbotMaxToProcess ) {
 		m_cr->m_spideringEnabled = false;
 		log("diffbot: abandoning url because we hit process limit "
@@ -11744,7 +11744,8 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 
 	// increment this counter on a successful reply from diffbot
 	if ( ! THIS->m_diffbotReplyError ) {
-		//THIS->m_cr->m_localCrawlInfo.m_pagesProcessed++;
+		// count it for stats
+		THIS->m_cr->m_localCrawlInfo.m_pageProcessSuccesses++;
 		// log it
 		log("build: processed page %s",THIS->m_firstUrl.m_url);
 		// sanity!
@@ -11752,9 +11753,9 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		// of an old page for purposes of incremental indexing or
 		// deletion. we do not re-download it, but it seems we try
 		// to re-process it...
-		if ( THIS->m_cr->m_localCrawlInfo.m_pageProcessAttempts >
-		     THIS->m_cr->m_localCrawlInfo.m_pageDownloadAttempts ) {
-			char *xx=NULL;*xx=0; }
+		//if ( THIS->m_cr->m_localCrawlInfo.m_pageProcessAttempts >
+		//     THIS->m_cr->m_localCrawlInfo.m_pageDownloadAttempts ) {
+		//	char *xx=NULL;*xx=0; }
 		// need to save collection rec now during auto save
 		THIS->m_cr->m_needsSave = true;
 		// set the reply properly
@@ -12316,6 +12317,9 @@ char **XmlDoc::gotHttpReply ( ) {
 
 	// make it so
 	g_errno = saved;
+
+	// do not count bad http status in mime as failure i guess
+	m_cr->m_localCrawlInfo.m_pageDownloadSuccesses++;
 
 	// this means the spider compression proxy's reply got corrupted
 	// over roadrunner's crappy wireless internet connection
