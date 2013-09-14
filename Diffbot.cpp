@@ -1582,7 +1582,53 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 			      "<tr>"
 			      "<td><b>Objects Indexed</b></td>"
 			      "<td>%lli</td>"
+			      //
+			      "<td><b>Download Objects:</b> "
+			      "<a href=/crawlbot/downloadobjects?token=&id="
+			      "format=json>"
+			      "json</a>"
+			      "&nbsp; "
+			      "<a href=/crawlbot/downloadobjects?"
+			      "token=&id=&"
+			      "format=xml>"
+			      "xml</a>"
+			      " &nbsp; "
+			      "<b>Search Objects:</b> "
+			      "<input type=text name=q size=50>"
+			      "</td>"
+
 			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>URLs Harvested</b></td>"
+			      "<td>%lli</td>"
+			      //
+			      "<td><b>Download Urls:</b> "
+			      "<a href=/crawlbot/downloadurls?token=&id="
+			      "format=json>"
+			      "json</a>"
+			      " &nbsp; "
+			      "<a href=/crawlbot/downloadurls?"
+			      "token=&id=&"
+			      "format=xml>"
+			      "xml</a>"
+			      "&nbsp; "
+			      "<a href=/crawlbot/downloadurls?"
+			      "token=&id=&"
+			      "format=csv>"
+			      "csv</a>"
+			      //
+			      " &nbsp; "
+			      "<b>Add Url: </b> "
+			      "<input type=text name=addurl size=50>"
+			      " &nbsp; &nbsp; <input type=checkbox "
+			      "name=spiderlinks "
+			      "checked>"
+			      " <i>crawl links on this page?</i>"
+			      "</td>"
+			      
+			      "</tr>"
+			      
 
 			      "<tr>"
 			      "<td><b>URLs Considered</b></td>"
@@ -1597,6 +1643,10 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 			      "<tr>"
 			      "<td><b>Page Download Successes</b></td>"
 			      "<td>%lli</td>"
+			      //
+			      "<td><b>Max:</b> "
+			      "<input type=text name=maxToCrawl "
+			      "size=9 value=%lli>"
 			      "</tr>"
 
 			      "<tr>"
@@ -1607,18 +1657,29 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 			      "<tr>"
 			      "<td><b>Page Process Successes</b></td>"
 			      "<td>%lli</td>"
+			      //
+			      "<td><b>Max:</b> "
+			      "<input type=text name=maxToProcess "
+			      "size=9 value=%lli>"
 			      "</tr>"
+
 			      
 			      "</table>"
 			      "<br>"
 
 			      , cr->m_globalCrawlInfo.m_objectsAdded -
 			        cr->m_globalCrawlInfo.m_objectsDeleted
+			      , cr->m_globalCrawlInfo.m_urlsHarvested
 			      , cr->m_globalCrawlInfo.m_urlsConsidered
+
 			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
+			      , cr->m_diffbotMaxToCrawl 
+
 			      , cr->m_globalCrawlInfo.m_pageProcessAttempts
 			      , cr->m_globalCrawlInfo.m_pageProcessSuccesses
+			      , cr->m_diffbotMaxToProcess
+
 			      );
 	}
 
@@ -1666,62 +1727,6 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 	sb.safePrintf ( "<br>\n" );
 
 
-	
-	// 
-	// downloads
-	//
-	sb.safePrintf("<table cellpadding=5>"
-
-		      "<tr>"
-
-		      "<td><a href=/crawlbot/downloadurls?c=%s&format=csv>"
-		      "download urls (csv)"
-		      "</td>"
-
-		      "<td><a href=/crawlbot/downloadurls?c=%s&format=csv>"
-		      "download urls (json)"
-		      "</td>"
-
-		      "<td><a href=/crawlbot/downloadurls?c=%s&format=csv>"
-		      "download urls (xml)"
-		      "</td>"
-
-		      "<td><a href=/crawlbot/downloadobjects?c=%s&"
-		      "format=json>"
-		      "download objects (json)"
-		      "</td>"
-
-		      "<td><a href=/crawlbot/downloadobjects?c=%s&"
-		      "format=xml>"
-		      "download objects (xml)"
-		      "</td>"
-
-		      "<table>\n"
-		      
-		      , cr->m_coll
-		      , cr->m_coll
-		      , cr->m_coll
-		      , cr->m_coll
-		      , cr->m_coll
-		      );
-
-
-	//
-	// search
-	//
-	sb.safePrintf("<br>"
-		      "<table cellpadding=5>"
-		      "<tr>"
-		      "<td>"
-		      "Search this crawl <input type=text name=q size=50>"
-		      "</td>"
-		      "<td>"
-		      "<input type=submit name=submit value=Search>"
-		      "</td>"
-		      "</tr>"
-		      "</table>");
-
-
 	//
 	// add search box to your site
 	//
@@ -1740,34 +1745,6 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 	// show input boxes
 	//
 
-	sb.safePrintf("<br>"
-		      "<table cellpadding=5>"
-		      "<tr>"
-		      "<td><b>Add Url</b></td>"
-		      "<td><input type=text name=addurl size=50>"
-		      " &nbsp; &nbsp; <input type=checkbox name=spiderlinks "
-		      "checked>"
-		      " <i>crawl links on this page?</i>"
-		      "</tr>"
-
-
-		      "<tr>"
-		      "<td><b>Max Pages to Crawl</b></td>"
-		      "<td><input type=text name=maxToCrawl "
-		      "size=9 value=%lli>"
-		      "</tr>"
-
-		      "<tr>"
-		      "<td><b>Max Pages to Process</b></td>"
-		      "<td><input type=text name=maxToProcess "
-		      "size=9 value=%lli>"
-		      "</tr>"
-
-
-		      "</table>"
-		      , cr->m_diffbotMaxToCrawl 
-		      , cr->m_diffbotMaxToProcess
-		      );
 
 	sb.safePrintf("<br>"
 		      "<table cellpadding=5>"

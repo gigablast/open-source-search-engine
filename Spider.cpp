@@ -8030,8 +8030,8 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// add the LOCAL stats we got from the remote into the GLOBAL stats
 	if ( slot ) {
 		CrawlInfo *stats = (CrawlInfo *)(slot->m_readBuf);
-		long long *ss = (long long *)&stats;
 		long long *gs = (long long *)&cr->m_globalCrawlInfo;
+		long long *ss = (long long *)&stats;
 		for ( long i = 0 ; i < NUMCRAWLSTATS ; i++ ) {
 			*gs = *gs + *ss;
 			gs++;

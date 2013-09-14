@@ -71,7 +71,7 @@
 
 
 // how many counts are in CrawlInfo below????
-#define NUMCRAWLSTATS 7
+#define NUMCRAWLSTATS 8
 
 // used by diffbot to control spidering per collection
 class CrawlInfo {
@@ -83,6 +83,7 @@ class CrawlInfo {
 	long long m_pageDownloadSuccesses; // 5
 	long long m_pageProcessAttempts;   // 6
 	long long m_pageProcessSuccesses;  // 7
+	long long m_urlsHarvested;         // 8
 
 	long m_lastUpdateTime;
 
