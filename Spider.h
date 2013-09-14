@@ -588,7 +588,12 @@ class SpiderRequest {
 
 	long printToTable     ( SafeBuf *sb , char *status ,
 				class XmlDoc *xd ) ;
+	// for diffbot...
+	long printToTableSimple     ( SafeBuf *sb , char *status ,
+				class XmlDoc *xd ) ;
 	static long printTableHeader ( SafeBuf *sb , bool currentlSpidering ) ;
+	static long printTableHeaderSimple ( SafeBuf *sb , 
+					     bool currentlSpidering ) ;
 };
 
 // . XmlDoc adds this record to spiderdb after attempting to spider a url

@@ -337,6 +337,96 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 }
 
 
+long SpiderRequest::printTableHeaderSimple ( SafeBuf *sb , 
+					     bool currentlySpidering) {
+
+	sb->safePrintf("<tr>\n");
+
+	// how long its been being spidered
+	if ( currentlySpidering )
+		sb->safePrintf(" <td><b>elapsed</b></td>\n");
+
+	sb->safePrintf(" <td><b>url</b></td>\n");
+	sb->safePrintf(" <td><b>status</b></td>\n");
+	sb->safePrintf(" <td><b>pri</b></td>\n");
+	sb->safePrintf(" <td><b>errCount</b></td>\n");
+	sb->safePrintf(" <td><b>hops</b></td>\n");
+	sb->safePrintf(" <td><b>addedTime</b></td>\n");
+	sb->safePrintf(" <td><b>flags</b></td>\n");
+	sb->safePrintf("</tr>\n");
+
+	return sb->length();
+}
+
+long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
+					 XmlDoc *xd ) {
+
+	sb->safePrintf("<tr>\n");
+
+	// show elapsed time
+	if ( xd ) {
+		long long now = gettimeofdayInMilliseconds();
+		long long elapsed = now - xd->m_startTime;
+		sb->safePrintf(" <td>%llims</td>\n",elapsed);
+	}
+
+	sb->safePrintf(" <td><nobr>%s</nobr></td>\n",m_url);
+	sb->safePrintf(" <td><nobr>%s</nobr></td>\n",status );
+
+	sb->safePrintf(" <td>%li</td>\n",(long)m_priority);
+
+	sb->safePrintf(" <td>%li</td>\n",(long)m_errCount );
+
+	sb->safePrintf(" <td>%li</td>\n",m_hopCount );
+
+	// print time format: 7/23/1971 10:45:32
+	struct tm *timeStruct ;
+	char time[256];
+
+	timeStruct = gmtime ( &m_addedTime );
+	strftime ( time , 256 , "%b %e %T %Y UTC", timeStruct );
+	sb->safePrintf(" <td><nobr>%s(%lu)</nobr></td>\n",time,m_addedTime);
+
+	sb->safePrintf(" <td><nobr>");
+
+	if ( m_isNewOutlink ) sb->safePrintf("ISNEWOUTLINK ");
+	if ( m_isAddUrl ) sb->safePrintf("ISADDURL ");
+	if ( m_isPageReindex ) sb->safePrintf("ISPAGEREINDEX ");
+	if ( m_isPageParser ) sb->safePrintf("ISPAGEPARSER ");
+	if ( m_urlIsDocId ) sb->safePrintf("URLISDOCID ");
+	if ( m_isRSSExt ) sb->safePrintf("ISRSSEXT ");
+	if ( m_isUrlPermalinkFormat ) sb->safePrintf("ISURLPERMALINKFORMAT ");
+	if ( m_isPingServer ) sb->safePrintf("ISPINGSERVER ");
+	if ( m_isInjecting ) sb->safePrintf("ISINJECTING ");
+	if ( m_forceDelete ) sb->safePrintf("FORCEDELETE ");
+	if ( m_sameDom ) sb->safePrintf("SAMEDOM ");
+	if ( m_sameHost ) sb->safePrintf("SAMEHOST ");
+	if ( m_sameSite ) sb->safePrintf("SAMESITE ");
+	if ( m_wasParentIndexed ) sb->safePrintf("WASPARENTINDEXED ");
+	if ( m_parentIsRSS ) sb->safePrintf("PARENTISRSS ");
+	if ( m_parentIsPermalink ) sb->safePrintf("PARENTISPERMALINK ");
+	if ( m_parentIsPingServer ) sb->safePrintf("PARENTISPINGSERVER ");
+	if ( m_isMenuOutlink ) sb->safePrintf("MENUOUTLINK ");
+
+	if ( m_parentHasAddress ) sb->safePrintf("PARENTHASADDRESS ");
+	//if ( m_fromSections ) sb->safePrintf("FROMSECTIONS ");
+	if ( m_isScraping ) sb->safePrintf("ISSCRAPING ");
+	if ( m_hasContent ) sb->safePrintf("HASCONTENT ");
+	if ( m_inGoogle ) sb->safePrintf("INGOOGLE ");
+	if ( m_hasAuthorityInlink ) sb->safePrintf("HASAUTHORITYINLINK ");
+	if ( m_hasContactInfo ) sb->safePrintf("HASCONTACTINFO ");
+
+	if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
+	if ( m_isContacty      ) sb->safePrintf("CONTACTY ");
+
+	sb->safePrintf("</nobr></td>\n");
+
+	sb->safePrintf("</tr>\n");
+
+	return sb->length();
+}
+
+
 long SpiderRequest::printTableHeader ( SafeBuf *sb , bool currentlySpidering) {
 
 	sb->safePrintf("<tr>\n");
@@ -7870,7 +7960,7 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 		       bool useCache ) {
 
 	long now = getTimeLocal();
-	if ( useCache && now - cr->m_globalCrawlInfoUpdateTime  < 60 )
+	if ( useCache && now - cr->m_globalCrawlInfo.m_lastUpdateTime  < 60 )
 		return true;
 
 	// wait in line if reply is pending
@@ -7937,25 +8027,22 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// the sendbuf should never be freed! it points into collrec
 	slot->m_sendBufAlloc = NULL;
 
-	// add it in to the stats
+	// add the LOCAL stats we got from the remote into the GLOBAL stats
 	if ( slot ) {
 		CrawlInfo *stats = (CrawlInfo *)(slot->m_readBuf);
-		cr->m_globalCrawlInfo.m_urlsConsidered +=
-			stats->m_urlsConsidered;
-		cr->m_globalCrawlInfo.m_pageProcessAttempts +=
-			stats->m_pageProcessAttempts;
-		cr->m_globalCrawlInfo.m_pageDownloadAttempts +=
-			stats->m_pageDownloadAttempts;
-		cr->m_globalCrawlInfo.m_pageProcessSuccesses +=
-			stats->m_pageProcessSuccesses;
-		cr->m_globalCrawlInfo.m_pageDownloadSuccesses +=
-			stats->m_pageDownloadSuccesses;
+		long long *ss = (long long *)&stats;
+		long long *gs = (long long *)&cr->m_globalCrawlInfo;
+		for ( long i = 0 ; i < NUMCRAWLSTATS ; i++ ) {
+			*gs = *gs + *ss;
+			gs++;
+			ss++;
+		}
 	}
 	// return if still waiting on more to come in
 	if ( cr->m_replies < cr->m_requests ) return;
 
 	// update cache time
-	cr->m_globalCrawlInfoUpdateTime = getTime();
+	cr->m_globalCrawlInfo.m_lastUpdateTime = getTime();
 
 	// make it save to disk i guess
 	cr->m_needsSave = true;

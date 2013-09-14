@@ -69,15 +69,26 @@
 #include "RdbList.h"
 #include "Rdb.h" // for RdbBase
 
+
+// how many counts are in CrawlInfo below????
+#define NUMCRAWLSTATS 7
+
 // used by diffbot to control spidering per collection
 class CrawlInfo {
  public:
-	long long m_urlsConsidered;
-	long long m_pageDownloadAttempts;
-	long long m_pageDownloadSuccesses;
-	long long m_pageProcessAttempts;
-	long long m_pageProcessSuccesses;
+	long long m_objectsDeleted;        // 1
+	long long m_objectsAdded;          // 2
+	long long m_urlsConsidered;        // 3
+	long long m_pageDownloadAttempts;  // 4
+	long long m_pageDownloadSuccesses; // 5
+	long long m_pageProcessAttempts;   // 6
+	long long m_pageProcessSuccesses;  // 7
+
+	long m_lastUpdateTime;
+
 	void reset() { memset ( this , 0 , sizeof(CrawlInfo) ); };
+	bool print (class SafeBuf *sb ) ;
+	bool setFromSafeBuf (class SafeBuf *sb ) ;
 };
 
 
@@ -396,7 +407,7 @@ class CollectionRec {
 	// total crawling stats summed up from all hosts in network
 	CrawlInfo m_globalCrawlInfo;
 	// last time we computed global crawl info
-	time_t m_globalCrawlInfoUpdateTime;
+	//time_t m_globalCrawlInfoUpdateTime;
 	// for counting replies
 	long m_replies;
 	long m_requests;

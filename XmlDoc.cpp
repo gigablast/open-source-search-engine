@@ -16880,6 +16880,8 @@ long *XmlDoc::nukeJSONObjects ( ) {
 		// does not include timeouts or 404s, etc. mostly just
 		// OOM errors.
 		if ( g_errno ) return NULL;
+		// count as deleted
+		m_cr->m_localCrawlInfo.m_objectsDeleted++;
 		// but gotta set this crap back
 		//log("diffbot: resetting %s",m_dx->m_firstUrl.m_url);
 		// clear for next guy if there is one. clears 
@@ -17667,6 +17669,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// does not include timeouts or 404s, etc. mostly just
 		// OOM errors.
 		if ( g_errno ) return NULL;
+		// count as deleted
+		m_cr->m_localCrawlInfo.m_objectsAdded++;
 		// undo the \0 termination we did above
 		*m_diffbotObjEnd = m_diffbotSavedChar;
 		// we successfully index the json object, skip to next one

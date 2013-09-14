@@ -415,7 +415,7 @@ bool handleDiffbotRequest ( TcpSocket *s , HttpRequest *hr ) {
 	// reset crawler stats. they should be loaded from crawlinfo.txt
 	memset ( &cr->m_localCrawlInfo , 0 , sizeof(CrawlInfo) );
 	memset ( &cr->m_globalCrawlInfo , 0 , sizeof(CrawlInfo) );
-	cr->m_globalCrawlInfoUpdateTime = 0;
+	//cr->m_globalCrawlInfoUpdateTime = 0;
 	cr->m_replies = 0;
 	cr->m_requests = 0;
 
@@ -1580,6 +1580,16 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 			      //"</tr>"
 
 			      "<tr>"
+			      "<td><b>Objects Indexed</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>URLs Considered</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
 			      "<td><b>Page Download Attempts</b></td>"
 			      "<td>%lli</td>"
 			      "</tr>"
@@ -1588,12 +1598,27 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 			      "<td><b>Page Download Successes</b></td>"
 			      "<td>%lli</td>"
 			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Process Attempts</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Process Successes</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
 			      
 			      "</table>"
+			      "<br>"
 
-			      //, cr->getNumTotalPagesIndexed()
+			      , cr->m_globalCrawlInfo.m_objectsAdded -
+			        cr->m_globalCrawlInfo.m_objectsDeleted
+			      , cr->m_globalCrawlInfo.m_urlsConsidered
 			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
+			      , cr->m_globalCrawlInfo.m_pageProcessAttempts
+			      , cr->m_globalCrawlInfo.m_pageProcessSuccesses
 			      );
 	}
 
@@ -1608,6 +1633,39 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 	//
 	// show urls being crawled (ajax) (from Spider.cpp)
 	//
+	sb.safePrintf ( "<table width=100%% border=1 cellpadding=5 "
+			"bgcolor=#%s>\n" 
+			"<tr><td colspan=50 bgcolor=#%s>"
+			"<b>Currently Spidering</b> (%li spiders)"
+			"</td></tr>\n" ,
+			LIGHT_BLUE,
+			DARK_BLUE,
+			(long)g_spiderLoop.m_numSpidersOut);
+	// the table headers so SpiderRequest::printToTable() works
+	if ( ! SpiderRequest::printTableHeaderSimple(&sb,true ) ) return false;
+	// shortcut
+	XmlDoc **docs = g_spiderLoop.m_docs;
+	// first print the spider recs we are spidering
+	for ( long i = 0 ; i < (long)MAX_SPIDERS ; i++ ) {
+		// get it
+		XmlDoc *xd = docs[i];
+		// skip if empty
+		if ( ! xd ) continue;
+		// sanity check
+		if ( ! xd->m_oldsrValid ) { char *xx=NULL;*xx=0; }
+		// grab it
+		SpiderRequest *oldsr = &xd->m_oldsr;
+		// get status
+		char *status = xd->m_statusMsg;
+		// show that
+		if ( ! oldsr->printToTableSimple ( &sb , status,xd) ) 
+			return false;
+	}
+	// end the table
+	sb.safePrintf ( "</table>\n" );
+	sb.safePrintf ( "<br>\n" );
+
+
 	
 	// 
 	// downloads
@@ -1713,9 +1771,19 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 
 	sb.safePrintf("<br>"
 		      "<table cellpadding=5>"
-		      "<tr><td><input type=submit name=delete value=\""
+		      "<tr>"
+
+		      "<td>"
+		      "<input type=submit name=reset value=\""
+		      "Reset this collection\">"
+		      "</td>"
+
+		      "<td>"
+		      "<input type=submit name=delete value=\""
 		      "Delete this collection\">"
-		      "</td></tr>"
+		      "</td>"
+
+		      "</tr>"
 		      "</table>");
 
 
@@ -1870,7 +1938,7 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 	// reset crawler stats. they should be loaded from crawlinfo.txt
 	memset ( &cr->m_localCrawlInfo , 0 , sizeof(CrawlInfo) );
 	memset ( &cr->m_globalCrawlInfo , 0 , sizeof(CrawlInfo) );
-	cr->m_globalCrawlInfoUpdateTime = 0;
+	//cr->m_globalCrawlInfoUpdateTime = 0;
 	cr->m_replies = 0;
 	cr->m_requests = 0;
 
