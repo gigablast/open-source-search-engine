@@ -18,10 +18,14 @@
 //#define MAX_RDB_FILES 2048
 // make Msg5 footprint smaller
 //#define MAX_RDB_FILES 512
+// make Msg5 footprint smaller since we have "whitelist" in msg2.cpp
+// we need to run one msg5 per whitelisted site then and we can have up to
+// 500 sites in the whitelist.
 #define MAX_RDB_FILES 1024
 
 //#define MSG3_BUF_SIZE ((sizeof(RdbScan)+sizeof(key_t)+sizeof(RdbList)+20)*6)
-#define MSG3_BUF_SIZE ((sizeof(RdbScan)+MAX_KEY_BYTES+sizeof(RdbList)+20)*6)
+//#define MSG3_BUF_SIZE ((sizeof(RdbScan)+MAX_KEY_BYTES+sizeof(RdbList)+20)*6)
+#define MSG3_BUF_SIZE 64
 
 #include "RdbList.h"
 #include "RdbScan.h"

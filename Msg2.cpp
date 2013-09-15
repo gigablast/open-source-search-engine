@@ -6,6 +6,7 @@
 #include "Rdb.h"
 #include "Threads.h"
 #include "Posdb.h" // getTermId()
+#include "Msg39.h" // MAX_QUERY_LISTS
 
 //static void gotListWrapper0 ( void *state ) ;
 static void  gotListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) ;
@@ -32,8 +33,12 @@ bool Msg2::getLists ( long     rdbId       ,
 		      bool     addToCache  ,
 		      //QueryTerm *qterms ,
 		      Query *query ,
+		      // put list of sites to restrict to in here
+		      // or perhaps make it collections for federated search?
+		      //char *whiteList ,
 		      long    *minRecSizes ,
 		      //long     numLists    ,
+		      // make max MAX_MSG39_LISTS
 		      RdbList *lists       ,
 		      void    *state       ,
 		      void   (* callback)(void *state ) ,
@@ -79,7 +84,7 @@ bool Msg2::getLists ( long     rdbId       ,
 	m_numReplies  = 0;
 	m_numRequests = 0;
 	// save rdbid in case getDbnameFromId() is called below
-	m_msg5[0].m_rdbId = rdbId;
+	//m_msg5[0].m_rdbId = rdbId;
 	// start the timer
 	m_startTime = gettimeofdayInMilliseconds();
 	// set this
@@ -87,10 +92,10 @@ bool Msg2::getLists ( long     rdbId       ,
 	// make sure not too many lists being requested
 	if ( m_numLists > MAX_NUM_LISTS ) {g_errno=ETOOMANYLISTS; return true;}
 	// clear them all
-	for ( long i = 0 ; i < m_numLists ; i++ ) {
-		m_inProgress[i] = true;
-		//m_slotNum[i] = -1;
-	}
+	//for ( long i = 0 ; i < m_numLists ; i++ ) {
+	//	m_inProgress[i] = true;
+	//	//m_slotNum[i] = -1;
+	//}
 	// all msg5 available for use
 	for ( long i = 0 ; i < MSG2_MAX_REQUESTS ; i++ ) m_avail[i] = true;
 	if ( m_isDebug ) {
@@ -99,6 +104,8 @@ bool Msg2::getLists ( long     rdbId       ,
 	}
 	// reset error
 	m_errno = 0;
+	// reset list counter
+	m_i = 0;
 	// fetch what we need
 	return getLists ( );
 }
@@ -116,14 +123,16 @@ bool Msg2::getLists ( ) {
 	// loop:
 	// . send out a bunch of msg5 requests
 	// . make slots for all
-	for ( long i = 0 ; i < m_numLists ; i++ ) {			
+	for (  ; m_i < m_numLists ; m_i++ ) {
+		// sanity for Msg39's sake. do no breach m_lists[].
+		if ( m_i >= MAX_QUERY_LISTS ) { char *xx=NULL;*xx=0; }
 		// if any had error, forget the rest. do not launch any more
 		if ( m_errno ) break;
 		// skip if already did it
-		if ( ! m_inProgress[i] ) continue;
+		//if ( ! m_inProgress[i] ) continue;
 		// skip if currently launched
 		//if ( m_slotNum[i] >= 0 ) continue;
-		if ( ! m_avail[i] ) continue;
+		//if ( ! m_avail[i] ) continue;
 		// do not allow too many outstanding requests
 		//if ( m_numRequests - m_numReplies >= MSG2_MAX_REQUESTS )
 		//	return false;
@@ -131,7 +140,7 @@ bool Msg2::getLists ( ) {
 		// . now we call Msg39::reset() which frees each m_list[i]
 		//m_lists[i].freeList();
 		// skip if no bytes requested
-		if ( m_minRecSizes[i] == 0 ) continue;
+		if ( m_minRecSizes[m_i] == 0 ) continue;
 		// get a free msg5
 		//long j = 0;
 		//for( ; j < MSG2_MAX_REQUESTS ; j++ ) if ( m_avail[j] ) break;
@@ -152,27 +161,27 @@ bool Msg2::getLists ( ) {
 		if ( m_isDebug ) {
 			key144_t *sk ;
 			key144_t *ek ;
-			sk = (key144_t *)m_qterms[i].m_startKey;
-			ek = (key144_t *)m_qterms[i].m_endKey;
+			sk = (key144_t *)m_qterms[m_i].m_startKey;
+			ek = (key144_t *)m_qterms[m_i].m_endKey;
 			long long docId0 = g_posdb.getDocId(sk);
 			long long docId1 = g_posdb.getDocId(ek);
 			log("query: reading termlist #%li "//from "
 			    //"distributed cache on host #%li. "
 			    "termId=%lli. k=%s mr=%li (docid0=%lli -"
 			    "docid1=%lli).",
-			    i,
+			    m_i,
 			    //hostId, 
 			    g_posdb.getTermId(sk),
 			    KEYSTR(sk,sizeof(POSDBKEY)),
 			    //sk->n2,
 			    //sk->n1,
 			    //(long)sk->n0,
-			    m_minRecSizes[i],
+			    m_minRecSizes[m_i],
 			    docId0,
 			    docId1);
 		}
 		
-		long minRecSize = m_minRecSizes[i];
+		long minRecSize = m_minRecSizes[m_i];
 
 		// sanity check
 		if ( ( minRecSize > ( 500 * 1024 * 1024 ) || 
@@ -185,11 +194,8 @@ bool Msg2::getLists ( ) {
 		// if it is a no-split term, we may gotta get it over the net
 		//if ( ! m_qterms[i].isSplit() ) 
 		//	forceLocalIndexdb = false;
-		// stash this 
-		m_msg5[i].m_parent = this;
-		m_msg5[i].m_i      = i;
 
-		QueryTerm *qt = &m_qterms[i];
+		QueryTerm *qt = &m_qterms[m_i];
 
 		char *sk2 = NULL;
 		char *ek2 = NULL;
@@ -201,6 +207,14 @@ bool Msg2::getLists ( ) {
 		     ! qt->m_isPhrase &&
 		     ! qt->m_synonymOf )
 			continue;
+
+		Msg5 *msg5 = getAvailMsg5();
+		// return if all are in use
+		if ( ! msg5 ) return false;
+
+		// stash this 
+		msg5->m_parent = this;
+		msg5->m_i      = m_i;
 
 		/*
 		// if doing a gbdocid:| restricted query then use msg0
@@ -254,10 +268,10 @@ bool Msg2::getLists ( ) {
 		//   really needs to do it and he doesn't call Msg2
 		// . this is really only used to get IndexLists
 		// . we now always compress the list for 2x faster transmits
-		if ( ! m_msg5[i].getList ( 
+		if ( ! msg5->getList ( 
 					   m_rdbId         , // rdbid
 					   m_coll        ,
-					   &m_lists[i], // listPtr
+					   &m_lists[m_i], // listPtr
 					   sk2,//&m_startKeys  [i*ks],
 					   ek2,//&m_endKeys    [i*ks],
 					   minRecSize  ,
@@ -266,7 +280,7 @@ bool Msg2::getLists ( ) {
 					   0, // maxcacheage
 					   0              , // start file num
 					   numFiles,//-1    , // num files
-					   &m_msg5[i]     , // state
+					   msg5,//&m_msg5[i]     , // state
 					   gotListWrapper ,
 					   m_niceness     ,
 					   false          , // error correction
@@ -283,7 +297,7 @@ bool Msg2::getLists ( ) {
 					   true) ) { // MERGE AGAIN NOW!
 			m_numRequests++;
 			//m_slotNum   [i] = i;
-			m_avail     [i] = false;
+			//m_avail     [i] = false;
 			continue;
 		}
 
@@ -295,30 +309,122 @@ bool Msg2::getLists ( ) {
 		// that is no longer the case!! we do a merge now... i
 		// think we decided it was easier to deal with shit n posdb.cpp
 		// but i don't know how much this matters really
-		m_avail     [i] = false;
+		//m_avail     [i] = false;
 
 		// set our end time if we need to
 		//if ( g_conf.m_logTimingNet )
 		//	m_endTimes[i] = gettimeofdayInMilliseconds();
 		// if the list is empty, we can get its components now
-		m_inProgress[i] = false;
+		//m_inProgress[i] = false;
 		// we didn't block, so do this
 		m_numReplies++; 
 		m_numRequests++; 
-		// break out on error and wait for replies if we blocked
-		if ( g_errno ) {
-			m_errno = g_errno;
-			log("query: Got error reading termlist: %s.",
-			    mstrerror(g_errno));
-			break;
-		}
+		// return the msg5 now
+		returnMsg5 ( msg5 );
 		// note it
 		//if ( m_isDebug )
 		//	logf(LOG_DEBUG,"query: got list #%li size=%li",
 		//	     i,m_lists[i].getListSize() );
 		// count it
 		//m_totalRead += m_lists[i].getListSize();
+		// break out on error and wait for replies if we blocked
+		if ( ! g_errno ) continue;
+		// report the error and return
+		m_errno = g_errno;
+		log("query: Got error reading termlist: %s.",
+		    mstrerror(g_errno));
+		goto skip;
 	}
+
+	//
+	// now read in lists from the terms in the "whiteList"
+	//
+
+	// initialize ptr
+	if ( ! m_p ) m_p = m_whiteList;
+
+	// loop over terms in the whitelist, space separated
+	for ( char *p = m_p ; *p ; m_i++ ) {
+		// advance
+		char *current = p;
+		for ( ; *p && *p != ' ' ; p++ );
+		// save end of "current"
+		char *end = p;
+		// advance to point to next item in whiteList
+		for ( ; *p == ' ' ; p++ );
+		// convert whiteList term into key
+		long long termId = hash64 ( current , end - current , 0LL );
+		// mask to 48 bits
+		termId &= TERMID_MASK;
+		// make key. be sure to limit to provided docid range
+		// if we are doing docid range splits to prevent OOM
+		key_t sk3 = g_posdb.makeStartKey ( termId , docId1 );
+		key_t ek3 = g_posdb.makeEndKey ( termId , docId2 );
+
+		// get one
+		Msg5 *msg5 = getAvailMsg5();
+		// return if all are in use
+		if ( ! msg5 ) return false;
+
+		// stash this 
+		msg5->m_parent = this;
+		msg5->m_i      = m_i;
+
+		// advance cursor
+		m_p = p;
+
+		// sanity for Msg39's sake. do no breach m_lists[].
+		if ( m_i >= MAX_QUERY_LISTS ) { char *xx=NULL;*xx=0; }
+
+		// start up the read. thread will wait in thread queue to 
+		// launch if too many threads are out.
+		if ( ! msg5->getList ( 
+					   m_rdbId         , // rdbid
+					   m_coll        ,
+					   &m_lists[m_i], // listPtr
+					   &sk3,//&m_startKeys  [i*ks],
+					   &ek3,//&m_endKeys    [i*ks],
+					   -1,//minRecSize  ,
+					   includeTree,//true, // include tree?
+					   false , // addtocache
+					   0, // maxcacheage
+					   0              , // start file num
+					   numFiles,//-1    , // num files
+					   msg5,//&m_msg5[i]     , // state
+					   gotListWrapper ,
+					   m_niceness     ,
+					   false          , // error correction
+					   NULL , // cachekeyptr
+					   0, // retrynum
+					   -1, // maxretries
+					   true, // compensateformerge?
+					   -1, // syncpoint
+					   NULL, // msg5b
+					   false, // isrealmerge?
+					   true,// allow disk page cache?
+					   true, // hit disk?
+					   //false)) {// MERGE LISTS??? NO!!!
+					   true) ) { // MERGE AGAIN NOW!
+			m_numRequests++;
+			//m_avail     [i] = false;
+			continue;
+		}
+		// return it!
+		m_numReplies++; 
+		m_numRequests++; 
+		// . return the msg5 now
+		returnMsg5 ( msg5 );
+		// break out on error and wait for replies if we blocked
+		if ( ! g_errno ) continue;
+		// report the error and return
+		m_errno = g_errno;
+		log("query: Got error reading termlist: %s.",
+		    mstrerror(g_errno));
+		goto skip;
+	}
+		
+ skip:
+
 	// do the 2nd pass if we need to (and there was no error)
 	//if ( ! g_errno && pass == 0 ) { pass = 1; goto loop; }
 	// if we did get a compound list reply w/o blocking, re-do the loop
@@ -333,6 +439,24 @@ bool Msg2::getLists ( ) {
 	// . sets g_errno on error
 	return gotList ( NULL );
 }
+
+Msg5 *Msg2::getAvailMsg5 ( ) {
+	for ( long i = 0 ; i < MSG2_MAX_REQUESTS ; i++ ) 
+		if ( m_avail[i] ) return &m_msg5[i];
+	return NULL;
+}
+
+void Msg2::returnMsg5 ( Msg5 *msg5 ) {
+	long i; for ( i = 0 ; i < MSG2_MAX_REQUESTS ; i++ ) 
+		if ( &m_msg5[i] != msg5 ) continue;
+	// wtf?
+	if ( i >= MSG2_MAX_REQUESTS ) { char *xx=NULL;*xx=0; }
+	// make it available
+	m_avail[i] = true;
+	// reset it
+	msg5->reset();
+}
+
 
 /*
 void gotListWrapper0 ( void *state ) {
@@ -369,11 +493,12 @@ void gotListWrapper ( void *state , RdbList *rdblist, Msg5 *msg5 ) {
 		g_errno = 0;
 	}
 	// identify the msg0 slot we use
-	//long i  = list - THIS->m_lists;
-	long i = ms->m_i;
+	long i  = list - THIS->m_lists;
+	//long i = ms->m_i;
 	//if ( i < 0 || i >= MSG2_MAX_REQUESTS ) { char *xx=NULL;*xx=0; }
 	//long nn = THIS->m_slotNum [ i ];
- 	THIS->m_inProgress[ i] = false;
+ 	//THIS->m_inProgress[ i] = false;
+	THIS->returnMsg5 ( ms );
 	// now we keep for because Msg2::getGroupList() needs it!!
 	//THIS->m_avail     [nn] = true;
 	//THIS->m_slotNum   [ i] = -1;
@@ -421,7 +546,7 @@ bool Msg2::gotList ( RdbList *list ) {
 	//if ( g_errno ) return true;
 	if ( m_errno )
 		log("net: Had error fetching data from %s: %s.", 
-		    getDbnameFromId(m_msg5[0].m_rdbId),
+		    getDbnameFromId(m_rdbId),
 		    mstrerror(m_errno) );
 
 	// note it

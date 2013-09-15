@@ -17,6 +17,10 @@
 #include "Msg51.h"
 #include "HashTableX.h"
 
+// how many RdbLists to hold?
+#define MAX_WHITELIST_TERMS 500
+#define MAX_QUERY_LISTS (MAX_QUERY_TERMS+MAX_WHITELIST_TERMS)
+
 #define MAX_MSG39_REQUEST_SIZE (500+MAX_QUERY_LEN)
 
 void  handleRequest39 ( UdpSlot *slot , long netnice ) ;
@@ -57,10 +61,12 @@ class Msg39Request {
 
 		ptr_readSizes             = NULL;
 		ptr_query                 = NULL; // in utf8?
+		ptr_whiteList             = NULL;
 		ptr_coll                  = NULL;
 
 		size_readSizes            = 0;
 		size_query                = 0;
+		size_whiteList            = 0;
 		size_coll                 = 0;
 
 		m_getDocIdScoringInfo = 1;
@@ -125,11 +131,13 @@ class Msg39Request {
 	char   *ptr_readSizes;
 	char   *ptr_termFreqWeights;
 	char   *ptr_query; // in utf8?
+	char   *ptr_whiteList;
 	char   *ptr_coll;
 	
 	long    size_readSizes;
 	long    size_termFreqWeights;
 	long    size_query;
+	long    size_whiteList;
 	long    size_coll;
 
 	char    m_buf[0];
@@ -174,7 +182,6 @@ public:
 	//   depends on the size of that udp reply
 	char       m_buf[0];
 };
-
 
 
 class Msg39 {
@@ -229,7 +236,7 @@ class Msg39 {
 
 	// . we hold our IndexLists here for passing to PosdbTable
 	// . one array for each of the tiers
-	IndexList  m_lists [ MAX_QUERY_TERMS ];
+	IndexList  m_lists [ MAX_QUERY_LISTS ];
 	
 	// used for timing
 	long long  m_startTime;

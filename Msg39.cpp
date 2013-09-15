@@ -577,6 +577,7 @@ bool Msg39::getLists () {
 				 m_r->m_addToCache          ,
 				 //m_tmpq.m_qterms ,
 				 &m_tmpq,
+				 m_r->ptr_whiteList,
 				 // how much of each termlist to read in bytes
 				 (long *)m_r->ptr_readSizes ,
 				 //m_tmpq.getNumTerms()       , // numLists

@@ -14,6 +14,8 @@
 
 // launch up to 25 msg0 requests at a time
 //#define MSG2_MAX_REQUESTS 25
+
+// how many outstanding msg5 requests at one time?
 #define MSG2_MAX_REQUESTS MAX_QUERY_TERMS
 
 class Msg2 {
@@ -54,6 +56,10 @@ class Msg2 {
 			bool     checkCache           = false);
 	bool getLists();
 
+	// list of sites to restrict search results to. space separated
+	char *m_whiteList;
+	char *m_p;
+	long  m_i;
 
 	// for posdbtable to get lists
 	//long getNumListGroups ( ) { return m_query->m_numTerms; }
@@ -70,6 +76,9 @@ class Msg2 {
 	// get how many bytes we read
 	//long getTotalRead() { return m_totalRead; };
 
+	class Msg5 *getAvailMsg5();
+	void returnMsg5 ( class Msg5 *msg5 ) ;
+
 	// leave public so C wrapper can call
 	bool gotList ( RdbList *list );
 
@@ -82,8 +91,8 @@ class Msg2 {
 
 	RdbList *m_lists;
 
-	char      m_inProgress [ MAX_NUM_LISTS ];
-	char      m_slotNum    [ MAX_NUM_LISTS ];
+	//char      m_inProgress [ MAX_NUM_LISTS ];
+	//char      m_slotNum    [ MAX_NUM_LISTS ];
 
 	// used for getting component lists if compound list is empty
 	void     mergeLists_r       ( ) ;

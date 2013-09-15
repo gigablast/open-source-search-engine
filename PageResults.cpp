@@ -267,6 +267,13 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// propagate "admin" if set
 		long admin = hr->getLong("admin",-1);
 		if ( admin != -1 ) sb.safePrintf("&admin=%li",admin);
+		// propagate list of sites to restrict query to
+		long sitesLen;
+		char *sites = hr->getString("sites",&sitesLen,NULL);
+		if ( sites ) {
+			sb.safePrintf("&sites=");
+			sb.urlEncode ( sites,true);
+		}
 		// propagate "debug" if set
 		long debug = hr->getLong("debug",0);
 		if ( debug ) sb.safePrintf("&debug=%li",debug);

@@ -341,7 +341,12 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	// based on if we're doing an xml feed, have a site: query, etc.
 	long  xml      = r->getLong ( "xml" , 0 ); // was "raw"
 	long  siteLen  = 0; r->getString ("site",&siteLen);
-	long  sitesLen = 0; r->getString ("sites",&sitesLen);
+	long  sitesLen = 0; 
+	char *sites = r->getString ("sites",&sitesLen,NULL);
+
+	// save it if there
+	if ( sites && sitesLen > 0 && ! m_whiteListBuf.safeStrcpy(sites) )
+		return log("query: unable to strcpy whitelist");
 	
 	// now override automatic defaults for special cases
 	if ( xml > 0 ) {
@@ -361,12 +366,12 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 		m_doSiteClustering        = false;
 		m_ipRestrictForTopics     = false;
 	}
-	else if ( m_sitesLen > 0 ) {
+	else if ( m_whiteListBuf.length() > 0 ) {
 		m_ipRestrictForTopics     = false;
 	}
 
 	m_doIpClustering          = false;
-	m_sitesQueryLen           = 0;
+	//m_sitesQueryLen           = 0;
 
 	// set the user ip, "uip"
 	long uip = m_queryIP;
@@ -830,7 +835,7 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 			else if ( m_q->m_hasIpField   ) m_useCache = 0;
 			else if ( m_q->m_hasUrlField  ) m_useCache = 0;
 			else if ( m_siteLen  > 0      ) m_useCache = 0;
-			else if ( m_sitesLen > 0      ) m_useCache = 0;
+			else if ( m_whiteListBuf.length() ) m_useCache = 0;
 			else if ( m_urlLen   > 0      ) m_useCache = 0;
 		}
 	}
@@ -909,11 +914,12 @@ bool SearchInput::setQueryBuffers ( ) {
 	numSites = 0;
 	csStr = get_charset_str(qcs);
 
+	/*
 	if ( m_sites && m_sites[0] ) {
 		char *s = m_sites;
 		char *t;
 		long  len;
-		m_sbuf1.pushChar('(');//*p++ = '(';
+		m_sbuf1.pushChar('(');// *p++ = '(';
 	loop:
 		// skip white space
 		while ( *s && ! is_alnum_a(*s) ) s++;
@@ -930,7 +936,7 @@ bool SearchInput::setQueryBuffers ( ) {
 		//p += ucToUtf8(p, pend-p,s, len, csStr, 0,0);
 		m_sbuf1.safeMemcpy ( s , len );
 		//memcpy ( p , s , len     ); p += len;
-		//*p++ = ' ';
+		// *p++ = ' ';
 		m_sbuf1.pushChar(' ');
 		s = t;
 		numSites++;
@@ -940,6 +946,7 @@ bool SearchInput::setQueryBuffers ( ) {
 		// inc totalLen
 		m_sitesQueryLen = m_sitesLen + (numSites * 10);
 	}
+	*/
 	// append site: term
 	if ( m_siteLen > 0 ) {
 		//if ( p > pstart ) *p++ = ' ';

@@ -512,6 +512,8 @@ bool Msg40::getDocIds ( bool recall ) {
 	m_r.m_language                  = (unsigned char)m_si->m_queryLang;
 	m_r.ptr_query                   = m_si->m_q->m_orig;
 	m_r.size_query                  = m_si->m_q->m_origLen+1;
+	m_r.ptr_whiteList               = m_si->m_whiteListBuf.getBufStart();
+	m_r.size_whiteList              = m_si->m_whiteListBuf.length()+1;
 	m_r.m_timeout                   = -1; // auto-determine based on #terms
 	// make sure query term counts match in msg39
 	m_r.m_maxQueryTerms             = m_si->m_maxQueryTerms; 

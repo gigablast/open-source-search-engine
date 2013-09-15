@@ -304,8 +304,8 @@ class SearchInput {
 	char  *m_htmlTail;
 	long   m_siteLen;
 	char  *m_site;
-	long   m_sitesLen;
-	char  *m_sites;
+	//long   m_sitesLen;
+	//char  *m_sites;
 	long   m_plusLen;
 	char  *m_plus;
 	long   m_minusLen;
@@ -324,7 +324,9 @@ class SearchInput {
 	char  *m_url;
 	long   m_imgWidth;
 	long   m_imgHeight;
-	long   m_sitesQueryLen;
+	//long   m_sitesQueryLen;
+
+	SafeBuf m_whiteListBuf;
 
 	// password is for all
 	long   m_pwdLen;
