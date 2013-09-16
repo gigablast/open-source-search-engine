@@ -639,6 +639,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 // steve cook's webserver
 	 //if ( sock && strncmp(iptoa(sock->m_ip),"216.168.36.21",13) == 0) 
 	 //	 m_isLocal = true;
+
 	 // . also if we're coming from lenny at my house consider it local
 	 // . this is a security risk, however... TODO: FIX!!!
 	 //if ( sock->m_ip == atoip ("68.35.105.199" , 13 ) ) m_isAdmin = true;

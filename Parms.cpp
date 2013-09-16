@@ -7796,6 +7796,13 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m++;
 
+	m->m_xml   = "isDiffbotCollection";
+	m->m_off   = (char *)&cr.m_isDiffbotCollection - x;
+	m->m_type  = TYPE_CHAR;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "0";
+	m++;
+
 	m->m_cgi   = "dbmaxtocrawl";
 	m->m_xml   = "diffbotMaxToCrawl";
 	m->m_off   = (char *)&cr.m_diffbotMaxToCrawl - x;

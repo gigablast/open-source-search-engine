@@ -35,6 +35,7 @@ void attemptMergeAll ( int fd , void *state ) ;
 Rdb::Rdb ( ) {
 	//m_numBases = 0;
 	m_inAddList = false;
+	m_collectionlessBase = NULL;
 	//memset ( m_bases , 0 , sizeof(RdbBase *) * MAX_COLLS );
 	reset();
 }
@@ -54,6 +55,12 @@ void Rdb::reset ( ) {
 	}
 	m_numBases = 0;
 	*/
+	if ( m_collectionlessBase ) {
+		RdbBase *base = m_collectionlessBase;
+		mdelete (base, sizeof(RdbBase), "Rdb Coll");
+		delete  (base);
+		m_collectionlessBase = NULL;
+	}
 	// reset tree and cache
 	m_tree.reset();
 	m_buckets.reset();
@@ -73,12 +80,21 @@ Rdb::~Rdb ( ) {
 }
 
 RdbBase *Rdb::getBase ( collnum_t collnum )  {
+	if ( m_isCollectionLess ) 
+		return m_collectionlessBase;
+	// RdbBase for statsdb, etc. resides in collrec #0 i guess
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return NULL;
 	return cr->m_bases[(unsigned char)m_rdbId];
 }
 
 void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
+	// if we are collectionless, like g_statsdb.m_rdb or
+	// g_cachedb.m_rdb, etc.. shared by all collections essentially.
+	if ( m_isCollectionLess ) {
+		m_collectionlessBase = base;
+		return;
+	}
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return;
 	if ( cr->m_bases[(unsigned char)m_rdbId] ) { char *xx=NULL;*xx=0; }
@@ -424,7 +440,8 @@ bool Rdb::updateToRebuildFiles ( Rdb *rdb2 , char *coll ) {
 	return true;
 }
 
-// returns false and sets g_errno on error, returns true on success
+// . returns false and sets g_errno on error, returns true on success
+// . if this rdb is collectionless we set m_collectionlessBase in addBase()
 bool Rdb::addColl ( char *coll ) {
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
 	// catdb,statsbaccessdb,facebookdb,syncdb

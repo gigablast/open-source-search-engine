@@ -387,6 +387,7 @@ long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
 	strftime ( time , 256 , "%b %e %T %Y UTC", timeStruct );
 	sb->safePrintf(" <td><nobr>%s(%lu)</nobr></td>\n",time,m_addedTime);
 
+	/*
 	sb->safePrintf(" <td><nobr>");
 
 	if ( m_isNewOutlink ) sb->safePrintf("ISNEWOUTLINK ");
@@ -420,6 +421,7 @@ long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
 	if ( m_isContacty      ) sb->safePrintf("CONTACTY ");
 
 	sb->safePrintf("</nobr></td>\n");
+	*/
 
 	sb->safePrintf("</tr>\n");
 
@@ -464,7 +466,7 @@ long SpiderRequest::printTableHeader ( SafeBuf *sb , bool currentlySpidering) {
 	//sb->safePrintf(" <td><b>retryNum</b></td>\n");
 	//sb->safePrintf(" <td><b>langId</b></td>\n");
 	//sb->safePrintf(" <td><b>percentChanged</b></td>\n");
-	sb->safePrintf(" <td><b>flags</b></td>\n");
+	//sb->safePrintf(" <td><b>flags</b></td>\n");
 	sb->safePrintf("</tr>\n");
 
 	return sb->length();

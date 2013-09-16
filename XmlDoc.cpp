@@ -178,9 +178,8 @@ static long long s_lastTimeStart = 0LL;
 void XmlDoc::reset ( ) {
 
 	m_diffbotReplyError = 0;
-
+	m_diffbotJSONCount = 0;
 	m_downloadAttempted = false;
-
 	m_incrementedAttemptsCount = false;
 	m_incrementedDownloadCount = false;
 
@@ -17249,10 +17248,12 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// if using diffbot do not index the content of the web page we
 	// got the json objects from, although, do keep it cached in titledb
 	// because that can be useful
-	if ( g_conf.m_useDiffbot && ! m_isDiffbotJSONObject ) {
-		m_usePosdb      = false;
-		m_useClusterdb  = false;
-	}
+	// Not any more, now index the pages as well! then restrict search
+	// to type:json to just search json objects.
+	//if ( g_conf.m_useDiffbot && ! m_isDiffbotJSONObject ) {
+	//	m_usePosdb      = false;
+	//	m_useClusterdb  = false;
+	//}
 
 
 	// get the old meta list if we had an old doc
@@ -21283,6 +21284,9 @@ bool XmlDoc::hashContentType ( HashTableX *tt ) {
 	case CT_XLS : s = "xls" ; break;
 	case CT_PPT : s = "ppt" ; break;
 	case CT_PS  : s = "ps"  ; break;
+		// for diffbot. so we can limit search to json objects
+		// in Diffbot.cpp
+	case CT_JSON: s = "json"  ; break;
 	}
 	// bail if unrecognized content type
 	if ( ! s ) return true;

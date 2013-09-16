@@ -352,6 +352,7 @@ enum {
 
 	PAGE_SEARCH      ,  
 	PAGE_SPIDER      ,
+	PAGE_CRAWLBOT    ,
 	PAGE_SPIDERDB    ,  //35	
 	//PAGE_PRIORITIES  ,  // priority queue controls
 	PAGE_FILTERS     ,

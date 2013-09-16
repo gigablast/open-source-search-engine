@@ -1448,6 +1448,21 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//
 	long tokenLen = 0;
 	char *token = hr->getString("token",&tokenLen);
+	// crawlid?
+	char *crawlId = hr->getString("id",NULL,NULL);
+
+	// extract token/crawlid from coll?
+	char *c = hr->getString("c",NULL,NULL);
+	if ( c ) {
+		token = c;
+		for ( ; token[tokenLen] && token[tokenLen] != '-';tokenLen++ );
+		// now crawl id
+		crawlId = token + tokenLen;
+		// skip hyphen
+		if ( crawlId[0] == '-' ) crawlId++;
+	}
+
+
 	if ( ! token || tokenLen == 0 ) {
 		sb.safePrintf("In order to use crawlbot you must "
 			      "first LOGIN:"
@@ -1477,9 +1492,6 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 	sb.safePrintf("<center><br>");
 			      
-	// crawlid?
-	char *id = hr->getString("id",NULL,NULL);
-
 	// first print "add new collection"
 	sb.safePrintf("<a href=/api/addcoll?token=%s&c=%s>"
 		      "add new collection"
@@ -1517,10 +1529,10 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		// if current coll id...
 		char *cid = coll+tokenLen+1;
 		// if no crawlid "id" was given, use first for now!
-		if ( ! id ) id = cid;
+		if ( ! crawlId ) crawlId = cid;
 		// highlight the tab if it is what we selected
 		bool highlight = false;
-		if ( id && strcmp(cid,id) == 0 ) highlight = true;
+		if ( crawlId && strcmp(cid,crawlId) == 0 ) highlight = true;
 		char *style = "";
 		if  ( highlight ) {
 			cr = cx;
@@ -1680,25 +1692,24 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      
 			      "</table>"
 			      "</form>"
-			      "<br>"
 
 			      , cr->m_coll
 			      , token
-			      , id
+			      , crawlId
 
 			      , cr->m_globalCrawlInfo.m_objectsAdded -
 			        cr->m_globalCrawlInfo.m_objectsDeleted
 			      , token
-			      , id
+			      , crawlId
 			      , token
-			      , id
+			      , crawlId
 			      , cr->m_globalCrawlInfo.m_urlsHarvested
 			      //, token
 			      //, id
 			      //, token
 			      //, id
 			      , token
-			      , id
+			      , crawlId
 			      , cr->m_globalCrawlInfo.m_urlsConsidered
 
 			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
@@ -1712,11 +1723,17 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      );
 	}
 
+	unsigned long r1 = rand();
+	unsigned long r2 = rand();
+	unsigned long long rand64 = (unsigned long long) r1;
+	rand64 <<= 32;
+	rand64 |=  r2;
+
 
 	sb.safePrintf(
 		      "<table border=0 cellpadding=5>"
 
-		      // search input box
+		      // OBJECT search input box
 		      "<form method=get action=/search>"
 		      "<tr>"
 		      "<td>"
@@ -1724,6 +1741,24 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "</td><td>"
 		      "<input type=text name=q size=50>"
 		      "<input type=hidden name=c value=\"%s\">"
+		      "<input type=hidden name=rand value=%lli>"
+		      // restrict search to json objects
+		      "<input type=hidden name=prepend value=\"type:json |\">"
+		      " "
+		      "<input type=submit name=submit value=OK>"
+		      "</tr>"
+		      "</form>"
+
+
+		      // PAGE search input box
+		      "<form method=get action=/search>"
+		      "<tr>"
+		      "<td>"
+		      "<b>Search Pages:</b>"
+		      "</td><td>"
+		      "<input type=text name=q size=50>"
+		      "<input type=hidden name=c value=\"%s\">"
+		      "<input type=hidden name=rand value=%lli>"
 		      " "
 		      "<input type=submit name=submit value=OK>"
 		      "</tr>"
@@ -1743,6 +1778,9 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "checked>"
 		      " <i>crawl links on this page?</i>"
 		      , cr->m_coll
+		      , rand64
+		      , cr->m_coll
+		      , rand64
 		      );
 
 	if ( injectionResponse )
@@ -1762,7 +1800,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "<br>"
 		      , cr->m_coll
 		      , token
-		      , id
+		      , crawlId
 		      );
 
 
@@ -1783,25 +1821,25 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	sb.safePrintf ( "<table width=100%% border=1 cellpadding=5 "
 			"bgcolor=#%s>\n" 
 			"<tr><td colspan=50 bgcolor=#%s>"
-			"<b>Currently Spidering</b> (%li spiders)"
+			"<b>Last 10 URLs</b> (%li spiders active)"
 			,
 			LIGHT_BLUE,
 			DARK_BLUE,
 			(long)g_spiderLoop.m_numSpidersOut);
 	if ( cr->m_spideringEnabled )
 		sb.safePrintf(" "
-			      "<a href=/crawlbot?token=%s&id=%s&pause=1>"
+			      "<a href=/crawlbot?c=%s&pause=1>"
 			      "<font color=red><b>Pause spiders</b>"
 			      "</font></a>"
-			      , token
-			      , id );
+			      , cr->m_coll
+			      );
 	else
 		sb.safePrintf(" "
-			      "<a href=/crawlbot?token=%s&id=%s&pause=0>"
+			      "<a href=/crawlbot?c=%s&pause=0>"
 			      "<font color=green><b>Resume spidering</b>"
 			      "</font></a>"
-			      , token
-			      , id );
+			      , cr->m_coll
+			      );
 
 	sb.safePrintf("</td></tr>\n" );
 	// the table headers so SpiderRequest::printToTable() works
@@ -2022,6 +2060,11 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 	cr->m_diffbotMaxToCrawl = 100000;
 	// do not process more than this. -1 means no max.
 	cr->m_diffbotMaxToProcess = 100000;
+
+	// turn this flag on. so anyone that knows the name of this
+	// collection means they know the token and the crawlid so
+	// we can assume they are an admin.
+	cr->m_isDiffbotCollection = 1;
 
 	// reset the crawl stats
 	cr->m_diffbotCrawlStartTime = gettimeofdayInMillisecondsGlobal();

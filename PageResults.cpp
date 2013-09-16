@@ -292,6 +292,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// show gigabits?
 		long gb = hr->getLong("gigabits",0);
 		if ( gb >= 1 ) sb.safePrintf("&gigabits=%li",gb);
+		// show banned results?
+		long showBanned = hr->getLong("sb",0);
+		if ( showBanned ) sb.safePrintf("&sb=1");
 		// propagate collection
 		long clen;
 		char *coll = hr->getString("c",&clen,"",NULL);
@@ -2183,13 +2186,13 @@ static int printResult ( SafeBuf &sb,
 
 
 	// this stuff is secret just for local guys!
-	if ( isAdmin ) {
+	if ( isAdmin || cr->m_isDiffbotCollection ) {
 		// now the ip of url
 		//long urlip = msg40->getIp(i);
 		// don't combine this with the sprintf above cuz
 		// iptoa uses a static local buffer like ctime()
-		sb.safePrintf("<br>"
-			      "<a href=\"/search?"
+		sb.safePrintf(//"<br>"
+			      " &nbsp; - &nbsp; <a href=\"/search?"
 			      "c=%s&sc=1&dr=0&q=ip:%s&"
 			      "n=100&usecache=0\">%s</a>",
 			      coll,iptoa(mr->m_ip), iptoa(mr->m_ip) );
@@ -2232,7 +2235,7 @@ static int printResult ( SafeBuf &sb,
 	}
 
 	// admin always gets the site: option so he can ban
-	if ( isAdmin ) {
+	if ( isAdmin || cr->m_isDiffbotCollection ) {
 		char dbuf [ MAX_URL_LEN ];
 		long dlen = uu.getDomainLen();
 		memcpy ( dbuf , uu.getDomain() , dlen );
@@ -2249,15 +2252,25 @@ static int printResult ( SafeBuf &sb,
 			       "%s</a> " ,
 			       dbuf ,
 			       coll , dbuf );
+		char *un = "";
+		long  banVal = 1;
+		if ( mr->m_isBanned ) {
+			un = "UN";
+			banVal = 0;
+		}
 		sb.safePrintf(" - "
 			      " <a href=\"/master/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
-			      "tagdata0=1&"
+			      "tagdata0=%li&"
 			      "u=%s&c=%s\">"
-			      "<nobr>[<b>BAN %s</b>]"
-			      "</nobr></a> " ,
-			      dbuf , coll , dbuf );
+			      "<nobr><b>%sBAN %s</b>"
+			      "</nobr></a> "
+			      , banVal
+			      , dbuf
+			      , coll
+			      , un
+			      , dbuf );
 		//banSites->safePrintf("%s+", dbuf);
 		dlen = uu.getHostLen();
 		memcpy ( dbuf , uu.getHost() , dlen );
@@ -2266,11 +2279,17 @@ static int printResult ( SafeBuf &sb,
 			      " <a href=\"/master/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
-			      "tagdata0=1&"
+			      "tagdata0=%li&"
 			      "u=%s&c=%s\">"
-			      "<nobr>[BAN %s]</nobr></a> " ,
-			      dbuf , coll , dbuf );
-		
+			      "<nobr>%sBAN %s</nobr></a> "
+			      , banVal
+			      , dbuf
+			      , coll
+			      , un
+			      , dbuf
+			      );
+		// take similarity out until working again
+		/*
 		sb.safePrintf (" - [similar -"
 			       " <a href=\"/search?"
 			       "q="
@@ -2286,6 +2305,7 @@ static int printResult ( SafeBuf &sb,
 			       "&rcache=0\">"
 			       "topic</a> " ,
 			       (long)mr->m_gigabitVectorHash, coll);
+		*/
 		if ( mr->size_gbAdIds > 0 ) 
 			sb.safePrintf ("<a href=\"/search?"
 				       "q=%s"
@@ -2293,7 +2313,7 @@ static int printResult ( SafeBuf &sb,
 				       "Ad Id</a> " ,
 				       mr->ptr_gbAdIds,  coll);
 		
-		sb.safePrintf ("] ");
+		//sb.safePrintf ("] ");
 		
 		long urlFilterNum = (long)mr->m_urlFilterNum;
 		if(urlFilterNum != -1) {

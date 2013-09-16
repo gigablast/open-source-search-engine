@@ -350,6 +350,8 @@ class Rdb {
 	long      m_dbnameLen;
 
 	bool      m_isCollectionLess;
+	// for g_cachedb, g_statsdb, etc.
+	RdbBase *m_collectionlessBase;
 
 	//RdbCache  m_cache;
 	// for storing records in memory

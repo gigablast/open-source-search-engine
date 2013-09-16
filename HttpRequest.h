@@ -94,6 +94,9 @@ class HttpRequest {
 	//bool  isAdmin        () { return m_isAdmin; };
 	bool  isLocal        () { return m_isLocal; };
 
+	// is this the admin of a collection?
+	//bool isCollAdmin () { return m_isCollAdmin; }
+
 	// . the &ucontent= cgi var does not get its value decoded
 	//   because it's already decoded
 	// . this is so Mark doesn't have to url encode his injected content

@@ -786,7 +786,10 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	m_showBanned = false;
 	//if ( m_isAdmin ) m_showBanned = true;
 	// admin can say &sb=0 explicitly to not show banned results
-	if ( m_isAdmin ) m_showBanned = r->getLong("sb",m_showBanned);
+	// . if you are searching a diffbot collection, you are the admin
+	//   i guess...
+	if ( m_isAdmin || cr->m_isDiffbotCollection ) 
+		m_showBanned = r->getLong("sb",m_showBanned);
 
 
 	if ( m_q->m_hasUrlField  ) m_ipRestrictForTopics = false;

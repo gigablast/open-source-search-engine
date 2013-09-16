@@ -192,7 +192,11 @@ bool Statsdb::init ( ) {
 
 	m_disabled = false;
 
-	return true;
+	// normally Collectiondb.addColl() will call Rdb::addColl() which
+	// will init the CollectionRec::m_rdbBase, which is what
+	// Rdb::getBase(collnum_t) will return. however, for collectionless
+	// rdb databases we set Rdb::m_collectionlessBase special here.
+	return m_rdb.addColl ( NULL );
 }
 
 

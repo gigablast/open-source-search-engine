@@ -46,7 +46,7 @@ bool Cachedb::init ( ) {
 			   false    )) // minimizeDiskSeeks?
 		return log("db: %s init failed.",m_name);
 	// init the rdb
-	return m_rdb.init ( g_hostdb.m_dir ,
+	if ( ! m_rdb.init ( g_hostdb.m_dir ,
 			    m_name ,
 			    true     , // dedup
 			    -1        , // fixeddatasize is 0 since no data
@@ -67,7 +67,11 @@ bool Cachedb::init ( ) {
 			    false    , // preload page cache
 			    sizeof(key96_t) ,
 			    true             , // bias page cache? (true!)
-			    true ); // is collectionless???? !!!!
+			    true )) // is collectionless???? !!!!
+		return false;
+
+	// add the base since it is a collectionless rdb
+	return m_rdb.addColl ( NULL );
 }
 
 bool Cachedb::addColl ( char *coll, bool doVerify ) {

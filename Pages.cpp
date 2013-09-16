@@ -195,6 +195,12 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER | USER_PROXY   ,
 	  "spider controls page",
 	  sendPageGeneric  , 0 } ,
+
+	{ PAGE_CRAWLBOT    , "crawlbot"   , 0 , "crawlbot" ,  1 , 0,
+	  //USER_ADMIN | USER_MASTER | USER_PROXY   ,
+	  "simplified spider controls page",
+	  sendPageGeneric  , 0 } ,
+
 	{ PAGE_SPIDERDB  , "admin/spiderdb" , 0 , "spider queue" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "spiderdb page",
@@ -238,10 +244,10 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER   ,
 	  "add url page",
 	  sendPageAddUrl   , 0 } ,
-	{ PAGE_LOGIN2    , "admin/login"         , 0 , "login" ,  0 , 0,
-	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
-	  "login link - also logoffs user",
-	  sendPageLogin,0}
+	//{ PAGE_LOGIN2    , "admin/login"         , 0 , "login" ,  0 , 0,
+	//  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
+	//"login link - also logoffs user",
+	//  sendPageLogin,0}
 //	{ PAGE_TOPDOCS , "admin/topdocs"  , 0 , "top docs" ,  1 , 1 ,
 //	  //USER_ADMIN | USER_MASTER, 
 //	  "top documents page",
@@ -1627,6 +1633,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 
 	if ( top ) return status;
 
+	/*
 	//
 	// if diffbot give the crawlbot api here mostly for testing
 	//
@@ -1695,7 +1702,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		sb->safePrintf("</center>\n");
 		sb->safePrintf("<br>");
 	}
-
+	*/
 
 
 

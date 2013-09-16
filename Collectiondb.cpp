@@ -419,6 +419,7 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	// if first time adding a collrec, initialize the collectionless
 	// rdbs so they call Rdb::addColl() which makes a new RdbBase for them
 	// and stores ptr to that base in CollectionRec::m_bases[]
+	/*
 	if ( m_numRecsUsed == 1 ) {
 		g_statsdb.addColl ( NULL );
 		g_cachedb.addColl ( NULL );
@@ -427,7 +428,7 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 		//return g_facebookdb.addColl ( NULL );
 		g_syncdb.addColl ( NULL );
 	}
-
+	*/
 
 
 	// debug message
