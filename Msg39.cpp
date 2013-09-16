@@ -295,6 +295,8 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 }
 
 // . returns false if blocked, true if done
+// . to avoid running out of memory, generate the search results for
+//   multiple smaller docid-ranges, one range at a time.
 bool Msg39::doDocIdSplitLoop ( ) {
 	long long delta = MAX_DOCID / (long long)m_numDocIdSplits;
 	for ( ; m_ddd < m_dddEnd ; ) {
@@ -681,6 +683,16 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 		sendReply ( m_slot , this , NULL , 0 , 0 );
 		return true;
 	}
+
+	// we have to allocate this with each call because each call can
+	// be a different docid range from doDocIdSplitLoop.
+	if ( ! m_posdbTable.allocWhiteListTable() ) {
+		log("msg39: Had error allocating white list table: %s.",
+		    mstrerror(g_errno));
+		sendReply (m_slot,this,NULL,0,0);
+		return true; 
+	}
+
 
 	// do not re do it if doing docid range splitting
 	m_allocedTree = true;

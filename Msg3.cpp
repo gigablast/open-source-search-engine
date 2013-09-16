@@ -243,8 +243,7 @@ bool Msg3::readList  ( char           rdbId         ,
 		    numFiles , max , startFileNum );
 		g_errno = EBADENGINEER; 
 		// force core dump
-		//char *p = NULL;
-		//*p = 0;
+		char *xx=NULL;*xx=0;
 		return true; 
 	}
 

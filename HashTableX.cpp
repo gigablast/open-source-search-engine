@@ -51,6 +51,8 @@ bool HashTableX::set ( long  ks              ,
 	m_needsSave = true;
 	m_isSaving  = false;
 	m_maxSlots  = 0x7fffffffffffffffLL;
+	// fi it so when you first call addKey() it does not grow your table!
+	if ( initialNumTerms < 32 ) initialNumTerms = 32;
 	// sanity check. assume min keysize of 4 because we do *(long *)key
 	// logic below!!
 	if ( ks <  4 ) { char *xx=NULL;*xx=0; }

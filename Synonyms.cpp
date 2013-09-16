@@ -46,8 +46,8 @@ long Synonyms::getSynonyms ( Words *words ,
 
 	// init the dedup table to dedup wordIds
 	HashTableX dt;
-	char dbuf[256];
-	dt.set(8,0,12,dbuf,256,false,m_niceness,"altwrds");
+	char dbuf[512];
+	dt.set(8,0,12,dbuf,512,false,m_niceness,"altwrds");
 
 
 	long maxSyns = (long)MAX_SYNS;

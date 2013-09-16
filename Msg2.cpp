@@ -6,6 +6,7 @@
 #include "Rdb.h"
 #include "Threads.h"
 #include "Posdb.h" // getTermId()
+#include "Msg3a.h" // DEFAULT_POSDB_READ_SIZE
 
 //static void gotListWrapper0 ( void *state ) ;
 static void  gotListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) ;
@@ -361,7 +362,19 @@ bool Msg2::getLists ( ) {
 		// . put the "site:" prefix before it first
 		// . see XmlDoc::hashUrl() where prefix = "site"
 		long long prefixHash = hash64b ( "site" );
-		long long termId = hash64(current,end-current);
+		//long long termId = hash64(current,end-current);
+		// crap, Query.cpp i guess turns xyz.com into http://xyz.com/
+		long conti = 0;
+		long long termId = 0LL;
+		termId = hash64_cont("http://",7,termId,&conti);
+		termId = hash64_cont(current,end-current,termId,&conti);
+		termId = hash64_cont("/",1,termId,&conti);
+		//SafeBuf tt;
+		//tt.safePrintf("http://");
+		//tt.safeMemcpy(current,end-current);
+		//tt.pushChar('/');
+		//long long yy = hash64n(tt.getBufStart());
+		//if ( yy != termId ) { char *xx=NULL;*xx=0; }
 		long long finalTermId = hash64 ( termId , prefixHash );
 		// mask to 48 bits
 		finalTermId &= TERMID_MASK;
@@ -371,10 +384,10 @@ bool Msg2::getLists ( ) {
 		//   doDocIdRangeSplitLoop(). it already applied them to
 		//   the QueryTerm::m_startKey in Msg39.cpp so we have to
 		//   apply here as well...
-		key_t sk3;
-		key_t ek3;
-		g_posdb.makeStartKey ( &sk3 , finalTermId , m_docIdStart );
-		g_posdb.makeEndKey   ( &ek3 , finalTermId , m_docIdEnd );
+		char sk3[MAX_KEY_BYTES];
+		char ek3[MAX_KEY_BYTES];
+		g_posdb.makeStartKey ( sk3 , finalTermId , m_docIdStart );
+		g_posdb.makeEndKey   ( ek3 , finalTermId , m_docIdEnd );
 		// get one
 		Msg5 *msg5 = getAvailMsg5();
 		// return if all are in use
@@ -390,6 +403,10 @@ bool Msg2::getLists ( ) {
 		// sanity for Msg39's sake. do no breach m_lists[].
 		if ( m_w >= MAX_WHITELISTS ) { char *xx=NULL;*xx=0; }
 
+		// like 90MB last time i checked. so it won't read more
+		// than that...
+		long minRecSizes = DEFAULT_POSDB_READSIZE;
+
 		// start up the read. thread will wait in thread queue to 
 		// launch if too many threads are out.
 		if ( ! msg5->getList ( 	   m_rdbId         , // rdbid
@@ -397,7 +414,7 @@ bool Msg2::getLists ( ) {
 					   &m_whiteLists[m_w], // listPtr
 					   &sk3,//&m_startKeys  [i*ks],
 					   &ek3,//&m_endKeys    [i*ks],
-					   -1,//minRecSize  ,
+					   minRecSizes,
 					   includeTree,//true, // include tree?
 					   false , // addtocache
 					   0, // maxcacheage
@@ -454,14 +471,17 @@ bool Msg2::getLists ( ) {
 }
 
 Msg5 *Msg2::getAvailMsg5 ( ) {
-	for ( long i = 0 ; i < MSG2_MAX_REQUESTS ; i++ ) 
-		if ( m_avail[i] ) return &m_msg5[i];
+	for ( long i = 0 ; i < MSG2_MAX_REQUESTS ; i++ ) {
+		if ( ! m_avail[i] ) continue;
+		m_avail[i] = false;
+		return &m_msg5[i];
+	}
 	return NULL;
 }
 
 void Msg2::returnMsg5 ( Msg5 *msg5 ) {
 	long i; for ( i = 0 ; i < MSG2_MAX_REQUESTS ; i++ ) 
-		if ( &m_msg5[i] != msg5 ) continue;
+		if ( &m_msg5[i] == msg5 ) break;
 	// wtf?
 	if ( i >= MSG2_MAX_REQUESTS ) { char *xx=NULL;*xx=0; }
 	// make it available

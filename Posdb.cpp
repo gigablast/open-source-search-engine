@@ -547,7 +547,9 @@ PosdbTable::PosdbTable() {
 	reset();
 }
 
-PosdbTable::~PosdbTable() { reset(); }
+PosdbTable::~PosdbTable() { 
+	reset(); 
+}
 
 void PosdbTable::reset() {
 	// has init() been called?
@@ -558,9 +560,10 @@ void PosdbTable::reset() {
 	// does not free the mem of this safebuf, only resets length
 	m_docIdVoteBuf.reset();
 	m_qiBuf.reset();
-	m_whiteTable.reset();
 	// assume no-op
 	m_t1 = 0LL;
+	m_whiteTable.reset();
+	m_addedSites = false;
 }
 
 // realloc to save mem if we're rat
@@ -636,6 +639,43 @@ void PosdbTable::init ( Query     *q               ,
 	if ( ! topTree ) {char *xx=NULL;*xx=0;}
 }
 
+// this is separate from allocTopTree() function below because we must
+// call it for each iteration in Msg39::doDocIdSplitLoop() which is used
+// to avoid reading huge termlists into memory. it breaks the huge lists
+// up by smaller docid ranges and gets the search results for each docid
+// range separately.
+bool PosdbTable::allocWhiteListTable ( ) {
+	//
+	// the whitetable is for the docids in the whitelist. we have
+	// to only show results whose docid is in the whitetable, which
+	// is from the "&sites=abc.com+xyz.com..." custom search site list
+	// provided by the user.
+	//
+	if ( m_r->size_whiteList <= 1 ) m_useWhiteTable = false; // inclds \0
+	else 		                m_useWhiteTable = true;
+	RdbList *whiteLists = m_msg2->m_whiteLists;
+	long nw = m_msg2->m_w;
+	long sum = 0;
+	for ( long i = 0 ; i < nw ; i++ ) {
+		RdbList *list = &whiteLists[i];
+		if ( list->isEmpty() ) continue;
+		// assume 12 bytes for all keys but first which is 18
+		long size = list->getListSize();
+		sum += size / 12 + 1;
+	}
+	if ( sum ) {
+		long numSlots = sum * 2;
+		// keep it restricted to 5 byte keys so we do not have to
+		// extract the docid, we can just hash the ptr to those
+		// 5 bytes (which includes 1 siterank bit as the lowbit,
+		// but should be ok since it should be set the same in
+		// all termlists that have that docid)
+		if ( ! m_whiteTable.set(5,0,numSlots,NULL,0,false,0,"wtall"))
+			return false;
+	}
+	return true;
+}
+
 
 bool PosdbTable::allocTopTree ( ) {
 	long nn = m_r->m_docsToGet;
@@ -656,36 +696,6 @@ bool PosdbTable::allocTopTree ( ) {
 	// for seeing if a docid is in toptree. niceness=0.
 	//if ( ! m_docIdTable.set(8,0,xx*4,NULL,0,false,0,"dotb") )
 	//	return false;
-
-	//
-	// the whitetable is for the docids in the whitelist. we have
-	// to only show results whose docid is in the whitetable, which
-	// is from the "&sites=abc.com+xyz.com..." custom search site list
-	// provided by the user.
-	//
-	RdbList *whiteLists = m_msg2->m_whiteLists;
-	long nw = m_msg2->m_w;
-	long sum = 0;
-	for ( long i = 0 ; i < nw ; i++ ) {
-		RdbList *list = &whiteLists[i];
-		if ( list->isEmpty() ) continue;
-		// assume 12 bytes for all keys but first which is 18
-		long size = list->getListSize();
-		sum += size / 12 + 1;
-	}
-	m_useWhiteTable = false;
-	if ( sum ) {
-		m_useWhiteTable = true;
-		long numSlots = sum * 2;
-		// keep it restricted to 5 byte keys so we do not have to
-		// extract the docid, we can just hash the ptr to those
-		// 5 bytes (which includes 1 siterank bit as the lowbit,
-		// but should be ok since it should be set the same in
-		// all termlists that have that docid)
-		if ( ! m_whiteTable.set(5,0,numSlots,NULL,0,false,0,"wtall"))
-			return false;
-	}
-
 
 	if ( m_r->m_getDocIdScoringInfo ) {
 		// . for holding the scoring info
@@ -4890,7 +4900,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	//
 	RdbList *whiteLists = m_msg2->m_whiteLists;
 	long nw = m_msg2->m_w;
-	for ( long i = 0 ; i < nw ; i++ ) {
+	for ( long i = 0 ; ! m_addedSites && i < nw ; i++ ) {
 		RdbList *list = &whiteLists[i];
 		if ( list->isEmpty() ) continue;
 		// first key is always 18 bytes cuz it has the termid
@@ -4901,6 +4911,7 @@ void PosdbTable::intersectLists10_r ( ) {
 			m_whiteTable.addKey ( rec + 7 );
 		}
 	}
+	m_addedSites = true;
 
 
 

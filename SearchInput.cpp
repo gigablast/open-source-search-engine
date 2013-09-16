@@ -345,7 +345,9 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	char *sites = r->getString ("sites",&sitesLen,NULL);
 
 	// save it if there
-	if ( sites && sitesLen > 0 && ! m_whiteListBuf.safeStrcpy(sites) )
+	if ( sites && sitesLen > 0 && 
+	     ( ! m_whiteListBuf.safeStrcpy(sites)||
+	       ! m_whiteListBuf.nullTerm() ) )
 		return log("query: unable to strcpy whitelist");
 	
 	// now override automatic defaults for special cases
