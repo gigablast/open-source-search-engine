@@ -1618,6 +1618,9 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "<input type=hidden name=id value=\"%s\">"
 
 
+			      "<TABLE border=0>"
+			      "<TR><TD valign=top>"
+
 			      "<table border=0 cellpadding=5>"
 
 			      // this will  have to be in crawlinfo too!
@@ -1629,6 +1632,58 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "<tr>"
 			      "<td><b>Objects Found</b></td>"
 			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>URLs Found</b></td>"
+			      "<td>%lli</td>"
+
+
+
+     
+			      "</tr>"
+			      
+
+			      "<tr>"
+			      "<td><b>URLs Considered</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Download Attempts</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Download Successes</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Process Attempts</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Process Successes</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      
+			      "</table>"
+
+			      "</TD>"
+
+			      // spacer column
+			      "<TD>"
+			      "&nbsp;&nbsp;&nbsp;&nbsp;"
+			      "&nbsp;&nbsp;&nbsp;&nbsp;"
+			      "</TD>"
+
+			      "<TD valign=top>"
+
+			      "<table cellpadding=5 border=0>"
+			      "<tr>"
 			      //
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
@@ -1642,13 +1697,9 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "format=xml>"
 			      "xml</a>"
 			      "</td>"
-
 			      "</tr>"
 
 			      "<tr>"
-			      "<td><b>URLs Found</b></td>"
-			      "<td>%lli</td>"
-			      //
 			      "<td><b>Download Urls:</b> "
 			      "</td><td>"
 			      /*
@@ -1670,47 +1721,49 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "csv</a>"
 			      //
 			      "</td>"
-     
 			      "</tr>"
+
 			      
-
-			      "<tr>"
-			      "<td><b>URLs Considered</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Page Download Attempts</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Page Download Successes</b></td>"
-			      "<td>%lli</td>"
 			      //
-			      "<td><b>Max:</b> "
+			      //
+			      "<tr>"
+			      "<td><b>Max Page Download Successes:</b> "
+			      "</td><td>"
 			      "<input type=text name=maxtocrawl "
 			      "size=9 value=%lli> "
 			      "<input type=submit name=submit value=OK>"
+			      "</td>"
 			      "</tr>"
-
 			      "<tr>"
-			      "<td><b>Page Process Attempts</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Page Process Successes</b></td>"
-			      "<td>%lli</td>"
-			      //
-			      "<td><b>Max:</b> "
+			      "<td><b>Max Page Process Successes:</b>"
+			      "</td><td>"
 			      "<input type=text name=maxtoprocess "
 			      "size=9 value=%lli> "
 			      "<input type=submit name=submit value=OK>"
+			      "</td>"
 			      "</tr>"
 
-			      
+			      "<tr><td>"
+			      "Use Robots.txt when crawling? "
+			      "</td><td>"
+			      "<input type=checkbox name=userobotstxt checked>"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr><td>"
+			      "Use spider proxies on AWS? "
+			      "</td><td>"
+			      "<input type=checkbox name=usefloaters checked>"
+			      "</td>"
+			      "</tr>"
+
+
 			      "</table>"
+
+			      "</TD>"
+			      "</TR>"
+			      "</TABLE>"
+
 			      "</form>"
 
 			      , cr->m_coll
@@ -1719,25 +1772,26 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 			      , cr->m_globalCrawlInfo.m_objectsAdded -
 			        cr->m_globalCrawlInfo.m_objectsDeleted
-			      , token
-			      , crawlId
-			      , token
-			      , crawlId
 			      , cr->m_globalCrawlInfo.m_urlsHarvested
-			      //, token
-			      //, id
-			      //, token
-			      //, id
-			      , token
-			      , crawlId
 			      , cr->m_globalCrawlInfo.m_urlsConsidered
 
 			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
-			      , cr->m_diffbotMaxToCrawl 
 
 			      , cr->m_globalCrawlInfo.m_pageProcessAttempts
 			      , cr->m_globalCrawlInfo.m_pageProcessSuccesses
+
+			      , token
+			      , crawlId
+			      , token
+			      , crawlId
+			      //, token
+			      //, id
+			      //, token
+			      //, id
+			      , token
+			      , crawlId
+			      , cr->m_diffbotMaxToCrawl 
 			      , cr->m_diffbotMaxToProcess
 
 			      );
@@ -1899,20 +1953,6 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "<br>"
 		      );
 
-
-
-	//
-	// spider parms
-	//
-	sb.safePrintf("<input type=checkbox name=userobotstxt checked>"
-		      " Use robots.txt when spidering?"
-		      "<br>"
-		      "<input type=checkbox name=usefloaters>"
-		      " Use floating spider proxies in Amazon "
-		      "Web Services (AWS)?"
-		      "<br>"
-		      );
-		      
 
 
 	//
