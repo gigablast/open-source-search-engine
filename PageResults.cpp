@@ -377,7 +377,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			      " &nbsp;&nbsp;&nbsp;&nbsp; -->"
 
 			      "<a title=\"Add your url to the index\" "
-			      "href=/adurl>"
+			      "href=/addurl>"
 			      "add url"
 			      "</a>"
 
