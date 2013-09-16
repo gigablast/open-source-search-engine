@@ -13814,7 +13814,9 @@ char **XmlDoc::getUtf8Content ( ) {
 	}
 
 	// recycle?
-	if ( m_cr->m_recycleContent || m_recycleContent ) {
+	if ( m_cr->m_recycleContent || m_recycleContent ||
+	     // if trying to delete from index, load from old titlerec
+	     m_deleteFromIndex ) {
 		// get the old xml doc from the old title rec
 		XmlDoc **pod = getOldXmlDoc ( );
 		if ( ! pod || pod == (void *)-1 ) return (char **)pod;
