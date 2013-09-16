@@ -7960,7 +7960,12 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 		       bool useCache ) {
 
 	long now = getTimeLocal();
-	if ( useCache && now - cr->m_globalCrawlInfo.m_lastUpdateTime  < 60 )
+	// keep it fresh within 1 second
+	long thresh = 1;
+	// unless cluster is big
+	if ( g_hostdb.m_numHosts > 32 ) thresh = 30;
+	
+	if ( useCache && now - cr->m_globalCrawlInfo.m_lastUpdateTime  <thresh)
 		return true;
 
 	// wait in line if reply is pending
