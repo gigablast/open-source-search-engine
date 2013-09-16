@@ -46,12 +46,6 @@ struct SafeBuf {
 	void print() { 
 	  if ( write(1,m_buf,m_length) != m_length) { char*xx=NULL;*xx=0;}; }
 
-	bool nullTerm() {
-		if ( m_length>=m_capacity && ! reserve(1) ) return false;
-		m_buf [m_length] = '\0';
-		return true;
-	}
-
 	// . returns bytes written to file, 0 is acceptable if m_length == 0
 	// . returns -1 on error and sets g_errno
 	long saveToFile ( char *dir , char *filename ) ;
