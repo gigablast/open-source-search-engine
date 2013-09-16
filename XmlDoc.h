@@ -1458,6 +1458,7 @@ class XmlDoc {
 	char *m_httpReply;
 	char m_downloadAttempted;
 	char m_incrementedAttemptsCount;
+	char m_incrementedDownloadCount;
 	char m_redirectFlag;
 	//char m_isScraping;
 	//char m_throttleDownload;

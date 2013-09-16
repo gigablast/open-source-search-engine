@@ -182,6 +182,7 @@ void XmlDoc::reset ( ) {
 	m_downloadAttempted = false;
 
 	m_incrementedAttemptsCount = false;
+	m_incrementedDownloadCount = false;
 
 	if ( m_dx ) {
 		mdelete ( m_dx , sizeof(XmlDoc), "xddx" );
@@ -12346,7 +12347,10 @@ char **XmlDoc::gotHttpReply ( ) {
 	g_errno = saved;
 
 	// do not count bad http status in mime as failure i guess
-	m_cr->m_localCrawlInfo.m_pageDownloadSuccesses++;
+	if ( ! m_incrementedDownloadCount ) {
+		m_cr->m_localCrawlInfo.m_pageDownloadSuccesses++;
+		m_incrementedDownloadCount = true;
+	}
 
 	// this means the spider compression proxy's reply got corrupted
 	// over roadrunner's crappy wireless internet connection

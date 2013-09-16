@@ -7,6 +7,7 @@
 #include "XmlDoc.h"
 #include "PageParser.h"
 #include "Repair.h"
+#include "Diffbot.h"
 
 static bool sendReply        ( void *state );
 
@@ -20,6 +21,9 @@ bool sendPageInject ( TcpSocket *s , HttpRequest *r ) {
 	// get the collection
 	long  collLen = 0;
 	char *coll  = r->getString ( "c" , &collLen  , NULL /*default*/);
+
+	long crawlbotAPI = r->getLong("crawlbotapi",0);
+
 	// get collection rec
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 	// bitch if no collection rec found
@@ -45,6 +49,12 @@ bool sendPageInject ( TcpSocket *s , HttpRequest *r ) {
 	msg7->m_socket = s;
 
 	msg7->m_isScrape = false;
+
+	msg7->m_crawlbotAPI = crawlbotAPI;
+
+	// for diffbot
+	if ( crawlbotAPI ) 
+		msg7->m_hr.copy ( r );
 
 	// a scrape request?
 	char *qts = r->getString("qts",NULL);
@@ -125,6 +135,33 @@ bool sendReply ( void *state ) {
 
 	// page is not more than 32k
 	char buf[1024*32];
+
+
+	// if using the diffbot crawlbot api just print the diffbot 
+	// universal api page with the status of this injection
+	if ( msg7->m_crawlbotAPI ) {
+		// make a status msg for the url
+		SafeBuf sb;
+		if ( xd->m_indexCode == 0 ) {
+			sb.safePrintf("<b><font color=black>"
+				      "Successfully added ");
+		}
+		else {
+			sb.safePrintf("<b><font color=red>"
+				      "Error: <i>%s</i> when adding "
+				      , mstrerror(xd->m_indexCode) );
+		}
+		sb.safeTruncateEllipsis(xd->m_firstUrl.getUrl(),60);
+		sb.safePrintf("</font></b>");
+		sb.nullTerm();
+		// this will call g_httpServer.sendReply()
+		printCrawlBotPage ( s , &msg7->m_hr , &sb );
+		// clean up our state
+		mdelete ( msg7, sizeof(Msg7) , "PageInject" );
+		delete (msg7);
+		return true;
+	}
+
 
 	// . if we're talking w/ a robot he doesn't care about this crap
 	// . send him back the error code (0 means success)

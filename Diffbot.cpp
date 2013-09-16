@@ -1430,7 +1430,9 @@ char *getNewCollName ( char *token ) {
 
 
 
-bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
+bool printCrawlBotPage ( TcpSocket *s , 
+			 HttpRequest *hr ,
+			 SafeBuf *injectionResponse ) {
 
 	SafeBuf sb;
 
@@ -1585,12 +1587,13 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 			      //
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
-			      "<a href=/crawlbot/downloadobjects?token=&id="
+			      "<a href=/api/downloadcrawl?"
+			      "token=%s&id=%s&"
 			      "format=json>"
 			      "json</a>"
 			      "&nbsp; "
-			      "<a href=/crawlbot/downloadobjects?"
-			      "token=&id=&"
+			      "<a href=/api/downloadocrawl?"
+			      "token=%s&id=%s&"
 			      "format=xml>"
 			      "xml</a>"
 			      "</td>"
@@ -1603,18 +1606,22 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 			      //
 			      "<td><b>Download Urls:</b> "
 			      "</td><td>"
-			      "<a href=/crawlbot/downloadurls?token=&id="
+			      /*
+			      "<a href=/api/downloadcrawl?"
+			      "token=%s&id=%s"
 			      "format=json>"
 			      "json</a>"
 			      " &nbsp; "
-			      "<a href=/crawlbot/downloadurls?"
-			      "token=&id=&"
+			      "<a href=/api/downloadcrawl?"
+			      "token=%s&id=%s&"
 			      "format=xml>"
 			      "xml</a>"
 			      "&nbsp; "
-			      "<a href=/crawlbot/downloadurls?"
-			      "token=&id=&"
-			      "format=csv>"
+			      */
+			      "<a href=/api/downloadcrawl?"
+			      "token=%s&id=%s"
+			      //"&format=csv"
+			      ">"
 			      "csv</a>"
 			      //
 			      "</td>"
@@ -1661,7 +1668,17 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 
 			      , cr->m_globalCrawlInfo.m_objectsAdded -
 			        cr->m_globalCrawlInfo.m_objectsDeleted
+			      , token
+			      , id
+			      , token
+			      , id
 			      , cr->m_globalCrawlInfo.m_urlsHarvested
+			      //, token
+			      //, id
+			      //, token
+			      //, id
+			      , token
+			      , id
 			      , cr->m_globalCrawlInfo.m_urlsConsidered
 
 			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
@@ -1699,11 +1716,24 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 		      "<b>Add Url: </b>"
 		      "</td><td>"
 		      "<input type=text name=u size=50>"
-		      "<input type=hidden name=c value=\"%s\">"
+		      " "
+		      "<input type=submit name=submit value=OK>"
 		      " &nbsp; &nbsp; <input type=checkbox "
 		      "name=spiderlinks "
 		      "checked>"
 		      " <i>crawl links on this page?</i>"
+		      , cr->m_coll
+		      );
+
+	if ( injectionResponse )
+		sb.safePrintf("<br><font size=-1>%s</font>\n"
+			      ,injectionResponse->getBufStart() 
+			      );
+
+	sb.safePrintf("<input type=hidden name=c value=\"%s\">"
+		      "<input type=hidden name=crawlbotapi value=1>"
+		      "<input type=hidden name=token value=\"%s\">"
+		      "<input type=hidden name=id value=\"%s\">"
 		      "</td>"
 		      "</tr>"
 		      "</form>"
@@ -1711,7 +1741,8 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 		      "</table>"
 		      "<br>"
 		      , cr->m_coll
-		      , cr->m_coll
+		      , token
+		      , id
 		      );
 
 

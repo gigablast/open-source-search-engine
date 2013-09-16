@@ -25,6 +25,8 @@ public:
 	char m_useAhrefs;
 	char m_injectLinks;
 	HashTableX m_linkDedupTable;
+	HttpRequest m_hr;
+	long m_crawlbotAPI;
 
 	Msg7 ();
 	~Msg7 ();
