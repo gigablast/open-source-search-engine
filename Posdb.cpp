@@ -562,7 +562,7 @@ void PosdbTable::reset() {
 	m_qiBuf.reset();
 	// assume no-op
 	m_t1 = 0LL;
-	m_whiteTable.reset();
+	m_whiteListTable.reset();
 	m_addedSites = false;
 }
 
@@ -664,14 +664,26 @@ bool PosdbTable::allocWhiteListTable ( ) {
 		sum += size / 12 + 1;
 	}
 	if ( sum ) {
+		// making this sum * 3 does not show a speedup... hmmm...
 		long numSlots = sum * 2;
 		// keep it restricted to 5 byte keys so we do not have to
 		// extract the docid, we can just hash the ptr to those
 		// 5 bytes (which includes 1 siterank bit as the lowbit,
 		// but should be ok since it should be set the same in
 		// all termlists that have that docid)
-		if ( ! m_whiteTable.set(5,0,numSlots,NULL,0,false,0,"wtall"))
+		if ( ! m_whiteListTable.set(5,0,numSlots,NULL,0,false,
+					    0,"wtall"))
 			return false;
+		// try to speed up. wow, this slowed it down about 4x!!
+		//m_whiteListTable.m_maskKeyOffset = 1;
+		//
+		////////////
+		//
+		// this seems to make it like 20x faster... 1444ms vs 27000ms:
+		//
+		////////////
+		//
+		m_whiteListTable.m_useKeyMagic = true;
 	}
 	return true;
 }
@@ -4672,7 +4684,7 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 	//   the 6 bytes of the docid ptr as is though since the siterank
 	//   should be the same for the site: terms we indexed for the same
 	//   docid!!
-	if ( m_useWhiteTable && ! m_whiteTable.isInTable(minRecPtr+7) )
+	if ( m_useWhiteTable && ! m_whiteListTable.isInTable(minRecPtr+7) )
 		goto getMin;
 		
 
@@ -4903,12 +4915,16 @@ void PosdbTable::intersectLists10_r ( ) {
 	for ( long i = 0 ; ! m_addedSites && i < nw ; i++ ) {
 		RdbList *list = &whiteLists[i];
 		if ( list->isEmpty() ) continue;
+		// sanity test
+		long long d1 = g_posdb.getDocId(list->getList());
+		if ( d1 > m_msg2->m_docIdEnd ) { char *xx=NULL;*xx=0; }
+		if ( d1 < m_msg2->m_docIdStart ) { char *xx=NULL;*xx=0; }
 		// first key is always 18 bytes cuz it has the termid
 		// scan recs in the list
 		for ( ; ! list->isExhausted() ; list->skipCurrentRecord() ) {
 			char *rec = list->getCurrentRec();
 			// point to the 5 bytes of docid
-			m_whiteTable.addKey ( rec + 7 );
+			m_whiteListTable.addKey ( rec + 7 );
 		}
 	}
 	m_addedSites = true;

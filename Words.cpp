@@ -1068,7 +1068,8 @@ long Words::getLanguage( Sections *sections ,
 	//long wordBase  = 0;
 	long wordi     = 0;
 	//if ( ! ht.set(maxSamples*1.5) ) return -1;
-	if ( ! ht.set(8,1,maxSamples*8.0,NULL,0,false,niceness,"wordslang")) 
+	if ( ! ht.set(8,1,(long)(maxSamples*8.0),NULL,0,false,
+		      niceness,"wordslang")) 
 		return -1;
  
 	// . avoid words in these bad sections

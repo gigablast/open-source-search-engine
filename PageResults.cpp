@@ -1368,6 +1368,9 @@ bool gotResults ( void *state ) {
 		args.safePrintf("&sb=1");
 	if ( ! si->m_showBanned && si->m_isAdmin )
 		args.safePrintf("&sb=0");
+	// carry over the sites we are restricting the search results to
+	if ( si->m_whiteListBuf.length() )
+		args.safePrintf("&sites=%s",si->m_whiteListBuf.getBufStart());
 	
 
 	if ( firstNum > 0 && ! si->m_xml ) {

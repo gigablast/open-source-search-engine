@@ -14,6 +14,7 @@ void HashTableX::constructor() {
 	m_doFree = false;
 	m_isWritable = true;
 	m_txtBuf = NULL;
+	m_useKeyMagic = false;
 }
 
 void HashTableX::destructor() {
@@ -82,6 +83,7 @@ void HashTableX::reset ( ) {
 	m_numSlotsUsed = 0;
 	m_addIffNotUnique = false;
 	m_maskKeyOffset = 0;
+	m_useKeyMagic = false;
 	// we should free it in reset()
 	if ( m_doFree && m_txtBuf ) {
 		mfree ( m_txtBuf , m_txtBufSize,"ftxtbuf");
@@ -135,8 +137,16 @@ long HashTableX::getCount ( void *key ) {
 // . returns -1 if key not in hash table
 long HashTableX::getOccupiedSlotNum ( void *key ) {
 	if ( m_numSlots <= 0 ) return -1;
+
+        long n = *(unsigned long *)(((char *)key)+m_maskKeyOffset);
+
+	// use magic to "randomize" key a little
+	if ( m_useKeyMagic ) 
+		n^=g_hashtab[(unsigned char)((char *)key)[m_maskKeyOffset]][0];
+
 	// mask on the lower 32 bits i guess
-        long n = (*(unsigned long *)(((char *)key)+m_maskKeyOffset)) & m_mask;
+        n &= m_mask;
+
         long count = 0;
         while ( count++ < m_numSlots ) {
 		// this is set to 0x01 if non-empty
@@ -176,7 +186,18 @@ bool HashTableX::addKey ( void *key , void *val , long *slot ) {
 		if ( growTo > m_maxSlots ) growTo = m_maxSlots;
 		if ( ! setTableSize ( (long)growTo , NULL , 0 ) ) return false;
 	}
-        long n = (*(unsigned long *)(((char *)key)+m_maskKeyOffset)) & m_mask;
+
+        //long n=(*(unsigned long *)(((char *)key)+m_maskKeyOffset)) & m_mask;
+
+        long n = *(unsigned long *)(((char *)key)+m_maskKeyOffset);
+
+	// use magic to "randomize" key a little
+	if ( m_useKeyMagic ) 
+		n^=g_hashtab[(unsigned char)((char *)key)[m_maskKeyOffset]][0];
+
+	// mask on the lower 32 bits i guess
+        n &= m_mask;
+
         long count = 0;
 	m_needsSave = true;
         while ( count++ < m_numSlots ) {

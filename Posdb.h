@@ -446,7 +446,7 @@ class PosdbTable {
 		   class Msg2 *msg2, 
 		   class          Msg39Request *r );
 
-	// pre-allocate m_whiteTable
+	// pre-allocate m_whiteListTable
 	bool allocWhiteListTable ( ) ;
 
 	// pre-allocate memory since intersection runs in a thread
@@ -579,7 +579,7 @@ class PosdbTable {
 	// the new intersection/scoring algo
 	void intersectLists10_r ( );	
 
-	HashTableX m_whiteTable;
+	HashTableX m_whiteListTable;
 	bool m_useWhiteTable;
 	bool m_addedSites;
 

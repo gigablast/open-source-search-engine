@@ -1637,7 +1637,7 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 		// prepare for next link, it may never come if we're last one!
 		//oldi = i;
 		// add to table
-		if ( ! table.addKey ( (long)wid , score , NULL ) ) 
+		if ( ! table.addKey ( (long)wid , (long)score , NULL ) ) 
 			return -1.0;
 		// if no last wid, continue
 		if ( lastWid == -1LL ) {lastWid=wid;lastScore=score;continue; }
@@ -1657,7 +1657,7 @@ float Title::getSimilarity ( Words  *w1 , long i0 , long i1 ,
 		//     "adding pid=%li score=%.02f sum=%.02f",
 		//	     (long)pid,phrScore,sum);
 		// now add that
-		if ( ! table.addKey ( (long)pid , phrScore , NULL ) )
+		if ( ! table.addKey ( (long)pid , (long)phrScore , NULL ) )
 			return -1.0;
 		// we are now the last wid
 		lastWid   = wid;

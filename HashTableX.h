@@ -408,6 +408,8 @@ class HashTableX {
 	char *m_buf;
 	long  m_bufSize;
 
+	char m_useKeyMagic;
+
 	long m_ks;
 	long m_ds;
 	char m_allowDups;
