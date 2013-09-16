@@ -1446,24 +1446,33 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//
 	// if no token... they need to login or signup
 	//
-	long tokenLen = 0;
+	long tokenLen;
 	char *token = hr->getString("token",&tokenLen);
+
 	// crawlid?
 	char *crawlId = hr->getString("id",NULL,NULL);
+
+	char tokenBuf[64];
 
 	// extract token/crawlid from coll?
 	char *c = hr->getString("c",NULL,NULL);
 	if ( c ) {
-		token = c;
-		for ( ; token[tokenLen] && token[tokenLen] != '-';tokenLen++ );
-		// now crawl id
-		crawlId = token + tokenLen;
-		// skip hyphen
-		if ( crawlId[0] == '-' ) crawlId++;
+		// the collection name is <token>-<crawlid> but we
+		// need token to be null terminated so we have to
+		// copy it into tokenBuf.
+		char *tp = c;
+		long i; for ( i = 0 ; tp[i] && tp[i] != '-'; i++ );
+		if ( i > 60 ) goto needToken;
+		strncpy ( tokenBuf, c , i );
+		tokenLen = i;
+		token = tokenBuf;
+		// now point to crawl id in the collection name itself
+		crawlId = c + i + 1;
 	}
 
 
 	if ( ! token || tokenLen == 0 ) {
+	needToken:
 		sb.safePrintf("In order to use crawlbot you must "
 			      "first LOGIN:"
 			      "<form action=/crawlbot method=get>"
