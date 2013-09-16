@@ -185,7 +185,7 @@ class Conf {
 
 	// if this is true, all collections index into the "main" collection
 	// but keep their own spiderdb in their collection.
-	bool m_useDiffbot;
+	//bool m_useDiffbot;
 
 	//bool  m_indexEventsOnly;
 

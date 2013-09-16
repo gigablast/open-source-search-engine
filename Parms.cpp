@@ -12169,7 +12169,7 @@ void Parms::init ( ) {
 	//m->m_type  = TYPE_COMMENT;
 	//m++;
 
-	m->m_title = "<a href=/overview.html#regex>regular expression</a>";
+	m->m_title = "expression";
 	m->m_desc  = "Before downloading the contents of a URL, Gigablast "
 		"first chains down this "
 		"list of "

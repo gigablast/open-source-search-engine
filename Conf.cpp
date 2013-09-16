@@ -212,12 +212,12 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 		g_conf.m_siteQualityMaxCacheMem = 3000000;
 
 
-	m_useDiffbot = false;
+	//m_useDiffbot = false;
 
-#ifdef DIFFBOT	
+	//#ifdef DIFFBOT	
 	// make sure all collections index into a single unified collection
-	m_useDiffbot = true;
-#endif
+	//m_useDiffbot = true;
+	//#endif
 
 	// HACK: set this now
 	setRootIps();

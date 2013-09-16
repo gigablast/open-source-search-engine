@@ -280,7 +280,7 @@ bool handleDiffbotRequest ( TcpSocket *s , HttpRequest *hr ) {
 	long compileError;
 	// test the url crawl pattern
 	sb.set ( urlCrawlPattern );
-	checkRegex (&sb,"x",&boolVal,&boolValValid,&compileError);
+	checkRegex (&sb,"x",&boolVal,&boolValValid,&compileError,cr);
 	if ( compileError ) {
 		g_errno = EBADREQUEST;
 		g_msg = "(error: bad url crawl pattern)";
@@ -289,7 +289,7 @@ bool handleDiffbotRequest ( TcpSocket *s , HttpRequest *hr ) {
 	}
 	// test the url process pattern
 	sb.set ( urlProcessPattern );
-	checkRegex (&sb,"x",&boolVal,&boolValValid,&compileError);
+	checkRegex (&sb,"x",&boolVal,&boolValValid,&compileError,cr);
 	if ( compileError ) {
 		g_errno = EBADREQUEST;
 		g_msg = "(error: bad url process pattern)";
@@ -298,7 +298,7 @@ bool handleDiffbotRequest ( TcpSocket *s , HttpRequest *hr ) {
 	}
 	// test the page process pattern
 	sb.set ( pageProcessPattern );
-	checkRegex (&sb,"x",&boolVal,&boolValValid,&compileError);
+	checkRegex (&sb,"x",&boolVal,&boolValValid,&compileError,cr);
 	if ( compileError ) {
 		g_errno = EBADREQUEST;
 		g_msg = "(error: bad page process pattern)";
@@ -1890,8 +1890,14 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//
 	// print url filters. use "multimedia" to handle jpg etc.
 	//
-
-
+	// use "notindexable" for images/movies/css etc.
+	// add a "process" column to send to diffbot...
+	//
+	//
+	sb.safePrintf("<a onclick=\"\">Show URL Filters table</a>"
+		      "<br>"
+		      "<br>"
+		      );
 
 
 

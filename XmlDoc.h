@@ -99,7 +99,8 @@ bool checkRegex ( SafeBuf *regex ,
 		  char    *target ,
 		  bool    *boolVal ,
 		  bool    *boolValValid ,
-		  long    *compileError = NULL ) ;
+		  long    *compileError ,
+		  CollectionRec *cr ) ;
 
 // Address.cpp calls this to make a vector from the "place name" for comparing
 // to other places in placedb using the computeSimilarity() function. if
