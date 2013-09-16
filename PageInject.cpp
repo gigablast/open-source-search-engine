@@ -146,6 +146,16 @@ bool sendReply ( void *state ) {
 			sb.safePrintf("<b><font color=black>"
 				      "Successfully added ");
 		}
+		else if ( xd->m_indexCode == EDOCFILTERED ) {
+			sb.safePrintf("<b><font color=red>"
+				      "Error: <i>%s</i> by matching "
+				      "url filter #%li "
+				      "when adding "
+				      , mstrerror(xd->m_indexCode) 
+				      , xd->m_urlFilterNum
+				      );
+
+		}
 		else {
 			sb.safePrintf("<b><font color=red>"
 				      "Error: <i>%s</i> when adding "

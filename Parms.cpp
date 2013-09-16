@@ -659,6 +659,11 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "parm."
 			  "</td></tr>"
 
+			  "<tr><td>isinjected</td>"
+			  "<td>"
+			  "This is true if the url was injected."
+			  "</td></tr>"
+
 			  "<tr><td>inpingserver | !inpingserver</td>"
 			  "<td>"
 			  "This is true if the url has an inlink from "
@@ -808,7 +813,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "only."
 			  "</td></tr>"
 
-			  "<tr><td>onsite</td>"
+			  "<tr><td>isonsite</td>"
 			  "<td>"
 			  "<b>This is a special expression in that "
 			  "it only applies to assigning spider priorities "

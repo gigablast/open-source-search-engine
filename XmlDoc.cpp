@@ -12346,8 +12346,9 @@ char **XmlDoc::gotHttpReply ( ) {
 	// make it so
 	g_errno = saved;
 
-	// do not count bad http status in mime as failure i guess
-	if ( ! m_incrementedDownloadCount ) {
+	// . do not count bad http status in mime as failure i guess
+	// . do not inc this count for robots.txt and root page downloads, etc.
+	if ( ! m_isChildDoc && ! m_incrementedDownloadCount ) {
 		m_cr->m_localCrawlInfo.m_pageDownloadSuccesses++;
 		m_incrementedDownloadCount = true;
 	}
@@ -17112,7 +17113,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// . or no json objects returned from diffbot?
 		// . or rejected from the processign regex filter?
 		// . then just add the SpiderReply to avoid respidering
-		|| diffbotEmptyReply
+		// . NO! still need to add outlinks
+		//|| diffbotEmptyReply
 	     // . treat this as a temporary error i guess
 	     // . getNewSpiderReply() below will clear the error in it and
 	     //   copy stuff over from m_oldsr and m_oldDoc for this case

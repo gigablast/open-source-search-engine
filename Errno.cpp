@@ -132,7 +132,7 @@ case    ENOCACHE         : return "Page disallows caching";
 case    EREPAIRING       : return "Can not add data to host in repair mode";
 case	ECANCELACK       : return "Read a cancel ack, destroy the slot";
 case	EBADURL          : return "Malformed url";
-case	EDOCFILTERED     : return "Doc is filtered"; // like banned...
+case	EDOCFILTERED     : return "Doc is filtered by URL filters";
 case    ESSLNOTREADY     : return "SSL tcpserver not ready";
 case	ERESTRICTEDPAGE  : return "Page is /admin or /master and restricted";
 //case	ESPIDERRECDUP    : return "Duplicate spiderdb record";

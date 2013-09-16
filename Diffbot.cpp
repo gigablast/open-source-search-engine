@@ -1582,7 +1582,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      //"</tr>"
 
 			      "<tr>"
-			      "<td><b>Objects Indexed</b></td>"
+			      "<td><b>Objects Found</b></td>"
 			      "<td>%lli</td>"
 			      //
 			      "<td><b>Download Objects:</b> "
@@ -1601,7 +1601,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "</tr>"
 
 			      "<tr>"
-			      "<td><b>URLs Harvested</b></td>"
+			      "<td><b>URLs Found</b></td>"
 			      "<td>%lli</td>"
 			      //
 			      "<td><b>Download Urls:</b> "
@@ -1719,7 +1719,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      " "
 		      "<input type=submit name=submit value=OK>"
 		      " &nbsp; &nbsp; <input type=checkbox "
-		      "name=spiderlinks "
+		      "name=spiderlinks value=1 "
 		      "checked>"
 		      " <i>crawl links on this page?</i>"
 		      , cr->m_coll
@@ -2071,6 +2071,9 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 	// links with /print/ in them
 	//
 	long i = 0;
+	cr->m_regExs[i].safePrintf("isinjected");
+	cr->m_spiderPriorities[i] = 49;
+	i++;
 	cr->m_regExs[i].safePrintf("$.css");
 	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
 	i++;
@@ -2108,7 +2111,7 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 	// the crawl limited to the same subdomain of the seed url
 	if ( cr->m_diffbotUrlCrawlPattern.length() == 0 ) {
 		// first limit to http://subdomain
-		cr->m_regExs[i].safePrintf("onsite");//^http://");
+		cr->m_regExs[i].safePrintf("isonsite");//^http://");
 		//cr->m_regExs[i].safeMemcpy(norm.getHost(),norm.getHostLen());
 		//cr->m_regExs[i].pushChar('/');
 		cr->m_regExs[i].nullTerm();
