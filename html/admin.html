@@ -22,7 +22,7 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <br>
 <h1>Table of Contents</h1>
 <br>
-<a href=#quick>Quick Start</a><br><br>
+<a href=#quickstart>Quick Start</a><br><br>
 <a href=#features>Features</a><br><br>
 <a href=/searchfeed.html>XML/REST Search Feed API</a><br><br>
 
@@ -53,10 +53,10 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 
 
 
-<br><br><a name=quick></a>
+<br><br><a name=quickstart></a>
 <h1>Quick Start</h1>
 
-Requirements: You will need an intel or AMD system running linux.<br><br>
+Requirements: You will need an Intel or AMD system running Linux.<br><br>
 
 You will need the following packages installed<br>
 <ul>
@@ -78,15 +78,15 @@ You will need the following packages installed<br>
 2. Edit hosts.conf so working-dir is your current working directory, 
    where the 'gb' binary resides.
 <br><br>
-3. Run './gb 0'  to start your a single gigablast node.
+3. Run './gb 0'  to start a single gigablast node.
 <br><br>
 4. Access the server with your browser on port 8000 (default port). You can change this default port in the gb.conf file.
 <br><br>
 5. The first time you run it you will have to wait for it to build some binary data files from the txt files it uses that are based on wiktionary and wikipedia that it uses to do synonyms and phrasing. 
 <br><br>
-6. re-run it after it builds those binaries
+6. Re-run it after it builds those binaries.
 <br><br>
-7. Check out the <a href=http://127.0.0.1:8000/master>Master Controls</a>
+7. Check out the <a href=http://127.0.0.1:8000/master>Master Controls</a>. You need to connect to port 8000 from a local IP address or from an IP address on the same C-Class as part of Gigablast's security. Consider using an ssh tunnel if your browser's IP is not on the same C-Class. i.e. From your browser machine, ssh to the machine running the gb server: <i>ssh someservername.com -L 8000:127.0.0.1:8000</i> . Then on your browser go to the <a href=http://127.0.0.1:8000/master>Master Controls</a>.
 <br><br>
 8. Click on the <a href=http://127.0.0.1:8000/admin/inject?c=main>inject</a> menu and inject a URL into the index. It might be slow because it uses Google's public DNSes as specified in the Master Controls as 8.8.8.8 and 8.8.4.4. You should change those to your own local bind9 server for speed.
 <br><br>
@@ -106,7 +106,7 @@ You will need the following packages installed<br>
 
 <li> 100% custom. A single binary. The Web Server, Database and everything else 
   is all contained in this source code in a highly efficient manner.
-<li> Scalable to thousands of servers. Has scaled to over 12 billion 
+<li> <b>The ONLY open source WEB search engine.</b> Scalable to thousands of servers. Has scaled to over 12 billion 
   web pages on over 200 servers.
 <li> Reliable. Has been tested in live production since 2002 on billions of 
   queries on indexes of over 12 billion web pages.
@@ -128,6 +128,7 @@ You will need the following packages installed<br>
 <li> Crawler/Spider is highly programmable and URLs are binned into priority queues. Each priority queue has several throttles.
 <li> Complete REST/XML API for doing queries as well as adding and deleting documents in real-time.
 <li> Automated data corruption detection and repair based on hardware failures.
+<li> Custom Search. (aka Custom Topic Search). Using a cgi parm like &sites=abc.com+xyz.com you can restrict the search results to a list of up to 500 subdomains.
 </ul>
 
 <br>
@@ -136,7 +137,6 @@ You will need the following packages installed<br>
 <li> Boolean query support
 <li> Spellchecker
 <li> DMOZ integration
-<li> restricting search results to a user-provided list of 500 sites
 </ul>
 
 <br>
