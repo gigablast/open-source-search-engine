@@ -1968,13 +1968,66 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	// add a "process" column to send to diffbot...
 	//
 	//
-	sb.safePrintf("<a onclick=\"\">Show URL Filters table</a>"
-		      "<div id=filters>"
+	sb.safePrintf(
+
+		      "<a onclick="
+		      "\""
+		      "var e = document.getElementById('filters');"
+		      "var m = document.getElementById('msg');"
+		      "if ( e.style.display == 'none' ){"
+		      "e.style.display = '';"
+		      "m.innerHTML='Hide URL Filters Table';"
+		      "}"
+		      "else {"
+		      "e.style.display = 'none';"
+		      "m.innerHTML='Show URL Filters Table';"
+		      "}"
+		      "\""
+		      " "
+		      "style="
+		      "cursor:hand;"
+		      "cursor:pointer;"
+		      "color:blue;>"
+
+		      "<u><b>"
+		      "<div id=msg>"
+		      "Show URL Filters Table"
+		      "</div>"
+		      "</b></u>"
+		      "</a>"
+
+		      "<div id=filters style=display:none;>"
+		      "<form method=get action=/crawlbot>"
 		      );
 
-	//printUrlFilters();
+	//////////
+	//
+	// . update the parms for this collection
+	// . just update the url filters for now since that is complicated
+	//
+	//////////
+	long page = PAGE_FILTERS;
+	WebPage *pg = g_pages.getPage ( page ) ;
+	g_parms.setFromRequest ( hr , s, pg->m_function);
 
-	sb.safePrintf("</div>"
+
+	//
+	// print url filters. HACKy...
+	//
+	g_parms.sendPageGeneric ( s ,
+				  hr ,
+				  PAGE_FILTERS ,
+				  NULL ,
+				  &sb ,
+				  cr->m_coll  // coll override
+				  );
+	//
+	// end HACKy hack
+	//
+
+	sb.safePrintf(
+		      "</form>"
+		      "</div>"
 		      "<br>"
 		      "<br>"
 		      );
@@ -1984,6 +2037,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//
 	// add search box to your site
 	//
+	/*
 	sb.safePrintf("<br>"
 		      "<table>"
 		      "<tr>"
@@ -1993,6 +2047,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "</td>"
 		      "</tr>"
 		      "</table>");
+	*/
 
 
 	//

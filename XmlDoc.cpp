@@ -17081,6 +17081,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//if ( m_indexCode == EDOCNOTNEW || m_indexCode == EDOCNOTOLD  ) 
 	//	od = NULL;
 
+	// why call this way down here? it ends up downloading the doc!
 	long *indexCode = getIndexCode();
 	if ( ! indexCode || indexCode ==(void *)-1) return (char *)indexCode;
 	// sanity check

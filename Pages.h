@@ -310,28 +310,28 @@ enum {
 	// public pages
 	PAGE_ROOT        ,
 	PAGE_RESULTS     ,
-	PAGE_ADDURL      ,
+	PAGE_ADDURL      , // 5
 	PAGE_GET         ,
 	PAGE_LOGIN       ,
-	PAGE_DIRECTORY   , // 5
+	PAGE_DIRECTORY   ,
 	PAGE_REPORTSPAM  ,
 	//PAGE_WORDVECTOR  ,
 	
 	// master admin pages
-	PAGE_STATS       ,
+	PAGE_STATS       , // 10
 	PAGE_HOSTS       ,
-	PAGE_SOCKETS     ,  //10
+	PAGE_SOCKETS     ,
 	PAGE_LOG         ,
 	PAGE_MASTER      , 
 //	PAGE_SYNC        , 
 	PAGE_PERF        ,
 	PAGE_STATSDB	 ,
-	PAGE_SECURITY    , //15
+	PAGE_SECURITY    ,
 	PAGE_ADDCOLL     ,	
 	PAGE_DELCOLL     , 
-	PAGE_AUTOBAN     ,
+	PAGE_AUTOBAN     , // 20
 	//PAGE_SPIDERLOCKS ,
-	PAGE_PROFILER    , //20
+	PAGE_PROFILER    ,
 	PAGE_LOGVIEW     ,
 	PAGE_THREADS     ,
 	PAGE_REPAIR      ,
@@ -352,17 +352,17 @@ enum {
 
 	PAGE_SEARCH      ,  
 	PAGE_SPIDER      ,
-	PAGE_CRAWLBOT    ,
-	PAGE_SPIDERDB    ,  //35	
+	PAGE_CRAWLBOT    , // 35
+	PAGE_SPIDERDB    , 
 	//PAGE_PRIORITIES  ,  // priority queue controls
 	PAGE_FILTERS     ,
 	PAGE_REINDEX     ,	
 	PAGE_INJECT      , 
 	//PAGE_KEYWORDS    ,
 #ifdef PRIVATESTUFF
-	PAGE_SEO         ,
+	PAGE_SEO         , // 40
 #endif
-	PAGE_ACCESS      ,  //40	
+	PAGE_ACCESS      , // 40/41
 	PAGE_SEARCHBOX   ,
 	PAGE_ADDURL2     ,
 	PAGE_LOGIN2      ,

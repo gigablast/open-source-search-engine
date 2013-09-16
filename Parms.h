@@ -165,7 +165,12 @@ class Parms {
 	void init();
 	
 	bool sendPageGeneric ( class TcpSocket *s, class HttpRequest *r, 
-			       long page , char *cookie = NULL ) ;
+			       long page , char *cookie = NULL ,
+			       // Diffbot.cpp uses this to print the
+			       // url filters into
+			       SafeBuf *pageBuf = NULL ,
+			       // used by diffbot.cpp
+			       char *collOverride = NULL ) ;
 
 	bool sendPageGeneric2 ( class TcpSocket *s , class HttpRequest *r , 
 				long page , char *coll , char *pwd ) ;

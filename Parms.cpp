@@ -285,10 +285,16 @@ unsigned long Parms::calcChecksum() {
 // . sets g_errno on error
 // . must ultimately send reply back on "s"
 bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
-			      char *cookie ) {
+			      char *cookie , SafeBuf *pageBuf ,
+			      char *collOveride ) {
 
 	char  buf [ 128000 ];
-	SafeBuf sb(buf,128000);
+	SafeBuf stackBuf(buf,128000);
+
+	SafeBuf *sb = &stackBuf;
+
+	if ( pageBuf ) sb = pageBuf;
+
 	//char *p    = buf;
 	//char *pend = buf + 128000;
 
@@ -303,11 +309,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		//coll = g_conf.m_defaultColl;
 		coll = g_conf.getDefaultColl( r->getHost(), r->getHostLen() );
 
+	if ( collOveride ) coll = collOveride;
+
 	long nc = r->getLong("nc",1);
 	long pd = r->getLong("pd",1);
 
 	//p += sprintf(p, "<script type=\"text/javascript\">"
-	sb.safePrintf (  
+	sb->safePrintf (  
 		     "<script type=\"text/javascript\">"
 		     "function filterRow(str) {"
 		     //"alert ('string: ' + str);"
@@ -334,12 +342,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		     "</script>");
 	
 	// print standard header 
-	g_pages.printAdminTop ( &sb      ,
-				page     ,
-				username ,
-				coll     ,
-				pwd      , // NULL     , // pwd
-				fromIp   );
+	if ( ! pageBuf )
+		g_pages.printAdminTop ( sb      ,
+					page     ,
+					username ,
+					coll     ,
+					pwd      , // NULL     , // pwd
+					fromIp   );
 
 	
 
@@ -389,7 +398,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	//   a comma-separated list of the collections to repair. leave blank
 	//   to repair all collections.
 	if ( page == PAGE_REPAIR )
-		g_repair.printRepairStatus ( &sb , fromIp );
+		g_repair.printRepairStatus ( sb , fromIp );
 	
 	char bb [ MAX_COLL_LEN + 60 ];
 	bb[0]='\0';
@@ -397,7 +406,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	//	sprintf ( bb , " (%s)", c);
 
 	// start the table
-	sb.safePrintf( 
+	sb->safePrintf( 
 		  "\n"
 		  "<table width=100%% bgcolor=#%s cellpadding=4 border=1 "
 		  "id=\"parmtable\">"
@@ -423,15 +432,15 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		
 	// print the table(s) of controls
 	//p= g_parms.printParms (p, pend, page, user, THIS, coll, pwd, nc, pd);
-	g_parms.printParms ( &sb, page, username, THIS, coll, NULL, nc, pd);
+	g_parms.printParms ( sb, page, username, THIS, coll, NULL, nc, pd);
 
 	// end the table
-	sb.safePrintf ( "</table>\n" );
+	sb->safePrintf ( "</table>\n" );
 	
 	// if page is security
 	if ( page == PAGE_SECURITY ){
 		// a table of page names and description
-		sb.safePrintf (
+		sb->safePrintf (
 			  "<table align=center width=100%% border=1 bgcolor=#d0d0e0 "
 			  "cellpadding=2 border=0>" 
 			  //"<tr><td colspan=2 bgcolor=#d0c0d0>"
@@ -445,22 +454,22 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 		for ( long p=0; p < PAGE_INFO; p++ ){
 			WebPage *page = g_pages.getPage(p);
-			sb.safePrintf (
+			sb->safePrintf (
 				  "<tr>"
 				  "<td> <font size=2>%s</font></td>"
 				  "<td><font size=2>%s</font></td></tr>\n",
 				  page->m_filename , page->m_desc );
 		}
-		sb.safePrintf (  "</table>\n");
+		sb->safePrintf (  "</table>\n");
 	}
 
-	sb.safePrintf ( "<br><br>\n" );
+	sb->safePrintf ( "<br><br>\n" );
 
 	// url filter page has a test table
 	if ( page == PAGE_FILTERS ) {
 
 		// wrap up the form, print a submit button
-		g_pages.printAdminBottom ( &sb );
+		g_pages.printAdminBottom ( sb );
 
 		/*
 		CollectionRec *cr = (CollectionRec *)THIS;
@@ -535,7 +544,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "<td>%s</td></tr></table><br><br>\n" ,
 			  LIGHT_BLUE , DARK_BLUE , testUrl , matchString );
 		*/
-		sb.safePrintf (
+		sb->safePrintf (
 			  "<table width=100%% cellpadding=4 border=1 "
 			  "bgcolor=#%s>"
 			  "<tr><td colspan=2 bgcolor=%s><center>"
@@ -841,7 +850,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 
 		// show the languages you can use
-		sb.safePrintf (
+		sb->safePrintf (
 			  "<table width=100%% cellpadding=4 border=1 "
 			  "bgcolor=#%s>"
 			  "<tr><td colspan=2 bgcolor=%s><center>"
@@ -853,17 +862,17 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			char *lang1 = getLanguageAbbr   ( i );
 			char *lang2 = getLanguageString ( i );
 			if ( ! lang1 ) continue;
-			sb.safePrintf("<tr><td>%s</td><td>%s</td></tr>\n",
+			sb->safePrintf("<tr><td>%s</td><td>%s</td></tr>\n",
 				      lang1,lang2);
 		}
 		// wrap it up
-		sb.safePrintf("</table><br><br>");
+		sb->safePrintf("</table><br><br>");
 
 	}
 
 	else 
 		// wrap up the form, print a submit button
-		g_pages.printAdminBottom ( &sb );
+		g_pages.printAdminBottom ( sb );
 
 	// extra sync table
 	/*
@@ -901,11 +910,14 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 	//long plen = p - buf;
 
+	// if just printing into a buffer, return now
+	if ( pageBuf ) return true;
+
 	bool POSTReply = g_pages.getPage ( page )->m_usePost;
 
 	return g_httpServer.sendDynamicPage ( s                , 
-					      sb.getBufStart() ,
-					      sb.length()      , 
+					      sb->getBufStart() ,
+					      sb->length()      , 
 					      -1               ,
 					      POSTReply        ,
 					      NULL             , // contType
@@ -2317,7 +2329,17 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 		// parm "m" must be from the same page as the page we are on
 		// UNLESS parm is PAGE_NONE. that way CommandPowerNotice()
 		// will work.
-		if ( m->m_page != page && m->m_page != PAGE_NONE ) continue;
+		bool onPage = true;
+		if ( m->m_page != page && m->m_page != PAGE_NONE ) 
+			onPage = false;
+		// if showing the url filters page on the crawlbot/diffbot page
+		// then allow this to go through!
+		if ( ! onPage && 
+		     m->m_page == PAGE_FILTERS &&
+		     page      == PAGE_CRAWLBOT )
+			onPage = true;
+		// if parm is not on the page we are viewing, skip it!
+		if ( ! onPage ) continue;
 		// insert row above it if we should (only applicable to 
 		// non-fixed arrays)
 		if ( insert && m->m_max > 1 ) {
@@ -12326,8 +12348,7 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "<a href=/overview.html#spiderpriority>"
-		"spider priority</a>";
+	m->m_title = "spider priority";
 	m->m_cgi   = "fsp";
 	m->m_xml   = "filterPriority";
 	m->m_max   = MAX_FILTERS;
