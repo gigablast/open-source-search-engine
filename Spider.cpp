@@ -352,7 +352,7 @@ long SpiderRequest::printTableHeaderSimple ( SafeBuf *sb ,
 	sb->safePrintf(" <td><b>errCount</b></td>\n");
 	sb->safePrintf(" <td><b>hops</b></td>\n");
 	sb->safePrintf(" <td><b>addedTime</b></td>\n");
-	sb->safePrintf(" <td><b>flags</b></td>\n");
+	//sb->safePrintf(" <td><b>flags</b></td>\n");
 	sb->safePrintf("</tr>\n");
 
 	return sb->length();
@@ -466,7 +466,7 @@ long SpiderRequest::printTableHeader ( SafeBuf *sb , bool currentlySpidering) {
 	//sb->safePrintf(" <td><b>retryNum</b></td>\n");
 	//sb->safePrintf(" <td><b>langId</b></td>\n");
 	//sb->safePrintf(" <td><b>percentChanged</b></td>\n");
-	//sb->safePrintf(" <td><b>flags</b></td>\n");
+	sb->safePrintf(" <td><b>flags</b></td>\n");
 	sb->safePrintf("</tr>\n");
 
 	return sb->length();

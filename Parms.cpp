@@ -540,7 +540,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "bgcolor=#%s>"
 			  "<tr><td colspan=2 bgcolor=%s><center>"
 			  "<b>"
-			  "Commonly Used Filters</b>"
+			  "Commonly Used Expressions</b>"
 			  "</td></tr>"
 
 			  "<tr><td>^http://whatever</td>"
@@ -551,10 +551,15 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "<td>Matches if the url ends with \".css\"."
 			  "</td></tr>"
 
+			  "<tr><td>foobar</td>"
+			  "<td>Matches if the url CONTAINS <i>foobar</i>."
+			  "</td></tr>"
+
 			  "<tr><td>tld==uk,jp</td>"
 			  "<td>Matches if url's TLD ends in \"uk\" or \"jp\"."
 			  "</td></tr>"
 
+			  /*
 			  "<tr><td>doc:quality&lt;40</td>"
 			  "<td>Matches if document quality is "
 			  "less than 40. Can be used for assigning to spider "
@@ -575,6 +580,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "<td>Matches if document quality less than 40 and "
 			  "belongs to ruleset 33. Only for assigning to "
 			  "spider priority or a banned ruleset.</td></tr>"
+			  */
 
 			  "<tr><td>hopcount<4 && iswww</td>"
 			  "<td>Matches if document has a hop count of 4, and "
@@ -661,10 +667,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 			  "<tr><td>isinjected</td>"
 			  "<td>"
-			  "This is true if the url was injected."
+			  "This is true if the url was directly "
+			  "injected from the "
+			  "/inject page or API."
 			  "</td></tr>"
 
-			  "<tr><td>inpingserver | !inpingserver</td>"
+			  "<tr><td><nobr>inpingserver | !inpingserver"
+			  "</nobr></td>"
 			  "<td>"
 			  "This is true if the url has an inlink from "
 			  "a recognized ping server. Ping server urls are "
@@ -757,17 +766,17 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  //"can not involve doc:quality for purposes of "
 			  //"assigning a ruleset, unless banning it.</td>"
 
-			  "<tr><td><nobr>tld!=com,org,edu && "
-			  "doc:quality&lt;70</nobr></td>"
-			  "<td>Matches if document quality less than 70 and "
+			  "<tr><td><nobr>tld!=com,org,edu"// && "
+			  //"doc:quality&lt;70"
+			  "</nobr></td>"
+			  "<td>Matches if the "
 			  "url's TLD does NOT end in \"com\", \"org\" or "
 			  "\"edu\". "
-			  "Can be used for assigning to spider priority."
 			  "</td></tr>"
 
-			  "<tr><td><nobr>lang==zh_cn,de && doc:quality&lt;40"
+			  "<tr><td><nobr>lang==zh_cn,de"
 			  "</nobr></td>"
-			  "<td>Matches if document quality less than 40 and "
+			  "<td>Matches if "
 			  "the url's content is in the language \"zh_cn\" or "
 			  "\"de\". See table below for supported language "
 			  "abbreviations.</td></tr>"
@@ -777,9 +786,9 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  //"assigning a ruleset, unless banning it.</td>"
 			  //"</tr>"
 
-			  "<tr><td><nobr>lang!=xx,en,de && doc:quality&lt;60"
+			  "<tr><td><nobr>lang!=xx,en,de"
 			  "</nobr></td>"
-			  "<td>Matches if document quality less than 60 and "
+			  "<td>Matches if "
 			  "the url's content is NOT in the language \"xx\" "
 			  "(unknown), \"en\" or \"de\". "
 			  "See table below for supported language "
@@ -810,15 +819,17 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 			  "<tr><td>iswww</td>"
 			  "<td>Matches if the url's hostname is www or domain "
-			  "only."
+			  "only. For example: <i>www.xyz.com</i> would match, "
+			  "and so would <i>abc.com</i>, but "
+			  "<i>foo.somesite.com</i> would NOT match."
 			  "</td></tr>"
 
 			  "<tr><td>isonsite</td>"
 			  "<td>"
 			  "<b>This is a special expression in that "
 			  "it only applies to assigning spider priorities "
-			  "to outlinks we are harvesting on a page.</b>" 
-			  "Matches if the url's parent's <b>hostname</b> "
+			  "to outlinks we are harvesting on a page.</b> "
+			  "Matches if the url's parent's <b>subdomain</b> "
 			  "is the same as the url in question. "
 			  //"Only effective for links being added from a page "
 			  //"being spidered, because this information is "
@@ -12161,11 +12172,11 @@ void Parms::init ( ) {
 	m->m_title = "<a href=/overview.html#regex>regular expression</a>";
 	m->m_desc  = "Before downloading the contents of a URL, Gigablast "
 		"first chains down this "
-		"list of <a href=/overview.html#regex>"
+		"list of "
 		"expressions</a>, "
-		"starting with expression #1.  This table is also consulted "
-		"for every outlink added to spiderdb. When it finds a "
-		"regular expression that "
+		"starting with expression #0.  This table is also consulted "
+		"for every outlink added to spiderdb. When it finds an "
+		"expression that "
 		"matches that URL, it assigns the corresponding "
 		"<a href=/overview.html#spiderfreq>"
 		"spider frequency</a>, "
@@ -12173,7 +12184,9 @@ void Parms::init ( ) {
 		"spider priority</a> to "
 		//"and <a href=/overview.html#ruleset>ruleset</a> to "
 		"that URL. If no expression is matched, then the "
-		"<i>default</i> line is used.<br><br>";
+		"<i>default</i> line is used. "
+		"See the help table below for examples of all the supported "
+		"expressions.<br><br>";
 		
 		/*
 		"A URL is respidered according to the "

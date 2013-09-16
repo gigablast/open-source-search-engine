@@ -1490,6 +1490,17 @@ bool printCrawlBotPage ( TcpSocket *s ,
 						     -1); // cachetime
 	}
 
+	sb.safePrintf("<table border=0>"
+		      "<tr><td>"
+		      "<b><font size=+2>Crawlbot</font></b>"
+		      "<br>"
+		      "<font size=-1>"
+		      "Crawl, Extract and Index the Web"
+		      "</font>"
+		      "</td></tr>"
+		      "</table>"
+		      );
+
 	sb.safePrintf("<center><br>");
 			      
 	// first print "add new collection"
@@ -1865,6 +1876,15 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	// end the table
 	sb.safePrintf ( "</table>\n" );
 	sb.safePrintf ( "<br>\n" );
+
+
+	//
+	// print url filters. use "multimedia" to handle jpg etc.
+	//
+
+
+
+
 
 	//
 	// spider parms
