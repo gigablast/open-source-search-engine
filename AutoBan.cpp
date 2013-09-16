@@ -1527,6 +1527,7 @@ bool AutoBan::restore() {
 	SafeBuf p(tmp, 512 * 512);
 	if(p.fillFromFile("autoban-saved.dat")<0)
 		return false;
+	if (p.length() <= 0 ) return true;
 	char* buf = (char*) p.getBufStart();
 	char* bufEnd = (char*) p.getBufEnd();
 	// catLoop:

@@ -1584,6 +1584,7 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 			      "<td>%lli</td>"
 			      //
 			      "<td><b>Download Objects:</b> "
+			      "</td><td>"
 			      "<a href=/crawlbot/downloadobjects?token=&id="
 			      "format=json>"
 			      "json</a>"
@@ -1592,9 +1593,6 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 			      "token=&id=&"
 			      "format=xml>"
 			      "xml</a>"
-			      " &nbsp; "
-			      "<b>Search Objects:</b> "
-			      "<input type=text name=q size=50>"
 			      "</td>"
 
 			      "</tr>"
@@ -1604,6 +1602,7 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 			      "<td>%lli</td>"
 			      //
 			      "<td><b>Download Urls:</b> "
+			      "</td><td>"
 			      "<a href=/crawlbot/downloadurls?token=&id="
 			      "format=json>"
 			      "json</a>"
@@ -1618,15 +1617,8 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 			      "format=csv>"
 			      "csv</a>"
 			      //
-			      " &nbsp; "
-			      "<b>Add Url: </b> "
-			      "<input type=text name=addurl size=50>"
-			      " &nbsp; &nbsp; <input type=checkbox "
-			      "name=spiderlinks "
-			      "checked>"
-			      " <i>crawl links on this page?</i>"
 			      "</td>"
-			      
+     
 			      "</tr>"
 			      
 
@@ -1683,7 +1675,46 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 			      );
 	}
 
-	
+
+	sb.safePrintf(
+		      "<table border=0 cellpadding=5>"
+
+		      // search input box
+		      "<form method=get action=/search>"
+		      "<tr>"
+		      "<td>"
+		      "<b>Search Objects:</b>"
+		      "</td><td>"
+		      "<input type=text name=q size=50>"
+		      "<input type=hidden name=c value=\"%s\">"
+		      " "
+		      "<input type=submit name=submit value=OK>"
+		      "</tr>"
+		      "</form>"
+
+		      // add url input box
+		      "<form method=get action=/inject>"
+		      "<tr>"
+		      "<td>"
+		      "<b>Add Url: </b>"
+		      "</td><td>"
+		      "<input type=text name=u size=50>"
+		      "<input type=hidden name=c value=\"%s\">"
+		      " &nbsp; &nbsp; <input type=checkbox "
+		      "name=spiderlinks "
+		      "checked>"
+		      " <i>crawl links on this page?</i>"
+		      "</td>"
+		      "</tr>"
+		      "</form>"
+
+		      "</table>"
+		      "<br>"
+		      , cr->m_coll
+		      , cr->m_coll
+		      );
+
+
 	// xml or json does not show the input boxes
 	if ( format != FMT_HTML ) 
 		return g_httpServer.sendDynamicPage ( s, 
@@ -1725,6 +1756,19 @@ bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr ) {
 	// end the table
 	sb.safePrintf ( "</table>\n" );
 	sb.safePrintf ( "<br>\n" );
+
+	//
+	// spider parms
+	//
+	sb.safePrintf("<input type=checkbox name=userobotstxt checked>"
+		      " Use robots.txt when spidering?"
+		      "<br>"
+		      "<input type=checkbox name=usefloaters>"
+		      " Use floating spider proxies in Amazon "
+		      "Web Services (AWS)?"
+		      "<br>"
+		      );
+		      
 
 
 	//

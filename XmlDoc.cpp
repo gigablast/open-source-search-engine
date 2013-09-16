@@ -1830,8 +1830,11 @@ bool XmlDoc::indexDoc ( ) {
 	     m_cr->m_diffbotMaxToCrawl ) {
 		m_cr->m_spideringEnabled = false;
 		log("diffbot: abandoning url because we hit crawl limit "
-		    "of %lli. Disabling spiders.",m_cr->m_diffbotMaxToCrawl);
-		m_indexCode = EABANDONED;
+		    "of %lli. downloaded %lli. Disabling spiders."
+		    ,m_cr->m_diffbotMaxToCrawl
+		    ,m_cr->m_globalCrawlInfo.m_pageDownloadSuccesses
+		    );
+		m_indexCode = EHITCRAWLLIMIT;//EABANDONED;
 		m_indexCodeValid = true;
 		g_errno = m_indexCode;
 		return true;
@@ -1844,8 +1847,11 @@ bool XmlDoc::indexDoc ( ) {
 	     m_cr->m_diffbotMaxToProcess ) {
 		m_cr->m_spideringEnabled = false;
 		log("diffbot: abandoning url because we hit process limit "
-		    "of %lli. Disabling spiders.",m_cr->m_diffbotMaxToProcess);
-		m_indexCode = EABANDONED;
+		    "of %lli. processed %lli. Disabling spiders."
+		    , m_cr->m_diffbotMaxToProcess
+		    , m_cr->m_globalCrawlInfo.m_pageProcessSuccesses
+		    );
+		m_indexCode = EHITPROCESSLIMIT;//EABANDONED;
 		m_indexCodeValid = true;
 		g_errno = m_indexCode;
 		return true;
@@ -17070,7 +17076,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( ! m_indexCodeValid ) { char *xx=NULL;*xx=0; }
 
 	// this means to abandon the injection
-	if ( *indexCode == EABANDONED ) {
+	if ( *indexCode == EABANDONED || 
+	     *indexCode == EHITCRAWLLIMIT ||
+	     *indexCode == EHITPROCESSLIMIT ) {
 		m_metaList = (char *)0x123456;
 		m_metaListSize = 0;
 		m_metaListValid = true;

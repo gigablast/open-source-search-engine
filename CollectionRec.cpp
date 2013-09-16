@@ -127,25 +127,25 @@ bool CollectionRec::load ( char *coll , long i ) {
 	//
 	// LOAD the crawlinfo class in the collectionrec for diffbot
 	//
-	if ( g_conf.m_useDiffbot ) {
-		// LOAD LOCAL
-		sprintf ( tmp1 , "%scoll.%s.%li/localcrawlinfo.txt",
-			  g_hostdb.m_dir , m_coll , (long)m_collnum );
-		log("coll: loading %s",tmp1);
-		SafeBuf sb;
-		// fillfromfile returns 0 if does not exist, -1 on read error
-		if ( sb.fillFromFile ( tmp1 ) > 0 )
-			m_localCrawlInfo.setFromSafeBuf(&sb);
-		// LOAD GLOBAL
-		sprintf ( tmp1 , "%scoll.%s.%li/globalcrawlinfo.txt",
-			  g_hostdb.m_dir , m_coll , (long)m_collnum );
-		log("coll: loading %s",tmp1);
-		sb.reset();
-		if ( sb.fillFromFile ( tmp1 ) > 0 )
-			m_globalCrawlInfo.setFromSafeBuf(&sb);
-		// ignore errors i guess
-		g_errno = 0;
-	}
+	// LOAD LOCAL
+	sprintf ( tmp1 , "%scoll.%s.%li/localcrawlinfo.txt",
+		  g_hostdb.m_dir , m_coll , (long)m_collnum );
+	log("coll: loading %s",tmp1);
+	m_localCrawlInfo.reset();
+	SafeBuf sb;
+	// fillfromfile returns 0 if does not exist, -1 on read error
+	if ( sb.fillFromFile ( tmp1 ) > 0 )
+		m_localCrawlInfo.setFromSafeBuf(&sb);
+	// LOAD GLOBAL
+	sprintf ( tmp1 , "%scoll.%s.%li/globalcrawlinfo.txt",
+		  g_hostdb.m_dir , m_coll , (long)m_collnum );
+	log("coll: loading %s",tmp1);
+	m_globalCrawlInfo.reset();
+	sb.reset();
+	if ( sb.fillFromFile ( tmp1 ) > 0 )
+		m_globalCrawlInfo.setFromSafeBuf(&sb);
+	// ignore errors i guess
+	g_errno = 0;
 
 
 
@@ -365,32 +365,29 @@ bool CollectionRec::save ( ) {
 	//
 	// save the crawlinfo class in the collectionrec for diffbot
 	//
-	if ( g_conf.m_useDiffbot ) {
-		// SAVE LOCAL
-		sprintf ( tmp , "%scoll.%s.%li/localcrawlinfo.txt",
-			  g_hostdb.m_dir , m_coll , (long)m_collnum );
-		log("coll: saving %s",tmp);
-		SafeBuf sb;
-		m_localCrawlInfo.print ( &sb );
-		if ( sb.dumpToFile ( tmp ) == -1 ) {
-			log("coll: failed to save file %s : %s",
-			    tmp,mstrerror(g_errno));
-			g_errno = 0;
-		}
-		// SAVE GLOBAL
-		sprintf ( tmp , "%scoll.%s.%li/globalcrawlinfo.txt",
-			  g_hostdb.m_dir , m_coll , (long)m_collnum );
-		log("coll: saving %s",tmp);
-		sb.reset();
-		m_globalCrawlInfo.print ( &sb );
-		if ( sb.dumpToFile ( tmp ) == -1 ) {
-			log("coll: failed to save file %s : %s",
-			    tmp,mstrerror(g_errno));
-			g_errno = 0;
-		}
-						 
+	// SAVE LOCAL
+	sprintf ( tmp , "%scoll.%s.%li/localcrawlinfo.txt",
+		  g_hostdb.m_dir , m_coll , (long)m_collnum );
+	log("coll: saving %s",tmp);
+	SafeBuf sb;
+	m_localCrawlInfo.print ( &sb );
+	if ( sb.dumpToFile ( tmp ) == -1 ) {
+		log("coll: failed to save file %s : %s",
+		    tmp,mstrerror(g_errno));
+		g_errno = 0;
 	}
-
+	// SAVE GLOBAL
+	sprintf ( tmp , "%scoll.%s.%li/globalcrawlinfo.txt",
+		  g_hostdb.m_dir , m_coll , (long)m_collnum );
+	log("coll: saving %s",tmp);
+	sb.reset();
+	m_globalCrawlInfo.print ( &sb );
+	if ( sb.dumpToFile ( tmp ) == -1 ) {
+		log("coll: failed to save file %s : %s",
+		    tmp,mstrerror(g_errno));
+		g_errno = 0;
+	}
+	
 	// do not need a save now
 	m_needsSave = false;
 	return true;

@@ -8031,7 +8031,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	if ( slot ) {
 		CrawlInfo *stats = (CrawlInfo *)(slot->m_readBuf);
 		long long *gs = (long long *)&cr->m_globalCrawlInfo;
-		long long *ss = (long long *)&stats;
+		long long *ss = (long long *)stats;
 		for ( long i = 0 ; i < NUMCRAWLSTATS ; i++ ) {
 			*gs = *gs + *ss;
 			gs++;
