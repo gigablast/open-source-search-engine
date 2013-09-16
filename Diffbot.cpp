@@ -1559,6 +1559,12 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 	sb.safePrintf ( "</center><br/>" );
 
+	long maxToCrawl = hr->getLongLong("maxtocrawl",-1LL);
+	long maxToProcess = hr->getLongLong("maxtoprocess",-1LL);
+	if ( maxToCrawl != -1 ) cr->m_diffbotMaxToCrawl = maxToCrawl;
+	if ( maxToProcess != -1 ) cr->m_diffbotMaxToProcess = maxToProcess;
+
+
 	#define FMT_HTML 1
 	#define FMT_XML  2
 	#define FMT_JSON 3
@@ -1573,6 +1579,13 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//
 	if ( format == FMT_HTML ) {
 		sb.safePrintf("<br>"
+
+			      "<form method=get action=/crawlbot>"
+			      "<input type=hidden name=c value=\"%s\">"
+			      "<input type=hidden name=token value=\"%s\">"
+			      "<input type=hidden name=id value=\"%s\">"
+
+
 			      "<table border=0 cellpadding=5>"
 
 			      // this will  have to be in crawlinfo too!
@@ -1644,8 +1657,9 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "<td>%lli</td>"
 			      //
 			      "<td><b>Max:</b> "
-			      "<input type=text name=maxToCrawl "
-			      "size=9 value=%lli>"
+			      "<input type=text name=maxtocrawl "
+			      "size=9 value=%lli> "
+			      "<input type=submit name=submit value=OK>"
 			      "</tr>"
 
 			      "<tr>"
@@ -1658,13 +1672,19 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "<td>%lli</td>"
 			      //
 			      "<td><b>Max:</b> "
-			      "<input type=text name=maxToProcess "
-			      "size=9 value=%lli>"
+			      "<input type=text name=maxtoprocess "
+			      "size=9 value=%lli> "
+			      "<input type=submit name=submit value=OK>"
 			      "</tr>"
 
 			      
 			      "</table>"
+			      "</form>"
 			      "<br>"
+
+			      , cr->m_coll
+			      , token
+			      , id
 
 			      , cr->m_globalCrawlInfo.m_objectsAdded -
 			        cr->m_globalCrawlInfo.m_objectsDeleted
@@ -1753,6 +1773,10 @@ bool printCrawlBotPage ( TcpSocket *s ,
 						      sb.length(),
 						      -1 ); // cachetime
 
+	long pause = hr->getLong("pause",-1);
+	if ( pause == 0 ) cr->m_spideringEnabled = 1;
+	if ( pause == 1 ) cr->m_spideringEnabled = 0;
+
 	//
 	// show urls being crawled (ajax) (from Spider.cpp)
 	//
@@ -1760,10 +1784,26 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			"bgcolor=#%s>\n" 
 			"<tr><td colspan=50 bgcolor=#%s>"
 			"<b>Currently Spidering</b> (%li spiders)"
-			"</td></tr>\n" ,
+			,
 			LIGHT_BLUE,
 			DARK_BLUE,
 			(long)g_spiderLoop.m_numSpidersOut);
+	if ( cr->m_spideringEnabled )
+		sb.safePrintf(" "
+			      "<a href=/crawlbot?token=%s&id=%s&pause=1>"
+			      "<font color=red><b>Pause spiders</b>"
+			      "</font></a>"
+			      , token
+			      , id );
+	else
+		sb.safePrintf(" "
+			      "<a href=/crawlbot?token=%s&id=%s&pause=0>"
+			      "<font color=green><b>Resume spidering</b>"
+			      "</font></a>"
+			      , token
+			      , id );
+
+	sb.safePrintf("</td></tr>\n" );
 	// the table headers so SpiderRequest::printToTable() works
 	if ( ! SpiderRequest::printTableHeaderSimple(&sb,true ) ) return false;
 	// shortcut
