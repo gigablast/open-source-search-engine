@@ -200,11 +200,11 @@ retry16:
 	if (m_useSSL) {
 		// init SSL
   		// older ssl does not use "const". depends on the include files
-#if OPENSSL_VERSION_NUMBER <= 0x009080bfL
-		SSL_METHOD *meth = NULL;
-#else
+		//#if OPENSSL_VERSION_NUMBER <= 0x009080bfL
+		//SSL_METHOD *meth = NULL;
+		//#else
 		const SSL_METHOD *meth = NULL;
-#endif
+		//#endif
 		SSL_library_init();
 		SSL_load_error_strings();
 		//SSLeay_add_all_algorithms();
