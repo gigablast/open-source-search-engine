@@ -18,6 +18,10 @@
 // how many outstanding msg5 requests at one time?
 #define MSG2_MAX_REQUESTS MAX_QUERY_TERMS
 
+// support the &sites=xyz.com+abc.com+... to restrict search results to
+// provided sites.
+#define MAX_WHITELISTS 500
+
 class Msg2 {
 
  public:
@@ -38,6 +42,13 @@ class Msg2 {
 			//char    *endKeys     ,
 			//class QueryTerm *qterms ,
 			class Query *query ,
+			// restrict search results to this list of sites,
+			// i.e. "abc.com+xyz.com+..." (Custom Search)
+			char *whiteList,
+			// for intersecting ranges of docids separately
+			// to prevent OOM errors
+			long long docIdStart,
+			long long docIdEnd,
 			// isSplit[i] is true if list #i is split.
 			// i.e. gbdom:xyz.com, etc.
 			//char    *isSplit , 
@@ -56,10 +67,15 @@ class Msg2 {
 			bool     checkCache           = false);
 	bool getLists();
 
+	long  m_i;
+
 	// list of sites to restrict search results to. space separated
 	char *m_whiteList;
+	long long m_docIdStart;
+	long long m_docIdEnd;
 	char *m_p;
-	long  m_i;
+	long  m_w;
+	RdbList m_whiteLists [ MAX_WHITELISTS ];
 
 	// for posdbtable to get lists
 	//long getNumListGroups ( ) { return m_query->m_numTerms; }

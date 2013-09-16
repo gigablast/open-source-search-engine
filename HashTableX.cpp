@@ -212,7 +212,7 @@ bool HashTableX::addKey ( void *key , void *val , long *slot ) {
 		m_numSlotsUsed++;
 		// and store the key
 		if ( m_ks == 4 ) ((int32_t *)m_keys)[n] = *(int32_t *)key;
-		if ( m_ks == 8 ) ((int64_t *)m_keys)[n] = *(int64_t *)key;
+		else if ( m_ks == 8 ) ((int64_t *)m_keys)[n] = *(int64_t *)key;
 		else             memcpy ( m_keys + m_ks * n , key , m_ks );
 	}
 	// insert the value for this key

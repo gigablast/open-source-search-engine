@@ -576,6 +576,9 @@ class PosdbTable {
 	// the new intersection/scoring algo
 	void intersectLists10_r ( );	
 
+	HashTableX m_whiteTable;
+	bool m_useWhiteTable;
+
 	// sets stuff used by intersect10_r()
 	bool setQueryTermInfo ( );
 

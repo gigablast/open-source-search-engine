@@ -558,6 +558,7 @@ void PosdbTable::reset() {
 	// does not free the mem of this safebuf, only resets length
 	m_docIdVoteBuf.reset();
 	m_qiBuf.reset();
+	m_whiteTable.reset();
 	// assume no-op
 	m_t1 = 0LL;
 }
@@ -655,6 +656,36 @@ bool PosdbTable::allocTopTree ( ) {
 	// for seeing if a docid is in toptree. niceness=0.
 	//if ( ! m_docIdTable.set(8,0,xx*4,NULL,0,false,0,"dotb") )
 	//	return false;
+
+	//
+	// the whitetable is for the docids in the whitelist. we have
+	// to only show results whose docid is in the whitetable, which
+	// is from the "&sites=abc.com+xyz.com..." custom search site list
+	// provided by the user.
+	//
+	RdbList *whiteLists = m_msg2->m_whiteLists;
+	long nw = m_msg2->m_w;
+	long sum = 0;
+	for ( long i = 0 ; i < nw ; i++ ) {
+		RdbList *list = &whiteLists[i];
+		if ( list->isEmpty() ) continue;
+		// assume 12 bytes for all keys but first which is 18
+		long size = list->getListSize();
+		sum += size / 12 + 1;
+	}
+	m_useWhiteTable = false;
+	if ( sum ) {
+		m_useWhiteTable = true;
+		long numSlots = sum * 2;
+		// keep it restricted to 5 byte keys so we do not have to
+		// extract the docid, we can just hash the ptr to those
+		// 5 bytes (which includes 1 siterank bit as the lowbit,
+		// but should be ok since it should be set the same in
+		// all termlists that have that docid)
+		if ( ! m_whiteTable.set(5,0,numSlots,NULL,0,false,0,"wtall"))
+			return false;
+	}
+
 
 	if ( m_r->m_getDocIdScoringInfo ) {
 		// . for holding the scoring info
@@ -4624,7 +4655,18 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 	// update
 	lastMinRecPtr = minRecPtr;
 
-	// store our docid. actually it contains to lower bits not
+	// . do not store the docid if not in the whitelist
+	// . FIX: two lower bits, what are they? at minRecPtrs[7].
+	// . well the lowest bit is the siterank upper bit and the
+	//   other bit is always 0. we should be ok with just using
+	//   the 6 bytes of the docid ptr as is though since the siterank
+	//   should be the same for the site: terms we indexed for the same
+	//   docid!!
+	if ( m_useWhiteTable && ! m_whiteTable.isInTable(minRecPtr+7) )
+		goto getMin;
+		
+
+	// store our docid. actually it contains two lower bits not
 	// part of the docid, so we'll have to shift and mask to get
 	// the actual docid!
 	// docid is only 5 bytes for now
@@ -4833,6 +4875,31 @@ void PosdbTable::intersectLists10_r ( ) {
 		}
 		m_siteHashList.setLength((char *)s-(char *)orig);
 		return;
+	}
+
+
+
+	//
+	// hash the docids in the whitelist termlists into a hashtable.
+	// every docid in the search results must be in there. the
+	// whitelist termlists are from a provided "&sites=abc.com+xyz.com+.."
+	// cgi parm. the user only wants search results returned from the
+	// specified subdomains. there can be up to MAX_WHITELISTS (500)
+	// sites right now. this hash table must have been pre-allocated
+	// in Posdb::allocTopTree() above since we might be in a thread.
+	//
+	RdbList *whiteLists = m_msg2->m_whiteLists;
+	long nw = m_msg2->m_w;
+	for ( long i = 0 ; i < nw ; i++ ) {
+		RdbList *list = &whiteLists[i];
+		if ( list->isEmpty() ) continue;
+		// first key is always 18 bytes cuz it has the termid
+		// scan recs in the list
+		for ( ; ! list->isExhausted() ; list->skipCurrentRecord() ) {
+			char *rec = list->getCurrentRec();
+			// point to the 5 bytes of docid
+			m_whiteTable.addKey ( rec + 7 );
+		}
 	}
 
 

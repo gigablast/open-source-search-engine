@@ -327,6 +327,8 @@ bool Msg39::doDocIdSplitLoop ( ) {
 		//m_debug = true;
 		// . get the lists
 		// . i think this always should block!
+		// . it will also intersect the termlists to get the search
+		//   results and accumulate the winners into the "tree"
 		if ( ! getLists() ) return false;
 		// if there was an error, stop!
 		if ( g_errno ) break;
@@ -390,7 +392,52 @@ bool Msg39::getLists () {
 	// . ask Indexdb for the IndexLists we need for these termIds
 	// . each rec in an IndexList is a termId/score/docId tuple
 
+	//
+	// restrict to docid range?
+	//
+	// . get the docid start and end
+	// . do docid paritioning so we can send to all hosts
+	//   in the network, not just one stripe
+	long long docIdStart = 0;
+	long long docIdEnd = MAX_DOCID;
+	// . restrict to this docid?
+	// . will really make gbdocid:| searches much faster!
+	long long dr = m_tmpq.m_docIdRestriction;
+	if ( dr ) {
+		docIdStart = dr;
+		docIdEnd   = dr + 1;
+	}
+	// . override
+	// . this is set from Msg39::doDocIdSplitLoop() to compute 
+	//   search results in stages, so that we do not load massive
+	//   termlists into memory and got OOM (out of memory)
+	if ( m_r->m_minDocId != -1 ) docIdStart = m_r->m_minDocId;
+	if ( m_r->m_maxDocId != -1 ) docIdEnd   = m_r->m_maxDocId+1;
+	
+	// if we have twins, then make sure the twins read different
+	// pieces of the same docid range to make things 2x faster
+	bool useTwins = false;
+	if ( g_hostdb.getNumStripes() == 2 ) useTwins = true;
+	if ( useTwins ) {
+		long long delta = docIdEnd - docIdStart;
+		if ( m_r->m_stripe == 0 ) docIdEnd = docIdStart + delta;
+		else                      docIdStart = docIdStart + delta;
+	}
+	// TODO: add triplet support later for this to split the
+	// read 3 ways. 4 ways for quads, etc.
+	if ( g_hostdb.getNumStripes() >= 3 ) { char *xx=NULL;*xx=0;}
+	// do not go over MAX_DOCID  because it gets masked and
+	// ends up being 0!!! and we get empty lists
+	if ( docIdEnd > MAX_DOCID ) docIdEnd = MAX_DOCID;
+	// remember so Msg2.cpp can use them to restrict the termlists 
+	// from "whiteList" as well
+	m_docIdStart = docIdStart;
+	m_docIdEnd   = docIdEnd;
+	
+
+	//
 	// set startkey/endkey for each term/termlist
+	//
 	for ( long i = 0 ; i < m_tmpq.getNumTerms() ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_r->m_niceness );
@@ -400,38 +447,11 @@ bool Msg39::getLists () {
 		char *ek = qterm->m_endKey;
 		// get the term id
 		long long tid = m_tmpq.getTermId(i);
-		// now do docid paritioning so we can send to all hosts
-		// in the network, not just one stripe
-		long long docIdStart;
-		long long docIdEnd;
-		if ( m_r->m_stripe == 0 ) {
-			docIdStart = 0;
-			docIdEnd   = MAX_DOCID / 2 - 1;
-		}
-		else if ( m_r->m_stripe == 1 ) {
-			docIdStart = MAX_DOCID / 2;
-			docIdEnd   = MAX_DOCID;
-		}
-		// we only support two stripes now
-		else {	char *xx=NULL;*xx=0; }
 		// if only 1 stripe
-		if ( g_hostdb.getNumStripes() == 1 ) {
-			docIdStart = 0;
-			docIdEnd   = MAX_DOCID;
-		}
-		// . restrict to this docid?
-		// . will really make gbdocid:| searches much faster!
-		long long dr = m_tmpq.m_docIdRestriction;
-		if ( dr ) {
-			docIdStart = dr;
-			docIdEnd   = dr + 1;
-		}
-		// override
-		if ( m_r->m_minDocId != -1 ) docIdStart = m_r->m_minDocId;
-		if ( m_r->m_maxDocId != -1 ) docIdEnd   = m_r->m_maxDocId+1;
-		// do not go over MAX_DOCID  because it gets masked and
-		// ends up being 0!!! and we get empty lists
-		if ( docIdEnd > MAX_DOCID ) docIdEnd = MAX_DOCID;
+		//if ( g_hostdb.getNumStripes() == 1 ) {
+		//	docIdStart = 0;
+		//	docIdEnd   = MAX_DOCID;
+		//}
 		// store now in qterm
 		g_posdb.makeStartKey ( sk , tid , docIdStart );
 		g_posdb.makeEndKey   ( ek , tid , docIdEnd   );
@@ -578,6 +598,11 @@ bool Msg39::getLists () {
 				 //m_tmpq.m_qterms ,
 				 &m_tmpq,
 				 m_r->ptr_whiteList,
+				 // we need to restrict docid range for
+				 // whitelist as well! this is from
+				 // doDocIdSplitLoop()
+				 m_docIdStart,
+				 m_docIdEnd,
 				 // how much of each termlist to read in bytes
 				 (long *)m_r->ptr_readSizes ,
 				 //m_tmpq.getNumTerms()       , // numLists

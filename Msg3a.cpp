@@ -381,7 +381,7 @@ bool Msg3a::gotCacheReply ( ) {
 	m_r->ptr_query  = m_q->m_orig;
 	m_r->size_query = m_q->m_origLen+1;
 	// the white list now too...
-	m_r->ptr_whiteList = si->m_whiteListBuf.getBufStart();
+	//m_r->ptr_whiteList = si->m_whiteListBuf.getBufStart();
 	// free us?
 	if ( m_rbufPtr && m_rbufPtr != m_rbuf ) {
 		mfree ( m_rbufPtr , m_rbufSize, "Msg3a" );

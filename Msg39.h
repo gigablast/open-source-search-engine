@@ -17,10 +17,6 @@
 #include "Msg51.h"
 #include "HashTableX.h"
 
-// how many RdbLists to hold?
-#define MAX_WHITELIST_TERMS 500
-#define MAX_QUERY_LISTS (MAX_QUERY_TERMS+MAX_WHITELIST_TERMS)
-
 #define MAX_MSG39_REQUEST_SIZE (500+MAX_QUERY_LEN)
 
 void  handleRequest39 ( UdpSlot *slot , long netnice ) ;
@@ -212,6 +208,9 @@ class Msg39 {
 	// . TODO: have a serialize/deserialize for Query class
 	Query       m_tmpq;
 
+	long long m_docIdStart ;
+	long long m_docIdEnd   ;
+
 	// used to get IndexLists all at once
 	Msg2        m_msg2;
 
@@ -236,7 +235,7 @@ class Msg39 {
 
 	// . we hold our IndexLists here for passing to PosdbTable
 	// . one array for each of the tiers
-	IndexList  m_lists [ MAX_QUERY_LISTS ];
+	IndexList  m_lists [ MAX_QUERY_TERMS ];
 	
 	// used for timing
 	long long  m_startTime;

@@ -6,7 +6,6 @@
 #include "Rdb.h"
 #include "Threads.h"
 #include "Posdb.h" // getTermId()
-#include "Msg39.h" // MAX_QUERY_LISTS
 
 //static void gotListWrapper0 ( void *state ) ;
 static void  gotListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) ;
@@ -35,7 +34,9 @@ bool Msg2::getLists ( long     rdbId       ,
 		      Query *query ,
 		      // put list of sites to restrict to in here
 		      // or perhaps make it collections for federated search?
-		      //char *whiteList ,
+		      char *whiteList ,
+		      long long docIdStart,
+		      long long docIdEnd,
 		      long    *minRecSizes ,
 		      //long     numLists    ,
 		      // make max MAX_MSG39_LISTS
@@ -67,6 +68,12 @@ bool Msg2::getLists ( long     rdbId       ,
 	m_isDebug     = isDebug;
 	m_lists = lists;
 	//m_totalRead   = 0;
+	m_whiteList = whiteList;
+	m_w = 0;
+	m_p = whiteList;
+
+	m_docIdStart = docIdStart;
+	m_docIdEnd   = docIdEnd;
 	m_req         = request;
 	m_qterms              = m_query->m_qterms;
 	m_minRecSizes         = minRecSizes;
@@ -125,7 +132,7 @@ bool Msg2::getLists ( ) {
 	// . make slots for all
 	for (  ; m_i < m_numLists ; m_i++ ) {
 		// sanity for Msg39's sake. do no breach m_lists[].
-		if ( m_i >= MAX_QUERY_LISTS ) { char *xx=NULL;*xx=0; }
+		if ( m_i >= MAX_QUERY_TERMS ) { char *xx=NULL;*xx=0; }
 		// if any had error, forget the rest. do not launch any more
 		if ( m_errno ) break;
 		// skip if already did it
@@ -340,11 +347,9 @@ bool Msg2::getLists ( ) {
 	// now read in lists from the terms in the "whiteList"
 	//
 
-	// initialize ptr
-	if ( ! m_p ) m_p = m_whiteList;
-
-	// loop over terms in the whitelist, space separated
-	for ( char *p = m_p ; *p ; m_i++ ) {
+	// . loop over terms in the whitelist, space separated. 
+	// . m_whiteList is NULL if none provided.
+	for ( char *p = m_p ; m_whiteList && *p ; m_w++ ) {
 		// advance
 		char *current = p;
 		for ( ; *p && *p != ' ' ; p++ );
@@ -352,15 +357,24 @@ bool Msg2::getLists ( ) {
 		char *end = p;
 		// advance to point to next item in whiteList
 		for ( ; *p == ' ' ; p++ );
-		// convert whiteList term into key
-		long long termId = hash64 ( current , end - current , 0LL );
+		// . convert whiteList term into key
+		// . put the "site:" prefix before it first
+		// . see XmlDoc::hashUrl() where prefix = "site"
+		long long prefixHash = hash64b ( "site" );
+		long long termId = hash64(current,end-current);
+		long long finalTermId = hash64 ( termId , prefixHash );
 		// mask to 48 bits
-		termId &= TERMID_MASK;
-		// make key. be sure to limit to provided docid range
-		// if we are doing docid range splits to prevent OOM
-		key_t sk3 = g_posdb.makeStartKey ( termId , docId1 );
-		key_t ek3 = g_posdb.makeEndKey ( termId , docId2 );
-
+		finalTermId &= TERMID_MASK;
+		// . make key. be sure to limit to provided docid range
+		//   if we are doing docid range splits to prevent OOM
+		// . these docid ranges were likely set in Msg39::
+		//   doDocIdRangeSplitLoop(). it already applied them to
+		//   the QueryTerm::m_startKey in Msg39.cpp so we have to
+		//   apply here as well...
+		key_t sk3;
+		key_t ek3;
+		g_posdb.makeStartKey ( &sk3 , finalTermId , m_docIdStart );
+		g_posdb.makeEndKey   ( &ek3 , finalTermId , m_docIdEnd );
 		// get one
 		Msg5 *msg5 = getAvailMsg5();
 		// return if all are in use
@@ -368,20 +382,19 @@ bool Msg2::getLists ( ) {
 
 		// stash this 
 		msg5->m_parent = this;
-		msg5->m_i      = m_i;
+		msg5->m_i      = m_i + m_w;
 
 		// advance cursor
 		m_p = p;
 
 		// sanity for Msg39's sake. do no breach m_lists[].
-		if ( m_i >= MAX_QUERY_LISTS ) { char *xx=NULL;*xx=0; }
+		if ( m_w >= MAX_WHITELISTS ) { char *xx=NULL;*xx=0; }
 
 		// start up the read. thread will wait in thread queue to 
 		// launch if too many threads are out.
-		if ( ! msg5->getList ( 
-					   m_rdbId         , // rdbid
+		if ( ! msg5->getList ( 	   m_rdbId         , // rdbid
 					   m_coll        ,
-					   &m_lists[m_i], // listPtr
+					   &m_whiteLists[m_w], // listPtr
 					   &sk3,//&m_startKeys  [i*ks],
 					   &ek3,//&m_endKeys    [i*ks],
 					   -1,//minRecSize  ,
@@ -565,7 +578,6 @@ bool Msg2::gotList ( RdbList *list ) {
 		    "docIds!",
 		    i,m_lists[i].m_listSize,m_minRecSizes[i]);
 	}
-
 
 	// debug msg
 	long long now = gettimeofdayInMilliseconds();
