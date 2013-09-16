@@ -267,6 +267,13 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// propagate "admin" if set
 		long admin = hr->getLong("admin",-1);
 		if ( admin != -1 ) sb.safePrintf("&admin=%li",admin);
+		// propagate list of sites to restrict query to
+		long sitesLen;
+		char *sites = hr->getString("sites",&sitesLen,NULL);
+		if ( sites ) {
+			sb.safePrintf("&sites=");
+			sb.urlEncode ( sites,true);
+		}
 		// propagate "debug" if set
 		long debug = hr->getLong("debug",0);
 		if ( debug ) sb.safePrintf("&debug=%li",debug);
@@ -374,7 +381,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			      " &nbsp;&nbsp;&nbsp;&nbsp; -->"
 
 			      "<a title=\"Add your url to the index\" "
-			      "href=/adurl>"
+			      "href=/addurl>"
 			      "add url"
 			      "</a>"
 
@@ -1370,6 +1377,9 @@ bool gotResults ( void *state ) {
 		args.safePrintf("&sb=1");
 	if ( ! si->m_showBanned && si->m_isAdmin )
 		args.safePrintf("&sb=0");
+	// carry over the sites we are restricting the search results to
+	if ( si->m_whiteListBuf.length() )
+		args.safePrintf("&sites=%s",si->m_whiteListBuf.getBufStart());
 	
 
 	if ( firstNum > 0 && ! si->m_xml ) {

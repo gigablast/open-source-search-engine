@@ -14,7 +14,13 @@
 
 // launch up to 25 msg0 requests at a time
 //#define MSG2_MAX_REQUESTS 25
+
+// how many outstanding msg5 requests at one time?
 #define MSG2_MAX_REQUESTS MAX_QUERY_TERMS
+
+// support the &sites=xyz.com+abc.com+... to restrict search results to
+// provided sites.
+#define MAX_WHITELISTS 500
 
 class Msg2 {
 
@@ -36,6 +42,13 @@ class Msg2 {
 			//char    *endKeys     ,
 			//class QueryTerm *qterms ,
 			class Query *query ,
+			// restrict search results to this list of sites,
+			// i.e. "abc.com+xyz.com+..." (Custom Search)
+			char *whiteList,
+			// for intersecting ranges of docids separately
+			// to prevent OOM errors
+			long long docIdStart,
+			long long docIdEnd,
 			// isSplit[i] is true if list #i is split.
 			// i.e. gbdom:xyz.com, etc.
 			//char    *isSplit , 
@@ -54,6 +67,15 @@ class Msg2 {
 			bool     checkCache           = false);
 	bool getLists();
 
+	long  m_i;
+
+	// list of sites to restrict search results to. space separated
+	char *m_whiteList;
+	long long m_docIdStart;
+	long long m_docIdEnd;
+	char *m_p;
+	long  m_w;
+	RdbList m_whiteLists [ MAX_WHITELISTS ];
 
 	// for posdbtable to get lists
 	//long getNumListGroups ( ) { return m_query->m_numTerms; }
@@ -70,6 +92,9 @@ class Msg2 {
 	// get how many bytes we read
 	//long getTotalRead() { return m_totalRead; };
 
+	class Msg5 *getAvailMsg5();
+	void returnMsg5 ( class Msg5 *msg5 ) ;
+
 	// leave public so C wrapper can call
 	bool gotList ( RdbList *list );
 
@@ -82,8 +107,8 @@ class Msg2 {
 
 	RdbList *m_lists;
 
-	char      m_inProgress [ MAX_NUM_LISTS ];
-	char      m_slotNum    [ MAX_NUM_LISTS ];
+	//char      m_inProgress [ MAX_NUM_LISTS ];
+	//char      m_slotNum    [ MAX_NUM_LISTS ];
 
 	// used for getting component lists if compound list is empty
 	void     mergeLists_r       ( ) ;

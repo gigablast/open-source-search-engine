@@ -57,10 +57,12 @@ class Msg39Request {
 
 		ptr_readSizes             = NULL;
 		ptr_query                 = NULL; // in utf8?
+		ptr_whiteList             = NULL;
 		ptr_coll                  = NULL;
 
 		size_readSizes            = 0;
 		size_query                = 0;
+		size_whiteList            = 0;
 		size_coll                 = 0;
 
 		m_getDocIdScoringInfo = 1;
@@ -125,11 +127,13 @@ class Msg39Request {
 	char   *ptr_readSizes;
 	char   *ptr_termFreqWeights;
 	char   *ptr_query; // in utf8?
+	char   *ptr_whiteList;
 	char   *ptr_coll;
 	
 	long    size_readSizes;
 	long    size_termFreqWeights;
 	long    size_query;
+	long    size_whiteList;
 	long    size_coll;
 
 	char    m_buf[0];
@@ -176,7 +180,6 @@ public:
 };
 
 
-
 class Msg39 {
 
  public:
@@ -204,6 +207,9 @@ class Msg39 {
 	// . this is used by handler to reconstruct the incoming Query class
 	// . TODO: have a serialize/deserialize for Query class
 	Query       m_tmpq;
+
+	long long m_docIdStart ;
+	long long m_docIdEnd   ;
 
 	// used to get IndexLists all at once
 	Msg2        m_msg2;

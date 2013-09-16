@@ -106,12 +106,12 @@ inline unsigned long long hash64_cont ( char *s, long len,
 					unsigned long long startHash ,
 					long *conti ) {
 	unsigned long long h = startHash;
-	long i = *conti;
+	long i = 0;//*conti;
 	while ( i < len ) { 
-		h ^= g_hashtab [(unsigned char)i] [(unsigned char)s[i]];
+		h ^= g_hashtab [(unsigned char)(i+*conti)][(unsigned char)s[i]];
 		i++;
 	}
-	*conti = i;
+	*conti = *conti + i;
 	return h;
 }
 

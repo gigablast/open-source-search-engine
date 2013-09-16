@@ -14259,6 +14259,7 @@ void Parms::init ( ) {
 	m->m_sprpp = 1;
 	m++;
 
+	/*
 	m->m_title = "restrict results to these sites";
 	m->m_desc  = "Returned results will have URLs from the "
 		"space-separated list of sites, X. X can be up to 200 sites. "
@@ -14272,6 +14273,7 @@ void Parms::init ( ) {
 	m->m_sprpg = 1;
 	m->m_sprpp = 1;
 	m++;
+	*/
 
 	m->m_title = "require these query terms";
 	m->m_desc  = "Returned results will have all the words in X.";
