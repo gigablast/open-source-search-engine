@@ -1504,7 +1504,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "<b><font size=+2>Crawlbot</font></b>"
 		      "<br>"
 		      "<font size=-1>"
-		      "Crawl, Extract and Index the Web"
+		      "Crawl, Datamine and Index the Web"
 		      "</font>"
 		      "</td></tr>"
 		      "</table>"
@@ -1605,6 +1605,67 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	// . put in xml or json if format=xml or format=json or
 	//   xml=1 or json=1 ...
 	char format = FMT_HTML;
+
+
+	long pause = hr->getLong("pause",-1);
+	if ( pause == 0 ) cr->m_spideringEnabled = 1;
+	if ( pause == 1 ) cr->m_spideringEnabled = 0;
+
+	//
+	// show urls being crawled (ajax) (from Spider.cpp)
+	//
+	sb.safePrintf ( "<table width=100%% cellpadding=5 "
+			"style=border-width:1px;border-style:solid;"
+			"border-color:black;>"
+			//"bgcolor=#%s>\n" 
+			"<tr><td colspan=50>"// bgcolor=#%s>"
+			"<b>Last 10 URLs</b> (%li spiders active)"
+			//,LIGHT_BLUE
+			//,DARK_BLUE
+			,(long)g_spiderLoop.m_numSpidersOut);
+	if ( cr->m_spideringEnabled )
+		sb.safePrintf(" "
+			      "<a href=/crawlbot?c=%s&pause=1>"
+			      "<font color=red><b>Pause spiders</b>"
+			      "</font></a>"
+			      , cr->m_coll
+			      );
+	else
+		sb.safePrintf(" "
+			      "<a href=/crawlbot?c=%s&pause=0>"
+			      "<font color=green><b>Resume spidering</b>"
+			      "</font></a>"
+			      , cr->m_coll
+			      );
+
+	sb.safePrintf("</td></tr>\n" );
+	// the table headers so SpiderRequest::printToTable() works
+	if ( ! SpiderRequest::printTableHeaderSimple(&sb,true ) ) return false;
+	// shortcut
+	XmlDoc **docs = g_spiderLoop.m_docs;
+	// first print the spider recs we are spidering
+	for ( long i = 0 ; i < (long)MAX_SPIDERS ; i++ ) {
+		// get it
+		XmlDoc *xd = docs[i];
+		// skip if empty
+		if ( ! xd ) continue;
+		// sanity check
+		if ( ! xd->m_oldsrValid ) { char *xx=NULL;*xx=0; }
+		// grab it
+		SpiderRequest *oldsr = &xd->m_oldsr;
+		// get status
+		char *status = xd->m_statusMsg;
+		// show that
+		if ( ! oldsr->printToTableSimple ( &sb , status,xd) ) 
+			return false;
+	}
+	// end the table
+	sb.safePrintf ( "</table>\n" );
+	sb.safePrintf ( "<br>\n" );
+
+
+
+
 
 	//
 	// show stats
@@ -1870,6 +1931,20 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "</tr>"
 		      "</form>"
 
+
+		      "<tr>"
+		      "<td><b>Upload URLs</b></td>"
+		      "<td><input type=button value=\"Select File "
+		      "to Upload\">"
+
+		      " &nbsp; &nbsp; <input type=checkbox "
+		      "name=spiderlinks value=1 "
+		      "checked>"
+		      " <i>crawl links on those pages?</i>"
+
+		      "</td>"
+		      "</tr>"
+
 		      "</table>"
 		      "<br>"
 		      , cr->m_coll
@@ -1879,66 +1954,11 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 
 	// xml or json does not show the input boxes
-	if ( format != FMT_HTML ) 
-		return g_httpServer.sendDynamicPage ( s, 
-						      sb.getBufStart(), 
-						      sb.length(),
-						      -1 ); // cachetime
-
-	long pause = hr->getLong("pause",-1);
-	if ( pause == 0 ) cr->m_spideringEnabled = 1;
-	if ( pause == 1 ) cr->m_spideringEnabled = 0;
-
-	//
-	// show urls being crawled (ajax) (from Spider.cpp)
-	//
-	sb.safePrintf ( "<table width=100%% border=1 cellpadding=5 "
-			"bgcolor=#%s>\n" 
-			"<tr><td colspan=50 bgcolor=#%s>"
-			"<b>Last 10 URLs</b> (%li spiders active)"
-			,
-			LIGHT_BLUE,
-			DARK_BLUE,
-			(long)g_spiderLoop.m_numSpidersOut);
-	if ( cr->m_spideringEnabled )
-		sb.safePrintf(" "
-			      "<a href=/crawlbot?c=%s&pause=1>"
-			      "<font color=red><b>Pause spiders</b>"
-			      "</font></a>"
-			      , cr->m_coll
-			      );
-	else
-		sb.safePrintf(" "
-			      "<a href=/crawlbot?c=%s&pause=0>"
-			      "<font color=green><b>Resume spidering</b>"
-			      "</font></a>"
-			      , cr->m_coll
-			      );
-
-	sb.safePrintf("</td></tr>\n" );
-	// the table headers so SpiderRequest::printToTable() works
-	if ( ! SpiderRequest::printTableHeaderSimple(&sb,true ) ) return false;
-	// shortcut
-	XmlDoc **docs = g_spiderLoop.m_docs;
-	// first print the spider recs we are spidering
-	for ( long i = 0 ; i < (long)MAX_SPIDERS ; i++ ) {
-		// get it
-		XmlDoc *xd = docs[i];
-		// skip if empty
-		if ( ! xd ) continue;
-		// sanity check
-		if ( ! xd->m_oldsrValid ) { char *xx=NULL;*xx=0; }
-		// grab it
-		SpiderRequest *oldsr = &xd->m_oldsr;
-		// get status
-		char *status = xd->m_statusMsg;
-		// show that
-		if ( ! oldsr->printToTableSimple ( &sb , status,xd) ) 
-			return false;
-	}
-	// end the table
-	sb.safePrintf ( "</table>\n" );
-	sb.safePrintf ( "<br>\n" );
+	//if ( format != FMT_HTML ) 
+	//	return g_httpServer.sendDynamicPage ( s, 
+	//					      sb.getBufStart(), 
+	//					      sb.length(),
+	//					      -1 ); // cachetime
 
 
 	//
@@ -1949,6 +1969,12 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//
 	//
 	sb.safePrintf("<a onclick=\"\">Show URL Filters table</a>"
+		      "<div id=filters>"
+		      );
+
+	//printUrlFilters();
+
+	sb.safePrintf("</div>"
 		      "<br>"
 		      "<br>"
 		      );
