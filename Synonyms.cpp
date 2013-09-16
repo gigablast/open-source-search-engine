@@ -190,7 +190,7 @@ long Synonyms::getSynonyms ( Words *words ,
 		// prepare th
 		HashTableX dedup;
 		HashTableX *dd = NULL;
-		char dbuf[256];
+		char dbuf[512];
 		long count = 0;
 	addSynSet:
 		// do we have another set following this
@@ -198,7 +198,7 @@ long Synonyms::getSynonyms ( Words *words ,
 		// if so, init the dedup table then
 		if ( next && ! dd ) {
 			dd = &dedup;
-			dd->set ( 8,0,8,dbuf,256,false,m_niceness,"sddbuf");
+			dd->set ( 8,0,8,dbuf,512,false,m_niceness,"sddbuf");
 		}
 		// skip over the pipe i guess
 		char *pipe = ss + 2;
