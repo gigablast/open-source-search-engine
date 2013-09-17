@@ -76,6 +76,13 @@
 // used by diffbot to control spidering per collection
 class CrawlInfo {
  public:
+
+	//
+	// WARNING!! Add NEW stats below the LAST member variable in
+	// this class so that it can still load the OLD file on disk
+	// which is in the OLD format!
+	//
+
 	long long m_objectsDeleted;        // 1
 	long long m_objectsAdded;          // 2
 	long long m_urlsConsidered;        // 3
@@ -88,8 +95,8 @@ class CrawlInfo {
 	long m_lastUpdateTime;
 
 	void reset() { memset ( this , 0 , sizeof(CrawlInfo) ); };
-	bool print (class SafeBuf *sb ) ;
-	bool setFromSafeBuf (class SafeBuf *sb ) ;
+	//bool print (class SafeBuf *sb ) ;
+	//bool setFromSafeBuf (class SafeBuf *sb ) ;
 };
 
 
