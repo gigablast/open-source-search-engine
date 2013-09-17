@@ -1675,6 +1675,12 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	if ( maxToCrawl != -1 ) cr->m_diffbotMaxToCrawl = maxToCrawl;
 	if ( maxToProcess != -1 ) cr->m_diffbotMaxToProcess = maxToProcess;
 
+	char *api = hr->getString("diffbotapi",NULL,NULL);
+	if ( api ) {
+		cr->m_diffbotApi.set(api);
+		cr->m_diffbotApi.nullTerm();
+	}
+
 
 	#define FMT_HTML 1
 	#define FMT_XML  2
@@ -1832,13 +1838,13 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		char *api = cr->m_diffbotApi.getBufStart();
 		char *s[10];
 		for ( long i = 0 ; i < 10 ; i++ ) s[i] = "";
-		if ( strcmp(api,"all") == 0 ) s[0] = " checked";
-		if ( strcmp(api,"article") == 0 ) s[1] = " checked";
-		if ( strcmp(api,"product") == 0 ) s[2] = " checked";
-		if ( strcmp(api,"image") == 0 ) s[3] = " checked";
-		if ( strcmp(api,"frontpage") == 0 ) s[4] = " checked";
-		if ( strcmp(api,"none") == 0 ) s[5] = " checked";
-		if ( ! api ) s[5] = " checked";
+		if ( api && strcmp(api,"all") == 0 ) s[0] = " selected";
+		if ( api && strcmp(api,"article") == 0 ) s[1] = " selected";
+		if ( api && strcmp(api,"product") == 0 ) s[2] = " selected";
+		if ( api && strcmp(api,"image") == 0 ) s[3] = " selected";
+		if ( api && strcmp(api,"frontpage") == 0 ) s[4] = " selected";
+		if ( api && strcmp(api,"none") == 0 ) s[5] = " selected";
+		if ( ! api || ! api[0] ) s[5] = " selected";
 		sb.safePrintf( "<TD valign=top>"
 
 			      "<table cellpadding=5 border=0>"
