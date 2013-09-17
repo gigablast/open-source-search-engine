@@ -13744,9 +13744,6 @@ char **XmlDoc::getRawUtf8Content ( ) {
 	m_rawUtf8ContentSize      = m_filteredContentLen + 1;
 	m_rawUtf8ContentAllocSize = 0;
 
-	// silly json says it is csASCII but it encodes unicode chars like
-	// /u23ef
-
 	// if we are not ascii or utf8 already, encode it into utf8
 	if ( m_rawUtf8ContentSize > 1 && 
 	     csName &&
