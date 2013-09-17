@@ -20,15 +20,17 @@
 #include "Pages.h" // g_msg
 #include "XmlDoc.h" // for checkRegex()
 
-void printCrawlStats ( SafeBuf *sb , CollectionRec *cr ) ;
+//void printCrawlStats ( SafeBuf *sb , CollectionRec *cr ) ;
 void doneSendingWrapper ( void *state , TcpSocket *sock ) ;
-bool sendBackDump ( TcpSocket *s,HttpRequest *hr,CollectionRec *cr,char rdbId);
-void gotMsg4ReplyWrapper ( void *state ) ;
-bool showAllCrawls ( TcpSocket *s , HttpRequest *hr ) ;
-CollectionRec *getCollRecFromCrawlId ( char *crawlId );
-void printCrawlStatsWrapper ( void *state ) ;
+bool sendBackDump ( TcpSocket *s,HttpRequest *hr );
+//void gotMsg4ReplyWrapper ( void *state ) ;
+//bool showAllCrawls ( TcpSocket *s , HttpRequest *hr ) ;
+CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
+//CollectionRec *getCollRecFromCrawlId ( char *crawlId );
+//void printCrawlStatsWrapper ( void *state ) ;
 CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) ;
 
+/*
 class StateNC {
 public:
 	Msg4 m_msg4;
@@ -43,7 +45,7 @@ public:
 };
 
 // . HttpServer.cpp calls handleDiffbotRequest() when it senses
-//   a diffbot api request, like "GET /api/*"
+//   a diffbot api request, like "GET /api/ *"
 // . incoming request format described in diffbot.com/dev/docs/
 // . use incoming request to create a new collection and set the crawl
 //   parameters of the collection if it is "/api/startcrawl"
@@ -197,10 +199,10 @@ bool handleDiffbotRequest ( TcpSocket *s , HttpRequest *hr ) {
 
 	// downloading the urls from spiderdb... sorted by time?
 	if ( func == DB_DOWNLOADURLS )
-		return sendBackDump ( s , hr , cr , RDB_SPIDERDB );
+		return sendBackDump ( s , hr , RDB_SPIDERDB );
 
 	if ( func == DB_DOWNLOADOBJECTS )
-		return sendBackDump ( s , hr , cr , RDB_TITLEDB );
+		return sendBackDump ( s , hr , RDB_TITLEDB );
 
 	// viewing crawl stats just for this one collection/crawl
 	if ( func == DB_ACTIVECRAWLS ) {
@@ -671,10 +673,11 @@ void gotMsg4ReplyWrapper ( void *state ) {
 				       crawlIdStr, 
 				       gbstrlen(crawlIdStr) );
 }
+*/
 
 ////////////////
 //
-// SUPPORT FOR GET /api/downloadcrawl
+// SUPPORT FOR DOWNLOADING an RDB DUMP
 //
 // We ask each shard for 10MB of Spiderdb records. If 10MB was returned
 // then we repeat. Everytime we get 10MB from each shard we print the
@@ -697,6 +700,7 @@ public:
 
 	bool m_needsMime;
 	char m_rdbId;
+	bool m_downloadJSON;
 	collnum_t m_collnum;
 	long m_numRequests;
 	long m_numReplies;
@@ -723,7 +727,37 @@ public:
 //   shard/group asking for all the spider urls. dan says 30MB is typical
 //   for a csv file, so for now we will just try to do a single spiderdb
 //   request.
-bool sendBackDump ( TcpSocket *s,HttpRequest *hr,CollectionRec *cr,char rdbId){
+bool sendBackDump ( TcpSocket *s, HttpRequest *hr ) {
+
+	CollectionRec *cr = getCollRecFromHttpRequest ( hr );
+	if ( ! cr ) {
+		char *msg = "token or id (crawlid) invalid";
+		log("crawlbot: invalid token or crawlid to dump");
+		g_httpServer.sendErrorReply(s,500,msg);
+		return true;
+	}
+
+	char *path = hr->getPath();
+	char rdbId = RDB_NONE;
+	bool downloadJSON = false;
+	if ( strncmp ( path ,"/crawlbot/downloadurls",22  ) == 0 )
+		rdbId = RDB_SPIDERDB;
+	if ( strncmp ( path ,"/crawlbot/downloadpages",23  ) == 0 )
+		rdbId = RDB_TITLEDB;
+	if ( strncmp ( path ,"/crawlbot/downloadobjects",25  ) == 0 ) {
+		downloadJSON = true;
+		rdbId = RDB_TITLEDB;
+	}
+
+	// sanity, must be one of 3 download calls
+	if ( rdbId == RDB_NONE ) {
+		char *msg ;
+		msg = "usage: downloadurls, downloadpages, downloadobjects";
+		log("crawlbot: %s",msg);
+		g_httpServer.sendErrorReply(s,500,msg);
+		return true;
+	}
+
 	StateCD *st;
 	try { st = new (StateCD); }
 	catch ( ... ) {
@@ -732,6 +766,7 @@ bool sendBackDump ( TcpSocket *s,HttpRequest *hr,CollectionRec *cr,char rdbId){
 	mnew ( st , sizeof(StateCD), "statecd");
 	// initialize the new state
 	st->m_rdbId = rdbId;
+	st->m_downloadJSON = downloadJSON;
 	st->m_socket = s;
 	// the name of the collections whose spiderdb we read from
 	st->m_collnum = cr->m_collnum;
@@ -1125,7 +1160,27 @@ void StateCD::printTitledbList ( RdbList *list , SafeBuf *sb , char *format ) {
 			continue;
 		}
 		// must be of type json to be a diffbot json object
-		if ( xd.m_contentType != CT_JSON ) continue;
+		if ( m_downloadJSON && xd.m_contentType != CT_JSON ) continue;
+		// or if downloading web pages...
+		if ( ! m_downloadJSON ) {
+			// skip if json object content type
+			if ( xd.m_contentType == CT_JSON ) continue;
+			// . just print the cached page
+			// . size should include the \0
+			sb->safeStrcpy ( xd.m_firstUrl.m_url);
+			// then \n
+			sb->pushChar('\n');
+			// then page content
+			sb->safeStrcpy ( xd.ptr_utf8Content );
+			// null term just in case
+			//sb->nullTerm();
+			// separate pages with \0 i guess
+			sb->pushChar('\0');
+			// \n
+			sb->pushChar('\n');
+			continue;
+		}
+
 		// skip if not a diffbot json url
 		char *url = xd.m_firstUrl.m_url;
 		long ulen = gbstrlen(url);
@@ -1158,7 +1213,7 @@ void StateCD::printTitledbList ( RdbList *list , SafeBuf *sb , char *format ) {
 	}
 }
 
-
+/*
 ////////////////
 //
 // SUPPORT FOR GET /api/crawls and /api/activecrawls
@@ -1220,11 +1275,48 @@ bool showAllCrawls ( TcpSocket *s , HttpRequest *hr ) {
 	// and send back now
 	return g_httpServer.sendDynamicPage (s, sb.getBufStart(), 
 					     sb.length(),
-					     -1/*cachetime*/);
+					     -1);// cachetime
 
 }
+*/
 
+CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) {
 
+	char *c = hr->getString("c",NULL,NULL);
+	if ( c ) return g_collectiondb.getRec ( c );
+
+	long tokenLen;
+	char *token = hr->getString("token",&tokenLen,NULL);
+	char *crawlId = hr->getString("id",NULL,NULL);
+
+	if ( ! token ) return NULL;
+	//if ( ! crawlId ) return NULL;
+
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// shortcut
+		char *coll = cr->m_coll;
+		// does collection match their token?
+		if ( cr->m_collLen < tokenLen ) continue;
+		if ( strncmp(coll,token,tokenLen) ) continue;
+		// coll name is <token>-<crawlid>
+		if ( coll[tokenLen] != '-' ) continue;
+
+		// if no crawler id supplied, just use that then
+		if ( ! crawlId ) return cr;
+
+		// if current coll id...
+		char *cid = coll+tokenLen+1;
+		// return if crawlid matches
+		if ( strcmp(cid,crawlId) == 0 ) return cr;
+	}
+
+	// no matches
+	return NULL;
+}
+
+/*
 // doesn't have to be fast, so  just do a scan
 CollectionRec *getCollRecFromCrawlId ( char *crawlId ) {
 
@@ -1252,7 +1344,6 @@ CollectionRec *getCollRecFromCrawlId ( char *crawlId ) {
 	return NULL;
 }
 
-
 void printCrawlStatsWrapper ( void *state ) {
 	StateXX *sxx = (StateXX *)state;
 	// get collection rec
@@ -1269,7 +1360,7 @@ void printCrawlStatsWrapper ( void *state ) {
 	g_httpServer.sendDynamicPage ( sock ,
 				       sb.getBufStart(), 
 				       sb.length(),
-				       -1/*cachetime*/);
+				       -1 ); // cachetime
 }
 
 
@@ -1384,6 +1475,7 @@ void printCrawlStats ( SafeBuf *sb , CollectionRec *cr ) {
 	sb->pushChar(']');
 
 }
+*/
 
 ////////////////
 //
@@ -1513,11 +1605,11 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	sb.safePrintf("<center><br>");
 			      
 	// first print "add new collection"
-	sb.safePrintf("<a href=/api/addcoll?token=%s&c=%s>"
+	sb.safePrintf("<a href=/crawlbot/addcoll?token=%s&c=%s>"
 		      "add new collection"
 		      "</a> &nbsp; "
 
-		      "<a href=/api/summary?token=%s>"
+		      "<a href=/crawlbot/summary?token=%s>"
 		      "all collections"
 		      "</a> &nbsp; "
 		      
@@ -1675,11 +1767,10 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 			      "<form method=get action=/crawlbot>"
 			      "<input type=hidden name=c value=\"%s\">"
-			      "<input type=hidden name=token value=\"%s\">"
-			      "<input type=hidden name=id value=\"%s\">"
+			      , cr->m_coll
+			      );
 
-
-			      "<TABLE border=0>"
+		sb.safePrintf("<TABLE border=0>"
 			      "<TR><TD valign=top>"
 
 			      "<table border=0 cellpadding=5>"
@@ -1698,12 +1789,8 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "<tr>"
 			      "<td><b>URLs Found</b></td>"
 			      "<td>%lli</td>"
-
-
-
      
 			      "</tr>"
-			      
 
 			      "<tr>"
 			      "<td><b>URLs Considered</b></td>"
@@ -1734,7 +1821,20 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "</table>"
 
 			      "</TD>"
+			      
+			      , cr->m_globalCrawlInfo.m_objectsAdded -
+			        cr->m_globalCrawlInfo.m_objectsDeleted
+			      , cr->m_globalCrawlInfo.m_urlsHarvested
+			      , cr->m_globalCrawlInfo.m_urlsConsidered
 
+			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
+			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
+
+			      , cr->m_globalCrawlInfo.m_pageProcessAttempts
+			      , cr->m_globalCrawlInfo.m_pageProcessSuccesses
+			      );
+
+		sb.safePrintf(
 			      // spacer column
 			      "<TD>"
 			      "&nbsp;&nbsp;&nbsp;&nbsp;"
@@ -1748,13 +1848,13 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      //
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
-			      "<a href=/api/downloadcrawl?"
-			      "token=%s&id=%s&"
+			      "<a href=/crawlbot/downloadobjects?"
+			      "c=%s&"
 			      "format=json>"
 			      "json</a>"
 			      "&nbsp; "
-			      "<a href=/api/downloadocrawl?"
-			      "token=%s&id=%s&"
+			      "<a href=/crawlbot/downloadobjects?"
+			      "c=%s&"
 			      "format=xml>"
 			      "xml</a>"
 			      "</td>"
@@ -1765,24 +1865,37 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "</td><td>"
 			      /*
 			      "<a href=/api/downloadcrawl?"
-			      "token=%s&id=%s"
+			      "c=%s"
 			      "format=json>"
 			      "json</a>"
 			      " &nbsp; "
 			      "<a href=/api/downloadcrawl?"
-			      "token=%s&id=%s&"
+			      "c=%s"
 			      "format=xml>"
 			      "xml</a>"
 			      "&nbsp; "
 			      */
-			      "<a href=/api/downloadcrawl?"
-			      "token=%s&id=%s"
+			      "<a href=/crawlbot/downloadurls?c=%s"
 			      //"&format=csv"
 			      ">"
 			      "csv</a>"
 			      //
 			      "</td>"
 			      "</tr>"
+
+
+			      "<tr>"
+			      "<td><b>Download Pages:</b> "
+			      "</td><td>"
+			      "<a href=/crawlbot/downloadpages?"
+			      "c=%s"
+			      //"&format=csv"
+			      ">"
+			      "json</a>"
+			      //
+			      "</td>"
+			      "</tr>"
+
 
 			      
 			      //
@@ -1828,30 +1941,13 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "</form>"
 
 			      , cr->m_coll
-			      , token
-			      , crawlId
+			      , cr->m_coll
+			      //, cr->m_coll
+			      //, cr->m_coll
 
-			      , cr->m_globalCrawlInfo.m_objectsAdded -
-			        cr->m_globalCrawlInfo.m_objectsDeleted
-			      , cr->m_globalCrawlInfo.m_urlsHarvested
-			      , cr->m_globalCrawlInfo.m_urlsConsidered
+			      , cr->m_coll
+			      , cr->m_coll
 
-			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
-			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
-
-			      , cr->m_globalCrawlInfo.m_pageProcessAttempts
-			      , cr->m_globalCrawlInfo.m_pageProcessSuccesses
-
-			      , token
-			      , crawlId
-			      , token
-			      , crawlId
-			      //, token
-			      //, id
-			      //, token
-			      //, id
-			      , token
-			      , crawlId
 			      , cr->m_diffbotMaxToCrawl 
 			      , cr->m_diffbotMaxToProcess
 

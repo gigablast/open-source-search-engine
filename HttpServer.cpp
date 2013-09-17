@@ -894,21 +894,26 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 
 	// . if we get a request for this then allow Diffbot.cpp to
 	//   handle it and send back the right stuff
-	if ( strcmp ( path , "/crawlbot"   ) == 0 ||
-	     strcmp ( path , "/dev/crawl"  ) == 0 ||
-	     strcmp ( path , "/dev/crawl/" ) == 0 )
+	if ( strcmp ( path , "/crawlbot"   ) == 0 )
 		// this will call g_httpServer.sendDynamicPage() to send
 		// back the reply when it is done generating the reply.
 		// this function is in Diffbot.cpp.
 		return printCrawlBotPage ( s , r );
 
+	// dump urls or json objects or pages? 
+	// "GET /crawlbot/downloadurls"
+	// "GET /crawlbot/downloadobjects"
+	// "GET /crawlbot/downloadpages"
+	if ( strncmp ( path , "/crawlbot/download" ,18 ) == 0 )
+		return sendBackDump ( s , r );
+
 	// . is it a diffbot api request, like "GET /api/*"
 	// . ie "/api/startcrawl" or "/api/stopcrawl" etc.?
-	if ( strncmp ( path , "/api/" , 5 ) == 0 )
-		// this will call g_httpServer.sendDynamicPage() to send
-		// back the reply when it is done generating the reply.
-		// this function is in Diffbot.cpp.
-		return handleDiffbotRequest ( s , r );
+	//if ( strncmp ( path , "/api/" , 5 ) == 0 )
+	//	// this will call g_httpServer.sendDynamicPage() to send
+	//	// back the reply when it is done generating the reply.
+	//	// this function is in Diffbot.cpp.
+	//	return handleDiffbotRequest ( s , r );
 
 
 	// for adding to browser list of search engines
