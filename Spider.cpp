@@ -920,7 +920,8 @@ SpiderColl *SpiderCache::getSpiderCollIffNonNull ( collnum_t collnum ) {
 	return cr->m_spiderColl;
 }
 
-// get SpiderColl for a collection
+// . get SpiderColl for a collection
+// . if it is NULL for that collection then make a new one
 SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	// return it if non-NULL
 	//if ( m_spiderColls [ collnum ] ) return m_spiderColls [ collnum ];
@@ -3155,8 +3156,11 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		// get collectionrec
 		CollectionRec *cr = g_collectiondb.getRec(i);
 		if ( ! cr ) continue;
+		// skip if not enabled
+		if ( ! cr->m_spideringEnabled ) continue;
 		// get it
-		SpiderColl *sc = cr->m_spiderColl;
+		//SpiderColl *sc = cr->m_spiderColl;
+		SpiderColl *sc = g_spiderCache.getSpiderColl(i);
 		// skip if none
 		if ( ! sc ) continue;
 		// also scan spiderdb to populate waiting tree now but

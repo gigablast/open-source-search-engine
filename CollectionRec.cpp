@@ -64,7 +64,7 @@ CollectionRec::CollectionRec() {
 	reset();
 
 	// add default reg ex if we do not have one
-	fixRec();
+	setUrlFiltersToDefaults();
 }
 
 CollectionRec::~CollectionRec() {
@@ -75,7 +75,7 @@ CollectionRec::~CollectionRec() {
 void CollectionRec::setToDefaults ( ) {
 	g_parms.setFromFile ( this , NULL , NULL  );
 	// add default reg ex
-	fixRec ();
+	setUrlFiltersToDefaults();
 }
 
 void CollectionRec::reset() {
@@ -122,7 +122,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	g_parms.setFromFile ( this , tmp2 , tmp1 );
 
 	// add default reg ex
-	fixRec ();
+	setUrlFiltersToDefaults();
 
 	//
 	// LOAD the crawlinfo class in the collectionrec for diffbot
@@ -268,7 +268,7 @@ bool CollectionRec::countEvents ( ) {
 }
 */
 
-void CollectionRec::fixRec ( ) {
+void CollectionRec::setUrlFiltersToDefaults ( ) {
 	bool addDefault = false;
 	if ( m_numRegExs == 0 ) 
 		addDefault = true;
@@ -298,10 +298,8 @@ void CollectionRec::fixRec ( ) {
 	m_spiderIpMaxSpiders[n] = 1;
 	m_numRegExs6++;
 
-	//m_spidersEnabled[n] = 0;
-	//m_numRegExs7++;
-
-
+	m_spidersEnabled[n] = 1;
+	m_numRegExs7++;
 }
 
 bool CrawlInfo::print (SafeBuf *sb ) {

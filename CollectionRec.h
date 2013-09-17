@@ -159,7 +159,7 @@ class CollectionRec {
 	bool      load ( char *coll , long collNum ) ;
 	void reset();
 
-	void fixRec ( );
+	void setUrlFiltersToDefaults();
 
 	// . when was the last time we changed?
 	//long long m_lastUpdateTime;
