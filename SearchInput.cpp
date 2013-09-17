@@ -788,7 +788,7 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	// admin can say &sb=0 explicitly to not show banned results
 	// . if you are searching a diffbot collection, you are the admin
 	//   i guess...
-	if ( m_isAdmin || cr->m_isDiffbotCollection ) 
+	if ( m_isAdmin || cr->m_isCustomCrawl )
 		m_showBanned = r->getLong("sb",m_showBanned);
 
 

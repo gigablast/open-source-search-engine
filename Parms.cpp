@@ -7773,6 +7773,23 @@ void Parms::init ( ) {
 	//
 	//////////////////////
 
+	///////////
+	//
+	// DO NOT INSERT parms above here, unless you set
+	// m_obj = OBJ_COLL !!! otherwise it thinks it belongs to
+	// OBJ_CONF as used in the above parms.
+	//
+	///////////
+
+	m->m_cgi   = "dbtoken";
+	m->m_xml   = "diffbotToken";
+	m->m_off   = (char *)&cr.m_diffbotToken - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m++;
+
 	m->m_cgi   = "dbseed";
 	m->m_xml   = "diffbotSeed";
 	m->m_off   = (char *)&cr.m_diffbotSeed - x;
@@ -7781,17 +7798,6 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
 	m++;
-
-	/*
-	  this is in the collection name, no need for it here
-	m->m_cgi   = "dbtoken";
-	m->m_xml   = "diffbotToken";
-	m->m_off   = (char *)&cr.m_diffbotToken - x;
-	m->m_type  = TYPE_SAFEBUF;
-	m->m_page  = PAGE_NONE;
-	m->m_def   = "";
-	m++;
-	*/
 
 	m->m_cgi   = "dbapi";
 	m->m_xml   = "diffbotApi";
@@ -7841,8 +7847,15 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m++;
 
-	m->m_xml   = "isDiffbotCollection";
-	m->m_off   = (char *)&cr.m_isDiffbotCollection - x;
+	m->m_xml   = "useDiffbot";
+	m->m_off   = (char *)&cr.m_useDiffbot - x;
+	m->m_type  = TYPE_CHAR;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "0";
+	m++;
+
+	m->m_xml   = "isCustomCrawl";
+	m->m_off   = (char *)&cr.m_isCustomCrawl - x;
 	m->m_type  = TYPE_CHAR;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "0";

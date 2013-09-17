@@ -1790,6 +1790,11 @@ bool XmlDoc::indexDoc ( ) {
 		m_masterState = this;
 	}
 
+	if ( ! m_useDiffbotValid ) {
+		m_useDiffbot = m_cr->m_useDiffbot;
+		m_useDiffbotValid = true;
+	}
+
 	// ensure that CollectionRec::m_globalCrawlInfo (spider stats)
 	// is at least 1 minute in sync with counts of
 	// all hosts in network. this returns false if it sent  out requests
@@ -1805,7 +1810,7 @@ bool XmlDoc::indexDoc ( ) {
 
 
 	// if diffbot, count as crawled now
-	if ( m_cr->m_isDiffbotCollection &&
+	if ( m_useDiffbot &&
 	     ! m_isDiffbotJSONObject && 
 	     ! m_incrementedAttemptsCount ) {
 		// do not repeat
@@ -1823,7 +1828,7 @@ bool XmlDoc::indexDoc ( ) {
 	// if we are being called from Spider.cpp and we met our max
 	// to crawl requirement, then bail out on this. this might
 	// become true when we are in the middle of processing this url...
-	if ( m_cr->m_isDiffbotCollection &&
+	if ( m_useDiffbot &&
 	     ! m_isDiffbotJSONObject &&
 	     // this is just for this collection, from all hosts in network
 	     m_cr->m_globalCrawlInfo.m_pageDownloadSuccesses >= //Attempts >=
@@ -1841,7 +1846,7 @@ bool XmlDoc::indexDoc ( ) {
 	}
 
 	// likewise if we hit the max processing limit...
-	if ( m_cr->m_isDiffbotCollection &&
+	if ( m_useDiffbot &&
 	     ! m_isDiffbotJSONObject &&
 	     m_cr->m_globalCrawlInfo.m_pageProcessSuccesses >= // Attempts >=
 	     m_cr->m_diffbotMaxToProcess ) {
@@ -11784,7 +11789,7 @@ skip:
 SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	// if not connecting with diffbot, then just return an empty safebuf
-	if ( ! m_cr->m_isDiffbotCollection ) 
+	if ( ! m_useDiffbot ) 
 		return &m_diffbotReply;
 
 	if ( m_isDiffbotJSONObject )
@@ -11804,13 +11809,13 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	// we should not "process" (i.e. send to diffbot) urls that do
 	// not match the supplied CollectionRec::m_diffbotUrlProcessPattern
-	if ( ! doesUrlMatchDiffbotProcessPattern() ) {
+	if ( m_useDiffbot && ! doesUrlMatchDiffbotProcessPattern() ) {
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
 	}
 
 	// or if original page content matches the page regex dont hit diffbot
-	if ( ! doesPageContentMatchDiffbotProcessPattern() ) {
+	if ( m_useDiffbot && ! doesPageContentMatchDiffbotProcessPattern() ) {
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
 	}
@@ -15738,7 +15743,7 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("urlfilternum=%li ",(long)m_urlFilterNum);
 
 
-	if ( m_cr->m_isDiffbotCollection )
+	if ( m_useDiffbot )
 		sb.safePrintf("diffbotjsonobjects=%li ",
 			      (long)m_diffbotJSONCount);
 
@@ -16756,7 +16761,7 @@ bool checkRegex ( SafeBuf *regex ,
 		return *boolVal;
 
 	// if not using diffbot or there is no regex, it is ok
-	if ( ! cr->m_isDiffbotCollection || regex->length() <= 0 ) {
+	if ( regex->length() <= 0 ) {
 		*boolVal = true;
 		*boolValValid = true;
 		return boolVal;
@@ -16985,7 +16990,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	bool diffbotEmptyReply = false;
 
 	// fake this for diffbot?
-	if ( m_cr->m_isDiffbotCollection && 
+	if ( m_useDiffbot && 
 	     ! m_isDiffbotJSONObject &&
 	     ! doesUrlMatchDiffbotCrawlPattern() ) {
 		// flag it so we only add the SpiderReply to spiderdb and bail
@@ -17096,7 +17101,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	// if diffbot reply is empty, don't bother adding anything except
 	// for the spider reply... reply might be "-1" too!
-	if ( m_cr->m_isDiffbotCollection && 
+	if ( m_useDiffbot && 
 	     ! m_isDiffbotJSONObject &&
 	     m_diffbotReplyValid &&
 	     m_diffbotReply.length() <= 3 )
@@ -17255,7 +17260,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// because that can be useful
 	// Not any more, now index the pages as well! then restrict search
 	// to type:json to just search json objects.
-	//if ( m_cr->m_isDiffbotCollection && ! m_isDiffbotJSONObject ) {
+	//if ( m_useDiffbot && ! m_isDiffbotJSONObject ) {
 	//	m_usePosdb      = false;
 	//	m_useClusterdb  = false;
 	//}
@@ -17264,7 +17269,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// get the old meta list if we had an old doc
 	char *oldList = NULL;
 	long  oldListSize = 0;
-	if ( od && ! m_cr->m_isDiffbotCollection ) {
+	if ( od && ! m_useDiffbot ) {
 		od->m_useSpiderdb = false;
 		od->m_useTagdb    = false;
 		oldList = od->getMetaList ( true );
@@ -17276,7 +17281,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// have indexed in od's diffbot reply buffer because they all
 	// were indexed with their own docids in the "m_dx" code below. so
 	// just delete them and we'll re-add from this doc's diffbot reply.
-	if ( od && m_cr->m_isDiffbotCollection ) {
+	if ( od && m_useDiffbot ) {
 		// this returns false if it blocks
 		long *status = od->nukeJSONObjects();
 		if ( ! status || status == (void *)-1) return (char *)status;
@@ -17589,7 +17594,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// should be indexed as its own document.
 	//
 	///////////
-	if ( m_cr->m_isDiffbotCollection && ! m_isDiffbotJSONObject ) {
+	if ( m_useDiffbot && ! m_isDiffbotJSONObject ) {
 		// get the reply of json objects from diffbot
 		SafeBuf *dbr = getDiffbotReply();
 		if ( ! dbr || dbr == (void *)-1 ) return (char *)dbr;

@@ -25,7 +25,7 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) ;
 bool sendBackDump ( TcpSocket *s,HttpRequest *hr );
 //void gotMsg4ReplyWrapper ( void *state ) ;
 //bool showAllCrawls ( TcpSocket *s , HttpRequest *hr ) ;
-char *getTokenFromHttpRequest ( HttpRequest *hr , long *tokenLen ) ;
+char *getTokenFromHttpRequest ( HttpRequest *hr ) ;
 char *getCrawlIdFromHttpRequest ( HttpRequest *hr ) ;
 CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
 //CollectionRec *getCollRecFromCrawlId ( char *crawlId );
@@ -1282,72 +1282,32 @@ bool showAllCrawls ( TcpSocket *s , HttpRequest *hr ) {
 }
 */
 
-char *getTokenFromHttpRequest ( HttpRequest *hr , long *tokenLen ) {
+char *getTokenFromHttpRequest ( HttpRequest *hr ) {
 	// provided directly?
-	char *token = hr->getString("token",tokenLen);
+	char *token = hr->getString("token",NULL,NULL);
 	if ( token ) return token;
 	// extract token from coll?
 	char *c = hr->getString("c",NULL,NULL);
 	if ( ! c ) return NULL;
-	// the collection name is <token>-<crawlid>
-	char *tp = c;
-	long i; for ( i = 0 ; tp[i] && tp[i] != '-'; i++ );
-	if ( i > 60 ) return NULL;
-	*tokenLen = i;
-	return c;
-}
-
-char *getCrawlIdFromHttpRequest ( HttpRequest *hr ) {
-	// crawlid?
-	char *crawlId = hr->getString("id",NULL,NULL);
-	if ( crawlId ) return crawlId;
-	// extract from coll?
-	char *c = hr->getString("c",NULL,NULL);
-	if ( ! c ) return NULL;
-	// the collection name is <token>-<crawlid>
-	char *p = c;
-	for ( ; *p && *p != '-'; p++ );
-	// if never hit a hyphen...
-	if ( ! *p ) return NULL;
-	// advance over it
-	p++;
-	// that is the crawlid then
-	return p;
+	CollectionRec *cr = g_collectiondb.getRec(c);
+	if ( ! cr ) return NULL;
+	if ( cr->m_diffbotToken.length() <= 0 ) return NULL;
+	token = cr->m_diffbotToken.getBufStart();
+	return token;
 }
 
 CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) {
-
 	// if we have the collection name explicitly, get the coll rec then
 	char *c = hr->getString("c",NULL,NULL);
 	if ( c ) return g_collectiondb.getRec ( c );
-
 	// otherwise, get it from token/crawlid
-	long tokenLen;
-	char *token = getTokenFromHttpRequest( hr , &tokenLen );
-	// token is required
-	if ( ! token ) return NULL;
-	// crawlid is NOT required, but useful
-	char *crawlId = getCrawlIdFromHttpRequest ( hr );
-
-
+	char *token = getTokenFromHttpRequest( hr );
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
-		// shortcut
-		char *coll = cr->m_coll;
-		// does collection match their token?
-		if ( cr->m_collLen < tokenLen ) continue;
-		if ( strncmp(coll,token,tokenLen) ) continue;
-		// coll name is <token>-<crawlid>
-		if ( coll[tokenLen] != '-' ) continue;
-		// if no crawler id supplied, just use the first token match
-		if ( ! crawlId ) return cr;
-		// if current coll id...
-		char *cid = coll+tokenLen+1;
-		// return if crawlid matches
-		if ( strcmp(cid,crawlId) == 0 ) return cr;
+		if ( strcmp ( cr->m_diffbotToken.getBufStart(),token)==0 )
+			return cr;
 	}
-
 	// no matches
 	return NULL;
 }
@@ -1524,7 +1484,7 @@ void printCrawlStats ( SafeBuf *sb , CollectionRec *cr ) {
 
 
 // generate a random collection name
-char *getNewCollName ( char *token , long tokenLen ) {
+char *getNewCollName ( ) { // char *token , long tokenLen ) {
 	// let's create a new crawl id. dan was making it 32 characters
 	// with 4 hyphens in it for a total of 36 bytes, but since
 	// MAX_COLL_LEN, the maximum length of a collection name, is just
@@ -1549,11 +1509,12 @@ char *getNewCollName ( char *token , long tokenLen ) {
 
 	// include a +5 for "-test"
 	// include 16 for crawlid (16 char hex #)
-	if ( tokenLen + 16 + 5>= MAX_COLL_LEN ) { char *xx=NULL;*xx=0;}
+	//if ( tokenLen + 16 + 5>= MAX_COLL_LEN ) { char *xx=NULL;*xx=0;}
 	// ensure the crawlid is the full 16 characters long so we
 	// can quickly extricate the crawlid from the collection name
-	memcpy ( s_collBuf, token, tokenLen );
-	sprintf(s_collBuf + tokenLen ,"-%016llx",crawlId64);
+	//memcpy ( s_collBuf, token, tokenLen );
+	//sprintf(s_collBuf + tokenLen ,"-%016llx",crawlId64);
+	sprintf(s_collBuf ,"%016llx",crawlId64);
 	return s_collBuf;
 }
 
@@ -1575,11 +1536,9 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//
 	// if no token... they need to login or signup
 	//
-	long tokenLen;
-	char *token = getTokenFromHttpRequest( hr , &tokenLen );
+	char *token = getTokenFromHttpRequest ( hr );
 
-
-	if ( ! token || tokenLen == 0 ) {
+	if ( ! token ) { // || tokenLen == 0 ) {
 		sb.safePrintf("In order to use crawlbot you must "
 			      "first LOGIN:"
 			      "<form action=/crawlbot method=get>"
@@ -1648,10 +1607,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	sb.safePrintf("<table border=0>"
 		      "<tr><td>"
 		      "<b><font size=+2>"
-		      "<a href=/crawlbot?token="
-		      );
-	sb.safeMemcpy(token,tokenLen);
-	sb.safePrintf(">"
+		      "<a href=/crawlbot?token=%s>"
 		      "Crawlbot</a></font></b>"
 		      "<br>"
 		      "<font size=-1>"
@@ -1659,25 +1615,24 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "</font>"
 		      "</td></tr>"
 		      "</table>"
+		      , token
 		      );
 
 	sb.safePrintf("<center><br>");
 			      
 	// first print "add new collection"
-	sb.safePrintf("<a href=/crawlbot?addcoll=1&token=");
-	sb.safeMemcpy(token,tokenLen);
-	sb.safePrintf(">"
+	sb.safePrintf("<a href=/crawlbot?addcoll=1&token=%s>"
 		      "add new collection"
 		      "</a> &nbsp; "
-
-		      "<a href=/crawlbot/summary?token="
-		      );
-	sb.safeMemcpy(token,tokenLen);
-	sb.safePrintf(">"
+		      "<a href=/crawlbot/summary?token=%s>"
 		      "all collections"
 		      "</a> &nbsp; "
+		      , token
+		      , token
 		      );
 	
+
+	long tokenLen = gbstrlen(token);
 
 	//
 	// print list of collections controlled by this token
@@ -1685,17 +1640,12 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cx = g_collectiondb.m_recs[i];
 		if ( ! cx ) continue;
-		// shortcut
-		char *coll = cx->m_coll;
-		// does collection match their token?
-		if ( cx->m_collLen < tokenLen ) continue;
-		if ( strncmp(coll,token,tokenLen) ) continue;
-		// coll name is <token>-<crawlid>
-		if ( coll[tokenLen] != '-' ) continue;
-		// if current coll id...
-		char *cid = coll+tokenLen+1;
-		// if no crawlid "id" was given, use first for now!
-		//if ( ! crawlId ) crawlId = cid;
+		// get its token if any
+		char *ct = cx->m_diffbotToken.getBufStart();
+		if ( ! ct ) continue;
+		// skip if token does not match
+		if ( strcmp(ct,token) )
+			continue;
 		// highlight the tab if it is what we selected
 		bool highlight = false;
 		if ( cx == cr ) highlight = true;
@@ -1710,7 +1660,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "</a> &nbsp; "
 			      , style
 			      , cx->m_coll
-			      , cid
+			      , cx->m_coll
 			      );
 		if ( highlight )
 			sb.safePrintf("</font></b>");
@@ -1871,17 +1821,46 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      , cr->m_globalCrawlInfo.m_pageProcessSuccesses
 			      );
 
-		sb.safePrintf(
-			      // spacer column
-			      "<TD>"
+		// spacer column
+		sb.safePrintf("<TD>"
 			      "&nbsp;&nbsp;&nbsp;&nbsp;"
 			      "&nbsp;&nbsp;&nbsp;&nbsp;"
 			      "</TD>"
+			      );
 
-			      "<TD valign=top>"
+		// what diffbot api to use?
+		char *api = cr->m_diffbotApi.getBufStart();
+		char *s[5];
+		for ( long i = 0 ; i < 5 ; i++ ) s[i] = "";
+		if ( strcmp(api,"all") == 0 ) s[0] = " checked";
+		if ( strcmp(api,"article") == 0 ) s[1] = " checked";
+		if ( strcmp(api,"product") == 0 ) s[2] = " checked";
+		if ( strcmp(api,"image") == 0 ) s[3] = " checked";
+		if ( strcmp(api,"frontpage") == 0 ) s[4] = " checked";
+		sb.safePrintf( "<TD valign=top>"
 
 			      "<table cellpadding=5 border=0>"
 			      "<tr>"
+
+			      "<td>"
+			      "Diffbot API"
+			      "</td><td>"
+			      "<select name=diffbotapi>"
+			      "<option value=all%s>All</option>"
+			      "<option value=article%s>Article</option>"
+			      "<option value=product%s>Product</option>"
+			      "<option value=image%s>Image</option>"
+			      "<option value=frontpage%s>FrontPage</option>"
+			      "</select>"
+			      "</td>"
+			      , s[0]
+			      , s[1]
+			      , s[2]
+			      , s[3]
+			      , s[4]
+			      );
+
+		sb.safePrintf(
 			      //
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
@@ -2328,15 +2307,14 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 
-	long tokenLen = 0;
-	char *token = getTokenFromHttpRequest ( hr ,&tokenLen);
+	char *token = getTokenFromHttpRequest ( hr );
 
 	if ( ! token ) {
 		log("crawlbot: need token to add new coll");
 		return NULL;
 	}
 
-	char *collBuf = getNewCollName ( token , tokenLen );
+	char *collBuf = getNewCollName ( );//token , tokenLen );
 
 	if ( ! g_collectiondb.addRec ( collBuf ,
 				       NULL ,  // copy from
@@ -2358,8 +2336,10 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 	//Url norm;
 	//norm.set ( seed );
 	//cr->m_diffbotSeed.set ( norm.getUrl() );
+
 	// remember the token
-	//cr->m_diffbotToken.set ( token );
+	cr->m_diffbotToken.set ( token );
+	cr->m_diffbotToken.nullTerm();
 
 
 	/* this stuff can be set later.
@@ -2375,7 +2355,6 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 
 	// let's make these all NULL terminated strings
 	cr->m_diffbotSeed.nullTerm();
-	cr->m_diffbotToken.nullTerm();
 	cr->m_diffbotApi.nullTerm();
 	cr->m_diffbotApiQueryString.nullTerm();
 	cr->m_diffbotUrlCrawlPattern.nullTerm();
@@ -2383,15 +2362,19 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 	cr->m_diffbotPageProcessPattern.nullTerm();
 	*/
 
+
+
 	// do not spider more than this many urls total. -1 means no max.
 	cr->m_diffbotMaxToCrawl = 100000;
 	// do not process more than this. -1 means no max.
 	cr->m_diffbotMaxToProcess = 100000;
 
-	// turn this flag on. so anyone that knows the name of this
-	// collection means they know the token and the crawlid so
-	// we can assume they are an admin.
-	cr->m_isDiffbotCollection = 1;
+	// this collection should always hit diffbot
+	cr->m_useDiffbot = true;
+
+	// show the ban links in the search results. the collection name
+	// is cryptographic enough to show that
+	cr->m_isCustomCrawl = true;
 
 	// reset the crawl stats
 	cr->m_diffbotCrawlStartTime = gettimeofdayInMillisecondsGlobal();

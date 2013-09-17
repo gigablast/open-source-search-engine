@@ -378,7 +378,7 @@ class CollectionRec {
 	char  m_retryPriority; 
 
 	// new diffbot parms
-	//SafeBuf m_diffbotToken;
+	SafeBuf m_diffbotToken;
 	SafeBuf m_diffbotSeed;
 	SafeBuf m_diffbotApi;
 	SafeBuf m_diffbotApiQueryString;
@@ -387,7 +387,9 @@ class CollectionRec {
 	SafeBuf m_diffbotPageProcessPattern;
 	//SafeBuf m_diffbotClassify;
 	char m_diffbotClassify;
-	char m_isDiffbotCollection;
+	char m_useDiffbot;
+	char m_isCustomCrawl;
+	//char m_isDiffbotCollection;
 	// format of output. "csv" or "xml" or "json" or null
 	SafeBuf m_diffbotFormat;
 	// what fields to return in the json output: (api dependent)

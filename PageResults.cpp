@@ -2186,7 +2186,7 @@ static int printResult ( SafeBuf &sb,
 
 
 	// this stuff is secret just for local guys!
-	if ( isAdmin || cr->m_isDiffbotCollection ) {
+	if ( isAdmin || cr->m_isCustomCrawl ) {
 		// now the ip of url
 		//long urlip = msg40->getIp(i);
 		// don't combine this with the sprintf above cuz
@@ -2235,7 +2235,7 @@ static int printResult ( SafeBuf &sb,
 	}
 
 	// admin always gets the site: option so he can ban
-	if ( isAdmin || cr->m_isDiffbotCollection ) {
+	if ( isAdmin || cr->m_isCustomCrawl ) {
 		char dbuf [ MAX_URL_LEN ];
 		long dlen = uu.getDomainLen();
 		memcpy ( dbuf , uu.getDomain() , dlen );

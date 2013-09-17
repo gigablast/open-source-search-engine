@@ -717,6 +717,10 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	// be passed on to the new rec.
 	g_parms.detachSafeBufs( &tmp );
 
+	// let's reset crawlinfo crap
+	nr->m_globalCrawlInfo.reset();
+	nr->m_localCrawlInfo.reset();
+
 	// and clear the robots.txt cache in case we recently spidered a
 	// robots.txt, we don't want to use it, we want to use the one we
 	// have in the test-parser subdir so we are consistent

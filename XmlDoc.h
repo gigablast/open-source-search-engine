@@ -1246,6 +1246,7 @@ class XmlDoc {
 	bool m_diffbotUrlCrawlPatternMatchValid;
 	bool m_diffbotUrlProcessPatternMatchValid;
 	bool m_diffbotPageProcessPatternMatchValid;
+	bool m_useDiffbotValid;
 	bool m_crawlInfoValid;
 	bool m_isPageParserValid;
 	bool m_imageUrlValid;
@@ -1503,6 +1504,7 @@ class XmlDoc {
 	bool m_diffbotUrlCrawlPatternMatch;
 	bool m_diffbotUrlProcessPatternMatch;
 	bool m_diffbotPageProcessPatternMatch;
+	bool m_useDiffbot;
 
 	SafeBuf *getDiffbotReply ( ) ;
 	bool doesUrlMatchDiffbotCrawlPattern() ;
