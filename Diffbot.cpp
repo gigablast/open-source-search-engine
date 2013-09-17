@@ -1591,6 +1591,34 @@ bool printCrawlBotPage ( TcpSocket *s ,
 						     -1); // cachetime
 	}
 
+	CollectionRec *cr = NULL;
+
+	// add new collection?
+	long addColl = hr->getLong("addcoll",0);
+	// make a new collection and it also becomes the cursor
+	if ( addColl )
+		cr = addNewDiffbotColl ( hr );
+
+	// set this to current collection. if only token was provided
+	// then it will return the first collection owned by token.
+	// if token has no collections it will be NULL.
+	if ( ! cr ) 
+		cr = getCollRecFromHttpRequest ( hr );
+
+	// if no collection, then it is the first time or this token
+	// so automatically add one for them
+	if ( ! cr ) 
+		cr = addNewDiffbotColl ( hr );
+
+	if ( ! cr ) {
+		log("crawlbot: failed to add new coll rec");
+		g_msg = " (error: crawlbot failed to allocate crawl)";
+		return g_httpServer.sendErrorReply(s,500,
+						   "crawlbot crawl "
+						   "alloc failed?");
+	}
+			
+
 	sb.safePrintf("<table border=0>"
 		      "<tr><td>"
 		      "<b><font size=+2>Crawlbot</font></b>"
@@ -1605,7 +1633,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	sb.safePrintf("<center><br>");
 			      
 	// first print "add new collection"
-	sb.safePrintf("<a href=/crawlbot/addcoll?token=%s&c=%s>"
+	sb.safePrintf("<a href=/crawlbot?addcoll=1&token=%s>"
 		      "add new collection"
 		      "</a> &nbsp; "
 
@@ -1614,20 +1642,13 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "</a> &nbsp; "
 		      
 		      , token
-		      , getNewCollName( token )
 		      , token
 		      );
 	
 
-	// set this to current collection
-	CollectionRec *cr = NULL;
-
- redo:
-
 	//
-	// print list of collections/crawls controlled by this token
+	// print list of collections controlled by this token
 	//
-
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cx = g_collectiondb.m_recs[i];
 		if ( ! cx ) continue;
@@ -1644,20 +1665,18 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		if ( ! crawlId ) crawlId = cid;
 		// highlight the tab if it is what we selected
 		bool highlight = false;
-		if ( crawlId && strcmp(cid,crawlId) == 0 ) highlight = true;
+		if ( cx == cr ) highlight = true;
 		char *style = "";
 		if  ( highlight ) {
-			cr = cx;
 			style = "style=text-decoration:none; ";
 			sb.safePrintf ( "<b><font color=red>");
 		}
 		// print the crawl id. collection name minus <TOKEN>-
-		sb.safePrintf("<a %shref=/crawlbot?token=%s&id=%s>"
+		sb.safePrintf("<a %shref=/crawlbot?c=%s>"
 			      "%s"
 			      "</a> &nbsp; "
 			      , style
-			      , token
-			      , cid
+			      , cx->m_coll
 			      , cid
 			      );
 		if ( highlight )
@@ -1665,21 +1684,6 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	}
 
 
-	// if no collection, add one automatically, then re-print the list
-	if ( ! cr ) {
-		cr = addNewDiffbotColl ( hr );
-		// we had to add a default one, go back up
-		if ( cr ) goto redo;
-	}
-
-	if ( ! cr ) {
-		log("diffbot: failed to add new coll rec");
-		g_msg = " (error: diffbot failed to allocate crawl)";
-		return g_httpServer.sendErrorReply(s,500,
-						   "diffbot crawl "
-						   "alloc failed?");
-	}
-			
 
 	sb.safePrintf ( "</center><br/>" );
 
@@ -2260,6 +2264,11 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 
 	long tokenLen = 0;
 	char *token = hr->getString("token",&tokenLen);
+
+	if ( ! token ) {
+		log("crawlbot: need token to add new coll");
+		return NULL;
+	}
 
 	char *collBuf = getNewCollName ( token );
 
