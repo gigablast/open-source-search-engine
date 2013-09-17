@@ -1647,7 +1647,12 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 	sb.safePrintf("<table border=0>"
 		      "<tr><td>"
-		      "<b><font size=+2>Crawlbot</font></b>"
+		      "<b><font size=+2>"
+		      "<a href=/crawlbot?token="
+		      );
+	sb.safeMemcpy(token,tokenLen);
+	sb.safePrintf(">"
+		      "Crawlbot</a></font></b>"
 		      "<br>"
 		      "<font size=-1>"
 		      "Crawl, Datamine and Index the Web"

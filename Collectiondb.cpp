@@ -330,6 +330,8 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	//	//coll[0] = '\0';
 	//}
 
+	log("admin: adding coll \"%s\" (new=%li)",coll,(long)isNew);
+
 	// MDW: create the new directory
 	if ( isNew ) {
 	retry22:
@@ -543,7 +545,7 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 		return false;
 	}
 	// note it
-	log("coll: deleting coll %s",cr->m_coll);
+	log("coll: deleting coll \"%s\"",cr->m_coll);
 	// we need a save
 	m_needsSave = true;
 	// nuke it on disk
@@ -564,7 +566,7 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	// move into that dir
 	::rename ( oldname , newname );
 	// debug message
-	logf ( LOG_INFO, "admin: deleted collection \"%s\" (%li).",
+	logf ( LOG_INFO, "admin: deleted coll \"%s\" (%li).",
 	       coll,(long)collnum );
 
 	// nuke doleiptable and waintree and waitingtable
@@ -644,6 +646,9 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 		log("admin: Can not delete collection while in repair mode.");
 		return false;
 	}
+
+	log("admin: resetting coll \"%s\"",coll);
+
 	// get the CollectionRec for "test"
 	CollectionRec *cr = getRec ( coll ); // "test" );
 
@@ -690,18 +695,26 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	if ( ! nr ) { char *xx=NULL;*xx=0; }
 	// save this though, this might have changed!
 	collnum_t cn = nr->m_collnum;
+
+	// CAUTION: do not ovewrite his m_bases[] array, those RdbBases
+	// should have been deleted by the call to deleteRec(), so
+	// ensure that CollectionRec::m_bases[] is left out of the copy.
+	// Plus addRec() above should have made all new RdbBases that
+	// m_bases will point to
+
 	// overwrite its rec
 	memcpy ( nr , &tmp , size ) ; // sizeof(CollectionRec) );
 	// put that collnum back
 	nr->m_collnum = cn;
 	// set the flag
 	m_needsSave = true;
-	// save it again after copy
-	nr->save();
+	// . save it again after copy
+	// . no, i think addRec above saves it, so don't double save
+	//nr->save();
 
 	// tell cr's SafeBufs not to free their buffers since we did the
-	// memcpy and their ptrs are now handled by "tmp" and will be passed
-	// on to the new rec.
+	// memcpy and their ptrs are now stored in "tmp"'s SafeBufs and will 
+	// be passed on to the new rec.
 	g_parms.detachSafeBufs( &tmp );
 
 	// and clear the robots.txt cache in case we recently spidered a

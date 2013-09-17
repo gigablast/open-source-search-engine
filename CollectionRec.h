@@ -101,10 +101,6 @@ class CollectionRec {
 	CollectionRec();
 	virtual ~CollectionRec();
 	
-	// now chuck this into CollectionRec instead of having a fixed
-	// array of them in Rdb.h called m_bases[]
-	RdbBase *m_bases[RDB_END];
-
 	char *getDiffbotToken ( long *tokenLen );
 
 	// . set ourselves from serialized raw binary
@@ -930,6 +926,11 @@ class CollectionRec {
 	// special var to prevent Collectiondb.cpp from copying the crap
 	// below here
 	char m_END_COPY;
+
+	// . now chuck this into CollectionRec instead of having a fixed
+	//   array of them in Rdb.h called m_bases[]
+	// . leave this out of any copy of course
+	RdbBase *m_bases[RDB_END];
 
 	// this is basically a cache on timedb, one per collection
 	HashTableX m_sortByDateTable;

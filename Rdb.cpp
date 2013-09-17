@@ -88,6 +88,7 @@ RdbBase *Rdb::getBase ( collnum_t collnum )  {
 	return cr->m_bases[(unsigned char)m_rdbId];
 }
 
+// used by Rdb::addColl
 void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
 	// if we are collectionless, like g_statsdb.m_rdb or
 	// g_cachedb.m_rdb, etc.. shared by all collections essentially.
@@ -99,6 +100,9 @@ void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
 	if ( ! cr ) return;
 	if ( cr->m_bases[(unsigned char)m_rdbId] ) { char *xx=NULL;*xx=0; }
 	cr->m_bases[(unsigned char)m_rdbId] = base;
+	log("rdb: added base to collrec "
+	    "for rdb=%s rdbid=%li coll=%s collnum=%li base=0x%lx",
+	    m_dbname,(long)m_rdbId,cr->m_coll,(long)collnum,(long)base);
 }
 
 
@@ -527,6 +531,10 @@ bool Rdb::delColl ( char *coll ) {
 	delete  (base);
 	CollectionRec *cr = g_collectiondb.getRec(collnum);
 	//m_bases[collnum] = NULL;
+
+	log("rdb: deleted base from collrec "
+	    "rdb=%s rdbid=%li coll=%s collnum=%li base=0x%lx",
+	    m_dbname,(long)m_rdbId,coll,(long)collnum,(long)base);
 
 	// NULL it out...
 	cr->m_bases[(unsigned char)m_rdbId] = NULL;
