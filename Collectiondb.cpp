@@ -630,25 +630,26 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 		return false;
 	}
 	// now must be "test" only for now
-	if ( strcmp(coll,"test") ) { char *xx=NULL;*xx=0; }
+	//if ( strcmp(coll,"test") ) { char *xx=NULL;*xx=0; }
 	// no spiders can be out. they may be referencing the CollectionRec
 	// in XmlDoc.cpp... quite likely.
-	if ( g_conf.m_spideringEnabled ||
-	     g_spiderLoop.m_numSpidersOut > 0 ) {
-		log("admin: Can not delete collection while "
-		    "spiders are enabled or active.");
-		return false;
-	}
+	//if ( g_conf.m_spideringEnabled ||
+	//     g_spiderLoop.m_numSpidersOut > 0 ) {
+	//	log("admin: Can not delete collection while "
+	//	    "spiders are enabled or active.");
+	//	return false;
+	//}
 	// do not allow this if in repair mode
 	if ( g_repairMode > 0 ) {
 		log("admin: Can not delete collection while in repair mode.");
 		return false;
 	}
 	// get the CollectionRec for "test"
-	CollectionRec *cr = getRec ( "test" );
+	CollectionRec *cr = getRec ( coll ); // "test" );
+
 	// must be there. if not, we create test i guess
 	if ( ! cr ) { 
-		log("db: could not get test coll rec");
+		log("db: could not get coll rec \"%s\" to reset", coll);
 		char *xx=NULL;*xx=0; 
 	}
 
@@ -662,12 +663,17 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	// do not copy the hashtable crap since you will have to re-init it!
 	memcpy ( &tmp , cr , size ); // sizeof(CollectionRec) );
 
+	// tell cr's SafeBufs not to free their buffers since we did the
+	// memcpy and their ptrs are now handled by "tmp" and will be passed
+	// on to the new rec.
+	g_parms.detachSafeBufs( cr );
+
 	// delete the test coll now
-	if ( ! deleteRec ( "test" , resetTurkdb  ) ) 
+	if ( ! deleteRec ( coll , resetTurkdb  ) ) 
 		return log("admin: reset coll failed");
 
 	// make a collection called "test2" so that we copy "test"'s parms
-	bool status = addRec ( "test" , 
+	bool status = addRec ( coll ,
 			       NULL , 
 			       0 ,
 			       true , // bool isNew ,
@@ -679,7 +685,7 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	// bail on error
 	if ( ! status ) return log("admin: failed to add new coll for reset");
 	// get its rec
-	CollectionRec *nr = getRec ( "test" );
+	CollectionRec *nr = getRec ( coll );
 	// must be there
 	if ( ! nr ) { char *xx=NULL;*xx=0; }
 	// save this though, this might have changed!
@@ -692,6 +698,11 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	m_needsSave = true;
 	// save it again after copy
 	nr->save();
+
+	// tell cr's SafeBufs not to free their buffers since we did the
+	// memcpy and their ptrs are now handled by "tmp" and will be passed
+	// on to the new rec.
+	g_parms.detachSafeBufs( &tmp );
 
 	// and clear the robots.txt cache in case we recently spidered a
 	// robots.txt, we don't want to use it, we want to use the one we

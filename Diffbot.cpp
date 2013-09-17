@@ -1620,6 +1620,11 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	if ( delColl )
 		g_collectiondb.deleteRec ( delColl , true );
 
+	char *resetColl = hr->getString("resetcoll",NULL,NULL);
+	if ( resetColl )
+		g_collectiondb.resetColl ( resetColl );
+
+
 	// set this to current collection. if only token was provided
 	// then it will return the first collection owned by token.
 	// if token has no collections it will be NULL.
@@ -2175,24 +2180,51 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 
 	sb.safePrintf("<br>"
+
+		      "<table cellpadding=5>"
+		      "<tr>"
+
+		      "<td>"
+
+
+		      // reset collection form
 		      "<form method=get action=/crawlbot>"
 		      "<input type=hidden name=token value=\""
 		      );
 	sb.safeMemcpy ( token , tokenLen );
 	sb.safePrintf("\">"
 
-		      "<input type=hidden name=delcoll value=%s>"
-		      "<table cellpadding=5>"
-		      "<tr>"
-
-		      "<td>"
-		      "<input type=submit name=reset value=\""
+		      "<input type=hidden name=resetcoll value=%s>"
+		      // also show it in the display, so set "c"
+		      "<input type=hidden name=c value=%s>"
+		      "<input type=submit name=button value=\""
 		      "Reset this collection\">"
+		      "</form>"
+		      // end reset collection form
+
+
 		      "</td>"
 
 		      "<td>"
-		      "<input type=submit name=delete value=\""
+
+		      // delete collection form
+		      "<form method=get action=/crawlbot>"
+		      "<input type=hidden name=token value=\""
+		      , cr->m_coll
+		      , cr->m_coll
+		      );
+	sb.safeMemcpy ( token , tokenLen );
+	sb.safePrintf("\">"
+
+		      "<input type=hidden name=delcoll value=%s>"
+		      "<input type=submit name=button value=\""
 		      "Delete this collection\">"
+		      "</form>"
+		      // end delete collection form
+
+
+
+
 		      "</td>"
 
 		      "</tr>"

@@ -247,6 +247,11 @@ class Parms {
 
 	char *getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s );
 
+	// . make it so a collectionrec can be copied in Collectiondb.cpp
+	// . so the rec can be copied and the old one deleted without
+	//   freeing the safebufs now used by the new one.
+	void detachSafeBufs ( class CollectionRec *cr ) ;
+
 	// calc checksum of parms
 	unsigned long calcChecksum();
 

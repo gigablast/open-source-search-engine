@@ -181,6 +181,18 @@ Parms::Parms ( ) {
 	m_isDefaultLoaded = false;
 }
 
+void Parms::detachSafeBufs ( CollectionRec *cr ) {
+	for ( long i = 0 ; i < m_numParms ; i++ ) {
+		Parm *m = &m_parms[i];
+		if ( m->m_type != TYPE_SAFEBUF ) continue;
+		if ( m->m_obj != OBJ_COLL ) continue;
+		if ( m->m_off < 0 ) continue;
+		// get it
+		SafeBuf *sb = (SafeBuf *)((char *)cr + m->m_off);
+		sb->detachBuf();
+	}
+}
+
 unsigned long Parms::calcChecksum() {
 	Checksum cs;
 
