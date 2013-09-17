@@ -162,6 +162,15 @@ bool sendReply ( void *state ) {
 				      , mstrerror(xd->m_indexCode) );
 		}
 		sb.safeTruncateEllipsis(xd->m_firstUrl.getUrl(),60);
+
+		if ( xd->m_indexCode == 0 ) {
+			if ( xd->m_numOutlinksAddedValid ) 
+				sb.safePrintf(" &nbsp; (added %li outlinks)",
+					      (long)xd->m_numOutlinksAdded);
+			else
+				sb.safePrintf(" &nbsp; (added 0 outlinks)");
+		}
+
 		sb.safePrintf("</font></b>");
 		sb.nullTerm();
 		// this will call g_httpServer.sendReply()

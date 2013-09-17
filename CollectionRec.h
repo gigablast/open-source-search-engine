@@ -101,7 +101,7 @@ class CollectionRec {
 	CollectionRec();
 	virtual ~CollectionRec();
 	
-	char *getDiffbotToken ( long *tokenLen );
+	//char *getDiffbotToken ( long *tokenLen );
 
 	// . set ourselves from serialized raw binary
 	// . returns false and sets errno on error

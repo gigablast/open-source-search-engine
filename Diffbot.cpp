@@ -1853,6 +1853,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "<option value=frontpage%s>FrontPage</option>"
 			      "</select>"
 			      "</td>"
+			       "</tr>"
 			      , s[0]
 			      , s[1]
 			      , s[2]
@@ -1862,6 +1863,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 		sb.safePrintf(
 			      //
+			      "<tr>"
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
 			      "<a href=/crawlbot/downloadobjects?"
