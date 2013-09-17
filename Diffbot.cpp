@@ -25,6 +25,8 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) ;
 bool sendBackDump ( TcpSocket *s,HttpRequest *hr );
 //void gotMsg4ReplyWrapper ( void *state ) ;
 //bool showAllCrawls ( TcpSocket *s , HttpRequest *hr ) ;
+char *getTokenFromHttpRequest ( HttpRequest *hr , long *tokenLen ) ;
+char *getCrawlIdFromHttpRequest ( HttpRequest *hr ) ;
 CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
 //CollectionRec *getCollRecFromCrawlId ( char *crawlId );
 //void printCrawlStatsWrapper ( void *state ) ;
@@ -1280,17 +1282,53 @@ bool showAllCrawls ( TcpSocket *s , HttpRequest *hr ) {
 }
 */
 
+char *getTokenFromHttpRequest ( HttpRequest *hr , long *tokenLen ) {
+	// provided directly?
+	char *token = hr->getString("token",tokenLen);
+	if ( token ) return token;
+	// extract token from coll?
+	char *c = hr->getString("c",NULL,NULL);
+	if ( ! c ) return NULL;
+	// the collection name is <token>-<crawlid>
+	char *tp = c;
+	long i; for ( i = 0 ; tp[i] && tp[i] != '-'; i++ );
+	if ( i > 60 ) return NULL;
+	*tokenLen = i;
+	return c;
+}
+
+char *getCrawlIdFromHttpRequest ( HttpRequest *hr ) {
+	// crawlid?
+	char *crawlId = hr->getString("id",NULL,NULL);
+	if ( crawlId ) return crawlId;
+	// extract from coll?
+	char *c = hr->getString("c",NULL,NULL);
+	if ( ! c ) return NULL;
+	// the collection name is <token>-<crawlid>
+	char *p = c;
+	for ( ; *p && *p != '-'; p++ );
+	// if never hit a hyphen...
+	if ( ! *p ) return NULL;
+	// advance over it
+	p++;
+	// that is the crawlid then
+	return p;
+}
+
 CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) {
 
+	// if we have the collection name explicitly, get the coll rec then
 	char *c = hr->getString("c",NULL,NULL);
 	if ( c ) return g_collectiondb.getRec ( c );
 
+	// otherwise, get it from token/crawlid
 	long tokenLen;
-	char *token = hr->getString("token",&tokenLen,NULL);
-	char *crawlId = hr->getString("id",NULL,NULL);
-
+	char *token = getTokenFromHttpRequest( hr , &tokenLen );
+	// token is required
 	if ( ! token ) return NULL;
-	//if ( ! crawlId ) return NULL;
+	// crawlid is NOT required, but useful
+	char *crawlId = getCrawlIdFromHttpRequest ( hr );
+
 
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
@@ -1302,10 +1340,8 @@ CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) {
 		if ( strncmp(coll,token,tokenLen) ) continue;
 		// coll name is <token>-<crawlid>
 		if ( coll[tokenLen] != '-' ) continue;
-
-		// if no crawler id supplied, just use that then
+		// if no crawler id supplied, just use the first token match
 		if ( ! crawlId ) return cr;
-
 		// if current coll id...
 		char *cid = coll+tokenLen+1;
 		// return if crawlid matches
@@ -1488,7 +1524,7 @@ void printCrawlStats ( SafeBuf *sb , CollectionRec *cr ) {
 
 
 // generate a random collection name
-char *getNewCollName ( char *token ) {
+char *getNewCollName ( char *token , long tokenLen ) {
 	// let's create a new crawl id. dan was making it 32 characters
 	// with 4 hyphens in it for a total of 36 bytes, but since
 	// MAX_COLL_LEN, the maximum length of a collection name, is just
@@ -1509,14 +1545,15 @@ char *getNewCollName ( char *token ) {
 	// they only crawl.
 	static char s_collBuf[MAX_COLL_LEN+1];
 
-	long tokenLen = gbstrlen(token);
+	//long tokenLen = gbstrlen(token);
 
 	// include a +5 for "-test"
 	// include 16 for crawlid (16 char hex #)
 	if ( tokenLen + 16 + 5>= MAX_COLL_LEN ) { char *xx=NULL;*xx=0;}
 	// ensure the crawlid is the full 16 characters long so we
 	// can quickly extricate the crawlid from the collection name
-	sprintf(s_collBuf,"%s-%016llx",token,crawlId64);
+	memcpy ( s_collBuf, token, tokenLen );
+	sprintf(s_collBuf + tokenLen ,"-%016llx",crawlId64);
 	return s_collBuf;
 }
 
@@ -1539,32 +1576,10 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	// if no token... they need to login or signup
 	//
 	long tokenLen;
-	char *token = hr->getString("token",&tokenLen);
-
-	// crawlid?
-	char *crawlId = hr->getString("id",NULL,NULL);
-
-	char tokenBuf[64];
-
-	// extract token/crawlid from coll?
-	char *c = hr->getString("c",NULL,NULL);
-	if ( c ) {
-		// the collection name is <token>-<crawlid> but we
-		// need token to be null terminated so we have to
-		// copy it into tokenBuf.
-		char *tp = c;
-		long i; for ( i = 0 ; tp[i] && tp[i] != '-'; i++ );
-		if ( i > 60 ) goto needToken;
-		strncpy ( tokenBuf, c , i );
-		tokenLen = i;
-		token = tokenBuf;
-		// now point to crawl id in the collection name itself
-		crawlId = c + i + 1;
-	}
+	char *token = getTokenFromHttpRequest( hr , &tokenLen );
 
 
 	if ( ! token || tokenLen == 0 ) {
-	needToken:
 		sb.safePrintf("In order to use crawlbot you must "
 			      "first LOGIN:"
 			      "<form action=/crawlbot method=get>"
@@ -1591,13 +1606,19 @@ bool printCrawlBotPage ( TcpSocket *s ,
 						     -1); // cachetime
 	}
 
+	//char *crawlId = getCrawlIdFromHttpRequest();
+
 	CollectionRec *cr = NULL;
 
-	// add new collection?
+	// . add new collection?
+	// . make a new collection and it also becomes the cursor
 	long addColl = hr->getLong("addcoll",0);
-	// make a new collection and it also becomes the cursor
 	if ( addColl )
 		cr = addNewDiffbotColl ( hr );
+
+	char *delColl = hr->getString("delcoll",NULL,NULL);
+	if ( delColl )
+		g_collectiondb.deleteRec ( delColl , true );
 
 	// set this to current collection. if only token was provided
 	// then it will return the first collection owned by token.
@@ -1633,16 +1654,18 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	sb.safePrintf("<center><br>");
 			      
 	// first print "add new collection"
-	sb.safePrintf("<a href=/crawlbot?addcoll=1&token=%s>"
+	sb.safePrintf("<a href=/crawlbot?addcoll=1&token=");
+	sb.safeMemcpy(token,tokenLen);
+	sb.safePrintf(">"
 		      "add new collection"
 		      "</a> &nbsp; "
 
-		      "<a href=/crawlbot/summary?token=%s>"
+		      "<a href=/crawlbot/summary?token="
+		      );
+	sb.safeMemcpy(token,tokenLen);
+	sb.safePrintf(">"
 		      "all collections"
 		      "</a> &nbsp; "
-		      
-		      , token
-		      , token
 		      );
 	
 
@@ -1662,7 +1685,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		// if current coll id...
 		char *cid = coll+tokenLen+1;
 		// if no crawlid "id" was given, use first for now!
-		if ( ! crawlId ) crawlId = cid;
+		//if ( ! crawlId ) crawlId = cid;
 		// highlight the tab if it is what we selected
 		bool highlight = false;
 		if ( cx == cr ) highlight = true;
@@ -2025,8 +2048,6 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 	sb.safePrintf("<input type=hidden name=c value=\"%s\">"
 		      "<input type=hidden name=crawlbotapi value=1>"
-		      "<input type=hidden name=token value=\"%s\">"
-		      "<input type=hidden name=id value=\"%s\">"
 		      "</td>"
 		      "</tr>"
 		      "</form>"
@@ -2048,8 +2069,6 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "</table>"
 		      "<br>"
 		      , cr->m_coll
-		      , token
-		      , crawlId
 		      );
 
 
@@ -2156,6 +2175,13 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 
 	sb.safePrintf("<br>"
+		      "<form method=get action=/crawlbot>"
+		      "<input type=hidden name=token value=\""
+		      );
+	sb.safeMemcpy ( token , tokenLen );
+	sb.safePrintf("\">"
+
+		      "<input type=hidden name=delcoll value=%s>"
 		      "<table cellpadding=5>"
 		      "<tr>"
 
@@ -2170,7 +2196,10 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "</td>"
 
 		      "</tr>"
-		      "</table>");
+		      "</table>"
+		      "</form>"
+		      , cr->m_coll
+		      );
 
 
 	return g_httpServer.sendDynamicPage ( s, 
@@ -2263,14 +2292,14 @@ bool printCrawlBotPage ( TcpSocket *s ,
 CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 
 	long tokenLen = 0;
-	char *token = hr->getString("token",&tokenLen);
+	char *token = getTokenFromHttpRequest ( hr ,&tokenLen);
 
 	if ( ! token ) {
 		log("crawlbot: need token to add new coll");
 		return NULL;
 	}
 
-	char *collBuf = getNewCollName ( token );
+	char *collBuf = getNewCollName ( token , tokenLen );
 
 	if ( ! g_collectiondb.addRec ( collBuf ,
 				       NULL ,  // copy from
