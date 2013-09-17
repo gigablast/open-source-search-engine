@@ -1774,13 +1774,13 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "</tr>"
 
 			      "<tr>"
-			      "<td><b>URLs Found</b></td>"
+			      "<td><b>URLs Harvested</b></td>"
 			      "<td>%lli</td>"
      
 			      "</tr>"
 
 			      "<tr>"
-			      "<td><b>URLs Considered</b></td>"
+			      "<td><b>URLs Examined</b></td>"
 			      "<td>%lli</td>"
 			      "</tr>"
 
@@ -1830,13 +1830,15 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 		// what diffbot api to use?
 		char *api = cr->m_diffbotApi.getBufStart();
-		char *s[5];
-		for ( long i = 0 ; i < 5 ; i++ ) s[i] = "";
+		char *s[10];
+		for ( long i = 0 ; i < 10 ; i++ ) s[i] = "";
 		if ( strcmp(api,"all") == 0 ) s[0] = " checked";
 		if ( strcmp(api,"article") == 0 ) s[1] = " checked";
 		if ( strcmp(api,"product") == 0 ) s[2] = " checked";
 		if ( strcmp(api,"image") == 0 ) s[3] = " checked";
 		if ( strcmp(api,"frontpage") == 0 ) s[4] = " checked";
+		if ( strcmp(api,"none") == 0 ) s[5] = " checked";
+		if ( ! api ) s[5] = " checked";
 		sb.safePrintf( "<TD valign=top>"
 
 			      "<table cellpadding=5 border=0>"
@@ -1851,6 +1853,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "<option value=product%s>Product</option>"
 			      "<option value=image%s>Image</option>"
 			      "<option value=frontpage%s>FrontPage</option>"
+			      "<option value=none%s>None</option>"
 			      "</select>"
 			      "</td>"
 			       "</tr>"
@@ -1859,6 +1862,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      , s[2]
 			      , s[3]
 			      , s[4]
+			      , s[5]
 			      );
 
 		sb.safePrintf(
@@ -2372,7 +2376,7 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 	cr->m_diffbotMaxToProcess = 100000;
 
 	// this collection should always hit diffbot
-	cr->m_useDiffbot = true;
+	//cr->m_useDiffbot = true;
 
 	// show the ban links in the search results. the collection name
 	// is cryptographic enough to show that

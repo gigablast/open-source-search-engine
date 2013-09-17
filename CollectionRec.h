@@ -387,6 +387,7 @@ class CollectionRec {
 	// new diffbot parms
 	SafeBuf m_diffbotToken;
 	SafeBuf m_diffbotSeed;
+	// this will be NULL or "none" to not pass off to diffbot
 	SafeBuf m_diffbotApi;
 	SafeBuf m_diffbotApiQueryString;
 	SafeBuf m_diffbotUrlCrawlPattern;
@@ -394,7 +395,7 @@ class CollectionRec {
 	SafeBuf m_diffbotPageProcessPattern;
 	//SafeBuf m_diffbotClassify;
 	char m_diffbotClassify;
-	char m_useDiffbot;
+	//char m_useDiffbot;
 	char m_isCustomCrawl;
 	//char m_isDiffbotCollection;
 	// format of output. "csv" or "xml" or "json" or null
