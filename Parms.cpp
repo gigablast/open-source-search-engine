@@ -187,9 +187,17 @@ void Parms::detachSafeBufs ( CollectionRec *cr ) {
 		if ( m->m_type != TYPE_SAFEBUF ) continue;
 		if ( m->m_obj != OBJ_COLL ) continue;
 		if ( m->m_off < 0 ) continue;
-		// get it
-		SafeBuf *sb = (SafeBuf *)((char *)cr + m->m_off);
-		sb->detachBuf();
+		long max = 1;
+		// this will be zero if not an array.
+		// othewise it is the # of elements in the array
+		if ( m->m_size > max ) max = m->m_size;
+		// an array of safebufs? m->m_size will be > 1 then.
+		for ( long j = 0 ; j < max ; j++ ) {
+			// get it
+			SafeBuf *sb = (SafeBuf *)((char *)cr + m->m_off +
+						  j*sizeof(SafeBuf));
+			sb->detachBuf();
+		}
 	}
 }
 

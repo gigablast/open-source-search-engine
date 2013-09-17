@@ -708,9 +708,6 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	nr->m_collnum = cn;
 	// set the flag
 	m_needsSave = true;
-	// . save it again after copy
-	// . no, i think addRec above saves it, so don't double save
-	//nr->save();
 
 	// tell cr's SafeBufs not to free their buffers since we did the
 	// memcpy and their ptrs are now stored in "tmp"'s SafeBufs and will 
@@ -720,6 +717,12 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	// let's reset crawlinfo crap
 	nr->m_globalCrawlInfo.reset();
 	nr->m_localCrawlInfo.reset();
+
+	// . save it again after copy
+	// . no, i think addRec above saves it, so don't double save
+	// . ah just double save since we copied "tmp" back to it above
+	nr->save();
+
 
 	// and clear the robots.txt cache in case we recently spidered a
 	// robots.txt, we don't want to use it, we want to use the one we
