@@ -97,8 +97,14 @@ class Parm {
 	char  m_type;  // TYPE_BOOL, TYPE_LONG, ...
 	long  m_page;  // PAGE_MASTER, PAGE_SPIDER, ... see Pages.h
 	char  m_obj;   // OBJ_CONF or OBJ_COLL
+	// the maximum number of elements supported in the array.
+	// this is 1 if NOT an array (i.e. array of only one parm).
+	// in such cases a "count" is NOT stored before the parm in 
+	// CollectionRec.h or Conf.h.
 	long  m_max;   // max elements in the array
-	long  m_fixed; // if array is fixed size, what size is it?
+	// if array is fixed size, how many elements in it?
+	// this is 0 if not a FIXED size array.
+	long  m_fixed; 
 	long  m_size;  // max string size
 	char *m_def;   // default value of this variable if not in either conf
 	char  m_cast;  // true if we should broadcast to all hosts (default)

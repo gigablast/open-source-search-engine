@@ -2032,7 +2032,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "<form method=get action=/inject>"
 		      "<tr>"
 		      "<td>"
-		      "<b>Add Url: </b>"
+		      "<b>Inject Url: </b>"
 		      "</td><td>"
 		      "<input type=text name=u size=50>"
 		      " "
@@ -2096,7 +2096,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 	char *s1 = "Show";
 	char *s2 = "none";
-	if ( hr->getLong("showtable",0) ) {
+	if ( hr->getLongFromCookie("showtable",0) ) {
 		s1 = "Hide";
 		s2 = "";
 	}
@@ -2110,10 +2110,12 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "if ( e.style.display == 'none' ){"
 		      "e.style.display = '';"
 		      "m.innerHTML='Hide URL Filters Table';"
+		      "document.cookie = 'showtable=1;';"
 		      "}"
 		      "else {"
 		      "e.style.display = 'none';"
 		      "m.innerHTML='Show URL Filters Table';"
+		      "document.cookie = 'showtable=0;';"
 		      "}"
 		      "\""
 		      " "

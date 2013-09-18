@@ -2704,7 +2704,8 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		char *pos =  (char *)THIS + m_parms[mm-1].m_off - 4 ;
 		long maxcount = *(long *)pos;
 		if ( j >= maxcount ) {
-			log("admin: parm before \"m\" is limiting us");
+			log("admin: parm before \"%s\" is limiting us",
+			    m_parms[mm-1].m_title);
 			//log("admin: try nuking the url filters or whatever "
 			//    "and re-adding");
 			return;
