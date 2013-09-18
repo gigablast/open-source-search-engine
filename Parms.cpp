@@ -7191,6 +7191,14 @@ void Parms::init ( ) {
 	m->m_priv  = 1;
 	m++;
 
+	m->m_title = "log debug dirty messages";
+	m->m_cgi   = "lddm";
+	m->m_off   = (char *)&g_conf.m_logDebugDirty - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m++;
+
 	m->m_title = "log debug disk messages";
 	m->m_cgi   = "lddi";
 	m->m_off   = (char *)&g_conf.m_logDebugDisk - g;

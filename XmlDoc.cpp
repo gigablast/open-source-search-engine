@@ -3053,7 +3053,7 @@ static Needle s_dirtyWords []  = {
 	{"blowjob"    ,0,2,0,0,NULL,0,NULL},
 	{"blow job"   ,0,2,0,0,NULL,0,NULL},
 	{"gangbang"   ,0,2,0,0,NULL,0,NULL},
-	{"xxx"        ,0,2,0,0,NULL,0,NULL},
+	{"xxx"        ,0,1,0,0,NULL,0,NULL}, // yahoo.com has class="fz-xxxl"
 	{"porn"       ,0,2,0,0,NULL,0,NULL},
 	{"felch"      ,0,2,0,0,NULL,0,NULL},
 	{"cunt"       ,0,2,0,0,NULL,0,NULL},
@@ -3115,6 +3115,7 @@ static Needle s_dirtyWords []  = {
 	{"sexclu"      ,0,-2,0,0,NULL,0,NULL},
 	{"sexo"        ,0,-2,0,0,NULL,0,NULL},
 	{"sexism"      ,0,-2,0,0,NULL,0,NULL},
+	{"sexpan"      ,0,-2,0,0,NULL,0,NULL}, // buttonsexpanion
 	{"same-sex"    ,0,-2,0,0,NULL,0,NULL},
 	{"opposite sex",0,-2,0,0,NULL,0,NULL},
 
@@ -3263,7 +3264,7 @@ char *XmlDoc::getIsAdult ( ) {
 
 	// score that up
 	long total = getDirtyPoints ( ptr_utf8Content, size_utf8Content - 1 ,
-				      m_niceness );
+				      m_niceness , m_firstUrl.m_url );
 
 	// then the url
 	//char *u = getFirstUrl()->getUrl();
@@ -3293,7 +3294,7 @@ char *XmlDoc::getIsAdult ( ) {
 
 
 
-long getDirtyPoints ( char *s , long slen , long niceness ) {
+long getDirtyPoints ( char *s , long slen , long niceness , char *url ) {
 	// . use the matches function to get all the matches
 	// . then check each match to see if it is actually a legit word
 	// . actually match the dirty words, then match the clean words
@@ -3319,6 +3320,14 @@ long getDirtyPoints ( char *s , long slen , long niceness ) {
 		// . uses +2/-2 for really dirty words 
 		// . uses +1/-1 for borderline dirty words
 		points += s_dirtyWords[i].m_id;
+		// log debug
+		if ( ! g_conf.m_logDebugDirty ) continue;
+		// show it in the log
+		log("dirty: %s %li %s"
+		    ,s_dirtyWords[i].m_string
+		    ,(long)s_dirtyWords[i].m_id
+		    ,url
+		    );
 	}
 	return points;
 }

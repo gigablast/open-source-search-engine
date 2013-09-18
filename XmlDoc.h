@@ -158,7 +158,7 @@ long intersectGigabits ( Msg20       **mp          ,   // search results
 			 class GigabitInfo  *top   ,
 			 long          niceness    ) ;
 
-long getDirtyPoints ( char *s , long len , long niceness ) ;
+long getDirtyPoints ( char *s , long len , long niceness , char *logUrl ) ;
 
 bool storeTerm ( char             *s        ,
                  long              slen     ,

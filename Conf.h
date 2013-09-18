@@ -597,6 +597,7 @@ class Conf {
 	bool  m_logDebugBuild   ;
 	bool  m_logDebugBuildTime ;
 	bool  m_logDebugDb      ;
+	bool  m_logDebugDirty   ;
 	bool  m_logDebugDisk    ;
 	bool  m_logDebugDns     ;
 	bool  m_logDebugDownloads;

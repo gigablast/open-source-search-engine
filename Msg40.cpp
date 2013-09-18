@@ -467,7 +467,8 @@ bool Msg40::prepareToGetDocIds ( ) {
 	if ( m_si->m_familyFilter && 
 	     getDirtyPoints ( m_si->m_sbuf1.getBufStart() , 
 			      m_si->m_sbuf1.length() , 
-			      0 ) ) {
+			      0 ,
+			      NULL ) ) {
 		// make sure the m_numDocIds gets set to 0
 		m_msg3a.reset();
 		m_queryCensored = true;
