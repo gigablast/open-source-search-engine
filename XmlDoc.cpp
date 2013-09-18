@@ -3288,6 +3288,11 @@ char *XmlDoc::getIsAdult ( ) {
 	m_isAdult2 = (bool)m_isAdult;
 	// validate
 	m_isAdultValid = true;
+
+	// note it
+	if ( m_isAdult2 && g_conf.m_logDebugDirty )
+		log("dirty: %s points = %li",m_firstUrl.m_url,total);
+
 	// no dirty words found
 	return &m_isAdult2;
 }
