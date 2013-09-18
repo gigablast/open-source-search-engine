@@ -2093,6 +2093,14 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	// add a "process" column to send to diffbot...
 	//
 	//
+
+	char *s1 = "Show";
+	char *s2 = "none";
+	if ( hr->getLong("showtable",0) ) {
+		s1 = "Hide";
+		s2 = "";
+	}
+
 	sb.safePrintf(
 
 		      "<a onclick="
@@ -2116,14 +2124,17 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 		      "<u><b>"
 		      "<div id=msg>"
-		      "Show URL Filters Table"
+		      "%s URL Filters Table"
 		      "</div>"
 		      "</b></u>"
 		      "</a>"
 
-		      "<div id=filters style=display:none;>"
+		      "<div id=filters style=display:%s;>"
 		      "<form method=get action=/crawlbot>"
 		      "<input type=hidden name=c value=\"%s\">"
+		      "<input type=hidden name=showtable value=1>"
+		      , s1
+		      , s2
 		      , cr->m_coll
 		      );
 
