@@ -459,6 +459,11 @@ class CollectionRec {
 	long      m_numRegExs7;
 	char      m_spidersEnabled     [ MAX_FILTERS ];
 
+	// should urls in this queue be sent to diffbot for processing
+	// when we are trying to index them?
+	long      m_numRegExs11;
+	char      m_spiderSendToDiffbot [ MAX_FILTERS ];
+
 	// dummy?
 	long      m_numRegExs9;
 

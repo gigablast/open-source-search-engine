@@ -2469,6 +2469,7 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 		cr->m_spiderIpMaxSpiders[i] = 10;
 		cr->m_spidersEnabled    [i] = 1;
 		cr->m_spiderFreqs       [i] = 7.0;
+		cr->m_spiderSendToDiffbot[i] = 0;
 	}
 
 
@@ -2485,57 +2486,33 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 	i++;
 	// if user did not specify a url crawl pattern then keep
 	// the crawl limited to the same subdomain of the seed url
-	if ( cr->m_diffbotUrlCrawlPattern.length() == 0 ) {
-		// first limit to http://subdomain
-		cr->m_regExs[i].safePrintf("isonsite");//^http://");
-		//cr->m_regExs[i].safeMemcpy(norm.getHost(),norm.getHostLen());
-		//cr->m_regExs[i].pushChar('/');
-		cr->m_regExs[i].nullTerm();
-		cr->m_spiderPriorities  [i] = 50;
-		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
-		cr->m_spiderIpMaxSpiders[i] = 10;
-		cr->m_spidersEnabled    [i] = 1;
-		i++;
-		/*
-		// then include HTTPS
-		cr->m_regExs[i].safePrintf("^https://");
-		cr->m_regExs[i].safeMemcpy(norm.getHost(),norm.getHostLen());
-		cr->m_regExs[i].pushChar('/');
-		cr->m_regExs[i].nullTerm();
-		cr->m_spiderPriorities  [i] = 50;
-		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
-		cr->m_spiderIpMaxSpiders[i] = 10;
-		cr->m_spidersEnabled    [i] = 1;
-		i++;
-		*/
-		// and make all else filtered
-		cr->m_regExs[i].safePrintf("default");
-		cr->m_spiderPriorities  [i] = SPIDER_PRIORITY_FILTERED;
-		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
-		cr->m_spiderIpMaxSpiders[i] = 10;
-		cr->m_spidersEnabled    [i] = 1;
-		i++;
-	}
-	else {
-		cr->m_regExs[i].safePrintf("default");
-		cr->m_spiderPriorities  [i] = 50;
-		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
-		cr->m_spiderIpMaxSpiders[i] = 10;
-		cr->m_spidersEnabled    [i] = 1;
-		i++;
-	}
-
-	
+	//if ( cr->m_diffbotUrlCrawlPattern.length() == 0 ) {
+	// first limit to http://subdomain
+	cr->m_regExs[i].safePrintf("isonsite");//^http://");
+	//cr->m_regExs[i].safeMemcpy(norm.getHost(),norm.getHostLen());
+	//cr->m_regExs[i].pushChar('/');
+	cr->m_regExs[i].nullTerm();
+	cr->m_spiderPriorities  [i] = 50;
+	cr->m_maxSpidersPerRule [i] = 10;
+	cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
+	cr->m_spiderIpMaxSpiders[i] = 10;
+	cr->m_spidersEnabled    [i] = 1;
+	i++;
+	// and make all else filtered
+	cr->m_regExs[i].safePrintf("default");
+	cr->m_spiderPriorities  [i] = SPIDER_PRIORITY_FILTERED;
+	cr->m_maxSpidersPerRule [i] = 10;
+	cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
+	cr->m_spiderIpMaxSpiders[i] = 10;
+	cr->m_spidersEnabled    [i] = 1;
+	i++;
 
 	// just the default rule!
 	cr->m_numRegExs   = i;
 	cr->m_numRegExs2  = i;
 	cr->m_numRegExs3  = i;
 	cr->m_numRegExs10 = i;
+	cr->m_numRegExs11 = i;
 	cr->m_numRegExs5  = i;
 	cr->m_numRegExs6  = i;
 	cr->m_numRegExs7  = i;

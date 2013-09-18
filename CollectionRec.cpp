@@ -305,6 +305,9 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 
 	m_spidersEnabled[n] = 1;
 	m_numRegExs7++;
+
+	m_spiderSendToDiffbot[n] = 1;
+	m_numRegExs11++;
 }
 
 /*

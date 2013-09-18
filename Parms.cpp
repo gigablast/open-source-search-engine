@@ -444,7 +444,17 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		  "</td></tr>%s%s\n",
 		  LIGHT_BLUE,DARK_BLUE,tt,bb,e1,e2);
 
-	char *THIS = g_parms.getTHIS ( r , page );
+	char *THIS ;
+	// when being called from Diffbot.cpp crawlbot page it is kind of
+	// hacky and we want to print the url filters for the supplied 
+	// collection dictated by collOveride. if we don't have this
+	// fix here it ends up printing the url filters for the default
+	// "main" collection
+	if ( collOveride )
+		THIS = (char *)g_collectiondb.getRec(collOveride);
+	else
+		THIS = g_parms.getTHIS ( r , page );
+
 	if ( ! THIS ) {
 		log("admin: Could not get parameter object.");
 		return g_httpServer.sendErrorReply ( s , 505 , "Bad Request");
@@ -2013,6 +2023,8 @@ bool Parms::printParm ( SafeBuf* sb,
 				cgi,size);
 		//sb->dequote ( s , gbstrlen(s) );
 		SafeBuf *sx = (SafeBuf *)s;
+		// note it
+		//log("hack: %s",sx->getBufStart());
 		sb->dequote ( sx->getBufStart() , sx->length() );
 		sb->safePrintf ("\">");
 	}
@@ -2645,7 +2657,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 			return;
 		if ( fromRequest)oldVal = (float)*(char *)(THIS + m->m_off +j);
 		*(char *)(THIS + m->m_off + j) = atol ( s );
-		newVal = (float)*(char *)(THIS + m->m_off + j);
+ 		newVal = (float)*(char *)(THIS + m->m_off + j);
 		goto changed; }
 	else if ( t == TYPE_CMD ) {
 		log(LOG_LOGIC, "conf: Parms: TYPE_CMD is not a cgi var.");
@@ -2720,6 +2732,9 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		else                   len = sb->htmlDecode (s,len,false,0);
 		// ensure null terminated
 		sb->nullTerm();
+		// note it
+		//log("hack: %s",s);
+
 		// null term it all
 		//dst[len] = '\0';
 		//sb->reserve ( 1 );
@@ -2834,6 +2849,15 @@ Parm *Parms::getParmFromParmHash ( long parmHash ) {
 void Parms::setToDefault ( char *THIS ) {
 	// init if we should
 	init();
+
+	// . clear out any coll rec to get the sendToDiffbot checkboxes
+	// . this is a backwards-compatibility hack since this new parm
+	//   will not be in old coll.conf files and will not be properly
+	//   initialize when displaying a url filter row.
+	if ( THIS != (char *)&g_conf ) {
+		CollectionRec *cr = (CollectionRec *)THIS;
+		memset ( cr->m_spiderSendToDiffbot , 0 , MAX_FILTERS);
+	}
 
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		Parm *m = &m_parms[i];
@@ -12408,8 +12432,19 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_PRIORITY2; // includes UNDEFINED priority in dropdown
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
-	m->m_addin = 1; // "insert" follows?
 	m->m_def   = "";
+	m++;
+
+	m->m_title = "send to diffbot";
+	m->m_cgi   = "stdb";
+	m->m_xml   = "spiderSendToDiffbot";
+	m->m_max   = MAX_FILTERS;
+	m->m_off   = (char *)cr.m_spiderSendToDiffbot - x;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "0";
+	m->m_page  = PAGE_FILTERS;
+	m->m_rowid = 1;
+	m->m_addin = 1; // "insert" follows?
 	m++;
 
 	//m->m_title = "<a href=/overview.html#ruleset>ruleset</a>";
