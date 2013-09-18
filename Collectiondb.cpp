@@ -602,10 +602,16 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	//g_tfndb.getRdb()->delColl      ( coll );
 	g_clusterdb.getRdb()->delColl  ( coll );
 	g_linkdb.getRdb()->delColl     ( coll );
+
+	// and spider collection!
+	if ( cr->m_spiderColl ) {
+		mdelete ( cr->m_spiderColl, sizeof(SpiderColl),"nukecr");
+		cr->m_spiderColl = NULL;
+	}
+
 	// free it
-	mdelete ( m_recs[(long)collnum], sizeof(CollectionRec), 
-		  "CollectionRec" ); 
-	delete ( m_recs[(long)collnum] );
+	mdelete ( cr, sizeof(CollectionRec),  "CollectionRec" ); 
+	delete ( cr );
 	m_recs[(long)collnum] = NULL;
 	// dec counts
 	m_numRecsUsed--;
