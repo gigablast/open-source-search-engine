@@ -460,10 +460,14 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		log("admin: Could not get parameter object.");
 		return g_httpServer.sendErrorReply ( s , 505 , "Bad Request");
 	}
+
+	bool isCrawlbot = false;
+	if ( collOveride ) isCrawlbot = true;
 		
 	// print the table(s) of controls
 	//p= g_parms.printParms (p, pend, page, user, THIS, coll, pwd, nc, pd);
-	g_parms.printParms ( sb, page, username, THIS, coll, NULL, nc, pd);
+	g_parms.printParms ( sb, page, username, THIS, coll, NULL, nc, pd,
+			     isCrawlbot );
 
 	// end the table
 	sb->safePrintf ( "</table>\n" );
@@ -1272,7 +1276,7 @@ char *Parms::printParms ( char *p , char *pend , long page , char *username,
 */
 bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 			 void *THIS , char *coll , char *pwd , long nc ,
-			 long pd ) {
+			 long pd , bool isCrawlbot ) {
 	bool status = true;
 	s_count = 0;
 	// background color
@@ -1341,7 +1345,8 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 						     j, jend, (char *)THIS,
 						     coll,NULL,
 						     bg,nc,pd,
-						     false);
+						     false,
+						     isCrawlbot);
 			continue;
 		}
 		// if not first in a row, skip it, we printed it already
@@ -1356,10 +1361,13 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 			for ( long k = i ; 
 			      k < m_numParms && 
 				      m_parms[k].m_rowid == rowid;  
-			      k++ )
+			      k++ ) {
+
 				status &=printParm(sb,username,&m_parms[k],k,
-					    newj,jend,(char *)THIS,coll,NULL,bg,
-						   nc,pd, j==size-1);
+					    newj,jend,(char *)THIS,coll,NULL,
+						   bg,nc,pd, j==size-1,
+						   isCrawlbot);
+			}
 		}
 		// end array table
 		//if ( m->m_max > 1 ) {
@@ -1794,7 +1802,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			char *bg   ,
 			long  nc   ,
 			long  pd   ,
-			bool lastRow ) {
+			bool lastRow ,
+			bool isCrawlbot ) {
 	bool status = true;
 	// do not print if no permissions
 	if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
@@ -1812,6 +1821,17 @@ bool Parms::printParm ( SafeBuf* sb,
 #endif
 	// priv of 4 means do not print at all
 	if ( m->m_priv == 4 ) return status;
+
+	// . if printing on crawlbot page hide these
+	// . we repeat this logic below when printing parm titles
+	//   for the column headers in the table
+	if ( isCrawlbot &&
+	     m->m_page == PAGE_FILTERS &&
+	     (strcmp(m->m_xml,"spidersEnabled") == 0 ||
+	      strcmp(m->m_xml,"maxSpidersPerRule")==0||
+	      strcmp(m->m_xml,"maxSpidersPerIp") == 0||
+	      strcmp(m->m_xml,"spiderIpWait") == 0 ) )
+		return true;
 
 	// what type of parameter?
 	char t = m->m_type;
@@ -1852,6 +1872,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 	if ( mm > 0 && m->m_rowid >= 0 && m_parms[mm-1].m_rowid == m->m_rowid )
 		firstInRow = false;
+
 	long firstRow = 0;
 	//if ( m->m_page==PAGE_PRIORITIES ) firstRow = MAX_PRIORITY_QUEUES - 1;
 	// . use a separate table for arrays
@@ -1879,6 +1900,16 @@ bool Parms::printParm ( SafeBuf* sb,
 		      k<m_numParms && m_parms[k].m_rowid==m->m_rowid; k++ ) {
 			// parm shortcut
 			Parm *mk = &m_parms[k];
+			// . skip table column headers hidden parms
+			// . we repeat this logic above when skipping the
+			//   actual parms
+			if ( isCrawlbot &&
+			     m->m_page == PAGE_FILTERS &&
+			     (strcmp(mk->m_xml,"spidersEnabled") == 0 ||
+			      strcmp(mk->m_xml,"maxSpidersPerRule")==0||
+			      strcmp(mk->m_xml,"maxSpidersPerIp") == 0||
+			      strcmp(mk->m_xml,"spiderIpWait") == 0 ) )
+				continue;
 			sb->safePrintf ( "<td>" );
 			// if its of type checkbox in a table make it
 			// toggle them all on/off

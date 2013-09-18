@@ -190,7 +190,8 @@ class Parms {
 	//                  void *THIS, char *coll , char *pwd , 
 	//		  long nc , long pd ) ;
 	bool printParms (SafeBuf* sb, long page,char *username,void *THIS,
-			 char *coll , char *pwd , long nc , long pd );
+			 char *coll , char *pwd , long nc , long pd ,
+			 bool isCrawlbot = false );
 
 	/*
 	char *printParm ( char *p    , 
@@ -222,7 +223,8 @@ class Parms {
 			  char *bg   ,
 			  long  nc   ,
 			 long  pd   ,
-			 bool lastRow ) ;
+			 bool lastRow ,
+			 bool isCrawlbot = false) ;
 
 	char *getTHIS ( HttpRequest *r , long page ) ;
 
