@@ -15468,6 +15468,8 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("oldpubdate=%s ",tmp );
 	}
 
+	if ( m_isAdultValid )
+		sb.safePrintf("isadult=%li ",(long)m_isAdult);
 
 	// only print if different now! good for grepping changes
 	if ( m_oldDocValid && m_oldDoc && 
@@ -25245,10 +25247,10 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 	if ( hi->m_prefix && plen ) {
 		prefixHash = hash64 ( hi->m_prefix , plen );
 		// sanity test, make sure it is in supported list
-		if ( getFieldCode3 ( prefixHash ) == FIELD_GENERIC ) { 
-			if (hi->m_desc&&strcmp(hi->m_desc,"custom meta tag")) {
-				char *xx=NULL;*xx=0; }
-		}
+		//if ( getFieldCode3 ( prefixHash ) == FIELD_GENERIC ) { 
+		//	if (hi->m_desc&&strcmp(hi->m_desc,"custom meta tag")) {
+		//			char *xx=NULL;*xx=0; }
+		//}
 	}
 
 	bool hashIffUnique = false;
