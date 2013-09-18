@@ -1790,15 +1790,6 @@ bool XmlDoc::indexDoc ( ) {
 		m_masterState = this;
 	}
 
-	if ( ! m_useDiffbotValid ) {
-		//m_useDiffbot = m_cr->m_useDiffbot;
-		m_useDiffbotValid = true;
-		// if api is None, turn it off
-		char *api = m_cr->m_diffbotApi.getBufStart();
-		if ( ! api || strcmp(api,"none") == 0 )	m_useDiffbot = false;
-		else                                    m_useDiffbot = true;
-	}
-
 	// ensure that CollectionRec::m_globalCrawlInfo (spider stats)
 	// is at least 1 minute in sync with counts of
 	// all hosts in network. this returns false if it sent  out requests
@@ -1814,8 +1805,7 @@ bool XmlDoc::indexDoc ( ) {
 
 
 	// even if not using diffbot, keep track of these counts
-	if ( //m_useDiffbot &&
-	     ! m_isDiffbotJSONObject && 
+	if ( ! m_isDiffbotJSONObject && 
 	     ! m_incrementedAttemptsCount ) {
 		// do not repeat
 		m_incrementedAttemptsCount = true;
@@ -1832,8 +1822,7 @@ bool XmlDoc::indexDoc ( ) {
 	// if we are being called from Spider.cpp and we met our max
 	// to crawl requirement, then bail out on this. this might
 	// become true when we are in the middle of processing this url...
-	if ( //m_useDiffbot &&
-	     ! m_isDiffbotJSONObject &&
+	if ( ! m_isDiffbotJSONObject &&
 	     // this is just for this collection, from all hosts in network
 	     m_cr->m_globalCrawlInfo.m_pageDownloadSuccesses >= //Attempts >=
 	     m_cr->m_diffbotMaxToCrawl ) {
@@ -1850,8 +1839,7 @@ bool XmlDoc::indexDoc ( ) {
 	}
 
 	// likewise if we hit the max processing limit...
-	if ( //m_useDiffbot &&
-	     ! m_isDiffbotJSONObject &&
+	if ( ! m_isDiffbotJSONObject &&
 	     m_cr->m_globalCrawlInfo.m_pageProcessSuccesses >= // Attempts >=
 	     m_cr->m_diffbotMaxToProcess ) {
 		m_cr->m_spideringEnabled = false;
@@ -11803,18 +11791,50 @@ skip:
 	THIS->m_masterLoop ( THIS->m_masterState );
 }
 
+long *XmlDoc::getDiffbotApiNum ( ) {
+
+	if ( m_diffbotApiNumValid )
+		return &m_diffbotApiNum;
+
+	// if we are a diffbot json object, do not re-send to diffbot!
+	if ( m_isDiffbotJSONObject ) {
+		m_diffbotApiNum = DBA_NONE;
+		m_diffbotApiNumValid = true;
+		return &m_diffbotApiNum;
+	}
+
+	long *ufn = getUrlFilterNum();
+	if ( ! ufn || ufn == (void *)-1 ) return (long *)ufn;
+
+	m_diffbotApiNum = m_cr->m_spiderDiffbotApiNum[*ufn];
+
+	// sanity check
+	if ( m_diffbotApiNum < 0 ) { char *xx=NULL;*xx=0; }
+
+	m_diffbotApiNumValid = true;
+	return &m_diffbotApiNum;
+}
+
 // the diffbot reply will be a list of json objects we want to index
 SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
-	// if not connecting with diffbot, then just return an empty safebuf
-	if ( ! m_useDiffbot ) 
-		return &m_diffbotReply;
-
-	if ( m_isDiffbotJSONObject )
-		return &m_diffbotReply;
-
 	if ( m_diffbotReplyValid )
 		return &m_diffbotReply;
+
+	if ( m_isDiffbotJSONObject ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
+	// check the url filters table to see if diffbot api is specified
+	long *an = getDiffbotApiNum();
+	if ( ! *an || an == (void *)-1 ) return (SafeBuf *)an;
+
+	// if "NONE" is in the diffbot api drop down, do not send to diffbot
+	if ( *an == DBA_NONE ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
 
 	// when respidering an "old" doc, never call this. we already
 	// have the diffbot replies xyz.com/-diffbot-0 and xyz.com/-diffbot-1
@@ -11852,17 +11872,17 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	char *ib = getIsBinary();
 	if ( ! ib || ib == (void *)-1 ) return (SafeBuf *)ib;
 	if ( *ib ) {
-		log("diffbot: skipping binary page %s",m_firstUrl.m_url);
 		m_diffbotReplyValid = true;
+		log("diffbot: skipping binary page %s",m_firstUrl.m_url);
 		return &m_diffbotReply;
 	}
 
 
 	setStatus("getting diffbot reply");
 
-	char *path = "api";
-	if ( strcmp(m_cr->m_diffbotApi.getBufStart(),"product") == 0 )
-		path = "v2";
+	//char *path = "api";
+	//if ( strcmp(m_cr->m_diffbotApi.getBufStart(),"product") == 0 )
+	//	path = "v2";
 	
 	//
 	// DIFFBOT injection interface TODO
@@ -11873,8 +11893,6 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// the original diffbot.com request url in this xmldoc class that
 	// is being inject using the url encoded in that request.
 	//
-
-
 
 	// url can be on the stack since httpserver.cpp makes an http mime
 	// from this url
@@ -11889,18 +11907,29 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// . otherwise, if classify is false empty json will be returned
 	//   if there is no json objects of the specified page type, "api"
 	// . BUT if api is "all" return all types of json objects
-	// . TODO: add "all" to the drop down list
-	if ( strcmp(m_cr->m_diffbotApi.getBufStart(),"all") == 0 )
-		diffbotUrl.safePrintf("analyze?mode=auto&" );
 	// . SHOULD we return "type" in the json output?
-	else if ( m_cr->m_diffbotClassify )
-		diffbotUrl.safePrintf("analyze?mode=%s&"
-				      , m_cr->m_diffbotApi.getBufStart() 
-				      );
-	else
-		diffbotUrl.safePrintf("%s?"
-				      , m_cr->m_diffbotApi.getBufStart()
-				      );
+	if ( *an == DBA_ALL )
+		diffbotUrl.safePrintf("analyze?mode=auto&" );
+	else if ( *an == DBA_ARTICLE_FORCE )
+		diffbotUrl.safePrintf("article?");
+	else if ( *an == DBA_ARTICLE_AUTO )
+		diffbotUrl.safePrintf("analyze?mode=article&");
+	else if ( *an == DBA_PRODUCT_FORCE )
+		diffbotUrl.safePrintf("product?");
+	else if ( *an == DBA_PRODUCT_AUTO )
+		diffbotUrl.safePrintf("analyze?mode=product&");
+	else if ( *an == DBA_IMAGE_FORCE )
+		diffbotUrl.safePrintf("image?");
+	else if ( *an == DBA_IMAGE_AUTO )
+		diffbotUrl.safePrintf("analyze?mode=image&");
+	else if ( *an == DBA_FRONTPAGE_FORCE )
+		diffbotUrl.safePrintf("frontpage?");
+	else if ( *an == DBA_FRONTPAGE_AUTO )
+		diffbotUrl.safePrintf("analyze?mode=frontpage&");
+	else {
+		log("build: unknown diffbot api num = %li. assuming all",*an );
+		diffbotUrl.safePrintf("analyze?mode=auto&" );
+	}
 
 	//diffbotUrl.safePrintf("http://54.212.86.74/api/%s?token=%s&u="
 	diffbotUrl.safePrintf("token=%s",m_cr->m_diffbotToken.getBufStart());
@@ -15760,7 +15789,7 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("urlfilternum=%li ",(long)m_urlFilterNum);
 
 
-	if ( m_useDiffbot )
+	if ( m_diffbotApiNumValid && m_diffbotApiNum != DBA_NONE )
 		sb.safePrintf("diffbotjsonobjects=%li ",
 			      (long)m_diffbotJSONCount);
 
@@ -17296,8 +17325,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		od->m_useTagdb    = false;
 		// do not use diffbot for old doc since we call
 		// od->nukeJSONObjects below()
-		od->m_useDiffbot  = false;
-		od->m_useDiffbotValid = true;
+		od->m_diffbotApiNumValid = true;
+		od->m_diffbotApiNum = DBA_NONE;
 		// if we are doing diffbot stuff, we are still indexing this
 		// page, so we need to get the old doc meta list
 		oldList = od->getMetaList ( true );
@@ -17309,7 +17338,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// have indexed in od's diffbot reply buffer because they all
 	// were indexed with their own docids in the "m_dx" code below. so
 	// just delete them and we'll re-add from this doc's diffbot reply.
-	if ( od && m_useDiffbot ) {
+	if ( od && od->m_diffbotJSONCount ) {
 		// this returns false if it blocks
 		long *status = od->nukeJSONObjects();
 		if ( ! status || status == (void *)-1) return (char *)status;
@@ -17605,6 +17634,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			return (char *)linkSiteHashes;
 	}
 
+	long *an = getDiffbotApiNum();
+	if ( ! *an || an == (void *)-1 ) return (char *)an;
+
 
 	// test json parser
 	//
@@ -17622,15 +17654,21 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// should be indexed as its own document.
 	//
 	///////////
-	if ( m_useDiffbot && ! m_isDiffbotJSONObject ) {
-		// get the reply of json objects from diffbot
-		SafeBuf *dbr = getDiffbotReply();
-		if ( ! dbr || dbr == (void *)-1 ) return (char *)dbr;
+
+	// . get the reply of json objects from diffbot
+	// . this will be empty if we are a json object!
+	// . will also be empty if not meant to be sent to diffbot
+	SafeBuf *dbr = getDiffbotReply();
+	if ( ! dbr || dbr == (void *)-1 ) return (char *)dbr;
+
+	//
+	// if we got a json object or two from diffbot, index them
+	// as their own child xmldocs.
+	// watch out for reply from diffbot of "-1" indicating error!
+	//
+	if ( dbr->length() > 3 ) {
 		// make sure diffbot reply is valid for sure
 		if ( ! m_diffbotReplyValid ) { char *xx=NULL;*xx=0; }
-		// if reply is empty, we have no json objects. or if reply
-		// is "-1"
-		if ( m_diffbotReply.length() <= 3 ) goto bustOut;
 		// new guy here
 		if ( ! m_dx ) {
 			try { m_dx = new ( XmlDoc ); }
@@ -17740,7 +17778,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// if more json... this will not be \0
 		if ( *m_diffbotObj ) goto jsonloop;
 	}
- bustOut:
+
 	/////
 	//
 	// END the diffbot json object index hack

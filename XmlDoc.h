@@ -64,6 +64,7 @@
 #include "Spider.h" // SpiderRequest/SpiderReply definitions
 #include "HttpMime.h" // ET_DEFLAT
 #include "Msg1.h"
+#include "Diffbot.h" // DBA_NONE
 
 //#define XMLDOC_MAX_AD_IDS 4
 //#define XMLDOC_ADLEN      64
@@ -773,6 +774,7 @@ class XmlDoc {
 	char *getIsCompromised ( ) ;
 	char *getIsNoArchive ( ) ;
 	long *getUrlFilterNum();
+	long *getDiffbotApiNum();
 	long long **getAdVector ( ) ;
 	char *getIsLinkSpam ( ) ;
 	char *getIsHijacked();
@@ -1248,7 +1250,8 @@ class XmlDoc {
 	bool m_diffbotUrlCrawlPatternMatchValid;
 	bool m_diffbotUrlProcessPatternMatchValid;
 	bool m_diffbotPageProcessPatternMatchValid;
-	bool m_useDiffbotValid;
+	//bool m_useDiffbotValid;
+	bool m_diffbotApiNumValid;
 	bool m_crawlInfoValid;
 	bool m_isPageParserValid;
 	bool m_imageUrlValid;
@@ -1506,7 +1509,8 @@ class XmlDoc {
 	bool m_diffbotUrlCrawlPatternMatch;
 	bool m_diffbotUrlProcessPatternMatch;
 	bool m_diffbotPageProcessPatternMatch;
-	bool m_useDiffbot;
+	long m_diffbotApiNum;
+	//bool m_useDiffbot;
 
 	SafeBuf *getDiffbotReply ( ) ;
 	bool doesUrlMatchDiffbotCrawlPattern() ;

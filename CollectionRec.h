@@ -386,15 +386,15 @@ class CollectionRec {
 
 	// new diffbot parms
 	SafeBuf m_diffbotToken;
-	SafeBuf m_diffbotSeed;
+	//SafeBuf m_diffbotSeed;
 	// this will be NULL or "none" to not pass off to diffbot
-	SafeBuf m_diffbotApi;
+	//SafeBuf m_diffbotApi;
 	SafeBuf m_diffbotApiQueryString;
-	SafeBuf m_diffbotUrlCrawlPattern;
-	SafeBuf m_diffbotUrlProcessPattern;
-	SafeBuf m_diffbotPageProcessPattern;
+	//SafeBuf m_diffbotUrlCrawlPattern;
+	//SafeBuf m_diffbotUrlProcessPattern;
+	//SafeBuf m_diffbotPageProcessPattern;
 	//SafeBuf m_diffbotClassify;
-	char m_diffbotClassify;
+	//char m_diffbotClassify;
 	//char m_useDiffbot;
 	char m_isCustomCrawl;
 	//char m_isDiffbotCollection;
@@ -462,7 +462,7 @@ class CollectionRec {
 	// should urls in this queue be sent to diffbot for processing
 	// when we are trying to index them?
 	long      m_numRegExs11;
-	char      m_spiderSendToDiffbot [ MAX_FILTERS ];
+	char      m_spiderDiffbotApiNum [ MAX_FILTERS ];
 
 	// dummy?
 	long      m_numRegExs9;

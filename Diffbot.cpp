@@ -32,6 +32,25 @@ CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
 //void printCrawlStatsWrapper ( void *state ) ;
 CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) ;
 
+
+char *g_diffbotFields [] = {
+	"None",
+	"All", // /api/analyze?mode=auto
+	"Article (force)", // /api/article
+	"Article (autodetect)", // /api/analyze?mode=article
+	"Product (force)",
+	"Product (autodetect)",
+	"Image (force)",
+	"Image (autodetect)",
+	"FrontPage (force)",
+	"FrontPage (autodetect)",
+
+	//
+	// last field must be empty. add new fields above this.
+	//
+	NULL
+};
+
 /*
 class StateNC {
 public:
@@ -1582,6 +1601,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	char *resetColl = hr->getString("resetcoll",NULL,NULL);
 	if ( resetColl )
 		g_collectiondb.resetColl ( resetColl );
+		
 
 
 	// set this to current collection. if only token was provided
@@ -1589,6 +1609,10 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	// if token has no collections it will be NULL.
 	if ( ! cr ) 
 		cr = getCollRecFromHttpRequest ( hr );
+
+	// if you reset from crawlbot api page then enable spiders
+	if ( resetColl && cr )
+		cr->m_spideringEnabled = 1;
 
 	// if no collection, then it is the first time or this token
 	// so automatically add one for them
@@ -1675,11 +1699,11 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	if ( maxToCrawl != -1 ) cr->m_diffbotMaxToCrawl = maxToCrawl;
 	if ( maxToProcess != -1 ) cr->m_diffbotMaxToProcess = maxToProcess;
 
-	char *api = hr->getString("diffbotapi",NULL,NULL);
-	if ( api ) {
-		cr->m_diffbotApi.set(api);
-		cr->m_diffbotApi.nullTerm();
-	}
+	//char *api = hr->getString("diffbotapi",NULL,NULL);
+	//if ( api ) {
+	//	cr->m_diffbotApi.set(api);
+	//	cr->m_diffbotApi.nullTerm();
+	//}
 
 
 	#define FMT_HTML 1
@@ -2487,7 +2511,7 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 		cr->m_spiderIpMaxSpiders[i] = 10;
 		cr->m_spidersEnabled    [i] = 1;
 		cr->m_spiderFreqs       [i] = 7.0;
-		cr->m_spiderSendToDiffbot[i] = 0;
+		cr->m_spiderDiffbotApiNum[i] = 0;
 	}
 
 

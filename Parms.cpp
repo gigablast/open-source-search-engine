@@ -1047,24 +1047,12 @@ char *printDropDown ( long n , char *p, char *pend, char *name, long select,
 
 bool printDiffbotDropDown ( long n , SafeBuf *sb , char *name , long select ) {
 	sb->safePrintf ( "<select name=%s>", name );
-	// add new fields to END of list since i think we store the
-	// field we use as a number in the coll.conf, starting at 0
-	char *fields[] = {
-		"None",
-		"All", // /api/analyze?mode=auto
-		"Article (force)", // /api/article
-		"Article (autodetect)", // /api/analyze?mode=article
-		"Product (force)",
-		"Product (autodetect)",
-		"Image (force)",
-		"Image (autodetect)",
-		"FrontPage (force)",
-		"FrontPage (autodetect)"
-	};
-	for ( long i = 0 ; i < (long)sizeof(fields)/(long)sizeof(char *) ; i++ ) {
+	for ( long i = 0 ; i < 100 ; i++ ) {
 		char *s = "";
+		char *field = g_diffbotFields[i];
+		if ( ! field || field[0] == '\0' ) break;
 		if ( i == select ) s = " selected";
-		sb->safePrintf ("<option value=%li%s>%s",i,s,fields[i]);
+		sb->safePrintf ("<option value=%li%s>%s",i,s,field);
 	}
 	sb->safePrintf ( "</select>" );
 	return true;
@@ -2961,13 +2949,13 @@ void Parms::setToDefault ( char *THIS ) {
 	// init if we should
 	init();
 
-	// . clear out any coll rec to get the sendToDiffbot checkboxes
+	// . clear out any coll rec to get the diffbotApiNum dropdowns
 	// . this is a backwards-compatibility hack since this new parm
 	//   will not be in old coll.conf files and will not be properly
 	//   initialize when displaying a url filter row.
 	if ( THIS != (char *)&g_conf ) {
 		CollectionRec *cr = (CollectionRec *)THIS;
-		memset ( cr->m_spiderSendToDiffbot , 0 , MAX_FILTERS);
+		memset ( cr->m_spiderDiffbotApiNum , 0 , MAX_FILTERS);
 	}
 
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
@@ -7954,6 +7942,7 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
+	/*
 	m->m_cgi   = "dbseed";
 	m->m_xml   = "diffbotSeed";
 	m->m_off   = (char *)&cr.m_diffbotSeed - x;
@@ -7970,6 +7959,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
 	m++;
+	*/
 
 	m->m_cgi   = "dbapiqs";
 	m->m_xml   = "diffbotApiQueryString";
@@ -7979,6 +7969,7 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
+	/*
 	m->m_cgi   = "dbucp";
 	m->m_xml   = "diffbotUrlCrawlPattern";
 	m->m_off   = (char *)&cr.m_diffbotUrlCrawlPattern - x;
@@ -8010,6 +8001,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "0";
 	m++;
+	*/
 
 	//m->m_xml   = "useDiffbot";
 	//m->m_off   = (char *)&cr.m_useDiffbot - x;
@@ -12561,7 +12553,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "dapi";
 	m->m_xml   = "diffbotAPI";
 	m->m_max   = MAX_FILTERS;
-	m->m_off   = (char *)cr.m_spiderSendToDiffbot - x;
+	m->m_off   = (char *)cr.m_spiderDiffbotApiNum - x;
 	m->m_type  = TYPE_DIFFBOT_DROPDOWN;
 	m->m_def   = "0";
 	m->m_page  = PAGE_FILTERS;
