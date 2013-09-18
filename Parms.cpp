@@ -2618,6 +2618,9 @@ void Parms::insertParm ( long i , long an ,  char *THIS ) {
 	long size = ( num - an ) * m->m_size ;
 	// move them
 	memmove ( dst , src , size );
+	// if the src was a TYPE_SAFEBUF clear it so we don't end up doing
+	// a double free, etc.!
+	memset ( src , 0 , m->m_size );
 	// inc the count
 	*(long *)(pos-4) = (*(long *)(pos-4)) + 1;
 	// put the defaults in the inserted line
@@ -2640,6 +2643,12 @@ void Parms::removeParm ( long i , long an , char *THIS ) {
 	}
 	// point to the element being removed
 	char *dst = pos + m->m_size * an;
+	// free memory pointed to by safebuf, if we are safebuf, before
+	// overwriting it... prevents a memory leak
+	if ( m->m_type == TYPE_SAFEBUF ) {
+		SafeBuf *dx = (SafeBuf *)dst;
+		dx->purge();
+	}
 	// then point to the good stuf
 	char *src = pos + m->m_size * (an+1);
 	// how much to bury it with
