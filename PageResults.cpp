@@ -1386,6 +1386,8 @@ bool gotResults ( void *state ) {
 		args.safePrintf("&sb=1");
 	if ( ! si->m_showBanned && si->m_isAdmin )
 		args.safePrintf("&sb=0");
+	// collection
+	args.safePrintf("&c=%s",coll);
 	// carry over the sites we are restricting the search results to
 	if ( si->m_whiteListBuf.length() )
 		args.safePrintf("&sites=%s",si->m_whiteListBuf.getBufStart());
