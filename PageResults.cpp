@@ -274,6 +274,12 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			sb.safePrintf("&sites=");
 			sb.urlEncode ( sites,true);
 		}
+		// propagate "prepend"
+		char *prepend = hr->getString("prepend",NULL);
+		if ( prepend ) {
+			sb.safePrintf("&prepend=");
+			sb.urlEncode(prepend);
+		}
 		// propagate "debug" if set
 		long debug = hr->getLong("debug",0);
 		if ( debug ) sb.safePrintf("&debug=%li",debug);

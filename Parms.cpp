@@ -14736,6 +14736,19 @@ void Parms::init ( ) {
 	m->m_scgi  = "gblang";
 	m++;
 
+	// prepend to query
+	/*
+	m->m_title = "prepend";
+	m->m_desc  = "prepend this to the supplied query";
+	m->m_sparm = 1;
+	m->m_soff  = (char *)&si.m_queryPrepend - y;
+	m->m_type  = TYPE_STRING;
+	m->m_size  = 40;
+	m->m_def   = NULL;
+	m->m_scgi  = "prepend";
+	m++;
+	*/
+
 	m->m_title = "GB Country";
 	m->m_desc  = "Country code to restrict search";
 	m->m_sparm = 1;

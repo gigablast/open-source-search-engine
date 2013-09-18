@@ -21018,7 +21018,19 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// hash diffbot's json output here
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;
-	if ( *ct == CT_JSON ) return hashJSON ( table ); 
+	if ( *ct == CT_JSON ) {
+		// hash the content type for type:json query
+		if ( ! hashContentType   ( table ) ) return NULL;
+		// and the url: query support
+		if ( ! hashUrl           ( table ) ) return NULL;
+		// language support
+		if ( ! hashLanguage      ( table ) ) return NULL;
+		// country?
+		if ( ! hashCountry       ( table ) ) return NULL;
+		if ( ! hashTagRec        ( table ) ) return NULL;
+		// and the json itself
+		return hashJSON ( table ); 
+	}
 
 
 	// hash the body of the doc first so m_dist is 0 to match
@@ -21308,8 +21320,8 @@ bool XmlDoc::hashContentType ( HashTableX *tt ) {
 	case CT_XLS : s = "xls" ; break;
 	case CT_PPT : s = "ppt" ; break;
 	case CT_PS  : s = "ps"  ; break;
-		// for diffbot. so we can limit search to json objects
-		// in Diffbot.cpp
+	// for diffbot. so we can limit search to json objects
+	// in Diffbot.cpp
 	case CT_JSON: s = "json"  ; break;
 	}
 	// bail if unrecognized content type

@@ -55,7 +55,7 @@ class SearchInput {
 	// private
 	void setTopicGroups  ( class HttpRequest *r , 
 			       class CollectionRec *cr ) ;
-	bool setQueryBuffers ( ) ;
+	bool setQueryBuffers ( class HttpRequest *hr ) ;
 
 	void setToDefaults ( class CollectionRec *cr , long niceness ) ;
 
@@ -187,6 +187,8 @@ class SearchInput {
 	long   m_displayOutlinks;
 	char   m_displayTermFreqs;
 	char   m_justMarkClusterLevels;
+
+	//char   m_queryPrepend[41];
 
 	// for selecting a language
 	//long   m_languageCodeLen;
