@@ -2018,6 +2018,8 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		      "<input type=text name=q size=50>"
 		      "<input type=hidden name=c value=\"%s\">"
 		      "<input type=hidden name=rand value=%lli>"
+		      // restrict search to NON json objects
+		      "<input type=hidden name=prepend value=\"-type:json |\">"
 		      " "
 		      "<input type=submit name=submit value=OK>"
 		      "</tr>"
