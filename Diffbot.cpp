@@ -1749,13 +1749,16 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 	sb.safePrintf("</td></tr>\n" );
 	// the table headers so SpiderRequest::printToTable() works
-	if ( ! SpiderRequest::printTableHeaderSimple(&sb,true ) ) return false;
+	if ( ! SpiderRequest::printTableHeaderSimple(&sb,true) ) 
+		return false;
 	// shortcut
 	XmlDoc **docs = g_spiderLoop.m_docs;
 	// first print the spider recs we are spidering
 	for ( long i = 0 ; i < (long)MAX_SPIDERS ; i++ ) {
 		// get it
 		XmlDoc *xd = docs[i];
+		// skip if not our coll rec!
+		if ( xd->m_cr != cr ) continue;
 		// skip if empty
 		if ( ! xd ) continue;
 		// sanity check
