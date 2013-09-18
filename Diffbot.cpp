@@ -2533,7 +2533,7 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 	// the crawl limited to the same subdomain of the seed url
 	//if ( cr->m_diffbotUrlCrawlPattern.length() == 0 ) {
 	// first limit to http://subdomain
-	cr->m_regExs[i].safePrintf("isonsite");//^http://");
+	cr->m_regExs[i].safePrintf("isonsamedomain");//^http://");
 	//cr->m_regExs[i].safeMemcpy(norm.getHost(),norm.getHostLen());
 	//cr->m_regExs[i].pushChar('/');
 	cr->m_regExs[i].nullTerm();

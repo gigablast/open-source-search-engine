@@ -6998,7 +6998,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
-		if ( strncmp ( p , "isonsite",6 ) == 0 ) {
+		if ( strncmp ( p , "isonsamesubdomain",17 ) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			if ( val == 0 &&
@@ -7006,6 +7006,22 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 				continue;
 			if ( val == 1 &&
 			     sreq->m_parentHostHash32 != sreq->m_hostHash32 ) 
+				continue;
+			p += 6;
+			p = strstr(p, "&&");
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
+		if ( strncmp ( p , "isonsamedomain",14 ) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			if ( val == 0 &&
+			     sreq->m_parentDomHash32 != sreq->m_domHash32 ) 
+				continue;
+			if ( val == 1 &&
+			     sreq->m_parentDomHash32 != sreq->m_domHash32 ) 
 				continue;
 			p += 6;
 			p = strstr(p, "&&");

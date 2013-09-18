@@ -914,10 +914,21 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "<i>foo.somesite.com</i> would NOT match."
 			  "</td></tr>"
 
-			  "<tr><td>isonsite | !isonsite</td>"
+			  "<tr><td>issamedomain | !isonsamedomain</td>"
 			  "<td>"
 			  "This is true if the url is from the same "
-			  "subdomain as the page from which it was "
+			  "DOMAIN as the page from which it was "
+			  "harvested."
+			  //"Only effective for links being added from a page "
+			  //"being spidered, because this information is "
+			  //"not preserved in the titleRec."
+			  "</td></tr>"
+
+
+			  "<tr><td>issamesubdomain | !isonsamesubdomain</td>"
+			  "<td>"
+			  "This is true if the url is from the same "
+			  "SUBDOMAIN as the page from which it was "
 			  "harvested."
 			  //"Only effective for links being added from a page "
 			  //"being spidered, because this information is "

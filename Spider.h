@@ -41,8 +41,9 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 // in Rdb.cpp we call addSpiderRequest() or addSpiderReply(). then
 // that rec might be added to the waiting tree. the waiting tree
 // is scanned for IPs that have a SpiderRequest whose spiderTime is
-// <= now and we grab ONE from spiderdb and add to doledb. we try to
-// store every IP (firstIp) we have in Spiderdb into the waiting tree,
+// <= now. We get an IP from waiting tree and get its corresponding
+// SpiderRequest from spiderdb. we then add the SpiderRequest to doledb. we try
+// to store every IP (firstIp) we have in Spiderdb into the waiting tree,
 // but the IP is also paired up with a spider priority representing a
 // SpiderRequest in that priority from that IP. then the entries in
 // waiting tree are sorted by scheduled spider time. waiting tree does not
