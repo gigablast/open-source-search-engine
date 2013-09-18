@@ -6643,6 +6643,9 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 	//if ( bad ) 
 	//	log("hey");
 
+	char *ext;
+	char *special;
+
 	// CONSIDER COMPILING FOR SPEED:
 	// 1) each command can be combined into a bitmask on the spiderRequest
 	//    bits, or an access to m_siteNumInlinks, or a substring match
@@ -7005,6 +7008,78 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			     sreq->m_parentHostHash32 != sreq->m_hostHash32 ) 
 				continue;
 			p += 6;
+			p = strstr(p, "&&");
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
+		// jpg JPG gif GIF wmv mpg css etc.
+		if ( strncmp ( p , "ismedia",7 ) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// check the extension
+			if ( urlLen<=5 ) continue;
+			ext = url - 4;
+			if ( ext[0] == '.' ) {
+				if ( to_lower_a(ext[1]) == 'c' &&
+				     to_lower_a(ext[2]) == 's' &&
+				     to_lower_a(ext[3]) == 's' )
+					goto gotOne;
+				if ( to_lower_a(ext[1]) == 'm' &&
+				     to_lower_a(ext[2]) == 'p' &&
+				     to_lower_a(ext[3]) == 'g' )
+					goto gotOne;
+				if ( to_lower_a(ext[1]) == 'w' &&
+				     to_lower_a(ext[2]) == 'm' &&
+				     to_lower_a(ext[3]) == 'v' )
+					goto gotOne;
+				if ( to_lower_a(ext[1]) == 'j' &&
+				     to_lower_a(ext[2]) == 'p' &&
+				     to_lower_a(ext[3]) == 'g' )
+					goto gotOne;
+				if ( to_lower_a(ext[1]) == 'g' &&
+				     to_lower_a(ext[2]) == 'i' &&
+				     to_lower_a(ext[3]) == 'f' )
+					goto gotOne;
+				if ( to_lower_a(ext[1]) == 'i' &&
+				     to_lower_a(ext[2]) == 'c' &&
+				     to_lower_a(ext[3]) == 'o' )
+					goto gotOne;
+				if ( to_lower_a(ext[1]) == 'm' &&
+				     to_lower_a(ext[2]) == 'p' &&
+				     to_lower_a(ext[3]) == '3' )
+					goto gotOne;
+				if ( to_lower_a(ext[1]) == 'm' &&
+				     to_lower_a(ext[2]) == 'p' &&
+				     to_lower_a(ext[3]) == '4' )
+					goto gotOne;
+				if ( to_lower_a(ext[1]) == 'a' &&
+				     to_lower_a(ext[2]) == 'v' &&
+				     to_lower_a(ext[3]) == 'i' )
+					goto gotOne;
+			}
+			else if ( ext[-1] == '.' ) {
+				if ( to_lower_a(ext[0]) == 'm' &&
+				     to_lower_a(ext[1]) == 'p' &&
+				     to_lower_a(ext[2]) == 'e' &&
+				     to_lower_a(ext[3]) == 'g' )
+					goto gotOne;
+				if ( to_lower_a(ext[0]) == 'j' &&
+				     to_lower_a(ext[1]) == 'p' &&
+				     to_lower_a(ext[2]) == 'e' &&
+				     to_lower_a(ext[3]) == 'g' )
+					goto gotOne;
+			}
+			// check for ".css?" substring
+			special = strstr(url,".css?");
+			if ( special ) goto gotOne;
+			special = strstr(url,"/print/");
+			if ( special ) goto gotOne;
+			// no match, try the next rule
+			continue;
+		gotOne:
+			p += 7;
 			p = strstr(p, "&&");
 			if ( ! p ) return i;
 			p += 2;

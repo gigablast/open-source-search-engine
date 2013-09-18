@@ -869,6 +869,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  //"not preserved in the titleRec."
 			  "</td></tr>"
 
+			  "<tr><td>ismedia</td>"
+			  "<td>"
+			  "<b>Does the url have a media or css related "
+			  "extension. Like gif, jpg, mpeg, css, etc. "
+			  "</td></tr>"
+
+
 			  "</td></tr></table><br><br>\n",
 			  LIGHT_BLUE , DARK_BLUE );
 
