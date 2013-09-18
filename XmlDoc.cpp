@@ -20297,6 +20297,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashTagRec        ( table ) ) return NULL;
 	if ( ! hashAds           ( table ) ) return NULL;
 	if ( ! hashSubmitUrls    ( table ) ) return NULL;
+	if ( ! hashIsAdult       ( table ) ) return NULL;
 
 	// hash sectionhash:xxxx terms
 	if ( ! hashSections   ( table ) ) return NULL;
@@ -22132,6 +22133,34 @@ Url *XmlDoc::getBaseUrl ( ) {
 	}
 	m_baseUrlValid = true;
 	return &m_baseUrl;
+}
+
+// returns false and sets g_errno on error
+bool XmlDoc::hashIsAdult ( HashTableX *tt ) {
+
+	setStatus ("hashing isadult");
+
+	char *ia = getIsAdult();
+	// this should not block or return error! should have been
+	// set in prepareToMakeTitleRec() before hashAll() was called!
+	if ( ! ia || ia == (void *)-1 ) {char *xx=NULL;*xx=0; }
+
+	// index gbisadult:1 if adult or gbisadult:0 if not
+	char *val;
+	if ( *ia ) val = "1";
+	else       val = "0";
+
+	// update hash parms
+	HashInfo hi;
+	hi.m_tt        = tt;
+	hi.m_hashGroup = HASHGROUP_INTAG;
+	hi.m_prefix    = "gbisadult";
+	hi.m_desc      = "is document adult content";
+
+	// this returns false on failure
+	if ( ! hashString ( val,1,&hi ) ) return false;
+
+	return true;
 }
 
 

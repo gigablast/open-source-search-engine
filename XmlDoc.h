@@ -720,6 +720,8 @@ class XmlDoc {
 	bool hashAds(class HashTableX *table ) ;
 	class Url *getBaseUrl ( ) ;
 	bool hashSubmitUrls ( class HashTableX *table ) ;
+	bool hashIsAdult    ( class HashTableX *table ) ;
+
 	void set20 ( Msg20Request *req ) ;
 	class Msg20Reply *getMsg20Reply ( ) ;
 	char **getImageUrl() ;
