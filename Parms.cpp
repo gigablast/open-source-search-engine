@@ -487,8 +487,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			WebPage *page = g_pages.getPage(p);
 			sb->safePrintf (
 				  "<tr>"
-				  "<td> <font size=2>%s</font></td>"
-				  "<td><font size=2>%s</font></td></tr>\n",
+				  "<td> <font size=-1>%s</font></td>"
+				  "<td><font size=-1>%s</font></td></tr>\n",
 				  page->m_filename , page->m_desc );
 		}
 		sb->safePrintf (  "</table>\n");
@@ -580,7 +580,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "bgcolor=#%s>"
 			  "<tr><td colspan=2 bgcolor=%s><center>"
 			  "<b>"
-			  "Commonly Used Expressions</b>"
+			  "Supported URL Expressions</b>"
 			  "</td></tr>"
 
 			  "<tr><td>default</td>"
@@ -639,16 +639,16 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "outlinks have a hop count of 1, and the outlinks "
 			  "of those outlinks a hop count of 2, etc."
 
-			  "<tr><td>isrss</td>"
+			  "<tr><td>isrss | !isrss</td>"
 			  "<td>Matches if document is an rss feed. "
 			  "When harvesting outlinks we <i>guess</i> if they "
 			  "are an rss feed by seeing if their file extension "
 			  "is xml, rss or rdf. Or if they are in an "
 			  "alternative link tag.</td></tr>"
 
-			  "<tr><td>!isrss</td>"
-			  "<td>Matches if document is NOT an rss feed."
-			  "</td></tr>"
+			  //"<tr><td>!isrss</td>"
+			  //"<td>Matches if document is NOT an rss feed."
+			  //"</td></tr>"
 
 			  "<tr><td>ispermalink | !ispermalink</td>"
 			  "<td>Matches if document is a permalink. "
@@ -660,6 +660,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  //"<td>Matches if document is NOT a permalink."
 			  //"</td></tr>"
 
+			  /*
 			  "<tr><td>outlink | !outlink</td>"
 			  "<td>"
 			  "<b>This is true if url being added to spiderdb "
@@ -669,16 +670,24 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "is often VERY useful to partition the Spiderdb "
 			  "records based on this criteria."
 			  "</td></tr>"
+			  */
 
-			  "<tr><td>newoutlink | !newoutlink</td>"
+			  "<tr><td><nobr>isnewoutlink | !isnewoutlink"
+			  "</nobr></td>"
 			  "<td>"
-			  "<b>This is a special expression in that "
-			  "it only applies to assigning spider priorities "
-			  "to outlinks we are harvesting on a page.</b> " 
-			  "Matches if url is a new outlink, which "
-			  "implies that the page must have been spidered "
-			  "at an earlier date so that we know that the "
-			  "outlink is indeed new.</td></tr>"
+			  "This is true since the outlink was not there "
+			  "the last time we spidered the page we harvested "
+			  "it from."
+			  "</td></tr>"
+
+			  "<tr><td>isnew | !isnew</td>"
+			  "<td>"
+			  "This is true if we have never tried to spider "
+			  "this url. If we have tried to spider it and "
+			  "received an error, like a timeout or something, "
+			  "then it will no longer match <i>isnew</i>."
+			  "</td></tr>"
+			  
 
 			  //"<tr><td>!newoutlink</td>"
 			  //"<td>Matches if document is NOT a new outlink."
@@ -692,7 +701,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "time that the document was last significantly "
 			  "modified. If this date is unknown then the age "
 			  "will be -1 and only match the expression "
-			  "<i>age==-1</i>."
+			  "<i>age==-1</i>. "
 			  "When harvesting links, we guess the publication "
 			  "date of the oulink by detecting dates contained "
 			  "in the url itself, which is popular among some "
@@ -702,14 +711,14 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 
 
-			  "<tr><td>isaddurl</td>"
+			  "<tr><td>isaddurl | !isaddurl</td>"
 			  "<td>"
 			  "This is true if the url was added from the add "
 			  "url interface. This replaces the add url priority "
 			  "parm."
 			  "</td></tr>"
 
-			  "<tr><td>isinjected</td>"
+			  "<tr><td>isinjected | !isinjected</td>"
 			  "<td>"
 			  "This is true if the url was directly "
 			  "injected from the "
@@ -726,15 +735,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</font></b>"
 			  "</td></tr>"
 
-			  "<tr><td>parentisrss | !parentisrss</td>"
+			  "<tr><td>isparentrss | !isparentrss</td>"
 			  "<td>"
-			  "<b>This is a special expression in that "
-			  "it only applies to assigning spider priorities "
-			  "to outlinks we are harvesting on a page.</b> " 
-			  "This is true if the url is being added as an "
-			  "outlink from an rss page. "
+			  "If a parent of the URL was an RSS page "
+			  "then this will be matched."
 			  "</td></tr>"
 
+			  /*
 			  "<tr><td>parentisnew | !parentisnew</td>"
 			  "<td>"
 			  "<b>Parent providing this outlink is not currently "
@@ -743,6 +750,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "it only applies to assigning spider priorities "
 			  "to outlinks we are harvesting on a page.</b>" 
 			  "</td></tr>"
+			  */
 
 			  "<tr><td>isindexed | !isindexed</td>"
 			  "<td>"
@@ -758,12 +766,43 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 			  "<tr><td>hastmperror</td>"
 			  "<td>"
-			  "This is true if the last spider attempty resulted "
+			  "This is true if the last spider attempt resulted "
 			  "in an error like EDNSTIMEDOUT or a similar error, "
 			  "usually indicative of a temporary internet "
 			  "failure, and should be retried soon."
 			  "</td></tr>"
 
+			  "<tr><td>percentchangedperday&lt=5</td>"
+			  "<td>"
+			  "Looks at how much a url's page content has changed "
+			  "between the last two times it was spidered, and "
+			  "divides that percentage by the number of days. "
+			  "So if a URL's last two downloads were 10 days "
+			  "apart and its page content changed 30%% then "
+			  "the <i>percentchangedperday</i> will be 3. "
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "</td></tr>"
+
+			  "<tr><td>sitenuminlinks&gt;20</td>"
+			  "<td>"
+			  "How many inlinks does the URL's site have? "
+			  "We only count non-spammy inlinks, and at most only "
+			  "one inlink per IP address C-Class is counted "
+			  "so that a webmaster who owns an entire C-Class "
+			  "of IP addresses will only have his inlinks counted "
+			  "once."
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "</td></tr>"
+
+			  "<tr><td>httpstatus==404</td>"
+			  "<td>"
+			  "For matching the URL based on the http status "
+			  "of its last download. Does not apply to URLs "
+			  "that have not yet been successfully downloaded."
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "</td></tr>"
+
+			  /*
 			  "<tr><td>priority==30</td>"
 			  "<td>"
 			  "<b>If the current priority of the url is 30, then "
@@ -804,6 +843,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "us from having to spider all the blogspot.com "
 			  "subdomains a couple times a day each."
 			  "</td></tr>"
+			  */
 
 			  //"NOTE: Until we get the link info to get the doc "
 			  //"quality before calling msg8 in Msg16.cpp, we "
@@ -838,6 +878,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "See table below for supported language "
 			  "abbreviations.</td></tr>"
 
+			  /*
 			  "<tr><td>link:gigablast</td>"
 			  "<td>Matches if the document links to gigablast."
 			  "</td></tr>"
@@ -860,30 +901,29 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "Other sitetypes include: "
 			  "..."
 			  "</td></tr>"
+			  */
 
-			  "<tr><td>iswww</td>"
+			  "<tr><td>iswww | !iswww</td>"
 			  "<td>Matches if the url's hostname is www or domain "
 			  "only. For example: <i>www.xyz.com</i> would match, "
 			  "and so would <i>abc.com</i>, but "
 			  "<i>foo.somesite.com</i> would NOT match."
 			  "</td></tr>"
 
-			  "<tr><td>isonsite</td>"
+			  "<tr><td>isonsite | !isonsite</td>"
 			  "<td>"
-			  "<b>This is a special expression in that "
-			  "it only applies to assigning spider priorities "
-			  "to outlinks we are harvesting on a page.</b> "
-			  "Matches if the url's parent's <b>subdomain</b> "
-			  "is the same as the url in question. "
+			  "This is true if the url is from the same "
+			  "subdomain as the page from which it was "
+			  "harvested."
 			  //"Only effective for links being added from a page "
 			  //"being spidered, because this information is "
 			  //"not preserved in the titleRec."
 			  "</td></tr>"
 
-			  "<tr><td>ismedia</td>"
+			  "<tr><td>ismedia | !ismedia</td>"
 			  "<td>"
-			  "<b>Does the url have a media or css related "
-			  "extension. Like gif, jpg, mpeg, css, etc. "
+			  "Does the url have a media or css related "
+			  "extension. Like gif, jpg, mpeg, css, etc.? "
 			  "</td></tr>"
 
 
@@ -897,7 +937,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "bgcolor=#%s>"
 			  "<tr><td colspan=2 bgcolor=%s><center>"
 			  "<b>"
-			  "Language Abbreviations for lang= Filter</b>"
+			  "Supported Language Abbreviations "
+			  "for lang== Filter</b>"
 			  "</td></tr>",
 			  LIGHT_BLUE , DARK_BLUE );
 		for ( long i = 0 ; i < 256 ; i++ ) {
@@ -1280,7 +1321,7 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 				  "</b>"
 				  //"</font>"
 				  "</td></tr>\n"
-				  "<tr><td colspan=20><font size=1>"
+				  "<tr><td colspan=20><font size=-1>"
 				  "%s</font></td></tr>\n",
 				  DARK_BLUE,m->m_title,m->m_desc );
 		}
@@ -1820,7 +1861,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( j == firstRow && m->m_rowid >= 0 && firstInRow && m->m_hdrs ) {
 		// print description as big comment
 		if ( m->m_desc && pd == 1 ) {
-			sb->safePrintf ( "<td colspan=20><font size=1>\n" );
+			sb->safePrintf ( "<td colspan=20><font size=-1>\n" );
 
 			//p = htmlEncode ( p , pend , m->m_desc ,
 			//		 m->m_desc + gbstrlen ( m->m_desc ) );
@@ -1878,7 +1919,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ( "<tr bgcolor=%s>",bg);
 		if ( t == TYPE_STRINGBOX ) {
 			sb->safePrintf ( "<td colspan=2><center>"
-				  "<b>%s</b><br><font size=1>",m->m_title );
+				  "<b>%s</b><br><font size=-1>",m->m_title );
 			if ( pd ) 
 				status &= sb->htmlEncode (m->m_desc,
 							  gbstrlen(m->m_desc),
@@ -12303,17 +12344,26 @@ void Parms::init ( ) {
 		"first chains down this "
 		"list of "
 		"expressions</a>, "
-		"starting with expression #0.  This table is also consulted "
-		"for every outlink added to spiderdb. When it finds an "
+		"starting with expression #0.  "
+		//"This table is also consulted "
+		//"for every outlink added to spiderdb. "
+		"When it finds an "
 		"expression that "
 		"matches that URL, it assigns the corresponding "
-		"<a href=/overview.html#spiderfreq>"
-		"spider frequency</a>, "
-		"<a href=/overview.html#spiderpriority>"
-		"spider priority</a> to "
+		//"<a href=/overview.html#spiderfreq>"
+		"respider frequency, "
+		//"<a href=/overview.html#spiderpriority>"
+		"spider priority, etc. to "
 		//"and <a href=/overview.html#ruleset>ruleset</a> to "
-		"that URL. If no expression is matched, then the "
-		"<i>default</i> line is used. "
+		"that URL. "
+		"If no expression is matched, then the "
+		"<i><b>default</b></i> line is used. "
+		"URLs with high spider priorities take spidering "
+		"precedence over "
+		"URLs with lower spider priorities. "
+		"The respider frequency dictates how often a URL will "
+		"be respidered. "
+
 		"See the help table below for examples of all the supported "
 		"expressions.<br><br>";
 		
