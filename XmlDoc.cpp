@@ -17635,7 +17635,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	}
 
 	long *an = getDiffbotApiNum();
-	if ( ! *an || an == (void *)-1 ) return (char *)an;
+	if ( ! an || an == (void *)-1 ) return (char *)an;
 
 
 	// test json parser
