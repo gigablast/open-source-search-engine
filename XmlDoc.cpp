@@ -3149,7 +3149,7 @@ static Needle s_dirtyWords []  = {
 	{"blowjob"    ,0,2,0,0,NULL,0,NULL},
 	{"blow job"   ,0,2,0,0,NULL,0,NULL},
 	{"gangbang"   ,0,2,0,0,NULL,0,NULL},
-	{"xxx"        ,0,2,0,0,NULL,0,NULL},
+	{"xxx"        ,0,1,0,0,NULL,0,NULL}, // yahoo.com has class="fz-xxxl"
 	{"porn"       ,0,2,0,0,NULL,0,NULL},
 	{"felch"      ,0,2,0,0,NULL,0,NULL},
 	{"cunt"       ,0,2,0,0,NULL,0,NULL},
@@ -3211,6 +3211,7 @@ static Needle s_dirtyWords []  = {
 	{"sexclu"      ,0,-2,0,0,NULL,0,NULL},
 	{"sexo"        ,0,-2,0,0,NULL,0,NULL},
 	{"sexism"      ,0,-2,0,0,NULL,0,NULL},
+	{"sexpan"      ,0,-2,0,0,NULL,0,NULL}, // buttonsexpanion
 	{"same-sex"    ,0,-2,0,0,NULL,0,NULL},
 	{"opposite sex",0,-2,0,0,NULL,0,NULL},
 
@@ -3359,7 +3360,7 @@ char *XmlDoc::getIsAdult ( ) {
 
 	// score that up
 	long total = getDirtyPoints ( ptr_utf8Content, size_utf8Content - 1 ,
-				      m_niceness );
+				      m_niceness , m_firstUrl.m_url );
 
 	// then the url
 	//char *u = getFirstUrl()->getUrl();
@@ -3383,13 +3384,18 @@ char *XmlDoc::getIsAdult ( ) {
 	m_isAdult2 = (bool)m_isAdult;
 	// validate
 	m_isAdultValid = true;
+
+	// note it
+	if ( m_isAdult2 && g_conf.m_logDebugDirty )
+		log("dirty: %s points = %li",m_firstUrl.m_url,total);
+
 	// no dirty words found
 	return &m_isAdult2;
 }
 
 
 
-long getDirtyPoints ( char *s , long slen , long niceness ) {
+long getDirtyPoints ( char *s , long slen , long niceness , char *url ) {
 	// . use the matches function to get all the matches
 	// . then check each match to see if it is actually a legit word
 	// . actually match the dirty words, then match the clean words
@@ -3415,6 +3421,14 @@ long getDirtyPoints ( char *s , long slen , long niceness ) {
 		// . uses +2/-2 for really dirty words 
 		// . uses +1/-1 for borderline dirty words
 		points += s_dirtyWords[i].m_id;
+		// log debug
+		if ( ! g_conf.m_logDebugDirty ) continue;
+		// show it in the log
+		log("dirty: %s %li %s"
+		    ,s_dirtyWords[i].m_string
+		    ,(long)s_dirtyWords[i].m_id
+		    ,url
+		    );
 	}
 	return points;
 }
@@ -15845,6 +15859,8 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("oldpubdate=%s ",tmp );
 	}
 
+	if ( m_isAdultValid )
+		sb.safePrintf("isadult=%li ",(long)m_isAdult);
 
 	// only print if different now! good for grepping changes
 	if ( m_oldDocValid && m_oldDoc && 
@@ -21081,6 +21097,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashTagRec        ( table ) ) return NULL;
 	if ( ! hashAds           ( table ) ) return NULL;
 	if ( ! hashSubmitUrls    ( table ) ) return NULL;
+	if ( ! hashIsAdult       ( table ) ) return NULL;
 
 	// hash sectionhash:xxxx terms
 	if ( ! hashSections   ( table ) ) return NULL;
@@ -22919,6 +22936,34 @@ Url *XmlDoc::getBaseUrl ( ) {
 	}
 	m_baseUrlValid = true;
 	return &m_baseUrl;
+}
+
+// returns false and sets g_errno on error
+bool XmlDoc::hashIsAdult ( HashTableX *tt ) {
+
+	setStatus ("hashing isadult");
+
+	char *ia = getIsAdult();
+	// this should not block or return error! should have been
+	// set in prepareToMakeTitleRec() before hashAll() was called!
+	if ( ! ia || ia == (void *)-1 ) {char *xx=NULL;*xx=0; }
+
+	// index gbisadult:1 if adult or gbisadult:0 if not
+	char *val;
+	if ( *ia ) val = "1";
+	else       val = "0";
+
+	// update hash parms
+	HashInfo hi;
+	hi.m_tt        = tt;
+	hi.m_hashGroup = HASHGROUP_INTAG;
+	hi.m_prefix    = "gbisadult";
+	hi.m_desc      = "is document adult content";
+
+	// this returns false on failure
+	if ( ! hashString ( val,1,&hi ) ) return false;
+
+	return true;
 }
 
 

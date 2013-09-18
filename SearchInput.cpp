@@ -975,6 +975,11 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		m_sbuf1.safeMemcpy(m_site,m_siteLen);
 	}
 
+	if ( m_familyFilter ) {
+		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+		m_sbuf1.safePrintf("gbisadult:0 | ");
+	}
+
 	// append gblang: term
 	if( m_gblang > 0 ) {
 		//if( p > pstart ) *p++ =  ' ';

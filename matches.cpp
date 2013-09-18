@@ -232,6 +232,8 @@ char *getMatches2 ( Needle *needles          ,
 		QUICKPOLL(niceness);
 		//if ( (char *)p - (char *)haystack >= 12508 )
 		//	log("hey");
+		// analytics...
+		
 		// is this a possible match? (this should be VERY fast)
 		mask  = s0[*(p+0)];
 		if ( ! mask ) continue;
@@ -348,6 +350,9 @@ char *getMatches2 ( Needle *needles          ,
 			}
 			// otherwise, just count it
 			needles[j].m_count++;
+			// see if we match another needle, fixes bug
+			// of matching "anal" but not "analy[tics]"
+			continue;
 			// advance to next char in the haystack
 			break;
 		}

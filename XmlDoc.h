@@ -167,7 +167,7 @@ long intersectGigabits ( Msg20       **mp          ,   // search results
 			 class GigabitInfo  *top   ,
 			 long          niceness    ) ;
 
-long getDirtyPoints ( char *s , long len , long niceness ) ;
+long getDirtyPoints ( char *s , long len , long niceness , char *logUrl ) ;
 
 bool storeTerm ( char             *s        ,
                  long              slen     ,
@@ -757,6 +757,8 @@ class XmlDoc {
 	bool hashAds(class HashTableX *table ) ;
 	class Url *getBaseUrl ( ) ;
 	bool hashSubmitUrls ( class HashTableX *table ) ;
+	bool hashIsAdult    ( class HashTableX *table ) ;
+
 	void set20 ( Msg20Request *req ) ;
 	class Msg20Reply *getMsg20Reply ( ) ;
 	char **getImageUrl() ;
