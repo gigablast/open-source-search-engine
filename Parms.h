@@ -51,7 +51,8 @@ enum {
 	TYPE_MONOM2         ,
 	TYPE_LONG_CONST     ,
 	TYPE_SITERULE       , // 29
-	TYPE_SAFEBUF
+	TYPE_SAFEBUF        ,
+	TYPE_DIFFBOT_DROPDOWN
 };
 
 //forward decls to make compiler happy:

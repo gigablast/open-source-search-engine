@@ -222,6 +222,7 @@ unsigned long Parms::calcChecksum() {
 		if ( m->m_type == TYPE_BOOL2          ) size = 1;
 		if ( m->m_type == TYPE_PRIORITY       ) size = 1;
 		if ( m->m_type == TYPE_PRIORITY2      ) size = 1;
+		if ( m->m_type == TYPE_DIFFBOT_DROPDOWN) size = 1;
 		if ( m->m_type == TYPE_PRIORITY_BOXES ) size = 1;
 		if ( m->m_type == TYPE_RETRIES        ) size = 1;
 		if ( m->m_type == TYPE_TIME           ) size = 6;
@@ -998,6 +999,31 @@ char *printDropDown ( long n , char *p, char *pend, char *name, long select,
 	return p;
 }
 */
+
+bool printDiffbotDropDown ( long n , SafeBuf *sb , char *name , long select ) {
+	sb->safePrintf ( "<select name=%s>", name );
+	// add new fields to END of list since i think we store the
+	// field we use as a number in the coll.conf, starting at 0
+	char *fields[] = {
+		"None",
+		"All", // /api/analyze?mode=auto
+		"Article (force)", // /api/article
+		"Article (autodetect)", // /api/analyze?mode=article
+		"Product (force)",
+		"Product (autodetect)",
+		"Image (force)",
+		"Image (autodetect)",
+		"FrontPage (force)",
+		"FrontPage (autodetect)"
+	};
+	for ( long i = 0 ; i < (long)sizeof(fields)/(long)sizeof(char *) ; i++ ) {
+		char *s = "";
+		if ( i == select ) s = " selected";
+		sb->safePrintf ("<option value=%li%s>%s",i,s,fields[i]);
+	}
+	sb->safePrintf ( "</select>" );
+	return true;
+}
 
 bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 		     bool includeMinusOne ,
@@ -1962,6 +1988,8 @@ bool Parms::printParm ( SafeBuf* sb,
 	else if ( t == TYPE_PRIORITY2 )
 		printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s ,
 				true , true );
+	else if ( t == TYPE_DIFFBOT_DROPDOWN )
+		printDiffbotDropDown ( 8, sb , cgi , *s );
 	else if ( t == TYPE_RETRIES    ) 
 		printDropDown ( 4 , sb , cgi , *s , false , false );
 	else if ( t == TYPE_PRIORITY_BOXES ) {
@@ -2650,6 +2678,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		  t == TYPE_BOOL2          ||
 		  t == TYPE_PRIORITY       || 
 		  t == TYPE_PRIORITY2      || 
+		  t == TYPE_DIFFBOT_DROPDOWN ||
 		  t == TYPE_PRIORITY_BOXES || 
 		  t == TYPE_RETRIES        ||
 		  t == TYPE_FILTER           ) {
@@ -3469,6 +3498,7 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 	if ( t == TYPE_CHAR           || t == TYPE_BOOL           ||
 	     t == TYPE_CHECKBOX       ||
 	     t == TYPE_PRIORITY       || t == TYPE_PRIORITY2      || 
+	     t == TYPE_DIFFBOT_DROPDOWN ||
 	     t == TYPE_PRIORITY_BOXES || t == TYPE_RETRIES        ||
 	     t == TYPE_RETRIES        || t == TYPE_FILTER         ||
 	     t == TYPE_BOOL2          || t == TYPE_CHAR2           ) 
@@ -3568,6 +3598,7 @@ bool Parms::serialize( char *buf, long *bufSize ) {
 		if ( m->m_type == TYPE_BOOL2          ) size = 1;
 		if ( m->m_type == TYPE_PRIORITY       ) size = 1;
 		if ( m->m_type == TYPE_PRIORITY2      ) size = 1;
+		if ( m->m_type == TYPE_DIFFBOT_DROPDOWN) size = 1;
 		if ( m->m_type == TYPE_PRIORITY_BOXES ) size = 1;
 		if ( m->m_type == TYPE_RETRIES        ) size = 1;
 		if ( m->m_type == TYPE_TIME           ) size = 6;
@@ -12435,12 +12466,12 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
-	m->m_title = "send to diffbot";
-	m->m_cgi   = "stdb";
-	m->m_xml   = "spiderSendToDiffbot";
+	m->m_title = "diffbot api";
+	m->m_cgi   = "dapi";
+	m->m_xml   = "diffbotAPI";
 	m->m_max   = MAX_FILTERS;
 	m->m_off   = (char *)cr.m_spiderSendToDiffbot - x;
-	m->m_type  = TYPE_CHECKBOX;
+	m->m_type  = TYPE_DIFFBOT_DROPDOWN;
 	m->m_def   = "0";
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
@@ -15155,6 +15186,7 @@ void Parms::init ( ) {
 		if ( t == TYPE_CHECKBOX       ) size = 1;
 		if ( t == TYPE_PRIORITY       ) size = 1;
 		if ( t == TYPE_PRIORITY2      ) size = 1;
+		if ( t ==TYPE_DIFFBOT_DROPDOWN) size = 1;
 		if ( t == TYPE_PRIORITY_BOXES ) size = 1;
 		if ( t == TYPE_RETRIES        ) size = 1;
 		if ( t == TYPE_TIME           ) size = 6;

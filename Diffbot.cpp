@@ -1835,6 +1835,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      );
 
 		// what diffbot api to use?
+		/*
 		char *api = cr->m_diffbotApi.getBufStart();
 		char *s[10];
 		for ( long i = 0 ; i < 10 ; i++ ) s[i] = "";
@@ -1845,11 +1846,12 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		if ( api && strcmp(api,"frontpage") == 0 ) s[4] = " selected";
 		if ( api && strcmp(api,"none") == 0 ) s[5] = " selected";
 		if ( ! api || ! api[0] ) s[5] = " selected";
+		*/
 		sb.safePrintf( "<TD valign=top>"
 
 			      "<table cellpadding=5 border=0>"
+			       /*
 			      "<tr>"
-
 			      "<td>"
 			      "Diffbot API"
 			      "</td><td>"
@@ -1869,6 +1871,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      , s[3]
 			      , s[4]
 			      , s[5]
+			       */
 			      );
 
 		sb.safePrintf(
@@ -2120,6 +2123,8 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 		      "<div id=filters style=display:none;>"
 		      "<form method=get action=/crawlbot>"
+		      "<input type=hidden name=c value=\"%s\">"
+		      , cr->m_coll
 		      );
 
 	//////////
