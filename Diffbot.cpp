@@ -2177,8 +2177,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//
 
 
-	sb.safePrintf("<br>"
-
+	sb.safePrintf(
 		      "<table cellpadding=5>"
 		      "<tr>"
 

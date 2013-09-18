@@ -572,6 +572,10 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "Commonly Used Expressions</b>"
 			  "</td></tr>"
 
+			  "<tr><td>default</td>"
+			  "<td>Matches every url."
+			  "</td></tr>"
+
 			  "<tr><td>^http://whatever</td>"
 			  "<td>Matches if the url begins with this."
 			  "</td></tr>"
