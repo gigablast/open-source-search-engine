@@ -1740,12 +1740,12 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	for ( long i = 0 ; i < (long)MAX_SPIDERS ; i++ ) {
 		// get it
 		XmlDoc *xd = docs[i];
-		// skip if not our coll rec!
-		if ( xd->m_cr != cr ) continue;
 		// skip if empty
 		if ( ! xd ) continue;
 		// sanity check
 		if ( ! xd->m_oldsrValid ) { char *xx=NULL;*xx=0; }
+		// skip if not our coll rec!
+		if ( xd->m_cr != cr ) continue;
 		// grab it
 		SpiderRequest *oldsr = &xd->m_oldsr;
 		// get status

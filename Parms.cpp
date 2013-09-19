@@ -1083,7 +1083,8 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 		if ( i == select ) s = " selected";
 		else               s = "";
 		if      ( i == -3 ) 
-			sb->safePrintf ("<option value=%li%s>FILTERED",i,s);
+			//sb->safePrintf ("<option value=%li%s>FILTERED",i,s);
+			sb->safePrintf ("<option value=%li%s>IGNORED",i,s);
 		else if ( i == -2 ) 
 			sb->safePrintf ("<option value=%li%s>BANNED",i,s);
 		else if ( i == -1 ) 
@@ -12391,17 +12392,17 @@ void Parms::init ( ) {
 		"starting with expression #0.  "
 		//"This table is also consulted "
 		//"for every outlink added to spiderdb. "
-		"When it finds an "
-		"expression that "
-		"matches that URL, it assigns the corresponding "
+		"The first expression it matches is the ONE AND ONLY "
+		"matching row for that url. "
+		"It then uses the "
 		//"<a href=/overview.html#spiderfreq>"
 		"respider frequency, "
 		//"<a href=/overview.html#spiderpriority>"
-		"spider priority, etc. to "
+		"spider priority, etc. on the MATCHING ROW when spidering "
 		//"and <a href=/overview.html#ruleset>ruleset</a> to "
 		"that URL. "
-		"If no expression is matched, then the "
-		"<i><b>default</b></i> line is used. "
+		"The "
+		"<i><b>default</b></i> line MATCHES ALL URLs. "
 		"URLs with high spider priorities take spidering "
 		"precedence over "
 		"URLs with lower spider priorities. "
