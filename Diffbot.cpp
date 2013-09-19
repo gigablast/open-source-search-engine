@@ -1116,7 +1116,7 @@ void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb , char *format) {
 		if ( status ) time = prevReplyDownloadTime;
 
 		char *msg = "Successfully Crawled";
-		if ( status == 0 ) msg = "Uncrawled";
+		if ( status == 0 ) msg = "Unexamined";
 		if ( status == -1 ) msg = mstrerror(prevReplyError);
 
 		// "csv" is default if json not specified

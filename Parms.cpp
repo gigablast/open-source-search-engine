@@ -925,7 +925,9 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 
 
-			  "<tr><td>issamesubdomain | !isonsamesubdomain</td>"
+			  "<tr><td><nobr>"
+			  "issamesubdomain | !isonsamesubdomain"
+			  "</nobr></td>"
 			  "<td>"
 			  "This is true if the url is from the same "
 			  "SUBDOMAIN as the page from which it was "
@@ -1825,13 +1827,14 @@ bool Parms::printParm ( SafeBuf* sb,
 	// . if printing on crawlbot page hide these
 	// . we repeat this logic below when printing parm titles
 	//   for the column headers in the table
+	char *vt = "";
 	if ( isCrawlbot &&
 	     m->m_page == PAGE_FILTERS &&
 	     (strcmp(m->m_xml,"spidersEnabled") == 0 ||
 	      strcmp(m->m_xml,"maxSpidersPerRule")==0||
 	      strcmp(m->m_xml,"maxSpidersPerIp") == 0||
 	      strcmp(m->m_xml,"spiderIpWait") == 0 ) )
-		return true;
+		vt = " style=display:none;";
 
 	// what type of parameter?
 	char t = m->m_type;
@@ -1900,17 +1903,17 @@ bool Parms::printParm ( SafeBuf* sb,
 		      k<m_numParms && m_parms[k].m_rowid==m->m_rowid; k++ ) {
 			// parm shortcut
 			Parm *mk = &m_parms[k];
-			// . skip table column headers hidden parms
-			// . we repeat this logic above when skipping the
-			//   actual parms
+			// . hide table column headers that are too advanced
+			// . we repeat this logic above for the actual parms
+			char *vt = "";
 			if ( isCrawlbot &&
 			     m->m_page == PAGE_FILTERS &&
 			     (strcmp(mk->m_xml,"spidersEnabled") == 0 ||
 			      strcmp(mk->m_xml,"maxSpidersPerRule")==0||
 			      strcmp(mk->m_xml,"maxSpidersPerIp") == 0||
 			      strcmp(mk->m_xml,"spiderIpWait") == 0 ) )
-				continue;
-			sb->safePrintf ( "<td>" );
+				vt = " style=display:none;";
+			sb->safePrintf ( "<td>%s" , vt );
 			// if its of type checkbox in a table make it
 			// toggle them all on/off
 			if ( mk->m_type == TYPE_CHECKBOX &&
@@ -1958,9 +1961,11 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ( "</font><br>\n" );
 		}
 		else {
-			sb->safePrintf ( "<td width=%li%%>" //"<td width=78%%>"
+			// this td will be invisible if isCrawlbot and the
+			// parm is too advanced to display
+			sb->safePrintf ( "<td width=%li%%%s>"//"<td width=78%%>
 					 "<b>%s</b><br><font size=1>",
-					 3*100/nc/2/4,m->m_title );
+					 3*100/nc/2/4, vt, m->m_title );
 			if ( pd ) 
 				status &= sb->htmlEncode (m->m_desc,
 							  gbstrlen(m->m_desc),
