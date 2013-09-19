@@ -1203,20 +1203,8 @@ void StateCD::printTitledbList ( RdbList *list , SafeBuf *sb , char *format ) {
 		}
 
 		// skip if not a diffbot json url
-		char *url = xd.m_firstUrl.m_url;
-		long ulen = gbstrlen(url);
-		char *p = url + ulen - 1;
-		// must be digit like <url>-diffbot-%li
-		// if no digit at end it is not a diffbot json obj url
-		if ( ! is_digit ( *p ) ) 
-			continue;
-		// back up over digits
-		while ( p > url && is_digit(*p) ) p--;
-		// then "-diffbot-" (see XmlDoc.cpp for this appendage)
-		if ( p - 9 < url ) 
-			continue;
-		if ( strncmp(p-8,"-diffbot-",9) ) 
-			continue;
+		if ( ! xd.m_isDiffbotJSONObject ) continue;
+
 		// get the json content
 		char *json = xd.ptr_utf8Content;
 		
@@ -1517,11 +1505,6 @@ char *getNewCollName ( ) { // char *token , long tokenLen ) {
 	crawlId64 <<= 32;
 	crawlId64 |= r2;
 
-	// the name of the new collection we are creating for this crawl
-	// will be <tokenId>-<crawlId>. if it is a "test" crawl as
-	// specified as an option in the diffbot crawlbot api page,
-	// then make it <tokenId>-<crawlId>-test. Test crawls do not index,
-	// they only crawl.
 	static char s_collBuf[MAX_COLL_LEN+1];
 
 	//long tokenLen = gbstrlen(token);
@@ -1904,6 +1887,11 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		sb.safePrintf(
 			      //
 			      "<tr>"
+			      "<td><b>Token:</td>"
+			      "<td>%s</td>"
+			      "</tr>"
+
+			      "<tr>"
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
 			      "<a href=/crawlbot/downloadobjects?"
@@ -1997,6 +1985,8 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "</TABLE>"
 
 			      "</form>"
+
+			      , cr->m_diffbotToken.getBufStart()
 
 			      , cr->m_coll
 			      , cr->m_coll

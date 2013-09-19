@@ -16879,7 +16879,7 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 // . returns ptr to status
 // . diffbot uses this to remove the indexed json pages associated with
 //   a url. each json object is basically its own url. a json object
-//   url is the parent page's url with a -diffbot-%li appended to it
+//   url is the parent page's url with a -diffbotxyz-%li appended to it
 //   where %li is the object # starting at 0 and incrementing from there.
 // . XmlDoc::m_diffbotJSONCount is how many json objects the parent url had.
 long *XmlDoc::nukeJSONObjects ( ) {
@@ -16911,8 +16911,8 @@ long *XmlDoc::nukeJSONObjects ( ) {
 			// make the fake url for this json object for indexing
 			SafeBuf fakeUrl;
 			fakeUrl.set ( m_firstUrl.getUrl() );
-			// append -diffbot-0 etc. for fake url
-			fakeUrl.safePrintf("-diffbot-%li",m_joc);
+			// append -diffbot0 etc. for fake url
+			fakeUrl.safePrintf("-diffbotxyz%li",m_joc);
 			// set url of new xmldoc
 			if ( ! m_dx->set1 ( fakeUrl.getBufStart(),
 					    m_coll ,
@@ -17695,7 +17695,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			SafeBuf fakeUrl;
 			fakeUrl.set ( m_firstUrl.getUrl() );
 			// append -diffbot-0 etc. for fake url
-			fakeUrl.safePrintf("-diffbot-%li",
+			fakeUrl.safePrintf("-diffbotxyz%li",
 					   (long)m_diffbotJSONCount);
 			m_diffbotJSONCount++;
 			// this can go on the stack since set4() copies it
