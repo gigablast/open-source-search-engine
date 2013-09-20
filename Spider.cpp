@@ -3715,6 +3715,15 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( g_conf.m_logDebugSpider ) 
 		logf(LOG_DEBUG,"spider: trying to spider url %s",sreq->m_url);
 
+	// in milliseconds. ho wlong to wait between downloads from same IP.
+	// only for parnent urls, not including child docs like robots.txt
+	// iframe contents, etc.
+	long sameIpWaitTime = 250; // ms
+	if ( ufn >= 0 ) {
+		long siwt = m_sc->m_cr->m_spiderIpWaits[ufn];
+		if ( siwt >= 0 ) sameIpWaitTime = siwt;
+	}
+
 	// shortcut
 	char *coll = m_sc->m_cr->m_coll;
 	// . spider that. we don't care wheter it blocks or not
@@ -3726,7 +3735,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// . this returns true right away if it failed to get the lock...
 	//   which means the url is already locked by someone else...
 	// . it might also return true if we are already spidering the url
-	bool status = spiderUrl9 ( sreq , doledbKey , coll ) ;
+	bool status = spiderUrl9 ( sreq , doledbKey , coll , sameIpWaitTime ) ;
 
 	// just increment then i guess
 	m_list.skipCurrentRecord();
@@ -3773,7 +3782,10 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 // . returns false if blocked on a spider launch, otherwise true.
 // . returns false if your callback will be called
 // . returns true and sets g_errno on error
-bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq,key_t *doledbKey,char *coll){
+bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
+			      key_t *doledbKey ,
+			      char *coll ,
+			      long sameIpWaitTime ) {
 	// sanity check
 	//if ( ! sreq->m_doled ) { char *xx=NULL;*xx=0; }
 	// if waiting on a lock, wait
@@ -3911,6 +3923,9 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq,key_t *doledbKey,char *coll){
 	m_doledbKey = doledbKey;
 	m_coll      = coll;
 
+	// we store this in msg12 for making a fakedb key
+	collnum_t collnum = g_collectiondb.getCollnum ( coll );
+
 	// if we already have the lock then forget it. this can happen
 	// if spidering was turned off then back on.
 	// MDW: TODO: we can't do this anymore since we no longer have
@@ -3941,6 +3956,10 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq,key_t *doledbKey,char *coll){
 	//
 	if ( ! m_msg12.getLocks ( m_sreq->m_probDocId,//UrlHash48(),
 				  m_sreq->m_url ,
+				  m_doledbKey ,
+				  collnum,
+				  sameIpWaitTime,
+				  m_sreq->m_firstIp,
 				  NULL ,
 				  NULL ) ) 
 		return false;
@@ -4340,6 +4359,10 @@ void gotLockReplyWrapper ( void *state , UdpSlot *slot ) {
 // . that way if a host goes down is load is taken over
 bool Msg12::getLocks ( long long probDocId , 
 		       char *url ,
+		       DOLEDBKEY *doledbKey,
+		       collnum_t collnum,
+		       long sameIpWaitTime,
+		       long firstIp,
 		       void *state ,
 		       void (* callback)(void *state) ) {
 	// do not use locks for injections
@@ -4369,6 +4392,12 @@ bool Msg12::getLocks ( long long probDocId ,
 	m_callback = callback;
 	m_state = state;
 	m_hasLock = false;
+
+	// support ability to spider multiple urls from same ip
+	m_doledbKey = *doledbKey;
+	m_collnum = collnum;
+	m_sameIpWaitTime = sameIpWaitTime;
+	m_firstIp = firstIp;
 
 	// sanity check, just 6 bytes! (48 bits)
 	if ( probDocId & 0xffff000000000000LL ) { char *xx=NULL;*xx=0; }
@@ -4451,6 +4480,15 @@ bool Msg12::getLocks ( long long probDocId ,
 	return true;
 }
 
+// after adding the negative doledb recs to remove the url we are spidering
+// from doledb, and adding the fake titledb rec to add a new entry into
+// waiting tree so that our ip can have more than one outstanding spider,
+// call the callback. usually msg4::addMetaList() will not block i'd guess.
+void rejuvenateIPWrapper ( void *state ) {
+	Msg12 *THIS = (Msg12 *)state;
+	THIS->m_callback ( THIS->m_state );
+}
+
 // returns true if all done, false if waiting for more replies
 bool Msg12::gotLockReply ( UdpSlot *slot ) {
 	// got reply
@@ -4502,6 +4540,51 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 		m_hasLock = true;
 		// we are done
 		m_gettingLocks = false;
+
+
+		char *coll = g_collectiondb.getCollName ( m_collnum );
+
+		///////
+		//
+		// now tell our group (shard) to remove from doledb
+		// and re-add to waiting tree. the scanSpiderdb() function
+		// should skip this probable docid because it is in the 
+		// LOCK TABLE!
+		//
+		///////
+		char listBuf[128];
+		char *p = listBuf;
+		// doledb
+		*p++ = RDB_DOLEDB;
+		// make it negative
+		m_doledbKey.n0 &= 0xfffffffffffffffeLL;
+		// add the negative doledb key to delete it
+		memcpy ( p , &m_doledbKey , sizeof(DOLEDBKEY) );
+		p += sizeof(DOLEDBKEY);
+		// now add the fake titledb key
+		*p++ = RDB_FAKEDB;
+		// this can't be zero!! because Rdb.cpp checks it for zero
+		// as meaning to remove the spider lock
+		if ( ! m_firstIp ) { char *xx=NULL;*xx=0; }
+		long long timestamp64 = gettimeofdayInMillisecondsGlobal();
+		// when to spider this
+		timestamp64 += m_sameIpWaitTime;
+		// embed the firstip and spiderIpWaitTime into this key
+		key_t k; 
+		k.n1 = m_firstIp;
+		k.n0 = timestamp64;
+		memcpy ( p , &k , sizeof(key_t) );
+		p += sizeof(key_t);
+		// tell Rdb.cpp on each host in our group (shard) that they
+		// should add this new entry into their waiting table. really 
+		// only the assigned host in the group (shard) should do this.
+		if ( ! m_msg4.addMetaList ( listBuf ,
+					    p - listBuf ,
+					    coll ,
+					    this ,
+					    rejuvenateIPWrapper ,
+					    1 ) ) // niceness
+			return false;
 		// ok, they are all back, resume loop
 		if ( ! m_callback ) g_spiderLoop.spiderUrl2 ( );
 		// all done

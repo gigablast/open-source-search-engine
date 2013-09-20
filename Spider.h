@@ -283,8 +283,16 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 // remove that IP from the waiting tree. This keeps this check fast.
 
 
-// NEW ALGO:
+// SUPPORTING MULTIPLE SPIDERS PER IP
 //
+// In order to allow multiple outstanding spiders per IP address, if, say,
+// maxSpidersPerIp is > 1, we now promptly add the negative doledb key
+// as soon as a lock is granted and we also add an entry to the waiting tree
+// which will result in an addition to doledb of the next unlocked 
+// SpiderRequest. This logic is mostly in Spider.cpp's Msg12::gotLockReply().
+//
+// Rdb.cpp will see that we added a "fakedb" record 
+
 // A record is only removed from Doledb after the spider adds the negative
 // doledb record in XmlDoc.cpp when it is done. XmlDoc.cpp also adds a
 // "fake" negative titledb record to remove the lock on that url at the
@@ -820,6 +828,8 @@ class SpiderReply {
 // are we responsible for this ip?
 bool isAssignedToUs ( long firstIp ) ;
 
+#define DOLEDBKEY key_t
+
 // . store urls that can be spidered right NOW in doledb
 // . SpiderLoop.cpp doles out urls from its local spiderdb into 
 //   the doledb rdb of remote hosts (and itself as well sometimes!)
@@ -1121,6 +1131,10 @@ class Msg12 {
 	// stuff for getting the msg12 lock for spidering a url
 	bool getLocks       ( long long probDocId,
 			      char *url ,
+			      DOLEDBKEY *doledbKey,
+			      collnum_t collnum,
+			      long sameIpWaitTime, // in milliseconds
+			      long firstIp,
 			      void *state,
 			      void (* callback)(void *state) );
 	bool gotLockReply   ( class UdpSlot *slot );
@@ -1139,6 +1153,12 @@ class Msg12 {
 	void      (*m_callback)(void *state);
 	bool       m_gettingLocks;
 	bool       m_hasLock;
+
+	collnum_t  m_collnum;
+	DOLEDBKEY  m_doledbKey;
+	long       m_sameIpWaitTime;
+	long       m_firstIp;
+	Msg4       m_msg4;
 };
 
 void handleRequest12 ( UdpSlot *udpSlot , long niceness ) ;
@@ -1182,7 +1202,8 @@ class SpiderLoop {
 	// . returns true and sets g_errno on error
 	bool spiderUrl9 ( class SpiderRequest *sreq ,
 			 key_t *doledbKey       ,
-			 char  *coll            );
+			  char  *coll            ,
+			  long sameIpWaitTime ); // in milliseconds
 
 	bool spiderUrl2 ( );
 

@@ -17252,6 +17252,15 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		m_pend = m_metaList + needx;
 		// save it
 		char *saved = m_p;
+		/*
+
+		  Not any more, now we remove from doledb as soon
+		  as we get all the lock grants in our group (shard)
+		  using Msg4 in Spider.cpp. That way we can add a
+		  "0" entry into the waiting tree (or a time X ms into
+		  the future from now) to try to enforce a sameIpWait 
+		  constraint and also allow up to maxSpidersPerIP.
+
 		// remove from doledb if we had a valid key 
 		// (BEFORE adding SpiderReply)
 		if ( m_doledbKey.n0 || m_doledbKey.n1 ) { 
@@ -17268,17 +17277,22 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			// skip key
 			m_p += sizeof(key_t);
 			// then zero for data size
-			//*(long *)m_p = 0;
+			// *(long *)m_p = 0;
 			//m_p += 4;
 			// sanity check
 			verifyMetaList( m_metaList , m_p , forDelete );
 		}
+		*/
+
 		// sanity check
 		if ( ! m_docIdValid ) { char *xx=NULL;*xx=0; }
 		// . make a fake titledb key
 		// . remove the spider lock (Msg12 in Spider.cpp)
-		*m_p++ = RDB_TITLEDB;
-		*(key_t *)m_p = g_titledb.makeKey ( m_docId , 0LL , true );
+		*m_p++ = RDB_FAKEDB;
+		//*(key_t *)m_p = g_titledb.makeKey ( m_docId , 0LL , true );
+		key_t fakeKey;
+		fakeKey.n1 = 0;
+		fakeKey.n0 = m_docId;
 		m_p += sizeof(key_t);
 		// now add the new rescheduled time
 		setStatus ( "adding SpiderReply to spiderdb" );
@@ -17462,7 +17476,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( ! m_docIdValid ) { char *xx=NULL;*xx=0; }
 		// . make a fake titledb key
 		// . remove the spider lock (Msg12 in Spider.cpp)
-		*m_p++ = RDB_TITLEDB;
+		*m_p++ = RDB_FAKEDB;
 		*(key_t *)m_p = g_titledb.makeKey ( m_docId , 0LL , true );
 		m_p += sizeof(key_t);
 		// now add the new rescheduled time
@@ -18626,8 +18640,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	// shortcut
 	saved = m_p;
+	/*
+
+	  See comment under DOLEDB above! this approach is no longer used.
+
 	// . remove from doledb if we had a valid key
-	// . DO THIS BEFORE adding the SpiderReply since Spider.cpp::addSpiderReply() will
+	// . DO THIS BEFORE adding the SpiderReply since 
+	//   Spider.cpp::addSpiderReply() will
 	//   decrement the count for firstIp in m_doleIpTable
 	if ( (m_doledbKey.n0 || m_doledbKey.n1) && 
 	     ! m_useSecondaryRdbs &&
@@ -18647,14 +18666,14 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// skip key
 		m_p += sizeof(key_t);
 		// datasize is 0
-		//*(long *)m_p = 0;
+		// *(long *)m_p = 0;
 		//m_p += 4;
 		// sanity check
 		if ( m_p - saved != needDoledb ) { char *xx=NULL;*xx=0; }
 		// sanity check
 		verifyMetaList( m_metaList , m_p , forDelete );
 	}
-
+	*/
 
 	// note it
 	setStatus ( "removing spider lock");
@@ -18666,7 +18685,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//   the cacheTermLists() function which ONLY wants posdb keys and
 	//   any other keys in the metalist messes it up. MDW 1/26/13
 	if ( ! m_useSecondaryRdbs && ! forDelete && m_useSpiderdb ) {
-		*m_p++ = RDB_TITLEDB;
+		*m_p++ = RDB_FAKEDB;
 		*(key_t *)m_p = g_titledb.makeKey ( m_docId , 0LL , true );
 		m_p += sizeof(key_t);
 	}
