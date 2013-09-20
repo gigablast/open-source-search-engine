@@ -1899,6 +1899,9 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 
 static void gotSpiderdbListWrapper2( void *state , RdbList *list , Msg5 *msg5);
 
+// . this stores an ip into the waiting tree with a spidertime of "0" so
+//   it will be evaluate properly by populateDoledbFromWaitingTree()
+//
 // . scan spiderdb to make sure each firstip represented in spiderdb is
 //   in the waiting tree. it seems they fall out over time. we need to fix
 //   that but in the meantime this should do a bg repair. and is nice to have
