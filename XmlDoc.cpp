@@ -11828,7 +11828,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	// check the url filters table to see if diffbot api is specified
 	long *an = getDiffbotApiNum();
-	if ( ! *an || an == (void *)-1 ) return (SafeBuf *)an;
+	if ( ! an || an == (void *)-1 ) return (SafeBuf *)an;
 
 	// if "NONE" is in the diffbot api drop down, do not send to diffbot
 	if ( *an == DBA_NONE ) {

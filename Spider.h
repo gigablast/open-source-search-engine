@@ -36,22 +36,122 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 // QUICK OVERVIEW
 //
 //
-// There are SpiderRequests and SpiderReplies in Spiderdb. they now use
-// 16 byte keys (key128_t). when a new spiderdb rec is added to spiderdb
-// in Rdb.cpp we call addSpiderRequest() or addSpiderReply(). then
-// that rec might be added to the waiting tree. the waiting tree
-// is scanned for IPs that have a SpiderRequest whose spiderTime is
-// <= now. We get an IP from waiting tree and get its corresponding
-// SpiderRequest from spiderdb. we then add the SpiderRequest to doledb. we try
-// to store every IP (firstIp) we have in Spiderdb into the waiting tree,
-// but the IP is also paired up with a spider priority representing a
-// SpiderRequest in that priority from that IP. then the entries in
-// waiting tree are sorted by scheduled spider time. waiting tree does not
-// even store the SpiderRequest, but just the scheduling info for each
-// ip/priority pair. then we can quickly scan waiting tree to find
-// the next ip/priority ready for spidering, so we read the SpiderRequest
-// from spiderdb for the ip/priority/time we choose and add that 
-// SpiderRequest to doledb to be spidered. 
+// There are two types of records in Spiderdb, SpiderRequests and 
+// SpiderReplies. the use 16 byte keys (key128_t). when a new spiderdb record
+// is added to spiderdb (in Rdb.cpp) we call SpiderColl::addSpiderRequest() or
+// addSpiderReply() respectively.
+
+// addSpiderRequest() tries to add an entry to the "waiting tree". 
+// The waiting tree is a b-tree where the keys are a spiderTime/IPaddress tuple
+// of the corresponding SpiderRequest. Think of its keys as requests to
+// spider something from that IP address at the given time, spiderTIme.
+// The entries are sorted by spiderTime first then IP address. 
+// It let's us know the earliest time we can spider a SpiderRequest 
+// from an IP address. We have exactly one entry in the waiting tree from
+// every IP address that is in Spiderdb. "m_waitingTable" maps an IP 
+// address to its entry in the waiting tree.
+
+// If the IP address of the SpiderRequest that addSpiderRequest() receives
+// is already in "doledb" then we do not add to the waiting tree.
+// Doledb holds the SpiderRequests that are READY to be spidered right now.
+// "Doledb" holds one SpiderRequest per IP address, where the 
+// SpiderRequest is due for spidering, that is, its spiderTime is before the 
+// current time.
+
+// scanSpiderdb() scans all the SpiderRequests in spiderdb. It can also
+// just read in all the SpiderRequests for a particular IP address if
+// m_nextKey/m_endKey is constrainted as such before calling it.
+// We scan spiderdb to repair the spidering system (which
+// we do every 24 hrs because of a bug) or we also call it if the user
+// changes the url filters table. As it scans spiderdb for each IP address,
+// it gets the "best" SpiderRequest for a particular IP. Then, if that "best"
+// request should only be spidered IN THE FUTURE, it adds a corresponding
+// entry for it to the waiting table under that spider time. Otherwise, if
+// the "best" spiderRequest is due for spidering now, it adds it directly
+// to Doledb, assuming no other SpiderRequest for that IP is not already in
+// Doledb. It will remove the corresponding entry from waiting tree for
+// any SpiderRequest it adds to doledb. 
+//
+
+// NEW ALGO:
+//
+// In order to support multiple spiders hitting the same IP we have to
+// allow Doledb to hold up to X spiderrequests from the same IP, not just
+// the single request we do now. scanSpiderdb() uses a s_ufnTree now for 
+// getting the top X SpiderRequests. So we can use that and just add them all 
+// to Doledb. and the m_doleIpTable can hold the # of entries per IP in 
+// Doledb. And based on the "ufn" of the SpiderRequest we want to add to 
+// Doledb, we can get its maxSpidersPerIp assignment, and if it is > 1 then we
+// can multi-add to doledb. [we need to somehow lockout the X SpiderRequests 
+// that are in doledb, maybe using the/a doledb table]
+
+//
+// GETTING A URL TO SPIDER
+//
+// To actually spider something, we do a read of doledb to get the next
+// SpiderRequest. Because there are so many negative/positive key annihilations
+// in doledb, we keep a "cursor key" for each spider priority in doledb.
+// We get a "lock" on the url so no other hosts in our group (shard) can 
+// spider it from doledb. We get the lock if all hosts in the shard 
+// successfully grant it to us, otherwise, we inform all the hosts that
+// we were unable to get the lock, so they can unlock it.
+//
+// SpiderLoop::spiderDoledUrls() will scan doledb for each collection that
+// has spidering enabled, and get the SpiderRequests in doledb that are
+// in need of spidering. The keys in doledb are sorted by highest spider
+// priority first and then by the "spider time". If one spider priority is
+// empty or only has spiderRequests in it that can be spidered in the future,
+// then the next priority is read.
+//
+// any host in our group (shard) can spider a request in doledb, but they must 
+// lock it by calling getLocks() first and all hosts in the group (shard) must
+// grant them the lock for that url otherwise they remove all the locks and
+// try again on another spiderRequest in doledb.
+//
+// Each group (shard) is responsible for spidering a set of IPs in spiderdb.
+// and each host in the group (shard) has its own subset of those IPs for which
+// it is responsible for adding to doledb. but any host in the group (shard)
+// can spider any request/url in doledb provided they get the lock.
+
+
+
+// SPIDER COMPLETION
+//
+// When a host is done spidering a url it adds a special negative key to
+// titledb which is a signal in Rdb.cpp to remove the lock on the url.
+// (See "doledb" in XmlDoc::getMetaList() and Rdb.cpp). It also adds a
+// negative doledb key to remove the key from doledb. When Rdb.cpp
+// adds a negative doledb key it will possibly update the doledb "cursor key"
+// that it uses as the start key for reading lists of records from doledb.
+//
+// If adding a Spiderdb record, Rdb.cpp will call 
+// SpiderColl::addSpiderRequest() or addSpiderReply() respectively. Adding
+// a SpiderReply in Spider.cpp will update the crawlDelay table for that
+// domain, update the lastdownloadtime for that ip for throttling purposes,
+// update the doleiptable to keep track of outstanding spiders per ip,
+// and ADD TO WAITING TREE with a timestamp of 0 which means it needs to
+// load the spiderdb records from disk for that IP and populate the waiting
+// tree with a record for that ip, or add the record directly to doledb
+// if it is overdue for spidering. SpiderColl::populateDoledbFromWaitingTree()
+// scans the waiting tree and will hit this entry immediately and call
+// scanSpiderdb() restricted to its IP address in order to either add the
+// waiting tree entry with the proper spider time, or add another 
+// SpiderRequest from this IP directly into doledb. The addToWaitingTree()
+// function that was used to add the entry with the 0 time, then calls
+// populateDoledbFromWaitingTree() to kick off this procedure immediately.
+//
+// If adding a SpiderRequest, like from a harvested outlink, then Rdb.cpp 
+// calls SpiderColl::addSpiderRequest()
+// which will determine the "url filter number" from the user's Url Filter
+// Table (click on the url filters link to see the table). It will caculate
+// the time at which the url should be spidered and its spider priority.
+// It will add it to the waiting tree using that timestamp and its IP address.
+// It must have a spider time that is less than the
+// current entry for the same IP/priority by at least 5 seconds the way
+// that SpiderColl::addToWaitingTree() is written now, in order to supplant
+// what record is there, if any.
+
+// STARTUP
 //
 // The waiting tree is populated at startup by scanning spiderdb (see
 // SpiderColl::scanSpiderdb()), which might take a while to complete, 
@@ -70,55 +170,35 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 // most of the cpu it uses will probably be spent. It picks the best
 // url to spider for each IP address. It only picks one per IP right now.
 // If the best url has a scheduled spider time in the future, it will add it 
-// to the waiting tree with that future timestamp. If the spidertime
-// is overdue then it will add it to doledb to make it available for spidering
-// immediately. It calls m_msg4.addMetaList() to add it to doledb on all
-// hosts in its group (shard). It uses s_ufnTree for keeping track of the
-// best urls to spider for a given IP/spiderPriority.
+// to the waiting tree with that future timestamp. The waiting tree only
+// stores one entry for each unique IP, so it tries to store
+// the entry with the earliest computed scheduled spider time, but if 
+// some times are all BEFORE the current time, it will resolve conflicts
+// by preferring those with the highest priority. Tied spider priorities
+// should be resolved by minimum hopCount probably.
+//
+// If the spidertime of the URL is overdue then scanSpiderdb() will NOT add
+// it to waiting tree, but will add it to doledb directly to make it available
+// for spidering immediately. It calls m_msg4.addMetaList() to add it to 
+// doledb on all hosts in its group (shard). It uses s_ufnTree for keeping 
+// track of the best urls to spider for a given IP/spiderPriority.
+//
 
+// POPULATING DOLEB
 //
-// Doledb scans the waiting tree for entries that indicate an IP address
-// that has a url in spiderdb that can be spidered. When the url is 
-// added to Doledb the entry in the waiting tree is removed to prevent
-// re-adds i think.
-//
-// any host in our group (shard) can spider a request in doledb, but they must 
-// lock it by calling getLocks() first and all hosts in the group (shard) must
-// grant them the lock for that url otherwise they remove all the locks and
-// try again on another spiderRequest in doledb.
-//
-// Each group (shard) is responsible for spidering a set of IPs in spiderdb.
-// and each host in the group (shard) has its own subset of those IPs for which
-// it is responsible for adding to doledb. but any host in the group (shard)
-// can spider any request/url in doledb provided they get the lock.
-//
-// SPIDER COMPLETION
-//
-// When a host is done spidering a url it adds a special negative key to
-// titledb which is a signal in Rdb.cpp to remove the lock on the url.
-// (See "doledb" in XmlDoc::getMetaList() and Rdb.cpp). It also adds a
-// negative doledb key to remove the key from doledb there. When Rdb.cpp
-// adds a negative doledb key it will possibly update the doledb "cursor key"
-// that it uses as the start key for reading lists of records from doledb.
-//
-// If adding a Spiderdb record, Rdb.cpp will call 
-// SpiderColl::addSpiderRequest() or addSpiderReply() respectively. Adding
-// a spider reply in Spider.cpp will update the crawlDelay table for that
-// domain, update the lastdownloadtime for that ip for throttling purposes,
-// update the doleiptable to keep track of outstanding spiders per ip,
-// and ADD TO WAITING TREE with a timestamp of 0 which means it needs to
-// load the spiderdb records from disk for that IP and populate the waiting
-// tree with a record for that ip.
-//
-// If adding a spider request, Rdb.cpp calls SpiderColl::addSpiderRequest()
-// which will determine the "url filter number" from the user's Url Filter
-// Table (click on the url filters link to see the table). It will caculate
-// the time at which the url should be spidered and its spider priority.
-// it will add it to the waiting tree using that timestamp and its IP address 
-// and spider priority. It must have a spider time that is less than the
-// current entry for the same IP/priority by at least 5 seconds the way
-// that SpiderColl::addToWaitingTree() is written now, in order to supplant
-// what record is there, if any.
+// SpiderColl::populateDoledbFromWaitingTree() scans the waiting tree for
+// entries whose spider time is due. so it gets the IP address and spider
+// priority from the waiting tree. but then it calls scanSpiderdb() 
+// restricted to that IP (using m_nextKey,m_endKey) to get the best
+// SpiderRequest from spiderdb for that IP to add to doledb for immediate 
+// spidering. populateDoledbFromWaitingTree() is called a lot to try to
+// keep doledb in sync with waiting tree. any time an entry in the waiting
+// tree becomes available for spidering it should be called right away so
+// as not to hold back the spiders. in general it should exit quickly because
+// it calls getNextIpFromWaitingTree() which most of the time will return 0
+// indicating there are no IPs in the waiting tree ready to be spidered.
+// Which is why as we add SpiderRequests to doledb for an IP we also
+// remove that IP from the waiting tree. This keeps this check fast.
 //
 ///////////////////////////////////////
 

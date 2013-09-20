@@ -1187,7 +1187,7 @@ key_t makeWaitingTreeKey ( uint64_t spiderTimeMS , long firstIp ) {
 	wk.n1 = (spiderTimeMS>>32);
 	wk.n0 = (spiderTimeMS&0xffffffff);
 	wk.n0 <<= 32;
-	wk |= (unsigned long)firstIp;
+	wk.n0 |= (unsigned long)firstIp;
 	// sanity
 	if ( wk.n1 & 0x8000000000000000LL ) { char *xx=NULL;*xx=0; }
 	return wk;

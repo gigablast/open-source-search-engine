@@ -2504,7 +2504,7 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 		cr->m_spiderIpMaxSpiders[i] = 10;
 		cr->m_spidersEnabled    [i] = 1;
 		cr->m_spiderFreqs       [i] = 7.0;
-		cr->m_spiderDiffbotApiNum[i] = 0;
+		cr->m_spiderDiffbotApiNum[i] = DBA_NONE;
 	}
 
 

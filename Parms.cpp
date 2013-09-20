@@ -1913,7 +1913,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			      strcmp(mk->m_xml,"maxSpidersPerIp") == 0||
 			      strcmp(mk->m_xml,"spiderIpWait") == 0 ) )
 				vt = " style=display:none;";
-			sb->safePrintf ( "<td>%s" , vt );
+			sb->safePrintf ( "<td%s>" , vt );
 			// if its of type checkbox in a table make it
 			// toggle them all on/off
 			if ( mk->m_type == TYPE_CHECKBOX &&
