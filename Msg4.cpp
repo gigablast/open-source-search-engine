@@ -1120,6 +1120,15 @@ bool addMetaList ( char *p , UdpSlot *slot ) {
 	// . do not call this for every rec if we do not have to
 	if ( rdbId != lastRdbId ) {
 		rdb = getRdbFromId ( (char) rdbId );
+		// skip RDBFAKEDB
+		if ( rdbId == RDB_FAKEDB ) {
+			// skip the fakedb record
+			p += recSize;
+			// drop it for now!!
+			if ( p < pend ) goto loop;
+			// all done
+			return true;
+		}
 		// an uninitialized secondary rdb? it will have a keysize
 		// if 0 if its never been intialized from the repair page
 		if ( rdb && rdb->m_ks <= 0 ) {
