@@ -15822,8 +15822,17 @@ bool XmlDoc::logIt ( ) {
 	if ( m_linkInfo1Valid && ptr_linkInfo1 && ptr_linkInfo1->hasRSSItem())
 		sb.safePrintf("hasrssitem=1 ");
 
+	// was the content itself injected?
 	if ( m_wasInjected ) // m_oldsrValid && m_oldsr.m_isInjecting )
-		sb.safePrintf("injected=1 ");
+		sb.safePrintf("contentinjected=1 ");
+	else
+		sb.safePrintf("contentinjected=0 ");
+
+	// might have just injected the url and downloaded the content?
+	if ( m_oldsrValid && m_oldsr.m_isInjecting )
+		sb.safePrintf("urlinjected=1 ");
+	else
+		sb.safePrintf("urlinjected=0 ");
 
 	if ( m_crawlDelayValid && m_crawlDelay != -1 )
 		sb.safePrintf("crawldelayms=%li ",(long)m_crawlDelay);
@@ -17293,6 +17302,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		key_t fakeKey;
 		fakeKey.n1 = 0;
 		fakeKey.n0 = m_docId;
+		memcpy ( m_p , &fakeKey , sizeof(key_t) );
 		m_p += sizeof(key_t);
 		// now add the new rescheduled time
 		setStatus ( "adding SpiderReply to spiderdb" );
@@ -18686,7 +18696,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//   any other keys in the metalist messes it up. MDW 1/26/13
 	if ( ! m_useSecondaryRdbs && ! forDelete && m_useSpiderdb ) {
 		*m_p++ = RDB_FAKEDB;
-		*(key_t *)m_p = g_titledb.makeKey ( m_docId , 0LL , true );
+		((key_t *)m_p)->n1 = 0;
+		((key_t *)m_p)->n0 = m_docId;
+		//= g_titledb.makeKey ( m_docId , 0LL , true );
 		m_p += sizeof(key_t);
 	}
 
@@ -19303,7 +19315,12 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	if ( m_contentHash32Valid )
 		m_newsr.m_contentHash32 = m_contentHash32;
 
+	// injecting the content (url implied)
 	if ( m_contentInjected ) // m_oldsrValid && m_oldsr.m_isInjecting )
+		m_newsr.m_fromInjectionRequest = 1;
+
+	// can be injecting a url too, content not necessarily implied
+	if ( m_oldsrValid && m_oldsr.m_isInjecting )
 		m_newsr.m_fromInjectionRequest = 1;
 
 	// treat error replies special i guess, since langId, etc. will be

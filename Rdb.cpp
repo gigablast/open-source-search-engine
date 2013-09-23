@@ -1796,68 +1796,6 @@ bool Rdb::addRecord ( collnum_t collnum,
 		return false;
 	}
 
-	// this fake titledb key means to add to waiting tree if we
-	// are the assigned spider host!!
-	if ( m_rdbId == RDB_FAKEDB && ((key_t *)key)->n1 ) {
-		//char *xx=NULL;*xx=0;
-		// get firstip
-		long firstIp = ((key_t *)key)->n1;
-		// when it should be spidered, might be 0
-		long long timestamp = ((key_t *)key)->n0;
-		// add it
-		SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
-		sc->addToWaitingTree ( timestamp , firstIp , true );
-		// that is it, not an actual rdb add
-		return true;
-	}
-
-	// now this fake titledb key is used to remove spider lock
-	if ( m_rdbId == RDB_FAKEDB && ((key_t *)key)->n1 == 0 ) {
-	     // use a uh48 of 0 to signify an unlock operation
-	     //g_titledb.getUrlHash48 ( (key_t *)key ) == 0LL ) {
-		// must be 96 bits
-		if ( m_ks != 12 ) { char *xx=NULL;*xx=0; }
-		// get docid that was locked
-		//long long d = g_titledb.getDocId ( (key_t *)key);
-		long long d = ((key_t *)key)->n0;
-		// . make it the first probable, that is the lock key
-		// . we do that so if we are locking a new url that
-		//   is not yet indexed, its probable docid may collide
-		//   and be incremented, so we do not know what its
-		//   actual docid will end up being...
-		long long lockKey = g_titledb.getFirstProbableDocId(d);
-		// log debug msg
-		if ( g_conf.m_logDebugSpider)
-			// log debug
-			logf(LOG_DEBUG,"spider: rdb: got fake titledb "
-			     "key for lockkey=%llu - removing spider lock",
-			     lockKey);
-		// shortcut
-		HashTableX *ht = &g_spiderLoop.m_lockTable;
-		UrlLock *lock = (UrlLock *)ht->getValue ( &lockKey );
-		// test it
-		if ( m_nowGlobal == 0 && lock )
-			m_nowGlobal = getTimeGlobal();
-		// we do it this way rather than remove it ourselves
-		// because a lock request for this guy
-		// might be currently outstanding, and it will end up
-		// being granted the lock even though we have by now removed
-		// it from doledb, because it read doledb before we removed 
-		// it! so wait 5 seconds for the doledb negative key to 
-		// be absorbed to prevent a url we just spidered from being
-		// re-spidered right away because of this sync issue.
-		if ( lock ) lock->m_expires = m_nowGlobal + 5;
-		// bitch if not in there
-		if (!lock&&g_conf.m_logDebugSpider)//ht->isInTable(&lockKey)) 
-			logf(LOG_DEBUG,"spider: rdb: lockkey %llu "
-			     "was not in lock table",lockKey);
-		// now unlock on that
-		//g_spiderLoop.m_lockTable.removeKey(&lockKey);
-		// do not actually add this fake key to titledb!
-		return true;
-	}
-
-
 	// skip if tree not writable
 	if ( ! g_process.m_powerIsOn ) {
 		// log it every 3 seconds
