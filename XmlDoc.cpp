@@ -17247,10 +17247,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// how much we need
 		long needx = sizeof(SpiderReply) + 1;
 		// doledb key?
-		if ( m_doledbKey.n0 || m_doledbKey.n1 )
-			needx += 1 + sizeof(key_t); // + 4;
-		// the titledb unlock key for msg12 in spider.cpp
-		needx += 1 + sizeof(key_t);
+		//if ( m_doledbKey.n0 || m_doledbKey.n1 )
+		//	needx += 1 + sizeof(key_t); // + 4;
+		// the FAKEDB unlock key for msg12 in spider.cpp
+		needx += 1 + sizeof(key_t); // FAKEDB
 		// make the buffer
 		m_metaList = (char *)mmalloc ( needx , "metalist");
 		if ( ! m_metaList ) return NULL;

@@ -1437,7 +1437,7 @@ unsigned long Hostdb::makeGroupMask ( long numGroups ) {
 // return first alive host in a group/shard
 Host *Hostdb::getLiveHostInGroup ( long groupId ) {
 	Host *group = getGroup ( groupId );
-	Host *live = NULL;
+	//Host *live = NULL;
 	for ( long i = 0 ; i < m_numHostsPerGroup ; i++ ) {
 		// get it
 		Host *h = &group[i];

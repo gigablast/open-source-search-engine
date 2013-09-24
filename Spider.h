@@ -985,6 +985,8 @@ class SpiderColl {
 	bool  addSpiderReply   ( SpiderReply   *srep );
 	bool  addSpiderRequest ( SpiderRequest *sreq , long long nowGlobalMS );
 
+	void removeFromDoledbTable ( long firstIp );
+
 	bool  addToDoleTable   ( SpiderRequest *sreq ) ;
 
 
@@ -1128,6 +1130,11 @@ public:
 
 class Msg12 {
  public:
+
+	bool confirmLockAcquisition ( ) ;
+
+	unsigned long m_lockGroupId;
+
 	// stuff for getting the msg12 lock for spidering a url
 	bool getLocks       ( long long probDocId,
 			      char *url ,
@@ -1148,6 +1155,7 @@ class Msg12 {
 	long       m_numRequests;
 	long       m_grants;
 	bool       m_removing;
+	bool       m_confirming;
 	char      *m_url; // for debugging
 	void      *m_state;
 	void      (*m_callback)(void *state);

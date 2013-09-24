@@ -1592,27 +1592,13 @@ bool loadAddsInProgress ( char *prefix ) {
 }
 
 
+//
+// right now the FAKEDB record is a signal to remove the spider lock
+// from the lock table because we are done spidering it.
+//
 void processSpecialSignal ( collnum_t collnum , char *p ) {
 
 	key_t *fake = (key_t *)p;
-
-	// this fake key means to add to waiting tree if we
-	// are the assigned spider host!!
-	if ( fake->n1 ) {
-		//char *xx=NULL;*xx=0;
-		// get firstip
-		long firstIp = fake->n1;
-		// when it should be spidered, might be 0
-		long long timestamp = fake->n0;
-		// add it
-		SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
-		sc->addToWaitingTree ( timestamp , firstIp , true );
-		// that is it, not an actual rdb add
-		return;
-	}
-
-	// now this fake titledb key is used to remove spider lock
-	if ( fake->n1 ) { char *xx=NULL;*xx=0; }
 
 	// use a uh48 of 0 to signify an unlock operation
 	//g_titledb.getUrlHash48 ( (key_t *)key ) == 0LL ) {
@@ -1630,13 +1616,18 @@ void processSpecialSignal ( collnum_t collnum , char *p ) {
 	// log debug msg
 	if ( g_conf.m_logDebugSpider)
 		// log debug
-		logf(LOG_DEBUG,"spider: rdb: got fake titledb "
+		logf(LOG_DEBUG,"msg4: got FAKE titledb "
 		     "key for lockkey=%llu - removing spider lock",
 		     lockKey);
 	// shortcut
 	HashTableX *ht = &g_spiderLoop.m_lockTable;
 	UrlLock *lock = (UrlLock *)ht->getValue ( &lockKey );
 	time_t nowGlobal = getTimeGlobal();
+
+	if ( g_conf.m_logDebugSpiderFlow )
+		logf(LOG_DEBUG,"spflow: removed lock for "
+		     "docid=lockkey=%llu",  lockKey);
+
 	// test it
 	//if ( m_nowGlobal == 0 && lock )
 	//	m_nowGlobal = getTimeGlobal();

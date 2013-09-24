@@ -1950,9 +1950,17 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// remove from g_spiderLoop.m_lockTable too!
 		if ( KEYNEG(key) ) {
 			// log debug
-			logf(LOG_DEBUG,"spider: rdb: "
-			     "got negative doledb "
-			     "key for uh48=%llu",
+			logf(LOG_DEBUG,"spflow: removed doledb key "
+			     "for uh48=%llu",
+			     g_doledb.getUrlHash48(&doleKey));
+		}
+		else {
+			// what collection?
+			//SpiderColl *sc = g_spiderCache.getSpiderColl(collnum)
+			// do not overflow!
+			// log debug
+			logf(LOG_DEBUG,"spflow: added   doledb key "
+			     "for uh48=%llu",
 			     g_doledb.getUrlHash48(&doleKey));
 		}
 	}
@@ -2209,6 +2217,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// add the request
 		if ( isReq ) {
 			// log that. why isn't this undoling always
+			/*
 			if ( g_conf.m_logDebugSpider )
 				logf(LOG_DEBUG,"spider: rdb: got spider "
 				     "request for uh48=%llu prntdocid=%llu "
@@ -2216,6 +2225,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 				     sreq->getUrlHash48(), 
 				     sreq->getParentDocId(),
 				     iptoa(sreq->m_firstIp));
+			*/
 			// false means to NOT call evaluateAllRequests()
 			// because we call it below. the reason we do this
 			// is because it does not always get called
