@@ -1942,7 +1942,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		n = m_tree.getNode ( collnum , oppKey );
 	}
 
-	if ( m_rdbId == RDB_DOLEDB && g_conf.m_logDebugSpider ) {
+	if ( m_rdbId == RDB_DOLEDB && g_conf.m_logDebugSpiderFlow ) {
 		// must be 96 bits
 		if ( m_ks != 12 ) { char *xx=NULL;*xx=0; }
 		// set this

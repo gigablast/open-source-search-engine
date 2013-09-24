@@ -1532,15 +1532,12 @@ void SpiderColl::removeFromDoledbTable ( long firstIp ) {
 	*score = *score - 1;
 
 	// now we log it too
-	log(LOG_DEBUG,"spflow: removed ip=%s to doleiptable (count=%li)",
+	log(LOG_DEBUG,"spflow: removed ip=%s from doleiptable (newcount=%li)",
 	    iptoa(firstIp),*score);
 
 
 	// remove if zero
 	if ( *score == 0 ) {
-		// note it
-		log(LOG_DEBUG,"spflow: removing ip=%s from doledbtable",
-		    iptoa(firstIp));
 		// this can file if writes are disabled on this hashtablex
 		// because it is saving
 		m_doleIpTable.removeKey ( &firstIp );
@@ -1733,6 +1730,14 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 		    "saving?");
 		return false;
 	}
+
+	// . do not add to waiting tree if already in doledb
+	// . an ip should not exist in both doledb and waiting tree.
+	// . waiting tree is meant to be a signal that we need to add
+	//   a spiderrequest from that ip into doledb where it can be picked
+	//   up for immediate spidering
+	if ( m_doleIpTable.isInTable ( &firstIp ) ) 
+		return true;
 
 	// sanity check
 	// i think this trigged on gk209 during an auto-save!!! FIX!
@@ -2834,6 +2839,9 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		return true;
 	}
 
+	if ( g_spiderLoop.m_lockTable.isInTable(&m_bestRequest->m_probDocId)){
+		char *xx=NULL;*xx=0; }
+
 	// make the doledb key first for this so we can add it
 	key_t doleKey = g_doledb.makeKey ( m_bestRequest->m_priority     ,
 					   // convert to seconds from ms
@@ -3024,6 +3032,8 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 		*score = *score + 1;
 		// sanity check
 		if ( *score <= 0 ) { char *xx=NULL;*xx=0; }
+		// only one per ip!
+		if ( *score > 1 ) { char *xx=NULL;*xx=0; }
 		// now we log it too
 		log(LOG_DEBUG,"spflow: added ip=%s to doleiptable (score=%li)",
 		    iptoa(sreq->m_firstIp),*score);
@@ -3357,7 +3367,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	//m_sc->m_nextDoledbKey.setMin();
 
 	// set the key to this at start
-	//m_sc->m_nextDoledbKey = g_doledb.makeFirstKey2 ( m_pri );
+	//m_sc->m_nextDoledbKey = g_doledb.makeFirstKey2 ( m_sc->m_pri );
 
 	// init the m_priorityToUfn map array?
 	if ( ! m_sc->m_ufnMapValid ) {
@@ -3976,6 +3986,10 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	g_errno = 0;
 	// breathe
 	QUICKPOLL(MAX_NICENESS);
+
+	// sanity. ensure m_sreq doesn't change from under us i guess
+	if ( m_msg12.m_gettingLocks ) { char *xx=NULL;*xx=0; }
+
 	// get rid of this crap for now
 	//g_spiderCache.meterBandwidth();
 
@@ -3998,9 +4012,6 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	//	return spiderUrl2();
 	//}
 	
-	// sanity
-	if ( m_msg12.m_gettingLocks ) { char *xx=NULL;*xx=0; }
-
 	// flag it so m_sreq does not "disappear"
 	m_msg12.m_gettingLocks = true;
 
@@ -4598,11 +4609,14 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 	// all done if we were confirming
 	if ( m_confirming ) {
 		// note it
-		if ( g_conf.m_logDebugSpider )
-		      logf(LOG_DEBUG,"spider: done confirming all locks "
+		if ( g_conf.m_logDebugSpiderFlow )
+		      logf(LOG_DEBUG,"spflow: done confirming all locks "
 			   "for %s",m_url);//m_sreq->m_url);
 		// we are done
 		m_gettingLocks = false;
+		// keep processing
+		if ( ! m_callback ) return g_spiderLoop.spiderUrl2();
+		// if we had a callback let our parent call it
 		return true;
 	}
 
@@ -4807,6 +4821,9 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	// breathe
 	QUICKPOLL ( niceness );
 
+	// shortcut
+	char *reply = udpSlot->m_tmpBuf;
+
 	//
 	// . is it confirming that he got all the locks?
 	// . if so, remove the doledb record and dock the doleiptable count
@@ -4844,14 +4861,16 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 			return;
 		}
 		// success!!
-
+		reply[0] = 1;
+		us->sendReply_ass ( reply , 1 , reply , 1 , udpSlot );
+		return;
 	}
 
 
 
 	// sanity check
 	if ( reqSize != 12 ) {
-		log("spider: bad msg12 request size");
+		log("spider: bad msg12 request size of %li",reqSize);
 		us->sendErrorReply ( udpSlot , EBADREQUEST );
 		return;
 	}
@@ -4878,8 +4897,6 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	// note it
 	if ( g_conf.m_logDebugSpider )
 		log("spider: got msg12 request remove=%li",(long)remove);
-	// shortcut
-	char *reply = udpSlot->m_tmpBuf;
 	// get time
 	long nowGlobal = getTimeGlobal();
 	// shortcut
