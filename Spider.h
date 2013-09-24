@@ -22,6 +22,7 @@
 #include <time.h>
 #include "Msg5.h"      // local getList()
 #include "Msg4.h"
+#include "Msg1.h"
 #include "hash.h"
 
 // for diffbot, this is for xmldoc.cpp to update CollectionRec::m_crawlInfo
@@ -952,6 +953,8 @@ class SpiderColl {
 
 	bool      load();
 
+	long long m_msg4Start;
+
 	long getTotalOutstandingSpiders ( ) ;
 
 	key128_t m_firstKey;
@@ -979,6 +982,7 @@ class SpiderColl {
 	bool m_isReadDone;
 
 	Msg4 m_msg4;
+	Msg1 m_msg1;
 	bool m_msg4Avail;
 
 	// Rdb.cpp calls this
@@ -1065,6 +1069,8 @@ class SpiderColl {
 	RdbTree    m_waitingTree;
 	RdbMem     m_waitingMem; // used by m_waitingTree
 	key_t      m_waitingTreeKey;
+	bool       m_waitingTreeKeyValid;
+	long       m_scanningIp;
 
 	key_t m_nextDoledbKey;
 	bool  m_didRound;
@@ -1120,12 +1126,29 @@ extern class SpiderCache g_spiderCache;
 
 
 
+class LockRequest {
+public:
+	long long m_lockKey; // firstProbableDocId;
+	long m_lockSequence;
+	long m_firstIp;
+	char m_removeLock;
+};
+
+class ConfirmRequest {
+public:
+	collnum_t m_collnum;
+	key_t m_doledbKey;
+	long  m_firstIp;
+	long m_maxSpidersOutPerIp;
+};
+
 class UrlLock {
 public:
 	long m_hostId;
 	long m_lockSequence;
 	long m_timestamp;
 	long m_expires;
+	long m_firstIp;
 };
 
 class Msg12 {
@@ -1135,12 +1158,17 @@ class Msg12 {
 
 	unsigned long m_lockGroupId;
 
+	LockRequest m_lockRequest;
+
+	ConfirmRequest m_confirmRequest;
+
 	// stuff for getting the msg12 lock for spidering a url
 	bool getLocks       ( long long probDocId,
 			      char *url ,
 			      DOLEDBKEY *doledbKey,
 			      collnum_t collnum,
 			      long sameIpWaitTime, // in milliseconds
+			      long maxSpidersOutPerIp,
 			      long firstIp,
 			      void *state,
 			      void (* callback)(void *state) );
@@ -1165,6 +1193,7 @@ class Msg12 {
 	collnum_t  m_collnum;
 	DOLEDBKEY  m_doledbKey;
 	long       m_sameIpWaitTime;
+	long       m_maxSpidersOutPerIp;
 	long       m_firstIp;
 	Msg4       m_msg4;
 };
@@ -1191,6 +1220,8 @@ class SpiderLoop {
 
 	bool isInLockTable ( long long probDocId );
 
+	long getNumSpidersOutPerIp ( long firstIp ) ;
+
 	// free all XmlDocs and m_list
 	void reset();
 
@@ -1213,7 +1244,8 @@ class SpiderLoop {
 	bool spiderUrl9 ( class SpiderRequest *sreq ,
 			 key_t *doledbKey       ,
 			  char  *coll            ,
-			  long sameIpWaitTime ); // in milliseconds
+			  long sameIpWaitTime , // in milliseconds
+			  long maxSpidersOutPerIp );
 
 	bool spiderUrl2 ( );
 

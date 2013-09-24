@@ -1046,6 +1046,8 @@ bool SpiderColl::load ( ) {
 	// . try going to 20M now since we hit it again...
 	if (!m_waitingTree.set(0,-1,true,20000000,true,"waittree2",
 			       false,"waitingtree",sizeof(key_t)))return false;
+	m_waitingTreeKeyValid = false;
+	m_scanningIp = 0;
 	// prevent core with this
 	m_waitingTree.m_rdbId = RDB_NONE;
 
@@ -1269,8 +1271,8 @@ bool SpiderColl::makeWaitingTree ( ) {
 			return false;
 		}
 		// note it
-		log(LOG_DEBUG,"spflow: added time=1 ip=%s to waiting tree",
-		    iptoa(firstIp));
+		log(LOG_DEBUG,"spflow: added time=1 ip=%s to waiting tree "
+		    "(node#=%li)", iptoa(firstIp),wn);
 		// a tmp var
 		long long fakeone = 1LL;
 		// add to table now since its in the tree
@@ -1731,6 +1733,10 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 		return false;
 	}
 
+	// only if we are the responsible host in the group (shard)
+	if ( ! isAssignedToUs ( firstIp ) ) 
+		return true;
+
 	// . do not add to waiting tree if already in doledb
 	// . an ip should not exist in both doledb and waiting tree.
 	// . waiting tree is meant to be a signal that we need to add
@@ -1879,7 +1885,7 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 	// at least one ping from him so we do not remove at startup.
 	// if it is in doledb or in the middle of being added to doledb 
 	// via msg4, nuke it as well!
-	if ( ! isAssignedToUs (firstIp) && m_doleIpTable.isInTable(&firstIp)) {
+	if ( ! isAssignedToUs (firstIp) || m_doleIpTable.isInTable(&firstIp)) {
 		// only delete if this host is alive and has sent us a ping
 		// before so we know he was up at one time. this way we do not
 		// remove all his keys just because we restarted and think he
@@ -1915,6 +1921,8 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 	// save key for deleting when done
 	m_waitingTreeKey.n1 = k->n1;
 	m_waitingTreeKey.n0 = k->n0;
+	m_waitingTreeKeyValid = true;
+	m_scanningIp = firstIp;
 	// sanity
 	if ( firstIp == 0 || firstIp == -1 ) { char *xx=NULL;*xx=0; }
 	// we set this to true when done
@@ -2121,6 +2129,29 @@ static bool    s_ufnTreeSet = false;
 static RdbTree s_ufnTree;
 static time_t  s_lastUfnTreeFlushTime = 0;
 
+//////////////////////////
+//////////////////////////
+//
+// The first KEYSTONE function.
+//
+// CALL THIS ANYTIME to load up doledb from waiting tree entries
+//
+// This is a key function.
+//
+// It is called from two places:
+//
+// 1) sleep callback
+//
+// 2) addToWaitingTree()
+//    is called from addSpiderRequest() anytime a SpiderRequest
+//    is added to spiderdb (or from addSpiderReply())
+//
+// It can only be entered once so will just return if already scanning 
+// spiderdb.
+//
+//////////////////////////
+//////////////////////////
+
 // . for each IP in the waiting tree, scan all its SpiderRequests and determine
 //   which one should be the next to be spidered. and put that one in doledb.
 // . we call this a lot, like if the admin changes the url filters table
@@ -2137,6 +2168,11 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 	// Doledb::m_rdb::addRecord() below
 	// WE NEED THIS TO REPOPULATE DOLEDB THOUGH!!!
 	//return;
+	if ( g_conf.m_logDebugSpider )
+		log("spider: in populatedoledbfromwaitingtree "
+		    "numUsedNodes=%li",
+		    m_waitingTree.m_numUsedNodes);
+
 	// set this flag so we are not re-entered
 	m_isPopulating = true;
  loop:
@@ -2149,7 +2185,8 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 		return;
 	}
 
-	// get next IP that is due to be spidered from
+	// . get next IP that is due to be spidered from
+	// . also sets m_waitingTreeKey so scanSpiderdb can delete it easily!
 	long ip = getNextIpFromWaitingTree();
 	// . return if none. all done. unset populating flag.
 	// . it returns 0 if the next firstip has a spidertime in the future
@@ -2219,7 +2256,9 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 	// so we know if we are the first read or not...
 	m_firstKey = m_nextKey;
 
-	// look up in spiderdb otherwise and add best req to doledb from ip
+	// . look up in spiderdb otherwise and add best req to doledb from ip
+	// . if it blocks ultimately it calls gotSpiderdbListWrapper() which
+	//   calls this function again with re-entry set to true
 	if ( ! scanSpiderdb ( true ) ) return;
 	// oom error? i've seen this happen and we end up locking up!
 	if ( g_errno ) return;
@@ -2229,6 +2268,11 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 
 static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
 	SpiderColl *THIS = (SpiderColl *)state;
+
+	// note its return
+	if ( g_conf.m_logDebugSpider )
+		log("spider: back from msg5 spiderdb read2");
+
 	// . finish processing the list we read now
 	// . if that blocks, it will call doledWrapper
 	if ( ! THIS->scanSpiderdb ( false ) ) return;
@@ -2249,6 +2293,11 @@ static void doledWrapper ( void *state ) {
 	SpiderColl *THIS = (SpiderColl *)state;
 	// msg4 is available again
 	THIS->m_msg4Avail = true;
+
+	long long now = gettimeofdayInMilliseconds();
+	long long diff = now - THIS->m_msg4Start;
+	log("spider: adding to doledb took %llims",diff);
+
 	// . we added a rec to doledb for the firstIp in m_waitingTreeKey, so
 	//   now go to the next node in the wait tree.
 	// . it will get the next key after m_waitingTreeKey
@@ -2292,9 +2341,36 @@ void parseUfnTreeKey ( key128_t  *k ,
 	*spiderTimeMS |= k->n0 >> (32+24);
 }
 
+// . this is ONLY CALLED from populatedDoledbFromWaitingTree() above
 // . returns false if blocked, true otherwise
 // . returns true and sets g_errno on error
 bool SpiderColl::scanSpiderdb ( bool needList ) {
+
+	if ( ! m_waitingTreeKeyValid ) { char *xx=NULL;*xx=0; }
+	if ( ! m_scanningIp ) { char *xx=NULL;*xx=0; }
+
+	//
+	// no longer getting list
+	//
+	if ( ! needList )
+		m_gettingList = false;
+
+	// i guess we are always restricted to an ip, because
+	// populateWaitingTreeFromSpiderdb calls its own msg5.
+	long firstIp0 = g_spiderdb.getFirstIp(&m_nextKey);
+	// sanity
+	if ( m_scanningIp != firstIp0 ) { char *xx=NULL;*xx=0; }
+	// sometimes we already have this ip in doledb/doleiptable
+	// already and somehow we try to scan spiderdb for it anyway
+	if ( m_doleIpTable.isInTable ( &firstIp0 ) ) { char *xx=NULL;*xx=0;}
+	// if it got zapped from the waiting tree by the time we read the list
+	if ( ! m_waitingTable.isInTable ( &m_scanningIp ) ) return true;
+	// sanity check
+	long wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
+	if ( wn < 0 ) { 
+		log("spider: waiting tree key removed while reading list");
+		return true;
+	}
 
  readLoop:
 
@@ -2307,11 +2383,12 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// . get the list of spiderdb records
 		// . do not include cache, those results are old and will mess
 		//   us up
-		log(LOG_DEBUG,"spider: scanSpiderdb: "
-		    "calling msg5: startKey=0x%llx,0x%llx "
-		    "firstip=%s",
-		    m_nextKey.n1,m_nextKey.n0,
-		    iptoa(g_spiderdb.getFirstIp(&m_nextKey)));
+		if (g_conf.m_logDebugSpiderFlow )
+			log(LOG_DEBUG,"spflow: scanSpiderdb: "
+			    "calling msg5: startKey=0x%llx,0x%llx "
+			    "firstip=%s",
+			    m_nextKey.n1,m_nextKey.n0,
+			    iptoa(firstIp0));
 		// flag it
 		m_gettingList = true;
 		// read the list from local disk
@@ -2332,6 +2409,11 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 					true          )) // do error correct?
 			// return false if blocked
 			return false ;
+		// note its return
+		if ( g_conf.m_logDebugSpider )
+			log("spider: back from msg5 spiderdb read");
+		// no longer getting list
+		m_gettingList = false;
 	}
 
 	// show list stats
@@ -2340,7 +2422,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		    m_list.m_listSize);
 
 	// unflag it
-	m_gettingList = false;
+	//m_gettingList = false;
 	// stop if we are done
 	if ( m_isReadDone ) return true;
 
@@ -2410,6 +2492,9 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 				false );
 	}
 
+
+	if ( list->isEmpty() )
+		log("spflow: failed to get rec for ip=%s",iptoa(firstIp0));
 
 	long firstIp = m_waitingTreeKey.n0 & 0xffffffff;
 
@@ -2764,7 +2849,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			log("spider: nuking misleading waitingtree key "
 			    "firstIp=%s", iptoa(firstIp));
 		m_waitingTree.deleteNode ( 0,(char *)&m_waitingTreeKey,true);
-
+		m_waitingTreeKeyValid = false;
 		// note it
 		unsigned long long timestamp64 = m_waitingTreeKey.n1;
 		timestamp64 <<= 32;
@@ -2812,7 +2897,11 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		oldSpiderTimeMS <<= 32;
 		oldSpiderTimeMS |= (m_waitingTreeKey.n0 >> 32);
 		// delete old node
-		m_waitingTree.deleteNode ( 0,(char *)&m_waitingTreeKey ,true);
+		long wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
+		if ( wn < 0 ) { char *xx=NULL;*xx=0; }
+		m_waitingTree.deleteNode (wn,false );
+		// invalidate
+		m_waitingTreeKeyValid = false;
 		long  fip = m_bestRequest->m_firstIp;
 		key_t wk2 = makeWaitingTreeKey ( m_bestSpiderTimeMS , fip );
 		// log the replacement
@@ -2829,7 +2918,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		m_waitingTree.addKey ( &wk2 );
 
 		// note it
-		log(LOG_DEBUG,"spflow: added time=%lli ip=%s to waiting tree",
+		log(LOG_DEBUG,"spflow: RE-added time=%lli ip=%s to waiting "
+		    "tree",
 		    m_bestSpiderTimeMS , iptoa(fip));
 
 		// keep the table in sync now with the time
@@ -2849,6 +2939,13 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 					   m_bestRequest->getUrlHash48() ,
 					   false                         );
 	
+
+	if ( g_conf.m_logDebugSpiderFlow )
+		log("spflow: got winner pdocid=%lli url=%s",
+		    m_bestRequest->m_probDocId,
+		    m_bestRequest->m_url);
+
+
 	// make it into a doledb record
 	char *p = m_doleBuf;
 	*(key_t *)p = doleKey;
@@ -2867,6 +2964,9 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// immediately get another spider request from this same ip added
 	// to it while the msg4 is out. but if add failes we totally bail
 	// with g_errno set
+	//
+	// crap, i think this could be slowing us down when spidering
+	// a single ip address. maybe use msg1 here not msg4?
 	if ( ! addToDoleTable ( m_bestRequest ) ) return true;
 
 	//
@@ -2889,14 +2989,17 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	}
 	
 
-	// use msg4 to transmit our guys into the rdb, RDB_DOLEDB
-	bool status = m_msg4.addMetaList ( m_doleBuf     ,
-					   p - m_doleBuf ,
-					   m_collnum     ,
-					   this          ,
-					   doledWrapper  ,
-					   MAX_NICENESS  ,
-					   RDB_DOLEDB    ) ;
+	m_msg4Start = gettimeofdayInMilliseconds();
+
+	// . use msg4 to transmit our guys into the rdb, RDB_DOLEDB
+	// . no, use msg1 for speed, so we get it right away!!
+	bool status = m_msg1.addRecord ( m_doleBuf     ,
+					 p - m_doleBuf ,
+					 RDB_DOLEDB    ,
+					 m_collnum     ,
+					 this          ,
+					 doledWrapper  ,
+					 0 ); // niceness MAX_NICENESS  ,
 	// if it blocked set this to true so we do not reuse it
 	if ( ! status ) m_msg4Avail = false;
 
@@ -2922,6 +3025,9 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	m_waitingTree.deleteNode ( 0, (char *)&m_waitingTreeKey , true);
 	m_waitingTable.removeKey  ( &storedFirstIp );
 	
+	// invalidate
+	m_waitingTreeKeyValid = false;
+
 	// sanity check
 	if ( ! m_waitingTable.m_isWritable ) { char *xx=NULL;*xx=0;}
 
@@ -3273,6 +3379,27 @@ SpiderColl *getNextSpiderColl ( long *cri ) ;
 
 void gotDoledbListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) ;
 
+//////////////////////////
+//////////////////////////
+//
+// The second KEYSTONE function.
+//
+// Scans doledb and spiders the doledb records.
+//
+// Doledb records contain SpiderRequests ready for spidering NOW.
+//
+// 1. gets all locks from all hosts in the group (shard)
+// 2. sends confirm msg to all hosts if lock acquired:
+//    - each host will remove from doledb then
+//    - assigned host will also add new "0" entry to waiting tree if need be
+//    - calling addToWaitingTree() will trigger populateDoledbFromWaitingTree()
+//      to add a new entry into waiting tree, not the one just locked.
+// 3. makes a new xmldoc class for that url and calls indexDoc() on it
+//
+//////////////////////////
+//////////////////////////
+
+
 // now check our RDB_DOLEDB for SpiderRequests to spider!
 void SpiderLoop::spiderDoledUrls ( ) {
 
@@ -3564,7 +3691,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	}
 
 	// if debugging the spider flow show the start key if list non-empty
-	if ( g_conf.m_logDebugSpiderFlow ) {
+	/*if ( g_conf.m_logDebugSpiderFlow ) {
 		// 12 byte doledb keys
 		long pri = g_doledb.getPriority(&m_sc->m_nextDoledbKey);
 		long stm = g_doledb.getSpiderTime(&m_sc->m_nextDoledbKey);
@@ -3575,7 +3702,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		     pri,
 		     stm,
 		     uh48);
-	}
+		     }*/
 	
 
 	//time_t nowGlobal = getTimeGlobal();
@@ -3618,11 +3745,16 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	// only inc it if its positive! because we do have negative
 	// doledb keys in here now
-	if ( (m_sc->m_nextDoledbKey & 0x01) == 0x01 )
-		m_sc->m_nextDoledbKey += 1;
+	//if ( (m_sc->m_nextDoledbKey & 0x01) == 0x01 )
+	//	m_sc->m_nextDoledbKey += 1;
 	// if its negative inc by two then! this fixes the bug where the
 	// list consisted only of one negative key and was spinning forever
-	else
+	//else
+	//	m_sc->m_nextDoledbKey += 2;
+
+	// if its negative inc by two then! this fixes the bug where the
+	// list consisted only of one negative key and was spinning forever
+	if ( (m_sc->m_nextDoledbKey & 0x01) == 0x00 )
 		m_sc->m_nextDoledbKey += 2;
 
 	// did it hit zero? that means it wrapped around!
@@ -3803,6 +3935,12 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		if ( siwt >= 0 ) sameIpWaitTime = siwt;
 	}
 
+	long maxSpidersOutPerIp = 999;
+	if ( ufn >= 0 ) {
+		maxSpidersOutPerIp = m_sc->m_cr->m_spiderIpMaxSpiders[ufn];
+		if ( maxSpidersOutPerIp < 0 ) maxSpidersOutPerIp = 999;
+	}
+
 	// shortcut
 	char *coll = m_sc->m_cr->m_coll;
 	// . spider that. we don't care wheter it blocks or not
@@ -3814,7 +3952,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// . this returns true right away if it failed to get the lock...
 	//   which means the url is already locked by someone else...
 	// . it might also return true if we are already spidering the url
-	bool status = spiderUrl9 ( sreq , doledbKey , coll , sameIpWaitTime ) ;
+	bool status = spiderUrl9 ( sreq , doledbKey , coll , sameIpWaitTime ,
+				   maxSpidersOutPerIp ) ;
 
 	// just increment then i guess
 	m_list.skipCurrentRecord();
@@ -3864,7 +4003,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 			      key_t *doledbKey ,
 			      char *coll ,
-			      long sameIpWaitTime ) {
+			      long sameIpWaitTime ,
+			      long maxSpidersOutPerIp ) {
 	// sanity check
 	//if ( ! sreq->m_doled ) { char *xx=NULL;*xx=0; }
 	// if waiting on a lock, wait
@@ -3978,8 +4118,14 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 		//   hour. it had only reach about 30,000 after an hour.
 		//   so at this point just set the lock timeout to
 		//   4 hours i guess.
-		//if ( xd->m_doledbKey == *doledbKey ) { char *xx=NULL;*xx=0; }
-		if ( xd->m_doledbKey != *doledbKey ) continue;
+		// . i am seeing this again and we are trying over and over
+		//   again to spider the same url and hogging the cpu so
+		//   we need to keep this sanity check in here for times
+		//   like this
+		if ( xd->m_doledbKey == *doledbKey ) { char *xx=NULL;*xx=0; }
+		// keep chugging
+		continue;
+		//if ( xd->m_doledbKey != *doledbKey ) continue;
 		// count it as processed
 		m_processed++;
 		// log it
@@ -4039,6 +4185,7 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 				  m_doledbKey ,
 				  collnum,
 				  sameIpWaitTime,
+				  maxSpidersOutPerIp,
 				  m_sreq->m_firstIp,
 				  NULL , // state
 				  NULL ) )  // callback
@@ -4173,8 +4320,10 @@ bool SpiderLoop::spiderUrl2 ( ) {
 	m_sc->m_outstandingSpiders[(unsigned char)m_sreq->m_priority]++;
 
 	if ( g_conf.m_logDebugSpiderFlow )
-		log(LOG_DEBUG,"spflow: sc_out=%li url=%s",
-		    m_sc->m_spidersOut,m_sreq->m_url);
+		log(LOG_DEBUG,"spflow: sc_out=%li waiting=%li url=%s",
+		    m_sc->m_spidersOut,
+		    m_sc->m_waitingTree.m_numUsedNodes,
+		    m_sreq->m_url);
 
 	// . return if this blocked
 	// . no, launch another spider!
@@ -4452,6 +4601,7 @@ bool Msg12::getLocks ( long long probDocId ,
 		       DOLEDBKEY *doledbKey,
 		       collnum_t collnum,
 		       long sameIpWaitTime,
+		       long maxSpidersOutPerIp,
 		       long firstIp,
 		       void *state ,
 		       void (* callback)(void *state) ) {
@@ -4487,6 +4637,7 @@ bool Msg12::getLocks ( long long probDocId ,
 	m_doledbKey = *doledbKey;
 	m_collnum = collnum;
 	m_sameIpWaitTime = sameIpWaitTime;
+	m_maxSpidersOutPerIp = maxSpidersOutPerIp;
 	m_firstIp = firstIp;
 
 	// sanity check, just 6 bytes! (48 bits)
@@ -4524,12 +4675,20 @@ bool Msg12::getLocks ( long long probDocId ,
 	// short cut
 	UdpServer *us = &g_udpServer;
 
+
 	static long s_lockSequence = 0;
-	// point to start of the 12 byte request buffer
-	char *request = (char *)&m_lockKey;
 	// remember the lock sequence # in case we have to call remove locks
 	m_lockSequence = s_lockSequence++;
-	long  requestSize = 12;
+
+	LockRequest *lr = &m_lockRequest;
+	lr->m_lockKey = m_lockKey;
+	lr->m_firstIp = m_firstIp;
+	lr->m_removeLock = 0;
+	lr->m_lockSequence = m_lockSequence;
+
+	// point to start of the 12 byte request buffer
+	char *request = (char *)lr;//m_lockKey;
+	long  requestSize = sizeof(LockRequest);//12;
 
 	// loop over hosts in that group
 	for ( long i = 0 ; i < hpg ; i++ ) {
@@ -4591,6 +4750,34 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 	// if error, treat as a not grant
 	if ( g_errno ) {
 		bool logIt = true;
+		// if we got an ETRYAGAIN when trying to confirm our lock
+		// that means doledb was saving/dumping to disk and we 
+		// could not remove the record from doledb and add an
+		// entry to the waiting tree, so we need to keep trying
+		if ( g_errno == ETRYAGAIN && m_confirming ) {
+			// c ount it again
+			m_numRequests++;
+			// use what we were using
+			char *request     = (char *)&m_confirmRequest;
+			long  requestSize = sizeof(ConfirmRequest);
+			Host *h = g_hostdb.getHost(slot->m_hostId);
+			// send request to him
+			UdpServer *us = &g_udpServer;
+			if ( ! us->sendRequest ( request      ,
+						 requestSize  ,
+						 0x12         , // msgType
+						 h->m_ip      ,
+						 h->m_port    ,
+						 h->m_hostId  ,
+						 NULL         , // retSlotPtrPt
+						 this         , // state data
+						 gotLockReplyWrapper ,
+						 60*60*24*365    ) ) 
+				return false;
+			// error?
+			log("spider: error re-sending confirm request: %s",
+			    mstrerror(g_errno));
+		}
 		// only log every 10 seconds for ETRYAGAIN
 		if ( g_errno == ETRYAGAIN ) {
 			static time_t s_lastTime = 0;
@@ -4713,11 +4900,18 @@ bool Msg12::removeAllLocks ( ) {
 	// we are now removing 
 	m_removing = true;
 
+	LockRequest *lr = &m_lockRequest;
+	lr->m_lockKey = m_lockKey;
+	lr->m_lockSequence = m_lockSequence;
+	lr->m_firstIp = m_firstIp;
+	lr->m_removeLock = 1;
+
+
 	// make that the request
 	// . point to start of the 12 byte request buffer
 	// . m_lockSequence should still be valid
-	char *request     = (char *)&m_lockKey;
-	long  requestSize = 12;
+	char *request     = (char *)lr;//m_lockKey;
+	long  requestSize = sizeof(LockRequest);//12;
 
 	// now the locking group is based on the probable docid
 	unsigned long groupId = g_hostdb.getGroupIdFromDocId(m_lockKey);
@@ -4730,7 +4924,7 @@ bool Msg12::removeAllLocks ( ) {
 	// short cut
 	UdpServer *us = &g_udpServer;
 	// set the hi bit though for this one
-	m_lockKey |= 0x8000000000000000LL;
+	//m_lockKey |= 0x8000000000000000LL;
 	// get # of hosts in each mirror group
 	long hpg = g_hostdb.getNumHostsPerGroup();
 	// loop over hosts in that group
@@ -4761,14 +4955,6 @@ bool Msg12::removeAllLocks ( ) {
 	return true;
 }
 
-class ConfirmRequest {
-public:
-	collnum_t m_collnum;
-	key_t m_doledbKey;
-	long  m_firstIp;
-};
-
-
 bool Msg12::confirmLockAcquisition ( ) {
 
 	// we are now removing 
@@ -4777,15 +4963,18 @@ bool Msg12::confirmLockAcquisition ( ) {
 	// make that the request
 	// . point to start of the 12 byte request buffer
 	// . m_lockSequence should still be valid
-	ConfirmRequest cq;
-	char *request     = (char *)&cq;
+	ConfirmRequest *cq = &m_confirmRequest;
+	char *request     = (char *)cq;
 	long  requestSize = sizeof(ConfirmRequest);
 	// sanity
 	if ( requestSize != sizeof(ConfirmRequest) ) { char *xx=NULL;*xx=0; }
+	// sanity
+	if ( requestSize == sizeof(LockRequest)){ char *xx=NULL;*xx=0; }
 	// set it
-	cq.m_collnum   = m_collnum;
-	cq.m_doledbKey = m_doledbKey;
-	cq.m_firstIp   = m_firstIp;
+	cq->m_collnum   = m_collnum;
+	cq->m_doledbKey = m_doledbKey;
+	cq->m_firstIp   = m_firstIp;
+	cq->m_maxSpidersOutPerIp = m_maxSpidersOutPerIp;
 	// . use the locking group from when we sent the lock request
 	// . get ptr to list of hosts in the group
 	Host *hosts = g_hostdb.getGroup ( m_lockGroupId );
@@ -4826,6 +5015,35 @@ bool Msg12::confirmLockAcquisition ( ) {
 	return true;
 }
 
+long SpiderLoop::getNumSpidersOutPerIp ( long firstIp ) {
+	long count = 0;
+	// count locks
+	HashTableX *ht = &g_spiderLoop.m_lockTable;
+	// scan the slots
+	long ns = ht->m_numSlots;
+	for ( long i = 0 ; i < ns ; i++ ) {
+		// breathe
+		//QUICKPOLL(niceness);
+		// skip if empty
+		if ( ! ht->m_flags[i] ) continue;
+		// cast lock
+		UrlLock *lock = (UrlLock *)ht->getValueFromSlot(i);
+		// skip if not yet expired
+		if ( lock->m_firstIp == firstIp ) count++;
+	}
+	/*
+	for ( long i = 0 ; i <= m_maxUsed ; i++ ) {
+		// get it
+		XmlDoc *xd = m_docs[i];
+		// skip if empty
+		if ( ! xd ) continue;
+		// check it
+		if ( xd->m_firstIp == firstIp ) count++;
+	}
+	*/
+	return count;
+}
+
 void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	// get request
 	char *request = udpSlot->m_readBuf;
@@ -4850,7 +5068,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 		SpiderColl *sc = g_spiderCache.getSpiderColl(cq->m_collnum);
 		// make it negative
 		cq->m_doledbKey.n0 &= 0xfffffffffffffffeLL;
-		// and add it to doledb
+		// and add the negative rec to doledb (deletion operation)
 		Rdb *rdb = &g_doledb.m_rdb;
 		if ( ! rdb->addRecord ( cq->m_collnum,
 					(char *)&cq->m_doledbKey,
@@ -4860,15 +5078,26 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 			// tree is dumping or something, probably ETRYAGAIN
 			msg = "error adding neg rec to doledb";
 			log("spider: %s %s",msg,mstrerror(g_errno));
+			//char *xx=NULL;*xx=0;
 			us->sendErrorReply ( udpSlot , g_errno );
 			return;
 		}
 		// now remove from doleiptable since we removed from doledb
 		sc->removeFromDoledbTable ( cq->m_firstIp );
+
+		// how many spiders outstanding for this coll and IP?
+		long out = g_spiderLoop.getNumSpidersOutPerIp ( cq->m_firstIp);
+
 		// . now add to waiting tree so we add another spiderdb
 		//   record for this firstip to doledb
 		// . true = callForScan
-		if ( ! sc->addToWaitingTree ( 0 , cq->m_firstIp, true ) ) {
+		// . do not add to waiting tree if we have enough outstanding
+		//   spiders for this ip. we will add to waiting tree when
+		//   we receive a SpiderReply in addSpiderReply()
+		if ( out < cq->m_maxSpidersOutPerIp &&
+		     // this will just return true if we are not the 
+		     // responsible host for this firstip
+		     ! sc->addToWaitingTree ( 0 , cq->m_firstIp, true ) ) {
 			msg = "FAILED TO ADD TO WAITING TREE";
 			log("spider: %s %s",msg,mstrerror(g_errno));
 			us->sendErrorReply ( udpSlot , g_errno );
@@ -4883,7 +5112,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 
 
 	// sanity check
-	if ( reqSize != 12 ) {
+	if ( reqSize != sizeof(LockRequest) ) {
 		log("spider: bad msg12 request size of %li",reqSize);
 		us->sendErrorReply ( udpSlot , EBADREQUEST );
 		return;
@@ -4898,19 +5127,23 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 		us->sendErrorReply ( udpSlot , ETRYAGAIN );
 		return;
 	}
-	unsigned long long lockKey = *(long long *)request;
-	long lockSequence = *(long *)(request+8);
+
+	LockRequest *lr = (LockRequest *)request;
+	//unsigned long long lockKey = *(long long *)request;
+	//long lockSequence = *(long *)(request+8);
 	// is this a remove operation? assume not
-	bool remove = false;
+	//bool remove = false;
 	// get top bit
-	if ( lockKey & 0x8000000000000000LL ) remove = true;
+	//if ( lockKey & 0x8000000000000000LL ) remove = true;
+
 	// mask it out
-	lockKey &= 0x7fffffffffffffffLL;
+	//lockKey &= 0x7fffffffffffffffLL;
 	// sanity check, just 6 bytes! (48 bits)
-	if ( lockKey & 0xffff000000000000LL ) { char *xx=NULL;*xx=0; }
+	if ( lr->m_lockKey & 0xffff000000000000LL ) { char *xx=NULL;*xx=0; }
 	// note it
 	if ( g_conf.m_logDebugSpider )
-		log("spider: got msg12 request remove=%li",(long)remove);
+		log("spider: got msg12 request remove=%li",
+		    (long)lr->m_removeLock);
 	// get time
 	long nowGlobal = getTimeGlobal();
 	// shortcut
@@ -4952,7 +5185,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 			log("spider: removing lock after waiting. elapsed=%li."
 			    " lockKey=%llu hid=%li expires=%lu nowGlobal=%lu",
 			    (nowGlobal - lock->m_timestamp),
-			    lockKey,hostId,lock->m_expires,nowGlobal);
+			    lr->m_lockKey,hostId,lock->m_expires,nowGlobal);
 		// nuke the slot and possibly re-chain
 		ht->removeSlot ( i );
 		// gotta restart from the top since table may have shrunk
@@ -4964,32 +5197,39 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 
 
 	// check tree
-	long slot = ht->getSlot ( &lockKey );
+	long slot = ht->getSlot ( &lr->m_lockKey );
 	// put it here
 	UrlLock *lock = NULL;
 	// if there say no no
 	if ( slot >= 0 ) lock = (UrlLock *)ht->getValueFromSlot ( slot );
 
 	// if doing a remove operation and that was our hostid then unlock it
-	if ( remove && 
+	if ( lr->m_removeLock && 
 	     lock && 
 	     lock->m_hostId == hostId &&
-	     lock->m_lockSequence == lockSequence ) {
+	     lock->m_lockSequence == lr->m_lockSequence ) {
 		// note it for now
 		if ( g_conf.m_logDebugSpider )
 			log("spider: removing lock for lockkey=%llu hid=%li",
-			    lockKey,hostId);
+			    lr->m_lockKey,hostId);
 		// unlock it
 		ht->removeSlot ( slot );
 		// it is gone
 		lock = NULL;
 	}
 	// ok, at this point all remove ops return
-	if ( remove ) {
+	if ( lr->m_removeLock ) {
 		reply[0] = 1;
 		us->sendReply_ass ( reply , 1 , reply , 1 , udpSlot );
 		return;
 	}
+
+	/////////
+	//
+	// add new lock
+	//
+	/////////
+
 
 	// if lock > 1 hour old then remove it automatically!!
 	if ( lock && nowGlobal - lock->m_timestamp > MAX_LOCK_AGE ) {
@@ -4997,7 +5237,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 		log("spider: removing lock after %li seconds "
 		    "for lockKey=%llu hid=%li",
 		    (nowGlobal - lock->m_timestamp),
-		    lockKey,hostId);
+		    lr->m_lockKey,hostId);
 		// unlock it
 		ht->removeSlot ( slot );
 		// it is gone
@@ -5008,7 +5248,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 		// note it for now
 		if ( g_conf.m_logDebugSpider )
 			log("spider: refusing lock for lockkey=%llu hid=%li",
-			    lockKey,hostId);
+			    lr->m_lockKey,hostId);
 		reply[0] = 0;
 		us->sendReply_ass ( reply , 1 , reply , 1 , udpSlot );
 		return;
@@ -5016,11 +5256,12 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	// make the new lock
 	UrlLock tmp;
 	tmp.m_hostId       = hostId;
-	tmp.m_lockSequence = lockSequence;
+	tmp.m_lockSequence = lr->m_lockSequence;
 	tmp.m_timestamp    = nowGlobal;
 	tmp.m_expires      = 0;
+	tmp.m_firstIp      = lr->m_firstIp;
 	// put it into the table
-	if ( ! ht->addKey ( &lockKey , &tmp ) ) {
+	if ( ! ht->addKey ( &lr->m_lockKey , &tmp ) ) {
 		// return error if that failed!
 		us->sendErrorReply ( udpSlot , g_errno );
 		return;
@@ -5028,7 +5269,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	// note it for now
 	if ( g_conf.m_logDebugSpider )
 		log("spider: granting lock for lockKey=%llu hid=%li",
-		    lockKey,hostId);
+		    lr->m_lockKey,hostId);
 	// grant the lock
 	reply[0] = 1;
 	us->sendReply_ass ( reply , 1 , reply , 1 , udpSlot );

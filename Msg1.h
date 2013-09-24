@@ -68,6 +68,14 @@ class Msg1 {
 		       bool      waitForReply = true  ,
 		       bool     *inTransit    = NULL  );
 
+	bool addRecord ( char *rec , 
+			 long recSize , 
+			 char          rdbId             ,
+			 collnum_t collnum ,
+			 void         *state             ,
+			 void (* callback)(void *state)  ,
+			 long          niceness          ) ;
+
 	// private:
 
 	// keep this public cuz it's called by a C wrapper in Msg1.cpp
