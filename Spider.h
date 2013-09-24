@@ -1189,6 +1189,8 @@ class SpiderLoop {
 	~SpiderLoop();
 	SpiderLoop();
 
+	bool isInLockTable ( long long probDocId );
+
 	// free all XmlDocs and m_list
 	void reset();
 

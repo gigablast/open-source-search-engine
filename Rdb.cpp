@@ -1951,7 +1951,9 @@ bool Rdb::addRecord ( collnum_t collnum,
 		if ( KEYNEG(key) ) {
 			// log debug
 			logf(LOG_DEBUG,"spflow: removed doledb key "
-			     "for uh48=%llu",
+			     "for pri=%li time=%lu uh48=%llu",
+			     (long)g_doledb.getPriority(&doleKey),
+			     (long)g_doledb.getSpiderTime(&doleKey),
 			     g_doledb.getUrlHash48(&doleKey));
 		}
 		else {
@@ -1959,9 +1961,14 @@ bool Rdb::addRecord ( collnum_t collnum,
 			//SpiderColl *sc = g_spiderCache.getSpiderColl(collnum)
 			// do not overflow!
 			// log debug
-			logf(LOG_DEBUG,"spflow: added   doledb key "
-			     "for uh48=%llu",
-			     g_doledb.getUrlHash48(&doleKey));
+			SpiderRequest *sreq = (SpiderRequest *)data;
+			logf(LOG_DEBUG,"spflow: added doledb key "
+			     "for pri=%li time=%lu uh48=%llu docid=%lli u=%s",
+			     (long)g_doledb.getPriority(&doleKey),
+			     (long)g_doledb.getSpiderTime(&doleKey),
+			     g_doledb.getUrlHash48(&doleKey),
+			     sreq->m_probDocId,
+			     sreq->m_url);
 		}
 	}
 
@@ -2198,8 +2205,10 @@ bool Rdb::addRecord ( collnum_t collnum,
 				       (char *)key,
 				       sizeof(key_t) );
 				// debug log
-				if ( g_conf.m_logDebugSpider )
-					log("rdb: cursor reset pri=%li to %s",
+				if ( g_conf.m_logDebugSpider ||
+				     g_conf.m_logDebugSpiderFlow )
+					log("spflow: cursor reset pri=%li to "
+					    "%s",
 					    pri,KEYSTR(key,12));
 			}
 			// that's it for doledb mods

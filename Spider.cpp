@@ -2659,7 +2659,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// that scanSpiderdb() repopulates doledb again with that
 		// "firstIp". this way we can spider multiple urls from the
 		// same ip at the same time.
-		if ( g_spiderLoop.m_lockTable.isInTable(&sreq->m_probDocId) )
+		if ( g_spiderLoop.isInLockTable(sreq->m_probDocId) )
 			continue;
 		     
 		// ok, we got a new winner
@@ -2839,7 +2839,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		return true;
 	}
 
-	if ( g_spiderLoop.m_lockTable.isInTable(&m_bestRequest->m_probDocId)){
+	if ( g_spiderLoop.isInLockTable ( m_bestRequest->m_probDocId ) ) {
 		char *xx=NULL;*xx=0; }
 
 	// make the doledb key first for this so we can add it
@@ -3444,15 +3444,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	m_gettingDoledbList = true;
 
 	// log this now
-	if ( g_conf.m_logDebugSpider ) {
+	if ( g_conf.m_logDebugSpider )
 		m_doleStart = gettimeofdayInMillisecondsLocal();
-		// 12 byte doledb keys
-		//long pri = g_doledb.getPriority(&m_sc->m_nextDoledbKey);
-		//logf(LOG_DEBUG,"spider: loading list from doledb startkey=%s"
-		//     " pri=%li",
-		//     KEYSTR(&m_sc->m_nextDoledbKey,12),
-		//     pri);
-	}
 
 	// get a spider rec for us to spider from doledb
 	if ( ! m_msg5.getList ( RDB_DOLEDB      ,
@@ -3569,6 +3562,21 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// and load that list from doledb for that priority
 		return true;
 	}
+
+	// if debugging the spider flow show the start key if list non-empty
+	if ( g_conf.m_logDebugSpiderFlow ) {
+		// 12 byte doledb keys
+		long pri = g_doledb.getPriority(&m_sc->m_nextDoledbKey);
+		long stm = g_doledb.getSpiderTime(&m_sc->m_nextDoledbKey);
+		long long uh48 = g_doledb.getUrlHash48(&m_sc->m_nextDoledbKey);
+		logf(LOG_DEBUG,"spider: loading list from doledb startkey=%s"
+		     " pri=%li time=%lu uh48=%llu",
+		     KEYSTR(&m_sc->m_nextDoledbKey,12),
+		     pri,
+		     stm,
+		     uh48);
+	}
+	
 
 	//time_t nowGlobal = getTimeGlobal();
 
@@ -4425,6 +4433,12 @@ void gotLockReplyWrapper ( void *state , UdpSlot *slot ) {
 	if ( msg12->m_callback ) msg12->m_callback ( msg12->m_state );
 	// ok, try to get another url to spider
 	else                     g_spiderLoop.spiderDoledUrls();
+}
+
+bool SpiderLoop::isInLockTable ( long long probDocId ) {
+	unsigned long long  lockKey=g_titledb.getFirstProbableDocId(probDocId);
+	HashTableX *ht = &g_spiderLoop.m_lockTable;
+	return ht->isInTable ( &lockKey );
 }
 
 // . returns false if blocked, true otherwise.
