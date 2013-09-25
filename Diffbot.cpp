@@ -1750,12 +1750,20 @@ bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( ! cr ) 
 			return sendErrorReply(socket,fmt,"invalid collection");
 		// make a list of spider requests from these urls
-		long listSize;
-		char *list ;
-		list = g_spiderdb.getSpiderRequestMetaList(urlData,&listSize);
+		SafeBuf listBuf;
+		// this returns NULL with g_errno set
+		bool status = getSpiderRequestMetaList ( urlData , &listBuf );
+		// empty?
+		long size = listBuf.length();
+		// error?
+		if ( ! status )
+			return sendErrorReply(socket,fmt,mstrerror(g_errno));
+		// if not list
+		if ( ! size )
+			return sendErrorReply(socket,fmt,"no urls found");
 		// add to spiderdb
-		if ( ! st->m_msg4.addMetaList( list ,
-					       listSize ,
+		if ( ! st->m_msg4.addMetaList( listBuf.getBufStart() ,
+					       listBuf.length(),
 					       cr->m_coll,
 					       st ,
 					       addedUrlsToSpiderdbWrapper,
@@ -2943,3 +2951,67 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 
 	return cr;
 }
+
+// just use "fakeips" based on the hash of each url hostname/subdomain
+// so we don't waste time doing ip lookups.
+bool getSpiderRequestMetaList ( char *doc , SafeBuf *listBuf ) {
+	// . scan the list of urls
+	// . assume separated by white space \n \t or space
+	char *p = doc;
+
+	long now = getTimeGlobal();
+
+	// a big loop
+	while ( true ) {
+		// skip white space (\0 is not a whitespace)
+		for ( ; is_wspace_a(*p) ; p++ );
+		// all done?
+		if ( ! *p ) break;
+		// save it
+		char *saved = p;
+		// advance to next white space
+		for ( ; ! is_wspace_a(*p) && *p ; p++ );
+		// set end
+		char *end = p;
+		// get that url
+		Url url;
+		url.set ( saved , end - saved );
+		// if not legit skip
+		if ( url.getUrlLen() <= 0 ) continue;
+		// need this
+		long long probDocId = g_titledb.getProbableDocId(&url);
+		// make it
+		SpiderRequest sreq;
+		sreq.reset();
+		sreq.m_firstIp = url.getHostHash32(); // fakeip!
+		sreq.m_hostHash32 = url.getHostHash32();
+		sreq.m_domHash32  = url.getDomainHash32();
+		sreq.m_siteHash32 = url.getHostHash32();
+		sreq.m_probDocId  = probDocId;
+		sreq.m_hopCount   = 0; // we're a seed
+		sreq.m_hopCountValid = true;
+		sreq.m_addedTime = now;
+		sreq.m_isNewOutlink = 1;
+		sreq.m_isWWWSubdomain = url.isSimpleSubdomain();
+		
+		// treat seed urls as being on same domain and hostname
+		sreq.m_sameDom = 1;
+		sreq.m_sameHost = 1;
+		sreq.m_sameSite = 1;
+		// save the url!
+		strcpy ( sreq.m_url , url.getUrl() );
+		// finally, we can set the key. isDel = false
+		sreq.setKey ( sreq.m_firstIp , probDocId , false );
+		// store rdbid first
+		if ( ! listBuf->pushChar(RDB_SPIDERDB) )
+			// return false with g_errno set
+			return false;
+		// store it
+		if ( ! listBuf->safeMemcpy ( &sreq , sreq.getRecSize() ) )
+			// return false with g_errno set
+			return false;
+	}
+	// all done
+	return true;
+}
+
