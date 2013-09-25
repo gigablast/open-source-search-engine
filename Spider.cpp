@@ -2514,8 +2514,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	if ( winReq && m_bestRequestValid ) {
 		if ( m_bestRequest->m_priority > winPriority )
 			winReq = NULL;
-		else if ( m_bestRequest->m_priority == winPriority &&
-			  (long)m_bestSpiderTimeMS < winPriority )
+		if ( m_bestRequest->m_priority == winPriority &&
+		     m_bestSpiderTimeMS < winTimeMS )
 			winReq = NULL;
 	}
 
