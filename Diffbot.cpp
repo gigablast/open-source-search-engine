@@ -1584,8 +1584,6 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	char *resetColl = hr->getString("resetcoll",NULL,NULL);
 	if ( resetColl )
 		g_collectiondb.resetColl ( resetColl );
-		
-
 
 	// set this to current collection. if only token was provided
 	// then it will return the first collection owned by token.
@@ -1631,7 +1629,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	sb.safePrintf("<a href=/crawlbot?addcoll=1&token=%s>"
 		      "add new collection"
 		      "</a> &nbsp; "
-		      "<a href=/crawlbot/summary?token=%s>"
+		      "<a href=/crawlbot?summary=1&token=%s>"
 		      "all collections"
 		      "</a> &nbsp; "
 		      , token
@@ -1676,6 +1674,70 @@ bool printCrawlBotPage ( TcpSocket *s ,
 
 
 	sb.safePrintf ( "</center><br/>" );
+
+	//////
+	//
+	// print collection summary page
+	//
+	//////
+
+	long summary = hr->getLong("summary",0);
+	// start the table
+	if ( summary ) {
+		sb.safePrintf("<table border=1 cellpadding=5>"
+			      "<tr>"
+			      "<td><b>Collection</b></td>"
+			      "<td><b>Objects Found</b></td>"
+			      "<td><b>URLs Harvested</b></td>"
+			      "<td><b>URLs Examined</b></td>"
+			      "<td><b>Page Download Attempts</b></td>"
+			      "<td><b>Page Download Successes</b></td>"
+			      "<td><b>Page Process Attempts</b></td>"
+			      "<td><b>Page Process Successes</b></td>"
+			      "</tr>"
+			      );
+	}
+	// scan each coll and get its stats
+	for ( long i = 0 ; summary && i < g_collectiondb.m_numRecs ; i++ ) {
+		CollectionRec *cx = g_collectiondb.m_recs[i];
+		if ( ! cx ) continue;
+		// must belong to us
+		if ( strcmp(cx->m_diffbotToken.getBufStart(),token) )
+			continue;
+		// print in table
+		sb.safePrintf("<tr>"
+			      "<td>%s</td>"
+			      "<td>%lli</td>"
+			      "<td>%lli</td>"
+			      "<td>%lli</td>"
+			      "<td>%lli</td>"
+			      "<td>%lli</td>"
+			      "<td>%lli</td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+			      , cx->m_coll
+			      , cx->m_globalCrawlInfo.m_objectsAdded -
+			        cx->m_globalCrawlInfo.m_objectsDeleted
+			      , cx->m_globalCrawlInfo.m_urlsHarvested
+			      , cx->m_globalCrawlInfo.m_urlsConsidered
+			      , cx->m_globalCrawlInfo.m_pageDownloadAttempts
+			      , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
+			      , cx->m_globalCrawlInfo.m_pageProcessAttempts
+			      , cx->m_globalCrawlInfo.m_pageProcessSuccesses
+			      );
+	}
+	if ( summary ) {
+		sb.safePrintf("</table></html>" );
+		return g_httpServer.sendDynamicPage (s, 
+						     sb.getBufStart(), 
+						     sb.length(),
+						     -1); // cachetime
+	}
+	///////
+	//
+	// end print collection summary page
+	//
+	///////
 
 	long maxToCrawl = hr->getLongLong("maxtocrawl",-1LL);
 	long maxToProcess = hr->getLongLong("maxtoprocess",-1LL);
