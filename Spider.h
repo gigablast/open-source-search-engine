@@ -593,7 +593,11 @@ class SpiderRequest {
 	// . only support certain tags in url filters now i guess
 	// . use the tag value from most recent SpiderRequest only
 	// . the "deep" tag is popular for hitting certain sites hard
-	long    m_tagDeep:1;
+	//long    m_tagDeep:1;
+	// we set this to one from Diffbot.cpp when urldata does not
+	// want the url's to have their links spidered. default is to make
+	// this 0 and to not avoid spidering the links.
+	long    m_avoidSpiderLinks:1;
 	// for identifying address heavy sites...
 	long    m_tagYellowPages:1;
 	// called XmlDoc::set4() from PageSubmit.cpp?

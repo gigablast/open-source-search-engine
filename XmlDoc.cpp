@@ -15326,6 +15326,12 @@ char *XmlDoc::getSpiderLinks ( ) {
 	     strstr ( buf2 , "none"     ) )
 		m_spiderLinks = false;
 
+	// spider request forbade it? diffbot.cpp crawlbot api when
+	// specifying urldata (list of urls to add to spiderdb) usually
+	// they do not want the links crawled i'd imagine.
+	if ( m_oldsrValid && m_oldsr.m_avoidSpiderLinks )
+		m_spiderLinks = false;
+
 	// set shadow member
 	m_spiderLinks2 = m_spiderLinks;
 	// validate

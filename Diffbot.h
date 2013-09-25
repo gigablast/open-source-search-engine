@@ -29,6 +29,6 @@ bool printCrawlBotPage2 ( TcpSocket *s ,
 //bool handleDiffbotRequest ( TcpSocket *s , HttpRequest *hr ) ;
 bool sendBackDump ( TcpSocket *s,HttpRequest *hr );
 
-bool getSpiderRequestMetaList ( char *doc , SafeBuf *listBuf ) ;
+bool getSpiderRequestMetaList ( char *doc, SafeBuf *listBuf, bool spiderLinks);
 
 #endif

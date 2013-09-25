@@ -1640,9 +1640,45 @@ public:
 	char *m_desc;
 };
 static class HelpItem s_his[] = {
+	{"format","Use &format=json to show JSON output."},
+	{"token","Required for all operations below."},
+	{"delcoll","Specify collection name to delete."},
+	{"resetcoll","Specify collection name to reset."},
+	{"addcoll","Say addcoll=1 to add a new collection."},
+	{"c","Specify the collection name. "
+	 "Required for all operations below. Just pass the token to "
+	 "the /crawlbot page to see a list of all collections that the "
+	 "token controls."},
+	{"pause","Use pause=0 or pause=1 to activate or pause spidering "
+	 "respectively."},
 	{"maxtocrawl", "specify max pages to successfully download"},
 	{"maxtoprocess", "specify max pages to successfully process through "
 	 "diffbot"},
+	{"urt","use robots.txt?"},
+	{"fe[N]","filter expression #N. The first expression in the url "
+	 "filters table is 0. But if N is 0, leave N out, only specify it "
+	 "if N is > 0. Example &fe=onsamedomain to change the expression in "
+	 "row #0 to onsamedomain. Or &fe1=foobar to change the expression "
+	 "in the second row to foobar."},
+	{"cspe[N]","spidering enabled for row #N in url filters table."},
+	{"fsf[N]","Respider frequency in days for row #N in url filters table."},
+	{"mspr[N]","Max outstanding spiders for this spider priority."},
+	{"mspi[N]","Max outstanding spiders for this IP."},
+	{"xg[N]","Wait this many milliseconds between spiders of same IP."},
+	{"fsp[N]","Spider priority. Higher priorities spidered first. Can be from 0 to 127."},
+	{"dapi[N]","Diffbot api number. Process through this diffbot api."},
+	{"injecturl","Specify a seed url to inject."},
+	{"urldata","A huge string of whitespace separated URLs to add to "
+	 "spiderdb for crawling."},
+	{"spiderlinks","Use 0 or 1 to not spider or spider links from "
+	 "the injected url respectively. Pass this along with the injecturl "
+	 "parameter. Any injected url will be treated as a seed url. Use "
+	 "this parameter in conjunction with the urldata parameter as well."},
+	{"ins_dapi[N]","Insert a row above row #N. Do not include [N] if it "
+	 "is row 0."},
+	{"rm_dapi[N]","Delete row #N. Do not include [N] if it "
+	 "is row 0."},
+
 	{NULL,NULL}
 };
 
@@ -1654,6 +1690,9 @@ bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
 		SafeBuf sb;
 		sb.safePrintf("<html>"
 			      "<title>Crawlbot API</title>"
+			      "<b>Use the parameters below on the "
+			      "<a href=\"/crawlbot\">/crawlbot</a> page."
+			      "</b><br><br>"
 			      "<table>"
 			      );
 		for ( long i = 0 ; i < 1000 ; i++ ) {
@@ -1753,10 +1792,15 @@ bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( ! cr ) 
 			return sendErrorReply2(socket,fmt,
 					       "invalid collection");
+		// avoid spidering links for these urls? i would say
+		// default is to NOT spider the links...
+		long spiderLinks = hr->getLong("spiderlinks",0);
 		// make a list of spider requests from these urls
 		SafeBuf listBuf;
 		// this returns NULL with g_errno set
-		bool status = getSpiderRequestMetaList ( urlData , &listBuf );
+		bool status = getSpiderRequestMetaList ( urlData , 
+							 &listBuf ,
+							 spiderLinks );
 		// empty?
 		long size = listBuf.length();
 		// error?
@@ -1978,6 +2022,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			firstOne = false;
 			sb.safePrintf("\n\n{"
 				      "\"name\":\"%s\",\n"
+				      "\"crawlingEnabled\":%li,\n"
 				      "\"objectsFound\":%lli,\n"
 				      "\"urlsHarvested\":%lli,\n"
 				      "\"urlsExamined\":%lli,\n"
@@ -1986,10 +2031,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      "\"pageProcessAttempts\":%lli,\n"
 				      "\"pageProcessSuccesses\":%lli,\n"
 				      // settable parms
-				      "\"maxToCrawl\":%lli,\n"
-				      "\"maxToProcess\":%lli,\n"
-				      "\"useRobotsTxt\":%li,\n"
+				      "\"maxtocrawl\":%lli,\n"
+				      "\"maxtoprocess\":%lli,\n"
+				      "\"urt\":%li,\n"
 				      ,cx->m_coll
+				      , (long)cx->m_spideringEnabled 
 				      , cx->m_globalCrawlInfo.m_objectsAdded -
 				      cx->m_globalCrawlInfo.m_objectsDeleted
 				      , cx->m_globalCrawlInfo.m_urlsHarvested
@@ -2076,7 +2122,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//	cr->m_diffbotApi.set(api);
 	//	cr->m_diffbotApi.nullTerm();
 	//}
-
 
 
 	long pause = hr->getLong("pause",-1);
@@ -2964,7 +3009,9 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 
 // just use "fakeips" based on the hash of each url hostname/subdomain
 // so we don't waste time doing ip lookups.
-bool getSpiderRequestMetaList ( char *doc , SafeBuf *listBuf ) {
+bool getSpiderRequestMetaList ( char *doc , 
+				SafeBuf *listBuf ,
+				bool spiderLinks ) {
 	// . scan the list of urls
 	// . assume separated by white space \n \t or space
 	char *p = doc;
@@ -3008,6 +3055,14 @@ bool getSpiderRequestMetaList ( char *doc , SafeBuf *listBuf ) {
 		sreq.m_sameDom = 1;
 		sreq.m_sameHost = 1;
 		sreq.m_sameSite = 1;
+
+		sreq.m_fakeFirstIp = 1;
+		sreq.m_isAddUrl = 1;
+
+		// spider links?
+		if ( ! spiderLinks )
+			sreq.m_avoidSpiderLinks = 1;
+
 		// save the url!
 		strcpy ( sreq.m_url , url.getUrl() );
 		// finally, we can set the key. isDel = false
