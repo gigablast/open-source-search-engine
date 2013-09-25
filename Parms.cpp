@@ -2095,7 +2095,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	else if ( t == TYPE_PRIORITY2 ) {
 		// just show the parm name and value if printing in json
 		if ( isJSON )
-			sb->safePrintf("\"%s\":%li,\n",cgi,*(long *)s);
+			sb->safePrintf("\"%s\":%li,\n",cgi,(long)*(char *)s);
 		else
 			printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s ,
 					true , true );
@@ -2107,7 +2107,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			long apiNum = (long)*s;
 			char *str = g_diffbotFields [apiNum];
 			sb->safePrintf("\"%s-str\":\"%s\",\n",cgi,str);
-			sb->safePrintf("\"%s\":\"%li\",\n",cgi,apiNum);
+			sb->safePrintf("\"%s\":%li,\n",cgi,apiNum);
 		}
 		else
 			printDiffbotDropDown ( 8, sb , cgi , *s );
