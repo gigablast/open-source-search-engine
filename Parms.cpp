@@ -1912,7 +1912,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			      strcmp(mk->m_xml,"maxSpidersPerRule")==0||
 			      strcmp(mk->m_xml,"maxSpidersPerIp") == 0||
 			      strcmp(mk->m_xml,"spiderIpWait") == 0 ) )
-				vt = " style=display:none;";
+				vt = " style=display:none;display:none;";
 			sb->safePrintf ( "<td%s>" , vt );
 			// if its of type checkbox in a table make it
 			// toggle them all on/off
@@ -1963,9 +1963,9 @@ bool Parms::printParm ( SafeBuf* sb,
 		else {
 			// this td will be invisible if isCrawlbot and the
 			// parm is too advanced to display
-			sb->safePrintf ( "<td width=%li%%%s>"//"<td width=78%%>
+			sb->safePrintf ( "<td width=%li%%>"//"<td width=78%%>
 					 "<b>%s</b><br><font size=1>",
-					 3*100/nc/2/4, vt, m->m_title );
+					 3*100/nc/2/4, m->m_title );
 			if ( pd ) 
 				status &= sb->htmlEncode (m->m_desc,
 							  gbstrlen(m->m_desc),
@@ -2003,7 +2003,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		else if ( firstInRow ) 
 			sb->safePrintf ( "<tr><td>" );
 		else    
-			sb->safePrintf ( "<td>" );
+			sb->safePrintf ( "<td%s>" , vt);
 	}
 
 	long cast = m->m_cast;
