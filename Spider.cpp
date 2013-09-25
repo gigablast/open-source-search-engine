@@ -2538,7 +2538,13 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	}
 
 	// are we the final list in the scan?
-	m_isReadDone = ( list->getListSize() < (long)SR_READ_SIZE ) ;
+	//m_isReadDone = ( list->getListSize() < (long)SR_READ_SIZE ) ;
+
+	//
+	// try to fix the bug of reading like only 150k when we asked for 512k
+	//
+	if ( list->isEmpty() )
+		m_isReadDone = true;
 
 	// if no spiderreply for the current url, invalidate this
 	m_lastReplyValid = false;
