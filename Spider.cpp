@@ -4536,6 +4536,8 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	long ns = ht->m_numSlots;
 	// only do this once per second at the most
 	if ( nowGlobal <= s_lastTime ) ns = 0;
+	// store timstamp since we are scanning this time
+	else s_lastTime = nowGlobal;
 	// . clean out expired locks...
 	// . if lock was there and m_expired is up, then nuke it!
 	// . when Rdb.cpp receives the "fake" title rec it removes the
@@ -4566,8 +4568,6 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 		// gotta restart from the top since table may have shrunk
 		goto restart;
 	}
-	// store it
-	s_lastTime = nowGlobal;
 		
 
 
