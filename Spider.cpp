@@ -1271,8 +1271,9 @@ bool SpiderColl::makeWaitingTree ( ) {
 			return false;
 		}
 		// note it
-		log(LOG_DEBUG,"spflow: added time=1 ip=%s to waiting tree "
-		    "(node#=%li)", iptoa(firstIp),wn);
+		if ( g_conf.m_logDebugSpiderFlow )
+			log(LOG_DEBUG,"spflow: added time=1 ip=%s to waiting "
+			    "tree (node#=%li)", iptoa(firstIp),wn);
 		// a tmp var
 		long long fakeone = 1LL;
 		// add to table now since its in the tree
@@ -1534,8 +1535,9 @@ void SpiderColl::removeFromDoledbTable ( long firstIp ) {
 	*score = *score - 1;
 
 	// now we log it too
-	log(LOG_DEBUG,"spflow: removed ip=%s from doleiptable (newcount=%li)",
-	    iptoa(firstIp),*score);
+	if ( g_conf.m_logDebugSpiderFlow )
+		log(LOG_DEBUG,"spflow: removed ip=%s from doleiptable "
+		    "(newcount=%li)", iptoa(firstIp),*score);
 
 
 	// remove if zero
@@ -1859,8 +1861,9 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	}
 
 	// note it
-	log(LOG_DEBUG,"spflow: added time=%lli ip=%s to waiting tree",
-	    spiderTimeMS , iptoa(firstIp));
+	if ( g_conf.m_logDebugSpiderFlow )
+		log(LOG_DEBUG,"spflow: added time=%lli ip=%s to waiting tree",
+		    spiderTimeMS , iptoa(firstIp));
 
 	// add to table now since its in the tree
 	if ( ! m_waitingTable.addKey ( &firstIp , &spiderTimeMS ) ) {
@@ -1937,9 +1940,10 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 		m_waitingTree.deleteNode ( node , true );
 
 		// note it
-		log(LOG_DEBUG,"spflow: removed1 ip=%s from waiting tree. "
-		    "nn=%li",
-		    iptoa(firstIp),m_waitingTree.m_numUsedNodes);
+		if ( g_conf.m_logDebugSpiderFlow )
+			log(LOG_DEBUG,"spflow: removed1 ip=%s from waiting "
+			    "tree. nn=%li",
+			    iptoa(firstIp),m_waitingTree.m_numUsedNodes);
 
 		// log it
 		if ( g_conf.m_logDebugSpcache )
@@ -2557,7 +2561,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	}
 
 
-	if ( list->isEmpty() )
+	if ( list->isEmpty() && g_conf.m_logDebugSpiderFlow )
 		log("spflow: failed to get rec for ip=%s",iptoa(firstIp0));
 
 	long firstIp = m_waitingTreeKey.n0 & 0xffffffff;
@@ -2952,9 +2956,11 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		timestamp64 <<= 32;
 		timestamp64 |= m_waitingTreeKey.n0 >> 32;
 		long firstIp = m_waitingTreeKey.n0 &= 0xffffffff;
-		log(LOG_DEBUG,"spflow: removed2 time=%lli ip=%s from "
-		    "waiting tree. nn=%li.",
-		    timestamp64, iptoa(firstIp),m_waitingTree.m_numUsedNodes);
+		if ( g_conf.m_logDebugSpiderFlow )
+			log(LOG_DEBUG,"spflow: removed2 time=%lli ip=%s from "
+			    "waiting tree. nn=%li.",
+			    timestamp64, iptoa(firstIp),
+			    m_waitingTree.m_numUsedNodes);
 
 		m_waitingTable.removeKey  ( &firstIp  );
 		// sanity check
@@ -3015,9 +3021,10 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		m_waitingTree.addKey ( &wk2 );
 
 		// note it
-		log(LOG_DEBUG,"spflow: RE-added time=%lli ip=%s to waiting "
-		    "tree",
-		    m_bestSpiderTimeMS , iptoa(fip));
+		if ( g_conf.m_logDebugSpiderFlow )
+			log(LOG_DEBUG,"spflow: RE-added time=%lli ip=%s to "
+			    "waiting tree",
+			    m_bestSpiderTimeMS , iptoa(fip));
 
 		// keep the table in sync now with the time
 		m_waitingTable.addKey( &fip, &m_bestSpiderTimeMS );
@@ -3242,8 +3249,10 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 		// only one per ip!
 		if ( *score > 1 ) { char *xx=NULL;*xx=0; }
 		// now we log it too
-		log(LOG_DEBUG,"spflow: added ip=%s to doleiptable (score=%li)",
-		    iptoa(sreq->m_firstIp),*score);
+		if ( g_conf.m_logDebugSpiderFlow )
+			log(LOG_DEBUG,"spflow: added ip=%s to doleiptable "
+			    "(score=%li)",
+			    iptoa(sreq->m_firstIp),*score);
 	}
 	else {
 		// ok, add new slot
@@ -3256,8 +3265,9 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 			return false;
 		}
 		// now we log it too
-		log(LOG_DEBUG,"spflow: added ip=%s to doleiptable (score=1)",
-		    iptoa(sreq->m_firstIp));
+		if ( g_conf.m_logDebugSpiderFlow )
+			log(LOG_DEBUG,"spflow: added ip=%s to doleiptable "
+			    "(score=1)",iptoa(sreq->m_firstIp));
 		// sanity check
 		//if ( ! m_doleIpTable.m_isWritable ) { char *xx=NULL;*xx=0;}
 	}
