@@ -18,7 +18,8 @@ class HashTableX {
 		   long  bufSize         , // = 0    ,
 		   bool  allowDups       , // = false ,
 		   long  niceness        , // = MAX_NICENESS ,
-		   char *allocName       );
+		   char *allocName       ,
+		   bool  useKeyMagic = false );
 
 	 HashTableX       ( );
 	~HashTableX       ( );
@@ -220,8 +221,19 @@ class HashTableX {
 		if ( m_numSlots <= 0 ) return -1;
 		// sanity check
 		if ( m_ks != 4 ) { char *xx=NULL;*xx=0; }
-		// mask on the lower 32 bits i guess
-		long n = key & m_mask;
+		long n;
+		if ( ! m_useKeyMagic ) {
+			// mask on the lower 32 bits i guess
+			n = key & m_mask;
+		}
+		else {
+			// get lower 32 bits of key
+			n = (unsigned long)key;
+			// use magic to "randomize" key a little
+			n^=g_hashtab[(unsigned char)((char *)&key)[0]][0];
+			// mask on the lower 32 bits i guess
+			n &= m_mask;
+		}
 		long count = 0;
 		while ( count++ < m_numSlots ) {
 			// this is set to 0x01 if non-empty
@@ -242,8 +254,19 @@ class HashTableX {
 		if ( m_numSlots <= 0 ) return NULL;
 		// sanity check
 		if ( m_ks != 4 ) { char *xx=NULL;*xx=0; }
-		// mask on the lower 32 bits i guess
-		long n = key & m_mask;
+		long n;
+		if ( ! m_useKeyMagic ) {
+			// mask on the lower 32 bits i guess
+			n = key & m_mask;
+		}
+		else {
+			// get lower 32 bits of key
+			n = (unsigned long)key;
+			// use magic to "randomize" key a little
+			n^=g_hashtab[(unsigned char)((char *)&key)[0]][0];
+			// mask on the lower 32 bits i guess
+			n &= m_mask;
+		}
 		long count = 0;
 		while ( count++ < m_numSlots ) {
 			// this is set to 0x01 if non-empty
@@ -264,8 +287,19 @@ class HashTableX {
 		if ( m_numSlots <= 0 ) return NULL;
 		// sanity check
 		if ( m_ks != 8 ) { char *xx=NULL;*xx=0; }
-		// mask on the lower 32 bits i guess
-		long n = key & m_mask;
+		long n;
+		if ( ! m_useKeyMagic ) {
+			// mask on the lower 32 bits i guess
+			// get lower 32 bits of key
+			n = key & m_mask;
+		}
+		else {
+			// use magic to "randomize" key a little
+			n = *(unsigned long *)((char *)&key);
+			n ^= g_hashtab[(unsigned char)((char *)&key)[0]][0];
+			// mask on the lower 32 bits i guess
+			n &= m_mask;
+		}
 		long count = 0;
 		while ( count++ < m_numSlots ) {
 			// this is set to 0x01 if non-empty
@@ -303,8 +337,18 @@ class HashTableX {
 		if ( m_numSlots <= 0 ) return -1;
 		// sanity check
 		if ( m_ks != 8 ) { char *xx=NULL;*xx=0; }
-		// mask on the lower 32 bits i guess
-		long n = *key & m_mask;
+		long n;
+		if ( ! m_useKeyMagic ) {
+			// mask on the lower 32 bits i guess
+			n = *key & m_mask;
+		}
+		else {
+			// use magic to "randomize" key a little
+			n = *(unsigned long *)((char *)key);
+			n ^= g_hashtab[(unsigned char)((char *)key)[0]][0];
+			// mask on the lower 32 bits i guess
+			n &= m_mask;
+		}
 		long count = 0;
 		while ( count++ < m_numSlots ) {
 			// this is set to 0x01 if non-empty

@@ -621,8 +621,8 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 #endif
 
 	 // comcast
-	 //if ( sock && strncmp(iptoa(sock->m_ip),"75.160.49.8",11) == 0) 
-	 //	 m_isLocal = true;
+	 if ( sock && strncmp(iptoa(sock->m_ip),"75.160.49.8",11) == 0) 
+	 	 m_isLocal = true;
 
 	 // roadrunner ip
 	 // if ( sock && strncmp(iptoa(sock->m_ip),"66.162.42.131",13) == 0) 

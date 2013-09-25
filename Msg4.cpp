@@ -1625,7 +1625,7 @@ void processSpecialSignal ( collnum_t collnum , char *p ) {
 	time_t nowGlobal = getTimeGlobal();
 
 	if ( g_conf.m_logDebugSpiderFlow )
-		logf(LOG_DEBUG,"spflow: removed lock for "
+		logf(LOG_DEBUG,"spflow: scheduled lock removal in 5 secs for "
 		     "docid=lockkey=%llu",  lockKey);
 
 	// test it

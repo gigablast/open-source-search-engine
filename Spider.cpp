@@ -1717,6 +1717,22 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	return status;
 }
 
+bool SpiderColl::printWaitingTree ( ) {
+	long node = m_waitingTree.getFirstNode();
+	for ( ; node >= 0 ; node = m_waitingTree.getNextNode(node) ) {
+		key_t *wk = (key_t *)m_waitingTree.getKey (node);
+		// spider time is up top
+		uint64_t spiderTimeMS = (wk->n1);
+		spiderTimeMS <<= 32;
+		spiderTimeMS |= ((wk->n0) >> 32);
+		// then ip
+		long firstIp = wk->n0 & 0xffffffff;
+		// show it
+		log("dump: time=%lli firstip=%s",spiderTimeMS,iptoa(firstIp));
+	}
+	return true;
+}
+
 // . if one of these add fails consider increasing mem used by tree/table
 // . if we lose an ip that sux because it won't be gotten again unless
 //   we somehow add another request/reply to spiderdb in the future
@@ -1749,6 +1765,27 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	// i think this trigged on gk209 during an auto-save!!! FIX!
 	if ( ! m_waitingTree.m_isWritable ) { char *xx=NULL; *xx=0; }
 
+	/*
+	///////
+	//
+	// compute the min time for this entry to satisfy sameIpWait
+	//
+	///////
+	long long spiderTimeMS = spiderTimeMSArg;
+	long long lastDownloadTimeMS = lastDownloadTime ( firstIp );
+	// how long to wait between downloads from same ip in milliseconds?
+	long sameIpWaitTime = 250; // ms
+	if ( ufn >= 0 ) {
+		long siwt = m_sc->m_cr->m_spiderIpWaits[ufn];
+		if ( siwt >= 0 ) sameIpWaitTime = siwt;
+	}
+	long long minDownloadTime = sameIpWaitTime + siwt;
+	// use that if it is more restrictive
+	if ( minDownloadTime > now && minDownloadTime > spiderTimeMS )
+		spiderTimeMS = minDownloadTime;
+	*/
+
+
 	// see if in tree already, so we can delete it and replace it below
 	long ws = m_waitingTable.getSlot ( &firstIp ) ;
 	// . this is >= 0 if already in tree
@@ -1771,8 +1808,11 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 		// not only must we be a sooner time, but we must be 5-seconds
 		// sooner than the time currently in there to avoid thrashing
 		// when we had a ton of outlinks with this first ip within an
-		// 5-second interval
-		if ( (long long)spiderTimeMS > sms - 5000 ) {
+		// 5-second interval.
+		//
+		// i'm not so sure what i was doing here before, but i don't
+		// want to starve the spiders, so make this 100ms not 5000ms
+		if ( (long long)spiderTimeMS > sms - 100 ) {
 			if ( g_conf.m_logDebugSpider )
 				log("spider: skip updating waiting tree");
 			return true;
@@ -1939,6 +1979,17 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 }
 
 static void gotSpiderdbListWrapper2( void *state , RdbList *list , Msg5 *msg5);
+
+//////////////////
+//////////////////
+//
+// THE BACKGROUND FUNCTION
+//
+// when the user changes the ufn table the waiting tree is flushed
+// and repopulated from spiderdb with this. also used for repairs.
+//
+//////////////////
+//////////////////
 
 // . this stores an ip into the waiting tree with a spidertime of "0" so
 //   it will be evaluate properly by populateDoledbFromWaitingTree()
@@ -2371,6 +2422,9 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		log("spider: waiting tree key removed while reading list");
 		return true;
 	}
+	// sanity. if first time, this must be invalid
+	if ( needList && m_nextKey == m_firstKey && m_bestRequestValid ) {
+		char *xx=NULL; *xx=0 ; }
 
  readLoop:
 
@@ -2383,12 +2437,22 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// . get the list of spiderdb records
 		// . do not include cache, those results are old and will mess
 		//   us up
-		if (g_conf.m_logDebugSpiderFlow )
-			log(LOG_DEBUG,"spflow: scanSpiderdb: "
-			    "calling msg5: startKey=0x%llx,0x%llx "
-			    "firstip=%s",
-			    m_nextKey.n1,m_nextKey.n0,
-			    iptoa(firstIp0));
+		if (g_conf.m_logDebugSpiderFlow ) {
+			// got print each out individually because KEYSTR
+			// uses a static buffer to store the string
+			SafeBuf tmp;
+			tmp.safePrintf("spflow: scanSpiderdb: "
+				       "calling msg5: ");
+			tmp.safePrintf("firstKey=%s "
+				       ,KEYSTR(&m_firstKey,sizeof(key128_t)));
+			tmp.safePrintf("endKey=%s "
+				       ,KEYSTR(&m_endKey,sizeof(key128_t)));
+			tmp.safePrintf("nextKey=%s "
+				       ,KEYSTR(&m_nextKey,sizeof(key128_t)));
+			tmp.safePrintf("firstip=%s"
+				       ,iptoa(firstIp0));
+			log(LOG_DEBUG,"%s",tmp.getBufStart());
+		}
 		// flag it
 		m_gettingList = true;
 		// read the list from local disk
@@ -2620,6 +2684,16 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			log("spider: got corrupt 2 spiderRequest in scan");
 			continue;
 		}
+
+		// debug. show candidates due to be spidered now.
+		//if(g_conf.m_logDebugSpider ) //&& spiderTimeMS< nowGlobalMS )
+		//	log("spider: considering ip=%s sreq spiderTimeMS=%lli "
+		//	    "pri=%li uh48=%lli",
+		//	    iptoa(sreq->m_firstIp),
+		//	    spiderTimeMS,
+		//	    priority,
+		//	    sreq->getUrlHash48());
+
 		// skip if banned
 		if ( priority == SPIDER_PRIORITY_FILTERED ) continue;
 		if ( priority == SPIDER_PRIORITY_BANNED   ) continue;
@@ -2763,8 +2837,9 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	if ( winReq && m_bestRequestValid ) {
 		if ( m_bestRequest->m_priority > winPriority )
 			winReq = NULL;
-		else if ( m_bestRequest->m_priority == winPriority &&
-			  (long)m_bestSpiderTimeMS < winPriority )
+		if ( m_bestRequest->m_priority == winPriority &&
+		     // export this fix to master branch!!!
+		     m_bestSpiderTimeMS < winTimeMS )
 			winReq = NULL;
 	}
 
@@ -2784,10 +2859,32 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		m_bestSpiderTimeMS = winTimeMS;
 		// sanity
 		if ( (long long)winTimeMS < 0 ) { char *xx=NULL;*xx=0; }
+		// note it
+		if ( g_conf.m_logDebugSpider )
+			log("spider: made best_req ip=%s spiderTimeMS=%lli "
+			    "pri=%li uh48=%lli",
+			    iptoa(m_bestRequest->m_firstIp),
+			    m_bestSpiderTimeMS,
+			    (long)m_bestRequest->m_priority,
+			    m_bestRequest->getUrlHash48());
 	}
 
+	if ( g_conf.m_logDebugSpider && m_bestRequestValid ) {
+		log("spider: got best ip=%s sreq spiderTimeMS=%lli pri=%li uh48=%lli",
+		    iptoa(m_bestRequest->m_firstIp),
+		    m_bestSpiderTimeMS,
+		    (long)m_bestRequest->m_priority,
+		    m_bestRequest->getUrlHash48());
+	}
+	
 	// are we the final list in the scan?
-	m_isReadDone = ( list->getListSize() < (long)SR_READ_SIZE ) ;
+	//m_isReadDone = ( list->getListSize() < (long)SR_READ_SIZE ) ;
+
+	//
+	// try to fix the bug of reading like only 150k when we asked for 512k
+	//
+	if ( list->isEmpty() )
+		m_isReadDone = true;
 
 	// if no spiderreply for the current url, invalidate this
 	m_lastReplyValid = false;
@@ -3068,7 +3165,11 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	// wait 5 seconds for all outlinks in order for them to have a
 	// chance to get any link info that might have been added
 	// from the page that supplied this outlink
-	spiderTimeMS += 5000;
+	// CRAP! this slows down same ip spidering i think... yeah, without
+	// this it seems the spiders are always at 10 (sometimes 8 or 9) 
+	// when i spider techcrunch.com.
+	//spiderTimeMS += 5000;
+
 	//  ensure min
 	if ( spiderTimeMS < minSpiderTimeMS ) spiderTimeMS = minSpiderTimeMS;
 	// if no reply, use that
@@ -3279,9 +3380,9 @@ void SpiderLoop::startLoop ( ) {
 	m_maxUsed = -1;
 	m_numSpidersOut = 0;
 	m_processed = 0;
-	// for locking. key size is 6 bytes!
-	m_lockTable.set ( 6,sizeof(UrlLock),0,NULL,0,false,MAX_NICENESS,
-			  "splocks");
+	// for locking. key size is 8 for easier debugging
+	m_lockTable.set ( 8,sizeof(UrlLock),0,NULL,0,false,MAX_NICENESS,
+			  "splocks", true ); // useKeyMagic? yes.
 
 	if ( ! m_lockCache.init ( 10000 , // maxcachemem
 				  4     , // fixedatasize
@@ -3301,6 +3402,8 @@ void SpiderLoop::startLoop ( ) {
 		log("build: Failed to register timer callback. Spidering "
 		    "is permanently disabled. Restart to fix.");
 }
+
+void removeExpiredLocks ( long hostId );
 
 void doneSleepingWrapperSL ( int fd , void *state ) {
 	//SpiderLoop *THIS = (SpiderLoop *)state;
@@ -3421,10 +3524,20 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// not while repairing
 	if ( g_repairMode ) return;
 
+	if ( g_conf.m_logDebugSpider )
+		log("spider: trying to get a doledb rec to spider. "
+		    "currentnumout=%li",m_numSpidersOut);
+
 	// when getting a lock we keep a ptr to the SpiderRequest in the
 	// doledb list, so do not try to read more just yet until we know
 	// if we got the lock or not
-	if ( m_msg12.m_gettingLocks ) return;
+	if ( m_msg12.m_gettingLocks ) {
+		// make a note, maybe this is why spiders are deficient?
+		if ( g_conf.m_logDebugSpider )
+			log("spider: failed to get doledb rec to spider: "
+			    "msg12 is getting locks");
+		return;
+	}
 
 	// turn on for now
 	//g_conf.m_logDebugSpider = 1;
@@ -3648,7 +3761,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( g_conf.m_logDebugSpider ) {
 		long long now = gettimeofdayInMillisecondsLocal();
 		long long took = now - m_doleStart;
-		if ( took > 1 )
+		//if ( took > 1 )
 			logf(LOG_DEBUG,"spider: GOT list from doledb in "
 			     "%llims "
 			     "size=%li bytes",
@@ -3668,6 +3781,12 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	// bail if list is empty
 	if ( m_list.getListSize() <= 0 ) {
+		// if no spiders...
+		if ( g_conf.m_logDebugSpider ) {
+			log("spider: crap. doledblist is empty. numusednodes"
+			    "inwaitingtree=%li",
+			    m_sc->m_waitingTree.m_numUsedNodes);
+		}
 		//if ( g_conf.m_logDebugSpider )
 		//	log("spider: resetting doledb priority pri=%li",
 		//	    m_sc->m_pri);
@@ -5153,48 +5272,8 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	// this must be legit - sanity check
 	if ( hostId < 0 ) { char *xx=NULL;*xx=0; }
 
-
-	// when we last cleaned them out
-	static time_t s_lastTime = 0;
- restart:
-	// scan the slots
-	long ns = ht->m_numSlots;
-	// only do this once per second at the most
-	if ( nowGlobal <= s_lastTime ) ns = 0;
-	// . clean out expired locks...
-	// . if lock was there and m_expired is up, then nuke it!
-	// . when Rdb.cpp receives the "fake" title rec it removes the
-	//   lock, only it just sets the m_expired to a few seconds in the
-	//   future to give the negative doledb key time to be absorbed.
-	//   that way we don't repeat the same url we just got done spidering.
-	// . this happens when we launch our lock request on a url that we
-	//   or a twin is spidering or has just finished spidering, and
-	//   we get the lock, but we avoided the negative doledb key.
-	for ( long i = 0 ; i < ns ; i++ ) {
-		// breathe
-		QUICKPOLL(niceness);
-		// skip if empty
-		if ( ! ht->m_flags[i] ) continue;
-		// cast lock
-		UrlLock *lock = (UrlLock *)ht->getValueFromSlot(i);
-		// skip if not yet expired
-		if ( lock->m_expires == 0 ) continue;
-		if ( lock->m_expires >= nowGlobal ) continue;
-		// note it for now
-		if ( g_conf.m_logDebugSpider )
-			log("spider: removing lock after waiting. elapsed=%li."
-			    " lockKey=%llu hid=%li expires=%lu nowGlobal=%lu",
-			    (nowGlobal - lock->m_timestamp),
-			    lr->m_lockKey,hostId,lock->m_expires,nowGlobal);
-		// nuke the slot and possibly re-chain
-		ht->removeSlot ( i );
-		// gotta restart from the top since table may have shrunk
-		goto restart;
-	}
-	// store it
-	s_lastTime = nowGlobal;
-		
-
+	// remove expired locks from locktable
+	removeExpiredLocks ( hostId );
 
 	// check tree
 	long slot = ht->getSlot ( &lr->m_lockKey );
@@ -5276,6 +5355,58 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	return;
 }
 
+// hostId is the remote hostid sending us the lock request
+void removeExpiredLocks ( long hostId ) {
+	// when we last cleaned them out
+	static time_t s_lastTime = 0;
+
+	long nowGlobal = getTimeGlobal();
+	long niceness = MAX_NICENESS;
+
+	// only do this once per second at the most
+	if ( nowGlobal <= s_lastTime ) return;
+
+	// shortcut
+	HashTableX *ht = &g_spiderLoop.m_lockTable;
+
+ restart:
+
+	// scan the slots
+	long ns = ht->m_numSlots;
+	// . clean out expired locks...
+	// . if lock was there and m_expired is up, then nuke it!
+	// . when Rdb.cpp receives the "fake" title rec it removes the
+	//   lock, only it just sets the m_expired to a few seconds in the
+	//   future to give the negative doledb key time to be absorbed.
+	//   that way we don't repeat the same url we just got done spidering.
+	// . this happens when we launch our lock request on a url that we
+	//   or a twin is spidering or has just finished spidering, and
+	//   we get the lock, but we avoided the negative doledb key.
+	for ( long i = 0 ; i < ns ; i++ ) {
+		// breathe
+		QUICKPOLL(niceness);
+		// skip if empty
+		if ( ! ht->m_flags[i] ) continue;
+		// cast lock
+		UrlLock *lock = (UrlLock *)ht->getValueFromSlot(i);
+		long long lockKey = *(long long *)ht->getKeyFromSlot(i);
+		// skip if not yet expired
+		if ( lock->m_expires == 0 ) continue;
+		if ( lock->m_expires >= nowGlobal ) continue;
+		// note it for now
+		if ( g_conf.m_logDebugSpider )
+			log("spider: removing lock after waiting. elapsed=%li."
+			    " lockKey=%llu hid=%li expires=%lu nowGlobal=%lu",
+			    (nowGlobal - lock->m_timestamp),
+			    lockKey,hostId,lock->m_expires,nowGlobal);
+		// nuke the slot and possibly re-chain
+		ht->removeSlot ( i );
+		// gotta restart from the top since table may have shrunk
+		goto restart;
+	}
+	// store it
+	s_lastTime = nowGlobal;
+}		
 
 /////////////////////////
 /////////////////////////      PAGESPIDER
@@ -5482,10 +5613,12 @@ bool sendPage ( State11 *st ) {
 			"bgcolor=#%s>\n" 
 			"<tr><td colspan=50 bgcolor=#%s>"
 			"<b>Currently Spidering</b> (%li spiders)"
+			" (%li locks)"
 			"</td></tr>\n" ,
 			LIGHT_BLUE,
 			DARK_BLUE,
-			(long)g_spiderLoop.m_numSpidersOut);
+			(long)g_spiderLoop.m_numSpidersOut,
+			g_spiderLoop.m_lockTable.m_numSlotsUsed);
 	// the table headers so SpiderRequest::printToTable() works
 	if ( ! SpiderRequest::printTableHeader ( &sb , true ) ) return false;
 	// shortcut
@@ -8695,3 +8828,4 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 				    sizeof(CrawlInfo) , //alloc size
 				    slot );
 }
+

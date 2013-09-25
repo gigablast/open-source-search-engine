@@ -43,7 +43,11 @@ bool HashTableX::set ( long  ks              ,
 		       long  bufSize         ,
 		       bool  allowDups       ,
 		       long  niceness        ,
-		       char *allocName       ) {
+		       char *allocName       ,
+		       // in general you want keymagic to ensure your
+		       // keys are "random" for good hashing. it doesn't
+		       // really slow things down either.
+		       bool  useKeyMagic     ) {
 	reset();
 	m_ks = ks;
 	m_ds = ds;
@@ -67,6 +71,8 @@ bool HashTableX::set ( long  ks              ,
 	// set this
 	m_allocName = allocName;
 
+	m_useKeyMagic = useKeyMagic;
+
 	return setTableSize ( initialNumTerms , buf , bufSize );
 }
 
@@ -83,7 +89,7 @@ void HashTableX::reset ( ) {
 	m_numSlotsUsed = 0;
 	m_addIffNotUnique = false;
 	m_maskKeyOffset = 0;
-	m_useKeyMagic = false;
+	//m_useKeyMagic = false;
 	// we should free it in reset()
 	if ( m_doFree && m_txtBuf ) {
 		mfree ( m_txtBuf , m_txtBufSize,"ftxtbuf");

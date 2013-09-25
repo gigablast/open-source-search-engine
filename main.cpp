@@ -6039,6 +6039,7 @@ long dumpSpiderdb ( char *coll,
 	long  count   = 0;
 	long  countReplies = 0;
 	long  countRequests = 0;
+	long long offset = 0LL;
 	long now;
 	static long long s_lastRepUh48 = 0LL;
  loop:
@@ -6074,6 +6075,11 @@ long dumpSpiderdb ( char *coll,
 		// get it
 		char *srec = list.getCurrentRec();
 
+		// save it
+		long long curOff = offset;
+		// and advance
+		offset += list.getCurrentRecSize();
+
 		// must be a request -- for now, for stats
 		if ( ! g_spiderdb.isSpiderRequest((key128_t *)srec) ) {
 			// print it
@@ -6105,6 +6111,7 @@ long dumpSpiderdb ( char *coll,
 
 		// print it
 		if ( ! printStats ) {
+			printf( "offset=%lli ",curOff);
 			g_spiderdb.print ( srec );
 			printf(" age=%lis",now-sreq->m_addedTime);
 			printf(" hadReply=%li\n",(long)hadReply);

@@ -14052,10 +14052,17 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		url = getFieldValue ( p , pend - p ,"src" , &urlLen );
 		// needs a src field
 		if ( ! url ) continue;
+		// "" is not acceptable either. techcrunch.com has
+		// <iframe src=""> which ends up embedding the root url.
+		if ( urlLen == 0 ) 
+			continue;
 		// get our current url
 		//cu = getCurrentUrl();
 		// set our frame url
 		furl.set ( cu , url , urlLen );
+		// no recursion
+		if ( strcmp(furl.getUrl(),m_firstUrl.getUrl()) == 0 )
+			continue;
 		// must be http or https, not ftp! ftp was causing us to
 		// core in Msg22.cpp where it checks the url's protocol
 		// when trying to lookup the old title rec.

@@ -1057,6 +1057,8 @@ class SpiderColl {
 
 	long long getEarliestSpiderTimeFromWaitingTree ( long firstIp ) ;
 
+	bool printWaitingTree ( ) ;
+
 	bool addToWaitingTree    ( uint64_t spiderTime , long firstIp ,
 				   bool callForScan );
 	long getNextIpFromWaitingTree ( );
