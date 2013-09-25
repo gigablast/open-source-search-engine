@@ -1544,7 +1544,7 @@ char *getNewCollName ( ) { // char *token , long tokenLen ) {
 #define FMT_XML  2
 #define FMT_JSON 3
 
-bool sendErrorReply ( TcpSocket *socket , long fmt , char *msg ) {
+bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 
 	// log it
 	log("crawlbot: %s",msg);
@@ -1552,8 +1552,8 @@ bool sendErrorReply ( TcpSocket *socket , long fmt , char *msg ) {
 	// send this back to browser
 	SafeBuf sb;
 	if ( fmt == FMT_JSON ) 
-		sb.safePrintf("[{\"response\":fail},"
-			      "{\"reason\":\"%s\"}]\n"
+		sb.safePrintf("{\"response\":fail},"
+			      "{\"reason\":\"%s\"}\n"
 			      , msg );
 	else
 		sb.safePrintf("<html><body>"
@@ -1561,7 +1561,11 @@ bool sendErrorReply ( TcpSocket *socket , long fmt , char *msg ) {
 			      "</body></html>"
 			      , msg );
 
-	return g_httpServer.sendErrorReply(socket,500,sb.getBufStart());
+	//return g_httpServer.sendErrorReply(socket,500,sb.getBufStart());
+	return g_httpServer.sendDynamicPage (socket, 
+					     sb.getBufStart(), 
+					     sb.length(),
+					     -1); // cachetime
 }
 
 void addedUrlsToSpiderdbWrapper ( void *state ) {
@@ -1687,9 +1691,8 @@ bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( ! token ) {
 		// send back json error msg
 		if ( fmt == FMT_JSON ) {
-			char *msg = "[{\"response\":0},"
-				"{\"reason\":\"invalid token\"}]\n";
-			return sendErrorReply(socket,fmt,msg);
+			char *msg = "invalid token";
+			return sendErrorReply2 (socket,fmt,msg);
 		}
 		// print token form if html
 		SafeBuf sb;
@@ -1729,7 +1732,7 @@ bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
 	StateCD *st;
 	try { st = new (StateCD); }
 	catch ( ... ) {
-		return sendErrorReply ( socket , fmt , mstrerror(g_errno));
+		return sendErrorReply2 ( socket , fmt , mstrerror(g_errno));
 	}
 	mnew ( st , sizeof(StateCD), "statecd");
 
@@ -1748,7 +1751,8 @@ bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( urlData ) {
 		// a valid collection is required
 		if ( ! cr ) 
-			return sendErrorReply(socket,fmt,"invalid collection");
+			return sendErrorReply2(socket,fmt,
+					       "invalid collection");
 		// make a list of spider requests from these urls
 		SafeBuf listBuf;
 		// this returns NULL with g_errno set
@@ -1757,10 +1761,10 @@ bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
 		long size = listBuf.length();
 		// error?
 		if ( ! status )
-			return sendErrorReply(socket,fmt,mstrerror(g_errno));
+			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
 		// if not list
 		if ( ! size )
-			return sendErrorReply(socket,fmt,"no urls found");
+			return sendErrorReply2(socket,fmt,"no urls found");
 		// add to spiderdb
 		if ( ! st->m_msg4.addMetaList( listBuf.getBufStart() ,
 					       listBuf.length(),
@@ -1786,7 +1790,8 @@ bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( injectUrl ) {
 		// a valid collection is required
 		if ( ! cr ) 
-			return sendErrorReply(socket,fmt,"invalid collection");
+			return sendErrorReply2(socket,fmt,
+					       "invalid collection");
 		// begin the injection
 		if ( ! st->m_msg7.inject ( st->m_socket,
 					   &st->m_hr,
@@ -1860,7 +1865,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	if ( ! cr ) {
 		char *msg = "failed to add new collection";
 		g_msg = " (error: crawlbot failed to allocate crawl)";
-		return sendErrorReply ( socket , fmt , msg );
+		return sendErrorReply2 ( socket , fmt , msg );
 	}
 			
 	char *token = getTokenFromHttpRequest ( hr );
@@ -1938,7 +1943,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//////
 
 	if ( fmt == FMT_JSON )
-		sb.safePrintf("{\"collections\":{");
+		sb.safePrintf("[\"collections\":");
 
 	long summary = hr->getLong("summary",0);
 	// enter summary mode for json
@@ -2051,8 +2056,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	}
 
 	if ( fmt == FMT_JSON ) 
-		// end the {"collections": thing
-		sb.safePrintf("\n}\n");
+		// end the array of collection objects
+		sb.safePrintf("\n]\n");
 
 	///////
 	//
