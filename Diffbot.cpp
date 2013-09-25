@@ -1060,6 +1060,7 @@ void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb , char *format) {
 	long long prevReplyUh48 = 0LL;
 	long prevReplyError = 0;
 	time_t prevReplyDownloadTime = 0LL;
+	long badCount = 0;
 	// parse through it
 	for ( ; ! list->isExhausted() ; list->skipCurrentRec() ) {
 		// this record is either a SpiderRequest or SpiderReply
@@ -1081,9 +1082,10 @@ void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb , char *format) {
 		sreq = (SpiderRequest *)rec;
 		// sanity check
 		if ( srep && srep->getUrlHash48() != sreq->getUrlHash48()){
-			log("diffbot: had a spider reply with no "
-			    "corresponding spider request for uh48=%lli"
-			    , srep->getUrlHash48());
+			badCount++;
+			//log("diffbot: had a spider reply with no "
+			//    "corresponding spider request for uh48=%lli"
+			//    , srep->getUrlHash48());
 			//char *xx=NULL;*xx=0;
 		}
 
@@ -1154,6 +1156,11 @@ void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb , char *format) {
 				       );
 
 	}
+
+	if ( ! badCount ) return;
+
+	log("diffbot: had a spider reply with no "
+	    "corresponding spider request %li times", badCount);
 }
 
 
@@ -1626,12 +1633,12 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	sb.safePrintf("<center><br>");
 			      
 	// first print "add new collection"
-	sb.safePrintf("<a href=/crawlbot?addcoll=1&token=%s>"
+	sb.safePrintf("[ <a href=/crawlbot?addcoll=1&token=%s>"
 		      "add new collection"
-		      "</a> &nbsp; "
-		      "<a href=/crawlbot?summary=1&token=%s>"
-		      "all collections"
-		      "</a> &nbsp; "
+		      "</a> ] &nbsp; "
+		      "[ <a href=/crawlbot?summary=1&token=%s>"
+		      "show all collections"
+		      "</a> ] &nbsp; "
 		      , token
 		      , token
 		      );
@@ -1999,7 +2006,7 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "c=%s"
 			      //"&format=csv"
 			      ">"
-			      "json</a>"
+			      "raw</a>"
 			      //
 			      "</td>"
 			      "</tr>"
