@@ -177,7 +177,8 @@ class Parms {
 			       // url filters into
 			       SafeBuf *pageBuf = NULL ,
 			       // used by diffbot.cpp
-			       char *collOverride = NULL ) ;
+			       char *collOverride = NULL ,
+			       bool isJSON = false ) ;
 
 	bool sendPageGeneric2 ( class TcpSocket *s , class HttpRequest *r , 
 				long page , char *coll , char *pwd ) ;
@@ -191,7 +192,8 @@ class Parms {
 	//		  long nc , long pd ) ;
 	bool printParms (SafeBuf* sb, long page,char *username,void *THIS,
 			 char *coll , char *pwd , long nc , long pd ,
-			 bool isCrawlbot = false );
+			 bool isCrawlbot = false ,
+			 bool isJSON = false );
 
 	/*
 	char *printParm ( char *p    , 
@@ -224,7 +226,8 @@ class Parms {
 			  long  nc   ,
 			 long  pd   ,
 			 bool lastRow ,
-			 bool isCrawlbot = false) ;
+			 bool isCrawlbot = false,
+			 bool isJSON = false ) ;
 
 	char *getTHIS ( HttpRequest *r , long page ) ;
 

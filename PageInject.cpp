@@ -137,51 +137,6 @@ bool sendReply ( void *state ) {
 	char buf[1024*32];
 
 
-	// if using the diffbot crawlbot api just print the diffbot 
-	// universal api page with the status of this injection
-	if ( msg7->m_crawlbotAPI ) {
-		// make a status msg for the url
-		SafeBuf sb;
-		if ( xd->m_indexCode == 0 ) {
-			sb.safePrintf("<b><font color=black>"
-				      "Successfully added ");
-		}
-		else if ( xd->m_indexCode == EDOCFILTERED ) {
-			sb.safePrintf("<b><font color=red>"
-				      "Error: <i>%s</i> by matching "
-				      "url filter #%li "
-				      "when adding "
-				      , mstrerror(xd->m_indexCode) 
-				      , xd->m_urlFilterNum
-				      );
-
-		}
-		else {
-			sb.safePrintf("<b><font color=red>"
-				      "Error: <i>%s</i> when adding "
-				      , mstrerror(xd->m_indexCode) );
-		}
-		sb.safeTruncateEllipsis(xd->m_firstUrl.getUrl(),60);
-
-		if ( xd->m_indexCode == 0 ) {
-			if ( xd->m_numOutlinksAddedValid ) 
-				sb.safePrintf(" &nbsp; (added %li outlinks)",
-					      (long)xd->m_numOutlinksAdded);
-			else
-				sb.safePrintf(" &nbsp; (added 0 outlinks)");
-		}
-
-		sb.safePrintf("</font></b>");
-		sb.nullTerm();
-		// this will call g_httpServer.sendReply()
-		printCrawlBotPage ( s , &msg7->m_hr , &sb );
-		// clean up our state
-		mdelete ( msg7, sizeof(Msg7) , "PageInject" );
-		delete (msg7);
-		return true;
-	}
-
-
 	// . if we're talking w/ a robot he doesn't care about this crap
 	// . send him back the error code (0 means success)
 	if ( msg7->m_quickReply ) {
@@ -504,6 +459,8 @@ bool Msg7::inject ( TcpSocket *s ,
 	bool  quickReply     = r->getLong   ( "quick" , 0 );	
 	//char *pwd            = r->getString ( "pwd" , NULL );
 	char *url            = r->getString ( "u" , NULL , NULL /*default*/);
+	// for diffbot.cpp api
+	if ( ! url ) url = r->getString("injecturl",NULL,NULL);
 	bool  recycleContent = r->getLong   ( "recycle",0);
 	char *ips            = r->getString ( "ip" , NULL , NULL );
 	//char *username       = g_users.getUsername(r);

@@ -19,6 +19,7 @@
 #include "HttpServer.h"
 #include "Pages.h" // g_msg
 #include "XmlDoc.h" // for checkRegex()
+#include "PageInject.h" // Msg7
 
 //void printCrawlStats ( SafeBuf *sb , CollectionRec *cr ) ;
 void doneSendingWrapper ( void *state , TcpSocket *sock ) ;
@@ -718,6 +719,11 @@ public:
 	void gotRdbList ( ) ;
 	void printSpiderdbList ( RdbList *list , SafeBuf *sb , char *format ) ;
 	void printTitledbList ( RdbList *list , SafeBuf *sb , char *format ) ;
+
+	char m_fmt;
+	Msg4 m_msg4;
+	HttpRequest m_hr;
+	Msg7 m_msg7;
 
 	bool m_needsMime;
 	char m_rdbId;
@@ -1527,27 +1533,166 @@ char *getNewCollName ( ) { // char *token , long tokenLen ) {
 	return s_collBuf;
 }
 
+//////////////////////////////////////////
+//
+// MAIN API STUFF I GUESS
+//
+//////////////////////////////////////////
 
+// so user can specify the format of the reply/output
+#define FMT_HTML 1
+#define FMT_XML  2
+#define FMT_JSON 3
 
-bool printCrawlBotPage ( TcpSocket *s , 
-			 HttpRequest *hr ,
-			 SafeBuf *injectionResponse ) {
+bool sendErrorReply ( TcpSocket *socket , long fmt , char *msg ) {
 
+	// log it
+	log("crawlbot: %s",msg);
+
+	// send this back to browser
 	SafeBuf sb;
+	if ( fmt == FMT_JSON ) 
+		sb.safePrintf("[{\"response\":fail},"
+			      "{\"reason\":\"%s\"}]\n"
+			      , msg );
+	else
+		sb.safePrintf("<html><body>"
+			      "failed: %s"
+			      "</body></html>"
+			      , msg );
 
-	sb.safePrintf(
-		      "<html>"
-		      "<title>Crawlbot - "
-		      "Web Data Extraction and Search Made Easy</title>"
-		      "<body>"
-		      );
+	return g_httpServer.sendErrorReply(socket,500,sb.getBufStart());
+}
 
-	//
+void addedUrlsToSpiderdbWrapper ( void *state ) {
+	StateCD *st = (StateCD *)state;
+	SafeBuf rr;
+	rr.safePrintf("Successfully scheduled urls for spidering");
+	printCrawlBotPage2 ( st->m_socket,
+			     &st->m_hr ,
+			     st->m_fmt,
+			     NULL ,
+			     &rr );
+	delete st;
+	mdelete ( st , sizeof(StateCD) , "stcd" );
+}
+
+void injectedUrlWrapper ( void *state ) {
+	StateCD *st = (StateCD *)state;
+
+	Msg7 *msg7 = &st->m_msg7;
+	// the doc we injected...
+	XmlDoc *xd = &msg7->m_xd;
+
+	// make a status msg for the url
+	SafeBuf sb;
+	if ( xd->m_indexCode == 0 ) {
+		sb.safePrintf("<b><font color=black>"
+			      "Successfully added ");
+	}
+	else if ( xd->m_indexCode == EDOCFILTERED ) {
+		sb.safePrintf("<b><font color=red>"
+			      "Error: <i>%s</i> by matching "
+			      "url filter #%li "
+			      "when adding "
+			      , mstrerror(xd->m_indexCode) 
+			      , xd->m_urlFilterNum
+			      );
+		
+	}
+	else {
+		sb.safePrintf("<b><font color=red>"
+			      "Error: <i>%s</i> when adding "
+			      , mstrerror(xd->m_indexCode) );
+	}
+	sb.safeTruncateEllipsis(xd->m_firstUrl.getUrl(),60);
+	
+	if ( xd->m_indexCode == 0 ) {
+		if ( xd->m_numOutlinksAddedValid ) 
+			sb.safePrintf(" &nbsp; (added %li outlinks)",
+				      (long)xd->m_numOutlinksAdded);
+		else
+			sb.safePrintf(" &nbsp; (added 0 outlinks)");
+	}
+	
+	sb.safePrintf("</font></b>");
+	sb.nullTerm();
+
+	// . this will call g_httpServer.sendReply()
+	// . pass it in the injection response, "sb"
+	printCrawlBotPage2 ( st->m_socket,
+			     &st->m_hr ,
+			     st->m_fmt,
+			     &sb ,
+			     NULL );
+	delete st;
+	mdelete ( st , sizeof(StateCD) , "stcd" );
+}
+	
+
+class HelpItem {
+public:
+	char *m_parm;
+	char *m_desc;
+};
+static class HelpItem s_his[] = {
+	{"maxtocrawl", "specify max pages to successfully download"},
+	{"maxtoprocess", "specify max pages to successfully process through "
+	 "diffbot"},
+	{NULL,NULL}
+};
+
+bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
+
+	// print help
+	long help = hr->getLong("help",0);
+	if ( help ) {
+		SafeBuf sb;
+		sb.safePrintf("<html>"
+			      "<title>Crawlbot API</title>"
+			      "<table>"
+			      );
+		for ( long i = 0 ; i < 1000 ; i++ ) {
+			HelpItem *h = &s_his[i];
+			if ( ! h->m_parm ) break;
+			sb.safePrintf( "<tr>"
+				       "<td>%s</td>"
+				       "<td>%s</td>"
+				       "</tr>"
+				       , h->m_parm
+				       , h->m_desc
+				       );
+		}
+		sb.safePrintf("</table>"
+			      "</html>");
+		return g_httpServer.sendDynamicPage (socket, 
+						     sb.getBufStart(), 
+						     sb.length(),
+						     -1); // cachetime
+	}
+
+
+	// . now show stats for the current crawl
+	// . put in xml or json if format=xml or format=json or
+	//   xml=1 or json=1 ...
+	char fmt = FMT_HTML;
+	char *fs = hr->getString("format",NULL,NULL);
+	// give john a json api
+	if ( fs && strcmp(fs,"json") == 0 ) fmt = FMT_JSON;
+	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FMT_XML;
+
+
 	// if no token... they need to login or signup
-	//
 	char *token = getTokenFromHttpRequest ( hr );
-
-	if ( ! token ) { // || tokenLen == 0 ) {
+	if ( ! token ) {
+		// send back json error msg
+		if ( fmt == FMT_JSON ) {
+			char *msg = "[{\"response\":0},"
+				"{\"reason\":\"invalid token\"}]\n";
+			return sendErrorReply(socket,fmt,msg);
+		}
+		// print token form if html
+		SafeBuf sb;
 		sb.safePrintf("In order to use crawlbot you must "
 			      "first LOGIN:"
 			      "<form action=/crawlbot method=get>"
@@ -1566,15 +1711,112 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      "<input type=submit name=submit value=OK>"
 			      "</form>"
 			      "</body>"
-			      "</html>"
-			      );
-		return g_httpServer.sendDynamicPage (s, 
+			      "</html>");
+		return g_httpServer.sendDynamicPage (socket, 
 						     sb.getBufStart(), 
 						     sb.length(),
 						     -1); // cachetime
 	}
 
-	//char *crawlId = getCrawlIdFromHttpRequest();
+
+	// get collection name if any was specified
+	char *coll = hr->getString("c",NULL,NULL);
+	// and rec
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
+
+
+	// make a new state
+	StateCD *st;
+	try { st = new (StateCD); }
+	catch ( ... ) {
+		return sendErrorReply ( socket , fmt , mstrerror(g_errno));
+	}
+	mnew ( st , sizeof(StateCD), "statecd");
+
+	// copy crap
+	st->m_hr.copy ( hr );
+	st->m_socket = socket;
+	st->m_fmt = fmt;
+
+
+	///////
+	// 
+	// handle file of urls upload. can be HUGE!
+	//
+	///////
+	char *urlData = hr->getString("urldata",NULL,NULL);
+	if ( urlData ) {
+		// a valid collection is required
+		if ( ! cr ) 
+			return sendErrorReply(socket,fmt,"invalid collection");
+		// make a list of spider requests from these urls
+		long listSize;
+		char *list ;
+		list = g_spiderdb.getSpiderRequestMetaList(urlData,&listSize);
+		// add to spiderdb
+		if ( ! st->m_msg4.addMetaList( list ,
+					       listSize ,
+					       cr->m_coll,
+					       st ,
+					       addedUrlsToSpiderdbWrapper,
+					       0 // niceness
+					       ) )
+			// blocked!
+			return false;
+		// did not block, print page!
+		addedUrlsToSpiderdbWrapper(st);
+		return true;
+	}
+
+	/////////
+	//
+	// handle direct injection of a url. looks at "spiderlinks=1" parm
+	// and all the other parms in Msg7::inject() in PageInject.cpp.
+	//
+	//////////
+	char *injectUrl = hr->getString("injecturl",NULL,NULL);
+	if ( injectUrl ) {
+		// a valid collection is required
+		if ( ! cr ) 
+			return sendErrorReply(socket,fmt,"invalid collection");
+		// begin the injection
+		if ( ! st->m_msg7.inject ( st->m_socket,
+					   &st->m_hr,
+					   st ,
+					   injectedUrlWrapper ) )
+			// if blocked, return now
+			return false;
+		// otherwise send back reply
+		injectedUrlWrapper ( st );
+		return true;
+	}
+
+	//
+	// print the html or json page of all the data
+	//
+	return printCrawlBotPage2 ( socket , hr , fmt , NULL , NULL );
+}
+
+
+
+bool printCrawlBotPage2 ( TcpSocket *socket , 
+			  HttpRequest *hr ,
+			  char fmt, // format
+			  SafeBuf *injectionResponse ,
+			  SafeBuf *urlUploadResponse ) {
+	
+	// store output into here
+	SafeBuf sb;
+
+	if ( fmt == FMT_HTML )
+		sb.safePrintf(
+			      "<html>"
+			      "<title>Crawlbot - "
+			      "Web Data Extraction and Search Made "
+			      "Easy</title>"
+			      "<body>"
+			      );
+
 
 	CollectionRec *cr = NULL;
 
@@ -1608,48 +1850,48 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		cr = addNewDiffbotColl ( hr );
 
 	if ( ! cr ) {
-		log("crawlbot: failed to add new coll rec");
+		char *msg = "failed to add new collection";
 		g_msg = " (error: crawlbot failed to allocate crawl)";
-		return g_httpServer.sendErrorReply(s,500,
-						   "crawlbot crawl "
-						   "alloc failed?");
+		return sendErrorReply ( socket , fmt , msg );
 	}
 			
+	char *token = getTokenFromHttpRequest ( hr );
 
-	sb.safePrintf("<table border=0>"
-		      "<tr><td>"
-		      "<b><font size=+2>"
-		      "<a href=/crawlbot?token=%s>"
-		      "Crawlbot</a></font></b>"
-		      "<br>"
-		      "<font size=-1>"
-		      "Crawl, Datamine and Index the Web"
-		      "</font>"
-		      "</td></tr>"
-		      "</table>"
-		      , token
-		      );
-
-	sb.safePrintf("<center><br>");
-			      
-	// first print "add new collection"
-	sb.safePrintf("[ <a href=/crawlbot?addcoll=1&token=%s>"
-		      "add new collection"
-		      "</a> ] &nbsp; "
-		      "[ <a href=/crawlbot?summary=1&token=%s>"
-		      "show all collections"
-		      "</a> ] &nbsp; "
-		      , token
-		      , token
-		      );
+	if ( fmt == FMT_HTML ) {
+		sb.safePrintf("<table border=0>"
+			      "<tr><td>"
+			      "<b><font size=+2>"
+			      "<a href=/crawlbot?token=%s>"
+			      "Crawlbot</a></font></b>"
+			      "<br>"
+			      "<font size=-1>"
+			      "Crawl, Datamine and Index the Web"
+			      "</font>"
+			      "</td></tr>"
+			      "</table>"
+			      , token
+			      );
+		sb.safePrintf("<center><br>");
+		// first print "add new collection"
+		sb.safePrintf("[ <a href=/crawlbot?addcoll=1&token=%s>"
+			      "add new collection"
+			      "</a> ] &nbsp; "
+			      "[ <a href=/crawlbot?summary=1&token=%s>"
+			      "show all collections"
+			      "</a> ] &nbsp; "
+			      , token
+			      , token
+			      );
+	}
 	
 
 	long tokenLen = gbstrlen(token);
+	bool firstOne = true;
 
 	//
 	// print list of collections controlled by this token
 	//
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( long i = 0 ; fmt == FMT_HTML && i<g_collectiondb.m_numRecs;i++ ){
 		CollectionRec *cx = g_collectiondb.m_recs[i];
 		if ( ! cx ) continue;
 		// get its token if any
@@ -1678,9 +1920,8 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			sb.safePrintf("</font></b>");
 	}
 
-
-
-	sb.safePrintf ( "</center><br/>" );
+	if ( fmt == FMT_HTML )
+		sb.safePrintf ( "</center><br/>" );
 
 	//////
 	//
@@ -1688,9 +1929,12 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//
 	//////
 
+	if ( fmt == FMT_JSON )
+		sb.safePrintf("{\"collections\":{");
+
 	long summary = hr->getLong("summary",0);
 	// start the table
-	if ( summary ) {
+	if ( summary && fmt == FMT_HTML ) {
 		sb.safePrintf("<table border=1 cellpadding=5>"
 			      "<tr>"
 			      "<td><b>Collection</b></td>"
@@ -1711,6 +1955,58 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		// must belong to us
 		if ( strcmp(cx->m_diffbotToken.getBufStart(),token) )
 			continue;
+
+		// if json, print each collectionrec
+		if ( fmt == FMT_JSON ) {
+			if ( ! firstOne ) 
+				sb.safePrintf(",\n\t");
+			firstOne = false;
+			sb.safePrintf("\n\t{"
+				      "\"name\":\"%s\","
+				      "\"objectsFound\":%lli,"
+				      "\"urlsHarvested\":%lli,"
+				      "\"urlsExamined\":%lli,"
+				      "\"pageDownloadAttempts\":%lli,"
+				      "\"pageDownloadSuccesses\":%lli,"
+				      "\"pageProcessAttempts\":%lli,"
+				      "\"pageProcessSuccesses\":%lli,"
+				      // settable parms
+				      "\"maxToCrawl\":%lli,"
+				      "\"maxToProcess\":%lli,"
+				      "\"useRobotsTxt\":%li,"
+				      ,cx->m_coll
+				      , cx->m_globalCrawlInfo.m_objectsAdded -
+				      cx->m_globalCrawlInfo.m_objectsDeleted
+				      , cx->m_globalCrawlInfo.m_urlsHarvested
+				      , cx->m_globalCrawlInfo.m_urlsConsidered
+				, cx->m_globalCrawlInfo.m_pageDownloadAttempts
+				, cx->m_globalCrawlInfo.m_pageDownloadSuccesses
+				, cx->m_globalCrawlInfo.m_pageProcessAttempts
+				, cx->m_globalCrawlInfo.m_pageProcessSuccesses
+				      , cx->m_diffbotMaxToCrawl
+				      , cx->m_diffbotMaxToProcess
+				      , (long)cx->m_useRobotsTxt
+				      );
+			/////
+			//
+			// show url filters table. kinda hacky!!
+			//
+			/////
+			g_parms.sendPageGeneric ( socket ,
+						  hr ,
+						  PAGE_FILTERS ,
+						  NULL ,
+						  &sb ,
+						  cr->m_coll,  // coll override
+						  true // isJSON?
+						  );
+			// end that collection rec
+			sb.safePrintf("}\n");
+			// print the next one out
+			continue;
+		}
+
+
 		// print in table
 		sb.safePrintf("<tr>"
 			      "<td>%s</td>"
@@ -1733,18 +2029,24 @@ bool printCrawlBotPage ( TcpSocket *s ,
 			      , cx->m_globalCrawlInfo.m_pageProcessSuccesses
 			      );
 	}
-	if ( summary ) {
+	if ( summary && fmt == FMT_HTML ) {
 		sb.safePrintf("</table></html>" );
-		return g_httpServer.sendDynamicPage (s, 
+		return g_httpServer.sendDynamicPage (socket, 
 						     sb.getBufStart(), 
 						     sb.length(),
 						     -1); // cachetime
 	}
+
+	if ( fmt == FMT_JSON ) 
+		// end the {"collections": thing
+		sb.safePrintf("}\n");
+
 	///////
 	//
 	// end print collection summary page
 	//
 	///////
+
 
 	long maxToCrawl = hr->getLongLong("maxtocrawl",-1LL);
 	long maxToProcess = hr->getLongLong("maxtoprocess",-1LL);
@@ -1758,15 +2060,6 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//}
 
 
-	#define FMT_HTML 1
-	#define FMT_XML  2
-	#define FMT_JSON 3
-
-	// . now show stats for the current crawl
-	// . put in xml or json if format=xml or format=json or
-	//   xml=1 or json=1 ...
-	char format = FMT_HTML;
-
 
 	long pause = hr->getLong("pause",-1);
 	if ( pause == 0 ) cr->m_spideringEnabled = 1;
@@ -1775,66 +2068,70 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//
 	// show urls being crawled (ajax) (from Spider.cpp)
 	//
-	sb.safePrintf ( "<table width=100%% cellpadding=5 "
-			"style=border-width:1px;border-style:solid;"
-			"border-color:black;>"
-			//"bgcolor=#%s>\n" 
-			"<tr><td colspan=50>"// bgcolor=#%s>"
-			"<b>Last 10 URLs</b> (%li spiders active)"
-			//,LIGHT_BLUE
-			//,DARK_BLUE
-			,(long)g_spiderLoop.m_numSpidersOut);
-	if ( cr->m_spideringEnabled )
-		sb.safePrintf(" "
-			      "<a href=/crawlbot?c=%s&pause=1>"
-			      "<font color=red><b>Pause spiders</b>"
-			      "</font></a>"
-			      , cr->m_coll
-			      );
-	else
-		sb.safePrintf(" "
-			      "<a href=/crawlbot?c=%s&pause=0>"
-			      "<font color=green><b>Resume spidering</b>"
-			      "</font></a>"
-			      , cr->m_coll
-			      );
+	if ( fmt == FMT_HTML ) {
+		sb.safePrintf ( "<table width=100%% cellpadding=5 "
+				"style=border-width:1px;border-style:solid;"
+				"border-color:black;>"
+				//"bgcolor=#%s>\n" 
+				"<tr><td colspan=50>"// bgcolor=#%s>"
+				"<b>Last 10 URLs</b> (%li spiders active)"
+				//,LIGHT_BLUE
+				//,DARK_BLUE
+				,(long)g_spiderLoop.m_numSpidersOut);
+		if ( cr->m_spideringEnabled )
+			sb.safePrintf(" "
+				      "<a href=/crawlbot?c=%s&pause=1>"
+				      "<font color=red><b>Pause spiders</b>"
+				      "</font></a>"
+				      , cr->m_coll
+				      );
+		else
+			sb.safePrintf(" "
+				      "<a href=/crawlbot?c=%s&pause=0>"
+				      "<font color=green><b>Resume "
+				      "spidering</b>"
+				      "</font></a>"
+				      , cr->m_coll
+				      );
 
-	sb.safePrintf("</td></tr>\n" );
-	// the table headers so SpiderRequest::printToTable() works
-	if ( ! SpiderRequest::printTableHeaderSimple(&sb,true) ) 
-		return false;
-	// shortcut
-	XmlDoc **docs = g_spiderLoop.m_docs;
-	// first print the spider recs we are spidering
-	for ( long i = 0 ; i < (long)MAX_SPIDERS ; i++ ) {
-		// get it
-		XmlDoc *xd = docs[i];
-		// skip if empty
-		if ( ! xd ) continue;
-		// sanity check
-		if ( ! xd->m_oldsrValid ) { char *xx=NULL;*xx=0; }
-		// skip if not our coll rec!
-		if ( xd->m_cr != cr ) continue;
-		// grab it
-		SpiderRequest *oldsr = &xd->m_oldsr;
-		// get status
-		char *status = xd->m_statusMsg;
-		// show that
-		if ( ! oldsr->printToTableSimple ( &sb , status,xd) ) 
+		sb.safePrintf("</td></tr>\n" );
+
+		// the table headers so SpiderRequest::printToTable() works
+		if ( ! SpiderRequest::printTableHeaderSimple(&sb,true) ) 
 			return false;
-	}
-	// end the table
-	sb.safePrintf ( "</table>\n" );
-	sb.safePrintf ( "<br>\n" );
+		// shortcut
+		XmlDoc **docs = g_spiderLoop.m_docs;
+		// first print the spider recs we are spidering
+		for ( long i = 0 ; i < (long)MAX_SPIDERS ; i++ ) {
+			// get it
+			XmlDoc *xd = docs[i];
+			// skip if empty
+			if ( ! xd ) continue;
+			// sanity check
+			if ( ! xd->m_oldsrValid ) { char *xx=NULL;*xx=0; }
+			// skip if not our coll rec!
+			if ( xd->m_cr != cr ) continue;
+			// grab it
+			SpiderRequest *oldsr = &xd->m_oldsr;
+			// get status
+			char *status = xd->m_statusMsg;
+			// show that
+			if ( ! oldsr->printToTableSimple ( &sb , status,xd) ) 
+				return false;
+		}
 
+		// end the table
+		sb.safePrintf ( "</table>\n" );
+		sb.safePrintf ( "<br>\n" );
 
+	} // end html format
 
 
 
 	//
 	// show stats
 	//
-	if ( format == FMT_HTML ) {
+	if ( fmt == FMT_HTML ) {
 		sb.safePrintf("<br>"
 
 			      "<form method=get action=/crawlbot>"
@@ -2078,90 +2375,99 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	rand64 |=  r2;
 
 
-	sb.safePrintf(
-		      "<table border=0 cellpadding=5>"
+	if ( fmt == FMT_HTML )
+		sb.safePrintf(
+			      "<table border=0 cellpadding=5>"
+			      
+			      // OBJECT search input box
+			      "<form method=get action=/search>"
+			      "<tr>"
+			      "<td>"
+			      "<b>Search Objects:</b>"
+			      "</td><td>"
+			      "<input type=text name=q size=50>"
+			      "<input type=hidden name=c value=\"%s\">"
+			      "<input type=hidden name=rand value=%lli>"
+			      // restrict search to json objects
+			      "<input type=hidden name=prepend "
+			      "value=\"type:json |\">"
+			      " "
+			      "<input type=submit name=submit value=OK>"
+			      "</tr>"
+			      "</form>"
+			      
+			      
+			      // PAGE search input box
+			      "<form method=get action=/search>"
+			      "<tr>"
+			      "<td>"
+			      "<b>Search Pages:</b>"
+			      "</td><td>"
+			      "<input type=text name=q size=50>"
+			      "<input type=hidden name=c value=\"%s\">"
+			      "<input type=hidden name=rand value=%lli>"
+			      // restrict search to NON json objects
+			      "<input type=hidden "
+			      "name=prepend value=\"-type:json |\">"
+			      " "
+			      "<input type=submit name=submit value=OK>"
+			      "</tr>"
+			      "</form>"
+			      
+			      // add url input box
+			      "<form method=get action=/crawlbot>"
+			      "<tr>"
+			      "<td>"
+			      "<b>Inject Url: </b>"
+			      "</td><td>"
+			      "<input type=text name=injecturl size=50>"
+			      " "
+			      "<input type=submit name=submit value=OK>"
+			      " &nbsp; &nbsp; <input type=checkbox "
+			      "name=spiderlinks value=1 "
+			      "checked>"
+			      " <i>crawl links on this page?</i>"
+			      , cr->m_coll
+			      , rand64
+			      , cr->m_coll
+			      , rand64
+			      );
 
-		      // OBJECT search input box
-		      "<form method=get action=/search>"
-		      "<tr>"
-		      "<td>"
-		      "<b>Search Objects:</b>"
-		      "</td><td>"
-		      "<input type=text name=q size=50>"
-		      "<input type=hidden name=c value=\"%s\">"
-		      "<input type=hidden name=rand value=%lli>"
-		      // restrict search to json objects
-		      "<input type=hidden name=prepend value=\"type:json |\">"
-		      " "
-		      "<input type=submit name=submit value=OK>"
-		      "</tr>"
-		      "</form>"
-
-
-		      // PAGE search input box
-		      "<form method=get action=/search>"
-		      "<tr>"
-		      "<td>"
-		      "<b>Search Pages:</b>"
-		      "</td><td>"
-		      "<input type=text name=q size=50>"
-		      "<input type=hidden name=c value=\"%s\">"
-		      "<input type=hidden name=rand value=%lli>"
-		      // restrict search to NON json objects
-		      "<input type=hidden name=prepend value=\"-type:json |\">"
-		      " "
-		      "<input type=submit name=submit value=OK>"
-		      "</tr>"
-		      "</form>"
-
-		      // add url input box
-		      "<form method=get action=/inject>"
-		      "<tr>"
-		      "<td>"
-		      "<b>Inject Url: </b>"
-		      "</td><td>"
-		      "<input type=text name=u size=50>"
-		      " "
-		      "<input type=submit name=submit value=OK>"
-		      " &nbsp; &nbsp; <input type=checkbox "
-		      "name=spiderlinks value=1 "
-		      "checked>"
-		      " <i>crawl links on this page?</i>"
-		      , cr->m_coll
-		      , rand64
-		      , cr->m_coll
-		      , rand64
-		      );
-
-	if ( injectionResponse )
+	if ( injectionResponse && fmt == FMT_HTML )
 		sb.safePrintf("<br><font size=-1>%s</font>\n"
 			      ,injectionResponse->getBufStart() 
 			      );
 
-	sb.safePrintf("<input type=hidden name=c value=\"%s\">"
-		      "<input type=hidden name=crawlbotapi value=1>"
-		      "</td>"
-		      "</tr>"
-		      "</form>"
-
-
-		      "<tr>"
-		      "<td><b>Upload URLs</b></td>"
-		      "<td><input type=button value=\"Select File "
-		      "to Upload\">"
-
-		      " &nbsp; &nbsp; <input type=checkbox "
-		      "name=spiderlinks value=1 "
-		      "checked>"
-		      " <i>crawl links on those pages?</i>"
-
-		      "</td>"
-		      "</tr>"
-
-		      "</table>"
-		      "<br>"
-		      , cr->m_coll
-		      );
+	if ( fmt == FMT_HTML )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">"
+			      "<input type=hidden name=crawlbotapi value=1>"
+			      "</td>"
+			      "</tr>"
+			      "</form>"
+			      
+			      
+			      "<tr>"
+			      "<td><b>Upload URLs</b></td>"
+			      
+			      "<td>"
+			      // this page will call 
+			      // printCrawlbotPage2(uploadResponse) 2display it
+			      "<form method=get action=/crawlbot>"
+			      "<input type=file name=urldata size=40>"
+			      "</form>"
+			      
+			      " &nbsp; &nbsp; <input type=checkbox "
+			      "name=spiderlinks value=1 "
+			      "checked>"
+			      " <i>crawl links on those pages?</i>"
+			      
+			      "</td>"
+			      "</tr>"
+			      
+			      "</table>"
+			      "<br>"
+			      , cr->m_coll
+			      );
 
 
 	// xml or json does not show the input boxes
@@ -2187,45 +2493,46 @@ bool printCrawlBotPage ( TcpSocket *s ,
 		s2 = "";
 	}
 
-	sb.safePrintf(
-
-		      "<a onclick="
-		      "\""
-		      "var e = document.getElementById('filters');"
-		      "var m = document.getElementById('msg');"
-		      "if ( e.style.display == 'none' ){"
-		      "e.style.display = '';"
-		      "m.innerHTML='Hide URL Filters Table';"
-		      "document.cookie = 'showtable=1;';"
-		      "}"
-		      "else {"
-		      "e.style.display = 'none';"
-		      "m.innerHTML='Show URL Filters Table';"
-		      "document.cookie = 'showtable=0;';"
-		      "}"
-		      "\""
-		      " "
-		      "style="
-		      "cursor:hand;"
-		      "cursor:pointer;"
-		      "color:blue;>"
-
-		      "<u><b>"
-		      "<div id=msg>"
-		      "%s URL Filters Table"
-		      "</div>"
-		      "</b></u>"
-		      "</a>"
-
-		      "<div id=filters style=display:%s;>"
-		      "<form method=get action=/crawlbot>"
-		      "<input type=hidden name=c value=\"%s\">"
-		      "<input type=hidden name=showtable value=1>"
-		      , s1
-		      , s2
-		      , cr->m_coll
-		      );
-
+	if ( fmt == FMT_HTML )
+		sb.safePrintf(
+			      
+			      "<a onclick="
+			      "\""
+			      "var e = document.getElementById('filters');"
+			      "var m = document.getElementById('msg');"
+			      "if ( e.style.display == 'none' ){"
+			      "e.style.display = '';"
+			      "m.innerHTML='Hide URL Filters Table';"
+			      "document.cookie = 'showtable=1;';"
+			      "}"
+			      "else {"
+			      "e.style.display = 'none';"
+			      "m.innerHTML='Show URL Filters Table';"
+			      "document.cookie = 'showtable=0;';"
+			      "}"
+			      "\""
+			      " "
+			      "style="
+			      "cursor:hand;"
+			      "cursor:pointer;"
+			      "color:blue;>"
+			      
+			      "<u><b>"
+			      "<div id=msg>"
+			      "%s URL Filters Table"
+			      "</div>"
+			      "</b></u>"
+			      "</a>"
+			      
+			      "<div id=filters style=display:%s;>"
+			      "<form method=get action=/crawlbot>"
+			      "<input type=hidden name=c value=\"%s\">"
+			      "<input type=hidden name=showtable value=1>"
+			      , s1
+			      , s2
+			      , cr->m_coll
+			      );
+	
 	//////////
 	//
 	// . update the parms for this collection
@@ -2234,29 +2541,30 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//////////
 	long page = PAGE_FILTERS;
 	WebPage *pg = g_pages.getPage ( page ) ;
-	g_parms.setFromRequest ( hr , s, pg->m_function);
+	g_parms.setFromRequest ( hr , socket , pg->m_function);
 
 
 	//
 	// print url filters. HACKy...
 	//
-	g_parms.sendPageGeneric ( s ,
-				  hr ,
-				  PAGE_FILTERS ,
-				  NULL ,
-				  &sb ,
-				  cr->m_coll  // coll override
-				  );
+	if ( fmt == FMT_HTML )
+		g_parms.sendPageGeneric ( socket ,
+					  hr ,
+					  PAGE_FILTERS ,
+					  NULL ,
+					  &sb ,
+					  cr->m_coll,  // coll override
+					  false ); // isJSON?
 	//
 	// end HACKy hack
 	//
-
-	sb.safePrintf(
-		      "</form>"
-		      "</div>"
-		      "<br>"
-		      "<br>"
-		      );
+	if ( fmt == FMT_HTML )
+		sb.safePrintf(
+			      "</form>"
+			      "</div>"
+			      "<br>"
+			      "<br>"
+			      );
 
 
 
@@ -2281,61 +2589,63 @@ bool printCrawlBotPage ( TcpSocket *s ,
 	//
 
 
-	sb.safePrintf(
-		      "<table cellpadding=5>"
-		      "<tr>"
+	if ( fmt == FMT_HTML ) {
+		sb.safePrintf(
+			      "<table cellpadding=5>"
+			      "<tr>"
 
-		      "<td>"
-
-
-		      // reset collection form
-		      "<form method=get action=/crawlbot>"
-		      "<input type=hidden name=token value=\""
-		      );
-	sb.safeMemcpy ( token , tokenLen );
-	sb.safePrintf("\">"
-
-		      "<input type=hidden name=resetcoll value=%s>"
-		      // also show it in the display, so set "c"
-		      "<input type=hidden name=c value=%s>"
-		      "<input type=submit name=button value=\""
-		      "Reset this collection\">"
-		      "</form>"
-		      // end reset collection form
+			      "<td>"
 
 
-		      "</td>"
+			      // reset collection form
+			      "<form method=get action=/crawlbot>"
+			      "<input type=hidden name=token value=\""
+			      );
+		sb.safeMemcpy ( token , tokenLen );
+		sb.safePrintf("\">"
 
-		      "<td>"
-
-		      // delete collection form
-		      "<form method=get action=/crawlbot>"
-		      "<input type=hidden name=token value=\""
-		      , cr->m_coll
-		      , cr->m_coll
-		      );
-	sb.safeMemcpy ( token , tokenLen );
-	sb.safePrintf("\">"
-
-		      "<input type=hidden name=delcoll value=%s>"
-		      "<input type=submit name=button value=\""
-		      "Delete this collection\">"
-		      "</form>"
-		      // end delete collection form
+			      "<input type=hidden name=resetcoll value=%s>"
+			      // also show it in the display, so set "c"
+			      "<input type=hidden name=c value=%s>"
+			      "<input type=submit name=button value=\""
+			      "Reset this collection\">"
+			      "</form>"
+			      // end reset collection form
 
 
+			      "</td>"
+
+			      "<td>"
+
+			      // delete collection form
+			      "<form method=get action=/crawlbot>"
+			      "<input type=hidden name=token value=\""
+			      , cr->m_coll
+			      , cr->m_coll
+			      );
+		sb.safeMemcpy ( token , tokenLen );
+		sb.safePrintf("\">"
+
+			      "<input type=hidden name=delcoll value=%s>"
+			      "<input type=submit name=button value=\""
+			      "Delete this collection\">"
+			      "</form>"
+			      // end delete collection form
 
 
-		      "</td>"
-
-		      "</tr>"
-		      "</table>"
-		      "</form>"
-		      , cr->m_coll
-		      );
 
 
-	return g_httpServer.sendDynamicPage ( s, 
+			      "</td>"
+
+			      "</tr>"
+			      "</table>"
+			      "</form>"
+			      , cr->m_coll
+			      );
+	}
+
+	// this could be in html json or xml
+	return g_httpServer.sendDynamicPage ( socket, 
 					      sb.getBufStart(), 
 					      sb.length(),
 					      -1 ); // cachetime

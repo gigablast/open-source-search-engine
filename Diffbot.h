@@ -18,9 +18,14 @@
 // field we use as a number in the coll.conf, starting at 0
 extern char *g_diffbotFields [];
 
-bool printCrawlBotPage ( TcpSocket *s , 
-			 HttpRequest *hr ,
-			 SafeBuf *injectionResponse = NULL ) ;
+bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr );
+
+bool printCrawlBotPage2 ( TcpSocket *s , 
+			  HttpRequest *hr ,
+			  char fmt,
+			  SafeBuf *injectionResponse ,
+			  SafeBuf *urlUploadResponse ) ;
+
 //bool handleDiffbotRequest ( TcpSocket *s , HttpRequest *hr ) ;
 bool sendBackDump ( TcpSocket *s,HttpRequest *hr );
 

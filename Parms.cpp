@@ -307,7 +307,8 @@ unsigned long Parms::calcChecksum() {
 // . must ultimately send reply back on "s"
 bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			      char *cookie , SafeBuf *pageBuf ,
-			      char *collOveride ) {
+			      char *collOveride ,
+			      bool isJSON ) {
 
 	char  buf [ 128000 ];
 	SafeBuf stackBuf(buf,128000);
@@ -336,34 +337,36 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	long pd = r->getLong("pd",1);
 
 	//p += sprintf(p, "<script type=\"text/javascript\">"
-	sb->safePrintf (  
-		     "<script type=\"text/javascript\">"
-		     "function filterRow(str) {"
-		     //"alert ('string: ' + str);"
-		     "  var tab = document.all ? document.all['parmtable'] :"
-	             "                           document.getElementById ?"
-	             "             document.getElementById('parmtable') : null;"
-                     "  for(var j = 1; j < tab.rows.length;j++) {" 
-		     "    if(tab.rows[j].innerHTML.indexOf(str) < 0) {"
-		     "      tab.rows[j].style.display = 'none';"
-		     "    } else {"
-		     "      tab.rows[j].style.display = '';"
-		     "    }"
-		     "  }"
-		     "}\n"
-		     "function checkAll(form, name, num) {\n "
-		     "    for (var i = 0; i < num; i++) {\n"
-		     "      var nombre;\n"
-		     "      if( i > 0) nombre = name + i;\n"
-		     "      else nombre = name;\n"
-		     "      var e = document.getElementById(nombre);\n"
-		     "      e.checked = !e.checked;\n"
-		     "    }\n"
-		     "}\n"
-		     "</script>");
+	if ( ! isJSON )
+		sb->safePrintf (  
+				"<script type=\"text/javascript\">"
+				"function filterRow(str) {"
+				//"alert ('string: ' + str);"
+				"var tab = document.all ? document.all"
+				"['parmtable'] :"
+				"               document.getElementById ?"
+				"document.getElementById('parmtable') : null;"
+				"  for(var j = 1; j < tab.rows.length;j++) {" 
+				" if(tab.rows[j].innerHTML.indexOf(str) < 0) {"
+				"      tab.rows[j].style.display = 'none';"
+				"    } else {"
+				"      tab.rows[j].style.display = '';"
+				"    }"
+				"  }"
+				"}\n"
+				"function checkAll(form, name, num) {\n "
+				"    for (var i = 0; i < num; i++) {\n"
+				"      var nombre;\n"
+				"      if( i > 0) nombre = name + i;\n"
+				"      else nombre = name;\n"
+				"   var e = document.getElementById(nombre);\n"
+				"      e.checked = !e.checked;\n"
+				"    }\n"
+				"}\n"
+				"</script>");
 	
 	// print standard header 
-	if ( ! pageBuf )
+	if ( ! pageBuf && ! isJSON )
 		g_pages.printAdminTop ( sb      ,
 					page     ,
 					username ,
@@ -427,23 +430,25 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	//	sprintf ( bb , " (%s)", c);
 
 	// start the table
-	sb->safePrintf( 
-		  "\n"
-		  "<table width=100%% bgcolor=#%s cellpadding=4 border=1 "
-		  "id=\"parmtable\">"
-		  "<tr><td colspan=20 bgcolor=#%s>"
-		  
-		  "<div style=\"float:left;\">" 
-		  "filter:<input type=\"text\" "
-		  "onkeyup=\"filterRow(this.value)\" "
-		  "value=\"\"></div>"
-		  "<div style=\"margin-left:45%%;\">"
-		  //"<font size=+1>"
-		  "<b>%s</b>%s"
-		  //"</font>"
-		  "</div>"
-		  "</td></tr>%s%s\n",
-		  LIGHT_BLUE,DARK_BLUE,tt,bb,e1,e2);
+	if ( ! isJSON ) 
+		sb->safePrintf( 
+			       "\n"
+			       "<table width=100%% bgcolor=#%s "
+			       "cellpadding=4 border=1 "
+			       "id=\"parmtable\">"
+			       "<tr><td colspan=20 bgcolor=#%s>"
+			       
+			       "<div style=\"float:left;\">" 
+			       "filter:<input type=\"text\" "
+			       "onkeyup=\"filterRow(this.value)\" "
+			       "value=\"\"></div>"
+			       "<div style=\"margin-left:45%%;\">"
+			       //"<font size=+1>"
+			       "<b>%s</b>%s"
+			       //"</font>"
+			       "</div>"
+			       "</td></tr>%s%s\n",
+			       LIGHT_BLUE,DARK_BLUE,tt,bb,e1,e2);
 
 	char *THIS ;
 	// when being called from Diffbot.cpp crawlbot page it is kind of
@@ -467,16 +472,17 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	// print the table(s) of controls
 	//p= g_parms.printParms (p, pend, page, user, THIS, coll, pwd, nc, pd);
 	g_parms.printParms ( sb, page, username, THIS, coll, NULL, nc, pd,
-			     isCrawlbot );
+			     isCrawlbot , isJSON );
 
 	// end the table
-	sb->safePrintf ( "</table>\n" );
+	if ( ! isJSON ) sb->safePrintf ( "</table>\n" );
 	
 	// if page is security
 	if ( page == PAGE_SECURITY ){
 		// a table of page names and description
 		sb->safePrintf (
-			  "<table align=center width=100%% border=1 bgcolor=#d0d0e0 "
+			  "<table align=center width=100%% border=1 "
+			  "bgcolor=#d0d0e0 "
 			  "cellpadding=2 border=0>" 
 			  //"<tr><td colspan=2 bgcolor=#d0c0d0>"
 			  "<tr><td colspan=2 bgcolor=#%s>"
@@ -498,10 +504,10 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		sb->safePrintf (  "</table>\n");
 	}
 
-	sb->safePrintf ( "<br><br>\n" );
+	if ( ! isJSON ) sb->safePrintf ( "<br><br>\n" );
 
 	// url filter page has a test table
-	if ( page == PAGE_FILTERS ) {
+	if ( page == PAGE_FILTERS && ! isJSON ) {
 
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( sb );
@@ -970,7 +976,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 	}
 
-	else 
+	else  if ( ! isJSON )
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( sb );
 
@@ -1278,7 +1284,7 @@ char *Parms::printParms ( char *p , char *pend , long page , char *username,
 */
 bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 			 void *THIS , char *coll , char *pwd , long nc ,
-			 long pd , bool isCrawlbot ) {
+			 long pd , bool isCrawlbot , bool isJSON ) {
 	bool status = true;
 	s_count = 0;
 	// background color
@@ -1310,12 +1316,18 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 			if ( bg == bg1 ) bg = bg2;
 			else             bg = bg1;
 		}
+
+			//
+			// mdw just debug to here ... left off here
+			char *xx=NULL;*xx=0;
+
 		// . do we have an array? if so print title on next row
 		//   UNLESS these are priority checkboxes, those can all 
 		//   cluster together onto one row
 		// . only add if not in a row of controls
 		if ( m->m_max > 1 && m->m_type != TYPE_PRIORITY_BOXES &&
 		     m->m_rowid == -1 ) {
+			//
 			// make a separate table for array of parms
 			sb->safePrintf (
 				  //"<table width=100%% bgcolor=#d0d0e0 "
@@ -1343,12 +1355,13 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 		// if not part of a complex row, just print this array right up
 		if ( rowid == -1 ) {
 			for ( long j = 0 ; j < size ; j++ )
-				status &=printParm ( sb, username,&m_parms[i],i,
+				status &=printParm ( sb,username,&m_parms[i],i,
 						     j, jend, (char *)THIS,
 						     coll,NULL,
 						     bg,nc,pd,
 						     false,
-						     isCrawlbot);
+						     isCrawlbot,
+						     isJSON);
 			continue;
 		}
 		// if not first in a row, skip it, we printed it already
@@ -1368,7 +1381,7 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 				status &=printParm(sb,username,&m_parms[k],k,
 					    newj,jend,(char *)THIS,coll,NULL,
 						   bg,nc,pd, j==size-1,
-						   isCrawlbot);
+						   isCrawlbot,isJSON);
 			}
 		}
 		// end array table
@@ -1805,7 +1818,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			long  nc   ,
 			long  pd   ,
 			bool lastRow ,
-			bool isCrawlbot ) {
+			bool isCrawlbot ,
+			bool isJSON ) {
 	bool status = true;
 	// do not print if no permissions
 	if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
