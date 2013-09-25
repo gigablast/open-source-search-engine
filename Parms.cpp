@@ -1319,14 +1319,15 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 
 			//
 			// mdw just debug to here ... left off here
-			char *xx=NULL;*xx=0;
+			//char *xx=NULL;*xx=0;
 
 		// . do we have an array? if so print title on next row
 		//   UNLESS these are priority checkboxes, those can all 
 		//   cluster together onto one row
 		// . only add if not in a row of controls
 		if ( m->m_max > 1 && m->m_type != TYPE_PRIORITY_BOXES &&
-		     m->m_rowid == -1 ) {
+		     m->m_rowid == -1 &&
+		     ! isJSON ) {
 			//
 			// make a separate table for array of parms
 			sb->safePrintf (
@@ -1898,7 +1899,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	//   default line in the url filters table
 	if ( j == firstRow && m->m_rowid >= 0 && firstInRow && m->m_hdrs ) {
 		// print description as big comment
-		if ( m->m_desc && pd == 1 ) {
+		if ( m->m_desc && pd == 1 && ! isJSON ) {
 			sb->safePrintf ( "<td colspan=20><font size=-1>\n" );
 
 			//p = htmlEncode ( p , pend , m->m_desc ,
@@ -1908,7 +1909,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		}
 		// # column
 		// do not show this for PAGE_PRIORITIES it is confusing
-		if ( m->m_max > 1 ) {
+		if ( m->m_max > 1 && ! isJSON ) {
 		     //m->m_page != PAGE_PRIORITIES ) {
 			sb->safePrintf (  "<td><b>#</b></td>\n" );
 		}
@@ -1917,6 +1918,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		      k<m_numParms && m_parms[k].m_rowid==m->m_rowid; k++ ) {
 			// parm shortcut
 			Parm *mk = &m_parms[k];
+			// not if printing json
+			if ( isJSON ) continue;
 			// . hide table column headers that are too advanced
 			// . we repeat this logic above for the actual parms
 			char *vt = "";
@@ -1951,7 +1954,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			*/
 			sb->safePrintf ("</td>\n");
 		}
-		sb->safePrintf ( "</tr>\n" ); // mdw added
+		if ( ! isJSON ) sb->safePrintf ( "</tr>\n" ); // mdw added
 	}
 	// print row start for single parm
 	if ( m->m_max <= 1 && ! m->m_hdrs ) {
@@ -2010,9 +2013,11 @@ bool Parms::printParm ( SafeBuf* sb,
 	// . print number in row if array, start at 1 for clarity's sake
 	// . used for url filters table, etc.
 	if ( m->m_max > 1 ) {
+		// do not print this if doing json
+		if ( isJSON ) ;
 		// but if it is in same row as previous, do not repeat it
 		// for this same row, silly
-		if ( firstInRow ) // && m->m_page != PAGE_PRIORITIES ) 
+		else if ( firstInRow ) // && m->m_page != PAGE_PRIORITIES ) 
 			sb->safePrintf ( "<tr><td>%li</td>\n<td>", j );//j+1
 		else if ( firstInRow ) 
 			sb->safePrintf ( "<tr><td>" );
@@ -2052,20 +2057,31 @@ bool Parms::printParm ( SafeBuf* sb,
 	else if ( t == TYPE_CHECKBOX ) {
 		char *ddd = "";
 		if ( *s ) ddd = " checked";
-		// this is part of the "HACK" fix below. you have to
-		// specify the cgi parm in the POST request, and unchecked
-		// checkboxes are not included in the POST request.
-		if ( lastRow && m->m_page == PAGE_FILTERS ) 
-			sb->safePrintf("<center><input type=hidden ");
-		else
-			sb->safePrintf("<center>"
-				       "<input type=checkbox ");
-		if ( m->m_page == PAGE_FILTERS)
-			sb->safePrintf("id=id_%s ",cgi);
-
-		sb->safePrintf("value=1 name=%s%s>"
-			       "</center>",
-			       cgi,ddd);
+		// just show the parm name and value if printing in json
+		if ( isJSON ) {
+			if ( ! lastRow ) {
+				long val = 0;
+				if ( *s ) val = 1;
+				sb->safePrintf("\"%s\":%li,\n",cgi,val);
+			}
+		}
+		else {
+			// this is part of the "HACK" fix below. you have to
+			// specify the cgi parm in the POST request, and 
+			// unchecked checkboxes are not included in the POST 
+			// request.
+			if ( lastRow && m->m_page == PAGE_FILTERS ) 
+				sb->safePrintf("<center><input type=hidden ");
+			else
+				sb->safePrintf("<center>"
+					       "<input type=checkbox ");
+			if ( m->m_page == PAGE_FILTERS)
+				sb->safePrintf("id=id_%s ",cgi);
+			
+			sb->safePrintf("value=1 name=%s%s>"
+				       "</center>",
+				       cgi,ddd);
+		}
 	}
 	else if ( t == TYPE_CHAR )
 		sb->safePrintf ("<input type=text name=%s value=\"%li\" "
@@ -2076,11 +2092,26 @@ bool Parms::printParm ( SafeBuf* sb,
 	else if ( t == TYPE_PRIORITY ) 
 		printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s , 
 				false , false );
-	else if ( t == TYPE_PRIORITY2 )
-		printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s ,
-				true , true );
-	else if ( t == TYPE_DIFFBOT_DROPDOWN )
-		printDiffbotDropDown ( 8, sb , cgi , *s );
+	else if ( t == TYPE_PRIORITY2 ) {
+		// just show the parm name and value if printing in json
+		if ( isJSON )
+			sb->safePrintf("\"%s\":%li,\n",cgi,*(long *)s);
+		else
+			printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s ,
+					true , true );
+	}
+	else if ( t == TYPE_DIFFBOT_DROPDOWN ) {
+		// just show the parm name and value if printing in json
+		if ( isJSON ) {
+			// convert diffbot # to string
+			long apiNum = (long)*s;
+			char *str = g_diffbotFields [apiNum];
+			sb->safePrintf("\"%s-str\":\"%s\",\n",cgi,str);
+			sb->safePrintf("\"%s\":\"%li\",\n",cgi,apiNum);
+		}
+		else
+			printDiffbotDropDown ( 8, sb , cgi , *s );
+	}
 	else if ( t == TYPE_RETRIES    ) 
 		printDropDown ( 4 , sb , cgi , *s , false , false );
 	else if ( t == TYPE_PRIORITY_BOXES ) {
@@ -2096,9 +2127,15 @@ bool Parms::printParm ( SafeBuf* sb,
 			  "<center>%s</center></a></b>",
 			  g_pages.getPath(m->m_page),coll,
 			  cgi,cast,m->m_title);
-	else if ( t == TYPE_FLOAT )
-		sb->safePrintf ("<input type=text name=%s value=\"%.03f\" "
-				"size=12>",cgi,*(float *)s);
+	else if ( t == TYPE_FLOAT ) {
+		// just show the parm name and value if printing in json
+		if ( isJSON )
+			sb->safePrintf("\"%s\":%.03f,\n",cgi,*(float *)s);
+		else
+			sb->safePrintf ("<input type=text name=%s "
+					"value=\"%.03f\" "
+					"size=12>",cgi,*(float *)s);
+	}
 	else if ( t == TYPE_IP ) {
 		if ( m->m_max > 0 && j == jend ) 
 			sb->safePrintf ("<input type=text name=%s value=\"\" "
@@ -2107,9 +2144,15 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ("<input type=text name=%s value=\"%s\" "
 					"size=12>",cgi,iptoa(*(long *)s));
 	}
-	else if ( t == TYPE_LONG ) 
-		sb->safePrintf ("<input type=text name=%s value=\"%li\" "
-				"size=12>",cgi,*(long *)s);
+	else if ( t == TYPE_LONG ) {
+		// just show the parm name and value if printing in json
+		if ( isJSON )
+			sb->safePrintf("\"%s\":%li,\n",cgi,*(long *)s);
+		else
+			sb->safePrintf ("<input type=text name=%s "
+					"value=\"%li\" "
+					"size=12>",cgi,*(long *)s);
+	}
 	else if ( t == TYPE_LONG_CONST ) 
 		sb->safePrintf ("%li",*(long *)s);
 	else if ( t == TYPE_LONG_LONG )
@@ -2138,14 +2181,27 @@ bool Parms::printParm ( SafeBuf* sb,
 		else {
 			if ( size > 20 ) size = 20;
 		}
-		sb->safePrintf ("<input type=text name=%s size=%li value=\"",
-				cgi,size);
-		//sb->dequote ( s , gbstrlen(s) );
 		SafeBuf *sx = (SafeBuf *)s;
-		// note it
-		//log("hack: %s",sx->getBufStart());
-		sb->dequote ( sx->getBufStart() , sx->length() );
-		sb->safePrintf ("\">");
+		// just show the parm name and value if printing in json
+		if ( isJSON ) {
+			// this can be empty for the empty row i guess
+			if ( sx->length() ) {
+				// convert diffbot # to string
+				sb->safePrintf("\"%s\":\"",cgi);
+				sb->safeUtf8ToJSON (sx->getBufStart() );
+				sb->safePrintf("\",\n");
+			}
+		}
+		else {
+			sb->safePrintf ("<input type=text name=%s size=%li "
+					"value=\"",
+					cgi,size);
+			//sb->dequote ( s , gbstrlen(s) );
+			// note it
+			//log("hack: %s",sx->getBufStart());
+			sb->dequote ( sx->getBufStart() , sx->length() );
+			sb->safePrintf ("\">");
+		}
 	}
 	else if ( t == TYPE_STRINGBOX ) {
 		sb->safePrintf("<textarea rows=10 cols=64 name=%s>",cgi);
@@ -2280,10 +2336,10 @@ bool Parms::printParm ( SafeBuf* sb,
 
 
 	// end the input cell
-	sb->safePrintf ( "</td>\n");
+	if ( ! isJSON ) sb->safePrintf ( "</td>\n");
 
 	// "insert above" link? used for arrays only, where order matters
-	if ( m->m_addin && j < jend ) {
+	if ( m->m_addin && j < jend && ! isJSON ) {
 		sb->safePrintf ( "<td><a href=\"?c=%s&cast=1&"
 				 "ins_%s=1\">insert</td>\n",coll,cgi );
 	}
@@ -2296,7 +2352,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 	// . display the remove link for arrays if we need to
 	// . but don't display if next guy does NOT start a new row
-	if ( m->m_max > 1 && lastInRow ) {
+	if ( m->m_max > 1 && lastInRow && ! isJSON ) {
 	//     m->m_page != PAGE_PRIORITIES ) {
 		// show remove link?
 		bool show = true;
@@ -2317,7 +2373,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ( "<td></td>\n");
 	}
 
-	if ( lastInRow ) sb->safePrintf ("</tr>\n");
+	if ( lastInRow && ! isJSON ) sb->safePrintf ("</tr>\n");
 	return status;
 }
 

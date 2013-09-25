@@ -2668,6 +2668,64 @@ bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
 }
 
 
+bool SafeBuf::safeUtf8ToJSON ( char *utf8 ) {
+	// how much space do we need?
+	// each single byte \t char for instance will need 2 bytes
+	long need = gbstrlen(utf8) * 2 + 1;
+	if ( ! reserve ( need ) ) return false;
+	// scan and copy
+	char *src = utf8;
+	// concatenate to what's already there
+	char *dst = m_buf + m_length;
+	for ( ; *src ; src++ ) {
+		if ( *src == '\"' ) {
+			*dst++ = '\\';
+			*dst++ = '\"';
+			continue;
+		}
+		if ( *src == '\t' ) {
+			*dst++ = '\\';
+			*dst++ = 't';
+			continue;
+		}
+		if ( *src == '\n' ) {
+			*dst++ = '\\';
+			*dst++ = 'n';
+			continue;
+		}
+		if ( *src == '\r' ) {
+			*dst++ = '\\';
+			*dst++ = 'r';
+			continue;
+		}
+		if ( *src == '\f' ) {
+			*dst++ = '\\';
+			*dst++ = 'f';
+			continue;
+		}
+		if ( *src == '\\' ) {
+			*dst++ = '\\';
+			*dst++ = '\\';
+			continue;
+		}
+		//if ( *src == '\/' ) {
+		//	*dst++ = '\\';
+		//	*dst++ = '/';
+		//	continue;
+		//}
+
+		*dst++ = *src;
+
+	}
+	// null term
+	*dst = '\0';
+
+	m_length = dst - m_buf;
+
+	return true;
+}
+
+
 		
 bool SafeBuf::linkify ( long niceness , long startPos ) {
 

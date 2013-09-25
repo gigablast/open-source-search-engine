@@ -92,6 +92,7 @@ struct SafeBuf {
 	bool  safeMemcpy ( class Words *w , long a , long b ) ;
 	bool  safeStrcpy ( char *s ) ;
 	bool  safeStrcpyPrettyJSON ( char *decodedJson ) ;
+	bool  safeUtf8ToJSON ( char *utf8 ) ;
 	//bool  pushLong ( long val ) { return safeMemcpy((char *)&val,4); }
 	bool  cat(SafeBuf& c);
 	// . only cat the sections/tag that start with "tagFilter"

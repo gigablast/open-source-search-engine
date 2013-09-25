@@ -1941,6 +1941,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		sb.safePrintf("{\"collections\":{");
 
 	long summary = hr->getLong("summary",0);
+	// enter summary mode for json
+	if ( fmt != FMT_HTML ) summary = 1;
 	// start the table
 	if ( summary && fmt == FMT_HTML ) {
 		sb.safePrintf("<table border=1 cellpadding=5>"
@@ -1969,19 +1971,19 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			if ( ! firstOne ) 
 				sb.safePrintf(",\n\t");
 			firstOne = false;
-			sb.safePrintf("\n\t{"
-				      "\"name\":\"%s\","
-				      "\"objectsFound\":%lli,"
-				      "\"urlsHarvested\":%lli,"
-				      "\"urlsExamined\":%lli,"
-				      "\"pageDownloadAttempts\":%lli,"
-				      "\"pageDownloadSuccesses\":%lli,"
-				      "\"pageProcessAttempts\":%lli,"
-				      "\"pageProcessSuccesses\":%lli,"
+			sb.safePrintf("\n\n{"
+				      "\"name\":\"%s\",\n"
+				      "\"objectsFound\":%lli,\n"
+				      "\"urlsHarvested\":%lli,\n"
+				      "\"urlsExamined\":%lli,\n"
+				      "\"pageDownloadAttempts\":%lli,\n"
+				      "\"pageDownloadSuccesses\":%lli,\n"
+				      "\"pageProcessAttempts\":%lli,\n"
+				      "\"pageProcessSuccesses\":%lli,\n"
 				      // settable parms
-				      "\"maxToCrawl\":%lli,"
-				      "\"maxToProcess\":%lli,"
-				      "\"useRobotsTxt\":%li,"
+				      "\"maxToCrawl\":%lli,\n"
+				      "\"maxToProcess\":%lli,\n"
+				      "\"useRobotsTxt\":%li,\n"
 				      ,cx->m_coll
 				      , cx->m_globalCrawlInfo.m_objectsAdded -
 				      cx->m_globalCrawlInfo.m_objectsDeleted
@@ -2008,8 +2010,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 						  cr->m_coll,  // coll override
 						  true // isJSON?
 						  );
+			// remove trailing comma
+			sb.removeLastChar('\n');
+			sb.removeLastChar(',');
 			// end that collection rec
-			sb.safePrintf("}\n");
+			sb.safePrintf("\n}\n");
 			// print the next one out
 			continue;
 		}
@@ -2047,7 +2052,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 	if ( fmt == FMT_JSON ) 
 		// end the {"collections": thing
-		sb.safePrintf("}\n");
+		sb.safePrintf("\n}\n");
 
 	///////
 	//
