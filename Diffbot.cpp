@@ -1997,7 +1997,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//////
 
 	if ( fmt == FMT_JSON )
-		sb.safePrintf("[\"collections\":");
+		sb.safePrintf("[");//\"collections\":");
 
 	long summary = hr->getLong("summary",0);
 	// enter summary mode for json
