@@ -1665,7 +1665,7 @@ static class HelpItem s_his[] = {
 	{"mspr[N]","Max outstanding spiders for this spider priority."},
 	{"mspi[N]","Max outstanding spiders for this IP."},
 	{"xg[N]","Wait this many milliseconds between spiders of same IP."},
-	{"fsp[N]","Spider priority. Higher priorities spidered first. Can be from 0 to 127."},
+	{"fsp[N]","Spider priority. Higher priorities spidered first. Can be from 0 to 127. But -3 means to ignore the URL. -2 means the URL is banned because it comes from an evil site."},
 	{"dapi[N]","Diffbot api number. Process through this diffbot api."},
 	{"injecturl","Specify a seed url to inject."},
 	{"urldata","A huge string of whitespace separated URLs to add to "
@@ -1931,7 +1931,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      );
 		sb.safePrintf("<center><br>");
 		// first print help
-		sb.safePrintf("[ <a href=/crawlbot?help=1>help</a> ] &nbsp; ");
+		sb.safePrintf("[ <a href=/crawlbot?help=1>"
+			      "api help</a> ] &nbsp; "
+			      // json output
+			      "[ <a href=/crawlbot?token=%s&format=json>"
+			      "json output"
+			      "</a> ] &nbsp; "
+			      , token );
 		// first print "add new collection"
 		sb.safePrintf("[ <a href=/crawlbot?addcoll=1&token=%s>"
 			      "add new collection"
@@ -1940,11 +1946,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "show all collections"
 			      "</a> ] &nbsp; "
 
-			      "[ <a href=/crawlbot?token=%s&format=json>"
-			      "json api"
-			      "</a> ] &nbsp; "
-
-			      , token
 			      , token
 			      , token
 			      );
