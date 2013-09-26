@@ -1690,6 +1690,7 @@ bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
 		SafeBuf sb;
 		sb.safePrintf("<html>"
 			      "<title>Crawlbot API</title>"
+			      "<h1>Crawlbot API</h1>"
 			      "<b>Use the parameters below on the "
 			      "<a href=\"/crawlbot\">/crawlbot</a> page."
 			      "</b><br><br>"
@@ -1929,6 +1930,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , token
 			      );
 		sb.safePrintf("<center><br>");
+		// first print help
+		sb.safePrintf("[ <a href=/crawlbot?help=1>help</a> ] &nbsp; ");
 		// first print "add new collection"
 		sb.safePrintf("[ <a href=/crawlbot?addcoll=1&token=%s>"
 			      "add new collection"
@@ -1936,6 +1939,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "[ <a href=/crawlbot?summary=1&token=%s>"
 			      "show all collections"
 			      "</a> ] &nbsp; "
+
+			      "[ <a href=/crawlbot?token=%s&format=json>"
+			      "json api"
+			      "</a> ] &nbsp; "
+
+			      , token
 			      , token
 			      , token
 			      );
