@@ -386,6 +386,10 @@ class CollectionRec {
 
 	// new diffbot parms
 	SafeBuf m_diffbotToken;
+	// an alternate name for the collection. we tend to create
+	// collection names as a random sequence of hex digits. this
+	// will allow a user to give them an alternate name.
+	SafeBuf m_collectionNameAlias;
 	//SafeBuf m_diffbotSeed;
 	// this will be NULL or "none" to not pass off to diffbot
 	//SafeBuf m_diffbotApi;

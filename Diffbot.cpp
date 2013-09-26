@@ -32,7 +32,7 @@ CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
 //CollectionRec *getCollRecFromCrawlId ( char *crawlId );
 //void printCrawlStatsWrapper ( void *state ) ;
 CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) ;
-
+bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) ;
 
 char *g_diffbotFields [] = {
 	"None",
@@ -1651,11 +1651,13 @@ static class HelpItem s_his[] = {
 	 "token controls."},
 	{"pause","Use pause=0 or pause=1 to activate or pause spidering "
 	 "respectively."},
-	{"maxtocrawl", "specify max pages to successfully download"},
-	{"maxtoprocess", "specify max pages to successfully process through "
+	{"alias", "Set the collection name alias to this string. Must be "
+	 "unqiue over all collections under the same token."},
+	{"maxtocrawl", "Specify max pages to successfully download"},
+	{"maxtoprocess", "Specify max pages to successfully process through "
 	 "diffbot"},
-	{"urt","use robots.txt?"},
-	{"fe[N]","filter expression #N. The first expression in the url "
+	{"urt","Use robots.txt?"},
+	{"fe[N]","Filter expression #N. The first expression in the url "
 	 "filters table is 0. But if N is 0, leave N out, only specify it "
 	 "if N is > 0. Example &fe=onsamedomain to change the expression in "
 	 "row #0 to onsamedomain. Or &fe1=foobar to change the expression "
@@ -2030,8 +2032,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			if ( ! firstOne ) 
 				sb.safePrintf(",\n\t");
 			firstOne = false;
+			char *alias = "";
+			if ( cx->m_collectionNameAlias.length() > 0 )
+				alias=cx->m_collectionNameAlias.getBufStart();
 			sb.safePrintf("\n\n{"
 				      "\"name\":\"%s\",\n"
+				      "\"alias\":\"%s\",\n"
 				      "\"crawlingEnabled\":%li,\n"
 				      "\"objectsFound\":%lli,\n"
 				      "\"urlsHarvested\":%lli,\n"
@@ -2045,6 +2051,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      "\"maxtoprocess\":%lli,\n"
 				      "\"urt\":%li,\n"
 				      ,cx->m_coll
+				      , alias
 				      , (long)cx->m_spideringEnabled 
 				      , cx->m_globalCrawlInfo.m_objectsAdded -
 				      cx->m_globalCrawlInfo.m_objectsDeleted
@@ -2124,8 +2131,48 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 	long maxToCrawl = hr->getLongLong("maxtocrawl",-1LL);
 	long maxToProcess = hr->getLongLong("maxtoprocess",-1LL);
-	if ( maxToCrawl != -1 ) cr->m_diffbotMaxToCrawl = maxToCrawl;
-	if ( maxToProcess != -1 ) cr->m_diffbotMaxToProcess = maxToProcess;
+	if ( maxToCrawl != -1 ) {
+		cr->m_diffbotMaxToCrawl = maxToCrawl;
+		cr->m_needsSave = 1;
+	}
+	if ( maxToProcess != -1 ) {
+		cr->m_diffbotMaxToProcess = maxToProcess;
+		cr->m_needsSave = 1;
+	}
+
+	///////
+	//
+	// a new alias?
+	//
+	///////
+	char *aliasResponse = "";
+	char *alias = hr->getString("alias",NULL,NULL );
+	SafeBuf atr;
+	if ( alias && alias[0] ) {
+		// assume ok
+		aliasResponse = "<font size=-2><br>"
+			"Alias updated successfully.</font>";
+		// scan to make sure unique for OUR token
+		if ( ! isAliasUnique ( cr , token , alias ) ) {
+			atr.safePrintf("<font color=red>%s"
+				       "<font size=-2><br>"
+				       "Alias is not unqiue. Please choose "
+				       "another one.</font></font>", alias);
+			aliasResponse = atr.getBufStart();
+			// if json bail out i guess
+			if ( fmt == FMT_JSON ) {
+				char *msg = "alias is not unique for token";
+				return sendErrorReply2(socket,fmt,msg);
+			}
+		}
+		else {
+			cr->m_collectionNameAlias.set(alias);
+			cr->m_collectionNameAlias.nullTerm();
+			cr->m_needsSave = 1;
+		}
+	}
+
+		
 
 	//char *api = hr->getString("diffbotapi",NULL,NULL);
 	//if ( api ) {
@@ -2323,8 +2370,22 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			       */
 			      );
 
+		char *alias = "";
+		if ( cr->m_collectionNameAlias.length() > 0 )
+			alias = cr->m_collectionNameAlias.getBufStart();
+
 		sb.safePrintf(
 			      //
+			      "<tr>"
+			      "<td><b>Collection Name:</td>"
+			      "<td>%s</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Collection Alias:</td>"
+			      "<td>%s%s</td>"
+			      "</tr>"
+
 			      "<tr>"
 			      "<td><b>Token:</td>"
 			      "<td>%s</td>"
@@ -2424,6 +2485,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</TABLE>"
 
 			      "</form>"
+
+
+			      , cr->m_coll
+			      , alias
+			      , aliasResponse
 
 			      , cr->m_diffbotToken.getBufStart()
 
@@ -3090,3 +3156,23 @@ bool getSpiderRequestMetaList ( char *doc ,
 	return true;
 }
 
+
+bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) {
+	// scan all collections
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		CollectionRec *cx = g_collectiondb.m_recs[i];
+		if ( ! cx ) continue;
+		// must belong to us
+		if ( strcmp(cx->m_diffbotToken.getBufStart(),token) )
+			continue;
+		// skip if collection we are putting alias on
+		if ( cx == cr ) continue;
+		// does it match?
+		if ( cx->m_collectionNameAlias.length() <= 0 ) continue;
+		// return false if it matches! not unique
+		if ( strcmp ( cx->m_collectionNameAlias.getBufStart() ,
+			      alias ) == 0 )
+			return false;
+	}
+	return true;
+}
