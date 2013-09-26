@@ -3824,11 +3824,18 @@ bool Parms::serialize( char *buf, long *bufSize ) {
 	return false;
 }
 
-// serialize a conf parm
+// . serialize a conf parm
+// . if sizeChk is true then we do not serialize, but just get the
+//   bytes required if we did serialize
+// . serialize parm into *p, the cursor i guess, buf end is "end"
 bool Parms::serializeConfParm( Parm *m, long i, char **p, char *end,
 			       long size, long cnt, 
 			       bool sizeChk, long *bufSz ) {
 	SerParm *sp = NULL;
+
+	// safebuf not supported here yet, but it for coll recs below
+	// so copy code from there if you need it
+	if ( m->m_type == TYPE_SAFEBUF ) { char *xx=NULL;*xx=0;}
 
 	if (m->m_type == TYPE_STRING || 
 	    m->m_type == TYPE_STRINGBOX || 
@@ -3909,7 +3916,10 @@ bool Parms::serializeConfParm( Parm *m, long i, char **p, char *end,
 	return false;
 }
 
-// TODO: add TYPE_SAFEBUF support
+// . serialize a coll parm in CollectionRec.h
+// . if sizeChk is true then we do not serialize, but just get the
+//   bytes required if we did serialize
+// . serialize parm into *p, the cursor i guess, buf end is "end"
 bool Parms::serializeCollParm( CollectionRec *cr,
 			       Parm *m, long i, char **p, char *end,
 			       long size, long cnt,
@@ -3918,6 +3928,7 @@ bool Parms::serializeCollParm( CollectionRec *cr,
 
 	if (m->m_type == TYPE_STRING || 
 	    m->m_type == TYPE_STRINGBOX || 
+	    m->m_type == TYPE_SAFEBUF ||
 	    m->m_type == TYPE_STRINGNONEMPTY ) {
 		char *sVal = NULL;
 		if ( ! sizeChk ) {
@@ -3926,9 +3937,15 @@ bool Parms::serializeCollParm( CollectionRec *cr,
 			sp->obj = OBJ_COLL; 
 			sp->size = 0L; // 0 for strings
 			sp->cnt = cnt; // # of strings
-			// get num of member
+			// is this parm an array if parms?
 			if ( cnt > 1 ) {
+				// the offset of the "count" or the 
+				// "number of elements" in the array.
+				// it preceeds the value of the first element
+				// as can be seen infor parms in 
+				// CollectionRec.h.
 				sp->off = m->m_off - sizeof(long);
+				// store the # of then into "num"
 				sp->num = *(long *)((char *)cr + sp->off);
 			}
 			else {
@@ -3937,21 +3954,43 @@ bool Parms::serializeCollParm( CollectionRec *cr,
 			}
 			sVal = sp->val;
 		}
+		// point to the actual parm itself
 		char *sColl = (char *)cr + m->m_off;
 		long totLen = 0;
+		// "cnt" is how many elements in the array
 		long tcnt = cnt;
 		while ( tcnt ) {
-			long len = gbstrlen( sColl );
+			// the  length of the string
+			long len;
+			// the string
+			char *pstr;
+			// if a safebuf, point to string it has
+			if ( m->m_type == TYPE_SAFEBUF ) {
+				SafeBuf *sx = (SafeBuf *)sColl;
+				pstr = sx->getBuf();
+				len = sx->length();
+				if ( ! pstr ) pstr = "";
+			}
+			// get length of the string. if not a safebuf it will
+			// just be an outright string in CollectionRec.h
+			else {
+				pstr = sColl;
+				len = gbstrlen( sColl );
+			}
 			if ( ! sizeChk ) {
-				// copy the parm value
-				if  ( sVal+len > end )
+				// copy the string
+				if  ( sVal+len > end ) {
+					log("parms: buffer too small");
 					return true; 
-				strcpy( sVal, sColl );
+				}
+				// this puts a \0 at the end
+				strcpy( sVal, pstr );
 			}
 			totLen += len + 1; // incl NULL
-			// inc cr ptr by size of strs
+			// . inc cr ptr by size of strs
+			// . this is the size of the SafeBuf for TYPE_SAFEBUF
 			sColl += m->m_size;
-			// . inc ser value by len of str + NULL
+			// . inc the write cursor by string length + the \0
 			sVal += len + 1;
 			tcnt--;
 		}
@@ -4162,34 +4201,66 @@ void Parms::deserializeCollParm( CollectionRec *cr,
 		char *xx =0; *xx = 0;
 	}
 	if ( sp->size == 0 ) { // strings
-		char *sVal = sp->val;
-		char *sColl = (char *)cr + m->m_off;
+		char *sVal = sp->val; // the sent string buffer i guess
+		char *sColl = (char *)cr + m->m_off; // what we have
 		long totLen = 0;
-		long tcnt = sp->cnt;
+		long tcnt = sp->cnt; // # of strings
 		bool goodParm = true;
 		while ( tcnt ) {
-			goodParm= (goodParm && 0 == strcmp(sVal, sColl));
+
+			char *pstr;
+			if ( m->m_type == TYPE_SAFEBUF ) {
+				SafeBuf *sx = (SafeBuf *)sColl;
+				pstr = sx->getBuf();
+			}
+			else {
+				pstr = sColl;
+			}
+
+			// set goodParm to true if unchanged
+			goodParm= (goodParm && 0 == strcmp(sVal, pstr));
+			// get length of what was sent to us
 			long len = gbstrlen( sVal );
 			totLen += len + 1; //incl NULL
+			// this is a list of strings with \0s (sent to us)
 			sVal += len + 1;   //incl NULL
-			// inc by size of strs
+			// inc by size of strs. point to next string we have
+			// stored in our array of strings in CollectionRec.
+			// for TYPE_SAFEBUF this size is sizeof(SafeBuf).
 			sColl += m->m_size;
 			tcnt--;
 		}
+		// if parm was an exact match return now
 		if ( goodParm ) {
 			// . inc by sizeof rec and 
 			//   tot len of compacted array
+			// . skip the SerParm and following string buffer.
 			*p += sizeof( *sp ) + totLen;
 			return;
 		}
-		// parms don't match
+		//
+		// if parms don't match, we need to update our stuff
+		//
+		//
+		// point to the sent string buffer
 		sVal = sp->val;
+		// point to the local parm, array of strings or safebufs
 		sColl = (char *)cr + m->m_off;
 		totLen = 0;
+		// how many strings or safebufs in there?
 		tcnt = sp->cnt;
+		// loop over each one
 		while ( tcnt ) {
-			// . copy an array value to this parm
-			strcpy( sColl, sVal );
+			if ( m->m_type == TYPE_SAFEBUF ) {
+				SafeBuf *sx = (SafeBuf *)sColl;
+				sx->set ( sVal );
+				sx->nullTerm ( );
+			}
+			else {
+				// copy an array value to this parm
+				strcpy( sColl, sVal );
+			}
+			// get length of string we copied
 			long len = gbstrlen( sVal );
 			totLen += len + 1; // +the NULL
 			// . inc conf ptr by size 
@@ -4221,6 +4292,9 @@ void Parms::deserializeCollParm( CollectionRec *cr,
 		*p += sizeof( *sp ) + totLen;
 	}
 	else {
+		// sanity
+		if ( m->m_type == TYPE_SAFEBUF ) { char *xx=NULL;*xx=0; }
+
 		if ( 0 != memcmp( sp->val, (char *)cr + m->m_off, sp->size) ) {
 			// copy the new value
 			memcpy( (char *)cr + m->m_off, 

@@ -163,7 +163,7 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	g_conf.m_spideringEnabled = true;
 #else
 	// always force off on startup if not diffbot
-	g_conf.m_spideringEnabled = false;
+	//g_conf.m_spideringEnabled = false;
 #endif
 	// this off
 	g_conf.m_repairingEnabled = false;
