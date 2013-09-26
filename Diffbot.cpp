@@ -1308,6 +1308,8 @@ char *getTokenFromHttpRequest ( HttpRequest *hr ) {
 	if ( token ) return token;
 	// extract token from coll?
 	char *c = hr->getString("c",NULL,NULL);
+	// try new "id" approach
+	if ( ! c ) c = hr->getString("id",NULL,NULL);
 	if ( ! c ) return NULL;
 	CollectionRec *cr = g_collectiondb.getRec(c);
 	if ( ! cr ) return NULL;
@@ -1319,6 +1321,8 @@ char *getTokenFromHttpRequest ( HttpRequest *hr ) {
 CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) {
 	// if we have the collection name explicitly, get the coll rec then
 	char *c = hr->getString("c",NULL,NULL);
+	// try new "id" approach
+	if ( ! c ) c = hr->getString("id",NULL,NULL);
 	if ( c ) return g_collectiondb.getRec ( c );
 	// otherwise, get it from token/crawlid
 	char *token = getTokenFromHttpRequest( hr );
@@ -1649,6 +1653,7 @@ static class HelpItem s_his[] = {
 	 "Required for all operations below. Just pass the token to "
 	 "the /crawlbot page to see a list of all collections that the "
 	 "token controls."},
+	{"id","Specify the collection name. Just like 'c'."},
 	{"pause","Use pause=0 or pause=1 to activate or pause spidering "
 	 "respectively."},
 	{"alias", "Set the collection name alias to this string. Must be "
@@ -1766,6 +1771,7 @@ bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// get collection name if any was specified
 	char *coll = hr->getString("c",NULL,NULL);
+	if ( ! coll ) coll = hr->getString("id",NULL,NULL);
 	// and rec
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 
@@ -2036,7 +2042,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			if ( cx->m_collectionNameAlias.length() > 0 )
 				alias=cx->m_collectionNameAlias.getBufStart();
 			sb.safePrintf("\n\n{"
-				      "\"name\":\"%s\",\n"
+				      "\"id\":\"%s\",\n"
 				      "\"alias\":\"%s\",\n"
 				      "\"crawlingEnabled\":%li,\n"
 				      "\"objectsFound\":%lli,\n"
