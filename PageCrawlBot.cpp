@@ -31,7 +31,7 @@ char *getCrawlIdFromHttpRequest ( HttpRequest *hr ) ;
 CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
 //CollectionRec *getCollRecFromCrawlId ( char *crawlId );
 //void printCrawlStatsWrapper ( void *state ) ;
-CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) ;
+CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) ;
 bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) ;
 
 char *g_diffbotFields [] = {
@@ -1506,7 +1506,7 @@ void printCrawlStats ( SafeBuf *sb , CollectionRec *cr ) {
 //
 ////////////////
 
-
+/*
 // generate a random collection name
 char *getNewCollName ( ) { // char *token , long tokenLen ) {
 	// let's create a new crawl id. dan was making it 32 characters
@@ -1536,6 +1536,7 @@ char *getNewCollName ( ) { // char *token , long tokenLen ) {
 	sprintf(s_collBuf ,"%016llx",crawlId64);
 	return s_collBuf;
 }
+*/
 
 //////////////////////////////////////////
 //
@@ -1548,6 +1549,30 @@ char *getNewCollName ( ) { // char *token , long tokenLen ) {
 #define FMT_XML  2
 #define FMT_JSON 3
 
+bool sendReply2 (TcpSocket *socket , long fmt , char *msg ) {
+	// log it
+	log("crawlbot: %s",msg);
+
+	// send this back to browser
+	SafeBuf sb;
+	if ( fmt == FMT_JSON ) 
+		sb.safePrintf("{\"response\":\"success\"},"
+			      "{\"reason\":\"%s\"}\n"
+			      , msg );
+	else
+		sb.safePrintf("<html><body>"
+			      "success: %s"
+			      "</body></html>"
+			      , msg );
+
+	//return g_httpServer.sendErrorReply(socket,500,sb.getBufStart());
+	return g_httpServer.sendDynamicPage (socket, 
+					     sb.getBufStart(), 
+					     sb.length(),
+					     0); // cachetime
+}
+
+
 bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 
 	// log it
@@ -1556,7 +1581,7 @@ bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 	// send this back to browser
 	SafeBuf sb;
 	if ( fmt == FMT_JSON ) 
-		sb.safePrintf("{\"response\":fail},"
+		sb.safePrintf("{\"response\":\"fail\"},"
 			      "{\"reason\":\"%s\"}\n"
 			      , msg );
 	else
@@ -1569,7 +1594,7 @@ bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 	return g_httpServer.sendDynamicPage (socket, 
 					     sb.getBufStart(), 
 					     sb.length(),
-					     -1); // cachetime
+					     0); // cachetime
 }
 
 void addedUrlsToSpiderdbWrapper ( void *state ) {
@@ -1580,7 +1605,8 @@ void addedUrlsToSpiderdbWrapper ( void *state ) {
 			     &st->m_hr ,
 			     st->m_fmt,
 			     NULL ,
-			     &rr );
+			     &rr ,
+			     st->m_collnum );
 	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
 }
@@ -1632,7 +1658,8 @@ void injectedUrlWrapper ( void *state ) {
 			     &st->m_hr ,
 			     st->m_fmt,
 			     &sb ,
-			     NULL );
+			     NULL ,
+			     st->m_collnum );
 	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
 }
@@ -1645,15 +1672,15 @@ public:
 };
 static class HelpItem s_his[] = {
 	{"format","Use &format=json to show JSON output."},
-	{"token","Required for all operations below."},
-	{"delcoll","Specify collection name to delete."},
-	{"resetcoll","Specify collection name to reset."},
-	{"addcoll","Say addcoll=1 to add a new collection."},
-	{"c","Specify the collection name. "
+	{"token=xxx","Required for all operations below."},
+	{"delcoll=xxx","Deletes collection named xxx."},
+	{"resetcoll=xxx","Resets collection named xxx."},
+	{"addcoll=xxx","Say addcoll=xxx to add a new collection named xxx."},
+	{"c=xxx","Specify the collection name. "
 	 "Required for all operations below. Just pass the token to "
 	 "the /crawlbot page to see a list of all collections that the "
 	 "token controls."},
-	{"id","Specify the collection name. Just like 'c'."},
+	{"id=xxx","Specify the collection name. Just like 'c'."},
 	{"pause","Use pause=0 or pause=1 to activate or pause spidering "
 	 "respectively."},
 	{"alias", "Set the collection name alias to this string. Must be "
@@ -1713,16 +1740,24 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( fs && strcmp(fs,"json") == 0 ) fmt = FMT_JSON;
 	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FMT_XML;
 
+	// get coll name if any
+	char *c = hr->getString("c");
+	if ( ! c ) c = hr->getString("id");
 
+	// get some other parms provided optionally
+	char *addColl    = hr->getString("addcoll");
+	char *delColl   = hr->getString("delcoll");
+	char *resetColl = hr->getString("resetcoll");
 
-	// . if this is a cast=0 request it is received by all hosts in the network
+	// . if this is a cast=0 request it is received by all hosts in the 
+	//   network
 	// . this code is the only code run by EVERY host in the network
 	// . the other code is just run once by the receiving host
 	// . so we gotta create a coll rec on each host etc.
 	// . no need to update collectionrec parms here since Pages.cpp calls
 	//   g_parms.setFromRequest() for us before calling this function,
-	//   pg->m_function(). even though maxtocrawl is on "PAGE_NONE" hopefully
-	//   it will still be set
+	//   pg->m_function(). even though maxtocrawl is on "PAGE_NONE" 
+	//   hopefully it will still be set
 	// . but we should take care of add/del/reset coll here.
 	if ( cast == 0 ) {
 		// each host should return right away if token not given
@@ -1730,50 +1765,60 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			char *msg = "invalid token";
 			return sendErrorReply2 (socket,fmt,msg);
 		}
-		// get some other parms provided optionally
-		long addColl    = hr->getLong  ("addcoll",0);
-		char *delColl   = hr->getString("delcoll");
-		char *resetColl = hr->getString("resetcoll");
 		// . we can't sync these operations on a dead host when it
 		//   comes back up yet. we can only sync parms, not collection
 		//   adds/deletes/resets
-		// . TODO: make new collections just a list of rdb records, then they
-		//   can leverage the msg4 and addsinprogress.dat functionality we have
-		//   for getting dead hosts back up to sync. Call it Colldb.
-		if ( ( addColl || delColl || resetColl ) &&
-		     // if any host in network is dead, do not do this
-		     g_hostdb.hasDeadHost() )  {
-			char *msg = "A host in the network is dead";
-			log("diffbot: %s",msg);
-			// make sure this returns in json if required
-			return sendErrorReply2(socket,fmt,msg);
+		// . TODO: make new collections just a list of rdb records, 
+		//   then they can leverage the msg4 and addsinprogress.dat 
+		//   functionality we have for getting dead hosts back up to 
+		//   sync. Call it Colldb.
+		if ( addColl || delColl || resetColl ) {
+			// if any host in network is dead, do not do this
+			if ( g_hostdb.hasDeadHost() )  {
+				char *msg = "A host in the network is dead.";
+				// log it
+				log("crawlbot: %s",msg);
+				// make sure this returns in json if required
+				return sendErrorReply2(socket,fmt,msg);
+			}
+		}
+
+		if ( delColl ) {
+			// delete collection name
+			g_collectiondb.deleteRec ( delColl , true );
+			// all done
+			return g_httpServer.sendDynamicPage (socket,"OK",2);
 		}
 
 		CollectionRec *cr = NULL;
+
 		if ( addColl ) {
-			cr = addNewDiffbotColl ( hr );
+			// name of new collection will is "c" parm
+			cr = addNewDiffbotColl ( addColl , hr );
 		}
-		if ( delColl ) {
-			g_collectiondb.deleteRec ( delColl , true );
-			cr = NULL;
-		}
-		if ( resetColl ) {
+		else if ( resetColl ) {
 			cr = g_collectiondb.getRec ( resetColl );
 			g_collectiondb.resetColl ( resetColl );
 			// if reset from crawlbot api page then enable spiders
 			// to avoid user confusion
 			if ( cr ) cr->m_spideringEnabled = 1;
 		}
-		// get specified collection name
-		char *coll = hr->getString("c");
-		if ( ! coll ) coll = hr->getString("id");
-		// if none specified that way
-		if ( ! cr && coll ) cr = g_collectiondb.getRec(coll);
-		// if no cr to set parms on we are done
-		if ( ! cr ) return g_httpServer.sendDynamicPage(socket,"OK",2);
-		//
+		// get it from the "c" parm otherwise. just for display
+		// or modifying parms.
+		else
+			cr = g_collectiondb.getRec ( c );
+
+		// problem?
+		if ( ! cr ) {
+			// send back error
+			char *msg = "Error adding or resetting collection.";
+			// log it
+			log("crawlbot: %s",msg);
+			// make sure this returns in json if required
+			return sendErrorReply2(socket,fmt,msg);
+		}
+
 		// alias must be unique!
-		//
 		char *alias = hr->getString("alias");
 		if ( alias && ! isAliasUnique(cr,token,alias) ) {
 			char *msg = "alias is not unqiue";
@@ -1783,18 +1828,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			cr->m_collectionNameAlias.set(alias);
 			cr->m_collectionNameAlias.nullTerm();
 		}
-		//
 		//  update the url filters for now since that is complicated
-		//
+		//  supply "cr" directly since "c" may not be in the http
+		//  request if addcoll=xxxxxx (just created a new rec)
 		long page = PAGE_FILTERS;
 		WebPage *pg = g_pages.getPage ( page ) ;
-		g_parms.setFromRequest ( hr , socket , pg->m_function);
+		g_parms.setFromRequest ( hr , socket , pg->m_function, cr );
 		//
 		// set other diffbot parms for this collection
-		//
-		// TODO:
-		// maybe set to PAGE_SPIDER_CONTROLS... >?
-		// then call setFromRequest() on that page.
 		//
 		long maxToCrawl = hr->getLongLong("maxtocrawl",-1LL);
 		long maxToProcess = hr->getLongLong("maxtoprocess",-1LL);
@@ -1806,12 +1847,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			cr->m_diffbotMaxToProcess = maxToProcess;
 			cr->m_needsSave = 1;
 		}
-		// this is now in the url filters dropdown?
-		//char *api = hr->getString("diffbotapi",NULL,NULL);
-		//if ( api ) {
-		//	cr->m_diffbotApi.set(api);
-		//	cr->m_diffbotApi.nullTerm();
-		//}
 		long pause = hr->getLong("pause",-1);
 		if ( pause == 0 ) cr->m_spideringEnabled = 1;
 		if ( pause == 1 ) cr->m_spideringEnabled = 0;
@@ -1857,7 +1892,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		return g_httpServer.sendDynamicPage (socket, 
 						     sb.getBufStart(), 
 						     sb.length(),
-						     -1); // cachetime
+						     0); // cachetime
 	}
 
 
@@ -1890,7 +1925,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		return g_httpServer.sendDynamicPage (socket, 
 						     sb.getBufStart(), 
 						     sb.length(),
-						     -1); // cachetime
+						     0); // cachetime
 	}
 
 
@@ -1900,9 +1935,24 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// get collection name if any was specified
 	char *coll = hr->getString("c",NULL,NULL);
 	if ( ! coll ) coll = hr->getString("id",NULL,NULL);
+	if ( ! coll ) coll = addColl;
+	if ( ! coll ) coll = resetColl;
+	if ( ! coll ) coll = delColl;
+
+	// we need a name!!
+	if ( ! coll )
+		return sendErrorReply2(socket,fmt,"no coll name specified");
+
+
 	// and rec
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 
+
+	if ( ! cr && delColl )
+		return sendReply2 (socket,fmt,"OK");
+
+	if ( ! cr )
+		return sendErrorReply2(socket,fmt,"no collection found");
 
 	// make a new state
 	StateCD *st;
@@ -1916,6 +1966,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	st->m_hr.copy ( hr );
 	st->m_socket = socket;
 	st->m_fmt = fmt;
+	st->m_collnum = cr->m_collnum;
 
 
 	///////
@@ -1925,10 +1976,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	///////
 	char *urlData = hr->getString("urldata",NULL,NULL);
 	if ( urlData ) {
-		// a valid collection is required
-		if ( ! cr ) 
-			return sendErrorReply2(socket,fmt,
-					       "invalid collection");
 		// avoid spidering links for these urls? i would say
 		// default is to NOT spider the links...
 		long spiderLinks = hr->getLong("spiderlinks",0);
@@ -1985,11 +2032,18 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		return true;
 	}
 
+	// we do not need the state i guess
+
 	////////////
 	//
 	// print the html or json page of all the data
 	//
-	return printCrawlBotPage2 ( socket , hr , fmt , NULL , NULL );
+	printCrawlBotPage2 ( socket,hr,fmt,NULL,NULL,cr->m_collnum);
+
+	// get rid of that state
+	delete st;
+	mdelete ( st , sizeof(StateCD) , "stcd" );
+	return true;
 }
 
 
@@ -1998,7 +2052,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			  HttpRequest *hr ,
 			  char fmt, // format
 			  SafeBuf *injectionResponse ,
-			  SafeBuf *urlUploadResponse ) {
+			  SafeBuf *urlUploadResponse ,
+			  collnum_t collnum ) {
 	
 	// store output into here
 	SafeBuf sb;
@@ -2013,19 +2068,19 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      );
 
 
-	CollectionRec *cr = NULL;
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 
 	// set this to current collection. if only token was provided
 	// then it will return the first collection owned by token.
 	// if token has no collections it will be NULL.
-	if ( ! cr ) 
-		cr = getCollRecFromHttpRequest ( hr );
+	//if ( ! cr ) 
+	//	cr = getCollRecFromHttpRequest ( hr );
 
-	if ( ! cr ) {
-		char *msg = "failed to add new collection";
-		g_msg = " (error: crawlbot failed to allocate crawl)";
-		return sendErrorReply2 ( socket , fmt , msg );
-	}
+	//if ( ! cr ) {
+	//	char *msg = "failed to add new collection";
+	//	g_msg = " (error: crawlbot failed to allocate crawl)";
+	//	return sendErrorReply2 ( socket , fmt , msg );
+	//}
 			
 	char *token = getTokenFromHttpRequest ( hr );
 
@@ -2052,14 +2107,20 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "json output"
 			      "</a> ] &nbsp; "
 			      , token );
+		// random coll name to add
+		unsigned long r1 = rand();
+		unsigned long r2 = rand();
+		unsigned long long rand64 = (unsigned long long) r1;
+		rand64 <<= 32;
+		rand64 |=  r2;
 		// first print "add new collection"
-		sb.safePrintf("[ <a href=/crawlbot?addcoll=1&token=%s>"
+		sb.safePrintf("[ <a href=/crawlbot?addcoll=%016llx&token=%s>"
 			      "add new collection"
 			      "</a> ] &nbsp; "
 			      "[ <a href=/crawlbot?summary=1&token=%s>"
 			      "show all collections"
 			      "</a> ] &nbsp; "
-
+			      , rand64
 			      , token
 			      , token
 			      );
@@ -2227,7 +2288,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		return g_httpServer.sendDynamicPage (socket, 
 						     sb.getBufStart(), 
 						     sb.length(),
-						     -1); // cachetime
+						     0); // cachetime
 	}
 
 	if ( fmt == FMT_JSON ) 
@@ -2567,6 +2628,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      );
 	}
 
+	// this is for making sure the search results are not cached
 	unsigned long r1 = rand();
 	unsigned long r2 = rand();
 	unsigned long long rand64 = (unsigned long long) r1;
@@ -2921,7 +2983,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 */
 }
 
-CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
+CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 
 	char *token = getTokenFromHttpRequest ( hr );
 
@@ -2930,9 +2992,7 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 		return NULL;
 	}
 
-	char *collBuf = getNewCollName ( );//token , tokenLen );
-
-	if ( ! g_collectiondb.addRec ( collBuf ,
+	if ( ! g_collectiondb.addRec ( addColl ,
 				       NULL ,  // copy from
 				       0  , // copy from len
 				       true , // it is a brand new one
@@ -2943,7 +3003,7 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 		return NULL;
 
 	// get the collrec
-	CollectionRec *cr = g_collectiondb.getRec ( collBuf );
+	CollectionRec *cr = g_collectiondb.getRec ( addColl );
 
 	// did an alloc fail?
 	if ( ! cr ) { char *xx=NULL;*xx=0; }
@@ -3009,6 +3069,7 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 	//if ( strange && strcmp ( strange,"/dev/crawl#testCrawl" ) == 0 )
 	//	cr->m_isDiffbotTestCrawl = true;
 
+	/*
 	///////
 	//
 	// extra diffbot ARTICLE parms
@@ -3025,12 +3086,14 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 
 	// save that
 	cr->m_diffbotFormat.safeStrcpy(format);
+	*/
 
 	// return all content from page? for frontpage api.
 	// TODO: can we put "all" into "fields="?
 	//bool all = hr->hasField("all");
 
-	
+
+	/*
 	/////////
 	//
 	// specify diffbot fields to return in the json output
@@ -3055,6 +3118,7 @@ CollectionRec *addNewDiffbotColl ( HttpRequest *hr ) {
 	if ( hr->hasField("all"     ) ) f->safeStrcpy("all,");
 	// if we added crap to "fields" safebuf remove trailing comma
 	f->removeLastChar(',');
+	*/
 
 
 	// set some defaults. max spiders for all priorities in this collection

@@ -24,7 +24,8 @@ bool printCrawlBotPage2 ( TcpSocket *s ,
 			  HttpRequest *hr ,
 			  char fmt,
 			  SafeBuf *injectionResponse ,
-			  SafeBuf *urlUploadResponse ) ;
+			  SafeBuf *urlUploadResponse ,
+			  collnum_t collnum ) ;
 
 //bool handleDiffbotRequest ( TcpSocket *s , HttpRequest *hr ) ;
 bool sendBackDump ( TcpSocket *s,HttpRequest *hr );

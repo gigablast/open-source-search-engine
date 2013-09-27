@@ -2400,12 +2400,15 @@ char *Parms::getTHIS ( HttpRequest *r , long page ) {
 bool Parms::setFromRequest ( HttpRequest *r , 
 			     //long user ,
 			     TcpSocket* s,
-			     bool (*callback)(TcpSocket *s , HttpRequest *r)) {
+			     bool (*callback)(TcpSocket *s , HttpRequest *r),
+			     CollectionRec *newcr ) {
 	bool retval = true;
 	// get the page from the path... like /sockets --> PAGE_SOCKETS
 	long page = g_pages.getDynamicPageNumber ( r );
 	// is it a collection?
 	char *THIS = getTHIS ( r , page );
+	// override? THIS will point to default main coll, so override it
+	if ( newcr ) THIS = (char *)newcr;
 	// ensure valid
 	if ( ! THIS ) {
 		// it is null when no collection explicitly specified...

@@ -229,13 +229,14 @@ class Parms {
 			 bool isCrawlbot = false,
 			 bool isJSON = false ) ;
 
-	char *getTHIS ( HttpRequest *r , long page ) ;
+	char *getTHIS ( HttpRequest *r , long page );
 
 	class Parm *getParmFromParmHash ( long parmHash );
 
 	bool setFromRequest ( HttpRequest *r , //long user,
 			      TcpSocket* s,
-			      bool (*callback)(TcpSocket *s , HttpRequest *r));
+			      bool (*callback)(TcpSocket *s , HttpRequest *r),
+			      class CollectionRec *newcr = NULL );
 	
 	void insertParm ( long i , long an , char *THIS ) ;
 

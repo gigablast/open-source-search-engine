@@ -536,7 +536,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 
 	// broadcast request to ALL hosts if we should
 	// should this request be broadcasted?
-	bool cast = r->getLong("cast",-1) ;
+	long cast = r->getLong("cast",-1) ;
 
 	// 0 is the default
 	// UNLESS we are the crawlbot page, john does not send a &cast=1
@@ -583,7 +583,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//if ( g_proxy.isProxyRunning() && 
 	//   (g_conf.isMasterAdmin( s, r ) || g_hostdb.getProxyByIp(s->m_ip)) )
 	//	cast = false;
-	if ( g_proxy.isProxy () ) cast = false;
+	if ( g_proxy.isProxy () ) cast = 0;
 	// this only returns true on error. uses msg28 to send the http request
 	// verbatim to all hosts in network, using tcpserver. the spawned msg28
 	// requests will come through this same path and be identical to this request
@@ -599,7 +599,9 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	}
 	// . if no collection specified, and page depends on collection, error
 	// . allow some pages to use default if no collection explicitly given
-	if ( page > PAGE_OVERVIEW && page != PAGE_TITLEDB ) {
+	if ( page > PAGE_OVERVIEW && page != PAGE_TITLEDB &&
+	     // crawlbot page might just have a token
+	     page != PAGE_CRAWLBOT) {
 		char *coll = r->getString("c");
 		// ensure it exists
 		CollectionRec *cr = g_collectiondb.getRec ( coll );
