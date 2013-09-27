@@ -1170,6 +1170,8 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	m_cr = g_collectiondb.getRec ( m_coll , gbstrlen(m_coll) );
 	if ( ! m_cr ) { g_errno = ENOCOLLREC; return false; }
 
+	m_useRobotsTxt = m_cr->m_useRobotsTxt;
+
 	// solidify some parms
 	//m_eliminateMenus       = m_cr->m_eliminateMenus;
 	//m_eliminateMenusValid  = true;

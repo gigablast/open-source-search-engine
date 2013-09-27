@@ -1324,14 +1324,6 @@ CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) {
 	// try new "id" approach
 	if ( ! c ) c = hr->getString("id",NULL,NULL);
 	if ( c ) return g_collectiondb.getRec ( c );
-	// otherwise, get it from token/crawlid
-	char *token = getTokenFromHttpRequest( hr );
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
-		CollectionRec *cr = g_collectiondb.m_recs[i];
-		if ( ! cr ) continue;
-		if ( strcmp ( cr->m_diffbotToken.getBufStart(),token)==0 )
-			return cr;
-	}
 	// no matches
 	return NULL;
 }
@@ -1857,6 +1849,40 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		return g_httpServer.sendDynamicPage (socket,"OK",2);
 	}
 
+
+	// print help
+	long help = hr->getLong("help",0);
+	if ( help ) {
+		SafeBuf sb;
+		sb.safePrintf("<html>"
+			      "<title>Crawlbot API</title>"
+			      "<h1>Crawlbot API</h1>"
+			      "<b>Use the parameters below on the "
+			      "<a href=\"/crawlbot\">/crawlbot</a> page."
+			      "</b><br><br>"
+			      "<table>"
+			      );
+		for ( long i = 0 ; i < 1000 ; i++ ) {
+			HelpItem *h = &s_his[i];
+			if ( ! h->m_parm ) break;
+			sb.safePrintf( "<tr>"
+				       "<td>%s</td>"
+				       "<td>%s</td>"
+				       "</tr>"
+				       , h->m_parm
+				       , h->m_desc
+				       );
+		}
+		sb.safePrintf("</table>"
+			      "</html>");
+		return g_httpServer.sendDynamicPage (socket, 
+						     sb.getBufStart(), 
+						     sb.length(),
+						     0); // cachetime
+	}
+
+
+
 	//
 	// after all hosts have replied to the request, we finally send the
 	// request here, with no &cast=0 appended to it. so there is where we
@@ -1898,55 +1924,38 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 
 
-	// print help
-	long help = hr->getLong("help",0);
-	if ( help ) {
-		SafeBuf sb;
-		sb.safePrintf("<html>"
-			      "<title>Crawlbot API</title>"
-			      "<h1>Crawlbot API</h1>"
-			      "<b>Use the parameters below on the "
-			      "<a href=\"/crawlbot\">/crawlbot</a> page."
-			      "</b><br><br>"
-			      "<table>"
-			      );
-		for ( long i = 0 ; i < 1000 ; i++ ) {
-			HelpItem *h = &s_his[i];
-			if ( ! h->m_parm ) break;
-			sb.safePrintf( "<tr>"
-				       "<td>%s</td>"
-				       "<td>%s</td>"
-				       "</tr>"
-				       , h->m_parm
-				       , h->m_desc
-				       );
-		}
-		sb.safePrintf("</table>"
-			      "</html>");
-		return g_httpServer.sendDynamicPage (socket, 
-						     sb.getBufStart(), 
-						     sb.length(),
-						     0); // cachetime
-	}
-
-
-
-
 
 	// get collection name if any was specified
 	char *coll = hr->getString("c",NULL,NULL);
 	if ( ! coll ) coll = hr->getString("id",NULL,NULL);
 	if ( ! coll ) coll = addColl;
 	if ( ! coll ) coll = resetColl;
-	if ( ! coll ) coll = delColl;
+	//if ( ! coll ) coll = delColl;
+
+	char *urlData = hr->getString("urldata",NULL,NULL);
+	char *injectUrl = hr->getString("injecturl",NULL,NULL);
 
 	// we need a name!!
-	if ( ! coll )
+	if ( ( injectUrl || urlData ) && ! coll )
 		return sendErrorReply2(socket,fmt,"no coll name specified");
+
+	//
+	// use a default collname if it was not specified and we are not
+	// doing an inject or url upload
+	//
+	for ( long i = 0 ; ! coll && i < g_collectiondb.m_numRecs ; i++ ) {
+		CollectionRec *cx = g_collectiondb.m_recs[i];
+		if ( ! cx ) continue;
+		if ( strcmp ( cx->m_diffbotToken.getBufStart(),token) )
+			continue;
+		// got it
+		coll = cx->m_coll;
+	}
 
 
 	// and rec
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	CollectionRec *cr = NULL;
+	if ( coll ) cr = g_collectiondb.getRec ( coll );
 
 
 	if ( ! cr && delColl )
@@ -1975,7 +1984,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// handle file of urls upload. can be HUGE!
 	//
 	///////
-	char *urlData = hr->getString("urldata",NULL,NULL);
 	if ( urlData ) {
 		// avoid spidering links for these urls? i would say
 		// default is to NOT spider the links...
@@ -2015,7 +2023,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// and all the other parms in Msg7::inject() in PageInject.cpp.
 	//
 	//////////
-	char *injectUrl = hr->getString("injecturl",NULL,NULL);
 	if ( injectUrl ) {
 		// a valid collection is required
 		if ( ! cr ) 
@@ -2152,10 +2159,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			sb.safePrintf ( "<b><font color=red>");
 		}
 		// print the crawl id. collection name minus <TOKEN>-
-		sb.safePrintf("<a %shref=/crawlbot?c=%s>"
+		sb.safePrintf("<a %shref=/crawlbot?token=%s&c=%s>"
 			      "%s"
 			      "</a> &nbsp; "
 			      , style
+			      , token
 			      , cx->m_coll
 			      , cx->m_coll
 			      );
@@ -2993,13 +3001,14 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 		return NULL;
 	}
 
+	// this saves it to disk!
 	if ( ! g_collectiondb.addRec ( addColl ,
 				       NULL ,  // copy from
 				       0  , // copy from len
 				       true , // it is a brand new one
 				       -1 , // we are new, this is -1
 				       false , // is NOT a dump
-				       true // save it for sure!
+				       false // save it below
 				       ) )
 		return NULL;
 
@@ -3191,9 +3200,12 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 
 	cr->m_needsSave = 1;
 
-
 	// start the spiders!
 	cr->m_spideringEnabled = true;
+
+	// save it again!
+	if ( ! cr->save() ) 
+		log("crawlbot: failed to save collrec");
 
 	return cr;
 }

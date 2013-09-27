@@ -350,7 +350,7 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 				   "%s.", dname,mstrerror(g_errno));
 		}
 		// save it into this dir... might fail!
-		if ( ! m_recs[i]->save() ) {
+		if ( saveIt && ! m_recs[i]->save() ) {
 			mdelete ( m_recs[i] , sizeof(CollectionRec) , 
 				  "CollectionRec" ); 
 			delete ( m_recs[i]);
@@ -368,7 +368,8 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 			   "\"%s\".",coll);
 	}
 	// mark it as needing to be saved instead
-	m_recs[i]->m_needsSave = false;
+	if ( saveIt ) m_recs[i]->m_needsSave = false;
+	else          m_recs[i]->m_needsSave = true;
 	// force this to off for now
 	//m_recs[i]->m_queryExpansion = false;
 	// reserve it

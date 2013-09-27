@@ -548,7 +548,6 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 		else                         cast = 0;
 	}
 
-
 	// proxy can only handle certain pages. it has logic in Proxy.cpp
 	// to use the 0xfd msg type to forward certain page requests to 
 	// host #0, like 
