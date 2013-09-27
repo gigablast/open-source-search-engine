@@ -35,6 +35,7 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) ;
 bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) ;
 
 char *g_diffbotFields [] = {
+	"Unused-ERROR",
 	"None",
 	"All", // /api/analyze?mode=auto
 	"Article (force)", // /api/article
@@ -1804,7 +1805,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		// problem?
 		if ( ! cr ) {
 			// send back error
-			char *msg = "Error adding or resetting collection.";
+			char *msg = "Error. No collection identified.";
 			// log it
 			log("crawlbot: %s",msg);
 			// make sure this returns in json if required
@@ -3158,7 +3159,7 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 		cr->m_spiderIpMaxSpiders[i] = 10;
 		cr->m_spidersEnabled    [i] = 1;
 		cr->m_spiderFreqs       [i] = 7.0;
-		cr->m_spiderDiffbotApiNum[i] = DBA_NONE;
+		cr->m_spiderDiffbotApiNum[i] = DBA_NONE; // 1
 	}
 
 
