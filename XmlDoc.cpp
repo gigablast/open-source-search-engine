@@ -177,6 +177,8 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_loaded = false;
+
 	m_diffbotReplyError = 0;
 	m_diffbotJSONCount = 0;
 	m_downloadAttempted = false;
@@ -949,7 +951,7 @@ void loadFromOldTitleRecWrapper ( void *state ) {
 	// make sure has not been freed from under us!
 	if ( THIS->m_freed ) { char *xx=NULL;*xx=0;}
 	// note it
-	THIS->setStatus ( "loaded from old title rec wrapper" );
+	THIS->setStatus ( "loading from old title rec wrapper" );
 	// return if it blocked
 	if ( ! THIS->loadFromOldTitleRec ( ) ) return;
 	// error?

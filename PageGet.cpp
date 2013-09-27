@@ -280,13 +280,19 @@ bool processLoop ( void *state ) {
 	// wait if blocked???
 	if ( utf8 == (void *)-1 ) return false;
 	// strange
-	if ( xd->size_utf8Content<=0) return sendErrorReply(st,EBADENGINEER );
+	if ( xd->size_utf8Content<=0) {
+		log("pageget: utf8 content <= 0");
+		return sendErrorReply(st,EBADENGINEER );
+	}
 	// alloc error?
 	if ( ! utf8 ) return sendErrorReply ( st , g_errno );
 
 	// get this host
 	Host *h = g_hostdb.getHost ( g_hostdb.m_hostId );
-	if ( ! h ) return sendErrorReply ( st , EBADENGINEER );
+	if ( ! h ) {
+		log("pageget: hostid %li is bad",g_hostdb.m_hostId);
+		return sendErrorReply(st,EBADENGINEER );
+	}
 
 
 	char *content    = xd->ptr_utf8Content;

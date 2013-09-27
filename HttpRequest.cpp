@@ -614,13 +614,11 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 // procog's ip
 	 // if ( sock && strncmp(iptoa(sock->m_ip),"216.168.36.21",13) == 0) 
 	 //	 m_isLocal = true;
-#ifdef DIFFBOT
+
 	 // diffbot comcast
 	 if ( sock && strncmp(iptoa(sock->m_ip),"50.168.3.61",11) == 0) 
 	 	 m_isLocal = true;
-#endif
-
-	 // comcast
+	 // matt comcast
 	 if ( sock && strncmp(iptoa(sock->m_ip),"75.160.49.8",11) == 0) 
 	 	 m_isLocal = true;
 

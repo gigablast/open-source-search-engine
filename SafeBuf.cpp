@@ -2557,10 +2557,12 @@ bool SafeBuf::decodeJSONToUtf8 ( long niceness ) {
 			if ( src[1] != 'u'  ) { src++; continue; }
 			// otherwise, decode. can do in place like this...
 			char *p = src + 2;
-			if ( ! is_hex(p[0]) ) continue;
-			if ( ! is_hex(p[1]) ) continue;
-			if ( ! is_hex(p[2]) ) continue;
-			if ( ! is_hex(p[3]) ) continue;
+			// skip the /ug or /ugg or /uggg or /ugggg in its
+			// entirety i guess... to avoid infinite loop
+			if ( ! is_hex(p[0]) ) { src +=2; continue;}
+			if ( ! is_hex(p[1]) ) { src +=3; continue;}
+			if ( ! is_hex(p[2]) ) { src +=4; continue;}
+			if ( ! is_hex(p[3]) ) { src +=5; continue;}
 			// TODO: support surrogate pairs in utf16?
 			UChar32 uc = 0;
 			// store the 16-bit number in lower 16 bits of uc...

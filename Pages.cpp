@@ -425,6 +425,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 #endif
 	if ( page == PAGE_ADDURL ) publicPage = true;
 	if ( page == PAGE_GET ) publicPage = true;
+	if ( page == PAGE_CRAWLBOT ) publicPage = true;
 
 	// get our host
 	Host *h = g_hostdb.m_myHost;

@@ -7,6 +7,13 @@ static void gotReplyWrapper3e ( void *state , UdpSlot *slot ) ;
 static void handleRequest3e ( UdpSlot *slot , long netnice ) ;
 static void trySyncConf ( int fd, void *state );
 
+
+// replace the broadcast() crap in Pages.cpp
+// . just update your collection rec on host #0 then call this
+// . this will send a msg3e to each host
+// . when doing a reset operation 
+//syncCollections ( ) {
+
 bool Msg3e::registerHandler ( ) {
         // . register ourselves with the udp server
         // . it calls our callback when it receives a msg of type 0x3e

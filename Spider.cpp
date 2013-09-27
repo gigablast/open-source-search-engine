@@ -370,7 +370,9 @@ long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
 		sb->safePrintf(" <td>%llims</td>\n",elapsed);
 	}
 
-	sb->safePrintf(" <td><nobr>%s</nobr></td>\n",m_url);
+	sb->safePrintf(" <td><nobr>");
+	sb->safeTruncateEllipsis ( m_url , 64 );
+	sb->safePrintf("</nobr></td>\n");
 	sb->safePrintf(" <td><nobr>%s</nobr></td>\n",status );
 
 	sb->safePrintf(" <td>%li</td>\n",(long)m_priority);
@@ -4467,6 +4469,11 @@ bool SpiderLoop::spiderUrl2 ( ) {
 		    m_sc->m_waitingTree.m_numUsedNodes,
 		    m_sreq->m_url);
 
+
+	// debug log
+	log("XXX: incremented count to %li for %s",
+	    m_sc->m_spidersOut,m_sreq->m_url);
+
 	// . return if this blocked
 	// . no, launch another spider!
 	bool status = xd->indexDoc();
@@ -4552,6 +4559,9 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	// update this
 	sc->m_outstandingSpiders[(unsigned char)sreq->m_priority]--;
 
+	// debug log
+	log("XXX: decremented count to %li for %s",
+	    sc->m_spidersOut,sreq->m_url);
 
 	// breathe
 	QUICKPOLL ( xd->m_niceness );
@@ -8785,13 +8795,22 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 	if ( cr->m_replies < cr->m_requests ) return false;
 
 	// somehow we did not block... hmmmm...
-	gotCrawlInfoReply( cr , NULL );
+	char *xx=NULL;*xx=0;
+	//gotCrawlInfoReply( cr , NULL );
 
 	// we did not block...
 	return true;
 }
 
 void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
+	// reply is error?
+	if ( ! slot->m_readBuf || g_errno ) {
+		log("spider: got crawlinfo reply error: %s",
+		    mstrerror(g_errno));
+		// just clear it
+		g_errno = 0;
+	}
+
 	// cast it
 	CollectionRec *cr = (CollectionRec *)state;
 	// inc it
@@ -8800,8 +8819,10 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// the sendbuf should never be freed! it points into collrec
 	slot->m_sendBufAlloc = NULL;
 
-	// add the LOCAL stats we got from the remote into the GLOBAL stats
-	if ( slot ) {
+	// . add the LOCAL stats we got from the remote into the GLOBAL stats
+	// . readBuf is null on an error, so check for that...
+	// . TODO: do not update on error???
+	if ( slot && slot->m_readBuf ) {
 		CrawlInfo *stats = (CrawlInfo *)(slot->m_readBuf);
 		long long *gs = (long long *)&cr->m_globalCrawlInfo;
 		long long *ss = (long long *)stats;
