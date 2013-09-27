@@ -3034,9 +3034,15 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		if ( ! m_waitingTable.m_isWritable ) { char *xx=NULL;*xx=0;}
 		return true;
 	}
-
+	// we are coring here. i guess the best request or a copy of it
+	// somehow started spidering since our last spider read, so i would
+	// say we should bail on this spider scan! really i'm not exactly
+	// sure what happened...
 	if ( g_spiderLoop.isInLockTable ( m_bestRequest->m_probDocId ) ) {
-		char *xx=NULL;*xx=0; }
+		log("spider: best request got doled out from under us");
+		return true;
+		char *xx=NULL;*xx=0; 
+	}
 
 	// make the doledb key first for this so we can add it
 	key_t doleKey = g_doledb.makeKey ( m_bestRequest->m_priority     ,
@@ -3249,7 +3255,10 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 		// sanity check
 		if ( *score <= 0 ) { char *xx=NULL;*xx=0; }
 		// only one per ip!
-		if ( *score > 1 ) { char *xx=NULL;*xx=0; }
+		if ( *score > 1 )
+			log("spider: crap. had %li recs in doledb from %s."
+			    "how did this happen?",
+			    (long)*score,iptoa(sreq->m_firstIp));
 		// now we log it too
 		if ( g_conf.m_logDebugSpiderFlow )
 			log(LOG_DEBUG,"spflow: added ip=%s to doleiptable "
