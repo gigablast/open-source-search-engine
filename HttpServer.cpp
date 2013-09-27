@@ -9,7 +9,7 @@
 #include "XmlDoc.h" // gbzip
 #include "UdpServer.h"
 #include "Proxy.h"
-#include "Diffbot.h"
+#include "PageCrawlBot.h"
 
 // a global class extern'd in .h file
 HttpServer g_httpServer;
@@ -890,15 +890,6 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	for ( char *p = path ; *p ; p++ )
 		if ( *p == '.' && *(p+1) == '.' )
 			return sendErrorReply(s,404,"bad request");
-
-
-	// . if we get a request for this then allow Diffbot.cpp to
-	//   handle it and send back the right stuff
-	if ( strcmp ( path , "/crawlbot"   ) == 0 )
-		// this will call g_httpServer.sendDynamicPage() to send
-		// back the reply when it is done generating the reply.
-		// this function is in Diffbot.cpp.
-		return printCrawlBotPage ( s , r );
 
 	// dump urls or json objects or pages? 
 	// "GET /crawlbot/downloadurls"

@@ -115,7 +115,7 @@ class Pages {
 	long getNumPages ( );
 	// this passes control to the dynamic page generation routine based
 	// on the path of the GET request
-	bool sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) ;
+	bool sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page );
 
 	// . each dynamic page generation routine MUST call this to send
 	//   its reply to the requesting client's browser

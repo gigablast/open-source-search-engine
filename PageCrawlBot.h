@@ -1,6 +1,6 @@
 
-#ifndef DIFFBOT_H
-#define DIFFBOT_H
+#ifndef CRAWLBOT_H
+#define CRAWLBOT_H
 
 // values for the diffbot dropdown
 #define DBA_NONE 1
@@ -18,7 +18,7 @@
 // field we use as a number in the coll.conf, starting at 0
 extern char *g_diffbotFields [];
 
-bool printCrawlBotPage ( TcpSocket *s , HttpRequest *hr );
+bool sendPageCrawlbot ( TcpSocket *s , HttpRequest *hr );
 
 bool printCrawlBotPage2 ( TcpSocket *s , 
 			  HttpRequest *hr ,

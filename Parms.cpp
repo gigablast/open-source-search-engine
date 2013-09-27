@@ -2382,6 +2382,9 @@ char *Parms::getTHIS ( HttpRequest *r , long page ) {
 	// if not master controls, must be a collection rec
 	if ( page < PAGE_OVERVIEW ) return (char *)&g_conf;
 	char *coll = r->getString ( "c" );
+	// support john wanting to use "id" for the crawl id which is really
+	// the collection id, hopefully won't conflict with other things.
+	if ( ! coll ) coll = r->getString ( "id" );
 	if ( ! coll || ! coll[0] )
 		//coll = g_conf.m_defaultColl;
 		coll = g_conf.getDefaultColl( r->getHost(), r->getHostLen() );

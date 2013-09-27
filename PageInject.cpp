@@ -7,7 +7,7 @@
 #include "XmlDoc.h"
 #include "PageParser.h"
 #include "Repair.h"
-#include "Diffbot.h"
+#include "PageCrawlBot.h"
 
 static bool sendReply        ( void *state );
 

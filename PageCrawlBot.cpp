@@ -1689,7 +1689,178 @@ static class HelpItem s_his[] = {
 	{NULL,NULL}
 };
 
-bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
+
+// . when we receive the request from john we call broadcastRequest() from
+//   Pages.cpp. then msg28 sends this replay with a &cast=0 appended to it
+//   to every host in the network. then when msg28 gets back replies from all 
+//   those hosts it calls sendPageCrawlbot() here but without a &cast=0
+// . so if no &cast is present we are the original!!!
+bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
+
+	// Msg28::massConfig() puts a &cast=0 on the secondary requests sent to
+	// each host in the network
+	long cast = hr->getLong("cast",1);
+
+	// if no token... they need to login or signup
+	char *token = getTokenFromHttpRequest ( hr );
+
+	// . now show stats for the current crawl
+	// . put in xml or json if format=xml or format=json or
+	//   xml=1 or json=1 ...
+	char fmt = FMT_HTML;
+	char *fs = hr->getString("format",NULL,NULL);
+	// give john a json api
+	if ( fs && strcmp(fs,"json") == 0 ) fmt = FMT_JSON;
+	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FMT_XML;
+
+
+
+	// . if this is a cast=0 request it is received by all hosts in the network
+	// . this code is the only code run by EVERY host in the network
+	// . the other code is just run once by the receiving host
+	// . so we gotta create a coll rec on each host etc.
+	// . no need to update collectionrec parms here since Pages.cpp calls
+	//   g_parms.setFromRequest() for us before calling this function,
+	//   pg->m_function(). even though maxtocrawl is on "PAGE_NONE" hopefully
+	//   it will still be set
+	// . but we should take care of add/del/reset coll here.
+	if ( cast == 0 ) {
+		// each host should return right away if token not given
+		if ( ! token ) {
+			char *msg = "invalid token";
+			return sendErrorReply2 (socket,fmt,msg);
+		}
+		// get some other parms provided optionally
+		long addColl    = hr->getLong  ("addcoll",0);
+		char *delColl   = hr->getString("delcoll");
+		char *resetColl = hr->getString("resetcoll");
+		// . we can't sync these operations on a dead host when it
+		//   comes back up yet. we can only sync parms, not collection
+		//   adds/deletes/resets
+		// . TODO: make new collections just a list of rdb records, then they
+		//   can leverage the msg4 and addsinprogress.dat functionality we have
+		//   for getting dead hosts back up to sync. Call it Colldb.
+		if ( ( addColl || delColl || resetColl ) &&
+		     // if any host in network is dead, do not do this
+		     g_hostdb.hasDeadHost() )  {
+			char *msg = "A host in the network is dead";
+			log("diffbot: %s",msg);
+			// make sure this returns in json if required
+			return sendErrorReply2(socket,fmt,msg);
+		}
+
+		CollectionRec *cr = NULL;
+		if ( addColl ) {
+			cr = addNewDiffbotColl ( hr );
+		}
+		if ( delColl ) {
+			g_collectiondb.deleteRec ( delColl , true );
+			cr = NULL;
+		}
+		if ( resetColl ) {
+			cr = g_collectiondb.getRec ( resetColl );
+			g_collectiondb.resetColl ( resetColl );
+			// if reset from crawlbot api page then enable spiders
+			// to avoid user confusion
+			if ( cr ) cr->m_spideringEnabled = 1;
+		}
+		// get specified collection name
+		char *coll = hr->getString("c");
+		if ( ! coll ) coll = hr->getString("id");
+		// if none specified that way
+		if ( ! cr && coll ) cr = g_collectiondb.getRec(coll);
+		// if no cr to set parms on we are done
+		if ( ! cr ) return g_httpServer.sendDynamicPage(socket,"OK",2);
+		//
+		// alias must be unique!
+		//
+		char *alias = hr->getString("alias");
+		if ( alias && ! isAliasUnique(cr,token,alias) ) {
+			char *msg = "alias is not unqiue";
+			return sendErrorReply2 (socket,fmt,msg);
+		}
+		if ( alias ) {
+			cr->m_collectionNameAlias.set(alias);
+			cr->m_collectionNameAlias.nullTerm();
+		}
+		//
+		//  update the url filters for now since that is complicated
+		//
+		long page = PAGE_FILTERS;
+		WebPage *pg = g_pages.getPage ( page ) ;
+		g_parms.setFromRequest ( hr , socket , pg->m_function);
+		//
+		// set other diffbot parms for this collection
+		//
+		// TODO:
+		// maybe set to PAGE_SPIDER_CONTROLS... >?
+		// then call setFromRequest() on that page.
+		//
+		long maxToCrawl = hr->getLongLong("maxtocrawl",-1LL);
+		long maxToProcess = hr->getLongLong("maxtoprocess",-1LL);
+		if ( maxToCrawl != -1 ) {
+			cr->m_diffbotMaxToCrawl = maxToCrawl;
+			cr->m_needsSave = 1;
+		}
+		if ( maxToProcess != -1 ) {
+			cr->m_diffbotMaxToProcess = maxToProcess;
+			cr->m_needsSave = 1;
+		}
+		// this is now in the url filters dropdown?
+		//char *api = hr->getString("diffbotapi",NULL,NULL);
+		//if ( api ) {
+		//	cr->m_diffbotApi.set(api);
+		//	cr->m_diffbotApi.nullTerm();
+		//}
+		long pause = hr->getLong("pause",-1);
+		if ( pause == 0 ) cr->m_spideringEnabled = 1;
+		if ( pause == 1 ) cr->m_spideringEnabled = 0;
+		long urt = hr->getLong("urt",-1);
+		if ( urt != -1 ) cr->m_useRobotsTxt = urt;
+		// this is a cast, so just return simple response
+		return g_httpServer.sendDynamicPage (socket,"OK",2);
+	}
+
+	//
+	// after all hosts have replied to the request, we finally send the
+	// request here, with no &cast=0 appended to it. so there is where we
+	// send the final reply back to the sender
+	//
+	
+	if ( ! token ) {
+		// send back json error msg
+		if ( fmt == FMT_JSON ) {
+			char *msg = "invalid token";
+			return sendErrorReply2 (socket,fmt,msg);
+		}
+		// print token form if html
+		SafeBuf sb;
+		sb.safePrintf("In order to use crawlbot you must "
+			      "first LOGIN:"
+			      "<form action=/crawlbot method=get>"
+			      "<br>"
+			      "<input type=text name=token size=50>"
+			      "<input type=submit name=submit value=OK>"
+			      "</form>"
+			      "<br>"
+			      "<b>- OR -</b>"
+			      "<br> SIGN UP"
+			      "<form action=/crawlbot method=get>"
+			      "Name: <input type=text name=name size=50>"
+			      "<br>"
+			      "Email: <input type=text name=email size=50>"
+			      "<br>"
+			      "<input type=submit name=submit value=OK>"
+			      "</form>"
+			      "</body>"
+			      "</html>");
+		return g_httpServer.sendDynamicPage (socket, 
+						     sb.getBufStart(), 
+						     sb.length(),
+						     -1); // cachetime
+	}
+
+
 
 	// print help
 	long help = hr->getLong("help",0);
@@ -1723,50 +1894,7 @@ bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 
-	// . now show stats for the current crawl
-	// . put in xml or json if format=xml or format=json or
-	//   xml=1 or json=1 ...
-	char fmt = FMT_HTML;
-	char *fs = hr->getString("format",NULL,NULL);
-	// give john a json api
-	if ( fs && strcmp(fs,"json") == 0 ) fmt = FMT_JSON;
-	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FMT_XML;
 
-
-	// if no token... they need to login or signup
-	char *token = getTokenFromHttpRequest ( hr );
-	if ( ! token ) {
-		// send back json error msg
-		if ( fmt == FMT_JSON ) {
-			char *msg = "invalid token";
-			return sendErrorReply2 (socket,fmt,msg);
-		}
-		// print token form if html
-		SafeBuf sb;
-		sb.safePrintf("In order to use crawlbot you must "
-			      "first LOGIN:"
-			      "<form action=/crawlbot method=get>"
-			      "<br>"
-			      "<input type=text name=token size=50>"
-			      "<input type=submit name=submit value=OK>"
-			      "</form>"
-			      "<br>"
-			      "<b>- OR -</b>"
-			      "<br> SIGN UP"
-			      "<form action=/crawlbot method=get>"
-			      "Name: <input type=text name=name size=50>"
-			      "<br>"
-			      "Email: <input type=text name=email size=50>"
-			      "<br>"
-			      "<input type=submit name=submit value=OK>"
-			      "</form>"
-			      "</body>"
-			      "</html>");
-		return g_httpServer.sendDynamicPage (socket, 
-						     sb.getBufStart(), 
-						     sb.length(),
-						     -1); // cachetime
-	}
 
 
 	// get collection name if any was specified
@@ -1857,6 +1985,7 @@ bool printCrawlBotPage ( TcpSocket *socket , HttpRequest *hr ) {
 		return true;
 	}
 
+	////////////
 	//
 	// print the html or json page of all the data
 	//
@@ -1886,34 +2015,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 	CollectionRec *cr = NULL;
 
-	// . add new collection?
-	// . make a new collection and it also becomes the cursor
-	long addColl = hr->getLong("addcoll",0);
-	if ( addColl )
-		cr = addNewDiffbotColl ( hr );
-
-	char *delColl = hr->getString("delcoll",NULL,NULL);
-	if ( delColl )
-		g_collectiondb.deleteRec ( delColl , true );
-
-	char *resetColl = hr->getString("resetcoll",NULL,NULL);
-	if ( resetColl )
-		g_collectiondb.resetColl ( resetColl );
-
 	// set this to current collection. if only token was provided
 	// then it will return the first collection owned by token.
 	// if token has no collections it will be NULL.
 	if ( ! cr ) 
 		cr = getCollRecFromHttpRequest ( hr );
-
-	// if you reset from crawlbot api page then enable spiders
-	if ( resetColl && cr )
-		cr->m_spideringEnabled = 1;
-
-	// if no collection, then it is the first time or this token
-	// so automatically add one for them
-	if ( ! cr ) 
-		cr = addNewDiffbotColl ( hr );
 
 	if ( ! cr ) {
 		char *msg = "failed to add new collection";
@@ -2135,62 +2241,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	///////
 
 
-	long maxToCrawl = hr->getLongLong("maxtocrawl",-1LL);
-	long maxToProcess = hr->getLongLong("maxtoprocess",-1LL);
-	if ( maxToCrawl != -1 ) {
-		cr->m_diffbotMaxToCrawl = maxToCrawl;
-		cr->m_needsSave = 1;
-	}
-	if ( maxToProcess != -1 ) {
-		cr->m_diffbotMaxToProcess = maxToProcess;
-		cr->m_needsSave = 1;
-	}
-
-	///////
-	//
-	// a new alias?
-	//
-	///////
-	char *aliasResponse = "";
-	char *alias = hr->getString("alias",NULL,NULL );
-	SafeBuf atr;
-	if ( alias && alias[0] ) {
-		// assume ok
-		aliasResponse = "<font size=-2><br>"
-			"Alias updated successfully.</font>";
-		// scan to make sure unique for OUR token
-		if ( ! isAliasUnique ( cr , token , alias ) ) {
-			atr.safePrintf("<font color=red>%s"
-				       "<font size=-2><br>"
-				       "Alias is not unqiue. Please choose "
-				       "another one.</font></font>", alias);
-			aliasResponse = atr.getBufStart();
-			// if json bail out i guess
-			if ( fmt == FMT_JSON ) {
-				char *msg = "alias is not unique for token";
-				return sendErrorReply2(socket,fmt,msg);
-			}
-		}
-		else {
-			cr->m_collectionNameAlias.set(alias);
-			cr->m_collectionNameAlias.nullTerm();
-			cr->m_needsSave = 1;
-		}
-	}
-
-		
-
-	//char *api = hr->getString("diffbotapi",NULL,NULL);
-	//if ( api ) {
-	//	cr->m_diffbotApi.set(api);
-	//	cr->m_diffbotApi.nullTerm();
-	//}
-
-
-	long pause = hr->getLong("pause",-1);
-	if ( pause == 0 ) cr->m_spideringEnabled = 1;
-	if ( pause == 1 ) cr->m_spideringEnabled = 0;
-
 	//
 	// show urls being crawled (ajax) (from Spider.cpp)
 	//
@@ -2379,6 +2429,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		char *alias = "";
 		if ( cr->m_collectionNameAlias.length() > 0 )
 			alias = cr->m_collectionNameAlias.getBufStart();
+		char *aliasResponse = "";
+		if ( alias && ! isAliasUnique(cr,token,alias) )
+			aliasResponse = "<br><font size=1 color=red>"
+				"Alias not unique</font>";
 
 		sb.safePrintf(
 			      //
@@ -2678,16 +2732,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , cr->m_coll
 			      );
 	
-	//////////
-	//
-	// . update the parms for this collection
-	// . just update the url filters for now since that is complicated
-	//
-	//////////
-	long page = PAGE_FILTERS;
-	WebPage *pg = g_pages.getPage ( page ) ;
-	g_parms.setFromRequest ( hr , socket , pg->m_function);
-
 
 	//
 	// print url filters. HACKy...

@@ -197,9 +197,8 @@ static WebPage s_pages[] = {
 	  sendPageGeneric  , 0 } ,
 
 	{ PAGE_CRAWLBOT    , "crawlbot"   , 0 , "crawlbot" ,  1 , 0,
-	  //USER_ADMIN | USER_MASTER | USER_PROXY   ,
 	  "simplified spider controls page",
-	  sendPageGeneric  , 0 } ,
+	  sendPageCrawlbot , 0 } ,
 
 	{ PAGE_SPIDERDB  , "admin/spiderdb" , 0 , "spider queue" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER   , 
@@ -413,7 +412,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//}
 
 	// did they supply correct password for given username?
-	bool userAccess = g_users.verifyUser(s,r);
+	//bool userAccess = g_users.verifyUser(s,r);
 
 	// does public have permission?
 	//bool publicPage = g_users.hasPermission ( "public", page ) ;
@@ -492,15 +491,15 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//   often times my cookie says username=mwells but i am not logged
 	//   in and i don't want to type my password to see the root page,
 	//   or any other public page
-	if ( ! publicPage && ! g_users.hasPermission( r, page , s ) &&
-	     ! isLoopback ) {
-		log("login: access denied 2 from ip=%s",iptoa(s->m_ip));
-		return sendPageLogin ( s , r, "Access Denied. No permission.");
-	}
-	if ( ! publicPage && ! userAccess && ! isLoopback ) {
-		log("login: access denied 3 from ip=%s",iptoa(s->m_ip));
-		return sendPageLogin(s,r,"Access Denied. Bad or no password.");
-	}
+	//if ( ! publicPage && ! g_users.hasPermission( r, page , s ) &&
+	//     ! isLoopback ) {
+	//	log("login: access denied 2 from ip=%s",iptoa(s->m_ip));
+	//	return sendPageLogin ( s , r, "Access Denied. No permission.");
+	//}
+	//if ( ! publicPage && ! userAccess && ! isLoopback ) {
+	//	log("login: access denied 3 from ip=%s",iptoa(s->m_ip));
+	//	return sendPageLogin(s,r,"Access Denied. Bad or no password.");
+	//}
 
 	g_errno = 0;
 
@@ -537,7 +536,18 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 
 	// broadcast request to ALL hosts if we should
 	// should this request be broadcasted?
-	bool cast = r->getLong("cast",0) ;
+	bool cast = r->getLong("cast",-1) ;
+
+	// 0 is the default
+	// UNLESS we are the crawlbot page, john does not send a &cast=1
+	// on his requests and they LIKELY need to go to each host in the network
+	// like for adding/deleting/resetting collections and updating coll parms
+	// like "alias" and "maxtocrawl" and "maxtoprocess"
+	if ( cast == -1 ) {
+		if ( page == PAGE_CRAWLBOT ) cast = 1;
+		else                         cast = 0;
+	}
+
 
 	// proxy can only handle certain pages. it has logic in Proxy.cpp
 	// to use the 0xfd msg type to forward certain page requests to 
@@ -574,7 +584,10 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//   (g_conf.isMasterAdmin( s, r ) || g_hostdb.getProxyByIp(s->m_ip)) )
 	//	cast = false;
 	if ( g_proxy.isProxy () ) cast = false;
-	// this only returns true on error
+	// this only returns true on error. uses msg28 to send the http request
+	// verbatim to all hosts in network, using tcpserver. the spawned msg28
+	// requests will come through this same path and be identical to this request
+	// but their cast will be "0" this time to break any recursion.
 	if ( cast ) if ( ! broadcastRequest ( s , r , page ) ) return false;
 	// on error from broadcast, bail here, it call sendErrorReply()
 	if ( g_errno )
@@ -624,18 +637,21 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . now, so it can be responsible for calling pg->m_function
 	//if ( userType > USER_PUBLIC ) {
 	// check if user has public page access 
-	if ( g_users.hasPermission( r, page , s ) ) {
+	//if ( g_users.hasPermission( r, page , s ) ) {
+	if ( isLocal ) { //g_users.hasPermission( r, page , s )){
 		// . this will set various parms
 		// . we know the request came from a host in the cluster
 		//   because "isHost" is true.
 		// . this will call CmdJustSave(), etc. too if need be
+		// . this calls the callback pg->m_function() when done!
+		// . if there was a &cast=1 it was have left up above so we
+		//   know that this is a &cast=0 request and an endpoint host.
 		if(!g_parms.setFromRequest ( r , 
 					     //userType, 
 					     s,
 					     pg->m_function))
 			return false;
 	}
-
 
 	// do not call sendPageEvents if not eventwidget
 	//if ( page == PAGE_RESULTS &&
@@ -651,7 +667,8 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//   eventually
 	// . returns false if blocked, true otherwise
 	// . sets g_errno on error i think
-	return pg->m_function ( s , r);
+	// . false means not called from msg28
+	return pg->m_function ( s , r );
 }
 
 #include "Msg28.h"
@@ -686,7 +703,9 @@ bool Pages::broadcastRequest ( TcpSocket *s , HttpRequest *r , long page ) {
 	s_page   = page;
 	s_s      = s;
 	s_r.copy ( r ); // just a ptr copy really, references s->m_readBuf
-	// this returns false if blocked
+	// . this returns false if blocked
+	// . this removes &cast=1 and adds &cast=0 to the request before sending
+	//   to each host in the network
 	if ( ! s_msg28.massConfig ( s_s , &s_r , -1 , NULL , doneWrapper ) ) 
 		return false;
 	// did not block
@@ -697,6 +716,7 @@ bool Pages::broadcastRequest ( TcpSocket *s , HttpRequest *r , long page ) {
 void doneWrapper ( void *state ) {
 	// release the lock
 	s_locked = false;
+
 	// . now we can handle the page
 	// . this must call g_httpServer.sendDynamicReply() eventually
 	s_pages[s_page].m_function ( s_s , &s_r );

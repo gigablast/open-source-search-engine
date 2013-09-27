@@ -64,7 +64,7 @@
 #include "Spider.h" // SpiderRequest/SpiderReply definitions
 #include "HttpMime.h" // ET_DEFLAT
 #include "Msg1.h"
-#include "Diffbot.h" // DBA_NONE
+#include "PageCrawlBot.h" // DBA_NONE
 
 //#define XMLDOC_MAX_AD_IDS 4
 //#define XMLDOC_ADLEN      64
