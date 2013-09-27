@@ -455,7 +455,12 @@ bool Msg7::inject ( TcpSocket *s ,
 
 	// get the junk
 	char *coll           = r->getString ( "c" , NULL  , NULL /*default*/);
-	if ( ! coll ) coll = "main";
+	//if ( ! coll ) coll = "main";
+	// sometimes crawlbot will add or reset a coll and do an inject
+	// in PageCrawlBot.cpp
+	if ( ! coll ) coll = r->getString("addcoll");
+	if ( ! coll ) coll = r->getString("resetcoll");
+
 	bool  quickReply     = r->getLong   ( "quick" , 0 );	
 	//char *pwd            = r->getString ( "pwd" , NULL );
 	char *url            = r->getString ( "u" , NULL , NULL /*default*/);

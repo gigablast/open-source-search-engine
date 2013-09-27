@@ -1707,7 +1707,8 @@ static class HelpItem s_his[] = {
 	{"spiderlinks","Use 0 or 1 to not spider or spider links from "
 	 "the injected url respectively. Pass this along with the injecturl "
 	 "parameter. Any injected url will be treated as a seed url. Use "
-	 "this parameter in conjunction with the urldata parameter as well."},
+	 "this parameter in conjunction with the urldata parameter as well. "
+	 "The DEFAULT is 0!!! So if seeding make sure to say &spiderlinks=1."},
 	{"ins_dapi[N]","Insert a row above row #N. Do not include [N] if it "
 	 "is row 0."},
 	{"rm_dapi[N]","Delete row #N. Do not include [N] if it "
