@@ -2504,6 +2504,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			aliasResponse = "<br><font size=1 color=red>"
 				"Alias not unique</font>";
 
+		char *urtYes = " checked";
+		char *urtNo  = "";
+		if ( ! cr->m_useRobotsTxt ) {
+			urtYes = "";
+			urtNo  = " checked";
+		}
+
 		sb.safePrintf(
 			      //
 			      "<tr>"
@@ -2596,16 +2603,19 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr><td>"
 			      "Use Robots.txt when crawling? "
 			      "</td><td>"
-			      "<input type=checkbox name=userobotstxt checked>"
+			      "<input type=radio name=urt "
+			      "value=1%s> yes &nbsp; "
+			      "<input type=radio name=urt "
+			      "value=0%s> no &nbsp; "
 			      "</td>"
 			      "</tr>"
 
-			      "<tr><td>"
-			      "Use spider proxies on AWS? "
-			      "</td><td>"
-			      "<input type=checkbox name=usefloaters checked>"
-			      "</td>"
-			      "</tr>"
+			      //"<tr><td>"
+			      //"Use spider proxies on AWS? "
+			      //"</td><td>"
+			      //"<input type=checkbox name=usefloaters checked>
+			      //"</td>"
+			      //"</tr>"
 
 
 			      "</table>"
@@ -2634,6 +2644,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , cr->m_diffbotMaxToCrawl 
 			      , cr->m_diffbotMaxToProcess
 
+			      , urtYes
+			      , urtNo
 			      );
 	}
 
