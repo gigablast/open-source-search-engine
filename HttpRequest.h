@@ -40,7 +40,8 @@ class HttpRequest {
 		   time_t ifModifiedSince = 0 , char *userAgent = NULL ,
 		   char *proto = "HTTP/1.0" ,
 		   bool doPost = false ,
-		   char *cookie = NULL );
+		   char *cookie = NULL ,
+		   char *additionalHeader = NULL ); // does not incl \r\n
 
 	// use this
 	SafeBuf m_reqBuf;

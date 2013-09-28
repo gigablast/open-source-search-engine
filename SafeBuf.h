@@ -64,7 +64,6 @@ struct SafeBuf {
 	void truncLen ( long newLen ) {
 		if ( m_length > newLen ) m_length = newLen; };
 
-
 	bool set ( char *str ) {
 		purge();
 		if ( ! str ) return true;

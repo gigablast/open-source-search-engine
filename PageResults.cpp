@@ -360,13 +360,17 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			      "</a>"
 
 			      " &nbsp;&nbsp;&nbsp;&nbsp; "
+			      );
+		//  SEO functionality not included yet - so redir to gigablast.
+		if ( g_conf.m_isMattWells )
+			sb.safePrintf("<a title=\"Rank higher in "
+				      "Google\" href='/seo'>");
+		else
+			sb.safePrintf("<a title=\"Rank higher in "
+				      "Google\" href='https://www.gigablast."
+				      "com/seo'>");
 
-				  /*  SEO functionality not included yet - so redir to gigablast. */				  
-#ifdef PRIVATESTUFF
-			      "<a title=\"Rank higher in Google\" href='/seo'>"
-#else
-			      "<a title=\"Rank higher in Google\" href='https://www.gigablast.com/seo'>"
-#endif
+		sb.safePrintf(
 			      "seo"
 			      "</a>"
 
@@ -2102,11 +2106,11 @@ static int printResult ( SafeBuf &sb,
 		//	      "c=%s&\">scoring</a>",
 		//	      coll );
 		//sb.safePrintf(" - <a href=\"/print?c=%s&",coll);
-#ifdef PRIVATESTUFF
-		sb.safePrintf(" - <a href=\"/seo?");//c=%s&",coll);
-#else
-		sb.safePrintf(" - <a href=\"https://www.gigablast.com/seo?");//c=%s&",coll);
-#endif
+		if ( g_conf.m_isMattWells )
+			sb.safePrintf(" - <a href=\"/seo?");//c=%s&",coll);
+		else
+			sb.safePrintf(" - <a href=\"https://www.gigablast."
+				      "com/seo?");//c=%s&",coll);
 		//sb.safePrintf("d=%lli",mr->m_docId);
 		sb.safePrintf("u=");
 		sb.urlEncode ( url , gbstrlen(url) , false );
@@ -3287,15 +3291,16 @@ bool printPairScore ( SafeBuf &sb , SearchInput *si , PairScore *ps ,
 		      , getHashGroupString(hg1)
 		      , hgw1 );
 	// the word position
-	sb.safePrintf("<td>"
+	sb.safePrintf("<td>");
 		      //"<a href=\"/print?d="
 		      //"&page=4&recycle=1&"
-#ifdef PRIVATESTUFF
-		      "<a href=\"/seo?d="
-#else
-		      "<a href=\"https://www.gigablast.com/seo?d="
-#endif
-		      "%lli"
+
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<a href=\"/seo?d=");
+	else
+		sb.safePrintf("<a href=\"https://www.gigablast.com/seo?d=");
+
+	sb.safePrintf("%lli"
 		      "&page=sections&"
 		      "hipos=%li&c=%s\">"
 		      "%li</a></td>"
@@ -3368,16 +3373,17 @@ bool printPairScore ( SafeBuf &sb , SearchInput *si , PairScore *ps ,
 		      , getHashGroupString(hg2)
 		      , hgw2 );
 	// the word position
-	sb.safePrintf("<td>"
+	sb.safePrintf("<td>");
 		      //"<a href=\"/print?d="
 		      //"%lli"
 		      //"&page=4&recycle=1&"
-#ifdef PRIVATESTUFF
-		      "<a href=\"/seo?d="
-#else
-		      "<a href=\"https://www.gigablast.com/seo?d="
-#endif
-		      "%lli"
+
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<a href=\"/seo?d=");
+	else
+		sb.safePrintf("<a href=\"https://www.gigablast.com/seo?d=");
+
+	sb.safePrintf("%lli"
 		      "&page=sections&"
 		      "hipos=%li&c=%s\">"
 		      "%li</a></td>"
