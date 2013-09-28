@@ -32,7 +32,7 @@ CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
 //CollectionRec *getCollRecFromCrawlId ( char *crawlId );
 //void printCrawlStatsWrapper ( void *state ) ;
 CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) ;
-bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) ;
+//bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) ;
 
 char *g_diffbotFields [] = {
 	"Unused-ERROR",
@@ -1676,8 +1676,10 @@ static class HelpItem s_his[] = {
 	{"id=xxx","Specify the collection name. Just like 'c'."},
 	{"pause","Use pause=0 or pause=1 to activate or pause spidering "
 	 "respectively."},
+	/*
 	{"alias", "Set the collection name alias to this string. Must be "
 	 "unqiue over all collections under the same token."},
+	*/
 	{"maxtocrawl", "Specify max pages to successfully download"},
 	{"maxtoprocess", "Specify max pages to successfully process through "
 	 "diffbot"},
@@ -1812,6 +1814,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			return sendErrorReply2(socket,fmt,msg);
 		}
 
+		/*
 		// alias must be unique!
 		char *alias = hr->getString("alias");
 		if ( alias && ! isAliasUnique(cr,token,alias) ) {
@@ -1822,6 +1825,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			cr->m_collectionNameAlias.set(alias);
 			cr->m_collectionNameAlias.nullTerm();
 		}
+		*/
+
 		//  update the url filters for now since that is complicated
 		//  supply "cr" directly since "c" may not be in the http
 		//  request if addcoll=xxxxxx (just created a new rec)
@@ -2215,12 +2220,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			if ( ! firstOne ) 
 				sb.safePrintf(",\n\t");
 			firstOne = false;
-			char *alias = "";
-			if ( cx->m_collectionNameAlias.length() > 0 )
-				alias=cx->m_collectionNameAlias.getBufStart();
+			//char *alias = "";
+			//if ( cx->m_collectionNameAlias.length() > 0 )
+			//	alias=cx->m_collectionNameAlias.getBufStart();
 			sb.safePrintf("\n\n{"
 				      "\"id\":\"%s\",\n"
-				      "\"alias\":\"%s\",\n"
+				      //"\"alias\":\"%s\",\n"
 				      "\"crawlingEnabled\":%li,\n"
 				      "\"objectsFound\":%lli,\n"
 				      "\"urlsHarvested\":%lli,\n"
@@ -2234,7 +2239,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      "\"maxtoprocess\":%lli,\n"
 				      "\"urt\":%li,\n"
 				      ,cx->m_coll
-				      , alias
+				      //, alias
 				      , (long)cx->m_spideringEnabled 
 				      , cx->m_globalCrawlInfo.m_objectsAdded -
 				      cx->m_globalCrawlInfo.m_objectsDeleted
@@ -2497,13 +2502,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			       */
 			      );
 
-		char *alias = "";
-		if ( cr->m_collectionNameAlias.length() > 0 )
-			alias = cr->m_collectionNameAlias.getBufStart();
-		char *aliasResponse = "";
-		if ( alias && ! isAliasUnique(cr,token,alias) )
-			aliasResponse = "<br><font size=1 color=red>"
-				"Alias not unique</font>";
+		//char *alias = "";
+		//if ( cr->m_collectionNameAlias.length() > 0 )
+		//	alias = cr->m_collectionNameAlias.getBufStart();
+		//char *aliasResponse = "";
+		//if ( alias && ! isAliasUnique(cr,token,alias) )
+		//	aliasResponse = "<br><font size=1 color=red>"
+		//		"Alias not unique</font>";
 
 		char *urtYes = " checked";
 		char *urtNo  = "";
@@ -2519,10 +2524,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td>%s</td>"
 			      "</tr>"
 
-			      "<tr>"
-			      "<td><b>Collection Alias:</td>"
-			      "<td>%s%s</td>"
-			      "</tr>"
+			      //"<tr>"
+			      //"<td><b>Collection Alias:</td>"
+			      //"<td>%s%s</td>"
+			      //"</tr>"
 
 			      "<tr>"
 			      "<td><b>Token:</td>"
@@ -2629,8 +2634,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 
 			      , cr->m_coll
-			      , alias
-			      , aliasResponse
+			      //, alias
+			      //, aliasResponse
 
 			      , cr->m_diffbotToken.getBufStart()
 
@@ -3299,7 +3304,7 @@ bool getSpiderRequestMetaList ( char *doc ,
 	return true;
 }
 
-
+/*
 bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) {
 	// scan all collections
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
@@ -3319,3 +3324,4 @@ bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) {
 	}
 	return true;
 }
+*/

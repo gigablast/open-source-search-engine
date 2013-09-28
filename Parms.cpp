@@ -8118,6 +8118,7 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
+	/*
 	m->m_cgi   = "alias";
 	m->m_xml   = "collectionNameAlias";
 	m->m_off   = (char *)&cr.m_collectionNameAlias - x;
@@ -8127,7 +8128,6 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
-	/*
 	m->m_cgi   = "dbseed";
 	m->m_xml   = "diffbotSeed";
 	m->m_off   = (char *)&cr.m_diffbotSeed - x;
