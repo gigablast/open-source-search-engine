@@ -69,6 +69,13 @@ struct SafeBuf {
 	void truncLen ( long newLen ) {
 		if ( m_length > newLen ) m_length = newLen; };
 
+	void removeLastChar ( char lastChar ) {
+		if ( m_length <= 0 ) return;
+		if ( m_buf[m_length-1] != lastChar ) return;
+		m_length--;
+		m_buf[m_length] = '\0';
+	};
+
 	//MUTATORS
 #ifdef _CHECK_FORMAT_STRING_
 	bool  safePrintf(char *formatString, ...)

@@ -104,11 +104,15 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	//g_proxy.insertLoginBarDirective ( &sb );
 	sb.safePrintf("<br><br>\n");
 // try to avoid using https for images. it is like 10ms slower.
-#ifdef PRIVATESTUFF
-	sb.safePrintf("<center><a href=/><img border=0 width=500 height=122 src=http://www.gigablast.com/logo-med.jpg></a>\n");
-#else
-	sb.safePrintf("<center><a href=/><img border=0 width=500 height=122 src=/logo-med.jpg></a>\n");
-#endif
+
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<center><a href=/><img border=0 width=500 "
+			      "height=122 src=http://www.gigablast.com/logo-"
+			      "med.jpg></a>\n");
+	else
+		sb.safePrintf("<center><a href=/><img border=0 width=500 "
+			      "height=122 src=/logo-med.jpg></a>\n");
+
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
 	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; <a href=/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"http://www.gigablast.com/?c=dmoz3\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
@@ -310,11 +314,15 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 	sb.safePrintf("\n");
 	sb.safePrintf("<br><br>\n");
-#ifdef PRIVATESTUFF
-	sb.safePrintf("<center><a href=/><img border=0 width=500 height=122 src=http://www.gigablast.com/logo-med.jpg></a>\n");
-#else
-	sb.safePrintf("<center><a href=/><img border=0 width=500 height=122 src=/logo-med.jpg></a>\n");
-#endif
+
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<center><a href=/><img border=0 width=500 "
+			      "height=122 src=http://www.gigablast.com/logo-"
+			      "med.jpg></a>\n");
+	else
+		sb.safePrintf("<center><a href=/><img border=0 width=500 "
+			      "height=122 src=/logo-med.jpg></a>\n");
+
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
 	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"http://www.gigablast.com/?c=dmoz3\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
@@ -444,11 +452,15 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("<body>\n");
 	sb.safePrintf("<br><br>\n");
 // try to avoid using https for images. it is like 10ms slower.
-#ifdef PRIVATESTUFF
-	sb.safePrintf("<center><a href=/><img border=0 width=500 height=122 src=http://www.gigablast.com/logo-med.jpg></a>\n");
-#else
-	sb.safePrintf("<center><a href=/><img border=0 width=500 height=122 src=/logo-med.jpg></a>\n");
-#endif
+
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<center><a href=/><img border=0 width=500 "
+			      "height=122 src=http://www.gigablast.com/logo-"
+			      "med.jpg></a>\n");
+	else
+		sb.safePrintf("<center><a href=/><img border=0 width=500 "
+			      "height=122 src=/logo-med.jpg></a>\n");
+
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
 	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <b>directory</b> &nbsp;&nbsp;&nbsp;&nbsp; \n");

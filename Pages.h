@@ -358,9 +358,9 @@ enum {
 	PAGE_REINDEX     ,	
 	PAGE_INJECT      , 
 	//PAGE_KEYWORDS    ,
-#ifdef PRIVATESTUFF
+
 	PAGE_SEO         ,
-#endif
+
 	PAGE_ACCESS      ,  //40	
 	PAGE_SEARCHBOX   ,
 	PAGE_ADDURL2     ,

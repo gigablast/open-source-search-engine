@@ -172,6 +172,27 @@ void dumpClusterdb       ( char *coll,long sfn,long numFiles,bool includeTree);
 void dumpLinkdb          ( char *coll,long sfn,long numFiles,bool includeTree,
 			   char *url );
 
+//////
+//
+// if seo.o is being linked to it needs to override these weak stubs:
+//
+//////
+bool loadQueryLog() __attribute__((weak));
+void runSEOQueryLoop ( int fd, void *state ) __attribute__((weak));
+bool sendPageSEO(TcpSocket *, HttpRequest *) __attribute__((weak));
+void handleRequest8e(UdpSlot *, long netnice ) __attribute__((weak));
+void handleRequest4f(UdpSlot *, long netnice ) __attribute__((weak));
+void handleRequest95(UdpSlot *, long netnice ) __attribute__((weak));
+
+// make the stubs here. seo.o will override them
+bool loadQueryLog() { return true; } 
+void runSEOQueryLoop ( int fd, void *state ) { return; }
+bool sendPageSEO(TcpSocket *s, HttpRequest *hr) {
+	return g_httpServer.sendErrorReply(s,500,"Seo support not present"); }
+void handleRequest8e(UdpSlot *, long netnice ) {return; }
+void handleRequest4f(UdpSlot *, long netnice ) {return; }
+void handleRequest95(UdpSlot *, long netnice ) {return; }
+
 
 // for cleaning up indexdb
 void dumpMissing ( char *coll );
@@ -2780,10 +2801,13 @@ int main ( int argc , char *argv[] ) {
 		//return 1;
 	}
 
-	// the query log split
-#ifdef PRIVATESTUFF
-	if ( ! loadQueryLog() ) return 1;
-#endif
+	// the query log split. only for seo tools, so only do if
+	// we are running in Matt Wells's datacenter.
+	if ( g_conf.m_isMattWells && ! loadQueryLog() ) {
+		log("init: failed to load query log. continuing with seo "
+		    "support.");
+		//return 1;
+	}
 
 	//if( !g_pageTopDocs.init() ) {
 	//	log( "init: PageTopDocs init failed." );
@@ -3105,10 +3129,11 @@ int main ( int argc , char *argv[] ) {
 		log("db: Failed to init merge sleep callback.");
 
 	// SEO MODULE
-#ifdef PRIVATESTUFF
-	if ( ! g_loop.registerSleepCallback(2000,(void *)1,runSEOQueryLoop))
+	// . only use if we are in Matt Wells's data center
+	//   and have access to the seo tools
+	if ( g_conf.m_isMattWells &&
+	     ! g_loop.registerSleepCallback(2000,(void *)1,runSEOQueryLoop))
 		log("db: Failed to register seo query loop");
-#endif
 
 
 
@@ -4798,16 +4823,6 @@ bool registerMsgHandlers1(){
 	return true;
 }
 
-//
-// to make things compile we need to declare this stuff since the seo
-// module is not in the open source version
-//
-#ifndef PRIVATESTUFF
-SafeBuf    g_qbuf;
-long       g_qbufNeedSave = false;
-bool sendPageSEO(TcpSocket *, HttpRequest *) {	return true;}
-#endif
-
 bool registerMsgHandlers2(){
 	Msg0  msg0 ;	if ( ! msg0.registerHandler  () ) return false;
 	Msg1  msg1 ;	if ( ! msg1.registerHandler  () ) return false;
@@ -4834,14 +4849,11 @@ bool registerMsgHandlers2(){
 
 	if ( ! registerHandler4  () ) return false;
 
-#ifdef PRIVATESTUFF
-	// seo module handlers
+	// seo module handlers. this will just be stubs declared above
+	// if no seo module. the seo module is not part of the open source.
 	if(! g_udpServer.registerHandler(0x8e,handleRequest8e)) return false;
 	if(! g_udpServer.registerHandler(0x4f,handleRequest4f)) return false;
 	if(! g_udpServer.registerHandler(0x95,handleRequest95)) return false;
-#endif
-	
-
 
 	return true;
 

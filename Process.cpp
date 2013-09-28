@@ -46,8 +46,10 @@
 
 // the query log hashtable defined in XmlDoc.cpp
 //extern HashTableX g_qt;
-extern SafeBuf    g_qbuf;
-extern long       g_qbufNeedSave;
+
+// normally in seo.cpp, but here so it compiles
+SafeBuf    g_qbuf;
+long       g_qbufNeedSave = 0;
 
 // for resetAll()
 //#include "Msg6.h"
@@ -477,12 +479,12 @@ bool Process::init ( ) {
 	//if ( ! g_loop.registerSleepCallback(10000,NULL,hdtempWrapper,0))
 	//	return false;
 
-	// power monitor, every 10 seconds
-	if ( ! g_loop.registerSleepCallback(10000,NULL,powerMonitorWrapper,0))
+	// power monitor, every 30 seconds
+	if ( ! g_loop.registerSleepCallback(30000,NULL,powerMonitorWrapper,0))
 		return false;
 
-	// check temps to possible turn fans on/off every 30 seconds
-	if ( !g_loop.registerSleepCallback(30000,NULL,fanSwitchCheckWrapper,0))
+	// check temps to possible turn fans on/off every 60 seconds
+	if ( !g_loop.registerSleepCallback(60000,NULL,fanSwitchCheckWrapper,0))
 		return false;
 
 	// -99 means unknown
@@ -495,6 +497,11 @@ bool Process::init ( ) {
 
 void powerMonitorWrapper ( int fd , void *state ) {
 	if ( g_isYippy ) return;
+
+	// only if in matt wells datacenter
+	if ( ! g_conf.m_isMattWells ) 
+		return;
+
 	// are we in group #0
 	bool checkPower = false;
 	// get our host
@@ -509,7 +516,7 @@ void powerMonitorWrapper ( int fd , void *state ) {
 	// if not checking, all done
 	if ( ! checkPower ) return;
 	// only if live
-	if ( ! g_conf.m_isLive ) return;
+	//if ( ! g_conf.m_isLive ) return;
 	// skip if request out already
 	if ( g_process.m_powerReqOut ) return;
 	// the url
@@ -575,6 +582,8 @@ bool Process::gotPower ( TcpSocket *s ) {
 	char *p;
 	char *dataCtrTempStr;
 	char *roofTempStr;
+	char *tag1,*tag2;
+	float newTemp;
 
 	if ( g_errno ) {
 		log("powermo: had error getting power state: %s. assuming "
@@ -633,23 +642,33 @@ bool Process::gotPower ( TcpSocket *s ) {
 	//   we want to keep the fans on, otherwise we need to send an
 	//   http request to the power strip control to turn the fans off
 	//
-	dataCtrTempStr = strstr( content, "\"Exit Temp\",tempf:\"" );
+	tag1 = "\"Exit Temp\",tempf:\"" ;
+	dataCtrTempStr = strstr( content, tag1 );
 	if ( ! dataCtrTempStr ) {
 		log("powermo: could not parse our data ctr temp from "
 		    "room alert.");
 		goto skip;
 	}
-	m_dataCtrTemp = atof ( dataCtrTempStr+19+4 );
+	newTemp = atof ( dataCtrTempStr+ gbstrlen(tag1) );
+	if ( newTemp != m_dataCtrTemp )
+		log("powermo: data ctr temp changed from %0.1f to %.01f",
+		    m_dataCtrTemp,newTemp);
+	m_dataCtrTemp = newTemp;
 
 
-	roofTempStr = strstr( content, "\"Roof Temp\",tempf:\"" );
+	tag2 = "\"Roof Temp\",tempf:\"";
+	roofTempStr = strstr( content, tag2 );
 	if ( ! dataCtrTempStr ) {
 		log("powermo: could not parse out roof temp from "
 		    "room alert.");
 		goto skip;
 	}
-	m_roofTemp = atof ( dataCtrTempStr+19);
 
+	newTemp = atof ( roofTempStr+gbstrlen(tag2));
+	if ( newTemp != m_roofTemp )
+		log("powermo: roof     temp changed from %0.1f to %.01f",
+		    m_roofTemp,newTemp);
+	m_roofTemp = newTemp;
 
 
  skip:
@@ -2127,8 +2146,9 @@ void fanSwitchCheckWrapper ( int fd , void *state ) {
 
 void Process::checkFanSwitch ( ) {
 
-	// skip for now
-	return;
+	// skip if you are not me, because this controls my custom fan
+	if ( ! g_conf.m_isMattWells )
+		return;
 
 	// are we in group #0
 	bool check = false;
@@ -2144,7 +2164,7 @@ void Process::checkFanSwitch ( ) {
 	// if not checking, all done
 	if ( ! check ) return;
 	// only if live
-	if ( ! g_conf.m_isLive ) return;
+	//if ( ! g_conf.m_isLive ) return;
 	// skip if request out already
 	if ( m_fanReqOut ) return;
 	// both must be legit
@@ -2164,13 +2184,16 @@ void Process::checkFanSwitch ( ) {
 	// what is the desired state? assume fans on.
 	m_desiredFanState = 1;
 	// if roof is hotter then fans off! we don't want hotter air.
-	if ( m_roofTemp > m_dataCtrTemp ) 
+	if ( //m_roofTemp > m_dataCtrTemp &&
+	     // even if roof temp is slightly cooler, turn off fans. it 
+	     // needs to be more than 5 degrees cooler.
+	     m_roofTemp + 5.0 > m_dataCtrTemp ) 
+		// 0 means we want fans to be off
 		m_desiredFanState = 0;
 	// if matches, leave alone
 	if ( m_currentFanState == m_desiredFanState ) return;
 
 	// ok change! the url
-	char *url ;
 	// . the IP9258 power controller
 	// . default ip=192.168.1.100
 	// . default user=admin
@@ -2182,6 +2205,8 @@ void Process::checkFanSwitch ( ) {
 	// . i changed the ip to 10.5.0.8 since the roomalert is at 10.5.0.9
 	// . turn all 4 ports on or off so we can plug the fans into two
 	//   separate ports
+	/*
+	char *url ;
 	if ( m_desiredFanState ) 
 		url = "http://10.5.0.8/tgi/iocontrol.tgi?"
 			"pw1Name=&"
@@ -2222,17 +2247,40 @@ void Process::checkFanSwitch ( ) {
 			"P63_TC=Off&"
 			"Apply=Apply"
 			;
-
-	// mark the request as outstanding so we do not overlap it
-	m_fanReqOut = true;
 	// . make a cookie with the login info
 	// . on chrome open the console and click "Network" tab 
 	//   to view the http network requests and replies
 	char *cookie = "admin=12345678; Taifatech=yes";
+	*/
+
+	//
+	// the new power switch is hopefully less flaky!
+	//
+	SafeBuf urlBuf;
+
+	if ( m_desiredFanState ) 
+		// this turns it on
+		urlBuf.safePrintf("http://10.5.0.10/outlet.cgi?outlet=1&"
+				  "command=1&time=%li",
+				  getTimeGlobal());
+	else 
+		// this turns it off
+		urlBuf.safePrintf("http://10.5.0.10/outlet.cgi?outlet=1&"
+				  "command=0&time=%li",
+				  getTimeGlobal());
+	// . make a cookie with the login info
+	// . on chrome open the console and click "Network" tab 
+	//   to view the http network requests and replies
+	//char *cookie = "admin=12345678; Taifatech=yes";
+	char *cookie = NULL;
+	
+
+	// mark the request as outstanding so we do not overlap it
+	m_fanReqOut = true;
 
 	// get it
 	bool status = g_httpServer.
-		getDoc ( url             , // url to download
+		getDoc ( urlBuf.getBufStart() , // url to download
 			 0               , // ip
 			 0               , // offset
 			 -1              , // size
@@ -2250,7 +2298,9 @@ void Process::checkFanSwitch ( ) {
 			 //false           , // respect download limit?
 			 "HTTP/1.1"      ,// fake 1.1 otherwise we get error!
 			 true , // doPost? converts cgi str to post
-			 cookie );
+			 cookie ,
+			 // additional mime headers
+			 "Authorization: Basic YWRtaW46^C");
 	// wait for it
 	if ( ! status ) return;
 	// i guess it is back!
@@ -2292,8 +2342,13 @@ bool Process::gotFanReply ( TcpSocket *s ) {
 	long  contentLen = bufSize - mime.getMimeLen();
 	content[contentLen]='\0';
 
-	// get the state of the power!
-	char *p = strstr ( content ,"\"power\",status:" );
+	// get the state of the power! (from old power switch)
+	//char *p = strstr ( content ,"\"power\",status:" );
+
+	// get the state of the power! (from new power switch)
+	char *tag = "<outlet1_status>";
+	long tagLen = gbstrlen(tag);
+	char *p = strstr ( content, tag );
 	// panic?
 	if ( ! p ) {
 		log("powermo: could not parse out fan power state "
@@ -2304,7 +2359,7 @@ bool Process::gotFanReply ( TcpSocket *s ) {
  
 	// . get the value
 	// . val is 0 if the fan power off, 1 if on?
-	long val = atoi ( p + 15 );
+	long val = atoi ( p + tagLen );
 
 	m_currentFanState = val;
 

@@ -468,6 +468,10 @@ class Conf {
 	// . give suggestions to narrow the search
 	bool   m_doNarrowSearch;
 
+	// are we running in Matt Wells's private data center? if so we
+	// use seo tools and control datacenter fans, etc.
+	bool   m_isMattWells;
+
 	// maximum number of synonyms/stems to expand a word into
 	//long   m_maxSynonyms;
 
