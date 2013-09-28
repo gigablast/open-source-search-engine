@@ -676,6 +676,11 @@ long File::doesExist ( ) {
         // resource temporarily unavailable (for newer libc)
         if ( g_errno == EAGAIN ) { g_errno = old_errno; return 0; }
         // log & return -1 on any other error
+	if ( ! g_errno ) {
+		log("process: you tried to overload __errno_location() "
+		    "but were unsuccessful. you need to be using pthreads.");
+		char *xx=NULL;*xx=0; 
+	}
         log("disk: error stat3(%s): %s", m_filename , strerror(g_errno));
         return -1;
 }

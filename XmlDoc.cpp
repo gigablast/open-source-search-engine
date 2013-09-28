@@ -1721,7 +1721,7 @@ void XmlDoc::setStatus ( char *s ) {
 
 	s_last = s;
 
-	//if ( ! g_conf.m_logDebugBuild ) return ;
+	if ( ! g_conf.m_logDebugBuild ) return ;
 	//return;
 	if ( m_firstUrlValid )
 		logf(LOG_DEBUG,"build: status = %s for %s (this=0x%lx)",

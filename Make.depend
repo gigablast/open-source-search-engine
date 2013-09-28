@@ -3242,7 +3242,7 @@ Proxy.o: Proxy.cpp gb-include.h types.h fctypes.h Unicode.h \
  SearchInput.h Msg40.h Msg39.h Msg37.h Posdb.h TopTree.h IndexTable2.h \
  Msg51.h Msg17.h Msg2b.h Msg3a.h PostQueryRerank.h Sanity.h SiteGetter.h \
  Title.h Address.h zlib.h zconf.h Spider.h PageCrawlBot.h Statsdb.h \
- Process.h Msg28.h seo.h
+ Process.h Msg28.h
 QAClient.o: QAClient.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h UCNormalizer.h hash.h Errno.h \
  Log.h QAClient.h Url.h ip.h Titledb.h Rdb.h RdbBase.h Conf.h Xml.h \
