@@ -2278,6 +2278,8 @@ void Process::checkFanSwitch ( ) {
 	// mark the request as outstanding so we do not overlap it
 	m_fanReqOut = true;
 
+	log("process: trying to set fan state to %li",m_desiredFanState);
+
 	// get it
 	bool status = g_httpServer.
 		getDoc ( urlBuf.getBufStart() , // url to download
