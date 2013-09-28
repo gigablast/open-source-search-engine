@@ -11830,6 +11830,14 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
+	// if this is a robots.txt or a root page we are downloading
+	// separately to get the title for to compare to this page's title,
+	// or whatever, do not pass to diffbot
+	if ( m_isChildDoc ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
 	// check the url filters table to see if diffbot api is specified
 	long *an = getDiffbotApiNum();
 	if ( ! an || an == (void *)-1 ) return (SafeBuf *)an;
