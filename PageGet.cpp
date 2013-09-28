@@ -185,7 +185,8 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	//   since XmlDoc::m_setFromTitleRec will be true
 	// . niceness is 0
 	else {
-		xd->set3 ( docId , coll , 0 );
+	        // use st->m_coll since XmlDoc just points to it!
+		xd->set3 ( docId , st->m_coll , 0 );
 	}
 	// if it blocks while it loads title rec, it will re-call this routine
 	xd->setCallback ( st , processLoopWrapper );
