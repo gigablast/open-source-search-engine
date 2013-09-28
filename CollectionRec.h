@@ -622,13 +622,16 @@ class CollectionRec {
 	long  m_refs_maxLinkersCeiling;
 	float m_refs_additionalTRFetchCeiling;
 
+	class SpiderColl *m_spiderColl;
+
 	// each Rdb has a tree, so keep the pos/neg key count here so
 	// that RdbTree does not have to have its own array limited by
 	// MAX_COLLS which we did away with because we made this dynamic.
 	long m_numPosKeysInTree[RDB_END];
 	long m_numNegKeysInTree[RDB_END];
 
-	class SpiderColl *m_spiderColl;
+	long m_overflow;
+	long m_overflow2;
 
 	// . related pages parameters
 	// . copied from Parms.cpp

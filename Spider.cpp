@@ -348,6 +348,7 @@ long SpiderRequest::printTableHeaderSimple ( SafeBuf *sb ,
 
 	sb->safePrintf(" <td><b>url</b></td>\n");
 	sb->safePrintf(" <td><b>status</b></td>\n");
+	sb->safePrintf(" <td><b>first IP</b></td>\n");
 	sb->safePrintf(" <td><b>pri</b></td>\n");
 	sb->safePrintf(" <td><b>errCount</b></td>\n");
 	sb->safePrintf(" <td><b>hops</b></td>\n");
@@ -374,6 +375,8 @@ long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
 	sb->safeTruncateEllipsis ( m_url , 64 );
 	sb->safePrintf("</nobr></td>\n");
 	sb->safePrintf(" <td><nobr>%s</nobr></td>\n",status );
+
+	sb->safePrintf(" <td>%s</td>\n",iptoa(m_firstIp));
 
 	sb->safePrintf(" <td>%li</td>\n",(long)m_priority);
 
@@ -901,6 +904,7 @@ bool SpiderCache::needsSave ( ) {
 }
 
 void SpiderCache::reset ( ) {
+	log("spider: resetting spidercache");
 	// loop over all SpiderColls and get the best
 	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
 		SpiderColl *sc = getSpiderCollIffNonNull(i);
@@ -952,6 +956,9 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	// store it
 	//m_spiderColls [ collnum ] = sc;
 	cr->m_spiderColl = sc;
+	// note it
+	log("spider: made spidercoll=%lx for cr=%lx",
+	    (long)sc,(long)cr);
 	// update this
 	//if ( m_numSpiderColls < collnum + 1 )
 	//	m_numSpiderColls = collnum + 1;
@@ -1053,7 +1060,7 @@ bool SpiderColl::load ( ) {
 	m_waitingTreeKeyValid = false;
 	m_scanningIp = 0;
 	// prevent core with this
-	m_waitingTree.m_rdbId = RDB_NONE;
+	//m_waitingTree.m_rdbId = RDB_NONE;
 
 	// make dir
 	char dir[500];
@@ -4471,8 +4478,9 @@ bool SpiderLoop::spiderUrl2 ( ) {
 
 
 	// debug log
-	log("XXX: incremented count to %li for %s",
-	    m_sc->m_spidersOut,m_sreq->m_url);
+	//log("XXX: incremented count to %li for %s",
+	//    m_sc->m_spidersOut,m_sreq->m_url);
+	//if ( m_sc->m_spidersOut != m_numSpidersOut ) { char *xx=NULL;*xx=0; }
 
 	// . return if this blocked
 	// . no, launch another spider!
@@ -4560,8 +4568,9 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	sc->m_outstandingSpiders[(unsigned char)sreq->m_priority]--;
 
 	// debug log
-	log("XXX: decremented count to %li for %s",
-	    sc->m_spidersOut,sreq->m_url);
+	//log("XXX: decremented count to %li for %s",
+	//    sc->m_spidersOut,sreq->m_url);
+	//if ( sc->m_spidersOut != m_numSpidersOut ) { char *xx=NULL;*xx=0; }
 
 	// breathe
 	QUICKPOLL ( xd->m_niceness );

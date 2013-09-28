@@ -3156,7 +3156,7 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 		cr->m_spiderPriorities[i] = 0;
 		cr->m_maxSpidersPerRule [i] = 10;
 		cr->m_spiderIpWaits     [i] = 250; // 250 ms for now
-		cr->m_spiderIpMaxSpiders[i] = 10;
+		cr->m_spiderIpMaxSpiders[i] = 3; // keep it respectful
 		cr->m_spidersEnabled    [i] = 1;
 		cr->m_spiderFreqs       [i] = 7.0;
 		cr->m_spiderDiffbotApiNum[i] = DBA_NONE; // 1
@@ -3169,7 +3169,10 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 	//
 	long i = 0;
 	cr->m_regExs[i].safePrintf("isinjected");
-	cr->m_spiderPriorities[i] = 49;
+	cr->m_spiderPriorities[i] = 70;
+	i++;
+	cr->m_regExs[i].safePrintf("isaddurl");
+	cr->m_spiderPriorities[i] = 60;
 	i++;
 	cr->m_regExs[i].safePrintf("ismedia");
 	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
@@ -3185,7 +3188,7 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 	cr->m_spiderPriorities  [i] = 50;
 	cr->m_maxSpidersPerRule [i] = 10;
 	cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
-	cr->m_spiderIpMaxSpiders[i] = 10;
+	cr->m_spiderIpMaxSpiders[i] = 3;
 	cr->m_spidersEnabled    [i] = 1;
 	i++;
 	// and make all else filtered
@@ -3193,7 +3196,7 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 	cr->m_spiderPriorities  [i] = SPIDER_PRIORITY_FILTERED;
 	cr->m_maxSpidersPerRule [i] = 10;
 	cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
-	cr->m_spiderIpMaxSpiders[i] = 10;
+	cr->m_spiderIpMaxSpiders[i] = 3;
 	cr->m_spidersEnabled    [i] = 1;
 	i++;
 

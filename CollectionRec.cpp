@@ -26,6 +26,8 @@ CollectionRec::CollectionRec() {
 	memset ( m_numNegKeysInTree , 0 , 4*RDB_END );
 	memset ( m_numPosKeysInTree , 0 , 4*RDB_END );
 	m_spiderColl = NULL;
+	m_overflow  = 0x12345678;
+	m_overflow2 = 0x12345678;
 	// for Url::getSite()
 	m_updateSiteRulesTable = 1;
 	m_lastUpdateTime = 0LL;

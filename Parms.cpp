@@ -1846,9 +1846,10 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( isCrawlbot &&
 	     m->m_page == PAGE_FILTERS &&
 	     (strcmp(m->m_xml,"spidersEnabled") == 0 ||
-	      strcmp(m->m_xml,"maxSpidersPerRule")==0||
-	      strcmp(m->m_xml,"maxSpidersPerIp") == 0||
-	      strcmp(m->m_xml,"spiderIpWait") == 0 ) )
+	      //strcmp(m->m_xml,"maxSpidersPerRule")==0||
+	      //strcmp(m->m_xml,"maxSpidersPerIp") == 0||
+	      strcmp(m->m_xml,"spiderIpWait") == 0 
+	      ) )
 		vt = " style=display:none;";
 
 	// what type of parameter?
@@ -1926,8 +1927,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			if ( isCrawlbot &&
 			     m->m_page == PAGE_FILTERS &&
 			     (strcmp(mk->m_xml,"spidersEnabled") == 0 ||
-			      strcmp(mk->m_xml,"maxSpidersPerRule")==0||
-			      strcmp(mk->m_xml,"maxSpidersPerIp") == 0||
+			      //strcmp(mk->m_xml,"maxSpidersPerRule")==0||
+			      //strcmp(mk->m_xml,"maxSpidersPerIp") == 0||
 			      strcmp(mk->m_xml,"spiderIpWait") == 0 ) )
 				vt = " style=display:none;display:none;";
 			sb->safePrintf ( "<td%s>" , vt );

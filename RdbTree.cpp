@@ -122,6 +122,13 @@ bool RdbTree::set ( long fixedDataSize ,
 	*p++ = '\0';
 	// set rdbid
 	m_rdbId = rdbId; // -1;
+	// sanity
+	if ( rdbId < -1       ) { char *xx=NULL;*xx=0; }
+	if ( rdbId >= RDB_END ) { char *xx=NULL;*xx=0; }
+	// is it a valid one
+	m_isRealTree = true;
+	if ( m_rdbId <= RDB_NONE ) m_isRealTree = false;
+	if ( m_rdbId >= RDB_END  ) m_isRealTree = false;
 	// if its doledb, set it
 	//if ( dbname && strcmp(dbname,"doledb") == 0 ) m_rdbId = RDB_DOLEDB;
 	// adjust m_maxMem to virtual infinity if it was -1
@@ -258,8 +265,13 @@ long RdbTree::clear ( ) {
 	m_numNegativeKeys = 0;
 	m_numPositiveKeys = 0;
 
+
 	// clear tree counts for all collections!
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	long nc = g_collectiondb.m_numRecs;
+	// BUT only if we are an Rdb::m_tree!!!
+	if ( ! m_isRealTree ) nc = 0;
+	// otherwise, we overwrite stuff in CollectionRec we shouldn't
+	for ( long i = 0 ; i < nc ; i++ ) {
 		CollectionRec *cr = g_collectiondb.getRec(i);
 		if ( ! cr ) continue;
 		cr->m_numNegKeysInTree[(unsigned char)m_rdbId] = 0;
@@ -526,10 +538,15 @@ long RdbTree::addNode ( collnum_t collnum ,
 		// ensure these are right
 		m_numNegativeKeys = 0;
 		m_numPositiveKeys = 0;
-		g_collectiondb.m_recs[collnum]->
-			m_numNegKeysInTree[(unsigned char)m_rdbId] =0;
-		g_collectiondb.m_recs[collnum]->
-			m_numPosKeysInTree[(unsigned char)m_rdbId] =0;
+		// we only use these stats for Rdb::m_trees for a 
+		// PER COLLECTION count, since there can be multiple 
+		// collections using the same Rdb::m_tree!
+		if ( m_isRealTree ) {
+			g_collectiondb.m_recs[collnum]->
+				m_numNegKeysInTree[(unsigned char)m_rdbId] =0;
+			g_collectiondb.m_recs[collnum]->
+				m_numPosKeysInTree[(unsigned char)m_rdbId] =0;
+		}
 	}
 
 	// stick ourselves in the next available node, "m_nextNode"
@@ -601,14 +618,19 @@ long RdbTree::addNode ( collnum_t collnum ,
 	if ( KEYNEG(key) ) {
 		m_numNegativeKeys++;
 		//m_numNegKeysPerColl[collnum]++;
-		g_collectiondb.m_recs[collnum]->
-			m_numNegKeysInTree[(unsigned char)m_rdbId]++;
+		// we only use these stats for Rdb::m_trees for a 
+		// PER COLLECTION count, since there can be multiple 
+		// collections using the same Rdb::m_tree!
+		if ( m_isRealTree )
+			g_collectiondb.m_recs[collnum]->
+				m_numNegKeysInTree[(unsigned char)m_rdbId]++;
 	}
 	else {
 		m_numPositiveKeys++;
 		//m_numPosKeysPerColl[collnum]++;
-		g_collectiondb.m_recs[collnum]->
-			m_numPosKeysInTree[(unsigned char)m_rdbId]++;
+		if ( m_isRealTree )
+			g_collectiondb.m_recs[collnum]->
+				m_numPosKeysInTree[(unsigned char)m_rdbId]++;
 	}
 	// debug2 msg
 	// fprintf(stderr,"+ #%li %lli %li\n",i,key.n0,iparent);
@@ -800,14 +822,16 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	if ( KEYNEG(m_keys,i,m_ks) ) {
 		m_numNegativeKeys--;
 		//m_numNegKeysPerColl[m_collnums[i]]--;
-		g_collectiondb.m_recs[m_collnums[i]]->
-			m_numPosKeysInTree[(unsigned char)m_rdbId]--;
+		if ( m_isRealTree )
+			g_collectiondb.m_recs[m_collnums[i]]->
+				m_numPosKeysInTree[(unsigned char)m_rdbId]--;
 	}
 	else {
 		m_numPositiveKeys--;
 		//m_numPosKeysPerColl[m_collnums[i]]--;
-		g_collectiondb.m_recs[m_collnums[i]]->
-			m_numPosKeysInTree[(unsigned char)m_rdbId]--;
+		if ( m_isRealTree )
+			g_collectiondb.m_recs[m_collnums[i]]->
+				m_numPosKeysInTree[(unsigned char)m_rdbId]--;
 	}
 	// debug step -- check chain from iparent down making sure that
 	//printTree();
@@ -832,10 +856,12 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	m_numPositiveKeys = 0;
 	//m_numNegKeysPerColl[m_collnums[i]] = 0;
 	//m_numPosKeysPerColl[m_collnums[i]] = 0;
-	g_collectiondb.m_recs[m_collnums[i]]->
-		m_numNegKeysInTree[(unsigned char)m_rdbId] = 0;
-	g_collectiondb.m_recs[m_collnums[i]]->
-		m_numPosKeysInTree[(unsigned char)m_rdbId] = 0;
+	if ( m_isRealTree ) {
+		g_collectiondb.m_recs[m_collnums[i]]->
+			m_numNegKeysInTree[(unsigned char)m_rdbId] = 0;
+		g_collectiondb.m_recs[m_collnums[i]]->
+			m_numPosKeysInTree[(unsigned char)m_rdbId] = 0;
+	}
 
 
 	return;
@@ -899,14 +925,16 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	if ( KEYNEG(m_keys,i,m_ks) ) {
 		m_numNegativeKeys--;
 		//m_numNegKeysPerColl[m_collnums[i]]--;
-		g_collectiondb.m_recs[m_collnums[i]]->
-			m_numNegKeysInTree[(unsigned char)m_rdbId]--;
+		if ( m_isRealTree )
+			g_collectiondb.m_recs[m_collnums[i]]->
+				m_numNegKeysInTree[(unsigned char)m_rdbId]--;
 	}
 	else {
 		m_numPositiveKeys--;
 		//m_numPosKeysPerColl[m_collnums[i]]--;
-		g_collectiondb.m_recs[m_collnums[i]]->
-			m_numPosKeysInTree[(unsigned char)m_rdbId]--;
+		if ( m_isRealTree )
+			g_collectiondb.m_recs[m_collnums[i]]->
+				m_numPosKeysInTree[(unsigned char)m_rdbId]--;
 	}
 	// debug step -- check chain from iparent down making sure that
 	// all kids don't have -2 for their parent... seems to be a rare bug
@@ -2676,8 +2704,6 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 	// if the data is actually stored in the data ptrs, just save those
 	if ( m_dataInPtrs ) {
 		f->read ( &m_data[start] , n * 4 , offset); offset += n * 4; }
-	// sanity
-	if ( m_rdbId < 0 || m_rdbId > RDB_END ) { char *xx=NULL;*xx=0; }
 	// return false on read error
 	if ( g_errno ) {
 		log("db: Failed to read %s: %s.",
@@ -2704,17 +2730,21 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 		}
 		// keep a tally on all this
 		m_numUsedNodes++;
+		m_memOccupied += m_overhead;
 		if   ( KEYNEG(m_keys,i,m_ks) ) {
 			m_numNegativeKeys++;
 			//m_numNegKeysPerColl[c]++;
+			// this is only used for Rdb::m_trees
+			if ( m_isRealTree )
 			recs[c]->m_numNegKeysInTree[(unsigned char)m_rdbId]++;
 		}
 		else {
 			m_numPositiveKeys++;
 			//m_numPosKeysPerColl[c]++;
+			// this is only used for Rdb::m_trees
+			if ( m_isRealTree )
 			recs[c]->m_numPosKeysInTree[(unsigned char)m_rdbId]++;
 		}
-		m_memOccupied += m_overhead;
 	}
 	// bail now if we can 
 	if ( m_fixedDataSize == 0 || m_dataInPtrs ) return offset - oldOffset ;
@@ -2994,11 +3024,13 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 }
 
 long  RdbTree::getNumNegativeKeys ( collnum_t collnum ) { 
+	if ( ! m_isRealTree ) { char *xx=NULL;*xx=0; }
 	return g_collectiondb.m_recs[collnum]->
 		m_numNegKeysInTree[(unsigned char)m_rdbId]; 
 }
 
 long  RdbTree::getNumPositiveKeys ( collnum_t collnum ) { 
+	if ( ! m_isRealTree ) { char *xx=NULL;*xx=0; }
 	return g_collectiondb.m_recs[collnum]->
 		m_numPosKeysInTree[(unsigned char)m_rdbId]; 
 }

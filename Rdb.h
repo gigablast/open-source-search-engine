@@ -17,7 +17,7 @@
 // . these ids are also return values for getIdFromRdb()
 #define	RDB_START 1
 enum {
-	RDB_NONE, //       0
+	RDB_NONE = 0, //       0
 	RDB_TAGDB,
 	RDB_INDEXDB,
 	RDB_TITLEDB,
