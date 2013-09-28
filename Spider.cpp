@@ -1516,7 +1516,47 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	//	if ( last != srep->m_downloadEndTime ) { char *xx=NULL;*xx=0;}
 	//}
 
+	/////////
+	//
+	// remove the lock here
+	//
+	//////
+	long long uh48 = srep->getUrlHash48() ;
+	// shortcut
+	HashTableX *ht = &g_spiderLoop.m_lockTable;
+	UrlLock *lock = (UrlLock *)ht->getValue ( &uh48 );
+	time_t nowGlobal = getTimeGlobal();
 
+	if ( g_conf.m_logDebugSpiderFlow )
+		logf(LOG_DEBUG,"spflow: scheduled lock removal in 5 secs for "
+		     "uh48=%llu",  uh48 );
+
+	// test it
+	//if ( m_nowGlobal == 0 && lock )
+	//	m_nowGlobal = getTimeGlobal();
+	// we do it this way rather than remove it ourselves
+	// because a lock request for this guy
+	// might be currently outstanding, and it will end up
+	// being granted the lock even though we have by now removed
+	// it from doledb, because it read doledb before we removed 
+	// it! so wait 5 seconds for the doledb negative key to 
+	// be absorbed to prevent a url we just spidered from being
+	// re-spidered right away because of this sync issue.
+	if ( lock ) lock->m_expires = nowGlobal + 5;
+	/////
+	//
+	// but do note that its spider has returned for populating the
+	// waiting tree. addToWaitingTree should not add an entry if
+	// a spiderReply is still pending according to the lock table,
+	// UNLESS, maxSpidersPerIP is more than what the lock table says
+	// is currently being spidered.
+	//
+	/////
+	if ( lock ) lock->m_spiderOutstanding = false;
+	// bitch if not in there
+	if ( !lock ) // &&g_conf.m_logDebugSpider)//ht->isInTable(&lockKey)) 
+		logf(LOG_DEBUG,"spider: rdb: uh48=%llu "
+		     "was not in lock table",uh48);
 	// skip:
 
 	// . add to wait tree and let it populate doledb on its batch run
@@ -1666,15 +1706,16 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	sreq->m_priority = priority;
 
 	// get spider time -- i.e. earliest time when we can spider it
-	uint64_t spiderTimeMS = getSpiderTimeMS (sreq,ufn,NULL,nowGlobalMS );
+	//uint64_t spiderTimeMS = getSpiderTimeMS (sreq,ufn,NULL,nowGlobalMS );
 	// sanity
-	if ( (long long)spiderTimeMS < 0 ) { char *xx=NULL;*xx=0; }
+	//if ( (long long)spiderTimeMS < 0 ) { char *xx=NULL;*xx=0; }
 
 	// once in waiting tree, we will scan waiting tree and then lookup
 	// each firstIp in waiting tree in spiderdb to get the best
 	// SpiderRequest for that firstIp, then we can add it to doledb
 	// as long as it can be spidered now
-	bool status = addToWaitingTree ( spiderTimeMS , sreq->m_firstIp, true);
+	//bool status = addToWaitingTree ( spiderTimeMS,sreq->m_firstIp,true);
+	addToWaitingTree ( 0 , sreq->m_firstIp , true );
 
 	// if already doled and we beat the priority/spidertime of what
 	// was doled then we should probably delete the old doledb key
@@ -1700,7 +1741,7 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	}
 
 
-	if ( ! g_conf.m_logDebugSpider ) return status;
+	if ( ! g_conf.m_logDebugSpider ) return true;//status;
 
 	// log it
 	logf(LOG_DEBUG,
@@ -1714,7 +1755,8 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	     "ufn=%li "
 	     "priority=%li "
 	     "addedtime=%lu "
-	     "spidertime=%llu",
+	     //"spidertime=%llu",
+	     ,
 	     sreq->m_url,
 	     sreq->getUrlHash48(),
 	     iptoa(sreq->m_firstIp),
@@ -1724,10 +1766,11 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	     (long)(bool)sreq->m_isPageReindex,
 	     (long)sreq->m_ufn,
 	     (long)sreq->m_priority,
-	     sreq->m_addedTime,
-	     spiderTimeMS);
+	     sreq->m_addedTime
+	     //spiderTimeMS);
+	     );
 
-	return status;
+	return true;//status;
 }
 
 bool SpiderColl::printWaitingTree ( ) {
@@ -1746,6 +1789,29 @@ bool SpiderColl::printWaitingTree ( ) {
 	return true;
 }
 
+//////
+//
+// . 1. called by addSpiderReply(). it should have the sameIpWait available
+//      or at least that will be in the crawldelay cache table.
+//      SpiderReply::m_crawlDelayMS. Unfortunately, no maxSpidersPerIP!!!
+//      we just add a "0" in the waiting tree which means scanSpiderdb() will
+//      be called and can get the maxSpidersPerIP from the winning candidate
+//      and add to the waiting tree based on that.
+// . 2. called by addSpiderRequests(). It SHOULD maybe just add a "0" as well
+//      to offload the logic. try that.
+// . 3. called by populateWaitingTreeFromSpiderdb(). it just adds "0" as well,
+//      if not doled
+// . 4. UPDATED in scanSpiderdb() if the best SpiderRequest for a firstIp is
+//      in the future, this is the only time we will add a waiting tree key
+//      whose spider time is non-zero. that is where we also take 
+//      sameIpWait and maxSpidersPerIP into consideration. scanSpiderdb()
+//      will actually REMOVE the entry from the waiting tree if that IP
+//      already has the max spiders outstanding per IP. when a spiderReply
+//      is received it will populate the waiting tree again with a "0" entry
+//      and scanSpiderdb() will re-do its check.
+//
+//////
+
 // . if one of these add fails consider increasing mem used by tree/table
 // . if we lose an ip that sux because it won't be gotten again unless
 //   we somehow add another request/reply to spiderdb in the future
@@ -1754,6 +1820,12 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	// skip if already in wait tree. no - might be an override with
 	// a sooner spiderTimeMS
 	//if ( m_waitingTable.isInTable ( &firstIp ) ) return true;
+
+	// . this can now be only 0
+	// . only scanSpiderdb will add a waiting tree key with a non-zero
+	//   value after it figures out the EARLIEST time that a 
+	//   SpiderRequest from this firstIp can be spidered.
+	if ( spiderTimeMS != 0 ) { char *xx=NULL;*xx=0; }
 
 	// waiting tree might be saving!!!
 	if ( ! m_waitingTree.m_isWritable ) {
@@ -2126,6 +2198,15 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		// skip if ip already represented in doledb i guess otehrwise
 		// the populatedoledb scan will nuke it!!
 		if ( m_doleIpTable.isInTable ( &firstIp ) ) continue;
+		// not currently spidering either. when they got their
+		// lock they called confirmLockAcquisition() which will
+		// have added an entry to the waiting table. sometimes the
+		// lock still exists but the spider is done. because the
+		// lock persists for 5 seconds afterwards in case there was
+		// a lock request for that url in progress, so it will be
+		// denied.
+		if ( g_spiderLoop.getNumSpidersOutPerIp ( firstIp ) > 0 )
+			continue;
 		// otherwise, we want to add it with 0 time so the doledb
 		// scan will evaluate it properly
 		// this will return false if we are saving the tree i guess
@@ -2440,6 +2521,23 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// sanity. if first time, this must be invalid
 	if ( needList && m_nextKey == m_firstKey && m_bestRequestValid ) {
 		char *xx=NULL; *xx=0 ; }
+
+	// . if the scanning ip has too many outstanding spiders
+	// . looks a UrlLock::m_firstIp and UrlLock::m_isSpiderOutstanding
+	//   since the lock lives for 5 seconds after the spider reply
+	//   comes back.
+	// . when the spiderReply comes back that will re-add a "0" entry
+	//   to the waiting tree. 
+	// . PROBLEM: some spiders don't seem to add a spiderReply!! wtf???
+	//   they end up having their locks timeout after like 3 hrs?
+	// . maybe just do not add to waiting tree in confirmLockAcquisition()
+	//   handler in such cases? YEAH.. try that
+	//long numOutPerIp = getOustandingSpidersPerIp ( firstIp );
+	//if ( numOutPerIp > maxSpidersPerIp ) {
+	//	// remove from the tree and table
+	//	removeFromWaitingTree ( firstIp );
+	//	return true;
+	//}
 
  readLoop:
 
@@ -2833,7 +2931,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// that scanSpiderdb() repopulates doledb again with that
 		// "firstIp". this way we can spider multiple urls from the
 		// same ip at the same time.
-		if ( g_spiderLoop.isInLockTable(sreq->m_probDocId) )
+		long long uh48 = sreq->getUrlHash48();
+		if ( g_spiderLoop.m_lockTable.isInTable ( &uh48 ) )
 			continue;
 		     
 		// ok, we got a new winner
@@ -2993,6 +3092,15 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	if ( m_bestRequest->m_ufn          < 0 ) { char *xx=NULL;*xx=0; }
 	if ( m_bestRequest->m_priority ==   -1 ) { char *xx=NULL;*xx=0; }
 
+	////////////////////
+	//
+	// UPDATE WAITING TREE ENTRY
+	//
+	// Normally the "spidertime" is 0 for a firstIp. This will make it
+	// a future time if it is not yet due for spidering.
+	//
+	////////////////////
+
 	// if best request has a future spiderTime, at least update
 	// the wait tree with that since we will not be doling this request
 	// right now.
@@ -3047,7 +3155,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// somehow started spidering since our last spider read, so i would
 	// say we should bail on this spider scan! really i'm not exactly
 	// sure what happened...
-	if ( g_spiderLoop.isInLockTable ( m_bestRequest->m_probDocId ) ) {
+	long long uh48 = m_bestRequest->getUrlHash48();
+	if ( g_spiderLoop.m_lockTable.isInTable ( &uh48 ) ) {
 		log("spider: best request got doled out from under us");
 		return true;
 		char *xx=NULL;*xx=0; 
@@ -3093,11 +3202,11 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	//
 	// delete the winner from ufntree as well
 	//
-	long long uh48 = m_bestRequest->getUrlHash48();
+	long long buh48 = m_bestRequest->getUrlHash48();
 	key128_t bkey = makeUfnTreeKey ( m_bestRequest->m_firstIp ,
 					 m_bestRequest->m_priority ,
 					 m_bestSpiderTimeMS ,
-					 uh48 );
+					 buh48 );
 	// must be in tree!
 	long node = s_ufnTree.getNextNode ( 0, (char *)&bkey );
 	// if this firstip had too few requests to make it into the
@@ -3185,6 +3294,13 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	uint64_t minSpiderTimeMS = lastMS + m_cr->m_spiderIpWaits[ufn];
 	// if not found in cache
 	if ( lastMS == (uint64_t)-1 ) minSpiderTimeMS = 0LL;
+
+	/////////////////////////////////////////////////
+	/////////////////////////////////////////////////
+	// TODO: put crawldelay table check in here!!!!
+	/////////////////////////////////////////////////
+	/////////////////////////////////////////////////
+
 
 	// wait 5 seconds for all outlinks in order for them to have a
 	// chance to get any link info that might have been added
@@ -4745,12 +4861,6 @@ void gotLockReplyWrapper ( void *state , UdpSlot *slot ) {
 	else                     g_spiderLoop.spiderDoledUrls();
 }
 
-bool SpiderLoop::isInLockTable ( long long probDocId ) {
-	unsigned long long  lockKey=g_titledb.getFirstProbableDocId(probDocId);
-	HashTableX *ht = &g_spiderLoop.m_lockTable;
-	return ht->isInTable ( &lockKey );
-}
-
 // . returns false if blocked, true otherwise.
 // . returns true and sets g_errno on error
 // . before we can spider for a SpiderRequest we must be granted the lock
@@ -5189,6 +5299,10 @@ long SpiderLoop::getNumSpidersOutPerIp ( long firstIp ) {
 		if ( ! ht->m_flags[i] ) continue;
 		// cast lock
 		UrlLock *lock = (UrlLock *)ht->getValueFromSlot(i);
+		// skip if not outstanding, just a 5-second expiration wait
+		// when the spiderReply returns, so that in case a lock
+		// request for the same url was in progress, it will be denied.
+		if ( ! lock->m_spiderOutstanding ) continue;
 		// skip if not yet expired
 		if ( lock->m_firstIp == firstIp ) count++;
 	}
@@ -5381,6 +5495,16 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	tmp.m_timestamp    = nowGlobal;
 	tmp.m_expires      = 0;
 	tmp.m_firstIp      = lr->m_firstIp;
+	// when the spider returns we remove its lock on reception of the
+	// spiderReply, however, we actually just set the m_expires time
+	// to 5 seconds into the future in case there is a current request
+	// to get a lock for that url in progress. but, we do need to
+	// indicate that the spider has indeed completed by setting
+	// m_spiderOutstanding to true. this way, addToWaitingTree() will
+	// not count it towards a "max spiders per IP" quota when deciding
+	// on if it should add a new entry for this IP.
+	tmp.m_spiderOutstanding = true;
+
 	// put it into the table
 	if ( ! ht->addKey ( &lr->m_lockKey , &tmp ) ) {
 		// return error if that failed!
@@ -8746,6 +8870,10 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 		       void (* callback)(void *state) ,
 		       bool useCache ) {
 
+
+	// prevent condition described in gotCrawlInfoReply() below
+	if ( cr->m_doingCallbacks ) return true;
+
 	long now = getTimeLocal();
 	// keep it fresh within 1 second
 	long thresh = 1;
@@ -8762,12 +8890,17 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 	CallbackEntry2 ce2;
 	ce2.m_state = state;
 	ce2.m_callback = callback;
-	if ( ! cr->m_callbackQueue.safeMemcpy ( &ce2, sizeof(CallbackEntry2)) )
+	if ( ! cr->m_callbackQueue.safeMemcpy ( &ce2, sizeof(CallbackEntry2))){
+		log("spider: failed to queue update crawl info request");
 		return true;
+	}
 
 	// if we were not the first, we do not initiate it, we just wait
 	// for all the replies to come back
 	if ( cr->m_replies < cr->m_requests ) return false;
+
+	// sanity test
+	if ( cr->m_replies > cr->m_requests ) { char *xx=NULL;*xx=0; }
 
 	cr->m_globalCrawlInfo.reset();
 
@@ -8782,7 +8915,11 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = g_hostdb.getHost(i);
 		// skip if dead
-		if ( g_hostdb.isDead(i) ) continue;
+		if ( g_hostdb.isDead(i) ) {
+			log("spider: skipping dead host #%li when getting "
+			    "crawl info",i);
+			continue;
+		}
 		// count it as launched
 		cr->m_requests++;
 		if ( ! g_udpServer.sendRequest ( request,
@@ -8844,6 +8981,9 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// return if still waiting on more to come in
 	if ( cr->m_replies < cr->m_requests ) return;
 
+	// sanity check
+	if ( cr->m_replies > cr->m_requests ) { char *xx=NULL;*xx=0; }
+
 	// update cache time
 	cr->m_globalCrawlInfo.m_lastUpdateTime = getTime();
 
@@ -8852,15 +8992,35 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 	// call all callbacks
 	long nc = cr->m_callbackQueue.length() / sizeof(CallbackEntry2);
+
+	// wtf? need to be at least one in here
+	if ( nc <= 0 ) { char *xx=NULL;*xx=0; }
+
+	// see note below. if the m_callback we call ends up calling 
+	// updateCrawlInfo() its callback in callbackqueue will get flushed
+	// in the purge() below and will be a forever lost spider. so prevent
+	// that.
+	cr->m_doingCallbacks = true;
+
+	// call each callback
 	char *p = cr->m_callbackQueue.getBufStart();
 	for ( long i = 0 ; i < nc ; i++ ) {
 		CallbackEntry2 *ce2 = (CallbackEntry2 *)p;
 		p += sizeof(CallbackEntry2);
 		// clear g_errno just in case
 		g_errno = 0;
-		// call that callback waiting in the queue
+		// debug note
+		XmlDoc *xd = (XmlDoc *)(ce2->m_state);
+		log("spider: calling crawlupdate callback for %s",
+		    xd->m_firstUrl.m_url);
+		// . call that callback waiting in the queue
+		// . crap! if this callback ends up calling updateCrawlInfo()
+		//   itself, then the purge below flushes its callback out!
+		//   SHIT!
 		ce2->m_callback ( ce2->m_state );
 	}
+
+	cr->m_doingCallbacks = false;
 
 	// save the mem!
 	cr->m_callbackQueue.purge();

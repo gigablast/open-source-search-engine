@@ -1155,6 +1155,7 @@ public:
 	long m_timestamp;
 	long m_expires;
 	long m_firstIp;
+	char m_spiderOutstanding;
 };
 
 class Msg12 {

@@ -37,7 +37,7 @@ enum {
 	RDB_CACHEDB, // 17
 	RDB_SERPDB, // 18
 	RDB_MONITORDB, // 19
-	RDB_FAKEDB, // used by spider.cpp to fake things out
+	//RDB_FAKEDB, // used by spider.cpp to fake things out
 // . secondary rdbs for rebuilding done in PageRepair.cpp
 // . we add new recs into these guys and then make the original rdbs
 //   point to them when we are done.

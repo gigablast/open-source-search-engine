@@ -50,7 +50,7 @@ static void       sleepCallback4   ( int bogusfd      , void *state    ) ;
 static bool       sendBuffer       ( long hostId , long niceness ) ;
 static Multicast *getMulticast     ( ) ;
 static void       returnMulticast  ( Multicast *mcast ) ;
-static void processSpecialSignal ( collnum_t collnum , char *p ) ;
+//static void processSpecialSignal ( collnum_t collnum , char *p ) ;
 //static bool storeList2 ( RdbList *list , char rdbId , collnum_t collnum,
 //			 bool forceLocal, bool splitList , long niceness );
 static bool storeRec   ( collnum_t      collnum , 
@@ -1122,16 +1122,16 @@ bool addMetaList ( char *p , UdpSlot *slot ) {
 	if ( rdbId != lastRdbId ) {
 		rdb = getRdbFromId ( (char) rdbId );
 		// skip RDBFAKEDB
-		if ( rdbId == RDB_FAKEDB ) {
-			// do special handler process
-			processSpecialSignal ( collnum , p );
-			// skip the fakedb record
-			p += recSize;
-			// drop it for now!!
-			if ( p < pend ) goto loop;
-			// all done
-			return true;
-		}
+		//if ( rdbId == RDB_FAKEDB ) {
+		//	// do special handler process
+		//	processSpecialSignal ( collnum , p );
+		//	// skip the fakedb record
+		//	p += recSize;
+		//	// drop it for now!!
+		//	if ( p < pend ) goto loop;
+		//	// all done
+		//	return true;
+		//}
 		// an uninitialized secondary rdb? it will have a keysize
 		// if 0 if its never been intialized from the repair page
 		if ( rdb && rdb->m_ks <= 0 ) {
@@ -1596,6 +1596,7 @@ bool loadAddsInProgress ( char *prefix ) {
 // right now the FAKEDB record is a signal to remove the spider lock
 // from the lock table because we are done spidering it.
 //
+/*
 void processSpecialSignal ( collnum_t collnum , char *p ) {
 
 	key_t *fake = (key_t *)p;
@@ -1649,4 +1650,5 @@ void processSpecialSignal ( collnum_t collnum , char *p ) {
 	// do not actually add this fake key to titledb!
 	//return true;
 }
+*/
 

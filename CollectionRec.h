@@ -423,6 +423,7 @@ class CollectionRec {
 	// for counting replies
 	long m_replies;
 	long m_requests;
+	bool m_doingCallbacks;
 	// for storing callbacks waiting in line for freshest crawl info
 	SafeBuf m_callbackQueue;
 	

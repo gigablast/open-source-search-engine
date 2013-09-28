@@ -1721,7 +1721,7 @@ void XmlDoc::setStatus ( char *s ) {
 
 	s_last = s;
 
-	if ( ! g_conf.m_logDebugBuild ) return ;
+	//if ( ! g_conf.m_logDebugBuild ) return ;
 	//return;
 	if ( m_firstUrlValid )
 		logf(LOG_DEBUG,"build: status = %s for %s (this=0x%lx)",
@@ -15057,6 +15057,8 @@ char *XmlDoc::getIsVisible ( ) {
 long *XmlDoc::getUrlFilterNum ( ) {
 	// return it if already set
 	if ( m_urlFilterNumValid ) return &m_urlFilterNum;
+	// note that
+	setStatus ( "getting url filter row num");
 	// make the partial new spider rec
 	SpiderReply *newsr = getNewSpiderReply ( );
 	// note it
@@ -17275,7 +17277,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		//if ( m_doledbKey.n0 || m_doledbKey.n1 )
 		//	needx += 1 + sizeof(key_t); // + 4;
 		// the FAKEDB unlock key for msg12 in spider.cpp
-		needx += 1 + sizeof(key_t); // FAKEDB
+		//needx += 1 + sizeof(key_t); // FAKEDB
 		// make the buffer
 		m_metaList = (char *)mmalloc ( needx , "metalist");
 		if ( ! m_metaList ) return NULL;
@@ -17322,13 +17324,15 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( ! m_docIdValid ) { char *xx=NULL;*xx=0; }
 		// . make a fake titledb key
 		// . remove the spider lock (Msg12 in Spider.cpp)
-		*m_p++ = RDB_FAKEDB;
+		// . now SPider.cpp uses SpiderReply reception to remove lock
+		//   - mdw 9/28/13
+		//*m_p++ = RDB_FAKEDB;
 		//*(key_t *)m_p = g_titledb.makeKey ( m_docId , 0LL , true );
-		key_t fakeKey;
-		fakeKey.n1 = 0;
-		fakeKey.n0 = m_docId;
-		memcpy ( m_p , &fakeKey , sizeof(key_t) );
-		m_p += sizeof(key_t);
+		//key_t fakeKey;
+		//fakeKey.n1 = 0;
+		//fakeKey.n0 = m_docId;
+		//memcpy ( m_p , &fakeKey , sizeof(key_t) );
+		//m_p += sizeof(key_t);
 		// now add the new rescheduled time
 		setStatus ( "adding SpiderReply to spiderdb" );
 		// rdbid first
@@ -17718,6 +17722,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( dbr->length() > 3 ) {
 		// make sure diffbot reply is valid for sure
 		if ( ! m_diffbotReplyValid ) { char *xx=NULL;*xx=0; }
+		// set status for this
+		setStatus ( "indexing diffbot json doc");
 		// new guy here
 		if ( ! m_dx ) {
 			try { m_dx = new ( XmlDoc ); }
@@ -18711,7 +18717,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	*/
 
 	// note it
-	setStatus ( "removing spider lock");
+	//setStatus ( "removing spider lock");
 	// . make a fake titledb key
 	// . remove the spider lock (Msg12 in Spider.cpp)
 	// . no need to do this if called from Repair.cpp
@@ -18719,13 +18725,15 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// . i added "&& m_useSpiderdb" here because it was messing up
 	//   the cacheTermLists() function which ONLY wants posdb keys and
 	//   any other keys in the metalist messes it up. MDW 1/26/13
-	if ( ! m_useSecondaryRdbs && ! forDelete && m_useSpiderdb ) {
-		*m_p++ = RDB_FAKEDB;
-		((key_t *)m_p)->n1 = 0;
-		((key_t *)m_p)->n0 = m_docId;
-		//= g_titledb.makeKey ( m_docId , 0LL , true );
-		m_p += sizeof(key_t);
-	}
+	// . now SPider.cpp uses SpiderReply reception to remove lock
+	//   - mdw 9/28/13
+	//if ( ! m_useSecondaryRdbs && ! forDelete && m_useSpiderdb ) {
+	//	*m_p++ = RDB_FAKEDB;
+	//	((key_t *)m_p)->n1 = 0;
+	//	((key_t *)m_p)->n0 = m_docId;
+	//	//= g_titledb.makeKey ( m_docId , 0LL , true );
+	//	m_p += sizeof(key_t);
+	//}
 
 
 	bool addReply = true;
@@ -29721,6 +29729,9 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 	// . sets our m_rootTitleBuf/m_rootTitleBufSize
 	char **rtbufp = getRootTitleBuf();
 	if ( ! rtbufp || rtbufp == (void *)-1) return (SafeBuf *)rtbufp;
+
+	// overwrite "getting root title buf" status
+	setStatus ("computing new tags");
 
 	if ( g_conf.m_logDebugLinkInfo )
 		log("xmldoc: adding tags for mysite=%s",mysite);
