@@ -128,12 +128,12 @@ bool HttpServer::getDoc ( char   *url      ,
 			  //bool    respectDownloadLimit ,
 			  char    *proto ,
 			  bool     doPost ,
-			  char    *cookie ) { 
+			  char    *cookie ,
+			  char    *additionalHeader ) { 
 	// sanity
 	if ( ip == -1 ) 
 		log("http: you probably didn't mean to set ip=-1 did you? "
 		    "try setting to 0.");
-
 	//log(LOG_WARN, "http: get doc %s", url->getUrl());
 	// use the HttpRequest class
 	HttpRequest r;
@@ -154,7 +154,8 @@ bool HttpServer::getDoc ( char   *url      ,
 	}
 	// this returns false and sets g_errno on error
 	if ( ! r.set ( url , offset , size , ifModifiedSince ,
-		       userAgent , proto , doPost , cookie ) ) return true;
+		       userAgent , proto , doPost , cookie ,
+		       additionalHeader ) ) return true;
 
 	if ( g_conf.m_logDebugSpider )
 		log("spider: httprequest = %s", r.getRequest());

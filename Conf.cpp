@@ -188,6 +188,31 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	//g_conf.m_testSpiderEnabled = false;
 	//g_conf.m_testSearchEnabled = false;
 
+
+	//
+	// are we running in Matt Wells's data center?
+	// if so, we want to be able to use the seo tools that are not part
+	// of the open source. we also want to be able to control the
+	// data center fans for optimal cooling.
+	//
+	// get hostname from /etc/host
+	SafeBuf sb; 
+	sb.fillFromFile("/etc/hostname");
+	g_errno = 0;
+	bool priv = false;
+	char *hh = sb.getBufStart();
+	// cut off tail
+	sb.removeLastChar('\n');
+	sb.removeLastChar('\n');
+	if ( hh && strcmp(hh,"galileo") == 0) priv = true;
+	if ( hh && strcmp(hh,"sputnik") == 0) priv = true;
+	if ( hh && strcmp(hh,"titan") == 0) priv = true;
+	if ( hh[0]=='g' && hh[1]=='k' && is_digit(hh[2]) ) priv = true;
+	//if(hh[0]=='s' && hh[1]=='p' && is_digit(hh[2])) ) priv = true;
+	if ( priv ) g_conf.m_isMattWells = true;
+	else        g_conf.m_isMattWells = false;
+
+
 	// this is not possible
 	/*
 	if ( g_hostdb.getNumGroups() != g_hostdb.m_indexSplits ) {

@@ -95,7 +95,8 @@ class HttpServer {
 		      //   use 1.0
 		      char   *proto = "HTTP/1.0" ,
 		      bool    doPost = false ,
-		      char   *cookie = NULL );
+		      char   *cookie = NULL ,
+		      char *additionalHeader = NULL ); // does not include \r\n
 
 	bool getDoc ( long ip,
 		      long port,

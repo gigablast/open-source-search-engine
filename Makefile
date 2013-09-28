@@ -71,29 +71,29 @@ HOST=$(shell hostname)
 #print_vars:
 #	$(HOST)
 
-
-# force 32-bit mode using -m32 (apt-get install gcc-multilib to ensure works)
-# and -m32 should use /usr/lib32/ as the library path.
-# for old kernel 2.4 we don't use pthreads, just clone. so if compiling
-# on host "titan" use clone. i still use that. -matt
-# we can only build a 32-bit binary, so we have to use the 32-bit libraries
-# provided for now.
 ifeq ("titan","$(HOST)")
-CPPFLAGS = -DPRIVATESTUFF -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static	
+# my machine, titan, runs the old 2.4 kernel, it does not use pthreads because
+# they were very buggy in 1999. Plus they are still kind of slow even today,
+# in 2013. So it just uses clone() and does its own "threading". Unfortunately,
+# the way it works is not even possible on newer kernels because they no longer
+# allow you to override the _errno_location() function. -- matt
+CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static	
 LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
-OBJS:=$(OBJS) seo.o
-$(shell rm seo.o)
 else
-CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DPTHREADS -Wno-unused-but-set-variable
+# use -m32 to force 32-bit mode compilation.
+# you might have to do apt-get install gcc-multilib to ensure that -m32 works.
+# -m32 should use /usr/lib32/ as the library path.
+# i also provide 32-bit libraries for linking that are not so easy to get.
+CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -D_PTHREADS_ -Wno-unused-but-set-variable
 LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread 
 endif
 
-
-# special diffbot compiling case to default g_conf.m_useDiffbot to true
-ifeq ("neo","$(HOST)")
-CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DPTHREADS -Wno-unused-but-set-variable -DDIFFBOT
-LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread 
+# if you have seo.cpp link that in. This is not part of the open source
+# distribution but is available for interested parties.
+ifneq ($(wildcard seo.cpp),) 
+OBJS:=$(OBJS) seo.o
 endif
+
 
 
 # let's keep the libraries in the repo for easier bug reporting and debugging

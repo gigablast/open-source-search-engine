@@ -69,7 +69,7 @@ bool HttpRequest::copy ( class HttpRequest *r ) {
 // . NOTE: http 1.1 uses Keep-Alive by default (use Connection: close to not)
 bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 		       char *userAgent , char *proto , bool doPost ,
-		       char *cookie ) {
+		       char *cookie , char *additionalHeader ) {
 
 	m_reqBufValid = false;
 
@@ -256,6 +256,9 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 			   acceptEncoding);
 			   //accept );
 	 }
+
+	 if ( additionalHeader )
+		 m_reqBuf.safePrintf("%s\r\n",additionalHeader );
 
 	 // cookie here
 	 if ( cookie ) 
