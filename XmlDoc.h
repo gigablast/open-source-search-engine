@@ -485,6 +485,7 @@ class XmlDoc {
 	void setCallback ( void *state, bool (*callback) (void *state) ) ;
 	bool addToSpiderdb ( ) ;
 	bool indexDoc ( );
+	bool indexDoc2 ( );
 	key_t *getTitleRecKey() ;
 	//char *getSkipIndexing ( );
 	char *prepareToMakeTitleRec ( ) ;
@@ -2119,6 +2120,7 @@ class XmlDoc {
 	bool m_freed;
 
 	bool m_msg4Waiting;
+	bool m_msg4Launched;
 
 	// word spam detection
 	char *getWordSpamVec ( );

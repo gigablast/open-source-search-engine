@@ -1893,6 +1893,11 @@ void TcpServer::readTimeoutPoll ( ) {
 		// and they haven't gotten back to us yet...
 		if ( total > 60000 && s->m_sendBufSize > 0 &&
 		     m_doReadRateTimeouts &&
+		     // This is affecting the diffbot reply, so only do this
+		     // if we got something in the readbuf. diffbot will not
+		     // send anything until it is done, and it should send
+		     // everything fairly quickly once it is ready.
+		     s->m_readOffset > 0 &&
 		     s->m_sockState == ST_READING ) {
 			// calculate "Bytes per second"
 			float Bps=(float)s->m_readOffset/((float)total)/1000.0;

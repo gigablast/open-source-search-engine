@@ -118,6 +118,7 @@ XmlDoc::XmlDoc() {
 	memset ( p , 0 , (long)pend - (long)p );
 	m_msg22Request.m_inUse = 0;
 	m_msg4Waiting = false;
+	m_msg4Launched = false;
 	//m_sectiondbData = NULL;
 	//m_placedbData   = NULL;
 	m_dupTrPtr = NULL;
@@ -178,6 +179,8 @@ static long long s_lastTimeStart = 0LL;
 void XmlDoc::reset ( ) {
 
 	m_loaded = false;
+
+	m_msg4Launched = false;
 
 	m_diffbotReplyError = 0;
 	m_diffbotJSONCount = 0;
@@ -1786,6 +1789,67 @@ void indexDocWrapper2 ( int fd , void *state ) {
 // . sets g_errno on error and returns true
 bool XmlDoc::indexDoc ( ) {
 
+	// return from the msg4 below?
+	if ( m_msg4Launched ) {
+		// must have been waiting
+		if ( ! m_msg4Waiting ) { char *xx=NULL;*xx=0; }
+		return true;
+	}
+
+	bool status = true;
+
+	if ( ! g_errno ) status = indexDoc2 ( );
+
+	// blocked?
+	if ( ! status ) return false;
+
+	// done with no error?
+	if ( status && ! g_errno ) return true;
+
+	///
+	// otherwise, an internal error. we must add a SpiderReply
+	// to spiderdb to release the lock.
+	///
+
+	log("build: %s had internal error = %s. adding spider error reply.",
+	    m_firstUrl.m_url,mstrerror(g_errno));
+
+	m_indexCode = EINTERNALERROR;//g_errno;
+	m_indexCodeValid = true;
+
+	SpiderReply *nsr = getNewSpiderReply();
+
+	SafeBuf metaList;
+	metaList.pushChar(RDB_SPIDERDB);
+	metaList.safeMemcpy ( (char *)nsr , nsr->getRecSize() );
+
+	m_msg4Launched = true;
+
+	// clear g_errno
+	g_errno = 0;
+
+	if ( ! m_msg4.addMetaList ( metaList.getBufStart()     ,
+				    metaList.length() ,
+				    m_coll         ,
+				    m_masterState  , // state
+				    m_masterLoop   ,
+				    m_niceness     ) ) {
+		// spider hang bug
+		if ( g_conf.m_testSpiderEnabled )
+			logf(LOG_DEBUG,"build: msg4 meta add3 blocked" 
+			     "msg4=0x%lx" ,(long)&m_msg4);
+		m_msg4Waiting = true;
+		return false;
+	}
+
+	m_msg4Launched = false;
+
+	// all done
+	return true;
+}
+
+bool XmlDoc::indexDoc2 ( ) {
+
 	if ( g_isYippy ) return true;
 
 	// if anything blocks, this will be called when it comes back
@@ -1803,7 +1867,8 @@ bool XmlDoc::indexDoc ( ) {
 	// specified callback, m_masterLoop with m_masterState. this code
 	// is all in Spider.cpp.
 	setStatus ( "updating crawl info" );
-	if ( ! updateCrawlInfo ( m_cr , m_masterState , m_masterLoop ) )
+	if ( ! g_errno &&
+	     ! updateCrawlInfo ( m_cr , m_masterState , m_masterLoop ) )
 		return false;
 
 

@@ -3948,6 +3948,10 @@ void gotDoledbListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) {
 //   to lookup over 80,000 places in placedb. after an hour it had only
 //   reached about 30,000
 //   http://pitchfork.com/news/tours/833-julianna-barwick-announces-european-and-north-american-dates/
+// . this problem with this now is that it will lock an entire IP until it
+//   expires if we have maxSpidersPerIp set to 1. so now we try to add
+//   a SpiderReply for local errors like when XmlDoc::indexDoc() sets g_errno,
+//   we try to add a SpiderReply at least.
 #define MAX_LOCK_AGE (3600*4)
 
 // spider the spider rec in this list from doledb
@@ -4833,17 +4837,25 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	*/
 
 	// note it
+	// this should not happen any more since indexDoc() will take
+	// care of g_errno now by clearing it and adding an error spider
+	// reply to release the lock!!
 	if ( g_errno ) {
 		log("spider: ----CRITICAL CRITICAL CRITICAL----");
 		log("spider: ----CRITICAL CRITICAL CRITICAL----");
-		log("spider: ----CRITICAL CRITICAL CRITICAL----");
-		log("spider: ----CRITICAL CRITICAL CRITICAL----");
-		log("spider: spidering %s has error: %s. Respidering "
+		log("spider: ------ *** LOCAL ERROR ***  ------");
+		log("spider: ------ *** LOCAL ERROR ***  ------");
+		log("spider: ------ *** LOCAL ERROR ***  ------");
+		log("spider: spidering %s has error: %s. uh48=%lli. "
+		    "Respidering "
 		    "in %li seconds. MAX_LOCK_AGE when lock expires.",
-		    xd->m_firstUrl.m_url,mstrerror(g_errno),
+		    xd->m_firstUrl.m_url,
+		    mstrerror(g_errno),
+		    xd->getFirstUrlHash48(),
 		    (long)MAX_LOCK_AGE);
-		log("spider: ----CRITICAL CRITICAL CRITICAL----");
-		log("spider: ----CRITICAL CRITICAL CRITICAL----");
+		log("spider: ------ *** LOCAL ERROR ***  ------");
+		log("spider: ------ *** LOCAL ERROR ***  ------");
+		log("spider: ------ *** LOCAL ERROR ***  ------");
 		log("spider: ----CRITICAL CRITICAL CRITICAL----");
 		log("spider: ----CRITICAL CRITICAL CRITICAL----");
 		// don't release the lock on it right now. just let the
