@@ -1232,6 +1232,8 @@ class SpiderLoop {
 
 	bool isInLockTable ( long long probDocId );
 
+	bool printLockTable ( );
+
 	long getNumSpidersOutPerIp ( long firstIp ) ;
 
 	// free all XmlDocs and m_list

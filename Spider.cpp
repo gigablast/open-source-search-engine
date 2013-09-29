@@ -1789,6 +1789,39 @@ bool SpiderColl::printWaitingTree ( ) {
 	return true;
 }
 
+bool SpiderLoop::printLockTable ( ) {
+	// count locks
+	HashTableX *ht = &g_spiderLoop.m_lockTable;
+	// scan the slots
+	long ns = ht->m_numSlots;
+	for ( long i = 0 ; i < ns ; i++ ) {
+		// skip if empty
+		if ( ! ht->m_flags[i] ) continue;
+		// cast lock
+		UrlLock *lock = (UrlLock *)ht->getValueFromSlot(i);
+		// get the key
+		long long uh48 = *(long long *)ht->getKeyFromSlot(i);
+		// show it
+		log("dump: lock. "
+		    "uh48=%lli "
+		    "spiderout=%li "
+		    "confirmed=%li "
+		    "firstip=%s "
+		    "expires=%li "
+		    "timestamp=%li "
+		    "sequence=%li "
+		    ,uh48
+		    ,(long)(lock->m_spiderOutstanding)
+		    ,(long)(lock->m_confirmed)
+		    ,iptoa(lock->m_firstIp)
+		    ,lock->m_expires
+		    ,lock->m_timestamp
+		    ,lock->m_lockSequence
+		    );
+	}
+	return true;
+}
+
 //////
 //
 // . 1. called by addSpiderReply(). it should have the sameIpWait available
