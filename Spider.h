@@ -973,6 +973,7 @@ class SpiderColl {
 	char           m_bestRequestBuf[MAX_BEST_REQUEST_SIZE];
 	SpiderRequest *m_bestRequest;
 	uint64_t       m_bestSpiderTimeMS;
+	long           m_bestMaxSpidersPerIp;
 
 	bool           m_lastReplyValid;
 	char           m_lastReplyBuf[MAX_SP_REPLY_SIZE];
@@ -1134,7 +1135,7 @@ extern class SpiderCache g_spiderCache;
 
 class LockRequest {
 public:
-	long long m_lockKey; // firstProbableDocId;
+	long long m_lockKeyUh48;
 	long m_lockSequence;
 	long m_firstIp;
 	char m_removeLock;
@@ -1142,6 +1143,7 @@ public:
 
 class ConfirmRequest {
 public:
+	long long m_lockKeyUh48;
 	collnum_t m_collnum;
 	key_t m_doledbKey;
 	long  m_firstIp;
@@ -1156,6 +1158,7 @@ public:
 	long m_expires;
 	long m_firstIp;
 	char m_spiderOutstanding;
+	char m_confirmed;
 };
 
 class Msg12 {
@@ -1163,7 +1166,7 @@ class Msg12 {
 
 	bool confirmLockAcquisition ( ) ;
 
-	unsigned long m_lockGroupId;
+	//unsigned long m_lockGroupId;
 
 	LockRequest m_lockRequest;
 
@@ -1183,7 +1186,9 @@ class Msg12 {
 	bool removeAllLocks ( );
 
 	// these two things comprise the lock request buffer
-	unsigned long long  m_lockKey;
+	//unsigned long long  m_lockKey;
+	// this is the new lock key. just use docid for docid-only spider reqs.
+	unsigned long long  m_lockKeyUh48;
 	long                m_lockSequence;
 
 	long       m_numReplies;
