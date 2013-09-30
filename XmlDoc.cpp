@@ -11920,6 +11920,14 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
+	// "none" means none too! Parms.cpp doesn't like &dapi1=& because
+	// it does not call setParm() on such things even though it probably should,
+	// it doesn't like no values, so i put "none" in there.
+	if ( strncasecmp(au->getBufStart(),"none",4) == 0 ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
 	// when respidering an "old" doc, never call this. we already
 	// have the diffbot replies xyz.com/-diffbot-0 and xyz.com/-diffbot-1
 	// etc.

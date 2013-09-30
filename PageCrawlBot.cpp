@@ -1686,11 +1686,11 @@ static class HelpItem s_his[] = {
 	{"maxtoprocess", "Specify max pages to successfully process through "
 	 "diffbot"},
 	{"urt","Use robots.txt?"},
-	{"dbapilist","Special list of diffbot API urls. The URL Filters "
-	 "will display these options in a drop down menu. "
-	 "Example (unencoded): "
-	 "&dbapilist=All|/api/analyze?mode=auto&u=,Article (forced)|/api/"
-	 "article?u="},
+	//{"dbapilist","Special list of diffbot API urls. The URL Filters "
+	// "will display these options in a drop down menu. "
+	// "Example (unencoded): "
+	// "&dbapilist=All|/api/analyze?mode=auto&u=,Article (forced)|/api/"
+	// "article?u="},
 	{"fe[N]","Filter expression #N. The first expression in the url "
 	 "filters table is 0. But if N is 0, leave N out, only specify it "
 	 "if N is > 0. Example &fe=onsamedomain to change the expression in "
@@ -1704,8 +1704,9 @@ static class HelpItem s_his[] = {
 	{"fsp[N]","Spider priority. Higher priorities spidered first. Can be from 0 to 127. But -3 means to ignore the URL. -2 means the URL is banned because it comes from an evil site."},
 	{"dapi[N]","Diffbot API Url. This is a string. Usually it "
 	 "corresponds to dbapilist parm above. But it is the url we use when "
-	 "accessing diffbot for this url filter. "
-	 "Example (unencoded): &dapi2=/api/article?u="},
+	 "accessing diffbot for this url filter. Gigablast appends a "
+	 "&url=<url>&token=<yourtoken> to the url before requesting it."
+	 "Example (unencoded): &dapi2=http://www.diffbot.com/api/article?"},
 	{"injecturl","Specify a seed url to inject."},
 	{"urldata","A huge string of whitespace separated URLs to add to "
 	 "spiderdb for crawling."},

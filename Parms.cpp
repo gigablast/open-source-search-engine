@@ -1065,7 +1065,7 @@ char *printDropDown ( long n , char *p, char *pend, char *name, long select,
 */
 
 bool printDiffbotDropDown ( SafeBuf *sb,char *name,char *THIS , SafeBuf *sx) {
-	CollectionRec *cr = (CollectionRec *)THIS;
+	//CollectionRec *cr = (CollectionRec *)THIS;
 	// . get the string we have selected
 	// . the list of available strings to select is in
 	//   m_diffbotApiList for this collection, and that can
@@ -1077,15 +1077,28 @@ bool printDiffbotDropDown ( SafeBuf *sb,char *name,char *THIS , SafeBuf *sx) {
 	// "m_def" for "diffbotApiList" below to see the
 	// comma separated list of default strings. each item in
 	// this list is of the format "<title>|<urlPath>,"
-	char *p = cr->m_diffbotApiList.getBufStart();
+	//char *p = cr->m_diffbotApiList.getBufStart();
+	char *p = 
+		"None|none,"
+		"All|http://www.diffbot.com/api/analzye?mode=auto&url=,"
+		"Article (autodetect)|http://www.diffbot.com/api/analyze?mode=article,"
+		"Article (force)|http://www.diffbot.com/api/article?,"
+		"Product (autodetect)|http://www.diffbot.com/api/analyze?mode=product,"
+		"Product (force)|http://www.diffbot.com/api/product?,"
+		"Image (autodetect)|http://www.diffbot.com/api/analyze?mode=image,"
+		"Image (force)|http://www.diffbot.com/api/image?,"
+		"FrontPage (autodetect)|http://www.diffbot.com/api/analyze?mode=frontpage,"
+		"FrontPage (force)|http://www.diffbot.com/api/frontpage?"
+		;
+
 	// wtf?
 	if ( ! p ) return true;
 	// print out. cgi is "dapi%li".
 	sb->safePrintf("<select name=%s>\n",name);
 	// print "none" as the first option
-	char *sel = "";
-	if ( ! usingApi ) sel = " selected";
-	sb->safePrintf("<option value=\"\"%s>None</option>",sel);
+	//char *sel = "";
+	//if ( ! usingApi ) sel = " selected";
+	//sb->safePrintf("<option value=\"\"%s>None</option>",sel);
 	// the various "diffbot urls" are separated by commas
 	for ( ; *p ; ) {
 		// point to start of item name
@@ -1101,8 +1114,10 @@ bool printDiffbotDropDown ( SafeBuf *sb,char *name,char *THIS , SafeBuf *sx) {
 		char *urlEnd = url;
 		for ( ; *urlEnd && *urlEnd != ',' ; urlEnd++ );
 		// do we match it?
-		sel = "";
+		char *sel = "";
 		if ( usingApi && strncmp(usingApi,url,urlEnd-url)== 0 )
+			sel = " selected";
+		if ( ! usingApi && urlEnd - url == 0 )
 			sel = " selected";
 		// advance p
 		p = urlEnd;
@@ -8216,6 +8231,7 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	/*
 	m->m_cgi   = "dbapilist";
 	m->m_xml   = "diffbotApiList";//QueryString";
 	m->m_off   = (char *)&cr.m_diffbotApiList - x;
@@ -8225,6 +8241,7 @@ void Parms::init ( ) {
 	// m_diffbotApiUrl to one of these. lest we change the url filters
 	// table AFTER it gets the ufn and BEFORE it gets the diffbot api url.
 	m->m_def   = 
+		"None|,"
 		"All|http://www.diffbot.com/api/analzye?mode=auto,"
 		"Article (autodetect)|http://www.diffbot.com/api/analyze?mode=article,"
 		"Article (force)|http://www.diffbot.com/api/article?,"
@@ -8236,6 +8253,7 @@ void Parms::init ( ) {
 		"FrontPage (force)|http://www.diffbot.com/api/frontpage?"
 		;
 	m++;
+	*/
 
 	/*
 	m->m_cgi   = "dbucp";

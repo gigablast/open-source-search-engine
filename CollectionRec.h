@@ -393,7 +393,7 @@ class CollectionRec {
 	//SafeBuf m_diffbotSeed;
 	// this will be NULL or "none" to not pass off to diffbot
 	//SafeBuf m_diffbotApi;
-	SafeBuf m_diffbotApiList;//QueryString;
+	//SafeBuf m_diffbotApiList;//QueryString;
 	//SafeBuf m_diffbotUrlCrawlPattern;
 	//SafeBuf m_diffbotUrlProcessPattern;
 	//SafeBuf m_diffbotPageProcessPattern;
