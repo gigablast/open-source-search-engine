@@ -26,6 +26,7 @@
 #define FMT_XML  2
 #define FMT_JSON 3
 #define FMT_CSV  4
+#define FMT_TXT  5
 
 //void printCrawlStats ( SafeBuf *sb , CollectionRec *cr ) ;
 void doneSendingWrapper ( void *state , TcpSocket *sock ) ;
@@ -751,7 +752,12 @@ public:
 };
 
 // . basically dump out spiderdb
-// . returns urls in csv format in reply to a "GET /api/downloadcrawl "
+// . returns urls in csv format in reply to a 
+//   "GET /api/download/%s_data.json"
+//   "GET /api/download/%s_data.xml"
+//   "GET /api/download/%s_urls.csv"
+//   "GET /api/download/%s_pages.txt"
+//   where %s is the collection name
 // . the ordering of the urls is not specified so whatever order they are
 //   in spiderdb will do
 // . the gui that lists the urls as they are spidered in real time when you
@@ -762,57 +768,103 @@ public:
 //   shard/group asking for all the spider urls. dan says 30MB is typical
 //   for a csv file, so for now we will just try to do a single spiderdb
 //   request.
-bool sendBackDump ( TcpSocket *s, HttpRequest *hr ) {
+bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
-	CollectionRec *cr = getCollRecFromHttpRequest ( hr );
-	if ( ! cr ) {
-		char *msg = "token or id (crawlid) invalid";
-		log("crawlbot: invalid token or crawlid to dump");
-		g_httpServer.sendErrorReply(s,500,msg);
+	char *path = hr->getPath();
+	long pathLen = hr->getPathLen();
+	char *pathEnd = path + pathLen;
+
+	char *str = strstr ( path , "/download/" );
+	if ( ! str ) {
+		char *msg = "bad download request";
+		log("crawlbot: %s",msg);
+		g_httpServer.sendErrorReply(sock,500,msg);
 		return true;
 	}
 
-	char *path = hr->getPath();
+	char *coll = str + 10;
+	if ( coll >= pathEnd ) {
+		char *msg = "bad download request2";
+		log("crawlbot: %s",msg);
+		g_httpServer.sendErrorReply(sock,500,msg);
+		return true;
+	}
+
+	char *collEnd = strstr ( coll , "_");
+	if ( ! collEnd ) {
+		char *msg = "bad download request3";
+		log("crawlbot: %s",msg);
+		g_httpServer.sendErrorReply(sock,500,msg);
+		return true;
+	}
+
+
+	//CollectionRec *cr = getCollRecFromHttpRequest ( hr );
+	CollectionRec *cr = g_collectiondb.getRec ( coll , collEnd - coll );
+	if ( ! cr ) {
+		char *msg = "token or id (crawlid) invalid";
+		log("crawlbot: invalid token or crawlid to dump");
+		g_httpServer.sendErrorReply(sock,500,msg);
+		return true;
+	}
+
+	//long pathLen = hr->getPathLen();
 	char rdbId = RDB_NONE;
 	bool downloadJSON = false;
-	if ( strncmp ( path ,"/crawlbot/downloadurls",22  ) == 0 )
-		rdbId = RDB_SPIDERDB;
-	if ( strncmp ( path ,"/crawlbot/downloadpages",23  ) == 0 )
+	long fmt;
+
+	if ( strstr ( path , "_data.json" ) ) {
 		rdbId = RDB_TITLEDB;
-	if ( strncmp ( path ,"/crawlbot/downloaddata",22  ) == 0 ) {
+		fmt = FMT_JSON;
 		downloadJSON = true;
-		rdbId = RDB_TITLEDB;
 	}
+	if ( strstr ( path , "_data.xml" ) ) {
+		rdbId = RDB_TITLEDB;
+		downloadJSON = true;
+		fmt = FMT_XML;
+	}
+	else if ( strstr ( path , "_urls.csv" ) ) {
+		rdbId = RDB_SPIDERDB;
+		fmt = FMT_CSV;
+	}
+	else if ( strstr ( path , "_pages.txt" ) ) {
+		rdbId = RDB_TITLEDB;
+		fmt = FMT_TXT;
+	}
+
+
+	//if ( strncmp ( path ,"/crawlbot/downloadurls",22  ) == 0 )
+	//	rdbId = RDB_SPIDERDB;
+	//if ( strncmp ( path ,"/crawlbot/downloadpages",23  ) == 0 )
+	//	rdbId = RDB_TITLEDB;
+	//if ( strncmp ( path ,"/crawlbot/downloaddata",22  ) == 0 ) {
+	//	downloadJSON = true;
+	//	rdbId = RDB_TITLEDB;
+	//}
 
 	// sanity, must be one of 3 download calls
 	if ( rdbId == RDB_NONE ) {
 		char *msg ;
 		msg = "usage: downloadurls, downloadpages, downloaddata";
 		log("crawlbot: %s",msg);
-		g_httpServer.sendErrorReply(s,500,msg);
+		g_httpServer.sendErrorReply(sock,500,msg);
 		return true;
 	}
 
 	StateCD *st;
 	try { st = new (StateCD); }
 	catch ( ... ) {
-		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
+		return g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno));
 	}
 	mnew ( st , sizeof(StateCD), "statecd");
 	// initialize the new state
 	st->m_rdbId = rdbId;
 	st->m_downloadJSON = downloadJSON;
-	st->m_socket = s;
+	st->m_socket = sock;
 	// the name of the collections whose spiderdb we read from
 	st->m_collnum = cr->m_collnum;
 
-	st->m_fmt = FMT_CSV;
-	char *format = hr->getString("format",NULL);
-	if ( format && strcmp(format,"json") == 0 )
-		st->m_fmt = FMT_JSON;
-	if ( format && strcmp(format,"xml") == 0 )
-		st->m_fmt = FMT_XML;
-
+	st->m_fmt = fmt;
 
 	// begin the possible segmented process of sending back spiderdb
 	// to the user's browser
@@ -920,6 +972,8 @@ void StateCD::gotRdbList ( ) {
 		ct = "application/json";
 	if ( m_fmt == FMT_XML )
 		ct = "text/xml";
+	if ( m_fmt == FMT_TXT )
+		ct = "text/plain";
 
 	// . if we haven't yet sent an http mime back to the user
 	//   then do so here, the content-length will not be in there
@@ -2565,14 +2619,14 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
-			      "<a href=/crawlbot/downloaddata?"
-			      "c=%s&"
-			      "format=json>"
+			      "<a href=/crawlbot/download/%s_data.json>"
+			      //"c=%s&"
+			      //"format=json>"
 			      "json</a>"
 			      "&nbsp; "
-			      "<a href=/crawlbot/downloaddata?"
-			      "c=%s&"
-			      "format=xml>"
+			      "<a href=/crawlbot/download/%s_data.xml>"
+			      //"c=%s&"
+			      //"format=xml>"
 			      "xml</a>"
 			      "</td>"
 			      "</tr>"
@@ -2592,9 +2646,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "xml</a>"
 			      "&nbsp; "
 			      */
-			      "<a href=/crawlbot/downloadurls?c=%s"
-			      "&format=csv"
-			      ">"
+			      "<a href=/crawlbot/download/%s_urls.csv>"
+			      //"&format=csv"
+			      //">"
 			      "csv</a>"
 			      //
 			      "</td>"
@@ -2604,11 +2658,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Download Pages:</b> "
 			      "</td><td>"
-			      "<a href=/crawlbot/downloadpages?"
-			      "c=%s"
+			      "<a href=/crawlbot/download/%s_pages.txt>"
+			      //"c=%s"
 			      //"&format=csv"
-			      ">"
-			      "raw</a>"
+			      //">"
+			      "txt</a>"
 			      //
 			      "</td>"
 			      "</tr>"
