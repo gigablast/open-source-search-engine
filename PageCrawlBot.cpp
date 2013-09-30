@@ -725,7 +725,7 @@ public:
 	StateCD () { m_needsMime = true; };
 	void sendBackDump2 ( ) ;
 	bool readDataFromRdb ( ) ;
-	bool gotRdbList ( ) ;
+	bool sendList ( ) ;
 	void printSpiderdbList ( RdbList *list , SafeBuf *sb ) ;
 	void printTitledbList ( RdbList *list , SafeBuf *sb );
 
@@ -897,7 +897,7 @@ void StateCD::sendBackDump2 ( ) {
 	// over the network. return if that blocked
 	if ( ! readDataFromRdb ( ) ) return;
 	// send it to the browser socket
-	if ( ! gotRdbList() ) return;
+	if ( ! sendList() ) return;
 	// . hey, it did not block... i guess no data to send out
 	// . but if all shards are exhausted from the dump, just return
 	if ( m_someoneNeedsMore ) goto subloop;
@@ -905,7 +905,7 @@ void StateCD::sendBackDump2 ( ) {
 	log("crawlbot: nobody needs more 1");
 }
 
-void gotRdbListWrapper ( void *state ) ;
+void sendListWrapper ( void *state ) ;
 
 bool StateCD::readDataFromRdb ( ) {
 
@@ -947,7 +947,7 @@ bool StateCD::readDataFromRdb ( ) {
 					   // records
 					   m_minRecSizes,
 					   this,
-					   gotRdbListWrapper ,
+					   sendListWrapper ,
 					    niceness ) ) {
 			log("crawlbot: blocked getting list from shard");
 			// continue if it blocked
@@ -960,17 +960,19 @@ bool StateCD::readDataFromRdb ( ) {
 	// all done? return if still waiting on more msg0s to get their data
 	if ( m_numReplies < m_numRequests ) return false;
 	// i guess did not block, empty single shard? no, must have been
-	// error becaues gotRdbList() would have sent back on the tcp
+	// error becaues sendList() would have sent back on the tcp
 	// socket and blocked and returned false if not error sending
 	return true;
 }
 
-void gotRdbListWrapper ( void *state ) {
+void sendListWrapper ( void *state ) {
 	// get the Crawler dump State
 	StateCD *st = (StateCD *)state;
+	// inc it up here
+	st->m_numReplies++;
  subloop:
 	// if this blocked sending back some data, return
-	if ( ! st->gotRdbList() ) return;
+	if ( ! st->sendList() ) return;
 	// otherwise, read more, maybe had no data to send from list
 	if ( ! st->readDataFromRdb () ) return;
 	// send and read more
@@ -979,10 +981,10 @@ void gotRdbListWrapper ( void *state ) {
 	log("crawlbot: nobody needs more 2");
 }
 	
-bool StateCD::gotRdbList ( ) {
+bool StateCD::sendList ( ) {
 	// get the Crawler dump State
 	// inc it
-	m_numReplies++;
+	//m_numReplies++;
 	// sohw it
 	log("crawlbot: got list from shard. req=%li rep=%li",
 	    m_numRequests,m_numReplies);
@@ -1101,6 +1103,10 @@ bool StateCD::gotRdbList ( ) {
 		//TcpSocket *s = m_socket;
 		// sometimes it does not block and is successful
 		if ( ! g_errno ) sb.detachBuf();
+
+		// log it
+		log("crawlbot: nuking state. strange");
+
 		// nuke state
 		delete this;
 		mdelete ( this , sizeof(StateCD) , "stcd" );
@@ -1128,7 +1134,7 @@ bool StateCD::gotRdbList ( ) {
 	m_socket->m_totalToSend = sb.length();
 
 	// tell TcpServer.cpp to send this latest buffer! HACK!
-	m_socket->m_sockState = ST_WRITING;//SEND_AGAIN;
+	//m_socket->m_sockState = ST_SEND_AGAIN;//ST_WRITING;//SEND_AGAIN;
 
 	// do not let safebuf free this, we will take care of it
 	sb.detachBuf();
@@ -1138,6 +1144,13 @@ bool StateCD::gotRdbList ( ) {
 	//   destroy the socket and delete "this"
 	m_socket->m_callback = doneSendingWrapper;
 	m_socket->m_state    = this;
+
+	if ( m_socket->m_sendBufUsed == 79 )
+		log("hey");
+	
+	// log it
+	log("crawlbot: resending %li bytes on socket",m_socket->m_sendBufUsed);
+
 	// we blocked sending back
 	return false;
 }
@@ -1148,6 +1161,10 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 	StateCD *st = (StateCD *)state;
 
 	TcpSocket *socket = st->m_socket;
+
+	log("crawlbot: done sending on socket %li/%li bytes",
+	    sock->m_totalSent,
+	    sock->m_sendBufUsed);
 
 	// if the final callback
 	if ( ! socket->m_sendBuf &&
@@ -1196,7 +1213,9 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 		// otherwise, read more, maybe had no data to send from list
 		if ( ! st->readDataFromRdb () ) return;
 		// if this blocked sending back some data, return
-		if ( ! st->gotRdbList() ) return;
+		if ( ! st->sendList() ) return;
+		// note that
+		log("crawlbot: sendList did not block");
 		// send and read more
 		if ( st->m_someoneNeedsMore ) goto subloop;
 		// note it
@@ -1209,7 +1228,7 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 	log("crawlbot: no more data available");
 
 	// it's possible that readDataFromRdb() did not block and called
-	// gotRdbList which set the socket m_sendBuf again... so check
+	// sendList which set the socket m_sendBuf again... so check
 	// for that... it needs to be sent yet before we delete this state
 	//if ( st->m_socket->m_sendBuf ) return;
 }
