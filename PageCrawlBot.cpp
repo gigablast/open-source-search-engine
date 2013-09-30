@@ -21,6 +21,12 @@
 #include "XmlDoc.h" // for checkRegex()
 #include "PageInject.h" // Msg7
 
+// so user can specify the format of the reply/output
+#define FMT_HTML 1
+#define FMT_XML  2
+#define FMT_JSON 3
+#define FMT_CSV  4
+
 //void printCrawlStats ( SafeBuf *sb , CollectionRec *cr ) ;
 void doneSendingWrapper ( void *state , TcpSocket *sock ) ;
 bool sendBackDump ( TcpSocket *s,HttpRequest *hr );
@@ -719,8 +725,8 @@ public:
 	void sendBackDump2 ( ) ;
 	void readDataFromRdb ( ) ;
 	void gotRdbList ( ) ;
-	void printSpiderdbList ( RdbList *list , SafeBuf *sb , char *format ) ;
-	void printTitledbList ( RdbList *list , SafeBuf *sb , char *format ) ;
+	void printSpiderdbList ( RdbList *list , SafeBuf *sb ) ;
+	void printTitledbList ( RdbList *list , SafeBuf *sb );
 
 	char m_fmt;
 	Msg4 m_msg4;
@@ -773,7 +779,7 @@ bool sendBackDump ( TcpSocket *s, HttpRequest *hr ) {
 		rdbId = RDB_SPIDERDB;
 	if ( strncmp ( path ,"/crawlbot/downloadpages",23  ) == 0 )
 		rdbId = RDB_TITLEDB;
-	if ( strncmp ( path ,"/crawlbot/downloadobjects",25  ) == 0 ) {
+	if ( strncmp ( path ,"/crawlbot/downloaddata",22  ) == 0 ) {
 		downloadJSON = true;
 		rdbId = RDB_TITLEDB;
 	}
@@ -781,7 +787,7 @@ bool sendBackDump ( TcpSocket *s, HttpRequest *hr ) {
 	// sanity, must be one of 3 download calls
 	if ( rdbId == RDB_NONE ) {
 		char *msg ;
-		msg = "usage: downloadurls, downloadpages, downloadobjects";
+		msg = "usage: downloadurls, downloadpages, downloaddata";
 		log("crawlbot: %s",msg);
 		g_httpServer.sendErrorReply(s,500,msg);
 		return true;
@@ -799,6 +805,15 @@ bool sendBackDump ( TcpSocket *s, HttpRequest *hr ) {
 	st->m_socket = s;
 	// the name of the collections whose spiderdb we read from
 	st->m_collnum = cr->m_collnum;
+
+	st->m_fmt = FMT_CSV;
+	char *format = hr->getString("format",NULL);
+	if ( format && strcmp(format,"json") == 0 )
+		st->m_fmt = FMT_JSON;
+	if ( format && strcmp(format,"xml") == 0 )
+		st->m_fmt = FMT_XML;
+
+
 	// begin the possible segmented process of sending back spiderdb
 	// to the user's browser
 	st->sendBackDump2();
@@ -900,6 +915,12 @@ void StateCD::gotRdbList ( ) {
 	SafeBuf sb;
 	//sb.setLabel("dbotdmp");
 
+	char *ct = "text/csv";
+	if ( m_fmt == FMT_JSON )
+		ct = "application/json";
+	if ( m_fmt == FMT_XML )
+		ct = "text/xml";
+
 	// . if we haven't yet sent an http mime back to the user
 	//   then do so here, the content-length will not be in there
 	//   because we might have to call for more spiderdb data
@@ -912,7 +933,7 @@ void StateCD::gotRdbList ( ) {
 				-1 , // bytesToSend
 				NULL , // ext
 				false, // POSTReply
-				"text/csv", // contenttype
+				ct, // "text/csv", // contenttype
 				"utf-8" , // charset
 				-1 , // httpstatus
 				NULL ); //cookie
@@ -936,14 +957,14 @@ void StateCD::gotRdbList ( ) {
 		// get the format
 		//char *format = cr->m_diffbotFormat.getBufStart();
 		//if ( cr->m_diffbotFormat.length() <= 0 ) format = NULL;
-		char *format = NULL;
+		//char *format = NULL;
 
 		char *ek = list->getEndKey();
 
 		// now print the spiderdb list out into "sb"
 		if ( m_rdbId == RDB_SPIDERDB ) {
 			// print SPIDERDB list into "sb"
-			printSpiderdbList ( list , &sb , format );
+			printSpiderdbList ( list , &sb );
 			//  update spiderdb startkey for this shard
 			KEYSET((char *)&m_spiderdbStartKeys[i],ek,
 			       sizeof(key128_t));
@@ -953,7 +974,7 @@ void StateCD::gotRdbList ( ) {
 
 		if ( m_rdbId == RDB_TITLEDB ) {
 			// print TITLEDB list into "sb"
-			printTitledbList ( list , &sb , format );
+			printTitledbList ( list , &sb );
 			//  update titledb startkey for this shard
 			KEYSET((char *)&m_titledbStartKeys[i],ek,
 			       sizeof(key_t));
@@ -1061,7 +1082,7 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 	mdelete ( st , sizeof(StateCD) , "stcd" );
 }
 
-void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb , char *format) {
+void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb ) {
 	// declare these up here
 	SpiderRequest *sreq = NULL;
 	SpiderReply   *srep = NULL;
@@ -1131,7 +1152,7 @@ void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb , char *format) {
 		if ( status == -1 ) msg = mstrerror(prevReplyError);
 
 		// "csv" is default if json not specified
-		if ( format && strcmp(format,"json")==0 )
+		if ( m_fmt == FMT_JSON )
 			sb->safePrintf("[{"
 				       "{\"url\":"
 				       "\"%s\"},"
@@ -1174,7 +1195,7 @@ void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb , char *format) {
 
 
 
-void StateCD::printTitledbList ( RdbList *list , SafeBuf *sb , char *format ) {
+void StateCD::printTitledbList ( RdbList *list , SafeBuf *sb ) {
 
 	XmlDoc xd;
 
@@ -1539,10 +1560,6 @@ char *getNewCollName ( ) { // char *token , long tokenLen ) {
 //
 //////////////////////////////////////////
 
-// so user can specify the format of the reply/output
-#define FMT_HTML 1
-#define FMT_XML  2
-#define FMT_JSON 3
 
 bool sendReply2 (TcpSocket *socket , long fmt , char *msg ) {
 	// log it
@@ -1702,8 +1719,8 @@ static class HelpItem s_his[] = {
 	{"mspi[N]","Max outstanding spiders for this IP."},
 	{"xg[N]","Wait this many milliseconds between spiders of same IP."},
 	{"fsp[N]","Spider priority. Higher priorities spidered first. Can be from 0 to 127. But -3 means to ignore the URL. -2 means the URL is banned because it comes from an evil site."},
-	{"dapi[N]","Diffbot API Url. This is a string. Usually it "
-	 "corresponds to dbapilist parm above. But it is the url we use when "
+	{"dapi[N]","Diffbot API Url. This is a string. "
+	 "It is the URL we use when "
 	 "accessing diffbot for this url filter. Gigablast appends a "
 	 "&url=<url>&token=<yourtoken> to the url before requesting it."
 	 "Example (unencoded): &dapi2=http://www.diffbot.com/api/article?"},
@@ -2548,12 +2565,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
-			      "<a href=/crawlbot/downloadobjects?"
+			      "<a href=/crawlbot/downloaddata?"
 			      "c=%s&"
 			      "format=json>"
 			      "json</a>"
 			      "&nbsp; "
-			      "<a href=/crawlbot/downloadobjects?"
+			      "<a href=/crawlbot/downloaddata?"
 			      "c=%s&"
 			      "format=xml>"
 			      "xml</a>"
@@ -2576,7 +2593,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "&nbsp; "
 			      */
 			      "<a href=/crawlbot/downloadurls?c=%s"
-			      //"&format=csv"
+			      "&format=csv"
 			      ">"
 			      "csv</a>"
 			      //
