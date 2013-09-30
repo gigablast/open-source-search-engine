@@ -389,11 +389,11 @@ class CollectionRec {
 	// an alternate name for the collection. we tend to create
 	// collection names as a random sequence of hex digits. this
 	// will allow a user to give them an alternate name.
-	SafeBuf m_collectionNameAlias;
+	//SafeBuf m_collectionNameAlias;
 	//SafeBuf m_diffbotSeed;
 	// this will be NULL or "none" to not pass off to diffbot
 	//SafeBuf m_diffbotApi;
-	SafeBuf m_diffbotApiQueryString;
+	SafeBuf m_diffbotApiList;//QueryString;
 	//SafeBuf m_diffbotUrlCrawlPattern;
 	//SafeBuf m_diffbotUrlProcessPattern;
 	//SafeBuf m_diffbotPageProcessPattern;
@@ -403,9 +403,9 @@ class CollectionRec {
 	char m_isCustomCrawl;
 	//char m_isDiffbotCollection;
 	// format of output. "csv" or "xml" or "json" or null
-	SafeBuf m_diffbotFormat;
+	//SafeBuf m_diffbotFormat;
 	// what fields to return in the json output: (api dependent)
-	SafeBuf m_diffbotFields;
+	//SafeBuf m_diffbotFields;
 	long long m_diffbotMaxToCrawl;
 	long long m_diffbotMaxToProcess;
 	long long m_diffbotCrawlStartTime;
@@ -466,8 +466,11 @@ class CollectionRec {
 
 	// should urls in this queue be sent to diffbot for processing
 	// when we are trying to index them?
+	//long      m_numRegExs11;
+	//char      m_spiderDiffbotApiNum [ MAX_FILTERS ];
+
 	long      m_numRegExs11;
-	char      m_spiderDiffbotApiNum [ MAX_FILTERS ];
+	SafeBuf   m_spiderDiffbotApiUrl [ MAX_FILTERS ];
 
 	// dummy?
 	long      m_numRegExs9;

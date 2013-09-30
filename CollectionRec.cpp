@@ -317,7 +317,10 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_spidersEnabled[n] = 1;
 	m_numRegExs7++;
 
-	m_spiderDiffbotApiNum[n] = 1;
+	//m_spiderDiffbotApiNum[n] = 1;
+	//m_numRegExs11++;
+	m_spiderDiffbotApiUrl[n].set("");
+	m_spiderDiffbotApiUrl[n].nullTerm();
 	m_numRegExs11++;
 }
 

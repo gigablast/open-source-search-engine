@@ -3,6 +3,7 @@
 #define CRAWLBOT_H
 
 // values for the diffbot dropdown
+/*
 #define DBA_NONE 0
 #define DBA_ALL  1
 #define DBA_ARTICLE_FORCE 2
@@ -17,6 +18,7 @@
 // add new fields to END of list since i think we store the
 // field we use as a number in the coll.conf, starting at 0
 extern char *g_diffbotFields [];
+*/
 
 bool sendPageCrawlbot ( TcpSocket *s , HttpRequest *hr );
 

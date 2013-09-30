@@ -775,7 +775,8 @@ class XmlDoc {
 	char *getIsCompromised ( ) ;
 	char *getIsNoArchive ( ) ;
 	long *getUrlFilterNum();
-	long *getDiffbotApiNum();
+	//long *getDiffbotApiNum();
+	SafeBuf *getDiffbotApiUrl();
 	long long **getAdVector ( ) ;
 	char *getIsLinkSpam ( ) ;
 	char *getIsHijacked();
@@ -1248,11 +1249,12 @@ class XmlDoc {
 	bool m_baseUrlValid;
 	bool m_replyValid;
 	bool m_diffbotReplyValid;
-	bool m_diffbotUrlCrawlPatternMatchValid;
-	bool m_diffbotUrlProcessPatternMatchValid;
-	bool m_diffbotPageProcessPatternMatchValid;
+	//bool m_diffbotUrlCrawlPatternMatchValid;
+	//bool m_diffbotUrlProcessPatternMatchValid;
+	//bool m_diffbotPageProcessPatternMatchValid;
 	//bool m_useDiffbotValid;
-	bool m_diffbotApiNumValid;
+	//bool m_diffbotApiNumValid;
+	bool m_diffbotApiUrlValid;
 	bool m_crawlInfoValid;
 	bool m_isPageParserValid;
 	bool m_imageUrlValid;
@@ -1507,16 +1509,18 @@ class XmlDoc {
 	char  m_diffbotSavedChar;
 	SafeBuf m_diffbotReply;
 	long m_diffbotReplyError;
-	bool m_diffbotUrlCrawlPatternMatch;
-	bool m_diffbotUrlProcessPatternMatch;
-	bool m_diffbotPageProcessPatternMatch;
-	long m_diffbotApiNum;
+	//bool m_diffbotUrlCrawlPatternMatch;
+	//bool m_diffbotUrlProcessPatternMatch;
+	//bool m_diffbotPageProcessPatternMatch;
+	//long m_diffbotApiNum;
 	//bool m_useDiffbot;
+	// url to access diffbot with
+	SafeBuf m_diffbotApiUrl;
 
 	SafeBuf *getDiffbotReply ( ) ;
-	bool doesUrlMatchDiffbotCrawlPattern() ;
-	bool doesUrlMatchDiffbotProcessPattern() ;
-	bool doesPageContentMatchDiffbotProcessPattern() ;
+	//bool doesUrlMatchDiffbotCrawlPattern() ;
+	//bool doesUrlMatchDiffbotProcessPattern() ;
+	//bool doesPageContentMatchDiffbotProcessPattern() ;
 	char *hashJSON ( HashTableX *table );
 	long *nukeJSONObjects ( ) ;
 	long m_joc;

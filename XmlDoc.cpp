@@ -11860,28 +11860,34 @@ skip:
 	THIS->m_masterLoop ( THIS->m_masterState );
 }
 
-long *XmlDoc::getDiffbotApiNum ( ) {
+SafeBuf *XmlDoc::getDiffbotApiUrl ( ) {
 
-	if ( m_diffbotApiNumValid )
-		return &m_diffbotApiNum;
+	if ( m_diffbotApiUrlValid )
+		return &m_diffbotApiUrl;
 
 	// if we are a diffbot json object, do not re-send to diffbot!
 	if ( m_isDiffbotJSONObject ) {
-		m_diffbotApiNum = DBA_NONE;
-		m_diffbotApiNumValid = true;
-		return &m_diffbotApiNum;
+		//m_diffbotApiNum = DBA_NONE;
+		m_diffbotApiUrlValid = true;
+		return &m_diffbotApiUrl;
 	}
 
+	// this now automatically sets m_diffbotApiUrl and m_diffbotApiUrlValid
+	// in case the url filters table changes while spidering this!!!
+	// gotta be careful of that.
 	long *ufn = getUrlFilterNum();
-	if ( ! ufn || ufn == (void *)-1 ) return (long *)ufn;
+	if ( ! ufn || ufn == (void *)-1 ) return (SafeBuf *)ufn;
 
-	m_diffbotApiNum = m_cr->m_spiderDiffbotApiNum[*ufn];
+	// ensure it does set it!
+	if ( ! m_diffbotApiUrlValid ) { char *xx=NULL;*xx=0; }
+
+	//m_diffbotApiNum = m_cr->m_spiderDiffbotApiNum[*ufn];
 
 	// sanity check
-	if ( m_diffbotApiNum < 0 ) { char *xx=NULL;*xx=0; }
+	//if ( m_diffbotApiNum < 0 ) { char *xx=NULL;*xx=0; }
 
-	m_diffbotApiNumValid = true;
-	return &m_diffbotApiNum;
+	//m_diffbotApiNumValid = true;
+	return &m_diffbotApiUrl;
 }
 
 // the diffbot reply will be a list of json objects we want to index
@@ -11903,12 +11909,13 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
-	// check the url filters table to see if diffbot api is specified
-	long *an = getDiffbotApiNum();
-	if ( ! an || an == (void *)-1 ) return (SafeBuf *)an;
+	// . check the url filters table to see if diffbot api is specified
+	// . just return "\0" if none, but NULL means error i guess
+	SafeBuf *au = getDiffbotApiUrl();
+	if ( ! au || au == (void *)-1 ) return (SafeBuf *)au;
 
-	// if "NONE" is in the diffbot api drop down, do not send to diffbot
-	if ( *an == DBA_NONE ) {
+	// if no url, assume do not access diffbot
+	if ( au->length() <= 0 ) {
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
 	}
@@ -11975,7 +11982,15 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// from this url
 	SafeBuf diffbotUrl;
 	// TODO: make sure "api" works as hostname for not just product...
-	diffbotUrl.safePrintf("http://www.diffbot.com/api/");
+	//diffbotUrl.safePrintf("http://www.diffbot.com/");
+	// skip extra '/'?
+	//char *api = au->getBufStart();
+	//long apiLen = au->length();
+	//if ( api && api[0] == '/' ) { api++; apiLen--; }
+	// append the custom url. i.e. /api/analyze?mode=auto&u=
+	//if ( api ) diffbotUrl.safeMemcpy ( api , apiLen );
+	// store the api url into here
+	diffbotUrl.safeMemcpy ( au );
 
 	// . m_diffbotApi Is like "article" or "product" etc.
 	// . if classify is true we always return the classification 
@@ -11985,6 +12000,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	//   if there is no json objects of the specified page type, "api"
 	// . BUT if api is "all" return all types of json objects
 	// . SHOULD we return "type" in the json output?
+	/*
 	if ( *an == DBA_ALL )
 		diffbotUrl.safePrintf("analyze?mode=auto&" );
 	else if ( *an == DBA_ARTICLE_FORCE )
@@ -12007,19 +12023,20 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		log("build: unknown diffbot api num = %li. assuming all",*an );
 		diffbotUrl.safePrintf("analyze?mode=auto&" );
 	}
+	*/
 
 	//diffbotUrl.safePrintf("http://54.212.86.74/api/%s?token=%s&u="
-	diffbotUrl.safePrintf("token=%s",m_cr->m_diffbotToken.getBufStart());
+	diffbotUrl.safePrintf("&token=%s",m_cr->m_diffbotToken.getBufStart());
 	diffbotUrl.safePrintf("&url=");
 	// give diffbot the url to process
 	diffbotUrl.urlEncode ( m_firstUrl.getUrl() );
 	// append this just in case the next thing doesn't have it.
-	if ( m_cr->m_diffbotApiQueryString.length() &&
-	     m_cr->m_diffbotApiQueryString.getBufStart()[0] != '&' ) 
-		diffbotUrl.pushChar('&');
+	//if ( m_cr->m_diffbotApiQueryString.length() &&
+	//     m_cr->m_diffbotApiQueryString.getBufStart()[0] != '&' ) 
+	//	diffbotUrl.pushChar('&');
 	// then user provided parms that are dependent on if it is an
 	// article, product, etc. like "&dontstripads=1" or whatever
-	diffbotUrl.safeStrcpy ( m_cr->m_diffbotApiQueryString.getBufStart());
+	//diffbotUrl.safeStrcpy ( m_cr->m_diffbotApiQueryString.getBufStart());
 	// null term it
 	diffbotUrl.nullTerm();
 
@@ -15147,6 +15164,17 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	// store it
 	m_urlFilterNum      = ufn;
 	m_urlFilterNumValid = true;
+
+	// set this too in case the url filters table changes while
+	// we are spidering this and a row is inserted or deleted or something
+	SafeBuf *yy = &m_cr->m_spiderDiffbotApiUrl[ufn];
+	// copy to ours
+	m_diffbotApiUrl.safeMemcpy ( yy );
+	// ensure null term
+	m_diffbotApiUrl.nullTerm();
+	m_diffbotApiUrlValid = true;
+
+
 	return &m_urlFilterNum;
 }
 
@@ -15881,7 +15909,9 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("urlfilternum=%li ",(long)m_urlFilterNum);
 
 
-	if ( m_diffbotApiNumValid && m_diffbotApiNum != DBA_NONE )
+	if ( m_diffbotApiUrlValid && 
+	     m_diffbotApiUrl.getBufStart() &&
+	     m_diffbotApiUrl.getBufStart()[0] )
 		sb.safePrintf("diffbotjsonobjects=%li ",
 			      (long)m_diffbotJSONCount);
 
@@ -17443,8 +17473,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		od->m_useTagdb    = false;
 		// do not use diffbot for old doc since we call
 		// od->nukeJSONObjects below()
-		od->m_diffbotApiNumValid = true;
-		od->m_diffbotApiNum = DBA_NONE;
+		od->m_diffbotApiUrlValid = true;
+		// api url should be empty by default
+		//od->m_diffbotApiNum = DBA_NONE;
 		// if we are doing diffbot stuff, we are still indexing this
 		// page, so we need to get the old doc meta list
 		oldList = od->getMetaList ( true );
@@ -17752,8 +17783,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			return (char *)linkSiteHashes;
 	}
 
-	long *an = getDiffbotApiNum();
-	if ( ! an || an == (void *)-1 ) return (char *)an;
+	//SafeBuf *au = getDiffbotApiUrl();
+	//if ( ! au || au == (void *)-1 ) return (char *)au;
 
 
 	// test json parser

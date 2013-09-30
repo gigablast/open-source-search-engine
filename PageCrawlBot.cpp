@@ -34,6 +34,7 @@ CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
 CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) ;
 //bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) ;
 
+/*
 char *g_diffbotFields [] = {
 	"Unused-ERROR",
 	"None",
@@ -46,12 +47,12 @@ char *g_diffbotFields [] = {
 	"Image (autodetect)",
 	"FrontPage (force)",
 	"FrontPage (autodetect)",
-
 	//
 	// last field must be empty. add new fields above this.
 	//
 	NULL
 };
+*/
 
 /*
 class StateNC {
@@ -918,7 +919,7 @@ void StateCD::gotRdbList ( ) {
 		sb.safeMemcpy(mime.getMime(),mime.getMimeLen() );
 	}
 
-	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	//CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 
 	// we set this to true below if any one shard has more spiderdb
 	// records left to read
@@ -933,8 +934,9 @@ void StateCD::gotRdbList ( ) {
 		RdbList *list = &m_lists[i];
 
 		// get the format
-		char *format = cr->m_diffbotFormat.getBufStart();
-		if ( cr->m_diffbotFormat.length() <= 0 ) format = NULL;
+		//char *format = cr->m_diffbotFormat.getBufStart();
+		//if ( cr->m_diffbotFormat.length() <= 0 ) format = NULL;
+		char *format = NULL;
 
 		char *ek = list->getEndKey();
 
@@ -1684,6 +1686,11 @@ static class HelpItem s_his[] = {
 	{"maxtoprocess", "Specify max pages to successfully process through "
 	 "diffbot"},
 	{"urt","Use robots.txt?"},
+	{"dbapilist","Special list of diffbot API urls. The URL Filters "
+	 "will display these options in a drop down menu. "
+	 "Example (unencoded): "
+	 "&dbapilist=All|/api/analyze?mode=auto&u=,Article (forced)|/api/"
+	 "article?u="},
 	{"fe[N]","Filter expression #N. The first expression in the url "
 	 "filters table is 0. But if N is 0, leave N out, only specify it "
 	 "if N is > 0. Example &fe=onsamedomain to change the expression in "
@@ -1695,7 +1702,10 @@ static class HelpItem s_his[] = {
 	{"mspi[N]","Max outstanding spiders for this IP."},
 	{"xg[N]","Wait this many milliseconds between spiders of same IP."},
 	{"fsp[N]","Spider priority. Higher priorities spidered first. Can be from 0 to 127. But -3 means to ignore the URL. -2 means the URL is banned because it comes from an evil site."},
-	{"dapi[N]","Diffbot api number. Process through this diffbot api."},
+	{"dapi[N]","Diffbot API Url. This is a string. Usually it "
+	 "corresponds to dbapilist parm above. But it is the url we use when "
+	 "accessing diffbot for this url filter. "
+	 "Example (unencoded): &dapi2=/api/article?u="},
 	{"injecturl","Specify a seed url to inject."},
 	{"urldata","A huge string of whitespace separated URLs to add to "
 	 "spiderdb for crawling."},
@@ -3164,7 +3174,7 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 		cr->m_spiderIpMaxSpiders[i] = 3; // keep it respectful
 		cr->m_spidersEnabled    [i] = 1;
 		cr->m_spiderFreqs       [i] = 7.0;
-		cr->m_spiderDiffbotApiNum[i] = DBA_NONE; // 1
+		cr->m_spiderDiffbotApiUrl[i].purge();// = DBA_NONE; // 1
 	}
 
 

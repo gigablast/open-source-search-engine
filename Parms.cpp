@@ -222,7 +222,7 @@ unsigned long Parms::calcChecksum() {
 		if ( m->m_type == TYPE_BOOL2          ) size = 1;
 		if ( m->m_type == TYPE_PRIORITY       ) size = 1;
 		if ( m->m_type == TYPE_PRIORITY2      ) size = 1;
-		if ( m->m_type == TYPE_DIFFBOT_DROPDOWN) size = 1;
+		//if ( m->m_type == TYPE_DIFFBOT_DROPDOWN) size = 1;
 		if ( m->m_type == TYPE_PRIORITY_BOXES ) size = 1;
 		if ( m->m_type == TYPE_RETRIES        ) size = 1;
 		if ( m->m_type == TYPE_TIME           ) size = 6;
@@ -1064,16 +1064,59 @@ char *printDropDown ( long n , char *p, char *pend, char *name, long select,
 }
 */
 
-bool printDiffbotDropDown ( long n , SafeBuf *sb , char *name , long select ) {
-	sb->safePrintf ( "<select name=%s>", name );
-	for ( long i = 0 ; i < 100 ; i++ ) {
-		char *s = "";
-		char *field = g_diffbotFields[i];
-		if ( ! field || field[0] == '\0' ) break;
-		if ( i == select ) s = " selected";
-		sb->safePrintf ("<option value=%li%s>%s",i,s,field);
+bool printDiffbotDropDown ( SafeBuf *sb,char *name,char *THIS , SafeBuf *sx) {
+	CollectionRec *cr = (CollectionRec *)THIS;
+	// . get the string we have selected
+	// . the list of available strings to select is in
+	//   m_diffbotApiList for this collection, and that can
+	//   be changed by john to add custom diffbot api urls.
+	// . should just be m_spiderDiffbotApiUrl[i] safebuf
+	char *usingApi = sx->getBufStart();
+	if ( sx->length() == 0 ) usingApi = NULL;
+	// now scan each item in the list. see the setting of
+	// "m_def" for "diffbotApiList" below to see the
+	// comma separated list of default strings. each item in
+	// this list is of the format "<title>|<urlPath>,"
+	char *p = cr->m_diffbotApiList.getBufStart();
+	// wtf?
+	if ( ! p ) return true;
+	// print out. cgi is "dapi%li".
+	sb->safePrintf("<select name=%s>\n",name);
+	// print "none" as the first option
+	char *sel = "";
+	if ( ! usingApi ) sel = " selected";
+	sb->safePrintf("<option value=\"\"%s>None</option>",sel);
+	// the various "diffbot urls" are separated by commas
+	for ( ; *p ; ) {
+		// point to start of item name
+		char *name = p;
+		// p should now point to name of the item
+		char *end1 = p;
+		// point to start of url for that item
+		for ( ; *end1 && *end1 != '|' ;end1++);
+		// save that
+		char *url = end1;
+		if ( *url == '|' ) url++;
+		// find end of url
+		char *urlEnd = url;
+		for ( ; *urlEnd && *urlEnd != ',' ; urlEnd++ );
+		// do we match it?
+		sel = "";
+		if ( usingApi && strncmp(usingApi,url,urlEnd-url)== 0 )
+			sel = " selected";
+		// advance p
+		p = urlEnd;
+		// skip over comma to get next one
+		if ( *p == ',' ) p++;
+		// use the hash as the identifier
+		sb->safePrintf("<option value=\"");
+		sb->safeMemcpy ( url, urlEnd - url );
+		sb->safePrintf("\"%s>",sel);
+		// print item name
+		sb->safeMemcpy ( name , end1 - name );
+		sb->safePrintf("</option>\n");
 	}
-	sb->safePrintf ( "</select>" );
+	sb->safePrintf("</select>");
 	return true;
 }
 
@@ -2101,18 +2144,12 @@ bool Parms::printParm ( SafeBuf* sb,
 			printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s ,
 					true , true );
 	}
-	else if ( t == TYPE_DIFFBOT_DROPDOWN ) {
-		// just show the parm name and value if printing in json
-		if ( isJSON ) {
-			// convert diffbot # to string
-			long apiNum = (long)*s;
-			char *str = g_diffbotFields [apiNum];
-			sb->safePrintf("\"%s-str\":\"%s\",\n",cgi,str);
-			sb->safePrintf("\"%s\":%li,\n",cgi,apiNum);
-		}
-		else
-			printDiffbotDropDown ( 8, sb , cgi , *s );
-	}
+	// this url filters parm is an array of SAFEBUFs now, so each is
+	// a string and that string is the diffbot api url to use. 
+	// the string is empty or zero length to indicate none.
+	//else if ( t == TYPE_DIFFBOT_DROPDOWN ) {
+	//	char *xx=NULL;*xx=0;
+	//}
 	else if ( t == TYPE_RETRIES    ) 
 		printDropDown ( 4 , sb , cgi , *s , false , false );
 	else if ( t == TYPE_PRIORITY_BOXES ) {
@@ -2172,6 +2209,31 @@ bool Parms::printParm ( SafeBuf* sb,
 				cgi,size);
 		sb->dequote ( s , gbstrlen(s) );
 		sb->safePrintf ("\">");
+	}
+	// HACK: print a drop down not a textbox for selecting the
+	// m_spiderDiffbotApiUrl[]. we can't just store this selection
+	// as a number because m_diffbotApiList (a string of comma separated
+	// items to select from) can change! it is not a typical dropdown.
+	// so we have to record the actual text we selected, which is
+	// basically the diffbot api url. this is because john can add
+	// custom diffbot api urls at anytime to the list.
+	else if ( t == TYPE_SAFEBUF && strcmp(m->m_cgi,"dapi") == 0 ) {
+		SafeBuf *sx = (SafeBuf *)s;
+		// just show the parm name and value if printing in json
+		if ( isJSON ) {
+			// this can be empty for the empty row i guess
+			if ( sx->length() ) {
+				// convert diffbot # to string
+				sb->safePrintf("\"%s\":\"",cgi);
+				// this is just the url path, not the title
+				// of the menu option... so this would be
+				// like "/api/article?u="
+				sb->safeUtf8ToJSON (sx->getBufStart() );
+				sb->safePrintf("\",\n");
+			}
+		}
+		else
+			printDiffbotDropDown ( sb , cgi , THIS , sx );
 	}
 	else if ( t == TYPE_SAFEBUF ) {
 		long size = m->m_size;
@@ -2842,7 +2904,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		  t == TYPE_BOOL2          ||
 		  t == TYPE_PRIORITY       || 
 		  t == TYPE_PRIORITY2      || 
-		  t == TYPE_DIFFBOT_DROPDOWN ||
+		  //t == TYPE_DIFFBOT_DROPDOWN ||
 		  t == TYPE_PRIORITY_BOXES || 
 		  t == TYPE_RETRIES        ||
 		  t == TYPE_FILTER           ) {
@@ -3047,10 +3109,10 @@ void Parms::setToDefault ( char *THIS ) {
 	// . this is a backwards-compatibility hack since this new parm
 	//   will not be in old coll.conf files and will not be properly
 	//   initialize when displaying a url filter row.
-	if ( THIS != (char *)&g_conf ) {
-		CollectionRec *cr = (CollectionRec *)THIS;
-		memset ( cr->m_spiderDiffbotApiNum , 0 , MAX_FILTERS);
-	}
+	//if ( THIS != (char *)&g_conf ) {
+	//	CollectionRec *cr = (CollectionRec *)THIS;
+	//	memset ( cr->m_spiderDiffbotApiNum , 0 , MAX_FILTERS);
+	//}
 
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		Parm *m = &m_parms[i];
@@ -3662,7 +3724,7 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 	if ( t == TYPE_CHAR           || t == TYPE_BOOL           ||
 	     t == TYPE_CHECKBOX       ||
 	     t == TYPE_PRIORITY       || t == TYPE_PRIORITY2      || 
-	     t == TYPE_DIFFBOT_DROPDOWN ||
+	     //t == TYPE_DIFFBOT_DROPDOWN ||
 	     t == TYPE_PRIORITY_BOXES || t == TYPE_RETRIES        ||
 	     t == TYPE_RETRIES        || t == TYPE_FILTER         ||
 	     t == TYPE_BOOL2          || t == TYPE_CHAR2           ) 
@@ -3762,7 +3824,7 @@ bool Parms::serialize( char *buf, long *bufSize ) {
 		if ( m->m_type == TYPE_BOOL2          ) size = 1;
 		if ( m->m_type == TYPE_PRIORITY       ) size = 1;
 		if ( m->m_type == TYPE_PRIORITY2      ) size = 1;
-		if ( m->m_type == TYPE_DIFFBOT_DROPDOWN) size = 1;
+		//if ( m->m_type == TYPE_DIFFBOT_DROPDOWN) size = 1;
 		if ( m->m_type == TYPE_PRIORITY_BOXES ) size = 1;
 		if ( m->m_type == TYPE_RETRIES        ) size = 1;
 		if ( m->m_type == TYPE_TIME           ) size = 6;
@@ -8154,12 +8216,25 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_cgi   = "dbapiqs";
-	m->m_xml   = "diffbotApiQueryString";
-	m->m_off   = (char *)&cr.m_diffbotApiQueryString - x;
+	m->m_cgi   = "dbapilist";
+	m->m_xml   = "diffbotApiList";//QueryString";
+	m->m_off   = (char *)&cr.m_diffbotApiList - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
-	m->m_def   = "";
+	// XmlDoc.cpp when it first computes "ufn" it also sets
+	// m_diffbotApiUrl to one of these. lest we change the url filters
+	// table AFTER it gets the ufn and BEFORE it gets the diffbot api url.
+	m->m_def   = 
+		"All|http://www.diffbot.com/api/analzye?mode=auto,"
+		"Article (autodetect)|http://www.diffbot.com/api/analyze?mode=article,"
+		"Article (force)|http://www.diffbot.com/api/article?,"
+		"Product (autodetect)|http://www.diffbot.com/api/analyze?mode=product,"
+		"Product (force)|http://www.diffbot.com/api/product?,"
+		"Image (autodetect)|http://www.diffbot.com/api/analyze?mode=image,"
+		"Image (force)|http://www.diffbot.com/api/image?,"
+		"FrontPage (autodetect)|http://www.diffbot.com/api/analyze?mode=frontpage,"
+		"FrontPage (force)|http://www.diffbot.com/api/frontpage?"
+		;
 	m++;
 
 	/*
@@ -12746,10 +12821,16 @@ void Parms::init ( ) {
 	m->m_cgi   = "dapi";
 	m->m_xml   = "diffbotAPI";
 	m->m_max   = MAX_FILTERS;
-	m->m_off   = (char *)cr.m_spiderDiffbotApiNum - x;
-	m->m_type  = TYPE_DIFFBOT_DROPDOWN;
-	m->m_def   = "0";
+	m->m_off   = (char *)cr.m_spiderDiffbotApiUrl - x;
+	// HACK: we print a dropdown for this but the value is a string
+	// because the items in the drop down can change so we can't store
+	// an item # here, it has to be a string, i.e. the diffbot api url.
+	// john might add a new custom api to m_diffbotApiList at any time.
+	// so we select the item in the drop down if it matches THIS string.
+	m->m_type  = TYPE_SAFEBUF;//DIFFBOT_DROPDOWN;
+	m->m_def   = "";
 	m->m_page  = PAGE_FILTERS;
+	m->m_size  = sizeof(SafeBuf);
 	m->m_rowid = 1;
 	m->m_addin = 1; // "insert" follows?
 	m++;
@@ -15462,7 +15543,7 @@ void Parms::init ( ) {
 		if ( t == TYPE_CHECKBOX       ) size = 1;
 		if ( t == TYPE_PRIORITY       ) size = 1;
 		if ( t == TYPE_PRIORITY2      ) size = 1;
-		if ( t ==TYPE_DIFFBOT_DROPDOWN) size = 1;
+		//if ( t ==TYPE_DIFFBOT_DROPDOWN) size = 1;
 		if ( t == TYPE_PRIORITY_BOXES ) size = 1;
 		if ( t == TYPE_RETRIES        ) size = 1;
 		if ( t == TYPE_TIME           ) size = 6;
