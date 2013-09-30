@@ -319,6 +319,7 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 			m_msg5b = msg5b;
 			m_deleteMsg5b = false;
 		}
+		/*
 		else if ( m_rdbId == RDB_TITLEDB ) {
 			try { m_msg5b = new ( Msg5 ); } 
 			catch ( ... ) {
@@ -332,6 +333,7 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 			mnew ( m_msg5b , sizeof(Msg5) , "Msg0b" );
 			m_deleteMsg5b = true;
 		}
+		*/
 		QUICKPOLL(m_niceness);
 		if ( ! m_msg5->getList ( rdbId,
 					 coll ,
@@ -353,7 +355,7 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 					 -1   , // maxRetries
 					 true , // compensateForMerge
 					 syncPoint ,
-					 m_msg5b   ,
+					 NULL,//m_msg5b   ,
 					 m_isRealMerge ,
 					 m_allowPageCache ) ) return false;
 		// nuke it
@@ -857,7 +859,7 @@ void Msg0::gotReply ( char *reply , long replySize , long replyMaxSize ) {
 class State00 {
 public:
 	Msg5       m_msg5;
-	Msg5       m_msg5b;
+	//Msg5       m_msg5b;
 	RdbList    m_list;
 	UdpSlot   *m_slot;
 	long long  m_startTime;
@@ -1176,7 +1178,7 @@ void handleRequest0 ( UdpSlot *slot , long netnice ) {
 				     2    , // maxRetries
 				     true , // compensateForMerge
 				     syncPoint ,
-				     &st0->m_msg5b ,
+				     NULL,//&st0->m_msg5b ,
 				     false,
 				     allowPageCache ) )
 		return;

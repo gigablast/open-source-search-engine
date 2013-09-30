@@ -1445,6 +1445,9 @@ void writeSocketWrapper ( int sd , void *state ) {
 	// then let's send the new buffer that it has. Diffbot.cpp uses this.
 	if ( s->m_sockState == ST_SEND_AGAIN ) {
 		s->m_sockState = ST_WRITING;
+		// if nothing left to send just return
+		if ( ! s->m_sendBuf ) return;
+		// otherwise send it
 		goto sendAgain;
 	}
 

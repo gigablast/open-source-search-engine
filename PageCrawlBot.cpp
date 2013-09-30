@@ -724,8 +724,8 @@ class StateCD {
 public:
 	StateCD () { m_needsMime = true; };
 	void sendBackDump2 ( ) ;
-	void readDataFromRdb ( ) ;
-	void gotRdbList ( ) ;
+	bool readDataFromRdb ( ) ;
+	bool gotRdbList ( ) ;
 	void printSpiderdbList ( RdbList *list , SafeBuf *sb ) ;
 	void printTitledbList ( RdbList *list , SafeBuf *sb );
 
@@ -892,21 +892,28 @@ void StateCD::sendBackDump2 ( ) {
 		KEYMIN((char *)&m_titledbStartKeys[i],sizeof(key_t));
 	}
 
+ subloop:
 	// begin reading from each shard and sending the spiderdb records
-	// over the network
-	readDataFromRdb ( );
-
+	// over the network. return if that blocked
+	if ( ! readDataFromRdb ( ) ) return;
+	// send it to the browser socket
+	if ( ! gotRdbList() ) return;
+	// . hey, it did not block... i guess no data to send out
+	// . but if all shards are exhausted from the dump, just return
+	if ( m_someoneNeedsMore ) goto subloop;
+	// note it
+	log("crawlbot: nobody needs more 1");
 }
 
 void gotRdbListWrapper ( void *state ) ;
 
-void StateCD::readDataFromRdb ( ) {
+bool StateCD::readDataFromRdb ( ) {
 
 	// set end key to max key. we are limiting using m_minRecSizes for this
 	key128_t ek; KEYMAX((char *)&ek,sizeof(key128_t));
 
 	CollectionRec *cr = g_collectiondb.getRec(m_collnum);
-
+	// top:
 	// launch one request to each shard
 	for ( long i = 0 ; i < g_hostdb.m_numGroups ; i++ ) {
 		// count it
@@ -921,6 +928,8 @@ void StateCD::readDataFromRdb ( ) {
 			sk = (char *)&m_titledbStartKeys[i];
 		// get host
 		Host *h = g_hostdb.getLiveHostInGroup(i);
+		// reset each one
+		m_lists[i].freeList();
 		// msg0 uses multicast in case one of the hosts in a shard is
 		// dead or dies during this call.
 		if ( ! m_msg0s[i].getList ( h->m_hostId , // use multicast
@@ -939,30 +948,46 @@ void StateCD::readDataFromRdb ( ) {
 					   m_minRecSizes,
 					   this,
 					   gotRdbListWrapper ,
-					   niceness ) )
+					    niceness ) ) {
+			log("crawlbot: blocked getting list from shard");
 			// continue if it blocked
 			continue;
+		}
+		log("crawlbot: did not block getting list from shard");
 		// we got a reply back right away...
 		m_numReplies++;
 	}
 	// all done? return if still waiting on more msg0s to get their data
-	if ( m_numReplies < m_numRequests ) return;
-	// done i guess, print and return
-	gotRdbList();
+	if ( m_numReplies < m_numRequests ) return false;
+	// i guess did not block, empty single shard? no, must have been
+	// error becaues gotRdbList() would have sent back on the tcp
+	// socket and blocked and returned false if not error sending
+	return true;
 }
 
 void gotRdbListWrapper ( void *state ) {
 	// get the Crawler dump State
 	StateCD *st = (StateCD *)state;
-	st->gotRdbList();
+ subloop:
+	// if this blocked sending back some data, return
+	if ( ! st->gotRdbList() ) return;
+	// otherwise, read more, maybe had no data to send from list
+	if ( ! st->readDataFromRdb () ) return;
+	// send and read more
+	if ( st->m_someoneNeedsMore ) goto subloop;
+	// note it
+	log("crawlbot: nobody needs more 2");
 }
 	
-void StateCD::gotRdbList ( ) {
+bool StateCD::gotRdbList ( ) {
 	// get the Crawler dump State
 	// inc it
 	m_numReplies++;
+	// sohw it
+	log("crawlbot: got list from shard. req=%li rep=%li",
+	    m_numRequests,m_numReplies);
 	// return if still awaiting more replies
-	if ( m_numReplies < m_numRequests ) return;
+	if ( m_numReplies < m_numRequests ) return false;
 
 	SafeBuf sb;
 	//sb.setLabel("dbotdmp");
@@ -1008,12 +1033,20 @@ void StateCD::gotRdbList ( ) {
 		// get the list from that group
 		RdbList *list = &m_lists[i];
 
+		// should we try to read more?
+		m_needMore[i] = false;
+
+		if ( list->isEmpty() ) {
+			list->freeList();
+			continue;
+		}
+
 		// get the format
 		//char *format = cr->m_diffbotFormat.getBufStart();
 		//if ( cr->m_diffbotFormat.length() <= 0 ) format = NULL;
 		//char *format = NULL;
 
-		char *ek = list->getEndKey();
+		char *ek = list->getLastKey();
 
 		// now print the spiderdb list out into "sb"
 		if ( m_rdbId == RDB_SPIDERDB ) {
@@ -1036,12 +1069,14 @@ void StateCD::gotRdbList ( ) {
 			m_titledbStartKeys[i] += 1;
 		}
 
-		// should we try to read more?
-		m_needMore[i] = false;
-		if ( list->m_listSize >= m_minRecSizes ) {
-			m_needMore[i] = true;
-			m_someoneNeedsMore = true;
-		}
+		// figure out why we do not get the full list????
+		//if ( list->m_listSize >= 0 ) { // m_minRecSizes ) {
+		m_needMore[i] = true;
+		m_someoneNeedsMore = true;
+		//}
+
+		// save mem
+		list->freeList();
 	}
 
 
@@ -1060,7 +1095,7 @@ void StateCD::gotRdbList ( ) {
 				       doneSendingWrapper  ) ) { // callback
 			// do not free sendbuf we are transmitting it
 			sb.detachBuf();
-			return;
+			return false;
 		}
 		// error?
 		//TcpSocket *s = m_socket;
@@ -1073,13 +1108,16 @@ void StateCD::gotRdbList ( ) {
 			log("diffbot: tcp sendmsg did not block. error: %s",
 			    mstrerror(g_errno));
 		//g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
-		return ;
+		return true;
 	}
 
 
 	// if nothing to send back we are done. return true since we
 	// did not block sending back.
-	if ( sb.length() == 0 ) return;
+	if ( sb.length() == 0 ) return true;
+
+	// how can this be?
+	if ( m_socket->m_sendBuf ) { char *xx=NULL;*xx=0; }
 
 	// put socket in sending-again mode
 	m_socket->m_sendBuf     = sb.getBufStart();
@@ -1090,7 +1128,7 @@ void StateCD::gotRdbList ( ) {
 	m_socket->m_totalToSend = sb.length();
 
 	// tell TcpServer.cpp to send this latest buffer! HACK!
-	m_socket->m_sockState = ST_SEND_AGAIN;
+	m_socket->m_sockState = ST_WRITING;//SEND_AGAIN;
 
 	// do not let safebuf free this, we will take care of it
 	sb.detachBuf();
@@ -1101,7 +1139,7 @@ void StateCD::gotRdbList ( ) {
 	m_socket->m_callback = doneSendingWrapper;
 	m_socket->m_state    = this;
 	// we blocked sending back
-	return;
+	return false;
 }
 
 // TcpServer.cpp calls this when done sending TcpSocket's m_sendBuf
@@ -1110,6 +1148,24 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 	StateCD *st = (StateCD *)state;
 
 	TcpSocket *socket = st->m_socket;
+
+	// if the final callback
+	if ( ! socket->m_sendBuf &&
+	     st->m_numRequests <= st->m_numReplies &&
+	     ! st->m_someoneNeedsMore ) {
+		log("crawlbot: done sending for download request");
+		delete st;
+		mdelete ( st , sizeof(StateCD) , "stcd" );
+		return;
+	}
+
+	// if the timer called us, just return
+	if ( ! socket->m_sendBuf ) {
+		log("crawlbot: timer callback");
+		socket->m_sockState = ST_SEND_AGAIN;
+		return;
+	}
+
 
 	// free the old sendbuf then i guess since we might replace it
 	// in the above function.
@@ -1121,19 +1177,41 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 	// what we just freed above. it'll core.
 	socket->m_sendBuf = NULL;
 
-	// all done?
-	if ( st->m_someoneNeedsMore ) {
-		// . read more from spiderdb from one or more shards
-		// . will also put into socket's write buf and set
-		//   TcpSocket::m_sockState to ST_SEND_AGAIN so that
-		//   TcpServer.cpp resumes the sending process and does not
-		//   destroy the socket
-		st->readDataFromRdb();
+	// sometimes this wrapper is called just from the timer...
+	// so if we have outstanding msg0s then we gotta wait
+	if ( st->m_numRequests > st->m_numReplies ) {
+		char *xx=NULL;*xx=0;
+		socket->m_sockState = ST_SEND_AGAIN;
 		return;
 	}
-	// delete that state
-	delete st;
-	mdelete ( st , sizeof(StateCD) , "stcd" );
+
+
+	// all done?
+	if ( st->m_someoneNeedsMore ) {
+		// make sure socket doesn't close up on us!
+		socket->m_sockState = ST_SEND_AGAIN;
+		log("crawlbot: reading more download data");
+		// just enter the little loop here
+	subloop:
+		// otherwise, read more, maybe had no data to send from list
+		if ( ! st->readDataFromRdb () ) return;
+		// if this blocked sending back some data, return
+		if ( ! st->gotRdbList() ) return;
+		// send and read more
+		if ( st->m_someoneNeedsMore ) goto subloop;
+		// note it
+		log("crawlbot: nobody needs more 3");
+		// sanity
+		if ( st->m_numRequests>st->m_numReplies){char *xx=NULL;*xx=0;}
+	}
+
+
+	log("crawlbot: no more data available");
+
+	// it's possible that readDataFromRdb() did not block and called
+	// gotRdbList which set the socket m_sendBuf again... so check
+	// for that... it needs to be sent yet before we delete this state
+	//if ( st->m_socket->m_sendBuf ) return;
 }
 
 void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb ) {
@@ -1775,8 +1853,10 @@ static class HelpItem s_his[] = {
 	{"fsp[N]","Spider priority. Higher priorities spidered first. Can be from 0 to 127. But -3 means to ignore the URL. -2 means the URL is banned because it comes from an evil site."},
 	{"dapi[N]","Diffbot API Url. This is a string. "
 	 "It is the URL we use when "
-	 "accessing diffbot for this url filter. Gigablast appends a "
-	 "&url=<url>&token=<yourtoken> to the url before requesting it."
+	 "accessing diffbot for this url filter. Specify 'none' (e.g. &dapi=none) "
+	 "to not use "
+	 "an API URL. Gigablast appends a "
+	 "&url=<url>&token=<yourtoken> to the url before requesting it. "
 	 "Example (unencoded): &dapi2=http://www.diffbot.com/api/article?"},
 	{"injecturl","Specify a seed url to inject."},
 	{"urldata","A huge string of whitespace separated URLs to add to "

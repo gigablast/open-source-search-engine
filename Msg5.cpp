@@ -159,10 +159,10 @@ bool Msg5::getList ( char     rdbId         ,
 	// warning
 	if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg5.");
 	// MUST have this
-	if ( rdbId == RDB_TITLEDB && ! msg5b ) {
-		log(LOG_LOGIC,"net: No msg5b supplied. 1.");
-		char *xx = NULL; *xx = 0;
-	}
+	//if ( rdbId == RDB_TITLEDB && ! msg5b ) {
+	//	log(LOG_LOGIC,"net: No msg5b supplied. 1.");
+	//	char *xx = NULL; *xx = 0;
+	//}
 	// . reset the provided list
 	// . this will not free any mem it may have alloc'd but it will set
 	//   m_listSize to 0 so list->isEmpty() will return true
