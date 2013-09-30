@@ -1231,7 +1231,8 @@ bool XmlDoc::set2 ( char    *titleRec ,
 		    long     niceness ,
 		    SpiderRequest *sreq ) {
 
-	reset();
+	// NO! can't do this. see below
+	//reset();
 
 	setStatus ( "setting xml doc from title rec");
 

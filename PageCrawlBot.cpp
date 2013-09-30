@@ -1358,6 +1358,8 @@ void StateCD::printTitledbList ( RdbList *list , SafeBuf *sb ) {
 		char *rec = list->getCurrentRec();
 		// skip ifnegative
 		if ( (rec[0] & 0x01) == 0x00 ) continue;
+		// reset first since set2() can't call reset()
+		xd.reset();
 		// uncompress it
 		if ( ! xd.set2 ( rec ,
 				 0, // maxSize unused
@@ -2589,7 +2591,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      "<tr>"
-			      "<td><b>URLs Harvested</b></td>"
+			      "<td><b>URLs Harvested</b> (inc. dups)</td>"
 			      "<td>%lli</td>"
      
 			      "</tr>"
