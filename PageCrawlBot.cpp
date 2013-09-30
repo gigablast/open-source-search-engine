@@ -1101,20 +1101,22 @@ bool StateCD::sendList ( ) {
 		}
 		// error?
 		//TcpSocket *s = m_socket;
-		// sometimes it does not block and is successful
+		// sometimes it does not block and is successful because
+		// it just writes its buffer out in one write call.
 		if ( ! g_errno ) sb.detachBuf();
 
 		// log it
 		log("crawlbot: nuking state. strange");
 
 		// nuke state
-		delete this;
-		mdelete ( this , sizeof(StateCD) , "stcd" );
+		//delete this;
+		//mdelete ( this , sizeof(StateCD) , "stcd" );
 		if ( g_errno )
 			log("diffbot: tcp sendmsg did not block. error: %s",
 			    mstrerror(g_errno));
 		//g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
-		return true;
+		// wait for doneSendingWrapper to be called.
+		return false;
 	}
 
 
@@ -1166,8 +1168,13 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 	    sock->m_totalSent,
 	    sock->m_sendBufUsed);
 
-	// if the final callback
-	if ( ! socket->m_sendBuf &&
+	// . if the final callback
+	// . sometimes m_sendBuf is NULL if we freed it below and tried to
+	//   read more, only to read 0 bytes
+	// . but it will be non-null if we read 0 bytes the first time
+	//   and just have a mime to send. because sendReply() above 
+	//   returned true, and then doneSendingWrapper() got called.
+	if ( //! socket->m_sendBuf &&
 	     st->m_numRequests <= st->m_numReplies &&
 	     ! st->m_someoneNeedsMore ) {
 		log("crawlbot: done sending for download request");
