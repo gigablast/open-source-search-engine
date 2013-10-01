@@ -2249,10 +2249,26 @@ bool Rdb::addRecord ( collnum_t collnum,
 			SpiderReply *rr = (SpiderReply *)sreq;
 			// log that. why isn't this undoling always
 			if ( g_conf.m_logDebugSpider )
-				logf(LOG_DEBUG,"spider: rdb: got spider reply"
+				logf(LOG_DEBUG,"rdb: rdb: got spider reply"
 				     " for uh48=%llu",rr->getUrlHash48());
 			// add the reply
 			sc->addSpiderReply(rr);
+			// don't actually add it if "fake". i.e. if it
+			// was an internal error of some sort... this will
+			// make it try over and over again i guess...
+			long indexCode = rr->m_errCode;
+			if ( indexCode == EINTERNALERROR ||
+			     indexCode == EABANDONED ||
+			     indexCode == EHITCRAWLLIMIT ||
+			     indexCode == EHITPROCESSLIMIT ) {
+				log("rdb: not adding spiderreply to rdb "
+				    "because "
+				    "it was an internal error for uh48=%llu "
+				    "errCode = %s",
+				    rr->getUrlHash48(),
+				    mstrerror(indexCode));
+				m_tree.deleteNode(tn,false);
+			}
 		}
 		// clear errors from adding to SpiderCache
 		g_errno = 0;

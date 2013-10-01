@@ -2809,11 +2809,30 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
 			      "</tr>"
+
 			      "<tr>"
 			      "<td><b>Max Page Process Successes:</b>"
 			      "</td><td>"
 			      "<input type=text name=maxtoprocess "
 			      "size=9 value=%lli> "
+			      "<input type=submit name=submit value=OK>"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Notification Email:</b>"
+			      "</td><td>"
+			      "<input type=text name=notifyemail "
+			      "size=20 value=\"%s\"> "
+			      "<input type=submit name=submit value=OK>"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Notification URL:</b>"
+			      "</td><td>"
+			      "<input type=text name=notifyurl "
+			      "size=20 value=\"%s\"> "
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
 			      "</tr>"
@@ -2861,6 +2880,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      , cr->m_diffbotMaxToCrawl 
 			      , cr->m_diffbotMaxToProcess
+
+			      , cr->m_notifyEmail.getBufStart()
+			      , cr->m_notifyUrl.getBufStart()
 
 			      , urtYes
 			      , urtNo

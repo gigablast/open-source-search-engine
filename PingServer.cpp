@@ -2743,6 +2743,9 @@ bool gotMxIp ( EmailInfo *ei ) ;
 
 void gotMxIpWrapper ( void *state , long ip ) {
 	EmailInfo *ei = (EmailInfo *)state;
+	// i guess set it
+	ei->m_mxIp = ip;
+	// handle it
 	if ( ! gotMxIp ( ei ) ) return;
 	// did not block, call callback
 	ei->m_callback ( ei->m_state );
@@ -2778,6 +2781,11 @@ bool sendEmail ( class EmailInfo *ei ) {
 }
 
 void doneSendingEmailWrapper ( void *state , TcpSocket *sock ) {
+	if ( g_errno )
+		log("crawlbot: error sending email = %s",mstrerror(g_errno));
+	// log the reply
+	if ( sock && sock->m_readBuf )
+		log("crawlbot: got socket reply=%s", sock->m_readBuf);
 	EmailInfo *ei = (EmailInfo *)state;
 	ei->m_callback ( ei->m_state );
 }
@@ -2786,14 +2794,30 @@ void doneSendingEmailWrapper ( void *state , TcpSocket *sock ) {
 // returns false if blocked, true otherwise
 bool gotMxIp ( EmailInfo *ei ) {
 
+	// error?
+	if ( g_errno ) {
+		log("crawlbot: error getting MX IP to send email alert for "
+		    "%s = %s",
+		    ei->m_mxDomain.getBufStart(),
+		    mstrerror(g_errno));
+		return true;
+	}
+
+	// wtf?
+	if ( ei->m_mxIp == 0 ) {
+		log("crawlbot: got bad MX ip of 0 for %s",
+		    ei->m_mxDomain.getBufStart());
+		return true;
+	}
+
 	// label alloc'd mem with gotmxip in case of mem leak
 	SafeBuf sb;//("gotmxip");
 	// helo line
 	sb.safePrintf("HELO %s\r\n",ei->m_dom);
 	// mail line
-	sb.safePrintf( "MAIL from:<%s>\r\n", ei->m_fromAddress.getBufStart());
+	sb.safePrintf( "MAIL FROM:<%s>\r\n", ei->m_fromAddress.getBufStart());
 	// to line
-	sb.safePrintf( "RCPT to:<%s>\r\n", ei->m_toAddress.getBufStart());
+	sb.safePrintf( "RCPT TO:<%s>\r\n", ei->m_toAddress.getBufStart());
 	// data
 	sb.safePrintf( "DATA\r\n");
 	// body
@@ -2803,12 +2827,13 @@ bool gotMxIp ( EmailInfo *ei ) {
 	sb.safePrintf( "\r\n");
 	sb.safePrintf( "%s", ei->m_body.getBufStart() );
 	// quit
-	sb.safePrintf( "\r\n.\r\nQUIT\r\n");
+	sb.safePrintf( "\r\n.\r\nQUIT\r\n\r\n");
 	// send the message
 	TcpServer *ts = g_httpServer.getTcp();
-	log ( LOG_WARN, "crawlbot: Sending email to %s:\n %s", 
+	log ( LOG_WARN, "crawlbot: Sending email to %s (MX IP=%s):\n %s", 
 	      ei->m_toAddress.getBufStart(),
-	      ei->m_body.getBufStart() );
+	      iptoa(ei->m_mxIp),
+	      sb.getBufStart() );
 	// make a temp string
 	SafeBuf mxIpStr;
 	mxIpStr.safePrintf("%s",iptoa(ei->m_mxIp) );
@@ -2819,7 +2844,7 @@ bool gotMxIp ( EmailInfo *ei ) {
 			    sb.getCapacity(),
 			    sb.getLength(),
 			    sb.getLength(),
-			    NULL,//h,
+			    ei,//NULL,//h,
 			    doneSendingEmailWrapper,
 			    60*1000,
 			    100*1024,

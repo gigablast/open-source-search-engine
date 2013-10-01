@@ -8204,6 +8204,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_cgi   = "notifyemail";
+	m->m_title = "notify email";
 	m->m_xml   = "notifyEmail";
 	m->m_off   = (char *)&cr.m_notifyEmail - x;
 	m->m_type  = TYPE_SAFEBUF;
@@ -8214,6 +8215,7 @@ void Parms::init ( ) {
 
 	m->m_cgi   = "notifyurl";
 	m->m_xml   = "notifyUrl";
+	m->m_title = "notify url";
 	m->m_off   = (char *)&cr.m_notifyUrl - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
@@ -8322,6 +8324,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_cgi   = "dbmaxtocrawl";
+	m->m_title = "diffbot max to crawl";
 	m->m_xml   = "diffbotMaxToCrawl";
 	m->m_off   = (char *)&cr.m_diffbotMaxToCrawl - x;
 	m->m_type  = TYPE_LONG_LONG;
@@ -8330,6 +8333,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_cgi   = "dbmaxtoprocess";
+	m->m_title = "diffbot max to process";
 	m->m_xml   = "diffbotMaxToProcess";
 	m->m_off   = (char *)&cr.m_diffbotMaxToProcess - x;
 	m->m_type  = TYPE_LONG_LONG;

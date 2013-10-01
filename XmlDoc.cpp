@@ -1821,10 +1821,16 @@ bool XmlDoc::indexDoc ( ) {
 	log("build: %s had internal error = %s. adding spider error reply.",
 	    m_firstUrl.m_url,mstrerror(g_errno));
 
-	m_indexCode = EINTERNALERROR;//g_errno;
-	m_indexCodeValid = true;
+	if ( ! m_indexCodeValid ) {
+		m_indexCode = EINTERNALERROR;//g_errno;
+		m_indexCodeValid = true;
+	}
 
+	// if this is EABANDONED or EHITCRAWLLIMIT or EHITPROCESSLIMIT
+	// then this should make a "fake" reply to release the url spider
+	// lock in SpiderLoop::m_lockTable.
 	SpiderReply *nsr = getNewSpiderReply();
+	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
 
 	SafeBuf metaList;
 	metaList.pushChar(RDB_SPIDERDB);
@@ -1902,37 +1908,46 @@ bool XmlDoc::indexDoc2 ( ) {
 	     // this is just for this collection, from all hosts in network
 	     m_cr->m_globalCrawlInfo.m_pageDownloadSuccesses >= //Attempts >=
 	     m_cr->m_diffbotMaxToCrawl ) {
-		m_cr->m_spideringEnabled = false;
+		// set the code to badness
+		m_indexCode = EHITCRAWLLIMIT;//EABANDONED;
+		m_indexCodeValid = true;
 		log("diffbot: abandoning url because we hit crawl limit "
 		    "of %lli. downloaded %lli. Disabling spiders."
 		    ,m_cr->m_diffbotMaxToCrawl
 		    ,m_cr->m_globalCrawlInfo.m_pageDownloadSuccesses
 		    );
-		m_indexCode = EHITCRAWLLIMIT;//EABANDONED;
-		m_indexCodeValid = true;
+		g_errno = m_indexCode;
+		// if spiders already off..
+		if ( ! m_cr->m_spideringEnabled ) return true;
+		// do not repeat call sendNotification()
+		m_cr->m_spideringEnabled = false;
+		// this returns false if it would block, so we ret fals
+		if ( ! sendNotification() ) return false;
+		// it didn't block
 		g_errno = m_indexCode;
 		return true;
 	}
-
+	
 	// likewise if we hit the max processing limit...
 	if ( ! m_isDiffbotJSONObject &&
 	     m_cr->m_globalCrawlInfo.m_pageProcessSuccesses >= // Attempts >=
 	     m_cr->m_diffbotMaxToProcess ) {
-		// if spiders are enabled send a notification then turn
-		// them off
-		if ( m_cr->m_spideringEnabled ){
-			// do not repeat call sendNotification()
-			m_cr->m_spideringEnabled = false;
-			// this returns false if it would block, so we ret fals
-			if ( ! sendNotification() ) return false;
-		}
+		// set the code to badness
+		m_indexCode = EHITPROCESSLIMIT;//EABANDONED;
+		m_indexCodeValid = true;
 		log("diffbot: abandoning url because we hit process limit "
 		    "of %lli. processed %lli. Disabling spiders."
 		    , m_cr->m_diffbotMaxToProcess
 		    , m_cr->m_globalCrawlInfo.m_pageProcessSuccesses
 		    );
-		m_indexCode = EHITPROCESSLIMIT;//EABANDONED;
-		m_indexCodeValid = true;
+		g_errno = m_indexCode;
+		// if spiders already off...
+		if ( ! m_cr->m_spideringEnabled ) return true;
+		// turn them off and send notification (email or url)
+		m_cr->m_spideringEnabled = false;
+		// this returns false if it would block, so we ret fals
+		if ( ! sendNotification() ) return false;
+		// it didn't block
 		g_errno = m_indexCode;
 		return true;
 	}
@@ -19366,6 +19381,39 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	long *indexCode = getIndexCode();
 	if (! indexCode || indexCode == (void *)-1) 
 		return (SpiderReply *)indexCode;
+
+
+	// if it has been abandoned early, i.e. cut-off, then we should
+	// add a "fake" spider reply to release the lock in
+	// SpiderLoop::m_lockTable at least. see Spider.cpp's addSpiderReply()
+	// to see what parts of this are relevant.
+	if ( *indexCode == EABANDONED ||
+	     *indexCode == EHITCRAWLLIMIT ||
+	     *indexCode == EHITPROCESSLIMIT ) {
+		// clear everything
+		m_newsr.reset();
+		// get from spider request, if there
+		long firstIp = 0;
+		if ( m_oldsrValid ) firstIp = m_oldsr.m_firstIp;
+		// otherwise, wtf?
+		if ( ! firstIp ) 
+			log("build: no first ip to make fake spiderReply. "
+			    "injected?");
+		// we at least need this
+		m_newsr.m_firstIp = firstIp;
+		Url *fu = getFirstUrl();
+		// this is the lock key
+		long long uh48 = hash64b(fu->m_url) & 0x0000ffffffffffffLL;
+		m_newsr.setKey (  firstIp, 0 , uh48 , false );
+		// tell it we are fake and not to really add us to
+		// spiderdb, but just to release the lock
+		m_newsr.m_errCode = *indexCode;
+		m_newsrValid = true;
+		return &m_newsr;
+	}
+
+
+
 
 	TagRec *gr = getTagRec();
 	if ( ! gr || gr == (TagRec *)-1 ) return (SpiderReply *)gr;
@@ -41838,6 +41886,10 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 void doneSendingNotifyEmailWrapper ( void *state ) {
 	XmlDoc *THIS = (XmlDoc *)state;
 	THIS->m_notifyBlocked--;
+	// error?
+	log("build: email notification status: %s",mstrerror(g_errno));
+	// ignore it for rest
+	g_errno = 0;
 	// wait for post url to get done
 	if ( THIS->m_notifyBlocked > 0 ) return;
 	// all done
@@ -41847,6 +41899,8 @@ void doneSendingNotifyEmailWrapper ( void *state ) {
 void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
 	XmlDoc *THIS = (XmlDoc *)state;
 	THIS->m_notifyBlocked--;
+	// error?
+	log("build: url notification status: %s",mstrerror(g_errno));
 	// wait for post url to get done
 	if ( THIS->m_notifyBlocked > 0 ) return;
 	// all done
@@ -41860,6 +41914,8 @@ void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
 //   or maxToProcess limitation.
 bool XmlDoc::sendNotification ( ) {
 
+	setStatus("sending notification");
+
 	char *email = m_cr->m_notifyEmail.getBufStart();
 	char *url   = m_cr->m_notifyUrl.getBufStart();
 
@@ -41867,6 +41923,8 @@ bool XmlDoc::sendNotification ( ) {
 	if ( m_notifyBlocked != 0 ) { char *xx=NULL;*xx=0; }
 
 	if ( email && email[0] ) {
+		log("build: sending email notification to %s for coll \"%s\"",
+		    email,m_cr->m_coll);
 		SafeBuf msg;
 		msg.safePrintf("Your crawl \"%s\" "
 			       "has hit a limitation and has "
@@ -41876,7 +41934,7 @@ bool XmlDoc::sendNotification ( ) {
 		EmailInfo *ei = &m_emailInfo;
 		ei->m_toAddress.safeStrcpy ( email );
 		ei->m_toAddress.nullTerm();
-		ei->m_fromAddress.safePrintf("crawlbot");
+		ei->m_fromAddress.safePrintf("support@diffbot.com");
 		ei->m_subject.safePrintf("crawl paused");
 		ei->m_body.safePrintf("Your crawl for collection \"%s\" "
 				      "has been paused because it hit "
@@ -41891,6 +41949,8 @@ bool XmlDoc::sendNotification ( ) {
 	}
 
 	if ( url && url[0] ) {
+		log("build: sending url notification to %s for coll \"%s\"",
+		    url,m_cr->m_coll);
 		// GET request
 		if ( ! g_httpServer.getDoc ( url ,
 					     0 , // ip
