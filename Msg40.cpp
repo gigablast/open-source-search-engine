@@ -9,7 +9,7 @@
 //#include "TitleRec.h"      // containsAdultWords ()
 #include "LanguageIdentifier.h"
 #include "sort.h"
-#include "matches.h"
+#include "matches2.h"
 #include "XmlDoc.h" // computeSimilarity()
 //#include "Facebook.h" // msgfb
 #include "Speller.h"
