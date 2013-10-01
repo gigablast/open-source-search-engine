@@ -20,18 +20,13 @@
 extern char *g_diffbotFields [];
 */
 
-bool sendPageCrawlbot ( TcpSocket *s , HttpRequest *hr );
-
-bool printCrawlBotPage2 ( TcpSocket *s , 
-			  HttpRequest *hr ,
-			  char fmt,
-			  SafeBuf *injectionResponse ,
-			  SafeBuf *urlUploadResponse ,
-			  collnum_t collnum ) ;
+bool sendPageCrawlbot ( class TcpSocket *s , class HttpRequest *hr );
 
 //bool handleDiffbotRequest ( TcpSocket *s , HttpRequest *hr ) ;
-bool sendBackDump ( TcpSocket *s,HttpRequest *hr );
+bool sendBackDump ( class TcpSocket *s, class HttpRequest *hr );
 
-bool getSpiderRequestMetaList ( char *doc, SafeBuf *listBuf, bool spiderLinks);
+bool getSpiderRequestMetaList ( char *doc, 
+				class SafeBuf *listBuf, 
+				bool spiderLinks);
 
 #endif

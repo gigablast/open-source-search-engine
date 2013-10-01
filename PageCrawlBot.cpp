@@ -14,6 +14,7 @@
 // * http://diffbot.com/dev/docs/  (Crawlbot API tab, and others)
 // * http://diffbot.com/dev/crawl/
 
+#include "PageCrawlBot.h"
 #include "TcpServer.h"
 #include "HttpRequest.h"
 #include "HttpServer.h"
@@ -1769,6 +1770,13 @@ bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 					     0); // cachetime
 }
 
+bool printCrawlBotPage2 ( class TcpSocket *s , 
+			  class HttpRequest *hr ,
+			  char fmt,
+			  class SafeBuf *injectionResponse ,
+			  class SafeBuf *urlUploadResponse ,
+			  collnum_t collnum ) ;
+
 void addedUrlsToSpiderdbWrapper ( void *state ) {
 	StateCD *st = (StateCD *)state;
 	SafeBuf rr;
@@ -1862,6 +1870,10 @@ static class HelpItem s_his[] = {
 	{"maxtocrawl", "Specify max pages to successfully download"},
 	{"maxtoprocess", "Specify max pages to successfully process through "
 	 "diffbot"},
+	{"notifyemail","Send email alert to this email when crawl hits "
+	 "the maxtocrawl or maxtoprocess limit."},
+	{"notifyurl","Fetch this URL when crawl hits "
+	 "the maxtocrawl or maxtoprocess limit."},
 	{"urt","Use robots.txt?"},
 	//{"dbapilist","Special list of diffbot API urls. The URL Filters "
 	// "will display these options in a drop down menu. "
@@ -2035,6 +2047,16 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( maxToProcess != -1 ) {
 			cr->m_diffbotMaxToProcess = maxToProcess;
 			cr->m_needsSave = 1;
+		}
+		char *email = hr->getString("notifyemail",NULL,NULL);
+		if ( email ) {
+			cr->m_notifyEmail.set(email);
+			cr->m_notifyEmail.nullTerm();
+		}
+		char *url = hr->getString("notifyurl",NULL,NULL);
+		if ( url ) {
+			cr->m_notifyUrl.set(url);
+			cr->m_notifyUrl.nullTerm();
 		}
 		long pause = hr->getLong("pause",-1);
 		if ( pause == 0 ) cr->m_spideringEnabled = 1;

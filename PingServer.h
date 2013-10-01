@@ -131,5 +131,9 @@ class PingServer {
 
 extern class PingServer g_pingServer;
 
+// . returns false if blocked, true otherwise
+// . use this for sending generic emails
+bool sendEmail ( class EmailInfo *ei ) ;
+
 #endif
 

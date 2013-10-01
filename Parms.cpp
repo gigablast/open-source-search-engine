@@ -8203,6 +8203,24 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
+	m->m_cgi   = "notifyemail";
+	m->m_xml   = "notifyEmail";
+	m->m_off   = (char *)&cr.m_notifyEmail - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m++;
+
+	m->m_cgi   = "notifyurl";
+	m->m_xml   = "notifyUrl";
+	m->m_off   = (char *)&cr.m_notifyUrl - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m++;
+
 	/*
 	m->m_cgi   = "alias";
 	m->m_xml   = "collectionNameAlias";

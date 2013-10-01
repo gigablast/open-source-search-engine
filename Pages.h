@@ -12,6 +12,7 @@
 #include "HttpRequest.h"
 #include "HttpServer.h"
 #include "SafeBuf.h"
+#include "PageCrawlBot.h" // sendPageCrawlBot()
 
 #define LIGHT_BLUE "d0d0e0"
 #define DARK_BLUE  "c0c0f0"

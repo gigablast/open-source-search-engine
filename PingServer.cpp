@@ -2733,3 +2733,108 @@ void PingServer::sendEmailMsg ( long *lastTimeStamp , char *msg ) {
 	return;
 }
 
+/////////////////
+//
+// for sending email notifications to external addresses
+//
+///////////////////
+
+bool gotMxIp ( EmailInfo *ei ) ;
+
+void gotMxIpWrapper ( void *state , long ip ) {
+	EmailInfo *ei = (EmailInfo *)state;
+	if ( ! gotMxIp ( ei ) ) return;
+	// did not block, call callback
+	ei->m_callback ( ei->m_state );
+}
+
+// returns false if blocked, true otherwise
+bool sendEmail ( class EmailInfo *ei ) {
+
+	char *to = ei->m_toAddress.getBufStart();
+	char *dom = strstr(to,"@");
+	if ( ! dom || ! dom[1] ) {
+		g_errno = EBADENGINEER;
+		log("email: missing @ sign in email %s",to);
+		return true;
+	}
+	// point to domain
+	dom++;
+	// ref that for printing HELO line
+	ei->m_dom = dom;
+
+	// prepend a special marker so Dns.cpp returns the mx record
+	ei->m_mxDomain.safePrintf("gbmxrec-%s",dom);
+
+	// get mx ip. returns false if would block.
+	if ( ! g_dns.getIp ( ei->m_mxDomain.getBufStart() ,
+			     ei->m_mxDomain.getLength() ,
+			     &ei->m_mxIp,
+			     ei ,
+			     gotMxIpWrapper ) )
+		return false;
+
+	return gotMxIp ( ei );
+}
+
+void doneSendingEmailWrapper ( void *state , TcpSocket *sock ) {
+	EmailInfo *ei = (EmailInfo *)state;
+	ei->m_callback ( ei->m_state );
+}
+
+
+// returns false if blocked, true otherwise
+bool gotMxIp ( EmailInfo *ei ) {
+
+	// label alloc'd mem with gotmxip in case of mem leak
+	SafeBuf sb;//("gotmxip");
+	// helo line
+	sb.safePrintf("HELO %s\r\n",ei->m_dom);
+	// mail line
+	sb.safePrintf( "MAIL from:<%s>\r\n", ei->m_fromAddress.getBufStart());
+	// to line
+	sb.safePrintf( "RCPT to:<%s>\r\n", ei->m_toAddress.getBufStart());
+	// data
+	sb.safePrintf( "DATA\r\n");
+	// body
+	sb.safePrintf( "To: %s\r\n", ei->m_toAddress.getBufStart());
+	sb.safePrintf( "Subject: %s\r\n",ei->m_subject.getBufStart());
+	// mime header must be separated from body by an extra \r\n
+	sb.safePrintf( "\r\n");
+	sb.safePrintf( "%s", ei->m_body.getBufStart() );
+	// quit
+	sb.safePrintf( "\r\n.\r\nQUIT\r\n");
+	// send the message
+	TcpServer *ts = g_httpServer.getTcp();
+	log ( LOG_WARN, "crawlbot: Sending email to %s:\n %s", 
+	      ei->m_toAddress.getBufStart(),
+	      ei->m_body.getBufStart() );
+	// make a temp string
+	SafeBuf mxIpStr;
+	mxIpStr.safePrintf("%s",iptoa(ei->m_mxIp) );
+	if ( !ts->sendMsg ( mxIpStr.getBufStart(),
+			    mxIpStr.length(),
+			    25, // smtp (send mail transfer protocol) port
+			    sb.getBufStart(),
+			    sb.getCapacity(),
+			    sb.getLength(),
+			    sb.getLength(),
+			    NULL,//h,
+			    doneSendingEmailWrapper,
+			    60*1000,
+			    100*1024,
+			    100*1024 ) ) {
+		// tcpserver will free it, so prevent double free with detach
+		sb.detachBuf();
+		return false;
+	}
+	// error? if no error, it was a successful write and it done,
+	// otherwise we will want to free the sendbuf here so do not
+	// call detachBuf()
+	if ( ! g_errno )
+		// tcpserver will free it, so prevent double free with detach
+		sb.detachBuf();
+	// we did not block
+	return true;
+}
+

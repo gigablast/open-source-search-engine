@@ -64,7 +64,7 @@
 #include "Spider.h" // SpiderRequest/SpiderReply definitions
 #include "HttpMime.h" // ET_DEFLAT
 #include "Msg1.h"
-#include "PageCrawlBot.h" // DBA_NONE
+//#include "PageCrawlBot.h" // DBA_NONE
 
 //#define XMLDOC_MAX_AD_IDS 4
 //#define XMLDOC_ADLEN      64
@@ -84,6 +84,20 @@
 #define XD_MAX_GIGABIT_HASHES 48
 
 #define XD_MAX_AD_IDS         5
+
+class EmailInfo {
+public:
+	SafeBuf m_toAddress;
+	SafeBuf m_fromAddress;
+	SafeBuf m_subject;
+	SafeBuf m_body;
+	char *m_dom; // ref into m_toAddress of the domain in email addr
+	SafeBuf m_mxDomain; // just the domain with a "gbmxrec-" prepended
+	void *m_state;
+	void (* m_callback ) (void *state);
+	// ip address of MX record for this domain
+	long m_mxIp;
+};
 
 double getTrafficPercent ( long rank ) ;
 
@@ -1525,6 +1539,9 @@ class XmlDoc {
 	long *nukeJSONObjects ( ) ;
 	long m_joc;
 
+	bool sendNotification ( );
+	EmailInfo m_emailInfo;
+	long m_notifyBlocked;
 
 	//
 	// functions and vars for the seo query matching tool

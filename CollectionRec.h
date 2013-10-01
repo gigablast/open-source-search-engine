@@ -386,6 +386,10 @@ class CollectionRec {
 
 	// new diffbot parms
 	SafeBuf m_diffbotToken;
+	// email for emailing when crawl limit hit
+	SafeBuf m_notifyEmail;
+	// fetch this url when crawl limit hit
+	SafeBuf m_notifyUrl;
 	// an alternate name for the collection. we tend to create
 	// collection names as a random sequence of hex digits. this
 	// will allow a user to give them an alternate name.
