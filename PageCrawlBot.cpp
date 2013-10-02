@@ -1970,16 +1970,19 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		//   then they can leverage the msg4 and addsinprogress.dat 
 		//   functionality we have for getting dead hosts back up to 
 		//   sync. Call it Colldb.
-		if ( addColl || delColl || resetColl ) {
-			// if any host in network is dead, do not do this
-			if ( g_hostdb.hasDeadHost() )  {
-				char *msg = "A host in the network is dead.";
-				// log it
-				log("crawlbot: %s",msg);
-				// make sure this returns in json if required
-				return sendErrorReply2(socket,fmt,msg);
-			}
-		}
+		// . PROBLEM: when just starting up seems like hasDeadHost()
+		//   is returning true because it has not yet received its
+		//   first ping reply
+		//if ( addColl || delColl || resetColl ) {
+		//	// if any host in network is dead, do not do this
+		//	if ( g_hostdb.hasDeadHost() )  {
+		//		char *msg = "A host in the network is dead.";
+		//		// log it
+		//		log("crawlbot: %s",msg);
+		//		// make sure this returns in json if required
+		//		return sendErrorReply2(socket,fmt,msg);
+		//	}
+		//}
 
 		if ( delColl ) {
 			// delete collection name
