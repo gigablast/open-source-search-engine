@@ -5475,6 +5475,18 @@ void Parms::init ( ) {
 	m++;
 
 
+	m->m_title = "sendmail IP";
+	m->m_desc  = "We send crawlbot notification emails to this sendmail "
+		"server which forwards them to the specified email address.";
+		m->m_cgi   = "smip";
+	m->m_off   = (char *)&g_conf.m_sendmailIp - g;
+	m->m_type  = TYPE_STRING;
+	m->m_def   = "10.5.54.47";
+	m->m_size  = MAX_MX_LEN;
+	m->m_priv  = 2;
+	m->m_group = 0;
+	m++;
+
 	m->m_title = "send email alerts";
 	m->m_desc  = "Sends emails to admin if a host goes down.";
 	m->m_cgi   = "sea";

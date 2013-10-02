@@ -2739,6 +2739,7 @@ void PingServer::sendEmailMsg ( long *lastTimeStamp , char *msg ) {
 //
 ///////////////////
 
+/*
 bool gotMxIp ( EmailInfo *ei ) ;
 
 void gotMxIpWrapper ( void *state , long ip ) {
@@ -2750,9 +2751,24 @@ void gotMxIpWrapper ( void *state , long ip ) {
 	// did not block, call callback
 	ei->m_callback ( ei->m_state );
 }
+*/
+
+void doneSendingEmailWrapper ( void *state , TcpSocket *sock ) {
+	if ( g_errno )
+		log("crawlbot: error sending email = %s",mstrerror(g_errno));
+	// log the reply
+	if ( sock && sock->m_readBuf )
+		log("crawlbot: got socket reply=%s", sock->m_readBuf);
+	EmailInfo *ei = (EmailInfo *)state;
+	ei->m_callback ( ei->m_state );
+}
+
 
 // returns false if blocked, true otherwise
 bool sendEmail ( class EmailInfo *ei ) {
+
+	// this is often set from XmlDoc.cpp::indexDoc()
+	g_errno = 0;
 
 	char *to = ei->m_toAddress.getBufStart();
 	char *dom = strstr(to,"@");
@@ -2766,6 +2782,15 @@ bool sendEmail ( class EmailInfo *ei ) {
 	// ref that for printing HELO line
 	ei->m_dom = dom;
 
+	// just send it to a sendmail server which will forward it,
+	// because a lot of email servers don't like us connecting directly
+	// beause i think our IP address does not match that of our 
+	// MX ip for our domain? sendmail must be configured to allow
+	// forwarding if it receives an email from the IP of host #0
+	// in the cluster.
+	ei->m_mxIp = atoip(g_conf.m_sendmailIp);
+
+	/*
 	// prepend a special marker so Dns.cpp returns the mx record
 	ei->m_mxDomain.safePrintf("gbmxrec-%s",dom);
 
@@ -2780,17 +2805,6 @@ bool sendEmail ( class EmailInfo *ei ) {
 	return gotMxIp ( ei );
 }
 
-void doneSendingEmailWrapper ( void *state , TcpSocket *sock ) {
-	if ( g_errno )
-		log("crawlbot: error sending email = %s",mstrerror(g_errno));
-	// log the reply
-	if ( sock && sock->m_readBuf )
-		log("crawlbot: got socket reply=%s", sock->m_readBuf);
-	EmailInfo *ei = (EmailInfo *)state;
-	ei->m_callback ( ei->m_state );
-}
-
-
 // returns false if blocked, true otherwise
 bool gotMxIp ( EmailInfo *ei ) {
 
@@ -2802,6 +2816,7 @@ bool gotMxIp ( EmailInfo *ei ) {
 		    mstrerror(g_errno));
 		return true;
 	}
+	*/
 
 	// wtf?
 	if ( ei->m_mxIp == 0 ) {
