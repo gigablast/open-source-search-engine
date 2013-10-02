@@ -22,7 +22,7 @@
 
 #include "gb-include.h"
 #include "Unicode.h"
-#include "matches.h"
+#include "matches2.h"
 #include "Query.h"
 #include "Xml.h"
 #include "Mem.h"

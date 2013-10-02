@@ -1,6 +1,6 @@
 #include "gb-include.h"
 
-#include "matches.h"
+#include "matches2.h"
 #include "Unicode.h"
 #include "Titledb.h"
 #include "HashTableT.h"

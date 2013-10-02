@@ -48,7 +48,7 @@ OBJS =  Tfndb.o UdpSlot.o \
 	PageLogView.o Msg1f.o Blaster.o MsgC.o \
 	PageSpam.o Proxy.o PageThreads.o Linkdb.o \
 	PageNetTest.o \
-	matches.o LanguageIdentifier.o \
+	matches2.o LanguageIdentifier.o \
 	Language.o Repair.o Process.o Msg3e.o \
 	Abbreviations.o \
 	RequestTable.o TuringTest.o Msg51.o geo_ip_table.o \
@@ -255,7 +255,7 @@ Matches.o:
 Highlight.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
-matches.o:
+matches2.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
 linkspam.o:
