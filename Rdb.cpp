@@ -1942,7 +1942,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		n = m_tree.getNode ( collnum , oppKey );
 	}
 
-	if ( m_rdbId == RDB_DOLEDB && g_conf.m_logDebugSpiderFlow ) {
+	if ( m_rdbId == RDB_DOLEDB && g_conf.m_logDebugSpider ) {
 		// must be 96 bits
 		if ( m_ks != 12 ) { char *xx=NULL;*xx=0; }
 		// set this
@@ -1950,7 +1950,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// remove from g_spiderLoop.m_lockTable too!
 		if ( KEYNEG(key) ) {
 			// log debug
-			logf(LOG_DEBUG,"spflow: removed doledb key "
+			logf(LOG_DEBUG,"spider: removed doledb key "
 			     "for pri=%li time=%lu uh48=%llu",
 			     (long)g_doledb.getPriority(&doleKey),
 			     (long)g_doledb.getSpiderTime(&doleKey),
@@ -1962,7 +1962,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 			// do not overflow!
 			// log debug
 			SpiderRequest *sreq = (SpiderRequest *)data;
-			logf(LOG_DEBUG,"spflow: added doledb key "
+			logf(LOG_DEBUG,"spider: added doledb key "
 			     "for pri=%li time=%lu uh48=%llu docid=%lli u=%s",
 			     (long)g_doledb.getPriority(&doleKey),
 			     (long)g_doledb.getSpiderTime(&doleKey),
@@ -2205,9 +2205,8 @@ bool Rdb::addRecord ( collnum_t collnum,
 				       (char *)key,
 				       sizeof(key_t) );
 				// debug log
-				if ( g_conf.m_logDebugSpider ||
-				     g_conf.m_logDebugSpiderFlow )
-					log("spflow: cursor reset pri=%li to "
+				if ( g_conf.m_logDebugSpider )
+					log("spider: cursor reset pri=%li to "
 					    "%s",
 					    pri,KEYSTR(key,12));
 			}

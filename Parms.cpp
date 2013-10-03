@@ -7865,14 +7865,6 @@ void Parms::init ( ) {
 	m->m_priv  = 1;
 	m++;
 
-	m->m_title = "log debug spider flow messages";
-	m->m_cgi   = "ldspf";
-	m->m_off   = (char *)&g_conf.m_logDebugSpiderFlow - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
-	m->m_priv  = 1;
-	m++;
-
 	m->m_title = "log debug spider wait messages";
 	m->m_cgi   = "ldspw";
 	m->m_off   = (char *)&g_conf.m_logDebugSpiderWait - g;
