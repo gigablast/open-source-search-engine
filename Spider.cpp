@@ -4196,24 +4196,22 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	}		
 
 
-	// sometimes we have it locked, but is still in doledb i guess!!
-	// wtf? maybe the doledb negative key did not go through before
-	// we added the lock? that can happen because confirmLockAcquisition()
-	// sends a confirm request and the handleRequest12() for it 
-	// first confirms the lock before trying to add the negative key
-	// to doledb, which can fail, with ETRYAGAIN etc. in this case i am
-	// seeing host #0 having it locked and confirmed, but still in doledb.
+	// sometimes we have it locked, but is still in doledb i guess.
+	// seems like we might have give the lock to someone else and
+	// there confirmation has not come through yet, so it's still
+	// in doledb.
 	HashTableX *ht = &g_spiderLoop.m_lockTable;
 	// shortcut
 	long long uh48 = sreq->getUrlHash48();
-	// get the lock key
-	// check tree
+	// is it locked?
 	if ( ht->isInTable ( &uh48 ) ) {
-		log("spider: spider request locked but in doledb! wtf?");
+		log("spider: spider request locked but still in doledb.");
 		// just increment then i guess
 		m_list.skipCurrentRecord();
-		// if exhausted -- try another load with m_nextKey set
-		if ( m_list.isExhausted() ) return true;
+		// let's return false here to avoid an infinite loop
+		// since we are nto advancing nextkey and m_pri is not
+		// being changed, that is what happens!
+		if ( m_list.isExhausted() ) return false;//true;
 		goto listLoop;
 	}
 
