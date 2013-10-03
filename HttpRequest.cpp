@@ -46,7 +46,9 @@ bool HttpRequest::copy ( class HttpRequest *r ) {
 	char *dbuf =    m_reqBuf.getBufStart();
 	for ( long i = 0 ; i < m_numFields ; i++ ) {
 		m_fields     [i] = dbuf + (r->m_fields     [i] - sbuf);
-		m_fieldValues[i] = dbuf + (r->m_fieldValues[i] - sbuf);
+		m_fieldValues[i] = NULL;
+		if ( r->m_fieldValues[i] )
+			m_fieldValues[i] = dbuf + (r->m_fieldValues[i] - sbuf);
 	}
 	m_cookiePtr  = dbuf + (r->m_cookiePtr  - sbuf );
 	m_metaCookie = dbuf + (r->m_metaCookie - sbuf );
