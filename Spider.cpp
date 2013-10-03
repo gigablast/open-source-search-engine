@@ -4216,7 +4216,18 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// let's return false here to avoid an infinite loop
 		// since we are nto advancing nextkey and m_pri is not
 		// being changed, that is what happens!
-		if ( m_list.isExhausted() ) return false;//true;
+		if ( m_list.isExhausted() ) {
+			// crap. but then we never make it to lower priorities.
+			// since we are returning false. so let's try the
+			// next priority in line.
+			m_sc->m_pri--;
+			// try returning true now that we skipped to
+			// the next priority level to avoid the infinite
+			// loop as described above.
+			return true;
+			//return false;//true;
+		}
+		// try the next record in this list
 		goto listLoop;
 	}
 
