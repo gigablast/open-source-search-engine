@@ -2351,10 +2351,10 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 	// Doledb::m_rdb::addRecord() below
 	// WE NEED THIS TO REPOPULATE DOLEDB THOUGH!!!
 	//return;
-	if ( g_conf.m_logDebugSpider )
-		log("spider: in populatedoledbfromwaitingtree "
-		    "numUsedNodes=%li",
-		    m_waitingTree.m_numUsedNodes);
+	//if ( g_conf.m_logDebugSpider )
+	//	log("spider: in populatedoledbfromwaitingtree "
+	//	    "numUsedNodes=%li",
+	// 	    m_waitingTree.m_numUsedNodes);
 
 	// set this flag so we are not re-entered
 	m_isPopulating = true;
@@ -3997,7 +3997,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( g_conf.m_logDebugSpider ) {
 		long long now = gettimeofdayInMillisecondsLocal();
 		long long took = now - m_doleStart;
-		//if ( took > 1 )
+		if ( took > 2 )
 			logf(LOG_DEBUG,"spider: GOT list from doledb in "
 			     "%llims "
 			     "size=%li bytes",
@@ -4018,11 +4018,11 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// bail if list is empty
 	if ( m_list.getListSize() <= 0 ) {
 		// if no spiders...
-		if ( g_conf.m_logDebugSpider ) {
-			log("spider: crap. doledblist is empty. numusednodes"
-			    "inwaitingtree=%li",
-			    m_sc->m_waitingTree.m_numUsedNodes);
-		}
+		//if ( g_conf.m_logDebugSpider ) {
+		//	log("spider: crap. doledblist is empty. numusednodes"
+		//	    "inwaitingtree=%li",
+		//	    m_sc->m_waitingTree.m_numUsedNodes);
+		//}
 		//if ( g_conf.m_logDebugSpider )
 		//	log("spider: resetting doledb priority pri=%li",
 		//	    m_sc->m_pri);
@@ -4194,6 +4194,28 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// otherwise, try the next doledb rec in this list
 		goto listLoop;
 	}		
+
+
+	// sometimes we have it locked, but is still in doledb i guess!!
+	// wtf? maybe the doledb negative key did not go through before
+	// we added the lock? that can happen because confirmLockAcquisition()
+	// sends a confirm request and the handleRequest12() for it 
+	// first confirms the lock before trying to add the negative key
+	// to doledb, which can fail, with ETRYAGAIN etc. in this case i am
+	// seeing host #0 having it locked and confirmed, but still in doledb.
+	HashTableX *ht = &g_spiderLoop.m_lockTable;
+	// shortcut
+	long long uh48 = sreq->getUrlHash48();
+	// get the lock key
+	// check tree
+	if ( ht->isInTable ( &uh48 ) ) {
+		log("spider: spider request locked but in doledb! wtf?");
+		// just increment then i guess
+		m_list.skipCurrentRecord();
+		// if exhausted -- try another load with m_nextKey set
+		if ( m_list.isExhausted() ) return true;
+		goto listLoop;
+	}
 
 	// . no no! the SpiderRequests in doledb are in our group because
 	//   doledb is split based on ... firstIp i guess...
@@ -5259,6 +5281,11 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 		// all done
 		return true;
 	}
+	// note that
+	if ( g_conf.m_logDebugSpider )
+		logf(LOG_DEBUG,"spider: sending request to all in group to "
+		     "remove lock uh48=%llu. grants=%li",
+		     m_lockKeyUh48,(long)m_grants);
 	// remove all locks we tried to get, BUT only if from our hostid!
 	// no no! that doesn't quite work right... we might be the ones
 	// locking it! i.e. another one of our spiders has it locked...

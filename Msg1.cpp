@@ -82,8 +82,8 @@ bool Msg1::addRecord ( char *rec ,
 	key_t ek;
 	sk.setMin();
 	ek.setMax();
-	RdbList list;
-	list.set ( rec , 
+	//RdbList list;
+	m_tmpList.set ( rec , 
 		   recSize ,
 		   rec ,
 		   recSize ,
@@ -93,7 +93,7 @@ bool Msg1::addRecord ( char *rec ,
 		   false , // owndata?
 		   false , // use half keys?
 		   sizeof(key_t));
-	return addList ( &list ,
+	return addList ( &m_tmpList ,
 			 rdbId ,
 			 g_collectiondb.m_recs[collnum]->m_coll ,
 			 state ,
