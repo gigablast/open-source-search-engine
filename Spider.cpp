@@ -4208,8 +4208,15 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	HashTableX *ht = &g_spiderLoop.m_lockTable;
 	// shortcut
 	long long uh48 = sreq->getUrlHash48();
-	// is it locked?
-	if ( ht->isInTable ( &uh48 ) ) {
+	// get the lock... only avoid if confirmed!
+	long slot = ht->getSlot ( &uh48 );
+	UrlLock *lock = NULL;
+	if ( slot >= 0 ) 
+		// get the corresponding lock then if there
+		lock = (UrlLock *)ht->getValueFromSlot ( slot );
+	// if there and confirmed, why still in doledb?
+	if ( lock && lock->m_confirmed ) {
+		// why is it not getting unlocked!?!?!
 		log("spider: spider request locked but still in doledb.");
 		// just increment then i guess
 		m_list.skipCurrentRecord();
