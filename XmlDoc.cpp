@@ -3197,7 +3197,7 @@ char **XmlDoc::getTitleRec ( ) {
 // . an "id" of 2 means very indicative of a dirty doc
 // . an "id" of 1 means it must be joined with another dirty word to indicate
 // . taken mostly from Url.cpp
-// . see matches.h for Needle class definition
+// . see matches2.h for Needle class definition
 static Needle s_dirtyWords []  = {
 	{"upskirt"    ,0,2,0,0,NULL,0,NULL},
 	{"downblouse" ,0,2,0,0,NULL,0,NULL},

@@ -1282,8 +1282,8 @@ bool SpiderColl::makeWaitingTree ( ) {
 			return false;
 		}
 		// note it
-		if ( g_conf.m_logDebugSpiderFlow )
-			log(LOG_DEBUG,"spflow: added time=1 ip=%s to waiting "
+		if ( g_conf.m_logDebugSpider )
+			log(LOG_DEBUG,"spider: added time=1 ip=%s to waiting "
 			    "tree (node#=%li)", iptoa(firstIp),wn);
 		// a tmp var
 		long long fakeone = 1LL;
@@ -1424,7 +1424,53 @@ bool SpiderColl::updateSiteNumInlinksTable ( long siteHash32,
 //   the count in m_doleIpTable here
 bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 
+	/////////
+	//
+	// remove the lock here
+	//
+	//////
+	long long uh48 = srep->getUrlHash48() ;
+	// shortcut
+	HashTableX *ht = &g_spiderLoop.m_lockTable;
+	UrlLock *lock = (UrlLock *)ht->getValue ( &uh48 );
+	time_t nowGlobal = getTimeGlobal();
+
+	if ( g_conf.m_logDebugSpider )
+		logf(LOG_DEBUG,"spider: scheduled lock removal in 5 secs for "
+		     "uh48=%llu",  uh48 );
+
+	// test it
+	//if ( m_nowGlobal == 0 && lock )
+	//	m_nowGlobal = getTimeGlobal();
+	// we do it this way rather than remove it ourselves
+	// because a lock request for this guy
+	// might be currently outstanding, and it will end up
+	// being granted the lock even though we have by now removed
+	// it from doledb, because it read doledb before we removed 
+	// it! so wait 5 seconds for the doledb negative key to 
+	// be absorbed to prevent a url we just spidered from being
+	// re-spidered right away because of this sync issue.
+	if ( lock ) lock->m_expires = nowGlobal + 5;
+	/////
+	//
+	// but do note that its spider has returned for populating the
+	// waiting tree. addToWaitingTree should not add an entry if
+	// a spiderReply is still pending according to the lock table,
+	// UNLESS, maxSpidersPerIP is more than what the lock table says
+	// is currently being spidered.
+	//
+	/////
+	if ( lock ) lock->m_spiderOutstanding = false;
+	// bitch if not in there
+	if ( !lock ) // &&g_conf.m_logDebugSpider)//ht->isInTable(&lockKey)) 
+		logf(LOG_DEBUG,"spider: rdb: uh48=%llu "
+		     "was not in lock table",uh48);
+
+	////
+	//
 	// skip if not assigned to us for doling
+	//
+	////
 	if ( ! isAssignedToUs ( srep->m_firstIp ) )
 		return true;
 
@@ -1516,47 +1562,6 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	//	if ( last != srep->m_downloadEndTime ) { char *xx=NULL;*xx=0;}
 	//}
 
-	/////////
-	//
-	// remove the lock here
-	//
-	//////
-	long long uh48 = srep->getUrlHash48() ;
-	// shortcut
-	HashTableX *ht = &g_spiderLoop.m_lockTable;
-	UrlLock *lock = (UrlLock *)ht->getValue ( &uh48 );
-	time_t nowGlobal = getTimeGlobal();
-
-	if ( g_conf.m_logDebugSpiderFlow )
-		logf(LOG_DEBUG,"spflow: scheduled lock removal in 5 secs for "
-		     "uh48=%llu",  uh48 );
-
-	// test it
-	//if ( m_nowGlobal == 0 && lock )
-	//	m_nowGlobal = getTimeGlobal();
-	// we do it this way rather than remove it ourselves
-	// because a lock request for this guy
-	// might be currently outstanding, and it will end up
-	// being granted the lock even though we have by now removed
-	// it from doledb, because it read doledb before we removed 
-	// it! so wait 5 seconds for the doledb negative key to 
-	// be absorbed to prevent a url we just spidered from being
-	// re-spidered right away because of this sync issue.
-	if ( lock ) lock->m_expires = nowGlobal + 5;
-	/////
-	//
-	// but do note that its spider has returned for populating the
-	// waiting tree. addToWaitingTree should not add an entry if
-	// a spiderReply is still pending according to the lock table,
-	// UNLESS, maxSpidersPerIP is more than what the lock table says
-	// is currently being spidered.
-	//
-	/////
-	if ( lock ) lock->m_spiderOutstanding = false;
-	// bitch if not in there
-	if ( !lock ) // &&g_conf.m_logDebugSpider)//ht->isInTable(&lockKey)) 
-		logf(LOG_DEBUG,"spider: rdb: uh48=%llu "
-		     "was not in lock table",uh48);
 	// skip:
 
 	// . add to wait tree and let it populate doledb on its batch run
@@ -1586,8 +1591,8 @@ void SpiderColl::removeFromDoledbTable ( long firstIp ) {
 	*score = *score - 1;
 
 	// now we log it too
-	if ( g_conf.m_logDebugSpiderFlow )
-		log(LOG_DEBUG,"spflow: removed ip=%s from doleiptable "
+	if ( g_conf.m_logDebugSpider )
+		log(LOG_DEBUG,"spider: removed ip=%s from doleiptable "
 		    "(newcount=%li)", iptoa(firstIp),*score);
 
 
@@ -1980,8 +1985,8 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	}
 
 	// note it
-	if ( g_conf.m_logDebugSpiderFlow )
-		log(LOG_DEBUG,"spflow: added time=%lli ip=%s to waiting tree",
+	if ( g_conf.m_logDebugSpider )
+		log(LOG_DEBUG,"spider: added time=%lli ip=%s to waiting tree",
 		    spiderTimeMS , iptoa(firstIp));
 
 	// add to table now since its in the tree
@@ -2059,8 +2064,8 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 		m_waitingTree.deleteNode ( node , true );
 
 		// note it
-		if ( g_conf.m_logDebugSpiderFlow )
-			log(LOG_DEBUG,"spflow: removed1 ip=%s from waiting "
+		if ( g_conf.m_logDebugSpider )
+			log(LOG_DEBUG,"spider: removed1 ip=%s from waiting "
 			    "tree. nn=%li",
 			    iptoa(firstIp),m_waitingTree.m_numUsedNodes);
 
@@ -2351,10 +2356,10 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 	// Doledb::m_rdb::addRecord() below
 	// WE NEED THIS TO REPOPULATE DOLEDB THOUGH!!!
 	//return;
-	if ( g_conf.m_logDebugSpider )
-		log("spider: in populatedoledbfromwaitingtree "
-		    "numUsedNodes=%li",
-		    m_waitingTree.m_numUsedNodes);
+	//if ( g_conf.m_logDebugSpider )
+	//	log("spider: in populatedoledbfromwaitingtree "
+	//	    "numUsedNodes=%li",
+	// 	    m_waitingTree.m_numUsedNodes);
 
 	// set this flag so we are not re-entered
 	m_isPopulating = true;
@@ -2586,11 +2591,11 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// . get the list of spiderdb records
 		// . do not include cache, those results are old and will mess
 		//   us up
-		if (g_conf.m_logDebugSpiderFlow ) {
+		if (g_conf.m_logDebugSpider ) {
 			// got print each out individually because KEYSTR
 			// uses a static buffer to store the string
 			SafeBuf tmp;
-			tmp.safePrintf("spflow: scanSpiderdb: "
+			tmp.safePrintf("spider: scanSpiderdb: "
 				       "calling msg5: ");
 			tmp.safePrintf("firstKey=%s "
 				       ,KEYSTR(&m_firstKey,sizeof(key128_t)));
@@ -2712,8 +2717,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	}
 
 
-	if ( list->isEmpty() && g_conf.m_logDebugSpiderFlow )
-		log("spflow: failed to get rec for ip=%s",iptoa(firstIp0));
+	if ( list->isEmpty() && g_conf.m_logDebugSpider )
+		log("spider: failed to get rec for ip=%s",iptoa(firstIp0));
 
 	long firstIp = m_waitingTreeKey.n0 & 0xffffffff;
 
@@ -3124,8 +3129,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		timestamp64 <<= 32;
 		timestamp64 |= m_waitingTreeKey.n0 >> 32;
 		long firstIp = m_waitingTreeKey.n0 &= 0xffffffff;
-		if ( g_conf.m_logDebugSpiderFlow )
-			log(LOG_DEBUG,"spflow: removed2 time=%lli ip=%s from "
+		if ( g_conf.m_logDebugSpider )
+			log(LOG_DEBUG,"spider: removed2 time=%lli ip=%s from "
 			    "waiting tree. nn=%li.",
 			    timestamp64, iptoa(firstIp),
 			    m_waitingTree.m_numUsedNodes);
@@ -3218,8 +3223,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		m_waitingTree.addKey ( &wk2 );
 
 		// note it
-		if ( g_conf.m_logDebugSpiderFlow )
-			log(LOG_DEBUG,"spflow: RE-added time=%lli ip=%s to "
+		if ( g_conf.m_logDebugSpider )
+			log(LOG_DEBUG,"spider: RE-added time=%lli ip=%s to "
 			    "waiting tree",
 			    m_bestSpiderTimeMS , iptoa(fip));
 
@@ -3248,8 +3253,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 					   false                         );
 	
 
-	if ( g_conf.m_logDebugSpiderFlow )
-		log("spflow: got winner pdocid=%lli url=%s",
+	if ( g_conf.m_logDebugSpider )
+		log("spider: got winner pdocid=%lli url=%s",
 		    m_bestRequest->m_probDocId,
 		    m_bestRequest->m_url);
 
@@ -3469,8 +3474,8 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 			    "how did this happen?",
 			    (long)*score,iptoa(sreq->m_firstIp));
 		// now we log it too
-		if ( g_conf.m_logDebugSpiderFlow )
-			log(LOG_DEBUG,"spflow: added ip=%s to doleiptable "
+		if ( g_conf.m_logDebugSpider )
+			log(LOG_DEBUG,"spider: added ip=%s to doleiptable "
 			    "(score=%li)",
 			    iptoa(sreq->m_firstIp),*score);
 	}
@@ -3485,8 +3490,8 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 			return false;
 		}
 		// now we log it too
-		if ( g_conf.m_logDebugSpiderFlow )
-			log(LOG_DEBUG,"spflow: added ip=%s to doleiptable "
+		if ( g_conf.m_logDebugSpider )
+			log(LOG_DEBUG,"spider: added ip=%s to doleiptable "
 			    "(score=1)",iptoa(sreq->m_firstIp));
 		// sanity check
 		//if ( ! m_doleIpTable.m_isWritable ) { char *xx=NULL;*xx=0;}
@@ -3997,7 +4002,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( g_conf.m_logDebugSpider ) {
 		long long now = gettimeofdayInMillisecondsLocal();
 		long long took = now - m_doleStart;
-		//if ( took > 1 )
+		if ( took > 2 )
 			logf(LOG_DEBUG,"spider: GOT list from doledb in "
 			     "%llims "
 			     "size=%li bytes",
@@ -4018,11 +4023,11 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// bail if list is empty
 	if ( m_list.getListSize() <= 0 ) {
 		// if no spiders...
-		if ( g_conf.m_logDebugSpider ) {
-			log("spider: crap. doledblist is empty. numusednodes"
-			    "inwaitingtree=%li",
-			    m_sc->m_waitingTree.m_numUsedNodes);
-		}
+		//if ( g_conf.m_logDebugSpider ) {
+		//	log("spider: crap. doledblist is empty. numusednodes"
+		//	    "inwaitingtree=%li",
+		//	    m_sc->m_waitingTree.m_numUsedNodes);
+		//}
 		//if ( g_conf.m_logDebugSpider )
 		//	log("spider: resetting doledb priority pri=%li",
 		//	    m_sc->m_pri);
@@ -4046,7 +4051,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	}
 
 	// if debugging the spider flow show the start key if list non-empty
-	/*if ( g_conf.m_logDebugSpiderFlow ) {
+	/*if ( g_conf.m_logDebugSpider ) {
 		// 12 byte doledb keys
 		long pri = g_doledb.getPriority(&m_sc->m_nextDoledbKey);
 		long stm = g_doledb.getSpiderTime(&m_sc->m_nextDoledbKey);
@@ -4194,6 +4199,26 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// otherwise, try the next doledb rec in this list
 		goto listLoop;
 	}		
+
+
+	// sometimes we have it locked, but is still in doledb i guess.
+	// seems like we might have give the lock to someone else and
+	// there confirmation has not come through yet, so it's still
+	// in doledb.
+	HashTableX *ht = &g_spiderLoop.m_lockTable;
+	// shortcut
+	long long uh48 = sreq->getUrlHash48();
+	// is it locked?
+	if ( ht->isInTable ( &uh48 ) ) {
+		log("spider: spider request locked but still in doledb.");
+		// just increment then i guess
+		m_list.skipCurrentRecord();
+		// let's return false here to avoid an infinite loop
+		// since we are nto advancing nextkey and m_pri is not
+		// being changed, that is what happens!
+		if ( m_list.isExhausted() ) return false;//true;
+		goto listLoop;
+	}
 
 	// . no no! the SpiderRequests in doledb are in our group because
 	//   doledb is split based on ... firstIp i guess...
@@ -4677,8 +4702,8 @@ bool SpiderLoop::spiderUrl2 ( ) {
 	// update this
 	m_sc->m_outstandingSpiders[(unsigned char)m_sreq->m_priority]++;
 
-	if ( g_conf.m_logDebugSpiderFlow )
-		log(LOG_DEBUG,"spflow: sc_out=%li waiting=%li url=%s",
+	if ( g_conf.m_logDebugSpider )
+		log(LOG_DEBUG,"spider: sc_out=%li waiting=%li url=%s",
 		    m_sc->m_spidersOut,
 		    m_sc->m_waitingTree.m_numUsedNodes,
 		    m_sreq->m_url);
@@ -5187,8 +5212,8 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 	// all done if we were confirming
 	if ( m_confirming ) {
 		// note it
-		if ( g_conf.m_logDebugSpiderFlow )
-		      logf(LOG_DEBUG,"spflow: done confirming all locks "
+		if ( g_conf.m_logDebugSpider )
+		      logf(LOG_DEBUG,"spider: done confirming all locks "
 			   "for %s",m_url);//m_sreq->m_url);
 		// we are done
 		m_gettingLocks = false;
@@ -5201,8 +5226,8 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 	// if got ALL locks, spider it
 	if ( m_grants == m_numReplies ) {
 		// note it
-		if ( g_conf.m_logDebugSpiderFlow )
-		      logf(LOG_DEBUG,"spflow: got lock for docid=lockkey=%llu",
+		if ( g_conf.m_logDebugSpider )
+		      logf(LOG_DEBUG,"spider: got lock for docid=lockkey=%llu",
 			   m_lockKeyUh48);
 		// flag this
 		m_hasLock = true;
@@ -5259,6 +5284,11 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 		// all done
 		return true;
 	}
+	// note that
+	if ( g_conf.m_logDebugSpider )
+		logf(LOG_DEBUG,"spider: sending request to all in group to "
+		     "remove lock uh48=%llu. grants=%li",
+		     m_lockKeyUh48,(long)m_grants);
 	// remove all locks we tried to get, BUT only if from our hostid!
 	// no no! that doesn't quite work right... we might be the ones
 	// locking it! i.e. another one of our spiders has it locked...

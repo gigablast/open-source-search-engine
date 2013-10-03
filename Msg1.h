@@ -90,6 +90,9 @@ class Msg1 {
 	// list to be added
 	RdbList    *m_list;
 
+	// for Msg1::addRecord:
+	RdbList m_tmpList;
+
 	// rdb id to add to ( see Msg0::getRdb(char rdbId) )
 	char        m_rdbId;
 	char       *m_coll;

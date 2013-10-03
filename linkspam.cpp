@@ -8,7 +8,7 @@
 #include "Linkdb.h"
 //#include "TitleRec.h"
 #include "Unicode.h"
-#include "matches.h"
+#include "matches2.h"
 #include "Categories.h"
 
 bool isLinkChain ( Xml *xml , Url *linker , Url *linkee , long linkNode ,
