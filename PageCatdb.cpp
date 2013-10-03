@@ -105,8 +105,8 @@ bool sendPageCatdb ( TcpSocket *s , HttpRequest *r ) {
 		st->m_url.set(url, urlLen);
 		// call msg8b to lookup in catdb
 		if (!st->m_msg8b.getCatRec ( &st->m_url,
-					      st->m_coll,
-					      st->m_collLen,
+					     NULL,//st->m_coll,
+					     0,//st->m_collLen,
 					      true,
 					      1,
 					      &st->m_catRec,

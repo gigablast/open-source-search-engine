@@ -1011,13 +1011,17 @@ errEnd:
 	return false;
 }
 
-// generate sub categories for a given catid
+// . generate sub categories for a given catid
+// . store list of SubCategories into "subCatBuf" return # stored
 long Categories::generateSubCats ( long catid,
-				   SubCategory *subCats,
-				   char **catBuffer,
-				   long  *catBufferSize,
-				   long  *catBufferLen,
-				   bool   allowRealloc ) {
+				   SafeBuf *subCatBuf 
+				   //SubCategory *subCats,
+				   //char **catBuffer,
+				   //long  *catBufferSize,
+				   //long  *catBufferLen,
+				   //bool   allowRealloc 
+				   ) {
+
 	long catIndex;
 	unsigned long fileOffset;
 	unsigned long n;
@@ -1029,15 +1033,22 @@ long Categories::generateSubCats ( long catid,
 	long prefixLen;
 	long nameStart;
 	long nameLen;
-	long catp         = 0;
-	long catBufferInc = *catBufferSize;
-	// lookup the index for this catid
+	long need ;
+	SubCategory *cat;
+	char *p ;
+
+	//long catp         = 0;
+	//long catBufferInc = *catBufferSize;
+	// . lookup the index for this catid
+	// . binary step, guessing to approximate place
+	//   and then scanning from there
 	catIndex = getIndexFromId(catid);
 	if (catIndex < 0)
 		goto errEnd;
 	// get the file offset
 	fileOffset = m_cats[catIndex].m_structureOffset;
 	// open the structure file
+	// cat/content.rdf.u8 in utf8
 	char filename[512];
 	sprintf(filename, "%scat/%s", g_hostdb.m_dir, RDFSTRUCTURE_FILE);
 	//m_rdfStream.clear();
@@ -1066,12 +1077,16 @@ long Categories::generateSubCats ( long catid,
 		log("cat: Error Reading Structure Offset");
 		goto errEnd;
 	}
+	// point to the buffer we just read with m_rdfPtr
 	m_rdfPtr = m_rdfBuffer;
 	m_rdfEnd = &m_rdfBuffer[n];
 	m_currOffset = fileOffset;
 	
 	// parse tags for the sub categories or until we hit /Topic
 nextTag:
+	// . this increments m_rdfPtr until it points to the beginning of a tag
+	// . it may end up reading another chunk from disk
+	// . it memcopies m_tagRecfer to be the name of the tag it points to
 	if (rdfNextTag() < 0)
 		goto gotSubCats;
 	// check for /Topic
@@ -1173,37 +1188,36 @@ nextTag:
 		break;
 	}
 	// . fill the next sub category
-	if (catp + prefixLen + nameLen >= *catBufferSize) {
-		if (!allowRealloc)
-			goto gotSubCats;
-		// realloc the buffer
-		char *re_catBuffer = (char*)mrealloc ( *catBuffer,
-					       *catBufferSize,
-					       *catBufferSize+catBufferInc,
-					       "Categories" );
-		if (!re_catBuffer) {
-			log ( "Could not allocate %li bytes for catBuffer",
-			      *catBufferSize+catBufferInc );
-			g_errno = ENOMEM;
-			goto errEnd;
-		}
-		*catBuffer = re_catBuffer;
-		*catBufferSize += catBufferInc;
-	}
-	// fill the prefix and name in the buffer and subcat
+	// . fill the prefix and name in the buffer and subcat
+	need = sizeof(SubCategory) + prefixLen + 1 + nameLen + 1;
+	if ( ! subCatBuf->reserve(need) ) goto errEnd;
+	cat = (SubCategory *)(subCatBuf->getBuf());
+	cat->m_prefixLen = prefixLen;
+	cat->m_nameLen = nameLen;
+	cat->m_type = currType;
+	p = cat->m_buf;
+	memcpy ( p , catStr + prefixStart , prefixLen );
+	p += prefixLen;
+	*p++ = '\0';
+	memcpy ( p , catStr + nameStart , nameLen );
+	p += nameLen;
+	*p++ = '\0';
+
+	/*
 	subCats[numSubCats].m_prefixOffset = catp;
 	subCats[numSubCats].m_prefixLen    = prefixLen;
 	if (prefixLen > 0) {
 		memcpy(&((*catBuffer)[catp]), &catStr[prefixStart], prefixLen);
 		catp += prefixLen;
 	}
-	subCats[numSubCats].m_nameOffset   = catp;
+	subCats[numSubCats].m_nameOffset   = catBuf->length();//catp;
 	subCats[numSubCats].m_nameLen      = nameLen;
 	if (nameLen > 0) {
 		memcpy(&((*catBuffer)[catp]), &catStr[nameStart], nameLen);
 		catp += nameLen;
 	}
 	subCats[numSubCats].m_type         = currType;
+	*/
 	// next sub cat
 	numSubCats++;
 	if (numSubCats >= MAX_SUB_CATS) {
@@ -1214,14 +1228,14 @@ nextTag:
 	// next tag
 	goto nextTag;
 gotSubCats:
-	*catBufferLen = catp;
+	//*catBufferLen = catp;
 	//m_rdfStream.close();
 	//m_rdfStream.clear();
 	close(m_rdfStream);
 	return numSubCats;
 
 errEnd:
-	*catBufferLen = 0;
+	//*catBufferLen = 0;
 	//m_rdfStream.close();
 	//m_rdfStream.clear();
 	close(m_rdfStream);

@@ -14,7 +14,7 @@
 #include "Msg39.h"      // getTermFreqs()
 #include "Msg20.h"      // for getting summary from docId
 #include "Msg17.h"      // a distributed cache of serialized/compressed Msg40s
-#include "Msg2b.h"      // for generating directories
+//#include "Msg2b.h"      // for generating directories
 #include "IndexReadInfo.h" // STAGE0,...
 #include "Msg3a.h"
 #include "PostQueryRerank.h"
@@ -302,7 +302,7 @@ class Msg40 {
 	long       m_docsToScanForTopics;
 
 	// Msg2b for generating a directory
-	Msg2b  m_msg2b;
+	//Msg2b  m_msg2b;
 
 	PostQueryRerank m_postQueryRerank;
 

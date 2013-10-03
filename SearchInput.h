@@ -400,6 +400,9 @@ class SearchInput {
 	SafeBuf m_sbuf2;
 	SafeBuf m_sbuf3;
 
+	long m_catId;
+	bool m_isRTL;
+
 	// make a cookie from parms with m_flags of PF_COOKIE set
 	SafeBuf m_cookieBuf;
 

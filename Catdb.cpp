@@ -51,8 +51,8 @@ bool Catdb::init (  ) {
 	// . initialize our own internal rdb
 	// . i no longer use cache so changes to tagdb are instant
 	// . we still use page cache however, which is good enough!
-	if ( this == &g_catdb )
-		return m_rdb.init ( g_hostdb.m_dir               ,
+	//if ( this == &g_catdb )
+	if ( !  m_rdb.init ( g_hostdb.m_dir               ,
 			    "catdb"                   ,
 			    true                       , // dedup same keys?
 			    -1                         , // fixed record size
@@ -72,8 +72,14 @@ bool Catdb::init (  ) {
 				    false,
 				    12,
 				    false,
-				    true ); // is collectionless?
-	return true;
+			     true )) // is collectionless?
+		return false;
+
+	// normally Collectiondb.addColl() will call Rdb::addColl() which
+	// will init the CollectionRec::m_rdbBase, which is what
+	// Rdb::getBase(collnum_t) will return. however, for collectionless
+	// rdb databases we set Rdb::m_collectionlessBase special here.
+	return m_rdb.addColl ( NULL );
 }
 
 bool Catdb::init2 ( long treeMem ) {
@@ -119,7 +125,7 @@ bool Catdb::verify ( char *coll ) {
 	g_threads.disableThreads();
 
 	Msg5 msg5;
-	Msg5 msg5b;
+	//Msg5 msg5b;
 	RdbList list;
 	key_t startKey;
 	key_t endKey;
@@ -128,7 +134,7 @@ bool Catdb::verify ( char *coll ) {
 	//long minRecSizes = 64000;
 	
 	if ( ! msg5.getList ( RDB_CATDB     ,
-			      coll          ,
+			      "",//coll          ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -147,7 +153,7 @@ bool Catdb::verify ( char *coll ) {
 			      -1            ,
 			      true          ,
 			      -1LL          ,
-			      &msg5b        ,
+			      NULL,//&msg5b        ,
 			      true          )) {
 		g_threads.enableThreads();
 		return log("db: HEY! it did not block");
@@ -309,6 +315,19 @@ void Catdb::listSearch ( RdbList *list,
 	// for small lists, just loop through the list
 	if (list->getListSize() < 16*1024) {
 		while ( ! list->isExhausted() ) {
+			// for debug!
+			/*
+			CatRec crec;
+			crec.set ( NULL,
+				   list->getCurrentData(),
+				   list->getCurrentDataSize(),
+				   false);
+			log("catdb: caturl=%s #catid=%li version=%li"
+			    ,crec.m_url
+			    ,(long)crec.m_numCatids
+			    ,(long)crec.m_version
+			    );
+			*/
 			// check the current key
 			if ( list->getCurrentKey() != exactKey ) {
 				// miss, next

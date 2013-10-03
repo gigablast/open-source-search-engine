@@ -5,7 +5,7 @@
 #include "Clusterdb.h"
 #include "Hostdb.h"
 #include "Tagdb.h"
-//#include "Catdb.h"
+#include "Catdb.h"
 #include "Indexdb.h"
 #include "Posdb.h"
 #include "Cachedb.h"
@@ -1340,7 +1340,7 @@ void attemptMergeAll ( int fd , void *state ) {
 	g_titledb.getRdb()->attemptMerge    ( 1 , false , !state);
 	//g_tfndb.getRdb()->attemptMerge      ( 1 , false , !state);
 	g_tagdb.getRdb()->attemptMerge     ( 1 , false , !state);
-	//g_catdb.getRdb()->attemptMerge      ( 1 , false , !state);
+	g_catdb.getRdb()->attemptMerge      ( 1 , false , !state);
 	g_clusterdb.getRdb()->attemptMerge  ( 1 , false , !state);
 	g_statsdb.getRdb()->attemptMerge    ( 1 , false , !state);
 	g_syncdb.getRdb()->attemptMerge    ( 1 , false , !state);
@@ -2351,7 +2351,7 @@ Rdb *getRdbFromId ( uint8_t rdbId ) {
 		s_table9 [ RDB_DOLEDB    ] = g_doledb.getRdb();
 		s_table9 [ RDB_TFNDB     ] = g_tfndb.getRdb();
 		s_table9 [ RDB_CLUSTERDB ] = g_clusterdb.getRdb();
-		//s_table9 [ RDB_CATDB     ] = g_catdb.getRdb();
+		s_table9 [ RDB_CATDB     ] = g_catdb.getRdb();
 		s_table9 [ RDB_DATEDB    ] = g_datedb.getRdb();
 		s_table9 [ RDB_LINKDB    ] = g_linkdb.getRdb();
 		s_table9 [ RDB_CACHEDB   ] = g_cachedb.getRdb();
@@ -2380,7 +2380,7 @@ Rdb *getRdbFromId ( uint8_t rdbId ) {
 // the opposite of the above
 char getIdFromRdb ( Rdb *rdb ) {
 	if ( rdb == g_tagdb.getRdb    () ) return RDB_TAGDB;
-	//if ( rdb == g_catdb.getRdb     () ) return RDB_CATDB;
+	if ( rdb == g_catdb.getRdb     () ) return RDB_CATDB;
 	if ( rdb == g_indexdb.getRdb   () ) return RDB_INDEXDB;
 	if ( rdb == g_posdb.getRdb   () ) return RDB_POSDB;
 	if ( rdb == g_datedb.getRdb    () ) return RDB_DATEDB;
@@ -2401,7 +2401,7 @@ char getIdFromRdb ( Rdb *rdb ) {
 	if ( rdb == g_revdb.getRdb     () ) return RDB_REVDB;
 	//if ( rdb == g_sitedb.getRdb    () ) return RDB_SITEDB;
 	//if ( rdb == g_tagdb2.getRdb    () ) return RDB2_SITEDB2;
-	//if ( rdb == g_catdb.getRdb     () ) return RDB_CATDB;
+	if ( rdb == g_catdb.getRdb     () ) return RDB_CATDB;
 	if ( rdb == g_indexdb2.getRdb   () ) return RDB2_INDEXDB2;
 	if ( rdb == g_posdb2.getRdb   () ) return RDB2_POSDB2;
 	if ( rdb == g_datedb2.getRdb    () ) return RDB2_DATEDB2;
@@ -2425,7 +2425,7 @@ char getIdFromRdb ( Rdb *rdb ) {
 char isSecondaryRdb ( uint8_t rdbId ) {
 	switch ( rdbId ) {
 	//case RDB2_SITEDB2    : return true;
-        //case RDB_CATDB2     : return g_catdb2.getRdb();
+        case RDB2_CATDB2     : return true;
 	case RDB2_INDEXDB2   : return true;
 	case RDB2_POSDB2   : return true;
 	case RDB2_DATEDB2    : return true;
@@ -2532,6 +2532,7 @@ long getDataSizeFromRdbId ( uint8_t rdbId ) {
 			else if ( i == RDB2_TITLEDB2 ||
 				  i == RDB2_REVDB2   ||
 				  i == RDB2_TAGDB2   ||
+				  i == RDB2_CATDB2   ||
 				  i == RDB2_SPIDERDB2 ||
 				  i == RDB2_PLACEDB2 )
 				ds = -1;

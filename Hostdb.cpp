@@ -2308,10 +2308,9 @@ uint32_t Hostdb::getGroupId ( char rdbId,void *k,bool split ) {
 		unsigned long long d = g_revdb.getDocId( (key_t *)k );
 		return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 	}
-
-	//else if ( rdbId == RDB_CATDB || rdbId == RDB2_CATDB2 ) {
-	//	return m_map [(*(uint16_t *)((char *)k + 10))>>3];
-	//}
+	else if ( rdbId == RDB_CATDB || rdbId == RDB2_CATDB2 ) {
+		return m_map [(*(uint16_t *)((char *)k + 10))>>3];
+	}
 	// core -- must be provided
 	char *xx = NULL; *xx = 0;
 	//groupId=key.n1 & g_hostdb.m_groupMask;

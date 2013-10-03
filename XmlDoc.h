@@ -693,6 +693,7 @@ class XmlDoc {
 	bool hashZipCodes ( class HashTableX *table ) ;
 	bool hashMetaZip ( class HashTableX *table ) ;
 	bool hashContentType ( class HashTableX *table ) ;
+	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
 	bool hashUrl ( class HashTableX *table ) ;
 	bool hashSections ( class HashTableX *table ) ;

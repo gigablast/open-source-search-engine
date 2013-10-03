@@ -1210,6 +1210,40 @@ bool SearchInput::setQueryBuffers ( ) {
 		  m_displayQuery,
 		  m_displayQueryLen);
 	
+
+
+
+	//////////
+	//
+	// show DMOZ BREADCRUMB if doing a 
+	// "gbpdcat:<catid> |" (Search restricted to category)
+	// "gbdcat:<catid>"    (DMOZ urls in that topic, c=dmoz3)
+	//
+	//////////
+	long pcatId = -1;
+	long dcatId  = -1;
+	// get the final query
+	char *q =m_sbuf1.getBufStart();
+	if ( q ) sscanf(q,"gbpdcat:%li",&pcatId);
+	if ( q ) sscanf(q,"gbcat:%li",&dcatId);
+	// pick the one that is valid
+	long catId = -1;
+	if ( pcatId >= 0 ) catId = pcatId;
+	if ( dcatId >= 0 ) catId = dcatId;
+	
+	//////
+	//
+	// save catid into the state
+	m_catId = catId;
+	//
+	///////
+
+	// are we a right to left language like hebrew?
+	if ( catId > 0 && g_categories->isIdRTL(catId) )
+		m_isRTL = true;
+	else
+		m_isRTL = false;
+
 	return true;
 }
 

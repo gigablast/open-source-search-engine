@@ -61,11 +61,15 @@ struct CategoryHash {
 };
 
 struct SubCategory {
-	long  m_prefixOffset;
+	//long  m_prefixOffset;
 	long  m_prefixLen;
-	long  m_nameOffset;
+	//long  m_nameOffset;
 	long  m_nameLen;
 	char  m_type;
+	long getRecSize () { return sizeof(SubCategory)+m_prefixLen+m_nameLen+2;};
+	char *getPrefix() { return m_buf; };
+	char *getName  () { return m_buf+m_prefixLen+1;};
+	char  m_buf[0];
 };
 
 class Categories {
@@ -153,13 +157,10 @@ public:
 	// normalize a url string
 	long fixUrl ( char *url, long urlLen );
 
-	// generate sub categories for a given catid
-	long generateSubCats ( long catid,
-			       SubCategory *subCats,
-			       char **catBuffer,
-			       long  *catBufferSize,
-			       long  *catBufferLen,
-			       bool   allowRealloc = true );
+	// . generate sub categories for a given catid
+	// . store list of SubCategories into "subCatBuf" return # stored
+	// . hits disk without using threads... so kinda sucks...
+	long generateSubCats ( long catid, SafeBuf *subCatBuf );
 
 	long getNumUrlsFromIndex ( long catIndex ) {
 		return m_cats[catIndex].m_numUrls; };

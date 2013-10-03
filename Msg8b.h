@@ -68,11 +68,11 @@ class Msg8b {
 	void cleanSlot     ( );
 
 	// some specified input
-	char  *m_coll;
-	long   m_collLen;
+	//char  *m_coll;
+	//long   m_collLen;
 	Url   *m_url;
 
-	collnum_t m_collnum;
+	//collnum_t m_collnum;
 
 	void    (*m_callback ) ( void *state );//, CatRec *rec );
 	void     *m_state;      // ptr to caller's private state data

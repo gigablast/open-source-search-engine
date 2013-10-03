@@ -22,7 +22,7 @@
 #include "Titledb.h"
 #include "Revdb.h"
 #include "Tagdb.h"
-//#include "Catdb.h"
+#include "Catdb.h"
 #include "Users.h"
 #include "Tfndb.h"
 #include "Spider.h"
@@ -2624,8 +2624,8 @@ int main ( int argc , char *argv[] ) {
 	if ( ! g_tagdb.init()     ) {
 		log("db: Tagdb init failed." ); return 1; }
 	// the catdb, it's an instance of tagdb, pass RDB_CATDB
-	//if ( ! g_catdb.init()   ) {
-	//	log("db: Catdb1 init failed." ); return 1; }
+	if ( ! g_catdb.init()   ) {
+		log("db: Catdb1 init failed." ); return 1; }
 	// initialize Users
 	if ( ! g_users.init()  ){
 		log("db: Users init failed. "); return 1;}
@@ -10986,7 +10986,8 @@ void dumpTagdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_tagdb.init ();
 	g_collectiondb.init(true);
-	g_tagdb.addColl ( coll, false );
+	if ( rdbId == RDB_TAGDB ) g_tagdb.addColl ( coll, false );
+	if ( rdbId == RDB_CATDB ) g_catdb.init();
 	key128_t startKey ;
 	key128_t endKey   ;
 	startKey.setMin();
@@ -11049,6 +11050,21 @@ void dumpTagdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 		// breach check
 		if ( p >= pend ) {
 			printf("corrupt tagdb rec k.n0=%llu",k.n0);
+			continue;
+		}
+		// catdb?
+		if ( rdbId == RDB_CATDB ) {
+			// for debug!
+			CatRec crec;
+			crec.set ( NULL,
+				   data ,
+				   size ,
+				   false);
+			printf("caturl=%s #catids=%li version=%li\n"
+			    ,crec.m_url
+			    ,(long)crec.m_numCatids
+			    ,(long)crec.m_version
+			    );
 			continue;
 		}
 		// parse it up
@@ -13945,10 +13961,10 @@ void saveRdbs ( int fd , void *state ) {
 	last = rdb->getLastWriteTime();
 	if ( now - last > delta )
 		if ( ! rdb->close(NULL,NULL,false,false)) return;
-	//rdb = g_catdb.getRdb();
-	//last = rdb->getLastWriteTime();
-	//if ( now - last > delta )
-	//	if ( ! rdb->close(NULL,NULL,false,false)) return;
+	rdb = g_catdb.getRdb();
+	last = rdb->getLastWriteTime();
+	if ( now - last > delta )
+		if ( ! rdb->close(NULL,NULL,false,false)) return;
 	//rdb = g_indexdb.getRdb();
 	//last = rdb->getLastWriteTime();
 	//if ( now - last > delta )

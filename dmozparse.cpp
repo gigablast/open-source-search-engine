@@ -21,6 +21,11 @@
 bool closeAll ( void *state , void (* callback)(void *state) ) { return true; }
 bool allExit ( ) { return true; };
 
+bool sendPageSEO(TcpSocket *s, HttpRequest *hr) {return true;}
+
+//long g_qbufNeedSave = false;
+//SafeBuf g_qbuf;
+
 #define RDFBUFFER_SIZE    (1024*1024*10)
 #define RDFSTRUCTURE_FILE "structure.rdf.u8"
 #define RDFCONTENT_FILE   "content.rdf.u8"
@@ -518,7 +523,7 @@ bool isGoodUrl ( char *url, long urlLen ) {
 	if ( urlLen <= 0 )
 		return false;
 	for (long i = 0; i < urlLen; i++) {
-		if (is_space(url[i]))
+		if (is_wspace_a(url[i]))
 			return false;
 	}
 	// check for [prot]://[url]
@@ -621,7 +626,7 @@ long fixUrl ( char *url, long urlLen ) {
 			memmove(&url[slashi-1], &url[slashi], newUrlLen - slashi);
 			newUrlLen--;
 		}
-		if (is_space(url[slashi])) {
+		if (is_wspace_a(url[slashi])) {
 			memmove(&url[slashi], &url[slashi+1], newUrlLen - (slashi+1));
 			newUrlLen--;
 		}
@@ -678,7 +683,7 @@ int main ( int argc, char *argv[] ) {
 	long m = 0;
 	long newNameBufferSize = 0;
 	long newOffset = 0;
-	char filename[256];
+	char filename[1256];
 	long urlTxtCount = 0;
 	long urlTxtFile  = 0;
 	Url normUrl;
@@ -695,6 +700,7 @@ int main ( int argc, char *argv[] ) {
 	bool splitUrls = false;
 	char mode = MODE_NONE;
 	long totalNEC = 0;
+	char *dir;
 
 	// check the options and mode
 	for (long i = 0; i < argc; i++) {
@@ -783,20 +789,29 @@ int main ( int argc, char *argv[] ) {
 		goto errExit;
 	}
 
+	dir = "";
+
+ retry:
+
 	// open the structure file
 	if ( mode == MODE_NEW || mode == MODE_CATDUMP )
-		sprintf(filename, "%s", RDFSTRUCTURE_FILE);
+		sprintf(filename, "%s%s", dir,RDFSTRUCTURE_FILE);
 	else
-		sprintf(filename, "%s.new", RDFSTRUCTURE_FILE);
+		sprintf(filename, "%s%s.new", dir,RDFSTRUCTURE_FILE);
 	//rdfStream.open(filename, ifstream::in);
 	rdfStream = open ( filename, O_RDONLY );
-	// make sure it openned okay
+	// make sure it opened okay
 	//if (!rdfStream.is_open()) {
 	if ( rdfStream < 0 ) {
-		printf("Error Openning %s\n", filename);
+		// try ./cat/ subdir if not found
+		if ( ! dir[0] ) {
+			dir = "./cat/";
+			goto retry;
+		}
+		printf("Error Opening %s\n", filename);
 		goto errExit;
 	}
-	printf("Openned Structure File: %s\n", filename);
+	printf("Opened Structure File: %s\n", filename);
 
 	// take the first chunk
 	//rdfStream.read(rdfBuffer, RDFBUFFER_SIZE);
@@ -832,7 +847,9 @@ int main ( int argc, char *argv[] ) {
 			nameLen = MAX_HTTP_FILENAME_LEN;
 		nameLen = htmlDecode ( htmlDecoded,
 				      &nameBuffer[nameOffset],
-				       nameLen );
+				       nameLen ,
+				       false,
+				       0);
 		memcpy(&nameBuffer[nameOffset], htmlDecoded, nameLen);
 		nameBufferLen  += nameLen;
 		// parse the catid
@@ -977,7 +994,9 @@ nextChildTag:
 			childNameLen = MAX_HTTP_FILENAME_LEN;
 		childNameLen = htmlDecode ( htmlDecoded,
 					    childName,
-					    childNameLen );
+					    childNameLen ,
+					    false,
+					    0);
 		memcpy(childName, htmlDecoded, childNameLen);
 		// cut off the leading label if symbolic
 //		if (parentType == 2) {
@@ -1066,25 +1085,25 @@ fileEnd1:
 	for (long i = 0; i < numRdfCats; i++) {
 		// get the hash of the path
 		rawPathLen = printCatPath(rawPath, rdfCats[i].m_catid, true);
-		rdfCats[i].m_catHash = hash32Lower(rawPath, rawPathLen, 0);
+		rdfCats[i].m_catHash = hash32Lower_a(rawPath, rawPathLen, 0);
 	}
 
 	// . now we want to serialize the needed data into
 	//   one (or more?) file(s) to be quickly read by gb
 	if ( mode == MODE_NEW )
-		sprintf(filename, "%s", STRUCTURE_OUTPUT_FILE);
+		sprintf(filename, "%s%s", dir,STRUCTURE_OUTPUT_FILE);
 	else
-		sprintf(filename, "%s.new", STRUCTURE_OUTPUT_FILE);
+		sprintf(filename, "%s%s.new", dir,STRUCTURE_OUTPUT_FILE);
 	//outStream.open(filename, ofstream::out|ofstream::trunc);
 	outStream = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
 			S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-	// make sure it openned okay
+	// make sure it opened okay
 	//if (!outStream.is_open()) {
 	if ( outStream < 0 ) {
-		printf("Error Openning %s\n", filename);
+		printf("Error Opening %s\n", filename);
 		goto errExit;
 	}
-	printf("\nOpenned %s for writing.\n", filename);
+	printf("\nOpened %s for writing.\n", filename);
 
 	// write the size of the truncated name buffer
 	//outStream.write((char*)&newNameBufferSize, sizeof(long));
@@ -1152,18 +1171,18 @@ contentParse:
 	
 	// open the content file
 	if ( mode == MODE_NEW ||  mode == MODE_URLDUMP )
-		sprintf(filename, "%s", RDFCONTENT_FILE);
+		sprintf(filename, "%s%s", dir,RDFCONTENT_FILE);
 	else
-		sprintf(filename, "%s.new", RDFCONTENT_FILE);
+		sprintf(filename, "%s%s.new", dir,RDFCONTENT_FILE);
 	//rdfStream.open(filename, ifstream::in);
 	rdfStream = open ( filename, O_RDONLY );
-	// make sure it openned okay
+	// make sure it opened okay
 	//if (!rdfStream.is_open()) {
 	if ( rdfStream < 0 ) {
-		printf("Error Openning %s\n", filename);
+		printf("Error Opening %s\n", filename);
 		goto errExit;
 	}
-	printf("\nOpenned Content File: %s\n", filename);
+	printf("\nOpened Content File: %s\n", filename);
 
 	// take the first chunk
 	//rdfStream.read(rdfBuffer, RDFBUFFER_SIZE);
@@ -1199,13 +1218,13 @@ contentParse:
 		//outStream2.open(filename, ofstream::out|ofstream::trunc);
 		outStream2 = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
 					S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-		// make sure it openned okay
+		// make sure it opened okay
 		//if (!outStream2.is_open()) {
 		if ( outStream2 < 0 ) {
-			printf("Error Openning %s\n", filename);
+			printf("Error Opening %s\n", filename);
 			goto errExit1;
 		}
-		printf("Openned %s for writing.\n", filename);
+		printf("Opened %s for writing.\n", filename);
 
 		// if we're doing a diffurldump, load up the diff file first
 		if ( mode == MODE_DIFFURLDUMP ) {
@@ -1219,10 +1238,10 @@ contentParse:
 			diffInStream = open(filename, O_RDONLY);
 			//if (!diffInStream.is_open()) {
 			if ( diffInStream < 0 ) {
-				printf("Error Openning %s\n", filename);
+				printf("Error Opening %s\n", filename);
 				goto errExit;
 			}
-			printf("Openned Diff File: %s\n", filename);
+			printf("Opened Diff File: %s\n", filename);
 	
 			// read in the number of urls to update/add
 			//diffInStream.read((char*)&numUpdateIndexes,
@@ -1326,14 +1345,14 @@ contentParse:
 					outStream2 = open ( filename,
 					  O_CREAT|O_WRONLY|O_TRUNC,
 					  S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-					// make sure it openned okay
+					// make sure it opened okay
 					//if (!outStream2.is_open()) {
 					if ( outStream2 < 0 ) {
-						printf("Error Openning %s\n",
+						printf("Error Opening %s\n",
 						       filename);
 						goto errExit1;
 					}
-					printf("Openned %s for writing.\n",
+					printf("Opened %s for writing.\n",
 					       filename);
 					urlTxtCount = 0;
 				}
@@ -1348,20 +1367,20 @@ contentParse:
 	}
 	else {
 		if ( mode == MODE_NEW )
-			sprintf(filename, "%s", CONTENT_OUTPUT_FILE);
+			sprintf(filename, "%s%s", dir,CONTENT_OUTPUT_FILE);
 		else
-			sprintf(filename, "%s.new", CONTENT_OUTPUT_FILE);
+			sprintf(filename, "%s%s.new", dir,CONTENT_OUTPUT_FILE);
 		// stream the urls into the content
 		//outStream.open(filename, ofstream::out|ofstream::trunc);
 		outStream = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
 				S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-		// make sure it openned okay
+		// make sure it opened okay
 		//if (!outStream.is_open()) {
 		if ( outStream < 0 ) {
-			printf("Error Openning %s\n", filename);
+			printf("Error Opening %s\n", filename);
 			goto errExit;
 		}
-		printf("Openned %s for writing.\n", filename);
+		printf("Opened %s for writing.\n", filename);
 
 		// store a space for the number of urls at the start of the file
 		//outStream.write((char*)&numUrlInfos, sizeof(long));
@@ -1442,7 +1461,8 @@ hashLink:
 		// html decode the url
 		if (urlLen > MAX_URL_LEN)
 			urlLen = MAX_URL_LEN;
-		urlLen = htmlDecode(decodedUrl, &urlBuffer[urlOffset], urlLen);
+		urlLen = htmlDecode(decodedUrl, &urlBuffer[urlOffset], urlLen,
+				    false,0);
 		memcpy(&urlBuffer[urlOffset], decodedUrl, urlLen);
 		// fix up bad urls
 		urlLen = fixUrl(&urlBuffer[urlOffset], urlLen);
@@ -1473,7 +1493,7 @@ hashLink:
 		//urlBufferLen += urlLen;
 		// get the hash value
 		unsigned long long urlHash =
-			hash64Lower(&urlBuffer[urlOffset], urlLen, 0);
+			hash64Lower_a(&urlBuffer[urlOffset], urlLen, 0);
 		//unsigned long urlHash2 =
 		//	hash32Lower(&urlBuffer[urlOffset], urlLen, 0);
 		// see if it's already indexed
@@ -1530,14 +1550,14 @@ hashLink:
 					outStream2 = open ( filename,
 					  O_CREAT|O_WRONLY|O_TRUNC,
 					  S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-					// make sure it openned okay
+					// make sure it opened okay
 					//if (!outStream2.is_open()) {
 					if ( outStream2 < 0 ) {
-						printf("Error Openning %s\n",
+						printf("Error Opening %s\n",
 						       filename);
 						goto errExit1;
 					}
-					printf("Openned %s for writing.\n",
+					printf("Opened %s for writing.\n",
 					       filename);
 					urlTxtCount = 0;
 				}
@@ -1697,19 +1717,19 @@ fileEnd2:
 
 		// load the content and url files
 		// url info (content) file
-		sprintf(filename, "%s", CONTENT_OUTPUT_FILE);
+		sprintf(filename, "%s%s", dir,CONTENT_OUTPUT_FILE);
 		//rdfStream.open(filename, ifstream::in);
 		rdfStream = open ( filename, O_RDONLY );
 		//if (!rdfStream.is_open()) {
 		if ( rdfStream < 0 ) {
-			printf("Error Openning %s\n", CONTENT_OUTPUT_FILE);
+			printf("Error Opening %s\n", filename);
 			goto oldErrExit;
 		}
 		// read in the number of urls
 		//rdfStream.read((char*)&oldNumUrls, sizeof(long));
 		if (fileRead(rdfStream, &oldNumUrls, sizeof(long)) !=
 				sizeof(long)) {
-			printf("Error Reading %s\n", CONTENT_OUTPUT_FILE);
+			printf("Error Reading %s\n", filename);
 			goto oldErrExit;
 		}
 	
@@ -1749,8 +1769,8 @@ fileEnd2:
 			//rdfStream.read((char*)&urlLen, sizeof(short));
 			long n = fileRead(rdfStream, &urlLen, sizeof(short));
 			if ( n < 0 || n > (long)sizeof(short) ) {
-				printf("Error Reading %s\n",
-					CONTENT_OUTPUT_FILE);
+				printf("Error Reading %s\n",filename);
+				//CONTENT_OUTPUT_FILE);
 				goto oldErrExit;
 			}
 			if ( n == 0 )
@@ -1780,8 +1800,8 @@ fileEnd2:
 			}
 			n = fileRead(rdfStream, &oldUrls[urlp], urlLen);
 			if ( n < 0 || n > urlLen ) {
-				printf("Error Reading %s\n",
-					CONTENT_OUTPUT_FILE);
+				printf("Error Reading %s\n",filename);
+				//CONTENT_OUTPUT_FILE);
 				goto oldErrExit;
 			}
 			if ( n == 0 )
@@ -1791,7 +1811,7 @@ fileEnd2:
 			urlLen = fixUrl(&oldUrls[urlp], urlLen);
 			// make the hash
 			oldUrlHashes[currUrl] =
-				hash64Lower(&oldUrls[urlp], urlLen, 0);
+				hash64Lower_a(&oldUrls[urlp], urlLen, 0);
 			removeOldUrl[currUrl] = 0;
 			// increment the buffer pointer
 			if (urlLen <= 0) {
@@ -1814,8 +1834,8 @@ fileEnd2:
 			//rdfStream.read((char*)&oldNumCatids[currUrl], 1);
 			long n = fileRead(rdfStream, &oldNumCatids[currUrl], 1);
 			if ( n < 0 || n > 1 ) {
-				printf("Error Reading %s\n",
-					CONTENT_OUTPUT_FILE);
+				printf("Error Reading %s\n",filename);
+				//CONTENT_OUTPUT_FILE);
 				goto oldErrExit;
 			}
 			if ( n == 0 )
@@ -1839,8 +1859,8 @@ fileEnd2:
 			long readSize = sizeof(long)*oldNumCatids[currUrl];
 			n = fileRead(rdfStream, &oldCatids[catidp], readSize);
 			if ( n < 0 || n > readSize ) {
-				printf("Error Reading %s\n",
-					CONTENT_OUTPUT_FILE);
+				printf("Error Reading %s\n",filename);
+				//CONTENT_OUTPUT_FILE);
 				goto oldErrExit;
 			}
 			if ( n == 0 )
@@ -1907,17 +1927,17 @@ oldIsDifferent:
 		//   also urls to remove
 		//
 		// open the new diff file for writing
-		sprintf(filename, "%s.new.diff", CONTENT_OUTPUT_FILE);
+		sprintf(filename, "%s%s.new.diff", dir,CONTENT_OUTPUT_FILE);
 		//outStream.open(filename, ofstream::out|ofstream::trunc);
 		outStream = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
 				S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-		// make sure it openned okay
+		// make sure it opened okay
 		//if (!outStream.is_open()) {
 		if ( outStream < 0 ) {
-			printf("Error Openning %s\n", filename);
+			printf("Error Opening %s\n", filename);
 			goto oldErrExit;
 		}
-		printf("\nOpenned %s for writing.\n", filename);
+		printf("\nOpened %s for writing.\n", filename);
 
 		// write out the number of urls to update/add
 		//outStream.write(&numUpdateUrls, sizeof(long));
@@ -2027,19 +2047,19 @@ oldGoodExit:
 	// . now we want to serialize the needed data into
 	//   one (or more?) file(s) to be quickly read by gb
 	if ( mode == MODE_NEW )
-		sprintf(filename, "%s", STRUCTURE_OUTPUT_FILE);
+		sprintf(filename, "%s%s", dir,STRUCTURE_OUTPUT_FILE);
 	else
-		sprintf(filename, "%s.new", STRUCTURE_OUTPUT_FILE);
+		sprintf(filename, "%s%s.new", dir,STRUCTURE_OUTPUT_FILE);
 	//outStream.open(filename, ofstream::out|ofstream::ate);
 	outStream = open ( filename, O_WRONLY|O_APPEND,
 			S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-	// make sure it openned okay
+	// make sure it opened okay
 	//if (!outStream.is_open()) {
 	if ( outStream < 0 ) {
-		printf("Error Openning %s\n", filename);
+		printf("Error Opening %s\n", filename);
 		goto errExit;
 	}
-	printf("\nOpenned %s for writing.\n", filename);
+	printf("\nOpened %s for writing.\n", filename);
 
 	// write the cats
 	//outStream.write((char*)rdfCats, sizeof(RdfCat)*numRdfCats);
@@ -2109,21 +2129,21 @@ oldGoodExit:
 
 	// write another file for the urls
 	if ( mode == MODE_NEW )
-		sprintf(filename, "%s", CONTENT_OUTPUT_FILE);
+		sprintf(filename, "%s%s", dir,CONTENT_OUTPUT_FILE);
 	else
-		sprintf(filename, "%s.new", CONTENT_OUTPUT_FILE);
+		sprintf(filename, "%s%s.new", dir,CONTENT_OUTPUT_FILE);
 	//outStream.open(filename, ofstream::out|ofstream::ate);
 	outStream = open ( filename, O_WRONLY,
 			S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
 	//outStream.open(filename, ofstream::out|ofstream::trunc);
 	//endpos = outStream.tellp();
-	// make sure it openned okay
+	// make sure it opened okay
 	//if (!outStream.is_open()) {
 	if ( outStream < 0 ) {
-		printf("Error Openning %s\n", filename);
+		printf("Error Opening %s\n", filename);
 		goto errExit;
 	}
-	printf("\nOpenned %s for writing.\n", filename);
+	printf("\nOpened %s for writing.\n", filename);
 
 	//outStream.seekp(0);
 	lseek(outStream, 0, SEEK_SET);

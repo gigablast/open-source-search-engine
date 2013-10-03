@@ -680,7 +680,7 @@ bool SafeBuf::setEncoding(short cs) {
 	return true;
 }
 
-bool  SafeBuf::utf8Encode(char *s, long len, bool encodeHTML,long niceness) {
+bool  SafeBuf::utf8Encode2(char *s, long len, bool encodeHTML,long niceness) {
 	long tmp = m_length;
 	if ( m_encoding == csUTF8 ) {
 		if (! safeMemcpy(s,len)) return false;
@@ -1235,7 +1235,8 @@ void initTable ( ) {
 	}
 }
 
-bool SafeBuf::urlEncode ( bool spaceToPlus ) {
+//  url encode the whole buffer
+bool SafeBuf::urlEncodeAllBuf ( bool spaceToPlus ) {
 	// this makes things faster
 	if ( ! s_init23 ) initTable();
 	// how many chars do we need?

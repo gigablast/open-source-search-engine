@@ -2790,7 +2790,11 @@ char **XmlDoc::getTitleRec ( ) {
 		long dslen = 0;
 		unsigned char dalen = 0;
 
-		// store all dmoz info separated by \0's into titles[] buffer
+		// . store all dmoz info separated by \0's into titles[] buffer
+		// . crap, this does a disk read and blocks on that
+		//
+		// . TODO: make it non-blocking!!!!
+		//
 		g_categories->getTitleAndSummary ( m_firstUrl.getUrl(),
 						   m_firstUrl.getUrlLen(),
 						   ptr_catIds[i],
@@ -3372,7 +3376,7 @@ CatRec *XmlDoc::getCatRec ( ) {
 	// return what we got
 	if ( m_catRecValid ) return &m_catRec;
 	// call that
-	setStatus ("getting cat rec");
+	setStatus ("getting dmoz cat rec");
 	// callback?
 	if ( m_calledMsg8b ) {
 		// return NULL on error
@@ -3386,7 +3390,8 @@ CatRec *XmlDoc::getCatRec ( ) {
 	// assume empty and skip the call for now
 	m_catRec.reset();
 	m_catRecValid = true;
-	return &m_catRec;
+	// let's bring dmoz back
+	//return &m_catRec;
 	// compute it otherwise
 	if ( ! m_msg8b.getCatRec ( &m_firstUrl    ,
 				   m_coll         ,
@@ -20303,7 +20308,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashUrl           ( table ) ) return NULL;
 	if ( ! hashMetaTags      ( table ) ) return NULL;
 	if ( ! hashMetaZip       ( table ) ) return NULL;
-	//if ( ! hashCategories    ( table ) ) return NULL;
+	if ( ! hashDMOZCategories( table ) ) return NULL;
 	if ( ! hashLanguage      ( table ) ) return NULL;
 	if ( ! hashCountry       ( table ) ) return NULL;
 	if ( ! hashSiteNumInlinks( table ) ) return NULL;
@@ -21787,6 +21792,113 @@ bool XmlDoc::searchboxToGigablast ( ) {
 	// . they may have a form variable like
 	// . <form method=get action=http://www.gigablast.com/cgi/0.cgi name=f>
 	return m_xml.hasGigablastForm();
+}
+
+// . bring back support for dmoz integration
+// . when clicking on a "search within this category" it does a gbpdcat:<catid>
+//   search to capture all pages that have that dmoz category as one of their
+//   parent topics
+bool XmlDoc::hashDMOZCategories ( HashTableX *tt ) {
+
+	char *titlePtr = ptr_dmozTitles;
+	char *sumPtr   = ptr_dmozSumms;
+	//char *anchPtr  = ptr_dmozAnchors;
+
+	char  buf[128];
+
+	HashInfo hi;
+	hi.m_tt        = tt;
+	hi.m_hashGroup = HASHGROUP_INTAG;
+	
+	long *catIds = (long *)ptr_catIds;
+	long numCatIds = size_catIds / 4;
+	// go through the catIds and hash them
+	for (long i = 0; i < numCatIds; i++) {
+		// write the catid as a string
+		sprintf(buf, "%lu", catIds[i]);
+		// term prefix for hashing
+		hi.m_prefix = "gbdcat";
+		// hash it
+		hashString ( buf , gbstrlen(buf) , &hi );
+		// we also want to hash the parents
+		long currCatId    = catIds[i];
+		long currParentId = catIds[i];
+		long currCatIndex;
+		// loop to the Top, Top = 1
+		while ( currCatId > 1 ) {
+			// hash the parent
+			sprintf(buf, "%lu", currParentId);
+			hi.m_prefix = "gbpdcat";
+			hashString ( buf , gbstrlen(buf), &hi );
+			// next cat
+			currCatId = currParentId;
+			// get the index for this cat
+			currCatIndex = g_categories->getIndexFromId(currCatId);
+			if ( currCatIndex <= 0 ) break;
+			// get the parent for this cat
+			currParentId = 
+				g_categories->m_cats[currCatIndex].m_parentid;
+		}
+		
+		// do not hash titles or summaries if "index article content
+		// only" parm is on
+		//if ( tr->eliminateMenus() ) continue;
+
+		// hash dmoz title
+		hi.m_prefix = NULL;
+		// call this DMOZ title as regular title i guess
+		hi.m_hashGroup = HASHGROUP_TITLE;
+		// hash the DMOZ title
+		hashString ( titlePtr , gbstrlen(titlePtr), &hi );
+		// next title
+		titlePtr += gbstrlen(titlePtr) + 1;
+
+		// hash DMOZ summary
+		hi.m_prefix = NULL;
+		// call this DMOZ summary as body i guess
+		hi.m_hashGroup = HASHGROUP_BODY;
+		// hash the DMOZ summary
+		hashString ( sumPtr , gbstrlen(sumPtr), &hi );
+		// next summary
+		sumPtr += gbstrlen(sumPtr) + 1;
+	}
+
+	long numIndCatIds = size_indCatIds / 4;
+	long *indCatIds   = (long *)ptr_indCatIds;
+	// go through the INDIRECT catIds and hash them
+	for (long i = 0 ; i < numIndCatIds; i++) {
+
+		// write the catid as a string
+		sprintf(buf, "%lu", indCatIds[i]);
+		// use prefix
+		hi.m_prefix = "gbicat";
+		hi.m_hashGroup = HASHGROUP_INTAG;
+		// hash it
+		hashString ( buf , gbstrlen(buf), &hi );
+		
+		// we also want to hash the parents
+		long currCatId    = indCatIds[i];
+		long currParentId = indCatIds[i];
+		long currCatIndex;
+		// loop to the Top, Top = 1
+		while (currCatId > 1) {
+			// hash the parent
+			sprintf(buf, "%lu", currParentId);
+			// new prefix
+			hi.m_prefix = "gbpicat";
+			// hash it
+			hashString ( buf , gbstrlen(buf), &hi );
+			// next cat
+			currCatId = currParentId;
+			// get the index for this cat
+			currCatIndex = g_categories->getIndexFromId(currCatId);
+			if ( currCatIndex <= 0 ) break;
+			// get the parent for this cat
+			currParentId = 
+				g_categories->m_cats[currCatIndex].m_parentid;
+		}
+	}
+	return true;
 }
 
 bool XmlDoc::hashLanguage ( HashTableX *tt ) {

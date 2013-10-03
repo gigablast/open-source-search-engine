@@ -39,7 +39,7 @@ OBJS =  Tfndb.o UdpSlot.o \
 	Parms.o Pages.o Msg28.o Msg30.o \
 	Unicode.o iana_charset.o Iso8859.o \
 	SearchInput.o \
-	Categories.o Msg2a.o PageCatdb.o PageDirectory.o Msg2b.o \
+	Categories.o Msg2a.o PageCatdb.o PageDirectory.o \
 	SafeBuf.o Datedb.o \
 	UCNormalizer.o UCPropTable.o UnicodeProperties.o \
 	Pops.o Title.o Pos.o LangList.o \
