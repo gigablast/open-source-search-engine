@@ -96,6 +96,9 @@ bool Msg28::massConfig ( TcpSocket   *s                       ,
 			    "Command failed.");
 			return true;
 		}
+		// just a field and no "=<value>" ? then just skip it
+		if ( ! r->getValue(i) ) continue;
+		// otherwise, propagate it into the broadcast
 		p += urlEncode ( p , pend - p , 
 				 r->getValue(i) , gbstrlen(r->getValue(i)) );
 		if ( i + 1 < r->getNumFields() ) *p++ = '&';
