@@ -45,7 +45,7 @@ bool Msg8b::getCatRec  ( Url     *url              ,
 	// clear g_errno
 	g_errno = 0;
 	// warning
-	if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg8b.");
+	//if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg8b.");
 	// store the calling parameters in this class for retrieval by callback
 	m_state          = state;
 	m_callback       = callback;

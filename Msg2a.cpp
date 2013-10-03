@@ -328,6 +328,12 @@ bool Msg2a::makeCatdb( char  *coll,
 		// null terminate
 		m_urls[urlp] = '\0';
 		currUrl++;
+		// debug
+		//SafeBuf sb;
+		//sb.safeMemcpy(&m_urls[urlp-urlLen],urlLen);
+		//sb.nullTerm();
+		//log("gencat: url=%s",sb.getBufStart());
+
 	}
 	log(LOG_INFO, "db: Wrote %li urls to update (%li)\n",
 		      currUrl - m_numRemoveUrls, m_numUpdateIndexes);

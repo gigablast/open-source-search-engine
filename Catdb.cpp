@@ -29,7 +29,11 @@ bool Catdb::init (  ) {
 	// . what's max # of tree nodes?
 	// . assume avg tagdb rec size (siteUrl) is about 82 bytes we get:
 	// . NOTE: 32 bytes of the 82 are overhead
-	long treeMem = g_conf.m_catdbMaxTreeMem;
+	//long treeMem = g_conf.m_catdbMaxTreeMem;
+	// speed up gen catdb, use 15MB. later maybe once gen is complete
+	// we can free this tree or something...
+	// TODO!
+	long treeMem = 15000000;
 	//long treeMem = 100000000;
 	//long maxTreeNodes = g_conf.m_catdbMaxTreeMem / 82;
 	long maxTreeNodes = treeMem / 82;

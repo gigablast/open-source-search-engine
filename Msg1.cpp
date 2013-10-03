@@ -355,6 +355,12 @@ bool Msg1::sendSomeOfList ( ) {
 	if ( m_list->m_fixedDataSize != getDataSizeFromRdbId(m_rdbId) ) {
 		char *xx=NULL;*xx=0; }
 
+	// little debug thing for genCatdb from msg9b's huge list add
+	if ( m_list->m_listSize > 10000000 )
+		log("msg1: adding chunk @ %li of %li bytes",
+		    dataStart - m_list->m_list ,
+		    m_list->m_listSize );
+
 	// . now send this list to the host
 	// . this returns false if blocked, true otherwise
 	// . it also sets g_errno on error
@@ -447,7 +453,9 @@ bool Msg1::sendData ( unsigned long groupId, char *listData , long listSize ) {
 		if ( ! g_errno ) sendToSelf = false;
 		else {
 			log("rdb: msg1 had error: %s",mstrerror(g_errno));
-			return true;
+			// this is messing up generate catdb's huge rdblist add
+			// why did we put it in there??? from msg9b.cpp
+			//return true;
 		}
 		
  		QUICKPOLL(m_niceness);

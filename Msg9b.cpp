@@ -123,7 +123,10 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		}
 		else if ( ! m_list.addRecord ( key, dataSize, data ) )
 			return true;
-		
+
+		// debug
+		//log("gencat: adding url=%s",sr.m_url);
+
 		//skip:
 		// now advance p to e
 		p = e;
@@ -133,7 +136,8 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		
 		QUICKPOLL((niceness));
 	}
-	log ( LOG_INFO, "Msg9b: %li sites and %li links added", k , c );
+	log ( LOG_INFO, "Msg9b: %li sites and %li links added. "
+	      "listSize=%li", k , c , m_list.m_listSize );
 	// . now add the m_list to tagdb using msg1
 	// . use high priority (niceness of 0)
 	// . i raised niceness from 0 to 1 so multicast does not use the
