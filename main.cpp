@@ -4083,27 +4083,61 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"%sgb "
 				//"%sgbfilter "
 				"%shosts.conf "
-				"%shosts2.conf "
+				//"%shosts2.conf "
 				"%sgb.conf "
 				"%stmpgb "
 				//"%scollections.dat "
 				"%sgb.pem "
-				"%sdict "
+				//"%sdict "
 				"%sucdata "
-				"%stop100000Alexa.txt "
+				//"%stop100000Alexa.txt "
 				//"%slanglist "
 				"%santiword "
-				"%s.antiword "
+				//"%s.antiword "
 				"badcattable.dat "
 				"catcountry.dat "
 				"%spdftohtml "
 				"%spstotext "
-				"%sxlhtml "
+				//"%sxlhtml "
 				"%sppthtml "
 				//"%stagdb*.xml "
 				"%shtml "
 				"%scat "
-				"%s:%s",
+
+				"%santiword-dir "
+				"%sgiftopnm "
+				"%spostalCodes.txt "
+				"%stifftopnm "
+				"%sppmtojpeg "
+				"%spnmscale "
+				"%spngtopnm "
+				"%sjpegtopnm "
+				"%sbmptopnm "
+				"%swiktionary-buf.txt "
+				"%swiktionary-lang.txt "
+				"%swiktionary-syns.dat "
+				"%swikititles.txt.part1 "
+				"%swikititles.txt.part2 "
+				"%swikititles2.dat "
+				"%sunifiedDict.txt "
+				"%sunifiedDict-buf.txt "
+				"%sunifiedDict-map.dat "
+
+				"%s:%s"
+				,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+
 				dir,
 				dir,
 				dir,
@@ -4121,6 +4155,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				dir,
 				dir,
 				dir,
+				dir,
+
 				iptoa(h2->m_ip),
 				h2->m_dir);
 			log(LOG_INIT,"admin: %s", tmp);
