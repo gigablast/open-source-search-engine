@@ -5501,6 +5501,9 @@ bool Msg12::confirmLockAcquisition ( ) {
 	// reset counts
 	m_numRequests = 0;
 	m_numReplies  = 0;
+	// note it
+	if ( g_conf.m_logDebugSpider )
+		log("spider: confirming lock for uh48=%llu",m_lockKeyUh48);
 	// loop over hosts in that group
 	for ( long i = 0 ; i < hpg ; i++ ) {
 		// get a host
@@ -5595,7 +5598,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 
 		// note that
 		if ( g_conf.m_logDebugSpider ) // Wait )
-			log("spider: confirming lock for ip=%s",
+			log("spider: got confirm lock request for ip=%s",
 			    iptoa(lock->m_firstIp));
 
 		// get it
