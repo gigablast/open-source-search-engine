@@ -1079,9 +1079,14 @@ class SpiderColl {
 	bool       m_waitingTreeKeyValid;
 	long       m_scanningIp;
 
+	// start key for reading doledb
+	key_t m_msg5StartKey;
+
+	void devancePriority();
+
 	key_t m_nextDoledbKey;
 	bool  m_didRound;
-	long  m_pri;
+	long  m_pri2;
 	bool  m_twinDied;
 	long  m_lastUrlFiltersUpdate;
 

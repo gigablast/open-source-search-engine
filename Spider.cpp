@@ -1363,7 +1363,9 @@ void SpiderColl::reset ( ) {
 	// reset these for SpiderLoop;
 	m_nextDoledbKey.setMin();
 	m_didRound = false;
-	m_pri = MAX_SPIDER_PRIORITIES - 1;
+	// set this to -1 here, when we enter spiderDoledUrls() it will
+	// see that its -1 and set the m_msg5StartKey
+	m_pri2 = -1; // MAX_SPIDER_PRIORITIES - 1;
 	m_twinDied = false;
 	m_lastUrlFiltersUpdate = 0;
 
@@ -3873,27 +3875,32 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
  loop:
 
+	// bail if waiting for lock reply, no point in reading more
+	if ( m_msg12.m_gettingLocks ) return;
+
 	// reset priority when it goes bogus
-	if ( m_sc->m_pri < 0 ) {
+	if ( m_sc->m_pri2 < 0 ) {
 		// i guess the scan is complete for this guy
 		m_sc->m_didRound = true;
 		// reset for next coll
-		m_sc->m_pri = MAX_SPIDER_PRIORITIES - 1;
+		m_sc->m_pri2 = MAX_SPIDER_PRIORITIES - 1;
 		// reset key now too since this coll was exhausted
 		//m_sc->m_nextDoledbKey=g_doledb.makeFirstKey2 ( m_sc->m_pri );
 		// we can't keep starting over because there are often tons
 		// of annihilations between positive and negative keys
 		// and causes massive disk slow down because we have to do
 		// like 300 re-reads or more of about 2k each on coeus
-		m_sc->m_nextDoledbKey = m_sc->m_nextKeys [ m_sc->m_pri ];
+		m_sc->m_nextDoledbKey = m_sc->m_nextKeys [ m_sc->m_pri2 ];
+		// and this
+		m_sc->m_msg5StartKey = m_sc->m_nextDoledbKey;
 		// and go up top
 		goto collLoop;
 	}
 
 	// skip the priority if we already have enough spiders on it
-	long out = m_sc->m_outstandingSpiders[m_sc->m_pri];
+	long out = m_sc->m_outstandingSpiders[m_sc->m_pri2];
 	// get the first ufn that uses this priority
-	long ufn = m_sc->m_priorityToUfn[m_sc->m_pri];
+	long ufn = m_sc->m_priorityToUfn[m_sc->m_pri2];
 	// how many can we have? crap, this is based on ufn, not priority
 	// so we need to map the priority to a ufn that uses that priority
 	long max = 0;
@@ -3907,12 +3914,13 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// skip?
 	if ( out >= max ) {
 		// try the priority below us
-		m_sc->m_pri--;
+		m_sc->devancePriority();
+		//m_sc->m_pri--;
 		// set the new key for this priority if valid
-		if ( m_sc->m_pri >= 0 )
-			//m_sc->m_nextDoledbKey = 
-			//	g_doledb.makeFirstKey2(m_sc->m_pri);
-			m_sc->m_nextDoledbKey = m_sc->m_nextKeys [m_sc->m_pri];
+		//if ( m_sc->m_pri >= 0 )
+		//	//m_sc->m_nextDoledbKey = 
+		//	//	g_doledb.makeFirstKey2(m_sc->m_pri);
+		//	m_sc->m_nextDoledbKey = m_sc->m_nextKeys[m_sc->m_pri2];
 		// and try again
 		goto loop;
 	}
@@ -3924,11 +3932,16 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( g_conf.m_logDebugSpider )
 		m_doleStart = gettimeofdayInMillisecondsLocal();
 
+	// debug
+	if ( g_conf.m_logDebugSpider &&
+	     m_sc->m_msg5StartKey != m_sc->m_nextDoledbKey )
+		log("spider: msg5startKey differs from nextdoledbkey");
+
 	// get a spider rec for us to spider from doledb
 	if ( ! m_msg5.getList ( RDB_DOLEDB      ,
 				coll            ,
 				&m_list         ,
-				m_sc->m_nextDoledbKey   ,
+				m_sc->m_msg5StartKey,//m_sc->m_nextDoledbKey,
 				endKey          ,
 				// need to make this big because we don't
 				// want to end up getting just a negative key
@@ -3962,16 +3975,36 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// . DO NOT reset the whole scan. that was what was happening
 		//   when we just had "goto loop;" here
 		// . this means a reset above!!!
-		if ( m_sc->m_pri == -1 ) return;
+		//if ( m_sc->m_pri2 == -1 ) return;
 		// bail if waiting for lock reply, no point in reading more
-		if ( m_msg12.m_gettingLocks ) return;
+		// mdw- i moved this check up to loop: jump point.
+		//if ( m_msg12.m_gettingLocks ) return;
 		// gotDoledbList2() always advances m_nextDoledbKey so
 		// try another read
 		goto loop;
 	}
-	// wait for the msg12 get lock request to return... or maybe spiders are off
+	// wait for the msg12 get lock request to return... 
+	// or maybe spiders are off
 	return;
 }
+
+// . decrement priority
+// . will also set m_sc->m_nextDoledbKey
+// . will also set m_sc->m_msg5StartKey
+void SpiderColl::devancePriority() {
+	// try next
+	m_pri2 = m_pri2 - 1;
+	// how can this happen?
+	if ( m_pri2 < -1 ) m_pri2 = -1;
+	// bogus?
+	if ( m_pri2 < 0 ) return;
+	// set to next priority otherwise
+	//m_sc->m_nextDoledbKey=g_doledb.makeFirstKey2 ( m_sc->m_pri );
+	m_nextDoledbKey = m_nextKeys [m_pri2];
+	// and the read key
+	m_msg5StartKey = m_nextDoledbKey;
+}
+
 
 void gotDoledbListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) {
 	// process the doledb list and try to launch a spider
@@ -3997,6 +4030,11 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// unlock
 	m_gettingDoledbList = false;
 
+	// update m_msg5StartKey for next read
+	if ( m_list.getListSize() > 0 ) {
+		m_list.getLastKey((char *)&m_sc->m_msg5StartKey);
+		m_sc->m_msg5StartKey += 1;
+	}
 
 	// log this now
 	if ( g_conf.m_logDebugSpider ) {
@@ -4036,16 +4074,20 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// . let the sleep timer init the loop again!
 		// . no, just continue the loop
 		//return true;
+		// . this priority is EMPTY, try next
+		// . will also set m_sc->m_nextDoledbKey
+		// . will also set m_sc->m_msg5StartKey
+		m_sc->devancePriority();
 		// this priority is EMPTY, try next
-		m_sc->m_pri = m_sc->m_pri - 1;
+		//m_sc->m_pri = m_sc->m_pri - 1;
 		// how can this happen?
-		if ( m_sc->m_pri < -1 ) m_sc->m_pri = -1;
+		//if ( m_sc->m_pri < -1 ) m_sc->m_pri = -1;
 		// all done if priority is negative, it will start over
 		// at the top most priority, we've completed a round
-		if ( m_sc->m_pri < 0 ) return true;
+		//if ( m_sc->m_pri < 0 ) return true;
 		// set to next priority otherwise
 		//m_sc->m_nextDoledbKey=g_doledb.makeFirstKey2 ( m_sc->m_pri );
-		m_sc->m_nextDoledbKey = m_sc->m_nextKeys [m_sc->m_pri];
+		//m_sc->m_nextDoledbKey = m_sc->m_nextKeys [m_sc->m_pri];
 		// and load that list from doledb for that priority
 		return true;
 	}
@@ -4127,11 +4169,12 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	long pri = g_doledb.getPriority ( doledbKey );
 
 	if ( g_conf.m_logDebugSpider )
-		log("spider: setting pri=%li nextkey to %s",
-		    m_sc->m_pri,KEYSTR(&m_sc->m_nextDoledbKey,12));
+		log("spider: setting pri2=%li nextkey to %s",
+		    m_sc->m_pri2,KEYSTR(&m_sc->m_nextDoledbKey,12));
 
-	// update next doledbkey for this priority
-	m_sc->m_nextKeys [ m_sc->m_pri ] = m_sc->m_nextDoledbKey;
+	// update next doledbkey for this priority to avoid having to
+	// process excessive positive/negative key annihilations
+	m_sc->m_nextKeys [ m_sc->m_pri2 ] = m_sc->m_nextDoledbKey;
 
 	// sanity
 	if ( pri < 0 || pri >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
@@ -4156,12 +4199,13 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// skip? and re-get another doledb list from next priority...
 	if ( out >= max ) {
 		// this priority is maxed out, try next
-		m_sc->m_pri = pri - 1;
+		m_sc->devancePriority();
+		//m_sc->m_pri = pri - 1;
 		// all done if priority is negative
-		if ( m_sc->m_pri < 0 ) return true;
+		//if ( m_sc->m_pri < 0 ) return true;
 		// set to next priority otherwise
 		//m_sc->m_nextDoledbKey=g_doledb.makeFirstKey2 ( m_sc->m_pri );
-		m_sc->m_nextDoledbKey = m_sc->m_nextKeys [m_sc->m_pri];
+		//m_sc->m_nextDoledbKey = m_sc->m_nextKeys [m_sc->m_pri];
 		// and load that list
 		return true;
 	}
@@ -4227,7 +4271,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 			// crap. but then we never make it to lower priorities.
 			// since we are returning false. so let's try the
 			// next priority in line.
-			m_sc->m_pri--;
+			//m_sc->m_pri--;
+			m_sc->devancePriority();
 			// try returning true now that we skipped to
 			// the next priority level to avoid the infinite
 			// loop as described above.
@@ -4736,8 +4781,10 @@ bool SpiderLoop::spiderUrl2 ( ) {
 	// . no, launch another spider!
 	bool status = xd->indexDoc();
 
-	// reset the next doledbkey to start over!
-	m_sc->m_pri = -1;	
+	// . reset the next doledbkey to start over!
+	// . when spiderDoledUrls() see this negative priority it will
+	//   reset the doledb scan to the top priority.
+	m_sc->m_pri2 = -1;	
 
 	// if we were injecting and it blocked... return false
 	if ( ! status ) return false;
