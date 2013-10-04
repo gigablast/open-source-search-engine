@@ -1169,6 +1169,8 @@ public:
 class Msg12 {
  public:
 
+	Msg12();
+
 	bool confirmLockAcquisition ( ) ;
 
 	//unsigned long m_lockGroupId;
