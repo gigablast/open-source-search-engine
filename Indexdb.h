@@ -154,7 +154,7 @@ class Indexdb {
 
 	unsigned long getSplitGroupId ( unsigned long baseGroupId,
 					unsigned long offset ) {
-		if ( g_hostdb.m_numGroups <= 1 ) return 0;
+		if ( g_hostdb.m_numShards <= 1 ) return 0;
 		baseGroupId >>= m_groupIdShift;
 		return m_groupIdTable[baseGroupId+(offset*m_numGroups)];
 	}

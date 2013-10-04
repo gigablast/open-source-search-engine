@@ -160,8 +160,10 @@ bool Catdb::verify ( char *coll ) {
 		key_t k = list.getCurrentKey();
 		count++;
 		//unsigned long groupId = g_catdb.getGroupId ( &k );
-		uint32_t groupId = getGroupId ( RDB_CATDB , &k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		//uint32_t shardNum = getShardNum ( RDB_CATDB , &k );
+		//if ( groupId == g_hostdb.m_groupId ) got++;
+		uint32_t shardNum = getShardNum( RDB_CATDB , &k );
+		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		log ("db: Out of first %li records in %s, only %li belong "

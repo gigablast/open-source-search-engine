@@ -17223,8 +17223,8 @@ bool Sectiondb::verify ( char *coll ) {
 		key128_t k;
 		list.getCurrentKey(&k);
 		count++;
-		unsigned long groupId = getGroupId ( RDB_SECTIONDB , &k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		unsigned long shardNum = getShardNum ( RDB_SECTIONDB , &k );
+		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		log ("db: Out of first %li records in sectiondb, "

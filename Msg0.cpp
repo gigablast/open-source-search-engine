@@ -199,16 +199,21 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 	// . titledb and spiderdb use special masks to get groupId
 
 	// if diffbot.cpp is reading spiderdb from each shard we have to
-	// get groupid from hostid here lest we core in getGroupId() below
+	// get groupid from hostid here lest we core in getGroupId() below.
+	// it does that for dumping spiderdb to the client browser. they
+	// can download the whole enchilada.
 	if ( hostId >= 0 && m_rdbId == RDB_SPIDERDB )
-		m_groupId = 0;
+		m_shardNum = 0;
 	// did they force it? core until i figure out what this is
 	else if ( forceParitySplit >= 0 ) 
-		m_groupId =  g_hostdb.getGroupId ( forceParitySplit );
+		//m_groupId =  g_hostdb.getGroupId ( forceParitySplit );
+		m_shardNum = forceParitySplit;
 	else
-		m_groupId = getGroupId ( m_rdbId , startKey , ! noSplit );
+		//m_groupId = getGroupId ( m_rdbId , startKey , ! noSplit );
+		m_shardNum = getShardNum ( m_rdbId , startKey , ! noSplit );
 	// how is this used?
-	if ( forceLocalIndexdb ) m_groupId = g_hostdb.m_groupId;
+	//if ( forceLocalIndexdb ) m_groupId = g_hostdb.m_groupId;
+	if ( forceLocalIndexdb ) m_shardNum = getMyShardNum();
 
 	// . store these parameters
 	// . get a handle to the rdb in case we can satisfy locally
@@ -242,7 +247,8 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 	preferLocalReads = true;
 
 	// it it stored locally?
-	bool isLocal = ( m_hostId == -1 && g_hostdb.m_groupId == m_groupId );
+	bool isLocal = ( m_hostId == -1 && //g_hostdb.m_groupId == m_groupId );
+			 m_shardNum == getMyShardNum() );
 	// only do local lookups if this is true
 	if ( ! preferLocalReads ) isLocal = false;
 
@@ -366,10 +372,12 @@ skip:
 	// debug msg
 	if ( g_conf.m_logDebugQuery )
 		log(LOG_DEBUG,"net: msg0: Sending request for data to "
-		    "group=%li listPtr=%li minRecSizes=%li termId=%llu "
+		    "shard=%lu listPtr=%li minRecSizes=%li termId=%llu "
 		    //"startKey.n1=%lx,n0=%llx (niceness=%li)",
 		    "startKey.n1=%llx,n0=%llx (niceness=%li)",
-		    g_hostdb.makeHostId ( m_groupId ) ,(long)m_list,
+		    //g_hostdb.makeHostId ( m_groupId ) ,
+		    m_shardNum,
+		    (long)m_list,
 		    m_minRecSizes, g_posdb.getTermId(m_startKey) , 
 		    //m_startKey.n1,m_startKey.n0 , (long)m_niceness);
 		    KEY1(m_startKey,m_ks),KEY0(m_startKey),
@@ -543,7 +551,7 @@ skip:
 	//for ( long i = 0; i < m_numSplit; i++ ) {
 
 	QUICKPOLL(m_niceness);
-	long gr;
+	//long gr;
 	char *buf;
 	/*
 	if ( m_numSplit > 1 ) {
@@ -552,7 +560,7 @@ skip:
 	}
 	else {
 	*/
-	gr  = m_groupId;
+	//gr  = m_groupId;
 	buf = replyBuf;
 	//}
 
@@ -567,8 +575,9 @@ skip:
 			      m_requestSize, 
 			      0x00         , // msgType 0x00
 			      false        , // does multicast own request?
+			 m_shardNum ,
 //#ifdef SPLIT_INDEXDB
-			      gr           , // group + offset
+//			      gr           , // group + offset
 //#else
 //			      m_groupId    , // group to send to (groupKey)
 //#endif
@@ -602,9 +611,9 @@ skip:
 			 0 , // *(key_t *)cacheKey        ,
 			      rdbId           ,
 			      minRecSizes     ) ) {
-		log("net: Failed to send request for data from %s in group "
-		    "#%li over network: %s.",
-		    getDbnameFromId(m_rdbId),m_groupId, mstrerror(g_errno));
+		log("net: Failed to send request for data from %s in shard "
+		    "#%lu over network: %s.",
+		    getDbnameFromId(m_rdbId),m_shardNum, mstrerror(g_errno));
 		// no, multicast will free this when it is destroyed
 		//if (replyBuf) mfree ( replyBuf , replyBufMaxSize , "Msg22" );
 		// but speed it up

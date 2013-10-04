@@ -507,7 +507,7 @@ void powerMonitorWrapper ( int fd , void *state ) {
 	// get our host
 	Host *me = g_hostdb.m_myHost;
 	// if we are not host #0 and host #0 is dead, we check it
-	if ( me->m_groupId == 0 && g_hostdb.isDead((long)0) ) 
+	if ( me->m_shardNum == 0 && g_hostdb.isDead((long)0) ) 
 		checkPower = true;
 	// if we are host #0 we always check it
 	if ( me->m_hostId == 0 ) checkPower = true;
@@ -2155,7 +2155,7 @@ void Process::checkFanSwitch ( ) {
 	// get our host
 	Host *me = g_hostdb.m_myHost;
 	// if we are not host #0 and host #0 is dead, we check it
-	if ( me->m_groupId == 0 && g_hostdb.isDead((long)0) ) 
+	if ( me->m_shardNum == 0 && g_hostdb.isDead((long)0) ) 
 		check = true;
 	// if we are host #0 we always check it
 	if ( me->m_hostId == 0 ) check = true;

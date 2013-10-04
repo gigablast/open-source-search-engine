@@ -98,7 +98,8 @@ class Msg8b {
 	long m_niceness;
 
 	// for forwarding
-	unsigned long m_groupId;
+	//unsigned long m_groupId;
+	unsigned long m_shardNum;
 	char          m_request[MSG8B_REQ_SIZE];
 	long          m_requestSize;
 	Multicast     m_mcast;

@@ -81,7 +81,14 @@ class Host {
 	//bool isDead ( ) { return m_hostdb->m_isDead ( this ); };
 
 	long           m_hostId ;
-	unsigned long  m_groupId ;
+	//unsigned long  m_groupId ;
+
+	// shards and groups are basically the same, but let's keep it simple.
+	// since we use m_map in Hostdb.cpp to map the bits of a key to
+	// the shard # now (not a groupId anymore, since groupId does not
+	// work for non binary powers of shards)
+	unsigned long m_shardNum;
+
 	//long           m_groupNum;
 //	char       m_pubKey[20];     // 128bit(16 byte) and a short/long
 	unsigned long  m_ip ;        // used for internal communcation (udp)
@@ -180,7 +187,7 @@ class Host {
 	// . Msg34 will add disk load from other gigablast process that are
 	//   using your channel and your ip
 	long           m_ideChannel;
-	long           m_tokenGroupNum;
+	//long           m_tokenGroupNum;
 	// 0 means no, 1 means yes, 2 means unknown
 	char           m_syncStatus;
 
@@ -198,7 +205,7 @@ class Host {
 
 	// . what set the host is in
 	// . its redundant twins are always in different sets
-	long           m_group;
+	//long           m_group;
 	// was host in gk0 cluster and retired because its twin got
 	// ssds, so it was no longer really needed.
 	bool           m_retired;
@@ -312,7 +319,8 @@ class Hostdb {
 	long           getMyMachineNum ( ) { return m_myMachineNum; };
 	unsigned long  getLoopbackIp   ( ) { return m_loopbackIp; };
 	Host          *getMyHost       ( ) { return m_myHost; };
-	Host          *getMyGroup      ( ) { return m_myGroup; };
+	Host          *getMyShard      ( ) { return m_myShard; };
+	long getMyShardNum ( ) { return m_myHost->m_shardNum; };
 	bool           isMyIp ( unsigned long ip ) {
 		if ( ip == m_myIp        ) return true;
 		if ( ip == m_myIpShotgun ) return true;
@@ -331,12 +339,12 @@ class Hostdb {
 	// . hostIds go from 0 to N-1 where N is # of particiapting hosts
 	// . groupIds have hi bits set first & depend on # of groups
 	// . groupMask is just the highest groupId
-	long          makeHostId     ( unsigned long groupId ) ;
-	unsigned long makeGroupId    ( long hostId    , long numGroups );
-	unsigned long makeGroupMask  ( long numGroups ) ;
+	//long          makeHostId     ( unsigned long groupId ) ;
+	//unsigned long makeGroupId    ( long hostId    , long numGroups );
+	//unsigned long makeGroupMask  ( long numGroups ) ;
 
 	// uses a table
-	long          makeHostIdFast ( unsigned long groupId ) ;
+	//long          makeHostIdFast ( unsigned long groupId ) ;
 
 	// we consider the host dead if we didn't get a ping reply back
 	// after 10 seconds
@@ -354,7 +362,8 @@ class Hostdb {
 
 	long long getNumGlobalEvents ( );
 
-	Host *getLiveHostInGroup ( long groupId );
+	//Host *getLiveHostInGroup ( long groupId );
+	Host *getLiveHostInShard ( long shardNum );
 
 	// . returns false if blocks and will call your callback later
 	// . returns true if doesn't block
@@ -364,52 +373,55 @@ class Hostdb {
 	// . RdbList will be populated with the hosts in that group
 	// . we do not create an RdbList, you must do that
 	// . callback passes your RdbList back to you
-	Host *getGroup ( unsigned long groupId , long *numHosts = NULL );
-
-	Host *getGroupFromGroupId ( unsigned long gid ) {
-		return getGroup ( gid ); 
+	//Host *getGroup ( unsigned long groupId , long *numHosts = NULL );
+	Host *getShard ( unsigned long shardNum , long *numHosts = NULL ) {
+		return &m_hosts[shardNum]; 
 	};
 
-	Host *getGroupFromGroupNum ( long groupNum ) {
-		// the array of Hosts that this points into is sorted
-		// by groupId first, so we should be ok
-		return m_groups[groupNum]; 
-	};
+	//Host *getGroupFromGroupId ( unsigned long gid ) {
+	//	return getGroup ( gid ); 
+	//};
+
+	//Host *getGroupFromGroupNum ( long groupNum ) {
+	//	// the array of Hosts that this points into is sorted
+	//	// by groupId first, so we should be ok
+	//	return m_groups[groupNum]; 
+	//};
 
 	// the row #
-	long getStripe ( unsigned long groupId ) {
-		Host *h = getGroup ( groupId );
-		if ( ! h ) return -1;
-		return h->m_stripe;//groupNum;
-	};
+	//long getStripe ( unsigned long groupId ) {
+	//	Host *h = getGroup ( groupId );
+	//	if ( ! h ) return -1;
+	//	return h->m_stripe;//groupNum;
+	//};
 
 	// the column #
-	long getGroupNum ( unsigned long groupId ) {
-		Host *h = getGroup ( groupId );
-		if ( ! h ) return -1;
-		return h->m_group;
-	};
+	//long getGroupNum ( unsigned long groupId ) {
+	//	Host *h = getGroup ( groupId );
+	//	if ( ! h ) return -1;
+	//	return h->m_group;
+	//};
 
 	// quickly get the lowest hostid in group "groupId"
-	Host *getHostIdFast ( unsigned long groupId );
+	//Host *getHostIdFast ( unsigned long groupId );
 
 	// hosts in a token group share a token that is required for
 	// performing merges (big read/writes on disk)
-	Host **getTokenGroup ( unsigned long hostId , long *numHosts = NULL ) ;
+	//Host **getTokenGroup ( unsigned long hostId , long *numHosts = NULL);
 
 	// this is used to set the Host::m_tokenGroupNum members
-	long getTokenGroupNum ( Host *ha ) ;
+	//long getTokenGroupNum ( Host *ha ) ;
 
 	// . map a group num to a groupId
 	// . used by titledb.h to find groupId for a docId
-	unsigned long getGroupId ( long groupNum ) {
-		return m_hostPtrs[groupNum]->m_groupId; }
+	//unsigned long getGroupId_old ( long groupNum ) {
+	//	return m_hostPtrs[groupNum]->m_groupId_old; }
 
-	unsigned long getGroupIdFromHostId ( long hostId ) {
-		return m_hostPtrs[hostId]->m_groupId; };
+	//unsigned long getGroupIdFromHostId ( long hostId ) {
+	//	return m_hostPtrs[hostId]->m_groupId; };
 
 	// get the host in this group with the smallest avg roundtrip time
-	Host *getFastestHostInGroup ( unsigned long groupId );
+	//Host *getFastestHostInGroup ( unsigned long groupId );
 
 	// . like above but just gets one host
 	// Host *getHost ( long hostId ) { return m_groups[hostId]; };
@@ -425,14 +437,16 @@ class Hostdb {
 	// how many of the hosts are non-dead?
 	long  getNumHostsAlive ( ) { return m_numHostsAlive; };
 	long  getNumProxyAlive ( ) { return m_numProxyAlive; };
-	long  getNumGroups () { return m_numGroups; };
+	//long  getNumGroups () { return m_numGroups; };
+	long  getNumShards () { return m_numShards; };
 	long  getNumIndexSplits() { return m_indexSplits; };
 
 	// how many hosts in this group?
-	long  getNumHostsPerGroup ( ) { return m_numHostsPerGroup; };
+	//long  getNumHostsPerShard ( ) { return m_numHostsPerShard; };
+	long  getNumHostsPerShard ( ) { return m_numHostsPerShard; };
 
 	// goes with Host::m_stripe
-	long  getNumStripes ( ) { return m_numHostsPerGroup; };
+	long  getNumStripes ( ) { return m_numHostsPerShard; };
 
 	// . get a host entry from ip/port
 	// . returns NULL if no match
@@ -510,7 +524,7 @@ class Hostdb {
 	//unsigned short m_myPort2;
 	long           m_myMachineNum;
 	Host          *m_myHost;
-	Host          *m_myGroup;
+	Host          *m_myShard;
 
 	// the loopback ip (127.0.0.1)
 	unsigned long  m_loopbackIp;
@@ -531,19 +545,19 @@ class Hostdb {
 	// . m_hostPtrs2 [ tgn ] is the list of Host ptrs in that host's
 	//   merge token group and the size of the group is m_groupSize [ tgn ]
 	// . used by getTokenGroup() which is used by Msg35.cpp
-	Host  *m_hostPtrs2             [ MAX_HOSTS ] ;
-	long   m_hostIdToTokenGroupNum [ MAX_HOSTS ] ;
-	long   m_groupSize             [ MAX_HOSTS ];
+	//Host  *m_hostPtrs2             [ MAX_HOSTS ] ;
+	//long   m_hostIdToTokenGroupNum [ MAX_HOSTS ] ;
+	//long   m_groupSize             [ MAX_HOSTS ];
 
 	// we must have the same number of hosts in each group
-	long   m_numHostsPerGroup;
+	long   m_numHostsPerShard;
 
 	// store the file in m_buf
 	char m_buf [MAX_HOSTS * 128];
 	long m_bufSize;
 
-	// this maps groupId to the array of hosts in that group
-	Host *m_groups[MAX_HOSTS];
+	// this maps shard # to the array of hosts in that shard
+	Host *m_shards[MAX_HOSTS];
 
 	long    m_numMachines;
 
@@ -556,9 +570,9 @@ class Hostdb {
 
 	// . our group info
 	long          m_hostId;      // our hostId
-	long          m_numGroups;
-	unsigned long m_groupId;     // hi bits are set before low bits
-	unsigned long m_groupMask;   // hi bits are set before low bits
+	long          m_numShards;
+	//unsigned long m_groupId;     // hi bits are set before low bits
+	//unsigned long m_groupMask;   // hi bits are set before low bits
 	char          m_dir[256];
 	char          m_httpRootDir[256];
 	char          m_logFilename[256];
@@ -586,8 +600,11 @@ class Hostdb {
 
 	char  m_useTmpCluster;
 
-	uint32_t getGroupId (char rdbId, void *key, bool split = true);
-	uint32_t getGroupIdFromDocId ( long long d ) ;
+	//uint32_t getGroupId (char rdbId, void *key, bool split = true);
+	//uint32_t getGroupIdFromDocId ( long long d ) ;
+
+	uint32_t getShardNum (char rdbId, void *key, bool split = true);
+	uint32_t getShardNumFromDocId ( long long d ) ;
 
 	uint32_t m_map[MAX_KSLOTS];
 };
@@ -600,12 +617,24 @@ extern uint32_t  g_listIps   [ MAX_HOSTS * 4 ];
 extern uint16_t  g_listPorts [ MAX_HOSTS * 4 ];
 extern long      g_listNumTotal;
 
-inline uint32_t getGroupId ( char rdbId, void *key,bool split = true) {
-	return g_hostdb.getGroupId ( rdbId , key , split );
+inline uint32_t getShardNum ( char rdbId, void *key,bool split = true) {
+	return g_hostdb.getShardNum ( rdbId , key , split );
 };
 
-inline uint32_t getGroupIdFromDocId ( long long d ) {
-	return g_hostdb.getGroupIdFromDocId ( d );
+inline uint32_t getMyShardNum ( ) { 
+	return g_hostdb.m_myHost->m_shardNum; 
 };
+
+inline uint32_t getShardNumFromDocId ( long long d ) {
+	return g_hostdb.getShardNumFromDocId ( d );
+};
+
+//inline uint32_t getGroupId ( char rdbId, void *key,bool split = true) {
+//	return g_hostdb.getGroupId ( rdbId , key , split );
+//};
+
+//inline uint32_t getGroupIdFromDocId ( long long d ) {
+//	return g_hostdb.getGroupIdFromDocId ( d );
+//};
 
 #endif

@@ -316,7 +316,7 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 // . what groupId (shardId) should spider/index this spider request?
 // . CAUTION: NOT the same group (shard) that stores it in spiderdb!!!
 // . CAUTION: NOT the same group (shard) that doles it out to spider!!!
-unsigned long getGroupIdToSpider ( char *spiderRec );
+//unsigned long getGroupIdToSpider ( char *spiderRec );
 
 // now used by xmldoc.cpp
 bool isAggregator ( long siteHash32 , 
@@ -398,14 +398,16 @@ class Spiderdb {
 		return makeKey ( firstIp,uh48,true,MAX_DOCID,false); };
 
 	// what groupId (shardid) spiders this url?
-	inline unsigned long getGroupId ( long firstIp ) {
+	/*
+	inline unsigned long getShardNum ( long firstIp ) {
 		// must be valid
 		if ( firstIp == 0 || firstIp == -1 ) {char *xx=NULL;*xx=0; }
 		// mix it up
 		unsigned long h = (unsigned long)hash32h ( firstIp, 0x123456 );
 		// get it
-		return g_hostdb.getGroupId ( h % g_hostdb.m_numGroups );
+		return h % g_hostdb.m_numShards;
 	};
+	*/
 
 	// print the spider rec
 	long print( char *srec );

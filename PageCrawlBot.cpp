@@ -887,7 +887,7 @@ void StateCD::sendBackDump2 ( ) {
 	m_someoneNeedsMore = true;
 
 	// initialize the spiderdb startkey "cursor" for each shard's spiderdb
-	for ( long i = 0 ; i < g_hostdb.m_numGroups ; i++ ) {
+	for ( long i = 0 ; i < g_hostdb.m_numShards ; i++ ) {
 		m_needMore[i] = true;
 		KEYMIN((char *)&m_spiderdbStartKeys[i],sizeof(key128_t));
 		KEYMIN((char *)&m_titledbStartKeys[i],sizeof(key_t));
@@ -916,7 +916,7 @@ bool StateCD::readDataFromRdb ( ) {
 	CollectionRec *cr = g_collectiondb.getRec(m_collnum);
 	// top:
 	// launch one request to each shard
-	for ( long i = 0 ; i < g_hostdb.m_numGroups ; i++ ) {
+	for ( long i = 0 ; i < g_hostdb.m_numShards ; i++ ) {
 		// count it
 		m_numRequests++;
 		// this is the least nice. crawls will yield to it mostly.
@@ -928,7 +928,7 @@ bool StateCD::readDataFromRdb ( ) {
 		else
 			sk = (char *)&m_titledbStartKeys[i];
 		// get host
-		Host *h = g_hostdb.getLiveHostInGroup(i);
+		Host *h = g_hostdb.getLiveHostInShard(i);
 		// reset each one
 		m_lists[i].freeList();
 		// msg0 uses multicast in case one of the hosts in a shard is
@@ -1031,7 +1031,7 @@ bool StateCD::sendList ( ) {
 	//
 	// got all replies... create the HTTP reply and send it back
 	//
-	for ( long i = 0 ; i < g_hostdb.m_numGroups ; i++ ) {
+	for ( long i = 0 ; i < g_hostdb.m_numShards ; i++ ) {
 		if ( ! m_needMore[i] ) continue;
 		// get the list from that group
 		RdbList *list = &m_lists[i];

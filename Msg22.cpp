@@ -98,7 +98,7 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 		docId = g_titledb.getProbableDocId ( url );
 
 	// get groupId from docId
-	uint32_t groupId = getGroupIdFromDocId ( docId );
+	uint32_t shardNum = getShardNumFromDocId ( docId );
 	// generate cacheKey, just use docid now
 	key_t cacheKey ; cacheKey.n1 = 0; cacheKey.n0 = docId;
 	// do load balancing iff we're the spider because if we send this
@@ -112,19 +112,19 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 	long firstHostId = -1;
 	// i don't see why not to always bias it, this makes tfndb page cache
 	// twice as effective for all lookups
-	long numTwins = g_hostdb.getNumHostsPerGroup();
+	long numTwins = g_hostdb.getNumHostsPerShard();
 	//long long bias=((0x0000003fffffffffLL)/(long long)numTwins);
 	long long sectionWidth = (DOCID_MASK/(long long)numTwins) + 1;
 	long hostNum = (docId & DOCID_MASK) / sectionWidth;
-	long numHosts = g_hostdb.getNumHostsPerGroup();
+	long numHosts = g_hostdb.getNumHostsPerShard();
 	Host *hosts = g_hostdb.getGroup ( groupId );
 	if ( hostNum >= numHosts ) { char *xx = NULL; *xx = 0; }
 	firstHostId = hosts [ hostNum ].m_hostId ;
 	*/
 
 	// get our group
-	long  allNumHosts = g_hostdb.getNumHostsPerGroup();
-	Host *allHosts    = g_hostdb.getGroup ( groupId );
+	long  allNumHosts = g_hostdb.getNumHostsPerShard();
+	Host *allHosts    = g_hostdb.getShard ( shardNum );//Group ( groupId );
 
 	// put all alive hosts in this array
 	Host *cand[32];
@@ -172,7 +172,7 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 			      r->getSize()    ,
 			      0x22            , // msgType 0x22
 			      false           , // m_mcast own m_request?
-			      groupId         , // send to group (groupKey)
+			      shardNum        , // send to group (groupKey)
 			      false           , // send to whole group?
 			      //hostKey         , // key is lower bits of docId
 			      0               , // key is lower bits of docId

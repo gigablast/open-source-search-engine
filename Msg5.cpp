@@ -1887,8 +1887,9 @@ bool Msg5::getRemoteList ( ) {
 	//   since our files may not be the same
 	// . if doRemotely parm is not supplied replying hostId is unspecified
 	// get our twin host, or a redundant host in our group
-	Host *group = g_hostdb.getGroup ( g_hostdb.m_groupId );
-	long  n     = g_hostdb.getNumHostsPerGroup();
+	//Host *group = g_hostdb.getGroup ( g_hostdb.m_groupId );
+	Host *group = g_hostdb.getMyShard();
+	long  n     = g_hostdb.getNumHostsPerShard();
 	// . if we only have 1 host per group, data is unpatchable
 	// . we should not have been called if this is the case!!
 	if ( n == 1 ) {
@@ -1926,7 +1927,7 @@ bool Msg5::getRemoteList ( ) {
 		if ( group[i].m_hostId != g_hostdb.m_hostId ) break;
 	Host *h = &group[i];
 	// get our groupnum. the column #
-	long forceParitySplit = h->m_group;
+	long forceParitySplit = h->m_shardNum;//group;
 	// translate base to an id, for the sake of m_msg0
 	//char rdbId = getIdFromRdb ( base->m_rdb );
 	// . this returns false if blocked, true otherwise

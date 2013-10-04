@@ -68,7 +68,7 @@ bool registerHandler4 ( ) {
 		return false;
 
 	// clear the host bufs
-	s_numHostBufs = g_hostdb.getNumGroups() ;
+	s_numHostBufs = g_hostdb.getNumShards();
 	for ( long i = 0 ; i < s_numHostBufs ; i++ )
 		s_hostBufs[i] = NULL;
 
@@ -578,7 +578,8 @@ bool Msg4::addMetaList2 ( ) {
 		// . but uses the top 32 bits of key still
 		// . spiderdb uses last 64 bits to determine groupId
 		// . tfndb now is like titledb(top 32 bits are top 32 of docId)
-		uint32_t gid = getGroupId ( rdbId , key , split );
+		//uint32_t gid = getGroupId ( rdbId , key , split );
+		unsigned long shardNum = getShardNum( rdbId , key , split );
 		// get the record, is -1 if variable. a table lookup.
 		long dataSize;
 		if      ( rdbId==RDB_POSDB || rdbId==RDB2_POSDB2) dataSize = 0;
@@ -610,14 +611,16 @@ bool Msg4::addMetaList2 ( ) {
  		QUICKPOLL(m_niceness); // MAX_NICENESS);
 		// convert the gid to the hostid of the first host in this
 		// group. uses a quick hash table.
-		long hostId = g_hostdb.makeHostIdFast ( gid );
+		//long hostId = g_hostdb.makeHostIdFast ( gid );
+		Host *hosts = g_hostdb.getShard ( shardNum );
+		long hostId = hosts[0].m_hostId;
 		// . add that rec to this groupId, gid, includes the key
 		// . these are NOT allowed to be compressed (half bit set)
 		//   and this point
 		// . this returns false and sets g_errno on failure
 		if ( storeRec ( m_collnum, 
 				rdbId, 
-				gid, 
+				shardNum,//gid, 
 				hostId, 
 				key, // start of rec, 
 				p - key , // recSize
@@ -653,7 +656,7 @@ bool Msg4::addMetaList2 ( ) {
 // . store these requests in the buffer just like that
 bool storeRec ( collnum_t      collnum , 
 		char           rdbId   ,
-		unsigned long  gid     ,
+		unsigned long  shardNum, //gid
 		long           hostId  ,
 		char          *rec     ,
 		long           recSize ,
@@ -772,7 +775,9 @@ bool sendBuffer ( long hostId , long niceness ) {
 	else 	s_hostBufSizes[hostId] = 0; //if we were oom reset size
 	*/
 	// get groupId
-	unsigned long groupId = g_hostdb.getGroupIdFromHostId ( hostId );
+	//unsigned long groupId = g_hostdb.getGroupIdFromHostId ( hostId );
+	Host *h = g_hostdb.getHost(hostId);
+	unsigned long shardNum = h->m_shardNum;
 	// get group #
 	//long groupNum = g_hostdb.getGroupNum ( groupId );
 
@@ -813,7 +818,7 @@ bool sendBuffer ( long hostId , long niceness ) {
 			   requestSize, // sets mcast->m_msgLen to this
 			   0x04       , // msgType for add rdb record
 			   false      , // does multicast own msg?
-			   groupId    , // group to send to (groupKey)
+			   shardNum,//groupId , // group to send to (groupKey)
 			   true       , // send to whole group?
 			   0          , // key is useless for us
 			   (void *)allocSize  , // state data
@@ -844,8 +849,8 @@ bool sendBuffer ( long hostId , long niceness ) {
 	}
 
 	// g_errno should be set
-	log("net: Had error when sending request to add data to rdb in group "
-	    "#%li: %s.", groupId,mstrerror(g_errno));
+	log("net: Had error when sending request to add data to rdb shard "
+	    "#%lu: %s.", shardNum,mstrerror(g_errno));
 
 	returnMulticast ( mcast );
 

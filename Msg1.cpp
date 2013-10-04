@@ -254,7 +254,7 @@ bool Msg1::sendSomeOfList ( ) {
 	// get groupId from this key
 	//unsigned long groupId ; 
 	// . use the new Hostdb.h inlined function
-	uint32_t groupId = getGroupId ( m_rdbId , firstKey );
+	uint32_t shardNum = getShardNum ( m_rdbId , firstKey );
 	// . default is to use top bits of the key
 	// . but if we're adding to titledb use last bits in the top of key
 	// . but if we're adding to spiderdb we use the last long in the key
@@ -313,7 +313,8 @@ bool Msg1::sendSomeOfList ( ) {
 		// . but uses the top 32 bits of key still
 		// . spiderdb uses last 64 bits to determine groupId
 		// . tfndb now is like titledb(top 32 bits are top 32 of docId)
-		if ( getGroupId(m_rdbId,key) != groupId ) goto done;
+		//if ( getGroupId(m_rdbId,key) != groupId ) goto done;
+		if ( getShardNum(m_rdbId,key) != shardNum ) goto done;
 		/*
 		switch ( m_rdbId ) {
 		case RDB_TITLEDB: 
@@ -371,14 +372,14 @@ bool Msg1::sendSomeOfList ( ) {
 	//   just enough to put it into a different groupId (but not out
 	//   of order) so we couldn't delete it cuz our delete keys would go
 	//   elsewhere
-	if ( m_forceLocal && groupId != g_hostdb.m_groupId &&
+	if ( m_forceLocal && shardNum != getMyShardNum() &&
 	     ! g_conf.m_interfaceMachine ) {
 		// make the groupId local, our group
-		groupId = g_hostdb.m_groupId;
+		//groupId = g_hostdb.m_groupId;
 		// bitch about this to log it
-		log("net: Data does not belong in group id 0x%lx, but adding "
+		log("net: Data does not belong in shard %lu, but adding "
 		    "to %s anyway. Probable data corruption.",
-		    (long)groupId,getDbnameFromId(m_rdbId));
+		    (unsigned long)shardNum,getDbnameFromId(m_rdbId));
 	}
 	
  	QUICKPOLL(m_niceness);
@@ -391,7 +392,7 @@ bool Msg1::sendSomeOfList ( ) {
 	// . this returns false if blocked, true otherwise
 	// . it also sets g_errno on error
 	// . if it blocked return false
-	if ( ! sendData ( groupId , dataStart , dataEnd - dataStart ) )
+	if ( ! sendData ( shardNum , dataStart , dataEnd - dataStart ) )
 		return false;
 	// if there was an error return true
 	if ( g_errno ) return true;
@@ -401,7 +402,7 @@ bool Msg1::sendSomeOfList ( ) {
 
 // . return false if blocked, true otherwise
 // . sets g_errno on error
-bool Msg1::sendData ( unsigned long groupId, char *listData , long listSize ) {
+bool Msg1::sendData ( unsigned long shardNum, char *listData , long listSize) {
 	// debug msg
 	//log("sendData: mcast=%lu listSize=%li",
 	//    (long)&m_mcast,(long)listSize);
@@ -411,7 +412,7 @@ bool Msg1::sendData ( unsigned long groupId, char *listData , long listSize ) {
 	// return true if no data
 	if ( listSize == 0 ) return true;
 	// how many hosts in this group
-	//long numHosts = g_hostdb.getNumHostsPerGroup();
+	//long numHosts = g_hostdb.getNumHostsPerShard();
 	// . NOTE: for now i'm removing this until I handle ETRYAGAIN errors
 	//         properly... by waiting and retrying...
 	// . if this is local data just for us just do an addList to OUR rdb
@@ -445,7 +446,7 @@ bool Msg1::sendData ( unsigned long groupId, char *listData , long listSize ) {
 	// if the data is being added to our group, don't send ourselves
 	// a msg1, if we can add it right now
 	bool sendToSelf = true;
-	if ( groupId == g_hostdb.m_groupId &&
+	if ( shardNum == getMyShardNum() &&
 	     ! g_conf.m_interfaceMachine ) {
 		// get the rdb to which it belongs, use Msg0::getRdb()
 		Rdb *rdb = getRdbFromId ( (char) m_rdbId );
@@ -485,7 +486,7 @@ bool Msg1::sendData ( unsigned long groupId, char *listData , long listSize ) {
  		QUICKPOLL(m_niceness);
 		// if we're the only one in the group, bail, we're done
 		if ( ! sendToSelf &&
-		     g_hostdb.getNumHostsPerGroup() == 1 ) return true;
+		     g_hostdb.getNumHostsPerShard() == 1 ) return true;
 	}
 skip:
 	// . make an add record request to multicast to a bunch of machines
@@ -545,7 +546,7 @@ skip:
 			    requestLen , // sets mcast->m_msgLen to this
 			    0x01       , // msgType for add rdb record
 			    true       , // does multicast own msg?
-			    groupId    , // group to send to (groupKey)
+			    shardNum   , // group to send to (groupKey)
 			    true       , // send to whole group?
 			    0          , // key is useless for us
 			    this       , // state data
@@ -569,8 +570,8 @@ skip:
 
  	QUICKPOLL(m_niceness);
 	// g_errno should be set
-	log("net: Had error when sending request to add data to %s in group "
-	    "#%li: %s.", getDbnameFromId(m_rdbId),groupId,mstrerror(g_errno));
+	log("net: Had error when sending request to add data to %s in shard "
+	    "#%lu: %s.", getDbnameFromId(m_rdbId),shardNum,mstrerror(g_errno));
 	return true;	
 }
 

@@ -112,8 +112,8 @@ bool Monitordb::verify ( char *coll ) {
 		key224_t k;
 		list.getCurrentKey((char*)&k);
 		count++;
-		uint32_t groupId = getGroupId ( RDB_MONITORDB , &k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		uint32_t shardNum = getShardNum ( RDB_MONITORDB , &k );
+		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		log ("db: Out of first %li records in Monitordb , "
@@ -126,7 +126,7 @@ bool Monitordb::verify ( char *coll ) {
 
 			key224_t k;
 			list.getCurrentKey((char*)&k);
-			uint32_t groupId = getGroupId ( RDB_MONITORDB , &k );
+			uint32_t shardNum = getShardNum ( RDB_MONITORDB , &k );
 			long groupNum = g_hostdb.getGroupNum(groupId);
 			unsigned long sh32 ;
 			sh32 = g_monitordb.getLinkeeSiteHash32_uk(&k);

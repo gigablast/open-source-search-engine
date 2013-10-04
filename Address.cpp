@@ -16284,16 +16284,18 @@ bool Msg2c::launchRequests ( ) {
 	// . get group to handle it
 	// . each group is responsible for a specific streetname/ctry/city/adm1
 	// . Hostdb.cpp::getGroupId()
-	unsigned long gid = getGroupId ( RDB_PLACEDB,(char *)&a->m_placedbKey);
+	//unsigned long gid = getGroupId(RDB_PLACEDB,(char *)&a->m_placedbKey);
+	unsigned long shardNum;
+	shardNum = getShardNum (RDB_PLACEDB,(char *)&a->m_placedbKey);
 
 	// . pick a host within that group based on docid
 	// . base that on streetname hash i guess
 	// . but i would like to cache this using a biased cache
 	// . so we need to divide based on streetname hash
 	// . that is the most significant 16 bits of the placedb key
-	long  numHosts = g_hostdb.getNumHostsPerGroup();
+	long  numHosts = g_hostdb.getNumHostsPerShard();
 	long  hostNum  = a->m_street->m_hash % numHosts;
-	Host *group    = g_hostdb.getGroup ( gid );
+	Host *group    = g_hostdb.getShard ( shardNum );
 	// get host # "hostNum" in group "group" to send our request to
 	Host *h        = &group [ hostNum ];
 
@@ -16306,7 +16308,7 @@ bool Msg2c::launchRequests ( ) {
 			 requestSize ,
 			 0x2c        , // msgType
 			 false       , // multicast own request?
-			 gid         ,
+			 shardNum, // gid         ,
 			 false       , // send to whole group?
 			 0           , // key for selecting host (not used)
 			 this        , // state

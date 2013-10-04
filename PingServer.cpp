@@ -565,7 +565,8 @@ void gotReplyWrapperP ( void *state , UdpSlot *slot ) {
 		     // and this is lefit
 		     h->m_timeOfDeath != 0 &&
 		     // and in our group
-		     h->m_groupId == g_hostdb.m_myHost->m_groupId ) {
+		     //h->m_groupId == g_hostdb.m_myHost->m_groupId ) {
+		     h->m_shardNum == getMyShardNum() ) {
 			// how long dead for?
 			long long delta = nowms - h->m_timeOfDeath;
 			// we did it once, do not repeat
@@ -1440,7 +1441,7 @@ bool PingServer::sendEmail ( Host *h            ,
 
 			//check if the hosts twins are dead too
 			long numTwins = 0;
-			Host *hosts = g_hostdb.getGroup( h->m_groupId, 
+			Host *hosts = g_hostdb.getShard( h->m_shardNum, 
 							 &numTwins );
 			long i = 0;
 			while ( i < numTwins ){

@@ -132,8 +132,10 @@ bool gotTitleRec ( void *state ) {
 			sb.safePrintf("<br><br>No titleRec for that docId "
 				      "or higher");
 		// print where it should be
-		unsigned long gid = getGroupIdFromDocId ( docId );
-		Host *hosts = g_hostdb.getGroup(gid);
+		//unsigned long gid = getGroupIdFromDocId ( docId );
+		//Host *hosts = g_hostdb.getGroup(gid);
+		long shardNum = getShardNumFromDocId ( docId );
+		Host *hosts = g_hostdb.getShard ( shardNum );
 		long hostId = -1;
 		if ( hosts ) hostId = hosts[0].m_hostId;
 		sb.safePrintf("<br><br>docId on host #%li and twins.",hostId);
@@ -152,8 +154,10 @@ bool gotTitleRec ( void *state ) {
 		       "<center>Enter docId: "
 		       "<input type=text name=d value=%lli size=15>", docId );
 	// print where it should be
-	unsigned long gid = getGroupIdFromDocId ( docId );
-	Host *hosts = g_hostdb.getGroup(gid);
+	//unsigned long gid = getGroupIdFromDocId ( docId );
+	//Host *hosts = g_hostdb.getGroup(gid);
+	long shardNum = getShardNumFromDocId ( docId );
+	Host *hosts = g_hostdb.getShard ( shardNum );
 	long hostId = -1;
 	if ( hosts ) hostId = hosts[0].m_hostId;
 	sb.safePrintf("<br><br>docId on host #%li and twins.",hostId);

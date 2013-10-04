@@ -27316,12 +27316,11 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 	if ( m_oldsrValid ) {
 		// must not block
 		SpiderRequest *oldsr = &m_oldsr;
-		unsigned long gid = getGroupIdToSpider ( (char *)oldsr );
-		sb->safePrintf ("<tr><td><b>assigned spider groupId id</b>"
+		unsigned long shard = g_hostdb.getShardNum(RDB_SPIDERDB,oldsr);
+		sb->safePrintf ("<tr><td><b>assigned spider shard</b>"
 				"</td>\n"
-				"<td><b>0x%08lx</b></td></tr>\n",gid);
+				"<td><b>%li</b></td></tr>\n",shard);
 	}
-
 	
 	sb->safePrintf("<tr><td>first indexed date</td>"
 		       "<td>%s UTC</td></tr>\n" ,
@@ -28263,9 +28262,11 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 
 	if ( ! isXml ) printMenu ( sb );
 
-	long groupId = g_hostdb.getGroupIdFromDocId(m_docId);
-	Host *group = g_hostdb.getGroup(groupId);
-	Host *h = &group[0];
+	//long groupId = g_hostdb.getGroupIdFromDocId(m_docId);
+	//Host *group = g_hostdb.getGroup(groupId);
+	long shardNum = getShardNumFromDocId ( m_docId );
+	Host *hosts = g_hostdb.getShard ( shardNum );
+	Host *h = &hosts[0];
 
 	if ( ! isXml )
 		sb->safePrintf (
@@ -35851,10 +35852,12 @@ SafeBuf *XmlDoc::getRelatedDocIdsScored ( ) {
 	// scan the related docids and send the requests if we have not already
 	for ( long i = 0 ; ! m_sentMsg4fRequests && i < numRelated ; i++ ) {
 		RelatedDocId *rd = &rds[i];
-		unsigned long gid = g_hostdb.getGroupIdFromDocId (rd->m_docId);
+		//unsigned long gid=g_hostdb.getGroupIdFromDocId (rd->m_docId);
 		// pick host in that group
-		Host *group = g_hostdb.getGroup ( gid );
-		long nh = g_hostdb.m_numHostsPerGroup;
+		//Host *group = g_hostdb.getGroup ( gid );
+		long shardNum = getShardNumFromDocId ( rd->m_docId );
+		Host *group = g_hostdb.getShard ( shardNum );
+		long nh = g_hostdb.m_numHostsPerShard;
 		long hostNum = rd->m_docId % nh;
 		Host *h = &group[hostNum];
 		long hostId = h->m_hostId;
@@ -40576,7 +40579,7 @@ bool XmlDoc::setRelatedDocIdWeightAndRank ( RelatedDocId *rd ) {
 		// how many search results does this query have total?
 		long long numResults = qe->m_numTotalResultsInSlice;
 		// fix it to be global
-		numResults *= (long long)g_hostdb.getNumGroups();
+		numResults *= (long long)g_hostdb.getNumShards();
 		// big indexes did the "slice logic" restricting docid
 		// range to MAX_DOCID * .10 when setting this!
 		if ( numPagesIndexed > 10000000 ) numResults *= 10;

@@ -43,7 +43,7 @@ void Hostdb::resetPortTables () {
 }
 
 static int cmp  ( const void *h1 , const void *h2 ) ;
-static int cmp2 ( const void *h1 , const void *h2 ) ;
+//static int cmp2 ( const void *h1 , const void *h2 ) ;
 
 //static void *syncStartWrapper_r ( void *state );
 //static void  syncDoneWrapper    ( void *state );
@@ -91,7 +91,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	m_myPort           = 0;
 	//m_myPort2          = 0;
 	m_numHosts         = 0;
-	m_numHostsPerGroup = 0;
+	m_numHostsPerShard = 0;
 	m_loopbackIp       = atoip ( "127.0.0.1" , 9 );
 	m_useTmpCluster    = useTmpCluster;
 	m_initialized = true;
@@ -243,13 +243,13 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	if ( ! m_hosts ) return log(
 				    "conf: Memory allocation failed.");
 
-	long maxGroup = 0;
+	unsigned long maxShard = 0;
 
 	// now fill up m_hosts
 	p = m_buf;
 	i = 0;
 	long line = 1;
-	long lastGroup = 0;
+	unsigned long lastShard = 0;
 	long proxyNum = 0;
 
 	// assume defaults
@@ -589,9 +589,10 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		//h->m_ideChannel    = 0;
 		// our group is based on our split!
 		//h->m_group = i % g_hostdb.m_indexSplits; // # grps
-		h->m_group = i % indexSplits; // # grps
+		//h->m_group = i % indexSplits; // # grps
+		h->m_shardNum = i % indexSplits;
 		// i guess proxy and spares don't count
-		if ( h->m_type != HT_GRUNT ) h->m_group = 0;
+		if ( h->m_type != HT_GRUNT ) h->m_shardNum = 0;
 		
 		// are we a compression proxy?
 		//h->m_isCompressionProxy = false;
@@ -664,19 +665,19 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		h->m_externalHttpsPort = h->m_httpsPort;
 
 		// get max group number
-		if ( h->m_group > maxGroup && h->m_type==HT_GRUNT )
-			maxGroup = h->m_group;
+		if ( h->m_shardNum > maxShard && h->m_type==HT_GRUNT )
+			maxShard = h->m_shardNum;
 
-		if ( h->m_group <= lastGroup && h->m_group != 0 
+		if ( h->m_shardNum <= lastShard && h->m_shardNum != 0 
 		     && !(h->m_type&(HT_ALL_PROXIES)) ) {
 		      g_errno = EBADENGINEER;
-		      return log("conf: Host has bad group id in %s line %li. "
-				 "Group ids must be strictly increasing, with "
+		      return log("conf: Host has bad shard # in %s line %li. "
+				 "Shard #'s must be strictly increasing, with "
 				 "the exception of going from the last "
-				 "group id to the group id of zero.",
+				 "shard # to the shard # of zero.",
 				 filename,line);
 		}
-		lastGroup = h->m_group;
+		lastShard = h->m_shardNum;
 
 		// skip line now
 		while ( *p && *p != '\n' )
@@ -740,8 +741,8 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	}
 	//m_numHosts = i;
 	m_numTotalHosts = i;
-	// how many groups are we configure for?
-	m_numGroups = maxGroup + 1; // g_conf.m_numGroups;
+	// how many shards are we configure for?
+	m_numShards = maxShard + 1; // g_conf.m_numGroups;
 
 	m_indexSplits = indexSplits;
 
@@ -773,22 +774,23 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	log ( LOG_INFO, "conf: Discovered %li hosts and %li spares and "
 	      "%li proxies.",m_numHosts, m_numSpareHosts, m_numProxyHosts );
 
-	// if we have m_numGroups we must have 
-	long hostsPerGroup  = m_numHosts / m_numGroups;
+	// if we have m_numShards we must have 
+	long hostsPerShard  = m_numHosts / m_numShards;
 	// must be exact fit
-	if ( hostsPerGroup * m_numGroups != m_numHosts ) {
+	if ( hostsPerShard * m_numShards != m_numHosts ) {
 		g_errno = EBADENGINEER;
-		return log("conf: Bad number of hosts for %li groups "
-			   "in hosts.conf.",m_numGroups);
+		return log("conf: Bad number of hosts for %li shards "
+			   "in hosts.conf.",m_numShards);
 	}
-	// count number of hosts in each group
-	for ( i = 0 ; i < m_numGroups ; i++ ) {
+	// count number of hosts in each shard
+	for ( i = 0 ; i < m_numShards ; i++ ) {
 		long count = 0;
 		for ( long j = 0 ; j < m_numHosts ; j++ )
-			if ( m_hosts[j].m_group == i ) count++;
-		if ( count != hostsPerGroup ) {
+			if ( m_hosts[j].m_shardNum == (unsigned long)i ) 
+				count++;
+		if ( count != hostsPerShard ) {
 			g_errno = EBADENGINEER;
-			return log("conf: Number of hosts in each group "
+			return log("conf: Number of hosts in each shard "
 				   "in %s is not equal.",filename);
 		}
 	}
@@ -829,36 +831,36 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	}
 	*/
 	// set the groupId for each host
-	for ( i = 0 ; i < m_numHosts ; i++ ) 
-		m_hosts[i].m_groupId = g_hostdb.makeGroupId ( i, m_numGroups);
+	//for ( i = 0 ; i < m_numHosts ; i++ ) 
+	//	m_hosts[i].m_groupId = g_hostdb.makeGroupId ( i, m_numGroups);
 	// set group #
 	//for ( i = 0 ; i < m_numHosts ; i++ ) 
 	//	m_hosts[i].m_groupNum = i / hostsPerGroup;
-	// now sort hosts by GROUP id then HOST id (both ascending order)
+	// now sort hosts by shard # then HOST id (both ascending order)
 	gbsort ( m_hosts , m_numHosts , sizeof(Host), cmp );
 	// ensure hosts in order of groupId then hostId
-	for ( i = 1 ; i < m_numHosts ; i++ ) {
-		if ( m_hosts[i-1].m_groupId <  m_hosts[i].m_groupId)continue;
-		if ( m_hosts[i-1].m_groupId == m_hosts[i].m_groupId &&
-		     m_hosts[i-1].m_hostId  <  m_hosts[i].m_hostId )continue;
-		return log(
-			   "conf: Hosts in %s not sorted correctly. "
-			   "Check order of hostId and groupId.",filename);
-	}
-	// . set m_groups array
-	// . m_groups[i] is the first host in groupId "i"
-	// . any other hosts w/ same groupId immediately follow it
-	// . loop through each group
+	//for ( i = 1 ; i < m_numHosts ; i++ ) {
+	//	if ( m_hosts[i-1].m_groupId <  m_hosts[i].m_groupId)continue;
+	//	if ( m_hosts[i-1].m_groupId == m_hosts[i].m_groupId &&
+	//	     m_hosts[i-1].m_hostId  <  m_hosts[i].m_hostId )continue;
+	//	return log(
+	//		   "conf: Hosts in %s not sorted correctly. "
+	//		   "Check order of hostId and groupId.",filename);
+	//}
+	// . set m_shards array
+	// . m_shards[i] is the first host in shardId "i"
+	// . any other hosts w/ same shardId immediately follow it
+	// . loop through each shard
 	long j;
-	for ( i = 0 ; i < m_numGroups ; i++ ) {
+	for ( i = 0 ; i < m_numShards ; i++ ) {
 		for ( j = 0 ; j < m_numHosts ; j++ ) 
 			if ( m_hosts[j].m_hostId == i ) break;
-		// this points to list of all hosts in group #j since
-		// we sorted m_hosts by groupId
-		m_groups[i] = &m_hosts[j];
+		// this points to list of all hosts in shard #j since
+		// we sorted m_hosts by shardId
+		m_shards[i] = &m_hosts[j];
 	}
 	// . set m_hostPtrs now so Hostdb::getHost() works
-	// . the hosts are sorted by groupId so we must be careful
+	// . the hosts are sorted by shard first so we must be careful
 	for ( i = 0 ; i < m_numHosts ; i++ ) {
 		long j = m_hosts[i].m_hostId;
 		m_hostPtrs[j] = &m_hosts[i];
@@ -959,6 +961,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	// Token Groups for Merging
 	//
 
+	/*
 	// set the m_tokenGroupNum member of each Host class we have
 	for ( long i = 0 ; i < m_numHosts ; i++ ) 
 		m_hosts[i].m_tokenGroupNum = -1;
@@ -967,6 +970,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	// do a second pass to resolve indirections
 	for ( long i = 0 ; i < m_numHosts ; i++ ) 
 		m_hosts[i].m_tokenGroupNum = getTokenGroupNum ( &m_hosts[i] );
+
 	// . order the hostIds by their token group num
 	// . if they are on the same host (IP) using the same ide channel OR
 	//   they are in the same mirror group, then they are in the same
@@ -1010,35 +1014,36 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		}
 		log ( LOG_DEBUG , "%s", buf );
 	}
+	*/
 
 	// THIS hostId
 	m_hostId = hostId;
-	// set hosts per group
-	m_numHostsPerGroup = m_numHosts / m_numGroups;
+	// set hosts per shard (mirror group)
+	m_numHostsPerShard = m_numHosts / m_numShards;
 
 	// groupId and groupmask should be -1 for proxy but they
 	// are declared as unsigned :(
 
 	// CALCULATE groupId of THIS host from hostId and numGroups
-	m_groupId = g_hostdb.makeGroupId ( m_hostId , m_numGroups );
+	//m_groupId = g_hostdb.makeGroupId ( m_hostId , m_numGroups );
 	// make groupMask - same for the whole network
-	m_groupMask = g_hostdb.makeGroupMask ( m_numGroups );
+	//m_groupMask = g_hostdb.makeGroupMask ( m_numGroups );
 
 
 	// set m_stripe (aka m_twinNum) for each host
 	for ( long i = 0 ; i < m_numHosts ; i++ ) {
 		// get this host
 		Host *h = &m_hosts[i];
-		// get his group ptr
-		Host *group = getGroup ( h->m_groupId );
-		// how many hosts in the group?
-		long ng = getNumHostsPerGroup();
-		// hosts in group should be sorted by hostid i think, anyway,
+		// get his shard, array of hosts
+		Host *shard = getShard ( h->m_shardNum );
+		// how many hosts in the shard?
+		long ng = getNumHostsPerShard();
+		// hosts in shard should be sorted by hostid i think, anyway,
 		// they *need* to be. see above, hosts are in order in the
-		// m_hosts[] array by groupId then by hostId, so we should be
+		// m_hosts[] array by shard then by hostId, so we should be
 		// good to go.
 		for ( long j = 0 ; j < ng ; j++ ) {
-			if ( &group[j] != h ) continue;
+			if ( &shard[j] != h ) continue;
 			h->m_stripe = j;
 			break;
 		}
@@ -1060,13 +1065,19 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	long gcount = 0;
 	for ( long i = 0 ; i < MAX_KSLOTS && m_numHosts ; i++ ) {
 		// set its group id from groupNum, which is "gcount"
-		m_map[i] = getGroupId ( gcount++ );
+		//m_map[i] = getGroupId ( gcount++ );
+		// TODO: test this later
+		//long oldVal = getGroupId_old ( gcount );
+		// now just map to the shard # not the groupId... simpler...
+		m_map[i] = gcount % m_numShards;
+		// inc it
+		gcount++;
 		// wrap group Num
-		if ( gcount >= m_numGroups ) gcount = 0;
+		//if ( gcount >= m_numShards ) gcount = 0;
 	}
 
 	// set our group
-	m_myGroup = getGroup ( m_myHost->m_groupId );
+	m_myShard = getShard ( m_myHost->m_shardNum );
 
 	// has the hosts
 	return hashHosts();
@@ -1315,7 +1326,7 @@ Host *Hostdb::getHostFromTable ( bool udp , uint32_t ip , uint16_t port ) {
 
 
 
-
+/*
 Host **Hostdb::getTokenGroup ( unsigned long hostId , long *numHosts ) {
 	// map groupId to hostId
 	long hid = m_hostIdToTokenGroupNum [ hostId ];
@@ -1360,19 +1371,20 @@ int cmp2 (const void *v1, const void *v2) {
 	// return if groups differ
 	return h1->m_tokenGroupNum - h2->m_tokenGroupNum;
 }
+*/
 
 // . this is used by gbsort() above
-// . sorts Hosts by their groupId
+// . sorts Hosts by their shard
 int cmp (const void *v1, const void *v2) {
 	Host *h1 = (Host *)v1;
 	Host *h2 = (Host *)v2;
-	// return if groups differ
-	if ( h1->m_groupId < h2->m_groupId ) return -1; 
-	if ( h1->m_groupId > h2->m_groupId ) return  1;
+	// return if shards differ
+	if ( h1->m_shardNum < h2->m_shardNum ) return -1; 
+	if ( h1->m_shardNum > h2->m_shardNum ) return  1;
 	// otherwise sort by hostId
 	return h1->m_hostId - h2->m_hostId;
 }
-
+/*
 // . returns the first host in the group "groupId"
 // . this host has the lowest hostId of all hosts in that group
 // . reverse bit order to get hostId from groupId
@@ -1433,27 +1445,29 @@ unsigned long Hostdb::makeGroupId ( long hostId , long numGroups ) {
 unsigned long Hostdb::makeGroupMask ( long numGroups ) {
 	return makeGroupId ( numGroups - 1 , numGroups );
 }
+*/
 
-// return first alive host in a group/shard
-Host *Hostdb::getLiveHostInGroup ( long groupId ) {
-	Host *group = getGroup ( groupId );
+// return first alive host in a shard
+Host *Hostdb::getLiveHostInShard ( long shardNum ) {
+	Host *shard = getShard ( shardNum );
 	//Host *live = NULL;
-	for ( long i = 0 ; i < m_numHostsPerGroup ; i++ ) {
+	for ( long i = 0 ; i < m_numHostsPerShard ; i++ ) {
 		// get it
-		Host *h = &group[i];
+		Host *h = &shard[i];
 		// skip if dead
 		if ( isDead(h->m_hostId) ) continue;
 		// return it if alive
 		return h;
 	}
 	// return first one if all dead
-	return &group[0];
+	return &shard[0];
 }
 
+/*
 // . get the Hosts in group with "groupId"
 Host *Hostdb::getGroup ( unsigned long groupId , long *numHosts ) {
 	// set hosts per group
-	if ( numHosts ) *numHosts = m_numHostsPerGroup;
+	if ( numHosts ) *numHosts = m_numHostsPerShard;
 	// . translate groupId to a hostId
 	// . this hostId should be the lowest hostId in this groupId
 	long hostId = makeHostId ( groupId );
@@ -1475,7 +1489,7 @@ Host *Hostdb::getFastestHostInGroup ( unsigned long groupId ) {
 	// scan for smallest average roundtrip time (i.e. ping time)
 	long minPing = 0x7fffffff;
 	long mini    = -1;
-	for ( long i = 0 ; i < m_numHostsPerGroup ; i++ ) {
+	for ( long i = 0 ; i < m_numHostsPerShard ; i++ ) {
 		//if ( hosts[i].m_pingAvg >= minPing ) continue;
 		if ( hosts[i].m_ping >= minPing ) continue;
 		//minPing = hosts[i].m_pingAvg;
@@ -1487,6 +1501,7 @@ Host *Hostdb::getFastestHostInGroup ( unsigned long groupId ) {
 	// return the fastest host
 	return &hosts[mini];
 }
+*/
 
 // TODO: speed this up when we get a *lot* of hosts
 /*
@@ -1540,14 +1555,14 @@ long long Hostdb::getNumGlobalRecs ( ) {
 	long long n = 0;
 	for ( long i = 0 ; i < m_numHosts ; i++ )
 		n += getHost ( i )->m_docsIndexed;
-	return n / m_numHostsPerGroup;
+	return n / m_numHostsPerShard;
 }
 
 long long Hostdb::getNumGlobalEvents ( ) {
 	long long n = 0;
 	for ( long i = 0 ; i < m_numHosts ; i++ )
 		n += getHost ( i )->m_eventsIndexed;
-	return n / m_numHostsPerGroup;
+	return n / m_numHostsPerShard;
 }
 
 bool Hostdb::setNote ( long hostId, char *note, long noteLen ) {
@@ -1593,10 +1608,11 @@ bool Hostdb::replaceHost ( long origHostId, long spareHostId ) {
 
 	// however, these values need to change
 	oldHost->m_hostId      = origHostId;
-	oldHost->m_groupId     = spareHost->m_groupId;
-	//oldHost->m_groupNum    = spareHost->m_groupNum;
+	//oldHost->m_groupId   = spareHost->m_groupId;
+	oldHost->m_shardNum    = spareHost->m_shardNum;
+	//oldHost->m_groupNum  = spareHost->m_groupNum;
 	oldHost->m_stripe      = spareHost->m_stripe;
-	oldHost->m_group       = spareHost->m_group;
+	//oldHost->m_group     = spareHost->m_group;
 	oldHost->m_isProxy     = spareHost->m_isProxy;
 	oldHost->m_type        = HT_SPARE;
 	oldHost->m_hostdb      = spareHost->m_hostdb;
@@ -1836,7 +1852,7 @@ bool Hostdb::saveHostsConf ( ) {
 		write(fd, temp, gbstrlen(temp));
 
 		long spaces;
-		long g;
+		//long g;
 
 		// the new format is just the hostname then note
 		sprintf(temp,"%s ",h->m_hostname);
@@ -1886,6 +1902,7 @@ bool Hostdb::saveHostsConf ( ) {
 		sprintf(temp, "%li ", (long)h->m_switchId);
 		write(fd, temp, gbstrlen(temp));
 		// Group ID
+		/*
 		g = h->m_group;
 		if ( g < 10 )
 			sprintf(temp, "00%li ", g);
@@ -1894,6 +1911,7 @@ bool Hostdb::saveHostsConf ( ) {
 		else
 			sprintf(temp, "%li ", g);
 		write(fd, temp, gbstrlen(temp));
+		*/
 		// directory
 		write(fd, h->m_dir, gbstrlen(h->m_dir));
 	skip:
@@ -1928,7 +1946,7 @@ bool Hostdb::syncHost ( long syncHostId, bool useSecondaryIps ) {
 	// log the start
 	log ( LOG_INFO, "init: Syncing host %li with twin.", syncHostId );
 	// if no twins, can't do it
-	if ( m_numHostsPerGroup == 1 )
+	if ( m_numHostsPerShard == 1 )
 		return log(LOG_WARN, "conf: Cannot sync host, no twins. "
 				     "Aborting.");
         // spiders must be off
@@ -1994,16 +2012,17 @@ int startUp ( void *cmd );
 
 void Hostdb::syncStart_r ( bool amThread ) {
 	// get the twin we'll copy from
-	long numHostsInGroup;
-	Host *hostGroup = getGroup(m_syncHost->m_groupId, &numHostsInGroup);
-	if ( numHostsInGroup == 1 ) {
+	long numHostsInShard;
+	//Host *hostGroup = getGroup(m_syncHost->m_groupId, &numHostsInGroup);
+	Host *shard = getShard(m_syncHost->m_shardNum, &numHostsInShard);
+	if ( numHostsInShard == 1 ) {
 		m_syncHost->m_doingSync = 0;
 		m_syncHost = NULL;
                 log (LOG_WARN, "sync: Could not Sync, Host has no twin.");
 		return;
 	}
-	Host *srcHost = &hostGroup[numHostsInGroup - 1];
-	if ( srcHost == m_syncHost ) srcHost = &hostGroup[numHostsInGroup-2];
+	Host *srcHost = &shard[numHostsInShard - 1];
+	if ( srcHost == m_syncHost ) srcHost = &shard[numHostsInShard-2];
 	// create the rcp command
 	char cmd[1024];
 	long ip1 = m_syncHost->m_ip;
@@ -2190,7 +2209,8 @@ long Hostdb::getBestHosts2IP ( Host  *h ) {
 // . this allows us to have any # of groups in a stripe, not just power of 2
 // . now we can use 3 stripes of 96 hosts each so spiders will almost never
 //   go down
-uint32_t Hostdb::getGroupId ( char rdbId,void *k,bool split ) {
+//uint32_t Hostdb::getGroupId ( char rdbId,void *k,bool split ) {
+uint32_t Hostdb::getShardNum ( char rdbId,void *k,bool split ) {
 
 	if ( ! split ) {
 		// based on termid for nosplits
@@ -2284,7 +2304,8 @@ uint32_t Hostdb::getGroupId ( char rdbId,void *k,bool split ) {
 		//SpiderRequest *sreq = (SpiderRequest *)k;
 		long firstIp = g_spiderdb.getFirstIp((key128_t *)k);
 		// use that for getting the group
-		return g_spiderdb.getGroupId( firstIp );
+		//return g_spiderdb.getGroupId( firstIp );
+		return m_map [ firstIp & (MAX_KSLOTS-1)];
 	}
 	else if ( rdbId == RDB_CLUSTERDB || rdbId == RDB2_CLUSTERDB2 ) {
 		unsigned long long d = g_clusterdb.getDocId ( k );
@@ -2310,7 +2331,8 @@ uint32_t Hostdb::getGroupId ( char rdbId,void *k,bool split ) {
 	}
 	else if ( rdbId == RDB_DOLEDB ) { // || rdbId == RDB2_DOLEDB2 ) {
 		// HACK:!!!!!!  this is a trick!!! it is us!!!
-		return g_hostdb.m_myHost->m_groupId;
+		//return g_hostdb.m_myHost->m_groupId;
+		return g_hostdb.m_myHost->m_shardNum;
 	}
 	else if ( rdbId == RDB_SECTIONDB || rdbId == RDB2_SECTIONDB2 ) {
 		// use top 13 bits of key
@@ -2339,7 +2361,7 @@ uint32_t Hostdb::getGroupId ( char rdbId,void *k,bool split ) {
 	return 0;
 }
 
-uint32_t Hostdb::getGroupIdFromDocId ( long long d ) {
+uint32_t Hostdb::getShardNumFromDocId ( long long d ) {
 	return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
 }
 

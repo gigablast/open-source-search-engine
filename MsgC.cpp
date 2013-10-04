@@ -130,7 +130,7 @@ bool MsgC::getIp(char  *hostname    , long   hostnameLen ,
 	// null end it
 	m_request[requestSize]='\0';
 	requestSize++;
-	//unsigned long groupNum=key.n0 % g_hostdb.m_numGroups;
+	//unsigned long groupNum=key.n0 % g_hostdb.m_numShards;
 	//unsigned long groupId=g_hostdb.getGroupId(groupNum);
 	// get a hostid that should house this ip in its local cache
 	Host *host = NULL; // g_dns.getResponsibleHost ( key );
@@ -191,7 +191,7 @@ bool MsgC::getIp(char  *hostname    , long   hostnameLen ,
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return true;
 	}
-	unsigned long groupId     = host->m_groupId;
+	//unsigned long groupId     = host->m_groupId;
 	long          firstHostId = host->m_hostId;
 	// the handling server will timeout its dns algorithm and send us
 	// back an EDNSTIMEDOUT error, so we do not need to have any timeout
@@ -205,7 +205,7 @@ bool MsgC::getIp(char  *hostname    , long   hostnameLen ,
 			    requestSize, // sets mcast->m_msgLen to this
 			    0x0c       , // msgType for add rdb record
 			    false       , // does multicast own msg?
-			    groupId    , // group to send to (groupKey)
+			    host->m_shardNum , // group to send to (groupKey)
 			    false      , // send to whole group?
 			    0          , // key.n1 , // key is useless for us
 			    this       , // state data

@@ -730,7 +730,7 @@ bool PageNetTest::controls( TcpSocket *s, HttpRequest *r ) {
 				Host *h = g_hostdb.getHost(hids[j]);
 				long switchGroup = 0;
 				if ( g_hostdb.m_indexSplits > 1 )
-					switchGroup = h->m_group %
+					switchGroup = h->m_shardNum %
 						g_hostdb.m_indexSplits;
 				sprintf( p, "<td>%li</td>", switchGroup );
 			}
@@ -850,8 +850,8 @@ int switchSort( const void *p1, const void *p2 ) {
 	long sg1 = 0;
 	long sg2 = 0;
 	if ( g_hostdb.m_indexSplits > 1 ) {
-		sg1 = h1->m_group % g_hostdb.m_indexSplits;
-		sg2 = h2->m_group % g_hostdb.m_indexSplits;
+		sg1 = h1->m_shardNum % g_hostdb.m_indexSplits;
+		sg2 = h2->m_shardNum % g_hostdb.m_indexSplits;
 	}
 	return (sg1-sg2);
 }

@@ -248,7 +248,7 @@ void Statsdb::addDocsIndexed ( ) {
 		total += h->m_docsIndexed;
 	}
 	// divide by # of groups
-	total /= g_hostdb.getNumGroups();
+	total /= g_hostdb.getNumShards();
 	// skip if no change
 	if ( total == s_lastTotal ) return;
 

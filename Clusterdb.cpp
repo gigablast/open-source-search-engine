@@ -95,8 +95,8 @@ static void clusterAddPages ( DiskPageCache *pc,
 	if ( ! pc->m_memOff[vfd] )
 		return;
 	// get the number of twins, used for filtering
-	long numTwins  = g_hostdb.getNumHostsPerGroup();
-	long thisTwin  = g_hostdb.m_hostId/g_hostdb.m_numGroups;
+	long numTwins  = g_hostdb.getNumHostsPerShard();
+	long thisTwin  = g_hostdb.m_hostId/g_hostdb.m_numShards;
 	// get the bias range for this twin
 	long long biasStart = ((0x0000003fffffffffLL)/(long long)numTwins) *
 		(long long)thisTwin;
@@ -394,8 +394,10 @@ bool Clusterdb::verify ( char *coll ) {
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
 		count++;
-		unsigned long groupId = getGroupId ( RDB_CLUSTERDB , &k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		//unsigned long groupId = getGroupId ( RDB_CLUSTERDB , &k );
+		//if ( groupId == g_hostdb.m_groupId ) got++;
+		unsigned long shardNum = getShardNum( RDB_CLUSTERDB , &k );
+		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		log ("db: Out of first %li records in clusterdb, "

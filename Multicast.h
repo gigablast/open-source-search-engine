@@ -77,11 +77,12 @@ class Multicast {
 		    bool        ownMsg          , 
 		    // send this request to a host or hosts who have
 		    // m_groupId equal to this
-		    unsigned long groupId       , 
+		    //unsigned long groupId       , 
+		    unsigned long shardNum ,
 		    // should the request be sent to all hosts in the group
 		    // "groupId", or just one host. Msg1 adds data to all 
 		    /// hosts in the group so it sets this to true.
-		    bool        sendToWholeGroup, 
+		    bool        sendToWholeShard, // Group, 
 		    // if "key" is not 0 then it is used to select
 		    // a host in the group "groupId" to send to.
 		    long        key             ,
@@ -141,7 +142,8 @@ class Multicast {
 	uint8_t     m_msgType;
 	bool        m_ownMsg;
 	long        m_numGroups;
-	unsigned long m_groupId;
+	//unsigned long m_groupId;
+	unsigned long m_shardNum;
 	bool        m_sendToWholeGroup;
 	void       *m_state;
 	void       *m_state2;

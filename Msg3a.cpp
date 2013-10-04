@@ -446,7 +446,8 @@ bool Msg3a::gotCacheReply ( ) {
 		// going to sweat over performance on non-fully split indexes
 		// because they suck really bad anyway compared to full
 		// split indexes. "gid" is already set if we are not split.
-		unsigned long gid = h->m_groupId;//g_hostdb.getGroupId(i);
+		//unsigned long gid = h->m_groupId;//g_hostdb.getGroupId(i);
+		unsigned long shardNum = h->m_shardNum;
 		long firstHostId = h->m_hostId;
 		// get strip num
 		char *req = m_rbufPtr;
@@ -461,14 +462,15 @@ bool Msg3a::gotCacheReply ( ) {
 			long long     tid  = m_q->getTermId(0);
 			key_t         k    = g_indexdb.makeKey(tid,1,1,false );
 			// split = false! do not split 
-			gid = getGroupId ( RDB_POSDB,&k,false);
+			//gid = getGroupId ( RDB_POSDB,&k,false);
+			shardNum = getShardNum(RDB_POSDB,&k,false);
 			firstHostId = -1;
 		}
 		// debug log
 		if ( m_debug )
 			logf(LOG_DEBUG,"query: Msg3a[%lu]: forwarding request "
-			     "of query=%s to groupid 0x%lx.", 
-			     (long)this, m_q->getQuery(), gid);
+			     "of query=%s to shard %lu.", 
+			     (long)this, m_q->getQuery(), shardNum);
 		// send to this guy
 		Multicast *m = &m_mcast[i];
 		// clear it for transmit
@@ -486,7 +488,7 @@ bool Msg3a::gotCacheReply ( ) {
 				   m_rbufSize        , // request size
 				   0x39              , // msgType 0x39
 				   false             , // mcast owns m_request?
-				   gid               , // group to send to
+				   shardNum          , // group to send to
 				   false             , // send to whole group?
 				   (long)qh          , // 0 // startKey.n1
 				   this              , // state1 data

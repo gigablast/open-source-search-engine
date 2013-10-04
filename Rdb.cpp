@@ -2332,7 +2332,7 @@ long long Rdb::getListSize ( char *coll ,
 }
 
 long long Rdb::getNumGlobalRecs ( ) {
-	return getNumTotalRecs() * g_hostdb.m_numGroups;
+	return getNumTotalRecs() * g_hostdb.m_numShards;//Groups;
 }
 
 // . return number of positive records - negative records

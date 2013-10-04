@@ -150,7 +150,7 @@ skipReplaceHost:
 		  "password=%s\">"
 		  "<b>hostId</b></td>"
 		  "<td><b>host name</b></td>"
-		  "<td><b>mirror group</b></td>"
+		  "<td><b>shard</b></td>" // mirror group
 		  "<td><b>stripe</b></td>"
 
 		  // i don't remember the last time i used this, so let's
@@ -480,7 +480,7 @@ skipReplaceHost:
 			  coll, sort,
 			  i , 
 			  h->m_hostname,
-			  h->m_group,
+			  h->m_shardNum,//group,
 			  h->m_stripe,
 			  // group mask is not looked at a lot and is
 			  // really only for indexdb and a few other rdbs

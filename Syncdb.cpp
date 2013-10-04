@@ -96,8 +96,8 @@ bool Syncdb::gotMetaListRequest ( char *req , long reqSize , uint32_t sid ) {
 	// . add the individiual checkoff keys
 	// . 1 key per hostid in our mirror group
 	// . we delete these keys using msg1 on successful transmissions
-	long  nh    = g_hostdb.getNumHostsPerGroup();
-	Host *hosts = g_hostdb.m_myGroup;
+	long  nh    = g_hostdb.getNumHostsPerShard();
+	Host *hosts = g_hostdb.getMyShard();
 	for ( long i = 0 ; i < nh ; i++ ) {
 		// get it
 		Host *h = &hosts[i];
@@ -202,9 +202,9 @@ void Syncdb::loop1 ( ) {
 	// how many hosts in our group are alive?
 	long alive = 0;
 	// get group we are in
-	Host *group = g_hostdb.getMyGroup();
+	Host *group = g_hostdb.getMyShard();
 	// number hosts in group
-	long nh = g_hostdb.getNumHostsPerGroup();
+	long nh = g_hostdb.getNumHostsPerShard();
 	// count alive
 	for ( long i = 0 ; i < nh ; i++ )
 		if ( ! g_hostdb.isDead ( &group[i] ) ) alive++;
@@ -266,9 +266,9 @@ void Syncdb::loop1 ( ) {
 // . we cannot add a meta list until we have
 bool Syncdb::sentAllCheckoffRequests ( uint32_t sid , uint64_t zid ) {
 	// get group we are in
-	Host *group = g_hostdb.getMyGroup();
+	Host *group = g_hostdb.getMyShard();
 	// number hosts in group
-	long nh = g_hostdb.getNumHostsPerGroup();
+	long nh = g_hostdb.getNumHostsPerShard();
 	// loop over our twins
 	for ( long i = 0 ; i < nh ; i++ ) {
 		// get host
@@ -476,10 +476,10 @@ bool Syncdb::canDeleteMetaList ( uint32_t sid , uint64_t zid ) {
 	// so we can not delete it yet!
 	if ( nn >= 0 ) return false;
 	// get group we are in
-	Host *group = g_hostdb.getMyGroup();
+	Host *group = g_hostdb.getMyShard();
 	// . if we need to send some requests still can not delete
 	// . number hosts in group
-	long nh = g_hostdb.getNumHostsPerGroup();
+	long nh = g_hostdb.getNumHostsPerShard();
 	// loop over our twins
 	for ( long i = 0 ; i < nh ; i++ ) {
 		// get host
@@ -520,7 +520,7 @@ bool Syncdb::loop4 ( ) {
 	// get next node
 	long nn = m_qt.getNode ( 0 , (char *)&k );
 	// get group we are in
-	//Host *group = g_hostdb.getMyGroup();
+	//Host *group = g_hostdb.getMyShard();
 	// use this for determining approximate age of meta lists
 	long long nowms = gettimeofdayInMilliseconds();
 	// do the loop
@@ -1068,8 +1068,10 @@ bool Syncdb::verify ( char *coll ) {
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
 		count++;
-		unsigned long groupId = getGroupId ( RDB_SYNCDB , &k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		//unsigned long groupId = getGroupId ( RDB_SYNCDB , &k );
+		//if ( groupId == g_hostdb.m_groupId ) got++;
+		uint32_t shardNum = getShardNum ( RDB_SYNCDB , (char *)&k );
+		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		log ("db: Out of first %li records in syncdb, "
@@ -1096,9 +1098,10 @@ bool Syncdb::syncHost ( long syncHostId ) {
 	Host *sh = g_hostdb.getHost ( syncHostId );
 	if ( ! sh ) return log("sync: bad host id %li",syncHostId);
 	// get its group
-	Host *hosts = g_hostdb.getGroup ( sh->m_groupId );
+	//Host *hosts = g_hostdb.getGroup ( sh->m_groupId );
+	Host *hosts = g_hostdb.getShard ( sh->m_shardNum );
 	// get the best twin for it to sync from
-	for ( long i = 0 ; i < g_hostdb.getNumHostsPerGroup() ; i++ ) {
+	for ( long i = 0 ; i < g_hostdb.getNumHostsPerShard() ; i++ ) {
 		// get host
 		Host *h = &hosts[i];
 		// skip if dead

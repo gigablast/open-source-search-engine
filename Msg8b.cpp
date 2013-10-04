@@ -78,7 +78,8 @@ bool Msg8b::getCatRec  ( Url     *url              ,
 	g_catdb.getKeyRange ( isIp, m_url, &startKey, &endKey );
 	
 	// get the groupid
-	m_groupId = startKey.n1 & g_hostdb.m_groupMask;
+	//m_groupId = startKey.n1 & g_hostdb.m_groupMask;
+	m_shardNum = getShardNum ( RDB_CATDB , &startKey );
 	
 	// reset the xml's in case they were already set
 	m_cr->reset();
@@ -87,7 +88,7 @@ bool Msg8b::getCatRec  ( Url     *url              ,
 	//
 	// forward
 	//
-	if ( g_hostdb.m_groupId != m_groupId ) {
+	if ( getMyShardNum() != m_shardNum ) {//g_hostdb.m_groupId!=m_groupId){
 		// coll, url, niceness(1), rdbid(1), useCanonicalName(1)
 		long requestSize = m_collLen + m_url->getUrlLen() + 4 + 4;
 		// make the request
@@ -120,7 +121,7 @@ bool Msg8b::getCatRec  ( Url     *url              ,
 				      m_requestSize,
 				      0x8b,
 				      false,         // multicase own request?
-				      m_groupId,
+				      m_shardNum,//m_groupId,
 				      false,         // send to whole group?
 				      startKey.n1,   // key
 				      this,          // state data

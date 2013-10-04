@@ -150,7 +150,7 @@ class Titledb {
 	// . we assume each group/cluster has about the same # of docs as us
 	long long getGlobalNumDocs ( ) { 
 		return m_rdb.getNumTotalRecs()*
-			(long long)g_hostdb.m_numGroups;};
+			(long long)g_hostdb.m_numShards;};
 
 	long getLocalNumDocs () { return m_rdb.getNumTotalRecs(); };
 	long getNumDocsInMem () { return m_rdb.m_tree.getNumUsedNodes(); };

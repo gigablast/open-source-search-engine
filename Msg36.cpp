@@ -90,11 +90,11 @@ bool Msg36::getTermFreq ( char      *coll       ,
 		groupId = g_indexdb.getGroupIdFromKey(&key);
 	*/
 	//groupId = g_indexdb.getNoSplitGroupId(&key);
-	uint32_t groupId = getGroupId ( RDB_POSDB , &key , false );
+	uint32_t shardNum = getShardNum ( RDB_POSDB , &key , false );
 	
 	log(LOG_DEBUG,"quota: msg36 termid=%lli inc=%li dec=%li "
-	    "sending to group=0x%lx\n",termId,(long)incCount,(long)decCount,
-	    (long)groupId);
+	    "sending to shard=%li\n",termId,(long)incCount,(long)decCount,
+	    (long)shardNum);
 
 		//unsigned long groupId = g_indexdb.getBaseGroupId(&key);
 	                                    //getGroupIdFromKey ( &key );
@@ -103,7 +103,7 @@ bool Msg36::getTermFreq ( char      *coll       ,
 	//if ( groupId == g_hostdb.m_groupId &&
 	bool local = true;
 	if ( g_hostdb.m_indexSplits != 1   ) local = false;
-	if ( groupId != g_hostdb.m_groupId ) local = false;
+	if ( shardNum != getMyShardNum()   ) local = false;
 	//if ( g_conf.m_fullSplit            ) local = true;
 	local = true;
 	if ( exactCount                    ) local = false;
@@ -172,7 +172,7 @@ bool Msg36::getTermFreq ( char      *coll       ,
 			char *xx=NULL;*xx=0;
 		}
 		else {
-			gr  = groupId;  //this is just the baseGroupId
+			gr  = shardNum;  //this is just the baseGroupId
 			buf = m_reply;
 		}
 		// in case it fails somehow
@@ -185,7 +185,7 @@ bool Msg36::getTermFreq ( char      *coll       ,
 			    p - m_request, // request size
 			    0x36         , // msgType 0x36
 			    false        , // multicast owns msg?
-			    gr           ,
+			    gr           , // shard num
 			    false        , // send to whole group?
 			    termId       , // key is termId
 			    this         , // state data
