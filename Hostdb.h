@@ -375,6 +375,7 @@ class Hostdb {
 	// . callback passes your RdbList back to you
 	//Host *getGroup ( unsigned long groupId , long *numHosts = NULL );
 	Host *getShard ( unsigned long shardNum , long *numHosts = NULL ) {
+		if ( numHosts ) *numHosts = m_numHostsPerShard;
 		return &m_hosts[shardNum]; 
 	};
 
