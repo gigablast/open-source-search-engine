@@ -172,7 +172,7 @@ char* incRdfPtr( long skip = 1 ) {
 
 // parse the rdf file up past a given start tag
 long rdfParse ( char *tagName ) {
-	bool inQuote = false;
+	//bool inQuote = false;
 	do {
 		long matchPos = 0;
 		// move to the next tag
@@ -646,12 +646,16 @@ long fixUrl ( char *url, long urlLen ) {
 		}
 	}
 	// remove any anchor
+	// mdw, sep 2013, no because there is twitter.com/#!/ronpaul
+	// and others...
+	/*
 	for (long i = 0; i < newUrlLen; i++) {
 		if (url[i] == '#') {
 			newUrlLen = i;
 			break;
 		}
 	}
+	*/
 	// remove any trailing /
 	if (url[newUrlLen-1] == '/')
 		newUrlLen--;
@@ -1498,14 +1502,33 @@ hashLink:
 			urlLen = MAX_URL_LEN;
 		urlLen = htmlDecode(decodedUrl, &urlBuffer[urlOffset], urlLen,
 				    false,0);
+		// debug point
+		//if ( strcmp(decodedUrl,"http://twitter.com/#!/ronpaul")==0)
+		//	printf("hey\n");
+
+		// ignore any url with # in it for now like
+		// http://twitter.com/#!/ronpaul because it bastardizes
+		// the meaning of the # (hashtag) and we need to protest that
+		if ( strchr ( decodedUrl , '#' ) )
+			goto nextLink;
+
 		memcpy(&urlBuffer[urlOffset], decodedUrl, urlLen);
 		// fix up bad urls
 		urlLen = fixUrl(&urlBuffer[urlOffset], urlLen);
 		if (urlLen == 0)
 			goto nextLink;
-		// normalize with Url
-		normUrl.set(&urlBuffer[urlOffset], urlLen,
-			    true, false, false, true);
+		// . normalize with Url
+		// . watch out for
+		//   http://twitter.com/#!/ronpaul to http://www.twitter.com/
+		//   so do not strip # hashtags
+		normUrl.set(&urlBuffer[urlOffset], 
+			    urlLen,
+			    true, // addwww?
+			    false, // stripsessionid
+			    false, // strippound?
+			    true); // stripcommonfile? (i.e. index.htm)
+		// debug print
+		//printf("gburl %s -> %s\n",decodedUrl,normUrl.getUrl());
 		// put it back
 		urlLen = normUrl.getUrlLen();
 		if (urlBufferLen+urlLen+10 >= urlBufferSize) {

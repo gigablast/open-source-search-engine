@@ -93,8 +93,11 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		char *e = p; while ( *e && ! is_wspace_a (*e) ) e++;
 		// . set the url
 		// . but don't add the "www."
+		// . watch out for
+		//   http://twitter.com/#!/ronpaul to http://www.twitter.com/
+		//   so do not strip # hashtags
 		Url site;
-		site.set ( p , e - p , false/*addwww?*/);
+		site.set ( p , e - p , false ); // addwww?
 		// normalize the url
 		g_catdb.normalizeUrl(&site, &site);
 		// make a siteRec from this url
@@ -107,6 +110,12 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		char *data     = sr.getData ();
 		long  dataSize = sr.getDataSize ();
 		key_t key;
+		// debug when generating catdb
+		//char *x = p;
+		//for ( ; x<e ; x++ ) {
+		//	if ( x[0] == '#' )
+		//		log("hey");
+		//}
 		if ( numCatids[k] == 0 )
 			key = g_catdb.makeKey(&site, true);
 		else
