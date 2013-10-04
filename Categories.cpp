@@ -509,8 +509,12 @@ void Categories::printPathFromIndex ( SafeBuf *sb ,
 	if (catIndex < 1) return;
 	// get the parent
 	parentId = m_cats[catIndex].m_parentid;
-	// print the parent(s) first
-	if (parentId > 1) {
+	long catid = m_cats[catIndex].m_catid;
+	// . print the parent(s) first
+	// . the new dmoz data dumps signify a parentless topic by
+	//   havings its parentid equal its catid, so avoid infinite
+	//   loops by checking for that here now. mdw oct 2013.
+	if (parentId > 1 && parentId != catid ) {
 		bool isParentRTL = isIdRTLStart(parentId);
 		// print spacing here if RTL
 		//if (isRTL && !raw)
@@ -569,8 +573,9 @@ void Categories::printPathCrumbFromIndex ( SafeBuf *sb,
 	if (catIndex < 1) return;
 	// get the parent
 	parentId = m_cats[catIndex].m_parentid;
+	long catid = m_cats[catIndex].m_catid;
 	// print the parent(s) first
-	if (parentId > 1) {
+	if (parentId > 1 && parentId != catid ) {
 		bool isParentRTL = isIdRTLStart(parentId);
 		printPathCrumbFromId(sb, parentId, isRTL);
 		// print a spacing

@@ -308,7 +308,9 @@ bool CatRec::set ( Url *site ,
 	// add the ids
 	m_catids = (long*)p;
 	memcpy(p, catids, 4*m_numCatids);
-	p += 4*m_numCatids;
+	// skip over "numCatids" NOT m_numCatids which is TRUNCATED
+	// to MAX_CATIDS
+	p += 4*numCatids;
 	//}
 	// point to the filenum so we can mod it!
 	//m_filenumPtr = p;
