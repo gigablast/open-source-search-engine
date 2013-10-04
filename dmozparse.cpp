@@ -176,10 +176,14 @@ long rdfParse ( char *tagName ) {
 	do {
 		long matchPos = 0;
 		// move to the next tag
-		while (*rdfPtr != '<' || inQuote ) {
+		// . quotes are no longer escaped out in the newer
+		//   dmoz files in oct 2013... so take that out. i do
+		//   this < is &lt; though.. perhaps only check for
+		//   quotes when in a tag?
+		while (*rdfPtr != '<' ) { // || inQuote ) {
 			// check for quotes
-			if (*rdfPtr == '"')
-				inQuote = !inQuote;
+			//if (*rdfPtr == '"')
+			//	inQuote = !inQuote;
 			// next char
 			if (!incRdfPtr())
 				return -1;
@@ -400,6 +404,11 @@ long getIndexFromId ( long catid ) {
 		else
 			low  = currCat+1;
 	}
+	//printf("catid %li not found. sanity checking.\n",catid);
+	// sanity check our algo
+	//for ( long i = 0 ; i < numRdfCats ; i++ ) {
+	//	if ( rdfCats[i].m_catid == catid ) { char *xx=NULL;*xx=0;}
+	//}
 	// not found
 	return -1;
 }
@@ -552,7 +561,12 @@ long printCatPath ( char *str, long catid, bool raw ) {
 	// get the parent
 	parentId = rdfCats[catIndex].m_parentid;
 	// print the parent(s) first
-	if (parentId > 1) {
+	if (parentId > 1 && 
+	    // the newer dmoz files have the catid == the parent id of
+	    // i guess top most categories, like "Top/Arts"... i would think
+	    // it should have a parentId of 1 like the old dmoz files,
+	    // so it's probably a bug on dmoz's end
+	    parentId != catid ) {
 		p += printCatPath(p, parentId, raw);
 		// print spacing
 		if (!raw) p += sprintf(p, " / ");
@@ -701,6 +715,7 @@ int main ( int argc, char *argv[] ) {
 	char mode = MODE_NONE;
 	long totalNEC = 0;
 	char *dir;
+	bool firstTime;
 
 	// check the options and mode
 	for (long i = 0; i < argc; i++) {
@@ -824,6 +839,7 @@ int main ( int argc, char *argv[] ) {
 	rdfPtr = rdfBuffer;
 	rdfEnd = &rdfBuffer[n];
 	currOffset = 0;
+	firstTime = true;
 
 	// read and parse the file
 	printf("Parsing Topics...\n");
@@ -841,6 +857,17 @@ int main ( int argc, char *argv[] ) {
 		if (nameLen == -2) {
 			printf("Out of Memory!\n");
 			goto errExit1;
+		}
+		// fix <Topic r:id=\"\"> in the newer content.rdf.u8
+		if ( nameLen == 0 ) {
+			// only do this once!
+			if ( ! firstTime ) {
+				printf("Encountered zero length name");
+				continue;
+			}
+			memcpy(nameBuffer+nameOffset,"Top\0",4);
+			nameLen = 3;
+			firstTime = false;
 		}
 		// html decode it
 		if (nameLen > MAX_HTTP_FILENAME_LEN)
@@ -873,6 +900,11 @@ int main ( int argc, char *argv[] ) {
 			printf("Out of Memory!\n");
 			goto errExit1;
 		}
+		// debug
+		//printf("gbcat=");
+		//for ( long i = 0 ; i < nameLen ; i++ )
+		//	printf("%c",htmlDecoded[i]);
+		//printf("\n");
 		// fill it
 		rdfCats[numRdfCats].m_catid           = catid;
 		rdfCats[numRdfCats].m_parentid        = 0;
@@ -1408,6 +1440,9 @@ contentParse:
 		if ( mode == MODE_URLDUMP || mode == MODE_DIFFURLDUMP )
 			goto nextLink;
 		// . set the content offset for this cat
+		// . it's missing catid 425187... why? because it had
+		//   a double quote in it like '4"'!! so i took out inQuotes
+		//   logic above.
 		cat = getIndexFromId(catid);
 		if (cat == -1) {
 			totalNEC++;
@@ -1654,8 +1689,17 @@ hashLink:
 		long currIndex = getIndexFromId(catid);
 		while (currIndex >= 0) {
 			rdfCats[currIndex].m_numUrls++;
+			// the new dmoz files have catids whose parents
+			// are the same cat id! so stop infinite loops
+			if ( rdfCats[currIndex].m_parentid == 
+			     rdfCats[currIndex].m_catid )
+				break;
+			// otherwise, make "currIndex" point to the parent
 			currIndex = getIndexFromId(
 					rdfCats[currIndex].m_parentid );
+			// in the newer dmoz files 0 is a bad catid i guess
+			// not -1 any more?
+			// ??????
 		}
 
 		goto nextLink;
