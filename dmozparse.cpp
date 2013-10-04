@@ -718,7 +718,7 @@ int main ( int argc, char *argv[] ) {
 	bool splitUrls = false;
 	char mode = MODE_NONE;
 	long totalNEC = 0;
-	char *dir;
+	char *dir="";
 	bool firstTime;
 
 	// check the options and mode
@@ -1204,7 +1204,8 @@ contentParse:
 		printf("Out of Memory!\n");
 		goto errExit;
 	}
-	
+
+ again:	
 	// open the content file
 	if ( mode == MODE_NEW ||  mode == MODE_URLDUMP )
 		sprintf(filename, "%s%s", dir,RDFCONTENT_FILE);
@@ -1215,6 +1216,10 @@ contentParse:
 	// make sure it opened okay
 	//if (!rdfStream.is_open()) {
 	if ( rdfStream < 0 ) {
+		if ( ! dir[0] ) {
+			dir = "./cat/";
+			goto again;
+		}
 		printf("Error Opening %s\n", filename);
 		goto errExit;
 	}
