@@ -21307,7 +21307,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// hash diffbot's json output here
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;
-	if ( *ct == CT_JSON ) {
+	if ( *ct == CT_JSON && m_isDiffbotJSONObject ) {
 		// hash the content type for type:json query
 		if ( ! hashContentType   ( table ) ) return NULL;
 		// and the url: query support
