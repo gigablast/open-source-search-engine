@@ -254,7 +254,7 @@ bool Proxy::initProxy ( long proxyId, unsigned short udpPort,
 	g_pages.init ( );
 	// load up the dmoz categories here
 	char structureFile[256];
-	sprintf(structureFile, "%scat/gbdmoz.structure.dat", g_hostdb.m_dir);
+	sprintf(structureFile, "%scatdb/gbdmoz.structure.dat", g_hostdb.m_dir);
 	g_categories = &g_categories1;
 	if (g_categories->loadCategories(structureFile) != 0) {
 		log("cat: Loading Categories From %s Failed.",

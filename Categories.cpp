@@ -862,7 +862,7 @@ bool Categories::getTitleAndSummary ( char  *urlOrig,
 
 	// . open the file
 	char filename[512];
-	sprintf(filename, "%scat/%s", g_hostdb.m_dir, RDFCONTENT_FILE);
+	sprintf(filename, "%scatdb/%s", g_hostdb.m_dir, RDFCONTENT_FILE);
 	//m_rdfStream.clear();
 	//m_rdfStream.open(filename, ifstream::in);
 	m_rdfStream = open(filename, O_RDONLY | O_NONBLOCK);
@@ -1053,9 +1053,9 @@ long Categories::generateSubCats ( long catid,
 	// get the file offset
 	fileOffset = m_cats[catIndex].m_structureOffset;
 	// open the structure file
-	// cat/content.rdf.u8 in utf8
+	// catdb/content.rdf.u8 in utf8
 	char filename[512];
-	sprintf(filename, "%scat/%s", g_hostdb.m_dir, RDFSTRUCTURE_FILE);
+	sprintf(filename, "%scatdb/%s", g_hostdb.m_dir, RDFSTRUCTURE_FILE);
 	//m_rdfStream.clear();
 	//m_rdfStream.open(filename, ifstream::in);
 	m_rdfStream = open(filename, O_RDONLY);
@@ -1333,7 +1333,7 @@ bool Categories::loadLangTables(void) {
 	unsigned long entries = 0L;
 	char *cp;
 	char *cpEnd = line + 10239;
-	if(!(content = fopen("cat/content.rdf.u8", "r"))) {
+	if(!(content = fopen("catdb/content.rdf.u8", "r"))) {
 		log(LOG_INFO, "cat: could not open content file.\n");
 		return(false);
 	}
