@@ -822,9 +822,9 @@ int main ( int argc, char *argv[] ) {
 	// make sure it opened okay
 	//if (!rdfStream.is_open()) {
 	if ( rdfStream < 0 ) {
-		// try ./cat/ subdir if not found
+		// try ./catdb/ subdir if not found
 		if ( ! dir[0] ) {
-			dir = "./cat/";
+			dir = "./catdb/";
 			goto retry;
 		}
 		printf("Error Opening %s\n", filename);
@@ -1217,7 +1217,7 @@ contentParse:
 	//if (!rdfStream.is_open()) {
 	if ( rdfStream < 0 ) {
 		if ( ! dir[0] ) {
-			dir = "./cat/";
+			dir = "./catdb/";
 			goto again;
 		}
 		printf("Error Opening %s\n", filename);

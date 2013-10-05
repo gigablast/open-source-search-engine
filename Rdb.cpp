@@ -273,8 +273,10 @@ bool Rdb::init ( char          *dir                  ,
 	//	return g_accessdb.addColl ( NULL );
 	//else if ( g_facebookdb.getRdb() == this ) 
 	//	return g_facebookdb.addColl ( NULL );
-	else if ( g_syncdb.getRdb() == this ) 
+	if ( g_syncdb.getRdb() == this ) 
 		return g_syncdb.addColl ( NULL );
+	if ( g_catdb.getRdb() == this ) 
+		return g_catdb.addColl ( NULL );
 
 	// set this for use below
 	//*(long long *)m_gbcounteventsTermId =
