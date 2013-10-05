@@ -1847,6 +1847,16 @@ bool XmlDoc::indexDoc ( ) {
 		m_downloadEndTimeValid = true;
 	}
 
+	if ( ! m_ipValid ) {
+		m_ipValid = true;
+		m_ip = atoip("1.2.3.4");
+	}
+
+	if ( ! m_spideredTimeValid ) {
+		m_spideredTimeValid = true;
+		m_spideredTime = 0;
+	}
+
 	// if this is EABANDONED or EHITCRAWLLIMIT or EHITPROCESSLIMIT
 	// or ECORRUPTDATA (corrupt gzip reply)
 	// then this should not block. we need a spiderReply to release the 
