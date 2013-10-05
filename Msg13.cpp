@@ -361,7 +361,7 @@ bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 	uint32_t unzippedLen = *(long*)reply;
 	// sanity checks
 	if ( unzippedLen < 0 || unzippedLen > 10000000 ) {
-		log("spider: got possible corrupt compressed doc "
+		log("spider: downloaded probable corrupt gzipped doc "
 		    "with unzipped len of %li",(long)unzippedLen);
 		g_errno = ECORRUPTDATA;
 		return true;

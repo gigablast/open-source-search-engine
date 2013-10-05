@@ -1826,10 +1826,32 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
+	////
+	//
+	// make these fake so getNewSpiderReply() below does not block
+	//
+	////
+
+	if ( ! m_tagRecValid ) {
+		m_tagRec.reset();
+		m_tagRecValid = true;
+	}
+
+	if ( ! m_siteHash32Valid ) {
+		m_siteHash32 = 1;
+		m_siteHash32Valid = true;
+	}
+
+	if ( ! m_downloadEndTimeValid ) {
+		m_downloadEndTime = 0;
+		m_downloadEndTimeValid = true;
+	}
+
 	// if this is EABANDONED or EHITCRAWLLIMIT or EHITPROCESSLIMIT
-	// then this should make a "fake" reply to release the url spider
-	// lock in SpiderLoop::m_lockTable.
-	SpiderReply *nsr = getNewSpiderReply();
+	// or ECORRUPTDATA (corrupt gzip reply)
+	// then this should not block. we need a spiderReply to release the 
+	// url spider lock in SpiderLoop::m_lockTable.
+	SpiderReply *nsr = getNewSpiderReply ();
 	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
 
 	SafeBuf metaList;
@@ -19387,7 +19409,11 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// add a "fake" spider reply to release the lock in
 	// SpiderLoop::m_lockTable at least. see Spider.cpp's addSpiderReply()
 	// to see what parts of this are relevant.
+	/*
 	if ( *indexCode == EABANDONED ||
+	     // . any internal "error" needs to be here really
+	     // . was there an error unzipping the title rec?
+	     *indexCode == ECORRUPTDATA ||
 	     *indexCode == EHITCRAWLLIMIT ||
 	     *indexCode == EHITPROCESSLIMIT ) {
 		// clear everything
@@ -19411,9 +19437,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 		m_newsrValid = true;
 		return &m_newsr;
 	}
-
-
-
+	*/
 
 	TagRec *gr = getTagRec();
 	if ( ! gr || gr == (TagRec *)-1 ) return (SpiderReply *)gr;
