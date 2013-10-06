@@ -11834,6 +11834,23 @@ char **XmlDoc::getHttpReply2 ( ) {
 	strcpy ( r->m_url , cu->getUrl() );
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+	// max to download in bytes. currently 1MB.
+	long maxDownload = (long)MAXDOCLEN;
+	// but if url is http://127.0.0.1.... or local then
+	if ( m_ipValid ) {
+		// make into a string
+		char *ipStr = iptoa(m_ip);
+		// is it local?
+		bool isLocal = false;
+		if ( strncmp(ipStr,"192.168.",8) == 0) isLocal = true;
+		if ( strncmp(ipStr,"10."     ,3) == 0) isLocal = true;
+		if ( m_ip == 16777343 ) isLocal = true; // 127.0.0.1 ?
+		// . if local then make web page download max size unlimited
+		// . this is for adding the gbdmoz.urls.txt.* files to
+		//   populate dmoz. those files are about 25MB each.
+		if ( isLocal )
+			maxDownload = -1;
+	}
 	// m_maxCacheAge is set for getting contact or root docs in 
 	// getContactDoc() and getRootDoc() and it only applies to
 	// titleRecs in titledb i guess... but still... for Msg13 it applies
@@ -11842,8 +11859,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 	r->m_urlIp                  = *ip;
 	r->m_firstIp                = m_firstIp;
 	r->m_urlHash48              = getFirstUrlHash48();
-	r->m_maxTextDocLen          = MAXDOCLEN;//m_cr->m_maxTextDocLen  ;
-	r->m_maxOtherDocLen         = MAXDOCLEN;//m_cr->m_maxOtherDocLen ;
+	r->m_maxTextDocLen          = maxDownload;
+	r->m_maxOtherDocLen         = maxDownload;
 	r->m_forwardDownloadRequest = (bool)m_forwardDownloadRequest;
 	r->m_useTestCache           = (bool)useTestCache;
 	r->m_spideredTime           = getSpideredTime();//m_spideredTime;
