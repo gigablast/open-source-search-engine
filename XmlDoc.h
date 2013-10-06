@@ -623,6 +623,7 @@ class XmlDoc {
 	int8_t *getNextSpiderPriority ( ) ;
 	long *getPriorityQueueNum ( ) ;
 	class TagRec ***getOutlinkTagRecVector () ;
+	char *getUseFakeIpsMetaTagVal ( );
 	long **getOutlinkFirstIpVector () ;
 	//char **getOutlinkIsIndexedVector () ;
 	long *getRegExpNum ( long outlinkNum ) ;
@@ -1198,6 +1199,7 @@ class XmlDoc {
 	bool m_priorityQueueNumValid;
 	bool m_outlinkTagRecVectorValid;
 	bool m_outlinkIpVectorValid;
+	bool m_useFakeIpsValid;
 	bool m_outlinkIsIndexedVectorValid;
 	bool m_isSiteRootValid;
 	bool m_wasInjectedValid;
@@ -1447,7 +1449,9 @@ class XmlDoc {
 	Msge0 m_msge0;
 
 	// this points into m_msge1 i guess
-	//long *m_outlinkIpVector;
+	long *m_outlinkIpVector;
+	SafeBuf m_fakeIpBuf;
+	char m_useFakeIps;
 	Msge1 m_msge1;
 
 

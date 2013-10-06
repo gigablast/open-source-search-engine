@@ -173,6 +173,8 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_fakeIpBuf.purge();
+
 	m_tlbufTimer = 0LL;
 	m_gsbuf.reset();
 
@@ -14546,10 +14548,56 @@ TagRec ***XmlDoc::getOutlinkTagRecVector () {
 	return &m_msge0.m_tagRecPtrs;
 }
 
+char *XmlDoc::getUseFakeIpsMetaTagVal ( ) {
+	if ( m_useFakeIpsValid ) return &m_useFakeIps;
+
+	char mbuf[16];
+	mbuf[0] = '\0';
+	char *tag = "usefakeips";
+	long tlen = gbstrlen(tag);
+
+	// check the xml for a meta tag
+	Xml *xml = getXml();
+	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
+	xml->getMetaContent ( mbuf, 16 , tag , tlen );
+
+	m_useFakeIps = false;
+	if ( mbuf[0] == '1' ) m_useFakeIps = true;
+	m_useFakeIpsValid = true;
+	return &m_useFakeIps;
+}
+
+
 long **XmlDoc::getOutlinkFirstIpVector () {
-	if ( m_outlinkIpVectorValid ) return &m_msge1.m_ipBuf;
+
+	if ( m_outlinkIpVectorValid ) return &m_outlinkIpVector;
+
 	Links *links = getLinks();
 	if ( ! links ) return NULL;
+
+	// if page has a <meta name=usefakeips content=1> tag
+	// then use the hash of the links host as the firstip.
+	// this will speed things up when adding a gbdmoz.urls.txt.*
+	// file to index every url in dmoz.
+	char *useFakeIps = getUseFakeIpsMetaTagVal();
+	if ( ! useFakeIps || useFakeIps == (void *)-1 ) 
+		return (long **)useFakeIps;
+	
+	if ( *useFakeIps ) {
+		long need = links->m_numLinks * 4;
+		m_fakeIpBuf.reserve ( need );
+		for ( long i = 0 ; i < links->m_numLinks ; i++ ) {
+			unsigned long long h64 = links->getHostHash64(i);
+			long ip = h64 & 0xffffffff;
+			m_fakeIpBuf.pushLong(ip);
+		}
+		long *ipBuf = (long *)m_fakeIpBuf.getBufStart();
+		m_outlinkIpVector = ipBuf;
+		m_outlinkIpVectorValid = true;
+		return &m_outlinkIpVector;
+	}
+
+
 	// . we now scrounge them from TagRec's "firstip" tag if there!
 	// . that way even if a domain changes its ip we still use the
 	//   original ip, because the only reason we need this ip is for
@@ -14599,10 +14647,11 @@ long **XmlDoc::getOutlinkFirstIpVector () {
 	// error?
        	if ( g_errno ) return NULL;
 	// set it
-	//m_outlinkIpVector = m_msge1.m_ipBuf;
+	m_outlinkIpVector = m_msge1.m_ipBuf;
 	// . ptr to a list of ptrs to tag recs
 	// . ip will be -1 on error
-	return &m_msge1.m_ipBuf;
+	//return &m_msge1.m_ipBuf;
+	return &m_outlinkIpVector;
 }
 
 /*

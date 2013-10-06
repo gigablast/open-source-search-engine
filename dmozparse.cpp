@@ -1444,8 +1444,14 @@ contentParse:
 	// where these meta tags come into play.
 	if ( mode == MODE_URLDUMP ) {
 		char *str = 
-			"<meta name=spiderlinkslinks value=0>\n"
-			"<meta name=ignorelinksexternalerrors=1>\n";
+			"<meta name=spiderlinkslinks content=0>\n"
+			"<meta name=ignorelinksexternalerrors content=1>\n"
+			// tell gigablast to not do a dns lookup on every
+			// outlink when adding spiderRequests to spiderdb
+			// for each outlink. will save time up front but
+			// will have to be done when spidering the doc.
+			"<meta name=usefakeips content=1>\n"
+			;
 		long len = gbstrlen(str);
 		if ( write ( outStream2, str , len ) != len ) {
 			printf("Error writing to outStream2b\n");
