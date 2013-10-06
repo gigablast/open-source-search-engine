@@ -561,7 +561,7 @@ bool Spiderdb::init ( ) {
 			    "spiderdb"   ,
 			    true    , // dedup
 			    -1      , // fixedDataSize
-			    -1,//g_conf.m_spiderdbMinFilesToMerge , mintomerge
+			    2,//g_conf.m_spiderdbMinFilesToMerge , mintomerge
 			    maxMem,//g_conf.m_spiderdbMaxTreeMem ,
 			    maxTreeNodes                ,
 			    true                        , // balance tree?
@@ -3006,17 +3006,49 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		//winReq->m_spiderTime = spiderTime;
 	}
 
+	// if its ready to spider now, that trumps one in the future always!
+	if ( winReq &&
+	     m_bestRequestValid &&
+	     m_bestSpiderTimeMS <= nowGlobalMS &&
+	     winTimeMS > nowGlobal )
+		winReq = NULL;
+
 	// if this is a successive call we have to beat the global because
 	// the firstIp has a *ton* of spider requests and we can't read them
 	// all in one list, then see if we beat our global winner!
-	if ( winReq && m_bestRequestValid ) {
-		if ( m_bestRequest->m_priority > winPriority )
-			winReq = NULL;
-		if ( m_bestRequest->m_priority == winPriority &&
-		     // export this fix to master branch!!!
-		     m_bestSpiderTimeMS < winTimeMS )
-			winReq = NULL;
-	}
+	if ( winReq && 
+	     m_bestRequestValid &&
+	     m_bestSpiderTimeMS <= nowGlobalMS &&
+	     m_bestRequest->m_priority > winPriority )
+		winReq = NULL;
+
+	// or if both in future. use time.
+	if ( winReq && 
+	     m_bestRequestValid &&
+	     m_bestSpiderTimeMS > nowGlobalMS &&
+	     winTimeMS > nowGlobal &&
+	     m_bestSpiderTimeMS < winTimeMS )
+		winReq = NULL;
+
+	// if both recs are overdue for spidering and priorities tied, use
+	// the hopcount. should make us breadth-first, all else being equal.
+	if ( winReq && 
+	     m_bestRequestValid &&
+	     m_bestRequest->m_priority == winPriority &&
+	     m_bestSpiderTimeMS <= nowGlobalMS &&
+	     winTimeMS <= nowGlobal &&
+	     m_bestRequest->m_hopCount < winReq->m_hopCount )
+		winReq = NULL;
+		
+	// use times if hops are equal and both are overdue from same priority.
+	if ( winReq && 
+	     m_bestRequestValid &&
+	     m_bestRequest->m_priority == winPriority &&
+	     m_bestSpiderTimeMS <= nowGlobalMS &&
+	     winTimeMS <= nowGlobal &&
+	     m_bestRequest->m_hopCount == winReq->m_hopCount &&
+	     m_bestSpiderTimeMS <= winTimeMS )
+		winReq = NULL;
 
 	// if nothing, we are done!
 	if ( winReq ) {
