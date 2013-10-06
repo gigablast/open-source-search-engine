@@ -680,7 +680,9 @@ class Sections {
 	long getStoredSize ( ) ;
 	static long getStoredSize ( char *p ) ;
 	long serialize     ( char *p ) ;
-	long getMemUsed ( ) { return m_sectionsBufSize; };
+	//long getMemUsed ( ) { return m_sectionsBufSize; };
+
+	bool growSections ( );
 
 	bool getSectiondbList ( );
 	bool gotSectiondbList ( bool *needsRecall ) ;
@@ -828,9 +830,16 @@ class Sections {
 
 	// allocate m_sections[] buffer
 	class Section  *m_sections;
-	long            m_sectionsBufSize;
+	//long            m_sectionsBufSize;
 	long            m_numSections;
 	long            m_maxNumSections;
+
+	// this holds the Sections instances in a growable array
+	SafeBuf m_sectionBuf;
+
+	// this holds ptrs to sections 1-1 with words array, so we can
+	// see what section a word is in.
+	SafeBuf m_sectionPtrBuf;
 
 	long m_numSentenceSections;
 
