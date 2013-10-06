@@ -693,6 +693,32 @@ long fileWrite ( int fileid, void *buf, size_t count ) {
 	return sizeWrote;
 }
 
+// print special meta tags to tell gigablast to only spider/index
+// the links and not the links of the links. b/c we only want
+// to index the dmoz urls. AND ignore any external error like 
+// ETCPTIMEDOUT when indexing a dmoz url so we can be sure to index
+// all of them under the proper category so our gbcatid:xxx search 
+// works and we can replicate dmoz accurately. see XmlDoc.cpp
+// addOutlinksSpiderRecsToMetaList() and indexDoc() to see
+// where these meta tags come into play.
+void writeMetaTags ( int outStream2 ) {
+	char *str = 
+		"<meta name=spiderlinkslinks content=0>\n"
+		"<meta name=ignorelinksexternalerrors content=1>\n"
+		// tell gigablast to not do a dns lookup on every
+		// outlink when adding spiderRequests to spiderdb
+		// for each outlink. will save time up front but
+		// will have to be done when spidering the doc.
+		"<meta name=usefakeips content=1>\n"
+		;
+	long len = gbstrlen(str);
+	if ( write ( outStream2, str , len ) != len )
+		printf("Error writing to outStream2b\n");
+}
+
+		
+
+
 // main parser
 int main ( int argc, char *argv[] ) {
 	long n;
@@ -1244,7 +1270,7 @@ contentParse:
 		// write another file for the urls
 		if ( mode == MODE_URLDUMP ) {
 			if (!splitUrls)
-				sprintf(filename, "%s", URLTEXT_OUTPUT_FILE);
+				sprintf(filename, "html/%s", URLTEXT_OUTPUT_FILE);
 			else
 				// put them directly into html/ now for
 				// easy add url'ing
@@ -1252,7 +1278,7 @@ contentParse:
 		}
 		else {
 			if (!splitUrls)
-				sprintf(filename, "%s",
+				sprintf(filename, "html/%s",
 					DIFFURLTEXT_OUTPUT_FILE);
 			else
 				sprintf(filename, "html/%s.0",
@@ -1268,6 +1294,8 @@ contentParse:
 			goto errExit1;
 		}
 		printf("Opened %s for writing.\n", filename);
+
+		writeMetaTags ( outStream2 );
 
 		// if we're doing a diffurldump, load up the diff file first
 		if ( mode == MODE_DIFFURLDUMP ) {
@@ -1380,7 +1408,7 @@ contentParse:
 					printf("Completed Writing File.\n");
 					// write another file for the urls
 					urlTxtFile++;
-					sprintf(filename, "%s.%li",
+					sprintf(filename, "html/%s.%li",
 						URLTEXT_OUTPUT_FILE,
 						urlTxtFile);
 					//outStream2.open(filename,
@@ -1434,32 +1462,6 @@ contentParse:
 		}
 	}
 
-	// print special meta tags to tell gigablast to only spider/index
-	// the links and not the links of the links. b/c we only want
-	// to index the dmoz urls. AND ignore any external error like 
-	// ETCPTIMEDOUT when indexing a dmoz url so we can be sure to index
-	// all of them under the proper category so our gbcatid:xxx search 
-	// works and we can replicate dmoz accurately. see XmlDoc.cpp
-	// addOutlinksSpiderRecsToMetaList() and indexDoc() to see
-	// where these meta tags come into play.
-	if ( mode == MODE_URLDUMP ) {
-		char *str = 
-			"<meta name=spiderlinkslinks content=0>\n"
-			"<meta name=ignorelinksexternalerrors content=1>\n"
-			// tell gigablast to not do a dns lookup on every
-			// outlink when adding spiderRequests to spiderdb
-			// for each outlink. will save time up front but
-			// will have to be done when spidering the doc.
-			"<meta name=usefakeips content=1>\n"
-			;
-		long len = gbstrlen(str);
-		if ( write ( outStream2, str , len ) != len ) {
-			printf("Error writing to outStream2b\n");
-			goto errExit1;
-		}
-	}
-
-		
 	// read and parse the file again
 	printf("Building Links...\n");
 	while (true) {
@@ -1634,11 +1636,11 @@ hashLink:
 					// write another file for the urls
 					urlTxtFile++;
 					if ( mode == MODE_URLDUMP )
-						sprintf(filename, "%s.%li",
+						sprintf(filename, "html/%s.%li",
 							URLTEXT_OUTPUT_FILE,
 							urlTxtFile);
 					else
-						sprintf(filename, "%s.%li",
+						sprintf(filename, "html/%s.%li",
 							DIFFURLTEXT_OUTPUT_FILE,
 							urlTxtFile);
 					//outStream2.open(filename,
@@ -1655,6 +1657,7 @@ hashLink:
 					}
 					printf("Opened %s for writing.\n",
 					       filename);
+					writeMetaTags ( outStream2 );
 					urlTxtCount = 0;
 				}
 			}
