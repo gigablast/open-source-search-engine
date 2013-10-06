@@ -14928,6 +14928,12 @@ char *XmlDoc::getSpiderLinks ( ) {
 	     strstr ( buf2 , "none"     ) )
 		m_spiderLinks = false;
 
+	// spider request forbade it? diffbot.cpp crawlbot api when
+	// specifying urldata (list of urls to add to spiderdb) usually
+	// they do not want the links crawled i'd imagine.
+	if ( m_oldsrValid && m_oldsr.m_avoidSpiderLinks )
+		m_spiderLinks = false;
+
 	// set shadow member
 	m_spiderLinks2 = m_spiderLinks;
 	// validate
@@ -16547,6 +16553,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		return m_metaList;
 	}
 
+	bool temporaryExternalError = false;
+
 	// . some index code warrant retries, like EDNSTIMEDOUT, ETCPTIMEDOUT,
 	//   etc. these are deemed temporary errors. other errors basically
 	//   indicate a document that will never be indexable and should,
@@ -16562,7 +16570,21 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	     // . getNewSpiderReply() below will clear the error in it and
 	     //   copy stuff over from m_oldsr and m_oldDoc for this case
 		//|| *indexCode == EDOCUNCHANGED
-	     ) {
+	     )
+		temporaryExternalError = true;
+
+	// in the case of indexing dmoz urls outputted from
+	// 'dmozparse urldump -s' it specifies a meta tag that
+	// indicates to index the documents even in the case of a
+	// temporary external error, so that we can be assured to have
+	// exactly the same urls the dmoz has in our index. so when we
+	// do a gbcatid:xxx query we get the same urls in the search results
+	// that dmoz has for that category id.
+	if ( m_oldsrValid && m_oldsr.m_ignoreExternalErrors )
+		temporaryExternalError = false;
+
+
+	if ( temporaryExternalError ) {
 		// sanity - in repair mode?
 		if ( m_useSecondaryRdbs ) { char *xx=NULL;*xx=0; }
 		// . this seems to be an issue for blocking
@@ -18847,6 +18869,9 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	// do not do this if recycling content
 	if ( m_recycleContent ) return (char *)0x01;
 
+	Xml *xml = getXml();
+	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
+
 	Links *links = getLinks();
 	if ( ! links || links == (Links *)-1 ) return (char *)links;
 
@@ -18978,6 +19003,32 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	long linkTypes[2000];
 	long lastType = 0;
 
+
+
+	// if the file we are indexing now has 
+	// "<meta name=spiderlinkslinks value=0>" then that means to
+	// add the links to spiderdb, but do not spider their links!
+	// dmozparse uses this to make a file called gbdmoz.urs.txt.0
+	// that is just filled with urls that are in dmoz. and we want
+	// to index just those urls.
+	//
+	// now just make dmozparse output urls as <a href=> tags.
+	//
+	char mbuf[16];
+	mbuf[0] = '\0';
+	char *tag = "spiderlinkslinks";
+	long tlen = gbstrlen(tag);
+	xml->getMetaContent ( mbuf, 16 , tag , tlen );
+	bool avoid = false;
+	if ( mbuf[0] == '0' ) avoid = true;
+
+	// it also has this meta tag now too
+	mbuf[0] = '\0';
+	tag = "ignorelinksexternalerrors";
+	tlen = gbstrlen(tag);
+	xml->getMetaContent ( mbuf, 16 , tag , tlen );
+	bool ignore = false;
+	if ( mbuf[0] == '1' ) ignore = true;
 
 	//
 	// serialize each link into the metalist now
@@ -19201,6 +19252,14 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		if ( isParentRSS                 ) ksr.m_parentIsRSS       = 1;
 		if ( parentIsPermalink           ) ksr.m_parentIsPermalink = 1;
 		if ( isParentPingServer          ) ksr.m_parentIsPingServer= 1;
+
+		// this is used for building dmoz. we just want to index
+		// the urls in dmoz, not their outlinks.
+		if ( avoid  ) ksr.m_avoidSpiderLinks = 1;
+
+		// this is used for building dmoz. we need to index this
+		// url even in the case of ETCPTIMEDOUT, etc.
+		if ( ignore ) ksr.m_ignoreExternalErrors = 1;
 
 		// . if this is the 2nd+ time we were spidered and this outlink
 		//   wasn't there last time, then set this!

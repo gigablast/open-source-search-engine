@@ -1246,14 +1246,16 @@ contentParse:
 			if (!splitUrls)
 				sprintf(filename, "%s", URLTEXT_OUTPUT_FILE);
 			else
-				sprintf(filename, "%s.0", URLTEXT_OUTPUT_FILE);
+				// put them directly into html/ now for
+				// easy add url'ing
+				sprintf(filename, "html/%s.0", URLTEXT_OUTPUT_FILE);
 		}
 		else {
 			if (!splitUrls)
 				sprintf(filename, "%s",
 					DIFFURLTEXT_OUTPUT_FILE);
 			else
-				sprintf(filename, "%s.0",
+				sprintf(filename, "html/%s.0",
 					DIFFURLTEXT_OUTPUT_FILE);
 		}
 		//outStream2.open(filename, ofstream::out|ofstream::trunc);
@@ -1431,7 +1433,27 @@ contentParse:
 			goto errExit;
 		}
 	}
-	
+
+	// print special meta tags to tell gigablast to only spider/index
+	// the links and not the links of the links. b/c we only want
+	// to index the dmoz urls. AND ignore any external error like 
+	// ETCPTIMEDOUT when indexing a dmoz url so we can be sure to index
+	// all of them under the proper category so our gbcatid:xxx search 
+	// works and we can replicate dmoz accurately. see XmlDoc.cpp
+	// addOutlinksSpiderRecsToMetaList() and indexDoc() to see
+	// where these meta tags come into play.
+	if ( mode == MODE_URLDUMP ) {
+		char *str = 
+			"<meta name=spiderlinkslinks value=0>\n"
+			"<meta name=ignorelinksexternalerrors=1>\n";
+		long len = gbstrlen(str);
+		if ( write ( outStream2, str , len ) != len ) {
+			printf("Error writing to outStream2b\n");
+			goto errExit1;
+		}
+	}
+
+		
 	// read and parse the file again
 	printf("Building Links...\n");
 	while (true) {
@@ -1574,6 +1596,10 @@ hashLink:
 				     currUrl == updateIndexes[currDiffIndex] ) {
 					//outStream2.write(&urlBuffer[urlOffset],
 					//		  urlLen);
+					// print it in an anchor tag
+					// now so gigablast can spider
+					// these links
+					write ( outStream2,"<a href=\"",9);
 					if ( write ( outStream2,
 						     &urlBuffer[urlOffset],
 						     urlLen ) != urlLen ) {
@@ -1581,6 +1607,7 @@ hashLink:
 						       "outStream2\n");
 						goto errExit1;
 					}
+					write ( outStream2,"\"></a>",6);
 					//outStream2.write("\n", 1);
 					if (write(outStream2, "\n", 1) != 1) {
 						printf("Error writing to "

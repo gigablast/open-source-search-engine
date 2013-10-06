@@ -66,7 +66,8 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 
 	// see if they provided a url of a file of urls if they did not
 	// provide a url to add directly
-	bool isAdmin = g_collectiondb.isAdmin ( r , s );
+	//bool isAdmin = g_collectiondb.isAdmin ( r , s );
+	bool isAdmin = r->getIsLocal();
 	long  ufuLen = 0;
 	char *ufu = NULL;
 	if ( isAdmin )
