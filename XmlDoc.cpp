@@ -174,6 +174,7 @@ static long long s_lastTimeStart = 0LL;
 void XmlDoc::reset ( ) {
 
 	m_fakeIpBuf.purge();
+	m_fakeTagRecPtrBuf.purge();
 
 	m_tlbufTimer = 0LL;
 	m_gsbuf.reset();
@@ -14508,8 +14509,6 @@ TagRec ***XmlDoc::getOutlinkTagRecVector () {
 		g_errno = m_msge0.m_errno;
 		return NULL;
 	}
-	// no error and valid, return quick
-	if ( m_outlinkTagRecVectorValid ) return &m_msge0.m_tagRecPtrs;
 
 	// if page has a <meta name=usefakeips content=1> tag
 	// then use the hash of the links host as the firstip.
@@ -14517,29 +14516,38 @@ TagRec ***XmlDoc::getOutlinkTagRecVector () {
 	// file to index every url in dmoz.
 	char *useFakeIps = getUseFakeIpsMetaTagVal();
 	if ( ! useFakeIps || useFakeIps == (void *)-1 ) 
-		return (long **)useFakeIps;
+		return (TagRec ***)useFakeIps;
 	
+	// no error and valid, return quick
+	if ( m_outlinkTagRecVectorValid && *useFakeIps ) 
+		return &m_outlinkTagRecVector;
+
+	// if not using fake ips, give them the real tag rec vector
+	if ( m_outlinkTagRecVectorValid )
+		return &m_msge0.m_tagRecPtrs;
+
+	Links *links = getLinks();
+	if ( ! links || links == (void *) -1 ) return (TagRec ***)links;
+
 	if ( *useFakeIps ) {
+		// set to those
+		m_fakeTagRec.reset();
+		// just make a bunch ptr to empty tag rec
 		long need = links->m_numLinks * 4;
-		m_fakeIpBuf.reserve ( need );
-		for ( long i = 0 ; i < links->m_numLinks ; i++ ) {
-			unsigned long long h64 = links->getHostHash64(i);
-			long ip = h64 & 0xffffffff;
-			m_fakeIpBuf.pushLong(ip);
-		}
-		long *ipBuf = (long *)m_fakeIpBuf.getBufStart();
-		m_tagRecPtrBuf...outlinkIpVector = ipBuf;
-		m_outlinkIpVectorValid = true;
-		return &m_outlinkIpVector;
+		if ( ! m_fakeTagRecPtrBuf.reserve ( need ) ) return NULL;
+		// make them all point to the fake empty tag rec
+		TagRec **grv = (TagRec **)m_fakeTagRecPtrBuf.getBufStart();
+		for ( long i = 0 ; i < links->m_numLinks ; i++ )
+			grv[i] = &m_fakeTagRec;
+		// set it
+		m_outlinkTagRecVector = grv;
+		m_outlinkTagRecVectorValid = true;
+		return &m_outlinkTagRecVector;
 	}
-
-
 
 
 	// update status msg
 	setStatus ( "getting outlink tag rec vector" );
-	Links *links = getLinks();
-	if ( ! links ) return NULL;
 	TagRec *gr = getTagRec();
 	if ( ! gr || gr == (TagRec *)-1 ) return (TagRec ***)gr;
 	// assume valid

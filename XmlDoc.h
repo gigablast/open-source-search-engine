@@ -1450,9 +1450,13 @@ class XmlDoc {
 
 	// this points into m_msge1 i guess
 	long *m_outlinkIpVector;
+	SafeBuf m_outlinkTagRecPtrBuf;
 	SafeBuf m_fakeIpBuf;
 	char m_useFakeIps;
 	Msge1 m_msge1;
+	TagRec **m_outlinkTagRecVector;
+	SafeBuf m_fakeTagRecPtrBuf;
+	TagRec m_fakeTagRec;
 
 
 	//
