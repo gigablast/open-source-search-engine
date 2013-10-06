@@ -14510,6 +14510,32 @@ TagRec ***XmlDoc::getOutlinkTagRecVector () {
 	}
 	// no error and valid, return quick
 	if ( m_outlinkTagRecVectorValid ) return &m_msge0.m_tagRecPtrs;
+
+	// if page has a <meta name=usefakeips content=1> tag
+	// then use the hash of the links host as the firstip.
+	// this will speed things up when adding a gbdmoz.urls.txt.*
+	// file to index every url in dmoz.
+	char *useFakeIps = getUseFakeIpsMetaTagVal();
+	if ( ! useFakeIps || useFakeIps == (void *)-1 ) 
+		return (long **)useFakeIps;
+	
+	if ( *useFakeIps ) {
+		long need = links->m_numLinks * 4;
+		m_fakeIpBuf.reserve ( need );
+		for ( long i = 0 ; i < links->m_numLinks ; i++ ) {
+			unsigned long long h64 = links->getHostHash64(i);
+			long ip = h64 & 0xffffffff;
+			m_fakeIpBuf.pushLong(ip);
+		}
+		long *ipBuf = (long *)m_fakeIpBuf.getBufStart();
+		m_tagRecPtrBuf...outlinkIpVector = ipBuf;
+		m_outlinkIpVectorValid = true;
+		return &m_outlinkIpVector;
+	}
+
+
+
+
 	// update status msg
 	setStatus ( "getting outlink tag rec vector" );
 	Links *links = getLinks();
@@ -17287,6 +17313,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( nl && m_useLinkdb ) nis = nl->getNumLinks() * 4;
 	// pre-grow table based on # outlinks
 	kt1.set ( sizeof(key224_t),0,nis,NULL,0,false,m_niceness,"link-indx" );
+	// use magic to make fast
+	kt1.m_useKeyMagic = true;
+	// linkdb keys will have the same lower 4 bytes, so make hashing fast.
+	// they are 28 byte keys. bytes 20-23 are the hash of the linkEE
+	// so that will be the most random.
+	kt1.m_maskKeyOffset = 20;
+	// faster
 	//kt2.set ( sizeof(key128_t) , 0,0,NULL,0,false,m_niceness );
 	// do not add these
 	//bool add1 = true;
