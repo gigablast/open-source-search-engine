@@ -11836,18 +11836,19 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 
 	XmlDoc *THIS = (XmlDoc *)state;
 
+	bool hadError = false;
+
 	// wha?
 	if ( g_errno ) {
 		log("diffbot: http error2 %s",mstrerror(g_errno));
 		THIS->m_diffbotReplyError = g_errno;
+		hadError = true;
 	}
 
 	//char *buf = s->m_readBuf;
 	// do not allow TcpServer.cpp to free it since m_diffbotReply
 	// is now responsible for that
 	//s->m_readBuf = NULL;
-
-	bool hadError = false;
 
 	// set the mime
 	HttpMime mime;
@@ -11859,6 +11860,7 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		// note it
 		log("xmldoc: error setting diffbot mime");
 		THIS->m_diffbotReplyError = EDIFFBOTMIMEERROR;
+		hadError = true;
 	}
 
 	// check the status
@@ -11866,6 +11868,7 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		THIS->m_diffbotReplyError = EDIFFBOTBADHTTPSTATUS;
 		log("xmldoc: diffbot reply mime was %li",
 		    mime.getHttpStatus());
+		hadError = true;
 	}
 
 
@@ -11894,7 +11897,9 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		// count it for stats
 		THIS->m_cr->m_localCrawlInfo.m_pageProcessSuccesses++;
 		// log it
-		log("build: processed page %s",THIS->m_firstUrl.m_url);
+		log("build: processed page %s (pageLen=%li)",
+		    THIS->m_firstUrl.m_url,
+		    pageLen);
 		// sanity!
 		// crap, this can happen if we try to get the metalist
 		// of an old page for purposes of incremental indexing or

@@ -1080,7 +1080,7 @@ bool printDiffbotDropDown ( SafeBuf *sb,char *name,char *THIS , SafeBuf *sx) {
 	//char *p = cr->m_diffbotApiList.getBufStart();
 	char *p = 
 		"None|none,"
-		"All|http://www.diffbot.com/api/analzye?mode=auto&url=,"
+		"All|http://www.diffbot.com/api/analyze?mode=auto,"
 		"Article (autodetect)|http://www.diffbot.com/api/analyze?mode=article,"
 		"Article (force)|http://www.diffbot.com/api/article?,"
 		"Product (autodetect)|http://www.diffbot.com/api/analyze?mode=product,"

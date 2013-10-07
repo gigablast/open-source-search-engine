@@ -185,6 +185,13 @@ void RdbDump::doneDumping ( ) {
 	    "db: Dumped %li positive and %li negative recs. Total = %li.",
 	     m_totalPosDumped , m_totalNegDumped ,
 	     m_totalPosDumped + m_totalNegDumped );
+
+	// map verify
+	log("db: map # pos=%lli neg=%lli",
+	    m_map->getNumPositiveRecs(),
+	    m_map->getNumNegativeRecs()
+	    );
+
 	// free the list's memory
 	if ( m_list ) m_list->freeList();
 	// reset verify buffer
@@ -567,6 +574,10 @@ bool RdbDump::dumpList ( RdbList *list , long niceness , bool recall ) {
 	// write thread is out
 	m_writing = true;
 	//m_bytesWritten = 0;
+
+	// sanity check
+	log("dump: writing %li bytes at offset %lli",m_bytesToWrite,offset);
+
 	// . if we're called by RdbMerge directly use m_callback/m_state
 	// . otherwise, use doneWritingWrapper() which will call dumpTree()
 	// . BigFile::write() return 0 if blocked,-1 on error,>0 on completion
