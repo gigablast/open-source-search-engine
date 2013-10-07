@@ -1080,15 +1080,15 @@ bool printDiffbotDropDown ( SafeBuf *sb,char *name,char *THIS , SafeBuf *sx) {
 	//char *p = cr->m_diffbotApiList.getBufStart();
 	char *p = 
 		"None|none,"
-		"All|http://www.diffbot.com/api/analyze?mode=auto,"
-		"Article (autodetect)|http://www.diffbot.com/api/analyze?mode=article,"
-		"Article (force)|http://www.diffbot.com/api/article?,"
-		"Product (autodetect)|http://www.diffbot.com/api/analyze?mode=product,"
-		"Product (force)|http://www.diffbot.com/api/product?,"
-		"Image (autodetect)|http://www.diffbot.com/api/analyze?mode=image,"
-		"Image (force)|http://www.diffbot.com/api/image?,"
-		"FrontPage (autodetect)|http://www.diffbot.com/api/analyze?mode=frontpage,"
-		"FrontPage (force)|http://www.diffbot.com/api/frontpage?"
+		"All|http://www.diffbot.com/api/analyze?mode=auto&fields=*,"
+		"Article (autodetect)|http://www.diffbot.com/api/analyze?mode=article&fields=*,"
+		"Article (force)|http://www.diffbot.com/api/article?fields=*,"
+		"Product (autodetect)|http://www.diffbot.com/api/analyze?mode=product&fields=*,"
+		"Product (force)|http://www.diffbot.com/v2/product?fields=*,"
+		"Image (autodetect)|http://www.diffbot.com/api/analyze?mode=image&fields=*,"
+		"Image (force)|http://www.diffbot.com/api/image?fields=*,"
+		"FrontPage (autodetect)|http://www.diffbot.com/api/analyze?mode=frontpage&fields=*,"
+		"FrontPage (force)|http://www.diffbot.com/api/frontpage?fields=*"
 		;
 
 	// wtf?
