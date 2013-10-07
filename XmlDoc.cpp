@@ -14143,6 +14143,18 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		return &m_expandedUtf8Content;
 	}
 
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (char **)ct;
+
+	// if we have a json reply, leave it alone... do not expand iframes
+	// in json, it will mess up the json
+	if ( *ct == CT_JSON ) {
+		m_expandedUtf8Content     = m_rawUtf8Content;
+		m_expandedUtf8ContentSize = m_rawUtf8ContentSize;
+		m_expandedUtf8ContentValid = true;
+		return &m_expandedUtf8Content;
+	}
+
 	// we need this so getExtraDoc does not core
 	long *pfip = getFirstIp();
 	if ( ! pfip || pfip == (void *)-1 ) return (char **)pfip;
@@ -14439,6 +14451,18 @@ char **XmlDoc::getUtf8Content ( ) {
 	if ( ! *ep ) {
 		ptr_utf8Content    = NULL;
 		size_utf8Content   = 0;
+		m_utf8ContentValid = true;
+		return &ptr_utf8Content;
+	}
+
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (char **)ct;
+
+	// if we have a json reply, leave it alone... expanding a &quot;
+	// into a double quote will mess up the JSON!
+	if ( *ct == CT_JSON ) {
+		ptr_utf8Content  = (char *)m_expandedUtf8Content;
+		size_utf8Content = m_expandedUtf8ContentSize;
 		m_utf8ContentValid = true;
 		return &ptr_utf8Content;
 	}
