@@ -364,7 +364,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			      " &nbsp;&nbsp;&nbsp;&nbsp; "
 
 			      "<a title=\"Browse the DMOZ directory\" "
-			      "href=/?c=dmoz3>"
+			      "href=/?c=dmoz>"
 			      "directory"
 			      "</a>"
 
@@ -857,7 +857,7 @@ bool gotResults ( void *state ) {
 	//
 	// show DMOZ subcategories if doing either a
 	// "gbpdcat:<catid> |" (Search restricted to category)
-	// "gbdcat:<catid>"    (DMOZ urls in that topic, c=dmoz3)
+	// "gbdcat:<catid>"    (DMOZ urls in that topic, c=dmoz)
 	//
 	// The search gbdcat: results should be sorted by siterank i guess
 	// since it is only search a single term: gbdcat:<catid> so we can
