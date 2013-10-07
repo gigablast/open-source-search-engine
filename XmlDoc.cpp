@@ -11999,9 +11999,9 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// etc.
 	//if ( m_setFromTitleRec ) { char *xx = NULL; *xx = 0; }
 
-	// sanity check
-	if ( strstr(m_firstUrl.m_url,"-diffbot-") ) {
-		char *xx=NULL; *xx = 0; }
+	// sanity check. no! barfs on legit url with -diffbot- in it
+	//if ( strstr(m_firstUrl.m_url,"-diffbot-") ) {
+	//	char *xx=NULL; *xx = 0; }
 
 	// we should not "process" (i.e. send to diffbot) urls that do
 	// not match the supplied CollectionRec::m_diffbotUrlProcessPattern
