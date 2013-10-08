@@ -1746,8 +1746,11 @@ void XmlDoc::setStatus ( char *s ) {
 void XmlDoc::setCallback ( void *state, void (* callback) (void *state) ) {
 	m_state     = state;
 	m_callback1 = callback;
-	// sanity check
-	if ( callback == getMetaListWrapper ) { char *xx=NULL;*xx=0; }
+	// add this additional state==this constraint to prevent core when
+	// doing a page parser
+	if ( state == this &&
+	     // i don't remember why i added this sanity check...
+	     callback == getMetaListWrapper ) { char *xx=NULL;*xx=0; }
 }
 
 void XmlDoc::setCallback ( void *state, bool (*callback) (void *state) ) {
