@@ -1066,6 +1066,8 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	for ( long i = 0 ; i < MAX_KSLOTS && m_numHosts ; i++ ) {
 		// set its group id from groupNum, which is "gcount"
 		//m_map[i] = getGroupId ( gcount++ );
+		//unsigned long gid = getGroupId_old(gcount);
+		//long groupNum = getGroupNum (gid);
 		// TODO: test this later
 		//long oldVal = getGroupId_old ( gcount );
 		// now just map to the shard # not the groupId... simpler...
@@ -2303,9 +2305,12 @@ uint32_t Hostdb::getShardNum ( char rdbId,void *k,bool split ) {
 		// . this must be a full rec... cast it
 		//SpiderRequest *sreq = (SpiderRequest *)k;
 		long firstIp = g_spiderdb.getFirstIp((key128_t *)k);
+		// do what Spider.h getGroupId() used to do so we are
+		// backwards compatible
+		unsigned long h = (unsigned long)hash32h(firstIp,0x123456);
 		// use that for getting the group
 		//return g_spiderdb.getGroupId( firstIp );
-		return m_map [ firstIp & (MAX_KSLOTS-1)];
+		return m_map [ h & (MAX_KSLOTS-1)];
 	}
 	else if ( rdbId == RDB_CLUSTERDB || rdbId == RDB2_CLUSTERDB2 ) {
 		unsigned long long d = g_clusterdb.getDocId ( k );

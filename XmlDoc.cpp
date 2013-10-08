@@ -41758,7 +41758,7 @@ char *getNextJSONObject ( char *p ) {
 	// scan
 	for ( ; *p ; p++ ) {
 		// escaping a quote? ignore quote then.
-		if ( *p == '/' && p[1] == '\"' ) {
+		if ( *p == '\\' && p[1] == '\"' ) {
 			// skip two bytes then..
 			p++;
 			continue;
