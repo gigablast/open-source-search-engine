@@ -41863,8 +41863,8 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 	// just do a linear scan keeping track of nested field names as we go
 	//
 
-	char *field;
-	long  fieldLen;
+	char *field = NULL;
+	long  fieldLen = 0;
 	long  size;
 	// scan
 	for ( ; *p ; p += size ) {
