@@ -1066,6 +1066,8 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	for ( long i = 0 ; i < MAX_KSLOTS && m_numHosts ; i++ ) {
 		// set its group id from groupNum, which is "gcount"
 		//m_map[i] = getGroupId ( gcount++ );
+		//unsigned long gid = getGroupId_old(gcount);
+		//long groupNum = getGroupNum (gid);
 		// TODO: test this later
 		//long oldVal = getGroupId_old ( gcount );
 		// now just map to the shard # not the groupId... simpler...
