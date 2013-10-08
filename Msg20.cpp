@@ -124,12 +124,12 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 	if ( hostdb != &g_hostdb ) req->m_expected = false;
 
 	// get groupId from docId, if positive
-	unsigned long groupId ;
+	unsigned long shardNum;
 	if ( req->m_docId >= 0 ) 
-		groupId = hostdb->getGroupIdFromDocId(req->m_docId);
+		shardNum = hostdb->getShardNumFromDocId(req->m_docId);
 	else {
 		long long pdocId = g_titledb.getProbableDocId(req->ptr_ubuf);
-		groupId = getGroupIdFromDocId(pdocId);
+		shardNum = getShardNumFromDocId(pdocId);
 	}
 
 	// we might be getting inlinks for a spider request
@@ -138,8 +138,8 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 	if ( req->m_niceness == 0 ) timeout = 20;
 
 	// get our group
-	long  allNumHosts = hostdb->getNumHostsPerGroup();
-	Host *allHosts    = hostdb->getGroup ( groupId );
+	long  allNumHosts = hostdb->getNumHostsPerShard();
+	Host *allHosts    = hostdb->getShard ( shardNum );//getGroup(groupId );
 
 	// put all alive hosts in this array
 	Host *cand[32];
@@ -201,7 +201,7 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 			      m_requestSize     , 
 			      0x20              , // msgType 0x20
 			      false             , // m_mcast own m_request?
-			      groupId           , // send to group (groupKey)
+			      shardNum          , // send to group (groupKey)
 			      false             , // send to whole group?
 			      probDocId         , // key is lower bits of docId
 			      this              , // state data

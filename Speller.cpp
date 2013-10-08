@@ -138,7 +138,7 @@ bool Speller::init(){
 
 	/*
 	m_hostsPerSplit = g_hostdb.m_numHosts / g_hostdb.m_indexSplits;
-	m_hostsPerSplit /= g_hostdb.m_numHostsPerGroup;
+	m_hostsPerSplit /= g_hostdb.m_numHostsPerShard;
 	if ( m_hostsPerSplit <= 0 )
 		return log("db: the <indexSplit> in gb.conf is probably not "
 			   "too big. Are you using the wrong hosts.conf?");
@@ -535,7 +535,7 @@ bool Speller::launchReco(StateFrag *st){
 
 	long hostsPerSplit = g_hostdb.m_numHosts / g_hostdb.m_indexSplits;
 	// don't send to twins...
-	hostsPerSplit /= g_hostdb.m_numHostsPerGroup;
+	hostsPerSplit /= g_hostdb.m_numHostsPerShard;
 	long mySplit = g_hostdb.m_hostId % g_hostdb.m_indexSplits;
 
 	long key = st->m_q->getQueryHash();//0;
@@ -635,7 +635,7 @@ bool Speller::gotSpellerReply( StateFrag *st ){
 	bool  found = false; //phrase was found in dict or pop words
 	long hostsPerSplit = g_hostdb.m_numHosts / g_hostdb.m_indexSplits;
 	// don't send to twins...
-	hostsPerSplit /= g_hostdb.m_numHostsPerGroup;
+	hostsPerSplit /= g_hostdb.m_numHostsPerShard;
 
 	long  numNarrowPhrases[MAX_UNIQUE_HOSTS_PER_SPLIT];
 	char *narrowPtrs[MAX_UNIQUE_HOSTS_PER_SPLIT];

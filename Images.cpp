@@ -330,7 +330,9 @@ bool Images::launchRequests ( ) {
 		// get our residing groupid
 		//unsigned long gid = g_indexdb.getNoSplitGroupId(&startKey);
 		// no split is true for this one, so we do not split by docid
-		uint32_t gid = getGroupId(RDB_INDEXDB,&startKey,false);
+		//uint32_t gid = getGroupId(RDB_INDEXDB,&startKey,false);
+		unsigned long shardNum;
+		shardNum = getShardNum(RDB_INDEXDB,&startKey,false);
 		// get the termlist
 		if ( ! m_msg0.getList ( -1    , // hostid
 					-1    , // ip
@@ -361,7 +363,7 @@ bool Images::launchRequests ( ) {
 					true  , // allow pg cache
 					false , // focelocalindexdb
 					false , // doIndexdbSplit?
-					gid   ))// force paritysplit
+					shardNum ))// force paritysplit
 			return false;
 		// process the msg36 response
 		gotTermList ();

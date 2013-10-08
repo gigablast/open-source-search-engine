@@ -364,8 +364,8 @@ bool RdbBase::init ( char  *dir            ,
 		long long off    = 0;
 		// for biasing, only read part of the file
 		if ( biasDiskPageCache ) {
-			long numTwins = g_hostdb.getNumHostsPerGroup();
-			long thisTwin = g_hostdb.m_hostId/g_hostdb.m_numGroups;
+			long numTwins = g_hostdb.getNumHostsPerShard();
+			long thisTwin = g_hostdb.m_hostId/g_hostdb.m_numShards;
 			off   = (fsize/numTwins) * thisTwin;
 			if ( thisTwin < numTwins-1 )
 				fsize = (fsize/numTwins) * (thisTwin+1);
@@ -2021,7 +2021,7 @@ long long RdbBase::getListSize ( char *startKey , char *endKey , char *max ,
 }
 
 long long RdbBase::getNumGlobalRecs ( ) {
-	return getNumTotalRecs() * g_hostdb.m_numGroups;
+	return getNumTotalRecs() * g_hostdb.m_numShards;
 }
 
 // . return number of positive records - negative records

@@ -4769,7 +4769,7 @@ bool Language::genDistributedPopFile ( char *infile, unsigned long myHash ){
 	char  buf[1024];
 	
 	long hostsPerSplit = g_hostdb.m_numHosts / g_hostdb.m_indexSplits;
-	hostsPerSplit /= g_hostdb.m_numHostsPerGroup;
+	hostsPerSplit /= g_hostdb.m_numHostsPerShard;
 	long count = 0;
 
 	// this loop goes through all the words and only adds those

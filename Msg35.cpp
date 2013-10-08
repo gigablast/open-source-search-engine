@@ -69,7 +69,7 @@ bool Msg35::getToken ( void *state,
 	return true;
 	// . if only one host per group, you always have the token
 	// . no, they can only have one merge going at a time
-	//if ( g_hostdb.getNumHostsPerGroup() == 1 ) return true;
+	//if ( g_hostdb.getNumHostsPerShard() == 1 ) return true;
 	// . ensure not already registered
 	// . this can happen if a client's get request arrives before their
 	//   release request... so allow for that now
@@ -206,9 +206,13 @@ bool Msg35::callCallback ( long n ) {
 
 
 Host *Msg35::getTokenManager ( ) {
-	long numHosts;
-	Host **hosts = g_hostdb.getTokenGroup ( g_hostdb.m_hostId, &numHosts );
+	//long numHosts;
+	// take this out for now
+	/*
+	Host **hosts = g_hostdb.getTokenGroup ( g_hostdb.m_hostId, &numHosts);
 	Host *h = hosts[0];
+	*/
+	Host *h = NULL;
 	// now perfer the guy that shares his ide if he has lower hostid
 	//Host *s = g_hostdb.getSharer ( h );
 	//if ( s && s->m_hostId < h->m_hostId ) return s;
@@ -254,7 +258,7 @@ void Msg35::releaseToken ( ) {
 	if ( g_threads.areThreadsDisabled() ) return;
 	// . if only one host per group, you always have the token
 	// . no, they can only have one merge going at a time
-	//if ( g_hostdb.getNumHostsPerGroup() == 1 ) return;
+	//if ( g_hostdb.getNumHostsPerShard() == 1 ) return;
 	// . send to the governing host, he must be up
 	// . this returns NULL and sets g_errno on error
 	Host *h = getTokenManager ( );
@@ -433,8 +437,9 @@ void Msg35::handleRequest ( UdpSlot *slot ) {
 		// the token to one
 		if ( ! m_allReceived ) {
 			long numHosts;
-			Host **h = g_hostdb.getTokenGroup ( g_hostdb.m_hostId,
-							    &numHosts ) ;
+			//Host **h = g_hostdb.getTokenGroup (g_hostdb.m_hostId,
+			//				    &numHosts ) ;
+			Host **h = NULL;
 			//Host **h = getTokenGroup(&numHosts);
 			if ( numHosts > 16 ) {
 				log(LOG_LOGIC,

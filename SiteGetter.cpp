@@ -276,10 +276,12 @@ top:
 
 	long minRecSizes = 5000000;
 	// get the group this list is in
-	unsigned long gid ;
-	gid = getGroupId ( RDB_POSDB , (char *)&start , false ); //split?
+	//unsigned long gid ;
+	//gid = getGroupId ( RDB_POSDB , (char *)&start , false ); //split?
+	unsigned long shardNum ;
+	shardNum = getShardNum( RDB_POSDB , (char *)&start , false ); //split?
 	// we need a group #. the column #.
-	long split = g_hostdb.getGroupNum ( gid );
+	//long split = g_hostdb.getGroupNum ( gid );
 	// shortcut
 	Msg0 *m = &m_msg0;
 	// get the list. returns false if blocked.
@@ -313,7 +315,7 @@ top:
 			    true  ,  // allowpagecache?
 			    false ,  // forceLocalIndexdb?
 			    false ,  // doIndexdbSplit? nosplit
-			    split ))
+			    shardNum ) )//split ))
 		return false;
 
 	// return false if this blocked

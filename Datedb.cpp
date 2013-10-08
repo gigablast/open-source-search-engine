@@ -181,8 +181,10 @@ bool Datedb::verify ( char *coll ) {
 		key128_t k;
 		list.getCurrentKey ( (char*)&k );
 		count++;
-		unsigned long groupId = getGroupId ( RDB_DATEDB , &k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		//unsigned long groupId = getGroupId ( RDB_DATEDB , &k );
+		//if ( groupId == g_hostdb.m_groupId ) got++;
+		unsigned long shardNum = getShardNum( RDB_DATEDB , &k );
+		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		log ("db: Out of first %li records in datedb, only %li belong "

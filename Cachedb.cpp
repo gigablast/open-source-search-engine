@@ -133,8 +133,8 @@ bool Cachedb::verify ( char *coll ) {
 		key224_t k;
 		list.getCurrentKey((char*)&k);
 		count++;
-		uint32_t groupId = getGroupId ( m_rdbId , &k );//RDB_CACHEDB
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		uint32_t shardNum = getShardNum ( m_rdbId , &k );//RDB_CACHEDB
+		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		log ("db: Out of first %li records in %s , "
@@ -147,7 +147,7 @@ bool Cachedb::verify ( char *coll ) {
 
 			key224_t k;
 			list.getCurrentKey((char*)&k);
-			uint32_t groupId = getGroupId ( RDB_CACHEDB , &k );
+			uint32_t shardNum = getShardNum ( RDB_CACHEDB , &k );
 			long groupNum = g_hostdb.getGroupNum(groupId);
 			unsigned long sh32 ;
 			sh32 = g_cachedb.getLinkeeSiteHash32_uk(&k);

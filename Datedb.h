@@ -127,7 +127,10 @@ class Datedb {
 	// doing quotas.
 	// ---> IS THIS RIGHT???? MDW
 	unsigned long getNoSplitGroupId ( key128_t *k ) {
-		return (((unsigned long *)k)[3]) & g_hostdb.m_groupMask;
+		char *xx=NULL;*xx=0; 
+		return 0;
+		// wtf is this? still being used?
+		//return (((unsigned long *)k)[3]) & g_hostdb.m_groupMask;
 		//unsigned long bgid = getBaseGroupId(k);
 		//return g_indexdb.getSplitGroupId(bgid,0);
 		//return bgid;

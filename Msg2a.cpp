@@ -488,7 +488,7 @@ bool Msg2a::sendSwitchCatdbMsgs ( long num ) {
 	// initialize the sending process
 	long n = num;
 	if ( num == -1 ) {
-		//m_numMsgsToSend = g_hostdb.m_numGroups;
+		//m_numMsgsToSend = g_hostdb.m_numShards;
 		m_numMsgsToSend = g_hostdb.m_numHosts;
 		m_msgsSent = 0;
 		m_msgsReplied = 0;

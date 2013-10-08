@@ -3424,7 +3424,7 @@ int collcopy ( char *newHostsConf , char *coll , long collnum ) {
 		return -1;
 	}
 	// sanity check
-	if ( hdb.getNumGroups() != g_hostdb.getNumGroups() ) {
+	if ( hdb.getNumShards() != g_hostdb.getNumShards() ) {
 		log("Hosts.conf files do not have same number of groups.");
 		return -1;
 	}
@@ -3499,6 +3499,7 @@ int scale ( char *newHostsConf , bool useShotgunIp) {
 		if ( strcmp ( h2->m_dir , h->m_dir ) != 0 ) continue;
 		// bitch if twins not preserved when scaling
 		//if ( h2->m_group != h->m_group ) {
+		/*
 		if ( (h2->m_groupId & hdb1->m_groupMask) != 
 		     (h->m_groupId & hdb1->m_groupMask) )  {
 			log("Twins not preserved when scaling. New hosts.conf "
@@ -3518,6 +3519,7 @@ int scale ( char *newHostsConf , bool useShotgunIp) {
 		     newHostsConf,
 		     h->m_hostId,h->m_group);
 		return -1;
+		*/
 	}
 	}
 
@@ -3526,8 +3528,8 @@ int scale ( char *newHostsConf , bool useShotgunIp) {
 	//   where h2 is in a derivative group of h.
 	// . do a quick monte carlo test to make sure that a key in old
 	//   group #0 maps to groups 0,8,16,24 for all keys and all dbs
-	unsigned long groupId1;
-	unsigned long groupId2;
+	unsigned long shard1;
+	unsigned long shard2;
 	for ( long i = 0 ; i < 1000 ; i++ ) {
 		//key_t k;
 		//k.n1 = rand(); k.n0 = rand(); k.n0 <<= 32; k.n0 |= rand();
@@ -3544,15 +3546,16 @@ int scale ( char *newHostsConf , bool useShotgunIp) {
 		//else
 		//	k2 = (char *)&k16;
 		// get old group (groupId1) and new group (groupId2)
-		groupId1 = hdb1->getGroupId ( RDB_TITLEDB , k );//, hdb1 );
-		groupId2 = hdb2->getGroupId ( RDB_TITLEDB , k );//, hdb2 );
+		shard1 = hdb1->getShardNum ( RDB_TITLEDB , k );//, hdb1 );
+		shard2 = hdb2->getShardNum( RDB_TITLEDB , k );//, hdb2 );
+		/*
 		// ensure groupId2 is derivative of groupId1
 		if ( (groupId2 & hdb1->m_groupMask) != groupId1 ) {
 			log("Bad engineer. Group id 0x%lx not derivative of "
 			    "group id 0x%lx for titledb.",groupId2,groupId1);
 			return -1;
 		}
-
+		*/
 		/*
 		// get old group (groupId1) and new group (groupId2)
 		//groupId1 = g_checksumdb.getGroupId ( k , &g_hostdb );
@@ -3567,7 +3570,7 @@ int scale ( char *newHostsConf , bool useShotgunIp) {
 			return -1;
 		}
 		*/
-
+		/*
 		// get old group (groupId1) and new group (groupId2)
 		groupId1 = hdb1->getGroupId ( RDB_SPIDERDB , k );
 		groupId2 = hdb2->getGroupId ( RDB_SPIDERDB , k );
@@ -3633,7 +3636,7 @@ int scale ( char *newHostsConf , bool useShotgunIp) {
 			    groupId2,groupId1);
 			return -1;
 		}
-
+		*/
 	}
 
 	// . now copy all titleRecs in old hosts to all derivatives
@@ -3658,12 +3661,13 @@ int scale ( char *newHostsConf , bool useShotgunIp) {
 		if ( h2->m_ip == h->m_ip &&
 		     strcmp ( h2->m_dir , h->m_dir ) == 0 ) continue;
 		// skip if not derivative groupId for titledb
-		if ( (h2->m_groupId & hdb1->m_groupMask) !=
-		     h->m_groupId ) continue;
+		//if ( (h2->m_groupId & hdb1->m_groupMask) !=
+		//     h->m_groupId ) continue;
 		// continue if already copying to here
 		if ( done[j] ) continue;
 		// mark as done
 		done[j] = 1;
+		/*
 		// . don't copy to a twin in the old hosts.conf
 		// . WE MUST preserve twins when scaling for this to work
 		if ( h2->m_group == h->m_group ) {
@@ -3680,7 +3684,7 @@ int scale ( char *newHostsConf , bool useShotgunIp) {
 			if ( k < hdb1->m_numHosts ) 
 				continue;
 		}
-
+		*/
 		// skip local copies for now!!
 		//if ( h->m_ip == h2->m_ip ) continue;
 
@@ -3764,13 +3768,14 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 	if ( hostId2 == -1 ) hostId2 = hostId;
 
 	char tmp[1024];
+	/*
 	long i,j;
 	if( installFlag == ifk_distributeC ) {
-		long numGroups = g_hostdb.getNumGroups();
+		long numGroups = g_hostdb.getNumShards();
 
 		char tmp2[100];
 		unsigned long groupId1, groupId2;
-		long numHostsPerGroup = g_hostdb.getNumHostsPerGroup();
+		long numHostsPerGroup = g_hostdb.getNumHostsPerShard();
 		log("distribute copying files to twins for each host");
 		for(i=0;i<numGroups;i++) {
 			groupId1 = g_hostdb.getGroupId(i);
@@ -3811,11 +3816,6 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				Host *h2 = g_hostdb.getGroup(groupId2);
 				
 
-				/*
-				Host *h1 = g_hostdb.getHost(j);
-				Host *h2 = 
-					g_hostdb.getHost((j+i)%numHosts);
-				*/
 				long baseHostId = h2->m_hostId;
 				for(int k=0;k<numHostsPerGroup; k++) {
 				sprintf(tmp, 
@@ -3837,31 +3837,12 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				h2++;
 	
 				}
-				/*
-				sprintf(tmp, 
-					"scp %s:%schecksumg%lih%lidb ",
-					iptoa(h1->m_ip),
-					h1->m_dir,h2->m_hostId,h1->m_hostId);
-				sprintf(tmp2, "%s:%s &",
-					iptoa(h2->m_ip),
-					h2->m_dir);
-				strcat(tmp,tmp2);
-				log("distribute %s",tmp);
-				system(tmp);
-				*/
-				/*				sprintf(tmp,
-					"ssh %s \"cd %s; rm checksumg%dh%ddb\"",
-					iptoa(h1->m_ip),
-					h1->m_dir,
-					h2->m_hostId,h1->m_hostId);		
-				log("distribute %s",tmp);
-				system(tmp);*/
-				//				h1=h2;
 			}
 		}
 
 	return 0;
 	}
+*/
 
 	if ( installFlag == ifk_proxy_start ) {
 		for ( long i = 0; i < g_hostdb.m_numProxyHosts; i++ ) {
@@ -4083,27 +4064,61 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"%sgb "
 				//"%sgbfilter "
 				"%shosts.conf "
-				"%shosts2.conf "
+				//"%shosts2.conf "
 				"%sgb.conf "
 				"%stmpgb "
 				//"%scollections.dat "
 				"%sgb.pem "
-				"%sdict "
+				//"%sdict "
 				"%sucdata "
-				"%stop100000Alexa.txt "
+				//"%stop100000Alexa.txt "
 				//"%slanglist "
 				"%santiword "
-				"%s.antiword "
+				//"%s.antiword "
 				"badcattable.dat "
 				"catcountry.dat "
 				"%spdftohtml "
 				"%spstotext "
-				"%sxlhtml "
+				//"%sxlhtml "
 				"%sppthtml "
 				//"%stagdb*.xml "
 				"%shtml "
 				"%scat "
-				"%s:%s",
+
+				"%santiword-dir "
+				"%sgiftopnm "
+				"%spostalCodes.txt "
+				"%stifftopnm "
+				"%sppmtojpeg "
+				"%spnmscale "
+				"%spngtopnm "
+				"%sjpegtopnm "
+				"%sbmptopnm "
+				"%swiktionary-buf.txt "
+				"%swiktionary-lang.txt "
+				"%swiktionary-syns.dat "
+				"%swikititles.txt.part1 "
+				"%swikititles.txt.part2 "
+				"%swikititles2.dat "
+				"%sunifiedDict.txt "
+				"%sunifiedDict-buf.txt "
+				"%sunifiedDict-map.dat "
+
+				"%s:%s"
+				,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+				dir,
+
 				dir,
 				dir,
 				dir,
@@ -4121,6 +4136,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				dir,
 				dir,
 				dir,
+				dir,
+
 				iptoa(h2->m_ip),
 				h2->m_dir);
 			log(LOG_INIT,"admin: %s", tmp);
@@ -6589,7 +6606,7 @@ bool addToChecksumdb ( char *coll , TitleRec *tr ) {
 	// all of them locally ourselves
 	if ( ! s_cdbInit ) {
 		// open up one checksumdb FLAT file for each group
-		long ng = g_hostdb.getNumGroups();
+		long ng = g_hostdb.getNumShards();
 		for ( long i = 0 ; i < ng ; i++ ){
 			char name[64];
 			// . initialize our own internal rdb
@@ -6698,7 +6715,7 @@ bool mergeChecksumFiles ( ) {
 	// open up one checksumdb FLAT file for each group
 	bool flag = false;
 	long long count = 0;
-	long ng = g_hostdb.getNumGroups();
+	long ng = g_hostdb.getNumShards();
 	for ( long i = 0 ; i < ng ; i++ ) {
 		// . initialize our own internal rdb
 		// . the %lx in "g%lx" is the group id to which the keys
@@ -6935,7 +6952,7 @@ bool fixTitleRecs( char *coll ) {
 		return log("filesize of %s is %lli",
 			   f.getFilename(),fsize);
 	}
-	long ng = g_hostdb.getNumGroups();
+	long ng = g_hostdb.getNumShards();
 
 	// save the old map, do not overwrite any old one
 	log("db: *-*-*-* Moving old titledb0001.map to titledb0001.map.old");
@@ -7133,7 +7150,7 @@ bool genDbs ( char *coll ) {
 	bool doSpiderdb   = true ;
 	// build checksumdb if there not one
 	char tmp[256];
-	long ng = g_hostdb.getNumGroups();
+	long ng = g_hostdb.getNumShards();
 	long gnum = g_hostdb.m_hostId % ng;
 	sprintf ( tmp , "checksumg%lih%lidb",gnum,g_hostdb.m_hostId);
 	f.set ( g_hostdb.m_dir , tmp );
@@ -7726,7 +7743,8 @@ void dumpMissing ( char *coll ) {
 	minRecSizes = 5*1024*1024;
 
 	Msg5 msg5b;
-	unsigned long groupId = g_hostdb.m_groupId;
+	//unsigned long groupId = g_hostdb.m_groupId;
+	unsigned long shardNum = g_hostdb.getMyShardNum();
 	count = 0;
 	long scanned = 0;
 	//HashTableT <long long,char> repeat;
@@ -7773,7 +7791,7 @@ void dumpMissing ( char *coll ) {
 		// skip deletes
 		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		// do we hold his titleRec? continue if not
-		if ( getGroupId ( RDB_TITLEDB , &k ) != groupId ) continue;
+		if ( getShardNum ( RDB_TITLEDB , &k ) != shardNum ) continue;
 		// get his docid
 		unsigned long long d = g_indexdb.getDocId(k);
 		// otherwise, report him if not in tfndb
@@ -10838,8 +10856,9 @@ void dumpSectiondb(char *coll,long startFileNum,long numFiles,
 		firstKey = false;
 		// copy it
 		memcpy ( &lastk , k , sizeof(key128_t) );
-		unsigned long gid = g_hostdb.getGroupId (RDB_SECTIONDB,k,true);
-		long groupNum = g_hostdb.getGroupNum ( gid );
+		unsigned long shardNum;
+		shardNum =  getShardNum (RDB_SECTIONDB,k,true);
+		//long groupNum = g_hostdb.getGroupNum ( gid );
 		// point to the data
 		char  *p       = data;
 		char  *pend    = data + size;
@@ -10874,7 +10893,7 @@ void dumpSectiondb(char *coll,long startFileNum,long numFiles,
 		       "%s (%lu) "
 		       "d=%012llu "
 		       "score=%f samples=%f "
-		       "groupnum=%li"
+		       "shardnum=%li"
 		       "\n",
 		       //k->n1,
 		       //k->n0,
@@ -10885,7 +10904,7 @@ void dumpSectiondb(char *coll,long startFileNum,long numFiles,
 		       d,
 		       sv->m_score,
 		       sv->m_numSampled,
-		       groupNum);
+		       shardNum);
 	}
 		
 	startKey = *(key128_t *)list.getLastKey();
@@ -12584,15 +12603,16 @@ void dumpClusterdb ( char *coll,
 		// get the language string
 		languageToString ( g_clusterdb.getLanguage((char*)&k),
 				   strLanguage );
-		unsigned long gid = getGroupId ( RDB_CLUSTERDB , &k );
-		Host *grp = g_hostdb.getGroup ( gid , NULL );
+		//unsigned long gid = getGroupId ( RDB_CLUSTERDB , &k );
+		unsigned long shardNum = getShardNum( RDB_CLUSTERDB , &k );
+		Host *grp = g_hostdb.getShard ( shardNum );
 		Host *hh = &grp[0];
 		// print it
 		printf("k.n1=%08lx k.n0=%016llx "
 		       "docId=%012lli family=%lu "
 		       "language=%li (%s) siteHash26=%lu%s " 
 		       "groupNum=%lu "
-		       "groupId=%lu\n", 
+		       "shardNum=%lu\n", 
 		       k.n1, k.n0,
 		       g_clusterdb.getDocId((char*)&k) , 
 		       g_clusterdb.hasAdultContent((char*)&k) ,
@@ -12601,7 +12621,7 @@ void dumpClusterdb ( char *coll,
 		       g_clusterdb.getSiteHash26((char*)&k)    ,
 		       dd ,
 		       hh->m_hostId ,
-		       gid);
+		       shardNum);
 		continue;
 	}
 
@@ -13026,8 +13046,9 @@ void dumpLinkdb ( char *coll,
 		//if ( list.m_listPtr-list.m_list >= 11784-24 )
 		//	log("boo");
 		//unsigned char hc = g_linkdb.getLinkerHopCount_uk(&k);
-		unsigned long gid = g_hostdb.getGroupId (RDB_LINKDB,&k,true);
-		long groupNum = g_hostdb.getGroupNum ( gid );
+		//unsigned long gid = g_hostdb.getGroupId (RDB_LINKDB,&k,true);
+		//long groupNum = g_hostdb.getGroupNum ( gid );
+		unsigned long shardNum = getShardNum(RDB_LINKDB,&k,true);
 		//if ( hc != 0 ) { char *xx=NULL;*xx=0; }
 		// is it an ip or url record?
 		//bool isHost = g_linkdb.isHostRecord ( &k );
@@ -13048,7 +13069,7 @@ void dumpLinkdb ( char *coll,
 		       "discovered=%lu "
 		       "lost=%lu "
 		       "sitehash32=0x%08lx "
-		       "groupnum=%li "
+		       "shardNum=%lu "
 		       "%s\n",
 		       KEYSTR(&k,sizeof(key224_t)),
 		       (long)g_linkdb.getLinkeeSiteHash32_uk(&k),
@@ -13061,7 +13082,7 @@ void dumpLinkdb ( char *coll,
 		       (long)g_linkdb.getDiscoveryDate_uk(&k),
 		       (long)g_linkdb.getLostDate_uk(&k),
 		       (long)g_linkdb.getLinkerSiteHash32_uk(&k),
-		       groupNum,
+		       shardNum,
 		       dd );
 	}
 
@@ -14039,7 +14060,7 @@ bool checkDataParity ( ) {
 		key_t k = list.getCurrentKey();
 		count++;
 		//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
-		uint32_t groupId = getGroupId ( RDB_INDEXDB, &k );
+		uint32_t shardNum = getShardNum ( RDB_INDEXDB, &k );
 		if ( groupId == g_hostdb.m_groupId ) got++;
 	}
 	if ( got != count ) {
@@ -14085,7 +14106,7 @@ bool checkDataParity ( ) {
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
 		count++;
-		uint32_t groupId = getGroupId ( RDB_TITLEDB , &k );
+		uint32_t shardNum = getShardNum ( RDB_TITLEDB , &k );
 		//long groupId = k.n1 & g_hostdb.m_groupMask;
 		if ( groupId == g_hostdb.m_groupId ) got++;
 	}
@@ -14128,7 +14149,7 @@ bool checkDataParity ( ) {
 		key_t k = list.getCurrentKey();
 		count++;
 		// verify the group
-		uint32_t groupId = getGroupId ( RDB_TFNDB , &k );
+		uint32_t shardNum = getShardNum ( RDB_TFNDB , &k );
 		if ( groupId == g_hostdb.m_groupId ) got++;
 	}
 	if ( got != count ) {
@@ -16227,12 +16248,13 @@ int collinject ( char *newHostsConf ) {
 	// . old hosts may not even be present! consider them the same host,
 	//   though, if have same ip and working dir, because that would
 	//   interfere with a file copy.
-	for ( long i = 0 ; i < hdb1->m_numGroups ; i++ ) {
+	for ( long i = 0 ; i < hdb1->m_numShards ; i++ ) {
 		//Host *h1 = &hdb1->getHost(i);//m_hosts[i];
-		long gid = hdb1->getGroupId ( i ); // groupNum
-		
-		Host *h1 = hdb1->getGroup ( gid );
-		Host *h2 = hdb2->getGroup ( gid );
+		//long gid = hdb1->getGroupId ( i ); // groupNum
+		unsigned long shardNum = (unsigned long)i;
+
+		Host *h1 = hdb1->getShard ( shardNum );
+		Host *h2 = hdb2->getShard ( shardNum );
 		
 		printf("ssh %s 'nohup /w/gbi -c /w/hosts.conf inject titledb "
 		       "%s:%li >& /w/ilog' &\n"

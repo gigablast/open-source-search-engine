@@ -1746,8 +1746,11 @@ void XmlDoc::setStatus ( char *s ) {
 void XmlDoc::setCallback ( void *state, void (* callback) (void *state) ) {
 	m_state     = state;
 	m_callback1 = callback;
-	// sanity check
-	if ( callback == getMetaListWrapper ) { char *xx=NULL;*xx=0; }
+	// add this additional state==this constraint to prevent core when
+	// doing a page parser
+	if ( state == this &&
+	     // i don't remember why i added this sanity check...
+	     callback == getMetaListWrapper ) { char *xx=NULL;*xx=0; }
 }
 
 void XmlDoc::setCallback ( void *state, bool (*callback) (void *state) ) {
@@ -1826,10 +1829,42 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCodeValid = true;
 	}
 
+	////
+	//
+	// make these fake so getNewSpiderReply() below does not block
+	//
+	////
+
+	if ( ! m_tagRecValid ) {
+		m_tagRec.reset();
+		m_tagRecValid = true;
+	}
+
+	if ( ! m_siteHash32Valid ) {
+		m_siteHash32 = 1;
+		m_siteHash32Valid = true;
+	}
+
+	if ( ! m_downloadEndTimeValid ) {
+		m_downloadEndTime = 0;
+		m_downloadEndTimeValid = true;
+	}
+
+	if ( ! m_ipValid ) {
+		m_ipValid = true;
+		m_ip = atoip("1.2.3.4");
+	}
+
+	if ( ! m_spideredTimeValid ) {
+		m_spideredTimeValid = true;
+		m_spideredTime = 0;
+	}
+
 	// if this is EABANDONED or EHITCRAWLLIMIT or EHITPROCESSLIMIT
-	// then this should make a "fake" reply to release the url spider
-	// lock in SpiderLoop::m_lockTable.
-	SpiderReply *nsr = getNewSpiderReply();
+	// or ECORRUPTDATA (corrupt gzip reply)
+	// then this should not block. we need a spiderReply to release the 
+	// url spider lock in SpiderLoop::m_lockTable.
+	SpiderReply *nsr = getNewSpiderReply ();
 	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
 
 	SafeBuf metaList;
@@ -11804,18 +11839,19 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 
 	XmlDoc *THIS = (XmlDoc *)state;
 
+	bool hadError = false;
+
 	// wha?
 	if ( g_errno ) {
 		log("diffbot: http error2 %s",mstrerror(g_errno));
 		THIS->m_diffbotReplyError = g_errno;
+		hadError = true;
 	}
 
 	//char *buf = s->m_readBuf;
 	// do not allow TcpServer.cpp to free it since m_diffbotReply
 	// is now responsible for that
 	//s->m_readBuf = NULL;
-
-	bool hadError = false;
 
 	// set the mime
 	HttpMime mime;
@@ -11827,6 +11863,7 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		// note it
 		log("xmldoc: error setting diffbot mime");
 		THIS->m_diffbotReplyError = EDIFFBOTMIMEERROR;
+		hadError = true;
 	}
 
 	// check the status
@@ -11834,6 +11871,7 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		THIS->m_diffbotReplyError = EDIFFBOTBADHTTPSTATUS;
 		log("xmldoc: diffbot reply mime was %li",
 		    mime.getHttpStatus());
+		hadError = true;
 	}
 
 
@@ -11862,7 +11900,9 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		// count it for stats
 		THIS->m_cr->m_localCrawlInfo.m_pageProcessSuccesses++;
 		// log it
-		log("build: processed page %s",THIS->m_firstUrl.m_url);
+		log("build: processed page %s (pageLen=%li)",
+		    THIS->m_firstUrl.m_url,
+		    pageLen);
 		// sanity!
 		// crap, this can happen if we try to get the metalist
 		// of an old page for purposes of incremental indexing or
@@ -11962,9 +12002,9 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// etc.
 	//if ( m_setFromTitleRec ) { char *xx = NULL; *xx = 0; }
 
-	// sanity check
-	if ( strstr(m_firstUrl.m_url,"-diffbot-") ) {
-		char *xx=NULL; *xx = 0; }
+	// sanity check. no! barfs on legit url with -diffbot- in it
+	//if ( strstr(m_firstUrl.m_url,"-diffbot-") ) {
+	//	char *xx=NULL; *xx = 0; }
 
 	// we should not "process" (i.e. send to diffbot) urls that do
 	// not match the supplied CollectionRec::m_diffbotUrlProcessPattern
@@ -14106,6 +14146,18 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		return &m_expandedUtf8Content;
 	}
 
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (char **)ct;
+
+	// if we have a json reply, leave it alone... do not expand iframes
+	// in json, it will mess up the json
+	if ( *ct == CT_JSON ) {
+		m_expandedUtf8Content     = m_rawUtf8Content;
+		m_expandedUtf8ContentSize = m_rawUtf8ContentSize;
+		m_expandedUtf8ContentValid = true;
+		return &m_expandedUtf8Content;
+	}
+
 	// we need this so getExtraDoc does not core
 	long *pfip = getFirstIp();
 	if ( ! pfip || pfip == (void *)-1 ) return (char **)pfip;
@@ -14402,6 +14454,18 @@ char **XmlDoc::getUtf8Content ( ) {
 	if ( ! *ep ) {
 		ptr_utf8Content    = NULL;
 		size_utf8Content   = 0;
+		m_utf8ContentValid = true;
+		return &ptr_utf8Content;
+	}
+
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (char **)ct;
+
+	// if we have a json reply, leave it alone... expanding a &quot;
+	// into a double quote will mess up the JSON!
+	if ( *ct == CT_JSON ) {
+		ptr_utf8Content  = (char *)m_expandedUtf8Content;
+		size_utf8Content = m_expandedUtf8ContentSize;
 		m_utf8ContentValid = true;
 		return &ptr_utf8Content;
 	}
@@ -19387,7 +19451,11 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// add a "fake" spider reply to release the lock in
 	// SpiderLoop::m_lockTable at least. see Spider.cpp's addSpiderReply()
 	// to see what parts of this are relevant.
+	/*
 	if ( *indexCode == EABANDONED ||
+	     // . any internal "error" needs to be here really
+	     // . was there an error unzipping the title rec?
+	     *indexCode == ECORRUPTDATA ||
 	     *indexCode == EHITCRAWLLIMIT ||
 	     *indexCode == EHITPROCESSLIMIT ) {
 		// clear everything
@@ -19411,9 +19479,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 		m_newsrValid = true;
 		return &m_newsr;
 	}
-
-
-
+	*/
 
 	TagRec *gr = getTagRec();
 	if ( ! gr || gr == (TagRec *)-1 ) return (SpiderReply *)gr;
@@ -21307,7 +21373,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// hash diffbot's json output here
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;
-	if ( *ct == CT_JSON ) {
+	if ( *ct == CT_JSON && m_isDiffbotJSONObject ) {
 		// hash the content type for type:json query
 		if ( ! hashContentType   ( table ) ) return NULL;
 		// and the url: query support
@@ -27316,12 +27382,11 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 	if ( m_oldsrValid ) {
 		// must not block
 		SpiderRequest *oldsr = &m_oldsr;
-		unsigned long gid = getGroupIdToSpider ( (char *)oldsr );
-		sb->safePrintf ("<tr><td><b>assigned spider groupId id</b>"
+		unsigned long shard = g_hostdb.getShardNum(RDB_SPIDERDB,oldsr);
+		sb->safePrintf ("<tr><td><b>assigned spider shard</b>"
 				"</td>\n"
-				"<td><b>0x%08lx</b></td></tr>\n",gid);
+				"<td><b>%li</b></td></tr>\n",shard);
 	}
-
 	
 	sb->safePrintf("<tr><td>first indexed date</td>"
 		       "<td>%s UTC</td></tr>\n" ,
@@ -28263,9 +28328,11 @@ bool XmlDoc::printGeneralInfo ( SafeBuf *sb , HttpRequest *hr ) {
 
 	if ( ! isXml ) printMenu ( sb );
 
-	long groupId = g_hostdb.getGroupIdFromDocId(m_docId);
-	Host *group = g_hostdb.getGroup(groupId);
-	Host *h = &group[0];
+	//long groupId = g_hostdb.getGroupIdFromDocId(m_docId);
+	//Host *group = g_hostdb.getGroup(groupId);
+	long shardNum = getShardNumFromDocId ( m_docId );
+	Host *hosts = g_hostdb.getShard ( shardNum );
+	Host *h = &hosts[0];
 
 	if ( ! isXml )
 		sb->safePrintf (
@@ -35851,10 +35918,12 @@ SafeBuf *XmlDoc::getRelatedDocIdsScored ( ) {
 	// scan the related docids and send the requests if we have not already
 	for ( long i = 0 ; ! m_sentMsg4fRequests && i < numRelated ; i++ ) {
 		RelatedDocId *rd = &rds[i];
-		unsigned long gid = g_hostdb.getGroupIdFromDocId (rd->m_docId);
+		//unsigned long gid=g_hostdb.getGroupIdFromDocId (rd->m_docId);
 		// pick host in that group
-		Host *group = g_hostdb.getGroup ( gid );
-		long nh = g_hostdb.m_numHostsPerGroup;
+		//Host *group = g_hostdb.getGroup ( gid );
+		long shardNum = getShardNumFromDocId ( rd->m_docId );
+		Host *group = g_hostdb.getShard ( shardNum );
+		long nh = g_hostdb.m_numHostsPerShard;
 		long hostNum = rd->m_docId % nh;
 		Host *h = &group[hostNum];
 		long hostId = h->m_hostId;
@@ -40576,7 +40645,7 @@ bool XmlDoc::setRelatedDocIdWeightAndRank ( RelatedDocId *rd ) {
 		// how many search results does this query have total?
 		long long numResults = qe->m_numTotalResultsInSlice;
 		// fix it to be global
-		numResults *= (long long)g_hostdb.getNumGroups();
+		numResults *= (long long)g_hostdb.getNumShards();
 		// big indexes did the "slice logic" restricting docid
 		// range to MAX_DOCID * .10 when setting this!
 		if ( numPagesIndexed > 10000000 ) numResults *= 10;
@@ -41797,8 +41866,8 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 	// just do a linear scan keeping track of nested field names as we go
 	//
 
-	char *field;
-	long  fieldLen;
+	char *field = NULL;
+	long  fieldLen = 0;
 	long  size;
 	// scan
 	for ( ; *p ; p += size ) {

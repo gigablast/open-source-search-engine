@@ -269,12 +269,12 @@ bool Msg51::sendRequest ( long    i ) {
 	key_t endKey   = g_clusterdb.makeLastClusterRecKey  ( d );
 	
 	// bias clusterdb lookups (from Msg22.cpp)
-	long           numTwins     = g_hostdb.getNumHostsPerGroup();
+	long           numTwins     = g_hostdb.getNumHostsPerShard();
 	long long      sectionWidth = (DOCID_MASK/(long long)numTwins) + 1;
 	long           hostNum      = (d & DOCID_MASK) / sectionWidth;
-	long           numHosts     = g_hostdb.getNumHostsPerGroup();
-	unsigned long  groupId      = getGroupId(RDB_CLUSTERDB,&startKey);
-	Host          *hosts        = g_hostdb.getGroup ( groupId );
+	long           numHosts     = g_hostdb.getNumHostsPerShard();
+	unsigned long  shardNum     = getShardNum(RDB_CLUSTERDB,&startKey);
+	Host          *hosts        = g_hostdb.getShard ( shardNum );
 	if ( hostNum >= numHosts ) { char *xx = NULL; *xx = 0; }
 	long firstHostId = hosts [ hostNum ].m_hostId ;
 

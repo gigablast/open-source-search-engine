@@ -202,7 +202,8 @@ class Msg0 {
 	short     m_port;
 
 	// group we sent RdbList request to
-	unsigned long  m_groupId;    
+	//unsigned long  m_groupId;    
+	unsigned long  m_shardNum;
 
 	UdpSlot  *m_slot;
 

@@ -378,9 +378,11 @@ bool Query::set2 ( char *query        ,
 		// get docid
 		char *ds = m_qterms[i].m_term + 8;
 		m_docIdRestriction = atoll(ds);
-		unsigned long gid;
-		gid = g_hostdb.getGroupIdFromDocId(m_docIdRestriction);
-		m_groupThatHasDocId = g_hostdb.getGroup(gid);
+		//unsigned long gid;
+		unsigned long shard = getShardNumFromDocId(m_docIdRestriction);
+		//gid = g_hostdb.getGroupIdFromDocId(m_docIdRestriction);
+		//m_groupThatHasDocId = g_hostdb.getGroup(gid);
+		m_groupThatHasDocId = g_hostdb.getShard ( shard );
 		break;
 	}
 

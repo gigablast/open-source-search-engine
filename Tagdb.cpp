@@ -1930,8 +1930,8 @@ bool Tagdb::verify ( char *coll ) {
 		// lower 3 bytes are the file number. >= 30 on gk
 		//if ( version >= 30 ) numOld++;
 		//unsigned long groupId = g_tagdb.getGroupId ( &k );
-		uint32_t groupId = getGroupId ( RDB_TAGDB , &k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		unsigned long shardNum = getShardNum ( RDB_TAGDB , &k );
+		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		log ("tagdb: Out of first %li records in %s, only %li belong "
@@ -2746,9 +2746,12 @@ bool Msg8a::launchGetRequests ( ) {
 	RdbList *listPtr = &m_tagRec->m_lists[m_requests];
 
 	// bias based on the top 64 bits which is the hash of the "site" now
-	uint32_t gid = g_hostdb.getGroupId ( m_rdbId , &startKey , true );
-	Host *group = g_hostdb.getGroup ( gid );
-	long numTwins = g_hostdb.getNumHostsPerGroup();
+	//uint32_t gid = g_hostdb.getGroupId ( m_rdbId , &startKey , true );
+	//Host *group = g_hostdb.getGroup ( gid );
+	unsigned long shardNum = getShardNum ( m_rdbId , &startKey , true );
+	Host *group = g_hostdb.getShard ( shardNum );
+
+	long numTwins = g_hostdb.getNumHostsPerShard();
 	// use top byte!
 	uint8_t *sks = (uint8_t *)&startKey;
 	uint8_t top = sks[sizeof(TAGDB_KEY)-1];
@@ -3607,11 +3610,11 @@ bool Msg9a::launchAddRequests ( ) {
 	// . tagRec's key should already be valid because when you add
 	//   a ST_SITE to a TagRec it sets TagRec::m_key (special thing)
 	//unsigned long groupId = g_tagdb.getGroupId ( &tagRec->m_key );
-	uint32_t groupId = getGroupId ( RDB_TAGDB , &tagRec->m_key );
+	uint32_t shardNum = getShardNum ( RDB_TAGDB , &tagRec->m_key );
 	// get the host to send to
 	Host *hosts = g_hostdb.getGroup ( groupId );
 	// select a host in the group
-	long hostNum = tagRec->m_key.n1 % g_hostdb.getNumHostsPerGroup();
+	long hostNum = tagRec->m_key.n1 % g_hostdb.getNumHostsPerShard();
 	// and his ptr
 	Host *h = &hosts[hostNum];
 

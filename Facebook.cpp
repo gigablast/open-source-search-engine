@@ -5295,7 +5295,7 @@ void Emailer::gotScanList ( ) {
 
 		// is assigned to us for emailing?
 		Host *group = g_hostdb.getMyGroup();
-		long hpg = g_hostdb.getNumHostsPerGroup();
+		long hpg = g_hostdb.getNumHostsPerShard();
 		long i = fbId % hpg;
 		Host *h = &group[i];
 		// skip if not assigned to us

@@ -86,7 +86,8 @@ bool Multicast::send ( char         *msg              ,
 		       long          msgSize          ,
 		       uint8_t       msgType          ,
 		       bool          ownMsg           ,
-		       unsigned long groupId          ,
+		       //unsigned long groupId          ,
+		       unsigned long shardNum,
 		       bool          sendToWholeGroup ,
 		       long          key              ,
 		       void         *state            ,
@@ -130,7 +131,8 @@ bool Multicast::send ( char         *msg              ,
 	m_freeReadBuf      = freeReplyBuf;
 	m_msgSize          = msgSize;
 	m_msgType          = msgType;
-	m_groupId          = groupId;
+	//m_groupId          = groupId;
+	m_shardNum = shardNum;
 	m_sendToWholeGroup = sendToWholeGroup;
 	m_state            = state;
 	m_state2           = state2;
@@ -187,7 +189,8 @@ bool Multicast::send ( char         *msg              ,
 		// . get the list of hosts in this group
 		// . returns false if blocked, true otherwise
 		// . sets g_errno on error
-		Host *hostList = m_hostdb->getGroup ( groupId , &m_numHosts );
+		//Host *hostList = m_hostdb->getGroup ( groupId , &m_numHosts);
+		Host *hostList = g_hostdb.getShard ( shardNum , &m_numHosts );
 		if ( ! hostList ) {
 			log("mcast: no group");g_errno=ENOHOSTS;return false;}
 		// now copy the ptr into our array
@@ -651,7 +654,7 @@ void gotBestHostWrapper ( void *state ) {
 long Multicast::pickBestHost2 ( unsigned long key , long firstHostId ,
 				bool preferLocal ) {
 	// now select the host on our same network switch
-	long hpg     = m_hostdb->m_numHostsPerGroup;
+	long hpg     = m_hostdb->m_numHostsPerShard;
 	// . get the hostid range on our switch
 	// . a segment is all the hosts on the same switch
 	long segmentSize = m_hostdb->m_numHosts / hpg;

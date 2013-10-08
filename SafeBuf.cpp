@@ -2554,7 +2554,13 @@ bool SafeBuf::decodeJSONToUtf8 ( long niceness ) {
 				continue;
 			}
 			// utf8? if not, just skip the slash
-			if ( src[1] != 'u'  ) { src++; continue; }
+			if ( src[1] != 'u'  ) { 
+				// no, keep the slash so if we have /"
+				// we do not convert to just "
+				*dst++ = '\\';
+				src++; 
+				continue; 
+			}
 			// otherwise, decode. can do in place like this...
 			char *p = src + 2;
 			// skip the /ug or /ugg or /uggg or /ugggg in its

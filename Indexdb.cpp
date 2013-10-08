@@ -237,8 +237,10 @@ bool Indexdb::verify ( char *coll ) {
 		key_t k = list.getCurrentKey();
 		count++;
 		//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
-		unsigned long groupId = getGroupId ( RDB_INDEXDB , &k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		//unsigned long groupId = getGroupId ( RDB_INDEXDB , &k );
+		//if ( groupId == g_hostdb.m_groupId ) got++;
+		unsigned long shardNum = getShardNum( RDB_INDEXDB , &k );
+		if ( shardNum == getMyShardNum() ) got++;
 		else if ( !printedKey ) {
 			log ( "db: Found bad key in list (only printing once): "
 			      "%lx %llx", k.n1, k.n0 );
@@ -250,7 +252,7 @@ bool Indexdb::verify ( char *coll ) {
 				      "(only printing once)." );
 				printedZeroKey = true;
 			}
-			if ( groupId != g_hostdb.m_groupId )
+			if ( shardNum != getMyShardNum() )
 				got++;
 		}
 	}
@@ -334,8 +336,10 @@ deepLoop:
 		key_t k = list.getCurrentKey();
 		count++;
 		//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
-		unsigned long groupId = getGroupId ( RDB_INDEXDB , &k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		//unsigned long groupId = getGroupId ( RDB_INDEXDB , &k );
+		//if ( groupId == g_hostdb.m_groupId ) got++;
+		unsigned long shardNum = getShardNum( RDB_INDEXDB , &k );
+		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		BigFile *f = rdbBase->getFile(currentFile);

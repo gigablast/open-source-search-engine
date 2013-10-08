@@ -229,8 +229,10 @@ bool Linkdb::verify ( char *coll ) {
 		key224_t k;
 		list.getCurrentKey((char*)&k);
 		count++;
-		uint32_t groupId = getGroupId ( RDB_LINKDB , &k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		//uint32_t shardNum = getShardNum ( RDB_LINKDB , &k );
+		//if ( groupId == g_hostdb.m_groupId ) got++;
+		unsigned long shardNum = getShardNum( RDB_LINKDB , &k );
+		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		log ("db: Out of first %li records in Linkdb , "
@@ -243,7 +245,7 @@ bool Linkdb::verify ( char *coll ) {
 
 			key224_t k;
 			list.getCurrentKey((char*)&k);
-			uint32_t groupId = getGroupId ( RDB_LINKDB , &k );
+			uint32_t shardNum = getShardNum ( RDB_LINKDB , &k );
 			long groupNum = g_hostdb.getGroupNum(groupId);
 			unsigned long sh32 ;
 			sh32 = g_linkdb.getLinkeeSiteHash32_uk(&k);
@@ -641,15 +643,16 @@ bool Msg25::doReadLoop ( ) {
 	bool includeTree = true;
 
 	// what group has this linkdb list?
-	unsigned long groupId = getGroupId ( RDB_LINKDB , &startKey );
+	//unsigned long groupId = getGroupId ( RDB_LINKDB , &startKey );
+	unsigned long shardNum = getShardNum ( RDB_LINKDB, &startKey );
 	// use a biased lookup
-	long numTwins = g_hostdb.getNumHostsPerGroup();
+	long numTwins = g_hostdb.getNumHostsPerShard();
 	long long sectionWidth = (0xffffffff/(long long)numTwins) + 1;
 	// these are 192 bit keys, top 32 bits are a hash of the url
 	unsigned long x = siteHash32;//(startKey.n1 >> 32);
 	long hostNum = x / sectionWidth;
-	long numHosts = g_hostdb.getNumHostsPerGroup();
-	Host *hosts = g_hostdb.getGroup ( groupId );
+	long numHosts = g_hostdb.getNumHostsPerShard();
+	Host *hosts = g_hostdb.getShard ( shardNum); // Group ( groupId );
 	if ( hostNum >= numHosts ) { char *xx = NULL; *xx = 0; }
 	long hostId = hosts [ hostNum ].m_hostId ;
 

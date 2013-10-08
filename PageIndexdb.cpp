@@ -207,7 +207,7 @@ bool launchRequests ( State10 *st ) {
 loop:
 	long split = st->m_i;
 	// all done?
-	if ( split >= g_hostdb.getNumGroups() ) return true;
+	if ( split >= g_hostdb.getNumShards() ) return true;
 	// get group id
 	//unsigned long gid = g_hostdb.getGroupId ( split );
 	// get group
@@ -494,9 +494,13 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 		// but set the ip/port to a host that has this titleRec
 		// stored locally!
 		long long     docId   = st->m_list.getCurrentDocId () ;
-		unsigned long groupId = getGroupIdFromDocId ( docId );
+		//unsigned long groupId = getGroupIdFromDocId ( docId );
+		long shardNum = getShardNumFromDocId ( docId );
 		// get the first host's hostId in this groupId
-		Host *h = g_hostdb.getFastestHostInGroup ( groupId );
+		//Host *h = g_hostdb.getFastestHostInGroup ( groupId );
+		Host *hosts = g_hostdb.getShard ( shardNum );
+		// just pick a host now...
+		Host *h = &hosts[0];
 		// . pick the first host to handle the cached titleRec request
 		// . we assume it has the best time and is up!! TODO: fix!
 		// . use local ip though if it was an internal request

@@ -180,8 +180,10 @@ bool Titledb::verify ( char *coll ) {
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
 		count++;
-		unsigned long groupId = getGroupId ( RDB_TITLEDB , &k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		//unsigned long groupId = getGroupId ( RDB_TITLEDB , &k );
+		//if ( groupId == g_hostdb.m_groupId ) got++;
+		uint32_t shardNum = getShardNum ( RDB_TITLEDB, &k );
+		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		log ("db: Out of first %li records in titledb, "
@@ -195,10 +197,11 @@ bool Titledb::verify ( char *coll ) {
 		for ( list.resetListPtr() ; ! list.isExhausted() ;
 		      list.skipCurrentRecord() ) {
 			key_t k = list.getCurrentKey();
-			unsigned long groupId = getGroupId ( RDB_TITLEDB , &k);
-			long groupNum = g_hostdb.getGroupNum(groupId);
-			log("db: docid=%lli group=%li",
-			    getDocId(&k),groupNum);
+			//unsigned long groupId = getGroupId ( RDB_TITLEDB,&k);
+			//long groupNum = g_hostdb.getGroupNum(groupId);
+			long shardNum = getShardNum ( RDB_TITLEDB, &k );
+			log("db: docid=%lli shard=%li",
+			    getDocId(&k),shardNum);
 		}
 
 		log ( "db: Exiting due to Titledb inconsistency." );
@@ -248,7 +251,8 @@ bool Titledb::isLocal ( long long docId ) {
 	// shift it up (64 minus 38) bits so we can mask it
 	//key_t key = makeTitleRecKey ( docId , false /*isDelKey?*/ );
 	// mask upper bits of the top 4 bytes
-	return ( getGroupIdFromDocId ( docId ) == g_hostdb.m_groupId ) ;
+	//return ( getGroupIdFromDocId ( docId ) == g_hostdb.m_groupId ) ;
+	return ( getShardNumFromDocId(docId) == getMyShardNum() );
 }
 
 // . make the key of a TitleRec from a docId

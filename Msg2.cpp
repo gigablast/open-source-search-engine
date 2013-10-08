@@ -232,7 +232,7 @@ bool Msg2::getLists ( ) {
 			long long d = m_query->m_docIdRestriction;
 			unsigned long gid = g_hostdb.getGroupIdFromDocId ( d );
 			Host *group = g_hostdb.getGroupFromGroupId ( gid );
-			long hoff = d % g_hostdb.getNumHostsPerGroup();
+			long hoff = d % g_hostdb.getNumHostsPerShard();
 			Host *h = &group[hoff];
 			m_msg0[i].m_parent = this;
 			// this will use a termlist cache locally and on the

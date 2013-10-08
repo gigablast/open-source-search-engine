@@ -591,7 +591,8 @@ bool Msg39::getLists () {
 	// . partap says there is a bug in this??? we can't cache UOR'ed lists?
 	bool checkCache = false;
 	// split is us????
-	long split = g_hostdb.m_myHost->m_group;
+	//long split = g_hostdb.m_myHost->m_group;
+	long split = g_hostdb.m_myHost->m_shardNum;
 	// call msg2
 	if ( ! m_msg2.getLists ( rdbId                      ,
 				 m_r->ptr_coll              ,

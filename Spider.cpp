@@ -143,8 +143,9 @@ long SpiderRequest::print ( SafeBuf *sbarg ) {
 	//if ( m_inOrderTree ) sb->safePrintf("INORDERTREE ");
 	//if ( m_doled ) sb->safePrintf("DOLED ");
 
-	unsigned long gid = g_spiderdb.getGroupId(m_firstIp);
-	sb->safePrintf("gid=%lu ",gid);
+	//unsigned long gid = g_spiderdb.getGroupId(m_firstIp);
+	long shardNum = g_hostdb.getShardNum(RDB_SPIDERDB,this);
+	sb->safePrintf("shardnum=%lu ",shardNum);
 
 	sb->safePrintf("url=%s",m_url);
 
@@ -560,7 +561,7 @@ bool Spiderdb::init ( ) {
 			    "spiderdb"   ,
 			    true    , // dedup
 			    -1      , // fixedDataSize
-			    -1,//g_conf.m_spiderdbMinFilesToMerge , mintomerge
+			    2,//g_conf.m_spiderdbMinFilesToMerge , mintomerge
 			    maxMem,//g_conf.m_spiderdbMaxTreeMem ,
 			    maxTreeNodes                ,
 			    true                        , // balance tree?
@@ -657,12 +658,14 @@ bool Spiderdb::verify ( char *coll ) {
 		//key_t k = list.getCurrentKey();
 		count++;
 		// what group's spiderdb should hold this rec
-		uint32_t groupId = g_hostdb.getGroupId ( RDB_SPIDERDB , k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		//uint32_t groupId = g_hostdb.getGroupId ( RDB_SPIDERDB , k );
+		//if ( groupId == g_hostdb.m_groupId ) got++;
+		long shardNum = g_hostdb.getShardNum(RDB_SPIDERDB,k);
+		if ( shardNum == g_hostdb.getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
 		log ("db: Out of first %li records in spiderdb, "
-		     "only %li belong to our group.",count,got);
+		     "only %li belong to our shard.",count,got);
 		// exit if NONE, we probably got the wrong data
 		if ( got == 0 ) log("db: Are you sure you have the "
 					   "right "
@@ -1879,7 +1882,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 		return false;
 	}
 
-	// only if we are the responsible host in the group (shard)
+	// only if we are the responsible host in the shard
 	if ( ! isAssignedToUs ( firstIp ) ) 
 		return true;
 
@@ -3003,17 +3006,49 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		//winReq->m_spiderTime = spiderTime;
 	}
 
+	// if its ready to spider now, that trumps one in the future always!
+	if ( winReq &&
+	     m_bestRequestValid &&
+	     m_bestSpiderTimeMS <= nowGlobalMS &&
+	     winTimeMS > nowGlobal )
+		winReq = NULL;
+
 	// if this is a successive call we have to beat the global because
 	// the firstIp has a *ton* of spider requests and we can't read them
 	// all in one list, then see if we beat our global winner!
-	if ( winReq && m_bestRequestValid ) {
-		if ( m_bestRequest->m_priority > winPriority )
-			winReq = NULL;
-		if ( m_bestRequest->m_priority == winPriority &&
-		     // export this fix to master branch!!!
-		     m_bestSpiderTimeMS < winTimeMS )
-			winReq = NULL;
-	}
+	if ( winReq && 
+	     m_bestRequestValid &&
+	     m_bestSpiderTimeMS <= nowGlobalMS &&
+	     m_bestRequest->m_priority > winPriority )
+		winReq = NULL;
+
+	// or if both in future. use time.
+	if ( winReq && 
+	     m_bestRequestValid &&
+	     m_bestSpiderTimeMS > nowGlobalMS &&
+	     winTimeMS > nowGlobal &&
+	     m_bestSpiderTimeMS < winTimeMS )
+		winReq = NULL;
+
+	// if both recs are overdue for spidering and priorities tied, use
+	// the hopcount. should make us breadth-first, all else being equal.
+	if ( winReq && 
+	     m_bestRequestValid &&
+	     m_bestRequest->m_priority == winPriority &&
+	     m_bestSpiderTimeMS <= nowGlobalMS &&
+	     winTimeMS <= nowGlobal &&
+	     m_bestRequest->m_hopCount < winReq->m_hopCount )
+		winReq = NULL;
+		
+	// use times if hops are equal and both are overdue from same priority.
+	if ( winReq && 
+	     m_bestRequestValid &&
+	     m_bestRequest->m_priority == winPriority &&
+	     m_bestSpiderTimeMS <= nowGlobalMS &&
+	     winTimeMS <= nowGlobal &&
+	     m_bestRequest->m_hopCount == winReq->m_hopCount &&
+	     m_bestSpiderTimeMS <= winTimeMS )
+		winReq = NULL;
 
 	// if nothing, we are done!
 	if ( winReq ) {
@@ -3508,9 +3543,11 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 /////////////////////////      UTILITY FUNCTIONS
 /////////////////////////
 
-// . map a spiderdb rec to the group id that should spider it
+// . map a spiderdb rec to the shard # that should spider it
 // . "sr" can be a SpiderRequest or SpiderReply
-unsigned long getGroupIdToSpider ( char *sr ) {
+// . shouldn't this use Hostdb::getShardNum()?
+/*
+unsigned long getShardToSpider ( char *sr ) {
 	// use the url hash
 	long long uh48 = g_spiderdb.getUrlHash48 ( (key128_t *)sr );
 	// host to dole it based on ip
@@ -3520,7 +3557,7 @@ unsigned long getGroupIdToSpider ( char *sr ) {
 	// and return groupid
 	return h->m_groupId;
 }
-
+*/
 
 // does this belong in our spider cache?
 bool isAssignedToUs ( long firstIp ) {
@@ -3532,7 +3569,8 @@ bool isAssignedToUs ( long firstIp ) {
 	//long hostId=(((unsigned long)firstIp) >> 8) % g_hostdb.getNumHosts();
 
 	// get our group
-	Host *group = g_hostdb.getMyGroup();
+	//Host *group = g_hostdb.getMyGroup();
+	Host *shard = g_hostdb.getMyShard();
 	// pick a host in our group
 
 	// if not dead return it
@@ -3542,12 +3580,17 @@ bool isAssignedToUs ( long firstIp ) {
 	// get the group
 	//Host *group = g_hostdb.getGroup ( h->m_groupId );
 	// and number of hosts in the group
-	long hpg = g_hostdb.getNumHostsPerGroup();
+	long hpg = g_hostdb.getNumHostsPerShard();
+	// let's mix it up since spider shard was selected using this
+	// same mod on the firstIp method!!
+	unsigned long long h64 = firstIp;
+	unsigned char c = firstIp & 0xff;
+	h64 ^= g_hashtab[c][0];
 	// select the next host number to try
 	//long next = (((unsigned long)firstIp) >> 16) % hpg ;
 	// hash to a host
-	long i = ((uint32_t)firstIp) % hpg;
-	Host *h = &group[i];
+	long i = ((uint32_t)h64) % hpg;
+	Host *h = &shard[i];
 	// return that if alive
 	if ( ! g_hostdb.isDead(h) ) return (h->m_hostId == g_hostdb.m_hostId);
 	// . select another otherwise
@@ -3555,7 +3598,7 @@ bool isAssignedToUs ( long firstIp ) {
 	Host *alive[64];
 	long upc = 0;
 	for ( long j = 0 ; j < hpg ; j++ ) {
-		Host *h = &group[i];
+		Host *h = &shard[i];
 		if ( g_hostdb.isDead(h) ) continue;
 		alive[upc++] = h;
 	}
@@ -3564,7 +3607,7 @@ bool isAssignedToUs ( long firstIp ) {
 	// select from the good ones now
 	i  = ((uint32_t)firstIp) % hpg;
 	// get that
-	h = &group[i];
+	h = &shard[i];
 	// guaranteed to be alive... kinda
 	return (h->m_hostId == g_hostdb.m_hostId);
 }
@@ -3730,7 +3773,7 @@ void gotDoledbListWrapper2 ( void *state , RdbList *list , Msg5 *msg5 ) ;
 //
 // Doledb records contain SpiderRequests ready for spidering NOW.
 //
-// 1. gets all locks from all hosts in the group (shard)
+// 1. gets all locks from all hosts in the shard
 // 2. sends confirm msg to all hosts if lock acquired:
 //    - each host will remove from doledb then
 //    - assigned host will also add new "0" entry to waiting tree if need be
@@ -5079,7 +5122,7 @@ bool Msg12::getLocks ( long long uh48, // probDocId ,
 	// do not use locks for injections
 	//if ( m_sreq->m_isInjecting ) return true;
 	// get # of hosts in each mirror group
-	long hpg = g_hostdb.getNumHostsPerGroup();
+	long hpg = g_hostdb.getNumHostsPerShard();
 	// reset
 	m_numRequests = 0;
 	m_numReplies  = 0;
@@ -5155,7 +5198,7 @@ bool Msg12::getLocks ( long long uh48, // probDocId ,
 	//Host *hosts = g_hostdb.getGroup ( m_lockGroupId );
 	// the same group (shard) that has the spiderRequest/Reply is
 	// the one responsible for locking.
-	Host *hosts = g_hostdb.getMyGroup();
+	Host *hosts = g_hostdb.getMyShard();
 
 	// short cut
 	UdpServer *us = &g_udpServer;
@@ -5179,7 +5222,7 @@ bool Msg12::getLocks ( long long uh48, // probDocId ,
 	char *request = (char *)lr;//m_lockKey;
 	long  requestSize = sizeof(LockRequest);//12;
 
-	// loop over hosts in that group
+	// loop over hosts in that shard
 	for ( long i = 0 ; i < hpg ; i++ ) {
 		// get a host
 		Host *h = &hosts[i];
@@ -5378,7 +5421,7 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 	}
 	// note that
 	if ( g_conf.m_logDebugSpider )
-		logf(LOG_DEBUG,"spider: sending request to all in group to "
+		logf(LOG_DEBUG,"spider: sending request to all in shard to "
 		     "remove lock uh48=%llu. grants=%li",
 		     m_lockKeyUh48,(long)m_grants);
 	// remove all locks we tried to get, BUT only if from our hostid!
@@ -5423,7 +5466,7 @@ bool Msg12::removeAllLocks ( ) {
 	//unsigned long groupId = g_hostdb.getGroupIdFromDocId(m_lockKeyUh48);
 	// ptr to list of hosts in the group
 	//Host *hosts = g_hostdb.getGroup ( groupId );
-	Host *hosts = g_hostdb.getMyGroup();
+	Host *hosts = g_hostdb.getMyShard();
 	// this must select the same group that is going to spider it!
 	// i.e. our group! because we check our local lock table to see
 	// if a doled url is locked before spidering it ourselves.
@@ -5433,8 +5476,8 @@ bool Msg12::removeAllLocks ( ) {
 	// set the hi bit though for this one
 	//m_lockKey |= 0x8000000000000000LL;
 	// get # of hosts in each mirror group
-	long hpg = g_hostdb.getNumHostsPerGroup();
-	// loop over hosts in that group
+	long hpg = g_hostdb.getNumHostsPerShard();
+	// loop over hosts in that shard
 	for ( long i = 0 ; i < hpg ; i++ ) {
 		// get a host
 		Host *h = &hosts[i];
@@ -5489,22 +5532,22 @@ bool Msg12::confirmLockAcquisition ( ) {
 	//Host *hosts = g_hostdb.getGroup ( m_lockGroupId );
 	// the same group (shard) that has the spiderRequest/Reply is
 	// the one responsible for locking.
-	Host *hosts = g_hostdb.getMyGroup();
-	// this must select the same group that is going to spider it!
-	// i.e. our group! because we check our local lock table to see
+	Host *hosts = g_hostdb.getMyShard();
+	// this must select the same shard that is going to spider it!
+	// i.e. our shard! because we check our local lock table to see
 	// if a doled url is locked before spidering it ourselves.
-	//Host *hosts = g_hostdb.getMyGroup();
+	//Host *hosts = g_hostdb.getMyShard();
 	// short cut
 	UdpServer *us = &g_udpServer;
 	// get # of hosts in each mirror group
-	long hpg = g_hostdb.getNumHostsPerGroup();
+	long hpg = g_hostdb.getNumHostsPerShard();
 	// reset counts
 	m_numRequests = 0;
 	m_numReplies  = 0;
 	// note it
 	if ( g_conf.m_logDebugSpider )
 		log("spider: confirming lock for uh48=%llu",m_lockKeyUh48);
-	// loop over hosts in that group
+	// loop over hosts in that shard
 	for ( long i = 0 ; i < hpg ; i++ ) {
 		// get a host
 		Host *h = &hosts[i];

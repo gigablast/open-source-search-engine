@@ -150,8 +150,8 @@ bool Placedb::verify ( char *coll ) {
 		key_t k = list.getCurrentKey();
 		count++;
 		// verify the group
-		uint32_t groupId = getGroupId ( RDB_PLACEDB , (char *)&k );
-		if ( groupId == g_hostdb.m_groupId )
+		uint32_t shardNum = getShardNum ( RDB_PLACEDB , (char *)&k );
+		if ( shardNum == getMyShardNum() )
 			got++;
 		else if ( !printedKey ) {
 			log ("db: Found bad key in list (only printing once): "
@@ -165,7 +165,7 @@ bool Placedb::verify ( char *coll ) {
 				printedZeroKey = true;
 			}
 			// pass if we didn't match above
-			if ( groupId != g_hostdb.m_groupId )
+			if ( shardNum != getMyShardNum() )
 				got++;
 		}
 	}

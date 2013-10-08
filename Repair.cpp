@@ -1564,8 +1564,9 @@ bool Repair::gotScanRecList ( ) {
 	}
 
 	// are we the host this url is meant for?
-	uint32_t gid = getGroupId ( RDB_TITLEDB , &tkey );
-	if ( gid != g_hostdb.m_groupId ) {
+	//uint32_t gid = getGroupId ( RDB_TITLEDB , &tkey );
+	unsigned long shardNum = getShardNum (RDB_TITLEDB , &tkey );
+	if ( shardNum != getMyShardNum() ) {
 		m_recsWrongGroupId++;
 		m_stage = STAGE_TITLEDB_0;
 		return true;
@@ -1575,7 +1576,8 @@ bool Repair::gotScanRecList ( ) {
 	// . is it assigned to us? taken from assigendToUs() in SpiderCache.cpp
 	// . get our group from our hostId
 	long  numHosts;
-	Host *hosts = g_hostdb.getGroup ( g_hostdb.m_groupId, &numHosts);
+	//Host *hosts = g_hostdb.getGroup ( g_hostdb.m_groupId, &numHosts);
+	Host *hosts = g_hostdb.getShard ( shardNum , &numHosts );
 	long  ii =  docId % numHosts ;
 	// . are we the host this url is meant for?
 	// . however, if you are rebuilding tfndb, each twin must scan all
@@ -2317,7 +2319,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 "respsponsibility</b></td>"
 			 "<td>%lli</td></tr>\n"
 
-			 "<tr bgcolor=%s><td> &nbsp; wrong group id</b></td>"
+			 "<tr bgcolor=%s><td> &nbsp; wrong shard</b></td>"
 			 "<td>%lli</td></tr>\n"
 
 			 "<tr bgcolor=%s><td> &nbsp; root urls</b></td>"

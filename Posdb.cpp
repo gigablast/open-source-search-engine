@@ -283,8 +283,10 @@ bool Posdb::verify ( char *coll ) {
 		list.getCurrentKey(&k);
 		count++;
 		//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
-		unsigned long groupId = getGroupId ( RDB_POSDB , &k );
-		if ( groupId == g_hostdb.m_groupId ) got++;
+		//unsigned long groupId = getGroupId ( RDB_POSDB , &k );
+		//if ( groupId == g_hostdb.m_groupId ) got++;
+		unsigned long shardNum = getShardNum( RDB_POSDB , &k );
+		if ( shardNum == getMyShardNum() ) got++;
 		else if ( !printedKey ) {
 			log ( "db: Found bad key in list (only printing once): "
 			      "%llx %llx %lx", k.n2, k.n1 ,(long)k.n0);
@@ -296,7 +298,7 @@ bool Posdb::verify ( char *coll ) {
 				      "(only printing once)." );
 				printedZeroKey = true;
 			}
-			if ( groupId != g_hostdb.m_groupId )
+			if ( shardNum != getMyShardNum() )
 				got++;
 		}
 	}
@@ -504,7 +506,7 @@ long long Posdb::getTermFreq ( char *coll, long long termId ) {
 				    (char *)&maxKey,
 				    oldTrunc );
 	// over all splits!
-	maxRecs *= g_hostdb.m_numGroups;
+	maxRecs *= g_hostdb.m_numShards;
 	// . assume about 8 bytes per key on average for posdb.
 	// . because of compression we got 12 and 6 byte keys in here typically
 	//   for a single termid
@@ -935,7 +937,7 @@ float getTermFreqWeight ( long long termFreq , long long numDocsInColl ) {
 	// that posdb keys can be 18, 12 or 6 bytes!
 	//fw /= 11.0;
 	// adjust this so its per split!
-	//long nd = numDocsInColl / g_hostdb.m_numGroups;
+	//long nd = numDocsInColl / g_hostdb.m_numShards;
 	float fw = termFreq;
 	// what chunk are we of entire collection?
 	//if ( nd ) fw /= nd;
