@@ -68,7 +68,7 @@
 #include "HashTableX.h"
 #include "RdbList.h"
 #include "Rdb.h" // for RdbBase
-
+#include "PingServer.h" // EmailInfo
 
 // how many counts are in CrawlInfo below????
 #define NUMCRAWLSTATS 8
@@ -93,6 +93,13 @@ class CrawlInfo {
 	long long m_urlsHarvested;         // 8
 
 	long m_lastUpdateTime;
+
+	// this is non-zero if urls are available to be spidered right now.
+	long m_hasUrlsReadyToSpider;
+
+	// have we sent out email/webhook notifications crawl has no urls
+	// currently in the ready queue (doledb) to spider?
+	char m_sentCrawlDoneAlert;
 
 	void reset() { memset ( this , 0 , sizeof(CrawlInfo) ); };
 	//bool print (class SafeBuf *sb ) ;
@@ -400,7 +407,7 @@ class CollectionRec {
 	//SafeBuf m_diffbotApiList;//QueryString;
 	//SafeBuf m_diffbotUrlCrawlPattern;
 	//SafeBuf m_diffbotUrlProcessPattern;
-	//SafeBuf m_diffbotPageProcessPattern;
+	SafeBuf m_diffbotPageProcessPattern;
 	//SafeBuf m_diffbotClassify;
 	//char m_diffbotClassify;
 	//char m_useDiffbot;
@@ -424,6 +431,7 @@ class CollectionRec {
 	CrawlInfo m_globalCrawlInfo;
 	// last time we computed global crawl info
 	//time_t m_globalCrawlInfoUpdateTime;
+	EmailInfo m_emailInfo;
 	// for counting replies
 	long m_replies;
 	long m_requests;

@@ -2879,3 +2879,216 @@ bool gotMxIp ( EmailInfo *ei ) {
 	return true;
 }
 
+
+static void gotMandrillReplyWrapper ( void *state , TcpSocket *s ) {
+	EmailInfo *ei = (EmailInfo *)state;
+	ei->m_callback ( ei->m_state );
+}
+
+
+// mailchimp http mail api
+bool sendEmailThroughMandrill ( class EmailInfo *ei ) {
+
+	// this is often set from XmlDoc.cpp::indexDoc()
+	g_errno = 0;
+
+	SafeBuf sb;
+
+	// then the message to send
+	sb.safePrintf(
+		  "POST /api/1.0/messages/send-template.json"
+		  " HTTP/1.0\r\n"
+		  "Accept: image/gif, image/x-xbitmap, image/jpeg, "
+		  "image/pjpeg, application/x-shockwave-flash, "
+		  "application/msword, */*\r\n"
+		  "Accept-Language: en-us\r\n"
+		  "Content-Type: application/x-www-form-urlencoded\r\n"
+		  "Accept-Encoding: gzip, deflate\r\n"
+		  "User-Agent: Mozilla/4.0 "
+		  "(compatible; MSIE 6.0; Windows 98; Win 9x 4.90)\r\n"
+		  "Host: mandrillapp.com\r\n" // www.t-mobile.com
+		  "Content-Length: xxx\r\n"
+		  //"Connection: Keep-Alive\r\n"
+		  "Connection: close\r\n"
+		  "Cookie: \r\n"
+		  "Cache-Control: no-cache\r\n\r\n"
+		  );
+	//
+	// post data
+	//
+	char *to = ei->m_toAddress.getBufStart();
+	char *from = ei->m_fromAddress.getBufStart();
+
+	SafeBuf ub;
+	sb.safePrintf( "{\"key\":\"GhWT0UpcVBl7kmumrt9dqg\","
+		       "\"template_name\":\"crawl-finished\","
+		       "\"template_content\": [],"
+		       "\"message\": {"
+		       "\"to\": ["
+		       "{"
+		       "\"email\":\"%s\""
+		       "}"
+		       "],"
+
+		       "\"from_email\":\"%s\","
+		       "\"headers\": {"
+		       "\"Reply-To\":\"%s\""
+		       "},"
+		       "\"bcc_address\":\"%s\","
+		       "\"global_merge_vars\":["
+		       "{"
+		       "\"name\":\"CRAWLNAME\","
+		       "\"content\":\"%s\""
+		       "}"
+		       "]"
+		       "}"
+		       "}"
+		       , to
+		       , from
+		       , from
+		       , from
+		       , ei->m_cr->m_coll
+		       );
+	ub.urlEncode();
+	// append the post data to the full request
+	sb.safeMemcpy ( &ub );
+	// make sure ends in \0
+	sb.nullTerm();
+
+	// gotta get the cookie
+	char *uu = "https://mandrillapp.com/";
+	if ( ! g_httpServer.getDoc ( uu,
+				     0, // ip
+				     0                 , // offset
+				     -1                , // size
+				     false             , // m_ifModifiedSince
+				     ei              , // state
+				     gotMandrillReplyWrapper    , // 
+				     60*1000           , // timeout
+				     0                 , // m_proxyIp
+				     0                 , // m_proxyPort
+				     100*1024          , // m_maxTextDocLen
+				     100*1024          , // m_maxOtherDocLen  
+				     NULL,     // user agent
+				     "HTTP/1.0" , //proto
+				     true, // post?
+				     NULL, // cookie
+				     NULL, // additional header
+				     sb.getBufStart() ) ) // full requesst
+		return false;
+	// must have been an error
+	log("net: Got error getting page from mandrill: %s.",
+	    mstrerror(g_errno));
+	// ignore it
+	g_errno = 0;
+	// always call this at the end
+	return true;
+}
+	
+/////////////////////////////
+//
+// send two notifications, email and webhook
+//
+/////////////////////////////
+
+void doneSendingNotifyEmailWrapper ( void *state ) {
+	EmailInfo *ei = (EmailInfo *)state;
+	ei->m_notifyBlocked--;
+	// error?
+	log("build: email notification status: %s",mstrerror(g_errno));
+	// ignore it for rest
+	g_errno = 0;
+	// wait for post url to get done
+	if ( ei->m_notifyBlocked > 0 ) return;
+	// unmark it
+	ei->m_inUse = false;
+	// all done
+	ei->m_finalCallback ( ei->m_finalState );
+}
+
+void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
+	EmailInfo *ei = (EmailInfo *)state;
+	ei->m_notifyBlocked--;
+	// error?
+	log("build: url notification status: %s",mstrerror(g_errno));
+	// wait for email to get done
+	if ( ei->m_notifyBlocked > 0 ) return;
+	// unmark it
+	ei->m_inUse = false;
+	// all done
+	ei->m_finalCallback ( ei->m_finalState );
+}
+
+// . return false if would block, true otherwise
+// . used to send email and get a url when a crawl hits a maxToCrawl
+//   or maxToProcess limitation.
+bool sendNotification ( EmailInfo *ei ) {
+
+	if ( ei->m_inUse ) { char *xx=NULL;*xx=0; }
+
+	// caller must set this, as well as m_finalCallback/m_finalState
+	CollectionRec *cr = ei->m_cr;
+
+	char *email = cr->m_notifyEmail.getBufStart();
+	char *url   = cr->m_notifyUrl.getBufStart();
+
+	// sanity check, can only call once
+	if ( ei->m_notifyBlocked != 0 ) { char *xx=NULL;*xx=0; }
+
+	ei->m_inUse = true;
+
+	if ( email && email[0] ) {
+		log("build: sending email notification to %s for coll \"%s\"",
+		    email,cr->m_coll);
+		SafeBuf msg;
+		msg.safePrintf("Your crawl \"%s\" "
+			       "has hit a limitation and has "
+			       "been paused."
+			       , cr->m_coll);
+		// use this
+		ei->m_toAddress.safeStrcpy ( email );
+		ei->m_toAddress.nullTerm();
+		ei->m_fromAddress.safePrintf("support@diffbot.com");
+		/*
+		ei->m_subject.safePrintf("crawl paused");
+		ei->m_body.safePrintf("Your crawl for collection \"%s\" "
+				      "has been paused because it hit "
+				      "a maxPagesToCrawl or maxPagesToProcess "
+				      "limitation."
+				      , cr->m_coll);
+		*/
+		ei->m_state = ei;//this;
+		ei->m_callback = doneSendingNotifyEmailWrapper;
+		// this will usually block, unless error maybe
+		if ( ! sendEmailThroughMandrill ( ei ) )
+			ei->m_notifyBlocked++;
+	}
+
+	if ( url && url[0] ) {
+		log("build: sending url notification to %s for coll \"%s\"",
+		    url,cr->m_coll);
+		// GET request
+		if ( ! g_httpServer.getDoc ( url ,
+					     0 , // ip
+					     0 , // offset
+					    -1 , // size
+					     false, // ifmodsince
+					     ei,//this ,
+					     doneGettingNotifyUrlWrapper ,
+					     60*1000 , // timeout
+					     0, // proxyip
+					     0 , // proxyport
+					     10000, // maxTextDocLen
+					     10000 // maxOtherDocLen
+					     ) )
+			ei->m_notifyBlocked++;
+	}
+
+	if ( ei->m_notifyBlocked == 0 ) {
+		ei->m_inUse = false;
+		return true;
+	}
+
+	// we blocked, wait
+	return false;
+}

@@ -2,6 +2,8 @@
 
 #include "Proxy.h"
 #include "Statsdb.h"
+#include "Msg13.h"
+#include "XmlDoc.h"
 //#include "seo.h" // g_secret_tran_key and api_key
 
 
