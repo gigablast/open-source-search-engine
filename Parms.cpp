@@ -2515,39 +2515,13 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 	//		((CollectionRec*) THIS)->invalidateRegEx ();
 	//}
 
-	// well, recompute if we have a doc:quality in any of the rules
-	// so Msg16 will know to get outlink qualities or not. saves time
-	// to not get them.
-	if ( action && strcmp(action,"submit" )==0 && 
-	     page == PAGE_FILTERS &&
-	     THIS != (char *)&g_conf ) {
-		// cast it
-		CollectionRec *cr = (CollectionRec *)THIS;
-		// get it
-		SpiderColl *sc = cr->m_spiderColl;
-		// right now we blindly force a reload of this spider cache
-		// since the url filters might have MATERIALLY changed, 
-		// although later on we might want to check for that.
-		//if ( sc ) sc->m_needsReload = true;
-		if ( sc ) sc->m_lastUrlFiltersUpdate = getTimeGlobal();
-		// need to recompute this!
-		if ( sc ) sc->m_ufnMapValid = false;
-		// rebuild the waiting tree
-		if ( sc ) {
-			// reset this cache
-			clearUfnTable();
-			// activate a scan if not already activated
-			sc->m_waitingTreeNeedsRebuild = true;
-			// if a scan is ongoing, this will re-set it
-			sc->m_nextKey2.setMin();
-		}
-	}
-
 	// reset the sitedb filters table if submitted changes
 	//if ( action && strcmp(action,"submit" )==0 && page == PAGE_RULES ) {
 	//	if ( THIS != (char *)&g_conf )
 	//		((CollectionRec*) THIS)->m_updateSiteRulesTable=1;
 	//}
+
+	bool changedUrlFilters = false;
 
 	// loop through cgi parms
 	for ( long i = 0 ; i < r->getNumFields() ; i++ ) {
@@ -2642,6 +2616,9 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 			onPage = true;
 		// if parm is not on the page we are viewing, skip it!
 		if ( ! onPage ) continue;
+		// if they provided a url filters parm, then assume they
+		// are changing the url filters and reset waiting tree
+		if ( m->m_page == PAGE_FILTERS ) changedUrlFilters = true;
 		// insert row above it if we should (only applicable to 
 		// non-fixed arrays)
 		if ( insert && m->m_max > 1 ) {
@@ -2772,6 +2749,17 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 		// set the count to it if it is bigger than current count
 		//if ( an + 1 > *(long *)pos ) *(long *)pos = an + 1; mdw
 	}
+
+	// have to reset and recompute "waitingtree" if url filters change
+	if ( changedUrlFilters && THIS != (char *)&g_conf ) {
+		// cast it
+		CollectionRec *cr = (CollectionRec *)THIS;
+		// get it
+		SpiderColl *sc = cr->m_spiderColl;
+		// this will rebuild the waiting tree
+		if ( sc ) sc->urlFiltersChanged();
+	}
+
 	// so g_spiderCache can reload if sameDomainWait, etc. have changed
 	g_collectiondb.updateTime();
 	return retval;

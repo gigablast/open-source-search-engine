@@ -963,6 +963,8 @@ class SpiderColl {
 
 	long getTotalOutstandingSpiders ( ) ;
 
+	void urlFiltersChanged();
+
 	key128_t m_firstKey;
 	// spiderdb is now 128bit keys
 	key128_t m_nextKey;
@@ -971,11 +973,11 @@ class SpiderColl {
 	bool m_useTree;
 
 	// last time we launched a spider. 0 on startup.
-	//time_t m_lastSpiderAttempt;
+	time_t m_lastSpiderAttempt;
 
-	bool m_lastDoledbReadEmpty;
-	bool m_encounteredDoledbRecs;
-	long long m_numRoundsDone;
+	//bool m_lastDoledbReadEmpty;
+	//bool m_encounteredDoledbRecs;
+	//long long m_numRoundsDone;
 
 	bool           m_bestRequestValid;
 	char           m_bestRequestBuf[MAX_BEST_REQUEST_SIZE];

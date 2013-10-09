@@ -2059,16 +2059,10 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			cr->m_notifyEmail.set(email);
 			cr->m_notifyEmail.nullTerm();
 		}
-		else {
-			cr->m_notifyEmail.purge();
-		}
 		char *url = hr->getString("notifyurl",NULL,NULL);
 		if ( url ) {
 			cr->m_notifyUrl.set(url);
 			cr->m_notifyUrl.nullTerm();
-		}
-		else {
-			cr->m_notifyUrl.purge();
 		}
 		long pause = hr->getLong("pause",-1);
 		if ( pause == 0 ) cr->m_spideringEnabled = 1;
@@ -2079,9 +2073,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( ppp ) {
 			cr->m_diffbotPageProcessPattern.set(ppp);
 			cr->m_diffbotPageProcessPattern.nullTerm();
-		}
-		else {
-			cr->m_diffbotPageProcessPattern.purge();
 		}
 		// this is a cast, so just return simple response
 		return g_httpServer.sendDynamicPage (socket,"OK",2);
