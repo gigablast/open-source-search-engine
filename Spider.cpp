@@ -998,6 +998,9 @@ SpiderColl::SpiderColl () {
 	m_numAdded = 0;
 	m_numBytesScanned = 0;
 	m_lastPrintCount = 0;
+	//m_lastSpiderAttempt = 0;
+	m_numRoundsDone = 0;
+	m_lastDoledbReadEmpty = false; // over all priorities in this coll
 	// re-set this to min and set m_needsWaitingTreeRebuild to true
 	// when the admin updates the url filters page
 	m_waitingTreeNeedsRebuild = false;
@@ -1323,8 +1326,9 @@ long long SpiderColl::getEarliestSpiderTimeFromWaitingTree ( long firstIp ) {
 	key_t *k = (key_t *)m_waitingTree.getKey ( node );
 	// ok, we got one
 	long storedFirstIp = (k->n0) & 0xffffffff;
-	// match?
-	if ( storedFirstIp != firstIp ) return -1;
+	// match? we call this with a firstIp of 0 below to indicate
+	// any IP, we just want to get the next spider time.
+	if ( firstIp != 0 && storedFirstIp != firstIp ) return -1;
 	// get the time
 	unsigned long long spiderTimeMS = k->n1;
 	// shift upp
@@ -3746,8 +3750,17 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		sc->populateDoledbFromWaitingTree ( false );
 		// skip if still loading doledb lists from disk this round
 		if ( ! sc->m_didRound ) continue;
+		// ensure at the top!
+		if ( sc->m_pri2!=MAX_SPIDER_PRIORITIES-1){char*xx=NULL;*xx=0;}
 		// ok, reset it so it can start a new doledb scan
 		sc->m_didRound = false;
+		// reset this as well. if there are no spiderRequests
+		// available on any priority level for this collection,
+		// then it will remain true. but if we attempt to spider
+		// a url, or can't spider a url b/c of a max oustanding
+		// constraint, we set this to false. this is used to
+		// send notifications when a crawl is basically in hiatus.
+		sc->m_encounteredDoledbRecs = false;
 		//sc->m_nextDoledbKey.setMin();
 	}
 
@@ -3933,6 +3946,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( m_sc->m_pri2 < 0 ) {
 		// i guess the scan is complete for this guy
 		m_sc->m_didRound = true;
+		// count # of priority scan rounds done
+		m_sc->m_numRoundsDone++;
 		// reset for next coll
 		m_sc->m_pri2 = MAX_SPIDER_PRIORITIES - 1;
 		// reset key now too since this coll was exhausted
@@ -3944,6 +3959,12 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		m_sc->m_nextDoledbKey = m_sc->m_nextKeys [ m_sc->m_pri2 ];
 		// and this
 		m_sc->m_msg5StartKey = m_sc->m_nextDoledbKey;
+		// was it all empty? if did not encounter ANY doledb recs
+		// after scanning all priorities, set empty to true.
+		if ( ! m_sc->m_encounteredDoledbRecs &&
+		     // if waiting tree is rebuilding... could be empty...
+		     ! m_sc->m_waitingTreeNeedsRebuild )
+			m_sc->m_lastDoledbReadEmpty = true;
 		// and go up top
 		goto collLoop;
 	}
@@ -3964,6 +3985,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// no, we use this to disabled spiders... if ( max <= 0 ) max = 1;
 	// skip?
 	if ( out >= max ) {
+		// count as non-empty then!
+		m_sc->m_encounteredDoledbRecs = true;
 		// try the priority below us
 		m_sc->devancePriority();
 		//m_sc->m_pri--;
@@ -4085,6 +4108,16 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( m_list.getListSize() > 0 ) {
 		m_list.getLastKey((char *)&m_sc->m_msg5StartKey);
 		m_sc->m_msg5StartKey += 1;
+		// i guess we had something? wait for nothing to be there
+		m_sc->m_encounteredDoledbRecs = true;
+		if ( g_conf.m_logDebugSpider )
+			log("spider: got full list pri2=%li c=%s",
+			    m_sc->m_pri2,m_sc->m_cr->m_coll);
+	}
+
+	else if ( g_conf.m_logDebugSpider ) {
+		log("spider: got empty list pri2=%li c=%s",
+		    m_sc->m_pri2,m_sc->m_cr->m_coll);
 	}
 
 	// log this now
@@ -4251,6 +4284,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( out >= max ) {
 		// this priority is maxed out, try next
 		m_sc->devancePriority();
+		// assume not an empty read
+		m_sc->m_encounteredDoledbRecs = true;
 		//m_sc->m_pri = pri - 1;
 		// all done if priority is negative
 		//if ( m_sc->m_pri < 0 ) return true;
@@ -4435,6 +4470,9 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		if ( maxSpidersOutPerIp < 0 ) maxSpidersOutPerIp = 999;
 	}
 
+	// assume not an empty read
+	m_sc->m_encounteredDoledbRecs = true;
+
 	// shortcut
 	char *coll = m_sc->m_cr->m_coll;
 	// . spider that. we don't care wheter it blocks or not
@@ -4448,6 +4486,10 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// . it might also return true if we are already spidering the url
 	bool status = spiderUrl9 ( sreq , doledbKey , coll , sameIpWaitTime ,
 				   maxSpidersOutPerIp ) ;
+
+	// mark the time. for send notifications when haven't spidered a
+	// a while...
+	//m_sc->m_lastSpiderAttempt = getTimeGlobal();
 
 	// just increment then i guess
 	m_list.skipCurrentRecord();
@@ -9269,7 +9311,11 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 	}
 
 	// return false if we blocked awaiting replies
-	if ( cr->m_replies < cr->m_requests ) return false;
+	if ( cr->m_replies < cr->m_requests ) {
+		// do not return false if callback is NULL
+		if ( ! callback ) return true;
+		return false;
+	}
 
 	// somehow we did not block... hmmmm...
 	char *xx=NULL;*xx=0;
@@ -9317,7 +9363,19 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			gs++;
 			ss++;
 		}
-		if ( stats->m_hasUrlsReadyToSpider ) {
+		// if a host sends back -1 for hasUrlsReadyToSpider that
+		// means it does not KNOW yet... it has to read from doledb
+		// still to know.
+		if ( stats->m_hasUrlsReadyToSpider == -1 ) {
+			cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = -1;
+		}
+		
+		if ( stats->m_hasUrlsReadyToSpider > 0 &&
+		     // if we already set this to -1 this round then
+		     // do not undo that. -1 means we don't know if there
+		     // are urls to spider or not.
+		     cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider >= 0 ) {
+			// inc the count otherwise
 			cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider++;
 			// unflag the sent flag if we had sent an alert
 			cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
@@ -9380,7 +9438,8 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// only host #0 sends alaerts
 	if ( g_hostdb.getMyHost()->m_hostId != 0 ) return;
 
-	// but of course if it has urls ready to spider, do not send alert
+	// but of course if it has urls ready to spider, do not send alert...
+	// or if this is -1, indicating "unknown".
 	if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) return;
 
 	// if we already sent it return now. we set this to false everytime
@@ -9416,6 +9475,34 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	// return that future time. so if a crawl is enabled we should
 	// actively call updateCrawlInfo a collection every minute or
 	// so.
+	cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = 1;
+	SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
+	long long nowGlobalMS = gettimeofdayInMillisecondsGlobal();
+	long long nextSpiderTimeMS;
+	// this will be 0 for ip's which have not had their SpiderRequests
+	// in spiderdb scanned yet to get the best SpiderRequest, so we
+	// just have to wait for that.
+	nextSpiderTimeMS = sc->getEarliestSpiderTimeFromWaitingTree(0); 
+	if ( ! sc->m_waitingTreeNeedsRebuild &&
+	     sc->m_lastDoledbReadEmpty && 
+	     cr->m_spideringEnabled &&
+	     g_conf.m_spideringEnabled &&
+	     nextSpiderTimeMS > nowGlobalMS +10*60*1000 ) 
+		// turn off this flag, "ready queue" is empty
+		cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = 0;
+
+	// but send back a -1 if we do not know yet because we haven't
+	// read the doledblists from disk from all priorities for this coll
+	if ( sc->m_numRoundsDone == 0 )
+		cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = -1;
+
+	// if we haven't spidered anything in 5 mins assume the
+	// queue is basically empty...
+	//if ( sc->m_lastSpiderAttempt &&
+	//     sc->m_lastSpiderAttempt - now > 5*60 )
+	//	// turn off this flag, "ready queue" is empty
+	//	m_localCrawlInfo.m_hasUrlsReadyToSpider = 0;
+
 
 
 	char *reply = slot->m_tmpBuf;

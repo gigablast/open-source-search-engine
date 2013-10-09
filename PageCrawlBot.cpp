@@ -2748,6 +2748,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			urtYes = "";
 			urtNo  = " checked";
 		}
+		
+		char *ppp = cr->m_diffbotPageProcessPattern.getBufStart();
+		if ( ! ppp ) ppp = "";
+		char *notifEmail = cr->m_notifyEmail.getBufStart();
+		char *notifUrl   = cr->m_notifyUrl.getBufStart();
+		if ( ! notifEmail ) notifEmail = "";
+		if ( ! notifUrl   ) notifUrl = "";
 
 		sb.safePrintf(
 			      //
@@ -2907,13 +2914,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , cr->m_coll
 			      , cr->m_coll
 
-			      , cr->m_diffbotPageProcessPattern.getBufStart()
+			      , ppp
 
 			      , cr->m_diffbotMaxToCrawl 
 			      , cr->m_diffbotMaxToProcess
 
-			      , cr->m_notifyEmail.getBufStart()
-			      , cr->m_notifyUrl.getBufStart()
+			      , notifEmail
+			      , notifUrl
 
 			      , urtYes
 			      , urtNo

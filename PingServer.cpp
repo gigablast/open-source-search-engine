@@ -2920,7 +2920,7 @@ bool sendEmailThroughMandrill ( class EmailInfo *ei ) {
 	char *from = ei->m_fromAddress.getBufStart();
 
 	SafeBuf ub;
-	sb.safePrintf( "{\"key\":\"GhWT0UpcVBl7kmumrt9dqg\","
+	ub.safePrintf( "{\"key\":\"GhWT0UpcVBl7kmumrt9dqg\","
 		       "\"template_name\":\"crawl-finished\","
 		       "\"template_content\": [],"
 		       "\"message\": {"

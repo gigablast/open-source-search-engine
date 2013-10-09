@@ -17127,6 +17127,8 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 	if ( ! m_utf8ContentValid ) { char *xx=NULL;*xx=0; }
 	char *p = m_cr->m_diffbotPageProcessPattern.getBufStart();
+	// empty? no pattern matches everything.
+	if ( ! p ) return true;
 	// how many did we have?
 	long count = 0;
 	// scan the " || " separated substrings
