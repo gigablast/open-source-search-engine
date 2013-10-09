@@ -29,6 +29,7 @@
 #include "Placedb.h"
 #include "Sections.h"
 //#include "Msg0.h" // g_termlistCache
+#include "Msg13.h"
 
 bool printNumAbbr ( SafeBuf &p, long long vvv ) {
 	float val = (float)vvv;

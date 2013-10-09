@@ -5,7 +5,37 @@
 
 #include "gb-include.h"
 #include "Hostdb.h"
-#include "Repair.h"
+//#include "Repair.h"
+
+extern char g_repairMode;
+
+
+class EmailInfo {
+public:
+	SafeBuf m_toAddress;
+	SafeBuf m_fromAddress;
+	SafeBuf m_subject;
+	SafeBuf m_body;
+	CollectionRec *m_cr;
+	char *m_dom; // ref into m_toAddress of the domain in email addr
+	SafeBuf m_mxDomain; // just the domain with a "gbmxrec-" prepended
+	void *m_state;
+	void (* m_callback ) (void *state);
+	void *m_finalState;
+	void (* m_finalCallback ) (void *state);
+	// ip address of MX record for this domain
+	long m_mxIp;
+	long m_notifyBlocked;
+	bool m_inUse;
+	EmailInfo() { 
+		memset ( this,0,sizeof(EmailInfo) ); 
+	};
+	void reset() { 
+		if ( m_inUse ) { char *xx=NULL;*xx=0; }
+		if ( m_notifyBlocked ) { char *xx=NULL;*xx=0; }
+		memset ( this,0,sizeof(EmailInfo) ); 
+	};
+};
 
 class PingServer {
 
@@ -137,6 +167,9 @@ bool sendEmail ( class EmailInfo *ei ) ;
 
 // use mailchimp's mandrill email http api
 bool sendEmailThroughMandrill ( class EmailInfo *ei ) ;
+
+// send email and webhook notification
+bool sendNotification ( class EmailInfo *ei );
 
 #endif
 

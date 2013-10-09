@@ -2985,3 +2985,110 @@ bool sendEmailThroughMandrill ( class EmailInfo *ei ) {
 	return true;
 }
 	
+/////////////////////////////
+//
+// send two notifications, email and webhook
+//
+/////////////////////////////
+
+void doneSendingNotifyEmailWrapper ( void *state ) {
+	EmailInfo *ei = (EmailInfo *)state;
+	ei->m_notifyBlocked--;
+	// error?
+	log("build: email notification status: %s",mstrerror(g_errno));
+	// ignore it for rest
+	g_errno = 0;
+	// wait for post url to get done
+	if ( ei->m_notifyBlocked > 0 ) return;
+	// unmark it
+	ei->m_inUse = false;
+	// all done
+	ei->m_finalCallback ( ei->m_finalState );
+}
+
+void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
+	EmailInfo *ei = (EmailInfo *)state;
+	ei->m_notifyBlocked--;
+	// error?
+	log("build: url notification status: %s",mstrerror(g_errno));
+	// wait for email to get done
+	if ( ei->m_notifyBlocked > 0 ) return;
+	// unmark it
+	ei->m_inUse = false;
+	// all done
+	ei->m_finalCallback ( ei->m_finalState );
+}
+
+// . return false if would block, true otherwise
+// . used to send email and get a url when a crawl hits a maxToCrawl
+//   or maxToProcess limitation.
+bool sendNotification ( EmailInfo *ei ) {
+
+	if ( ei->m_inUse ) { char *xx=NULL;*xx=0; }
+
+	// caller must set this, as well as m_finalCallback/m_finalState
+	CollectionRec *cr = ei->m_cr;
+
+	char *email = cr->m_notifyEmail.getBufStart();
+	char *url   = cr->m_notifyUrl.getBufStart();
+
+	// sanity check, can only call once
+	if ( ei->m_notifyBlocked != 0 ) { char *xx=NULL;*xx=0; }
+
+	ei->m_inUse = true;
+
+	if ( email && email[0] ) {
+		log("build: sending email notification to %s for coll \"%s\"",
+		    email,cr->m_coll);
+		SafeBuf msg;
+		msg.safePrintf("Your crawl \"%s\" "
+			       "has hit a limitation and has "
+			       "been paused."
+			       , cr->m_coll);
+		// use this
+		ei->m_toAddress.safeStrcpy ( email );
+		ei->m_toAddress.nullTerm();
+		ei->m_fromAddress.safePrintf("support@diffbot.com");
+		/*
+		ei->m_subject.safePrintf("crawl paused");
+		ei->m_body.safePrintf("Your crawl for collection \"%s\" "
+				      "has been paused because it hit "
+				      "a maxPagesToCrawl or maxPagesToProcess "
+				      "limitation."
+				      , cr->m_coll);
+		*/
+		ei->m_state = ei;//this;
+		ei->m_callback = doneSendingNotifyEmailWrapper;
+		// this will usually block, unless error maybe
+		if ( ! sendEmailThroughMandrill ( ei ) )
+			ei->m_notifyBlocked++;
+	}
+
+	if ( url && url[0] ) {
+		log("build: sending url notification to %s for coll \"%s\"",
+		    url,cr->m_coll);
+		// GET request
+		if ( ! g_httpServer.getDoc ( url ,
+					     0 , // ip
+					     0 , // offset
+					    -1 , // size
+					     false, // ifmodsince
+					     ei,//this ,
+					     doneGettingNotifyUrlWrapper ,
+					     60*1000 , // timeout
+					     0, // proxyip
+					     0 , // proxyport
+					     10000, // maxTextDocLen
+					     10000 // maxOtherDocLen
+					     ) )
+			ei->m_notifyBlocked++;
+	}
+
+	if ( ei->m_notifyBlocked == 0 ) {
+		ei->m_inUse = false;
+		return true;
+	}
+
+	// we blocked, wait
+	return false;
+}

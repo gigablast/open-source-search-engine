@@ -44,7 +44,8 @@
 #include "Highlight.h"
 #include "Wiktionary.h"
 #include "seo.h" // Msg99Request etc.
-#include <regex.h>
+//#include <regex.h>
+#include "PingServer.h"
 
 #define MAXDOCLEN (1024*1024)
 
@@ -162,7 +163,7 @@ XmlDoc::XmlDoc() {
 	m_numMsg4fRequests = 0;
 	m_numMsg4fReplies = 0;
 	m_sentMsg4fRequests = false;
-	m_notifyBlocked = 0;
+	//m_notifyBlocked = 0;
 	//m_mcasts = NULL;
 	//for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) 
 	//	m_currentBinPtrs[i] = NULL;
@@ -180,7 +181,7 @@ static long long s_lastTimeStart = 0LL;
 void XmlDoc::reset ( ) {
 
 	// notifications pending?
-	if ( m_notifyBlocked ) { char *xx=NULL;*xx=0; }
+	//if ( m_notifyBlocked ) { char *xx=NULL;*xx=0; }
 
 	m_loaded = false;
 
@@ -1956,8 +1957,15 @@ bool XmlDoc::indexDoc2 ( ) {
 		if ( ! m_cr->m_spideringEnabled ) return true;
 		// do not repeat call sendNotification()
 		m_cr->m_spideringEnabled = false;
+		// set this
+		m_emailInfo.reset();
+		m_emailInfo.m_finalCallback = m_masterLoop;
+		m_emailInfo.m_finalState = m_masterState;
+		m_emailInfo.m_cr = m_cr;
+		// note it
+		setStatus("sending notification");
 		// this returns false if it would block, so we ret fals
-		if ( ! sendNotification() ) return false;
+		if ( ! sendNotification ( &m_emailInfo ) ) return false;
 		// it didn't block
 		g_errno = m_indexCode;
 		return true;
@@ -1980,8 +1988,16 @@ bool XmlDoc::indexDoc2 ( ) {
 		if ( ! m_cr->m_spideringEnabled ) return true;
 		// turn them off and send notification (email or url)
 		m_cr->m_spideringEnabled = false;
-		// this returns false if it would block, so we ret fals
-		if ( ! sendNotification() ) return false;
+		// set this
+		m_emailInfo.reset();
+		m_emailInfo.m_finalCallback = m_masterLoop;
+		m_emailInfo.m_finalState = m_masterState;
+		m_emailInfo.m_cr = m_cr;
+		// note it
+		setStatus("sending notification");
+		// . this returns false if it would block, so we ret fals
+		// . this is now in PingServer.cpp
+		if ( ! sendNotification( &m_emailInfo ) ) return false;
 		// it didn't block
 		g_errno = m_indexCode;
 		return true;
@@ -41989,98 +42005,4 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 	}
 
 	return (char *)0x01;
-}
-
-void doneSendingNotifyEmailWrapper ( void *state ) {
-	XmlDoc *THIS = (XmlDoc *)state;
-	THIS->m_notifyBlocked--;
-	// error?
-	log("build: email notification status: %s",mstrerror(g_errno));
-	// ignore it for rest
-	g_errno = 0;
-	// wait for post url to get done
-	if ( THIS->m_notifyBlocked > 0 ) return;
-	// all done
-	THIS->m_masterLoop ( THIS->m_masterState );
-}
-
-void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
-	XmlDoc *THIS = (XmlDoc *)state;
-	THIS->m_notifyBlocked--;
-	// error?
-	log("build: url notification status: %s",mstrerror(g_errno));
-	// wait for post url to get done
-	if ( THIS->m_notifyBlocked > 0 ) return;
-	// all done
-	THIS->m_masterLoop ( THIS->m_masterState );
-}
-
-#include "PingServer.h" // sendEmail() function
-
-// . return false if would block, true otherwise
-// . used to send email and get a url when a crawl hits a maxToCrawl
-//   or maxToProcess limitation.
-bool XmlDoc::sendNotification ( ) {
-
-	setStatus("sending notification");
-
-	char *email = m_cr->m_notifyEmail.getBufStart();
-	char *url   = m_cr->m_notifyUrl.getBufStart();
-
-	// sanity check, can only call once
-	if ( m_notifyBlocked != 0 ) { char *xx=NULL;*xx=0; }
-
-	if ( email && email[0] ) {
-		log("build: sending email notification to %s for coll \"%s\"",
-		    email,m_cr->m_coll);
-		SafeBuf msg;
-		msg.safePrintf("Your crawl \"%s\" "
-			       "has hit a limitation and has "
-			       "been paused."
-			       , m_cr->m_coll);
-		// use this
-		EmailInfo *ei = &m_emailInfo;
-		ei->m_toAddress.safeStrcpy ( email );
-		ei->m_toAddress.nullTerm();
-		ei->m_fromAddress.safePrintf("support@diffbot.com");
-		/*
-		ei->m_subject.safePrintf("crawl paused");
-		ei->m_body.safePrintf("Your crawl for collection \"%s\" "
-				      "has been paused because it hit "
-				      "a maxPagesToCrawl or maxPagesToProcess "
-				      "limitation."
-				      , m_cr->m_coll);
-		*/
-		ei->m_cr = m_cr;
-		ei->m_state = this;
-		ei->m_callback = doneSendingNotifyEmailWrapper;
-		// this will usually block, unless error maybe
-		if ( ! sendEmailThroughMandrill ( ei ) )
-			m_notifyBlocked++;
-	}
-
-	if ( url && url[0] ) {
-		log("build: sending url notification to %s for coll \"%s\"",
-		    url,m_cr->m_coll);
-		// GET request
-		if ( ! g_httpServer.getDoc ( url ,
-					     0 , // ip
-					     0 , // offset
-					    -1 , // size
-					     false, // ifmodsince
-					     this ,
-					     doneGettingNotifyUrlWrapper ,
-					     60*1000 , // timeout
-					     0, // proxyip
-					     0 , // proxyport
-					     10000, // maxTextDocLen
-					     10000 // maxOtherDocLen
-					     ) )
-			m_notifyBlocked++;
-	}
-
-	if ( m_notifyBlocked == 0 ) return true;
-
-	// we blocked, wait
-	return false;
 }
