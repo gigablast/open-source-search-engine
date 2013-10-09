@@ -12015,12 +12015,6 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	//	return &m_diffbotReply;
 	//}
 
-	// or if original page content matches the page regex dont hit diffbot
-	//if( m_useDiffbot && ! doesPageContentMatchDiffbotProcessPattern() ) {
-	//	m_diffbotReplyValid = true;
-	//	return &m_diffbotReply;
-	//}
-
 	// empty content, do not send to diffbot then
 	char **u8 = getUtf8Content();
 	if ( ! u8 || u8 == (char **)-1 ) return (SafeBuf *)u8;
@@ -12038,6 +12032,12 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
+
+	// or if original page content matches the page regex dont hit diffbot
+	if ( ! doesPageContentMatchDiffbotProcessPattern() ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
 
 	setStatus("getting diffbot reply");
 
@@ -17107,6 +17107,45 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 			    m_cr);
 }
 */
+
+bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
+	if ( ! m_utf8ContentValid ) { char *xx=NULL;*xx=0; }
+	char *p = m_cr->m_diffbotPageProcessPattern.getBufStart();
+	// how many did we have?
+	long count = 0;
+	// scan the " || " separated substrings
+	for ( ; *p ; ) {
+		// get beginning of this string
+		char *start = p;
+		// skip white space
+		while ( *start && is_wspace_a(*start) ) start++;
+		// done?
+		if ( ! *start ) break;
+		// find end of it
+		char *end = start;
+		while ( *end && end[0] != '|' && ! is_wspace_a(end[0]) ) 
+			end++;
+		// advance p for next guy
+		p = end;
+		while ( *p && (*p=='|' || is_wspace_a(*p) ) ) p++;
+		// temp null this
+		char c = *end;
+		*end = '\0';
+		// count it as an attempt
+		count++;
+		// . is this substring anywhere in the document
+		// . check the rawest content before converting to utf8 i guess
+		char *foundPtr =  strstr ( m_content , start ) ;
+		// revert \0
+		*end = c;
+		// did we find it?
+		if ( foundPtr ) return true;
+	}
+	// if we had no attempts, it is ok
+	if ( count == 0 ) return true;
+	// if we had an unfound substring...
+	return false;
+}
 
 // . returns ptr to status
 // . diffbot uses this to remove the indexed json pages associated with

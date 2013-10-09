@@ -1534,7 +1534,7 @@ class XmlDoc {
 	SafeBuf *getDiffbotReply ( ) ;
 	//bool doesUrlMatchDiffbotCrawlPattern() ;
 	//bool doesUrlMatchDiffbotProcessPattern() ;
-	//bool doesPageContentMatchDiffbotProcessPattern() ;
+	bool doesPageContentMatchDiffbotProcessPattern() ;
 	char *hashJSON ( HashTableX *table );
 	long *nukeJSONObjects ( ) ;
 	long m_joc;

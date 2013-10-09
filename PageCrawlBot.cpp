@@ -1875,6 +1875,9 @@ static class HelpItem s_his[] = {
 	{"notifyurl","Fetch this URL when crawl hits "
 	 "the maxtocrawl or maxtoprocess limit."},
 	{"urt","Use robots.txt?"},
+	{"pageprocesspattern","List of || separated strings. If the page "
+	 "contains any of these then we send it to diffbot for processing. "
+	 "If this is empty we send all pages to diffbot for processing."},
 	//{"dbapilist","Special list of diffbot API urls. The URL Filters "
 	// "will display these options in a drop down menu. "
 	// "Example (unencoded): "
@@ -2056,16 +2059,30 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			cr->m_notifyEmail.set(email);
 			cr->m_notifyEmail.nullTerm();
 		}
+		else {
+			cr->m_notifyEmail.purge();
+		}
 		char *url = hr->getString("notifyurl",NULL,NULL);
 		if ( url ) {
 			cr->m_notifyUrl.set(url);
 			cr->m_notifyUrl.nullTerm();
+		}
+		else {
+			cr->m_notifyUrl.purge();
 		}
 		long pause = hr->getLong("pause",-1);
 		if ( pause == 0 ) cr->m_spideringEnabled = 1;
 		if ( pause == 1 ) cr->m_spideringEnabled = 0;
 		long urt = hr->getLong("urt",-1);
 		if ( urt != -1 ) cr->m_useRobotsTxt = urt;
+		char *ppp = hr->getString("pageprocesspattern",NULL);
+		if ( ppp ) {
+			cr->m_diffbotPageProcessPattern.set(ppp);
+			cr->m_diffbotPageProcessPattern.nullTerm();
+		}
+		else {
+			cr->m_diffbotPageProcessPattern.purge();
+		}
 		// this is a cast, so just return simple response
 		return g_httpServer.sendDynamicPage (socket,"OK",2);
 	}
@@ -2805,6 +2822,15 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      //
 			      //
 			      "<tr>"
+			      "<td><b>Page Process Pattern:</b> "
+			      "</td><td>"
+			      "<input type=text name=pageprocesspattern "
+			      "size=20 value=\"%s\"> "
+			      "<input type=submit name=submit value=OK>"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
 			      "<td><b>Max Page Download Successes:</b> "
 			      "</td><td>"
 			      "<input type=text name=maxtocrawl "
@@ -2880,6 +2906,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      , cr->m_coll
 			      , cr->m_coll
+
+			      , cr->m_diffbotPageProcessPattern.getBufStart()
 
 			      , cr->m_diffbotMaxToCrawl 
 			      , cr->m_diffbotMaxToProcess
@@ -3291,7 +3319,6 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 	cr->m_diffbotApiQueryString.set ( apiQueryString );
 	cr->m_diffbotUrlCrawlPattern.set ( urlCrawlPattern );
 	cr->m_diffbotUrlProcessPattern.set ( urlProcessPattern );
-	cr->m_diffbotPageProcessPattern.set ( pageProcessPattern );
 	cr->m_diffbotClassify = classify;
 
 	// let's make these all NULL terminated strings
@@ -3303,7 +3330,9 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 	cr->m_diffbotPageProcessPattern.nullTerm();
 	*/
 
-
+	// bring this back
+	cr->m_diffbotPageProcessPattern.set ( "" );
+	cr->m_diffbotPageProcessPattern.nullTerm();
 
 	// do not spider more than this many urls total. -1 means no max.
 	cr->m_diffbotMaxToCrawl = 100000;
