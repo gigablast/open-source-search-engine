@@ -172,6 +172,9 @@ void dumpClusterdb       ( char *coll,long sfn,long numFiles,bool includeTree);
 void dumpLinkdb          ( char *coll,long sfn,long numFiles,bool includeTree,
 			   char *url );
 
+void exitWrapper ( void *state ) { exit(0); };
+	
+
 //////
 //
 // if seo.o is being linked to it needs to override these weak stubs:
@@ -909,6 +912,11 @@ int main ( int argc , char *argv[] ) {
 	//unclean shutdown.
 	bool recoveryMode = false;
 	if ( strcmp ( cmd , "-r" ) == 0 ) recoveryMode = true;		
+
+	bool testMandrill = false;
+	if ( strcmp ( cmd , "emailmandrill" ) == 0 ) {
+		testMandrill = true;
+	}
 
 	// gb gendbs, preset the hostid at least
 	if ( //strcmp ( cmd , "gendbs"   ) == 0 ||
@@ -3160,6 +3168,17 @@ int main ( int argc , char *argv[] ) {
 		sprintf(buf, "Host %li respawning after crash.(%s)",
 			hostId, iptoa(g_hostdb.getMyIp()));
 		g_pingServer.sendEmail(NULL, buf);
+	}
+
+	if ( testMandrill ) {
+		static EmailInfo ei;
+		ei.m_cr = g_collectiondb.getRec(1);
+		ei.m_fromAddress.safePrintf("support@diffbot.com");
+		ei.m_toAddress.safePrintf("matt@diffbot.com");
+		ei.m_callback = exitWrapper;
+		sendEmailThroughMandrill ( &ei );
+		g_conf.m_spideringEnabled = false;
+		g_conf.m_save = true;
 	}
 
 	// . start the spiderloop

@@ -2348,7 +2348,7 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 	long newSize = *(long*)(s->m_readBuf + s->m_readOffset - 4);
 
 	if(newSize < 0 || newSize > 500*1024*1024) {
-		log("http: got bad gzipped reply of size=%li.",
+		log("http: got bad gzipped reply1 of size=%li.",
 		    newSize );
 		g_errno = ECORRUPTHTTPGZIP;//CORRUPTDATA;//EBADREPLYSIZE;
 		return s;
@@ -2422,7 +2422,7 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 	// leading \n's in the document body because the while loop above
 	// was bad logic
 	if ( restLen < 0 || ! ptr1 ) {
-		log("http: got bad gzipped reply of size=%li.",
+		log("http: got bad gzipped reply2 of size=%li.",
 		    newSize );
 		mfree (newBuf, need, "HttpUnzipError");
 		g_errno = ECORRUPTHTTPGZIP;

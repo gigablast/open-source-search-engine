@@ -2881,8 +2881,10 @@ bool gotMxIp ( EmailInfo *ei ) {
 
 
 static void gotMandrillReplyWrapper ( void *state , TcpSocket *s ) {
+	// log the mandril reply
+	log("email: got mandrill reply: %s",s->m_readBuf);
 	EmailInfo *ei = (EmailInfo *)state;
-	ei->m_callback ( ei->m_state );
+	if ( ei->m_callback ) ei->m_callback ( ei->m_state );
 }
 
 
@@ -2902,15 +2904,16 @@ bool sendEmailThroughMandrill ( class EmailInfo *ei ) {
 		  "image/pjpeg, application/x-shockwave-flash, "
 		  "application/msword, */*\r\n"
 		  "Accept-Language: en-us\r\n"
-		  "Content-Type: application/x-www-form-urlencoded\r\n"
-		  "Accept-Encoding: gzip, deflate\r\n"
+		  //"Content-Type: application/x-www-form-urlencoded\r\n"
+		  "Content-Type: application/json\r\n"
+		  //"Accept-Encoding: gzip, deflate\r\n"
 		  "User-Agent: Mozilla/4.0 "
 		  "(compatible; MSIE 6.0; Windows 98; Win 9x 4.90)\r\n"
 		  "Host: mandrillapp.com\r\n" // www.t-mobile.com
-		  "Content-Length: xxx\r\n"
+		  "Content-Length: xxxx\r\n"
 		  //"Connection: Keep-Alive\r\n"
 		  "Connection: close\r\n"
-		  "Cookie: \r\n"
+		  //"Cookie: \r\n"
 		  "Cache-Control: no-cache\r\n\r\n"
 		  );
 	//
@@ -2949,11 +2952,28 @@ bool sendEmailThroughMandrill ( class EmailInfo *ei ) {
 		       , from
 		       , ei->m_cr->m_coll
 		       );
-	ub.urlEncode();
+	// this is not for application/json content type in POST request
+	//ub.urlEncode();
+	// how big?
+	long contentLen = ub.length();
 	// append the post data to the full request
 	sb.safeMemcpy ( &ub );
 	// make sure ends in \0
 	sb.nullTerm();
+
+	// set it
+	char *needle = "Content-Length: ";
+	long needleLen = gbstrlen(needle);
+	char *s = strstr(sb.getBufStart(),needle);
+	s += needleLen;
+	char c = s[4];
+	sprintf(s,"%04li",contentLen);
+	s[4] = c;
+	
+
+	// show it
+	log("email: sending request to https://mandrillapp.com/ : %s",
+	    sb.getBufStart() );
 
 	// gotta get the cookie
 	char *uu = "https://mandrillapp.com/";
