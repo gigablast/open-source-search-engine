@@ -129,7 +129,8 @@ bool HttpServer::getDoc ( char   *url      ,
 			  char    *proto ,
 			  bool     doPost ,
 			  char    *cookie ,
-			  char    *additionalHeader ) { 
+			  char    *additionalHeader ,
+			  char    *fullRequest ) { 
 	// sanity
 	if ( ip == -1 ) 
 		log("http: you probably didn't mean to set ip=-1 did you? "
@@ -152,24 +153,37 @@ bool HttpServer::getDoc ( char   *url      ,
 		tcp = &m_ssltcp;
 		defPort = 443;
 	}
-	// this returns false and sets g_errno on error
-	if ( ! r.set ( url , offset , size , ifModifiedSince ,
-		       userAgent , proto , doPost , cookie ,
-		       additionalHeader ) ) return true;
 
-	if ( g_conf.m_logDebugSpider )
-		log("spider: httprequest = %s", r.getRequest());
+	char *req = NULL;
+	long reqSize;
+
+	// this returns false and sets g_errno on error
+	if ( ! fullRequest ) {
+		if ( ! r.set ( url , offset , size , ifModifiedSince ,
+			       userAgent , proto , doPost , cookie ,
+			       additionalHeader ) ) return true;
+		reqSize = r.getRequestLen();
+		req = (char *) mdup ( r.getRequest() , reqSize,"HttpServer");
+	}
+	else {
+		// does not contain \0 i guess
+		reqSize = gbstrlen(fullRequest);
+		req = (char *) mdup ( fullRequest , reqSize,"HttpServer");
+	}
+
+	// . get the request from the static buffer and dup it
+	// . return true and set g_errno on error
+	if ( ! req ) return true;
 
 	long  hostLen ;
 	long  port = defPort;
 	char *host = getHostFast ( url , &hostLen , &port );
 	
 
-	// . get the request from the static buffer and dup it
-	// . return true and set g_errno on error
-	long  reqSize = r.getRequestLen();
-	char *req     = (char *) mdup ( r.getRequest() , reqSize,"HttpServer");
-	if ( ! req ) return true;
+	if ( g_conf.m_logDebugSpider )
+		log("spider: httprequest = %s", req );
+
+
 	// do we have an ip to send to? assume not
 	if ( proxyIp ) { ip = proxyIp ; port = proxyPort; }
 	// special NULL case

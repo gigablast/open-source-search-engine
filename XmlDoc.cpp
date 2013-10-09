@@ -42043,16 +42043,19 @@ bool XmlDoc::sendNotification ( ) {
 		ei->m_toAddress.safeStrcpy ( email );
 		ei->m_toAddress.nullTerm();
 		ei->m_fromAddress.safePrintf("support@diffbot.com");
+		/*
 		ei->m_subject.safePrintf("crawl paused");
 		ei->m_body.safePrintf("Your crawl for collection \"%s\" "
 				      "has been paused because it hit "
 				      "a maxPagesToCrawl or maxPagesToProcess "
 				      "limitation."
 				      , m_cr->m_coll);
+		*/
+		ei->m_cr = m_cr;
 		ei->m_state = this;
 		ei->m_callback = doneSendingNotifyEmailWrapper;
 		// this will usually block, unless error maybe
-		if ( ! sendEmail ( ei ) )
+		if ( ! sendEmailThroughMandrill ( ei ) )
 			m_notifyBlocked++;
 	}
 

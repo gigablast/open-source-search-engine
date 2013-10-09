@@ -135,5 +135,8 @@ extern class PingServer g_pingServer;
 // . use this for sending generic emails
 bool sendEmail ( class EmailInfo *ei ) ;
 
+// use mailchimp's mandrill email http api
+bool sendEmailThroughMandrill ( class EmailInfo *ei ) ;
+
 #endif
 

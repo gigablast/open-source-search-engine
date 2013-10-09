@@ -2879,3 +2879,109 @@ bool gotMxIp ( EmailInfo *ei ) {
 	return true;
 }
 
+
+static void gotMandrillReplyWrapper ( void *state , TcpSocket *s ) {
+	EmailInfo *ei = (EmailInfo *)state;
+	ei->m_callback ( ei->m_state );
+}
+
+
+// mailchimp http mail api
+bool sendEmailThroughMandrill ( class EmailInfo *ei ) {
+
+	// this is often set from XmlDoc.cpp::indexDoc()
+	g_errno = 0;
+
+	SafeBuf sb;
+
+	// then the message to send
+	sb.safePrintf(
+		  "POST /api/1.0/messages/send-template.json"
+		  " HTTP/1.0\r\n"
+		  "Accept: image/gif, image/x-xbitmap, image/jpeg, "
+		  "image/pjpeg, application/x-shockwave-flash, "
+		  "application/msword, */*\r\n"
+		  "Accept-Language: en-us\r\n"
+		  "Content-Type: application/x-www-form-urlencoded\r\n"
+		  "Accept-Encoding: gzip, deflate\r\n"
+		  "User-Agent: Mozilla/4.0 "
+		  "(compatible; MSIE 6.0; Windows 98; Win 9x 4.90)\r\n"
+		  "Host: mandrillapp.com\r\n" // www.t-mobile.com
+		  "Content-Length: xxx\r\n"
+		  //"Connection: Keep-Alive\r\n"
+		  "Connection: close\r\n"
+		  "Cookie: \r\n"
+		  "Cache-Control: no-cache\r\n\r\n"
+		  );
+	//
+	// post data
+	//
+	char *to = ei->m_toAddress.getBufStart();
+	char *from = ei->m_fromAddress.getBufStart();
+
+	SafeBuf ub;
+	sb.safePrintf( "{\"key\":\"GhWT0UpcVBl7kmumrt9dqg\","
+		       "\"template_name\":\"crawl-finished\","
+		       "\"template_content\": [],"
+		       "\"message\": {"
+		       "\"to\": ["
+		       "{"
+		       "\"email\":\"%s\""
+		       "}"
+		       "],"
+
+		       "\"from_email\":\"%s\","
+		       "\"headers\": {"
+		       "\"Reply-To\":\"%s\""
+		       "},"
+		       "\"bcc_address\":\"%s\","
+		       "\"global_merge_vars\":["
+		       "{"
+		       "\"name\":\"CRAWLNAME\","
+		       "\"content\":\"%s\""
+		       "}"
+		       "]"
+		       "}"
+		       "}"
+		       , to
+		       , from
+		       , from
+		       , from
+		       , ei->m_cr->m_coll
+		       );
+	ub.urlEncode();
+	// append the post data to the full request
+	sb.safeMemcpy ( &ub );
+	// make sure ends in \0
+	sb.nullTerm();
+
+	// gotta get the cookie
+	char *uu = "https://mandrillapp.com/";
+	if ( ! g_httpServer.getDoc ( uu,
+				     0, // ip
+				     0                 , // offset
+				     -1                , // size
+				     false             , // m_ifModifiedSince
+				     ei              , // state
+				     gotMandrillReplyWrapper    , // 
+				     60*1000           , // timeout
+				     0                 , // m_proxyIp
+				     0                 , // m_proxyPort
+				     100*1024          , // m_maxTextDocLen
+				     100*1024          , // m_maxOtherDocLen  
+				     NULL,     // user agent
+				     "HTTP/1.0" , //proto
+				     true, // post?
+				     NULL, // cookie
+				     NULL, // additional header
+				     sb.getBufStart() ) ) // full requesst
+		return false;
+	// must have been an error
+	log("net: Got error getting page from mandrill: %s.",
+	    mstrerror(g_errno));
+	// ignore it
+	g_errno = 0;
+	// always call this at the end
+	return true;
+}
+	
