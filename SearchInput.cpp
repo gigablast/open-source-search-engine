@@ -1224,8 +1224,8 @@ bool SearchInput::setQueryBuffers ( ) {
 	long dcatId  = -1;
 	// get the final query
 	char *q =m_sbuf1.getBufStart();
-	if ( q ) sscanf(q,"gbpdcat:%li",&pcatId);
-	if ( q ) sscanf(q,"gbcat:%li",&dcatId);
+	if ( q ) sscanf(q,"gbpdcatid:%li",&pcatId);
+	if ( q ) sscanf(q,"gbcatid:%li",&dcatId);
 	// pick the one that is valid
 	long catId = -1;
 	if ( pcatId >= 0 ) catId = pcatId;

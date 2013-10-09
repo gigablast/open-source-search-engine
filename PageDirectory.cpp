@@ -4,6 +4,9 @@
 #include "Pages.h"
 #include "Categories.h"
 
+// function is in PageRoot.cpp:
+bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) ;
+
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
 bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
@@ -39,11 +42,34 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 	// look it up
 	long catId = g_categories->getIdFromPath(decodedPath, decodedPathLen);
 
+	// if /Top print the directory homepage
+	if ( catId == 1 ) {
+		SafeBuf sb;
+		// this is in PageRoot.cpp
+		printDirHomePage(sb,r);
+		return g_httpServer.sendDynamicPage ( s,
+						      (char*) sb.getBufStart(),
+						      sb.length(),
+						      // 120 seconds cachetime
+						      // don't cache anymore 
+						      // since
+						      // we have the login bar
+						      // @ the top of the page
+						      0,//120, // cachetime
+						      false,// post?
+						      "text/html",
+						      200,
+						      NULL, // cookie
+						      "UTF-8",
+						      r);
+	}
+
 	// . make a new request for PageResults
 	//Url dirUrl;
 	char requestBuf[1024+MAX_COLL_LEN+128];
 	long requestBufSize = 1024+MAX_COLL_LEN+128;
 	//g_categories.createDirectorySearchUrl ( &dirUrl,
+	log("dmoz: creating search request");
 	long requestBufLen = g_categories->createDirSearchRequest(
 						 requestBuf,
 						 requestBufSize,

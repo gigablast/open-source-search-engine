@@ -212,6 +212,15 @@ long Categories::loadCategories ( char *filename ) {
 	long long start = gettimeofdayInMilliseconds();
 	// sort the category hash by hash value
 	gbsort(m_catHash, m_numCats, sizeof(CategoryHash), sortCatHash);
+
+	// sanity check - no dups allowed
+	unsigned long last = 0xffffffff;
+	for ( long i = 0 ; i < m_numCats ; i++ ) {
+		if ( m_catHash[i].m_hash == last ) 
+			log("dmoz: hash collision on %lu",last);
+		last = m_catHash[i].m_hash;
+	}
+
 	// time it
 	long long took = gettimeofdayInMilliseconds();
 	if ( took - start > 100 ) log(LOG_INIT,"admin: Took %lli ms to "
@@ -330,6 +339,8 @@ long Categories::getIndexFromPath ( char *str, long strLen ) {
 		return 0;
 	// get the hash
 	unsigned long hash = hash32Lower_a(str, strLen, 0);
+	// debug
+	log("dmoz: looking up hash %lu",hash);
 	// binary search
 	while (low <= high) {
 		// next check spot
@@ -514,7 +525,10 @@ void Categories::printPathFromIndex ( SafeBuf *sb ,
 	// . the new dmoz data dumps signify a parentless topic by
 	//   havings its parentid equal its catid, so avoid infinite
 	//   loops by checking for that here now. mdw oct 2013.
-	if (parentId > 1 && parentId != catid ) {
+	// . the new DMOZ has Top has catid 2 now, even though it is
+	//   mistakenly labelled as Top/World, which is really catid 3.
+	//   so make this parentId > 2...
+	if (parentId > 2 && parentId != catid ) {
 		bool isParentRTL = isIdRTLStart(parentId);
 		// print spacing here if RTL
 		//if (isRTL && !raw)
@@ -574,8 +588,10 @@ void Categories::printPathCrumbFromIndex ( SafeBuf *sb,
 	// get the parent
 	parentId = m_cats[catIndex].m_parentid;
 	long catid = m_cats[catIndex].m_catid;
-	// print the parent(s) first
-	if (parentId > 1 && parentId != catid ) {
+	// . print the parent(s) first
+	// . the new dmoz has Top has parentid 2 now, and Top/World is
+	//   catid 3. so make this parentId > 2 not parentId > 1
+	if (parentId > 2 && parentId != catid ) {
 		bool isParentRTL = isIdRTLStart(parentId);
 		printPathCrumbFromId(sb, parentId, isRTL);
 		// print a spacing
@@ -1195,8 +1211,13 @@ nextTag:
 	// . fill the next sub category
 	// . fill the prefix and name in the buffer and subcat
 	need = sizeof(SubCategory) + prefixLen + 1 + nameLen + 1;
+
+	// reserve space in safebuf for it
 	if ( ! subCatBuf->reserve(need) ) goto errEnd;
+
+	// point to it in safebuf
 	cat = (SubCategory *)(subCatBuf->getBuf());
+
 	cat->m_prefixLen = prefixLen;
 	cat->m_nameLen = nameLen;
 	cat->m_type = currType;
@@ -1207,6 +1228,9 @@ nextTag:
 	memcpy ( p , catStr + nameStart , nameLen );
 	p += nameLen;
 	*p++ = '\0';
+
+	// update safebuf length
+	subCatBuf->incrementLength ( cat->getRecSize() );
 
 	/*
 	subCats[numSubCats].m_prefixOffset = catp;
@@ -1278,8 +1302,13 @@ long Categories::createDirSearchRequest ( char *requestBuf,
 	char *rrr = r->m_reqBuf.getBufStart();
 	if ( rrr && rrr[0] == 'Z' ) cmd = "ZET";
 	// request
-	p += sprintf(p, "%s /search?dir=%li&dr=0&sc=0&sdir=%li&sdirt=0&c=",
-			cmd, catid, catid);
+	//p += sprintf(p, "%s /search?dir=%li&dr=0&sc=0&sdir=%li&sdirt=0&c=",
+	//		cmd, catid, catid);
+	p += sprintf(p, 
+		     "%s /search?q=gbcatid%%3A%li&dir=%li&dr=0&sc=0&c="
+		     , cmd
+		     , catid
+		     , catid);
 	// coll
 	memcpy(p, coll, collLen);
 	p += collLen;

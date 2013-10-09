@@ -212,11 +212,15 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	long rawFormat = hr->getLong("xml", 0); // was "raw"
 	long xml = hr->getLong("xml",0);
 
+	// get the dmoz catid if given
+	long catid = hr->getLong("dir",-1);
+
 	//
 	// send back page frame with the ajax call to get the real
-	// search results
+	// search results. do not do this if a "&dir=" (dmoz category)
+	// is given
 	//
-	if ( hr->getLong("id",0) == 0 && ! xml ) {
+	if ( hr->getLong("id",0) == 0 && ! xml && catid == -1 ) {
 		SafeBuf sb;
 		sb.safePrintf(
 			      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML "
@@ -830,14 +834,16 @@ bool gotResults ( void *state ) {
 		if ( ! xml ) {
 			sb.safePrintf("\n<font size=4><b>");
 			if ( rtl ) sb.safePrintf("<span dir=ltr>");
-			sb.safePrintf("<a href=\"/\">Top</a>: ");
+			sb.safePrintf("<a href=\"/Top\">Top</a>: ");
 		}
 		// put crumbin xml?
 		if ( xml ) 
 			sb.safePrintf("<breacdcrumb><![CDATA[");
 		// display the breadcrumb in xml or html?
 		g_categories->printPathCrumbFromIndex(&sb,dirIndex,rtl);
-		sb.safePrintf("]]></breadcrumb>\n" );
+
+		if ( xml )
+			sb.safePrintf("]]></breadcrumb>\n" );
 
 		// print the num
 		if ( ! xml ) {
@@ -4192,7 +4198,8 @@ bool printDMOZSubTopics ( SafeBuf&  sb, long catId, State0 *st, bool inXml ) {
 		prefixp = cat->getPrefix();//&catBuffer[subCats[i].m_prefixOffset];
 		prefixLen = cat->m_prefixLen;//subCats[i].m_prefixLen;
 		// skip bad categories
-		currIndex = g_categories->getIndexFromPath(catName, catNameLen);
+		//currIndex=g_categories->getIndexFromPath(catName,catNameLen);
+		currIndex=g_categories->getIndexFromPath(prefixp,prefixLen);
 		if (currIndex < 0)
 			continue;
 		// skip top adult category if we're supposed to

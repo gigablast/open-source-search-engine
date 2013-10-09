@@ -209,12 +209,15 @@ long rdfParse ( char *tagName ) {
 
 // move to the next tag in the file
 long rdfNextTag ( ) {
-	bool inQuote = false;
+	//bool inQuote = false;
 	// move to the next tag
-	while (*rdfPtr != '<' || inQuote ) {
+	while (*rdfPtr != '<' ) { // || inQuote ) {
 		// check for quotes
-		if (*rdfPtr == '"')
-			inQuote = !inQuote;
+		// NO! too many unbalanced quotes all over the place!
+		// and i think quotes in tags do not have < or > in them
+		// because they should be encoded as &gt; and &lt;
+		//if (*rdfPtr == '"')
+		//	inQuote = !inQuote;
 		// next char
 		if (!incRdfPtr())
 			return -1;
@@ -560,8 +563,12 @@ long printCatPath ( char *str, long catid, bool raw ) {
 		return 0;
 	// get the parent
 	parentId = rdfCats[catIndex].m_parentid;
-	// print the parent(s) first
-	if (parentId > 1 && 
+	// . print the parent(s) first
+	// . in NEWER DMOZ dumps, "Top" is catid 2 and catid 1 is an
+	//   empty title. really catid 2 is Top/World but that is an
+	//   error that we correct below. (see "Top/World" below).
+	//   but do not include the "Top/" as part of the path name
+	if (parentId > 2 && 
 	    // the newer dmoz files have the catid == the parent id of
 	    // i guess top most categories, like "Top/Arts"... i would think
 	    // it should have a parentId of 1 like the old dmoz files,
@@ -907,12 +914,29 @@ int main ( int argc, char *argv[] ) {
 				       nameLen ,
 				       false,
 				       0);
-		memcpy(&nameBuffer[nameOffset], htmlDecoded, nameLen);
-		nameBufferLen  += nameLen;
+
 		// parse the catid
 		long catid = parseNextCatid();
 		if (catid == -1)
 			goto fileEnd;
+
+		// crap, in the new dmoz structure.rdf.u8 catid 1 is 
+		// empty name and catid 2 has Topic tag "Top/World" but 
+		// Title tag "Top".
+		// but it should probably be "Top" and not "World". There is 
+		// another catid 3 in structure.rdf.u8 that has 
+		// <Topic r:id="Top/World"> and catid 3 which is the real one,
+		// so catid 2 is just "Top". this is a bug in the dmoz output 
+		// i think, so fix it here.
+		if ( catid == 2 ) {
+			nameLen = 3;
+			memcpy(&nameBuffer[nameOffset],"Top",nameLen); 
+			nameBufferLen += nameLen;
+		}
+		else {
+			memcpy(&nameBuffer[nameOffset], htmlDecoded, nameLen);
+			nameBufferLen  += nameLen;
+		}
 		// . fill the current cat
 		//   make sure there's room
 		if (numRdfCats >= rdfCatsSize) {
@@ -1002,10 +1026,16 @@ fileEnd:
 	rdfEnd = &rdfBuffer[n];
 	currOffset = 0;
 
+	//
+	// set m_parentid using structure.rdf.u8
+	//
+
 	// read and parse the file again
 	printf("Building Hierarchy...\n");
 	while (true) {
-		// parse the next catid
+		// parse the next catid in the file, sequentially
+		//if ( currOffset == 545468935 )
+		//	printf("shit\n");
 		long catid = parseNextCatid();
 		if (catid == -1)
 			goto fileEnd1;
@@ -1060,6 +1090,14 @@ nextChildTag:
 					    false,
 					    0);
 		memcpy(childName, htmlDecoded, childNameLen);
+
+		// debug log
+		//if ( currOffset >= 506362430 ) // 556362463
+		//	printf("off=%li\n",currOffset);
+		// debug point
+		//if ( currOffset == 545467573 )
+		//	printf("GOT DEBUG POINT before giant skip\n");
+
 		// cut off the leading label if symbolic
 //		if (parentType == 2) {
 //			while (*childName != ':') {
@@ -1069,20 +1107,27 @@ nextChildTag:
 //			childName++;
 //			childNameLen--;
 //		}
+		// debug point
+		//if (strcmp(childName,"Top/World/Català/Arts") == 0 )
+		//	printf("hey\n");
 		// get the catid for the child
 		long childid = getCatHash(childName, childNameLen);
 		// get the cat for this id
 		long cat = getIndexFromId(childid);
 		// make sure we have a match
 		if (cat == -1) {
-			//printf("Warning: Child Topic Not Found: ");
-			//for (long i = 0; i < childNameLen; i++)
-			//	printf("%c", childName[i]);
-			//printf("\n");
+			// debug. why does Top/World/Catala/Arts
+			// not have a parent??
+			printf("Warning: Child Topic Not Found: ");
+			for (long i = 0; i < childNameLen; i++)
+				printf("%c", childName[i]);
+			printf("\n");
 			m++;
 			goto nextChildTag;
 		}
-		// assign the parent to the cat
+		// . assign the parent to the cat
+		// . this means we are in a "child" tag within the "catid"
+		// . catid 84192 
 		if (parentType == 1) {
 			if (rdfCats[cat].m_parentid != 0)
 				printf("Warning: Overwriting Parent Id!\n");
@@ -1114,6 +1159,14 @@ fileEnd1:
 	printf("  Total Topics:                  %li\n", numRdfCats);
 	printf("  Topics with Parents:           %li\n", t);
 	printf("  Topics Linked but Nonexistent: %li\n", m);
+
+	if ( t != numRdfCats ) {
+		printf("\n"
+		       "  *Topics without parents is bad because they\n"
+		       "   can not have their entired rawPath printed out\n"
+		       "   in order to get their proper hash\n");
+	}
+
 	//printf("  Number of Symbolic Links:      %li\n", numSymParents);
 	printf("\n");
 
@@ -1148,6 +1201,22 @@ fileEnd1:
 		// get the hash of the path
 		rawPathLen = printCatPath(rawPath, rdfCats[i].m_catid, true);
 		rdfCats[i].m_catHash = hash32Lower_a(rawPath, rawPathLen, 0);
+		// fix. so that xyz/Arts does not just hash "Arts"
+		// because it has no parent...
+		if ( rdfCats[i].m_parentid == 0 ) {
+			printf("Missing parent for catid %li. Will be "
+			       "excluded from DMOZ so we avoid hash "
+			       "collisions.\n",rdfCats[i].m_catid);
+		}
+		//
+		// DEBUG!
+		// print this shit out to find the collisions
+		//
+		//printf("hash32=%lu catid=%li parentid=%li path=%s\n",
+		//       rdfCats[i].m_catHash,
+		//       rdfCats[i].m_catid,
+		//       rdfCats[i].m_parentid,
+		//       rawPath);
 	}
 
 	// . now we want to serialize the needed data into

@@ -21983,7 +21983,7 @@ bool XmlDoc::hashDMOZCategories ( HashTableX *tt ) {
 		// write the catid as a string
 		sprintf(buf, "%lu", catIds[i]);
 		// term prefix for hashing
-		hi.m_prefix = "gbdcat";
+		hi.m_prefix = "gbcatid";
 		// hash it
 		hashString ( buf , gbstrlen(buf) , &hi );
 		// we also want to hash the parents
@@ -21994,7 +21994,7 @@ bool XmlDoc::hashDMOZCategories ( HashTableX *tt ) {
 		while ( currCatId > 1 ) {
 			// hash the parent
 			sprintf(buf, "%lu", currParentId);
-			hi.m_prefix = "gbpdcat";
+			hi.m_prefix = "gbpcatid";
 			hashString ( buf , gbstrlen(buf), &hi );
 			// next cat
 			currCatId = currParentId;
@@ -22037,7 +22037,7 @@ bool XmlDoc::hashDMOZCategories ( HashTableX *tt ) {
 		// write the catid as a string
 		sprintf(buf, "%lu", indCatIds[i]);
 		// use prefix
-		hi.m_prefix = "gbicat";
+		hi.m_prefix = "gbicatid";
 		hi.m_hashGroup = HASHGROUP_INTAG;
 		// hash it
 		hashString ( buf , gbstrlen(buf), &hi );
@@ -22051,7 +22051,7 @@ bool XmlDoc::hashDMOZCategories ( HashTableX *tt ) {
 			// hash the parent
 			sprintf(buf, "%lu", currParentId);
 			// new prefix
-			hi.m_prefix = "gbpicat";
+			hi.m_prefix = "gbipcatid";
 			// hash it
 			hashString ( buf , gbstrlen(buf), &hi );
 			// next cat

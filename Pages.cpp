@@ -379,7 +379,10 @@ long Pages::getDynamicPageNumber ( HttpRequest *r ) {
 	}
 	// sanity
 	if ( ! g_categories ) log("process: no categories loaded");
-	// look it up for a category
+
+	//
+	// dmoz - look it up for a category
+	//
 	if ( g_categories &&
 	     g_categories->getIndexFromPath(decodedPath, decodedPathLen) >= 0)
 		return PAGE_DIRECTORY;
@@ -482,7 +485,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//   often times my cookie says username=mwells but i am not logged
 	//   in and i don't want to type my password to see the root page,
 	//   or any other public page
-	if ( ! publicPage && ! g_users.hasPermission( r, page , s ) &&
+	if ( ! publicPage &&!isLocal&&//g_users.hasPermission( r, page , s ) &&
 	     ! isLoopback ) {
 		log("login: access denied 2 from ip=%s",iptoa(s->m_ip));
 		return sendPageLogin ( s , r, "Access Denied. No permission.");
@@ -614,7 +617,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . now, so it can be responsible for calling pg->m_function
 	//if ( userType > USER_PUBLIC ) {
 	// check if user has public page access 
-	if ( g_users.hasPermission( r, page , s ) ) {
+	if ( isLocal ) { // g_users.hasPermission( r, page , s ) ) {
 		// . this will set various parms
 		// . we know the request came from a host in the cluster
 		//   because "isHost" is true.

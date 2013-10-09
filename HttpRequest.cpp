@@ -23,6 +23,7 @@ void HttpRequest::reset() {
 	m_userIP = 0;
 	m_isMSIE = false;
 	m_reqBufValid = false;
+	m_reqBuf.purge();
 
 	if (m_cgiBuf2) {
 		mfree(m_cgiBuf2, m_cgiBuf2Size, "extraParms");
