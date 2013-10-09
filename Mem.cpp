@@ -323,7 +323,7 @@ void * operator new [] (size_t size) throw (std::bad_alloc) {
 	if ( g_mem.m_used + size >= g_mem.m_maxMem &&
 	     g_mem.m_maxMem > 1000000 ) {
 		log("mem: new(%i): Out of memory.", size );
-		throw bad_alloc();
+		throw std::bad_alloc();
 		//throw 1;
 	}
 #ifdef _EFENCE_
