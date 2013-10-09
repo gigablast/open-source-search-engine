@@ -576,7 +576,7 @@ bool RdbDump::dumpList ( RdbList *list , long niceness , bool recall ) {
 	//m_bytesWritten = 0;
 
 	// sanity check
-	log("dump: writing %li bytes at offset %lli",m_bytesToWrite,offset);
+	//log("dump: writing %li bytes at offset %lli",m_bytesToWrite,offset);
 
 	// . if we're called by RdbMerge directly use m_callback/m_state
 	// . otherwise, use doneWritingWrapper() which will call dumpTree()
