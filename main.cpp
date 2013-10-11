@@ -122,6 +122,7 @@
 #include "Placedb.h"
 #include "Test.h"
 #include "seo.h"
+#include "Json.h"
 //#include "Facebook.h"
 //#include "Accessdb.h"
 
@@ -3180,6 +3181,9 @@ int main ( int argc , char *argv[] ) {
 		g_conf.m_spideringEnabled = false;
 		g_conf.m_save = true;
 	}
+
+	Json json;
+	json.test();
 
 	// . start the spiderloop
 	// . comment out when testing SpiderCache

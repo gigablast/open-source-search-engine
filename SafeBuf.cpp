@@ -2514,7 +2514,8 @@ bool SafeBuf::safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness) {
 	char *src = json;//m_buf;
 	char *srcEnd = json + jsonLen;
 
-	char *dst = m_buf;
+	char *dst = m_buf + m_length;
+
 	for ( ; src < srcEnd ; ) {
 		QUICKPOLL(niceness);
 		if ( *src == '\\' ) {

@@ -56,16 +56,16 @@ class Json {
 
 	void test();
 
-	JsonItem *parseJsonStringIntoJsonItems ( SafeBuf *sb , char *json );
+	JsonItem *parseJsonStringIntoJsonItems ( char *json );
 
 	JsonItem *addNewItem ();
 
-	Json() { m_stackPtr = 0; m_ji = NULL; };
+	Json() { m_stackPtr = 0; };
 	
 	SafeBuf m_sb;
-	JsonItem *m_ji;
 	JsonItem *m_stack[MAXJSONPARENTS];
 	long m_stackPtr;
+	class JsonItem *m_prev;
 };
 
 #endif

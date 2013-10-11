@@ -9,41 +9,45 @@ class JsonItem *Json::addNewItem () {
 	//}
 
 
-	JsonItem *prev = m_ji;
-
-	m_ji = (JsonItem *)m_sb.getBuf();
+	JsonItem *ji = (JsonItem *)m_sb.getBuf();
 	m_sb.incrementLength(sizeof(JsonItem));
 
-	prev->m_next = m_ji;
-	m_ji->m_prev = prev;
+	if ( m_prev ) m_prev->m_next = ji;
+	ji->m_prev = m_prev;
+
+	// we are the new prev now
+	m_prev = ji;
 
 	// value null for now
-	m_ji->m_type = JT_NULL;
+	ji->m_type = JT_NULL;
 	// parent on stack
 	JsonItem *parent = NULL;
 	if ( m_stackPtr > 0 ) parent = m_stack[m_stackPtr-1];
 
-	m_ji->m_parent = parent;
+	ji->m_parent = parent;
 	
-	// if our parent was an array, we are an element in that array
-	if ( parent && parent->m_type == JT_ARRAY ) {
+	// . if our parent was an array, we are an element in that array
+	// . if it is an array of objects, then the name will be overwritten
+	if ( parent ) { // && parent->m_type == JT_ARRAY ) {
 		// inherit object name from parent
-		m_ji->m_name    = parent->m_name;
-		m_ji->m_nameLen = parent->m_nameLen;
+		ji->m_name    = parent->m_name;
+		ji->m_nameLen = parent->m_nameLen;
 	}
 
-	return m_ji;
+	return ji;
 }
 
 
-JsonItem *Json::parseJsonStringIntoJsonItems ( SafeBuf *sb , char *json ) {
+JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 
 	m_stackPtr = 0;
-	m_ji = NULL;
+	m_sb.purge();
+
+	JsonItem *ji = NULL;
 
 	// how much space will we need to avoid any reallocs?
 	char *p = json;
-	bool inQuote;
+	bool inQuote = false;
 	long need = 0;
 	for ( ; *p ; p++ ) {
 		if ( *p == '\"' && (p==json || p[-1]!='\\') )
@@ -60,16 +64,18 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( SafeBuf *sb , char *json ) {
 	// plus a \0
 	need++;
 	// this should be enough
-	if ( ! sb->reserve ( need ) ) return NULL;
+	if ( ! m_sb.reserve ( need ) ) return NULL;
 	// for testing if we realloc
-	char *mem = sb->getBufStart();
+	char *mem = m_sb.getBufStart();
 
-	// first is field
-	//char *field = NULL;
-	//long  fieldLen = 0;
 	long  size;
-	// ptr to current json item
-	m_ji = NULL;
+
+	char *NAME = NULL;
+	long  NAMELEN = 0;
+
+	// reset p
+	p = json;
+
 	// scan
 	for ( ; *p ; p += size ) {
 		// get size
@@ -78,26 +84,59 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( SafeBuf *sb , char *json ) {
 		// did we hit a '{'? that means the existing json item
 		// is a parent of the item(s) inside the {}'s
 		if ( *p == '{' ) {
-			// push the current ji on the stack
-			if ( m_ji ) m_stack[m_stackPtr++] = m_ji;
+			// if ji is non-null it must be a name like in
+			// \"stats\":{\"fetchTime\":2069,....}
 			// . this indicates the start of a json object
 			// . addNewItem() will push the current item on stack
-			m_ji = addNewItem();
-			if ( ! m_ji ) return NULL;
+			ji = addNewItem();
+			if ( ! ji ) return NULL;
 			// current ji is an object type then
-			m_ji->m_type = JT_OBJECT;
+			ji->m_type = JT_OBJECT;
+			// set the name
+			ji->m_name    = NAME;
+			ji->m_nameLen = NAMELEN;
+			// this goes on the stack
+			m_stack[m_stackPtr++] = ji;
+			// and null this
+			ji = NULL;
+			continue;
 		}
 		// pop the stack?
 		if ( *p == '}' ) {
-			// sanity
-			if ( m_stackPtr <= 0 ) m_ji = NULL;
-			// get it back
-			else m_ji = m_stack[--m_stackPtr];
+			// just pop it and restore name cursor
+			if ( m_stackPtr > 0 ) {
+				JsonItem *px = m_stack[m_stackPtr-1];
+				NAME    = px->m_name;
+				NAMELEN = px->m_nameLen;
+				m_stackPtr--;
+			}
+			continue;
 		}
 		// array of things?
 		if ( *p == '[' ) {
-			// our parrent is array type then
-			m_ji->m_type = JT_ARRAY;
+			// make a newitem to put on stack
+			ji = addNewItem();
+			if ( ! ji ) return NULL;
+			// current ji is an object type then
+			ji->m_type = JT_ARRAY;
+			// set the name
+			ji->m_name    = NAME;
+			ji->m_nameLen = NAMELEN;
+			// this goes on the stack
+			m_stack[m_stackPtr++] = ji;
+			ji = NULL;
+			continue;
+		}
+		// pop the stack?
+		if ( *p == ']' ) {
+			// just pop it and restore name cursor
+			if ( m_stackPtr > 0 ) {
+				JsonItem *px = m_stack[m_stackPtr-1];
+				NAME    = px->m_name;
+				NAMELEN = px->m_nameLen;
+				m_stackPtr--;
+			}
+			continue;
 		}
 
 		// a quote?
@@ -105,7 +144,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( SafeBuf *sb , char *json ) {
 			// find end of quote
 			char *end = p + 1;
 			for ( ; *end ; end++ ) 
-				if ( *end == '\"' && end[-1] != '\"' ) break;
+				if ( *end == '\"' && end[-1] != '\\' ) break;
 			// field?
 			char *x = end + 1;
 			// skip spaces
@@ -115,67 +154,74 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( SafeBuf *sb , char *json ) {
 			long  slen = end - str;
 			// . if a colon follows, it was a field
 			if ( *x == ':' ) {
-				// this will put the current item on the
-				// stack if it is non-NULL
-				m_ji = addNewItem();
-				if ( ! m_ji ) return NULL;
-				// set the item name referencing the orig json
-				m_ji->m_name    = str;
-				m_ji->m_nameLen = slen;
+				// just set the name cursor
+				NAME    = str;
+				NAMELEN = slen;
 			}
 			// . otherwise, it was field value, so index it
 			// . TODO: later make field names compounded to
 			//   better represent nesting?
 			else {
-				// if the current item is an array, make
-				// one item for each string in array
-				if ( m_ji->m_type == JT_ARRAY ) {
-					// make a new one in safebuf
-					m_ji = addNewItem();
-				}
+				// make a new one in safebuf. our
+				// parent will be the array type item.
+				ji = addNewItem();
 				// we are a string
-				m_ji->m_type = JT_STRING;
+				ji->m_type = JT_STRING;
+				// use name cursor
+				ji->m_name    = NAME;
+				ji->m_nameLen = NAMELEN;
 				// get length decoded
-				long curr = sb->length();
+				long curr = m_sb.length();
 				// store decoded string right after jsonitem
-				if ( ! sb->safeDecodeJSONToUtf8 ( str, slen,0))
+				if ( !m_sb.safeDecodeJSONToUtf8 ( str, slen,0))
 					return NULL;
 				// store length decoded json
-				m_ji->m_valueLen = sb->length() - curr;
+				ji->m_valueLen = m_sb.length() - curr;
+				// ok, this one is done
+				ji = NULL;
 			}
 			// skip over the string
-			size = 1;
+			size = 0;
 			p    = x;
 			continue;
 		}
 		// if we hit a digit they might not be in quotes like
 		// "crawled":123
-		if ( is_digit ( *p ) ) {
+		if ( is_digit ( *p ) ||
+		     // like .123 ?
+		     ( *p == '.' && is_digit(p[1]) ) ) {
 			// find end of the number
 			char *end = p + 1;
-			for ( ; *end && is_digit(*p) ; end++ ) ;
+			for ( ; *end && is_digit(*end) ; end++ ) ;
 			// define the string
-			char *str  = p + 1;
-			long  slen = end - str;
+			char *str  = p;
+			// make a new one
+			ji = addNewItem();
+			if ( ! ji ) return NULL;
+			//long  slen = end - str;
 			// decode
-			char c = str[slen];
-			str[slen] = '\0';
-			m_ji->m_valueLong = atol(str);
-			m_ji->m_valueDouble = atof(str);
-			str[slen] = c;
-			m_ji->m_type = JT_NUMBER;
+			//char c = str[slen];
+			//str[slen] = '\0';
+			ji->m_valueLong = atol(str);
+			ji->m_valueDouble = atof(str);
+			//str[slen] = c;
+			ji->m_type = JT_NUMBER;
+			// use name cursor
+			ji->m_name    = NAME;
+			ji->m_nameLen = NAMELEN;
+			ji = NULL;
 			// skip over the string
-			size = 1;
+			size = 0;
 			p    = end;
 			continue;
 		}
 	}
 
 	// for testing if we realloc
-	char *memEnd = sb->getBufStart();
+	char *memEnd = m_sb.getBufStart();
 	if ( mem != memEnd ) { char *xx=NULL;*xx=0; }
 
-	return (JsonItem *)sb->getBufStart();
+	return (JsonItem *)m_sb.getBufStart();
 }
 
 	
@@ -192,8 +238,7 @@ void Json::test ( ) {
 		"in 2010\",\"18083009\":\"Apple personal digital assistants\",\"23475157\":\"Touchscreen portable media players\",\"30107877\":\"IPad\",\"9301031\":\"Apple Inc. hardware\",\"27765345\":\"IOS (Apple)\",\"26588084\":\"Tablet computers\"},\"type\":1,\"senseRank\":1,\"variety\":0.49056603773584906,\"depth\":0.5882352941176471},{\"id\":18839,\"positions\":[[1945,1950],[2204,2209]],\"name\":\"Music\",\"score\":0.7,\"contentMatch\":1,\"categories\":{\"991222\":\"Performing arts\",\"693016\":\"Entertainment\",\"691484\":\"Music\"},\"type\":1,\"senseRank\":1,\"variety\":0.22264150943396221,\"depth\":0.7058823529411764}],\"media\":[{\"pixelHeight\":350,\"link\":\"http://www.onlinemba.com/wp-content/uploads/2013/02/apple-innovates-invert-350x350.png\",\"primary\":\"true\",\"pixelWidth\":350,\"type\":\"image\"}]}";
 
 
-	SafeBuf sb;
-	JsonItem *ji = parseJsonStringIntoJsonItems ( &sb , json );
+	JsonItem *ji = parseJsonStringIntoJsonItems ( json );
 
 	// print them out?
 	log("json: type0=%li",(long)ji->m_type);
