@@ -2493,26 +2493,29 @@ bool SafeBuf::decodeJSON ( long niceness ) {
 	return true;
 }
 
-bool SafeBuf::decodeJSONToUtf8 ( long niceness ) {
+// . this should support the case when the src and dst buffers are the same!
+//   so decodeJSONToUtf8() function below will work
+bool SafeBuf::safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness) {
 
-	//char *x = strstr(m_buf,"Chief European");
-	//if ( x )
-	//	log("hey");
+	// how much space to reserve for the copy?
+	long need = jsonLen;
 
 	// count how many \u's we got
-	long need = 0;
-	char *p = m_buf;
-	for ( ; *p ; p++ ) 
+	char *p = json;//m_buf;
+	char *pend = json + jsonLen;
+	for ( ; p < pend ; p++ ) 
 		// for the 'x' and the ';'
 		if ( *p == '\\' && p[1] == 'u' ) need += 2;
 
 	// reserve a little extra if we need it
-	SafeBuf dbuf;
-	dbuf.reserve ( need + m_length + 1);
+	//SafeBuf dbuf;
+	if ( ! reserve ( need + 1) ) return false;
 
-	char *src = m_buf;
-	char *dst = dbuf.m_buf;
-	for ( ; *src ; ) {
+	char *src = json;//m_buf;
+	char *srcEnd = json + jsonLen;
+
+	char *dst = m_buf;
+	for ( ; src < srcEnd ; ) {
 		QUICKPOLL(niceness);
 		if ( *src == '\\' ) {
 			// \n? (from json.org homepage)
@@ -2591,22 +2594,28 @@ bool SafeBuf::decodeJSONToUtf8 ( long niceness ) {
 		*dst++ = *src++;
 	}
 	*dst = '\0';
-	dbuf.m_length = dst - dbuf.m_buf;
-
-	// purge ourselves
-	purge();
-
-	// and steal dbuf's m_buf
-	m_buf        = dbuf.m_buf;
-	m_length     = dbuf.m_length;
-	m_capacity   = dbuf.m_capacity;
-	m_usingStack = dbuf.m_usingStack;
-
-	// detach from dbuf so he does not free it
-	dbuf.detachBuf();
+	// update our length
+	m_length = dst - m_buf;
 
 	return true;
 }
+
+
+
+
+bool SafeBuf::decodeJSONToUtf8 ( long niceness ) {
+
+	//char *x = strstr(m_buf,"Chief European");
+	//if ( x )
+	//	log("hey");
+
+	long saved = m_length;
+	// reset for calling the function below
+	m_length = 0;
+
+	return safeDecodeJSONToUtf8 ( m_buf , saved , niceness );
+}
+
 
 // . REALLY just a print vanity function. makes json output prettier
 //
@@ -2674,7 +2683,6 @@ bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
 
 	return true;
 }
-
 
 bool SafeBuf::safeUtf8ToJSON ( char *utf8 ) {
 	// how much space do we need?

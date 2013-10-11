@@ -57,6 +57,9 @@ struct SafeBuf {
 	bool truncateLongWords ( char *src, long srcLen , long minmax );
 	bool safeTruncateEllipsis ( char *src , long maxLen );
 	bool convertJSONtoXML ( long niceness , long startConvertPos );
+
+	bool safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness);
+
 	bool decodeJSONToUtf8 ( long niceness );
 	bool decodeJSON ( long niceness );
 	bool linkify ( long niceness , long startPos );
@@ -104,6 +107,12 @@ struct SafeBuf {
 	bool  advance ( long i ) ;
 	bool  reserve(long i, char *label=NULL);
 	bool  reserve2x(long i);
+
+	char *makeSpace ( long size ) {
+		if ( ! reserve ( size ) ) return NULL;
+		return m_buf + m_length;
+	};
+
 	bool  inlineStyleTags();
 	void  incrementLength(long i) { 
 		m_length += i; 

@@ -8486,6 +8486,11 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		char *s = p;
 		// skip s to after
 		while ( *s && is_alpha_a(*s) ) s++;
+
+		// skip white space before the operator
+		char *saved = s;
+		while ( *s && is_wspace_a(*s) ) s++;
+
 		char sign = 0;
 		if ( *s == '=' ) {
 			s++;
@@ -8507,7 +8512,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			else               sign = SIGN_GT; 
 		} 
 
-		// skip spaces after the operator
+		// skip whitespace after the operator
 		while ( *s && is_wspace_a(*s) ) s++;
 
 		// tld:cn 

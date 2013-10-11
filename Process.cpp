@@ -1253,7 +1253,10 @@ bool Process::shutdown2 ( ) {
 	// if they are in the middle of being added they will be
 	// saved by spider restore
 	// wait for all spiders to clear
-	g_conf.m_spideringEnabled = false;
+
+	// don't shut the crawler down on a core
+	//g_conf.m_spideringEnabled = false;
+
 	//g_conf.m_injectionEnabled = false;
 
 	// . suspend all merges

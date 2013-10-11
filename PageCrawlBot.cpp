@@ -3589,3 +3589,25 @@ bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) {
 	return true;
 }
 */
+
+
+// json can be provided via get or post but content type must be
+// url-encoded so we can test with a simple html form page.
+bool setSpiderParmsFromJSONPost ( TcpSocket *socket , HttpRequest *hr ) {
+
+	// get the json
+	char *json = hr->getString("json");
+	if ( ! json ) 
+		return sendReply2 ( socket, 
+				    FMT_JSON,
+				    "No &json= provided in request.");
+
+
+
+
+
+	// traverse the json
+	char *p = json;
+
+
+}

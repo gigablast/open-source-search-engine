@@ -12725,7 +12725,10 @@ void Parms::init ( ) {
 		"be respidered. "
 
 		"See the help table below for examples of all the supported "
-		"expressions.<br><br>";
+		"expressions. "
+		"Use the <i>&&</i> operator to string multiple expressions "
+		"together in the same text box. "
+		"<br><br>";
 		
 		/*
 		"A URL is respidered according to the "
