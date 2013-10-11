@@ -115,7 +115,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; <a href=/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"http://www.gigablast.com/?c=dmoz\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
+	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; <a href=/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"/Top\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
 	sb.safePrintf("<a href=/addurl title=\"Instantly add your url to "
@@ -325,7 +325,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"http://www.gigablast.com/?c=dmoz\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
+	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"/Top\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
 	sb.safePrintf("<b title=\"Instantly add your url to Gigablast's "
@@ -570,10 +570,10 @@ bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 	*/
 
 
-	if ( ! strcmp(coll,"dmoz" ) )
-		printDirHomePage(sb,r);
-	else
-		printWebHomePage(sb,r);
+	//if ( ! strcmp(coll,"dmoz" ) )
+	//	printDirHomePage(sb,r);
+	//else
+	printWebHomePage(sb,r);
 
 
 	// . print last 5 queries
