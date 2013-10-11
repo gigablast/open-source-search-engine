@@ -995,7 +995,7 @@ nextTag:
 	sb->safeMemcpy ( title , titleLen );
 	sb->safePrintf("</a><br>");
 	sb->safeMemcpy( summ, summLen );
-	sb->safePrintf("<br>");
+	sb->safePrintf("<br><br>");
 
 
 	/*

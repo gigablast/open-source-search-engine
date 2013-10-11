@@ -3,6 +3,7 @@
 #include "CollectionRec.h"
 #include "Pages.h"
 #include "Categories.h"
+#include "PageResults.h" // printDMOZSubtopics()
 
 // function is in PageRoot.cpp:
 bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) ;
@@ -42,27 +43,47 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 	// look it up
 	long catId = g_categories->getIdFromPath(decodedPath, decodedPathLen);
 
+	SafeBuf sb;
+
+	long xml = r->getLong("xml",0);
+
 	// if /Top print the directory homepage
 	if ( catId == 1 ) {
-		SafeBuf sb;
 		// this is in PageRoot.cpp
 		printDirHomePage(sb,r);
-		return g_httpServer.sendDynamicPage ( s,
-						      (char*) sb.getBufStart(),
-						      sb.length(),
-						      // 120 seconds cachetime
-						      // don't cache anymore 
-						      // since
-						      // we have the login bar
-						      // @ the top of the page
-						      0,//120, // cachetime
-						      false,// post?
-						      "text/html",
-						      200,
-						      NULL, // cookie
-						      "UTF-8",
-						      r);
 	}
+
+	//
+	// try printing this shit out not as search results right now
+	// but just verbatim from dmoz files
+	//
+
+	// the dmoz breadcrumb
+	printDMOZCrumb ( sb,catId,xml);
+
+	// print the subtopcis in this topic. show as links above
+	// the search results
+	printDMOZSubTopics ( sb, catId , xml );
+	// ok, for now just print the dmoz topics since our search
+	// results will be empty... until populated!
+	g_categories->printUrlsInTopic ( &sb , catId );
+
+	return g_httpServer.sendDynamicPage ( s,
+					      (char*) sb.getBufStart(),
+					      sb.length(),
+					      // 120 seconds cachetime
+					      // don't cache anymore 
+					      // since
+					      // we have the login bar
+					      // @ the top of the page
+					      0,//120, // cachetime
+					      false,// post?
+					      "text/html",
+					      200,
+					      NULL, // cookie
+					      "UTF-8",
+					      r);
+
 
 	// . make a new request for PageResults
 	//Url dirUrl;

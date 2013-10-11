@@ -17,6 +17,9 @@ bool printEventAddress ( SafeBuf &sb , char *addrStr , class SearchInput *si ,
 			 double eventGeocoderLon,
 			 char *eventBestPlaceName );
 
+bool printDMOZCrumb ( SafeBuf &sb , long catId , bool xml ) ;
+bool printDMOZSubTopics ( SafeBuf&  sb, long catId, bool inXml ) ;
+
 bool printEventCountdown2 ( SafeBuf &sb ,
 			    SearchInput *si,
 		       long now ,

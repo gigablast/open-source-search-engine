@@ -748,8 +748,6 @@ static bool printGigabit ( State0 *st,
 	return true;
 }
 
-bool printDMOZSubTopics ( SafeBuf&  sb, long catId, State0 *st, bool inXml ) ;
-
 // . make a web page from results stored in msg40
 // . send it on TcpSocket "s" when done
 // . returns false if blocked, true otherwise
@@ -821,41 +819,7 @@ bool gotResults ( void *state ) {
 
 	// display it?
 	if (  si->m_catId >= 0 ) {
-		long dirIndex = g_categories->getIndexFromId(si->m_catId);
-		//  dirIndex = g_categories->getIndexFromId(si->m_cat_sdir);
-		if (dirIndex < 0) dirIndex = 0;
-		//   display the directory bread crumb
-		//if( (si->m_cat_dirId > 0 && si->m_isAdmin && !si->m_isFriend)
-		//     || (si->m_cat_sdir > 0 && si->m_cat_sdirt != 0) )
-		//	sb.safePrintf("<br><br>");
-		// shortcut. rtl=Right To Left language format.
-		bool rtl = g_categories->isIdRTL ( si->m_catId ) ;
-		//st->m_isRTL = rtl;
-		if ( ! xml ) {
-			sb.safePrintf("\n<font size=4><b>");
-			if ( rtl ) sb.safePrintf("<span dir=ltr>");
-			//sb.safePrintf("<a href=\"/Top\">Top</a>: ");
-		}
-		// put crumbin xml?
-		if ( xml ) 
-			sb.safePrintf("<breacdcrumb><![CDATA[");
-		// display the breadcrumb in xml or html?
-		g_categories->printPathCrumbFromIndex(&sb,dirIndex,rtl);
-
-		if ( xml )
-			sb.safePrintf("]]></breadcrumb>\n" );
-
-		// print the num
-		if ( ! xml ) {
-			sb.safePrintf("</b>&nbsp&nbsp<i>");
-			// how many urls/entries in this topic?
-			long nu =g_categories->getNumUrlsFromIndex(dirIndex);
-			if ( rtl )
-				sb.safePrintf("<span dir=ltr>(%li)</span>",nu);
-			else
-				sb.safePrintf("(%li)", nu);
-			sb.safePrintf("</i></font><br><br>\n");
-		}
+		printDMOZCrumb ( sb , si->m_catId , xml );
 	}
 
 
@@ -870,10 +834,14 @@ bool gotResults ( void *state ) {
 	// put our stars back onto that and should be sorted by them.
 	//
 	///////////
-	if ( si->m_catId >= 0 )
+	if ( si->m_catId >= 0 ) {
 		// print the subtopcis in this topic. show as links above
 		// the search results
-		printDMOZSubTopics ( sb, si->m_catId , st, xml );
+		printDMOZSubTopics ( sb, si->m_catId , xml );//st, xml );
+		// ok, for now just print the dmoz topics since our search
+		// results will be empty... until populated!
+		//g_categories->printUrlsInTopic ( &sb , si->m_catId );
+	}
 
 
 
@@ -4131,7 +4099,7 @@ bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
 // . just a list of all the topics/categories
 //
 ////////
-bool printDMOZSubTopics ( SafeBuf&  sb, long catId, State0 *st, bool inXml ) {
+bool printDMOZSubTopics ( SafeBuf&  sb, long catId, bool inXml ) {
 	long currType;
 	bool first;
 	bool nextColumn;
@@ -4144,11 +4112,13 @@ bool printDMOZSubTopics ( SafeBuf&  sb, long catId, State0 *st, bool inXml ) {
 	long catNameLen;
 	char encodedName[2048];
 
-	SearchInput *si = &st->m_si;
+	//SearchInput *si = &st->m_si;
+
+	bool isRTL = g_categories->isIdRTL ( catId );
 
 	SafeBuf subCatBuf;
 	// stores a list of SubCategories into "subCatBuf"
-	long numSubCats = g_categories->generateSubCats ( si->m_catId , &subCatBuf );
+	long numSubCats = g_categories->generateSubCats ( catId , &subCatBuf );
 
 	// . get the subcategories for a given categoriy
 	// . msg2b::gernerateDirectory() was launched in Msg40.cpp
@@ -4163,13 +4133,13 @@ bool printDMOZSubTopics ( SafeBuf&  sb, long catId, State0 *st, bool inXml ) {
 		sb.safePrintf ( "\t<directory>\n"
 				"\t\t<dirId>%li</dirId>\n"
 				"\t\t<dirName><![CDATA[",
-				si->m_catId);//si.m_cat_dirId );
+				catId);//si.m_cat_dirId );
 		g_categories->printPathFromId ( &sb, 
-						si->m_catId, // st->m_si.m_cat_dirId,
+						catId, // st->m_si.m_cat_dirId,
 						true );
 		sb.safePrintf ( "]]></dirName>\n");
 		sb.safePrintf ( "\t\t<dirIsRTL>%li</dirIsRTL>\n",
-				(long)si->m_isRTL);
+				(long)isRTL);
 	}
 
 	char *p    = subCatBuf.getBufStart();
@@ -4205,11 +4175,13 @@ bool printDMOZSubTopics ( SafeBuf&  sb, long catId, State0 *st, bool inXml ) {
 		if (currIndex < 0)
 			continue;
 		// skip top adult category if we're supposed to
+		/*
 		if ( !inXml && 
 		     st->m_si.m_catId == 1 && 
 		     si->m_familyFilter &&
 		     g_categories->isIndexAdultStart ( currIndex ) )
 			continue;
+		*/
 		// check for room
 		//if (p + subCats[i].m_prefixLen*2 +
 		//	subCats[i].m_nameLen*2 +
@@ -4338,11 +4310,11 @@ bool printDMOZSubTopics ( SafeBuf&  sb, long catId, State0 *st, bool inXml ) {
 					sb.safePrintf("<hr>");
 				else
 					sb.safePrintf("<br>");
-				if (si->m_isRTL)
+				if (isRTL)
 					sb.safePrintf("<span dir=ltr>");
 				sb.safePrintf ( "<b>Related Categories:"
 						"</b>" );
-				if (si->m_isRTL)
+				if (isRTL)
 					sb.safePrintf("</span>");
 				break;
 			case SUBCAT_ALTLANG:
@@ -4351,11 +4323,11 @@ bool printDMOZSubTopics ( SafeBuf&  sb, long catId, State0 *st, bool inXml ) {
 					sb.safePrintf("<hr>");
 				else
 					sb.safePrintf("<br>");
-				if (si->m_isRTL)
+				if (isRTL)
 					sb.safePrintf("<span dir=ltr>");
 				sb.safePrintf ( "<b>This category in other"
 						" languages:</b>");
-				if (si->m_isRTL)
+				if (isRTL)
 					sb.safePrintf("</span>");
 				break;
 			}
@@ -4449,7 +4421,7 @@ bool printDMOZSubTopics ( SafeBuf&  sb, long catId, State0 *st, bool inXml ) {
 							&sb,
 							currIndex,
 							false,
-							si->m_isRTL);
+							isRTL);
 		}
 		else {
 			char *encodeEnd = htmlEncode ( encodedName,
@@ -4485,7 +4457,7 @@ bool printDMOZSubTopics ( SafeBuf&  sb, long catId, State0 *st, bool inXml ) {
 		// print number of urls under here
 		if ( cat->m_type != SUBCAT_LETTERBAR) { 
 			sb.safePrintf("&nbsp&nbsp<i>");
-			if (si->m_isRTL)
+			if (isRTL)
 				sb.safePrintf ( "<span dir=ltr>(%li)"
 						"</span></i>",
 					g_categories->getNumUrlsFromIndex(
@@ -4525,5 +4497,44 @@ dirEnd:
 		sb.safePrintf("<hr><br>\n");
 	}
 
+	return true;
+}
+
+bool printDMOZCrumb ( SafeBuf &sb , long catId , bool xml ) {
+	long dirIndex = g_categories->getIndexFromId(catId);
+	//  dirIndex = g_categories->getIndexFromId(si->m_cat_sdir);
+	if (dirIndex < 0) dirIndex = 0;
+	//   display the directory bread crumb
+	//if( (si->m_cat_dirId > 0 && si->m_isAdmin && !si->m_isFriend)
+	//     || (si->m_cat_sdir > 0 && si->m_cat_sdirt != 0) )
+	//	sb.safePrintf("<br><br>");
+	// shortcut. rtl=Right To Left language format.
+	bool rtl = g_categories->isIdRTL ( catId ) ;
+	//st->m_isRTL = rtl;
+	if ( ! xml ) {
+		sb.safePrintf("\n<font size=4><b>");
+		if ( rtl ) sb.safePrintf("<span dir=ltr>");
+		//sb.safePrintf("<a href=\"/Top\">Top</a>: ");
+	}
+	// put crumbin xml?
+	if ( xml ) 
+		sb.safePrintf("<breacdcrumb><![CDATA[");
+	// display the breadcrumb in xml or html?
+	g_categories->printPathCrumbFromIndex(&sb,dirIndex,rtl);
+	
+	if ( xml )
+		sb.safePrintf("]]></breadcrumb>\n" );
+	
+	// print the num
+	if ( ! xml ) {
+		sb.safePrintf("</b>&nbsp&nbsp<i>");
+		// how many urls/entries in this topic?
+		long nu =g_categories->getNumUrlsFromIndex(dirIndex);
+		if ( rtl )
+			sb.safePrintf("<span dir=ltr>(%li)</span>",nu);
+		else
+			sb.safePrintf("(%li)", nu);
+		sb.safePrintf("</i></font><br><br>\n");
+	}
 	return true;
 }
