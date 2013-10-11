@@ -974,6 +974,8 @@ class SpiderColl {
 
 	// last time we launched a spider. 0 on startup.
 	time_t m_lastSpiderAttempt;
+	// time we had or might have had a url available for spidering
+	time_t m_lastSpiderCouldLaunch;
 
 	//bool m_lastDoledbReadEmpty;
 	//bool m_encounteredDoledbRecs;

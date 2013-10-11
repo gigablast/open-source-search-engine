@@ -999,6 +999,7 @@ SpiderColl::SpiderColl () {
 	m_numBytesScanned = 0;
 	m_lastPrintCount = 0;
 	m_lastSpiderAttempt = 0;
+	m_lastSpiderCouldLaunch = 0;
 	//m_numRoundsDone = 0;
 	//m_lastDoledbReadEmpty = false; // over all priorities in this coll
 	// re-set this to min and set m_needsWaitingTreeRebuild to true
@@ -3869,6 +3870,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	long count = g_collectiondb.m_numRecs;
 	// set this in the loop
 	CollectionRec *cr = NULL;
+	long nowGlobal = 0;
 	// . get the next collection to spider
 	// . just alternate them
 	for ( ; count > 0 ; m_cri++ , count-- ) {
@@ -3881,12 +3883,27 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// stop if not enabled
 		if ( ! cr->m_spideringEnabled ) continue;
 		// get the spider collection for this collnum
-		//m_sc = g_spiderCache.m_spiderColls[m_cri];
 		m_sc = g_spiderCache.getSpiderColl(m_cri);
 		// skip if none
 		if ( ! m_sc ) continue;
-		// skip if we completed the doledb scan for this collection
+		// skip if we completed the doledb scan for every spider
+		// priority in this collection
 		if ( m_sc->m_didRound ) continue;
+		// set current time, synced with host #0
+		nowGlobal = getTimeGlobal();
+		// the last time we attempted to spider a url for this coll
+		m_sc->m_lastSpiderAttempt = nowGlobal;
+		// update this for the first time in case it is never updated.
+		// then after 60 seconds we assume the crawl is done and
+		// we send out notifications. see below.
+		if ( m_sc->m_lastSpiderCouldLaunch == 0 )
+			m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+		// if populating this collection's waitingtree assume
+		// we would have found something to launch as well. it might
+		// mean the waitingtree-saved.dat file was deleted from disk
+		// so we need to rebuild it at startup.
+		if ( m_sc->m_waitingTreeNeedsRebuild ) 
+			m_sc->m_lastSpiderCouldLaunch = nowGlobal;
 		// get max spiders
 		long maxSpiders = cr->m_maxNumSpiders;
 		if ( m_sc->m_isTestColl ) {
@@ -3903,13 +3920,21 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//if ( g_conf.m_logDebugSpider )
 		//	log("spider: has %li spiders out",m_sc->m_spidersOut);
 		// obey max spiders per collection too
-		if ( m_sc->m_spidersOut >= maxSpiders ) continue;
+		if ( m_sc->m_spidersOut >= maxSpiders ) {
+			// assume we would have launched a spider
+			m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+			// try next collection
+			continue;
+		}
 		// ok, we are good to launch a spider for coll m_cri
 		break;
 	}
 	
 	// if none, bail, wait for sleep wrapper to re-call us later on
 	if ( count == 0 ) return;
+
+	// sanity check
+	if ( nowGlobal == 0 ) { char *xx=NULL;*xx=0; }
 
 	// sanity check
 	if ( m_cri >= g_collectiondb.m_numRecs ) { char *xx=NULL;*xx=0; }
@@ -3962,7 +3987,12 @@ void SpiderLoop::spiderDoledUrls ( ) {
  loop:
 
 	// bail if waiting for lock reply, no point in reading more
-	if ( m_msg12.m_gettingLocks ) return;
+	if ( m_msg12.m_gettingLocks ) {
+		// assume we would have launched a spider for this coll
+		m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+		// wait for sleep callback to re-call us in 10ms
+		return;
+	}
 
 	// reset priority when it goes bogus
 	if ( m_sc->m_pri2 < 0 ) {
@@ -4007,6 +4037,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// no, we use this to disabled spiders... if ( max <= 0 ) max = 1;
 	// skip?
 	if ( out >= max ) {
+		// assume we could have launched a spider
+		m_sc->m_lastSpiderCouldLaunch = nowGlobal;
 		// count as non-empty then!
 		//m_sc->m_encounteredDoledbRecs = true;
 		// try the priority below us
@@ -4145,15 +4177,22 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 			     took,m_list.getListSize());
 	}
 
+	bool bail = false;
 	// bail instantly if in read-only mode (no RdbTrees!)
-	if ( g_conf.m_readOnlyMode ) return false;
+	if ( g_conf.m_readOnlyMode ) bail = true;
 	// or if doing a daily merge
-	if ( g_dailyMerge.m_mergeMode ) return false;
+	if ( g_dailyMerge.m_mergeMode ) bail = true;
 	// skip if too many udp slots being used
-	if ( g_udpServer.getNumUsedSlots() >= 1300 ) return false;
+	if ( g_udpServer.getNumUsedSlots() >= 1300 ) bail = true;
 	// stop if too many out
-	if ( m_numSpidersOut >= MAX_SPIDERS ) return false;
+	if ( m_numSpidersOut >= MAX_SPIDERS ) bail = true;
 
+	if ( bail ) {
+		// assume we could have launched a spider
+		m_sc->m_lastSpiderCouldLaunch = getTimeGlobal();
+		// return false to indicate to try another
+		return false;
+	}
 
 
 	// bail if list is empty
@@ -4296,11 +4335,12 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	//if ( max <= 0 ) max = 1;
 	// skip? and re-get another doledb list from next priority...
 	if ( out >= max ) {
+		// assume we could have launched a spider
+		m_sc->m_lastSpiderCouldLaunch = nowGlobal;
 		// this priority is maxed out, try next
 		m_sc->devancePriority();
 		// assume not an empty read
 		//m_sc->m_encounteredDoledbRecs = true;
-		m_sc->m_lastSpiderAttempt = nowGlobal;
 		//m_sc->m_pri = pri - 1;
 		// all done if priority is negative
 		//if ( m_sc->m_pri < 0 ) return true;
@@ -4485,6 +4525,11 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		if ( maxSpidersOutPerIp < 0 ) maxSpidersOutPerIp = 999;
 	}
 
+	// assume we launch the spider below. really this timestamp indicates
+	// the last time we COULD HAVE LAUNCHED *OR* did actually launch
+	// a spider
+	m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+
 	// assume not an empty read
 	//m_sc->m_encounteredDoledbRecs = true;
 
@@ -4501,10 +4546,6 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// . it might also return true if we are already spidering the url
 	bool status = spiderUrl9 ( sreq , doledbKey , coll , sameIpWaitTime ,
 				   maxSpidersOutPerIp ) ;
-
-	// mark the time. for send notifications when haven't spidered a
-	// a while...
-	m_sc->m_lastSpiderAttempt = nowGlobal;
 
 	// just increment then i guess
 	m_list.skipCurrentRecord();
@@ -8466,6 +8507,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			else               sign = SIGN_GT; 
 		} 
 
+		// skip spaces after the operator
+		while ( *s && is_wspace_a(*s) ) s++;
 
 		// tld:cn 
 		if ( *p=='t' && strncmp(p,"tld",3)==0){
@@ -8615,6 +8658,39 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			p += 2;
 			goto checkNextRule;
 		}
+
+		// the last time it was spidered
+		if ( *p=='l' && strncmp(p,"lastspidertime",14) == 0 ) {
+			// if we do not have enough info for outlink, all done
+			if ( isOutlink ) return -1;
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// reply based
+			if ( ! srep ) continue;
+			// shortcut
+			long a = srep->m_errCount;
+			// make it point to the retry count
+			long b ;
+			// now "s" can be "{roundstart}"
+			if ( s[0]=='{' && strncmp(s,"{roundstart}",12)==0)
+				b = cr->m_spiderRoundNum;
+			else
+				b = atoi(s);
+			// compare
+			if ( sign == SIGN_EQ && a != b ) continue;
+			if ( sign == SIGN_NE && a == b ) continue;
+			if ( sign == SIGN_GT && a <= b ) continue;
+			if ( sign == SIGN_LT && a >= b ) continue;
+			if ( sign == SIGN_GE && a <  b ) continue;
+			if ( sign == SIGN_LE && a >  b ) continue;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
 
 		if ( *p=='e' && strncmp(p,"errorcount",10) == 0 ) {
 			// if we do not have enough info for outlink, all done
@@ -8866,11 +8942,26 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			while ( *p && ! is_wspace_a(*p) ) p++;
 			// how long is the string to match?
 			long plen = p - pstart;
-			// . do we match it?
-			// . url has to be at least as big
-			if ( urlLen>=plen && plen>0 &&
-			     strncmp(pstart,url,plen)==0 )
-				return i;
+			// empty? that's kinda an error
+			if ( plen == 0 ) 
+				continue;
+			long m = 1;
+			// check to see if we matched if url was long enough
+			if ( urlLen >= plen )
+				m = strncmp(pstart,url,plen);
+			if ( ( m == 0 && val == 0 ) ||
+			     // if they used the '!' operator and we
+			     // did not match the string, that's a 
+			     // row match
+			     ( m && val == 1 ) ) {
+				// another expression follows?
+				p = strstr(s, "&&");
+				//if nothing, else then it is a match
+				if ( ! p ) return i;
+				//skip the '&&' and go to next rule
+				p += 2;
+				goto checkNextRule;
+			}
 			// no match
 			continue;
 		}
@@ -8887,12 +8978,29 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			while ( *p && ! is_wspace_a(*p) ) p++;
 			// how long is the string to match?
 			long plen = p - pstart;
+			// empty? that's kinda an error
+			if ( plen == 0 ) 
+				continue;
 			// . do we match it?
 			// . url has to be at least as big
 			// . match our tail
-			if ( urlLen>=plen && plen>0 &&
-			     strncmp(pstart,url+urlLen-plen,plen)==0)
-				return i;
+			long m = 1;
+			// check to see if we matched if url was long enough
+			if ( urlLen >= plen )
+				m = strncmp(pstart,url+urlLen-plen,plen);
+			if ( ( m == 0 && val == 0 ) ||
+			     // if they used the '!' operator and we
+			     // did not match the string, that's a 
+			     // row match
+			     ( m && val == 1 ) ) {
+				// another expression follows?
+				p = strstr(s, "&&");
+				//if nothing, else then it is a match
+				if ( ! p ) return i;
+				//skip the '&&' and go to next rule
+				p += 2;
+				goto checkNextRule;
+			}
 			// no match
 			continue;
 		}
@@ -8910,7 +9018,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		// need something...
 		if ( plen <= 0 ) continue;
 		// must be at least as big
-		if ( urlLen < plen ) continue;
+		//if ( urlLen < plen ) continue;
 		// nullilfy it temporarily
 		char c = *p;
 		*p     = '\0';
@@ -8933,9 +9041,22 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     cr->m_spiderPriorities[i] < 0 )
 			continue;
 
-		// was it a match?
-		if ( found ) 
-			return i;
+		// support "!company" meaning if it does NOT match
+		// then do this ...
+		if ( ( found && val == 0 ) ||
+		     // if they used the '!' operator and we
+		     // did not match the string, that's a 
+		     // row match
+		     ( ! found && val == 1 ) ) {
+			// another expression follows?
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
 	}
 	// sanity check ... must be a default rule!
 	char *xx=NULL;*xx=0;
@@ -9342,11 +9463,47 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 
 void doneSendingNotification ( void *state ) {
 	EmailInfo *ei = (EmailInfo *)state;
-	log("spider: done sending notifications for coll=%s",
-	    ei->m_cr->m_coll);
+	CollectionRec *cr = ei->m_cr;
+	log("spider: done sending notifications for coll=%s", cr->m_coll);
 	// mark it as sent. anytime a new url is spidered will mark this
 	// as false again! use LOCAL crawlInfo, since global is reset often.
-	ei->m_cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 1;
+	cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 1;
+
+	// sanity check
+	if ( g_hostdb.m_myHost->m_hostId != 0 ) { char *xx=NULL;*xx=0; }
+
+	// this should have been set below
+	if ( cr->m_spiderRoundStartTime == 0 ) { char *xx=NULL;*xx=0; }
+
+	// how is this possible
+	//if ( getTimeGlobal() 
+
+	float respiderFreq = -1.0;
+
+	// find the "respider frequency" from the first line in the url
+	// filters table whose expressions contains "{roundstart}" i guess
+	for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
+		// get it
+		char *ex = cr->m_regExs[i].getBufStart();
+		// compare
+		if ( ! strstr ( ex , "roundstart" ) ) continue;
+		// that's good enough
+		respiderFreq = cr->m_spiderFreqs[i];
+		break;
+	}
+
+	if ( respiderFreq == -1.0 ) return;
+
+	if ( respiderFreq < 0.0 ) {
+		log("spider: bad respiderFreq of %f. making 0.",
+		    respiderFreq);
+		respiderFreq = 0.0;
+	}
+
+	// now update this round start time. all the other hosts should
+	// sync with us using the parm sync code, msg3e, every 13.5 seconds.
+	cr->m_spiderRoundStartTime += respiderFreq;
+	cr->m_spiderRoundNum++;
 }
 
 void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
@@ -9443,6 +9600,17 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// only host #0 sends alaerts
 	if ( g_hostdb.getMyHost()->m_hostId != 0 ) return;
 
+	// and we've examined at least one url. to prevent us from
+	// sending a notification if we haven't spidered anything
+	// because no seed urls have been added/injected.
+	if ( cr->m_globalCrawlInfo.m_urlsConsidered == 0 ) return;
+
+	// if urls were considered and roundstarttime is still 0 then
+	// set it to the current time...
+	if ( cr->m_spiderRoundStartTime == 0 )
+		// all hosts in the network should sync with host #0 on this
+		cr->m_spiderRoundStartTime = getTimeGlobal();
+
 	// but of course if it has urls ready to spider, do not send alert...
 	// or if this is -1, indicating "unknown".
 	if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) return;
@@ -9510,15 +9678,14 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	// assume it does
 	cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = 1;
 
-	long now = getTimeGlobal();
-
 	// if we haven't spidered anything in 1 min assume the
 	// queue is basically empty...
 	if ( sc->m_lastSpiderAttempt &&
-	     cr->m_spideringEnabled &&
-	     g_conf.m_spideringEnabled &&
-	     now - sc->m_lastSpiderAttempt > 60 )
-		// turn off this flag, "ready queue" is empty
+	     sc->m_lastSpiderCouldLaunch &&
+	     //cr->m_spideringEnabled &&
+	     //g_conf.m_spideringEnabled &&
+	     sc->m_lastSpiderAttempt - sc->m_lastSpiderCouldLaunch > 60 )
+		// assume our crawl on this host is completed i guess
 		cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = 0;
 
 

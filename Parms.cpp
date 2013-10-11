@@ -424,10 +424,33 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	if ( page == PAGE_REPAIR )
 		g_repair.printRepairStatus ( sb , fromIp );
 	
-	char bb [ MAX_COLL_LEN + 60 ];
+	char *THIS ;
+	// when being called from Diffbot.cpp crawlbot page it is kind of
+	// hacky and we want to print the url filters for the supplied 
+	// collection dictated by collOveride. if we don't have this
+	// fix here it ends up printing the url filters for the default
+	// "main" collection
+	if ( collOveride )
+		THIS = (char *)g_collectiondb.getRec(collOveride);
+	else
+		THIS = g_parms.getTHIS ( r , page );
+
+	if ( ! THIS ) {
+		log("admin: Could not get parameter object.");
+		return g_httpServer.sendErrorReply ( s , 505 , "Bad Request");
+	}
+
+	CollectionRec *cr = (CollectionRec *)THIS;
+
+	char bb [ 256];//MAX_COLL_LEN + 60 ];
 	bb[0]='\0';
 	//if ( user == USER_MASTER && page >= PAGE_OVERVIEW && c && c[0] ) 
 	//	sprintf ( bb , " (%s)", c);
+	if ( page == PAGE_FILTERS )
+		sprintf(bb,"(roundtime=%li roundnum=%li)"
+			, cr->m_spiderRoundStartTime
+			, cr->m_spiderRoundNum
+			);
 
 	// start the table
 	if ( ! isJSON ) 
@@ -449,22 +472,6 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			       "</div>"
 			       "</td></tr>%s%s\n",
 			       LIGHT_BLUE,DARK_BLUE,tt,bb,e1,e2);
-
-	char *THIS ;
-	// when being called from Diffbot.cpp crawlbot page it is kind of
-	// hacky and we want to print the url filters for the supplied 
-	// collection dictated by collOveride. if we don't have this
-	// fix here it ends up printing the url filters for the default
-	// "main" collection
-	if ( collOveride )
-		THIS = (char *)g_collectiondb.getRec(collOveride);
-	else
-		THIS = g_parms.getTHIS ( r , page );
-
-	if ( ! THIS ) {
-		log("admin: Could not get parameter object.");
-		return g_httpServer.sendErrorReply ( s , 505 , "Bad Request");
-	}
 
 	bool isCrawlbot = false;
 	if ( collOveride ) isCrawlbot = true;
@@ -8616,6 +8623,24 @@ void Parms::init ( ) {
 	m->m_def   = "-1";
 	m->m_group = 0;
 	m++;*/
+
+	m->m_title = "spider round start time";
+	m->m_desc  = "When the spider round started";
+	m->m_cgi   = "srst";
+	m->m_off   = (char *)&cr.m_spiderRoundStartTime - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m++;
+
+	m->m_title = "spider round num";
+	m->m_desc  = "The spider round number.";
+	m->m_cgi   = "srn";
+	m->m_off   = (char *)&cr.m_spiderRoundNum - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m++;
 
 	m->m_title = "scraping enabled procog";
 	m->m_desc  = "Do searches for queries in this hosts part of the "

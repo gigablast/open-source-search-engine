@@ -202,6 +202,14 @@ class CollectionRec {
 	//char  m_recycleVotes            ;
 	long  m_spiderDelayInMilliseconds;
 
+	// . at what time did the spiders start?
+	// . this is incremented when all urls have been spidered and
+	//   the next round begins
+	time_t m_spiderRoundStartTime;
+	// this begins at 0, and increments when all the urls have been
+	// spidered and begin the next round
+	long   m_spiderRoundNum;
+
 	char  m_useDatedb               ;
 	char  m_addUrlEnabled           ; // TODO: use at http interface lvl
 	char  m_spiderLinks             ;
