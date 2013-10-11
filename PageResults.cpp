@@ -834,7 +834,7 @@ bool gotResults ( void *state ) {
 		if ( ! xml ) {
 			sb.safePrintf("\n<font size=4><b>");
 			if ( rtl ) sb.safePrintf("<span dir=ltr>");
-			sb.safePrintf("<a href=\"/Top\">Top</a>: ");
+			//sb.safePrintf("<a href=\"/Top\">Top</a>: ");
 		}
 		// put crumbin xml?
 		if ( xml ) 

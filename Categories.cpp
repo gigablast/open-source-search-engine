@@ -515,7 +515,7 @@ void Categories::printPathFromId ( SafeBuf *sb ,
 	long catIndex;
 	// get the index
 	catIndex = getIndexFromId(catid);
-	if (catIndex < 1) return;
+	//if (catIndex < 1) return;
 	printPathFromIndex(sb, catIndex, raw, isRTL);
 }
 
@@ -530,10 +530,10 @@ void Categories::printPathFromIndex ( SafeBuf *sb ,
 	long catid = m_cats[catIndex].m_catid;
 
 	// include Top now. in newer dmoz it is catid2.
-	if ( catid == 2 ) {
-		sb->safePrintf("Top");
-		return;
-	}		
+	//if ( catid == 2 ) {
+	//	sb->safePrintf("Top");
+	//	return;
+	//}		
 
 	// . print the parent(s) first
 	// . the new dmoz data dumps signify a parentless topic by
@@ -590,7 +590,7 @@ void Categories::printPathCrumbFromId ( SafeBuf *sb ,
 	long catIndex;
 	// get the index
 	catIndex = getIndexFromId(catid);
-	if (catIndex < 1) return;
+	//if (catIndex < 1) return;
 	printPathCrumbFromIndex(sb, catIndex, isRTL);
 }
 
@@ -604,10 +604,12 @@ void Categories::printPathCrumbFromIndex ( SafeBuf *sb,
 	long catid = m_cats[catIndex].m_catid;
 
 	// include Top now. in newer dmoz it is catid2.
-	if ( catid == 2 ) {
-		sb->safePrintf("Top");
-		return;
-	}
+	// seems to already be included below... because you made it
+	// parentId>1 not parentId>2
+	//if ( catid == 2 ) {
+	//	sb->safePrintf("Top");
+	//	return;
+	//}
 
 	// . print the parent(s) first
 	// . the new dmoz has Top has parentid 2 now, and Top/World is
