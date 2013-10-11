@@ -137,6 +137,8 @@ public:
 				       long  catid,
 				       bool  isRTL = false );
 
+	bool printUrlsInTopic ( class SafeBuf *sb , long catid  ) ;
+
 	// . get the title and summary for a specific url
 	//   and catid
 	bool getTitleAndSummary ( char  *url,

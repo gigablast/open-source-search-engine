@@ -854,6 +854,175 @@ long Categories::fixUrl ( char *url, long urlLen ) {
 				     true  );// just add to table
  }
 
+// just show the urls in dmoz
+bool Categories::printUrlsInTopic ( SafeBuf *sb, long catid ) {
+	long catIndex;
+	unsigned long fileOffset;
+	unsigned long n;
+	char* p;
+	unsigned long readSize;
+	char title[1024];
+	char summ[5000];
+	long maxTitleLen = 1024;
+	long maxSummLen = 5000;
+	long titleLen;
+	long summLen;
+	long urlStrLen;
+	char urlStr[MAX_URL_LEN];
+	long niceness = 0;
+
+	// lookup the index for this catid
+	catIndex = getIndexFromId(catid);
+	if (catIndex < 0)
+		goto errEnd;
+	// get the file offset
+	fileOffset = m_cats[catIndex].m_contentOffset;
+
+	QUICKPOLL( niceness );
+
+	// . open the file
+	char filename[512];
+	sprintf(filename, "%scatdb/%s", g_hostdb.m_dir, RDFCONTENT_FILE);
+	m_rdfStream = open(filename, O_RDONLY | O_NONBLOCK);
+	if ( m_rdfStream < 0 ) {
+		log("cat: Error Opening %s\n", filename);
+		goto errEnd;
+	}
+	// . seek to the offset
+	n = lseek ( m_rdfStream, fileOffset, SEEK_SET );
+	if ( n != fileOffset ) {
+		log("cat: Error seeking to Content Offset %li", fileOffset);
+		goto errEnd;
+	}
+	// . read in a chunk
+	m_rdfBuffer     = m_rdfSmallBuffer;
+	m_rdfBufferSize = RDFSMALLBUFFER_SIZE;
+
+	p = m_rdfBuffer;
+	readSize = m_rdfBufferSize;
+ readLoop:
+	n = read ( m_rdfStream, p, readSize );
+	if(n > 0 && n != readSize) {
+		p += n;
+		readSize -= n;
+	}
+	//log(LOG_WARN,"build: reading %li bytes out of %li",n,m_rdfBufferSize);
+	QUICKPOLL(niceness);
+
+	if(n < 0 && errno == EAGAIN) goto readLoop;
+	
+	if ( n <= 0 || n > (unsigned long)m_rdfBufferSize ) {
+		log("cat: Error Reading Content");
+		goto errEnd;
+	}
+	m_rdfPtr = m_rdfBuffer;
+	m_rdfEnd = &m_rdfBuffer[n];
+	m_currOffset = fileOffset;
+	// . parse to the correct url
+	// parse the first topic and catid
+	if (rdfNextTag() < 0)
+		goto errEnd;
+	if (rdfNextTag() < 0)
+		goto errEnd;
+	// parse until "ExternalPage"
+nextTag:
+	QUICKPOLL((niceness));
+	if (rdfNextTag() < 0)
+		goto errEnd;
+	// check for catid of next topic to stop looking
+	if (m_tagLen == 5 &&
+	    strncmp(m_tagRecfer, "catid", 5) == 0)
+		goto errEnd;
+	if (m_tagLen != 12 ) goto nextTag;
+	if ( strncmp(m_tagRecfer, "ExternalPage", 12) != 0) goto nextTag;
+
+	//
+	// got one
+	//
+
+	// get the next string
+	urlStrLen = fillNextString(urlStr, MAX_URL_LEN-1);
+	if (urlStrLen < 0)
+		goto errEnd;
+
+	// html decode the url
+	/*
+	urlStrLen = htmlDecode(decodedUrl, urlStr, urlStrLen,false,
+			       niceness);
+	memcpy(urlStr, decodedUrl, urlStrLen);
+
+	normUrl.set(urlStr, urlStrLen, true);
+	g_catdb.normalizeUrl(&normUrl, &normUrl);
+	// copy it back
+	urlStrLen = normUrl.getUrlLen();
+	memcpy(urlStr, normUrl.getUrl(), urlStrLen);
+	// make sure there's a trailing / on root urls
+	// and no www.
+	//urlStrLen = fixUrl(urlStr, urlStrLen);
+	// check for an anchor
+	urlAnchor = NULL;
+	urlAnchorLen = 0;
+	//for (long i = 0; i < urlStrLen; i++) {
+	//if (urlStr[i] == '#') {
+	if (normUrl.getAnchorLen() > 0) {
+		//urlAnchor = &urlStr[i];
+		//urlAnchorLen = urlStrLen - i;
+		//urlStrLen = i;
+		urlAnchor = normUrl.getAnchor();
+		urlAnchorLen = normUrl.getAnchorLen();
+		//break;
+	}
+	*/
+
+	// . parse out the title
+	if (rdfParse("d:Title") < 0)
+		goto errEnd;
+
+	titleLen = fillNextTagBody(title, maxTitleLen);
+
+	QUICKPOLL(niceness);
+
+	// . parse out the summary
+	if (rdfParse("d:Description") < 0)
+		goto errEnd;
+
+	summLen = fillNextTagBody(summ, maxSummLen);
+
+	// print it out
+	sb->safePrintf("<a href=\"");
+	sb->safeMemcpy ( urlStr , urlStrLen );
+	sb->safePrintf("\">");
+	sb->safeMemcpy ( title , titleLen );
+	sb->safePrintf("</a><br>");
+	sb->safeMemcpy( summ, summLen );
+	sb->safePrintf("<br>");
+
+
+	/*
+	// . fill the anchor
+	if (anchor) {
+		if (urlAnchor) {
+			if (urlAnchorLen > maxAnchorLen)
+				urlAnchorLen = maxAnchorLen;
+			memcpy(anchor, urlAnchor, urlAnchorLen);
+			*anchorLen = urlAnchorLen;
+		}
+		else
+			*anchorLen = 0;
+	}
+	*/
+
+	// DO NEXT tag
+	goto nextTag;
+
+errEnd:
+
+	close(m_rdfStream);
+	return false;
+}
+
+
+
 // . get the title and summary for a specific url
 //   and catid
 bool Categories::getTitleAndSummary ( char  *urlOrig,
@@ -1092,7 +1261,7 @@ long Categories::generateSubCats ( long catid,
 	// get the file offset
 	fileOffset = m_cats[catIndex].m_structureOffset;
 	// open the structure file
-	// catdb/content.rdf.u8 in utf8
+	// catdb/structure.rdf.u8 in utf8
 	char filename[512];
 	sprintf(filename, "%scatdb/%s", g_hostdb.m_dir, RDFSTRUCTURE_FILE);
 	//m_rdfStream.clear();
