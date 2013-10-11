@@ -4195,11 +4195,13 @@ bool printDMOZSubTopics ( SafeBuf&  sb, long catId, State0 *st, bool inXml ) {
 		first = false;
 		catName = cat->getName();//&catBuffer[subCats[i].m_nameOffset];
 		catNameLen = cat->m_nameLen;//subCats[i].m_nameLen;
+		// this is the last topic in the dmoz dir path
+		// so if the dmoz topic is Top/Arts/Directories then
+		// the prefixp is "Directories"
 		prefixp = cat->getPrefix();//&catBuffer[subCats[i].m_prefixOffset];
 		prefixLen = cat->m_prefixLen;//subCats[i].m_prefixLen;
 		// skip bad categories
-		//currIndex=g_categories->getIndexFromPath(catName,catNameLen);
-		currIndex=g_categories->getIndexFromPath(prefixp,prefixLen);
+		currIndex=g_categories->getIndexFromPath(catName,catNameLen);
 		if (currIndex < 0)
 			continue;
 		// skip top adult category if we're supposed to

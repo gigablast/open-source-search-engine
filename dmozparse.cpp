@@ -563,12 +563,22 @@ long printCatPath ( char *str, long catid, bool raw ) {
 		return 0;
 	// get the parent
 	parentId = rdfCats[catIndex].m_parentid;
+
 	// . print the parent(s) first
 	// . in NEWER DMOZ dumps, "Top" is catid 2 and catid 1 is an
 	//   empty title. really catid 2 is Top/World but that is an
 	//   error that we correct below. (see "Top/World" below).
 	//   but do not include the "Top/" as part of the path name
-	if (parentId > 2 && 
+	if ( catid == 2 ) {
+		// no! we now include Top as part of the path. let's
+		// be consistent. i'd rather have www.gigablast.com/Top
+		// and www.gigablast.com/Top/Arts etc. then i know if the
+		// path starts with /Top that it is dmoz!!
+		sprintf(p,"Top");
+		return 3;
+	}
+
+	if (parentId > 1 && 
 	    // the newer dmoz files have the catid == the parent id of
 	    // i guess top most categories, like "Top/Arts"... i would think
 	    // it should have a parentId of 1 like the old dmoz files,
@@ -888,6 +898,13 @@ int main ( int argc, char *argv[] ) {
 		unsigned long catOffset = currOffset - 6;
 		// get the topic name, preserve it on the buffer
 		long nameOffset = nameBufferLen;
+		// the name inserted by this function into "nameBuffer"
+		// does not seem to contain "Top/" at the beginning.
+		// it is from structure.rdf.u8, but it seems to be there!
+		// yeah, later on we hack the name buffer and nameOffset
+		// so it is just the last word in the directory to save
+		// mem. then we print out all the parent names to
+		// reconstruct.
 		long nameLen    = fillNextString();
 		if (nameLen == -1)
 			goto fileEnd;
@@ -1200,6 +1217,9 @@ fileEnd1:
 	for (long i = 0; i < numRdfCats; i++) {
 		// get the hash of the path
 		rawPathLen = printCatPath(rawPath, rdfCats[i].m_catid, true);
+		// crap, this rawpath contains "Top/" in the beginning
+		// but the rdfCats[i].m_nameOffset refers to a name
+		// that does not include "Top/"
 		rdfCats[i].m_catHash = hash32Lower_a(rawPath, rawPathLen, 0);
 		// fix. so that xyz/Arts does not just hash "Arts"
 		// because it has no parent...
@@ -1212,11 +1232,12 @@ fileEnd1:
 		// DEBUG!
 		// print this shit out to find the collisions
 		//
-		//printf("hash32=%lu catid=%li parentid=%li path=%s\n",
-		//       rdfCats[i].m_catHash,
-		//       rdfCats[i].m_catid,
-		//       rdfCats[i].m_parentid,
-		//       rawPath);
+		continue;
+		printf("hash32=%lu catid=%li parentid=%li path=%s\n",
+		       rdfCats[i].m_catHash,
+		       rdfCats[i].m_catid,
+		       rdfCats[i].m_parentid,
+		       rawPath);
 	}
 
 	// . now we want to serialize the needed data into

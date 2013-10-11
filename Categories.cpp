@@ -50,6 +50,7 @@ void Categories::reset() {
 	}
 }
 
+// filename usually ./catdb/gbdmoz.structure.dat
 long Categories::loadCategories ( char *filename ) {
 	//ifstream inStream;
 	int inStream;
@@ -69,6 +70,7 @@ long Categories::loadCategories ( char *filename ) {
 		return 1;
 	}
 	// read in the number of cats
+	// filename usually ./catdb/gbdmoz.structure.dat
 	if ( fileRead ( inStream, &m_numCats, sizeof(long) ) != sizeof(long) ) {
 		log("cat: Error reading structure file: %s", filename);
 		close(inStream);
@@ -114,7 +116,8 @@ long Categories::loadCategories ( char *filename ) {
 		g_errno = ENOMEM;
 		return 1;
 	}
-	// read the rest of the file into the temp buffer
+	// . read the rest of the file into the temp buffer
+	// . filename usually ./catdb/gbdmoz.structure.dat
 	if ( fileRead ( inStream, tempBuffer, readSize ) != readSize ) {
 		log("cat: Error reading structure file: %s", filename);
 		close(inStream);
@@ -336,11 +339,15 @@ long Categories::getIndexFromPath ( char *str, long strLen ) {
 	// check for top
 	if (strLen == 3 &&
 	    strncasecmp(str, "Top", 3) == 0)
+		// it is catid 2 right? but i guess zero is symbolic for us!
 		return 0;
 	// get the hash
 	unsigned long hash = hash32Lower_a(str, strLen, 0);
 	// debug
-	log("dmoz: looking up hash %lu",hash);
+	//char c = str[strLen];
+	//str[strLen] = '\0';
+	//log("dmoz: looking up hash %lu for %s",hash,str);
+	//str[strLen] = c;
 	// binary search
 	while (low <= high) {
 		// next check spot
@@ -521,6 +528,13 @@ void Categories::printPathFromIndex ( SafeBuf *sb ,
 	// get the parent
 	parentId = m_cats[catIndex].m_parentid;
 	long catid = m_cats[catIndex].m_catid;
+
+	// include Top now. in newer dmoz it is catid2.
+	if ( catid == 2 ) {
+		sb->safePrintf("Top");
+		return;
+	}		
+
 	// . print the parent(s) first
 	// . the new dmoz data dumps signify a parentless topic by
 	//   havings its parentid equal its catid, so avoid infinite
@@ -528,7 +542,7 @@ void Categories::printPathFromIndex ( SafeBuf *sb ,
 	// . the new DMOZ has Top has catid 2 now, even though it is
 	//   mistakenly labelled as Top/World, which is really catid 3.
 	//   so make this parentId > 2...
-	if (parentId > 2 && parentId != catid ) {
+	if (parentId >= 1 && parentId != catid ) {
 		bool isParentRTL = isIdRTLStart(parentId);
 		// print spacing here if RTL
 		//if (isRTL && !raw)
@@ -588,10 +602,17 @@ void Categories::printPathCrumbFromIndex ( SafeBuf *sb,
 	// get the parent
 	parentId = m_cats[catIndex].m_parentid;
 	long catid = m_cats[catIndex].m_catid;
+
+	// include Top now. in newer dmoz it is catid2.
+	if ( catid == 2 ) {
+		sb->safePrintf("Top");
+		return;
+	}
+
 	// . print the parent(s) first
 	// . the new dmoz has Top has parentid 2 now, and Top/World is
 	//   catid 3. so make this parentId > 2 not parentId > 1
-	if (parentId > 2 && parentId != catid ) {
+	if (parentId > 1 && parentId != catid ) {
 		bool isParentRTL = isIdRTLStart(parentId);
 		printPathCrumbFromId(sb, parentId, isRTL);
 		// print a spacing
@@ -1157,6 +1178,9 @@ nextTag:
 				 false,
 				 0);
 	memcpy(catStr, htmlDecoded, catStrLen);
+	// reset this offset
+	nameStart = 0;
+	nameLen = catStrLen;
 	// get the prefix and name position/length
 	switch (currType) {
 	case SUBCAT_ALTLANG:
@@ -1166,14 +1190,14 @@ nextTag:
 		// prefix is at the start
 		prefixStart = 0;
 		prefixLen   = 0;
-		nameStart   = 0;
+		//nameStart   = 0;
 		// go to the end of the prefix
 		while (catStr[nameStart] != ':') {
 			nameStart++;
 			prefixLen++;
 		}
-		// skip the :Top/
-		nameStart += 5;
+		// skip the : in :Top/
+		nameStart += 1;
 		nameLen = catStrLen - nameStart;
 		break;
 	case SUBCAT_LETTERBAR:
@@ -1181,9 +1205,9 @@ nextTag:
 		prefixStart = catStrLen - 1;
 		prefixLen   = 1;
 		// skip the Top/ for the name
-		nameStart   = 4;
+		//nameStart   = 4;
 		// lose the Top/, keep the end letter
-		nameLen     = catStrLen - 4;
+		//nameLen     = catStrLen - 4;
 		break;
 	// . don't do this because of ltr?
 	//case SUBCAT_RELATED:
@@ -1203,9 +1227,15 @@ nextTag:
 			prefixStart--;
 			prefixLen++;
 		}
-		// name skips Top/
-		nameStart = 4;
-		nameLen   = catStrLen - 4;
+		// name skips Top/ ... no! we include Top now
+		// because we need it so PageResults.cpp can call
+		// currIndex=g_categories->getIndexFromPath(catName,catNameLen)
+		// on this name, and it needs "Top/" because it was part
+		// of the hash of the full name for the category now.
+		// and we lookup the Category record by that hash
+		// in getIndexFromPath().
+		//nameStart = 4;
+		//nameLen   = catStrLen - 4;
 		break;
 	}
 	// . fill the next sub category
