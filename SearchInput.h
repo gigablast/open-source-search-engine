@@ -55,7 +55,7 @@ class SearchInput {
 	// private
 	void setTopicGroups  ( class HttpRequest *r , 
 			       class CollectionRec *cr ) ;
-	bool setQueryBuffers ( ) ;
+	bool setQueryBuffers ( class HttpRequest *r ) ;
 
 	void setToDefaults ( class CollectionRec *cr , long niceness ) ;
 

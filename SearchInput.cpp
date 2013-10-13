@@ -706,7 +706,7 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 
 	// . returns false and sets g_errno on error
 	// . sets m_qbuf1 and m_qbuf2
-	if ( ! setQueryBuffers () ) return false;
+	if ( ! setQueryBuffers (r) ) return false;
 
 
 	/* --- Virtual host language detection --- */
@@ -893,7 +893,7 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 // . m_qbuf1[] is the advanced query
 // . m_qbuf2[] is the query to be used for spell checking
 // . returns false and set g_errno on error
-bool SearchInput::setQueryBuffers ( ) {
+bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 
 	m_sbuf1.reset();
 	m_sbuf2.reset();
@@ -949,6 +949,16 @@ bool SearchInput::setQueryBuffers ( ) {
 		m_sitesQueryLen = m_sitesLen + (numSites * 10);
 	}
 	*/
+
+	// prepend
+	char *qp = hr->getString("prepend",NULL,NULL);
+	if( qp && qp[0] ) {
+		//if( p > pstart ) *p++ =  ' ';
+		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
+		//p += sprintf( p, "+gblang:%li |", m_gblang );
+		m_sbuf1.safePrintf( "%s", qp );
+	}
+
 	// append site: term
 	if ( m_siteLen > 0 ) {
 		//if ( p > pstart ) *p++ = ' ';

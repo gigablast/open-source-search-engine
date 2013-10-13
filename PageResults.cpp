@@ -278,6 +278,12 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			sb.safePrintf("&sites=");
 			sb.urlEncode2 ( sites,true);
 		}
+		// propagate "prepend"
+		char *prepend = hr->getString("prepend",NULL);
+		if ( prepend ) {
+			sb.safePrintf("&prepend=");
+			sb.urlEncode(prepend);
+		}
 		// propagate "debug" if set
 		long debug = hr->getLong("debug",0);
 		if ( debug ) sb.safePrintf("&debug=%li",debug);
@@ -4443,8 +4449,10 @@ bool printDMOZCrumb ( SafeBuf &sb , long catId , bool xml ) {
 
 bool printDmozRadioButtons ( SafeBuf &sb , long catId ) {
 	sb.safePrintf("Search "
-		      "<input type=radio name=gbipcatid:%li checked> sites "
-		      "<input type=radio name=gbpcatid:%li> pages "
+		      "<input type=radio name=prepend "
+		      "value=gbipcatid:%li checked> sites "
+		      "<input type=radio name=prepend "
+		      "value=gbpcatid:%li> pages "
 		      "in this topic or below"
 		      , catId
 		      , catId
