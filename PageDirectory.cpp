@@ -59,8 +59,9 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 	else {
 		// search box
 		printLogoAndSearchBox(sb,r,catId);
-		// radio buttons for search dmoz
-		printDmozRadioButtons(sb,catId);
+		// radio buttons for search dmoz. no, this is printed
+		// from call to printLogoAndSearchBox()
+		//printDmozRadioButtons(sb,catId);
 		// the dmoz breadcrumb
 		printDMOZCrumb ( sb,catId,xml);
 		// print the subtopcis in this topic. show as links above
