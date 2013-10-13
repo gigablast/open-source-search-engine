@@ -1216,15 +1216,15 @@ bool SearchInput::setQueryBuffers ( ) {
 	//////////
 	//
 	// show DMOZ BREADCRUMB if doing a 
-	// "gbpdcat:<catid> |" (Search restricted to category)
-	// "gbdcat:<catid>"    (DMOZ urls in that topic, c=dmoz3)
+	// "gbpcatid:<catid> |" (Search restricted to category)
+	// "gbcatid:<catid>"    (DMOZ urls in that topic, c=dmoz3)
 	//
 	//////////
 	long pcatId = -1;
 	long dcatId  = -1;
 	// get the final query
 	char *q =m_sbuf1.getBufStart();
-	if ( q ) sscanf(q,"gbpdcatid:%li",&pcatId);
+	if ( q ) sscanf(q,"gbpcatid:%li",&pcatId);
 	if ( q ) sscanf(q,"gbcatid:%li",&dcatId);
 	// pick the one that is valid
 	long catId = -1;
