@@ -3956,42 +3956,6 @@ bool printSingleScore ( SafeBuf &sb ,
 	return true;
 }
 
-
-// print the search options under a dmoz search box
-bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
-	// default to entire directory
-	if (sdirt < 1 || sdirt > 4)
-		sdirt = 3;
-
-	// by default search the whole thing
-	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"3\"");
-	if (sdirt == 3) sb.safePrintf(" checked>");
-	else            sb.safePrintf(">");
-	sb.safePrintf("Entire Directory<br>\n");
-	// entire category
-	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"1\"");
-	if (sdirt == 1) sb.safePrintf(" checked>");
-	else            sb.safePrintf(">");
-	sb.safePrintf("Entire Category<br>\n");
-	// base category only
-	sb.safePrintf("<nobr><input type=\"radio\" name=\"sdirt\" value=\"2\"");
-	if (sdirt == 2) sb.safePrintf(" checked>");
-	else            sb.safePrintf(">"); 
-	sb.safePrintf("Pages in Base Category</nobr><br>\n");
-	// sites in base category
-	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"7\"");
-	if (sdirt == 7) sb.safePrintf(" checked>");
-	else            sb.safePrintf(">");
-	sb.safePrintf("Sites in Base Category<br>\n");
-	// sites in entire category
-	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"6\"");
-	if (sdirt == 6) sb.safePrintf(" checked>");
-	else            sb.safePrintf(">");
-	sb.safePrintf("Sites in Entire Category<br>\n");
-	// end it
-	return true;
-}
-
 ////////
 //
 // . print the directory subtopics
@@ -4060,6 +4024,8 @@ bool printDMOZSubTopics ( SafeBuf&  sb, long catId, bool inXml ) {
 		SubCategory *cat = (SubCategory *)p;
 		ptrs[count++] = cat;
 		p += cat->getRecSize();
+		// do not breach
+		if ( count >= MAX_SUB_CATS ) break;
 	}
 
 
@@ -4447,18 +4413,7 @@ bool printDMOZCrumb ( SafeBuf &sb , long catId , bool xml ) {
 	return true;
 }
 
-bool printDmozRadioButtons ( SafeBuf &sb , long catId ) {
-	sb.safePrintf("Search "
-		      "<input type=radio name=prepend "
-		      "value=gbipcatid:%li checked> sites "
-		      "<input type=radio name=prepend "
-		      "value=gbpcatid:%li> pages "
-		      "in this topic or below"
-		      , catId
-		      , catId
-		      );
-	return true;
-}
+bool printDmozRadioButtons ( SafeBuf &sb , long catId ) ;
 
 // if catId >= 1 then print the dmoz radio button
 bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
@@ -4584,3 +4539,53 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 		       );
 	return true;
 }
+
+bool printDmozRadioButtons ( SafeBuf &sb , long catId ) {
+	sb.safePrintf("Search "
+		      "<input type=radio name=prepend "
+		      "value=gbipcatid:%li checked> sites "
+		      "<input type=radio name=prepend "
+		      "value=gbpcatid:%li> pages "
+		      "in this topic or below"
+		      , catId
+		      , catId
+		      );
+	return true;
+}
+
+/*
+// print the search options under a dmoz search box
+bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
+	// default to entire directory
+	if (sdirt < 1 || sdirt > 4)
+		sdirt = 3;
+
+	// by default search the whole thing
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"3\"");
+	if (sdirt == 3) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Entire Directory<br>\n");
+	// entire category
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"1\"");
+	if (sdirt == 1) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Entire Category<br>\n");
+	// base category only
+	sb.safePrintf("<nobr><input type=\"radio\" name=\"sdirt\" value=\"2\"");
+	if (sdirt == 2) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">"); 
+	sb.safePrintf("Pages in Base Category</nobr><br>\n");
+	// sites in base category
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"7\"");
+	if (sdirt == 7) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Sites in Base Category<br>\n");
+	// sites in entire category
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"6\"");
+	if (sdirt == 6) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Sites in Entire Category<br>\n");
+	// end it
+	return true;
+}
+*/

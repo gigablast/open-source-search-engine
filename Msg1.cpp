@@ -356,10 +356,10 @@ bool Msg1::sendSomeOfList ( ) {
 		char *xx=NULL;*xx=0; }
 
 	// little debug thing for genCatdb from msg9b's huge list add
-	if ( m_list->m_listSize > 10000000 )
-		log("msg1: adding chunk @ %li of %li bytes",
-		    (long)(dataStart - m_list->m_list) ,
-		    (long)m_list->m_listSize );
+	//if ( m_list->m_listSize > 10000000 )
+	//	log("msg1: adding chunk @ %li of %li bytes",
+	//	    (long)(dataStart - m_list->m_list) ,
+	//	    (long)m_list->m_listSize );
 
 	// . now send this list to the host
 	// . this returns false if blocked, true otherwise

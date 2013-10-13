@@ -2111,6 +2111,8 @@ long *XmlDoc::getIndexCode ( ) {
 
 	// if we could not get an ip we need to make a fake one 
 	if ( ! m_ipValid || m_ip == 0 || m_ip == -1 ) {
+		log("build: ip unattainable. forcing ip address of %s "
+		    "to 10.5.123.45",m_firstUrl.m_url);
 		m_ip = atoip("10.5.123.45");
 		m_ipValid = true;
 	}
