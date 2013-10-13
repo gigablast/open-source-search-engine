@@ -40,7 +40,7 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 			break;
 		}
 	}
-	// look it up
+	// look it up. returns catId <= 0 if dmoz not setup yet.
 	long catId = g_categories->getIdFromPath(decodedPath, decodedPathLen);
 
 	SafeBuf sb;
@@ -48,7 +48,7 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 	long xml = r->getLong("xml",0);
 
 	// if /Top print the directory homepage
-	if ( catId == 1 ) {
+	if ( catId == 1 || catId <= 0 ) {
 		// this is in PageRoot.cpp
 		printDirHomePage(sb,r);
 	}

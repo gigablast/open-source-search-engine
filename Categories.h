@@ -165,6 +165,7 @@ public:
 	long generateSubCats ( long catid, SafeBuf *subCatBuf );
 
 	long getNumUrlsFromIndex ( long catIndex ) {
+		if ( ! m_cats ) return 0;
 		return m_cats[catIndex].m_numUrls; };
 
 	// creates a directory search request url

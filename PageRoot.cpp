@@ -947,6 +947,21 @@ long printLastQueries ( char *p , char *pend ) {
 
 //char *printTopDirectory ( char *p, char *pend ) {
 bool printTopDirectory ( SafeBuf& sb ) {
+
+	// if no recs in catdb, print instructions
+	if ( g_catdb.getRdb()->getNumTotalRecs() == 0 )
+		return sb.safePrintf("<center>"
+				     "<b>DMOZ functionality is not set up.</b>"
+				     "<br>"
+				     "<br>"
+				     "<b>"
+				     "Please follow the set up "
+				     "<a href=/admin.html#dmoz>"
+				     "instructions"
+				     "</a>."
+				     "</b>"
+				     "</center>");
+
 	//char topList[4096];
 	//sprintf(topList, 
 	return sb.safePrintf (

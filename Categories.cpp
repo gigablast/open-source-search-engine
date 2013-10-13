@@ -367,6 +367,7 @@ long Categories::getIndexFromPath ( char *str, long strLen ) {
 
 // return the catid from the given path
 long Categories::getIdFromPath ( char *str, long strLen ) {
+	if ( ! m_cats ) return -1;
 	long index = getIndexFromPath(str, strLen);
 	return m_cats[index].m_catid;
 }

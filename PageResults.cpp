@@ -4100,6 +4100,9 @@ bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
 //
 ////////
 bool printDMOZSubTopics ( SafeBuf&  sb, long catId, bool inXml ) {
+
+	if ( catId <= 0 ) return true;
+
 	long currType;
 	bool first;
 	bool nextColumn;
@@ -4501,6 +4504,10 @@ dirEnd:
 }
 
 bool printDMOZCrumb ( SafeBuf &sb , long catId , bool xml ) {
+
+	// catid -1 means error
+	if ( catId <= 0 ) return true;
+
 	long dirIndex = g_categories->getIndexFromId(catId);
 	//  dirIndex = g_categories->getIndexFromId(si->m_cat_sdir);
 	if (dirIndex < 0) dirIndex = 0;
@@ -4525,11 +4532,12 @@ bool printDMOZCrumb ( SafeBuf &sb , long catId , bool xml ) {
 	if ( xml )
 		sb.safePrintf("]]></breadcrumb>\n" );
 	
+	// how many urls/entries in this topic?
+	long nu =g_categories->getNumUrlsFromIndex(dirIndex);
+
 	// print the num
 	if ( ! xml ) {
 		sb.safePrintf("</b>&nbsp&nbsp<i>");
-		// how many urls/entries in this topic?
-		long nu =g_categories->getNumUrlsFromIndex(dirIndex);
 		if ( rtl )
 			sb.safePrintf("<span dir=ltr>(%li)</span>",nu);
 		else
