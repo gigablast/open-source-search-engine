@@ -11060,7 +11060,9 @@ void dumpTagdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 				   data ,
 				   size ,
 				   false);
-			printf("caturl=%s #catids=%li version=%li\n"
+			fprintf(stdout,
+				"key=%s caturl=%s #catids=%li version=%li\n"
+			       ,KEYSTR(&k,12)
 			    ,crec.m_url
 			    ,(long)crec.m_numCatids
 			    ,(long)crec.m_version

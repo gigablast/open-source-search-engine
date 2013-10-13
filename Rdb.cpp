@@ -261,8 +261,8 @@ bool Rdb::init ( char          *dir                  ,
 	if ( ! loadTree ( ) ) return false;
 
 	// add the single dummy collection for catdb
-	//if ( g_catdb.getRdb() == this ) //||
-	//	return g_catdb.addColl ( NULL );
+	if ( g_catdb.getRdb() == this ) 
+		return g_catdb.addColl ( NULL );
 	if ( g_statsdb.getRdb() == this ) 
 		return g_statsdb.addColl ( NULL );
 	if ( g_cachedb.getRdb() == this ) 
@@ -275,8 +275,6 @@ bool Rdb::init ( char          *dir                  ,
 	//	return g_facebookdb.addColl ( NULL );
 	if ( g_syncdb.getRdb() == this ) 
 		return g_syncdb.addColl ( NULL );
-	if ( g_catdb.getRdb() == this ) 
-		return g_catdb.addColl ( NULL );
 
 	// set this for use below
 	//*(long long *)m_gbcounteventsTermId =
@@ -2000,6 +1998,13 @@ bool Rdb::addRecord ( collnum_t collnum,
 	/*
 	}
 	*/
+
+	// debug testing
+	//if ( m_rdbId == RDB_CATDB ) {
+	//	// show key
+	//	log("rdb: adding key=%s to tree n=%li",KEYSTR(key,12) ,n);
+	//}
+
 
 	//jumpdown:
 

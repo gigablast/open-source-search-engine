@@ -198,6 +198,7 @@ bool CatRec::set ( Url *url , char *data , long dataSize , bool gotByIp ) {
 		log ( "tagdb: Deserialized datasize %i != %li for url %s so "
 		      "ignoring tagdb record.",
 		      p - m_data, m_dataSize , url->getUrl() );
+		return false;
 		char *xx = NULL; *xx = 0;
 	}
 

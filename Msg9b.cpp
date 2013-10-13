@@ -100,6 +100,10 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		site.set ( p , e - p , false ); // addwww?
 		// normalize the url
 		g_catdb.normalizeUrl(&site, &site);
+
+		// sanity
+		if ( numCatids[k] > MAX_CATIDS ) { char *xx=NULL;*xx=0; }
+
 		// make a siteRec from this url
 		CatRec sr;
 		// returns false and sets g_errno on error
@@ -110,6 +114,10 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		char *data     = sr.getData ();
 		long  dataSize = sr.getDataSize ();
 		key_t key;
+		// sanity test
+		CatRec cr2;
+		if ( ! cr2.set ( NULL , sr.getData(), sr.getDataSize(),false)){
+			char *xx=NULL;*xx=0; }
 		// debug when generating catdb
 		//char *x = p;
 		//for ( ; x<e ; x++ ) {
@@ -132,6 +140,19 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		}
 		else if ( ! m_list.addRecord ( key, dataSize, data ) )
 			return true;
+
+		/*
+		// debug point
+		SafeBuf sb;
+		//sb.safeMemcpy(p , e-p );
+		sb.safeStrcpy(sr.m_url);
+		sb.safePrintf(" ");
+		for ( long i = 0 ; i < numCatids[k] ; i++ )
+			sb.safePrintf ( "%li " , catids[c+i] );
+		log("catdb: adding key=%s url=%s",
+		    KEYSTR(&key,12),
+		    sb.getBufStart());
+		*/
 
 		// debug
 		//log("gencat: adding url=%s",sr.m_url);

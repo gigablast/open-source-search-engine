@@ -164,7 +164,7 @@ class Conf {
 	long  m_catdbMaxTreeMem;
 	long  m_catdbMaxDiskPageCacheMem;
 	long  m_catdbMaxCacheMem;
-	long  m_catdbMinFilesToMerge;
+	//long  m_catdbMinFilesToMerge;
 
 	long  m_revdbMaxTreeMem;
 	long  m_timedbMaxTreeMem;

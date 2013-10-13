@@ -6,7 +6,7 @@
 #include "Clusterdb.h"
 #include "Hostdb.h"
 #include "Tagdb.h"
-//#include "Catdb.h"
+#include "Catdb.h"
 #include "Posdb.h"
 #include "Cachedb.h"
 #include "Monitordb.h"
@@ -411,7 +411,7 @@ bool Process::init ( ) {
 	m_rdbs[m_numRdbs++] = g_spiderdb.getRdb    ();
 	m_rdbs[m_numRdbs++] = g_clusterdb.getRdb   (); 
 	m_rdbs[m_numRdbs++] = g_tagdb.getRdb      ();
-	//m_rdbs[m_numRdbs++] = g_catdb.getRdb       ();
+	m_rdbs[m_numRdbs++] = g_catdb.getRdb       ();
 	m_rdbs[m_numRdbs++] = g_statsdb.getRdb     ();
 	m_rdbs[m_numRdbs++] = g_linkdb.getRdb      ();
 	m_rdbs[m_numRdbs++] = g_cachedb.getRdb      ();
@@ -1657,7 +1657,7 @@ void Process::resetAll ( ) {
 		rdb->reset();
 	}
 
-	//g_catdb           .reset();
+	g_catdb           .reset();
 	g_collectiondb    .reset();
 	g_categories1     .reset();
 	g_categories2     .reset();
@@ -1758,7 +1758,7 @@ void Process::resetPageCaches ( ) {
 	//g_tfndb           .getDiskPageCache()->reset();
 	//g_checksumdb      .getDiskPageCache()->reset();
 	g_clusterdb       .getDiskPageCache()->reset();
-	//g_catdb           .getDiskPageCache()->reset();
+	g_catdb           .getDiskPageCache()->reset();
 	//g_placedb         .getDiskPageCache()->reset();
 	g_doledb          .getDiskPageCache()->reset();
 	//g_statsdb	  .getDiskPageCache()->reset();

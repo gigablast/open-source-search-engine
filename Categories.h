@@ -26,7 +26,7 @@
 #define MAX_TAG_LEN      127
 #define MAX_URL_CATIDS   64
 #define MAX_URLTXT_SIZE  500000
-#define MAX_CATIDS       64
+#define MAX_CATIDS       96
 #define MAX_CATNAME_LEN  1024
 
 #define HASHTABLE_SIZE    (1024*1024)

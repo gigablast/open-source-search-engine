@@ -62,7 +62,7 @@ bool Catdb::init (  ) {
 			    -1                         , // fixed record size
 			    //g_hostdb.m_groupMask         ,
 			    //g_hostdb.m_groupId           ,
-				    g_conf.m_catdbMinFilesToMerge   ,
+			     2,//g_conf.m_catdbMinFilesToMerge   ,
 				    treeMem ,//g_conf.m_catdbMaxTreeMem  ,
 			    maxTreeNodes               ,
 			    // now we balance so Sync.cpp can ordered huge list
@@ -74,7 +74,7 @@ bool Catdb::init (  ) {
 				    &m_pc                      ,
 				    false,
 				    false,
-				    12,
+			     12, // keysize
 				    false,
 			     true )) // is collectionless?
 		return false;

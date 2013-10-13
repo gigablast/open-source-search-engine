@@ -1086,7 +1086,6 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		//g_tfndb.getRdb(),
 		g_tagdb.getRdb(),
 		g_clusterdb.getRdb(),
-		//g_catdb.getRdb(),
 		g_linkdb.getRdb(),
 		g_cachedb.getRdb(),
 		g_serpdb.getRdb(),
