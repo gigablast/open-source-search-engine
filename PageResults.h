@@ -3,6 +3,9 @@
 
 #include "SafeBuf.h"
 
+bool printDmozRadioButtons ( SafeBuf &sb , long catId ) ;
+bool printLogoAndSearchBox ( SafeBuf &sb , class HttpRequest *hr, long catId );
+
 bool printTermPairs ( SafeBuf &sb , class Query *q , class PairScore *ps ) ;
 bool printSingleTerm ( SafeBuf &sb , class Query *q , class SingleScore *ss );
 

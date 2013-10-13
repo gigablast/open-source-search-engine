@@ -52,22 +52,24 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 		// this is in PageRoot.cpp
 		printDirHomePage(sb,r);
 	}
-
 	//
 	// try printing this shit out not as search results right now
 	// but just verbatim from dmoz files
 	//
-
-	// the dmoz breadcrumb
-	printDMOZCrumb ( sb,catId,xml);
-
-	// print the subtopcis in this topic. show as links above
-	// the search results
-	printDMOZSubTopics ( sb, catId , xml );
-
-	// ok, for now just print the dmoz topics since our search
-	// results will be empty... until populated!
-	g_categories->printUrlsInTopic ( &sb , catId );
+	else {
+		// search box
+		printLogoAndSearchBox(sb,r,catId);
+		// radio buttons for search dmoz
+		printDmozRadioButtons(sb,catId);
+		// the dmoz breadcrumb
+		printDMOZCrumb ( sb,catId,xml);
+		// print the subtopcis in this topic. show as links above
+		// the search results
+		printDMOZSubTopics ( sb, catId , xml );
+		// ok, for now just print the dmoz topics since our search
+		// results will be empty... until populated!
+		g_categories->printUrlsInTopic ( &sb , catId );
+	}
 
 	return g_httpServer.sendDynamicPage ( s,
 					      (char*) sb.getBufStart(),

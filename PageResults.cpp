@@ -68,7 +68,7 @@ bool printScoresHeader ( SafeBuf &sb ) ;
 bool printSingleScore ( SafeBuf &sb , SearchInput *si , SingleScore *ss ,
 			Msg20Reply *mr , Msg40 *msg40 ) ;
 
-
+bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId );
 
 bool sendReply ( State0 *st , char *reply ) {
 
@@ -213,14 +213,14 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	long xml = hr->getLong("xml",0);
 
 	// get the dmoz catid if given
-	long catid = hr->getLong("dir",-1);
+	//long searchingDmoz = hr->getLong("dmoz",0);
 
 	//
 	// send back page frame with the ajax call to get the real
 	// search results. do not do this if a "&dir=" (dmoz category)
 	// is given
 	//
-	if ( hr->getLong("id",0) == 0 && ! xml && catid == -1 ) {
+	if ( hr->getLong("id",0) == 0 && ! xml ) {
 		SafeBuf sb;
 		sb.safePrintf(
 			      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML "
@@ -325,114 +325,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// 
 		// logo header
 		//
-		sb.safePrintf(
-			      // logo and menu table
-			      "<table border=0 cellspacing=5>"
-			      //"style=color:blue;>"
-			      "<tr>"
-			      "<td rowspan=2 valign=top>"
-			      "<a href=/>"
-			      "<img "
-			      "src=http://www.gigablast.com/logo-small.png height=64 width=295>"
-			      "</a>"
-			      "</td>"
-
-			      "<td>"
-			      );
-		// menu above search box
-		sb.safePrintf(
-			      "<br>"
-
-			      " &nbsp; "
-
-			      "<b title=\"Search the web\">"
-			      "web"
-			      "</b>"
-			      "</a>"
-
-			      " &nbsp;&nbsp;&nbsp;&nbsp; "
-			      );
-		//  SEO functionality not included yet - so redir to gigablast.
-		if ( g_conf.m_isMattWells )
-			sb.safePrintf("<a title=\"Rank higher in "
-				      "Google\" href='/seo'>");
-		else
-			sb.safePrintf("<a title=\"Rank higher in "
-				      "Google\" href='https://www.gigablast."
-				      "com/seo'>");
-
-		sb.safePrintf(
-			      "seo"
-			      "</a>"
-
-			      " &nbsp;&nbsp;&nbsp;&nbsp; "
-
-			      "<a title=\"Browse the DMOZ directory\" "
-			      "href=/?c=dmoz>"
-			      "directory"
-			      "</a>"
-
-			      " &nbsp;&nbsp;&nbsp;&nbsp; "
-
-			      // i'm not sure why this was removed. perhaps
-			      // because it is not working yet because of
-			      // some bugs...
-			      "<!-- <a title=\"Advanced web search\" "
-			      "href=/adv.html>"
-			      "advanced"
-			      "</a>"
-
-			      " &nbsp;&nbsp;&nbsp;&nbsp; -->"
-
-			      "<a title=\"Add your url to the index\" "
-			      "href=/addurl>"
-			      "add url"
-			      "</a>"
-
-			      /*
-			      " &nbsp;&nbsp;|&nbsp;&nbsp; "
-
-			      "<a title=\"Words from Gigablast\" "
-			      "href=/blog.html>"
-			      "blog"
-			      "</a>"
-
-			      " &nbsp;&nbsp;|&nbsp;&nbsp; "
-
-			      "<a title=\"About Gigablast\" href=/about.html>"
-			      "about"
-			      "</a>"
-			      */
-
-			      "<br><br>"
-			       //
-			       // search box
-			       //
-			       "<form name=f method=GET action=/search>\n\n" 
-			       // input table
-			       //"<div style=margin-left:5px;margin-right:5px;>
-			       "<input size=40 type=text name=q value=\""
-		       );
-		// contents of search box
-		sb.htmlEncode ( qstr , qlen , false );
-		sb.safePrintf ("\">"
-			       "<input type=submit value=\"Search\" border=0>"
-			       "<br>"
-			       "<br>"
-			       "Try your search (not secure) on: &nbsp;&nbsp; "
-			       "<a href=https://www.google"
-			       ".com/search?q="
-			       );
-		sb.urlEncode ( qstr );
-		sb.safePrintf (">google</a> &nbsp;&nbsp;&nbsp;&nbsp; "
-			       "<a href=http://www.bing.com/search?q=");
-		sb.urlEncode ( qstr );		
-		sb.safePrintf (">bing</a>"
-			       "</form>\n"
-			       "</td>"
-			       "</tr>"
-			       "</table>\n"
-			       );
+		printLogoAndSearchBox ( sb , hr , -1 ); // catId = -1
 		//
 		// script to populate search results
 		//
@@ -814,13 +707,13 @@ bool gotResults ( void *state ) {
 	char  *q    = msg40->getQuery();
 	long   qlen = msg40->getQueryLen();
 
-	bool xml = si->m_xml;
+	//bool xml = si->m_xml;
 
 
-	// display it?
-	if (  si->m_catId >= 0 ) {
-		printDMOZCrumb ( sb , si->m_catId , xml );
-	}
+	// if they are doing a search in dmoz, catId will be > 0.
+	//if (  si->m_directCatId >= 0 ) {
+	//	printDMOZCrumb ( sb , si->m_directCatId , xml );
+	//}
 
 
 	///////////
@@ -834,6 +727,7 @@ bool gotResults ( void *state ) {
 	// put our stars back onto that and should be sorted by them.
 	//
 	///////////
+	/*
 	if ( si->m_catId >= 0 ) {
 		// print the subtopcis in this topic. show as links above
 		// the search results
@@ -842,7 +736,7 @@ bool gotResults ( void *state ) {
 		// results will be empty... until populated!
 		//g_categories->printUrlsInTopic ( &sb , si->m_catId );
 	}
-
+	*/
 
 
 	// save how many docs are in it
@@ -4544,5 +4438,141 @@ bool printDMOZCrumb ( SafeBuf &sb , long catId , bool xml ) {
 			sb.safePrintf("(%li)", nu);
 		sb.safePrintf("</i></font><br><br>\n");
 	}
+	return true;
+}
+
+bool printDmozRadioButtons ( SafeBuf &sb , long catId ) {
+	sb.safePrintf("Search "
+		      "<input type=radio name=gbipcatid:%li checked> sites "
+		      "<input type=radio name=gbpcatid:%li> pages "
+		      "in this topic or below"
+		      , catId
+		      , catId
+		      );
+	return true;
+}
+
+// if catId >= 1 then print the dmoz radio button
+bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
+
+	sb.safePrintf(
+		      // logo and menu table
+		      "<table border=0 cellspacing=5>"
+		      //"style=color:blue;>"
+		      "<tr>"
+		      "<td rowspan=2 valign=top>"
+		      "<a href=/>"
+		      "<img "
+		      "src=http://www.gigablast.com/logo-small.png "
+		      "height=64 width=295>"
+		      "</a>"
+		      "</td>"
+		      
+		      "<td>"
+		      );
+	// menu above search box
+	sb.safePrintf(
+		      "<br>"
+		      
+		      " &nbsp; "
+		      
+		      "<b title=\"Search the web\">"
+		      "web"
+		      "</b>"
+		      "</a>"
+		      
+		      " &nbsp;&nbsp;&nbsp;&nbsp; "
+		      );
+	//  SEO functionality not included yet - so redir to gigablast.
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<a title=\"Rank higher in "
+			      "Google\" href='/seo'>");
+	else
+		sb.safePrintf("<a title=\"Rank higher in "
+			      "Google\" href='https://www.gigablast."
+			      "com/seo'>");
+	
+	sb.safePrintf(
+		      "seo"
+		      "</a>"
+		      
+		      " &nbsp;&nbsp;&nbsp;&nbsp; "
+		      
+		      "<a title=\"Browse the DMOZ directory\" "
+		      "href=/?c=dmoz>"
+		      "directory"
+		      "</a>"
+		      
+		      " &nbsp;&nbsp;&nbsp;&nbsp; "
+		      
+		      // i'm not sure why this was removed. perhaps
+		      // because it is not working yet because of
+		      // some bugs...
+		      "<!-- <a title=\"Advanced web search\" "
+		      "href=/adv.html>"
+		      "advanced"
+		      "</a>"
+		      
+		      " &nbsp;&nbsp;&nbsp;&nbsp; -->"
+		      
+		      "<a title=\"Add your url to the index\" "
+		      "href=/addurl>"
+		      "add url"
+		      "</a>"
+		      
+		      /*
+			" &nbsp;&nbsp;|&nbsp;&nbsp; "
+			
+			"<a title=\"Words from Gigablast\" "
+			"href=/blog.html>"
+			"blog"
+			"</a>"
+			
+			" &nbsp;&nbsp;|&nbsp;&nbsp; "
+			
+			"<a title=\"About Gigablast\" href=/about.html>"
+			"about"
+			"</a>"
+		      */
+		      
+		      "<br><br>"
+		      //
+		      // search box
+		      //
+		      "<form name=f method=GET action=/search>\n\n" 
+		      // input table
+		      //"<div style=margin-left:5px;margin-right:5px;>
+		      "<input size=40 type=text name=q value=\""
+		      );
+	// contents of search box
+	long  qlen;
+	char *qstr = hr->getString("q",&qlen,"",NULL);
+	sb.htmlEncode ( qstr , qlen , false );
+	sb.safePrintf ("\">"
+		       "<input type=submit value=\"Search\" border=0>"
+		       "<br>"
+		       "<br>"
+		       );
+	if ( catId >= 0 ) {
+		printDmozRadioButtons(sb,catId);
+	}
+	else {
+		sb.safePrintf("Try your search (not secure) on: "
+			      "&nbsp;&nbsp; "
+			      "<a href=https://www.google"
+			      ".com/search?q="
+			      );
+		sb.urlEncode ( qstr );
+		sb.safePrintf (">google</a> &nbsp;&nbsp;&nbsp;&nbsp; "
+			       "<a href=http://www.bing.com/sea"
+			       "rch?q=");
+		sb.urlEncode ( qstr );		
+		sb.safePrintf (">bing</a>");
+	}
+	sb.safePrintf( "</form>\n"
+		       "</td>"
+		       "</tr>"
+		       "</table>\n"
+		       );
 	return true;
 }
