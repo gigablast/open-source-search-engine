@@ -14630,11 +14630,6 @@ Images *XmlDoc::getImages ( ) {
 // . get different attributes of the Links as vectors
 // . these are 1-1 with the Links::m_linkPtrs[] array
 TagRec ***XmlDoc::getOutlinkTagRecVector () {
-	// error?
-	if ( m_outlinkTagRecVectorValid && m_msge0.m_errno ) {
-		g_errno = m_msge0.m_errno;
-		return NULL;
-	}
 
 	// if page has a <meta name=usefakeips content=1> tag
 	// then use the hash of the links host as the firstip.
@@ -14647,6 +14642,12 @@ TagRec ***XmlDoc::getOutlinkTagRecVector () {
 	// no error and valid, return quick
 	if ( m_outlinkTagRecVectorValid && *useFakeIps ) 
 		return &m_outlinkTagRecVector;
+
+	// error?
+	if ( m_outlinkTagRecVectorValid && m_msge0.m_errno ) {
+		g_errno = m_msge0.m_errno;
+		return NULL;
+	}
 
 	// if not using fake ips, give them the real tag rec vector
 	if ( m_outlinkTagRecVectorValid )
@@ -14750,8 +14751,6 @@ char *XmlDoc::hasFakeIpsMetaTag ( ) {
 
 long **XmlDoc::getOutlinkFirstIpVector () {
 
-	if ( m_outlinkIpVectorValid ) return &m_outlinkIpVector;
-
 	Links *links = getLinks();
 	if ( ! links ) return NULL;
 
@@ -14762,6 +14761,9 @@ long **XmlDoc::getOutlinkFirstIpVector () {
 	char *useFakeIps = hasFakeIpsMetaTag();
 	if ( ! useFakeIps || useFakeIps == (void *)-1 ) 
 		return (long **)useFakeIps;
+
+	if ( *useFakeIps && m_outlinkIpVectorValid )
+		return &m_outlinkIpVector;
 	
 	if ( *useFakeIps ) {
 		long need = links->m_numLinks * 4;
@@ -14777,6 +14779,15 @@ long **XmlDoc::getOutlinkFirstIpVector () {
 		return &m_outlinkIpVector;
 	}
 
+	// return msge1's buf otherwise
+	if ( m_outlinkIpVectorValid ) 
+		return &m_msge1.m_ipBuf;
+
+	// should we have some kinda error for msge1?
+	//if ( m_outlinkIpVectorValid && m_msge1.m_errno ) {
+	//	g_errno = m_msge1.m_errno;
+	//	return NULL;
+	//}
 
 	// . we now scrounge them from TagRec's "firstip" tag if there!
 	// . that way even if a domain changes its ip we still use the
@@ -14826,12 +14837,9 @@ long **XmlDoc::getOutlinkFirstIpVector () {
 	}
 	// error?
        	if ( g_errno ) return NULL;
-	// set it
-	m_outlinkIpVector = m_msge1.m_ipBuf;
 	// . ptr to a list of ptrs to tag recs
 	// . ip will be -1 on error
-	//return &m_msge1.m_ipBuf;
-	return &m_outlinkIpVector;
+	return &m_msge1.m_ipBuf;
 }
 
 /*
