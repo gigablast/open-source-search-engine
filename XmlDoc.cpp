@@ -2109,6 +2109,12 @@ long *XmlDoc::getIndexCode ( ) {
 	// ok, neutralize it
 	*indexCode = 0;
 
+	// if we could not get an ip we need to make a fake one 
+	if ( ! m_ipValid || m_ip == 0 || m_ip == -1 ) {
+		m_ip = atoip("10.5.123.45");
+		m_ipValid = true;
+	}
+
 	// make certain things valid to avoid core in getNewSpiderReply()
 	if ( ! m_crawlDelayValid ) {
 		m_crawlDelayValid = true;
