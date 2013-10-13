@@ -647,6 +647,7 @@ class XmlDoc {
 	bool getIsInjecting();
 	long *getSpiderPriority ( ) ;
 	long *getIndexCode ( ) ;
+	long *getIndexCode2 ( ) ;
 	SafeBuf *getNewTagBuf ( ) ;
 
 	char *updateTagdb ( ) ;

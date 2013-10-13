@@ -590,16 +590,17 @@ Now if you are <a href=#input>interfacing to Gigablast</a> from another program 
 
 <br><b>Populating DMOZ Directories:</b>
 <ul>
-<li>Each DMOZ page that Gigablast serves is actually a set of search results. The search is something like <i>gbcat:&lt;catid&gt;</i> , where <i>catid</i> is the DMOZ category number. Each search result is a URL that is in that particular category. Therefore we must index every URL in DMOZ.
+<li>Each DMOZ page that Gigablast serves is actually a set of search results. The search is <i>gbcatid:&lt;catid&gt;</i> , where <i>catid</i> is the DMOZ category number. Each search result is a URL that is in that particular category. Therefore we must index every URL in DMOZ.
 So execute <i>dmozparse</i> with the <i>urldump -s</i> option to create the gbdmoz.urls.txt.* files which contain all the URLs in DMOZ. (Excluding URLs that contained hashtags, '#'.)
 <br><b>$ dmozparse urldump -s</b>
 
-<br><li>Now tell Gigablast to index each URL listed in each gbdmoz.urls.txt.* file. Make sure you specify the collection you are using for DMOZ, in the example below it uses <i>mydmozcoll</i>. You can use the <a href=/addurl>add url</a> page to add the gbdmoz.urls.txt.* files or you can use curl like:
+<br><li>Now tell Gigablast to index each URL listed in each gbdmoz.urls.txt.* file. Make sure you specify the collection you are using for DMOZ, in the example below it uses <i>main</i>. You can use the <a href=/addurl>add url</a> page to add the gbdmoz.urls.txt.* files or you can use curl (or wget) like:
 <br>
-<b>$ curl "http://127.0.0.1:8000/addurl?id=1&spiderlinks=1&c=mydmozcoll&u=http://127.0.0.1:8000/gbdmoz.urls.txt.0"</b>
+<b>$ curl "http://127.0.0.1:8000/addurl?id=1&spiderlinks=1&c=main&u=http://127.0.0.1:8000/gbdmoz.urls.txt.0"</b>
 
 <br><li>Each gbdmoz.urls.txt.* file contains a special meta tag which instructs Gigablast to NOT follow the links of each DMOZ URL.
 <br><li>Each gbdmoz.urls.txt.* file contains a special meta tag which instructs Gigablast to index each DMOZ URL even if there was some external error, like a DNS or TCP timeout. If the error is internal, like an Out of Memory error, then the document will, of course, not be indexed, but it should be reported in the log. This is essential for making our version of DMOZ exactly like the official version.
+<br><li>Finally ensure spiders are enabled for your collection> In the above example, <i>main</i>. And ALSO ensure that spiders are enabled in the Master Controls for all collections. Then the URLs you added above should be spidered and indexed. Hit reload on the <i>Spider Queue</i> tab to ensure you see some spider activity for your collection. Each topic viewed in the DMOZ directory then executes a gbcatid:xxxx search where xxxx is the category id. So when the URLs in that category are indexed, they will index gbcatid:xxxx therefore they should appear in the DMOZ topic page for category id xxxx.
 
 <!--
 <br>    <li>Move the gbdmoz.urls.txt.* files to the <i>html</i> directory under the main Gigablast directory of host 0.<br>    

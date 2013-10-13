@@ -2062,9 +2062,66 @@ key_t *XmlDoc::getTitleRecKey() {
 	return &m_titleRecKey;
 }
 
+
+long *XmlDoc::getIndexCode ( ) {
+
+	long *indexCode = getIndexCode2();
+	if ( ! indexCode || indexCode == (void *)-1 ) return indexCode;
+
+	// if zero good!
+	if ( *indexCode == 0 ) return indexCode;
+
+	//
+	// should we neutralize it?
+	//
+	// in the case of indexing dmoz urls outputted from
+	// 'dmozparse urldump -s' it outputs a meta tag 
+	// (<meta name=ignorelinksexternalerrors content=1>) that
+	// indicates to index the links even in the case of some errors,
+	// so that we can be assured to have exactly the same urls the dmoz 
+	// has in our index. so when we do a gbcatid:xxx query we get the same
+	// urls in the search results that dmoz has for that category id.
+	if ( ! m_oldsrValid || ! m_oldsr.m_ignoreExternalErrors ) 
+		return indexCode;
+
+	// only neutralize certain errors
+	if (    *   indexCode != EDNSTIMEDOUT
+		&& *indexCode != ETCPTIMEDOUT 
+		&& *indexCode != EUDPTIMEDOUT
+		// from m_redirError
+		&& *indexCode != EDOCSIMPLIFIEDREDIR
+		&& *indexCode != EDNSDEAD
+		&& *indexCode != ENETUNREACH
+		&& *indexCode != EHOSTUNREACH
+		&& *indexCode != EDOCFILTERED
+		&& *indexCode != EDOCREPEATSPAMMER
+		&& *indexCode != EDOCDUP
+		&& *indexCode != EDOCISERRPG
+		&& *indexCode != EDOCHIJACKED
+		&& *indexCode != EDOCBADHTTPSTATUS
+		&& *indexCode != EDOCDISALLOWED
+		&& *indexCode != EBADCHARSET
+		&& *indexCode != EDOCDUPWWW
+		&& *indexCode != EBADIP
+		)
+		return indexCode;
+
+	// ok, neutralize it
+	*indexCode = 0;
+
+	// make certain things valid to avoid core in getNewSpiderReply()
+	if ( ! m_crawlDelayValid ) {
+		m_crawlDelayValid = true;
+		m_crawlDelay      = -1;
+	}
+
+	return indexCode;
+}
+		
+
 // . return NULL and sets g_errno on error
 // . returns -1 if blocked
-long *XmlDoc::getIndexCode ( ) {
+long *XmlDoc::getIndexCode2 ( ) {
 
 	// return it now if we got it already
 	if ( m_indexCodeValid ) return &m_indexCode;
@@ -16807,8 +16864,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		return m_metaList;
 	}
 
-	bool temporaryExternalError = false;
-
 	// . some index code warrant retries, like EDNSTIMEDOUT, ETCPTIMEDOUT,
 	//   etc. these are deemed temporary errors. other errors basically
 	//   indicate a document that will never be indexable and should,
@@ -16824,27 +16879,14 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	     // . getNewSpiderReply() below will clear the error in it and
 	     //   copy stuff over from m_oldsr and m_oldDoc for this case
 		//|| *indexCode == EDOCUNCHANGED
-	     )
-		temporaryExternalError = true;
-
-	// in the case of indexing dmoz urls outputted from
-	// 'dmozparse urldump -s' it specifies a meta tag that
-	// indicates to index the documents even in the case of a
-	// temporary external error, so that we can be assured to have
-	// exactly the same urls the dmoz has in our index. so when we
-	// do a gbcatid:xxx query we get the same urls in the search results
-	// that dmoz has for that category id.
-	if ( m_oldsrValid && m_oldsr.m_ignoreExternalErrors )
-		temporaryExternalError = false;
-
-
-	if ( temporaryExternalError ) {
+		) {
 		// sanity - in repair mode?
 		if ( m_useSecondaryRdbs ) { char *xx=NULL;*xx=0; }
 		// . this seems to be an issue for blocking
 		// . if we do not have a valid ip, we can't compute this,
 		//   in which case it will not be valid in the spider reply
-		// . why do we need this for timeouts etc? if the doc is unchanged
+		// . why do we need this for timeouts etc? if the doc is 
+		//   unchanged
 		//   we should probably update its siteinlinks in tagdb 
 		//   periodically and reindex the whole thing...
 		// . i think we were getting the sitenuminlinks for
