@@ -720,12 +720,18 @@ long fileWrite ( int fileid, void *buf, size_t count ) {
 // where these meta tags come into play.
 void writeMetaTags ( int outStream2 ) {
 	char *str = 
+		"<!-- do not spider the links of the links -->\n"
 		"<meta name=spiderlinkslinks content=0>\n"
+		"<!--ignore tcp timeouts, dns timeouts, etc.-->\n"
 		"<meta name=ignorelinksexternalerrors content=1>\n"
+		"<!--do not index this document, but get links from it-->\n"
+		"<meta name=noindex content=1>\n"
 		// tell gigablast to not do a dns lookup on every
 		// outlink when adding spiderRequests to spiderdb
 		// for each outlink. will save time up front but
 		// will have to be done when spidering the doc.
+		"<!-- do not lookup the ip address of every outlink, "
+		"but use hash of the subdomain as the ip -->\n"
 		"<meta name=usefakeips content=1>\n"
 		;
 	long len = gbstrlen(str);
