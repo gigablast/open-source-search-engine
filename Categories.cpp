@@ -837,7 +837,7 @@ long Categories::fixUrl ( char *url, long urlLen ) {
 	return newUrlLen;
 }
 
- bool Categories::addUrlsToBadHashTable ( long catid  ) {
+bool Categories::addUrlsToBadHashTable ( long catid  ) {
 	 return getTitleAndSummary ( NULL  , // urlorig
 				     0     , // urloriglen
 				     catid ,
@@ -870,6 +870,7 @@ bool Categories::printUrlsInTopic ( SafeBuf *sb, long catid ) {
 	long urlStrLen;
 	char urlStr[MAX_URL_LEN];
 	long niceness = 0;
+	bool printedStart = false;
 
 	// lookup the index for this catid
 	catIndex = getIndexFromId(catid);
@@ -988,14 +989,19 @@ nextTag:
 
 	summLen = fillNextTagBody(summ, maxSummLen);
 
+	if ( ! printedStart ) {
+		printedStart = true;
+		sb->safePrintf("<ul>");
+	}
+
 	// print it out
-	sb->safePrintf("<a href=\"");
+	sb->safePrintf("<li><a href=\"");
 	sb->safeMemcpy ( urlStr , urlStrLen );
 	sb->safePrintf("\">");
 	sb->safeMemcpy ( title , titleLen );
 	sb->safePrintf("</a><br>");
 	sb->safeMemcpy( summ, summLen );
-	sb->safePrintf("<br><br>");
+	sb->safePrintf("<br>");//<br>");
 
 
 	/*
@@ -1016,6 +1022,8 @@ nextTag:
 	goto nextTag;
 
 errEnd:
+
+	sb->safePrintf("</ul>");
 
 	close(m_rdfStream);
 	return false;

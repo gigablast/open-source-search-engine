@@ -64,6 +64,7 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 	// print the subtopcis in this topic. show as links above
 	// the search results
 	printDMOZSubTopics ( sb, catId , xml );
+
 	// ok, for now just print the dmoz topics since our search
 	// results will be empty... until populated!
 	g_categories->printUrlsInTopic ( &sb , catId );

@@ -4494,7 +4494,7 @@ dirEnd:
 		sb.safePrintf("\t</directory>\n");
 	else {
 		sb.safePrintf("</span>");
-		sb.safePrintf("<hr><br>\n");
+		sb.safePrintf("<hr>\n");//<br>\n");
 	}
 
 	return true;
