@@ -455,6 +455,13 @@ class XmlDoc {
 	long **getIndCatIds ( ) ;
 	long **getCatIds ( ) ;
 	class CatRec *getCatRec ( ) ;
+
+	long *getNumDmozEntries() ;
+	char **getDmozTitles ( ) ;
+	char **getDmozSummaries ( ) ;
+	char **getDmozAnchors ( ) ;
+	bool setDmozInfo () ;
+
 	long long **getWikiDocIds ( ) ;
 	void gotWikiResults ( class UdpSlot *slot );
 	long *getPubDate ( ) ;
@@ -998,7 +1005,6 @@ class XmlDoc {
 	char     m_fragBufValid;
 	char     m_wordSpamBufValid;
 	char     m_finalSummaryBufValid;
-
 	char     m_matchingQueryBufValid;
 	char     m_relatedQueryBufValid;
 	char     m_queryLinkBufValid;
@@ -1103,6 +1109,7 @@ class XmlDoc {
 	bool m_dmozTitlesValid;
 	bool m_dmozSummsValid;
 	bool m_dmozAnchorsValid;
+	bool m_dmozInfoValid;
 	bool m_rawUtf8ContentValid;
 	bool m_expandedUtf8ContentValid;
 	bool m_utf8ContentValid;
@@ -1785,7 +1792,9 @@ class XmlDoc {
 	char m_isErrorPage;
 	char m_isHijacked;
 	//char m_isVisible;
-	char m_dmozBuf[12000];
+	//char m_dmozBuf[12000];
+	SafeBuf m_dmozBuf;
+	long m_numDmozEntries;
 
 	// stuff
 	char *m_statusMsg;

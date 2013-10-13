@@ -173,6 +173,7 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_dmozBuf.purge();
 	m_fakeIpBuf.purge();
 	m_fakeTagRecPtrBuf.purge();
 
@@ -1553,6 +1554,8 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	m_imageDataValid              = true;
 	m_catIdsValid                 = true;
 	m_indCatIdsValid              = true;
+	// ptr_dmozTitles/Summs/Anchors valid:
+	m_dmozInfoValid               = true;
 	m_utf8ContentValid            = true;
 	//m_sectionsReplyValid          = true;
 	//m_sectionsVotesValid          = true;
@@ -2610,6 +2613,121 @@ char *XmlDoc::prepareToMakeTitleRec ( ) {
 	return (char *)1;
 }
 
+#define MAX_DMOZ_TITLES 10
+
+long *XmlDoc::getNumDmozEntries() {
+	long **getDmozCatIds();
+	long nc = size_catIds / 4;
+	if ( nc > MAX_DMOZ_TITLES ) nc = MAX_DMOZ_TITLES;
+	m_numDmozEntries = nc;
+	return &m_numDmozEntries;
+}
+// list of \0 terminated titles, etc. use getNumDmozTitles() to get #
+char **XmlDoc::getDmozTitles ( ) {
+	// returns false if blocked
+	if ( ! setDmozInfo() ) return (char **)-1;
+	if ( g_errno ) return NULL;
+	return &ptr_dmozTitles;
+}
+char **XmlDoc::getDmozSummaries ( ) {
+	// returns false if blocked
+	if ( ! setDmozInfo() ) return (char **)-1;
+	if ( g_errno ) return NULL;
+	return &ptr_dmozSumms;
+}
+char **XmlDoc::getDmozAnchors ( ) {
+	// returns false if blocked
+	if ( ! setDmozInfo() ) return (char **)-1;
+	if ( g_errno ) return NULL;
+	return &ptr_dmozAnchors;
+}
+
+
+// returns false if blocked, true otherwise. sets g_errno on error & rets true
+bool XmlDoc::setDmozInfo () {
+
+	if ( m_dmozInfoValid ) return true;
+
+	g_errno = 0;
+
+	// return true and set g_errno on error
+	if ( ! m_dmozBuf.reserve(12000) ) {
+		log("xmldoc: error getting dmoz info: %s",mstrerror(g_errno));
+		// ensure log statement does not clear g_errno
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		return true;
+	}
+
+	// start here
+	char *dmozBuf = m_dmozBuf.getBufStart();
+
+	char *titles  = dmozBuf;
+	char *summs   = dmozBuf+5000;
+	char *anchors = dmozBuf+10000;
+	// the end of it
+	char *dtend = dmozBuf + 5000;
+	char *dsend = dmozBuf + 10000;
+	char *daend = dmozBuf + 12000;
+	// point into those bufs
+	char *dt = titles;
+	char *ds = summs;
+	char *da = anchors;
+	// MDW: i limit this to 10 to save stack space!
+	long nc = size_catIds / 4;
+	if ( nc > MAX_DMOZ_TITLES ) nc = MAX_DMOZ_TITLES;
+	for (long i = 0; i < nc ; i++) {
+		// breathe
+		QUICKPOLL ( m_niceness );
+		// temp stuff
+		long dtlen = 0;
+		long dslen = 0;
+		unsigned char dalen = 0;
+
+		// . store all dmoz info separated by \0's into titles[] buffer
+		// . crap, this does a disk read and blocks on that
+		//
+		// . TODO: make it non-blocking!!!!
+		//
+		g_categories->getTitleAndSummary ( m_firstUrl.getUrl(),
+						   m_firstUrl.getUrlLen(),
+						   ptr_catIds[i],
+						   dt,//&titles[titlesLen],
+						   &dtlen,//&titleLens[i],
+						   dtend-dt,
+						   ds,//&summs[summsLen],
+						   &dslen,//&summLens[i],
+						   dsend-ds,
+						   da,//&anchors[anchorsLen],
+						   &dalen,//&anchorLens[i],
+						   daend-da,
+						   m_niceness);
+		// advance ptrs
+		dt += dtlen;
+		ds += dslen;
+		da += dalen;
+		// null terminate
+		if ( dtlen>0 && dt[dtlen-1]!='\0' ) { *dt++=0; dtlen++; }
+		if ( dslen>0 && ds[dslen-1]!='\0' ) { *ds++=0; dslen++; }
+		if ( dalen>0 && da[dalen-1]!='\0' ) { *da++=0; dalen++; }
+		// must always be something!
+		if ( dtlen==0 ) {*dt++=0; dtlen++;}
+		if ( dslen==0 ) {*ds++=0; dslen++;}
+		if ( dalen==0 ) {*da++=0; dalen++;}
+	}
+
+	// set these
+	ptr_dmozTitles   = titles;
+	ptr_dmozSumms    = summs;
+	ptr_dmozAnchors  = anchors;
+	size_dmozTitles  = dt - titles;
+	size_dmozSumms   = ds - summs;
+	size_dmozAnchors = da - anchors;
+
+	m_dmozInfoValid = true;
+	return true;
+}
+
+
 // . return NULL and sets g_errno on error
 // . returns -1 if blocked
 char **XmlDoc::getTitleRec ( ) {
@@ -2727,6 +2845,7 @@ char **XmlDoc::getTitleRec ( ) {
 	if ( ! m_imageDataValid              ) { char *xx=NULL;*xx=0; }
 	if ( ! m_catIdsValid                 ) { char *xx=NULL;*xx=0; }
 	if ( ! m_indCatIdsValid              ) { char *xx=NULL;*xx=0; }
+	if ( ! m_dmozInfoValid               ) { char *xx=NULL;*xx=0; }
 	// if m_recycleContent is true, these are not valid
 	if ( ! m_recycleContent ) {
 		if ( ! m_rawUtf8ContentValid         ) { char *xx=NULL;*xx=0; }
@@ -2771,6 +2890,12 @@ char **XmlDoc::getTitleRec ( ) {
 	//char          titles     [10*1024];
 	//char          summs      [10*4096];
 	//char          anchors    [10* 256];
+
+	/*
+
+	  MDW oct 12 2013 -
+	  why is this here? we should store this info at spider time?
+	  
 	char *titles  = m_dmozBuf;
 	char *summs   = m_dmozBuf+5000;
 	char *anchors = m_dmozBuf+10000;
@@ -2832,6 +2957,7 @@ char **XmlDoc::getTitleRec ( ) {
 	size_dmozTitles  = dt - titles;
 	size_dmozSumms   = ds - summs;
 	size_dmozAnchors = da - anchors;
+	*/
 
 	// set our crap that is not necessarily set
 	//ptr_firstUrl   = m_firstUrl.getUrl();
@@ -21965,6 +22091,9 @@ bool XmlDoc::searchboxToGigablast ( ) {
 //   search to capture all pages that have that dmoz category as one of their
 //   parent topics
 bool XmlDoc::hashDMOZCategories ( HashTableX *tt ) {
+
+	getDmozTitles();
+
 
 	char *titlePtr = ptr_dmozTitles;
 	char *sumPtr   = ptr_dmozSumms;
