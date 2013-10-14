@@ -474,6 +474,8 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("<form method=get "
 		      "action=/search name=f>\n");
 	sb.safePrintf("<input name=q type=text size=60 value=\"\">&nbsp;<input type=\"submit\" value=\"Search Green\">\n");
+	sb.safePrintf("<input type=hidden "
+		      "name=prepend value=\"gbipcatid:2\">");
 	sb.safePrintf("\n");
 	sb.safePrintf("</form>\n");
 	sb.safePrintf("<br>\n");
