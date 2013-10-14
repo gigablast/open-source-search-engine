@@ -499,11 +499,11 @@ void drawLine2 ( SafeBuf &sb ,
 		      "left:%li;"
 		      "top:%li;"
 		      "background-color:#%lx;"
-		      "z-index:100;"
+		      "z-index:-5;"
 		      "min-height:%lipx;"
 		      "min-width:%lipx;\"></div>\n"
 		      , x1
-		      , (fy1 - width/2) - 300
+		      , (fy1 - width/2) - 20 //- 300
 		      , color
 		      , width
 		      , x2 - x1
@@ -551,14 +551,58 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 		if ( m_pts[i].m_startTime < t1 ) t1 = m_pts[i].m_startTime;
 	}
 
+	//
+	// main graphing window
+	//
+	sb.safePrintf("<div style=\"position:relative;"
+		      "background-color:#c0c0c0;"
+		      //"overflow-y:hidden;"
+		      "overflow-x:hidden;"
+		      "z-index:-10;"
+		      // the tick marks we print below are based on it
+		      // being a window of the last 20 seconds... and using
+		      // DX pixels
+		      "min-width:%lipx;"
+		      "min-height:%lipx;"
+		      //"width:100%%;"
+		      //"min-height:600px;"
+		      "margin-top:10px;"
+		      "margin-bottom:10px;"
+		      "margin-right:10px;"
+		      "margin-left:10px;\">"
+		      ,(long)DX
+		      ,(long)DY +20); // add 10 more for "2s" labels etc.
+
 	// 10 x-axis tick marks
-	for ( int x = DX/10 ; x < DX ; x += DX/10 ) {
+	for ( int x = DX/20 ; x <= DX ; x += DX/20 ) {
 		// tick mark
 		//plotter.line ( x , -20 , x , 20 );
+		sb.safePrintf("<div style=\"position:absolute;"
+			      "left:%li;"
+			      "bottom:0;"
+			      "background-color:#000000;"
+			      "z-index:110;"
+			      "min-height:20px;"
+			      "min-width:3px;\"></div>\n"
+			      , (long)x-1
+			      );
 		// generate label
-		char buf [ 32 ];
-		sprintf ( buf , "%li" , 
-			  (long)(DT * (long long)x / (long long)DX) );
+		//char buf [ 32 ];
+		//sprintf ( buf , "%li" , 
+		//	  (long)(DT * (long long)x / (long long)DX) );
+		// LABEL
+		sb.safePrintf("<div style=\"position:absolute;"
+			      "left:%li;"
+			      "bottom:20;"
+			      //"background-color:#000000;"
+			      "z-index:110;"
+			      "min-height:20px;"
+			      "min-width:3px;\">%lis</div>\n"
+			      , (long)x-10
+			      // the label:
+			      ,(long)(DT * (long long)x / (long long)DX)/1000
+			      );
+
 		// move cursor
 		//plotter.move ( x , -by / 2 - 9 );
 		// plot label
@@ -600,10 +644,6 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 		// . this adds point to points[x][n] where x is determined
 		addPoint ( points , numPoints , &m_pts[i] );
 	}
-
-	sb.safePrintf("<div style=\"position:relative;width:100%%;"
-		      "min-height:600px;"
-		      "margin-top:300px;margin-left:100px;\">");
 
 	int y1 = 21;
 	// plot the points (lines) in each line
