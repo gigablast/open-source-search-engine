@@ -2103,7 +2103,17 @@ long *XmlDoc::getIndexCode ( ) {
 		&& *indexCode != EBADCHARSET
 		&& *indexCode != EDOCDUPWWW
 		&& *indexCode != EBADIP
-		&& *indexCode != EDOCEVILREDIRECT
+		&& *indexCode != EDOCEVILREDIRECT // fix video.google.com dmoz
+		&& *indexCode != EBADMIME
+		// index.t and .exe files are in dmoz but those
+		// extensions are "bad" according to Url::isBadExtension()
+		&& *indexCode != EDOCBADCONTENTTYPE
+		// repeat url path components are ok:
+		&& *indexCode != ELINKLOOP
+		&& *indexCode != ECONNREFUSED
+		// malformed sections:
+		&& *indexCode != EDOCBADSECTIONS
+		&& *indexCode != ECORRUPTHTTPGZIP
 		)
 		return indexCode;
 

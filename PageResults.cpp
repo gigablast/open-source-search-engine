@@ -726,7 +726,7 @@ bool gotResults ( void *state ) {
 	//
 	// show DMOZ subcategories if doing either a
 	// "gbpcatid:<catid> |" (Search restricted to category)
-	// "gbcatid:<catid>"    (DMOZ urls in that topic, c=dmoz)
+	// "gbcatid:<catid>"    (DMOZ urls in that topic)
 	//
 	// The search gbcatid: results should be sorted by siterank i guess
 	// since it is only search a single term: gbcatid:<catid> so we can
@@ -4438,14 +4438,15 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 		      "<br>"
 		      
 		      " &nbsp; "
-		      
-		      "<b title=\"Search the web\">"
-		      "web"
-		      "</b>"
-		      "</a>"
-		      
-		      " &nbsp;&nbsp;&nbsp;&nbsp; "
 		      );
+
+	if ( catId <= 0 )
+		sb.safePrintf("<b title=\"Search the web\">web</b>");
+	else
+		sb.safePrintf("<a title=\"Search the web\" href=/>web</a>");
+
+		      
+	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; "  );
 	//  SEO functionality not included yet - so redir to gigablast.
 	if ( g_conf.m_isMattWells )
 		sb.safePrintf("<a title=\"Rank higher in "
@@ -4456,17 +4457,20 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 			      "com/seo'>");
 	
 	sb.safePrintf(
-		      "seo"
-		      "</a>"
-		      
+		      "seo</a>"
 		      " &nbsp;&nbsp;&nbsp;&nbsp; "
-		      
-		      "<a title=\"Browse the DMOZ directory\" "
-		      "href=/?c=dmoz>"
-		      "directory"
-		      "</a>"
-		      
-		      " &nbsp;&nbsp;&nbsp;&nbsp; "
+		      );
+
+	if (catId <= 0 )
+		sb.safePrintf("<a title=\"Browse the DMOZ directory\" "
+			      "href=/Top>"
+			      "directory"
+			      "</a>" );
+	else
+		sb.safePrintf("<b title=\"Browse the DMOZ directory\">"
+			      "directory</b>");
+
+	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; "
 		      
 		      // i'm not sure why this was removed. perhaps
 		      // because it is not working yet because of
