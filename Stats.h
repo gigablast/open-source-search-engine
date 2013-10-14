@@ -53,7 +53,7 @@ class Stats {
 	// . dumps a bar graph
 	// . each bar represents a stat in time, from inception to completion
 	// . useful for seeing possible sources of contention
-	void dumpGIF ( long long startTime = -1 , long long endTime = -1 );
+	//void dumpGIF ( long long startTime = -1 , long long endTime = -1 );
 
 
 	void printGraphInHtml ( SafeBuf &sb );

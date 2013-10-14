@@ -2,7 +2,7 @@
 
 #include <errno.h>
 #include "Stats.h"
-#define X_DISPLAY_MISSING 1
+//#define X_DISPLAY_MISSING 1
 //#include <plotter.h>
 #include <math.h>
 #include "Conf.h"
@@ -133,6 +133,7 @@ void Stats::addStat_r ( long        numBytes    ,
 	//pthread_mutex_unlock ( &s_lock );
 }
 
+/*
 // . dump a graph to /tmp/diskGraph.gif
 // . use libplotter.a or .so ?
 // . docs at http://www.gnu.org/manual/plotutils/html_mono/plotutils.html#SEC54
@@ -341,7 +342,7 @@ void Stats::dumpGIF ( long long startTime , long long endTime ) {
 	mfree(lrgBuf, lrgSize, "Stats.cpp");
 #endif
 }
-
+*/
 
 void Stats::addPoint (StatPoint **points    , 
 		      long       *numPoints ,

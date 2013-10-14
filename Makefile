@@ -99,7 +99,7 @@ endif
 # let's keep the libraries in the repo for easier bug reporting and debugging
 # in general if we can. the includes are still in /usr/include/ however...
 # which is kinda strange but seems to work so far.
-#LIBS= -L. ./libplotter.a ./libplot.a ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libgcc.a ./libpthread.a ./libc.a ./libstdc++.a 
+#LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libgcc.a ./libpthread.a ./libc.a ./libstdc++.a 
 
 
 
