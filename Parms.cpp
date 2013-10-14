@@ -3683,6 +3683,21 @@ Parm *Parms::getParm ( char *cgi ) {
 	return NULL;
 }
 
+Parm *Parms::getParm2 ( char *cgi , long cgiLen ) {
+	for ( long i = 0 ; i < m_numParms ; i++ ) {
+		if ( ! m_parms[i].m_cgi ) continue ;
+		if (   m_parms[i].m_cgi[0] != cgi[0] ) continue;
+		if (   cgiLen >=2 && m_parms[i].m_cgi[1] != cgi[1] ) continue;
+		// only compare as many letters as the cgi name has
+		if (   strncmp ( m_parms[i].m_cgi , cgi , cgiLen ) ) continue;
+		// that means we gotta check lengths next
+		if ( gbstrlen(m_parms[i].m_cgi) != cgiLen ) continue;
+		// got a match
+		return &m_parms[i];
+	}
+	return NULL;
+}
+
 /*
 #define PHTABLE_SIZE (MAX_PARMS*2)
 
@@ -4411,6 +4426,7 @@ void Parms::init ( ) {
 
 	// default all
 	for ( long i = 0 ; i < MAX_PARMS ; i++ ) {
+		m_parms[i].m_parmNum= i;
 		m_parms[i].m_hash   = 0         ;
 		m_parms[i].m_title  = ""         ; // for detecting if not set
 		m_parms[i].m_desc   = ""         ; // for detecting if not set
@@ -8223,6 +8239,19 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
 	m++;
+
+	// collective respider frequency (for pagecrawlbot.cpp)
+	m->m_title = "collective respider frequency (days)";
+	m->m_cgi   = "crf";
+	m->m_xml   = "frequency";
+	m->m_off   = (char *)cr.m_collectiveRespiderFrequency - x;
+	m->m_type  = TYPE_FLOAT;
+	m->m_def   = "0.0"; // 0.0
+	m->m_page  = PAGE_NONE;
+	m->m_units = "days";
+	m++;
+
+
 
 	/*
 	m->m_cgi   = "alias";

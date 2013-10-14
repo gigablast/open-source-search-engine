@@ -3603,11 +3603,274 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket , HttpRequest *hr ) {
 				    "No &json= provided in request.");
 
 
+	Json JP;
+	bool status = JP.parseJsonStringIntoJsonItems ( json );
+
+	// wtf?
+	if ( ! status ) 
+		return sendReply2 ( socket, FMT_JSON,
+				    "Error with JSON parser.");
+
+	// get collection
+	char *name = JP.getValueAsString("name");
+	if ( ! name )
+		return sendReply2 ( socket, FMT_JSON,
+				    "No \"name\" parm given in JSON.");
 
 
+	long nameLen = gbstrlen(name);
+	if ( nameLen > 32 )
+		return sendReply2 ( socket, FMT_JSON,
+				    "\"name\" value is over 32 bytes long.");
+
+	char *token = JP.getValueAsString("name");
+	if ( ! token )
+		return sendReply2 ( socket, FMT_JSON,
+				    "No \"token\" parm given in JSON.");
+
+	long tokenLen = gbstrlen(token);
+	if ( tokenLen > 32 )
+		return sendReply2 ( socket, FMT_JSON,
+				    "\"token\" value is over 32 bytes long.");
+
+
+	// . create new collection? default is false if not there
+	// . TODO: support "true" in json parser
+	//bool addNewColl = JP.getValueAsBool("addNew",false);
+
+	// combine name with token to get collection name
+	char coll[256];
+	sprintf(coll,"%s-%s",token,name);
+
+	// get that
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
+
+	// if does not exist, create it
+	if ( ! cr ) cr = g_collectiondb.addColl ( coll );
+
+	// error adding it?
+	if ( ! cr )
+		return sendReply2 ( socket,FMT_JSON,
+				    "Failed to create new collection.");
+
+	JsonItem *ji = JP.getFirstItem();
 
 	// traverse the json
-	char *p = json;
+	for ( ; ji ; ji = ji->m_next ) {
+		// just get STRINGS or NUMS
+		if ( ji->m_type != JT_STRING && ji->m_type != JT_NUMBER ) 
+			continue;
+		// check name
+		Parm *m ;
+		char *name   = ji->m_name;
+		long nameLen = ji->m_nameLen;
+		// get the parm associated with this name, if any
+		m = g_parms.getParm2 ( name );
+		// if not there, bail
+		if ( ! m ) continue;
+		// json parser null terms the values after decoding
+		char *val = ji->getValue();
+		long vlen = ji->getValueLen();
+		if ( ! val || vlen <= 0 ) continue;
+		// Parms.cpp doesn't support "true" or "false" now
+		if ( ji->m_type == JT_NUMBER && val[0] == 't' ) val = "1";
+		if ( ji->m_type == JT_NUMBER && val[0] == 'f' ) val = "0";
+		// . set it to this value
+		g_parms.setParm ( cr , 
+				  m , 
+				  m->m_parmNum ,  // parm #?
+				  0 , // array #?
+				  // we store the number string for
+				  // numbers as well.
+				  val ,
+				  false, // ishtmlencoded?
+				  true); // from request?
+	}
+
+	// if url filters not specified, we are done
+	if ( ! JP.hasName("urlFilters") )
+		return true;
+
+	//
+	// get the default filter api:
+	//
+	// "urlFilters": [
+	// {
+	//   "value": "*",
+	//   "action": "http://www.diffbot.com/api/analyze?mode=auto"
+	// }
+	//
+	// loop over json elements
+	bool gotIt = false;
+	char *defaultAction = NULL;
+	for ( ji = JP.getFirstItem() ; ji ; ji = ji->m_next ) {
+		// just get STRINGS or NUMS
+		if ( ji->m_type != JT_STRING && ji->m_type != JT_NUMBER ) 
+			continue;
+		char *name   = ji->m_name;
+		//long nameLen = ji->m_nameLen;
+		char *val = ji->getValue();
+		long vlen = ji->getValueLen();
+		// do we have the action?
+		if ( gotIt && strcmp(name,"action") == 0 ) {
+			defaultAction = val;
+			break;
+		}
+		if ( ! val || vlen <= 0 ) continue;
+		if ( val[0] != '*' ) { gotIt = false; continue; }
+		if ( strcmp(name,"value") ) { gotIt = false; continue; }
+		gotIt = true;
+	}
+
+	//
+	// reset the url filters here. we will re-add all from json
+	//
+	cr->m_numRegExs   = 0;
+	cr->m_numRegExs2  = 0;
+	cr->m_numRegExs3  = 0;
+	cr->m_numRegExs5  = 0;
+	cr->m_numRegExs6  = 0;
+	cr->m_numRegExs7  = 0;
+	cr->m_numRegExs10 = 0;
+	cr->m_numRegExs11 = 0;
+
+	// add first default url filter
+	cr->m_regExs[0].set("isinjected"); 
+	m_numRegExs++;
+	cr->m_spiderFreqs        [0] = cr->m_collectiveRespiderFrequency ; 
+	m_numRegExs2++;
+	cr->m_spiderPriorities   [0] = 70; 
+	m_numRegExs3++;
+	cr->m_maxSpidersPerRule  [0] = 10; 
+	m_numRegExs10++;
+	cr->m_spiderIpWaits      [0] = 250; 
+	m_numRegExs5++;
+	cr->m_spiderIpMaxSpiders [0] = 3; 
+	m_numRegExs6++;
+	cr->m_spidersEnabled     [0] = 1; 
+	m_numRegExs7++;
+	cr->m_spiderDiffbotApiUrl[0].set(defaultAction); 
+	m_numRegExs11++;
+
+	// 2nd default url filter
+	cr->m_regExs[1].set("isaddurl");
+	m_numRegExs++;
+	cr->m_spiderFreqs        [1] = cr->m_collectiveRespiderFrequency ; 
+	m_numRegExs2++;
+	cr->m_spiderPriorities   [1] = 60; 
+	m_numRegExs3++;
+	cr->m_maxSpidersPerRule  [1] = 10; 
+	m_numRegExs10++;
+	cr->m_spiderIpWaits      [1] = 250; 
+	m_numRegExs5++;
+	cr->m_spiderIpMaxSpiders [1] = 3; 
+	m_numRegExs6++;
+	cr->m_spidersEnabled     [1] = 1; 
+	m_numRegExs7++;
+	cr->m_spiderDiffbotApiUrl[1].set(defaultAction); 
+	m_numRegExs11++;
+
+	// 3rd default url filter
+	cr->m_regExs[1].set("ismedia");
+	m_numRegExs++;
+	cr->m_spiderFreqs        [2] = cr->m_collectiveRespiderFrequency ; 
+	m_numRegExs2++;
+	cr->m_spiderPriorities   [2] = SPIDER_PRIORITY_FILTERED;
+	m_numRegExs3++;
+	cr->m_maxSpidersPerRule  [2] = 10; 
+	m_numRegExs10++;
+	cr->m_spiderIpWaits      [2] = 250; 
+	m_numRegExs5++;
+	cr->m_spiderIpMaxSpiders [2] = 3; 
+	m_numRegExs6++;
+	cr->m_spidersEnabled     [2] = 1; 
+	m_numRegExs7++;
+	cr->m_spiderDiffbotApiUrl[2].set(defaultAction); 
+	m_numRegExs11++;
+
+	//
+	// DONE RESETTING URL FILTERS
+	//
+
+	char *expression = NULL;
+	char *action = NULL;
+
+	// start over at top
+	ji = JP.getFirstItem();
+
+	// "urlFilters": [
+	// {
+	//   "value": "*",
+	//   "action": "http://www.diffbot.com/api/analyze?mode=auto"
+	// }
+	// {
+	//   "value": "company",
+	//   "action" : "http://www.diffbot.com/api/article?tags&meta"
+	// }
+	// {
+	//   "value": "^http://www",
+	//   "action": "doNotProcess"
+	// }
+	// { 
+	//   "value": "$.html && category",
+	//   "action": "doNotCrawl"
+	// }
+	// {
+	//   "value": "!$.html && $.php",
+	//   "action": "doNotCrawl"
+	// }
+	// ]
+
+	// how many filters do we have so far?
+	long nf = 3;
+
+	for ( ; ji ; ji = ji->m_next ) {
+		// just get STRINGS only
+		if ( ji->m_type != JT_STRING ) continue;
+		// must be right now
+		char *name = ji->m_name;
+		char *value = ji->getValue();
+		if ( strcmp(name,"value")==0 )
+			expression = value;
+		if ( strcmp(name,"action")==0 )
+			action = ji->getValue();
+		// need both
+		if ( ! action ) continue;
+		if ( ! expression ) continue;
+		// deal with it
+
+		cr->m_regExs[1].set(expression);
+		m_numRegExs++;
+		long priority = 50;
+		// default diffbot api call:
+		char *api = defaultAction;
+		if ( strcasecmp(action,"donotcrawl") == 0 )
+			priority = SPIDER_PRIORITY_FILTERED;
+		if ( strcasecmp(action,"donotprocess") == 0 )
+			api = NULL;
+		// a new diffbot url?
+		if ( strcasecmp(action,"http") == 0 )
+			api = action;
+		// add the new filter
+		cr->m_spiderFreqs  [nf] = cr->m_collectiveRespiderFrequency ; 
+		m_numRegExs2++;
+		cr->m_spiderPriorities   [nf] = priority;
+		m_numRegExs3++;
+		cr->m_maxSpidersPerRule  [0] = 10; 
+		m_numRegExs10++;
+		cr->m_spiderIpWaits      [0] = 250; 
+		m_numRegExs5++;
+		cr->m_spiderIpMaxSpiders [0] = 3; 
+		m_numRegExs6++;
+		cr->m_spidersEnabled     [0] = 1; 
+		m_numRegExs7++;
+		cr->m_spiderDiffbotApiUrl[0].set(api);
+		m_numRegExs11++;
+		// NULL out again
+		action = NULL;
+		expression = NULL;
+	}
+
 
 
 }

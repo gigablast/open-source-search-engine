@@ -2,18 +2,12 @@
 
 class JsonItem *Json::addNewItem () {
 
-	// current item becomes parent, if any.... not if brother in array
-	//if ( m_ji ) {
-	//	// store the OFFSET on the stack since we realloc m_buf
-	//	m_stack[m_stackPtr++] = m_ji;
-	//}
-
-
 	JsonItem *ji = (JsonItem *)m_sb.getBuf();
 	m_sb.incrementLength(sizeof(JsonItem));
 
 	if ( m_prev ) m_prev->m_next = ji;
 	ji->m_prev = m_prev;
+	ji->m_next = NULL;
 
 	// we are the new prev now
 	m_prev = ji;
@@ -57,12 +51,13 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 		     *p == ',' ||
 		     *p == '[' ||
 		     *p == ':' )
-			need += sizeof(JsonItem);
+			// +1 for null terminating string of each item
+			need += sizeof(JsonItem) +1;
 	}
 	// plus the length of the string to store it decoded etc.
 	need += p - json;
-	// plus a \0
-	need++;
+	// plus a \0 for the value and a \0 for the name of each jsonitem
+	need += 2;
 	// this should be enough
 	if ( ! m_sb.reserve ( need ) ) return NULL;
 	// for testing if we realloc
@@ -81,6 +76,13 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 		// get size
 		size = getUtf8CharSize ( p );
 
+		// skip spaces
+		if ( is_wspace_a (*p) )
+			continue;
+
+		// skip commas
+		if ( *p == ',' ) continue;
+
 		// did we hit a '{'? that means the existing json item
 		// is a parent of the item(s) inside the {}'s
 		if ( *p == '{' ) {
@@ -96,6 +98,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 			ji->m_name    = NAME;
 			ji->m_nameLen = NAMELEN;
 			// this goes on the stack
+			if ( m_stackPtr >= MAXJSONPARENTS ) return NULL;
 			m_stack[m_stackPtr++] = ji;
 			// and null this
 			ji = NULL;
@@ -123,6 +126,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 			ji->m_name    = NAME;
 			ji->m_nameLen = NAMELEN;
 			// this goes on the stack
+			if ( m_stackPtr >= MAXJSONPARENTS ) return NULL;
 			m_stack[m_stackPtr++] = ji;
 			ji = NULL;
 			continue;
@@ -154,8 +158,12 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 			long  slen = end - str;
 			// . if a colon follows, it was a field
 			if ( *x == ':' ) {
+				// let's push this now so we can \0 term
+				char *savedStr = m_sb.getBuf();
+				m_sb.safeMemcpy ( str , slen );
+				m_sb.pushChar('\0');
 				// just set the name cursor
-				NAME    = str;
+				NAME    = savedStr;//str;
 				NAMELEN = slen;
 			}
 			// . otherwise, it was field value, so index it
@@ -165,6 +173,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 				// make a new one in safebuf. our
 				// parent will be the array type item.
 				ji = addNewItem();
+				if ( ! ji ) return NULL;
 				// we are a string
 				ji->m_type = JT_STRING;
 				// use name cursor
@@ -177,6 +186,8 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 					return NULL;
 				// store length decoded json
 				ji->m_valueLen = m_sb.length() - curr;
+				// end with a \0
+				m_sb.pushChar('\0');
 				// ok, this one is done
 				ji = NULL;
 			}
@@ -185,6 +196,44 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 			p    = x;
 			continue;
 		}
+
+		// true or false?
+		if ( (*p == 't' && strncmp(p,"true",4)==0) ||
+		     (*p == 'f' && strncmp(p,"false",5)==0) ) {
+			// make a new one
+			ji = addNewItem();
+			if ( ! ji ) return NULL;
+			// copy the number as a string as well
+			long curr = m_sb.length();
+			// what is the length of it?
+			long slen = 4;
+			ji->m_valueLong = 1;
+			ji->m_valueDouble = 1.0;
+			if ( *p == 'f' ) {
+				slen = 5;
+				ji->m_valueLong = 0;
+				ji->m_valueDouble = 0;
+			}
+			// store decoded string right after jsonitem
+			if ( !m_sb.safeDecodeJSONToUtf8 (p,slen,0))
+				return NULL;
+			// store length decoded json
+			ji->m_valueLen = m_sb.length() - curr;
+			// end with a \0
+			m_sb.pushChar('\0');
+			ji->m_type = JT_NUMBER;
+			// use name cursor
+			ji->m_name    = NAME;
+			ji->m_nameLen = NAMELEN;
+			ji = NULL;
+			// skip over the string
+			size = 0;
+			p    = end;
+			continue;
+		}
+			
+
+
 		// if we hit a digit they might not be in quotes like
 		// "crawled":123
 		if ( is_digit ( *p ) ||
@@ -192,18 +241,29 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 		     ( *p == '.' && is_digit(p[1]) ) ) {
 			// find end of the number
 			char *end = p + 1;
-			for ( ; *end && is_digit(*end) ; end++ ) ;
+			// . allow '.' for decimal numbers
+			// . TODO: allow E for exponent
+			for ( ; *end && (is_digit(*end) || *end=='.');end++) ;
 			// define the string
 			char *str  = p;
+			long  slen = end - str;
 			// make a new one
 			ji = addNewItem();
 			if ( ! ji ) return NULL;
-			//long  slen = end - str;
 			// decode
 			//char c = str[slen];
 			//str[slen] = '\0';
 			ji->m_valueLong = atol(str);
 			ji->m_valueDouble = atof(str);
+			// copy the number as a string as well
+			long curr = m_sb.length();
+			// store decoded string right after jsonitem
+			if ( !m_sb.safeDecodeJSONToUtf8 ( str, slen,0))
+				return NULL;
+			// store length decoded json
+			ji->m_valueLen = m_sb.length() - curr;
+			// end with a \0
+			m_sb.pushChar('\0');
 			//str[slen] = c;
 			ji->m_type = JT_NUMBER;
 			// use name cursor

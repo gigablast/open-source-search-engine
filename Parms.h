@@ -119,6 +119,7 @@ class Parm {
 	char *m_class;
 	char *m_icon;
 	char *m_qterm;
+	long  m_parmNum; // slot # in the m_parms[] array that we are
 	bool (*m_func)(TcpSocket *s , HttpRequest *r,
 		       bool (*cb)(TcpSocket *s , HttpRequest *r));
 	long  m_plen;  // offset of length for TYPE_STRINGS (m_htmlHeadLen...)
