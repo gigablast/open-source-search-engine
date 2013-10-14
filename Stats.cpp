@@ -486,3 +486,173 @@ void Stats::addSpiderPoint ( long errCode, bool isNew ) {
 		m_allErrorsOld[errCode]++;
 	}
 }
+
+// draw a HORIZONTAL line in html 5 i guess
+void drawLine2 ( SafeBuf &sb ,
+		 long x1 , 
+		 long x2 ,
+		 long fy1 , 
+		 long color ,
+		 long width ) {
+
+	sb.safePrintf("<div style=\"position:absolute;"
+		      "left:%li;"
+		      "top:%li;"
+		      "background-color:#%lx;"
+		      "z-index:100;"
+		      "min-height:%lipx;"
+		      "min-width:%lipx;\"></div>\n"
+		      , x1
+		      , (fy1 - width/2) - 300
+		      , color
+		      , width
+		      , x2 - x1
+		      );
+}
+
+
+//
+// new code for drawing graph in html with absolute divs instead
+// of using GIF plotter library which had issues
+//
+void Stats::printGraphInHtml ( SafeBuf &sb ) {
+
+	// gif size
+	char tmp[64];
+	sprintf ( tmp , "%lix%li", (long)DX+40 , (long)DY+40 ); // "1040x440"
+
+	// 20 pixel borders
+	//int bx = 10;
+	//int by = 30;
+	// define the space with boundaries 100 unit wide boundaries
+	//plotter.space ( -bx , -by , DX + bx , DY + by );
+	// draw the x-axis
+	//plotter.line ( 0 , 0 , DX , 0  );
+	// draw the y-axis
+	//plotter.line ( 0 , 0 ,  0 , DY );
+
+	// find time ranges
+	long long t2 = 0;
+	for ( long i = 0 ; i < MAX_POINTS ; i++ ) {
+		// skip empties
+		if ( m_pts[i].m_startTime == 0 ) continue;
+		// set min/max
+		if ( m_pts[i].m_endTime   > t2 ) t2 = m_pts[i].m_endTime;
+	}
+	// now compute the start time for the graph
+	long long t1 = 0x7fffffffffffffffLL;
+	// now recompute t1
+	for ( long i = 0 ; i < MAX_POINTS ; i++ ) {
+		// skip empties
+		if ( m_pts[i].m_startTime == 0 ) continue;
+		// can't be behind more than 1 second
+		if ( m_pts[i].m_startTime   < t2 - DT ) continue;
+		// otherwise, it's a candidate for the first time
+		if ( m_pts[i].m_startTime < t1 ) t1 = m_pts[i].m_startTime;
+	}
+
+	// 10 x-axis tick marks
+	for ( int x = DX/10 ; x < DX ; x += DX/10 ) {
+		// tick mark
+		//plotter.line ( x , -20 , x , 20 );
+		// generate label
+		char buf [ 32 ];
+		sprintf ( buf , "%li" , 
+			  (long)(DT * (long long)x / (long long)DX) );
+		// move cursor
+		//plotter.move ( x , -by / 2 - 9 );
+		// plot label
+		//plotter.alabel     ( 'c' , 'c' , buf );
+	}
+
+	// . each line consists of several points
+	// . we need to know each point for adding otherlines
+	// . is about [400/6][1024] = 70k
+	// . each line can contain multiple data points
+	// . each data point is expressed as a horizontal line segment
+	void *lrgBuf;
+	long lrgSize = 0;
+	lrgSize += MAX_LINES * MAX_POINTS * sizeof(StatPoint *);
+	lrgSize += MAX_LINES * sizeof(long);
+	lrgBuf = (char *) mmalloc(lrgSize, "Stats.cpp"); 
+	if (! lrgBuf) {
+	    log("could not allocate memory for local buffer in Stats.cpp"
+		"%li bytes needed", lrgSize);
+	    return;
+	}
+	char *lrgPtr = (char *)lrgBuf;
+	StatPoint **points = (StatPoint **)lrgPtr;   
+	lrgPtr += MAX_LINES * MAX_POINTS * sizeof(StatPoint *);
+	long *numPoints = (long *)lrgPtr;
+	lrgPtr += MAX_LINES * sizeof(long);
+	memset ( (char *)numPoints , 0 , MAX_LINES * sizeof(long) );
+
+	// store the data points into "lines"
+	long count = MAX_POINTS;
+	for ( long i = m_next ; count >= 0 ; i++ , count-- ) {
+		// wrap around the array
+		if ( i >= MAX_POINTS ) i = 0;
+		// skip point if empty
+		if ( m_pts[i].m_startTime == 0 ) continue;
+		// skip if too early
+		if ( m_pts[i].m_endTime < t1 ) continue;
+		// . find the lowest line the will hold us
+		// . this adds point to points[x][n] where x is determined
+		addPoint ( points , numPoints , &m_pts[i] );
+	}
+
+	sb.safePrintf("<div style=\"position:relative;width:100%%;"
+		      "min-height:600px;"
+		      "margin-top:300px;margin-left:100px;\">");
+
+	int y1 = 21;
+	// plot the points (lines) in each line
+	for ( long i = 0 ; i < MAX_LINES    ; i++ ) {
+		// increase vert
+		y1 += MAX_WIDTH + 1;
+		// wrap back down if necessary
+		if ( y1 >= DY ) y1 = 21;
+		// plt all points in this row
+	for ( long j = 0 ; j < numPoints[i] ; j++ ) {
+		// get the point
+		StatPoint *p =  points[MAX_POINTS * i + j];
+		// transform time to x coordinates
+		int x1 = (p->m_startTime - t1) * (long long)DX / DT;
+		int x2 = (p->m_endTime   - t1) * (long long)DX / DT;
+		// if x2 is negative, skip it
+		if ( x2 < 0 ) continue;
+		// if x1 is negative, boost it to -2
+		if ( x1 < 0 ) x1 = -2;
+		// . line thickness is function of read/write size
+		// . take logs
+		int w = (int)log(((double)p->m_numBytes)/8192.0) + 3;
+		//log("log of %li is %i",m_pts[i].m_numBytes,w);
+		if ( w < 3         ) w = 3;
+		if ( w > MAX_WIDTH ) w = MAX_WIDTH;
+		//plotter.linewidth ( w );       
+		// use the color specified from addStat_r() for this line/pt
+		//plotter.pencolor ( ((p->m_color >> 16) & 0xff) << 8 ,
+		//		   ((p->m_color >>  8) & 0xff) << 8 ,
+		//		   ((p->m_color >>  0) & 0xff) << 8 );
+		// ensure at least 3 units wide for visibility
+		if ( x2 < x1 + 3 ) x2 = x1 + 3;
+		// . flip the y so we don't have to scroll the browser down
+		// . DY does not include the axis and tick marks
+		long fy1 = DY - y1 + 20 ;
+		// plot it
+		//plotter.line ( x1 , fy1 , x2 , fy1 );
+		drawLine2 ( sb , x1 , x2 , fy1 , p->m_color , w );
+		// debug msg
+		//log("line (%i,%i, %i,%i) ", x1 , vert , x2 , vert );
+		//log("bytes = %li width = %li ", m_pts[i].m_numBytes,w);
+		//log("st=%i, end=%i color=%lx " ,
+		//      (int)m_pts[i].m_startTime , 
+		//      (int)m_pts[i].m_endTime   , 
+		//      m_pts[i].m_color );
+	}
+	}
+
+	sb.safePrintf("</div>\n");
+
+	mfree(lrgBuf, lrgSize, "Stats.cpp");
+}

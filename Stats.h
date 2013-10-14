@@ -55,6 +55,9 @@ class Stats {
 	// . useful for seeing possible sources of contention
 	void dumpGIF ( long long startTime = -1 , long long endTime = -1 );
 
+
+	void printGraphInHtml ( SafeBuf &sb );
+
 	// this graphs:
 	// 1. stats per second
 	// 2. avg time of completion
