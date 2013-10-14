@@ -2103,6 +2103,7 @@ long *XmlDoc::getIndexCode ( ) {
 		&& *indexCode != EBADCHARSET
 		&& *indexCode != EDOCDUPWWW
 		&& *indexCode != EBADIP
+		&& *indexCode != EDOCEVILREDIRECT
 		)
 		return indexCode;
 
