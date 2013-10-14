@@ -21,6 +21,7 @@
 #include "Pages.h" // g_msg
 #include "XmlDoc.h" // for checkRegex()
 #include "PageInject.h" // Msg7
+#include "Json.h"
 
 // so user can specify the format of the reply/output
 #define FMT_HTML 1
@@ -41,6 +42,7 @@ CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
 //void printCrawlStatsWrapper ( void *state ) ;
 CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) ;
 //bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) ;
+bool resetUrlFilters ( CollectionRec *cr ) ;
 
 /*
 char *g_diffbotFields [] = {
@@ -3344,6 +3346,15 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 	// is cryptographic enough to show that
 	cr->m_isCustomCrawl = true;
 
+	cr->m_diffbotOnlyProcessIfNew = true;
+
+	resetUrlFilters ( cr );
+
+	// default respider to off
+	cr->m_collectiveRespiderFrequency = 0.0;
+
+	cr->m_useRobotsTxt = true;
+
 	// reset the crawl stats
 	cr->m_diffbotCrawlStartTime = gettimeofdayInMillisecondsGlobal();
 	cr->m_diffbotCrawlEndTime   = 0LL;
@@ -3415,69 +3426,6 @@ CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) {
 
 	// set some defaults. max spiders for all priorities in this collection
 	cr->m_maxNumSpiders = 10;
-
-	// make the gigablast regex table just "default" so it does not
-	// filtering, but accepts all urls. we will add code to pass the urls
-	// through m_diffbotUrlCrawlPattern alternatively. if that itself
-	// is empty, we will just restrict to the seed urls subdomain.
-	for ( long i = 0 ; i < MAX_FILTERS ; i++ ) {
-		cr->m_regExs[i].purge();
-		cr->m_spiderPriorities[i] = 0;
-		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = 250; // 250 ms for now
-		cr->m_spiderIpMaxSpiders[i] = 3; // keep it respectful
-		cr->m_spidersEnabled    [i] = 1;
-		cr->m_spiderFreqs       [i] = 7.0;
-		cr->m_spiderDiffbotApiUrl[i].purge();// = DBA_NONE; // 1
-	}
-
-
-	// 
-	// by default to not spider image or movie links or
-	// links with /print/ in them
-	//
-	long i = 0;
-	cr->m_regExs[i].safePrintf("isinjected");
-	cr->m_spiderPriorities[i] = 70;
-	i++;
-	cr->m_regExs[i].safePrintf("isaddurl");
-	cr->m_spiderPriorities[i] = 60;
-	i++;
-	cr->m_regExs[i].safePrintf("ismedia");
-	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	// if user did not specify a url crawl pattern then keep
-	// the crawl limited to the same subdomain of the seed url
-	//if ( cr->m_diffbotUrlCrawlPattern.length() == 0 ) {
-	// first limit to http://subdomain
-	cr->m_regExs[i].safePrintf("isonsamedomain");//^http://");
-	//cr->m_regExs[i].safeMemcpy(norm.getHost(),norm.getHostLen());
-	//cr->m_regExs[i].pushChar('/');
-	cr->m_regExs[i].nullTerm();
-	cr->m_spiderPriorities  [i] = 50;
-	cr->m_maxSpidersPerRule [i] = 10;
-	cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
-	cr->m_spiderIpMaxSpiders[i] = 3;
-	cr->m_spidersEnabled    [i] = 1;
-	i++;
-	// and make all else filtered
-	cr->m_regExs[i].safePrintf("default");
-	cr->m_spiderPriorities  [i] = SPIDER_PRIORITY_FILTERED;
-	cr->m_maxSpidersPerRule [i] = 10;
-	cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
-	cr->m_spiderIpMaxSpiders[i] = 3;
-	cr->m_spidersEnabled    [i] = 1;
-	i++;
-
-	// just the default rule!
-	cr->m_numRegExs   = i;
-	cr->m_numRegExs2  = i;
-	cr->m_numRegExs3  = i;
-	cr->m_numRegExs10 = i;
-	cr->m_numRegExs11 = i;
-	cr->m_numRegExs5  = i;
-	cr->m_numRegExs6  = i;
-	cr->m_numRegExs7  = i;
 
 	//cr->m_spiderPriorities  [1] = -1; // filtered? or banned?
 	//cr->m_maxSpidersPerRule [1] = 10;
@@ -3590,7 +3538,6 @@ bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) {
 }
 */
 
-
 // json can be provided via get or post but content type must be
 // url-encoded so we can test with a simple html form page.
 bool setSpiderParmsFromJSONPost ( TcpSocket *socket , HttpRequest *hr ) {
@@ -3612,22 +3559,24 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket , HttpRequest *hr ) {
 				    "Error with JSON parser.");
 
 	// get collection
-	char *name = JP.getValueAsString("name");
-	if ( ! name )
+	JsonItem *ji;
+	ji = JP.getItem("name");
+	if ( ! ji )
 		return sendReply2 ( socket, FMT_JSON,
 				    "No \"name\" parm given in JSON.");
 
-
+	char *name = ji->getValue();
 	long nameLen = gbstrlen(name);
 	if ( nameLen > 32 )
 		return sendReply2 ( socket, FMT_JSON,
 				    "\"name\" value is over 32 bytes long.");
 
-	char *token = JP.getValueAsString("name");
-	if ( ! token )
+	ji = JP.getItem("token");
+	if ( ! ji )
 		return sendReply2 ( socket, FMT_JSON,
 				    "No \"token\" parm given in JSON.");
 
+	char *token = ji->getValue();
 	long tokenLen = gbstrlen(token);
 	if ( tokenLen > 32 )
 		return sendReply2 ( socket, FMT_JSON,
@@ -3646,14 +3595,16 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket , HttpRequest *hr ) {
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
 
 	// if does not exist, create it
-	if ( ! cr ) cr = g_collectiondb.addColl ( coll );
+	if ( ! cr ) cr = addNewDiffbotColl ( coll , hr );
 
 	// error adding it?
 	if ( ! cr )
 		return sendReply2 ( socket,FMT_JSON,
 				    "Failed to create new collection.");
 
-	JsonItem *ji = JP.getFirstItem();
+	ji = JP.getFirstItem();
+
+	char *seed = NULL;
 
 	// traverse the json
 	for ( ; ji ; ji = ji->m_next ) {
@@ -3661,136 +3612,55 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( ji->m_type != JT_STRING && ji->m_type != JT_NUMBER ) 
 			continue;
 		// check name
-		Parm *m ;
 		char *name   = ji->m_name;
-		long nameLen = ji->m_nameLen;
-		// get the parm associated with this name, if any
-		m = g_parms.getParm2 ( name );
-		// if not there, bail
-		if ( ! m ) continue;
-		// json parser null terms the values after decoding
 		char *val = ji->getValue();
-		long vlen = ji->getValueLen();
-		if ( ! val || vlen <= 0 ) continue;
-		// Parms.cpp doesn't support "true" or "false" now
-		if ( ji->m_type == JT_NUMBER && val[0] == 't' ) val = "1";
-		if ( ji->m_type == JT_NUMBER && val[0] == 'f' ) val = "0";
-		// . set it to this value
-		g_parms.setParm ( cr , 
-				  m , 
-				  m->m_parmNum ,  // parm #?
-				  0 , // array #?
-				  // we store the number string for
-				  // numbers as well.
-				  val ,
-				  false, // ishtmlencoded?
-				  true); // from request?
+
+		if ( strcmp(name,"seed") == 0 )
+			seed = val;
+		if ( strcmp(name,"email") == 0 )
+			cr->m_notifyEmail.set(val);
+		if ( strcmp(name,"webhook") == 0 )
+			cr->m_notifyUrl.set(val);
+		if ( strcmp(name,"frequency") == 0 )
+			cr->m_collectiveRespiderFrequency = atof(val);
+		if ( strcmp(name,"maxToCrawl") == 0 )
+			cr->m_diffbotMaxToCrawl = atoll(val);
+		if ( strcmp(name,"maxToProcess") == 0 )
+			cr->m_diffbotMaxToProcess = atoll(val);
+		if ( strcmp(name,"pageProcessPattern") == 0 )
+			cr->m_diffbotPageProcessPattern.set(val);
+		if ( strcmp(name,"obeyRobots") == 0 ) {
+			if ( val[0]=='t' || val[0]=='T' || val[0]==1 )
+				cr->m_useRobotsTxt = true;
+			else
+				cr->m_useRobotsTxt = false;
+		}
+		if ( strcmp(name,"onlyProcessNew") == 0 ) {
+			if ( val[0]=='t' || val[0]=='T' || val[0]==1 )
+				cr->m_diffbotOnlyProcessIfNew = true;
+			else
+				cr->m_diffbotOnlyProcessIfNew = false;
+		}
+		if ( strcmp(name,"pauseCrawl") == 0 ) {
+			if ( val[0]=='t' || val[0]=='T' || val[0]==1 )
+				cr->m_spideringEnabled = 0;
+			else
+				cr->m_spideringEnabled = 1;
+		}
 	}
+
+	// set collective respider in case just that was passed
+	for ( long i =0 ; i < MAX_FILTERS ; i++ ) 
+		cr->m_spiderFreqs[i] = cr->m_collectiveRespiderFrequency;
 
 	// if url filters not specified, we are done
-	if ( ! JP.hasName("urlFilters") )
+	if ( ! JP.getItem("urlFilters") )
 		return true;
 
-	//
-	// get the default filter api:
-	//
-	// "urlFilters": [
-	// {
-	//   "value": "*",
-	//   "action": "http://www.diffbot.com/api/analyze?mode=auto"
-	// }
-	//
-	// loop over json elements
-	bool gotIt = false;
-	char *defaultAction = NULL;
-	for ( ji = JP.getFirstItem() ; ji ; ji = ji->m_next ) {
-		// just get STRINGS or NUMS
-		if ( ji->m_type != JT_STRING && ji->m_type != JT_NUMBER ) 
-			continue;
-		char *name   = ji->m_name;
-		//long nameLen = ji->m_nameLen;
-		char *val = ji->getValue();
-		long vlen = ji->getValueLen();
-		// do we have the action?
-		if ( gotIt && strcmp(name,"action") == 0 ) {
-			defaultAction = val;
-			break;
-		}
-		if ( ! val || vlen <= 0 ) continue;
-		if ( val[0] != '*' ) { gotIt = false; continue; }
-		if ( strcmp(name,"value") ) { gotIt = false; continue; }
-		gotIt = true;
-	}
+	// reset the url filters here to the default set.
+	// we will append the client's filters below them below.
+	resetUrlFilters ( cr );
 
-	//
-	// reset the url filters here. we will re-add all from json
-	//
-	cr->m_numRegExs   = 0;
-	cr->m_numRegExs2  = 0;
-	cr->m_numRegExs3  = 0;
-	cr->m_numRegExs5  = 0;
-	cr->m_numRegExs6  = 0;
-	cr->m_numRegExs7  = 0;
-	cr->m_numRegExs10 = 0;
-	cr->m_numRegExs11 = 0;
-
-	// add first default url filter
-	cr->m_regExs[0].set("isinjected"); 
-	m_numRegExs++;
-	cr->m_spiderFreqs        [0] = cr->m_collectiveRespiderFrequency ; 
-	m_numRegExs2++;
-	cr->m_spiderPriorities   [0] = 70; 
-	m_numRegExs3++;
-	cr->m_maxSpidersPerRule  [0] = 10; 
-	m_numRegExs10++;
-	cr->m_spiderIpWaits      [0] = 250; 
-	m_numRegExs5++;
-	cr->m_spiderIpMaxSpiders [0] = 3; 
-	m_numRegExs6++;
-	cr->m_spidersEnabled     [0] = 1; 
-	m_numRegExs7++;
-	cr->m_spiderDiffbotApiUrl[0].set(defaultAction); 
-	m_numRegExs11++;
-
-	// 2nd default url filter
-	cr->m_regExs[1].set("isaddurl");
-	m_numRegExs++;
-	cr->m_spiderFreqs        [1] = cr->m_collectiveRespiderFrequency ; 
-	m_numRegExs2++;
-	cr->m_spiderPriorities   [1] = 60; 
-	m_numRegExs3++;
-	cr->m_maxSpidersPerRule  [1] = 10; 
-	m_numRegExs10++;
-	cr->m_spiderIpWaits      [1] = 250; 
-	m_numRegExs5++;
-	cr->m_spiderIpMaxSpiders [1] = 3; 
-	m_numRegExs6++;
-	cr->m_spidersEnabled     [1] = 1; 
-	m_numRegExs7++;
-	cr->m_spiderDiffbotApiUrl[1].set(defaultAction); 
-	m_numRegExs11++;
-
-	// 3rd default url filter
-	cr->m_regExs[1].set("ismedia");
-	m_numRegExs++;
-	cr->m_spiderFreqs        [2] = cr->m_collectiveRespiderFrequency ; 
-	m_numRegExs2++;
-	cr->m_spiderPriorities   [2] = SPIDER_PRIORITY_FILTERED;
-	m_numRegExs3++;
-	cr->m_maxSpidersPerRule  [2] = 10; 
-	m_numRegExs10++;
-	cr->m_spiderIpWaits      [2] = 250; 
-	m_numRegExs5++;
-	cr->m_spiderIpMaxSpiders [2] = 3; 
-	m_numRegExs6++;
-	cr->m_spidersEnabled     [2] = 1; 
-	m_numRegExs7++;
-	cr->m_spiderDiffbotApiUrl[2].set(defaultAction); 
-	m_numRegExs11++;
-
-	//
-	// DONE RESETTING URL FILTERS
-	//
 
 	char *expression = NULL;
 	char *action = NULL;
@@ -3800,7 +3670,7 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// "urlFilters": [
 	// {
-	//   "value": "*",
+	//   "value": "*",   // MDW - this matches all urls! ("default")
 	//   "action": "http://www.diffbot.com/api/analyze?mode=auto"
 	// }
 	// {
@@ -3822,7 +3692,7 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket , HttpRequest *hr ) {
 	// ]
 
 	// how many filters do we have so far?
-	long nf = 3;
+	long nf = cr->m_numRegExs;
 
 	for ( ; ji ; ji = ji->m_next ) {
 		// just get STRINGS only
@@ -3837,40 +3707,103 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket , HttpRequest *hr ) {
 		// need both
 		if ( ! action ) continue;
 		if ( ! expression ) continue;
+		// they use "*" instead of "default" so put that back
+		if ( expression[0] == '*' )
+			expression = "default";
 		// deal with it
-
 		cr->m_regExs[1].set(expression);
-		m_numRegExs++;
+		cr->m_numRegExs++;
 		long priority = 50;
 		// default diffbot api call:
-		char *api = defaultAction;
+		char *api = NULL;
 		if ( strcasecmp(action,"donotcrawl") == 0 )
 			priority = SPIDER_PRIORITY_FILTERED;
-		if ( strcasecmp(action,"donotprocess") == 0 )
-			api = NULL;
+		//if ( strcasecmp(action,"donotprocess") == 0 )
+		//	api = NULL;
 		// a new diffbot url?
 		if ( strcasecmp(action,"http") == 0 )
 			api = action;
 		// add the new filter
-		cr->m_spiderFreqs  [nf] = cr->m_collectiveRespiderFrequency ; 
-		m_numRegExs2++;
+		cr->m_regExs             [nf].set(expression);
 		cr->m_spiderPriorities   [nf] = priority;
-		m_numRegExs3++;
-		cr->m_maxSpidersPerRule  [0] = 10; 
-		m_numRegExs10++;
-		cr->m_spiderIpWaits      [0] = 250; 
-		m_numRegExs5++;
-		cr->m_spiderIpMaxSpiders [0] = 3; 
-		m_numRegExs6++;
-		cr->m_spidersEnabled     [0] = 1; 
-		m_numRegExs7++;
-		cr->m_spiderDiffbotApiUrl[0].set(api);
-		m_numRegExs11++;
+		cr->m_spiderDiffbotApiUrl[nf].set(api);
+		nf++;
+
+		// add a mirror of that filter but for manually added,
+		// i.e. injected or via add url, 
+		if ( priority < 0 ) continue;
+
+		// make the priority higher!
+		cr->m_regExs[nf].safePrintf("ismanualadd && %s",expression);
+		cr->m_spiderPriorities   [nf] = 70; 
+		cr->m_spiderDiffbotApiUrl[nf].set(api); // appends \0
+		nf++;
+
 		// NULL out again
 		action = NULL;
 		expression = NULL;
+
+		if ( nf < MAX_FILTERS ) continue;
+		log("crawlbot: too many url filters!");
+		break;
 	}
 
+	// update the counts
+	cr->m_numRegExs   = nf;
+	cr->m_numRegExs2  = nf;
+	cr->m_numRegExs3  = nf;
+	cr->m_numRegExs10 = nf;
+	cr->m_numRegExs5  = nf;
+	cr->m_numRegExs6  = nf;
+	cr->m_numRegExs7  = nf;
+	cr->m_numRegExs11 = nf;
 
+	// set collective respider
+	for ( long i =0 ; i < nf ; i++ ) 
+		cr->m_spiderFreqs[i] = cr->m_collectiveRespiderFrequency;
 
+	return true;
+}
+
+bool resetUrlFilters ( CollectionRec *cr ) {
+
+	// make the gigablast regex table just "default" so it does not
+	// filtering, but accepts all urls. we will add code to pass the urls
+	// through m_diffbotUrlCrawlPattern alternatively. if that itself
+	// is empty, we will just restrict to the seed urls subdomain.
+	for ( long i = 0 ; i < MAX_FILTERS ; i++ ) {
+		cr->m_regExs[i].purge();
+		cr->m_spiderPriorities[i] = 0;
+		cr->m_maxSpidersPerRule [i] = 10;
+		cr->m_spiderIpWaits     [i] = 250; // 250 ms for now
+		cr->m_spiderIpMaxSpiders[i] = 3; // keep it respectful
+		cr->m_spidersEnabled    [i] = 1;
+		cr->m_spiderFreqs       [i] =cr->m_collectiveRespiderFrequency;
+		cr->m_spiderDiffbotApiUrl[i].purge();
+	}
+
+	long i = 0;
+
+	// 3rd default url filter
+	cr->m_regExs[i].set("ismedia");
+	cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+	cr->m_spiderDiffbotApiUrl[i].purge();
+	i++;
+
+	// 4th filter
+	cr->m_regExs[i].set("!isonsamedomain");
+	cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+	cr->m_spiderDiffbotApiUrl[i].purge();
+	i++;
+
+	cr->m_numRegExs   = i;
+	cr->m_numRegExs2  = i;
+	cr->m_numRegExs3  = i;
+	cr->m_numRegExs10 = i;
+	cr->m_numRegExs5  = i;
+	cr->m_numRegExs6  = i;
+	cr->m_numRegExs7  = i;
+	cr->m_numRegExs11 = i;
+
+	return true;
 }

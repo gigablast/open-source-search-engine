@@ -1785,10 +1785,15 @@ bool SafeBuf::htmlEncodeXmlTags ( char *s , long slen , long niceness ) {
 	return true;
 }
 
+// this puts a \0 at the end but does not update m_length for the \0 
 bool  SafeBuf::safeStrcpy ( char *s ) {
 	if ( ! s ) return true;
 	long slen = gbstrlen(s);
-	return safeMemcpy(s,slen); 
+	// restrict to one realloc i guess
+	if ( ! reserve ( slen+1) ) return false;
+	if ( ! safeMemcpy(s,slen) ) return false;
+	nullTerm();
+	return true;
 }
 
 bool SafeBuf::truncateLongWords ( char *s , long srcLen , long minmax ) {

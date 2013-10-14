@@ -8112,6 +8112,23 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		if ( p[0]=='i' && strncmp(p,"ismanualadd",11) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// if we are not submitted from the add url api, skip
+			if ( (bool)sreq->m_isAddUrl == val &&
+			     (bool)sreq->m_isInjecting == val ) 
+				continue;
+			// skip
+			p += 8;
+			// skip to next constraint
+			p = strstr(p, "&&");
+			// all done?
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
 		// does it have an rss inlink? we want to expedite indexing
 		// of such pages. i.e. that we gather from an rss feed that
 		// we got from a pingserver...
@@ -8488,7 +8505,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		while ( *s && is_alpha_a(*s) ) s++;
 
 		// skip white space before the operator
-		char *saved = s;
+		//char *saved = s;
 		while ( *s && is_wspace_a(*s) ) s++;
 
 		char sign = 0;

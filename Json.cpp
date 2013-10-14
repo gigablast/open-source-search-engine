@@ -31,6 +31,24 @@ class JsonItem *Json::addNewItem () {
 	return ji;
 }
 
+JsonItem *Json::getFirstItem ( ) {
+	if ( m_sb.length() <= 0 ) return NULL;
+	return (JsonItem *)m_sb.getBufStart();
+}
+
+JsonItem *Json::getItem ( char *name ) {
+	JsonItem *ji = getFirstItem();
+	// traverse the json
+	for ( ; ji ; ji = ji->m_next ) {
+		// just get STRINGS or NUMS
+		if ( ji->m_type != JT_STRING && ji->m_type != JT_NUMBER ) 
+			continue;
+		// check name
+		char *name2   = ji->m_name;
+		if ( strcmp(name2,name) == 0 ) return ji;
+	}
+	return NULL;
+}
 
 JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 
@@ -227,8 +245,8 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 			ji->m_nameLen = NAMELEN;
 			ji = NULL;
 			// skip over the string
-			size = 0;
-			p    = end;
+			size = 1;
+			//p    = end;
 			continue;
 		}
 			

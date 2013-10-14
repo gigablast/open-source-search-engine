@@ -183,6 +183,9 @@ void XmlDoc::reset ( ) {
 	// notifications pending?
 	//if ( m_notifyBlocked ) { char *xx=NULL;*xx=0; }
 
+	m_sentToDiffbot = 0;
+	m_gotDiffbotSuccessfulReply = 0;
+
 	m_loaded = false;
 
 	m_msg4Launched = false;
@@ -11913,6 +11916,8 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 
 	// increment this counter on a successful reply from diffbot
 	if ( ! THIS->m_diffbotReplyError ) {
+		// mark this flag
+		THIS->m_gotDiffbotSuccessfulReply = 1;
 		// count it for stats
 		THIS->m_cr->m_localCrawlInfo.m_pageProcessSuccesses++;
 		// log it
@@ -11929,9 +11934,17 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		//	char *xx=NULL;*xx=0; }
 		// need to save collection rec now during auto save
 		THIS->m_cr->m_needsSave = true;
+		// the diffbot api url we used
+		SafeBuf *au = THIS->getDiffbotApiUrl();
+		if ( ! au || au == (void *)-1 ) {char *xx=NULL;*xx=0;}
 		// set the reply properly
-		if ( ! THIS->m_diffbotReply.reserve ( pageLen + 1 ) ) 
+		long need = pageLen + 1 + au->length() + 1;
+		if ( ! THIS->m_diffbotReply.reserve ( need ) ) 
 			goto skip;
+		// first store the url we used on first line
+		THIS->m_diffbotReply.safeMemcpy ( au->getBufStart(),
+						  au->length() );
+		THIS->m_diffbotReply.pushChar('\n');
 		THIS->m_diffbotReply.safeMemcpy ( page , pageLen );
 		// tack on a \0 but don't increment m_length
 		THIS->m_diffbotReply.nullTerm();
@@ -11975,11 +11988,45 @@ SafeBuf *XmlDoc::getDiffbotApiUrl ( ) {
 	return &m_diffbotApiUrl;
 }
 
+// if only processing NEW is enabled, then do not
+bool *XmlDoc::getRecycleDiffbotReply ( ) {
+
+	if ( m_recycleDiffbotReplyValid )
+		return &m_recycleDiffbotReply;
+
+	XmlDoc **odp = getOldXmlDoc( );
+	if ( ! odp || odp == (XmlDoc **)-1 ) return (bool *)odp;
+	XmlDoc *od = *odp;
+
+	// if doc has been successfully processed in the past then
+	// ***RECYCLE*** the diffbot reply!
+	m_recycleDiffbotReply = false;
+
+	if ( m_cr->m_diffbotOnlyProcessIfNew &&
+	     od && od->m_gotDiffbotSuccessfulReply ) 
+		m_recycleDiffbotReply = true;
+
+	m_recycleDiffbotReplyValid = true;
+
+	return &m_recycleDiffbotReply;
+}
+
 // the diffbot reply will be a list of json objects we want to index
 SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	if ( m_diffbotReplyValid )
 		return &m_diffbotReply;
+
+	// if already processed and onlyprocessifnew is enabled then
+	// we recycle and do not bother with this, we also do not nuke
+	// the diffbot json objects we have already indexed by calling
+	// nukeJSONObjects()
+	bool *recycle = getRecycleDiffbotReply();
+	if ( ! recycle || recycle == (void *)-1) return (SafeBuf *)recycle;
+	if ( *recycle ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
 
 	if ( m_isDiffbotJSONObject ) {
 		m_diffbotReplyValid = true;
@@ -12006,8 +12053,8 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	}
 
 	// "none" means none too! Parms.cpp doesn't like &dapi1=& because
-	// it does not call setParm() on such things even though it probably should,
-	// it doesn't like no values, so i put "none" in there.
+	// it does not call setParm() on such things even though it probably 
+	// should, it doesn't like no values, so i put "none" in there.
 	if ( strncasecmp(au->getBufStart(),"none",4) == 0 ) {
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
@@ -12134,6 +12181,9 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	diffbotUrl.nullTerm();
 
 	log("diffbot: getting %s",diffbotUrl.getBufStart());
+
+	// mark as tried
+	m_sentToDiffbot = 1;
 	
 	// count it for stats
 	m_cr->m_localCrawlInfo.m_pageProcessAttempts++;
@@ -17641,11 +17691,25 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( ! oldList || oldList ==(void *)-1) return (char *)oldList;
 	}
 
+	// . should we recycle the diffbot reply for this url?
+	// . if m_diffbotOnlyProcessIfNew is true then we want to keep
+	//   our existing diffbot reply, i.e. recycle it, even though we
+	//   respidered this page.
+	bool *recycle = getRecycleDiffbotReply();
+	if ( ! recycle || recycle == (void *)-1) return (char *)recycle;
+	// in that case inherit this from the old doc...
+	if ( od && *recycle ) {
+		m_diffbotJSONCount          = od->m_diffbotJSONCount;
+		m_sentToDiffbot             = od->m_sentToDiffbot;
+		m_gotDiffbotSuccessfulReply = od->m_gotDiffbotSuccessfulReply;
+	}
+
+
 	// we can't really get the meta list of each json object we may
 	// have indexed in od's diffbot reply buffer because they all
 	// were indexed with their own docids in the "m_dx" code below. so
 	// just delete them and we'll re-add from this doc's diffbot reply.
-	if ( od && od->m_diffbotJSONCount ) {
+	if ( od && od->m_diffbotJSONCount && ! *recycle ) {
 		// this returns false if it blocks
 		long *status = od->nukeJSONObjects();
 		if ( ! status || status == (void *)-1) return (char *)status;

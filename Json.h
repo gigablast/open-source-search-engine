@@ -58,6 +58,10 @@ class Json {
 
 	JsonItem *parseJsonStringIntoJsonItems ( char *json );
 
+	JsonItem *getFirstItem ( ) ;
+
+	JsonItem *getItem ( char *name );
+
 	JsonItem *addNewItem ();
 
 	Json() { m_stackPtr = 0; };

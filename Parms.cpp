@@ -3683,6 +3683,7 @@ Parm *Parms::getParm ( char *cgi ) {
 	return NULL;
 }
 
+/*
 Parm *Parms::getParm2 ( char *cgi , long cgiLen ) {
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		if ( ! m_parms[i].m_cgi ) continue ;
@@ -3697,7 +3698,7 @@ Parm *Parms::getParm2 ( char *cgi , long cgiLen ) {
 	}
 	return NULL;
 }
-
+*/
 /*
 #define PHTABLE_SIZE (MAX_PARMS*2)
 
@@ -8244,11 +8245,27 @@ void Parms::init ( ) {
 	m->m_title = "collective respider frequency (days)";
 	m->m_cgi   = "crf";
 	m->m_xml   = "frequency";
-	m->m_off   = (char *)cr.m_collectiveRespiderFrequency - x;
+	m->m_off   = (char *)&cr.m_collectiveRespiderFrequency - x;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.0"; // 0.0
 	m->m_page  = PAGE_NONE;
 	m->m_units = "days";
+	m++;
+
+	m->m_cgi   = "dbppp";
+	m->m_xml   = "diffbotPageProcessPattern";
+	m->m_off   = (char *)&cr.m_diffbotPageProcessPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
+	m++;
+
+	m->m_cgi   = "dbopn";
+	m->m_xml   = "diffbotOnlyProcessIfNew";
+	m->m_off   = (char *)&cr.m_diffbotOnlyProcessIfNew - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "1";
 	m++;
 
 
@@ -8317,14 +8334,6 @@ void Parms::init ( ) {
 	m->m_cgi   = "dbupp";
 	m->m_xml   = "diffbotUrlProcessPattern";
 	m->m_off   = (char *)&cr.m_diffbotUrlProcessPattern - x;
-	m->m_type  = TYPE_SAFEBUF;
-	m->m_page  = PAGE_NONE;
-	m->m_def   = "";
-	m++;
-
-	m->m_cgi   = "dbppp";
-	m->m_xml   = "diffbotPageProcessPattern";
-	m->m_off   = (char *)&cr.m_diffbotPageProcessPattern - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";

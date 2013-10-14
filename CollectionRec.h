@@ -418,6 +418,7 @@ class CollectionRec {
 	//SafeBuf m_diffbotUrlCrawlPattern;
 	//SafeBuf m_diffbotUrlProcessPattern;
 	SafeBuf m_diffbotPageProcessPattern;
+	char    m_diffbotOnlyProcessIfNew;
 	//SafeBuf m_diffbotClassify;
 	//char m_diffbotClassify;
 	//char m_useDiffbot;

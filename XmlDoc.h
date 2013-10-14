@@ -330,8 +330,8 @@ class XmlDoc {
 	uint16_t  m_isSiteRoot:1;
 
 	uint16_t  m_isDiffbotJSONObject:1;
-	uint16_t  m_reserved802:1;
-	uint16_t  m_reserved803:1;
+	uint16_t  m_sentToDiffbot:1;
+	uint16_t  m_gotDiffbotSuccessfulReply:1;
 	uint16_t  m_reserved804:1;
 	uint16_t  m_reserved805:1;
 	uint16_t  m_reserved806:1;
@@ -1249,6 +1249,7 @@ class XmlDoc {
 	bool m_numOutlinksAddedValid;
 	bool m_baseUrlValid;
 	bool m_replyValid;
+	bool m_recycleDiffbotReplyValid;
 	bool m_diffbotReplyValid;
 	//bool m_diffbotUrlCrawlPatternMatchValid;
 	//bool m_diffbotUrlProcessPatternMatchValid;
@@ -1510,6 +1511,7 @@ class XmlDoc {
 	char  m_diffbotSavedChar;
 	SafeBuf m_diffbotReply;
 	long m_diffbotReplyError;
+	bool m_recycleDiffbotReply;
 	//bool m_diffbotUrlCrawlPatternMatch;
 	//bool m_diffbotUrlProcessPatternMatch;
 	//bool m_diffbotPageProcessPatternMatch;
@@ -1518,6 +1520,7 @@ class XmlDoc {
 	// url to access diffbot with
 	SafeBuf m_diffbotApiUrl;
 
+	bool *getRecycleDiffbotReply ( ) ;
 	SafeBuf *getDiffbotReply ( ) ;
 	//bool doesUrlMatchDiffbotCrawlPattern() ;
 	//bool doesUrlMatchDiffbotProcessPattern() ;
