@@ -56,7 +56,7 @@ long       g_qbufNeedSave = 0;
 extern void resetPageAddUrl    ( );
 extern void resetHttpMime      ( );
 extern void reset_iana_charset ( );
-extern void resetAdultBit      ( );
+//extern void resetAdultBit      ( );
 extern void resetDomains       ( );
 extern void resetEntities      ( );
 extern void resetQuery         ( );
@@ -1709,7 +1709,7 @@ void Process::resetAll ( ) {
 	resetPageAddUrl();
 	resetHttpMime();
 	reset_iana_charset();
-	resetAdultBit();
+	//resetAdultBit();
 	resetDomains();
 	resetEntities();
 	resetQuery();
