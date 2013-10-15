@@ -73,13 +73,15 @@ class Statsdb {
 	char *plotGraph ( char *pstart ,
 			  char *pend ,
 			  long graphHash ,
-			  class GIFPlotter *plotter ,
+			  //class GIFPlotter *plotter ,
+			  SafeBuf &gw,
 			  long  zoff );
 
 	void drawHR ( float z ,
 		      float ymin , 
 		      float ymax ,
-		      class GIFPlotter *plotter ,
+		      //class GIFPlotter *plotter ,
+		      SafeBuf &gw,
 		      class Label *label ,
 		      float zoff ,
 		      long color ) ;
@@ -118,6 +120,9 @@ class Statsdb {
 	Rdb 	  m_rdb;
 	RdbList   m_list;
 	Msg1	  m_msg1;
+
+	// the graphing window. now a bunch of absolute divs in html
+	SafeBuf m_gw;
 
 	SafeBuf m_sb0;
 	SafeBuf m_sb1;

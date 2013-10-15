@@ -488,7 +488,7 @@ void Stats::addSpiderPoint ( long errCode, bool isNew ) {
 	}
 }
 
-// draw a HORIZONTAL line in html 5 i guess
+// draw a HORIZONTAL line in html
 void drawLine2 ( SafeBuf &sb ,
 		 long x1 , 
 		 long x2 ,
