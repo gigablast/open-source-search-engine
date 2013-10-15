@@ -1651,7 +1651,7 @@ static bool printDMOZCategoryUnderResult ( SafeBuf &sb ,
 	// print a link to apply your query to this DMOZ category
 	//
 	//////
-	sb.safePrintf("<a href=\"/search?s=0&q=gbpdcat%%3A%li",catid);
+	sb.safePrintf("<a href=\"/search?s=0&q=gbipcatid%%3A%li",catid);
 	sb.urlEncode("|",1);
 	sb.urlEncode(si->m_sbuf1.getBufStart(),si->m_sbuf1.length());
 	sb.safePrintf("\">Search in Category</a>: ");
