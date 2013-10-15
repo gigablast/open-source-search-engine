@@ -2285,6 +2285,17 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 
 
+bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr ) {
+
+	// skip first 2 filters that are ismedia->ignore and
+	// !isonsamedomain->ignore
+	for ( long i = 2 ; i < cr->m_numRegExs ; i++ ) {
+		//sb.safePrintf
+	}
+
+	return true;
+}
+
 bool printCrawlBotPage2 ( TcpSocket *socket , 
 			  HttpRequest *hr ,
 			  char fmt, // format
@@ -2447,7 +2458,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//if ( cx->m_collectionNameAlias.length() > 0 )
 			//	alias=cx->m_collectionNameAlias.getBufStart();
 			sb.safePrintf("\n\n{"
-				      "\"id\":\"%s\",\n"
+				      "\"name\":\"%s\",\n"
 				      //"\"alias\":\"%s\",\n"
 				      "\"crawlingEnabled\":%li,\n"
 				      "\"objectsFound\":%lli,\n"
@@ -2458,10 +2469,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      "\"pageProcessAttempts\":%lli,\n"
 				      "\"pageProcessSuccesses\":%lli,\n"
 				      // settable parms
-				      "\"maxtocrawl\":%lli,\n"
-				      "\"maxtoprocess\":%lli,\n"
-				      "\"urt\":%li,\n"
-				      ,cx->m_coll
+				      "\"maxToCrawl\":%lli,\n"
+				      "\"maxToProcess\":%lli,\n"
+				      "\"obeyRobots\":%li,\n"
+				      "\"repeatCrawl\":%f,\n"
+				      "\"onlyProcessIfNew\":%li,\n"
+				      //,cx->m_coll
+				      , cx->m_diffbotCrawlName.getBufStart()
 				      //, alias
 				      , (long)cx->m_spideringEnabled 
 				      , cx->m_globalCrawlInfo.m_objectsAdded -
@@ -2475,12 +2489,15 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      , cx->m_diffbotMaxToCrawl
 				      , cx->m_diffbotMaxToProcess
 				      , (long)cx->m_useRobotsTxt
+				      , cx->m_collectiveRespiderFrequency
+				      , (long)cx->m_diffbotOnlyProcessIfNew
 				      );
 			/////
 			//
 			// show url filters table. kinda hacky!!
 			//
 			/////
+			/*
 			g_parms.sendPageGeneric ( socket ,
 						  hr ,
 						  PAGE_FILTERS ,
@@ -2489,6 +2506,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 						  cr->m_coll,  // coll override
 						  true // isJSON?
 						  );
+			*/
+			printUrlFilters ( sb , cr );
 			// remove trailing comma
 			sb.removeLastChar('\n');
 			sb.removeLastChar(',');
