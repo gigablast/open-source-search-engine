@@ -8115,12 +8115,16 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		if ( p[0]=='i' && strncmp(p,"ismanualadd",11) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) continue;
-			// if we are not submitted from the add url api, skip
-			if ( (bool)sreq->m_isAddUrl == val &&
-			     (bool)sreq->m_isInjecting == val ) 
-				continue;
+			// . if we are not submitted from the add url api, skip
+			// . if we have '!' then val is 1
+			if ( sreq->m_isAddUrl|| sreq->m_isInjecting ) {
+				if ( val ) continue;
+			}
+			else {
+				if ( ! val ) continue;
+			}
 			// skip
-			p += 8;
+			p += 11;
 			// skip to next constraint
 			p = strstr(p, "&&");
 			// all done?
@@ -8251,7 +8255,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			     sreq->m_parentHostHash32 != sreq->m_hostHash32 ) 
 				continue;
 			if ( val == 1 &&
-			     sreq->m_parentHostHash32 != sreq->m_hostHash32 ) 
+			     sreq->m_parentHostHash32 == sreq->m_hostHash32 ) 
 				continue;
 			p += 6;
 			p = strstr(p, "&&");
@@ -8267,7 +8271,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			     sreq->m_parentDomHash32 != sreq->m_domHash32 ) 
 				continue;
 			if ( val == 1 &&
-			     sreq->m_parentDomHash32 != sreq->m_domHash32 ) 
+			     sreq->m_parentDomHash32 == sreq->m_domHash32 ) 
 				continue;
 			p += 6;
 			p = strstr(p, "&&");

@@ -2291,7 +2291,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 					   &st->m_hr,
 					   st ,
 					   injectedUrlWrapper ,
-					   1 ) ) // spiderLinks default is on
+					   1 , // spiderLinks default is on
+					   collName ) ) // coll override
 			// if blocked, return now
 			return false;
 		// otherwise send back reply
@@ -3788,7 +3789,7 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	i++;
 
 	// 2nd default filter
-	cr->m_regExs[i].set("!isonsamedomain");
+	cr->m_regExs[i].set("!isonsamedomain && !ismanualadd");
 	cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
 	cr->m_spiderDiffbotApiUrl[i].purge();
 	i++;

@@ -37,7 +37,8 @@ public:
 		      HttpRequest *r ,
 		      void *state ,
 		      void (*callback)(void *state),
-		      long spiderLinksDefault = 0 );
+		      long spiderLinksDefault = 0 ,
+		      char *collOveride = NULL );
 
 	bool inject ( char *url ,
 		      long  forcedIp ,

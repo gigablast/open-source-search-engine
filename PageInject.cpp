@@ -444,7 +444,8 @@ bool Msg7::inject ( TcpSocket *s ,
 		    HttpRequest *r ,
 		    void *state ,
 		    void (*callback)(void *state) ,
-		    long spiderLinksDefault ) {
+		    long spiderLinksDefault ,
+		    char *collOveride ) {
 
 	// save socket
 	// socket is responsible for free the HTTP request, which contains
@@ -459,14 +460,18 @@ bool Msg7::inject ( TcpSocket *s ,
 	//if ( ! coll ) coll = "main";
 	// sometimes crawlbot will add or reset a coll and do an inject
 	// in PageCrawlBot.cpp
-	if ( ! coll ) coll = r->getString("addcoll");
-	if ( ! coll ) coll = r->getString("resetcoll");
+	//if ( ! coll ) coll = r->getString("addcoll");
+	//if ( ! coll ) coll = r->getString("resetcoll");
+	if ( ! coll ) coll = collOveride;
 
 	bool  quickReply     = r->getLong   ( "quick" , 0 );	
 	//char *pwd            = r->getString ( "pwd" , NULL );
 	char *url            = r->getString ( "u" , NULL , NULL /*default*/);
 	// for diffbot.cpp api
 	if ( ! url ) url = r->getString("injecturl",NULL,NULL);
+	// PageCrawlBot.cpp uses "seed"
+	if ( ! url ) url = r->getString("seed",NULL,NULL);
+
 	bool  recycleContent = r->getLong   ( "recycle",0);
 	char *ips            = r->getString ( "ip" , NULL , NULL );
 	//char *username       = g_users.getUsername(r);
