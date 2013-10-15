@@ -2291,6 +2291,29 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr ) {
 	// !isonsamedomain->ignore
 	for ( long i = 2 ; i < cr->m_numRegExs ; i++ ) {
 		//sb.safePrintf
+		char *expression = cr->m_regExs[i].getBufStart();
+		// do not allow nulls
+		if ( ! expression ) expression = "";
+		// skip spaces
+		if ( *expression && is_wspace_a(*expression) ) expression++;
+		if ( strcmp(expression,"default") == 0 ) expression = "*";
+		char *action = cr->m_spiderDiffbotApiUrl[i].getBufStart();
+		// do not all nulls
+		if ( ! action ) action = "";
+		// skip spaces
+		if ( *action && is_wspace_a(*action) ) action++;
+		// if no diffbot api url specified, do not process
+		if ( ! *action ) action = "doNotProcess";
+		// if filtered from crawling, do not even spider
+		long priority = cr->m_spiderPriorities[i];
+		if ( priority == SPIDER_PRIORITY_FILTERED ) // -3
+			action = "doNotSpider";
+		// show it
+		sb.safePrintf("{\"expression\":\"%s\",",expression);
+		sb.safePrintf("\"action\":\"%s\"}",action);
+		// more follow?
+		if ( i+1<cr->m_numRegExs ) sb.pushChar(',');
+		sb.pushChar('\n');
 	}
 
 	return true;
@@ -2421,7 +2444,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//////
 
 	if ( fmt == FMT_JSON )
-		sb.safePrintf("[");//\"collections\":");
+		sb.safePrintf("{\"crawls\":[");//\"collections\":");
 
 	long summary = hr->getLong("summary",0);
 	// enter summary mode for json
@@ -2550,7 +2573,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 	if ( fmt == FMT_JSON ) 
 		// end the array of collection objects
-		sb.safePrintf("\n]\n");
+		sb.safePrintf("\n]}\n");
 
 	///////
 	//
@@ -3206,11 +3229,17 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      );
 	}
 
+	char *ct = "text/html";
+	if ( fmt == FMT_JSON ) ct = "application/json";
+	if ( fmt == FMT_XML ) ct = "text/xml";
+
 	// this could be in html json or xml
 	return g_httpServer.sendDynamicPage ( socket, 
 					      sb.getBufStart(), 
 					      sb.length(),
-					      -1 ); // cachetime
+					      -1 , // cachetime
+					      false ,
+					      ct );
 
 	/*		      
 		      "<h1>API for Diffbot</h1>"
