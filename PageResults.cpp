@@ -109,11 +109,11 @@ bool sendReply ( State0 *st , char *reply ) {
 			    STAT_QUERY );
 
 	// add to statsdb, use # of qterms as the value/qty
-	//g_statsdb.addStat ( 0,
-	//		    "query",
-	//		    st->m_startTime,
-	//		    nowms,
-	//		    st->m_q.m_numTerms);
+	g_statsdb.addStat ( 0,
+			    "query",
+			    st->m_startTime,
+			    nowms,
+			    st->m_q.m_numTerms);
 
 	// log the time
 	if ( st->m_took >= g_conf.m_logQueryTimeThreshold ) {

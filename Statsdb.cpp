@@ -80,7 +80,7 @@ static Label s_labels[] = {
 	// . max = -1, means dynamic size the ymax!
 	// . use 1B for now again...
 	// . color=pink
-	{GRAPH_QUANTITY,1000000000.0,"docs_indexed", .1,"%.0fK docs" , .001 , 0x00cc0099,"docs indexed" }
+	{GRAPH_QUANTITY,50000000.0,"docs_indexed", .1,"%.0fK docs" , .001 , 0x00cc0099,"docs indexed" }
 
 
 	//{ "termlist_intersect",0x0000ff00},
@@ -515,6 +515,8 @@ bool Statsdb::makeGIF ( long t1Arg ,
 
 	return gifLoop ();
 }
+
+#define POINTWIDTH 8
 
 #define MAX_POINTS 6000
 #define MAX_WIDTH  6
@@ -986,10 +988,12 @@ char *Statsdb::plotGraph ( char *pstart ,
 
 		// skip if can't make a line
 		if ( firstPoint ) { 
+			// flip y
+			long y = DY - fy2 +20 ; // fix -20 in drawLine3()
 			//plotter->circle ( x2 , fy2 , 2 );
-			long width = 4;
+			long width = POINTWIDTH;
 			// draw a 4x4 box now:
-			drawLine3(m_gw,x2-width/2,x2+width/2,fy2,color,width); 
+			drawLine3(m_gw,x2-width/2,x2+width/2,y,color,width); 
 			firstPoint = false;
 			continue;
 		}
@@ -1014,7 +1018,10 @@ char *Statsdb::plotGraph ( char *pstart ,
 		//plotter->circle ( x1 , fy1 , 2 );
 		//plotter->circle ( x2 , fy2 , 2 );
 		// draw a 4x4 boxes now:
-		long width = 4;
+		long width = POINTWIDTH;
+		// flip y's
+		fy1 = DY - fy1 +20; // fix -20 in drawLine3
+		fy2 = DY - fy2 +20; // fix -20 in drawLine3
 		drawLine3 ( m_gw,x1-width/2, x1+width/2, fy1,color, width); 
 		drawLine3 ( m_gw,x2-width/2, x2+width/2, fy2,color, width); 
 	}
@@ -1117,12 +1124,14 @@ void Statsdb::drawHR ( float z ,
 	// LABEL
 	gw.safePrintf("<div style=\"position:absolute;"
 		      "left:%li;"
-		      "bottom:20;"
-		      //"background-color:#000000;"
+		      "bottom:%li;"
+		      "color:#%lx;"
 		      "z-index:110;"
 		      "min-height:20px;"
 		      "min-width:3px;\">%s</div>\n"
-		      , (long)m_bx+80
+		      , (long)(m_bx)
+		      , (long)(z2) - 20 // drawLine3() has -20 so we do too
+		      , color
 		      // the label:
 		      , tmp
 		      );
