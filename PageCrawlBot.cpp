@@ -1732,12 +1732,16 @@ bool sendReply2 (TcpSocket *socket , long fmt , char *msg ) {
 	// log it
 	log("crawlbot: %s",msg);
 
+	char *ct = "text/html";
+
 	// send this back to browser
 	SafeBuf sb;
-	if ( fmt == FMT_JSON ) 
-		sb.safePrintf("{\"response\":\"success\"},"
-			      "{\"reason\":\"%s\"}\n"
+	if ( fmt == FMT_JSON ) {
+		sb.safePrintf("{\n{\"response\":\"success\"},\n"
+			      "{\"message\":\"%s\"}\n}\n"
 			      , msg );
+		ct = "application/json";
+	}
 	else
 		sb.safePrintf("<html><body>"
 			      "success: %s"
@@ -1748,7 +1752,9 @@ bool sendReply2 (TcpSocket *socket , long fmt , char *msg ) {
 	return g_httpServer.sendDynamicPage (socket, 
 					     sb.getBufStart(), 
 					     sb.length(),
-					     0); // cachetime
+					     0, // cachetime
+					     false, // POST reply?
+					     ct);
 }
 
 
@@ -1757,12 +1763,16 @@ bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 	// log it
 	log("crawlbot: %s",msg);
 
+	char *ct = "text/html";
+
 	// send this back to browser
 	SafeBuf sb;
-	if ( fmt == FMT_JSON ) 
-		sb.safePrintf("{\"response\":\"fail\"},"
-			      "{\"reason\":\"%s\"}\n"
+	if ( fmt == FMT_JSON ) {
+		sb.safePrintf("{\n{\"response\":\"fail\"},\n"
+			      "{\"message\":\"%s\"}\n}\n"
 			      , msg );
+		ct = "application/json";
+	}
 	else
 		sb.safePrintf("<html><body>"
 			      "failed: %s"
@@ -1773,7 +1783,9 @@ bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 	return g_httpServer.sendDynamicPage (socket, 
 					     sb.getBufStart(), 
 					     sb.length(),
-					     0); // cachetime
+					     0, // cachetime
+					     false, // POST reply?
+					     ct );
 }
 
 bool printCrawlBotPage2 ( class TcpSocket *s , 
@@ -2037,9 +2049,29 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	char *name = hr->getString("name");
 
+	//if ( delColl && !  && cast == 0 ) {
+	//	log("crawlbot: no collection found to delete.");
+	//	char *msg = "Could not find crawl to delete.";
+	//	return sendErrorReply2 (socket,fmt,msg);
+	//}
+
+	if ( delColl && cast && fmt == FMT_JSON ) {
+		char *msg = "Collection deleted.";
+		return sendReply2 (socket,fmt,msg);
+	}
+
+	// default name to next available collection crawl name in the
+	// case of a delete operation...
+	if ( delColl && cast ) {
+		// this was deleted... so is invalid now
+		name = NULL;
+		// no longer a delete function, we need to set "name" below
+		delColl = NULL;
+	}
+
 	// if name is missing default to name of first existing
 	// collection for this token. 
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs && cast ; i++ ) {
 		if (  name ) break;
 		// do not do this if doing an
 		// injection (seed) or add url or del coll or reset coll !!
@@ -2097,12 +2129,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//if ( JS.getInputString("deleteCrawl") ) delColl = true;
 	//if ( JS.getInputString("resetCrawl") ) resetColl = true;
 
-	if ( delColl && ! cr ) {
-		log("crawlbot: no collection found to delete.");
-		char *msg = "Could not find crawl to delete.";
-		return sendErrorReply2 (socket,fmt,msg);
-	}
-
 	if ( resetColl && ! cr ) {
 		log("crawlbot: no collection found to reset.");
 		char *msg = "Could not find crawl to reset.";
@@ -2149,7 +2175,9 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 		if ( resetColl ) {
 			//cr = g_collectiondb.getRec ( resetColl );
-			g_collectiondb.resetColl ( cr->m_coll );//resetColl );
+			g_collectiondb.resetColl ( collName );//resetColl );
+			// it is a NEW ptr now!
+			cr = g_collectiondb.getRec( collName );
 			// if reset from crawlbot api page then enable spiders
 			// to avoid user confusion
 			if ( cr ) cr->m_spideringEnabled = 1;
@@ -2385,10 +2413,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		rand64 <<= 32;
 		rand64 |=  r2;
 		// first print "add new collection"
-		sb.safePrintf("[ <a href=/crawlbot?addcoll=%016llx&token=%s>"
+		sb.safePrintf("[ <a href=/crawlbot?name=%016llx&token=%s&"
+			      "format=html>"
 			      "add new collection"
 			      "</a> ] &nbsp; "
-			      "[ <a href=/crawlbot?summary=1&token=%s>"
+			      "[ <a href=/crawlbot?token=%s>"
 			      "show all collections"
 			      "</a> ] &nbsp; "
 			      , rand64
@@ -2398,7 +2427,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	}
 	
 
-	long tokenLen = gbstrlen(token);
+	//long tokenLen = gbstrlen(token);
 	bool firstOne = true;
 
 	//
@@ -2422,12 +2451,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			sb.safePrintf ( "<b><font color=red>");
 		}
 		// print the crawl id. collection name minus <TOKEN>-
-		sb.safePrintf("<a %shref=/crawlbot?token=%s&name=%s>"
+		sb.safePrintf("<a %shref=/crawlbot?token=", style);
+		sb.urlEncode(token);
+		sb.safePrintf("&name=");
+		sb.urlEncode(cx->m_diffbotCrawlName.getBufStart());
+		sb.safePrintf("&format=html>"
 			      "%s"
 			      "</a> &nbsp; "
-			      , style
-			      , token
-			      , cx->m_diffbotCrawlName.getBufStart()
 			      , cx->m_diffbotCrawlName.getBufStart()
 			      );
 		if ( highlight )
@@ -2595,21 +2625,22 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				//,LIGHT_BLUE
 				//,DARK_BLUE
 				,(long)g_spiderLoop.m_numSpidersOut);
-		if ( cr->m_spideringEnabled )
-			sb.safePrintf(" "
-				      "<a href=/crawlbot?c=%s&pause=1>"
-				      "<font color=red><b>Pause spiders</b>"
-				      "</font></a>"
-				      , cr->m_coll
-				      );
-		else
-			sb.safePrintf(" "
-				      "<a href=/crawlbot?c=%s&pause=0>"
-				      "<font color=green><b>Resume "
-				      "spidering</b>"
-				      "</font></a>"
-				      , cr->m_coll
-				      );
+		char *str = "<font color=green>Resume Crawl</font>";
+		long pval = 0;
+		if ( cr->m_spideringEnabled )  {
+			str = "<font color=red>Pause Crawl</font>";
+			pval = 1;
+		}
+		sb.safePrintf(" "
+			      "<a href=/crawlbot?token="
+			      );
+		sb.urlEncode(token);
+		sb.safePrintf("&name=");
+		sb.urlEncode(cr->m_diffbotCrawlName.getBufStart());
+		sb.safePrintf("&pauseCrawl=%li><b>%s</b></a>"
+			      , pval
+			      , str
+			      );
 
 		sb.safePrintf("</td></tr>\n" );
 
@@ -2654,6 +2685,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<form method=get action=/crawlbot>"
 			      "<input type=hidden name=name value=\"%s\">"
 			      "<input type=hidden name=token value=\"%s\">"
+			      "<input type=hidden name=format value=\"html\">"
 			      , cr->m_diffbotCrawlName.getBufStart()
 			      , cr->m_diffbotToken.getBufStart()
 			      );
@@ -3184,48 +3216,45 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      // reset collection form
 			      "<form method=get action=/crawlbot>"
-			      "<input type=hidden name=token value=\""
+			      "<input type=hidden name=format value=html>"
+			      "<input type=hidden name=token value=\"%s\">"
+			      "<input type=hidden name=name value=\"%s\">"
+			      , cr->m_diffbotToken.getBufStart()
+			      , cr->m_diffbotCrawlName.getBufStart()
 			      );
-		sb.safeMemcpy ( token , tokenLen );
-		sb.safePrintf("\">"
+		sb.safePrintf(
 
-			      "<input type=hidden name=resetcoll value=%s>"
+			      "<input type=hidden name=resetCrawl value=1>"
 			      // also show it in the display, so set "c"
-			      "<input type=hidden name=c value=%s>"
 			      "<input type=submit name=button value=\""
 			      "Reset this collection\">"
 			      "</form>"
 			      // end reset collection form
-
-
 			      "</td>"
 
 			      "<td>"
 
 			      // delete collection form
 			      "<form method=get action=/crawlbot>"
-			      "<input type=hidden name=token value=\""
-			      , cr->m_coll
-			      , cr->m_coll
+			      "<input type=hidden name=format value=html>"
+			      "<input type=hidden name=token value=\"%s\">"
+			      "<input type=hidden name=name value=\"%s\">"
+			      , cr->m_diffbotToken.getBufStart()
+			      , cr->m_diffbotCrawlName.getBufStart()
 			      );
-		sb.safeMemcpy ( token , tokenLen );
-		sb.safePrintf("\">"
 
-			      "<input type=hidden name=delcoll value=%s>"
+		sb.safePrintf(
+
+			      "<input type=hidden name=deleteCrawl value=1>"
 			      "<input type=submit name=button value=\""
 			      "Delete this collection\">"
 			      "</form>"
 			      // end delete collection form
-
-
-
-
 			      "</td>"
 
 			      "</tr>"
 			      "</table>"
 			      "</form>"
-			      , cr->m_coll
 			      );
 	}
 
