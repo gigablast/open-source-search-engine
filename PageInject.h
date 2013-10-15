@@ -36,7 +36,8 @@ public:
 	bool inject ( TcpSocket *s , 
 		      HttpRequest *r ,
 		      void *state ,
-		      void (*callback)(void *state));
+		      void (*callback)(void *state),
+		      long spiderLinksDefault = 0 );
 
 	bool inject ( char *url ,
 		      long  forcedIp ,

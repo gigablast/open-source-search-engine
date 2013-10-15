@@ -443,7 +443,8 @@ Msg7::~Msg7 () {
 bool Msg7::inject ( TcpSocket *s , 
 		    HttpRequest *r ,
 		    void *state ,
-		    void (*callback)(void *state)) {
+		    void (*callback)(void *state) ,
+		    long spiderLinksDefault ) {
 
 	// save socket
 	// socket is responsible for free the HTTP request, which contains
@@ -478,9 +479,10 @@ bool Msg7::inject ( TcpSocket *s ,
 	char hasMime      = r->getLong("hasmime",0);
 	// do consistency testing?
 	bool doConsistencyTesting = r->getLong("dct",0);
-	// . default spiderlinks to no for injects
+	// . default spiderlinks to no for injects. no, not for
+	//   seed urls from PageCrawlbot.cpp, ppl expect links to be spidered.
 	// . support both camel and all-lower cases
-	long spiderLinks = r->getLong("spiderLinks",0);
+	long spiderLinks = r->getLong("spiderLinks",spiderLinksDefault);
 	spiderLinks = r->getLong("spiderlinks",spiderLinks);
 
 	long  forcedIp  = 0;

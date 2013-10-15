@@ -1857,7 +1857,7 @@ public:
 	char *m_desc;
 };
 static class HelpItem s_his[] = {
-	{"format","Use &format=json to show JSON output."},
+	{"format","Use &format=html to show HTML output. Default is JSON."},
 	{"token","Required for all operations below."},
 
 	{"name","Name of the crawl. If missing will just show "
@@ -1871,11 +1871,10 @@ static class HelpItem s_his[] = {
 	 ""},
 	{"addUrls","A huge string of whitespace separated URLs to add to "
 	 "spiderdb for crawling."},
-	{"spiderLinks","Use 0 or 1 to not spider or spider links from "
-	 "the seed url. Pass this along with the seed "
-	 "parameter.A Use "
-	 "this parameter in conjunction with the addUrls parameter as well. "
-	 "The DEFAULT is 0!!! So if seeding make sure to say &spiderLinks=1."},
+	{"spiderLinks","Use 1 or 0 to spider the links or NOT spider "
+	 "the links, respectively, from "
+	 "the provided seed or addUrls parameters. "
+	 "The default is 1."},
 
 	{"maxToCrawl", "Specify max pages to successfully download."},
 	{"maxToProcess", "Specify max pages to successfully process through "
@@ -1889,7 +1888,9 @@ static class HelpItem s_his[] = {
 	 "contains any of these then we send it to diffbot for processing. "
 	 "If this is empty we send all pages to diffbot for processing."},
 
-	{"expression","A pattern to match in a URL. Example expressions:"},
+	{"expression","A pattern to match in a URL. List up to 100 "
+	 "expression/action pairs in the HTTP request. "
+	 "Example expressions:"},
 	{"action","Take the appropriate action when preceeding pattern is "
 	 "matched. Specify multiple expression/action pairs to build a "
 	 "table of filters. Each URL being spidered will take the given "
@@ -1920,6 +1921,37 @@ char *getInputString ( char *string , HttpRequest *hr , Json *JS ) {
 // . so if no &cast is present we are the original!!!
 bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
+	// print help
+	long help = hr->getLong("help",0);
+	if ( help ) {
+		SafeBuf sb;
+		sb.safePrintf("<html>"
+			      "<title>Crawlbot API</title>"
+			      "<h1>Crawlbot API</h1>"
+			      "<b>Use the parameters below on the "
+			      "<a href=\"/crawlbot\">/crawlbot</a> page."
+			      "</b><br><br>"
+			      "<table>"
+			      );
+		for ( long i = 0 ; i < 1000 ; i++ ) {
+			HelpItem *h = &s_his[i];
+			if ( ! h->m_parm ) break;
+			sb.safePrintf( "<tr>"
+				       "<td>%s</td>"
+				       "<td>%s</td>"
+				       "</tr>"
+				       , h->m_parm
+				       , h->m_desc
+				       );
+		}
+		sb.safePrintf("</table>"
+			      "</html>");
+		return g_httpServer.sendDynamicPage (socket, 
+						     sb.getBufStart(), 
+						     sb.length(),
+						     0); // cachetime
+	}
+
 	// . Pages.cpp by default broadcasts all PageCrawlbot /crawlbot 
 	//   requests to every host in the network unless a cast=0 is 
 	//   explicitly given
@@ -1936,9 +1968,10 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// . now show stats for the current crawl
 	// . put in xml or json if format=xml or format=json or
 	//   xml=1 or json=1 ...
-	char fmt = FMT_HTML;
+	char fmt = FMT_JSON;
 	char *fs = hr->getString("format",NULL,NULL);
 	// give john a json api
+	if ( fs && strcmp(fs,"html") == 0 ) fmt = FMT_HTML;
 	if ( fs && strcmp(fs,"json") == 0 ) fmt = FMT_JSON;
 	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FMT_XML;
 	// if we got json as input, give it as output
@@ -1947,11 +1980,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// token is always required. get from json or html form input
 	//char *token = getInputString ( "token" );
 	char *token = hr->getString("token");
-
-	if ( gbstrlen(token) > 32 ) { 
-		log("crawlbot: token is over 32 chars.");
-		return NULL;
-	}
 
 	if ( ! token && ( cast == 0 || fmt == FMT_JSON ) ) {
 		char *msg = "invalid token";
@@ -1984,6 +2012,12 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 						     sb.getBufStart(), 
 						     sb.length(),
 						     0); // cachetime
+	}
+
+	if ( gbstrlen(token) > 32 ) { 
+		log("crawlbot: token is over 32 chars");
+		char *msg = "crawlbot: token is over 32 chars";
+		return sendErrorReply2 (socket,fmt,msg);
 	}
 
 	char *seed = hr->getString("seed");
@@ -2140,36 +2174,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//
 	/////////
 
-	// print help
-	long help = hr->getLong("help",0);
-	if ( help ) {
-		SafeBuf sb;
-		sb.safePrintf("<html>"
-			      "<title>Crawlbot API</title>"
-			      "<h1>Crawlbot API</h1>"
-			      "<b>Use the parameters below on the "
-			      "<a href=\"/crawlbot\">/crawlbot</a> page."
-			      "</b><br><br>"
-			      "<table>"
-			      );
-		for ( long i = 0 ; i < 1000 ; i++ ) {
-			HelpItem *h = &s_his[i];
-			if ( ! h->m_parm ) break;
-			sb.safePrintf( "<tr>"
-				       "<td>%s</td>"
-				       "<td>%s</td>"
-				       "</tr>"
-				       , h->m_parm
-				       , h->m_desc
-				       );
-		}
-		sb.safePrintf("</table>"
-			      "</html>");
-		return g_httpServer.sendDynamicPage (socket, 
-						     sb.getBufStart(), 
-						     sb.length(),
-						     0); // cachetime
-	}
 
 	// collectionrec must be non-null at this point. i.e. we added it
 	if ( ! cr )
@@ -2202,7 +2206,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		// . avoid spidering links for these urls? i would say
 		// . default is to NOT spider the links...
 		// . support camel case and all lower case
-		long spiderLinks = hr->getLong("spiderLinks",0);
+		long spiderLinks = hr->getLong("spiderLinks",1);
 		spiderLinks      = hr->getLong("spiderlinks",spiderLinks);
 		// make a list of spider requests from these urls
 		SafeBuf listBuf;
@@ -2248,7 +2252,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( ! st->m_msg7.inject ( st->m_socket,
 					   &st->m_hr,
 					   st ,
-					   injectedUrlWrapper ) )
+					   injectedUrlWrapper ,
+					   1 ) ) // spiderLinks default is on
 			// if blocked, return now
 			return false;
 		// otherwise send back reply
@@ -2958,7 +2963,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<form method=get action=/crawlbot>"
 			      "<tr>"
 			      "<td>"
-			      "<b>Inject Url: </b>"
+			      "<b>Add Seed Url: </b>"
 			      "</td><td>"
 			      "<input type=text name=seed size=50>"
 			      " "
@@ -3679,17 +3684,25 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 
 	long i = 0;
 
-	// 3rd default url filter
+	// 1st default url filter
 	cr->m_regExs[i].set("ismedia");
 	cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
 	cr->m_spiderDiffbotApiUrl[i].purge();
 	i++;
 
-	// 4th filter
+	// 2nd default filter
 	cr->m_regExs[i].set("!isonsamedomain");
 	cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
 	cr->m_spiderDiffbotApiUrl[i].purge();
 	i++;
+
+	// 3rd default filter. BUT if they specified filters this will
+	// be deleted and re-added to the bottom
+	cr->m_regExs[i].set("default");
+	cr->m_spiderPriorities   [i] = 50;
+	cr->m_spiderDiffbotApiUrl[i].purge();
+	i++;
+	
 
 	cr->m_numRegExs   = i;
 	cr->m_numRegExs2  = i;
@@ -3802,6 +3815,12 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	// how many filters do we have so far?
 	long nf = cr->m_numRegExs;
 
+	// delete the 3rd default filter cuz we should re-add it below
+	// to the bottom of the list.
+	if ( nf >= 3 ) nf--;
+
+	bool addedDefault = false;
+
 	// loop over the cgi parms
 	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
 		// get cgi parm name
@@ -3816,8 +3835,10 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		// action before expresion???? set action to NULL then?
 		if ( ! expression ) { action = NULL; continue; }
 		// they use "*" instead of "default" so put that back
-		if ( expression[0] == '*' )
+		if ( expression[0] == '*' ) {
 			expression = "default";
+			addedDefault = true;
+		}
 		// deal with it
 		long priority = 50;
 		// default diffbot api call:
@@ -3853,6 +3874,14 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		if ( nf < MAX_FILTERS ) continue;
 		log("crawlbot: too many url filters!");
 		break;
+	}
+
+	// if no '*' line was provided, add it here
+	if ( ! addedDefault ) {
+		cr->m_regExs [nf].safePrintf("default");
+		cr->m_spiderPriorities   [nf] = 50; 
+		cr->m_spiderDiffbotApiUrl[nf].set(NULL);
+		nf++;
 	}
 
 	// update the counts
