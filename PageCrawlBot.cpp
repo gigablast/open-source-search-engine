@@ -35,9 +35,9 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) ;
 bool sendBackDump ( TcpSocket *s,HttpRequest *hr );
 //void gotMsg4ReplyWrapper ( void *state ) ;
 //bool showAllCrawls ( TcpSocket *s , HttpRequest *hr ) ;
-char *getTokenFromHttpRequest ( HttpRequest *hr ) ;
-char *getCrawlIdFromHttpRequest ( HttpRequest *hr ) ;
-CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
+//char *getTokenFromHttpRequest ( HttpRequest *hr ) ;
+//char *getCrawlIdFromHttpRequest ( HttpRequest *hr ) ;
+//CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
 //CollectionRec *getCollRecFromCrawlId ( char *crawlId );
 //void printCrawlStatsWrapper ( void *state ) ;
 CollectionRec *addNewDiffbotColl ( char *addColl , char *token,char *name ) ;
@@ -1493,6 +1493,7 @@ bool showAllCrawls ( TcpSocket *s , HttpRequest *hr ) {
 }
 */
 
+/*
 char *getTokenFromHttpRequest ( HttpRequest *hr ) {
 	// provided directly?
 	char *token = hr->getString("token",NULL,NULL);
@@ -1518,6 +1519,7 @@ CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) {
 	// no matches
 	return NULL;
 }
+*/
 
 /*
 // doesn't have to be fast, so  just do a scan
@@ -2366,8 +2368,30 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<body>"
 			      );
 
-
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+
+
+	char *token = cr->m_diffbotToken.getBufStart();
+	char *name = cr->m_diffbotCrawlName.getBufStart();
+
+	// this is usefful
+	SafeBuf hb;
+	hb.safePrintf("<input type=hidden name=name value=\"%s\">"
+		      "<input type=hidden name=token value=\"%s\">"
+		      "<input type=hidden name=format value=\"html\">"
+		      , name
+		      , token );
+	hb.nullTerm();
+
+	// and this
+	SafeBuf lb;
+	lb.safePrintf("name=");
+	lb.urlEncode(name);
+	lb.safePrintf ("&token=");
+	lb.urlEncode(token);
+	if ( fmt == FMT_HTML ) lb.safePrintf("&format=html");
+	lb.nullTerm();
+	
 
 	// set this to current collection. if only token was provided
 	// then it will return the first collection owned by token.
@@ -2381,7 +2405,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//	return sendErrorReply2 ( socket , fmt , msg );
 	//}
 			
-	char *token = getTokenFromHttpRequest ( hr );
 
 	if ( fmt == FMT_HTML ) {
 		sb.safePrintf("<table border=0>"
@@ -2427,7 +2450,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	}
 	
 
-	//long tokenLen = gbstrlen(token);
 	bool firstOne = true;
 
 	//
@@ -2632,12 +2654,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			pval = 1;
 		}
 		sb.safePrintf(" "
-			      "<a href=/crawlbot?token="
-			      );
-		sb.urlEncode(token);
-		sb.safePrintf("&name=");
-		sb.urlEncode(cr->m_diffbotCrawlName.getBufStart());
-		sb.safePrintf("&pauseCrawl=%li><b>%s</b></a>"
+			      "<a href=/crawlbot?%s"
+			      "&pauseCrawl=%li><b>%s</b></a>"
+			      , lb.getBufStart() // has &name=&token= encoded
 			      , pval
 			      , str
 			      );
@@ -2683,13 +2702,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		sb.safePrintf("<br>"
 
 			      "<form method=get action=/crawlbot>"
-			      "<input type=hidden name=name value=\"%s\">"
-			      "<input type=hidden name=token value=\"%s\">"
-			      "<input type=hidden name=format value=\"html\">"
-			      , cr->m_diffbotCrawlName.getBufStart()
-			      , cr->m_diffbotToken.getBufStart()
+			      "%s"
+			      , hb.getBufStart() // hidden input token/name/..
 			      );
-
 		sb.safePrintf("<TABLE border=0>"
 			      "<TR><TD valign=top>"
 
@@ -3002,7 +3017,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	rand64 |=  r2;
 
 
-	if ( fmt == FMT_HTML )
+	if ( fmt == FMT_HTML ) {
 		sb.safePrintf(
 			      "<table border=0 cellpadding=5>"
 			      
@@ -3048,6 +3063,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<b>Add Seed Url: </b>"
 			      "</td><td>"
 			      "<input type=text name=seed size=50>"
+			      "%s" // hidden tags
 			      " "
 			      "<input type=submit name=submit value=OK>"
 			      " &nbsp; &nbsp; <input type=checkbox "
@@ -3058,7 +3074,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , rand64
 			      , cr->m_coll
 			      , rand64
+			      , hb.getBufStart() // hidden tags
 			      );
+	}
 
 	if ( injectionResponse && fmt == FMT_HTML )
 		sb.safePrintf("<br><font size=-1>%s</font>\n"
@@ -3066,7 +3084,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      );
 
 	if ( fmt == FMT_HTML )
-		sb.safePrintf("<input type=hidden name=c value=\"%s\">"
+		sb.safePrintf(//"<input type=hidden name=c value=\"%s\">"
 			      "<input type=hidden name=crawlbotapi value=1>"
 			      "</td>"
 			      "</tr>"
@@ -3093,7 +3111,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      
 			      "</table>"
 			      "<br>"
-			      , cr->m_coll
+			      //, cr->m_coll
 			      );
 
 
@@ -3216,11 +3234,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      // reset collection form
 			      "<form method=get action=/crawlbot>"
-			      "<input type=hidden name=format value=html>"
-			      "<input type=hidden name=token value=\"%s\">"
-			      "<input type=hidden name=name value=\"%s\">"
-			      , cr->m_diffbotToken.getBufStart()
-			      , cr->m_diffbotCrawlName.getBufStart()
+			      "%s" // hidden tags
+			      , hb.getBufStart()
 			      );
 		sb.safePrintf(
 
@@ -3236,11 +3251,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      // delete collection form
 			      "<form method=get action=/crawlbot>"
-			      "<input type=hidden name=format value=html>"
-			      "<input type=hidden name=token value=\"%s\">"
-			      "<input type=hidden name=name value=\"%s\">"
-			      , cr->m_diffbotToken.getBufStart()
-			      , cr->m_diffbotCrawlName.getBufStart()
+			      "%s"
+			      , hb.getBufStart()
 			      );
 
 		sb.safePrintf(
