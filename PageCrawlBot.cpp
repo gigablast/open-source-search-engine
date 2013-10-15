@@ -1866,6 +1866,13 @@ static class HelpItem s_his[] = {
 	{"deleteCrawl=1","Deletes the crawl."},
 	{"resetCrawl=1","Resets the crawl."},
 
+	{"pauseCrawl",
+	 "Specify 1 or 0 to pause or resume the crawl respectively."},
+
+	{"repeatCrawl","Specify number of days as floating point to "
+	 "recrawl the pages."},
+
+
 	{"seed","Inject this URL into the crawl and spider its links, "
 	 "as long as they are on the same domain. To inject multiple urls"
 	 ""},
@@ -1875,6 +1882,7 @@ static class HelpItem s_his[] = {
 	 "the links, respectively, from "
 	 "the provided seed or addUrls parameters. "
 	 "The default is 1."},
+
 
 	{"maxToCrawl", "Specify max pages to successfully download."},
 	{"maxToProcess", "Specify max pages to successfully process through "
@@ -3745,6 +3753,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_needsSave = 1;
 	}
 	char *url = hr->getString("notifyWebHook",NULL,NULL);
+	if ( ! url ) url = hr->getString("notifyWebhook",NULL,NULL);
 	if ( url ) {
 		cr->m_notifyUrl.set(url);
 		cr->m_needsSave = 1;
@@ -3762,7 +3771,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_diffbotPageProcessPattern.set(ppp);
 		cr->m_needsSave = 1;
 	}
-	float respider = hr->getFloat("recrawlFrequency",-1.0);
+	float respider = hr->getFloat("repeatCrawl",-1.0);
 	if ( respider >= 0.0 ) {
 		cr->m_collectiveRespiderFrequency = respider;
 		cr->m_needsSave = 1;
