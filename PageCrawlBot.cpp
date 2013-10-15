@@ -40,7 +40,7 @@ char *getCrawlIdFromHttpRequest ( HttpRequest *hr ) ;
 CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
 //CollectionRec *getCollRecFromCrawlId ( char *crawlId );
 //void printCrawlStatsWrapper ( void *state ) ;
-CollectionRec *addNewDiffbotColl ( char *addColl , char *token ) ;
+CollectionRec *addNewDiffbotColl ( char *addColl , char *token,char *name ) ;
 //bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) ;
 bool resetUrlFilters ( CollectionRec *cr ) ;
 
@@ -1913,38 +1913,6 @@ char *getInputString ( char *string , HttpRequest *hr , Json *JS ) {
 }
 */
 
-char *getSpecifiedCollName ( HttpRequest *hr ) { // , Json *JS ) {
-
-	char *token = hr->getString("token");//getInputString("token");
-	if ( ! token ) {
-		log("crawlbot: no token supplied");
-		return NULL;
-	}
-	if ( gbstrlen(token) > 32 ) { 
-		log("crawlbot: token is over 32 chars.");
-		return NULL;
-	}
-	// get collection name from "name" in json or "&name=" in cgi
-	char *name = hr->getString("name");//getInputString("name");
-	if ( ! name ) {
-		log("crawlbot: no name supplied");
-		return NULL;
-	}
-	if ( gbstrlen(name) > 30 ) { 
-		log("crawlbot: collection name is over 32 chars.");
-		return NULL;
-	}
-	// make the collection name so it includes the token
-	static char s_collName[MAX_COLL_LEN+1];
-	// sanity
-	if ( MAX_COLL_LEN < 64 ) { char *xx=NULL;*xx=0; }
-	// make a compound name for collection of token and name
-	sprintf(s_collName,"%s-%s",token,name);
-	// try to get that
-	return s_collName;
-}
-
-
 // . when we receive the request from john we call broadcastRequest() from
 //   Pages.cpp. then msg28 sends this replay with a &cast=0 appended to it
 //   to every host in the network. then when msg28 gets back replies from all 
@@ -1980,6 +1948,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//char *token = getInputString ( "token" );
 	char *token = hr->getString("token");
 
+	if ( gbstrlen(token) > 32 ) { 
+		log("crawlbot: token is over 32 chars.");
+		return NULL;
+	}
+
 	if ( ! token && ( cast == 0 || fmt == FMT_JSON ) ) {
 		char *msg = "invalid token";
 		return sendErrorReply2 (socket,fmt,msg);
@@ -2013,18 +1986,55 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 						     0); // cachetime
 	}
 
-	// . they must supply the token AND the NAME of the crawl
-	// . we create the collection name like %s-%s,token,name
-	char *collName = getSpecifiedCollName ( hr );//, &JS );
+	char *seed = hr->getString("seed");
+	char *addUrls = hr->getString("addUrls");
 
-	// return if they gave no name and we couldn't make and official
-	// collection name from the provided input
-	if ( ! collName ) {
-		log("crawlbot: no crawl name specified.");
+	// just existence is the operation
+	bool delColl   = hr->hasField("deleteCrawl");
+	bool resetColl = hr->hasField("resetCrawl");
+
+	char *name = hr->getString("name");
+
+	// if name is missing default to name of first existing
+	// collection for this token. 
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		if (  name ) break;
+		// do not do this if doing an
+		// injection (seed) or add url or del coll or reset coll !!
+		if ( seed ) break;
+		if ( addUrls ) break;
+		if ( delColl ) break;
+		if ( resetColl ) break;
+		CollectionRec *cx = g_collectiondb.m_recs[i];
+		// deleted collections leave a NULL slot
+		if ( ! cx ) continue;
+		// skip if token does not match
+		if ( strcmp ( cx->m_diffbotToken.getBufStart(),token) )
+			continue;
+		// got it
+		name = cx->m_diffbotCrawlName.getBufStart();
+		break;
+	}
+
+	if ( ! name ) {
+		log("crawlbot: no crawl name given");
 		char *msg = "invalid or missing \"name\"";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
 
+
+	if ( gbstrlen(name) > 30 ) { 
+		log("crawlbot: name is over 30 chars");
+		char *msg = "crawlbot: name is over 30 chars";
+		return sendErrorReply2 (socket,fmt,msg);
+	}
+
+	// make the collection name so it includes the token and crawl name
+	char collName[MAX_COLL_LEN+1];
+	// sanity
+	if ( MAX_COLL_LEN < 64 ) { char *xx=NULL;*xx=0; }
+	// make a compound name for collection of token and name
+	sprintf(collName,"%s-%s",token,name);
 
 	// if they did not specify the token/name of an existing collection
 	// then cr will be NULL and we'll add it below
@@ -2039,10 +2049,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// get some other parms provided optionally
 	//char *addColl   = hr->getString("addcoll");
-
-	// just existence is the operation
-	bool delColl   = hr->hasField("deleteCrawl");
-	bool resetColl = hr->hasField("resetCrawl");
 
 	// try json
 	//if ( JS.getInputString("addNewCrawl") ) addColl = collName;
@@ -2108,7 +2114,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		}
 		// add a new collection by default
 		if ( ! cr ) 
-			cr = addNewDiffbotColl ( collName , token );
+			cr = addNewDiffbotColl ( collName , token , name );
 		// problem?
 		if ( ! cr ) {
 			// send back error
@@ -2171,19 +2177,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	char *urlData = hr->getString("addUrls",NULL,NULL);
 	char *injectUrl = hr->getString("seed",NULL,NULL);
-
-	//
-	// use a default collname if it was not specified and we are not
-	// doing an inject or url upload
-	//
-	//for ( long i = 0 ; ! coll && i < g_collectiondb.m_numRecs ; i++ ) {
-	//	CollectionRec *cx = g_collectiondb.m_recs[i];
-	//	if ( ! cx ) continue;
-	//	if ( strcmp ( cx->m_diffbotToken.getBufStart(),token) )
-	//		continue;
-	//	// got it
-	//	coll = cx->m_coll;
-	//}
 
 	// make a new state
 	StateCD *st;
@@ -2382,13 +2375,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			sb.safePrintf ( "<b><font color=red>");
 		}
 		// print the crawl id. collection name minus <TOKEN>-
-		sb.safePrintf("<a %shref=/crawlbot?token=%s&c=%s>"
+		sb.safePrintf("<a %shref=/crawlbot?token=%s&name=%s>"
 			      "%s"
 			      "</a> &nbsp; "
 			      , style
 			      , token
-			      , cx->m_coll
-			      , cx->m_coll
+			      , cx->m_diffbotCrawlName.getBufStart()
+			      , cx->m_diffbotCrawlName.getBufStart()
 			      );
 		if ( highlight )
 			sb.safePrintf("</font></b>");
@@ -2604,8 +2597,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		sb.safePrintf("<br>"
 
 			      "<form method=get action=/crawlbot>"
-			      "<input type=hidden name=c value=\"%s\">"
-			      , cr->m_coll
+			      "<input type=hidden name=name value=\"%s\">"
+			      "<input type=hidden name=token value=\"%s\">"
+			      , cr->m_diffbotCrawlName.getBufStart()
+			      , cr->m_diffbotToken.getBufStart()
 			      );
 
 		sb.safePrintf("<TABLE border=0>"
@@ -2744,7 +2739,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		sb.safePrintf(
 			      //
 			      "<tr>"
-			      "<td><b>Collection Name:</td>"
+			      "<td><b>Crawl Name:</td>"
 			      "<td>%s</td>"
 			      "</tr>"
 
@@ -2852,7 +2847,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Notification URL:</b>"
 			      "</td><td>"
-			      "<input type=text name=notifyurl "
+			      "<input type=text name=notifyWebHook "
 			      "size=20 value=\"%s\"> "
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
@@ -2861,9 +2856,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr><td>"
 			      "Use Robots.txt when crawling? "
 			      "</td><td>"
-			      "<input type=radio name=urt "
+			      "<input type=radio name=obeyRobots "
 			      "value=1%s> yes &nbsp; "
-			      "<input type=radio name=urt "
+			      "<input type=radio name=obeyRobots "
 			      "value=0%s> no &nbsp; "
 			      "</td>"
 			      "</tr>"
@@ -2885,7 +2880,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</form>"
 
 
-			      , cr->m_coll
+			      , cr->m_diffbotCrawlName.getBufStart()
 			      //, alias
 			      //, aliasResponse
 
@@ -3267,7 +3262,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 */
 }
 
-CollectionRec *addNewDiffbotColl ( char *collName , char *token ) {
+CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ) {
 
 	//char *token = getTokenFromHttpRequest ( hr );
 	//if ( ! token ) {
@@ -3306,7 +3301,7 @@ CollectionRec *addNewDiffbotColl ( char *collName , char *token ) {
 
 	// remember the token
 	cr->m_diffbotToken.set ( token );
-
+	cr->m_diffbotCrawlName.set ( name );
 
 	/* this stuff can be set later.
 

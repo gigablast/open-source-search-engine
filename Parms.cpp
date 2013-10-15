@@ -8221,6 +8221,14 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
+	m->m_cgi   = "dbcrawlname";
+	m->m_xml   = "diffbotCrawlName";
+	m->m_off   = (char *)&cr.m_diffbotCrawlName - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "";
+	m++;
+
 	m->m_cgi   = "notifyemail";
 	m->m_title = "notify email";
 	m->m_xml   = "notifyEmail";
@@ -8244,7 +8252,7 @@ void Parms::init ( ) {
 	// collective respider frequency (for pagecrawlbot.cpp)
 	m->m_title = "collective respider frequency (days)";
 	m->m_cgi   = "crf";
-	m->m_xml   = "frequency";
+	m->m_xml   = "collectiveRespiderFrequency";
 	m->m_off   = (char *)&cr.m_collectiveRespiderFrequency - x;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.0"; // 0.0
@@ -8263,7 +8271,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "dbopn";
 	m->m_xml   = "diffbotOnlyProcessIfNew";
 	m->m_off   = (char *)&cr.m_diffbotOnlyProcessIfNew - x;
-	m->m_type  = TYPE_SAFEBUF;
+	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "1";
 	m++;

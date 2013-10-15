@@ -401,6 +401,7 @@ class CollectionRec {
 
 	// new diffbot parms
 	SafeBuf m_diffbotToken;
+	SafeBuf m_diffbotCrawlName;
 	// email for emailing when crawl limit hit
 	SafeBuf m_notifyEmail;
 	// fetch this url when crawl limit hit
