@@ -478,8 +478,11 @@ bool Msg7::inject ( TcpSocket *s ,
 	char hasMime      = r->getLong("hasmime",0);
 	// do consistency testing?
 	bool doConsistencyTesting = r->getLong("dct",0);
-	// default spiderlinks to no for injects
-	long spiderLinks  = r->getLong("spiderlinks",0);
+	// . default spiderlinks to no for injects
+	// . support both camel and all-lower cases
+	long spiderLinks = r->getLong("spiderLinks",0);
+	spiderLinks = r->getLong("spiderlinks",spiderLinks);
+
 	long  forcedIp  = 0;
 	
 	if ( ips ) forcedIp = atoip ( ips , gbstrlen(ips) );

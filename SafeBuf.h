@@ -70,6 +70,7 @@ struct SafeBuf {
 	bool set ( char *str ) {
 		purge();
 		if ( ! str ) return true;
+		// puts a \0 at the end, but does not include it in m_length:
 		return safeStrcpy ( str );
 	};
 

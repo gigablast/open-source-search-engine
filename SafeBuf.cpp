@@ -1789,8 +1789,7 @@ bool SafeBuf::htmlEncodeXmlTags ( char *s , long slen , long niceness ) {
 bool  SafeBuf::safeStrcpy ( char *s ) {
 	if ( ! s ) return true;
 	long slen = gbstrlen(s);
-	// restrict to one realloc i guess
-	if ( ! reserve ( slen+1) ) return false;
+	if ( ! reserve ( slen+1 ) ) return false;
 	if ( ! safeMemcpy(s,slen) ) return false;
 	nullTerm();
 	return true;

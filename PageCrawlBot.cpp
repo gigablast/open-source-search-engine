@@ -21,7 +21,7 @@
 #include "Pages.h" // g_msg
 #include "XmlDoc.h" // for checkRegex()
 #include "PageInject.h" // Msg7
-#include "Json.h"
+//#include "Json.h"
 
 // so user can specify the format of the reply/output
 #define FMT_HTML 1
@@ -40,9 +40,13 @@ char *getCrawlIdFromHttpRequest ( HttpRequest *hr ) ;
 CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
 //CollectionRec *getCollRecFromCrawlId ( char *crawlId );
 //void printCrawlStatsWrapper ( void *state ) ;
-CollectionRec *addNewDiffbotColl ( char *addColl , HttpRequest *hr ) ;
+CollectionRec *addNewDiffbotColl ( char *addColl , char *token ) ;
 //bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) ;
 bool resetUrlFilters ( CollectionRec *cr ) ;
+
+bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
+				     HttpRequest *hr , 
+				     CollectionRec *cr ) ;
 
 /*
 char *g_diffbotFields [] = {
@@ -1854,71 +1858,48 @@ public:
 };
 static class HelpItem s_his[] = {
 	{"format","Use &format=json to show JSON output."},
-	{"token=xxx","Required for all operations below."},
-	{"delcoll=xxx","Deletes collection named xxx."},
-	{"resetcoll=xxx","Resets collection named xxx."},
-	{"addcoll=xxx","Say addcoll=xxx to add a new collection named xxx."},
-	{"c=xxx","Specify the collection name. "
-	 "Required for all operations below. Just pass the token to "
-	 "the /crawlbot page to see a list of all collections that the "
-	 "token controls."},
-	{"id=xxx","Specify the collection name. Just like 'c'."},
-	{"pause","Use pause=0 or pause=1 to activate or pause spidering "
-	 "respectively."},
-	/*
-	{"alias", "Set the collection name alias to this string. Must be "
-	 "unqiue over all collections under the same token."},
-	*/
-	{"maxtocrawl", "Specify max pages to successfully download"},
-	{"maxtoprocess", "Specify max pages to successfully process through "
-	 "diffbot"},
-	{"notifyemail","Send email alert to this email when crawl hits "
-	 "the maxtocrawl or maxtoprocess limit."},
-	{"notifyurl","Fetch this URL when crawl hits "
-	 "the maxtocrawl or maxtoprocess limit."},
-	{"urt","Use robots.txt?"},
-	{"pageprocesspattern","List of || separated strings. If the page "
+	{"token","Required for all operations below."},
+
+	{"name","Name of the crawl. If missing will just show "
+	 "all crawls owned by the given token."},
+
+	{"deleteCrawl=1","Deletes the crawl."},
+	{"resetCrawl=1","Resets the crawl."},
+
+	{"seed","Inject this URL into the crawl and spider its links, "
+	 "as long as they are on the same domain. To inject multiple urls"
+	 ""},
+	{"addUrls","A huge string of whitespace separated URLs to add to "
+	 "spiderdb for crawling."},
+	{"spiderLinks","Use 0 or 1 to not spider or spider links from "
+	 "the seed url. Pass this along with the seed "
+	 "parameter.A Use "
+	 "this parameter in conjunction with the addUrls parameter as well. "
+	 "The DEFAULT is 0!!! So if seeding make sure to say &spiderLinks=1."},
+
+	{"maxToCrawl", "Specify max pages to successfully download."},
+	{"maxToProcess", "Specify max pages to successfully process through "
+	 "diffbot."},
+	{"notifyEmail","Send email alert to this email when crawl hits "
+	 "the maxtocrawl or maxtoprocess limit, or when the crawl completes."},
+	{"notifyWebHook","Fetch this URL when crawl hits "
+	 "the maxtocrawl or maxtoprocess limit, or when the crawl completes."},
+	{"obeyRobots","Obey robots.txt files?"},
+	{"pageProcessPattern","List of || separated strings. If the page "
 	 "contains any of these then we send it to diffbot for processing. "
 	 "If this is empty we send all pages to diffbot for processing."},
-	//{"dbapilist","Special list of diffbot API urls. The URL Filters "
-	// "will display these options in a drop down menu. "
-	// "Example (unencoded): "
-	// "&dbapilist=All|/api/analyze?mode=auto&u=,Article (forced)|/api/"
-	// "article?u="},
-	{"fe[N]","Filter expression #N. The first expression in the url "
-	 "filters table is 0. But if N is 0, leave N out, only specify it "
-	 "if N is > 0. Example &fe=onsamedomain to change the expression in "
-	 "row #0 to onsamedomain. Or &fe1=foobar to change the expression "
-	 "in the second row to foobar."},
-	{"cspe[N]","spidering enabled for row #N in url filters table."},
-	{"fsf[N]","Respider frequency in days for row #N in url filters table."},
-	{"mspr[N]","Max outstanding spiders for this spider priority."},
-	{"mspi[N]","Max outstanding spiders for this IP."},
-	{"xg[N]","Wait this many milliseconds between spiders of same IP."},
-	{"fsp[N]","Spider priority. Higher priorities spidered first. Can be from 0 to 127. But -3 means to ignore the URL. -2 means the URL is banned because it comes from an evil site."},
-	{"dapi[N]","Diffbot API Url. This is a string. "
-	 "It is the URL we use when "
-	 "accessing diffbot for this url filter. Specify 'none' (e.g. &dapi=none) "
-	 "to not use "
-	 "an API URL. Gigablast appends a "
-	 "&url=<url>&token=<yourtoken> to the url before requesting it. "
-	 "Example (unencoded): &dapi2=http://www.diffbot.com/api/article?"},
-	{"injecturl","Specify a seed url to inject."},
-	{"urldata","A huge string of whitespace separated URLs to add to "
-	 "spiderdb for crawling."},
-	{"spiderlinks","Use 0 or 1 to not spider or spider links from "
-	 "the injected url respectively. Pass this along with the injecturl "
-	 "parameter. Any injected url will be treated as a seed url. Use "
-	 "this parameter in conjunction with the urldata parameter as well. "
-	 "The DEFAULT is 0!!! So if seeding make sure to say &spiderlinks=1."},
-	{"ins_dapi[N]","Insert a row above row #N. Do not include [N] if it "
-	 "is row 0."},
-	{"rm_dapi[N]","Delete row #N. Do not include [N] if it "
-	 "is row 0."},
+
+	{"expression","A pattern to match in a URL. Example expressions:"},
+	{"action","Take the appropriate action when preceeding pattern is "
+	 "matched. Specify multiple expression/action pairs to build a "
+	 "table of filters. Each URL being spidered will take the given "
+	 "action of the first expression it matches. Example actions:"},
+
 
 	{NULL,NULL}
 };
 
+/*
 // get the input string from the httprequest or the json post
 char *getInputString ( char *string , HttpRequest *hr , Json *JS ) {
 	// try to get it from http request
@@ -1930,9 +1911,11 @@ char *getInputString ( char *string , HttpRequest *hr , Json *JS ) {
 	}
 	return val;
 }
+*/
 
-char *getSpecifiedCollName ( HttpRequest *hr , Json *JS ) {
-	char *token = getInputString("token");
+char *getSpecifiedCollName ( HttpRequest *hr ) { // , Json *JS ) {
+
+	char *token = hr->getString("token");//getInputString("token");
 	if ( ! token ) {
 		log("crawlbot: no token supplied");
 		return NULL;
@@ -1942,7 +1925,7 @@ char *getSpecifiedCollName ( HttpRequest *hr , Json *JS ) {
 		return NULL;
 	}
 	// get collection name from "name" in json or "&name=" in cgi
-	char *name = getInputString("name");
+	char *name = hr->getString("name");//getInputString("name");
 	if ( ! name ) {
 		log("crawlbot: no name supplied");
 		return NULL;
@@ -1978,10 +1961,9 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// httpserver/httprequest should not try to decode post if
 	// it's application/json.
-	char *json = hr->getPOST();
-
-	Json JS; 
-	if ( json ) JS.parseJsonStringIntoJsonItems ( json );
+	//char *json = hr->getPOST();
+	//Json JS; 
+	//if ( json ) JS.parseJsonStringIntoJsonItems ( json );
 
 	// . now show stats for the current crawl
 	// . put in xml or json if format=xml or format=json or
@@ -1992,12 +1974,13 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( fs && strcmp(fs,"json") == 0 ) fmt = FMT_JSON;
 	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FMT_XML;
 	// if we got json as input, give it as output
-	if ( JS.getFirstItem() ) fmt = FMT_JSON;
+	//if ( JS.getFirstItem() ) fmt = FMT_JSON;
 
 	// token is always required. get from json or html form input
-	char *token = getInputString ( "token" );
+	//char *token = getInputString ( "token" );
+	char *token = hr->getString("token");
 
-	if ( ! token && ( cast == 0 || fm == FMT_JSON ) ) {
+	if ( ! token && ( cast == 0 || fmt == FMT_JSON ) ) {
 		char *msg = "invalid token";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
@@ -2032,7 +2015,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// . they must supply the token AND the NAME of the crawl
 	// . we create the collection name like %s-%s,token,name
-	char *collName = getSpecifiedCollName ( hr , &JS );
+	char *collName = getSpecifiedCollName ( hr );//, &JS );
 
 	// return if they gave no name and we couldn't make and official
 	// collection name from the provided input
@@ -2056,13 +2039,15 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// get some other parms provided optionally
 	//char *addColl   = hr->getString("addcoll");
-	bool delColl   = hr->hasParm("deleteCrawl");
-	bool resetColl = hr->hasParm("resetCrawl");
+
+	// just existence is the operation
+	bool delColl   = hr->hasField("deleteCrawl");
+	bool resetColl = hr->hasField("resetCrawl");
 
 	// try json
 	//if ( JS.getInputString("addNewCrawl") ) addColl = collName;
-	if ( JS.getInputString("deleteCrawl") ) delColl = true;
-	if ( JS.getInputString("resetCrawl") ) resetColl = true;
+	//if ( JS.getInputString("deleteCrawl") ) delColl = true;
+	//if ( JS.getInputString("resetCrawl") ) resetColl = true;
 
 	if ( delColl && ! cr ) {
 		log("crawlbot: no collection found to delete.");
@@ -2122,19 +2107,19 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			if ( cr ) cr->m_spideringEnabled = 1;
 		}
 		// add a new collection by default
-		if ( ! cr ) {
-			cr = addNewDiffbotColl ( collName , hr );
+		if ( ! cr ) 
+			cr = addNewDiffbotColl ( collName , token );
 		// problem?
 		if ( ! cr ) {
 			// send back error
-			char *msg = "Collection add failed");
+			char *msg = "Collection add failed";
 			// log it
 			log("crawlbot: %s",msg);
 			// make sure this returns in json if required
 			return sendErrorReply2(socket,fmt,msg);
 		}
 		// this will set the the collection parms from json
-		setSpiderParmsFromJSONPost ( socket , hr , cr , &JS );
+		//setSpiderParmsFromJSONPost ( socket , hr , cr , &JS );
 		// also support the good 'ole html form interface
 		setSpiderParmsFromHtmlRequest ( socket , hr , cr );
 		// this is a cast, so just return simple response
@@ -2184,8 +2169,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( ! cr )
 		return sendErrorReply2(socket,fmt,"no collection found");
 
-	char *urlData = hr->getString("urldata",NULL,NULL);
-	char *injectUrl = hr->getString("injecturl",NULL,NULL);
+	char *urlData = hr->getString("addUrls",NULL,NULL);
+	char *injectUrl = hr->getString("seed",NULL,NULL);
 
 	//
 	// use a default collname if it was not specified and we are not
@@ -2221,9 +2206,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//
 	///////
 	if ( urlData ) {
-		// avoid spidering links for these urls? i would say
-		// default is to NOT spider the links...
-		long spiderLinks = hr->getLong("spiderlinks",0);
+		// . avoid spidering links for these urls? i would say
+		// . default is to NOT spider the links...
+		// . support camel case and all lower case
+		long spiderLinks = hr->getLong("spiderLinks",0);
+		spiderLinks      = hr->getLong("spiderlinks",spiderLinks);
 		// make a list of spider requests from these urls
 		SafeBuf listBuf;
 		// this returns NULL with g_errno set
@@ -2829,7 +2816,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Page Process Pattern:</b> "
 			      "</td><td>"
-			      "<input type=text name=pageprocesspattern "
+			      "<input type=text name=pageProcessPattern "
 			      "size=20 value=\"%s\"> "
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
@@ -2838,7 +2825,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Max Page Download Successes:</b> "
 			      "</td><td>"
-			      "<input type=text name=maxtocrawl "
+			      "<input type=text name=maxToCrawl "
 			      "size=9 value=%lli> "
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
@@ -2847,7 +2834,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Max Page Process Successes:</b>"
 			      "</td><td>"
-			      "<input type=text name=maxtoprocess "
+			      "<input type=text name=maxToProcess "
 			      "size=9 value=%lli> "
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
@@ -2856,7 +2843,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Notification Email:</b>"
 			      "</td><td>"
-			      "<input type=text name=notifyemail "
+			      "<input type=text name=notifyEmail "
 			      "size=20 value=\"%s\"> "
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
@@ -2978,11 +2965,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td>"
 			      "<b>Inject Url: </b>"
 			      "</td><td>"
-			      "<input type=text name=injecturl size=50>"
+			      "<input type=text name=seed size=50>"
 			      " "
 			      "<input type=submit name=submit value=OK>"
 			      " &nbsp; &nbsp; <input type=checkbox "
-			      "name=spiderlinks value=1 "
+			      "name=spiderLinks value=1 "
 			      "checked>"
 			      " <i>crawl links on this page?</i>"
 			      , cr->m_coll
@@ -3011,11 +2998,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      // this page will call 
 			      // printCrawlbotPage2(uploadResponse) 2display it
 			      "<form method=get action=/crawlbot>"
-			      "<input type=file name=urldata size=40>"
+			      "<input type=file name=addUrls size=40>"
 			      "</form>"
 			      
 			      " &nbsp; &nbsp; <input type=checkbox "
-			      "name=spiderlinks value=1 "
+			      "name=spiderLinks value=1 "
 			      "checked>"
 			      " <i>crawl links on those pages?</i>"
 			      
@@ -3280,25 +3267,21 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 */
 }
 
-CollectionRec *addNewDiffbotColl ( char *myName , char *token ) {
+CollectionRec *addNewDiffbotColl ( char *collName , char *token ) {
 
 	//char *token = getTokenFromHttpRequest ( hr );
-	if ( ! token ) {
-		log("crawlbot: need token to add new coll");
+	//if ( ! token ) {
+	//	log("crawlbot: need token to add new coll");
+	//	return NULL;
+	//}
+
+	if ( gbstrlen(collName) > MAX_COLL_LEN ) {
+		log("crawlbot: collection name too long");
 		return NULL;
 	}
-
-	if ( gbstrlen(myName) + 1 + gbstrlen(token) > MAX_COLL_LEN ) {
-		log("crawlbot: token or collection name too long");
-		return NULL;
-	}
-
-	// make the new collection name
-	char addColl[MAX_COLL_LEN+1];
-	sprintf(addColl,"%s-%s",token,myName);
 
 	// this saves it to disk!
-	if ( ! g_collectiondb.addRec ( addColl ,
+	if ( ! g_collectiondb.addRec ( collName,
 				       NULL ,  // copy from
 				       0  , // copy from len
 				       true , // it is a brand new one
@@ -3309,12 +3292,12 @@ CollectionRec *addNewDiffbotColl ( char *myName , char *token ) {
 		return NULL;
 
 	// get the collrec
-	CollectionRec *cr = g_collectiondb.getRec ( addColl );
+	CollectionRec *cr = g_collectiondb.getRec ( collName );
 
 	// did an alloc fail?
 	if ( ! cr ) { char *xx=NULL;*xx=0; }
 
-	log("crawlbot: added new collection \"%s\"", addColl );
+	log("crawlbot: added new collection \"%s\"", collName );
 
 	// normalize the seed url
 	//Url norm;
@@ -3323,7 +3306,6 @@ CollectionRec *addNewDiffbotColl ( char *myName , char *token ) {
 
 	// remember the token
 	cr->m_diffbotToken.set ( token );
-	cr->m_diffbotToken.nullTerm();
 
 
 	/* this stuff can be set later.
@@ -3347,7 +3329,6 @@ CollectionRec *addNewDiffbotColl ( char *myName , char *token ) {
 
 	// bring this back
 	cr->m_diffbotPageProcessPattern.set ( "" );
-	cr->m_diffbotPageProcessPattern.nullTerm();
 
 	// do not spider more than this many urls total. -1 means no max.
 	cr->m_diffbotMaxToCrawl = 100000;
@@ -3494,6 +3475,7 @@ bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) {
 
 // json can be provided via get or post but content type must be
 // url-encoded so we can test with a simple html form page.
+/*
 bool setSpiderParmsFromJSONPost ( TcpSocket *socket , 
 				  HttpRequest *hr ,
 				  CollectionRec *cr ) {
@@ -3681,6 +3663,7 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket ,
 
 	return true;
 }
+*/
 
 bool resetUrlFilters ( CollectionRec *cr ) {
 
@@ -3731,39 +3714,165 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	//  update the url filters for now since that is complicated
 	//  supply "cr" directly since "c" may not be in the http
 	//  request if addcoll=xxxxxx (just created a new rec)
-	long page = PAGE_FILTERS;
-	WebPage *pg = g_pages.getPage ( page ) ;
-	g_parms.setFromRequest ( hr , socket , pg->m_function, cr );
-		//
-		// set other diffbot parms for this collection
-		//
-		long maxToCrawl = hr->getLongLong("maxtocrawl",-1LL);
-		long maxToProcess = hr->getLongLong("maxtoprocess",-1LL);
-		if ( maxToCrawl != -1 ) {
-			cr->m_diffbotMaxToCrawl = maxToCrawl;
-			cr->m_needsSave = 1;
-		}
-		if ( maxToProcess != -1 ) {
-			cr->m_diffbotMaxToProcess = maxToProcess;
-			cr->m_needsSave = 1;
-		}
-		char *email = hr->getString("notifyemail",NULL,NULL);
-		if ( email ) {
-			cr->m_notifyEmail.set(email);
-			cr->m_notifyEmail.nullTerm();
-		}
-		char *url = hr->getString("notifyurl",NULL,NULL);
-		if ( url ) {
-			cr->m_notifyUrl.set(url);
-			cr->m_notifyUrl.nullTerm();
-		}
-		long pause = hr->getLong("pause",-1);
-		if ( pause == 0 ) cr->m_spideringEnabled = 1;
-		if ( pause == 1 ) cr->m_spideringEnabled = 0;
-		long urt = hr->getLong("urt",-1);
-		if ( urt != -1 ) cr->m_useRobotsTxt = urt;
-		char *ppp = hr->getString("pageprocesspattern",NULL);
-		if ( ppp ) {
-			cr->m_diffbotPageProcessPattern.set(ppp);
-			cr->m_diffbotPageProcessPattern.nullTerm();
-		}
+	//long page = PAGE_FILTERS;
+	//WebPage *pg = g_pages.getPage ( page ) ;
+	//g_parms.setFromRequest ( hr , socket , pg->m_function, cr );
+
+	//
+	// set other diffbot parms for this collection
+	//
+	long maxToCrawl = hr->getLongLong("maxToCrawl",-1LL);
+	if ( maxToCrawl != -1 ) {
+		cr->m_diffbotMaxToCrawl = maxToCrawl;
+		cr->m_needsSave = 1;
+	}
+	long maxToProcess = hr->getLongLong("maxToProcess",-1LL);
+	if ( maxToProcess != -1 ) {
+		cr->m_diffbotMaxToProcess = maxToProcess;
+		cr->m_needsSave = 1;
+	}
+	char *email = hr->getString("notifyEmail",NULL,NULL);
+	if ( email ) {
+		cr->m_notifyEmail.set(email);
+		cr->m_needsSave = 1;
+	}
+	char *url = hr->getString("notifyWebHook",NULL,NULL);
+	if ( url ) {
+		cr->m_notifyUrl.set(url);
+		cr->m_needsSave = 1;
+	}
+	long pause = hr->getLong("pauseCrawl",-1);
+	if ( pause == 0 ) { cr->m_needsSave = 1; cr->m_spideringEnabled = 1; }
+	if ( pause == 1 ) { cr->m_needsSave = 1; cr->m_spideringEnabled = 0; }
+	long obeyRobots = hr->getLong("obeyRobots",-1);
+	if ( obeyRobots != -1 ) {
+		cr->m_useRobotsTxt = obeyRobots;
+		cr->m_needsSave = 1;
+	}
+	char *ppp = hr->getString("pageProcessPattern",NULL);
+	if ( ppp ) {
+		cr->m_diffbotPageProcessPattern.set(ppp);
+		cr->m_needsSave = 1;
+	}
+	float respider = hr->getFloat("recrawlFrequency",-1.0);
+	if ( respider >= 0.0 ) {
+		cr->m_collectiveRespiderFrequency = respider;
+		cr->m_needsSave = 1;
+	}
+	long onlyProcessNew = hr->getLong("onlyProcessNew",-1);
+	if ( onlyProcessNew != -1 ) {
+		cr->m_diffbotOnlyProcessIfNew = onlyProcessNew;
+		cr->m_needsSave = 1;
+	}
+
+	// set collective respider
+	for ( long i =0 ; i < cr->m_numRegExs ; i++ ) 
+		cr->m_spiderFreqs[i] = cr->m_collectiveRespiderFrequency;
+
+
+	// were any url filteres specified? if not, don't reset them
+	if ( ! hr->hasField("expression") )
+		return true;
+
+	// reset the url filters here to the default set.
+	// we will append the client's filters below them below.
+	resetUrlFilters ( cr );
+
+	// "urlFilters": [
+	// {
+	//   "value": "*",   // MDW - this matches all urls! ("default")
+	//   "action": "http://www.diffbot.com/api/analyze?mode=auto"
+	// }
+	// {
+	//   "value": "company",
+	//   "action" : "http://www.diffbot.com/api/article?tags&meta"
+	// }
+	// {
+	//   "value": "^http://www",
+	//   "action": "doNotProcess"
+	// }
+	// { 
+	//   "value": "$.html && category",
+	//   "action": "doNotCrawl"
+	// }
+	// {
+	//   "value": "!$.html && $.php",
+	//   "action": "doNotCrawl"
+	// }
+	// ]
+
+	char *expression = NULL;
+	char *action = NULL;
+
+	// how many filters do we have so far?
+	long nf = cr->m_numRegExs;
+
+	// loop over the cgi parms
+	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
+		// get cgi parm name
+		char *field = hr->getField    ( i );
+		//long  flen  = hr->getFieldLen ( i );
+		if ( strcmp(field,"expression") == 0 )
+			expression = hr->getValue(i);
+		if ( strcmp(field,"action") == 0 ) 
+			action = hr->getValue(i);
+		// need both
+		if ( ! action ) continue;
+		// action before expresion???? set action to NULL then?
+		if ( ! expression ) { action = NULL; continue; }
+		// they use "*" instead of "default" so put that back
+		if ( expression[0] == '*' )
+			expression = "default";
+		// deal with it
+		long priority = 50;
+		// default diffbot api call:
+		char *api = NULL;
+		if ( strcasecmp(action,"donotcrawl") == 0 )
+			priority = SPIDER_PRIORITY_FILTERED;
+		//if ( strcasecmp(action,"donotprocess") == 0 )
+		//	api = NULL;
+		// a new diffbot url?
+		if ( strcasecmp(action,"http") == 0 )
+			api = action;
+
+		// add the new filter
+		cr->m_regExs             [nf].set(expression);
+		cr->m_spiderPriorities   [nf] = priority;
+		cr->m_spiderDiffbotApiUrl[nf].set(api);
+		nf++;
+
+		// add a mirror of that filter but for manually added,
+		// i.e. injected or via add url, 
+		if ( priority < 0 ) continue;
+
+		// make the priority higher!
+		cr->m_regExs [nf].safePrintf("ismanualadd && %s",expression);
+		cr->m_spiderPriorities   [nf] = 70; 
+		cr->m_spiderDiffbotApiUrl[nf].set(api); // appends \0
+		nf++;
+
+		// NULL out again
+		action = NULL;
+		expression = NULL;
+
+		if ( nf < MAX_FILTERS ) continue;
+		log("crawlbot: too many url filters!");
+		break;
+	}
+
+	// update the counts
+	cr->m_numRegExs   = nf;
+	cr->m_numRegExs2  = nf;
+	cr->m_numRegExs3  = nf;
+	cr->m_numRegExs10 = nf;
+	cr->m_numRegExs5  = nf;
+	cr->m_numRegExs6  = nf;
+	cr->m_numRegExs7  = nf;
+	cr->m_numRegExs11 = nf;
+
+	// set collective respider
+	for ( long i =0 ; i < nf ; i++ ) 
+		cr->m_spiderFreqs[i] = cr->m_collectiveRespiderFrequency;
+
+	return true;
+}

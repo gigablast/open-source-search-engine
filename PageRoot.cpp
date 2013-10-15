@@ -1358,9 +1358,11 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 
 
 	st1->m_strip = r->getLong("strip",0);
-	// Remember, for cgi, if the box is not checked, then it is not 
-	// reported in the request, so set default return value to 0
+	// . Remember, for cgi, if the box is not checked, then it is not 
+	//   reported in the request, so set default return value to 0
+	// . support both camel case and all lower-cases
 	st1->m_spiderLinks = r->getLong("spiderLinks",0);
+	st1->m_spiderLinks = r->getLong("spiderlinks",st1->m_spiderLinks);
 
 	// . should we force it into spiderdb even if already in there
 	// . use to manually update spider times for a url
