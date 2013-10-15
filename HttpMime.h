@@ -36,6 +36,7 @@ time_t atotime5   ( char *s ) ;
 #define CT_JS     14
 #define CT_CSS    15
 #define CT_JSON   16
+#define CT_IMAGE  17
 
 #define ET_IDENTITY 0
 #define ET_GZIP 1
