@@ -2439,10 +2439,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		// first print "add new collection"
 		sb.safePrintf("[ <a href=/crawlbot?name=%016llx&token=%s&"
 			      "format=html>"
-			      "add new collection"
+			      "add new crawl"
 			      "</a> ] &nbsp; "
 			      "[ <a href=/crawlbot?token=%s>"
-			      "show all collections"
+			      "show all crawls"
 			      "</a> ] &nbsp; "
 			      , rand64
 			      , token
@@ -2912,6 +2912,16 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      //
 			      //
 			      "<tr>"
+			      "<td><b>Repeat Crawl:</b> "
+			      "</td><td>"
+			      "<input type=text name=repeatCrawl "
+			      "size=10 value=\"%.02f\"> "
+			      "<input type=submit name=submit value=OK>"
+			      " days"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
 			      "<td><b>Page Process Pattern:</b> "
 			      "</td><td>"
 			      "<input type=text name=pageProcessPattern "
@@ -2996,6 +3006,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      , cr->m_coll
 			      , cr->m_coll
+
+			      , cr->m_collectiveRespiderFrequency
 
 			      , ppp
 
