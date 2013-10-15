@@ -123,7 +123,7 @@ bool Statsdb::init ( ) {
 
 	// 20 pixel borders
 	m_bx = 10;
-	m_by = 30;
+	m_by = 40;
 
 	// keep it at least at 20MB otherwise it is filling up the tree 
 	// constantly and dumping
@@ -631,8 +631,8 @@ bool Statsdb::gifLoop ( ) {
 		      "margin-bottom:10px;"
 		      "margin-right:10px;"
 		      "margin-left:10px;\">"
-		      ,(long)DX
-			,(long)DY +20);
+		      ,(long)DX + 2 *m_bx
+			,(long)DY + 2*m_by);
 
 
 	// draw the x-axis
@@ -649,7 +649,7 @@ bool Statsdb::gifLoop ( ) {
 			      "z-index:110;"
 			      "min-height:20px;"
 			      "min-width:3px;\"></div>\n"
-			      , (long)x-1
+			      , m_bx + (long)x-1
 			      );
 		long xv = (long)(dt * (long long)x/(long long)DX)-(long)dt;
 		// LABEL
@@ -660,7 +660,7 @@ bool Statsdb::gifLoop ( ) {
 				"z-index:110;"
 				"min-height:20px;"
 				"min-width:3px;\">%lis</div>\n"
-				, (long)x-10
+				, (long)x-10 + m_bx
 				// the label:
 				, xv
 				);
@@ -775,10 +775,10 @@ bool Statsdb::gifLoop ( ) {
 		if ( x2 < x1 + 10 ) x2 = x1 + 10;
 		// . flip the y so we don't have to scroll the browser down
 		// . DY does not include the axis and tick marks
-		long fy1 = DY - y1 + m_by ;
+		//long fy1 = DY - y1 + m_by ;
 		// plot it
 		//plotter.line ( x1 , fy1 , x2 , fy1 );
-		drawLine3 ( m_gw , x1 , x2 , fy1 , c1 , pp->m_thickness );
+		drawLine3 ( m_gw , x1 , x2 , y1 , c1 , pp->m_thickness );
 
 		// add to map key? only if we haven't already
 		if ( tmpht.isInTable ( &colorHash ) ) continue;
@@ -979,8 +979,8 @@ char *Statsdb::plotGraph ( char *pstart ,
 		// . flip the y so we don't have to scroll the browser down
 		// . DY does not include the axis and tick marks
 		// . do not flip y any more for statsdb graphs
-		long fy1 = (long)(y1+.5) + m_by ;
-		long fy2 = (long)(y2+.5) + m_by ;
+		long fy1 = (long)(y1+.5);// + m_by ;
+		long fy2 = (long)(y2+.5);// + m_by ;
 
 		// how are we getting -.469 for "query" point?
 		if ( fy1 < 0 ) continue;
@@ -988,12 +988,10 @@ char *Statsdb::plotGraph ( char *pstart ,
 
 		// skip if can't make a line
 		if ( firstPoint ) { 
-			// flip y
-			long y = DY - fy2 +20 ; // fix -20 in drawLine3()
 			//plotter->circle ( x2 , fy2 , 2 );
 			long width = POINTWIDTH;
 			// draw a 4x4 box now:
-			drawLine3(m_gw,x2-width/2,x2+width/2,y,color,width); 
+			drawLine3(m_gw,x2-width/2,x2+width/2,fy2,color,width); 
 			firstPoint = false;
 			continue;
 		}
@@ -1019,9 +1017,6 @@ char *Statsdb::plotGraph ( char *pstart ,
 		//plotter->circle ( x2 , fy2 , 2 );
 		// draw a 4x4 boxes now:
 		long width = POINTWIDTH;
-		// flip y's
-		fy1 = DY - fy1 +20; // fix -20 in drawLine3
-		fy2 = DY - fy2 +20; // fix -20 in drawLine3
 		drawLine3 ( m_gw,x1-width/2, x1+width/2, fy1,color, width); 
 		drawLine3 ( m_gw,x2-width/2, x2+width/2, fy2,color, width); 
 	}
@@ -1071,7 +1066,7 @@ void Statsdb::drawHR ( float z ,
 	// avoid collisions with other graphs
 	z2 += zoff;
 	// border
-	z2 += m_by;
+	//z2 += m_by;
 	// round off error
 	z2 += 0.5;
 	// for adjusatmnet
@@ -1089,7 +1084,7 @@ void Statsdb::drawHR ( float z ,
 	// horizontal line
 	//plotter->line ( m_bx, (long)z2 , DX + m_bx, (long)z2 );
 	long width = 1;
-	drawLine3 ( m_gw,m_bx, DX + m_bx, (long)z2,color, width); 
+	drawLine3 ( m_gw, 0, DX , (long)z2,color, width); 
 
 
 	// make label
@@ -1127,10 +1122,11 @@ void Statsdb::drawHR ( float z ,
 		      "bottom:%li;"
 		      "color:#%lx;"
 		      "z-index:110;"
+		      "font-size:14px;"
 		      "min-height:20px;"
 		      "min-width:3px;\">%s</div>\n"
 		      , (long)(m_bx)
-		      , (long)(z2) - 20 // drawLine3() has -20 so we do too
+		      , (long)z2 +m_by
 		      , color
 		      // the label:
 		      , tmp
@@ -1364,7 +1360,7 @@ bool Statsdb::addPoint ( long      x        ,
 	// convert x into pixel position
 	float xf = (float)DX * (float)(x - m_t1) / (float)(m_t2 - m_t1);
 	// round it to nearest pixel
-	long  x2 = (long)(xf + .5) + m_bx;
+	long  x2 = (long)(xf + .5) ;//+ m_bx;
 	// make this our y pos
 	float y2 = y;
 	// average values if tied
@@ -1446,7 +1442,7 @@ bool Statsdb::addEventPoint ( long  t1        ,
 	// convert t1 into pixel position
 	float af = (float)DX * (float)(t1 - m_t1) / (float)(m_t2 - m_t1);
 	// round it to nearest pixel
-	long  a = (long)(af + .5) + m_bx;
+	long  a = (long)(af + .5) ;//+ m_bx;
 
 	// convert t2 into pixel position
 	//float bf = (float)DX * (float)(t2 - m_t1) / (float)(m_t2 - m_t1);
@@ -1523,7 +1519,7 @@ bool Statsdb::addEventPoint ( long  t1        ,
 
 
 // draw a HORIZONTAL line in html
-void drawLine3 ( SafeBuf &sb ,
+void Statsdb::drawLine3 ( SafeBuf &sb ,
 		 long x1 , 
 		 long x2 ,
 		 long fy1 , 
@@ -1532,13 +1528,13 @@ void drawLine3 ( SafeBuf &sb ,
 
 	sb.safePrintf("<div style=\"position:absolute;"
 		      "left:%li;"
-		      "top:%li;"
+		      "bottom:%li;"
 		      "background-color:#%lx;"
 		      "z-index:-5;"
 		      "min-height:%lipx;"
 		      "min-width:%lipx;\"></div>\n"
-		      , x1
-		      , (fy1 - width/2) - 20 //- 300
+		      , x1 + m_bx
+		      , (fy1 - width/2) + m_by
 		      , color
 		      , width
 		      , x2 - x1

@@ -77,6 +77,13 @@ class Statsdb {
 			  SafeBuf &gw,
 			  long  zoff );
 
+	void drawLine3 ( SafeBuf &sb ,
+			 long x1 , 
+			 long x2 ,
+			 long fy1 , 
+			 long color ,
+			  long width ) ;
+
 	void drawHR ( float z ,
 		      float ymin , 
 		      float ymax ,
