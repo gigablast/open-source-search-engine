@@ -225,6 +225,7 @@ void sendReply ( void *state ) {
 
 	// purge it
 	g_statsdb.m_gw.purge();
+	g_statsdb.m_dupTable.reset();
 
 	//"<img src=\"/stats%li.gif\" height=%li width=%li "
 	//"border=\"0px\">"

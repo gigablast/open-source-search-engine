@@ -130,6 +130,7 @@ class Statsdb {
 
 	// the graphing window. now a bunch of absolute divs in html
 	SafeBuf m_gw;
+	HashTableX m_dupTable;
 
 	SafeBuf m_sb0;
 	SafeBuf m_sb1;

@@ -482,6 +482,8 @@ bool Statsdb::makeGIF ( long t1Arg ,
 
 	// print graph in here as a bunch of divs now:
 	m_gw.purge();
+	m_dupTable.reset();
+	m_dupTable.set(4,0,20000,NULL,0,false,0,"statstbl");
 
 	// . start at t1 and get stats lists, up to 1MB of stats at a time
 	// . subtract 60 seconds so we can have a better shot at having
@@ -1525,6 +1527,16 @@ void Statsdb::drawLine3 ( SafeBuf &sb ,
 		 long fy1 , 
 		 long color ,
 		 long width ) {
+
+	// do not draw repeats in the case we have a ton of points to plot
+	long key32 ;
+	key32 = hash32h ( x1  , 0 );
+	key32 = hash32h ( x2  , key32);
+	key32 = hash32h ( fy1 , key32);
+	key32 = hash32h ( color , key32);
+	key32 = hash32h ( width , key32);
+	if ( m_dupTable.isInTable(&key32) ) return;
+	m_dupTable.addKey(&key32);
 
 	sb.safePrintf("<div style=\"position:absolute;"
 		      "left:%li;"
