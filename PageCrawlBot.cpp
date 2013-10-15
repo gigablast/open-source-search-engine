@@ -1870,7 +1870,7 @@ static class HelpItem s_his[] = {
 	 "Specify 1 or 0 to pause or resume the crawl respectively."},
 
 	{"repeatCrawl","Specify number of days as floating point to "
-	 "recrawl the pages."},
+	 "recrawl the pages. Set to 0.0 to NOT repeat the crawl."},
 
 
 	{"seed","Inject this URL into the crawl and spider its links, "
