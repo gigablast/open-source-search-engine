@@ -2923,6 +2923,8 @@ char *XmlDoc::prepareToMakeTitleRec ( ) {
 	if ( ! rl || rl == (void *)-1 ) return (char *)rl;
 	long **pcids = getCatIds();
 	if ( ! pcids || pcids == (void *)-1) return (char *)pcids;
+	// get dmoz ptr_dmozTitles, ptr_dmozSumms, ptr_dmozAnchors
+	if ( ! setDmozInfo() ) return (char *)-1;
 
 	m_prepared = true;
 	return (char *)1;
@@ -3104,6 +3106,13 @@ char **XmlDoc::getTitleRec ( ) {
 	m_versionValid      = true;
 
 	setStatus ( "compressing into final title rec");
+
+	/////////
+	//
+	// IF ANY of these validation sanity checks fail then update
+	// prepareToMakeTitleRec() so it makes them valid!!!
+	//
+	/////////
 
 	// verify key parts
 	if ( ! m_docIdValid                  ) { char *xx=NULL;*xx=0; }
@@ -18348,7 +18357,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//	m_usePosdb      = false;
 	//	m_useClusterdb  = false;
 	//}
-
 
 	// get the old meta list if we had an old doc
 	char *oldList = NULL;
