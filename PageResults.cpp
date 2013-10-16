@@ -109,11 +109,11 @@ bool sendReply ( State0 *st , char *reply ) {
 			    STAT_QUERY );
 
 	// add to statsdb, use # of qterms as the value/qty
-	//g_statsdb.addStat ( 0,
-	//		    "query",
-	//		    st->m_startTime,
-	//		    nowms,
-	//		    st->m_q.m_numTerms);
+	g_statsdb.addStat ( 0,
+			    "query",
+			    st->m_startTime,
+			    nowms,
+			    st->m_q.m_numTerms);
 
 	// log the time
 	if ( st->m_took >= g_conf.m_logQueryTimeThreshold ) {
@@ -1651,7 +1651,7 @@ static bool printDMOZCategoryUnderResult ( SafeBuf &sb ,
 	// print a link to apply your query to this DMOZ category
 	//
 	//////
-	sb.safePrintf("<a href=\"/search?s=0&q=gbpdcat%%3A%li",catid);
+	sb.safePrintf("<a href=\"/search?s=0&q=gbipcatid%%3A%li",catid);
 	sb.urlEncode("|",1);
 	sb.urlEncode(si->m_sbuf1.getBufStart(),si->m_sbuf1.length());
 	sb.safePrintf("\">Search in Category</a>: ");
