@@ -22258,7 +22258,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// hash diffbot's json output here
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;
-	if ( *ct == CT_JSON && m_isDiffbotJSONObject ) {
+	if ( *ct == CT_JSON ) { // && m_isDiffbotJSONObject ) {
 		// hash the content type for type:json query
 		if ( ! hashContentType   ( table ) ) return NULL;
 		// and the url: query support
@@ -27384,11 +27384,11 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 		// . sanity test, make sure it is in supported list
 		// . hashing diffbot json output of course fails this so
 		//   skip in that case if diffbot
-		if ( ! m_isDiffbotJSONObject &&
-		     getFieldCode3 ( prefixHash ) == FIELD_GENERIC ) { 
-			if (hi->m_desc&&strcmp(hi->m_desc,"custom meta tag")) {
-				char *xx=NULL;*xx=0; }
-		}
+		//if ( ! m_isDiffbotJSONObject &&
+		//     getFieldCode3 ( prefixHash ) == FIELD_GENERIC ) { 
+		//	if (hi->m_desc&&strcmp(hi->m_desc,"custom meta tag")) {
+		//		char *xx=NULL;*xx=0; }
+		//}
 	}
 
 	bool hashIffUnique = false;
@@ -42880,10 +42880,32 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 		// reset, but don't free mem etc. just set m_length to 0
 		nameBuf.reset();
 		// get its full compound name like "meta.twitter.title"
-		JsonItem *p = ji->m_parent;
+		JsonItem *p = ji;
+		char *lastName = NULL;
+		char *nameArray[20];
+		long  numNames = 0;
 		for ( ; p ; p = p->m_parent ) {
-			// name?
-			if ( ! nameBuf.safeStrcpy ( p->m_name ) ) return NULL;
+			// empty name?
+			if ( ! p->m_name ) continue;
+			if ( ! p->m_name[0] ) continue;
+			// dup? can happen with arrays. parent of string
+			// in object, has same name as his parent, the
+			// name of the array. "dupname":[{"a":"b"},{"c":"d"}]
+			if ( p->m_name == lastName ) continue;
+			// update
+			lastName = p->m_name;
+			// add it up
+			nameArray[numNames++] = p->m_name;
+			// breach?
+			if ( numNames < 15 ) continue;
+			log("build: too many names in json tag");
+			break;
+		}
+		// assemble the names in reverse order which is correct order
+		for ( long i = 1 ; i <= numNames ; i++ ) {
+			// copy into our safebuf
+			if ( ! nameBuf.safeStrcpy ( nameArray[numNames-i]) ) 
+				return NULL;
 			// separate names with periods
 			if ( ! nameBuf.pushChar('.') ) return NULL;
 		}
