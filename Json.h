@@ -39,6 +39,9 @@ class JsonItem {
 	long m_valueLen;
 
 	// for JT_String
+	long  getValueLen() { return m_valueLen; };
+
+	// for JT_String
 	char *getValue () { 
 		// if value is another json object, then return NULL
 		// must be string

@@ -42843,6 +42843,9 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 //   VALUE with its FIELD like "title:cool" or "description:whatever"
 // . example:
 //   [{"id":"b7df5d33-3fe5-4a6c-8ad4-dad495b586cd","finish":1378322570280,"matched":64,"status":"Stopped","start":1378322184332,"token":"poo","parameterMap":{"token":"poo","seed":"www.alleyinsider.com","api":"article"},"crawled":64},{"id":"830e0584-7f69-4bdd-
+
+#include "Json.h"
+
 char *XmlDoc::hashJSON ( HashTableX *table ) {
 
 	setStatus ( "hashing json" );
@@ -42853,95 +42856,62 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 	// point to the json
 	char *p = *pp;
 
+	// empty? all done then.
+	if ( ! p ) return (char *)pp;
+
 	HashInfo hi;
 	hi.m_tt        = table;
 	hi.m_desc      = "json object";
 
-	//
-	// just do a linear scan keeping track of nested field names as we go
-	//
+	// use new json parser
+	Json jp;
+	jp.parseJsonStringIntoJsonItems ( p );
+	
+	JsonItem *ji = jp.getFirstItem();
 
-	char *field = NULL;
-	long  fieldLen = 0;
-	long  size;
-	// scan
-	for ( ; *p ; p += size ) {
-		// get size
-		size = getUtf8CharSize ( p );
-		// a quote?
-		if ( *p == '\"' ) {
-			// find end of quote
-			char *end = p + 1;
-			for ( ; *end ; end++ ) 
-				if ( *end == '\"' && end[-1] != '\"' ) break;
-			// field?
-			char *x = end + 1;
-			// skip spaces
-			for ( ; *x && is_wspace_a(*x) ; x++ );
-			// define the string
-			char *str  = p + 1;
-			long  slen = end - str;
-			// . if a colon follows, it was a field
-			// . if a comma or 
-			if ( *x == ':' ) {
-				field    = str;
-				fieldLen = slen;
-			}
-			// . otherwise, it was field value, so index it
-			// . TODO: later make field names compounded to
-			//   better represent nesting?
-			else {
-				// 
-				// DIFFBOT special field hacks
-				//
-				hi.m_hashGroup = HASHGROUP_BODY;
-				if ( strcmp(field,"title") == 0 )
-					hi.m_hashGroup = HASHGROUP_TITLE;
-				if ( strcmp(field,"url") == 0 )
-					hi.m_hashGroup = HASHGROUP_INURL;
-				if ( strcmp(field,"resolved_url") == 0 )
-					hi.m_hashGroup = HASHGROUP_INURL;
-				if ( strcmp(field,"tags") == 0 )
-					hi.m_hashGroup = HASHGROUP_INTAG;
-				if ( strcmp(field,"meta") == 0 )
-					hi.m_hashGroup = HASHGROUP_INMETATAG;
-				// index like "title:whatever"
-				hi.m_prefix = field;
-				char tmp = field[fieldLen];
-				field[fieldLen] = '\0';
-				hashString ( str , slen , &hi );
-				field[fieldLen] = tmp;
-				// hash without the field name as well
-				hi.m_prefix = NULL;
-				hashString ( str , slen , &hi );
-			}
-			// skip over the string
-			size = 1;
-			p    = x;
+	char nb[1024];
+	SafeBuf nameBuf(nb,1024);
+
+	for ( ; ji ; ji = ji->m_next ) {
+		QUICKPOLL(m_niceness);
+		// skip if not number or string
+		if ( ji->m_type != JT_NUMBER && ji->m_type != JT_STRING )
 			continue;
+		// reset, but don't free mem etc. just set m_length to 0
+		nameBuf.reset();
+		// get its full compound name like "meta.twitter.title"
+		JsonItem *p = ji->m_parent;
+		for ( ; p ; p = p->m_parent ) {
+			// name?
+			if ( ! nameBuf.safeStrcpy ( p->m_name ) ) return NULL;
+			// separate names with periods
+			if ( ! nameBuf.pushChar('.') ) return NULL;
 		}
-		// if we hit a digit they might not be in quotes like
-		// "crawled":123
-		if ( is_digit ( *p ) ) {
-			// find end of the number
-			char *end = p + 1;
-			for ( ; *end && is_digit(*p) ; end++ ) ;
-			// define the string
-			char *str  = p + 1;
-			long  slen = end - str;
-			// TODO: later make field names compounded to
-			// better represent nesting?
-			hi.m_prefix = field;
-			hi.m_hashGroup = HASHGROUP_BODY;
-			char tmp = field[fieldLen];
-			field[fieldLen] = '\0';
-			hashString ( str , slen , &hi );
-			field[fieldLen] = tmp;
-			// skip over the string
-			size = 1;
-			p    = end;
-			continue;
-		}
+		// remove last period
+		nameBuf.removeLastChar('.');
+		// and null terminate
+		if ( ! nameBuf.nullTerm() ) return NULL;
+		//
+		// DIFFBOT special field hacks
+		//
+		char *name = nameBuf.getBufStart();
+		hi.m_hashGroup = HASHGROUP_BODY;
+		if ( strstr(name,"title") == 0 )
+			hi.m_hashGroup = HASHGROUP_TITLE;
+		if ( strstr(name,"url") == 0 )
+			hi.m_hashGroup = HASHGROUP_INURL;
+		if ( strstr(name,"resolved_url") == 0 )
+			hi.m_hashGroup = HASHGROUP_INURL;
+		if ( strstr(name,"tags") == 0 )
+			hi.m_hashGroup = HASHGROUP_INTAG;
+		if ( strstr(name,"meta") == 0 )
+			hi.m_hashGroup = HASHGROUP_INMETATAG;
+		// index like "title:whatever"
+		hi.m_prefix = name;
+		hashString ( ji->getValue(),ji->getValueLen() , &hi );
+		// hash without the field name as well
+		hi.m_prefix = NULL;
+		hashString ( ji->getValue(),ji->getValueLen() , &hi );
 	}
 
 	return (char *)0x01;
