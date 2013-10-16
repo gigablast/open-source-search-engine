@@ -106,7 +106,9 @@ struct SafeBuf {
 	void  reset() { m_length = 0; }
 	void  purge(); // Clear all data and free all allocated memory
 	bool  advance ( long i ) ;
-	bool  reserve(long i, char *label=NULL);
+	// . if clearIt is true we init the new buffer space to zeroes
+	// . used by Collectiondb.cpp
+	bool  reserve(long i, char *label=NULL , bool clearIt = false );
 	bool  reserve2x(long i);
 
 	char *makeSpace ( long size ) {

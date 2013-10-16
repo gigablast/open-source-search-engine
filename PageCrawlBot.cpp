@@ -2316,7 +2316,10 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 
 
-bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr ) {
+bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
+
+	if ( fmt == FMT_JSON )
+		sb.safePrintf("{\"urlFilters\":[");
 
 	// skip first 2 filters that are ismedia->ignore and
 	// !isonsamedomain->ignore
@@ -2339,12 +2342,41 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr ) {
 		long priority = cr->m_spiderPriorities[i];
 		if ( priority == SPIDER_PRIORITY_FILTERED ) // -3
 			action = "doNotSpider";
+		// we add this supplemental expressin/action for every
+		// one the user adds in order to give manually added
+		// urls higher spider priority, so skip it
+		if ( strncmp(expression,"ismanualadd && ",15) == 0 )
+			continue;
+		if ( fmt == FMT_HTML ) {
+			sb.safePrintf("<tr>"
+				      "<td>Expression "
+				      "<input type=text "
+				      "name=expression size=30 "
+				      "value=\"%s\"> "
+				      "</td><td>"
+				      "Action "
+				      "<input type=text name=action size=50 "
+				      "value=\"%s\">"
+				      "</td>"
+				      "</tr>\n"
+				      , expression
+				      , action
+				      );
+			continue;
+		}
 		// show it
 		sb.safePrintf("{\"expression\":\"%s\",",expression);
 		sb.safePrintf("\"action\":\"%s\"}",action);
 		// more follow?
-		if ( i+1<cr->m_numRegExs ) sb.pushChar(',');
+		sb.pushChar(',');
 		sb.pushChar('\n');
+	}
+
+	if ( fmt == FMT_JSON ) {
+		// remove trailing comma
+		sb.removeLastChar('\n');
+		sb.removeLastChar(',');
+		sb.safePrintf("]}\n");
 	}
 
 	return true;
@@ -2583,10 +2615,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 						  true // isJSON?
 						  );
 			*/
-			printUrlFilters ( sb , cr );
-			// remove trailing comma
-			sb.removeLastChar('\n');
-			sb.removeLastChar(',');
+			printUrlFilters ( sb , cr , fmt );
 			// end that collection rec
 			sb.safePrintf("\n}\n");
 			// print the next one out
@@ -2696,11 +2725,119 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 
 
+
+	// this is for making sure the search results are not cached
+	unsigned long r1 = rand();
+	unsigned long r2 = rand();
+	unsigned long long rand64 = (unsigned long long) r1;
+	rand64 <<= 32;
+	rand64 |=  r2;
+
+
+	if ( fmt == FMT_HTML ) {
+		sb.safePrintf("<br>"
+			      "<table border=0 cellpadding=5>"
+			      
+			      // OBJECT search input box
+			      "<form method=get action=/search>"
+			      "<tr>"
+			      "<td>"
+			      "<b>Search Objects:</b>"
+			      "</td><td>"
+			      "<input type=text name=q size=50>"
+			      "<input type=hidden name=c value=\"%s\">"
+			      "<input type=hidden name=rand value=%lli>"
+			      // restrict search to json objects
+			      "<input type=hidden name=prepend "
+			      "value=\"type:json |\">"
+			      " "
+			      "<input type=submit name=submit value=OK>"
+			      "</tr>"
+			      "</form>"
+			      
+			      
+			      // PAGE search input box
+			      "<form method=get action=/search>"
+			      "<tr>"
+			      "<td>"
+			      "<b>Search Pages:</b>"
+			      "</td><td>"
+			      "<input type=text name=q size=50>"
+			      "<input type=hidden name=c value=\"%s\">"
+			      "<input type=hidden name=rand value=%lli>"
+			      // restrict search to NON json objects
+			      "<input type=hidden "
+			      "name=prepend value=\"-type:json |\">"
+			      " "
+			      "<input type=submit name=submit value=OK>"
+			      "</tr>"
+			      "</form>"
+			      
+			      // add url input box
+			      "<form method=get action=/crawlbot>"
+			      "<tr>"
+			      "<td>"
+			      "<b>Add Seed Url: </b>"
+			      "</td><td>"
+			      "<input type=text name=seed size=50>"
+			      "%s" // hidden tags
+			      " "
+			      "<input type=submit name=submit value=OK>"
+			      " &nbsp; &nbsp; <input type=checkbox "
+			      "name=spiderLinks value=1 "
+			      "checked>"
+			      " <i>crawl links on this page?</i>"
+			      , cr->m_coll
+			      , rand64
+			      , cr->m_coll
+			      , rand64
+			      , hb.getBufStart() // hidden tags
+			      );
+	}
+
+	if ( injectionResponse && fmt == FMT_HTML )
+		sb.safePrintf("<br><font size=-1>%s</font>\n"
+			      ,injectionResponse->getBufStart() 
+			      );
+
+	if ( fmt == FMT_HTML )
+		sb.safePrintf(//"<input type=hidden name=c value=\"%s\">"
+			      "<input type=hidden name=crawlbotapi value=1>"
+			      "</td>"
+			      "</tr>"
+			      "</form>"
+			      
+			      
+			      "<tr>"
+			      "<td><b>Upload URLs</b></td>"
+			      
+			      "<td>"
+			      // this page will call 
+			      // printCrawlbotPage2(uploadResponse) 2display it
+			      "<form method=get action=/crawlbot>"
+			      "<input type=file name=addUrls size=40>"
+			      
+			      " &nbsp; &nbsp; <input type=checkbox "
+			      "name=spiderLinks value=1 "
+			      "checked>"
+			      " <i>crawl links on those pages?</i>"
+			      
+			      "</form>"
+
+			      "</td>"
+			      "</tr>"
+			      
+			      "</table>"
+			      "<br>"
+			      //, cr->m_coll
+			      );
+
+
 	//
 	// show stats
 	//
 	if ( fmt == FMT_HTML ) {
-		sb.safePrintf("<br>"
+		sb.safePrintf(
 
 			      "<form method=get action=/crawlbot>"
 			      "%s"
@@ -2860,13 +2997,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
 			      "<a href=/crawlbot/download/%s_data.json>"
-			      //"c=%s&"
-			      //"format=json>"
 			      "json</a>"
 			      "&nbsp; "
 			      "<a href=/crawlbot/download/%s_data.xml>"
-			      //"c=%s&"
-			      //"format=xml>"
+
 			      "xml</a>"
 			      "</td>"
 			      "</tr>"
@@ -2874,21 +3008,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Download Urls:</b> "
 			      "</td><td>"
-			      /*
-			      "<a href=/api/downloadcrawl?"
-			      "c=%s"
-			      "format=json>"
-			      "json</a>"
-			      " &nbsp; "
-			      "<a href=/api/downloadcrawl?"
-			      "c=%s"
-			      "format=xml>"
-			      "xml</a>"
-			      "&nbsp; "
-			      */
+
 			      "<a href=/crawlbot/download/%s_urls.csv>"
-			      //"&format=csv"
-			      //">"
 			      "csv</a>"
 			      //
 			      "</td>"
@@ -2899,9 +3020,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td><b>Download Pages:</b> "
 			      "</td><td>"
 			      "<a href=/crawlbot/download/%s_pages.txt>"
-			      //"c=%s"
-			      //"&format=csv"
-			      //">"
 			      "txt</a>"
 			      //
 			      "</td>"
@@ -2990,8 +3108,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</TR>"
 			      "</TABLE>"
 
-			      "</form>"
-
 
 			      , cr->m_diffbotCrawlName.getBufStart()
 			      //, alias
@@ -3022,111 +3138,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      );
 	}
 
-	// this is for making sure the search results are not cached
-	unsigned long r1 = rand();
-	unsigned long r2 = rand();
-	unsigned long long rand64 = (unsigned long long) r1;
-	rand64 <<= 32;
-	rand64 |=  r2;
-
-
-	if ( fmt == FMT_HTML ) {
-		sb.safePrintf(
-			      "<table border=0 cellpadding=5>"
-			      
-			      // OBJECT search input box
-			      "<form method=get action=/search>"
-			      "<tr>"
-			      "<td>"
-			      "<b>Search Objects:</b>"
-			      "</td><td>"
-			      "<input type=text name=q size=50>"
-			      "<input type=hidden name=c value=\"%s\">"
-			      "<input type=hidden name=rand value=%lli>"
-			      // restrict search to json objects
-			      "<input type=hidden name=prepend "
-			      "value=\"type:json |\">"
-			      " "
-			      "<input type=submit name=submit value=OK>"
-			      "</tr>"
-			      "</form>"
-			      
-			      
-			      // PAGE search input box
-			      "<form method=get action=/search>"
-			      "<tr>"
-			      "<td>"
-			      "<b>Search Pages:</b>"
-			      "</td><td>"
-			      "<input type=text name=q size=50>"
-			      "<input type=hidden name=c value=\"%s\">"
-			      "<input type=hidden name=rand value=%lli>"
-			      // restrict search to NON json objects
-			      "<input type=hidden "
-			      "name=prepend value=\"-type:json |\">"
-			      " "
-			      "<input type=submit name=submit value=OK>"
-			      "</tr>"
-			      "</form>"
-			      
-			      // add url input box
-			      "<form method=get action=/crawlbot>"
-			      "<tr>"
-			      "<td>"
-			      "<b>Add Seed Url: </b>"
-			      "</td><td>"
-			      "<input type=text name=seed size=50>"
-			      "%s" // hidden tags
-			      " "
-			      "<input type=submit name=submit value=OK>"
-			      " &nbsp; &nbsp; <input type=checkbox "
-			      "name=spiderLinks value=1 "
-			      "checked>"
-			      " <i>crawl links on this page?</i>"
-			      , cr->m_coll
-			      , rand64
-			      , cr->m_coll
-			      , rand64
-			      , hb.getBufStart() // hidden tags
-			      );
-	}
-
-	if ( injectionResponse && fmt == FMT_HTML )
-		sb.safePrintf("<br><font size=-1>%s</font>\n"
-			      ,injectionResponse->getBufStart() 
-			      );
-
-	if ( fmt == FMT_HTML )
-		sb.safePrintf(//"<input type=hidden name=c value=\"%s\">"
-			      "<input type=hidden name=crawlbotapi value=1>"
-			      "</td>"
-			      "</tr>"
-			      "</form>"
-			      
-			      
-			      "<tr>"
-			      "<td><b>Upload URLs</b></td>"
-			      
-			      "<td>"
-			      // this page will call 
-			      // printCrawlbotPage2(uploadResponse) 2display it
-			      "<form method=get action=/crawlbot>"
-			      "<input type=file name=addUrls size=40>"
-			      "</form>"
-			      
-			      " &nbsp; &nbsp; <input type=checkbox "
-			      "name=spiderLinks value=1 "
-			      "checked>"
-			      " <i>crawl links on those pages?</i>"
-			      
-			      "</td>"
-			      "</tr>"
-			      
-			      "</table>"
-			      "<br>"
-			      //, cr->m_coll
-			      );
-
 
 	// xml or json does not show the input boxes
 	//if ( format != FMT_HTML ) 
@@ -3144,6 +3155,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	//
 
+	/*
 	char *s1 = "Show";
 	char *s2 = "none";
 	if ( hr->getLongFromCookie("showtable",0) ) {
@@ -3213,7 +3225,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<br>"
 			      "<br>"
 			      );
-
+	*/
 
 
 	//
@@ -3231,12 +3243,40 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		      "</table>");
 	*/
 
+	//
+	// show simpler url filters table
+	//
+	if ( fmt == FMT_HTML ) {
+		sb.safePrintf ( "<table>"
+				"<tr><td colspan=2>URL Filters</td></tr>\n"
+				);
+		// true means its html input
+		printUrlFilters ( sb , cr , fmt );
+		// for adding new rule
+		sb.safePrintf("<tr>"
+			      "<td>Expression "
+			      "<input type=text name=expression size=30 "
+			      "value=\"\"> "
+			      "</td><td>"
+			      "Action <input type=text name=action size=50 "
+			      "value=\"\">"
+			      "</td>"
+			      "</tr>\n"
+			      );
+		
+		
+		//sb.safePrintf("<tr><td colspan=2><font size=-1><i>U
+		sb.safePrintf("</table>\n");
+
+		// 
+		// END THE BIG FORM
+		//
+		sb.safePrintf("</form>");
+	}
 
 	//
-	// show input boxes
+	// show reset and delete crawl buttons
 	//
-
-
 	if ( fmt == FMT_HTML ) {
 		sb.safePrintf(
 			      "<table cellpadding=5>"
@@ -3279,9 +3319,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      "</tr>"
 			      "</table>"
-			      "</form>"
+			      //"</form>"
 			      );
 	}
+
+
 
 	char *ct = "text/html";
 	if ( fmt == FMT_JSON ) ct = "application/json";
@@ -3944,7 +3986,11 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		// need both
 		if ( ! action ) continue;
 		// action before expresion???? set action to NULL then?
-		if ( ! expression ) { action = NULL; continue; }
+		if ( ! expression ) { 
+			action = NULL; continue; }
+		// skip if expression is empty
+		if ( ! expression[0] ) { 
+			action = NULL; expression = NULL; continue; }
 		// they use "*" instead of "default" so put that back
 		if ( expression[0] == '*' ) {
 			expression = "default";
@@ -3954,7 +4000,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		long priority = 50;
 		// default diffbot api call:
 		char *api = NULL;
-		if ( strcasecmp(action,"donotcrawl") == 0 )
+		if ( strcasecmp(action,"donotcrawl") == 0 ) 
 			priority = SPIDER_PRIORITY_FILTERED;
 		//if ( strcasecmp(action,"donotprocess") == 0 )
 		//	api = NULL;

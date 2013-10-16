@@ -292,7 +292,7 @@ bool SafeBuf::advance ( long i ) {
 	return true;
 }
 
-bool SafeBuf::reserve(long i, char *label) {
+bool SafeBuf::reserve(long i, char *label, bool clearIt ) {
 	if ( ! label ) label = "SafeBuf";
 	if(m_length + i > m_capacity) {
 		char *tmpBuf = m_buf;
@@ -310,6 +310,11 @@ bool SafeBuf::reserve(long i, char *label) {
 			log(LOG_DEBUG, "query: safebuf switching to heap: %li",
 			    m_capacity);
 			memcpy(m_buf, tmpBuf, m_length);
+			// reset to 0's?
+			if ( clearIt ) {
+				long clearSize = m_capacity - m_length;
+				memset(m_buf+m_length,0,clearSize);
+			}
 			m_usingStack = false;
 			return true;
 		}
@@ -324,6 +329,10 @@ bool SafeBuf::reserve(long i, char *label) {
 		log(LOG_DEBUG, "query: resize safebuf %li to %li", 
 		    tmpCap, m_capacity);
 	}
+	// reset to 0's?
+	if ( ! clearIt ) return true;
+	long clearSize = m_capacity - m_length;
+	memset(m_buf+m_length,0,clearSize);
 	return true;
 }
 

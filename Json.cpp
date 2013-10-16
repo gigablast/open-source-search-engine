@@ -1,4 +1,5 @@
 #include "Json.h"
+#include "SafeBuf.h"
 
 class JsonItem *Json::addNewItem () {
 
