@@ -83,9 +83,8 @@ bool Catdb::init (  ) {
 	// will init the CollectionRec::m_rdbBase, which is what
 	// Rdb::getBase(collnum_t) will return. however, for collectionless
 	// rdb databases we set Rdb::m_collectionlessBase special here.
-	// This is in Rdb.cpp::init() now.
-	//return m_rdb.addColl ( NULL );
-	return true;
+	// This was in Rdb.cpp::init().
+	return m_rdb.addColl ( NULL );
 }
 
 bool Catdb::init2 ( long treeMem ) {

@@ -58,7 +58,8 @@ bool Accessdb::init ( ) {
 			    false , // bias disk page cache?
 			    true )) // iscollectionless? syncdb,facebookdb,...
 		return false;
-	return true;
+	// add the base since it is a collectionless rdb
+	return m_rdb.addColl ( NULL );
 }
 
 

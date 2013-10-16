@@ -56,7 +56,7 @@ bool Facebookdb::init ( ) {
 	//if(! m_pc.init ("facebookdb",RDB_TAGDB,10000000,GB_TFNDB_PAGE_SIZE))
 	//	return log("facebookdb: Tagdb init failed.");
 	// initialize our own internal rdb
-	return m_rdb.init ( g_hostdb.m_dir               ,
+	if ( ! m_rdb.init ( g_hostdb.m_dir               ,
 			    "facebookdb"                     ,
 			    true                       , // dedup same keys?
 			    -1                         , // fixed record size
@@ -74,7 +74,10 @@ bool Facebookdb::init ( ) {
 			    false,  // preload disk page cache
 			    sizeof(key96_t),     // key size
 			    false , // bias disk page cache?
-			    true ); // iscollectionless? syncdb,facebookdb,...
+			    true )) // iscollectionless? syncdb,facebookdb,...
+		return false;
+	// add the base since it is a collectionless rdb
+	return m_rdb.addColl ( NULL );
 }
 
 bool Facebookdb::addColl ( char *coll, bool doVerify ) {

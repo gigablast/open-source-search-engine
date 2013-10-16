@@ -301,21 +301,27 @@ bool Rdb::init ( char          *dir                  ,
 	// load any saved tree
 	if ( ! loadTree ( ) ) return false;
 
+	// i prefer to put these into Statsdb::init() etc.
+	// rather than here because then if we disable an rdb we don't
+	// have to mess with code here as well:
+
 	// add the single dummy collection for catdb
-	if ( g_catdb.getRdb() == this ) 
-		return g_catdb.addColl ( NULL );
-	if ( g_statsdb.getRdb() == this ) 
-		return g_statsdb.addColl ( NULL );
-	if ( g_cachedb.getRdb() == this ) 
-		return g_cachedb.addColl ( NULL );
-	if ( g_serpdb.getRdb() == this ) 
-		return g_serpdb.addColl ( NULL );
+	//if ( g_catdb.getRdb() == this ) 
+	//	return g_catdb.addColl ( NULL );
+	// we now call g_*db.addColl(NULL) for Statsdb::init(),
+	// Cachedb::init(), ... directly
+	//if ( g_statsdb.getRdb() == this ) 
+	//	return g_statsdb.addColl ( NULL );
+	//if ( g_cachedb.getRdb() == this ) 
+	//	return g_cachedb.addColl ( NULL );
+	//if ( g_serpdb.getRdb() == this ) 
+	//	return g_serpdb.addColl ( NULL );
 	//else if ( g_accessdb.getRdb() == this ) 
 	//	return g_accessdb.addColl ( NULL );
 	//else if ( g_facebookdb.getRdb() == this ) 
 	//	return g_facebookdb.addColl ( NULL );
-	if ( g_syncdb.getRdb() == this ) 
-		return g_syncdb.addColl ( NULL );
+	//if ( g_syncdb.getRdb() == this ) 
+	//	return g_syncdb.addColl ( NULL );
 
 	// set this for use below
 	//*(long long *)m_gbcounteventsTermId =

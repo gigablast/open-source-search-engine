@@ -991,7 +991,8 @@ bool Syncdb::init ( ) {
 	if ( ! h->m_isPermanentOutOfSync ) return true;
 	// clear it all!
 	m_qt.clear();
-	return true;
+	// add the base since it is a collectionless rdb
+	return m_rdb.addColl ( NULL );
 }
 
 // . save our crap
