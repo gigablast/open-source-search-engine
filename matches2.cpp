@@ -6,7 +6,8 @@
 #include "HashTableT.h"
 
 //make the key, it is just the needles ptr 
-static HashTableT<unsigned long long , char*> s_quickTables;
+//static HashTableT<unsigned long long , char*> s_quickTables;
+static HashTableX s_quickTables;
 
 /*
 // returns false and sets g_errno on error
@@ -63,6 +64,9 @@ bool fast_highlight ( // highlight these query terms:
 //   to lower and store into tmp[]. TODO.
 // . a space (includes \r \n) in a needle will match a consecutive sequence
 //   of spaces in the haystack
+
+#define BITVEC unsigned long long
+
 char *getMatches2 ( Needle *needles          , 
 		    long    numNeedles       ,
 		    char   *haystack         , 
@@ -108,51 +112,69 @@ char *getMatches2 ( Needle *needles          ,
 	// . TODO: use a static cache of like 4 of these tables where the key
 	//         is the Needles ptr ... done
 	long numNeedlesToInit = numNeedles;
-	char space[256 * 5 * sizeof(unsigned long)];
+	char space[256 * 6 * sizeof(BITVEC)];
 	char *buf = NULL;
 
-	unsigned long *s0;
-	unsigned long *s1;
-	unsigned long *s2;
-	unsigned long *s3;
-	unsigned long *s4;
+	BITVEC *s0;
+	BITVEC *s1;
+	BITVEC *s2;
+	BITVEC *s3;
+	BITVEC *s4;
+	BITVEC *s5;
 
+	/*
+	static bool s_quickTableInit = false;
+	static char s_qtbuf[128*(12+1)*2];
+
+	long slot = -1;
 	if(saveQuickTables) {
-		uint64_t key = (uint32_t)needles;
-		long slot = s_quickTables.getSlot(key);
-		if(slot == -1) {
-			buf = (char*)mcalloc(sizeof(unsigned long)*256*5,
-					     "matches");
-			if(buf) s_quickTables.addKey(key, buf);
-			//sanity check, no reason why there needs to be a 
-			//limit, I just don't expect there to be this many
-			//static needles at this point.
-			if(s_quickTables.getNumSlotsUsed() > 32){
-				char *xx=NULL; *xx = 0;
-			}
+		if ( ! s_quickTableInit ) {
+			s_quickTableInit = true;
+			s_quickTables.set(8,4,128,s_qtbuf,256*13,false,0,"qx");
 		}
-		else {
+		uint64_t key = (uint32_t)needles;
+		slot = s_quickTables.getSlot(&key);
+		if ( slot >= 0 ) {
 			buf = s_quickTables.getValueFromSlot(slot);
 			numNeedlesToInit = 0;
 		}
 	}
+	*/
+
 	if(!buf) {
 		buf = space;
-		memset ( buf , 0 , sizeof(unsigned long)*256*5);
+		memset ( buf , 0 , sizeof(BITVEC)*256*6);
 	}
 
-	long offset = 0;
-	s0 = (unsigned long*)(buf + offset);
-	offset += sizeof(unsigned long)*256;
-	s1 = (unsigned long*)(buf + offset);
-	offset += sizeof(unsigned long)*256;
-	s2 = (unsigned long*)(buf + offset);
-	offset += sizeof(unsigned long)*256;
-	s3 = (unsigned long*)(buf + offset);
-	offset += sizeof(unsigned long)*256;
-	s4 = (unsigned long*)(buf + offset);
+	/*
+	if( useQuickTables && slot == -1 ) {
+		//buf = (char*)mcalloc(sizeof(unsigned long)*256*5,
+		//		     "matches");
+		if(buf) s_quickTables.addKey(&key, &buf);
+		//sanity check, no reason why there needs to be a 
+		//limit, I just don't expect there to be this many
+		//static needles at this point.
+		if(s_quickTables.getNumSlotsUsed() > 32){
+			char *xx=NULL; *xx = 0;
+		}
+	}
+	*/
 
-	unsigned long mask;
+	// try 64 bit bit vectors now since we doubled # of needles
+	long offset = 0;
+	s0 = (BITVEC *)(buf + offset);
+	offset += sizeof(BITVEC)*256;
+	s1 = (BITVEC *)(buf + offset);
+	offset += sizeof(BITVEC)*256;
+	s2 = (BITVEC *)(buf + offset);
+	offset += sizeof(BITVEC)*256;
+	s3 = (BITVEC *)(buf + offset);
+	offset += sizeof(BITVEC)*256;
+	s4 = (BITVEC *)(buf + offset);
+	offset += sizeof(BITVEC)*256;
+	s5 = (BITVEC *)(buf + offset);
+
+	BITVEC mask;
 
 	// set the letter tables, s0[] through sN[], for each needle
 	for ( long i = 0 ; i < numNeedlesToInit ; i++ ) {
@@ -160,7 +182,8 @@ char *getMatches2 ( Needle *needles          ,
 		QUICKPOLL(niceness);
 		unsigned char *w    = (unsigned char *)needles[i].m_string;
 		unsigned char *wend = w + needles[i].m_stringSize;
-		mask = (1<<(i&0x1f)); // (1<<(i%32));
+		// BITVEC is now 64 bits
+		mask = (1<<(i&0x3f)); // (1<<(i%64));
 		// if the needle is small, fill up the remaining letter tables
 		// with its mask... so it matches any character in haystack.
 		s0[(unsigned char)to_lower_a(*w)] |= mask;
@@ -172,6 +195,7 @@ char *getMatches2 ( Needle *needles          ,
 				s2[j] |= mask;
 				s3[j] |= mask;
 				s4[j] |= mask;
+				s5[j] |= mask;
 			}
 			continue;
 		}
@@ -184,6 +208,7 @@ char *getMatches2 ( Needle *needles          ,
 				s2[j] |= mask;
 				s3[j] |= mask;
 				s4[j] |= mask;
+				s5[j] |= mask;
 			}
 			continue;
 		}
@@ -195,6 +220,7 @@ char *getMatches2 ( Needle *needles          ,
 			for ( long j = 0 ; j < 256 ; j++ )  {
 				s3[j] |= mask;
 				s4[j] |= mask;
+				s5[j] |= mask;
 			}
 			continue;
 		}
@@ -206,12 +232,24 @@ char *getMatches2 ( Needle *needles          ,
 		if ( w >= wend ) {
 			for ( long j = 0 ; j < 256 ; j++ )  {
 				s4[j] |= mask;
+				s5[j] |= mask;
 			}
 			continue;
 		}
 		s4[(unsigned char)to_lower_a(*w)] |= mask;
 		s4[(unsigned char)to_upper_a(*w)] |= mask;
 		w += 1;//step;
+
+		if ( w >= wend ) {
+			for ( long j = 0 ; j < 256 ; j++ )  {
+				s5[j] |= mask;
+			}
+			continue;
+		}
+		s5[(unsigned char)to_lower_a(*w)] |= mask;
+		s5[(unsigned char)to_upper_a(*w)] |= mask;
+		w += 1;//step;
+
 	}
 
 	// return a ptr to the first match if we should, this is it
@@ -245,6 +283,8 @@ char *getMatches2 ( Needle *needles          ,
 		if ( ! mask ) continue;
 		mask &= s4[*(p+4)];
 		if ( ! mask ) continue;
+		mask &= s5[*(p+5)];
+		if ( ! mask ) continue;
 		//debugCount++;
 		/*
 		// display
@@ -273,7 +313,7 @@ char *getMatches2 ( Needle *needles          ,
 		// we got a good candidate, loop through all the needles
 		for ( long j = 0 ; j < numNeedles ; j++ ) {
 			// skip if does not match mask, will save time
-			if ( ! ((1<<(j&0x1f)) & mask) ) continue;
+			if ( ! ((1<<(j&0x3f)) & mask) ) continue;
 			if( needles[j].m_stringSize > 3) {
 				// ensure first 4 bytes matches this needle's
 				if (needles[j].m_string[0]!=to_lower_a(*(p+0)))
@@ -421,7 +461,7 @@ char *getMatches2 ( Needle *needles          ,
 		// we got a good candidate, loop through all the needles
 		for ( long j = 0 ; j < numNeedles ; j++ ) {
 			// skip if does not match mask, will save time
-			if ( ! ((1<<(j&0x1f)) & mask) ) continue;
+			if ( ! ((1<<(j&0x3f)) & mask) ) continue;
 			if( needles[j].m_stringSize > 3) {
 				// ensure first 4 bytes matches this needle's
 				if (needles[j].m_string[0]!=to_lower_a(*(p+0)))

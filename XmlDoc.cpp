@@ -3307,9 +3307,153 @@ static Needle s_dirtyWords []  = {
 	{"bastard"    ,0,1,0,0,NULL,0,NULL},
 	{"erotik"     ,0,2,0,0,NULL,0,NULL},
 
-	////
-	//// New stuff from sex.com adult word list
-	////
+	// EXCEPTIONS
+
+	// smut
+	{"transmut"    ,0,-2,0,0,NULL,0,NULL},
+	{"bismuth"     ,0,-2,0,0,NULL,0,NULL},
+
+	// sex
+	{"middlesex"   ,0,-1,0,0,NULL,0,NULL},
+	{"sussex"      ,0,-1,0,0,NULL,0,NULL},
+	{"essex"       ,0,-1,0,0,NULL,0,NULL},
+	{"deusex"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexchange"   ,0,-1,0,0,NULL,0,NULL},
+	{"sexpress"    ,0,-1,0,0,NULL,0,NULL},
+	{"sexpert"     ,0,-1,0,0,NULL,0,NULL},
+
+
+	// EXCEPTIONS
+
+	// sex
+	{"middlesex"   ,0,-1,0,0,NULL,0,NULL},
+	{"sussex"      ,0,-1,0,0,NULL,0,NULL},
+	{"essex"       ,0,-1,0,0,NULL,0,NULL},
+	{"deusex"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexchange"   ,0,-1,0,0,NULL,0,NULL},
+	{"sexpress"    ,0,-1,0,0,NULL,0,NULL},
+	{"sexpert"     ,0,-1,0,0,NULL,0,NULL},
+	{"sexcel"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexist"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexile"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexperi"     ,0,-1,0,0,NULL,0,NULL},
+	{"sexual"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexpose"     ,0,-1,0,0,NULL,0,NULL},
+	{"sexclu"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexo"        ,0,-1,0,0,NULL,0,NULL},
+	{"sexism"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexpan"      ,0,-1,0,0,NULL,0,NULL}, // buttonsexpanion
+	{"same-sex"    ,0,-1,0,0,NULL,0,NULL},
+	{"opposite sex",0,-1,0,0,NULL,0,NULL},
+
+	// anal
+	{"analog"      ,0,-2,0,0,NULL,0,NULL},
+	{"analy"       ,0,-2,0,0,NULL,0,NULL},
+	{"canal"       ,0,-2,0,0,NULL,0,NULL},
+	{"kanal"       ,0,-2,0,0,NULL,0,NULL},
+	{"banal"       ,0,-2,0,0,NULL,0,NULL},
+	{"ianalbert"   ,0,-2,0,0,NULL,0,NULL}, // ian albert
+
+	// cum
+	{"circum"      ,0,-2,0,0,NULL,0,NULL},
+	{"cum laude"   ,0,-2,0,0,NULL,0,NULL},
+	{"succum"      ,0,-2,0,0,NULL,0,NULL},
+	{"cumber"      ,0,-2,0,0,NULL,0,NULL},
+	{"docum"       ,0,-2,0,0,NULL,0,NULL},
+	{"cumul"       ,0,-2,0,0,NULL,0,NULL},
+	{"acumen"      ,0,-2,0,0,NULL,0,NULL},
+	{"incum"       ,0,-2,0,0,NULL,0,NULL},
+	{"capsicum"    ,0,-2,0,0,NULL,0,NULL},
+	{"modicum"     ,0,-2,0,0,NULL,0,NULL},
+	{"locum"       ,0,-2,0,0,NULL,0,NULL},
+	{"scum"        ,0,-2,0,0,NULL,0,NULL},
+	{"accum"       ,0,-2,0,0,NULL,0,NULL},
+	{"cumbre"      ,0,-2,0,0,NULL,0,NULL},
+
+	{"swank"       ,0,-2,0,0,NULL,0,NULL},
+	{"fickle"      ,0,-2,0,0,NULL,0,NULL},
+	{"traffick"    ,0,-2,0,0,NULL,0,NULL},
+	{"scleroti"    ,0,-2,0,0,NULL,0,NULL},
+	{"gaylor"      ,0,-2,0,0,NULL,0,NULL},
+	{"gaynor"      ,0,-2,0,0,NULL,0,NULL},
+	{"gayner"      ,0,-2,0,0,NULL,0,NULL},
+	{"gayton"      ,0,-2,0,0,NULL,0,NULL},
+	{"dipthong"    ,0,-1,0,0,NULL,0,NULL},
+
+	// hell
+	{"hellen"      ,0,-1,0,0,NULL,0,NULL},
+	{"hellman"     ,0,-1,0,0,NULL,0,NULL},
+	{"shell"       ,0,-1,0,0,NULL,0,NULL},
+	{"mitchell"    ,0,-1,0,0,NULL,0,NULL},
+	{"chelle"      ,0,-1,0,0,NULL,0,NULL},  // me/michelle
+	{"hello"       ,0,-1,0,0,NULL,0,NULL},
+	{"moschella"   ,0,-1,0,0,NULL,0,NULL},
+	{"othello"     ,0,-1,0,0,NULL,0,NULL},
+	{"schelling"   ,0,-1,0,0,NULL,0,NULL},
+	{"seychelles"  ,0,-1,0,0,NULL,0,NULL},
+	{"wheller"     ,0,-1,0,0,NULL,0,NULL},
+	{"winchell"    ,0,-1,0,0,NULL,0,NULL},
+
+	// dick
+	{"dicker"      ,0,-1,0,0,NULL,0,NULL},
+	{"dickins"     ,0,-1,0,0,NULL,0,NULL},
+	{"dickies"     ,0,-1,0,0,NULL,0,NULL},
+	{"dickran"     ,0,-1,0,0,NULL,0,NULL},
+
+	// cock
+	{"babcock"     ,0,-1,0,0,NULL,0,NULL},
+	{"cocked"      ,0,-1,0,0,NULL,0,NULL},
+	{"cocking"     ,0,-1,0,0,NULL,0,NULL},
+	{"cockpit"     ,0,-1,0,0,NULL,0,NULL},
+	{"cockroach"   ,0,-1,0,0,NULL,0,NULL},
+	{"cocktail"    ,0,-1,0,0,NULL,0,NULL},
+	{"cocky"       ,0,-1,0,0,NULL,0,NULL},
+	{"hancock"     ,0,-1,0,0,NULL,0,NULL},
+	{"hitchcock"   ,0,-1,0,0,NULL,0,NULL},
+	{"peacock"     ,0,-1,0,0,NULL,0,NULL},
+	{"shuttlecock" ,0,-1,0,0,NULL,0,NULL},
+	{"stopcock"    ,0,-1,0,0,NULL,0,NULL},
+	{"weathercock" ,0,-1,0,0,NULL,0,NULL},
+	{"woodcock"    ,0,-1,0,0,NULL,0,NULL},
+	{"cockburn"    ,0,-1,0,0,NULL,0,NULL},
+
+	// kink
+	{"kinko"       ,0,-2,0,0,NULL,0,NULL},
+	{"ukink"       ,0,-2,0,0,NULL,0,NULL},  // ink shop in uk
+
+	// naked
+	{"snaked"      ,0,-1,0,0,NULL,0,NULL},
+	
+	// rape
+	{"drape"       ,0,-2,0,0,NULL,0,NULL},
+	{"grape"       ,0,-2,0,0,NULL,0,NULL},
+	{"scrape"      ,0,-2,0,0,NULL,0,NULL},
+	{"therape"     ,0,-2,0,0,NULL,0,NULL},
+	{"trapez"      ,0,-2,0,0,NULL,0,NULL},
+	{"parapet"     ,0,-2,0,0,NULL,0,NULL},
+	{"scraping"    ,0,-2,0,0,NULL,0,NULL},
+	{"draping"     ,0,-2,0,0,NULL,0,NULL},
+
+	// twat
+	{"twatch"      ,0,-2,0,0,NULL,0,NULL}, // courtwatch -- cspan.org
+
+	// clit
+	{"heraclitus"  ,0,-2,0,0,NULL,0,NULL},
+
+	// boob
+	{"booboo"      ,0,-1,0,0,NULL,0,NULL},
+
+	// shit
+	{"shitak"      ,0,-2,0,0,NULL,0,NULL}
+};
+
+////
+//// New stuff from sex.com adult word list
+////
+////
+//// make it a 2nd part because of performance limits on matches2.cpp algo
+////
+static Needle s_dirtyWordsPart2 []  = {
         {"amateurfoto"  ,0,2,0,0,NULL,0,NULL},
         {"amateurhardcore"      ,0,2,0,0,NULL,0,NULL},
         {"amateurindex" ,0,2,0,0,NULL,0,NULL},
@@ -3558,151 +3702,9 @@ static Needle s_dirtyWords []  = {
         {"wetpanties"   ,0,2,0,0,NULL,0,NULL},
         {"wifesharing"  ,0,2,0,0,NULL,0,NULL},
         {"wifeswapping" ,0,2,0,0,NULL,0,NULL},
-        {"xrated"       ,0,2,0,0,NULL,0,NULL},
-
-
-	// EXCEPTIONS
-
-	// smut
-	{"transmut"    ,0,-2,0,0,NULL,0,NULL},
-	{"bismuth"     ,0,-2,0,0,NULL,0,NULL},
-
-	// sex
-	{"middlesex"   ,0,-1,0,0,NULL,0,NULL},
-	{"sussex"      ,0,-1,0,0,NULL,0,NULL},
-	{"essex"       ,0,-1,0,0,NULL,0,NULL},
-	{"deusex"      ,0,-1,0,0,NULL,0,NULL},
-	{"sexchange"   ,0,-1,0,0,NULL,0,NULL},
-	{"sexpress"    ,0,-1,0,0,NULL,0,NULL},
-	{"sexpert"     ,0,-1,0,0,NULL,0,NULL},
-
-
-	// mdw mdw
-
-
-	// EXCEPTIONS
-
-	// sex
-	{"middlesex"   ,0,-1,0,0,NULL,0,NULL},
-	{"sussex"      ,0,-1,0,0,NULL,0,NULL},
-	{"essex"       ,0,-1,0,0,NULL,0,NULL},
-	{"deusex"      ,0,-1,0,0,NULL,0,NULL},
-	{"sexchange"   ,0,-1,0,0,NULL,0,NULL},
-	{"sexpress"    ,0,-1,0,0,NULL,0,NULL},
-	{"sexpert"     ,0,-1,0,0,NULL,0,NULL},
-	{"sexcel"      ,0,-1,0,0,NULL,0,NULL},
-	{"sexist"      ,0,-1,0,0,NULL,0,NULL},
-	{"sexile"      ,0,-1,0,0,NULL,0,NULL},
-	{"sexperi"     ,0,-1,0,0,NULL,0,NULL},
-	{"sexual"      ,0,-1,0,0,NULL,0,NULL},
-	{"sexpose"     ,0,-1,0,0,NULL,0,NULL},
-	{"sexclu"      ,0,-1,0,0,NULL,0,NULL},
-	{"sexo"        ,0,-1,0,0,NULL,0,NULL},
-	{"sexism"      ,0,-1,0,0,NULL,0,NULL},
-	{"sexpan"      ,0,-1,0,0,NULL,0,NULL}, // buttonsexpanion
-	{"same-sex"    ,0,-1,0,0,NULL,0,NULL},
-	{"opposite sex",0,-1,0,0,NULL,0,NULL},
-
-	// anal
-	{"analog"      ,0,-2,0,0,NULL,0,NULL},
-	{"analy"       ,0,-2,0,0,NULL,0,NULL},
-	{"canal"       ,0,-2,0,0,NULL,0,NULL},
-	{"kanal"       ,0,-2,0,0,NULL,0,NULL},
-	{"banal"       ,0,-2,0,0,NULL,0,NULL},
-	{"ianalbert"   ,0,-2,0,0,NULL,0,NULL}, // ian albert
-
-	// cum
-	{"circum"      ,0,-2,0,0,NULL,0,NULL},
-	{"cum laude"   ,0,-2,0,0,NULL,0,NULL},
-	{"succum"      ,0,-2,0,0,NULL,0,NULL},
-	{"cumber"      ,0,-2,0,0,NULL,0,NULL},
-	{"docum"       ,0,-2,0,0,NULL,0,NULL},
-	{"cumul"       ,0,-2,0,0,NULL,0,NULL},
-	{"acumen"      ,0,-2,0,0,NULL,0,NULL},
-	{"incum"       ,0,-2,0,0,NULL,0,NULL},
-	{"capsicum"    ,0,-2,0,0,NULL,0,NULL},
-	{"modicum"     ,0,-2,0,0,NULL,0,NULL},
-	{"locum"       ,0,-2,0,0,NULL,0,NULL},
-	{"scum"        ,0,-2,0,0,NULL,0,NULL},
-	{"accum"       ,0,-2,0,0,NULL,0,NULL},
-	{"cumbre"      ,0,-2,0,0,NULL,0,NULL},
-
-	{"swank"       ,0,-2,0,0,NULL,0,NULL},
-	{"fickle"      ,0,-2,0,0,NULL,0,NULL},
-	{"traffick"    ,0,-2,0,0,NULL,0,NULL},
-	{"scleroti"    ,0,-2,0,0,NULL,0,NULL},
-	{"gaylor"      ,0,-2,0,0,NULL,0,NULL},
-	{"gaynor"      ,0,-2,0,0,NULL,0,NULL},
-	{"gayner"      ,0,-2,0,0,NULL,0,NULL},
-	{"gayton"      ,0,-2,0,0,NULL,0,NULL},
-	{"dipthong"    ,0,-1,0,0,NULL,0,NULL},
-
-	// hell
-	{"hellen"      ,0,-1,0,0,NULL,0,NULL},
-	{"hellman"     ,0,-1,0,0,NULL,0,NULL},
-	{"shell"       ,0,-1,0,0,NULL,0,NULL},
-	{"mitchell"    ,0,-1,0,0,NULL,0,NULL},
-	{"chelle"      ,0,-1,0,0,NULL,0,NULL},  // me/michelle
-	{"hello"       ,0,-1,0,0,NULL,0,NULL},
-	{"moschella"   ,0,-1,0,0,NULL,0,NULL},
-	{"othello"     ,0,-1,0,0,NULL,0,NULL},
-	{"schelling"   ,0,-1,0,0,NULL,0,NULL},
-	{"seychelles"  ,0,-1,0,0,NULL,0,NULL},
-	{"wheller"     ,0,-1,0,0,NULL,0,NULL},
-	{"winchell"    ,0,-1,0,0,NULL,0,NULL},
-
-	// dick
-	{"dicker"      ,0,-1,0,0,NULL,0,NULL},
-	{"dickins"     ,0,-1,0,0,NULL,0,NULL},
-	{"dickies"     ,0,-1,0,0,NULL,0,NULL},
-	{"dickran"     ,0,-1,0,0,NULL,0,NULL},
-
-	// cock
-	{"babcock"     ,0,-1,0,0,NULL,0,NULL},
-	{"cocked"      ,0,-1,0,0,NULL,0,NULL},
-	{"cocking"     ,0,-1,0,0,NULL,0,NULL},
-	{"cockpit"     ,0,-1,0,0,NULL,0,NULL},
-	{"cockroach"   ,0,-1,0,0,NULL,0,NULL},
-	{"cocktail"    ,0,-1,0,0,NULL,0,NULL},
-	{"cocky"       ,0,-1,0,0,NULL,0,NULL},
-	{"hancock"     ,0,-1,0,0,NULL,0,NULL},
-	{"hitchcock"   ,0,-1,0,0,NULL,0,NULL},
-	{"peacock"     ,0,-1,0,0,NULL,0,NULL},
-	{"shuttlecock" ,0,-1,0,0,NULL,0,NULL},
-	{"stopcock"    ,0,-1,0,0,NULL,0,NULL},
-	{"weathercock" ,0,-1,0,0,NULL,0,NULL},
-	{"woodcock"    ,0,-1,0,0,NULL,0,NULL},
-	{"cockburn"    ,0,-1,0,0,NULL,0,NULL},
-
-	// kink
-	{"kinko"       ,0,-2,0,0,NULL,0,NULL},
-	{"ukink"       ,0,-2,0,0,NULL,0,NULL},  // ink shop in uk
-
-	// naked
-	{"snaked"      ,0,-1,0,0,NULL,0,NULL},
-	
-	// rape
-	{"drape"       ,0,-2,0,0,NULL,0,NULL},
-	{"grape"       ,0,-2,0,0,NULL,0,NULL},
-	{"scrape"      ,0,-2,0,0,NULL,0,NULL},
-	{"therape"     ,0,-2,0,0,NULL,0,NULL},
-	{"trapez"      ,0,-2,0,0,NULL,0,NULL},
-	{"parapet"     ,0,-2,0,0,NULL,0,NULL},
-	{"scraping"    ,0,-2,0,0,NULL,0,NULL},
-	{"draping"     ,0,-2,0,0,NULL,0,NULL},
-
-	// twat
-	{"twatch"      ,0,-2,0,0,NULL,0,NULL}, // courtwatch -- cspan.org
-
-	// clit
-	{"heraclitus"  ,0,-2,0,0,NULL,0,NULL},
-
-	// boob
-	{"booboo"      ,0,-1,0,0,NULL,0,NULL},
-
-	// shit
-	{"shitak"      ,0,-2,0,0,NULL,0,NULL}
+        {"xrated"       ,0,2,0,0,NULL,0,NULL}
 };
+
 
 // . store this in clusterdb rec so family filter works!
 // . check content for adult words
@@ -3818,6 +3820,51 @@ long getDirtyPoints ( char *s , long slen , long niceness , char *url ) {
 		    ,url
 		    );
 	}
+
+	////
+	//
+	// repeat for part2
+	//
+	// we have to do two separate parts otherwise the algo in
+	// matches2.cpp gets really slow. it was not meant to match
+	// so many needles in one haystack.
+	//
+	///
+	long numDirty2 = sizeof(s_dirtyWordsPart2) / sizeof(Needle);
+
+	//numDirty2 = 0;
+
+	getMatches2 ( s_dirtyWordsPart2 ,
+		      numDirty2     ,
+		      s            ,
+		      slen         ,
+		      NULL         , // linkPos
+		      NULL         , // needleNum
+		      false        , // stopAtFirstMatch?
+		      NULL         , // hadPreMatch ptr
+		      true         , // saveQuickTables?
+		      niceness     );
+
+
+	// each needle has an associated score
+	for ( long i = 0 ; i < numDirty2 ; i++ ) {
+		// skip if no match
+		if ( s_dirtyWordsPart2[i].m_count <= 0 ) continue;
+		// . the "id", is positive for dirty words, - for clean
+		// . uses +2/-2 for really dirty words 
+		// . uses +1/-1 for borderline dirty words
+		points += s_dirtyWordsPart2[i].m_id;
+		// log debug
+		if ( ! g_conf.m_logDebugDirty ) continue;
+		// show it in the log
+		log("dirty: %s %li %s"
+		    ,s_dirtyWordsPart2[i].m_string
+		    ,(long)s_dirtyWordsPart2[i].m_id
+		    ,url
+		    );
+	}
+
+
 	return points;
 }
 
