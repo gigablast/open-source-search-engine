@@ -1820,9 +1820,11 @@ void injectedUrlWrapper ( void *state ) {
 
 	// make a status msg for the url
 	SafeBuf sb;
+	SafeBuf js; // for json reply
 	if ( xd->m_indexCode == 0 ) {
 		sb.safePrintf("<b><font color=black>"
 			      "Successfully added ");
+		js.safePrintf("Seed Successful. ");
 	}
 	else if ( xd->m_indexCode == EDOCFILTERED ) {
 		sb.safePrintf("<b><font color=red>"
@@ -1830,34 +1832,55 @@ void injectedUrlWrapper ( void *state ) {
 			      "url filter #%li "
 			      "when adding "
 			      , mstrerror(xd->m_indexCode) 
-			      , xd->m_urlFilterNum
+			      // divide by 2 because we add a 
+			      // "manualadd &&" rule with every url filter
+			      // that the client adds
+			      , (xd->m_urlFilterNum - 2) / 2
 			      );
-		
+		js.safePrintf("Seed URL filtered by URL filter #%li"
+			      , (xd->m_urlFilterNum - 2) / 2 );
 	}
 	else {
 		sb.safePrintf("<b><font color=red>"
 			      "Error: <i>%s</i> when adding "
 			      , mstrerror(xd->m_indexCode) );
+		js.safePrintf("Error adding seed url: %s"
+			      , mstrerror(xd->m_indexCode) );
 	}
 	sb.safeTruncateEllipsis(xd->m_firstUrl.getUrl(),60);
 	
 	if ( xd->m_indexCode == 0 ) {
-		if ( xd->m_numOutlinksAddedValid ) 
-			sb.safePrintf(" &nbsp; (added %li outlinks)",
-				      (long)xd->m_numOutlinksAdded);
-		else
+		if ( xd->m_numOutlinksAddedValid ) {
+			sb.safePrintf(" &nbsp; (added %li outlinks)"
+				      ,(long)xd->m_numOutlinksAdded);
+			js.safePrintf("Added %li outlinks from same domain. "
+				      "%li outlinks were filtered."
+			       ,(long)xd->m_numOutlinksAddedFromSameDomain
+				      ,(long)xd->m_numOutlinksFiltered
+				      );
+		}
+		else {
 			sb.safePrintf(" &nbsp; (added 0 outlinks)");
+			js.safePrintf("Added 0 outlinks from same domain. "
+				      "0 links were filtered." );
+		}
 	}
 	
 	sb.safePrintf("</font></b>");
 	sb.nullTerm();
+
+	js.nullTerm();
+
+	// send back the html or json response?
+	SafeBuf *response = &sb;
+	if ( st->m_fmt == FMT_JSON ) response = &js;
 
 	// . this will call g_httpServer.sendReply()
 	// . pass it in the injection response, "sb"
 	printCrawlBotPage2 ( st->m_socket,
 			     &st->m_hr ,
 			     st->m_fmt,
-			     &sb ,
+			     response,
 			     NULL ,
 			     st->m_collnum );
 	delete st;
@@ -2389,6 +2412,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			  SafeBuf *urlUploadResponse ,
 			  collnum_t collnum ) {
 	
+
 	// store output into here
 	SafeBuf sb;
 
@@ -2522,6 +2546,16 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	if ( fmt == FMT_HTML )
 		sb.safePrintf ( "</center><br/>" );
 
+
+	if ( fmt == FMT_JSON && injectionResponse )
+		sb.safePrintf("{\"seedResponse\":\"%s\"},\n\n"
+			      , injectionResponse->getBufStart() );
+
+	if ( fmt == FMT_JSON && urlUploadResponse )
+		sb.safePrintf("{\"addUrlsResponse\":\"%s\"},\n\n"
+			      , urlUploadResponse->getBufStart() );
+
+
 	//////
 	//
 	// print collection summary page
@@ -2549,6 +2583,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 			      );
 	}
+
 	// scan each coll and get its stats
 	for ( long i = 0 ; summary && i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cx = g_collectiondb.m_recs[i];

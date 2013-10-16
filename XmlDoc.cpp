@@ -12060,6 +12060,23 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
+	if ( strncasecmp(au->getBufStart(),"donotprocess",12) == 0 ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
+	// invalid url?
+	Url apiUrl; apiUrl.set ( au->getBufStart() );
+	if ( apiUrl.getUrlLen() <= 0 || 
+	     apiUrl.getHostLen() <= 0 ||
+	     apiUrl.getDomainLen() <= 0 )  {
+		log("build: invalid diffbot api url of \"%s\".",
+		    au->getBufStart() );
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+	
+
 	// when respidering an "old" doc, never call this. we already
 	// have the diffbot replies xyz.com/-diffbot-0 and xyz.com/-diffbot-1
 	// etc.
@@ -12130,7 +12147,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// append the custom url. i.e. /api/analyze?mode=auto&u=
 	//if ( api ) diffbotUrl.safeMemcpy ( api , apiLen );
 	// store the api url into here
-	diffbotUrl.safeMemcpy ( au );
+	diffbotUrl.safeMemcpy ( apiUrl.getUrl() , apiUrl.getUrlLen() );
 
 	// . m_diffbotApi Is like "article" or "product" etc.
 	// . if classify is true we always return the classification 
@@ -20169,6 +20186,9 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 
 	// count how many we add
 	long numAdded = 0;
+	long numAddedFromSameDomain = 0;
+	long linksBanned = 0;
+	long linksFiltered = 0;
 
 	bool isParentPingServer = false;
 	if ( fu && fu->isPingServer() ) isParentPingServer = true;
@@ -20483,8 +20503,10 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 			     sb2.getBufStart());
 		}
 		// do not add if bad priority, SPIDER_PRIORITY_FILTERED, ...
-		if ( priority == SPIDER_PRIORITY_FILTERED ) continue;
-		if ( priority == SPIDER_PRIORITY_BANNED   ) continue;
+		if ( priority == SPIDER_PRIORITY_FILTERED ) {
+			linksFiltered++; continue; }
+		if ( priority == SPIDER_PRIORITY_BANNED   ) {
+			linksBanned++; continue; }
 
 		// serialize into the buffer
 		long need = ksr.getRecSize();
@@ -20509,6 +20531,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		p += need;
 		// count it
 		numAdded++;
+		// check domain
+		if ( domHash32  == m_domHash32 ) numAddedFromSameDomain++;
 	}
 
 	//
@@ -20543,6 +20567,9 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	// save it
 	m_numOutlinksAdded      = numAdded;
 	m_numOutlinksAddedValid = true;
+	m_numOutlinksAddedFromSameDomain = numAddedFromSameDomain;
+	m_numOutlinksFiltered = linksFiltered;
+	m_numOutlinksBanned = linksBanned;
 	// update end of list once we have successfully added all spider recs
 	m_p = p;
 	// return current ptr

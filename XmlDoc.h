@@ -1831,6 +1831,9 @@ class XmlDoc {
 	char m_isFiltered;
 	long m_urlFilterNum;
 	long m_numOutlinksAdded;
+	long m_numOutlinksAddedFromSameDomain;
+	long m_numOutlinksFiltered;
+	long m_numOutlinksBanned;
 	long m_numRedirects;
 	bool m_isPageParser;
 	Url m_baseUrl;
