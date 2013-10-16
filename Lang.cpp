@@ -459,7 +459,11 @@ unsigned char getLanguageFromUserAgent(char *abbr) {
 	return langUnknown;
 }
 
-// these are going to be adult, in any language
+// . these are going to be adult, in any language
+// . this seems only to be used by Speller.cpp when splitting up words
+//   in the url domain. 
+// . s/slen is a full word that is found in our "dictionary" so using
+//   phrases like biglittlestuff probably should not go here.
 bool isAdult( char *s, long slen, char **loc ) {
 	char **p = NULL;
 	char *a = NULL;
