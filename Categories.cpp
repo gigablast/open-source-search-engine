@@ -50,6 +50,7 @@ void Categories::reset() {
 	}
 }
 
+// filename usually ./catdb/gbdmoz.structure.dat
 long Categories::loadCategories ( char *filename ) {
 	//ifstream inStream;
 	int inStream;
@@ -69,6 +70,7 @@ long Categories::loadCategories ( char *filename ) {
 		return 1;
 	}
 	// read in the number of cats
+	// filename usually ./catdb/gbdmoz.structure.dat
 	if ( fileRead ( inStream, &m_numCats, sizeof(long) ) != sizeof(long) ) {
 		log("cat: Error reading structure file: %s", filename);
 		close(inStream);
@@ -114,7 +116,8 @@ long Categories::loadCategories ( char *filename ) {
 		g_errno = ENOMEM;
 		return 1;
 	}
-	// read the rest of the file into the temp buffer
+	// . read the rest of the file into the temp buffer
+	// . filename usually ./catdb/gbdmoz.structure.dat
 	if ( fileRead ( inStream, tempBuffer, readSize ) != readSize ) {
 		log("cat: Error reading structure file: %s", filename);
 		close(inStream);
@@ -212,6 +215,15 @@ long Categories::loadCategories ( char *filename ) {
 	long long start = gettimeofdayInMilliseconds();
 	// sort the category hash by hash value
 	gbsort(m_catHash, m_numCats, sizeof(CategoryHash), sortCatHash);
+
+	// sanity check - no dups allowed
+	unsigned long last = 0xffffffff;
+	for ( long i = 0 ; i < m_numCats ; i++ ) {
+		if ( m_catHash[i].m_hash == last ) 
+			log("dmoz: hash collision on %lu",last);
+		last = m_catHash[i].m_hash;
+	}
+
 	// time it
 	long long took = gettimeofdayInMilliseconds();
 	if ( took - start > 100 ) log(LOG_INIT,"admin: Took %lli ms to "
@@ -327,9 +339,15 @@ long Categories::getIndexFromPath ( char *str, long strLen ) {
 	// check for top
 	if (strLen == 3 &&
 	    strncasecmp(str, "Top", 3) == 0)
+		// it is catid 2 right? but i guess zero is symbolic for us!
 		return 0;
 	// get the hash
 	unsigned long hash = hash32Lower_a(str, strLen, 0);
+	// debug
+	//char c = str[strLen];
+	//str[strLen] = '\0';
+	//log("dmoz: looking up hash %lu for %s",hash,str);
+	//str[strLen] = c;
 	// binary search
 	while (low <= high) {
 		// next check spot
@@ -349,6 +367,7 @@ long Categories::getIndexFromPath ( char *str, long strLen ) {
 
 // return the catid from the given path
 long Categories::getIdFromPath ( char *str, long strLen ) {
+	if ( ! m_cats ) return -1;
 	long index = getIndexFromPath(str, strLen);
 	return m_cats[index].m_catid;
 }
@@ -497,7 +516,7 @@ void Categories::printPathFromId ( SafeBuf *sb ,
 	long catIndex;
 	// get the index
 	catIndex = getIndexFromId(catid);
-	if (catIndex < 1) return;
+	//if (catIndex < 1) return;
 	printPathFromIndex(sb, catIndex, raw, isRTL);
 }
 
@@ -509,8 +528,22 @@ void Categories::printPathFromIndex ( SafeBuf *sb ,
 	if (catIndex < 1) return;
 	// get the parent
 	parentId = m_cats[catIndex].m_parentid;
-	// print the parent(s) first
-	if (parentId > 1) {
+	long catid = m_cats[catIndex].m_catid;
+
+	// include Top now. in newer dmoz it is catid2.
+	//if ( catid == 2 ) {
+	//	sb->safePrintf("Top");
+	//	return;
+	//}		
+
+	// . print the parent(s) first
+	// . the new dmoz data dumps signify a parentless topic by
+	//   havings its parentid equal its catid, so avoid infinite
+	//   loops by checking for that here now. mdw oct 2013.
+	// . the new DMOZ has Top has catid 2 now, even though it is
+	//   mistakenly labelled as Top/World, which is really catid 3.
+	//   so make this parentId > 2...
+	if (parentId >= 1 && parentId != catid ) {
 		bool isParentRTL = isIdRTLStart(parentId);
 		// print spacing here if RTL
 		//if (isRTL && !raw)
@@ -558,7 +591,7 @@ void Categories::printPathCrumbFromId ( SafeBuf *sb ,
 	long catIndex;
 	// get the index
 	catIndex = getIndexFromId(catid);
-	if (catIndex < 1) return;
+	//if (catIndex < 1) return;
 	printPathCrumbFromIndex(sb, catIndex, isRTL);
 }
 
@@ -569,8 +602,20 @@ void Categories::printPathCrumbFromIndex ( SafeBuf *sb,
 	if (catIndex < 1) return;
 	// get the parent
 	parentId = m_cats[catIndex].m_parentid;
-	// print the parent(s) first
-	if (parentId > 1) {
+	long catid = m_cats[catIndex].m_catid;
+
+	// include Top now. in newer dmoz it is catid2.
+	// seems to already be included below... because you made it
+	// parentId>1 not parentId>2
+	//if ( catid == 2 ) {
+	//	sb->safePrintf("Top");
+	//	return;
+	//}
+
+	// . print the parent(s) first
+	// . the new dmoz has Top has parentid 2 now, and Top/World is
+	//   catid 3. so make this parentId > 2 not parentId > 1
+	if (parentId > 1 && parentId != catid ) {
 		bool isParentRTL = isIdRTLStart(parentId);
 		printPathCrumbFromId(sb, parentId, isRTL);
 		// print a spacing
@@ -793,7 +838,7 @@ long Categories::fixUrl ( char *url, long urlLen ) {
 	return newUrlLen;
 }
 
- bool Categories::addUrlsToBadHashTable ( long catid  ) {
+bool Categories::addUrlsToBadHashTable ( long catid  ) {
 	 return getTitleAndSummary ( NULL  , // urlorig
 				     0     , // urloriglen
 				     catid ,
@@ -809,6 +854,183 @@ long Categories::fixUrl ( char *url, long urlLen ) {
 				     0     , // niceness
 				     true  );// just add to table
  }
+
+// just show the urls in dmoz
+bool Categories::printUrlsInTopic ( SafeBuf *sb, long catid ) {
+	long catIndex;
+	unsigned long fileOffset;
+	unsigned long n;
+	char* p;
+	unsigned long readSize;
+	char title[1024];
+	char summ[5000];
+	long maxTitleLen = 1024;
+	long maxSummLen = 5000;
+	long titleLen;
+	long summLen;
+	long urlStrLen;
+	char urlStr[MAX_URL_LEN];
+	long niceness = 0;
+	bool printedStart = false;
+
+	// lookup the index for this catid
+	catIndex = getIndexFromId(catid);
+	if (catIndex < 0)
+		goto errEnd;
+	// get the file offset
+	fileOffset = m_cats[catIndex].m_contentOffset;
+
+	QUICKPOLL( niceness );
+
+	// . open the file
+	char filename[512];
+	sprintf(filename, "%scatdb/%s", g_hostdb.m_dir, RDFCONTENT_FILE);
+	m_rdfStream = open(filename, O_RDONLY | O_NONBLOCK);
+	if ( m_rdfStream < 0 ) {
+		log("cat: Error Opening %s\n", filename);
+		goto errEnd;
+	}
+	// . seek to the offset
+	n = lseek ( m_rdfStream, fileOffset, SEEK_SET );
+	if ( n != fileOffset ) {
+		log("cat: Error seeking to Content Offset %li", fileOffset);
+		goto errEnd;
+	}
+	// . read in a chunk
+	m_rdfBuffer     = m_rdfSmallBuffer;
+	m_rdfBufferSize = RDFSMALLBUFFER_SIZE;
+
+	p = m_rdfBuffer;
+	readSize = m_rdfBufferSize;
+ readLoop:
+	n = read ( m_rdfStream, p, readSize );
+	if(n > 0 && n != readSize) {
+		p += n;
+		readSize -= n;
+	}
+	//log(LOG_WARN,"build: reading %li bytes out of %li",n,m_rdfBufferSize);
+	QUICKPOLL(niceness);
+
+	if(n < 0 && errno == EAGAIN) goto readLoop;
+	
+	if ( n <= 0 || n > (unsigned long)m_rdfBufferSize ) {
+		log("cat: Error Reading Content");
+		goto errEnd;
+	}
+	m_rdfPtr = m_rdfBuffer;
+	m_rdfEnd = &m_rdfBuffer[n];
+	m_currOffset = fileOffset;
+	// . parse to the correct url
+	// parse the first topic and catid
+	if (rdfNextTag() < 0)
+		goto errEnd;
+	if (rdfNextTag() < 0)
+		goto errEnd;
+	// parse until "ExternalPage"
+nextTag:
+	QUICKPOLL((niceness));
+	if (rdfNextTag() < 0)
+		goto errEnd;
+	// check for catid of next topic to stop looking
+	if (m_tagLen == 5 &&
+	    strncmp(m_tagRecfer, "catid", 5) == 0)
+		goto errEnd;
+	if (m_tagLen != 12 ) goto nextTag;
+	if ( strncmp(m_tagRecfer, "ExternalPage", 12) != 0) goto nextTag;
+
+	//
+	// got one
+	//
+
+	// get the next string
+	urlStrLen = fillNextString(urlStr, MAX_URL_LEN-1);
+	if (urlStrLen < 0)
+		goto errEnd;
+
+	// html decode the url
+	/*
+	urlStrLen = htmlDecode(decodedUrl, urlStr, urlStrLen,false,
+			       niceness);
+	memcpy(urlStr, decodedUrl, urlStrLen);
+
+	normUrl.set(urlStr, urlStrLen, true);
+	g_catdb.normalizeUrl(&normUrl, &normUrl);
+	// copy it back
+	urlStrLen = normUrl.getUrlLen();
+	memcpy(urlStr, normUrl.getUrl(), urlStrLen);
+	// make sure there's a trailing / on root urls
+	// and no www.
+	//urlStrLen = fixUrl(urlStr, urlStrLen);
+	// check for an anchor
+	urlAnchor = NULL;
+	urlAnchorLen = 0;
+	//for (long i = 0; i < urlStrLen; i++) {
+	//if (urlStr[i] == '#') {
+	if (normUrl.getAnchorLen() > 0) {
+		//urlAnchor = &urlStr[i];
+		//urlAnchorLen = urlStrLen - i;
+		//urlStrLen = i;
+		urlAnchor = normUrl.getAnchor();
+		urlAnchorLen = normUrl.getAnchorLen();
+		//break;
+	}
+	*/
+
+	// . parse out the title
+	if (rdfParse("d:Title") < 0)
+		goto errEnd;
+
+	titleLen = fillNextTagBody(title, maxTitleLen);
+
+	QUICKPOLL(niceness);
+
+	// . parse out the summary
+	if (rdfParse("d:Description") < 0)
+		goto errEnd;
+
+	summLen = fillNextTagBody(summ, maxSummLen);
+
+	if ( ! printedStart ) {
+		printedStart = true;
+		sb->safePrintf("<ul>");
+	}
+
+	// print it out
+	sb->safePrintf("<li><a href=\"");
+	sb->safeMemcpy ( urlStr , urlStrLen );
+	sb->safePrintf("\">");
+	sb->safeMemcpy ( title , titleLen );
+	sb->safePrintf("</a><br>");
+	sb->safeMemcpy( summ, summLen );
+	sb->safePrintf("<br>");//<br>");
+
+
+	/*
+	// . fill the anchor
+	if (anchor) {
+		if (urlAnchor) {
+			if (urlAnchorLen > maxAnchorLen)
+				urlAnchorLen = maxAnchorLen;
+			memcpy(anchor, urlAnchor, urlAnchorLen);
+			*anchorLen = urlAnchorLen;
+		}
+		else
+			*anchorLen = 0;
+	}
+	*/
+
+	// DO NEXT tag
+	goto nextTag;
+
+errEnd:
+
+	sb->safePrintf("</ul>");
+
+	close(m_rdfStream);
+	return false;
+}
+
+
 
 // . get the title and summary for a specific url
 //   and catid
@@ -857,7 +1079,7 @@ bool Categories::getTitleAndSummary ( char  *urlOrig,
 
 	// . open the file
 	char filename[512];
-	sprintf(filename, "%scat/%s", g_hostdb.m_dir, RDFCONTENT_FILE);
+	sprintf(filename, "%scatdb/%s", g_hostdb.m_dir, RDFCONTENT_FILE);
 	//m_rdfStream.clear();
 	//m_rdfStream.open(filename, ifstream::in);
 	m_rdfStream = open(filename, O_RDONLY | O_NONBLOCK);
@@ -1011,13 +1233,17 @@ errEnd:
 	return false;
 }
 
-// generate sub categories for a given catid
+// . generate sub categories for a given catid
+// . store list of SubCategories into "subCatBuf" return # stored
 long Categories::generateSubCats ( long catid,
-				   SubCategory *subCats,
-				   char **catBuffer,
-				   long  *catBufferSize,
-				   long  *catBufferLen,
-				   bool   allowRealloc ) {
+				   SafeBuf *subCatBuf 
+				   //SubCategory *subCats,
+				   //char **catBuffer,
+				   //long  *catBufferSize,
+				   //long  *catBufferLen,
+				   //bool   allowRealloc 
+				   ) {
+
 	long catIndex;
 	unsigned long fileOffset;
 	unsigned long n;
@@ -1029,17 +1255,24 @@ long Categories::generateSubCats ( long catid,
 	long prefixLen;
 	long nameStart;
 	long nameLen;
-	long catp         = 0;
-	long catBufferInc = *catBufferSize;
-	// lookup the index for this catid
+	long need ;
+	SubCategory *cat;
+	char *p ;
+
+	//long catp         = 0;
+	//long catBufferInc = *catBufferSize;
+	// . lookup the index for this catid
+	// . binary step, guessing to approximate place
+	//   and then scanning from there
 	catIndex = getIndexFromId(catid);
 	if (catIndex < 0)
 		goto errEnd;
 	// get the file offset
 	fileOffset = m_cats[catIndex].m_structureOffset;
 	// open the structure file
+	// catdb/structure.rdf.u8 in utf8
 	char filename[512];
-	sprintf(filename, "%scat/%s", g_hostdb.m_dir, RDFSTRUCTURE_FILE);
+	sprintf(filename, "%scatdb/%s", g_hostdb.m_dir, RDFSTRUCTURE_FILE);
 	//m_rdfStream.clear();
 	//m_rdfStream.open(filename, ifstream::in);
 	m_rdfStream = open(filename, O_RDONLY);
@@ -1066,12 +1299,16 @@ long Categories::generateSubCats ( long catid,
 		log("cat: Error Reading Structure Offset");
 		goto errEnd;
 	}
+	// point to the buffer we just read with m_rdfPtr
 	m_rdfPtr = m_rdfBuffer;
 	m_rdfEnd = &m_rdfBuffer[n];
 	m_currOffset = fileOffset;
 	
 	// parse tags for the sub categories or until we hit /Topic
 nextTag:
+	// . this increments m_rdfPtr until it points to the beginning of a tag
+	// . it may end up reading another chunk from disk
+	// . it memcopies m_tagRecfer to be the name of the tag it points to
 	if (rdfNextTag() < 0)
 		goto gotSubCats;
 	// check for /Topic
@@ -1121,6 +1358,9 @@ nextTag:
 				 false,
 				 0);
 	memcpy(catStr, htmlDecoded, catStrLen);
+	// reset this offset
+	nameStart = 0;
+	nameLen = catStrLen;
 	// get the prefix and name position/length
 	switch (currType) {
 	case SUBCAT_ALTLANG:
@@ -1130,14 +1370,14 @@ nextTag:
 		// prefix is at the start
 		prefixStart = 0;
 		prefixLen   = 0;
-		nameStart   = 0;
+		//nameStart   = 0;
 		// go to the end of the prefix
 		while (catStr[nameStart] != ':') {
 			nameStart++;
 			prefixLen++;
 		}
-		// skip the :Top/
-		nameStart += 5;
+		// skip the : in :Top/
+		nameStart += 1;
 		nameLen = catStrLen - nameStart;
 		break;
 	case SUBCAT_LETTERBAR:
@@ -1145,9 +1385,9 @@ nextTag:
 		prefixStart = catStrLen - 1;
 		prefixLen   = 1;
 		// skip the Top/ for the name
-		nameStart   = 4;
+		//nameStart   = 4;
 		// lose the Top/, keep the end letter
-		nameLen     = catStrLen - 4;
+		//nameLen     = catStrLen - 4;
 		break;
 	// . don't do this because of ltr?
 	//case SUBCAT_RELATED:
@@ -1167,43 +1407,56 @@ nextTag:
 			prefixStart--;
 			prefixLen++;
 		}
-		// name skips Top/
-		nameStart = 4;
-		nameLen   = catStrLen - 4;
+		// name skips Top/ ... no! we include Top now
+		// because we need it so PageResults.cpp can call
+		// currIndex=g_categories->getIndexFromPath(catName,catNameLen)
+		// on this name, and it needs "Top/" because it was part
+		// of the hash of the full name for the category now.
+		// and we lookup the Category record by that hash
+		// in getIndexFromPath().
+		//nameStart = 4;
+		//nameLen   = catStrLen - 4;
 		break;
 	}
 	// . fill the next sub category
-	if (catp + prefixLen + nameLen >= *catBufferSize) {
-		if (!allowRealloc)
-			goto gotSubCats;
-		// realloc the buffer
-		char *re_catBuffer = (char*)mrealloc ( *catBuffer,
-					       *catBufferSize,
-					       *catBufferSize+catBufferInc,
-					       "Categories" );
-		if (!re_catBuffer) {
-			log ( "Could not allocate %li bytes for catBuffer",
-			      *catBufferSize+catBufferInc );
-			g_errno = ENOMEM;
-			goto errEnd;
-		}
-		*catBuffer = re_catBuffer;
-		*catBufferSize += catBufferInc;
-	}
-	// fill the prefix and name in the buffer and subcat
+	// . fill the prefix and name in the buffer and subcat
+	need = sizeof(SubCategory) + prefixLen + 1 + nameLen + 1;
+
+	// reserve space in safebuf for it
+	if ( ! subCatBuf->reserve(need) ) goto errEnd;
+
+	// point to it in safebuf
+	cat = (SubCategory *)(subCatBuf->getBuf());
+
+	cat->m_prefixLen = prefixLen;
+	cat->m_nameLen = nameLen;
+	cat->m_type = currType;
+	p = cat->m_buf;
+	memcpy ( p , catStr + prefixStart , prefixLen );
+	p += prefixLen;
+	*p++ = '\0';
+	memcpy ( p , catStr + nameStart , nameLen );
+	p += nameLen;
+	*p++ = '\0';
+
+	// update safebuf length
+	subCatBuf->incrementLength ( cat->getRecSize() );
+
+	/*
 	subCats[numSubCats].m_prefixOffset = catp;
 	subCats[numSubCats].m_prefixLen    = prefixLen;
 	if (prefixLen > 0) {
 		memcpy(&((*catBuffer)[catp]), &catStr[prefixStart], prefixLen);
 		catp += prefixLen;
 	}
-	subCats[numSubCats].m_nameOffset   = catp;
+	subCats[numSubCats].m_nameOffset   = catBuf->length();//catp;
 	subCats[numSubCats].m_nameLen      = nameLen;
 	if (nameLen > 0) {
 		memcpy(&((*catBuffer)[catp]), &catStr[nameStart], nameLen);
 		catp += nameLen;
 	}
 	subCats[numSubCats].m_type         = currType;
+	*/
 	// next sub cat
 	numSubCats++;
 	if (numSubCats >= MAX_SUB_CATS) {
@@ -1214,14 +1467,14 @@ nextTag:
 	// next tag
 	goto nextTag;
 gotSubCats:
-	*catBufferLen = catp;
+	//*catBufferLen = catp;
 	//m_rdfStream.close();
 	//m_rdfStream.clear();
 	close(m_rdfStream);
 	return numSubCats;
 
 errEnd:
-	*catBufferLen = 0;
+	//*catBufferLen = 0;
 	//m_rdfStream.close();
 	//m_rdfStream.clear();
 	close(m_rdfStream);
@@ -1259,8 +1512,13 @@ long Categories::createDirSearchRequest ( char *requestBuf,
 	char *rrr = r->m_reqBuf.getBufStart();
 	if ( rrr && rrr[0] == 'Z' ) cmd = "ZET";
 	// request
-	p += sprintf(p, "%s /search?dir=%li&dr=0&sc=0&sdir=%li&sdirt=0&c=",
-			cmd, catid, catid);
+	//p += sprintf(p, "%s /search?dir=%li&dr=0&sc=0&sdir=%li&sdirt=0&c=",
+	//		cmd, catid, catid);
+	p += sprintf(p, 
+		     "%s /search?q=gbcatid%%3A%li&dir=%li&dr=0&sc=0&c="
+		     , cmd
+		     , catid
+		     , catid);
 	// coll
 	memcpy(p, coll, collLen);
 	p += collLen;
@@ -1314,7 +1572,7 @@ bool Categories::loadLangTables(void) {
 	unsigned long entries = 0L;
 	char *cp;
 	char *cpEnd = line + 10239;
-	if(!(content = fopen("cat/content.rdf.u8", "r"))) {
+	if(!(content = fopen("catdb/content.rdf.u8", "r"))) {
 		log(LOG_INFO, "cat: could not open content file.\n");
 		return(false);
 	}

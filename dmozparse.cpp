@@ -21,6 +21,11 @@
 bool closeAll ( void *state , void (* callback)(void *state) ) { return true; }
 bool allExit ( ) { return true; };
 
+bool sendPageSEO(TcpSocket *s, HttpRequest *hr) {return true;}
+
+//long g_qbufNeedSave = false;
+//SafeBuf g_qbuf;
+
 #define RDFBUFFER_SIZE    (1024*1024*10)
 #define RDFSTRUCTURE_FILE "structure.rdf.u8"
 #define RDFCONTENT_FILE   "content.rdf.u8"
@@ -167,14 +172,18 @@ char* incRdfPtr( long skip = 1 ) {
 
 // parse the rdf file up past a given start tag
 long rdfParse ( char *tagName ) {
-	bool inQuote = false;
+	//bool inQuote = false;
 	do {
 		long matchPos = 0;
 		// move to the next tag
-		while (*rdfPtr != '<' || inQuote ) {
+		// . quotes are no longer escaped out in the newer
+		//   dmoz files in oct 2013... so take that out. i do
+		//   this < is &lt; though.. perhaps only check for
+		//   quotes when in a tag?
+		while (*rdfPtr != '<' ) { // || inQuote ) {
 			// check for quotes
-			if (*rdfPtr == '"')
-				inQuote = !inQuote;
+			//if (*rdfPtr == '"')
+			//	inQuote = !inQuote;
 			// next char
 			if (!incRdfPtr())
 				return -1;
@@ -200,12 +209,15 @@ long rdfParse ( char *tagName ) {
 
 // move to the next tag in the file
 long rdfNextTag ( ) {
-	bool inQuote = false;
+	//bool inQuote = false;
 	// move to the next tag
-	while (*rdfPtr != '<' || inQuote ) {
+	while (*rdfPtr != '<' ) { // || inQuote ) {
 		// check for quotes
-		if (*rdfPtr == '"')
-			inQuote = !inQuote;
+		// NO! too many unbalanced quotes all over the place!
+		// and i think quotes in tags do not have < or > in them
+		// because they should be encoded as &gt; and &lt;
+		//if (*rdfPtr == '"')
+		//	inQuote = !inQuote;
 		// next char
 		if (!incRdfPtr())
 			return -1;
@@ -395,6 +407,11 @@ long getIndexFromId ( long catid ) {
 		else
 			low  = currCat+1;
 	}
+	//printf("catid %li not found. sanity checking.\n",catid);
+	// sanity check our algo
+	//for ( long i = 0 ; i < numRdfCats ; i++ ) {
+	//	if ( rdfCats[i].m_catid == catid ) { char *xx=NULL;*xx=0;}
+	//}
 	// not found
 	return -1;
 }
@@ -518,7 +535,7 @@ bool isGoodUrl ( char *url, long urlLen ) {
 	if ( urlLen <= 0 )
 		return false;
 	for (long i = 0; i < urlLen; i++) {
-		if (is_space(url[i]))
+		if (is_wspace_a(url[i]))
 			return false;
 	}
 	// check for [prot]://[url]
@@ -546,8 +563,27 @@ long printCatPath ( char *str, long catid, bool raw ) {
 		return 0;
 	// get the parent
 	parentId = rdfCats[catIndex].m_parentid;
-	// print the parent(s) first
-	if (parentId > 1) {
+
+	// . print the parent(s) first
+	// . in NEWER DMOZ dumps, "Top" is catid 2 and catid 1 is an
+	//   empty title. really catid 2 is Top/World but that is an
+	//   error that we correct below. (see "Top/World" below).
+	//   but do not include the "Top/" as part of the path name
+	if ( catid == 2 ) {
+		// no! we now include Top as part of the path. let's
+		// be consistent. i'd rather have www.gigablast.com/Top
+		// and www.gigablast.com/Top/Arts etc. then i know if the
+		// path starts with /Top that it is dmoz!!
+		sprintf(p,"Top");
+		return 3;
+	}
+
+	if (parentId > 1 && 
+	    // the newer dmoz files have the catid == the parent id of
+	    // i guess top most categories, like "Top/Arts"... i would think
+	    // it should have a parentId of 1 like the old dmoz files,
+	    // so it's probably a bug on dmoz's end
+	    parentId != catid ) {
 		p += printCatPath(p, parentId, raw);
 		// print spacing
 		if (!raw) p += sprintf(p, " / ");
@@ -621,18 +657,22 @@ long fixUrl ( char *url, long urlLen ) {
 			memmove(&url[slashi-1], &url[slashi], newUrlLen - slashi);
 			newUrlLen--;
 		}
-		if (is_space(url[slashi])) {
+		if (is_wspace_a(url[slashi])) {
 			memmove(&url[slashi], &url[slashi+1], newUrlLen - (slashi+1));
 			newUrlLen--;
 		}
 	}
 	// remove any anchor
+	// mdw, sep 2013, no because there is twitter.com/#!/ronpaul
+	// and others...
+	/*
 	for (long i = 0; i < newUrlLen; i++) {
 		if (url[i] == '#') {
 			newUrlLen = i;
 			break;
 		}
 	}
+	*/
 	// remove any trailing /
 	if (url[newUrlLen-1] == '/')
 		newUrlLen--;
@@ -670,6 +710,38 @@ long fileWrite ( int fileid, void *buf, size_t count ) {
 	return sizeWrote;
 }
 
+// print special meta tags to tell gigablast to only spider/index
+// the links and not the links of the links. b/c we only want
+// to index the dmoz urls. AND ignore any external error like 
+// ETCPTIMEDOUT when indexing a dmoz url so we can be sure to index
+// all of them under the proper category so our gbcatid:xxx search 
+// works and we can replicate dmoz accurately. see XmlDoc.cpp
+// addOutlinksSpiderRecsToMetaList() and indexDoc() to see
+// where these meta tags come into play.
+void writeMetaTags ( int outStream2 ) {
+	char *str = 
+		"<!-- do not spider the links of the links -->\n"
+		"<meta name=spiderlinkslinks content=0>\n"
+		"<!--ignore tcp timeouts, dns timeouts, etc.-->\n"
+		"<meta name=ignorelinksexternalerrors content=1>\n"
+		"<!--do not index this document, but get links from it-->\n"
+		"<meta name=noindex content=1>\n"
+		// tell gigablast to not do a dns lookup on every
+		// outlink when adding spiderRequests to spiderdb
+		// for each outlink. will save time up front but
+		// will have to be done when spidering the doc.
+		"<!-- do not lookup the ip address of every outlink, "
+		"but use hash of the subdomain as the ip -->\n"
+		"<meta name=usefakeips content=1>\n"
+		;
+	long len = gbstrlen(str);
+	if ( write ( outStream2, str , len ) != len )
+		printf("Error writing to outStream2b\n");
+}
+
+		
+
+
 // main parser
 int main ( int argc, char *argv[] ) {
 	long n;
@@ -678,7 +750,7 @@ int main ( int argc, char *argv[] ) {
 	long m = 0;
 	long newNameBufferSize = 0;
 	long newOffset = 0;
-	char filename[256];
+	char filename[1256];
 	long urlTxtCount = 0;
 	long urlTxtFile  = 0;
 	Url normUrl;
@@ -695,6 +767,8 @@ int main ( int argc, char *argv[] ) {
 	bool splitUrls = false;
 	char mode = MODE_NONE;
 	long totalNEC = 0;
+	char *dir="";
+	bool firstTime;
 
 	// check the options and mode
 	for (long i = 0; i < argc; i++) {
@@ -783,20 +857,29 @@ int main ( int argc, char *argv[] ) {
 		goto errExit;
 	}
 
+	dir = "";
+
+ retry:
+
 	// open the structure file
 	if ( mode == MODE_NEW || mode == MODE_CATDUMP )
-		sprintf(filename, "%s", RDFSTRUCTURE_FILE);
+		sprintf(filename, "%s%s", dir,RDFSTRUCTURE_FILE);
 	else
-		sprintf(filename, "%s.new", RDFSTRUCTURE_FILE);
+		sprintf(filename, "%s%s.new", dir,RDFSTRUCTURE_FILE);
 	//rdfStream.open(filename, ifstream::in);
 	rdfStream = open ( filename, O_RDONLY );
-	// make sure it openned okay
+	// make sure it opened okay
 	//if (!rdfStream.is_open()) {
 	if ( rdfStream < 0 ) {
-		printf("Error Openning %s\n", filename);
+		// try ./catdb/ subdir if not found
+		if ( ! dir[0] ) {
+			dir = "./catdb/";
+			goto retry;
+		}
+		printf("Error Opening %s\n", filename);
 		goto errExit;
 	}
-	printf("Openned Structure File: %s\n", filename);
+	printf("Opened Structure File: %s\n", filename);
 
 	// take the first chunk
 	//rdfStream.read(rdfBuffer, RDFBUFFER_SIZE);
@@ -809,6 +892,7 @@ int main ( int argc, char *argv[] ) {
 	rdfPtr = rdfBuffer;
 	rdfEnd = &rdfBuffer[n];
 	currOffset = 0;
+	firstTime = true;
 
 	// read and parse the file
 	printf("Parsing Topics...\n");
@@ -820,6 +904,13 @@ int main ( int argc, char *argv[] ) {
 		unsigned long catOffset = currOffset - 6;
 		// get the topic name, preserve it on the buffer
 		long nameOffset = nameBufferLen;
+		// the name inserted by this function into "nameBuffer"
+		// does not seem to contain "Top/" at the beginning.
+		// it is from structure.rdf.u8, but it seems to be there!
+		// yeah, later on we hack the name buffer and nameOffset
+		// so it is just the last word in the directory to save
+		// mem. then we print out all the parent names to
+		// reconstruct.
 		long nameLen    = fillNextString();
 		if (nameLen == -1)
 			goto fileEnd;
@@ -827,18 +918,48 @@ int main ( int argc, char *argv[] ) {
 			printf("Out of Memory!\n");
 			goto errExit1;
 		}
+		// fix <Topic r:id=\"\"> in the newer content.rdf.u8
+		if ( nameLen == 0 ) {
+			// only do this once!
+			if ( ! firstTime ) {
+				printf("Encountered zero length name");
+				continue;
+			}
+			memcpy(nameBuffer+nameOffset,"Top\0",4);
+			nameLen = 3;
+			firstTime = false;
+		}
 		// html decode it
 		if (nameLen > MAX_HTTP_FILENAME_LEN)
 			nameLen = MAX_HTTP_FILENAME_LEN;
 		nameLen = htmlDecode ( htmlDecoded,
 				      &nameBuffer[nameOffset],
-				       nameLen );
-		memcpy(&nameBuffer[nameOffset], htmlDecoded, nameLen);
-		nameBufferLen  += nameLen;
+				       nameLen ,
+				       false,
+				       0);
+
 		// parse the catid
 		long catid = parseNextCatid();
 		if (catid == -1)
 			goto fileEnd;
+
+		// crap, in the new dmoz structure.rdf.u8 catid 1 is 
+		// empty name and catid 2 has Topic tag "Top/World" but 
+		// Title tag "Top".
+		// but it should probably be "Top" and not "World". There is 
+		// another catid 3 in structure.rdf.u8 that has 
+		// <Topic r:id="Top/World"> and catid 3 which is the real one,
+		// so catid 2 is just "Top". this is a bug in the dmoz output 
+		// i think, so fix it here.
+		if ( catid == 2 ) {
+			nameLen = 3;
+			memcpy(&nameBuffer[nameOffset],"Top",nameLen); 
+			nameBufferLen += nameLen;
+		}
+		else {
+			memcpy(&nameBuffer[nameOffset], htmlDecoded, nameLen);
+			nameBufferLen  += nameLen;
+		}
 		// . fill the current cat
 		//   make sure there's room
 		if (numRdfCats >= rdfCatsSize) {
@@ -856,6 +977,11 @@ int main ( int argc, char *argv[] ) {
 			printf("Out of Memory!\n");
 			goto errExit1;
 		}
+		// debug
+		//printf("gbcat=");
+		//for ( long i = 0 ; i < nameLen ; i++ )
+		//	printf("%c",htmlDecoded[i]);
+		//printf("\n");
 		// fill it
 		rdfCats[numRdfCats].m_catid           = catid;
 		rdfCats[numRdfCats].m_parentid        = 0;
@@ -923,10 +1049,16 @@ fileEnd:
 	rdfEnd = &rdfBuffer[n];
 	currOffset = 0;
 
+	//
+	// set m_parentid using structure.rdf.u8
+	//
+
 	// read and parse the file again
 	printf("Building Hierarchy...\n");
 	while (true) {
-		// parse the next catid
+		// parse the next catid in the file, sequentially
+		//if ( currOffset == 545468935 )
+		//	printf("shit\n");
 		long catid = parseNextCatid();
 		if (catid == -1)
 			goto fileEnd1;
@@ -977,8 +1109,18 @@ nextChildTag:
 			childNameLen = MAX_HTTP_FILENAME_LEN;
 		childNameLen = htmlDecode ( htmlDecoded,
 					    childName,
-					    childNameLen );
+					    childNameLen ,
+					    false,
+					    0);
 		memcpy(childName, htmlDecoded, childNameLen);
+
+		// debug log
+		//if ( currOffset >= 506362430 ) // 556362463
+		//	printf("off=%li\n",currOffset);
+		// debug point
+		//if ( currOffset == 545467573 )
+		//	printf("GOT DEBUG POINT before giant skip\n");
+
 		// cut off the leading label if symbolic
 //		if (parentType == 2) {
 //			while (*childName != ':') {
@@ -988,20 +1130,27 @@ nextChildTag:
 //			childName++;
 //			childNameLen--;
 //		}
+		// debug point
+		//if (strcmp(childName,"Top/World/Català/Arts") == 0 )
+		//	printf("hey\n");
 		// get the catid for the child
 		long childid = getCatHash(childName, childNameLen);
 		// get the cat for this id
 		long cat = getIndexFromId(childid);
 		// make sure we have a match
 		if (cat == -1) {
-			//printf("Warning: Child Topic Not Found: ");
-			//for (long i = 0; i < childNameLen; i++)
-			//	printf("%c", childName[i]);
-			//printf("\n");
+			// debug. why does Top/World/Catala/Arts
+			// not have a parent??
+			printf("Warning: Child Topic Not Found: ");
+			for (long i = 0; i < childNameLen; i++)
+				printf("%c", childName[i]);
+			printf("\n");
 			m++;
 			goto nextChildTag;
 		}
-		// assign the parent to the cat
+		// . assign the parent to the cat
+		// . this means we are in a "child" tag within the "catid"
+		// . catid 84192 
 		if (parentType == 1) {
 			if (rdfCats[cat].m_parentid != 0)
 				printf("Warning: Overwriting Parent Id!\n");
@@ -1033,6 +1182,14 @@ fileEnd1:
 	printf("  Total Topics:                  %li\n", numRdfCats);
 	printf("  Topics with Parents:           %li\n", t);
 	printf("  Topics Linked but Nonexistent: %li\n", m);
+
+	if ( t != numRdfCats ) {
+		printf("\n"
+		       "  *Topics without parents is bad because they\n"
+		       "   can not have their entired rawPath printed out\n"
+		       "   in order to get their proper hash\n");
+	}
+
 	//printf("  Number of Symbolic Links:      %li\n", numSymParents);
 	printf("\n");
 
@@ -1066,25 +1223,45 @@ fileEnd1:
 	for (long i = 0; i < numRdfCats; i++) {
 		// get the hash of the path
 		rawPathLen = printCatPath(rawPath, rdfCats[i].m_catid, true);
-		rdfCats[i].m_catHash = hash32Lower(rawPath, rawPathLen, 0);
+		// crap, this rawpath contains "Top/" in the beginning
+		// but the rdfCats[i].m_nameOffset refers to a name
+		// that does not include "Top/"
+		rdfCats[i].m_catHash = hash32Lower_a(rawPath, rawPathLen, 0);
+		// fix. so that xyz/Arts does not just hash "Arts"
+		// because it has no parent...
+		if ( rdfCats[i].m_parentid == 0 ) {
+			printf("Missing parent for catid %li. Will be "
+			       "excluded from DMOZ so we avoid hash "
+			       "collisions.\n",rdfCats[i].m_catid);
+		}
+		//
+		// DEBUG!
+		// print this shit out to find the collisions
+		//
+		continue;
+		printf("hash32=%lu catid=%li parentid=%li path=%s\n",
+		       rdfCats[i].m_catHash,
+		       rdfCats[i].m_catid,
+		       rdfCats[i].m_parentid,
+		       rawPath);
 	}
 
 	// . now we want to serialize the needed data into
 	//   one (or more?) file(s) to be quickly read by gb
 	if ( mode == MODE_NEW )
-		sprintf(filename, "%s", STRUCTURE_OUTPUT_FILE);
+		sprintf(filename, "%s%s", dir,STRUCTURE_OUTPUT_FILE);
 	else
-		sprintf(filename, "%s.new", STRUCTURE_OUTPUT_FILE);
+		sprintf(filename, "%s%s.new", dir,STRUCTURE_OUTPUT_FILE);
 	//outStream.open(filename, ofstream::out|ofstream::trunc);
 	outStream = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
 			S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-	// make sure it openned okay
+	// make sure it opened okay
 	//if (!outStream.is_open()) {
 	if ( outStream < 0 ) {
-		printf("Error Openning %s\n", filename);
+		printf("Error Opening %s\n", filename);
 		goto errExit;
 	}
-	printf("\nOpenned %s for writing.\n", filename);
+	printf("\nOpened %s for writing.\n", filename);
 
 	// write the size of the truncated name buffer
 	//outStream.write((char*)&newNameBufferSize, sizeof(long));
@@ -1149,21 +1326,26 @@ contentParse:
 		printf("Out of Memory!\n");
 		goto errExit;
 	}
-	
+
+ again:	
 	// open the content file
 	if ( mode == MODE_NEW ||  mode == MODE_URLDUMP )
-		sprintf(filename, "%s", RDFCONTENT_FILE);
+		sprintf(filename, "%s%s", dir,RDFCONTENT_FILE);
 	else
-		sprintf(filename, "%s.new", RDFCONTENT_FILE);
+		sprintf(filename, "%s%s.new", dir,RDFCONTENT_FILE);
 	//rdfStream.open(filename, ifstream::in);
 	rdfStream = open ( filename, O_RDONLY );
-	// make sure it openned okay
+	// make sure it opened okay
 	//if (!rdfStream.is_open()) {
 	if ( rdfStream < 0 ) {
-		printf("Error Openning %s\n", filename);
+		if ( ! dir[0] ) {
+			dir = "./catdb/";
+			goto again;
+		}
+		printf("Error Opening %s\n", filename);
 		goto errExit;
 	}
-	printf("\nOpenned Content File: %s\n", filename);
+	printf("\nOpened Content File: %s\n", filename);
 
 	// take the first chunk
 	//rdfStream.read(rdfBuffer, RDFBUFFER_SIZE);
@@ -1184,28 +1366,32 @@ contentParse:
 		// write another file for the urls
 		if ( mode == MODE_URLDUMP ) {
 			if (!splitUrls)
-				sprintf(filename, "%s", URLTEXT_OUTPUT_FILE);
+				sprintf(filename, "html/%s", URLTEXT_OUTPUT_FILE);
 			else
-				sprintf(filename, "%s.0", URLTEXT_OUTPUT_FILE);
+				// put them directly into html/ now for
+				// easy add url'ing
+				sprintf(filename, "html/%s.0", URLTEXT_OUTPUT_FILE);
 		}
 		else {
 			if (!splitUrls)
-				sprintf(filename, "%s",
+				sprintf(filename, "html/%s",
 					DIFFURLTEXT_OUTPUT_FILE);
 			else
-				sprintf(filename, "%s.0",
+				sprintf(filename, "html/%s.0",
 					DIFFURLTEXT_OUTPUT_FILE);
 		}
 		//outStream2.open(filename, ofstream::out|ofstream::trunc);
 		outStream2 = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
 					S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-		// make sure it openned okay
+		// make sure it opened okay
 		//if (!outStream2.is_open()) {
 		if ( outStream2 < 0 ) {
-			printf("Error Openning %s\n", filename);
+			printf("Error Opening %s\n", filename);
 			goto errExit1;
 		}
-		printf("Openned %s for writing.\n", filename);
+		printf("Opened %s for writing.\n", filename);
+
+		writeMetaTags ( outStream2 );
 
 		// if we're doing a diffurldump, load up the diff file first
 		if ( mode == MODE_DIFFURLDUMP ) {
@@ -1219,10 +1405,10 @@ contentParse:
 			diffInStream = open(filename, O_RDONLY);
 			//if (!diffInStream.is_open()) {
 			if ( diffInStream < 0 ) {
-				printf("Error Openning %s\n", filename);
+				printf("Error Opening %s\n", filename);
 				goto errExit;
 			}
-			printf("Openned Diff File: %s\n", filename);
+			printf("Opened Diff File: %s\n", filename);
 	
 			// read in the number of urls to update/add
 			//diffInStream.read((char*)&numUpdateIndexes,
@@ -1318,7 +1504,7 @@ contentParse:
 					printf("Completed Writing File.\n");
 					// write another file for the urls
 					urlTxtFile++;
-					sprintf(filename, "%s.%li",
+					sprintf(filename, "html/%s.%li",
 						URLTEXT_OUTPUT_FILE,
 						urlTxtFile);
 					//outStream2.open(filename,
@@ -1326,14 +1512,14 @@ contentParse:
 					outStream2 = open ( filename,
 					  O_CREAT|O_WRONLY|O_TRUNC,
 					  S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-					// make sure it openned okay
+					// make sure it opened okay
 					//if (!outStream2.is_open()) {
 					if ( outStream2 < 0 ) {
-						printf("Error Openning %s\n",
+						printf("Error Opening %s\n",
 						       filename);
 						goto errExit1;
 					}
-					printf("Openned %s for writing.\n",
+					printf("Opened %s for writing.\n",
 					       filename);
 					urlTxtCount = 0;
 				}
@@ -1348,20 +1534,20 @@ contentParse:
 	}
 	else {
 		if ( mode == MODE_NEW )
-			sprintf(filename, "%s", CONTENT_OUTPUT_FILE);
+			sprintf(filename, "%s%s", dir,CONTENT_OUTPUT_FILE);
 		else
-			sprintf(filename, "%s.new", CONTENT_OUTPUT_FILE);
+			sprintf(filename, "%s%s.new", dir,CONTENT_OUTPUT_FILE);
 		// stream the urls into the content
 		//outStream.open(filename, ofstream::out|ofstream::trunc);
 		outStream = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
 				S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-		// make sure it openned okay
+		// make sure it opened okay
 		//if (!outStream.is_open()) {
 		if ( outStream < 0 ) {
-			printf("Error Openning %s\n", filename);
+			printf("Error Opening %s\n", filename);
 			goto errExit;
 		}
-		printf("Openned %s for writing.\n", filename);
+		printf("Opened %s for writing.\n", filename);
 
 		// store a space for the number of urls at the start of the file
 		//outStream.write((char*)&numUrlInfos, sizeof(long));
@@ -1371,7 +1557,7 @@ contentParse:
 			goto errExit;
 		}
 	}
-	
+
 	// read and parse the file again
 	printf("Building Links...\n");
 	while (true) {
@@ -1389,6 +1575,9 @@ contentParse:
 		if ( mode == MODE_URLDUMP || mode == MODE_DIFFURLDUMP )
 			goto nextLink;
 		// . set the content offset for this cat
+		// . it's missing catid 425187... why? because it had
+		//   a double quote in it like '4"'!! so i took out inQuotes
+		//   logic above.
 		cat = getIndexFromId(catid);
 		if (cat == -1) {
 			totalNEC++;
@@ -1442,15 +1631,35 @@ hashLink:
 		// html decode the url
 		if (urlLen > MAX_URL_LEN)
 			urlLen = MAX_URL_LEN;
-		urlLen = htmlDecode(decodedUrl, &urlBuffer[urlOffset], urlLen);
+		urlLen = htmlDecode(decodedUrl, &urlBuffer[urlOffset], urlLen,
+				    false,0);
+		// debug point
+		//if ( strcmp(decodedUrl,"http://twitter.com/#!/ronpaul")==0)
+		//	printf("hey\n");
+
+		// ignore any url with # in it for now like
+		// http://twitter.com/#!/ronpaul because it bastardizes
+		// the meaning of the # (hashtag) and we need to protest that
+		if ( strchr ( decodedUrl , '#' ) )
+			goto nextLink;
+
 		memcpy(&urlBuffer[urlOffset], decodedUrl, urlLen);
 		// fix up bad urls
 		urlLen = fixUrl(&urlBuffer[urlOffset], urlLen);
 		if (urlLen == 0)
 			goto nextLink;
-		// normalize with Url
-		normUrl.set(&urlBuffer[urlOffset], urlLen,
-			    true, false, false, true);
+		// . normalize with Url
+		// . watch out for
+		//   http://twitter.com/#!/ronpaul to http://www.twitter.com/
+		//   so do not strip # hashtags
+		normUrl.set(&urlBuffer[urlOffset], 
+			    urlLen,
+			    true, // addwww?
+			    false, // stripsessionid
+			    false, // strippound?
+			    true); // stripcommonfile? (i.e. index.htm)
+		// debug print
+		//printf("gburl %s -> %s\n",decodedUrl,normUrl.getUrl());
 		// put it back
 		urlLen = normUrl.getUrlLen();
 		if (urlBufferLen+urlLen+10 >= urlBufferSize) {
@@ -1473,7 +1682,7 @@ hashLink:
 		//urlBufferLen += urlLen;
 		// get the hash value
 		unsigned long long urlHash =
-			hash64Lower(&urlBuffer[urlOffset], urlLen, 0);
+			hash64Lower_a(&urlBuffer[urlOffset], urlLen, 0);
 		//unsigned long urlHash2 =
 		//	hash32Lower(&urlBuffer[urlOffset], urlLen, 0);
 		// see if it's already indexed
@@ -1491,6 +1700,10 @@ hashLink:
 				     currUrl == updateIndexes[currDiffIndex] ) {
 					//outStream2.write(&urlBuffer[urlOffset],
 					//		  urlLen);
+					// print it in an anchor tag
+					// now so gigablast can spider
+					// these links
+					write ( outStream2,"<a href=\"",9);
 					if ( write ( outStream2,
 						     &urlBuffer[urlOffset],
 						     urlLen ) != urlLen ) {
@@ -1498,6 +1711,7 @@ hashLink:
 						       "outStream2\n");
 						goto errExit1;
 					}
+					write ( outStream2,"\"></a>",6);
 					//outStream2.write("\n", 1);
 					if (write(outStream2, "\n", 1) != 1) {
 						printf("Error writing to "
@@ -1518,11 +1732,11 @@ hashLink:
 					// write another file for the urls
 					urlTxtFile++;
 					if ( mode == MODE_URLDUMP )
-						sprintf(filename, "%s.%li",
+						sprintf(filename, "html/%s.%li",
 							URLTEXT_OUTPUT_FILE,
 							urlTxtFile);
 					else
-						sprintf(filename, "%s.%li",
+						sprintf(filename, "html/%s.%li",
 							DIFFURLTEXT_OUTPUT_FILE,
 							urlTxtFile);
 					//outStream2.open(filename,
@@ -1530,15 +1744,16 @@ hashLink:
 					outStream2 = open ( filename,
 					  O_CREAT|O_WRONLY|O_TRUNC,
 					  S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-					// make sure it openned okay
+					// make sure it opened okay
 					//if (!outStream2.is_open()) {
 					if ( outStream2 < 0 ) {
-						printf("Error Openning %s\n",
+						printf("Error Opening %s\n",
 						       filename);
 						goto errExit1;
 					}
-					printf("Openned %s for writing.\n",
+					printf("Opened %s for writing.\n",
 					       filename);
+					writeMetaTags ( outStream2 );
 					urlTxtCount = 0;
 				}
 			}
@@ -1634,8 +1849,17 @@ hashLink:
 		long currIndex = getIndexFromId(catid);
 		while (currIndex >= 0) {
 			rdfCats[currIndex].m_numUrls++;
+			// the new dmoz files have catids whose parents
+			// are the same cat id! so stop infinite loops
+			if ( rdfCats[currIndex].m_parentid == 
+			     rdfCats[currIndex].m_catid )
+				break;
+			// otherwise, make "currIndex" point to the parent
 			currIndex = getIndexFromId(
 					rdfCats[currIndex].m_parentid );
+			// in the newer dmoz files 0 is a bad catid i guess
+			// not -1 any more?
+			// ??????
 		}
 
 		goto nextLink;
@@ -1697,19 +1921,19 @@ fileEnd2:
 
 		// load the content and url files
 		// url info (content) file
-		sprintf(filename, "%s", CONTENT_OUTPUT_FILE);
+		sprintf(filename, "%s%s", dir,CONTENT_OUTPUT_FILE);
 		//rdfStream.open(filename, ifstream::in);
 		rdfStream = open ( filename, O_RDONLY );
 		//if (!rdfStream.is_open()) {
 		if ( rdfStream < 0 ) {
-			printf("Error Openning %s\n", CONTENT_OUTPUT_FILE);
+			printf("Error Opening %s\n", filename);
 			goto oldErrExit;
 		}
 		// read in the number of urls
 		//rdfStream.read((char*)&oldNumUrls, sizeof(long));
 		if (fileRead(rdfStream, &oldNumUrls, sizeof(long)) !=
 				sizeof(long)) {
-			printf("Error Reading %s\n", CONTENT_OUTPUT_FILE);
+			printf("Error Reading %s\n", filename);
 			goto oldErrExit;
 		}
 	
@@ -1749,8 +1973,8 @@ fileEnd2:
 			//rdfStream.read((char*)&urlLen, sizeof(short));
 			long n = fileRead(rdfStream, &urlLen, sizeof(short));
 			if ( n < 0 || n > (long)sizeof(short) ) {
-				printf("Error Reading %s\n",
-					CONTENT_OUTPUT_FILE);
+				printf("Error Reading %s\n",filename);
+				//CONTENT_OUTPUT_FILE);
 				goto oldErrExit;
 			}
 			if ( n == 0 )
@@ -1780,8 +2004,8 @@ fileEnd2:
 			}
 			n = fileRead(rdfStream, &oldUrls[urlp], urlLen);
 			if ( n < 0 || n > urlLen ) {
-				printf("Error Reading %s\n",
-					CONTENT_OUTPUT_FILE);
+				printf("Error Reading %s\n",filename);
+				//CONTENT_OUTPUT_FILE);
 				goto oldErrExit;
 			}
 			if ( n == 0 )
@@ -1791,7 +2015,7 @@ fileEnd2:
 			urlLen = fixUrl(&oldUrls[urlp], urlLen);
 			// make the hash
 			oldUrlHashes[currUrl] =
-				hash64Lower(&oldUrls[urlp], urlLen, 0);
+				hash64Lower_a(&oldUrls[urlp], urlLen, 0);
 			removeOldUrl[currUrl] = 0;
 			// increment the buffer pointer
 			if (urlLen <= 0) {
@@ -1814,8 +2038,8 @@ fileEnd2:
 			//rdfStream.read((char*)&oldNumCatids[currUrl], 1);
 			long n = fileRead(rdfStream, &oldNumCatids[currUrl], 1);
 			if ( n < 0 || n > 1 ) {
-				printf("Error Reading %s\n",
-					CONTENT_OUTPUT_FILE);
+				printf("Error Reading %s\n",filename);
+				//CONTENT_OUTPUT_FILE);
 				goto oldErrExit;
 			}
 			if ( n == 0 )
@@ -1839,8 +2063,8 @@ fileEnd2:
 			long readSize = sizeof(long)*oldNumCatids[currUrl];
 			n = fileRead(rdfStream, &oldCatids[catidp], readSize);
 			if ( n < 0 || n > readSize ) {
-				printf("Error Reading %s\n",
-					CONTENT_OUTPUT_FILE);
+				printf("Error Reading %s\n",filename);
+				//CONTENT_OUTPUT_FILE);
 				goto oldErrExit;
 			}
 			if ( n == 0 )
@@ -1907,17 +2131,17 @@ oldIsDifferent:
 		//   also urls to remove
 		//
 		// open the new diff file for writing
-		sprintf(filename, "%s.new.diff", CONTENT_OUTPUT_FILE);
+		sprintf(filename, "%s%s.new.diff", dir,CONTENT_OUTPUT_FILE);
 		//outStream.open(filename, ofstream::out|ofstream::trunc);
 		outStream = open ( filename, O_CREAT|O_WRONLY|O_TRUNC,
 				S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-		// make sure it openned okay
+		// make sure it opened okay
 		//if (!outStream.is_open()) {
 		if ( outStream < 0 ) {
-			printf("Error Openning %s\n", filename);
+			printf("Error Opening %s\n", filename);
 			goto oldErrExit;
 		}
-		printf("\nOpenned %s for writing.\n", filename);
+		printf("\nOpened %s for writing.\n", filename);
 
 		// write out the number of urls to update/add
 		//outStream.write(&numUpdateUrls, sizeof(long));
@@ -2027,19 +2251,19 @@ oldGoodExit:
 	// . now we want to serialize the needed data into
 	//   one (or more?) file(s) to be quickly read by gb
 	if ( mode == MODE_NEW )
-		sprintf(filename, "%s", STRUCTURE_OUTPUT_FILE);
+		sprintf(filename, "%s%s", dir,STRUCTURE_OUTPUT_FILE);
 	else
-		sprintf(filename, "%s.new", STRUCTURE_OUTPUT_FILE);
+		sprintf(filename, "%s%s.new", dir,STRUCTURE_OUTPUT_FILE);
 	//outStream.open(filename, ofstream::out|ofstream::ate);
 	outStream = open ( filename, O_WRONLY|O_APPEND,
 			S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
-	// make sure it openned okay
+	// make sure it opened okay
 	//if (!outStream.is_open()) {
 	if ( outStream < 0 ) {
-		printf("Error Openning %s\n", filename);
+		printf("Error Opening %s\n", filename);
 		goto errExit;
 	}
-	printf("\nOpenned %s for writing.\n", filename);
+	printf("\nOpened %s for writing.\n", filename);
 
 	// write the cats
 	//outStream.write((char*)rdfCats, sizeof(RdfCat)*numRdfCats);
@@ -2109,21 +2333,21 @@ oldGoodExit:
 
 	// write another file for the urls
 	if ( mode == MODE_NEW )
-		sprintf(filename, "%s", CONTENT_OUTPUT_FILE);
+		sprintf(filename, "%s%s", dir,CONTENT_OUTPUT_FILE);
 	else
-		sprintf(filename, "%s.new", CONTENT_OUTPUT_FILE);
+		sprintf(filename, "%s%s.new", dir,CONTENT_OUTPUT_FILE);
 	//outStream.open(filename, ofstream::out|ofstream::ate);
 	outStream = open ( filename, O_WRONLY,
 			S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP );
 	//outStream.open(filename, ofstream::out|ofstream::trunc);
 	//endpos = outStream.tellp();
-	// make sure it openned okay
+	// make sure it opened okay
 	//if (!outStream.is_open()) {
 	if ( outStream < 0 ) {
-		printf("Error Openning %s\n", filename);
+		printf("Error Opening %s\n", filename);
 		goto errExit;
 	}
-	printf("\nOpenned %s for writing.\n", filename);
+	printf("\nOpened %s for writing.\n", filename);
 
 	//outStream.seekp(0);
 	lseek(outStream, 0, SEEK_SET);

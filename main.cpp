@@ -22,7 +22,7 @@
 #include "Titledb.h"
 #include "Revdb.h"
 #include "Tagdb.h"
-//#include "Catdb.h"
+#include "Catdb.h"
 #include "Users.h"
 #include "Tfndb.h"
 #include "Spider.h"
@@ -1390,7 +1390,7 @@ int main ( int argc , char *argv[] ) {
 		char structureFile[256];
 		g_conf.m_maxMem = 1000000000LL; // 1G
 		g_mem.m_maxMem  = 1000000000LL; // 1G
-		sprintf(structureFile, "%scat/gbdmoz.structure.dat", g_hostdb.m_dir);
+		sprintf(structureFile, "%scatdb/gbdmoz.structure.dat", g_hostdb.m_dir);
 		g_categories = &g_categories1;
 		if (g_categories->loadCategories(structureFile) != 0) {
 			log("cat: Loading Categories From %s Failed.", structureFile);
@@ -2633,8 +2633,8 @@ int main ( int argc , char *argv[] ) {
 	if ( ! g_tagdb.init()     ) {
 		log("db: Tagdb init failed." ); return 1; }
 	// the catdb, it's an instance of tagdb, pass RDB_CATDB
-	//if ( ! g_catdb.init()   ) {
-	//	log("db: Catdb1 init failed." ); return 1; }
+	if ( ! g_catdb.init()   ) {
+		log("db: Catdb1 init failed." ); return 1; }
 	// initialize Users
 	if ( ! g_users.init()  ){
 		log("db: Users init failed. "); return 1;}
@@ -2842,7 +2842,7 @@ int main ( int argc , char *argv[] ) {
 
 	// load up the dmoz categories here
 	char structureFile[256];
-	sprintf(structureFile, "%scat/gbdmoz.structure.dat", g_hostdb.m_dir);
+	sprintf(structureFile, "%scatdb/gbdmoz.structure.dat", g_hostdb.m_dir);
 	g_categories = &g_categories1;
 	if (g_categories->loadCategories(structureFile) != 0) {
 		log("cat: Loading Categories From %s Failed.",
@@ -4511,8 +4511,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			if ( h2->m_hostId == 0 ) continue;
 			sprintf(tmp,
 				"rcp "
-				"%scat/content.rdf.u8 "
-				"%s:%scat/content.rdf.u8",
+				"%scatdb/content.rdf.u8 "
+				"%s:%scatdb/content.rdf.u8",
 				dir,
 				iptoa(h2->m_ip),
 				h2->m_dir);
@@ -4520,8 +4520,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/structure.rdf.u8 "
-				"%s:%scat/structure.rdf.u8",
+				"%scatdb/structure.rdf.u8 "
+				"%s:%scatdb/structure.rdf.u8",
 				dir,
 				iptoa(h2->m_ip),
 				h2->m_dir);
@@ -4529,8 +4529,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/gbdmoz.structure.dat "
-				"%s:%scat/gbdmoz.structure.dat",
+				"%scatdb/gbdmoz.structure.dat "
+				"%s:%scatdb/gbdmoz.structure.dat",
 				dir,
 				iptoa(h2->m_ip),
 				h2->m_dir);
@@ -4538,8 +4538,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/gbdmoz.content.dat "
-				"%s:%scat/gbdmoz.content.dat",
+				"%scatdb/gbdmoz.content.dat "
+				"%s:%scatdb/gbdmoz.content.dat",
 				dir,
 				iptoa(h2->m_ip),
 				h2->m_dir);
@@ -4547,8 +4547,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			//system ( tmp );
 			//sprintf(tmp,
 			//	"rcp "
-			//	"%scat/gbdmoz.content.dat.diff "
-			//	"%s:%scat/gbdmoz.content.dat.diff",
+			//	"%scatdb/gbdmoz.content.dat.diff "
+			//	"%s:%scatdb/gbdmoz.content.dat.diff",
 			//	dir,
 			//	iptoa(h2->m_ip),
 			//	h2->m_dir);
@@ -4561,8 +4561,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			if ( h2->m_hostId == 0 ) continue;
 			sprintf(tmp,
 				"rcp "
-				"%scat/content.rdf.u8.new "
-				"%s:%scat/content.rdf.u8.new",
+				"%scatdb/content.rdf.u8.new "
+				"%s:%scatdb/content.rdf.u8.new",
 				dir,
 				iptoa(h2->m_ip),
 				h2->m_dir);
@@ -4570,8 +4570,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/structure.rdf.u8.new "
-				"%s:%scat/structure.rdf.u8.new",
+				"%scatdb/structure.rdf.u8.new "
+				"%s:%scatdb/structure.rdf.u8.new",
 				dir,
 				iptoa(h2->m_ip),
 				h2->m_dir);
@@ -4579,8 +4579,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/gbdmoz.structure.dat.new "
-				"%s:%scat/gbdmoz.structure.dat.new",
+				"%scatdb/gbdmoz.structure.dat.new "
+				"%s:%scatdb/gbdmoz.structure.dat.new",
 				dir,
 				iptoa(h2->m_ip),
 				h2->m_dir);
@@ -4588,8 +4588,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/gbdmoz.content.dat.new "
-				"%s:%scat/gbdmoz.content.dat.new",
+				"%scatdb/gbdmoz.content.dat.new "
+				"%s:%scatdb/gbdmoz.content.dat.new",
 				dir,
 				iptoa(h2->m_ip),
 				h2->m_dir);
@@ -4597,8 +4597,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/gbdmoz.content.dat.new.diff "
-				"%s:%scat/gbdmoz.content.dat.new.diff",
+				"%scatdb/gbdmoz.content.dat.new.diff "
+				"%s:%scatdb/gbdmoz.content.dat.new.diff",
 				dir,
 				iptoa(h2->m_ip),
 				h2->m_dir);
@@ -4694,8 +4694,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			if ( h2->m_hostId == 0 ) continue;
 			sprintf(tmp,
 				"rcp "
-				"%scat/content.rdf.u8 "
-				"%s:%scat/content.rdf.u8",
+				"%scatdb/content.rdf.u8 "
+				"%s:%scatdb/content.rdf.u8",
 				dir,
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir);
@@ -4703,8 +4703,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/structure.rdf.u8 "
-				"%s:%scat/structure.rdf.u8",
+				"%scatdb/structure.rdf.u8 "
+				"%s:%scatdb/structure.rdf.u8",
 				dir,
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir);
@@ -4712,8 +4712,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/gbdmoz.structure.dat "
-				"%s:%scat/gbdmoz.structure.dat",
+				"%scatdb/gbdmoz.structure.dat "
+				"%s:%scatdb/gbdmoz.structure.dat",
 				dir,
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir);
@@ -4721,8 +4721,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/gbdmoz.content.dat "
-				"%s:%scat/gbdmoz.content.dat",
+				"%scatdb/gbdmoz.content.dat "
+				"%s:%scatdb/gbdmoz.content.dat",
 				dir,
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir);
@@ -4730,8 +4730,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			//system ( tmp );
 			//sprintf(tmp,
 			//	"rcp "
-			//	"%scat/gbdmoz.content.dat.diff "
-			//	"%s:%scat/gbdmoz.content.dat.diff",
+			//	"%scatdb/gbdmoz.content.dat.diff "
+			//	"%s:%scatdb/gbdmoz.content.dat.diff",
 			//	dir,
 			//	iptoa(h2->m_ip),
 			//	h2->m_dir);
@@ -4745,8 +4745,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			if ( h2->m_hostId == 0 ) continue;
 			sprintf(tmp,
 				"rcp "
-				"%scat/content.rdf.u8.new "
-				"%s:%scat/content.rdf.u8.new",
+				"%scatdb/content.rdf.u8.new "
+				"%s:%scatdb/content.rdf.u8.new",
 				dir,
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir);
@@ -4754,8 +4754,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/structure.rdf.u8.new "
-				"%s:%scat/structure.rdf.u8.new",
+				"%scatdb/structure.rdf.u8.new "
+				"%s:%scatdb/structure.rdf.u8.new",
 				dir,
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir);
@@ -4763,8 +4763,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/gbdmoz.structure.dat.new "
-				"%s:%scat/gbdmoz.structure.dat.new",
+				"%scatdb/gbdmoz.structure.dat.new "
+				"%s:%scatdb/gbdmoz.structure.dat.new",
 				dir,
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir);
@@ -4772,8 +4772,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/gbdmoz.content.dat.new "
-				"%s:%scat/gbdmoz.content.dat.new",
+				"%scatdb/gbdmoz.content.dat.new "
+				"%s:%scatdb/gbdmoz.content.dat.new",
 				dir,
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir);
@@ -4781,8 +4781,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			system ( tmp );
 			sprintf(tmp,
 				"rcp "
-				"%scat/gbdmoz.content.dat.new.diff "
-				"%s:%scat/gbdmoz.content.dat.new.diff",
+				"%scatdb/gbdmoz.content.dat.new.diff "
+				"%s:%scatdb/gbdmoz.content.dat.new.diff",
 				dir,
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir);
@@ -11036,7 +11036,8 @@ void dumpTagdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_tagdb.init ();
 	g_collectiondb.init(true);
-	g_tagdb.addColl ( coll, false );
+	if ( rdbId == RDB_TAGDB ) g_tagdb.addColl ( coll, false );
+	if ( rdbId == RDB_CATDB ) g_catdb.init();
 	key128_t startKey ;
 	key128_t endKey   ;
 	startKey.setMin();
@@ -11099,6 +11100,23 @@ void dumpTagdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 		// breach check
 		if ( p >= pend ) {
 			printf("corrupt tagdb rec k.n0=%llu",k.n0);
+			continue;
+		}
+		// catdb?
+		if ( rdbId == RDB_CATDB ) {
+			// for debug!
+			CatRec crec;
+			crec.set ( NULL,
+				   data ,
+				   size ,
+				   false);
+			fprintf(stdout,
+				"key=%s caturl=%s #catids=%li version=%li\n"
+			       ,KEYSTR(&k,12)
+			    ,crec.m_url
+			    ,(long)crec.m_numCatids
+			    ,(long)crec.m_version
+			    );
 			continue;
 		}
 		// parse it up
@@ -13997,10 +14015,10 @@ void saveRdbs ( int fd , void *state ) {
 	last = rdb->getLastWriteTime();
 	if ( now - last > delta )
 		if ( ! rdb->close(NULL,NULL,false,false)) return;
-	//rdb = g_catdb.getRdb();
-	//last = rdb->getLastWriteTime();
-	//if ( now - last > delta )
-	//	if ( ! rdb->close(NULL,NULL,false,false)) return;
+	rdb = g_catdb.getRdb();
+	last = rdb->getLastWriteTime();
+	if ( now - last > delta )
+		if ( ! rdb->close(NULL,NULL,false,false)) return;
 	//rdb = g_indexdb.getRdb();
 	//last = rdb->getLastWriteTime();
 	//if ( now - last > delta )

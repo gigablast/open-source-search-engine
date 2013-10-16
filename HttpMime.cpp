@@ -518,6 +518,7 @@ long HttpMime::getContentTypePrivate ( char *s ) {
         else if (!strcasecmp(s,"image/jpeg"              ) ) ct = CT_JPG;
         else if (!strcasecmp(s,"image/png"               ) ) ct = CT_PNG;
         else if (!strcasecmp(s,"image/tiff"              ) ) ct = CT_TIFF;
+        else if (!strncasecmp(s,"image/",6               ) ) ct = CT_IMAGE;
 	else if (!strcasecmp(s,"application/javascript"  ) ) ct = CT_JS;
 	else if (!strcasecmp(s,"application/x-javascript") ) ct = CT_JS;
 	else if (!strcasecmp(s,"text/javascript"         ) ) ct = CT_JS;

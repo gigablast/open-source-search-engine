@@ -1275,10 +1275,12 @@ mallocmemloop:
 		long long avail = (long long)m_maxMem - 
 			(long long)m_used;
 		if ( now - s_lastTime >= 1000LL ) {
-			log("mem: system malloc(%i) availShouldBe=%lli: "
+			log("mem: system malloc(%i,%s) availShouldBe=%lli: "
 			    "%s (%s) (ooms suppressed since "
 			    "last log msg = %li)",
-			    size+UNDERPAD+OVERPAD,avail,
+			    size+UNDERPAD+OVERPAD,
+			    note,
+			    avail,
 			    mstrerror(g_errno),
 			    note,
 			    s_missed);

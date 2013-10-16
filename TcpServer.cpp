@@ -1735,7 +1735,10 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	//log("tcp: closing fd=%i",sd);
 
 	// TODO: does this block or what?
-	long cret = ::close ( sd );
+	long cret = 0;
+	// if sd is 0 do not really close it. seems to fix that bug.
+	// 0 is the FD for stdin so i don't know how that is happening.
+	if ( sd != 0 ) cret = ::close ( sd );
 	if ( cret != 0 ) // == -1 ) 
 		log("tcp: close(%li) = %li = %s",
 		    (long)sd,cret,mstrerror(errno));

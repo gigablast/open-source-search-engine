@@ -53,6 +53,7 @@ enum {
 	RDB2_REVDB2,
 	RDB2_TAGDB2,
 	RDB2_POSDB2, // 31
+	RDB2_CATDB2,
 	RDB_END
 };
 // how many rdbs are in "urgent merge" mode?

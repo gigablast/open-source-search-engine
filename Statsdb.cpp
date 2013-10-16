@@ -80,7 +80,7 @@ static Label s_labels[] = {
 	// . max = -1, means dynamic size the ymax!
 	// . use 1B for now again...
 	// . color=pink
-	{GRAPH_QUANTITY,1000000000.0,"docs_indexed", .1,"%.0fK docs" , .001 , 0x00cc0099,"docs indexed" }
+	{GRAPH_QUANTITY,50000000.0,"docs_indexed", .1,"%.0fK docs" , .001 , 0x00cc0099,"docs indexed" }
 
 
 	//{ "termlist_intersect",0x0000ff00},
@@ -101,6 +101,13 @@ static Label s_labels[] = {
 	//{ "parm_change",0xffc0c0} // pink?
 };
 
+void drawLine3 ( SafeBuf &sb ,
+		 long x1 , 
+		 long x2 ,
+		 long fy1 , 
+		 long color ,
+		 long width ) ;
+
 Label *Statsdb::getLabel ( long labelHash ) {
 	Label **label = (Label **)m_labelTable.getValue ( &labelHash );
 	if ( ! label ) return NULL;
@@ -116,7 +123,7 @@ bool Statsdb::init ( ) {
 
 	// 20 pixel borders
 	m_bx = 10;
-	m_by = 30;
+	m_by = 40;
 
 	// keep it at least at 20MB otherwise it is filling up the tree 
 	// constantly and dumping
@@ -477,6 +484,11 @@ bool Statsdb::makeGIF ( long t1Arg ,
 	m_sb3.reset();
 	m_ht3.reset();
 
+	// print graph in here as a bunch of divs now:
+	m_gw.purge();
+	m_dupTable.reset();
+	m_dupTable.set(4,0,20000,NULL,0,false,0,"statstbl");
+
 	// . start at t1 and get stats lists, up to 1MB of stats at a time
 	// . subtract 60 seconds so we can have a better shot at having
 	//   a moving average for the last SAMPLE points
@@ -495,6 +507,7 @@ bool Statsdb::makeGIF ( long t1Arg ,
 		return true;
 
 	// open the file for the gif
+	/*
 	char fname [ 1024 ];
 	sprintf ( fname , "%s/stats%li.gif" ,
 		  g_hostdb.m_httpRootDir , g_hostdb.m_hostId );
@@ -504,13 +517,16 @@ bool Statsdb::makeGIF ( long t1Arg ,
 		    fname , mstrerror(errno) );
 		return true;
 	}
+	*/
 
 	return gifLoop ();
 }
 
+#define POINTWIDTH 8
+
 #define MAX_POINTS 6000
 #define MAX_WIDTH  6
-#define DY         900              // pixels vertical
+#define DY         600              // pixels vertical
 #define DX         1000             // pixels across
 #define MAX_LINES  (DY / (MAX_WIDTH+1)) // leave free pixel above each line
 
@@ -542,9 +558,9 @@ bool Statsdb::gifLoop ( ) {
 	// shortcut
 	Msg5 *m = &m_msg5;
 
-#ifndef _USEPLOTTER_
-	return true;
-#endif
+	//#ifndef _USEPLOTTER_
+	//return true;
+	//#endif
 
 	// loop over all the lists in the time range, [m_t1,m_t2]
 	for ( ; ! m_done ; ) {
@@ -576,52 +592,86 @@ bool Statsdb::gifLoop ( ) {
 	}
 
 	// define time delta - commented out because it's currently not used.
-	//long dt = m_t2 - m_t1;
+	long dt = m_t2 - m_t1;
 
-#ifdef _USEPLOTTER_
+	//#ifdef _USEPLOTTER_
 
 	// gif size
-	char tmp[64];
+	//char tmp[64];
 	// dimensions of the gif
-	sprintf ( tmp , "%lix%li", (long)DX+m_bx*2 , (long)DY+m_by*2 );
-	GIFPlotter::parampl ( "BITMAPSIZE" , (void *)tmp );
+	//sprintf ( tmp , "%lix%li", (long)DX+m_bx*2 , (long)DY+m_by*2 );
+	//GIFPlotter::parampl ( "BITMAPSIZE" , (void *)tmp );
 	// create one
-	GIFPlotter plotter ( NULL , m_fd , NULL );
+	//GIFPlotter plotter ( NULL , m_fd , NULL );
 	// open it
-	plotter.openpl ( );
+	//plotter.openpl ( );
 
 	// define the space with boundaries 100 unit wide boundaries
-	//plotter.space ( -m_bx , -m_by , DX + m_bx , DY + m_by );
-	plotter.space ( 0 , 0 , DX + m_bx * 2 , DY + m_by * 2 );
+	//plotter.space ( 0 , 0 , DX + m_bx * 2 , DY + m_by * 2 );
 
 	// line thickness in user coordinates (pixels for us)
-	plotter.linewidth ( 1 );       
+	//plotter.linewidth ( 1 );       
 	// set bg color to gray (r/g/b) 
-	plotter.bgcolor ( 0xd600 , 0xce00 , 0xd600 );
-	// set bg color to white (r/g/b) 
-	//plotter.bgcolor ( 0xff00 , 0xff00 , 0xff00 );
+	//plotter.bgcolor ( 0xd600 , 0xce00 , 0xd600 );
 	// erase Plotter's graphics display
-	plotter.erase ();                
+	//plotter.erase ();                
 	// draw axises in black
-	plotter.pencolorname ("black");    
+	//plotter.pencolorname ("black");    
+
+	//
+	// main graphing window
+	//
+	m_gw.safePrintf("<div style=\"position:relative;"
+		      "background-color:#c0c0c0;"
+		      //"overflow-y:hidden;"
+		      "overflow-x:hidden;"
+		      "z-index:-10;"
+		      // the tick marks we print below are based on it
+		      // being a window of the last 20 seconds... and using
+		      // DX pixels
+		      "min-width:%lipx;"
+		      "min-height:%lipx;"
+		      //"width:100%%;"
+		      //"min-height:600px;"
+		      "margin-top:10px;"
+		      "margin-bottom:10px;"
+		      "margin-right:10px;"
+		      "margin-left:10px;\">"
+		      ,(long)DX + 2 *m_bx
+			,(long)DY + 2*m_by);
+
+
 	// draw the x-axis
-	plotter.line ( m_bx , m_by , DX + m_bx , m_by  );
-	// draw the y-axis
-	plotter.line ( m_bx , m_by ,  m_bx , DY + m_by);
+	//plotter.line ( m_bx , m_by , DX + m_bx , m_by  );
+
 	// 10 x-axis tick marks
-	for ( int x = DX/10 + m_bx ; x < DX - m_bx ; x += DX/10 ) {
+	for ( int x = DX/20 ; x <= DX ; x += DX/20 ) {
 		// tick mark
-		plotter.line ( x , m_by - 15 , x , m_by + 15 );
-		// generate label
-		long xv = (long)(dt * (long long)x / (long long)DX) -(long)dt;
-		char buf [ 32 ];
-		// in seconds, so put "s" in there
-		sprintf ( buf , "%lis" , xv );//(float)xv / 1000.0 );
-		// move cursor
-		plotter.move ( x , m_by - m_by / 2 - 9 );
-		// plot label
-		plotter.alabel     ( 'c' , 'c' , buf );
+		//plotter.line ( x , -20 , x , 20 );
+		m_gw.safePrintf("<div style=\"position:absolute;"
+			      "left:%li;"
+			      "bottom:0;"
+			      "background-color:#000000;"
+			      "z-index:110;"
+			      "min-height:20px;"
+			      "min-width:3px;\"></div>\n"
+			      , m_bx + (long)x-1
+			      );
+		long xv = (long)(dt * (long long)x/(long long)DX)-(long)dt;
+		// LABEL
+		m_gw.safePrintf("<div style=\"position:absolute;"
+				"left:%li;"
+				"bottom:20;"
+				//"background-color:#000000;"
+				"z-index:110;"
+				"min-height:20px;"
+				"min-width:3px;\">%lis</div>\n"
+				, (long)x-10 + m_bx
+				// the label:
+				, xv
+				);
 	}
+
 
 	HashTableX tmpht;
 	tmpht.set(4,0,0,NULL,0,false,m_niceness,"statsparms");
@@ -651,7 +701,7 @@ bool Statsdb::gifLoop ( ) {
 
 		// . graph this single graph of this color
 		// . returns ptr to first point of different color!
-		plotGraph ( p , pend , gh , &plotter , zoff );
+		plotGraph ( p , pend , gh , m_gw , zoff );
 		// prevent collisions
 		zoff += 20;
 
@@ -709,7 +759,7 @@ bool Statsdb::gifLoop ( ) {
 		}
 
 		// set the line width
-		plotter.linewidth ( pp->m_thickness );
+		//plotter.linewidth ( pp->m_thickness );
 
 		// get parm hash
 		long colorHash = pp->m_parmHash;
@@ -720,9 +770,9 @@ bool Statsdb::gifLoop ( ) {
 		// . is really the parm hash in disguise
 		long c1 = colorHash & 0x00ffffff;
 		// use the color specified from addStat_r() for this line/pt
-		plotter.pencolor ( ((c1 >> 16) & 0xff) << 8 ,
-				   ((c1 >>  8) & 0xff) << 8 ,
-				   ((c1 >>  0) & 0xff) << 8 );
+		//plotter.pencolor ( ((c1 >> 16) & 0xff) << 8 ,
+		//		   ((c1 >>  8) & 0xff) << 8 ,
+		//		   ((c1 >>  0) & 0xff) << 8 );
 
 		long x1 = pp->m_a;
 		long x2 = pp->m_b;
@@ -731,9 +781,10 @@ bool Statsdb::gifLoop ( ) {
 		if ( x2 < x1 + 10 ) x2 = x1 + 10;
 		// . flip the y so we don't have to scroll the browser down
 		// . DY does not include the axis and tick marks
-		long fy1 = DY - y1 + m_by ;
+		//long fy1 = DY - y1 + m_by ;
 		// plot it
-		plotter.line ( x1 , fy1 , x2 , fy1 );
+		//plotter.line ( x1 , fy1 , x2 , fy1 );
+		drawLine3 ( m_gw , x1 , x2 , y1 , c1 , pp->m_thickness );
 
 		// add to map key? only if we haven't already
 		if ( tmpht.isInTable ( &colorHash ) ) continue;
@@ -785,12 +836,15 @@ bool Statsdb::gifLoop ( ) {
 	//
 
 	// all done
-	if ( plotter.closepl () < 0 ) 
-		log("admin: Could not close performance graph object.");
+	//if ( plotter.closepl () < 0 ) 
+	//	log("admin: Could not close performance graph object.");
 	// close the file
-	fclose ( m_fd );
+	//fclose ( m_fd );
 
-#endif
+	//#endif
+
+	// close main graphing window
+	m_gw.safePrintf("</div>\n");
 
 	return true;
 }
@@ -799,14 +853,9 @@ bool Statsdb::gifLoop ( ) {
 char *Statsdb::plotGraph ( char *pstart , 
 			   char *pend , 
 			   long graphHash , 
-			   GIFPlotter *plotter ,
+			   //GIFPlotter *plotter ,
+			   SafeBuf &gw ,
 			   long zoff ) {
-
-#ifndef _USEPLOTTER_
-
-	return NULL;
-
-#else
 
 	// . use "graphHash" to map to unit display
 	// . this is a disk read volume
@@ -857,19 +906,15 @@ char *Statsdb::plotGraph ( char *pstart ,
 	char *retp = p;
 
 	// set the line width
-	plotter->linewidth ( 1 );
+	//plotter->linewidth ( 1 );
 
 	long color = label->m_color;
 
 	// use the color specified from addStat_r() for this line/pt
-	plotter->pencolor ( ((color >> 16) & 0xff) << 8 ,
-			    ((color >>  8) & 0xff) << 8 ,
-			    ((color >>  0) & 0xff) << 8 );
+	//plotter->pencolor ( ((color >> 16) & 0xff) << 8 ,
+	//		    ((color >>  8) & 0xff) << 8 ,
+	//		    ((color >>  0) & 0xff) << 8 );
 
-
-	// how many points per pixel do we have now
-	//float res = (ymax - ymin) / (float)DY;
-	
 
 	// . the minimum difference between ymax and ymin is minDiff.
 	// . this prevents us from zooming in too close!
@@ -896,7 +941,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 
 
 	// set the line width
-	plotter->linewidth ( 2 );
+	//plotter->linewidth ( 2 );
 
 	// reset for 2nd scan
 	p = pstart;
@@ -940,8 +985,8 @@ char *Statsdb::plotGraph ( char *pstart ,
 		// . flip the y so we don't have to scroll the browser down
 		// . DY does not include the axis and tick marks
 		// . do not flip y any more for statsdb graphs
-		long fy1 = (long)(y1+.5) + m_by ;
-		long fy2 = (long)(y2+.5) + m_by ;
+		long fy1 = (long)(y1+.5);// + m_by ;
+		long fy2 = (long)(y2+.5);// + m_by ;
 
 		// how are we getting -.469 for "query" point?
 		if ( fy1 < 0 ) continue;
@@ -949,7 +994,10 @@ char *Statsdb::plotGraph ( char *pstart ,
 
 		// skip if can't make a line
 		if ( firstPoint ) { 
-			plotter->circle ( x2 , fy2 , 2 );
+			//plotter->circle ( x2 , fy2 , 2 );
+			long width = POINTWIDTH;
+			// draw a 4x4 box now:
+			drawLine3(m_gw,x2-width/2,x2+width/2,fy2,color,width); 
 			firstPoint = false;
 			continue;
 		}
@@ -963,32 +1011,38 @@ char *Statsdb::plotGraph ( char *pstart ,
 
 		// plot it
 		// BUT only iff not more than 5 seconds difference
-		float secondsPerPixel = (m_t2-m_t1)/(float)DX;
-		float dt = (x2 - x1) * secondsPerPixel;
+		//float secondsPerPixel = (m_t2-m_t1)/(float)DX;
 
-		if ( dt <= 13 || x2 - x1 <= 10 )
-			plotter->line ( x1 , fy1 , x2  , fy2 );
+		// avoid this for now. mdw oct 14 2013.
+		//float dt = (x2 - x1) * secondsPerPixel;
+		//if ( dt <= 13 || x2 - x1 <= 10 )
+		//	plotter->line ( x1 , fy1 , x2  , fy2 );
+
 		// circle second point
-		plotter->circle ( x1 , fy1 , 2 );
-		plotter->circle ( x2 , fy2 , 2 );
+		//plotter->circle ( x1 , fy1 , 2 );
+		//plotter->circle ( x2 , fy2 , 2 );
+		// draw a 4x4 boxes now:
+		long width = POINTWIDTH;
+		drawLine3 ( m_gw,x1-width/2, x1+width/2, fy1,color, width); 
+		drawLine3 ( m_gw,x2-width/2, x2+width/2, fy2,color, width); 
 	}
 
-	plotter->linewidth ( 1 );
+	//plotter->linewidth ( 1 );
 
 	// plot unit lines
 	float deltaz = (ymax-ymin) / 6;
 	if ( strstr(label->m_keyDesc,"latency" ) ) {
 		// draw it
-		drawHR ( 400.0 - 111.0 , ymin , ymax , plotter , label , zoff,0xff0000);
-		drawHR ( 600.0 - 111.0 , ymin , ymax , plotter , label , zoff , color);
+		drawHR ( 400.0 - 111.0 , ymin,ymax,m_gw,label,zoff,0xff0000);
+		drawHR ( 600.0-111.0,ymin,ymax,m_gw,label,zoff,color);
 	}
 
 	if ( strstr(label->m_keyDesc,"queries per sec" ) ) {
 		// draw it
 		//deltaz /= 2;
-		//drawHR ( 120.0 , ymin , ymax , plotter , label , zoff , color );
-		//drawHR ( 130.0 , ymin , ymax , plotter , label , zoff , color );
-		drawHR ( 140.0 , ymin , ymax , plotter , label , zoff , color );
+		//drawHR(120.0, ymin , ymax , plotter , label , zoff , color );
+		//drawHR(130.0, ymin , ymax , plotter , label , zoff , color );
+		drawHR ( 140.0 , ymin , ymax ,m_gw , label , zoff , color );
 	}
 
 
@@ -996,18 +1050,19 @@ char *Statsdb::plotGraph ( char *pstart ,
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// draw it
-		drawHR ( z , ymin , ymax , plotter , label , zoff , color );
+		drawHR ( z , ymin , ymax , m_gw , label , zoff , color );
 	}
 
 	return retp;
-#endif
+	//#endif
        
 }
 
 void Statsdb::drawHR ( float z ,
 		       float ymin , 
 		       float ymax ,
-		       GIFPlotter *plotter ,
+		       //GIFPlotter *plotter ,
+		       SafeBuf &gw,
 		       Label *label ,
 		       float zoff ,
 		       long color ) {
@@ -1017,29 +1072,34 @@ void Statsdb::drawHR ( float z ,
 	// avoid collisions with other graphs
 	z2 += zoff;
 	// border
-	z2 += m_by;
+	//z2 += m_by;
 	// round off error
 	z2 += 0.5;
 	// for adjusatmnet
-	//float ptsPerPixel = (ymax-ymin)/ (float)DY;
+	float ptsPerPixel = (ymax-ymin)/ (float)DY;
 	// make an adjustment to the label then! -- Commented out because it's currently not used.
-	//float zadj = zoff * ptsPerPixel;
+	float zadj = zoff * ptsPerPixel;
 
-#ifdef _USEPLOTTER_
+	//#ifdef _USEPLOTTER_
 
 	// use the color specified from addStat_r() for this line/pt
-	plotter->pencolor ( ((color >> 16) & 0xff) << 8 ,
-			    ((color >>  8) & 0xff) << 8 ,
-			    ((color >>  0) & 0xff) << 8 );
+	//plotter->pencolor ( ((color >> 16) & 0xff) << 8 ,
+	//		    ((color >>  8) & 0xff) << 8 ,
+	//		    ((color >>  0) & 0xff) << 8 );
 
 	// horizontal line
-	plotter->line ( m_bx, (long)z2 , DX + m_bx, (long)z2 );
+	//plotter->line ( m_bx, (long)z2 , DX + m_bx, (long)z2 );
+	long width = 1;
+	drawLine3 ( m_gw, 0, DX , (long)z2,color, width); 
+
+
 	// make label
 	char tmp[128];
 	// . use "graphHash" to map to unit display
 	// . this is a disk read volume
 	sprintf(tmp,label->m_format,z +zadj);//* label->m_yscalar);
 
+	/*
 	// a white shadow
 	plotter->pencolor ( 0xffff,0xffff,0xffff );
 	plotter->move ( m_bx + 80 + 2 , z2 + 10 - 2 );
@@ -1060,7 +1120,24 @@ void Statsdb::drawHR ( float z ,
 	plotter->move ( m_bx + 80 , z2 + 10 );
 	// plot label
 	plotter->alabel     ( 'c' , 'c' , tmp );
-#endif
+	*/
+
+	// LABEL
+	gw.safePrintf("<div style=\"position:absolute;"
+		      "left:%li;"
+		      "bottom:%li;"
+		      "color:#%lx;"
+		      "z-index:110;"
+		      "font-size:14px;"
+		      "min-height:20px;"
+		      "min-width:3px;\">%s</div>\n"
+		      , (long)(m_bx)
+		      , (long)z2 +m_by
+		      , color
+		      // the label:
+		      , tmp
+		      );
+	
 }
 
 void gotListWrapper ( void *state , RdbList *list, Msg5 *msg5 ) {
@@ -1289,7 +1366,7 @@ bool Statsdb::addPoint ( long      x        ,
 	// convert x into pixel position
 	float xf = (float)DX * (float)(x - m_t1) / (float)(m_t2 - m_t1);
 	// round it to nearest pixel
-	long  x2 = (long)(xf + .5) + m_bx;
+	long  x2 = (long)(xf + .5) ;//+ m_bx;
 	// make this our y pos
 	float y2 = y;
 	// average values if tied
@@ -1371,7 +1448,7 @@ bool Statsdb::addEventPoint ( long  t1        ,
 	// convert t1 into pixel position
 	float af = (float)DX * (float)(t1 - m_t1) / (float)(m_t2 - m_t1);
 	// round it to nearest pixel
-	long  a = (long)(af + .5) + m_bx;
+	long  a = (long)(af + .5) ;//+ m_bx;
 
 	// convert t2 into pixel position
 	//float bf = (float)DX * (float)(t2 - m_t1) / (float)(m_t2 - m_t1);
@@ -1438,4 +1515,44 @@ bool Statsdb::addEventPoint ( long  t1        ,
 	// crap no room!
 	log("stats: no room in graph for event");
 	return true;
+}
+
+//////////
+//
+// NEW CODE HERE
+//
+//////////
+
+
+// draw a HORIZONTAL line in html
+void Statsdb::drawLine3 ( SafeBuf &sb ,
+		 long x1 , 
+		 long x2 ,
+		 long fy1 , 
+		 long color ,
+		 long width ) {
+
+	// do not draw repeats in the case we have a ton of points to plot
+	long key32 ;
+	key32 = hash32h ( x1  , 0 );
+	key32 = hash32h ( x2  , key32);
+	key32 = hash32h ( fy1 , key32);
+	key32 = hash32h ( color , key32);
+	key32 = hash32h ( width , key32);
+	if ( m_dupTable.isInTable(&key32) ) return;
+	m_dupTable.addKey(&key32);
+
+	sb.safePrintf("<div style=\"position:absolute;"
+		      "left:%li;"
+		      "bottom:%li;"
+		      "background-color:#%lx;"
+		      "z-index:-5;"
+		      "min-height:%lipx;"
+		      "min-width:%lipx;\"></div>\n"
+		      , x1 + m_bx
+		      , (fy1 - width/2) + m_by
+		      , color
+		      , width
+		      , x2 - x1
+		      );
 }

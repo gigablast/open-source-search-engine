@@ -16,8 +16,10 @@
 bool mainShutdown ( bool urgent ) { return true; }
 bool closeAll ( void *state , void (* callback)(void *state) ) {return true;}
 bool allExit ( ) { return true; }
-long g_qbufNeedSave = false;
-SafeBuf g_qbuf;
+//long g_qbufNeedSave = false;
+//SafeBuf g_qbuf;
+bool sendPageSEO(class TcpSocket *s, class HttpRequest *hr) {return true;}
+
 
 int main ( int argc , char *argv[] ) {
 	bool addWWW = true;

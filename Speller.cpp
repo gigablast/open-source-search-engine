@@ -1537,7 +1537,8 @@ bool Speller::findNext( char *s, char *send, char **nextWord, bool *isPorn,
 	long slen = send - s;
 	// check if there is an adult word in there
 	// NOTE: The word 'adult' gives a lot of false positives, so even 
-	// though it is in the isAdult() list, skip it
+	// though it is in the isAdult() list, skip it.
+	// s/slen constitues an individual word.
 	if ( isAdult ( s, slen, &loc ) && strncmp ( s, "adult", 5 ) != 0 ){
 		// if this string starts with the adult word, don't check 
 		// further

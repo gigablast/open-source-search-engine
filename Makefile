@@ -33,13 +33,13 @@ OBJS =  Tfndb.o UdpSlot.o \
 	HttpMime.o Hostdb.o \
 	Highlight.o File.o Errno.o Entities.o \
 	Dns.o Dir.o Conf.o Bits.o \
-	Stats.o BigFile.o AdultBit.o Msg17.o \
+	Stats.o BigFile.o Msg17.o \
 	Speller.o DiskPageCache.o \
 	PingServer.o StopWords.o TopTree.o \
 	Parms.o Pages.o Msg28.o Msg30.o \
 	Unicode.o iana_charset.o Iso8859.o \
 	SearchInput.o \
-	Categories.o Msg2a.o PageCatdb.o PageDirectory.o Msg2b.o \
+	Categories.o Msg2a.o PageCatdb.o PageDirectory.o \
 	SafeBuf.o Datedb.o \
 	UCNormalizer.o UCPropTable.o UnicodeProperties.o \
 	Pops.o Title.o Pos.o LangList.o \
@@ -99,7 +99,7 @@ endif
 # let's keep the libraries in the repo for easier bug reporting and debugging
 # in general if we can. the includes are still in /usr/include/ however...
 # which is kinda strange but seems to work so far.
-#LIBS= -L. ./libplotter.a ./libplot.a ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libgcc.a ./libpthread.a ./libc.a ./libstdc++.a 
+#LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libgcc.a ./libpthread.a ./libc.a ./libstdc++.a 
 
 
 

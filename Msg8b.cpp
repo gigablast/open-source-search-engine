@@ -45,13 +45,13 @@ bool Msg8b::getCatRec  ( Url     *url              ,
 	// clear g_errno
 	g_errno = 0;
 	// warning
-	if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg8b.");
+	//if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg8b.");
 	// store the calling parameters in this class for retrieval by callback
 	m_state          = state;
 	m_callback       = callback;
 	m_url            = url;
-	m_coll           = coll;
-	m_collLen        = collLen;
+	//m_coll           = coll;
+	//m_collLen        = collLen;
 	m_cr             = cr;
 	m_niceness       = niceness;
 
@@ -68,10 +68,10 @@ bool Msg8b::getCatRec  ( Url     *url              ,
 	//m_coll = g_conf.m_dirColl;
 	//m_collLen = gbstrlen(m_coll);
 	// catdb uses a dummy collection now, should not be looked at
-	m_coll = "catdb";
-	m_collLen = 5;
+	//m_coll = "catdb";
+	//m_collLen = 5;
 
-	m_collnum = g_collectiondb.getCollnum ( m_coll , m_collLen );
+	//m_collnum = g_collectiondb.getCollnum ( m_coll , m_collLen );
 
 	// . first, try it by canonical domain name
 	// . if that finds no matches, then try it by ip domain
@@ -90,7 +90,7 @@ bool Msg8b::getCatRec  ( Url     *url              ,
 	//
 	if ( getMyShardNum() != m_shardNum ) {//g_hostdb.m_groupId!=m_groupId){
 		// coll, url, niceness(1), rdbid(1), useCanonicalName(1)
-		long requestSize = m_collLen + m_url->getUrlLen() + 4 + 4;
+		long requestSize = m_url->getUrlLen() + 4 + 3;
 		// make the request
 		char *p = m_request;
 		*(long *)p = m_url->getIp()     ; p+=4;
@@ -98,10 +98,10 @@ bool Msg8b::getCatRec  ( Url     *url              ,
 		*p      = (char)niceness        ; p++;
 		*p      = (char)useCanonicalName; p++;
 		// coll
-		memcpy(p, m_coll, m_collLen);
-		p      += m_collLen;
-		*p      = '\0';
-		p++;
+		//memcpy(p, m_coll, m_collLen);
+		//p      += m_collLen;
+		//*p      = '\0';
+		//p++;
 		// url
 		memcpy(p, m_url->getUrl(), m_url->getUrlLen());
 		 p     += m_url->getUrlLen();
@@ -187,7 +187,7 @@ bool Msg8b::getCatRec  ( Url     *url              ,
 				0        , // max cached age in seconds (60)
 			        false    , // add net recv'd list to cache?
 				RDB_CATDB, // specifies the rdb, 1 = tagdb
-				m_coll   ,
+				"",//NULL,//m_coll   ,
 				//&m_list  ,
 				m_list   ,
 				startKey ,
@@ -546,7 +546,7 @@ bool Msg8b::gotList ( ) {
 	char *rec;
 
 	//rec = g_catdb->getRec ( &m_list , m_url , &recSize );
-	rec = g_catdb.getRec(m_list,m_url,&recSize,m_coll,m_collLen);
+	rec = g_catdb.getRec(m_list,m_url,&recSize,NULL,0);//m_coll,m_collLen);
 
 	// if record found then set it and also set gotIt to true
 	if ( rec ) {
@@ -589,8 +589,8 @@ void Msg8b::getIndirectCatids ( ) {
 					matchRecs,
 					matchRecSizes,
 					MAX_IND_CATIDS,
-					m_coll,
-					m_collLen);
+					NULL,//m_coll,
+					0);//m_collLen);
 	// parse out the catids from the matches
 	m_cr->m_numIndCatids = 0;
 	for ( long i = 0; i < numMatches; i++ ) {

@@ -384,7 +384,10 @@ long Pages::getDynamicPageNumber ( HttpRequest *r ) {
 	}
 	// sanity
 	if ( ! g_categories ) log("process: no categories loaded");
-	// look it up for a category
+
+	//
+	// dmoz - look it up for a category
+	//
 	if ( g_categories &&
 	     g_categories->getIndexFromPath(decodedPath, decodedPathLen) >= 0)
 		return PAGE_DIRECTORY;
@@ -497,6 +500,10 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//	log("login: access denied 3 from ip=%s",iptoa(s->m_ip));
 	//	return sendPageLogin(s,r,"Access Denied. Bad or no password.");
 	//}
+	if ( ! publicPage && ! isLocal && ! isLoopback ) {
+		log("login: access denied 2 from ip=%s",iptoa(s->m_ip));
+		return sendPageLogin ( s , r, "Access Denied. No permission.");
+	}
 
 	g_errno = 0;
 
@@ -635,7 +642,6 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . now, so it can be responsible for calling pg->m_function
 	//if ( userType > USER_PUBLIC ) {
 	// check if user has public page access 
-	//if ( g_users.hasPermission( r, page , s ) ) {
 	if ( isLocal ) { //g_users.hasPermission( r, page , s )){
 		// . this will set various parms
 		// . we know the request came from a host in the cluster

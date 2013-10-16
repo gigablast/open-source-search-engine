@@ -3,6 +3,10 @@
 #include "CollectionRec.h"
 #include "Pages.h"
 #include "Categories.h"
+#include "PageResults.h" // printDMOZSubtopics()
+
+// function is in PageRoot.cpp:
+bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) ;
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
@@ -36,14 +40,61 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 			break;
 		}
 	}
-	// look it up
+	// look it up. returns catId <= 0 if dmoz not setup yet.
 	long catId = g_categories->getIdFromPath(decodedPath, decodedPathLen);
+
+	SafeBuf sb;
+
+	long xml = r->getLong("xml",0);
+
+	// if /Top print the directory homepage
+	if ( catId == 1 || catId <= 0 ) {
+		// this is in PageRoot.cpp
+		printDirHomePage(sb,r);
+	}
+	//
+	// try printing this shit out not as search results right now
+	// but just verbatim from dmoz files
+	//
+	else {
+		// search box
+		printLogoAndSearchBox(sb,r,catId);
+		// radio buttons for search dmoz. no, this is printed
+		// from call to printLogoAndSearchBox()
+		//printDmozRadioButtons(sb,catId);
+		// the dmoz breadcrumb
+		printDMOZCrumb ( sb,catId,xml);
+		// print the subtopcis in this topic. show as links above
+		// the search results
+		printDMOZSubTopics ( sb, catId , xml );
+		// ok, for now just print the dmoz topics since our search
+		// results will be empty... until populated!
+		g_categories->printUrlsInTopic ( &sb , catId );
+	}
+
+	return g_httpServer.sendDynamicPage ( s,
+					      (char*) sb.getBufStart(),
+					      sb.length(),
+					      // 120 seconds cachetime
+					      // don't cache anymore 
+					      // since
+					      // we have the login bar
+					      // @ the top of the page
+					      0,//120, // cachetime
+					      false,// post?
+					      "text/html",
+					      200,
+					      NULL, // cookie
+					      "UTF-8",
+					      r);
+
 
 	// . make a new request for PageResults
 	//Url dirUrl;
 	char requestBuf[1024+MAX_COLL_LEN+128];
 	long requestBufSize = 1024+MAX_COLL_LEN+128;
 	//g_categories.createDirectorySearchUrl ( &dirUrl,
+	log("dmoz: creating search request");
 	long requestBufLen = g_categories->createDirSearchRequest(
 						 requestBuf,
 						 requestBufSize,

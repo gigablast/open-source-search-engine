@@ -68,7 +68,7 @@ bool printScoresHeader ( SafeBuf &sb ) ;
 bool printSingleScore ( SafeBuf &sb , SearchInput *si , SingleScore *ss ,
 			Msg20Reply *mr , Msg40 *msg40 ) ;
 
-
+bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId );
 
 bool sendReply ( State0 *st , char *reply ) {
 
@@ -109,11 +109,11 @@ bool sendReply ( State0 *st , char *reply ) {
 			    STAT_QUERY );
 
 	// add to statsdb, use # of qterms as the value/qty
-	//g_statsdb.addStat ( 0,
-	//		    "query",
-	//		    st->m_startTime,
-	//		    nowms,
-	//		    st->m_q.m_numTerms);
+	g_statsdb.addStat ( 0,
+			    "query",
+			    st->m_startTime,
+			    nowms,
+			    st->m_q.m_numTerms);
 
 	// log the time
 	if ( st->m_took >= g_conf.m_logQueryTimeThreshold ) {
@@ -212,9 +212,13 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	long rawFormat = hr->getLong("xml", 0); // was "raw"
 	long xml = hr->getLong("xml",0);
 
+	// get the dmoz catid if given
+	//long searchingDmoz = hr->getLong("dmoz",0);
+
 	//
 	// send back page frame with the ajax call to get the real
-	// search results
+	// search results. do not do this if a "&dir=" (dmoz category)
+	// is given
 	//
 	if ( hr->getLong("id",0) == 0 && ! xml ) {
 		SafeBuf sb;
@@ -263,7 +267,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		char *qstr = hr->getString("q",&qlen,"",NULL);
 		// . crap! also gotta encode apostrophe since "var url='..."
 		// . true = encodeApostrophes?
-		sb.urlEncode ( qstr , true );
+		sb.urlEncode2 ( qstr , true );
 		// propagate "admin" if set
 		long admin = hr->getLong("admin",-1);
 		if ( admin != -1 ) sb.safePrintf("&admin=%li",admin);
@@ -272,7 +276,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		char *sites = hr->getString("sites",&sitesLen,NULL);
 		if ( sites ) {
 			sb.safePrintf("&sites=");
-			sb.urlEncode ( sites,true);
+			sb.urlEncode2 ( sites,true);
 		}
 		// propagate "prepend"
 		char *prepend = hr->getString("prepend",NULL);
@@ -334,116 +338,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// 
 		// logo header
 		//
-		sb.safePrintf(
-			      // logo and menu table
-			      "<table border=0 cellspacing=5>"
-			      //"style=color:blue;>"
-			      "<tr>"
-			      "<td rowspan=2 valign=top>"
-			      "<a href=/>"
-			      "<img "
-			      "src=http://www.gigablast.com/logo-small.png height=64 width=295>"
-			      "</a>"
-			      "</td>"
-
-			      "<td>"
-			      );
-		// menu above search box
-		sb.safePrintf(
-			      "<br>"
-
-			      " &nbsp; "
-
-			      "<b title=\"Search the web\">"
-			      "web"
-			      "</b>"
-			      "</a>"
-
-			      " &nbsp;&nbsp;&nbsp;&nbsp; "
-			      );
-		//  SEO functionality not included yet - so redir to gigablast.
-		if ( g_conf.m_isMattWells )
-			sb.safePrintf("<a title=\"Rank higher in "
-				      "Google\" href='/seo'>");
-		else
-			sb.safePrintf("<a title=\"Rank higher in "
-				      "Google\" href='https://www.gigablast."
-				      "com/seo'>");
-
-		sb.safePrintf(
-			      "seo"
-			      "</a>"
-
-			      " &nbsp;&nbsp;&nbsp;&nbsp; "
-
-			      "<a title=\"Browse the DMOZ directory\" "
-			      "href=/?c=dmoz3>"
-			      "directory"
-			      "</a>"
-
-			      " &nbsp;&nbsp;&nbsp;&nbsp; "
-
-			      // i'm not sure why this was removed. perhaps
-			      // because it is not working yet because of
-			      // some bugs...
-			      "<!-- <a title=\"Advanced web search\" "
-			      "href=/adv.html>"
-			      "advanced"
-			      "</a>"
-
-			      " &nbsp;&nbsp;&nbsp;&nbsp; -->"
-
-			      "<a title=\"Add your url to the index\" "
-			      "href=/addurl>"
-			      "add url"
-			      "</a>"
-
-			      /*
-			      " &nbsp;&nbsp;|&nbsp;&nbsp; "
-
-			      "<a title=\"Words from Gigablast\" "
-			      "href=/blog.html>"
-			      "blog"
-			      "</a>"
-
-			      " &nbsp;&nbsp;|&nbsp;&nbsp; "
-
-			      "<a title=\"About Gigablast\" href=/about.html>"
-			      "about"
-			      "</a>"
-			      */
-
-			      "<br><br>"
-			       //
-			       // search box
-			       //
-			       "<form name=f method=GET action=/search>\n\n" 
-			       // input table
-			       //"<div style=margin-left:5px;margin-right:5px;>
-			       "<input size=40 type=text name=q value=\""
-		       );
-		// contents of search box
-		sb.htmlEncode ( qstr , qlen , false );
-		sb.safePrintf ("\">");
-		// propagate collection on subsequent searches
-		sb.safePrintf("<input name=c type=hidden value=\"%s\">",coll);
-		sb.safePrintf("<input type=submit value=\"Search\" border=0>"
-			       "<br>"
-			       "<br>"
-			       "Try your search (not secure) on: &nbsp;&nbsp; "
-			       "<a href=https://www.google"
-			       ".com/search?q="
-			       );
-		sb.urlEncode ( qstr );
-		sb.safePrintf (">google</a> &nbsp;&nbsp;&nbsp;&nbsp; "
-			       "<a href=http://www.bing.com/search?q=");
-		sb.urlEncode ( qstr );		
-		sb.safePrintf (">bing</a>"
-			       "</form>\n"
-			       "</td>"
-			       "</tr>"
-			       "</table>\n"
-			       );
+		printLogoAndSearchBox ( sb , hr , -1 ); // catId = -1
 		//
 		// script to populate search results
 		//
@@ -823,6 +718,43 @@ bool gotResults ( void *state ) {
 	       return sendReply(st,NULL);
 	}
 
+
+	// grab the query
+	char  *q    = msg40->getQuery();
+	long   qlen = msg40->getQueryLen();
+
+	//bool xml = si->m_xml;
+
+
+	// if they are doing a search in dmoz, catId will be > 0.
+	//if (  si->m_directCatId >= 0 ) {
+	//	printDMOZCrumb ( sb , si->m_directCatId , xml );
+	//}
+
+
+	///////////
+	//
+	// show DMOZ subcategories if doing either a
+	// "gbpcatid:<catid> |" (Search restricted to category)
+	// "gbcatid:<catid>"    (DMOZ urls in that topic)
+	//
+	// The search gbcatid: results should be sorted by siterank i guess
+	// since it is only search a single term: gbcatid:<catid> so we can
+	// put our stars back onto that and should be sorted by them.
+	//
+	///////////
+	/*
+	if ( si->m_catId >= 0 ) {
+		// print the subtopcis in this topic. show as links above
+		// the search results
+		printDMOZSubTopics ( sb, si->m_catId , xml );//st, xml );
+		// ok, for now just print the dmoz topics since our search
+		// results will be empty... until populated!
+		//g_categories->printUrlsInTopic ( &sb , si->m_catId );
+	}
+	*/
+
+
 	// save how many docs are in it
 	long long docsInColl = -1;
 	//RdbBase *base = getRdbBase ( RDB_CHECKSUMDB , si->m_coll );
@@ -872,9 +804,6 @@ bool gotResults ( void *state ) {
 	// numResults may be more than we requested now!
 	long n = msg40->getDocsWanted();
 	if ( n > numResults )  n = numResults;
-	// grab the query
-	char  *q    = msg40->getQuery();
-	long   qlen = msg40->getQueryLen();
 	// . make the query class here for highlighting
 	// . keepAllSingles means to convert all individual words into
 	//   QueryTerms even if they're in quotes or in a connection (cd-rom).
@@ -1702,6 +1631,60 @@ bool printInlinkText ( SafeBuf &sb , Msg20Reply *mr , SearchInput *si ,
 	return true;
 }
 
+//
+// . print a dmoz topic for the given numeric catid UNDER search result
+// . print "Search in Category" link as well
+//
+static bool printDMOZCategoryUnderResult ( SafeBuf &sb , 
+					   SearchInput *si, 
+					   long catid ,
+					   State0 *st ) {
+
+	uint8_t queryLanguage = langUnknown;
+	// Don't print category if not in native language category
+	// Note that this only trims out "World" cats, not all
+	// of them. Some of them may still sneak in.
+	if(si->m_langHint)
+		queryLanguage = si->m_langHint;
+	if(queryLanguage != langUnknown) {
+		char tmpbuf[1024];
+		SafeBuf langsb(tmpbuf, 1024);
+		g_categories->printPathFromId(&langsb, catid, false);
+		char *ptr = langsb.getBufStart();
+		uint8_t lang = g_langId.findLangFromDMOZTopic(ptr + 7);
+		if(!strncmp("World: ", ptr, 6) &&
+		   lang != langUnknown &&
+		   lang != queryLanguage)
+			// do not print it if not in our language
+			return true;
+	}
+	//////
+	//
+	// print a link to apply your query to this DMOZ category
+	//
+	//////
+	sb.safePrintf("<a href=\"/search?s=0&q=gbipcatid%%3A%li",catid);
+	sb.urlEncode("|",1);
+	sb.urlEncode(si->m_sbuf1.getBufStart(),si->m_sbuf1.length());
+	sb.safePrintf("\">Search in Category</a>: ");
+	
+	// setup the host of the url
+	//if ( dmozHost )
+	//	sb.safePrintf("<a href=\"http://%s/", dmozHost );
+	//else
+	sb.safePrintf("<a href=\"/");
+	// print link
+	g_categories->printPathFromId(&sb, catid, true,si->m_isRTL);
+	sb.safePrintf("/\">");
+	// print the name of the dmoz category
+	sb.safePrintf("<font color=#c62939>");
+	g_categories->printPathFromId(&sb, catid, false,si->m_isRTL);
+	sb.safePrintf("</font></a><br>");
+	//++tr.brCount;
+	return true;
+}
+
+
 // use this for xml as well as html
 static int printResult ( SafeBuf &sb,
 			 State0 *st,
@@ -1826,6 +1809,13 @@ static int printResult ( SafeBuf &sb,
 	if ( mr->m_isBanned && ! si->m_xml )
 		sb.safePrintf("<font color=red><b>BANNED</b></font> ");
 
+	///////
+	//
+	// PRINT THE TITLE
+	//
+	///////
+
+
 	// the a href tag
 	if ( ! si->m_xml ) {
 		sb.safePrintf ( "<a href=" );
@@ -1843,6 +1833,41 @@ static int printResult ( SafeBuf &sb,
 	char  *str  = mr->ptr_tbuf;//msg40->getTitle(i);
 	long strLen = mr->size_tbuf - 1;// msg40->getTitleLen(i);
 	if ( ! str || strLen < 0 ) strLen = 0;
+
+	/////
+	//
+	// are we printing a dmoz category page?
+	// get the appropriate dmoz title/summary to use since the same
+	// url can exist in multiple topics (catIds) with different
+	// titles summaries.
+	//
+	/////
+
+	char *dmozSummary = NULL;
+	// TODO: just get the catid from httprequest directly?
+	if ( si->m_catId > 0 ) { // si->m_cat_dirId > 0) {
+		// . get the dmoz title and summary
+		// . if empty then just a bunch of \0s, except for catIds
+	        Msg20Reply *mr = m20->getReply();
+		char *dmozTitle  = mr->ptr_dmozTitles;
+		dmozSummary = mr->ptr_dmozSumms;
+		char *dmozAnchor = mr->ptr_dmozAnchors;
+		long *catIds     = mr->ptr_catIds;
+		long numCats = mr->size_catIds / 4;
+		// loop through looking for the right ID
+		for (long i = 0; i < numCats ; i++ ) {
+			// assign shit if we match the dmoz cat we are showing
+			if ( catIds[i] ==  si->m_catId) break;
+			dmozTitle +=gbstrlen(dmozTitle)+1;
+			dmozSummary +=gbstrlen(dmozSummary)+1;
+			dmozAnchor += gbstrlen(dmozAnchor)+1;
+		}
+		// now make the title the dmoz title
+		str = dmozTitle;
+		strLen = gbstrlen(str);
+	}
+	
+
 
 	long hlen;
 	//copy all summary and title excerpts for this result into here
@@ -1892,7 +1917,11 @@ static int printResult ( SafeBuf &sb,
 
 	if ( ! si->m_xml ) sb.safePrintf ("</a><br>\n" ) ;
 
+	/////
+	//
 	// print content type after title
+	//
+	/////
 	unsigned char ctype = mr->m_contentType;
 	if ( ctype > 2 && ctype <= 13 ) {
 		char *cs = g_contentTypeStrings[ctype];
@@ -1907,6 +1936,12 @@ static int printResult ( SafeBuf &sb,
 			sb.safePrintf(" (%s) &nbsp;" ,cs);
 	}
 
+	////////////
+	//
+	// print the summary
+	//
+	////////////
+
 	// . then the summary
 	// . "s" is a string of null terminated strings
 	char *send;
@@ -1917,22 +1952,56 @@ static int printResult ( SafeBuf &sb,
 	if ( strLen < 0 ) strLen  = 0;
 	send = str + strLen;
 
+	// dmoz summary might override if we are showing a dmoz topic page
+	if ( dmozSummary ) {
+		str = dmozSummary;
+		strLen = gbstrlen(dmozSummary);
+	}
+
 	if ( si->m_xml ) sb.safePrintf("\t\t<sum><![CDATA[");
-	// print summary out
-	//sb.safeMemcpy ( str , strLen );
+
 	sb.brify ( str , strLen, 0 , cols ); // niceness = 0
-
-	// remove \0's... wtf?
-	//char *xend = sb.getBuf();
-	//char *x    = xend - strLen;
-	//for ( ; x < xend ; x++ ) if ( ! *x ) *x = ' ';
-
 	// close xml tag
 	if ( si->m_xml ) sb.safePrintf("]]></sum>\n");
 	// new line if not xml
 	else if ( strLen ) sb.safePrintf("<br>\n");
 
-	
+	////////////
+	//
+	// . print DMOZ topics under the summary
+	// . will print the "Search in Category" link too
+	//
+	////////////
+	//Msg20Reply *mr = m20->getMsg20Reply();
+	long nCatIds = mr->getNumCatIds();
+	for (long i = 0; i < nCatIds; i++) {
+		long catid = ((long *)(mr->ptr_catIds))[i];
+		printDMOZCategoryUnderResult(sb,si,catid,st);
+	}
+	// skipCatsPrint:
+	// print the indirect category Ids
+	long nIndCatids = mr->size_indCatIds / 4;
+	//if ( !cr->m_displayIndirectDmozCategories )
+	//	goto skipCatsPrint2;
+	for ( long i = 0; i < nIndCatids; i++ ) {
+		long catid = ((long *)(mr->ptr_indCatIds))[i];
+		// skip it if it's a regular category
+		//bool skip = false;
+		long d; for ( d = 0; d < nCatIds; d++) {
+			if (  catid == mr->ptr_catIds[i] ) break;
+		}
+		// skip if the indirect catid matched a directed catid
+		if ( d < nCatIds ) continue;
+		// otherwise print it
+		printDMOZCategoryUnderResult(sb,si,catid,st);
+	}
+
+
+	////////////
+	//
+	// print the URL
+	//
+	////////////
 	// hack off the http:// if any for displaying it on screen
 	if ( urlLen > 8 && strncmp ( url , "http://" , 7 )==0 ) {
 		url += 7; urlLen -= 7; }
@@ -1948,7 +2017,6 @@ static int printResult ( SafeBuf &sb,
 		// so hack off the last slash
 		if ( j < 0 ) urlLen--;
 	}
-
 	if ( ! si->m_xml ) {
 		sb.safePrintf ("<font color=gray>" );
 		//sb.htmlEncode ( url , gbstrlen(url) , false );
@@ -1957,7 +2025,6 @@ static int printResult ( SafeBuf &sb,
 		// turn off the color
 		sb.safePrintf ( "</font>\n" );
 	}
-
 	if ( si->m_xml ) {
 		sb.safePrintf("\t\t<url><![CDATA[");
 		sb.safeMemcpy ( url , urlLen );
@@ -3917,3 +3984,641 @@ bool printSingleScore ( SafeBuf &sb ,
 	//	      "<br>");
 	return true;
 }
+
+////////
+//
+// . print the directory subtopics
+// . show these when we are in a directory topic browsing dmoz
+// . just a list of all the topics/categories
+//
+////////
+bool printDMOZSubTopics ( SafeBuf&  sb, long catId, bool inXml ) {
+
+	if ( catId <= 0 ) return true;
+
+	long currType;
+	bool first;
+	bool nextColumn;
+	long maxPerColumn;
+	long currInColumn;
+	long currIndex;
+	char *prefixp;
+	long prefixLen;
+	char *catName;
+	long catNameLen;
+	char encodedName[2048];
+
+	//SearchInput *si = &st->m_si;
+
+	bool isRTL = g_categories->isIdRTL ( catId );
+
+	SafeBuf subCatBuf;
+	// stores a list of SubCategories into "subCatBuf"
+	long numSubCats = g_categories->generateSubCats ( catId , &subCatBuf );
+
+	// . get the subcategories for a given categoriy
+	// . msg2b::gernerateDirectory() was launched in Msg40.cpp
+	//long numSubCats      = st->m_msg40.m_msg2b.m_numSubCats;
+	//SubCategory *subCats = st->m_msg40.m_msg2b.m_subCats;
+	//char *catBuffer      = st->m_msg40.m_msg2b.m_catBuffer;
+	//bool showAdultOnTop  = st->m_si.m_cr->m_showAdultCategoryOnTop;
+
+
+	// just print <hr> if no sub categories
+	if (inXml) {
+		sb.safePrintf ( "\t<directory>\n"
+				"\t\t<dirId>%li</dirId>\n"
+				"\t\t<dirName><![CDATA[",
+				catId);//si.m_cat_dirId );
+		g_categories->printPathFromId ( &sb, 
+						catId, // st->m_si.m_cat_dirId,
+						true );
+		sb.safePrintf ( "]]></dirName>\n");
+		sb.safePrintf ( "\t\t<dirIsRTL>%li</dirIsRTL>\n",
+				(long)isRTL);
+	}
+
+	char *p    = subCatBuf.getBufStart();
+	char *pend = subCatBuf.getBuf();
+	SubCategory *ptrs[MAX_SUB_CATS];
+	long count = 0;
+
+	if (numSubCats <= 0)
+		goto dirEnd;
+	// print out the cats
+	currType = 0;
+
+	// first make ptrs to them
+	for ( ; p < pend ; ) {
+		SubCategory *cat = (SubCategory *)p;
+		ptrs[count++] = cat;
+		p += cat->getRecSize();
+		// do not breach
+		if ( count >= MAX_SUB_CATS ) break;
+	}
+
+
+	for (long i = 0; i < count ; i++ ) {
+		SubCategory *cat = ptrs[i];
+		first = false;
+		catName = cat->getName();//&catBuffer[subCats[i].m_nameOffset];
+		catNameLen = cat->m_nameLen;//subCats[i].m_nameLen;
+		// this is the last topic in the dmoz dir path
+		// so if the dmoz topic is Top/Arts/Directories then
+		// the prefixp is "Directories"
+		prefixp = cat->getPrefix();//&catBuffer[subCats[i].m_prefixOffset];
+		prefixLen = cat->m_prefixLen;//subCats[i].m_prefixLen;
+		// skip bad categories
+		currIndex=g_categories->getIndexFromPath(catName,catNameLen);
+		if (currIndex < 0)
+			continue;
+		// skip top adult category if we're supposed to
+		/*
+		if ( !inXml && 
+		     st->m_si.m_catId == 1 && 
+		     si->m_familyFilter &&
+		     g_categories->isIndexAdultStart ( currIndex ) )
+			continue;
+		*/
+		// check for room
+		//if (p + subCats[i].m_prefixLen*2 +
+		//	subCats[i].m_nameLen*2 +
+		//	512 > pend){
+		//	goto diroverflow;
+		//}
+		// print simple xml tag for inXml
+		if (inXml) {
+			switch ( cat->m_type ) {
+			case SUBCAT_LETTERBAR:
+				sb.safePrintf ( "\t\t<letterbar><![CDATA[" );
+				sb.safePrintf ( "]]>" );
+				sb.safePrintf ( "<urlcount>%li</urlcount>",
+					g_categories->getNumUrlsFromIndex(
+						currIndex) );
+				sb.safePrintf ( "</letterbar>\n" );
+				break;
+			case SUBCAT_NARROW2:
+				sb.safePrintf ( "\t\t<narrow2><![CDATA[" );
+				sb.utf8Encode2 ( catName, catNameLen );
+				sb.safePrintf ( "]]>");
+				sb.safePrintf ( "<urlcount>%li</urlcount>",
+					g_categories->getNumUrlsFromIndex(
+						currIndex) );
+				sb.safePrintf ( "</narrow2>\n" );
+				break;
+			case SUBCAT_NARROW1:
+				sb.safePrintf ( "\t\t<narrow1><![CDATA[" );
+				sb.utf8Encode2 ( catName, catNameLen );
+				sb.safePrintf ( "]]>" );
+				sb.safePrintf ( "<urlcount>%li</urlcount>",
+					g_categories->getNumUrlsFromIndex(
+						currIndex) );
+				sb.safePrintf ( "</narrow1>\n" );
+				break;
+			case SUBCAT_NARROW:
+				sb.safePrintf ( "\t\t<narrow><![CDATA[" );
+				sb.utf8Encode2 ( catName, catNameLen );
+				sb.safePrintf ( "]]>" );
+				sb.safePrintf ( "<urlcount>%li</urlcount>",
+					g_categories->getNumUrlsFromIndex(
+						currIndex) );
+				sb.safePrintf ( "</narrow>\n" );
+				break;
+			case SUBCAT_SYMBOLIC2:
+				sb.safePrintf ( "\t\t<symbolic2><![CDATA[" );
+				sb.utf8Encode2 ( prefixp, prefixLen  );
+				sb.safePrintf ( ":" );
+				sb.utf8Encode2 ( catName, catNameLen );
+				sb.safePrintf ( "]]>" );
+				sb.safePrintf ( "<urlcount>%li</urlcount>",
+					g_categories->getNumUrlsFromIndex(
+						currIndex) );
+				sb.safePrintf ( "</symbolic2>\n" );
+				break;
+			case SUBCAT_SYMBOLIC1:
+				sb.safePrintf ( "\t\t<symbolic1><![CDATA[" );
+				sb.utf8Encode2 ( prefixp, prefixLen  );
+				sb.safePrintf ( ":" );
+				sb.utf8Encode2 ( catName, catNameLen );
+				sb.safePrintf ( "]]>" );
+				sb.safePrintf ( "<urlcount>%li</urlcount>",
+					g_categories->getNumUrlsFromIndex(
+						currIndex) );
+				sb.safePrintf ( "</symbolic1>\n" );
+				break;
+			case SUBCAT_SYMBOLIC:
+				sb.safePrintf ( "\t\t<symbolic><![CDATA[" );
+				sb.utf8Encode2 ( prefixp, prefixLen  );
+				sb.safePrintf ( ":" );
+				sb.utf8Encode2 ( catName, catNameLen );
+				sb.safePrintf ( "]]>" );
+				sb.safePrintf ( "<urlcount>%li</urlcount>",
+					g_categories->getNumUrlsFromIndex(
+						currIndex) );
+				sb.safePrintf ( "</symbolic>\n" );
+				break;
+			case SUBCAT_RELATED:
+				sb.safePrintf ( "\t\t<related><![CDATA[" );
+				sb.utf8Encode2 ( catName, catNameLen );
+				sb.safePrintf ( "]]>" );
+				sb.safePrintf ( "<urlcount>%li</urlcount>",
+					g_categories->getNumUrlsFromIndex(
+						currIndex) );
+				sb.safePrintf ( "</related>\n" );
+				break;
+			case SUBCAT_ALTLANG:
+				sb.safePrintf ( "\t\t<altlang><![CDATA[" );
+				sb.utf8Encode2 ( prefixp, prefixLen  );
+				sb.safePrintf ( ":" );
+				sb.utf8Encode2 ( catName, catNameLen );
+				sb.safePrintf ( "]]>" );
+				sb.safePrintf ( "<urlcount>%li</urlcount>",
+					g_categories->getNumUrlsFromIndex(
+						currIndex) );
+				sb.safePrintf ( "</altlang>\n");
+				break;
+			}
+			continue;
+		}
+		// print type header
+		if ( cat->m_type - currType >= 10) {
+			// end the last type
+			if (currType == SUBCAT_LETTERBAR)
+				sb.safePrintf(" ]</center>\n");
+			else if (currType != 0)
+				sb.safePrintf ( "\n</span></ul></td></tr>"
+						"</table>\n" );
+			// start the new type
+			switch (cat->m_type) {
+			case SUBCAT_LETTERBAR:
+				sb.safePrintf ( "<span class=\"directory\">"
+						"<center>[ " );
+				break;
+			case SUBCAT_NARROW2:
+			case SUBCAT_SYMBOLIC2:
+			case SUBCAT_NARROW1:
+			case SUBCAT_SYMBOLIC1:
+			case SUBCAT_NARROW:
+			case SUBCAT_SYMBOLIC:
+				sb.safePrintf("<hr>\n");
+				break;
+			case SUBCAT_RELATED:
+				if (currType == 0 ||
+				    currType == SUBCAT_LETTERBAR)
+					sb.safePrintf("<hr>");
+				else
+					sb.safePrintf("<br>");
+				if (isRTL)
+					sb.safePrintf("<span dir=ltr>");
+				sb.safePrintf ( "<b>Related Categories:"
+						"</b>" );
+				if (isRTL)
+					sb.safePrintf("</span>");
+				break;
+			case SUBCAT_ALTLANG:
+				if (currType == 0 ||
+				    currType == SUBCAT_LETTERBAR)
+					sb.safePrintf("<hr>");
+				else
+					sb.safePrintf("<br>");
+				if (isRTL)
+					sb.safePrintf("<span dir=ltr>");
+				sb.safePrintf ( "<b>This category in other"
+						" languages:</b>");
+				if (isRTL)
+					sb.safePrintf("</span>");
+				break;
+			}
+			currType = ( cat->m_type/10)*10;
+			first = true;
+			nextColumn = false;
+			currInColumn = 0;
+			if (currType == SUBCAT_LETTERBAR ||
+			    currType == SUBCAT_RELATED)
+				maxPerColumn = 999;
+			else {
+				// . check how many columns we'll use for this
+				//   type
+				long numInType = 1;
+				for (long j = i+1; j < numSubCats; j++) {
+					if ( ptrs[j]->m_type - currType >= 10)
+						break;
+					numInType++;
+				}
+				// column for every 5, up to 3 columns
+				long numColumns = numInType/5;
+				if ( numInType%5 > 0 ) numColumns++;
+				if ( currType == SUBCAT_ALTLANG &&
+				     numColumns > 4)
+					numColumns = 4;
+				else if (numColumns > 3)
+					numColumns = 3;
+				// max number of links per column
+				maxPerColumn = numInType/numColumns;
+				if (numInType%numColumns > 0)
+					maxPerColumn++;
+			}
+		}
+		// start the sub cat
+		if (first) {
+			if (currType != SUBCAT_LETTERBAR)
+				sb.safePrintf ( "<table border=0>"
+						"<tr><td valign=top>"
+						"<ul><span class=\"directory\">"
+						"\n<li>");
+		}
+		// check for the next column
+		else if (nextColumn) {
+			sb.safePrintf ( "\n</span></ul></td><td valign=top>"
+					"<ul><span class=\"directory\">"
+					"\n<li>");
+			nextColumn = false;
+		}
+		// or just next link
+		else {
+			if (currType == SUBCAT_LETTERBAR)
+				sb.safePrintf("| ");
+			else
+				sb.safePrintf("<li>");
+		}
+		// print out the prefix as a link
+		//if ( p + catNameLen + 16 > pend ) {
+		//	goto diroverflow;
+		//}
+		sb.safePrintf("<a href=\"/");
+		sb.utf8Encode2(catName, catNameLen);
+		sb.safePrintf("/\">");
+		// prefix...
+		//if ( p + prefixLen + 512 > pend ) {
+		//	goto diroverflow;
+		//}
+		if (currType != SUBCAT_ALTLANG)
+			sb.safePrintf("<b>");
+		else {
+			// check for coded <b> or <strong> tags, remove
+			if (prefixLen >= 19 &&
+			    strncasecmp(prefixp, "&lt;b&gt;", 9) == 0 &&
+			    strncasecmp(prefixp + (prefixLen-10), 
+				    "&lt;/b&gt;", 10) == 0) {
+				prefixp += 9;
+				prefixLen -= 19;
+			}
+			else if (prefixLen >= 29 &&
+			    strncasecmp(prefixp, "&lt;strong&gt;", 14) == 0 &&
+			    strncasecmp(prefixp + (prefixLen-15), 
+				    "&lt;/strong&gt;", 15) == 0) {
+				prefixp += 14;
+				prefixLen -= 29;
+			}
+		}
+		if (currType == SUBCAT_RELATED) {
+			// print the full path
+			if (g_categories->isIndexRTL(currIndex))
+				sb.safePrintf("<span dir=ltr>");
+			g_categories->printPathFromIndex (
+							&sb,
+							currIndex,
+							false,
+							isRTL);
+		}
+		else {
+			char *encodeEnd = htmlEncode ( encodedName,
+						       encodedName + 2047,
+						       prefixp,
+						       prefixp + prefixLen );
+			prefixp = encodedName;
+			prefixLen = encodeEnd - encodedName;
+			//if ( p + prefixLen + 512 > pend ) {
+			//	goto diroverflow;
+			//}
+			for (long c = 0; c < prefixLen; c++) {
+				if (*prefixp == '_')
+					//*p = ' ';
+					sb.safePrintf(" ");
+				else
+					//*p = *prefixp;
+					sb.utf8Encode2(prefixp, 1);
+				//p++;
+				prefixp++;
+			}
+		}
+		//if ( p + 512 > pend ) {
+		//	goto diroverflow;
+		//}
+		// end the link
+		if (currType != SUBCAT_ALTLANG)
+			sb.safePrintf("</b>");
+		sb.safePrintf("</a>");
+		// print an @ for symbolic links
+		if ( (cat->m_type % 10) == 1)
+			sb.safePrintf("@");
+		// print number of urls under here
+		if ( cat->m_type != SUBCAT_LETTERBAR) { 
+			sb.safePrintf("&nbsp&nbsp<i>");
+			if (isRTL)
+				sb.safePrintf ( "<span dir=ltr>(%li)"
+						"</span></i>",
+					g_categories->getNumUrlsFromIndex(
+						currIndex) );
+			else
+				sb.safePrintf ( "(%li)</i>",
+					g_categories->getNumUrlsFromIndex(
+						currIndex) );
+		}
+		// next line/letter
+		if ( cat->m_type == SUBCAT_LETTERBAR) {
+			sb.safePrintf(" ");
+			continue;
+		}
+		// check for next column
+		currInColumn++;
+		if (currInColumn >= maxPerColumn) {
+			currInColumn = 0;
+			nextColumn = true;
+		}
+	}
+	//if ( p + 512 > pend ) {
+	//	goto diroverflow;
+	//}
+	// end the last type
+	if (!inXml) {
+		if (currType == SUBCAT_LETTERBAR)
+			sb.safePrintf(" ]</center>\n");
+		else
+			sb.safePrintf("</ul></td></tr></table>\n");
+	}
+dirEnd:
+	if (inXml)
+		sb.safePrintf("\t</directory>\n");
+	else {
+		sb.safePrintf("</span>");
+		sb.safePrintf("<hr>\n");//<br>\n");
+	}
+
+	return true;
+}
+
+bool printDMOZCrumb ( SafeBuf &sb , long catId , bool xml ) {
+
+	// catid -1 means error
+	if ( catId <= 0 ) return true;
+
+	long dirIndex = g_categories->getIndexFromId(catId);
+	//  dirIndex = g_categories->getIndexFromId(si->m_cat_sdir);
+	if (dirIndex < 0) dirIndex = 0;
+	//   display the directory bread crumb
+	//if( (si->m_cat_dirId > 0 && si->m_isAdmin && !si->m_isFriend)
+	//     || (si->m_cat_sdir > 0 && si->m_cat_sdirt != 0) )
+	//	sb.safePrintf("<br><br>");
+	// shortcut. rtl=Right To Left language format.
+	bool rtl = g_categories->isIdRTL ( catId ) ;
+	//st->m_isRTL = rtl;
+	if ( ! xml ) {
+		sb.safePrintf("\n<font size=4><b>");
+		if ( rtl ) sb.safePrintf("<span dir=ltr>");
+		//sb.safePrintf("<a href=\"/Top\">Top</a>: ");
+	}
+	// put crumbin xml?
+	if ( xml ) 
+		sb.safePrintf("<breacdcrumb><![CDATA[");
+	// display the breadcrumb in xml or html?
+	g_categories->printPathCrumbFromIndex(&sb,dirIndex,rtl);
+	
+	if ( xml )
+		sb.safePrintf("]]></breadcrumb>\n" );
+	
+	// how many urls/entries in this topic?
+	long nu =g_categories->getNumUrlsFromIndex(dirIndex);
+
+	// print the num
+	if ( ! xml ) {
+		sb.safePrintf("</b>&nbsp&nbsp<i>");
+		if ( rtl )
+			sb.safePrintf("<span dir=ltr>(%li)</span>",nu);
+		else
+			sb.safePrintf("(%li)", nu);
+		sb.safePrintf("</i></font><br><br>\n");
+	}
+	return true;
+}
+
+bool printDmozRadioButtons ( SafeBuf &sb , long catId ) ;
+
+// if catId >= 1 then print the dmoz radio button
+bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
+
+	sb.safePrintf(
+		      // logo and menu table
+		      "<table border=0 cellspacing=5>"
+		      //"style=color:blue;>"
+		      "<tr>"
+		      "<td rowspan=2 valign=top>"
+		      "<a href=/>"
+		      "<img "
+		      "src=http://www.gigablast.com/logo-small.png "
+		      "height=64 width=295>"
+		      "</a>"
+		      "</td>"
+		      
+		      "<td>"
+		      );
+	// menu above search box
+	sb.safePrintf(
+		      "<br>"
+		      
+		      " &nbsp; "
+		      );
+
+	if ( catId <= 0 )
+		sb.safePrintf("<b title=\"Search the web\">web</b>");
+	else
+		sb.safePrintf("<a title=\"Search the web\" href=/>web</a>");
+
+		      
+	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; "  );
+	//  SEO functionality not included yet - so redir to gigablast.
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<a title=\"Rank higher in "
+			      "Google\" href='/seo'>");
+	else
+		sb.safePrintf("<a title=\"Rank higher in "
+			      "Google\" href='https://www.gigablast."
+			      "com/seo'>");
+	
+	sb.safePrintf(
+		      "seo</a>"
+		      " &nbsp;&nbsp;&nbsp;&nbsp; "
+		      );
+
+	if (catId <= 0 )
+		sb.safePrintf("<a title=\"Browse the DMOZ directory\" "
+			      "href=/Top>"
+			      "directory"
+			      "</a>" );
+	else
+		sb.safePrintf("<b title=\"Browse the DMOZ directory\">"
+			      "directory</b>");
+
+	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; "
+		      
+		      // i'm not sure why this was removed. perhaps
+		      // because it is not working yet because of
+		      // some bugs...
+		      "<!-- <a title=\"Advanced web search\" "
+		      "href=/adv.html>"
+		      "advanced"
+		      "</a>"
+		      
+		      " &nbsp;&nbsp;&nbsp;&nbsp; -->"
+		      
+		      "<a title=\"Add your url to the index\" "
+		      "href=/addurl>"
+		      "add url"
+		      "</a>"
+		      
+		      /*
+			" &nbsp;&nbsp;|&nbsp;&nbsp; "
+			
+			"<a title=\"Words from Gigablast\" "
+			"href=/blog.html>"
+			"blog"
+			"</a>"
+			
+			" &nbsp;&nbsp;|&nbsp;&nbsp; "
+			
+			"<a title=\"About Gigablast\" href=/about.html>"
+			"about"
+			"</a>"
+		      */
+		      
+		      "<br><br>"
+		      //
+		      // search box
+		      //
+		      "<form name=f method=GET action=/search>\n\n" 
+		      // input table
+		      //"<div style=margin-left:5px;margin-right:5px;>
+		      "<input size=40 type=text name=q value=\""
+		      );
+	// contents of search box
+	long  qlen;
+	char *qstr = hr->getString("q",&qlen,"",NULL);
+	sb.htmlEncode ( qstr , qlen , false );
+	sb.safePrintf ("\">"
+		       "<input type=submit value=\"Search\" border=0>"
+		       "<br>"
+		       "<br>"
+		       );
+	if ( catId >= 0 ) {
+		printDmozRadioButtons(sb,catId);
+	}
+	else {
+		sb.safePrintf("Try your search (not secure) on: "
+			      "&nbsp;&nbsp; "
+			      "<a href=https://www.google"
+			      ".com/search?q="
+			      );
+		sb.urlEncode ( qstr );
+		sb.safePrintf (">google</a> &nbsp;&nbsp;&nbsp;&nbsp; "
+			       "<a href=http://www.bing.com/sea"
+			       "rch?q=");
+		sb.urlEncode ( qstr );		
+		sb.safePrintf (">bing</a>");
+	}
+	sb.safePrintf( "</form>\n"
+		       "</td>"
+		       "</tr>"
+		       "</table>\n"
+		       );
+	return true;
+}
+
+bool printDmozRadioButtons ( SafeBuf &sb , long catId ) {
+	sb.safePrintf("Search "
+		      "<input type=radio name=prepend "
+		      "value=gbipcatid:%li checked> sites "
+		      "<input type=radio name=prepend "
+		      "value=gbpcatid:%li> pages "
+		      "in this topic or below"
+		      , catId
+		      , catId
+		      );
+	return true;
+}
+
+/*
+// print the search options under a dmoz search box
+bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
+	// default to entire directory
+	if (sdirt < 1 || sdirt > 4)
+		sdirt = 3;
+
+	// by default search the whole thing
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"3\"");
+	if (sdirt == 3) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Entire Directory<br>\n");
+	// entire category
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"1\"");
+	if (sdirt == 1) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Entire Category<br>\n");
+	// base category only
+	sb.safePrintf("<nobr><input type=\"radio\" name=\"sdirt\" value=\"2\"");
+	if (sdirt == 2) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">"); 
+	sb.safePrintf("Pages in Base Category</nobr><br>\n");
+	// sites in base category
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"7\"");
+	if (sdirt == 7) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Sites in Base Category<br>\n");
+	// sites in entire category
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"6\"");
+	if (sdirt == 6) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Sites in Entire Category<br>\n");
+	// end it
+	return true;
+}
+*/

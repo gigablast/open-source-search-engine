@@ -1244,7 +1244,8 @@ void initTable ( ) {
 	}
 }
 
-bool SafeBuf::urlEncode ( bool spaceToPlus ) {
+//  url encode the whole buffer
+bool SafeBuf::urlEncodeAllBuf ( bool spaceToPlus ) {
 	// this makes things faster
 	if ( ! s_init23 ) initTable();
 	// how many chars do we need?

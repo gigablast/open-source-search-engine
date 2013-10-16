@@ -180,6 +180,9 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	// reset count for nukeJSONObjects() function
+	m_joc = 0;
+
 	// notifications pending?
 	//if ( m_notifyBlocked ) { char *xx=NULL;*xx=0; }
 
@@ -204,6 +207,10 @@ void XmlDoc::reset ( ) {
 	}
 
 	m_isDiffbotJSONObject = false;
+
+	m_dmozBuf.purge();
+	m_fakeIpBuf.purge();
+	m_fakeTagRecPtrBuf.purge();
 
 	m_tlbufTimer = 0LL;
 	m_gsbuf.reset();
@@ -1567,6 +1574,8 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	m_imageDataValid              = true;
 	m_catIdsValid                 = true;
 	m_indCatIdsValid              = true;
+	// ptr_dmozTitles/Summs/Anchors valid:
+	m_dmozInfoValid               = true;
 	m_utf8ContentValid            = true;
 	//m_sectionsReplyValid          = true;
 	//m_sectionsVotesValid          = true;
@@ -2274,9 +2283,85 @@ key_t *XmlDoc::getTitleRecKey() {
 	return &m_titleRecKey;
 }
 
+
+long *XmlDoc::getIndexCode ( ) {
+
+	long *indexCode = getIndexCode2();
+	if ( ! indexCode || indexCode == (void *)-1 ) return indexCode;
+
+	// if zero good!
+	if ( *indexCode == 0 ) return indexCode;
+
+	//
+	// should we neutralize it?
+	//
+	// in the case of indexing dmoz urls outputted from
+	// 'dmozparse urldump -s' it outputs a meta tag 
+	// (<meta name=ignorelinksexternalerrors content=1>) that
+	// indicates to index the links even in the case of some errors,
+	// so that we can be assured to have exactly the same urls the dmoz 
+	// has in our index. so when we do a gbcatid:xxx query we get the same
+	// urls in the search results that dmoz has for that category id.
+	if ( ! m_oldsrValid || ! m_oldsr.m_ignoreExternalErrors ) 
+		return indexCode;
+
+	// only neutralize certain errors
+	if (    *   indexCode != EDNSTIMEDOUT
+		&& *indexCode != ETCPTIMEDOUT 
+		&& *indexCode != EUDPTIMEDOUT
+		// from m_redirError
+		&& *indexCode != EDOCSIMPLIFIEDREDIR
+		&& *indexCode != EDNSDEAD
+		&& *indexCode != ENETUNREACH
+		&& *indexCode != EHOSTUNREACH
+		&& *indexCode != EDOCFILTERED
+		&& *indexCode != EDOCREPEATSPAMMER
+		&& *indexCode != EDOCDUP
+		&& *indexCode != EDOCISERRPG
+		&& *indexCode != EDOCHIJACKED
+		&& *indexCode != EDOCBADHTTPSTATUS
+		&& *indexCode != EDOCDISALLOWED
+		&& *indexCode != EBADCHARSET
+		&& *indexCode != EDOCDUPWWW
+		&& *indexCode != EBADIP
+		&& *indexCode != EDOCEVILREDIRECT // fix video.google.com dmoz
+		&& *indexCode != EBADMIME
+		// index.t and .exe files are in dmoz but those
+		// extensions are "bad" according to Url::isBadExtension()
+		&& *indexCode != EDOCBADCONTENTTYPE
+		// repeat url path components are ok:
+		&& *indexCode != ELINKLOOP
+		&& *indexCode != ECONNREFUSED
+		// malformed sections:
+		&& *indexCode != EDOCBADSECTIONS
+		&& *indexCode != ECORRUPTHTTPGZIP
+		)
+		return indexCode;
+
+	// ok, neutralize it
+	*indexCode = 0;
+
+	// if we could not get an ip we need to make a fake one 
+	if ( ! m_ipValid || m_ip == 0 || m_ip == -1 ) {
+		log("build: ip unattainable. forcing ip address of %s "
+		    "to 10.5.123.45",m_firstUrl.m_url);
+		m_ip = atoip("10.5.123.45");
+		m_ipValid = true;
+	}
+
+	// make certain things valid to avoid core in getNewSpiderReply()
+	if ( ! m_crawlDelayValid ) {
+		m_crawlDelayValid = true;
+		m_crawlDelay      = -1;
+	}
+
+	return indexCode;
+}
+		
+
 // . return NULL and sets g_errno on error
 // . returns -1 if blocked
-long *XmlDoc::getIndexCode ( ) {
+long *XmlDoc::getIndexCode2 ( ) {
 
 	// return it now if we got it already
 	if ( m_indexCodeValid ) return &m_indexCode;
@@ -2843,6 +2928,121 @@ char *XmlDoc::prepareToMakeTitleRec ( ) {
 	return (char *)1;
 }
 
+#define MAX_DMOZ_TITLES 10
+
+long *XmlDoc::getNumDmozEntries() {
+	long **getDmozCatIds();
+	long nc = size_catIds / 4;
+	if ( nc > MAX_DMOZ_TITLES ) nc = MAX_DMOZ_TITLES;
+	m_numDmozEntries = nc;
+	return &m_numDmozEntries;
+}
+// list of \0 terminated titles, etc. use getNumDmozTitles() to get #
+char **XmlDoc::getDmozTitles ( ) {
+	// returns false if blocked
+	if ( ! setDmozInfo() ) return (char **)-1;
+	if ( g_errno ) return NULL;
+	return &ptr_dmozTitles;
+}
+char **XmlDoc::getDmozSummaries ( ) {
+	// returns false if blocked
+	if ( ! setDmozInfo() ) return (char **)-1;
+	if ( g_errno ) return NULL;
+	return &ptr_dmozSumms;
+}
+char **XmlDoc::getDmozAnchors ( ) {
+	// returns false if blocked
+	if ( ! setDmozInfo() ) return (char **)-1;
+	if ( g_errno ) return NULL;
+	return &ptr_dmozAnchors;
+}
+
+
+// returns false if blocked, true otherwise. sets g_errno on error & rets true
+bool XmlDoc::setDmozInfo () {
+
+	if ( m_dmozInfoValid ) return true;
+
+	g_errno = 0;
+
+	// return true and set g_errno on error
+	if ( ! m_dmozBuf.reserve(12000) ) {
+		log("xmldoc: error getting dmoz info: %s",mstrerror(g_errno));
+		// ensure log statement does not clear g_errno
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		return true;
+	}
+
+	// start here
+	char *dmozBuf = m_dmozBuf.getBufStart();
+
+	char *titles  = dmozBuf;
+	char *summs   = dmozBuf+5000;
+	char *anchors = dmozBuf+10000;
+	// the end of it
+	char *dtend = dmozBuf + 5000;
+	char *dsend = dmozBuf + 10000;
+	char *daend = dmozBuf + 12000;
+	// point into those bufs
+	char *dt = titles;
+	char *ds = summs;
+	char *da = anchors;
+	// MDW: i limit this to 10 to save stack space!
+	long nc = size_catIds / 4;
+	if ( nc > MAX_DMOZ_TITLES ) nc = MAX_DMOZ_TITLES;
+	for (long i = 0; i < nc ; i++) {
+		// breathe
+		QUICKPOLL ( m_niceness );
+		// temp stuff
+		long dtlen = 0;
+		long dslen = 0;
+		unsigned char dalen = 0;
+
+		// . store all dmoz info separated by \0's into titles[] buffer
+		// . crap, this does a disk read and blocks on that
+		//
+		// . TODO: make it non-blocking!!!!
+		//
+		g_categories->getTitleAndSummary ( m_firstUrl.getUrl(),
+						   m_firstUrl.getUrlLen(),
+						   ptr_catIds[i],
+						   dt,//&titles[titlesLen],
+						   &dtlen,//&titleLens[i],
+						   dtend-dt,
+						   ds,//&summs[summsLen],
+						   &dslen,//&summLens[i],
+						   dsend-ds,
+						   da,//&anchors[anchorsLen],
+						   &dalen,//&anchorLens[i],
+						   daend-da,
+						   m_niceness);
+		// advance ptrs
+		dt += dtlen;
+		ds += dslen;
+		da += dalen;
+		// null terminate
+		if ( dtlen>0 && dt[dtlen-1]!='\0' ) { *dt++=0; dtlen++; }
+		if ( dslen>0 && ds[dslen-1]!='\0' ) { *ds++=0; dslen++; }
+		if ( dalen>0 && da[dalen-1]!='\0' ) { *da++=0; dalen++; }
+		// must always be something!
+		if ( dtlen==0 ) {*dt++=0; dtlen++;}
+		if ( dslen==0 ) {*ds++=0; dslen++;}
+		if ( dalen==0 ) {*da++=0; dalen++;}
+	}
+
+	// set these
+	ptr_dmozTitles   = titles;
+	ptr_dmozSumms    = summs;
+	ptr_dmozAnchors  = anchors;
+	size_dmozTitles  = dt - titles;
+	size_dmozSumms   = ds - summs;
+	size_dmozAnchors = da - anchors;
+
+	m_dmozInfoValid = true;
+	return true;
+}
+
+
 // . return NULL and sets g_errno on error
 // . returns -1 if blocked
 char **XmlDoc::getTitleRec ( ) {
@@ -2960,6 +3160,7 @@ char **XmlDoc::getTitleRec ( ) {
 	if ( ! m_imageDataValid              ) { char *xx=NULL;*xx=0; }
 	if ( ! m_catIdsValid                 ) { char *xx=NULL;*xx=0; }
 	if ( ! m_indCatIdsValid              ) { char *xx=NULL;*xx=0; }
+	if ( ! m_dmozInfoValid               ) { char *xx=NULL;*xx=0; }
 	// if m_recycleContent is true, these are not valid
 	if ( ! m_recycleContent ) {
 		if ( ! m_rawUtf8ContentValid         ) { char *xx=NULL;*xx=0; }
@@ -3004,6 +3205,12 @@ char **XmlDoc::getTitleRec ( ) {
 	//char          titles     [10*1024];
 	//char          summs      [10*4096];
 	//char          anchors    [10* 256];
+
+	/*
+
+	  MDW oct 12 2013 -
+	  why is this here? we should store this info at spider time?
+	  
 	char *titles  = m_dmozBuf;
 	char *summs   = m_dmozBuf+5000;
 	char *anchors = m_dmozBuf+10000;
@@ -3026,7 +3233,11 @@ char **XmlDoc::getTitleRec ( ) {
 		long dslen = 0;
 		unsigned char dalen = 0;
 
-		// store all dmoz info separated by \0's into titles[] buffer
+		// . store all dmoz info separated by \0's into titles[] buffer
+		// . crap, this does a disk read and blocks on that
+		//
+		// . TODO: make it non-blocking!!!!
+		//
 		g_categories->getTitleAndSummary ( m_firstUrl.getUrl(),
 						   m_firstUrl.getUrlLen(),
 						   ptr_catIds[i],
@@ -3061,6 +3272,7 @@ char **XmlDoc::getTitleRec ( ) {
 	size_dmozTitles  = dt - titles;
 	size_dmozSumms   = ds - summs;
 	size_dmozAnchors = da - anchors;
+	*/
 
 	// set our crap that is not necessarily set
 	//ptr_firstUrl   = m_firstUrl.getUrl();
@@ -3269,7 +3481,8 @@ static Needle s_dirtyWords []  = {
 	{"stripper"   ,0,1,0,0,NULL,0,NULL},
 	{"softcore"   ,0,2,0,0,NULL,0,NULL}, 
 	{"whore"      ,0,2,0,0,NULL,0,NULL},
-	{"slut"       ,0,2,0,0,NULL,0,NULL},
+	// gary slutkin on ted.com. make this just 1 point.
+	{"slut"       ,0,1,0,0,NULL,0,NULL},
 	{"smut"       ,0,2,0,0,NULL,0,NULL},
 	{"tits"       ,0,2,0,0,NULL,0,NULL},
 	{"lesbian"    ,0,2,0,0,NULL,0,NULL},
@@ -3296,7 +3509,9 @@ static Needle s_dirtyWords []  = {
 	{"bestial"    ,0,2,0,0,NULL,0,NULL},
 	{"beastial"   ,0,2,0,0,NULL,0,NULL},
 	{"kink"       ,0,2,0,0,NULL,0,NULL},
-	{"sex"        ,0,2,0,0,NULL,0,NULL},	       
+	// . "sex" is often substring in tagids. 
+	// . too many false positives, make "1" not "2"
+	{"sex"        ,0,1,0,0,NULL,0,NULL}, 
 	{"anal"       ,0,2,0,0,NULL,0,NULL},
 	{"cum"        ,0,2,0,0,NULL,0,NULL},  // often used for cumulative
 	{"clit"       ,0,2,0,0,NULL,0,NULL},
@@ -3305,7 +3520,7 @@ static Needle s_dirtyWords []  = {
 	{"wank"       ,0,2,0,0,NULL,0,NULL},
 	{"fick"       ,0,2,0,0,NULL,0,NULL},
 	{"eroti"      ,0,2,0,0,NULL,0,NULL},
-	{"gay"        ,0,2,0,0,NULL,0,NULL},
+	{"gay"        ,0,1,0,0,NULL,0,NULL}, // make 1 pt. 'marvin gay'
 	// new stuff not in Url.cpp
 	{"thong"      ,0,1,0,0,NULL,0,NULL},
 	{"masturbat"  ,0,2,0,0,NULL,0,NULL},	
@@ -3324,36 +3539,51 @@ static Needle s_dirtyWords []  = {
 	{"shit"       ,0,2,0,0,NULL,0,NULL},
 	{"naked"      ,0,1,0,0,NULL,0,NULL},
 	{"nympho"     ,0,2,0,0,NULL,0,NULL},
-	{"hardcore"   ,0,2,0,0,NULL,0,NULL},
+	{"hardcore"   ,0,1,0,0,NULL,0,NULL}, // hardcore gamer, count as 1
 	{"sodom"      ,0,2,0,0,NULL,0,NULL},
 	{"titties"    ,0,2,0,0,NULL,0,NULL}, // re-do
 	{"twat"       ,0,2,0,0,NULL,0,NULL},
 	{"bastard"    ,0,1,0,0,NULL,0,NULL},
 	{"erotik"     ,0,2,0,0,NULL,0,NULL},
 
+	// EXCEPTIONS
+
+	// smut
+	{"transmut"    ,0,-2,0,0,NULL,0,NULL},
+	{"bismuth"     ,0,-2,0,0,NULL,0,NULL},
+
+	// sex
+	{"middlesex"   ,0,-1,0,0,NULL,0,NULL},
+	{"sussex"      ,0,-1,0,0,NULL,0,NULL},
+	{"essex"       ,0,-1,0,0,NULL,0,NULL},
+	{"deusex"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexchange"   ,0,-1,0,0,NULL,0,NULL},
+	{"sexpress"    ,0,-1,0,0,NULL,0,NULL},
+	{"sexpert"     ,0,-1,0,0,NULL,0,NULL},
+
 
 	// EXCEPTIONS
 
 	// sex
-	{"middlesex"   ,0,-2,0,0,NULL,0,NULL},
-	{"sussex"      ,0,-2,0,0,NULL,0,NULL},
-	{"essex"       ,0,-2,0,0,NULL,0,NULL},
-	{"deusex"      ,0,-2,0,0,NULL,0,NULL},
-	{"sexchange"   ,0,-2,0,0,NULL,0,NULL},
-	{"sexpress"    ,0,-2,0,0,NULL,0,NULL},
-	{"sexpert"     ,0,-2,0,0,NULL,0,NULL},
-	{"sexcel"      ,0,-2,0,0,NULL,0,NULL},
-	{"sexist"      ,0,-2,0,0,NULL,0,NULL},
-	{"sexile"      ,0,-2,0,0,NULL,0,NULL},
-	{"sexperi"     ,0,-2,0,0,NULL,0,NULL},
-	{"sexual"      ,0,-2,0,0,NULL,0,NULL},
-	{"sexpose"     ,0,-2,0,0,NULL,0,NULL},
-	{"sexclu"      ,0,-2,0,0,NULL,0,NULL},
-	{"sexo"        ,0,-2,0,0,NULL,0,NULL},
-	{"sexism"      ,0,-2,0,0,NULL,0,NULL},
-	{"sexpan"      ,0,-2,0,0,NULL,0,NULL}, // buttonsexpanion
-	{"same-sex"    ,0,-2,0,0,NULL,0,NULL},
-	{"opposite sex",0,-2,0,0,NULL,0,NULL},
+	{"middlesex"   ,0,-1,0,0,NULL,0,NULL},
+	{"sussex"      ,0,-1,0,0,NULL,0,NULL},
+	{"essex"       ,0,-1,0,0,NULL,0,NULL},
+	{"deusex"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexchange"   ,0,-1,0,0,NULL,0,NULL},
+	{"sexpress"    ,0,-1,0,0,NULL,0,NULL},
+	{"sexpert"     ,0,-1,0,0,NULL,0,NULL},
+	{"sexcel"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexist"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexile"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexperi"     ,0,-1,0,0,NULL,0,NULL},
+	{"sexual"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexpose"     ,0,-1,0,0,NULL,0,NULL},
+	{"sexclu"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexo"        ,0,-1,0,0,NULL,0,NULL},
+	{"sexism"      ,0,-1,0,0,NULL,0,NULL},
+	{"sexpan"      ,0,-1,0,0,NULL,0,NULL}, // buttonsexpanion
+	{"same-sex"    ,0,-1,0,0,NULL,0,NULL},
+	{"opposite sex",0,-1,0,0,NULL,0,NULL},
 
 	// anal
 	{"analog"      ,0,-2,0,0,NULL,0,NULL},
@@ -3455,6 +3685,265 @@ static Needle s_dirtyWords []  = {
 	// shit
 	{"shitak"      ,0,-2,0,0,NULL,0,NULL}
 };
+
+////
+//// New stuff from sex.com adult word list
+////
+////
+//// make it a 2nd part because of performance limits on matches2.cpp algo
+////
+static Needle s_dirtyWordsPart2 []  = {
+        {"amateurfoto"  ,0,2,0,0,NULL,0,NULL},
+        {"amateurhardcore"      ,0,2,0,0,NULL,0,NULL},
+        {"amateurindex" ,0,2,0,0,NULL,0,NULL},
+        {"amateurnaked" ,0,2,0,0,NULL,0,NULL},
+        {"amatuerhardcore"      ,0,2,0,0,NULL,0,NULL},
+        {"ampland"      ,0,2,0,0,NULL,0,NULL},
+        //{"animehentai"  ,0,2,0,0,NULL,0,NULL}, dup
+        {"anitablonde"  ,0,2,0,0,NULL,0,NULL},
+        {"asiacarrera"  ,0,2,0,0,NULL,0,NULL},
+        {"asshole"      ,0,2,0,0,NULL,0,NULL},
+        {"asslick"      ,0,2,0,0,NULL,0,NULL},
+        {"asspic"       ,0,2,0,0,NULL,0,NULL},
+        {"assworship"   ,0,2,0,0,NULL,0,NULL},
+        //{"badgirl"      ,0,2,0,0,NULL,0,NULL}, not necessarily bad
+        {"bareceleb"    ,0,2,0,0,NULL,0,NULL},
+        {"barenaked"    ,0,2,0,0,NULL,0,NULL},
+        {"beaverboy"    ,0,2,0,0,NULL,0,NULL},
+        {"beavershot"  ,0,2,0,0,NULL,0,NULL}, // was beavershots
+        //{"bigball"      ,0,2,0,0,NULL,0,NULL}, // not necessarily bad
+        {"bigbreast"    ,0,2,0,0,NULL,0,NULL},
+        //{"bigbutt"      ,0,2,0,0,NULL,0,NULL}, // not necessarily bad
+        {"bigcock"      ,0,2,0,0,NULL,0,NULL},
+        {"bigdick"      ,0,2,0,0,NULL,0,NULL},
+        {"biggestdick"  ,0,2,0,0,NULL,0,NULL},
+        {"biggesttit"   ,0,2,0,0,NULL,0,NULL},
+        {"bighairyball" ,0,2,0,0,NULL,0,NULL},
+        {"bighooter"    ,0,2,0,0,NULL,0,NULL},
+        {"bignipple"    ,0,2,0,0,NULL,0,NULL},
+        {"bigtit"       ,0,2,0,0,NULL,0,NULL},
+        {"blackbooty"   ,0,2,0,0,NULL,0,NULL},
+        {"blackbutt"    ,0,2,0,0,NULL,0,NULL},
+        {"blackcock"    ,0,2,0,0,NULL,0,NULL},
+        {"blackdick"    ,0,2,0,0,NULL,0,NULL},
+        {"blackhardcore"        ,0,2,0,0,NULL,0,NULL},
+        {"blackonblonde"        ,0,2,0,0,NULL,0,NULL},
+        {"blacksonblonde"       ,0,2,0,0,NULL,0,NULL},
+        {"blacktit"     ,0,2,0,0,NULL,0,NULL},
+        {"blacktwat"    ,0,2,0,0,NULL,0,NULL},
+        {"boner"        ,0,1,0,0,NULL,0,NULL}, // softcore, someone's lastname?
+        {"bordello"     ,0,2,0,0,NULL,0,NULL},
+        {"braless"      ,0,2,0,0,NULL,0,NULL},
+        {"brothel"      ,0,2,0,0,NULL,0,NULL},
+        {"bukake"       ,0,2,0,0,NULL,0,NULL},
+        {"bukkake"      ,0,2,0,0,NULL,0,NULL},
+        {"bustyblonde"  ,0,2,0,0,NULL,0,NULL},
+        {"bustyceleb"   ,0,2,0,0,NULL,0,NULL},
+        {"butthole"     ,0,2,0,0,NULL,0,NULL},
+        {"buttman"      ,0,2,0,0,NULL,0,NULL},
+        {"buttpic"      ,0,2,0,0,NULL,0,NULL},
+        {"buttplug"     ,0,2,0,0,NULL,0,NULL},
+        {"buttthumbnails"       ,0,2,0,0,NULL,0,NULL},
+        {"callgirl"     ,0,2,0,0,NULL,0,NULL},
+        {"celebritiesnaked"     ,0,2,0,0,NULL,0,NULL},
+        {"celebritybush"        ,0,2,0,0,NULL,0,NULL},
+        {"celebritybutt"        ,0,2,0,0,NULL,0,NULL},
+        {"chaseylain"   ,0,2,0,0,NULL,0,NULL},
+        {"chickswithdick"       ,0,2,0,0,NULL,0,NULL},
+        {"christycanyon"        ,0,2,0,0,NULL,0,NULL},
+        {"cicciolina"   ,0,2,0,0,NULL,0,NULL},
+        //{"cunilingus"   ,0,2,0,0,NULL,0,NULL},
+        {"cunniling"  ,0,2,0,0,NULL,0,NULL}, // abbreviate
+        {"cyberlust"    ,0,2,0,0,NULL,0,NULL},
+        {"danniashe"    ,0,2,0,0,NULL,0,NULL},
+        {"dicksuck"     ,0,2,0,0,NULL,0,NULL},
+        {"dirtymind"    ,0,2,0,0,NULL,0,NULL},
+        {"dirtypicture" ,0,2,0,0,NULL,0,NULL},
+        {"doggiestyle"  ,0,2,0,0,NULL,0,NULL},
+        {"doggystyle"   ,0,2,0,0,NULL,0,NULL},
+        {"domatrix"     ,0,2,0,0,NULL,0,NULL},
+        {"dominatrix"   ,0,2,0,0,NULL,0,NULL},
+        //{"dyke" ,0,2,0,0,NULL,0,NULL}, // dick van dyke!
+        {"ejaculation"  ,0,2,0,0,NULL,0,NULL},
+        {"erosvillage"  ,0,2,0,0,NULL,0,NULL},
+        {"facesit"      ,0,2,0,0,NULL,0,NULL},
+        {"fatass"       ,0,2,0,0,NULL,0,NULL},
+        {"feetfetish"   ,0,2,0,0,NULL,0,NULL},
+        {"felatio"      ,0,2,0,0,NULL,0,NULL},
+        {"fellatio"     ,0,2,0,0,NULL,0,NULL},
+        {"femdom"       ,0,2,0,0,NULL,0,NULL},
+        {"fetishwear"   ,0,2,0,0,NULL,0,NULL},
+        {"fettegirl"    ,0,2,0,0,NULL,0,NULL},
+        {"fingerbang"   ,0,2,0,0,NULL,0,NULL},
+        {"fingering"    ,0,1,0,0,NULL,0,NULL}, // fingering the keyboard? use 1
+        {"flesh4free"   ,0,2,0,0,NULL,0,NULL},
+        {"footfetish"   ,0,2,0,0,NULL,0,NULL},
+        {"footjob"      ,0,2,0,0,NULL,0,NULL},
+        {"footlicking"  ,0,2,0,0,NULL,0,NULL},
+        {"footworship"  ,0,2,0,0,NULL,0,NULL},
+        {"fornication"  ,0,2,0,0,NULL,0,NULL},
+        {"freeass"      ,0,2,0,0,NULL,0,NULL},
+        {"freebigtit"   ,0,2,0,0,NULL,0,NULL},
+        {"freedick"     ,0,2,0,0,NULL,0,NULL},
+        {"freehardcore" ,0,2,0,0,NULL,0,NULL},
+        //{"freehentai"   ,0,2,0,0,NULL,0,NULL}, dup
+        {"freehooter"   ,0,2,0,0,NULL,0,NULL},
+        {"freelargehooter"      ,0,2,0,0,NULL,0,NULL},
+        {"freenakedpic" ,0,2,0,0,NULL,0,NULL},
+        {"freenakedwomen"       ,0,2,0,0,NULL,0,NULL},
+        {"freetit"      ,0,2,0,0,NULL,0,NULL},
+        {"freevoyeur"   ,0,2,0,0,NULL,0,NULL},
+        {"gratishardcoregalerie"        ,0,2,0,0,NULL,0,NULL},
+        {"hardcorecelebs"       ,0,2,0,0,NULL,0,NULL},
+        {"hardcorefree" ,0,2,0,0,NULL,0,NULL},
+        {"hardcorehooter"       ,0,2,0,0,NULL,0,NULL},
+        {"hardcorejunkie"       ,0,2,0,0,NULL,0,NULL},
+        {"hardcorejunky"        ,0,2,0,0,NULL,0,NULL},
+        {"hardcoremovie"        ,0,2,0,0,NULL,0,NULL},
+        {"hardcorepic"  ,0,2,0,0,NULL,0,NULL},
+        {"hardcorepix"  ,0,2,0,0,NULL,0,NULL},
+        {"hardcoresample"       ,0,2,0,0,NULL,0,NULL},
+        {"hardcorestories"      ,0,2,0,0,NULL,0,NULL},
+        {"hardcorethumb"        ,0,2,0,0,NULL,0,NULL},
+        {"hardcorevideo"        ,0,2,0,0,NULL,0,NULL},
+        {"harddick"     ,0,2,0,0,NULL,0,NULL},
+        {"hardnipple"   ,0,2,0,0,NULL,0,NULL},
+        {"hardon"       ,0,2,0,0,NULL,0,NULL},
+        {"hentai"       ,0,2,0,0,NULL,0,NULL},
+        {"interacialhardcore"   ,0,2,0,0,NULL,0,NULL},
+        {"intercourseposition"  ,0,2,0,0,NULL,0,NULL},
+        {"interracialhardcore"  ,0,2,0,0,NULL,0,NULL},
+        {"ittybittytitty"       ,0,2,0,0,NULL,0,NULL},
+        {"jackoff"      ,0,2,0,0,NULL,0,NULL},
+        {"jennajameson" ,0,2,0,0,NULL,0,NULL},
+        {"jennicam"     ,0,2,0,0,NULL,0,NULL},
+        {"jerkoff"      ,0,2,0,0,NULL,0,NULL},
+        {"jism" ,0,2,0,0,NULL,0,NULL},
+        {"jiz"  ,0,2,0,0,NULL,0,NULL},
+        {"justhardcore" ,0,2,0,0,NULL,0,NULL},
+        {"karasamateurs"        ,0,2,0,0,NULL,0,NULL},
+        {"kascha"       ,0,2,0,0,NULL,0,NULL},
+        {"kaylakleevage"        ,0,2,0,0,NULL,0,NULL},
+        {"kobetai"      ,0,2,0,0,NULL,0,NULL},
+        {"lapdance"     ,0,2,0,0,NULL,0,NULL},
+        {"largedick"    ,0,2,0,0,NULL,0,NULL},
+        {"largehooter"  ,0,2,0,0,NULL,0,NULL},
+        {"largestbreast"        ,0,2,0,0,NULL,0,NULL},
+        {"largetit"     ,0,2,0,0,NULL,0,NULL},
+        {"lesben"       ,0,2,0,0,NULL,0,NULL},
+        {"lesbo"        ,0,2,0,0,NULL,0,NULL},
+        {"lickadick"    ,0,2,0,0,NULL,0,NULL},
+        {"lindalovelace"        ,0,2,0,0,NULL,0,NULL},
+        {"longdick"     ,0,2,0,0,NULL,0,NULL},
+        {"lovedoll"     ,0,2,0,0,NULL,0,NULL},
+        {"makinglove"   ,0,2,0,0,NULL,0,NULL},
+        {"mangax"       ,0,2,0,0,NULL,0,NULL},
+        {"manpic"       ,0,2,0,0,NULL,0,NULL},
+        {"marilynchambers"      ,0,2,0,0,NULL,0,NULL},
+        {"massivecock"  ,0,2,0,0,NULL,0,NULL},
+        {"masterbating" ,0,2,0,0,NULL,0,NULL},
+        {"mensdick"     ,0,2,0,0,NULL,0,NULL},
+        {"milf" ,0,2,0,0,NULL,0,NULL},
+        {"minka"        ,0,2,0,0,NULL,0,NULL},
+        {"monstercock"  ,0,2,0,0,NULL,0,NULL},
+        {"monsterdick"  ,0,2,0,0,NULL,0,NULL},
+        {"muffdiving"   ,0,2,0,0,NULL,0,NULL},
+        {"nacktfoto"    ,0,2,0,0,NULL,0,NULL},
+        {"nakedblackwomen"      ,0,2,0,0,NULL,0,NULL},
+        {"nakedceleb"   ,0,2,0,0,NULL,0,NULL},
+        {"nakedcelebrity"       ,0,2,0,0,NULL,0,NULL},
+        {"nakedcheerleader"     ,0,2,0,0,NULL,0,NULL},
+        {"nakedchick"   ,0,2,0,0,NULL,0,NULL},
+        {"nakedgirl"    ,0,2,0,0,NULL,0,NULL},
+        {"nakedguy"     ,0,2,0,0,NULL,0,NULL},
+        {"nakedladies"  ,0,2,0,0,NULL,0,NULL},
+        {"nakedlady"    ,0,2,0,0,NULL,0,NULL},
+        {"nakedman"     ,0,2,0,0,NULL,0,NULL},
+        {"nakedmen"     ,0,2,0,0,NULL,0,NULL},
+        {"nakedness"    ,0,2,0,0,NULL,0,NULL},
+        {"nakedphoto"   ,0,2,0,0,NULL,0,NULL},
+        {"nakedpic"     ,0,2,0,0,NULL,0,NULL},
+        {"nakedstar"    ,0,2,0,0,NULL,0,NULL},
+        {"nakedwife"    ,0,2,0,0,NULL,0,NULL},
+        {"nakedwoman"   ,0,2,0,0,NULL,0,NULL},
+        {"nakedwomen"   ,0,2,0,0,NULL,0,NULL},
+        {"nastychat"    ,0,2,0,0,NULL,0,NULL},
+        {"nastythumb"   ,0,2,0,0,NULL,0,NULL},
+        {"naughtylink"  ,0,2,0,0,NULL,0,NULL},
+        {"naughtylinx"  ,0,2,0,0,NULL,0,NULL},
+        {"naughtylynx"  ,0,2,0,0,NULL,0,NULL},
+        {"naughtynurse" ,0,2,0,0,NULL,0,NULL},
+        {"niceass"      ,0,2,0,0,NULL,0,NULL},
+        {"nikkinova"    ,0,2,0,0,NULL,0,NULL},
+        {"nikkityler"   ,0,2,0,0,NULL,0,NULL},
+        {"nylonfetish"  ,0,2,0,0,NULL,0,NULL},
+        {"nympho"       ,0,2,0,0,NULL,0,NULL},
+        {"openleg"      ,0,2,0,0,NULL,0,NULL},
+        {"oral4free"    ,0,2,0,0,NULL,0,NULL},
+        {"pantyhosefetish"      ,0,2,0,0,NULL,0,NULL},
+        {"peepcam"      ,0,2,0,0,NULL,0,NULL},
+        {"persiankitty" ,0,2,0,0,NULL,0,NULL},
+        {"perverted"    ,0,2,0,0,NULL,0,NULL},
+        {"pimpserver"   ,0,2,0,0,NULL,0,NULL},
+        {"pissing"      ,0,2,0,0,NULL,0,NULL},
+        {"poontang"     ,0,2,0,0,NULL,0,NULL},
+        {"privatex"     ,0,2,0,0,NULL,0,NULL},
+        {"prono"        ,0,2,0,0,NULL,0,NULL},
+        {"publicnudity" ,0,2,0,0,NULL,0,NULL},
+        {"puffynipple"  ,0,2,0,0,NULL,0,NULL},
+        {"racqueldarrian"       ,0,2,0,0,NULL,0,NULL},
+        //{"rape" ,0,2,0,0,NULL,0,NULL}, // dup!
+        {"rawlink"      ,0,2,0,0,NULL,0,NULL},
+        {"realhardcore" ,0,2,0,0,NULL,0,NULL},
+        {"rubberfetish" ,0,2,0,0,NULL,0,NULL},
+        {"seka" ,0,2,0,0,NULL,0,NULL},
+        {"sheboy"       ,0,2,0,0,NULL,0,NULL},
+        {"showcam"      ,0,2,0,0,NULL,0,NULL},
+        {"showercam"    ,0,2,0,0,NULL,0,NULL},
+        {"smallbreast"  ,0,2,0,0,NULL,0,NULL},
+        {"smalldick"    ,0,2,0,0,NULL,0,NULL},
+        {"spycamadult"  ,0,2,0,0,NULL,0,NULL},
+        {"strapon"      ,0,2,0,0,NULL,0,NULL},
+        {"stripclub"    ,0,2,0,0,NULL,0,NULL},
+        {"stripshow"    ,0,2,0,0,NULL,0,NULL},
+        {"striptease"   ,0,2,0,0,NULL,0,NULL},
+        {"strokeit"     ,0,2,0,0,NULL,0,NULL},
+        {"strokeme"     ,0,2,0,0,NULL,0,NULL},
+        {"suckdick"     ,0,2,0,0,NULL,0,NULL},
+        {"sylviasaint"  ,0,2,0,0,NULL,0,NULL},
+        {"teenhardcore" ,0,2,0,0,NULL,0,NULL},
+        {"teenie"       ,0,2,0,0,NULL,0,NULL},
+        {"teenpic"      ,0,2,0,0,NULL,0,NULL},
+        {"teensuck"     ,0,2,0,0,NULL,0,NULL},
+        {"tgp"  ,0,2,0,0,NULL,0,NULL},
+        {"threesome"    ,0,2,0,0,NULL,0,NULL},
+        {"thumblord"    ,0,2,0,0,NULL,0,NULL},
+        {"thumbzilla"   ,0,2,0,0,NULL,0,NULL},
+        {"tiffanytowers"        ,0,2,0,0,NULL,0,NULL},
+        {"tinytitties"  ,0,2,0,0,NULL,0,NULL},
+        //{"tities"       ,0,2,0,0,NULL,0,NULL}, // entities
+        {"titman"       ,0,2,0,0,NULL,0,NULL},
+        {"titsandass"   ,0,2,0,0,NULL,0,NULL},
+        {"titties"      ,0,2,0,0,NULL,0,NULL},
+        {"titts"        ,0,2,0,0,NULL,0,NULL},
+        {"titty"        ,0,2,0,0,NULL,0,NULL},
+        {"tokyotopless" ,0,2,0,0,NULL,0,NULL},
+        {"tommysbookmark"       ,0,2,0,0,NULL,0,NULL},
+        {"toplesswomen" ,0,2,0,0,NULL,0,NULL},
+        {"trannies"     ,0,2,0,0,NULL,0,NULL},
+        {"twinks"       ,0,2,0,0,NULL,0,NULL},
+        {"ultradonkey"  ,0,2,0,0,NULL,0,NULL},
+        {"ultrahardcore"        ,0,2,0,0,NULL,0,NULL},
+        {"uncutcock"    ,0,2,0,0,NULL,0,NULL},
+        {"vividtv"      ,0,2,0,0,NULL,0,NULL},
+        {"wendywhoppers"        ,0,2,0,0,NULL,0,NULL},
+        {"wetdick"      ,0,2,0,0,NULL,0,NULL},
+        {"wetpanties"   ,0,2,0,0,NULL,0,NULL},
+        {"wifesharing"  ,0,2,0,0,NULL,0,NULL},
+        {"wifeswapping" ,0,2,0,0,NULL,0,NULL},
+        {"xrated"       ,0,2,0,0,NULL,0,NULL}
+};
+
 
 // . store this in clusterdb rec so family filter works!
 // . check content for adult words
@@ -3570,6 +4059,51 @@ long getDirtyPoints ( char *s , long slen , long niceness , char *url ) {
 		    ,url
 		    );
 	}
+
+	////
+	//
+	// repeat for part2
+	//
+	// we have to do two separate parts otherwise the algo in
+	// matches2.cpp gets really slow. it was not meant to match
+	// so many needles in one haystack.
+	//
+	///
+	long numDirty2 = sizeof(s_dirtyWordsPart2) / sizeof(Needle);
+
+	//numDirty2 = 0;
+
+	getMatches2 ( s_dirtyWordsPart2 ,
+		      numDirty2     ,
+		      s            ,
+		      slen         ,
+		      NULL         , // linkPos
+		      NULL         , // needleNum
+		      false        , // stopAtFirstMatch?
+		      NULL         , // hadPreMatch ptr
+		      true         , // saveQuickTables?
+		      niceness     );
+
+
+	// each needle has an associated score
+	for ( long i = 0 ; i < numDirty2 ; i++ ) {
+		// skip if no match
+		if ( s_dirtyWordsPart2[i].m_count <= 0 ) continue;
+		// . the "id", is positive for dirty words, - for clean
+		// . uses +2/-2 for really dirty words 
+		// . uses +1/-1 for borderline dirty words
+		points += s_dirtyWordsPart2[i].m_id;
+		// log debug
+		if ( ! g_conf.m_logDebugDirty ) continue;
+		// show it in the log
+		log("dirty: %s %li %s"
+		    ,s_dirtyWordsPart2[i].m_string
+		    ,(long)s_dirtyWordsPart2[i].m_id
+		    ,url
+		    );
+	}
+
+
 	return points;
 }
 
@@ -3608,7 +4142,7 @@ CatRec *XmlDoc::getCatRec ( ) {
 	// return what we got
 	if ( m_catRecValid ) return &m_catRec;
 	// call that
-	setStatus ("getting cat rec");
+	setStatus ("getting dmoz cat rec");
 	// callback?
 	if ( m_calledMsg8b ) {
 		// return NULL on error
@@ -3622,7 +4156,8 @@ CatRec *XmlDoc::getCatRec ( ) {
 	// assume empty and skip the call for now
 	m_catRec.reset();
 	m_catRecValid = true;
-	return &m_catRec;
+	// let's bring dmoz back
+	//return &m_catRec;
 	// compute it otherwise
 	if ( ! m_msg8b.getCatRec ( &m_firstUrl    ,
 				   m_coll         ,
@@ -12446,6 +12981,23 @@ char **XmlDoc::getHttpReply2 ( ) {
 	strcpy ( r->m_url , cu->getUrl() );
 	// sanity check
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+	// max to download in bytes. currently 1MB.
+	long maxDownload = (long)MAXDOCLEN;
+	// but if url is http://127.0.0.1.... or local then
+	if ( m_ipValid ) {
+		// make into a string
+		char *ipStr = iptoa(m_ip);
+		// is it local?
+		bool isLocal = false;
+		if ( strncmp(ipStr,"192.168.",8) == 0) isLocal = true;
+		if ( strncmp(ipStr,"10."     ,3) == 0) isLocal = true;
+		if ( m_ip == 16777343 ) isLocal = true; // 127.0.0.1 ?
+		// . if local then make web page download max size unlimited
+		// . this is for adding the gbdmoz.urls.txt.* files to
+		//   populate dmoz. those files are about 25MB each.
+		if ( isLocal )
+			maxDownload = -1;
+	}
 	// m_maxCacheAge is set for getting contact or root docs in 
 	// getContactDoc() and getRootDoc() and it only applies to
 	// titleRecs in titledb i guess... but still... for Msg13 it applies
@@ -12454,8 +13006,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 	r->m_urlIp                  = *ip;
 	r->m_firstIp                = m_firstIp;
 	r->m_urlHash48              = getFirstUrlHash48();
-	r->m_maxTextDocLen          = MAXDOCLEN;//m_cr->m_maxTextDocLen  ;
-	r->m_maxOtherDocLen         = MAXDOCLEN;//m_cr->m_maxOtherDocLen ;
+	r->m_maxTextDocLen          = maxDownload;
+	r->m_maxOtherDocLen         = maxDownload;
 	r->m_forwardDownloadRequest = (bool)m_forwardDownloadRequest;
 	r->m_useTestCache           = (bool)useTestCache;
 	r->m_spideredTime           = getSpideredTime();//m_spideredTime;
@@ -15160,17 +15712,51 @@ Images *XmlDoc::getImages ( ) {
 // . get different attributes of the Links as vectors
 // . these are 1-1 with the Links::m_linkPtrs[] array
 TagRec ***XmlDoc::getOutlinkTagRecVector () {
+
+	// if page has a <meta name=usefakeips content=1> tag
+	// then use the hash of the links host as the firstip.
+	// this will speed things up when adding a gbdmoz.urls.txt.*
+	// file to index every url in dmoz.
+	char *useFakeIps = hasFakeIpsMetaTag();
+	if ( ! useFakeIps || useFakeIps == (void *)-1 ) 
+		return (TagRec ***)useFakeIps;
+	
+	// no error and valid, return quick
+	if ( m_outlinkTagRecVectorValid && *useFakeIps ) 
+		return &m_outlinkTagRecVector;
+
 	// error?
 	if ( m_outlinkTagRecVectorValid && m_msge0.m_errno ) {
 		g_errno = m_msge0.m_errno;
 		return NULL;
 	}
-	// no error and valid, return quick
-	if ( m_outlinkTagRecVectorValid ) return &m_msge0.m_tagRecPtrs;
+
+	// if not using fake ips, give them the real tag rec vector
+	if ( m_outlinkTagRecVectorValid )
+		return &m_msge0.m_tagRecPtrs;
+
+	Links *links = getLinks();
+	if ( ! links || links == (void *) -1 ) return (TagRec ***)links;
+
+	if ( *useFakeIps ) {
+		// set to those
+		m_fakeTagRec.reset();
+		// just make a bunch ptr to empty tag rec
+		long need = links->m_numLinks * 4;
+		if ( ! m_fakeTagRecPtrBuf.reserve ( need ) ) return NULL;
+		// make them all point to the fake empty tag rec
+		TagRec **grv = (TagRec **)m_fakeTagRecPtrBuf.getBufStart();
+		for ( long i = 0 ; i < links->m_numLinks ; i++ )
+			grv[i] = &m_fakeTagRec;
+		// set it
+		m_outlinkTagRecVector = grv;
+		m_outlinkTagRecVectorValid = true;
+		return &m_outlinkTagRecVector;
+	}
+
+
 	// update status msg
 	setStatus ( "getting outlink tag rec vector" );
-	Links *links = getLinks();
-	if ( ! links ) return NULL;
 	TagRec *gr = getTagRec();
 	if ( ! gr || gr == (TagRec *)-1 ) return (TagRec ***)gr;
 	// assume valid
@@ -15205,10 +15791,86 @@ TagRec ***XmlDoc::getOutlinkTagRecVector () {
 	return &m_msge0.m_tagRecPtrs;
 }
 
+char *XmlDoc::hasNoIndexMetaTag() {
+	if ( m_hasNoIndexMetaTagValid )
+		return &m_hasNoIndexMetaTag;
+	// assume none
+	m_hasNoIndexMetaTag = false;
+	// store value/content of meta tag in here
+	char mbuf[16];
+	mbuf[0] = '\0';
+	char *tag = "noindex";
+	long tlen = gbstrlen(tag);
+	// check the xml for a meta tag
+	Xml *xml = getXml();
+	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
+	xml->getMetaContent ( mbuf, 16 , tag , tlen );
+	if ( mbuf[0] == '1' ) m_hasNoIndexMetaTag = true;
+	m_hasNoIndexMetaTagValid = true;
+	return &m_hasNoIndexMetaTag;
+}
+
+
+char *XmlDoc::hasFakeIpsMetaTag ( ) {
+	if ( m_hasUseFakeIpsMetaTagValid ) return &m_hasUseFakeIpsMetaTag;
+
+	char mbuf[16];
+	mbuf[0] = '\0';
+	char *tag = "usefakeips";
+	long tlen = gbstrlen(tag);
+
+	// check the xml for a meta tag
+	Xml *xml = getXml();
+	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
+	xml->getMetaContent ( mbuf, 16 , tag , tlen );
+
+	m_hasUseFakeIpsMetaTag = false;
+	if ( mbuf[0] == '1' ) m_hasUseFakeIpsMetaTag = true;
+	m_hasUseFakeIpsMetaTagValid = true;
+	return &m_hasUseFakeIpsMetaTag;
+}
+
+
 long **XmlDoc::getOutlinkFirstIpVector () {
-	if ( m_outlinkIpVectorValid ) return &m_msge1.m_ipBuf;
+
 	Links *links = getLinks();
 	if ( ! links ) return NULL;
+
+	// if page has a <meta name=usefakeips content=1> tag
+	// then use the hash of the links host as the firstip.
+	// this will speed things up when adding a gbdmoz.urls.txt.*
+	// file to index every url in dmoz.
+	char *useFakeIps = hasFakeIpsMetaTag();
+	if ( ! useFakeIps || useFakeIps == (void *)-1 ) 
+		return (long **)useFakeIps;
+
+	if ( *useFakeIps && m_outlinkIpVectorValid )
+		return &m_outlinkIpVector;
+	
+	if ( *useFakeIps ) {
+		long need = links->m_numLinks * 4;
+		m_fakeIpBuf.reserve ( need );
+		for ( long i = 0 ; i < links->m_numLinks ; i++ ) {
+			unsigned long long h64 = links->getHostHash64(i);
+			long ip = h64 & 0xffffffff;
+			m_fakeIpBuf.pushLong(ip);
+		}
+		long *ipBuf = (long *)m_fakeIpBuf.getBufStart();
+		m_outlinkIpVector = ipBuf;
+		m_outlinkIpVectorValid = true;
+		return &m_outlinkIpVector;
+	}
+
+	// return msge1's buf otherwise
+	if ( m_outlinkIpVectorValid ) 
+		return &m_msge1.m_ipBuf;
+
+	// should we have some kinda error for msge1?
+	//if ( m_outlinkIpVectorValid && m_msge1.m_errno ) {
+	//	g_errno = m_msge1.m_errno;
+	//	return NULL;
+	//}
+
 	// . we now scrounge them from TagRec's "firstip" tag if there!
 	// . that way even if a domain changes its ip we still use the
 	//   original ip, because the only reason we need this ip is for
@@ -15257,8 +15919,6 @@ long **XmlDoc::getOutlinkFirstIpVector () {
 	}
 	// error?
        	if ( g_errno ) return NULL;
-	// set it
-	//m_outlinkIpVector = m_msge1.m_ipBuf;
 	// . ptr to a list of ptrs to tag recs
 	// . ip will be -1 on error
 	return &m_msge1.m_ipBuf;
@@ -17244,6 +17904,9 @@ long *XmlDoc::nukeJSONObjects ( ) {
 	// if none, we are done
 	if ( m_diffbotJSONCount <= 0 ) return &s_return;
 
+	// already did it?
+	if ( m_joc >= m_diffbotJSONCount ) return &s_return;
+
 	// new guy here
 	if ( ! m_dx ) {
 		try { m_dx = new ( XmlDoc ); }
@@ -17253,10 +17916,6 @@ long *XmlDoc::nukeJSONObjects ( ) {
 			return NULL;
 		}
 		mnew ( m_dx , sizeof(XmlDoc),"xmldocdx");
-		//
-		// reset count for for loop below
-		//
-		m_joc = 0;
 	}
 
 
@@ -17535,13 +18194,14 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	     // . getNewSpiderReply() below will clear the error in it and
 	     //   copy stuff over from m_oldsr and m_oldDoc for this case
 		//|| *indexCode == EDOCUNCHANGED
-	     ) {
+		) {
 		// sanity - in repair mode?
 		if ( m_useSecondaryRdbs ) { char *xx=NULL;*xx=0; }
 		// . this seems to be an issue for blocking
 		// . if we do not have a valid ip, we can't compute this,
 		//   in which case it will not be valid in the spider reply
-		// . why do we need this for timeouts etc? if the doc is unchanged
+		// . why do we need this for timeouts etc? if the doc is 
+		//   unchanged
 		//   we should probably update its siteinlinks in tagdb 
 		//   periodically and reindex the whole thing...
 		// . i think we were getting the sitenuminlinks for
@@ -17706,6 +18366,31 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		oldList = od->getMetaList ( true );
 		oldListSize = od->m_metaListSize;
 		if ( ! oldList || oldList ==(void *)-1) return (char *)oldList;
+	}
+
+	// . set whether we should add recs to titledb, posdb, linkdb, etc.
+	// . if this doc is set by titlerec we won't change these
+	// . we only turn off m_usePosdb, etc. if there is a 
+	//   <meta name=noindex content=1>
+	// . we will still add to spiderdb, but not posdb, linkdb, titledb
+	//   and clusterdb.
+	// . so we'll add the spiderreply for this doc and the spiderrequests
+	//   for all outlinks and "firstIp" tagrecs to tagdb for those outlinks
+	// . we use this for adding the url seed file gbdmoz.urls.txt
+	//   which contains a list of all the dmoz urls we want to spider.
+	//   gbdmoz.urls.txt is generated by dmozparse.cpp. we spider all
+	//   these dmoz urls so we can search the CONTENT of the pages in dmoz,
+	//   something dmoz won't let you do.
+	char *mt = hasNoIndexMetaTag();
+	if ( ! mt || mt == (void *)-1 ) return (char *)mt;
+	if ( *mt ) {
+		m_usePosdb = false;
+		m_useLinkdb = false;
+		m_useTitledb = false;
+		m_useClusterdb = false;
+		// do not add the "firstIp" tagrecs of the outlinks any more
+		// because it might hurt us?
+		m_useTagdb = false;
 	}
 
 	// . should we recycle the diffbot reply for this url?
@@ -18386,6 +19071,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( nl && m_useLinkdb ) nis = nl->getNumLinks() * 4;
 	// pre-grow table based on # outlinks
 	kt1.set ( sizeof(key224_t),0,nis,NULL,0,false,m_niceness,"link-indx" );
+	// use magic to make fast
+	kt1.m_useKeyMagic = true;
+	// linkdb keys will have the same lower 4 bytes, so make hashing fast.
+	// they are 28 byte keys. bytes 20-23 are the hash of the linkEE
+	// so that will be the most random.
+	kt1.m_maskKeyOffset = 20;
+	// faster
 	//kt2.set ( sizeof(key128_t) , 0,0,NULL,0,false,m_niceness );
 	// do not add these
 	//bool add1 = true;
@@ -20083,6 +20775,9 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	// do not do this if recycling content
 	if ( m_recycleContent ) return (char *)0x01;
 
+	Xml *xml = getXml();
+	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
+
 	Links *links = getLinks();
 	if ( ! links || links == (Links *)-1 ) return (char *)links;
 
@@ -20217,6 +20912,32 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	long linkTypes[2000];
 	long lastType = 0;
 
+
+
+	// if the file we are indexing now has 
+	// "<meta name=spiderlinkslinks value=0>" then that means to
+	// add the links to spiderdb, but do not spider their links!
+	// dmozparse uses this to make a file called gbdmoz.urs.txt.0
+	// that is just filled with urls that are in dmoz. and we want
+	// to index just those urls.
+	//
+	// now just make dmozparse output urls as <a href=> tags.
+	//
+	char mbuf[16];
+	mbuf[0] = '\0';
+	char *tag = "spiderlinkslinks";
+	long tlen = gbstrlen(tag);
+	xml->getMetaContent ( mbuf, 16 , tag , tlen );
+	bool avoid = false;
+	if ( mbuf[0] == '0' ) avoid = true;
+
+	// it also has this meta tag now too
+	mbuf[0] = '\0';
+	tag = "ignorelinksexternalerrors";
+	tlen = gbstrlen(tag);
+	xml->getMetaContent ( mbuf, 16 , tag , tlen );
+	bool ignore = false;
+	if ( mbuf[0] == '1' ) ignore = true;
 
 	//
 	// serialize each link into the metalist now
@@ -20440,6 +21161,14 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		if ( isParentRSS                 ) ksr.m_parentIsRSS       = 1;
 		if ( parentIsPermalink           ) ksr.m_parentIsPermalink = 1;
 		if ( isParentPingServer          ) ksr.m_parentIsPingServer= 1;
+
+		// this is used for building dmoz. we just want to index
+		// the urls in dmoz, not their outlinks.
+		if ( avoid  ) ksr.m_avoidSpiderLinks = 1;
+
+		// this is used for building dmoz. we need to index this
+		// url even in the case of ETCPTIMEDOUT, etc.
+		if ( ignore ) ksr.m_ignoreExternalErrors = 1;
 
 		// . if this is the 2nd+ time we were spidered and this outlink
 		//   wasn't there last time, then set this!
@@ -21574,7 +22303,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashUrl           ( table ) ) return NULL;
 	if ( ! hashMetaTags      ( table ) ) return NULL;
 	if ( ! hashMetaZip       ( table ) ) return NULL;
-	//if ( ! hashCategories    ( table ) ) return NULL;
+	if ( ! hashDMOZCategories( table ) ) return NULL;
 	if ( ! hashLanguage      ( table ) ) return NULL;
 	if ( ! hashCountry       ( table ) ) return NULL;
 	if ( ! hashSiteNumInlinks( table ) ) return NULL;
@@ -23061,6 +23790,116 @@ bool XmlDoc::searchboxToGigablast ( ) {
 	// . they may have a form variable like
 	// . <form method=get action=http://www.gigablast.com/cgi/0.cgi name=f>
 	return m_xml.hasGigablastForm();
+}
+
+// . bring back support for dmoz integration
+// . when clicking on a "search within this category" it does a gbpdcat:<catid>
+//   search to capture all pages that have that dmoz category as one of their
+//   parent topics
+bool XmlDoc::hashDMOZCategories ( HashTableX *tt ) {
+
+	getDmozTitles();
+
+
+	char *titlePtr = ptr_dmozTitles;
+	char *sumPtr   = ptr_dmozSumms;
+	//char *anchPtr  = ptr_dmozAnchors;
+
+	char  buf[128];
+
+	HashInfo hi;
+	hi.m_tt        = tt;
+	hi.m_hashGroup = HASHGROUP_INTAG;
+	
+	long *catIds = (long *)ptr_catIds;
+	long numCatIds = size_catIds / 4;
+	// go through the catIds and hash them
+	for (long i = 0; i < numCatIds; i++) {
+		// write the catid as a string
+		sprintf(buf, "%lu", catIds[i]);
+		// term prefix for hashing
+		hi.m_prefix = "gbcatid";
+		// hash it
+		hashString ( buf , gbstrlen(buf) , &hi );
+		// we also want to hash the parents
+		long currCatId    = catIds[i];
+		long currParentId = catIds[i];
+		long currCatIndex;
+		// loop to the Top, Top = 1
+		while ( currCatId > 1 ) {
+			// hash the parent
+			sprintf(buf, "%lu", currParentId);
+			hi.m_prefix = "gbpcatid";
+			hashString ( buf , gbstrlen(buf), &hi );
+			// next cat
+			currCatId = currParentId;
+			// get the index for this cat
+			currCatIndex = g_categories->getIndexFromId(currCatId);
+			if ( currCatIndex <= 0 ) break;
+			// get the parent for this cat
+			currParentId = 
+				g_categories->m_cats[currCatIndex].m_parentid;
+		}
+		
+		// do not hash titles or summaries if "index article content
+		// only" parm is on
+		//if ( tr->eliminateMenus() ) continue;
+
+		// hash dmoz title
+		hi.m_prefix = NULL;
+		// call this DMOZ title as regular title i guess
+		hi.m_hashGroup = HASHGROUP_TITLE;
+		// hash the DMOZ title
+		hashString ( titlePtr , gbstrlen(titlePtr), &hi );
+		// next title
+		titlePtr += gbstrlen(titlePtr) + 1;
+
+		// hash DMOZ summary
+		hi.m_prefix = NULL;
+		// call this DMOZ summary as body i guess
+		hi.m_hashGroup = HASHGROUP_BODY;
+		// hash the DMOZ summary
+		hashString ( sumPtr , gbstrlen(sumPtr), &hi );
+		// next summary
+		sumPtr += gbstrlen(sumPtr) + 1;
+	}
+
+	long numIndCatIds = size_indCatIds / 4;
+	long *indCatIds   = (long *)ptr_indCatIds;
+	// go through the INDIRECT catIds and hash them
+	for (long i = 0 ; i < numIndCatIds; i++) {
+
+		// write the catid as a string
+		sprintf(buf, "%lu", indCatIds[i]);
+		// use prefix
+		hi.m_prefix = "gbicatid";
+		hi.m_hashGroup = HASHGROUP_INTAG;
+		// hash it
+		hashString ( buf , gbstrlen(buf), &hi );
+		
+		// we also want to hash the parents
+		long currCatId    = indCatIds[i];
+		long currParentId = indCatIds[i];
+		long currCatIndex;
+		// loop to the Top, Top = 1
+		while (currCatId > 1) {
+			// hash the parent
+			sprintf(buf, "%lu", currParentId);
+			// new prefix
+			hi.m_prefix = "gbipcatid";
+			// hash it
+			hashString ( buf , gbstrlen(buf), &hi );
+			// next cat
+			currCatId = currParentId;
+			// get the index for this cat
+			currCatIndex = g_categories->getIndexFromId(currCatId);
+			if ( currCatIndex <= 0 ) break;
+			// get the parent for this cat
+			currParentId = 
+				g_categories->m_cats[currCatIndex].m_parentid;
+		}
+	}
+	return true;
 }
 
 bool XmlDoc::hashLanguage ( HashTableX *tt ) {

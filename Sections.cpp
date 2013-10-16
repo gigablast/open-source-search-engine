@@ -36,8 +36,10 @@ Sections::Sections ( ) {
 }
 
 void Sections::reset() {
-	if ( m_sections && m_needsFree )
-		mfree ( m_sections , m_sectionsBufSize , "Sections" );
+	//if ( m_sections && m_needsFree )
+	//	mfree ( m_sections , m_sectionsBufSize , "Sections" );
+	m_sectionBuf.purge();
+	m_sectionPtrBuf.purge();
 	if ( m_buf && m_bufSize )
 		mfree ( m_buf , m_bufSize , "sdata" );
 	if ( m_buf2 && m_bufSize2 )
@@ -228,10 +230,20 @@ bool Sections::set ( Words     *w                       ,
 	max++;
 	// and each section may create a sentence section
 	max *= 2;
+
+	// truncate if excessive. growSections() will kick in then i guess
+	// if we need more sections.
+	if ( max > 1000000 ) {
+		log("sections: truncating max sections to 1000000");
+		max = 1000000;
+	}
+
 	//max += 5000;
 	long need = max * sizeof(Section);
+
+
 	// and we need one section ptr for every word!
-	need += nw * 4;
+	//need += nw * 4;
 	// and a section ptr for m_sorted[]
 	//need += max * sizeof(Section *);
 	// set this
@@ -240,8 +252,21 @@ bool Sections::set ( Words     *w                       ,
 	// breathe
 	QUICKPOLL(m_niceness);
 
-	// allocate m_sections[] buffer
+	// separate buf now for section ptr for each word
+	if ( ! m_sectionPtrBuf.reserve ( nw *4 ) ) return true;
+	m_sectionPtrs = (Section **)m_sectionPtrBuf.getBufStart();
+	m_sectionPtrsEnd = (Section **)m_sectionPtrBuf.getBufEnd();
+
+	// allocate m_sectionBuf
 	m_sections = NULL;
+
+	if ( ! m_sectionBuf.reserve ( need ) )
+		return true;
+
+	// point into it
+	m_sections = (Section *)m_sectionBuf.getBufStart();
+
+	/*
 	// assume no malloc
 	m_needsFree = false;
 	if      ( need < SECTIONS_LOCALBUFSIZE ) {
@@ -259,6 +284,7 @@ bool Sections::set ( Words     *w                       ,
 		m_sectionsBufSize = need;
 		m_needsFree       = true;
 	}
+	*/
 
 	// clear it nicely
 	//memset_nice ( m_sections , 0 , m_sectionsBufSize, m_niceness );
@@ -270,20 +296,20 @@ bool Sections::set ( Words     *w                       ,
 	m_titleEnd   = -1;
 
 	// bail if no luck
-	if ( ! m_sections ) return true;
+	//if ( ! m_sections ) return true;
 
 	// point to buf
-	char *ppp = (char *)m_sections;
+	//char *ppp = (char *)m_sections;
 	// skip Sections array
-	ppp += max * sizeof(Section);
+	//ppp += max * sizeof(Section);
 	// assign space for m_sorted
 	//m_sorted = (Section **)ppp;
 	// skip that
 	//ppp += max * sizeof(Section *);
 	// assign space for our ptrs that are 1-1 with the words array
-	m_sectionPtrs = (Section **)ppp;
+	//m_sectionPtrs = (Section **)ppp;
 	// the end
-	m_sectionPtrsEnd = (Section **)(ppp + nw * 4);
+	//m_sectionPtrsEnd = (Section **)(ppp + nw * 4);
 	// save this too
 	m_nw = nw;
 
@@ -375,6 +401,10 @@ bool Sections::set ( Words     *w                       ,
 		if ( fullTid == TAG_INPUT ||
 		     fullTid == TAG_HR    ||
 		     fullTid == TAG_COMMENT ) {
+			// try to realloc i guess. should keep ptrs in tact.
+			if ( m_numSections >= m_maxNumSections && 
+			     ! growSections() ) 
+				return true;
 			// get the section
 			Section *sn = &m_sections[m_numSections];
 			// clear
@@ -397,6 +427,10 @@ bool Sections::set ( Words     *w                       ,
 
 		// a section of multiple br tags in a sequence
 		if ( fullTid == TAG_BR ) {
+			// try to realloc i guess. should keep ptrs in tact.
+			if ( m_numSections >= m_maxNumSections && 
+			     ! growSections() ) 
+				return true;
 			// get the section
 			Section *sn = &m_sections[m_numSections];
 			// clear
@@ -884,6 +918,9 @@ bool Sections::set ( Words     *w                       ,
 		// with the address above it, and it shouldn't do that!
 		if ( tid == TAG_FONT ) continue;
 
+		// try to realloc i guess. should keep ptrs in tact.
+		if ( m_numSections >= m_maxNumSections && ! growSections() ) 
+			return true;
 		// get the section
 		Section *sn = &m_sections[m_numSections];
 		// clear
@@ -11034,8 +11071,11 @@ Section *Sections::insertSubSection ( Section *parentArg , long a , long b ,
 	// debug
 	//log("sect: inserting subsection [%li,%li)",a,b);
 
-	// sanity check
-	if ( m_numSections >= m_maxNumSections ) { char *xx=NULL;*xx=0;}
+	// try to realloc i guess. should keep ptrs in tact.
+	if ( m_numSections >= m_maxNumSections )
+		// try to realloc i guess
+		if ( ! growSections() ) return NULL;
+		//char *xx=NULL;*xx=0;}
 
 	//
 	// make a new section
@@ -17270,3 +17310,95 @@ bool Sections::setListFlags ( ) {
 		Section *ps;
 	*/
 }
+
+bool Sections::growSections ( ) {
+	// make a log note b/c this should not happen a lot because it's slow
+	log("build: growing sections!");
+	// record old buf start
+	char *oldBuf = m_sectionBuf.getBufStart();
+	// grow by 20MB at a time
+	if ( ! m_sectionBuf.reserve ( 20000000 ) ) return false;
+	// for fixing ptrs:
+	char *newBuf = m_sectionBuf.getBufStart();
+	// set the new max
+	m_maxNumSections = m_sectionBuf.getCapacity() / sizeof(Section);
+	// update ptrs in the old sections
+	for ( long i = 0 ; i < m_numSections ; i++ ) {
+		// breathe
+		QUICKPOLL(m_niceness);
+		Section *si = &m_sections[i];
+		if ( si->m_parent ) {
+			char *np = (char *)si->m_parent;
+			np = np - oldBuf + newBuf;
+			si->m_parent = (Section *)np;
+		}
+		if ( si->m_next ) {
+			char *np = (char *)si->m_next;
+			np = np - oldBuf + newBuf;
+			si->m_next = (Section *)np;
+		}
+		if ( si->m_prev ) {
+			char *np = (char *)si->m_prev;
+			np = np - oldBuf + newBuf;
+			si->m_prev = (Section *)np;
+		}
+		if ( si->m_listContainer ) {
+			char *np = (char *)si->m_listContainer;
+			np = np - oldBuf + newBuf;
+			si->m_listContainer = (Section *)np;
+		}
+		if ( si->m_prevBrother ) {
+			char *np = (char *)si->m_prevBrother;
+			np = np - oldBuf + newBuf;
+			si->m_prevBrother = (Section *)np;
+		}
+		if ( si->m_nextBrother ) {
+			char *np = (char *)si->m_nextBrother;
+			np = np - oldBuf + newBuf;
+			si->m_nextBrother = (Section *)np;
+		}
+		if ( si->m_sentenceSection ) {
+			char *np = (char *)si->m_sentenceSection;
+			np = np - oldBuf + newBuf;
+			si->m_sentenceSection = (Section *)np;
+		}
+		if ( si->m_prevSent ) {
+			char *np = (char *)si->m_prevSent;
+			np = np - oldBuf + newBuf;
+			si->m_prevSent = (Section *)np;
+		}
+		if ( si->m_nextSent ) {
+			char *np = (char *)si->m_nextSent;
+			np = np - oldBuf + newBuf;
+			si->m_nextSent = (Section *)np;
+		}
+		if ( si->m_tableSec ) {
+			char *np = (char *)si->m_tableSec;
+			np = np - oldBuf + newBuf;
+			si->m_tableSec = (Section *)np;
+		}
+		if ( si->m_headColSection ) {
+			char *np = (char *)si->m_headColSection;
+			np = np - oldBuf + newBuf;
+			si->m_headColSection = (Section *)np;
+		}
+		if ( si->m_headRowSection ) {
+			char *np = (char *)si->m_headRowSection;
+			np = np - oldBuf + newBuf;
+			si->m_headRowSection = (Section *)np;
+		}
+		if ( si->m_leftCell ) {
+			char *np = (char *)si->m_leftCell;
+			np = np - oldBuf + newBuf;
+			si->m_leftCell = (Section *)np;
+		}
+		if ( si->m_aboveCell ) {
+			char *np = (char *)si->m_aboveCell;
+			np = np - oldBuf + newBuf;
+			si->m_aboveCell = (Section *)np;
+		}
+	}
+	return true;
+}
+
+		

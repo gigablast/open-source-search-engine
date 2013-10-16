@@ -2359,6 +2359,9 @@ uint32_t Hostdb::getShardNum ( char rdbId,void *k,bool split ) {
 	//else if ( rdbId == RDB_CATDB || rdbId == RDB2_CATDB2 ) {
 	//	return m_map [(*(uint16_t *)((char *)k + 10))>>3];
 	//}
+	else if ( rdbId == RDB_CATDB || rdbId == RDB2_CATDB2 ) {
+		return m_map [(*(uint16_t *)((char *)k + 10))>>3];
+	}
 	// core -- must be provided
 	char *xx = NULL; *xx = 0;
 	//groupId=key.n1 & g_hostdb.m_groupMask;

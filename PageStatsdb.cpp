@@ -67,7 +67,8 @@ bool sendPageStatsdb ( TcpSocket *s, HttpRequest *r ) {
 	st->m_niceness     = MAX_NICENESS;
 
 	st->m_socket  	   = s;
-	st->m_request 	   = *r;
+	//st->m_request 	   = *r;
+	st->m_request.copy ( r );
 
 	// hostId must be one of the following:
 	// 	 0-n - a valid hostId
@@ -120,7 +121,9 @@ bool sendPageStatsdb ( TcpSocket *s, HttpRequest *r ) {
 		st->m_endDate = st->m_endDateR;
 	}
 
-
+	//
+	// this is no longer a gif, but an html graph in g_statsdb.m_sb
+	//
 	if ( ! g_statsdb.makeGIF ( st->m_endDateR   ,
 				   st->m_startDateR ,
 				   st->m_samples ,
@@ -211,15 +214,28 @@ void sendReply ( void *state ) {
 	buf.safePrintf("<table cellpadding=10 border=0>\n");
 
 	buf.safePrintf("<tr><td>"
-		       "<center>"
-		       "<img src=\"/stats%li.gif\" height=%li width=%li "
-		       "border=\"0px\">"
-		       "</center>"
+		       "<center>");
+
+	/////////////////////////
+	//
+	// insert the div graph here
+	//
+	/////////////////////////
+	buf.cat ( g_statsdb.m_gw );
+
+	// purge it
+	g_statsdb.m_gw.purge();
+	g_statsdb.m_dupTable.reset();
+
+	//"<img src=\"/stats%li.gif\" height=%li width=%li "
+	//"border=\"0px\">"
+	//st->m_hostId,
+	//g_statsdb.getImgHeight(),
+	//g_statsdb.getImgWidth());
+
+	buf.safePrintf("</center>"
 		       //"class=\"statsdb_image\">"
-		       "</td></tr>\n",
-		       st->m_hostId,
-		       g_statsdb.getImgHeight(),
-		       g_statsdb.getImgWidth());
+		       "</td></tr>\n");
 
 	// the map key
 	buf.safePrintf("<tr><td>");

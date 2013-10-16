@@ -58,9 +58,9 @@ bool Msg2a::makeCatdb( char  *coll,
 	char inFile[256];
 	// url info (content) file
 	if ( m_updateFromNew )
-		sprintf(inFile, "%scat/gbdmoz.content.dat.new", g_hostdb.m_dir);
+		sprintf(inFile, "%scatdb/gbdmoz.content.dat.new", g_hostdb.m_dir);
 	else
-		sprintf(inFile, "%scat/gbdmoz.content.dat", g_hostdb.m_dir);
+		sprintf(inFile, "%scatdb/gbdmoz.content.dat", g_hostdb.m_dir);
 	//m_inStream.open(inFile, ifstream::in);
 	m_inStream = open(inFile, O_RDONLY);
 	//if (!m_inStream.is_open()) {
@@ -118,7 +118,7 @@ bool Msg2a::makeCatdb( char  *coll,
 		// open the new diff file
 		//ifstream diffInStream;
 		int diffInStream;
-		sprintf(inFile, "%scat/gbdmoz.content.dat.new.diff",
+		sprintf(inFile, "%scatdb/gbdmoz.content.dat.new.diff",
 				g_hostdb.m_dir);
 		//diffInStream.open(inFile, ifstream::in);
 		diffInStream = open(inFile, O_RDONLY);
@@ -328,6 +328,12 @@ bool Msg2a::makeCatdb( char  *coll,
 		// null terminate
 		m_urls[urlp] = '\0';
 		currUrl++;
+		// debug
+		//SafeBuf sb;
+		//sb.safeMemcpy(&m_urls[urlp-urlLen],urlLen);
+		//sb.nullTerm();
+		//log("gencat: url=%s",sb.getBufStart());
+
 	}
 	log(LOG_INFO, "db: Wrote %li urls to update (%li)\n",
 		      currUrl - m_numRemoveUrls, m_numUpdateIndexes);
@@ -581,9 +587,9 @@ void handleRequest2a ( UdpSlot *slot, long netnice ) {
 		otherCategories = &g_categories1;
 	// load the new file
 	if ( updateFromNew )
-		sprintf(buff, "%scat/gbdmoz.structure.dat.new", g_hostdb.m_dir);
+		sprintf(buff, "%scatdb/gbdmoz.structure.dat.new", g_hostdb.m_dir);
 	else
-		sprintf(buff, "%scat/gbdmoz.structure.dat", g_hostdb.m_dir);
+		sprintf(buff, "%scatdb/gbdmoz.structure.dat", g_hostdb.m_dir);
 	if (otherCategories->loadCategories(buff) != 0) {
 		log("db: Loading Categories From %s Failed", buff);
 		// send error reply
@@ -605,51 +611,51 @@ void handleRequest2a ( UdpSlot *slot, long netnice ) {
 	}
 
 	// move the current files to .old
-	sprintf(buff, "mv %scat/content.rdf.u8 %scat/content.rdf.u8.old",
+	sprintf(buff, "mv %scatdb/content.rdf.u8 %scatdb/content.rdf.u8.old",
 		      g_hostdb.m_dir, g_hostdb.m_dir);
 	log ( LOG_INFO, "%s", buff);
 	system ( buff );
-	sprintf(buff, "mv %scat/structure.rdf.u8 %scat/structure.rdf.u8.old",
+	sprintf(buff, "mv %scatdb/structure.rdf.u8 %scatdb/structure.rdf.u8.old",
 		      g_hostdb.m_dir, g_hostdb.m_dir);
 	log ( LOG_INFO, "%s", buff);
 	system ( buff );
-	sprintf(buff, "mv %scat/gbdmoz.content.dat "
-		      "%scat/gbdmoz.content.dat.old",
+	sprintf(buff, "mv %scatdb/gbdmoz.content.dat "
+		      "%scatdb/gbdmoz.content.dat.old",
 		      g_hostdb.m_dir, g_hostdb.m_dir);
 	log ( LOG_INFO, "%s", buff);
 	system ( buff );
-	sprintf(buff, "mv %scat/gbdmoz.structure.dat "
-		      "%scat/gbdmoz.structure.dat.old",
+	sprintf(buff, "mv %scatdb/gbdmoz.structure.dat "
+		      "%scatdb/gbdmoz.structure.dat.old",
 		      g_hostdb.m_dir, g_hostdb.m_dir);
 	log ( LOG_INFO, "%s", buff);
 	system ( buff );
-	sprintf(buff, "mv %scat/gbdmoz.content.dat.diff "
-		      "%scat/gbdmoz.content.dat.diff.old",
+	sprintf(buff, "mv %scatdb/gbdmoz.content.dat.diff "
+		      "%scatdb/gbdmoz.content.dat.diff.old",
 		      g_hostdb.m_dir, g_hostdb.m_dir);
 	log ( LOG_INFO, "%s", buff);
 	system ( buff );
 
 	// move the .new files to current
-	sprintf(buff, "mv %scat/content.rdf.u8.new %scat/content.rdf.u8",
+	sprintf(buff, "mv %scatdb/content.rdf.u8.new %scatdb/content.rdf.u8",
 		      g_hostdb.m_dir, g_hostdb.m_dir);
 	log ( LOG_INFO, "%s", buff);
 	system ( buff );
-	sprintf(buff, "mv %scat/structure.rdf.u8.new %scat/structure.rdf.u8",
+	sprintf(buff, "mv %scatdb/structure.rdf.u8.new %scatdb/structure.rdf.u8",
 		      g_hostdb.m_dir, g_hostdb.m_dir);
 	log ( LOG_INFO, "%s", buff);
 	system ( buff );
-	sprintf(buff, "mv %scat/gbdmoz.content.dat.new "
-		      "%scat/gbdmoz.content.dat",
+	sprintf(buff, "mv %scatdb/gbdmoz.content.dat.new "
+		      "%scatdb/gbdmoz.content.dat",
 		      g_hostdb.m_dir, g_hostdb.m_dir);
 	log ( LOG_INFO, "%s", buff);
 	system ( buff );
-	sprintf(buff, "mv %scat/gbdmoz.structure.dat.new "
-		      "%scat/gbdmoz.structure.dat",
+	sprintf(buff, "mv %scatdb/gbdmoz.structure.dat.new "
+		      "%scatdb/gbdmoz.structure.dat",
 		      g_hostdb.m_dir, g_hostdb.m_dir);
 	log ( LOG_INFO, "%s", buff);
 	system ( buff );
-	//sprintf(buff, "mv %scat/gbdmoz.content.dat.new.diff "
-	//	      "%scat/gbdmoz.content.dat.diff",
+	//sprintf(buff, "mv %scatdb/gbdmoz.content.dat.new.diff "
+	//	      "%scatdb/gbdmoz.content.dat.diff",
 	//	      g_hostdb.m_dir, g_hostdb.m_dir);
 	//log ( LOG_INFO, "%s", buff);
 	//system ( buff );

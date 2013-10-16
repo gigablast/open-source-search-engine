@@ -3878,7 +3878,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( m_cri >= g_collectiondb.m_numRecs ) m_cri = 0;
 		// get rec
 		cr = g_collectiondb.m_recs[m_cri];
-		// skip if empty
+		// skip if gone
 		if ( ! cr ) continue;
 		// stop if not enabled
 		if ( ! cr->m_spideringEnabled ) continue;

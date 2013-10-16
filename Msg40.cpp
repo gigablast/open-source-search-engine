@@ -148,6 +148,10 @@ bool Msg40::getResults ( SearchInput *si      ,
 	// we need this info for caching as well
 	//m_numGigabitInfos = 0;
 
+
+	//just getfrom searchinput
+	//....	m_catId = hr->getLong("catid",0);m_si->m_catId;
+
  	m_postQueryRerank.set1( this, si );
 
 	// get the collection rec
@@ -680,6 +684,20 @@ bool Msg40::gotDocIds ( ) {
 // 	if ( ! m_msg1a.generateReferences(m_si,(void*)this,didTaskWrapper) )
 // 		m_tasksRemaining++;
 
+
+	//
+	// call Msg2b to generate directory
+	//
+	// why is this here? it does not depend on the docids. (mdw 9/25/13)
+	// dissect it and fix it!!
+	//
+	//if ( m_si->m_catId && 
+	//     ! m_msg2b.generateDirectory ( m_si->m_catId,
+	//				   (void*)this,
+	//				   didTaskWrapper ) )
+	//	m_tasksRemaining++;
+
+
 	return launchMsg20s ( false );
 }
 
@@ -878,7 +896,6 @@ bool Msg40::reallocMsg20Buf ( ) {
 	return true;
 }
 
-/*
 void didTaskWrapper ( void* state ) {
 	Msg40 *THIS = (Msg40 *) state;
 	// one less task
@@ -888,7 +905,6 @@ void didTaskWrapper ( void* state ) {
 	// we are done, call the callback
 	THIS->m_callback ( THIS->m_state );
 }
-*/
 
 bool Msg40::launchMsg20s ( bool recalled ) {
 
@@ -2128,7 +2144,7 @@ long Msg40::getStoredSize ( ) {
 	//size += m_msg24.getStoredSize ( );
 	//size += m_msg1a.getStoredSize ( );
 	// cache msg2b if we have it
-	size += m_msg2b.getStoredSize();
+	//size += m_msg2b.getStoredSize();
 
 	return size;
 }
@@ -2203,9 +2219,9 @@ long Msg40::serialize ( char *buf , long bufLen ) {
 	//if ( y == -1 ) return -1;
 	//p += y;
 
-	long z = m_msg2b.serialize (p, pend - p);
-	if ( z == -1 ) return -1;
-	p += z;
+	//long z = m_msg2b.serialize (p, pend - p);
+	//if ( z == -1 ) return -1;
+	//p += z;
 
 	if ( m_r.m_debug )
 		log("query: msg40 serialize nd=%li "
@@ -2258,9 +2274,9 @@ long Msg40::deserialize ( char *buf , long bufSize ) {
 	}
 
 	// msg2b
-	long z = m_msg2b.deserialize ( p , pend - p );
-	if ( z == -1 ) return -1;
-	p += z;
+	//long z = m_msg2b.deserialize ( p , pend - p );
+	//if ( z == -1 ) return -1;
+	//p += z;
 
 	// return bytes read
 	return p - buf;

@@ -229,11 +229,15 @@ struct SafeBuf {
 			 bool requestPath = false,
 			 bool encodeApostrophes = false );
 
-	bool  urlEncode (char *s , 
-			 bool encodeApostrophes = false ) {
+	bool  urlEncode (char *s ) {
+		return urlEncode ( s,strlen(s),false,false); };
+
+
+	bool  urlEncode2 (char *s , 
+			  bool encodeApostrophes ) { // usually false
 		return urlEncode ( s,strlen(s),false,encodeApostrophes); };
 
-	bool  urlEncode ( bool spaceToPlus = true );
+	bool  urlEncodeAllBuf ( bool spaceToPlus = true );
 	bool  latin1CdataEncode(char *s, long len);
 	bool  utf8CdataEncode(char *s, long len);
 

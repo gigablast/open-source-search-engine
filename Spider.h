@@ -601,7 +601,13 @@ class SpiderRequest {
 	// this 0 and to not avoid spidering the links.
 	long    m_avoidSpiderLinks:1;
 	// for identifying address heavy sites...
-	long    m_tagYellowPages:1;
+	//long    m_tagYellowPages:1;
+	// when indexing urls for dmoz, i.e. the urls outputted from
+	// 'dmozparse urldump -s' we need to index them even if there
+	// was a ETCPTIMEDOUT because we have to have indexed the same
+	// urls that dmoz has in it in order to be identical to dmoz.
+	long    m_ignoreExternalErrors:1;
+
 	// called XmlDoc::set4() from PageSubmit.cpp?
 	//long    m_isPageSubmit:1;
 

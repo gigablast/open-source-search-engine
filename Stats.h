@@ -25,9 +25,9 @@ class StatPoint {
 
 #define MAX_POINTS 6000
 #define MAX_WIDTH  6
-#define DY         900              // pixels vertical
+#define DY         600              // pixels vertical
 #define DX         1000             // pixels across
-#define DT         (20*1000)        // time window, 10 seconds
+#define DT         (20*1000)        // time window, 20 seconds
 #define MAX_LINES  (DY / (MAX_WIDTH+1)) // leave free pixel above each line
 
 #define STAT_GENERIC 0
@@ -53,7 +53,10 @@ class Stats {
 	// . dumps a bar graph
 	// . each bar represents a stat in time, from inception to completion
 	// . useful for seeing possible sources of contention
-	void dumpGIF ( long long startTime = -1 , long long endTime = -1 );
+	//void dumpGIF ( long long startTime = -1 , long long endTime = -1 );
+
+
+	void printGraphInHtml ( SafeBuf &sb );
 
 	// this graphs:
 	// 1. stats per second

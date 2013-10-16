@@ -1087,12 +1087,12 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		//g_tfndb.getRdb(),
 		g_tagdb.getRdb(),
 		g_clusterdb.getRdb(),
-		//g_catdb.getRdb(),
 		g_linkdb.getRdb(),
 		g_cachedb.getRdb(),
 		g_serpdb.getRdb(),
 		g_monitordb.getRdb(),
-		g_statsdb.getRdb()
+		g_statsdb.getRdb(),
+		g_catdb.getRdb()
 		//g_placedb.getRdb() ,
 		//g_sectiondb.getRdb()
 	};

@@ -495,6 +495,13 @@ class XmlDoc {
 	long **getIndCatIds ( ) ;
 	long **getCatIds ( ) ;
 	class CatRec *getCatRec ( ) ;
+
+	long *getNumDmozEntries() ;
+	char **getDmozTitles ( ) ;
+	char **getDmozSummaries ( ) ;
+	char **getDmozAnchors ( ) ;
+	bool setDmozInfo () ;
+
 	long long **getWikiDocIds ( ) ;
 	void gotWikiResults ( class UdpSlot *slot );
 	long *getPubDate ( ) ;
@@ -663,6 +670,8 @@ class XmlDoc {
 	int8_t *getNextSpiderPriority ( ) ;
 	long *getPriorityQueueNum ( ) ;
 	class TagRec ***getOutlinkTagRecVector () ;
+	char *hasNoIndexMetaTag();
+	char *hasFakeIpsMetaTag ( );
 	long **getOutlinkFirstIpVector () ;
 	//char **getOutlinkIsIndexedVector () ;
 	long *getRegExpNum ( long outlinkNum ) ;
@@ -678,6 +687,7 @@ class XmlDoc {
 	bool getIsInjecting();
 	long *getSpiderPriority ( ) ;
 	long *getIndexCode ( ) ;
+	long *getIndexCode2 ( ) ;
 	SafeBuf *getNewTagBuf ( ) ;
 
 	char *updateTagdb ( ) ;
@@ -733,6 +743,7 @@ class XmlDoc {
 	bool hashZipCodes ( class HashTableX *table ) ;
 	bool hashMetaZip ( class HashTableX *table ) ;
 	bool hashContentType ( class HashTableX *table ) ;
+	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
 	bool hashUrl ( class HashTableX *table ) ;
 	bool hashSections ( class HashTableX *table ) ;
@@ -1038,7 +1049,6 @@ class XmlDoc {
 	char     m_fragBufValid;
 	char     m_wordSpamBufValid;
 	char     m_finalSummaryBufValid;
-
 	char     m_matchingQueryBufValid;
 	char     m_relatedQueryBufValid;
 	char     m_queryLinkBufValid;
@@ -1143,6 +1153,7 @@ class XmlDoc {
 	bool m_dmozTitlesValid;
 	bool m_dmozSummsValid;
 	bool m_dmozAnchorsValid;
+	bool m_dmozInfoValid;
 	bool m_rawUtf8ContentValid;
 	bool m_expandedUtf8ContentValid;
 	bool m_utf8ContentValid;
@@ -1239,6 +1250,8 @@ class XmlDoc {
 	bool m_priorityQueueNumValid;
 	bool m_outlinkTagRecVectorValid;
 	bool m_outlinkIpVectorValid;
+	bool m_hasNoIndexMetaTagValid;
+	bool m_hasUseFakeIpsMetaTagValid;
 	bool m_outlinkIsIndexedVectorValid;
 	bool m_isSiteRootValid;
 	bool m_wasInjectedValid;
@@ -1499,8 +1512,15 @@ class XmlDoc {
 	Msge0 m_msge0;
 
 	// this points into m_msge1 i guess
-	//long *m_outlinkIpVector;
+	long *m_outlinkIpVector;
+	SafeBuf m_outlinkTagRecPtrBuf;
+	SafeBuf m_fakeIpBuf;
+	char m_hasNoIndexMetaTag;
+	char m_hasUseFakeIpsMetaTag;
 	Msge1 m_msge1;
+	TagRec **m_outlinkTagRecVector;
+	SafeBuf m_fakeTagRecPtrBuf;
+	TagRec m_fakeTagRec;
 
 	//
 	// diffbot parms for indexing diffbot's json output
@@ -1860,7 +1880,9 @@ class XmlDoc {
 	char m_isErrorPage;
 	char m_isHijacked;
 	//char m_isVisible;
-	char m_dmozBuf[12000];
+	//char m_dmozBuf[12000];
+	SafeBuf m_dmozBuf;
+	long m_numDmozEntries;
 
 	// stuff
 	char *m_statusMsg;

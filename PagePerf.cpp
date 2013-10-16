@@ -14,11 +14,11 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 	// allow connection if i'm running this on lenny, too
 	//if ( s->m_ip != matt1 && s->m_ip != matt2 )
 	//	return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
-	long refreshLen = 0;
-	if(r->getString ( "refresh" , &refreshLen) ) {
-		g_stats.dumpGIF ();
-		return g_httpServer.sendDynamicPage ( s , "x", 1 );
-	}
+	//long refreshLen = 0;
+	//if(r->getString ( "refresh" , &refreshLen) ) {
+	//	g_stats.dumpGIF ();
+	//	return g_httpServer.sendDynamicPage ( s , "x", 1 );
+	//}
 
 	// don't allow pages bigger than 128k in cache
 	char  buf [ 64*1024 ];
@@ -77,7 +77,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// dump stats to /tmp/diskGraph.gif
-	g_stats.dumpGIF ();
+	//g_stats.dumpGIF ();
 
 	if(autoRefresh > 0) 
 		p.safePrintf("<body onLoad=\"timeit();\">"); 
@@ -105,8 +105,13 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf(
 		       //"<center>Disk Statistics<br><br>"
 		       "<center><br>"
-		       "<img name=\"diskgraph\" src=/diskGraph%li.gif><br><br>",
-		       g_hostdb.m_hostId );
+		       //"<img name=\"diskgraph\" 
+		       //src=/diskGraph%li.gif><br><br>",
+		       //g_hostdb.m_hostId );
+		     );
+
+	// now try using absolute divs instead of a GIF
+	g_stats.printGraphInHtml ( p );
 
 	if(autoRefresh > 0) {
 		if(refresh) *(refresh+4) = '0';

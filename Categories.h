@@ -26,7 +26,7 @@
 #define MAX_TAG_LEN      127
 #define MAX_URL_CATIDS   64
 #define MAX_URLTXT_SIZE  500000
-#define MAX_CATIDS       64
+#define MAX_CATIDS       96
 #define MAX_CATNAME_LEN  1024
 
 #define HASHTABLE_SIZE    (1024*1024)
@@ -61,11 +61,15 @@ struct CategoryHash {
 };
 
 struct SubCategory {
-	long  m_prefixOffset;
+	//long  m_prefixOffset;
 	long  m_prefixLen;
-	long  m_nameOffset;
+	//long  m_nameOffset;
 	long  m_nameLen;
 	char  m_type;
+	long getRecSize () { return sizeof(SubCategory)+m_prefixLen+m_nameLen+2;};
+	char *getPrefix() { return m_buf; };
+	char *getName  () { return m_buf+m_prefixLen+1;};
+	char  m_buf[0];
 };
 
 class Categories {
@@ -133,6 +137,8 @@ public:
 				       long  catid,
 				       bool  isRTL = false );
 
+	bool printUrlsInTopic ( class SafeBuf *sb , long catid  ) ;
+
 	// . get the title and summary for a specific url
 	//   and catid
 	bool getTitleAndSummary ( char  *url,
@@ -153,15 +159,13 @@ public:
 	// normalize a url string
 	long fixUrl ( char *url, long urlLen );
 
-	// generate sub categories for a given catid
-	long generateSubCats ( long catid,
-			       SubCategory *subCats,
-			       char **catBuffer,
-			       long  *catBufferSize,
-			       long  *catBufferLen,
-			       bool   allowRealloc = true );
+	// . generate sub categories for a given catid
+	// . store list of SubCategories into "subCatBuf" return # stored
+	// . hits disk without using threads... so kinda sucks...
+	long generateSubCats ( long catid, SafeBuf *subCatBuf );
 
 	long getNumUrlsFromIndex ( long catIndex ) {
+		if ( ! m_cats ) return 0;
 		return m_cats[catIndex].m_numUrls; };
 
 	// creates a directory search request url

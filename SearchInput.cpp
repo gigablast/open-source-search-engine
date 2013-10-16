@@ -711,7 +711,6 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	// . sets m_qbuf1 and m_qbuf2
 	if ( ! setQueryBuffers ( r ) ) return false;
 
-
 	/* --- Virtual host language detection --- */
 	if(r->getHost()) {
 		bool langset = getLanguageFromAbbr(m_defaultSortLanguage);
@@ -1226,6 +1225,40 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 		  m_displayQuery,
 		  m_displayQueryLen);
 	
+
+
+
+	//////////
+	//
+	// show DMOZ BREADCRUMB if doing a 
+	// "gbpcatid:<catid> |" (Search restricted to category)
+	// "gbcatid:<catid>"    (DMOZ urls in that topic, c=dmoz3)
+	//
+	//////////
+	long pcatId = -1;
+	long dcatId  = -1;
+	// get the final query
+	char *q =m_sbuf1.getBufStart();
+	if ( q ) sscanf(q,"gbpcatid:%li",&pcatId);
+	if ( q ) sscanf(q,"gbcatid:%li",&dcatId);
+	// pick the one that is valid
+	long catId = -1;
+	if ( pcatId >= 0 ) catId = pcatId;
+	if ( dcatId >= 0 ) catId = dcatId;
+	
+	//////
+	//
+	// save catid into the state
+	m_catId = catId;
+	//
+	///////
+
+	// are we a right to left language like hebrew?
+	if ( catId > 0 && g_categories->isIdRTL(catId) )
+		m_isRTL = true;
+	else
+		m_isRTL = false;
+
 	return true;
 }
 

@@ -198,6 +198,7 @@ bool CatRec::set ( Url *url , char *data , long dataSize , bool gotByIp ) {
 		log ( "tagdb: Deserialized datasize %i != %li for url %s so "
 		      "ignoring tagdb record.",
 		      p - m_data, m_dataSize , url->getUrl() );
+		return false;
 		char *xx = NULL; *xx = 0;
 	}
 
@@ -308,7 +309,9 @@ bool CatRec::set ( Url *site ,
 	// add the ids
 	m_catids = (long*)p;
 	memcpy(p, catids, 4*m_numCatids);
-	p += 4*m_numCatids;
+	// skip over "numCatids" NOT m_numCatids which is TRUNCATED
+	// to MAX_CATIDS
+	p += 4*numCatids;
 	//}
 	// point to the filenum so we can mod it!
 	//m_filenumPtr = p;

@@ -3,6 +3,9 @@
 
 #include "SafeBuf.h"
 
+bool printDmozRadioButtons ( SafeBuf &sb , long catId ) ;
+bool printLogoAndSearchBox ( SafeBuf &sb , class HttpRequest *hr, long catId );
+
 bool printTermPairs ( SafeBuf &sb , class Query *q , class PairScore *ps ) ;
 bool printSingleTerm ( SafeBuf &sb , class Query *q , class SingleScore *ss );
 
@@ -16,6 +19,9 @@ bool printEventAddress ( SafeBuf &sb , char *addrStr , class SearchInput *si ,
 			 double eventGeocoderLat,
 			 double eventGeocoderLon,
 			 char *eventBestPlaceName );
+
+bool printDMOZCrumb ( SafeBuf &sb , long catId , bool xml ) ;
+bool printDMOZSubTopics ( SafeBuf&  sb, long catId, bool inXml ) ;
 
 bool printEventCountdown2 ( SafeBuf &sb ,
 			    SearchInput *si,

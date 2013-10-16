@@ -93,10 +93,17 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		char *e = p; while ( *e && ! is_wspace_a (*e) ) e++;
 		// . set the url
 		// . but don't add the "www."
+		// . watch out for
+		//   http://twitter.com/#!/ronpaul to http://www.twitter.com/
+		//   so do not strip # hashtags
 		Url site;
-		site.set ( p , e - p , false/*addwww?*/);
+		site.set ( p , e - p , false ); // addwww?
 		// normalize the url
 		g_catdb.normalizeUrl(&site, &site);
+
+		// sanity
+		if ( numCatids[k] > MAX_CATIDS ) { char *xx=NULL;*xx=0; }
+
 		// make a siteRec from this url
 		CatRec sr;
 		// returns false and sets g_errno on error
@@ -107,6 +114,16 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		char *data     = sr.getData ();
 		long  dataSize = sr.getDataSize ();
 		key_t key;
+		// sanity test
+		CatRec cr2;
+		if ( ! cr2.set ( NULL , sr.getData(), sr.getDataSize(),false)){
+			char *xx=NULL;*xx=0; }
+		// debug when generating catdb
+		//char *x = p;
+		//for ( ; x<e ; x++ ) {
+		//	if ( x[0] == '#' )
+		//		log("hey");
+		//}
 		if ( numCatids[k] == 0 )
 			key = g_catdb.makeKey(&site, true);
 		else
@@ -123,7 +140,23 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		}
 		else if ( ! m_list.addRecord ( key, dataSize, data ) )
 			return true;
-		
+
+		/*
+		// debug point
+		SafeBuf sb;
+		//sb.safeMemcpy(p , e-p );
+		sb.safeStrcpy(sr.m_url);
+		sb.safePrintf(" ");
+		for ( long i = 0 ; i < numCatids[k] ; i++ )
+			sb.safePrintf ( "%li " , catids[c+i] );
+		log("catdb: adding key=%s url=%s",
+		    KEYSTR(&key,12),
+		    sb.getBufStart());
+		*/
+
+		// debug
+		//log("gencat: adding url=%s",sr.m_url);
+
 		//skip:
 		// now advance p to e
 		p = e;
@@ -133,7 +166,8 @@ bool Msg9b::addCatRecs ( char *urls        ,
 		
 		QUICKPOLL((niceness));
 	}
-	log ( LOG_INFO, "Msg9b: %li sites and %li links added", k , c );
+	log ( LOG_INFO, "Msg9b: %li sites and %li links added. "
+	      "listSize=%li", k , c , m_list.m_listSize );
 	// . now add the m_list to tagdb using msg1
 	// . use high priority (niceness of 0)
 	// . i raised niceness from 0 to 1 so multicast does not use the

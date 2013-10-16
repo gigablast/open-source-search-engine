@@ -4657,6 +4657,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m++;
 
+	/*
 	m->m_title = "catdb min files to merge";
 	m->m_desc  = "";
 	m->m_off   = (char *)&g_conf.m_catdbMinFilesToMerge - g;
@@ -4665,7 +4666,6 @@ void Parms::init ( ) {
 	m->m_save  = 0;
 	m++;
 
-	/*
 	m->m_title = "revdb max tree mem";
 	m->m_desc  = "Revdb holds the meta list we added for this doc.";
 	m->m_off   = (char *)&g_conf.m_revdbMaxTreeMem - g;
