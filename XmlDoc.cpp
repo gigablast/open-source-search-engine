@@ -12486,9 +12486,9 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		if ( ! THIS->m_diffbotReply.reserve ( need ) ) 
 			goto skip;
 		// first store the url we used on first line
-		THIS->m_diffbotReply.safeMemcpy ( au->getBufStart(),
-						  au->length() );
-		THIS->m_diffbotReply.pushChar('\n');
+		//THIS->m_diffbotReply.safeMemcpy ( au->getBufStart(),
+		//				  au->length() );
+		//THIS->m_diffbotReply.pushChar('\n');
 		THIS->m_diffbotReply.safeMemcpy ( page , pageLen );
 		// tack on a \0 but don't increment m_length
 		THIS->m_diffbotReply.nullTerm();
