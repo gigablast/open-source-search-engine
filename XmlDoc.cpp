@@ -2684,6 +2684,8 @@ char *XmlDoc::prepareToMakeTitleRec ( ) {
 	if ( ! rl || rl == (void *)-1 ) return (char *)rl;
 	long **pcids = getCatIds();
 	if ( ! pcids || pcids == (void *)-1) return (char *)pcids;
+	// get dmoz ptr_dmozTitles, ptr_dmozSumms, ptr_dmozAnchors
+	if ( ! setDmozInfo() ) return (char *)-1;
 
 	m_prepared = true;
 	return (char *)1;
