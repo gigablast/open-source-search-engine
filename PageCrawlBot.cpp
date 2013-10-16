@@ -2080,10 +2080,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//	return sendErrorReply2 (socket,fmt,msg);
 	//}
 
-	if ( delColl && cast && fmt == FMT_JSON ) {
-		char *msg = "Collection deleted.";
-		return sendReply2 (socket,fmt,msg);
-	}
+	// just send back a list of all the collections after the delete
+	//if ( delColl && cast && fmt == FMT_JSON ) {
+	//	char *msg = "Collection deleted.";
+	//	return sendReply2 (socket,fmt,msg);
+	//}
 
 	// default name to next available collection crawl name in the
 	// case of a delete operation...
@@ -3283,7 +3284,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	if ( fmt == FMT_HTML ) {
 		sb.safePrintf ( "<table>"
-				"<tr><td colspan=2>URL Filters</td></tr>\n"
+				"<tr><td colspan=2>"
+				"<b>URL Filters</b>"
+				"</td></tr>\n"
 				);
 		// true means its html input
 		printUrlFilters ( sb , cr , fmt );
@@ -3295,6 +3298,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</td><td>"
 			      "Action <input type=text name=action size=50 "
 			      "value=\"\">"
+			      " "
+			      "<input type=submit name=submit value=OK>"
 			      "</td>"
 			      "</tr>\n"
 			      );
