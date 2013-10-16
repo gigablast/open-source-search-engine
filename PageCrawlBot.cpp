@@ -1911,8 +1911,9 @@ static class HelpItem s_his[] = {
 
 
 	{"seed","Inject this URL into the crawl and spider its links, "
-	 "as long as they are on the same domain. To inject multiple urls"
-	 ""},
+	 "unless spiderLinks=0 is specified. By default CrawlBot only "
+	 "spiders links from the same domain."
+	},
 	{"addUrls","A huge string of whitespace separated URLs to add to "
 	 "spiderdb for crawling."},
 	{"spiderLinks","Use 1 or 0 to spider the links or NOT spider "
@@ -2884,6 +2885,23 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      "<table border=0 cellpadding=5>"
 
+			      //
+			      "<tr>"
+			      "<td><b>Crawl Name:</td>"
+			      "<td>%s</td>"
+			      "</tr>"
+
+			      //"<tr>"
+			      //"<td><b>Collection Alias:</td>"
+			      //"<td>%s%s</td>"
+			      //"</tr>"
+
+			      "<tr>"
+			      "<td><b>Token:</td>"
+			      "<td>%s</td>"
+			      "</tr>"
+
+
 			      // this will  have to be in crawlinfo too!
 			      //"<tr>"
 			      //"<td><b>pages indexed</b>"
@@ -2931,6 +2949,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      "</TD>"
 			      
+			      , cr->m_diffbotCrawlName.getBufStart()
+			      , cr->m_diffbotToken.getBufStart()
+
 			      , cr->m_globalCrawlInfo.m_objectsAdded -
 			        cr->m_globalCrawlInfo.m_objectsDeleted
 			      , cr->m_globalCrawlInfo.m_urlsHarvested
@@ -3013,22 +3034,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		if ( ! notifUrl   ) notifUrl = "";
 
 		sb.safePrintf(
-			      //
-			      "<tr>"
-			      "<td><b>Crawl Name:</td>"
-			      "<td>%s</td>"
-			      "</tr>"
-
-			      //"<tr>"
-			      //"<td><b>Collection Alias:</td>"
-			      //"<td>%s%s</td>"
-			      //"</tr>"
-
-			      "<tr>"
-			      "<td><b>Token:</td>"
-			      "<td>%s</td>"
-			      "</tr>"
-
 			      "<tr>"
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
@@ -3144,12 +3149,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</TR>"
 			      "</TABLE>"
 
-
-			      , cr->m_diffbotCrawlName.getBufStart()
-			      //, alias
-			      //, aliasResponse
-
-			      , cr->m_diffbotToken.getBufStart()
 
 			      , cr->m_coll
 			      , cr->m_coll
