@@ -2319,7 +2319,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 
 	if ( fmt == FMT_JSON )
-		sb.safePrintf("{\"urlFilters\":[");
+		sb.safePrintf("\"urlFilters\":[");
 
 	// skip first 2 filters that are ismedia->ignore and
 	// !isonsamedomain->ignore
@@ -2376,7 +2376,7 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 		// remove trailing comma
 		sb.removeLastChar('\n');
 		sb.removeLastChar(',');
-		sb.safePrintf("]}\n");
+		sb.safePrintf("]\n");
 	}
 
 	return true;
@@ -4005,8 +4005,8 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		//if ( strcasecmp(action,"donotprocess") == 0 )
 		//	api = NULL;
 		// a new diffbot url?
-		if ( strcasecmp(action,"http") == 0 )
-			api = action;
+		//if ( strncasecmp(action,"http",4) == 0 )
+		api = action;
 
 		// add the new filter
 		cr->m_regExs             [nf].set(expression);
