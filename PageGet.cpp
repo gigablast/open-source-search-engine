@@ -363,13 +363,18 @@ bool processLoop ( void *state ) {
 	// get the url of the title rec
 	Url *f = xd->getFirstUrl();
 
+	bool printDisclaimer = st->m_printDisclaimer;
+
+	if ( xd->m_contentType == CT_JSON )
+		printDisclaimer = false;
+
 
 	// We should always be displaying this disclaimer.
 	// - May eventually want to display this at a different location
 	//   on the page, or on the click 'n' scroll browser page itself
 	//   when this page is not being viewed solo.
 	// CNS: if ( ! st->m_clickNScroll ) {
-	if ( st->m_printDisclaimer ) {
+	if ( printDisclaimer ) {
 
 		sprintf ( p , 
 			  //"<BASE HREF=\"%s\">"
@@ -514,9 +519,10 @@ bool processLoop ( void *state ) {
 	//m.addMatches ( &qw , &ss , true );
 	m.addMatches ( &qw );
 	long hilen = 0;
+
 	// CNS: if ( ! st->m_clickNScroll ) {
 	// and highlight the matches
-	if ( st->m_printDisclaimer ) {
+	if ( printDisclaimer ) {
 		hilen = hi.set ( p       ,
 				 avail   ,
 				 &qw     , // words to highlight
@@ -529,9 +535,16 @@ bool processLoop ( void *state ) {
 		memcpy ( p , "</span></table></table>\n" , 24 );   p += 24;
 	}
 
+
+	bool includeHeader = st->m_includeHeader;
+
+	// do not show header for json object display
+	if ( xd->m_contentType == CT_JSON )
+		includeHeader = false;
+
 	//mfree(uq, uqCapacity, "PageGet");
 	// undo the header writes if we should
-	if ( ! st->m_includeHeader ) {
+	if ( ! includeHeader ) {
 		// including base href is off by default when not including
 		// the header, so the caller must explicitly turn it back on
 		if ( st->m_includeBaseHref ) p = start2;
@@ -592,7 +605,7 @@ bool processLoop ( void *state ) {
 
 		long printLinks = st->m_r.getLong("links",0);
 
-		if ( ! st->m_printDisclaimer && printLinks )
+		if ( ! printDisclaimer && printLinks )
 			p += sprintf ( p , 
 				       // first put cached and live link
 				       "<tr>"
@@ -668,6 +681,12 @@ bool processLoop ( void *state ) {
 	// if no highlighting, skip it
 	bool queryHighlighting = st->m_queryHighlighting;
 	if ( st->m_strip == 2 ) queryHighlighting = false;
+
+	// do not do term highlighting if json
+	if ( xd->m_contentType == CT_JSON )
+		queryHighlighting = false;
+	
+
 	if ( ! queryHighlighting ) {
 		memcpy ( p , content , contentLen );
 		p += contentLen ;
@@ -736,6 +755,9 @@ bool processLoop ( void *state ) {
 	if ( strip == 2 ) contentType = "text/xml";
 	// xml is usually buggy and this throws browser off
 	//if ( ctype == CT_XML ) contentType = "text/xml";
+
+	if ( xd->m_contentType == CT_JSON )
+		contentType = "application/json";
 
 	// nuke state2
 	mdelete ( st , sizeof(State2) , "PageGet1" );
