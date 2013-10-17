@@ -2119,7 +2119,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	if ( ! name ) {
 		log("crawlbot: no crawl name given");
-		char *msg = "invalid or missing \"name\"";
+		char *msg = "invalid or missing name";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
 
@@ -2548,13 +2548,16 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	if ( fmt == FMT_HTML )
 		sb.safePrintf ( "</center><br/>" );
 
+	// the ROOT JSON {
+	if ( fmt == FMT_JSON )
+		sb.safePrintf("{\n");
 
 	if ( fmt == FMT_JSON && injectionResponse )
-		sb.safePrintf("{\"seedResponse\":\"%s\"},\n\n"
+		sb.safePrintf("\"seedResponse\":\"%s\",\n\n"
 			      , injectionResponse->getBufStart() );
 
 	if ( fmt == FMT_JSON && urlUploadResponse )
-		sb.safePrintf("{\"addUrlsResponse\":\"%s\"},\n\n"
+		sb.safePrintf("\"addUrlsResponse\":\"%s\",\n\n"
 			      , urlUploadResponse->getBufStart() );
 
 
@@ -2565,7 +2568,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//////
 
 	if ( fmt == FMT_JSON )
-		sb.safePrintf("{\"crawls\":[");//\"collections\":");
+		sb.safePrintf("\"crawls\":[");//\"collections\":");
 
 	long summary = hr->getLong("summary",0);
 	// enter summary mode for json
@@ -2692,7 +2695,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 	if ( fmt == FMT_JSON ) 
 		// end the array of collection objects
-		sb.safePrintf("\n]}\n");
+		sb.safePrintf("\n]\n");
 
 	///////
 	//
@@ -3363,6 +3366,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	}
 
 
+	// the ROOT JSON }
+	if ( fmt == FMT_JSON )
+		sb.safePrintf("}\n");
 
 	char *ct = "text/html";
 	if ( fmt == FMT_JSON ) ct = "application/json";

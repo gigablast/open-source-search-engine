@@ -1423,6 +1423,9 @@ class XmlDoc {
 	uint8_t m_siteNumInlinks8;
 	//long m_siteNumInlinks;
 	LinkInfo m_siteLinkInfo;
+	SafeBuf m_mySiteLinkInfoBuf;
+	SafeBuf m_myPageLinkInfoBuf;
+	SafeBuf m_myTempLinkInfoBuf;
 	char m_isInjecting;
 	char m_useFakeMime;
 	char m_useSiteLinkBuf;
