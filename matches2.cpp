@@ -112,15 +112,13 @@ char *getMatches2 ( Needle *needles          ,
 	// . TODO: use a static cache of like 4 of these tables where the key
 	//         is the Needles ptr ... done
 	long numNeedlesToInit = numNeedles;
-	char space[256 * 6 * sizeof(BITVEC)];
+	char space[256 * 4 * sizeof(BITVEC)];
 	char *buf = NULL;
 
 	BITVEC *s0;
 	BITVEC *s1;
 	BITVEC *s2;
 	BITVEC *s3;
-	BITVEC *s4;
-	BITVEC *s5;
 
 	/*
 	static bool s_quickTableInit = false;
@@ -143,7 +141,7 @@ char *getMatches2 ( Needle *needles          ,
 
 	if(!buf) {
 		buf = space;
-		memset ( buf , 0 , sizeof(BITVEC)*256*6);
+		memset ( buf , 0 , sizeof(BITVEC)*256*4);
 	}
 
 	/*
@@ -170,9 +168,6 @@ char *getMatches2 ( Needle *needles          ,
 	offset += sizeof(BITVEC)*256;
 	s3 = (BITVEC *)(buf + offset);
 	offset += sizeof(BITVEC)*256;
-	s4 = (BITVEC *)(buf + offset);
-	offset += sizeof(BITVEC)*256;
-	s5 = (BITVEC *)(buf + offset);
 
 	BITVEC mask;
 
@@ -194,8 +189,6 @@ char *getMatches2 ( Needle *needles          ,
 				s1[j] |= mask;
 				s2[j] |= mask;
 				s3[j] |= mask;
-				s4[j] |= mask;
-				s5[j] |= mask;
 			}
 			continue;
 		}
@@ -207,8 +200,6 @@ char *getMatches2 ( Needle *needles          ,
 			for ( long j = 0 ; j < 256 ; j++ )  {
 				s2[j] |= mask;
 				s3[j] |= mask;
-				s4[j] |= mask;
-				s5[j] |= mask;
 			}
 			continue;
 		}
@@ -219,8 +210,6 @@ char *getMatches2 ( Needle *needles          ,
 		if ( w >= wend ) {
 			for ( long j = 0 ; j < 256 ; j++ )  {
 				s3[j] |= mask;
-				s4[j] |= mask;
-				s5[j] |= mask;
 			}
 			continue;
 		}
@@ -228,28 +217,6 @@ char *getMatches2 ( Needle *needles          ,
 		s3[(unsigned char)to_lower_a(*w)] |= mask;
 		s3[(unsigned char)to_upper_a(*w)] |= mask;
 		w += 1;//step;
-
-		if ( w >= wend ) {
-			for ( long j = 0 ; j < 256 ; j++ )  {
-				s4[j] |= mask;
-				s5[j] |= mask;
-			}
-			continue;
-		}
-		s4[(unsigned char)to_lower_a(*w)] |= mask;
-		s4[(unsigned char)to_upper_a(*w)] |= mask;
-		w += 1;//step;
-
-		if ( w >= wend ) {
-			for ( long j = 0 ; j < 256 ; j++ )  {
-				s5[j] |= mask;
-			}
-			continue;
-		}
-		s5[(unsigned char)to_lower_a(*w)] |= mask;
-		s5[(unsigned char)to_upper_a(*w)] |= mask;
-		w += 1;//step;
-
 	}
 
 	// return a ptr to the first match if we should, this is it
@@ -280,10 +247,6 @@ char *getMatches2 ( Needle *needles          ,
 		mask &= s2[*(p+2)];
 		if ( ! mask ) continue;
 		mask &= s3[*(p+3)];
-		if ( ! mask ) continue;
-		mask &= s4[*(p+4)];
-		if ( ! mask ) continue;
-		mask &= s5[*(p+5)];
 		if ( ! mask ) continue;
 		//debugCount++;
 		/*
@@ -427,10 +390,6 @@ char *getMatches2 ( Needle *needles          ,
 		}
 		if ( p+3 < pend ) {
 			mask &= s3[*(p+3)];
-			if ( ! mask ) continue;
-		}
-		if ( p+4 < pend ) {
-			mask &= s4[*(p+4)];
 			if ( ! mask ) continue;
 		}
 		//debugCount++;
