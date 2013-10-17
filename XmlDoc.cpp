@@ -6467,6 +6467,17 @@ Links *XmlDoc::getLinks ( bool doQuickSet ) {
 	if ( ! sni || sni == (long *)-1 ) return (Links *)sni;
 	// get the latest url we are on
 	Url *u = getCurrentUrl();
+
+	//
+	// if we had a EDOCSIMPLIFIEDREDIR error, pretend it is a link
+	// so addOutlinkSpiderRecsToMetaList() will add it to spiderdb
+	//
+	if ( m_indexCodeValid && m_indexCode == EDOCSIMPLIFIEDREDIR ) {
+		m_links.set ( m_redirUrl.getUrl(),m_redirUrl.getUrlLen() );
+		m_linksValid = true;
+		return &m_links;
+	}
+		
 	// . set it
 	// . if parent is a permalink we can avoid its suburl outlinks 
 	//   containing "comment" from being classified as permalinks
@@ -8871,6 +8882,10 @@ Url **XmlDoc::getRedirUrl() {
 		// returns false if blocked, true otherwise
 		//return addSimplifiedRedirect();
 		m_redirError = EDOCSIMPLIFIEDREDIR;
+		// set this because getLinks() treats this redirUrl
+		// as a link now, it will add a SpiderRequest for it:
+		m_redirUrl.set ( loc , false ); // addWWW=false
+		m_redirUrlPtr   = &m_redirUrl;
 		// mdw: let this path through so contactXmlDoc gets a proper
 		// redirect that we can follow. for the base xml doc at 
 		// least the m_indexCode will be set
@@ -12573,6 +12588,9 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	if ( m_diffbotReplyValid )
 		return &m_diffbotReply;
 
+	if ( *getIndexCode() ) 
+		return &m_diffbotReply;
+
 	// if already processed and onlyprocessifnew is enabled then
 	// we recycle and do not bother with this, we also do not nuke
 	// the diffbot json objects we have already indexed by calling
@@ -12818,6 +12836,11 @@ char **XmlDoc::getHttpReply ( ) {
 	if ( *redirp && ! m_redirUrlValid ) { char *xx=NULL;*xx=0; }
 	// if NULL, we are done
 	if ( ! *redirp ) return &m_httpReply;
+	// . also, hang it up if we got a simplified redir url now
+	// . we set m_redirUrl so that getLinks() can add a spiderRequest
+	//   for it, but we do not want to actually redirect to it to get
+	//   the content for THIS document
+	if ( m_redirError ) return &m_httpReply;
 	// and invalidate the redir url because we do not know if the
 	// current url will redirect or not (mdwmdw)
 	m_redirUrlValid           = false;
@@ -18625,20 +18648,29 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//if ( ! sp || sp == (void *)-1 ) return (char *)sp;
 
 	// our next slated spider priority
-	char *spiderLinks = getSpiderLinks();
-	if ( ! spiderLinks  || spiderLinks == (char *)-1 )
-		return (char *)spiderLinks;
+	char *spiderLinks3 = getSpiderLinks();
+	if ( ! spiderLinks3  || spiderLinks3 == (char *)-1 )
+		return (char *)spiderLinks3;
+
+	bool spideringLinks = *spiderLinks3;
 
 	// shortcut
 	XmlDoc *nd = this;
 	// if we had an error, do not add us regardless to the index
 	if ( m_indexCode ) nd = NULL;
 
+	if ( ! nd )
+		spideringLinks = false;
+
+	// if we are adding a simplified redirect as a link to spiderdb
+	if ( m_indexCode == EDOCSIMPLIFIEDREDIR )
+		spideringLinks = true;
+
 	//
 	// . prepare the outlink info if we are adding links to spiderdb!
 	// . do this before we start hashing so we do not block and re-hash!!
 	//
-	if ( *spiderLinks && nd && ! m_doingConsistencyCheck && m_useSpiderdb){
+	if ( spideringLinks && ! m_doingConsistencyCheck && m_useSpiderdb){
 		setStatus ( "getting outlink info" );
 		TagRec ***grv = getOutlinkTagRecVector();
 		if ( ! grv || grv == (void *)-1 ) return (char *)grv;
@@ -19077,9 +19109,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// . LINKDB
 	// . linkdb records. assume one per outlink
 	// . we may index 2 16-byte keys for each outlink
-	Links *nl = NULL; if ( nd ) nl = &m_links;
-	// do not bother if deleting
-	if ( m_indexCode ) nl = NULL;
+	Links *nl = NULL; if ( spideringLinks ) nl = &m_links;
+	// do not bother if deleting. but we do add simplified redirects
+	// to spiderdb as SpiderRequests now.
+	if ( m_indexCode && m_indexCode != EDOCSIMPLIFIEDREDIR ) nl = NULL;
 	//Links *ol = NULL; if ( od ) ol = od->getLinks();
 	// . set key/data size
 	// . use a 16 byte key, not the usual 12
@@ -19635,7 +19668,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// . should also add with a time of now plus 5 seconds to that if
 	//   we spider an outlink linkdb should be update with this doc
 	//   pointing to it so it can get link text then!!
-	if ( *spiderLinks && nl && ! m_doingConsistencyCheck && 
+	if ( spideringLinks && nl && ! m_doingConsistencyCheck && 
 	     m_useSpiderdb && ! forDelete ){
 		// returns NULL and sets g_errno on error
 		char *ret = addOutlinkSpiderRecsToMetaList ();
@@ -20843,6 +20876,9 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	Url *cu = getCurrentUrl();
 	if ( ! cu || cu == (void *)-1 ) return (char *)cu;
 
+	// validate this to prevent core for simplified redirect links
+	long hostHash32a = getHostHash32a();
+
 	// so linkSites[i] is site for link #i in Links.cpp class
 	long *linkSiteHashes = getLinkSiteHashes ( );
 	if ( ! linkSiteHashes || linkSiteHashes == (void *)-1 )
@@ -21001,7 +21037,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// add it, returns false and sets g_errno on error
 		if ( ! ht.addKey ( &uh ) ) return NULL;
 		// we now supports HTTPS
-		if ( ! strncmp(s,"http://",7) && ! strncmp(s,"https://",8) ) 
+		if ( strncmp(s,"http://",7) && strncmp(s,"https://",8) ) 
 			continue;
 		// . do not add if "old"
 		// . Links::set() calls flagOldOutlinks()
@@ -21090,7 +21126,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//ksr.m_lastAttempt    = 0;
 		//ksr.m_urlPubDate       = urlPubDate;
 		//ksr.m_errCode        = 0;
-		ksr.m_parentHostHash32 = m_hostHash32a;
+		ksr.m_parentHostHash32 = hostHash32a;
 		ksr.m_parentDomHash32  = m_domHash32;
 		ksr.m_parentSiteHash32 = m_siteHash32;
 		ksr.m_parentFirstIp    = *pfip;//m_ip;
@@ -28261,6 +28297,11 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 			"<td>%s</td>"
 			"</tr>\n"
 
+			"<tr>"
+			"<td>metalist size</td>"
+			"<td>%li</td>"
+			"</tr>\n"
+
 
 			"<tr>"
 			"<td>url</td>"
@@ -28278,6 +28319,8 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 			ufn,
 			mstrerror(g_errno),
 			allowed,
+
+			m_metaListSize,
 
 			fu,
 			fu
@@ -28362,6 +28405,11 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		sb->safePrintf("</table><br>\n");
 		sb->safePrintf("<h2>Delete Meta List</h2>");
 		printMetaList ( m_metaList , m_metaList + m_metaListSize ,sb);
+	}
+
+
+	if ( m_indexCode || g_errno ) {
+		printMetaList ( m_metaList , m_metaList + m_metaListSize, sb );
 	}
 
 	if ( m_indexCode ) return true;

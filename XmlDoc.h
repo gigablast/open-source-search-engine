@@ -711,6 +711,12 @@ class XmlDoc {
 	// m_indexCode or g_errno was set!
 	class SpiderReply *getNewSpiderReply ( );
 
+
+	SpiderRequest **getRedirSpiderRequest ( );
+	SpiderRequest m_redirSpiderRequest;
+	SpiderRequest *m_redirSpiderRequestPtr;
+
+
 	void  setSpiderReqForMsg20 ( class SpiderRequest *sreq , 
 				     class SpiderReply   *srep );
 
@@ -1052,6 +1058,7 @@ class XmlDoc {
 	char     m_matchingQueryBufValid;
 	char     m_relatedQueryBufValid;
 	char     m_queryLinkBufValid;
+	char     m_redirSpiderRequestValid;
 	//char     m_queryPtrsValid;
 	char     m_queryOffsetsValid;
 	//char     m_queryPtrsSortedValid;
