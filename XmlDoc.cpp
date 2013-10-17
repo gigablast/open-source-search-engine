@@ -42926,6 +42926,9 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 		nameBuf.removeLastChar('.');
 		// and null terminate
 		if ( ! nameBuf.nullTerm() ) return NULL;
+		// change all :'s in names to .'s since : is reserved!
+		char *px = nameBuf.getBufStart();
+		for ( ; *px ; px++ ) if ( *px == ':' ) *px = '.';
 		//
 		// DIFFBOT special field hacks
 		//

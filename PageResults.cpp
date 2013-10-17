@@ -4499,6 +4499,9 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 		sb.safePrintf("<b title=\"Browse the DMOZ directory\">"
 			      "directory</b>");
 
+	char *coll = hr->getString("c");
+	if ( ! coll ) coll = "";
+
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; "
 		      
 		      // i'm not sure why this was removed. perhaps
@@ -4536,6 +4539,22 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 		      // search box
 		      //
 		      "<form name=f method=GET action=/search>\n\n" 
+
+		      // propagate the collection if they re-search
+		      "<input name=c type=hidden value=\"%s\">"
+		      , coll
+		      );
+
+	// propagate prepend
+	char *prepend = hr->getString("prepend");
+	if ( prepend ) {
+		sb.safePrintf("<input name=prepend type=hidden value=\"");
+		sb.htmlEncode ( prepend, gbstrlen(prepend), false);
+		sb.safePrintf("\">");
+	}
+	
+
+	sb.safePrintf (
 		      // input table
 		      //"<div style=margin-left:5px;margin-right:5px;>
 		      "<input size=40 type=text name=q value=\""
