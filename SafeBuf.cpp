@@ -2617,7 +2617,7 @@ bool SafeBuf::safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness) {
 
 
 
-
+/*
 bool SafeBuf::decodeJSONToUtf8 ( long niceness ) {
 
 	//char *x = strstr(m_buf,"Chief European");
@@ -2630,7 +2630,7 @@ bool SafeBuf::decodeJSONToUtf8 ( long niceness ) {
 
 	return safeDecodeJSONToUtf8 ( m_buf , saved , niceness );
 }
-
+*/
 
 // . REALLY just a print vanity function. makes json output prettier
 //

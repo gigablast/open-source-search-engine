@@ -2950,7 +2950,7 @@ bool sendEmailThroughMandrill ( class EmailInfo *ei ) {
 		       , from
 		       , from
 		       , from
-		       , ei->m_cr->m_coll
+		       , ei->m_cr->m_diffbotCrawlName.getBufStart()//coll
 		       );
 	// this is not for application/json content type in POST request
 	//ub.urlEncode();

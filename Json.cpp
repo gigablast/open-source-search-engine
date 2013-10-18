@@ -51,7 +51,11 @@ JsonItem *Json::getItem ( char *name ) {
 	return NULL;
 }
 
+#include "Mem.h" // gbstrlen()
+
 JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
+
+	m_prev = NULL;
 
 	m_stackPtr = 0;
 	m_sb.purge();
@@ -89,9 +93,11 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 
 	// reset p
 	p = json;
+	// json maybe bad utf8 causing us to miss the \0 char, so use "pend"
+	char *pend = json + gbstrlen(json);
 
 	// scan
-	for ( ; *p ; p += size ) {
+	for ( ; p < pend ; p += size ) {
 		// get size
 		size = getUtf8CharSize ( p );
 

@@ -67,7 +67,7 @@ class Json {
 
 	JsonItem *addNewItem ();
 
-	Json() { m_stackPtr = 0; };
+	Json() { m_stackPtr = 0; m_prev = NULL; };
 	
 	SafeBuf m_sb;
 	JsonItem *m_stack[MAXJSONPARENTS];

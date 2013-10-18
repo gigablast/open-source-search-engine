@@ -2348,7 +2348,13 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 
 	// skip first 2 filters that are ismedia->ignore and
 	// !isonsamedomain->ignore
-	for ( long i = 2 ; i < cr->m_numRegExs ; i++ ) {
+	long istart = 2;
+	// if respidering then we added an extra filter 
+	// lastspidertime>={roundstart} --> FILTERED
+	if ( cr->m_collectiveRespiderFrequency > 0.0 )
+		istart++;
+
+	for ( long i = istart ; i < cr->m_numRegExs ; i++ ) {
 		//sb.safePrintf
 		char *expression = cr->m_regExs[i].getBufStart();
 		// do not allow nulls
@@ -2640,6 +2646,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      , cx->m_collectiveRespiderFrequency
 				      , (long)cx->m_diffbotOnlyProcessIfNew
 				      );
+			sb.safePrintf("\"notifyEmail\":\"");
+			sb.safeUtf8ToJSON ( cx->m_notifyEmail.getBufStart() );
+			sb.safePrintf("\",\n");
+			sb.safePrintf("\"notifyWebHook\":\"");
+			sb.safeUtf8ToJSON ( cx->m_notifyUrl.getBufStart() );
+			sb.safePrintf("\",\n");
 			/////
 			//
 			// show url filters table. kinda hacky!!
@@ -3980,8 +3992,8 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 			cr->m_spiderRoundStartTime += respider;
 		}
 		// if 0 that means NO recrawling
-		else {
-			cr->m_spiderRoundStartTime = 0;
+		if ( respider == 0.0 ) {
+			cr->m_spiderRoundStartTime = 0;//getTimeGlobal();
 		}
 		cr->m_collectiveRespiderFrequency = respider;
 		cr->m_needsSave = 1;
@@ -3995,9 +4007,9 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	// set collective respider
 	for ( long i =0 ; i < cr->m_numRegExs ; i++ ) {
 		if ( cr->m_collectiveRespiderFrequency == 0.0 )
-			cr->m_spiderFreqs[i] = 0.00;
+			cr->m_spiderFreqs[i] = 0.000;
 		else
-			cr->m_spiderFreqs[i] = 0.00001;
+			cr->m_spiderFreqs[i] = 0.001;
 		//cr->m_collectiveRespiderFrequency;
 	}
 

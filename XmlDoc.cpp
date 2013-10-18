@@ -12506,21 +12506,23 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		// need to save collection rec now during auto save
 		THIS->m_cr->m_needsSave = true;
 		// the diffbot api url we used
-		SafeBuf *au = THIS->getDiffbotApiUrl();
-		if ( ! au || au == (void *)-1 ) {char *xx=NULL;*xx=0;}
+		//SafeBuf *au = THIS->getDiffbotApiUrl();
+		//if ( ! au || au == (void *)-1 ) {char *xx=NULL;*xx=0;}
 		// set the reply properly
-		long need = pageLen + 1 + au->length() + 1;
+		long need = pageLen + 1;// + au->length() + 1;
 		if ( ! THIS->m_diffbotReply.reserve ( need ) ) 
 			goto skip;
 		// first store the url we used on first line
 		//THIS->m_diffbotReply.safeMemcpy ( au->getBufStart(),
 		//				  au->length() );
 		//THIS->m_diffbotReply.pushChar('\n');
-		THIS->m_diffbotReply.safeMemcpy ( page , pageLen );
+		// convert the \u1f23 to utf8 (\n and \r as well)
+		THIS->m_diffbotReply.safeDecodeJSONToUtf8 ( page , pageLen ,
+							    THIS->m_niceness );
 		// tack on a \0 but don't increment m_length
 		THIS->m_diffbotReply.nullTerm();
 		// convert the \u1f23 to utf8 (\n and \r as well)
-		THIS->m_diffbotReply.decodeJSONToUtf8 ( THIS->m_niceness );
+		//THIS->m_diffbotReply.decodeJSONToUtf8 ( THIS->m_niceness );
 		THIS->m_diffbotReply.nullTerm();
 	}
 
@@ -16044,11 +16046,17 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	SpiderRequest *oldsr = &m_oldsr;
 	// null it out if invalid...
 	if ( ! m_oldsrValid ) oldsr = NULL;
+	// do not set the spideredTime in the spiderReply to 0
+	// so we do not trigger the lastSpiderTime
+	long saved = newsr->m_spideredTime;
+	newsr->m_spideredTime = 0;
 	// . look it up
 	// . use the old spidered date for "nowGlobal" so we can be consistent
 	//   for injecting into the "test" coll
 	long ufn = ::getUrlFilterNum ( oldsr,newsr,spideredTime,false,
 				       m_niceness,m_cr);
+	// put it back
+	newsr->m_spideredTime = saved;
 	// store it
 	m_urlFilterNum      = ufn;
 	m_urlFilterNumValid = true;
@@ -42910,7 +42918,7 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 char *XmlDoc::hashJSON ( HashTableX *table ) {
 
 	setStatus ( "hashing json" );
-
+	// \0 terminated
 	char **pp = getUtf8Content();
 	if ( ! pp || pp == (void *)-1 ) return (char *)pp;
 
