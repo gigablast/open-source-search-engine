@@ -362,6 +362,8 @@ class CollectionRec {
 	long  m_maxNumSpiders             ; // per local spider host
 	float m_spiderNewPct;             ; // appx. percentage new documents
 
+	long m_lastResetCount;
+
 	// . in seconds
 	// . shift all spiderTimes for urls in spider queue down this many secs
 	//long m_spiderTimeShift;

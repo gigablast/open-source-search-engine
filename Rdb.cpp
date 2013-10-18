@@ -535,6 +535,44 @@ bool Rdb::addColl ( char *coll ) {
 	return true;
 }
 
+bool Rdb::resetColl ( collnum_t collnum ) {
+
+	char *coll = g_collectiondb.m_recs[collnum]->m_coll;
+
+	// remove these collnums from tree
+	if(m_useTree) m_tree.delColl    ( collnum );
+	else          m_buckets.delColl ( collnum );
+
+	// . close all files, set m_numFiles to 0 in RdbBase
+	// . TODO: what about outstanding merge or dump operations?
+	RdbBase *base = getBase ( collnum );
+	base->reset();
+
+	// move the files into trash
+	// nuke it on disk
+	char oldname[1024];
+	sprintf(oldname, "%scoll.%s.%li/",g_hostdb.m_dir,coll,
+		(long)collnum);
+	char newname[1024];
+	sprintf(newname, "%strash/coll.%s.%li.%lli/",g_hostdb.m_dir,coll,
+		(long)collnum,gettimeofdayInMilliseconds());
+	//Dir d; d.set ( dname );
+	// ensure ./trash dir is there
+	char trash[1024];
+	sprintf(trash, "%strash/",g_hostdb.m_dir);
+	::mkdir ( trash, 
+		  S_IRUSR | S_IWUSR | S_IXUSR | 
+		  S_IRGRP | S_IWGRP | S_IXGRP | 
+		  S_IROTH | S_IXOTH ) ;
+	// move into that dir
+	::rename ( oldname , newname );
+
+	logf ( LOG_INFO, "admin: cleared data for coll \"%s\" (%li) rdb=%s.",
+	       coll,(long)collnum ,getDbnameFromId(m_rdbId));
+
+	return true;
+}
+
 // returns false and sets g_errno on error, returns true on success
 bool Rdb::delColl ( char *coll ) {
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
@@ -545,21 +583,26 @@ bool Rdb::delColl ( char *coll ) {
 		return log("db: %s: Failed to delete collection #%i. Does "
 			   "not exist.", m_dbname,collnum);
 	}
+
+	// move all files to trash and clear the tree/buckets
+	resetColl ( collnum );
+
 	mdelete (base, sizeof(RdbBase), "Rdb Coll");
 	delete  (base);
-	CollectionRec *cr = g_collectiondb.getRec(collnum);
 	//m_bases[collnum] = NULL;
 
-	log("rdb: deleted base from collrec "
-	    "rdb=%s rdbid=%li coll=%s collnum=%li base=0x%lx",
-	    m_dbname,(long)m_rdbId,coll,(long)collnum,(long)base);
+	CollectionRec *cr = g_collectiondb.getRec(collnum);
 
 	// NULL it out...
 	cr->m_bases[(unsigned char)m_rdbId] = NULL;
 	
+	log("rdb: deleted base from collrec "
+	    "rdb=%s rdbid=%li coll=%s collnum=%li base=0x%lx",
+	    m_dbname,(long)m_rdbId,coll,(long)collnum,(long)base);
+
 	// remove these collnums from tree
-	if(m_useTree) m_tree.delColl    ( collnum );
-	else          m_buckets.delColl ( collnum );
+	//if(m_useTree) m_tree.delColl    ( collnum );
+	//else          m_buckets.delColl ( collnum );
 	// don't forget to save the tree to disk
 	//m_needsSave = true;
 	// and from cache, just clear everything out

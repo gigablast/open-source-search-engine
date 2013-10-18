@@ -1781,6 +1781,9 @@ bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 			      "</body></html>"
 			      , msg );
 
+	// log it
+	log("crawlbot: %s",msg );
+
 	//return g_httpServer.sendErrorReply(socket,500,sb.getBufStart());
 	return g_httpServer.sendDynamicPage (socket, 
 					     sb.getBufStart(), 
@@ -1810,7 +1813,7 @@ void addedUrlsToSpiderdbWrapper ( void *state ) {
 	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
 }
-
+/*
 void injectedUrlWrapper ( void *state ) {
 	StateCD *st = (StateCD *)state;
 
@@ -1886,7 +1889,7 @@ void injectedUrlWrapper ( void *state ) {
 	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
 }
-	
+*/	
 
 class HelpItem {
 public:
@@ -2061,7 +2064,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	if ( gbstrlen(token) > 32 ) { 
-		log("crawlbot: token is over 32 chars");
+		//log("crawlbot: token is over 32 chars");
 		char *msg = "crawlbot: token is over 32 chars";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
@@ -2118,14 +2121,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	if ( ! name ) {
-		log("crawlbot: no crawl name given");
+		//log("crawlbot: no crawl name given");
 		char *msg = "invalid or missing name";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
 
 
 	if ( gbstrlen(name) > 30 ) { 
-		log("crawlbot: name is over 30 chars");
+		//log("crawlbot: name is over 30 chars");
 		char *msg = "crawlbot: name is over 30 chars";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
@@ -2157,7 +2160,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//if ( JS.getInputString("resetCrawl") ) resetColl = true;
 
 	if ( resetColl && ! cr ) {
-		log("crawlbot: no collection found to reset.");
+		//log("crawlbot: no collection found to reset.");
 		char *msg = "Could not find crawl to reset.";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
@@ -2217,7 +2220,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			// send back error
 			char *msg = "Collection add failed";
 			// log it
-			log("crawlbot: %s",msg);
+			//log("crawlbot: %s",msg);
 			// make sure this returns in json if required
 			return sendErrorReply2(socket,fmt,msg);
 		}
@@ -2445,6 +2448,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 
+	// was coll deleted while adding urls to spiderdb?
+	if ( ! cr ) {
+		g_errno = EBADREQUEST;
+		char *msg = "invalid crawl. crawl was deleted.";
+		return sendErrorReply2(socket,fmt,msg);
+	}
 
 	char *token = cr->m_diffbotToken.getBufStart();
 	char *name = cr->m_diffbotCrawlName.getBufStart();
@@ -2769,7 +2778,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			// sanity check
 			if ( ! xd->m_oldsrValid ) { char *xx=NULL;*xx=0; }
 			// skip if not our coll rec!
-			if ( xd->m_cr != cr ) continue;
+			//if ( xd->m_cr != cr ) continue;
+			if ( xd->m_collnum != cr->m_collnum ) continue;
 			// grab it
 			SpiderRequest *oldsr = &xd->m_oldsr;
 			// get status

@@ -2922,6 +2922,10 @@ bool sendEmailThroughMandrill ( class EmailInfo *ei ) {
 	char *to = ei->m_toAddress.getBufStart();
 	char *from = ei->m_fromAddress.getBufStart();
 
+	char *crawl = "unknown2";
+	CollectionRec *cr = g_collectiondb.m_recs[ei->m_collnum];
+	if ( cr ) crawl = cr->m_diffbotCrawlName.getBufStart();
+
 	SafeBuf ub;
 	ub.safePrintf( "{\"key\":\"GhWT0UpcVBl7kmumrt9dqg\","
 		       "\"template_name\":\"crawl-finished\","
@@ -2950,7 +2954,7 @@ bool sendEmailThroughMandrill ( class EmailInfo *ei ) {
 		       , from
 		       , from
 		       , from
-		       , ei->m_cr->m_diffbotCrawlName.getBufStart()//coll
+		       , crawl
 		       );
 	// this is not for application/json content type in POST request
 	//ub.urlEncode();
@@ -3047,24 +3051,30 @@ bool sendNotification ( EmailInfo *ei ) {
 	if ( ei->m_inUse ) { char *xx=NULL;*xx=0; }
 
 	// caller must set this, as well as m_finalCallback/m_finalState
-	CollectionRec *cr = ei->m_cr;
+	CollectionRec *cr = g_collectiondb.m_recs[ei->m_collnum];
 
-	char *email = cr->m_notifyEmail.getBufStart();
-	char *url   = cr->m_notifyUrl.getBufStart();
+	char *email = "";
+	char *url   = "";
+	char *crawl = "unknown2";
+
+	if ( cr ) email = cr->m_notifyEmail.getBufStart();
+	if ( cr ) url   = cr->m_notifyUrl.getBufStart();
+	if ( cr ) crawl = cr->m_diffbotCrawlName.getBufStart();
 
 	// sanity check, can only call once
 	if ( ei->m_notifyBlocked != 0 ) { char *xx=NULL;*xx=0; }
 
 	ei->m_inUse = true;
 
+
 	if ( email && email[0] ) {
-		log("build: sending email notification to %s for coll \"%s\"",
-		    email,cr->m_coll);
+		log("build: sending email notification to %s for crawl \"%s\"",
+		    email,crawl);
 		SafeBuf msg;
 		msg.safePrintf("Your crawl \"%s\" "
 			       "has hit a limitation and has "
 			       "been paused."
-			       , cr->m_coll);
+			       , crawl );
 		// use this
 		ei->m_toAddress.safeStrcpy ( email );
 		ei->m_toAddress.nullTerm();
@@ -3086,7 +3096,7 @@ bool sendNotification ( EmailInfo *ei ) {
 
 	if ( url && url[0] ) {
 		log("build: sending url notification to %s for coll \"%s\"",
-		    url,cr->m_coll);
+		    url,crawl);
 		// GET request
 		if ( ! g_httpServer.getDoc ( url ,
 					     0 , // ip

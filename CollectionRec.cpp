@@ -66,6 +66,8 @@ CollectionRec::CollectionRec() {
 	m_replies = 0;
 	m_doingCallbacks = false;
 
+	m_lastResetCount = 0;
+
 	// for diffbot caching the global spider stats
 	reset();
 

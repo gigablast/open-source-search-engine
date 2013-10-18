@@ -3173,7 +3173,8 @@ int main ( int argc , char *argv[] ) {
 
 	if ( testMandrill ) {
 		static EmailInfo ei;
-		ei.m_cr = g_collectiondb.getRec(1);
+		//ei.m_cr = g_collectiondb.getRec(1);
+		ei.m_collnum = 1;
 		ei.m_fromAddress.safePrintf("support@diffbot.com");
 		ei.m_toAddress.safePrintf("matt@diffbot.com");
 		ei.m_callback = exitWrapper;

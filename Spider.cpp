@@ -1213,12 +1213,23 @@ key_t makeWaitingTreeKey ( uint64_t spiderTimeMS , long firstIp ) {
 	return wk;
 }
 
+CollectionRec *SpiderColl::getCollRec() {
+	CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
+	if ( ! cr ) log("spider: lost coll rec");
+	return cr;
+}
+
+char *SpiderColl::getCollName() {
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return "lostcollection";
+	return cr->m_coll;
+}
+
 // . call this when changing the url filters
 // . will make all entries in waiting tree have zero time basically
 void SpiderColl::urlFiltersChanged ( ) {
 	// log it
-	log("spider: rebuilding waiting tree for coll=%s",m_cr->m_coll);
-
+	log("spider: rebuilding waiting tree for coll=%s",getCollName());
 	m_lastUrlFiltersUpdate = getTimeGlobal();
 	// need to recompute this!
 	m_ufnMapValid = false;
@@ -5013,15 +5024,15 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	m_numSpidersOut--;
 
 	// get coll
-	collnum_t collnum = g_collectiondb.getCollnum ( xd->m_coll );
+	collnum_t collnum = xd->m_collnum;//tiondb.getCollnum ( xd->m_coll );
 	// get it
 	SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
 	// decrement this
 	sc->m_spidersOut--;
 	// get the original request from xmldoc
 	SpiderRequest *sreq = &xd->m_oldsr;
-	// update this
-	sc->m_outstandingSpiders[(unsigned char)sreq->m_priority]--;
+	// update this. if coll was deleted while spidering, sc will be NULL
+	if ( sc ) sc->m_outstandingSpiders[(unsigned char)sreq->m_priority]--;
 
 	// debug log
 	//log("XXX: decremented count to %li for %s",
@@ -9499,8 +9510,15 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 
 void doneSendingNotification ( void *state ) {
 	EmailInfo *ei = (EmailInfo *)state;
-	CollectionRec *cr = ei->m_cr;
-	log("spider: done sending notifications for coll=%s", cr->m_coll);
+	collnum_t collnum = ei->m_collnum;
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	char *coll = "lostcoll";
+	if ( cr ) coll = cr->m_coll;
+	log("spider: done sending notifications for coll=%s", coll);
+
+	// all done if collection was deleted from under us
+	if ( ! cr ) return;
+
 	// mark it as sent. anytime a new url is spidered will mark this
 	// as false again! use LOCAL crawlInfo, since global is reset often.
 	cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 1;
@@ -9665,7 +9683,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// set it up
 	ei->m_finalCallback = doneSendingNotification;
 	ei->m_finalState    = ei;
-	ei->m_cr            = cr;
+	ei->m_collnum       = cr->m_collnum;
 
 	sendNotification ( ei );
 }

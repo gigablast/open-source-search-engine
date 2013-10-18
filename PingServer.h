@@ -16,7 +16,8 @@ public:
 	SafeBuf m_fromAddress;
 	SafeBuf m_subject;
 	SafeBuf m_body;
-	CollectionRec *m_cr;
+	//CollectionRec *m_cr;
+	collnum_t m_collnum;
 	char *m_dom; // ref into m_toAddress of the domain in email addr
 	SafeBuf m_mxDomain; // just the domain with a "gbmxrec-" prepended
 	void *m_state;

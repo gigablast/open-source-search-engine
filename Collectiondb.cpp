@@ -550,26 +550,6 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	log("coll: deleting coll \"%s\"",cr->m_coll);
 	// we need a save
 	m_needsSave = true;
-	// nuke it on disk
-	char oldname[1024];
-	sprintf(oldname, "%scoll.%s.%li/",g_hostdb.m_dir,cr->m_coll,
-		(long)cr->m_collnum);
-	char newname[1024];
-	sprintf(newname, "%strash/coll.%s.%li.%lli/",g_hostdb.m_dir,cr->m_coll,
-		(long)cr->m_collnum,gettimeofdayInMilliseconds());
-	//Dir d; d.set ( dname );
-	// ensure ./trash dir is there
-	char trash[1024];
-	sprintf(trash, "%strash/",g_hostdb.m_dir);
-	::mkdir ( trash, 
-		  S_IRUSR | S_IWUSR | S_IXUSR | 
-		  S_IRGRP | S_IWGRP | S_IXGRP | 
-		  S_IROTH | S_IXOTH ) ;
-	// move into that dir
-	::rename ( oldname , newname );
-	// debug message
-	logf ( LOG_INFO, "admin: deleted coll \"%s\" (%li).",
-	       coll,(long)collnum );
 
 	// nuke doleiptable and waintree and waitingtable
 	/*
@@ -666,6 +646,23 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 		char *xx=NULL;*xx=0; 
 	}
 
+	// so XmlDoc.cpp can detect if the collection was reset since it
+	// launched its spider:
+	cr->m_lastResetCount++;
+
+	collnum_t collnum = cr->m_collnum;
+	
+	// . unlink all the *.dat and *.map files for this coll in its subdir
+	// . remove all recs from this collnum from m_tree/m_buckets
+	g_posdb.getRdb()->resetColl ( collnum );
+	g_titledb.getRdb()->resetColl ( collnum );
+	g_tagdb.getRdb()->resetColl ( collnum );
+	g_spiderdb.getRdb()->resetColl ( collnum );
+	g_doledb.getRdb()->resetColl ( collnum );
+	g_clusterdb.getRdb()->resetColl ( collnum );
+	g_linkdb.getRdb()->resetColl ( collnum );
+
+	/*
 	// make sure an update not in progress
 	if ( cr->m_inProgress ) { char *xx=NULL;*xx=0; }
 
@@ -721,15 +718,16 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	// memcpy and their ptrs are now stored in "tmp"'s SafeBufs and will 
 	// be passed on to the new rec.
 	g_parms.detachSafeBufs( &tmp );
+	*/
 
 	// let's reset crawlinfo crap
-	nr->m_globalCrawlInfo.reset();
-	nr->m_localCrawlInfo.reset();
+	cr->m_globalCrawlInfo.reset();
+	cr->m_localCrawlInfo.reset();
 
 	// . save it again after copy
 	// . no, i think addRec above saves it, so don't double save
 	// . ah just double save since we copied "tmp" back to it above
-	nr->save();
+	cr->save();
 
 
 	// and clear the robots.txt cache in case we recently spidered a
@@ -737,8 +735,8 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	// have in the test-parser subdir so we are consistent
 	RdbCache *robots = Msg13::getHttpCacheRobots();
 	RdbCache *others = Msg13::getHttpCacheOthers();
-	robots->clear ( cn );
-	others->clear ( cn );
+	robots->clear ( collnum );
+	others->clear ( collnum );
 
 	//g_templateTable.reset();
 	//g_templateTable.save( g_hostdb.m_dir , "turkedtemplates.dat" );

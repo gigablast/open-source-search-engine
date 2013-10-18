@@ -479,7 +479,6 @@ class XmlDoc {
 	void nukeDoc ( class XmlDoc *);
 	void reset ( ) ;
 	bool setFirstUrl ( char *u , bool addWWW , Url *base = NULL ) ;
-	class CollectionRec *getCollRec ( );
 	bool setRedirUrl ( char *u , bool addWWW ) ;
 	void setStatus ( char *s ) ;
 	void setCallback ( void *state, void (*callback) (void *state) ) ;
@@ -922,8 +921,16 @@ class XmlDoc {
 	long long  m_firstUrlHash48;
 	long long  m_firstUrlHash64;
 	Url        m_currentUrl;
-	char      *m_coll;
-	char       m_collBuf[MAX_COLL_LEN+1]; // include \0
+
+	//char      *m_coll;
+	//char       m_collBuf[MAX_COLL_LEN+1]; // include \0
+	CollectionRec *m_lastcr;
+	collnum_t      m_collnum;
+	long           m_lastCollRecResetCount;
+	class CollectionRec *getCollRec ( ) ;
+	bool setCollNum ( char *coll ) ;
+
+
 	char      *m_content;
 	long       m_contentLen;
 
@@ -1044,7 +1051,7 @@ class XmlDoc {
 	char     m_firstUrlHash64Valid;
 	char     m_lastUrlValid;
 	char     m_docIdValid;
-	char     m_collValid;
+	//char     m_collValid;
 	char     m_tagRecValid;
 	char     m_robotsTxtLenValid;
 	char     m_tagRecDataValid;
@@ -1285,6 +1292,7 @@ class XmlDoc {
 	bool m_matchesValid;
 	bool m_dbufValid;
 	bool m_titleValid;
+	bool m_collnumValid;
 	//bool m_twidsValid;
 	bool m_termId32BufValid;
 	bool m_termInfoBufValid;
@@ -1365,7 +1373,7 @@ class XmlDoc {
 	Msg22 m_msg22d;
 	Msg22 m_msg22e;
 	Msg22 m_msg22f;
-	long m_collLen;
+	//long m_collLen;
 	uint32_t m_gigabitVectorHash;
 	char m_gigabitQuery [XD_GQ_MAX_SIZE];
 	long m_gigabitHashes [XD_MAX_GIGABIT_HASHES];
@@ -1510,7 +1518,7 @@ class XmlDoc {
 	long m_filteredContentMaxSize;
 	char m_calledThread;
 	long m_errno;
-	class CollectionRec *m_cr;
+	//class CollectionRec *m_cr;
 	//long m_utf8ContentAllocSize;
 	long m_hostHash32a;
 	long m_hostHash32b;
