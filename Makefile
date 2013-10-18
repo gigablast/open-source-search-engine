@@ -293,8 +293,8 @@ RdbBuckets.o:
 Linkdb.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
 
-#XmlDoc.o:
-#	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+XmlDoc.o:
+	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
 
 seo.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
