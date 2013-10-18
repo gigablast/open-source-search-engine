@@ -3893,6 +3893,15 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	cr->m_spiderDiffbotApiUrl[i].purge();
 	i++;
 
+	// 3rd rule for respidering
+	if ( cr->m_collectiveRespiderFrequency > 0.0 ) {
+		cr->m_regExs[i].set("lastspidertime>={roundstart}");
+		cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		cr->m_spiderDiffbotApiUrl[i].purge();
+		i++;
+	}
+
+
 	// 3rd default filter. BUT if they specified filters this will
 	// be deleted and re-added to the bottom
 	cr->m_regExs[i].set("default");
@@ -3962,6 +3971,18 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	}
 	float respider = hr->getFloat("repeatCrawl",-1.0);
 	if ( respider >= 0.0 ) {
+		// if not 0, then change this by the delta
+		if ( cr->m_spiderRoundStartTime ) {
+			// remove old one.
+			cr->m_spiderRoundStartTime -= 
+				cr->m_collectiveRespiderFrequency;
+			// add in new one
+			cr->m_spiderRoundStartTime += respider;
+		}
+		// if 0 that means NO recrawling
+		else {
+			cr->m_spiderRoundStartTime = 0;
+		}
 		cr->m_collectiveRespiderFrequency = respider;
 		cr->m_needsSave = 1;
 	}
@@ -3972,8 +3993,13 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	}
 
 	// set collective respider
-	for ( long i =0 ; i < cr->m_numRegExs ; i++ ) 
-		cr->m_spiderFreqs[i] = cr->m_collectiveRespiderFrequency;
+	for ( long i =0 ; i < cr->m_numRegExs ; i++ ) {
+		if ( cr->m_collectiveRespiderFrequency == 0.0 )
+			cr->m_spiderFreqs[i] = 0.00;
+		else
+			cr->m_spiderFreqs[i] = 0.00001;
+		//cr->m_collectiveRespiderFrequency;
+	}
 
 
 	// were any url filteres specified? if not, don't reset them
@@ -4033,6 +4059,9 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		// action before expresion???? set action to NULL then?
 		if ( ! expression ) { 
 			action = NULL; continue; }
+		// skip whitespace
+		while ( is_wspace_a(*expression) ) expression++;
+		while ( is_wspace_a(*action) ) action++;
 		// skip if expression is empty
 		if ( ! expression[0] ) { 
 			action = NULL; expression = NULL; continue; }
@@ -4044,19 +4073,19 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		// deal with it
 		long priority = 50;
 		// default diffbot api call:
-		char *api = NULL;
+		//char *api = NULL;
 		if ( strcasecmp(action,"donotcrawl") == 0 ) 
 			priority = SPIDER_PRIORITY_FILTERED;
 		//if ( strcasecmp(action,"donotprocess") == 0 )
 		//	api = NULL;
 		// a new diffbot url?
 		//if ( strncasecmp(action,"http",4) == 0 )
-		api = action;
+		//api = action;
 
 		// add the new filter
 		cr->m_regExs             [nf].set(expression);
 		cr->m_spiderPriorities   [nf] = priority;
-		cr->m_spiderDiffbotApiUrl[nf].set(api);
+		cr->m_spiderDiffbotApiUrl[nf].set(action);
 		nf++;
 
 		// add a mirror of that filter but for manually added,
@@ -4066,7 +4095,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		// make the priority higher!
 		cr->m_regExs [nf].safePrintf("ismanualadd && %s",expression);
 		cr->m_spiderPriorities   [nf] = 70; 
-		cr->m_spiderDiffbotApiUrl[nf].set(api); // appends \0
+		cr->m_spiderDiffbotApiUrl[nf].set(action); // appends \0
 		nf++;
 
 		// NULL out again

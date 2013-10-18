@@ -3891,6 +3891,16 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( m_sc->m_didRound ) continue;
 		// set current time, synced with host #0
 		nowGlobal = getTimeGlobal();
+
+		//
+		// . if doing respider with roundstarttime....
+		// . roundstarttime is > 0 if m_collectiveRespiderFrequency
+		//   is > 0, unless it has not been set to current time yet
+		// . if m_collectiveRespiderFrequency was set to 0.0 then
+		//   PageCrawlBot.cpp also sets m_roundStartTime to 0.
+		//
+		if ( nowGlobal < cr->m_spiderRoundStartTime ) continue;
+
 		// the last time we attempted to spider a url for this coll
 		m_sc->m_lastSpiderAttempt = nowGlobal;
 		// update this for the first time in case it is never updated.
@@ -8692,14 +8702,14 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// reply based
-			if ( ! srep ) continue;
+			long a = 0;
 			// shortcut
-			long a = srep->m_errCount;
+			if ( srep ) a = srep->m_spideredTime;
 			// make it point to the retry count
 			long b ;
 			// now "s" can be "{roundstart}"
 			if ( s[0]=='{' && strncmp(s,"{roundstart}",12)==0)
-				b = cr->m_spiderRoundNum;
+				b = cr->m_spiderRoundStartTime;//Num;
 			else
 				b = atoi(s);
 			// compare
