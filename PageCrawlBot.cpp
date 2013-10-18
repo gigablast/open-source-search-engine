@@ -1910,16 +1910,16 @@ static class HelpItem s_his[] = {
 	 "recrawl the pages. Set to 0.0 to NOT repeat the crawl."},
 
 
-	{"seed","Inject this URL into the crawl and spider its links, "
-	 "unless spiderLinks=0 is specified. By default CrawlBot only "
-	 "spiders links from the same domain."
+	{"seeds","Whitespace separated list of URLs used to seed the crawl. "
+	 "Will only follow outlinks on the same domain of seed URLs."
 	},
-	{"addUrls","A huge string of whitespace separated URLs to add to "
-	 "spiderdb for crawling."},
-	{"spiderLinks","Use 1 or 0 to spider the links or NOT spider "
-	 "the links, respectively, from "
-	 "the provided seed or addUrls parameters. "
-	 "The default is 1."},
+	{"spots",
+	 "Whitespace separated list of URLs to add to the crawl. "
+	 "Outlinks will not be followed." },
+	//{"spiderLinks","Use 1 or 0 to spider the links or NOT spider "
+	// "the links, respectively, from "
+	// "the provided seed or addUrls parameters. "
+	// "The default is 1."},
 
 
 	{"maxToCrawl", "Specify max pages to successfully download."},
@@ -2066,8 +2066,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		return sendErrorReply2 (socket,fmt,msg);
 	}
 
-	char *seed = hr->getString("seed");
-	char *addUrls = hr->getString("addUrls");
+	char *seeds = hr->getString("seeds");
+	char *spots = hr->getString("spots");
 
 	// just existence is the operation
 	bool delColl   = hr->hasField("deleteCrawl");
@@ -2102,8 +2102,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		if (  name ) break;
 		// do not do this if doing an
 		// injection (seed) or add url or del coll or reset coll !!
-		if ( seed ) break;
-		if ( addUrls ) break;
+		if ( seeds ) break;
+		if ( spots ) break;
 		if ( delColl ) break;
 		if ( resetColl ) break;
 		CollectionRec *cx = g_collectiondb.m_recs[i];
@@ -2242,8 +2242,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( ! cr )
 		return sendErrorReply2(socket,fmt,"no collection found");
 
-	char *urlData = hr->getString("addUrls",NULL,NULL);
-	char *injectUrl = hr->getString("seed",NULL,NULL);
+	//char *spots = hr->getString("spots",NULL,NULL);
+	//char *seeds = hr->getString("seeds",NULL,NULL);
 
 	// make a new state
 	StateCD *st;
@@ -2265,18 +2265,26 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// handle file of urls upload. can be HUGE!
 	//
 	///////
-	if ( urlData ) {
+	if ( spots || seeds ) {
 		// . avoid spidering links for these urls? i would say
 		// . default is to NOT spider the links...
 		// . support camel case and all lower case
-		long spiderLinks = hr->getLong("spiderLinks",1);
-		spiderLinks      = hr->getLong("spiderlinks",spiderLinks);
+		//long spiderLinks = hr->getLong("spiderLinks",1);
+		//spiderLinks      = hr->getLong("spiderlinks",spiderLinks);
+		//bool spiderLinks = false;
 		// make a list of spider requests from these urls
 		SafeBuf listBuf;
 		// this returns NULL with g_errno set
-		bool status = getSpiderRequestMetaList ( urlData , 
-							 &listBuf ,
-							 spiderLinks );
+		bool status = true;
+		if ( ! getSpiderRequestMetaList ( seeds,
+						  &listBuf ,
+						  true ) ) // spiderLinks?
+			status = false;
+		// do not spider links for spots
+		if ( ! getSpiderRequestMetaList ( spots,
+						  &listBuf ,
+						  false ) ) // spiderLinks?
+			status = false;
 		// empty?
 		long size = listBuf.length();
 		// error?
@@ -2306,6 +2314,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// and all the other parms in Msg7::inject() in PageInject.cpp.
 	//
 	//////////
+	/*
 	if ( injectUrl ) {
 		// a valid collection is required
 		if ( ! cr ) 
@@ -2324,6 +2333,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		injectedUrlWrapper ( st );
 		return true;
 	}
+	*/
 
 	// we do not need the state i guess
 
@@ -2559,11 +2569,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		sb.safePrintf("{\n");
 
 	if ( fmt == FMT_JSON && injectionResponse )
-		sb.safePrintf("\"seedResponse\":\"%s\",\n\n"
+		sb.safePrintf("\"seedsResponse\":\"%s\",\n\n"
 			      , injectionResponse->getBufStart() );
 
 	if ( fmt == FMT_JSON && urlUploadResponse )
-		sb.safePrintf("\"addUrlsResponse\":\"%s\",\n\n"
+		sb.safePrintf("\"spotsResponse\":\"%s\",\n\n"
 			      , urlUploadResponse->getBufStart() );
 
 
@@ -2829,16 +2839,16 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<form method=get action=/crawlbot>"
 			      "<tr>"
 			      "<td>"
-			      "<b>Add Seed Url: </b>"
+			      "<b>Add Seed Urls: </b>"
 			      "</td><td>"
-			      "<input type=text name=seed size=50>"
+			      "<input type=text name=seeds size=50>"
 			      "%s" // hidden tags
 			      " "
 			      "<input type=submit name=submit value=OK>"
-			      " &nbsp; &nbsp; <input type=checkbox "
-			      "name=spiderLinks value=1 "
-			      "checked>"
-			      " <i>crawl links on this page?</i>"
+			      //" &nbsp; &nbsp; <input type=checkbox "
+			      //"name=spiderLinks value=1 "
+			      //"checked>"
+			      //" <i>crawl links on this page?</i>"
 			      , cr->m_coll
 			      , rand64
 			      , cr->m_coll
@@ -2854,25 +2864,27 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 	if ( fmt == FMT_HTML )
 		sb.safePrintf(//"<input type=hidden name=c value=\"%s\">"
-			      "<input type=hidden name=crawlbotapi value=1>"
+			      //"<input type=hidden name=crawlbotapi value=1>"
 			      "</td>"
 			      "</tr>"
-			      "</form>"
+			      //"</form>"
 			      
 			      
 			      "<tr>"
-			      "<td><b>Upload URLs</b></td>"
+			      "<td><b>Add Spot URLs:</b></td>"
 			      
 			      "<td>"
 			      // this page will call 
 			      // printCrawlbotPage2(uploadResponse) 2display it
-			      "<form method=get action=/crawlbot>"
-			      "<input type=file name=addUrls size=40>"
-			      
-			      " &nbsp; &nbsp; <input type=checkbox "
-			      "name=spiderLinks value=1 "
-			      "checked>"
-			      " <i>crawl links on those pages?</i>"
+			      //"<form method=post action=/crawlbot>"
+			      //"<input type=file name=spots size=40>"
+			      "<input type=text name=spots size=50>"
+			      "<input type=submit name=submit value=OK>"
+			      "%s" // hidden tags
+			      //" &nbsp; &nbsp; <input type=checkbox "
+			      //"name=spiderLinks value=1 "
+			      //"checked>"
+			      //" <i>crawl links on those pages?</i>"
 			      
 			      "</form>"
 
@@ -2882,6 +2894,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</table>"
 			      "<br>"
 			      //, cr->m_coll
+			      , hb.getBufStart()
 			      );
 
 
@@ -3592,6 +3605,9 @@ CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ) {
 bool getSpiderRequestMetaList ( char *doc , 
 				SafeBuf *listBuf ,
 				bool spiderLinks ) {
+
+	if ( ! doc ) return true;
+
 	// . scan the list of urls
 	// . assume separated by white space \n \t or space
 	char *p = doc;
