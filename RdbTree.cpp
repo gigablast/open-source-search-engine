@@ -3025,13 +3025,15 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 
 long  RdbTree::getNumNegativeKeys ( collnum_t collnum ) { 
 	if ( ! m_isRealTree ) { char *xx=NULL;*xx=0; }
-	return g_collectiondb.m_recs[collnum]->
-		m_numNegKeysInTree[(unsigned char)m_rdbId]; 
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	if ( ! cr ) return 0;
+	return cr->m_numNegKeysInTree[(unsigned char)m_rdbId]; 
 }
 
 long  RdbTree::getNumPositiveKeys ( collnum_t collnum ) { 
 	if ( ! m_isRealTree ) { char *xx=NULL;*xx=0; }
-	return g_collectiondb.m_recs[collnum]->
-		m_numPosKeysInTree[(unsigned char)m_rdbId]; 
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	if ( ! cr ) return 0;
+	return cr->m_numPosKeysInTree[(unsigned char)m_rdbId]; 
 }
 

@@ -724,9 +724,44 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	cr->m_globalCrawlInfo.reset();
 	cr->m_localCrawlInfo.reset();
 
-	// . save it again after copy
-	// . no, i think addRec above saves it, so don't double save
-	// . ah just double save since we copied "tmp" back to it above
+	// make a new collnum so records in transit will not be added
+	// to any rdb...
+	cr->m_collnum = m_numRecs;
+
+	m_recs[collnum] = NULL;
+	m_recs[m_numRecs] = cr;
+	m_numRecs++;
+
+	// readd it to the hashtable that maps name to collnum too
+	long long h64 = hash64n(cr->m_coll);
+	g_collTable.removeKey ( &h64 );
+	g_collTable.addKey ( &h64 , &cr->m_collnum );
+
+
+	// a new directory then since we changed the collnum
+	char dname[512];
+	sprintf(dname, "%scoll.%s.%li/",
+		g_hostdb.m_dir,
+		cr->m_coll,
+		(long)cr->m_collnum);
+	if ( opendir ( dname ) ) {
+		//g_errno = EEXIST;
+		log("admin: Trying to create collection %s but "
+		    "directory %s already exists on disk.",coll,dname);
+	}
+	if ( ::mkdir ( dname , 
+		       S_IRUSR | S_IWUSR | S_IXUSR | 
+		       S_IRGRP | S_IWGRP | S_IXGRP | 
+		       S_IROTH | S_IXOTH ) ) {
+		// valgrind?
+		//if ( errno == EINTR ) goto retry22;
+		//g_errno = errno;
+		log("admin: Creating directory %s had error: "
+		    "%s.", dname,mstrerror(g_errno));
+	}
+
+
+	// save coll.conf to new directory
 	cr->save();
 
 

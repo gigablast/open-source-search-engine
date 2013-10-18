@@ -940,6 +940,8 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	//if ( ! g_conf.m_spideringEnabled ) return NULL;
 	// shortcut
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	// collection might have been reset in which case collnum changes
+	if ( ! cr ) return NULL;
 	// return it if non-NULL
 	SpiderColl *sc = cr->m_spiderColl;
 	if ( sc ) return sc;
@@ -5025,13 +5027,13 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 
 	// get coll
 	collnum_t collnum = xd->m_collnum;//tiondb.getCollnum ( xd->m_coll );
-	// get it
+	// if coll was deleted while spidering, sc will be NULL
 	SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
 	// decrement this
-	sc->m_spidersOut--;
+	if ( sc ) sc->m_spidersOut--;
 	// get the original request from xmldoc
 	SpiderRequest *sreq = &xd->m_oldsr;
-	// update this. if coll was deleted while spidering, sc will be NULL
+	// update this. 
 	if ( sc ) sc->m_outstandingSpiders[(unsigned char)sreq->m_priority]--;
 
 	// debug log

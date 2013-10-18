@@ -1217,6 +1217,10 @@ bool addMetaList ( char *p , UdpSlot *slot ) {
 	     g_repairMode > 0       )
 	     //g_repair.m_fullRebuild   )
 		g_errno = ETRYAGAIN;
+	// ignore enocollrec errors since collection can be reset while
+	// spiders are on now.
+	if ( g_errno == ENOCOLLREC )
+		g_errno = 0;
 	// are we done
 	if ( g_errno ) return false;
 	// success
