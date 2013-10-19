@@ -555,13 +555,13 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	CollectionRec *cr = m_recs [ collnum ];
 	if ( ! cr ) return log("admin: Collection id problem. Delete failed.");
 	// spiders off
-	if ( cr->m_spiderColl &&
-	     cr->m_spiderColl->getTotalOutstandingSpiders() > 0 ) {
-		log("admin: Can not delete collection while "
-		    "spiders are oustanding for collection. Turn off "
-		    "spiders and wait for them to exit.");
-		return false;
-	}
+	//if ( cr->m_spiderColl &&
+	//     cr->m_spiderColl->getTotalOutstandingSpiders() > 0 ) {
+	//	log("admin: Can not delete collection while "
+	//	    "spiders are oustanding for collection. Turn off "
+	//	    "spiders and wait for them to exit.");
+	//	return false;
+	//}
 	// note it
 	log("coll: deleting coll \"%s\"",cr->m_coll);
 	// we need a save
@@ -591,8 +591,8 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	//g_sectiondb.getRdb()->delColl  ( coll );
 	g_tagdb.getRdb()->delColl ( coll );
 	// let's preserve the tags... they have all the turk votes in them
-	if ( deleteTurkdb ) {
-	}
+	//if ( deleteTurkdb ) {
+	//}
 	//g_catdb.getRdb()->delColl      ( coll );
 	//g_checksumdb.getRdb()->delColl ( coll );
 	g_spiderdb.getRdb()->delColl   ( coll );
@@ -601,9 +601,14 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	g_clusterdb.getRdb()->delColl  ( coll );
 	g_linkdb.getRdb()->delColl     ( coll );
 
-	// and spider collection!
-	if ( cr->m_spiderColl ) {
-		mdelete ( cr->m_spiderColl, sizeof(SpiderColl),"nukecr");
+	// reset spider info
+	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(collnum);
+	if ( sc ) {
+		// remove locks from lock table:
+		sc->clear();
+		//sc->m_collnum = newCollnum;
+		sc->reset();
+		mdelete ( sc, sizeof(SpiderColl),"nukecr2");
 		cr->m_spiderColl = NULL;
 	}
 
@@ -613,7 +618,11 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	m_recs[(long)collnum] = NULL;
 	// dec counts
 	m_numRecsUsed--;
-	while ( ! m_recs[m_numRecs-1] ) m_numRecs--;
+
+	// do not do this here in case spiders were outstanding 
+	// and they added a new coll right away and it ended up getting
+	// recs from the deleted coll!!
+	//while ( ! m_recs[m_numRecs-1] ) m_numRecs--;
 
 	// remove it from the hashtable that maps name to collnum too
 	long long h64 = hash64n(coll);
