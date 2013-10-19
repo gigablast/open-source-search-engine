@@ -978,8 +978,16 @@ bool RdbCache::deleteRec ( ) {
 	// I think that the data here is corrupted or not pointed right
 	
 	// collnum can be 0 in case we have to go to next buffer
-	if ( collnum != 0 && ( collnum >= m_maxColls || collnum < 0 || 
-			       !g_collectiondb.m_recs[collnum] ) ) {
+	if ( collnum != 0 && ( collnum >= m_maxColls || collnum < 0
+			       // we now call ::reset(oldcollnum)
+			       // when resetting a collection in
+			       // Collectiondb::resetColl() which calls
+			       // SpiderColl::clear() which calls
+			       // lastDownloadTime.reset(oldcollnum)
+			       // and then we nuke the collrec so it was
+			       // triggering this. so check m_ptrs[i]==-1
+			       //|| !g_collectiondb.m_recs[collnum]
+			       ) ) {
 		log (LOG_WARN,"db: cache: deleteRec: possible "
 		     "corruption, start=%lx collNum=%li "
 		     "maxCollNum=%li dbname=%s", (long)start,
@@ -1244,6 +1252,41 @@ void RdbCache::addKey ( collnum_t collnum , char *key , char *ptr ) {
 	// debug testing
 	//m_crcs[n] = crc;
 }
+
+/*
+void RdbCache::clearAll ( ) {
+
+	//if ( m_numBufs > 0 )
+	//	log("db: resetting record cache");
+	m_offset = 0;
+	m_tail   = 0;
+	//for ( long i = 0 ; i < m_numBufs ; i++ )
+	//	// all bufs, but not necessarily last, are BUFSIZE bytes big
+	//	mfree ( m_bufs[i] , m_bufSizes[i] , "RdbCache" );
+	//m_numBufs     = 0;
+	//m_totalBufSize= 0;
+
+	//if(m_ptrs ) mfree ( m_ptrs , m_numPtrsMax*sizeof(char *),"RdbCache");
+	//m_ptrs        = NULL;
+	m_numPtrsUsed = 0;
+	// can't reset this, breaks the load!
+	//m_numPtrsMax  = 0;
+
+	m_memOccupied = 0;
+	//m_memAlloced  = 0;
+	m_numHits     = 0;
+	m_numMisses   = 0;
+
+	//m_wrapped = false;
+	m_adds    = 0;
+	m_deletes = 0;
+
+	// assume no need to call convertCache()
+	m_convert = false;
+
+	m_isSaving = false;
+}
+*/
 
 // . this just clears the contents of the cache
 // . used when deleting a collection in Rdb::delColl() and used in

@@ -1401,6 +1401,56 @@ SpiderColl::~SpiderColl () {
 	reset();
 }
 
+// we call this now instead of reset when Collectiondb::resetColl() is used
+void SpiderColl::clear ( ) {
+
+	// remove locks from locktable for all spiders out i guess
+	HashTableX *ht = &g_spiderLoop.m_lockTable;
+ top:
+	// scan the slots
+	long ns = ht->m_numSlots;
+	for ( long i = 0 ; i < ns ; i++ ) {
+		// skip if empty
+		if ( ! ht->m_flags[i] ) continue;
+		// cast lock
+		UrlLock *lock = (UrlLock *)ht->getValueFromSlot(i);
+		// skip if not our collnum
+		if ( lock->m_collnum != m_collnum ) continue;
+		// nuke it!
+		ht->removeSlot(i);
+		// restart since cells may have shifted
+		goto top;
+	}
+
+	// reset these for SpiderLoop;
+	m_nextDoledbKey.setMin();
+	m_didRound = false;
+	// set this to -1 here, when we enter spiderDoledUrls() it will
+	// see that its -1 and set the m_msg5StartKey
+	m_pri2 = -1; // MAX_SPIDER_PRIORITIES - 1;
+	m_twinDied = false;
+	m_lastUrlFiltersUpdate = 0;
+
+	char *coll = "unknown";
+	if ( m_coll[0] ) coll = m_coll;
+	logf(LOG_DEBUG,"spider: CLEARING spider cache coll=%s",coll);
+
+	m_ufnMapValid = false;
+
+	m_doleIpTable .clear();
+	m_cdTable     .clear();
+	m_sniTable    .clear();
+	m_waitingTable.clear();
+	m_waitingTree .clear();
+	m_waitingMem  .clear();
+
+	//m_lastDownloadCache.clear ( m_collnum );
+
+	// copied from reset() below
+	for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ )
+		m_nextKeys[i] =	g_doledb.makeFirstKey2 ( i );
+
+}
 void SpiderColl::reset ( ) {
 
 	// reset these for SpiderLoop;
@@ -1861,6 +1911,7 @@ bool SpiderLoop::printLockTable ( ) {
 		    "hostid=%li "
 		    "timestamp=%li "
 		    "sequence=%li "
+		    "collnum=%li "
 		    ,uh48
 		    ,(long)(lock->m_spiderOutstanding)
 		    ,(long)(lock->m_confirmed)
@@ -1869,6 +1920,7 @@ bool SpiderLoop::printLockTable ( ) {
 		    ,lock->m_hostId
 		    ,lock->m_timestamp
 		    ,lock->m_lockSequence
+		    ,(long)lock->m_collnum
 		    );
 	}
 	return true;
@@ -2736,8 +2788,16 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	}
 
 	// sanity, if it was in ufntree it should be on disk then...
-	if ( list->isEmpty() && m_nextKey == m_firstKey && ! m_useTree )
-		log("spider: strange corruption #1");
+	if ( list->isEmpty() && m_nextKey == m_firstKey && ! m_useTree ) {
+		SafeBuf sb;
+		sb.safePrintf("startkey=%s,",
+			      KEYSTR(&m_nextKey,sizeof(key128_t) ));
+		sb.safePrintf("endkey=%s",
+			      KEYSTR(&m_endKey,sizeof(key128_t) ));
+		log("spider: strange corruption #1. there was an entry "
+		    "in the waiting tree, but spiderdb read was empty. "
+		    "%s",sb.getBufStart());
+	}
 	//char *xx=NULL;*xx=0; }
 
 	// use the ufntree?
@@ -5340,6 +5400,7 @@ bool Msg12::getLocks ( long long uh48, // probDocId ,
 	lr->m_firstIp = m_firstIp;
 	lr->m_removeLock = 0;
 	lr->m_lockSequence = m_lockSequence;
+	lr->m_collnum = collnum;
 
 	// reset counts
 	m_numRequests = 0;
@@ -5928,6 +5989,8 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	tmp.m_timestamp    = nowGlobal;
 	tmp.m_expires      = 0;
 	tmp.m_firstIp      = lr->m_firstIp;
+	tmp.m_collnum      = lr->m_collnum;
+
 	// when the spider returns we remove its lock on reception of the
 	// spiderReply, however, we actually just set the m_expires time
 	// to 5 seconds into the future in case there is a current request

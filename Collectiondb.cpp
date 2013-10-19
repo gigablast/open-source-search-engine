@@ -196,8 +196,24 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	// . scan for holes
 	// . i is also known as the collection id
 	long i ;
-	if ( collnum >= 0 ) i = (long)collnum;
-	else for ( i = 0 ; i < m_numRecs ; i++ ) if ( ! m_recs[i] ) break;
+	if ( collnum >= 0 ) 
+		i = (long)collnum;
+	// no longer fill empty slots because if they do a reset then
+	// a new rec right away it will be filled with msg4 recs not
+	// destined for it. Later we will have to recycle some how!!
+	//else for ( i = 0 ; i < m_numRecs ; i++ ) if ( ! m_recs[i] ) break;
+	// right now we #define collnum_t short. so do not breach that!
+	else if ( m_numRecs < 0x7fff ) {
+		// set it
+		i = m_numRecs;
+		// claim it
+		// we don't do it here, because we check i below and
+		// increment m_numRecs below.
+		//m_numRecs++;
+	}
+	else { 
+		char *xx=NULL;*xx=0; }
+
 	// ceiling?
 	long long maxColls = 1LL<<(sizeof(collnum_t)*8);
 	if ( i >= maxColls ) {
@@ -373,8 +389,6 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	else          m_recs[i]->m_needsSave = true;
 	// force this to off for now
 	//m_recs[i]->m_queryExpansion = false;
-	// reserve it
-	if ( i >= m_numRecs ) m_numRecs = i + 1;
 
 	bool verify = true;
 	long long h64;
@@ -392,6 +406,8 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	if ( ! g_collTable.addKey ( &h64 , &i ) ) 
 		goto hadError;
 
+	// reserve it
+	if ( i >= m_numRecs ) m_numRecs = i + 1;
 
 	// count it
 	m_numRecsUsed++;
@@ -646,22 +662,6 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 		char *xx=NULL;*xx=0; 
 	}
 
-	// so XmlDoc.cpp can detect if the collection was reset since it
-	// launched its spider:
-	cr->m_lastResetCount++;
-
-	collnum_t collnum = cr->m_collnum;
-	
-	// . unlink all the *.dat and *.map files for this coll in its subdir
-	// . remove all recs from this collnum from m_tree/m_buckets
-	g_posdb.getRdb()->resetColl ( collnum );
-	g_titledb.getRdb()->resetColl ( collnum );
-	g_tagdb.getRdb()->resetColl ( collnum );
-	g_spiderdb.getRdb()->resetColl ( collnum );
-	g_doledb.getRdb()->resetColl ( collnum );
-	g_clusterdb.getRdb()->resetColl ( collnum );
-	g_linkdb.getRdb()->resetColl ( collnum );
-
 	/*
 	// make sure an update not in progress
 	if ( cr->m_inProgress ) { char *xx=NULL;*xx=0; }
@@ -724,18 +724,50 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	cr->m_globalCrawlInfo.reset();
 	cr->m_localCrawlInfo.reset();
 
+	collnum_t oldCollnum = cr->m_collnum;
+	collnum_t newCollnum = m_numRecs;
+	
+	// reset spider info
+	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(oldCollnum);
+	if ( sc ) {
+		sc->clear();
+		sc->m_collnum = newCollnum;
+	}
+
+	// so XmlDoc.cpp can detect if the collection was reset since it
+	// launched its spider:
+	cr->m_lastResetCount++;
+
+
+	m_numRecs++;
+
+	// advance sanity check. did we wrap around?
+	// right now we #define collnum_t short
+	if ( m_numRecs > 0x7fff ) { char *xx=NULL;*xx=0; }
+
+	// . unlink all the *.dat and *.map files for this coll in its subdir
+	// . remove all recs from this collnum from m_tree/m_buckets
+	// . updates RdbBase::m_collnum
+	g_posdb.getRdb()->resetColl     ( oldCollnum , newCollnum );
+	g_titledb.getRdb()->resetColl   ( oldCollnum , newCollnum );
+	g_tagdb.getRdb()->resetColl     ( oldCollnum , newCollnum );
+	g_spiderdb.getRdb()->resetColl  ( oldCollnum , newCollnum );
+	g_doledb.getRdb()->resetColl    ( oldCollnum , newCollnum );
+	g_clusterdb.getRdb()->resetColl ( oldCollnum , newCollnum );
+	g_linkdb.getRdb()->resetColl    ( oldCollnum , newCollnum );
+
 	// make a new collnum so records in transit will not be added
 	// to any rdb...
-	cr->m_collnum = m_numRecs;
+	cr->m_collnum = newCollnum;
 
-	m_recs[collnum] = NULL;
-	m_recs[m_numRecs] = cr;
-	m_numRecs++;
+	m_recs[oldCollnum] = NULL;
+	m_recs[newCollnum] = cr;
+
 
 	// readd it to the hashtable that maps name to collnum too
 	long long h64 = hash64n(cr->m_coll);
 	g_collTable.removeKey ( &h64 );
-	g_collTable.addKey ( &h64 , &cr->m_collnum );
+	g_collTable.addKey ( &h64 , &newCollnum );
 
 
 	// a new directory then since we changed the collnum
@@ -743,7 +775,7 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	sprintf(dname, "%scoll.%s.%li/",
 		g_hostdb.m_dir,
 		cr->m_coll,
-		(long)cr->m_collnum);
+		(long)newCollnum);
 	if ( opendir ( dname ) ) {
 		//g_errno = EEXIST;
 		log("admin: Trying to create collection %s but "
@@ -761,6 +793,10 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	}
 
 
+	// update RdbBase::m_collnum to new collnum
+
+
+
 	// save coll.conf to new directory
 	cr->save();
 
@@ -770,8 +806,8 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	// have in the test-parser subdir so we are consistent
 	RdbCache *robots = Msg13::getHttpCacheRobots();
 	RdbCache *others = Msg13::getHttpCacheOthers();
-	robots->clear ( collnum );
-	others->clear ( collnum );
+	robots->clear ( oldCollnum );
+	others->clear ( oldCollnum );
 
 	//g_templateTable.reset();
 	//g_templateTable.save( g_hostdb.m_dir , "turkedtemplates.dat" );

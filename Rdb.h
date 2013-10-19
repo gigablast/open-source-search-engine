@@ -87,7 +87,7 @@ class Rdb {
 	bool addColl ( char *coll );
 	bool delColl ( char *coll );
 
-	bool resetColl ( collnum_t collnum ) ;
+	bool resetColl ( collnum_t collnum , collnum_t newCollnum ) ;
 
 	bool init ( char  *dir             , // working directory
 		    char  *dbname          , // "indexdb","tagdb",...

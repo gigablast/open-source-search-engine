@@ -960,6 +960,8 @@ class SpiderColl {
 	~SpiderColl ( );
 	SpiderColl  ( ) ;
 
+	void clear();
+
 	// called by main.cpp on exit to free memory
 	void      reset();
 
@@ -1164,6 +1166,7 @@ public:
 	long m_lockSequence;
 	long m_firstIp;
 	char m_removeLock;
+	collnum_t m_collnum;
 };
 
 class ConfirmRequest {
@@ -1184,6 +1187,7 @@ public:
 	long m_firstIp;
 	char m_spiderOutstanding;
 	char m_confirmed;
+	collnum_t m_collnum;
 };
 
 class Msg12 {

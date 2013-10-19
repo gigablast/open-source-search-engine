@@ -535,7 +535,7 @@ bool Rdb::addColl ( char *coll ) {
 	return true;
 }
 
-bool Rdb::resetColl ( collnum_t collnum ) {
+bool Rdb::resetColl ( collnum_t collnum , collnum_t newCollnum ) {
 
 	char *coll = g_collectiondb.m_recs[collnum]->m_coll;
 
@@ -546,7 +546,10 @@ bool Rdb::resetColl ( collnum_t collnum ) {
 	// . close all files, set m_numFiles to 0 in RdbBase
 	// . TODO: what about outstanding merge or dump operations?
 	RdbBase *base = getBase ( collnum );
-	base->reset();
+	base->reset( );
+
+	// update this as well
+	base->m_collnum = newCollnum;
 
 	// move the files into trash
 	// nuke it on disk
@@ -585,7 +588,7 @@ bool Rdb::delColl ( char *coll ) {
 	}
 
 	// move all files to trash and clear the tree/buckets
-	resetColl ( collnum );
+	resetColl ( collnum , collnum );
 
 	mdelete (base, sizeof(RdbBase), "Rdb Coll");
 	delete  (base);

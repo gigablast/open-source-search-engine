@@ -21,6 +21,13 @@ void RdbMem::reset ( ) {
 	m_mem = NULL;
 }
 
+void RdbMem::clear ( ) {
+	// set up primary/secondary mem ptrs
+	m_ptr1 = m_mem;
+	// secondary mem initially grow downward
+	m_ptr2 = m_mem + m_memSize;
+}	
+
 /*
 #include <asm/page.h> // PAGE_SIZE
 

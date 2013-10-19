@@ -162,6 +162,10 @@ void RdbTree::reset ( ) {
 	     strcmp(m_dbname,"statsdb") ) {
 	     //strcmp(m_dbname,"doledb") ) {
 		log("rdb: Resetting unsaved tree %s.",m_dbname);
+		// when resetting a collection from pagecrawlbot.cpp
+		// it calls Collectiondb::resetColl() which calls
+		// SpiderColl::reset() which calls m_waitingTree.reset()
+		// which was coring here! so take this out
 		char *xx = NULL; *xx = 0;
 	}
 	// unprotect it all

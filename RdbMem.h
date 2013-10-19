@@ -19,6 +19,8 @@ class RdbMem {
 	bool init ( class Rdb *rdb , long memToAlloc , char keySize ,
 		    char *allocName );
 
+	void clear();
+
 	void reset();
 
 	// . if a dump is not going on this uses the primary mem space
