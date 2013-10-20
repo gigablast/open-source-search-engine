@@ -1242,8 +1242,8 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 	if ( is_wspace_a(*wp) ) wp++;
 
 	// debug point
-	if ( word[0] == 'b' && word[1] == 'i' && word[2] == 'o' && ! word[3] )
-		log("got bio");
+	//if ( word[0] == 'b' && word[1] == 'i' && word[2] == 'o' && ! word[3])
+	//	log("got bio");
 
 	//
 	// SPECIAL case for abbreviations.
