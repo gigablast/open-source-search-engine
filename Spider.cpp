@@ -4146,7 +4146,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// skip?
 	if ( out >= max ) {
 		// assume we could have launched a spider
-		m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+		if ( max > 0 ) m_sc->m_lastSpiderCouldLaunch = nowGlobal;
 		// count as non-empty then!
 		//m_sc->m_encounteredDoledbRecs = true;
 		// try the priority below us
@@ -4463,7 +4463,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// skip? and re-get another doledb list from next priority...
 	if ( out >= max ) {
 		// assume we could have launched a spider
-		m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+		if ( max > 0 ) m_sc->m_lastSpiderCouldLaunch = nowGlobal;
 		// this priority is maxed out, try next
 		m_sc->devancePriority();
 		// assume not an empty read
@@ -9663,10 +9663,25 @@ void doneSendingNotification ( void *state ) {
 		respiderFreq = 0.0;
 	}
 
+	long seconds = respiderFreq * 24*3600;
+	if ( seconds <= 0 ) seconds = 1;
+
 	// now update this round start time. all the other hosts should
 	// sync with us using the parm sync code, msg3e, every 13.5 seconds.
-	cr->m_spiderRoundStartTime += respiderFreq;
+	//cr->m_spiderRoundStartTime += respiderFreq;
+	cr->m_spiderRoundStartTime = getTimeGlobal() + seconds;
 	cr->m_spiderRoundNum++;
+
+	// waiting tree will usually be empty for this coll since no
+	// spider requests had a valid spider priority, so let's rebuild!
+	cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+
+	// log it
+	log("spider: new round #%li starttime = %lu for %s"
+	    , cr->m_spiderRoundNum
+	    , cr->m_spiderRoundStartTime
+	    , cr->m_coll
+	    );
 }
 
 void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
