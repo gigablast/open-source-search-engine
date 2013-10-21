@@ -4104,18 +4104,31 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		goto collLoop;
 	}
 
+	// shortcut
+	//CollectionRec *cr = m_sc->m_cr;
+	// sanity
+	if ( cr != m_sc->m_cr ) { char *xx=NULL;*xx=0; }
 	// skip the priority if we already have enough spiders on it
 	long out = m_sc->m_outstandingSpiders[m_sc->m_pri2];
-	// get the first ufn that uses this priority
-	long ufn = m_sc->m_priorityToUfn[m_sc->m_pri2];
+	// how many spiders can we have out?
+	long max = 0;
+	for ( long i =0 ; i < cr->m_numRegExs ; i++ ) {
+		if ( cr->m_spiderPriorities[i] != m_sc->m_pri2 ) continue;
+		if ( ! cr->m_spidersEnabled[i] ) continue;
+		if ( cr->m_maxSpidersPerRule[i] > max )
+			max = cr->m_maxSpidersPerRule[i];
+	}
+	// get the max # of spiders over all ufns that use this priority!
+	//long max = getMaxAllowableSpidersOut ( m_sc->m_pri2 );
+	//long ufn = m_sc->m_priorityToUfn[m_sc->m_pri2];
 	// how many can we have? crap, this is based on ufn, not priority
 	// so we need to map the priority to a ufn that uses that priority
-	long max = 0;
+	//long max = 0;
 	// see if it has a maxSpiders, if no ufn uses this priority then
 	// "max" will remain set to 0
-	if ( ufn >= 0 ) max = m_sc->m_cr->m_maxSpidersPerRule[ufn];
+	//if ( ufn >= 0 ) max = m_sc->m_cr->m_maxSpidersPerRule[ufn];
 	// turned off?
-	if ( ufn >= 0 && ! m_sc->m_cr->m_spidersEnabled[ufn] ) max = 0;
+	//if ( ufn >= 0 && ! m_sc->m_cr->m_spidersEnabled[ufn] ) max = 0;
 	// always allow at least 1, they can disable spidering otherwise
 	// no, we use this to disabled spiders... if ( max <= 0 ) max = 1;
 	// skip?
@@ -4400,16 +4413,35 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( pri < 0 || pri >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
 	// skip the priority if we already have enough spiders on it
 	long out = m_sc->m_outstandingSpiders[pri];
+	CollectionRec *cr = m_sc->m_cr;
 	// get the first ufn that uses this priority
-	long ufn = m_sc->m_priorityToUfn[pri];
+	//long max = getMaxAllowableSpidersOut ( pri );
+	// how many spiders can we have out?
+	long max = 0;
+	// in milliseconds. ho wlong to wait between downloads from same IP.
+	// only for parnent urls, not including child docs like robots.txt
+	// iframe contents, etc.
+	long sameIpWaitTime = 5000; // 250; // ms
+	long maxSpidersOutPerIp = 1;
+	for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
+		if ( cr->m_spiderPriorities[i] != m_sc->m_pri2 ) continue;
+		if ( ! cr->m_spidersEnabled[i] ) continue;
+		if ( cr->m_maxSpidersPerRule[i] > max )
+			max = cr->m_maxSpidersPerRule[i];
+		if ( cr->m_spiderIpWaits[i] < sameIpWaitTime )
+			sameIpWaitTime = cr->m_spiderIpWaits[i];
+		if ( cr->m_spiderIpMaxSpiders[i] > maxSpidersOutPerIp )
+			maxSpidersOutPerIp = cr->m_spiderIpMaxSpiders[i];
+	}
+	//long ufn = m_sc->m_priorityToUfn[pri];
 	// how many can we have? crap, this is based on ufn, not priority
 	// so we need to map the priority to a ufn that uses that priority
-	long max = 0;
+	//long max = 0;
 	// see if it has a maxSpiders, if no ufn uses this priority then
 	// "max" will remain set to 0
-	if ( ufn >= 0 ) max = m_sc->m_cr->m_maxSpidersPerRule[ufn];
+	//if ( ufn >= 0 ) max = m_sc->m_cr->m_maxSpidersPerRule[ufn];
 	// turned off?
-	if ( ufn >= 0 && ! m_sc->m_cr->m_spidersEnabled[ufn] ) max = 0;
+	//if ( ufn >= 0 && ! m_sc->m_cr->m_spidersEnabled[ufn] ) max = 0;
 	// if we skipped over the priority we wanted, update that
 	//m_pri = pri;
 	// then do the next one after that for next round
@@ -4593,20 +4625,17 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( g_conf.m_logDebugSpider ) 
 		logf(LOG_DEBUG,"spider: trying to spider url %s",sreq->m_url);
 
-	// in milliseconds. ho wlong to wait between downloads from same IP.
-	// only for parnent urls, not including child docs like robots.txt
-	// iframe contents, etc.
-	long sameIpWaitTime = 250; // ms
+	/*
 	if ( ufn >= 0 ) {
 		long siwt = m_sc->m_cr->m_spiderIpWaits[ufn];
 		if ( siwt >= 0 ) sameIpWaitTime = siwt;
 	}
 
-	long maxSpidersOutPerIp = 999;
 	if ( ufn >= 0 ) {
 		maxSpidersOutPerIp = m_sc->m_cr->m_spiderIpMaxSpiders[ufn];
 		if ( maxSpidersOutPerIp < 0 ) maxSpidersOutPerIp = 999;
 	}
+	*/
 
 	// assume we launch the spider below. really this timestamp indicates
 	// the last time we COULD HAVE LAUNCHED *OR* did actually launch
@@ -9216,7 +9245,6 @@ long getUrlFilterNum ( SpiderRequest *sreq       ,
 	if ( uv ) 
 		return *uv;
 	*/
- 
 	char ufn = getUrlFilterNum2 ( sreq,
 				      srep,
 				      nowGlobal,

@@ -1280,6 +1280,8 @@ class SpiderLoop {
 	void doleUrls1();
 	void doleUrls2();
 
+	long getMaxAllowableSpidersOut ( long pri ) ;
+
 	void spiderDoledUrls ( ) ;
 	bool gotDoledbList2  ( ) ;
 

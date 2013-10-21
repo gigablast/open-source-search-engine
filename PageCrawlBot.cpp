@@ -4150,20 +4150,24 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		//if ( strncasecmp(action,"http",4) == 0 )
 		//api = action;
 
+		// add a mirror of that filter but for manually added,
+		// i.e. injected or via add url, 
+		if ( priority >= 0 ) {
+			// purge because might have been the last "default"
+			// filter that we did nf-- above on.
+			cr->m_regExs [nf].purge();
+			// make the priority higher!
+			cr->m_regExs [nf].safePrintf("ismanualadd && %s",
+						     expression);
+			cr->m_spiderPriorities   [nf] = 70; 
+			cr->m_spiderDiffbotApiUrl[nf].set(action); // appends\0
+			nf++;
+		}
+
 		// add the new filter
 		cr->m_regExs             [nf].set(expression);
 		cr->m_spiderPriorities   [nf] = priority;
 		cr->m_spiderDiffbotApiUrl[nf].set(action);
-		nf++;
-
-		// add a mirror of that filter but for manually added,
-		// i.e. injected or via add url, 
-		if ( priority < 0 ) continue;
-
-		// make the priority higher!
-		cr->m_regExs [nf].safePrintf("ismanualadd && %s",expression);
-		cr->m_spiderPriorities   [nf] = 70; 
-		cr->m_spiderDiffbotApiUrl[nf].set(action); // appends \0
 		nf++;
 
 		// NULL out again
