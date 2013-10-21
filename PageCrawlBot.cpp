@@ -3121,7 +3121,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td><b>Repeat Crawl:</b> "
 			      "</td><td>"
 			      "<input type=text name=repeatCrawl "
-			      "size=10 value=\"%.02f\"> "
+			      "size=10 value=\"%f\"> "
 			      "<input type=submit name=submit value=OK>"
 			      " days"
 			      "</td>"
@@ -3943,7 +3943,11 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	// 3rd rule for respidering
 	if ( cr->m_collectiveRespiderFrequency > 0.0 ) {
 		cr->m_regExs[i].set("lastspidertime>={roundstart}");
-		cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		// do not "remove" from index
+		cr->m_spiderPriorities   [i] = 10;
+		// just turn off spidering. if we were to set priority to
+		// filtered it would be removed from index!
+		cr->m_spidersEnabled     [i] = 0;
 		cr->m_spiderDiffbotApiUrl[i].purge();
 		i++;
 	}
@@ -3951,7 +3955,7 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	// documents already indexed.
 	else {
 		cr->m_regExs[i].set("isindexed");
-		cr->m_spiderPriorities   [i] = 50;
+		cr->m_spiderPriorities   [i] = 10;
 		// just turn off spidering. if we were to set priority to
 		// filtered it would be removed from index!
 		cr->m_spidersEnabled     [i] = 0;
@@ -4065,13 +4069,13 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	}
 
 	// set collective respider
-	for ( long i =0 ; i < cr->m_numRegExs ; i++ ) {
-		if ( cr->m_collectiveRespiderFrequency == 0.0 )
-			cr->m_spiderFreqs[i] = 0.000;
-		else
-			cr->m_spiderFreqs[i] = 0.001;
-		//cr->m_collectiveRespiderFrequency;
-	}
+	//for ( long i =0 ; i < cr->m_numRegExs ; i++ ) {
+	//	if ( cr->m_collectiveRespiderFrequency == 0.0 )
+	//		cr->m_spiderFreqs[i] = 0.000;
+	//	else
+	//		cr->m_spiderFreqs[i] = 0.001;
+	//	//cr->m_collectiveRespiderFrequency;
+	//}
 
 
 	// were any url filteres specified? if not, don't reset them
@@ -4165,6 +4169,8 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 						     expression);
 			cr->m_spiderPriorities   [nf] = 70; 
 			cr->m_spiderDiffbotApiUrl[nf].set(action); // appends\0
+			cr->m_spiderFreqs[nf]=
+				cr->m_collectiveRespiderFrequency;
 			nf++;
 		}
 
@@ -4172,6 +4178,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_regExs             [nf].set(expression);
 		cr->m_spiderPriorities   [nf] = priority;
 		cr->m_spiderDiffbotApiUrl[nf].set(action);
+		cr->m_spiderFreqs [nf] = cr->m_collectiveRespiderFrequency;
 		nf++;
 
 		// NULL out again
@@ -4188,6 +4195,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_regExs [nf].safePrintf("default");
 		cr->m_spiderPriorities   [nf] = 50; 
 		cr->m_spiderDiffbotApiUrl[nf].set(NULL);
+		cr->m_spiderFreqs[nf] = cr->m_collectiveRespiderFrequency;
 		nf++;
 	}
 
@@ -4202,8 +4210,8 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	cr->m_numRegExs11 = nf;
 
 	// set collective respider
-	for ( long i =0 ; i < nf ; i++ ) 
-		cr->m_spiderFreqs[i] = cr->m_collectiveRespiderFrequency;
+	//for ( long i =0 ; i < nf ; i++ ) 
+	//	cr->m_spiderFreqs[i] = cr->m_collectiveRespiderFrequency;
 
 	return true;
 }

@@ -2189,10 +2189,10 @@ bool Parms::printParm ( SafeBuf* sb,
 	else if ( t == TYPE_FLOAT ) {
 		// just show the parm name and value if printing in json
 		if ( isJSON )
-			sb->safePrintf("\"%s\":%.03f,\n",cgi,*(float *)s);
+			sb->safePrintf("\"%s\":%f,\n",cgi,*(float *)s);
 		else
 			sb->safePrintf ("<input type=text name=%s "
-					"value=\"%.03f\" "
+					"value=\"%f\" "
 					"size=12>",cgi,*(float *)s);
 	}
 	else if ( t == TYPE_IP ) {
@@ -3755,7 +3755,7 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 	     t == TYPE_BOOL2          || t == TYPE_CHAR2           ) 
 		sprintf (p,"%li",(long)*s);
 	else if ( t == TYPE_FLOAT )
-		sprintf (p,"%.03f",*(float *)s);
+		sprintf (p,"%f",*(float *)s);
 	else if ( t == TYPE_IP ) 
 		sprintf (p,"%s",iptoa(*(long *)s));
 	else if ( t == TYPE_LONG || t == TYPE_LONG_CONST || t == TYPE_RULESET||
