@@ -12,7 +12,7 @@
 //#include "Stats.h"
 
 // put me back
-//#define _EFENCE_
+#define _EFENCE_
 
 // uncomment this for _EFENCE_ to do underflow checks instead of the
 // default overflow checks

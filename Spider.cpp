@@ -1781,6 +1781,14 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	ufn = ::getUrlFilterNum(sreq,NULL,nowGlobalMS,false,MAX_NICENESS,m_cr);
 	// sanity check
 	if ( ufn < 0 ) { char *xx=NULL;*xx=0; }
+
+	// spiders disabled for this row in url filteres?
+	if ( ! m_cr->m_spidersEnabled[ufn] ) {
+		if ( g_conf.m_logDebugSpider )
+			log("spider: request spidersoff ufn=%li",ufn);
+		return true;
+	}
+
 	// set the priority (might be the same as old)
 	long priority = m_cr->m_spiderPriorities[ufn];
 
@@ -2948,6 +2956,13 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		if ( priority == -1 ) { char *xx=NULL;*xx=0; }
 		if ( priority >= MAX_SPIDER_PRIORITIES) {char *xx=NULL;*xx=0;}
 
+		// spiders disabled for this row in url filteres?
+		if ( ! m_cr->m_spidersEnabled[ufn] ) continue;
+
+		// skip if banned
+		if ( priority == SPIDER_PRIORITY_FILTERED ) continue;
+		if ( priority == SPIDER_PRIORITY_BANNED   ) continue;
+
 		uint64_t spiderTimeMS;
 		spiderTimeMS = getSpiderTimeMS ( sreq,ufn,srep,nowGlobalMS );
 		// how many outstanding spiders on a single IP?
@@ -2967,9 +2982,6 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		//	    priority,
 		//	    sreq->getUrlHash48());
 
-		// skip if banned
-		if ( priority == SPIDER_PRIORITY_FILTERED ) continue;
-		if ( priority == SPIDER_PRIORITY_BANNED   ) continue;
 
 		// we can't have negative priorities at this point because
 		// the s_ufnTree uses priority as part of the key so it

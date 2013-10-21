@@ -257,7 +257,7 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	if ( i >= m_numRecs && 
 	     (i+1)*4 > m_recPtrBuf.getCapacity() ) {
 		long need = (i+1)*sizeof(CollectionRec *);
-		long have = m_recPtrBuf.getCapacity();
+		long have = m_recPtrBuf.getLength();//Capacity();
 		need -= have;
 		// true here means to clear the new space to zeroes
 		if ( ! m_recPtrBuf.reserve ( need ,NULL, true ) ) 
