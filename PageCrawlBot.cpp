@@ -2359,9 +2359,14 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 	if ( fmt == FMT_JSON )
 		sb.safePrintf("\"urlFilters\":[");
 
-	// skip first 2 filters that are ismedia->ignore and
-	// !isonsamedomain->ignore
-	long istart = 2;
+	// skip first filters that are:
+	// 0. ismedia->ignore and
+	// 1. !isonsamedomain->ignore
+	// 2. lastspidertime or !isindexed
+	// 3. errorcount rule
+	// 4. errorcount rule
+
+	long istart = 5;
 	// if respidering then we added an extra filter 
 	// lastspidertime>={roundstart} --> FILTERED
 	if ( cr->m_collectiveRespiderFrequency > 0.0 )
@@ -3938,6 +3943,31 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 		cr->m_spiderDiffbotApiUrl[i].purge();
 		i++;
 	}
+	// if collectiverespiderfreq is 0 or less then do not RE-spider
+	// documents already indexed.
+	else {
+		cr->m_regExs[i].set("isindexed");
+		cr->m_spiderPriorities   [i] = 50;
+		// just turn off spidering. if we were to set priority to
+		// filtered it would be removed from index!
+		cr->m_spidersEnabled     [i] = 0;
+		cr->m_spiderDiffbotApiUrl[i].purge();
+		i++;
+	}
+
+	// and for docs that have errors respider once every 5 hours
+	cr->m_regExs[i].set("errorcount>0 && errcount<3");
+	cr->m_spiderPriorities   [i] = 40;
+	cr->m_spiderFreqs        [i] = 0.2; // half a day
+	cr->m_spiderDiffbotApiUrl[i].purge();
+	i++;
+
+	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
+	cr->m_regExs[i].set("errorcount>=3");
+	cr->m_spiderPriorities   [i] = 30;
+	cr->m_spiderFreqs        [i] = 30; // 30 days
+	cr->m_spiderDiffbotApiUrl[i].purge();
+	i++;
 
 
 	// 3rd default filter. BUT if they specified filters this will

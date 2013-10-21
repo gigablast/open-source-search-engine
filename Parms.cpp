@@ -1156,8 +1156,7 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 		if ( i == select ) s = " selected";
 		else               s = "";
 		if      ( i == -3 ) 
-			//sb->safePrintf ("<option value=%li%s>FILTERED",i,s);
-			sb->safePrintf ("<option value=%li%s>DONOTSPIDER",i,s);
+			sb->safePrintf ("<option value=%li%s>FILTERED",i,s);
 		else if ( i == -2 ) 
 			sb->safePrintf ("<option value=%li%s>BANNED",i,s);
 		else if ( i == -1 ) 
@@ -12768,7 +12767,7 @@ void Parms::init ( ) {
 		"precedence over "
 		"URLs with lower spider priorities. "
 		"The respider frequency dictates how often a URL will "
-		"be respidered. 0.0 means do not respider. "
+		"be respidered. "
 
 		"See the help table below for examples of all the supported "
 		"expressions. "
