@@ -3915,9 +3915,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// not while repairing
 	if ( g_repairMode ) return;
 
-	if ( g_conf.m_logDebugSpider )
-		log("spider: trying to get a doledb rec to spider. "
-		    "currentnumout=%li",m_numSpidersOut);
+	//if ( g_conf.m_logDebugSpider )
+	//	log("spider: trying to get a doledb rec to spider. "
+	//	    "currentnumout=%li",m_numSpidersOut);
 
 	// when getting a lock we keep a ptr to the SpiderRequest in the
 	// doledb list, so do not try to read more just yet until we know
@@ -8401,7 +8401,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( isForMsg20 ) continue;
 			// check the extension
 			if ( urlLen<=5 ) continue;
-			ext = url - 4;
+			ext = url + urlLen - 4;
 			if ( ext[0] == '.' ) {
 				if ( to_lower_a(ext[1]) == 'c' &&
 				     to_lower_a(ext[2]) == 's' &&
@@ -8409,6 +8409,10 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 					goto gotOne;
 				if ( to_lower_a(ext[1]) == 'm' &&
 				     to_lower_a(ext[2]) == 'p' &&
+				     to_lower_a(ext[3]) == 'g' )
+					goto gotOne;
+				if ( to_lower_a(ext[1]) == 'p' &&
+				     to_lower_a(ext[2]) == 'n' &&
 				     to_lower_a(ext[3]) == 'g' )
 					goto gotOne;
 				if ( to_lower_a(ext[1]) == 'w' &&

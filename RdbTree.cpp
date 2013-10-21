@@ -3043,6 +3043,8 @@ long  RdbTree::getNumPositiveKeys ( collnum_t collnum ) {
 
 void RdbTree::setNumKeys ( CollectionRec *cr ) {
 
+	if ( ! cr ) return;
+
 	collnum_t collnum = cr->m_collnum;
 	cr->m_numNegKeysInTree[(unsigned char)m_rdbId] = 0;
 	cr->m_numPosKeysInTree[(unsigned char)m_rdbId] = 0;

@@ -2670,6 +2670,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      , cx->m_collectiveRespiderFrequency
 				      , (long)cx->m_diffbotOnlyProcessIfNew
 				      );
+			sb.safePrintf("\"pageProcessPattern\":\"");
+			sb.safeUtf8ToJSON ( cx->m_diffbotPageProcessPattern.
+					    getBufStart() );
+			sb.safePrintf("\",\n");
 			sb.safePrintf("\"notifyEmail\":\"");
 			sb.safeUtf8ToJSON ( cx->m_notifyEmail.getBufStart() );
 			sb.safePrintf("\",\n");

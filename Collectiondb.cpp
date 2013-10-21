@@ -256,8 +256,10 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	// capacity for us already...
 	if ( i >= m_numRecs && 
 	     (i+1)*4 > m_recPtrBuf.getCapacity() ) {
-		long need = (i+1-m_numRecs)*sizeof(CollectionRec *);
-	     // true here means to clear the new space to zeroes
+		long need = (i+1)*sizeof(CollectionRec *);
+		long have = m_recPtrBuf.getCapacity();
+		need -= have;
+		// true here means to clear the new space to zeroes
 		if ( ! m_recPtrBuf.reserve ( need ,NULL, true ) ) 
 			return log("admin: error growing rec ptr buf");
 	}
@@ -410,6 +412,12 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 
 	// reserve it
 	if ( i >= m_numRecs ) m_numRecs = i + 1;
+
+	// sanity
+	for ( long j = 0 ; j < m_numRecs ; j++ ) {
+		if ( ! m_recs[j] ) continue;
+		if ( m_recs[j]->m_collnum == 1 ) continue;
+	}
 
 	// count it
 	m_numRecsUsed++;
