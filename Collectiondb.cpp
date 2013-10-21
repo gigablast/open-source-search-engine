@@ -255,10 +255,12 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	// grow the ptr buf if we could not plug a hole and it has not the
 	// capacity for us already...
 	if ( i >= m_numRecs && 
-	     (i+1)*4 > m_recPtrBuf.getCapacity() &&
+	     (i+1)*4 > m_recPtrBuf.getCapacity() ) {
+		long need = (i+1-m_numRecs)*sizeof(CollectionRec *);
 	     // true here means to clear the new space to zeroes
-	     ! m_recPtrBuf.reserve ( 120 ,NULL, true ) ) 
-		return log("admin: error growing rec ptr buf");
+		if ( ! m_recPtrBuf.reserve ( need ,NULL, true ) ) 
+			return log("admin: error growing rec ptr buf");
+	}
 	// re-ref it in case it is different
 	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
 

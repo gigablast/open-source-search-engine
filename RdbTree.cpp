@@ -2721,7 +2721,7 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 	// define ending node for all loops
 	long end = start + n ;
 	// shortcut
-	CollectionRec **recs = g_collectiondb.m_recs;
+	//CollectionRec **recs = g_collectiondb.m_recs;
 	// store into tree in the appropriate nodes
 	for ( long i = start ; i < end ; i++ ) {
 		// skip if empty
@@ -2739,15 +2739,15 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 			m_numNegativeKeys++;
 			//m_numNegKeysPerColl[c]++;
 			// this is only used for Rdb::m_trees
-			if ( m_isRealTree )
-			recs[c]->m_numNegKeysInTree[(unsigned char)m_rdbId]++;
+			//if ( m_isRealTree )
+			//recs[c]->m_numNegKeysInTree[(unsigned char)m_rdbId]++
 		}
 		else {
 			m_numPositiveKeys++;
 			//m_numPosKeysPerColl[c]++;
 			// this is only used for Rdb::m_trees
-			if ( m_isRealTree )
-			recs[c]->m_numPosKeysInTree[(unsigned char)m_rdbId]++;
+			//if ( m_isRealTree )
+			//recs[c]->m_numPosKeysInTree[(unsigned char)m_rdbId]++
 		}
 	}
 	// bail now if we can 
@@ -3041,3 +3041,21 @@ long  RdbTree::getNumPositiveKeys ( collnum_t collnum ) {
 	return cr->m_numPosKeysInTree[(unsigned char)m_rdbId]; 
 }
 
+void RdbTree::setNumKeys ( CollectionRec *cr ) {
+
+	collnum_t collnum = cr->m_collnum;
+	cr->m_numNegKeysInTree[(unsigned char)m_rdbId] = 0;
+	cr->m_numPosKeysInTree[(unsigned char)m_rdbId] = 0;
+
+	for ( long i = 0 ; i < m_numNodes ; i++ ) {
+		//QUICKPOLL(niceness);
+		// skip if empty
+		if ( m_parents[i] == -2 ) continue;
+		// or if we hit a different collection number
+		if ( m_collnums [ i ] != collnum ) continue;
+		if   ( KEYNEG(m_keys,i,m_ks) ) 
+			cr->m_numNegKeysInTree[(unsigned char)m_rdbId]++;
+		else
+			cr->m_numPosKeysInTree[(unsigned char)m_rdbId]++;
+	}
+}	

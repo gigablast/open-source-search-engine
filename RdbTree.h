@@ -227,6 +227,8 @@ class RdbTree {
 	long  getNumNegativeKeys ( collnum_t collnum ) ;
 	long  getNumPositiveKeys ( collnum_t collnum ) ;
 
+	void setNumKeys ( class CollectionRec *cr ) ;
+
 	// how much mem, including data, is used by this class?
 	long getMemAlloced       ( ) { return m_memAlloced;  };
 	// . how much of the alloc'd mem is actually in use holding data

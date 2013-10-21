@@ -530,6 +530,13 @@ bool Rdb::addColl ( char *coll ) {
 		exit(-1);
 		return false;
 	}
+
+	// . set CollectionRec::m_numPos/NegKeysInTree[rdbId]
+	// . these counts are now stored in the CollectionRec and not
+	//   in RdbTree since the # of collections can be huge!
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	m_tree.setNumKeys ( cr );
+
 	//if ( (long)collnum >= m_numBases ) m_numBases = (long)collnum + 1;
 	// Success
 	return true;
