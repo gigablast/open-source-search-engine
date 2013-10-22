@@ -2837,6 +2837,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<input type=text name=q size=50>"
 			      "<input type=hidden name=c value=\"%s\">"
 			      "<input type=hidden name=rand value=%lli>"
+			      // bypass ajax, searchbox, logo, etc.
+			      "<input type=hidden name=id value=12345>"
 			      // restrict search to json objects
 			      "<input type=hidden name=prepend "
 			      "value=\"type:json |\">"
@@ -2855,6 +2857,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<input type=text name=q size=50>"
 			      "<input type=hidden name=c value=\"%s\">"
 			      "<input type=hidden name=rand value=%lli>"
+			      // bypass ajax, searchbox, logo, etc.
+			      "<input type=hidden name=id value=12345>"
 			      // restrict search to NON json objects
 			      "<input type=hidden "
 			      "name=prepend value=\"-type:json |\">"
