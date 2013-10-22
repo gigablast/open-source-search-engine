@@ -2371,8 +2371,8 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 	long istart = 5;
 	// if respidering then we added an extra filter 
 	// lastspidertime>={roundstart} --> FILTERED
-	if ( cr->m_collectiveRespiderFrequency > 0.0 )
-		istart++;
+	//if ( cr->m_collectiveRespiderFrequency > 0.0 )
+	//	istart++;
 
 	for ( long i = istart ; i < cr->m_numRegExs ; i++ ) {
 		//sb.safePrintf
@@ -2392,7 +2392,7 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 		// if filtered from crawling, do not even spider
 		long priority = cr->m_spiderPriorities[i];
 		if ( priority == SPIDER_PRIORITY_FILTERED ) // -3
-			action = "doNotSpider";
+			action = "doNotCrawl";
 		// we add this supplemental expressin/action for every
 		// one the user adds in order to give manually added
 		// urls higher spider priority, so skip it
