@@ -545,7 +545,9 @@ long RdbTree::addNode ( collnum_t collnum ,
 		// we only use these stats for Rdb::m_trees for a 
 		// PER COLLECTION count, since there can be multiple 
 		// collections using the same Rdb::m_tree!
-		if ( m_isRealTree ) {
+		// crap, when fixing a tree this will segfault because
+		// m_recs[collnum] is NULL.
+		if ( m_isRealTree && g_collectiondb.m_recs[collnum] ) {
 			g_collectiondb.m_recs[collnum]->
 				m_numNegKeysInTree[(unsigned char)m_rdbId] =0;
 			g_collectiondb.m_recs[collnum]->
@@ -625,16 +627,22 @@ long RdbTree::addNode ( collnum_t collnum ,
 		// we only use these stats for Rdb::m_trees for a 
 		// PER COLLECTION count, since there can be multiple 
 		// collections using the same Rdb::m_tree!
-		if ( m_isRealTree )
+		// crap, when fixing a tree this will segfault because
+		// m_recs[collnum] is NULL.
+		if ( m_isRealTree && g_collectiondb.m_recs[collnum] ) {
 			g_collectiondb.m_recs[collnum]->
 				m_numNegKeysInTree[(unsigned char)m_rdbId]++;
+		}
 	}
 	else {
 		m_numPositiveKeys++;
 		//m_numPosKeysPerColl[collnum]++;
-		if ( m_isRealTree )
+		// crap, when fixing a tree this will segfault because
+		// m_recs[collnum] is NULL.
+		if ( m_isRealTree && g_collectiondb.m_recs[collnum] ) {
 			g_collectiondb.m_recs[collnum]->
 				m_numPosKeysInTree[(unsigned char)m_rdbId]++;
+		}
 	}
 	// debug2 msg
 	// fprintf(stderr,"+ #%li %lli %li\n",i,key.n0,iparent);

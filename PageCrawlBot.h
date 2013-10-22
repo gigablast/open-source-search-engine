@@ -27,6 +27,7 @@ bool sendBackDump ( class TcpSocket *s, class HttpRequest *hr );
 
 bool getSpiderRequestMetaList ( char *doc, 
 				class SafeBuf *listBuf, 
-				bool spiderLinks);
+				bool spiderLinks,
+				class CollectionRec *cr);
 
 #endif

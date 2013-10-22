@@ -8275,21 +8275,19 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m++;
 
-
-
-	/*
-	m->m_cgi   = "alias";
-	m->m_xml   = "collectionNameAlias";
-	m->m_off   = (char *)&cr.m_collectionNameAlias - x;
+	m->m_cgi   = "dbseed";
+	m->m_xml   = "diffbotSeeds";
+	m->m_off   = (char *)&cr.m_diffbotSeeds - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
 	m++;
 
-	m->m_cgi   = "dbseed";
-	m->m_xml   = "diffbotSeed";
-	m->m_off   = (char *)&cr.m_diffbotSeed - x;
+	/*
+	m->m_cgi   = "alias";
+	m->m_xml   = "collectionNameAlias";
+	m->m_off   = (char *)&cr.m_collectionNameAlias - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;

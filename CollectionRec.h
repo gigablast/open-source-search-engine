@@ -414,7 +414,7 @@ class CollectionRec {
 	// collection names as a random sequence of hex digits. this
 	// will allow a user to give them an alternate name.
 	//SafeBuf m_collectionNameAlias;
-	//SafeBuf m_diffbotSeed;
+	SafeBuf m_diffbotSeeds;
 	// this will be NULL or "none" to not pass off to diffbot
 	//SafeBuf m_diffbotApi;
 	//SafeBuf m_diffbotApiList;//QueryString;
@@ -662,6 +662,8 @@ class CollectionRec {
 
 	long m_overflow;
 	long m_overflow2;
+
+	HashTableX m_seedHashTable;
 
 	// . related pages parameters
 	// . copied from Parms.cpp

@@ -3075,10 +3075,16 @@ bool sendNotification ( EmailInfo *ei ) {
 			       "has hit a limitation and has "
 			       "been paused."
 			       , crawl );
-		// use this
+
+		// reset m_length otherwise it builds up
+		ei->m_toAddress.reset();
 		ei->m_toAddress.safeStrcpy ( email );
 		ei->m_toAddress.nullTerm();
+		
+		// reset m_length otherwise it builds up
+		ei->m_fromAddress.reset();
 		ei->m_fromAddress.safePrintf("support@diffbot.com");
+
 		/*
 		ei->m_subject.safePrintf("crawl paused");
 		ei->m_body.safePrintf("Your crawl for collection \"%s\" "

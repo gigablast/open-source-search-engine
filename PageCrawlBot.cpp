@@ -1154,8 +1154,8 @@ bool StateCD::sendList ( ) {
 	m_socket->m_callback = doneSendingWrapper;
 	m_socket->m_state    = this;
 
-	if ( m_socket->m_sendBufUsed == 79 )
-		log("hey");
+	//if ( m_socket->m_sendBufUsed == 79 )
+	//	log("hey");
 	
 	// log it
 	log("crawlbot: resending %li bytes on socket",m_socket->m_sendBufUsed);
@@ -2281,12 +2281,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		bool status = true;
 		if ( ! getSpiderRequestMetaList ( seeds,
 						  &listBuf ,
-						  true ) ) // spiderLinks?
+						  true , // spiderLinks?
+						  cr ) )
 			status = false;
 		// do not spider links for spots
 		if ( ! getSpiderRequestMetaList ( spots,
 						  &listBuf ,
-						  false ) ) // spiderLinks?
+						  false , // spiderLinks?
+						  NULL ) )
 			status = false;
 		// empty?
 		long size = listBuf.length();
@@ -2670,6 +2672,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      , cx->m_collectiveRespiderFrequency
 				      , (long)cx->m_diffbotOnlyProcessIfNew
 				      );
+			sb.safePrintf("\"seeds\":\"");
+			sb.safeUtf8ToJSON ( cx->m_diffbotSeeds.getBufStart());
+			sb.safePrintf("\",\n");
 			sb.safePrintf("\"pageProcessPattern\":\"");
 			sb.safeUtf8ToJSON ( cx->m_diffbotPageProcessPattern.
 					    getBufStart() );
@@ -3619,11 +3624,52 @@ CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ) {
 	return cr;
 }
 
+// . do not add dups into m_diffbotSeeds safebuf
+// . return 0 if not in table, 1 if in table. -1 on error adding to table.
+long isInSeedBuf ( CollectionRec *cr , Url *url ) {
+
+	HashTableX *ht = &cr->m_seedHashTable;
+
+	// if table is empty, populate it
+	if ( ht->m_numSlotsUsed <= 0 ) {
+		// initialize the hash table
+		if ( ! ht->set(8,0,1024,NULL,0,false,1,"seedtbl") ) 
+			return -1;
+		// populate it from list of seed urls
+		char *p = cr->m_diffbotSeeds.getBufStart();
+		for ( ; p && *p ; ) {
+			// get url
+			char *purl = p;
+			// advance to next
+			for ( ; *p && !is_wspace_a(*p) ; p++ );
+			// make end then
+			char *end = p;
+			// skip possible white space. might be \0.
+			if ( *p ) p++;
+			// hash it
+			long long h64 = hash64 ( purl , end-purl );
+			if ( ! ht->addKey ( &h64 ) ) return -1;
+		}
+	}
+
+	// is this url in the hash table?
+	long long u64 = hash64 ( url->getUrl() , url->getUrlLen() );
+	
+	if ( ht->isInTable ( &u64 ) ) return 1;
+
+	// add it to hashtable
+	if ( ! ht->addKey ( &u64 ) ) return -1;
+
+	// WAS not in table
+	return 0;
+}
+
 // just use "fakeips" based on the hash of each url hostname/subdomain
 // so we don't waste time doing ip lookups.
 bool getSpiderRequestMetaList ( char *doc , 
 				SafeBuf *listBuf ,
-				bool spiderLinks ) {
+				bool spiderLinks ,
+				CollectionRec *cr ) {
 
 	if ( ! doc ) return true;
 
@@ -3690,6 +3736,29 @@ bool getSpiderRequestMetaList ( char *doc ,
 		if ( ! listBuf->safeMemcpy ( &sreq , sreq.getRecSize() ) )
 			// return false with g_errno set
 			return false;
+
+		if ( ! cr ) continue;
+
+		// do not add dups into m_diffbotSeeds safebuf
+		long status = isInSeedBuf ( cr , &url );
+
+		// error?
+		if ( status == -1 ) {
+			log ( "crawlbot: error adding seed to table: %s",
+			      mstrerror(g_errno) );
+			return true;
+		}
+
+		// already in buf
+		if ( status == 1 ) continue;
+
+		// add url into m_diffbotSeeds, \n separated list
+		if ( cr->m_diffbotSeeds.length() )
+			// make it space not \n so it looks better in the
+			// json output i guess
+			cr->m_diffbotSeeds.pushChar(' '); // \n
+		cr->m_diffbotSeeds.safeMemcpy (url.getUrl(), url.getUrlLen());
+		cr->m_diffbotSeeds.nullTerm();
 	}
 	// all done
 	return true;
@@ -3911,6 +3980,16 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket ,
 
 bool resetUrlFilters ( CollectionRec *cr ) {
 
+	// if it was not recrawling and we made it start we have
+	// to repopulate waiting tree because most entries will
+	// need to be re-added!
+	// really, anytime we change url filters we have to repopulate
+	// the waiting tree
+	SpiderColl *sc = cr->m_spiderColl;
+	if ( sc ) {
+		sc->m_waitingTreeNeedsRebuild = true;
+	}
+
 	// make the gigablast regex table just "default" so it does not
 	// filtering, but accepts all urls. we will add code to pass the urls
 	// through m_diffbotUrlCrawlPattern alternatively. if that itself
@@ -3997,6 +4076,7 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 
 	return true;
 }
+
 
 bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 				     HttpRequest *hr , 

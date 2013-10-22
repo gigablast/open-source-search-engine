@@ -9809,7 +9809,10 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	ei->m_finalState    = ei;
 	ei->m_collnum       = cr->m_collnum;
 
-	sendNotification ( ei );
+	// if no email address or webhook provided this will not block!
+	if ( ! sendNotification ( ei ) ) return;
+	// so handle this ourselves in that case:
+	doneSendingNotification ( ei );
 }
 
 void handleRequestc1 ( UdpSlot *slot , long niceness ) {

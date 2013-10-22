@@ -751,7 +751,11 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	if ( sc ) {
 		sc->clear();
 		sc->m_collnum = newCollnum;
+		// reset spider round
+		cr->m_spiderRoundNum = 0;
+		cr->m_spiderRoundStartTime = 0;
 	}
+
 
 	// so XmlDoc.cpp can detect if the collection was reset since it
 	// launched its spider:
