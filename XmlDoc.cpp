@@ -16200,13 +16200,13 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	// note that
 	setStatus ( "getting url filter row num");
 	// make the partial new spider rec
-	SpiderReply *newsr = getNewSpiderReply ( );
+	//SpiderReply *newsr = getNewSpiderReply ( );
 	// note it
-	if ( ! newsr )
-		log("doc: getNewSpiderReply: %s",mstrerror(g_errno));
+	//if ( ! newsr )
+	//	log("doc: getNewSpiderReply: %s",mstrerror(g_errno));
 	// sanity check
 	//if ( ! newsr || newsr == (void *)-1 ) { char *xx=NULL;*xx=0; }
-	if ( ! newsr || newsr == (void *)-1 ) return (long *)newsr;
+	//if ( ! newsr || newsr == (void *)-1 ) return (long *)newsr;
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 	// this must be valid
@@ -16218,15 +16218,37 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	if ( ! m_oldsrValid ) oldsr = NULL;
 	// do not set the spideredTime in the spiderReply to 0
 	// so we do not trigger the lastSpiderTime
-	long saved = newsr->m_spideredTime;
-	newsr->m_spideredTime = 0;
+	//long saved = newsr->m_spideredTime;
+	//newsr->m_spideredTime = 0;
+	//
+	// PROBLEM: we end up matching "isIndexed" in the url filters
+	// even if this is a NEW document because we pass it in the spider
+	// reply that we generate now even though another spider reply
+	// may not exist. 
+	//
+	// SOLUTION: just do not supply a spider reply, we only seem to
+	// use the urlfilternum to get a diffbot api url OR to see if the
+	// document is banned/filtered so we should delete it. otherwise
+	// we were supplying "newsr" above...
+
 	// . look it up
 	// . use the old spidered date for "nowGlobal" so we can be consistent
 	//   for injecting into the "test" coll
-	long ufn = ::getUrlFilterNum ( oldsr,newsr,spideredTime,false,
+	long ufn = ::getUrlFilterNum ( oldsr,NULL,spideredTime,false,
 				       m_niceness,cr);
+
 	// put it back
-	newsr->m_spideredTime = saved;
+	//newsr->m_spideredTime = saved;
+
+	// bad news?
+	if ( ufn < 0 ) {
+		log("build: failed to get url filter for xmldoc %s",
+		    m_firstUrl.m_url);
+		g_errno = EBADENGINEER;
+		return NULL;
+	}
+
+
 	// store it
 	m_urlFilterNum      = ufn;
 	m_urlFilterNumValid = true;
@@ -21472,6 +21494,15 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//   confidently toss this guy out.
 		long ufn = ::getUrlFilterNum ( &ksr , NULL, m_spideredTime ,
 					       false, m_niceness, cr);
+
+		// bad?
+		if ( ufn < 0 ) {
+			log("build: link %s had bad url filter."
+			    , ksr.m_url );
+			g_errno = EBADENGINEER;
+			return NULL;
+		}
+
 		long priority = -1;
 		if ( ufn >= 0 )
 			priority = cr->m_spiderPriorities[ufn];
@@ -25199,11 +25230,14 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		ufn=::getUrlFilterNum(&sreq,&srep,spideredTime,true,
 				      m_niceness,cr);
 		// sanity check
-		if ( ufn < 0 ) { char *xx=NULL;*xx=0; }
+		if ( ufn < 0 ) { 
+			log("msg20: bad url filter for url %s", sreq.m_url);
+		}
+
 		// save it
 		reply->m_urlFilterNum = ufn;
-		// get spider priority
-		long pr = cr->m_spiderPriorities[ufn];
+		// get spider priority if ufn is valid
+		long pr = 0; if ( ufn >= 0 ) pr = cr->m_spiderPriorities[ufn];
 
 		// this is an automatic ban!
 		if ( gr->getLong("manualban",0) ) pr = SPIDER_PRIORITY_BANNED;

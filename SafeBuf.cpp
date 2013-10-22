@@ -2705,6 +2705,9 @@ bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
 }
 
 bool SafeBuf::safeUtf8ToJSON ( char *utf8 ) {
+
+	if ( ! utf8 ) return true;
+
 	// how much space do we need?
 	// each single byte \t char for instance will need 2 bytes
 	long need = gbstrlen(utf8) * 2 + 1;

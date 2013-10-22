@@ -1778,7 +1778,13 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	long ufn ;
 	ufn = ::getUrlFilterNum(sreq,NULL,nowGlobalMS,false,MAX_NICENESS,m_cr);
 	// sanity check
-	if ( ufn < 0 ) { char *xx=NULL;*xx=0; }
+	if ( ufn < 0 ) { 
+		log("spider: failed to add spider request for %s because "
+		    "it matched no url filter",
+		    sreq->m_url);
+		g_errno = EBADENGINEER;
+		return false;
+	}
 
 	// spiders disabled for this row in url filteres?
 	if ( ! m_cr->m_spidersEnabled[ufn] ) {
@@ -2948,7 +2954,12 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		long ufn = ::getUrlFilterNum(sreq,srep,nowGlobal,false,
 					     MAX_NICENESS,m_cr);
 		// sanity check
-		if ( ufn == -1 ) { char *xx=NULL;*xx=0; }
+		if ( ufn == -1 ) { 
+			log("spider: failed to match url filter for "
+			    "url = %s", sreq->m_url);
+			g_errno = EBADENGINEER;
+			return true;
+		}
 		// set the priority (might be the same as old)
 		long priority = m_cr->m_spiderPriorities[ufn];
 		// sanity checks
@@ -9220,7 +9231,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 
 	}
 	// sanity check ... must be a default rule!
-	char *xx=NULL;*xx=0;
+	//char *xx=NULL;*xx=0;
 	// return -1 if no match, caller should use a default
 	return -1;
 }
