@@ -910,8 +910,12 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// "GET /crawlbot/downloadurls"
 	// "GET /crawlbot/downloadobjects"
 	// "GET /crawlbot/downloadpages"
-	if ( strncmp ( path , "/crawlbot/download/" ,19 ) == 0 )
+	if ( strncmp ( path , "/crawlbot/download/" ,19 ) == 0 ||
+	     strncmp ( path , "/v2/crawl/download/" ,19 ) == 0 )
 		return sendBackDump ( s , r );
+
+	if ( strncmp ( path , "/v2/crawl", 9 ) == 0 )
+		return sendPageCrawlbot ( s , r );
 
 	// . is it a diffbot api request, like "GET /api/*"
 	// . ie "/api/startcrawl" or "/api/stopcrawl" etc.?

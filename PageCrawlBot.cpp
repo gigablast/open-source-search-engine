@@ -1739,8 +1739,8 @@ bool sendReply2 (TcpSocket *socket , long fmt , char *msg ) {
 	// send this back to browser
 	SafeBuf sb;
 	if ( fmt == FMT_JSON ) {
-		sb.safePrintf("{\n{\"response\":\"success\"},\n"
-			      "{\"message\":\"%s\"}\n}\n"
+		sb.safePrintf("{\n\"response\":\"success\",\n"
+			      "\"message\":\"%s\"\n}\n"
 			      , msg );
 		ct = "application/json";
 	}
@@ -1770,8 +1770,7 @@ bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 	// send this back to browser
 	SafeBuf sb;
 	if ( fmt == FMT_JSON ) {
-		sb.safePrintf("{\n{\"response\":\"fail\"},\n"
-			      "{\"message\":\"%s\"}\n}\n"
+		sb.safePrintf("{\"error\":\"%s\"}\n"
 			      , msg );
 		ct = "application/json";
 	}
