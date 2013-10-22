@@ -2679,13 +2679,25 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			sb.safePrintf("\"seeds\":\"");
 			sb.safeUtf8ToJSON ( cx->m_diffbotSeeds.getBufStart());
 			sb.safePrintf("\",\n");
+
+			sb.safePrintf("\"crawlRoundNumber\":%li,\n",
+				      cx->m_spiderRoundNum);
+
+			sb.safePrintf("\"crawlRoundStartTime\":%lu,\n",
+				      cx->m_spiderRoundStartTime);
+
+			sb.safePrintf("\"currentTime\":%lu,\n",
+				      getTimeGlobal() );
+
 			sb.safePrintf("\"pageProcessPattern\":\"");
 			sb.safeUtf8ToJSON ( cx->m_diffbotPageProcessPattern.
 					    getBufStart() );
 			sb.safePrintf("\",\n");
+
 			sb.safePrintf("\"notifyEmail\":\"");
 			sb.safeUtf8ToJSON ( cx->m_notifyEmail.getBufStart() );
 			sb.safePrintf("\",\n");
+
 			sb.safePrintf("\"notifyWebHook\":\"");
 			sb.safeUtf8ToJSON ( cx->m_notifyUrl.getBufStart() );
 			sb.safePrintf("\",\n");
@@ -2704,7 +2716,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 						  true // isJSON?
 						  );
 			*/
-			printUrlFilters ( sb , cr , fmt );
+			printUrlFilters ( sb , cx , fmt );
 			// end that collection rec
 			sb.safePrintf("\n}\n");
 			// print the next one out
