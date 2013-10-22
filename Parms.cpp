@@ -15793,6 +15793,8 @@ void Parms::overlapTest ( char step ) {
 		// because that modifies another parm, "spidering enabled"
 		if ( m_parms[i].m_type == TYPE_BOOL2 ) continue;
 
+		if ( m_parms[i].m_type == TYPE_SAFEBUF ) continue;
+
 		p1 = NULL;
 		if ( m_parms[i].m_obj == OBJ_COLL ) p1 = (char *)&tmpcr;
 		if ( m_parms[i].m_obj == OBJ_CONF ) p1 = (char *)&tmpconf;
@@ -15832,6 +15834,8 @@ void Parms::overlapTest ( char step ) {
 		// skip if it is a broadcast switch, like "all spiders on"
 		// because that modifies another parm, "spidering enabled"
 		if ( m_parms[i].m_type == TYPE_BOOL2 ) continue;
+
+		if ( m_parms[i].m_type == TYPE_SAFEBUF ) continue;
 
 		p1 = NULL;
 		if ( m_parms[i].m_obj == OBJ_COLL ) p1 = (char *)&tmpcr;

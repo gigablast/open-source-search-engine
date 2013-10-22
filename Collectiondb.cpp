@@ -257,11 +257,13 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	if ( i >= m_numRecs && 
 	     (i+1)*4 > m_recPtrBuf.getCapacity() ) {
 		long need = (i+1)*sizeof(CollectionRec *);
-		long have = m_recPtrBuf.getLength();//Capacity();
+		long have = m_recPtrBuf.getLength();
 		need -= have;
 		// true here means to clear the new space to zeroes
 		if ( ! m_recPtrBuf.reserve ( need ,NULL, true ) ) 
 			return log("admin: error growing rec ptr buf");
+		// don't forget to do this...
+		m_recPtrBuf.setLength ( need );
 	}
 	// re-ref it in case it is different
 	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
@@ -681,6 +683,21 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 		char *xx=NULL;*xx=0; 
 	}
 
+	// inc the rec ptr buf i guess
+	long need = (m_numRecs+1)*sizeof(CollectionRec *);
+	long have = m_recPtrBuf.getLength();
+	need -= have;
+	// true here means to clear the new space to zeroes
+	if ( ! m_recPtrBuf.reserve ( need ,NULL, true ) )  
+		return log("admin: error growing rec ptr buf2.");
+	// re-ref it in case it is different
+	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
+	// ensure last is NULL
+	m_recs[m_numRecs] = NULL;
+	// update length of used bytes
+	m_recPtrBuf.setLength ( need );
+
+	
 	/*
 	// make sure an update not in progress
 	if ( cr->m_inProgress ) { char *xx=NULL;*xx=0; }
@@ -745,7 +762,7 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 
 	collnum_t oldCollnum = cr->m_collnum;
 	collnum_t newCollnum = m_numRecs;
-	
+
 	// reset spider info
 	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(oldCollnum);
 	if ( sc ) {

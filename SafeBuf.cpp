@@ -312,8 +312,8 @@ bool SafeBuf::reserve(long i, char *label, bool clearIt ) {
 			memcpy(m_buf, tmpBuf, m_length);
 			// reset to 0's?
 			if ( clearIt ) {
-				long clearSize = m_capacity - m_length;
-				memset(m_buf+m_length,0,clearSize);
+				long clearSize = m_capacity - tmpCap;
+				memset(m_buf+tmpCap,0,clearSize);
 			}
 			m_usingStack = false;
 			return true;
@@ -326,13 +326,18 @@ bool SafeBuf::reserve(long i, char *label, bool clearIt ) {
 			m_capacity = tmpCap;
 			return false;
 		}
+		// reset to 0's?
+		if ( clearIt ) {
+			long clearSize = m_capacity - tmpCap;
+			memset(m_buf+tmpCap,0,clearSize);
+		}
 		log(LOG_DEBUG, "query: resize safebuf %li to %li", 
 		    tmpCap, m_capacity);
 	}
 	// reset to 0's?
-	if ( ! clearIt ) return true;
-	long clearSize = m_capacity - m_length;
-	memset(m_buf+m_length,0,clearSize);
+	//if ( ! clearIt ) return true;
+	//long clearSize = m_capacity - m_length;
+	//memset(m_buf+m_length,0,clearSize);
 	return true;
 }
 

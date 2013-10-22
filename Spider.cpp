@@ -1050,7 +1050,7 @@ bool SpiderColl::load ( ) {
 
 	if (!m_sniTable.set   ( 4,8,5000,NULL,0,false,MAX_NICENESS,"snitbl") )
 		return false;
-	if (!m_cdTable.set    (4,8,3000,NULL,0,false,MAX_NICENESS,"cdtbl"))
+	if (!m_cdTable.set    (4,4,3000,NULL,0,false,MAX_NICENESS,"cdtbl"))
 		return false;
 	// doledb seems to have like 32000 entries in it
 	if (!m_doleIpTable.set(4,4,128000,NULL,0,false,MAX_NICENESS,"doleip"))
@@ -1588,24 +1588,22 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	// . -1 implies an invalid or unknown crawl delay
 	if ( srep->m_crawlDelayMS >= 0 ) {
 		// use the domain hash for this guy! since its from robots.txt
-		uint64_t *cdp ;
-		cdp = (uint64_t *)m_cdTable.getValue32(srep->m_domHash32);
+		long *cdp = (long *)m_cdTable.getValue32(srep->m_domHash32);
 		// update it only if better or empty
 		bool update = false;
-		if      ( ! cdp )
-			update = true;
-		else if (((*cdp)&0xffffffff)<(uint32_t)srep->m_spideredTime) 
-			update = true;
+		if ( ! cdp ) update = true;
+		//else if (((*cdp)&0xffffffff)<(uint32_t)srep->m_spideredTime) 
+		//	update = true;
 		// update m_sniTable if we should
 		if ( update ) {
 			// . make new data for this key
-			// . lower 32 bits is the addedTime
-			// . upper 32 bits is the siteNumInlinks
-			uint64_t nv = (uint32_t)(srep->m_crawlDelayMS);
+			// . lower 32 bits is the spideredTime
+			// . upper 32 bits is the crawldelay
+			long nv = (long)(srep->m_crawlDelayMS);
 			// shift up
-			nv <<= 32;
+			//nv <<= 32;
 			// or in time
-			nv |= (uint32_t)srep->m_spideredTime;
+			//nv |= (uint32_t)srep->m_spideredTime;
 			// just direct update if faster
 			if      ( cdp ) *cdp = nv;
 			// store it anew otherwise
@@ -1785,7 +1783,8 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	// spiders disabled for this row in url filteres?
 	if ( ! m_cr->m_spidersEnabled[ufn] ) {
 		if ( g_conf.m_logDebugSpider )
-			log("spider: request spidersoff ufn=%li",ufn);
+			log("spider: request spidersoff ufn=%li url=%s",ufn,
+			    sreq->m_url);
 		return true;
 	}
 
@@ -3513,12 +3512,12 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 				       uint64_t nowGlobalMS ) {
 	// . get the scheduled spiderTime for it
 	// . assume this SpiderRequest never been successfully spidered
-	uint64_t spiderTimeMS = ((uint64_t)sreq->m_addedTime) * 1000LL;
+	long long spiderTimeMS = ((uint64_t)sreq->m_addedTime) * 1000LL;
 	// if injecting for first time, use that!
 	if ( ! srep && sreq->m_isInjecting ) return spiderTimeMS;
 
 	// to avoid hammering an ip, get last time we spidered it...
-	uint64_t lastMS ;
+	long long lastMS ;
 	lastMS = m_lastDownloadCache.getLongLong ( m_collnum       ,
 						   sreq->m_firstIp ,
 						   -1              , // maxAge
@@ -3531,16 +3530,18 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 		lastMS = 0;
 	}
 	// min time we can spider it
-	uint64_t minSpiderTimeMS = lastMS + m_cr->m_spiderIpWaits[ufn];
+	long long minSpiderTimeMS1 = lastMS + m_cr->m_spiderIpWaits[ufn];
 	// if not found in cache
-	if ( lastMS == (uint64_t)-1 ) minSpiderTimeMS = 0LL;
+	if ( lastMS == -1 ) minSpiderTimeMS1 = 0LL;
 
 	/////////////////////////////////////////////////
 	/////////////////////////////////////////////////
-	// TODO: put crawldelay table check in here!!!!
+	// crawldelay table check!!!!
 	/////////////////////////////////////////////////
 	/////////////////////////////////////////////////
-
+	long *cdp = (long *)m_cdTable.getValue ( &sreq->m_domHash32 );
+	long long minSpiderTimeMS2 = 0;
+	if ( cdp && *cdp >= 0 ) minSpiderTimeMS2 = lastMS + *cdp;
 
 	// wait 5 seconds for all outlinks in order for them to have a
 	// chance to get any link info that might have been added
@@ -3551,7 +3552,8 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	//spiderTimeMS += 5000;
 
 	//  ensure min
-	if ( spiderTimeMS < minSpiderTimeMS ) spiderTimeMS = minSpiderTimeMS;
+	if ( spiderTimeMS < minSpiderTimeMS1 ) spiderTimeMS = minSpiderTimeMS1;
+	if ( spiderTimeMS < minSpiderTimeMS2 ) spiderTimeMS = minSpiderTimeMS2;
 	// if no reply, use that
 	if ( ! srep ) return spiderTimeMS;
 	// if this is not the first try, then re-compute the spiderTime
@@ -3559,33 +3561,33 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	// sanity check
 	if ( srep->m_spideredTime <= 0 ) {
 		// a lot of times these are corrupt! wtf???
-		spiderTimeMS = minSpiderTimeMS;
+		//spiderTimeMS = minSpiderTimeMS;
 		return spiderTimeMS;
 		//{ char*xx=NULL;*xx=0;}
 	}
 	// compute new spiderTime for this guy, in seconds
-	uint64_t waitInSecs = (uint64_t)(m_cr->m_spiderFreqs[ufn]*3600*24.0);
-	// do not spider more than once per 15 minutes ever!
+	long long waitInSecs = (uint64_t)(m_cr->m_spiderFreqs[ufn]*3600*24.0);
+	// do not spider more than once per 15 seconds ever!
 	// no! might be a query reindex!!
-	if ( waitInSecs < 900 && ! sreq->m_urlIsDocId ) { 
+	if ( waitInSecs < 15 && ! sreq->m_urlIsDocId ) { 
 		static bool s_printed = false;
 		if ( ! s_printed ) {
 			s_printed = true;
-			log("spider: min spider wait is 900, "
+			log("spider: min spider wait is 15 seconds, "
 			    "not %llu (ufn=%li)",waitInSecs,ufn);
 		}
-		waitInSecs = 900;
+		waitInSecs = 15;//900; this was 15 minutes
 	}
 	// in fact, force docid based guys to be zero!
 	if ( sreq->m_urlIsDocId ) waitInSecs = 0;
 	// when it was spidered
-	uint64_t lastSpideredMS = ((uint64_t)srep->m_spideredTime) * 1000;
+	long long lastSpideredMS = ((uint64_t)srep->m_spideredTime) * 1000;
 	// . when we last attempted to spider it... (base time)
 	// . use a lastAttempt of 0 to indicate never! 
 	// (first time)
-	spiderTimeMS = lastSpideredMS + (waitInSecs * 1000LL);
+	long long minSpiderTimeMS3 = lastSpideredMS + (waitInSecs * 1000LL);
 	//  ensure min
-	if ( spiderTimeMS < minSpiderTimeMS ) spiderTimeMS = minSpiderTimeMS;
+	if ( spiderTimeMS < minSpiderTimeMS3 ) spiderTimeMS = minSpiderTimeMS3;
 	// sanity
 	if ( (long long)spiderTimeMS < 0 ) { char *xx=NULL;*xx=0; }
 
@@ -8824,6 +8826,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( isForMsg20 ) continue;
 			// reply based
 			long a = 0;
+			// if no spider reply we can't match this rule!
+			if ( ! srep ) continue;
 			// shortcut
 			if ( srep ) a = srep->m_spideredTime;
 			// make it point to the retry count

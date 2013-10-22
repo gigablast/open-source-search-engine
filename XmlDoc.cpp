@@ -11784,11 +11784,11 @@ bool isAllowed2 ( Url   *url            ,
 	if ( flen == 11 && strncasecmp ( f , "crawl-delay", 11 ) == 0 ) {
 		// set flag
 		flag = 1;
-		// skip if invalid
-		if ( ! is_digit ( *v ) ) goto urlLoop;
+		// skip if invalid. it could be ".5" seconds
+		if ( ! is_digit ( *v ) && *v != '.' ) goto urlLoop;
 		// get this. multiply crawl delay by x1000 to be in 
 		// milliseconds/ms
-		long long vv = atoll(v) * 1000LL;
+		long long vv = atof(v) * 1000LL;
 		// truncate to 0x7fffffff
 		if      ( vv > 0x7fffffff ) *crawlDelay = 0x7fffffff;
 		else if ( vv < 0          ) *crawlDelay = -1;
@@ -12024,7 +12024,20 @@ bool *XmlDoc::getIsAllowed ( ) {
 	m_isAllowed      = true;
 	m_isAllowedValid = true;
 
+	// put in a crawldelay test for diffbot
+	/*
+	SafeBuf tmp;
+	if ( strstr(m_firstUrl.getUrl(),"diffbot.com") ) {
+		tmp.safePrintf("User-Agent: *\n"
+			       "Crawl-Delay: 10.1\n"
+			       );
+		content = tmp.getBufStart();
+		contentLen = tmp.getLength();
+	}
+
 	// if not success, assume no robots.txt
+	else*/
+
 	if ( mime->getHttpStatus() != 200 ) {
 		// nuke it to save mem
 		nukeDoc ( ed );
@@ -12070,7 +12083,7 @@ bool *XmlDoc::getIsAllowed ( ) {
 				       &cacheLen           ,
 				       &hadAllowOrDisallow   );
 	// bring back?
-	if ( savedCrawlDelay ) m_crawlDelay = savedCrawlDelay;
+	if ( savedCrawlDelay != -1 ) m_crawlDelay = savedCrawlDelay;
 	// nuke it to save mem
 	nukeDoc ( ed );
 	// we are legit
