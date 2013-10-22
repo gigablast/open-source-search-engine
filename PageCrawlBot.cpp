@@ -4109,7 +4109,16 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	char *url = hr->getString("notifyWebHook",NULL,NULL);
 	if ( ! url ) url = hr->getString("notifyWebhook",NULL,NULL);
 	if ( url ) {
-		cr->m_notifyUrl.set(url);
+		// assume url is invalid, purge it
+		cr->m_notifyUrl.purge();
+		// normalize
+		Url norm;
+		norm.set ( url );
+		if ( norm.getDomainLen() > 0 &&
+		     norm.getHostLen() > 0 ) 
+			// set the ssafebuf to it. will \0 terminate it.
+			cr->m_notifyUrl.set(norm.getUrl());
+		// save the collection rec
 		cr->m_needsSave = 1;
 	}
 	long pause = hr->getLong("pauseCrawl",-1);
