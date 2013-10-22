@@ -2637,10 +2637,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//char *alias = "";
 			//if ( cx->m_collectionNameAlias.length() > 0 )
 			//	alias=cx->m_collectionNameAlias.getBufStart();
+			//long paused = 1;
+			//if ( cx->m_spideringEnabled ) paused = 0;
 			sb.safePrintf("\n\n{"
 				      "\"name\":\"%s\",\n"
 				      //"\"alias\":\"%s\",\n"
 				      "\"crawlingEnabled\":%li,\n"
+				      //"\"crawlingPaused\":%li,\n"
 				      "\"objectsFound\":%lli,\n"
 				      "\"urlsHarvested\":%lli,\n"
 				      "\"urlsExamined\":%lli,\n"
@@ -2658,6 +2661,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      , cx->m_diffbotCrawlName.getBufStart()
 				      //, alias
 				      , (long)cx->m_spideringEnabled 
+				      //, (long)paused
 				      , cx->m_globalCrawlInfo.m_objectsAdded -
 				      cx->m_globalCrawlInfo.m_objectsDeleted
 				      , cx->m_globalCrawlInfo.m_urlsHarvested
