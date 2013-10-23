@@ -444,9 +444,9 @@ bool handleDiffbotRequest ( TcpSocket *s , HttpRequest *hr ) {
 	cr->m_diffbotPageProcessPattern.nullTerm();
 
 	// do not spider more than this many urls total. -1 means no max.
-	cr->m_diffbotMaxToCrawl = maxCrawled;
+	cr->m_maxToCrawl = maxCrawled;
 	// do not process more than this. -1 means no max.
-	cr->m_diffbotMaxToProcess = maxToProcess;
+	cr->m_maxToProcess = maxToProcess;
 
 	// reset the crawl stats
 	cr->m_diffbotCrawlStartTime = gettimeofdayInMillisecondsGlobal();
@@ -1927,6 +1927,10 @@ static class HelpItem s_his[] = {
 	{"maxToCrawl", "Specify max pages to successfully download."},
 	{"maxToProcess", "Specify max pages to successfully process through "
 	 "diffbot."},
+
+	{"maxCrawlRounds", "Specify maximum number of crawl rounds. Use "
+	 "-1 to indicate no max."},
+
 	{"notifyEmail","Send email alert to this email when crawl hits "
 	 "the maxtocrawl or maxtoprocess limit, or when the crawl completes."},
 	{"notifyWebHook","Fetch this URL when crawl hits "
@@ -2644,11 +2648,15 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//if ( cx->m_collectionNameAlias.length() > 0 )
 			//	alias=cx->m_collectionNameAlias.getBufStart();
 			//long paused = 1;
+			char *ss = "normal";
+			if ( cx->m_spiderStatusMsg )
+				ss = cx->m_spiderStatusMsg;
 			//if ( cx->m_spideringEnabled ) paused = 0;
 			sb.safePrintf("\n\n{"
 				      "\"name\":\"%s\",\n"
 				      //"\"alias\":\"%s\",\n"
 				      "\"crawlingEnabled\":%li,\n"
+				      "\"crawlingStatus\":\"%s\",\n"
 				      //"\"crawlingPaused\":%li,\n"
 				      "\"objectsFound\":%lli,\n"
 				      "\"urlsHarvested\":%lli,\n"
@@ -2660,13 +2668,15 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      // settable parms
 				      "\"maxToCrawl\":%lli,\n"
 				      "\"maxToProcess\":%lli,\n"
+				      "\"maxCrawlRounds\":%li,\n"
 				      "\"obeyRobots\":%li,\n"
 				      "\"repeatCrawl\":%f,\n"
 				      "\"onlyProcessIfNew\":%li,\n"
 				      //,cx->m_coll
 				      , cx->m_diffbotCrawlName.getBufStart()
 				      //, alias
-				      , (long)cx->m_spideringEnabled 
+				      , (long)cx->m_spideringEnabled
+				      , ss
 				      //, (long)paused
 				      , cx->m_globalCrawlInfo.m_objectsAdded -
 				      cx->m_globalCrawlInfo.m_objectsDeleted
@@ -2676,8 +2686,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				, cx->m_globalCrawlInfo.m_pageDownloadSuccesses
 				, cx->m_globalCrawlInfo.m_pageProcessAttempts
 				, cx->m_globalCrawlInfo.m_pageProcessSuccesses
-				      , cx->m_diffbotMaxToCrawl
-				      , cx->m_diffbotMaxToProcess
+				      , cx->m_maxToCrawl
+				      , cx->m_maxToProcess
+				      , (long)cx->m_maxCrawlRounds
 				      , (long)cx->m_useRobotsTxt
 				      , cx->m_collectiveRespiderFrequency
 				      , (long)cx->m_diffbotOnlyProcessIfNew
@@ -3186,6 +3197,15 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      "<tr>"
+			      "<td><b>Max Crawl Rounds:</b>"
+			      "</td><td>"
+			      "<input type=text name=maxCrawlRounds "
+			      "size=9 value=%li> "
+			      "<input type=submit name=submit value=OK>"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
 			      "<td><b>Notification Email:</b>"
 			      "</td><td>"
 			      "<input type=text name=notifyEmail "
@@ -3240,8 +3260,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      , ppp
 
-			      , cr->m_diffbotMaxToCrawl 
-			      , cr->m_diffbotMaxToProcess
+			      , cr->m_maxToCrawl 
+			      , cr->m_maxToProcess
+			      , (long)cr->m_maxCrawlRounds
 
 			      , notifEmail
 			      , notifUrl
@@ -3603,9 +3624,12 @@ CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ) {
 	cr->m_diffbotPageProcessPattern.set ( "" );
 
 	// do not spider more than this many urls total. -1 means no max.
-	cr->m_diffbotMaxToCrawl = 100000;
+	cr->m_maxToCrawl = 100000;
 	// do not process more than this. -1 means no max.
-	cr->m_diffbotMaxToProcess = 100000;
+	cr->m_maxToProcess = 100000;
+
+	// -1 means no max
+	cr->m_maxCrawlRounds = -1;
 
 	// this collection should always hit diffbot
 	//cr->m_useDiffbot = true;
@@ -3862,9 +3886,9 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket ,
 		if ( strcmp(name,"frequency") == 0 )
 			cr->m_collectiveRespiderFrequency = atof(val);
 		if ( strcmp(name,"maxToCrawl") == 0 )
-			cr->m_diffbotMaxToCrawl = atoll(val);
+			cr->m_maxToCrawl = atoll(val);
 		if ( strcmp(name,"maxToProcess") == 0 )
-			cr->m_diffbotMaxToProcess = atoll(val);
+			cr->m_maxToProcess = atoll(val);
 		if ( strcmp(name,"pageProcessPattern") == 0 )
 			cr->m_diffbotPageProcessPattern.set(val);
 		if ( strcmp(name,"obeyRobots") == 0 ) {
@@ -4120,12 +4144,18 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	//
 	long maxToCrawl = hr->getLongLong("maxToCrawl",-1LL);
 	if ( maxToCrawl != -1 ) {
-		cr->m_diffbotMaxToCrawl = maxToCrawl;
+		cr->m_maxToCrawl = maxToCrawl;
 		cr->m_needsSave = 1;
 	}
 	long maxToProcess = hr->getLongLong("maxToProcess",-1LL);
 	if ( maxToProcess != -1 ) {
-		cr->m_diffbotMaxToProcess = maxToProcess;
+		cr->m_maxToProcess = maxToProcess;
+		cr->m_needsSave = 1;
+	}
+	// -1 means no max, so use -2 as default here
+	long maxCrawlRounds = hr->getLongLong("maxCrawlRounds",-2LL);
+	if ( maxCrawlRounds != -2 ) {
+		cr->m_maxCrawlRounds = maxCrawlRounds;
 		cr->m_needsSave = 1;
 	}
 	char *email = hr->getString("notifyEmail",NULL,NULL);

@@ -3930,6 +3930,121 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	g_spiderLoop.spiderDoledUrls( );
 }
 
+#define SP_MAXROUNDS    1
+#define SP_MAXTOCRAWL   2
+#define SP_MAXTOPROCESS 3
+#define SP_ROUNDDONE    4
+
+void doneSendingNotification ( void *state ) {
+	EmailInfo *ei = (EmailInfo *)state;
+	collnum_t collnum = ei->m_collnum;
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	char *coll = "lostcoll";
+	if ( cr ) coll = cr->m_coll;
+	log("spider: done sending notifications for coll=%s", coll);
+
+	// all done if collection was deleted from under us
+	if ( ! cr ) return;
+
+	// we can re-use the EmailInfo class now
+	ei->m_inUse = false;
+
+	// mark it as sent. anytime a new url is spidered will mark this
+	// as false again! use LOCAL crawlInfo, since global is reset often.
+	cr->m_localCrawlInfo.m_sentCrawlDoneAlert = cr->m_spiderStatus;//1;
+
+	// sanity check
+	if ( g_hostdb.m_myHost->m_hostId != 0 ) { char *xx=NULL;*xx=0; }
+
+
+	// this should have been set below
+	if ( cr->m_spiderRoundStartTime == 0 ) { char *xx=NULL;*xx=0; }
+
+	// how is this possible
+	//if ( getTimeGlobal() 
+
+	float respiderFreq = -1.0;
+
+	// find the "respider frequency" from the first line in the url
+	// filters table whose expressions contains "{roundstart}" i guess
+	for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
+		// get it
+		char *ex = cr->m_regExs[i].getBufStart();
+		// compare
+		if ( ! strstr ( ex , "roundstart" ) ) continue;
+		// that's good enough
+		respiderFreq = cr->m_spiderFreqs[i];
+		break;
+	}
+
+	if ( respiderFreq == -1.0 ) return;
+
+	if ( respiderFreq < 0.0 ) {
+		log("spider: bad respiderFreq of %f. making 0.",
+		    respiderFreq);
+		respiderFreq = 0.0;
+	}
+
+	long seconds = respiderFreq * 24*3600;
+	if ( seconds <= 0 ) seconds = 1;
+
+	// now update this round start time. all the other hosts should
+	// sync with us using the parm sync code, msg3e, every 13.5 seconds.
+	//cr->m_spiderRoundStartTime += respiderFreq;
+	cr->m_spiderRoundStartTime = getTimeGlobal() + seconds;
+	cr->m_spiderRoundNum++;
+
+	// waiting tree will usually be empty for this coll since no
+	// spider requests had a valid spider priority, so let's rebuild!
+	cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+
+	// log it
+	log("spider: new round #%li starttime = %lu for %s"
+	    , cr->m_spiderRoundNum
+	    , cr->m_spiderRoundStartTime
+	    , cr->m_coll
+	    );
+}
+
+bool sendNotificationForCollRec ( CollectionRec *cr )  {
+
+	// . if already sent email for this, skip
+	// . localCrawlInfo stores this value on disk so it is persistent
+	// . we do it this way so SP_ROUNDDONE can be emailed and then
+	//   we'd email SP_MAXROUNDS to indicate we've hit the maximum
+	//   round count. 
+	if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert == cr->m_spiderStatus )
+		return true;
+
+	// wtf? caller must set this
+	if ( ! cr->m_spiderStatus ) { char *xx=NULL; *xx=0; }
+
+	// if we already sent it return now. we set this to false everytime
+	// we spider a url, which resets it. use local crawlinfo for this
+	// since we reset global.
+	//if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert ) return true;
+
+	// ok, send it
+	EmailInfo *ei = &cr->m_emailInfo;
+
+	// in use already?
+	if ( ei->m_inUse ) return true;
+
+	ei->m_inUse = true;
+
+	// set it up
+	ei->m_finalCallback = doneSendingNotification;
+	ei->m_finalState    = ei;
+	ei->m_collnum       = cr->m_collnum;
+
+	ei->m_spiderStatusMsg = cr->m_spiderStatusMsg;
+					 
+	// if no email address or webhook provided this will not block!
+	if ( ! sendNotification ( ei ) ) return false;
+	// so handle this ourselves in that case:
+	doneSendingNotification ( ei );
+	return true;
+}
 
 SpiderColl *getNextSpiderColl ( long *cri ) ;
 
@@ -4018,6 +4133,33 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( ! cr ) continue;
 		// stop if not enabled
 		if ( ! cr->m_spideringEnabled ) continue;
+
+		// hit crawl round max?
+		if ( cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) {
+			cr->m_spiderStatus = SP_MAXROUNDS;
+			cr->m_spiderStatusMsg = "Hit max rounds limit.";
+			sendNotificationForCollRec ( cr );
+			continue;
+		}
+
+		// hit pages to crawl max?
+		if ( cr->m_globalCrawlInfo.m_pageDownloadSuccesses >=
+		     cr->m_maxToCrawl ) {
+			cr->m_spiderStatus = SP_MAXTOCRAWL;
+			cr->m_spiderStatusMsg = "Hit max pages limit.";
+			sendNotificationForCollRec ( cr );
+			continue;
+		}
+
+		// hit pages to process max?
+		if ( cr->m_globalCrawlInfo.m_pageProcessSuccesses >=
+		     cr->m_maxToProcess ) {
+			cr->m_spiderStatus = SP_MAXTOPROCESS;
+			cr->m_spiderStatusMsg = "Hit max process limit.";
+			sendNotificationForCollRec ( cr );
+			continue;
+		}
+
 		// get the spider collection for this collnum
 		m_sc = g_spiderCache.getSpiderColl(m_cri);
 		// skip if none
@@ -9674,73 +9816,6 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 	return true;
 }
 
-void doneSendingNotification ( void *state ) {
-	EmailInfo *ei = (EmailInfo *)state;
-	collnum_t collnum = ei->m_collnum;
-	CollectionRec *cr = g_collectiondb.m_recs[collnum];
-	char *coll = "lostcoll";
-	if ( cr ) coll = cr->m_coll;
-	log("spider: done sending notifications for coll=%s", coll);
-
-	// all done if collection was deleted from under us
-	if ( ! cr ) return;
-
-	// mark it as sent. anytime a new url is spidered will mark this
-	// as false again! use LOCAL crawlInfo, since global is reset often.
-	cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 1;
-
-	// sanity check
-	if ( g_hostdb.m_myHost->m_hostId != 0 ) { char *xx=NULL;*xx=0; }
-
-	// this should have been set below
-	if ( cr->m_spiderRoundStartTime == 0 ) { char *xx=NULL;*xx=0; }
-
-	// how is this possible
-	//if ( getTimeGlobal() 
-
-	float respiderFreq = -1.0;
-
-	// find the "respider frequency" from the first line in the url
-	// filters table whose expressions contains "{roundstart}" i guess
-	for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
-		// get it
-		char *ex = cr->m_regExs[i].getBufStart();
-		// compare
-		if ( ! strstr ( ex , "roundstart" ) ) continue;
-		// that's good enough
-		respiderFreq = cr->m_spiderFreqs[i];
-		break;
-	}
-
-	if ( respiderFreq == -1.0 ) return;
-
-	if ( respiderFreq < 0.0 ) {
-		log("spider: bad respiderFreq of %f. making 0.",
-		    respiderFreq);
-		respiderFreq = 0.0;
-	}
-
-	long seconds = respiderFreq * 24*3600;
-	if ( seconds <= 0 ) seconds = 1;
-
-	// now update this round start time. all the other hosts should
-	// sync with us using the parm sync code, msg3e, every 13.5 seconds.
-	//cr->m_spiderRoundStartTime += respiderFreq;
-	cr->m_spiderRoundStartTime = getTimeGlobal() + seconds;
-	cr->m_spiderRoundNum++;
-
-	// waiting tree will usually be empty for this coll since no
-	// spider requests had a valid spider priority, so let's rebuild!
-	cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
-
-	// log it
-	log("spider: new round #%li starttime = %lu for %s"
-	    , cr->m_spiderRoundNum
-	    , cr->m_spiderRoundStartTime
-	    , cr->m_coll
-	    );
-}
-
 void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// reply is error?
 	if ( ! slot->m_readBuf || g_errno ) {
@@ -9775,7 +9850,12 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			// inc the count otherwise
 			cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider++;
 			// unflag the sent flag if we had sent an alert
-			cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
+			// but only if it was a crawl round done alert,
+			// not a maxToCrawl or maxToProcess or maxRounds
+			// alert.
+			if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert ==
+			     SP_ROUNDDONE )
+				cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
 		}
 	}
 	// return if still waiting on more to come in
@@ -9850,26 +9930,12 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// or if this is -1, indicating "unknown".
 	if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) return;
 
-	// if we already sent it return now. we set this to false everytime
-	// we spider a url, which resets it. use local crawlinfo for this
-	// since we reset global.
-	if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert ) return;
+	// update status
+	cr->m_spiderStatus = SP_ROUNDDONE;
+	cr->m_spiderStatusMsg = "Crawl round completed.";
 
-	// ok, send it
-	EmailInfo *ei = &cr->m_emailInfo;
-
-	// in use already?
-	if ( ei->m_inUse ) return;
-
-	// set it up
-	ei->m_finalCallback = doneSendingNotification;
-	ei->m_finalState    = ei;
-	ei->m_collnum       = cr->m_collnum;
-
-	// if no email address or webhook provided this will not block!
-	if ( ! sendNotification ( ei ) ) return;
-	// so handle this ourselves in that case:
-	doneSendingNotification ( ei );
+	// do email and web hook...
+	sendNotificationForCollRec ( cr );
 }
 
 void handleRequestc1 ( UdpSlot *slot , long niceness ) {

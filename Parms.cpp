@@ -8367,19 +8367,19 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m++;
 
-	m->m_cgi   = "dbmaxtocrawl";
-	m->m_title = "diffbot max to crawl";
-	m->m_xml   = "diffbotMaxToCrawl";
-	m->m_off   = (char *)&cr.m_diffbotMaxToCrawl - x;
+	m->m_cgi   = "maxtocrawl";
+	m->m_title = "max to crawl";
+	m->m_xml   = "maxToCrawl";
+	m->m_off   = (char *)&cr.m_maxToCrawl - x;
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
 	m++;
 
-	m->m_cgi   = "dbmaxtoprocess";
-	m->m_title = "diffbot max to process";
-	m->m_xml   = "diffbotMaxToProcess";
-	m->m_off   = (char *)&cr.m_diffbotMaxToProcess - x;
+	m->m_cgi   = "maxtoprocess";
+	m->m_title = "max to process";
+	m->m_xml   = "maxToProcess";
+	m->m_off   = (char *)&cr.m_maxToProcess - x;
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";

@@ -297,6 +297,9 @@ class CollectionRec {
 
 	long  m_maxQueryTerms;
 
+	char  m_spiderStatus;
+	char *m_spiderStatusMsg;
+
 	// Language stuff
 	float			m_languageUnknownWeight;
 	float			m_languageWeightFactor;
@@ -431,8 +434,10 @@ class CollectionRec {
 	//SafeBuf m_diffbotFormat;
 	// what fields to return in the json output: (api dependent)
 	//SafeBuf m_diffbotFields;
-	long long m_diffbotMaxToCrawl;
-	long long m_diffbotMaxToProcess;
+	long long m_maxToCrawl;
+	long long m_maxToProcess;
+	long      m_maxCrawlRounds;
+
 	long long m_diffbotCrawlStartTime;
 	long long m_diffbotCrawlEndTime;
 

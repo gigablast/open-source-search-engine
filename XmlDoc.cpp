@@ -2004,7 +2004,7 @@ bool XmlDoc::indexDoc2 ( ) {
 		cr->m_diffbotCrawlEndTime = now;
 	}
 
-
+	/*
 	// if we are being called from Spider.cpp and we met our max
 	// to crawl requirement, then bail out on this. this might
 	// become true when we are in the middle of processing this url...
@@ -2038,7 +2038,7 @@ bool XmlDoc::indexDoc2 ( ) {
 		g_errno = m_indexCode;
 		return true;
 	}
-	
+
 	// likewise if we hit the max processing limit...
 	if ( ! m_isDiffbotJSONObject &&
 	     cr->m_globalCrawlInfo.m_pageProcessSuccesses >= // Attempts >=
@@ -2070,7 +2070,7 @@ bool XmlDoc::indexDoc2 ( ) {
 		g_errno = m_indexCode;
 		return true;
 	}
-
+	*/
 
 	setStatus("indexing doc");
 

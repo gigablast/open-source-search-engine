@@ -16,6 +16,7 @@ public:
 	SafeBuf m_fromAddress;
 	SafeBuf m_subject;
 	SafeBuf m_body;
+	char *m_spiderStatusMsg;
 	//CollectionRec *m_cr;
 	collnum_t m_collnum;
 	char *m_dom; // ref into m_toAddress of the domain in email addr
@@ -28,6 +29,7 @@ public:
 	long m_mxIp;
 	long m_notifyBlocked;
 	bool m_inUse;
+
 	EmailInfo() { 
 		memset ( this,0,sizeof(EmailInfo) ); 
 	};

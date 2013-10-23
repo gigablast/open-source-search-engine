@@ -3068,12 +3068,12 @@ bool sendNotification ( EmailInfo *ei ) {
 
 
 	if ( email && email[0] ) {
-		log("build: sending email notification to %s for crawl \"%s\"",
-		    email,crawl);
+		log("build: sending email notification to %s for "
+		    "crawl \"%s\" : %s",
+		    email,crawl,ei->m_spiderStatusMsg);
 		SafeBuf msg;
-		msg.safePrintf("Your crawl \"%s\" "
-			       "has hit a limitation and has "
-			       "been paused."
+		msg.safePrintf("Your crawl \"%s\" has a new status: %s"
+			       , ei->m_spiderStatusMsg
 			       , crawl );
 
 		// reset m_length otherwise it builds up

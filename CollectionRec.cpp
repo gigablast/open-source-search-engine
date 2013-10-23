@@ -28,6 +28,9 @@ CollectionRec::CollectionRec() {
 	m_spiderColl = NULL;
 	m_overflow  = 0x12345678;
 	m_overflow2 = 0x12345678;
+	// the spiders are currently uninhibited i guess
+	m_spiderStatus = 0;
+	m_spiderStatusMsg = NULL;
 	// for Url::getSite()
 	m_updateSiteRulesTable = 1;
 	m_lastUpdateTime = 0LL;
