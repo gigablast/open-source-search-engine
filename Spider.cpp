@@ -1586,35 +1586,38 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	// . update the latest crawl delay for this domain
 	// . only add to the table if we had a crawl delay
 	// . -1 implies an invalid or unknown crawl delay
-	if ( srep->m_crawlDelayMS >= 0 ) {
-		// use the domain hash for this guy! since its from robots.txt
-		long *cdp = (long *)m_cdTable.getValue32(srep->m_domHash32);
-		// update it only if better or empty
-		bool update = false;
-		if ( ! cdp ) update = true;
-		//else if (((*cdp)&0xffffffff)<(uint32_t)srep->m_spideredTime) 
-		//	update = true;
-		// update m_sniTable if we should
-		if ( update ) {
-			// . make new data for this key
-			// . lower 32 bits is the spideredTime
-			// . upper 32 bits is the crawldelay
-			long nv = (long)(srep->m_crawlDelayMS);
-			// shift up
-			//nv <<= 32;
-			// or in time
-			//nv |= (uint32_t)srep->m_spideredTime;
-			// just direct update if faster
-			if      ( cdp ) *cdp = nv;
-			// store it anew otherwise
-			else if ( ! m_cdTable.addKey(&srep->m_domHash32,&nv)){
-				// return false with g_errno set on error
-				//return false;
-				log("spider: failed to add crawl delay for "
-				    "firstip=%s",iptoa(srep->m_firstIp));
-				// just ignore
-				g_errno = 0;
-			}
+	// . we have to store crawl delays of -1 now so we at least know we
+	//   tried to download the robots.txt (todo: verify that!)
+	//   and the webmaster did not have one. then we can 
+	//   crawl more vigorously...
+	//if ( srep->m_crawlDelayMS >= 0 ) {
+	// use the domain hash for this guy! since its from robots.txt
+	long *cdp = (long *)m_cdTable.getValue32(srep->m_domHash32);
+	// update it only if better or empty
+	bool update = false;
+	if ( ! cdp ) update = true;
+	//else if (((*cdp)&0xffffffff)<(uint32_t)srep->m_spideredTime) 
+	//	update = true;
+	// update m_sniTable if we should
+	if ( update ) {
+		// . make new data for this key
+		// . lower 32 bits is the spideredTime
+		// . upper 32 bits is the crawldelay
+		long nv = (long)(srep->m_crawlDelayMS);
+		// shift up
+		//nv <<= 32;
+		// or in time
+		//nv |= (uint32_t)srep->m_spideredTime;
+		// just direct update if faster
+		if      ( cdp ) *cdp = nv;
+		// store it anew otherwise
+		else if ( ! m_cdTable.addKey(&srep->m_domHash32,&nv)){
+			// return false with g_errno set on error
+			//return false;
+			log("spider: failed to add crawl delay for "
+			    "firstip=%s",iptoa(srep->m_firstIp));
+			// just ignore
+			g_errno = 0;
 		}
 	}
 
