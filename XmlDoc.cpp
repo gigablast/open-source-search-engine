@@ -12898,8 +12898,14 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
+	// add a '?' if none
+	if ( ! strchr ( apiUrl.getUrl() , '?' ) )
+		diffbotUrl.pushChar('?');
+	else
+		diffbotUrl.pushChar('&');
+
 	//diffbotUrl.safePrintf("http://54.212.86.74/api/%s?token=%s&u="
-	diffbotUrl.safePrintf("&token=%s",cr->m_diffbotToken.getBufStart());
+	diffbotUrl.safePrintf("token=%s",cr->m_diffbotToken.getBufStart());
 	diffbotUrl.safePrintf("&url=");
 	// give diffbot the url to process
 	diffbotUrl.urlEncode ( m_firstUrl.getUrl() );
