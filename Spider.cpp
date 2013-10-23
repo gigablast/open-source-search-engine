@@ -2847,6 +2847,9 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 
 	key128_t finalKey;
 
+	// how many spiders currently out for this ip?
+	long outNow = g_spiderLoop.getNumSpidersOutPerIp ( m_scanningIp );
+
 	// loop over all serialized spiderdb records in the list
 	for ( ; ! list->isExhausted() ; ) {
 		// breathe
@@ -2982,6 +2985,38 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			log("spider: got corrupt 2 spiderRequest in scan");
 			continue;
 		}
+
+		// how many "ready" urls for this IP? urls in doledb
+		// can be spidered right now
+		long *score ;
+		score = (long *)m_doleIpTable.getValue32 ( sreq->m_firstIp );
+		// how many spiders are current outstanding
+		long out2 = outNow;
+		// add in any requests in doledb
+		if ( score ) out2 += *score;
+
+		// do not add any more to doledb if we could violate our quota
+		if ( out2 >= maxSpidersPerIp ) continue;
+
+		// by ensuring only one spider out at a time when there
+		// is a positive crawl-delay, we ensure that m_lastDownloadTime
+		// is the last time we downloaded from this ip so that we
+		// can accurately set the time in getSpiderTimeMS() for
+		// when the next url from this firstip should be spidered.
+		if ( out2 >= 1 ) {
+			// get the crawldelay for this domain
+			long *cdp ;
+			cdp = (long *)m_cdTable.getValue (&sreq->m_domHash32);
+			// if crawl delay is NULL, we need to download
+			// robots.txt. most of the time it will be -1
+			// which indicates not specified in robots.txt
+			if ( ! cdp ) continue;
+			// if we had a positive crawldelay and there is
+			// already >= 1 outstanding spider on this ip, 
+			// then skip this url
+			if ( cdp && *cdp > 0 ) continue;
+		}
+
 
 		// debug. show candidates due to be spidered now.
 		//if(g_conf.m_logDebugSpider ) //&& spiderTimeMS< nowGlobalMS )
@@ -3279,7 +3314,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// that firstIp had something ready for us. maybe the url filters
 	// table changed to filter/ban them all.
 	if ( ! g_errno && ! m_bestRequestValid ) {
-		// note it
+		// note it - this can happen if no more to spider right now!
 		if ( g_conf.m_logDebugSpcache )
 			log("spider: nuking misleading waitingtree key "
 			    "firstIp=%s", iptoa(firstIp));
@@ -3327,8 +3362,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 
 	// even if hadn't gotten list we can bail early if too many
 	// spiders from this ip are out! 
-	long out = g_spiderLoop.getNumSpidersOutPerIp ( m_scanningIp );
-	if ( out >= m_bestMaxSpidersPerIp ) {
+	//long out = g_spiderLoop.getNumSpidersOutPerIp ( m_scanningIp );
+	if ( outNow >= m_bestMaxSpidersPerIp ) {
 		// note it
 		if ( g_conf.m_logDebugSpider )
 			log("spider: already got %li from this ip out. ip=%s",
@@ -5909,6 +5944,10 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 
 		// how many spiders outstanding for this coll and IP?
 		//long out=g_spiderLoop.getNumSpidersOutPerIp ( cq->m_firstIp);
+
+		// DO NOT add back to waiting tree if max spiders
+		// out per ip was 1 OR there was a crawldelay. but better
+		// yet, take care of that in the winReq code above.
 
 		// . now add to waiting tree so we add another spiderdb
 		//   record for this firstip to doledb

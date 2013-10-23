@@ -180,8 +180,8 @@ bool HttpServer::getDoc ( char   *url      ,
 	char *host = getHostFast ( url , &hostLen , &port );
 	
 
-	if ( g_conf.m_logDebugSpider )
-		log("spider: httprequest = %s", req );
+	//if ( g_conf.m_logDebugSpider )
+	//	log("spider: httprequest = %s", req );
 
 
 	// do we have an ip to send to? assume not
