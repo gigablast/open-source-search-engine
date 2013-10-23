@@ -544,12 +544,12 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 
 	// 0 is the default
 	// UNLESS we are the crawlbot page, john does not send a &cast=1
-	// on his requests and they LIKELY need to go to each host in the network
-	// like for adding/deleting/resetting collections and updating coll parms
-	// like "alias" and "maxtocrawl" and "maxtoprocess"
+	// on his requests and they LIKELY need to go to each host in the 
+	// network like for adding/deleting/resetting collections and updating
+	// coll parms like "alias" and "maxtocrawl" and "maxtoprocess"
 	if ( cast == -1 ) {
+		cast = 0;
 		if ( page == PAGE_CRAWLBOT ) cast = 1;
-		else                         cast = 0;
 	}
 
 	// proxy can only handle certain pages. it has logic in Proxy.cpp

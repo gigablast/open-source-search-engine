@@ -2075,6 +2075,13 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	bool delColl   = hr->hasField("deleteCrawl");
 	bool resetColl = hr->hasField("resetCrawl");
 
+	// /v2/bulk api support:
+	if ( ! spots ) spots = hr->getString("urls");
+	if ( ! delColl   ) delColl   = hr->hasField("delete");
+	if ( ! resetColl ) resetColl = hr->hasField("reset");
+
+
+
 	char *name = hr->getString("name");
 
 	//if ( delColl && !  && cast == 0 ) {
@@ -4026,8 +4033,9 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 
 	long i = 0;
 
+
 	// 1st default url filter
-	cr->m_regExs[i].set("ismedia");
+	cr->m_regExs[i].set("ismedia && !ismanualadd");
 	cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
 	cr->m_spiderDiffbotApiUrl[i].purge();
 	i++;
@@ -4141,6 +4149,10 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_needsSave = 1;
 	}
 	long pause = hr->getLong("pauseCrawl",-1);
+
+	// /v2/bulk api support
+	if ( pause == -1 ) pause = hr->getLong("pause",-1);
+
 	if ( pause == 0 ) { cr->m_needsSave = 1; cr->m_spideringEnabled = 1; }
 	if ( pause == 1 ) { cr->m_needsSave = 1; cr->m_spideringEnabled = 0; }
 	long obeyRobots = hr->getLong("obeyRobots",-1);
@@ -4186,8 +4198,13 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	//}
 
 
+	char *path = hr->getPath();
+	bool isBulkApi = false;
+	if ( path && strncmp(path,"/v2/bulk",8)==0 ) isBulkApi = true;
+
+
 	// were any url filteres specified? if not, don't reset them
-	if ( ! hr->hasField("expression") )
+	if ( ! hr->hasField("action") )
 		return true;
 
 	// reset the url filters here to the default set.
@@ -4242,7 +4259,10 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		if ( ! action ) continue;
 		// action before expresion???? set action to NULL then?
 		if ( ! expression ) { 
-			action = NULL; continue; }
+			// no! the /v2/bulk api just has a single action
+			if ( isBulkApi ) expression = "*";
+			else { action = NULL; continue; }
+		}
 		// skip whitespace
 		while ( is_wspace_a(*expression) ) expression++;
 		while ( is_wspace_a(*action) ) action++;

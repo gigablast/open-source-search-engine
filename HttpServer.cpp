@@ -914,9 +914,6 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	     strncmp ( path , "/v2/crawl/download/" ,19 ) == 0 )
 		return sendBackDump ( s , r );
 
-	if ( strncmp ( path , "/v2/crawl", 9 ) == 0 )
-		return sendPageCrawlbot ( s , r );
-
 	// . is it a diffbot api request, like "GET /api/*"
 	// . ie "/api/startcrawl" or "/api/stopcrawl" etc.?
 	//if ( strncmp ( path , "/api/" , 5 ) == 0 )
@@ -971,7 +968,10 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 
 	// the new cached page format. for twitter.
 	if ( ! strncmp ( path , "/?id=" , 5 ) ) n = PAGE_RESULTS;
-
+	if ( strncmp(path,"/crawlbot",9) == 0 ) n = PAGE_CRAWLBOT;
+	if ( strncmp(path,"/v2/crawl",9) == 0 ) n = PAGE_CRAWLBOT;
+	if ( strncmp(path,"/v2/bulk" ,8) == 0 ) n = PAGE_CRAWLBOT;
+	
 	bool isProxy = g_proxy.isProxy();
 	// . prevent coring
 	// . we got a request for
