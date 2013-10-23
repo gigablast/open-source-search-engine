@@ -8373,7 +8373,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxToCrawl - x;
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_page  = PAGE_NONE;
-	m->m_def   = "";
+	m->m_def   = "100001";
 	m++;
 
 	m->m_cgi   = "maxtoprocess";
@@ -8382,7 +8382,16 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxToProcess - x;
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_page  = PAGE_NONE;
-	m->m_def   = "";
+	m->m_def   = "100001";
+	m++;
+
+	m->m_cgi   = "maxCrawlRounds";
+	m->m_title = "max crawl rounds";
+	m->m_xml   = "maxCrawlRounds";
+	m->m_off   = (char *)&cr.m_maxCrawlRounds - x;
+	m->m_type  = TYPE_LONG;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "-1";
 	m++;
 
 	/*

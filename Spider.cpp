@@ -3947,7 +3947,8 @@ void doneSendingNotification ( void *state ) {
 	if ( ! cr ) return;
 
 	// we can re-use the EmailInfo class now
-	ei->m_inUse = false;
+	// pingserver.cpp sets this
+	//ei->m_inUse = false;
 
 	// mark it as sent. anytime a new url is spidered will mark this
 	// as false again! use LOCAL crawlInfo, since global is reset often.
@@ -3956,6 +3957,8 @@ void doneSendingNotification ( void *state ) {
 	// sanity check
 	if ( g_hostdb.m_myHost->m_hostId != 0 ) { char *xx=NULL;*xx=0; }
 
+	// if not round done we are done
+	if ( cr->m_spiderStatus != SP_ROUNDDONE ) return;
 
 	// this should have been set below
 	if ( cr->m_spiderRoundStartTime == 0 ) { char *xx=NULL;*xx=0; }
@@ -4030,7 +4033,8 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	// in use already?
 	if ( ei->m_inUse ) return true;
 
-	ei->m_inUse = true;
+	// pingserver.cpp sets this
+	//ei->m_inUse = true;
 
 	// set it up
 	ei->m_finalCallback = doneSendingNotification;
@@ -4135,9 +4139,10 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( ! cr->m_spideringEnabled ) continue;
 
 		// hit crawl round max?
-		if ( cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) {
+		if ( //cr->m_maxCrawlRounds > 0 &&
+		     cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) {
 			cr->m_spiderStatus = SP_MAXROUNDS;
-			cr->m_spiderStatusMsg = "Hit max rounds limit.";
+			cr->m_spiderStatusMsg = "Hit maxCrawlRounds limit.";
 			sendNotificationForCollRec ( cr );
 			continue;
 		}
@@ -4146,7 +4151,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( cr->m_globalCrawlInfo.m_pageDownloadSuccesses >=
 		     cr->m_maxToCrawl ) {
 			cr->m_spiderStatus = SP_MAXTOCRAWL;
-			cr->m_spiderStatusMsg = "Hit max pages limit.";
+			cr->m_spiderStatusMsg = "Hit maxToCrawl limit.";
 			sendNotificationForCollRec ( cr );
 			continue;
 		}
@@ -4155,7 +4160,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( cr->m_globalCrawlInfo.m_pageProcessSuccesses >=
 		     cr->m_maxToProcess ) {
 			cr->m_spiderStatus = SP_MAXTOPROCESS;
-			cr->m_spiderStatusMsg = "Hit max process limit.";
+			cr->m_spiderStatusMsg = "Hit maxToProcess limit.";
 			sendNotificationForCollRec ( cr );
 			continue;
 		}
@@ -4846,6 +4851,11 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// the last time we COULD HAVE LAUNCHED *OR* did actually launch
 	// a spider
 	m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+
+	// set crawl done email sent flag so another email can be sent again
+	// in case the user upped the maxToCrawl limit, for instance,
+	// so that the crawl could continue.
+	m_sc->m_cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
 
 	// assume not an empty read
 	//m_sc->m_encounteredDoledbRecs = true;

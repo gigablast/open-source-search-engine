@@ -1567,7 +1567,7 @@ class XmlDoc {
 	long *nukeJSONObjects ( ) ;
 	long m_joc;
 
-	EmailInfo m_emailInfo;
+	//EmailInfo m_emailInfo;
 
 	//
 	// functions and vars for the seo query matching tool

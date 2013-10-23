@@ -2649,7 +2649,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//if ( cx->m_collectionNameAlias.length() > 0 )
 			//	alias=cx->m_collectionNameAlias.getBufStart();
 			//long paused = 1;
-			char *ss = "normal";
+			char *ss = "Normal";
 			if ( cx->m_spiderStatusMsg )
 				ss = cx->m_spiderStatusMsg;
 			//if ( cx->m_spideringEnabled ) paused = 0;
@@ -2698,7 +2698,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			sb.safeUtf8ToJSON ( cx->m_diffbotSeeds.getBufStart());
 			sb.safePrintf("\",\n");
 
-			sb.safePrintf("\"crawlRoundNumber\":%li,\n",
+			sb.safePrintf("\"crawlRoundsCompleted\":%li,\n",
 				      cx->m_spiderRoundNum);
 
 			sb.safePrintf("\"crawlRoundStartTime\":%lu,\n",
