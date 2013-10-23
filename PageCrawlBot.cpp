@@ -1895,6 +1895,7 @@ public:
 	char *m_parm;
 	char *m_desc;
 };
+
 static class HelpItem s_his[] = {
 	{"format","Use &format=html to show HTML output. Default is JSON."},
 	{"token","Required for all operations below."},
