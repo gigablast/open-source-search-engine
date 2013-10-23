@@ -4119,14 +4119,14 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	}
 
 	// and for docs that have errors respider once every 5 hours
-	cr->m_regExs[i].set("errorcount>0 && errcount<3");
+	cr->m_regExs[i].set("hastmperror && errorcount>0 && errcount<3");
 	cr->m_spiderPriorities   [i] = 40;
 	cr->m_spiderFreqs        [i] = 0.2; // half a day
 	cr->m_spiderDiffbotApiUrl[i].purge();
 	i++;
 
 	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
-	cr->m_regExs[i].set("errorcount>=3");
+	cr->m_regExs[i].set("hastmperror && errorcount>=3");
 	cr->m_spiderPriorities   [i] = 30;
 	cr->m_spiderFreqs        [i] = 30; // 30 days
 	cr->m_spiderDiffbotApiUrl[i].purge();
