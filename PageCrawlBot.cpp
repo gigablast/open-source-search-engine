@@ -2652,12 +2652,35 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			char *ss = "Normal";
 			if ( cx->m_spiderStatusMsg )
 				ss = cx->m_spiderStatusMsg;
+			// 0 means not to RE-crawl
+			char tmp[256];
+			// indicate if we are WAITING for next round...
+			if ( cx->m_collectiveRespiderFrequency > 0.0 &&
+			     getTimeGlobal() < cr->m_spiderRoundStartTime ) {
+				long now = getTimeGlobal();
+				sprintf(tmp,"Spidering next round in %li "
+					"seconds.",
+					cr->m_spiderRoundStartTime - now
+					);
+				ss = tmp;
+			}
+			// if we sent an email simply because no urls
+			// were left and we are not recrawling!
+			if ( cx->m_collectiveRespiderFrequency == 0.0 &&
+			     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
+				ss = "Crawl has exhausted all urls and "
+					"repeatCrawl is set to 0.0";
+			}
+			CrawlInfo *ci = &cx->m_localCrawlInfo;
+			long sentAlert = (long)ci->m_sentCrawlDoneAlert;
+			if ( sentAlert ) sentAlert = 1;
 			//if ( cx->m_spideringEnabled ) paused = 0;
 			sb.safePrintf("\n\n{"
 				      "\"name\":\"%s\",\n"
 				      //"\"alias\":\"%s\",\n"
 				      "\"crawlingEnabled\":%li,\n"
-				      "\"crawlingStatus\":\"%s\",\n"
+				      "\"crawlStatus\":\"%s\",\n"
+				      "\"sentCrawlDoneNotification\":%li,\n"
 				      //"\"crawlingPaused\":%li,\n"
 				      "\"objectsFound\":%lli,\n"
 				      "\"urlsHarvested\":%lli,\n"
@@ -2678,6 +2701,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      //, alias
 				      , (long)cx->m_spideringEnabled
 				      , ss
+				      , sentAlert
 				      //, (long)paused
 				      , cx->m_globalCrawlInfo.m_objectsAdded -
 				      cx->m_globalCrawlInfo.m_objectsDeleted

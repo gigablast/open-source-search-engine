@@ -1000,8 +1000,8 @@ SpiderColl::SpiderColl () {
 	m_numAdded = 0;
 	m_numBytesScanned = 0;
 	m_lastPrintCount = 0;
-	m_lastSpiderAttempt = 0;
-	m_lastSpiderCouldLaunch = 0;
+	//m_lastSpiderAttempt = 0;
+	//m_lastSpiderCouldLaunch = 0;
 	//m_numRoundsDone = 0;
 	//m_lastDoledbReadEmpty = false; // over all priorities in this coll
 	// re-set this to min and set m_needsWaitingTreeRebuild to true
@@ -3954,14 +3954,23 @@ void doneSendingNotification ( void *state ) {
 	// as false again! use LOCAL crawlInfo, since global is reset often.
 	cr->m_localCrawlInfo.m_sentCrawlDoneAlert = cr->m_spiderStatus;//1;
 
+	// be sure to save state so we do not re-send emails
+	cr->m_needsSave = 1;
+
+	// sanity
+	if ( cr->m_spiderStatus == 0 ) { char *xx=NULL;*xx=0; }
+
 	// sanity check
 	if ( g_hostdb.m_myHost->m_hostId != 0 ) { char *xx=NULL;*xx=0; }
 
-	// if not round done we are done
-	if ( cr->m_spiderStatus != SP_ROUNDDONE ) return;
+	// advance round if that round has completed, or there are no
+	// more urls to spider. if we hit maxToProcess/maxToCrawl then 
+	// do not increment the round #. otherwise we should increment it.
+	if ( cr->m_spiderStatus == SP_MAXTOCRAWL ) return;
+	if ( cr->m_spiderStatus == SP_MAXTOPROCESS ) return;
 
 	// this should have been set below
-	if ( cr->m_spiderRoundStartTime == 0 ) { char *xx=NULL;*xx=0; }
+	//if ( cr->m_spiderRoundStartTime == 0 ) { char *xx=NULL;*xx=0; }
 
 	// how is this possible
 	//if ( getTimeGlobal() 
@@ -3980,7 +3989,10 @@ void doneSendingNotification ( void *state ) {
 		break;
 	}
 
-	if ( respiderFreq == -1.0 ) return;
+	// if not REcrawling, set this to 0 so we at least update our
+	// round # and round start time...
+	if ( respiderFreq == -1.0 ) 
+		respiderFreq = 0.0;
 
 	if ( respiderFreq < 0.0 ) {
 		log("spider: bad respiderFreq of %f. making 0.",
@@ -3989,6 +4001,9 @@ void doneSendingNotification ( void *state ) {
 	}
 
 	long seconds = respiderFreq * 24*3600;
+	// add 1 for lastspidertime round off errors so we can be assured
+	// all spiders have a lastspidertime LESS than the new
+	// m_spiderRoundStartTime we set below.
 	if ( seconds <= 0 ) seconds = 1;
 
 	// now update this round start time. all the other hosts should
@@ -4139,7 +4154,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( ! cr->m_spideringEnabled ) continue;
 
 		// hit crawl round max?
-		if ( //cr->m_maxCrawlRounds > 0 &&
+		if ( cr->m_maxCrawlRounds > 0 &&
 		     cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) {
 			cr->m_spiderStatus = SP_MAXROUNDS;
 			cr->m_spiderStatusMsg = "Hit maxCrawlRounds limit.";
@@ -4175,6 +4190,24 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// set current time, synced with host #0
 		nowGlobal = getTimeGlobal();
 
+		// shortcut
+		CrawlInfo *ci = &cr->m_localCrawlInfo;
+
+		// the last time we attempted to spider a url for this coll
+		//m_sc->m_lastSpiderAttempt = nowGlobal;
+		// now we save this so when we restart these two times
+		// are from where we left off so we do not end up setting
+		// hasUrlsReadyToSpider to true which in turn sets
+		// the sentEmailAlert flag to false, which makes us
+		// send ANOTHER email alert!!
+		ci->m_lastSpiderAttempt = nowGlobal;
+
+		// update this for the first time in case it is never updated.
+		// then after 60 seconds we assume the crawl is done and
+		// we send out notifications. see below.
+		if ( ci->m_lastSpiderCouldLaunch == 0 )
+			ci->m_lastSpiderCouldLaunch = nowGlobal;
+
 		//
 		// . if doing respider with roundstarttime....
 		// . roundstarttime is > 0 if m_collectiveRespiderFrequency
@@ -4184,19 +4217,13 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//
 		if ( nowGlobal < cr->m_spiderRoundStartTime ) continue;
 
-		// the last time we attempted to spider a url for this coll
-		m_sc->m_lastSpiderAttempt = nowGlobal;
-		// update this for the first time in case it is never updated.
-		// then after 60 seconds we assume the crawl is done and
-		// we send out notifications. see below.
-		if ( m_sc->m_lastSpiderCouldLaunch == 0 )
-			m_sc->m_lastSpiderCouldLaunch = nowGlobal;
 		// if populating this collection's waitingtree assume
 		// we would have found something to launch as well. it might
 		// mean the waitingtree-saved.dat file was deleted from disk
 		// so we need to rebuild it at startup.
 		if ( m_sc->m_waitingTreeNeedsRebuild ) 
-			m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+			ci->m_lastSpiderCouldLaunch = nowGlobal;
+
 		// get max spiders
 		long maxSpiders = cr->m_maxNumSpiders;
 		if ( m_sc->m_isTestColl ) {
@@ -4215,7 +4242,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// obey max spiders per collection too
 		if ( m_sc->m_spidersOut >= maxSpiders ) {
 			// assume we would have launched a spider
-			m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+			ci->m_lastSpiderCouldLaunch = nowGlobal;
 			// try next collection
 			continue;
 		}
@@ -4279,10 +4306,13 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
  loop:
 
+	// shortcut
+	CrawlInfo *ci = &cr->m_localCrawlInfo;
+
 	// bail if waiting for lock reply, no point in reading more
 	if ( m_msg12.m_gettingLocks ) {
 		// assume we would have launched a spider for this coll
-		m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+		ci->m_lastSpiderCouldLaunch = nowGlobal;
 		// wait for sleep callback to re-call us in 10ms
 		return;
 	}
@@ -4344,7 +4374,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// skip?
 	if ( out >= max ) {
 		// assume we could have launched a spider
-		if ( max > 0 ) m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+		if ( max > 0 ) ci->m_lastSpiderCouldLaunch = nowGlobal;
 		// count as non-empty then!
 		//m_sc->m_encounteredDoledbRecs = true;
 		// try the priority below us
@@ -4464,6 +4494,10 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// unlock
 	m_gettingDoledbList = false;
 
+	// shortcuts
+	CollectionRec *cr = m_sc->m_cr;
+	CrawlInfo *ci = &cr->m_localCrawlInfo;
+
 	// update m_msg5StartKey for next read
 	if ( m_list.getListSize() > 0 ) {
 		m_list.getLastKey((char *)&m_sc->m_msg5StartKey);
@@ -4495,7 +4529,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	if ( bail ) {
 		// assume we could have launched a spider
-		m_sc->m_lastSpiderCouldLaunch = getTimeGlobal();
+		ci->m_lastSpiderCouldLaunch = getTimeGlobal();
 		// return false to indicate to try another
 		return false;
 	}
@@ -4623,7 +4657,6 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( pri < 0 || pri >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
 	// skip the priority if we already have enough spiders on it
 	long out = m_sc->m_outstandingSpiders[pri];
-	CollectionRec *cr = m_sc->m_cr;
 	// get the first ufn that uses this priority
 	//long max = getMaxAllowableSpidersOut ( pri );
 	// how many spiders can we have out?
@@ -4661,7 +4694,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// skip? and re-get another doledb list from next priority...
 	if ( out >= max ) {
 		// assume we could have launched a spider
-		if ( max > 0 ) m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+		if ( max > 0 ) ci->m_lastSpiderCouldLaunch = nowGlobal;
 		// this priority is maxed out, try next
 		m_sc->devancePriority();
 		// assume not an empty read
@@ -4850,12 +4883,18 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// assume we launch the spider below. really this timestamp indicates
 	// the last time we COULD HAVE LAUNCHED *OR* did actually launch
 	// a spider
-	m_sc->m_lastSpiderCouldLaunch = nowGlobal;
+	ci->m_lastSpiderCouldLaunch = nowGlobal;
 
 	// set crawl done email sent flag so another email can be sent again
 	// in case the user upped the maxToCrawl limit, for instance,
 	// so that the crawl could continue.
-	m_sc->m_cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
+	//ci->m_sentCrawlDoneAlert = 0;
+
+	// there are urls ready to spider
+	ci->m_hasUrlsReadyToSpider = true;
+
+	// be sure to save state so we do not re-send emails
+	cr->m_needsSave = 1;
 
 	// assume not an empty read
 	//m_sc->m_encounteredDoledbRecs = true;
@@ -9863,9 +9902,13 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			// but only if it was a crawl round done alert,
 			// not a maxToCrawl or maxToProcess or maxRounds
 			// alert.
-			if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert ==
-			     SP_ROUNDDONE )
-				cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
+			// we can't do this because on startup we end up
+			// setting hasUrlsReadyToSpider to true and we
+			// may have already sent an email, and it gets RESET
+			// here when it shouldn't be
+			//if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert ==
+			//     SP_ROUNDDONE )
+			//	cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
 		}
 	}
 	// return if still waiting on more to come in
@@ -9873,6 +9916,15 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 	// sanity check
 	if ( cr->m_replies > cr->m_requests ) { char *xx=NULL;*xx=0; }
+
+
+	//if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert == SP_ROUNDDONE )
+
+	// if we have urls ready to be spidered then prepare to send another
+	// email/webhook notification
+	if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider )
+		cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
+
 
 	// update cache time
 	cr->m_globalCrawlInfo.m_lastUpdateTime = getTime();
@@ -9932,9 +9984,9 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 	// if urls were considered and roundstarttime is still 0 then
 	// set it to the current time...
-	if ( cr->m_spiderRoundStartTime == 0 )
-		// all hosts in the network should sync with host #0 on this
-		cr->m_spiderRoundStartTime = getTimeGlobal();
+	//if ( cr->m_spiderRoundStartTime == 0 )
+	//	// all hosts in the network should sync with host #0 on this
+	//	cr->m_spiderRoundStartTime = getTimeGlobal();
 
 	// but of course if it has urls ready to spider, do not send alert...
 	// or if this is -1, indicating "unknown".
@@ -9987,20 +10039,23 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 
 	//long now = getTimeGlobal();
 
-	SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
+	//SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
+
+	// shortcut
+	CrawlInfo *ci = &cr->m_localCrawlInfo;
 
 	// assume it does
-	cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = 1;
+	//ci->m_hasUrlsReadyToSpider = 1;
 
 	// if we haven't spidered anything in 1 min assume the
 	// queue is basically empty...
-	if ( sc->m_lastSpiderAttempt &&
-	     sc->m_lastSpiderCouldLaunch &&
+	if ( ci->m_lastSpiderAttempt &&
+	     ci->m_lastSpiderCouldLaunch &&
 	     //cr->m_spideringEnabled &&
 	     //g_conf.m_spideringEnabled &&
-	     sc->m_lastSpiderAttempt - sc->m_lastSpiderCouldLaunch > 60 )
+	     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 60 )
 		// assume our crawl on this host is completed i guess
-		cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = 0;
+		ci->m_hasUrlsReadyToSpider = 0;
 
 
 

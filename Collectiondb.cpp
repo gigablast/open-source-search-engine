@@ -774,6 +774,9 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	cr->m_spiderRoundNum = 0;
 	cr->m_spiderRoundStartTime = 0;
 
+	cr->m_spiderStatus = 0;
+	cr->m_spiderStatusMsg = NULL;
+
 	// reset seed buf
 	cr->m_diffbotSeeds.purge();
 
