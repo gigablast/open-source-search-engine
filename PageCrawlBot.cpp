@@ -1902,13 +1902,13 @@ static class HelpItem s_his[] = {
 	{"name","Name of the crawl. If missing will just show "
 	 "all crawls owned by the given token."},
 
-	{"deleteCrawl=1","Deletes the crawl."},
-	{"resetCrawl=1","Resets the crawl."},
+	{"delete=1","Deletes the crawl."},
+	{"reset=1","Resets the crawl."},
 
-	{"pauseCrawl",
+	{"pause",
 	 "Specify 1 or 0 to pause or resume the crawl respectively."},
 
-	{"repeatCrawl","Specify number of days as floating point to "
+	{"repeat","Specify number of days as floating point to "
 	 "recrawl the pages. Set to 0.0 to NOT repeat the crawl."},
 
 
@@ -4156,6 +4156,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	if ( pause == 0 ) { cr->m_needsSave = 1; cr->m_spideringEnabled = 1; }
 	if ( pause == 1 ) { cr->m_needsSave = 1; cr->m_spideringEnabled = 0; }
 	long obeyRobots = hr->getLong("obeyRobots",-1);
+	if ( obeyRobots == -1 ) obeyRobots = hr->getLong("robots",-1);
 	if ( obeyRobots != -1 ) {
 		cr->m_useRobotsTxt = obeyRobots;
 		cr->m_needsSave = 1;
@@ -4166,6 +4167,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_needsSave = 1;
 	}
 	float respider = hr->getFloat("repeatCrawl",-1.0);
+	if ( respider == -1.0 ) respider = hr->getFloat("repeat",-1.0);
 	if ( respider >= 0.0 ) {
 		// if not 0, then change this by the delta
 		if ( cr->m_spiderRoundStartTime ) {
