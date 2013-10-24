@@ -2669,8 +2669,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			if ( cx->m_collectiveRespiderFrequency == 0.0 &&
 			     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
 				ss = "Crawl has exhausted all urls and "
-					"repeatCrawl is set to 0.0";
+					"repeatCrawl is set to 0.0.";
 			}
+			if ( ! cx->m_spideringEnabled )
+				ss = "Crawl paused.";
 			CrawlInfo *ci = &cx->m_localCrawlInfo;
 			long sentAlert = (long)ci->m_sentCrawlDoneAlert;
 			if ( sentAlert ) sentAlert = 1;
@@ -2678,7 +2680,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			sb.safePrintf("\n\n{"
 				      "\"name\":\"%s\",\n"
 				      //"\"alias\":\"%s\",\n"
-				      "\"crawlingEnabled\":%li,\n"
+				      //"\"crawlingEnabled\":%li,\n"
 				      "\"crawlStatus\":\"%s\",\n"
 				      "\"sentCrawlDoneNotification\":%li,\n"
 				      //"\"crawlingPaused\":%li,\n"
@@ -2699,7 +2701,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      //,cx->m_coll
 				      , cx->m_diffbotCrawlName.getBufStart()
 				      //, alias
-				      , (long)cx->m_spideringEnabled
+				      //, (long)cx->m_spideringEnabled
 				      , ss
 				      , sentAlert
 				      //, (long)paused
