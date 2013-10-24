@@ -3969,6 +3969,7 @@ void doneSendingNotification ( void *state ) {
 	if ( cr->m_spiderStatus == SP_MAXTOCRAWL ) return;
 	if ( cr->m_spiderStatus == SP_MAXTOPROCESS ) return;
 
+
 	// this should have been set below
 	//if ( cr->m_spiderRoundStartTime == 0 ) { char *xx=NULL;*xx=0; }
 
@@ -4025,6 +4026,15 @@ void doneSendingNotification ( void *state ) {
 }
 
 bool sendNotificationForCollRec ( CollectionRec *cr )  {
+
+	// do not send email for maxrounds hit, it will send a round done
+	// email for that. otherwise we end up calling doneSendingEmail()
+	// twice and increment the round twice
+	if ( cr->m_spiderStatus == SP_MAXROUNDS ) {
+		log("spider: not sending email for max rounds limit "
+		    "since already sent for round done.");
+		return true;
+	}
 
 	// . if already sent email for this, skip
 	// . localCrawlInfo stores this value on disk so it is persistent
@@ -4158,7 +4168,10 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		     cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) {
 			cr->m_spiderStatus = SP_MAXROUNDS;
 			cr->m_spiderStatusMsg = "Hit maxCrawlRounds limit.";
-			sendNotificationForCollRec ( cr );
+			// it'll send a SP_ROUNDDONE email first
+			// so no need to repeat it, but we do want to
+			// update the status msg
+			//sendNotificationForCollRec ( cr );
 			continue;
 		}
 

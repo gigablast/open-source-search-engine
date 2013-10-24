@@ -16,6 +16,21 @@
 #include "Multicast.h"
 #include "Syncdb.h"
 
+//////////////
+//
+// Send out our records to add every X ms here:
+//
+// Batching up the add requests saves udp traffic
+// on large networks (100+ hosts).
+//
+// . currently: send out adds once every 500ms
+// . when this was 5000ms (5s) it would wait like
+//   5s to spider a url after adding it.
+//
+//////////////
+#define MSG4_WAIT 500
+
+
 // we have up to this many outstanding Multicasts to send add requests to hosts
 #define MAX_MCASTS 128
 Multicast  s_mcasts[MAX_MCASTS];
@@ -98,8 +113,11 @@ bool registerHandler4 ( ) {
 	}
 
 	// . register sleep handler every 5 seconds = 5000 ms
+	// . right now MSG4_WAIT is 500ms... i lowered it from 5s
+	//   to speed up spidering so it would harvest outlinks
+	//   faster and be able to spider them right away.
 	// . returns false on failure
-	return g_loop.registerSleepCallback ( 5000 , NULL , sleepCallback4 );
+	return g_loop.registerSleepCallback(MSG4_WAIT,NULL,sleepCallback4 );
 }
 
 static void flushLocal ( ) ;
@@ -475,7 +493,8 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 	if ( metaListSize == 0 ) return true;
 
 	// sanity
-	if ( collnum < 0 || collnum > 1000 ) { char *xx=NULL;*xx=0; }
+	//if ( collnum < 0 || collnum > 1000 ) { char *xx=NULL;*xx=0; }
+	if ( collnum < 0 ) { char *xx=NULL;*xx=0; }
 
 	// if first time set this
 	m_currentPtr   = metaList;
@@ -547,7 +566,8 @@ bool Msg4::addMetaList2 ( ) {
 
 	char *pend = m_metaList + m_metaListSize;
 
-	if ( m_collnum < 0 || m_collnum > 1000 ) { char *xx=NULL;*xx=0; }
+	//if ( m_collnum < 0 || m_collnum > 1000 ) { char *xx=NULL;*xx=0; }
+	if ( m_collnum < 0 ) { char *xx=NULL;*xx=0; }
 
 	// store each record in the list into the send buffers
 	for ( ; p < pend ; ) {
