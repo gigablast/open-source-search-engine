@@ -780,6 +780,10 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	// reset seed buf
 	cr->m_diffbotSeeds.purge();
 
+	// reset seed dedup table
+	HashTableX *ht = &cr->m_seedHashTable;
+	ht->reset();
+
 	// so XmlDoc.cpp can detect if the collection was reset since it
 	// launched its spider:
 	cr->m_lastResetCount++;
