@@ -194,6 +194,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 			// skip known directives
 			if ( ! strncmp(p,"port-offset:",12) ||
 			     ! strncmp(p,"index-splits:",13) ||
+			     ! strncmp(p,"num-mirrors:",12) ||
 			     ! strncmp(p,"working-dir:",12) )
 				p = p;
 			// check if this is a spare host
@@ -243,13 +244,14 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	if ( ! m_hosts ) return log(
 				    "conf: Memory allocation failed.");
 
-	unsigned long maxShard = 0;
+	//unsigned long maxShard = 0;
+	long numGrunts = 0;
 
 	// now fill up m_hosts
 	p = m_buf;
 	i = 0;
 	long line = 1;
-	unsigned long lastShard = 0;
+	//unsigned long lastShard = 0;
 	long proxyNum = 0;
 
 	// assume defaults
@@ -257,6 +259,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	long indexSplits = 0;
 	char *wdir2 = NULL;
 	long  wdirlen2 = 0;
+	long numMirrors = 0;
 
 	for ( ; *p ; p++ , line++ ) {
 		if ( is_wspace_a (*p) ) continue;
@@ -269,6 +272,15 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 			// skip spaces after the colon
 			while (  is_wspace_a(*p) ) p++;			
 			indexSplits = atol(p);
+			while ( *p && *p != '\n' ) p++; 
+			continue; 
+		}
+
+		if ( ! strncmp(p,"num-mirrors:",12) ) {
+			p += 12;
+			// skip spaces after the colon
+			while (  is_wspace_a(*p) ) p++;			
+			numMirrors = atol(p);
 			while ( *p && *p != '\n' ) p++; 
 			continue; 
 		}
@@ -350,13 +362,6 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 
 		// skip numeric hostid or "proxy" keyword
 		while ( ! is_wspace_a(*p) ) p++;
-
-		if ( indexSplits == 0 ) {
-			g_errno = EBADENGINEER;
-			log("admin: need index-splits: xxx directive "
-			    "in hosts.conf");
-			return false;
-		}
 
 		// read in switch id
 		//h->m_switchId = atoi(p);
@@ -590,7 +595,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		// our group is based on our split!
 		//h->m_group = i % g_hostdb.m_indexSplits; // # grps
 		//h->m_group = i % indexSplits; // # grps
-		h->m_shardNum = i % indexSplits;
+		//h->m_shardNum = i % indexSplits;
 		// i guess proxy and spares don't count
 		if ( h->m_type != HT_GRUNT ) h->m_shardNum = 0;
 		
@@ -665,9 +670,12 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		h->m_externalHttpsPort = h->m_httpsPort;
 
 		// get max group number
-		if ( h->m_shardNum > maxShard && h->m_type==HT_GRUNT )
-			maxShard = h->m_shardNum;
+		//if ( h->m_shardNum > maxShard && h->m_type==HT_GRUNT )
+		//	maxShard = h->m_shardNum;
+		if ( h->m_type == HT_GRUNT )
+			numGrunts++;
 
+		/*
 		if ( h->m_shardNum <= lastShard && h->m_shardNum != 0 
 		     && !(h->m_type&(HT_ALL_PROXIES)) ) {
 		      g_errno = EBADENGINEER;
@@ -678,6 +686,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 				 filename,line);
 		}
 		lastShard = h->m_shardNum;
+		*/
 
 		// skip line now
 		while ( *p && *p != '\n' )
@@ -742,9 +751,41 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	//m_numHosts = i;
 	m_numTotalHosts = i;
 	// how many shards are we configure for?
-	m_numShards = maxShard + 1; // g_conf.m_numGroups;
+	//m_numShards = maxShard + 1; // g_conf.m_numGroups;
+
+	// set it here
+	if ( numMirrors > 0 )
+		indexSplits = numGrunts / numMirrors;
+
+	if ( indexSplits == 0 ) {
+		g_errno = EBADENGINEER;
+		log("admin: need num-mirrors: xxx or "
+		    "index-splits: xxx directive "
+		    "in hosts.conf");
+		return false;
+	}
+
+	numMirrors = numGrunts / indexSplits;
+
+	if ( numMirrors == 0 ) {
+		g_errno = EBADENGINEER;
+		log("admin: need num-mirrors: xxx or "
+		    "index-splits: xxx directive "
+		    "in hosts.conf (2)");
+		return false;
+	}
 
 	m_indexSplits = indexSplits;
+
+	m_numShards = numGrunts / numMirrors;
+
+	//
+	// set Host::m_shardNum
+	//
+	for ( long i = 0 ; i < numGrunts ; i++ ) {
+		Host *h = &m_hosts[i];
+		h->m_shardNum = i % indexSplits;
+	}
 
 	// assign spare hosts
 	if ( m_numSpareHosts > MAX_SPARES ) {
