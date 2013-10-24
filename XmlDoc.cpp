@@ -21498,20 +21498,20 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//   so if your first X filters all map to a "FILTERED" 
 		//   priority and this url matches one of them we can 
 		//   confidently toss this guy out.
-		long ufn = ::getUrlFilterNum ( &ksr , NULL, m_spideredTime ,
-					       false, m_niceness, cr);
+		//long ufn = ::getUrlFilterNum ( &ksr , NULL, m_spideredTime ,
+		//			       false, m_niceness, cr);
 
 		// bad?
-		if ( ufn < 0 ) {
-			log("build: link %s had bad url filter."
-			    , ksr.m_url );
-			g_errno = EBADENGINEER;
-			return NULL;
-		}
+		//if ( ufn < 0 ) {
+		//	log("build: link %s had bad url filter."
+		//	    , ksr.m_url );
+		//	g_errno = EBADENGINEER;
+		//	return NULL;
+		//}
 
-		long priority = -1;
-		if ( ufn >= 0 )
-			priority = cr->m_spiderPriorities[ufn];
+		//long priority = -1;
+		//if ( ufn >= 0 )
+		//	priority = cr->m_spiderPriorities[ufn];
 
 		// debug
 		if ( g_conf.m_logDebugUrlAttempts || isScraping ) {
@@ -21532,10 +21532,15 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 			     sb2.getBufStart());
 		}
 		// do not add if bad priority, SPIDER_PRIORITY_FILTERED, ...
-		if ( priority == SPIDER_PRIORITY_FILTERED ) {
-			linksFiltered++; continue; }
-		if ( priority == SPIDER_PRIORITY_BANNED   ) {
-			linksBanned++; continue; }
+		// . mdw: oct 24, 2013. now i add so the urls show up in
+		//   the pagecrawlbot.cpp spiderdb dump, so you can examine
+		//   exactly why a url was crawled or not. plus if you change
+		//   your mind about banning/filtering then it'd be nice to
+		//   have these urls readily available.
+		//if ( priority == SPIDER_PRIORITY_FILTERED ) {
+		//	linksFiltered++; continue; }
+		//if ( priority == SPIDER_PRIORITY_BANNED   ) {
+		//	linksBanned++; continue; }
 
 		// serialize into the buffer
 		long need = ksr.getRecSize();

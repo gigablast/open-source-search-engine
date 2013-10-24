@@ -1256,6 +1256,10 @@ void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb ) {
 	long prevReplyError = 0;
 	time_t prevReplyDownloadTime = 0LL;
 	long badCount = 0;
+
+	long nowGlobalMS = gettimeofdayInMillisecondsGlobal();
+	CollectionRec *cr = g_collectiondb.getRec(m_collnum);
+	
 	// parse through it
 	for ( ; ! list->isExhausted() ; list->skipCurrentRec() ) {
 		// this record is either a SpiderRequest or SpiderReply
@@ -1316,8 +1320,36 @@ void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb ) {
 		if ( status == 0 ) msg = "Unexamined";
 		if ( status == -1 ) msg = mstrerror(prevReplyError);
 
+		// matching url filter, print out the expression
+		long ufn ;
+		ufn = ::getUrlFilterNum(sreq,
+					srep,
+					nowGlobalMS,
+					false,
+					MAX_NICENESS,
+					cr);
+		char *expression = NULL;
+		long  priority = -4;
+		// sanity check
+		if ( ufn >= 0 ) { 
+			expression = cr->m_regExs[ufn].getBufStart();
+			priority   = cr->m_spiderPriorities[ufn];
+		}
+
+		if ( ! expression ) {
+			expression = "error. matches no expression!";
+			priority = -4;
+		}
+
+		// when spidering rounds we use the 
+		// lastspidertime>={roundstart} --> spiders disabled rule
+		// so that we do not spider a url twice in the same round
+		if ( ufn >= 0 && ! cr->m_spidersEnabled[ufn] ) {
+			priority = -5;
+		}
+
 		// "csv" is default if json not specified
-		if ( m_fmt == FMT_JSON )
+		if ( m_fmt == FMT_JSON ) 
 			sb->safePrintf("[{"
 				       "{\"url\":"
 				       "\"%s\"},"
@@ -1338,18 +1370,35 @@ void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb ) {
 				       , msg
 				       );
 		// but default to csv
-		else
-			sb->safePrintf("%s,%lu,%li,\"%s\""
+		else {
+			sb->safePrintf("\"%s\",%lu,\"%s\",\"%s\",\""
 				       //",%s"
-				       "\n"
+				       //"\n"
 				       , sreq->m_url
 				       // when was it first added to spiderdb?
 				       , sreq->m_addedTime
-				       , status
+				       //, status
 				       , msg
+				       // the url filter expression it matches
+				       , expression
+				       // the priority
+				       //, priorityMsg
 				       //, iptoa(sreq->m_firstIp)
 				       );
-
+			// print priority
+			if ( priority == SPIDER_PRIORITY_FILTERED )
+				sb->safePrintf("url ignored");
+			else if ( priority == SPIDER_PRIORITY_BANNED )
+				sb->safePrintf("url banned");
+			else if ( priority == -4 )
+				sb->safePrintf("error");
+			else if ( priority == -5 )
+				sb->safePrintf("will spider next round");
+			else 
+				sb->safePrintf("%li",priority);
+			sb->safePrintf("\""
+				       "\n");
+		}
 	}
 
 	if ( ! badCount ) return;
@@ -4405,3 +4454,27 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 
 	return true;
 }
+
+
+///////////
+//
+// SUPPORT for getting the last 100 spidered urls
+//
+// . sends request to each node
+// . each node returns top 100 after scanning spiderdb (cache for speed)
+// . master node gets top 100 of the top 100s
+// . sends pretty html or json back to socket
+// . then user can see why their crawl isn't working
+// . also since we are scanning spiderdb indicate how many urls are
+//   ignored because they match "ismedia" or "!isonsamedomain" etc. so
+//   show each url filter expression then show how many urls matched that.
+//   when doing this make the spiderReply null, b/c the purpose is to see
+//   what urls 
+// . BUT url may never be attempted because it matches "ismedia" so that kind
+//   of thing might have to be indicated on the spiderdb dump above, not here.
+//
+//////////
+
+//bool sendPageLast100Urls ( TcpSocket *socket , HttpRequest *hr ) {
+
+
