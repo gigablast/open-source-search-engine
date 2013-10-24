@@ -4893,6 +4893,10 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// there are urls ready to spider
 	ci->m_hasUrlsReadyToSpider = true;
 
+	// reset reason why crawl is not running, because we basically are now
+	cr->m_spiderStatus = 0;
+	cr->m_spiderStatusMsg = NULL;
+
 	// be sure to save state so we do not re-send emails
 	cr->m_needsSave = 1;
 
@@ -8361,6 +8365,24 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		if ( *p=='h' && strncmp(p,"hasreply",8) == 0 ) {
+			// if we do not have enough info for outlink, all done
+			if ( isOutlink ) return -1;
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// if we got a reply, we are not new!!
+			if ( (bool)srep == (bool)val ) continue;
+			// skip it for speed
+			p += 8;
+			// check for &&
+			p = strstr(p, "&&");
+			// if nothing, else then it is a match
+			if ( ! p ) return i;
+			// skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
 		// hastmperror, if while spidering, the last reply was
 		// like EDNSTIMEDOUT or ETCPTIMEDOUT or some kind of
 		// usually temporary condition that warrants a retry
@@ -8841,7 +8863,6 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			p += 2;
 			goto checkNextRule;
 		}
-
 		// iswww, means url is like www.xyz.com/...
 		if ( strncmp(p,"iswww", 5) == 0 ) {
 			// now this is a bit

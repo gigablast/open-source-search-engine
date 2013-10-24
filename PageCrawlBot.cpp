@@ -2649,18 +2649,18 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//if ( cx->m_collectionNameAlias.length() > 0 )
 			//	alias=cx->m_collectionNameAlias.getBufStart();
 			//long paused = 1;
-			char *ss = "Normal";
+			char *ss = "In progress.";
 			if ( cx->m_spiderStatusMsg )
 				ss = cx->m_spiderStatusMsg;
 			// 0 means not to RE-crawl
 			char tmp[256];
 			// indicate if we are WAITING for next round...
 			if ( cx->m_collectiveRespiderFrequency > 0.0 &&
-			     getTimeGlobal() < cr->m_spiderRoundStartTime ) {
+			     getTimeGlobal() < cx->m_spiderRoundStartTime ) {
 				long now = getTimeGlobal();
 				sprintf(tmp,"Spidering next round in %li "
 					"seconds.",
-					cr->m_spiderRoundStartTime - now
+					cx->m_spiderRoundStartTime - now
 					);
 				ss = tmp;
 			}
@@ -4109,7 +4109,10 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	// if collectiverespiderfreq is 0 or less then do not RE-spider
 	// documents already indexed.
 	else {
-		cr->m_regExs[i].set("isindexed");
+		// this does NOT work! error docs continuosly respider
+		// because they are never indexed!!! like EDOCSIMPLIFIEDREDIR
+		//cr->m_regExs[i].set("isindexed");
+		cr->m_regExs[i].set("hasreply");
 		cr->m_spiderPriorities   [i] = 10;
 		// just turn off spidering. if we were to set priority to
 		// filtered it would be removed from index!
@@ -4119,14 +4122,14 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	}
 
 	// and for docs that have errors respider once every 5 hours
-	cr->m_regExs[i].set("hastmperror && errorcount>0 && errcount<3");
+	cr->m_regExs[i].set("errorcount>0 && errcount<3");
 	cr->m_spiderPriorities   [i] = 40;
 	cr->m_spiderFreqs        [i] = 0.2; // half a day
 	cr->m_spiderDiffbotApiUrl[i].purge();
 	i++;
 
 	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
-	cr->m_regExs[i].set("hastmperror && errorcount>=3");
+	cr->m_regExs[i].set("errorcount>=3");
 	cr->m_spiderPriorities   [i] = 30;
 	cr->m_spiderFreqs        [i] = 30; // 30 days
 	cr->m_spiderDiffbotApiUrl[i].purge();

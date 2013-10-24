@@ -697,12 +697,10 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "it from."
 			  "</td></tr>"
 
-			  "<tr><td>isnew | !isnew</td>"
+			  "<tr><td>hasreply | !hasreply</td>"
 			  "<td>"
-			  "This is true if we have never tried to spider "
-			  "this url. If we have tried to spider it and "
-			  "received an error, like a timeout or something, "
-			  "then it will no longer match <i>isnew</i>."
+			  "This is true if we have tried to spider "
+			  "this url, even if we got an error while trying."
 			  "</td></tr>"
 			  
 
