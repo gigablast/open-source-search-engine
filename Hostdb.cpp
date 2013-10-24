@@ -259,7 +259,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	long indexSplits = 0;
 	char *wdir2 = NULL;
 	long  wdirlen2 = 0;
-	long numMirrors = 0;
+	long numMirrors = -1;
 
 	for ( ; *p ; p++ , line++ ) {
 		if ( is_wspace_a (*p) ) continue;
@@ -753,9 +753,13 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	// how many shards are we configure for?
 	//m_numShards = maxShard + 1; // g_conf.m_numGroups;
 
-	// set it here
+
+	// # of mirrors is zero if no mirrors,
+	// if it is 1 then each host has ONE MIRROR host
+	if ( numMirrors == 0 )
+		indexSplits = numGrunts;
 	if ( numMirrors > 0 )
-		indexSplits = numGrunts / numMirrors;
+		indexSplits = numGrunts / (numMirrors+1);
 
 	if ( indexSplits == 0 ) {
 		g_errno = EBADENGINEER;
@@ -765,9 +769,9 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		return false;
 	}
 
-	numMirrors = numGrunts / indexSplits;
+	numMirrors = (numGrunts / indexSplits) - 1 ;
 
-	if ( numMirrors == 0 ) {
+	if ( numMirrors < 0 ) {
 		g_errno = EBADENGINEER;
 		log("admin: need num-mirrors: xxx or "
 		    "index-splits: xxx directive "
@@ -777,7 +781,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 
 	m_indexSplits = indexSplits;
 
-	m_numShards = numGrunts / numMirrors;
+	m_numShards = numGrunts / (numMirrors+1);
 
 	//
 	// set Host::m_shardNum
