@@ -2300,10 +2300,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//
 	/////////
 
+	// in case collection was just added above... try this!!
+	cr = g_collectiondb.getRec(collName);
 
 	// collectionrec must be non-null at this point. i.e. we added it
-	if ( ! cr )
+	if ( ! cr ) {
+		log("crawlbot: no collection found");
 		return sendErrorReply2(socket,fmt,"no collection found");
+	}
 
 	//char *spots = hr->getString("spots",NULL,NULL);
 	//char *seeds = hr->getString("seeds",NULL,NULL);
@@ -2321,6 +2325,9 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	st->m_socket = socket;
 	st->m_fmt = fmt;
 	st->m_collnum = cr->m_collnum;
+
+	if ( seeds )
+		log("crawlbot: adding seeds=\"%s\"",seeds);
 
 
 	///////
