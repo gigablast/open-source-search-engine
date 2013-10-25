@@ -305,23 +305,24 @@ bool processLoop ( void *state ) {
 	SafeBuf sb;
 
 	// alloc buffer now
-	char *buf = NULL;
-	long  bufMaxSize = 0;
+	//char *buf = NULL;
+	//long  bufMaxSize = 0;
 	//bufMaxSize = len + ( 32 * 1024 ) ;
-	bufMaxSize = contentLen + ( 32 * 1024 ) ;
-	buf        = (char *)mmalloc ( bufMaxSize , "PageGet2" );
-	char *p          = buf;
-	char *bufEnd     = buf + bufMaxSize;
-	if ( ! buf ) {
-		return sendErrorReply ( st , g_errno );
-	}
+	//bufMaxSize = contentLen + ( 32 * 1024 ) ;
+	//buf        = (char *)mmalloc ( bufMaxSize , "PageGet2" );
+	//char *p          = buf;
+	//char *bufEnd     = buf + bufMaxSize;
+	//if ( ! buf ) {
+	//	return sendErrorReply ( st , g_errno );
+	//}
 
 	// for undoing the header
-	char *start1 = p;
+	//char *start1 = p;
+	long startLen1 = sb.length();
 
 	// we are always utfu
 	if ( strip != 2 )
-		p += sprintf(p, "<meta http-equiv=\"Content-Type\" "
+		sb.safePrintf( "<meta http-equiv=\"Content-Type\" "
 			     "content=\"text/html;charset=utf8\">\n");
 
 	// base href
@@ -332,20 +333,21 @@ bool processLoop ( void *state ) {
 	if ( xd->ptr_redirUrl ) base = xd->ptr_redirUrl;
 	//Url *redir = *xd->getRedirUrl();
 	if ( strip != 2 ) {
-		sprintf ( p , "<BASE HREF=\"%s\">" , base );
-		p += gbstrlen ( p );
+		sb.safePrintf ( "<BASE HREF=\"%s\">" , base );
+		//p += gbstrlen ( p );
 	}
 
 	// default colors in case css files missing
 	if ( strip != 2 ) {
-		sprintf ( p , "\n<style type=\"text/css\">\n"
+		sb.safePrintf( "\n<style type=\"text/css\">\n"
 			  "body{background-color:white;color:black;}\n"
 			  "</style>\n");
-		p += gbstrlen ( p );
+		//p += gbstrlen ( p );
 	}
 
 
-	char *start2 = p;
+	// for undoing the stuff below
+	long startLen2 = sb.length();//p;
 
 	// query should be NULL terminated
 	char *q    = st->m_q;
@@ -376,7 +378,7 @@ bool processLoop ( void *state ) {
 	// CNS: if ( ! st->m_clickNScroll ) {
 	if ( printDisclaimer ) {
 
-		sprintf ( p , 
+		sb.safePrintf(//sprintf ( p , 
 			  //"<BASE HREF=\"%s\">"
 			  //"<table border=1 width=100%%>"
 			  //"<tr><td>"
@@ -394,28 +396,31 @@ bool processLoop ( void *state ) {
 			  "<a href=\"%s\" style=\"%s\">%s</a>"
 			  "" , styleTitle, f->getUrl(), styleLink,
 			  f->getUrl() );
-		p += gbstrlen ( p );
+		//p += gbstrlen ( p );
 		// then the rest
-		sprintf(p , 
+		//sprintf(p , 
+		sb.safePrintf(
 			"<span style=\"%s\">. "
 			"Gigablast is not responsible for the content of "
 			"this page.</span>", styleTitle );
-		p += gbstrlen ( p );
+		//p += gbstrlen ( p );
 
-		sprintf ( p , "<br/><span style=\"%s\">"
+		sb.safePrintf ( "<br/><span style=\"%s\">"
 			  "Cached: </span>"
 			  "<span style=\"%s\">",
 			  styleTitle, styleText );
-		p += gbstrlen ( p );
+		//p += gbstrlen ( p );
 
 		// then the spider date in GMT
 		time_t lastSpiderDate = xd->m_spideredTime;
 		struct tm *timeStruct = gmtime ( &lastSpiderDate );
-		strftime ( p, 100,"%b %d, %Y UTC", timeStruct);
-		p += gbstrlen ( p );
+		char tbuf[100];
+		strftime ( tbuf, 100,"%b %d, %Y UTC", timeStruct);
+		//p += gbstrlen ( p );
+		sb.safeStrcpy(tbuf);
 
 		// Moved over from PageResults.cpp
-		p += sprintf (p, "</span> - <a href=\""
+		sb.safePrintf( "</span> - <a href=\""
 			      "/get?"
 			      "q=%s&amp;c=%s&amp;rtq=%li&amp;"
 			      "d=%lli&amp;strip=1\""
@@ -427,7 +432,7 @@ bool processLoop ( void *state ) {
 
 		// a link to alexa
 		if ( f->getUrlLen() > 5 ) {
-			p += sprintf (p, " - <a href=\"http:"
+			sb.safePrintf( " - <a href=\"http:"
 					 "//web.archive.org/web/*/%s\""
 					 " style=\"%s\">"
 					 "[older copies]</a>" ,
@@ -435,29 +440,29 @@ bool processLoop ( void *state ) {
 		}
 
 		if (st->m_noArchive){
-			p += sprintf(p, " - <span style=\"%s\"><b>"
+			sb.safePrintf( " - <span style=\"%s\"><b>"
 				     "[NOARCHIVE]</b></span>",
 				     styleTell );
 		}
 		if (st->m_isBanned){
-			p += sprintf(p, " - <span style=\"%s\"><b>"
+			sb.safePrintf(" - <span style=\"%s\"><b>"
 				     "[BANNED]</b></span>",
 				     styleTell );
 		}
 
 		// only print this if we got a query
 		if ( qlen > 0 ) {
-			sprintf (p,"<br/><br/><span style=\"%s\"> "
+			sb.safePrintf("<br/><br/><span style=\"%s\"> "
 				   "These search terms have been "
 				   "highlighted:  ",
 				   styleText );
-			p += gbstrlen ( p );
+			//p += gbstrlen ( p );
 		}
 		
 	}
 
 	// how much space left in p?
-	long avail = bufEnd - p;
+	//long avail = bufEnd - p;
 	// . make the url that we're outputting for (like in PageResults.cpp)
 	// . "thisUrl" is the baseUrl for click & scroll
 	char thisUrl[MAX_URL_LEN];
@@ -487,7 +492,7 @@ bool processLoop ( void *state ) {
 	//sprintf ( x, "&seq=%li&rtq=%lid=%lli",
 	//	  (long)st->m_seq,(long)st->m_rtq,st->m_msg22.getDocId());
 	sprintf ( x, "&d=%lli",st->m_docId );
-	x += gbstrlen(p);		
+	x += gbstrlen(x);		
 	// set our query for highlighting
 	Query qq;
 	qq.set2 ( q, st->m_langId , true );
@@ -523,16 +528,18 @@ bool processLoop ( void *state ) {
 	// CNS: if ( ! st->m_clickNScroll ) {
 	// and highlight the matches
 	if ( printDisclaimer ) {
-		hilen = hi.set ( p       ,
-				 avail   ,
+		hilen = hi.set ( //p       ,
+				 //avail   ,
+				&sb ,
 				 &qw     , // words to highlight
 				 &m      , // matches relative to qw
 				 false   , // doSteming
 				 false   , // st->m_clickAndScroll , 
 				 (char *)thisUrl );// base url for ClcknScrll
-		p += hilen;
+		//p += hilen;
 		// now an hr
-		memcpy ( p , "</span></table></table>\n" , 24 );   p += 24;
+		//memcpy ( p , "</span></table></table>\n" , 24 );   p += 24;
+		sb.safeStrcpy("</span></table></table>\n");
 	}
 
 
@@ -547,8 +554,8 @@ bool processLoop ( void *state ) {
 	if ( ! includeHeader ) {
 		// including base href is off by default when not including
 		// the header, so the caller must explicitly turn it back on
-		if ( st->m_includeBaseHref ) p = start2;
-		else                         p = start1;
+		if ( st->m_includeBaseHref ) sb.m_length=startLen2;//p=start2;
+		else                         sb.m_length=startLen1;//p=start1;
 	}
 
 	// identify start of <title> tag we wrote out
@@ -596,7 +603,8 @@ bool processLoop ( void *state ) {
 		char *ebuf = st->m_r.getString("eb");
 		if ( ! ebuf ) ebuf = "";
 
-		p += sprintf ( p , 
+		//p += sprintf ( p , 
+		sb.safePrintf(
 			       "<table border=1 "
 			       "cellpadding=10 "
 			       "cellspacing=0 "
@@ -606,7 +614,7 @@ bool processLoop ( void *state ) {
 		long printLinks = st->m_r.getLong("links",0);
 
 		if ( ! printDisclaimer && printLinks )
-			p += sprintf ( p , 
+			sb.safePrintf(//p += sprintf ( p , 
 				       // first put cached and live link
 				       "<tr>"
 				       "<td bgcolor=lightyellow>"
@@ -637,7 +645,7 @@ bool processLoop ( void *state ) {
 				       );
 
 		if ( printLinks ) {
-			p += sprintf ( p ,
+			sb.safePrintf(//p += sprintf ( p ,
 				       "<tr><td bgcolor=pink>"
 				       "<span style=\"font-size:18px;"
 				       "font-weight:600;"
@@ -646,11 +654,11 @@ bool processLoop ( void *state ) {
 				       "<b>PAGE TITLE:</b> "
 				       );
 			long tlen = titleEnd - titleStart;
-			memcpy ( p , titleStart , tlen ); p += tlen;
-			p += sprintf ( p , "</span></td></tr>" );
+			sb.safeMemcpy ( titleStart , tlen );
+			sb.safePrintf ( "</span></td></tr>" );
 		}
 
-		p += sprintf ( p , "</table><br>\n" );
+		sb.safePrintf( "</table><br>\n" );
 
 	}
 
@@ -661,9 +669,9 @@ bool processLoop ( void *state ) {
 	if ( ctype == CT_DOC  ) pre = true ; // filtered msword
 	if ( ctype == CT_PS   ) pre = true ; // filtered postscript
 	// if it is content-type text, add a <pre>
-	if ( p + 5 < bufEnd && pre ) {
-		memcpy ( p , "<pre>" , 5 );
-		p += 5;
+	if ( pre ) {//p + 5 < bufEnd && pre ) {
+		sb.safePrintf("<pre>");
+		//p += 5;
 	}
 
 	if ( st->m_strip == 1 )
@@ -671,7 +679,7 @@ bool processLoop ( void *state ) {
 					(long)xd->m_version, st->m_strip );
 	// it returns -1 and sets g_errno on error, line OOM
 	if ( contentLen == -1 ) {
-		if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );	
+		//if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );	
 		return sendErrorReply ( st , g_errno );
 	}
 
@@ -688,8 +696,8 @@ bool processLoop ( void *state ) {
 	
 
 	if ( ! queryHighlighting ) {
-		memcpy ( p , content , contentLen );
-		p += contentLen ;
+		sb.safeMemcpy ( content , contentLen );
+		//p += contentLen ;
 	}
 	else {
 		// get the content as xhtml (should be NULL terminated)
@@ -697,37 +705,38 @@ bool processLoop ( void *state ) {
 		if ( ! xml.set ( content , contentLen , false ,
 				 0 , false , TITLEREC_CURRENT_VERSION ,
 				 false , 0 ) ) { // niceness is 0
-			if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );
+			//if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );
 			return sendErrorReply ( st , g_errno );
 		}			
 		if ( ! ww.set ( &xml , true , 0 ) ) { // niceness is 0
-			if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );
+			//if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );
 			return sendErrorReply ( st , g_errno );
 		}
 		// sanity check
 		//if ( ! xd->m_wordsValid ) { char *xx=NULL;*xx=0; }
 		// how much space left in p?
-		avail = bufEnd - p;
+		//avail = bufEnd - p;
 
 		Matches m;
 		m.setQuery ( &qq );
 		m.addMatches ( &ww );
-		hilen = hi.set ( p , avail , &ww , &m ,
+		hilen = hi.set ( &sb , // p , avail , 
+				 &ww , &m ,
 				 false /*doStemming?*/ ,  
 				 st->m_clickAndScroll , 
 				 thisUrl /*base url for click & scroll*/);
-		p += hilen;
+		//p += hilen;
 		log(LOG_DEBUG, "query: Done highlighting cached page content");
 	}
 
 	// if it is content-type text, add a </pre>
-	if ( p + 6 < bufEnd && pre ) {
-		memcpy ( p , "</pre>" , 6 );
-		p += 6;
+	if ( pre ) { // p + 6 < bufEnd && pre ) {
+		sb.safeMemcpy ( "</pre>" , 6 );
+		//p += 6;
 	}
 
 	// calculate bufLen
-	long bufLen = p - buf;
+	//long bufLen = p - buf;
 
 	long ct = xd->m_contentType;
 
@@ -737,16 +746,19 @@ bool processLoop ( void *state ) {
 
 	if ( ct == CT_XML ) {
 		// encode the xml tags into &lt;tagname&gt; sequences
-		if ( !newbuf.htmlEncodeXmlTags ( buf , p-buf,0)){// niceness=0
-			if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );
+		if ( !newbuf.htmlEncodeXmlTags ( sb.getBufStart() ,
+						 sb.getLength(),
+						 0)){// niceness=0
+			//if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );
 			return sendErrorReply ( st , g_errno );
 		}
 		// free out buffer that we alloc'd before returning since this
 		// should have copied it into another buffer
-		if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );	
+		//if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );	
 		// reassign
-		buf    = newbuf.getBufStart();
-		bufLen = newbuf.length();
+		//buf    = newbuf.getBufStart();
+		//bufLen = newbuf.length();
+		sb.stealBuf ( &newbuf );
 	}
 
 	// now encapsulate it in html head/tail and send it off
@@ -763,14 +775,18 @@ bool processLoop ( void *state ) {
 	mdelete ( st , sizeof(State2) , "PageGet1" );
 	delete (st);
 
-	bool status = g_httpServer.sendDynamicPage (s,buf,bufLen,-1,false,
+	bool status = g_httpServer.sendDynamicPage (s,
+						    //buf,bufLen,
+						    sb.getBufStart(),
+						    sb.getLength(),
+						    -1,false,
 						    contentType,
 						     -1, NULL, "utf8" );
 	// free out buffer that we alloc'd before returning since this
 	// should have copied it into another buffer
 
-	if      ( ct == CT_XML ) newbuf.purge();
-	else if ( buf          ) mfree ( buf , bufMaxSize , "PageGet2" );
+	//if      ( ct == CT_XML ) newbuf.purge();
+	//else if ( buf          ) mfree ( buf , bufMaxSize , "PageGet2" );
 	
 	// and convey the status
 	return status;

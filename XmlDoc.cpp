@@ -26430,11 +26430,13 @@ char *XmlDoc::getHighlightedSummary ( ) {
 
 	if ( ! m_langIdValid ) { char *xx=NULL;*xx=0; }
 
-	char tt[5000];
+	//char tt[5000];
 	Highlight hi;
+	SafeBuf hb;
 	// highlight the query in it
-	long hlen = hi.set ( tt , 
-			     4999 ,
+	hi.set ( &hb,
+			     //tt , 
+			     //4999 ,
 			     sum, 
 			     sumLen,
 			     m_langId,
@@ -26448,8 +26450,9 @@ char *XmlDoc::getHighlightedSummary ( ) {
 			     m_niceness );
 
 	// store into our safebuf then
-	m_finalSummaryBuf.safeMemcpy ( tt , hlen + 1 );
+	m_finalSummaryBuf.safeMemcpy ( &hb );//tt , hlen + 1 );
 	m_finalSummaryBufValid = true;
+	m_finalSummaryBuf.nullTerm();
 
 	char *fsum = m_finalSummaryBuf.getBufStart();
 	if ( ! fsum ) fsum = (char *)0x01;

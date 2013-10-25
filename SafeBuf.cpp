@@ -2514,6 +2514,9 @@ bool SafeBuf::decodeJSON ( long niceness ) {
 
 // . this should support the case when the src and dst buffers are the same!
 //   so decodeJSONToUtf8() function below will work
+// . this is used by xmldoc.cpp to PARTIALLY decode a json buf so we do not
+//   index letters in escapes like \n \r \f \t \uxxxx \\ \/
+// . SO we do keep \" 
 bool SafeBuf::safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness) {
 
 	// how much space to reserve for the copy?
@@ -2687,11 +2690,13 @@ bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
 			*dst++ = '\\';
 			continue;
 		}
-		//if ( *src == '\/' ) {
-		//	*dst++ = '\\';
-		//	*dst++ = '/';
-		//	continue;
-		//}
+		// mdw: why was this commented out?
+		// we converted '\/' above to a single / so we must undo here
+		if ( *src == '/' ) {
+			*dst++ = '\\';
+			*dst++ = '/';
+			continue;
+		}
 
 		*dst++ = *src;
 

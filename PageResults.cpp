@@ -1515,8 +1515,8 @@ bool printInlinkText ( SafeBuf &sb , Msg20Reply *mr , SearchInput *si ,
 		if ( ! si->m_doQueryHighlighting && ! si->m_xml ) continue;
 		char *str   = k-> ptr_linkText;
 		long strLen = k->size_linkText;
-		char tt[1024*3];
-		char *ttend = tt + 1024*3;
+		//char tt[1024*3];
+		//char *ttend = tt + 1024*3;
 		char *frontTag = 
 		     "<font style=\"color:black;background-color:yellow\">" ;
 		char *backTag = "</font>";
@@ -1525,8 +1525,9 @@ bool printInlinkText ( SafeBuf &sb , Msg20Reply *mr , SearchInput *si ,
 			backTag  = "</b>";
 		}
 		Highlight hi;
-		long hlen = hi.set ( tt , 
-				ttend - tt , 
+		SafeBuf hb;
+		long hlen = hi.set ( &hb,//tt , 
+				     //ttend - tt , 
 				str, 
 				strLen , 
 				mr->m_language, // docLangId
@@ -1573,7 +1574,10 @@ bool printInlinkText ( SafeBuf &sb , Msg20Reply *mr , SearchInput *si ,
 			// inc it
 			inlinkId++;
 			// encode it for xml
-			if ( !sb.htmlEncode ( tt,hlen,false)) return false;
+			if ( !sb.htmlEncode ( hb.getBufStart(),
+					      hb.length(),
+					      false)) 
+				return false;
 			sb.safePrintf("\"/>\n");
 			continue;
 		}
@@ -1604,7 +1608,7 @@ bool printInlinkText ( SafeBuf &sb , Msg20Reply *mr , SearchInput *si ,
 			      //k->ptr_urlBuf);
 			      ,si->m_cr->m_coll
 			      ,k->m_docId);
-		if ( ! sb.safeMemcpy(tt,hlen) ) return false;
+		if ( ! sb.safeMemcpy(&hb) ) return false;
 		long hostLen = 0;
 		char *host = getHostFast(k->ptr_urlBuf,&hostLen,NULL);
 		sb.safePrintf("</td><td>");
@@ -1871,8 +1875,8 @@ static int printResult ( SafeBuf &sb,
 
 	long hlen;
 	//copy all summary and title excerpts for this result into here
-	char tt[1024*32];
-	char *ttend = tt + 1024*32;
+	//char tt[1024*32];
+	//char *ttend = tt + 1024*32;
 	char *frontTag = 
 		"<font style=\"color:black;background-color:yellow\">" ;
 	char *backTag = "</font>";
@@ -1882,9 +1886,11 @@ static int printResult ( SafeBuf &sb,
 	}
 	long cols = 80;
 	if ( si->m_xml ) sb.safePrintf("\t\t<title><![CDATA[");
+	SafeBuf hb;
 	if ( str && strLen && si->m_doQueryHighlighting ) {
-		hlen = hi.set ( tt , 
-				ttend - tt , 
+		hlen = hi.set ( &hb,
+				//tt , 
+				//ttend - tt , 
 				str, 
 				strLen , 
 				mr->m_language, // docLangId
@@ -1897,7 +1903,10 @@ static int printResult ( SafeBuf &sb,
 				0,
 				0 ); // niceness
 		//if (!sb.utf8Encode2(tt, hlen)) return false;
-		if ( ! sb.brify ( tt,hlen,0,cols) ) return false;
+		if ( ! sb.brify ( hb.getBufStart(),
+				  hb.getLength(),
+				  0,
+				  cols) ) return false;
 	}
 	else if ( str && strLen ) {
 		// determine if TiTle wraps, if it does add a <br> count for
