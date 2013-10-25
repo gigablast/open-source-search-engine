@@ -1404,10 +1404,6 @@ bool Rdb::dumpCollLoop ( ) {
 			     m_pc           ,  // DiskPageCache ptr
 			     maxFileSize    ,
 			     this           )) {// for setting m_needsToSave
-		// we have our own flag here since m_dump::m_isDumping gets
-		// set to true between collection dumps, RdbMem.cpp needs
-		// a flag that doesn't do that... see RdbDump.cpp
-		m_inDumpLoop = true;
 		return false;
 	}
 	// loop back up since we did not block

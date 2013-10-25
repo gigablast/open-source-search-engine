@@ -4141,7 +4141,15 @@ long getDirtyPoints ( char *s , long slen , long niceness , char *url ) {
 	///
 	long numDirty2 = sizeof(s_dirtyWordsPart2) / sizeof(Needle);
 
-	//numDirty2 = 0;
+	// . disable this for now. most of these are phrases and they
+	//   will not be detected.
+	// . TODO: hash the dirty words and phrases and just lookup
+	//   words in that table like we do for isStopWord(), but use
+	//   isDirtyWord(). Then replace the code is Speller.cpp
+	//   with isDirtyUrl() which will split the string into words
+	//   and call isDirtyWord() on each one. also use bi and tri grams
+	//   in the hash table.
+	numDirty2 = 0;
 
 	getMatches2 ( s_dirtyWordsPart2 ,
 		      numDirty2     ,

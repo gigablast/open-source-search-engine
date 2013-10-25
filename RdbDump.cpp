@@ -161,6 +161,14 @@ bool RdbDump::set ( char     *coll          ,
 	// keep a total count for reporting when done
 	m_totalPosDumped = 0;
 	m_totalNegDumped = 0;
+
+	// we have our own flag here since m_dump::m_isDumping gets
+	// set to true between collection dumps, RdbMem.cpp needs
+	// a flag that doesn't do that... see RdbDump.cpp.
+	// this was in Rdb.cpp but when threads were turned off it was
+	// NEVER getting set and resulted in corruption in RdbMem.cpp.
+	m_rdb->m_inDumpLoop = true;
+
 	// . start dumping the tree 
 	// . return false if it blocked
 	if ( ! dumpTree ( false ) ) return false;
