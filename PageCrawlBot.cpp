@@ -1961,7 +1961,7 @@ static class HelpItem s_his[] = {
 	{"repeat","Specify number of days as floating point to "
 	 "recrawl the pages. Set to 0.0 to NOT repeat the crawl."},
 
-	{"delay","Specify delay in milliseconds between urls from the "
+	{"wait","Wait this many milliseconds between crawling urls from the "
 	 "same IP address."},
 
 	{"deleteCrawl","Same as delete."},
@@ -2760,6 +2760,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      "\"maxCrawlRounds\":%li,\n"
 				      "\"obeyRobots\":%li,\n"
 				      "\"repeatCrawl\":%f,\n"
+				      "\"crawlWaitMS\":%li,\n"
 				      "\"onlyProcessIfNew\":%li,\n"
 				      //,cx->m_coll
 				      , cx->m_diffbotCrawlName.getBufStart()
@@ -2781,6 +2782,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      , (long)cx->m_maxCrawlRounds
 				      , (long)cx->m_useRobotsTxt
 				      , cx->m_collectiveRespiderFrequency
+				      , cx->m_collectiveSpiderWait
 				      , (long)cx->m_diffbotOnlyProcessIfNew
 				      );
 			sb.safePrintf("\"seeds\":\"");
@@ -3205,6 +3207,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			urtNo  = " checked";
 		}
 		
+		char *isNewYes = "";
+		char *isNewNo  = " checked";
+		if ( cr->m_diffbotOnlyProcessIfNew ) {
+			isNewYes = " checked";
+			isNewNo  = "";
+		}
+
 		char *ppp = cr->m_diffbotPageProcessPattern.getBufStart();
 		if ( ! ppp ) ppp = "";
 		char *notifEmail = cr->m_notifyEmail.getBufStart();
@@ -3264,6 +3273,25 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</td><td>"
 			      "<input type=text name=pageProcessPattern "
 			      "size=20 value=\"%s\"> "
+			      "<input type=submit name=submit value=OK>"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Only Process If New:</b> "
+			      "</td><td>"
+			      "<input type=radio name=onlyProcessNew "
+			      "value=1%s> yes &nbsp; "
+			      "<input type=radio name=onlyProcessNew "
+			      "value=0%s> no &nbsp; "
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Crawl Wait (ms):</b> "
+			      "</td><td>"
+			      "<input type=text name=wait "
+			      "size=9 value=%li> "
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
 			      "</tr>"
@@ -3349,6 +3377,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , cr->m_collectiveRespiderFrequency
 
 			      , ppp
+
+			      , isNewYes
+			      , isNewNo
+			      
+			      , cr->m_collectiveSpiderWait
+
 
 			      , cr->m_maxToCrawl 
 			      , cr->m_maxToProcess
@@ -4308,7 +4342,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_needsSave = 1;
 	}
 
-	long crawlWait = hr->getLong("delay",-1);
+	long crawlWait = hr->getLong("wait",-1);
 	if ( crawlWait >= 0 ) {
 		cr->m_collectiveSpiderWait = crawlWait;
 	}
