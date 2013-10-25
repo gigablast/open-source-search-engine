@@ -392,9 +392,9 @@ void handleRequest8b ( UdpSlot *slot, long netnice ) {
 	long niceness = (long)*p   ; p++;
 	bool useCanonicalName =  *p; p++;
 	// coll
-	char *coll    = p;
-	long  collLen = gbstrlen(coll);
-	p += collLen + 1;
+	//char *coll    = p;
+	//long  collLen = gbstrlen(coll);
+	//p += collLen + 1;
 	// url
 	char *url     = p;
 	long  urlLen  = gbstrlen(url);
@@ -424,8 +424,8 @@ void handleRequest8b ( UdpSlot *slot, long netnice ) {
 	st8b->m_url.setIp(ip);
 	// call the local msg8b to get the site rec
 	if ( ! st8b->m_msg8b.getCatRec ( &st8b->m_url,
-					 coll,
-					 collLen,
+					 NULL,//coll,
+					 0,//collLen,
 					 useCanonicalName,
 					 niceness,
 					 &st8b->m_catrec,

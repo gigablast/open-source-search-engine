@@ -893,6 +893,11 @@ CollectionRec *Collectiondb::getRec ( char *coll , long collLen ) {
 }
 
 CollectionRec *Collectiondb::getRec ( collnum_t collnum) { 
+	if ( collnum >= m_numRecs || collnum < 0 ) {
+		log("colldb: collnum %li > numrecs = %li",
+		    (long)collnum,(long)m_numRecs);
+		return NULL;
+	}
 	return m_recs[collnum]; 
 }
 

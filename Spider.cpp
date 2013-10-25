@@ -4001,7 +4001,7 @@ void doneSendingNotification ( void *state ) {
 		respiderFreq = 0.0;
 	}
 
-	long seconds = respiderFreq * 24*3600;
+	long seconds = (long)(respiderFreq * 24*3600);
 	// add 1 for lastspidertime round off errors so we can be assured
 	// all spiders have a lastspidertime LESS than the new
 	// m_spiderRoundStartTime we set below.
@@ -8749,6 +8749,12 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 				     to_lower_a(ext[3]) == 'g' )
 					goto gotOne;
 			}
+			// two letter extensions
+			else if ( ext[1] == '.' ) {
+				if ( to_lower_a(ext[2]) == 'g' &&
+				     to_lower_a(ext[3]) == 'z' )
+					goto gotOne;
+			}
 			// check for ".css?" substring
 			special = strstr(url,".css?");
 			if ( special ) goto gotOne;
@@ -10040,6 +10046,18 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	if ( slot->m_readBufSize != sizeof(collnum_t) ) { char *xx=NULL;*xx=0;}
 	collnum_t collnum = *(collnum_t *)request;
 	CollectionRec *cr = g_collectiondb.getRec(collnum);
+
+	// deleted from under us? i've seen this happen
+	if ( ! cr ) {
+		log("spider: c1: coll deleted returning empty reply");
+		g_udpServer.sendReply_ass ( "", // reply
+					    0, 
+					    0 , // alloc
+					    0 , //alloc size
+					    slot );
+		return;
+	}
+
 
 	// while we are here update CrawlInfo::m_nextSpiderTime
 	// to the time of the next spider request to spider.

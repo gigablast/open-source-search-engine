@@ -733,8 +733,10 @@ public:
 	void sendBackDump2 ( ) ;
 	bool readDataFromRdb ( ) ;
 	bool sendList ( ) ;
-	void printSpiderdbList ( RdbList *list , SafeBuf *sb ) ;
-	void printTitledbList ( RdbList *list , SafeBuf *sb );
+	void printSpiderdbList ( RdbList *list , SafeBuf *sb ,
+				 char **lastKeyPtr ) ;
+	void printTitledbList ( RdbList *list , SafeBuf *sb ,
+				char **lastKeyPtr );
 
 	char m_fmt;
 	Msg4 m_msg4;
@@ -923,6 +925,10 @@ bool StateCD::readDataFromRdb ( ) {
 	// top:
 	// launch one request to each shard
 	for ( long i = 0 ; i < g_hostdb.m_numShards ; i++ ) {
+		// reset each one
+		m_lists[i].freeList();
+		// if last list was exhausted don't bother
+		if ( ! m_needMore[i] ) continue;
 		// count it
 		m_numRequests++;
 		// this is the least nice. crawls will yield to it mostly.
@@ -935,8 +941,6 @@ bool StateCD::readDataFromRdb ( ) {
 			sk = (char *)&m_titledbStartKeys[i];
 		// get host
 		Host *h = g_hostdb.getLiveHostInShard(i);
-		// reset each one
-		m_lists[i].freeList();
 		// msg0 uses multicast in case one of the hosts in a shard is
 		// dead or dies during this call.
 		if ( ! m_msg0s[i].getList ( h->m_hostId , // use multicast
@@ -1055,28 +1059,33 @@ bool StateCD::sendList ( ) {
 		//if ( cr->m_diffbotFormat.length() <= 0 ) format = NULL;
 		//char *format = NULL;
 
-		char *ek = list->getLastKey();
+		// this cores because msg0 does not transmit lastkey
+		//char *ek = list->getLastKey();
+
+		char *lastKeyPtr = NULL;
 
 		// now print the spiderdb list out into "sb"
 		if ( m_rdbId == RDB_SPIDERDB ) {
 			// print SPIDERDB list into "sb"
-			printSpiderdbList ( list , &sb );
+			printSpiderdbList ( list , &sb , &lastKeyPtr );
 			//  update spiderdb startkey for this shard
-			KEYSET((char *)&m_spiderdbStartKeys[i],ek,
+			KEYSET((char *)&m_spiderdbStartKeys[i],lastKeyPtr,
 			       sizeof(key128_t));
 			// advance by 1
 			m_spiderdbStartKeys[i] += 1;
 		}
 
-		if ( m_rdbId == RDB_TITLEDB ) {
+		else if ( m_rdbId == RDB_TITLEDB ) {
 			// print TITLEDB list into "sb"
-			printTitledbList ( list , &sb );
+			printTitledbList ( list , &sb , &lastKeyPtr );
 			//  update titledb startkey for this shard
-			KEYSET((char *)&m_titledbStartKeys[i],ek,
+			KEYSET((char *)&m_titledbStartKeys[i],lastKeyPtr,
 			       sizeof(key_t));
 			// advance by 1
 			m_titledbStartKeys[i] += 1;
 		}
+
+		else { char *xx=NULL;*xx=0; }
 
 		// figure out why we do not get the full list????
 		//if ( list->m_listSize >= 0 ) { // m_minRecSizes ) {
@@ -1247,7 +1256,7 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 	//if ( st->m_socket->m_sendBuf ) return;
 }
 
-void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb ) {
+void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 	// declare these up here
 	SpiderRequest *sreq = NULL;
 	SpiderReply   *srep = NULL;
@@ -1264,6 +1273,8 @@ void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb ) {
 	for ( ; ! list->isExhausted() ; list->skipCurrentRec() ) {
 		// this record is either a SpiderRequest or SpiderReply
 		char *rec = list->getCurrentRec();
+		// save it
+		*lastKeyPtr = rec;
 		// we encounter the spiderreplies first then the
 		// spiderrequests for the same url
 		if ( g_spiderdb.isSpiderReply ( (key128_t *)rec ) ) {
@@ -1409,7 +1420,7 @@ void StateCD::printSpiderdbList ( RdbList *list , SafeBuf *sb ) {
 
 
 
-void StateCD::printTitledbList ( RdbList *list , SafeBuf *sb ) {
+void StateCD::printTitledbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 
 	XmlDoc xd;
 
@@ -1419,6 +1430,8 @@ void StateCD::printTitledbList ( RdbList *list , SafeBuf *sb ) {
 	for ( ; ! list->isExhausted() ; list->skipCurrentRec() ) {
 		// this record is either a SpiderRequest or SpiderReply
 		char *rec = list->getCurrentRec();
+		// save it
+		*lastKeyPtr = NULL;
 		// skip ifnegative
 		if ( (rec[0] & 0x01) == 0x00 ) continue;
 		// reset first since set2() can't call reset()
@@ -2280,7 +2293,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			if ( cr ) cr->m_spideringEnabled = 1;
 		}
 		// add a new collection by default
-		if ( ! cr ) 
+		if ( ! cr && name && name[0] ) 
 			cr = addNewDiffbotColl ( collName , token , name );
 		// problem?
 		if ( ! cr ) {
@@ -2312,8 +2325,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// collectionrec must be non-null at this point. i.e. we added it
 	if ( ! cr ) {
-		log("crawlbot: no collection found");
-		return sendErrorReply2(socket,fmt,"no collection found");
+		//log("crawlbot: no collection found. need to add a crawl");
+		return sendErrorReply2(socket,fmt,"no crawls found. add one.");
 	}
 
 	//char *spots = hr->getString("spots",NULL,NULL);
