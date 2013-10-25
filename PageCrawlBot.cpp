@@ -1961,6 +1961,13 @@ static class HelpItem s_his[] = {
 	{"repeat","Specify number of days as floating point to "
 	 "recrawl the pages. Set to 0.0 to NOT repeat the crawl."},
 
+	{"delay","Specify delay in milliseconds between urls from the "
+	 "same IP address."},
+
+	{"deleteCrawl","Same as delete."},
+	{"resetCrawl","Same as delete."},
+	{"pauseCrawl","Same as pause."},
+	{"repeatCrawl","Same as repeat."},
 
 	{"seeds","Whitespace separated list of URLs used to seed the crawl. "
 	 "Will only follow outlinks on the same domain of seed URLs."
@@ -4131,7 +4138,7 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 		cr->m_regExs[i].purge();
 		cr->m_spiderPriorities[i] = 0;
 		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = 250; // 250 ms for now
+		cr->m_spiderIpWaits     [i] = cr->m_collectiveSpiderWait;//250
 		cr->m_spiderIpMaxSpiders[i] = 3; // keep it respectful
 		cr->m_spidersEnabled    [i] = 1;
 		cr->m_spiderFreqs       [i] =cr->m_collectiveRespiderFrequency;
@@ -4300,6 +4307,12 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_collectiveRespiderFrequency = respider;
 		cr->m_needsSave = 1;
 	}
+
+	long crawlWait = hr->getLong("delay",-1);
+	if ( crawlWait >= 0 ) {
+		cr->m_collectiveSpiderWait = crawlWait;
+	}
+	
 	long onlyProcessNew = hr->getLong("onlyProcessNew",-1);
 	if ( onlyProcessNew != -1 ) {
 		cr->m_diffbotOnlyProcessIfNew = onlyProcessNew;

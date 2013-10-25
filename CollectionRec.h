@@ -418,6 +418,7 @@ class CollectionRec {
 	SafeBuf m_notifyUrl;
 	// the default respider frequency for all rows in url filters
 	float   m_collectiveRespiderFrequency;
+	long    m_collectiveSpiderWait;
 	// an alternate name for the collection. we tend to create
 	// collection names as a random sequence of hex digits. this
 	// will allow a user to give them an alternate name.

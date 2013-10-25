@@ -8257,6 +8257,16 @@ void Parms::init ( ) {
 	m->m_units = "days";
 	m++;
 
+	m->m_title = "collective spider wait (ms)";
+	m->m_cgi   = "csw";
+	m->m_xml   = "collectiveSpiderWait";
+	m->m_off   = (char *)&cr.m_collectiveSpiderWait - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "250"; // 250 ms
+	m->m_page  = PAGE_NONE;
+	m->m_units = "milliseconds";
+	m++;
+
 	m->m_cgi   = "dbppp";
 	m->m_xml   = "diffbotPageProcessPattern";
 	m->m_off   = (char *)&cr.m_diffbotPageProcessPattern - x;
