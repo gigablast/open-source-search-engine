@@ -391,9 +391,9 @@ void handleRequest8b ( UdpSlot *slot, long netnice ) {
 	long niceness = (long)*p   ; p++;
 	bool useCanonicalName =  *p; p++;
 	// coll
-	char *coll    = p;
-	long  collLen = gbstrlen(coll);
-	p += collLen + 1;
+	//char *coll    = p;
+	//long  collLen = gbstrlen(coll);
+	//p += collLen + 1;
 	// url
 	char *url     = p;
 	long  urlLen  = gbstrlen(url);
