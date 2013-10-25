@@ -2685,7 +2685,12 @@ bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
 			*dst++ = 'f';
 			continue;
 		}
-		if ( *src == '\\' ) {
+		// do not decode the \ if it's in \" because we did not
+		// decode the \" back into " above because we can't afford
+		// to lose that info and for indexing purposes it does not
+		// index extra crap (like the 'n' in \n), 
+		// so it's ok to not decode it.
+		if ( *src == '\\' && src[1] != '\"' && src[1] !='/' ) {
 			*dst++ = '\\';
 			*dst++ = '\\';
 			continue;
