@@ -101,6 +101,8 @@ void CollectionRec::reset() {
 	m_replies = 0;
 }
 
+CollectionRec *g_cr = NULL;
+
 // . load this data from a conf file
 // . values we do not explicitly have will be taken from "default",
 //   collection config file. if it does not have them then we use

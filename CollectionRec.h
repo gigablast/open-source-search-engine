@@ -97,6 +97,11 @@ class CrawlInfo {
 	// this is non-zero if urls are available to be spidered right now.
 	long m_hasUrlsReadyToSpider;
 
+	// last time we launched a spider. 0 on startup.
+	time_t m_lastSpiderAttempt;
+	// time we had or might have had a url available for spidering
+	time_t m_lastSpiderCouldLaunch;
+
 	// have we sent out email/webhook notifications crawl has no urls
 	// currently in the ready queue (doledb) to spider?
 	char m_sentCrawlDoneAlert;
