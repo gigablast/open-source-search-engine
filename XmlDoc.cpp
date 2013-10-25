@@ -11788,7 +11788,7 @@ bool isAllowed2 ( Url   *url            ,
 		if ( ! is_digit ( *v ) && *v != '.' ) goto urlLoop;
 		// get this. multiply crawl delay by x1000 to be in 
 		// milliseconds/ms
-		long long vv = atof(v) * 1000LL;
+		long long vv = (long long)(atof(v) * 1000LL);
 		// truncate to 0x7fffffff
 		if      ( vv > 0x7fffffff ) *crawlDelay = 0x7fffffff;
 		else if ( vv < 0          ) *crawlDelay = -1;

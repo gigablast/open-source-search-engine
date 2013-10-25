@@ -2163,7 +2163,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		// this was deleted... so is invalid now
 		name = NULL;
 		// no longer a delete function, we need to set "name" below
-		delColl = NULL;
+		delColl = false;//NULL;
 	}
 
 	// if name is missing default to name of first existing
@@ -4328,11 +4328,16 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	if ( respider >= 0.0 ) {
 		// if not 0, then change this by the delta
 		if ( cr->m_spiderRoundStartTime ) {
+			// convert from days into seconds
+			float rfOld = cr->m_collectiveRespiderFrequency;
+			float rfNew = respider;
+			// 86400 seconds in a day
+			long secondsOld = (long)(rfOld * 86400);
+			long secondsNew = (long)(rfNew * 86400);
 			// remove old one.
-			cr->m_spiderRoundStartTime -= 
-				cr->m_collectiveRespiderFrequency;
+			cr->m_spiderRoundStartTime -= secondsOld;
 			// add in new one
-			cr->m_spiderRoundStartTime += respider;
+			cr->m_spiderRoundStartTime += secondsNew;
 		}
 		// if 0 that means NO recrawling
 		if ( respider == 0.0 ) {
