@@ -4173,7 +4173,7 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 		cr->m_spiderPriorities[i] = 0;
 		cr->m_maxSpidersPerRule [i] = 10;
 		cr->m_spiderIpWaits     [i] = cr->m_collectiveSpiderWait;//250
-		cr->m_spiderIpMaxSpiders[i] = 3; // keep it respectful
+		cr->m_spiderIpMaxSpiders[i] = 7; // keep it respectful
 		cr->m_spidersEnabled    [i] = 1;
 		cr->m_spiderFreqs       [i] =cr->m_collectiveRespiderFrequency;
 		cr->m_spiderDiffbotApiUrl[i].purge();
