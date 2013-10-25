@@ -73,8 +73,9 @@ char s_termList[1024];
 // . content must be NULL terminated
 // . if "useAnchors" is true we do click and scroll
 // . if "isQueryTerms" is true, we do typical anchors in a special way
-long Highlight::set ( char        *buf          ,
-		      long         bufLen       ,
+long Highlight::set ( SafeBuf *sb,
+		      //char        *buf          ,
+		      //long         bufLen       ,
 		      char        *content      ,
 		      long         contentLen   ,
 		      // primary language of the document (for synonyms)
@@ -119,8 +120,9 @@ long Highlight::set ( char        *buf          ,
 	// store
 	m_numMatches = matches.getNumMatches();
 
-	return set ( buf         ,
-		     bufLen      , 
+	return set ( sb , 
+		     //buf         ,
+		     //bufLen      , 
 		     &words      ,
 		     &matches    ,
 		     doStemming  ,
@@ -133,8 +135,9 @@ long Highlight::set ( char        *buf          ,
 }
 
 // New version
-long Highlight::set ( char        *buf        ,
-		      long         bufLen     ,
+long Highlight::set ( SafeBuf *sb ,
+		      //char        *buf        ,
+		      //long         bufLen     ,
 		      Words       *words      ,
 		      Matches     *matches    ,
 		      bool         doStemming ,
@@ -162,18 +165,20 @@ long Highlight::set ( char        *buf        ,
 	if ( m_frontTag ) m_frontTagLen = gbstrlen ( frontTag );
 	if ( m_backTag  ) m_backTagLen  = gbstrlen ( backTag  );
 	// point to buffer to store highlighted text into
-	m_buf    = buf;
-	m_bufLen = bufLen;
-	m_bufPtr = buf;
+	//m_buf    = buf;
+	//m_bufLen = bufLen;
+	//m_bufPtr = buf;
+	m_sb = sb;
 	// save room for terminating \0
-	m_bufEnd = m_buf + m_bufLen - 1;
+	//m_bufEnd = m_buf + m_bufLen - 1;
 
 	if ( ! highlightWords ( words, matches, q ) ) return 0;
 
 	// null terminate
-	*m_bufPtr = '\0';
+	//*m_bufPtr = '\0';
+	m_sb->nullTerm();
 	// return the length
-	return m_bufPtr - m_buf;
+	return m_sb->length();//m_bufPtr - m_buf;
 }
 
 bool Highlight::highlightWords ( Words *words , Matches *m, Query *q ) {
@@ -228,6 +233,7 @@ bool Highlight::highlightWords ( Words *words , Matches *m, Query *q ) {
 		endHead = false;
 		endHtml = false;
 		// bail now if out of room
+		/*
 		if ( m_bufPtr + MAX_URL_LEN + 1024 + wlen >= m_bufEnd ) {
 			// don't spam the logs
 			static long long s_lastTime = 0;
@@ -238,6 +244,7 @@ bool Highlight::highlightWords ( Words *words , Matches *m, Query *q ) {
 			s_lastTime = now;
 			return true;
 		}
+		*/
 		if ( (words->getTagId(i) ) == TAG_TITLE ) { //<TITLE>
 			if ( words->isBackTag(i) ) inTitle = false;
 			else inTitle = true;
@@ -282,8 +289,9 @@ bool Highlight::highlightWords ( Words *words , Matches *m, Query *q ) {
 				//else frontTag = s_frontTags [ p[i] % 10];
 				else frontTag =s_frontTags[mat->m_colorNum%10];
 				// OK...this is UTF-8 output, and ASCII Text
-				strcpy ( m_bufPtr , frontTag );
-				m_bufPtr += frontTagLen;
+				//strcpy ( m_bufPtr , frontTag );
+				//m_bufPtr += frontTagLen;
+				m_sb->safeStrcpy ( (char *)frontTag );
 				//log(LOG_DEBUG, 
 				//    "Highlight: starting phrase %d at word %d\n",
 				//    p[i], i);
@@ -296,8 +304,9 @@ bool Highlight::highlightWords ( Words *words , Matches *m, Query *q ) {
 		else if ( endHead ) {
 			// include the tags style sheet immediately before
 			// the closing </TITLE> tag
-			memcpy( m_bufPtr, s_styleSheet, s_styleSheetLen );
-			m_bufPtr += s_styleSheetLen;
+			//memcpy( m_bufPtr, s_styleSheet, s_styleSheetLen );
+			m_sb->safeMemcpy( s_styleSheet , s_styleSheetLen );
+			//m_bufPtr += s_styleSheetLen;
 		}
 		//else if ( endHtml ) {
 		//	;
@@ -326,14 +335,16 @@ bool Highlight::highlightWords ( Words *words , Matches *m, Query *q ) {
 		// write the alnum word
 		//m_bufPtr +=latin1ToUtf8(m_bufPtr, m_bufEnd-m_bufPtr,w, wlen);
 		// everything is utf8 now
-		memcpy ( m_bufPtr, w , wlen );
-		m_bufPtr += wlen;
+		//memcpy ( m_bufPtr, w , wlen );
+		//m_bufPtr += wlen;
+		m_sb->safeMemcpy ( w , wlen );
 
 		// back tag
 		if ( i == backTagi-1 ) {
 			// store the back tag
-			memcpy ( m_bufPtr , backTag , backTagLen );
-			m_bufPtr += backTagLen ;
+			//memcpy ( m_bufPtr , backTag , backTagLen );
+			//m_bufPtr += backTagLen ;
+			m_sb->safeMemcpy ( (char *)backTag , backTagLen );
 			//log(LOG_DEBUG, 
 			//    "Highlight: ending phrase %d at word %d\n",
 			//    p[i], i);

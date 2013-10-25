@@ -19,8 +19,9 @@ class Highlight {
 	// . we highlight Query "q" in "xml" as best as we can
 	// . store highlighted text into "buf"
 	// . return length stored into "buf"
-	long set ( char        *buf          ,
-		   long         bufLen       ,
+	long set ( //char        *buf          ,
+		   //long         bufLen       ,
+		  SafeBuf *sb,
 		   char        *content      ,
 		   long         contentLen   , 
 		   char         docLangId    ,
@@ -33,8 +34,9 @@ class Highlight {
 		   long         fieldCode    , // = 0     ,
 		   long         niceness    ) ;
 	
-	long set ( char        *buf        ,
-		   long         bufLen     ,
+	long set ( //char        *buf        ,
+		  //long         bufLen     ,
+		  SafeBuf *sb ,
 		   Words       *words      ,
 		   Matches     *matches    ,
 		   bool         doStemming ,
@@ -52,10 +54,11 @@ class Highlight {
 	bool highlightWords ( Words *words , Matches *m , Query *q=NULL );
 
 	// null terminate and store the highlighted content in m_buf
-	char    *m_buf ;
-	long     m_bufLen;
-	char    *m_bufPtr;
-	char    *m_bufEnd;
+	//char    *m_buf ;
+	//long     m_bufLen;
+	//char    *m_bufPtr;
+	//char    *m_bufEnd;
+	class SafeBuf *m_sb;
 
 	//Words    m_words;
 	Matches  m_matches;
