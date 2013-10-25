@@ -1050,8 +1050,10 @@ void processSleepWrapper ( int fd , void *state ) {
 	// skip autosave while sync in progress!
 	if ( g_process.m_suspendAutoSave ) return;
 
-	// need to have a clock unified with host #0
-	if ( ! isClockInSync() ) return;
+	// need to have a clock unified with host #0. i guess proxy
+	// does not sync with host #0 though
+	if ( ! isClockInSync() && ! g_hostdb.m_myHost->m_isProxy ) return;
+
 	// get time the day started
 	long now = getTimeGlobal();
 	// set this for the first time
