@@ -423,8 +423,8 @@ void handleRequest8b ( UdpSlot *slot, long netnice ) {
 	st8b->m_url.setIp(ip);
 	// call the local msg8b to get the site rec
 	if ( ! st8b->m_msg8b.getCatRec ( &st8b->m_url,
-					 coll,
-					 collLen,
+					 NULL,//coll,
+					 0,//collLen,
 					 useCanonicalName,
 					 niceness,
 					 &st8b->m_catrec,
