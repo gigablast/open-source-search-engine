@@ -2753,12 +2753,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			// if spiderdb is empty for this coll, then no url
 			// has been added to spiderdb yet.. either seed or spot
-			Rdb *rdb = g_spiderdb.getRdb();
-			RdbBase *base = rdb->getBase ( cx->m_collnum );
-			long recCount = 0;
-			if ( base ) recCount = base->getNumTotalRecs();
-			if ( recCount == 0 )
-				ss = "No urls are available to crawl.";
+			CrawlInfo *cg = &cx->m_globalCrawlInfo;
+			if ( cg->m_pageDownloadAttempts == 0 )
+				ss = "Crawl is initializing.";
 
 			CrawlInfo *ci = &cx->m_localCrawlInfo;
 			long sentAlert = (long)ci->m_sentCrawlDoneAlert;
