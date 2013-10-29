@@ -2283,7 +2283,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 					 0              , // max cache age
 					 0              , // startFileNum
 					 -1             , // numFiles (all)
-					 this           , // state 
+					 (void *)m_cr->m_collnum,//this//state
 					 gotSpiderdbListWrapper2 ,
 					 MAX_NICENESS   , // niceness
 					 true          )) // do error correct?
@@ -2570,7 +2570,18 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 }
 
 static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
-	SpiderColl *THIS = (SpiderColl *)state;
+
+	collnum_t collnum = (collnum_t)(long)state;
+
+	SpiderColl *THIS = g_spiderCache.getSpiderColl(collnum);
+
+	if ( ! THIS ) {
+		log("spider: lost1 collnum %li while scanning spiderdb",
+		    (long)collnum);
+		return;
+	}
+
+	//SpiderColl *THIS = (SpiderColl *)state;
 
 	// note its return
 	if ( g_conf.m_logDebugSpider )
@@ -2585,7 +2596,18 @@ static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
 }
 
 static void gotSpiderdbListWrapper2( void *state , RdbList *list , Msg5 *msg5){
-	SpiderColl *THIS = (SpiderColl *)state;
+
+	collnum_t collnum = (collnum_t)(long)state;
+
+	SpiderColl *THIS = g_spiderCache.getSpiderColl(collnum);
+
+	if ( ! THIS ) {
+		log("spider: lost2 collnum %li while scanning spiderdb",
+		    (long)collnum);
+		return;
+	}
+
+	//SpiderColl *THIS = (SpiderColl *)state;
 	// re-entry is true because we just got the msg5 reply
 	THIS->populateWaitingTreeFromSpiderdb ( true );
 }
@@ -2745,7 +2767,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 					0              , // max cache age
 					0              , // startFileNum
 					-1             , // numFiles (all)
-					this           , // state 
+					(void *)m_cr->m_collnum,//this,//state 
 					gotSpiderdbListWrapper ,
 					MAX_NICENESS   , // niceness
 					true          )) // do error correct?

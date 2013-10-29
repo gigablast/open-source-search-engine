@@ -783,6 +783,11 @@ bool Msg5::needsRecall ( ) {
 	bool logIt;
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
 	RdbBase *base = getRdbBase ( m_rdbId , m_coll );
+	// if collection was deleted from under us, base will be NULL
+	if ( ! base && ! g_errno ) {
+		log("msg5: base lost for coll %s",m_coll);
+		return false;
+	}
 	// sanity check
 	if ( ! base && ! g_errno ) { char *xx=NULL;*xx=0; }
 	// . return true if we're done reading
