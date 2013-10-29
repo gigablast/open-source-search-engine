@@ -2814,9 +2814,15 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			      KEYSTR(&m_nextKey,sizeof(key128_t) ));
 		sb.safePrintf("endkey=%s",
 			      KEYSTR(&m_endKey,sizeof(key128_t) ));
+		// get waiting key info
+		long firstIp = m_waitingTreeKey.n0 & 0xffffffff;
 		log("spider: strange corruption #1. there was an entry "
 		    "in the waiting tree, but spiderdb read was empty. "
-		    "%s",sb.getBufStart());
+		    "%s. deleting waitingtree key firstip=%s",
+		    sb.getBufStart(),
+		    iptoa(firstIp));
+		// delete the exact node #
+		m_waitingTree.deleteNode ( wn , false );
 	}
 	//char *xx=NULL;*xx=0; }
 

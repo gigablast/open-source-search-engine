@@ -1406,6 +1406,14 @@ bool Rdb::dumpCollLoop ( ) {
 			     this           )) {// for setting m_needsToSave
 		return false;
 	}
+
+	// error?
+	if ( g_errno ) {
+		log("rdb: error dumping = %s",mstrerror(g_errno));
+		// for now core out
+		char *xx=NULL;*xx=0;
+	}
+
 	// loop back up since we did not block
 	goto loop;
 }	

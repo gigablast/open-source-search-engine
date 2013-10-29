@@ -1698,12 +1698,6 @@ bool RdbTree::getList ( collnum_t collnum ,
 			// at least ignore it! let's RdbList::addRecord()
 			// core dump on us!
 			if ( (key[0] & 0x01) == 0x00 ) dataSize = 0;
-			// debug msg
-			//if ( m_dbname && m_dbname[0]=='t' && dataSize >= 4 )
-			//	logf(LOG_DEBUG,
-			//	     "getting node #%li with data ptr at %lx "
-			//	    "and data size of %li into a list.",
-			//	    node,m_data[node],dataSize);
 			// sanity check, break if 0 > titleRec > 100MB, 
 			// it's probably corrupt
 			//if (m_dbname && m_dbname[0]=='t' && dataSize >= 4 && 
@@ -1720,6 +1714,26 @@ bool RdbTree::getList ( collnum_t collnum ,
 					   "Fix the growList algo.",
 					   m_dbname,mstrerror(g_errno));
 			}
+			// debug msg for detecting tagdb corruption
+			/*
+			if ( m_dbname && 
+			     m_dbname[0]=='t' && 
+			     m_dbname[1] == 'a' && 
+			     dataSize >= 4 ) {
+				long back = dataSize + m_ks + 4;
+				char *rec = list->m_list+list->m_listSize-back;
+				Tag *tag = (Tag *)rec;
+				logf(LOG_DEBUG,
+				     "tree: "
+				     "getting node #%li with data ptr at %lu "
+				     "and data size of %li into a list.",
+				     node,(long)m_data[node],dataSize);
+				// detect tagdb corruption
+				if ( tag->m_bufSize < 0 ||
+				     tag->m_bufSize > 3000 ) {
+					char *xx=NULL;*xx=0; }
+			}
+			*/
 		}
 		// count negative and positive recs
 		//if ( ((m_keys[node].n0) & 0x01) == 0 ) numNeg++;

@@ -31048,7 +31048,7 @@ char **XmlDoc::getTitleBuf ( ) {
 	//HashTableX scoreTable;
 	//scoreTable.set(8,4,64,stbuf,2000,false,m_niceness,"xmlscores");
 	// scan each link in the link info
-	for ( Inlink *k = NULL; (k = info1->getNextInlink(k)) ; linkNum++) {
+	for ( Inlink *k = NULL; (k = info1->getNextInlink(k)) ; ) {
 		// do not breach
 		if ( linkNum >= 1000 ) break;
 		// is this inlinker internal?
@@ -31074,6 +31074,7 @@ char **XmlDoc::getTitleBuf ( ) {
 		if ( internal && ++internalCount >= 3 ) continue;
 		// it's good
 		bk[linkNum].m_score = 1;
+		linkNum++;
 		/*
 		// set into words
 		Words w; 

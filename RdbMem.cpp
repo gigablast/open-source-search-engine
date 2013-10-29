@@ -107,6 +107,10 @@ void *RdbMem::allocData ( char *key , long dataSize , collnum_t collnum ) {
 			if ( m_ptr2 - dataSize <= m_ptr1 ) return NULL;
 			// otherwise, grow downward
 			m_ptr2 -= dataSize;
+			// note it
+			//if ( m_ks == 16 )
+			//log("rdbmem: ptr2a=%lu size=%li",
+			//    (long)m_ptr2,dataSize);
 			return m_ptr2;
 		}
 		// . if it's growing up...
@@ -114,6 +118,10 @@ void *RdbMem::allocData ( char *key , long dataSize , collnum_t collnum ) {
 		if ( m_ptr2 + dataSize >= m_ptr1 ) return NULL;
 		// otherwise, grow downward
 		m_ptr2 += dataSize;
+		// note it
+		//if ( m_ks == 16 )
+		//log("rdbmem: ptr2b=%lu size=%li",
+		//    (long)m_ptr2-dataSize,dataSize);
 		return m_ptr2 - dataSize;
 	}
 	// . otherwise, use the primary mem
@@ -125,6 +133,9 @@ void *RdbMem::allocData ( char *key , long dataSize , collnum_t collnum ) {
 		m_ptr1 -= dataSize;
 		// are we at the 90% limit?
 		if ( m_ptr1 < m_90down ) m_is90PercentFull = true;
+		// note it
+		//if ( m_ks == 16 )
+		//log("rdbmem: ptr1a=%lu size=%li",(long)m_ptr1,dataSize);
 		// return the ptr
 		return m_ptr1;
 	}
@@ -135,6 +146,9 @@ void *RdbMem::allocData ( char *key , long dataSize , collnum_t collnum ) {
 	m_ptr1 += dataSize;
 	// are we at the 90% limit?
 	if ( m_ptr1 > m_90up ) m_is90PercentFull = true;
+	// note it
+	//if ( m_ks == 16 )
+	//log("rdbmem: ptr1b=%lu size=%li",(long)m_ptr1-dataSize,dataSize);
 	// return the ptr
 	return m_ptr1 - dataSize;
 }

@@ -3054,7 +3054,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      // printCrawlbotPage2(uploadResponse) 2display it
 			      //"<form method=post action=/crawlbot>"
 			      //"<input type=file name=spots size=40>"
-			      "<input type=text name=spots size=50>"
+			      "<input type=text name=spots size=50> "
 			      "<input type=submit name=submit value=OK>"
 			      "%s" // hidden tags
 			      //" &nbsp; &nbsp; <input type=checkbox "
@@ -3372,7 +3372,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      "<tr><td>"
-			      "Use Robots.txt when crawling? "
+			      "<b>Use Robots.txt when crawling?</b> "
 			      "</td><td>"
 			      "<input type=radio name=obeyRobots "
 			      "value=1%s> yes &nbsp; "
@@ -3382,7 +3382,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      "<tr><td>"
-			      "Restrict domain to seeds? "
+			      "<b>Restrict domain to seeds?</b> "
 			      "</td><td>"
 			      "<input type=radio name=restrictDomain "
 			      "value=1%s> yes &nbsp; "
