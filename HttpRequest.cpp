@@ -273,14 +273,20 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 		 m_reqBuf.safePrintf (
 			      "Content-Type: "
 			      "application/x-www-form-urlencoded\r\n");
-		 long contentLen = strlen(postData);
+	 }
+
+	 // we need this if doing a post even if postData is NULL
+	 if ( doPost ) {
+		 long contentLen = 0;
+		 if ( postData ) contentLen = strlen(postData);
 		 m_reqBuf.safePrintf ("Content-Length: %li\r\n", contentLen );
 		 m_reqBuf.safePrintf("\r\n");
-		 m_reqBuf.safePrintf("%s",postData);
+		 if ( postData ) m_reqBuf.safePrintf("%s",postData);
 		 // log it for debug
 		 //log("captch: %s",m_buf);
 	 }
-	 else {
+
+	 if ( ! postData ) {
 		 m_reqBuf.safePrintf("\r\n");
 	 }
 

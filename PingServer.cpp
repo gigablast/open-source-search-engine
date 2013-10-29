@@ -3103,6 +3103,15 @@ bool sendNotification ( EmailInfo *ei ) {
 	if ( url && url[0] ) {
 		log("build: sending url notification to %s for coll \"%s\"",
 		    url,crawl);
+		// make custom headers
+		SafeBuf custom;
+		custom.safePrintf ( "X-Crawl-Name: %s\r\n"
+				    // last \r\n is added in HttpRequest.cpp
+				    "X-Crawl-Status: %s"// \r\n" // hdrs
+				    
+				    , cr->m_diffbotCrawlName.getBufStart()
+				    , ei->m_spiderStatusMsg
+				    );
 		// GET request
 		if ( ! g_httpServer.getDoc ( url ,
 					     0 , // ip
@@ -3115,8 +3124,13 @@ bool sendNotification ( EmailInfo *ei ) {
 					     0, // proxyip
 					     0 , // proxyport
 					     10000, // maxTextDocLen
-					     10000 // maxOtherDocLen
-					     ) )
+					     10000, // maxOtherDocLen
+					     "Crawlbot/2.0", // user agent
+					     "HTTP/1.0", // proto
+					     true , // doPost
+					     NULL, // cookie
+					     custom.getBufStart(),
+					     NULL ) ) // fullRequest
 			ei->m_notifyBlocked++;
 	}
 
