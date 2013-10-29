@@ -4176,7 +4176,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( cr->m_maxCrawlRounds > 0 &&
 		     cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) {
 			cr->m_spiderStatus = SP_MAXROUNDS;
-			cr->m_spiderStatusMsg = "Hit maxCrawlRounds limit.";
+			cr->m_spiderStatusMsg = "Crawl has reached "
+				"maxCrawlRounds limit.";
 			// it'll send a SP_ROUNDDONE email first
 			// so no need to repeat it, but we do want to
 			// update the status msg
@@ -4188,7 +4189,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( cr->m_globalCrawlInfo.m_pageDownloadSuccesses >=
 		     cr->m_maxToCrawl ) {
 			cr->m_spiderStatus = SP_MAXTOCRAWL;
-			cr->m_spiderStatusMsg = "Hit maxToCrawl limit.";
+			cr->m_spiderStatusMsg = "Crawl has reached maxToCrawl "
+				"limit.";
 			sendNotificationForCollRec ( cr );
 			continue;
 		}
@@ -4197,7 +4199,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( cr->m_globalCrawlInfo.m_pageProcessSuccesses >=
 		     cr->m_maxToProcess ) {
 			cr->m_spiderStatus = SP_MAXTOPROCESS;
-			cr->m_spiderStatusMsg = "Hit maxToProcess limit.";
+			cr->m_spiderStatusMsg = "Crawl has reached "
+				"maxToProcess limit.";
 			sendNotificationForCollRec ( cr );
 			continue;
 		}

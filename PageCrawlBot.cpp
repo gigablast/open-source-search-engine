@@ -2726,7 +2726,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//if ( cx->m_collectionNameAlias.length() > 0 )
 			//	alias=cx->m_collectionNameAlias.getBufStart();
 			//long paused = 1;
-			char *ss = "In progress.";
+			char *ss = "Crawl in progress.";
 			if ( cx->m_spiderStatusMsg )
 				ss = cx->m_spiderStatusMsg;
 			// 0 means not to RE-crawl
@@ -2735,7 +2735,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			if ( cx->m_collectiveRespiderFrequency > 0.0 &&
 			     getTimeGlobal() < cx->m_spiderRoundStartTime ) {
 				long now = getTimeGlobal();
-				sprintf(tmp,"Spidering next round in %li "
+				sprintf(tmp,"Next crawl round to start in %li "
 					"seconds.",
 					cx->m_spiderRoundStartTime - now
 					);
@@ -2745,11 +2745,21 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			// were left and we are not recrawling!
 			if ( cx->m_collectiveRespiderFrequency == 0.0 &&
 			     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
-				ss = "Crawl has exhausted all urls and "
-					"repeatCrawl is set to 0.0.";
+				ss = "Crawl has completed and no "
+					"repeatCrawl is scheduled.";
 			}
 			if ( ! cx->m_spideringEnabled )
 				ss = "Crawl paused.";
+
+			// if spiderdb is empty for this coll, then no url
+			// has been added to spiderdb yet.. either seed or spot
+			Rdb *rdb = g_spiderdb.getRdb();
+			RdbBase *base = rdb->getBase ( cx->m_collnum );
+			long recCount = 0;
+			if ( base ) recCount = base->getNumTotalRecs();
+			if ( recCount == 0 )
+				ss = "No urls are available to crawl.";
+
 			CrawlInfo *ci = &cx->m_localCrawlInfo;
 			long sentAlert = (long)ci->m_sentCrawlDoneAlert;
 			if ( sentAlert ) sentAlert = 1;
