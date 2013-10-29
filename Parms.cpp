@@ -8257,14 +8257,14 @@ void Parms::init ( ) {
 	m->m_units = "days";
 	m++;
 
-	m->m_title = "collective spider wait (ms)";
-	m->m_cgi   = "csw";
-	m->m_xml   = "collectiveSpiderWait";
-	m->m_off   = (char *)&cr.m_collectiveSpiderWait - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "250"; // 250 ms
+	m->m_title = "collective crawl delay (seconds)";
+	m->m_cgi   = "ccd";
+	m->m_xml   = "collectiveCrawlDelay";
+	m->m_off   = (char *)&cr.m_collectiveCrawlDelay - x;
+	m->m_type  = TYPE_FLOAT;
+	m->m_def   = ".250"; // 250 ms
 	m->m_page  = PAGE_NONE;
-	m->m_units = "milliseconds";
+	m->m_units = "seconds";
 	m++;
 
 	m->m_cgi   = "dbppp";

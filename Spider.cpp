@@ -2599,7 +2599,11 @@ static void doledWrapper ( void *state ) {
 
 	long long now = gettimeofdayInMilliseconds();
 	long long diff = now - THIS->m_msg4Start;
-	log("spider: adding to doledb took %llims",diff);
+	// we add recs to doledb using msg1 to keep things fast because
+	// msg4 has a delay of 500ms in it. but even then, msg1 can take
+	// 6ms or more just because of load issues.
+	if ( diff > 10 ) 
+		log("spider: adding to doledb took %llims",diff);
 
 	// . we added a rec to doledb for the firstIp in m_waitingTreeKey, so
 	//   now go to the next node in the wait tree.
@@ -3960,8 +3964,9 @@ void doneSendingNotification ( void *state ) {
 	// sanity
 	if ( cr->m_spiderStatus == 0 ) { char *xx=NULL;*xx=0; }
 
+	// i guess each host advances its own round... so take this out
 	// sanity check
-	if ( g_hostdb.m_myHost->m_hostId != 0 ) { char *xx=NULL;*xx=0; }
+	//if ( g_hostdb.m_myHost->m_hostId != 0 ) { char *xx=NULL;*xx=0; }
 
 	// advance round if that round has completed, or there are no
 	// more urls to spider. if we hit maxToProcess/maxToCrawl then 
@@ -4026,6 +4031,10 @@ void doneSendingNotification ( void *state ) {
 }
 
 bool sendNotificationForCollRec ( CollectionRec *cr )  {
+
+	// only host #0 sends emails
+	if ( g_hostdb.m_myHost->m_hostId != 0 )
+		return true;
 
 	// do not send email for maxrounds hit, it will send a round done
 	// email for that. otherwise we end up calling doneSendingEmail()
@@ -6144,8 +6153,8 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 					0    , //dataSize
 					1 )){ // niceness
 			// tree is dumping or something, probably ETRYAGAIN
-			msg = "error adding neg rec to doledb";
-			log("spider: %s %s",msg,mstrerror(g_errno));
+			if ( g_errno != ETRYAGAIN ) {msg = "error adding neg rec to doledb";	log("spider: %s %s",msg,mstrerror(g_errno));
+			}
 			//char *xx=NULL;*xx=0;
 			us->sendErrorReply ( udpSlot , g_errno );
 			return;
@@ -10015,7 +10024,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// crawl is done.
 
 	// only host #0 sends alaerts
-	if ( g_hostdb.getMyHost()->m_hostId != 0 ) return;
+	//if ( g_hostdb.getMyHost()->m_hostId != 0 ) return;
 
 	// and we've examined at least one url. to prevent us from
 	// sending a notification if we haven't spidered anything

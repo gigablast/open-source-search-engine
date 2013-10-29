@@ -1974,8 +1974,8 @@ static class HelpItem s_his[] = {
 	{"repeat","Specify number of days as floating point to "
 	 "recrawl the pages. Set to 0.0 to NOT repeat the crawl."},
 
-	{"wait","Wait this many milliseconds between crawling urls from the "
-	 "same IP address."},
+	{"crawlDelay","Wait this many seconds between crawling urls from the "
+	 "same IP address. Can be a floating point number."},
 
 	{"deleteCrawl","Same as delete."},
 	{"resetCrawl","Same as delete."},
@@ -2773,7 +2773,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      "\"maxCrawlRounds\":%li,\n"
 				      "\"obeyRobots\":%li,\n"
 				      "\"repeatCrawl\":%f,\n"
-				      "\"crawlWaitMS\":%li,\n"
+				      "\"crawlDelay\":%f,\n"
 				      "\"onlyProcessIfNew\":%li,\n"
 				      //,cx->m_coll
 				      , cx->m_diffbotCrawlName.getBufStart()
@@ -2795,7 +2795,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      , (long)cx->m_maxCrawlRounds
 				      , (long)cx->m_useRobotsTxt
 				      , cx->m_collectiveRespiderFrequency
-				      , cx->m_collectiveSpiderWait
+				      , cx->m_collectiveCrawlDelay
 				      , (long)cx->m_diffbotOnlyProcessIfNew
 				      );
 			sb.safePrintf("\"seeds\":\"");
@@ -3301,10 +3301,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      "<tr>"
-			      "<td><b>Crawl Wait (ms):</b> "
+			      "<td><b>Crawl Delay (seconds):</b> "
 			      "</td><td>"
-			      "<input type=text name=wait "
-			      "size=9 value=%li> "
+			      "<input type=text name=crawlDelay "
+			      "size=9 value=%f> "
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
 			      "</tr>"
@@ -3394,7 +3394,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , isNewYes
 			      , isNewNo
 			      
-			      , cr->m_collectiveSpiderWait
+			      , cr->m_collectiveCrawlDelay
 
 
 			      , cr->m_maxToCrawl 
@@ -4177,6 +4177,11 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 		sc->m_waitingTreeNeedsRebuild = true;
 	}
 
+	// convert from seconds to milliseconds. default is 250ms?
+	long wait = (long)(cr->m_collectiveCrawlDelay * 1000.0);
+	// default to 250ms i guess. -1 means unset i think.
+	if ( cr->m_collectiveCrawlDelay < 0.0 ) wait = 250;
+
 	// make the gigablast regex table just "default" so it does not
 	// filtering, but accepts all urls. we will add code to pass the urls
 	// through m_diffbotUrlCrawlPattern alternatively. if that itself
@@ -4185,7 +4190,7 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 		cr->m_regExs[i].purge();
 		cr->m_spiderPriorities[i] = 0;
 		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = cr->m_collectiveSpiderWait;//250
+		cr->m_spiderIpWaits     [i] = wait;
 		cr->m_spiderIpMaxSpiders[i] = 7; // keep it respectful
 		cr->m_spidersEnabled    [i] = 1;
 		cr->m_spiderFreqs       [i] =cr->m_collectiveRespiderFrequency;
@@ -4360,10 +4365,10 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_needsSave = 1;
 	}
 
-	long crawlWait = hr->getLong("wait",-1);
-	if ( crawlWait >= 0 ) {
-		cr->m_collectiveSpiderWait = crawlWait;
-	}
+	float delay = hr->getFloat("crawlDelay",-1.0);
+	//long crawlWait = hr->getLong("wait",-1);
+	if ( delay >= 0.0 )
+		cr->m_collectiveCrawlDelay = delay;
 	
 	long onlyProcessNew = hr->getLong("onlyProcessNew",-1);
 	if ( onlyProcessNew != -1 ) {
