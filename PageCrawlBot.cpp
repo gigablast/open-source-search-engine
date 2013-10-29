@@ -1864,7 +1864,7 @@ bool printCrawlBotPage2 ( class TcpSocket *s ,
 void addedUrlsToSpiderdbWrapper ( void *state ) {
 	StateCD *st = (StateCD *)state;
 	SafeBuf rr;
-	rr.safePrintf("Successfully scheduled urls for spidering");
+	rr.safePrintf("Successfully added urls for spidering.");
 	printCrawlBotPage2 ( st->m_socket,
 			     &st->m_hr ,
 			     st->m_fmt,
@@ -2672,12 +2672,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	if ( fmt == FMT_JSON )
 		sb.safePrintf("{\n");
 
+	// injection is currently not in use, so this is an artifact:
 	if ( fmt == FMT_JSON && injectionResponse )
 		sb.safePrintf("\"seedsResponse\":\"%s\",\n\n"
 			      , injectionResponse->getBufStart() );
 
 	if ( fmt == FMT_JSON && urlUploadResponse )
-		sb.safePrintf("\"spotsResponse\":\"%s\",\n\n"
+		sb.safePrintf("\"crawlResponse\":\"%s\",\n\n"
 			      , urlUploadResponse->getBufStart() );
 
 
