@@ -2006,6 +2006,7 @@ static class HelpItem s_his[] = {
 	{"notifyWebHook","Fetch this URL when crawl hits "
 	 "the maxtocrawl or maxtoprocess limit, or when the crawl completes."},
 	{"obeyRobots","Obey robots.txt files?"},
+	{"restrictDomain","Restrict crawled urls to domains of seeds?"},
 	{"pageProcessPattern","List of || separated strings. If the page "
 	 "contains any of these then we send it to diffbot for processing. "
 	 "If this is empty we send all pages to diffbot for processing."},
@@ -2772,6 +2773,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      "\"maxToProcess\":%lli,\n"
 				      "\"maxCrawlRounds\":%li,\n"
 				      "\"obeyRobots\":%li,\n"
+				      "\"restrictDomain\":%li,\n"
 				      "\"repeatCrawl\":%f,\n"
 				      "\"crawlDelay\":%f,\n"
 				      "\"onlyProcessIfNew\":%li,\n"
@@ -2794,6 +2796,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      , cx->m_maxToProcess
 				      , (long)cx->m_maxCrawlRounds
 				      , (long)cx->m_useRobotsTxt
+				      , (long)cx->m_restrictDomain
 				      , cx->m_collectiveRespiderFrequency
 				      , cx->m_collectiveCrawlDelay
 				      , (long)cx->m_diffbotOnlyProcessIfNew
@@ -3220,6 +3223,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			urtNo  = " checked";
 		}
 		
+		char *rdomYes = " checked";
+		char *rdomNo  = "";
+		if ( ! cr->m_restrictDomain ) {
+			rdomYes = "";
+			rdomNo  = " checked";
+		}
+
 		char *isNewYes = "";
 		char *isNewNo  = " checked";
 		if ( cr->m_diffbotOnlyProcessIfNew ) {
@@ -3364,6 +3374,16 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</td>"
 			      "</tr>"
 
+			      "<tr><td>"
+			      "Restrict domain to seeds? "
+			      "</td><td>"
+			      "<input type=radio name=restrictDomain "
+			      "value=1%s> yes &nbsp; "
+			      "<input type=radio name=restrictDomain "
+			      "value=0%s> no &nbsp; "
+			      "</td>"
+			      "</tr>"
+
 			      //"<tr><td>"
 			      //"Use spider proxies on AWS? "
 			      //"</td><td>"
@@ -3406,6 +3426,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      , urtYes
 			      , urtNo
+
+			      , rdomYes
+			      , rdomNo
+
 			      );
 	}
 
@@ -3784,6 +3808,8 @@ CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ) {
 	cr->m_collectiveRespiderFrequency = 0.0;
 
 	cr->m_useRobotsTxt = true;
+
+	cr->m_restrictDomain = true;
 
 	// reset the crawl stats
 	cr->m_diffbotCrawlStartTime = gettimeofdayInMillisecondsGlobal();
@@ -4207,10 +4233,12 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	i++;
 
 	// 2nd default filter
-	cr->m_regExs[i].set("!isonsamedomain && !ismanualadd");
-	cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
-	cr->m_spiderDiffbotApiUrl[i].purge();
-	i++;
+	if ( cr->m_restrictDomain ) {
+		cr->m_regExs[i].set("!isonsamedomain && !ismanualadd");
+		cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		cr->m_spiderDiffbotApiUrl[i].purge();
+		i++;
+	}
 
 	// 3rd rule for respidering
 	if ( cr->m_collectiveRespiderFrequency > 0.0 ) {
@@ -4334,6 +4362,11 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	if ( obeyRobots == -1 ) obeyRobots = hr->getLong("robots",-1);
 	if ( obeyRobots != -1 ) {
 		cr->m_useRobotsTxt = obeyRobots;
+		cr->m_needsSave = 1;
+	}
+	long restrictDomain = hr->getLong("restrictDomain",-1);
+	if ( restrictDomain != -1 ) {
+		cr->m_restrictDomain = restrictDomain;
 		cr->m_needsSave = 1;
 	}
 	char *ppp = hr->getString("pageProcessPattern",NULL);

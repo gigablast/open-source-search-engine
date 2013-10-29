@@ -8876,6 +8876,14 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m++;
 
+	m->m_title = "restrict domain";
+	m->m_desc  = "Keep crawler on same domain as seed urls?";
+	m->m_cgi   = "rsd";
+	m->m_off   = (char *)&cr.m_restrictDomain - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m++;
+
 	m->m_title = "do url sporn checking";
 	m->m_desc  = "If this is true and the spider finds "
 		"lewd words in the hostname of a url it will throw "
