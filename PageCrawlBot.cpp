@@ -2763,7 +2763,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      //"\"crawlingPaused\":%li,\n"
 				      "\"objectsFound\":%lli,\n"
 				      "\"urlsHarvested\":%lli,\n"
-				      "\"urlsExamined\":%lli,\n"
+				      //"\"urlsExamined\":%lli,\n"
 				      "\"pageDownloadAttempts\":%lli,\n"
 				      "\"pageDownloadSuccesses\":%lli,\n"
 				      "\"pageProcessAttempts\":%lli,\n"
@@ -2787,7 +2787,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      , cx->m_globalCrawlInfo.m_objectsAdded -
 				      cx->m_globalCrawlInfo.m_objectsDeleted
 				      , cx->m_globalCrawlInfo.m_urlsHarvested
-				      , cx->m_globalCrawlInfo.m_urlsConsidered
+				      //,cx->m_globalCrawlInfo.m_urlsConsidered
 				, cx->m_globalCrawlInfo.m_pageDownloadAttempts
 				, cx->m_globalCrawlInfo.m_pageDownloadSuccesses
 				, cx->m_globalCrawlInfo.m_pageProcessAttempts
@@ -2854,7 +2854,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td>%s</td>"
 			      "<td>%lli</td>"
 			      "<td>%lli</td>"
-			      "<td>%lli</td>"
+			      //"<td>%lli</td>"
 			      "<td>%lli</td>"
 			      "<td>%lli</td>"
 			      "<td>%lli</td>"
@@ -2864,7 +2864,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , cx->m_globalCrawlInfo.m_objectsAdded -
 			        cx->m_globalCrawlInfo.m_objectsDeleted
 			      , cx->m_globalCrawlInfo.m_urlsHarvested
-			      , cx->m_globalCrawlInfo.m_urlsConsidered
+			      //, cx->m_globalCrawlInfo.m_urlsConsidered
 			      , cx->m_globalCrawlInfo.m_pageDownloadAttempts
 			      , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
 			      , cx->m_globalCrawlInfo.m_pageProcessAttempts
@@ -3116,10 +3116,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
      
 			      "</tr>"
 
-			      "<tr>"
-			      "<td><b>URLs Examined</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
+			      //"<tr>"
+			      //"<td><b>URLs Examined</b></td>"
+			      //"<td>%lli</td>"
+			      //"</tr>"
 
 			      "<tr>"
 			      "<td><b>Page Download Attempts</b></td>"
@@ -3152,7 +3152,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , cr->m_globalCrawlInfo.m_objectsAdded -
 			        cr->m_globalCrawlInfo.m_objectsDeleted
 			      , cr->m_globalCrawlInfo.m_urlsHarvested
-			      , cr->m_globalCrawlInfo.m_urlsConsidered
+			      //, cr->m_globalCrawlInfo.m_urlsConsidered
 
 			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses

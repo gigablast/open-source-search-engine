@@ -199,7 +199,7 @@ void XmlDoc::reset ( ) {
 
 	m_diffbotReplyError = 0;
 	m_diffbotJSONCount = 0;
-	m_downloadAttempted = false;
+	//m_downloadAttempted = false;
 	m_incrementedAttemptsCount = false;
 	m_incrementedDownloadCount = false;
 
@@ -1996,7 +1996,8 @@ bool XmlDoc::indexDoc2 ( ) {
 		// do not repeat
 		m_incrementedAttemptsCount = true;
 		// this is just how many urls we tried to index
-		cr->m_localCrawlInfo.m_urlsConsidered++;
+		//cr->m_localCrawlInfo.m_urlsConsidered++;
+		cr->m_localCrawlInfo.m_pageDownloadAttempts++;
 		// need to save collection rec now during auto save
 		cr->m_needsSave = true;
 		// update this just in case we are the last url crawled
@@ -13131,12 +13132,12 @@ char **XmlDoc::getHttpReply2 ( ) {
 	if ( ! cr ) return NULL;
 
 	// robots.txt and css files etc should have m_isChildDoc as true
-	if ( ! m_downloadAttempted && ! m_isChildDoc )
-		// keep track of spider stats
-		cr->m_localCrawlInfo.m_pageDownloadAttempts++;
+	//if ( ! m_downloadAttempted && ! m_isChildDoc )
+	//	// keep track of spider stats
+	//	cr->m_localCrawlInfo.m_pageDownloadAttempts++;
 
 	// we made an attempt to download, so mark it
-	m_downloadAttempted = true;
+	//m_downloadAttempted = true;
 
 	// if we didn't block getting the lock, keep going
 	setStatus ( "getting web page" );
