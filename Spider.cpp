@@ -10214,20 +10214,6 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 				       cx->m_spiderRoundStartTime-now );
 	}
 
-	// if we sent an email simply because no urls
-	// were left and we are not recrawling!
-	if ( cx->m_collectiveRespiderFrequency <= 0.0 &&
-	     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
-		*status = SP_COMPLETED;
-		return msg->safePrintf("Crawl has completed and no "
-			"repeatCrawl is scheduled.");
-	}
-
-	if ( cx->m_spiderStatus == SP_ROUNDDONE ) {
-		*status = SP_ROUNDDONE;
-		return msg->safePrintf ( "Crawl round completed.");
-	}
-
 	if ( ! cx->m_spideringEnabled ) {
 		*status = SP_PAUSED;
 		return msg->safePrintf("Crawl paused.");
@@ -10242,15 +10228,29 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 
 	// if spiderdb is empty for this coll, then no url
 	// has been added to spiderdb yet.. either seed or spot
-	CrawlInfo *cg = &cx->m_globalCrawlInfo;
-	if ( cg->m_pageDownloadAttempts == 0 ) {
-		*status = SP_NOURLS;
-		return msg->safePrintf("Crawl is waiting for urls.");
-	}
+	//CrawlInfo *cg = &cx->m_globalCrawlInfo;
+	//if ( cg->m_pageDownloadAttempts == 0 ) {
+	//	*status = SP_NOURLS;
+	//	return msg->safePrintf("Crawl is waiting for urls.");
+	//}
 
 	if ( cx->m_spiderStatus == SP_INITIALIZING ) {
 		*status = SP_INITIALIZING;
 		return msg->safePrintf("Crawl is initializing.");
+	}
+
+	// if we sent an email simply because no urls
+	// were left and we are not recrawling!
+	if ( cx->m_collectiveRespiderFrequency <= 0.0 &&
+	     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
+		*status = SP_COMPLETED;
+		return msg->safePrintf("Crawl has completed and no "
+			"repeatCrawl is scheduled.");
+	}
+
+	if ( cx->m_spiderStatus == SP_ROUNDDONE ) {
+		*status = SP_ROUNDDONE;
+		return msg->safePrintf ( "Crawl round completed.");
 	}
 
 	// otherwise in progress?
