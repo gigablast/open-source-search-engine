@@ -883,6 +883,9 @@ bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we ) {
 	// to any rdb...
 	cr->m_collnum = newCollnum;
 
+	// reset crawl status too!
+	cr->m_spiderStatus = SP_INITIALIZING;
+
 	m_recs[oldCollnum] = NULL;
 	m_recs[newCollnum] = cr;
 

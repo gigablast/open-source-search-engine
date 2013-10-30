@@ -3811,6 +3811,8 @@ CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ) {
 	// bring this back
 	cr->m_diffbotPageProcessPattern.set ( "" );
 
+	cr->m_spiderStatus = SP_INITIALIZING;
+
 	// do not spider more than this many urls total. -1 means no max.
 	cr->m_maxToCrawl = 100000;
 	// do not process more than this. -1 means no max.
