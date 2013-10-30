@@ -523,6 +523,8 @@ bool Collectiondb::isAdmin ( HttpRequest *r , TcpSocket *s ) {
 
 void savingCheckWrapper1 ( int fd , void *state ) {
 	WaitEntry *we = (WaitEntry *)state;
+	// no state?
+	if ( ! we ) return;
 	// if it blocked again i guess tree is still saving
 	if ( ! g_collectiondb.resetColl ( we->m_coll , we ) ) return;
 	// unregister too
@@ -533,6 +535,8 @@ void savingCheckWrapper1 ( int fd , void *state ) {
 
 void savingCheckWrapper2 ( int fd , void *state ) {
 	WaitEntry *we = (WaitEntry *)state;
+	// no state?
+	if ( ! we ) return;
 	// if it blocked again i guess tree is still saving
 	if ( ! g_collectiondb.deleteRec ( we->m_coll , we ) ) return;
 	// unregister too

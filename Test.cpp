@@ -126,7 +126,7 @@ void Test::removeFiles ( ) {
 	// . kinda like Collectiondb::deleteRec() i guess but we need to
 	//   preserve the parms!!
 	// . deletetagdb = false
-	g_collectiondb.resetColl ( "test"  , false );
+	g_collectiondb.resetColl ( "test"  , NULL ); // false );
 
 	// reset event count
 	//g_collectiondb.countEvents();
