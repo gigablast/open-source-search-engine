@@ -2745,8 +2745,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td><b>Objects Found</b></td>"
 			      "<td><b>URLs Harvested</b></td>"
 			      "<td><b>URLs Examined</b></td>"
-			      "<td><b>Page Download Attempts</b></td>"
-			      "<td><b>Page Download Successes</b></td>"
+			      "<td><b>Page Crawl Attempts</b></td>"
+			      "<td><b>Page Crawl Successes</b></td>"
 			      "<td><b>Page Process Attempts</b></td>"
 			      "<td><b>Page Process Successes</b></td>"
 			      "</tr>"
@@ -2790,8 +2790,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      "\"objectsFound\":%lli,\n"
 				      "\"urlsHarvested\":%lli,\n"
 				      //"\"urlsExamined\":%lli,\n"
-				      "\"pageDownloadAttempts\":%lli,\n"
-				      "\"pageDownloadSuccesses\":%lli,\n"
+				      "\"pageCrawlAttempts\":%lli,\n"
+				      "\"pageCrawlSuccesses\":%lli,\n"
 				      "\"pageProcessAttempts\":%lli,\n"
 				      "\"pageProcessSuccesses\":%lli,\n"
 				      // settable parms
@@ -3149,12 +3149,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      //"</tr>"
 
 			      "<tr>"
-			      "<td><b>Page Download Attempts</b></td>"
+			      "<td><b>Page Crawl Attempts</b></td>"
 			      "<td>%lli</td>"
 			      "</tr>"
 
 			      "<tr>"
-			      "<td><b>Page Download Successes</b></td>"
+			      "<td><b>Page Crawl Successes</b></td>"
 			      "<td>%lli</td>"
 			      "</tr>"
 
@@ -3347,7 +3347,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      "<tr>"
-			      "<td><b>Max Page Download Successes:</b> "
+			      "<td><b>Max Page Crawl Successes:</b> "
 			      "</td><td>"
 			      "<input type=text name=maxToCrawl "
 			      "size=9 value=%lli> "
