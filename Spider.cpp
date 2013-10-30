@@ -2271,6 +2271,8 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		    iptoa(g_spiderdb.getFirstIp(&m_nextKey2)));
 		// flag it
 		m_gettingList2 = true;
+		// make state
+		long state2 = (long)m_cr->m_collnum;
 		// read the list from local disk
 		if ( ! m_msg5b.getList ( RDB_SPIDERDB   ,
 					 m_cr->m_coll   ,
@@ -2283,7 +2285,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 					 0              , // max cache age
 					 0              , // startFileNum
 					 -1             , // numFiles (all)
-					 (void *)m_cr->m_collnum,//this//state
+					 (void *)state2,//this//state
 					 gotSpiderdbListWrapper2 ,
 					 MAX_NICENESS   , // niceness
 					 true          )) // do error correct?
@@ -2757,6 +2759,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			    ,KEYSTR(&m_nextKey,sizeof(key128_t) ) );
 		// flag it
 		m_gettingList = true;
+		// make state
+		long state2 = (long)m_cr->m_collnum;
 		// read the list from local disk
 		if ( ! m_msg5.getList ( RDB_SPIDERDB   ,
 					m_cr->m_coll   ,
@@ -2769,7 +2773,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 					0              , // max cache age
 					0              , // startFileNum
 					-1             , // numFiles (all)
-					(void *)m_cr->m_collnum,//this,//state 
+					(void *)state2,//this,//state 
 					gotSpiderdbListWrapper ,
 					MAX_NICENESS   , // niceness
 					true          )) // do error correct?
