@@ -1227,6 +1227,13 @@ bool addMetaList ( char *p , UdpSlot *slot ) {
 	rdb->readRequestAdd ( recSize );
 	// this returns false and sets g_errno on error
 	bool status =rdb->addList(collnum, &list, MAX_NICENESS );
+
+	// bad coll #? ignore it. common when deleting and resetting
+	// collections using crawlbot. but there are other recs in this
+	// list from different collections, so do not abandon the whole 
+	// meta list!! otherwise we lose data!!
+	if ( g_errno == ENOCOLLREC && !status ) { g_errno = 0; status = true; }
+
 	// do the next record here if there is one
 	if ( status && p < pend ) goto loop;
 
@@ -1239,8 +1246,8 @@ bool addMetaList ( char *p , UdpSlot *slot ) {
 		g_errno = ETRYAGAIN;
 	// ignore enocollrec errors since collection can be reset while
 	// spiders are on now.
-	if ( g_errno == ENOCOLLREC )
-		g_errno = 0;
+	//if ( g_errno == ENOCOLLREC )
+	//	g_errno = 0;
 	// are we done
 	if ( g_errno ) return false;
 	// success
