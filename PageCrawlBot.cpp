@@ -743,6 +743,8 @@ public:
 	HttpRequest m_hr;
 	Msg7 m_msg7;
 
+	WaitEntry m_waitEntry;
+
 	bool m_needsMime;
 	char m_rdbId;
 	bool m_downloadJSON;
@@ -2049,6 +2051,14 @@ char *getInputString ( char *string , HttpRequest *hr , Json *JS ) {
 }
 */
 
+void collOpDoneWrapper ( void *state ) {
+	StateCD *st = (StateCD *)state;
+	TcpSocket *socket = st->m_socket;
+	delete st;
+	mdelete ( st , sizeof(StateCD) , "stcd" );
+	g_httpServer.sendDynamicPage (socket,"OK",2);
+}
+
 // . when we receive the request from john we call broadcastRequest() from
 //   Pages.cpp. then msg28 sends this replay with a &cast=0 appended to it
 //   to every host in the network. then when msg28 gets back replies from all 
@@ -2258,6 +2268,21 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		return sendErrorReply2 (socket,fmt,msg);
 	}
 
+	// make a new state
+	StateCD *st;
+	try { st = new (StateCD); }
+	catch ( ... ) {
+		return sendErrorReply2 ( socket , fmt , mstrerror(g_errno));
+	}
+	mnew ( st , sizeof(StateCD), "statecd");
+
+	// copy crap
+	st->m_hr.copy ( hr );
+	st->m_socket = socket;
+	st->m_fmt = fmt;
+	if ( cr ) st->m_collnum = cr->m_collnum;
+	else      st->m_collnum = -1;
+
 	// . if this is a cast=0 request it is received by all hosts in the 
 	//   network
 	// . this code is the only code run by EVERY host in the network
@@ -2269,6 +2294,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//   hopefully it will still be set
 	// . but we should take care of add/del/reset coll here.
 	if ( cast == 0 ) {
+		// add a new collection by default
+		if ( ! cr && name && name[0] ) 
+			cr = addNewDiffbotColl ( collName , token , name );
+		// also support the good 'ole html form interface
+		if ( cr ) setSpiderParmsFromHtmlRequest ( socket , hr , cr );
 		// . we can't sync these operations on a dead host when it
 		//   comes back up yet. we can only sync parms, not collection
 		//   adds/deletes/resets
@@ -2289,25 +2319,39 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		//		return sendErrorReply2(socket,fmt,msg);
 		//	}
 		//}
+
+		// set this up
+		WaitEntry *we = &st->m_waitEntry;
+		we->m_state = st;
+		we->m_callback = collOpDoneWrapper;
+		we->m_coll = collName;
+
 		if ( delColl ) {
 			// delete collection name
-			g_collectiondb.deleteRec ( collName , true );
+			// this can block if tree is saving, it has to wait
+			// for tree save to complete before removing old
+			// collnum recs from tree
+			if ( ! g_collectiondb.deleteRec ( collName , we ) )
+				return false;
 			// all done
 			return g_httpServer.sendDynamicPage (socket,"OK",2);
 		}
 
 		if ( resetColl ) {
 			//cr = g_collectiondb.getRec ( resetColl );
-			g_collectiondb.resetColl ( collName );//resetColl );
+			// this can block if tree is saving, it has to wait
+			// for tree save to complete before removing old
+			// collnum recs from tree
+			if ( ! g_collectiondb.resetColl ( collName , we ) )
+				return false;
 			// it is a NEW ptr now!
 			cr = g_collectiondb.getRec( collName );
 			// if reset from crawlbot api page then enable spiders
 			// to avoid user confusion
 			if ( cr ) cr->m_spideringEnabled = 1;
+			// all done
+			return g_httpServer.sendDynamicPage (socket,"OK",2);
 		}
-		// add a new collection by default
-		if ( ! cr && name && name[0] ) 
-			cr = addNewDiffbotColl ( collName , token , name );
 		// problem?
 		if ( ! cr ) {
 			// send back error
@@ -2319,8 +2363,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		}
 		// this will set the the collection parms from json
 		//setSpiderParmsFromJSONPost ( socket , hr , cr , &JS );
-		// also support the good 'ole html form interface
-		setSpiderParmsFromHtmlRequest ( socket , hr , cr );
 		// this is a cast, so just return simple response
 		return g_httpServer.sendDynamicPage (socket,"OK",2);
 	}
@@ -2347,20 +2389,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	//char *spots = hr->getString("spots",NULL,NULL);
 	//char *seeds = hr->getString("seeds",NULL,NULL);
-
-	// make a new state
-	StateCD *st;
-	try { st = new (StateCD); }
-	catch ( ... ) {
-		return sendErrorReply2 ( socket , fmt , mstrerror(g_errno));
-	}
-	mnew ( st , sizeof(StateCD), "statecd");
-
-	// copy crap
-	st->m_hr.copy ( hr );
-	st->m_socket = socket;
-	st->m_fmt = fmt;
-	st->m_collnum = cr->m_collnum;
 
 	if ( seeds )
 		log("crawlbot: adding seeds=\"%s\"",seeds);

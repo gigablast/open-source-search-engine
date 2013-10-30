@@ -32,6 +32,7 @@ class Process {
 
 	Process                 ( ) ;
 	bool init               ( ) ;
+	bool isAnyTreeSaving    ( ) ;
 	bool save2              ( ) ;
 	bool shutdown2          ( ) ;
 	void disableTreeWrites  ( ) ;

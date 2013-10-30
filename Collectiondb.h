@@ -13,6 +13,13 @@
 
 #include "SafeBuf.h"
 
+class WaitEntry {
+public:
+	void (* m_callback) (void *state);
+	void *m_state;
+	char *m_coll;
+};
+
 class Collectiondb  {
 
  public:
@@ -80,11 +87,14 @@ class Collectiondb  {
 	bool addRec     ( char *coll , char *cc , long cclen , bool isNew ,
 			  collnum_t collnum , bool isDump , //  = false );
 			  bool saveRec ); // = true
-	bool deleteRec  ( char *coll , bool deleteTurkdb = true );
+
+	// returns false if blocked, true otherwise. 
+	bool deleteRec  ( char *coll , WaitEntry *we );
 	//bool updateRec ( CollectionRec *newrec );
 	bool deleteRecs ( class HttpRequest *r ) ;
 
-	bool resetColl ( char *coll , bool resetTurkdb = true ) ;
+	// returns false if blocked, true otherwise. 
+	bool resetColl ( char *coll , WaitEntry *we );
 
 	// . keep up to 128 of them, these reference into m_list
 	// . COllectionRec now includes m_needsSave and m_lastUpdateTime

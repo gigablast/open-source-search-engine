@@ -495,6 +495,15 @@ bool Process::init ( ) {
 	return true;
 }
 
+bool Process::isAnyTreeSaving ( ) {
+	for ( long i = 0 ; i < m_numRdbs ; i++ ) {
+		Rdb *rdb = m_rdbs[i];
+		if ( rdb->m_isCollectionLess ) continue;
+		if ( rdb->isSavingTree() ) return true;
+	}
+	return false;
+}
+
 void powerMonitorWrapper ( int fd , void *state ) {
 	if ( g_isYippy ) return;
 

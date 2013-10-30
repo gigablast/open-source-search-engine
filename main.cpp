@@ -80,7 +80,7 @@
 #include "Msg35.h"
 //#include "Msg24.h"
 #include "Msg28.h"
-#include "Msg30.h"
+//#include "Msg30.h"
 //#include "MsgB.h"
 #include "Msg3e.h"
 //#include "Msg50.h"
@@ -4855,7 +4855,7 @@ bool registerMsgHandlers1(){
 	//Msg23 msg23;	if ( ! msg23.registerHandler () ) return false;
 	Msg2a msg2a;    if ( ! msg2a.registerHandler () ) return false;
 	Msg36 msg36;	if ( ! msg36.registerHandler () ) return false;
-	Msg30 msg30;    if ( ! msg30.registerHandler () ) return false;
+	//Msg30 msg30;    if ( ! msg30.registerHandler () ) return false;
 	MsgC  msgC ;    if ( ! msgC.registerHandler  () ) return false;
 
 	if ( ! Msg22::registerHandler() ) return false;

@@ -36,7 +36,7 @@ OBJS =  Tfndb.o UdpSlot.o \
 	Stats.o BigFile.o Msg17.o \
 	Speller.o DiskPageCache.o \
 	PingServer.o StopWords.o TopTree.o \
-	Parms.o Pages.o Msg28.o Msg30.o \
+	Parms.o Pages.o Msg28.o \
 	Unicode.o iana_charset.o Iso8859.o \
 	SearchInput.o \
 	Categories.o Msg2a.o PageCatdb.o PageDirectory.o \

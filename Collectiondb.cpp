@@ -521,6 +521,26 @@ bool Collectiondb::isAdmin ( HttpRequest *r , TcpSocket *s ) {
 	//return cr->hasPermission ( r , s );
 }
 
+void savingCheckWrapper1 ( int fd , void *state ) {
+	WaitEntry *we = (WaitEntry *)state;
+	// if it blocked again i guess tree is still saving
+	if ( ! g_collectiondb.resetColl ( we->m_coll , we ) ) return;
+	// unregister too
+	g_loop.unregisterSleepCallback ( state,savingCheckWrapper1 );
+	// all done
+	we->m_callback ( we->m_state );
+}
+
+void savingCheckWrapper2 ( int fd , void *state ) {
+	WaitEntry *we = (WaitEntry *)state;
+	// if it blocked again i guess tree is still saving
+	if ( ! g_collectiondb.deleteRec ( we->m_coll , we ) ) return;
+	// unregister too
+	g_loop.unregisterSleepCallback ( state,savingCheckWrapper2 );
+	// all done
+	we->m_callback ( we->m_state );
+}
+
 // delete all records checked in the list
 bool Collectiondb::deleteRecs ( HttpRequest *r ) {
 	for ( long i = 0 ; i < r->getNumFields() ; i++ ) {
@@ -529,16 +549,17 @@ bool Collectiondb::deleteRecs ( HttpRequest *r ) {
 		char *coll = f + 3;
 		//if ( ! is_digit ( f[3] )            ) continue;
 		//long h = atol ( f + 3 );
-		deleteRec ( coll );
+		deleteRec ( coll , NULL );
 	}
 	return true;
 }
 
 // . delete a collection
 // . this uses blocking unlinks, may make non-blocking later
-bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
+// . returns false if blocked, true otherwise
+bool Collectiondb::deleteRec ( char *coll , WaitEntry *we ) {
 	// force on for now
-	deleteTurkdb = true;
+	//deleteTurkdb = true;
 	// no spiders can be out. they may be referencing the CollectionRec
 	// in XmlDoc.cpp... quite likely.
 	//if ( g_conf.m_spideringEnabled ||
@@ -550,23 +571,44 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	// do not allow this if in repair mode
 	if ( g_repairMode > 0 ) {
 		log("admin: Can not delete collection while in repair mode.");
-		return false;
+		g_errno = EBADENGINEER;
+		return true;
 	}
 	// ensure it's not NULL
 	if ( ! coll ) {
 		log(LOG_LOGIC,"admin: Collection name to delete is NULL.");
-		return false;
+		g_errno = ENOTFOUND;
+		return true;
 	}
 	// find the rec for this collection
 	collnum_t collnum = getCollnum ( coll );
 	// bitch if not found
 	if ( collnum < 0 ) {
 		g_errno = ENOTFOUND;
-		return log(LOG_LOGIC,"admin: Collection \"%s\" not found, "
-			   "delete failed.",coll);
+		log(LOG_LOGIC,"admin: Collection \"%s\" not found, "
+		    "delete failed.",coll);
+		return true;
 	}
 	CollectionRec *cr = m_recs [ collnum ];
-	if ( ! cr ) return log("admin: Collection id problem. Delete failed.");
+	if ( ! cr ) {
+		log("admin: Collection id problem. Delete failed.");
+		g_errno = ENOTFOUND;
+		return true;
+	}
+		
+	if ( g_process.isAnyTreeSaving() ) {
+		// note it
+		log("admin: tree is saving. waiting2.");
+		// try again in 100ms
+		if ( ! g_loop.registerSleepCallback ( 100 , 
+						      we ,
+						      savingCheckWrapper2 ,
+						      0 ) ) // niceness
+			return true;
+		// all done
+		return false;
+	}
+
 	// spiders off
 	//if ( cr->m_spiderColl &&
 	//     cr->m_spiderColl->getTotalOutstandingSpiders() > 0 ) {
@@ -650,15 +692,16 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	return true;
 }
 
-#include "PageTurk.h"
+//#include "PageTurk.h"
 
 // . reset a collection
-// . returns false if failed
-bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
+// . returns false if blocked and will call callback
+bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we ) {
 	// ensure it's not NULL
 	if ( ! coll ) {
 		log(LOG_LOGIC,"admin: Collection name to delete is NULL.");
-		return false;
+		g_errno = ENOCOLLREC;
+		return true;
 	}
 	// now must be "test" only for now
 	//if ( strcmp(coll,"test") ) { char *xx=NULL;*xx=0; }
@@ -673,10 +716,28 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	// do not allow this if in repair mode
 	if ( g_repairMode > 0 ) {
 		log("admin: Can not delete collection while in repair mode.");
-		return false;
+		g_errno = EBADENGINEER;
+		return true;
 	}
 
 	log("admin: resetting coll \"%s\"",coll);
+
+	// CAUTION: tree might be in the middle of saving
+	// we deal with this in Process.cpp now
+	if ( g_process.isAnyTreeSaving() ) {
+		// note it
+		log("admin: tree is saving. waiting1.");
+		// try again in 100ms
+		if ( ! g_loop.registerSleepCallback ( 100 , 
+						      we ,
+						      savingCheckWrapper1 ,
+						      0 ) ) // niceness
+			return true;
+		// all done
+		return false;
+	}
+
+	
 
 	// get the CollectionRec for "test"
 	CollectionRec *cr = getRec ( coll ); // "test" );
@@ -692,8 +753,10 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	long have = m_recPtrBuf.getLength();
 	need -= have;
 	// true here means to clear the new space to zeroes
-	if ( ! m_recPtrBuf.reserve ( need ,NULL, true ) )  
-		return log("admin: error growing rec ptr buf2.");
+	if ( ! m_recPtrBuf.reserve ( need ,NULL, true ) ) {
+		log("admin: error growing rec ptr buf2.");
+		return true;
+	}
 	// re-ref it in case it is different
 	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
 	// ensure last is NULL
@@ -799,12 +862,11 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	// right now we #define collnum_t short
 	if ( m_numRecs > 0x7fff ) { char *xx=NULL;*xx=0; }
 
-	// CAUTION: tree might be in the middle of saving
-	// we deal with this in Process.cpp now
-
 	// . unlink all the *.dat and *.map files for this coll in its subdir
 	// . remove all recs from this collnum from m_tree/m_buckets
 	// . updates RdbBase::m_collnum
+	// . so for the tree it just needs to mark the old collnum recs
+	//   with a collnum -1 in case it is saving...
 	g_posdb.getRdb()->resetColl     ( oldCollnum , newCollnum );
 	g_titledb.getRdb()->resetColl   ( oldCollnum , newCollnum );
 	g_tagdb.getRdb()->resetColl     ( oldCollnum , newCollnum );
