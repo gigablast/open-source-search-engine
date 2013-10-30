@@ -32,7 +32,22 @@ bool updateCrawlInfo ( CollectionRec *cr ,
 		       void (* callback)(void *state) ,
 		       bool useCache = true ) ;
 
+// . values for CollectionRec::m_spiderStatus
+// . reasons why crawl is not happening
+#define SP_INITIALIZING 0
+#define SP_MAXROUNDS    1 // hit max rounds limit
+#define SP_MAXTOCRAWL   2 // hit max to crawl limit
+#define SP_MAXTOPROCESS 3 // hit max to process limit
+#define SP_ROUNDDONE    4 // spider round is done
+#define SP_NOURLS       5 // initializing
+#define SP_PAUSED       6 // user paused spider
+#define SP_INPROGRESS   7 // it is going on!
+#define SP_ADMIN_PAUSED 8 // g_conf.m_spideringEnabled = false
+#define SP_COMPLETED    9 // crawl is done, and no repeatCrawl is scheduled
 
+bool getSpiderStatusMsg ( class CollectionRec *cx , 
+			  class SafeBuf *msg , 
+			  long *status ) ;
 
 // Overview of Spider
 //

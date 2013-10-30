@@ -185,6 +185,7 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	for ( ; *p ; p++ ) {
 		if ( is_alnum_a(*p) ) continue;
 		if ( *p == '-' ) continue;
+		if ( *p == '_' ) continue; // underscore now allowed
 		break;
 	}
 	if ( *p ) {
@@ -774,8 +775,8 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	cr->m_spiderRoundNum = 0;
 	cr->m_spiderRoundStartTime = 0;
 
-	cr->m_spiderStatus = 0;
-	cr->m_spiderStatusMsg = NULL;
+	cr->m_spiderStatus = SP_INITIALIZING; // this is 0
+	//cr->m_spiderStatusMsg = NULL;
 
 	// reset seed buf
 	cr->m_diffbotSeeds.purge();

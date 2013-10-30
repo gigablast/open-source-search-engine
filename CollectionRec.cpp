@@ -7,6 +7,7 @@
 #include "Threads.h"
 #include "Datedb.h"
 #include "Timedb.h"
+#include "Spider.h"
 
 static CollectionRec g_default;
 
@@ -29,8 +30,8 @@ CollectionRec::CollectionRec() {
 	m_overflow  = 0x12345678;
 	m_overflow2 = 0x12345678;
 	// the spiders are currently uninhibited i guess
-	m_spiderStatus = 0;
-	m_spiderStatusMsg = NULL;
+	m_spiderStatus = SP_INITIALIZING; // this is 0
+	//m_spiderStatusMsg = NULL;
 	// for Url::getSite()
 	m_updateSiteRulesTable = 1;
 	m_lastUpdateTime = 0LL;

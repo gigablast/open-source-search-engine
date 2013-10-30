@@ -85,7 +85,7 @@ class CrawlInfo {
 
 	long long m_objectsDeleted;        // 1
 	long long m_objectsAdded;          // 2
-	long long m_urlsConsidered;        // 3
+	long long m_urlsConsideredNOTUSED; // 3
 	long long m_pageDownloadAttempts;  // 4
 	long long m_pageDownloadSuccesses; // 5
 	long long m_pageProcessAttempts;   // 6
@@ -304,7 +304,7 @@ class CollectionRec {
 	long  m_maxQueryTerms;
 
 	char  m_spiderStatus;
-	char *m_spiderStatusMsg;
+	//char *m_spiderStatusMsg;
 
 	// Language stuff
 	float			m_languageUnknownWeight;

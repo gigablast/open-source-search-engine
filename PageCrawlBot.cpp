@@ -791,6 +791,41 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		return true;
 	}
 
+	//long pathLen = hr->getPathLen();
+	char rdbId = RDB_NONE;
+	bool downloadJSON = false;
+	long fmt;
+	char *xx;
+
+	if ( ( xx = strstr ( path , "_data.json" ) ) ) {
+		rdbId = RDB_TITLEDB;
+		fmt = FMT_JSON;
+		downloadJSON = true;
+	}
+	else if ( ( xx = strstr ( path , "_data.xml" ) ) ) {
+		rdbId = RDB_TITLEDB;
+		downloadJSON = true;
+		fmt = FMT_XML;
+	}
+	else if ( ( xx = strstr ( path , "_urls.csv" ) ) ) {
+		rdbId = RDB_SPIDERDB;
+		fmt = FMT_CSV;
+	}
+	else if ( ( xx = strstr ( path , "_pages.txt" ) ) ) {
+		rdbId = RDB_TITLEDB;
+		fmt = FMT_TXT;
+	}
+
+	// sanity, must be one of 3 download calls
+	if ( rdbId == RDB_NONE ) {
+		char *msg ;
+		msg = "usage: downloadurls, downloadpages, downloaddata";
+		log("crawlbot: %s",msg);
+		g_httpServer.sendErrorReply(sock,500,msg);
+		return true;
+	}
+
+
 	char *coll = str + 10;
 	if ( coll >= pathEnd ) {
 		char *msg = "bad download request2";
@@ -799,14 +834,8 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		return true;
 	}
 
-	char *collEnd = strstr ( coll , "_");
-	if ( ! collEnd ) {
-		char *msg = "bad download request3";
-		log("crawlbot: %s",msg);
-		g_httpServer.sendErrorReply(sock,500,msg);
-		return true;
-	}
-
+	// get coll
+	char *collEnd = xx;
 
 	//CollectionRec *cr = getCollRecFromHttpRequest ( hr );
 	CollectionRec *cr = g_collectiondb.getRec ( coll , collEnd - coll );
@@ -817,29 +846,6 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		return true;
 	}
 
-	//long pathLen = hr->getPathLen();
-	char rdbId = RDB_NONE;
-	bool downloadJSON = false;
-	long fmt;
-
-	if ( strstr ( path , "_data.json" ) ) {
-		rdbId = RDB_TITLEDB;
-		fmt = FMT_JSON;
-		downloadJSON = true;
-	}
-	if ( strstr ( path , "_data.xml" ) ) {
-		rdbId = RDB_TITLEDB;
-		downloadJSON = true;
-		fmt = FMT_XML;
-	}
-	else if ( strstr ( path , "_urls.csv" ) ) {
-		rdbId = RDB_SPIDERDB;
-		fmt = FMT_CSV;
-	}
-	else if ( strstr ( path , "_pages.txt" ) ) {
-		rdbId = RDB_TITLEDB;
-		fmt = FMT_TXT;
-	}
 
 
 	//if ( strncmp ( path ,"/crawlbot/downloadurls",22  ) == 0 )
@@ -851,14 +857,6 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	//	rdbId = RDB_TITLEDB;
 	//}
 
-	// sanity, must be one of 3 download calls
-	if ( rdbId == RDB_NONE ) {
-		char *msg ;
-		msg = "usage: downloadurls, downloadpages, downloaddata";
-		log("crawlbot: %s",msg);
-		g_httpServer.sendErrorReply(sock,500,msg);
-		return true;
-	}
 
 	StateCD *st;
 	try { st = new (StateCD); }
@@ -1268,7 +1266,8 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 
 	long nowGlobalMS = gettimeofdayInMillisecondsGlobal();
 	CollectionRec *cr = g_collectiondb.getRec(m_collnum);
-	
+	long lastSpidered = 0;
+
 	// parse through it
 	for ( ; ! list->isExhausted() ; list->skipCurrentRec() ) {
 		// this record is either a SpiderRequest or SpiderReply
@@ -1279,7 +1278,12 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// spiderrequests for the same url
 		if ( g_spiderdb.isSpiderReply ( (key128_t *)rec ) ) {
 			srep = (SpiderReply *)rec;
+			if ( sreq ) lastSpidered = 0;
 			sreq = NULL;
+			if ( lastSpidered == 0 )
+				lastSpidered = srep->m_spideredTime;
+			else if ( srep->m_spideredTime > lastSpidered )
+				lastSpidered = srep->m_spideredTime;
 			prevReplyUh48 = srep->getUrlHash48();
 			// 0 means indexed successfully. not sure if
 			// this includes http status codes like 404 etc.
@@ -1306,6 +1310,12 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		if ( lastUh48 != uh48 ) printIt = true;
 		if ( ! printIt ) continue;
 		lastUh48 = uh48;
+
+		// make sure spiderreply is for the same url!
+		if ( srep && srep->getUrlHash48() != sreq->getUrlHash48() )
+			srep = NULL;
+		if ( ! srep )
+			lastSpidered = 0;
 
 		// debug point
 		//if ( strstr(sreq->m_url,"chief") )
@@ -1382,12 +1392,14 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 				       );
 		// but default to csv
 		else {
-			sb->safePrintf("\"%s\",%lu,\"%s\",\"%s\",\""
+			sb->safePrintf("\"%s\",%lu,%lu,\"%s\",\"%s\",\""
 				       //",%s"
 				       //"\n"
 				       , sreq->m_url
 				       // when was it first added to spiderdb?
 				       , sreq->m_addedTime
+				       // last time spidered, 0 if none
+				       , lastSpidered
 				       //, status
 				       , msg
 				       // the url filter expression it matches
@@ -2326,8 +2338,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// collectionrec must be non-null at this point. i.e. we added it
 	if ( ! cr ) {
+		char *msg = "Crawl name was not found.";
+		if ( name && name[0] )
+			msg = "Failed to add crawl. Crawl name is illegal.";
 		//log("crawlbot: no collection found. need to add a crawl");
-		return sendErrorReply2(socket,fmt,"no crawls found. add one.");
+		return sendErrorReply2(socket,fmt, msg);
 	}
 
 	//char *spots = hr->getString("spots",NULL,NULL);
@@ -2727,36 +2742,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//if ( cx->m_collectionNameAlias.length() > 0 )
 			//	alias=cx->m_collectionNameAlias.getBufStart();
 			//long paused = 1;
-			char *ss = "Crawl in progress.";
-			if ( cx->m_spiderStatusMsg )
-				ss = cx->m_spiderStatusMsg;
-			// 0 means not to RE-crawl
-			char tmp[256];
-			// indicate if we are WAITING for next round...
-			if ( cx->m_collectiveRespiderFrequency > 0.0 &&
-			     getTimeGlobal() < cx->m_spiderRoundStartTime ) {
-				long now = getTimeGlobal();
-				sprintf(tmp,"Next crawl round to start in %li "
-					"seconds.",
-					cx->m_spiderRoundStartTime - now
-					);
-				ss = tmp;
-			}
-			// if we sent an email simply because no urls
-			// were left and we are not recrawling!
-			if ( cx->m_collectiveRespiderFrequency == 0.0 &&
-			     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
-				ss = "Crawl has completed and no "
-					"repeatCrawl is scheduled.";
-			}
-			if ( ! cx->m_spideringEnabled )
-				ss = "Crawl paused.";
-
-			// if spiderdb is empty for this coll, then no url
-			// has been added to spiderdb yet.. either seed or spot
-			CrawlInfo *cg = &cx->m_globalCrawlInfo;
-			if ( cg->m_pageDownloadAttempts == 0 )
-				ss = "Crawl is initializing.";
+			SafeBuf tmp;
+			long crawlStatus = -1;
+			getSpiderStatusMsg ( cx , &tmp , &crawlStatus );
 
 			CrawlInfo *ci = &cx->m_localCrawlInfo;
 			long sentAlert = (long)ci->m_sentCrawlDoneAlert;
@@ -2766,7 +2754,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      "\"name\":\"%s\",\n"
 				      //"\"alias\":\"%s\",\n"
 				      //"\"crawlingEnabled\":%li,\n"
-				      "\"crawlStatus\":\"%s\",\n"
+				      "\"crawlStatus\":{"
+				      "\"status\":%li,"
+				      "\"message\":\"%s\"},\n"
 				      "\"sentCrawlDoneNotification\":%li,\n"
 				      //"\"crawlingPaused\":%li,\n"
 				      "\"objectsFound\":%lli,\n"
@@ -2789,7 +2779,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 				      , cx->m_diffbotCrawlName.getBufStart()
 				      //, alias
 				      //, (long)cx->m_spideringEnabled
-				      , ss
+				      , crawlStatus
+				      , tmp.getBufStart()
 				      , sentAlert
 				      //, (long)paused
 				      , cx->m_globalCrawlInfo.m_objectsAdded -

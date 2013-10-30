@@ -3070,10 +3070,10 @@ bool sendNotification ( EmailInfo *ei ) {
 	if ( email && email[0] ) {
 		log("build: sending email notification to %s for "
 		    "crawl \"%s\" : %s",
-		    email,crawl,ei->m_spiderStatusMsg);
+		    email,crawl,ei->m_spiderStatusMsg.getBufStart());
 		SafeBuf msg;
 		msg.safePrintf("Your crawl \"%s\" has a new status: %s"
-			       , ei->m_spiderStatusMsg
+			       , ei->m_spiderStatusMsg.getBufStart()
 			       , crawl );
 
 		// reset m_length otherwise it builds up
@@ -3110,7 +3110,7 @@ bool sendNotification ( EmailInfo *ei ) {
 				    "X-Crawl-Status: %s"// \r\n" // hdrs
 				    
 				    , cr->m_diffbotCrawlName.getBufStart()
-				    , ei->m_spiderStatusMsg
+				    , ei->m_spiderStatusMsg.getBufStart()
 				    );
 		// GET request
 		if ( ! g_httpServer.getDoc ( url ,
