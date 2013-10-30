@@ -1339,8 +1339,8 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// then use the time it was spidered
 		if ( status ) time = prevReplyDownloadTime;
 
-		char *msg = "Successfully Crawled";
-		if ( status == 0 ) msg = "Unexamined";
+		char *msg = "Successfully Downloaded";//Crawled";
+		if ( status == 0 ) msg = "Not downloaded";//Unexamined";
 		if ( status == -1 ) msg = mstrerror(prevReplyError);
 
 		// matching url filter, print out the expression
@@ -2017,7 +2017,7 @@ static class HelpItem s_his[] = {
 
 	{"notifyEmail","Send email alert to this email when crawl hits "
 	 "the maxtocrawl or maxtoprocess limit, or when the crawl completes."},
-	{"notifyWebHook","Fetch this URL when crawl hits "
+	{"notifyWebhook","Fetch this URL when crawl hits "
 	 "the maxtocrawl or maxtoprocess limit, or when the crawl completes."},
 	{"obeyRobots","Obey robots.txt files?"},
 	{"restrictDomain","Restrict crawled urls to domains of seeds?"},
@@ -2850,7 +2850,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			sb.safeUtf8ToJSON ( cx->m_notifyEmail.getBufStart() );
 			sb.safePrintf("\",\n");
 
-			sb.safePrintf("\"notifyWebHook\":\"");
+			sb.safePrintf("\"notifyWebhook\":\"");
 			sb.safeUtf8ToJSON ( cx->m_notifyUrl.getBufStart() );
 			sb.safePrintf("\",\n");
 			/////
@@ -3385,7 +3385,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Notification URL:</b>"
 			      "</td><td>"
-			      "<input type=text name=notifyWebHook "
+			      "<input type=text name=notifyWebhook "
 			      "size=20 value=\"%s\"> "
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
