@@ -271,6 +271,8 @@ class Rdb {
 	// . you'll lose your data in this class if you call this
 	void reset();
 
+	bool isSavingTree ( ) ;
+
 	bool saveTree  ( bool useThread ) ;
 	bool saveMaps  ( bool useThread ) ;
 	//bool saveCache ( bool useThread ) ;

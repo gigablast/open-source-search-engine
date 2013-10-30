@@ -879,6 +879,11 @@ void Rdb::doneSaving ( ) {
 	//if ( m_isClosing ) close ( );
 }
 
+bool Rdb::isSavingTree ( ) {
+	if ( m_useTree ) return m_tree.m_isSaving;
+	return m_buckets.m_isSaving;
+}
+
 bool Rdb::saveTree ( bool useThread ) {
 	char *dbn = m_dbname;
 	if ( ! dbn ) dbn = "unknown";

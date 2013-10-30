@@ -591,6 +591,9 @@ bool Collectiondb::deleteRec ( char *coll , bool deleteTurkdb ) {
 	sc->m_lastDownloadCache.clear(collnum);
 	*/
 
+	// CAUTION: tree might be in the middle of saving
+	// we deal with this in Process.cpp now
+
 	// remove from spider cache, tell it to sync up with collectiondb
 	//g_spiderCache.reset1();
 	// . TODO: remove from g_sync
@@ -795,6 +798,9 @@ bool Collectiondb::resetColl ( char *coll , bool resetTurkdb ) {
 	// advance sanity check. did we wrap around?
 	// right now we #define collnum_t short
 	if ( m_numRecs > 0x7fff ) { char *xx=NULL;*xx=0; }
+
+	// CAUTION: tree might be in the middle of saving
+	// we deal with this in Process.cpp now
 
 	// . unlink all the *.dat and *.map files for this coll in its subdir
 	// . remove all recs from this collnum from m_tree/m_buckets
