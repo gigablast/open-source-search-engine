@@ -108,6 +108,10 @@ endif
 
 all: gb
 
+g8: gb
+	scp gb g8:/p/gb.new
+	ssh g8 'cd /p/ ; ./gb stop ; ./gb installgb ; sleep 4 ; ./gb start'
+
 utils: addtest blaster dump hashtest makeclusterdb makespiderdb membustest monitor seektest urlinfo treetest dnstest dmozparse gbtitletest
 
 gb: $(OBJS) main.o $(LIBFILES)

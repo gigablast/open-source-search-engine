@@ -8576,7 +8576,9 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( isForMsg20 ) continue;
 			// . if we are not submitted from the add url api, skip
 			// . if we have '!' then val is 1
-			if ( sreq->m_isAddUrl|| sreq->m_isInjecting ) {
+			if ( sreq->m_isAddUrl    || 
+			     sreq->m_isInjecting ||
+			     sreq->m_isPageParser ) {
 				if ( val ) continue;
 			}
 			else {

@@ -508,13 +508,6 @@ bool processLoop ( void *state ) {
 	// get the xmldoc
 	XmlDoc *xd = &st->m_xd;
 
-	// . save the ips.txt file if we are the test coll
-	// . saveTestBuf() is a function in Msge1.cpp
-	CollectionRec *cr = xd->getCollRec();
-	if ( xd && cr && cr->m_coll && ! strcmp ( cr->m_coll , "test") )
-		// use same dir that XmlDoc::getTestDir() would use
-		saveTestBuf ( "test-page-parser" );
-
 	// error?
 	if ( g_errno ) return sendErrorReply ( st , g_errno );
 
@@ -522,6 +515,12 @@ bool processLoop ( void *state ) {
 	SafeBuf *xbuf = &st->m_xbuf;
 
 	if ( st->m_u && st->m_u[0] ) {
+		// . save the ips.txt file if we are the test coll
+		// . saveTestBuf() is a function in Msge1.cpp
+		CollectionRec *cr = xd->getCollRec();
+		if ( xd && cr && cr->m_coll && ! strcmp ( cr->m_coll,"test") )
+			// use same dir that XmlDoc::getTestDir() would use
+			saveTestBuf ( "test-page-parser" );
 		// now get the meta list, in the process it will print out a 
 		// bunch of junk into st->m_xbuf
 		char *metalist = xd->getMetaList ( );

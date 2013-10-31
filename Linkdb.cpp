@@ -3443,7 +3443,8 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 			if ( g_conf.m_logDebugLinkInfo ) 
 				log("linkdb: inlink #%li is link spam: %s",
 				    i,r->ptr_note);
-			continue;
+			if ( onlyNeedGoodInlinks )
+				continue;
 		}
 		// do a quick set
 		Inlink k; k.set ( r );
@@ -3508,7 +3509,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 		//if ( r->m_linkTextScoreWeight <= 0 ) continue;
 		// ignore if spam
 		//if ( onlyNeedGoodInlinks && r->m_isLinkSpam ) continue;
-		if ( r->m_isLinkSpam ) continue;
+		if ( r->m_isLinkSpam && onlyNeedGoodInlinks ) continue;
 		// are we internal?
 		bool internal = false;
 		if ( (r->m_ip&0x0000ffff) == (ip & 0x0000ffff) ) 

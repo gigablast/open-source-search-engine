@@ -12308,6 +12308,17 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 		setStatus ( "calling msg25 for url" );
 		CollectionRec *cr = getCollRec();
 		if ( ! cr ) return NULL;
+
+		// we want to get all inlinks if doing a custom crawlbot crawl
+		// because we need the anchor text to pass in to diffbot
+		bool doLinkSpamCheck = cr->m_doLinkSpamCheck;
+		bool oneVotePerIpDom = cr->m_oneVotePerIpDom;
+		if ( cr->m_isCustomCrawl && cr->m_restrictDomain ) {
+			doLinkSpamCheck     = false;
+			oneVotePerIpDom     = false;
+			onlyNeedGoodInlinks = false;
+		}
+
 		// call it
 		char *url = getFirstUrl()->getUrl();
 		if ( ! m->getLinkInfo ( mysite , 
@@ -12327,8 +12338,8 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 					//m_sitePop           ,
 					oldLinkInfo1        ,	     
 					m_niceness          ,
-					cr->m_doLinkSpamCheck ,
-					cr->m_oneVotePerIpDom ,
+					doLinkSpamCheck ,
+					oneVotePerIpDom ,
 					canBeCancelled        ,
 					lastUpdateTime ,
 					onlyNeedGoodInlinks ,
@@ -12710,6 +12721,13 @@ bool *XmlDoc::getRecycleDiffbotReply ( ) {
 	if ( m_recycleDiffbotReplyValid )
 		return &m_recycleDiffbotReply;
 
+	// if from pageparser.cpp re-call diffbot for debugging
+	if ( getIsPageParser() ) {
+		m_recycleDiffbotReply = false;
+		m_recycleDiffbotReplyValid = true;
+		return &m_recycleDiffbotReply;
+	}
+
 	XmlDoc **odp = getOldXmlDoc( );
 	if ( ! odp || odp == (XmlDoc **)-1 ) return (bool *)odp;
 	XmlDoc *od = *odp;
@@ -12759,6 +12777,13 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// separately to get the title for to compare to this page's title,
 	// or whatever, do not pass to diffbot
 	if ( m_isChildDoc ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
+	// if set from title rec, do not do it. we are possibly an "old doc"
+	// and we should only call diffbot.com with new docs
+	if ( m_setFromTitleRec ) {
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
 	}
@@ -12841,7 +12866,93 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
+	// now include referring link anchor text, etc.
+	LinkInfo  *info1    = getLinkInfo1 ();
+	if ( ! info1 || info1 == (LinkInfo *)-1 ) return (SafeBuf *)info1;
+
+
 	setStatus("getting diffbot reply");
+
+
+	// set up dedup table for deduping on link text
+	HashTableX dedup;
+	char tmp[512];
+	if ( ! dedup.set ( 4,0,32,tmp,512,false,m_niceness,"difdedup") )
+		return NULL;
+
+	SafeBuf headers;
+	bool first = true;
+
+	// . make additional headers
+	// . add two headers for every "good" (non-dup) link
+	// . do NOT end headers in \r\n since HttpServer adds that!
+	for ( Inlink *k=NULL ; info1 && (k=info1->getNextInlink(k)) ; ) {
+		// breathe
+		QUICKPOLL(m_niceness);
+		// sanity
+		if ( k->size_urlBuf <= 1 ) continue;
+		// skip if too long
+		if ( k->size_linkText > 1024 ) continue;
+		// or not enough! (size includes \0)
+		if ( k->size_linkText <= 1 ) continue;
+		// sanity check
+		char *txt = k->ptr_linkText;
+		long tlen = k->size_linkText;
+		if ( tlen > 0 ) tlen--;
+		// this seems to happen sometimes..
+		if ( ! verifyUtf8 ( txt , tlen ) ) continue;
+		// if anchor text has \0 skip it
+		if ( gbstrlen(txt) != tlen ) continue;
+		// or if surrounding text has \0 skip as well
+		char *surStr = k->ptr_surroundingText;
+		long  surLen = k->size_surroundingText;
+		if ( surLen > 0 ) surLen--;
+		if ( surStr && gbstrlen(surStr) != surLen ) continue;
+		// dedup on that
+		long h32 = hash32 ( txt , tlen );
+		if ( dedup.isInTable ( &h32 ) ) continue;
+		if ( ! dedup.addKey ( &h32 ) ) return NULL;
+		// separate with \r\n
+		if ( ! first && ! headers.safePrintf("\r\n" ) ) 
+			return NULL;
+		first = false;
+		// add to http header
+		if ( ! headers.safePrintf("X-referring-url: ") ) 
+			return NULL;
+		// do not include the terminating \0, so -1
+		if ( ! headers.safeMemcpy(k->ptr_urlBuf , k->size_urlBuf-1 ))
+			return NULL;
+		// and link text
+		if ( ! headers.safePrintf("\r\nX-anchor-text: ") ) 
+			return NULL;
+		// store the anchor text without any \r or \n chars
+		if ( ! headers.reserve ( tlen ) ) return NULL;
+		char *p    = txt;
+		char *pend = txt + tlen;
+		for ( ; p < pend ; p++ ) {
+			if ( *p == '\r' ) continue;
+			if ( *p == '\n' ) continue;
+			headers.pushChar(*p);
+		}
+		// do not include it if more than 2000 chars big
+		if ( surLen > 0 && surLen < 2000 ) {
+			if ( ! headers.safePrintf("\r\nX-surrounding-text: ") )
+				return NULL;
+			// make room for copying the surrounding text
+			if ( ! headers.reserve ( surLen ) ) return NULL;
+			// copy minus any \r or \n so its mime header safe
+			p    = surStr;
+			pend = surStr + surLen;
+			for ( ; p < pend ; p++ ) {
+				if ( *p == '\r' ) continue;
+				if ( *p == '\n' ) continue;
+				headers.pushChar(*p);
+			}
+		}
+	}
+
+	// make sure to null term the headers
+	if ( headers.length() && ! headers.nullTerm() ) return NULL;
 
 	//char *path = "api";
 	//if ( strcmp(cr->m_diffbotApi.getBufStart(),"product") == 0 )
@@ -12928,13 +13039,18 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// null term it
 	diffbotUrl.nullTerm();
 
-	log("diffbot: getting %s",diffbotUrl.getBufStart());
-
 	// mark as tried
 	m_sentToDiffbot = 1;
 	
 	// count it for stats
 	cr->m_localCrawlInfo.m_pageProcessAttempts++;
+
+	char *additionalHeaders = NULL;
+	if ( headers.length() > 0 )
+		additionalHeaders = headers.getBufStart();
+
+	log("diffbot: getting %s headers=%s",diffbotUrl.getBufStart(),
+	    additionalHeaders);
 
 	if ( ! g_httpServer.getDoc ( diffbotUrl.getBufStart() ,
 				     0 , // ip
@@ -12948,7 +13064,11 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 				     0,//proxyport
 				     10000,//maxtextdoclen
 				     10000,//maxotherdoclen
-				     g_conf.m_spiderUserAgent ) )
+				     g_conf.m_spiderUserAgent ,
+				     "HTTP/1.0",
+				     false, // do post?
+				     NULL, // cookie
+				     additionalHeaders ) )
 		// return -1 if blocked
 		return (SafeBuf *)-1;
 	// error?
@@ -18690,7 +18810,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// have indexed in od's diffbot reply buffer because they all
 	// were indexed with their own docids in the "m_dx" code below. so
 	// just delete them and we'll re-add from this doc's diffbot reply.
-	if ( od && od->m_diffbotJSONCount && ! *recycle ) {
+	if ( od && od->m_diffbotJSONCount && ! *recycle && 
+	     // do not remove old json objects if pageparser.cpp test
+	     // because that can not change the index, etc.
+	     ! getIsPageParser() ) {
 		// this returns false if it blocks
 		long *status = od->nukeJSONObjects();
 		if ( ! status || status == (void *)-1) return (char *)status;
@@ -19022,12 +19145,17 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	SafeBuf *dbr = getDiffbotReply();
 	if ( ! dbr || dbr == (void *)-1 ) return (char *)dbr;
 
+	long dbrLen = dbr->length();
+
+	// do not index json items as separate docs if we are page parser
+	if ( getIsPageParser() ) dbrLen = 0;
+
 	//
 	// if we got a json object or two from diffbot, index them
 	// as their own child xmldocs.
 	// watch out for reply from diffbot of "-1" indicating error!
 	//
-	if ( dbr->length() > 3 ) {
+	if ( dbrLen > 3 ) {
 		// make sure diffbot reply is valid for sure
 		if ( ! m_diffbotReplyValid ) { char *xx=NULL;*xx=0; }
 		// set status for this
