@@ -7684,13 +7684,16 @@ RdbList *XmlDoc::getDupList ( ) {
 	// must match term in XmlDoc::hashVectors()
 	char qbuf[256];
 	snprintf(qbuf, 256, "%llu",*ph64);
-	uint64_t pre    = hash64b ( "gbcontenthash" , 0LL );
-	uint64_t termId = hash64b ( qbuf        , pre );
+	long long pre     = hash64b ( "gbcontenthash" , 0LL );
+	long long rawHash = hash64b ( qbuf , 0LL );
+	long long termId  = hash64 ( rawHash , pre );
 	// get the startkey, endkey for termlist
 	key144_t sk ;
 	key144_t ek ;
 	g_posdb.makeStartKey ( &sk,termId ,0);
 	g_posdb.makeEndKey   ( &ek,termId ,MAX_DOCID);
+	// note it
+	log("dup: check termid=%llu",termId&TERMID_MASK);
 	// assume valid now
 	m_dupListValid = true;
 	// this is a no-split lookup by default now
