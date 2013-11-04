@@ -7639,8 +7639,8 @@ long long *XmlDoc::getExactContentHash64 ( ) {
 	if ( plen > 0 ) plen--;
 
 	// sanity
-	if ( ! p ) return 0LL;
-	if ( p[plen] != '\0' ) { char *xx=NULL;*xx=0; }
+	//if ( ! p ) return 0LL;
+	//if ( p[plen] != '\0' ) { char *xx=NULL;*xx=0; }
 
 	unsigned char *pend = (unsigned char *)p + plen;
 	unsigned long long h64 = 0LL;
@@ -17277,6 +17277,10 @@ bool XmlDoc::logIt ( ) {
 	if ( m_recycleContent )
 		sb.safePrintf("recycleContent=1 ");
 
+	if ( m_exactContentHash64Valid )
+		sb.safePrintf("exactcontenthash=%llu ",
+			      m_exactContentHash64 );
+
 	// . print percent changed
 	// . only print if non-zero!
 	if ( m_percentChangedValid && m_oldDocValid && m_oldDoc &&
@@ -19141,6 +19145,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	Words *ww = getWords();
 	if ( ! ww || ww == (void *)-1 ) return (char *)ww;
+
+	long long *pch64 = getExactContentHash64();
+	if ( ! pch64 || pch64 == (void *)-1 ) return (char *)pch64;
 
 	/*
 	// get the voting table which we will add to sectiondb
@@ -22489,13 +22496,10 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 
 	// for exact content deduping
 	setStatus ( "hashing gbcontenthash (deduping) no-split keys" );	
-	char hbuf[64];
-	sprintf(hbuf,"%llu",*pch64);
-	hi.m_hashGroup = HASHGROUP_INTAG;
+	char cbuf[64];
+	long clen = sprintf(cbuf,"%llu",*pch64);
 	hi.m_prefix    = "gbcontenthash";
-	hi.m_tt        = tt;
-	hi.m_noSplit   = true;
-	if ( ! hashString ( dom,dlen,&hi ) ) return false;
+	if ( ! hashString ( cbuf,clen,&hi ) ) return false;
 
 
 

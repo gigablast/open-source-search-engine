@@ -2070,9 +2070,11 @@ static class HelpItem s_his[] = {
 	{"maxToCrawl", "Specify max pages to successfully download."},
 	{"maxToProcess", "Specify max pages to successfully process through "
 	 "diffbot."},
-
 	{"maxCrawlRounds", "Specify maximum number of crawl rounds. Use "
 	 "-1 to indicate no max."},
+
+	{"onlyProcessIfNew", "Specify 1 to avoid re-processing pages "
+	 "that have already been processed once before."},
 
 	{"notifyEmail","Send email alert to this email when crawl hits "
 	 "the maxtocrawl or maxtoprocess limit, or when the crawl completes."},
@@ -3398,9 +3400,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Only Process If New:</b> "
 			      "</td><td>"
-			      "<input type=radio name=onlyProcessNew "
+			      "<input type=radio name=onlyProcessIfNew "
 			      "value=1%s> yes &nbsp; "
-			      "<input type=radio name=onlyProcessNew "
+			      "<input type=radio name=onlyProcessIfNew "
 			      "value=0%s> no &nbsp; "
 			      "</td>"
 			      "</tr>"
@@ -4503,7 +4505,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	if ( delay >= 0.0 )
 		cr->m_collectiveCrawlDelay = delay;
 	
-	long onlyProcessNew = hr->getLong("onlyProcessNew",-1);
+	long onlyProcessNew = hr->getLong("onlyProcessIfNew",-1);
 	if ( onlyProcessNew != -1 ) {
 		cr->m_diffbotOnlyProcessIfNew = onlyProcessNew;
 		cr->m_needsSave = 1;
