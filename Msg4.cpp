@@ -28,7 +28,11 @@
 //   5s to spider a url after adding it.
 //
 //////////////
-#define MSG4_WAIT 500
+//#define MSG4_WAIT 500
+
+// article1.html and article11.html are dups but they are being spidered
+// within 500ms of another
+#define MSG4_WAIT 100
 
 
 // we have up to this many outstanding Multicasts to send add requests to hosts
