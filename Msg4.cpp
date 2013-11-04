@@ -28,7 +28,7 @@
 //   5s to spider a url after adding it.
 //
 //////////////
-#define MSG4_WAIT 500
+#define MSG4_WAIT 100
 
 
 // we have up to this many outstanding Multicasts to send add requests to hosts

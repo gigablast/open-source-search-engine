@@ -172,6 +172,8 @@ bool CollectionRec::load ( char *coll , long i ) {
 	g_errno = 0;
 
 
+	// fix for diffbot
+	if ( m_isCustomCrawl ) m_dedupingEnabled = true;
 
 	// always turn on distributed spider locking because otherwise
 	// we end up calling Msg50 which calls Msg25 for the same root url
