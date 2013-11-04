@@ -2676,10 +2676,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		sb.safePrintf("[ <a href=/crawlbot?help=1>"
 			      "api help</a> ] &nbsp; "
 			      // json output
-			      "[ <a href=/crawlbot?token=%s&format=json>"
+			      "[ <a href=\"/crawlbot?token=%s&format=json&"
+			      "name=%s\">"
 			      "json output"
 			      "</a> ] &nbsp; "
-			      , token );
+			      , token 
+			      , name );
 		// random coll name to add
 		unsigned long r1 = rand();
 		unsigned long r2 = rand();
@@ -2782,12 +2784,19 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      );
 	}
 
+	char *name3 = hr->getString("name");
+
 	// scan each coll and get its stats
 	for ( long i = 0 ; summary && i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cx = g_collectiondb.m_recs[i];
 		if ( ! cx ) continue;
 		// must belong to us
 		if ( strcmp(cx->m_diffbotToken.getBufStart(),token) )
+			continue;
+
+
+		// just print out single crawl info for json
+		if ( fmt != FMT_HTML && cx != cr && name3 ) 
 			continue;
 
 		// if json, print each collectionrec
@@ -3849,6 +3858,9 @@ CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ) {
 
 	// -1 means no max
 	cr->m_maxCrawlRounds = -1;
+
+	// john want's deduping on by default to avoid processing similar pgs
+	cr->m_dedupingEnabled = true;
 
 	// this collection should always hit diffbot
 	//cr->m_useDiffbot = true;

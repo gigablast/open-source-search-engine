@@ -5016,6 +5016,8 @@ bool Links::addLink ( char *link , long linkLen , long nodeNum ,
 		  // really the same url...
 		  true            , // stripPound? 
 		  // convert /index.html to /
+		  // turned this back on per john's request
+		  // will cause undeletable data in existing indexes.
 		  true            , // stripCommonFile?
 		  titleRecVersion );// used for removing session ids
 
