@@ -746,6 +746,8 @@ public:
 	WaitEntry m_waitEntry;
 
 	bool m_isFirstTime;
+	bool m_printedFirstBracket;
+	bool m_printedItem;
 
 	bool m_needsMime;
 	char m_rdbId;
@@ -877,6 +879,9 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
 	st->m_fmt = fmt;
 	st->m_isFirstTime = true;
+
+	st->m_printedFirstBracket = false;
+	st->m_printedItem = false;
 
 	// begin the possible segmented process of sending back spiderdb
 	// to the user's browser
@@ -1037,6 +1042,13 @@ bool StateCD::sendList ( ) {
 
 	//CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 
+
+	if ( ! m_printedFirstBracket && m_fmt == FMT_JSON ) {
+		sb.safePrintf("[\n");
+		m_printedFirstBracket = true;
+	}
+
+
 	// we set this to true below if any one shard has more spiderdb
 	// records left to read
 	m_someoneNeedsMore = false;
@@ -1100,6 +1112,12 @@ bool StateCD::sendList ( ) {
 		list->freeList();
 	}
 
+
+	// if nobody needs to read more...
+	if ( m_rdbId == RDB_TITLEDB && m_fmt == FMT_JSON ) {
+		// end array of json objects. might be empty!
+		sb.safePrintf("\n]");
+	}
 
 	// if first time, send it back
 	if ( m_needsMime ) {
@@ -1469,14 +1487,17 @@ void StateCD::printTitledbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 
+	// save it
+	*lastKeyPtr = NULL;
+
 	// parse through it
 	for ( ; ! list->isExhausted() ; list->skipCurrentRec() ) {
 		// this record is either a SpiderRequest or SpiderReply
 		char *rec = list->getCurrentRec();
-		// save it
-		*lastKeyPtr = NULL;
 		// skip ifnegative
 		if ( (rec[0] & 0x01) == 0x00 ) continue;
+		// set it
+		*lastKeyPtr = rec;
 		// reset first since set2() can't call reset()
 		xd.reset();
 		// uncompress it
@@ -1517,6 +1538,11 @@ void StateCD::printTitledbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// get the json content
 		char *json = xd.ptr_utf8Content;
 		
+		if ( m_printedItem )
+			sb->safePrintf("\n,\n");
+
+		m_printedItem = true;
+
 		// just print that out. encode \n's and \r's back to \\n \\r
 		// and backslash to a \\ ...
 		// but if they originally had a \u<backslash> encoding and
@@ -1526,7 +1552,7 @@ void StateCD::printTitledbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 			log("diffbot: error printing json in dump");
 
 		// separate each JSON object with \n i guess
-		sb->pushChar('\n');
+		//sb->pushChar('\n');
 
 	}
 }
@@ -2742,7 +2768,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	if ( fmt == FMT_HTML )
 		sb.safePrintf ( "</center><br/>" );
 
-	// the ROOT JSON {
+	// the ROOT JSON [
 	if ( fmt == FMT_JSON )
 		sb.safePrintf("{\n");
 
