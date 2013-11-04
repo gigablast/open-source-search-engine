@@ -40,7 +40,7 @@
 #include "SearchInput.h"
 #include "Msg40.h"
 #include "Dates.h"
-#include "IndexList.h"
+//#include "IndexList.h"
 #include "Msg0.h"
 #include "Msg22.h"
 #include "Tagdb.h"
@@ -550,8 +550,9 @@ class XmlDoc {
 	float *getGigabitSimilarity ( class XmlDoc *xd2 ) ;
 	float *getPageSimilarity ( class XmlDoc *xd2 ) ;
 	float *getPercentChanged ( );
-	uint64_t *getDupHash ( );
-	class IndexList *getDupList ( ) ;
+	uint64_t *getFuzzyDupHash ( );
+	long long *getExactContentHash64();
+	class RdbList *getDupList ( ) ;
 	class RdbList *getLikedbListForReq ( );
 	class RdbList *getLikedbListForIndexing ( );
 	long addLikedbRecords ( bool justGetSize ) ;
@@ -1308,6 +1309,7 @@ class XmlDoc {
 	bool m_isErrorPageValid;
 	bool m_isHijackedValid;
 	bool m_dupHashValid;
+	bool m_exactContentHash64Valid;
 
 	// shadows
 	char m_isRSS2;
@@ -1358,9 +1360,10 @@ class XmlDoc {
 	float m_percentChanged;
 	bool  m_unchanged;
 	// what docids are similar to us? docids are in this list
-	IndexList m_dupList;
+	RdbList m_dupList;
 	RdbList m_likedbList;
 	uint64_t m_dupHash;
+	long long m_exactContentHash64;
 	Msg0 m_msg0;
 	Msg5 m_msg5;
 	char m_isDup;

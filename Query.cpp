@@ -3031,6 +3031,7 @@ struct QueryField g_fields[] = {
 
 	{"gbgigabitvector", FIELD_GBGIGABITVECTOR, false,""},
 	{"gbsamplevector", FIELD_GBSAMPLEVECTOR, false,""},
+	{"gbcontenthash", FIELD_GBCONTENTHASH, false,""},
 	{"gbcountry",FIELD_GBCOUNTRY,false,""},
 	{"gbad",FIELD_GBAD,false,""},
 
@@ -3676,6 +3677,7 @@ bool QueryTerm::isSplit() {
 	if(m_fieldCode == FIELD_GBGIGABITVECTOR) return false;
 	if(m_fieldCode == FIELD_GBSAMPLEVECTOR)  return false;
 	if(m_fieldCode == FIELD_GBSECTIONHASH)  return false;
+	if(m_fieldCode == FIELD_GBCONTENTHASH)  return false;
 	return true;
 }
 

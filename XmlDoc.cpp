@@ -7609,8 +7609,7 @@ bool isSimilar_sorted ( long   *vec0 ,
 	goto mergeLoop;
 }
 
-
-uint64_t *XmlDoc::getDupHash ( ) {
+uint64_t *XmlDoc::getFuzzyDupHash ( ) {
 
 	if ( m_dupHashValid ) return &m_dupHash;
 	uint32_t *h1 = getTagPairHash32();
@@ -7626,30 +7625,66 @@ uint64_t *XmlDoc::getDupHash ( ) {
 	return &m_dupHash;
 }
 
+long long *XmlDoc::getExactContentHash64 ( ) {
 
-IndexList *XmlDoc::getDupList ( ) {
+	if ( m_exactContentHash64Valid )
+		return &m_exactContentHash64;
+
+	char **u8 = getUtf8Content();
+	if ( ! u8 || u8 == (char **)-1) return (long long *)u8;
+
+	unsigned char *p = (unsigned char *)*u8;
+
+	long plen = size_utf8Content;
+	if ( plen > 0 ) plen--;
+
+	// sanity
+	if ( ! p ) return 0LL;
+	if ( p[plen] != '\0' ) { char *xx=NULL;*xx=0; }
+
+	unsigned char *pend = (unsigned char *)p + plen;
+	unsigned long long h64 = 0LL;
+	unsigned char pos = 0;
+	for ( ; p < pend ; p++ ) {
+		// breathe
+		QUICKPOLL ( m_niceness );
+		// xor this in right
+		h64 ^= g_hashtab[pos][p[0]];
+		pos++;
+	}
+
+	m_exactContentHash64Valid = true;
+	m_exactContentHash64 = h64;
+	return &m_exactContentHash64;
+}
+
+
+RdbList *XmlDoc::getDupList ( ) {
 	if ( m_dupListValid ) return &m_dupList;
 
 	// until we start using posdb and not indexdb, just return an
 	// empty list.
 	// TODO: MDW fix the deduping.
-	m_dupList.reset();
-	m_dupListValid = true;
-	return &m_dupList;
+	//m_dupList.reset();
+	//m_dupListValid = true;
+	//return &m_dupList;
 	//
 	// end temp hack
 	//
 
-	uint64_t *dh = getDupHash ( );
-	if ( ! dh || dh == (uint64_t *)-1 ) return (IndexList *)dh;
+	//uint64_t *dh = getDupHash ( );
+	//if ( ! dh || dh == (uint64_t *)-1 ) return (IndexList *)dh;
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
+	long long *ph64 = getExactContentHash64();
+	if ( ! ph64 || ph64 == (void *)-1 ) return (RdbList *)ph64;
+
 	// must match term in XmlDoc::hashVectors()
 	char qbuf[256];
-	snprintf(qbuf, 256, "%llu",*dh);
-	uint64_t pre    = hash64b ( "gbduphash" , 0LL );
+	snprintf(qbuf, 256, "%llu",*ph64);
+	uint64_t pre    = hash64b ( "gbcontenthash" , 0LL );
 	uint64_t termId = hash64b ( qbuf        , pre );
 	// get the startkey, endkey for termlist
 	key144_t sk ;
@@ -7664,17 +7699,32 @@ IndexList *XmlDoc::getDupList ( ) {
 				0     , // port
 				0     , // maxCacheAge
 				false , // add to cache?
-				RDB_INDEXDB ,
+				RDB_POSDB, // INDEXDB ,
 				cr->m_coll      ,
 				&m_dupList  ,
 				(char *)&sk          ,
 				(char *)&ek          ,
-				306         , // minRecSizes in bytes
+				606006        , // minRecSizes in bytes
 				m_masterState , // state
 				m_masterLoop  ,
-				m_niceness    ))
+				m_niceness    ,
+				true , // error correction?
+				true , // include tree?
+				true , // domerge?
+				-1 , // firsthosti
+				0 , // startfilenum
+				-1, // # files
+				30 , // timeout
+				-1 , // syncpoint
+				-1 , // preferlocal reads
+				NULL, // msg5
+				NULL, // msg5b
+				false , // isRealMerge
+				true , // allow page cache
+				false , // forcelocalindexdb
+				true ) ) // NOSPLIT! THIS IS DIFFERENT
 		// return -1 if this blocks
-		return (IndexList *)-1;
+		return (RdbList *)-1;
 	// assume valid!
 	m_dupListValid = true;
 	return &m_dupList;
@@ -7701,47 +7751,83 @@ char *XmlDoc::getIsDup ( ) {
 	long long *mydocid = getDocId();
 	if ( ! mydocid || mydocid == (long long *)-1) return (char *)mydocid;
 	// get the duplist!
-	IndexList *list = getDupList();
-	if ( ! list || list == (IndexList *)list ) return (char *)list;
+	RdbList *list = getDupList();
+	if ( ! list || list == (RdbList *)-1 ) return (char *)list;
+
+	// sanity. must be posdb list.
+	if ( ! list->isEmpty() && list->m_ks != 18 ) { char *xx=NULL;*xx=0;}
 
 	setStatus ( "checking for dups" );
 
 	// . see if there are any pages that seem like they are dups of us
 	// . they must also have a HIGHER score than us, for us to be 
 	//   considered the dup
-	if ( ! m_didQuickDupCheck ) {
-		// do not repeat
-		m_didQuickDupCheck = true;
-		// init
-		uint8_t maxScore = 0;
-		uint8_t myScore  = 0;
-		// assume not a dup
-		m_isDup = false;
-		// get the docid that we are a dup of
-		for ( ; ! list->isExhausted() ; list->skipCurrentRecord() ) {
-			// get the docid
-			long long d = list->getCurrentDocId();
-			// get the score
-			uint8_t score = list->getCurrentScore();
-			// skip if us!
-			if ( d == *getDocId() ) {
-				// record our score
-				myScore = score;
-				continue;
-			}
-			// get the winner
-			if ( score > maxScore ) maxScore = score;
+	//if ( ! m_didQuickDupCheck ) {
+	//	// do not repeat
+	//	m_didQuickDupCheck = true;
+
+	// init
+	//uint8_t maxScore = 0;
+	//uint8_t myScore  = 0;
+	char maxSiteRank = -1;
+	long long maxDocId = -1LL;
+	// assume not a dup
+	m_isDup = false;
+	// get the docid that we are a dup of
+	for ( ; ! list->isExhausted() ; list->skipCurrentRecord() ) {
+		// breathe
+		QUICKPOLL(m_niceness);
+		//long long d = list->getCurrentDocId();
+		char *rec = list->getCurrentRec();
+		// get the docid
+		long long d = g_posdb.getDocId ( rec );
+		// get the score
+		//uint8_t score = list->getCurrentScore();
+		// just let the best site rank win i guess?
+		// even though one page may have more inlinks???
+		char sr = (char )g_posdb.getSiteRank ( rec );
+		// skip if us!
+		//if ( d == *getDocId() ) {
+		//	// record our score
+		//	//myScore = score;
+		//	mySiteRank = sr;
+		//	continue;
+		//}
+		// get the winner
+		//if ( score > maxScore ) maxScore = score;
+		if ( sr > maxSiteRank ) {
+			maxSiteRank = sr;
+			maxDocId = d;
+			continue;
 		}
-		// reset its ptr for stuff below
-		list->resetListPtr();
-		// are we the highest scoring doc with this template?
-		// corollary: if all dups have equal scores they will be
-		// removed until there is only one doc that matches the pattern
-		if ( myScore >= maxScore ) {
-			m_isDupValid = true; 
-			return &m_isDup; 
+		if ( sr < maxSiteRank ) continue;
+		// fallback to docid?
+		if ( d < maxDocId ) {
+			maxDocId = d;
+			continue;
 		}
 	}
+	// are we the highest scoring doc with this template?
+	// corollary: if all dups have equal scores they will be
+	// removed until there is only one doc that matches the pattern
+	//if ( myScore >= maxScore ) {
+	if ( maxDocId >= 0 && maxDocId != *mydocid ) {
+		m_isDup = true;
+		m_isDupValid = true; 
+		return &m_isDup; 
+	}
+
+	m_isDup = false;
+	m_isDupValid = true; 
+	return &m_isDup; 
+
+	/*
+	  we now temporarily at least, do exact dup checking...
+	  later we will bring in the fuzzy code...
+
+	// reset its ptr for stuff below
+	list->resetListPtr();
+
  loop:
 	// . get a title rec for the current docid
 	// . but if exhausted, we are not a dup!
@@ -7759,6 +7845,7 @@ char *XmlDoc::getIsDup ( ) {
 	list->skipCurrentRecord();
 	// loop up
 	goto loop;
+	*/
 }
 
 char *XmlDoc::isDupOfUs ( long long d ) {
@@ -15773,8 +15860,6 @@ char **XmlDoc::getUtf8Content ( ) {
 	return &ptr_utf8Content;
 }
 
-
-
 // *pend should be \0
 long getContentHash32Fast ( unsigned char *p , 
 			    long plen ,
@@ -22377,6 +22462,10 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 
 	//if ( m_skipIndexing ) return true;
 
+	// this should be ready to go and not block!
+	long long *pch64 = getExactContentHash64();
+	if ( ! pch64 || pch64 == (void *)-1 ) { char *xx=NULL;*xx=0; }
+
 	// shortcut
 	Url *fu = getFirstUrl();
 
@@ -22396,6 +22485,19 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 
 	// desc is NULL, prefix will be used as desc
 	if ( ! hashString ( dom,dlen,&hi ) ) return false;
+
+
+	// for exact content deduping
+	setStatus ( "hashing gbcontenthash (deduping) no-split keys" );	
+	char hbuf[64];
+	sprintf(hbuf,"%llu",*pch64);
+	hi.m_hashGroup = HASHGROUP_INTAG;
+	hi.m_prefix    = "gbcontenthash";
+	hi.m_tt        = tt;
+	hi.m_noSplit   = true;
+	if ( ! hashString ( dom,dlen,&hi ) ) return false;
+
+
 
 	setStatus ( "hashing no-split qhost keys" );
 
@@ -24627,6 +24729,9 @@ bool XmlDoc::hashVectors ( HashTableX *tt ) {
 	//uint64_t h1 = m_tagVector.getVectorHash();
 	//uint64_t h2 = getGigabitVectorScorelessHash(gigabitVec);
 	//uint64_t h64 = hash64 ( h1 , h2 );
+
+	// take this out for now
+	/*
 	uint64_t *dh = getDupHash ( );
 	blen = sprintf(buf,"%llu", *dh );//h64);
 	//field = "gbduphash";
@@ -24636,6 +24741,7 @@ bool XmlDoc::hashVectors ( HashTableX *tt ) {
 	hi.m_desc      = "dup vector hash";
 	// this returns false on failure
 	if ( ! hashString ( buf,blen,&hi ) ) return false;
+	*/
 
 	// hash the wikipedia docids we match
 	if ( ! m_wikiDocIdsValid   ) { char *xx=NULL;*xx=0; }

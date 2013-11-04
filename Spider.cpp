@@ -10100,6 +10100,8 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	sendNotificationForCollRec ( cr );
 }
 
+#define SPIDER_DONE_TIMER 10
+
 void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	char *request = slot->m_readBuf;
 	// just a single collnum
@@ -10165,7 +10167,8 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	     ci->m_lastSpiderCouldLaunch &&
 	     //cr->m_spideringEnabled &&
 	     //g_conf.m_spideringEnabled &&
-	     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 60 )
+	     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 
+	     (long)SPIDER_DONE_TIMER )
 		// assume our crawl on this host is completed i guess
 		ci->m_hasUrlsReadyToSpider = 0;
 
