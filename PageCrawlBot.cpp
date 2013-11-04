@@ -747,6 +747,7 @@ public:
 
 	bool m_isFirstTime;
 	bool m_printedFirstBracket;
+	bool m_printedEndingBracket;
 	bool m_printedItem;
 
 	bool m_needsMime;
@@ -882,6 +883,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
 	st->m_printedFirstBracket = false;
 	st->m_printedItem = false;
+	st->m_printedEndingBracket = false;
 
 	// begin the possible segmented process of sending back spiderdb
 	// to the user's browser
@@ -1114,7 +1116,9 @@ bool StateCD::sendList ( ) {
 
 
 	// if nobody needs to read more...
-	if ( m_rdbId == RDB_TITLEDB && m_fmt == FMT_JSON ) {
+	if ( m_rdbId == RDB_TITLEDB && m_fmt == FMT_JSON && 
+	     ! m_printedEndingBracket ) {
+		m_printedEndingBracket = true;
 		// end array of json objects. might be empty!
 		sb.safePrintf("\n]");
 	}
