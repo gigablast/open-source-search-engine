@@ -831,7 +831,8 @@ class SpiderReply {
 	long    m_siteNumInlinksValid     :1;
 	// was the request an injection request
 	long    m_fromInjectionRequest    :1; 
-	long    m_reserved1 :1;
+	// did we TRY to send it to the diffbot backend filter? might be err?
+	long    m_sentToDiffbot:1;
 	long    m_reserved2 :1;
 	long    m_reserved3 :1;
 	long    m_reserved4 :1;

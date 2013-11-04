@@ -1077,7 +1077,14 @@ bool printDiffbotDropDown ( SafeBuf *sb,char *name,char *THIS , SafeBuf *sx) {
 	//   be changed by john to add custom diffbot api urls.
 	// . should just be m_spiderDiffbotApiUrl[i] safebuf
 	char *usingApi = sx->getBufStart();
-	if ( sx->length() == 0 ) usingApi = NULL;
+	if ( sx->length() == 0 ) usingApi = "";//NULL;
+
+	// just print it as text box
+	return sb->safePrintf ( "<input type=text name=\"%s\" size=30 "
+				"value=\"%s\">"
+				, name 
+				, usingApi );
+
 	// now scan each item in the list. see the setting of
 	// "m_def" for "diffbotApiList" below to see the
 	// comma separated list of default strings. each item in

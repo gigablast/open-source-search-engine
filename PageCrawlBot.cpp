@@ -745,6 +745,8 @@ public:
 
 	WaitEntry m_waitEntry;
 
+	bool m_isFirstTime;
+
 	bool m_needsMime;
 	char m_rdbId;
 	bool m_downloadJSON;
@@ -874,6 +876,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	st->m_collnum = cr->m_collnum;
 
 	st->m_fmt = fmt;
+	st->m_isFirstTime = true;
 
 	// begin the possible segmented process of sending back spiderdb
 	// to the user's browser
@@ -1319,6 +1322,9 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		if ( ! srep )
 			lastSpidered = 0;
 
+		bool isProcessed = false;
+		if ( srep ) isProcessed = srep->m_sentToDiffbot;
+
 		// debug point
 		//if ( strstr(sreq->m_url,"chief") )
 		//	log("hey");
@@ -1371,6 +1377,26 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 			priority = -5;
 		}
 
+		char *as = "discovered";
+		if ( sreq && 
+		     ( sreq->m_isInjecting ||
+		       sreq->m_isAddUrl ) ) {
+			as = "manually added";
+		}
+
+		// print column headers?
+		if ( m_isFirstTime ) {
+			m_isFirstTime = false;
+			sb->safePrintf("\"Url\","
+				       "\"Entry Method\","
+				       "\"Processed?\","
+				       "\"Add Time\","
+				       "\"Last Crawled\","
+				       "\"Last Status\","
+				       "\"Matching Expression\","
+				       "\"Matching Action\"\n");
+		}
+
 		// "csv" is default if json not specified
 		if ( m_fmt == FMT_JSON ) 
 			sb->safePrintf("[{"
@@ -1394,10 +1420,13 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 				       );
 		// but default to csv
 		else {
-			sb->safePrintf("\"%s\",%lu,%lu,\"%s\",\"%s\",\""
+			sb->safePrintf("\"%s\",\"%s\","
+				       "%li,%lu,%lu,\"%s\",\"%s\",\""
 				       //",%s"
 				       //"\n"
 				       , sreq->m_url
+				       , as
+				       , (long)isProcessed
 				       // when was it first added to spiderdb?
 				       , sreq->m_addedTime
 				       // last time spidered, 0 if none

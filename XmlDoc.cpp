@@ -20840,6 +20840,11 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	if ( m_oldsrValid && m_oldsr.m_isInjecting )
 		m_newsr.m_fromInjectionRequest = 1;
 
+	if ( m_sentToDiffbot )
+		m_newsr.m_sentToDiffbot = true;
+	else
+		m_newsr.m_sentToDiffbot = false;
+
 	// treat error replies special i guess, since langId, etc. will be
 	// invalid
 	if ( m_indexCode ) {

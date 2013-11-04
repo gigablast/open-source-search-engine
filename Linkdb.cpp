@@ -5015,7 +5015,8 @@ bool Links::addLink ( char *link , long linkLen , long nodeNum ,
 		  // feeds have a link to every comment but it is
 		  // really the same url...
 		  true            , // stripPound? 
-		  false           , // stripCommonFile?
+		  // convert /index.html to /
+		  true            , // stripCommonFile?
 		  titleRecVersion );// used for removing session ids
 
 	// refix the link
