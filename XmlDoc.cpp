@@ -1998,6 +1998,7 @@ bool XmlDoc::indexDoc2 ( ) {
 		// this is just how many urls we tried to index
 		//cr->m_localCrawlInfo.m_urlsConsidered++;
 		cr->m_localCrawlInfo.m_pageDownloadAttempts++;
+		cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
 		// need to save collection rec now during auto save
 		cr->m_needsSave = true;
 		// update this just in case we are the last url crawled
@@ -12735,6 +12736,7 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		THIS->m_gotDiffbotSuccessfulReply = 1;
 		// count it for stats
 		cr->m_localCrawlInfo.m_pageProcessSuccesses++;
+		cr->m_globalCrawlInfo.m_pageProcessSuccesses++;
 		// log it
 		log("build: processed page %s (pageLen=%li)",
 		    THIS->m_firstUrl.m_url,
@@ -13134,6 +13136,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	
 	// count it for stats
 	cr->m_localCrawlInfo.m_pageProcessAttempts++;
+	cr->m_globalCrawlInfo.m_pageProcessAttempts++;
 
 	char *additionalHeaders = NULL;
 	if ( headers.length() > 0 )
@@ -13623,6 +13626,7 @@ char **XmlDoc::gotHttpReply ( ) {
 	// . do not inc this count for robots.txt and root page downloads, etc.
 	if ( ! m_isChildDoc && ! m_incrementedDownloadCount ) {
 		cr->m_localCrawlInfo.m_pageDownloadSuccesses++;
+		cr->m_globalCrawlInfo.m_pageDownloadSuccesses++;
 		m_incrementedDownloadCount = true;
 	}
 
@@ -18455,6 +18459,7 @@ long *XmlDoc::nukeJSONObjects ( ) {
 		if ( g_errno ) return NULL;
 		// count as deleted
 		cr->m_localCrawlInfo.m_objectsDeleted++;
+		cr->m_globalCrawlInfo.m_objectsDeleted++;
 		// but gotta set this crap back
 		//log("diffbot: resetting %s",m_dx->m_firstUrl.m_url);
 		// clear for next guy if there is one. clears 
@@ -19350,6 +19355,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( ! cr ) return NULL;
 		// count as deleted
 		cr->m_localCrawlInfo.m_objectsAdded++;
+		cr->m_globalCrawlInfo.m_objectsAdded++;
 		// undo the \0 termination we did above
 		*m_diffbotObjEnd = m_diffbotSavedChar;
 		// we successfully index the json object, skip to next one
@@ -21834,6 +21840,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 
 	// this is just how many urls we tried to index
 	cr->m_localCrawlInfo.m_urlsHarvested += numAdded;
+	cr->m_globalCrawlInfo.m_urlsHarvested += numAdded;
 
 	// save it
 	m_numOutlinksAdded      = numAdded;
