@@ -12770,7 +12770,7 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		THIS->m_diffbotReply.nullTerm();
 		// convert the \u1f23 to utf8 (\n and \r as well)
 		//THIS->m_diffbotReply.decodeJSONToUtf8 ( THIS->m_niceness );
-		THIS->m_diffbotReply.nullTerm();
+		//THIS->m_diffbotReply.nullTerm();
 	}
 
 skip:	     
@@ -13156,8 +13156,9 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 				     90*1000, // 90 sec timeout
 				     0,//proxyip
 				     0,//proxyport
-				     10000,//maxtextdoclen
-				     10000,//maxotherdoclen
+				     // unlimited replies i guess
+				     -1,//maxtextdoclen unlimited
+				     -1,//maxotherdoclen unlimited
 				     g_conf.m_spiderUserAgent ,
 				     "HTTP/1.0",
 				     false, // do post?

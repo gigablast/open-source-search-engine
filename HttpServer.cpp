@@ -1946,7 +1946,11 @@ long getMsgSize ( char *buf, long bufSize, TcpSocket *s ) {
 			    totalReplySize,max);
 		}
 		// truncate the reply if we have to
-		if ( totalReplySize > max ) totalReplySize = max;
+		if ( totalReplySize > max ) {
+			log("http: truncating reply of %li to %li bytes",
+			    totalReplySize,max);
+			totalReplySize = max;
+		}
 		// truncate if we need to
 		return totalReplySize;
 	}
