@@ -1512,6 +1512,27 @@ bool SpiderColl::updateSiteNumInlinksTable ( long siteHash32,
 	// success
 	return true;
 }
+/////////
+//
+// we now include the firstip in the case where the same url
+// has 2 spiderrequests where one is a fake firstip. in that scenario
+// we will miss the spider request to spider, the waiting tree
+// node will be removed, and the spider round will complete, 
+// which triggers a waiting tree recompute and we end up spidering
+// the dup spider request right away and double increment the round.
+//
+/////////
+inline long long makeLockTableKey ( long long uh48 , long firstIp ) {
+	return uh48 ^ (unsigned long)firstIp;
+}
+
+inline long long makeLockTableKey ( SpiderRequest *sreq ) {
+	return makeLockTableKey(sreq->getUrlHash48(),sreq->m_firstIp);
+}
+
+inline long long makeLockTableKey ( SpiderReply *srep ) {
+	return makeLockTableKey(srep->getUrlHash48(),srep->m_firstIp);
+}
 
 // . we call this when we receive a spider reply in Rdb.cpp
 // . returns false and sets g_errno on error
@@ -1524,15 +1545,16 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	// remove the lock here
 	//
 	//////
-	long long uh48 = srep->getUrlHash48() ;
+	long long lockKey = makeLockTableKey ( srep );
+	
 	// shortcut
 	HashTableX *ht = &g_spiderLoop.m_lockTable;
-	UrlLock *lock = (UrlLock *)ht->getValue ( &uh48 );
+	UrlLock *lock = (UrlLock *)ht->getValue ( &lockKey );
 	time_t nowGlobal = getTimeGlobal();
 
 	if ( g_conf.m_logDebugSpider )
 		logf(LOG_DEBUG,"spider: scheduled lock removal in 5 secs for "
-		     "uh48=%llu",  uh48 );
+		     "lockKey=%llu",  lockKey );
 
 	// test it
 	//if ( m_nowGlobal == 0 && lock )
@@ -1545,7 +1567,11 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	// it! so wait 5 seconds for the doledb negative key to 
 	// be absorbed to prevent a url we just spidered from being
 	// re-spidered right away because of this sync issue.
-	if ( lock ) lock->m_expires = nowGlobal + 5;
+	// . if we wait too long then the round end time, SPIDER_DONE_TIMER,
+	//   will kick in before us and end the round, then we end up
+	//   spidering a previously locked url right after and DOUBLE
+	//   increment the round!
+	if ( lock ) lock->m_expires = nowGlobal + 2;
 	/////
 	//
 	// but do note that its spider has returned for populating the
@@ -1558,8 +1584,8 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	if ( lock ) lock->m_spiderOutstanding = false;
 	// bitch if not in there
 	if ( !lock ) // &&g_conf.m_logDebugSpider)//ht->isInTable(&lockKey)) 
-		logf(LOG_DEBUG,"spider: rdb: uh48=%llu "
-		     "was not in lock table",uh48);
+		logf(LOG_DEBUG,"spider: rdb: lockKey=%llu "
+		     "was not in lock table",lockKey);
 
 	////
 	//
@@ -1916,10 +1942,10 @@ bool SpiderLoop::printLockTable ( ) {
 		// cast lock
 		UrlLock *lock = (UrlLock *)ht->getValueFromSlot(i);
 		// get the key
-		long long uh48 = *(long long *)ht->getKeyFromSlot(i);
+		long long lockKey = *(long long *)ht->getKeyFromSlot(i);
 		// show it
 		log("dump: lock. "
-		    "uh48=%lli "
+		    "lockkey=%lli "
 		    "spiderout=%li "
 		    "confirmed=%li "
 		    "firstip=%s "
@@ -1928,7 +1954,7 @@ bool SpiderLoop::printLockTable ( ) {
 		    "timestamp=%li "
 		    "sequence=%li "
 		    "collnum=%li "
-		    ,uh48
+		    ,lockKey
 		    ,(long)(lock->m_spiderOutstanding)
 		    ,(long)(lock->m_confirmed)
 		    ,iptoa(lock->m_firstIp)
@@ -2676,6 +2702,7 @@ void parseUfnTreeKey ( key128_t  *k ,
 
 void removeExpiredLocks ( long hostId );
 
+
 // . this is ONLY CALLED from populatedDoledbFromWaitingTree() above
 // . returns false if blocked, true otherwise
 // . returns true and sets g_errno on error
@@ -3191,12 +3218,18 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// that scanSpiderdb() repopulates doledb again with that
 		// "firstIp". this way we can spider multiple urls from the
 		// same ip at the same time.
-		long long uh48 = sreq->getUrlHash48();
-		if ( g_spiderLoop.m_lockTable.isInTable ( &uh48 ) ) {
+		long long key = makeLockTableKey ( sreq );
+		if ( g_spiderLoop.m_lockTable.isInTable ( &key ) ) {
+			// get it
+			//CrawlInfo *ci = &m_cr->m_localCrawlInfo;
+			// do not think the round is over!
+			//ci->m_lastSpiderCouldLaunch = nowGlobal;
+			// there are urls ready to spider, just locked up
+			//ci->m_hasUrlsReadyToSpider = true;
 			// debug note
-			if ( g_conf.m_logDebugSpider )
-				log("spider: skipping url uh48=%lli in "
-				    "lock table",uh48);
+			//if ( g_conf.m_logDebugSpider )
+				log("spider: skipping url lockkey=%lli in "
+				    "lock table",key);
 			continue;
 		}
 		     
@@ -3363,7 +3396,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// table changed to filter/ban them all.
 	if ( ! g_errno && ! m_bestRequestValid ) {
 		// note it - this can happen if no more to spider right now!
-		if ( g_conf.m_logDebugSpcache )
+		if ( g_conf.m_logDebugSpider )
 			log("spider: nuking misleading waitingtree key "
 			    "firstIp=%s", iptoa(firstIp));
 		m_waitingTree.deleteNode ( 0,(char *)&m_waitingTreeKey,true);
@@ -3482,8 +3515,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// somehow started spidering since our last spider read, so i would
 	// say we should bail on this spider scan! really i'm not exactly
 	// sure what happened...
-	long long uh48 = m_bestRequest->getUrlHash48();
-	if ( g_spiderLoop.m_lockTable.isInTable ( &uh48 ) ) {
+	long long key = makeLockTableKey ( m_bestRequest );
+	if ( g_spiderLoop.m_lockTable.isInTable ( &key ) ) {
 		log("spider: best request got doled out from under us");
 		return true;
 		char *xx=NULL;*xx=0; 
@@ -4827,9 +4860,9 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// in doledb.
 	HashTableX *ht = &g_spiderLoop.m_lockTable;
 	// shortcut
-	long long uh48 = sreq->getUrlHash48();
+	long long lockKey = makeLockTableKey ( sreq );
 	// get the lock... only avoid if confirmed!
-	long slot = ht->getSlot ( &uh48 );
+	long slot = ht->getSlot ( &lockKey );
 	UrlLock *lock = NULL;
 	if ( slot >= 0 ) 
 		// get the corresponding lock then if there
@@ -5130,7 +5163,8 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
 
 	// shortcut
-	long long lockKeyUh48 = sreq->getUrlHash48();
+	long long lockKeyUh48 = makeLockTableKey ( sreq );
+
 	//unsigned long long lockKey ;
 	//lockKey = g_titledb.getFirstProbableDocId(sreq->m_probDocId);
 	//lockKey = g_titledb.getFirstProbableDocId(sreq->m_probDocId);
@@ -5703,7 +5737,7 @@ bool Msg12::getLocks ( long long uh48, // probDocId ,
 	//m_lockKey = g_titledb.getFirstProbableDocId(probDocId);
 	// . use this for locking now, and let the docid-only requests just use
 	//   the docid
-	m_lockKeyUh48 = uh48;
+	m_lockKeyUh48 = makeLockTableKey ( uh48 , firstIp );
 	m_url = url;
 	m_callback = callback;
 	m_state = state;
@@ -5717,6 +5751,8 @@ bool Msg12::getLocks ( long long uh48, // probDocId ,
 
 	// sanity check, just 6 bytes! (48 bits)
 	if ( uh48 & 0xffff000000000000LL ) { char *xx=NULL;*xx=0; }
+
+	if ( m_lockKeyUh48 & 0xffff000000000000LL ) { char *xx=NULL;*xx=0; }
 
 	// cache time
 	long ct = 120;
@@ -6300,8 +6336,10 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	// remove expired locks from locktable
 	removeExpiredLocks ( hostId );
 
+	long long lockKey = lr->m_lockKeyUh48;
+
 	// check tree
-	long slot = ht->getSlot ( &lr->m_lockKeyUh48 );
+	long slot = ht->getSlot ( &lockKey ); // lr->m_lockKeyUh48 );
 	// put it here
 	UrlLock *lock = NULL;
 	// if there say no no
@@ -6382,7 +6420,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 	tmp.m_confirmed    = false;
 
 	// put it into the table
-	if ( ! ht->addKey ( &lr->m_lockKeyUh48 , &tmp ) ) {
+	if ( ! ht->addKey ( &lockKey , &tmp ) ) {
 		// return error if that failed!
 		us->sendErrorReply ( udpSlot , g_errno );
 		return;
