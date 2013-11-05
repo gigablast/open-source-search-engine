@@ -3227,7 +3227,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			// there are urls ready to spider, just locked up
 			//ci->m_hasUrlsReadyToSpider = true;
 			// debug note
-			//if ( g_conf.m_logDebugSpider )
+			if ( g_conf.m_logDebugSpider )
 				log("spider: skipping url lockkey=%lli in "
 				    "lock table",key);
 			continue;
