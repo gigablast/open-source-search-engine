@@ -200,7 +200,7 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	if ( hh && strcmp(hh,"galileo") == 0) priv = true;
 	if ( hh && strcmp(hh,"sputnik") == 0) priv = true;
 	if ( hh && strcmp(hh,"titan") == 0) priv = true;
-	if ( hh[0]=='g' && hh[1]=='k' && is_digit(hh[2]) ) priv = true;
+	if ( hh && hh[0]=='g' && hh[1]=='k' && is_digit(hh[2]) ) priv = true;
 	//if(hh[0]=='s' && hh[1]=='p' && is_digit(hh[2])) ) priv = true;
 	if ( priv ) g_conf.m_isMattWells = true;
 	else        g_conf.m_isMattWells = false;
