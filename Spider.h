@@ -27,10 +27,10 @@
 
 // for diffbot, this is for xmldoc.cpp to update CollectionRec::m_crawlInfo
 // which has m_pagesCrawled and m_pagesProcessed.
-bool updateCrawlInfo ( CollectionRec *cr , 
-		       void *state ,
-		       void (* callback)(void *state) ,
-		       bool useCache = true ) ;
+//bool updateCrawlInfo ( CollectionRec *cr , 
+//		       void *state ,
+//		       void (* callback)(void *state) ,
+//		       bool useCache = true ) ;
 
 // . values for CollectionRec::m_spiderStatus
 // . reasons why crawl is not happening

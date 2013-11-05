@@ -1983,10 +1983,11 @@ bool XmlDoc::indexDoc2 ( ) {
 	// requests from each hosts in the network it will call the
 	// specified callback, m_masterLoop with m_masterState. this code
 	// is all in Spider.cpp.
-	setStatus ( "updating crawl info" );
-	if ( ! g_errno &&
-	     ! updateCrawlInfo ( cr , m_masterState , m_masterLoop ) )
-		return false;
+	// this is now in a sleep wrapper in spider.cpp.
+	//setStatus ( "updating crawl info" );
+	//if ( ! g_errno &&
+	//     ! updateCrawlInfo ( cr , m_masterState , m_masterLoop ) )
+	//	return false;
 
 
 

@@ -66,9 +66,9 @@ CollectionRec::CollectionRec() {
 	//}
 	m_numRegExs = 0;
 
-	m_requests = 0;
-	m_replies = 0;
-	m_doingCallbacks = false;
+	//m_requests = 0;
+	//m_replies = 0;
+	//m_doingCallbacks = false;
 
 	m_lastResetCount = 0;
 
@@ -93,13 +93,13 @@ void CollectionRec::setToDefaults ( ) {
 void CollectionRec::reset() {
 	// make sure we do not leave spiders "hanging" waiting for their
 	// callback to be called... and it never gets called
-	if ( m_callbackQueue.length() > 0 ) { char *xx=NULL;*xx=0; }
-	if ( m_doingCallbacks ) { char *xx=NULL;*xx=0; }
-	if ( m_replies != m_requests  ) { char *xx=NULL;*xx=0; }
+	//if ( m_callbackQueue.length() > 0 ) { char *xx=NULL;*xx=0; }
+	//if ( m_doingCallbacks ) { char *xx=NULL;*xx=0; }
+	//if ( m_replies != m_requests  ) { char *xx=NULL;*xx=0; }
 	m_localCrawlInfo.reset();
 	m_globalCrawlInfo.reset();
-	m_requests = 0;
-	m_replies = 0;
+	//m_requests = 0;
+	//m_replies = 0;
 }
 
 CollectionRec *g_cr = NULL;

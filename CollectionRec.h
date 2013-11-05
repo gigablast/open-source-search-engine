@@ -102,6 +102,8 @@ class CrawlInfo {
 	// time we had or might have had a url available for spidering
 	time_t m_lastSpiderCouldLaunch;
 
+	long m_collnum;
+
 	// have we sent out email/webhook notifications crawl has no urls
 	// currently in the ready queue (doledb) to spider?
 	char m_sentCrawlDoneAlert;
@@ -455,15 +457,18 @@ class CollectionRec {
 	CrawlInfo m_localCrawlInfo;
 	// total crawling stats summed up from all hosts in network
 	CrawlInfo m_globalCrawlInfo;
+
+	CrawlInfo m_tmpCrawlInfo;
+
 	// last time we computed global crawl info
 	//time_t m_globalCrawlInfoUpdateTime;
 	EmailInfo m_emailInfo;
 	// for counting replies
-	long m_replies;
-	long m_requests;
-	bool m_doingCallbacks;
+	//long m_replies;
+	//long m_requests;
+	//bool m_doingCallbacks;
 	// for storing callbacks waiting in line for freshest crawl info
-	SafeBuf m_callbackQueue;
+	//SafeBuf m_callbackQueue;
 	
 
 	// . now the url regular expressions

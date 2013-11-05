@@ -3921,8 +3921,8 @@ CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ) {
 	memset ( &cr->m_localCrawlInfo , 0 , sizeof(CrawlInfo) );
 	memset ( &cr->m_globalCrawlInfo , 0 , sizeof(CrawlInfo) );
 	//cr->m_globalCrawlInfoUpdateTime = 0;
-	cr->m_replies = 0;
-	cr->m_requests = 0;
+	//cr->m_replies = 0;
+	//cr->m_requests = 0;
 
 	// set some defaults. max spiders for all priorities in this collection
 	cr->m_maxNumSpiders = 10;
