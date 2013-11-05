@@ -2674,6 +2674,8 @@ void parseUfnTreeKey ( key128_t  *k ,
 	*spiderTimeMS |= k->n0 >> (32+24);
 }
 
+void removeExpiredLocks ( long hostId );
+
 // . this is ONLY CALLED from populatedDoledbFromWaitingTree() above
 // . returns false if blocked, true otherwise
 // . returns true and sets g_errno on error
@@ -3190,8 +3192,13 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// "firstIp". this way we can spider multiple urls from the
 		// same ip at the same time.
 		long long uh48 = sreq->getUrlHash48();
-		if ( g_spiderLoop.m_lockTable.isInTable ( &uh48 ) )
+		if ( g_spiderLoop.m_lockTable.isInTable ( &uh48 ) ) {
+			// debug note
+			if ( g_conf.m_logDebugSpider )
+				log("spider: skipping url uh48=%lli in "
+				    "lock table",uh48);
 			continue;
+		}
 		     
 		// ok, we got a new winner
 		winPriority = priority;
@@ -3893,8 +3900,6 @@ void SpiderLoop::startLoop ( ) {
 					   updateAllCrawlInfosSleepWrapper))
 		log("build: failed to register updatecrawlinfowrapper");
 }
-
-void removeExpiredLocks ( long hostId );
 
 void doneSleepingWrapperSL ( int fd , void *state ) {
 	//SpiderLoop *THIS = (SpiderLoop *)state;
@@ -6427,15 +6432,24 @@ void removeExpiredLocks ( long hostId ) {
 		// cast lock
 		UrlLock *lock = (UrlLock *)ht->getValueFromSlot(i);
 		long long lockKey = *(long long *)ht->getKeyFromSlot(i);
+		// if collnum got deleted or reset
+		collnum_t collnum = lock->m_collnum;
+		if ( collnum >= g_collectiondb.m_numRecs ||
+		     ! g_collectiondb.m_recs[collnum] ) {
+			log("spider: removing lock from missing collnum "
+			    "%li",(long)collnum);
+			goto nuke;
+		}
 		// skip if not yet expired
 		if ( lock->m_expires == 0 ) continue;
 		if ( lock->m_expires >= nowGlobal ) continue;
 		// note it for now
-		if ( g_conf.m_logDebugSpider )
+		//if ( g_conf.m_logDebugSpider )
 			log("spider: removing lock after waiting. elapsed=%li."
 			    " lockKey=%llu hid=%li expires=%lu nowGlobal=%lu",
 			    (nowGlobal - lock->m_timestamp),
 			    lockKey,hostId,lock->m_expires,nowGlobal);
+	nuke:
 		// nuke the slot and possibly re-chain
 		ht->removeSlot ( i );
 		// gotta restart from the top since table may have shrunk
@@ -9871,6 +9885,13 @@ static bool s_inUse = false;
 // . figure out how to backoff on collections that don't need it so much
 // . ask every host for their crawl infos for each collection rec
 void updateAllCrawlInfosSleepWrapper ( int fd , void *state ) {
+
+	// i don't know why we have locks in the lock table that are not
+	// getting removed... so log when we remove an expired locks and see.
+	// piggyback on this sleep wrapper call i guess...
+	// perhaps the collection was deleted or reset before the spider
+	// reply could be generated. in that case we'd have a dangling lock.
+	removeExpiredLocks ( -1 );
 
 	if ( s_inUse ) return;
 
