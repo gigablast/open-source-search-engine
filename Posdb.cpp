@@ -4910,8 +4910,12 @@ void PosdbTable::intersectLists10_r ( ) {
 	// sites right now. this hash table must have been pre-allocated
 	// in Posdb::allocTopTree() above since we might be in a thread.
 	//
-	RdbList *whiteLists = m_msg2->m_whiteLists;
-	long nw = m_msg2->m_w;
+	RdbList *whiteLists = NULL;
+	long nw = 0;
+	if ( m_msg2 ) {
+		whiteLists = m_msg2->m_whiteLists;
+		nw = m_msg2->m_w;
+	}
 	for ( long i = 0 ; ! m_addedSites && i < nw ; i++ ) {
 		RdbList *list = &whiteLists[i];
 		if ( list->isEmpty() ) continue;
