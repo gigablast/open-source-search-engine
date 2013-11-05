@@ -5121,6 +5121,9 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 		}
 	}
 
+	// we store this in msg12 for making a fakedb key
+	collnum_t collnum = g_collectiondb.getCollnum ( coll );
+
 	// shortcut
 	long long lockKeyUh48 = sreq->getUrlHash48();
 	//unsigned long long lockKey ;
@@ -5133,7 +5136,7 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	//   is why we have an rdbcache, m_lockCache, to make these lock
 	//   lookups quick, now that the locking group is usually different
 	//   than our own!
-	// . we have ot check this now because removeAllLocks() below will
+	// . we have to check this now because removeAllLocks() below will
 	//   remove a lock that one of our spiders might have. it is only
 	//   sensitive to our hostid, not "spider id"
 	// sometimes we exhaust the doledb and m_nextDoledbKey gets reset
@@ -5144,6 +5147,12 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 		// get it
 		XmlDoc *xd = m_docs[i];
 		if ( ! xd ) continue;
+
+		// jenkins was coring spidering the same url in different
+		// collections at the same time
+		if ( ! xd->m_collnumValid ) continue;
+		if ( xd->m_collnum != collnum ) continue;
+
 		// . problem if it has our doledb key!
 		// . this happens if we removed the lock above before the
 		//   spider returned!! that's why you need to set
@@ -5188,8 +5197,6 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	m_doledbKey = doledbKey;
 	m_coll      = coll;
 
-	// we store this in msg12 for making a fakedb key
-	collnum_t collnum = g_collectiondb.getCollnum ( coll );
 
 	// if we already have the lock then forget it. this can happen
 	// if spidering was turned off then back on.
