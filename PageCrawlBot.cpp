@@ -2831,6 +2831,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		if ( fmt != FMT_HTML && cx != cr && name3 ) 
 			continue;
 
+		SafeBuf tmp;
+		long crawlStatus = -1;
+		getSpiderStatusMsg ( cx , &tmp , &crawlStatus );
+		CrawlInfo *ci = &cx->m_localCrawlInfo;
+		long sentAlert = (long)ci->m_sentCrawlDoneAlert;
+		if ( sentAlert ) sentAlert = 1;
+
 		// if json, print each collectionrec
 		if ( fmt == FMT_JSON ) {
 			if ( ! firstOne ) 
@@ -2840,13 +2847,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//if ( cx->m_collectionNameAlias.length() > 0 )
 			//	alias=cx->m_collectionNameAlias.getBufStart();
 			//long paused = 1;
-			SafeBuf tmp;
-			long crawlStatus = -1;
-			getSpiderStatusMsg ( cx , &tmp , &crawlStatus );
 
-			CrawlInfo *ci = &cx->m_localCrawlInfo;
-			long sentAlert = (long)ci->m_sentCrawlDoneAlert;
-			if ( sentAlert ) sentAlert = 1;
 			//if ( cx->m_spideringEnabled ) paused = 0;
 			sb.safePrintf("\n\n{"
 				      "\"name\":\"%s\",\n"
@@ -3168,6 +3169,14 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	// show stats
 	//
 	if ( fmt == FMT_HTML ) {
+
+		SafeBuf tmp;
+		long crawlStatus = -1;
+		getSpiderStatusMsg ( cr , &tmp , &crawlStatus );
+		CrawlInfo *ci = &cr->m_localCrawlInfo;
+		long sentAlert = (long)ci->m_sentCrawlDoneAlert;
+		if ( sentAlert ) sentAlert = 1;
+
 		sb.safePrintf(
 
 			      "<form method=get action=/crawlbot>"
@@ -3193,6 +3202,21 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Token:</td>"
 			      "<td>%s</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Crawl Status:</td>"
+			      "<td>%li</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Crawl Status Msg:</td>"
+			      "<td>%s</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Rounds Completed:</td>"
+			      "<td>%li</td>"
 			      "</tr>"
 
 
@@ -3245,6 +3269,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      
 			      , cr->m_diffbotCrawlName.getBufStart()
 			      , cr->m_diffbotToken.getBufStart()
+
+			      , crawlStatus
+			      , tmp.getBufStart()
+			      , cr->m_spiderRoundNum
 
 			      , cr->m_globalCrawlInfo.m_objectsAdded -
 			        cr->m_globalCrawlInfo.m_objectsDeleted

@@ -10131,13 +10131,14 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		replyBuf.safeMemcpy ( ci , sizeof(CrawlInfo) );
 	}
 
-	replyBuf.detachBuf();
-
 	g_udpServer.sendReply_ass ( replyBuf.getBufStart() , 
 				    replyBuf.length() ,
 				    replyBuf.getBufStart() , // alloc
 				    replyBuf.getCapacity() , //alloc size
 				    slot );
+
+	// udp server will free this
+	replyBuf.detachBuf();
 }
 
 bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {

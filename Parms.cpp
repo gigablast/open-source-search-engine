@@ -8709,6 +8709,15 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
+	m->m_title = "spider status";
+	m->m_desc  = "The spider status number.";
+	m->m_cgi   = "sst";
+	m->m_off   = (char *)&cr.m_spiderStatus - x;
+	m->m_type  = TYPE_CHAR;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m++;
+
 	m->m_title = "scraping enabled procog";
 	m->m_desc  = "Do searches for queries in this hosts part of the "
 		"query log.";
