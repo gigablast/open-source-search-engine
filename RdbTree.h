@@ -360,7 +360,7 @@ class RdbTree {
 	// need to pass this file to the fastSave() thread
 	//BigFile *m_saveFile;
 	char  m_rdbId;
-	char  m_isRealTree;
+	//char  m_isRealTree;
 	char  m_dir[128];
 	char  m_dbname[32];
 	char  m_memTag[16];
