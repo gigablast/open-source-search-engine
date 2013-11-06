@@ -1064,7 +1064,10 @@ void processSleepWrapper ( int fd , void *state ) {
 	if ( ! isClockInSync() && ! g_hostdb.m_myHost->m_isProxy ) return;
 
 	// get time the day started
-	long now = getTimeGlobal();
+	long now;
+	if ( g_hostdb.m_myHost->m_isProxy ) now = getTimeLocal();
+	else now = getTimeGlobal();
+
 	// set this for the first time
 	if ( g_process.m_lastSaveTime == 0 )
 		g_process.m_lastSaveTime = now;

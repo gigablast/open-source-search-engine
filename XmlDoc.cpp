@@ -14802,18 +14802,20 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	// damn, -stdout doesn't work when -c is specified.
 	// These ulimit sizes are max virtual memory in kilobytes. let's
 	// keep them to 25 Megabytes
-	// . the newer 2.6 kernels do not support ulimit !!!
 	if      ( ctype == CT_PDF ) 
 		sprintf ( cmd , "ulimit -v 25000 -t 30 ; nice -n 19 %s/pdftohtml -q -i -noframes -stdout %s > %s", wdir , in ,out);
 	else if ( ctype == CT_DOC ) 
 		// "wdir" include trailing '/'? not sure
 		sprintf ( cmd , "ulimit -v 25000 -t 30 ; ANTIWORDHOME=%s/antiword-dir ; nice -n 19 %s/antiword %s> %s" , wdir , wdir , in ,out);
 	else if ( ctype == CT_XLS )
-		sprintf ( cmd , "ulimit -v 25000 -t 30 ; nice -n 19 %s/xlhtml %s > %s" , wdir , in ,out);
+		sprintf ( cmd , "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/xlhtml %s > %s" , wdir , in ,out);
+	// this is too buggy for now... causes hanging threads because it
+	// hangs, so i added 'timeout 10s' but that only works on newer
+	// linux version, so it'll just error out otherwise.
 	else if ( ctype == CT_PPT )
-		sprintf ( cmd , "ulimit -v 25000 -t 30 ; nice -n 19 %s/ppthtml %s > %s" , wdir , in ,out);
+		sprintf ( cmd , "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/ppthtml %s > %s" , wdir , in ,out);
 	else if ( ctype == CT_PS  )
-		sprintf ( cmd , "ulimit -v 25000 -t 30; nice -n 19 %s/pstotext %s > %s" , wdir , in ,out);
+		sprintf ( cmd , "ulimit -v 25000 -t 30; timeout 10s nice -n 19 %s/pstotext %s > %s" , wdir , in ,out);
 	else { char *xx=NULL;*xx=0; }
 
 	// breach sanity check
