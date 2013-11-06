@@ -13746,8 +13746,10 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 		sprintf ( cmd , "ulimit -v 25000 -t 30 ; ANTIWORDHOME=%s/antiword-dir ; nice -n 19 %s/antiword %s> %s" , wdir , wdir , in ,out);
 	else if ( ctype == CT_XLS )
 		sprintf ( cmd , "ulimit -v 25000 -t 30 ; nice -n 19 %s/xlhtml %s > %s" , wdir , in ,out);
-	else if ( ctype == CT_PPT )
-		sprintf ( cmd , "ulimit -v 25000 -t 30 ; nice -n 19 %s/ppthtml %s > %s" , wdir , in ,out);
+	// this is too buggy for now... causes hanging threads because it
+	// hangs and ulimit does not work on >= 2.6 kernels
+	//else if ( ctype == CT_PPT )
+	//	sprintf ( cmd , "ulimit -v 25000 -t 30 ; nice -n 19 %s/ppthtml %s > %s" , wdir , in ,out);
 	else if ( ctype == CT_PS  )
 		sprintf ( cmd , "ulimit -v 25000 -t 30; nice -n 19 %s/pstotext %s > %s" , wdir , in ,out);
 	else { char *xx=NULL;*xx=0; }
