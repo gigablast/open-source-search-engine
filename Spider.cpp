@@ -2127,8 +2127,9 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 
 	// note it
 	if ( g_conf.m_logDebugSpider )
-		log(LOG_DEBUG,"spider: added time=%lli ip=%s to waiting tree",
-		    spiderTimeMS , iptoa(firstIp));
+		log(LOG_DEBUG,"spider: added time=%lli ip=%s to waiting tree "
+		    "scan=%li",
+		    spiderTimeMS , iptoa(firstIp),(long)callForScan);
 
 	// add to table now since its in the tree
 	if ( ! m_waitingTable.addKey ( &firstIp , &spiderTimeMS ) ) {
@@ -4479,12 +4480,17 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	//if ( ufn >= 0 ) max = m_sc->m_cr->m_maxSpidersPerRule[ufn];
 	// turned off?
 	//if ( ufn >= 0 && ! m_sc->m_cr->m_spidersEnabled[ufn] ) max = 0;
+
+	// if we have one out, do not end the round!
+	if ( out > 0 ) {
+		// assume we could have launched a spider
+		ci->m_lastSpiderCouldLaunch = nowGlobal;
+	}
+
 	// always allow at least 1, they can disable spidering otherwise
 	// no, we use this to disabled spiders... if ( max <= 0 ) max = 1;
 	// skip?
 	if ( out >= max ) {
-		// assume we could have launched a spider
-		if ( max > 0 ) ci->m_lastSpiderCouldLaunch = nowGlobal;
 		// count as non-empty then!
 		//m_sc->m_encounteredDoledbRecs = true;
 		// try the priority below us
