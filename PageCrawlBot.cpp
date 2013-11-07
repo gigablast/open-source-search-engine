@@ -2262,6 +2262,15 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		name = NULL;
 		// no longer a delete function, we need to set "name" below
 		delColl = false;//NULL;
+		// john wants just a brief success reply
+		char *reply = "{\"reply\":\"Successfully deleted crawl.\"}";
+		return g_httpServer.sendDynamicPage( socket,
+						     reply,
+						     gbstrlen(reply),
+						     0, // cacheTime
+						     false, // POSTReply?
+						     "application/json"
+						     );
 	}
 
 	// if name is missing default to name of first existing
