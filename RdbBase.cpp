@@ -493,7 +493,8 @@ bool RdbBase::setFiles ( ) {
 	if ( ! m_dir.open ( ) )
 		return log("db: Had error opening directory %s", getDir());
 	// note it
-	logf(LOG_INFO,"db: Loading files for %s.",m_dbname );
+	logf(LOG_INFO,"db: Loading files for %s coll=%s (%li).",
+	     m_dbname,m_coll,(long)m_collnum );
 	// . set our m_files array
 	// . addFile() will return -1 and set g_errno on error
 	// . the lower the fileId the older the data 
@@ -723,7 +724,6 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 	sprintf ( name , "%s%04li.map", m_dbname, id );
 	m->set ( getDir() , name , m_fixedDataSize , m_useHalfKeys , m_ks ,
 		 m_pageSize );
-	if ( ! isNew ) logf(LOG_INFO,"db: Adding %s.", name );
 	if ( ! isNew && ! m->readMap ( f ) ) { 
 		// if out of memory, do not try to regen for that
 		if ( g_errno == ENOMEM ) return -1;
@@ -759,6 +759,8 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		g_statsdb.m_disabled = false;
 		if ( ! status ) return log("db: Save failed.");
 	}
+	if ( ! isNew ) logf(LOG_INFO,"db: Added %s for collnum=%li pages=%li",
+			    name ,(long)m_collnum,m->getNumPages());
 	// open this big data file for reading only
 	if ( ! isNew ) {
 		if ( mergeNum < 0 ) 

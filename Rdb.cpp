@@ -923,7 +923,8 @@ bool Rdb::saveMaps ( bool useThread ) {
 		// shut it down
 		RdbBase *base = getBase(i);
 		//if ( m_bases[i] ) m_bases[i]->closeMaps ( m_urgent );
-		if ( base ) base->closeMaps ( m_urgent );
+		//if ( base ) base->closeMaps ( m_urgent );
+		if ( base ) base->saveMaps ( useThread );
 	}
 	return true;
 }
