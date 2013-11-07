@@ -5212,7 +5212,13 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 
 		//   we need to keep this sanity check in here for times
 		//   like this
-		if ( xd->m_doledbKey == *doledbKey ) { char *xx=NULL;*xx=0; }
+		if ( xd->m_doledbKey == *doledbKey ) { 
+			// just note it for now
+			log("spider: spidering same url %s twice. "
+			    "different firstips?",
+			    xd->m_firstUrl.m_url);
+			//char *xx=NULL;*xx=0; }
+		}
 		// keep chugging
 		continue;
 		//if ( xd->m_doledbKey != *doledbKey ) continue;

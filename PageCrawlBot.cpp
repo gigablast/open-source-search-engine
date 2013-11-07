@@ -974,7 +974,8 @@ bool StateCD::readDataFromRdb ( ) {
 			// continue if it blocked
 			continue;
 		}
-		log("crawlbot: did not block getting list from shard");
+		log("crawlbot: did not block getting list from shard err=%s",
+		    mstrerror(g_errno));
 		// we got a reply back right away...
 		m_numReplies++;
 	}
