@@ -130,7 +130,8 @@ bool HttpServer::getDoc ( char   *url      ,
 			  bool     doPost ,
 			  char    *cookie ,
 			  char    *additionalHeader ,
-			  char    *fullRequest ) { 
+			  char    *fullRequest ,
+			  char    *postContent ) { 
 	// sanity
 	if ( ip == -1 ) 
 		log("http: you probably didn't mean to set ip=-1 did you? "
@@ -154,6 +155,9 @@ bool HttpServer::getDoc ( char   *url      ,
 		defPort = 443;
 	}
 
+	long pcLen = 0;
+	if ( postContent ) pcLen = gbstrlen(postContent);
+
 	char *req = NULL;
 	long reqSize;
 
@@ -161,9 +165,15 @@ bool HttpServer::getDoc ( char   *url      ,
 	if ( ! fullRequest ) {
 		if ( ! r.set ( url , offset , size , ifModifiedSince ,
 			       userAgent , proto , doPost , cookie ,
-			       additionalHeader ) ) return true;
+			       additionalHeader , pcLen ) ) return true;
 		reqSize = r.getRequestLen();
-		req = (char *) mdup ( r.getRequest() , reqSize,"HttpServer");
+		req = (char *) mmalloc( reqSize + pcLen ,"HttpServer");
+		if ( req ) 
+			memcpy ( req , r.getRequest() , reqSize );
+		if ( req && pcLen ) {
+			memcpy ( req + reqSize, postContent , pcLen );
+			reqSize += pcLen;
+		}
 	}
 	else {
 		// does not contain \0 i guess

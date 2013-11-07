@@ -3043,6 +3043,8 @@ void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
 	ei->m_finalCallback ( ei->m_finalState );
 }
 
+bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) ;
+
 // . return false if would block, true otherwise
 // . used to send email and get a url when a crawl hits a maxToCrawl
 //   or maxToProcess limitation.
@@ -3112,6 +3114,10 @@ bool sendNotification ( EmailInfo *ei ) {
 				    , cr->m_diffbotCrawlName.getBufStart()
 				    , ei->m_spiderStatusMsg.getBufStart()
 				    );
+		// also in post body
+		SafeBuf postContent;
+		// the collection details
+		printCrawlDetailsInJson ( postContent , cr );
 		// GET request
 		if ( ! g_httpServer.getDoc ( url ,
 					     0 , // ip
@@ -3130,7 +3136,8 @@ bool sendNotification ( EmailInfo *ei ) {
 					     true , // doPost
 					     NULL, // cookie
 					     custom.getBufStart(),
-					     NULL ) ) // fullRequest
+					     NULL , // fullRequest
+					     postContent.getBufStart() ) )
 			ei->m_notifyBlocked++;
 	}
 

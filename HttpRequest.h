@@ -41,7 +41,8 @@ class HttpRequest {
 		   char *proto = "HTTP/1.0" ,
 		   bool doPost = false ,
 		   char *cookie = NULL ,
-		   char *additionalHeader = NULL ); // does not incl \r\n
+		   char *additionalHeader = NULL , // does not incl \r\n
+		   long postContentLen = -1 ); // for content-length of POST
 
 	// use this
 	SafeBuf m_reqBuf;

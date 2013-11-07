@@ -2635,6 +2635,112 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 	return true;
 }
 
+bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
+
+	SafeBuf tmp;
+	long crawlStatus = -1;
+	getSpiderStatusMsg ( cx , &tmp , &crawlStatus );
+	CrawlInfo *ci = &cx->m_localCrawlInfo;
+	long sentAlert = (long)ci->m_sentCrawlDoneAlert;
+	if ( sentAlert ) sentAlert = 1;
+
+	sb.safePrintf("\n\n{"
+		      "\"name\":\"%s\",\n"
+		      //"\"alias\":\"%s\",\n"
+		      //"\"crawlingEnabled\":%li,\n"
+		      "\"crawlStatus\":{"
+		      "\"status\":%li,"
+		      "\"message\":\"%s\"},\n"
+		      "\"sentCrawlDoneNotification\":%li,\n"
+		      //"\"crawlingPaused\":%li,\n"
+		      "\"objectsFound\":%lli,\n"
+		      "\"urlsHarvested\":%lli,\n"
+		      //"\"urlsExamined\":%lli,\n"
+		      "\"pageCrawlAttempts\":%lli,\n"
+		      "\"pageCrawlSuccesses\":%lli,\n"
+		      "\"pageProcessAttempts\":%lli,\n"
+		      "\"pageProcessSuccesses\":%lli,\n"
+		      // settable parms
+		      "\"maxToCrawl\":%lli,\n"
+		      "\"maxToProcess\":%lli,\n"
+		      "\"maxCrawlRounds\":%li,\n"
+		      "\"obeyRobots\":%li,\n"
+		      "\"restrictDomain\":%li,\n"
+		      "\"repeatCrawl\":%f,\n"
+		      "\"crawlDelay\":%f,\n"
+		      "\"onlyProcessIfNew\":%li,\n"
+		      //,cx->m_coll
+		      , cx->m_diffbotCrawlName.getBufStart()
+		      //, alias
+		      //, (long)cx->m_spideringEnabled
+		      , crawlStatus
+		      , tmp.getBufStart()
+		      , sentAlert
+		      //, (long)paused
+		      , cx->m_globalCrawlInfo.m_objectsAdded -
+		      cx->m_globalCrawlInfo.m_objectsDeleted
+		      , cx->m_globalCrawlInfo.m_urlsHarvested
+		      //,cx->m_globalCrawlInfo.m_urlsConsidered
+		      , cx->m_globalCrawlInfo.m_pageDownloadAttempts
+		      , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
+		      , cx->m_globalCrawlInfo.m_pageProcessAttempts
+		      , cx->m_globalCrawlInfo.m_pageProcessSuccesses
+		      , cx->m_maxToCrawl
+		      , cx->m_maxToProcess
+		      , (long)cx->m_maxCrawlRounds
+		      , (long)cx->m_useRobotsTxt
+		      , (long)cx->m_restrictDomain
+		      , cx->m_collectiveRespiderFrequency
+		      , cx->m_collectiveCrawlDelay
+		      , (long)cx->m_diffbotOnlyProcessIfNew
+		      );
+	sb.safePrintf("\"seeds\":\"");
+	sb.safeUtf8ToJSON ( cx->m_diffbotSeeds.getBufStart());
+	sb.safePrintf("\",\n");
+
+	sb.safePrintf("\"crawlRoundsCompleted\":%li,\n",
+		      cx->m_spiderRoundNum);
+
+	sb.safePrintf("\"crawlRoundStartTime\":%lu,\n",
+		      cx->m_spiderRoundStartTime);
+
+	sb.safePrintf("\"currentTime\":%lu,\n",
+		      getTimeGlobal() );
+
+	sb.safePrintf("\"pageProcessPattern\":\"");
+	sb.safeUtf8ToJSON ( cx->m_diffbotPageProcessPattern.
+			    getBufStart() );
+	sb.safePrintf("\",\n");
+
+	sb.safePrintf("\"notifyEmail\":\"");
+	sb.safeUtf8ToJSON ( cx->m_notifyEmail.getBufStart() );
+	sb.safePrintf("\",\n");
+
+	sb.safePrintf("\"notifyWebhook\":\"");
+	sb.safeUtf8ToJSON ( cx->m_notifyUrl.getBufStart() );
+	sb.safePrintf("\",\n");
+	/////
+	//
+	// show url filters table. kinda hacky!!
+	//
+	/////
+	/*
+	  g_parms.sendPageGeneric ( socket ,
+	  hr ,
+	  PAGE_FILTERS ,
+	  NULL ,
+	  &sb ,
+	  cr->m_coll,  // coll override
+	  true // isJSON?
+	  );
+	*/
+	printUrlFilters ( sb , cx , FMT_JSON );
+	// end that collection rec
+	sb.safePrintf("\n}\n");
+
+	return true;
+}
+
 bool printCrawlBotPage2 ( TcpSocket *socket , 
 			  HttpRequest *hr ,
 			  char fmt, // format
@@ -2841,13 +2947,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		if ( fmt != FMT_HTML && cx != cr && name3 ) 
 			continue;
 
-		SafeBuf tmp;
-		long crawlStatus = -1;
-		getSpiderStatusMsg ( cx , &tmp , &crawlStatus );
-		CrawlInfo *ci = &cx->m_localCrawlInfo;
-		long sentAlert = (long)ci->m_sentCrawlDoneAlert;
-		if ( sentAlert ) sentAlert = 1;
-
 		// if json, print each collectionrec
 		if ( fmt == FMT_JSON ) {
 			if ( ! firstOne ) 
@@ -2859,99 +2958,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//long paused = 1;
 
 			//if ( cx->m_spideringEnabled ) paused = 0;
-			sb.safePrintf("\n\n{"
-				      "\"name\":\"%s\",\n"
-				      //"\"alias\":\"%s\",\n"
-				      //"\"crawlingEnabled\":%li,\n"
-				      "\"crawlStatus\":{"
-				      "\"status\":%li,"
-				      "\"message\":\"%s\"},\n"
-				      "\"sentCrawlDoneNotification\":%li,\n"
-				      //"\"crawlingPaused\":%li,\n"
-				      "\"objectsFound\":%lli,\n"
-				      "\"urlsHarvested\":%lli,\n"
-				      //"\"urlsExamined\":%lli,\n"
-				      "\"pageCrawlAttempts\":%lli,\n"
-				      "\"pageCrawlSuccesses\":%lli,\n"
-				      "\"pageProcessAttempts\":%lli,\n"
-				      "\"pageProcessSuccesses\":%lli,\n"
-				      // settable parms
-				      "\"maxToCrawl\":%lli,\n"
-				      "\"maxToProcess\":%lli,\n"
-				      "\"maxCrawlRounds\":%li,\n"
-				      "\"obeyRobots\":%li,\n"
-				      "\"restrictDomain\":%li,\n"
-				      "\"repeatCrawl\":%f,\n"
-				      "\"crawlDelay\":%f,\n"
-				      "\"onlyProcessIfNew\":%li,\n"
-				      //,cx->m_coll
-				      , cx->m_diffbotCrawlName.getBufStart()
-				      //, alias
-				      //, (long)cx->m_spideringEnabled
-				      , crawlStatus
-				      , tmp.getBufStart()
-				      , sentAlert
-				      //, (long)paused
-				      , cx->m_globalCrawlInfo.m_objectsAdded -
-				      cx->m_globalCrawlInfo.m_objectsDeleted
-				      , cx->m_globalCrawlInfo.m_urlsHarvested
-				      //,cx->m_globalCrawlInfo.m_urlsConsidered
-				, cx->m_globalCrawlInfo.m_pageDownloadAttempts
-				, cx->m_globalCrawlInfo.m_pageDownloadSuccesses
-				, cx->m_globalCrawlInfo.m_pageProcessAttempts
-				, cx->m_globalCrawlInfo.m_pageProcessSuccesses
-				      , cx->m_maxToCrawl
-				      , cx->m_maxToProcess
-				      , (long)cx->m_maxCrawlRounds
-				      , (long)cx->m_useRobotsTxt
-				      , (long)cx->m_restrictDomain
-				      , cx->m_collectiveRespiderFrequency
-				      , cx->m_collectiveCrawlDelay
-				      , (long)cx->m_diffbotOnlyProcessIfNew
-				      );
-			sb.safePrintf("\"seeds\":\"");
-			sb.safeUtf8ToJSON ( cx->m_diffbotSeeds.getBufStart());
-			sb.safePrintf("\",\n");
-
-			sb.safePrintf("\"crawlRoundsCompleted\":%li,\n",
-				      cx->m_spiderRoundNum);
-
-			sb.safePrintf("\"crawlRoundStartTime\":%lu,\n",
-				      cx->m_spiderRoundStartTime);
-
-			sb.safePrintf("\"currentTime\":%lu,\n",
-				      getTimeGlobal() );
-
-			sb.safePrintf("\"pageProcessPattern\":\"");
-			sb.safeUtf8ToJSON ( cx->m_diffbotPageProcessPattern.
-					    getBufStart() );
-			sb.safePrintf("\",\n");
-
-			sb.safePrintf("\"notifyEmail\":\"");
-			sb.safeUtf8ToJSON ( cx->m_notifyEmail.getBufStart() );
-			sb.safePrintf("\",\n");
-
-			sb.safePrintf("\"notifyWebhook\":\"");
-			sb.safeUtf8ToJSON ( cx->m_notifyUrl.getBufStart() );
-			sb.safePrintf("\",\n");
-			/////
-			//
-			// show url filters table. kinda hacky!!
-			//
-			/////
-			/*
-			g_parms.sendPageGeneric ( socket ,
-						  hr ,
-						  PAGE_FILTERS ,
-						  NULL ,
-						  &sb ,
-						  cr->m_coll,  // coll override
-						  true // isJSON?
-						  );
-			*/
-			printUrlFilters ( sb , cx , fmt );
-			// end that collection rec
-			sb.safePrintf("\n}\n");
+			printCrawlDetailsInJson ( sb , cx );
 			// print the next one out
 			continue;
 		}

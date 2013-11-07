@@ -98,7 +98,8 @@ class HttpServer {
 		      char   *cookie = NULL ,
 		      char *additionalHeader = NULL , // does not include \r\n
 		      // specify your own mime and post data here...
-		      char *fullRequest = NULL );
+		      char *fullRequest = NULL ,
+		      char *postContent = NULL );
 
 	bool getDoc ( long ip,
 		      long port,
