@@ -3105,12 +3105,21 @@ bool sendNotification ( EmailInfo *ei ) {
 	if ( url && url[0] ) {
 		log("build: sending url notification to %s for coll \"%s\"",
 		    url,crawl);
+
+		Url uu; uu.set ( url );
+
+		SafeBuf fullReq;
+		fullReq.safePrintf("POST %s HTTP/1.0\r\n"
+				   "User-Agent: Crawlbot/2.0\r\n"
+				   "Accept: */*\r\n"
+				   "Host: "
+				   , uu.getPath()
+				   );
+		fullReq.safeMemcpy ( uu.getHost() , uu.getHostLen() );
 		// make custom headers
-		SafeBuf custom;
-		custom.safePrintf ( "X-Crawl-Name: %s\r\n"
+		fullReq.safePrintf ("X-Crawl-Name: %s\r\n"
 				    // last \r\n is added in HttpRequest.cpp
-				    "X-Crawl-Status: %s"// \r\n" // hdrs
-				    
+				    "X-Crawl-Status: %s\r\n" // hdrs
 				    , cr->m_diffbotCrawlName.getBufStart()
 				    , ei->m_spiderStatusMsg.getBufStart()
 				    );
@@ -3118,6 +3127,16 @@ bool sendNotification ( EmailInfo *ei ) {
 		SafeBuf postContent;
 		// the collection details
 		printCrawlDetailsInJson ( postContent , cr );
+		// content-length of it
+		fullReq.safePrintf("Content-Length: %li\r\n",
+				   postContent.length());
+		// type is json
+		fullReq.safePrintf("Content-Type: application/json\r\n");
+		fullReq.safePrintf("\r\n");
+		// then the post content
+		fullReq.safeMemcpy ( &postContent );
+		fullReq.nullTerm();
+
 		// GET request
 		if ( ! g_httpServer.getDoc ( url ,
 					     0 , // ip
@@ -3135,9 +3154,9 @@ bool sendNotification ( EmailInfo *ei ) {
 					     "HTTP/1.0", // proto
 					     true , // doPost
 					     NULL, // cookie
-					     custom.getBufStart(),
-					     NULL , // fullRequest
-					     postContent.getBufStart() ) )
+					     NULL , // custom hdrs
+					     fullReq.getBufStart() ,
+					     NULL ) )
 			ei->m_notifyBlocked++;
 	}
 
