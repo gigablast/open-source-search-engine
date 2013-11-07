@@ -2712,6 +2712,23 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 			    getBufStart() );
 	sb.safePrintf("\",\n");
 
+	char *token = cx->m_diffbotToken.getBufStart();
+	char *name = cx->m_diffbotCrawlName.getBufStart();
+
+	sb.safePrintf("\"downloadJson\":"
+		      "\"http://api.diffbot.com/v2/crawl/download/"
+		      "%s-%s_data.json\",\n"
+		      , token
+		      , name
+		      );
+
+	sb.safePrintf("\"downloadUrls\":"
+		      "\"http://api.diffbot.com/v2/crawl/download/"
+		      "%s-%s_urls.csv\",\n"
+		      , token
+		      , name
+		      );
+
 	sb.safePrintf("\"notifyEmail\":\"");
 	sb.safeUtf8ToJSON ( cx->m_notifyEmail.getBufStart() );
 	sb.safePrintf("\",\n");
