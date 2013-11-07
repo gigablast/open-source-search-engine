@@ -3071,6 +3071,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<b>Search Objects:</b>"
 			      "</td><td>"
 			      "<input type=text name=q size=50>"
+			      // site clustering off
+			      "<input type=hidden name=sc value=0>"
+			      // dup removal off
+			      "<input type=hidden name=dr value=0>"
 			      "<input type=hidden name=c value=\"%s\">"
 			      "<input type=hidden name=rand value=%lli>"
 			      // bypass ajax, searchbox, logo, etc.
@@ -3091,6 +3095,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<b>Search Pages:</b>"
 			      "</td><td>"
 			      "<input type=text name=q size=50>"
+			      // site clustering off
+			      "<input type=hidden name=sc value=0>"
+			      // dup removal off
+			      "<input type=hidden name=dr value=0>"
 			      "<input type=hidden name=c value=\"%s\">"
 			      "<input type=hidden name=rand value=%lli>"
 			      // bypass ajax, searchbox, logo, etc.
