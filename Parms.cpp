@@ -3790,7 +3790,7 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 		// time is stored as long
 		long ct = *(long *)s;
 		// get the time struct
-		struct tm *tp = gmtime ( (time_t *)&ct ) ;
+		struct tm *tp = localtime ( (time_t *)&ct ) ;
 		// set the "selected" month for the drop down
 		strftime ( p , 100 , "%d %b %Y %H:%M UTC" , tp );
 	}
