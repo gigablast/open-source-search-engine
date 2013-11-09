@@ -416,6 +416,33 @@ bool Words::addWords(char *s,long nodeLen,bool computeWordIds, long niceness) {
 	}
 	// . c#, j#, ...
 	if ( s[i]=='#' && !is_alnum_utf8(&s[i+1]) ) i++;
+
+	// comma is ok if like ,ddd!d
+	if ( s[i]==',' && 
+	     j-i <= 3 &&
+	     is_digit(s[i-1]) &&
+	     (j==i-1 || is_digit(s[i-2]) ) &&
+	     (j==i-2 || is_digit(s[i-3]) ) ) {
+		// scan forward
+	subloop:
+		if ( s[i] == ',' &&
+		     is_digit(s[i+1]) &&
+		     is_digit(s[i+2]) &&
+		     is_digit(s[i+3]) ) {
+			i += 4;
+			goto subloop;
+		}
+	}
+
+	// decimal point?
+	if ( s[i] == '.' &&
+	     is_digit(s[i-1]) &&
+	     is_digit(s[i+1]) ) {
+		// allow the decimal point
+		i++;
+		// skip over string of digits
+		while ( is_digit(s[i]) ) i++;
+	}
 	
 	// allow for words like we're dave's and i'm
 	if(s[i]=='\''&&s[i+1]&&is_alnum_utf8(&s[i+1])&&!hadApostrophe){

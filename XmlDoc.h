@@ -849,6 +849,13 @@ class XmlDoc {
 			  long              niceness       );
 
 
+	bool hashNumber ( char *beginBuf ,
+			  char *buf , 
+			  long bufLen , 
+			  class HashInfo *hi ) ;
+
+	bool hashNumber2 ( float f , class HashInfo *hi ) ;
+
 	// print out for PageTitledb.cpp and PageParser.cpp
 	bool printDoc ( class SafeBuf *pbuf );
 	bool printMenu ( class SafeBuf *pbuf );

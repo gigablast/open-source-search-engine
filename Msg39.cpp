@@ -507,6 +507,7 @@ bool Msg39::getLists () {
 			     "sign=%c "
 			     "numPlusses=%hhu "
 			     "required=%li "
+			     "fielcode=%li "
 
 			     "ebit=0x%0llx "
 			     "impBits=0x%0llx "
@@ -534,6 +535,7 @@ bool Msg39::getLists () {
 			     sign , //c ,
 			     0 , 
 			     (long)qt->m_isRequired,
+			     (long)qt->m_fieldCode,
 
 			     (long long)qt->m_explicitBit  ,
 			     (long long)qt->m_implicitBits ,
