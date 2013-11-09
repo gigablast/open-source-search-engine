@@ -14965,13 +14965,13 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "format of the returned search results";
-	m->m_desc  = "X is 0 to get back results in regular html, and 8 to "
-		"get back results in XML.";
+	m->m_desc  = "X is 0 to get back results in regular html, 1 to "
+		"get back results in XML, 2 for JSON.";
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_xml - y;
-	m->m_type  = TYPE_LONG;
+	m->m_soff  = (char *)&si.m_format - y;
+	m->m_type  = TYPE_CHAR;
 	m->m_sparm = 1;
-	m->m_scgi  = "xml";
+	m->m_scgi  = "format";
 	m->m_smin  = 0;
 	m->m_smax  = 12;
 	m++;

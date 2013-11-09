@@ -135,7 +135,8 @@ class HttpServer {
 			      long *bytesSent = NULL ); 
 	// send a "prettier" error reply, formatted in XML if necessary
 	bool sendQueryErrorReply ( TcpSocket *s , long error , char *errmsg,
-				   long rawFormat, int errnum, 
+				   // FORMAT_HTML=0,FORMAT_XML,FORMAT_JSON
+				   char format, int errnum, 
 				   char *content=NULL); 
 	
 

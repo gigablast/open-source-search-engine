@@ -1552,7 +1552,9 @@ bool HttpServer::sendErrorReply ( TcpSocket *s , long error , char *errmsg ,
 	*/
 }
 bool HttpServer::sendQueryErrorReply( TcpSocket *s , long error , 
-				      char *errmsg, long  rawFormat, 
+				      char *errmsg, 
+				      //long  rawFormat, 
+				      char format ,
 				      int errnum, char *content) {
 	// clear g_errno so the send goes through
 	g_errno = 0;
@@ -1569,7 +1571,7 @@ bool HttpServer::sendQueryErrorReply( TcpSocket *s , long error ,
 	// sanity check
 	if ( strncasecmp(errmsg,"Success",7)==0 ) {char*xx=NULL;*xx=0;}
 
-	if (!rawFormat){
+	if ( format == FORMAT_HTML ) {
 		// Page content
 		char cbuf[1024];
 		sprintf (cbuf, 

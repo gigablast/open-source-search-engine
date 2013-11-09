@@ -342,7 +342,7 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 
 	// we need to get some cgi values in order to correct the defaults
 	// based on if we're doing an xml feed, have a site: query, etc.
-	long  xml      = r->getLong ( "xml" , 0 ); // was "raw"
+	//long  xml      = r->getLong ( "xml" , 0 ); // was "raw"
 	long  siteLen  = 0; r->getString ("site",&siteLen);
 	long  sitesLen = 0; 
 	char *sites = r->getString ("sites",&sitesLen,NULL);
@@ -353,8 +353,23 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	       ! m_whiteListBuf.nullTerm() ) )
 		return log("query: unable to strcpy whitelist");
 	
+
+	// what format should search results be in? default is html
+	long format = r->getLong("format", FORMAT_HTML );
+
+	// support old api &xml=1 to mean &format=1
+	if ( r->getLong("xml",0) ) {
+		format = FORMAT_XML;
+	}
+
+	// also support &json=1
+	if ( r->getLong("json",0) ) {
+		format = FORMAT_JSON;
+	}
+
+
 	// now override automatic defaults for special cases
-	if ( xml > 0 ) {
+	if ( format != FORMAT_HTML ) {
 		m_familyFilter            = 0;
 		// this is causing me a headache when on when i dont know it
 		m_restrictIndexdbForQuery   = false;
@@ -654,17 +669,18 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	// use "&dg=1" to debug gigabits
 	m_debugGigabits = r->getLong("dg",0);
 
+	// override
+	m_format = format;
 
 	// . omit scoring info from the xml feed for now
 	// . we have to roll this out to gk144 net i think
-	if ( xml > 0 )
+	if ( m_format != FORMAT_HTML )
 		m_getDocIdScoringInfo = 0;
 
 	// turn off by default!
 	if ( ! r->getLong("gigabits",0) ) {
 		m_numTopicGroups = 0;
 	}
-
 
 	//////////////////////////////////////
 	//

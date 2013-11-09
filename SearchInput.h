@@ -43,6 +43,10 @@ class TopicGroup {
         long m_topicMaxPunctLen;
 };
 
+#define FORMAT_HTML 0
+#define FORMAT_XML  1
+#define FORMAT_JSON 2
+
 class SearchInput {
 
  public:
@@ -211,7 +215,9 @@ class SearchInput {
 	
 	// tier sizes can change with different "raw" values, therefore,
 	// so can search results
-	long   m_xml;                        // msg40
+	//long   m_xml;                        // msg40
+	// can be 0 for FORMAT_HTML, 1 = FORMAT_XML, 2=FORMAT_JSON
+	char m_format;
 
 	// this should be part of the key because it will affect the results!
 	char   m_queryExpansion;
