@@ -428,7 +428,8 @@ bool Words::addWords(char *s,long nodeLen,bool computeWordIds, long niceness) {
 		if ( s[i] == ',' &&
 		     is_digit(s[i+1]) &&
 		     is_digit(s[i+2]) &&
-		     is_digit(s[i+3]) ) {
+		     is_digit(s[i+3]) &&
+		     ! is_digit(s[i+4]) ) {
 			i += 4;
 			goto subloop;
 		}
