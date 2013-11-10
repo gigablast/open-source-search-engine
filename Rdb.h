@@ -184,7 +184,7 @@ class Rdb {
 	
 	void disableWrites ();
 	void enableWrites  ();
-
+	bool isWritable ( ) ;
 
 	RdbBase *getBase ( collnum_t collnum ) ;
 	long getNumBases ( ) { 	return g_collectiondb.m_numRecs; };

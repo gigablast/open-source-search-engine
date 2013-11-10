@@ -500,6 +500,11 @@ bool Process::isAnyTreeSaving ( ) {
 		Rdb *rdb = m_rdbs[i];
 		if ( rdb->m_isCollectionLess ) continue;
 		if ( rdb->isSavingTree() ) return true;
+		// we also just disable writing below in Process.cpp
+		// while saving other files. so hafta check that as well
+		// since we use isAnyTreeSaving() to determine if we can
+		// write to the tree or not.
+		if ( rdb->isWritable() ) return true;
 	}
 	return false;
 }

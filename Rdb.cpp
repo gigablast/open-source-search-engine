@@ -2840,6 +2840,12 @@ void Rdb::enableWrites  () {
 	else m_buckets.enableWrites();
 }
 
+bool Rdb::isWritable ( ) {
+	if(m_useTree) return m_tree.m_isWritable;
+	return m_buckets.m_isWritable;
+}
+
+
 bool Rdb::needsSave() {
 	if(m_useTree) return m_tree.m_needsSave; 
 	else return m_buckets.needsSave();
