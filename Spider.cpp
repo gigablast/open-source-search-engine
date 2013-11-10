@@ -9936,6 +9936,10 @@ static bool s_inUse = false;
 // . ask every host for their crawl infos for each collection rec
 void updateAllCrawlInfosSleepWrapper ( int fd , void *state ) {
 
+	// debug test
+	//long mr = g_collectiondb.m_recs[0]->m_maxCrawlRounds;
+	//log("mcr: %li",mr);
+
 	// i don't know why we have locks in the lock table that are not
 	// getting removed... so log when we remove an expired locks and see.
 	// piggyback on this sleep wrapper call i guess...

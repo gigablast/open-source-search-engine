@@ -103,7 +103,10 @@ typedef unsigned long long qvec_t;
 #define FIELD_GBCSENUM         50
 #define FIELD_GBSECTIONHASH    51
 #define FIELD_GBDOCID          52
-#define FIELD_GBCONTENTHASH    53
+#define FIELD_GBCONTENTHASH    53 // for deduping at spider time
+#define FIELD_GBSORTBY         54 // i.e. sortby:price -> numeric termlist
+#define FIELD_GBNUMBERMIN      55
+#define FIELD_GBNUMBERMAX      56
 
 #define FIELD_GBOTHER 92
 

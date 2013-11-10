@@ -22930,7 +22930,8 @@ long XmlDoc::getBoostFromSiteNumInlinks ( long inlinks ) {
 	if ( inlinks >= 51200 ) boost1 = 700;
 	return boost1;
 }
-		
+
+
 // returns false and sets g_errno on error
 bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
 
@@ -23050,6 +23051,10 @@ bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
 		tptr[tagLen] = c;
 		// bail on error, g_errno should be set
 		if ( ! status ) return false;
+
+		// return false with g_errno set on error
+		//if ( ! hashNumber ( buf , bufLen , &hi ) )
+		//	return false;
 	}
 	return true;
 }
@@ -27751,7 +27756,6 @@ bool XmlDoc::hashSingleTerm ( char       *s         ,
 	return true;
 }
 
-
 bool XmlDoc::hashString ( char       *s          ,
 			  long        slen       ,
 			  HashInfo   *hi         ) {
@@ -28435,11 +28439,141 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 		//	//char *xx=NULL;*xx=0; 
 		//}
 
+		//
+		// NUMERIC SORTING AND RANGES
+		//
+
+		// only store numbers in fields this way
+		if ( prefixHash == 0 ) continue;
+
+		// this may or may not be numeric.
+		if ( ! is_digit ( wptrs[i][0] ) ) continue;
+
+		// this might have to "back up" before any '.' or '-' symbols
+		if ( ! hashNumber ( wptrs[0] ,
+				    wptrs[i] ,
+				    wlens[i] ,
+				    hi ) )
+			return false;
 	}
 
 	// between calls? i.e. hashTitle() and hashBody()
 	//if ( wc > 0 ) m_dist = wposvec[wc-1] + 100;
 	if ( i > 0 ) m_dist = wposvec[i-1] + 100;
+
+	return true;
+}
+
+// . we store numbers as floats in the top 4 bytes of the lower 6 bytes of the 
+//   posdb key
+// . the termid is the hash of the preceeding field
+// . in json docs a field is like "object.details.price"
+// . in meta tags it is just the meta tag name
+// . credit card numbers are 16 digits. we'd need like 58 bits to store those
+//   so we can't do that here, but we can approximate as a float
+// . the binary representation of floating point numbers is ordered in the
+//   same order as the floating points themselves! so we are lucky and can
+//   keep our usually KEYCMP sorting algos to keep the floats in order.
+bool XmlDoc::hashNumber ( char *beginBuf , 
+			  char *buf , 
+			  long bufLen , 
+			  HashInfo *hi ) {
+
+	if ( ! is_digit(buf[0]) ) return true;
+
+	char *p = buf;
+	char *bufEnd = buf + bufLen;
+
+	// back-up over any .
+	if ( p > beginBuf && p[-1] == '.' ) p--;
+
+	// negative sign?
+	if ( p > beginBuf && p[-1] == '-' ) p--;
+
+	// . convert it to a float
+	// . this now allows for commas in numbers like "1,500.62"
+	float f = atof2 ( p , bufEnd - p );
+
+	return hashNumber2 ( f , hi );
+}
+
+bool XmlDoc::hashNumber2 ( float f , HashInfo *hi ) {
+
+	// prefix is something like price. like the meta "name" or
+	// the json name with dots in it like "product.info.price" or something
+	long long nameHash = 0LL;
+	long nameLen = 0;
+	if ( hi->m_prefix ) nameLen = gbstrlen ( hi->m_prefix );
+	if ( hi->m_prefix && nameLen ) 
+		nameHash = hash64Lower_utf8 ( hi->m_prefix , nameLen );
+	// need a prefix for hashing numbers... for now
+	else { char *xx=NULL; *xx=0; }
+		
+	// combine prefix hash with a special hash to make it unique to avoid
+	// collisions. this is the "TRUE" prefix.
+	long long truePrefix64 = hash64n ( "gbsortby");
+	// hash with the "TRUE" prefix
+	long long ph2 = hash64 ( nameHash , truePrefix64 );
+
+	// . now store it
+	// . use field hash as the termid. normally this would just be
+	//   a prefix hash
+	// . use mostly fake value otherwise
+	key144_t k;
+	g_posdb.makeKey ( &k ,
+			  ph2 ,
+			  0LL,//docid
+			  0,// word pos #
+			  0,// densityRank , // 0-15
+			  0 , // MAXDIVERSITYRANK
+			  0 , // wordSpamRank ,
+			  0 , //siterank
+			  0 , // hashGroup,
+			  // we set to docLang final hash loop
+			  langUnknown, // langid
+			  0 , // multiplier
+			  false, // syn?
+			  false ); // delkey?
+
+	// now set the float in that key
+	g_posdb.setFloat ( &k , f );
+
+	// sanity
+	float t = g_posdb.getFloat ( &k );
+	if ( t != f ) { char *xx=NULL;*xx=0; }
+
+	HashTableX *dt = hi->m_tt;
+
+	// the key may indeed collide, but that's ok for this application
+	if ( ! dt->addTerm144 ( &k ) ) 
+		return false;
+
+	if ( ! m_wts ) 
+		return true;
+
+	// store in buffer
+	char buf[128];
+	long bufLen = sprintf(buf,"%f",f);
+
+	// add to wts for PageParser.cpp display
+	// store it
+	if ( ! storeTerm ( buf,
+			   bufLen,
+			   truePrefix64,
+			   hi,
+			   0, // word#, i,
+			   0, // wordPos
+			   0,// densityRank , // 0-15
+			   0, // MAXDIVERSITYRANK,//phrase
+			   0, // ws,
+			   0, // hashGroup,
+			   //true,
+			   &m_wbuf,
+			   m_wts,
+			   // a hack for display in wts:
+			   SOURCE_NUMBER, // SOURCE_BIGRAM, // synsrc
+			   langUnknown ) )
+		return false;
 
 	return true;
 }
@@ -43464,7 +43598,7 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 	// scan
 	for ( ; *p ; p++ ) {
 		// escaping a quote? ignore quote then.
-		if ( *p == '/' && p[1] == '\"' ) {
+		if ( *p == '\\' && p[1] == '\"' ) {
 			// skip two bytes then..
 			p++;
 			continue;
@@ -43481,7 +43615,7 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 				  ! gotOne &&
 				  p[1] == ':' &&
 				  stringStart &&
-				  p - stringStart == fieldLen &&
+				  (p - stringStart) == fieldLen &&
 				  strncmp(field,stringStart,fieldLen)==0 ) {
 				// now, the next time we set stringStart
 				// it will be set to the VALUE of this field
@@ -43603,6 +43737,20 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 		// hash without the field name as well
 		hi.m_prefix = NULL;
 		hashString ( ji->getValue(),ji->getValueLen() , &hi );
+
+		/*
+		// a number? hash special then as well
+		if ( ji->m_type != JT_NUMBER ) continue;
+
+		// use prefix for this though
+		hi.m_prefix = name;
+
+		// hash as a number so we can sort search results by
+		// this number and do range constraints
+		float f = ji->m_valueDouble;
+		if ( ! hashNumber2 ( f , &hi ) )
+			return NULL;
+		*/
 	}
 
 	return (char *)0x01;

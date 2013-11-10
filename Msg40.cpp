@@ -1107,7 +1107,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		req.m_bigSampleMaxLen    = bigSampleMaxLen;
 		req.m_titleMaxLen        = 256;
 		req.m_titleMaxLen = cr->m_titleMaxLen;
-		if(m_si->m_isAdmin && m_si->m_xml == 0) 
+		if(m_si->m_isAdmin && m_si->m_format == FORMAT_HTML )
 			req.m_getGigabitVector   = true;
 		else    req.m_getGigabitVector   = false;
 		req.m_flags              = 0;

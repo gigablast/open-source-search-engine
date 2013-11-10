@@ -15,6 +15,7 @@
 #define SOURCE_GENERATED  4
 #define SOURCE_BIGRAM     5
 #define SOURCE_TRIGRAM    6
+#define SOURCE_NUMBER     7
 
 // per word!
 #define MAX_SYNS 64

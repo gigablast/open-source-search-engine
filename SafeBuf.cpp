@@ -2517,7 +2517,12 @@ bool SafeBuf::decodeJSON ( long niceness ) {
 // . this is used by xmldoc.cpp to PARTIALLY decode a json buf so we do not
 //   index letters in escapes like \n \r \f \t \uxxxx \\ \/
 // . SO we do keep \" 
-bool SafeBuf::safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness) {
+// . so when indexing a doc we set decodeAll to FALSE, but if you want to 
+//   decode quotation marks as well then set decodeAll to TRUE!
+bool SafeBuf::safeDecodeJSONToUtf8 ( char *json, 
+				     long jsonLen, 
+				     long niceness,
+				     bool decodeAll ) {
 
 	// how much space to reserve for the copy?
 	long need = jsonLen;
@@ -2576,6 +2581,15 @@ bool SafeBuf::safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness) {
 			// a "\/" is an encoded forward slash
 			if ( src[1] == '/' ) {
 				*dst++ = '/';
+				src += 2;
+				continue;
+			}
+			// we do not decode quotation marks when indexing
+			// the doc so we can preserve json names/value pair
+			// information for indexing purposes. however,
+			// Title.cpp DOES want to decode quotations.
+			if ( src[1] == '\"' && decodeAll ) {
+				*dst++ = '\"';
 				src += 2;
 				continue;
 			}

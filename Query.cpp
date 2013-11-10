@@ -2199,6 +2199,9 @@ bool Query::setQWords ( char boolFlag ,
 		     fieldCode == FIELD_IP   ||
 		     fieldCode == FIELD_ISCLEAN ||
 		     fieldCode == FIELD_QUOTA ||
+		     fieldCode == FIELD_GBSORTBY ||
+		     fieldCode == FIELD_GBNUMBERMIN ||
+		     fieldCode == FIELD_GBNUMBERMAX ||
 		     fieldCode == FIELD_GBAD  ) {
 			// find first space -- that terminates the field value
 			char *end = 
@@ -2210,6 +2213,14 @@ bool Query::setQWords ( char boolFlag ,
 			ignoreTilSpace = true;
 			// the hash
 			unsigned long long wid = hash64 ( w , wlen, 0LL );
+
+			// i've decided not to make 
+			// gbsortby:products.offerPrice case sensitive
+			if ( fieldCode == FIELD_GBSORTBY ||
+			     fieldCode == FIELD_GBNUMBERMIN ||
+			     fieldCode == FIELD_GBNUMBERMAX )
+				wid = hash64Lower_utf8 ( w , wlen , 0LL );
+
 			// should we have normalized before hashing?
 			if ( fieldCode == FIELD_URL ||
 			     fieldCode == FIELD_LINK ||
@@ -3032,6 +3043,11 @@ struct QueryField g_fields[] = {
 	{"gbgigabitvector", FIELD_GBGIGABITVECTOR, false,""},
 	{"gbsamplevector", FIELD_GBSAMPLEVECTOR, false,""},
 	{"gbcontenthash", FIELD_GBCONTENTHASH, false,""},
+	{"gbsortby", FIELD_GBSORTBY, false,""},
+
+	{"gbnumbermin", FIELD_GBNUMBERMIN, false,""},
+	{"gbnumbermax", FIELD_GBNUMBERMAX, false,""},
+
 	{"gbcountry",FIELD_GBCOUNTRY,false,""},
 	{"gbad",FIELD_GBAD,false,""},
 
