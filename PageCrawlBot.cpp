@@ -886,7 +886,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	st->m_printedEndingBracket = false;
 
 	// debug
-	log("mnew1: st=%lx",(long)st);
+	//log("mnew1: st=%lx",(long)st);
 
 	// begin the possible segmented process of sending back spiderdb
 	// to the user's browser
@@ -1151,23 +1151,32 @@ bool StateCD::sendList ( ) {
 		if ( ! g_errno ) sb.detachBuf();
 
 		// log it
-		log("crawlbot: nuking state. strange");
+		//log("crawlbot: nuking state. strange");
 
 		// nuke state
 		//delete this;
 		//mdelete ( this , sizeof(StateCD) , "stcd" );
-		if ( g_errno )
-			log("diffbot: tcp sendmsg did not block. error: %s",
-			    mstrerror(g_errno));
+		//if ( g_errno )
+		log("diffbot: tcp sendmsg did not block: %s",
+		    mstrerror(g_errno));
 		//g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
 		// wait for doneSendingWrapper to be called.
-		return false;
+		//return false;
+		//
+		// it did not block... so just keep going. that just
+		// means the socket sent the data. it's probably buffered.
+		//
 	}
 
 
 	// if nothing to send back we are done. return true since we
 	// did not block sending back.
-	if ( sb.length() == 0 ) return true;
+	if ( sb.length() == 0 ) {
+		//log("crawlbot: nuking state.");		
+		//delete this;
+		//mdelete ( this , sizeof(StateCD) , "stcd" );
+		return true;
+	}
 
 	// how can this be?
 	if ( m_socket->m_sendBuf ) { char *xx=NULL;*xx=0; }
@@ -1225,7 +1234,7 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 		log("crawlbot: done sending for download request");
 		delete st;
 		mdelete ( st , sizeof(StateCD) , "stcd" );
-		log("mdel1: st=%lx",(long)st);
+		//log("mdel1: st=%lx",(long)st);
 		return;
 	}
 
@@ -1951,7 +1960,7 @@ void addedUrlsToSpiderdbWrapper ( void *state ) {
 			     st->m_collnum );
 	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
-	log("mdel2: st=%lx",(long)st);
+	//log("mdel2: st=%lx",(long)st);
 }
 /*
 void injectedUrlWrapper ( void *state ) {
@@ -2124,7 +2133,7 @@ void collOpDoneWrapper ( void *state ) {
 	log("crawlbot: done with blocked op.");
 	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
-	log("mdel3: st=%lx",(long)st);
+	//log("mdel3: st=%lx",(long)st);
 	g_httpServer.sendDynamicPage (socket,"OK",2);
 }
 
@@ -2355,7 +2364,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	mnew ( st , sizeof(StateCD), "statecd");
 
 	// debug
-	log("mnew2: st=%lx",(long)st);
+	//log("mnew2: st=%lx",(long)st);
 
 	// copy crap
 	st->m_hr.copy ( hr );
@@ -2411,7 +2420,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
 			// log it
-			//log("crawlbot: %s",msg);
+			log("crawlbot: cr is null. %s",msg);
 			// make sure this returns in json if required
 			return sendErrorReply2(socket,fmt,msg);
 		}
@@ -2426,6 +2435,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		we->m_coll = cr->m_coll;
 
 		if ( delColl ) {
+			// note it
+			log("crawlbot: deleting coll");
 			// delete collection name
 			// this can block if tree is saving, it has to wait
 			// for tree save to complete before removing old
@@ -2440,6 +2451,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		}
 
 		if ( resetColl ) {
+			// note it
+			log("crawlbot: resetting coll");
 			//cr = g_collectiondb.getRec ( resetColl );
 			// this can block if tree is saving, it has to wait
 			// for tree save to complete before removing old
@@ -2482,6 +2495,9 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		char *msg = "Crawl name was not found.";
 		if ( name && name[0] )
 			msg = "Failed to add crawl. Crawl name is illegal.";
+		// nuke it
+		delete st;
+		mdelete ( st , sizeof(StateCD) , "stcd" );
 		//log("crawlbot: no collection found. need to add a crawl");
 		return sendErrorReply2(socket,fmt, msg);
 	}
@@ -2523,11 +2539,19 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		// empty?
 		long size = listBuf.length();
 		// error?
-		if ( ! status )
+		if ( ! status ) {
+			// nuke it
+			delete st;
+			mdelete ( st , sizeof(StateCD) , "stcd" );
 			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
+		}
 		// if not list
-		if ( ! size )
+		if ( ! size ) {
+			// nuke it
+			delete st;
+			mdelete ( st , sizeof(StateCD) , "stcd" );
 			return sendErrorReply2(socket,fmt,"no urls found");
+		}
 		// add to spiderdb
 		if ( ! st->m_msg4.addMetaList( listBuf.getBufStart() ,
 					       listBuf.length(),
@@ -2581,7 +2605,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// get rid of that state
 	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
-	log("mdel4: st=%lx",(long)st);
+	//log("mdel4: st=%lx",(long)st);
 	return true;
 }
 
