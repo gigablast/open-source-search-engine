@@ -524,11 +524,11 @@ bool Collectiondb::isAdmin ( HttpRequest *r , TcpSocket *s ) {
 void savingCheckWrapper1 ( int fd , void *state ) {
 	WaitEntry *we = (WaitEntry *)state;
 	// no state?
-	if ( ! we ) return;
-	// if it blocked again i guess tree is still saving
-	if ( ! g_collectiondb.resetColl ( we->m_coll , we ) ) return;
+	if ( ! we ) { log("colldb: we1 is null"); return; }
 	// unregister too
 	g_loop.unregisterSleepCallback ( state,savingCheckWrapper1 );
+	// if it blocked again i guess tree is still saving
+	if ( ! g_collectiondb.resetColl ( we->m_coll , we ) ) return;
 	// all done
 	we->m_callback ( we->m_state );
 }
@@ -536,11 +536,11 @@ void savingCheckWrapper1 ( int fd , void *state ) {
 void savingCheckWrapper2 ( int fd , void *state ) {
 	WaitEntry *we = (WaitEntry *)state;
 	// no state?
-	if ( ! we ) return;
-	// if it blocked again i guess tree is still saving
-	if ( ! g_collectiondb.deleteRec ( we->m_coll , we ) ) return;
+	if ( ! we ) { log("colldb: we2 is null"); return; }
 	// unregister too
 	g_loop.unregisterSleepCallback ( state,savingCheckWrapper2 );
+	// if it blocked again i guess tree is still saving
+	if ( ! g_collectiondb.deleteRec ( we->m_coll , we ) ) return;
 	// all done
 	we->m_callback ( we->m_state );
 }

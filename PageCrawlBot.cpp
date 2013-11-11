@@ -868,7 +868,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	StateCD *st;
 	try { st = new (StateCD); }
 	catch ( ... ) {
-		return g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno));
+	       return g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno));
 	}
 	mnew ( st , sizeof(StateCD), "statecd");
 	// initialize the new state
@@ -884,6 +884,9 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	st->m_printedFirstBracket = false;
 	st->m_printedItem = false;
 	st->m_printedEndingBracket = false;
+
+	// debug
+	log("mnew1: st=%lx",(long)st);
 
 	// begin the possible segmented process of sending back spiderdb
 	// to the user's browser
@@ -1222,6 +1225,7 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 		log("crawlbot: done sending for download request");
 		delete st;
 		mdelete ( st , sizeof(StateCD) , "stcd" );
+		log("mdel1: st=%lx",(long)st);
 		return;
 	}
 
@@ -1947,6 +1951,7 @@ void addedUrlsToSpiderdbWrapper ( void *state ) {
 			     st->m_collnum );
 	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	log("mdel2: st=%lx",(long)st);
 }
 /*
 void injectedUrlWrapper ( void *state ) {
@@ -2116,8 +2121,10 @@ char *getInputString ( char *string , HttpRequest *hr , Json *JS ) {
 void collOpDoneWrapper ( void *state ) {
 	StateCD *st = (StateCD *)state;
 	TcpSocket *socket = st->m_socket;
+	log("crawlbot: done with blocked op.");
 	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	log("mdel3: st=%lx",(long)st);
 	g_httpServer.sendDynamicPage (socket,"OK",2);
 }
 
@@ -2347,6 +2354,9 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 	mnew ( st , sizeof(StateCD), "statecd");
 
+	// debug
+	log("mnew2: st=%lx",(long)st);
+
 	// copy crap
 	st->m_hr.copy ( hr );
 	st->m_socket = socket;
@@ -2404,6 +2414,9 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			// collnum recs from tree
 			if ( ! g_collectiondb.deleteRec ( collName , we ) )
 				return false;
+			// nuke it
+			delete st;
+			mdelete ( st , sizeof(StateCD) , "stcd" );
 			// all done
 			return g_httpServer.sendDynamicPage (socket,"OK",2);
 		}
@@ -2420,6 +2433,9 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			// if reset from crawlbot api page then enable spiders
 			// to avoid user confusion
 			if ( cr ) cr->m_spideringEnabled = 1;
+			// nuke it
+			delete st;
+			mdelete ( st , sizeof(StateCD) , "stcd" );
 			// all done
 			return g_httpServer.sendDynamicPage (socket,"OK",2);
 		}
@@ -2427,11 +2443,17 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( ! cr ) {
 			// send back error
 			char *msg = "Collection add failed";
+			// nuke it
+			delete st;
+			mdelete ( st , sizeof(StateCD) , "stcd" );
 			// log it
 			//log("crawlbot: %s",msg);
 			// make sure this returns in json if required
 			return sendErrorReply2(socket,fmt,msg);
 		}
+		// nuke it
+		delete st;
+		mdelete ( st , sizeof(StateCD) , "stcd" );
 		// this will set the the collection parms from json
 		//setSpiderParmsFromJSONPost ( socket , hr , cr , &JS );
 		// this is a cast, so just return simple response
@@ -2553,6 +2575,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// get rid of that state
 	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	log("mdel4: st=%lx",(long)st);
 	return true;
 }
 

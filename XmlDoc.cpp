@@ -28530,7 +28530,14 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi ) {
 			  0 , //siterank
 			  0 , // hashGroup,
 			  // we set to docLang final hash loop
-			  langUnknown, // langid
+			  //langUnknown, // langid
+			  // unless already set. so set to english here
+			  // so it will not be set to something else
+			  // otherwise our floats would be ordered by langid!
+			  // somehow we have to indicate that this is a float
+			  // termlist so it will not be mangled any more.
+			  //langEnglish,
+			  langUnknown,
 			  0 , // multiplier
 			  false, // syn?
 			  false ); // delkey?
