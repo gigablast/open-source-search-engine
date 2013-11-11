@@ -4939,8 +4939,16 @@ void PosdbTable::intersectLists10_r ( ) {
 		if ( list->isEmpty() ) continue;
 		// sanity test
 		long long d1 = g_posdb.getDocId(list->getList());
-		if ( d1 > m_msg2->m_docIdEnd ) { char *xx=NULL;*xx=0; }
-		if ( d1 < m_msg2->m_docIdStart ) { char *xx=NULL;*xx=0; }
+		if ( d1 > m_msg2->m_docIdEnd ) { 
+			log("posdb: d1=%lli > %lli",
+			    d1,m_msg2->m_docIdEnd);
+			//char *xx=NULL;*xx=0; 
+		}
+		if ( d1 < m_msg2->m_docIdStart ) { 
+			log("posdb: d1=%lli < %lli",
+			    d1,m_msg2->m_docIdStart);
+			//char *xx=NULL;*xx=0; 
+		}
 		// first key is always 18 bytes cuz it has the termid
 		// scan recs in the list
 		for ( ; ! list->isExhausted() ; list->skipCurrentRecord() ) {
