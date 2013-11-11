@@ -7803,7 +7803,7 @@ char *XmlDoc::getIsDup ( ) {
 		    m_firstUrl.m_url,d);
 		// get the winner
 		//if ( score > maxScore ) maxScore = score;
-		if ( sr > maxSiteRank ) {
+		if ( sr > maxSiteRank || maxSiteRank == -1 ) {
 			maxSiteRank = sr;
 			maxDocId = d;
 			continue;
