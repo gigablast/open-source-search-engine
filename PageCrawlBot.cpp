@@ -2401,11 +2401,29 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		//	}
 		//}
 
+		// problem?
+		if ( ! cr ) {
+			// send back error
+			char *msg = "Collection add failed";
+			if ( delColl ) msg = "No such collection";
+			if ( resetColl ) msg = "No such collection";
+			// nuke it
+			delete st;
+			mdelete ( st , sizeof(StateCD) , "stcd" );
+			// log it
+			//log("crawlbot: %s",msg);
+			// make sure this returns in json if required
+			return sendErrorReply2(socket,fmt,msg);
+		}
+
+
 		// set this up
 		WaitEntry *we = &st->m_waitEntry;
 		we->m_state = st;
 		we->m_callback = collOpDoneWrapper;
-		we->m_coll = collName;
+		// this won't work, collname is on the stack!
+		//we->m_coll = collName;
+		we->m_coll = cr->m_coll;
 
 		if ( delColl ) {
 			// delete collection name
@@ -2438,18 +2456,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			mdelete ( st , sizeof(StateCD) , "stcd" );
 			// all done
 			return g_httpServer.sendDynamicPage (socket,"OK",2);
-		}
-		// problem?
-		if ( ! cr ) {
-			// send back error
-			char *msg = "Collection add failed";
-			// nuke it
-			delete st;
-			mdelete ( st , sizeof(StateCD) , "stcd" );
-			// log it
-			//log("crawlbot: %s",msg);
-			// make sure this returns in json if required
-			return sendErrorReply2(socket,fmt,msg);
 		}
 		// nuke it
 		delete st;

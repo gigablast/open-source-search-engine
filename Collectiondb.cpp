@@ -599,7 +599,7 @@ bool Collectiondb::deleteRec ( char *coll , WaitEntry *we ) {
 		g_errno = ENOTFOUND;
 		return true;
 	}
-		
+
 	if ( g_process.isAnyTreeSaving() ) {
 		// note it
 		log("admin: tree is saving. waiting2.");

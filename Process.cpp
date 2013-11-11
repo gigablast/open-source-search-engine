@@ -504,7 +504,7 @@ bool Process::isAnyTreeSaving ( ) {
 		// while saving other files. so hafta check that as well
 		// since we use isAnyTreeSaving() to determine if we can
 		// write to the tree or not.
-		if ( rdb->isWritable() ) return true;
+		if ( ! rdb->isWritable() ) return true;
 	}
 	return false;
 }

@@ -7798,6 +7798,9 @@ char *XmlDoc::getIsDup ( ) {
 		//	mySiteRank = sr;
 		//	continue;
 		//}
+		// for debug
+		log("build: doc %s is dup of doid %lli",
+		    m_firstUrl.m_url,d);
 		// get the winner
 		//if ( score > maxScore ) maxScore = score;
 		if ( sr > maxSiteRank ) {
