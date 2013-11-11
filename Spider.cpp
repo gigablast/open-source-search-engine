@@ -10231,19 +10231,19 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 
 	if ( cx->m_spiderStatus == SP_MAXTOCRAWL ) {
 		*status = SP_MAXTOCRAWL;
-		return msg->safePrintf ( "Crawl has reached maxToCrawl "
+		return msg->safePrintf ( "Job has reached maxToCrawl "
 					 "limit." );
 	}
 
 	if ( cx->m_spiderStatus == SP_MAXTOPROCESS ) {
 		*status = SP_MAXTOPROCESS;
-		return msg->safePrintf ( "Crawl has reached maxToProcess "
+		return msg->safePrintf ( "Job has reached maxToProcess "
 					 "limit." );
 	}
 
 	if ( cx->m_spiderStatus == SP_MAXROUNDS ) {
 		*status = SP_MAXROUNDS;
-		return msg->safePrintf ( "Crawl has reached maxCrawlRounds "
+		return msg->safePrintf ( "Job has reached maxRounds "
 					 "limit." );
 	}
 
@@ -10260,7 +10260,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 
 	if ( ! cx->m_spideringEnabled ) {
 		*status = SP_PAUSED;
-		return msg->safePrintf("Crawl paused.");
+		return msg->safePrintf("Job paused.");
 	}
 
 	if ( ! g_conf.m_spideringEnabled ) {
@@ -10280,7 +10280,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 
 	if ( cx->m_spiderStatus == SP_INITIALIZING ) {
 		*status = SP_INITIALIZING;
-		return msg->safePrintf("Crawl is initializing.");
+		return msg->safePrintf("Job is initializing.");
 	}
 
 	// if we sent an email simply because no urls
@@ -10288,16 +10288,16 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 	if ( cx->m_collectiveRespiderFrequency <= 0.0 &&
 	     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
 		*status = SP_COMPLETED;
-		return msg->safePrintf("Crawl has completed and no "
+		return msg->safePrintf("Job has completed and no "
 			"repeatCrawl is scheduled.");
 	}
 
 	if ( cx->m_spiderStatus == SP_ROUNDDONE ) {
 		*status = SP_ROUNDDONE;
-		return msg->safePrintf ( "Crawl round completed.");
+		return msg->safePrintf ( "Job round completed.");
 	}
 
 	// otherwise in progress?
 	*status = SP_INPROGRESS;
-	return msg->safePrintf("Crawl is in progress.");
+	return msg->safePrintf("Job is in progress.");
 }

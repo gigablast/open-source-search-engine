@@ -40,7 +40,8 @@ bool sendBackDump ( TcpSocket *s,HttpRequest *hr );
 //CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
 //CollectionRec *getCollRecFromCrawlId ( char *crawlId );
 //void printCrawlStatsWrapper ( void *state ) ;
-CollectionRec *addNewDiffbotColl ( char *addColl , char *token,char *name ) ;
+CollectionRec *addNewDiffbotColl ( char *addColl , char *token,char *name ,
+				   class HttpRequest *hr ) ;
 //bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) ;
 bool resetUrlFilters ( CollectionRec *cr ) ;
 
@@ -2065,10 +2066,10 @@ static class HelpItem s_his[] = {
 	{"crawlDelay","Wait this many seconds between crawling urls from the "
 	 "same IP address. Can be a floating point number."},
 
-	{"deleteCrawl","Same as delete."},
-	{"resetCrawl","Same as delete."},
-	{"pauseCrawl","Same as pause."},
-	{"repeatCrawl","Same as repeat."},
+	//{"deleteCrawl","Same as delete."},
+	//{"resetCrawl","Same as delete."},
+	//{"pauseCrawl","Same as pause."},
+	//{"repeatCrawl","Same as repeat."},
 
 	{"seeds","Whitespace separated list of URLs used to seed the crawl. "
 	 "Will only follow outlinks on the same domain of seed URLs."
@@ -2076,6 +2077,8 @@ static class HelpItem s_his[] = {
 	{"spots",
 	 "Whitespace separated list of URLs to add to the crawl. "
 	 "Outlinks will not be followed." },
+	{"urls",
+	 "Same as spots."},
 	//{"spiderLinks","Use 1 or 0 to spider the links or NOT spider "
 	// "the links, respectively, from "
 	// "the provided seed or addUrls parameters. "
@@ -2083,20 +2086,24 @@ static class HelpItem s_his[] = {
 
 
 	{"maxToCrawl", "Specify max pages to successfully download."},
+	//{"maxToDownload", "Specify max pages to successfully download."},
+
 	{"maxToProcess", "Specify max pages to successfully process through "
 	 "diffbot."},
-	{"maxCrawlRounds", "Specify maximum number of crawl rounds. Use "
+	{"maxRounds", "Specify maximum number of crawl rounds. Use "
 	 "-1 to indicate no max."},
 
 	{"onlyProcessIfNew", "Specify 1 to avoid re-processing pages "
 	 "that have already been processed once before."},
 
 	{"notifyEmail","Send email alert to this email when crawl hits "
-	 "the maxtocrawl or maxtoprocess limit, or when the crawl completes."},
+	 "the maxtocrawl or maxtoprocess limit, or when the crawl "
+	 "completes."},
 	{"notifyWebhook","Fetch this URL when crawl hits "
-	 "the maxtocrawl or maxtoprocess limit, or when the crawl completes."},
+	 "the maxtocrawl or maxtoprocess limit, or when the crawl "
+	 "completes."},
 	{"obeyRobots","Obey robots.txt files?"},
-	{"restrictDomain","Restrict crawled urls to domains of seeds?"},
+	{"restrictDomain","Restrict downloaded urls to domains of seeds?"},
 	{"pageProcessPattern","List of || separated strings. If the page "
 	 "contains any of these then we send it to diffbot for processing. "
 	 "If this is empty we send all pages to diffbot for processing."},
@@ -2386,7 +2393,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( cast == 0 ) {
 		// add a new collection by default
 		if ( ! cr && name && name[0] ) 
-			cr = addNewDiffbotColl ( collName , token , name );
+			cr = addNewDiffbotColl ( collName , token , name, hr );
 		// also support the good 'ole html form interface
 		if ( cr ) setSpiderParmsFromHtmlRequest ( socket , hr , cr );
 		// . we can't sync these operations on a dead host when it
@@ -2507,7 +2514,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	if ( seeds )
 		log("crawlbot: adding seeds=\"%s\"",seeds);
-
 
 	///////
 	// 
@@ -2697,33 +2703,39 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 	long sentAlert = (long)ci->m_sentCrawlDoneAlert;
 	if ( sentAlert ) sentAlert = 1;
 
+	char *crawlTypeStr = "crawl";
+	//char *nomen = "crawl";
+	if ( cx->m_isCustomCrawl == 2 ) {
+		crawlTypeStr = "bulk";
+		//nomen = "job";
+	}
+
+
 	sb.safePrintf("\n\n{"
 		      "\"name\":\"%s\",\n"
+		      "\"type\":\"%s\",\n"
 		      //"\"alias\":\"%s\",\n"
 		      //"\"crawlingEnabled\":%li,\n"
-		      "\"crawlStatus\":{"
+		      "\"jobStatus\":{" // nomen = jobStatus / crawlStatus
 		      "\"status\":%li,"
 		      "\"message\":\"%s\"},\n"
-		      "\"sentCrawlDoneNotification\":%li,\n"
+		      "\"sentJobDoneNotification\":%li,\n"
 		      //"\"crawlingPaused\":%li,\n"
 		      "\"objectsFound\":%lli,\n"
 		      "\"urlsHarvested\":%lli,\n"
 		      //"\"urlsExamined\":%lli,\n"
-		      "\"pageCrawlAttempts\":%lli,\n"
-		      "\"pageCrawlSuccesses\":%lli,\n"
+		      "\"pageDownloadAttempts\":%lli,\n"
+		      "\"pageDownloadSuccesses\":%lli,\n"
 		      "\"pageProcessAttempts\":%lli,\n"
 		      "\"pageProcessSuccesses\":%lli,\n"
-		      // settable parms
-		      "\"maxToCrawl\":%lli,\n"
-		      "\"maxToProcess\":%lli,\n"
-		      "\"maxCrawlRounds\":%li,\n"
-		      "\"obeyRobots\":%li,\n"
-		      "\"restrictDomain\":%li,\n"
-		      "\"repeatCrawl\":%f,\n"
+
+		      "\"maxRounds\":%li,\n"
+		      "\"repeat\":%f,\n"
 		      "\"crawlDelay\":%f,\n"
-		      "\"onlyProcessIfNew\":%li,\n"
+
 		      //,cx->m_coll
 		      , cx->m_diffbotCrawlName.getBufStart()
+		      , crawlTypeStr
 		      //, alias
 		      //, (long)cx->m_spideringEnabled
 		      , crawlStatus
@@ -2738,23 +2750,37 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 		      , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
 		      , cx->m_globalCrawlInfo.m_pageProcessAttempts
 		      , cx->m_globalCrawlInfo.m_pageProcessSuccesses
-		      , cx->m_maxToCrawl
-		      , cx->m_maxToProcess
+
 		      , (long)cx->m_maxCrawlRounds
-		      , (long)cx->m_useRobotsTxt
-		      , (long)cx->m_restrictDomain
 		      , cx->m_collectiveRespiderFrequency
 		      , cx->m_collectiveCrawlDelay
-		      , (long)cx->m_diffbotOnlyProcessIfNew
 		      );
-	sb.safePrintf("\"seeds\":\"");
-	sb.safeUtf8ToJSON ( cx->m_diffbotSeeds.getBufStart());
-	sb.safePrintf("\",\n");
 
-	sb.safePrintf("\"crawlRoundsCompleted\":%li,\n",
+	// if not a "bulk" injection, show crawl stats
+	if ( cx->m_isCustomCrawl != 2 ) {
+
+		sb.safePrintf(
+			      // settable parms
+			      "\"maxToCrawl\":%lli,\n"
+			      "\"maxToProcess\":%lli,\n"
+			      "\"obeyRobots\":%li,\n"
+			      "\"restrictDomain\":%li,\n"
+			      "\"onlyProcessIfNew\":%li,\n"
+			      , cx->m_maxToCrawl
+			      , cx->m_maxToProcess
+			      , (long)cx->m_useRobotsTxt
+			      , (long)cx->m_restrictDomain
+			      , (long)cx->m_diffbotOnlyProcessIfNew
+			      );
+		sb.safePrintf("\"seeds\":\"");
+		sb.safeUtf8ToJSON ( cx->m_diffbotSeeds.getBufStart());
+		sb.safePrintf("\",\n");
+	}
+
+	sb.safePrintf("\"roundsCompleted\":%li,\n",
 		      cx->m_spiderRoundNum);
 
-	sb.safePrintf("\"crawlRoundStartTime\":%lu,\n",
+	sb.safePrintf("\"roundStartTime\":%lu,\n",
 		      cx->m_spiderRoundStartTime);
 
 	sb.safePrintf("\"currentTime\":%lu,\n",
@@ -2980,8 +3006,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	//////
 
+	// the items in the array now have type:bulk or type:crawl
+	// so call them 'jobs'
 	if ( fmt == FMT_JSON )
-		sb.safePrintf("\"crawls\":[");//\"collections\":");
+		sb.safePrintf("\"jobs\":[");//\"collections\":");
 
 	long summary = hr->getLong("summary",0);
 	// enter summary mode for json
@@ -2994,8 +3022,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td><b>Objects Found</b></td>"
 			      "<td><b>URLs Harvested</b></td>"
 			      "<td><b>URLs Examined</b></td>"
-			      "<td><b>Page Crawl Attempts</b></td>"
-			      "<td><b>Page Crawl Successes</b></td>"
+			      "<td><b>Page Download Attempts</b></td>"
+			      "<td><b>Page Download Successes</b></td>"
 			      "<td><b>Page Process Attempts</b></td>"
 			      "<td><b>Page Process Successes</b></td>"
 			      "</tr>"
@@ -3504,7 +3532,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Repeat Crawl:</b> "
 			      "</td><td>"
-			      "<input type=text name=repeatCrawl "
+			      "<input type=text name=repeat "
 			      "size=10 value=\"%f\"> "
 			      "<input type=submit name=submit value=OK>"
 			      " days"
@@ -3558,9 +3586,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      "<tr>"
-			      "<td><b>Max Crawl Rounds:</b>"
+			      "<td><b>Max Rounds:</b>"
 			      "</td><td>"
-			      "<input type=text name=maxCrawlRounds "
+			      "<input type=text name=maxRounds "
 			      "size=9 value=%li> "
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
@@ -3941,7 +3969,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 */
 }
 
-CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ) {
+CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ,
+				   HttpRequest *hr ) {
 
 	//char *token = getTokenFromHttpRequest ( hr );
 	//if ( ! token ) {
@@ -4022,7 +4051,16 @@ CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ) {
 
 	// show the ban links in the search results. the collection name
 	// is cryptographic enough to show that
-	cr->m_isCustomCrawl = true;
+	cr->m_isCustomCrawl = 1;//true;
+
+	// john wants tp print out "type":"bulk" or "type":"crawl"
+	char *filename = hr->getFilename();
+	long flen = hr->getFilenameLen();
+	if ( filename && flen >= 5 &&
+	     ( strncmp(filename+flen-4,"bulk",4)==0 ||
+	       strncmp(filename+flen-5,"bulk/",5)==0 ) )
+		cr->m_isCustomCrawl = 2;
+
 
 	cr->m_diffbotOnlyProcessIfNew = true;
 
@@ -4541,6 +4579,8 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	// set other diffbot parms for this collection
 	//
 	long maxToCrawl = hr->getLongLong("maxToCrawl",-1LL);
+	if ( maxToCrawl == -1 ) 
+		maxToCrawl = hr->getLongLong("maxToDownload",-1LL);
 	if ( maxToCrawl != -1 ) {
 		cr->m_maxToCrawl = maxToCrawl;
 		cr->m_needsSave = 1;
@@ -4552,6 +4592,8 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	}
 	// -1 means no max, so use -2 as default here
 	long maxCrawlRounds = hr->getLongLong("maxCrawlRounds",-2LL);
+	if ( maxCrawlRounds == -2 )
+		maxCrawlRounds = hr->getLongLong("maxRounds",-2LL);
 	if ( maxCrawlRounds != -2 ) {
 		cr->m_maxCrawlRounds = maxCrawlRounds;
 		cr->m_needsSave = 1;
@@ -4599,8 +4641,9 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_diffbotPageProcessPattern.set(ppp);
 		cr->m_needsSave = 1;
 	}
-	float respider = hr->getFloat("repeatCrawl",-1.0);
+	float respider = hr->getFloat("repeatJob",-1.0);
 	if ( respider == -1.0 ) respider = hr->getFloat("repeat",-1.0);
+	if ( respider == -1.0 ) respider = hr->getFloat("repeatCrawl",-1.0);
 	if ( respider >= 0.0 ) {
 		// if not 0, then change this by the delta
 		if ( cr->m_spiderRoundStartTime ) {
