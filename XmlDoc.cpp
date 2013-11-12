@@ -22856,7 +22856,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 		// country?
 		if ( ! hashCountry       ( table ) ) return NULL;
 		if ( ! hashTagRec        ( table ) ) return NULL;
-		// hash for gbsortby:spiderdate
+		// hash for gbsortby:gbspiderdate
 		if ( ! hashDateNumbers   ( table ) ) return NULL;
 		// and the json itself
 		return hashJSON ( table ); 
@@ -23092,7 +23092,7 @@ bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
 }
 
 // . hash dates for sorting by using gbsortby: and gbrevsortby:
-// . do 'gbsortby:spiderdate' as your query to see this in action
+// . do 'gbsortby:gbspiderdate' as your query to see this in action
 bool XmlDoc::hashDateNumbers ( HashTableX *tt ) {
 
 	// stop if already set
@@ -23104,7 +23104,7 @@ bool XmlDoc::hashDateNumbers ( HashTableX *tt ) {
 	hi.m_hashGroup = 0;// this doesn't matter, it's a numeric field
 	hi.m_tt        = tt;
 	hi.m_desc      = "last spidered date";
-	hi.m_prefix    = "spiderdate";
+	hi.m_prefix    = "gbspiderdate";
 
 	char buf[64];
 	long bufLen = sprintf ( buf , "%lu", m_spideredTime );
