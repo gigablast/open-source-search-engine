@@ -14,3 +14,5 @@ bool isAbbr ( long long wid , bool *hasWordAfter = NULL ) ;
 void resetAbbrTable ( ) ;
 
 #endif
+
+fffddsxc
