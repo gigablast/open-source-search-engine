@@ -47,6 +47,11 @@ Wiktionary::~Wiktionary () {
 
 
 bool Wiktionary::test ( ) {
+
+	// test words parsing here
+	//Words w;
+	//w.set9 ("get $4,500.00 now",0);
+
 	// test it out!
 	char *str = "love";//pie"; //forsake";
 	//long long wid = hash64Lower_utf8(str);

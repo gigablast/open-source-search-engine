@@ -22056,10 +22056,14 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , bool nosplit ) {
 		// store it as is
 		memcpy ( m_p , kp , sizeof(key144_t) );
 		// sanity check
-		//long long final = 202176590884090LL;
-		//final &= TERMID_MASK;
-		//if ( g_posdb.getTermId(kp) == final ) 
-		//	log("hey");
+		//long long final = hash64n("products.offerprice",0);
+		//long long prefix = hash64n("gbsortby",0);
+		//long long h64 = hash64 ( final , prefix);
+		//h64 &= TERMID_MASK;
+		//if ( g_posdb.getTermId(kp) == h64 ) {
+		//	log("hey: docid=%lli float=%f",m_docId,
+		//	    g_posdb.getFloat(kp) );
+		//}
 		/*
 		// get the score
 		long score = tt1->getScoreFromSlot ( i ) ;
@@ -22082,10 +22086,25 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , bool nosplit ) {
 		*/
 		// this was zero when we added these keys to zero, so fix it
 		g_posdb.setDocIdBits ( m_p , m_docId );
-		// this too
-		g_posdb.setSiteRankBits ( m_p , siteRank );
-		// set language here too
-		g_posdb.setLangIdBits ( m_p , m_langId );
+		// if this is a numeric field we do not want to set
+		// the siterank or langid bits because it will mess up
+		// sorting by the float which is basically in the position
+		// of the word position bits.
+		if ( g_posdb.isAlignmentBitClear ( m_p ) ) {
+			// make sure it is set again. it was just cleared
+			// to indicate that this key contains a float
+			// like a price or something, and we should not
+			// set siterank or langid so that its termlist
+			// remains sorted just by that float
+			g_posdb.setAlignmentBit ( m_p , 1 );
+		}
+		// otherwise, set the siterank and langid
+		else {
+			// this too
+			g_posdb.setSiteRankBits ( m_p , siteRank );
+			// set language here too
+			g_posdb.setLangIdBits ( m_p , m_langId );
+		}
 		// advance over it
 		m_p += sizeof(key144_t);
 	}
@@ -28525,7 +28544,7 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi ) {
 	key144_t k;
 	g_posdb.makeKey ( &k ,
 			  ph2 ,
-			  0LL,//docid
+			  0,//docid
 			  0,// word pos #
 			  0,// densityRank , // 0-15
 			  0 , // MAXDIVERSITYRANK
@@ -28545,8 +28564,24 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi ) {
 			  false, // syn?
 			  false ); // delkey?
 
+	//long long final = hash64n("products.offerprice",0);
+	//long long prefix = hash64n("gbsortby",0);
+	//long long h64 = hash64 ( final , prefix);
+	//if ( ph2 == h64 )
+	//	log("hey: got offer price");
+
 	// now set the float in that key
 	g_posdb.setFloat ( &k , f );
+
+	// HACK: this bit is ALWAYS set by Posdb::makeKey() to 1
+	// so that we can b-step into a posdb list and make sure
+	// we are aligned on a 6 byte or 12 byte key, since they come
+	// in both sizes. but for this, hack it off to tell
+	// addTable144() that we are a special posdb key, a "numeric"
+	// key that has a float stored in it. then it will NOT
+	// set the siterank and langid bits which throw our sorting
+	// off!!
+	g_posdb.setAlignmentBit ( &k , 0 );
 
 	// sanity
 	float t = g_posdb.getFloat ( &k );

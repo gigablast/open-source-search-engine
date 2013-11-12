@@ -206,6 +206,15 @@ class Posdb {
 	float getFloat ( void *vkp ) {
 		return *(float *)(((char *)vkp) + 2); };
 
+	void setAlignmentBit ( void *vkp , char val ) {
+		char *p = (char *)vkp;
+		if ( val ) p[1] = p[1] | 0x02;
+		else       p[1] = p[1] & 0xfd;
+	};
+
+	bool isAlignmentBitClear ( void *vkp ) {
+		return ( ( ((char *)vkp)[1] & 0x02 ) == 0x00 );
+	};
 
 	void makeStartKey ( void *kp, long long termId , 
 			    long long docId=0LL){
@@ -436,7 +445,7 @@ class PosdbList : public RdbList {
 #include "Query.h"         // MAX_QUERY_TERMS, qvec_t
 
 // max # search results that can be viewed without using TopTree
-#define MAX_RESULTS 1000
+//#define MAX_RESULTS 1000
 
 class PosdbTable {
 
