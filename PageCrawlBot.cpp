@@ -738,6 +738,7 @@ public:
 				 char **lastKeyPtr ) ;
 	void printTitledbList ( RdbList *list , SafeBuf *sb ,
 				char **lastKeyPtr );
+	bool printJsonItemInCsv ( char *json , SafeBuf *sb ) ;
 
 	char m_fmt;
 	Msg4 m_msg4;
@@ -750,6 +751,8 @@ public:
 	bool m_printedFirstBracket;
 	bool m_printedEndingBracket;
 	bool m_printedItem;
+
+	bool m_needHeaderRow;
 
 	bool m_needsMime;
 	char m_rdbId;
@@ -810,10 +813,10 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		fmt = FMT_JSON;
 		downloadJSON = true;
 	}
-	else if ( ( xx = strstr ( path , "_data.xml" ) ) ) {
+	else if ( ( xx = strstr ( path , "_data.csv" ) ) ) {
 		rdbId = RDB_TITLEDB;
 		downloadJSON = true;
-		fmt = FMT_XML;
+		fmt = FMT_CSV;
 	}
 	else if ( ( xx = strstr ( path , "_urls.csv" ) ) ) {
 		rdbId = RDB_SPIDERDB;
@@ -885,6 +888,9 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	st->m_printedFirstBracket = false;
 	st->m_printedItem = false;
 	st->m_printedEndingBracket = false;
+
+	// for csv...
+	st->m_needHeaderRow = true;
 
 	// debug
 	//log("mnew1: st=%lx",(long)st);
@@ -1027,6 +1033,8 @@ bool StateCD::sendList ( ) {
 		ct = "text/xml";
 	if ( m_fmt == FMT_TXT )
 		ct = "text/plain";
+	if ( m_fmt == FMT_CSV )
+		ct = "text/csv";
 
 	// . if we haven't yet sent an http mime back to the user
 	//   then do so here, the content-length will not be in there
@@ -1557,24 +1565,141 @@ void StateCD::printTitledbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// get the json content
 		char *json = xd.ptr_utf8Content;
 		
-		if ( m_printedItem )
-			sb->safePrintf("\n,\n");
+		// empty?
+		if ( xd.size_utf8Content <= 1 )
+			continue;
 
-		m_printedItem = true;
+		// if not json, just print the json item out in csv
+		if ( m_fmt == FMT_CSV ) {
+			printJsonItemInCsv ( json , sb );
+			continue;
+		}
 
 		// just print that out. encode \n's and \r's back to \\n \\r
 		// and backslash to a \\ ...
 		// but if they originally had a \u<backslash> encoding and
 		// we made into utf8, do not put that back into the \u
 		// encoding because it is not necessary.
+
+		// print in json
+		if ( m_printedItem )
+			sb->safePrintf("\n,\n");
+
+		m_printedItem = true;
+
 		if ( ! sb->safeStrcpyPrettyJSON ( json ) ) 
 			log("diffbot: error printing json in dump");
 
 		// separate each JSON object with \n i guess
 		//sb->pushChar('\n');
-
 	}
 }
+
+#include "Json.h"
+
+bool StateCD::printJsonItemInCsv ( char *json , SafeBuf *sb ) {
+
+	// parse the json
+	Json jp;
+	jp.parseJsonStringIntoJsonItems ( json );
+
+	// . TODO: index individual "Products":[...] as each an
+	//   individual title rec.
+		
+	SafeBuf nameBuf;
+	bool firstOne = true;
+
+	JsonItem *ji;
+
+	////
+	// 
+	// print header row in csv
+	//
+	////
+	for ( ji = jp.getFirstItem(); ji ; ji = ji->m_next ) {
+
+		if ( ! m_needHeaderRow )
+			break;
+
+		// skip if not number or string
+		if ( ji->m_type != JT_NUMBER && 
+		     ji->m_type != JT_STRING )
+			continue;
+
+		// if in an array, do not print! csv is not
+		// good for arrays... like "media":[....] . that
+		// one might be ok, but if the elements in the
+		// array are not simple types, like, if they are
+		// unflat json objects then it is not well suited
+		// for csv.
+		if ( ji->isInArray() ) continue;
+
+		if ( ! firstOne ) sb->pushChar(',');
+
+		firstOne = false;
+
+		ji->getCompoundName ( nameBuf );
+
+		//
+		// product.offerprice
+		//
+		sb->csvEncode ( nameBuf.getBufStart() , nameBuf.getLength() );
+	}
+
+	if ( m_needHeaderRow ) {
+		sb->pushChar('\n');
+		sb->nullTerm();
+		m_needHeaderRow = false;
+	}
+
+
+	firstOne = true;
+
+	///////
+	//
+	// print json item in csv
+	//
+	///////
+	for ( ji = jp.getFirstItem(); ji ; ji = ji->m_next ) {
+
+		// skip if not number or string
+		if ( ji->m_type != JT_NUMBER && 
+		     ji->m_type != JT_STRING )
+			continue;
+
+		// skip if not well suited for csv (see above comment)
+		if ( ji->isInArray() ) continue;
+
+
+		if ( ! firstOne ) sb->pushChar(',');
+
+		firstOne = false;
+
+		if ( ji->m_type == JT_NUMBER ) {
+			// print numbers without double quotes
+			if ( ji->m_valueDouble *10000000.0 == 
+			     (double)ji->m_valueLong * 10000000.0 )
+				sb->safePrintf("%li",ji->m_valueLong);
+			else
+				sb->safePrintf("%f",ji->m_valueDouble);
+			continue;
+		}
+
+		// print the value
+		sb->pushChar('\"');
+		sb->csvEncode ( ji->getValue() , ji->getValueLen() );
+		sb->pushChar('\"');
+	}
+
+	if ( ! firstOne )
+		sb->pushChar('\n');
+
+	sb->nullTerm();
+
+	return true;
+}
+
+
 
 /*
 ////////////////
@@ -3499,9 +3624,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<a href=/crawlbot/download/%s_data.json>"
 			      "json</a>"
 			      "&nbsp; "
-			      "<a href=/crawlbot/download/%s_data.xml>"
+			      "<a href=/crawlbot/download/%s_data.csv>"
 
-			      "xml</a>"
+			      "csv</a>"
 			      "</td>"
 			      "</tr>"
 
@@ -3878,6 +4003,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	char *ct = "text/html";
 	if ( fmt == FMT_JSON ) ct = "application/json";
 	if ( fmt == FMT_XML ) ct = "text/xml";
+	if ( fmt == FMT_CSV ) ct = "text/csv";
 
 	// this could be in html json or xml
 	return g_httpServer.sendDynamicPage ( socket, 

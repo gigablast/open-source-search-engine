@@ -3169,3 +3169,49 @@ bool SafeBuf::htmlDecode ( char *src,
 	// good to go
 	return true;
 }
+
+void SafeBuf::replaceChar ( char src , char dst ) {
+	char *px = m_buf;
+	char *pxEnd = m_buf + m_length;
+	for ( ; px < pxEnd ; px++ ) if ( *px == src ) *px = dst;
+}
+
+
+// encode a double quote char to two double quote chars
+bool SafeBuf::csvEncode ( char *s , long len , long niceness ) {
+
+	if ( ! s ) return true;
+
+	// assume all chars are double quotes and will have to be encoded
+	long need = len * 2 + 1;
+	if ( ! reserve ( need ) ) return false;
+
+	// tmp vars
+	char *dst  = m_buf + m_length;
+	//char *dstEnd = m_buf + m_capacity;
+
+	// scan through all 
+	char *send = s + len;
+	for ( ; s < send ; s++ ) {
+		// breathe
+		QUICKPOLL ( niceness );
+		// convert it?
+		if ( *s == '\"' ) {
+			*dst++ = '\"';
+			*dst++ = '\"';
+			continue;
+		}
+		//if ( *s == '\\' ) {
+		//	*dst++ = '\\';
+		//	*dst++ = '\\';
+		//	continue;
+		//}
+		*dst++ = *s;
+	}
+
+	m_length += dst - (m_buf + m_length);
+
+	nullTerm();
+
+	return true;
+}

@@ -51,6 +51,10 @@ class JsonItem {
 		return (char *)this + sizeof(JsonItem);
 	};
 
+	// like acme.product.offerPrice if "acme:{product:{offerprice:1.23}}"
+	bool getCompoundName ( SafeBuf &nameBuf ) ;
+
+	bool isInArray ( );
 };
 
 

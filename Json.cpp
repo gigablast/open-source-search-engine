@@ -330,4 +330,60 @@ void Json::test ( ) {
 
 	return;
 }
-	
+
+bool JsonItem::getCompoundName ( SafeBuf &nameBuf ) {
+
+	// reset, but don't free mem etc. just set m_length to 0
+	nameBuf.reset();
+	// get its full compound name like "meta.twitter.title"
+	JsonItem *p = this;//ji;
+	char *lastName = NULL;
+	char *nameArray[20];
+	long  numNames = 0;
+	for ( ; p ; p = p->m_parent ) {
+		// empty name?
+		if ( ! p->m_name ) continue;
+		if ( ! p->m_name[0] ) continue;
+		// dup? can happen with arrays. parent of string
+		// in object, has same name as his parent, the
+		// name of the array. "dupname":[{"a":"b"},{"c":"d"}]
+		if ( p->m_name == lastName ) continue;
+		// update
+		lastName = p->m_name;
+		// add it up
+		nameArray[numNames++] = p->m_name;
+		// breach?
+		if ( numNames < 15 ) continue;
+		log("build: too many names in json tag");
+		break;
+	}
+	// assemble the names in reverse order which is correct order
+	for ( long i = 1 ; i <= numNames ; i++ ) {
+		// copy into our safebuf
+		if ( ! nameBuf.safeStrcpy ( nameArray[numNames-i]) ) 
+			return false;
+		// separate names with periods
+		if ( ! nameBuf.pushChar('.') ) return false;
+	}
+	// remove last period
+	nameBuf.removeLastChar('.');
+	// and null terminate
+	if ( ! nameBuf.nullTerm() ) return false;
+	// change all :'s in names to .'s since : is reserved!
+	char *px = nameBuf.getBufStart();
+	for ( ; *px ; px++ ) if ( *px == ':' ) *px = '.';
+
+	return true;
+}
+
+// is this json item in an array of json items?
+bool JsonItem::isInArray ( ) {
+	JsonItem *p = this;//ji;
+	for ( ; p ; p = p->m_parent ) {
+		// empty name? it's just a "value item" then, i guess.
+		//if ( ! p->m_name ) continue;
+		//if ( ! p->m_name[0] ) continue;
+		if ( p->m_type == JT_ARRAY ) return true;
+	}
+	return false;
+}

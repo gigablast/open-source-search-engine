@@ -105,8 +105,9 @@ typedef unsigned long long qvec_t;
 #define FIELD_GBDOCID          52
 #define FIELD_GBCONTENTHASH    53 // for deduping at spider time
 #define FIELD_GBSORTBY         54 // i.e. sortby:price -> numeric termlist
-#define FIELD_GBNUMBERMIN      55
-#define FIELD_GBNUMBERMAX      56
+#define FIELD_GBREVSORTBY      55 // i.e. sortby:price -> low to high
+#define FIELD_GBNUMBERMIN      56
+#define FIELD_GBNUMBERMAX      57
 
 #define FIELD_GBOTHER 92
 

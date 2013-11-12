@@ -97,6 +97,9 @@ struct SafeBuf {
 	bool  safeStrcpy ( char *s ) ;
 	bool  safeStrcpyPrettyJSON ( char *decodedJson ) ;
 	bool  safeUtf8ToJSON ( char *utf8 ) ;
+
+	bool  csvEncode ( char *s , long len , long niceness = 0 );
+
 	//bool  pushLong ( long val ) { return safeMemcpy((char *)&val,4); }
 	bool  cat(SafeBuf& c);
 	// . only cat the sections/tag that start with "tagFilter"
@@ -144,6 +147,7 @@ struct SafeBuf {
 			     char *t , long tlen ,
 			     long niceness ,
 			     long startOff = 0 );
+	void replaceChar ( char src , char dst );
 	bool  copyToken(char* s);;
 	//output encoding
 	bool  setEncoding(short cs);

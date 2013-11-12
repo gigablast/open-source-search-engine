@@ -19338,6 +19338,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			m_dx->m_usePlacedb    = false;
 			m_dx->m_useLinkdb     = false;
 			m_dx->m_isChildDoc    = true;
+			// we like to sort json objects using
+			// 'gbsortby:spiderdate' query to get the most
+			// recent json objects, so this must be valid
+			if ( m_spideredTimeValid ) {
+				m_dx->m_spideredTimeValid = true;
+				m_dx->m_spideredTime = m_spideredTime;
+			}
 
 			m_dx->m_isDiffbotJSONObject = true;
 		}
@@ -22849,6 +22856,8 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 		// country?
 		if ( ! hashCountry       ( table ) ) return NULL;
 		if ( ! hashTagRec        ( table ) ) return NULL;
+		// hash for gbsortby:spiderdate
+		if ( ! hashDateNumbers   ( table ) ) return NULL;
 		// and the json itself
 		return hashJSON ( table ); 
 	}
@@ -22890,6 +22899,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashLinks         ( table ) ) return NULL;
 	if ( ! hashContentType   ( table ) ) return NULL;
 	if ( ! hashUrl           ( table ) ) return NULL;
+	if ( ! hashDateNumbers   ( table ) ) return NULL;
 	if ( ! hashMetaTags      ( table ) ) return NULL;
 	if ( ! hashMetaZip       ( table ) ) return NULL;
 	if ( ! hashDMOZCategories( table ) ) return NULL;
@@ -23078,6 +23088,31 @@ bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
 		//if ( ! hashNumber ( buf , bufLen , &hi ) )
 		//	return false;
 	}
+	return true;
+}
+
+// . hash dates for sorting by using gbsortby: and gbrevsortby:
+// . do 'gbsortby:spiderdate' as your query to see this in action
+bool XmlDoc::hashDateNumbers ( HashTableX *tt ) {
+
+	// stop if already set
+	if ( ! m_spideredTimeValid ) return true;
+
+
+	// first the last spidered date
+	HashInfo hi;
+	hi.m_hashGroup = 0;// this doesn't matter, it's a numeric field
+	hi.m_tt        = tt;
+	hi.m_desc      = "last spidered date";
+	hi.m_prefix    = "spiderdate";
+
+	char buf[64];
+	long bufLen = sprintf ( buf , "%lu", m_spideredTime );
+
+	if ( ! hashNumber ( buf , buf , bufLen , &hi ) )
+		return false;
+
+	// all done
 	return true;
 }
 
@@ -23769,6 +23804,9 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 	char buf2[32];
 	sprintf(buf2,"%llu",(m_docId) );
 	if ( ! hashSingleTerm(buf2,gbstrlen(buf2),&hi) ) return false;
+
+	// hash
+
 
 	return true;
 }
@@ -28516,10 +28554,19 @@ bool XmlDoc::hashNumber ( char *beginBuf ,
 	// . this now allows for commas in numbers like "1,500.62"
 	float f = atof2 ( p , bufEnd - p );
 
-	return hashNumber2 ( f , hi );
+	if ( ! hashNumber2 ( f , hi , "gbsortby" ) )
+		return false;
+
+	// also hash in reverse order for sorting from low to high
+	f = -1.0 * f;
+
+	if ( ! hashNumber2 ( f , hi , "gbrevsortby" ) )
+		return false;
+
+	return true;
 }
 
-bool XmlDoc::hashNumber2 ( float f , HashInfo *hi ) {
+bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 
 	// prefix is something like price. like the meta "name" or
 	// the json name with dots in it like "product.info.price" or something
@@ -28533,7 +28580,7 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi ) {
 		
 	// combine prefix hash with a special hash to make it unique to avoid
 	// collisions. this is the "TRUE" prefix.
-	long long truePrefix64 = hash64n ( "gbsortby");
+	long long truePrefix64 = hash64n ( sortByStr ); // "gbsortby");
 	// hash with the "TRUE" prefix
 	long long ph2 = hash64 ( nameHash , truePrefix64 );
 
