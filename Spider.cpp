@@ -10289,7 +10289,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 	     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
 		*status = SP_COMPLETED;
 		return msg->safePrintf("Job has completed and no "
-			"repeatCrawl is scheduled.");
+			"repeat is scheduled.");
 	}
 
 	if ( cx->m_spiderStatus == SP_ROUNDDONE ) {

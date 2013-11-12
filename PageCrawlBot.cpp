@@ -2724,8 +2724,8 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 		      "\"objectsFound\":%lli,\n"
 		      "\"urlsHarvested\":%lli,\n"
 		      //"\"urlsExamined\":%lli,\n"
-		      "\"pageDownloadAttempts\":%lli,\n"
-		      "\"pageDownloadSuccesses\":%lli,\n"
+		      "\"pageCrawlAttempts\":%lli,\n"
+		      "\"pageCrawlSuccesses\":%lli,\n"
 		      "\"pageProcessAttempts\":%lli,\n"
 		      "\"pageProcessSuccesses\":%lli,\n"
 
