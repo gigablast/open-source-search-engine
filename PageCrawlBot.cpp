@@ -3518,8 +3518,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</td><td>"
 			      "<a href=/crawlbot/download/%s_data.json>"
 			      "json</a>"
-			      "&nbsp; "
-			      //"<a href=/crawlbot/download/%s_data.csv>"
+			      "</td>"
+			      "</tr>"
+
+
+			      "<tr>"
+			      "<td><b>Download Products:</b> "
+			      "</td><td>"
 			      // make it search.csv so excel opens it
 			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
 			      "c=%s&n=10000000&rand=%llu&id=1&"
@@ -3527,17 +3532,15 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "prepend=type%%3Ajson"
 			      //"+type%%3Aproduct%%7C"
 			      ">"
-			      "csv of products</a>"
+			      "csv</a>"
 			      "</td>"
 			      "</tr>"
 
 			      "<tr>"
 			      "<td><b>Download Urls:</b> "
 			      "</td><td>"
-
 			      "<a href=/crawlbot/download/%s_urls.csv>"
 			      "csv</a>"
-			      //
 			      "</td>"
 			      "</tr>"
 
@@ -3546,22 +3549,42 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td><b>Latest Objects:</b> "
 			      "</td><td>"
 			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
-			      "c=%s&n=10000000&rand=%llu&id=1&"
+			      "c=%s&n=10&rand=%llu&id=1&"
 			      "q=gbsortby%%3Agbspiderdate&"
 			      "prepend=type%%3Ajson"
 			      ">"
 			      "csv</a>"
-			      " "
+			      " &nbsp; "
 			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
-			      "c=%s&n=10000000&rand=%llu&id=1&"
+			      "c=%s&n=10rand=%llu&id=1&"
 			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "html</a>"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Latest Products:</b> "
+			      "</td><td>"
+			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
+			      "c=%s&n=10&rand=%llu&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "q=type%%3Aproduct&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "csv</a>"
+			      " &nbsp; "
+			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
+			      "c=%s&n=10&rand=%llu&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "q=type%%3Aproduct&"
 			      "prepend=type%%3Ajson"
 			      ">"
 			      "html</a>"
 
 			      "</td>"
 			      "</tr>"
-
 
 
 			      "<tr>"
@@ -3713,6 +3736,16 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      // latest objects in csv
 			      , cr->m_coll
 			      , rand64
+
+
+			      // latest products in html
+			      , cr->m_coll
+			      , rand64
+
+			      // latest products in csv
+			      , cr->m_coll
+			      , rand64
+
 
 			      , cr->m_coll
 

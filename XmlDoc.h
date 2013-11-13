@@ -1490,6 +1490,12 @@ class XmlDoc {
 	char m_isWWWDup;
 	char m_calledMsg0b;
 	Url  m_tmpUrl;
+
+	// hack stuff:
+	SafeBuf m_tmpBuf;
+	bool m_isJsonProduct;
+	bool m_isJsonImage;
+	
 	SafeBuf m_tmpsb1;
 	SafeBuf m_tmpsb2;
 	SafeBuf m_turkBuf;

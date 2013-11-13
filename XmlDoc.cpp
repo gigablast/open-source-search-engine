@@ -99,7 +99,10 @@ static bool getWordPosVec ( Words *words ,
 
 static void getMetaListWrapper ( void *state ) ;
 
-char *getFirstJSONObject ( char *p , long niceness ) ;
+char *getFirstJSONObject ( char *p , 
+			   long niceness ,
+			   bool *isProduct , 
+			   bool *isImage ) ;
 char *getNextJSONObject ( char *p , long niceness ) ;
 
 XmlDoc::XmlDoc() { 
@@ -19282,7 +19285,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			char *rp = m_diffbotReply.getBufStart();
 			// we now parse the array of products out of the
 			// diffbot reply. each product is an item/object.
-			m_diffbotObj = getFirstJSONObject ( rp , m_niceness );
+			m_diffbotObj = getFirstJSONObject ( rp , 
+							    m_niceness ,
+							    &m_isJsonProduct , 
+							    &m_isJsonImage );
 			m_diffbotJSONCount = 0;
 			// set end of it
 			m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj,
@@ -19319,6 +19325,33 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			sreq.m_hopCountValid = 1;
 			sreq.m_fakeFirstIp   = 1;
 			sreq.m_firstIp       = firstIp;
+
+			// copy the content
+			m_tmpBuf.reset();
+			// how much
+			long clen = m_diffbotObjEnd - m_diffbotObj;
+			// include \0
+			long need = clen + 1;
+			// insert ,"type":"product" or
+			// possibly ,"type":"image" to make it kosher
+			need += 32;
+			// reserve the mem
+			if ( ! m_tmpBuf.reserve ( need ) ) 
+				return NULL;
+			// sanity
+			if ( m_diffbotObj[0] != '{' ) { char *xx=NULL;*xx=0;}
+			// copy first '{'
+			m_tmpBuf.pushChar(m_diffbotObj[0]);
+			// HACK: insert the type: thing here
+			if ( m_isJsonProduct )
+				m_tmpBuf.safePrintf("\"type\":\"product\",");
+			else if ( m_isJsonImage )
+				m_tmpBuf.safePrintf("\"type\":\"image\",");
+			// do the copy of the rest, title, etc.
+			m_tmpBuf.safeMemcpy ( m_diffbotObj+1 , clen-1 );
+			// null term
+			m_tmpBuf.nullTerm();
+
 			// set this
 			if (!m_dx->set4 ( &sreq       ,
 					  NULL        ,
@@ -19329,7 +19362,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 					  // niceness of 0!!!!
 					  m_niceness, // 1 , 
 					  // inject this content
-					  m_diffbotObj, // content ,
+					  m_tmpBuf.getBufStart(), // content ,
 					  false, // deleteFromIndex ,
 					  0, // forcedIp ,
 					  CT_JSON, // contentType ,
@@ -43636,15 +43669,23 @@ SafeBuf *XmlDoc::getQueryLinkBuf(SafeBuf *docIdList, bool doMatchingQueries) {
 
 // . the products and image types are listed as arrays in the json object.
 // . so go to those first if there...
-char *getFirstJSONObject ( char *p , long niceness ) {
+char *getFirstJSONObject ( char *p , 
+			   long niceness ,
+			   bool *isProduct ,
+			   bool *isImage ) {
 
 	// do we have a "products": array?
 	char *needle = ",\"products\":[";
 	char *s = strstr(p,needle);
 
+	*isProduct = false;
+	*isImage   = false;
+
 	// return ptr to first product if there
-	if ( s ) 
+	if ( s ) {
+		*isProduct = true;
 		return s + gbstrlen(needle);
+	}
 
 	QUICKPOLL ( niceness );
 
@@ -43652,8 +43693,10 @@ char *getFirstJSONObject ( char *p , long niceness ) {
 	needle = ",\"images\":[";
 	s = strstr(p,needle);
 	// return ptr to first product if there
-	if ( s )
+	if ( s ) {
+		*isImage = true;
 		return s + gbstrlen(needle);
+	}
 
 	// default to just that json otherwise
 	return p;
