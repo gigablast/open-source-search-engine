@@ -3533,6 +3533,14 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      //"+type%%3Aproduct%%7C"
 			      ">"
 			      "csv</a>"
+			      " &nbsp; "
+			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
+			      "c=%s&n=10000000&rand=%llu&id=1&"
+			      "q=gbrevsortby%%3AofferPrice&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "html</a>"
+
 			      "</td>"
 			      "</tr>"
 
@@ -3570,16 +3578,14 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
 			      "c=%s&n=10&rand=%llu&id=1&"
 			      "q=gbsortby%%3Agbspiderdate&"
-			      "q=type%%3Aproduct&"
-			      "prepend=type%%3Ajson"
+			      "prepend=type%%3Ajson+type%%3Aproduct"
 			      ">"
 			      "csv</a>"
 			      " &nbsp; "
 			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
 			      "c=%s&n=10&rand=%llu&id=1&"
 			      "q=gbsortby%%3Agbspiderdate&"
-			      "q=type%%3Aproduct&"
-			      "prepend=type%%3Ajson"
+			      "prepend=type%%3Ajson+type%%3Aproduct"
 			      ">"
 			      "html</a>"
 
@@ -3720,6 +3726,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      , cr->m_coll
 
+			      , cr->m_coll
+			      , rand64
+
+			      // download products html
 			      , cr->m_coll
 			      , rand64
 
