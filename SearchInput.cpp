@@ -354,8 +354,16 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 		return log("query: unable to strcpy whitelist");
 	
 
+	char format = FORMAT_HTML;
+
 	// what format should search results be in? default is html
-	long format = r->getLong("format", FORMAT_HTML );
+	char *formatStr = r->getString("format", NULL );
+
+	if ( formatStr && strcmp(formatStr,"html") == 0 ) format = FORMAT_HTML;
+	if ( formatStr && strcmp(formatStr,"json") == 0 ) format = FORMAT_JSON;
+	if ( formatStr && strcmp(formatStr,"xml") == 0 ) format = FORMAT_XML;
+	if ( formatStr && strcmp(formatStr,"csv") == 0 ) format = FORMAT_CSV;
+
 
 	// support old api &xml=1 to mean &format=1
 	if ( r->getLong("xml",0) ) {
@@ -365,6 +373,10 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	// also support &json=1
 	if ( r->getLong("json",0) ) {
 		format = FORMAT_JSON;
+	}
+
+	if ( r->getLong("csv",0) ) {
+		format = FORMAT_CSV;
 	}
 
 

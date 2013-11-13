@@ -46,6 +46,7 @@ class TopicGroup {
 #define FORMAT_HTML 0
 #define FORMAT_XML  1
 #define FORMAT_JSON 2
+#define FORMAT_CSV  3
 
 class SearchInput {
 
@@ -217,6 +218,10 @@ class SearchInput {
 	// so can search results
 	//long   m_xml;                        // msg40
 	// can be 0 for FORMAT_HTML, 1 = FORMAT_XML, 2=FORMAT_JSON
+	//long  m_formatStrLen;
+	//char *m_formatStr;
+
+	// can be 0 for FORMAT_HTML, 1 = FORMAT_XML, 2=FORMAT_JSON, 3=csv
 	char m_format;
 
 	// this should be part of the key because it will affect the results!

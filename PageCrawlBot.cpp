@@ -1570,10 +1570,11 @@ void StateCD::printTitledbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 			continue;
 
 		// if not json, just print the json item out in csv
-		if ( m_fmt == FMT_CSV ) {
-			printJsonItemInCsv ( json , sb );
-			continue;
-		}
+		// moved into PageResults.cpp...
+		//if ( m_fmt == FMT_CSV ) {
+		//	printJsonItemInCsv ( json , sb );
+		//	continue;
+		//}
 
 		// just print that out. encode \n's and \r's back to \\n \\r
 		// and backslash to a \\ ...
@@ -1594,112 +1595,6 @@ void StateCD::printTitledbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		//sb->pushChar('\n');
 	}
 }
-
-#include "Json.h"
-
-bool StateCD::printJsonItemInCsv ( char *json , SafeBuf *sb ) {
-
-	// parse the json
-	Json jp;
-	jp.parseJsonStringIntoJsonItems ( json );
-
-	// . TODO: index individual "Products":[...] as each an
-	//   individual title rec.
-		
-	SafeBuf nameBuf;
-	bool firstOne = true;
-
-	JsonItem *ji;
-
-	////
-	// 
-	// print header row in csv
-	//
-	////
-	for ( ji = jp.getFirstItem(); ji ; ji = ji->m_next ) {
-
-		if ( ! m_needHeaderRow )
-			break;
-
-		// skip if not number or string
-		if ( ji->m_type != JT_NUMBER && 
-		     ji->m_type != JT_STRING )
-			continue;
-
-		// if in an array, do not print! csv is not
-		// good for arrays... like "media":[....] . that
-		// one might be ok, but if the elements in the
-		// array are not simple types, like, if they are
-		// unflat json objects then it is not well suited
-		// for csv.
-		if ( ji->isInArray() ) continue;
-
-		if ( ! firstOne ) sb->pushChar(',');
-
-		firstOne = false;
-
-		ji->getCompoundName ( nameBuf );
-
-		//
-		// product.offerprice
-		//
-		sb->csvEncode ( nameBuf.getBufStart() , nameBuf.getLength() );
-	}
-
-	if ( m_needHeaderRow ) {
-		sb->pushChar('\n');
-		sb->nullTerm();
-		m_needHeaderRow = false;
-	}
-
-
-	firstOne = true;
-
-	///////
-	//
-	// print json item in csv
-	//
-	///////
-	for ( ji = jp.getFirstItem(); ji ; ji = ji->m_next ) {
-
-		// skip if not number or string
-		if ( ji->m_type != JT_NUMBER && 
-		     ji->m_type != JT_STRING )
-			continue;
-
-		// skip if not well suited for csv (see above comment)
-		if ( ji->isInArray() ) continue;
-
-
-		if ( ! firstOne ) sb->pushChar(',');
-
-		firstOne = false;
-
-		if ( ji->m_type == JT_NUMBER ) {
-			// print numbers without double quotes
-			if ( ji->m_valueDouble *10000000.0 == 
-			     (double)ji->m_valueLong * 10000000.0 )
-				sb->safePrintf("%li",ji->m_valueLong);
-			else
-				sb->safePrintf("%f",ji->m_valueDouble);
-			continue;
-		}
-
-		// print the value
-		sb->pushChar('\"');
-		sb->csvEncode ( ji->getValue() , ji->getValueLen() );
-		sb->pushChar('\"');
-	}
-
-	if ( ! firstOne )
-		sb->pushChar('\n');
-
-	sb->nullTerm();
-
-	return true;
-}
-
-
 
 /*
 ////////////////
@@ -3624,9 +3519,15 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<a href=/crawlbot/download/%s_data.json>"
 			      "json</a>"
 			      "&nbsp; "
-			      "<a href=/crawlbot/download/%s_data.csv>"
-
-			      "csv</a>"
+			      //"<a href=/crawlbot/download/%s_data.csv>"
+			      // make it search.csv so excel opens it
+			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
+			      "c=%s&n=10000000&rand=%llu&id=1&"
+			      "q=gbrevsortby%%3AofferPrice&"
+			      "prepend=type%%3Ajson"
+			      //"+type%%3Aproduct%%7C"
+			      ">"
+			      "csv of products</a>"
 			      "</td>"
 			      "</tr>"
 
@@ -3639,6 +3540,28 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      //
 			      "</td>"
 			      "</tr>"
+
+
+			      "<tr>"
+			      "<td><b>Latest Objects:</b> "
+			      "</td><td>"
+			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
+			      "c=%s&n=10000000&rand=%llu&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "csv</a>"
+			      " "
+			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
+			      "c=%s&n=10000000&rand=%llu&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "html</a>"
+
+			      "</td>"
+			      "</tr>"
+
 
 
 			      "<tr>"
@@ -3773,11 +3696,24 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 
 			      , cr->m_coll
+
 			      , cr->m_coll
+			      , rand64
+
+			      //, cr->m_coll
 			      //, cr->m_coll
 			      //, cr->m_coll
 
 			      , cr->m_coll
+
+			      // latest objects in html
+			      , cr->m_coll
+			      , rand64
+
+			      // latest objects in csv
+			      , cr->m_coll
+			      , rand64
+
 			      , cr->m_coll
 
 			      , cr->m_collectiveRespiderFrequency

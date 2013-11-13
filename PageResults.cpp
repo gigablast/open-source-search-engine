@@ -52,6 +52,7 @@ public:
         long         m_numDocIds;
 	long long    m_took; // how long it took to get the results
 	HttpRequest  m_hr;
+	bool         m_printedHeaderRow;
 };
 
 static int printResult ( SafeBuf &sb,
@@ -59,6 +60,8 @@ static int printResult ( SafeBuf &sb,
 			 long ix , 
 			 CollectionRec *cr ,
 			 char *qe ) ;
+
+bool printJsonItemInCsv ( char *json , SafeBuf *sb , bool *printedHeaderRow ) ;
 
 bool printPairScore ( SafeBuf &sb , SearchInput *si , PairScore *ps ,
 		      Msg20Reply *mr , Msg40 *msg40 , bool first ) ;
@@ -80,6 +83,7 @@ bool sendReply ( State0 *st , char *reply ) {
 	char *ct = "text/html";
 	if ( si && si->m_format == FORMAT_XML ) ct = "text/xml"; 
 	if ( si && si->m_format == FORMAT_JSON ) ct = "application/json";
+	if ( si && si->m_format == FORMAT_CSV ) ct = "text/csv";
 	char *charset = "utf-8";
 
 	// . filter anything < 0x20 to 0x20 to keep XML legal
@@ -466,7 +470,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 
 	// limit here
 	long maxpp = cr->m_maxSearchResultsPerQuery ;
-	if ( si->m_docsWanted > maxpp ) si->m_docsWanted = maxpp;
+	if ( si->m_docsWanted > maxpp &&
+	     // disable serp max per page for custom crawls
+	     ! cr->m_isCustomCrawl )
+		si->m_docsWanted = maxpp;
 
         st->m_numDocIds = si->m_docsWanted;
 
@@ -491,6 +498,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	st->m_gotResults = false;
 	st->m_gotAds     = false;
 	st->m_gotSpell   = false;
+
+	// reset
+	st->m_printedHeaderRow = false;
 
 	long ip = s->m_ip;
 	long uipLen;
@@ -1719,6 +1729,19 @@ static int printResult ( SafeBuf &sb,
 
 	Msg20      *m20 = msg40->m_msg20[ix];
 	Msg20Reply *mr  = m20->m_r;
+
+
+	if ( si->m_format == FORMAT_CSV &&
+	     mr->ptr_content &&
+	     mr->m_contentType == CT_JSON ) {
+		// parse it up
+		char *json = mr->ptr_content;
+		// only print header row once, so pass in that flag
+		printJsonItemInCsv ( json , &sb , &st->m_printedHeaderRow );
+		return true;
+	}
+
+
 
 	// just print cached web page?
 	if ( mr->ptr_content ) {
@@ -4680,3 +4703,108 @@ bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
 	return true;
 }
 */
+
+#include "Json.h"
+
+bool printJsonItemInCsv ( char *json , SafeBuf *sb , bool *printedHeaderRow ) {
+
+	// parse the json
+	Json jp;
+	jp.parseJsonStringIntoJsonItems ( json );
+
+	// . TODO: index individual "Products":[...] as each an
+	//   individual title rec.
+		
+	SafeBuf nameBuf;
+	bool firstOne = true;
+
+	JsonItem *ji;
+
+	////
+	// 
+	// print header row in csv
+	//
+	////
+	for ( ji = jp.getFirstItem(); ji ; ji = ji->m_next ) {
+
+		if ( *printedHeaderRow )
+			break;
+
+		// skip if not number or string
+		if ( ji->m_type != JT_NUMBER && 
+		     ji->m_type != JT_STRING )
+			continue;
+
+		// if in an array, do not print! csv is not
+		// good for arrays... like "media":[....] . that
+		// one might be ok, but if the elements in the
+		// array are not simple types, like, if they are
+		// unflat json objects then it is not well suited
+		// for csv.
+		if ( ji->isInArray() ) continue;
+
+		if ( ! firstOne ) sb->pushChar(',');
+
+		firstOne = false;
+
+		ji->getCompoundName ( nameBuf );
+
+		//
+		// product.offerprice
+		//
+		sb->csvEncode ( nameBuf.getBufStart() , nameBuf.getLength() );
+	}
+
+	if ( ! *printedHeaderRow ) {
+		sb->pushChar('\n');
+		sb->nullTerm();
+		*printedHeaderRow = true;
+	}
+
+
+	firstOne = true;
+
+	///////
+	//
+	// print json item in csv
+	//
+	///////
+	for ( ji = jp.getFirstItem(); ji ; ji = ji->m_next ) {
+
+		// skip if not number or string
+		if ( ji->m_type != JT_NUMBER && 
+		     ji->m_type != JT_STRING )
+			continue;
+
+		// skip if not well suited for csv (see above comment)
+		if ( ji->isInArray() ) continue;
+
+
+		if ( ! firstOne ) sb->pushChar(',');
+
+		firstOne = false;
+
+		if ( ji->m_type == JT_NUMBER ) {
+			// print numbers without double quotes
+			if ( ji->m_valueDouble *10000000.0 == 
+			     (double)ji->m_valueLong * 10000000.0 )
+				sb->safePrintf("%li",ji->m_valueLong);
+			else
+				sb->safePrintf("%f",ji->m_valueDouble);
+			continue;
+		}
+
+		// print the value
+		sb->pushChar('\"');
+		sb->csvEncode ( ji->getValue() , ji->getValueLen() );
+		sb->pushChar('\"');
+	}
+
+	if ( ! firstOne )
+		sb->pushChar('\n');
+
+	sb->nullTerm();
+
+	return true;
+}
+

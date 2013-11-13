@@ -14964,18 +14964,19 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m++;
 
+	/*
 	m->m_title = "format of the returned search results";
 	m->m_desc  = "X is 0 to get back results in regular html, 1 to "
 		"get back results in XML, 2 for JSON.";
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_format - y;
-	m->m_type  = TYPE_CHAR;
+	m->m_soff  = (char *)&si.m_formatStr - y;
+	m->m_type  = TYPE_STRING;//CHAR;
 	m->m_sparm = 1;
 	m->m_scgi  = "format";
 	m->m_smin  = 0;
 	m->m_smax  = 12;
 	m++;
-
+	*/
 
 	m->m_title = "highlight query terms in summaries.";
 	m->m_desc  = "Use to disable or enable "

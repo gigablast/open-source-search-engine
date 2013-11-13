@@ -99,7 +99,8 @@ static bool getWordPosVec ( Words *words ,
 
 static void getMetaListWrapper ( void *state ) ;
 
-char *getNextJSONObject ( char *p ) ;
+char *getFirstJSONObject ( char *p , long niceness ) ;
+char *getNextJSONObject ( char *p , long niceness ) ;
 
 XmlDoc::XmlDoc() { 
 	for ( long i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
@@ -19277,10 +19278,15 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			}
 			mnew ( m_dx , sizeof(XmlDoc),"xmldocdx");
 			// init cursor to first json object
-			m_diffbotObj       = m_diffbotReply.getBufStart();
+			//m_diffbotObj       = m_diffbotReply.getBufStart();
+			char *rp = m_diffbotReply.getBufStart();
+			// we now parse the array of products out of the
+			// diffbot reply. each product is an item/object.
+			m_diffbotObj = getFirstJSONObject ( rp , m_niceness );
 			m_diffbotJSONCount = 0;
 			// set end of it
-			m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj );
+			m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj,
+							      m_niceness);
 			// temp null it
 			m_diffbotSavedChar = *m_diffbotObjEnd;
 			*m_diffbotObjEnd = '\0';
@@ -19375,7 +19381,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// we successfully index the json object, skip to next one
 		m_diffbotObj = m_diffbotObjEnd;
 		// point to next json object again
-		m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj );
+		m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj ,
+						      m_niceness );
 		// re-save
 		m_diffbotSavedChar = *m_diffbotObjEnd;
 		// but gotta set this crap back
@@ -43626,12 +43633,39 @@ SafeBuf *XmlDoc::getQueryLinkBuf(SafeBuf *docIdList, bool doMatchingQueries) {
 //void XmlDoc::getGigabitExcerpts ( ) {
 //}
 
+
+// . the products and image types are listed as arrays in the json object.
+// . so go to those first if there...
+char *getFirstJSONObject ( char *p , long niceness ) {
+
+	// do we have a "products": array?
+	char *needle = ",\"products\":[";
+	char *s = strstr(p,needle);
+
+	// return ptr to first product if there
+	if ( s ) 
+		return s + gbstrlen(needle);
+
+	QUICKPOLL ( niceness );
+
+	// images?
+	needle = ",\"images\":[";
+	s = strstr(p,needle);
+	// return ptr to first product if there
+	if ( s )
+		return s + gbstrlen(needle);
+
+	// default to just that json otherwise
+	return p;
+}
+
+
 // . advance p to skip over the json object it is pointing to and return 
 //   ptr to the following json object
 // . deal with nested {}'s
 // . basically skips over current json object in a list of json objects to
 //   point to the next brother object
-char *getNextJSONObject ( char *p ) {
+char *getNextJSONObject ( char *p , long niceness ) {
 	// otherwise, *p must be {
 	for ( ; *p && *p != '{' ; p++ );
 	// empty?
@@ -43644,6 +43678,8 @@ char *getNextJSONObject ( char *p ) {
 	bool inQuotes = false;
 	// scan
 	for ( ; *p ; p++ ) {
+		// breathe
+		QUICKPOLL ( niceness );
 		// escaping a quote? ignore quote then.
 		if ( *p == '\\' && p[1] == '\"' ) {
 			// skip two bytes then..
