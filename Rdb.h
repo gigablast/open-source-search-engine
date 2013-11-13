@@ -163,7 +163,8 @@ class Rdb {
 	bool deleteRecord ( collnum_t collnum , char *key );
 
 	// get the directory name where this rdb stores it's files
-	char *getDir       ( ) { return m_dir.getDirname(); };
+	//char *getDir       ( ) { return m_dir.getDirname(); };
+	char *getDir       ( ) { return g_hostdb.m_dir; };
 	char *getStripeDir ( ) { return g_conf.m_stripeDir; };
 
 	long getFixedDataSize ( ) { return m_fixedDataSize; };

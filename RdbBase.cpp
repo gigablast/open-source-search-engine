@@ -127,8 +127,15 @@ bool RdbBase::init ( char  *dir            ,
 	// set all our contained classes
 	//m_dir.set ( dir );
 	// set all our contained classes
+	// . "tmp" is bogus
+	// . /home/mwells/github/coll.john-test1113.654coll.john-test1113.655
 	char tmp[1024];
 	sprintf ( tmp , "%scoll.%s.%li" , dir , coll , (long)collnum );
+
+	// debug
+	log("base: adding new base for dir=%s coll=%s collnum=%li db=%s",
+	    dir,coll,(long)collnum,dbname);
+
 	// catdb is collection independent
 
 	// make a special subdir to store the map and data files in if
@@ -261,7 +268,8 @@ bool RdbBase::init ( char  *dir            ,
 	// we can't merge more than MAX_RDB_FILES files at a time
 	if ( minToMergeArg > MAX_RDB_FILES ) minToMergeArg = MAX_RDB_FILES;
 	m_minToMergeArg = minToMergeArg;
-	// set our m_files array
+	// . set our m_files array
+	// . m_dir is bogus causing this to fail
 	if ( ! setFiles () ) return false;
 	//long dataMem;
 	// if we're in read only mode, don't bother with *ANY* trees
@@ -491,6 +499,7 @@ bool RdbBase::removeRebuildFromFilename ( BigFile *f ) {
 bool RdbBase::setFiles ( ) {
 	// set our directory class
 	if ( ! m_dir.open ( ) )
+		// we are getting this from a bogus m_dir
 		return log("db: Had error opening directory %s", getDir());
 	// note it
 	logf(LOG_INFO,"db: Loading files for %s coll=%s (%li).",

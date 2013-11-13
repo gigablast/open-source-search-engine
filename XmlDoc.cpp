@@ -12850,6 +12850,15 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	if ( m_diffbotReplyValid )
 		return &m_diffbotReply;
 
+	// we make a "fake" url for the diffbot reply when indexing it
+	// by appending -diffbotxyz%li. see "fakeUrl" below.
+	if ( m_firstUrl.getUrlLen() + 15 >= MAX_URL_LEN ) {
+		log("build: diffbot url would be too long for "
+		    "%s", m_firstUrl.getUrl() );
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
 	if ( *getIndexCode() ) 
 		return &m_diffbotReply;
 

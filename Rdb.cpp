@@ -132,7 +132,7 @@ bool Rdb::init ( char          *dir                  ,
 	// sanity
 	if ( ! dir ) { char *xx=NULL;*xx=0; }
 	// this is the working dir, all collection repositiories are subdirs
-	m_dir.set ( dir );
+	//m_dir.set ( dir );
 	// catdb, statsdb, accessdb, facebookdb, syncdb
 	m_isCollectionLess = isCollectionLess;
 	// save the dbname NULL terminated into m_dbname/m_dbnameLen
@@ -506,8 +506,9 @@ bool Rdb::addColl ( char *coll ) {
 	if(m_useTree) tree    = &m_tree;
 	else          buckets = &m_buckets;
 
-	// init it
-	if ( ! base->init ( m_dir.getDir() ,
+	// . init it
+	// . g_hostdb.m_dir should end in /
+	if ( ! base->init ( g_hostdb.m_dir, // m_dir.getDir() ,
 					m_dbname        ,
 					m_dedup         ,
 					m_fixedDataSize ,
@@ -527,7 +528,7 @@ bool Rdb::addColl ( char *coll ) {
 					m_biasDiskPageCache ) ) {
 		logf(LOG_INFO,"db: %s: Failed to initialize db for "
 		     "collection \"%s\".", m_dbname,coll);
-		exit(-1);
+		//exit(-1);
 		return false;
 	}
 
@@ -559,6 +560,12 @@ bool Rdb::resetColl ( collnum_t collnum , collnum_t newCollnum ) {
 
 	// update this as well
 	base->m_collnum = newCollnum;
+
+	// new dir. otherwise RdbDump will try to dump out the recs to
+	// the old dir and it will end up coring
+	//char tmp[1024];
+	//sprintf(tmp , "%scoll.%s.%li",g_hostdb.m_dir,coll,(long)newCollnum );
+	//m_dir.set ( tmp );
 
 	// move the files into trash
 	// nuke it on disk
