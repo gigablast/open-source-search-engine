@@ -738,6 +738,7 @@ public:
 				 char **lastKeyPtr ) ;
 	void printTitledbList ( RdbList *list , SafeBuf *sb ,
 				char **lastKeyPtr );
+	bool printJsonItemInCsv ( char *json , SafeBuf *sb ) ;
 
 	char m_fmt;
 	Msg4 m_msg4;
@@ -750,6 +751,8 @@ public:
 	bool m_printedFirstBracket;
 	bool m_printedEndingBracket;
 	bool m_printedItem;
+
+	bool m_needHeaderRow;
 
 	bool m_needsMime;
 	char m_rdbId;
@@ -810,10 +813,10 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		fmt = FMT_JSON;
 		downloadJSON = true;
 	}
-	else if ( ( xx = strstr ( path , "_data.xml" ) ) ) {
+	else if ( ( xx = strstr ( path , "_data.csv" ) ) ) {
 		rdbId = RDB_TITLEDB;
 		downloadJSON = true;
-		fmt = FMT_XML;
+		fmt = FMT_CSV;
 	}
 	else if ( ( xx = strstr ( path , "_urls.csv" ) ) ) {
 		rdbId = RDB_SPIDERDB;
@@ -885,6 +888,9 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	st->m_printedFirstBracket = false;
 	st->m_printedItem = false;
 	st->m_printedEndingBracket = false;
+
+	// for csv...
+	st->m_needHeaderRow = true;
 
 	// debug
 	//log("mnew1: st=%lx",(long)st);
@@ -1027,6 +1033,8 @@ bool StateCD::sendList ( ) {
 		ct = "text/xml";
 	if ( m_fmt == FMT_TXT )
 		ct = "text/plain";
+	if ( m_fmt == FMT_CSV )
+		ct = "text/csv";
 
 	// . if we haven't yet sent an http mime back to the user
 	//   then do so here, the content-length will not be in there
@@ -1557,22 +1565,34 @@ void StateCD::printTitledbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// get the json content
 		char *json = xd.ptr_utf8Content;
 		
-		if ( m_printedItem )
-			sb->safePrintf("\n,\n");
+		// empty?
+		if ( xd.size_utf8Content <= 1 )
+			continue;
 
-		m_printedItem = true;
+		// if not json, just print the json item out in csv
+		// moved into PageResults.cpp...
+		//if ( m_fmt == FMT_CSV ) {
+		//	printJsonItemInCsv ( json , sb );
+		//	continue;
+		//}
 
 		// just print that out. encode \n's and \r's back to \\n \\r
 		// and backslash to a \\ ...
 		// but if they originally had a \u<backslash> encoding and
 		// we made into utf8, do not put that back into the \u
 		// encoding because it is not necessary.
+
+		// print in json
+		if ( m_printedItem )
+			sb->safePrintf("\n,\n");
+
+		m_printedItem = true;
+
 		if ( ! sb->safeStrcpyPrettyJSON ( json ) ) 
 			log("diffbot: error printing json in dump");
 
 		// separate each JSON object with \n i guess
 		//sb->pushChar('\n');
-
 	}
 }
 
@@ -3498,20 +3518,77 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</td><td>"
 			      "<a href=/crawlbot/download/%s_data.json>"
 			      "json</a>"
-			      "&nbsp; "
-			      "<a href=/crawlbot/download/%s_data.xml>"
+			      "</td>"
+			      "</tr>"
 
-			      "xml</a>"
+
+			      "<tr>"
+			      "<td><b>Download Products:</b> "
+			      "</td><td>"
+			      // make it search.csv so excel opens it
+			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
+			      "c=%s&n=10000000&rand=%llu&id=1&"
+			      "q=gbrevsortby%%3AofferPrice&"
+			      "prepend=type%%3Ajson"
+			      //"+type%%3Aproduct%%7C"
+			      ">"
+			      "csv</a>"
+			      " &nbsp; "
+			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
+			      "c=%s&n=10000000&rand=%llu&id=1&"
+			      "q=gbrevsortby%%3AofferPrice&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "html</a>"
+
 			      "</td>"
 			      "</tr>"
 
 			      "<tr>"
 			      "<td><b>Download Urls:</b> "
 			      "</td><td>"
-
 			      "<a href=/crawlbot/download/%s_urls.csv>"
 			      "csv</a>"
-			      //
+			      "</td>"
+			      "</tr>"
+
+
+			      "<tr>"
+			      "<td><b>Latest Objects:</b> "
+			      "</td><td>"
+			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
+			      "c=%s&n=10&rand=%llu&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "csv</a>"
+			      " &nbsp; "
+			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
+			      "c=%s&n=10rand=%llu&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "html</a>"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Latest Products:</b> "
+			      "</td><td>"
+			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
+			      "c=%s&n=10&rand=%llu&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson+type%%3Aproduct"
+			      ">"
+			      "csv</a>"
+			      " &nbsp; "
+			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
+			      "c=%s&n=10&rand=%llu&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson+type%%3Aproduct"
+			      ">"
+			      "html</a>"
+
 			      "</td>"
 			      "</tr>"
 
@@ -3648,11 +3725,38 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 
 			      , cr->m_coll
+
 			      , cr->m_coll
+			      , rand64
+
+			      // download products html
+			      , cr->m_coll
+			      , rand64
+
+			      //, cr->m_coll
 			      //, cr->m_coll
 			      //, cr->m_coll
 
 			      , cr->m_coll
+
+			      // latest objects in html
+			      , cr->m_coll
+			      , rand64
+
+			      // latest objects in csv
+			      , cr->m_coll
+			      , rand64
+
+
+			      // latest products in html
+			      , cr->m_coll
+			      , rand64
+
+			      // latest products in csv
+			      , cr->m_coll
+			      , rand64
+
+
 			      , cr->m_coll
 
 			      , cr->m_collectiveRespiderFrequency
@@ -3878,6 +3982,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	char *ct = "text/html";
 	if ( fmt == FMT_JSON ) ct = "application/json";
 	if ( fmt == FMT_XML ) ct = "text/xml";
+	if ( fmt == FMT_CSV ) ct = "text/csv";
 
 	// this could be in html json or xml
 	return g_httpServer.sendDynamicPage ( socket, 

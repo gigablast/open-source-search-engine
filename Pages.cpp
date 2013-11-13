@@ -344,6 +344,8 @@ long Pages::getDynamicPageNumber ( HttpRequest *r ) {
 		path = "admin/inject"; pathLen = gbstrlen(path); }
 	if ( pathLen == 9 && strncmp ( path , "index.php" , 9 ) == 0 ) {
 		path = "search"; pathLen = gbstrlen(path); }
+	if ( pathLen == 10 && strncmp ( path , "search.csv" , 10 ) == 0 ) {
+		path = "search"; pathLen = gbstrlen(path); }
 
 	// if it is like /GA/Atlanta then call sendPageResults
 	// and that should be smart enough to set the m_where in

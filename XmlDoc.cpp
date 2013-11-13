@@ -99,7 +99,11 @@ static bool getWordPosVec ( Words *words ,
 
 static void getMetaListWrapper ( void *state ) ;
 
-char *getNextJSONObject ( char *p ) ;
+char *getFirstJSONObject ( char *p , 
+			   long niceness ,
+			   bool *isProduct , 
+			   bool *isImage ) ;
+char *getNextJSONObject ( char *p , long niceness ) ;
 
 XmlDoc::XmlDoc() { 
 	for ( long i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
@@ -19286,10 +19290,18 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			}
 			mnew ( m_dx , sizeof(XmlDoc),"xmldocdx");
 			// init cursor to first json object
-			m_diffbotObj       = m_diffbotReply.getBufStart();
+			//m_diffbotObj       = m_diffbotReply.getBufStart();
+			char *rp = m_diffbotReply.getBufStart();
+			// we now parse the array of products out of the
+			// diffbot reply. each product is an item/object.
+			m_diffbotObj = getFirstJSONObject ( rp , 
+							    m_niceness ,
+							    &m_isJsonProduct , 
+							    &m_isJsonImage );
 			m_diffbotJSONCount = 0;
 			// set end of it
-			m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj );
+			m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj,
+							      m_niceness);
 			// temp null it
 			m_diffbotSavedChar = *m_diffbotObjEnd;
 			*m_diffbotObjEnd = '\0';
@@ -19322,6 +19334,33 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			sreq.m_hopCountValid = 1;
 			sreq.m_fakeFirstIp   = 1;
 			sreq.m_firstIp       = firstIp;
+
+			// copy the content
+			m_tmpBuf.reset();
+			// how much
+			long clen = m_diffbotObjEnd - m_diffbotObj;
+			// include \0
+			long need = clen + 1;
+			// insert ,"type":"product" or
+			// possibly ,"type":"image" to make it kosher
+			need += 32;
+			// reserve the mem
+			if ( ! m_tmpBuf.reserve ( need ) ) 
+				return NULL;
+			// sanity
+			if ( m_diffbotObj[0] != '{' ) { char *xx=NULL;*xx=0;}
+			// copy first '{'
+			m_tmpBuf.pushChar(m_diffbotObj[0]);
+			// HACK: insert the type: thing here
+			if ( m_isJsonProduct )
+				m_tmpBuf.safePrintf("\"type\":\"product\",");
+			else if ( m_isJsonImage )
+				m_tmpBuf.safePrintf("\"type\":\"image\",");
+			// do the copy of the rest, title, etc.
+			m_tmpBuf.safeMemcpy ( m_diffbotObj+1 , clen-1 );
+			// null term
+			m_tmpBuf.nullTerm();
+
 			// set this
 			if (!m_dx->set4 ( &sreq       ,
 					  NULL        ,
@@ -19332,7 +19371,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 					  // niceness of 0!!!!
 					  m_niceness, // 1 , 
 					  // inject this content
-					  m_diffbotObj, // content ,
+					  m_tmpBuf.getBufStart(), // content ,
 					  false, // deleteFromIndex ,
 					  0, // forcedIp ,
 					  CT_JSON, // contentType ,
@@ -19347,6 +19386,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			m_dx->m_usePlacedb    = false;
 			m_dx->m_useLinkdb     = false;
 			m_dx->m_isChildDoc    = true;
+			// we like to sort json objects using
+			// 'gbsortby:spiderdate' query to get the most
+			// recent json objects, so this must be valid
+			if ( m_spideredTimeValid ) {
+				m_dx->m_spideredTimeValid = true;
+				m_dx->m_spideredTime = m_spideredTime;
+			}
 
 			m_dx->m_isDiffbotJSONObject = true;
 		}
@@ -19377,7 +19423,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// we successfully index the json object, skip to next one
 		m_diffbotObj = m_diffbotObjEnd;
 		// point to next json object again
-		m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj );
+		m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj ,
+						      m_niceness );
 		// re-save
 		m_diffbotSavedChar = *m_diffbotObjEnd;
 		// but gotta set this crap back
@@ -22065,10 +22112,14 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , bool nosplit ) {
 		// store it as is
 		memcpy ( m_p , kp , sizeof(key144_t) );
 		// sanity check
-		//long long final = 202176590884090LL;
-		//final &= TERMID_MASK;
-		//if ( g_posdb.getTermId(kp) == final ) 
-		//	log("hey");
+		//long long final = hash64n("products.offerprice",0);
+		//long long prefix = hash64n("gbsortby",0);
+		//long long h64 = hash64 ( final , prefix);
+		//h64 &= TERMID_MASK;
+		//if ( g_posdb.getTermId(kp) == h64 ) {
+		//	log("hey: docid=%lli float=%f",m_docId,
+		//	    g_posdb.getFloat(kp) );
+		//}
 		/*
 		// get the score
 		long score = tt1->getScoreFromSlot ( i ) ;
@@ -22091,10 +22142,25 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , bool nosplit ) {
 		*/
 		// this was zero when we added these keys to zero, so fix it
 		g_posdb.setDocIdBits ( m_p , m_docId );
-		// this too
-		g_posdb.setSiteRankBits ( m_p , siteRank );
-		// set language here too
-		g_posdb.setLangIdBits ( m_p , m_langId );
+		// if this is a numeric field we do not want to set
+		// the siterank or langid bits because it will mess up
+		// sorting by the float which is basically in the position
+		// of the word position bits.
+		if ( g_posdb.isAlignmentBitClear ( m_p ) ) {
+			// make sure it is set again. it was just cleared
+			// to indicate that this key contains a float
+			// like a price or something, and we should not
+			// set siterank or langid so that its termlist
+			// remains sorted just by that float
+			g_posdb.setAlignmentBit ( m_p , 1 );
+		}
+		// otherwise, set the siterank and langid
+		else {
+			// this too
+			g_posdb.setSiteRankBits ( m_p , siteRank );
+			// set language here too
+			g_posdb.setLangIdBits ( m_p , m_langId );
+		}
 		// advance over it
 		m_p += sizeof(key144_t);
 	}
@@ -22839,6 +22905,8 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 		// country?
 		if ( ! hashCountry       ( table ) ) return NULL;
 		if ( ! hashTagRec        ( table ) ) return NULL;
+		// hash for gbsortby:gbspiderdate
+		if ( ! hashDateNumbers   ( table ) ) return NULL;
 		// and the json itself
 		return hashJSON ( table ); 
 	}
@@ -22880,6 +22948,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashLinks         ( table ) ) return NULL;
 	if ( ! hashContentType   ( table ) ) return NULL;
 	if ( ! hashUrl           ( table ) ) return NULL;
+	if ( ! hashDateNumbers   ( table ) ) return NULL;
 	if ( ! hashMetaTags      ( table ) ) return NULL;
 	if ( ! hashMetaZip       ( table ) ) return NULL;
 	if ( ! hashDMOZCategories( table ) ) return NULL;
@@ -23068,6 +23137,31 @@ bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
 		//if ( ! hashNumber ( buf , bufLen , &hi ) )
 		//	return false;
 	}
+	return true;
+}
+
+// . hash dates for sorting by using gbsortby: and gbrevsortby:
+// . do 'gbsortby:gbspiderdate' as your query to see this in action
+bool XmlDoc::hashDateNumbers ( HashTableX *tt ) {
+
+	// stop if already set
+	if ( ! m_spideredTimeValid ) return true;
+
+
+	// first the last spidered date
+	HashInfo hi;
+	hi.m_hashGroup = 0;// this doesn't matter, it's a numeric field
+	hi.m_tt        = tt;
+	hi.m_desc      = "last spidered date";
+	hi.m_prefix    = "gbspiderdate";
+
+	char buf[64];
+	long bufLen = sprintf ( buf , "%lu", m_spideredTime );
+
+	if ( ! hashNumber ( buf , buf , bufLen , &hi ) )
+		return false;
+
+	// all done
 	return true;
 }
 
@@ -23759,6 +23853,9 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 	char buf2[32];
 	sprintf(buf2,"%llu",(m_docId) );
 	if ( ! hashSingleTerm(buf2,gbstrlen(buf2),&hi) ) return false;
+
+	// hash
+
 
 	return true;
 }
@@ -28506,10 +28603,19 @@ bool XmlDoc::hashNumber ( char *beginBuf ,
 	// . this now allows for commas in numbers like "1,500.62"
 	float f = atof2 ( p , bufEnd - p );
 
-	return hashNumber2 ( f , hi );
+	if ( ! hashNumber2 ( f , hi , "gbsortby" ) )
+		return false;
+
+	// also hash in reverse order for sorting from low to high
+	f = -1.0 * f;
+
+	if ( ! hashNumber2 ( f , hi , "gbrevsortby" ) )
+		return false;
+
+	return true;
 }
 
-bool XmlDoc::hashNumber2 ( float f , HashInfo *hi ) {
+bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 
 	// prefix is something like price. like the meta "name" or
 	// the json name with dots in it like "product.info.price" or something
@@ -28523,7 +28629,7 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi ) {
 		
 	// combine prefix hash with a special hash to make it unique to avoid
 	// collisions. this is the "TRUE" prefix.
-	long long truePrefix64 = hash64n ( "gbsortby");
+	long long truePrefix64 = hash64n ( sortByStr ); // "gbsortby");
 	// hash with the "TRUE" prefix
 	long long ph2 = hash64 ( nameHash , truePrefix64 );
 
@@ -28534,7 +28640,7 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi ) {
 	key144_t k;
 	g_posdb.makeKey ( &k ,
 			  ph2 ,
-			  0LL,//docid
+			  0,//docid
 			  0,// word pos #
 			  0,// densityRank , // 0-15
 			  0 , // MAXDIVERSITYRANK
@@ -28554,8 +28660,24 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi ) {
 			  false, // syn?
 			  false ); // delkey?
 
+	//long long final = hash64n("products.offerprice",0);
+	//long long prefix = hash64n("gbsortby",0);
+	//long long h64 = hash64 ( final , prefix);
+	//if ( ph2 == h64 )
+	//	log("hey: got offer price");
+
 	// now set the float in that key
 	g_posdb.setFloat ( &k , f );
+
+	// HACK: this bit is ALWAYS set by Posdb::makeKey() to 1
+	// so that we can b-step into a posdb list and make sure
+	// we are aligned on a 6 byte or 12 byte key, since they come
+	// in both sizes. but for this, hack it off to tell
+	// addTable144() that we are a special posdb key, a "numeric"
+	// key that has a float stored in it. then it will NOT
+	// set the siterank and langid bits which throw our sorting
+	// off!!
+	g_posdb.setAlignmentBit ( &k , 0 );
 
 	// sanity
 	float t = g_posdb.getFloat ( &k );
@@ -43553,12 +43675,49 @@ SafeBuf *XmlDoc::getQueryLinkBuf(SafeBuf *docIdList, bool doMatchingQueries) {
 //void XmlDoc::getGigabitExcerpts ( ) {
 //}
 
+
+// . the products and image types are listed as arrays in the json object.
+// . so go to those first if there...
+char *getFirstJSONObject ( char *p , 
+			   long niceness ,
+			   bool *isProduct ,
+			   bool *isImage ) {
+
+	// do we have a "products": array?
+	char *needle = ",\"products\":[";
+	char *s = strstr(p,needle);
+
+	*isProduct = false;
+	*isImage   = false;
+
+	// return ptr to first product if there
+	if ( s ) {
+		*isProduct = true;
+		return s + gbstrlen(needle);
+	}
+
+	QUICKPOLL ( niceness );
+
+	// images?
+	needle = ",\"images\":[";
+	s = strstr(p,needle);
+	// return ptr to first product if there
+	if ( s ) {
+		*isImage = true;
+		return s + gbstrlen(needle);
+	}
+
+	// default to just that json otherwise
+	return p;
+}
+
+
 // . advance p to skip over the json object it is pointing to and return 
 //   ptr to the following json object
 // . deal with nested {}'s
 // . basically skips over current json object in a list of json objects to
 //   point to the next brother object
-char *getNextJSONObject ( char *p ) {
+char *getNextJSONObject ( char *p , long niceness ) {
 	// otherwise, *p must be {
 	for ( ; *p && *p != '{' ; p++ );
 	// empty?
@@ -43571,6 +43730,8 @@ char *getNextJSONObject ( char *p ) {
 	bool inQuotes = false;
 	// scan
 	for ( ; *p ; p++ ) {
+		// breathe
+		QUICKPOLL ( niceness );
 		// escaping a quote? ignore quote then.
 		if ( *p == '\\' && p[1] == '\"' ) {
 			// skip two bytes then..

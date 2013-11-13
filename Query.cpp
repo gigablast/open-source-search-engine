@@ -2200,6 +2200,7 @@ bool Query::setQWords ( char boolFlag ,
 		     fieldCode == FIELD_ISCLEAN ||
 		     fieldCode == FIELD_QUOTA ||
 		     fieldCode == FIELD_GBSORTBY ||
+		     fieldCode == FIELD_GBREVSORTBY ||
 		     fieldCode == FIELD_GBNUMBERMIN ||
 		     fieldCode == FIELD_GBNUMBERMAX ||
 		     fieldCode == FIELD_GBAD  ) {
@@ -2217,6 +2218,7 @@ bool Query::setQWords ( char boolFlag ,
 			// i've decided not to make 
 			// gbsortby:products.offerPrice case sensitive
 			if ( fieldCode == FIELD_GBSORTBY ||
+			     fieldCode == FIELD_GBREVSORTBY ||
 			     fieldCode == FIELD_GBNUMBERMIN ||
 			     fieldCode == FIELD_GBNUMBERMAX )
 				wid = hash64Lower_utf8 ( w , wlen , 0LL );
@@ -3044,6 +3046,7 @@ struct QueryField g_fields[] = {
 	{"gbsamplevector", FIELD_GBSAMPLEVECTOR, false,""},
 	{"gbcontenthash", FIELD_GBCONTENTHASH, false,""},
 	{"gbsortby", FIELD_GBSORTBY, false,""},
+	{"gbrevsortby", FIELD_GBREVSORTBY, false,""},
 
 	{"gbnumbermin", FIELD_GBNUMBERMIN, false,""},
 	{"gbnumbermax", FIELD_GBNUMBERMAX, false,""},

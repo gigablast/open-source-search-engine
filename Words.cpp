@@ -419,10 +419,11 @@ bool Words::addWords(char *s,long nodeLen,bool computeWordIds, long niceness) {
 
 	// comma is ok if like ,ddd!d
 	if ( s[i]==',' && 
-	     j-i <= 3 &&
-	     is_digit(s[i-1]) &&
-	     (j==i-1 || is_digit(s[i-2]) ) &&
-	     (j==i-2 || is_digit(s[i-3]) ) ) {
+	     i-j <= 3 &&
+	     is_digit(s[i-1]) ) {
+		// if word so far is 2 or 3 chars, make sure digits
+		if ( i-j >= 2 && ! is_digit(s[i-2]) ) goto nogo;
+		if ( i-j >= 3 && ! is_digit(s[i-3]) ) goto nogo;
 		// scan forward
 	subloop:
 		if ( s[i] == ',' &&
@@ -445,6 +446,8 @@ bool Words::addWords(char *s,long nodeLen,bool computeWordIds, long niceness) {
 		while ( is_digit(s[i]) ) i++;
 	}
 	
+ nogo:
+
 	// allow for words like we're dave's and i'm
 	if(s[i]=='\''&&s[i+1]&&is_alnum_utf8(&s[i+1])&&!hadApostrophe){
 		i++;

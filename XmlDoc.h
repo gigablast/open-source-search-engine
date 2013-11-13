@@ -752,6 +752,7 @@ class XmlDoc {
 	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
 	bool hashUrl ( class HashTableX *table ) ;
+	bool hashDateNumbers ( class HashTableX *tt ) ;
 	bool hashSections ( class HashTableX *table ) ;
 	bool hashIncomingLinkText ( class HashTableX *table            ,
 				    bool       hashAnomalies    ,
@@ -854,7 +855,9 @@ class XmlDoc {
 			  long bufLen , 
 			  class HashInfo *hi ) ;
 
-	bool hashNumber2 ( float f , class HashInfo *hi ) ;
+	bool hashNumber2 ( float f , 
+			   class HashInfo *hi ,
+			   char *gbsortByStr ) ;
 
 	// print out for PageTitledb.cpp and PageParser.cpp
 	bool printDoc ( class SafeBuf *pbuf );
@@ -1487,6 +1490,12 @@ class XmlDoc {
 	char m_isWWWDup;
 	char m_calledMsg0b;
 	Url  m_tmpUrl;
+
+	// hack stuff:
+	SafeBuf m_tmpBuf;
+	bool m_isJsonProduct;
+	bool m_isJsonImage;
+	
 	SafeBuf m_tmpsb1;
 	SafeBuf m_tmpsb2;
 	SafeBuf m_turkBuf;
