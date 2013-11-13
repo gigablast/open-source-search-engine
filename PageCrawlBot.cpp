@@ -2306,7 +2306,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		// no longer a delete function, we need to set "name" below
 		delColl = false;//NULL;
 		// john wants just a brief success reply
-		char *reply = "{\"reply\":\"Successfully deleted crawl.\"}";
+		char *reply = "{\"response\":\"Successfully deleted job.\"}";
 		return g_httpServer.sendDynamicPage( socket,
 						     reply,
 						     gbstrlen(reply),
@@ -2814,16 +2814,21 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 	char *token = cx->m_diffbotToken.getBufStart();
 	char *name = cx->m_diffbotCrawlName.getBufStart();
 
+	char *mt = "crawl";
+	if ( cx->m_isCustomCrawl == 2 ) mt = "bulk";
+
 	sb.safePrintf("\"downloadJson\":"
-		      "\"http://api.diffbot.com/v2/crawl/download/"
+		      "\"http://api.diffbot.com/v2/%s/download/"
 		      "%s-%s_data.json\",\n"
+		      , mt
 		      , token
 		      , name
 		      );
 
 	sb.safePrintf("\"downloadUrls\":"
-		      "\"http://api.diffbot.com/v2/crawl/download/"
+		      "\"http://api.diffbot.com/v2/%s/download/"
 		      "%s-%s_urls.csv\",\n"
+		      , mt
 		      , token
 		      , name
 		      );
@@ -3012,11 +3017,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 	// injection is currently not in use, so this is an artifact:
 	if ( fmt == FMT_JSON && injectionResponse )
-		sb.safePrintf("\"seedsResponse\":\"%s\",\n\n"
+		sb.safePrintf("\"response\":\"%s\",\n\n"
 			      , injectionResponse->getBufStart() );
 
 	if ( fmt == FMT_JSON && urlUploadResponse )
-		sb.safePrintf("\"crawlResponse\":\"%s\",\n\n"
+		sb.safePrintf("\"response\":\"%s\",\n\n"
 			      , urlUploadResponse->getBufStart() );
 
 
