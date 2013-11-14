@@ -43678,6 +43678,41 @@ SafeBuf *XmlDoc::getQueryLinkBuf(SafeBuf *docIdList, bool doMatchingQueries) {
 //}
 
 
+// p points to first char after the '[' of the array
+char *getJsonArrayEnd ( char *p ) {
+	bool inQuotes = false;
+	long brackets = 0;
+	for ( ; *p ; p++ ) {
+		// escaping a quote? ignore quote then.
+		if ( *p == '\\' && p[1] == '\"' ) {
+			// skip two bytes then..
+			p++;
+			continue;
+		}
+		// a quote?
+		if ( *p == '\"' ) {
+			inQuotes = ! inQuotes;
+			continue;
+		}
+		// if in a quote, ignore {} in there
+		if ( inQuotes ) continue;
+		
+		if ( *p =='[' ) {
+			brackets++;
+			continue;
+		}
+
+		if ( *p == ']' ) {
+			brackets--;
+			if ( brackets >= 0 ) continue;
+			// otherwise, that was it!!
+			return p;
+		}
+	}
+	return NULL;
+}
+
+
 // . the products and image types are listed as arrays in the json object.
 // . so go to those first if there...
 char *getFirstJSONObject ( char *p , 
@@ -43695,7 +43730,11 @@ char *getFirstJSONObject ( char *p ,
 	// return ptr to first product if there
 	if ( s ) {
 		*isProduct = true;
-		return s + gbstrlen(needle);
+		// find ending ] and null term it!
+		char *start = s + gbstrlen(needle);
+		char *p = getJsonArrayEnd ( start );
+		if ( p ) *p = '\0';
+		return start;
 	}
 
 	QUICKPOLL ( niceness );
@@ -43706,7 +43745,11 @@ char *getFirstJSONObject ( char *p ,
 	// return ptr to first product if there
 	if ( s ) {
 		*isImage = true;
-		return s + gbstrlen(needle);
+		// find ending ] and null term it!
+		char *start = s + gbstrlen(needle);
+		char *p = getJsonArrayEnd ( start );
+		if ( p ) *p = '\0';
+		return start;
 	}
 
 	// default to just that json otherwise
@@ -43721,11 +43764,6 @@ char *getFirstJSONObject ( char *p ,
 //   point to the next brother object
 // . 
 char *getNextJSONObject ( char *p , long niceness ) {
-	// HACK
-	if ( *p == ']' ) {
-		p = p + gbstrlen(p);
-		return p;
-	}
 	// otherwise, *p must be {
 	for ( ; *p && *p != '{' ; p++ );
 	// empty?
@@ -43736,7 +43774,6 @@ char *getNextJSONObject ( char *p , long niceness ) {
 	p++;
 	// keep track of in a quote or not
 	bool inQuotes = false;
-	long brackets = 0;
 	// scan
 	for ( ; *p ; p++ ) {
 		// breathe
@@ -43754,16 +43791,6 @@ char *getNextJSONObject ( char *p , long niceness ) {
 		}
 		// if in a quote, ignore {} in there
 		if ( inQuotes ) continue;
-		// HACK. keep track of []'s.
-		if ( *p == '[' ) {
-			brackets++;
-			continue;
-		}
-		if ( *p == ']' ) {
-			brackets--;
-			if ( brackets < 0 ) return p;
-		}
-
 		// skip if no {}'s
 		if ( *p != '{' && *p !='}' ) continue;
 		// otherwise, check for { or }
