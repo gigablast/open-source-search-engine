@@ -1289,6 +1289,7 @@ class XmlDoc {
 	bool m_replyValid;
 	bool m_recycleDiffbotReplyValid;
 	bool m_diffbotReplyValid;
+	bool m_tokenizedDiffbotReplyValid;
 	//bool m_diffbotUrlCrawlPatternMatchValid;
 	//bool m_diffbotUrlProcessPatternMatchValid;
 	//bool m_diffbotPageProcessPatternMatchValid;
@@ -1491,11 +1492,6 @@ class XmlDoc {
 	char m_calledMsg0b;
 	Url  m_tmpUrl;
 
-	// hack stuff:
-	SafeBuf m_tmpBuf;
-	bool m_isJsonProduct;
-	bool m_isJsonImage;
-	
 	SafeBuf m_tmpsb1;
 	SafeBuf m_tmpsb2;
 	SafeBuf m_turkBuf;
@@ -1564,9 +1560,9 @@ class XmlDoc {
 	//
 	XmlDoc *m_dx;
 	char *m_diffbotObj;
-	char *m_diffbotObjEnd;
-	char  m_diffbotSavedChar;
 	SafeBuf m_diffbotReply;
+	SafeBuf *m_tokenizedDiffbotReplyPtr;
+	SafeBuf  m_tokenizedDiffbotReply;
 	long m_diffbotReplyError;
 	bool m_recycleDiffbotReply;
 	//bool m_diffbotUrlCrawlPatternMatch;
@@ -1578,6 +1574,7 @@ class XmlDoc {
 	SafeBuf m_diffbotApiUrl;
 
 	bool *getRecycleDiffbotReply ( ) ;
+	SafeBuf *getTokenizedDiffbotReply ( ) ;
 	SafeBuf *getDiffbotReply ( ) ;
 	//bool doesUrlMatchDiffbotCrawlPattern() ;
 	//bool doesUrlMatchDiffbotProcessPattern() ;

@@ -12850,6 +12850,139 @@ bool *XmlDoc::getRecycleDiffbotReply ( ) {
 	return &m_recycleDiffbotReply;
 }
 
+
+// . we now get the TOKENIZED diffbot reply.
+// . that converts a single diffbot reply into multiple \0 separated
+//   json objects.
+// . for instance, the diffbot product api returns an array like
+//   "products":[{...},{...}],"url":...  that consists of multiple
+//   json product items, but the json elements that are not in
+//   this array are description of the page itself, like url and title.
+//   so we need to carry over these outter json objects to each
+//   inner json object we tokenize.
+// . in this fashion we'll have separate objects that can each be indexed
+//   as a single page, which is what we want for searching.
+SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
+
+	if ( m_tokenizedDiffbotReplyValid )
+		return m_tokenizedDiffbotReplyPtr;
+
+	SafeBuf *dbr = getDiffbotReply();
+	if ( ! dbr || dbr == (void *)-1 ) return dbr;
+
+	// empty? that's easy. might be just "{}\n" i guess
+	if ( dbr->length() <= 3 ) return dbr;
+
+
+	char *text = dbr->getBufStart();
+
+	char *needle1 = ",\"products\":[";
+	char *needle2 = ",\"images\":[";
+	char *parray = strstr ( text , needle1 );
+	char *pstart = NULL;
+	if ( parray ) {
+		// point to [
+		pstart = parray + 13 - 1;
+	}
+	else {
+		parray = strstr ( text , needle2 );
+		// point to [
+		if ( parray ) pstart = parray + 11 - 1;
+	}
+
+	// if not found, no need to do anything...
+	if ( ! parray ) {
+		m_tokenizedDiffbotReplyValid = true;
+		m_tokenizedDiffbotReplyPtr = &m_diffbotReply;
+		return m_tokenizedDiffbotReplyPtr;
+	}
+
+	//
+	// ok, now we have to do so json ju jitsu to fix it
+	//
+
+	// point to array. starting at the '['
+	char *p = pstart;
+	long brackets = 0;
+	for ( ; *p ; p++ ) {
+		if ( *p == '[' ) brackets++;
+		if ( *p != ']' ) continue;
+		brackets--;
+		// stop if array is done. p points to ']'
+		if ( brackets == 0 ) break;
+	}
+
+	// now point to outter items to the left of the ",\"products\":[...
+	char *left1 = dbr->getBufStart();
+	char *left2 = parray;
+	// then to the right. skip over the ending ']'
+	char *right1 = p + 1;
+	char *right2 = dbr->getBuf(); // end of the buffer
+
+
+	SafeBuf *tbuf = &m_tokenizedDiffbotReply;
+	
+	// now scan the json products or images in the array
+	char *x = pstart;
+	// skip over [
+	x++;
+	// each product item in array is enclosed in {}'s
+	if ( *x != '{' ) {
+		log("build: something is wrong with diffbot reply");
+		g_errno = EBADENGINEER;
+		return NULL;
+	}
+	// reset CURLY bracket count
+	long curlies = 0;
+	char *xstart = NULL;
+	// scan now
+	for ( ; *x ; x++ ) {
+		if ( *x== '{' ) {
+			if ( curlies == 0 ) xstart = x;
+			curlies++;
+			continue;
+		}
+		if ( *x == '}' ) {
+			curlies--;
+			if ( curlies != 0 ) continue;
+			// unreciprocated '{'? wtf???
+			if ( ! xstart ) continue;
+			//
+			// ok, we got an item!
+			//
+
+			// left top items
+			if ( ! tbuf->safeMemcpy ( left1 , left2-left1 ) )
+				return NULL;
+			// use "product":
+			if ( ! tbuf->safePrintf(",\"product\":") )
+				return NULL;
+			// the item itself, include it's curlies.
+			if ( ! tbuf->safeMemcpy ( xstart , x - xstart+1 ) )
+				return NULL;
+			// right top items
+			if ( ! tbuf->safeMemcpy ( right1 , right2-right1 ) )
+				return NULL;
+			// then a \0
+			if ( ! tbuf->pushChar('\0') )
+				return NULL;
+			// reset this!
+			xstart = NULL;
+		}
+	}
+
+	// now show the items. debug!
+	//p = tbuf->getBufStart();
+	//for ( ; p < tbuf->getBuf() ; p += gbstrlen(p) + 1 )
+	//	fprintf(stderr,"ITEM\n%s\n\n",p);
+	
+
+	m_tokenizedDiffbotReplyPtr = tbuf;
+	m_tokenizedDiffbotReplyValid = true;
+	return m_tokenizedDiffbotReplyPtr;
+}
+
+
 // the diffbot reply will be a list of json objects we want to index
 SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
@@ -19261,23 +19394,26 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//
 	///////////
 
+
 	// . get the reply of json objects from diffbot
 	// . this will be empty if we are a json object!
 	// . will also be empty if not meant to be sent to diffbot
-	SafeBuf *dbr = getDiffbotReply();
-	if ( ! dbr || dbr == (void *)-1 ) return (char *)dbr;
+	// . the TOKENIZED reply consists of \0 separated json objects that
+	//   we create from the original diffbot reply
+	SafeBuf *tdbr = getTokenizedDiffbotReply();
+	if ( ! tdbr || tdbr == (void *)-1 ) return (char *)tdbr;
 
-	long dbrLen = dbr->length();
+	long tdbrLen = tdbr->length();
 
 	// do not index json items as separate docs if we are page parser
-	if ( getIsPageParser() ) dbrLen = 0;
+	if ( getIsPageParser() ) tdbrLen = 0;
 
 	//
 	// if we got a json object or two from diffbot, index them
 	// as their own child xmldocs.
 	// watch out for reply from diffbot of "-1" indicating error!
 	//
-	if ( dbrLen > 3 ) {
+	if ( tdbrLen > 3 ) {
 		// make sure diffbot reply is valid for sure
 		if ( ! m_diffbotReplyValid ) { char *xx=NULL;*xx=0; }
 		// set status for this
@@ -19291,22 +19427,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 				return NULL;
 			}
 			mnew ( m_dx , sizeof(XmlDoc),"xmldocdx");
-			// init cursor to first json object
-			//m_diffbotObj       = m_diffbotReply.getBufStart();
-			char *rp = m_diffbotReply.getBufStart();
 			// we now parse the array of products out of the
 			// diffbot reply. each product is an item/object.
-			m_diffbotObj = getFirstJSONObject ( rp , 
-							    m_niceness ,
-							    &m_isJsonProduct , 
-							    &m_isJsonImage );
+			m_diffbotObj = tdbr->getBufStart();
 			m_diffbotJSONCount = 0;
-			// set end of it
-			m_diffbotObjEnd = getJSONObjectEnd ( m_diffbotObj,
-							      m_niceness);
-			// temp null it
-			m_diffbotSavedChar = *m_diffbotObjEnd;
-			*m_diffbotObjEnd = '\0';
 		}
 		// loop back up here to process next json object from below
 	jsonloop:
@@ -19337,32 +19461,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			sreq.m_fakeFirstIp   = 1;
 			sreq.m_firstIp       = firstIp;
 
-			// copy the content
-			m_tmpBuf.reset();
-			// how much
-			long clen = m_diffbotObjEnd - m_diffbotObj;
-			// include \0
-			long need = clen + 1;
-			// insert ,"type":"product" or
-			// possibly ,"type":"image" to make it kosher
-			need += 32;
-			// reserve the mem
-			if ( ! m_tmpBuf.reserve ( need ) ) 
-				return NULL;
-			// sanity
-			if ( m_diffbotObj[0] != '{' ) { char *xx=NULL;*xx=0;}
-			// copy first '{'
-			m_tmpBuf.pushChar(m_diffbotObj[0]);
-			// HACK: insert the type: thing here
-			if ( m_isJsonProduct )
-				m_tmpBuf.safePrintf("\"type\":\"product\",");
-			else if ( m_isJsonImage )
-				m_tmpBuf.safePrintf("\"type\":\"image\",");
-			// do the copy of the rest, title, etc.
-			m_tmpBuf.safeMemcpy ( m_diffbotObj+1 , clen-1 );
-			// null term
-			m_tmpBuf.nullTerm();
-
 			// set this
 			if (!m_dx->set4 ( &sreq       ,
 					  NULL        ,
@@ -19373,7 +19471,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 					  // niceness of 0!!!!
 					  m_niceness, // 1 , 
 					  // inject this content
-					  m_tmpBuf.getBufStart(), // content ,
+					  m_diffbotObj,
 					  false, // deleteFromIndex ,
 					  0, // forcedIp ,
 					  CT_JSON, // contentType ,
@@ -19420,23 +19518,15 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// count as deleted
 		cr->m_localCrawlInfo.m_objectsAdded++;
 		cr->m_globalCrawlInfo.m_objectsAdded++;
-		// undo the \0 termination we did above
-		*m_diffbotObjEnd = m_diffbotSavedChar;
 		// we successfully index the json object, skip to next one
-		m_diffbotObj = m_diffbotObjEnd;
-		// advance to first '{'
-		for ( ; *m_diffbotObj && *m_diffbotObj!='{' ; m_diffbotObj++);
-		// point to next json object again
-		m_diffbotObjEnd = getJSONObjectEnd ( m_diffbotObj,m_niceness);
-		// re-save
-		m_diffbotSavedChar = *m_diffbotObjEnd;
+		m_diffbotObj += gbstrlen(m_diffbotObj) + 1;
 		// but gotta set this crap back
 		log("diffbot: resetting %s",m_dx->m_firstUrl.m_url);
 		// clear for next guy if there is one. clears 
 		// m_dx->m_contentValid so the set4() can be called again above
 		m_dx->reset();
-		// if more json... this will not be \0
-		if ( *m_diffbotObj ) goto jsonloop;
+		// have we breached the buffer of json objects? if not, do more
+		if ( m_diffbotObj < tdbr->getBuf() ) goto jsonloop;
 	}
 
 	/////
@@ -43720,107 +43810,7 @@ char *getJsonArrayEnd ( char *p ) {
 	return NULL;
 }
 
-
-// . the products and image types are listed as arrays in the json object.
-// . so go to those first if there...
-char *getFirstJSONObject ( char *p , 
-			   long niceness ,
-			   bool *isProduct ,
-			   bool *isImage ) {
-
-	// do we have a "products": array?
-	char *needle = ",\"products\":[";
-	char *s = strstr(p,needle);
-
-	*isProduct = false;
-	*isImage   = false;
-
-	// return ptr to first product if there
-	if ( s ) {
-		*isProduct = true;
-		// find ending ] and null term it!
-		char *start = s + gbstrlen(needle);
-		char *p = getJsonArrayEnd ( start );
-		if ( p ) *p = '\0';
-		return start;
-	}
-
-	QUICKPOLL ( niceness );
-
-	// images?
-	needle = ",\"images\":[";
-	s = strstr(p,needle);
-	// return ptr to first product if there
-	if ( s ) {
-		*isImage = true;
-		// find ending ] and null term it!
-		char *start = s + gbstrlen(needle);
-		char *p = getJsonArrayEnd ( start );
-		if ( p ) *p = '\0';
-		return start;
-	}
-
-	// default to just that json otherwise
-	return p;
-}
-
-
-// . advance p to skip over the json object it is pointing to and return 
-//   ptr to the following json object
-// . deal with nested {}'s
-// . basically skips over current json object in a list of json objects to
-//   point to the next brother object
-// . 
-char *getJSONObjectEnd ( char *p , long niceness ) {
-	// otherwise, *p must be {
-	for ( ; *p && *p != '{' ; p++ );
-	// empty?
-	if ( ! *p ) return p;
-	// count the nests
-	long nest = 0;
-	// skip first {
-	p++;
-	// keep track of in a quote or not
-	bool inQuotes = false;
-	// scan
-	for ( ; *p ; p++ ) {
-		// breathe
-		QUICKPOLL ( niceness );
-		// escaping a quote? ignore quote then.
-		if ( *p == '\\' && p[1] == '\"' ) {
-			// skip two bytes then..
-			p++;
-			continue;
-		}
-		// a quote?
-		if ( *p == '\"' ) {
-			inQuotes = ! inQuotes;
-			continue;
-		}
-		// if in a quote, ignore {} in there
-		if ( inQuotes ) continue;
-		// skip if no {}'s
-		if ( *p != '{' && *p !='}' ) continue;
-		// otherwise, check for { or }
-		if ( *p == '{' ) { nest++; continue; }
-		// otherwise, it must be a }
-		nest--;
-		// if we hit the } corresponding to the first }
-		// then stop!
-		if ( nest == -1 ) break;
-	}
-	// done?
-	if ( ! *p ) return p;
-	// must be this then
-	if ( *p != '}' ) { char *xx=NULL;*xx=0; }
-	// skip that
-	p++;
-	// skip til next {
-	//for ( ; *p && *p != '{' ; p++ );
-	// done
-	return p;
-}	
-
+// this is still used by Title.cpp to get the title: field quickly
 char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 	// get length
 	long fieldLen = gbstrlen(field);
