@@ -25460,8 +25460,15 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 
 	m_niceness = m_req->m_niceness;
 
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
+	char *coll = m_req->ptr_coll;
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	if ( ! cr ) { g_errno = ENOCOLLREC; return NULL; }
+
+	m_collnum = cr->m_collnum;
+	m_collnumValid = true;
+
+	//CollectionRec *cr = getCollRec();
+	//if ( ! cr ) return NULL;
 
 	// set this important member var
 	//if (!cr ) cr=g_collectiondb.getRec(cr->m_coll,gbstrlen(cr->m_coll));
