@@ -4860,12 +4860,11 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 			action = hr->getValue(i);
 		// need both
 		if ( ! action ) continue;
+		// no! the /v2/bulk api just has a single action
+		if ( isBulkApi ) expression = "*";
 		// action before expresion???? set action to NULL then?
-		if ( ! expression ) { 
-			// no! the /v2/bulk api just has a single action
-			if ( isBulkApi ) expression = "*";
-			else { action = NULL; continue; }
-		}
+		if ( ! expression ) continue;
+		//else continue;// { action = NULL; continue; }
 		// skip whitespace
 		while ( is_wspace_a(*expression) ) expression++;
 		while ( is_wspace_a(*action) ) action++;
