@@ -2411,7 +2411,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	else      st->m_collnum = -1;
 
 	// save seeds
-	if ( cr && restartColl ) {
+	if ( cr && restartColl && cast ) {
 		// bail on OOM saving seeds
 		if ( ! st->m_seedBank.safeMemcpy ( &cr->m_diffbotSeeds ) )
 			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
@@ -2498,13 +2498,16 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 		if ( resetColl || restartColl ) {
 			// note it
-			log("crawlbot: resetting coll");
+			log("crawlbot: resetting/restarting coll");
 			//cr = g_collectiondb.getRec ( resetColl );
 			// this can block if tree is saving, it has to wait
 			// for tree save to complete before removing old
 			// collnum recs from tree
-
-			if ( ! g_collectiondb.resetColl ( collName , we ) )
+			bool purgeSeeds = true;
+			if ( restartColl ) purgeSeeds = false;
+			if ( ! g_collectiondb.resetColl ( collName , 
+							  we ,
+							  purgeSeeds ) )
 				return false;
 			// it is a NEW ptr now!
 			cr = g_collectiondb.getRec( collName );

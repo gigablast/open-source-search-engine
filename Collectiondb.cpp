@@ -528,7 +528,8 @@ void savingCheckWrapper1 ( int fd , void *state ) {
 	// unregister too
 	g_loop.unregisterSleepCallback ( state,savingCheckWrapper1 );
 	// if it blocked again i guess tree is still saving
-	if ( ! g_collectiondb.resetColl ( we->m_coll , we ) ) return;
+	if ( ! g_collectiondb.resetColl ( we->m_coll , we , we->m_purgeSeeds))
+		return;
 	// all done
 	we->m_callback ( we->m_state );
 }
@@ -700,7 +701,11 @@ bool Collectiondb::deleteRec ( char *coll , WaitEntry *we ) {
 
 // . reset a collection
 // . returns false if blocked and will call callback
-bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we ) {
+bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we , bool purgeSeeds) {
+
+	// save parms in case we block
+	we->m_purgeSeeds = purgeSeeds;
+
 	// ensure it's not NULL
 	if ( ! coll ) {
 		log(LOG_LOGIC,"admin: Collection name to delete is NULL.");
@@ -849,11 +854,13 @@ bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we ) {
 	//cr->m_spiderStatusMsg = NULL;
 
 	// reset seed buf
-	cr->m_diffbotSeeds.purge();
-
-	// reset seed dedup table
-	HashTableX *ht = &cr->m_seedHashTable;
-	ht->reset();
+	if ( purgeSeeds ) {
+		// free the buffer of seed urls
+		cr->m_diffbotSeeds.purge();
+		// reset seed dedup table
+		HashTableX *ht = &cr->m_seedHashTable;
+		ht->reset();
+	}
 
 	// so XmlDoc.cpp can detect if the collection was reset since it
 	// launched its spider:
