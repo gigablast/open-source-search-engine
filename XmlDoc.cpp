@@ -103,7 +103,7 @@ char *getFirstJSONObject ( char *p ,
 			   long niceness ,
 			   bool *isProduct , 
 			   bool *isImage ) ;
-char *getNextJSONObject ( char *p , long niceness ) ;
+char *getJSONObjectEnd ( char *p , long niceness ) ;
 
 XmlDoc::XmlDoc() { 
 	for ( long i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
@@ -19302,7 +19302,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 							    &m_isJsonImage );
 			m_diffbotJSONCount = 0;
 			// set end of it
-			m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj,
+			m_diffbotObjEnd = getJSONObjectEnd ( m_diffbotObj,
 							      m_niceness);
 			// temp null it
 			m_diffbotSavedChar = *m_diffbotObjEnd;
@@ -19424,9 +19424,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		*m_diffbotObjEnd = m_diffbotSavedChar;
 		// we successfully index the json object, skip to next one
 		m_diffbotObj = m_diffbotObjEnd;
+		// advance to first '{'
+		for ( ; *m_diffbotObj && *m_diffbotObj!='{' ; m_diffbotObj++);
 		// point to next json object again
-		m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj ,
-						      m_niceness );
+		m_diffbotObjEnd = getJSONObjectEnd ( m_diffbotObj,m_niceness);
 		// re-save
 		m_diffbotSavedChar = *m_diffbotObjEnd;
 		// but gotta set this crap back
@@ -43763,7 +43764,7 @@ char *getFirstJSONObject ( char *p ,
 // . basically skips over current json object in a list of json objects to
 //   point to the next brother object
 // . 
-char *getNextJSONObject ( char *p , long niceness ) {
+char *getJSONObjectEnd ( char *p , long niceness ) {
 	// otherwise, *p must be {
 	for ( ; *p && *p != '{' ; p++ );
 	// empty?
@@ -43808,7 +43809,7 @@ char *getNextJSONObject ( char *p , long niceness ) {
 	// skip that
 	p++;
 	// skip til next {
-	for ( ; *p && *p != '{' ; p++ );
+	//for ( ; *p && *p != '{' ; p++ );
 	// done
 	return p;
 }	
