@@ -754,6 +754,8 @@ public:
 
 	bool m_needHeaderRow;
 
+	SafeBuf m_seedBank;
+
 	bool m_needsMime;
 	char m_rdbId;
 	bool m_downloadJSON;
@@ -2075,7 +2077,8 @@ static class HelpItem s_his[] = {
 	 "all crawls owned by the given token."},
 
 	{"delete=1","Deletes the crawl."},
-	{"reset=1","Resets the crawl."},
+	{"reset=1","Resets the crawl. Removes all seeds."},
+	{"restart=1","Restarts the crawl. Keeps the seeds."},
 
 	{"pause",
 	 "Specify 1 or 0 to pause or resume the crawl respectively."},
@@ -2282,6 +2285,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( ! delColl   ) delColl   = hr->hasField("delete");
 	if ( ! resetColl ) resetColl = hr->hasField("reset");
 
+	bool restartColl = hr->hasField("restart");
 
 
 	char *name = hr->getString("name");
@@ -2326,6 +2330,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( spots ) break;
 		if ( delColl ) break;
 		if ( resetColl ) break;
+		if ( restartColl ) break;
 		CollectionRec *cx = g_collectiondb.m_recs[i];
 		// deleted collections leave a NULL slot
 		if ( ! cx ) continue;
@@ -2382,6 +2387,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		return sendErrorReply2 (socket,fmt,msg);
 	}
 
+	if ( restartColl && ! cr ) {
+		char *msg = "Could not find crawl to restart.";
+		return sendErrorReply2 (socket,fmt,msg);
+	}
+
 	// make a new state
 	StateCD *st;
 	try { st = new (StateCD); }
@@ -2399,6 +2409,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	st->m_fmt = fmt;
 	if ( cr ) st->m_collnum = cr->m_collnum;
 	else      st->m_collnum = -1;
+
+	// save seeds
+	if ( cr && restartColl ) {
+		// bail on OOM saving seeds
+		if ( ! st->m_seedBank.safeMemcpy ( &cr->m_diffbotSeeds ) )
+			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
+	}
+			
 
 	// . if this is a cast=0 request it is received by all hosts in the 
 	//   network
@@ -2443,6 +2461,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			char *msg = "Collection add failed";
 			if ( delColl ) msg = "No such collection";
 			if ( resetColl ) msg = "No such collection";
+			if ( restartColl ) msg = "No such collection";
 			// nuke it
 			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
@@ -2477,13 +2496,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			return g_httpServer.sendDynamicPage (socket,"OK",2);
 		}
 
-		if ( resetColl ) {
+		if ( resetColl || restartColl ) {
 			// note it
 			log("crawlbot: resetting coll");
 			//cr = g_collectiondb.getRec ( resetColl );
 			// this can block if tree is saving, it has to wait
 			// for tree save to complete before removing old
 			// collnum recs from tree
+
 			if ( ! g_collectiondb.resetColl ( collName , we ) )
 				return false;
 			// it is a NEW ptr now!
@@ -2531,6 +2551,10 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	//char *spots = hr->getString("spots",NULL,NULL);
 	//char *seeds = hr->getString("seeds",NULL,NULL);
+
+	// check seed bank now too for restarting a crawl
+	if ( st->m_seedBank.length() && ! seeds )
+		seeds = st->m_seedBank.getBufStart();
 
 	if ( seeds )
 		log("crawlbot: adding seeds=\"%s\"",seeds);

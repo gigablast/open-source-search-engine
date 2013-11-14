@@ -12904,7 +12904,20 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 	// point to array. starting at the '['
 	char *p = pstart;
 	long brackets = 0;
+	bool inQuotes = false;
 	for ( ; *p ; p++ ) {
+		// escaping a quote? ignore quote then.
+		if ( *p == '\\' && p[1] == '\"' ) {
+			// skip two bytes then..
+			p++;
+			continue;
+		}
+		if ( *p == '\"' ) {
+			inQuotes = ! inQuotes;
+			continue;
+		}
+		// if in a quote, ignore {} in there
+		if ( inQuotes ) continue;
 		if ( *p == '[' ) brackets++;
 		if ( *p != ']' ) continue;
 		brackets--;
@@ -12935,8 +12948,21 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 	// reset CURLY bracket count
 	long curlies = 0;
 	char *xstart = NULL;
+	inQuotes = false;
 	// scan now
 	for ( ; *x ; x++ ) {
+		// escaping a quote? ignore quote then.
+		if ( *x == '\\' && x[1] == '\"' ) {
+			// skip two bytes then..
+			x++;
+			continue;
+		}
+		if ( *x == '\"' ) {
+			inQuotes = ! inQuotes;
+			continue;
+		}
+		// if in a quote, ignore {} in there
+		if ( inQuotes ) continue;
 		if ( *x== '{' ) {
 			if ( curlies == 0 ) xstart = x;
 			curlies++;
@@ -43775,40 +43801,6 @@ SafeBuf *XmlDoc::getQueryLinkBuf(SafeBuf *docIdList, bool doMatchingQueries) {
 //void XmlDoc::getGigabitExcerpts ( ) {
 //}
 
-
-// p points to first char after the '[' of the array
-char *getJsonArrayEnd ( char *p ) {
-	bool inQuotes = false;
-	long brackets = 0;
-	for ( ; *p ; p++ ) {
-		// escaping a quote? ignore quote then.
-		if ( *p == '\\' && p[1] == '\"' ) {
-			// skip two bytes then..
-			p++;
-			continue;
-		}
-		// a quote?
-		if ( *p == '\"' ) {
-			inQuotes = ! inQuotes;
-			continue;
-		}
-		// if in a quote, ignore {} in there
-		if ( inQuotes ) continue;
-		
-		if ( *p =='[' ) {
-			brackets++;
-			continue;
-		}
-
-		if ( *p == ']' ) {
-			brackets--;
-			if ( brackets >= 0 ) continue;
-			// otherwise, that was it!!
-			return p;
-		}
-	}
-	return NULL;
-}
 
 // this is still used by Title.cpp to get the title: field quickly
 char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
