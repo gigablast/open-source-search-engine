@@ -12950,7 +12950,7 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 	char *xstart = NULL;
 	inQuotes = false;
 	// scan now
-	for ( ; *x ; x++ ) {
+	for ( ; x < right1 ; x++ ) {
 		// escaping a quote? ignore quote then.
 		if ( *x == '\\' && x[1] == '\"' ) {
 			// skip two bytes then..
