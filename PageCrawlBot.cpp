@@ -1131,7 +1131,9 @@ bool StateCD::sendList ( ) {
 
 
 	// if nobody needs to read more...
-	if ( m_rdbId == RDB_TITLEDB && m_fmt == FMT_JSON && 
+	if ( m_rdbId == RDB_TITLEDB && 
+	     m_fmt == FMT_JSON && 
+	     ! m_someoneNeedsMore &&
 	     ! m_printedEndingBracket ) {
 		m_printedEndingBracket = true;
 		// end array of json objects. might be empty!
