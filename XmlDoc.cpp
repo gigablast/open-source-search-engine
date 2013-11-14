@@ -12681,6 +12681,8 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 
 	bool hadError = false;
 
+	THIS->setStatus("got diffbot reply");
+
 	// wha?
 	if ( g_errno ) {
 		log("diffbot: http error2 %s",mstrerror(g_errno));
@@ -12736,10 +12738,10 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 	THIS->m_diffbotReplyValid = true;
 
 	CollectionRec *cr = THIS->getCollRec();
-	if ( ! cr ) return;
+	//if ( ! cr ) return;
 
 	// increment this counter on a successful reply from diffbot
-	if ( ! THIS->m_diffbotReplyError ) {
+	if ( ! THIS->m_diffbotReplyError && cr ) {
 		// mark this flag
 		THIS->m_gotDiffbotSuccessfulReply = 1;
 		// count it for stats
@@ -18471,7 +18473,7 @@ long *XmlDoc::nukeJSONObjects ( ) {
 		// . if m_dx got its msg4 reply it ends up here, in which
 		//   case do NOT re-call indexDoc() so check for
 		//   m_listAdded.
-		if ( ! m_dx->m_listAdded && ! m_dx->indexDoc ( ) ) 
+		if ( ! m_dx->m_listAdded && ! m_dx->indexDoc ( ) )
 			return (long *)-1; 
 		// critical error on our part trying to index it?
 		// does not include timeouts or 404s, etc. mostly just
@@ -19407,7 +19409,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// . if m_dx got its msg4 reply it ends up here, in which
 		//   case do NOT re-call indexDoc() so check for
 		//   m_listAdded.
-		if ( ! m_dx->m_listAdded && ! m_dx->indexDoc ( ) ) 
+		if ( ! m_dx->m_listAdded && ! m_dx->indexDoc ( ) )
 			return (char *)-1; 
 		// critical error on our part trying to index it?
 		// does not include timeouts or 404s, etc. mostly just
@@ -43717,7 +43719,13 @@ char *getFirstJSONObject ( char *p ,
 // . deal with nested {}'s
 // . basically skips over current json object in a list of json objects to
 //   point to the next brother object
+// . 
 char *getNextJSONObject ( char *p , long niceness ) {
+	// HACK
+	if ( *p == ']' ) {
+		p = p + gbstrlen(p);
+		return p;
+	}
 	// otherwise, *p must be {
 	for ( ; *p && *p != '{' ; p++ );
 	// empty?
@@ -43728,6 +43736,7 @@ char *getNextJSONObject ( char *p , long niceness ) {
 	p++;
 	// keep track of in a quote or not
 	bool inQuotes = false;
+	long brackets = 0;
 	// scan
 	for ( ; *p ; p++ ) {
 		// breathe
@@ -43745,6 +43754,16 @@ char *getNextJSONObject ( char *p , long niceness ) {
 		}
 		// if in a quote, ignore {} in there
 		if ( inQuotes ) continue;
+		// HACK. keep track of []'s.
+		if ( *p == '[' ) {
+			brackets++;
+			continue;
+		}
+		if ( *p == ']' ) {
+			brackets--;
+			if ( brackets < 0 ) return p;
+		}
+
 		// skip if no {}'s
 		if ( *p != '{' && *p !='}' ) continue;
 		// otherwise, check for { or }

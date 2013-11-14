@@ -5012,10 +5012,13 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// newly created crawls usually have this set to false so set it
 	// to true so getSpiderStatus() does not return that "the job
 	// is completed and no repeat is scheduled"...
-	if ( cr->m_spiderStatus == SP_INITIALIZING ) 
+	if ( cr->m_spiderStatus == SP_INITIALIZING ) {
 		// this is the GLOBAL crawl info, not the LOCAL, which
 		// is what "ci" represents...
 		cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
+		// set this right i guess...?
+		ci->m_lastSpiderAttempt = nowGlobal;
+	}
 
 	// reset reason why crawl is not running, because we basically are now
 	cr->m_spiderStatus = SP_INPROGRESS; // this is 7
@@ -10210,6 +10213,7 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		// queue is basically empty...
 		if ( ci->m_lastSpiderAttempt &&
 		     ci->m_lastSpiderCouldLaunch &&
+		     ci->m_hasUrlsReadyToSpider &&
 		     //cr->m_spideringEnabled &&
 		     //g_conf.m_spideringEnabled &&
 		     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 

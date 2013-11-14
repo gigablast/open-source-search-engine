@@ -972,7 +972,8 @@ bool  SafeBuf::htmlEncode(char *s, long len, bool encodePoundSign ,
 	// . sanity check
 	if ( m_encoding == csUTF16 ) { char *xx = NULL; *xx = 0; }
 	// alloc some space if we need to. add a byte for NULL termination.
-	if(m_length+len+1>=m_capacity && !reserve(m_capacity+len))return false;
+	if(m_length+len+1>=m_capacity && !reserve(m_capacity+len+1))
+		return false;
 	// tmp vars
 	char *t    = m_buf + m_length;
 	char *tend = m_buf + m_capacity;

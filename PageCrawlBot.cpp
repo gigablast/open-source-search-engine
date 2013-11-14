@@ -3510,8 +3510,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			isNewNo  = "";
 		}
 
-		char *ppp = cr->m_diffbotPageProcessPattern.getBufStart();
-		if ( ! ppp ) ppp = "";
+		char *px = cr->m_diffbotPageProcessPattern.getBufStart();
+		if ( ! px ) px = "";
+		SafeBuf ppp;
+		ppp.htmlEncode ( px , gbstrlen(px) , true , 0 );
+		ppp.nullTerm();
+		
 		char *notifEmail = cr->m_notifyEmail.getBufStart();
 		char *notifUrl   = cr->m_notifyUrl.getBufStart();
 		if ( ! notifEmail ) notifEmail = "";
@@ -3766,7 +3770,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      , cr->m_collectiveRespiderFrequency
 
-			      , ppp
+			      , ppp.getBufStart()
 
 			      , isNewYes
 			      , isNewNo
@@ -4919,7 +4923,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 
 	// if no '*' line was provided, add it here
 	if ( ! addedDefault ) {
-		cr->m_regExs [nf].safePrintf("default");
+		cr->m_regExs [nf].set("default");
 		cr->m_spiderPriorities   [nf] = 50; 
 		cr->m_spiderDiffbotApiUrl[nf].set(NULL);
 		cr->m_spiderFreqs[nf] = cr->m_collectiveRespiderFrequency;
