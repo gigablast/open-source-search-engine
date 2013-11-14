@@ -3537,7 +3537,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      // make it search.csv so excel opens it
 			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
 			      "c=%s&n=10000000&rand=%llu&id=1&"
-			      "q=gbrevsortby%%3AofferPrice&"
+			      "q=gbrevsortby%%3Aproduct.offerPrice&"
 			      "prepend=type%%3Ajson"
 			      //"+type%%3Aproduct%%7C"
 			      ">"
@@ -3545,7 +3545,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      " &nbsp; "
 			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
 			      "c=%s&n=10000000&rand=%llu&id=1&"
-			      "q=gbrevsortby%%3AofferPrice&"
+			      "q=gbrevsortby%%3Aproduct.offerPrice&"
 			      "prepend=type%%3Ajson"
 			      ">"
 			      "html</a>"
