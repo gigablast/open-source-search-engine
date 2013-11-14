@@ -1424,9 +1424,10 @@ bool Rdb::dumpCollLoop ( ) {
 
 	// error?
 	if ( g_errno ) {
-		log("rdb: error dumping = %s",mstrerror(g_errno));
+		log("rdb: error dumping = %s . coll deleted from under us?",
+		    mstrerror(g_errno));
 		// for now core out
-		char *xx=NULL;*xx=0;
+		//char *xx=NULL;*xx=0;
 	}
 
 	// loop back up since we did not block
