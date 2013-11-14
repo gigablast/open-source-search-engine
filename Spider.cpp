@@ -5009,8 +5009,16 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// there are urls ready to spider
 	ci->m_hasUrlsReadyToSpider = true;
 
+	// newly created crawls usually have this set to false so set it
+	// to true so getSpiderStatus() does not return that "the job
+	// is completed and no repeat is scheduled"...
+	if ( cr->m_spiderStatus == SP_INITIALIZING ) 
+		// this is the GLOBAL crawl info, not the LOCAL, which
+		// is what "ci" represents...
+		cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
+
 	// reset reason why crawl is not running, because we basically are now
-	cr->m_spiderStatus = SP_INPROGRESS; // 0;
+	cr->m_spiderStatus = SP_INPROGRESS; // this is 7
 	//cr->m_spiderStatusMsg = NULL;
 
 	// be sure to save state so we do not re-send emails
