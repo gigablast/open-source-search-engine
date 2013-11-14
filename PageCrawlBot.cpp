@@ -4004,9 +4004,21 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      // end delete collection form
 			      "</td>"
 
+
+			      // restart collection form
+			      "<td>"
+			      "<form method=get action=/crawlbot>"
+			      "%s"
+			      "<input type=hidden name=restartCrawl value=1>"
+			      "<input type=submit name=button value=\""
+			      "Restart this collection\">"
+			      "</form>"
+			      "</td>"
+
 			      "</tr>"
 			      "</table>"
-			      //"</form>"
+
+			      , hb.getBufStart()
 			      );
 	}
 
