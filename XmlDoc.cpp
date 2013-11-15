@@ -43901,7 +43901,11 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 
 	// use new json parser
 	Json jp;
-	jp.parseJsonStringIntoJsonItems ( p );
+	// returns NULL and sets g_errno on error
+	if ( ! jp.parseJsonStringIntoJsonItems ( p ) ) {
+		g_errno = EBADJSONPARSER;
+		return NULL;
+	}
 	
 	JsonItem *ji = jp.getFirstItem();
 

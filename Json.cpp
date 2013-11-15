@@ -4,7 +4,15 @@
 class JsonItem *Json::addNewItem () {
 
 	JsonItem *ji = (JsonItem *)m_sb.getBuf();
+
+	if ( m_sb.m_length + (long)sizeof(JsonItem) > m_sb.m_capacity ) {
+		log("json: preventing buffer breach");
+		return NULL;
+	}
+
+	// otherwise we got room
 	m_sb.incrementLength(sizeof(JsonItem));
+
 
 	if ( m_prev ) m_prev->m_next = ji;
 	ji->m_prev = m_prev;
@@ -67,9 +75,15 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 	bool inQuote = false;
 	long need = 0;
 	for ( ; *p ; p++ ) {
-		if ( *p == '\"' && (p==json || p[-1]!='\\') )
+		// ignore any escaped char. also \x1234
+		if ( *p == '\\' ) {
+			if ( p[1] ) p++;
+			continue;
+		}
+		if ( *p == '\"' )
 			inQuote = ! inQuote;
-		if ( inQuote ) continue;
+		if ( inQuote ) 
+			continue;
 		if ( *p == '{' ||
 		     *p == ',' ||
 		     *p == '[' ||

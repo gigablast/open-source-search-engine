@@ -161,7 +161,8 @@ case    EDIFFBOTMIMEERROR: return "Diffbot mime error";
 case    EDIFFBOTBADHTTPSTATUS: return "Diffbot reply bad http status";
 case    EHITCRAWLLIMIT: return "Hit the page download limit";
 case    EHITPROCESSLIMIT: return "Hit the page process limit";
-	case    EINTERNALERROR: return "Internal error";
+case    EINTERNALERROR: return "Internal error";
+case	EBADJSONPARSER: return "Bad JSON parser";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );

@@ -10142,7 +10142,8 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	s_inUse    = false;
 }
 
-#define SPIDER_DONE_TIMER 10
+// this was 10 but cpu is getting pegged, maybe set to 30 now
+#define SPIDER_DONE_TIMER 30
 
 void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	//char *request = slot->m_readBuf;
