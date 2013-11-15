@@ -1161,7 +1161,8 @@ bool StateCD::sendList ( ) {
 		//TcpSocket *s = m_socket;
 		// sometimes it does not block and is successful because
 		// it just writes its buffer out in one write call.
-		if ( ! g_errno ) sb.detachBuf();
+		//if ( ! g_errno ) 
+		sb.detachBuf();
 
 		// log it
 		//log("crawlbot: nuking state. strange");
@@ -1179,6 +1180,12 @@ bool StateCD::sendList ( ) {
 		// it did not block... so just keep going. that just
 		// means the socket sent the data. it's probably buffered.
 		//
+		// but we DO have to free the sendbuffer here since
+		// we did not block
+		mfree ( m_socket->m_sendBuf ,
+			m_socket->m_sendBufSize ,
+			"dbsbuf");
+		m_socket->m_sendBuf = NULL;
 	}
 
 
