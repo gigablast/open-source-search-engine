@@ -1144,6 +1144,8 @@ bool StateCD::sendList ( ) {
 	if ( m_needsMime ) {
 		// only do once
 		m_needsMime = false;
+
+	sendLoop:
 		// start the send process
 		TcpServer *tcp = &g_httpServer.m_tcp;
 		if (  ! tcp->sendMsg ( m_socket ,
@@ -1186,6 +1188,8 @@ bool StateCD::sendList ( ) {
 			m_socket->m_sendBufSize ,
 			"dbsbuf");
 		m_socket->m_sendBuf = NULL;
+
+		return true;
 	}
 
 
@@ -1211,6 +1215,17 @@ bool StateCD::sendList ( ) {
 
 	// tell TcpServer.cpp to send this latest buffer! HACK!
 	//m_socket->m_sockState = ST_SEND_AGAIN;//ST_WRITING;//SEND_AGAIN;
+
+	// this does nothing if we were not called indirectly by
+	// TcpServer::writeSocketWrapper_r(). so if we should call
+	// sendMsg() ourselves in such a situation.
+	// so if the sendMsg() did not block, the first time, and we came
+	// here empty except for the ending ']' the 2nd time, then
+	// write it out this way... calling sendMsg() directly
+	if ( m_socket->m_sockState == ST_NEEDS_CLOSE ) {
+		//m_socket->m_sockState = ST_SEND_AGAIN;
+		goto sendLoop;
+	}
 
 	// do not let safebuf free this, we will take care of it
 	sb.detachBuf();
