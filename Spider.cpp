@@ -6253,7 +6253,16 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 		// confirm the lock
 		HashTableX *ht = &g_spiderLoop.m_lockTable;
 		long slot = ht->getSlot ( &cq->m_lockKeyUh48 );
-		if ( slot < 0 ) { char *xx=NULL;*xx=0; }
+		if ( slot < 0 ) { 
+			log("spider: got a confirm request for a key not "
+			    "in the table! coll must have been deleted "
+			    " or reset "
+			    "while lock request was outstanding.");
+			g_errno = EBADENGINEER;
+			us->sendErrorReply ( udpSlot , g_errno );
+			return;
+			//char *xx=NULL;*xx=0; }
+		}
 		UrlLock *lock = (UrlLock *)ht->getValueFromSlot ( slot );
 		lock->m_confirmed = true;
 
