@@ -77,7 +77,7 @@ ifeq ("titan","$(HOST)")
 # in 2013. So it just uses clone() and does its own "threading". Unfortunately,
 # the way it works is not even possible on newer kernels because they no longer
 # allow you to override the _errno_location() function. -- matt
-CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DIS_MATTWELLS
+CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DMATTWELLS
 LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
 else
 # use -m32 to force 32-bit mode compilation.

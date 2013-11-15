@@ -208,7 +208,7 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	*/
 	g_conf.m_isMattWells = false;
 
-#ifdef IS_MATTWELLS
+#ifdef MATTWELLS
 	g_conf.m_isMattWells = true;
 #endif
 

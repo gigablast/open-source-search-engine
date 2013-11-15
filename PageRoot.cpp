@@ -71,7 +71,6 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 		      , root
 		      , root
 		      , root
-		      , root
 		      , rootSecure
 
 		      //" &nbsp; &nbsp; <a href=/logout>Logout</a>"
@@ -137,7 +136,11 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; <a href=/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"/Top\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
+	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; "
+		      "<a href=http://www.gigablast.com/seo>seo</a> "
+		      "&nbsp;&nbsp;&nbsp;&nbsp; "
+		      "<a href=\"/Top\">directory</a> "
+		      "&nbsp;&nbsp;&nbsp;&nbsp; \n");
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
 	sb.safePrintf("<a href=/addurl title=\"Instantly add your url to "
@@ -166,10 +169,15 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("</td></tr>\n");
 
 
+	char *root = "";
+	if ( g_conf.m_isMattWells )
+		root = "http://www.gigablast.com";
 
 	sb.safePrintf("<tr valign=top>\n");
 	// 204x143
-	sb.safePrintf("<td><img height=52px width=75px src=http://www.eventguru.com/eventguru.png></td>\n");
+	sb.safePrintf("<td><img height=52px width=75px "
+		      "src=%s/eventguru.png></td>\n"
+		      , root );
 	sb.safePrintf("<td><font size=+1><b>Event Guru Returns</b></font><br>\n");
 	sb.brify2("<a href=http://www.eventguru.com/>Event Guru</a> datamines events from the web. It identifies events on a web page, or even plain text, using the same rules of deduction used by the human mind. It also has Facebook integration and lots of other cool things.",80);
 	sb.safePrintf("<br><br></td></tr>\n");
@@ -189,7 +197,9 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 
 	sb.safePrintf("<tr valign=top>\n");
-	sb.safePrintf("<td align=center><img src=http://www.gigablast.com/gears.png height=50 width=50></div></td>\n");
+	sb.safePrintf("<td align=center><img src=%s/gears.png "
+		      "height=50 width=50></div></td>\n"
+		      , root );
 	sb.safePrintf("<td><font size=+1><b>The Transparent Search Engine</b></font><br>\n");
 	sb.brify2("Gigablast is the first truly transparent search engine. It tells you exactly why the search results are ranked the way they are. There is nothing left to the imagination.",85);
 	sb.safePrintf("<br><br>");
@@ -198,7 +208,9 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("\n");
 
 	sb.safePrintf("<tr valign=top>\n");
-	sb.safePrintf("<td align=center><center><img src=http://www.gigablast.com/dollargear.png height=50 width=50></center></div></center></td>\n");
+	sb.safePrintf("<td align=center><center><img src=%s/dollargear.png "
+		      "height=50 width=50></center></div></center></td>\n"
+		      , root );
 	sb.safePrintf("<td><font size=+1><b>The SEO Search Engine</b></font><br>\n");
 	sb.brify2("When it comes to search-engine based SEO, Gigablast is the place to be. With a frothy set of unique and effective <a href=http://www.gigablast.com/seo>SEO tools</a>, you will find all you need to execute a simple yet effective SEO strategy. Stop the guesswork, and let a search engine tell you how to SEO it.",85);
 	sb.safePrintf("</td></tr>\n");
@@ -358,7 +370,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"/Top\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
+	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=http://www.gigablast.com/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"/Top\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
 	sb.safePrintf("<b title=\"Instantly add your url to Gigablast's "
