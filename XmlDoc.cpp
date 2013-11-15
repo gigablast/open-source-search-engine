@@ -12880,14 +12880,17 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 	char *needle2 = ",\"images\":[";
 	char *parray = strstr ( text , needle1 );
 	char *pstart = NULL;
+	char *newTerm = NULL;
 	if ( parray ) {
 		// point to [
 		pstart = parray + 13 - 1;
+		newTerm = "product";
 	}
 	else {
 		parray = strstr ( text , needle2 );
 		// point to [
 		if ( parray ) pstart = parray + 11 - 1;
+		newTerm = "image";
 	}
 
 	// if not found, no need to do anything...
@@ -12981,7 +12984,8 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 			if ( ! tbuf->safeMemcpy ( left1 , left2-left1 ) )
 				return NULL;
 			// use "product":
-			if ( ! tbuf->safePrintf(",\"product\":") )
+
+			if ( ! tbuf->safePrintf(",\"%s\":" , newTerm ) )
 				return NULL;
 			// the item itself, include it's curlies.
 			if ( ! tbuf->safeMemcpy ( xstart , x - xstart+1 ) )
