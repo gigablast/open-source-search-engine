@@ -466,6 +466,11 @@ bool Rdb::updateToRebuildFiles ( Rdb *rdb2 , char *coll ) {
 // . if this rdb is collectionless we set m_collectionlessBase in addBase()
 bool Rdb::addColl ( char *coll ) {
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
+	return addColl2 ( collnum );
+}
+
+bool Rdb::addColl2 ( collnum_t collnum ) {
+
 	// catdb,statsbaccessdb,facebookdb,syncdb
 	if ( m_isCollectionLess )
 		collnum = (collnum_t)0;
@@ -477,6 +482,12 @@ bool Rdb::addColl ( char *coll ) {
 			   "breech maximum number of collections, %lli.",
 			   m_dbname,collnum,maxColls);
 	}
+
+
+	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	char *coll = NULL;
+	if ( cr ) coll = cr->m_coll;
+
 	// . ensure no previous one exists
 	// . well it will be there but will be uninitialized, m_rdb will b NULL
 	RdbBase *base = getBase ( collnum );
@@ -536,7 +547,6 @@ bool Rdb::addColl ( char *coll ) {
 	// . these counts are now stored in the CollectionRec and not
 	//   in RdbTree since the # of collections can be huge!
 	if ( m_useTree ) {
-		CollectionRec *cr = g_collectiondb.m_recs[collnum];
 		m_tree.setNumKeys ( cr );
 	}
 
@@ -547,7 +557,7 @@ bool Rdb::addColl ( char *coll ) {
 
 bool Rdb::resetColl ( collnum_t collnum , collnum_t newCollnum ) {
 
-	char *coll = g_collectiondb.m_recs[collnum]->m_coll;
+	//char *coll = g_collectiondb.m_recs[collnum]->m_coll;
 
 	// remove these collnums from tree
 	if(m_useTree) m_tree.delColl    ( collnum );
@@ -555,11 +565,42 @@ bool Rdb::resetColl ( collnum_t collnum , collnum_t newCollnum ) {
 
 	// . close all files, set m_numFiles to 0 in RdbBase
 	// . TODO: what about outstanding merge or dump operations?
-	RdbBase *base = getBase ( collnum );
-	base->reset( );
+	// . it seems like we can't really recycle this too easily 
+	//   because reset it not resetting filenames or directory name?
+	//   just nuke it and rebuild using addColl2()...
+	RdbBase *oldBase = getBase ( collnum );
+	mdelete (oldBase, sizeof(RdbBase), "Rdb Coll");
+	delete  (oldBase);
 
-	// update this as well
-	base->m_collnum = newCollnum;
+	//base->reset( );
+
+	// NULL it out...
+	CollectionRec *oldcr = g_collectiondb.getRec(collnum);
+	oldcr->m_bases[(unsigned char)m_rdbId] = NULL;
+	char *coll = oldcr->m_coll;
+
+	char *msg = "deleted";
+
+	// if just resetting recycle base
+	if ( collnum != newCollnum ) {
+		addColl2 ( newCollnum );
+		// make a new base now
+		//RdbBase *newBase = mnew
+		// new cr
+		//CollectionRec *newcr = g_collectiondb.getRec(newCollnum);
+		// update this as well
+		//base->m_collnum = newCollnum;
+		// and the array
+		//newcr->m_bases[(unsigned char)m_rdbId] = base;
+		msg = "moved";
+	}
+
+	
+	log("rdb: %s base from collrec "
+	    "rdb=%s rdbid=%li coll=%s collnum=%li newcollnum=%li",
+	    msg,m_dbname,(long)m_rdbId,coll,(long)collnum,
+	    (long)newCollnum);
+
 
 	// new dir. otherwise RdbDump will try to dump out the recs to
 	// the old dir and it will end up coring
@@ -605,19 +646,6 @@ bool Rdb::delColl ( char *coll ) {
 
 	// move all files to trash and clear the tree/buckets
 	resetColl ( collnum , collnum );
-
-	mdelete (base, sizeof(RdbBase), "Rdb Coll");
-	delete  (base);
-	//m_bases[collnum] = NULL;
-
-	CollectionRec *cr = g_collectiondb.getRec(collnum);
-
-	// NULL it out...
-	cr->m_bases[(unsigned char)m_rdbId] = NULL;
-	
-	log("rdb: deleted base from collrec "
-	    "rdb=%s rdbid=%li coll=%s collnum=%li base=0x%lx",
-	    m_dbname,(long)m_rdbId,coll,(long)collnum,(long)base);
 
 	// remove these collnums from tree
 	//if(m_useTree) m_tree.delColl    ( collnum );
@@ -1252,6 +1280,7 @@ bool Rdb::gotTokenForDump ( ) {
 	m_dumpCollnum = (collnum_t)-1;
 	// clear this for dumpCollLoop()
 	g_errno = 0;
+	m_dumpErrno = 0;
 	m_fn = -1000;
 	// this returns false if blocked, which means we're ok, so we ret true
 	if ( ! dumpCollLoop ( ) ) return true;
@@ -1426,6 +1455,12 @@ bool Rdb::dumpCollLoop ( ) {
 	if ( g_errno ) {
 		log("rdb: error dumping = %s . coll deleted from under us?",
 		    mstrerror(g_errno));
+		// shit, what to do here? this is causing our RdbMem
+		// to get corrupted!
+		// because if we end up continuing it calls doneDumping()
+		// and updates RdbMem! maybe set a permanent error then!
+		// and if that is there do not clear RdbMem!
+		m_dumpErrno = g_errno;
 		// for now core out
 		//char *xx=NULL;*xx=0;
 	}
@@ -1448,11 +1483,12 @@ void Rdb::doneDumping ( ) {
 	// msg
 	//log(LOG_INFO,"db: Done dumping %s to %s (#%li): %s.",
 	//    m_dbname,m_files[n]->getFilename(),n,mstrerror(g_errno));
-	log(LOG_INFO,"db: Done dumping %s: %s.",m_dbname,mstrerror(g_errno));
+	log(LOG_INFO,"db: Done dumping %s: %s.",m_dbname,
+	    mstrerror(m_dumpErrno));
 	// give the token back so someone else can dump or merge
 	//g_msg35.releaseToken();
 	// free mem in the primary buffer
-	if ( ! g_errno ) m_mem.freeDumpedMem();
+	if ( ! m_dumpErrno ) m_mem.freeDumpedMem();
 	// . tell RdbDump it is done
 	// . we have to set this here otherwise RdbMem's memory ring buffer
 	//   will think the dumping is no longer going on and use the primary

@@ -873,6 +873,14 @@ bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we , bool purgeSeeds) {
 	// right now we #define collnum_t short
 	if ( m_numRecs > 0x7fff ) { char *xx=NULL;*xx=0; }
 
+	// make a new collnum so records in transit will not be added
+	// to any rdb...
+	cr->m_collnum = newCollnum;
+
+	// Rdb::resetColl() needs to know the new cr so it can move
+	// the RdbBase into cr->m_bases[rdbId] array. recycling.
+	m_recs[newCollnum] = cr;
+
 	// . unlink all the *.dat and *.map files for this coll in its subdir
 	// . remove all recs from this collnum from m_tree/m_buckets
 	// . updates RdbBase::m_collnum
@@ -886,16 +894,10 @@ bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we , bool purgeSeeds) {
 	g_clusterdb.getRdb()->resetColl ( oldCollnum , newCollnum );
 	g_linkdb.getRdb()->resetColl    ( oldCollnum , newCollnum );
 
-	// make a new collnum so records in transit will not be added
-	// to any rdb...
-	cr->m_collnum = newCollnum;
-
 	// reset crawl status too!
 	cr->m_spiderStatus = SP_INITIALIZING;
 
 	m_recs[oldCollnum] = NULL;
-	m_recs[newCollnum] = cr;
-
 
 	// readd it to the hashtable that maps name to collnum too
 	long long h64 = hash64n(cr->m_coll);

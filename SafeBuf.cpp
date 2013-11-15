@@ -369,8 +369,8 @@ long SafeBuf::dumpToFile(char *filename ) {
 		    filename);
 		return -1;
 	}
-	logf(LOG_DEBUG, "test: safebuf %li bytes written to %s",m_length,
-	     filename);
+	//logf(LOG_DEBUG, "test: safebuf %li bytes written to %s",m_length,
+	//     filename);
  retry23:
 	long bytes = write(fd, (char*)m_buf, m_length) ;
 	if ( bytes != m_length ) {

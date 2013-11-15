@@ -392,7 +392,7 @@ bool CollectionRec::save ( ) {
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
 	if ( ! g_parms.saveToXml ( (char *)this , tmp ) ) return false;
 	// log msg
-	log (LOG_INFO,"db: Saved %s.",tmp);//f.getFilename());
+	//log (LOG_INFO,"db: Saved %s.",tmp);//f.getFilename());
 
 	//
 	// save the crawlinfo class in the collectionrec for diffbot
@@ -400,7 +400,7 @@ bool CollectionRec::save ( ) {
 	// SAVE LOCAL
 	sprintf ( tmp , "%scoll.%s.%li/localcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	log("coll: saving %s",tmp);
+	//log("coll: saving %s",tmp);
 	SafeBuf sb;
 	//m_localCrawlInfo.print ( &sb );
 	// binary now
@@ -413,7 +413,7 @@ bool CollectionRec::save ( ) {
 	// SAVE GLOBAL
 	sprintf ( tmp , "%scoll.%s.%li/globalcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	log("coll: saving %s",tmp);
+	//log("coll: saving %s",tmp);
 	sb.reset();
 	//m_globalCrawlInfo.print ( &sb );
 	// binary now

@@ -85,6 +85,7 @@ class Rdb {
 	~Rdb ( );
 
 	bool addColl ( char *coll );
+	bool addColl2 ( collnum_t collnum );
 	bool delColl ( char *coll );
 
 	bool resetColl ( collnum_t collnum , collnum_t newCollnum ) ;
@@ -393,6 +394,8 @@ class Rdb {
 	long      m_minToMerge;  // need at least this many files b4 merging
 	long      m_numFilesToMerge   ;
 	long      m_mergeStartFileNum ;
+
+	long m_dumpErrno;
 
 	// a dummy data string for deleting records when m_fixedDataSize > 0
 	char     *m_dummy;
