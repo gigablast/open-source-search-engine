@@ -12873,8 +12873,22 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 	// empty? that's easy. might be just "{}\n" i guess
 	if ( dbr->length() <= 3 ) return dbr;
 
-
 	char *text = dbr->getBufStart();
+
+	// it must have \"type\":\"product or \"type\":\"image
+	// in order for us to do the array separation logic below.
+	// we don't want to do this logic for articles because they
+	// contain an image array!!!
+	char *needleA = "\"type\":\"product";
+	char *needleB = "\"type\":\"image";
+	char *productPtr = strstr ( text , needleA );
+	char *imagePtr   = strstr ( text , needleB );
+	if ( ! productPtr && ! imagePtr ) {
+		m_tokenizedDiffbotReplyValid = true;
+		m_tokenizedDiffbotReplyPtr = &m_diffbotReply;
+		return m_tokenizedDiffbotReplyPtr;
+	}
+
 
 	char *needle1 = ",\"products\":[";
 	char *needle2 = ",\"images\":[";
