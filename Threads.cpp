@@ -301,6 +301,10 @@ bool Threads::init ( ) {
 	// generic multipurpose
 	if ( ! g_threads.registerType (GENERIC_THREAD,100/*maxThreads*/,100) ) 
 		return log("thread: Failed to register thread type." );
+	// for call SSL_accept() which blocks for 10ms even when socket
+	// is non-blocking...
+	//if (!g_threads.registerType (SSLACCEPT_THREAD,20/*maxThreads*/,100)) 
+	//	return log("thread: Failed to register thread type." );
 
 #ifndef _PTHREADS_
 

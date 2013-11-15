@@ -238,7 +238,7 @@ class FBRec {
 #endif
 
 // facebook id for matt wells
-#define MATTWELLS 100003532411011LL
+#define FB_MATTWELLS 100003532411011LL
 
 
 //#define APPNAME "Event Widget"

@@ -1,18 +1,18 @@
 User-Agent: googlebot
-Disallow: /search
+Disallow: /search?
 
 User-Agent: bingbot
-Disallow: /search
+Disallow: /search?
 
 User-Agent: msnbot
-Disallow: /search
+Disallow: /search?
 
 User-Agent: slurp
-Disallow: /search
+Disallow: /search?
 
 User-Agent: gigabot
-Disallow: /search
+Disallow: /search?
 
 User-Agent: *
-Disallow: /search
+Disallow: /search?
 

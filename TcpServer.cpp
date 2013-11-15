@@ -1092,7 +1092,7 @@ bool TcpServer::closeLeastUsed ( long maxIdleTime ) {
 // . g_errno will be set by Loop if there was a kinda socket reset error
 void readSocketWrapper ( int sd , void *state ) {
 	// debug msg
-	// log("........... TcpServer::readSocketWrapper\n");
+	//log("........... TcpServer::readSocketWrapper\n");
 	// extract our this ptr
 	TcpServer *THIS = (TcpServer *)state;
 	// get a TcpSocket from sd
@@ -1239,8 +1239,13 @@ long TcpServer::readSocket ( TcpSocket *s ) {
 
 	// do the read
 	int n;
-	if (m_useSSL)
-		n = SSL_read ( s->m_ssl, s->m_readBuf + s->m_readOffset, avail );
+	if (m_useSSL) {
+		//long long now1 = gettimeofdayInMilliseconds();
+		n = SSL_read(s->m_ssl, s->m_readBuf + s->m_readOffset, avail );
+		//long long now2 = gettimeofdayInMilliseconds();
+		//long long took = now2 - now1 ;
+		//if ( took >= 2 ) log("tcp: ssl_read took %llims", took);
+	}
 	else
 		n = ::read ( s->m_sd, s->m_readBuf + s->m_readOffset, avail );
 
@@ -1469,8 +1474,13 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 	// send this piece
 	int n;
  retry10:
-	if (m_useSSL)
+	if (m_useSSL) {
+		//long long now1 = gettimeofdayInMilliseconds();
 		n = SSL_write ( s->m_ssl, msg + s->m_sendOffset, toSend );
+		//long long now2 = gettimeofdayInMilliseconds();
+		//long long took = now2 - now1 ;
+		//if ( took >= 2 ) log("tcp: ssl_write took %llims", took);
+	}
 	else
 		n = ::send ( s->m_sd , msg + s->m_sendOffset , toSend , 0 );
 	// cancel harmless errors, return -1 on severe ones
@@ -1612,8 +1622,12 @@ connected:
 		int r;
 		s->m_ssl = SSL_new(m_ctx);
 		SSL_set_fd(s->m_ssl, s->m_sd);
+		//long long now1 = gettimeofdayInMilliseconds();
 		SSL_set_connect_state(s->m_ssl);
 		r = SSL_connect(s->m_ssl);
+		//long long now2 = gettimeofdayInMilliseconds();
+		//long long took = now2 - now1 ;
+		//if ( took >= 2 ) log("tcp: ssl_connect took %llims", took);
 		if (!s->m_ssl) {
 			log("ssl: SSL is NULL after connect.");
 			char *xx = NULL; *xx = 0;
@@ -2073,9 +2087,19 @@ bool TcpServer::sslAccept ( TcpSocket *s ) {
 	}
 
 	//log("ssl: SSL_accept %li",newsd);
+	long long now1 = gettimeofdayInMilliseconds();
  retry19:
-	// javier put this in here, but it was not non-blocking!!!
+	// . javier put this in here, but it was not non-blocking!!!
+	// . it is non-blocking now, however, when it does block and
+	//   complete the accept it takes 10ms on sp1, a server from ~2009
+	//   using a custom build of the lastest libssl.a from about 2013.
+	// . this accept needs to be put in a thread then, maybe multiple 
+	//   threads
 	int r = SSL_accept(s->m_ssl);
+	long long now2 = gettimeofdayInMilliseconds();
+	long long took = now2 - now1 ;
+	if ( took >= 2 ) 
+		log("tcp: ssl_accept %li took %llims", (long)newsd, took);
 	// did it block?
 	if ( r < 0 && errno == EINTR ) goto retry19;
 	// copy errno to g_errno
@@ -2084,7 +2108,7 @@ bool TcpServer::sslAccept ( TcpSocket *s ) {
 	if ( g_errno == SSL_ERROR_WANT_READ ||
 	     g_errno == SSL_ERROR_WANT_WRITE ||
 	     g_errno == EAGAIN ) {
-		//log("ssl: SSL_accept blocked %li",newsd);
+		//log("ssl: SSL_accept would block %li",newsd);
 		return true;
 	}
 	// any other?
@@ -2098,8 +2122,9 @@ bool TcpServer::sslAccept ( TcpSocket *s ) {
 	}
 
 	// log this so we can monitor if we get too many of these per second
-	// because they take like 10ms each on sp1!!! mdw
-	log("ssl: SSL_accept (~10ms) completed %li",newsd);
+	// because they take like 10ms each on sp1!!! (even with non-blocking 
+	// sockets, they'll block for 10ms) - mdw 2013
+	//log("ssl: SSL_accept (~10ms) completed %li",newsd);
 	// ok, we got it
 	s->m_sockState = ST_READING;
 	return true;
