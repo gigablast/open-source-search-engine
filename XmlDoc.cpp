@@ -8915,6 +8915,7 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 				m_coll     ,
 				NULL       , // pbuf
 				m_niceness ) ) {
+		log("build: failed to set old doc for %s",m_firstUrl.m_url);
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return NULL;
 	}
