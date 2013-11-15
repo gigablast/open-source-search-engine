@@ -18573,6 +18573,10 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 		// . is this substring anywhere in the document
 		// . check the rawest content before converting to utf8 i guess
 		char *foundPtr =  strstr ( m_content , start ) ;
+		// debug log statement
+		if ( foundPtr )
+			log("build: page %s matches ppp of \"%s\"",
+			    m_firstUrl.m_url,start);
 		// revert \0
 		*end = c;
 		// did we find it?
