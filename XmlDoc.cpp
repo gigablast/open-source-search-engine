@@ -18544,11 +18544,13 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 		if ( ! *start ) break;
 		// find end of it
 		char *end = start;
-		while ( *end && end[0] != '|' && ! is_wspace_a(end[0]) ) 
+		while ( *end && end[0] != '|' )
 			end++;
 		// advance p for next guy
 		p = end;
-		while ( *p && (*p=='|' || is_wspace_a(*p) ) ) p++;
+		// should be two |'s
+		if ( *p ) p++;
+		if ( *p ) p++;
 		// temp null this
 		char c = *end;
 		*end = '\0';
