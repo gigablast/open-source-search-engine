@@ -8499,11 +8499,11 @@ Url **XmlDoc::getRedirUrl() {
 		return &m_redirUrlPtr;
 	}
 	// do not allow redirects to evil-G or bing
-	if ( strstr(loc->getUrl(),".google.com/")  ||
-	     strstr(loc->getUrl(),".bing.com/")  ) {
-		m_redirError = EDOCEVILREDIRECT;
-		return &m_redirUrlPtr;
-	}
+	//if ( strstr(loc->getUrl(),".google.com/")  ||
+	//     strstr(loc->getUrl(),".bing.com/")  ) {
+	//	m_redirError = EDOCEVILREDIRECT;
+	//	return &m_redirUrlPtr;
+	//}
 	// log a msg
 	//if ( g_conf.m_logSpideredUrls )
 	//	logf(LOG_INFO,"build: %s redirected to %s",
