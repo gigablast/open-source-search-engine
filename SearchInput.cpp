@@ -1084,10 +1084,11 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	//	if (qcs == csUTF8) {qcs = csISOLatin1;goto doOver;}
 	//	if (qcs != csISOLatin1) {qcs = csUTF8;goto doOver;}
 	//}
-	
+
 	// append plus terms
 	if ( m_plusLen > 0 ) {
-		char *s = m_plus, *send = m_plus + m_plusLen;
+		char *s = m_plus;
+		char *send = m_plus + m_plusLen;
 		//if ( p > pstart && p < pend ) *p++  = ' ';
 		//if ( p2 > pstart2 && p2 < pend2) *p2++ = ' ';
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
@@ -1103,7 +1104,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 			} else {
 				while (!isspace(*s2) && s2 < send) s2++;
 			}
-			if (s < send) break;
+			if (s2 < send) break;
 			//if (p < pend) *p++ = '+';
 			//if (p2 < pend2) *p2++ = '+';
 			m_sbuf1.pushChar('+');
@@ -1137,7 +1138,8 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	}  
 	// append minus terms
 	if ( m_minusLen > 0 ) {
-		char *s = m_minus, *send = m_minus + m_minusLen;
+		char *s = m_minus;
+		char *send = m_minus + m_minusLen;
 		//if ( p > pstart && p < pend ) *p++  = ' ';
 		//if ( p2 > pstart2 && p2 < pend2) *p2++ = ' ';
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
@@ -1153,7 +1155,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 			} else {
 				while (!isspace(*s2) && s2 < send) s2++;
 			}
-			if (s < send) break;
+			if (s2 < send) break;
 			//if (p < pend) *p++ = '-';
 			//if (p2 < pend2) *p2++ = '-';
 			m_sbuf1.pushChar('-');
