@@ -886,20 +886,28 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 
 #ifdef _PTHREADS_		
 
-		// . join up with that thread
-		// . damn, sometimes he can block forever on his
-		//   call to sigqueue(), 
-		long status =  pthread_join ( t->m_joinTid , NULL );
-		if ( status != 0 ) {
-		  log("threads: pthread_join %li = %s (%li)",
-		      (long)t->m_joinTid,mstrerror(status),status);
-		}
-		// debug msg
-		if ( g_conf.m_logDebugThread )
-			log(LOG_DEBUG,"thread: joined1 with t=0x%lx "
-			    "jointid=0x%lx.",
-			    (long)t,(long)t->m_joinTid);
 
+		// if pthread_create() failed it returns the errno and we
+		// needsJoin is false, so do not try to join
+		// to a thread if we did not create it, lest pthread_join()
+		// cores
+		if ( t->m_needsJoin ) {
+			// . join up with that thread
+			// . damn, sometimes he can block forever on his
+			//   call to sigqueue(), 
+			long status =  pthread_join ( t->m_joinTid , NULL );
+			if ( status != 0 ) {
+				log("threads: pthread_join %li = %s (%li)",
+				    (long)t->m_joinTid,mstrerror(status),
+				    status);
+			}
+			// debug msg
+			if ( g_conf.m_logDebugThread )
+				log(LOG_DEBUG,"thread: joined1 with t=0x%lx "
+				    "jointid=0x%lx.",
+				    (long)t,(long)t->m_joinTid);
+		}
+		
 #else
 
 	again:
@@ -2010,7 +2018,11 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	//
 #else
 
-	pthread_create ( &t->m_joinTid , &s_attr, startUp2 , t) ;
+	// assume it does not go through
+	t->m_needsJoin = false;
+
+	// this returns 0 on success, or the errno otherwise
+	g_errno = pthread_create ( &t->m_joinTid , &s_attr, startUp2 , t) ;
 
 #endif
 
@@ -2022,6 +2034,8 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 
 	// return true on successful creation of the thread
 	if ( g_errno == 0 ) {
+		// good stuff, the thread needs a join now
+		t->m_needsJoin = true;
 		if ( count > 0 ) 
 			log("thread: Call to clone looped %li times.",count);
 		return true;
@@ -2049,6 +2063,11 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 #ifndef _PTHREADS_
  hadError:
 #endif
+
+	if ( g_errno )
+		log("thread: pthread_create had error = %s",
+		    mstrerror(g_errno));
+
 	// it didn't launch, did it? dec the count.
 	m_launched--;
 	// priority-based LOCAL & GLOBAL launch counts

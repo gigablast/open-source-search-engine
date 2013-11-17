@@ -55,6 +55,7 @@ class ThreadEntry {
 	long         m_stackSize                ;
 	long         m_si                       ; // s_stackPtrs[i] = m_stack
 
+	bool      m_needsJoin;
 	pthread_t m_joinTid;
 };
 
