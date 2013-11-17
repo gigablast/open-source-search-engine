@@ -1221,20 +1221,22 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 
 #ifdef _PTHREADS_		
 
-		// . join up with that thread
-		// . damn, sometimes he can block forever on his
-		//   call to sigqueue(), 
-		long status =  pthread_join ( t->m_joinTid , NULL );
-		if ( status != 0 ) {
-		  log("threads: pthread_join2 %li = %s (%li)",
-		      (long)t->m_joinTid,mstrerror(status),status);
+		if ( t->m_needsJoin ) {
+			// . join up with that thread
+			// . damn, sometimes he can block forever on his
+			//   call to sigqueue(), 
+			long status =  pthread_join ( t->m_joinTid , NULL );
+			if ( status != 0 ) {
+				log("threads: pthread_join2 %li = %s (%li)",
+				    (long)t->m_joinTid,mstrerror(status),
+				    status);
+			}
+			// debug msg
+			if ( g_conf.m_logDebugThread )
+				log(LOG_DEBUG,"thread: joined2 with t=0x%lx "
+				    "jointid=0x%lx.",
+				    (long)t,(long)t->m_joinTid);
 		}
-		// debug msg
-		if ( g_conf.m_logDebugThread )
-			log(LOG_DEBUG,"thread: joined2 with t=0x%lx "
-			    "jointid=0x%lx.",
-			    (long)t,(long)t->m_joinTid);
-
 #else
 
 	again:
