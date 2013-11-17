@@ -454,12 +454,14 @@ void XmlDoc::reset ( ) {
 	if ( m_ahrefsDocValid  ) nukeDoc ( m_ahrefsDoc  );
 
 	if ( m_linkInfo1Valid && ptr_linkInfo1 && m_freeLinkInfo1 ) {
-		mfree ( ptr_linkInfo1 , size_linkInfo1, "LinkInfo1");
+		// it now points into m_myPageLinkInfoBuf !
+		//mfree ( ptr_linkInfo1 , size_linkInfo1, "LinkInfo1");
 		ptr_linkInfo1    = NULL;
 		m_linkInfo1Valid = false;
 	}
 	if ( m_linkInfo2Valid && ptr_linkInfo2 && m_freeLinkInfo2 ) {
-		mfree ( ptr_linkInfo2 , size_linkInfo2, "LinkInfo2");
+		// should point into a safebuf as well
+		//mfree ( ptr_linkInfo2 , size_linkInfo2, "LinkInfo2");
 		ptr_linkInfo2    = NULL;
 		m_linkInfo1Valid = false;
 	}
@@ -11066,7 +11068,9 @@ LinkInfo *XmlDoc::getSiteLinkInfo() {
 
 	setStatus ( "getting site link info" );
 
-	if ( m_siteLinkInfoValid ) return m_msg25.m_linkInfo;
+	if ( m_siteLinkInfoValid ) 
+		//return msg25.m_linkInfo;
+		return (LinkInfo *)m_mySiteLinkInfoBuf.getBufStart();
 	char *mysite = getSite();
 	if ( ! mysite || mysite == (void *)-1 ) return (LinkInfo *)mysite;
 	long *fip = getFirstIp();
@@ -11130,7 +11134,9 @@ LinkInfo *XmlDoc::getSiteLinkInfo() {
 				onlyNeedGoodInlinks ,
 				false,
 				0,
-				0) )
+				0,
+				// it will store the linkinfo into this safebuf
+				&m_mySiteLinkInfoBuf) )
 		// return -1 if it blocked
 		return (LinkInfo *)-1;
 	// sanity check
@@ -11935,7 +11941,8 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 					onlyNeedGoodInlinks ,
 					false, // getlinkertitles
 					0, // ourhosthash32 (special)
-					0  // ourdomhash32 (special)
+					0,  // ourdomhash32 (special)
+					&m_myPageLinkInfoBuf
 					) )
 			// blocked
 			return (LinkInfo *)-1;
@@ -11949,7 +11956,8 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 
 	// at this point assume its valid
 	m_linkInfo1Valid = true;
-	// get the link info we got set
+	// . get the link info we got set
+	// . this ptr references into m_myPageLinkInfoBuf safebuf
 	ptr_linkInfo1  = m_msg25.m_linkInfo;
 	size_linkInfo1 = m_msg25.m_linkInfo->getSize();
 	// we should free it
@@ -40086,7 +40094,8 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 					      false ,//onlyneedgoodinlinks?
 					      false,//getlinkertitles?
 					      0, // ourhosthash32 (special)
-					      0)) // ourdomhash32 (special)
+					      0, // ourdomhash32 (special)
+					      &m_myTempLinkInfoBuf ) )
 			// blocked?
 			return (Msg25 *)-1;
 	}

@@ -413,8 +413,9 @@ void Msg25::reset() {
 	m_numReplyPtrs = 0;
 	// . free the linkinfo if we are responsible for it
 	// . if someone "steals" it from us, they should set this to NULL
-	if ( m_linkInfo ) 
-		mfree ( m_linkInfo , m_linkInfo->getStoredSize(),"msg25s");
+	//if ( m_linkInfo ) 
+	//	mfree ( m_linkInfo , m_linkInfo->getStoredSize(),"msg25s");
+	// this now points into m_linkInfoBuf safebuf, just NULL it
 	m_linkInfo = NULL;
 
 	m_table.reset();
@@ -466,7 +467,8 @@ bool Msg25::getLinkInfo ( char      *site                ,
 			  bool       onlyNeedGoodInlinks  ,
 			  bool       getLinkerTitles ,
 			  long       ourHostHash32 ,
-			  long       ourDomHash32 ) {
+			  long       ourDomHash32 ,
+			  SafeBuf   *linkInfoBuf ) {
 
 	// reset the ip table
 	reset();
@@ -481,6 +483,9 @@ bool Msg25::getLinkInfo ( char      *site                ,
 	if ( ! coll ) { char *xx=NULL; *xx=0; }
 	m_onlyNeedGoodInlinks = onlyNeedGoodInlinks;
 	m_getLinkerTitles     = getLinkerTitles;
+	// save safebuf ptr, where we store the link info
+	m_linkInfoBuf = linkInfoBuf;
+	if ( ! linkInfoBuf ) { char *xx=NULL;*xx=0; }
 	// sanity check
 	if ( m_mode == MODE_PAGELINKINFO && ! docId ) {char *xx=NULL; *xx=0; }
 	// must have a valid ip
@@ -1900,7 +1905,8 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 				    m_lastUpdateTime  ,
 				    m_onlyNeedGoodInlinks ,
 				    m_niceness        ,
-				    this );
+				    this ,
+				    m_linkInfoBuf );
 	// return true with g_errno set on error
 	if ( ! m_linkInfo ) {
 		log("build: msg25 linkinfo set: %s",mstrerror(g_errno));
@@ -3179,7 +3185,8 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 			 long         lastUpdateTime          ,
 			 bool         onlyNeedGoodInlinks      ,
 			 long         niceness                ,
-			 Msg25 *msg25 ) {
+			 Msg25 *msg25 ,
+			 SafeBuf *linkInfoBuf ) {
 
 	// for parsing the link text
 	Words words;
@@ -3446,10 +3453,11 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 	// we need space for our header
 	need += sizeof(LinkInfo);
 	// alloc the buffer
-	char *buf = (char *)mmalloc ( need,"LinkInfo");
-	if ( ! buf ) return NULL;
+	//char *buf = (char *)mmalloc ( need,"LinkInfo");
+	//if ( ! buf ) return NULL;
+	if ( ! linkInfoBuf->reserve ( need , "LinkInfo" ) ) return NULL;
 	// set ourselves to this new buffer
-	LinkInfo *info = (LinkInfo *)buf;
+	LinkInfo *info = (LinkInfo *)(linkInfoBuf->getBufStart());
 	
 	// set our header
 	info->m_version                = 0;
@@ -3484,7 +3492,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 
 	// point to our buf
 	char *p    = info->m_buf;
-	char *pend = buf + need;
+	char *pend = linkInfoBuf->getBufStart() + need;
 	// count the ones we store that are internal
 	long  icount3 = 0;
 	// now set each inlink

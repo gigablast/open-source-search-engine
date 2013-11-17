@@ -341,7 +341,8 @@ class Msg25 {
 			   // to not perform this algo in handleRequest20()'s
 			   // call to XmlDoc::getMsg20Reply().
 			   long       ourHostHash32 , // = 0 ,
-			   long       ourDomHash32 ); // = 0 );
+			   long       ourDomHash32 , // = 0 );
+			   SafeBuf *myLinkInfoBuf );
 	Msg25();
 	~Msg25();
 	void reset();
@@ -369,6 +370,9 @@ class Msg25 {
 	bool addNote ( char *note , long noteLen , long long docId );
 
 	class LinkInfo *getLinkInfo () { return m_linkInfo; };
+
+	// m_linkInfo ptr references into here. provided by caller.
+	SafeBuf *m_linkInfoBuf;
 
 	// private:
 	// these need to be public for wrappers to call:
@@ -886,7 +890,8 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 			 long         lastUpdateTime          ,
 			 bool         onlyNeedGoodInlinks      ,
 			 long         niceness                ,
-			 class Msg25 *msg25 ) ;
+			 class Msg25 *msg25 ,
+			 SafeBuf *linkInfoBuf ) ;
 
 // . set from the Msg20 replies in MsgE
 // . Msg20 uses this to set the LinkInfo class to the "outlinks"
