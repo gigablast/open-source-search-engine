@@ -11,6 +11,10 @@
 #include "Statsdb.h"
 #include "DiskPageCache.h"
 
+#ifdef ASYNCIO
+#include <aio.h>
+#endif
+
 // main.cpp will wait for this to be zero before exiting so all unlink/renames
 // can complete
 long g_unlinkRenameThreads = 0;
@@ -530,6 +534,11 @@ bool BigFile::readwrite ( void         *buf      ,
 	// . if we're blocking then do it now
 	// . this should return false and set g_errno on error, true otherwise
 	if ( ! isNonBlocking ) 	goto skipThread;
+
+#ifdef ASYNCIO
+	goto skipThread;
+#endif
+
 	// . otherwise, spawn a thread to do this i/o
 	// . this returns false and sets g_errno on error, true on success
 	// . we should return false cuz we blocked
@@ -597,7 +606,90 @@ bool BigFile::readwrite ( void         *buf      ,
 			log("disk: read buf alloc failed for %li "
 			    "bytes.",need);
 	}
+
+	//
+	// pthread_create() is abhorently slow. use asyncio if possible.
+	//
+
+#ifdef ASYNCIO	
+
+	// we only have two in the array... most likely though we only
+	// need one here...
+	aiocb *a0 = &fstate->m_aiocb[0];
+	aiocb *a1 = &fstate->m_aiocb[1];
+	// init them for the read
+	a0->aio_fildes = fstate->m_fd1;
+	a1->aio_fildes = fstate->m_fd2;
+	// the offset of each file
+	long long off1 = fs->m_offset;
+	// always read at start of 2nd file
+	long long off2 = 0;
+	// how many bytes to read from each file?
+	long long readSize1 = size;
+	long long readSize2 = 0;
+	if ( off1 + readSize1 > MAX_PART_SIZE ) {
+		readSize1 = ((long long)MAX_PART_SIZE) - off1;
+		readSize2 = size - readSize1;
+	}
+	a0->aio_offset = off1;
+	a1->aio_offset = off2;
+	a0->aio_nbytes = readSize1;
+	a1->aio_nbytes = readSize2;
+	a0->aio_buf = fstate->m_buf;
+	a1->aio_buf = fstate->m_buf + readSize1;
+	a0->aio_reqprio = 0;
+	a1->aio_reqprio = 0;
+	a0->aio_sigevent = SIGEV_SIGNAL;
+	a1->aio_sigevent = SIGEV_SIGNAL;
+
+	// translate offset to a filenum and offset
+	long filenum     = offset / MAX_PART_SIZE;
+	long localOffset = offset % MAX_PART_SIZE;
+
+
+	// read or write?
+	if ( doWrite ) a0->aio_lio_opcode = LIO_WRITE;
+	else           a0->aio_lio_opcode = LIO_READ;
 	
+	// different fds implies two different files we gotta read from.
+	long numFilesToReadFrom = 1;
+	if ( fstate->m_fd1 != fstate->m_fd2 ) numFilesToReadFrom = 2;
+	// set it up
+	//aioList->m_signal = ESIG;
+
+ retry77:
+
+	//
+	// don't use this on kernels below 3.12 because it can block 
+	// when reading ext4 files.
+	//
+	io_submit();
+
+
+	// this will send the signal when read/write is completed
+	//long status = lio_listio ( LIO_NOWAIT , 
+	//			   a0 ,
+	//			   numFilesToReadFrom ,
+	//			   &fstate->m_sigEvent );
+
+	// if status is 0, there was no error
+	if ( status == 0 ) {
+		g_errno = 0;
+		// assume we will get the signal later
+		return false;
+	}
+	// got interrupted by a signal? try again.
+	if ( errno == EINTR ) 
+		goto retry77;
+	// tell caller about the error
+	g_errno = errno;
+	log("aio: %s", mstrerror(g_errno));
+	// we did not block or anything
+	return true;
+
+#endif
+
+
 	// . this returns false and sets errno on error
 	// . set g_errno to the errno
 	if ( ! readwrite_r ( fstate , NULL ) ) g_errno = errno;
