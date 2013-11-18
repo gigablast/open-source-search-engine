@@ -350,6 +350,7 @@ long SpiderRequest::printTableHeaderSimple ( SafeBuf *sb ,
 	sb->safePrintf(" <td><b>url</b></td>\n");
 	sb->safePrintf(" <td><b>status</b></td>\n");
 	sb->safePrintf(" <td><b>first IP</b></td>\n");
+	sb->safePrintf(" <td><b>crawlDelay</b></td>\n");
 	sb->safePrintf(" <td><b>pri</b></td>\n");
 	sb->safePrintf(" <td><b>errCount</b></td>\n");
 	sb->safePrintf(" <td><b>hops</b></td>\n");
@@ -378,6 +379,11 @@ long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
 	sb->safePrintf(" <td><nobr>%s</nobr></td>\n",status );
 
 	sb->safePrintf(" <td>%s</td>\n",iptoa(m_firstIp));
+
+	if ( xd->m_crawlDelayValid && xd->m_crawlDelay >= 0 )
+		sb->safePrintf(" <td>%li ms</td>\n",xd->m_crawlDelay);
+	else
+		sb->safePrintf(" <td>--</td>\n");
 
 	sb->safePrintf(" <td>%li</td>\n",(long)m_priority);
 
