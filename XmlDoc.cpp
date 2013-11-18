@@ -1079,6 +1079,7 @@ CollectionRec *XmlDoc::getCollRec ( ) {
 	return cr;
 }
 
+// returns false and sets g_errno on error
 bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		    key_t         *doledbKey ,
 		    char          *coll      ,
@@ -1240,7 +1241,8 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	memcpy ( &m_oldsr , sreq , sreq->getRecSize() );
 
 	// set m_collnum etc.
-	if ( ! setCollNum ( coll ) ) { g_errno = ENOCOLLREC; return false; }
+	if ( ! setCollNum ( coll ) ) 
+		return log("XmlDoc: set4() coll %s invalid",coll);
 
 	// it should be valid since we just set it
 	CollectionRec *cr = getCollRec();

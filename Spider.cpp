@@ -2390,8 +2390,14 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		// lock persists for 5 seconds afterwards in case there was
 		// a lock request for that url in progress, so it will be
 		// denied.
-		if ( g_spiderLoop.getNumSpidersOutPerIp ( firstIp ) > 0 )
+
+		// . this is starving other collections , should be
+		//   added to waiting tree anyway! otherwise it won't get
+		//   added!!!
+		// . so now i made this collection specific, not global
+		if ( g_spiderLoop.getNumSpidersOutPerIp (firstIp,m_collnum)>0)
 			continue;
+
 		// otherwise, we want to add it with 0 time so the doledb
 		// scan will evaluate it properly
 		// this will return false if we are saving the tree i guess
@@ -2403,7 +2409,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	}
 
 	// are we the final list in the scan?
-	bool shortRead = ( list->getListSize() < (long)SR_READ_SIZE ) ;
+	bool shortRead = ( list->getListSize() <= 0);// (long)SR_READ_SIZE ) ;
 
 	m_numBytesScanned += list->getListSize();
 
@@ -2919,7 +2925,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	key128_t finalKey;
 
 	// how many spiders currently out for this ip?
-	long outNow = g_spiderLoop.getNumSpidersOutPerIp ( m_scanningIp );
+	long outNow=g_spiderLoop.getNumSpidersOutPerIp(m_scanningIp,m_collnum);
 
 	// loop over all serialized spiderdb records in the list
 	for ( ; ! list->isExhausted() ; ) {
@@ -2974,6 +2980,13 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		if ( sreq->m_urlIsDocId &&
 		     srep && 
 		     srep->m_spideredTime > sreq->m_addedTime )
+			continue;
+
+		// once we have a spiderreply, even i guess if its an error,
+		// for a url, then bail if respidering is disabled
+		if ( m_cr->m_isCustomCrawl && 
+		     srep && 
+		     m_cr->m_collectiveRespiderFrequency <= 0.0 )
 			continue;
 
 		// sanity check. check for http(s)://
@@ -3066,7 +3079,10 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// add in any requests in doledb
 		if ( score ) out2 += *score;
 
-		// do not add any more to doledb if we could violate our quota
+		// . do not add any more to doledb if we could violate ourquota
+		// . shit we have to add it our it never gets in
+		// . try regulating in msg13.cpp download code. just queue
+		//   up requests to avoid hammering there.
 		if ( out2 >= maxSpidersPerIp ) continue;
 
 		// by ensuring only one spider out at a time when there
@@ -4252,6 +4268,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// set this in the loop
 	CollectionRec *cr = NULL;
 	long nowGlobal = 0;
+	// debug
+	//log("spider: m_cri=%li",(long)m_cri);
 	// . get the next collection to spider
 	// . just alternate them
 	for ( ; count > 0 ; m_cri++ , count-- ) {
@@ -4655,8 +4673,9 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( m_list.getListSize() <= 0 ) {
 		// if no spiders...
 		//if ( g_conf.m_logDebugSpider ) {
-		//	log("spider: crap. doledblist is empty. numusednodes"
+		//	log("spider: empty doledblist collnum=%li "
 		//	    "inwaitingtree=%li",
+		//	    (long)cr->m_collnum,
 		//	    m_sc->m_waitingTree.m_numUsedNodes);
 		//}
 		//if ( g_conf.m_logDebugSpider )
@@ -4880,7 +4899,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// just increment then i guess
 		m_list.skipCurrentRecord();
 		// let's return false here to avoid an infinite loop
-		// since we are nto advancing nextkey and m_pri is not
+		// since we are not advancing nextkey and m_pri is not
 		// being changed, that is what happens!
 		if ( m_list.isExhausted() ) {
 			// crap. but then we never make it to lower priorities.
@@ -5031,7 +5050,11 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	//m_sc->m_encounteredDoledbRecs = true;
 
 	// shortcut
-	char *coll = m_sc->m_cr->m_coll;
+	//char *coll = m_sc->m_cr->m_coll;
+	// sometimes the spider coll is reset/deleted while we are
+	// trying to get the lock in spiderUrl9() so let's use collnum
+	collnum_t collnum = m_sc->m_cr->m_collnum;
+
 	// . spider that. we don't care wheter it blocks or not
 	// . crap, it will need to block to get the locks!
 	// . so at least wait for that!!!
@@ -5041,7 +5064,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// . this returns true right away if it failed to get the lock...
 	//   which means the url is already locked by someone else...
 	// . it might also return true if we are already spidering the url
-	bool status = spiderUrl9 ( sreq , doledbKey , coll , sameIpWaitTime ,
+	bool status = spiderUrl9 ( sreq , doledbKey , collnum, sameIpWaitTime ,
 				   maxSpidersOutPerIp ) ;
 
 	// just increment then i guess
@@ -5091,7 +5114,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 // . returns true and sets g_errno on error
 bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 			      key_t *doledbKey ,
-			      char *coll ,
+			      //char *coll ,
+			      collnum_t collnum ,
 			      long sameIpWaitTime ,
 			      long maxSpidersOutPerIp ) {
 	// sanity check
@@ -5177,7 +5201,7 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	}
 
 	// we store this in msg12 for making a fakedb key
-	collnum_t collnum = g_collectiondb.getCollnum ( coll );
+	//collnum_t collnum = g_collectiondb.getCollnum ( coll );
 
 	// shortcut
 	long long lockKeyUh48 = makeLockTableKey ( sreq );
@@ -5257,7 +5281,9 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 	// save these in case getLocks() blocks
 	m_sreq      = sreq;
 	m_doledbKey = doledbKey;
-	m_coll      = coll;
+	//m_coll      = coll;
+	m_collnum = collnum;
+
 
 
 	// if we already have the lock then forget it. this can happen
@@ -5346,12 +5372,16 @@ bool SpiderLoop::spiderUrl2 ( ) {
 	// add to the array
 	m_docs [ i ] = xd;
 
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	char *coll = "collnumwasinvalid";
+	if ( cr ) coll = cr->m_coll;
+
 	// . pass in a pbuf if this is the "test" collection
 	// . we will dump the SafeBuf output into a file in the
 	//   test subdir for comparison with previous versions of gb
 	//   in order to see what changed
 	SafeBuf *pbuf = NULL;
-	if ( !strcmp( m_coll,"test") && g_conf.m_testParserEnabled ) 
+	if ( !strcmp( coll,"test") && g_conf.m_testParserEnabled ) 
 		pbuf = &xd->m_sbuf;
 
 	//
@@ -5377,14 +5407,25 @@ bool SpiderLoop::spiderUrl2 ( ) {
 	if ( g_conf.m_logDebugSpider )
 		logf(LOG_DEBUG,"spider: spidering uh48=%llu pdocid=%llu",
 		     m_sreq->getUrlHash48(),m_sreq->getParentDocId() );
-	
+
+	// this returns false and sets g_errno on error
 	if ( ! xd->set4 ( m_sreq       ,
 			  m_doledbKey  ,
-			  m_coll       ,
+			  coll       ,
 			  pbuf         ,
-			  MAX_NICENESS ) )
+			  MAX_NICENESS ) ) {
+		// i guess m_coll is no longer valid?
+		mdelete ( m_docs[i] , sizeof(XmlDoc) , "Doc" );
+		delete (m_docs[i]);
+		m_docs[i] = NULL;
 		// error, g_errno should be set!
 		return true;
+	}
+
+	// . launch count increment
+	// . this is only used locally on this host to set its
+	//   m_hasUrlsReadyToSpider to false.
+	//cr->m_localCrawlInfo.m_numUrlsLaunched++;
 
 	// call this after doc gets indexed
 	xd->setCallback ( xd  , indexedDocWrapper );
@@ -5970,7 +6011,9 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 			   "for %s",m_url);//m_sreq->m_url);
 		// we are done
 		m_gettingLocks = false;
-		// keep processing
+		// . keep processing
+		// . if the collection was nuked from under us the spiderUrl2
+		//   will return true and set g_errno
 		if ( ! m_callback ) return g_spiderLoop.spiderUrl2();
 		// if we had a callback let our parent call it
 		return true;
@@ -6004,6 +6047,8 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 		if ( ! confirmLockAcquisition ( ) ) return false;
 		// . we did it without blocking, maybe cuz we are a single node
 		// . ok, they are all back, resume loop
+		// . if the collection was nuked from under us the spiderUrl2
+		//   will return true and set g_errno
 		if ( ! m_callback ) g_spiderLoop.spiderUrl2 ( );
 		// all done
 		return true;
@@ -6194,7 +6239,8 @@ bool Msg12::confirmLockAcquisition ( ) {
 	return true;
 }
 
-long SpiderLoop::getNumSpidersOutPerIp ( long firstIp ) {
+// use -1 for any collnum
+long SpiderLoop::getNumSpidersOutPerIp ( long firstIp , collnum_t collnum ) {
 	long count = 0;
 	// count locks
 	HashTableX *ht = &g_spiderLoop.m_lockTable;
@@ -6213,6 +6259,8 @@ long SpiderLoop::getNumSpidersOutPerIp ( long firstIp ) {
 		if ( ! lock->m_spiderOutstanding ) continue;
 		// must be confirmed too
 		if ( ! lock->m_confirmed ) continue;
+		// correct collnum?
+		if ( lock->m_collnum != collnum && collnum != -1 ) continue;
 		// skip if not yet expired
 		if ( lock->m_firstIp == firstIp ) count++;
 	}
@@ -10224,6 +10272,10 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		if ( ci->m_lastSpiderAttempt &&
 		     ci->m_lastSpiderCouldLaunch &&
 		     ci->m_hasUrlsReadyToSpider &&
+		     // it must have launched at least one url! this should
+		     // prevent us from incrementing the round # at the gb
+		     // process startup
+		     //ci->m_numUrlsLaunched > 0 &&
 		     //cr->m_spideringEnabled &&
 		     //g_conf.m_spideringEnabled &&
 		     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 

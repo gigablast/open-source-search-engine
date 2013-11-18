@@ -1276,7 +1276,7 @@ class SpiderLoop {
 
 	bool printLockTable ( );
 
-	long getNumSpidersOutPerIp ( long firstIp ) ;
+	long getNumSpidersOutPerIp ( long firstIp , collnum_t collnum ) ;
 
 	// free all XmlDocs and m_list
 	void reset();
@@ -1301,7 +1301,7 @@ class SpiderLoop {
 	// . returns true and sets g_errno on error
 	bool spiderUrl9 ( class SpiderRequest *sreq ,
 			 key_t *doledbKey       ,
-			  char  *coll            ,
+			  collnum_t collnum,//char  *coll            ,
 			  long sameIpWaitTime , // in milliseconds
 			  long maxSpidersOutPerIp );
 
@@ -1312,7 +1312,8 @@ class SpiderLoop {
 	// state memory for calling SpiderUrl2() (maybe also getLocks()!)
 	SpiderRequest *m_sreq;
 
-	char      *m_coll;
+	//char      *m_coll;
+	collnum_t  m_collnum;
 	char      *m_content;
 	long       m_contentLen;
 	char       m_contentHasMime;

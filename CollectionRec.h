@@ -108,6 +108,9 @@ class CrawlInfo {
 	// currently in the ready queue (doledb) to spider?
 	char m_sentCrawlDoneAlert;
 
+	//long m_numUrlsLaunched;
+	long m_dummy1;
+
 	void reset() { memset ( this , 0 , sizeof(CrawlInfo) ); };
 	//bool print (class SafeBuf *sb ) ;
 	//bool setFromSafeBuf (class SafeBuf *sb ) ;

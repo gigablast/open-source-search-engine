@@ -2585,6 +2585,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	if ( seeds )
 		log("crawlbot: adding seeds=\"%s\"",seeds);
+	if ( spots )
+		log("crawlbot: got spots to add");
 
 	///////
 	// 
