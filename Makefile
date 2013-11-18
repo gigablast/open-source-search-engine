@@ -84,7 +84,12 @@ else
 # you might have to do apt-get install gcc-multilib to ensure that -m32 works.
 # -m32 should use /usr/lib32/ as the library path.
 # i also provide 32-bit libraries for linking that are not so easy to get.
-CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -D_PTHREADS_ -Wno-unused-but-set-variable
+#
+# mdw. 11/17/2013. i took out the -D_PTHREADS_ flag.
+# trying to use good ole' clone() again because it seems the errno location
+# thing is fixed by just ignoring it.
+#
+CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -Wno-unused-but-set-variable
 LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread 
 endif
 
