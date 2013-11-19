@@ -1,14 +1,12 @@
-// g++ errnotest.cpp ; ./a.out
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <errno.h>
 #include <sched.h>
 #include <unistd.h>
+#include <assert.h>
 
-//__thread int errno;
-
-static bool s_called = false;
+static int s_called = 0;
 
 #define MAX_PID 32767
 static int  s_errno ;
@@ -20,18 +18,26 @@ static long s_badPid = -1;
 // WARNING: you MUST compile with -DREENTRANT for this to work
 int *__errno_location (void) {
 	long pid = (long) getpid();
-	s_called = true;
+	s_called++;
 	if ( pid <= (long)MAX_PID ) return &s_errnos[pid];
 	s_bad++;
 	s_badPid = pid;
 	return &s_errno; 
 }
 
+//extern __thread int errno;
+
 int g_errno = 0;
 
 int startup ( void *state ) {
-	errno = 7; // E2BIG;
-	g_errno = 7;
+	char buf[5];
+	// this sets errno, but does not seem to call our __errno_location
+	// override, BUT does seem to not affect "errno" in main() either!
+	// maybe this is the TLS support?
+	int bytes = read(-9,buf,5);
+	//errno = 7; // E2BIG;
+	//assert ( errno && bytes == -1 );
+	g_errno = errno;
 }
 
 
@@ -46,7 +52,15 @@ int main() {
 			   NULL );
 	int status;
 	waitpid ( pid , &status, 0  );
-	if ( errno != 10 ) fprintf(stderr,"nooooo!\n");
-	if ( g_errno == 10 ) fprintf(stderr,"gerrno failed!\n",g_errno);
-	if ( s_called ) fprintf(stderr,"__errno_location() was called\n");
+
+	if ( s_called ) fprintf(stderr,"__errno_location() was called %i "
+				"times\n",s_called);
+
+	if ( errno != 10 ) fprintf(stderr,"errno=%i (failed)\n",errno);
+	else fprintf(stderr,"errno=%i (success)\n",errno);
+
+	if ( g_errno == 10 || g_errno == 0 ) 
+		fprintf(stderr,"gerrno=%i (failed)\n",g_errno);
+	else 
+		fprintf(stderr,"gerrno=%i (success)\n",g_errno);
 }
