@@ -1591,7 +1591,7 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	// return if the max is already launched
 	if ( active >= m_maxLaunched ) return false;
 
-	// do not launch a low priority merge, addlists or filter thread if we
+	// do not launch a low priority merge, intersect or filter thread if we
 	// have high priority cpu threads already going on. this way a
 	// low priority spider thread will not launch if a high priority
 	// cpu-based thread of any kind (right now just MERGE or INTERSECT) 
@@ -1642,7 +1642,7 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	// i dunno what the point of this was... so i commented it out
 	//long max2 = g_conf.m_queryMaxDiskThreads ;
 	//if ( max2 <= 0 ) max2 = 1;
-	// only do this check if we're a addlists thread queue
+	// only do this check if we're a addlists/instersect thread queue
 	//if (m_threadType == INTERSECT_THREAD&& hiActive >= max2)return false;
 
 	// loop through candidates
@@ -2326,7 +2326,7 @@ const char *ThreadQueue::getThreadType ( ) {
 	const char *s = "unknown";
 	if ( m_threadType == DISK_THREAD      ) s = "disk";
 	if ( m_threadType == MERGE_THREAD     ) s = "merge";
-	if ( m_threadType == INTERSECT_THREAD ) s = "addlists";
+	if ( m_threadType == INTERSECT_THREAD ) s = "intersectlists";
 	if ( m_threadType == FILTER_THREAD    ) s = "filter";
 	if ( m_threadType == SAVETREE_THREAD  ) s = "savetree";
 	if ( m_threadType == UNLINK_THREAD    ) s = "unlink";

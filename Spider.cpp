@@ -1000,7 +1000,7 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 /////////////////////////
 
 SpiderColl::SpiderColl () {
-	m_gettingList = false;
+	m_gettingList1 = false;
 	m_gettingList2 = false;
 	m_lastScanTime = 0;
 	m_numAdded = 0;
@@ -2728,7 +2728,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// no longer getting list
 	//
 	if ( ! needList )
-		m_gettingList = false;
+		m_gettingList1 = false;
 
 	// i guess we are always restricted to an ip, because
 	// populateWaitingTreeFromSpiderdb calls its own msg5.
@@ -2772,7 +2772,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// if we re-entered from the read wrapper, jump down
 	if ( needList ) {
 		// sanity check
-		if ( m_gettingList ) { char *xx=NULL;*xx=0; }
+		if ( m_gettingList1 ) { char *xx=NULL;*xx=0; }
 		// . read in a replacement SpiderRequest to add to doledb from
 		//   this ip
 		// . get the list of spiderdb records
@@ -2800,10 +2800,15 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			    ,iptoa(firstIp0)
 			    ,KEYSTR(&m_nextKey,sizeof(key128_t) ) );
 		// flag it
-		m_gettingList = true;
+		m_gettingList1 = true;
 		// make state
 		long state2 = (long)m_cr->m_collnum;
-		// read the list from local disk
+		// . read the list from local disk
+		// . if a niceness 0 intersect thread is taking a LONG time
+		//   then this will not complete in a long time and we
+		//   end up timing out the round. so try checking for
+		//   m_gettingList in spiderDoledUrls() and setting
+		//   m_lastSpiderCouldLaunch
 		if ( ! m_msg5.getList ( RDB_SPIDERDB   ,
 					m_cr->m_coll   ,
 					&m_list        ,
@@ -2825,7 +2830,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		if ( g_conf.m_logDebugSpider )
 			log("spider: back from msg5 spiderdb read");
 		// no longer getting list
-		m_gettingList = false;
+		m_gettingList1 = false;
 	}
 
 	// show list stats
@@ -4336,6 +4341,13 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// the sentEmailAlert flag to false, which makes us
 		// send ANOTHER email alert!!
 		ci->m_lastSpiderAttempt = nowGlobal;
+
+		// sometimes our read of spiderdb to populate the waiting
+		// tree using scanSpiderdb() takes a LONG time because
+		// a niceness 0 thread is taking a LONG time! so do not
+		// set hasUrlsReadyToSpider to false because of that!!
+		if ( m_sc->m_gettingList1 )
+			ci->m_lastSpiderCouldLaunch = nowGlobal;
 
 		// update this for the first time in case it is never updated.
 		// then after 60 seconds we assume the crawl is done and

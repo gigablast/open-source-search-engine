@@ -1125,7 +1125,7 @@ class SpiderColl {
 
 	// for reading lists from spiderdb
 	Msg5 m_msg5;
-	bool m_gettingList;
+	bool m_gettingList1;
 
 	// how many outstanding spiders a priority has
 	long m_outstandingSpiders[MAX_SPIDER_PRIORITIES];
@@ -1355,7 +1355,7 @@ class SpiderLoop {
 	class SpiderColl *m_sc;
 
 	// used to avoid calling getRec() twice!
-	bool m_gettingList;
+	//bool m_gettingList0;
 
 	long m_outstanding1;
 	bool m_gettingDoledbList;

@@ -392,6 +392,8 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 		m_spellCheck              = 0;
 		m_refs_numToGenerate      = 0;
 		m_refs_docsToScan         = 0;
+		// default scoring info to off
+		m_getDocIdScoringInfo = false;
 	}
 	else if ( m_siteLen > 0 ) {
 		m_restrictIndexdbForQuery = false;
@@ -686,8 +688,8 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 
 	// . omit scoring info from the xml feed for now
 	// . we have to roll this out to gk144 net i think
-	if ( m_format != FORMAT_HTML )
-		m_getDocIdScoringInfo = 0;
+	//if ( m_format != FORMAT_HTML )
+	//	m_getDocIdScoringInfo = 0;
 
 	// turn off by default!
 	if ( ! r->getLong("gigabits",0) ) {
