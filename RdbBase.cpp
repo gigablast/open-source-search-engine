@@ -610,6 +610,8 @@ bool RdbBase::setFiles ( ) {
 			return false;
 	}
 
+	m_dir.close();
+
 	if ( ! converting ) return true;
 
 	// now if we are converting old titledb names to new...

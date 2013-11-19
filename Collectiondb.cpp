@@ -247,7 +247,12 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	// MDW: ensure not created on disk since time of last load
 	char dname[512];
 	sprintf(dname, "%scoll.%s.%li/",g_hostdb.m_dir,coll,i);
-	if ( isNew && opendir ( dname ) ) {
+	DIR *dir = NULL;
+	if ( isNew )
+		dir = opendir ( dname );
+	if ( dir )
+		closedir ( dir );
+	if ( isNew && dir ) {
 		g_errno = EEXIST;
 		return log("admin: Trying to create collection %s but "
 			   "directory %s already exists on disk.",coll,dname);
@@ -911,7 +916,10 @@ bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we , bool purgeSeeds) {
 		g_hostdb.m_dir,
 		cr->m_coll,
 		(long)newCollnum);
-	if ( opendir ( dname ) ) {
+	DIR *dir = opendir ( dname );
+	if ( dir )
+	     closedir ( dir );
+	if ( dir ) {
 		//g_errno = EEXIST;
 		log("admin: Trying to create collection %s but "
 		    "directory %s already exists on disk.",coll,dname);

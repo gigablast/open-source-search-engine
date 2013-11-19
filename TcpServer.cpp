@@ -780,7 +780,10 @@ TcpSocket *TcpServer::getNewSocket ( ) {
 		log("tcp: using statically linked libc that only supports "
 		    "an fd of up to %li, but got an fd = %li. fd_set is "
 		    "only geared for 1024 bits of file descriptors for "
-		    "doing poll() in Loop.cpp",
+		    "doing poll() in Loop.cpp. Ensure 'ulimit -a' limits "
+		    "open files to 1024. "
+		    "Check open fds using ls /proc/<gb-pid>/fds/ and ensure "
+		    "they are all BELOW 1024.",
 		    (long)MAX_NUM_FDS,(long)sd);
 		char *xx=NULL;*xx=0; 
 	}

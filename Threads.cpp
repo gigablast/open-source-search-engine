@@ -2025,8 +2025,23 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	// assume it does not go through
 	t->m_needsJoin = false;
 
+	// pthread inherits our sigmask, so don't let it handle sigalrm
+	// signals in Loop.cpp, it'll screw things up. that handler
+	// is only meant to be called by the main process. if we end up
+	// double calling it, this thread may think g_callback is non-null
+	// then it gets set to NULL, then the thread cores! seen it...
+	sigset_t sigs;
+	sigemptyset ( &sigs );
+	sigaddset   ( &sigs , SIGALRM );
+	if ( sigprocmask ( SIG_BLOCK  , &sigs , NULL ) < 0 )
+		log("threads: failed to block sig");
+
 	// this returns 0 on success, or the errno otherwise
 	g_errno = pthread_create ( &t->m_joinTid , &s_attr, startUp2 , t) ;
+
+	if ( sigprocmask ( SIG_UNBLOCK  , &sigs , NULL ) < 0 )
+		log("threads: failed to unblock sig");
+
 
 #endif
 

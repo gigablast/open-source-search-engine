@@ -1207,6 +1207,8 @@ bool SpiderColl::makeDoleIPTable ( ) {
 	return true;
 }
 
+// . now use collnum as top long.
+// . it'd be nice to have a growTree() function
 key_t makeWaitingTreeKey ( uint64_t spiderTimeMS , long firstIp ) {
 	// sanity
 	if ( ((long long)spiderTimeMS) < 0 ) { char *xx=NULL;*xx=0; }

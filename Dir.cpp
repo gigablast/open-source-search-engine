@@ -5,6 +5,7 @@
 Dir::Dir ( ) {
 	m_dirname = NULL;
 	m_dir     = NULL;
+	m_needsClose = false;
 }
 
 
@@ -40,7 +41,8 @@ bool Dir::set ( char *dirname ) {
 }
 
 bool Dir::close ( ) {
-	if ( m_dir ) closedir ( m_dir );
+	if ( m_dir && m_needsClose ) closedir ( m_dir );
+	m_needsClose = false;
 	return true;
 }
 
@@ -56,6 +58,7 @@ bool Dir::open ( ) {
 	if ( ! m_dir ) 
 		return log("disk: opendir(%s) : %s",
 			   m_dirname,strerror( g_errno ) );
+	m_needsClose = true;
 	return true;
 }
 
