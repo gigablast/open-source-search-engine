@@ -1069,11 +1069,13 @@ CollectionRec *XmlDoc::getCollRec ( ) {
 	CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
 	if ( ! cr ) {
 		log("build: got NULL collection rec.");
+		g_errno = ENOCOLLREC;
 		return NULL;
 	}
 	// was it reset since we started spidering this url?
 	if ( cr->m_lastResetCount != m_lastCollRecResetCount ) {
 		log("build: collection rec was reset. returning null.");
+		g_errno = ENOCOLLREC;
 		return NULL;
 	}
 	return cr;
