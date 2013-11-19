@@ -95,9 +95,9 @@ static long s_badPid = -1;
 
 #ifndef _PTHREADS_
 
-//static int  s_errno ;
-//static int  s_errnos [ MAX_PID + 1 ];
-/*
+static int  s_errno ;
+static int  s_errnos [ MAX_PID + 1 ];
+
 // this was improvised from linuxthreads/errno.c
 //#define CURRENT_STACK_FRAME  ({ char __csf; &__csf; })
 // WARNING: you MUST compile with -DREENTRANT for this to work
@@ -109,7 +109,7 @@ int *__errno_location (void) {
 	s_badPid = pid;
 	return &s_errno; 
 }
-*/
+
 #endif
 
 // this also limit the maximum number of outstanding (live) threads
@@ -873,9 +873,6 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 #ifndef _PTHREADS_
 		// MDW: i hafta take this out because the errno_location thing
 		// is not working on the newer gcc
-		/*
-		  i am just using straight out errno. it seems different
-		  for each thread now.
 		if ( ! t->m_isDone && t->m_pid >= 0 && 
 		     s_errnos [t->m_pid] == 0x7fffffff ) {
 			log("thread: Got abnormal thread termination. Seems "
@@ -883,7 +880,6 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 			s_errnos[t->m_pid] = 0;
 			goto again;
 		}
-		*/
 #endif
 		// skip if not done yet
 		if ( ! t->m_isDone     ) continue;
@@ -1211,9 +1207,6 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 #ifndef _PTHREADS_
 		// MDW: i hafta take this out because the errno_location thing
 		// is not working on the newer gcc
-		/*
-		  i am just using straight out errno. it seems different
-		  for each thread now.
 		if ( ! t->m_isDone && t->m_pid >= 0 && 
 		     s_errnos [t->m_pid] == 0x7fffffff ) {
 			log("thread: Got abnormal thread termination. Seems "
@@ -1221,7 +1214,6 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 			s_errnos[t->m_pid] = 0;
 			goto again;
 		}
-		*/
 #endif
 		// skip if not done yet
 		if ( ! t->m_isDone     ) continue;
