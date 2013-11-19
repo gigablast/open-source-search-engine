@@ -186,8 +186,15 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 		if ( *p == '\"' ) {
 			// find end of quote
 			char *end = p + 1;
-			for ( ; *end ; end++ ) 
-				if ( *end == '\"' && end[-1] != '\\' ) break;
+			for ( ; *end ; end++ ) {
+				// skip two chars if escaped
+				if ( *end == '\\' && end[1] ) {
+					end++; 
+					continue;
+				}
+				// this quote is unescaped then
+				if ( *end == '\"' ) break;
+			}
 			// field?
 			char *x = end + 1;
 			// skip spaces
