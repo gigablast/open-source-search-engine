@@ -97,7 +97,7 @@ bool sendPageStatsdb ( TcpSocket *s, HttpRequest *r ) {
 	st->m_dateCustom   = (bool)r->getLong( "custom",  0 );
 	// default to 10 hours, i would do 1 day except that there are
 	// some bugs that mess up the display a lot when i do that
-	st->m_datePeriod   = r->getLong( "date_period" , 36000 );
+	st->m_datePeriod   = r->getLong( "date_period" , 300 );//36000 );
 	st->m_dateUnits    = r->getLong( "date_units"  , 1 );//SECS_PER_MIN
 	st->m_now	   = (bool)r->getLong( "date_now"   , 1 );
 	st->m_autoUpdate   = (bool)r->getLong( "auto_update" , 0 );

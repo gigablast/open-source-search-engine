@@ -22,6 +22,8 @@
 
 #define MAX_TOPIC_GROUPS 10
 
+char getFormatFromRequest ( class HttpRequest *r ) ;
+
 // . parameters used to generate a set of related topics (gigabits)
 // . you can have Msg24 generate multiple sets of related topics in one call
 class TopicGroup {

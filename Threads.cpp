@@ -95,9 +95,9 @@ static long s_badPid = -1;
 
 #ifndef PTHREADS
 
-static int  s_errno ;
-static int  s_errnos [ MAX_PID + 1 ];
-
+//static int  s_errno ;
+//static int  s_errnos [ MAX_PID + 1 ];
+/*
 // this was improvised from linuxthreads/errno.c
 //#define CURRENT_STACK_FRAME  ({ char __csf; &__csf; })
 // WARNING: you MUST compile with -DREENTRANT for this to work
@@ -109,7 +109,7 @@ int *__errno_location (void) {
 	s_badPid = pid;
 	return &s_errno; 
 }
-
+*/
 #endif
 
 // this also limit the maximum number of outstanding (live) threads
@@ -303,6 +303,10 @@ bool Threads::init ( ) {
 	// generic multipurpose
 	if ( ! g_threads.registerType (GENERIC_THREAD,100/*maxThreads*/,100) ) 
 		return log("thread: Failed to register thread type." );
+	// for call SSL_accept() which blocks for 10ms even when socket
+	// is non-blocking...
+	//if (!g_threads.registerType (SSLACCEPT_THREAD,20/*maxThreads*/,100)) 
+	//	return log("thread: Failed to register thread type." );
 
 #ifndef PTHREADS
 
@@ -871,6 +875,9 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 #ifndef PTHREADS
 		// MDW: i hafta take this out because the errno_location thing
 		// is not working on the newer gcc
+		/*
+		  i am just using straight out errno. it seems different
+		  for each thread now.
 		if ( ! t->m_isDone && t->m_pid >= 0 && 
 		     s_errnos [t->m_pid] == 0x7fffffff ) {
 			log("thread: Got abnormal thread termination. Seems "
@@ -878,26 +885,35 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 			s_errnos[t->m_pid] = 0;
 			goto again;
 		}
+		*/
 #endif
 		// skip if not done yet
 		if ( ! t->m_isDone     ) continue;
 
 #ifdef PTHREADS		
 
-		// . join up with that thread
-		// . damn, sometimes he can block forever on his
-		//   call to sigqueue(), 
-		long status =  pthread_join ( t->m_joinTid , NULL );
-		if ( status != 0 ) {
-		  log("threads: pthread_join %li = %s (%li)",
-		      (long)t->m_joinTid,mstrerror(status),status);
-		}
-		// debug msg
-		if ( g_conf.m_logDebugThread )
-			log(LOG_DEBUG,"thread: joined1 with t=0x%lx "
-			    "jointid=0x%lx.",
-			    (long)t,(long)t->m_joinTid);
 
+		// if pthread_create() failed it returns the errno and we
+		// needsJoin is false, so do not try to join
+		// to a thread if we did not create it, lest pthread_join()
+		// cores
+		if ( t->m_needsJoin ) {
+			// . join up with that thread
+			// . damn, sometimes he can block forever on his
+			//   call to sigqueue(), 
+			long status =  pthread_join ( t->m_joinTid , NULL );
+			if ( status != 0 ) {
+				log("threads: pthread_join %li = %s (%li)",
+				    (long)t->m_joinTid,mstrerror(status),
+				    status);
+			}
+			// debug msg
+			if ( g_conf.m_logDebugThread )
+				log(LOG_DEBUG,"thread: joined1 with t=0x%lx "
+				    "jointid=0x%lx.",
+				    (long)t,(long)t->m_joinTid);
+		}
+		
 #else
 
 	again:
@@ -1197,6 +1213,9 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 #ifndef PTHREADS
 		// MDW: i hafta take this out because the errno_location thing
 		// is not working on the newer gcc
+		/*
+		  i am just using straight out errno. it seems different
+		  for each thread now.
 		if ( ! t->m_isDone && t->m_pid >= 0 && 
 		     s_errnos [t->m_pid] == 0x7fffffff ) {
 			log("thread: Got abnormal thread termination. Seems "
@@ -1204,6 +1223,7 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 			s_errnos[t->m_pid] = 0;
 			goto again;
 		}
+		*/
 #endif
 		// skip if not done yet
 		if ( ! t->m_isDone     ) continue;
@@ -1211,20 +1231,22 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 
 #ifdef PTHREADS		
 
-		// . join up with that thread
-		// . damn, sometimes he can block forever on his
-		//   call to sigqueue(), 
-		long status =  pthread_join ( t->m_joinTid , NULL );
-		if ( status != 0 ) {
-		  log("threads: pthread_join2 %li = %s (%li)",
-		      (long)t->m_joinTid,mstrerror(status),status);
+		if ( t->m_needsJoin ) {
+			// . join up with that thread
+			// . damn, sometimes he can block forever on his
+			//   call to sigqueue(), 
+			long status =  pthread_join ( t->m_joinTid , NULL );
+			if ( status != 0 ) {
+				log("threads: pthread_join2 %li = %s (%li)",
+				    (long)t->m_joinTid,mstrerror(status),
+				    status);
+			}
+			// debug msg
+			if ( g_conf.m_logDebugThread )
+				log(LOG_DEBUG,"thread: joined2 with t=0x%lx "
+				    "jointid=0x%lx.",
+				    (long)t,(long)t->m_joinTid);
 		}
-		// debug msg
-		if ( g_conf.m_logDebugThread )
-			log(LOG_DEBUG,"thread: joined2 with t=0x%lx "
-			    "jointid=0x%lx.",
-			    (long)t,(long)t->m_joinTid);
-
 #else
 
 	again:
@@ -2008,7 +2030,11 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	//
 #else
 
-	pthread_create ( &t->m_joinTid , &s_attr, startUp2 , t) ;
+	// assume it does not go through
+	t->m_needsJoin = false;
+
+	// this returns 0 on success, or the errno otherwise
+	g_errno = pthread_create ( &t->m_joinTid , &s_attr, startUp2 , t) ;
 
 #endif
 
@@ -2020,6 +2046,8 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 
 	// return true on successful creation of the thread
 	if ( g_errno == 0 ) {
+		// good stuff, the thread needs a join now
+		t->m_needsJoin = true;
 		if ( count > 0 ) 
 			log("thread: Call to clone looped %li times.",count);
 		return true;
@@ -2047,6 +2075,11 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 #ifndef PTHREADS
  hadError:
 #endif
+
+	if ( g_errno )
+		log("thread: pthread_create had error = %s",
+		    mstrerror(g_errno));
+
 	// it didn't launch, did it? dec the count.
 	m_launched--;
 	// priority-based LOCAL & GLOBAL launch counts

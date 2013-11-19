@@ -354,31 +354,7 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 		return log("query: unable to strcpy whitelist");
 	
 
-	char format = FORMAT_HTML;
-
-	// what format should search results be in? default is html
-	char *formatStr = r->getString("format", NULL );
-
-	if ( formatStr && strcmp(formatStr,"html") == 0 ) format = FORMAT_HTML;
-	if ( formatStr && strcmp(formatStr,"json") == 0 ) format = FORMAT_JSON;
-	if ( formatStr && strcmp(formatStr,"xml") == 0 ) format = FORMAT_XML;
-	if ( formatStr && strcmp(formatStr,"csv") == 0 ) format = FORMAT_CSV;
-
-
-	// support old api &xml=1 to mean &format=1
-	if ( r->getLong("xml",0) ) {
-		format = FORMAT_XML;
-	}
-
-	// also support &json=1
-	if ( r->getLong("json",0) ) {
-		format = FORMAT_JSON;
-	}
-
-	if ( r->getLong("csv",0) ) {
-		format = FORMAT_CSV;
-	}
-
+	char format = getFormatFromRequest ( r );
 
 	// now override automatic defaults for special cases
 	if ( format != FORMAT_HTML ) {
@@ -1119,10 +1095,11 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	//	if (qcs == csUTF8) {qcs = csISOLatin1;goto doOver;}
 	//	if (qcs != csISOLatin1) {qcs = csUTF8;goto doOver;}
 	//}
-	
+
 	// append plus terms
 	if ( m_plusLen > 0 ) {
-		char *s = m_plus, *send = m_plus + m_plusLen;
+		char *s = m_plus;
+		char *send = m_plus + m_plusLen;
 		//if ( p > pstart && p < pend ) *p++  = ' ';
 		//if ( p2 > pstart2 && p2 < pend2) *p2++ = ' ';
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
@@ -1138,7 +1115,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 			} else {
 				while (!isspace(*s2) && s2 < send) s2++;
 			}
-			if (s < send) break;
+			if (s2 < send) break;
 			//if (p < pend) *p++ = '+';
 			//if (p2 < pend2) *p2++ = '+';
 			m_sbuf1.pushChar('+');
@@ -1172,7 +1149,8 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	}  
 	// append minus terms
 	if ( m_minusLen > 0 ) {
-		char *s = m_minus, *send = m_minus + m_minusLen;
+		char *s = m_minus;
+		char *send = m_minus + m_minusLen;
 		//if ( p > pstart && p < pend ) *p++  = ' ';
 		//if ( p2 > pstart2 && p2 < pend2) *p2++ = ' ';
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
@@ -1188,7 +1166,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 			} else {
 				while (!isspace(*s2) && s2 < send) s2++;
 			}
-			if (s < send) break;
+			if (s2 < send) break;
 			//if (p < pend) *p++ = '-';
 			//if (p2 < pend2) *p2++ = '-';
 			m_sbuf1.pushChar('-');
@@ -1330,4 +1308,34 @@ uint8_t SearchInput::detectQueryLanguage(void) {
 	}
 
 	return(lang);
+}
+
+
+char getFormatFromRequest ( HttpRequest *r ) {
+	char format = FORMAT_HTML;
+
+	// what format should search results be in? default is html
+	char *formatStr = r->getString("format", NULL );
+
+	if ( formatStr && strcmp(formatStr,"html") == 0 ) format = FORMAT_HTML;
+	if ( formatStr && strcmp(formatStr,"json") == 0 ) format = FORMAT_JSON;
+	if ( formatStr && strcmp(formatStr,"xml") == 0 ) format = FORMAT_XML;
+	if ( formatStr && strcmp(formatStr,"csv") == 0 ) format = FORMAT_CSV;
+
+
+	// support old api &xml=1 to mean &format=1
+	if ( r->getLong("xml",0) ) {
+		format = FORMAT_XML;
+	}
+
+	// also support &json=1
+	if ( r->getLong("json",0) ) {
+		format = FORMAT_JSON;
+	}
+
+	if ( r->getLong("csv",0) ) {
+		format = FORMAT_CSV;
+	}
+
+	return format;
 }

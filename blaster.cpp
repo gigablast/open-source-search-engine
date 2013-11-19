@@ -382,9 +382,9 @@ void gotDocWrapper ( void *state , TcpSocket *s ) {
 	// parse status message out of response
 
 	// HTTP/1.0
-	while ( p < pend && !is_space(*p) ) p++;
+	while ( p < pend && !isspace(*p) ) p++;
 	// skip space
-	while ( p < pend &&  is_space(*p) ) p++;
+	while ( p < pend &&  isspace(*p) ) p++;
 	// copy to end of line
 	while (p < pend && mlen < 255 && *p != '\r' && *p != '\n'){
 		message[mlen++] = *p;

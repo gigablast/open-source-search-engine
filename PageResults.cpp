@@ -206,34 +206,8 @@ bool sendReply ( State0 *st , char *reply ) {
 	return true;
 }
 
-// . returns false if blocked, true otherwise
-// . sets g_errno on error
-// . "msg" will be inserted into the access log for this request
-bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
-	// . check for sdirt=4, this a site search on the given directory id
-	// . need to pre-query the directory first to get the sites to search
-	//   this will likely have just been cached so it should be quick
-	// . then need to construct a site search query
-	//long rawFormat = hr->getLong("xml", 0); // was "raw"
-	//long xml = hr->getLong("xml",0);
-
-	// what format should search results be in? default is html
-	long format = hr->getLong("format", FORMAT_HTML );
-	if ( hr->getLong("xml",0) ) format = FORMAT_XML;
-	if ( hr->getLong("json",0) ) format = FORMAT_JSON;
-
-
-	// get the dmoz catid if given
-	//long searchingDmoz = hr->getLong("dmoz",0);
-
-	//
-	// send back page frame with the ajax call to get the real
-	// search results. do not do this if a "&dir=" (dmoz category)
-	// is given
-	//
-	if ( hr->getLong("id",0) == 0 && format == FORMAT_HTML ) {
-		SafeBuf sb;
-		sb.safePrintf(
+bool printCSSHead ( SafeBuf &sb ) {
+	return sb.safePrintf(
 			      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML "
 			      "4.01 Transitional//EN\">\n"
 			      //"<meta http-equiv=\"Content-Type\" "
@@ -267,6 +241,41 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			      "-->\n"
 			      "</style>\n"
 			      "</head>\n"
+			      );
+}
+
+// . returns false if blocked, true otherwise
+// . sets g_errno on error
+// . "msg" will be inserted into the access log for this request
+bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
+	// . check for sdirt=4, this a site search on the given directory id
+	// . need to pre-query the directory first to get the sites to search
+	//   this will likely have just been cached so it should be quick
+	// . then need to construct a site search query
+	//long rawFormat = hr->getLong("xml", 0); // was "raw"
+	//long xml = hr->getLong("xml",0);
+
+	// what format should search results be in? default is html
+	char format = getFormatFromRequest ( hr );
+
+	// get the dmoz catid if given
+	//long searchingDmoz = hr->getLong("dmoz",0);
+
+	//
+	// . send back page frame with the ajax call to get the real
+	//   search results. do not do this if a "&dir=" (dmoz category)
+	//   is given.
+	// . if not matt wells we do not do ajax
+	// . the ajax is just there to prevent bots from slamming me 
+	//   with queries.
+	//
+	if ( hr->getLong("id",0) == 0 && 
+	     format == FORMAT_HTML &&
+	     g_conf.m_isMattWells ) {
+
+		SafeBuf sb;
+		printCSSHead ( sb );
+		sb.safePrintf(
 			      "<body "
 			      "onLoad=\""
 			      "var client = new XMLHttpRequest();\n"
@@ -423,8 +432,6 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 						    NULL, // cookie
 						    "UTF-8"); // charset
 	}
-
-
 
 
 	// make a new state
@@ -696,6 +703,17 @@ bool gotResults ( void *state ) {
 		return true;
 
 	SearchInput *si = &st->m_si;
+
+	// . if not matt wells we do not do ajax
+	// . the ajax is just there to prevent bots from slamming me 
+	//   with queries.
+	if ( ! g_conf.m_isMattWells ) {
+		printCSSHead ( sb );
+		sb.safePrintf("<body>");
+		printLogoAndSearchBox ( sb , &st->m_hr , -1 ); // catId = -1
+	}
+
+
 
 	// xml
 	if ( si->m_format == FORMAT_XML )
@@ -1441,6 +1459,26 @@ bool gotResults ( void *state ) {
 	
 	if ( si->m_format == FORMAT_XML )
 		sb.safePrintf("</response>\n");
+
+
+	// if we did not use ajax, print this tail here now
+	if ( si->m_format == FORMAT_HTML && ! g_conf.m_isMattWells ) {
+		sb.safePrintf ( "<br>"
+				"<center>"
+				"<font color=gray>"
+				"Copyright &copy; 2013. All Rights "
+				"Reserved.<br/>"
+				"Powered by the <a href='https://www."
+				"gigablast.com/'>GigaBlast</a> open source "
+				"search engine."
+				"</font>"
+				"</center>\n"
+				
+				"</body>\n"
+				"</html>\n"
+			      );
+	}
+
 
 	return sendReply ( st , sb.getBufStart() );
 }
@@ -4509,6 +4547,10 @@ bool printDmozRadioButtons ( SafeBuf &sb , long catId ) ;
 // if catId >= 1 then print the dmoz radio button
 bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 
+	char *root = "";
+	if ( g_conf.m_isMattWells )
+		root = "http://www.gigablast.com";
+
 	sb.safePrintf(
 		      // logo and menu table
 		      "<table border=0 cellspacing=5>"
@@ -4517,12 +4559,13 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 		      "<td rowspan=2 valign=top>"
 		      "<a href=/>"
 		      "<img "
-		      "src=http://www.gigablast.com/logo-small.png "
+		      "src=%s/logo-small.png "
 		      "height=64 width=295>"
 		      "</a>"
 		      "</td>"
 		      
 		      "<td>"
+		      , root
 		      );
 	// menu above search box
 	sb.safePrintf(

@@ -428,6 +428,12 @@ Msg20Reply::Msg20Reply ( ) {
 	// this is free in destructor, so clear it here
 	//ptr_eventSummaryLines = NULL;
 	m_tmp = 0;
+
+	// seems to be an issue... caused a core with bogus size_dbuf
+	long *sizePtr = &size_tbuf;
+	long *sizeEnd = &size_note;
+	for ( ; sizePtr <= sizeEnd ; sizePtr++ )
+		*sizePtr = 0;
 }
 
 
