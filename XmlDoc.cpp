@@ -21155,6 +21155,11 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	else
 		m_newsr.m_sentToDiffbot = false;
 
+	if ( m_diffbotReplyError )
+		m_newsr.m_hadDiffbotError = true;
+	else
+		m_newsr.m_hadDiffbotError = false;
+
 	// treat error replies special i guess, since langId, etc. will be
 	// invalid
 	if ( m_indexCode ) {

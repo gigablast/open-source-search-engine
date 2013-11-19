@@ -1396,6 +1396,9 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		bool isProcessed = false;
 		if ( srep ) isProcessed = srep->m_sentToDiffbot;
 
+		if ( srep && srep->m_hadDiffbotError )
+			isProcessed = false;
+
 		// debug point
 		//if ( strstr(sreq->m_url,"chief") )
 		//	log("hey");
@@ -1419,6 +1422,9 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		char *msg = "Successfully Downloaded";//Crawled";
 		if ( status == 0 ) msg = "Not downloaded";//Unexamined";
 		if ( status == -1 ) msg = mstrerror(prevReplyError);
+
+		if ( srep && srep->m_hadDiffbotError )
+			msg = "Diffbot processing error";
 
 		// matching url filter, print out the expression
 		long ufn ;
