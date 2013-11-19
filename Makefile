@@ -89,8 +89,8 @@ else
 # trying to use good ole' clone() again because it seems the errno location
 # thing is fixed by just ignoring it.
 #
-CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -Wno-unused-but-set-variable
-LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a
+CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -D_PTHREADS_ -Wno-unused-but-set-variable
+LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthreads
 endif
 
 # if you have seo.cpp link that in. This is not part of the open source
