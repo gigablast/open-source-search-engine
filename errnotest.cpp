@@ -1,4 +1,4 @@
-// gcc errnotest.cpp ; ./a.out
+// g++ errnotest.cpp ; ./a.out
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/wait.h>
