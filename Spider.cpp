@@ -1070,7 +1070,8 @@ bool SpiderColl::load ( ) {
 	// . let's up this to 5M because we are hitting the limit in some
 	//   test runs...
 	// . try going to 20M now since we hit it again...
-	if (!m_waitingTree.set(0,-1,true,20000000,true,"waittree2",
+	// . start off at just 10 nodes since we grow dynamically now
+	if (!m_waitingTree.set(0,10,true,-1,true,"waittree2",
 			       false,"waitingtree",sizeof(key_t)))return false;
 	m_waitingTreeKeyValid = false;
 	m_scanningIp = 0;
@@ -1207,8 +1208,6 @@ bool SpiderColl::makeDoleIPTable ( ) {
 	return true;
 }
 
-// . now use collnum as top long.
-// . it'd be nice to have a growTree() function
 key_t makeWaitingTreeKey ( uint64_t spiderTimeMS , long firstIp ) {
 	// sanity
 	if ( ((long long)spiderTimeMS) < 0 ) { char *xx=NULL;*xx=0; }
@@ -2123,6 +2122,25 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 		log("spider: got ip of %s. wtf?",iptoa(firstIp) );
 		char *xx=NULL; *xx=0;
 	}
+
+	// grow the tree if too small!
+	long used = m_waitingTree.getNumUsedNodes();
+	long max =  m_waitingTree.getNumTotalNodes();
+	
+	if ( used + 1 > max ) {
+		long more = (((long long)used) * 15) / 10;
+		if ( more < 10 ) more = 10;
+		if ( more > 100000 ) more = 100000;
+		long newNum = max + more;
+		log("spider: growing waiting tree to from %li to %li nodes",
+		    max , newNum );
+		if ( ! m_waitingTree.growTree ( newNum , MAX_NICENESS ) )
+			return false;
+		if ( ! m_waitingTable.setTableSize ( newNum , NULL , 0 ) )
+			return false;
+	}
+
+
 	// add that
 	long wn;
 	if ( ( wn = m_waitingTree.addKey ( &wk ) ) < 0 ) {
@@ -4007,6 +4025,7 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 		// only one read per 100ms!!
 		if ( (s_count % 10) == 0 ) {
 			// always do a scan at startup & every 24 hrs
+			// AND at process startup!!!
 			if ( ! sc->m_waitingTreeNeedsRebuild &&
 			     getTimeLocal() - sc->m_lastScanTime > 24*3600) {
 				// if a scan is ongoing, this will re-set it

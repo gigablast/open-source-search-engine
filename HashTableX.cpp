@@ -341,6 +341,7 @@ bool HashTableX::setTableSize ( long oldn , char *buf , long bufSize ) {
 		m_bufSize = need;
 		m_doFree  = true;
 		if ( ! m_buf ) return false;
+		QUICKPOLL(m_niceness);
 	}
 
 	// save the old junk
