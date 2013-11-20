@@ -152,8 +152,8 @@ void sendReply ( void *state ) {
 
 	TcpSocket *s = st->m_socket;
 
-	SafeBuf buf( 1024*32 );
-	SafeBuf tmpBuf( 1024 );
+	SafeBuf buf( 1024*32 , "tmpbuf0" );
+	SafeBuf tmpBuf( 1024 , "tmpbuf1" );
 
 	//
 	// take these out until we need them!
