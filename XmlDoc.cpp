@@ -16931,6 +16931,17 @@ char *XmlDoc::getSpiderLinks ( ) {
 		return &m_spiderLinks2;
 	}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return (char *)cr;
+
+	// hack for bulk job detection. never spider links
+	if ( cr->m_isCustomCrawl == 2 ) {
+		m_spiderLinks  = false;
+		m_spiderLinks2 = false;
+		m_spiderLinksValid = true;
+		return &m_spiderLinks2;
+	}
+
 	// check the xml for a meta robots tag
 	Xml *xml = getXml();
 	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
@@ -17481,6 +17492,12 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("urlinjected=1 ");
 	else
 		sb.safePrintf("urlinjected=0 ");
+
+	if ( m_spiderLinksValid && m_spiderLinks )
+		sb.safePrintf("spiderlinks=1 ");
+	if ( m_spiderLinksValid && ! m_spiderLinks )
+		sb.safePrintf("spiderlinks=0 ");
+
 
 	if ( m_crawlDelayValid && m_crawlDelay != -1 )
 		sb.safePrintf("crawldelayms=%li ",(long)m_crawlDelay);

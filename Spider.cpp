@@ -139,6 +139,7 @@ long SpiderRequest::print ( SafeBuf *sbarg ) {
 	if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
 	if ( m_isContacty      ) sb->safePrintf("CONTACTY ");
 	if ( m_isWWWSubdomain  ) sb->safePrintf("WWWSUBDOMAIN ");
+	if ( m_avoidSpiderLinks ) sb->safePrintf("AVOIDSPIDERLINKS ");
 
 	//if ( m_inOrderTree ) sb->safePrintf("INORDERTREE ");
 	//if ( m_doled ) sb->safePrintf("DOLED ");
