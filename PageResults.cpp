@@ -53,6 +53,10 @@ public:
 	long long    m_took; // how long it took to get the results
 	HttpRequest  m_hr;
 	bool         m_printedHeaderRow;
+
+	// for printing our search result json items in csv:
+	HashTableX   m_columnTable;
+	long         m_numCSVColumns;
 };
 
 static int printResult ( SafeBuf &sb,
@@ -61,7 +65,9 @@ static int printResult ( SafeBuf &sb,
 			 CollectionRec *cr ,
 			 char *qe ) ;
 
-bool printJsonItemInCsv ( char *json , SafeBuf *sb , bool *printedHeaderRow ) ;
+bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) ;
+
+bool printJsonItemInCSV ( char *json , SafeBuf *sb , class State0 *st ) ;
 
 bool printPairScore ( SafeBuf &sb , SearchInput *si , PairScore *ps ,
 		      Msg20Reply *mr , Msg40 *msg40 , bool first ) ;
@@ -707,7 +713,7 @@ bool gotResults ( void *state ) {
 	// . if not matt wells we do not do ajax
 	// . the ajax is just there to prevent bots from slamming me 
 	//   with queries.
-	if ( ! g_conf.m_isMattWells ) {
+	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
 		printCSSHead ( sb );
 		sb.safePrintf("<body>");
 		printLogoAndSearchBox ( sb , &st->m_hr , -1 ); // catId = -1
@@ -1768,14 +1774,20 @@ static int printResult ( SafeBuf &sb,
 	Msg20      *m20 = msg40->m_msg20[ix];
 	Msg20Reply *mr  = m20->m_r;
 
-
+	// each "result" is the actual cached page, in this case, a json
+	// object, because we were called with &icc=1. in that situation
+	// ptr_content is set in the msg20reply.
 	if ( si->m_format == FORMAT_CSV &&
 	     mr->ptr_content &&
 	     mr->m_contentType == CT_JSON ) {
 		// parse it up
 		char *json = mr->ptr_content;
 		// only print header row once, so pass in that flag
-		printJsonItemInCsv ( json , &sb , &st->m_printedHeaderRow );
+		if ( ! st->m_printedHeaderRow ) {
+			printCSVHeaderRow ( &sb , st );
+			st->m_printedHeaderRow = true;
+		}
+		printJsonItemInCSV ( json , &sb , st );
 		return true;
 	}
 
@@ -4747,65 +4759,175 @@ bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
 }
 */
 
+// return 1 if a should be before b
+int csvPtrCmp ( const void *a, const void *b ) {
+	//JsonItem *ja = (JsonItem **)a;
+	//JsonItem *jb = (JsonItem **)b;
+	char *pa = *(char **)a;
+	char *pb = *(char **)b;
+	if ( strcmp(pa,"type") == 0 ) return -1;
+	if ( strcmp(pb,"type") == 0 ) return  1;
+	// force title on top
+	if ( strcmp(pa,"product.title") == 0 ) return -1;
+	if ( strcmp(pb,"product.title") == 0 ) return  1;
+	if ( strcmp(pa,"title") == 0 ) return -1;
+	if ( strcmp(pb,"title") == 0 ) return  1;
+	// otherwise string compare
+	int val = strcmp(pa,pb);
+	return val;
+}
+	
+
 #include "Json.h"
 
-bool printJsonItemInCsv ( char *json , SafeBuf *sb , bool *printedHeaderRow ) {
+// 
+// print header row in csv
+//
+bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
+
+	Msg40 *msg40 = &st->m_msg40;
+ 	long numResults = msg40->getNumResults();
+
+	char tmp1[1024];
+	SafeBuf tmpBuf (tmp1 , 1024);
+
+	char tmp2[1024];
+	SafeBuf nameBuf (tmp2, 1024);
+
+	char nbuf[27000];
+	HashTableX nameTable;
+	if ( ! nameTable.set ( 8,4,2048,nbuf,27000,false,0,"ntbuf") )
+		return false;
+
+	// . scan every fucking json item in the search results.
+	// . we still need to deal with the case when there are so many
+	//   search results we have to dump each msg20 reply to disk in
+	//   order. then we'll have to update this code to scan that file.
+
+	for ( long i = 0 ; i < numResults ; i++ ) {
+
+		// get the msg20 reply for search result #i
+		Msg20      *m20 = msg40->m_msg20[i];
+		Msg20Reply *mr  = m20->m_r;
+
+		// get content
+		char *json = mr->ptr_content;
+		// how can it be empty?
+		if ( ! json ) continue;
+
+		// parse it up
+		Json jp;
+		jp.parseJsonStringIntoJsonItems ( json );
+
+		// scan each json item
+		for ( JsonItem *ji = jp.getFirstItem(); ji ; ji = ji->m_next ){
+
+			// skip if not number or string
+			if ( ji->m_type != JT_NUMBER && 
+			     ji->m_type != JT_STRING )
+				continue;
+
+			// if in an array, do not print! csv is not
+			// good for arrays... like "media":[....] . that
+			// one might be ok, but if the elements in the
+			// array are not simple types, like, if they are
+			// unflat json objects then it is not well suited
+			// for csv.
+			if ( ji->isInArray() ) continue;
+
+			// reset length of buf to 0
+			tmpBuf.reset();
+
+			// . get the name of the item into "nameBuf"
+			// . returns false with g_errno set on error
+			if ( ! ji->getCompoundName ( tmpBuf ) )
+				return false;
+
+			// is it new?
+			long long h64 = hash64n ( tmpBuf.getBufStart() );
+			if ( nameTable.isInTable ( &h64 ) ) continue;
+
+			// record offset of the name for our hash table
+			long nameBufOffset = nameBuf.length();
+			
+			// store the name in our name buffer
+			if ( ! nameBuf.safeStrcpy ( tmpBuf.getBufStart() ) )
+				return false;
+			if ( ! nameBuf.pushChar ( '\0' ) )
+				return false;
+
+			// it's new. add it
+			if ( ! nameTable.addKey ( &h64 , &nameBufOffset ) )
+				return false;
+		}
+	}
+
+	// . make array of ptrs to the names so we can sort them
+	// . try to always put title first regardless
+	char *ptrs [ 1024 ];
+	long numPtrs = 0;
+	for ( long i = 0 ; i < nameTable.m_numSlots ; i++ ) {
+		if ( ! nameTable.m_flags[i] ) continue;
+		long off = *(long *)nameTable.getValueFromSlot(i);
+		char *p = nameBuf.getBufStart() + off;
+		ptrs[numPtrs++] = p;
+		if ( numPtrs >= 1024 ) break;
+	}
+
+	// sort them
+	qsort ( ptrs , numPtrs , 4 , csvPtrCmp );
+
+	// set up table to map field name to column for printing the json items
+	HashTableX *columnTable = &st->m_columnTable;
+	if ( ! columnTable->set ( 8,4, numPtrs * 4,NULL,0,false,0,"coltbl" ) )
+		return false;
+
+	// now print them out as the header row
+	for ( long i = 0 ; i < numPtrs ; i++ ) {
+		if ( i > 0 && ! sb->pushChar(',') ) return false;
+		if ( ! sb->safeStrcpy ( ptrs[i] ) ) return false;
+		// record the hash of each one for printing out further json
+		// objects in the same order so columns are aligned!
+		long long h64 = hash64n ( ptrs[i] );
+		if ( ! columnTable->addKey ( &h64 , &i ) ) 
+			return false;
+	}
+
+	st->m_numCSVColumns = numPtrs;
+
+	if ( ! sb->pushChar('\n') )
+		return false;
+	if ( ! sb->nullTerm() )
+		return false;
+
+	return true;
+}
+
+// returns false and sets g_errno on error
+bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 
 	// parse the json
 	Json jp;
 	jp.parseJsonStringIntoJsonItems ( json );
 
-	// . TODO: index individual "Products":[...] as each an
-	//   individual title rec.
-		
-	SafeBuf nameBuf;
-	bool firstOne = true;
+	HashTableX *columnTable = &st->m_columnTable;
+	long numCSVColumns = st->m_numCSVColumns;
+
+	
+	// make buffer space that we need
+	char ttt[1024];
+	SafeBuf ptrBuf(ttt,1024);
+	long need = numCSVColumns * sizeof(JsonItem *);
+	if ( ! ptrBuf.reserve ( need ) ) return false;
+	JsonItem **ptrs = (JsonItem **)ptrBuf.getBufStart();
+
+	// reset json item ptrs for csv columns. all to NULL
+	memset ( ptrs , 0 , need );
+
+	char tmp1[1024];
+	SafeBuf tmpBuf (tmp1 , 1024);
 
 	JsonItem *ji;
-
-	////
-	// 
-	// print header row in csv
-	//
-	////
-	for ( ji = jp.getFirstItem(); ji ; ji = ji->m_next ) {
-
-		if ( *printedHeaderRow )
-			break;
-
-		// skip if not number or string
-		if ( ji->m_type != JT_NUMBER && 
-		     ji->m_type != JT_STRING )
-			continue;
-
-		// if in an array, do not print! csv is not
-		// good for arrays... like "media":[....] . that
-		// one might be ok, but if the elements in the
-		// array are not simple types, like, if they are
-		// unflat json objects then it is not well suited
-		// for csv.
-		if ( ji->isInArray() ) continue;
-
-		if ( ! firstOne ) sb->pushChar(',');
-
-		firstOne = false;
-
-		ji->getCompoundName ( nameBuf );
-
-		//
-		// product.offerprice
-		//
-		sb->csvEncode ( nameBuf.getBufStart() , nameBuf.getLength() );
-	}
-
-	if ( ! *printedHeaderRow ) {
-		sb->pushChar('\n');
-		sb->nullTerm();
-		*printedHeaderRow = true;
-	}
-
-
-	firstOne = true;
 
 	///////
 	//
@@ -4822,11 +4944,40 @@ bool printJsonItemInCsv ( char *json , SafeBuf *sb , bool *printedHeaderRow ) {
 		// skip if not well suited for csv (see above comment)
 		if ( ji->isInArray() ) continue;
 
+		// . get the name of the item into "nameBuf"
+		// . returns false with g_errno set on error
+		if ( ! ji->getCompoundName ( tmpBuf ) )
+			return false;
 
-		if ( ! firstOne ) sb->pushChar(',');
+		// is it new?
+		long long h64 = hash64n ( tmpBuf.getBufStart() );
 
-		firstOne = false;
+		long slot = columnTable->getSlot ( &h64 ) ;
+		// MUST be in there
+		if ( slot < 0 ) { char *xx=NULL;*xx=0;}
 
+		// get col #
+		long column = *(long *)columnTable->getValueFromSlot ( slot );
+
+		// sanity
+		if ( column >= numCSVColumns ) { char *xx=NULL;*xx=0; }
+
+		// set ptr to it for printing when done parsing every field
+		// for this json item
+		ptrs[column] = ji;
+	}
+
+	// now print out what we got
+	for ( long i = 0 ; i < numCSVColumns ; i++ ) {
+		// , delimeted
+		if ( i > 0 ) sb->pushChar(',');
+		// get it
+		ji = ptrs[i];
+		// skip if none
+		if ( ! ji ) continue;
+		//
+		// get value and print otherwise
+		//
 		if ( ji->m_type == JT_NUMBER ) {
 			// print numbers without double quotes
 			if ( ji->m_valueDouble *10000000.0 == 
@@ -4843,9 +4994,7 @@ bool printJsonItemInCsv ( char *json , SafeBuf *sb , bool *printedHeaderRow ) {
 		sb->pushChar('\"');
 	}
 
-	if ( ! firstOne )
-		sb->pushChar('\n');
-
+	sb->pushChar('\n');
 	sb->nullTerm();
 
 	return true;

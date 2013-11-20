@@ -861,6 +861,24 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
 
 
+	// . if doing download of json, make it search results now!
+	// . make an httprequest on stack and call it
+	if ( fmt == FMT_CSV && rdbId == RDB_TITLEDB ) {
+		char tmp2[5000];
+		SafeBuf sb2(tmp2,5000);
+		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&dr=0&"
+			      "c=%s&n=1000000&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      "\r\n\r\n"
+			       , cr->m_coll
+			       );
+		HttpRequest hr2;
+		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
+		return sendPageResults ( sock , &hr2 );
+	}
+
+
 	//if ( strncmp ( path ,"/crawlbot/downloadurls",22  ) == 0 )
 	//	rdbId = RDB_SPIDERDB;
 	//if ( strncmp ( path ,"/crawlbot/downloadpages",23  ) == 0 )
@@ -3584,6 +3602,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<tr>"
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
+			      "<a href=/crawlbot/download/%s_data.csv>"
+			      "csv</a>"
+			      " &nbsp; "
 			      "<a href=/crawlbot/download/%s_data.json>"
 			      "json</a>"
 			      "</td>"
@@ -3792,6 +3813,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</TABLE>"
 
 
+			      , cr->m_coll
 			      , cr->m_coll
 
 			      , cr->m_coll
