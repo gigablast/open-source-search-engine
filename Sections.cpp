@@ -252,6 +252,8 @@ bool Sections::set ( Words     *w                       ,
 	// breathe
 	QUICKPOLL(m_niceness);
 
+	m_sectionPtrBuf.setLabel("psectbuf");
+
 	// separate buf now for section ptr for each word
 	if ( ! m_sectionPtrBuf.reserve ( nw *4 ) ) return true;
 	m_sectionPtrs = (Section **)m_sectionPtrBuf.getBufStart();
@@ -259,6 +261,8 @@ bool Sections::set ( Words     *w                       ,
 
 	// allocate m_sectionBuf
 	m_sections = NULL;
+
+	m_sectionBuf.setLabel ( "sectbuf" );
 
 	if ( ! m_sectionBuf.reserve ( need ) )
 		return true;
@@ -15160,6 +15164,9 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 
 	// save ptrs
 	m_sbuf = sbuf;
+
+	m_sbuf->setLabel ("sectprnt");
+
 	//m_pt = pt;
 	//m_et = et;
 	//m_at = at;

@@ -98,6 +98,7 @@ static bool getWordPosVec ( Words *words ,
 static void getMetaListWrapper ( void *state ) ;
 
 XmlDoc::XmlDoc() { 
+	m_esbuf.setLabel("exputfbuf");
 	for ( long i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
 	m_freed = false;
 	m_contentInjected = false;

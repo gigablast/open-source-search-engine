@@ -799,7 +799,7 @@ bool sendPageAutoban ( TcpSocket *s , HttpRequest *r ) {
 }
 
 bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
-	SafeBuf sb(512 * 512);
+	SafeBuf sb(512 * 512,"autobbuf");
 	//read in all of the possible cgi parms off the bat:
 	//long  user     = g_pages.getUserType( s , r );
 	char *username = g_users.getUsername(r);

@@ -22,11 +22,12 @@
 // 	3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0
 // };
 
-SafeBuf::SafeBuf(long initSize) {
+SafeBuf::SafeBuf(long initSize, char *label ) {
 	if(initSize <= 0) initSize = 1;
 	m_capacity = initSize;
 	m_length = 0;
-	m_buf = (char*)mrealloc(NULL, 0, m_capacity, "SafeBuf");
+	m_label = label;
+	m_buf = (char*)mrealloc(NULL, 0, m_capacity, m_label );
 	if(!m_buf) m_capacity = 0;
 	m_usingStack = false;
 	m_encoding = csUTF8;
@@ -39,6 +40,11 @@ SafeBuf::SafeBuf() {
 	m_buf = NULL;
 	m_usingStack = false;
 	m_encoding = csUTF8;
+	m_label = NULL;
+}
+
+void SafeBuf::setLabel ( char *label ) {
+	m_label = label;
 }
 
 SafeBuf::SafeBuf(char* stackBuf, long cap) {
@@ -47,6 +53,7 @@ SafeBuf::SafeBuf(char* stackBuf, long cap) {
 	m_buf = stackBuf;
 	m_length = 0;
 	m_encoding = csUTF8;
+	m_label = NULL;
 }
 
 SafeBuf::SafeBuf(char *heapBuf, long bufMax, long bytesInUse, bool ownData) {
@@ -292,8 +299,14 @@ bool SafeBuf::advance ( long i ) {
 	return true;
 }
 
-bool SafeBuf::reserve(long i, char *label) {
-	if ( ! label ) label = "SafeBuf";
+bool SafeBuf::reserve(long i , char *label) {
+
+	// if we don't already have a label and they provided one, use it
+	if ( ! m_label ) {
+		if ( label ) m_label = label;
+		else         m_label = "SafeBuf";
+	}
+
 	if(m_length + i > m_capacity) {
 		char *tmpBuf = m_buf;
 		long tmpCap = m_capacity;
@@ -301,7 +314,7 @@ bool SafeBuf::reserve(long i, char *label) {
 			m_buf = NULL;
 			m_capacity += i;
 			//if(m_capacity < 8) m_capacity = 8;
-			m_buf = (char*)mrealloc(m_buf, 0, m_capacity, label);
+			m_buf = (char*)mrealloc(m_buf, 0, m_capacity,m_label);
 			if(!m_buf) {
 				m_buf = tmpBuf;
 				m_capacity = tmpCap;
@@ -315,7 +328,7 @@ bool SafeBuf::reserve(long i, char *label) {
 		}
 		m_capacity += i;
 		//if(m_capacity < 8) m_capacity = 8;
-		m_buf = (char*)mrealloc(m_buf, tmpCap, m_capacity,label);
+		m_buf = (char*)mrealloc(m_buf, tmpCap, m_capacity,m_label);
 		if(!m_buf) {
 			m_buf = tmpBuf;
 			m_capacity = tmpCap;
@@ -330,11 +343,11 @@ bool SafeBuf::reserve(long i, char *label) {
 
 //reserve this many bytes, if we need to alloc, we double the 
 //buffer size.
-bool SafeBuf::reserve2x(long i) {
+bool SafeBuf::reserve2x(long i, char *label) {
 	//watch out for overflow!
 	if((m_capacity << 1) + i < 0) return false;
 	if(i + m_length >= m_capacity)
-		return reserve(m_capacity + i);
+		return reserve(m_capacity + i,label);
 	else return true;
 }
 

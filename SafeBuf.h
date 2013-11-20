@@ -8,12 +8,14 @@
 struct SafeBuf {
 	//*TRUCTORS
 	SafeBuf();
-	SafeBuf(long initSize);
+	SafeBuf(long initSize, char *label = NULL);
 	//be careful with passing in a stackBuf! it could go out
 	//of scope independently of the safebuf.
 	SafeBuf(char* stackBuf, long cap);
 	SafeBuf(char *heapBuf, long bufMax, long bytesInUse, bool ownData);
 	~SafeBuf();
+
+	void setLabel ( char *label );
 	
 	// CAUTION: BE CAREFUL WHEN USING THE FOLLOWING TWO FUNCTIONS!!
 	// setBuf() allows you reset the contents of the SafeBuf to either
@@ -99,8 +101,8 @@ struct SafeBuf {
 	void  reset() { m_length = 0; }
 	void  purge(); // Clear all data and free all allocated memory
 	bool  advance ( long i ) ;
-	bool  reserve(long i, char *label=NULL);
-	bool  reserve2x(long i);
+	bool  reserve(long i , char *label = NULL );
+	bool  reserve2x(long i, char *label = NULL );
 	bool  inlineStyleTags();
 	void  incrementLength(long i) { m_length += i; }
 	void  setLength(long i) { m_length = i; };
@@ -290,6 +292,7 @@ struct SafeBuf {
 	long  m_capacity;
 	long  m_length;
 	char *m_buf;
+	char *m_label;
 	bool  m_usingStack;
 	short m_encoding; // output charset
 

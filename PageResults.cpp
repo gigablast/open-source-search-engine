@@ -672,7 +672,7 @@ bool gotResults ( void *state ) {
 	//SafeBuf sb(local, 128000);
 	SafeBuf sb;
 	// reserve 1.5MB now!
-	if ( ! sb.reserve(1500000) ) // 128000) )
+	if ( ! sb.reserve(1500000 ,"pgresbuf" ) ) // 128000) )
 		return true;
 
 	SearchInput *si = &st->m_si;

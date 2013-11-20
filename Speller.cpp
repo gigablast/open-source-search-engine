@@ -1000,6 +1000,8 @@ bool Speller::loadUnifiedDict() {
 
 	bool needRebuild = false;
 
+	m_unifiedBuf.setLabel("unibuf");
+
 	// this MUST be there
 	if ( m_unifiedBuf.fillFromFile(g_hostdb.m_dir,
 				       "unifiedDict-buf.txt" ) == 0 ) 

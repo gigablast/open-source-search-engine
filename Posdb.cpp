@@ -710,6 +710,9 @@ bool PosdbTable::allocTopTree ( ) {
 	//	return false;
 
 	if ( m_r->m_getDocIdScoringInfo ) {
+
+		m_scoreInfoBuf.setLabel ("scinfobuf" );
+
 		// . for holding the scoring info
 		// . add 1 for the \0 safeMemcpy() likes to put at the end so 
 		//   it will not realloc on us
@@ -729,6 +732,10 @@ bool PosdbTable::allocTopTree ( ) {
 		// compute. so this could easily get into the megabytes, most 
 		// of the time we will not need nearly that much however.
 		numPairs *= xx;
+
+		m_pairScoreBuf.setLabel ( "pairbuf" );
+		m_singleScoreBuf.setLabel ("snglbuf" );
+
 		// but alloc it just in case
 		if ( ! m_pairScoreBuf.reserve (numPairs * sizeof(PairScore) ) )
 			return false;
@@ -784,7 +791,7 @@ bool PosdbTable::allocTopTree ( ) {
 			slots = 20000000;
 		}
 		// each site hash is 4 bytes
-		if ( ! m_siteHashList.reserve ( slots ) )
+		if ( ! m_siteHashList.reserve ( slots ,"shshbuf" ) )
 			return false;
 		// quad # of sites to have space in between
 		if ( ! m_dt.set(4,0,slots,NULL,0,false,0,"pdtdt"))

@@ -1214,7 +1214,7 @@ StatState *Statsdb::getStatState ( long us ) {
 		return ss;
 	}
 	// reserve
-	if ( ! m_sb0.reserve2x ( sizeof(StatState  ) ) ) return NULL;
+	if ( ! m_sb0.reserve2x ( sizeof(StatState),"statgph" ) ) return NULL;
 	// make it otherwise
 	StatState *ss = (StatState *)m_sb0.getBuf();
 	// store the offset
