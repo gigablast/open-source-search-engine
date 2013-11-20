@@ -115,8 +115,11 @@ bool sendReply ( State0 *st , char *reply ) {
 			    nowms,
 			    st->m_q.m_numTerms);
 
-	// log the time
-	if ( st->m_took >= g_conf.m_logQueryTimeThreshold ) {
+	// . log the time
+	// . do not do this if g_errno is set lest m_sbuf1 be bogus b/c
+	//   it failed to allocate its buf to hold terminating \0 in
+	//   SearchInput::setQueryBuffers()
+	if ( ! g_errno && st->m_took >= g_conf.m_logQueryTimeThreshold ) {
 		logf(LOG_TIMING,"query: Took %lli ms for %s. results=%li",
 		     st->m_took,
 		     si->m_sbuf1.getBufStart(),
@@ -432,8 +435,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			 "Please try later." );
 	}
 	mnew ( st , sizeof(State0) , "PageResults2" );
+
 	// copy yhits
-	st->m_hr.copy ( hr );
+	if ( ! st->m_hr.copy ( hr ) )
+		return sendReply ( st , NULL );
 
 	// set this in case SearchInput::set fails!
 	st->m_socket = s;
@@ -448,8 +453,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			 // m_hr points to the hr we pass into
 			 // SearchInput::set
 			 &st->m_hr, 
-			 &st->m_q ) ) 
+			 &st->m_q ) ) {
+		log("query: set search input: %s",mstrerror(g_errno));
 		return sendReply ( st, NULL );
+	}
 
 	long  codeLen = 0;
 	char *code = hr->getString("code", &codeLen, NULL);

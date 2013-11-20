@@ -706,7 +706,8 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 
 	// . returns false and sets g_errno on error
 	// . sets m_qbuf1 and m_qbuf2
-	if ( ! setQueryBuffers (r) ) return false;
+	if ( ! setQueryBuffers (r) )
+		return log("query: setQueryBuffers: %s",mstrerror(g_errno));
 
 
 	/* --- Virtual host language detection --- */
@@ -1199,9 +1200,9 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	}
 
 	// null terms
-	m_sbuf1.pushChar('\0');
-	m_sbuf2.pushChar('\0');
-	m_sbuf3.pushChar('\0');
+	if ( ! m_sbuf1.pushChar('\0') ) return false;
+	if ( ! m_sbuf2.pushChar('\0') ) return false;
+	if ( ! m_sbuf3.pushChar('\0') ) return false;
 
 	// the natural query
 	m_displayQuery = m_sbuf2.getBufStart();// + displayQueryOffset;
@@ -1236,6 +1237,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	long dcatId  = -1;
 	// get the final query
 	char *q =m_sbuf1.getBufStart();
+
 	if ( q ) sscanf(q,"gbpcatid:%li",&pcatId);
 	if ( q ) sscanf(q,"gbcatid:%li",&dcatId);
 	// pick the one that is valid
