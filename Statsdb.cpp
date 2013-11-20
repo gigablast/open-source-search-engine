@@ -522,16 +522,16 @@ bool Statsdb::makeGIF ( long t1Arg ,
 
 #define MAX_POINTS 6000
 #define MAX_WIDTH  6
-#define DY         600              // pixels vertical
-#define DX         1000             // pixels across
-#define MAX_LINES  (DY / (MAX_WIDTH+1)) // leave free pixel above each line
+#define DY2        600              // pixels vertical
+#define DX2        1000             // pixels across
+#define MAX_LINES2  (DY2 / (MAX_WIDTH+1)) // leave free pixel above each line
 
 long Statsdb::getImgHeight() {
-	return (long)DY + m_by * 2;
+	return (long)DY2 + m_by * 2;
 }
 
 long Statsdb::getImgWidth() {
-	return (long)DX + m_bx * 2;
+	return (long)DX2 + m_bx * 2;
 }
 
 // these are used for storing the "events"
@@ -595,7 +595,7 @@ bool Statsdb::gifLoop ( ) {
 	// gif size
 	//char tmp[64];
 	// dimensions of the gif
-	//sprintf ( tmp , "%lix%li", (long)DX+m_bx*2 , (long)DY+m_by*2 );
+	//sprintf ( tmp , "%lix%li", (long)DX2+m_bx*2 , (long)DY2+m_by*2 );
 	//GIFPlotter::parampl ( "BITMAPSIZE" , (void *)tmp );
 	// create one
 	//GIFPlotter plotter ( NULL , m_fd , NULL );
@@ -603,7 +603,7 @@ bool Statsdb::gifLoop ( ) {
 	//plotter.openpl ( );
 
 	// define the space with boundaries 100 unit wide boundaries
-	//plotter.space ( 0 , 0 , DX + m_bx * 2 , DY + m_by * 2 );
+	//plotter.space ( 0 , 0 , DX2 + m_bx * 2 , DY2 + m_by * 2 );
 
 	// line thickness in user coordinates (pixels for us)
 	//plotter.linewidth ( 1 );       
@@ -624,7 +624,7 @@ bool Statsdb::gifLoop ( ) {
 		      "z-index:-10;"
 		      // the tick marks we print below are based on it
 		      // being a window of the last 20 seconds... and using
-		      // DX pixels
+		      // DX2 pixels
 		      "min-width:%lipx;"
 		      "min-height:%lipx;"
 		      //"width:100%%;"
@@ -633,15 +633,15 @@ bool Statsdb::gifLoop ( ) {
 		      "margin-bottom:10px;"
 		      "margin-right:10px;"
 		      "margin-left:10px;\">"
-		      ,(long)DX + 2 *m_bx
-			,(long)DY + 2*m_by);
+		      ,(long)DX2 + 2 *m_bx
+			,(long)DY2 + 2*m_by);
 
 
 	// draw the x-axis
-	//plotter.line ( m_bx , m_by , DX + m_bx , m_by  );
+	//plotter.line ( m_bx , m_by , DX2 + m_bx , m_by  );
 
 	// 10 x-axis tick marks
-	for ( int x = DX/20 ; x <= DX ; x += DX/20 ) {
+	for ( int x = DX2/20 ; x <= DX2 ; x += DX2/20 ) {
 		// tick mark
 		//plotter.line ( x , -20 , x , 20 );
 		m_gw.safePrintf("<div style=\"position:absolute;"
@@ -653,7 +653,7 @@ bool Statsdb::gifLoop ( ) {
 			      "min-width:3px;\"></div>\n"
 			      , m_bx + (long)x-1
 			      );
-		long xv = (long)(dt * (long long)x/(long long)DX)-(long)dt;
+		long xv = (long)(dt * (long long)x/(long long)DX2)-(long)dt;
 		// LABEL
 		m_gw.safePrintf("<div style=\"position:absolute;"
 				"left:%li;"
@@ -776,8 +776,8 @@ bool Statsdb::gifLoop ( ) {
 		// ensure at least 3 units wide for visibility
 		if ( x2 < x1 + 10 ) x2 = x1 + 10;
 		// . flip the y so we don't have to scroll the browser down
-		// . DY does not include the axis and tick marks
-		//long fy1 = DY - y1 + m_by ;
+		// . DY2 does not include the axis and tick marks
+		//long fy1 = DY2 - y1 + m_by ;
 		// plot it
 		//plotter.line ( x1 , fy1 , x2 , fy1 );
 		drawLine3 ( m_gw , x1 , x2 , y1 , c1 , pp->m_thickness );
@@ -914,7 +914,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 
 	// . the minimum difference between ymax and ymin is minDiff.
 	// . this prevents us from zooming in too close!
-	float minDiff = (float)DY     * label->m_minRes ;
+	float minDiff = (float)DY2     * label->m_minRes ;
 	// we are already scaled!
 	float ourDiff = (ymax - ymin) ;
 
@@ -972,14 +972,14 @@ char *Statsdb::plotGraph ( char *pstart ,
 		float y1 = lasty;
 
 		// normalize y into pixel space
-		y2 = ((float)DY * (y2 - ymin)) / (ymax-ymin);
+		y2 = ((float)DY2 * (y2 - ymin)) / (ymax-ymin);
 
 		// set lasts for next iteration of this loop
 		lastx = x2;
 		lasty = y2;
 
 		// . flip the y so we don't have to scroll the browser down
-		// . DY does not include the axis and tick marks
+		// . DY2 does not include the axis and tick marks
 		// . do not flip y any more for statsdb graphs
 		long fy1 = (long)(y1+.5);// + m_by ;
 		long fy2 = (long)(y2+.5);// + m_by ;
@@ -1007,7 +1007,7 @@ char *Statsdb::plotGraph ( char *pstart ,
 
 		// plot it
 		// BUT only iff not more than 5 seconds difference
-		//float secondsPerPixel = (m_t2-m_t1)/(float)DX;
+		//float secondsPerPixel = (m_t2-m_t1)/(float)DX2;
 
 		// avoid this for now. mdw oct 14 2013.
 		//float dt = (x2 - x1) * secondsPerPixel;
@@ -1064,7 +1064,7 @@ void Statsdb::drawHR ( float z ,
 		       long color ) {
 
 	// convert into yspace
-	float z2 = ((float)DY * (float)(z - ymin)) /(float)(ymax-ymin);
+	float z2 = ((float)DY2 * (float)(z - ymin)) /(float)(ymax-ymin);
 	// avoid collisions with other graphs
 	z2 += zoff;
 	// border
@@ -1072,7 +1072,7 @@ void Statsdb::drawHR ( float z ,
 	// round off error
 	z2 += 0.5;
 	// for adjusatmnet
-	float ptsPerPixel = (ymax-ymin)/ (float)DY;
+	float ptsPerPixel = (ymax-ymin)/ (float)DY2;
 	// make an adjustment to the label then! -- Commented out because it's currently not used.
 	float zadj = zoff * ptsPerPixel;
 
@@ -1084,9 +1084,9 @@ void Statsdb::drawHR ( float z ,
 	//		    ((color >>  0) & 0xff) << 8 );
 
 	// horizontal line
-	//plotter->line ( m_bx, (long)z2 , DX + m_bx, (long)z2 );
+	//plotter->line ( m_bx, (long)z2 , DX2 + m_bx, (long)z2 );
 	long width = 1;
-	drawLine3 ( m_gw, 0, DX , (long)z2,color, width); 
+	drawLine3 ( m_gw, 0, DX2 , (long)z2,color, width); 
 
 
 	// make label
@@ -1214,7 +1214,7 @@ StatState *Statsdb::getStatState ( long us ) {
 		return ss;
 	}
 	// reserve
-	if ( ! m_sb0.reserve2x ( sizeof(StatState),"statgph" ) ) return NULL;
+	if ( ! m_sb0.reserve2x ( sizeof(StatState  ) ) ) return NULL;
 	// make it otherwise
 	StatState *ss = (StatState *)m_sb0.getBuf();
 	// store the offset
@@ -1360,7 +1360,7 @@ bool Statsdb::addPoint ( long      x        ,
 			 class     StatState *ss ) {
 
 	// convert x into pixel position
-	float xf = (float)DX * (float)(x - m_t1) / (float)(m_t2 - m_t1);
+	float xf = (float)DX2 * (float)(x - m_t1) / (float)(m_t2 - m_t1);
 	// round it to nearest pixel
 	long  x2 = (long)(xf + .5) ;//+ m_bx;
 	// make this our y pos
@@ -1442,12 +1442,12 @@ bool Statsdb::addEventPoint ( long  t1        ,
 			      long  thickness ) {
 	
 	// convert t1 into pixel position
-	float af = (float)DX * (float)(t1 - m_t1) / (float)(m_t2 - m_t1);
+	float af = (float)DX2 * (float)(t1 - m_t1) / (float)(m_t2 - m_t1);
 	// round it to nearest pixel
 	long  a = (long)(af + .5) ;//+ m_bx;
 
 	// convert t2 into pixel position
-	//float bf = (float)DX * (float)(t2 - m_t1) / (float)(m_t2 - m_t1);
+	//float bf = (float)DX2 * (float)(t2 - m_t1) / (float)(m_t2 - m_t1);
 	// round it to nearest pixel
 	//long  b = (long)(bf + .5) + m_bx;
 	//if ( a > b ) { char *xx=NULL;*xx=0; }
@@ -1464,7 +1464,7 @@ bool Statsdb::addEventPoint ( long  t1        ,
 	}
 
 	// go down each line of points
-	for ( long i = 0 ; i < MAX_LINES ; i++ ) {
+	for ( long i = 0 ; i < MAX_LINES2 ; i++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// . is there room for us in this line?
