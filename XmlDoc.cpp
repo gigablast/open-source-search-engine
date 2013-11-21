@@ -16936,12 +16936,12 @@ char *XmlDoc::getSpiderLinks ( ) {
 	if ( ! cr ) return (char *)cr;
 
 	// hack for bulk job detection. never spider links
-	if ( cr->m_isCustomCrawl == 2 ) {
-		m_spiderLinks  = false;
-		m_spiderLinks2 = false;
-		m_spiderLinksValid = true;
-		return &m_spiderLinks2;
-	}
+	//if ( cr->m_isCustomCrawl == 2 ) {
+	//	m_spiderLinks  = false;
+	//	m_spiderLinks2 = false;
+	//	m_spiderLinksValid = true;
+	//	return &m_spiderLinks2;
+	//}
 
 	// check the xml for a meta robots tag
 	Xml *xml = getXml();
@@ -21543,6 +21543,10 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	Links *links = getLinks();
 	if ( ! links || links == (Links *)-1 ) return (char *)links;
 
+	char *spiderLinks = getSpiderLinks();
+	if ( ! spiderLinks || spiderLinks == (char *)-1 ) 
+		return (char *)spiderLinks;
+
 	TagRec ***grv = getOutlinkTagRecVector();
 	if ( ! grv || grv == (void *)-1 ) return (char *)grv;
 	//char    **iiv = getOutlinkIsIndexedVector();
@@ -21698,6 +21702,12 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	xml->getMetaContent ( mbuf, 16 , tag , tlen );
 	bool avoid = false;
 	if ( mbuf[0] == '0' ) avoid = true;
+
+	// if this is a simplified redir and we should not be spidering
+	// links then turn it off as well! because we now add simplified
+	// redirects back into spiderdb using this function.
+	if ( m_spiderLinksValid && ! m_spiderLinks )
+		avoid = true;
 
 	// it also has this meta tag now too
 	mbuf[0] = '\0';
