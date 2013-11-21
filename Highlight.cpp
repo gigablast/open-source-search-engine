@@ -89,19 +89,20 @@ long Highlight::set ( char        *buf          ,
 		      long         niceness      ) {
 
 	Words words;
-	words.set ( content      , 
-		    contentLen   , 
-		    TITLEREC_CURRENT_VERSION,
-		    true         , // computeId
-		    true         ); // has html entites?
+	if ( ! words.set ( content      , 
+			   contentLen   , 
+			   TITLEREC_CURRENT_VERSION,
+			   true         , // computeId
+			   true         ) ) // has html entites?
+		return -1;
 
 	long version = TITLEREC_CURRENT_VERSION;
 
 	Bits bits;
-	if ( ! bits.set (&words,version,niceness) ) return 0;
+	if ( ! bits.set (&words,version,niceness) ) return -1;
 
 	Phrases phrases;
-	if ( !phrases.set(&words,&bits,true,false,version,niceness))return 0;
+	if ( !phrases.set(&words,&bits,true,false,version,niceness))return -1;
 
 	//SafeBuf langBuf;
 	//if ( !setLangVec ( &words , &langBuf , niceness )) return 0;
@@ -114,7 +115,7 @@ long Highlight::set ( char        *buf          ,
 	Matches matches;
 	matches.setQuery ( q );
 
-	if ( ! matches.addMatches ( &words , &phrases ) ) return 0;
+	if ( ! matches.addMatches ( &words , &phrases ) ) return -1;
 
 	// store
 	m_numMatches = matches.getNumMatches();
@@ -168,7 +169,7 @@ long Highlight::set ( char        *buf        ,
 	// save room for terminating \0
 	m_bufEnd = m_buf + m_bufLen - 1;
 
-	if ( ! highlightWords ( words, matches, q ) ) return 0;
+	if ( ! highlightWords ( words, matches, q ) ) return -1;
 
 	// null terminate
 	*m_bufPtr = '\0';
