@@ -16931,6 +16931,20 @@ char *XmlDoc::getSpiderLinks ( ) {
 		return &m_spiderLinks2;
 	}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return (char *)cr;
+
+	long *ufn = getUrlFilterNum();
+	if ( ! ufn || ufn == (void *)-1 ) return (char *)ufn;
+
+	// if url filters forbids it
+	if ( ! cr->m_harvestLinks[*ufn] ) {
+		m_spiderLinksValid = true;
+		m_spiderLinks2 = false;
+		m_spiderLinks  = false;
+		return &m_spiderLinks2;
+	}
+
 	// check the xml for a meta robots tag
 	Xml *xml = getXml();
 	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
@@ -16957,6 +16971,10 @@ char *XmlDoc::getSpiderLinks ( ) {
 	// they do not want the links crawled i'd imagine.
 	if ( m_oldsrValid && m_oldsr.m_avoidSpiderLinks )
 		m_spiderLinks = false;
+
+
+	// also check in url filters now too
+
 
 	// set shadow member
 	m_spiderLinks2 = m_spiderLinks;
@@ -18552,45 +18570,7 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 	// empty? no pattern matches everything.
 	if ( ! p ) return true;
 	// how many did we have?
-	long count = 0;
-	// scan the " || " separated substrings
-	for ( ; *p ; ) {
-		// get beginning of this string
-		char *start = p;
-		// skip white space
-		while ( *start && is_wspace_a(*start) ) start++;
-		// done?
-		if ( ! *start ) break;
-		// find end of it
-		char *end = start;
-		while ( *end && end[0] != '|' )
-			end++;
-		// advance p for next guy
-		p = end;
-		// should be two |'s
-		if ( *p ) p++;
-		if ( *p ) p++;
-		// temp null this
-		char c = *end;
-		*end = '\0';
-		// count it as an attempt
-		count++;
-		// . is this substring anywhere in the document
-		// . check the rawest content before converting to utf8 i guess
-		char *foundPtr =  strstr ( m_content , start ) ;
-		// debug log statement
-		if ( foundPtr )
-			log("build: page %s matches ppp of \"%s\"",
-			    m_firstUrl.m_url,start);
-		// revert \0
-		*end = c;
-		// did we find it?
-		if ( foundPtr ) return true;
-	}
-	// if we had no attempts, it is ok
-	if ( count == 0 ) return true;
-	// if we had an unfound substring...
-	return false;
+	return doesStringContainPattern ( m_content , p );
 }
 
 // . returns ptr to status

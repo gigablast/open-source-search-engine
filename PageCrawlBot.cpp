@@ -2175,9 +2175,18 @@ static class HelpItem s_his[] = {
 	 "completes."},
 	{"obeyRobots","Obey robots.txt files?"},
 	{"restrictDomain","Restrict downloaded urls to domains of seeds?"},
+
+	{"urlCrawlPattern","List of || separated strings. If the url "
+	 "contains any of these then we crawl the url, otherwise, we do not. "
+	 "An empty pattern matches all urls."},
+
+	{"urlProcessPattern","List of || separated strings. If the url "
+	 "contains any of these then we send url to diffbot for processing. "
+	 "An empty pattern matches all urls."},
+
 	{"pageProcessPattern","List of || separated strings. If the page "
 	 "contains any of these then we send it to diffbot for processing. "
-	 "If this is empty we send all pages to diffbot for processing."},
+	 "An empty pattern matches all pages."},
 
 	{"expression","A pattern to match in a URL. List up to 100 "
 	 "expression/action pairs in the HTTP request. "
@@ -2883,9 +2892,22 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 	sb.safePrintf("\"currentTime\":%lu,\n",
 		      getTimeGlobal() );
 
+
+	sb.safePrintf("\"apiUrl\":\"");
+	sb.safeUtf8ToJSON ( cx->m_diffbotApiUrl.getBufStart() );
+	sb.safePrintf("\",\n");
+
+
+	sb.safePrintf("\"urlCrawlPattern\":\"");
+	sb.safeUtf8ToJSON ( cx->m_diffbotUrlCrawlPattern.getBufStart() );
+	sb.safePrintf("\",\n");
+
+	sb.safePrintf("\"urlProcessPattern\":\"");
+	sb.safeUtf8ToJSON ( cx->m_diffbotUrlProcessPattern.getBufStart() );
+	sb.safePrintf("\",\n");
+
 	sb.safePrintf("\"pageProcessPattern\":\"");
-	sb.safeUtf8ToJSON ( cx->m_diffbotPageProcessPattern.
-			    getBufStart() );
+	sb.safeUtf8ToJSON ( cx->m_diffbotPageProcessPattern.getBufStart() );
 	sb.safePrintf("\",\n");
 
 	char *token = cx->m_diffbotToken.getBufStart();
@@ -3587,11 +3609,29 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			isNewNo  = "";
 		}
 
-		char *px = cr->m_diffbotPageProcessPattern.getBufStart();
-		if ( ! px ) px = "";
-		SafeBuf ppp;
-		ppp.htmlEncode ( px , gbstrlen(px) , true , 0 );
-		ppp.nullTerm();
+		char *api = cr->m_diffbotApiUrl.getBufStart();
+		if ( ! api ) api = "";
+		SafeBuf apiUrl;
+		apiUrl.htmlEncode ( api , gbstrlen(api), true , 0 );
+		apiUrl.nullTerm();
+
+		char *px1 = cr->m_diffbotUrlCrawlPattern.getBufStart();
+		if ( ! px1 ) px1 = "";
+		SafeBuf ppp1;
+		ppp1.htmlEncode ( px1 , gbstrlen(px1) , true , 0 );
+		ppp1.nullTerm();
+
+		char *px2 = cr->m_diffbotUrlProcessPattern.getBufStart();
+		if ( ! px2 ) px2 = "";
+		SafeBuf ppp2;
+		ppp2.htmlEncode ( px2 , gbstrlen(px2) , true , 0 );
+		ppp2.nullTerm();
+
+		char *px3 = cr->m_diffbotPageProcessPattern.getBufStart();
+		if ( ! px3 ) px3 = "";
+		SafeBuf ppp3;
+		ppp3.htmlEncode ( px3 , gbstrlen(px3) , true , 0 );
+		ppp3.nullTerm();
 		
 		char *notifEmail = cr->m_notifyEmail.getBufStart();
 		char *notifUrl   = cr->m_notifyUrl.getBufStart();
@@ -3702,6 +3742,33 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "size=10 value=\"%f\"> "
 			      "<input type=submit name=submit value=OK>"
 			      " days"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Diffbot API Url:</b> "
+			      "</td><td>"
+			      "<input type=text name=apiUrl "
+			      "size=20 value=\"%s\"> "
+			      "<input type=submit name=submit value=OK>"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Url Crawl Pattern:</b> "
+			      "</td><td>"
+			      "<input type=text name=urlCrawlPattern "
+			      "size=20 value=\"%s\"> "
+			      "<input type=submit name=submit value=OK>"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Url Process Pattern:</b> "
+			      "</td><td>"
+			      "<input type=text name=urlProcessPattern "
+			      "size=20 value=\"%s\"> "
+			      "<input type=submit name=submit value=OK>"
 			      "</td>"
 			      "</tr>"
 
@@ -3851,7 +3918,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      , cr->m_collectiveRespiderFrequency
 
-			      , ppp.getBufStart()
+			      , apiUrl.getBufStart()
+			      , ppp1.getBufStart()
+			      , ppp2.getBufStart()
+			      , ppp3.getBufStart()
 
 			      , isNewYes
 			      , isNewNo
@@ -3983,6 +4053,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	// show simpler url filters table
 	//
+	/*
 	if ( fmt == FMT_HTML ) {
 		sb.safePrintf ( "<table>"
 				"<tr><td colspan=2>"
@@ -4014,6 +4085,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		//
 		sb.safePrintf("</form>");
 	}
+	*/
 
 	//
 	// show reset and delete crawl buttons
@@ -4238,6 +4310,9 @@ CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ,
 	*/
 
 	// bring this back
+	cr->m_diffbotApiUrl.set ( "" );
+	cr->m_diffbotUrlCrawlPattern.set ( "" );
+	cr->m_diffbotUrlProcessPattern.set ( "" );
 	cr->m_diffbotPageProcessPattern.set ( "" );
 
 	cr->m_spiderStatus = SP_INITIALIZING;
@@ -4663,6 +4738,16 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket ,
 
 bool resetUrlFilters ( CollectionRec *cr ) {
 
+	char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
+	if ( ucp && ! ucp[0] ) ucp = NULL;
+
+	char *upp = cr->m_diffbotUrlProcessPattern.getBufStart();
+	if ( upp && ! upp[0] ) upp = NULL;
+
+	// what diffbot url to use for processing
+	char *api = cr->m_diffbotApiUrl.getBufStart();
+	if ( api && ! api[0] ) api = NULL;
+
 	// if it was not recrawling and we made it start we have
 	// to repopulate waiting tree because most entries will
 	// need to be re-added!
@@ -4691,6 +4776,7 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 		cr->m_spidersEnabled    [i] = 1;
 		cr->m_spiderFreqs       [i] =cr->m_collectiveRespiderFrequency;
 		cr->m_spiderDiffbotApiUrl[i].purge();
+		cr->m_harvestLinks[i] = true;
 	}
 
 	long i = 0;
@@ -4699,14 +4785,12 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	// 1st default url filter
 	cr->m_regExs[i].set("ismedia && !ismanualadd");
 	cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
-	cr->m_spiderDiffbotApiUrl[i].purge();
 	i++;
 
 	// 2nd default filter
 	if ( cr->m_restrictDomain ) {
 		cr->m_regExs[i].set("!isonsamedomain && !ismanualadd");
 		cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
-		cr->m_spiderDiffbotApiUrl[i].purge();
 		i++;
 	}
 
@@ -4718,7 +4802,6 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 		// just turn off spidering. if we were to set priority to
 		// filtered it would be removed from index!
 		cr->m_spidersEnabled     [i] = 0;
-		cr->m_spiderDiffbotApiUrl[i].purge();
 		i++;
 	}
 	// if collectiverespiderfreq is 0 or less then do not RE-spider
@@ -4732,7 +4815,6 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 		// just turn off spidering. if we were to set priority to
 		// filtered it would be removed from index!
 		cr->m_spidersEnabled     [i] = 0;
-		cr->m_spiderDiffbotApiUrl[i].purge();
 		i++;
 	}
 
@@ -4740,22 +4822,41 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	cr->m_regExs[i].set("errorcount>0 && errcount<3");
 	cr->m_spiderPriorities   [i] = 40;
 	cr->m_spiderFreqs        [i] = 0.2; // half a day
-	cr->m_spiderDiffbotApiUrl[i].purge();
 	i++;
 
 	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
 	cr->m_regExs[i].set("errorcount>=3");
 	cr->m_spiderPriorities   [i] = 30;
 	cr->m_spiderFreqs        [i] = 30; // 30 days
-	cr->m_spiderDiffbotApiUrl[i].purge();
 	i++;
 
+	// url crawl and process pattern
+	if ( ucp && upp ) {
+		cr->m_regExs[i].set("matchesucp && matchesupp");
+		cr->m_spiderPriorities   [i] = 55;
+		cr->m_spiderDiffbotApiUrl[i].set ( api );
+		i++;
+	}
 
-	// 3rd default filter. BUT if they specified filters this will
-	// be deleted and re-added to the bottom
+	// harvest links if we should crawl it
+	if ( ucp ) {
+		cr->m_regExs[i].set("matchesucp");
+		cr->m_spiderPriorities   [i] = 54;
+		i++;
+	}
+
+	// just process
+	if ( upp ) {
+		cr->m_regExs[i].set("matchesupp");
+		cr->m_spiderPriorities   [i] = 53;
+		cr->m_harvestLinks       [i] = false;
+		cr->m_spiderDiffbotApiUrl[i].set ( api );
+		i++;
+	}
+
 	cr->m_regExs[i].set("default");
 	cr->m_spiderPriorities   [i] = 50;
-	cr->m_spiderDiffbotApiUrl[i].purge();
+	cr->m_spiderDiffbotApiUrl[i].set ( api );
 	i++;
 	
 
@@ -4766,6 +4867,7 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	cr->m_numRegExs5  = i;
 	cr->m_numRegExs6  = i;
 	cr->m_numRegExs7  = i;
+	cr->m_numRegExs8  = i;
 	cr->m_numRegExs11 = i;
 
 	return true;
@@ -4843,9 +4945,25 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_restrictDomain = restrictDomain;
 		cr->m_needsSave = 1;
 	}
-	char *ppp = hr->getString("pageProcessPattern",NULL);
-	if ( ppp ) {
-		cr->m_diffbotPageProcessPattern.set(ppp);
+
+	char *api = hr->getString("apiUrl",NULL);
+	if ( api ) {
+		cr->m_diffbotApiUrl.set(api);
+		cr->m_needsSave = 1;
+	}
+	char *ppp1 = hr->getString("urlCrawlPattern",NULL);
+	if ( ppp1 ) {
+		cr->m_diffbotUrlCrawlPattern.set(ppp1);
+		cr->m_needsSave = 1;
+	}
+	char *ppp2 = hr->getString("urlProcessPattern",NULL);
+	if ( ppp2 ) {
+		cr->m_diffbotUrlProcessPattern.set(ppp2);
+		cr->m_needsSave = 1;
+	}
+	char *ppp3 = hr->getString("pageProcessPattern",NULL);
+	if ( ppp3 ) {
+		cr->m_diffbotPageProcessPattern.set(ppp3);
 		cr->m_needsSave = 1;
 	}
 	float respider = hr->getFloat("repeatJob",-1.0);
@@ -4900,12 +5018,14 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 
 
 	// were any url filteres specified? if not, don't reset them
-	if ( ! hr->hasField("action") )
-		return true;
+	//if ( ! hr->hasField("action") )
+	//	return true;
 
 	// reset the url filters here to the default set.
 	// we will append the client's filters below them below.
 	resetUrlFilters ( cr );
+
+	return true;
 
 	// "urlFilters": [
 	// {

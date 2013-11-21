@@ -435,8 +435,19 @@ class CollectionRec {
 	//SafeBuf m_diffbotApiList;//QueryString;
 	//SafeBuf m_diffbotUrlCrawlPattern;
 	//SafeBuf m_diffbotUrlProcessPattern;
+
+	// use for all now...
+	SafeBuf m_diffbotApiUrl;
+
+	// only process pages whose content matches this pattern
 	SafeBuf m_diffbotPageProcessPattern;
+	// only process urls that match this pattern
+	SafeBuf m_diffbotUrlProcessPattern;
+	// only CRAWL urls that match this pattern
+	SafeBuf m_diffbotUrlCrawlPattern;
+
 	char    m_diffbotOnlyProcessIfNew;
+
 	//SafeBuf m_diffbotClassify;
 	//char m_diffbotClassify;
 	//char m_useDiffbot;
@@ -517,6 +528,9 @@ class CollectionRec {
 
 	long      m_numRegExs11;
 	SafeBuf   m_spiderDiffbotApiUrl [ MAX_FILTERS ];
+
+	long      m_numRegExs8;
+	char      m_harvestLinks     [ MAX_FILTERS ];
 
 	// dummy?
 	long      m_numRegExs9;

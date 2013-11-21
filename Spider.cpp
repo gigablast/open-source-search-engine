@@ -3356,11 +3356,12 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// note it
 		if ( g_conf.m_logDebugSpider )
 			log("spider: made best_req ip=%s spiderTimeMS=%lli "
-			    "pri=%li uh48=%lli",
+			    "pri=%li uh48=%lli url=%s",
 			    iptoa(m_bestRequest->m_firstIp),
 			    m_bestSpiderTimeMS,
 			    (long)m_bestRequest->m_priority,
-			    m_bestRequest->getUrlHash48());
+			    m_bestRequest->getUrlHash48(),
+			    m_bestRequest->m_url);
 	}
 
 	// are we the final list in the scan?
@@ -4934,7 +4935,9 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// if there and confirmed, why still in doledb?
 	if ( lock && lock->m_confirmed ) {
 		// why is it not getting unlocked!?!?!
-		log("spider: spider request locked but still in doledb.");
+		log("spider: spider request locked but still in doledb. "
+		    "uh48=%lli firstip=%s %s",
+		    sreq->getUrlHash48(), iptoa(sreq->m_firstIp),sreq->m_url );
 		// just increment then i guess
 		m_list.skipCurrentRecord();
 		// let's return false here to avoid an infinite loop
@@ -6248,7 +6251,8 @@ bool Msg12::confirmLockAcquisition ( ) {
 	m_numReplies  = 0;
 	// note it
 	if ( g_conf.m_logDebugSpider )
-		log("spider: confirming lock for uh48=%llu",m_lockKeyUh48);
+		log("spider: confirming lock for uh48=%llu firstip=%s",
+		    m_lockKeyUh48,iptoa(m_firstIp));
 	// loop over hosts in that shard
 	for ( long i = 0 ; i < hpg ; i++ ) {
 		// get a host
@@ -8499,6 +8503,10 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 	//if ( bad ) 
 	//	log("hey");
 
+	// shortcut
+	char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
+	char *upp = cr->m_diffbotUrlProcessPattern.getBufStart();
+
 	char *ext;
 	char *special;
 
@@ -8530,6 +8538,55 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		if ( *p == '!' ) { val = 1; p++; }
 		// skip whitespace after the '!'
 		while ( *p && isspace(*p) ) p++;
+
+		// new rules for when to download (diffbot) page
+		if ( *p ==  'm' && 
+		     p[1]== 'a' &&
+		     p[2]== 't' &&
+		     p[3]== 'c' &&
+		     p[4]== 'h' &&
+		     p[5]== 'e' &&
+		     p[6]== 's' &&
+		     p[7]== 'u' &&
+		     p[8]== 'c' &&
+		     p[9]== 'p' ) {
+			// . skip this expression row if does not match
+			// . url must match one of the patterns in there. 
+			// . inline this for speed
+			// . "ucp" is a ||-separated list of substrings
+			if ( ucp && ! doesStringContainPattern ( url,ucp) ) 
+				continue;
+			p += 10;
+			p = strstr(p,"&&");
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
+		// new rules for when to "process" (diffbot) page
+		if ( *p ==  'm' && 
+		     p[1]== 'a' &&
+		     p[2]== 't' &&
+		     p[3]== 'c' &&
+		     p[4]== 'h' &&
+		     p[5]== 'e' &&
+		     p[6]== 's' &&
+		     p[7]== 'u' &&
+		     p[8]== 'p' &&
+		     p[9]== 'p' ) {
+			// . skip this expression row if does not match
+			// . url must match one of the patterns in there. 
+			// . inline this for speed
+			// . "upp" is a ||-separated list of substrings
+			if ( upp && ! doesStringContainPattern ( url,upp) ) 
+				continue;
+			p += 10;
+			p = strstr(p,"&&");
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
 
 		if ( *p=='h' && strncmp(p,"hasauthorityinlink",18) == 0 ) {
 			// skip for msg20
@@ -10414,3 +10471,50 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 	*status = SP_INPROGRESS;
 	return msg->safePrintf("Job is in progress.");
 }
+
+// pattern is a ||-separted list of substrings
+bool doesStringContainPattern ( char *content , char *pattern ) {
+
+	char *p = pattern;
+
+	long count = 0;
+	// scan the " || " separated substrings
+	for ( ; *p ; ) {
+		// get beginning of this string
+		char *start = p;
+		// skip white space
+		while ( *start && is_wspace_a(*start) ) start++;
+		// done?
+		if ( ! *start ) break;
+		// find end of it
+		char *end = start;
+		while ( *end && end[0] != '|' )
+			end++;
+		// advance p for next guy
+		p = end;
+		// should be two |'s
+		if ( *p ) p++;
+		if ( *p ) p++;
+		// temp null this
+		char c = *end;
+		*end = '\0';
+		// count it as an attempt
+		count++;
+		// . is this substring anywhere in the document
+		// . check the rawest content before converting to utf8 i guess
+		char *foundPtr =  strstr ( content , start ) ;
+		// debug log statement
+		//if ( foundPtr )
+		//	log("build: page %s matches ppp of \"%s\"",
+		//	    m_firstUrl.m_url,start);
+		// revert \0
+		*end = c;
+		// did we find it?
+		if ( foundPtr ) return true;
+	}
+	// if we had no attempts, it is ok
+	if ( count == 0 ) return true;
+	// if we had an unfound substring...
+	return false;
+}
+

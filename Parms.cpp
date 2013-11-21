@@ -1911,15 +1911,15 @@ bool Parms::printParm ( SafeBuf* sb,
 	// . if printing on crawlbot page hide these
 	// . we repeat this logic below when printing parm titles
 	//   for the column headers in the table
-	char *vt = "";
-	if ( isCrawlbot &&
-	     m->m_page == PAGE_FILTERS &&
-	     (strcmp(m->m_xml,"spidersEnabled") == 0 ||
-	      //strcmp(m->m_xml,"maxSpidersPerRule")==0||
-	      //strcmp(m->m_xml,"maxSpidersPerIp") == 0||
-	      strcmp(m->m_xml,"spiderIpWait") == 0 
-	      ) )
-		vt = " style=display:none;";
+	//char *vt = "";
+	//if ( isCrawlbot &&
+	//     m->m_page == PAGE_FILTERS &&
+	//     (strcmp(m->m_xml,"spidersEnabled") == 0 ||
+	//      //strcmp(m->m_xml,"maxSpidersPerRule")==0||
+	//      //strcmp(m->m_xml,"maxSpidersPerIp") == 0||
+	//      strcmp(m->m_xml,"spiderIpWait") == 0 
+	//      ) )
+	//	vt = " style=display:none;";
 
 	// what type of parameter?
 	char t = m->m_type;
@@ -1992,15 +1992,16 @@ bool Parms::printParm ( SafeBuf* sb,
 			if ( isJSON ) continue;
 			// . hide table column headers that are too advanced
 			// . we repeat this logic above for the actual parms
-			char *vt = "";
-			if ( isCrawlbot &&
-			     m->m_page == PAGE_FILTERS &&
-			     (strcmp(mk->m_xml,"spidersEnabled") == 0 ||
-			      //strcmp(mk->m_xml,"maxSpidersPerRule")==0||
-			      //strcmp(mk->m_xml,"maxSpidersPerIp") == 0||
-			      strcmp(mk->m_xml,"spiderIpWait") == 0 ) )
-				vt = " style=display:none;display:none;";
-			sb->safePrintf ( "<td%s>" , vt );
+			//char *vt = "";
+			//if ( isCrawlbot &&
+			//     m->m_page == PAGE_FILTERS &&
+			//     (strcmp(mk->m_xml,"spidersEnabled") == 0 ||
+			//      //strcmp(mk->m_xml,"maxSpidersPerRule")==0||
+			//      //strcmp(mk->m_xml,"maxSpidersPerIp") == 0||
+			//      strcmp(mk->m_xml,"spiderIpWait") == 0 ) )
+			//	vt = " style=display:none;display:none;";
+			//sb->safePrintf ( "<td%s>" , vt );
+			sb->safePrintf ( "<td>" );
 			// if its of type checkbox in a table make it
 			// toggle them all on/off
 			if ( mk->m_type == TYPE_CHECKBOX &&
@@ -2092,7 +2093,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		else if ( firstInRow ) 
 			sb->safePrintf ( "<tr><td>" );
 		else    
-			sb->safePrintf ( "<td%s>" , vt);
+			//sb->safePrintf ( "<td%s>" , vt);
+			sb->safePrintf ( "<td>" );
 	}
 
 	long cast = m->m_cast;
@@ -12873,6 +12875,17 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1; // if we START a new row
 	m->m_def   = "";
+	m++;
+
+	m->m_title = "harvest links";
+	m->m_cgi   = "hspl";
+	m->m_xml   = "harvestLinks";
+	m->m_max   = MAX_FILTERS;
+	m->m_off   = (char *)cr.m_harvestLinks - x;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "1";
+	m->m_page  = PAGE_FILTERS;
+	m->m_rowid = 1;
 	m++;
 
 	m->m_title = "spidering enabled";
