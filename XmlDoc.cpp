@@ -12740,6 +12740,21 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
 	}
 
+	// . verify that it contains legit json and has the last field
+	//   b/c we saw a case where the diffbot reply was truncated
+	//   somehow
+	// . check to make sure it has the "url": field as all diffbot
+	//   json replies must
+	if ( ! THIS->m_diffbotReplyError ) {
+		char *ttt = strstr ( page , "\"url\":\"");
+		if ( ! ttt ) {
+			log("xmldoc: diffbot reply for %s using %s missing url: field",
+			    THIS->m_firstUrl.m_url,THIS->m_diffbotApiUrl.getBufStart());
+			THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
+		}
+	}
+
+
 	// reply is now valid but might be empty
 	THIS->m_diffbotReplyValid = true;
 
@@ -12781,8 +12796,16 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		// convert the \u1f23 to utf8 (\n and \r as well)
 		THIS->m_diffbotReply.safeDecodeJSONToUtf8 ( page , pageLen ,
 							    THIS->m_niceness );
+		// convert embedded \0 to space
+		//char *p = THIS->m_diffbotReply.getBufStart();
+		//char *pend = p + THIS->m_diffbotReply.getLength();
 		// tack on a \0 but don't increment m_length
 		THIS->m_diffbotReply.nullTerm();
+
+		// any embedded \0's in the utf8?
+		long testLen1 = THIS->m_diffbotReply.length();
+		long testLen2 = gbstrlen(THIS->m_diffbotReply.getBufStart());
+		if ( testLen1 != testLen2 ) { char *xx=NULL;*xx=0; }
 		// convert the \u1f23 to utf8 (\n and \r as well)
 		//THIS->m_diffbotReply.decodeJSONToUtf8 ( THIS->m_niceness );
 		//THIS->m_diffbotReply.nullTerm();
@@ -29745,6 +29768,18 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 
 	// close the table
 	sb->safePrintf ( "</table></center><br>\n" );
+
+	//
+	// JSON from diffbot
+	//
+	SafeBuf *dbr = getDiffbotReply();
+	if ( dbr->length() ) {
+		sb->safePrintf("<b>START PARTIALLY-DECODED DIFFBOT REPLY</b><br>\n");
+		sb->safePrintf("<pre>");
+		sb->safeMemcpy ( dbr );
+		sb->safePrintf("</pre>");
+		sb->safePrintf("<b>END DIFFBOT REPLY</b><br><br>\n");
+	}	
 
 	//
 	// PRINT ADDRESSES (prints streets first)
