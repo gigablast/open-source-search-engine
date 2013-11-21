@@ -162,6 +162,11 @@ bool PostQueryRerank::set2 ( long resultsWanted ) {
 	m_pageUrl = (Url *)mcalloc( sizeof(Url)*m_maxResultsToRerank,
 				    "pqrpageUrls" );
 
+	if ( ! m_pageUrl ) {
+		log("pqr: had out of memory error");
+		return false;
+	}
+
 	return true;
 }
 

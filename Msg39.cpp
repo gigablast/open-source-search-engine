@@ -13,7 +13,8 @@ static void  sendReply         ( UdpSlot *slot         ,
 				 Msg39   *msg39        ,
 				 char    *reply        ,
 				 long     replySize    ,
-				 long     replyMaxSize );
+				 long     replyMaxSize ,
+				 bool     hadError     );
 // called when Msg2 has got all the termlists
 static void  gotListsWrapper   ( void *state ) ;
 // thread wrappers
@@ -66,7 +67,7 @@ void handleRequest39 ( UdpSlot *slot , long netnice ) {
 	catch ( ... ) {
 		g_errno = ENOMEM;
 		log("msg39: new(%i): %s", sizeof(Msg39),mstrerror(g_errno));
-		sendReply ( slot , NULL , NULL , 0 , 0 );
+		sendReply ( slot , NULL , NULL , 0 , 0 ,true);
 		return;
 	}
 	mnew ( THIS , sizeof(Msg39) , "Msg39" );
@@ -79,11 +80,14 @@ void handleRequest39 ( UdpSlot *slot , long netnice ) {
 
 // this must always be called sometime AFTER handleRequest() is called
 void sendReply ( UdpSlot *slot , Msg39 *msg39 , char *reply , long replyLen ,
-		 long replyMaxSize ) {
+		 long replyMaxSize , bool hadError ) {
 	// debug msg
 	if ( g_conf.m_logDebugQuery || (msg39&&msg39->m_debug) ) 
 		logf(LOG_DEBUG,"query: msg39: [%lu] Sending reply len=%li.",
 		     (long)msg39,replyLen);
+
+	// sanity
+	if ( hadError && ! g_errno ) { char *xx=NULL;*xx=0; }
 
 	// no longer in use. msg39 will be NULL if ENOMEM or something
 	if ( msg39 ) msg39->m_inUse = false;
@@ -140,7 +144,7 @@ void Msg39::getDocIds ( UdpSlot *slot ) {
 		g_errno = EBADREQUESTSIZE; 
 		log(LOG_LOGIC,"query: msg39: getDocIds: %s." , 
 		    mstrerror(g_errno) );
-		sendReply ( m_slot , this , NULL , 0 , 0 );
+		sendReply ( m_slot , this , NULL , 0 , 0 , true );
 		return ; 
 	}
 
@@ -176,7 +180,7 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 		g_errno = ENOCOLLREC;
 		log(LOG_LOGIC,"query: msg39: getDocIds: %s." , 
 		    mstrerror(g_errno) );
-		sendReply ( m_slot , this , NULL , 0 , 0 );
+		sendReply ( m_slot , this , NULL , 0 , 0 , true );
 		return ; 
 	}
 
@@ -185,7 +189,7 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 		g_errno = ENOCOLLREC;
 		log(LOG_LOGIC,"query: msg39: getDocIds: %s." , 
 		    mstrerror(g_errno) );
-		sendReply ( m_slot , this , NULL , 0 , 0 );
+		sendReply ( m_slot , this , NULL , 0 , 0 , true );
 		return ; 
 	}
 
@@ -199,7 +203,7 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 			     m_r->m_useQueryStopWords ) ) {
 		log(LOG_LOGIC,"query: msg39: setQuery: %s." , 
 		    mstrerror(g_errno) );
-		sendReply ( m_slot , this , NULL , 0 , 0 );
+		sendReply ( m_slot , this , NULL , 0 , 0 , true );
 		return ; 
 	}
 
@@ -217,7 +221,7 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 		    ,m_tmpq.m_orig
 		    ,(long)m_r->m_language
 		    );
-		sendReply ( m_slot , this , NULL , 0 , 0 );
+		sendReply ( m_slot , this , NULL , 0 , 0 , true );
 		return ; 
 	}
 	// debug
@@ -286,7 +290,7 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 	if ( g_errno ) {
 		log(LOG_LOGIC,"query: msg39: doDocIdSplitLoop: %s." , 
 		    mstrerror(g_errno) );
-		sendReply ( m_slot , this , NULL , 0 , 0 );
+		sendReply ( m_slot , this , NULL , 0 , 0 , true );
 		return ; 
 	}
 	// it might not have blocked! if all lists in tree and used no thread
@@ -327,11 +331,13 @@ bool Msg39::doDocIdSplitLoop ( ) {
 		if ( d0 >= d1 ) break;
 		// use this
 		//m_debug = true;
+		//log("call1");
 		// . get the lists
 		// . i think this always should block!
 		// . it will also intersect the termlists to get the search
 		//   results and accumulate the winners into the "tree"
 		if ( ! getLists() ) return false;
+		//log("call2 g_errno=%li",(long)g_errno);
 		// if there was an error, stop!
 		if ( g_errno ) break;
 	}
@@ -339,7 +345,7 @@ bool Msg39::doDocIdSplitLoop ( ) {
 	// return error reply if we had an error
 	if ( g_errno ) {
 		log("msg39: Had error3: %s.", mstrerror(g_errno));
-		sendReply (m_slot,this,NULL,0,0);
+		sendReply (m_slot,this,NULL,0,0 , true);
 		return true; 
 	}
 
@@ -625,6 +631,16 @@ bool Msg39::getLists () {
 		m_blocked = true;
 		return false;
 	}
+
+	// error?
+	if ( g_errno ) { 
+		log("msg39: Had error getting termlists2: %s.",
+		    mstrerror(g_errno));
+		// don't bail out here because we are in docIdSplitLoop()
+		//sendReply (m_slot,this,NULL,0,0,true);
+		return true; 
+	}
+	
 	return gotLists ( true );
 }
 
@@ -632,7 +648,16 @@ void gotListsWrapper ( void *state ) {
 	Msg39 *THIS = (Msg39 *) state;
 	// . hash the lists into our index table
 	// . this will send back a reply or recycle and read more list data
-	THIS->gotLists ( true );
+	if ( ! THIS->gotLists ( true ) ) return;
+
+	// . if he did not block and there was an errno we send reply
+	//   otherwise if there was NO error he will have sent the reply
+	// . if gotLists() was called in the ABOVE function and it returns
+	//   true then the docIdLoop() function will send back the reply.
+	if ( g_errno ) {
+		log("msg39: sending back error reply = %s",mstrerror(g_errno));
+		sendReply ( THIS->m_slot , THIS , NULL , 0 , 0 ,true);
+	}
 }
 
 // . now come here when we got the necessary index lists
@@ -643,7 +668,8 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	if ( g_errno ) { 
 		log("msg39: Had error getting termlists: %s.",
 		    mstrerror(g_errno));
-		sendReply (m_slot,this,NULL,0,0);
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		//sendReply (m_slot,this,NULL,0,0,true);
 		return true; 
 	}
 	// timestamp log
@@ -683,7 +709,8 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	// . actually we were using it before for rat=0/bool queries but
 	//   i got rid of NO_RAT_SLOTS
 	if ( ! m_allocedTree && ! m_posdbTable.allocTopTree() ) {
-		sendReply ( m_slot , this , NULL , 0 , 0 );
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		//sendReply ( m_slot , this , NULL , 0 , 0 , true);
 		return true;
 	}
 
@@ -692,7 +719,8 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	if ( ! m_posdbTable.allocWhiteListTable() ) {
 		log("msg39: Had error allocating white list table: %s.",
 		    mstrerror(g_errno));
-		sendReply (m_slot,this,NULL,0,0);
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		//sendReply (m_slot,this,NULL,0,0,true);
 		return true; 
 	}
 
@@ -705,7 +733,6 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	// . we have to re-set the QueryTermInfos with each docid range split
 	//   since it will set the list ptrs from the msg2 lists
 	if ( m_r->m_useNewAlgo && ! m_posdbTable.setQueryTermInfo () ) {
-		sendReply ( m_slot , this , NULL , 0 , 0 );
 		return true;
 	}
 
@@ -858,7 +885,7 @@ bool Msg39::addedLists ( ) {
 		m_posdbTable.freeMem();
 		g_errno = m_posdbTable.m_errno;
 		log("query: posdbtable had error = %s",mstrerror(g_errno));
-		sendReply ( m_slot , this , NULL , 0 , 0 );
+		sendReply ( m_slot , this , NULL , 0 , 0 ,true);
 		return true;
 	}
 
@@ -901,7 +928,7 @@ bool Msg39::setClusterRecs ( ) {
 	// on error, return true, g_errno should be set
 	if ( ! m_buf ) { 
 		log("query: msg39: Failed to alloc buf for clustering.");
-		sendReply(m_slot,this,NULL,0,0);
+		sendReply(m_slot,this,NULL,0,0,true);
 		return true; 
 	}
 
@@ -983,7 +1010,7 @@ void Msg39::gotClusterRecs ( ) {
 				  m_clusterLevels    )) {
 		m_errno = g_errno;
 		// send back an error reply
-		sendReply ( m_slot , this , NULL , 0 , 0 );
+		sendReply ( m_slot , this , NULL , 0 , 0 ,true);
 		return;
 	}
 
@@ -1148,7 +1175,7 @@ void Msg39::estimateHits ( ) {
 		if ( ! reply ) {
 			log("query: Could not allocated memory "
 			    "to hold reply of docids to send back.");
-			sendReply(m_slot,this,NULL,0,0);
+			sendReply(m_slot,this,NULL,0,0,true);
 			return ; 
 		}
 		topDocIds    = (long long *) mr.ptr_docIds;
@@ -1235,6 +1262,6 @@ void Msg39::estimateHits ( ) {
 	}
 
 	// now send back the reply
-	sendReply(m_slot,this,reply,replySize,replySize);
+	sendReply(m_slot,this,reply,replySize,replySize,false);
 	return;
 }

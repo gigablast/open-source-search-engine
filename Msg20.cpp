@@ -224,6 +224,7 @@ bool Msg20::getSummary ( Msg20Request *req ) {
 			      hostdb            )) {
 		// sendto() sometimes returns "Network is down" so i guess
 		// we just had an "error reply".
+		log("msg20: error sending mcast %s",mstrerror(g_errno));
 		m_gotReply = true;
 		return true;
 	}

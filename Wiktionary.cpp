@@ -22,6 +22,8 @@ Wiktionary::Wiktionary () {
 	// . now m_langTable just maps to langId, no POS bits...
 	//m_langTable.set ( 6 , 1,0,NULL,0,false,0 ,"wkt-lang"); 
 	m_synTable.set  ( 6 , 4,0,NULL,0,true,0 ,"wkt-synt"); 
+
+	m_synBuf.setLabel("synbuf");
 }
 
 void Wiktionary::reset() {

@@ -106,6 +106,7 @@ char *getFirstJSONObject ( char *p ,
 char *getJSONObjectEnd ( char *p , long niceness ) ;
 
 XmlDoc::XmlDoc() { 
+	m_esbuf.setLabel("exputfbuf");
 	for ( long i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
 	m_freed = false;
 	m_contentInjected = false;
@@ -16945,6 +16946,14 @@ char *XmlDoc::getSpiderLinks ( ) {
 		return &m_spiderLinks2;
 	}
 
+	// hack for bulk job detection. never spider links
+	//if ( cr->m_isCustomCrawl == 2 ) {
+	//	m_spiderLinks  = false;
+	//	m_spiderLinks2 = false;
+	//	m_spiderLinksValid = true;
+	//	return &m_spiderLinks2;
+	//}
+
 	// check the xml for a meta robots tag
 	Xml *xml = getXml();
 	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
@@ -17499,6 +17508,12 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("urlinjected=1 ");
 	else
 		sb.safePrintf("urlinjected=0 ");
+
+	if ( m_spiderLinksValid && m_spiderLinks )
+		sb.safePrintf("spiderlinks=1 ");
+	if ( m_spiderLinksValid && ! m_spiderLinks )
+		sb.safePrintf("spiderlinks=0 ");
+
 
 	if ( m_crawlDelayValid && m_crawlDelay != -1 )
 		sb.safePrintf("crawldelayms=%li ",(long)m_crawlDelay);
@@ -21505,6 +21520,10 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	Links *links = getLinks();
 	if ( ! links || links == (Links *)-1 ) return (char *)links;
 
+	char *spiderLinks = getSpiderLinks();
+	if ( ! spiderLinks || spiderLinks == (char *)-1 ) 
+		return (char *)spiderLinks;
+
 	TagRec ***grv = getOutlinkTagRecVector();
 	if ( ! grv || grv == (void *)-1 ) return (char *)grv;
 	//char    **iiv = getOutlinkIsIndexedVector();
@@ -21660,6 +21679,12 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	xml->getMetaContent ( mbuf, 16 , tag , tlen );
 	bool avoid = false;
 	if ( mbuf[0] == '0' ) avoid = true;
+
+	// if this is a simplified redir and we should not be spidering
+	// links then turn it off as well! because we now add simplified
+	// redirects back into spiderdb using this function.
+	if ( m_spiderLinksValid && ! m_spiderLinks )
+		avoid = true;
 
 	// it also has this meta tag now too
 	mbuf[0] = '\0';
@@ -25843,10 +25868,16 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		//long sumLen = m_finalSummaryBuf.length();
 		// is it size and not length?
 		long sumLen = 0;
+		// seems like it can return 0x01 if none...
+		//if ( sum == (char *)0x01 ) sum = NULL;
+		// get len
 		if ( sum ) sumLen = gbstrlen(sum);
-		// strange...
+		// must be \0 terminated
 		if ( sumLen > 0 && sum[sumLen] ) { char *xx=NULL;*xx=0; }
-		long sumSize = sumLen + 1;
+		// assume size is 0
+		long sumSize = 0;
+		// include the \0 in size
+		if ( sum ) sumSize = sumLen + 1;
 		// do not get any more than "me" lines/excerpts of summary
 		//long max = m_req->m_numSummaryLines;
 		// grab stuff from it!
@@ -26741,6 +26772,7 @@ Matches *XmlDoc::getMatches () {
 	if ( ! phrases || phrases == (void *)-1 ) return (Matches *)phrases;
 
 	Query *q = getQuery();
+	if ( ! q ) return (Matches *)q;
 
 	// set it up
 	m_matches.setQuery ( q );
@@ -26834,6 +26866,7 @@ Title *XmlDoc::getTitle ( ) {
 	Pos *pos = getPos();
 	if ( ! pos || pos == (Pos *)-1 ) return (Title *)pos;
 	Query *q = getQuery();
+	if ( ! q ) return (Title *)q;
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 	long titleMaxLen = cr->m_titleMaxLen;
@@ -26881,6 +26914,7 @@ Summary *XmlDoc::getSummary () {
 	Title *ti = getTitle();
 	if ( ! ti || ti == (Title *)-1 ) return (Summary *)ti;
 	Query *q = getQuery();
+	if ( ! q ) return (Summary *)q;
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 	
@@ -26936,28 +26970,30 @@ Summary *XmlDoc::getSummary () {
 char *XmlDoc::getHighlightedSummary ( ) {
 
 	if ( m_finalSummaryBufValid ) {
-		char *fsum = m_finalSummaryBuf.getBufStart();
-		if ( ! fsum ) fsum = (char *)0x01;
-		return fsum;
+		//char *fsum = m_finalSummaryBuf.getBufStart();
+		//if ( ! fsum ) fsum = (char *)0x01;
+		return m_finalSummaryBuf.getBufStart();
 	}
 
 	Summary *s = getSummary();
 	if ( ! s || s == (void *)-1 ) return (char *)s;
+
+	Query *q = getQuery();
+	if ( ! q ) return (char *)q;
 
 	// get the summary
 	char *sum    = s->getSummary();
 	long  sumLen = s->getSummaryLen();
 
 	// assume no highlighting?
-	if ( ! m_req->m_highlightQueryTerms ) {
+	if ( ! m_req->m_highlightQueryTerms || sumLen == 0 ) {
 		m_finalSummaryBuf.safeMemcpy ( sum , sumLen + 1 );
 		m_finalSummaryBufValid = true;
-		char *fsum = m_finalSummaryBuf.getBufStart();
-		if ( ! fsum ) fsum = (char *)0x01;
-		return fsum;
+		return m_finalSummaryBuf.getBufStart();
+		//char *fsum = m_finalSummaryBuf.getBufStart();
+		//if ( ! fsum ) fsum = (char *)0x01;
+		//return fsum;
 	}
-
-	Query *q = getQuery();
 
 	if ( ! m_langIdValid ) { char *xx=NULL;*xx=0; }
 
@@ -26965,7 +27001,7 @@ char *XmlDoc::getHighlightedSummary ( ) {
 	Highlight hi;
 	SafeBuf hb;
 	// highlight the query in it
-	hi.set ( &hb,
+	long hlen = hi.set ( &hb,
 			     //tt , 
 			     //4999 ,
 			     sum, 
@@ -26980,14 +27016,23 @@ char *XmlDoc::getHighlightedSummary ( ) {
 			     0,
 			     m_niceness );
 
+	// highlight::set() returns 0 on error
+	if ( hlen < 0 ) {
+		log("build: highlight class error = %s",mstrerror(g_errno));
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		return NULL;
+	}
+
 	// store into our safebuf then
 	m_finalSummaryBuf.safeMemcpy ( &hb );//tt , hlen + 1 );
 	m_finalSummaryBufValid = true;
 	m_finalSummaryBuf.nullTerm();
 
-	char *fsum = m_finalSummaryBuf.getBufStart();
-	if ( ! fsum ) fsum = (char *)0x01;
-	return fsum;
+	return m_finalSummaryBuf.getBufStart();
+
+	//char *fsum = m_finalSummaryBuf.getBufStart();
+	//if ( ! fsum ) fsum = (char *)0x01;
+	//return fsum;
 }
 
 

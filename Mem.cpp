@@ -462,6 +462,10 @@ bool Mem::init  ( long long maxMem ) {
 // this is called by C++ classes' constructors to register mem
 void Mem::addMem ( void *mem , long size , const char *note , char isnew ) {
 
+	// enforce safebuf::setLabel being called
+	//if ( size>=100000 && note && strcmp(note,"SafeBuf")==0 ) {
+	//	char *xx=NULL;*xx=0; }
+
 	//validate();
 
 	// sanity check
