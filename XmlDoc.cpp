@@ -24907,7 +24907,7 @@ char *XmlDoc::getHighlightedSummary ( ) {
 			     m_niceness );
 
 	// highlight::set() returns 0 on error
-	if ( hlen == 0 ) {
+	if ( hlen == -1 ) {
 		log("build: highlight class error = %s",mstrerror(g_errno));
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return NULL;
