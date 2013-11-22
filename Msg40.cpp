@@ -1781,7 +1781,11 @@ bool Msg40::gotSummary ( ) {
 	//Query *q = m_si->m_q;
 	// english? TEST!
 	unsigned char lang = m_si->m_queryLang;
-	if ( lang == 0 ) { char *xx=NULL;*xx=0; }
+	// just print warning i guess
+	if ( lang == 0 ) { 
+		log("query: queryLang is 0 for q=%s",q->m_orig);
+		//char *xx=NULL;*xx=0; }
+	}
 	// we gotta use query TERMS not words, because the query may be
 	// 'cd rom' and the phrase term will be 'cdrom' which is a good one
 	// to use for gigabits! plus we got synonyms now!
