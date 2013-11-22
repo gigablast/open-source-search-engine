@@ -4806,6 +4806,8 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 	if ( ! nameTable.set ( 8,4,2048,nbuf,27000,false,0,"ntbuf") )
 		return false;
 
+	long niceness = 0;
+
 	// . scan every fucking json item in the search results.
 	// . we still need to deal with the case when there are so many
 	//   search results we have to dump each msg20 reply to disk in
@@ -4824,7 +4826,7 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 
 		// parse it up
 		Json jp;
-		jp.parseJsonStringIntoJsonItems ( json );
+		jp.parseJsonStringIntoJsonItems ( json , niceness );
 
 		// scan each json item
 		for ( JsonItem *ji = jp.getFirstItem(); ji ; ji = ji->m_next ){
@@ -4913,9 +4915,11 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 // returns false and sets g_errno on error
 bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 
+	long niceness = 0;
+
 	// parse the json
 	Json jp;
-	jp.parseJsonStringIntoJsonItems ( json );
+	jp.parseJsonStringIntoJsonItems ( json , niceness );
 
 	HashTableX *columnTable = &st->m_columnTable;
 	long numCSVColumns = st->m_numCSVColumns;

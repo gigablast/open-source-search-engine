@@ -2535,8 +2535,7 @@ bool SafeBuf::decodeJSON ( long niceness ) {
 //   decode quotation marks as well then set decodeAll to TRUE!
 bool SafeBuf::safeDecodeJSONToUtf8 ( char *json, 
 				     long jsonLen, 
-				     long niceness,
-				     bool decodeAll ) {
+				     long niceness ) {
 
 	// how much space to reserve for the copy?
 	long need = jsonLen;
@@ -2602,7 +2601,7 @@ bool SafeBuf::safeDecodeJSONToUtf8 ( char *json,
 			// the doc so we can preserve json names/value pair
 			// information for indexing purposes. however,
 			// Title.cpp DOES want to decode quotations.
-			if ( src[1] == '\"' && decodeAll ) {
+			if ( src[1] == '\"' ) { // && decodeAll ) {
 				*dst++ = '\"';
 				src += 2;
 				continue;
