@@ -12794,8 +12794,16 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		//				  au->length() );
 		//THIS->m_diffbotReply.pushChar('\n');
 		// convert the \u1f23 to utf8 (\n and \r as well)
-		THIS->m_diffbotReply.safeDecodeJSONToUtf8 ( page , pageLen ,
-							    THIS->m_niceness );
+		// crap, this decodes \\\\\" to \\" which is causing
+		// the json parser to believe it is an encoded \ then
+		// a REAL quote... but quote is contained...
+		//THIS->m_diffbotReply.safeDecodeJSONToUtf8 ( page , pageLen ,
+		//					    THIS->m_niceness );
+
+		// do not do that any more then, jsonparse can call it
+		// on a per string basis
+		THIS->m_diffbotReply.safeMemcpy ( page , pageLen );
+
 		// convert embedded \0 to space
 		//char *p = THIS->m_diffbotReply.getBufStart();
 		//char *pend = p + THIS->m_diffbotReply.getLength();
@@ -29774,11 +29782,11 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 	//
 	SafeBuf *dbr = getDiffbotReply();
 	if ( dbr->length() ) {
-		sb->safePrintf("<b>START PARTIALLY-DECODED DIFFBOT REPLY</b><br>\n");
+		sb->safePrintf("<b>START EXACT DIFFBOT REPLY</b><br>\n");
 		sb->safePrintf("<pre>");
 		sb->safeMemcpy ( dbr );
 		sb->safePrintf("</pre>");
-		sb->safePrintf("<b>END DIFFBOT REPLY</b><br><br>\n");
+		sb->safePrintf("<b>END EXACT DIFFBOT REPLY</b><br><br>\n");
 	}	
 
 	//
@@ -43999,7 +44007,7 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 	// use new json parser
 	Json jp;
 	// returns NULL and sets g_errno on error
-	if ( ! jp.parseJsonStringIntoJsonItems ( p ) ) {
+	if ( ! jp.parseJsonStringIntoJsonItems ( p , m_niceness ) ) {
 		g_errno = EBADJSONPARSER;
 		return NULL;
 	}
@@ -44068,6 +44076,11 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 			hi.m_hashGroup = HASHGROUP_INTAG;
 		if ( strstr(name,"meta") == 0 )
 			hi.m_hashGroup = HASHGROUP_INMETATAG;
+		//
+		// now Json.cpp decodes and stores the value into
+		// a buffer, so ji->getValue() should be decoded completely
+		//
+
 		// index like "title:whatever"
 		hi.m_prefix = name;
 		hashString ( ji->getValue(),ji->getValueLen() , &hi );
