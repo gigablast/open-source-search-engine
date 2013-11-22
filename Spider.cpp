@@ -3423,7 +3423,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			    (long)m_bestRequest->m_priority,
 			    m_bestRequest->getUrlHash48());
 	}
-	else {
+	else if ( g_conf.m_logDebugSpider ) {
 		log("spider: did not find winning request for %s but "
 		    "bestReqValid=%li",
 		    iptoa(m_scanningIp),(long)m_bestRequestValid);
