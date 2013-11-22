@@ -8949,9 +8949,9 @@ Url **XmlDoc::getRedirUrl() {
 	//	return &m_redirUrlPtr;
 	//}
 	// log a msg
-	//if ( g_conf.m_logSpideredUrls )
-	//	logf(LOG_INFO,"build: %s redirected to %s",
-	//	     cu->getUrl(),loc->getUrl());
+	if ( g_conf.m_logSpideredUrls )
+		logf(LOG_INFO,"build: %s redirected to %s",
+		     cu->getUrl(),loc->getUrl());
 
 	// if not same Domain, it is not a simplified redirect
 	bool sameDom = true;

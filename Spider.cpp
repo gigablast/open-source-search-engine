@@ -2200,6 +2200,10 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 	// current time on host #0
 	uint64_t nowMS = gettimeofdayInMillisecondsGlobal();
  top:
+
+	// we might have deleted the only node below...
+	if ( m_waitingTree.isEmpty() ) return 0;
+
 	// advance to next
 	//m_waitingTreeKey += 1LL;
 	// assume none
