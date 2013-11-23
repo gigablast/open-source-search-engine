@@ -13633,6 +13633,13 @@ char **XmlDoc::getHttpReply2 ( ) {
 	r->m_spideredTime           = getSpideredTime();//m_spideredTime;
 	r->m_ifModifiedSince        = 0;
 	r->m_skipHammerCheck        = 0;
+
+	// . this is -1 if none found in robots.txt etc.
+	// . if not using robots.txt it will always be -1
+	// . it should also be -1 for the robots.txt file itself
+	if ( m_crawlDelayValid ) r->m_crawlDelayMS = m_crawlDelay;
+	else                     r->m_crawlDelayMS = -1;
+
 	// need this in order to get all languages, etc. and avoid having
 	// to set words class at the spider compression proxy level
 	r->m_forEvents              = 0;
