@@ -354,7 +354,7 @@ Collectiondb.o: Collectiondb.cpp gb-include.h types.h fctypes.h Unicode.h \
  IndexTable2.h Msg51.h Msg17.h IndexReadInfo.h Msg3a.h Stats.h \
  PostQueryRerank.h Sanity.h SiteGetter.h Title.h Address.h zlib.h zconf.h \
  HttpMime.h Users.h Pages.h HttpServer.h TcpServer.h openssl/err.h \
- PageCrawlBot.h Statsdb.h Process.h Msg28.h Cachedb.h Syncdb.h PageTurk.h
+ PageCrawlBot.h Statsdb.h Process.h Msg28.h Cachedb.h Syncdb.h
 CollectionRec.o: CollectionRec.cpp gb-include.h types.h fctypes.h \
  Unicode.h UnicodeProperties.h UCPropTable.h iconv.h UCNormalizer.h \
  hash.h Errno.h Log.h CollectionRec.h Url.h ip.h Parms.h Xml.h XmlNode.h \
@@ -374,7 +374,11 @@ CollectionRec.o: CollectionRec.cpp gb-include.h types.h fctypes.h \
  RdbBuckets.h RdbCache.h Msg5.h Msg3.h RdbMerge.h Dir.h PingServer.h \
  HttpServer.h TcpServer.h openssl/err.h MsgC.h UdpServer.h UdpSlot.h \
  UdpProtocol.h Dns.h DnsProtocol.h Multicast.h Threads.h HttpMime.h \
- Datedb.h Indexdb.h DiskPageCache.h Titledb.h Timedb.h
+ Datedb.h Indexdb.h DiskPageCache.h Titledb.h Timedb.h Spider.h Msg4.h \
+ Msg1.h Msg0.h Clusterdb.h Linkdb.h Msg2.h Query.h Msg20.h Summary.h \
+ matches2.h Words.h StopWords.h Bits.h Pos.h Matches.h HashTableT.h \
+ Domains.h CountryCode.h Tagdb.h Events.h Sections.h IndexList.h Dates.h \
+ Msg22.h CatRec.h Categories.h Catdb.h
 Conf.o: Conf.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h UCNormalizer.h hash.h Errno.h \
  Log.h Conf.h Xml.h XmlNode.h Lang.h Iso8859.h iana_charset.h File.h \
@@ -668,6 +672,7 @@ Entities.o: Entities.cpp gb-include.h types.h fctypes.h Unicode.h \
 Errno.o: Errno.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h UCNormalizer.h hash.h Errno.h \
  Log.h
+errnotest.o: errnotest.cpp
 Facebook.o: Facebook.cpp Facebook.h Conf.h Xml.h XmlNode.h gb-include.h \
  types.h fctypes.h Unicode.h UnicodeProperties.h UCPropTable.h iconv.h \
  UCNormalizer.h hash.h Errno.h Log.h Lang.h Iso8859.h iana_charset.h \
@@ -1349,10 +1354,10 @@ main.o: main.cpp gb-include.h types.h fctypes.h Unicode.h \
  Msge0.h Msge1.h Msg8b.h SearchInput.h Msg40.h Msg39.h Msg37.h TopTree.h \
  IndexTable2.h Msg51.h Msg17.h Msg3a.h PostQueryRerank.h Sanity.h \
  SiteGetter.h Title.h Address.h DailyMerge.h Speller.h Language.h Wiki.h \
- Wiktionary.h Scraper.h Msg2a.h Msg9b.h Msg35.h Msg30.h Msg3e.h \
- PageNetTest.h AutoBan.h TuringTest.h Msg1f.h Profiler.h Blaster.h \
- Proxy.h linkspam.h sort.h Ads.h LanguagePages.h ValidPointer.h Placedb.h \
- Test.h seo.h Json.h
+ Wiktionary.h Scraper.h Msg2a.h Msg9b.h Msg35.h Msg3e.h PageNetTest.h \
+ AutoBan.h TuringTest.h Msg1f.h Profiler.h Blaster.h Proxy.h linkspam.h \
+ sort.h Ads.h LanguagePages.h ValidPointer.h Placedb.h Test.h seo.h \
+ Json.h
 matches2.o: matches2.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h UCNormalizer.h hash.h Errno.h \
  Log.h matches2.h Titledb.h Rdb.h RdbBase.h Conf.h Xml.h XmlNode.h Lang.h \
@@ -2694,7 +2699,7 @@ PageResults.o: PageResults.cpp gb-include.h types.h fctypes.h Unicode.h \
  Highlight.h AutoBan.h TuringTest.h sort.h LanguageIdentifier.h \
  LanguagePages.h LangList.h XmlDoc.h Phrases.h Images.h Msg13.h Msge0.h \
  Msge1.h Msg8b.h SiteGetter.h Title.h Address.h Spider.h PageResults.h \
- Proxy.h
+ Proxy.h Json.h
 PageRoot.o: PageRoot.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h UCNormalizer.h hash.h Errno.h \
  Log.h Indexdb.h Rdb.h RdbBase.h Conf.h Xml.h XmlNode.h Lang.h Iso8859.h \

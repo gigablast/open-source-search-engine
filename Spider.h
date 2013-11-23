@@ -1111,6 +1111,7 @@ class SpiderColl {
 	key_t      m_waitingTreeKey;
 	bool       m_waitingTreeKeyValid;
 	long       m_scanningIp;
+	bool       m_gotNewRequestsForScanningIp;
 
 	// start key for reading doledb
 	key_t m_msg5StartKey;
