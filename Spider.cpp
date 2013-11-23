@@ -3417,7 +3417,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		if ( g_conf.m_logDebugSpider )
 			log("spider: found winning request ip=%s "
 			    "spiderTimeMS=%lli "
-			    "pri=%li uh48=%lli",
+			    "pri=%li uh48=%lli url=%s",
 			    iptoa(m_bestRequest->m_firstIp),
 			    m_bestSpiderTimeMS,
 			    (long)m_bestRequest->m_priority,
@@ -10560,8 +10560,11 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 
 // pattern is a ||-separted list of substrings
 bool doesStringContainPattern ( char *content , char *pattern ) {
+				//bool checkForNegatives ) {
 
 	char *p = pattern;
+
+	long matchedOne = 0;
 
 	long count = 0;
 	// scan the " || " separated substrings
@@ -10586,6 +10589,12 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 		*end = '\0';
 		// count it as an attempt
 		count++;
+		// if pattern is NOT/NEGATIVE...
+		bool negative = false;
+		if ( start[0] == '!' && start[1] && start[1]!='|' ) {
+			start++;
+			negative = true;
+		}
 		// . is this substring anywhere in the document
 		// . check the rawest content before converting to utf8 i guess
 		char *foundPtr =  strstr ( content , start ) ;
@@ -10595,11 +10604,20 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 		//	    m_firstUrl.m_url,start);
 		// revert \0
 		*end = c;
+		// negative is pad
+		if ( foundPtr && negative ) return false;
+		// skip if not found
+		if ( ! foundPtr ) continue;
 		// did we find it?
-		if ( foundPtr ) return true;
+		matchedOne++;
+		// if no negatives, done
+		//if ( ! checkForNegatives )
+		//return true;
 	}
 	// if we had no attempts, it is ok
 	if ( count == 0 ) return true;
+	// must have matched one at least
+	if ( matchedOne ) return true;
 	// if we had an unfound substring...
 	return false;
 }
