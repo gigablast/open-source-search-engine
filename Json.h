@@ -63,7 +63,7 @@ class Json {
 
 	void test();
 
-	JsonItem *parseJsonStringIntoJsonItems ( char *json );
+	JsonItem *parseJsonStringIntoJsonItems ( char *json , long niceness );
 
 	JsonItem *getFirstItem ( ) ;
 

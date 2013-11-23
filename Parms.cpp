@@ -8276,6 +8276,22 @@ void Parms::init ( ) {
 	m->m_units = "seconds";
 	m++;
 
+	m->m_cgi   = "dbucp";
+	m->m_xml   = "diffbotUrlCrawlPattern";
+	m->m_off   = (char *)&cr.m_diffbotUrlCrawlPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
+	m++;
+
+	m->m_cgi   = "dbupp";
+	m->m_xml   = "diffbotUrlProcessPattern";
+	m->m_off   = (char *)&cr.m_diffbotUrlProcessPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
+	m++;
+
 	m->m_cgi   = "dbppp";
 	m->m_xml   = "diffbotPageProcessPattern";
 	m->m_off   = (char *)&cr.m_diffbotPageProcessPattern - x;

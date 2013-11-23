@@ -2954,7 +2954,7 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 	  true // isJSON?
 	  );
 	*/
-	printUrlFilters ( sb , cx , FMT_JSON );
+	//printUrlFilters ( sb , cx , FMT_JSON );
 	// end that collection rec
 	sb.safePrintf("\n}\n");
 
@@ -4053,8 +4053,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	// show simpler url filters table
 	//
-	/*
 	if ( fmt == FMT_HTML ) {
+		/*
 		sb.safePrintf ( "<table>"
 				"<tr><td colspan=2>"
 				"<b>URL Filters</b>"
@@ -4079,13 +4079,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		
 		//sb.safePrintf("<tr><td colspan=2><font size=-1><i>U
 		sb.safePrintf("</table>\n");
-
+		*/
 		// 
 		// END THE BIG FORM
 		//
 		sb.safePrintf("</form>");
 	}
-	*/
 
 	//
 	// show reset and delete crawl buttons
@@ -4854,10 +4853,27 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 		i++;
 	}
 
-	cr->m_regExs[i].set("default");
-	cr->m_spiderPriorities   [i] = 50;
-	cr->m_spiderDiffbotApiUrl[i].set ( api );
-	i++;
+	if ( ucp && upp ) {
+		cr->m_regExs[i].set("default");
+		cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		i++;
+	}
+	else if ( ucp ) {
+		cr->m_regExs[i].set("default");
+		cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		i++;
+	}
+	else if ( upp ) {
+		cr->m_regExs[i].set("default");
+		cr->m_spiderPriorities   [i] = 50;
+		i++;
+	}
+	else {
+		cr->m_regExs[i].set("default");
+		cr->m_spiderPriorities   [i] = 50;
+		cr->m_spiderDiffbotApiUrl[i].set ( api );
+		i++;
+	}
 	
 
 	cr->m_numRegExs   = i;

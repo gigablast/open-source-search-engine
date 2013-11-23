@@ -118,8 +118,8 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 		char *jt;
 		jt = getJSONFieldValue(xd->ptr_utf8Content,"title",&vlen);
 		if ( jt && vlen > 0 ) {
-			jsonTitle.safeDecodeJSONToUtf8 (jt, vlen, m_niceness,
-							true ); // decodeAll?
+			jsonTitle.safeDecodeJSONToUtf8 (jt, vlen, m_niceness);
+							//true ); // decodeAll?
 			jsonTitle.nullTerm();
 			val = jsonTitle.getBufStart();
 		}

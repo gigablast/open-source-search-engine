@@ -60,8 +60,8 @@ struct SafeBuf {
 	bool safeTruncateEllipsis ( char *src , long maxLen );
 	bool convertJSONtoXML ( long niceness , long startConvertPos );
 
-	bool safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness,
-				    bool decodeAll = false );
+	bool safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness);
+	//			    bool decodeAll = false );
 
 	bool decodeJSONToUtf8 ( long niceness );
 	bool decodeJSON ( long niceness );
