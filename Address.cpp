@@ -11792,7 +11792,9 @@ char getTimeZone2 ( char *city , char *state , char *useDST ) {
 	// get city hash
 	long long h = getWordXorHash(city);
 	// TODO: make state into two letter abbr?
-	if ( gbstrlen(state) != 2 ) { char *xx=NULL;*xx=0; }
+	// crap, if state is taken from class ZipDesc it is only
+	// 2 letters and has no \0 in it
+	//if ( gbstrlen(state) != 2 ) { char *xx=NULL;*xx=0; }
 	// use this now
 	uint32_t cid32 = (uint64_t)getCityId32(h,state);
 	// and call this
