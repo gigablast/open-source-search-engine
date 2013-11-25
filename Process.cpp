@@ -2265,14 +2265,17 @@ void Process::checkFanSwitch ( ) {
 
 	if ( m_desiredFanState ) 
 		// this turns it on
-		urlBuf.safePrintf("http://10.5.0.10/outlet.cgi?outlet=1&"
+		if ( !urlBuf.safePrintf("http://10.5.0.10/outlet.cgi?outlet=1&"
 				  "command=1&time=%li",
-				  getTimeGlobal());
+					getTimeGlobal()) )
+			return;
 	else 
 		// this turns it off
-		urlBuf.safePrintf("http://10.5.0.10/outlet.cgi?outlet=1&"
+		if ( !urlBuf.safePrintf("http://10.5.0.10/outlet.cgi?outlet=1&"
 				  "command=0&time=%li",
-				  getTimeGlobal());
+					getTimeGlobal()) )
+			return;
+
 	// . make a cookie with the login info
 	// . on chrome open the console and click "Network" tab 
 	//   to view the http network requests and replies

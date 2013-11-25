@@ -33,6 +33,14 @@ SafeBuf::SafeBuf(long initSize, char *label ) {
 	m_encoding = csUTF8;
 }
 
+void SafeBuf::constructor ( ) {
+	m_capacity = 0;
+	m_length = 0;
+	m_buf = NULL;
+	m_usingStack = false;
+	m_encoding = csUTF8;
+	m_label = NULL;
+}	
 
 SafeBuf::SafeBuf() {
 	m_capacity = 0;

@@ -9,6 +9,9 @@ struct SafeBuf {
 	//*TRUCTORS
 	SafeBuf();
 	SafeBuf(long initSize, char *label = NULL);
+
+	void constructor();
+
 	//be careful with passing in a stackBuf! it could go out
 	//of scope independently of the safebuf.
 	SafeBuf(char* stackBuf, long cap);

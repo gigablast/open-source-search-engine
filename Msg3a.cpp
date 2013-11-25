@@ -20,6 +20,10 @@ void Msg3a::constructor ( ) {
 	m_finalBuf     = NULL;
 	m_docsToGet    = 0;
 	m_numDocIds    = 0;
+
+	// need to call all safebuf constructors now to set m_label
+	m_rbuf2.constructor();
+
 	// NULLify all the reply buffer ptrs
 	for ( long j = 0; j < MAX_INDEXDB_SPLIT; j++ ) 
 		m_reply[j] = NULL;
