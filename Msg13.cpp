@@ -679,9 +679,12 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 	//   will overwrite it with a timestamp when the download completes
 	// . but if measuring crawldelay from beginning of the download then
 	//   store the current time
-	if ( r->m_crawlDelayFromEnd )
+	// . do NOT do this when downloading robots.txt etc. type files
+	//   which should have skipHammerCheck set to true
+	if ( r->m_crawlDelayFromEnd && ! r->m_skipHammerCheck ) {
 		s_hammerCache.addLongLong(0,r->m_firstIp, 0LL);//nowms);
-	else {
+	}
+	else if ( ! r->m_skipHammerCheck ) {
 		// get time now
 		long long nowms = gettimeofdayInMilliseconds();
 		s_hammerCache.addLongLong(0,r->m_firstIp, nowms);
@@ -781,8 +784,9 @@ void gotHttpReply2 ( void *state ,
 
 	// get time now
 	long long nowms = gettimeofdayInMilliseconds();
-	// now store the current time in the cache
-	if ( r->m_crawlDelayFromEnd )
+	// . now store the current time in the cache
+	// . do NOT do this for robots.txt etc. where we skip hammer check
+	if ( r->m_crawlDelayFromEnd && ! r->m_skipHammerCheck )
 		s_hammerCache.addLongLong(0,r->m_firstIp,nowms);
 	// note it
 	if ( g_conf.m_logDebugSpider )
