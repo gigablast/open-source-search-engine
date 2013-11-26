@@ -12916,33 +12916,42 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 	// in order for us to do the array separation logic below.
 	// we don't want to do this logic for articles because they
 	// contain an image array!!!
-	char *needleA = "\"type\":\"product";
-	char *needleB = "\"type\":\"image";
-	char *productPtr = strstr ( text , needleA );
-	char *imagePtr   = strstr ( text , needleB );
-	if ( ! productPtr && ! imagePtr ) {
+
+	// this must be on the FIRST level of the json object, otherwise
+	// we get errors because we got type:article and it
+	// contains an images array!
+	
+	long valLen;
+	char *val = getJSONFieldValue ( text , "type", &valLen );
+
+	bool isProduct = false;
+	bool isImage = false;
+
+	if ( val && valLen == 7 && strncmp ( val , "product", 7) == 0 )
+		isProduct = true;
+
+	if ( val && valLen == 5 && strncmp ( val , "image", 5) == 0 )
+		isImage = true;
+
+	if ( ! isProduct && ! isImage ) {
 		m_tokenizedDiffbotReplyValid = true;
 		m_tokenizedDiffbotReplyPtr = &m_diffbotReply;
 		return m_tokenizedDiffbotReplyPtr;
 	}
 
 
-	char *needle1 = ",\"products\":[";
-	char *needle2 = ",\"images\":[";
-	char *parray = strstr ( text , needle1 );
-	char *pstart = NULL;
-	char *newTerm = NULL;
-	if ( parray ) {
-		// point to [
-		pstart = parray + 13 - 1;
+	char *needle;
+	char *newTerm;
+	if ( isProduct ) {
+		needle = ",\"products\":[";
 		newTerm = "product";
 	}
 	else {
-		parray = strstr ( text , needle2 );
-		// point to [
-		if ( parray ) pstart = parray + 11 - 1;
+		needle = ",\"images\":[";
 		newTerm = "image";
 	}
+
+	char *parray = strstr ( text , needle );
 
 	// if not found, no need to do anything...
 	if ( ! parray ) {
@@ -12950,6 +12959,10 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 		m_tokenizedDiffbotReplyPtr = &m_diffbotReply;
 		return m_tokenizedDiffbotReplyPtr;
 	}
+
+
+	// point to [
+	char *pstart = parray + gbstrlen(needle) - 1;
 
 	//
 	// ok, now we have to do so json ju jitsu to fix it
@@ -43943,6 +43956,7 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 	char *stringStart = NULL;
 	char *p = json;
 	bool gotOne = false;
+	long depth = 0;
 	// scan
 	for ( ; *p ; p++ ) {
 		// escaping a quote? ignore quote then.
@@ -43950,6 +43964,11 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 			// skip two bytes then..
 			p++;
 			continue;
+		}
+		// count {} depth
+		if ( ! inQuotes ) {
+			if ( *p == '{' ) depth++;
+			if ( *p == '}' ) depth--;
 		}
 		// a quote?
 		if ( *p == '\"' ) {
@@ -43962,6 +43981,8 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 			else if ( ! inQuotes && 
 				  ! gotOne &&
 				  p[1] == ':' &&
+				  // {"title":"whatever",...}
+				  depth == 1 &&
 				  stringStart &&
 				  (p - stringStart) == fieldLen &&
 				  strncmp(field,stringStart,fieldLen)==0 ) {
