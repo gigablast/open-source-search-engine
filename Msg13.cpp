@@ -528,7 +528,9 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 
 		bool queueIt = false;
 		if ( last > 0 && waited < r->m_crawlDelayMS ) queueIt = true;
+		// a "last" of 0 means currently downloading
 		if ( r->m_crawlDelayMS > 0 && last == 0LL ) queueIt = true;
+		// a last of -1 means not found. so first time i guess.
 		if ( last == -1 ) queueIt = false;
 
 		// . queue it up if we haven't waited long enough
@@ -537,6 +539,8 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 		// . it will just lookup the lastdownload time in the cache,
 		//   which will store maybe a -1 if currently downloading...
 		if ( queueIt ) {
+			// debug
+			//log("spider: adding %s to crawldelayqueue",r->m_url);
 			// save this
 			r->m_udpSlot = slot;
 			r->m_nextLink = NULL;
@@ -545,17 +549,20 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 				s_hammerQueueHead = r;
 				s_hammerQueueTail = r;
 			}
-			else
+			else {
 				s_hammerQueueTail->m_nextLink = r;
+				s_hammerQueueTail = r;
+			}
 			return;
 		}
 			
 
 		// if we had it in cache check the wait time
-		if ( last > 0 && waited < 400 ) {
+		if ( last > 0 && waited < r->m_crawlDelayMS ) {
 			log("spider: hammering firstIp=%s url=%s "
-			    "only waited %lli ms",
-			    iptoa(r->m_firstIp),r->m_url,waited);
+			    "only waited %lli ms of %li ms",
+			    iptoa(r->m_firstIp),r->m_url,waited,
+			    r->m_crawlDelayMS);
 			// this guy has too many redirects and it fails us...
 			// BUT do not core if running live, only if for test
 			// collection
@@ -645,17 +652,6 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	}
 
 
-	// are we the first?
-	bool firstInLine = s_rt.isEmpty ( &r->m_cacheKey );
-	// wait in line cuz someone else downloading it now
-	if ( ! s_rt.addKey ( &r->m_cacheKey , &r ) ) {
-		g_udpServer.sendErrorReply(slot,g_errno);
-		return;
-	}
-
-	// this means our callback will be called
-	if ( ! firstInLine ) return;
-
 	// do not get .google.com/ crap
 	//if ( strstr(r->m_url,".google.com/") ) { char *xx=NULL;*xx=0; }
 
@@ -663,6 +659,20 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 }
 
 void downloadTheDocForReals ( Msg13Request *r ) {
+
+	// are we the first?
+	bool firstInLine = s_rt.isEmpty ( &r->m_cacheKey );
+	// wait in line cuz someone else downloading it now
+	if ( ! s_rt.addKey ( &r->m_cacheKey , &r ) ) {
+		g_udpServer.sendErrorReply(r->m_udpSlot,g_errno);
+		return;
+	}
+
+	// this means our callback will be called
+	if ( ! firstInLine ) {
+		//log("spider: inlining %s",r->m_url);
+		return;
+	}
 
 	// . store time now
 	// . no, now we store 0 to indicate in progress, then we
@@ -2166,20 +2176,39 @@ void scanHammerQueue ( int fd , void *state ) {
 
 	long long nowms = gettimeofdayInMilliseconds();
 
+	Msg13Request *prev = NULL;
+	long long waited = -1LL;
+
 	// scan down the linked list of queued of msg13 requests
-	for ( ; r ; r = r->m_nextLink ) { 
+	for ( ; r ; prev = r , r = r->m_nextLink ) { 
 		long long last;
 		last = s_hammerCache.getLongLong(0,r->m_firstIp,30,true);
 		// is one from this ip outstanding?
 		if ( last == 0LL ) continue;
 		// download finished? 
 		if ( last > 0 ) {
-			long long waited = nowms - last;
+		        waited = nowms - last;
 			// but skip if haven't waited long enough
 			if ( waited < r->m_crawlDelayMS ) continue;
 		}
+		// debug
+		//log("spider: downloading %s from crawldelay queue "
+		//    "waited=%llims crawldelay=%lims", 
+		//    r->m_url,waited,r->m_crawlDelayMS);
 		// good to go
 		downloadTheDocForReals ( r );
+		//
+		// remove from future scans
+		//
+		if ( prev ) 
+			prev->m_nextLink = r->m_nextLink;
+
+		if ( s_hammerQueueHead == r )
+			s_hammerQueueHead = r->m_nextLink;
+
+		if ( s_hammerQueueTail == r )
+			s_hammerQueueTail = prev;
+
 		// try to download some more i guess...
 	}
 }

@@ -11982,6 +11982,67 @@ bool isAllowed2 ( Url   *url            ,
 	goto urlLoop;
 }
 
+// when doing a custom crawl we have to decide between the provided crawl
+// delay, and the one in the robots.txt...
+long *XmlDoc::getFinalCrawlDelay() {
+
+	if ( m_finalCrawlDelayValid )
+		return &m_finalCrawlDelay;
+
+	bool *isAllowed = getIsAllowed();
+	if ( ! isAllowed || isAllowed == (void *)-1 ) return (long *)isAllowed;
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	m_finalCrawlDelayValid = true;
+
+	// getIsAllowed already sets m_crawlDelayValid to true
+	if ( ! cr->m_isCustomCrawl ) {
+		m_finalCrawlDelay = m_crawlDelay;
+		// default to 250ms i guess if none specified in robots
+		// just to be somewhat nice by default
+		if ( m_crawlDelay < 0 )	m_finalCrawlDelay = 250;
+		return &m_finalCrawlDelay;
+	}
+
+	// get manually specified crawl delay in seconds. convert to ms.
+	long manual = cr->m_collectiveCrawlDelay * 1000.0;
+	// negative means -1 means unknown or not specified
+	if ( manual < 0 ) manual = -1;
+
+	// if both are unknown...
+	if ( m_crawlDelay == -1 && manual == -1 ) {
+		m_finalCrawlDelay = -1;
+		return &m_finalCrawlDelay;
+	}
+
+	// if not in robots.txt use manual
+	if ( m_crawlDelay == -1 ) {
+		m_finalCrawlDelay = manual;
+		return &m_finalCrawlDelay;
+	}
+
+	// if manually provided crawldelay is -1, use robots.txt then
+	if ( manual == -1 ) {
+		m_finalCrawlDelay = m_crawlDelay;
+		return &m_finalCrawlDelay;
+	}
+
+	// let robots.txt dictate if both are >= 0
+	if ( m_useRobotsTxt ) {
+		m_finalCrawlDelay = m_crawlDelay;
+		return &m_finalCrawlDelay;
+	}
+
+	// if not using robots.txt, pick the smallest
+	if ( m_crawlDelay < manual ) m_finalCrawlDelay = m_crawlDelay;
+	else                         m_finalCrawlDelay = manual;
+
+	return &m_finalCrawlDelay;
+}
+
+
 // . get the Robots.txt and see if we are allowed
 // . returns NULL and sets g_errno on error
 // . returns -1 if blocked, will re-call m_callback
@@ -12025,6 +12086,9 @@ bool *XmlDoc::getIsAllowed ( ) {
 	if ( isRobotsTxt ) {
 		m_isAllowed      = true;
 		m_isAllowedValid = true;
+		m_crawlDelayValid = true;
+		// make it super fast...
+		m_crawlDelay      = 0;
 		return &m_isAllowed;
 	}
 
@@ -13550,6 +13614,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// this must be valid, since we share m_msg13 with it
 	if ( ! m_isAllowedValid ) { char *xx=NULL;*xx=0; }
 
+	long *cd = getFinalCrawlDelay();
+	if ( ! cd || cd == (void *)-1 ) return (char **)cd;
+
 	// we might bail
 	if ( ! *isAllowed ) {
 		m_httpReplyValid          = true;
@@ -13678,11 +13745,11 @@ char **XmlDoc::getHttpReply2 ( ) {
 	r->m_ifModifiedSince        = 0;
 	r->m_skipHammerCheck        = 0;
 
-	// . this is -1 if none found in robots.txt etc.
-	// . if not using robots.txt it will always be -1
-	// . it should also be -1 for the robots.txt file itself
-	if ( m_crawlDelayValid ) r->m_crawlDelayMS = m_crawlDelay;
-	else                     r->m_crawlDelayMS = -1;
+
+	// . this is -1 if unknown. none found in robots.txt or provided
+	//   in the custom crawl parms.
+	// . it should also be 0 for the robots.txt file itself
+	r->m_crawlDelayMS = *cd;
 
 	// need this in order to get all languages, etc. and avoid having
 	// to set words class at the spider compression proxy level
