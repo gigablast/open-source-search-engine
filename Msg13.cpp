@@ -677,7 +677,16 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 	// . store time now
 	// . no, now we store 0 to indicate in progress, then we
 	//   will overwrite it with a timestamp when the download completes
-	s_hammerCache.addLongLong(0,r->m_firstIp, 0LL);//nowms);
+	// . but if measuring crawldelay from beginning of the download then
+	//   store the current time
+	if ( r->m_crawlDelayFromEnd )
+		s_hammerCache.addLongLong(0,r->m_firstIp, 0LL);//nowms);
+	else {
+		// get time now
+		long long nowms = gettimeofdayInMilliseconds();
+		s_hammerCache.addLongLong(0,r->m_firstIp, nowms);
+	}
+
 	// note it
 	if ( g_conf.m_logDebugSpider )
 		log("spider: adding special \"in-progress\" time of %lli for "
@@ -773,7 +782,8 @@ void gotHttpReply2 ( void *state ,
 	// get time now
 	long long nowms = gettimeofdayInMilliseconds();
 	// now store the current time in the cache
-	s_hammerCache.addLongLong(0,r->m_firstIp,nowms);
+	if ( r->m_crawlDelayFromEnd )
+		s_hammerCache.addLongLong(0,r->m_firstIp,nowms);
 	// note it
 	if ( g_conf.m_logDebugSpider )
 		log("spider: adding final download end time of %lli for "
@@ -2184,7 +2194,7 @@ void scanHammerQueue ( int fd , void *state ) {
 		long long last;
 		last = s_hammerCache.getLongLong(0,r->m_firstIp,30,true);
 		// is one from this ip outstanding?
-		if ( last == 0LL ) continue;
+		if ( last == 0LL && r->m_crawlDelayFromEnd ) continue;
 		// download finished? 
 		if ( last > 0 ) {
 		        waited = nowms - last;

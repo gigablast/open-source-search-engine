@@ -54,7 +54,8 @@ public:
 	long  m_addToTestCache:1;
 	long  m_skipHammerCheck:1;
 	long  m_attemptedIframeExpansion:1;
-	long  m_forEvents;
+	long  m_crawlDelayFromEnd:1;
+	long  m_forEvents:1;
 	//long  m_testParserEnabled:1;
 	//long  m_testSpiderEnabled:1;
 	//long  m_isPageParser:1;

@@ -13751,6 +13751,11 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// . it should also be 0 for the robots.txt file itself
 	r->m_crawlDelayMS = *cd;
 
+	// let's time our crawl delay from the initiation of the download
+	// not from the end of the download. this will make things a little
+	// faster but could slam servers more.
+	r->m_crawlDelayFromEnd = false;
+
 	// need this in order to get all languages, etc. and avoid having
 	// to set words class at the spider compression proxy level
 	r->m_forEvents              = 0;
