@@ -10565,6 +10565,7 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 	char *p = pattern;
 
 	long matchedOne = 0;
+	bool hadPositive = false;
 
 	long count = 0;
 	// scan the " || " separated substrings
@@ -10595,6 +10596,8 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 			start++;
 			negative = true;
 		}
+		else
+			hadPositive = true;
 		// . is this substring anywhere in the document
 		// . check the rawest content before converting to utf8 i guess
 		char *foundPtr =  strstr ( content , start ) ;
@@ -10604,8 +10607,14 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 		//	    m_firstUrl.m_url,start);
 		// revert \0
 		*end = c;
-		// negative is pad
-		if ( foundPtr && negative ) return false;
+
+		// negative mean we should NOT match it
+		if ( negative ) {
+			// so if its matched, that is bad
+			if ( foundPtr ) return false;
+			continue;
+		}
+
 		// skip if not found
 		if ( ! foundPtr ) continue;
 		// did we find it?
@@ -10618,6 +10627,8 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 	if ( count == 0 ) return true;
 	// must have matched one at least
 	if ( matchedOne ) return true;
+	// if all negative? i.e. !category||!author
+	if ( ! hadPositive ) return true;
 	// if we had an unfound substring...
 	return false;
 }

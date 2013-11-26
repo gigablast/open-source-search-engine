@@ -2938,7 +2938,9 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 
 	sb.safePrintf("\"notifyWebhook\":\"");
 	sb.safeUtf8ToJSON ( cx->m_notifyUrl.getBufStart() );
-	sb.safePrintf("\",\n");
+	sb.safePrintf("\"\n");
+	//sb.safePrintf("\",\n");
+
 	/////
 	//
 	// show url filters table. kinda hacky!!
@@ -2956,7 +2958,7 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 	*/
 	//printUrlFilters ( sb , cx , FMT_JSON );
 	// end that collection rec
-	sb.safePrintf("\n}\n");
+	sb.safePrintf("}\n");
 
 	return true;
 }
@@ -4835,46 +4837,56 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 		cr->m_spiderPriorities   [i] = 55;
 		cr->m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
-	}
-
-	// harvest links if we should crawl it
-	if ( ucp ) {
+		// if just matches ucp, just crawl it, do not process
 		cr->m_regExs[i].set("matchesucp");
 		cr->m_spiderPriorities   [i] = 54;
 		i++;
-	}
-
-	// just process
-	if ( upp ) {
+		// just process, do not spider links if does not match ucp
 		cr->m_regExs[i].set("matchesupp");
 		cr->m_spiderPriorities   [i] = 53;
 		cr->m_harvestLinks       [i] = false;
 		cr->m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
+		// do not crawl anything else
+		cr->m_regExs[i].set("default");
+		cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		i++;
 	}
 
-	if ( ucp && upp ) {
+	// harvest links if we should crawl it
+	if ( ucp && ! upp ) {
+		cr->m_regExs[i].set("matchesucp");
+		cr->m_spiderPriorities   [i] = 54;
+		// process everything since upp is empty
+		cr->m_spiderDiffbotApiUrl[i].set ( api );
+		i++;
+		// do not crawl anything else
 		cr->m_regExs[i].set("default");
 		cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
 		i++;
 	}
-	else if ( ucp ) {
-		cr->m_regExs[i].set("default");
-		cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+
+	// just process
+	if ( upp && ! ucp ) {
+		cr->m_regExs[i].set("matchesupp");
+		cr->m_spiderPriorities   [i] = 53;
+		cr->m_harvestLinks       [i] = false;
+		cr->m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
-	}
-	else if ( upp ) {
+		// crawl everything by default, no processing
 		cr->m_regExs[i].set("default");
 		cr->m_spiderPriorities   [i] = 50;
 		i++;
 	}
-	else {
+
+	// no restraints
+	if ( ! upp && ! ucp ) {
+		// crawl everything by default, no processing
 		cr->m_regExs[i].set("default");
 		cr->m_spiderPriorities   [i] = 50;
 		cr->m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 	}
-	
 
 	cr->m_numRegExs   = i;
 	cr->m_numRegExs2  = i;
