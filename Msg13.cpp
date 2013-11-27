@@ -15,6 +15,9 @@ long filterRobotsTxt ( char *reply , long replySize , HttpMime *mime ,
 bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts );
 void gotIframeExpandedContent ( void *state ) ;
 
+void scanHammerQueue ( int fd , void *state );
+void downloadTheDocForReals ( Msg13Request *r ) ;
+
 // utility functions
 bool getTestSpideredDate ( Url *u , long *origSpiderDate , char *testDir ) ;
 bool addTestSpideredDate ( Url *u , long  spideredTime   , char *testDir ) ;
@@ -110,6 +113,11 @@ bool Msg13::registerHandler ( ) {
 	// . allowDups = "true"
 	if ( ! s_rt.set ( 8 , 4 , 0 , NULL , 0 , true,0,"wait13tbl") )
 		return false;
+
+	if ( ! g_loop.registerSleepCallback(10,NULL,scanHammerQueue) )
+		return log("build: Failed to register timer callback for "
+			   "hammer queue.");
+
 
 	// success
 	return true;
@@ -419,6 +427,8 @@ bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 
 RdbCache s_hammerCache;
 static bool s_flag = false;
+Msg13Request *s_hammerQueueHead = NULL;
+Msg13Request *s_hammerQueueTail = NULL;
 
 // . only return false if you want slot to be nuked w/o replying
 // . MUST always call g_udpServer::sendReply() or sendErrorReply()
@@ -486,15 +496,6 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	// temporary hack
 	if ( r->m_parent ) { char *xx=NULL;*xx=0; }
 
-	// use the default agent unless scraping
-	// force to event guru bot for now
-	//char *agent = "Mozilla/5.0 (compatible; ProCogSEOBot/1.0; +http://www.procog.com/ )";
-	//char *agent = "Mozilla/5.0 (compatible; GigaBot/1.0; +http://www.gigablast.com/ )";
-	char *agent = g_conf.m_spiderUserAgent;
-	if ( r->m_isScraping )
-		agent = "Mozilla/4.0 "
-			"(compatible; MSIE 6.0; Windows 98; "
-			"Win 9x 4.90)" ;
 	// assume we do not add it!
 	r->m_addToTestCache = false;
 
@@ -515,18 +516,53 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	// we skip it if its a frame page, robots.txt, root doc or some other
 	// page that is a "child" page of the main page we are spidering
 	if ( ! r->m_skipHammerCheck ) {
-		// make sure we are not hammering an ip
+		// . make sure we are not hammering an ip
+		// . returns 0 if currently downloading a url from that ip
+		// . returns -1 if not found
 		long long last=s_hammerCache.getLongLong(0,r->m_firstIp,
 							 30,true);
 		// get time now
 		long long nowms = gettimeofdayInMilliseconds();
 		// how long has it been since last download START time?
 		long long waited = nowms - last;
+
+		bool queueIt = false;
+		if ( last > 0 && waited < r->m_crawlDelayMS ) queueIt = true;
+		// a "last" of 0 means currently downloading
+		if ( r->m_crawlDelayMS > 0 && last == 0LL ) queueIt = true;
+		// a last of -1 means not found. so first time i guess.
+		if ( last == -1 ) queueIt = false;
+
+		// . queue it up if we haven't waited long enough
+		// . then the functionr, checkQueue(), will re-eval all
+		//   the download requests in this hammer queue every 10ms. 
+		// . it will just lookup the lastdownload time in the cache,
+		//   which will store maybe a -1 if currently downloading...
+		if ( queueIt ) {
+			// debug
+			//log("spider: adding %s to crawldelayqueue",r->m_url);
+			// save this
+			r->m_udpSlot = slot;
+			r->m_nextLink = NULL;
+			// add it to queue
+			if ( ! s_hammerQueueHead ) {
+				s_hammerQueueHead = r;
+				s_hammerQueueTail = r;
+			}
+			else {
+				s_hammerQueueTail->m_nextLink = r;
+				s_hammerQueueTail = r;
+			}
+			return;
+		}
+			
+
 		// if we had it in cache check the wait time
-		if ( last > 0 && waited < 400 ) {
+		if ( last > 0 && waited < r->m_crawlDelayMS ) {
 			log("spider: hammering firstIp=%s url=%s "
-			    "only waited %lli ms",
-			    iptoa(r->m_firstIp),r->m_url,waited);
+			    "only waited %lli ms of %li ms",
+			    iptoa(r->m_firstIp),r->m_url,waited,
+			    r->m_crawlDelayMS);
 			// this guy has too many redirects and it fails us...
 			// BUT do not core if running live, only if for test
 			// collection
@@ -536,14 +572,14 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 			//	char*xx = NULL; *xx = 0; }
 		}
 		// store time now
-		s_hammerCache.addLongLong(0,r->m_firstIp,nowms);
+		//s_hammerCache.addLongLong(0,r->m_firstIp,nowms);
 		// note it
-		if ( g_conf.m_logDebugSpider )
-			log("spider: adding download end time of %llu for "
-			    "firstIp=%s "
-			    "url=%s "
-			    "to msg13::hammerCache",
-			    nowms,iptoa(r->m_firstIp),r->m_url);
+		//if ( g_conf.m_logDebugSpider )
+		//	log("spider: adding download end time of %llu for "
+		//	    "firstIp=%s "
+		//	    "url=%s "
+		//	    "to msg13::hammerCache",
+		//	    nowms,iptoa(r->m_firstIp),r->m_url);
 		// clear error from that if any, not important really
 		g_errno = 0;
 	}
@@ -616,19 +652,52 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	}
 
 
+	// do not get .google.com/ crap
+	//if ( strstr(r->m_url,".google.com/") ) { char *xx=NULL;*xx=0; }
+
+	downloadTheDocForReals ( r );
+}
+
+void downloadTheDocForReals ( Msg13Request *r ) {
+
 	// are we the first?
 	bool firstInLine = s_rt.isEmpty ( &r->m_cacheKey );
 	// wait in line cuz someone else downloading it now
 	if ( ! s_rt.addKey ( &r->m_cacheKey , &r ) ) {
-		g_udpServer.sendErrorReply(slot,g_errno);
+		g_udpServer.sendErrorReply(r->m_udpSlot,g_errno);
 		return;
 	}
 
 	// this means our callback will be called
-	if ( ! firstInLine ) return;
+	if ( ! firstInLine ) {
+		//log("spider: inlining %s",r->m_url);
+		return;
+	}
 
-	// do not get .google.com/ crap
-	//if ( strstr(r->m_url,".google.com/") ) { char *xx=NULL;*xx=0; }
+	// . store time now
+	// . no, now we store 0 to indicate in progress, then we
+	//   will overwrite it with a timestamp when the download completes
+	// . but if measuring crawldelay from beginning of the download then
+	//   store the current time
+	// . do NOT do this when downloading robots.txt etc. type files
+	//   which should have skipHammerCheck set to true
+	if ( r->m_crawlDelayFromEnd && ! r->m_skipHammerCheck ) {
+		s_hammerCache.addLongLong(0,r->m_firstIp, 0LL);//nowms);
+	}
+	else if ( ! r->m_skipHammerCheck ) {
+		// get time now
+		long long nowms = gettimeofdayInMilliseconds();
+		s_hammerCache.addLongLong(0,r->m_firstIp, nowms);
+	}
+
+	// note it
+	if ( g_conf.m_logDebugSpider )
+		log("spider: adding special \"in-progress\" time of %lli for "
+		    "firstIp=%s "
+		    "url=%s "
+		    "to msg13::hammerCache",
+		    -1LL,iptoa(r->m_firstIp),r->m_url);
+
 
 	// flag this
 	r->m_addToTestCache = true;
@@ -636,6 +705,17 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	if ( g_conf.m_logDebugSpider )
 		log("spider: downloading %s (%s)",
 		    r->m_url,iptoa(r->m_urlIp) );
+
+	// use the default agent unless scraping
+	// force to event guru bot for now
+	//char *agent = "Mozilla/5.0 (compatible; ProCogSEOBot/1.0; +http://www.procog.com/ )";
+	//char *agent = "Mozilla/5.0 (compatible; GigaBot/1.0; +http://www.gigablast.com/ )";
+	char *agent = g_conf.m_spiderUserAgent;
+	if ( r->m_isScraping )
+		agent = "Mozilla/4.0 "
+			"(compatible; MSIE 6.0; Windows 98; "
+			"Win 9x 4.90)" ;
+
 	// download it
 	if ( ! g_httpServer.getDoc ( r->m_url             ,
 				     r->m_urlIp           ,
@@ -701,6 +781,21 @@ void gotHttpReply2 ( void *state ,
 		log("spider: http reply (msg13) had error = %s "
 		    "for %s at ip %s",
 		    mstrerror(g_errno),r->m_url,iptoa(r->m_urlIp));
+
+	// get time now
+	long long nowms = gettimeofdayInMilliseconds();
+	// . now store the current time in the cache
+	// . do NOT do this for robots.txt etc. where we skip hammer check
+	if ( r->m_crawlDelayFromEnd && ! r->m_skipHammerCheck )
+		s_hammerCache.addLongLong(0,r->m_firstIp,nowms);
+	// note it
+	if ( g_conf.m_logDebugSpider )
+		log("spider: adding final download end time of %lli for "
+		    "firstIp=%s "
+		    "url=%s "
+		    "to msg13::hammerCache",
+		    nowms,iptoa(r->m_firstIp),r->m_url);
+
 
 	// sanity. this was happening from iframe download
 	//if ( g_errno == EDNSTIMEDOUT ) { char *xx=NULL;*xx=0; }
@@ -2086,5 +2181,48 @@ void gotIframeExpandedContent ( void *state ) {
 	delete  ( xd );
 }
 
+// call this once every 10ms to launch queued up download requests so that
+// we respect crawl delay for sure
+void scanHammerQueue ( int fd , void *state ) {
 
-	
+	Msg13Request *r = s_hammerQueueHead;
+	if ( ! r ) return;
+
+	long long nowms = gettimeofdayInMilliseconds();
+
+	Msg13Request *prev = NULL;
+	long long waited = -1LL;
+
+	// scan down the linked list of queued of msg13 requests
+	for ( ; r ; prev = r , r = r->m_nextLink ) { 
+		long long last;
+		last = s_hammerCache.getLongLong(0,r->m_firstIp,30,true);
+		// is one from this ip outstanding?
+		if ( last == 0LL && r->m_crawlDelayFromEnd ) continue;
+		// download finished? 
+		if ( last > 0 ) {
+		        waited = nowms - last;
+			// but skip if haven't waited long enough
+			if ( waited < r->m_crawlDelayMS ) continue;
+		}
+		// debug
+		//log("spider: downloading %s from crawldelay queue "
+		//    "waited=%llims crawldelay=%lims", 
+		//    r->m_url,waited,r->m_crawlDelayMS);
+		// good to go
+		downloadTheDocForReals ( r );
+		//
+		// remove from future scans
+		//
+		if ( prev ) 
+			prev->m_nextLink = r->m_nextLink;
+
+		if ( s_hammerQueueHead == r )
+			s_hammerQueueHead = r->m_nextLink;
+
+		if ( s_hammerQueueTail == r )
+			s_hammerQueueTail = prev;
+
+		// try to download some more i guess...
+	}
+}
