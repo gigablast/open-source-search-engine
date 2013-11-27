@@ -703,8 +703,9 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 	r->m_addToTestCache = true;
 	// note it here
 	if ( g_conf.m_logDebugSpider )
-		log("spider: downloading %s (%s)",
-		    r->m_url,iptoa(r->m_urlIp) );
+		log("spider: downloading %s (%s) (skiphammercheck=%li)",
+		    r->m_url,iptoa(r->m_urlIp) ,
+		    (long)r->m_skipHammerCheck);
 
 	// use the default agent unless scraping
 	// force to event guru bot for now

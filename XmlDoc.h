@@ -269,7 +269,6 @@ class XmlDoc {
 	uint32_t  m_internalFlags1;
 	long      m_ip;
 	long      m_crawlDelay;
-	long      m_finalCrawlDelay;
 	// . use this to quickly detect if doc is unchanged
 	// . we can avoid setting Xml and Words classes etc...
 	long      m_contentHash32;
@@ -632,6 +631,7 @@ class XmlDoc {
 	long *gotIp ( bool save ) ;
 	bool *getIsAllowed ( ) ;
 	long *getFinalCrawlDelay();
+	long      m_finalCrawlDelay;
 	//long getTryAgainTimeDelta() { 
 	//	if ( ! m_tryAgainTimeDeltaValid ) { char *xx=NULL;*xx=0;}
 	//	return m_tryAgainTimeDelta;
