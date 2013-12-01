@@ -421,10 +421,11 @@ bool gotReplyWrapperxd ( void *state ) {
 	     xd->m_cpuSummaryStartTime &&
 	     req->m_niceness == 0 )
 		log("query: Took %lli ms of CPU to compute summary for d=%lli "
-		    "u=%s niceness=%li",
+		    "u=%s niceness=%li q=%s",
 		    took2 ,
 		    xd->m_docId,xd->m_firstUrl.m_url,
-		    xd->m_niceness );
+		    xd->m_niceness ,
+		    req->ptr_qbuf );
 	// error?
 	if ( g_errno ) { xd->m_reply.sendReply ( xd ); return true; }
 	// this should not block now
