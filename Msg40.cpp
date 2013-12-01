@@ -1864,6 +1864,7 @@ bool Msg40::gotSummary ( ) {
 			return true;
 		}
 
+#ifdef NEEDLICENSE
 		// now make the fast facts from the gigabits and the
 		// samples. these are sentences containing the query and
 		// a gigabit.
@@ -1873,7 +1874,7 @@ bool Msg40::gotSummary ( ) {
 			// g_errno should be set on error here!
 			return true;
 		}
-		
+#endif
 
 		/*
 		long ng;
@@ -4294,6 +4295,9 @@ void setRepeatScores ( Words *words ,
 
 }
 
+// a separate license must be acq'd to use this code for commercial reasons
+#ifdef NEEDLICENSE
+
 ///////////////////
 //
 // FAST FACTS
@@ -4324,7 +4328,6 @@ static int factCmp ( const void *a, const void *b ) {
 	if ( fa->m_fact < fb->m_fact ) return -1;
 	return 0;
 }
-
 
 // . now make the fast facts from the gigabits and the samples. 
 // . these are sentences containing the query and a gigabit.
@@ -4379,7 +4382,7 @@ bool Msg40::computeFastFacts ( ) {
 
 
 	//
-	// store Facts (sentences) into this safebuf
+	// store Facts (sentences) into this safebuf (nuggets)
 	//
 	char ftmp[100000];
 	SafeBuf factBuf(ftmp,100000);
@@ -4615,3 +4618,5 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 	if ( ! factBuf->safeMemcpy ( &fact , sizeof(Fact) ) ) return false;
 	return true;
 }
+
+#endif

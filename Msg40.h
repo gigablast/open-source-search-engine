@@ -117,6 +117,7 @@ class Msg40 {
 	bool computeGigabits( class TopicGroup *tg );
 	SafeBuf m_gigabitBuf;
 
+#ifdef NEEDLICENSE
 	bool computeFastFacts ( );
 	bool addFacts ( HashTableX *queryTable,
 			HashTableX *gbitTable ,
@@ -125,6 +126,8 @@ class Msg40 {
 			bool debugGigabits ,
 			class Msg20Reply *reply,
 			SafeBuf *factBuf ) ;
+#endif
+
 	SafeBuf m_factBuf;
 
 	// keep these public since called by wrapper functions
