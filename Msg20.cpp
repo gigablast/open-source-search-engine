@@ -380,6 +380,7 @@ void handleRequest20 ( UdpSlot *slot , long netnice ) {
 	xd->setCallback ( xd , gotReplyWrapperxd );
 	// set set time
 	xd->m_setTime = startTime;
+	xd->m_cpuSummaryStartTime = 0;
 	// . now as for the msg20 reply!
 	// . TODO: move the parse state cache into just a cache of the
 	//   XmlDoc itself, and put that cache logic into XmlDoc.cpp so
@@ -417,6 +418,7 @@ bool gotReplyWrapperxd ( void *state ) {
 		    xd->m_docId,xd->m_firstUrl.m_url,
 		    xd->m_niceness );
 	if ( (req->m_isDebug || took2 > 100) &&
+	     xd->m_cpuSummaryStartTime &&
 	     req->m_niceness == 0 )
 		log("query: Took %lli ms of CPU to compute summary for d=%lli "
 		    "u=%s niceness=%li",
