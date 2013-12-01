@@ -418,7 +418,7 @@ bool gotReplyWrapperxd ( void *state ) {
 		    xd->m_niceness );
 	if ( (req->m_isDebug || took2 > 100) &&
 	     req->m_niceness == 0 )
-		log("query: Took %li ms of CPU to compute summary for d=%lli "
+		log("query: Took %lli ms of CPU to compute summary for d=%lli "
 		    "u=%s niceness=%li",
 		    took2 ,
 		    xd->m_docId,xd->m_firstUrl.m_url,
