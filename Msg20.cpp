@@ -399,7 +399,10 @@ bool gotReplyWrapperxd ( void *state ) {
 	// parse the request
 	Msg20Request *req = (Msg20Request *)slot->m_readBuf;
 	// print time
-	long long took = gettimeofdayInMilliseconds() - xd->m_setTime;
+	long long now = gettimeofdayInMilliseconds();
+	long long took = now - xd->m_setTime;
+	long long took2 = now - xd->m_cpuSummaryStartTime;
+
 	// if there is a baclkog of msg20 summary generation requests this
 	// is really not the cpu it took to make the smmary, but how long it
 	// took to get the reply. this request might have had to wait for the
@@ -411,6 +414,13 @@ bool gotReplyWrapperxd ( void *state ) {
 		log("query: Took %lli ms to compute summary for d=%lli u=%s "
 		    "niceness=%li",
 		    took,
+		    xd->m_docId,xd->m_firstUrl.m_url,
+		    xd->m_niceness );
+	if ( (req->m_isDebug || took2 > 100) &&
+	     req->m_niceness == 0 )
+		log("query: Took %li ms of CPU to compute summary for d=%lli "
+		    "u=%s niceness=%li",
+		    took2 ,
 		    xd->m_docId,xd->m_firstUrl.m_url,
 		    xd->m_niceness );
 	// error?

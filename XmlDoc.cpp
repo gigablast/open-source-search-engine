@@ -24825,6 +24825,10 @@ Summary *XmlDoc::getSummary () {
 	// shortcut
 	Summary *s = &m_summary;
 
+	// time cpu set time
+	long long start = gettimeofdayInMilliseconds();
+	m_cpuSummaryStartTime = start;
+
 	// make sure summary does not include title
 	char *tbuf    = ti->m_title;
 	// this does not include the terminating \0
