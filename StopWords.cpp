@@ -2027,6 +2027,9 @@ static char      *s_commonWords[] = {
 	"could've",
 	"wasn't",
 	"hasn't",
+	"hadn't",
+	"like", // in too many gigabits
+	"know", // in too many gigabits
 	"you'd",
 	"we'd",
 	"i'd",
