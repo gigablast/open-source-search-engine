@@ -312,7 +312,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		long dg = hr->getLong("dg",-1);
 		if ( dg >= 0 ) sb.safePrintf("&dg=%li",dg);
 		// show gigabits?
-		long gb = hr->getLong("gigabits",0);
+		long gb = hr->getLong("gigabits",1);
 		if ( gb >= 1 ) sb.safePrintf("&gigabits=%li",gb);
 		// forward the "ff" family filter as well
 		long ff = hr->getLong("ff",0);
@@ -1206,7 +1206,7 @@ bool gotResults ( void *state ) {
 		// print all sentences containing this gigabit
 		Gigabit *gi = &gigabits[i];
 		printGigabit ( st,sb , msg40 , gi , si );
-		sb.safePrintf("<br><br>");
+		sb.safePrintf("<br>");
 	}
 	if ( numGigabits && ! si->m_xml )
 		sb.safePrintf("</td></tr></table>");
