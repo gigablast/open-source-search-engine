@@ -10076,7 +10076,7 @@ TagRec *XmlDoc::getTagRec ( ) {
 				   &m_tagRec ) )
 		// we blocked, return -1
 		return (TagRec *)-1;
-	// error?
+	// error? ENOCOLLREC?
 	if ( g_errno ) return NULL;
 	// assign it
 	m_tagRec.serialize ( m_tagRecBuf );
