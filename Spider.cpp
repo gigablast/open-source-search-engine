@@ -8661,10 +8661,17 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// . "ucp" is a ||-separated list of substrings
 			// . "ucr" is a regex
 			// . regexec returns 0 for a match
-			if ( ucr && regexec(ucr,url,0,NULL,0) ) 
+			if ( ucr && regexec(ucr,url,0,NULL,0) &&
+			     // seed or other manual addition always matches
+			     ! sreq->m_isAddUrl &&
+			     ! sreq->m_isInjecting )
 				continue;
 			// do not require a match on ucp if ucr is given
-			if ( ucp && ! ucr&&!doesStringContainPattern(url,ucp))
+			if ( ucp && ! ucr &&
+			     ! doesStringContainPattern(url,ucp) &&
+			     // seed or other manual addition always matches
+			     ! sreq->m_isAddUrl &&
+			     ! sreq->m_isInjecting )
 				continue;
 			p += 10;
 			p = strstr(p,"&&");
