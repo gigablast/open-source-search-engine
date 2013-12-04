@@ -2513,6 +2513,13 @@ bool Msg8a::getTagRec ( Url   *url ,
 			TagRec *tagRec ,
 			bool   doInheritance ,
 			char   rdbId ) {
+
+
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	if ( ! cr ) { 
+		g_errno = ENOCOLLREC;
+		return true;
+	}
 	
 	// reset tag rec
 	tagRec->reset();//m_numListPtrs = 0;

@@ -4865,16 +4865,6 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	char *api = cr->m_diffbotApiUrl.getBufStart();
 	if ( api && ! api[0] ) api = NULL;
 
-	// if it was not recrawling and we made it start we have
-	// to repopulate waiting tree because most entries will
-	// need to be re-added!
-	// really, anytime we change url filters we have to repopulate
-	// the waiting tree
-	SpiderColl *sc = cr->m_spiderColl;
-	if ( sc ) {
-		sc->m_waitingTreeNeedsRebuild = true;
-	}
-
 	// convert from seconds to milliseconds. default is 250ms?
 	long wait = (long)(cr->m_collectiveCrawlDelay * 1000.0);
 	// default to 250ms i guess. -1 means unset i think.
@@ -5028,6 +5018,8 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	//WebPage *pg = g_pages.getPage ( page ) ;
 	//g_parms.setFromRequest ( hr , socket , pg->m_function, cr );
 
+	bool rebuild = false;
+
 	//
 	// set other diffbot parms for this collection
 	//
@@ -5088,6 +5080,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	if ( restrictDomain != -1 ) {
 		cr->m_restrictDomain = restrictDomain;
 		cr->m_needsSave = 1;
+		rebuild = true;
 	}
 
 	char *api = hr->getString("apiUrl",NULL);
@@ -5099,6 +5092,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	if ( ppp1 ) {
 		cr->m_diffbotUrlCrawlPattern.set(ppp1);
 		cr->m_needsSave = 1;
+		rebuild = true;
 	}
 	char *ppp2 = hr->getString("urlProcessPattern",NULL);
 	if ( ppp2 ) {
@@ -5196,8 +5190,10 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 
 	float delay = hr->getFloat("crawlDelay",-1.0);
 	//long crawlWait = hr->getLong("wait",-1);
-	if ( delay >= 0.0 )
+	if ( delay >= 0.0 ) {
+		rebuild = true;
 		cr->m_collectiveCrawlDelay = delay;
+	}
 	
 	long onlyProcessNew = hr->getLong("onlyProcessIfNew",-1);
 	if ( onlyProcessNew != -1 ) {
@@ -5227,6 +5223,18 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 	// reset the url filters here to the default set.
 	// we will append the client's filters below them below.
 	resetUrlFilters ( cr );
+
+	// if it was not recrawling and we made it start we have
+	// to repopulate waiting tree because most entries will
+	// need to be re-added!
+	// really, anytime we change url filters we have to repopulate
+	// the waiting tree
+	SpiderColl *sc = cr->m_spiderColl;
+	if ( sc && rebuild ) {
+		// this is causing a bulk job not to complete because
+		// jenkins keeps checking it every 10 seconds
+		sc->m_waitingTreeNeedsRebuild = true;
+	}
 
 	return true;
 
