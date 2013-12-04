@@ -5112,6 +5112,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_hasucr = false;
 		cr->m_diffbotUrlCrawlRegEx.purge();
 		cr->m_needsSave = 1;
+		rebuild = true;
 	}
 	// add a new one if not blank
 	if ( rx1 && rx1[0] ) {
