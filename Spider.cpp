@@ -4118,6 +4118,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 				// if a scan is ongoing, this will re-set it
 				sc->m_nextKey2.setMin();
 				sc->m_waitingTreeNeedsRebuild = true;
+				log("spider: hit rebuild timeout for %s",
+				    cr->m_coll);
 				// flush the ufn table
 				clearUfnTable();
 			}
