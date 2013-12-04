@@ -8308,6 +8308,22 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
+	m->m_cgi   = "dbucre";
+	m->m_xml   = "diffbotUrlCrawlRegEx";
+	m->m_off   = (char *)&cr.m_diffbotUrlCrawlRegEx - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
+	m++;
+
+	m->m_cgi   = "dbupre";
+	m->m_xml   = "diffbotUrlProcessRegEx";
+	m->m_off   = (char *)&cr.m_diffbotUrlProcessRegEx - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
+	m++;
+
 	m->m_cgi   = "dbopn";
 	m->m_xml   = "diffbotOnlyProcessIfNew";
 	m->m_off   = (char *)&cr.m_diffbotOnlyProcessIfNew - x;

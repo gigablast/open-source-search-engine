@@ -2188,6 +2188,18 @@ static class HelpItem s_his[] = {
 	 "contains any of these then we send it to diffbot for processing. "
 	 "An empty pattern matches all pages."},
 
+	{"urlCrawlRegEx","Regular expression that the url must match "
+	 "in order to be crawled. If present then the urlCrawlPattern will "
+	 "be ignored. "
+	 "An empty regular expression matches all urls."},
+
+	{"urlProcessRegEx","Regular expression that the url must match "
+	 "in order to be processed. "
+	 "If present then the urlProcessPattern will "
+	 "be ignored. "
+	 "An empty regular expression matches all urls."},
+
+
 	{"expression","A pattern to match in a URL. List up to 100 "
 	 "expression/action pairs in the HTTP request. "
 	 "Example expressions:"},
@@ -2473,6 +2485,48 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( ! st->m_seedBank.safeMemcpy ( &cr->m_diffbotSeeds ) )
 			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
 	}
+
+	//
+	// if we can't compile the provided regexes, return error
+	//
+	if ( cr ) {
+		char *rx1 = hr->getString("urlCrawlRegEx",NULL);
+		if ( rx1 && ! rx1[0] ) rx1 = NULL;
+		char *rx2 = hr->getString("urlProcessRegEx",NULL);
+		if ( rx2 && ! rx2[0] ) rx2 = NULL;
+		// this will store the compiled regular expression into ucr
+		regex_t re1;
+		regex_t re2;
+		long status1 = 0;
+		long status2 = 0;
+		if ( rx1 )
+			status1 = regcomp ( &re1 , rx1 ,
+					    REG_EXTENDED|REG_ICASE|
+					    REG_NEWLINE|REG_NOSUB);
+		if ( rx2 )
+			status2 = regcomp ( &re2 , rx2 ,
+					    REG_EXTENDED|REG_ICASE|
+					    REG_NEWLINE|REG_NOSUB);
+		if ( rx1 ) regfree ( &re1 );
+		if ( rx2 ) regfree ( &re2 );
+		SafeBuf em;
+		if ( status1 ) {
+			log("xmldoc: regcomp %s failed.",rx1);
+			em.safePrintf("Invalid regular expresion: %s",rx1);
+		}
+		else if ( status2 ) {
+			log("xmldoc: regcomp %s failed.",rx2);
+			em.safePrintf("Invalid regular expresion: %s",rx2);
+		}
+		if ( status1 || status2 ) {
+			delete st;
+			mdelete ( st , sizeof(StateCD) , "stcd" );
+			char *msg = em.getBufStart();
+			return sendErrorReply2(socket,fmt,msg);
+		}
+	}
+		
+
 			
 
 	// . if this is a cast=0 request it is received by all hosts in the 
@@ -2910,8 +2964,23 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 	sb.safeUtf8ToJSON ( cx->m_diffbotPageProcessPattern.getBufStart() );
 	sb.safePrintf("\",\n");
 
+
+	sb.safePrintf("\"urlCrawlRegEx\":\"");
+	sb.safeUtf8ToJSON ( cx->m_diffbotUrlCrawlRegEx.getBufStart() );
+	sb.safePrintf("\",\n");
+
+	sb.safePrintf("\"urlProcessRegEx\":\"");
+	sb.safeUtf8ToJSON ( cx->m_diffbotUrlProcessRegEx.getBufStart() );
+	sb.safePrintf("\",\n");
+
+
+
 	char *token = cx->m_diffbotToken.getBufStart();
 	char *name = cx->m_diffbotCrawlName.getBufStart();
+
+
+
+
 
 	char *mt = "crawl";
 	if ( cx->m_isCustomCrawl == 2 ) mt = "bulk";
@@ -3512,10 +3581,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      
-			      "</table>"
-
-			      "</TD>"
-			      
 			      , cr->m_diffbotCrawlName.getBufStart()
 			      , cr->m_diffbotToken.getBufStart()
 
@@ -3534,6 +3599,141 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , cr->m_globalCrawlInfo.m_pageProcessAttempts
 			      , cr->m_globalCrawlInfo.m_pageProcessSuccesses
 			      );
+
+
+		sb.safePrintf("<tr>"
+			      "<td><b>Download Objects:</b> "
+			      "</td><td>"
+			      "<a href=/crawlbot/download/%s_data.csv>"
+			      "csv</a>"
+			      " &nbsp; "
+			      "<a href=/crawlbot/download/%s_data.json>"
+			      "json</a>"
+			      "</td>"
+			      "</tr>"
+
+
+			      "<tr>"
+			      "<td><b>Download Products:</b> "
+			      "</td><td>"
+			      // make it search.csv so excel opens it
+			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
+			      "c=%s&n=10000000&rand=%llu&scores=0&id=1&"
+			      "q=gbrevsortby%%3Aproduct.offerPrice&"
+			      "prepend=type%%3Ajson"
+			      //"+type%%3Aproduct%%7C"
+			      ">"
+			      "csv</a>"
+			      " &nbsp; "
+			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
+			      "c=%s&n=10000000&rand=%llu&scores=0&id=1&"
+			      "q=gbrevsortby%%3Aproduct.offerPrice&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "html</a>"
+
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Download Urls:</b> "
+			      "</td><td>"
+			      "<a href=/crawlbot/download/%s_urls.csv>"
+			      "csv</a>"
+			      "</td>"
+			      "</tr>"
+
+
+			      "<tr>"
+			      "<td><b>Latest Objects:</b> "
+			      "</td><td>"
+			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
+			      "c=%s&n=10&rand=%llu&scores=0&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "csv</a>"
+			      " &nbsp; "
+			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
+			      "c=%s&n=10rand=%llu&scores=0&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "html</a>"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Latest Products:</b> "
+			      "</td><td>"
+			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
+			      "c=%s&n=10&rand=%llu&scores=0&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson+type%%3Aproduct"
+			      ">"
+			      "csv</a>"
+			      " &nbsp; "
+			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
+			      "c=%s&n=10&rand=%llu&scores=0&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson+type%%3Aproduct"
+			      ">"
+			      "html</a>"
+
+			      "</td>"
+			      "</tr>"
+
+
+			      "<tr>"
+			      "<td><b>Download Pages:</b> "
+			      "</td><td>"
+			      "<a href=/crawlbot/download/%s_pages.txt>"
+			      "txt</a>"
+			      //
+			      "</td>"
+			      "</tr>"
+
+			      "</table>"
+
+			      "</TD>"
+			      
+			      , cr->m_coll
+			      , cr->m_coll
+
+			      , cr->m_coll
+			      , rand64
+
+			      // download products html
+			      , cr->m_coll
+			      , rand64
+
+			      //, cr->m_coll
+			      //, cr->m_coll
+			      //, cr->m_coll
+
+			      , cr->m_coll
+
+			      // latest objects in html
+			      , cr->m_coll
+			      , rand64
+
+			      // latest objects in csv
+			      , cr->m_coll
+			      , rand64
+
+
+			      // latest products in html
+			      , cr->m_coll
+			      , rand64
+
+			      // latest products in csv
+			      , cr->m_coll
+			      , rand64
+
+			      // download pages
+			      , cr->m_coll
+			      );
+
 
 		// spacer column
 		sb.safePrintf("<TD>"
@@ -3634,106 +3834,23 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		SafeBuf ppp3;
 		ppp3.htmlEncode ( px3 , gbstrlen(px3) , true , 0 );
 		ppp3.nullTerm();
-		
+
+		char *rx1 = cr->m_diffbotUrlCrawlRegEx.getBufStart();
+		if ( ! rx1 ) rx1 = "";
+		SafeBuf rrr1;
+		rrr1.htmlEncode ( rx1 , gbstrlen(rx1), true , 0 );
+
+		char *rx2 = cr->m_diffbotUrlProcessRegEx.getBufStart();
+		if ( ! rx2 ) rx2 = "";
+		SafeBuf rrr2;
+		rrr2.htmlEncode ( rx2 , gbstrlen(rx2), true , 0 );
+
 		char *notifEmail = cr->m_notifyEmail.getBufStart();
 		char *notifUrl   = cr->m_notifyUrl.getBufStart();
 		if ( ! notifEmail ) notifEmail = "";
 		if ( ! notifUrl   ) notifUrl = "";
 
 		sb.safePrintf(
-			      "<tr>"
-			      "<td><b>Download Objects:</b> "
-			      "</td><td>"
-			      "<a href=/crawlbot/download/%s_data.csv>"
-			      "csv</a>"
-			      " &nbsp; "
-			      "<a href=/crawlbot/download/%s_data.json>"
-			      "json</a>"
-			      "</td>"
-			      "</tr>"
-
-
-			      "<tr>"
-			      "<td><b>Download Products:</b> "
-			      "</td><td>"
-			      // make it search.csv so excel opens it
-			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
-			      "c=%s&n=10000000&rand=%llu&scores=0&id=1&"
-			      "q=gbrevsortby%%3Aproduct.offerPrice&"
-			      "prepend=type%%3Ajson"
-			      //"+type%%3Aproduct%%7C"
-			      ">"
-			      "csv</a>"
-			      " &nbsp; "
-			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
-			      "c=%s&n=10000000&rand=%llu&scores=0&id=1&"
-			      "q=gbrevsortby%%3Aproduct.offerPrice&"
-			      "prepend=type%%3Ajson"
-			      ">"
-			      "html</a>"
-
-			      "</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Download Urls:</b> "
-			      "</td><td>"
-			      "<a href=/crawlbot/download/%s_urls.csv>"
-			      "csv</a>"
-			      "</td>"
-			      "</tr>"
-
-
-			      "<tr>"
-			      "<td><b>Latest Objects:</b> "
-			      "</td><td>"
-			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
-			      "c=%s&n=10&rand=%llu&scores=0&id=1&"
-			      "q=gbsortby%%3Agbspiderdate&"
-			      "prepend=type%%3Ajson"
-			      ">"
-			      "csv</a>"
-			      " &nbsp; "
-			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
-			      "c=%s&n=10rand=%llu&scores=0&id=1&"
-			      "q=gbsortby%%3Agbspiderdate&"
-			      "prepend=type%%3Ajson"
-			      ">"
-			      "html</a>"
-			      "</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Latest Products:</b> "
-			      "</td><td>"
-			      "<a href=/search.csv?icc=1&format=csv&sc=0&dr=0&"
-			      "c=%s&n=10&rand=%llu&scores=0&id=1&"
-			      "q=gbsortby%%3Agbspiderdate&"
-			      "prepend=type%%3Ajson+type%%3Aproduct"
-			      ">"
-			      "csv</a>"
-			      " &nbsp; "
-			      "<a href=/search?icc=1&format=html&sc=0&dr=0&"
-			      "c=%s&n=10&rand=%llu&scores=0&id=1&"
-			      "q=gbsortby%%3Agbspiderdate&"
-			      "prepend=type%%3Ajson+type%%3Aproduct"
-			      ">"
-			      "html</a>"
-
-			      "</td>"
-			      "</tr>"
-
-
-			      "<tr>"
-			      "<td><b>Download Pages:</b> "
-			      "</td><td>"
-			      "<a href=/crawlbot/download/%s_pages.txt>"
-			      "txt</a>"
-			      //
-			      "</td>"
-			      "</tr>"
-
-
 			      
 			      //
 			      //
@@ -3782,6 +3899,25 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<input type=submit name=submit value=OK>"
 			      "</td>"
 			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Url Crawl RegEx:</b> "
+			      "</td><td>"
+			      "<input type=text name=urlCrawlRegEx "
+			      "size=20 value=\"%s\"> "
+			      "<input type=submit name=submit value=OK>"
+			      "</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Url Process RegEx:</b> "
+			      "</td><td>"
+			      "<input type=text name=urlProcessRegEx "
+			      "size=20 value=\"%s\"> "
+			      "<input type=submit name=submit value=OK>"
+			      "</td>"
+			      "</tr>"
+
 
 			      "<tr>"
 			      "<td><b>Only Process If New:</b> "
@@ -3882,48 +4018,15 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</TABLE>"
 
 
-			      , cr->m_coll
-			      , cr->m_coll
-
-			      , cr->m_coll
-			      , rand64
-
-			      // download products html
-			      , cr->m_coll
-			      , rand64
-
-			      //, cr->m_coll
-			      //, cr->m_coll
-			      //, cr->m_coll
-
-			      , cr->m_coll
-
-			      // latest objects in html
-			      , cr->m_coll
-			      , rand64
-
-			      // latest objects in csv
-			      , cr->m_coll
-			      , rand64
-
-
-			      // latest products in html
-			      , cr->m_coll
-			      , rand64
-
-			      // latest products in csv
-			      , cr->m_coll
-			      , rand64
-
-
-			      , cr->m_coll
-
 			      , cr->m_collectiveRespiderFrequency
 
 			      , apiUrl.getBufStart()
 			      , ppp1.getBufStart()
 			      , ppp2.getBufStart()
 			      , ppp3.getBufStart()
+
+			      , rrr1.getBufStart()
+			      , rrr2.getBufStart()
 
 			      , isNewYes
 			      , isNewNo
@@ -4315,6 +4418,8 @@ CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ,
 	cr->m_diffbotUrlCrawlPattern.set ( "" );
 	cr->m_diffbotUrlProcessPattern.set ( "" );
 	cr->m_diffbotPageProcessPattern.set ( "" );
+	cr->m_diffbotUrlCrawlRegEx.set ( "" );
+	cr->m_diffbotUrlProcessRegEx.set ( "" );
 
 	cr->m_spiderStatus = SP_INITIALIZING;
 
@@ -4742,8 +4847,19 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
 	if ( ucp && ! ucp[0] ) ucp = NULL;
 
+	// if we had a regex, that works for this purpose as well
+	if ( ! ucp ) ucp = cr->m_diffbotUrlCrawlRegEx.getBufStart();
+	if ( ucp && ! ucp[0] ) ucp = NULL;
+
+
+
 	char *upp = cr->m_diffbotUrlProcessPattern.getBufStart();
 	if ( upp && ! upp[0] ) upp = NULL;
+
+	// if we had a regex, that works for this purpose as well
+	if ( ! upp ) upp = cr->m_diffbotUrlProcessRegEx.getBufStart();
+	if ( upp && ! upp[0] ) upp = NULL;
+
 
 	// what diffbot url to use for processing
 	char *api = cr->m_diffbotApiUrl.getBufStart();
@@ -4870,7 +4986,7 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 	if ( upp && ! ucp ) {
 		cr->m_regExs[i].set("matchesupp");
 		cr->m_spiderPriorities   [i] = 53;
-		cr->m_harvestLinks       [i] = false;
+		//cr->m_harvestLinks       [i] = false;
 		cr->m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// crawl everything by default, no processing
@@ -4994,6 +5110,65 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 		cr->m_diffbotPageProcessPattern.set(ppp3);
 		cr->m_needsSave = 1;
 	}
+	// reg ex support
+	char *rx1 = hr->getString("urlCrawlRegEx",NULL);
+	// clear what we had
+	if ( rx1 && cr->m_hasucr ) {
+		regfree ( &cr->m_ucr );
+		cr->m_hasucr = false;
+		cr->m_diffbotUrlCrawlRegEx.purge();
+		cr->m_needsSave = 1;
+	}
+	// add a new one if not blank
+	if ( rx1 && rx1[0] ) {
+		cr->m_diffbotUrlCrawlRegEx.set(rx1);
+		cr->m_needsSave = 1;
+		// this will store the compiled regular expression into ucr
+		if ( regcomp ( &cr->m_ucr ,
+			       // the regular expression to compile
+			       rx1 ,
+			       // some flags
+			       REG_EXTENDED|REG_ICASE|
+			       REG_NEWLINE|REG_NOSUB) ) {
+			regfree ( &cr->m_ucr);
+			// should never fail!
+			return log("xmldoc: regcomp %s failed: %s. "
+				   "Ignoring.",
+				   rx1,mstrerror(errno));
+		}
+		cr->m_hasucr = true;
+	}
+
+
+	char *rx2 = hr->getString("urlProcessRegEx",NULL);
+	// clear what we had
+	if ( rx2 && cr->m_hasupr ) {
+		regfree ( &cr->m_upr );
+		cr->m_hasupr = false;
+		cr->m_diffbotUrlProcessRegEx.purge();
+		cr->m_needsSave = 1;
+	}
+	// add a new one if not blank
+	if ( rx2 && rx2[0] ) {
+		cr->m_diffbotUrlProcessRegEx.set(rx2);
+		cr->m_needsSave = 1;
+		// this will store the compiled regular expression into upr
+		if ( regcomp ( &cr->m_upr ,
+			       // the regular expression to compile
+			       rx2 ,
+			       // some flags
+			       REG_EXTENDED|REG_ICASE|
+			       REG_NEWLINE|REG_NOSUB) ) {
+			regfree ( &cr->m_upr);
+			// error!
+			return log("xmldoc: regcomp %s failed: %s. "
+				   "Ignoring.",
+				   rx2,mstrerror(errno));
+		}
+		cr->m_hasupr = true;
+	}
+
+
 	float respider = hr->getFloat("repeatJob",-1.0);
 	if ( respider == -1.0 ) respider = hr->getFloat("repeat",-1.0);
 	if ( respider == -1.0 ) respider = hr->getFloat("repeatCrawl",-1.0);

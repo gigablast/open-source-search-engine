@@ -2615,6 +2615,13 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 	}
 
 	long long uh48;
+
+	//
+	// s_ufnTree tries to cache the top X spiderrequests for an IP
+	// that should be spidered next so we do not have to scan like
+	// a million spiderrequests in spiderdb to find the best one.
+	//
+
 	// if we have a specific uh48 targetted in s_ufnTree then that
 	// saves a ton of time!
 	// key format for s_ufnTree:
@@ -8593,6 +8600,16 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 	char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
 	char *upp = cr->m_diffbotUrlProcessPattern.getBufStart();
 
+	if ( upp && ! upp[0] ) upp = NULL;
+	if ( ucp && ! ucp[0] ) ucp = NULL;
+
+	// get the compiled regular expressions
+	regex_t *ucr = &cr->m_ucr;
+	regex_t *upr = &cr->m_upr;
+	if ( ! cr->m_hasucr ) ucr = NULL;
+	if ( ! cr->m_hasupr ) upr = NULL;
+
+
 	char *ext;
 	char *special;
 
@@ -8640,7 +8657,12 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// . url must match one of the patterns in there. 
 			// . inline this for speed
 			// . "ucp" is a ||-separated list of substrings
-			if ( ucp && ! doesStringContainPattern ( url,ucp) ) 
+			// . "ucr" is a regex
+			// . regexec returns 0 for a match
+			if ( ucr && regexec(ucr,url,0,NULL,0) ) 
+				continue;
+			// do not require a match on ucp if ucr is given
+			if ( ucp && ! ucr&&!doesStringContainPattern(url,ucp))
 				continue;
 			p += 10;
 			p = strstr(p,"&&");
@@ -8664,7 +8686,11 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// . url must match one of the patterns in there. 
 			// . inline this for speed
 			// . "upp" is a ||-separated list of substrings
-			if ( upp && ! doesStringContainPattern ( url,upp) ) 
+			// . "upr" is a regex
+			// . regexec returns 0 for a match
+			if ( upr && regexec(upr,url,0,NULL,0) ) 
+				continue;
+			if ( upp && !upr &&!doesStringContainPattern(url,upp))
 				continue;
 			p += 10;
 			p = strstr(p,"&&");

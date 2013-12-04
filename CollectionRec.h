@@ -56,7 +56,7 @@
 //#define MAX_SITE_EXPRESSION_LEN 128
 //#define MAX_SITE_EXPRESSIONS    256
 
-//#include "regex.h"
+#include "regex.h"
 
 #include "Url.h"  // MAX_COLL_LEN
 //#include "Sync.h"
@@ -445,6 +445,14 @@ class CollectionRec {
 	SafeBuf m_diffbotUrlProcessPattern;
 	// only CRAWL urls that match this pattern
 	SafeBuf m_diffbotUrlCrawlPattern;
+
+	// regex support
+	SafeBuf m_diffbotUrlCrawlRegEx;
+	SafeBuf m_diffbotUrlProcessRegEx;
+	regex_t m_ucr;
+	regex_t m_upr;
+	long    m_hasucr:1;
+	long    m_hasupr:1;
 
 	char    m_diffbotOnlyProcessIfNew;
 

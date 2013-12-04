@@ -45,6 +45,7 @@
 #define SP_ADMIN_PAUSED 8 // g_conf.m_spideringEnabled = false
 #define SP_COMPLETED    9 // crawl is done, and no repeatCrawl is scheduled
 
+bool testPatterns ( ) ;
 bool doesStringContainPattern ( char *content , char *pattern ) ;
 
 bool getSpiderStatusMsg ( class CollectionRec *cx , 
@@ -605,6 +606,8 @@ class SpiderRequest {
 	long    m_hasContactInfoValid     :1;
 	long    m_isContactyValid         :1;
 	long    m_hasAddressValid         :1;
+	//long    m_matchesUrlCrawlPattern  :1;
+	//long    m_matchesUrlProcessPattern:1;
 	long    m_hasTODValid             :1;
 	long    m_hasSiteVenueValid       :1;
 	long    m_siteNumInlinksValid     :1;
