@@ -740,6 +740,11 @@ public:
 				char **lastKeyPtr );
 	bool printJsonItemInCsv ( char *json , SafeBuf *sb ) ;
 
+	long long m_lastUh48;
+	long long m_prevReplyUh48;
+	long m_prevReplyError;
+	time_t m_prevReplyDownloadTime;
+
 	char m_fmt;
 	Msg4 m_msg4;
 	HttpRequest m_hr;
@@ -911,6 +916,11 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
 	// for csv...
 	st->m_needHeaderRow = true;
+
+	st->m_lastUh48 = 0LL;
+	st->m_prevReplyUh48 = 0LL;
+	st->m_prevReplyError = 0;
+	st->m_prevReplyDownloadTime = 0LL;
 
 	// debug
 	//log("mnew1: st=%lx",(long)st);
@@ -1352,10 +1362,6 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 	// declare these up here
 	SpiderRequest *sreq = NULL;
 	SpiderReply   *srep = NULL;
-	long long lastUh48 = 0LL;
-	long long prevReplyUh48 = 0LL;
-	long prevReplyError = 0;
-	time_t prevReplyDownloadTime = 0LL;
 	long badCount = 0;
 
 	long nowGlobalMS = gettimeofdayInMillisecondsGlobal();
@@ -1378,12 +1384,12 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 				lastSpidered = srep->m_spideredTime;
 			else if ( srep->m_spideredTime > lastSpidered )
 				lastSpidered = srep->m_spideredTime;
-			prevReplyUh48 = srep->getUrlHash48();
+			m_prevReplyUh48 = srep->getUrlHash48();
 			// 0 means indexed successfully. not sure if
 			// this includes http status codes like 404 etc.
 			// i don't think it includes those types of errors!
-			prevReplyError = srep->m_errCode;
-			prevReplyDownloadTime = srep->m_spideredTime;
+			m_prevReplyError = srep->m_errCode;
+			m_prevReplyDownloadTime = srep->m_spideredTime;
 			continue;
 		}
 		// ok, we got a spider request
@@ -1401,9 +1407,9 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		long long uh48 = sreq->getUrlHash48  ();
 		bool printIt = false;
 		// there can be multiple spiderrequests for the same url!
-		if ( lastUh48 != uh48 ) printIt = true;
+		if ( m_lastUh48 != uh48 ) printIt = true;
 		if ( ! printIt ) continue;
-		lastUh48 = uh48;
+		m_lastUh48 = uh48;
 
 		// make sure spiderreply is for the same url!
 		if ( srep && srep->getUrlHash48() != sreq->getUrlHash48() )
@@ -1426,20 +1432,20 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// if unspidered, then we don't match the prev reply
 		// so set "status" to 0 to indicate hasn't been 
 		// downloaded yet.
-		if ( lastUh48 != prevReplyUh48 ) status = 0;
+		if ( m_lastUh48 != m_prevReplyUh48 ) status = 0;
 		// if it matches, perhaps an error spidering it?
-		if ( status && prevReplyError ) status = -1;
+		if ( status && m_prevReplyError ) status = -1;
 
 		// use the time it was added to spiderdb if the url
 		// was not spidered
 		time_t time = sreq->m_addedTime;
 		// if it was spidered, successfully or got an error,
 		// then use the time it was spidered
-		if ( status ) time = prevReplyDownloadTime;
+		if ( status ) time = m_prevReplyDownloadTime;
 
 		char *msg = "Successfully Downloaded";//Crawled";
 		if ( status == 0 ) msg = "Not downloaded";//Unexamined";
-		if ( status == -1 ) msg = mstrerror(prevReplyError);
+		if ( status == -1 ) msg = mstrerror(m_prevReplyError);
 
 		if ( srep && srep->m_hadDiffbotError )
 			msg = "Diffbot processing error";
