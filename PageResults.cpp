@@ -1742,28 +1742,30 @@ static int printResult ( SafeBuf &sb,
 	SearchInput *si    = &st->m_si;
 	Msg40       *msg40 = &st->m_msg40;
 
-	Highlight hi;
-
 	// ensure not all cluster levels are invisible
 	if ( si->m_debug )
 		logf(LOG_DEBUG,"query: result #%li clusterlevel=%li",
 		     ix, (long)msg40->getClusterLevel(ix));
 
-	Msg20      *m20 = msg40->m_msg20[ix];
-	Msg20Reply *mr  = m20->m_r;
-
 	if ( si->m_xml ) sb.safePrintf("\t<result>\n" );
+
+	long long d = msg40->getDocId(ix);
 
 	if ( si->m_docIdsOnly ) {
 		if ( si->m_xml )
 			sb.safePrintf("\t\t<docId>%lli</docId>\n"
 				      "\t</result>\n", 
-				      mr->m_docId );
+				      d );
 		else
 			sb.safePrintf("%lli<br/>\n", 
-				      mr->m_docId );
+				      d );
 		return true;
 	}
+
+	Highlight hi;
+
+	Msg20      *m20 = msg40->m_msg20[ix];
+	Msg20Reply *mr  = m20->m_r;
 
 	// get the url
 	char *url    = mr->ptr_ubuf      ;
