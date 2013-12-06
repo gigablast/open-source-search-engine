@@ -981,7 +981,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 	if(m_docsToScanForTopics > 0 /*&& m_si->m_firstResultNum == 0*/) {
 		bigSampleRadius = 300;
 		//bigSampleMaxLen = m_si->m_topicGroups[0].m_topicSampleSize;
-		bigSampleMaxLen = 2000;
+		bigSampleMaxLen = 5000;
 	}
 	// . launch a msg20 getSummary() for each docid
 	// . m_numContiguous should preceed any gap, see below
@@ -4334,7 +4334,7 @@ static int factCmp ( const void *a, const void *b ) {
 bool Msg40::computeFastFacts ( ) {
 
 	// skip for now
-	//return true;
+	return true;
 
 	bool debugGigabits = m_si->m_debugGigabits;
 
@@ -4354,7 +4354,12 @@ bool Msg40::computeFastFacts ( ) {
 		Words ww;
 		ww.setx ( gi->m_term , gi->m_termLen , 0 );
 		long long *wids = ww.getWordIds();
-		if ( ! wids[0] ) { char *xx=NULL;*xx=0; }
+		// fix mere here
+		//if ( ! wids[0] ) { char *xx=NULL;*xx=0; }
+		if ( ! wids[0] )  {
+			log("doc: wids[0] is null");
+			return true;
+		}
 		// . hash first word
 		// . so gigabit has # words in it so we can do a slower
 		//   compare function to make sure entire gigabit is matched

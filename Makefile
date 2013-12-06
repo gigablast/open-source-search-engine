@@ -301,6 +301,10 @@ Linkdb.o:
 XmlDoc.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
 
+# final gigabit generation in here:
+Msg40.o:
+	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
+
 seo.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O3 -c $*.cpp 
 

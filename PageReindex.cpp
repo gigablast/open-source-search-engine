@@ -22,7 +22,8 @@
 #include "PageReindex.h"
 
 static char *printInterface ( char *p , char *pend , char *q ,//long user ,
-                              char *username, char *c , char *errmsg = NULL ) ;
+                              char *username, char *c , char *errmsg ,
+			      char *qlangStr ) ;
 
 
 class State13 {
@@ -96,12 +97,17 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	long  qlen;
 	char *q = r->getString ("q",&qlen);
 
+	// PageResults.cpp has a [query reindex] link that propagates this lang
+	char *qlangStr = r->getString("qlang",NULL);
+	long  langId = langEnglish;
+	if ( qlangStr ) langId = getLangIdFromAbbr ( qlangStr );
+
 	// if they are NOT submitting a request print the interface
 	// and we're not running, just print the interface
 	t = r->getString ("action" , &len );
 	if ( len != 2 ) { // && ! s_isRunning ) {
 		p = g_pages.printAdminTop ( p , pend , s , r );
-		p = printInterface ( p , pend , q , username , coll );
+		p = printInterface ( p , pend,q,username,coll,NULL,qlangStr);
 		return g_httpServer.sendDynamicPage (s,buf,p-buf,-1,false);
 	}		
 
@@ -128,6 +134,8 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	// save start and end numbers
 	long startNum = r->getLong   ( "srn" , 0 );
 	long endNum   = r->getLong   ( "ern" , 0 );
+	long forceDel = r->getLong   ( "forcedel", 0 );
+
 	//st->m_spiderPriority  = r->getLong   ( "sp" , 7 );
 	// get time offset to add to spider time for urls to be reindexed
 	//float days  = r->getFloat  ( "sto" , 0.0 );
@@ -160,7 +168,7 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 		log("admin: Query reindex was given no query terms.");
 		errmsg = "Empty Query. You must supply a query.";
  		p = g_pages.printAdminTop ( p , pend , s , r );
- 		p = printInterface ( p , pend , q , username , coll , errmsg );
+ 		p = printInterface ( p,pend , q , username , coll , errmsg,"");
  		return g_httpServer.sendDynamicPage (s,buf,p-buf,-1,false);
 	}
 
@@ -180,7 +188,7 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	memset ( rp , ' ' , 100 );
 	rp += 100;
 
-	rp = printInterface ( rp , rpend , q , username , coll , errmsg );
+	rp = printInterface ( rp,rpend,q,username , coll , errmsg ,qlangStr );
 
 	// save length
 	st->m_replyBufSize = rp - st->m_replyBuf;
@@ -215,6 +223,8 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 						  st->m_coll,
 						  startNum ,
 						  endNum   ,
+						  (bool)forceDel ,
+						  langId,
 						  st ,
 						  doneReindexing ) )
 			return false;
@@ -271,7 +281,8 @@ void doneReindexing ( void *state ) {
 }
 
 char *printInterface (char *p , char *pend , char *q , //long user , 
-                      char *username, char *c , char *errmsg ) {
+                      char *username, char *c , char *errmsg ,
+		      char *qlangStr ) {
 	if ( ! q ) q = "";
 
 	// print error msg if any
@@ -297,18 +308,24 @@ char *printInterface (char *p , char *pend , char *q , //long user ,
 		  "<tr><td colspan=3>"
 		  "<font size=1>"
 		  "Reindex the URLs that match this query. If URLs are "
-		  "banned they will be removed from the index. "
+		  "banned in tagdb they will be removed from the index. "
+		  "If URLs are filtered or banned according to the "
+		  "URL Filters table they will be removed as well. "
+		  "You must have an 'isdocidbased' rule in the URL "
+		  "Filters table so these requested reindexes can match that "
+		  "if you want to prioritize them, otherwise they will match "
+		  "whatever rule they match in the URL Filters table."
 		  "</td></tr>"
 
 		  "<tr><td><b>query</b>"
 		  "<br><font size=1>"
 		  "URLs matching this query will be added to the spider "
-		  "queue for re-spidering. Spider priority will be assigned "
-		  "based on what rule they match in the url filters table."
+		  "queue for re-spidering."
 		  "</td>"
 		  "<td><input type=text value=\"%s\" "
 		  "name=q size=30></td></tr>"
 
+		  /*
 		  "<tr><td><b>update event tags</b>"
 		  "<br><font size=1>Just update the tags for each event "
 		  "in the search results. For each docid in the search "
@@ -319,6 +336,7 @@ char *printInterface (char *p , char *pend , char *q , //long user ,
 		  "<td><input type=checkbox value=1 "
 		  "name=updatetags>"
 		  "</td></tr>"
+		  */
 		  , LIGHT_BLUE , DARK_BLUE , bb , q );
 
 	p += gbstrlen ( p );
@@ -334,9 +352,27 @@ char *printInterface (char *p , char *pend , char *q , //long user ,
 		  "<tr><td><b>end result number</b>"
 		  "<font size=1>"
 		  "<br>Stop at this search result number. "
-		  "Default 2000000.</td>"
-		  "<td><input type=text name=ern size=10 value=2000000>"
-		  "</td></tr>" );
+		  "Default 20000000. (20M)</td>"
+		  "<td><input type=text name=ern size=10 value=20000000>"
+		  "</td></tr>" 
+
+		  "<tr><td><b>query language</b>"
+		  "<font size=1>"
+		  "<br>Language that helps determine sort result ranking.</td>"
+		  "<td><input type=text name=qlang size=6 value=\"%s\">"
+		  "</td></tr>"
+
+		  "<tr><td><b>FORCE DELETE</b>"
+		  "<font size=1>"
+		  "<br>Check this checkbox to "
+		  "delete every search result matching the above "
+		  "query from the index.</td>"
+		  "<td><input type=checkbox name=forcedel value=1>"
+		  "</td></tr>"
+
+		  , qlangStr
+
+		  );
 
 	p += gbstrlen ( p );
 
@@ -409,12 +445,15 @@ bool Msg1c::reindexQuery ( char *query ,
 			   char *coll  ,
 			   long startNum ,
 			   long endNum ,
+			   bool forceDel ,
+			   long langId,
 			   void *state ,
 			   void (* callback) (void *state ) ) {
 
 	m_coll           = coll;
 	m_startNum       = startNum;
 	m_endNum         = endNum;
+	m_forceDel       = forceDel;
 	m_state          = state;
 	m_callback       = callback;
 	m_numDocIds      = 0;
@@ -422,25 +461,30 @@ bool Msg1c::reindexQuery ( char *query ,
 
 	m_niceness = MAX_NICENESS;
 
-	m_qq.set2 ( query , langUnknown , true ); // /*bool flag*/ );
+	// langunknown?
+	m_qq.set2 ( query , langId , true ); // /*bool flag*/ );
 
 	//CollectionRec *cr = g_collectiondb.getRec ( coll );
 	// reset again just in case
 	m_req.reset();
 	// set our Msg39Request
+	m_req.ptr_coll                    = coll;
+	m_req.size_coll                   = gbstrlen(coll)+1;
 	m_req.m_docsToGet                 = endNum;
 	m_req.m_niceness                  = 0,
+	m_req.m_getDocIdScoringInfo       = false;
 	m_req.m_doSiteClustering          = false;
 	m_req.m_doIpClustering            = false;
 	m_req.m_doDupContentRemoval       = false;
-	m_req.ptr_coll                    = coll;
-	m_req.size_coll                   = gbstrlen(coll)+1;
 	m_req.ptr_query                   = m_qq.m_orig;
 	m_req.size_query                  = m_qq.m_origLen+1;
 	m_req.m_timeout                   = 100000; // very high, 100k seconds
+	m_req.m_queryExpansion            = true; // so it's like regular rslts
+	// add language dropdown or take from [query reindex] link
+	m_req.m_language                  = langId;
 
 	// log for now
-	logf(LOG_DEBUG,"reindex: q=%s",query);
+	logf(LOG_DEBUG,"reindex: qlangid=%li q=%s",langId,query);
 
 	g_errno = 0;
 	// . get the docIds
@@ -509,8 +553,10 @@ bool Msg1c::gotList ( ) {
 		if ( ! dt.addKey ( &docId ) ) return true;
 		// log it if we have 1000 or less of them for now
 		//if ( i <= 100 ) 
-		logf(LOG_INFO,"build: Adding docid #%li/%li) %lli",
-		     i,count++,docId);
+		char *msg = "Reindexing";
+		if ( m_forceDel ) msg = "Deleting";
+		logf(LOG_INFO,"build: %s docid #%li/%li) %lli",
+		     msg,i,count++,docId);
 
 		SpiderRequest sr;
 		sr.reset();
@@ -535,6 +581,8 @@ bool Msg1c::gotList ( ) {
 		// spider time was > 0
 		sr.m_addedTime = nowGlobal;
 		//sr.setDataSize();
+		if ( m_forceDel ) sr.m_forceDelete = 1;
+		else              sr.m_forceDelete = 0;
 		// . complete its m_key member
 		// . parentDocId is used to make the key, but only allow one
 		//   page reindex spider request per url... so use "0"

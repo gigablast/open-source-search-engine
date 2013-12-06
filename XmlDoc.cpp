@@ -1045,6 +1045,10 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	// did page inject (pageinject) request to delete it?
 	m_deleteFromIndex = deleteFromIndex;
 
+	// PageReindex.cpp will set this in the spider request
+	if ( sreq->m_forceDelete )
+		m_deleteFromIndex = true;
+
 	char *utf8Content = utf8ContentArg;
 
 	if ( contentHasMime && utf8Content ) {
@@ -8892,13 +8896,19 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 	// if provided title rec matches our docid but not uh48 then there
 	// was a docid collision and we should null out our title rec
 	// and return with an error and no index this puppy!
-	long long uh48 = getFirstUrl()->getUrlHash48();
-	long long tuh48 = g_titledb.getUrlHash48 ( (key_t *)*otr );
-	if ( uh48 != tuh48 ) {
-		log("xmldoc: docid collision uh48 mismatch. cannot index "
-		    "%s",getFirstUrl()->getUrl() );
-		g_errno = EDOCIDCOLLISION;
-		return NULL;
+	// crap, we can't call getFirstUrl() because it might not be
+	// valid if we are a docid based doc and THIS function was called
+	// from getFirstUrl() -- we end up in a recursive loop.
+	if ( ! m_setFromDocId ) { 
+		long long uh48 = getFirstUrl()->getUrlHash48();
+		long long tuh48 = g_titledb.getUrlHash48 ( (key_t *)*otr );
+		if ( uh48 != tuh48 ) {
+			log("xmldoc: docid collision uh48 mismatch. cannot "
+			    "index "
+			    "%s",getFirstUrl()->getUrl() );
+			g_errno = EDOCIDCOLLISION;
+			return NULL;
+		}
 	}
 
 	// . if *otr is NULL that means not found
@@ -22658,8 +22668,10 @@ bool XmlDoc::hashLanguage ( HashTableX *tt ) {
 
 	setStatus ( "hashing language" );
 
-	char s[4]; // numeric langid
-	long slen = sprintf(s, "%li", (long)*getLangId());
+	long langId = (long)*getLangId();
+
+	char s[32]; // numeric langid
+	long slen = sprintf(s, "%li", langId );
 
 	// update hash parms
 	HashInfo hi;
@@ -22667,7 +22679,13 @@ bool XmlDoc::hashLanguage ( HashTableX *tt ) {
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_prefix    = "gblang";
 
-	return hashString ( s, slen, &hi );
+	if ( ! hashString ( s, slen, &hi ) ) return false;
+
+	// try lang abbreviation
+	sprintf(s , "%s ", getLangAbbr(langId) );
+	if ( ! hashString ( s, slen, &hi ) ) return false;
+
+	return true;
 }
 
 bool XmlDoc::hashCountry ( HashTableX *tt ) {
@@ -25002,6 +25020,11 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 			if ( *z == '[' ) bracketCount++;
 		}
 		long naw = (b - sp->m_a) / 2;
+
+		// just skip even for gigabits if too long. most likely
+		// a spammy list of nouns.
+		if ( naw >= 130 ) continue;
+
 		if ( commaCount >= 3 && commaCount *4 >= naw )
 			isList = true;
 		if ( commaCount >= 10 )
@@ -25049,7 +25072,7 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 		      e[-2] == '!' ) )
 			endsInPeriod = true;
 
-		//long off = reply.length();
+		long off = reply.length();
 
 		if ( ! reply.safePrintFilterTagsAndLines ( p , e-p ,false ) )
 			return NULL;
@@ -25086,10 +25109,16 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 		*pc = '\0';
 
 		// debug
-		//char *x = reply.getBufStart() + off;
-		//log("fact: %s",x);
+		char *x = reply.getBufStart() + off;
+		log("fastfact: %s",x);
 		// revert back to |
 		*pc = '|';
+
+		// stop? this fixes the query 'lesbain vedeo porno' on
+		// my cluster taking 10 seconds to get gigabits for.
+		// bigsamplemaxlen is 1000 as of 12/4/2013.
+		if ( reply.length() >= m_req->m_bigSampleMaxLen )
+			break;
 	}
 	// a final \0
 	reply.pushChar('\0');

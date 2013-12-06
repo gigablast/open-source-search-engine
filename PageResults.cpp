@@ -280,9 +280,14 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// . crap! also gotta encode apostrophe since "var url='..."
 		// . true = encodeApostrophes?
 		sb.urlEncode2 ( qstr , true );
+		// progate query language
+		char *qlang = hr->getString("qlang",NULL,NULL);
+		if ( qlang ) sb.safePrintf("&qlang=%s",qlang);
 		// propagate "admin" if set
 		long admin = hr->getLong("admin",-1);
 		if ( admin != -1 ) sb.safePrintf("&admin=%li",admin);
+		// propagate showing of banned results
+		if ( hr->getLong("sb",0) ) sb.safePrintf("&sb=1");
 		// propagate list of sites to restrict query to
 		long sitesLen;
 		char *sites = hr->getString("sites",&sitesLen,NULL);
@@ -1048,16 +1053,24 @@ bool gotResults ( void *state ) {
 			      "</a></b></font>",coll);
 		// print reindex link
 		// get the filename directly
+		char *langStr = getLangAbbr ( si->m_queryLang );
 		sb.safePrintf (" &nbsp; "
 			       "<font color=red><b>"
-			       "<a href=\"/admin/reindex?c=%s&q=%s\">"
-			       "[query reindex]</a></b>"
-			       "</font> ", coll , qe );
+			       "<a href=\"/admin/reindex?c=%s&"
+			       "qlang=%s&q=%s\">"
+			       "[reindex or delete these results]</a></b>"
+			       "</font> ", coll , langStr , qe );
 		sb.safePrintf (" &nbsp; "
 			       "<font color=red><b>"
 			       "<a href=\"/inject?c=%s&qts=%s\">"
 			       "[scrape]</a></b>"
 			       "</font> ", coll , qe );
+		sb.safePrintf (" &nbsp; "
+			       "<font color=red><b>"
+			       "<a href=\"/search?sb=1&c=%s&"
+			       "qlang=%s&q=%s\">"
+			       "[show banned results]</a></b>"
+			       "</font> ", coll , langStr , qe );
 	}
 
 	// if its an ip: or site: query, print ban link
@@ -2412,7 +2425,9 @@ static int printResult ( SafeBuf &sb,
 		
 		long urlFilterNum = (long)mr->m_urlFilterNum;
 		if(urlFilterNum != -1) {
-			sb.safePrintf (" - UrlFilter:%li", 
+			sb.safePrintf (" - <a href=/admin/filters?c=%s>"
+				       "UrlFilter</a>:%li", 
+				       coll ,
 				       urlFilterNum);
 		}					
 

@@ -150,7 +150,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	// submit to https now
 	sb.safePrintf("<form method=get "
 		      "action=/search name=f>\n");
-	sb.safePrintf("<input name=q type=text size=60 value=\"\">&nbsp;<input type=\"submit\" value=\"Search Green\">\n");
+	sb.safePrintf("<input name=q type=text size=60 value=\"\">&nbsp;<input type=\"submit\" value=\"Search\">\n");
 	sb.safePrintf("\n");
 	sb.safePrintf("</form>\n");
 	sb.safePrintf("<br>\n");
@@ -527,7 +527,7 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	// submit to HTTPS now
 	sb.safePrintf("<form method=get "
 		      "action=/search name=f>\n");
-	sb.safePrintf("<input name=q type=text size=60 value=\"\">&nbsp;<input type=\"submit\" value=\"Search Green\">\n");
+	sb.safePrintf("<input name=q type=text size=60 value=\"\">&nbsp;<input type=\"submit\" value=\"Search\">\n");
 	sb.safePrintf("<input type=hidden "
 		      "name=prepend value=\"gbipcatid:2\">");
 	sb.safePrintf("\n");

@@ -325,9 +325,9 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 
 	// this is just used to determine in PageResults.cpp if we should
 	// show admin knobs next to each result...
-	// default to off for now
-	m_isAdmin = r->getLong("admin",0);
-	//if ( m_isAdmin ) m_isAdmin = g_users.hasPermission ( r , PAGE_MASTER );
+	// default to off for now. default back on.
+	m_isAdmin = r->getLong("admin",1);
+	//if ( m_isAdmin ) m_isAdmin = g_users.hasPermission ( r,PAGE_MASTER);
 	// local ip?
 	if ( ! r->isLocal() ) m_isAdmin = 0;
 

@@ -45,7 +45,9 @@ static Label s_labels[] = {
 	// . 30 is the max qps regardless to stop graph shrinkage
 	// . use .03 qps as the min resolution per pixel
 	// . changed 30 to 150 and .005 to .020
-	{ GRAPH_OPS,150,"query" ,.025,"%.1f qps",1.0,  0x753d30, "queries per sec"},
+	// . back down to 30 since scale was too high before i think for most
+	//   ppl. really it should be autoscaled.
+	{ GRAPH_OPS,30,"query",.025,"%.1f qps",1.0,0x753d30,"queries per sec"},
 
 	// . 10000 ms is the max latency to stop graph shrinkage
 	// . use 1 ms as the min resolution per pixel
@@ -80,7 +82,10 @@ static Label s_labels[] = {
 	// . max = -1, means dynamic size the ymax!
 	// . use 1B for now again...
 	// . color=pink
-	{GRAPH_QUANTITY,50000000.0,"docs_indexed", .1,"%.0fK docs" , .001 , 0x00cc0099,"docs indexed" }
+	// . make it 2M now not 50M. seems like it is per pixel and theres
+	//   like 1000 pixels vertically. but we need to autoscale it 
+	//   eventually
+	{GRAPH_QUANTITY,2000000.0,"docs_indexed", .1,"%.0fK docs" , .001 , 0x00cc0099,"docs indexed" }
 
 
 	//{ "termlist_intersect",0x0000ff00},

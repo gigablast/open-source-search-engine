@@ -13,6 +13,8 @@ public:
 			    char *coll  ,
 			    long startNum ,
 			    long endNum ,
+			    bool forceDel ,
+			    long langId,
 			    void *state ,
 			    void (* callback) (void *state ) ) ;
 	
@@ -21,6 +23,7 @@ public:
 	char *m_coll;
 	long m_startNum;
 	long m_endNum;
+	bool m_forceDel;
 	void *m_state;
 	void (* m_callback) (void *state);
 	long m_niceness;
