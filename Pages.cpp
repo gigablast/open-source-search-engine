@@ -17,6 +17,23 @@ Pages g_pages;
 // error message thingy used by HttpServer.cpp for logging purposes
 char *g_msg;
 
+/*
+class WebPage {
+ public:
+	char  m_pageNum;  // see enum array below for this
+	char *m_filename;
+	long  m_flen;
+	char *m_name;     // for printing the links to the pages in admin sect.
+	bool  m_cast;     // broadcast input to all hosts?
+	bool  m_usePost;  // use a POST request/reply instead of GET?
+	                  // used because GET's input is limited to a few k.
+	//char  m_perm;     // permissions, see USER_* #define's below
+	char *m_desc; // page description
+	bool (* m_function)(TcpSocket *s , HttpRequest *r);
+	long  m_niceness;
+};
+*/
+
 // . list of all dynamic pages, their path names, permissions and callback
 //   functions that generate that page
 // . IMPORTANT: these must be in the same order as the PAGE_* enum in Pages.h
@@ -397,6 +414,25 @@ long Pages::getDynamicPageNumber ( HttpRequest *r ) {
 	return -1;
 }
 
+void doneFlushingParms ( void *state ) {
+	TcpSocket *sock = (TcpSocket *)state;
+	// set another http request again
+	HttpRequest r;
+	bool status = r.set ( sock->m_readBuf , sock->m_readOffset , sock ) ;
+	// we stored the page # below
+	WebPage *pg = &s_pages[sock->m_pageNum];
+	// call the page specifc function which will send data back on socket
+	pg->m_function ( sock , &r );
+}
+
+void doneBroadcastingParms ( void *state ) {
+	TcpSocket *sock = (TcpSocket *)state;
+	// free this mem
+	sock->m_handyBuf.purge();
+	// but flush msg4 now so parms are realized on all machines
+	flushMsg4Buffers ( state , doneFlushingParms );
+}
+
 // . returns false if blocked, true otherwise
 // . send an error page on error
 bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
@@ -538,6 +574,72 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// 		return g_httpServer.sendErrorReply(s,505,mstrerror(g_errno));
 	// 	}
 
+
+	// get safebuf stored in TcpSocket class
+	SafeBuf *parmList = &s->m_handyBuf;
+
+	// chuck this in there
+	s->m_pageNum = page;
+
+	////////
+	//
+	// the new way to set and distribute parm settings
+	//
+	////////
+	
+	// . convert http request to list of parmdb records
+	// . will only add parm recs we have permission to modify
+	if ( ! g_parms.convertHttpRequestToParmList ( r , parmList ) )
+		return g_httpServer.sendErrorReply(s,505,mstrerror(g_errno));
+		
+
+	// . add parmList using Parms::m_msg4 to all hosts!
+	// . returns true and sets g_errno on error
+	// . returns false if would block
+	// . so then doneBroadcastingParms() is called when all hosts
+	//   have received the updated parms, unless a host is dead,
+	//   in which case he should sync up when he comes back up
+	if ( ! g_parms.broadcastParmList ( parmList , 
+					   s , // state is socket i guess
+					   doneBroadcastingParms ) )
+		// this would block, so return false
+		return false;
+
+	// free the mem if we didn't block
+	s->m_handyBuf.purge();
+
+	// on error from broadcast, bail here
+	if ( g_errno )
+		return g_httpServer.sendErrorReply(s,505,mstrerror(g_errno));
+
+	// if this is a save & exit request we must log it here because it
+	// will never return in order to log it in HttpServer.cpp
+	// TODO: make this a function we can call.
+	if ( g_conf.m_logHttpRequests && page == PAGE_MASTER ) { 
+		//&& pg->m_function==CommandSaveAndExit ) {
+		// get time format: 7/23/1971 10:45:32
+		time_t tt ;//= getTimeGlobal();
+		if ( isClockInSync() ) tt = getTimeGlobal();
+		else                   tt = getTimeLocal();
+		struct tm *timeStruct = localtime ( &tt );
+		char buf[64];
+		strftime ( buf , 100 , "%b %d %T", timeStruct);
+		// what url refered user to this one?
+		char *ref = r->getReferer();
+		// skip over http:// in the referer
+		if ( strncasecmp ( ref , "http://" , 7 ) == 0 ) ref += 7;
+		// save ip in case "s" gets destroyed
+		long ip = s->m_ip;
+		logf (LOG_INFO,"http: %s %s %s %s %s",
+		      buf,iptoa(ip),r->getRequest(),ref,
+		      r->getUserAgent());
+	}
+
+	// if we did not block... maybe there were no parms to broadcast
+	return pg->m_function ( s , r );
+
+	/*
+
 	// broadcast request to ALL hosts if we should
 	// should this request be broadcasted?
 	long cast = r->getLong("cast",-1) ;
@@ -551,7 +653,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 		cast = 0;
 		if ( page == PAGE_CRAWLBOT ) cast = 1;
 	}
-
+	*/
 	// proxy can only handle certain pages. it has logic in Proxy.cpp
 	// to use the 0xfd msg type to forward certain page requests to 
 	// host #0, like 
@@ -586,6 +688,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//if ( g_proxy.isProxyRunning() && 
 	//   (g_conf.isMasterAdmin( s, r ) || g_hostdb.getProxyByIp(s->m_ip)) )
 	//	cast = false;
+	/*
 	if ( g_proxy.isProxy () ) cast = 0;
 	// this only returns true on error. uses msg28 to send the http request
 	// verbatim to all hosts in network, using tcpserver. the spawned msg28
@@ -615,6 +718,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 							  "collection given.");
 		}
 	}
+
 	// if this is a save & exit request we must log it here because it
 	// will never return in order to log it in HttpServer.cpp
 	if ( g_conf.m_logHttpRequests && page == PAGE_MASTER ) { 
@@ -642,6 +746,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . now, so it can be responsible for calling pg->m_function
 	//if ( userType > USER_PUBLIC ) {
 	// check if user has public page access 
+	
 	if ( isLocal ) { //g_users.hasPermission( r, page , s )){
 		// . this will set various parms
 		// . we know the request came from a host in the cluster
@@ -673,8 +778,10 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . sets g_errno on error i think
 	// . false means not called from msg28
 	return pg->m_function ( s , r );
+	*/
 }
 
+/*
 #include "Msg28.h"
 static Msg28        s_msg28;
 static TcpSocket   *s_s;
@@ -725,6 +832,7 @@ void doneWrapper ( void *state ) {
 	// . this must call g_httpServer.sendDynamicReply() eventually
 	s_pages[s_page].m_function ( s_s , &s_r );
 }
+*/
 
 // certain pages are automatically generated by the g_parms class
 // because they are menus of configurable parameters for either g_conf

@@ -2354,6 +2354,10 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//   pg->m_function(). even though maxtocrawl is on "PAGE_NONE" 
 	//   hopefully it will still be set
 	// . but we should take care of add/del/reset coll here.
+	// . i guess this will be handled by the new parm syncing logic
+	//   which deals with add/del coll requests
+
+	/*
 	if ( cast == 0 ) {
 		// add a new collection by default
 		if ( ! cr && name && name[0] ) 
@@ -2427,6 +2431,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		// this is a cast, so just return simple response
 		return g_httpServer.sendDynamicPage (socket,"OK",2);
 	}
+	*/
 
 	/////////
 	//
@@ -4430,6 +4435,10 @@ bool resetUrlFilters ( CollectionRec *cr ) {
 
 	return true;
 }
+
+/*
+  THIS IS NOW AUTOMATIC from new Parms.cpp broadcast logic
+*/
 
 
 bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,

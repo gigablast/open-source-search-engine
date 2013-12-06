@@ -1015,6 +1015,8 @@ class CollectionRec {
 	key128_t m_timedbEndKey;
 	RdbList  m_timedbList;
 
+	// used by Parms.cpp
+	char m_hackFlag;
 
 	//long m_numEventsOnHost;
 

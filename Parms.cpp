@@ -11,7 +11,7 @@
 #include "Catdb.h"
 #include "Collectiondb.h"
 #include "HttpMime.h"      // atotime()
-#include "Msg28.h"
+//#include "Msg28.h"
 //#include "Sync.h"
 #include "Indexdb.h" // for MIN_TRUNC
 #include "SearchInput.h"
@@ -33,61 +33,282 @@
 
 #define REGEX_TXT_MAX 80
 
-static bool CommandParserTestInit (TcpSocket *s , HttpRequest *r,
-				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-static bool CommandSpiderTestInit (TcpSocket *s , HttpRequest *r,
-				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-static bool CommandSpiderTestCont (TcpSocket *s , HttpRequest *r,
-				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-static bool CommandMergePosdb   (TcpSocket *s , HttpRequest *r,
-				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-//static bool CommandMergeSectiondb (TcpSocket *s , HttpRequest *r,
-//				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-static bool CommandMergeTitledb   (TcpSocket *s , HttpRequest *r,
-				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-static bool CommandMergeSpiderdb   (TcpSocket *s , HttpRequest *r,
-				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-static bool CommandDiskPageCacheOff(TcpSocket *s , HttpRequest *r,
-				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-static bool CommandDiskDump       (TcpSocket *s , HttpRequest *r,
-				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-static bool CommandJustSave       (TcpSocket *s , HttpRequest *r,
-				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-static bool CommandSaveAndExit    (TcpSocket *s , HttpRequest *r,
-				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-static bool CommandUrgentSaveAndExit (TcpSocket *s , HttpRequest *r,
-				      bool (*cb)(TcpSocket *s , HttpRequest *r) ) ;
-//static bool CommandForceOutOfSync (TcpSocket *s , HttpRequest *r,
-//		   bool (*cb)(TcpSocket *s , HttpRequest *r) ) ;
-static bool CommandReloadLanguagePages (TcpSocket *s , HttpRequest *r,
-				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-
-static bool CommandClearKernelError (TcpSocket *s , HttpRequest *r,
-				   bool (*cb)(TcpSocket *s , HttpRequest *r) );
-
-static bool CommandPowerNotice (TcpSocket *s , HttpRequest *r,
-				bool (*cb)(TcpSocket *s , HttpRequest *r) );
-
-// serialize parm
-struct SerParm {
-	long i;     // which parm
-	char obj;   // OBJ_CONF || OBJ_COLL
-	long size;  // size of each value
-	long cnt;   // total possible number of values
-	long off;   // offset to num of member
-	long num;   // actual num of items
-	char val[]; // value
-};
-
-
 Parms g_parms;
 
-//static char *printDropDown   ( long n , char *p, char *pend, char *name, 
-//			       long select , 
-//			       bool includeMinusOne ,
-//			       bool includeMinusTwo ) ;
-//static char *printCheckBoxes ( long n , char *p, char *pend, char *name, 
-//			       char *array );
+
+//////////////////////////////////////////////
+//
+// Command Functions. All return false if block... yadayada
+//
+//////////////////////////////////////////////
+
+//#include "Tfndb.h"
+#include "Spider.h"
+#include "Tagdb.h"
+#include "Indexdb.h"
+#include "Datedb.h"
+//#include "Checksumdb.h"
+#include "Clusterdb.h"
+#include "Collectiondb.h"
+
+
+////////
+//
+// . do commands this way now
+// . when handleRequest4 receives a special "command" parmdb rec
+//   it calls executes the cmd, one of the functions listed below
+//
+////////
+
+// all nodes are guaranteed to add the same collnum for the given name
+bool CommandAddColl ( char *rec ) {
+	collnum_t collnum = g_parms.getCollnumFromParmRec ( rec );
+	char *name = g_parms.getDataFromParmRec ( rec );
+	g_collectiondb.addColl ( collnum , name );
+	return true;
+}
+
+bool CommandDeleteColl ( char *rec ) {
+	collnum_t collnum = g_parms.getCollnumFromParmRec ( rec );
+	g_collectiondb.deleteColl ( collnum );
+	return true;
+}
+
+/*
+bool CommandRestartColl ( char *rec ) {
+	collnum_t collnum = g_parms.getCollnumFromParmRec ( rec );
+	g_collectiondb.restartColl ( collnum );
+	return true;
+}
+
+bool CommandResetColl ( char *rec ) {
+	collnum_t collnum = g_parms.getCollnumFromParmRec ( rec );
+	g_collectiondb.resetColl ( collnum );
+	return true;
+}
+*/
+
+bool CommandParserTestInit ( char *rec ) {
+	// enable testing for all other hosts
+	g_conf.m_testParserEnabled = 1;
+	// reset all files
+	g_test.removeFiles();
+	// turn spiders on globally
+	g_conf.m_spideringEnabled = 1;
+	//g_conf.m_webSpideringEnabled = 1;
+	// turn on for test coll too
+	CollectionRec *cr = g_collectiondb.getRec("test");
+	// turn on spiders
+	if ( cr ) cr->m_spideringEnabled = 1;
+	// if we are not host 0, turn on spiders for testing
+	if ( g_hostdb.m_myHost->m_hostId != 0 ) return true;
+	// start the test loop to inject urls for parsing/spidering
+	g_test.initTestRun();
+	// done 
+	return true;
+}
+
+bool CommandSpiderTestInit ( char *rec ) {
+	// enable testing for all other hosts
+	g_conf.m_testSpiderEnabled = 1;
+	// reset all files
+	g_test.removeFiles();
+	// turn spiders on globally
+	g_conf.m_spideringEnabled = 1;
+	//g_conf.m_webSpideringEnabled = 1;
+	// turn on for test coll too
+	CollectionRec *cr = g_collectiondb.getRec("test");
+	// turn on spiders
+	if ( cr ) cr->m_spideringEnabled = 1;
+	// if we are not host 0, turn on spiders for testing
+	if ( g_hostdb.m_myHost->m_hostId != 0 ) return true;
+	// start the test loop to inject urls for parsing/spidering
+	g_test.initTestRun();
+	// done 
+	return true;
+}
+
+bool CommandSpiderTestCont ( char *rec ) {
+	// enable testing for all other hosts
+	g_conf.m_testSpiderEnabled = 1;
+	// turn spiders on globally
+	g_conf.m_spideringEnabled = 1;
+	//g_conf.m_webSpideringEnabled = 1;
+	// turn on for test coll too
+	CollectionRec *cr = g_collectiondb.getRec("test");
+	// turn on spiders
+	if ( cr ) cr->m_spideringEnabled = 1;
+	// done 
+	return true;
+}
+
+// some of these can block a little. if threads are off, a lot!
+void CommandMerge ( char *rec ) {
+	// most of these are probably already in good shape
+	//g_checksumdb.getRdb()->attemptMerge (1,true);
+	g_clusterdb.getRdb()->attemptMerge  (1,true); // niceness, force?
+	g_tagdb.getRdb()->attemptMerge     (1,true);
+	g_catdb.getRdb()->attemptMerge      (1,true);
+	//g_tfndb.getRdb()->attemptMerge      (1,true);
+	g_spiderdb.getRdb()->attemptMerge   (1,true);
+	// these 2 will probably need the merge the most
+	g_indexdb.getRdb()->attemptMerge    (1,true);
+	g_datedb.getRdb()->attemptMerge     (1,true);
+	g_titledb.getRdb()->attemptMerge    (1,true);
+	//g_sectiondb.getRdb()->attemptMerge  (1,true);
+	g_statsdb.getRdb()->attemptMerge    (1,true);
+	g_linkdb .getRdb()->attemptMerge    (1,true);
+}
+
+
+bool CommandMergePosdb ( char *rec ) {
+	g_posdb.getRdb()->attemptMerge    (1,true);
+}
+
+
+bool CommandMergeSectiondb ( char *rec ) {
+	g_sectiondb.getRdb()->attemptMerge    (1,true); // nice , force
+}
+
+
+bool CommandMergeTitledb ( char *rec ) {
+	g_titledb.getRdb()->attemptMerge    (1,true);
+}
+
+
+bool CommandMergeSpiderdb ( char *rec ) {
+	g_spiderdb.getRdb()->attemptMerge    (1,true);
+}
+
+
+bool CommandDiskPageCacheOff ( char *rec ) {
+	g_process.resetPageCaches();
+}
+
+bool CommandDiskDump ( char *rec ) {
+	//g_checksumdb.getRdb()->dumpTree ( 1 ); // niceness
+	g_clusterdb.getRdb()->dumpTree  ( 1 );
+	g_tagdb.getRdb()->dumpTree     ( 1 );  
+	g_catdb.getRdb()->dumpTree      ( 1 );
+	//g_tfndb.getRdb()->dumpTree      ( 1 );   
+	g_spiderdb.getRdb()->dumpTree   ( 1 );
+	g_posdb.getRdb()->dumpTree    ( 1 );
+	//g_datedb.getRdb()->dumpTree     ( 1 );
+	g_titledb.getRdb()->dumpTree    ( 1 );
+	//g_sectiondb.getRdb()->dumpTree  ( 1 );
+	g_statsdb.getRdb()->dumpTree    ( 1 );
+	g_linkdb.getRdb() ->dumpTree    ( 1 );
+	g_errno = 0;
+}
+
+
+bool CommandJustSave ( char *rec ) {
+	// returns false if blocked, true otherwise
+	g_process.save ();
+	// always return true here
+	return true;
+}
+
+bool CommandSaveAndExit ( char *rec ) {
+	// return true if this blocks
+	g_process.shutdown ( false , NULL , NULL );
+	return true;
+}
+
+bool CommandUrgentSaveAndExit ( char *rec ) {
+	// "true" means urgent
+	g_process.shutdown ( true );
+	return true;
+}
+
+bool CommandReloadLanguagePages ( char *rec ) {
+	g_languagePages.reloadPages();
+	return true;
+}
+
+bool CommandClearKernelError ( char *rec ) {
+	g_hostdb.m_myHost->m_kernelErrors = 0;
+	return true;
+}
+
+bool CommandPowerNotice ( long hasPower ) {
+
+	//long hasPower = r->getLong("haspower",-1);
+	log("powermo: received haspower=%li",hasPower);
+	if ( hasPower != 0 && hasPower != 1 ) return true;
+
+	// did power state change? if not just return true
+	if (   g_process.m_powerIsOn &&   hasPower ) return true;
+	if ( ! g_process.m_powerIsOn && ! hasPower ) return true;
+	
+	if ( hasPower ) {
+		log("powermo: power is regained");
+		g_process.m_powerIsOn = true;
+		return true;
+	}
+
+	// if it was on and went off...
+	// now it is off
+	log("powermo: power was lost");
+	// . SpiderLoop.cpp will not launch any more spiders as
+	//   long as the power is off
+	// . autosave should kick in every 30 seconds
+	g_process.m_powerIsOn = false;
+	// note the autosave
+	log("powermo: disabling spiders, suspending merges, disabling "
+	    "tree writes and saving.");
+	// tell Process.cpp::save2() to save the blocking caches too!
+	//g_process.m_pleaseSaveCaches = true;
+	// . save everything now... this may block some when saving the
+	//   caches... then do not do ANY writes... 
+	// . RdbMerge suspends all merging if power is off
+	// . Rdb.cpp does not allow any adds if power is off. it will
+	//   send back an ETRYAGAIN...
+	// . if a tree is being dumped, this will keep re-calling
+	//   Process.cpp::save2()
+	g_process.save();
+
+	// also send an email if we are host #0
+	if ( g_hostdb.m_myHost->m_hostId != 0 ) return true;
+	if ( g_proxy.isProxy() ) return true;
+
+	char tmp[128];
+	Host *h0 = g_hostdb.getHost ( 0 );
+	long ip0 = 0;
+	if ( h0 ) ip0 = h0->m_ip;
+	sprintf(tmp,"%s: POWER IS OFF",iptoa(ip0));
+
+	g_pingServer.sendEmail ( NULL  , // Host ptr
+				 tmp   , // msg
+				 true  , // sendToAdmin
+				 false , // oom?
+				 false , // kernel error?
+				 true  , // parm change?
+				 // force it? even if disabled?
+				 false  );
+	return true;
+}
+
+
+bool CommandPowerOnNotice ( char *rec ) {
+	return CommandPowerNotice ( 1 );
+}
+
+bool CommandPowerOffNotice ( char *rec ) {
+	return CommandPowerNotice ( 0 );
+}
+
+bool CommandInSync ( char *rec ) {
+	g_parms.m_inSyncWithHost0 = true;
+}
+
+//////////////////////
+//
+// end new commands
+//
+//////////////////////
+
+
 static bool printDropDown   ( long n , SafeBuf* sb, char *name, 
 			      long selet , 
 			      bool includeMinusOne ,
@@ -95,7 +316,7 @@ static bool printDropDown   ( long n , SafeBuf* sb, char *name,
 
 extern bool closeAll ( void *state, void (* callback)(void *state) );
 extern bool allExit ( ) ;
-
+/*
 class Checksum {
 public:
 	Checksum() : m_sum1( 0xffff ), m_sum2( 0xffff ) {}
@@ -176,6 +397,7 @@ private:
 	uint32_t m_sum1;
 	uint32_t m_sum2;
 };
+*/
 
 Parms::Parms ( ) {
 	m_isDefaultLoaded = false;
@@ -200,7 +422,7 @@ void Parms::detachSafeBufs ( CollectionRec *cr ) {
 		}
 	}
 }
-
+/*
 unsigned long Parms::calcChecksum() {
 	Checksum cs;
 
@@ -301,6 +523,7 @@ unsigned long Parms::calcChecksum() {
 
 	return cs.getSum();
 }
+*/
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
@@ -1067,7 +1290,6 @@ char *printDropDown ( long n , char *p, char *pend, char *name, long select,
 	p += gbstrlen ( p );
 	return p;
 }
-*/
 
 bool printDiffbotDropDown ( SafeBuf *sb,char *name,char *THIS , SafeBuf *sx) {
 	//CollectionRec *cr = (CollectionRec *)THIS;
@@ -1077,14 +1299,7 @@ bool printDiffbotDropDown ( SafeBuf *sb,char *name,char *THIS , SafeBuf *sx) {
 	//   be changed by john to add custom diffbot api urls.
 	// . should just be m_spiderDiffbotApiUrl[i] safebuf
 	char *usingApi = sx->getBufStart();
-	if ( sx->length() == 0 ) usingApi = "";//NULL;
-
-	// just print it as text box
-	return sb->safePrintf ( "<input type=text name=\"%s\" size=30 "
-				"value=\"%s\">"
-				, name 
-				, usingApi );
-
+	if ( sx->length() == 0 ) usingApi = NULL;
 	// now scan each item in the list. see the setting of
 	// "m_def" for "diffbotApiList" below to see the
 	// comma separated list of default strings. each item in
@@ -1146,6 +1361,7 @@ bool printDiffbotDropDown ( SafeBuf *sb,char *name,char *THIS , SafeBuf *sx) {
 	sb->safePrintf("</select>");
 	return true;
 }
+*/
 
 bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 		     bool includeMinusOne ,
@@ -1936,8 +2152,10 @@ bool Parms::printParm ( SafeBuf* sb,
 	}
 	char cgi[64];
 	if ( m->m_cgi ) {
-		if ( j > 0 ) sprintf ( cgi , "%s%li" , m->m_cgi , j );
-		else         sprintf ( cgi , "%s"    , m->m_cgi     );
+		//if ( j > 0 ) sprintf ( cgi , "%s%li" , m->m_cgi , j );
+		//else         sprintf ( cgi , "%s"    , m->m_cgi     );
+		// let's try dropping the index # and just doing dup parms
+		sprintf ( cgi , "%s"    , m->m_cgi     );
 	}
 	// . display title and description of the control/parameter
 	// . the input cell of some parameters are colored
@@ -2775,7 +2993,7 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 	g_collectiondb.updateTime();
 	return retval;
 }
-
+/*
 void Parms::insertParm ( long i , long an ,  char *THIS ) {
 	Parm *m = &m_parms[i];
 	// . shift everyone above down
@@ -2847,7 +3065,7 @@ void Parms::removeParm ( long i , long an , char *THIS ) {
 	// dec the count
 	*(long *)(pos-4) = (*(long *)(pos-4)) - 1;
 }
-
+*/
 void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		      bool isHtmlEncoded , bool fromRequest ) {
 	// . this is just for setting CollectionRecs, so skip if offset < 0
@@ -3797,7 +4015,7 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 	p += gbstrlen ( p );
 	return p;
 }
-
+/*
 // returns the size needed to serialize parms
 long Parms::getStoredSize() {
 	long size = 0;
@@ -4422,6 +4640,7 @@ void Parms::deserializeCollParm( CollectionRec *cr,
 		*p += sizeof( *sp ) + sp->size;
 	}
 }
+*/
 
 void Parms::init ( ) {
 	// initialize the Parms class if we need to, only do it once
@@ -5278,6 +5497,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
+	/*
 	m->m_title = "just save";
 	m->m_desc  = "Copies the data in memory to disk for just this host. "
 		"Does Not exit.";
@@ -5287,6 +5507,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_MASTER;
 	m->m_cast  = 0;
 	m++;
+	*/
 
 	m->m_title = "all just save";
 	m->m_desc  = "Saves the data for all hosts. Does Not exit.";
@@ -5310,6 +5531,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL2; // no yes or no, just a link
 	m++;
 
+	/*
 	m->m_title = "save & exit";
 	m->m_desc  = "Copies the data in memory to disk for just this host "
 		"and then shuts down the gb process.";
@@ -5328,6 +5550,7 @@ void Parms::init ( ) {
 	m->m_cast  = 0;
 	m->m_priv  = 4;
 	m++;
+	*/
 
 	m->m_title = "all save & exit";
 	m->m_desc  = "Saves the data and exits for all hosts.";
@@ -6390,6 +6613,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m++;
 
+	/*
 	m->m_title = "reload language pages";
 	m->m_desc  = "Reloads language specific pages.";
 	m->m_cgi   = "rlpages";
@@ -6403,6 +6627,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "rlpages";
 	m->m_type  = TYPE_CMD;
 	m++;
+	*/
 
 	m->m_title = "clear kernel error message";
 	m->m_desc  = "clears the kernel error message that the host may be "
@@ -8299,82 +8524,6 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
-	/*
-	m->m_cgi   = "alias";
-	m->m_xml   = "collectionNameAlias";
-	m->m_off   = (char *)&cr.m_collectionNameAlias - x;
-	m->m_type  = TYPE_SAFEBUF;
-	m->m_page  = PAGE_NONE;
-	m->m_obj   = OBJ_COLL;
-	m->m_def   = "";
-	m++;
-
-	m->m_cgi   = "dbapi";
-	m->m_xml   = "diffbotApi";
-	m->m_off   = (char *)&cr.m_diffbotApi - x;
-	m->m_type  = TYPE_SAFEBUF;
-	m->m_page  = PAGE_NONE;
-	m->m_def   = "";
-	m++;
-	*/
-
-	/*
-	m->m_cgi   = "dbapilist";
-	m->m_xml   = "diffbotApiList";//QueryString";
-	m->m_off   = (char *)&cr.m_diffbotApiList - x;
-	m->m_type  = TYPE_SAFEBUF;
-	m->m_page  = PAGE_NONE;
-	// XmlDoc.cpp when it first computes "ufn" it also sets
-	// m_diffbotApiUrl to one of these. lest we change the url filters
-	// table AFTER it gets the ufn and BEFORE it gets the diffbot api url.
-	m->m_def   = 
-		"None|,"
-		"All|http://www.diffbot.com/api/analzye?mode=auto,"
-		"Article (autodetect)|http://www.diffbot.com/api/analyze?mode=article,"
-		"Article (force)|http://www.diffbot.com/api/article?,"
-		"Product (autodetect)|http://www.diffbot.com/api/analyze?mode=product,"
-		"Product (force)|http://www.diffbot.com/api/product?,"
-		"Image (autodetect)|http://www.diffbot.com/api/analyze?mode=image,"
-		"Image (force)|http://www.diffbot.com/api/image?,"
-		"FrontPage (autodetect)|http://www.diffbot.com/api/analyze?mode=frontpage,"
-		"FrontPage (force)|http://www.diffbot.com/api/frontpage?"
-		;
-	m++;
-	*/
-
-	/*
-	m->m_cgi   = "dbucp";
-	m->m_xml   = "diffbotUrlCrawlPattern";
-	m->m_off   = (char *)&cr.m_diffbotUrlCrawlPattern - x;
-	m->m_type  = TYPE_SAFEBUF;
-	m->m_page  = PAGE_NONE;
-	m->m_def   = "";
-	m++;
-
-	m->m_cgi   = "dbupp";
-	m->m_xml   = "diffbotUrlProcessPattern";
-	m->m_off   = (char *)&cr.m_diffbotUrlProcessPattern - x;
-	m->m_type  = TYPE_SAFEBUF;
-	m->m_page  = PAGE_NONE;
-	m->m_def   = "";
-	m++;
-
-	m->m_cgi   = "dbclassify";
-	m->m_xml   = "diffbotClassify";
-	m->m_off   = (char *)&cr.m_diffbotClassify - x;
-	m->m_type  = TYPE_CHAR;
-	m->m_page  = PAGE_NONE;
-	m->m_def   = "0";
-	m++;
-	*/
-
-	//m->m_xml   = "useDiffbot";
-	//m->m_off   = (char *)&cr.m_useDiffbot - x;
-	//m->m_type  = TYPE_CHAR;
-	//m->m_page  = PAGE_NONE;
-	//m->m_def   = "0";
-	//m++;
-
 	m->m_xml   = "isCustomCrawl";
 	m->m_off   = (char *)&cr.m_isCustomCrawl - x;
 	m->m_type  = TYPE_CHAR;
@@ -8409,28 +8558,38 @@ void Parms::init ( ) {
 	m->m_def   = "-1";
 	m++;
 
-	/*
-	m->m_cgi   = "dbcrawlstarttime";
-	m->m_xml   = "diffbotCrawlStartTime";
-	m->m_off   = (char *)&cr.m_diffbotCrawlStartTime - x;
-	m->m_type  = TYPE_LONG_LONG;
+	/////////////////////
+	//
+	// new cmd parms
+	//
+	/////////////////////
+
+	m->m_title = "delete collection";
+	m->m_desc  = "delete a collection";
+	m->m_cgi   = "delcoll";
+	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
+	m->m_func  = CommandDeleteColl;
+	m->m_cast  = 1;
 	m++;
 
-	m->m_cgi   = "dbcrawlendtime";
-	m->m_xml   = "diffbotCrawlEndTime";
-	m->m_off   = (char *)&cr.m_diffbotCrawlEndTime - x;
-	m->m_type  = TYPE_LONG_LONG;
+	m->m_title = "add collection";
+	m->m_desc  = "add a new collection";
+	m->m_cgi   = "addcoll";
+	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
+	m->m_func  = CommandAddColl;
+	m->m_cast  = 1;
 	m++;
 
-	m->m_cgi   = "isdbtestcrawl";
-	m->m_xml   = "isDiffbotTestCrawl";
-	m->m_off   = (char *)&cr.m_isDiffbotTestCrawl - x;
-	m->m_type  = TYPE_BOOL;
+	m->m_title = "in sync";
+	m->m_desc  = "signify in sync with host 0";
+	m->m_cgi   = "insync";
+	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
+	m->m_func  = CommandInSync;
+	m->m_cast  = 1;
 	m++;
-	*/
 
 
 	///////////////////////////////////////////
@@ -8705,15 +8864,6 @@ void Parms::init ( ) {
 	m->m_cgi   = "srn";
 	m->m_off   = (char *)&cr.m_spiderRoundNum - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "0";
-	m->m_group = 0;
-	m++;
-
-	m->m_title = "spider status";
-	m->m_desc  = "The spider status number.";
-	m->m_cgi   = "sst";
-	m->m_off   = (char *)&cr.m_spiderStatus - x;
-	m->m_type  = TYPE_CHAR;
 	m->m_def   = "0";
 	m->m_group = 0;
 	m++;
@@ -10060,6 +10210,7 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	/*
 	// now we store this in title recs, so we can change it on the fly
 	m->m_title = "title weight";
 	m->m_desc  = "Weight title this much more or less. This units are "
@@ -10143,6 +10294,7 @@ void Parms::init ( ) {
 	m->m_min   = 0;
 	m->m_group = 0;
 	m++;
+	*/
 
 	/*
 	// now we store this in title recs, so we can change it on the fly
@@ -15573,13 +15725,22 @@ void Parms::init ( ) {
 
 	// Process.cpp calls Msg28::massConfig with &haspower=[0|1] to 
 	// indicate power loss or coming back on from a power loss
-	m->m_title = "power status notificiation";
-	m->m_desc  = "If this is 1 then power came back on, othewise, it "
-		"just went off.";
-	m->m_cgi   = "haspower";
+	m->m_title = "power on status notificiation";
+	m->m_desc  = "Indicates power is back on.";
+	m->m_cgi   = "poweron";
 	m->m_obj   = OBJ_CONF;
 	m->m_type  = TYPE_CMD;
-	m->m_func  = CommandPowerNotice;
+	m->m_func  = CommandPowerOnNotice;
+	m->m_cast  = 0;
+	m->m_page  = PAGE_NONE;
+	m++;
+
+	m->m_title = "power off status notificiation";
+	m->m_desc  = "Indicates power is off.";
+	m->m_cgi   = "poweroff";
+	m->m_obj   = OBJ_CONF;
+	m->m_type  = TYPE_CMD;
+	m->m_func  = CommandPowerOffNotice;
 	m->m_cast  = 0;
 	m->m_page  = PAGE_NONE;
 	m++;
@@ -15609,6 +15770,12 @@ void Parms::init ( ) {
 		m_parms[i].m_hash = hash32n ( m_parms[i].m_title );
 	}
 
+	// cgi hashes
+	for ( long i = 0 ; i < m_numParms ; i++ ) {
+		if ( ! m_parms[i].m_cgi ) continue;
+		m_parms[i].m_cgiHash = hash32n ( m_parms[i].m_cgi );
+	}
+
 	// sanity check: ensure all cgi parms are different
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 	for ( long j = 0 ; j < m_numParms ; j++ ) {
@@ -15623,7 +15790,9 @@ void Parms::init ( ) {
 		if ( m_parms[i].m_sparm && m_parms[j].m_sparm &&
 		     strcmp ( m_parms[i].m_scmd, m_parms[j].m_scmd) != 0 )
 			continue;
-		if ( strcmp ( m_parms[i].m_cgi , m_parms[j].m_cgi ) != 0 )
+		if ( strcmp ( m_parms[i].m_cgi , m_parms[j].m_cgi ) != 0 &&
+		     // ensure cgi hashes are different as well!
+		     m_parms[i].m_cgiHash != m_parms[j].m_cgiHash )
 			continue;
 		log(LOG_LOGIC,"conf: Cgi parm for #%li \"%s\" "
 		    "matches #%li \"%s\". Exiting.",
@@ -15968,417 +16137,6 @@ void Parms::overlapTest ( char step ) {
 
 }
 
-//////////////////////////////////////////////
-//
-// Command Functions. All return false if block... yadayada
-//
-//////////////////////////////////////////////
-
-//#include "Tfndb.h"
-#include "Spider.h"
-#include "Tagdb.h"
-#include "Indexdb.h"
-#include "Datedb.h"
-//#include "Checksumdb.h"
-#include "Clusterdb.h"
-#include "Collectiondb.h"
-
-
-struct BlockedCommandState {
-	BlockedCommandState() :	m_callback(NULL){}
-	TcpSocket   *m_s; 
-	HttpRequest  m_r;
-	bool (*m_callback)(TcpSocket *s , HttpRequest *r);
-};
-
-//keep one spare around so we can run a command even
-//when malloc fails:
-static BlockedCommandState s_bcs;
-
-void blockedCommandWrapper(void *state) {
-	BlockedCommandState* bcs = (BlockedCommandState*)state;
-	bcs->m_callback(bcs->m_s, &bcs->m_r);
-	bcs->m_callback = NULL;
-	if(bcs != &s_bcs) 
-		mfree(bcs, sizeof(BlockedCommandState), 
-		      "BlockedCommandState");
-}
-
-
-void commandDiskDumpWrapper(int fd,void *state);
-void commandMergeTitledbWrapper(int fd,void *state);
-void commandMergeSpiderdbWrapper(int fd,void *state);
-void commandMergeSectiondbWrapper(int fd,void *state);
-void commandMergePosdbWrapper(int fd,void *state);
-void commandMergeWrapper(int fd,void *state);
-void commandDiskPageCacheOffWrapper(int fd,void *state);
-
-bool CommandMerge (TcpSocket *s , HttpRequest *r,
-		   bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	g_loop.registerSleepCallback (10,NULL,commandMergeWrapper);
-	// most of these are probably already in good shape
-	return true;
-}
-
-
-bool CommandParserTestInit (TcpSocket *s , HttpRequest *r,
-			    bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	// enable testing for all other hosts
-	g_conf.m_testParserEnabled = 1;
-	// reset all files
-	g_test.removeFiles();
-	// turn spiders on globally
-	g_conf.m_spideringEnabled = 1;
-	//g_conf.m_webSpideringEnabled = 1;
-	// turn on for test coll too
-	CollectionRec *cr = g_collectiondb.getRec("test");
-	// turn on spiders
-	if ( cr ) cr->m_spideringEnabled = 1;
-	// if we are not host 0, turn on spiders for testing
-	if ( g_hostdb.m_myHost->m_hostId != 0 ) return true;
-	// start the test loop to inject urls for parsing/spidering
-	g_test.initTestRun();
-	// done 
-	return true;
-}
-
-bool CommandSpiderTestInit (TcpSocket *s , HttpRequest *r,
-			    bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	// enable testing for all other hosts
-	g_conf.m_testSpiderEnabled = 1;
-	// reset all files
-	g_test.removeFiles();
-	// turn spiders on globally
-	g_conf.m_spideringEnabled = 1;
-	//g_conf.m_webSpideringEnabled = 1;
-	// turn on for test coll too
-	CollectionRec *cr = g_collectiondb.getRec("test");
-	// turn on spiders
-	if ( cr ) cr->m_spideringEnabled = 1;
-	// if we are not host 0, turn on spiders for testing
-	if ( g_hostdb.m_myHost->m_hostId != 0 ) return true;
-	// start the test loop to inject urls for parsing/spidering
-	g_test.initTestRun();
-	// done 
-	return true;
-}
-
-bool CommandSpiderTestCont (TcpSocket *s , HttpRequest *r,
-			    bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	// enable testing for all other hosts
-	g_conf.m_testSpiderEnabled = 1;
-	// turn spiders on globally
-	g_conf.m_spideringEnabled = 1;
-	//g_conf.m_webSpideringEnabled = 1;
-	// turn on for test coll too
-	CollectionRec *cr = g_collectiondb.getRec("test");
-	// turn on spiders
-	if ( cr ) cr->m_spideringEnabled = 1;
-	// done 
-	return true;
-}
-
-void commandMergeWrapper(int fd,void *state) {
-	g_loop.unregisterSleepCallback (NULL,commandMergeWrapper);
-	// most of these are probably already in good shape
-	//g_checksumdb.getRdb()->attemptMerge (1/*nice*/,true/*force?*/);
-	g_clusterdb.getRdb()->attemptMerge  (1/*nice*/,true/*force?*/);
-	g_tagdb.getRdb()->attemptMerge     (1/*nice*/,true/*force?*/);
-	g_catdb.getRdb()->attemptMerge      (1/*nice*/,true/*force?*/);
-	//g_tfndb.getRdb()->attemptMerge      (1/*nice*/,true/*force?*/);
-	g_spiderdb.getRdb()->attemptMerge   (1/*nice*/,true/*force?*/);
-	// these 2 will probably need the merge the most
-	g_indexdb.getRdb()->attemptMerge    (1/*nice*/,true/*force?*/);
-	g_datedb.getRdb()->attemptMerge     (1/*nice*/,true/*force?*/);
-	g_titledb.getRdb()->attemptMerge    (1/*nice*/,true/*force?*/);
-	//g_sectiondb.getRdb()->attemptMerge  (1/*nice*/,true/*force?*/);
-	g_statsdb.getRdb()->attemptMerge    (1/*nice*/,true/*force?*/);
-	g_linkdb .getRdb()->attemptMerge    (1/*nice*/,true/*force?*/);
-}
-
-
-bool CommandMergePosdb (TcpSocket *s , HttpRequest *r,
-			  bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	g_loop.registerSleepCallback (10,NULL,commandMergePosdbWrapper);
-	return true;
-}
-
-
-void commandMergePosdbWrapper(int fd,void *state) {
-	g_loop.unregisterSleepCallback (NULL,commandMergePosdbWrapper);
-	g_posdb.getRdb()->attemptMerge    (1/*nice*/,true/*force?*/);
-}
-
-/*
-bool CommandMergeSectiondb (TcpSocket *s , HttpRequest *r,
-			 bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	g_loop.registerSleepCallback (10,NULL,commandMergeSectiondbWrapper);
-	return true;
-}
-
-
-void commandMergeSectiondbWrapper(int fd,void *state) {
-	g_loop.unregisterSleepCallback (NULL,commandMergeSectiondbWrapper);
-	g_sectiondb.getRdb()->attemptMerge    (1,true); // nice , force
-}
-*/
-
-bool CommandMergeTitledb (TcpSocket *s , HttpRequest *r,
-			  bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	g_loop.registerSleepCallback (10,NULL,commandMergeTitledbWrapper);
-	return true;
-}
-
-
-void commandMergeTitledbWrapper(int fd,void *state) {
-	g_loop.unregisterSleepCallback (NULL,commandMergeTitledbWrapper);
-	g_titledb.getRdb()->attemptMerge    (1/*nice*/,true/*force?*/);
-}
-
-
-bool CommandMergeSpiderdb (TcpSocket *s , HttpRequest *r,
-			  bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	g_loop.registerSleepCallback (10,NULL,commandMergeSpiderdbWrapper);
-	return true;
-}
-void commandMergeSpiderdbWrapper(int fd,void *state) {
-	g_loop.unregisterSleepCallback (NULL,commandMergeSpiderdbWrapper);
-	g_spiderdb.getRdb()->attemptMerge    (1/*nice*/,true/*force?*/);
-}
-
-
-bool CommandDiskPageCacheOff (TcpSocket *s , HttpRequest *r,
-			      bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	g_loop.registerSleepCallback (10,NULL,commandDiskPageCacheOffWrapper);
-	return true;
-}
-
-
-void commandDiskPageCacheOffWrapper(int fd,void *state) {
-	g_loop.unregisterSleepCallback (NULL,commandDiskPageCacheOffWrapper);
-	g_process.resetPageCaches();
-}
-
-bool CommandDiskDump (TcpSocket *s , HttpRequest *r,
-		      bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	g_loop.registerSleepCallback (10,NULL,commandDiskDumpWrapper);
-	return true;
-}
-
-
-void commandDiskDumpWrapper(int fd,void *state) {
-	g_loop.unregisterSleepCallback (NULL,commandDiskDumpWrapper);
-	//g_checksumdb.getRdb()->dumpTree ( 1 ); // niceness
-	g_clusterdb.getRdb()->dumpTree  ( 1 );
-	g_tagdb.getRdb()->dumpTree     ( 1 );  
-	g_catdb.getRdb()->dumpTree      ( 1 );
-	//g_tfndb.getRdb()->dumpTree      ( 1 );   
-	g_spiderdb.getRdb()->dumpTree   ( 1 );
-	g_posdb.getRdb()->dumpTree    ( 1 );
-	//g_datedb.getRdb()->dumpTree     ( 1 );
-	g_titledb.getRdb()->dumpTree    ( 1 );
-	//g_sectiondb.getRdb()->dumpTree  ( 1 );
-	g_statsdb.getRdb()->dumpTree    ( 1 );
-	g_linkdb.getRdb() ->dumpTree    ( 1 );
-	g_errno = 0;
-}
-
-
-bool CommandJustSave (TcpSocket *s , HttpRequest *r,
-		      bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	// returns false if blocked, true otherwise
-	g_process.save ();
-	// always return true here
-	return true;
-	/*
-	// . this should queue a bunch of SAVETHREADS
-	// . nobody will allow writes to tree until all finished sving
-	// . TODO: rename Rdb::close() to Rdb::save() or have a 
-	//   separate routine at least
-	g_tagdb.getRdb()->close(NULL,NULL,false,false);
-	g_catdb.getRdb()->close(NULL,NULL,false,false);
-	g_indexdb.getRdb()->close(NULL,NULL,false,false);
-	g_datedb.getRdb()->close(NULL,NULL,false,false);
-	g_titledb.getRdb()->close(NULL,NULL,false,false);
-	g_tfndb.getRdb()->close(NULL,NULL,false,false);
-	g_spiderdb.getRdb()->close(NULL,NULL,false,false);
-	g_checksumdb.getRdb()->close(NULL,NULL,false,false);
-	g_clusterdb.getRdb()->close(NULL,NULL,false,false);
-	g_statsdb.getRdb()->close(NULL,NULL,false,false);
-	g_collectiondb.save();
-	g_conf.save();
-	g_repair.save();
-	// this will not save if save thread already launched
-	g_sync.saveSyncFile( true)// useThread?
-	// . save our caches
-	// . these block, so do not put this here until they are non-blocking
-	//   because it can hurt our query response time too much
-	//for ( long i = 0; i < MAX_GENERIC_CACHES; i++ ) {
-	//	if ( g_genericCache[i].useDisk() )
-	//		g_genericCache[i].save();
-	//}
-	return true;
-	*/
-}
-
-// this is defined in main.cpp
-//#ifndef NO_MAIN
-//extern bool mainShutdown ( bool urgent );
-//#endif
-
-bool CommandSaveAndExit (TcpSocket *s , HttpRequest *r,
-			 bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	// "false" means not urgent
-	
-	
-	BlockedCommandState* bcs;
-	bcs = (BlockedCommandState*)mmalloc(sizeof(BlockedCommandState),
-					    "BlockedCommandState");
-	if(!bcs) { //the malloc failed, we have a backup
-		if(s_bcs.m_callback) {
-			// . our backup is used too! we can't callback
-			// . we'll fall back to returning true like the 
-			// . bad ol' days
-			bcs = NULL;
-		}
-		else bcs = &s_bcs;
-	} 
-	if(bcs) {
-		bcs->m_callback = cb;
-		bcs->m_s = s;
-		bcs->m_r.copy(r);//r is on the stack, so we have to copy
-	}
-								 
-	if(!g_process.shutdown ( false, bcs, blockedCommandWrapper)
-	   && bcs) {
-		return false;
-	}
-	if(!bcs) return true;
-	if(bcs == &s_bcs) {
-		s_bcs.m_callback = NULL;
-		return true;
-	}
-	mfree(bcs, sizeof(BlockedCommandState),  "BlockedCommandState");
-	return true;
-	//#ifndef NO_MAIN
-	//	mainShutdown ( false );
-	//#endif
-	//return true;
-}
-
-bool CommandUrgentSaveAndExit (TcpSocket *s , HttpRequest *r,
-			       bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	// "true" means urgent
-	g_process.shutdown ( true );
-	return true;
-	/*
-	  #ifndef NO_MAIN
-	g_loop.m_shutdown = 1;
-	//mainShutdown ( true );
-	// turn off spidering and addUrl (don't save these)
-	g_conf.m_spideringEnabled = 0; 
-	g_conf.m_addUrlEnabled    = 0; 
-	// save it
-	//s_urgent = 1;
-	// if we're going down hard don't bother waiting on transactions...
-	// disable threads from spawning
-	g_threads.disableThreads();
-	// . save the Conf file again since we turned off spider/addurl
-	// . we don't want them to be on after we recover from crash
-	g_conf.save();
-	// . try to save all rdbs
-	// . return false if blocked
-	if ( ! closeAll(NULL,NULL) ) {
-		fprintf(stderr,"why did this block? Please fix asap. "
-			"Important data is not getting saved.\n");
-		return false;
-	}
-	// we didn't block, so they must all be closed
-	allExit ( );
-	#endif
-	return true;
-	*/
-}
-
-/*
-bool CommandForceOutOfSync (TcpSocket *s , HttpRequest *r,
-			    bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	g_sync.m_inSync = false;
-	return true;
-}
-*/
-
-bool CommandReloadLanguagePages (TcpSocket *s , HttpRequest *r,
-			       bool (*cb)(TcpSocket *s , HttpRequest *r)  ) {
-	g_languagePages.reloadPages();
-	return true;
-}
-
-bool CommandClearKernelError (TcpSocket *s , HttpRequest *r,
-			      bool (*cb)(TcpSocket *s , HttpRequest *r) ) {
-	g_hostdb.m_myHost->m_kernelErrors = 0;
-	return true;
-}
-
-bool CommandPowerNotice (TcpSocket *s , HttpRequest *r,
-			 bool (*cb)(TcpSocket *s , HttpRequest *r) ) {
-
-	long hasPower = r->getLong("haspower",-1);
-	log("powermo: received haspower=%li",hasPower);
-	if ( hasPower != 0 && hasPower != 1 ) return true;
-
-
-	// did power state change? if not just return true
-	if (   g_process.m_powerIsOn &&   hasPower ) return true;
-	if ( ! g_process.m_powerIsOn && ! hasPower ) return true;
-	
-	if ( hasPower ) {
-		log("powermo: power is regained");
-		g_process.m_powerIsOn = true;
-		return true;
-	}
-
-	// if it was on and went off...
-	// now it is off
-	log("powermo: power was lost");
-	// . SpiderLoop.cpp will not launch any more spiders as
-	//   long as the power is off
-	// . autosave should kick in every 30 seconds
-	g_process.m_powerIsOn = false;
-	// note the autosave
-	log("powermo: disabling spiders, suspending merges, disabling "
-	    "tree writes and saving.");
-	// tell Process.cpp::save2() to save the blocking caches too!
-	//g_process.m_pleaseSaveCaches = true;
-	// . save everything now... this may block some when saving the
-	//   caches... then do not do ANY writes... 
-	// . RdbMerge suspends all merging if power is off
-	// . Rdb.cpp does not allow any adds if power is off. it will
-	//   send back an ETRYAGAIN...
-	// . if a tree is being dumped, this will keep re-calling
-	//   Process.cpp::save2()
-	g_process.save();
-
-	// also send an email if we are host #0
-	if ( g_hostdb.m_myHost->m_hostId != 0 ) return true;
-	if ( g_proxy.isProxy() ) return true;
-
-	char tmp[128];
-	Host *h0 = g_hostdb.getHost ( 0 );
-	long ip0 = 0;
-	if ( h0 ) ip0 = h0->m_ip;
-	sprintf(tmp,"%s: POWER IS OFF",iptoa(ip0));
-
-	g_pingServer.sendEmail ( NULL  , // Host ptr
-				 tmp   , // msg
-				 true  , // sendToAdmin
-				 false , // oom?
-				 false , // kernel error?
-				 true  , // parm change?
-				 // force it? even if disabled?
-				 false  );
-	return true;
-}
 
 bool Parm::getValueAsBool ( SearchInput *si ) {
 	char *p = (char *)si + m_soff;
@@ -16393,4 +16151,813 @@ long Parm::getValueAsLong ( SearchInput *si ) {
 char *Parm::getValueAsString ( SearchInput *si ) {
 	char *p = (char *)si + m_soff;
 	return *(char **)p;
+}
+
+/////////
+//
+// new functions
+//
+/////////
+
+//////////
+//
+// . NOTE:
+//   url filters now do not have a # in the field name, they  just repeat like
+//   &regex=&regex=&regex= so need to use javascript to insert/delete a row
+//
+//////////
+
+// . occNum is index # for parms that are arrays. it is -1 if not used.
+// . collnum is -1 for g_conf, which is not a collrec
+key96_t makeParmKey ( collnum_t collnum , Parm *m , long occNum ) {
+	key96_t k;
+	k.n1 = collnum;
+	k.n0 = m->m_cgiHash; // 32 bit
+	k.n0 <<= 31;
+	k.n0 |= occNum;
+	k.n0 <<= 1;
+	return k;
+}
+
+collnum_t getCollNumFromParmRec ( char *rec ) {
+	key96_t *k = (key96_t *)rec;
+	return (collnum_t)k->n1;
+}
+
+// for parms that are arrays...
+collnum_t getOccNumFromParmRec ( char *rec ) {
+	key96_t *k = (key96_t *)rec;
+	return (collnum_t)((k->n0>>1)&0xffffffff);
+}
+
+Parm *getParmFromParmRec ( char *rec ) {
+	key96_t *k = (key96_t *)rec;
+	long cgiHash32 = (k.n0 >> 32);
+	return getParmFast2 ( cgiHash32 );
+}
+
+
+bool Parms::addNewParmToList1 ( SafeBuf *parmList ,
+				collnum_t collnum ,
+				char *parmValString ,
+				long  occNum ,
+				char *parmName ) {
+	// get the parm descriptor
+	Parm *m = getParmFast1 ( parmName );
+	if ( ! m ) return log("parms: got bogus parm2 %s",parmName );
+	return addNewParmToList2 ( parmList,collnum,m,occNum ,parmVal );
+}
+
+// . make a parm rec using the prodivded string
+// . used to convert http requests into a parmlist
+// . string could be a float or long or long long in ascii, as well as a string
+bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
+				collnum_t collnum , 
+				char *parmValString ,
+				long occNum ,
+				Parm *m ) {
+	// get value
+	char *val = NULL;
+
+	*valSize = 0;
+
+	if ( m->m_type == TYPE_STRING || 
+	     m->m_type == TYPE_STRINGBOX || 
+	     m->m_type == TYPE_SAFEBUF ||
+	     m->m_type == TYPE_STRINGNONEMPTY ) {
+		// point to string
+		val = obj + m->m_off;
+		// Parm::m_size is the max string size
+		if ( occNum > 0 ) val += occNum * m->m_size;
+		// stringlength + 1. no just make it the whole string in
+		// case it does not use the \0 protocol
+		*valSize = m->m_max;
+	}
+	else if ( m->m_type == TYPE_LONG ) {
+		// TODO: what about an unsigned long 0xffffffff will overflow
+		val32 = atol(parmVal);
+		val = (char *)&val32;
+		valSize = 4;
+	}
+	else if ( m->m_type == TYPE_FLOAT ) {
+		valf = atod(parmVal);
+		val = (char *)&valf;
+		valSize = 4;
+	}
+	else if ( m->m_type == TYPE_LONGLONG ) {
+		val64 = atoll(parmVal);
+		val = (char *)&val32;
+		valSize = 8;
+	}
+	else if ( m->m_type == TYPE_BOOL ||
+		  m->m_type == TYPE_CHAR ) {
+		val8 = atol(parmVal);
+		val = (char *)&val8;
+		valSize = 1;
+	}
+	else if ( m->m_type == TYPE_CMD ) {
+		val = NULL;
+		valSize = 0;
+	}
+	else {
+		log("parms: shit unsupported parm type");
+		char *xx=NULL;*xx=0;
+	}
+
+	return true;
+}
+
+bool Parms::addCurrentParmToList1 ( SafeBuf *parmList ,
+				    CollectionRec *cr , 
+				    char *parmName ) {
+	collnum_t collnum = -1;
+	if ( cr ) collnum = cr->m_collnum;
+	// get the parm descriptor
+	Parm *m = getParmFast1 ( parmName );
+	if ( ! m ) return log("parms: got bogus parm1 %s",parmName );
+	return addCurrentParmToList2 ( parmList , collnum, -1 , m );
+}
+
+// use the current value of the parm to make this record
+bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
+				    collnum_t collnum , 
+				    long occNum ,
+				    Parm *m ) {
+
+	char *obj = NULL;
+
+	if ( collnum != -1 ) {
+		CollectionRec *cr = g_collectiondb.getRec ( collnum );
+		if ( ! cr ) return NULL;
+		obj = (char *)cr;
+	}
+	else {
+		obj = &g_conf;
+	}
+
+	long val32;
+	long long val64;
+	char val8;
+	float valf;
+
+	// get value
+	char *val = NULL;
+
+	*valSize = 0;
+
+	if ( m->m_type == TYPE_STRING || 
+	     m->m_type == TYPE_STRINGBOX || 
+	     //m->m_type == TYPE_SAFEBUF ||
+	     m->m_type == TYPE_STRINGNONEMPTY ) {
+		// point to string
+		val = obj + m->m_off;
+		// Parm::m_size is the max string size
+		if ( occNum > 0 ) val += occNum * m->m_size;
+		// stringlength + 1. no just make it the whole string in
+		// case it does not use the \0 protocol
+		*valSize = m->m_max;
+	}
+	else if ( m->m_type == SAFEBUF ) {
+		SafeBuf *sb = (SafeBuf *)data;
+		data = sb->getBufStart();
+		dataSize = sb->length() + 1; // include \0
+	}
+	else if ( m->m_type == TYPE_LONG ) {
+		// TODO: what about an unsigned long 0xffffffff will overflow
+		val32 = atol(parmVal);
+		val = (char *)&val32;
+		valSize = 4;
+	}
+	else if ( m->m_type == TYPE_FLOAT ) {
+		valf = atod(parmVal);
+		val = (char *)&valf;
+		valSize = 4;
+	}
+	else if ( m->m_type == TYPE_LONGLONG ) {
+		val64 = atoll(parmVal);
+		val = (char *)&val32;
+		valSize = 8;
+	}
+	else if ( m->m_type == TYPE_BOOL ||
+		  m->m_type == TYPE_CHAR ) {
+		val8 = atol(parmVal);
+		val = (char *)&val8;
+		valSize = 1;
+	}
+	else if ( m->m_type == TYPE_CMD ) {
+		val = NULL;
+		valSize = 0;
+	}
+	else {
+		log("parms: shit unsupported parm type");
+		char *xx=NULL;*xx=0;
+	}
+
+	// use what is there
+	//long dataSize = 0;
+	//char *data = getParmCurrentValue ( m , &dataSize );
+
+	//long occNum = -1;
+	key96_t key = makeParmKey ( collnum , m ,  occNum );
+
+	// then key
+	if ( ! parmList->safeMemcpy ( &key , sizeof(key) ) )
+		return false;
+
+	// datasize
+	if ( ! parmList->pushLong ( dataSize ) )
+		return false;
+
+	// and data
+	if ( data && dataSize && ! parmList->safeMemcpy ( data ) )
+		return false;
+
+	return true;
+}
+
+
+// returns false and sets g_errno on error
+bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList){
+
+	// this points into a static buf so be careful!
+	char *coll = getCollname ( hr );
+
+	// . this is the collection we are operating on
+	// . returns -1 if no collection, it's the global g_conf record
+	// . if crawl was deleted this will be -1 ?
+	collnum_t collnum = (collnum)-1;
+
+	// should ideally use a hashtable for this for large # of colls...
+	if ( coll ) collnum = getCollnum ( hr );
+
+	// if coll *name* provided must be a valid coll *num*
+	if ( coll && collnum < 0 ) {
+		g_errno = ENOCOLL;
+		return log("parms: no collnum for coll name \"%s\"",coll);
+	}
+
+	// for now we will update the collrecs and use those though rather
+	// than an rdbtree of parm recs.
+	CollectionRec *cr = NULL;
+	if ( collnum >= 0 ) cr = g_collectiondb.getRec ( collnum );
+		
+	// might be g_conf specific, not coll specific
+	bool hasPerm = false;
+	// just knowing the collection name of a custom crawl means you
+	// know the token, so you have permission
+	if ( cr && cr->m_isCustomCrawl ) hasPerm = true;
+	if ( hr->isLocal() ) hasPerm = true;
+	if ( ! hasPerm ) {
+		log("parms: no permission to set parms");
+		g_errno = ENOPERM;
+		return false;
+	}
+
+	// for counting row #'s in url filters table
+	long occNum = -1;
+
+	// loop through cgi parms
+	for ( long i = 0 ; i < r->getNumFields() ; i++ ) {
+		// get cgi parm name
+		char *field = r->getField    ( i );
+		// get value of the cgi field
+		char *val  = r->getValue   (i);
+		//long  valSize = r->getValueLen(i);
+		// include \0
+		//if ( val ) valSize += 1;
+		// get the occurence # if its regex. this is the row #
+		// in the url filters table, since those parms repeat names.
+		// url filter expression.
+		if ( strcmp(field,"fe") == 0 ) occNum++;
+
+		if ( ! addNewParmToList1 ( parmList , 
+					   collnum ,
+					   val , 
+					   occNum ,
+					   field ) ) // parmName
+			return false;
+	}
+	return true;
+}
+
+Parm *Parms::getParmFast2 ( long cgiHash32 ) {
+	static HashTableX s_pht;
+	static char s_phtBuf[25000];
+	static bool s_init = false;
+
+	if ( ! s_init ) {
+		// init hashtable
+		s_pht.set ( 4,4, 2048, s_phtBuf,25000, false,0,"phttab" );
+		// reduce hash collisions:
+		s_pht.m_useMagicKey = true;
+		// fill up hashtable
+		for ( long i = 0 ; i < m_numParms ; i++ ) {
+			// get it
+			Parm *parm = &m_parms[i];
+			// skip comments
+			if ( parm->m_type == TYPE_COMMENT ) continue;
+			// skip if no cgi
+			if ( ! parm->m_cgi ) continue;
+			// get its hash of its cgi
+			long ph32 = parm->m_cgiHash;
+			// sanity!
+			if ( s_pht.isInTable ( &ph32 ) ) {char *xx=NULL;*xx=0;}
+			// add that to hash table
+			s_pht.addKey ( &ph32 , &parm );
+		}
+		// do not do this again
+		s_init = true;
+	}
+
+	Parm *parm = (Parm *)s_pht.getValue ( &cgiHash32 );
+	return parm;
+}
+
+
+Parm *Parms::getParmFast1 ( char *cgi ) {
+	long h32 = hash32 ( cgi );
+	return getParmFast2 ( h32 );
+}
+
+////////////
+//
+// functions for distrubting/syncing parms to/with all hosts
+//
+////////////
+
+class ParmNode {
+public:
+	SafeBuf m_parmList;
+	long m_numRequests;
+	long m_numReplies;
+	class ParmNode *m_nextNode;
+	long long m_parmId;
+};
+
+static ParmNode *s_headNode = NULL;
+static ParmNode *s_tailNode = NULL;
+static long long s_parmId = 0LL;
+
+// . will send the parm update request to each host and retry forever, 
+//   until dead hosts come back up
+// . keeps parm update requests in order received
+// . returns false and sets g_errno on error
+bool Parms::broadcastParmList ( SafeBuf *parmList ) {
+
+	// empty list?
+	if ( parmList->getLength() <= 0 ) return true;
+
+	// only us? no need for this then
+	if ( g_hostdb.m_numHosts <= 1 ) return true;
+
+	// make a new parm transmit node
+	ParmNode *pn = (ParmNode *)mmalloc ( sizeof(ParmNode) , "parmnode" );
+	if ( ! pn ) return false;
+
+	// update the ticket #. we use this to keep things ordered too.
+	// this should never be zero since it starts off at zero.
+	s_parmId++;
+
+	// set it
+	pn->m_parmList.stealBuf ( parmList );
+	pn->m_numRequests = 0;
+	pn->m_numReplies  = 0;
+	pn->m_nextNode    = NULL;
+	pn->m_parmId      = s_parmId; // take a ticket
+	//pn->m_state       = state;
+	//pn->m_callback    = callback;
+
+	// store it ordered in our linked list of parm transmit nodes
+	if ( ! s_tailNode ) {
+		s_headNode = pn;
+		s_tailNode = pn;
+	}
+	else {
+		s_tailNode->m_nextNode = pn;
+		s_tailNode = pn;
+	}
+
+	// pump the parms out to other hosts in the network
+	doParmSendingLoop ( );
+
+	// all done
+	return true;
+}
+
+bool Conf::doParmSendingLoop ( ) {
+
+	if ( ! s_headNode ) return true;
+
+	// try to send a parm update request to each host
+	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		// get it
+		Host *h = g_hostdb.getHosts(i);
+		// skip ourselves, host #0
+		if ( h->m_hostId == g_hostdb.m_myHostId ) continue;
+		// if in progress, gotta wait for that to complete
+		if ( h->m_currentParmIdInProgress ) continue;
+		// if his last completed parmid is the current he is uptodate
+		if ( h->m_lastParmIdCompleted == s_parmId ) continue;
+		// otherwise get him the next to send
+		ParmNode *pn = s_headNode;
+		for ( ; pn ; pn = pn->m_nextNode ) {
+			// stop when we got a parmnode we have not sent to
+			// him yet, we'll send it now
+			if ( pn->m_parmId > h->m_lastParmIdCompleted ) break;
+		}
+		// nothing? strange. something is not right.
+		if ( ! pn ) { char *xx=NULL; *xx=0; }
+		// ok, he's available
+		if ( ! g_udpServer.sendRequest ( pn->m_parmList.getBufStart(),
+						 pn->m_parmList.length() ,
+						 // a new msgtype
+						 0x3f,
+						 0, // ip
+						 0, // port
+						 h->m_hostId ,
+						 NULL, // retslot
+						 (void *)h->m_hostId , // state
+						 gotParmReplyWrapper ,
+						 999999999) ) { // timeout secs
+			log("parms: faild to send: %s",mstrerror(g_errno));
+			continue;
+		}
+		// flag this
+		h->m_currentParmIdInProgress = pn->m_parmId;
+		h->m_currentNodePtr = pn;
+	}
+	return true;
+}
+
+// host #0 is requesting that we update some parms
+void handleRequest3f ( UdpSlot *slot , long niceness ) {
+	char *parmRecs = slot->m_readBuf;
+	long  parmEnd  = parmRecs + slot->m_readBufSize;
+	// process them
+	char *p = parmRecs;
+	for ( ; p < parmEnd ; ) {
+		// get size
+		long dataSize = *(long *)(rec+sizeof(key96_t));
+		long recSize = sizeof(key96_t) + 4 + dataSize;
+		p += updateParm ( p );
+		p += recSize;
+	}
+}
+
+void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
+
+	// in case host table is dynamically modified, go by #
+	Host *h = g_hostdb.getHost((long)state);
+
+	long parmId = h->m_currentParmIdInProgress;
+
+	ParmNode *pn = h->m_currentNodePtr;
+
+	// nothing in progress now
+	h->m_currentParmIdInProgress = 0;
+	h->m_currentNodePtr = NULL;
+
+	if ( g_errno ) {
+		log("parms: got parm update reply from host #%li: %s",
+		    h->m_hostId,mstrerror(g_errno));
+		return;
+	}
+
+	// successfully completed
+	h->m_lastParmIdCompleted = parmId;
+
+	// inc this count
+	pn->m_numReplies++;
+
+	// nuke it?
+	if ( pn->m_numReplies >= pn->m_numRequests ) {
+		// we must always be the head lest we send out of order.
+		if ( pn != s_headNode ) { char *xx=NULL;*xx=0; }
+		// a new head
+		s_headNode = pn->m_nextNode;
+		// empty?
+		if ( ! s_headNode ) s_tailNode = NULL;
+		// do callback first before freeing pn
+		//if ( pn->m_callback ) pn->m_callback ( pn->m_state );
+		//if ( pn->m_prevNode ) 
+		//	pn->m_prevNode->m_nextNode = pn->m_nextNode;
+		//if ( pn->m_nextNode )
+		//	pn->m_nextNode->m_prevNode = pn->m_prevNode;
+		mfree ( pn , sizeof(ParmNode) , "pndfr");
+	}
+
+	// try to send more for him
+	doParmSendingLoop();
+}
+
+////
+//
+// functions for syncing parms with host #0
+//
+////
+
+// 1. we do not accept any recs into rdbs until in sync with host #0
+// 2. at startup we send the hash of all parms for each collrec and
+//    for g_conf (collnum -1) to host #0, then he will send us all the
+//    parms for a collrec (or g_conf) if we are out of sync.
+// 3. when host #0 changes a parm it lets everyone know via broadcastParmList()
+// 4. only host #0 may initiate parm changes. so don't let that go down!
+// 5. once in sync a host can drop recs for collnums that are invalid
+// 6. until in parm sync with host #0 reject adds to collnums we don't 
+//    have with ETRYAGAIN in Msg4.cpp
+
+
+// returns false and sets g_errno on error, true otherwise
+bool Parms::syncParmsWithHost0 ( ) {
+
+	m_inSyncWithHost0 = false;
+
+	// dont sync with ourselves
+	if ( g_hostdb.m_myHostId == 0 ) {
+		m_inSyncWithHost0 = true;
+		return true;
+	}
+
+	SafeBuf hashList;
+	
+	if ( ! makeSyncHashList ( &hashList ) ) return false;
+
+	// . send it off. use 3e i guess
+	// . host #0 will reply using msg4 really
+	// . msg4 guarantees ordering of requests
+	// . there will be a record that is CMD_INSYNC so when we get
+	//   that we set g_parms.m_inSyncWithHost0 to true
+	if ( ! g_udpServer.sendRequest ( hashList.getBufStart() ,
+					 hashList.length() ,
+					 hashList.getCapacity() ,
+					 true ,
+					 0x3e ,
+					 NULL , // state
+					 gotReplyFromHost0Wrapper ) ) {
+		log("parms: error syncing with host 0: %s",mstrerror(g_errno));
+		return false;
+	}
+
+	// wait now
+	return true;
+}
+
+// host #0 just sends back an empty reply, but it will hit us with
+// 0x3f parmlist requests. that way it uses the same mechanism and can
+// guarantee ordering of the parm update requests
+void gotReplyFromHost0Wrapper ( void *state , UdpSlot *slot ) {
+	// ignore his reply unless error?
+	if ( g_errno )
+		log("parms: got error syncing with host 0: %s",
+		    mstrerror(g_errno));
+	g_errno = 0;
+}
+	
+// . host #0 responds to a sync request from another host here
+// . host #0 will broadcast parm updates by calling broadcastParmList() which
+//   uses 0x3f, so this just returns and empty reply on success
+// . sends CMD "addcoll" and "delcoll" cmd parms as well
+// . include an "insync" command parm as last parm
+void handleRequest3e ( UdpSlot *slot , long niceness ) {
+
+	// right now we must be host #0
+	if ( g_hostdb.m_myHostId != 0 ) { 
+		g_errno = EBADENGINEER; 
+	hadError:
+		g_udpServer.sendErrorReply(slot,g_errno,60);
+		return;
+	}
+
+	//
+	// 0. scan our collections and clear a flag
+	//
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		// skip if empty
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// clear flag
+		cr->m_hackFlag = 0;
+	}
+
+	SafeBuf replyBuf;
+
+	//
+	// 1. update parms on collections we both have
+	// 2. tell him to delete collections we do not have but he does
+	//
+	SafeBuf tmp;
+	char *p = slot->m_readBuf;
+	char *pend = p + slot->m_readBufSize;
+	for ( ; p < pend ; ) {
+		// get collnum
+		collnum_t c = *(collnum_t *)p;
+		p += sizeof(collnum_t);
+		// and parm hash
+		long long h64 = *(long long *)p;
+		p += 8;
+		// if we being host #0 do not have this collnum tell 
+		// him to delete it!
+		CollectionRec *cr = g_collectiondb.getRec ( c );
+		if ( ! cr ) {
+			// add the parm rec as a parm cmd
+			if (!addNewParmToList1(&replyBuf,c,NULL,-1,"delcoll"))
+				goto hadError;
+			// ok, get next collection hash
+			continue;
+		}
+		// set our hack flag so we know he has this collection
+		cr->m_hackFlag = 1;
+		// get our parmlist for that collnum
+		tmp.reset();
+		if ( ! addAllParmsToList ( &tmp, c ) ) goto hadError;
+		// get checksum of that
+		long long m64 = hash64 ( tmp.getBufStart(),tmp.length() );
+		// if match, keep chugging, that's in sync
+		if ( h64 == m64 ) continue;
+		// otherwise, send him the list
+		if ( ! replyBuf.safeMemcpy ( &tmp ) ) goto hadError;
+	}
+
+	//
+	// 3. now if he's missing one of our collections tell him to add it
+	//
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		// skip if empty
+		CollectionRec *cr = g_collectiondb.m_recs[i];
+		if ( ! cr ) continue;
+		// clear flag
+		if ( cr->m_hackFlag ) continue;
+		// add the parm rec as a parm cmd
+		if ( ! addNewParmToList1 ( &replyBuf,i,NULL-1,"addcoll"))
+			goto hadError;
+		// and the parmlist for it
+		if ( ! addAllParmsToList ( &replyBuf, i ) ) goto hadError;
+	}
+
+	// final parm is the in sync stamp of approval which will set
+	// g_parms.m_inSyncWithHost0 to true. CommandInSync()
+	if ( ! addNewParmToList1 ( &replyBuf,i,NULL-1,"insync"))
+		goto hadError;
+
+	// this should at least have the in sync command
+	log("parms: sending %li bytes of parms to sync to host #%li",
+	    replyBuf.length(),slot->m_hostId);
+
+	// use the broadcast call here so things keep their order!
+	broadcastParmList ( &replyBuf );
+
+	// but do send back an empty reply to this 0x3e request
+	g_udpServer.sendReply_ass ( NULL,0,NULL,0,slot);
+	
+	// send that back now
+	//g_udpServer.sendReply_ass ( replyBuf.getBufStart() ,
+	//			    replyBuf.length() ,
+	//			    replyBuf.getBufStart() ,
+	//			    replyBuf.getCapacity() ,
+	//			    slot );
+	// udpserver will free it
+	//replyBuf.detachBuf();
+}
+
+
+// get the hash of every collection's parmlist
+bool Parms::makeSyncHashList ( SafeBuf *hashList ) {
+	SafeBuf tmp;
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		// skip if empty
+		if ( ! g_collectiondb.m_recs[i] ) continue;
+		// clear since last time
+		tmp.reset();
+		// g_conf?
+		if ( ! addAllParmsToList ( &tmp , i ) )
+			return false;
+		// store collnum first as 4 bytes
+		if ( ! hashList->safeMemcpy ( &i , sizeof(collnum_t) ) )
+			return false;
+		// hash that shit
+		long long h64 = hash64 ( tmp.getBufStart(),tmp.length() );
+		// and store it
+		if ( ! hashList->pushLongLong ( h64 ) )
+			return false;
+	}
+	return true;
+}
+
+long Parm::getNumInArray ( collnum_t collnum ) {
+	char *obj = &g_conf;
+	if ( m_obj == OBJ_COLL ) {
+		CollectionRec *cr = g_collectiondb.getRec ( collnum );
+		if ( ! cr ) return -1;
+		obj = (char *)cr;
+	}
+	// # in array is before it
+	return *(long *)(obj-4);
+}
+
+// . we use this for syncing parms between hosts
+// . called by convertAllCollRecsToParmList
+// . returns false and sets g_errno on error
+// . "rec" can be CollectionRec or g_conf ptr
+bool Parms::addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) {
+
+	// loop over parms
+	for ( long i = 0 ; i < m_numParms ; i++ ) {
+		// get it
+		Parm *parm = &m_parms[i];
+		// skip comments
+		if ( parm->m_type == TYPE_COMMENT ) continue;
+		// cmds
+		if ( parm->m_type == TYPE_CMD ) continue;
+		if ( parm->m_type == TYPE_BOOL2 ) continue;
+
+		long occNum = -1;
+		long maxOccNum = 0;
+
+		if ( parm->m_isArray() ) {
+			maxOccNum = parm->getNumInArray(collnum) ;
+			occNum = 0;
+		}
+
+		for ( ; occNum < maxOccNum ; occNum ++ ) {
+			// add each occ # to list
+			if ( ! addCurrentParmToList2 ( parmList ,
+						       collnum ,
+						       occNum ,
+						       parm ) )
+			return false;
+		}
+
+	}
+	return true;
+}	
+
+// . this adds the key if not a cmd key to parmdb rdbtree
+// . this executes cmds
+// . this updates the CollectionRec which may disappear later and be fully
+//   replaced by Parmdb
+// . returns false and sets g_errno on error
+bool Parms::updateParm ( char *rec ) {
+
+	collnum_t collnum = getCollNumFromParmRec ( rec );
+
+	// "cr" will remain null when updating g_conf and collnum -1
+	CollectionRec *cr = NULL;
+	if ( collnum >= 0 ) {
+		cr = g_collectiondb.getRec ( collnum );
+		if ( ! cr ) {
+			log("parmdb: invalid collnum for parm");
+			g_errno = ENOCOLL;
+			return false;
+		}
+	}
+
+	Parm *parm = getParmFromParmRec ( rec );
+
+	if ( ! parm ) {
+		log("parmdb: could not find parm for rec");
+		g_errno = EBADENGINEER;
+		return false;
+	}
+
+	// cmd to execute?
+	if ( parm->m_type == TYPE_CMD ) {
+		// all parm rec data for TYPE_CMD should be ascii/utf8 chars
+		// and should be \0 terminated
+		//char *data = getDataFromRec();
+		log("parmdb: running function for "
+		    "parm \"%s\" " // val=\"%s\"",
+		    , parm->m_title
+		    //, data 
+		    );
+		parm->m_function ( rec );
+		return true;
+	}
+
+	// what are we updating?
+	void *base = NULL;
+	if ( cr ) base = cr;
+	else      base = &g_conf;
+
+	long occNum = getOccNumFromParmRec ( rec );
+
+	// get data
+	long dataSize = *(long *)(rec+sizeof(key96_t));
+	char *data = rec+sizeof(key96_t)+4;
+
+	// point to where to copy the data into collrect
+	char *dst = (char *)base + parm->m_offset;
+	// array?
+	if ( parm->isArray() ) {
+		if ( occNum < 0 ) {
+			log("parms: bad occnum for %s",parm->m_title);
+			return false;
+		}
+		dst += parm->m_size * occNum;
+	}
+
+	// and copy the data into collrec or g_conf
+	memcpy ( dst , data , dataSize );
+
+	// all done
+	return true;
 }

@@ -82,7 +82,8 @@
 #include "Msg28.h"
 //#include "Msg30.h"
 //#include "MsgB.h"
-#include "Msg3e.h"
+//#include "Msg3e.h"
+#include "Parms.h"
 //#include "Msg50.h"
 //#include "MsgF.h"
 //#include "Msg33.h"
@@ -3159,9 +3160,15 @@ int main ( int argc , char *argv[] ) {
 	//	log("db: Failed to init Statsdb snapshot sleep callback.");
 
 	// check to make sure we have the latest parms
-	Msg3e msg3e;  
-	msg3e.checkForNewParms();
+	//Msg3e msg3e;  
+	//msg3e.checkForNewParms();
 
+	// this stuff is similar to alden's msg3e but will sync collections
+	// that were added/deleted
+	if ( ! g_parms.syncParmsWithHost0() ) {
+		log("parms: error syncing parms: %s",mstrerror(g_errno));
+		return 0;
+	}
 
 	if(recoveryMode) {
 		//now that everything is init-ed send the message.
@@ -4898,6 +4905,9 @@ bool registerMsgHandlers2(){
 	if(! g_udpServer.registerHandler(0x4f,handleRequest4f)) return false;
 	if(! g_udpServer.registerHandler(0x95,handleRequest95)) return false;
 
+	if(! g_udpServer.registerHandler(0x3e,handleRequest3e)) return false;
+	if(! g_udpServer.registerHandler(0x3f,handleRequest3f)) return false;
+
 	return true;
 
 	/*
@@ -4921,7 +4931,7 @@ bool registerMsgHandlers3(){
 	//Msg24 msg24;    if ( ! msg24.registerHandler () ) return false;
 	//Msg40 msg40;    if ( ! msg40.registerHandler () ) return false;
 	//MsgB  msgb;     if ( ! msgb.registerHandler  () ) return false;
-       	Msg3e msg3e;    if ( ! msg3e.registerHandler () ) return false;
+       	//Msg3e msg3e;    if ( ! msg3e.registerHandler () ) return false;
 	//Msg42 msg42;    if ( ! msg42.registerHandler () ) return false;
 	//Msg33 msg33;    if ( ! msg33.registerHandler () ) return false;
 	//if ( ! g_pingServer.registerHandler() ) return false;

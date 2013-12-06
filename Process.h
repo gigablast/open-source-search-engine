@@ -10,7 +10,7 @@
 
 
 #include "HttpRequest.h"
-#include "Msg28.h"
+//#include "Msg28.h"
 
 class Process {
 
@@ -78,7 +78,7 @@ class Process {
 	bool        m_powerIsOn;
 	long long   m_powerOffTime;
 	HttpRequest m_r;
-	Msg28       m_msg28;
+	//Msg28       m_msg28;
 	bool        m_exiting;
 	bool        m_calledSave;
 

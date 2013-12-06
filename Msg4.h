@@ -54,6 +54,7 @@ class Msg4 {
 			   char  rdbId = -1               );
 
 	// this one is faster...
+	// returns false if blocked
 	bool addMetaList ( char      *metaList                 ,
 			   long       metaListSize             ,
 			   collnum_t  collnum                  ,
