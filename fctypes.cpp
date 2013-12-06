@@ -999,14 +999,27 @@ long long atoll2 ( const char *s, long len ) {
 double atof2 ( const char *s, long len ) {
 	// skip over spaces
 	const char *end = s + len;
-	while ( s < end && is_wspace_a ( *s ) ) s++;
+	while ( s < end && is_wspace_a ( *s ) ) { s++; len--; }
 	// return 0 if all spaces
 	if ( s == end ) return 0;
-	char buf[128];
+	char tmpBuf[128];
 	if ( len >= 128 ) len = 127;
-	strncpy ( buf , s , len );
-	buf[len] = '\0';
-	return atof ( buf );
+	//strncpy ( dst , s , len );
+
+	const char *p = s;
+	const char *srcEnd = s + len;
+	char *dst = tmpBuf;
+	// remove commas
+	for ( ; p < srcEnd ; p++ ) {
+		// skip commas
+		if ( *p == ',' ) continue;
+		// otherwise store it
+		*dst++ = *p;
+	}
+	// null term
+	*dst = '\0';
+	//buf[len] = '\0';
+	return atof ( tmpBuf );
 }
 
 double atod2 ( char *s, long len ) {

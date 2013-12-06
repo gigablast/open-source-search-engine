@@ -49,6 +49,7 @@ class Dir {
 
 	char          *m_dirname;
 	DIR           *m_dir;
+	bool m_needsClose;
 };
 
 #endif

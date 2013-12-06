@@ -98,7 +98,8 @@ class HttpServer {
 		      char   *cookie = NULL ,
 		      char *additionalHeader = NULL , // does not include \r\n
 		      // specify your own mime and post data here...
-		      char *fullRequest = NULL );
+		      char *fullRequest = NULL ,
+		      char *postContent = NULL );
 
 	bool getDoc ( long ip,
 		      long port,
@@ -134,7 +135,8 @@ class HttpServer {
 			      long *bytesSent = NULL ); 
 	// send a "prettier" error reply, formatted in XML if necessary
 	bool sendQueryErrorReply ( TcpSocket *s , long error , char *errmsg,
-				   long rawFormat, int errnum, 
+				   // FORMAT_HTML=0,FORMAT_XML,FORMAT_JSON
+				   char format, int errnum, 
 				   char *content=NULL); 
 	
 

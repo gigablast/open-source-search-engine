@@ -2127,15 +2127,15 @@ bool Parms::printParm ( SafeBuf* sb,
 	// . if printing on crawlbot page hide these
 	// . we repeat this logic below when printing parm titles
 	//   for the column headers in the table
-	char *vt = "";
-	if ( isCrawlbot &&
-	     m->m_page == PAGE_FILTERS &&
-	     (strcmp(m->m_xml,"spidersEnabled") == 0 ||
-	      //strcmp(m->m_xml,"maxSpidersPerRule")==0||
-	      //strcmp(m->m_xml,"maxSpidersPerIp") == 0||
-	      strcmp(m->m_xml,"spiderIpWait") == 0 
-	      ) )
-		vt = " style=display:none;";
+	//char *vt = "";
+	//if ( isCrawlbot &&
+	//     m->m_page == PAGE_FILTERS &&
+	//     (strcmp(m->m_xml,"spidersEnabled") == 0 ||
+	//      //strcmp(m->m_xml,"maxSpidersPerRule")==0||
+	//      //strcmp(m->m_xml,"maxSpidersPerIp") == 0||
+	//      strcmp(m->m_xml,"spiderIpWait") == 0 
+	//      ) )
+	//	vt = " style=display:none;";
 
 	// what type of parameter?
 	char t = m->m_type;
@@ -2210,15 +2210,16 @@ bool Parms::printParm ( SafeBuf* sb,
 			if ( isJSON ) continue;
 			// . hide table column headers that are too advanced
 			// . we repeat this logic above for the actual parms
-			char *vt = "";
-			if ( isCrawlbot &&
-			     m->m_page == PAGE_FILTERS &&
-			     (strcmp(mk->m_xml,"spidersEnabled") == 0 ||
-			      //strcmp(mk->m_xml,"maxSpidersPerRule")==0||
-			      //strcmp(mk->m_xml,"maxSpidersPerIp") == 0||
-			      strcmp(mk->m_xml,"spiderIpWait") == 0 ) )
-				vt = " style=display:none;display:none;";
-			sb->safePrintf ( "<td%s>" , vt );
+			//char *vt = "";
+			//if ( isCrawlbot &&
+			//     m->m_page == PAGE_FILTERS &&
+			//     (strcmp(mk->m_xml,"spidersEnabled") == 0 ||
+			//      //strcmp(mk->m_xml,"maxSpidersPerRule")==0||
+			//      //strcmp(mk->m_xml,"maxSpidersPerIp") == 0||
+			//      strcmp(mk->m_xml,"spiderIpWait") == 0 ) )
+			//	vt = " style=display:none;display:none;";
+			//sb->safePrintf ( "<td%s>" , vt );
+			sb->safePrintf ( "<td>" );
 			// if its of type checkbox in a table make it
 			// toggle them all on/off
 			if ( mk->m_type == TYPE_CHECKBOX &&
@@ -2310,7 +2311,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		else if ( firstInRow ) 
 			sb->safePrintf ( "<tr><td>" );
 		else    
-			sb->safePrintf ( "<td%s>" , vt);
+			//sb->safePrintf ( "<td%s>" , vt);
+			sb->safePrintf ( "<td>" );
 	}
 
 	long cast = m->m_cast;
@@ -4008,7 +4010,7 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 		// time is stored as long
 		long ct = *(long *)s;
 		// get the time struct
-		struct tm *tp = gmtime ( (time_t *)&ct ) ;
+		struct tm *tp = localtime ( (time_t *)&ct ) ;
 		// set the "selected" month for the drop down
 		strftime ( p , 100 , "%d %b %Y %H:%M UTC" , tp );
 	}
@@ -8499,9 +8501,49 @@ void Parms::init ( ) {
 	m->m_units = "seconds";
 	m++;
 
+	m->m_cgi   = "dbapi";
+	m->m_xml   = "diffbotApiUrl";
+	m->m_off   = (char *)&cr.m_diffbotApiUrl - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
+	m++;
+
+	m->m_cgi   = "dbucp";
+	m->m_xml   = "diffbotUrlCrawlPattern";
+	m->m_off   = (char *)&cr.m_diffbotUrlCrawlPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
+	m++;
+
+	m->m_cgi   = "dbupp";
+	m->m_xml   = "diffbotUrlProcessPattern";
+	m->m_off   = (char *)&cr.m_diffbotUrlProcessPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
+	m++;
+
 	m->m_cgi   = "dbppp";
 	m->m_xml   = "diffbotPageProcessPattern";
 	m->m_off   = (char *)&cr.m_diffbotPageProcessPattern - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
+	m++;
+
+	m->m_cgi   = "dbucre";
+	m->m_xml   = "diffbotUrlCrawlRegEx";
+	m->m_off   = (char *)&cr.m_diffbotUrlCrawlRegEx - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_NONE;
+	m->m_def   = "";
+	m++;
+
+	m->m_cgi   = "dbupre";
+	m->m_xml   = "diffbotUrlProcessRegEx";
+	m->m_off   = (char *)&cr.m_diffbotUrlProcessRegEx - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
@@ -13027,6 +13069,17 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
+	m->m_title = "harvest links";
+	m->m_cgi   = "hspl";
+	m->m_xml   = "harvestLinks";
+	m->m_max   = MAX_FILTERS;
+	m->m_off   = (char *)cr.m_harvestLinks - x;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "1";
+	m->m_page  = PAGE_FILTERS;
+	m->m_rowid = 1;
+	m++;
+
 	m->m_title = "spidering enabled";
 	m->m_cgi   = "cspe";
 	m->m_xml   = "spidersEnabled";
@@ -15116,18 +15169,19 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m++;
 
+	/*
 	m->m_title = "format of the returned search results";
-	m->m_desc  = "X is 0 to get back results in regular html, and 8 to "
-		"get back results in XML.";
+	m->m_desc  = "X is 0 to get back results in regular html, 1 to "
+		"get back results in XML, 2 for JSON.";
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_xml - y;
-	m->m_type  = TYPE_LONG;
+	m->m_soff  = (char *)&si.m_formatStr - y;
+	m->m_type  = TYPE_STRING;//CHAR;
 	m->m_sparm = 1;
-	m->m_scgi  = "xml";
+	m->m_scgi  = "format";
 	m->m_smin  = 0;
 	m->m_smax  = 12;
 	m++;
-
+	*/
 
 	m->m_title = "highlight query terms in summaries.";
 	m->m_desc  = "Use to disable or enable "

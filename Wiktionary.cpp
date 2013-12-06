@@ -22,6 +22,8 @@ Wiktionary::Wiktionary () {
 	// . now m_langTable just maps to langId, no POS bits...
 	//m_langTable.set ( 6 , 1,0,NULL,0,false,0 ,"wkt-lang"); 
 	m_synTable.set  ( 6 , 4,0,NULL,0,true,0 ,"wkt-synt"); 
+
+	m_synBuf.setLabel("synbuf");
 }
 
 void Wiktionary::reset() {
@@ -47,6 +49,11 @@ Wiktionary::~Wiktionary () {
 
 
 bool Wiktionary::test ( ) {
+
+	// test words parsing here
+	//Words w;
+	//w.set9 ("get $4,500.00 now",0);
+
 	// test it out!
 	char *str = "love";//pie"; //forsake";
 	//long long wid = hash64Lower_utf8(str);

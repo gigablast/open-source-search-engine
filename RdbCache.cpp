@@ -416,6 +416,9 @@ bool RdbCache::getRecord ( collnum_t collnum   ,
 	if ( maxAge == 0 ) return false;
 	// bail if no cache
 	if ( m_numPtrsMax <= 0 ) return false;
+	// if init() called failed because of oom...
+	if ( ! m_ptrs )
+		return log("cache: getRecord: failed because oom");
 	// time it -- debug
 	long long t = 0LL ;
 	if ( g_conf.m_logTimingDb ) t = gettimeofdayInMillisecondsLocal();

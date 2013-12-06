@@ -99,6 +99,7 @@ float getTermFreqWeight  ( long long termFreq , long long numDocsInColl );
 #define BF_SYNONYM            0x04
 #define BF_NEGATIVE           0x08  // query word has a negative sign before it
 #define BF_BIGRAM             0x10  // query word has a negative sign before it
+#define BF_NUMBER             0x20  // is it like gbsortby:price? numeric?
 
 void printTermList ( long i, char *list, long listSize ) ;
 
@@ -197,6 +198,23 @@ class Posdb {
 		if ( langId & 0x20 ) kp->n0 |= 0x08;
 	}
 
+	// set the word position bits et al to this float
+	void setFloat ( void *vkp , float f ) {
+		*(float *)(((char *)vkp) + 2) = f; };
+
+	// and read the float as well
+	float getFloat ( void *vkp ) {
+		return *(float *)(((char *)vkp) + 2); };
+
+	void setAlignmentBit ( void *vkp , char val ) {
+		char *p = (char *)vkp;
+		if ( val ) p[1] = p[1] | 0x02;
+		else       p[1] = p[1] & 0xfd;
+	};
+
+	bool isAlignmentBitClear ( void *vkp ) {
+		return ( ( ((char *)vkp)[1] & 0x02 ) == 0x00 );
+	};
 
 	void makeStartKey ( void *kp, long long termId , 
 			    long long docId=0LL){
@@ -427,7 +445,7 @@ class PosdbList : public RdbList {
 #include "Query.h"         // MAX_QUERY_TERMS, qvec_t
 
 // max # search results that can be viewed without using TopTree
-#define MAX_RESULTS 1000
+//#define MAX_RESULTS 1000
 
 class PosdbTable {
 
@@ -575,6 +593,7 @@ class PosdbTable {
 
 	class Msg39Request *m_r;
 
+	long m_sortByTermNum;
 
 	// the new intersection/scoring algo
 	void intersectLists10_r ( );	

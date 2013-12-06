@@ -99,9 +99,14 @@ static bool getWordPosVec ( Words *words ,
 
 static void getMetaListWrapper ( void *state ) ;
 
-char *getNextJSONObject ( char *p ) ;
+char *getFirstJSONObject ( char *p , 
+			   long niceness ,
+			   bool *isProduct , 
+			   bool *isImage ) ;
+char *getJSONObjectEnd ( char *p , long niceness ) ;
 
 XmlDoc::XmlDoc() { 
+	m_esbuf.setLabel("exputfbuf");
 	for ( long i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
 	m_freed = false;
 	m_contentInjected = false;
@@ -1065,16 +1070,19 @@ CollectionRec *XmlDoc::getCollRec ( ) {
 	CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
 	if ( ! cr ) {
 		log("build: got NULL collection rec.");
+		g_errno = ENOCOLLREC;
 		return NULL;
 	}
 	// was it reset since we started spidering this url?
 	if ( cr->m_lastResetCount != m_lastCollRecResetCount ) {
 		log("build: collection rec was reset. returning null.");
+		g_errno = ENOCOLLREC;
 		return NULL;
 	}
 	return cr;
 }
 
+// returns false and sets g_errno on error
 bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		    key_t         *doledbKey ,
 		    char          *coll      ,
@@ -1236,7 +1244,8 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	memcpy ( &m_oldsr , sreq , sreq->getRecSize() );
 
 	// set m_collnum etc.
-	if ( ! setCollNum ( coll ) ) { g_errno = ENOCOLLREC; return false; }
+	if ( ! setCollNum ( coll ) ) 
+		return log("XmlDoc: set4() coll %s invalid",coll);
 
 	// it should be valid since we just set it
 	CollectionRec *cr = getCollRec();
@@ -7798,9 +7807,12 @@ char *XmlDoc::getIsDup ( ) {
 		//	mySiteRank = sr;
 		//	continue;
 		//}
+		// for debug
+		log("build: doc %s is dup of doid %lli",
+		    m_firstUrl.m_url,d);
 		// get the winner
 		//if ( score > maxScore ) maxScore = score;
-		if ( sr > maxSiteRank ) {
+		if ( sr > maxSiteRank || maxSiteRank == -1 ) {
 			maxSiteRank = sr;
 			maxDocId = d;
 			continue;
@@ -8931,15 +8943,15 @@ Url **XmlDoc::getRedirUrl() {
 		return &m_redirUrlPtr;
 	}
 	// do not allow redirects to evil-G or bing
-	if ( strstr(loc->getUrl(),".google.com/")  ||
-	     strstr(loc->getUrl(),".bing.com/")  ) {
-		m_redirError = EDOCEVILREDIRECT;
-		return &m_redirUrlPtr;
-	}
+	//if ( strstr(loc->getUrl(),".google.com/")  ||
+	//     strstr(loc->getUrl(),".bing.com/")  ) {
+	//	m_redirError = EDOCEVILREDIRECT;
+	//	return &m_redirUrlPtr;
+	//}
 	// log a msg
-	//if ( g_conf.m_logSpideredUrls )
-	//	logf(LOG_INFO,"build: %s redirected to %s",
-	//	     cu->getUrl(),loc->getUrl());
+	if ( g_conf.m_logSpideredUrls )
+		logf(LOG_INFO,"build: %s redirected to %s",
+		     cu->getUrl(),loc->getUrl());
 
 	// if not same Domain, it is not a simplified redirect
 	bool sameDom = true;
@@ -9354,6 +9366,7 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 				cr->m_coll     ,
 				NULL       , // pbuf
 				m_niceness ) ) {
+		log("build: failed to set old doc for %s",m_firstUrl.m_url);
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return NULL;
 	}
@@ -10063,7 +10076,7 @@ TagRec *XmlDoc::getTagRec ( ) {
 				   &m_tagRec ) )
 		// we blocked, return -1
 		return (TagRec *)-1;
-	// error?
+	// error? ENOCOLLREC?
 	if ( g_errno ) return NULL;
 	// assign it
 	m_tagRec.serialize ( m_tagRecBuf );
@@ -11969,6 +11982,67 @@ bool isAllowed2 ( Url   *url            ,
 	goto urlLoop;
 }
 
+// when doing a custom crawl we have to decide between the provided crawl
+// delay, and the one in the robots.txt...
+long *XmlDoc::getFinalCrawlDelay() {
+
+	if ( m_finalCrawlDelayValid )
+		return &m_finalCrawlDelay;
+
+	bool *isAllowed = getIsAllowed();
+	if ( ! isAllowed || isAllowed == (void *)-1 ) return (long *)isAllowed;
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	m_finalCrawlDelayValid = true;
+
+	// getIsAllowed already sets m_crawlDelayValid to true
+	if ( ! cr->m_isCustomCrawl ) {
+		m_finalCrawlDelay = m_crawlDelay;
+		// default to 250ms i guess if none specified in robots
+		// just to be somewhat nice by default
+		if ( m_crawlDelay < 0 )	m_finalCrawlDelay = 250;
+		return &m_finalCrawlDelay;
+	}
+
+	// get manually specified crawl delay in seconds. convert to ms.
+	long manual = cr->m_collectiveCrawlDelay * 1000.0;
+	// negative means -1 means unknown or not specified
+	if ( manual < 0 ) manual = -1;
+
+	// if both are unknown...
+	if ( m_crawlDelay == -1 && manual == -1 ) {
+		m_finalCrawlDelay = -1;
+		return &m_finalCrawlDelay;
+	}
+
+	// if not in robots.txt use manual
+	if ( m_crawlDelay == -1 ) {
+		m_finalCrawlDelay = manual;
+		return &m_finalCrawlDelay;
+	}
+
+	// if manually provided crawldelay is -1, use robots.txt then
+	if ( manual == -1 ) {
+		m_finalCrawlDelay = m_crawlDelay;
+		return &m_finalCrawlDelay;
+	}
+
+	// let robots.txt dictate if both are >= 0
+	if ( m_useRobotsTxt ) {
+		m_finalCrawlDelay = m_crawlDelay;
+		return &m_finalCrawlDelay;
+	}
+
+	// if not using robots.txt, pick the smallest
+	if ( m_crawlDelay < manual ) m_finalCrawlDelay = m_crawlDelay;
+	else                         m_finalCrawlDelay = manual;
+
+	return &m_finalCrawlDelay;
+}
+
+
 // . get the Robots.txt and see if we are allowed
 // . returns NULL and sets g_errno on error
 // . returns -1 if blocked, will re-call m_callback
@@ -12012,6 +12086,9 @@ bool *XmlDoc::getIsAllowed ( ) {
 	if ( isRobotsTxt ) {
 		m_isAllowed      = true;
 		m_isAllowedValid = true;
+		m_crawlDelayValid = true;
+		// make it super fast...
+		m_crawlDelay      = 0;
 		return &m_isAllowed;
 	}
 
@@ -12674,6 +12751,8 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 
 	bool hadError = false;
 
+	THIS->setStatus("got diffbot reply");
+
 	// wha?
 	if ( g_errno ) {
 		log("diffbot: http error2 %s",mstrerror(g_errno));
@@ -12725,14 +12804,29 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
 	}
 
+	// . verify that it contains legit json and has the last field
+	//   b/c we saw a case where the diffbot reply was truncated
+	//   somehow
+	// . check to make sure it has the "url": field as all diffbot
+	//   json replies must
+	if ( ! THIS->m_diffbotReplyError ) {
+		char *ttt = strstr ( page , "\"url\":\"");
+		if ( ! ttt ) {
+			log("xmldoc: diffbot reply for %s using %s missing url: field",
+			    THIS->m_firstUrl.m_url,THIS->m_diffbotApiUrl.getBufStart());
+			THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
+		}
+	}
+
+
 	// reply is now valid but might be empty
 	THIS->m_diffbotReplyValid = true;
 
 	CollectionRec *cr = THIS->getCollRec();
-	if ( ! cr ) return;
+	//if ( ! cr ) return;
 
 	// increment this counter on a successful reply from diffbot
-	if ( ! THIS->m_diffbotReplyError ) {
+	if ( ! THIS->m_diffbotReplyError && cr ) {
 		// mark this flag
 		THIS->m_gotDiffbotSuccessfulReply = 1;
 		// count it for stats
@@ -12764,13 +12858,29 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		//				  au->length() );
 		//THIS->m_diffbotReply.pushChar('\n');
 		// convert the \u1f23 to utf8 (\n and \r as well)
-		THIS->m_diffbotReply.safeDecodeJSONToUtf8 ( page , pageLen ,
-							    THIS->m_niceness );
+		// crap, this decodes \\\\\" to \\" which is causing
+		// the json parser to believe it is an encoded \ then
+		// a REAL quote... but quote is contained...
+		//THIS->m_diffbotReply.safeDecodeJSONToUtf8 ( page , pageLen ,
+		//					    THIS->m_niceness );
+
+		// do not do that any more then, jsonparse can call it
+		// on a per string basis
+		THIS->m_diffbotReply.safeMemcpy ( page , pageLen );
+
+		// convert embedded \0 to space
+		//char *p = THIS->m_diffbotReply.getBufStart();
+		//char *pend = p + THIS->m_diffbotReply.getLength();
 		// tack on a \0 but don't increment m_length
 		THIS->m_diffbotReply.nullTerm();
+
+		// any embedded \0's in the utf8?
+		long testLen1 = THIS->m_diffbotReply.length();
+		long testLen2 = gbstrlen(THIS->m_diffbotReply.getBufStart());
+		if ( testLen1 != testLen2 ) { char *xx=NULL;*xx=0; }
 		// convert the \u1f23 to utf8 (\n and \r as well)
 		//THIS->m_diffbotReply.decodeJSONToUtf8 ( THIS->m_niceness );
-		THIS->m_diffbotReply.nullTerm();
+		//THIS->m_diffbotReply.nullTerm();
 	}
 
 skip:	     
@@ -12841,11 +12951,210 @@ bool *XmlDoc::getRecycleDiffbotReply ( ) {
 	return &m_recycleDiffbotReply;
 }
 
+
+// . we now get the TOKENIZED diffbot reply.
+// . that converts a single diffbot reply into multiple \0 separated
+//   json objects.
+// . for instance, the diffbot product api returns an array like
+//   "products":[{...},{...}],"url":...  that consists of multiple
+//   json product items, but the json elements that are not in
+//   this array are description of the page itself, like url and title.
+//   so we need to carry over these outter json objects to each
+//   inner json object we tokenize.
+// . in this fashion we'll have separate objects that can each be indexed
+//   as a single page, which is what we want for searching.
+SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
+
+	if ( m_tokenizedDiffbotReplyValid )
+		return m_tokenizedDiffbotReplyPtr;
+
+	SafeBuf *dbr = getDiffbotReply();
+	if ( ! dbr || dbr == (void *)-1 ) return dbr;
+
+	// empty? that's easy. might be just "{}\n" i guess
+	if ( dbr->length() <= 3 ) return dbr;
+
+	char *text = dbr->getBufStart();
+
+	// it must have \"type\":\"product or \"type\":\"image
+	// in order for us to do the array separation logic below.
+	// we don't want to do this logic for articles because they
+	// contain an image array!!!
+
+	// this must be on the FIRST level of the json object, otherwise
+	// we get errors because we got type:article and it
+	// contains an images array!
+	
+	long valLen;
+	char *val = getJSONFieldValue ( text , "type", &valLen );
+
+	bool isProduct = false;
+	bool isImage = false;
+
+	if ( val && valLen == 7 && strncmp ( val , "product", 7) == 0 )
+		isProduct = true;
+
+	if ( val && valLen == 5 && strncmp ( val , "image", 5) == 0 )
+		isImage = true;
+
+	if ( ! isProduct && ! isImage ) {
+		m_tokenizedDiffbotReplyValid = true;
+		m_tokenizedDiffbotReplyPtr = &m_diffbotReply;
+		return m_tokenizedDiffbotReplyPtr;
+	}
+
+
+	char *needle;
+	char *newTerm;
+	if ( isProduct ) {
+		needle = ",\"products\":[";
+		newTerm = "product";
+	}
+	else {
+		needle = ",\"images\":[";
+		newTerm = "image";
+	}
+
+	char *parray = strstr ( text , needle );
+
+	// if not found, no need to do anything...
+	if ( ! parray ) {
+		m_tokenizedDiffbotReplyValid = true;
+		m_tokenizedDiffbotReplyPtr = &m_diffbotReply;
+		return m_tokenizedDiffbotReplyPtr;
+	}
+
+
+	// point to [
+	char *pstart = parray + gbstrlen(needle) - 1;
+
+	//
+	// ok, now we have to do so json ju jitsu to fix it
+	//
+
+	// point to array. starting at the '['
+	char *p = pstart;
+	long brackets = 0;
+	bool inQuotes = false;
+	for ( ; *p ; p++ ) {
+		// escaping a quote? ignore quote then.
+		if ( *p == '\\' && p[1] == '\"' ) {
+			// skip two bytes then..
+			p++;
+			continue;
+		}
+		if ( *p == '\"' ) {
+			inQuotes = ! inQuotes;
+			continue;
+		}
+		// if in a quote, ignore {} in there
+		if ( inQuotes ) continue;
+		if ( *p == '[' ) brackets++;
+		if ( *p != ']' ) continue;
+		brackets--;
+		// stop if array is done. p points to ']'
+		if ( brackets == 0 ) break;
+	}
+
+	// now point to outter items to the left of the ",\"products\":[...
+	char *left1 = dbr->getBufStart();
+	char *left2 = parray;
+	// then to the right. skip over the ending ']'
+	char *right1 = p + 1;
+	char *right2 = dbr->getBuf(); // end of the buffer
+
+
+	SafeBuf *tbuf = &m_tokenizedDiffbotReply;
+	
+	// now scan the json products or images in the array
+	char *x = pstart;
+	// skip over [
+	x++;
+	// each product item in array is enclosed in {}'s
+	if ( *x != '{' ) {
+		log("build: something is wrong with diffbot reply");
+		g_errno = EBADENGINEER;
+		return NULL;
+	}
+	// reset CURLY bracket count
+	long curlies = 0;
+	char *xstart = NULL;
+	inQuotes = false;
+	// scan now
+	for ( ; x < right1 ; x++ ) {
+		// escaping a quote? ignore quote then.
+		if ( *x == '\\' && x[1] == '\"' ) {
+			// skip two bytes then..
+			x++;
+			continue;
+		}
+		if ( *x == '\"' ) {
+			inQuotes = ! inQuotes;
+			continue;
+		}
+		// if in a quote, ignore {} in there
+		if ( inQuotes ) continue;
+		if ( *x== '{' ) {
+			if ( curlies == 0 ) xstart = x;
+			curlies++;
+			continue;
+		}
+		if ( *x == '}' ) {
+			curlies--;
+			if ( curlies != 0 ) continue;
+			// unreciprocated '{'? wtf???
+			if ( ! xstart ) continue;
+			//
+			// ok, we got an item!
+			//
+
+			// left top items
+			if ( ! tbuf->safeMemcpy ( left1 , left2-left1 ) )
+				return NULL;
+			// use "product":
+
+			if ( ! tbuf->safePrintf(",\"%s\":" , newTerm ) )
+				return NULL;
+			// the item itself, include it's curlies.
+			if ( ! tbuf->safeMemcpy ( xstart , x - xstart+1 ) )
+				return NULL;
+			// right top items
+			if ( ! tbuf->safeMemcpy ( right1 , right2-right1 ) )
+				return NULL;
+			// then a \0
+			if ( ! tbuf->pushChar('\0') )
+				return NULL;
+			// reset this!
+			xstart = NULL;
+		}
+	}
+
+	// now show the items. debug!
+	//p = tbuf->getBufStart();
+	//for ( ; p < tbuf->getBuf() ; p += gbstrlen(p) + 1 )
+	//	fprintf(stderr,"ITEM\n%s\n\n",p);
+	
+
+	m_tokenizedDiffbotReplyPtr = tbuf;
+	m_tokenizedDiffbotReplyValid = true;
+	return m_tokenizedDiffbotReplyPtr;
+}
+
+
 // the diffbot reply will be a list of json objects we want to index
 SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	if ( m_diffbotReplyValid )
 		return &m_diffbotReply;
+
+	// we make a "fake" url for the diffbot reply when indexing it
+	// by appending -diffbotxyz%li. see "fakeUrl" below.
+	if ( m_firstUrl.getUrlLen() + 15 >= MAX_URL_LEN ) {
+		log("build: diffbot url would be too long for "
+		    "%s", m_firstUrl.getUrl() );
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
 
 	if ( *getIndexCode() ) 
 		return &m_diffbotReply;
@@ -13156,8 +13465,9 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 				     90*1000, // 90 sec timeout
 				     0,//proxyip
 				     0,//proxyport
-				     10000,//maxtextdoclen
-				     10000,//maxotherdoclen
+				     // unlimited replies i guess
+				     -1,//maxtextdoclen unlimited
+				     -1,//maxotherdoclen unlimited
 				     g_conf.m_spiderUserAgent ,
 				     "HTTP/1.0",
 				     false, // do post?
@@ -13304,6 +13614,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// this must be valid, since we share m_msg13 with it
 	if ( ! m_isAllowedValid ) { char *xx=NULL;*xx=0; }
 
+	long *cd = getFinalCrawlDelay();
+	if ( ! cd || cd == (void *)-1 ) return (char **)cd;
+
 	// we might bail
 	if ( ! *isAllowed ) {
 		m_httpReplyValid          = true;
@@ -13431,6 +13744,18 @@ char **XmlDoc::getHttpReply2 ( ) {
 	r->m_spideredTime           = getSpideredTime();//m_spideredTime;
 	r->m_ifModifiedSince        = 0;
 	r->m_skipHammerCheck        = 0;
+
+
+	// . this is -1 if unknown. none found in robots.txt or provided
+	//   in the custom crawl parms.
+	// . it should also be 0 for the robots.txt file itself
+	r->m_crawlDelayMS = *cd;
+
+	// let's time our crawl delay from the initiation of the download
+	// not from the end of the download. this will make things a little
+	// faster but could slam servers more.
+	r->m_crawlDelayFromEnd = false;
+
 	// need this in order to get all languages, etc. and avoid having
 	// to set words class at the spider compression proxy level
 	r->m_forEvents              = 0;
@@ -14801,18 +15126,20 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	// damn, -stdout doesn't work when -c is specified.
 	// These ulimit sizes are max virtual memory in kilobytes. let's
 	// keep them to 25 Megabytes
-	// . the newer 2.6 kernels do not support ulimit !!!
 	if      ( ctype == CT_PDF ) 
 		sprintf ( cmd , "ulimit -v 25000 -t 30 ; nice -n 19 %s/pdftohtml -q -i -noframes -stdout %s > %s", wdir , in ,out);
 	else if ( ctype == CT_DOC ) 
 		// "wdir" include trailing '/'? not sure
 		sprintf ( cmd , "ulimit -v 25000 -t 30 ; ANTIWORDHOME=%s/antiword-dir ; nice -n 19 %s/antiword %s> %s" , wdir , wdir , in ,out);
 	else if ( ctype == CT_XLS )
-		sprintf ( cmd , "ulimit -v 25000 -t 30 ; nice -n 19 %s/xlhtml %s > %s" , wdir , in ,out);
+		sprintf ( cmd , "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/xlhtml %s > %s" , wdir , in ,out);
+	// this is too buggy for now... causes hanging threads because it
+	// hangs, so i added 'timeout 10s' but that only works on newer
+	// linux version, so it'll just error out otherwise.
 	else if ( ctype == CT_PPT )
-		sprintf ( cmd , "ulimit -v 25000 -t 30 ; nice -n 19 %s/ppthtml %s > %s" , wdir , in ,out);
+		sprintf ( cmd , "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/ppthtml %s > %s" , wdir , in ,out);
 	else if ( ctype == CT_PS  )
-		sprintf ( cmd , "ulimit -v 25000 -t 30; nice -n 19 %s/pstotext %s > %s" , wdir , in ,out);
+		sprintf ( cmd , "ulimit -v 25000 -t 30; timeout 10s nice -n 19 %s/pstotext %s > %s" , wdir , in ,out);
 	else { char *xx=NULL;*xx=0; }
 
 	// breach sanity check
@@ -16728,6 +17055,28 @@ char *XmlDoc::getSpiderLinks ( ) {
 		return &m_spiderLinks2;
 	}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return (char *)cr;
+
+	long *ufn = getUrlFilterNum();
+	if ( ! ufn || ufn == (void *)-1 ) return (char *)ufn;
+
+	// if url filters forbids it
+	if ( ! cr->m_harvestLinks[*ufn] ) {
+		m_spiderLinksValid = true;
+		m_spiderLinks2 = false;
+		m_spiderLinks  = false;
+		return &m_spiderLinks2;
+	}
+
+	// hack for bulk job detection. never spider links
+	//if ( cr->m_isCustomCrawl == 2 ) {
+	//	m_spiderLinks  = false;
+	//	m_spiderLinks2 = false;
+	//	m_spiderLinksValid = true;
+	//	return &m_spiderLinks2;
+	//}
+
 	// check the xml for a meta robots tag
 	Xml *xml = getXml();
 	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
@@ -16754,6 +17103,10 @@ char *XmlDoc::getSpiderLinks ( ) {
 	// they do not want the links crawled i'd imagine.
 	if ( m_oldsrValid && m_oldsr.m_avoidSpiderLinks )
 		m_spiderLinks = false;
+
+
+	// also check in url filters now too
+
 
 	// set shadow member
 	m_spiderLinks2 = m_spiderLinks;
@@ -17278,6 +17631,12 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("urlinjected=1 ");
 	else
 		sb.safePrintf("urlinjected=0 ");
+
+	if ( m_spiderLinksValid && m_spiderLinks )
+		sb.safePrintf("spiderlinks=1 ");
+	if ( m_spiderLinksValid && ! m_spiderLinks )
+		sb.safePrintf("spiderlinks=0 ");
+
 
 	if ( m_crawlDelayValid && m_crawlDelay != -1 )
 		sb.safePrintf("crawldelayms=%li ",(long)m_crawlDelay);
@@ -18349,39 +18708,7 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 	// empty? no pattern matches everything.
 	if ( ! p ) return true;
 	// how many did we have?
-	long count = 0;
-	// scan the " || " separated substrings
-	for ( ; *p ; ) {
-		// get beginning of this string
-		char *start = p;
-		// skip white space
-		while ( *start && is_wspace_a(*start) ) start++;
-		// done?
-		if ( ! *start ) break;
-		// find end of it
-		char *end = start;
-		while ( *end && end[0] != '|' && ! is_wspace_a(end[0]) ) 
-			end++;
-		// advance p for next guy
-		p = end;
-		while ( *p && (*p=='|' || is_wspace_a(*p) ) ) p++;
-		// temp null this
-		char c = *end;
-		*end = '\0';
-		// count it as an attempt
-		count++;
-		// . is this substring anywhere in the document
-		// . check the rawest content before converting to utf8 i guess
-		char *foundPtr =  strstr ( m_content , start ) ;
-		// revert \0
-		*end = c;
-		// did we find it?
-		if ( foundPtr ) return true;
-	}
-	// if we had no attempts, it is ok
-	if ( count == 0 ) return true;
-	// if we had an unfound substring...
-	return false;
+	return doesStringContainPattern ( m_content , p );
 }
 
 // . returns ptr to status
@@ -18452,7 +18779,7 @@ long *XmlDoc::nukeJSONObjects ( ) {
 		// . if m_dx got its msg4 reply it ends up here, in which
 		//   case do NOT re-call indexDoc() so check for
 		//   m_listAdded.
-		if ( ! m_dx->m_listAdded && ! m_dx->indexDoc ( ) ) 
+		if ( ! m_dx->m_listAdded && ! m_dx->indexDoc ( ) )
 			return (long *)-1; 
 		// critical error on our part trying to index it?
 		// does not include timeouts or 404s, etc. mostly just
@@ -19240,23 +19567,26 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//
 	///////////
 
+
 	// . get the reply of json objects from diffbot
 	// . this will be empty if we are a json object!
 	// . will also be empty if not meant to be sent to diffbot
-	SafeBuf *dbr = getDiffbotReply();
-	if ( ! dbr || dbr == (void *)-1 ) return (char *)dbr;
+	// . the TOKENIZED reply consists of \0 separated json objects that
+	//   we create from the original diffbot reply
+	SafeBuf *tdbr = getTokenizedDiffbotReply();
+	if ( ! tdbr || tdbr == (void *)-1 ) return (char *)tdbr;
 
-	long dbrLen = dbr->length();
+	long tdbrLen = tdbr->length();
 
 	// do not index json items as separate docs if we are page parser
-	if ( getIsPageParser() ) dbrLen = 0;
+	if ( getIsPageParser() ) tdbrLen = 0;
 
 	//
 	// if we got a json object or two from diffbot, index them
 	// as their own child xmldocs.
 	// watch out for reply from diffbot of "-1" indicating error!
 	//
-	if ( dbrLen > 3 ) {
+	if ( tdbrLen > 3 ) {
 		// make sure diffbot reply is valid for sure
 		if ( ! m_diffbotReplyValid ) { char *xx=NULL;*xx=0; }
 		// set status for this
@@ -19270,14 +19600,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 				return NULL;
 			}
 			mnew ( m_dx , sizeof(XmlDoc),"xmldocdx");
-			// init cursor to first json object
-			m_diffbotObj       = m_diffbotReply.getBufStart();
+			// we now parse the array of products out of the
+			// diffbot reply. each product is an item/object.
+			m_diffbotObj = tdbr->getBufStart();
 			m_diffbotJSONCount = 0;
-			// set end of it
-			m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj );
-			// temp null it
-			m_diffbotSavedChar = *m_diffbotObjEnd;
-			*m_diffbotObjEnd = '\0';
 		}
 		// loop back up here to process next json object from below
 	jsonloop:
@@ -19307,6 +19633,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			sreq.m_hopCountValid = 1;
 			sreq.m_fakeFirstIp   = 1;
 			sreq.m_firstIp       = firstIp;
+
 			// set this
 			if (!m_dx->set4 ( &sreq       ,
 					  NULL        ,
@@ -19317,7 +19644,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 					  // niceness of 0!!!!
 					  m_niceness, // 1 , 
 					  // inject this content
-					  m_diffbotObj, // content ,
+					  m_diffbotObj,
 					  false, // deleteFromIndex ,
 					  0, // forcedIp ,
 					  CT_JSON, // contentType ,
@@ -19332,6 +19659,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			m_dx->m_usePlacedb    = false;
 			m_dx->m_useLinkdb     = false;
 			m_dx->m_isChildDoc    = true;
+			// we like to sort json objects using
+			// 'gbsortby:spiderdate' query to get the most
+			// recent json objects, so this must be valid
+			if ( m_spideredTimeValid ) {
+				m_dx->m_spideredTimeValid = true;
+				m_dx->m_spideredTime = m_spideredTime;
+			}
 
 			m_dx->m_isDiffbotJSONObject = true;
 		}
@@ -19346,7 +19680,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// . if m_dx got its msg4 reply it ends up here, in which
 		//   case do NOT re-call indexDoc() so check for
 		//   m_listAdded.
-		if ( ! m_dx->m_listAdded && ! m_dx->indexDoc ( ) ) 
+		if ( ! m_dx->m_listAdded && ! m_dx->indexDoc ( ) )
 			return (char *)-1; 
 		// critical error on our part trying to index it?
 		// does not include timeouts or 404s, etc. mostly just
@@ -19357,21 +19691,15 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// count as deleted
 		cr->m_localCrawlInfo.m_objectsAdded++;
 		cr->m_globalCrawlInfo.m_objectsAdded++;
-		// undo the \0 termination we did above
-		*m_diffbotObjEnd = m_diffbotSavedChar;
 		// we successfully index the json object, skip to next one
-		m_diffbotObj = m_diffbotObjEnd;
-		// point to next json object again
-		m_diffbotObjEnd = getNextJSONObject ( m_diffbotObj );
-		// re-save
-		m_diffbotSavedChar = *m_diffbotObjEnd;
+		m_diffbotObj += gbstrlen(m_diffbotObj) + 1;
 		// but gotta set this crap back
 		log("diffbot: resetting %s",m_dx->m_firstUrl.m_url);
 		// clear for next guy if there is one. clears 
 		// m_dx->m_contentValid so the set4() can be called again above
 		m_dx->reset();
-		// if more json... this will not be \0
-		if ( *m_diffbotObj ) goto jsonloop;
+		// have we breached the buffer of json objects? if not, do more
+		if ( m_diffbotObj < tdbr->getBuf() ) goto jsonloop;
 	}
 
 	/////
@@ -20947,6 +21275,11 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	else
 		m_newsr.m_sentToDiffbot = false;
 
+	if ( m_diffbotReplyError )
+		m_newsr.m_hadDiffbotError = true;
+	else
+		m_newsr.m_hadDiffbotError = false;
+
 	// treat error replies special i guess, since langId, etc. will be
 	// invalid
 	if ( m_indexCode ) {
@@ -21310,6 +21643,10 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	Links *links = getLinks();
 	if ( ! links || links == (Links *)-1 ) return (char *)links;
 
+	char *spiderLinks = getSpiderLinks();
+	if ( ! spiderLinks || spiderLinks == (char *)-1 ) 
+		return (char *)spiderLinks;
+
 	TagRec ***grv = getOutlinkTagRecVector();
 	if ( ! grv || grv == (void *)-1 ) return (char *)grv;
 	//char    **iiv = getOutlinkIsIndexedVector();
@@ -21465,6 +21802,12 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	xml->getMetaContent ( mbuf, 16 , tag , tlen );
 	bool avoid = false;
 	if ( mbuf[0] == '0' ) avoid = true;
+
+	// if this is a simplified redir and we should not be spidering
+	// links then turn it off as well! because we now add simplified
+	// redirects back into spiderdb using this function.
+	if ( m_spiderLinksValid && ! m_spiderLinks )
+		avoid = true;
 
 	// it also has this meta tag now too
 	mbuf[0] = '\0';
@@ -22050,10 +22393,14 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , bool nosplit ) {
 		// store it as is
 		memcpy ( m_p , kp , sizeof(key144_t) );
 		// sanity check
-		//long long final = 202176590884090LL;
-		//final &= TERMID_MASK;
-		//if ( g_posdb.getTermId(kp) == final ) 
-		//	log("hey");
+		//long long final = hash64n("products.offerprice",0);
+		//long long prefix = hash64n("gbsortby",0);
+		//long long h64 = hash64 ( final , prefix);
+		//h64 &= TERMID_MASK;
+		//if ( g_posdb.getTermId(kp) == h64 ) {
+		//	log("hey: docid=%lli float=%f",m_docId,
+		//	    g_posdb.getFloat(kp) );
+		//}
 		/*
 		// get the score
 		long score = tt1->getScoreFromSlot ( i ) ;
@@ -22076,10 +22423,25 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , bool nosplit ) {
 		*/
 		// this was zero when we added these keys to zero, so fix it
 		g_posdb.setDocIdBits ( m_p , m_docId );
-		// this too
-		g_posdb.setSiteRankBits ( m_p , siteRank );
-		// set language here too
-		g_posdb.setLangIdBits ( m_p , m_langId );
+		// if this is a numeric field we do not want to set
+		// the siterank or langid bits because it will mess up
+		// sorting by the float which is basically in the position
+		// of the word position bits.
+		if ( g_posdb.isAlignmentBitClear ( m_p ) ) {
+			// make sure it is set again. it was just cleared
+			// to indicate that this key contains a float
+			// like a price or something, and we should not
+			// set siterank or langid so that its termlist
+			// remains sorted just by that float
+			g_posdb.setAlignmentBit ( m_p , 1 );
+		}
+		// otherwise, set the siterank and langid
+		else {
+			// this too
+			g_posdb.setSiteRankBits ( m_p , siteRank );
+			// set language here too
+			g_posdb.setLangIdBits ( m_p , m_langId );
+		}
 		// advance over it
 		m_p += sizeof(key144_t);
 	}
@@ -22824,6 +23186,8 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 		// country?
 		if ( ! hashCountry       ( table ) ) return NULL;
 		if ( ! hashTagRec        ( table ) ) return NULL;
+		// hash for gbsortby:gbspiderdate
+		if ( ! hashDateNumbers   ( table ) ) return NULL;
 		// and the json itself
 		return hashJSON ( table ); 
 	}
@@ -22865,6 +23229,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashLinks         ( table ) ) return NULL;
 	if ( ! hashContentType   ( table ) ) return NULL;
 	if ( ! hashUrl           ( table ) ) return NULL;
+	if ( ! hashDateNumbers   ( table ) ) return NULL;
 	if ( ! hashMetaTags      ( table ) ) return NULL;
 	if ( ! hashMetaZip       ( table ) ) return NULL;
 	if ( ! hashDMOZCategories( table ) ) return NULL;
@@ -22927,7 +23292,8 @@ long XmlDoc::getBoostFromSiteNumInlinks ( long inlinks ) {
 	if ( inlinks >= 51200 ) boost1 = 700;
 	return boost1;
 }
-		
+
+
 // returns false and sets g_errno on error
 bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
 
@@ -23047,7 +23413,36 @@ bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
 		tptr[tagLen] = c;
 		// bail on error, g_errno should be set
 		if ( ! status ) return false;
+
+		// return false with g_errno set on error
+		//if ( ! hashNumber ( buf , bufLen , &hi ) )
+		//	return false;
 	}
+	return true;
+}
+
+// . hash dates for sorting by using gbsortby: and gbrevsortby:
+// . do 'gbsortby:gbspiderdate' as your query to see this in action
+bool XmlDoc::hashDateNumbers ( HashTableX *tt ) {
+
+	// stop if already set
+	if ( ! m_spideredTimeValid ) return true;
+
+
+	// first the last spidered date
+	HashInfo hi;
+	hi.m_hashGroup = 0;// this doesn't matter, it's a numeric field
+	hi.m_tt        = tt;
+	hi.m_desc      = "last spidered date";
+	hi.m_prefix    = "gbspiderdate";
+
+	char buf[64];
+	long bufLen = sprintf ( buf , "%lu", m_spideredTime );
+
+	if ( ! hashNumber ( buf , buf , bufLen , &hi ) )
+		return false;
+
+	// all done
 	return true;
 }
 
@@ -23739,6 +24134,9 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 	char buf2[32];
 	sprintf(buf2,"%llu",(m_docId) );
 	if ( ! hashSingleTerm(buf2,gbstrlen(buf2),&hi) ) return false;
+
+	// hash
+
 
 	return true;
 }
@@ -25340,8 +25738,15 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 
 	m_niceness = m_req->m_niceness;
 
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
+	char *coll = m_req->ptr_coll;
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	if ( ! cr ) { g_errno = ENOCOLLREC; return NULL; }
+
+	m_collnum = cr->m_collnum;
+	m_collnumValid = true;
+
+	//CollectionRec *cr = getCollRec();
+	//if ( ! cr ) return NULL;
 
 	// set this important member var
 	//if (!cr ) cr=g_collectiondb.getRec(cr->m_coll,gbstrlen(cr->m_coll));
@@ -25586,10 +25991,16 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		//long sumLen = m_finalSummaryBuf.length();
 		// is it size and not length?
 		long sumLen = 0;
+		// seems like it can return 0x01 if none...
+		//if ( sum == (char *)0x01 ) sum = NULL;
+		// get len
 		if ( sum ) sumLen = gbstrlen(sum);
-		// strange...
+		// must be \0 terminated
 		if ( sumLen > 0 && sum[sumLen] ) { char *xx=NULL;*xx=0; }
-		long sumSize = sumLen + 1;
+		// assume size is 0
+		long sumSize = 0;
+		// include the \0 in size
+		if ( sum ) sumSize = sumLen + 1;
 		// do not get any more than "me" lines/excerpts of summary
 		//long max = m_req->m_numSummaryLines;
 		// grab stuff from it!
@@ -26484,6 +26895,7 @@ Matches *XmlDoc::getMatches () {
 	if ( ! phrases || phrases == (void *)-1 ) return (Matches *)phrases;
 
 	Query *q = getQuery();
+	if ( ! q ) return (Matches *)q;
 
 	// set it up
 	m_matches.setQuery ( q );
@@ -26577,6 +26989,7 @@ Title *XmlDoc::getTitle ( ) {
 	Pos *pos = getPos();
 	if ( ! pos || pos == (Pos *)-1 ) return (Title *)pos;
 	Query *q = getQuery();
+	if ( ! q ) return (Title *)q;
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 	long titleMaxLen = cr->m_titleMaxLen;
@@ -26624,6 +27037,7 @@ Summary *XmlDoc::getSummary () {
 	Title *ti = getTitle();
 	if ( ! ti || ti == (Title *)-1 ) return (Summary *)ti;
 	Query *q = getQuery();
+	if ( ! q ) return (Summary *)q;
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 	
@@ -26679,28 +27093,30 @@ Summary *XmlDoc::getSummary () {
 char *XmlDoc::getHighlightedSummary ( ) {
 
 	if ( m_finalSummaryBufValid ) {
-		char *fsum = m_finalSummaryBuf.getBufStart();
-		if ( ! fsum ) fsum = (char *)0x01;
-		return fsum;
+		//char *fsum = m_finalSummaryBuf.getBufStart();
+		//if ( ! fsum ) fsum = (char *)0x01;
+		return m_finalSummaryBuf.getBufStart();
 	}
 
 	Summary *s = getSummary();
 	if ( ! s || s == (void *)-1 ) return (char *)s;
+
+	Query *q = getQuery();
+	if ( ! q ) return (char *)q;
 
 	// get the summary
 	char *sum    = s->getSummary();
 	long  sumLen = s->getSummaryLen();
 
 	// assume no highlighting?
-	if ( ! m_req->m_highlightQueryTerms ) {
+	if ( ! m_req->m_highlightQueryTerms || sumLen == 0 ) {
 		m_finalSummaryBuf.safeMemcpy ( sum , sumLen + 1 );
 		m_finalSummaryBufValid = true;
-		char *fsum = m_finalSummaryBuf.getBufStart();
-		if ( ! fsum ) fsum = (char *)0x01;
-		return fsum;
+		return m_finalSummaryBuf.getBufStart();
+		//char *fsum = m_finalSummaryBuf.getBufStart();
+		//if ( ! fsum ) fsum = (char *)0x01;
+		//return fsum;
 	}
-
-	Query *q = getQuery();
 
 	if ( ! m_langIdValid ) { char *xx=NULL;*xx=0; }
 
@@ -26708,7 +27124,7 @@ char *XmlDoc::getHighlightedSummary ( ) {
 	Highlight hi;
 	SafeBuf hb;
 	// highlight the query in it
-	hi.set ( &hb,
+	long hlen = hi.set ( &hb,
 			     //tt , 
 			     //4999 ,
 			     sum, 
@@ -26723,14 +27139,23 @@ char *XmlDoc::getHighlightedSummary ( ) {
 			     0,
 			     m_niceness );
 
+	// highlight::set() returns 0 on error
+	if ( hlen < 0 ) {
+		log("build: highlight class error = %s",mstrerror(g_errno));
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		return NULL;
+	}
+
 	// store into our safebuf then
 	m_finalSummaryBuf.safeMemcpy ( &hb );//tt , hlen + 1 );
 	m_finalSummaryBufValid = true;
 	m_finalSummaryBuf.nullTerm();
 
-	char *fsum = m_finalSummaryBuf.getBufStart();
-	if ( ! fsum ) fsum = (char *)0x01;
-	return fsum;
+	return m_finalSummaryBuf.getBufStart();
+
+	//char *fsum = m_finalSummaryBuf.getBufStart();
+	//if ( ! fsum ) fsum = (char *)0x01;
+	//return fsum;
 }
 
 
@@ -27748,7 +28173,6 @@ bool XmlDoc::hashSingleTerm ( char       *s         ,
 	return true;
 }
 
-
 bool XmlDoc::hashString ( char       *s          ,
 			  long        slen       ,
 			  HashInfo   *hi         ) {
@@ -28432,11 +28856,173 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 		//	//char *xx=NULL;*xx=0; 
 		//}
 
+		//
+		// NUMERIC SORTING AND RANGES
+		//
+
+		// only store numbers in fields this way
+		if ( prefixHash == 0 ) continue;
+
+		// this may or may not be numeric.
+		if ( ! is_digit ( wptrs[i][0] ) ) continue;
+
+		// this might have to "back up" before any '.' or '-' symbols
+		if ( ! hashNumber ( wptrs[0] ,
+				    wptrs[i] ,
+				    wlens[i] ,
+				    hi ) )
+			return false;
 	}
 
 	// between calls? i.e. hashTitle() and hashBody()
 	//if ( wc > 0 ) m_dist = wposvec[wc-1] + 100;
 	if ( i > 0 ) m_dist = wposvec[i-1] + 100;
+
+	return true;
+}
+
+// . we store numbers as floats in the top 4 bytes of the lower 6 bytes of the 
+//   posdb key
+// . the termid is the hash of the preceeding field
+// . in json docs a field is like "object.details.price"
+// . in meta tags it is just the meta tag name
+// . credit card numbers are 16 digits. we'd need like 58 bits to store those
+//   so we can't do that here, but we can approximate as a float
+// . the binary representation of floating point numbers is ordered in the
+//   same order as the floating points themselves! so we are lucky and can
+//   keep our usually KEYCMP sorting algos to keep the floats in order.
+bool XmlDoc::hashNumber ( char *beginBuf , 
+			  char *buf , 
+			  long bufLen , 
+			  HashInfo *hi ) {
+
+	if ( ! is_digit(buf[0]) ) return true;
+
+	char *p = buf;
+	char *bufEnd = buf + bufLen;
+
+	// back-up over any .
+	if ( p > beginBuf && p[-1] == '.' ) p--;
+
+	// negative sign?
+	if ( p > beginBuf && p[-1] == '-' ) p--;
+
+	// . convert it to a float
+	// . this now allows for commas in numbers like "1,500.62"
+	float f = atof2 ( p , bufEnd - p );
+
+	if ( ! hashNumber2 ( f , hi , "gbsortby" ) )
+		return false;
+
+	// also hash in reverse order for sorting from low to high
+	f = -1.0 * f;
+
+	if ( ! hashNumber2 ( f , hi , "gbrevsortby" ) )
+		return false;
+
+	return true;
+}
+
+bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
+
+	// prefix is something like price. like the meta "name" or
+	// the json name with dots in it like "product.info.price" or something
+	long long nameHash = 0LL;
+	long nameLen = 0;
+	if ( hi->m_prefix ) nameLen = gbstrlen ( hi->m_prefix );
+	if ( hi->m_prefix && nameLen ) 
+		nameHash = hash64Lower_utf8 ( hi->m_prefix , nameLen );
+	// need a prefix for hashing numbers... for now
+	else { char *xx=NULL; *xx=0; }
+		
+	// combine prefix hash with a special hash to make it unique to avoid
+	// collisions. this is the "TRUE" prefix.
+	long long truePrefix64 = hash64n ( sortByStr ); // "gbsortby");
+	// hash with the "TRUE" prefix
+	long long ph2 = hash64 ( nameHash , truePrefix64 );
+
+	// . now store it
+	// . use field hash as the termid. normally this would just be
+	//   a prefix hash
+	// . use mostly fake value otherwise
+	key144_t k;
+	g_posdb.makeKey ( &k ,
+			  ph2 ,
+			  0,//docid
+			  0,// word pos #
+			  0,// densityRank , // 0-15
+			  0 , // MAXDIVERSITYRANK
+			  0 , // wordSpamRank ,
+			  0 , //siterank
+			  0 , // hashGroup,
+			  // we set to docLang final hash loop
+			  //langUnknown, // langid
+			  // unless already set. so set to english here
+			  // so it will not be set to something else
+			  // otherwise our floats would be ordered by langid!
+			  // somehow we have to indicate that this is a float
+			  // termlist so it will not be mangled any more.
+			  //langEnglish,
+			  langUnknown,
+			  0 , // multiplier
+			  false, // syn?
+			  false ); // delkey?
+
+	//long long final = hash64n("products.offerprice",0);
+	//long long prefix = hash64n("gbsortby",0);
+	//long long h64 = hash64 ( final , prefix);
+	//if ( ph2 == h64 )
+	//	log("hey: got offer price");
+
+	// now set the float in that key
+	g_posdb.setFloat ( &k , f );
+
+	// HACK: this bit is ALWAYS set by Posdb::makeKey() to 1
+	// so that we can b-step into a posdb list and make sure
+	// we are aligned on a 6 byte or 12 byte key, since they come
+	// in both sizes. but for this, hack it off to tell
+	// addTable144() that we are a special posdb key, a "numeric"
+	// key that has a float stored in it. then it will NOT
+	// set the siterank and langid bits which throw our sorting
+	// off!!
+	g_posdb.setAlignmentBit ( &k , 0 );
+
+	// sanity
+	float t = g_posdb.getFloat ( &k );
+	if ( t != f ) { char *xx=NULL;*xx=0; }
+
+	HashTableX *dt = hi->m_tt;
+
+	// the key may indeed collide, but that's ok for this application
+	if ( ! dt->addTerm144 ( &k ) ) 
+		return false;
+
+	if ( ! m_wts ) 
+		return true;
+
+	// store in buffer
+	char buf[128];
+	long bufLen = sprintf(buf,"%f",f);
+
+	// add to wts for PageParser.cpp display
+	// store it
+	if ( ! storeTerm ( buf,
+			   bufLen,
+			   truePrefix64,
+			   hi,
+			   0, // word#, i,
+			   0, // wordPos
+			   0,// densityRank , // 0-15
+			   0, // MAXDIVERSITYRANK,//phrase
+			   0, // ws,
+			   0, // hashGroup,
+			   //true,
+			   &m_wbuf,
+			   m_wts,
+			   // a hack for display in wts:
+			   SOURCE_NUMBER, // SOURCE_BIGRAM, // synsrc
+			   langUnknown ) )
+		return false;
 
 	return true;
 }
@@ -29259,6 +29845,18 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 
 	// close the table
 	sb->safePrintf ( "</table></center><br>\n" );
+
+	//
+	// JSON from diffbot
+	//
+	SafeBuf *dbr = getDiffbotReply();
+	if ( dbr->length() ) {
+		sb->safePrintf("<b>START EXACT DIFFBOT REPLY</b><br>\n");
+		sb->safePrintf("<pre>");
+		sb->safeMemcpy ( dbr );
+		sb->safePrintf("</pre>");
+		sb->safePrintf("<b>END EXACT DIFFBOT REPLY</b><br><br>\n");
+	}	
 
 	//
 	// PRINT ADDRESSES (prints streets first)
@@ -43397,59 +43995,8 @@ SafeBuf *XmlDoc::getQueryLinkBuf(SafeBuf *docIdList, bool doMatchingQueries) {
 //void XmlDoc::getGigabitExcerpts ( ) {
 //}
 
-// . advance p to skip over the json object it is pointing to and return 
-//   ptr to the following json object
-// . deal with nested {}'s
-// . basically skips over current json object in a list of json objects to
-//   point to the next brother object
-char *getNextJSONObject ( char *p ) {
-	// otherwise, *p must be {
-	for ( ; *p && *p != '{' ; p++ );
-	// empty?
-	if ( ! *p ) return p;
-	// count the nests
-	long nest = 0;
-	// skip first {
-	p++;
-	// keep track of in a quote or not
-	bool inQuotes = false;
-	// scan
-	for ( ; *p ; p++ ) {
-		// escaping a quote? ignore quote then.
-		if ( *p == '\\' && p[1] == '\"' ) {
-			// skip two bytes then..
-			p++;
-			continue;
-		}
-		// a quote?
-		if ( *p == '\"' ) {
-			inQuotes = ! inQuotes;
-			continue;
-		}
-		// if in a quote, ignore {} in there
-		if ( inQuotes ) continue;
-		// skip if no {}'s
-		if ( *p != '{' && *p !='}' ) continue;
-		// otherwise, check for { or }
-		if ( *p == '{' ) { nest++; continue; }
-		// otherwise, it must be a }
-		nest--;
-		// if we hit the } corresponding to the first }
-		// then stop!
-		if ( nest == -1 ) break;
-	}
-	// done?
-	if ( ! *p ) return p;
-	// must be this then
-	if ( *p != '}' ) { char *xx=NULL;*xx=0; }
-	// skip that
-	p++;
-	// skip til next {
-	for ( ; *p && *p != '{' ; p++ );
-	// done
-	return p;
-}	
 
+// this is still used by Title.cpp to get the title: field quickly
 char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 	// get length
 	long fieldLen = gbstrlen(field);
@@ -43458,13 +44005,19 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 	char *stringStart = NULL;
 	char *p = json;
 	bool gotOne = false;
+	long depth = 0;
 	// scan
 	for ( ; *p ; p++ ) {
 		// escaping a quote? ignore quote then.
-		if ( *p == '/' && p[1] == '\"' ) {
+		if ( *p == '\\' && p[1] == '\"' ) {
 			// skip two bytes then..
 			p++;
 			continue;
+		}
+		// count {} depth
+		if ( ! inQuotes ) {
+			if ( *p == '{' ) depth++;
+			if ( *p == '}' ) depth--;
 		}
 		// a quote?
 		if ( *p == '\"' ) {
@@ -43477,8 +44030,10 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 			else if ( ! inQuotes && 
 				  ! gotOne &&
 				  p[1] == ':' &&
+				  // {"title":"whatever",...}
+				  depth == 1 &&
 				  stringStart &&
-				  p - stringStart == fieldLen &&
+				  (p - stringStart) == fieldLen &&
 				  strncmp(field,stringStart,fieldLen)==0 ) {
 				// now, the next time we set stringStart
 				// it will be set to the VALUE of this field
@@ -43528,7 +44083,11 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 
 	// use new json parser
 	Json jp;
-	jp.parseJsonStringIntoJsonItems ( p );
+	// returns NULL and sets g_errno on error
+	if ( ! jp.parseJsonStringIntoJsonItems ( p , m_niceness ) ) {
+		g_errno = EBADJSONPARSER;
+		return NULL;
+	}
 	
 	JsonItem *ji = jp.getFirstItem();
 
@@ -43594,12 +44153,31 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 			hi.m_hashGroup = HASHGROUP_INTAG;
 		if ( strstr(name,"meta") == 0 )
 			hi.m_hashGroup = HASHGROUP_INMETATAG;
+		//
+		// now Json.cpp decodes and stores the value into
+		// a buffer, so ji->getValue() should be decoded completely
+		//
+
 		// index like "title:whatever"
 		hi.m_prefix = name;
 		hashString ( ji->getValue(),ji->getValueLen() , &hi );
 		// hash without the field name as well
 		hi.m_prefix = NULL;
 		hashString ( ji->getValue(),ji->getValueLen() , &hi );
+
+		/*
+		// a number? hash special then as well
+		if ( ji->m_type != JT_NUMBER ) continue;
+
+		// use prefix for this though
+		hi.m_prefix = name;
+
+		// hash as a number so we can sort search results by
+		// this number and do range constraints
+		float f = ji->m_valueDouble;
+		if ( ! hashNumber2 ( f , &hi ) )
+			return NULL;
+		*/
 	}
 
 	return (char *)0x01;

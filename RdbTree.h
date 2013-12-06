@@ -360,7 +360,7 @@ class RdbTree {
 	// need to pass this file to the fastSave() thread
 	//BigFile *m_saveFile;
 	char  m_rdbId;
-	char  m_isRealTree;
+	//char  m_isRealTree;
 	char  m_dir[128];
 	char  m_dbname[32];
 	char  m_memTag[16];
@@ -401,7 +401,7 @@ class RdbTree {
 	// . returns true if tree doesn't need to grow/shrink
         // . re-allocs the m_keys,m_data,m_sizes,m_leftNodes,m_rightNodes
 	// . used for growing AND shrinking the table
-        bool  growTree  ( long newNumNodes );
+        bool  growTree  ( long newNumNodes , long niceness );
 
 	// are we responsible for freeing nodes' data
 	bool    m_ownData;

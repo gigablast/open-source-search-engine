@@ -113,8 +113,17 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 	char *val = NULL;
 	long vlen;
 	// look for the "title:" field in json then use that
-	if ( xd->m_contentType == CT_JSON )
-		val = getJSONFieldValue ( xd->ptr_utf8Content,"title",&vlen);
+	SafeBuf jsonTitle;
+	if ( xd->m_contentType == CT_JSON ) {
+		char *jt;
+		jt = getJSONFieldValue(xd->ptr_utf8Content,"title",&vlen);
+		if ( jt && vlen > 0 ) {
+			jsonTitle.safeDecodeJSONToUtf8 (jt, vlen, m_niceness);
+							//true ); // decodeAll?
+			jsonTitle.nullTerm();
+			val = jsonTitle.getBufStart();
+		}
+	}
 	// if we had a title: field in the json...
 	if ( val ) {
 		char *dst = NULL;

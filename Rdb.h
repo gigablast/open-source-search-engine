@@ -10,7 +10,7 @@
 #include "RdbMem.h"
 #include "RdbCache.h"
 #include "RdbDump.h"
-#include "Dir.h"
+//#include "Dir.h"
 #include "RdbBuckets.h"
 
 // . each Rdb instance has an ID
@@ -86,6 +86,7 @@ class Rdb {
 	~Rdb ( );
 
 	bool addColl ( char *coll );
+	bool addColl2 ( collnum_t collnum );
 	bool delColl ( char *coll );
 
 	bool resetColl ( collnum_t collnum , collnum_t newCollnum ) ;
@@ -164,7 +165,8 @@ class Rdb {
 	bool deleteRecord ( collnum_t collnum , char *key );
 
 	// get the directory name where this rdb stores it's files
-	char *getDir       ( ) { return m_dir.getDirname(); };
+	//char *getDir       ( ) { return m_dir.getDirname(); };
+	char *getDir       ( ) { return g_hostdb.m_dir; };
 	char *getStripeDir ( ) { return g_conf.m_stripeDir; };
 
 	long getFixedDataSize ( ) { return m_fixedDataSize; };
@@ -185,7 +187,7 @@ class Rdb {
 	
 	void disableWrites ();
 	void enableWrites  ();
-
+	bool isWritable ( ) ;
 
 	RdbBase *getBase ( collnum_t collnum ) ;
 	long getNumBases ( ) { 	return g_collectiondb.m_numRecs; };
@@ -352,7 +354,7 @@ class Rdb {
 	bool      m_dedup;
 	long      m_fixedDataSize;
 
-	Dir       m_dir;
+	//Dir       m_dir;
 	char      m_dbname [32];
 	long      m_dbnameLen;
 
@@ -393,6 +395,8 @@ class Rdb {
 	long      m_minToMerge;  // need at least this many files b4 merging
 	long      m_numFilesToMerge   ;
 	long      m_mergeStartFileNum ;
+
+	long m_dumpErrno;
 
 	// a dummy data string for deleting records when m_fixedDataSize > 0
 	char     *m_dummy;

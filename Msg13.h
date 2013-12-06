@@ -25,6 +25,10 @@ public:
 	long  m_maxCacheAge;
 	long  m_maxTextDocLen;
 	long  m_maxOtherDocLen;
+	// in milliseconds. use -1 if none or unknown.
+	long  m_crawlDelayMS;
+	// for linked list, this is the hammer queue
+	class Msg13Request *m_nextLink;
 	// if doing spider compression, compute contentHash32 of document
 	// downloaded, and if it matches this then send back EDOCUNCHANGED
 	long  m_contentHash32;
@@ -50,7 +54,8 @@ public:
 	long  m_addToTestCache:1;
 	long  m_skipHammerCheck:1;
 	long  m_attemptedIframeExpansion:1;
-	long  m_forEvents;
+	long  m_crawlDelayFromEnd:1;
+	long  m_forEvents:1;
 	//long  m_testParserEnabled:1;
 	//long  m_testSpiderEnabled:1;
 	//long  m_isPageParser:1;
@@ -83,6 +88,7 @@ public:
 		memset (this,0,(char *)m_url - (char *)this + 1); 
 		m_maxTextDocLen  = -1; // no limit
 		m_maxOtherDocLen = -1; // no limit
+		m_crawlDelayMS   = -1; // unknown or none
 	};
 };
 

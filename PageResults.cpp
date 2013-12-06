@@ -52,6 +52,11 @@ public:
         long         m_numDocIds;
 	long long    m_took; // how long it took to get the results
 	HttpRequest  m_hr;
+	bool         m_printedHeaderRow;
+
+	// for printing our search result json items in csv:
+	HashTableX   m_columnTable;
+	long         m_numCSVColumns;
 };
 
 static int printResult ( SafeBuf &sb,
@@ -59,6 +64,10 @@ static int printResult ( SafeBuf &sb,
 			 long ix , 
 			 CollectionRec *cr ,
 			 char *qe ) ;
+
+bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) ;
+
+bool printJsonItemInCSV ( char *json , SafeBuf *sb , class State0 *st ) ;
 
 bool printPairScore ( SafeBuf &sb , SearchInput *si , PairScore *ps ,
 		      Msg20Reply *mr , Msg40 *msg40 , bool first ) ;
@@ -78,13 +87,15 @@ bool sendReply ( State0 *st , char *reply ) {
 	if ( ! s ) { char *xx=NULL;*xx=0; }
 	SearchInput *si = &st->m_si;
 	char *ct = "text/html";
-	if ( si && si->m_xml ) ct = "text/xml"; 
+	if ( si && si->m_format == FORMAT_XML ) ct = "text/xml"; 
+	if ( si && si->m_format == FORMAT_JSON ) ct = "application/json";
+	if ( si && si->m_format == FORMAT_CSV ) ct = "text/csv";
 	char *charset = "utf-8";
 
 	// . filter anything < 0x20 to 0x20 to keep XML legal
 	// . except \t, \n and \r, they're ok
 	// . gotta set "f" down here in case it realloc'd the buf
-	if ( si->m_xml && reply ) {
+	if ( si->m_format == FORMAT_XML && reply ) {
 		unsigned char *f = (unsigned char *)reply;
 		for ( ; *f ; f++ ) 
 			if ( *f < 0x20 && *f!='\t' && *f!='\n' && *f!='\r' ) 
@@ -99,7 +110,7 @@ bool sendReply ( State0 *st , char *reply ) {
 	// . use light brown if coming directly from an end user
 	// . use darker brown if xml feed
 	long color = 0x00b58869;
-	if ( si->m_xml )color = 0x00753d30 ;
+	if ( si->m_format != FORMAT_HTML )color = 0x00753d30 ;
 	long long nowms = gettimeofdayInMilliseconds();
 	long long took  = nowms - st->m_startTime ;
 	g_stats.addStat_r ( took            ,
@@ -115,15 +126,18 @@ bool sendReply ( State0 *st , char *reply ) {
 			    nowms,
 			    st->m_q.m_numTerms);
 
-	// log the time
-	if ( st->m_took >= g_conf.m_logQueryTimeThreshold ) {
+	// . log the time
+	// . do not do this if g_errno is set lest m_sbuf1 be bogus b/c
+	//   it failed to allocate its buf to hold terminating \0 in
+	//   SearchInput::setQueryBuffers()
+	if ( ! g_errno && st->m_took >= g_conf.m_logQueryTimeThreshold ) {
 		logf(LOG_TIMING,"query: Took %lli ms for %s. results=%li",
 		     st->m_took,
 		     si->m_sbuf1.getBufStart(),
 		     st->m_msg40.getNumResults());
 	}
 
-	bool xml = si->m_xml;
+	//bool xml = si->m_xml;
 
 	g_stats.logAvgQueryTime(st->m_startTime);
 
@@ -159,7 +173,7 @@ bool sendReply ( State0 *st , char *reply ) {
 	if ( savedErr != ENOPERM ) 
 		g_stats.m_numFails++;
 
-	if ( xml ) {
+	if ( si->m_format == FORMAT_XML ) {
 		SafeBuf sb;
 		sb.safePrintf("<?xml version=\"1.0\" "
 			      "encoding=\"UTF-8\" ?>\n"
@@ -195,34 +209,14 @@ bool sendReply ( State0 *st , char *reply ) {
 	g_httpServer.sendQueryErrorReply(s,
 					 status,
 					 mstrerror(savedErr),
-					 xml,
+					 si->m_format,//xml,
 					 savedErr, 
 					 "There was an error!");
 	return true;
 }
 
-// . returns false if blocked, true otherwise
-// . sets g_errno on error
-// . "msg" will be inserted into the access log for this request
-bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
-	// . check for sdirt=4, this a site search on the given directory id
-	// . need to pre-query the directory first to get the sites to search
-	//   this will likely have just been cached so it should be quick
-	// . then need to construct a site search query
-	long rawFormat = hr->getLong("xml", 0); // was "raw"
-	long xml = hr->getLong("xml",0);
-
-	// get the dmoz catid if given
-	//long searchingDmoz = hr->getLong("dmoz",0);
-
-	//
-	// send back page frame with the ajax call to get the real
-	// search results. do not do this if a "&dir=" (dmoz category)
-	// is given
-	//
-	if ( hr->getLong("id",0) == 0 && ! xml ) {
-		SafeBuf sb;
-		sb.safePrintf(
+bool printCSSHead ( SafeBuf &sb ) {
+	return sb.safePrintf(
 			      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML "
 			      "4.01 Transitional//EN\">\n"
 			      //"<meta http-equiv=\"Content-Type\" "
@@ -256,6 +250,41 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			      "-->\n"
 			      "</style>\n"
 			      "</head>\n"
+			      );
+}
+
+// . returns false if blocked, true otherwise
+// . sets g_errno on error
+// . "msg" will be inserted into the access log for this request
+bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
+	// . check for sdirt=4, this a site search on the given directory id
+	// . need to pre-query the directory first to get the sites to search
+	//   this will likely have just been cached so it should be quick
+	// . then need to construct a site search query
+	//long rawFormat = hr->getLong("xml", 0); // was "raw"
+	//long xml = hr->getLong("xml",0);
+
+	// what format should search results be in? default is html
+	char format = getFormatFromRequest ( hr );
+
+	// get the dmoz catid if given
+	//long searchingDmoz = hr->getLong("dmoz",0);
+
+	//
+	// . send back page frame with the ajax call to get the real
+	//   search results. do not do this if a "&dir=" (dmoz category)
+	//   is given.
+	// . if not matt wells we do not do ajax
+	// . the ajax is just there to prevent bots from slamming me 
+	//   with queries.
+	//
+	if ( hr->getLong("id",0) == 0 && 
+	     format == FORMAT_HTML &&
+	     g_conf.m_isMattWells ) {
+
+		SafeBuf sb;
+		printCSSHead ( sb );
+		sb.safePrintf(
 			      "<body "
 			      "onLoad=\""
 			      "var client = new XMLHttpRequest();\n"
@@ -414,8 +443,6 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	}
 
 
-
-
 	// make a new state
 	State0 *st;
 	try { st = new (State0); }
@@ -427,13 +454,15 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		g_stats.m_numFails++;
 		return g_httpServer.sendQueryErrorReply
 			(s,500,mstrerror(g_errno),
-			 rawFormat, g_errno, "Query failed.  "
+			 format, g_errno, "Query failed.  "
 			 "Could not allocate memory to execute a search.  "
 			 "Please try later." );
 	}
 	mnew ( st , sizeof(State0) , "PageResults2" );
+
 	// copy yhits
-	st->m_hr.copy ( hr );
+	if ( ! st->m_hr.copy ( hr ) )
+		return sendReply ( st , NULL );
 
 	// set this in case SearchInput::set fails!
 	st->m_socket = s;
@@ -448,8 +477,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			 // m_hr points to the hr we pass into
 			 // SearchInput::set
 			 &st->m_hr, 
-			 &st->m_q ) ) 
+			 &st->m_q ) ) {
+		log("query: set search input: %s",mstrerror(g_errno));
 		return sendReply ( st, NULL );
+	}
 
 	long  codeLen = 0;
 	char *code = hr->getString("code", &codeLen, NULL);
@@ -459,7 +490,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 
 	// limit here
 	long maxpp = cr->m_maxSearchResultsPerQuery ;
-	if ( si->m_docsWanted > maxpp ) si->m_docsWanted = maxpp;
+	if ( si->m_docsWanted > maxpp &&
+	     // disable serp max per page for custom crawls
+	     ! cr->m_isCustomCrawl )
+		si->m_docsWanted = maxpp;
 
         st->m_numDocIds = si->m_docsWanted;
 
@@ -484,6 +518,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	st->m_gotResults = false;
 	st->m_gotAds     = false;
 	st->m_gotSpell   = false;
+
+	// reset
+	st->m_printedHeaderRow = false;
 
 	long ip = s->m_ip;
 	long uipLen;
@@ -675,26 +712,37 @@ bool gotResults ( void *state ) {
 	//SafeBuf sb(local, 128000);
 	SafeBuf sb;
 	// reserve 1.5MB now!
-	if ( ! sb.reserve(1500000) ) // 128000) )
+	if ( ! sb.reserve(1500000 ,"pgresbuf" ) ) // 128000) )
 		return true;
 
 	SearchInput *si = &st->m_si;
 
+	// . if not matt wells we do not do ajax
+	// . the ajax is just there to prevent bots from slamming me 
+	//   with queries.
+	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
+		printCSSHead ( sb );
+		sb.safePrintf("<body>");
+		printLogoAndSearchBox ( sb , &st->m_hr , -1 ); // catId = -1
+	}
+
+
+
 	// xml
-	if ( si->m_xml )
+	if ( si->m_format == FORMAT_XML )
 		sb.safePrintf("<?xml version=\"1.0\" "
 			      "encoding=\"UTF-8\" ?>\n"
 			      "<response>\n" );
 
 	// show current time
-	if ( si->m_xml ) {
+	if ( si->m_format == FORMAT_XML ) {
 		long long globalNowMS = localToGlobalTimeMilliseconds(nowMS);
 		sb.safePrintf("\t<currentTimeUTC>%lu</currentTimeUTC>\n",
 			      (long)(globalNowMS/1000));
 	}
 
 	// show response time
-	if ( si->m_xml )
+	if ( si->m_format == FORMAT_XML )
 		sb.safePrintf("\t<responseTimeMS>%lli</responseTimeMS>\n",
 			      st->m_took);
 
@@ -762,7 +810,7 @@ bool gotResults ( void *state ) {
 	//if ( base ) docsInColl = base->getNumGlobalRecs();
 	docsInColl = g_hostdb.getNumGlobalRecs ( );
 	// include number of docs in the collection corpus
-	if ( si->m_xml && docsInColl >= 0LL )
+	if ( si->m_format == FORMAT_XML && docsInColl >= 0LL )
 		sb.safePrintf ( "\t<docsInCollection>%lli"
 				"</docsInCollection>\n", docsInColl );
 
@@ -773,7 +821,7 @@ bool gotResults ( void *state ) {
 	// only adjust upwards for first page now so it doesn't keep chaning
 	if ( totalHits < numResults ) totalHits = numResults;
 
-	if ( si->m_xml )
+	if ( si->m_format == FORMAT_XML )
 		sb.safePrintf("\t<hits>%lli</hits>\n"
 			      "\t<moreResultsFollow>%li</moreResultsFollow>\n"
 			      ,(long long)totalHits
@@ -783,7 +831,7 @@ bool gotResults ( void *state ) {
 	// . did he get a spelling recommendation?
 	// . do not use htmlEncode() on this anymore since receiver
 	//   of the XML feed usually does not want that.
-	if ( si->m_xml && st->m_spell[0] ) {
+	if ( si->m_format == FORMAT_XML && st->m_spell[0] ) {
 		sb.safePrintf ("\t<spell><![CDATA[");
 		sb.safeStrcpy(st->m_spell);
 		sb.safePrintf ("]]></spell>\n");
@@ -795,7 +843,7 @@ bool gotResults ( void *state ) {
 		     numResults);
 
 	// tell browser again
-	//if ( ! si->m_xml )
+	//if ( si->m_format == FORMAT_HTML )
 	//	sb.safePrintf("<meta http-equiv=\"Content-Type\" "
 	//		      "content=\"text/html; charset=utf-8\">\n");
 
@@ -818,7 +866,7 @@ bool gotResults ( void *state ) {
 	DocIdScore *dpx = NULL;
 	if ( numResults > 0 ) dpx = msg40->getScoreInfo(0);
 
-	if ( si->m_xml && dpx ) {
+	if ( si->m_format == FORMAT_XML && dpx ) {
 		// # query terms used!
 		//long nr = dpx->m_numRequiredTerms;
 		float max = 0.0;
@@ -922,13 +970,13 @@ bool gotResults ( void *state ) {
 	Query *qq2;
 	bool firstIgnored;
 	bool isAdmin = si->m_isAdmin;
-	if ( si->m_xml ) isAdmin = false;
+	if ( si->m_format == FORMAT_XML ) isAdmin = false;
 
 	// otherwise, we had no error
-	if ( numResults == 0 && ! si->m_xml ) {
+	if ( numResults == 0 && si->m_format == FORMAT_HTML ) {
 		sb.safePrintf ( "No results found." );
 	}
-	else if ( moreFollow && ! si->m_xml ) {
+	else if ( moreFollow && si->m_format == FORMAT_HTML ) {
 		if ( isAdmin && si->m_docsToScanForReranking > 1 )
 			sb.safePrintf ( "PQR'd " );
 		sb.safePrintf ("Results <b>%li</b> to <b>%li</b> of "
@@ -941,7 +989,7 @@ bool gotResults ( void *state ) {
 			       );
 	}
 	// otherwise, we didn't get enough results to show this page
-	else if ( ! si->m_xml ) {
+	else if ( si->m_format == FORMAT_HTML ) {
 		if ( isAdmin && si->m_docsToScanForReranking > 1 )
 			sb.safePrintf ( "PQR'd " );
 		sb.safePrintf ("Results <b>%li</b> to <b>%li</b> of "
@@ -965,7 +1013,7 @@ bool gotResults ( void *state ) {
 	// find end of url
 	char *ue = url;
 	for ( ; ue && *ue && ! is_wspace_a(*ue) ; ue++ ) ;
-	if ( numResults == 0 && ! si->m_xml && url ) {
+	if ( numResults == 0 && si->m_format == FORMAT_HTML && url ) {
 		sb.safePrintf("<br><br>"
 			      "Could not find that url in the "
 			      "index. Try <a href=/addurl?u=");
@@ -975,7 +1023,7 @@ bool gotResults ( void *state ) {
 
 	// sometimes ppl search for "www.whatever.com" so ask them if they
 	// want to search for url:www.whatever.com
-	if ( numResults > 0  && ! si->m_xml && url && url == q ) {
+	if ( numResults > 0  && si->m_format == FORMAT_HTML && url && url ==q){
 		sb.safePrintf("<br><br>"
 			      "Did you mean to "
 			      "search for the url "
@@ -1004,7 +1052,7 @@ bool gotResults ( void *state ) {
 	if ( ! pwd ) pwd = "";
 
 	/*
-	if ( ! si->m_xml )
+	if ( si->m_format == FORMAT_HTML )
 		sb.safePrintf(" &nbsp; <u><b><font color=blue><a onclick=\""
 			      "for (var i = 0; i < %li; i++) {"
 			      "var nombre;"
@@ -1138,7 +1186,7 @@ bool gotResults ( void *state ) {
 		if ( qw->m_ignoreWord != IGNORE_QSTOP ) continue;
 		// print header -- we got one
 		if ( firstIgnored ) {
-			if ( si->m_xml )
+			if ( si->m_format == FORMAT_XML )
 				sb.safePrintf ("\t<ignoredWords><![CDATA[");
 			else
 				sb.safePrintf (" &nbsp; <font "
@@ -1157,7 +1205,7 @@ bool gotResults ( void *state ) {
 	// print tail if we had ignored terms
 	if ( ! firstIgnored ) {
 		sb.incrementLength(-1);
-		if ( si->m_xml )
+		if ( si->m_format == FORMAT_XML )
 			sb.safePrintf("]]></ignoredWords>\n");
 		else
 			sb.safePrintf ("</b>. Preceed each with a '+' or "
@@ -1165,26 +1213,26 @@ bool gotResults ( void *state ) {
 				       "quotes to not ignore.</font>");
 	}
 
-	if ( ! si->m_xml ) sb.safePrintf("<br><br>");
+	if ( si->m_format == FORMAT_HTML ) sb.safePrintf("<br><br>");
 
-	if ( ! si->m_xml )
+	if ( si->m_format == FORMAT_HTML )
 		sb.safePrintf("<table cellpadding=0 cellspacing=0>"
 			      "<tr><td valign=top>");
 
 	SafeBuf *gbuf = &msg40->m_gigabitBuf;
 	long numGigabits = gbuf->length()/sizeof(Gigabit);
 
-	if ( si->m_xml ) numGigabits = 0;
+	if ( si->m_format == FORMAT_XML ) numGigabits = 0;
 
 	// print gigabits
 	Gigabit *gigabits = (Gigabit *)gbuf->getBufStart();
 	//long numCols = 5;
 	//long perRow = numGigabits / numCols;
-	if ( numGigabits && ! si->m_xml )
+	if ( numGigabits && si->m_format == FORMAT_HTML )
 		sb.safePrintf("<table cellspacing=7 bgcolor=lightgray>"
 			      "<tr><td width=200px; valign=top>");
 	for ( long i = 0 ; i < numGigabits ; i++ ) {
-		if ( i > 0 && ! si->m_xml ) 
+		if ( i > 0 && si->m_format == FORMAT_HTML ) 
 			sb.safePrintf("<hr>");
 		//if ( perRow && (i % perRow == 0) )
 		//	sb.safePrintf("</td><td valign=top>");
@@ -1193,14 +1241,15 @@ bool gotResults ( void *state ) {
 		printGigabit ( st,sb , msg40 , gi , si );
 		sb.safePrintf("<br><br>");
 	}
-	if ( numGigabits && ! si->m_xml )
+	if ( numGigabits && si->m_format == FORMAT_HTML )
 		sb.safePrintf("</td></tr></table>");
 
 	// two pane table
-	if ( ! si->m_xml ) sb.safePrintf("</td><td valign=top>");
+	if ( si->m_format == FORMAT_HTML ) 
+		sb.safePrintf("</td><td valign=top>");
 
 	// did we get a spelling recommendation?
-	if ( ! si->m_xml && st->m_spell[0] ) {
+	if ( si->m_format == FORMAT_HTML && st->m_spell[0] ) {
 		// encode the spelling recommendation
 		long len = gbstrlen ( st->m_spell );
 		char qe2[MAX_FRAG_SIZE];
@@ -1262,7 +1311,7 @@ bool gotResults ( void *state ) {
 	*/
 
 	/*
-	if ( ! si->m_xml )
+	if ( si->m_format == FORMAT_HTML )
 		sb.safePrintf("<a onclick=\""
 			      "var e = "
 			      "document.getElementsByTagName('html')[0];\n"
@@ -1289,7 +1338,7 @@ bool gotResults ( void *state ) {
 	//
 
 	// end the two-pane table
-	if ( ! si->m_xml ) sb.safePrintf("</td></tr></table>");
+	if ( si->m_format == FORMAT_HTML ) sb.safePrintf("</td></tr></table>");
 
 	// for storing a list of all of the sites we displayed, now we print a 
 	// link at the bottom of the page to ban all of the sites displayed 
@@ -1305,7 +1354,7 @@ bool gotResults ( void *state ) {
 	// 
 
 	// center everything below here
-	if ( ! si->m_xml ) sb.safePrintf ( "<br><center>" );
+	if ( si->m_format == FORMAT_HTML ) sb.safePrintf ( "<br><center>" );
 
 	long remember = sb.length();
 
@@ -1326,7 +1375,7 @@ bool gotResults ( void *state ) {
 		args.safePrintf("&sites=%s",si->m_whiteListBuf.getBufStart());
 	
 
-	if ( firstNum > 0 && ! si->m_xml ) {
+	if ( firstNum > 0 && si->m_format == FORMAT_HTML ) {
 		long ss = firstNum - msg40->getDocsWanted();
 		sb.safePrintf("<a href=\"/search?s=%li&q=",ss);
 		// our current query parameters
@@ -1341,7 +1390,7 @@ bool gotResults ( void *state ) {
 	}
 
 	// now print "Next X Results"
-	if ( moreFollow && ! si->m_xml ) {
+	if ( moreFollow && si->m_format == FORMAT_HTML ) {
 		long ss = firstNum + msg40->getDocsWanted();
 		// print a separator first if we had a prev results before us
 		if ( sb.length() > remember ) sb.safePrintf ( " &nbsp; " );
@@ -1370,9 +1419,9 @@ bool gotResults ( void *state ) {
 	// end results table cell... and print calendar at top
 	//tail = cr->m_htmlTail;
 	//tailLen = gbstrlen (tail );
-	//if ( ! si->m_xml ) sb.safeMemcpy ( tail , tailLen );
+	//if ( si->m_format == FORMAT_HTML ) sb.safeMemcpy ( tail , tailLen );
 
-	if ( ! si->m_xml ) {
+	if ( si->m_format == FORMAT_HTML ) {
 		/*
 		sb.safePrintf("<table cellpadding=2 cellspacing=0 border=0>"
 			      "<tr><td></td>"
@@ -1407,7 +1456,7 @@ bool gotResults ( void *state ) {
 
 	// TODO: print cache line in light gray here
 	// TODO: "these results were cached X minutes ago"
-	if ( msg40->getCachedTime() > 0 && ! si->m_xml ) {
+	if ( msg40->getCachedTime() > 0 && si->m_format == FORMAT_HTML ) {
 		sb.safePrintf("<br><br><font size=1 color=707070><b><center>");
 		sb.safePrintf ( " These results were cached " );
 		// this cached time is this local cpu's time
@@ -1421,8 +1470,28 @@ bool gotResults ( void *state ) {
 	}
 
 	
-	if ( si->m_xml )
+	if ( si->m_format == FORMAT_XML )
 		sb.safePrintf("</response>\n");
+
+
+	// if we did not use ajax, print this tail here now
+	if ( si->m_format == FORMAT_HTML && ! g_conf.m_isMattWells ) {
+		sb.safePrintf ( "<br>"
+				"<center>"
+				"<font color=gray>"
+				"Copyright &copy; 2013. All Rights "
+				"Reserved.<br/>"
+				"Powered by the <a href='https://www."
+				"gigablast.com/'>GigaBlast</a> open source "
+				"search engine."
+				"</font>"
+				"</center>\n"
+				
+				"</body>\n"
+				"</html>\n"
+			      );
+	}
+
 
 	return sendReply ( st , sb.getBufStart() );
 }
@@ -1499,7 +1568,7 @@ bool printInlinkText ( SafeBuf &sb , Msg20Reply *mr , SearchInput *si ,
 	// sort them
 	gbsort ( ptrs , numLinks , 4 , linkSiteRankCmp );
 	// print xml starter
-	if ( si->m_xml ) sb.safePrintf("\t\t<inlinks>\n");
+	if ( si->m_format == FORMAT_XML ) sb.safePrintf("\t\t<inlinks>\n");
 	// loop through the inlinks
 	bool printedInlinkText = false;
 	bool firstTime = true;
@@ -1512,7 +1581,9 @@ bool printInlinkText ( SafeBuf &sb , Msg20Reply *mr , SearchInput *si ,
 	for ( long i = 0 ; i < numLinks ; i++ ) {
 		k = ptrs[i];
 		if ( ! k->ptr_linkText ) continue;
-		if ( ! si->m_doQueryHighlighting && ! si->m_xml ) continue;
+		if ( ! si->m_doQueryHighlighting && 
+		     si->m_format == FORMAT_HTML ) 
+			continue;
 		char *str   = k-> ptr_linkText;
 		long strLen = k->size_linkText;
 		//char tt[1024*3];
@@ -1520,7 +1591,7 @@ bool printInlinkText ( SafeBuf &sb , Msg20Reply *mr , SearchInput *si ,
 		char *frontTag = 
 		     "<font style=\"color:black;background-color:yellow\">" ;
 		char *backTag = "</font>";
-		if ( si->m_xml ) {
+		if ( si->m_format == FORMAT_XML ) {
 			frontTag = "<b>";
 			backTag  = "</b>";
 		}
@@ -1543,7 +1614,7 @@ bool printInlinkText ( SafeBuf &sb , Msg20Reply *mr , SearchInput *si ,
 		// skip it if nothing highlighted
 		if ( hi.getNumMatches() == 0 ) continue;
 
-		if ( si->m_xml ) {
+		if ( si->m_format == FORMAT_XML ) {
 			sb.safePrintf("\t\t\t<inlink "
 				      "docId=\"%lli\" "
 				      "url=\"",
@@ -1626,7 +1697,7 @@ bool printInlinkText ( SafeBuf &sb , Msg20Reply *mr , SearchInput *si ,
 
 
 	// closer for xml
-	if ( si->m_xml ) sb.safePrintf("\t\t</inlinks>\n");
+	if ( si->m_format == FORMAT_XML ) sb.safePrintf("\t\t</inlinks>\n");
 	//if ( printedInlinkText ) sb.safePrintf("<br>\n");
 	if ( printedInlinkText )
 		sb.safePrintf("</font>"
@@ -1710,10 +1781,43 @@ static int printResult ( SafeBuf &sb,
 	Msg20      *m20 = msg40->m_msg20[ix];
 	Msg20Reply *mr  = m20->m_r;
 
-	if ( si->m_xml ) sb.safePrintf("\t<result>\n" );
+	// each "result" is the actual cached page, in this case, a json
+	// object, because we were called with &icc=1. in that situation
+	// ptr_content is set in the msg20reply.
+	if ( si->m_format == FORMAT_CSV &&
+	     mr->ptr_content &&
+	     mr->m_contentType == CT_JSON ) {
+		// parse it up
+		char *json = mr->ptr_content;
+		// only print header row once, so pass in that flag
+		if ( ! st->m_printedHeaderRow ) {
+			printCSVHeaderRow ( &sb , st );
+			st->m_printedHeaderRow = true;
+		}
+		printJsonItemInCSV ( json , &sb , st );
+		return true;
+	}
+
+
+
+	// just print cached web page?
+	if ( mr->ptr_content ) {
+		sb.safeStrcpy ( mr->ptr_content );
+		//mr->size_content );
+		if ( si->m_format == FORMAT_HTML )
+			sb.safePrintf("\n\n<br><br>\n\n");
+		if ( si->m_format != FORMAT_HTML )
+			sb.safePrintf("\n\n");
+		// just in case
+		sb.nullTerm();
+		return true;
+	}
+
+
+	if ( si->m_format == FORMAT_XML ) sb.safePrintf("\t<result>\n" );
 
 	if ( si->m_docIdsOnly ) {
-		if ( si->m_xml )
+		if ( si->m_format == FORMAT_XML )
 			sb.safePrintf("\t\t<docId>%lli</docId>\n"
 				      "\t</result>\n", 
 				      mr->m_docId );
@@ -1743,13 +1847,14 @@ static int printResult ( SafeBuf &sb,
 	bool indent = false;
 
 	bool isAdmin = si->m_isAdmin;
-	if ( si->m_xml ) isAdmin = false;
+	if ( si->m_format == FORMAT_XML ) isAdmin = false;
 
 	//unsigned long long lastSiteHash = siteHash;
-	if ( indent && ! si->m_xml ) sb.safePrintf("<blockquote>"); 
+	if ( indent && si->m_format == FORMAT_HTML ) 
+		sb.safePrintf("<blockquote>"); 
 
 	// print the rank. it starts at 0 so add 1
-	if ( ! si->m_xml )
+	if ( si->m_format == FORMAT_HTML )
 		sb.safePrintf("<table><tr><td valign=top>%li.</td><td>",
 			      ix+1 + si->m_firstResultNum );
 
@@ -1803,14 +1908,14 @@ static int printResult ( SafeBuf &sb,
 	// http://www.youtube.com/watch?v=auQbi_fkdGE
 	// http://img.youtube.com/vi/auQbi_fkdGE/2.jpg
 	// get the thumbnail url
-	if ( mr->ptr_imgUrl && ! si->m_xml )
+	if ( mr->ptr_imgUrl && si->m_format == FORMAT_HTML )
 		sb.safePrintf ("<a href=%s><image src=%s></a>",
 				   url,mr->ptr_imgUrl);
 	// the a href tag
-	if ( ! si->m_xml ) sb.safePrintf ( "\n\n" );
+	if ( si->m_format == FORMAT_HTML ) sb.safePrintf ( "\n\n" );
 
 	// then if it is banned 
-	if ( mr->m_isBanned && ! si->m_xml )
+	if ( mr->m_isBanned && si->m_format == FORMAT_HTML )
 		sb.safePrintf("<font color=red><b>BANNED</b></font> ");
 
 	///////
@@ -1821,7 +1926,7 @@ static int printResult ( SafeBuf &sb,
 
 
 	// the a href tag
-	if ( ! si->m_xml ) {
+	if ( si->m_format == FORMAT_HTML ) {
 		sb.safePrintf ( "<a href=" );
 		// print the url in the href tag
 		sb.safeMemcpy ( url , urlLen ); 
@@ -1880,12 +1985,13 @@ static int printResult ( SafeBuf &sb,
 	char *frontTag = 
 		"<font style=\"color:black;background-color:yellow\">" ;
 	char *backTag = "</font>";
-	if ( si->m_xml ) {
+	if ( si->m_format == FORMAT_XML ) {
 		frontTag = "<b>";
 		backTag  = "</b>";
 	}
 	long cols = 80;
-	if ( si->m_xml ) sb.safePrintf("\t\t<title><![CDATA[");
+	if ( si->m_format == FORMAT_XML ) 
+		sb.safePrintf("\t\t<title><![CDATA[");
 	SafeBuf hb;
 	if ( str && strLen && si->m_doQueryHighlighting ) {
 		hlen = hi.set ( &hb,
@@ -1921,10 +2027,10 @@ static int printResult ( SafeBuf &sb,
 			return false;
 	}
 	// close up the title tag
-	if ( si->m_xml ) sb.safePrintf("]]></title>\n");
+	if ( si->m_format == FORMAT_XML ) sb.safePrintf("]]></title>\n");
 
 
-	if ( ! si->m_xml ) sb.safePrintf ("</a><br>\n" ) ;
+	if ( si->m_format == FORMAT_HTML ) sb.safePrintf ("</a><br>\n" ) ;
 
 	/////
 	//
@@ -1934,7 +2040,7 @@ static int printResult ( SafeBuf &sb,
 	unsigned char ctype = mr->m_contentType;
 	if ( ctype > 2 && ctype <= 13 ) {
 		char *cs = g_contentTypeStrings[ctype];
-		if ( si->m_xml )
+		if ( si->m_format == FORMAT_XML )
 			sb.safePrintf("\t\t<contentType>"
 				      "<![CDATA["
 				      "%s"
@@ -1967,11 +2073,11 @@ static int printResult ( SafeBuf &sb,
 		strLen = gbstrlen(dmozSummary);
 	}
 
-	if ( si->m_xml ) sb.safePrintf("\t\t<sum><![CDATA[");
+	if ( si->m_format == FORMAT_XML ) sb.safePrintf("\t\t<sum><![CDATA[");
 
 	sb.brify ( str , strLen, 0 , cols ); // niceness = 0
 	// close xml tag
-	if ( si->m_xml ) sb.safePrintf("]]></sum>\n");
+	if ( si->m_format == FORMAT_XML ) sb.safePrintf("]]></sum>\n");
 	// new line if not xml
 	else if ( strLen ) sb.safePrintf("<br>\n");
 
@@ -2026,7 +2132,7 @@ static int printResult ( SafeBuf &sb,
 		// so hack off the last slash
 		if ( j < 0 ) urlLen--;
 	}
-	if ( ! si->m_xml ) {
+	if ( si->m_format == FORMAT_HTML ) {
 		sb.safePrintf ("<font color=gray>" );
 		//sb.htmlEncode ( url , gbstrlen(url) , false );
 		// 20 for the date after it
@@ -2034,7 +2140,7 @@ static int printResult ( SafeBuf &sb,
 		// turn off the color
 		sb.safePrintf ( "</font>\n" );
 	}
-	if ( si->m_xml ) {
+	if ( si->m_format == FORMAT_XML ) {
 		sb.safePrintf("\t\t<url><![CDATA[");
 		sb.safeMemcpy ( url , urlLen );
 		sb.safePrintf("]]></url>\n");
@@ -2043,16 +2149,18 @@ static int printResult ( SafeBuf &sb,
 
 	// now the last spidered date of the document
 	time_t ts = mr->m_lastSpidered;
-	if ( ! si->m_xml ) printTimeAgo ( sb , ts , "indexed" , si );
+	if ( si->m_format == FORMAT_HTML ) 
+		printTimeAgo ( sb , ts , "indexed" , si );
 
 	// the date it was last modified
 	ts = mr->m_lastModified;
-	if ( ! si->m_xml ) printTimeAgo ( sb , ts , "modified" , si );
+	if ( si->m_format == FORMAT_HTML ) 
+		printTimeAgo ( sb , ts , "modified" , si );
 
 	//
 	// more xml stuff
 	//
-	if ( si->m_xml ) {
+	if ( si->m_format == FORMAT_XML ) {
 		// doc size in Kilobytes
 		sb.safePrintf ( "\t\t<size><![CDATA[%4.0fk]]></size>\n",
 				(float)mr->m_contentLen/1024.0);
@@ -2103,7 +2211,7 @@ static int printResult ( SafeBuf &sb,
 	// NULLify if empty
 	if ( mr->size_outlinks <= 0 ) outlinks = NULL;
 	// only for xml for now
-	if ( ! si->m_xml ) outlinks = NULL;
+	if ( si->m_format == FORMAT_HTML ) outlinks = NULL;
 	Inlink *k;
 	// do we need absScore2 for outlinks?
 	//k = NULL;
@@ -2119,7 +2227,7 @@ static int printResult ( SafeBuf &sb,
 			      k->m_ip, // hostHash, but use ip for now
 			      (long)k->m_firstIndexedDate ,
 			      (long)k->m_datedbDate );
-	if ( si->m_xml ) {
+	if ( si->m_format == FORMAT_XML ) {
 		// result
 		sb.safePrintf("\t\t<language><![CDATA[%s]]>"
 			      "</language>\n", 
@@ -2146,7 +2254,7 @@ static int printResult ( SafeBuf &sb,
 		if ( charset ) sb.safePrintf(" - %s ", charset);
 	}
 
-	if ( ! si->m_xml ) sb.safePrintf("<br>\n");
+	if ( si->m_format == FORMAT_HTML ) sb.safePrintf("<br>\n");
 
 	char *coll = si->m_cr->m_coll;
 
@@ -2155,7 +2263,7 @@ static int printResult ( SafeBuf &sb,
 	if ( mr->m_noArchive       ) printCached = false;
 	if ( isAdmin               ) printCached = true;
 	if ( mr->m_contentLen <= 0 ) printCached = false;
-	if ( si->m_xml             ) printCached = false;
+	if ( si->m_format == FORMAT_XML ) printCached = false;
 	if ( printCached && cr->m_clickNScrollEnabled ) 
 		sb.safePrintf ( " - <a href=/scroll.html?page="
 				"get?"
@@ -2177,7 +2285,7 @@ static int printResult ( SafeBuf &sb,
 				mr->m_docId ); 
 
 	// the new links
-	if ( ! si->m_xml ) {
+	if ( si->m_format == FORMAT_HTML ) {
 		//sb.safePrintf(" - <a href=\"/scoring?"
 		//	      "c=%s&\">scoring</a>",
 		//	      coll );
@@ -2199,7 +2307,7 @@ static int printResult ( SafeBuf &sb,
 	//     g_conf.m_addUrlEnabled &&
 	//     cr->m_addUrlEnabled      ) {
 	/*
-	if ( ! si->m_xml ) {
+	if ( si->m_format == FORMAT_HTML ) {
 		// the [respider] link
 		// save this for seo iframe!
 		sb.safePrintf (" - <a href=\"/admin/inject?u=" );
@@ -2218,7 +2326,7 @@ static int printResult ( SafeBuf &sb,
 	// unhide the divs on click
 	long placeHolder = -1;
 	long placeHolderLen;
-	if ( ! si->m_xml ) {
+	if ( si->m_format == FORMAT_HTML ) {
 		// place holder for backlink table link
 		placeHolder = sb.length();
 		sb.safePrintf (" - <a onclick="
@@ -2274,7 +2382,7 @@ static int printResult ( SafeBuf &sb,
 
 
 	// this stuff is secret just for local guys!
-	if ( ! si->m_xml && ( isAdmin || cr->m_isCustomCrawl ) ) {
+	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
 		// now the ip of url
 		//long urlip = msg40->getIp(i);
 		// don't combine this with the sprintf above cuz
@@ -2323,7 +2431,7 @@ static int printResult ( SafeBuf &sb,
 	}
 
 	// admin always gets the site: option so he can ban
-	if ( ! si->m_xml && ( isAdmin || cr->m_isCustomCrawl ) ) {
+	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){
 		char dbuf [ MAX_URL_LEN ];
 		long dlen = uu.getDomainLen();
 		memcpy ( dbuf , uu.getDomain() , dlen );
@@ -2482,18 +2590,20 @@ static int printResult ( SafeBuf &sb,
 	*/
 		
 
-	if ( ! si->m_xml )
+	if ( si->m_format == FORMAT_HTML )
 		sb.safePrintf ( "<br><br>\n");
 
 
 	// done?
 	DocIdScore *dp = msg40->getScoreInfo(ix);
 	if ( ! dp ) {
-		if ( si->m_xml ) sb.safePrintf ("\t</result>\n\n");
+		if ( si->m_format == FORMAT_XML ) 
+			sb.safePrintf ("\t</result>\n\n");
 		// wtf?
 		//char *xx=NULL;*xx=0;
 		// at least close up the table
-		if ( ! si->m_xml ) sb.safePrintf("</table>\n");
+		if ( si->m_format == FORMAT_HTML ) 
+			sb.safePrintf("</table>\n");
 		return true;
 	}
 
@@ -2512,7 +2622,7 @@ static int printResult ( SafeBuf &sb,
 	//Query *q = si->m_q;
 
 	// put in a hidden div so you can unhide it
-	if ( ! si->m_xml )
+	if ( si->m_format == FORMAT_HTML )
 		sb.safePrintf("<div id=bl%li style=display:none;>\n", ix );
 
 	// print xml and html inlinks
@@ -2520,7 +2630,7 @@ static int printResult ( SafeBuf &sb,
 	printInlinkText ( sb , mr , si , &numInlinks );
 
 
-	if ( ! si->m_xml ) {
+	if ( si->m_format == FORMAT_HTML ) {
 		sb.safePrintf("</div>");
 		sb.safePrintf("<div id=sc%li style=display:none;>\n", ix );
 	}
@@ -2555,7 +2665,7 @@ static int printResult ( SafeBuf &sb,
 			// skip if 0. neighborhood terms have weight of 0 now
 			if ( ps->m_finalScore == 0.0 ) continue;
 			// first time?
-			if ( firstTime && ! si->m_xml ) {
+			if ( firstTime && si->m_format == FORMAT_HTML ) {
 				Query *q = si->m_q;
 				printTermPairs ( sb , q , ps );
 				printScoresHeader ( sb );
@@ -2574,7 +2684,7 @@ static int printResult ( SafeBuf &sb,
 		if ( minScore < 0.0 || totalPairScore < minScore )
 			minScore = totalPairScore;
 		// we need to set "ft" for xml stuff below
-		if ( si->m_xml ) continue;
+		if ( si->m_format == FORMAT_XML ) continue;
 		//sb.safePrintf("<table border=1><tr><td><center><b>");
 		// print pair text
 		//long qtn1 = fps->m_qtermNum1;
@@ -2640,7 +2750,7 @@ static int printResult ( SafeBuf &sb,
 			// skip if 0. skip neighborhoods i guess
 			if ( ss->m_finalScore == 0.0 ) continue;
 			// first time?
-			if ( firstTime && ! si->m_xml ) {
+			if ( firstTime && si->m_format == FORMAT_HTML ) {
 				Query *q = si->m_q;
 				printSingleTerm ( sb , q , ss );
 				printScoresHeader ( sb );
@@ -2657,7 +2767,7 @@ static int printResult ( SafeBuf &sb,
 		if ( minScore < 0.0 || totalSingleScore < minScore )
 			minScore = totalSingleScore;
 		// we need to set "ft" for xml stuff below
-		if ( si->m_xml ) continue;
+		if ( si->m_format == FORMAT_XML ) continue;
 		//sb.safePrintf("<table border=1><tr><td><center><b>");
 		// print pair text
 		//long qtn = fss->m_qtermNum;
@@ -2680,7 +2790,7 @@ static int printResult ( SafeBuf &sb,
 	//if ( nr ) sb.safePrintf("</table>");
 	//sb.safePrintf("<br>");
 	// final score!!!
-	if ( si->m_xml ) {
+	if ( si->m_format == FORMAT_XML ) {
 		sb.safePrintf ("\t\t<siteRank>%li</siteRank>\n",
 			       (long)dp->m_siteRank );
 
@@ -2852,7 +2962,7 @@ static int printResult ( SafeBuf &sb,
 
 	/*
 	// UN-indent it if level is 1
-	if ( ! si->m_xml && si->m_doIpClustering ) {
+	if ( si->m_format == FORMAT_HTML && si->m_doIpClustering ) {
 		sb.safePrintf (" - [ <a href=\"/search?"
 			       "q=%%2Bip%%3A%s+%s&sc=0&c=%s\">"
 			       "More from this ip</a> ]",
@@ -2861,7 +2971,7 @@ static int printResult ( SafeBuf &sb,
 		if ( indent ) sb.safePrintf ( "</blockquote><br>\n");
 		else sb.safePrintf ( "<br><br>\n");
 	}
-	else if ( ! si->m_xml && si->m_doSiteClustering ) {
+	else if ( si->m_format == FORMAT_HTML && si->m_doSiteClustering ) {
 		char hbuf [ MAX_URL_LEN ];
 		long hlen = uu.getHostLen();
 		memcpy ( hbuf , uu.getHost() , hlen );
@@ -3006,7 +3116,7 @@ bool printPairScore ( SafeBuf &sb , SearchInput *si , PairScore *ps ,
 		bes = "+ <b>1.0</b>";
 	}
 	
-	if ( si->m_xml ) {
+	if ( si->m_format == FORMAT_XML ) {
 		sb.safePrintf("\t\t<pairInfo>\n");
 		
 		
@@ -3698,7 +3808,7 @@ bool printSingleScore ( SafeBuf &sb ,
 	long long tf = msg40->m_msg3a.m_termFreqs[qtn];
 	float tfw = ss->m_tfWeight;
 	
-	if ( si->m_xml ) {
+	if ( si->m_format == FORMAT_XML ) {
 		sb.safePrintf("\t\t<termInfo>\n");
 		
 		/*
@@ -4456,6 +4566,10 @@ bool printDmozRadioButtons ( SafeBuf &sb , long catId ) ;
 // if catId >= 1 then print the dmoz radio button
 bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 
+	char *root = "";
+	if ( g_conf.m_isMattWells )
+		root = "http://www.gigablast.com";
+
 	sb.safePrintf(
 		      // logo and menu table
 		      "<table border=0 cellspacing=5>"
@@ -4464,12 +4578,13 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 		      "<td rowspan=2 valign=top>"
 		      "<a href=/>"
 		      "<img "
-		      "src=http://www.gigablast.com/logo-small.png "
+		      "src=%s/logo-small.png "
 		      "height=64 width=295>"
 		      "</a>"
 		      "</td>"
 		      
 		      "<td>"
+		      , root
 		      );
 	// menu above search box
 	sb.safePrintf(
@@ -4650,3 +4765,249 @@ bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
 	return true;
 }
 */
+
+// return 1 if a should be before b
+int csvPtrCmp ( const void *a, const void *b ) {
+	//JsonItem *ja = (JsonItem **)a;
+	//JsonItem *jb = (JsonItem **)b;
+	char *pa = *(char **)a;
+	char *pb = *(char **)b;
+	if ( strcmp(pa,"type") == 0 ) return -1;
+	if ( strcmp(pb,"type") == 0 ) return  1;
+	// force title on top
+	if ( strcmp(pa,"product.title") == 0 ) return -1;
+	if ( strcmp(pb,"product.title") == 0 ) return  1;
+	if ( strcmp(pa,"title") == 0 ) return -1;
+	if ( strcmp(pb,"title") == 0 ) return  1;
+	// otherwise string compare
+	int val = strcmp(pa,pb);
+	return val;
+}
+	
+
+#include "Json.h"
+
+// 
+// print header row in csv
+//
+bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
+
+	Msg40 *msg40 = &st->m_msg40;
+ 	long numResults = msg40->getNumResults();
+
+	char tmp1[1024];
+	SafeBuf tmpBuf (tmp1 , 1024);
+
+	char tmp2[1024];
+	SafeBuf nameBuf (tmp2, 1024);
+
+	char nbuf[27000];
+	HashTableX nameTable;
+	if ( ! nameTable.set ( 8,4,2048,nbuf,27000,false,0,"ntbuf") )
+		return false;
+
+	long niceness = 0;
+
+	// . scan every fucking json item in the search results.
+	// . we still need to deal with the case when there are so many
+	//   search results we have to dump each msg20 reply to disk in
+	//   order. then we'll have to update this code to scan that file.
+
+	for ( long i = 0 ; i < numResults ; i++ ) {
+
+		// get the msg20 reply for search result #i
+		Msg20      *m20 = msg40->m_msg20[i];
+		Msg20Reply *mr  = m20->m_r;
+
+		// get content
+		char *json = mr->ptr_content;
+		// how can it be empty?
+		if ( ! json ) continue;
+
+		// parse it up
+		Json jp;
+		jp.parseJsonStringIntoJsonItems ( json , niceness );
+
+		// scan each json item
+		for ( JsonItem *ji = jp.getFirstItem(); ji ; ji = ji->m_next ){
+
+			// skip if not number or string
+			if ( ji->m_type != JT_NUMBER && 
+			     ji->m_type != JT_STRING )
+				continue;
+
+			// if in an array, do not print! csv is not
+			// good for arrays... like "media":[....] . that
+			// one might be ok, but if the elements in the
+			// array are not simple types, like, if they are
+			// unflat json objects then it is not well suited
+			// for csv.
+			if ( ji->isInArray() ) continue;
+
+			// reset length of buf to 0
+			tmpBuf.reset();
+
+			// . get the name of the item into "nameBuf"
+			// . returns false with g_errno set on error
+			if ( ! ji->getCompoundName ( tmpBuf ) )
+				return false;
+
+			// is it new?
+			long long h64 = hash64n ( tmpBuf.getBufStart() );
+			if ( nameTable.isInTable ( &h64 ) ) continue;
+
+			// record offset of the name for our hash table
+			long nameBufOffset = nameBuf.length();
+			
+			// store the name in our name buffer
+			if ( ! nameBuf.safeStrcpy ( tmpBuf.getBufStart() ) )
+				return false;
+			if ( ! nameBuf.pushChar ( '\0' ) )
+				return false;
+
+			// it's new. add it
+			if ( ! nameTable.addKey ( &h64 , &nameBufOffset ) )
+				return false;
+		}
+	}
+
+	// . make array of ptrs to the names so we can sort them
+	// . try to always put title first regardless
+	char *ptrs [ 1024 ];
+	long numPtrs = 0;
+	for ( long i = 0 ; i < nameTable.m_numSlots ; i++ ) {
+		if ( ! nameTable.m_flags[i] ) continue;
+		long off = *(long *)nameTable.getValueFromSlot(i);
+		char *p = nameBuf.getBufStart() + off;
+		ptrs[numPtrs++] = p;
+		if ( numPtrs >= 1024 ) break;
+	}
+
+	// sort them
+	qsort ( ptrs , numPtrs , 4 , csvPtrCmp );
+
+	// set up table to map field name to column for printing the json items
+	HashTableX *columnTable = &st->m_columnTable;
+	if ( ! columnTable->set ( 8,4, numPtrs * 4,NULL,0,false,0,"coltbl" ) )
+		return false;
+
+	// now print them out as the header row
+	for ( long i = 0 ; i < numPtrs ; i++ ) {
+		if ( i > 0 && ! sb->pushChar(',') ) return false;
+		if ( ! sb->safeStrcpy ( ptrs[i] ) ) return false;
+		// record the hash of each one for printing out further json
+		// objects in the same order so columns are aligned!
+		long long h64 = hash64n ( ptrs[i] );
+		if ( ! columnTable->addKey ( &h64 , &i ) ) 
+			return false;
+	}
+
+	st->m_numCSVColumns = numPtrs;
+
+	if ( ! sb->pushChar('\n') )
+		return false;
+	if ( ! sb->nullTerm() )
+		return false;
+
+	return true;
+}
+
+// returns false and sets g_errno on error
+bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
+
+	long niceness = 0;
+
+	// parse the json
+	Json jp;
+	jp.parseJsonStringIntoJsonItems ( json , niceness );
+
+	HashTableX *columnTable = &st->m_columnTable;
+	long numCSVColumns = st->m_numCSVColumns;
+
+	
+	// make buffer space that we need
+	char ttt[1024];
+	SafeBuf ptrBuf(ttt,1024);
+	long need = numCSVColumns * sizeof(JsonItem *);
+	if ( ! ptrBuf.reserve ( need ) ) return false;
+	JsonItem **ptrs = (JsonItem **)ptrBuf.getBufStart();
+
+	// reset json item ptrs for csv columns. all to NULL
+	memset ( ptrs , 0 , need );
+
+	char tmp1[1024];
+	SafeBuf tmpBuf (tmp1 , 1024);
+
+	JsonItem *ji;
+
+	///////
+	//
+	// print json item in csv
+	//
+	///////
+	for ( ji = jp.getFirstItem(); ji ; ji = ji->m_next ) {
+
+		// skip if not number or string
+		if ( ji->m_type != JT_NUMBER && 
+		     ji->m_type != JT_STRING )
+			continue;
+
+		// skip if not well suited for csv (see above comment)
+		if ( ji->isInArray() ) continue;
+
+		// . get the name of the item into "nameBuf"
+		// . returns false with g_errno set on error
+		if ( ! ji->getCompoundName ( tmpBuf ) )
+			return false;
+
+		// is it new?
+		long long h64 = hash64n ( tmpBuf.getBufStart() );
+
+		long slot = columnTable->getSlot ( &h64 ) ;
+		// MUST be in there
+		if ( slot < 0 ) { char *xx=NULL;*xx=0;}
+
+		// get col #
+		long column = *(long *)columnTable->getValueFromSlot ( slot );
+
+		// sanity
+		if ( column >= numCSVColumns ) { char *xx=NULL;*xx=0; }
+
+		// set ptr to it for printing when done parsing every field
+		// for this json item
+		ptrs[column] = ji;
+	}
+
+	// now print out what we got
+	for ( long i = 0 ; i < numCSVColumns ; i++ ) {
+		// , delimeted
+		if ( i > 0 ) sb->pushChar(',');
+		// get it
+		ji = ptrs[i];
+		// skip if none
+		if ( ! ji ) continue;
+		//
+		// get value and print otherwise
+		//
+		if ( ji->m_type == JT_NUMBER ) {
+			// print numbers without double quotes
+			if ( ji->m_valueDouble *10000000.0 == 
+			     (double)ji->m_valueLong * 10000000.0 )
+				sb->safePrintf("%li",ji->m_valueLong);
+			else
+				sb->safePrintf("%f",ji->m_valueDouble);
+			continue;
+		}
+
+		// print the value
+		sb->pushChar('\"');
+		sb->csvEncode ( ji->getValue() , ji->getValueLen() );
+		sb->pushChar('\"');
+	}
+
+	sb->pushChar('\n');
+	sb->nullTerm();
+
+	return true;
+}
+

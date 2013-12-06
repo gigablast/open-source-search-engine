@@ -22,11 +22,12 @@
 // 	3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0
 // };
 
-SafeBuf::SafeBuf(long initSize) {
+SafeBuf::SafeBuf(long initSize, char *label ) {
 	if(initSize <= 0) initSize = 1;
 	m_capacity = initSize;
 	m_length = 0;
-	m_buf = (char*)mrealloc(NULL, 0, m_capacity, "SafeBuf");
+	m_label = label;
+	m_buf = (char*)mrealloc(NULL, 0, m_capacity, m_label );
 	if(!m_buf) m_capacity = 0;
 	m_usingStack = false;
 	m_encoding = csUTF8;
@@ -39,6 +40,11 @@ SafeBuf::SafeBuf() {
 	m_buf = NULL;
 	m_usingStack = false;
 	m_encoding = csUTF8;
+	m_label = NULL;
+}
+
+void SafeBuf::setLabel ( char *label ) {
+	m_label = label;
 }
 
 SafeBuf::SafeBuf(char* stackBuf, long cap) {
@@ -47,6 +53,7 @@ SafeBuf::SafeBuf(char* stackBuf, long cap) {
 	m_buf = stackBuf;
 	m_length = 0;
 	m_encoding = csUTF8;
+	m_label = NULL;
 }
 
 SafeBuf::SafeBuf(char *heapBuf, long bufMax, long bytesInUse, bool ownData) {
@@ -292,8 +299,14 @@ bool SafeBuf::advance ( long i ) {
 	return true;
 }
 
-bool SafeBuf::reserve(long i, char *label, bool clearIt ) {
-	if ( ! label ) label = "SafeBuf";
+bool SafeBuf::reserve(long i , char *label, bool clearIt ) {
+
+	// if we don't already have a label and they provided one, use it
+	if ( ! m_label ) {
+		if ( label ) m_label = label;
+		else         m_label = "SafeBuf";
+	}
+
 	if(m_length + i > m_capacity) {
 		char *tmpBuf = m_buf;
 		long tmpCap = m_capacity;
@@ -301,7 +314,7 @@ bool SafeBuf::reserve(long i, char *label, bool clearIt ) {
 			m_buf = NULL;
 			m_capacity += i;
 			//if(m_capacity < 8) m_capacity = 8;
-			m_buf = (char*)mrealloc(m_buf, 0, m_capacity, label);
+			m_buf = (char*)mrealloc(m_buf, 0, m_capacity,m_label);
 			if(!m_buf) {
 				m_buf = tmpBuf;
 				m_capacity = tmpCap;
@@ -320,7 +333,7 @@ bool SafeBuf::reserve(long i, char *label, bool clearIt ) {
 		}
 		m_capacity += i;
 		//if(m_capacity < 8) m_capacity = 8;
-		m_buf = (char*)mrealloc(m_buf, tmpCap, m_capacity,label);
+		m_buf = (char*)mrealloc(m_buf, tmpCap, m_capacity,m_label);
 		if(!m_buf) {
 			m_buf = tmpBuf;
 			m_capacity = tmpCap;
@@ -344,11 +357,11 @@ bool SafeBuf::reserve(long i, char *label, bool clearIt ) {
 
 //reserve this many bytes, if we need to alloc, we double the 
 //buffer size.
-bool SafeBuf::reserve2x(long i) {
+bool SafeBuf::reserve2x(long i, char *label) {
 	//watch out for overflow!
 	if((m_capacity << 1) + i < 0) return false;
 	if(i + m_length >= m_capacity)
-		return reserve(m_capacity + i);
+		return reserve(m_capacity + i,label);
 	else return true;
 }
 
@@ -369,8 +382,8 @@ long SafeBuf::dumpToFile(char *filename ) {
 		    filename);
 		return -1;
 	}
-	logf(LOG_DEBUG, "test: safebuf %li bytes written to %s",m_length,
-	     filename);
+	//logf(LOG_DEBUG, "test: safebuf %li bytes written to %s",m_length,
+	//     filename);
  retry23:
 	long bytes = write(fd, (char*)m_buf, m_length) ;
 	if ( bytes != m_length ) {
@@ -972,7 +985,8 @@ bool  SafeBuf::htmlEncode(char *s, long len, bool encodePoundSign ,
 	// . sanity check
 	if ( m_encoding == csUTF16 ) { char *xx = NULL; *xx = 0; }
 	// alloc some space if we need to. add a byte for NULL termination.
-	if(m_length+len+1>=m_capacity && !reserve(m_capacity+len))return false;
+	if(m_length+len+1>=m_capacity && !reserve(m_capacity+len+1))
+		return false;
 	// tmp vars
 	char *t    = m_buf + m_length;
 	char *tend = m_buf + m_capacity;
@@ -2517,7 +2531,11 @@ bool SafeBuf::decodeJSON ( long niceness ) {
 // . this is used by xmldoc.cpp to PARTIALLY decode a json buf so we do not
 //   index letters in escapes like \n \r \f \t \uxxxx \\ \/
 // . SO we do keep \" 
-bool SafeBuf::safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness) {
+// . so when indexing a doc we set decodeAll to FALSE, but if you want to 
+//   decode quotation marks as well then set decodeAll to TRUE!
+bool SafeBuf::safeDecodeJSONToUtf8 ( char *json, 
+				     long jsonLen, 
+				     long niceness ) {
 
 	// how much space to reserve for the copy?
 	long need = jsonLen;
@@ -2576,6 +2594,15 @@ bool SafeBuf::safeDecodeJSONToUtf8 ( char *json, long jsonLen, long niceness) {
 			// a "\/" is an encoded forward slash
 			if ( src[1] == '/' ) {
 				*dst++ = '/';
+				src += 2;
+				continue;
+			}
+			// we do not decode quotation marks when indexing
+			// the doc so we can preserve json names/value pair
+			// information for indexing purposes. however,
+			// Title.cpp DOES want to decode quotations.
+			if ( src[1] == '\"' ) { // && decodeAll ) {
+				*dst++ = '\"';
 				src += 2;
 				continue;
 			}
@@ -3153,5 +3180,51 @@ bool SafeBuf::htmlDecode ( char *src,
 	// assign that length then
 	m_length = newLen;
 	// good to go
+	return true;
+}
+
+void SafeBuf::replaceChar ( char src , char dst ) {
+	char *px = m_buf;
+	char *pxEnd = m_buf + m_length;
+	for ( ; px < pxEnd ; px++ ) if ( *px == src ) *px = dst;
+}
+
+
+// encode a double quote char to two double quote chars
+bool SafeBuf::csvEncode ( char *s , long len , long niceness ) {
+
+	if ( ! s ) return true;
+
+	// assume all chars are double quotes and will have to be encoded
+	long need = len * 2 + 1;
+	if ( ! reserve ( need ) ) return false;
+
+	// tmp vars
+	char *dst  = m_buf + m_length;
+	//char *dstEnd = m_buf + m_capacity;
+
+	// scan through all 
+	char *send = s + len;
+	for ( ; s < send ; s++ ) {
+		// breathe
+		QUICKPOLL ( niceness );
+		// convert it?
+		if ( *s == '\"' ) {
+			*dst++ = '\"';
+			*dst++ = '\"';
+			continue;
+		}
+		//if ( *s == '\\' ) {
+		//	*dst++ = '\\';
+		//	*dst++ = '\\';
+		//	continue;
+		//}
+		*dst++ = *s;
+	}
+
+	m_length += dst - (m_buf + m_length);
+
+	nullTerm();
+
 	return true;
 }

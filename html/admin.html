@@ -78,21 +78,19 @@ You will need the following packages installed<br>
 2. Edit hosts.conf so the working directory is not /home/mwells/github/ but 
 rather your current working directory, where the 'gb' binary resides.
 <br><br>
-3. Run './gb 0'  to start a single gigablast node.
+3. Run './gb 0'  to start a single gigablast node which listens on port 8000.
 <br><br>
-4. Access the server with your browser on port 8000 (default port). You can change this default port in the gb.conf file.
+4. The first time you run it you will have to wait for it to build some binary data files from the txt files it uses that are based on wiktionary and wikipedia that it uses to do synonyms and phrasing. 
 <br><br>
-5. The first time you run it you will have to wait for it to build some binary data files from the txt files it uses that are based on wiktionary and wikipedia that it uses to do synonyms and phrasing. 
+5. Re-run it after it builds those binaries.
 <br><br>
-6. Re-run it after it builds those binaries.
+6. Check out the <a href=http://127.0.0.1:8000/master>Master Controls</a>. You need to connect to port 8000 from a local IP address or from an IP address on the same C-Class as part of Gigablast's security. Consider using an ssh tunnel if your browser's IP is not on the same C-Class as the server's. i.e. From your browser machine, ssh to the machine running the gb server: <i>ssh someservername.com -L 8000:127.0.0.1:8000</i> . Then on your browser go to the <a href=http://127.0.0.1:8000/master>Master Controls</a>.
 <br><br>
-7. Check out the <a href=http://127.0.0.1:8000/master>Master Controls</a>. You need to connect to port 8000 from a local IP address or from an IP address on the same C-Class as part of Gigablast's security. Consider using an ssh tunnel if your browser's IP is not on the same C-Class. i.e. From your browser machine, ssh to the machine running the gb server: <i>ssh someservername.com -L 8000:127.0.0.1:8000</i> . Then on your browser go to the <a href=http://127.0.0.1:8000/master>Master Controls</a>.
+7. Click on the <a href=http://127.0.0.1:8000/admin/inject?c=main>inject</a> menu and inject a URL into the index. It might be slow because it uses Google's public DNSes as specified in the Master Controls as 8.8.8.8 and 8.8.4.4. You should change those to your own local bind9 server for speed.
 <br><br>
-8. Click on the <a href=http://127.0.0.1:8000/admin/inject?c=main>inject</a> menu and inject a URL into the index. It might be slow because it uses Google's public DNSes as specified in the Master Controls as 8.8.8.8 and 8.8.4.4. You should change those to your own local bind9 server for speed.
+8. When the injection completes, try a <a href=http://127.0.0.1:8000/>search</a> for the document you injected.
 <br><br>
-9. When the injection completes, try a <a href=http://127.0.0.1:8000/>search</a> for the document you injected.
-<br><br>
-10. Turn on spiders on the <a href=http://127.0.0.1:8000>Master Controls</a> page so that it will begin spidering the outlinks of the page you injected.
+9. <a href=http://127.0.0.1:8000/master?se=1>Turn on spiders</a> on the <a href=http://127.0.0.1:8000/master>Master Controls</a> page so that it will begin spidering the outlinks of the page you injected.
 
 <br>
 

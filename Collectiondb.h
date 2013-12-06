@@ -18,6 +18,7 @@ public:
 	void (* m_callback) (void *state);
 	void *m_state;
 	char *m_coll;
+	bool  m_purgeSeeds;
 };
 
 class Collectiondb  {
@@ -94,7 +95,7 @@ class Collectiondb  {
 	bool deleteRecs ( class HttpRequest *r ) ;
 
 	// returns false if blocked, true otherwise. 
-	bool resetColl ( char *coll , WaitEntry *we );
+	bool resetColl ( char *coll , WaitEntry *we , bool purgeSeeds );
 
 	// . keep up to 128 of them, these reference into m_list
 	// . COllectionRec now includes m_needsSave and m_lastUpdateTime

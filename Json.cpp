@@ -4,7 +4,15 @@
 class JsonItem *Json::addNewItem () {
 
 	JsonItem *ji = (JsonItem *)m_sb.getBuf();
+
+	if ( m_sb.m_length + (long)sizeof(JsonItem) > m_sb.m_capacity ) {
+		log("json: preventing buffer breach");
+		return NULL;
+	}
+
+	// otherwise we got room
 	m_sb.incrementLength(sizeof(JsonItem));
+
 
 	if ( m_prev ) m_prev->m_next = ji;
 	ji->m_prev = m_prev;
@@ -53,7 +61,7 @@ JsonItem *Json::getItem ( char *name ) {
 
 #include "Mem.h" // gbstrlen()
 
-JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
+JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 
 	m_prev = NULL;
 
@@ -67,9 +75,15 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 	bool inQuote = false;
 	long need = 0;
 	for ( ; *p ; p++ ) {
-		if ( *p == '\"' && (p==json || p[-1]!='\\') )
+		// ignore any escaped char. also \x1234
+		if ( *p == '\\' ) {
+			if ( p[1] ) p++;
+			continue;
+		}
+		if ( *p == '\"' )
 			inQuote = ! inQuote;
-		if ( inQuote ) continue;
+		if ( inQuote ) 
+			continue;
 		if ( *p == '{' ||
 		     *p == ',' ||
 		     *p == '[' ||
@@ -172,8 +186,15 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 		if ( *p == '\"' ) {
 			// find end of quote
 			char *end = p + 1;
-			for ( ; *end ; end++ ) 
-				if ( *end == '\"' && end[-1] != '\\' ) break;
+			for ( ; *end ; end++ ) {
+				// skip two chars if escaped
+				if ( *end == '\\' && end[1] ) {
+					end++; 
+					continue;
+				}
+				// this quote is unescaped then
+				if ( *end == '\"' ) break;
+			}
 			// field?
 			char *x = end + 1;
 			// skip spaces
@@ -207,7 +228,8 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 				// get length decoded
 				long curr = m_sb.length();
 				// store decoded string right after jsonitem
-				if ( !m_sb.safeDecodeJSONToUtf8 ( str, slen,0))
+				if ( !m_sb.safeDecodeJSONToUtf8 (str,slen,
+								 niceness ))
 					return NULL;
 				// store length decoded json
 				ji->m_valueLen = m_sb.length() - curr;
@@ -240,7 +262,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 				ji->m_valueDouble = 0;
 			}
 			// store decoded string right after jsonitem
-			if ( !m_sb.safeDecodeJSONToUtf8 (p,slen,0))
+			if ( !m_sb.safeDecodeJSONToUtf8 (p,slen,niceness))
 				return NULL;
 			// store length decoded json
 			ji->m_valueLen = m_sb.length() - curr;
@@ -283,7 +305,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 			// copy the number as a string as well
 			long curr = m_sb.length();
 			// store decoded string right after jsonitem
-			if ( !m_sb.safeDecodeJSONToUtf8 ( str, slen,0))
+			if ( !m_sb.safeDecodeJSONToUtf8 ( str, slen,niceness))
 				return NULL;
 			// store length decoded json
 			ji->m_valueLen = m_sb.length() - curr;
@@ -323,11 +345,68 @@ void Json::test ( ) {
 		"in 2010\",\"18083009\":\"Apple personal digital assistants\",\"23475157\":\"Touchscreen portable media players\",\"30107877\":\"IPad\",\"9301031\":\"Apple Inc. hardware\",\"27765345\":\"IOS (Apple)\",\"26588084\":\"Tablet computers\"},\"type\":1,\"senseRank\":1,\"variety\":0.49056603773584906,\"depth\":0.5882352941176471},{\"id\":18839,\"positions\":[[1945,1950],[2204,2209]],\"name\":\"Music\",\"score\":0.7,\"contentMatch\":1,\"categories\":{\"991222\":\"Performing arts\",\"693016\":\"Entertainment\",\"691484\":\"Music\"},\"type\":1,\"senseRank\":1,\"variety\":0.22264150943396221,\"depth\":0.7058823529411764}],\"media\":[{\"pixelHeight\":350,\"link\":\"http://www.onlinemba.com/wp-content/uploads/2013/02/apple-innovates-invert-350x350.png\",\"primary\":\"true\",\"pixelWidth\":350,\"type\":\"image\"}]}";
 
 
-	JsonItem *ji = parseJsonStringIntoJsonItems ( json );
+	long niceness = 0;
+	JsonItem *ji = parseJsonStringIntoJsonItems ( json , niceness );
 
 	// print them out?
 	log("json: type0=%li",(long)ji->m_type);
 
 	return;
 }
-	
+
+bool JsonItem::getCompoundName ( SafeBuf &nameBuf ) {
+
+	// reset, but don't free mem etc. just set m_length to 0
+	nameBuf.reset();
+	// get its full compound name like "meta.twitter.title"
+	JsonItem *p = this;//ji;
+	char *lastName = NULL;
+	char *nameArray[20];
+	long  numNames = 0;
+	for ( ; p ; p = p->m_parent ) {
+		// empty name?
+		if ( ! p->m_name ) continue;
+		if ( ! p->m_name[0] ) continue;
+		// dup? can happen with arrays. parent of string
+		// in object, has same name as his parent, the
+		// name of the array. "dupname":[{"a":"b"},{"c":"d"}]
+		if ( p->m_name == lastName ) continue;
+		// update
+		lastName = p->m_name;
+		// add it up
+		nameArray[numNames++] = p->m_name;
+		// breach?
+		if ( numNames < 15 ) continue;
+		log("build: too many names in json tag");
+		break;
+	}
+	// assemble the names in reverse order which is correct order
+	for ( long i = 1 ; i <= numNames ; i++ ) {
+		// copy into our safebuf
+		if ( ! nameBuf.safeStrcpy ( nameArray[numNames-i]) ) 
+			return false;
+		// separate names with periods
+		if ( ! nameBuf.pushChar('.') ) return false;
+	}
+	// remove last period
+	nameBuf.removeLastChar('.');
+	// and null terminate
+	if ( ! nameBuf.nullTerm() ) return false;
+	// change all :'s in names to .'s since : is reserved!
+	char *px = nameBuf.getBufStart();
+	for ( ; *px ; px++ ) if ( *px == ':' ) *px = '.';
+
+	return true;
+}
+
+// is this json item in an array of json items?
+bool JsonItem::isInArray ( ) {
+	JsonItem *p = this;//ji;
+	for ( ; p ; p = p->m_parent ) {
+		// empty name? it's just a "value item" then, i guess.
+		//if ( ! p->m_name ) continue;
+		//if ( ! p->m_name[0] ) continue;
+		if ( p->m_type == JT_ARRAY ) return true;
+	}
+	return false;
+}

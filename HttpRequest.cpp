@@ -72,7 +72,9 @@ bool HttpRequest::copy ( class HttpRequest *r ) {
 // . NOTE: http 1.1 uses Keep-Alive by default (use Connection: close to not)
 bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 		       char *userAgent , char *proto , bool doPost ,
-		       char *cookie , char *additionalHeader ) {
+		       char *cookie , char *additionalHeader ,
+		       // if posting something, how many bytes is it?
+		       long postContentLen ) {
 
 	m_reqBufValid = false;
 
@@ -279,6 +281,8 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 if ( doPost ) {
 		 long contentLen = 0;
 		 if ( postData ) contentLen = strlen(postData);
+		 // this overrides if provided. -1 is default
+		 if ( postContentLen >= 0 ) contentLen = postContentLen;
 		 m_reqBuf.safePrintf ("Content-Length: %li\r\n", contentLen );
 		 m_reqBuf.safePrintf("\r\n");
 		 if ( postData ) m_reqBuf.safePrintf("%s",postData);
@@ -633,6 +637,13 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 // matt comcast
 	 if ( sock && strncmp(iptoa(sock->m_ip),"75.160.49.8",11) == 0) 
 	 	 m_isLocal = true;
+	 // matt comcast #2
+	 if ( sock && strncmp(iptoa(sock->m_ip),"69.181.136.143",14) == 0) 
+	 	 m_isLocal = true;
+	 // titan
+	 if ( sock && strncmp(iptoa(sock->m_ip),"66.162.42.131",13) == 0) 
+	 	 m_isLocal = true;
+
 
 	 // roadrunner ip
 	 // if ( sock && strncmp(iptoa(sock->m_ip),"66.162.42.131",13) == 0) 

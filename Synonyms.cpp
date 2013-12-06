@@ -429,6 +429,8 @@ char *getSourceString ( char source ) {
 	if ( source == SOURCE_BIGRAM ) return "bigram";
 	if ( source == SOURCE_TRIGRAM ) return "trigram";
 	if ( source == SOURCE_WIKTIONARY_EN ) return "wiktionary-en";
+	// the thing we are hashing is a "number"
+	if ( source == SOURCE_NUMBER ) return "number";
 	return "unknown";
 }
 

@@ -45,6 +45,9 @@
 #define SP_ADMIN_PAUSED 8 // g_conf.m_spideringEnabled = false
 #define SP_COMPLETED    9 // crawl is done, and no repeatCrawl is scheduled
 
+bool testPatterns ( ) ;
+bool doesStringContainPattern ( char *content , char *pattern ) ;
+
 bool getSpiderStatusMsg ( class CollectionRec *cx , 
 			  class SafeBuf *msg , 
 			  long *status ) ;
@@ -603,6 +606,8 @@ class SpiderRequest {
 	long    m_hasContactInfoValid     :1;
 	long    m_isContactyValid         :1;
 	long    m_hasAddressValid         :1;
+	//long    m_matchesUrlCrawlPattern  :1;
+	//long    m_matchesUrlProcessPattern:1;
 	long    m_hasTODValid             :1;
 	long    m_hasSiteVenueValid       :1;
 	long    m_siteNumInlinksValid     :1;
@@ -832,8 +837,8 @@ class SpiderReply {
 	// was the request an injection request
 	long    m_fromInjectionRequest    :1; 
 	// did we TRY to send it to the diffbot backend filter? might be err?
-	long    m_sentToDiffbot:1;
-	long    m_reserved2 :1;
+	long    m_sentToDiffbot           :1;
+	long    m_hadDiffbotError         :1;
 	long    m_reserved3 :1;
 	long    m_reserved4 :1;
 
@@ -1111,6 +1116,7 @@ class SpiderColl {
 	key_t      m_waitingTreeKey;
 	bool       m_waitingTreeKeyValid;
 	long       m_scanningIp;
+	bool       m_gotNewRequestsForScanningIp;
 
 	// start key for reading doledb
 	key_t m_msg5StartKey;
@@ -1125,7 +1131,7 @@ class SpiderColl {
 
 	// for reading lists from spiderdb
 	Msg5 m_msg5;
-	bool m_gettingList;
+	bool m_gettingList1;
 
 	// how many outstanding spiders a priority has
 	long m_outstandingSpiders[MAX_SPIDER_PRIORITIES];
@@ -1276,7 +1282,7 @@ class SpiderLoop {
 
 	bool printLockTable ( );
 
-	long getNumSpidersOutPerIp ( long firstIp ) ;
+	long getNumSpidersOutPerIp ( long firstIp , collnum_t collnum ) ;
 
 	// free all XmlDocs and m_list
 	void reset();
@@ -1301,7 +1307,7 @@ class SpiderLoop {
 	// . returns true and sets g_errno on error
 	bool spiderUrl9 ( class SpiderRequest *sreq ,
 			 key_t *doledbKey       ,
-			  char  *coll            ,
+			  collnum_t collnum,//char  *coll            ,
 			  long sameIpWaitTime , // in milliseconds
 			  long maxSpidersOutPerIp );
 
@@ -1312,7 +1318,8 @@ class SpiderLoop {
 	// state memory for calling SpiderUrl2() (maybe also getLocks()!)
 	SpiderRequest *m_sreq;
 
-	char      *m_coll;
+	//char      *m_coll;
+	collnum_t  m_collnum;
 	char      *m_content;
 	long       m_contentLen;
 	char       m_contentHasMime;
@@ -1354,7 +1361,7 @@ class SpiderLoop {
 	class SpiderColl *m_sc;
 
 	// used to avoid calling getRec() twice!
-	bool m_gettingList;
+	//bool m_gettingList0;
 
 	long m_outstanding1;
 	bool m_gettingDoledbList;

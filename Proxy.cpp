@@ -60,6 +60,7 @@ struct StateControl{
 	HttpRequest m_hr;
 	Host *m_forwardHost;
 	float m_pending;
+	bool m_isEventGuru;
 };
 
 #define UIF_ADMIN   0x01
@@ -370,6 +371,8 @@ bool Proxy::handleRequest (TcpSocket *s){
 	char *host  = hr.getHost();
 	char *hdom = host;
 	if ( strncasecmp(hdom,"www.",4) == 0 ) hdom += 4;
+	if ( strncasecmp(hdom,"www2.",5) == 0 ) hdom += 5;
+	if ( strncasecmp(hdom,"www1.",5) == 0 ) hdom += 5;
 	// auto redirect eventguru.com to www.eventguru.com so cookies
 	// are consistent
 	if ( ! redir && 
@@ -387,9 +390,19 @@ bool Proxy::handleRequest (TcpSocket *s){
 		redirLen = gbstrlen(redir);
 	}
 
+	bool isEventGuru = false;
+	if ( strcasecmp(hdom,"eventguru.com") == 0 )
+		isEventGuru = true;
+
+#ifdef MATTWELLS
+#define HTTPS_REDIR 1
+#endif
+
 
 	if ( redirLen > 0 && redir ) {
-		//redirect:
+#ifdef HTTPS_REDIR
+	redirect:
+#endif
 		HttpMime m;
 		m.makeRedirMime (redir,redirLen);
 		// . move the reply to a send buffer
@@ -431,6 +444,10 @@ bool Proxy::handleRequest (TcpSocket *s){
 	char *path = hr.getPath();
 	//long pathLen = hr.getPathLen();
 
+	// serve events on the gigablast.com domain:
+	if ( path && strncmp(path,"/events",7) == 0 )
+		isEventGuru = true;
+	
 	/*
 	bool badPage = false;
 	if ( n < 0 ) badPage = true;
@@ -502,6 +519,32 @@ bool Proxy::handleRequest (TcpSocket *s){
 	if ( ! strncmp(path,"/?id="        ,5 ) ) handleIt = false;
 
 
+	// log the request iff filename does not end in .gif .jpg .
+	char *f = NULL;
+	long  flen = 0;
+	if ( isEventGuru ) {
+		f     = hr.getFilename();
+		flen  = hr.getFilenameLen();
+	}
+
+	// proxy will handle eventguru images i guess
+	bool  isGif = ( f && flen >= 4 && strncmp(&f[flen-4],".gif",4) == 0 );
+	bool  isJpg = ( f && flen >= 4 && strncmp(&f[flen-4],".jpg",4) == 0 );
+	bool  isBmp = ( f && flen >= 4 && strncmp(&f[flen-4],".bmp",4) == 0 );
+	bool  isPng = ( f && flen >= 4 && strncmp(&f[flen-4],".png",4) == 0 );
+	bool  isIco = ( f && flen >= 4 && strncmp(&f[flen-4],".ico",4) == 0 );
+	bool  isPic = (isGif | isJpg | isBmp | isPng || isIco);
+
+	// use event guru favicon?
+	//if ( isEventGuru && isIco && strcmp(f,"favicon.ico") == 0 ) {
+	//	f = "eventguru_favicon.ico";
+	//	flen = gbstrlen(f);
+	//}
+
+	// eventguru.com host: in mime?
+	if ( isEventGuru && ! isPic )
+		handleIt = false;
+
 	// only proxy holds the accounting info
 	if ( ! strncmp ( path ,"/account", 8 ) ) {
 		printRequest(s, &hr);
@@ -515,12 +558,14 @@ bool Proxy::handleRequest (TcpSocket *s){
 	if ( tcp == &g_httpServer.m_ssltcp ) max = g_conf.m_httpsMaxSockets;
 	else                                 max = g_conf.m_httpMaxSockets;
 
-#ifdef _HTTPS_REDIR_
+#ifdef HTTPS_REDIR
 	// if hitting root page then tell them to go to https
 	// if not autobanned... but if it is an autobanned request on root
 	// page it should have go the turing test above!
 	if ( n == PAGE_ROOT && 
 	     ! g_isYippy &&
+	     // not event guru homepage
+	     ! isEventGuru &&
 	     // if not already on https
 	     tcp != &g_httpServer.m_ssltcp &&
 	     // do not redirect http://www.gigablast.com/?c=dmoz3 (directory)!
@@ -1265,6 +1310,8 @@ bool Proxy::forwardRequest ( StateControl *stC ) {
 			p[5] = '9';
 			break;
 		}
+		// code is invalid if is not for an old client
+		//if ( userId32b == 0 ) code = NULL;
 	}
 
 
@@ -1665,7 +1712,7 @@ void Proxy::gotReplyPage ( void *state, UdpSlot *slot ) {
 
 	// do not print login bars in the xml!! do not print for ixquick
 	// which gets results in html...
-	if ( ! stC->m_raw && ! stC->m_ch )
+	if ( ! stC->m_raw && ! stC->m_ch && ! stC->m_isEventGuru )
 		newReply = storeLoginBar ( reply , 
 					   size ,  // transmit size
 					   size , // allocsize
@@ -5153,11 +5200,16 @@ void Proxy::printUsers ( SafeBuf *sb ) {
 		// but if admin we should still have set our cookie
 		// adminsessid to our current session id so we know we are
 		// also the admin!
-		sb->safePrintf("<td><a href=/account?login=%s&password=%s>"
-			       "%s</td>"
+		sb->safePrintf("<td><nobr>%li. "
+			       "<a href=/account?login=%s&password=%s>"
+			       "%s</a></nobr></td>"
+			       ,i
 			       ,ui->m_login
 			       ,ui->m_password 
-			       ,ui->m_login);
+			       ,ui->m_login
+			       //,ui->m_userId32
+			       );
 	}
+	sb->safePrintf("</tr>\n");
 	sb->safePrintf("</table>\n");
 }

@@ -712,6 +712,9 @@ bool PosdbTable::allocTopTree ( ) {
 	//	return false;
 
 	if ( m_r->m_getDocIdScoringInfo ) {
+
+		m_scoreInfoBuf.setLabel ("scinfobuf" );
+
 		// . for holding the scoring info
 		// . add 1 for the \0 safeMemcpy() likes to put at the end so 
 		//   it will not realloc on us
@@ -731,6 +734,10 @@ bool PosdbTable::allocTopTree ( ) {
 		// compute. so this could easily get into the megabytes, most 
 		// of the time we will not need nearly that much however.
 		numPairs *= xx;
+
+		m_pairScoreBuf.setLabel ( "pairbuf" );
+		m_singleScoreBuf.setLabel ("snglbuf" );
+
 		// but alloc it just in case
 		if ( ! m_pairScoreBuf.reserve (numPairs * sizeof(PairScore) ) )
 			return false;
@@ -786,7 +793,7 @@ bool PosdbTable::allocTopTree ( ) {
 			slots = 20000000;
 		}
 		// each site hash is 4 bytes
-		if ( ! m_siteHashList.reserve ( slots ) )
+		if ( ! m_siteHashList.reserve ( slots ,"shshbuf" ) )
 			return false;
 		// quad # of sites to have space in between
 		if ( ! m_dt.set(4,0,slots,NULL,0,false,0,"pdtdt"))
@@ -1005,7 +1012,7 @@ void PosdbTable::evalSlidingWindow ( char **ptrs ,
 	for ( long i = 0 ; i < maxi ; i++ ) {
 
 		// skip if to the left of a pipe operator
-		if ( m_bflags[i] & (BF_PIPED|BF_NEGATIVE) ) continue;
+		if ( m_bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
 
 		//if ( ptrs[i] ) wpi = ptrs[i];
 		// if term does not occur in body, sub-in the best term
@@ -1027,7 +1034,7 @@ void PosdbTable::evalSlidingWindow ( char **ptrs ,
 	for ( ; j < maxj ; j++ ) {
 
 		// skip if to the left of a pipe operator
-		if ( m_bflags[j] & (BF_PIPED|BF_NEGATIVE) ) continue;
+		if ( m_bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
 
 		// TODO: use a cache using wpi/wpj as the key. 
 		//if ( ptrs[j] ) wpj = ptrs[j];
@@ -4097,6 +4104,9 @@ bool PosdbTable::setQueryTermInfo ( ) {
 
 	long nrg = 0;
 
+	// assume not sorting by a numeric termlist
+	m_sortByTermNum = -1;
+
 	//for ( long i = 0 ; i < m_msg2->getNumLists() ; i++ ) {
 	for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
 		QueryTerm *qt = &m_q->m_qterms[i];
@@ -4111,6 +4121,10 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		qti->m_qpos          = wordNum;
 		qti->m_wikiPhraseId  = qw->m_wikiPhraseId;
 		qti->m_quotedStartId = qw->m_quoteStart;
+		// is it gbsortby:?
+		if ( qt->m_fieldCode == FIELD_GBSORTBY ||
+		     qt->m_fieldCode == FIELD_GBREVSORTBY )
+			m_sortByTermNum = i;
 		// count
 		long nn = 0;
 		// also add in bigram lists
@@ -4226,6 +4240,18 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		if ( qt->m_piped ) qti->m_bigramFlags[nn] |= BF_PIPED;
 		// is it a negative term?
 		if ( qt->m_termSign=='-')qti->m_bigramFlags[nn]|=BF_NEGATIVE; 
+
+		// numeric posdb termlist flags. instead of word position
+		// they have a float stored there for sorting etc.
+		if (qt->m_fieldCode == FIELD_GBSORTBY )
+			qti->m_bigramFlags[nn]|=BF_NUMBER;
+		if (qt->m_fieldCode == FIELD_GBREVSORTBY )
+			qti->m_bigramFlags[nn]|=BF_NUMBER;
+		if (qt->m_fieldCode == FIELD_GBNUMBERMIN )
+			qti->m_bigramFlags[nn]|=BF_NUMBER;
+		if (qt->m_fieldCode == FIELD_GBNUMBERMAX )
+			qti->m_bigramFlags[nn]|=BF_NUMBER;
+
 		// only really add if useful
 		// no, because when inserting NEW (related) terms that are
 		// not currently in the document, this list may initially
@@ -4912,15 +4938,27 @@ void PosdbTable::intersectLists10_r ( ) {
 	// sites right now. this hash table must have been pre-allocated
 	// in Posdb::allocTopTree() above since we might be in a thread.
 	//
-	RdbList *whiteLists = m_msg2->m_whiteLists;
-	long nw = m_msg2->m_w;
+	RdbList *whiteLists = NULL;
+	long nw = 0;
+	if ( m_msg2 ) {
+		whiteLists = m_msg2->m_whiteLists;
+		nw = m_msg2->m_w;
+	}
 	for ( long i = 0 ; ! m_addedSites && i < nw ; i++ ) {
 		RdbList *list = &whiteLists[i];
 		if ( list->isEmpty() ) continue;
 		// sanity test
 		long long d1 = g_posdb.getDocId(list->getList());
-		if ( d1 > m_msg2->m_docIdEnd ) { char *xx=NULL;*xx=0; }
-		if ( d1 < m_msg2->m_docIdStart ) { char *xx=NULL;*xx=0; }
+		if ( d1 > m_msg2->m_docIdEnd ) { 
+			log("posdb: d1=%lli > %lli",
+			    d1,m_msg2->m_docIdEnd);
+			//char *xx=NULL;*xx=0; 
+		}
+		if ( d1 < m_msg2->m_docIdStart ) { 
+			log("posdb: d1=%lli < %lli",
+			    d1,m_msg2->m_docIdStart);
+			//char *xx=NULL;*xx=0; 
+		}
 		// first key is always 18 bytes cuz it has the termid
 		// scan recs in the list
 		for ( ; ! list->isExhausted() ; list->skipCurrentRecord() ) {
@@ -5049,6 +5087,8 @@ void PosdbTable::intersectLists10_r ( ) {
 		QueryTermInfo *qti = &qip[i];
 		// skip if negative query term
 		if ( qti->m_bigramFlags[0] & BF_NEGATIVE ) continue;
+		// skip if numeric field like gbsortby:price gbmin.price:1.23
+		if ( qti->m_bigramFlags[0] & BF_NUMBER ) continue;
 		// set it
 		if ( qti->m_wikiPhraseId == 1 ) continue;
 		// stop
@@ -5297,6 +5337,9 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	long nnn = m_numQueryTermInfos;
 	if ( ! m_r->m_doMaxScoreAlgo ) nnn = 0;
+
+	// do not do it if we got a gbsortby: field
+	if ( m_sortByTermNum >= 0 ) nnn = 0;
 
 	/*
 	// skip all this if getting score of just one docid on special
@@ -5584,6 +5627,8 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	pass0++;
 
+	if ( m_sortByTermNum >= 0 ) goto skipScoringFilter;
+
 	// test why we are slow
 	//if ( (s_sss++ % 8) != 0 ) { docIdPtr += 6; fail0++; goto docIdLoop;}
 
@@ -5743,6 +5788,8 @@ void PosdbTable::intersectLists10_r ( ) {
 		}
 	}
 
+ skipScoringFilter:
+
 	pass++;
 
  skipPreAdvance:
@@ -5770,7 +5817,12 @@ void PosdbTable::intersectLists10_r ( ) {
 	// mini merge buf:
 	mptr = mbuf;
 
-	// merge each set of sublists
+	// . merge each set of sublists
+	// . like we merge a term's list with its two associated bigram
+	//   lists, if there, the left bigram and right bigram list.
+	// . and merge all the synonym lists for that term together as well.
+	//   so if the term is 'run' we merge it with the lists for
+	//   'running' 'ran' etc.
 	for ( long j = 0 ; j < m_numQueryTermInfos ; j++ ) {
 		// get the query term info
 		QueryTermInfo *qti = &qip[j];
@@ -6045,12 +6097,12 @@ void PosdbTable::intersectLists10_r ( ) {
 	for ( long i = 0   ; i < m_numQueryTermInfos ; i++ ) {
 
 	// skip if not part of score
-	if ( bflags[i] & (BF_PIPED|BF_NEGATIVE) ) continue;
+	if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
 
 	// and pair it with each other possible query term
 	for ( long j = i+1 ; j < m_numQueryTermInfos ; j++ ) {
 		// skip if not part of score
-		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE) ) continue;
+		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
 		// but if they are in the same wikipedia phrase
 		// then try to keep their positions as in the query.
 		// so for 'time enough for love' ideally we want
@@ -6126,7 +6178,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	for ( long i = 0 ; i < m_numQueryTermInfos ; i++ ) {
 		float sts;
 		// skip if to the left of a pipe operator
-		if ( bflags[i] & (BF_PIPED|BF_NEGATIVE) ) continue;
+		if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
 		// sometimes there is no wordpos subtermlist for this docid
 		// because it just has the bigram, like "streetlight" and not
 		// the word "light" by itself for the query 'street light'
@@ -6218,7 +6270,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	//
 	for ( long i = 0 ; i < m_numQueryTermInfos ; i++ ) {
 		// skip if to the left of a pipe operator
-		if ( bflags[i] & (BF_PIPED|BF_NEGATIVE) ) continue;
+		if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
 		// skip wordposition until it in the body
 		while ( xpos[i] &&!s_inBody[g_posdb.getHashGroup(xpos[i])]) {
 			// advance
@@ -6269,7 +6321,9 @@ void PosdbTable::intersectLists10_r ( ) {
 	minx = -1;
 	for ( long x = 0 ; x < m_numQueryTermInfos ; x++ ) {
 		// skip if to the left of a pipe operator
-		if ( bflags[x] & (BF_PIPED|BF_NEGATIVE) ) continue;
+		// and numeric posdb termlists do not have word positions,
+		// they store a float there.
+		if ( bflags[x] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
 		if ( ! xpos[x] ) continue;
 		if ( xpos[x] && minx == -1 ) {
 			minx = x;
@@ -6298,7 +6352,8 @@ void PosdbTable::intersectLists10_r ( ) {
 		long k; 
 		for ( k = 0 ; k < m_numQueryTermInfos ; k++ ) {
 			// skip if to the left of a pipe operator
-			if ( bflags[k] & (BF_PIPED|BF_NEGATIVE) ) continue;
+			if ( bflags[k] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) 
+				continue;
 			if ( xpos[k] ) break;
 		}
 		// all lists are now exhausted
@@ -6337,12 +6392,12 @@ void PosdbTable::intersectLists10_r ( ) {
 	for ( long i = 0   ; i < m_numQueryTermInfos ; i++ ) {
 
 	// skip if to the left of a pipe operator
-	if ( bflags[i] & (BF_PIPED|BF_NEGATIVE) ) continue;
+	if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
 
 	for ( long j = i+1 ; j < m_numQueryTermInfos ; j++ ) {
 
 		// skip if to the left of a pipe operator
-		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE) ) continue;
+		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
 
 		//
 		// get score for term pair from non-body occuring terms
@@ -6403,6 +6458,12 @@ void PosdbTable::intersectLists10_r ( ) {
 	     docLang == 0 ||
 	     m_r->m_language == docLang)
 		score *= SAMELANGMULT;
+
+	//
+	// if we have a gbsortby:price term then score exclusively on that
+	//
+	if ( m_sortByTermNum >= 0 )
+		score = g_posdb.getFloat ( miniMergedList[m_sortByTermNum] );
 
 	// . seoDebug hack so we can set "dcs"
 	// . we only come here if we actually made it into m_topTree

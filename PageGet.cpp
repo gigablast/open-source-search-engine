@@ -33,7 +33,7 @@ public:
 	//TagRec     m_tagRec;
 	TcpSocket *m_socket;
 	HttpRequest m_r;
-	char m_coll[50];
+	char m_coll[MAX_COLL_LEN+2];
 	//CollectionRec *m_cr;
 	bool       m_isAdmin;
 	bool       m_isLocal;
@@ -136,7 +136,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 		uint8_t langId = getLangIdFromAbbr ( langAbbr );
 		st->m_langId = langId;
 	}
-	strncpy ( st->m_coll , coll , 40 );
+	strncpy ( st->m_coll , coll , MAX_COLL_LEN+1 );
 	// store query for query highlighting
 	st->m_netTestResults    = r->getLong ("rnettest", false );
 	if( st->m_netTestResults ) {
@@ -179,14 +179,22 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 		sreq.reset();
 		strcpy(sreq.m_url, url );
 		sreq.setDataSize();
-		xd->set4 ( &sreq , NULL , coll , NULL , st->m_niceness ); 
+		// this returns false if "coll" is invalid
+		if ( ! xd->set4 ( &sreq , NULL , coll , NULL , st->m_niceness ) ) 
+			goto hadSetError;
 	}
 	// . when getTitleRec() is called it will load the old one
 	//   since XmlDoc::m_setFromTitleRec will be true
 	// . niceness is 0
-	else {
-		// use st->m_coll since XmlDoc just points to it!
-		xd->set3 ( docId , st->m_coll , 0 );
+	// . use st->m_coll since XmlDoc just points to it!
+	// . this returns false if "coll" is invalid
+	else if ( ! xd->set3 ( docId , st->m_coll , 0 ) ) {
+	hadSetError:
+		mdelete ( st , sizeof(State2) , "PageGet1" );
+		delete ( st );
+		g_errno = ENOMEM;
+		log("PageGet: set3: %s", mstrerror(g_errno));
+		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
 	}
 	// if it blocks while it loads title rec, it will re-call this routine
 	xd->setCallback ( st , processLoopWrapper );

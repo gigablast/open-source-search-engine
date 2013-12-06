@@ -72,6 +72,10 @@ CollectionRec::CollectionRec() {
 
 	m_lastResetCount = 0;
 
+	// regex_t types
+	m_hasucr = false;
+	m_hasupr = false;
+
 	// for diffbot caching the global spider stats
 	reset();
 
@@ -91,6 +95,11 @@ void CollectionRec::setToDefaults ( ) {
 }
 
 void CollectionRec::reset() {
+
+	// regex_t types
+	if ( m_hasucr ) regfree ( &m_ucr );
+	if ( m_hasupr ) regfree ( &m_upr );
+
 	// make sure we do not leave spiders "hanging" waiting for their
 	// callback to be called... and it never gets called
 	//if ( m_callbackQueue.length() > 0 ) { char *xx=NULL;*xx=0; }
@@ -140,8 +149,34 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// . accepts OBJ_COLLECTIONREC or OBJ_CONF
 	g_parms.setFromFile ( this , tmp2 , tmp1 );
 
-	// add default reg ex
-	setUrlFiltersToDefaults();
+	// add default reg ex IFF there are no url filters there now
+	if ( m_numRegExs == 0 ) setUrlFiltersToDefaults();
+
+	// compile regexs here
+	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
+	if ( rx && ! rx[0] ) rx = NULL;
+	if ( rx ) m_hasucr = true;
+	if ( rx && regcomp ( &m_ucr , rx ,
+		       REG_EXTENDED|REG_ICASE|
+		       REG_NEWLINE|REG_NOSUB) ) {
+			// error!
+			return log("xmldoc: regcomp %s failed: %s. "
+				   "Ignoring.",
+				   rx,mstrerror(errno));
+	}
+
+	rx = m_diffbotUrlProcessRegEx.getBufStart();
+	if ( rx && ! rx[0] ) rx = NULL;
+	if ( rx ) m_hasupr = true;
+	if ( rx && regcomp ( &m_upr , rx ,
+		       REG_EXTENDED|REG_ICASE|
+		       REG_NEWLINE|REG_NOSUB) ) {
+			// error!
+			return log("xmldoc: regcomp %s failed: %s. "
+				   "Ignoring.",
+				   rx,mstrerror(errno));
+	}
+
 
 	//
 	// LOAD the crawlinfo class in the collectionrec for diffbot
@@ -392,7 +427,7 @@ bool CollectionRec::save ( ) {
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
 	if ( ! g_parms.saveToXml ( (char *)this , tmp ) ) return false;
 	// log msg
-	log (LOG_INFO,"db: Saved %s.",tmp);//f.getFilename());
+	//log (LOG_INFO,"db: Saved %s.",tmp);//f.getFilename());
 
 	//
 	// save the crawlinfo class in the collectionrec for diffbot
@@ -400,7 +435,7 @@ bool CollectionRec::save ( ) {
 	// SAVE LOCAL
 	sprintf ( tmp , "%scoll.%s.%li/localcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	log("coll: saving %s",tmp);
+	//log("coll: saving %s",tmp);
 	SafeBuf sb;
 	//m_localCrawlInfo.print ( &sb );
 	// binary now
@@ -413,7 +448,7 @@ bool CollectionRec::save ( ) {
 	// SAVE GLOBAL
 	sprintf ( tmp , "%scoll.%s.%li/globalcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	log("coll: saving %s",tmp);
+	//log("coll: saving %s",tmp);
 	sb.reset();
 	//m_globalCrawlInfo.print ( &sb );
 	// binary now

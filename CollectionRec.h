@@ -56,7 +56,7 @@
 //#define MAX_SITE_EXPRESSION_LEN 128
 //#define MAX_SITE_EXPRESSIONS    256
 
-//#include "regex.h"
+#include "regex.h"
 
 #include "Url.h"  // MAX_COLL_LEN
 //#include "Sync.h"
@@ -107,6 +107,9 @@ class CrawlInfo {
 	// have we sent out email/webhook notifications crawl has no urls
 	// currently in the ready queue (doledb) to spider?
 	char m_sentCrawlDoneAlert;
+
+	//long m_numUrlsLaunched;
+	long m_dummy1;
 
 	void reset() { memset ( this , 0 , sizeof(CrawlInfo) ); };
 	//bool print (class SafeBuf *sb ) ;
@@ -432,8 +435,27 @@ class CollectionRec {
 	//SafeBuf m_diffbotApiList;//QueryString;
 	//SafeBuf m_diffbotUrlCrawlPattern;
 	//SafeBuf m_diffbotUrlProcessPattern;
+
+	// use for all now...
+	SafeBuf m_diffbotApiUrl;
+
+	// only process pages whose content matches this pattern
 	SafeBuf m_diffbotPageProcessPattern;
+	// only process urls that match this pattern
+	SafeBuf m_diffbotUrlProcessPattern;
+	// only CRAWL urls that match this pattern
+	SafeBuf m_diffbotUrlCrawlPattern;
+
+	// regex support
+	SafeBuf m_diffbotUrlCrawlRegEx;
+	SafeBuf m_diffbotUrlProcessRegEx;
+	regex_t m_ucr;
+	regex_t m_upr;
+	long    m_hasucr:1;
+	long    m_hasupr:1;
+
 	char    m_diffbotOnlyProcessIfNew;
+
 	//SafeBuf m_diffbotClassify;
 	//char m_diffbotClassify;
 	//char m_useDiffbot;
@@ -514,6 +536,9 @@ class CollectionRec {
 
 	long      m_numRegExs11;
 	SafeBuf   m_spiderDiffbotApiUrl [ MAX_FILTERS ];
+
+	long      m_numRegExs8;
+	char      m_harvestLinks     [ MAX_FILTERS ];
 
 	// dummy?
 	long      m_numRegExs9;
@@ -670,12 +695,6 @@ class CollectionRec {
 	float m_refs_additionalTRFetchCeiling;
 
 	class SpiderColl *m_spiderColl;
-
-	// each Rdb has a tree, so keep the pos/neg key count here so
-	// that RdbTree does not have to have its own array limited by
-	// MAX_COLLS which we did away with because we made this dynamic.
-	long m_numPosKeysInTree[RDB_END];
-	long m_numNegKeysInTree[RDB_END];
 
 	long m_overflow;
 	long m_overflow2;
@@ -1017,6 +1036,12 @@ class CollectionRec {
 
 	// used by Parms.cpp
 	char m_hackFlag;
+
+	// each Rdb has a tree, so keep the pos/neg key count here so
+	// that RdbTree does not have to have its own array limited by
+	// MAX_COLLS which we did away with because we made this dynamic.
+	long m_numPosKeysInTree[RDB_END];
+	long m_numNegKeysInTree[RDB_END];
 
 	//long m_numEventsOnHost;
 

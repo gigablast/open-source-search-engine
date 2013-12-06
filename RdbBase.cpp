@@ -127,8 +127,15 @@ bool RdbBase::init ( char  *dir            ,
 	// set all our contained classes
 	//m_dir.set ( dir );
 	// set all our contained classes
+	// . "tmp" is bogus
+	// . /home/mwells/github/coll.john-test1113.654coll.john-test1113.655
 	char tmp[1024];
 	sprintf ( tmp , "%scoll.%s.%li" , dir , coll , (long)collnum );
+
+	// debug
+	log("base: adding new base for dir=%s coll=%s collnum=%li db=%s",
+	    dir,coll,(long)collnum,dbname);
+
 	// catdb is collection independent
 
 	// make a special subdir to store the map and data files in if
@@ -261,7 +268,8 @@ bool RdbBase::init ( char  *dir            ,
 	// we can't merge more than MAX_RDB_FILES files at a time
 	if ( minToMergeArg > MAX_RDB_FILES ) minToMergeArg = MAX_RDB_FILES;
 	m_minToMergeArg = minToMergeArg;
-	// set our m_files array
+	// . set our m_files array
+	// . m_dir is bogus causing this to fail
 	if ( ! setFiles () ) return false;
 	//long dataMem;
 	// if we're in read only mode, don't bother with *ANY* trees
@@ -491,9 +499,11 @@ bool RdbBase::removeRebuildFromFilename ( BigFile *f ) {
 bool RdbBase::setFiles ( ) {
 	// set our directory class
 	if ( ! m_dir.open ( ) )
+		// we are getting this from a bogus m_dir
 		return log("db: Had error opening directory %s", getDir());
 	// note it
-	logf(LOG_INFO,"db: Loading files for %s.",m_dbname );
+	logf(LOG_INFO,"db: Loading files for %s coll=%s (%li).",
+	     m_dbname,m_coll,(long)m_collnum );
 	// . set our m_files array
 	// . addFile() will return -1 and set g_errno on error
 	// . the lower the fileId the older the data 
@@ -599,6 +609,8 @@ bool RdbBase::setFiles ( ) {
 		if (addFile(id,false/*newFile?*/,mergeNum,id2,converting) < 0) 
 			return false;
 	}
+
+	m_dir.close();
 
 	if ( ! converting ) return true;
 
@@ -723,7 +735,6 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 	sprintf ( name , "%s%04li.map", m_dbname, id );
 	m->set ( getDir() , name , m_fixedDataSize , m_useHalfKeys , m_ks ,
 		 m_pageSize );
-	if ( ! isNew ) logf(LOG_INFO,"db: Adding %s.", name );
 	if ( ! isNew && ! m->readMap ( f ) ) { 
 		// if out of memory, do not try to regen for that
 		if ( g_errno == ENOMEM ) return -1;
@@ -759,6 +770,8 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		g_statsdb.m_disabled = false;
 		if ( ! status ) return log("db: Save failed.");
 	}
+	if ( ! isNew ) logf(LOG_INFO,"db: Added %s for collnum=%li pages=%li",
+			    name ,(long)m_collnum,m->getNumPages());
 	// open this big data file for reading only
 	if ( ! isNew ) {
 		if ( mergeNum < 0 ) 
@@ -1603,7 +1616,8 @@ void RdbBase::gotTokenForMerge ( ) {
 			return;
 		}
 		// make a log note
-		log(LOG_INFO,"merge: Resuming killed merge for %s.",m_dbname);
+		log(LOG_INFO,"merge: Resuming killed merge for %s coll=%s.",
+		    m_dbname,m_coll);
 		// compute the total size of merged file
 		mint = 0;
 		long mm = 0;

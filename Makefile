@@ -77,15 +77,20 @@ ifeq ("titan","$(HOST)")
 # in 2013. So it just uses clone() and does its own "threading". Unfortunately,
 # the way it works is not even possible on newer kernels because they no longer
 # allow you to override the _errno_location() function. -- matt
-CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static	
+CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DMATTWELLS
 LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
 else
 # use -m32 to force 32-bit mode compilation.
 # you might have to do apt-get install gcc-multilib to ensure that -m32 works.
 # -m32 should use /usr/lib32/ as the library path.
 # i also provide 32-bit libraries for linking that are not so easy to get.
+#
+# mdw. 11/17/2013. i took out the -D_PTHREADS_ flag (and -lpthread).
+# trying to use good ole' clone() again because it seems the errno location
+# thing is fixed by just ignoring it.
+#
 CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DPTHREADS -Wno-unused-but-set-variable
-LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread 
+LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
 endif
 
 # if you have seo.cpp link that in. This is not part of the open source

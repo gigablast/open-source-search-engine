@@ -22,6 +22,8 @@
 
 #define MAX_TOPIC_GROUPS 10
 
+char getFormatFromRequest ( class HttpRequest *r ) ;
+
 // . parameters used to generate a set of related topics (gigabits)
 // . you can have Msg24 generate multiple sets of related topics in one call
 class TopicGroup {
@@ -42,6 +44,11 @@ class TopicGroup {
         long m_topicSampleSize;
         long m_topicMaxPunctLen;
 };
+
+#define FORMAT_HTML 0
+#define FORMAT_XML  1
+#define FORMAT_JSON 2
+#define FORMAT_CSV  3
 
 class SearchInput {
 
@@ -211,7 +218,13 @@ class SearchInput {
 	
 	// tier sizes can change with different "raw" values, therefore,
 	// so can search results
-	long   m_xml;                        // msg40
+	//long   m_xml;                        // msg40
+	// can be 0 for FORMAT_HTML, 1 = FORMAT_XML, 2=FORMAT_JSON
+	//long  m_formatStrLen;
+	//char *m_formatStr;
+
+	// can be 0 for FORMAT_HTML, 1 = FORMAT_XML, 2=FORMAT_JSON, 3=csv
+	char m_format;
 
 	// this should be part of the key because it will affect the results!
 	char   m_queryExpansion;

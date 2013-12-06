@@ -247,7 +247,12 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	// MDW: ensure not created on disk since time of last load
 	char dname[512];
 	sprintf(dname, "%scoll.%s.%li/",g_hostdb.m_dir,coll,i);
-	if ( isNew && opendir ( dname ) ) {
+	DIR *dir = NULL;
+	if ( isNew )
+		dir = opendir ( dname );
+	if ( dir )
+		closedir ( dir );
+	if ( isNew && dir ) {
 		g_errno = EEXIST;
 		return log("admin: Trying to create collection %s but "
 			   "directory %s already exists on disk.",coll,dname);
@@ -524,11 +529,12 @@ bool Collectiondb::isAdmin ( HttpRequest *r , TcpSocket *s ) {
 void savingCheckWrapper1 ( int fd , void *state ) {
 	WaitEntry *we = (WaitEntry *)state;
 	// no state?
-	if ( ! we ) return;
-	// if it blocked again i guess tree is still saving
-	if ( ! g_collectiondb.resetColl ( we->m_coll , we ) ) return;
+	if ( ! we ) { log("colldb: we1 is null"); return; }
 	// unregister too
 	g_loop.unregisterSleepCallback ( state,savingCheckWrapper1 );
+	// if it blocked again i guess tree is still saving
+	if ( ! g_collectiondb.resetColl ( we->m_coll , we , we->m_purgeSeeds))
+		return;
 	// all done
 	we->m_callback ( we->m_state );
 }
@@ -536,11 +542,11 @@ void savingCheckWrapper1 ( int fd , void *state ) {
 void savingCheckWrapper2 ( int fd , void *state ) {
 	WaitEntry *we = (WaitEntry *)state;
 	// no state?
-	if ( ! we ) return;
-	// if it blocked again i guess tree is still saving
-	if ( ! g_collectiondb.deleteRec ( we->m_coll , we ) ) return;
+	if ( ! we ) { log("colldb: we2 is null"); return; }
 	// unregister too
 	g_loop.unregisterSleepCallback ( state,savingCheckWrapper2 );
+	// if it blocked again i guess tree is still saving
+	if ( ! g_collectiondb.deleteRec ( we->m_coll , we ) ) return;
 	// all done
 	we->m_callback ( we->m_state );
 }
@@ -599,7 +605,7 @@ bool Collectiondb::deleteRec ( char *coll , WaitEntry *we ) {
 		g_errno = ENOTFOUND;
 		return true;
 	}
-		
+
 	if ( g_process.isAnyTreeSaving() ) {
 		// note it
 		log("admin: tree is saving. waiting2.");
@@ -700,7 +706,11 @@ bool Collectiondb::deleteRec ( char *coll , WaitEntry *we ) {
 
 // . reset a collection
 // . returns false if blocked and will call callback
-bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we ) {
+bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we , bool purgeSeeds) {
+
+	// save parms in case we block
+	we->m_purgeSeeds = purgeSeeds;
+
 	// ensure it's not NULL
 	if ( ! coll ) {
 		log(LOG_LOGIC,"admin: Collection name to delete is NULL.");
@@ -849,11 +859,13 @@ bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we ) {
 	//cr->m_spiderStatusMsg = NULL;
 
 	// reset seed buf
-	cr->m_diffbotSeeds.purge();
-
-	// reset seed dedup table
-	HashTableX *ht = &cr->m_seedHashTable;
-	ht->reset();
+	if ( purgeSeeds ) {
+		// free the buffer of seed urls
+		cr->m_diffbotSeeds.purge();
+		// reset seed dedup table
+		HashTableX *ht = &cr->m_seedHashTable;
+		ht->reset();
+	}
 
 	// so XmlDoc.cpp can detect if the collection was reset since it
 	// launched its spider:
@@ -865,6 +877,14 @@ bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we ) {
 	// advance sanity check. did we wrap around?
 	// right now we #define collnum_t short
 	if ( m_numRecs > 0x7fff ) { char *xx=NULL;*xx=0; }
+
+	// make a new collnum so records in transit will not be added
+	// to any rdb...
+	cr->m_collnum = newCollnum;
+
+	// Rdb::resetColl() needs to know the new cr so it can move
+	// the RdbBase into cr->m_bases[rdbId] array. recycling.
+	m_recs[newCollnum] = cr;
 
 	// . unlink all the *.dat and *.map files for this coll in its subdir
 	// . remove all recs from this collnum from m_tree/m_buckets
@@ -879,16 +899,10 @@ bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we ) {
 	g_clusterdb.getRdb()->resetColl ( oldCollnum , newCollnum );
 	g_linkdb.getRdb()->resetColl    ( oldCollnum , newCollnum );
 
-	// make a new collnum so records in transit will not be added
-	// to any rdb...
-	cr->m_collnum = newCollnum;
-
 	// reset crawl status too!
 	cr->m_spiderStatus = SP_INITIALIZING;
 
 	m_recs[oldCollnum] = NULL;
-	m_recs[newCollnum] = cr;
-
 
 	// readd it to the hashtable that maps name to collnum too
 	long long h64 = hash64n(cr->m_coll);
@@ -902,7 +916,10 @@ bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we ) {
 		g_hostdb.m_dir,
 		cr->m_coll,
 		(long)newCollnum);
-	if ( opendir ( dname ) ) {
+	DIR *dir = opendir ( dname );
+	if ( dir )
+	     closedir ( dir );
+	if ( dir ) {
 		//g_errno = EEXIST;
 		log("admin: Trying to create collection %s but "
 		    "directory %s already exists on disk.",coll,dname);
