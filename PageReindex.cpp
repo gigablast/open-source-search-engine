@@ -543,7 +543,7 @@ bool Msg1c::gotList ( ) {
 	dt.set(8,0,64,dbuf,1024,false,0,"ddocids");
 
 	m_numDocIdsAdded = 0;
-	long count = 0;
+	//long count = 0;
 	// list consists of docIds, loop through each one
  	for(long i = 0; i < numDocIds; i++) {
 		long long docId = tmpDocIds[i];
@@ -553,10 +553,12 @@ bool Msg1c::gotList ( ) {
 		if ( ! dt.addKey ( &docId ) ) return true;
 		// log it if we have 1000 or less of them for now
 		//if ( i <= 100 ) 
-		char *msg = "Reindexing";
-		if ( m_forceDel ) msg = "Deleting";
-		logf(LOG_INFO,"build: %s docid #%li/%li) %lli",
-		     msg,i,count++,docId);
+
+		// this causes a sigalarm log msg to wait forever for lock
+		//char *msg = "Reindexing";
+		//if ( m_forceDel ) msg = "Deleting";
+		//logf(LOG_INFO,"build: %s docid #%li/%li) %lli",
+		//     msg,i,count++,docId);
 
 		SpiderRequest sr;
 		sr.reset();
