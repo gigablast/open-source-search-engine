@@ -10,7 +10,7 @@
 #include "RdbMem.h"
 #include "RdbCache.h"
 #include "RdbDump.h"
-#include "Dir.h"
+//#include "Dir.h"
 #include "RdbBuckets.h"
 
 // . each Rdb instance has an ID
@@ -353,7 +353,7 @@ class Rdb {
 	bool      m_dedup;
 	long      m_fixedDataSize;
 
-	Dir       m_dir;
+	//Dir       m_dir;
 	char      m_dbname [32];
 	long      m_dbnameLen;
 

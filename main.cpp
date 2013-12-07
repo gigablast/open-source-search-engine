@@ -2453,9 +2453,21 @@ int main ( int argc , char *argv[] ) {
 	if ( setrlimit(RLIMIT_CORE,&lim) )
 		log("db: setrlimit: %s.", mstrerror(errno) );
 	// limit fds
-	//lim.rlim_cur = lim.rlim_max = 511;
-	//if ( setrlimit(RLIMIT_NOFILE,&lim))
-	//	log("db: setrlimit2: %s.", mstrerror(errno) );
+	// try to prevent core from systems where it is above 1024
+	// because our FD_ISSET() libc function will core! (it's older)
+	long NOFILE = 1024;
+	lim.rlim_cur = lim.rlim_max = NOFILE;
+	if ( setrlimit(RLIMIT_NOFILE,&lim))
+		log("db: setrlimit RLIMIT_NOFILE %li: %s.",
+		    NOFILE,mstrerror(errno) );
+	struct rlimit rlim;
+	getrlimit ( RLIMIT_NOFILE,&rlim);
+	if ( (long)rlim.rlim_max > NOFILE || (long)rlim.rlim_cur > NOFILE ) {
+		log("db: setrlimit RLIMIT_NOFILE failed!");
+		char *xx=NULL;*xx=0;
+	}
+	log("db: RLIMIT_NOFILE = %li",(long)rlim.rlim_max);
+	//exit(0);
 	// . disable o/s's and hard drive's read ahead 
 	// . set multcount to 16 --> 1 interrupt for every 16 sectors read
 	// . multcount of 16 reduces OS overhead by 30%-50% (more throughput) 

@@ -53,6 +53,10 @@ public:
 	long long    m_took; // how long it took to get the results
 	HttpRequest  m_hr;
 	bool         m_printedHeaderRow;
+
+	// for printing our search result json items in csv:
+	HashTableX   m_columnTable;
+	long         m_numCSVColumns;
 };
 
 static int printResult ( SafeBuf &sb,
@@ -61,7 +65,9 @@ static int printResult ( SafeBuf &sb,
 			 CollectionRec *cr ,
 			 char *qe ) ;
 
-bool printJsonItemInCsv ( char *json , SafeBuf *sb , bool *printedHeaderRow ) ;
+bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) ;
+
+bool printJsonItemInCSV ( char *json , SafeBuf *sb , class State0 *st ) ;
 
 bool printPairScore ( SafeBuf &sb , SearchInput *si , PairScore *ps ,
 		      Msg20Reply *mr , Msg40 *msg40 , bool first ) ;
@@ -120,8 +126,11 @@ bool sendReply ( State0 *st , char *reply ) {
 			    nowms,
 			    st->m_q.m_numTerms);
 
-	// log the time
-	if ( st->m_took >= g_conf.m_logQueryTimeThreshold ) {
+	// . log the time
+	// . do not do this if g_errno is set lest m_sbuf1 be bogus b/c
+	//   it failed to allocate its buf to hold terminating \0 in
+	//   SearchInput::setQueryBuffers()
+	if ( ! g_errno && st->m_took >= g_conf.m_logQueryTimeThreshold ) {
 		logf(LOG_TIMING,"query: Took %lli ms for %s. results=%li",
 		     st->m_took,
 		     si->m_sbuf1.getBufStart(),
@@ -206,34 +215,8 @@ bool sendReply ( State0 *st , char *reply ) {
 	return true;
 }
 
-// . returns false if blocked, true otherwise
-// . sets g_errno on error
-// . "msg" will be inserted into the access log for this request
-bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
-	// . check for sdirt=4, this a site search on the given directory id
-	// . need to pre-query the directory first to get the sites to search
-	//   this will likely have just been cached so it should be quick
-	// . then need to construct a site search query
-	//long rawFormat = hr->getLong("xml", 0); // was "raw"
-	//long xml = hr->getLong("xml",0);
-
-	// what format should search results be in? default is html
-	long format = hr->getLong("format", FORMAT_HTML );
-	if ( hr->getLong("xml",0) ) format = FORMAT_XML;
-	if ( hr->getLong("json",0) ) format = FORMAT_JSON;
-
-
-	// get the dmoz catid if given
-	//long searchingDmoz = hr->getLong("dmoz",0);
-
-	//
-	// send back page frame with the ajax call to get the real
-	// search results. do not do this if a "&dir=" (dmoz category)
-	// is given
-	//
-	if ( hr->getLong("id",0) == 0 && format == FORMAT_HTML ) {
-		SafeBuf sb;
-		sb.safePrintf(
+bool printCSSHead ( SafeBuf &sb ) {
+	return sb.safePrintf(
 			      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML "
 			      "4.01 Transitional//EN\">\n"
 			      //"<meta http-equiv=\"Content-Type\" "
@@ -267,6 +250,41 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			      "-->\n"
 			      "</style>\n"
 			      "</head>\n"
+			      );
+}
+
+// . returns false if blocked, true otherwise
+// . sets g_errno on error
+// . "msg" will be inserted into the access log for this request
+bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
+	// . check for sdirt=4, this a site search on the given directory id
+	// . need to pre-query the directory first to get the sites to search
+	//   this will likely have just been cached so it should be quick
+	// . then need to construct a site search query
+	//long rawFormat = hr->getLong("xml", 0); // was "raw"
+	//long xml = hr->getLong("xml",0);
+
+	// what format should search results be in? default is html
+	char format = getFormatFromRequest ( hr );
+
+	// get the dmoz catid if given
+	//long searchingDmoz = hr->getLong("dmoz",0);
+
+	//
+	// . send back page frame with the ajax call to get the real
+	//   search results. do not do this if a "&dir=" (dmoz category)
+	//   is given.
+	// . if not matt wells we do not do ajax
+	// . the ajax is just there to prevent bots from slamming me 
+	//   with queries.
+	//
+	if ( hr->getLong("id",0) == 0 && 
+	     format == FORMAT_HTML &&
+	     g_conf.m_isMattWells ) {
+
+		SafeBuf sb;
+		printCSSHead ( sb );
+		sb.safePrintf(
 			      "<body "
 			      "onLoad=\""
 			      "var client = new XMLHttpRequest();\n"
@@ -425,8 +443,6 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	}
 
 
-
-
 	// make a new state
 	State0 *st;
 	try { st = new (State0); }
@@ -443,8 +459,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			 "Please try later." );
 	}
 	mnew ( st , sizeof(State0) , "PageResults2" );
+
 	// copy yhits
-	st->m_hr.copy ( hr );
+	if ( ! st->m_hr.copy ( hr ) )
+		return sendReply ( st , NULL );
 
 	// set this in case SearchInput::set fails!
 	st->m_socket = s;
@@ -459,8 +477,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			 // m_hr points to the hr we pass into
 			 // SearchInput::set
 			 &st->m_hr, 
-			 &st->m_q ) ) 
+			 &st->m_q ) ) {
+		log("query: set search input: %s",mstrerror(g_errno));
 		return sendReply ( st, NULL );
+	}
 
 	long  codeLen = 0;
 	char *code = hr->getString("code", &codeLen, NULL);
@@ -692,10 +712,21 @@ bool gotResults ( void *state ) {
 	//SafeBuf sb(local, 128000);
 	SafeBuf sb;
 	// reserve 1.5MB now!
-	if ( ! sb.reserve(1500000) ) // 128000) )
+	if ( ! sb.reserve(1500000 ,"pgresbuf" ) ) // 128000) )
 		return true;
 
 	SearchInput *si = &st->m_si;
+
+	// . if not matt wells we do not do ajax
+	// . the ajax is just there to prevent bots from slamming me 
+	//   with queries.
+	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
+		printCSSHead ( sb );
+		sb.safePrintf("<body>");
+		printLogoAndSearchBox ( sb , &st->m_hr , -1 ); // catId = -1
+	}
+
+
 
 	// xml
 	if ( si->m_format == FORMAT_XML )
@@ -1442,6 +1473,26 @@ bool gotResults ( void *state ) {
 	if ( si->m_format == FORMAT_XML )
 		sb.safePrintf("</response>\n");
 
+
+	// if we did not use ajax, print this tail here now
+	if ( si->m_format == FORMAT_HTML && ! g_conf.m_isMattWells ) {
+		sb.safePrintf ( "<br>"
+				"<center>"
+				"<font color=gray>"
+				"Copyright &copy; 2013. All Rights "
+				"Reserved.<br/>"
+				"Powered by the <a href='https://www."
+				"gigablast.com/'>GigaBlast</a> open source "
+				"search engine."
+				"</font>"
+				"</center>\n"
+				
+				"</body>\n"
+				"</html>\n"
+			      );
+	}
+
+
 	return sendReply ( st , sb.getBufStart() );
 }
 
@@ -1730,14 +1781,20 @@ static int printResult ( SafeBuf &sb,
 	Msg20      *m20 = msg40->m_msg20[ix];
 	Msg20Reply *mr  = m20->m_r;
 
-
+	// each "result" is the actual cached page, in this case, a json
+	// object, because we were called with &icc=1. in that situation
+	// ptr_content is set in the msg20reply.
 	if ( si->m_format == FORMAT_CSV &&
 	     mr->ptr_content &&
 	     mr->m_contentType == CT_JSON ) {
 		// parse it up
 		char *json = mr->ptr_content;
 		// only print header row once, so pass in that flag
-		printJsonItemInCsv ( json , &sb , &st->m_printedHeaderRow );
+		if ( ! st->m_printedHeaderRow ) {
+			printCSVHeaderRow ( &sb , st );
+			st->m_printedHeaderRow = true;
+		}
+		printJsonItemInCSV ( json , &sb , st );
 		return true;
 	}
 
@@ -4509,6 +4566,10 @@ bool printDmozRadioButtons ( SafeBuf &sb , long catId ) ;
 // if catId >= 1 then print the dmoz radio button
 bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 
+	char *root = "";
+	if ( g_conf.m_isMattWells )
+		root = "http://www.gigablast.com";
+
 	sb.safePrintf(
 		      // logo and menu table
 		      "<table border=0 cellspacing=5>"
@@ -4517,12 +4578,13 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 		      "<td rowspan=2 valign=top>"
 		      "<a href=/>"
 		      "<img "
-		      "src=http://www.gigablast.com/logo-small.png "
+		      "src=%s/logo-small.png "
 		      "height=64 width=295>"
 		      "</a>"
 		      "</td>"
 		      
 		      "<td>"
+		      , root
 		      );
 	// menu above search box
 	sb.safePrintf(
@@ -4704,65 +4766,179 @@ bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
 }
 */
 
+// return 1 if a should be before b
+int csvPtrCmp ( const void *a, const void *b ) {
+	//JsonItem *ja = (JsonItem **)a;
+	//JsonItem *jb = (JsonItem **)b;
+	char *pa = *(char **)a;
+	char *pb = *(char **)b;
+	if ( strcmp(pa,"type") == 0 ) return -1;
+	if ( strcmp(pb,"type") == 0 ) return  1;
+	// force title on top
+	if ( strcmp(pa,"product.title") == 0 ) return -1;
+	if ( strcmp(pb,"product.title") == 0 ) return  1;
+	if ( strcmp(pa,"title") == 0 ) return -1;
+	if ( strcmp(pb,"title") == 0 ) return  1;
+	// otherwise string compare
+	int val = strcmp(pa,pb);
+	return val;
+}
+	
+
 #include "Json.h"
 
-bool printJsonItemInCsv ( char *json , SafeBuf *sb , bool *printedHeaderRow ) {
+// 
+// print header row in csv
+//
+bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
+
+	Msg40 *msg40 = &st->m_msg40;
+ 	long numResults = msg40->getNumResults();
+
+	char tmp1[1024];
+	SafeBuf tmpBuf (tmp1 , 1024);
+
+	char tmp2[1024];
+	SafeBuf nameBuf (tmp2, 1024);
+
+	char nbuf[27000];
+	HashTableX nameTable;
+	if ( ! nameTable.set ( 8,4,2048,nbuf,27000,false,0,"ntbuf") )
+		return false;
+
+	long niceness = 0;
+
+	// . scan every fucking json item in the search results.
+	// . we still need to deal with the case when there are so many
+	//   search results we have to dump each msg20 reply to disk in
+	//   order. then we'll have to update this code to scan that file.
+
+	for ( long i = 0 ; i < numResults ; i++ ) {
+
+		// get the msg20 reply for search result #i
+		Msg20      *m20 = msg40->m_msg20[i];
+		Msg20Reply *mr  = m20->m_r;
+
+		// get content
+		char *json = mr->ptr_content;
+		// how can it be empty?
+		if ( ! json ) continue;
+
+		// parse it up
+		Json jp;
+		jp.parseJsonStringIntoJsonItems ( json , niceness );
+
+		// scan each json item
+		for ( JsonItem *ji = jp.getFirstItem(); ji ; ji = ji->m_next ){
+
+			// skip if not number or string
+			if ( ji->m_type != JT_NUMBER && 
+			     ji->m_type != JT_STRING )
+				continue;
+
+			// if in an array, do not print! csv is not
+			// good for arrays... like "media":[....] . that
+			// one might be ok, but if the elements in the
+			// array are not simple types, like, if they are
+			// unflat json objects then it is not well suited
+			// for csv.
+			if ( ji->isInArray() ) continue;
+
+			// reset length of buf to 0
+			tmpBuf.reset();
+
+			// . get the name of the item into "nameBuf"
+			// . returns false with g_errno set on error
+			if ( ! ji->getCompoundName ( tmpBuf ) )
+				return false;
+
+			// is it new?
+			long long h64 = hash64n ( tmpBuf.getBufStart() );
+			if ( nameTable.isInTable ( &h64 ) ) continue;
+
+			// record offset of the name for our hash table
+			long nameBufOffset = nameBuf.length();
+			
+			// store the name in our name buffer
+			if ( ! nameBuf.safeStrcpy ( tmpBuf.getBufStart() ) )
+				return false;
+			if ( ! nameBuf.pushChar ( '\0' ) )
+				return false;
+
+			// it's new. add it
+			if ( ! nameTable.addKey ( &h64 , &nameBufOffset ) )
+				return false;
+		}
+	}
+
+	// . make array of ptrs to the names so we can sort them
+	// . try to always put title first regardless
+	char *ptrs [ 1024 ];
+	long numPtrs = 0;
+	for ( long i = 0 ; i < nameTable.m_numSlots ; i++ ) {
+		if ( ! nameTable.m_flags[i] ) continue;
+		long off = *(long *)nameTable.getValueFromSlot(i);
+		char *p = nameBuf.getBufStart() + off;
+		ptrs[numPtrs++] = p;
+		if ( numPtrs >= 1024 ) break;
+	}
+
+	// sort them
+	qsort ( ptrs , numPtrs , 4 , csvPtrCmp );
+
+	// set up table to map field name to column for printing the json items
+	HashTableX *columnTable = &st->m_columnTable;
+	if ( ! columnTable->set ( 8,4, numPtrs * 4,NULL,0,false,0,"coltbl" ) )
+		return false;
+
+	// now print them out as the header row
+	for ( long i = 0 ; i < numPtrs ; i++ ) {
+		if ( i > 0 && ! sb->pushChar(',') ) return false;
+		if ( ! sb->safeStrcpy ( ptrs[i] ) ) return false;
+		// record the hash of each one for printing out further json
+		// objects in the same order so columns are aligned!
+		long long h64 = hash64n ( ptrs[i] );
+		if ( ! columnTable->addKey ( &h64 , &i ) ) 
+			return false;
+	}
+
+	st->m_numCSVColumns = numPtrs;
+
+	if ( ! sb->pushChar('\n') )
+		return false;
+	if ( ! sb->nullTerm() )
+		return false;
+
+	return true;
+}
+
+// returns false and sets g_errno on error
+bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
+
+	long niceness = 0;
 
 	// parse the json
 	Json jp;
-	jp.parseJsonStringIntoJsonItems ( json );
+	jp.parseJsonStringIntoJsonItems ( json , niceness );
 
-	// . TODO: index individual "Products":[...] as each an
-	//   individual title rec.
-		
-	SafeBuf nameBuf;
-	bool firstOne = true;
+	HashTableX *columnTable = &st->m_columnTable;
+	long numCSVColumns = st->m_numCSVColumns;
+
+	
+	// make buffer space that we need
+	char ttt[1024];
+	SafeBuf ptrBuf(ttt,1024);
+	long need = numCSVColumns * sizeof(JsonItem *);
+	if ( ! ptrBuf.reserve ( need ) ) return false;
+	JsonItem **ptrs = (JsonItem **)ptrBuf.getBufStart();
+
+	// reset json item ptrs for csv columns. all to NULL
+	memset ( ptrs , 0 , need );
+
+	char tmp1[1024];
+	SafeBuf tmpBuf (tmp1 , 1024);
 
 	JsonItem *ji;
-
-	////
-	// 
-	// print header row in csv
-	//
-	////
-	for ( ji = jp.getFirstItem(); ji ; ji = ji->m_next ) {
-
-		if ( *printedHeaderRow )
-			break;
-
-		// skip if not number or string
-		if ( ji->m_type != JT_NUMBER && 
-		     ji->m_type != JT_STRING )
-			continue;
-
-		// if in an array, do not print! csv is not
-		// good for arrays... like "media":[....] . that
-		// one might be ok, but if the elements in the
-		// array are not simple types, like, if they are
-		// unflat json objects then it is not well suited
-		// for csv.
-		if ( ji->isInArray() ) continue;
-
-		if ( ! firstOne ) sb->pushChar(',');
-
-		firstOne = false;
-
-		ji->getCompoundName ( nameBuf );
-
-		//
-		// product.offerprice
-		//
-		sb->csvEncode ( nameBuf.getBufStart() , nameBuf.getLength() );
-	}
-
-	if ( ! *printedHeaderRow ) {
-		sb->pushChar('\n');
-		sb->nullTerm();
-		*printedHeaderRow = true;
-	}
-
-
-	firstOne = true;
 
 	///////
 	//
@@ -4779,11 +4955,40 @@ bool printJsonItemInCsv ( char *json , SafeBuf *sb , bool *printedHeaderRow ) {
 		// skip if not well suited for csv (see above comment)
 		if ( ji->isInArray() ) continue;
 
+		// . get the name of the item into "nameBuf"
+		// . returns false with g_errno set on error
+		if ( ! ji->getCompoundName ( tmpBuf ) )
+			return false;
 
-		if ( ! firstOne ) sb->pushChar(',');
+		// is it new?
+		long long h64 = hash64n ( tmpBuf.getBufStart() );
 
-		firstOne = false;
+		long slot = columnTable->getSlot ( &h64 ) ;
+		// MUST be in there
+		if ( slot < 0 ) { char *xx=NULL;*xx=0;}
 
+		// get col #
+		long column = *(long *)columnTable->getValueFromSlot ( slot );
+
+		// sanity
+		if ( column >= numCSVColumns ) { char *xx=NULL;*xx=0; }
+
+		// set ptr to it for printing when done parsing every field
+		// for this json item
+		ptrs[column] = ji;
+	}
+
+	// now print out what we got
+	for ( long i = 0 ; i < numCSVColumns ; i++ ) {
+		// , delimeted
+		if ( i > 0 ) sb->pushChar(',');
+		// get it
+		ji = ptrs[i];
+		// skip if none
+		if ( ! ji ) continue;
+		//
+		// get value and print otherwise
+		//
 		if ( ji->m_type == JT_NUMBER ) {
 			// print numbers without double quotes
 			if ( ji->m_valueDouble *10000000.0 == 
@@ -4800,9 +5005,7 @@ bool printJsonItemInCsv ( char *json , SafeBuf *sb , bool *printedHeaderRow ) {
 		sb->pushChar('\"');
 	}
 
-	if ( ! firstOne )
-		sb->pushChar('\n');
-
+	sb->pushChar('\n');
 	sb->nullTerm();
 
 	return true;

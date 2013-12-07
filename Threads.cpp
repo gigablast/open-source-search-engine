@@ -303,6 +303,10 @@ bool Threads::init ( ) {
 	// generic multipurpose
 	if ( ! g_threads.registerType (GENERIC_THREAD,100/*maxThreads*/,100) ) 
 		return log("thread: Failed to register thread type." );
+	// for call SSL_accept() which blocks for 10ms even when socket
+	// is non-blocking...
+	//if (!g_threads.registerType (SSLACCEPT_THREAD,20/*maxThreads*/,100)) 
+	//	return log("thread: Failed to register thread type." );
 
 #ifndef PTHREADS
 
@@ -884,20 +888,28 @@ bool ThreadQueue::timedCleanUp ( long maxNiceness ) {
 
 #ifdef PTHREADS		
 
-		// . join up with that thread
-		// . damn, sometimes he can block forever on his
-		//   call to sigqueue(), 
-		long status =  pthread_join ( t->m_joinTid , NULL );
-		if ( status != 0 ) {
-		  log("threads: pthread_join %li = %s (%li)",
-		      (long)t->m_joinTid,mstrerror(status),status);
-		}
-		// debug msg
-		if ( g_conf.m_logDebugThread )
-			log(LOG_DEBUG,"thread: joined1 with t=0x%lx "
-			    "jointid=0x%lx.",
-			    (long)t,(long)t->m_joinTid);
 
+		// if pthread_create() failed it returns the errno and we
+		// needsJoin is false, so do not try to join
+		// to a thread if we did not create it, lest pthread_join()
+		// cores
+		if ( t->m_needsJoin ) {
+			// . join up with that thread
+			// . damn, sometimes he can block forever on his
+			//   call to sigqueue(), 
+			long status =  pthread_join ( t->m_joinTid , NULL );
+			if ( status != 0 ) {
+				log("threads: pthread_join %li = %s (%li)",
+				    (long)t->m_joinTid,mstrerror(status),
+				    status);
+			}
+			// debug msg
+			if ( g_conf.m_logDebugThread )
+				log(LOG_DEBUG,"thread: joined1 with t=0x%lx "
+				    "jointid=0x%lx.",
+				    (long)t,(long)t->m_joinTid);
+		}
+		
 #else
 
 	again:
@@ -1211,20 +1223,22 @@ bool ThreadQueue::cleanUp ( ThreadEntry *tt , long maxNiceness ) {
 
 #ifdef PTHREADS		
 
-		// . join up with that thread
-		// . damn, sometimes he can block forever on his
-		//   call to sigqueue(), 
-		long status =  pthread_join ( t->m_joinTid , NULL );
-		if ( status != 0 ) {
-		  log("threads: pthread_join2 %li = %s (%li)",
-		      (long)t->m_joinTid,mstrerror(status),status);
+		if ( t->m_needsJoin ) {
+			// . join up with that thread
+			// . damn, sometimes he can block forever on his
+			//   call to sigqueue(), 
+			long status =  pthread_join ( t->m_joinTid , NULL );
+			if ( status != 0 ) {
+				log("threads: pthread_join2 %li = %s (%li)",
+				    (long)t->m_joinTid,mstrerror(status),
+				    status);
+			}
+			// debug msg
+			if ( g_conf.m_logDebugThread )
+				log(LOG_DEBUG,"thread: joined2 with t=0x%lx "
+				    "jointid=0x%lx.",
+				    (long)t,(long)t->m_joinTid);
 		}
-		// debug msg
-		if ( g_conf.m_logDebugThread )
-			log(LOG_DEBUG,"thread: joined2 with t=0x%lx "
-			    "jointid=0x%lx.",
-			    (long)t,(long)t->m_joinTid);
-
 #else
 
 	again:
@@ -1591,7 +1605,7 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	// return if the max is already launched
 	if ( active >= m_maxLaunched ) return false;
 
-	// do not launch a low priority merge, addlists or filter thread if we
+	// do not launch a low priority merge, intersect or filter thread if we
 	// have high priority cpu threads already going on. this way a
 	// low priority spider thread will not launch if a high priority
 	// cpu-based thread of any kind (right now just MERGE or INTERSECT) 
@@ -1642,7 +1656,7 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	// i dunno what the point of this was... so i commented it out
 	//long max2 = g_conf.m_queryMaxDiskThreads ;
 	//if ( max2 <= 0 ) max2 = 1;
-	// only do this check if we're a addlists thread queue
+	// only do this check if we're a addlists/instersect thread queue
 	//if (m_threadType == INTERSECT_THREAD&& hiActive >= max2)return false;
 
 	// loop through candidates
@@ -2008,7 +2022,26 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	//
 #else
 
-	pthread_create ( &t->m_joinTid , &s_attr, startUp2 , t) ;
+	// assume it does not go through
+	t->m_needsJoin = false;
+
+	// pthread inherits our sigmask, so don't let it handle sigalrm
+	// signals in Loop.cpp, it'll screw things up. that handler
+	// is only meant to be called by the main process. if we end up
+	// double calling it, this thread may think g_callback is non-null
+	// then it gets set to NULL, then the thread cores! seen it...
+	sigset_t sigs;
+	sigemptyset ( &sigs );
+	sigaddset   ( &sigs , SIGALRM );
+	if ( sigprocmask ( SIG_BLOCK  , &sigs , NULL ) < 0 )
+		log("threads: failed to block sig");
+
+	// this returns 0 on success, or the errno otherwise
+	g_errno = pthread_create ( &t->m_joinTid , &s_attr, startUp2 , t) ;
+
+	if ( sigprocmask ( SIG_UNBLOCK  , &sigs , NULL ) < 0 )
+		log("threads: failed to unblock sig");
+
 
 #endif
 
@@ -2020,6 +2053,8 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 
 	// return true on successful creation of the thread
 	if ( g_errno == 0 ) {
+		// good stuff, the thread needs a join now
+		t->m_needsJoin = true;
 		if ( count > 0 ) 
 			log("thread: Call to clone looped %li times.",count);
 		return true;
@@ -2047,6 +2082,11 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 #ifndef PTHREADS
  hadError:
 #endif
+
+	if ( g_errno )
+		log("thread: pthread_create had error = %s",
+		    mstrerror(g_errno));
+
 	// it didn't launch, did it? dec the count.
 	m_launched--;
 	// priority-based LOCAL & GLOBAL launch counts
@@ -2326,7 +2366,7 @@ const char *ThreadQueue::getThreadType ( ) {
 	const char *s = "unknown";
 	if ( m_threadType == DISK_THREAD      ) s = "disk";
 	if ( m_threadType == MERGE_THREAD     ) s = "merge";
-	if ( m_threadType == INTERSECT_THREAD ) s = "addlists";
+	if ( m_threadType == INTERSECT_THREAD ) s = "intersectlists";
 	if ( m_threadType == FILTER_THREAD    ) s = "filter";
 	if ( m_threadType == SAVETREE_THREAD  ) s = "savetree";
 	if ( m_threadType == UNLINK_THREAD    ) s = "unlink";

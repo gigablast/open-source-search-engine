@@ -1222,6 +1222,7 @@ bool Msg40::gotSummary ( ) {
 	if ( m_numReplies < m_numRequests )
 		return false;
 
+ doAgain:
 
 	// do we need to launch another batch of summary requests?
 	if ( m_numRequests < m_msg3a.m_numDocIds ) {
@@ -1235,7 +1236,12 @@ bool Msg40::gotSummary ( ) {
 		// it returned true, so m_numRequests == m_numReplies and
 		// we don't need to launch any more! but that does NOT
 		// make sense because m_numContiguous < m_msg3a.m_numDocIds
-		char *xx=NULL; *xx=0;
+		// . i guess the launch can fail because of oom... and
+		//   end up returning true here... seen it happen, and
+		//   we had full requests/replies for m_msg3a.m_numDocIds
+		log("msg40: got all replies i guess");
+		goto doAgain;
+		//char *xx=NULL; *xx=0;
 	}
 
 
@@ -1895,9 +1901,10 @@ bool Msg40::gotSummary ( ) {
 	}
 
 
+	// take this out for now...
+#ifdef GB_PQR
 	// run post query reranks for this query
 	long wanted = m_si->m_docsWanted + m_si->m_firstResultNum + 1;
-
 	if ( m_postQueryRerank.isEnabled() && 
 	    m_postQueryRerank.set2(wanted)){
 		if (      ! m_postQueryRerank.preRerank  () ) {
@@ -1916,6 +1923,7 @@ bool Msg40::gotSummary ( ) {
 			m_postQueryRerank.rerankFailed();
 		}
 	}
+#endif
 
 	// set m_moreToCome, if true, we print a "Next 10" link
 	m_moreToCome = (visible > //m_visibleContiguous > 

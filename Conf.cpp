@@ -189,6 +189,7 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	//g_conf.m_testSearchEnabled = false;
 
 
+	/*
 	//
 	// are we running in Matt Wells's data center?
 	// if so, we want to be able to use the seo tools that are not part
@@ -211,7 +212,12 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	//if(hh[0]=='s' && hh[1]=='p' && is_digit(hh[2])) ) priv = true;
 	if ( priv ) g_conf.m_isMattWells = true;
 	else        g_conf.m_isMattWells = false;
+	*/
+	g_conf.m_isMattWells = false;
 
+#ifdef MATTWELLS
+	g_conf.m_isMattWells = true;
+#endif
 
 	// this is not possible
 	/*

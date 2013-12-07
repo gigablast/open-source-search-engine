@@ -630,6 +630,8 @@ class XmlDoc {
 	long *getIp ( ) ;
 	long *gotIp ( bool save ) ;
 	bool *getIsAllowed ( ) ;
+	long *getFinalCrawlDelay();
+	long      m_finalCrawlDelay;
 	//long getTryAgainTimeDelta() { 
 	//	if ( ! m_tryAgainTimeDeltaValid ) { char *xx=NULL;*xx=0;}
 	//	return m_tryAgainTimeDelta;
@@ -1169,6 +1171,7 @@ class XmlDoc {
 	*/
 	bool m_httpStatusValid;
 	bool m_crawlDelayValid;
+	bool m_finalCrawlDelayValid;
 	bool m_titleRecKeyValid;
 	bool m_adVectorValid;
 	bool m_wikiDocIdsValid;

@@ -499,7 +499,7 @@ void drawLine2 ( SafeBuf &sb ,
 	sb.safePrintf("<div style=\"position:absolute;"
 		      "left:%li;"
 		      "top:%li;"
-		      "background-color:#%lx;"
+		      "background-color:#%06lx;"
 		      "z-index:-5;"
 		      "min-height:%lipx;"
 		      "min-width:%lipx;\"></div>\n"

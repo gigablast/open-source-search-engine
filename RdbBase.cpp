@@ -610,6 +610,8 @@ bool RdbBase::setFiles ( ) {
 			return false;
 	}
 
+	m_dir.close();
+
 	if ( ! converting ) return true;
 
 	// now if we are converting old titledb names to new...
@@ -1614,7 +1616,8 @@ void RdbBase::gotTokenForMerge ( ) {
 			return;
 		}
 		// make a log note
-		log(LOG_INFO,"merge: Resuming killed merge for %s.",m_dbname);
+		log(LOG_INFO,"merge: Resuming killed merge for %s coll=%s.",
+		    m_dbname,m_coll);
 		// compute the total size of merged file
 		mint = 0;
 		long mm = 0;

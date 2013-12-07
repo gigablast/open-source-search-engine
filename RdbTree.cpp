@@ -151,7 +151,7 @@ bool RdbTree::set ( long fixedDataSize ,
 	// initiate protection
 	if ( m_useProtection ) protect();
 	// allocate the nodes
-	return growTree ( maxNumNodes );
+	return growTree ( maxNumNodes , 0 );
 }
 
 void RdbTree::reset ( ) {
@@ -1319,7 +1319,7 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 
 // . grow tree to "n" nodes
 // . this will now actually grow from a current size to a new one
-bool RdbTree::growTree ( long nn ) {
+bool RdbTree::growTree ( long nn , long niceness ) {
 	// if we're that size, bail
 	if ( m_numNodes == nn ) return true;
 
@@ -1346,27 +1346,35 @@ bool RdbTree::growTree ( long nn ) {
 	long cs = sizeof(collnum_t);
 	cp =(collnum_t *)mrealloc (m_collnums, on*cs,nn*cs,m_allocName);
 	if ( ! cp ) goto error;
+	QUICKPOLL(niceness);
 	kp = (char  *) mrealloc ( m_keys    , on*k , nn*k , m_allocName );
 	if ( ! kp ) goto error;
+	QUICKPOLL(niceness);
 	lp = (long  *) mrealloc ( m_left    , on*4 , nn*4 , m_allocName );
 	if ( ! lp ) goto error;
+	QUICKPOLL(niceness);
 	rp = (long  *) mrealloc ( m_right   , on*4 , nn*4 , m_allocName );
 	if ( ! rp ) goto error;
+	QUICKPOLL(niceness);
 	pp = (long  *) mrealloc ( m_parents , on*4 , nn*4 , m_allocName );
 	if ( ! pp ) goto error;
+	QUICKPOLL(niceness);
 
 	// deal with data, sizes and depth arrays on a basis of need
 	if ( m_fixedDataSize !=  0 ) {
 		dp =(char **)mrealloc (m_data  , on*d,nn*d,m_allocName);
 		if ( ! dp ) goto error;
+		QUICKPOLL(niceness);
 	}
 	if ( m_fixedDataSize == -1 ) {
 		sp =(long  *)mrealloc (m_sizes , on*4,nn*4,m_allocName);
 		if ( ! sp ) goto error;
+		QUICKPOLL(niceness);
 	}
 	if ( m_doBalancing         ) {
 		tp =(char  *)mrealloc (m_depth , on  ,nn  ,m_allocName);
 		if ( ! tp ) goto error;
+		QUICKPOLL(niceness);
 	}
 
 	// re-assign
@@ -1394,6 +1402,7 @@ bool RdbTree::growTree ( long nn ) {
 
 	// protect it from writes
 	if ( m_useProtection ) protect ( );
+	QUICKPOLL(niceness);
 	return true;
 
  error:
@@ -1408,41 +1417,49 @@ bool RdbTree::growTree ( long nn ) {
 		ss = (collnum_t *)mrealloc ( cp , nn*cs , on*cs , m_allocName);
 		if ( ! ss ) { char *xx = NULL; *xx = 0; }
 		m_collnums = ss;
+		QUICKPOLL(niceness);
 	}
 	if ( kp ) {
 		kk = (char *)mrealloc ( kp, nn*k, on*k, m_allocName );
 		if ( ! kk ) { char *xx = NULL; *xx = 0; }
 		m_keys = kk;
+		QUICKPOLL(niceness);
 	}
 	if ( lp ) {
 		x = (long *)mrealloc ( lp , nn*4 , on*4 , m_allocName );
 		if ( ! x ) { char *xx = NULL; *xx = 0; }
 		m_left = x;
+		QUICKPOLL(niceness);
 	}
 	if ( rp ) {
 		x = (long *)mrealloc ( rp , nn*4 , on*4 , m_allocName );
 		if ( ! x ) { char *xx = NULL; *xx = 0; }
 		m_right = x;
+		QUICKPOLL(niceness);
 	}
 	if ( pp ) {
 		x = (long *)mrealloc ( pp , nn*4 , on*4 , m_allocName );
 		if ( ! x ) { char *xx = NULL; *xx = 0; }
 		m_parents = x;
+		QUICKPOLL(niceness);
 	}
 	if ( dp && m_fixedDataSize != 0 ) {
 		p = (char **)mrealloc ( dp , nn*d , on*d , m_allocName );
 		if ( ! p ) { char *xx = NULL; *xx = 0; }
 		m_data = p;
+		QUICKPOLL(niceness);
 	}
 	if ( sp && m_fixedDataSize == -1 ) {
 		x = (long *)mrealloc ( sp , nn*4 , on*4 , m_allocName );
 		if ( ! x ) { char *xx = NULL; *xx = 0; }
 		m_sizes = x;
+		QUICKPOLL(niceness);
 	}
 	if ( tp && m_doBalancing ) {
 		s = (char *)mrealloc ( tp , nn   , on   , m_allocName );
 		if ( ! s ) { char *xx = NULL; *xx = 0; }
 		m_depth = s;
+		QUICKPOLL(niceness);
 	}
 
 	return log("db: Failed to grow tree for %s from %li to %li bytes: %s.",
@@ -2621,7 +2638,7 @@ bool RdbTree::fastLoad ( BigFile *f , RdbMem *stack ) {
 	if ( m_numNodes < minUnusedNode ) {
 		log(LOG_INIT,
 		    "db: Growing tree to make room for %s",f->getFilename());
-		if ( ! growTree ( minUnusedNode ) ) {
+		if ( ! growTree ( minUnusedNode , 0 ) ) {
 			f->close();
 			m_isLoading = false;
 			return log("db: Failed to grow tree: %s.",

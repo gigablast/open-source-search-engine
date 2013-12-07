@@ -154,6 +154,13 @@ int main ( int argc , char *argv[] ) {
 		printf("%s\n", out );
 	}
 
+	// encoded
+	char dst[MAX_URL_LEN+200];
+	urlEncode ( dst,MAX_URL_LEN+100,
+				u.getUrl(), u.getUrlLen(), 
+				false ); // are we encoding a request path?
+	printf("encoded: %s\n",dst);
+
 	// the probable docid
 	long long pd = g_titledb.getProbableDocId(&u);
 	printf("pdocid: %llu\n", pd );

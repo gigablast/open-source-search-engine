@@ -354,31 +354,7 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 		return log("query: unable to strcpy whitelist");
 	
 
-	char format = FORMAT_HTML;
-
-	// what format should search results be in? default is html
-	char *formatStr = r->getString("format", NULL );
-
-	if ( formatStr && strcmp(formatStr,"html") == 0 ) format = FORMAT_HTML;
-	if ( formatStr && strcmp(formatStr,"json") == 0 ) format = FORMAT_JSON;
-	if ( formatStr && strcmp(formatStr,"xml") == 0 ) format = FORMAT_XML;
-	if ( formatStr && strcmp(formatStr,"csv") == 0 ) format = FORMAT_CSV;
-
-
-	// support old api &xml=1 to mean &format=1
-	if ( r->getLong("xml",0) ) {
-		format = FORMAT_XML;
-	}
-
-	// also support &json=1
-	if ( r->getLong("json",0) ) {
-		format = FORMAT_JSON;
-	}
-
-	if ( r->getLong("csv",0) ) {
-		format = FORMAT_CSV;
-	}
-
+	char format = getFormatFromRequest ( r );
 
 	// now override automatic defaults for special cases
 	if ( format != FORMAT_HTML ) {
@@ -392,6 +368,8 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 		m_spellCheck              = 0;
 		m_refs_numToGenerate      = 0;
 		m_refs_docsToScan         = 0;
+		// default scoring info to off
+		m_getDocIdScoringInfo = false;
 	}
 	else if ( m_siteLen > 0 ) {
 		m_restrictIndexdbForQuery = false;
@@ -686,8 +664,8 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 
 	// . omit scoring info from the xml feed for now
 	// . we have to roll this out to gk144 net i think
-	if ( m_format != FORMAT_HTML )
-		m_getDocIdScoringInfo = 0;
+	//if ( m_format != FORMAT_HTML )
+	//	m_getDocIdScoringInfo = 0;
 
 	// turn off by default!
 	if ( ! r->getLong("gigabits",0) ) {
@@ -737,7 +715,8 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 
 	// . returns false and sets g_errno on error
 	// . sets m_qbuf1 and m_qbuf2
-	if ( ! setQueryBuffers ( r ) ) return false;
+	if ( ! setQueryBuffers (r) )
+		return log("query: setQueryBuffers: %s",mstrerror(g_errno));
 
 	/* --- Virtual host language detection --- */
 	if(r->getHost()) {
@@ -1117,10 +1096,11 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	//	if (qcs == csUTF8) {qcs = csISOLatin1;goto doOver;}
 	//	if (qcs != csISOLatin1) {qcs = csUTF8;goto doOver;}
 	//}
-	
+
 	// append plus terms
 	if ( m_plusLen > 0 ) {
-		char *s = m_plus, *send = m_plus + m_plusLen;
+		char *s = m_plus;
+		char *send = m_plus + m_plusLen;
 		//if ( p > pstart && p < pend ) *p++  = ' ';
 		//if ( p2 > pstart2 && p2 < pend2) *p2++ = ' ';
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
@@ -1136,7 +1116,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 			} else {
 				while (!isspace(*s2) && s2 < send) s2++;
 			}
-			if (s < send) break;
+			if (s2 < send) break;
 			//if (p < pend) *p++ = '+';
 			//if (p2 < pend2) *p2++ = '+';
 			m_sbuf1.pushChar('+');
@@ -1170,7 +1150,8 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	}  
 	// append minus terms
 	if ( m_minusLen > 0 ) {
-		char *s = m_minus, *send = m_minus + m_minusLen;
+		char *s = m_minus;
+		char *send = m_minus + m_minusLen;
 		//if ( p > pstart && p < pend ) *p++  = ' ';
 		//if ( p2 > pstart2 && p2 < pend2) *p2++ = ' ';
 		if ( m_sbuf1.length() ) m_sbuf1.pushChar(' ');
@@ -1186,7 +1167,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 			} else {
 				while (!isspace(*s2) && s2 < send) s2++;
 			}
-			if (s < send) break;
+			if (s2 < send) break;
 			//if (p < pend) *p++ = '-';
 			//if (p2 < pend2) *p2++ = '-';
 			m_sbuf1.pushChar('-');
@@ -1230,9 +1211,9 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	}
 
 	// null terms
-	m_sbuf1.pushChar('\0');
-	m_sbuf2.pushChar('\0');
-	m_sbuf3.pushChar('\0');
+	if ( ! m_sbuf1.pushChar('\0') ) return false;
+	if ( ! m_sbuf2.pushChar('\0') ) return false;
+	if ( ! m_sbuf3.pushChar('\0') ) return false;
 
 	// the natural query
 	m_displayQuery = m_sbuf2.getBufStart();// + displayQueryOffset;
@@ -1267,6 +1248,7 @@ bool SearchInput::setQueryBuffers ( HttpRequest *hr ) {
 	long dcatId  = -1;
 	// get the final query
 	char *q =m_sbuf1.getBufStart();
+
 	if ( q ) sscanf(q,"gbpcatid:%li",&pcatId);
 	if ( q ) sscanf(q,"gbcatid:%li",&dcatId);
 	// pick the one that is valid
@@ -1328,4 +1310,34 @@ uint8_t SearchInput::detectQueryLanguage(void) {
 	}
 
 	return(lang);
+}
+
+
+char getFormatFromRequest ( HttpRequest *r ) {
+	char format = FORMAT_HTML;
+
+	// what format should search results be in? default is html
+	char *formatStr = r->getString("format", NULL );
+
+	if ( formatStr && strcmp(formatStr,"html") == 0 ) format = FORMAT_HTML;
+	if ( formatStr && strcmp(formatStr,"json") == 0 ) format = FORMAT_JSON;
+	if ( formatStr && strcmp(formatStr,"xml") == 0 ) format = FORMAT_XML;
+	if ( formatStr && strcmp(formatStr,"csv") == 0 ) format = FORMAT_CSV;
+
+
+	// support old api &xml=1 to mean &format=1
+	if ( r->getLong("xml",0) ) {
+		format = FORMAT_XML;
+	}
+
+	// also support &json=1
+	if ( r->getLong("json",0) ) {
+		format = FORMAT_JSON;
+	}
+
+	if ( r->getLong("csv",0) ) {
+		format = FORMAT_CSV;
+	}
+
+	return format;
 }

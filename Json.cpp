@@ -61,7 +61,7 @@ JsonItem *Json::getItem ( char *name ) {
 
 #include "Mem.h" // gbstrlen()
 
-JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
+JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 
 	m_prev = NULL;
 
@@ -186,8 +186,15 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 		if ( *p == '\"' ) {
 			// find end of quote
 			char *end = p + 1;
-			for ( ; *end ; end++ ) 
-				if ( *end == '\"' && end[-1] != '\\' ) break;
+			for ( ; *end ; end++ ) {
+				// skip two chars if escaped
+				if ( *end == '\\' && end[1] ) {
+					end++; 
+					continue;
+				}
+				// this quote is unescaped then
+				if ( *end == '\"' ) break;
+			}
 			// field?
 			char *x = end + 1;
 			// skip spaces
@@ -221,7 +228,8 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 				// get length decoded
 				long curr = m_sb.length();
 				// store decoded string right after jsonitem
-				if ( !m_sb.safeDecodeJSONToUtf8 ( str, slen,0))
+				if ( !m_sb.safeDecodeJSONToUtf8 (str,slen,
+								 niceness ))
 					return NULL;
 				// store length decoded json
 				ji->m_valueLen = m_sb.length() - curr;
@@ -254,7 +262,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 				ji->m_valueDouble = 0;
 			}
 			// store decoded string right after jsonitem
-			if ( !m_sb.safeDecodeJSONToUtf8 (p,slen,0))
+			if ( !m_sb.safeDecodeJSONToUtf8 (p,slen,niceness))
 				return NULL;
 			// store length decoded json
 			ji->m_valueLen = m_sb.length() - curr;
@@ -297,7 +305,7 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json ) {
 			// copy the number as a string as well
 			long curr = m_sb.length();
 			// store decoded string right after jsonitem
-			if ( !m_sb.safeDecodeJSONToUtf8 ( str, slen,0))
+			if ( !m_sb.safeDecodeJSONToUtf8 ( str, slen,niceness))
 				return NULL;
 			// store length decoded json
 			ji->m_valueLen = m_sb.length() - curr;
@@ -337,7 +345,8 @@ void Json::test ( ) {
 		"in 2010\",\"18083009\":\"Apple personal digital assistants\",\"23475157\":\"Touchscreen portable media players\",\"30107877\":\"IPad\",\"9301031\":\"Apple Inc. hardware\",\"27765345\":\"IOS (Apple)\",\"26588084\":\"Tablet computers\"},\"type\":1,\"senseRank\":1,\"variety\":0.49056603773584906,\"depth\":0.5882352941176471},{\"id\":18839,\"positions\":[[1945,1950],[2204,2209]],\"name\":\"Music\",\"score\":0.7,\"contentMatch\":1,\"categories\":{\"991222\":\"Performing arts\",\"693016\":\"Entertainment\",\"691484\":\"Music\"},\"type\":1,\"senseRank\":1,\"variety\":0.22264150943396221,\"depth\":0.7058823529411764}],\"media\":[{\"pixelHeight\":350,\"link\":\"http://www.onlinemba.com/wp-content/uploads/2013/02/apple-innovates-invert-350x350.png\",\"primary\":\"true\",\"pixelWidth\":350,\"type\":\"image\"}]}";
 
 
-	JsonItem *ji = parseJsonStringIntoJsonItems ( json );
+	long niceness = 0;
+	JsonItem *ji = parseJsonStringIntoJsonItems ( json , niceness );
 
 	// print them out?
 	log("json: type0=%li",(long)ji->m_type);

@@ -43,15 +43,36 @@ bool sendPageRoot ( TcpSocket *s, HttpRequest *r ){
 }
 
 bool printNav ( SafeBuf &sb , HttpRequest *r ) {
+
+	char *root       = "";
+	char *rootSecure = "";
+	if ( g_conf.m_isMattWells ) {
+		root       = "http://www.gigablast.com";
+		rootSecure = "https://www.gigablast.com";
+	}
+
 	sb.safePrintf("<center><b><p class=nav>"
-		      "<a href=\"/about.html\">About</a>"
-		      " &nbsp; &nbsp; <a href=\"/contact.html\">Contact</a>"
-		      " &nbsp; &nbsp;<a href=\"/help.html\">Help</a>"
-		      " &nbsp; &nbsp; <a href=/privacy.html>Privacy Policy</a>"
-		      " &nbsp; &nbsp;<a href=\"/searchfeed.html\">"
-		      "Search API</a>"
-		      " &nbsp; &nbsp; <a href=/seoapi.html>SEO API</a>"
-		      " &nbsp; &nbsp; <a href=/account>My Account</a> "
+		      "<a href=%s/about.html>About</a>"
+		      " &nbsp; &nbsp; "
+		      "<a href=%s/contact.html>Contact</a>"
+		      " &nbsp; &nbsp; "
+		      "<a href=%s/help.html>Help</a>"
+		      " &nbsp; &nbsp; "
+		      "<a href=%s/privacy.html>Privacy Policy</a>"
+		      " &nbsp; &nbsp; "
+		      "<a href=%s/searchfeed.html>Search API</a>"
+		      " &nbsp; &nbsp; "
+		      "<a href=%s/seoapi.html>SEO API</a>"
+		      " &nbsp; &nbsp; "
+		      "<a href=%s/account>My Account</a> "
+		      , root
+		      , root
+		      , root
+		      , root
+		      , root
+		      , root
+		      , rootSecure
+
 		      //" &nbsp; &nbsp; <a href=/logout>Logout</a>"
 		      );
 	if ( r->isLocal() )
@@ -115,7 +136,11 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; <a href=/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"/Top\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
+	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; "
+		      "<a href=http://www.gigablast.com/seo>seo</a> "
+		      "&nbsp;&nbsp;&nbsp;&nbsp; "
+		      "<a href=\"/Top\">directory</a> "
+		      "&nbsp;&nbsp;&nbsp;&nbsp; \n");
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
 	sb.safePrintf("<a href=/addurl title=\"Instantly add your url to "
@@ -135,7 +160,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 
 	sb.safePrintf("<tr valign=top>\n");
-	sb.safePrintf("<td><div style=width:50px;height:50px;display:inline-block;background-color:red;></td>\n");
+	sb.safePrintf("<td align=center><div style=width:50px;height:50px;display:inline-block;background-color:red;></div></td>\n");
 	sb.safePrintf("<td><font size=+1><b>Open Source!</b>"
 	"</font><br>\n");
 	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=/admin.html#features>Features.</a> Limited support available for free."
@@ -144,19 +169,37 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("</td></tr>\n");
 
 
+	char *root = "";
+	if ( g_conf.m_isMattWells )
+		root = "http://www.gigablast.com";
 
 	sb.safePrintf("<tr valign=top>\n");
-	sb.safePrintf("<td><div style=width:50px;height:50px;display:inline-block;background-color:green;></td>\n");
-	sb.safePrintf("<td><font size=+1><b>The Green Search Engine</b></font><br>\n");
-	sb.brify2("Gigablast is the only clean-powered web search engine. 90% of its power usage comes from wind energy. Astoundingly, Gigablast is one of ONLY four search engines in the United States indexing over a billion pages.",80);
+	// 204x143
+	sb.safePrintf("<td><img height=52px width=75px "
+		      "src=%s/eventguru.png></td>\n"
+		      , root );
+	sb.safePrintf("<td><font size=+1><b>Event Guru Returns</b></font><br>\n");
+	sb.brify2("<a href=http://www.eventguru.com/>Event Guru</a> datamines events from the web. It identifies events on a web page, or even plain text, using the same rules of deduction used by the human mind. It also has Facebook integration and lots of other cool things.",80);
 	sb.safePrintf("<br><br></td></tr>\n");
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
 
 
+	/*
+	sb.safePrintf("<tr valign=top>\n");
+	sb.safePrintf("<td align=center><div style=width:50px;height:50px;display:inline-block;background-color:green;></div></td>\n");
+	sb.safePrintf("<td><font size=+1><b>The Green Search Engine</b></font><br>\n");
+	sb.brify2("Gigablast is the only clean-powered web search engine. 90% of its power usage comes from wind energy. Astoundingly, Gigablast is one of ONLY four search engines in the United States indexing over a billion pages.",80);
+	sb.safePrintf("<br><br></td></tr>\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("\n");
+	*/
+
 
 	sb.safePrintf("<tr valign=top>\n");
-	sb.safePrintf("<td><div style=width:50px;height:50px;display:inline-block;background-color:0040fe;></td>\n");
+	sb.safePrintf("<td align=center><img src=%s/gears.png "
+		      "height=50 width=50></div></td>\n"
+		      , root );
 	sb.safePrintf("<td><font size=+1><b>The Transparent Search Engine</b></font><br>\n");
 	sb.brify2("Gigablast is the first truly transparent search engine. It tells you exactly why the search results are ranked the way they are. There is nothing left to the imagination.",85);
 	sb.safePrintf("<br><br>");
@@ -165,9 +208,11 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("\n");
 
 	sb.safePrintf("<tr valign=top>\n");
-	sb.safePrintf("<td><div style=width:50px;height:50px;display:inline-block;background-color:f2b629;></td>\n");
+	sb.safePrintf("<td align=center><center><img src=%s/dollargear.png "
+		      "height=50 width=50></center></div></center></td>\n"
+		      , root );
 	sb.safePrintf("<td><font size=+1><b>The SEO Search Engine</b></font><br>\n");
-	sb.brify2("When it comes to search-engine based SEO, Gigablast is the place to be. With a frothy set of unique and effective <a href=/seo>SEO tools</a>, you will find all you need to execute a simple yet effective SEO strategy. Stop the guesswork, and let a search engine tell you how to SEO it.",85);
+	sb.brify2("When it comes to search-engine based SEO, Gigablast is the place to be. With a frothy set of unique and effective <a href=http://www.gigablast.com/seo>SEO tools</a>, you will find all you need to execute a simple yet effective SEO strategy. Stop the guesswork, and let a search engine tell you how to SEO it.",85);
 	sb.safePrintf("</td></tr>\n");
 
 
@@ -325,7 +370,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"/Top\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
+	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=http://www.gigablast.com/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"/Top\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
 	sb.safePrintf("<b title=\"Instantly add your url to Gigablast's "
@@ -368,19 +413,22 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	// . when loaded with the main page for the first time it will
 	//   immediately replace its content...
 	if ( url ) {
+		char *root = "";
+		if ( g_conf.m_isMattWells )
+			root = "http://www.gigablast.com";
 		sb.safePrintf("<br>"
 			      "<br>"
 			      "<div id=msgbox>"
 			      //"<b>Injecting your url. Please wait...</b>"
 			      "<center>"
-			      "<img src=/gears.gif width=50 height=50>"
+			      "<img src=%s/gears.gif width=50 height=50>"
 			      "</center>"
 			      "<script type=text/javascript>"
 			      //"alert('shit');"
 			      "var client = new XMLHttpRequest();\n"
 			      "client.onreadystatechange = handler;\n"
 			      "var url='/addurl?u="
-			      );
+			      , root );
 		sb.urlEncode ( url );
 		// propagate "admin" if set
 		//long admin = hr->getLong("admin",-1);
@@ -463,11 +511,17 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <b>directory</b> &nbsp;&nbsp;&nbsp;&nbsp; \n");
+	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=http://www.gigablast.com/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <b>directory</b> &nbsp;&nbsp;&nbsp;&nbsp; \n");
+	sb.safePrintf("<a href=http://www.gigablast.com/events>events</a>"
+		      " &nbsp;&nbsp;&nbsp;&nbsp; \n");
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
-	sb.safePrintf("<a href=/addurl title=\"Instantly add your url to "
-		      "Gigablast's index\">add url</a>");
+	char *root = "";
+	if ( g_conf.m_isMattWells )
+		root = "http://www.gigablast.com";
+	sb.safePrintf("<a href=%s/addurl title=\"Instantly add your url to "
+		      "Gigablast's index\">add url</a>"
+		      , root );
 	sb.safePrintf("\n");
 	sb.safePrintf("<br><br>\n");
 	// submit to HTTPS now
@@ -1591,7 +1645,7 @@ void doneInjectingWrapper3 ( void *st ) {
 				      rand32);
 			sb.urlEncode(url);
 			sb.safePrintf(">Check it</a> or "
-				      "<a href=/seo?u=");
+				      "<a href=http://www.gigablast.com/seo?u=");
 			sb.urlEncode(url);
 			sb.safePrintf(">SEO it</a>"
 				      ".</b>");

@@ -106,6 +106,7 @@ char *getFirstJSONObject ( char *p ,
 char *getJSONObjectEnd ( char *p , long niceness ) ;
 
 XmlDoc::XmlDoc() { 
+	m_esbuf.setLabel("exputfbuf");
 	for ( long i = 0 ; i < MAX_XML_DOCS ; i++ ) m_xmlDocs[i] = NULL;
 	m_freed = false;
 	m_contentInjected = false;
@@ -1069,16 +1070,19 @@ CollectionRec *XmlDoc::getCollRec ( ) {
 	CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
 	if ( ! cr ) {
 		log("build: got NULL collection rec.");
+		g_errno = ENOCOLLREC;
 		return NULL;
 	}
 	// was it reset since we started spidering this url?
 	if ( cr->m_lastResetCount != m_lastCollRecResetCount ) {
 		log("build: collection rec was reset. returning null.");
+		g_errno = ENOCOLLREC;
 		return NULL;
 	}
 	return cr;
 }
 
+// returns false and sets g_errno on error
 bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		    key_t         *doledbKey ,
 		    char          *coll      ,
@@ -1240,7 +1244,8 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	memcpy ( &m_oldsr , sreq , sreq->getRecSize() );
 
 	// set m_collnum etc.
-	if ( ! setCollNum ( coll ) ) { g_errno = ENOCOLLREC; return false; }
+	if ( ! setCollNum ( coll ) ) 
+		return log("XmlDoc: set4() coll %s invalid",coll);
 
 	// it should be valid since we just set it
 	CollectionRec *cr = getCollRec();
@@ -8944,9 +8949,9 @@ Url **XmlDoc::getRedirUrl() {
 	//	return &m_redirUrlPtr;
 	//}
 	// log a msg
-	//if ( g_conf.m_logSpideredUrls )
-	//	logf(LOG_INFO,"build: %s redirected to %s",
-	//	     cu->getUrl(),loc->getUrl());
+	if ( g_conf.m_logSpideredUrls )
+		logf(LOG_INFO,"build: %s redirected to %s",
+		     cu->getUrl(),loc->getUrl());
 
 	// if not same Domain, it is not a simplified redirect
 	bool sameDom = true;
@@ -9361,6 +9366,7 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 				cr->m_coll     ,
 				NULL       , // pbuf
 				m_niceness ) ) {
+		log("build: failed to set old doc for %s",m_firstUrl.m_url);
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return NULL;
 	}
@@ -10070,7 +10076,7 @@ TagRec *XmlDoc::getTagRec ( ) {
 				   &m_tagRec ) )
 		// we blocked, return -1
 		return (TagRec *)-1;
-	// error?
+	// error? ENOCOLLREC?
 	if ( g_errno ) return NULL;
 	// assign it
 	m_tagRec.serialize ( m_tagRecBuf );
@@ -11976,6 +11982,67 @@ bool isAllowed2 ( Url   *url            ,
 	goto urlLoop;
 }
 
+// when doing a custom crawl we have to decide between the provided crawl
+// delay, and the one in the robots.txt...
+long *XmlDoc::getFinalCrawlDelay() {
+
+	if ( m_finalCrawlDelayValid )
+		return &m_finalCrawlDelay;
+
+	bool *isAllowed = getIsAllowed();
+	if ( ! isAllowed || isAllowed == (void *)-1 ) return (long *)isAllowed;
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	m_finalCrawlDelayValid = true;
+
+	// getIsAllowed already sets m_crawlDelayValid to true
+	if ( ! cr->m_isCustomCrawl ) {
+		m_finalCrawlDelay = m_crawlDelay;
+		// default to 250ms i guess if none specified in robots
+		// just to be somewhat nice by default
+		if ( m_crawlDelay < 0 )	m_finalCrawlDelay = 250;
+		return &m_finalCrawlDelay;
+	}
+
+	// get manually specified crawl delay in seconds. convert to ms.
+	long manual = cr->m_collectiveCrawlDelay * 1000.0;
+	// negative means -1 means unknown or not specified
+	if ( manual < 0 ) manual = -1;
+
+	// if both are unknown...
+	if ( m_crawlDelay == -1 && manual == -1 ) {
+		m_finalCrawlDelay = -1;
+		return &m_finalCrawlDelay;
+	}
+
+	// if not in robots.txt use manual
+	if ( m_crawlDelay == -1 ) {
+		m_finalCrawlDelay = manual;
+		return &m_finalCrawlDelay;
+	}
+
+	// if manually provided crawldelay is -1, use robots.txt then
+	if ( manual == -1 ) {
+		m_finalCrawlDelay = m_crawlDelay;
+		return &m_finalCrawlDelay;
+	}
+
+	// let robots.txt dictate if both are >= 0
+	if ( m_useRobotsTxt ) {
+		m_finalCrawlDelay = m_crawlDelay;
+		return &m_finalCrawlDelay;
+	}
+
+	// if not using robots.txt, pick the smallest
+	if ( m_crawlDelay < manual ) m_finalCrawlDelay = m_crawlDelay;
+	else                         m_finalCrawlDelay = manual;
+
+	return &m_finalCrawlDelay;
+}
+
+
 // . get the Robots.txt and see if we are allowed
 // . returns NULL and sets g_errno on error
 // . returns -1 if blocked, will re-call m_callback
@@ -12019,6 +12086,9 @@ bool *XmlDoc::getIsAllowed ( ) {
 	if ( isRobotsTxt ) {
 		m_isAllowed      = true;
 		m_isAllowedValid = true;
+		m_crawlDelayValid = true;
+		// make it super fast...
+		m_crawlDelay      = 0;
 		return &m_isAllowed;
 	}
 
@@ -12734,6 +12804,21 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
 	}
 
+	// . verify that it contains legit json and has the last field
+	//   b/c we saw a case where the diffbot reply was truncated
+	//   somehow
+	// . check to make sure it has the "url": field as all diffbot
+	//   json replies must
+	if ( ! THIS->m_diffbotReplyError ) {
+		char *ttt = strstr ( page , "\"url\":\"");
+		if ( ! ttt ) {
+			log("xmldoc: diffbot reply for %s using %s missing url: field",
+			    THIS->m_firstUrl.m_url,THIS->m_diffbotApiUrl.getBufStart());
+			THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
+		}
+	}
+
+
 	// reply is now valid but might be empty
 	THIS->m_diffbotReplyValid = true;
 
@@ -12773,10 +12858,26 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		//				  au->length() );
 		//THIS->m_diffbotReply.pushChar('\n');
 		// convert the \u1f23 to utf8 (\n and \r as well)
-		THIS->m_diffbotReply.safeDecodeJSONToUtf8 ( page , pageLen ,
-							    THIS->m_niceness );
+		// crap, this decodes \\\\\" to \\" which is causing
+		// the json parser to believe it is an encoded \ then
+		// a REAL quote... but quote is contained...
+		//THIS->m_diffbotReply.safeDecodeJSONToUtf8 ( page , pageLen ,
+		//					    THIS->m_niceness );
+
+		// do not do that any more then, jsonparse can call it
+		// on a per string basis
+		THIS->m_diffbotReply.safeMemcpy ( page , pageLen );
+
+		// convert embedded \0 to space
+		//char *p = THIS->m_diffbotReply.getBufStart();
+		//char *pend = p + THIS->m_diffbotReply.getLength();
 		// tack on a \0 but don't increment m_length
 		THIS->m_diffbotReply.nullTerm();
+
+		// any embedded \0's in the utf8?
+		long testLen1 = THIS->m_diffbotReply.length();
+		long testLen2 = gbstrlen(THIS->m_diffbotReply.getBufStart());
+		if ( testLen1 != testLen2 ) { char *xx=NULL;*xx=0; }
 		// convert the \u1f23 to utf8 (\n and \r as well)
 		//THIS->m_diffbotReply.decodeJSONToUtf8 ( THIS->m_niceness );
 		//THIS->m_diffbotReply.nullTerm();
@@ -12879,33 +12980,42 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 	// in order for us to do the array separation logic below.
 	// we don't want to do this logic for articles because they
 	// contain an image array!!!
-	char *needleA = "\"type\":\"product";
-	char *needleB = "\"type\":\"image";
-	char *productPtr = strstr ( text , needleA );
-	char *imagePtr   = strstr ( text , needleB );
-	if ( ! productPtr && ! imagePtr ) {
+
+	// this must be on the FIRST level of the json object, otherwise
+	// we get errors because we got type:article and it
+	// contains an images array!
+	
+	long valLen;
+	char *val = getJSONFieldValue ( text , "type", &valLen );
+
+	bool isProduct = false;
+	bool isImage = false;
+
+	if ( val && valLen == 7 && strncmp ( val , "product", 7) == 0 )
+		isProduct = true;
+
+	if ( val && valLen == 5 && strncmp ( val , "image", 5) == 0 )
+		isImage = true;
+
+	if ( ! isProduct && ! isImage ) {
 		m_tokenizedDiffbotReplyValid = true;
 		m_tokenizedDiffbotReplyPtr = &m_diffbotReply;
 		return m_tokenizedDiffbotReplyPtr;
 	}
 
 
-	char *needle1 = ",\"products\":[";
-	char *needle2 = ",\"images\":[";
-	char *parray = strstr ( text , needle1 );
-	char *pstart = NULL;
-	char *newTerm = NULL;
-	if ( parray ) {
-		// point to [
-		pstart = parray + 13 - 1;
+	char *needle;
+	char *newTerm;
+	if ( isProduct ) {
+		needle = ",\"products\":[";
 		newTerm = "product";
 	}
 	else {
-		parray = strstr ( text , needle2 );
-		// point to [
-		if ( parray ) pstart = parray + 11 - 1;
+		needle = ",\"images\":[";
 		newTerm = "image";
 	}
+
+	char *parray = strstr ( text , needle );
 
 	// if not found, no need to do anything...
 	if ( ! parray ) {
@@ -12913,6 +13023,10 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 		m_tokenizedDiffbotReplyPtr = &m_diffbotReply;
 		return m_tokenizedDiffbotReplyPtr;
 	}
+
+
+	// point to [
+	char *pstart = parray + gbstrlen(needle) - 1;
 
 	//
 	// ok, now we have to do so json ju jitsu to fix it
@@ -13500,6 +13614,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// this must be valid, since we share m_msg13 with it
 	if ( ! m_isAllowedValid ) { char *xx=NULL;*xx=0; }
 
+	long *cd = getFinalCrawlDelay();
+	if ( ! cd || cd == (void *)-1 ) return (char **)cd;
+
 	// we might bail
 	if ( ! *isAllowed ) {
 		m_httpReplyValid          = true;
@@ -13627,6 +13744,18 @@ char **XmlDoc::getHttpReply2 ( ) {
 	r->m_spideredTime           = getSpideredTime();//m_spideredTime;
 	r->m_ifModifiedSince        = 0;
 	r->m_skipHammerCheck        = 0;
+
+
+	// . this is -1 if unknown. none found in robots.txt or provided
+	//   in the custom crawl parms.
+	// . it should also be 0 for the robots.txt file itself
+	r->m_crawlDelayMS = *cd;
+
+	// let's time our crawl delay from the initiation of the download
+	// not from the end of the download. this will make things a little
+	// faster but could slam servers more.
+	r->m_crawlDelayFromEnd = false;
+
 	// need this in order to get all languages, etc. and avoid having
 	// to set words class at the spider compression proxy level
 	r->m_forEvents              = 0;
@@ -16926,6 +17055,28 @@ char *XmlDoc::getSpiderLinks ( ) {
 		return &m_spiderLinks2;
 	}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return (char *)cr;
+
+	long *ufn = getUrlFilterNum();
+	if ( ! ufn || ufn == (void *)-1 ) return (char *)ufn;
+
+	// if url filters forbids it
+	if ( ! cr->m_harvestLinks[*ufn] ) {
+		m_spiderLinksValid = true;
+		m_spiderLinks2 = false;
+		m_spiderLinks  = false;
+		return &m_spiderLinks2;
+	}
+
+	// hack for bulk job detection. never spider links
+	//if ( cr->m_isCustomCrawl == 2 ) {
+	//	m_spiderLinks  = false;
+	//	m_spiderLinks2 = false;
+	//	m_spiderLinksValid = true;
+	//	return &m_spiderLinks2;
+	//}
+
 	// check the xml for a meta robots tag
 	Xml *xml = getXml();
 	if ( ! xml || xml == (Xml *)-1 ) return (char *)xml;
@@ -16952,6 +17103,10 @@ char *XmlDoc::getSpiderLinks ( ) {
 	// they do not want the links crawled i'd imagine.
 	if ( m_oldsrValid && m_oldsr.m_avoidSpiderLinks )
 		m_spiderLinks = false;
+
+
+	// also check in url filters now too
+
 
 	// set shadow member
 	m_spiderLinks2 = m_spiderLinks;
@@ -17476,6 +17631,12 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("urlinjected=1 ");
 	else
 		sb.safePrintf("urlinjected=0 ");
+
+	if ( m_spiderLinksValid && m_spiderLinks )
+		sb.safePrintf("spiderlinks=1 ");
+	if ( m_spiderLinksValid && ! m_spiderLinks )
+		sb.safePrintf("spiderlinks=0 ");
+
 
 	if ( m_crawlDelayValid && m_crawlDelay != -1 )
 		sb.safePrintf("crawldelayms=%li ",(long)m_crawlDelay);
@@ -18547,45 +18708,7 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 	// empty? no pattern matches everything.
 	if ( ! p ) return true;
 	// how many did we have?
-	long count = 0;
-	// scan the " || " separated substrings
-	for ( ; *p ; ) {
-		// get beginning of this string
-		char *start = p;
-		// skip white space
-		while ( *start && is_wspace_a(*start) ) start++;
-		// done?
-		if ( ! *start ) break;
-		// find end of it
-		char *end = start;
-		while ( *end && end[0] != '|' )
-			end++;
-		// advance p for next guy
-		p = end;
-		// should be two |'s
-		if ( *p ) p++;
-		if ( *p ) p++;
-		// temp null this
-		char c = *end;
-		*end = '\0';
-		// count it as an attempt
-		count++;
-		// . is this substring anywhere in the document
-		// . check the rawest content before converting to utf8 i guess
-		char *foundPtr =  strstr ( m_content , start ) ;
-		// debug log statement
-		if ( foundPtr )
-			log("build: page %s matches ppp of \"%s\"",
-			    m_firstUrl.m_url,start);
-		// revert \0
-		*end = c;
-		// did we find it?
-		if ( foundPtr ) return true;
-	}
-	// if we had no attempts, it is ok
-	if ( count == 0 ) return true;
-	// if we had an unfound substring...
-	return false;
+	return doesStringContainPattern ( m_content , p );
 }
 
 // . returns ptr to status
@@ -21152,6 +21275,11 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	else
 		m_newsr.m_sentToDiffbot = false;
 
+	if ( m_diffbotReplyError )
+		m_newsr.m_hadDiffbotError = true;
+	else
+		m_newsr.m_hadDiffbotError = false;
+
 	// treat error replies special i guess, since langId, etc. will be
 	// invalid
 	if ( m_indexCode ) {
@@ -21515,6 +21643,10 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	Links *links = getLinks();
 	if ( ! links || links == (Links *)-1 ) return (char *)links;
 
+	char *spiderLinks = getSpiderLinks();
+	if ( ! spiderLinks || spiderLinks == (char *)-1 ) 
+		return (char *)spiderLinks;
+
 	TagRec ***grv = getOutlinkTagRecVector();
 	if ( ! grv || grv == (void *)-1 ) return (char *)grv;
 	//char    **iiv = getOutlinkIsIndexedVector();
@@ -21670,6 +21802,12 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	xml->getMetaContent ( mbuf, 16 , tag , tlen );
 	bool avoid = false;
 	if ( mbuf[0] == '0' ) avoid = true;
+
+	// if this is a simplified redir and we should not be spidering
+	// links then turn it off as well! because we now add simplified
+	// redirects back into spiderdb using this function.
+	if ( m_spiderLinksValid && ! m_spiderLinks )
+		avoid = true;
 
 	// it also has this meta tag now too
 	mbuf[0] = '\0';
@@ -25853,10 +25991,16 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		//long sumLen = m_finalSummaryBuf.length();
 		// is it size and not length?
 		long sumLen = 0;
+		// seems like it can return 0x01 if none...
+		//if ( sum == (char *)0x01 ) sum = NULL;
+		// get len
 		if ( sum ) sumLen = gbstrlen(sum);
-		// strange...
+		// must be \0 terminated
 		if ( sumLen > 0 && sum[sumLen] ) { char *xx=NULL;*xx=0; }
-		long sumSize = sumLen + 1;
+		// assume size is 0
+		long sumSize = 0;
+		// include the \0 in size
+		if ( sum ) sumSize = sumLen + 1;
 		// do not get any more than "me" lines/excerpts of summary
 		//long max = m_req->m_numSummaryLines;
 		// grab stuff from it!
@@ -26751,6 +26895,7 @@ Matches *XmlDoc::getMatches () {
 	if ( ! phrases || phrases == (void *)-1 ) return (Matches *)phrases;
 
 	Query *q = getQuery();
+	if ( ! q ) return (Matches *)q;
 
 	// set it up
 	m_matches.setQuery ( q );
@@ -26844,6 +26989,7 @@ Title *XmlDoc::getTitle ( ) {
 	Pos *pos = getPos();
 	if ( ! pos || pos == (Pos *)-1 ) return (Title *)pos;
 	Query *q = getQuery();
+	if ( ! q ) return (Title *)q;
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 	long titleMaxLen = cr->m_titleMaxLen;
@@ -26891,6 +27037,7 @@ Summary *XmlDoc::getSummary () {
 	Title *ti = getTitle();
 	if ( ! ti || ti == (Title *)-1 ) return (Summary *)ti;
 	Query *q = getQuery();
+	if ( ! q ) return (Summary *)q;
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 	
@@ -26946,28 +27093,30 @@ Summary *XmlDoc::getSummary () {
 char *XmlDoc::getHighlightedSummary ( ) {
 
 	if ( m_finalSummaryBufValid ) {
-		char *fsum = m_finalSummaryBuf.getBufStart();
-		if ( ! fsum ) fsum = (char *)0x01;
-		return fsum;
+		//char *fsum = m_finalSummaryBuf.getBufStart();
+		//if ( ! fsum ) fsum = (char *)0x01;
+		return m_finalSummaryBuf.getBufStart();
 	}
 
 	Summary *s = getSummary();
 	if ( ! s || s == (void *)-1 ) return (char *)s;
+
+	Query *q = getQuery();
+	if ( ! q ) return (char *)q;
 
 	// get the summary
 	char *sum    = s->getSummary();
 	long  sumLen = s->getSummaryLen();
 
 	// assume no highlighting?
-	if ( ! m_req->m_highlightQueryTerms ) {
+	if ( ! m_req->m_highlightQueryTerms || sumLen == 0 ) {
 		m_finalSummaryBuf.safeMemcpy ( sum , sumLen + 1 );
 		m_finalSummaryBufValid = true;
-		char *fsum = m_finalSummaryBuf.getBufStart();
-		if ( ! fsum ) fsum = (char *)0x01;
-		return fsum;
+		return m_finalSummaryBuf.getBufStart();
+		//char *fsum = m_finalSummaryBuf.getBufStart();
+		//if ( ! fsum ) fsum = (char *)0x01;
+		//return fsum;
 	}
-
-	Query *q = getQuery();
 
 	if ( ! m_langIdValid ) { char *xx=NULL;*xx=0; }
 
@@ -26975,7 +27124,7 @@ char *XmlDoc::getHighlightedSummary ( ) {
 	Highlight hi;
 	SafeBuf hb;
 	// highlight the query in it
-	hi.set ( &hb,
+	long hlen = hi.set ( &hb,
 			     //tt , 
 			     //4999 ,
 			     sum, 
@@ -26990,14 +27139,23 @@ char *XmlDoc::getHighlightedSummary ( ) {
 			     0,
 			     m_niceness );
 
+	// highlight::set() returns 0 on error
+	if ( hlen < 0 ) {
+		log("build: highlight class error = %s",mstrerror(g_errno));
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		return NULL;
+	}
+
 	// store into our safebuf then
 	m_finalSummaryBuf.safeMemcpy ( &hb );//tt , hlen + 1 );
 	m_finalSummaryBufValid = true;
 	m_finalSummaryBuf.nullTerm();
 
-	char *fsum = m_finalSummaryBuf.getBufStart();
-	if ( ! fsum ) fsum = (char *)0x01;
-	return fsum;
+	return m_finalSummaryBuf.getBufStart();
+
+	//char *fsum = m_finalSummaryBuf.getBufStart();
+	//if ( ! fsum ) fsum = (char *)0x01;
+	//return fsum;
 }
 
 
@@ -29687,6 +29845,18 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 
 	// close the table
 	sb->safePrintf ( "</table></center><br>\n" );
+
+	//
+	// JSON from diffbot
+	//
+	SafeBuf *dbr = getDiffbotReply();
+	if ( dbr->length() ) {
+		sb->safePrintf("<b>START EXACT DIFFBOT REPLY</b><br>\n");
+		sb->safePrintf("<pre>");
+		sb->safeMemcpy ( dbr );
+		sb->safePrintf("</pre>");
+		sb->safePrintf("<b>END EXACT DIFFBOT REPLY</b><br><br>\n");
+	}	
 
 	//
 	// PRINT ADDRESSES (prints streets first)
@@ -43835,6 +44005,7 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 	char *stringStart = NULL;
 	char *p = json;
 	bool gotOne = false;
+	long depth = 0;
 	// scan
 	for ( ; *p ; p++ ) {
 		// escaping a quote? ignore quote then.
@@ -43842,6 +44013,11 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 			// skip two bytes then..
 			p++;
 			continue;
+		}
+		// count {} depth
+		if ( ! inQuotes ) {
+			if ( *p == '{' ) depth++;
+			if ( *p == '}' ) depth--;
 		}
 		// a quote?
 		if ( *p == '\"' ) {
@@ -43854,6 +44030,8 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 			else if ( ! inQuotes && 
 				  ! gotOne &&
 				  p[1] == ':' &&
+				  // {"title":"whatever",...}
+				  depth == 1 &&
 				  stringStart &&
 				  (p - stringStart) == fieldLen &&
 				  strncmp(field,stringStart,fieldLen)==0 ) {
@@ -43906,7 +44084,7 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 	// use new json parser
 	Json jp;
 	// returns NULL and sets g_errno on error
-	if ( ! jp.parseJsonStringIntoJsonItems ( p ) ) {
+	if ( ! jp.parseJsonStringIntoJsonItems ( p , m_niceness ) ) {
 		g_errno = EBADJSONPARSER;
 		return NULL;
 	}
@@ -43975,6 +44153,11 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 			hi.m_hashGroup = HASHGROUP_INTAG;
 		if ( strstr(name,"meta") == 0 )
 			hi.m_hashGroup = HASHGROUP_INMETATAG;
+		//
+		// now Json.cpp decodes and stores the value into
+		// a buffer, so ji->getValue() should be decoded completely
+		//
+
 		// index like "title:whatever"
 		hi.m_prefix = name;
 		hashString ( ji->getValue(),ji->getValueLen() , &hi );
