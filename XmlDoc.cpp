@@ -17311,6 +17311,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		m_langId = 1;
 		m_siteNumInlinksValid = true;
 		m_siteNumInlinks = 0;
+		m_ipValid = true;
+		m_ip = 123456;
 	}
 
 	// get our checksum
