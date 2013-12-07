@@ -352,8 +352,8 @@ char *printInterface (char *p , char *pend , char *q , //long user ,
 		  "<tr><td><b>end result number</b>"
 		  "<font size=1>"
 		  "<br>Stop at this search result number. "
-		  "Default 20000000. (20M)</td>"
-		  "<td><input type=text name=ern size=10 value=20000000>"
+		  "Default 2000000. (2M)</td>"
+		  "<td><input type=text name=ern size=10 value=2000000>"
 		  "</td></tr>" 
 
 		  "<tr><td><b>query language</b>"
@@ -604,6 +604,10 @@ bool Msg1c::gotList ( ) {
 			return true;
 		}
 	}
+
+	// free "finalBuf" etc. for msg39
+	m_msg3a.reset();
+
 	// make it into a list for adding with Msg1
 	key128_t startKey; startKey.setMin();
 	key128_t endKey  ; endKey.setMax();
@@ -622,6 +626,8 @@ bool Msg1c::gotList ( ) {
 
 	//g_conf.m_logDebugSpider = 1;
 
+	log("reindex: adding docid list to spiderdb");
+
 	if ( ! m_msg1.addList ( &m_list2  ,
 				RDB_SPIDERDB , // spiderdb
 				m_coll       ,
@@ -635,6 +641,8 @@ bool Msg1c::gotList ( ) {
 }
 
 void addedListWrapper ( void *state ) {
+	// note that
+	log("reindex: done adding list to spiderdb");
 	// cast
 	Msg1c *m = (Msg1c *)state;
 	// call callback, all done
