@@ -19296,7 +19296,8 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	m_newsr.m_siteHash32 = m_siteHash32;
 
 	// need this for updating crawl delay table, m_cdTable in Spider.cpp
-	m_newsr.m_domHash32  = getDomHash32();
+	if ( fu ) m_newsr.m_domHash32  = getDomHash32();
+	else      m_newsr.m_domHash32  = 0;
 
 	if ( ! m_tagRecValid               ) { char *xx=NULL;*xx=0; }
 	if ( ! m_ipValid                   ) { char *xx=NULL;*xx=0; }
