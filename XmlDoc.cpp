@@ -19268,7 +19268,9 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	
 
 	// shortcut
-	Url *fu = getFirstUrl();
+	Url *fu = NULL;
+	// watch out for titlerec lookup errors for docid based spider reqs
+	if ( m_firstUrlValid ) fu = getFirstUrl();
 
 	// reset
 	m_newsr.reset();
@@ -19326,7 +19328,10 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	//tag = gr->getTag ( "hascontactinfo"  );
 	//if ( tag ) {
 
-	long long uh48        = hash64b(fu->m_url) & 0x0000ffffffffffffLL;
+	long long uh48        = 0LL;
+	// we might be a docid based spider request so fu could be invalid
+	// if the titlerec lookup failed
+	if ( fu ) uh48 = hash64b(fu->m_url) & 0x0000ffffffffffffLL;
 	long long parentDocId = 0LL;
 	if ( m_oldsrValid )
 		parentDocId = m_oldsr.getParentDocId();
@@ -19375,7 +19380,8 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 		if ( m_isPermalinkValid ) m_newsr.m_isPermalink =m_isPermalink;
 		if ( m_httpStatusValid  ) m_newsr.m_httpStatus = m_httpStatus;
 		// stuff that is automatically valid
-		m_newsr.m_isPingServer = (bool)fu->isPingServer();
+		m_newsr.m_isPingServer = 0;
+		if ( fu ) m_newsr.m_isPingServer = (bool)fu->isPingServer();
 		// this was replaced by m_contentHash32
 		//m_newsr.m_newRequests  = 0;
 		m_newsr.m_errCode      = m_indexCode;
