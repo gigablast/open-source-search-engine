@@ -1,6 +1,9 @@
 #ifndef _PAGEREINDEX_H_
 #define _PAGEREINDEX_H_
 
+#include "Msg4.h"
+#include "SafeBuf.h"
+
 // . for adding docid-based spider requests to spiderdb
 // . this is the original method, for queuing up docid-based spider requests
 class Msg1c {
@@ -29,8 +32,10 @@ public:
 	long m_niceness;
 	Msg39Request m_req;
 	Msg3a m_msg3a;
-	Msg1 m_msg1;
-	RdbList m_list2;
+	//Msg1 m_msg1;
+	//RdbList m_list2;
+	Msg4 m_msg4;
+	SafeBuf m_sb;
 	long m_numDocIds;
 	long m_numDocIdsAdded;
 	Query  m_qq;

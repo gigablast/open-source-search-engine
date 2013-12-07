@@ -115,6 +115,7 @@ XmlDoc::XmlDoc() {
 	memset ( p , 0 , (long)pend - (long)p );
 	m_msg22Request.m_inUse = 0;
 	m_msg4Waiting = false;
+	m_msg4Launched = false;
 	//m_sectiondbData = NULL;
 	//m_placedbData   = NULL;
 	m_dupTrPtr = NULL;
@@ -173,6 +174,8 @@ XmlDoc::~XmlDoc() {
 static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
+
+	m_msg4Launched = false;
 
 	m_dmozBuf.purge();
 	m_fakeIpBuf.purge();
@@ -1013,6 +1016,20 @@ bool XmlDoc::loadFromOldTitleRec ( ) {
 	return true;
 }
 
+CollectionRec *XmlDoc::getCollRec ( ) {
+	if ( ! m_collnumValid ) { char *xx=NULL;*xx=0; }
+	CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
+	if ( ! cr ) {
+		log("build: got NULL collection rec.");
+		return NULL;
+	}
+	// was it reset since we started spidering this url?
+	//if ( cr->m_lastResetCount != m_lastCollRecResetCount ) {
+	//	log("build: collection rec was reset. returning null.");
+	//	return NULL;
+	//}
+	return cr;
+}
 
 bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		    key_t         *doledbKey ,
@@ -1794,7 +1811,116 @@ void indexDocWrapper2 ( int fd , void *state ) {
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error and returns true
+// . this is now a WRAPPER for indexDoc2() and it will deal with
+//   g_errnos by adding an error spider reply so we offload the
+//   logic to the url filters table
 bool XmlDoc::indexDoc ( ) {
+
+	// return from the msg4 below?
+	if ( m_msg4Launched ) {
+		// must have been waiting
+		if ( ! m_msg4Waiting ) { char *xx=NULL;*xx=0; }
+		return true;
+	}
+
+	bool status = true;
+
+	if ( ! g_errno ) status = indexDoc2 ( );
+
+	// blocked?
+	if ( ! status ) return false;
+
+	// done with no error?
+	if ( status && ! g_errno ) return true;
+
+	///
+	// otherwise, an internal error. we must add a SpiderReply
+	// to spiderdb to release the lock.
+	///
+
+	log("build: %s had internal error = %s. adding spider error reply.",
+	    m_firstUrl.m_url,mstrerror(g_errno));
+
+	if ( ! m_indexCodeValid ) {
+		m_indexCode = EINTERNALERROR;//g_errno;
+		m_indexCodeValid = true;
+	}
+
+	////
+	//
+	// make these fake so getNewSpiderReply() below does not block
+	//
+	////
+
+	if ( ! m_tagRecValid ) {
+		m_tagRec.reset();
+		m_tagRecValid = true;
+	}
+
+	if ( ! m_siteHash32Valid ) {
+		m_siteHash32 = 1;
+		m_siteHash32Valid = true;
+	}
+
+	if ( ! m_downloadEndTimeValid ) {
+		m_downloadEndTime = 0;
+		m_downloadEndTimeValid = true;
+	}
+
+	if ( ! m_ipValid ) {
+		m_ipValid = true;
+		m_ip = atoip("1.2.3.4");
+	}
+
+	if ( ! m_spideredTimeValid ) {
+		m_spideredTimeValid = true;
+		m_spideredTime = 0;
+	}
+
+	// if this is EABANDONED or EHITCRAWLLIMIT or EHITPROCESSLIMIT
+	// or ECORRUPTDATA (corrupt gzip reply)
+	// then this should not block. we need a spiderReply to release the 
+	// url spider lock in SpiderLoop::m_lockTable.
+	SpiderReply *nsr = getNewSpiderReply ();
+	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
+
+	//CollectionRec *cr = getCollRec();
+	//if ( ! cr ) return true;
+	// we do not have all those functions in here yet, so do this
+	CollectionRec *cr = m_cr;
+
+	SafeBuf metaList;
+	metaList.pushChar(RDB_SPIDERDB);
+	metaList.safeMemcpy ( (char *)nsr , nsr->getRecSize() );
+
+	m_msg4Launched = true;
+
+	// clear g_errno
+	g_errno = 0;
+
+	if ( ! m_msg4.addMetaList ( metaList.getBufStart()     ,
+				    metaList.length() ,
+				    cr->m_coll         ,
+				    m_masterState  , // state
+				    m_masterLoop   ,
+				    m_niceness     ) ) {
+		// spider hang bug
+		if ( g_conf.m_testSpiderEnabled )
+			logf(LOG_DEBUG,"build: msg4 meta add3 blocked" 
+			     "msg4=0x%lx" ,(long)&m_msg4);
+		m_msg4Waiting = true;
+		return false;
+	}
+
+	m_msg4Launched = false;
+
+	// all done
+	return true;
+}
+
+// . returns false if blocked, true otherwise
+// . sets g_errno on error and returns true
+bool XmlDoc::indexDoc2 ( ) {
 
 	if ( g_isYippy ) return true;
 
@@ -1803,6 +1929,8 @@ bool XmlDoc::indexDoc ( ) {
 		m_masterLoop  = indexDocWrapper;
 		m_masterState = this;
 	}
+
+	setStatus("indexing doc");
 
 	// maybe a callback had g_errno set?
 	if ( g_errno ) return true;
@@ -8886,7 +9014,9 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 		return &m_oldDoc;
 	}
 
-	// cache age is 0... super fresh
+	// . cache age is 0... super fresh 
+	// . returns NULL w/ g_errno if not found unless isIndexed is false 
+	//   and valid, and it is not valid for pagereindexes.
 	char **otr = getOldTitleRec ( );
 	if ( ! otr || otr == (char **)-1 ) return (XmlDoc **)otr;
 	// if no title rec, return ptr to a null
@@ -9289,7 +9419,12 @@ char **XmlDoc::getOldTitleRec ( ) {
 	// add it to the cache?
 	bool addToCache = false;
 	//if ( maxCacheAge > 0 ) addToCache = true;
+
 	// not if new! no we need to do this so XmlDoc::getDocId() works!
+	// this logic prevents us from setting g_errno to ENOTFOUND
+	// when m_msg22a below calls indexDocWrapper(). however, for
+	// doing a query delete on a not found docid will succumb to
+	// the g_errno because m_isIndexed is not valid i think...
 	if ( m_isIndexedValid && ! m_isIndexed && m_docIdValid ) {
 		m_oldTitleRec      = NULL;
 		m_oldTitleRecValid = true;
@@ -17684,8 +17819,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//	if ( ! odp || odp==(void *)-1) return (char *)odp;
 	//}
 
+	// shit, we need a spider reply so that it will not re-add the
+	// spider request to waiting tree, we ignore docid-based
+	// recs that have spiderreplies in Spider.cpp
 	SpiderReply *newsr = NULL;
-	if ( m_useSpiderdb && ! m_deleteFromIndex ) {
+	if ( m_useSpiderdb ) { // && ! m_deleteFromIndex ) {
 		newsr = getNewSpiderReply();
 		if ( ! newsr || newsr == (void *)-1 ) return (char *)newsr;
 	}

@@ -440,13 +440,13 @@ class XmlDoc {
 	void nukeDoc ( class XmlDoc *);
 	void reset ( ) ;
 	bool setFirstUrl ( char *u , bool addWWW , Url *base = NULL ) ;
-	class CollectionRec *getCollRec ( );
 	bool setRedirUrl ( char *u , bool addWWW ) ;
 	void setStatus ( char *s ) ;
 	void setCallback ( void *state, void (*callback) (void *state) ) ;
 	void setCallback ( void *state, bool (*callback) (void *state) ) ;
 	bool addToSpiderdb ( ) ;
 	bool indexDoc ( );
+	bool indexDoc2 ( );
 	key_t *getTitleRecKey() ;
 	//char *getSkipIndexing ( );
 	char *prepareToMakeTitleRec ( ) ;
@@ -877,6 +877,12 @@ class XmlDoc {
 	Url        m_currentUrl;
 	char      *m_coll;
 	char       m_collBuf[MAX_COLL_LEN+1]; // include \0
+
+	collnum_t      m_collnum;
+	long           m_lastCollRecResetCount;
+	class CollectionRec *getCollRec ( ) ;
+
+
 	char      *m_content;
 	long       m_contentLen;
 
@@ -1228,6 +1234,7 @@ class XmlDoc {
 	bool m_matchesValid;
 	bool m_dbufValid;
 	bool m_titleValid;
+	bool m_collnumValid;
 	//bool m_twidsValid;
 	bool m_termId32BufValid;
 	bool m_termInfoBufValid;
@@ -2074,6 +2081,7 @@ class XmlDoc {
 	bool m_freed;
 
 	bool m_msg4Waiting;
+	bool m_msg4Launched;
 
 	// word spam detection
 	char *getWordSpamVec ( );

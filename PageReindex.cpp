@@ -534,13 +534,15 @@ bool Msg1c::gotList ( ) {
 
 	// make a list big enough to hold all the spider recs that we make
 	// from these docIds
-	SafeBuf sb;
+	//SafeBuf sb;
 
 	long nowGlobal = getTimeGlobal();
 
 	HashTableX dt;
 	char dbuf[1024];
 	dt.set(8,0,64,dbuf,1024,false,0,"ddocids");
+
+	m_sb.setLabel("reiadd");
 
 	m_numDocIdsAdded = 0;
 	//long count = 0;
@@ -595,7 +597,7 @@ bool Msg1c::gotList ( ) {
 		m_numDocIdsAdded++;
 	
 		// store it
-		if ( ! sb.safeMemcpy ( (char *)&sr , recSize ) ) {
+		if ( ! m_sb.safeMemcpy ( (char *)&sr , recSize ) ) {
 			// g_errno must be set
 			if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 			//s_isRunning = false;
@@ -610,6 +612,7 @@ bool Msg1c::gotList ( ) {
 	// free "finalBuf" etc. for msg39
 	m_msg3a.reset();
 
+	/*
 	// make it into a list for adding with Msg1
 	key128_t startKey; startKey.setMin();
 	key128_t endKey  ; endKey.setMax();
@@ -625,18 +628,19 @@ bool Msg1c::gotList ( ) {
 		      16 ); // 16 byte keys now
 	// release from sb so it doesn't free it
 	sb.detachBuf();
+	*/
 
 	//g_conf.m_logDebugSpider = 1;
 
 	log("reindex: adding docid list to spiderdb");
 
-	if ( ! m_msg1.addList ( &m_list2  ,
-				RDB_SPIDERDB , // spiderdb
-				m_coll       ,
-				this ,
-				addedListWrapper ,
-				false     , // force local
-				0         ))// niceness
+	if ( ! m_msg4.addMetaList ( m_sb.getBufStart() ,
+				    m_sb.length() ,
+				    m_coll ,
+				    this ,
+				    addedListWrapper ,
+				    0 , // niceness
+				    RDB_SPIDERDB ))// spiderdb
 		return false;
 	// if we did not block, go here
 	return true;
