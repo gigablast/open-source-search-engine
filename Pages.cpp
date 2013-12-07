@@ -416,8 +416,13 @@ long Pages::getDynamicPageNumber ( HttpRequest *r ) {
 	return -1;
 }
 
-void doneFlushingParms ( void *state ) {
+// once all hosts have received the parms, or we've at least tried to send
+// them to all hosts, then come here to return the page content back to
+// the client browser
+void doneBroadcastingParms ( void *state ) {
 	TcpSocket *sock = (TcpSocket *)state;
+	// free this mem
+	sock->m_handyBuf.purge();
 	// set another http request again
 	HttpRequest r;
 	bool status = r.set ( sock->m_readBuf , sock->m_readOffset , sock ) ;
@@ -425,14 +430,6 @@ void doneFlushingParms ( void *state ) {
 	WebPage *pg = &s_pages[sock->m_pageNum];
 	// call the page specifc function which will send data back on socket
 	pg->m_function ( sock , &r );
-}
-
-void doneBroadcastingParms ( void *state ) {
-	TcpSocket *sock = (TcpSocket *)state;
-	// free this mem
-	sock->m_handyBuf.purge();
-	// but flush msg4 now so parms are realized on all machines
-	flushMsg4Buffers ( state , doneFlushingParms );
 }
 
 // . returns false if blocked, true otherwise

@@ -4246,7 +4246,7 @@ void doneSendingNotification ( void *state ) {
 	cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
 
 	// we have to send these two parms to all in cluster now
-	SafBuf parmList;
+	SafeBuf parmList;
 	g_parms.addParmToList2 ( &parmList , cr , "spiderRoundNum" ); 
 	g_parms.addParmToList2 ( &parmList , cr , "spiderRoundStart" ); 
 	// this uses msg4 so parm ordering is guaranteed

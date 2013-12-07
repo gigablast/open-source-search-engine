@@ -85,9 +85,23 @@ class Collectiondb  {
 
 	// . these are called by handleRequest
 	// . based on "action" cgi var, 1-->add,2-->delete,3-->update
-	bool addRec     ( char *coll , char *cc , long cclen , bool isNew ,
-			  collnum_t collnum , bool isDump , //  = false );
-			  bool saveRec ); // = true
+	//bool addRec     ( char *coll , char *cc , long cclen , bool isNew ,
+	//		  collnum_t collnum , bool isDump , //  = false );
+	//		  bool saveRec ); // = true
+
+
+	bool addExistingColl ( char *coll, 
+			       collnum_t collnum ,
+			       bool isDump ) ;
+	bool addNewColl ( char *coll , 
+			  char customCrawl ,
+			  char *cpc , 
+			  long cpclen , 
+			  bool saveIt ) ;
+	bool registerCollRec ( CollectionRec *cr ,
+			       bool isDump ,
+			       bool isNew ) ;
+
 
 	// returns false if blocked, true otherwise. 
 	bool deleteRec  ( char *coll , WaitEntry *we );

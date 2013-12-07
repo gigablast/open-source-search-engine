@@ -113,8 +113,7 @@ bool Collectiondb::load ( bool isDump ) {
 		// get collnum
 		collnum_t collnum = atol ( pp + 1 );
 		// add it
-		if ( !addRec ( coll , NULL , 0 , false , collnum , isDump ,
-			       true ) )
+		if ( ! addExistingColl ( coll , collnum ,isDump ) )
 			return false;
 	}
 	// note it
@@ -166,20 +165,63 @@ void Collectiondb::updateTime() {
 #include "Cachedb.h"
 #include "Syncdb.h"
 
+bool Collectiondb::addExistingColl ( char *coll, 
+				     collnum_t collnum ,
+				     bool isDump ) {
 
-// . MDW: TODO: bring this back when we have a subdir for each collection
+	long i = collnum;
+
+	// ensure does not already exist in memory
+	if ( getCollnum ( coll ) >= 0 ) {
+		g_errno = EEXIST;
+		return log("admin: Trying to create collection \"%s\" but "
+			   "already exists in memory.",coll);
+	}
+
+	// create the record in memory
+	CollectionRec *cr = new (CollectionRec);
+	if ( ! cr ) 
+		return log("admin: Failed to allocated %li bytes for new "
+			   "collection record for \"%s\".",
+			   (long)sizeof(CollectionRec),coll);
+	mnew ( cr , sizeof(CollectionRec) , "CollectionRec" ); 
+
+
+	// get the default.conf from working dir if there
+	g_parms.setToDefault( (char *)cr );
+
+	// point to this, so Rdb and RdbBase can reference it
+	coll = cr->m_coll;
+
+	//log("admin: loaded old coll \"%s\"",coll);
+
+	// load if not new
+	if ( ! cr->load ( coll , i ) ) {
+		mdelete ( cr, sizeof(CollectionRec), "CollectionRec" ); 
+		delete ( cr );
+		m_recs[i] = NULL;
+		return log("admin: Failed to load conf for collection "
+			   "\"%s\".",coll);
+	}
+
+	return registerCollRec ( cr , isDump , false );
+}
+
 // . add a new rec
 // . returns false and sets g_errno on error
-// . use a collnum_t of -1 if it is new
-bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
-			    collnum_t collnum , bool isDump ,
-			    bool saveIt ) {
-	// sanity check
-	if ( ( isNew && collnum >= 0) ||
-	     (!isNew && collnum <  0) ) {
-		log(LOG_LOGIC,"admin: Bad parms passed to addRec.");
-		char *xx = NULL; *xx = 0;
-	}
+// . was addRec()
+// . "isDump" is true if we don't need to initialize all the rdbs etc
+//   because we are doing a './gb dump ...' cmd to dump out data from
+//   one Rdb which we will custom initialize in main.cpp where the dump
+//   code is. like for instance, posdb.
+// . "customCrawl" is 0 for a regular collection, 1 for a simple crawl
+//   2 for a bulk job. diffbot terminology.
+bool Collectiondb::addNewColl ( char *coll , 
+				char customCrawl ,
+				char *cpc , 
+				long cpclen , 
+				bool saveIt ) {
+
 	// ensure coll name is legit
 	char *p = coll;
 	for ( ; *p ; p++ ) {
@@ -196,15 +238,13 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	}
 	// . scan for holes
 	// . i is also known as the collection id
-	long i ;
-	if ( collnum >= 0 ) 
-		i = (long)collnum;
+	long i;
 	// no longer fill empty slots because if they do a reset then
 	// a new rec right away it will be filled with msg4 recs not
 	// destined for it. Later we will have to recycle some how!!
 	//else for ( i = 0 ; i < m_numRecs ; i++ ) if ( ! m_recs[i] ) break;
 	// right now we #define collnum_t short. so do not breach that!
-	else if ( m_numRecs < 0x7fff ) {
+	if ( m_numRecs < 0x7fff ) {
 		// set it
 		i = m_numRecs;
 		// claim it
@@ -212,6 +252,7 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 		// increment m_numRecs below.
 		//m_numRecs++;
 	}
+	// TODO: scan for holes here...
 	else { 
 		char *xx=NULL;*xx=0; }
 
@@ -247,50 +288,23 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	// MDW: ensure not created on disk since time of last load
 	char dname[512];
 	sprintf(dname, "%scoll.%s.%li/",g_hostdb.m_dir,coll,i);
-	DIR *dir = NULL;
-	if ( isNew )
-		dir = opendir ( dname );
-	if ( dir )
-		closedir ( dir );
-	if ( isNew && dir ) {
+	DIR *dir = opendir ( dname );
+	if ( dir ) closedir ( dir );
+	if ( dir ) {
 		g_errno = EEXIST;
 		return log("admin: Trying to create collection %s but "
 			   "directory %s already exists on disk.",coll,dname);
 	}
 
-	// grow the ptr buf if we could not plug a hole and it has not the
-	// capacity for us already...
-	if ( i >= m_numRecs && 
-	     (i+1)*4 > m_recPtrBuf.getCapacity() ) {
-		long need = (i+1)*sizeof(CollectionRec *);
-		long have = m_recPtrBuf.getLength();
-		need -= have;
-		// true here means to clear the new space to zeroes
-		if ( ! m_recPtrBuf.reserve ( need ,NULL, true ) ) 
-			return log("admin: error growing rec ptr buf");
-		// don't forget to do this...
-		m_recPtrBuf.setLength ( need );
-	}
-	// re-ref it in case it is different
-	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
-
-	//char fname[512];
-	// ending '/' is ALWAYS included in g_hostdb.m_dir
-	//sprintf ( fname , "%s%li.%s.conf",g_hostdb.m_dir,i,coll);
-	//File f;
-	//f.set ( fname );
-	//if ( f.doesExist() ) {
-	//	g_errno = EEXIST;
-	//	return log("admin: Trying to create collection \"%s\" but "
-	//		   "file %s already exists on disk.",coll,fname);
-	//}
 	// create the record in memory
-	m_recs[i] = new (CollectionRec);
-	if ( ! m_recs[i] ) 
+	CollectionRec *cr = new (CollectionRec);
+	if ( ! cr ) 
 		return log("admin: Failed to allocated %li bytes for new "
 			   "collection record for \"%s\".",
 			   (long)sizeof(CollectionRec),coll);
-	mnew ( m_recs[i] , sizeof(CollectionRec) , "CollectionRec" ); 
+	// register the mem
+	mnew ( cr , sizeof(CollectionRec) , "CollectionRec" ); 
+
 	// get copy collection
 	CollectionRec *cpcrec = NULL;
 	if ( cpc && cpc[0] ) cpcrec = getRec ( cpc , cpclen );
@@ -298,16 +312,16 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 		log("admin: Collection \"%s\" to copy config from does not "
 		    "exist.",cpc);
 	// get the default.conf from working dir if there
-	g_parms.setToDefault( (char *)m_recs[i] );
+	g_parms.setToDefault( (char *)cr );
 
-	if ( isNew ) {
-		// the default conf file
-		char tmp1[1024];
-		sprintf ( tmp1 , "%sdefault.conf" , g_hostdb.m_dir );
-		// . set our parms from the file.
-		// . accepts OBJ_COLLECTIONREC or OBJ_CONF
-		g_parms.setFromFile ( m_recs[i] , NULL , tmp1 );
-	}
+	/*
+	// the default conf file
+	char tmp1[1024];
+	sprintf ( tmp1 , "%sdefault.conf" , g_hostdb.m_dir );
+	// . set our parms from the file.
+	// . accepts OBJ_COLLECTIONREC or OBJ_CONF
+	g_parms.setFromFile ( cr , NULL , tmp1 );
+	*/
 
 	// this will override all
 	if ( cpcrec ) {
@@ -315,95 +329,185 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 		long size = (char *)&(cpcrec->m_END_COPY) - (char *)cpcrec;
 		// JAB: bad memcpy - no donut!
 		// this is not how objects are supposed to be copied!!!
-		memcpy ( m_recs[i] , cpcrec , size);//sizeof(CollectionRec) );
-		// perform the cleanup that a copy constructor might do...
-		//for (int rx = 0; rx < MAX_FILTERS; rx++)
-		//	m_recs[i]->m_pRegExParser[rx] = NULL;
-		// don't NUKE the filters!
-		// m_recs[i]->m_numRegExs = 0;
-		// OK - done with cleaning up...
-		// but never copy over the collection hostname, that is
-		// problematic
-		//m_recs[i]->m_collectionHostname [0] = '\0';
-		//m_recs[i]->m_collectionHostname1[0] = '\0';
-		//m_recs[i]->m_collectionHostname2[0] = '\0';
+		memcpy ( cr , cpcrec , size);
 	}
 
 	// set coll id and coll name for coll id #i
-	strcpy ( m_recs[i]->m_coll , coll );
-	m_recs[i]->m_collLen = gbstrlen ( coll );
-	m_recs[i]->m_collnum = i;
+	strcpy ( cr->m_coll , coll );
+	cr->m_collLen = gbstrlen ( coll );
+	cr->m_collnum = i;
 
 	// point to this, so Rdb and RdbBase can reference it
-	coll = m_recs[i]->m_coll;
+	coll = cr->m_coll;
 
-	// . if has no password or ip add the default password, footbar
-	// . no, just don't have any password, just use the 127.0.0.1 ip
-	//   that is the loopback
-	/*
-	if ( m_recs[i]->m_numAdminIps  == 0 &&
-	     m_recs[i]->m_numAdminPwds == 0    ) {
-		m_recs[i]->m_numAdminIps = 1;
-		m_recs[i]->m_adminIps[0] = atoip("0.0.0.0",7);
-		//strcpy ( m_recs[i]->m_adminPwds[0] , "footbar23" );
-		//m_recs[i]->m_numAdminPwds = 1;
-		//log("admin: Using default password for new collection of "
-		//    "'footbar23'.");
+	//
+	// BEGIN NEW CODE
+	//
+
+	//
+	// get token and crawlname if customCrawl is 1 or 2
+	//
+	char *token = NULL;
+	char *crawl = NULL;
+	SafeBuf tmp;
+	// . return true with g_errno set on error
+	// . if we fail to set a parm right we should force ourselves 
+	//   out sync
+	if ( customCrawl ) {
+		if ( ! tmp.safeStrcpy ( coll ) ) return true;
+		token = tmp.getBufStart();
+		// diffbot coll name format is <token>-<crawlname>
+		char *h = strchr ( tmp.getBufStart() , '-' );
+		if ( ! h ) {
+			log("crawlbot: bad custom collname");
+			g_errno = EBADENGINEER;
+			return true;
+		}
+		*h = '\0';
+		crawl = h + 1;
+		if ( ! crawl[0] ) {
+			log("crawlbot: bad custom crawl name");
+			g_errno = EBADENGINEER;
+			return true;
+		}
 	}
-	*/
 
-	// collection name HACK for backwards compatibility
-	//if ( strcmp ( coll , "main" ) == 0 ) {
-	//	m_recs[i]->m_coll[0] = '\0';
-	//	m_recs[i]->m_collLen = 0;
-	//	//coll[0] = '\0';
-	//}
+	//log("parms: added new collection \"%s\"", collName );
 
-	log("admin: adding coll \"%s\" (new=%li)",coll,(long)isNew);
+	cr->m_maxToCrawl = -1;
+	cr->m_maxToProcess = -1;
+
+
+	if ( customCrawl ) {
+		// remember the token
+		cr->m_diffbotToken.set ( token );
+		cr->m_diffbotCrawlName.set ( crawl );
+		// bring this back
+		cr->m_diffbotApiUrl.set ( "" );
+		cr->m_diffbotUrlCrawlPattern.set ( "" );
+		cr->m_diffbotUrlProcessPattern.set ( "" );
+		cr->m_diffbotPageProcessPattern.set ( "" );
+		cr->m_diffbotUrlCrawlRegEx.set ( "" );
+		cr->m_diffbotUrlProcessRegEx.set ( "" );
+		cr->m_spiderStatus = SP_INITIALIZING;
+		// do not spider more than this many urls total. 
+		// -1 means no max.
+		cr->m_maxToCrawl = 100000;
+		// do not process more than this. -1 means no max.
+		cr->m_maxToProcess = 100000;
+		// -1 means no max
+		cr->m_maxCrawlRounds = -1;
+		// john want's deduping on by default to avoid 
+		// processing similar pgs
+		cr->m_dedupingEnabled = true;
+		// show the ban links in the search results. the 
+		// collection name is cryptographic enough to show that
+		cr->m_isCustomCrawl = customCrawl;
+		cr->m_diffbotOnlyProcessIfNew = true;
+		// default respider to off
+		cr->m_collectiveRespiderFrequency = 0.0;
+		cr->m_restrictDomain = true;
+		// reset the crawl stats
+		cr->m_diffbotCrawlStartTime=
+			gettimeofdayInMillisecondsGlobal();
+		cr->m_diffbotCrawlEndTime   = 0LL;
+		// . just the basics on these for now
+		// . if certain parms are changed then the url filters
+		//   must be rebuilt, as well as possibly the waiting tree!!!
+		cr->rebuildUrlFilters ( );
+	}
+
+
+	cr->m_useRobotsTxt = true;
+
+	// reset crawler stats.they should be loaded from crawlinfo.txt
+	memset ( &cr->m_localCrawlInfo , 0 , sizeof(CrawlInfo) );
+	memset ( &cr->m_globalCrawlInfo , 0 , sizeof(CrawlInfo) );
+
+	// set some defaults. max spiders for all priorities in this 
+	// collection
+	cr->m_maxNumSpiders = 10;
+
+	//cr->m_needsSave = 1;
+
+	// start the spiders!
+	cr->m_spideringEnabled = true;
+
+	// override this?
+	saveIt = true;
+
+	//
+	// END NEW CODE
+	//
+
+	//log("admin: adding coll \"%s\" (new=%li)",coll,(long)isNew);
 
 	// MDW: create the new directory
-	if ( isNew ) {
-	retry22:
-		if ( ::mkdir ( dname , 
-			       S_IRUSR | S_IWUSR | S_IXUSR | 
-			       S_IRGRP | S_IWGRP | S_IXGRP | 
-			       S_IROTH | S_IXOTH ) ) {
-			// valgrind?
-			if ( errno == EINTR ) goto retry22;
-			g_errno = errno;
-			mdelete ( m_recs[i] , sizeof(CollectionRec) , 
-				  "CollectionRec" ); 
-			delete ( m_recs[i]);
-			m_recs[i] = NULL;
-			return log("admin: Creating directory %s had error: "
-				   "%s.", dname,mstrerror(g_errno));
-		}
-		// save it into this dir... might fail!
-		if ( saveIt && ! m_recs[i]->save() ) {
-			mdelete ( m_recs[i] , sizeof(CollectionRec) , 
-				  "CollectionRec" ); 
-			delete ( m_recs[i]);
-			m_recs[i] = NULL;
-			return log("admin: Failed to save file %s: %s",
-				   dname,mstrerror(g_errno));
-		}
+ retry22:
+	if ( ::mkdir ( dname , 
+		       S_IRUSR | S_IWUSR | S_IXUSR | 
+		       S_IRGRP | S_IWGRP | S_IXGRP | 
+		       S_IROTH | S_IXOTH ) ) {
+		// valgrind?
+		if ( errno == EINTR ) goto retry22;
+		g_errno = errno;
+		mdelete ( cr , sizeof(CollectionRec) , "CollectionRec" ); 
+		delete ( cr );
+		return log("admin: Creating directory %s had error: "
+			   "%s.", dname,mstrerror(g_errno));
 	}
-	// load if not new
-	if ( ! isNew && ! m_recs[i]->load ( coll , i ) ) {
-		mdelete ( m_recs[i], sizeof(CollectionRec), "CollectionRec" ); 
-		delete ( m_recs[i]);
-		m_recs[i] = NULL;
-		return log("admin: Failed to load conf for collection "
-			   "\"%s\".",coll);
+
+	// save it into this dir... might fail!
+	if ( saveIt && ! cr->save() ) {
+		mdelete ( cr , sizeof(CollectionRec) , "CollectionRec" ); 
+		delete ( cr );
+		return log("admin: Failed to save file %s: %s",
+			   dname,mstrerror(g_errno));
 	}
-	// mark it as needing to be saved instead
-	if ( saveIt ) m_recs[i]->m_needsSave = false;
-	else          m_recs[i]->m_needsSave = true;
-	// force this to off for now
-	//m_recs[i]->m_queryExpansion = false;
+
+
+	return registerCollRec ( cr , false , true );
+}
+
+bool Collectiondb::registerCollRec ( CollectionRec *cr ,
+				     bool isDump ,
+				     bool isNew ) {
+
+	long i = cr->m_collnum;
+	long need;
+	long have;
+
+	// grow the ptr buf if we could not plug a hole and it has not the
+	// capacity for us already...
+	if ( i >= m_numRecs && 
+	     (i+1)*4 > m_recPtrBuf.getCapacity() ) {
+		need = (i+1)*sizeof(CollectionRec *);
+		have = m_recPtrBuf.getLength();
+		need -= have;
+		// true here means to clear the new space to zeroes
+		if ( ! m_recPtrBuf.reserve ( need ,NULL, true ) )  {
+		hadError:
+			log("admin: Had error adding new collection: %s.",
+			    mstrerror(g_errno));
+			// do not delete it, might have failed to add because 
+			// not enough memory to read in the tree *-saved.dat 
+			// file on disk!! and if you delete in then core the 
+			// *-saved.dat file gets overwritten!!!
+			return false;
+		}
+		// don't forget to do this...
+		m_recPtrBuf.setLength ( need );
+	}
+
+	// re-ref it in case it is different
+	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
+
 
 	bool verify = true;
 	long long h64;
+
+	char *coll = cr->m_coll;
+
 
 	// first time init?
 	if ( g_collTable.m_numSlots == 0 )
@@ -418,10 +522,13 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	if ( ! g_collTable.addKey ( &h64 , &i ) ) 
 		goto hadError;
 
+	// store our collrec ptr in there
+	m_recs[i] = cr;
+
 	// reserve it
 	if ( i >= m_numRecs ) m_numRecs = i + 1;
 
-	// sanity
+	// sanity to make sure collectionrec ptrs are legit
 	for ( long j = 0 ; j < m_numRecs ; j++ ) {
 		if ( ! m_recs[j] ) continue;
 		if ( m_recs[j]->m_collnum == 1 ) continue;
@@ -429,11 +536,15 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 
 	// count it
 	m_numRecsUsed++;
+
 	// update the time
 	updateTime();
+
 	// if we are doing a dump from the command line, skip this stuff
 	if ( isDump ) return true;
-	if(isNew) verify = false;
+
+
+	if ( isNew ) verify = false;
 
 
 	// tell rdbs to add one, too
@@ -453,68 +564,20 @@ bool Collectiondb::addRec ( char *coll , char *cpc , long cpclen , bool isNew ,
 	if ( ! g_spiderdb.addColl   ( coll, verify ) ) goto hadError;
 	if ( ! g_doledb.addColl     ( coll, verify ) ) goto hadError;
 
-
-	// if first time adding a collrec, initialize the collectionless
-	// rdbs so they call Rdb::addColl() which makes a new RdbBase for them
-	// and stores ptr to that base in CollectionRec::m_bases[]
-	/*
-	if ( m_numRecsUsed == 1 ) {
-		g_statsdb.addColl ( NULL );
-		g_cachedb.addColl ( NULL );
-		g_serpdb.addColl ( NULL );
-		//return g_accessdb.addColl ( NULL );
-		//return g_facebookdb.addColl ( NULL );
-		g_syncdb.addColl ( NULL );
-	}
-	*/
-
-
 	// debug message
-	log ( LOG_INFO, "admin: added collection \"%s\" (%li).",coll,(long)i);
+	log ( LOG_INFO, "admin: verified collection \"%s\" (%li).",
+	      coll,(long)i);
+
 	// tell SpiderCache about this collection, it will create a 
 	// SpiderCollection class for it.
 	//g_spiderCache.reset1();
 
-	// . make it set is CollectionRec::m_sortByDateTable now
-	// . everyone else uses setTimeOfDayInMilliseconds() in fctypes.cpp
-	//   to call this function once their clock is synced with host #0
-	//if ( g_hostdb.m_initialized && g_hostdb.m_hostId == 0 )
-	//	initSortByDateTable(coll);
-	//else if ( g_hostdb.m_initialized && isClockInSync() )
-	//	initSortByDateTable(coll);
-	// . do it for all regard-less
-	// . once clock is in sync with host #0 we may do it again!
-	//if ( g_hostdb.m_initialized )
-	//	initSortByDateTable(coll);
-
 	// success
 	return true;
- hadError:
-	log("admin: Had error adding new collection: %s.",mstrerror(g_errno));
-	// do not delete it, might have failed to add because not enough
-	// memory to read in the tree *-saved.dat file on disk!! and if
-	// you delete in then core the *-saved.dat file gets overwritten!!!
-	return false;
-	/*
-	g_indexdb.getRdb()->delColl    ( coll );
-	g_datedb.getRdb()->delColl     ( coll );
-	g_timedb.getRdb()->delColl     ( coll );
-	g_titledb.getRdb()->delColl    ( coll );
-	g_revdb.getRdb()->delColl      ( coll );
-	g_sectiondb.getRdb()->delColl  ( coll );
-	g_placedb.getRdb()->delColl    ( coll );
-	g_tagdb.getRdb()->delColl      ( coll );
-	//g_catdb.getRdb()->delColl      ( coll );
-	//g_checksumdb.getRdb()->delColl ( coll );
-	g_spiderdb.getRdb()->delColl   ( coll );
-	g_doledb.getRdb()->delColl     ( coll );
-	g_tfndb.getRdb()->delColl      ( coll );
-	g_clusterdb.getRdb()->delColl  ( coll );
-	g_linkdb.getRdb()->delColl     ( coll );
-	deleteRec                      ( coll );
-	return false;
-	*/
 }
+
+
+
 
 bool Collectiondb::isAdmin ( HttpRequest *r , TcpSocket *s ) {
 	if ( r->getLong("admin",1) == 0 ) return false;

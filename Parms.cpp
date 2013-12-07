@@ -60,12 +60,58 @@ Parms g_parms;
 //
 ////////
 
+// customCrawl:
+// 0 for regular collection
+// 1 for custom crawl
+// 2 for bulk job
+bool CommandAddColl2 ( char *rec , char customCrawl ) {
+
+	// caller must specify collnum
+	collnum_t collnum = g_parms.getCollnumFromParmRec ( rec );
+
+	// sanity.
+	if ( collnum < 0 ) {
+		g_errno = EBADCOLL;
+		log("parms: bad collnum for AddColl");
+		return true;
+	}
+
+	char *data = rec + sizeof(key96_t) + 4;
+	long dataSize = *(long *)(rec + sizeof(key96_t));
+	// collection name must be at least 2 bytes (includes \0)
+	if ( dataSize <= 1 ) { char *xx=NULL;*xx=0; }
+
+	// then collname, \0 terminated
+	char *collName = data;
+
+	if ( gbstrlen(collName) > MAX_COLL_LEN ) {
+		log("crawlbot: collection name too long");
+		return NULL;
+	}
+
+	// this saves it to disk! returns false and sets g_errno on error.
+	if ( ! g_collectiondb.addNewColl ( collName,
+					   customCrawl ,
+					   NULL ,  // copy from
+					   0  , // copy from len
+					   true // save?
+					   ) )
+		return false;
+
+	return true;
+}
+
 // all nodes are guaranteed to add the same collnum for the given name
 bool CommandAddColl ( char *rec ) {
-	collnum_t collnum = g_parms.getCollnumFromParmRec ( rec );
-	char *name = g_parms.getDataFromParmRec ( rec );
-	g_collectiondb.addColl ( collnum , name );
-	return true;
+	return CommandAddColl2 ( rec , 0 );
+}
+
+bool CommandAddCustomCrawl ( char *rec ) {
+	return CommandAddColl2 ( rec , 1 );
+}
+
+bool CommandAddBulkJob ( char *rec ) {
+	return CommandAddColl2 ( rec , 2 );
 }
 
 bool CommandDeleteColl ( char *rec ) {
@@ -74,19 +120,47 @@ bool CommandDeleteColl ( char *rec ) {
 	return true;
 }
 
-/*
+// . returns true and sets g_errno on error
+// . returns false if would block
 bool CommandRestartColl ( char *rec ) {
 	collnum_t collnum = g_parms.getCollnumFromParmRec ( rec );
-	g_collectiondb.restartColl ( collnum );
+	// this can block if tree is saving, it has to wait
+	// for tree save to complete before removing old
+	// collnum recs from tree
+	if ( ! g_collectiondb.resetColl ( collnum ,
+					  we ,
+					  false ) ) // purgeSeeds?
+		return false;
+	// . it is a NEW ptr now!
+	// . collname is same but collnum will be different.
+	CollectionRec *cr = g_collectiondb.getRec( collName );
+	// if reset from crawlbot api page then enable spiders
+	// to avoid user confusion
+	if ( cr ) cr->m_spideringEnabled = 1;
+	// all done
 	return true;
 }
 
+// . returns true and sets g_errno on error
+// . returns false if would block
 bool CommandResetColl ( char *rec ) {
 	collnum_t collnum = g_parms.getCollnumFromParmRec ( rec );
-	g_collectiondb.resetColl ( collnum );
+	// this can block if tree is saving, it has to wait
+	// for tree save to complete before removing old
+	// collnum recs from tree
+	if ( ! g_collectiondb.resetColl ( collnum ,
+					  we ,
+					  true ) ) // purgeSeeds?
+		return false;
+	// turn on spiders on new collrec. collname is same but collnum
+	// will be different.
+	CollectionRec *cr = g_collectiondb.getRec( collName );
+	// if reset from crawlbot api page then enable spiders
+	// to avoid user confusion
+	if ( cr ) cr->m_spideringEnabled = 1;
+
 	return true;
 }
-*/
 
 bool CommandParserTestInit ( char *rec ) {
 	// enable testing for all other hosts
@@ -8624,6 +8698,24 @@ void Parms::init ( ) {
 	m->m_cast  = 1;
 	m++;
 
+	m->m_title = "reset collection";
+	m->m_desc  = "reset collection";
+	m->m_cgi   = "resetcoll";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_func  = CommandResetColl;
+	m->m_cast  = 1;
+	m++;
+
+	m->m_title = "restart collection";
+	m->m_desc  = "restart collection";
+	m->m_cgi   = "restartcoll";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_func  = CommandRestartColl;
+	m->m_cast  = 1;
+	m++;
+
 	m->m_title = "in sync";
 	m->m_desc  = "signify in sync with host 0";
 	m->m_cgi   = "insync";
@@ -16275,6 +16367,13 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 
 	*valSize = 0;
 
+	char buf[2+MAX_COLL_LEN];
+
+	long val32;
+	long long val64;
+	char val8;
+	float valf;
+
 	if ( m->m_type == TYPE_STRING || 
 	     m->m_type == TYPE_STRINGBOX || 
 	     m->m_type == TYPE_SAFEBUF ||
@@ -16289,34 +16388,52 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	}
 	else if ( m->m_type == TYPE_LONG ) {
 		// TODO: what about an unsigned long 0xffffffff will overflow
-		val32 = atol(parmVal);
+		val32 = atol(parmValString);
 		val = (char *)&val32;
 		valSize = 4;
 	}
 	else if ( m->m_type == TYPE_FLOAT ) {
-		valf = atod(parmVal);
+		valf = atod(parmValString);
 		val = (char *)&valf;
 		valSize = 4;
 	}
 	else if ( m->m_type == TYPE_LONGLONG ) {
-		val64 = atoll(parmVal);
+		val64 = atoll(parmValString);
 		val = (char *)&val32;
 		valSize = 8;
 	}
 	else if ( m->m_type == TYPE_BOOL ||
 		  m->m_type == TYPE_CHAR ) {
-		val8 = atol(parmVal);
+		val8 = atol(parmValString);
 		val = (char *)&val8;
 		valSize = 1;
 	}
+	// you'll have to say ?addcoll=abc ?addcrawl=abc ?addbulk=abc
 	else if ( m->m_type == TYPE_CMD ) {
-		val = NULL;
-		valSize = 0;
+		val = parmString;
+		valSize = gbstrlen(val)+1;
+		// scan for holes if we hit the limit
+		//if ( g_collectiondb.m_numRecs >= 1LL>>sizeof(collnum_t) )
 	}
 	else {
 		log("parms: shit unsupported parm type");
 		char *xx=NULL;*xx=0;
 	}
+
+	long occNum = -1;
+	key96_t key = makeParmKey ( collnum , m ,  occNum );
+
+	// then key
+	if ( ! parmList->safeMemcpy ( &key , sizeof(key) ) )
+		return false;
+
+	// datasize
+	if ( ! parmList->pushLong ( dataSize ) )
+		return false;
+
+	// and data
+	if ( data && dataSize && ! parmList->safeMemcpy ( data ) )
+		return false;
 
 	return true;
 }
@@ -16327,7 +16444,8 @@ bool Parms::addCurrentParmToList1 ( SafeBuf *parmList ,
 	collnum_t collnum = -1;
 	if ( cr ) collnum = cr->m_collnum;
 	// get the parm descriptor
-	Parm *m = getParmFast1 ( parmName );
+	long occNum;
+	Parm *m = getParmFast1 ( parmName , &occNum );
 	if ( ! m ) return log("parms: got bogus parm1 %s",parmName );
 	return addCurrentParmToList2 ( parmList , collnum, -1 , m );
 }
@@ -16467,6 +16585,52 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList){
 		return false;
 	}
 
+	// we set the parms in this collnum
+	collnum_t parmCollnum = collnum;
+
+	// loop through cgi parms
+	for ( long i = 0 ; i < r->getNumFields() ; i++ ) {
+		// get cgi parm name
+		char *field = r->getField    ( i );
+		// get value of the cgi field
+		char *val  = r->getValue   (i);
+		// convert field to parm
+		long occNum;
+		Parm *m = getParmFast1 ( field , &occNum );
+		if ( ! m ) continue;
+
+		// skip if not a command parm, like "addcoll"
+		if ( m->m_type != TYPE_CMD ) continue;
+
+		//
+		// HACK
+		//
+		// if its a resetcoll/restartcoll/addcoll we have to
+		// get the next available collnum and use that for setting
+		// any additional parms. that is the coll it will act on.
+		if ( strcmp(m->m_title,"addcoll") ||
+		     strcmp(m->m_title,"addcrawl") == 0 ||
+		     strcmp(m->m_title,"addbulk" ) == 0 ||
+		     strcmp(m->m_title,"resetcoll" ) == 0 ||
+		     strcmp(m->m_title,"restartcoll" ) == 0 )
+			// if we wanted to we could make the data the
+			// new parmCollnum since we already store the old
+			// collnum in the parm rec key
+			parmCollnum = g_collectiondb.getNextNewCollnum();
+
+		// add the cmd parm
+		if ( ! addNewParmToList1 ( parmList ,
+					   collnum ,
+					   val , 
+					   occNum ,
+					   m ) )
+			return false;
+	}
+
+	//
+	// now add the parms that are NOT commands
+	//
+	
 	// for counting row #'s in url filters table
 	long occNum = -1;
 
@@ -16476,21 +16640,29 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList){
 		char *field = r->getField    ( i );
 		// get value of the cgi field
 		char *val  = r->getValue   (i);
-		//long  valSize = r->getValueLen(i);
-		// include \0
-		//if ( val ) valSize += 1;
+
 		// get the occurence # if its regex. this is the row #
 		// in the url filters table, since those parms repeat names.
 		// url filter expression.
-		if ( strcmp(field,"fe") == 0 ) occNum++;
+		//if ( strcmp(field,"fe") == 0 ) occNum++;
 
-		if ( ! addNewParmToList1 ( parmList , 
+		// convert field to parm
+		long occNum;
+		Parm *m = getParmFast1 ( field , &occNum );
+		if ( ! m ) continue;
+		if ( m->m_type == TYPE_CMD ) continue;
+
+		// add it to a list now
+		if ( ! addNewParmToList1 ( parmList ,
 					   collnum ,
 					   val , 
-					   occNum ,
-					   field ) ) // parmName
+					   // HACK! operate on the to-be-added
+					   // collrec
+					   parmOccNum ,
+					   m ) )
 			return false;
 	}
+
 	return true;
 }
 
@@ -16528,9 +16700,38 @@ Parm *Parms::getParmFast2 ( long cgiHash32 ) {
 }
 
 
-Parm *Parms::getParmFast1 ( char *cgi ) {
-	long h32 = hash32 ( cgi );
-	return getParmFast2 ( h32 );
+Parm *Parms::getParmFast1 ( char *cgi , long *occNum ) {
+	// strip off the %li for things like 'fe3' for example
+	// because that is the occurence # for parm arrays.
+	long clen = gbstrlen(cgi);
+
+	char *d = NULL;
+
+	if ( clen > 1 ) {
+		d = cgi + clen - 1;
+		while ( is_digit(*d) ) d--;
+		d++;
+	}
+
+	long h32;
+
+	// assume not an array
+	if ( occNum ) *occNum = -1;
+
+	if ( d && *d ) {
+		if ( occNum ) *occNum = atol(d);
+		h32 = hash32 ( cgi , d - cgi );
+	}
+	else 
+		h32 = hash32n ( cgi );
+
+	Parm *m = getParmFast2 ( h32 );
+
+	// the first element does not have a number after it
+	if ( m->isArray() && occNum && *occNum == -1 )
+		*occNum = 0;
+
+	return m;
 }
 
 ////////////
@@ -16546,6 +16747,10 @@ public:
 	long m_numReplies;
 	class ParmNode *m_nextNode;
 	long long m_parmId;
+	bool m_calledCallback;
+	long m_startTime;
+	void *m_state;
+	void (* m_callback)(void *state);
 };
 
 static ParmNode *s_headNode = NULL;
@@ -16555,18 +16760,21 @@ static long long s_parmId = 0LL;
 // . will send the parm update request to each host and retry forever, 
 //   until dead hosts come back up
 // . keeps parm update requests in order received
-// . returns false and sets g_errno on error
-bool Parms::broadcastParmList ( SafeBuf *parmList ) {
+// . returns true and sets g_errno on error
+// . returns false if blocked and will call your callback
+bool Parms::broadcastParmList ( SafeBuf *parmList ,
+				void    *state ,
+				void   (* callback)(void *) ) {
 
 	// empty list?
 	if ( parmList->getLength() <= 0 ) return true;
 
-	// only us? no need for this then
-	if ( g_hostdb.m_numHosts <= 1 ) return true;
+	// only us? no need for this then. we now do this...
+	//if ( g_hostdb.m_numHosts <= 1 ) return true;
 
 	// make a new parm transmit node
 	ParmNode *pn = (ParmNode *)mmalloc ( sizeof(ParmNode) , "parmnode" );
-	if ( ! pn ) return false;
+	if ( ! pn ) return true;
 
 	// update the ticket #. we use this to keep things ordered too.
 	// this should never be zero since it starts off at zero.
@@ -16574,12 +16782,14 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ) {
 
 	// set it
 	pn->m_parmList.stealBuf ( parmList );
-	pn->m_numRequests = 0;
-	pn->m_numReplies  = 0;
-	pn->m_nextNode    = NULL;
-	pn->m_parmId      = s_parmId; // take a ticket
-	//pn->m_state       = state;
-	//pn->m_callback    = callback;
+	pn->m_numRequests    = 0;
+	pn->m_numReplies     = 0;
+	pn->m_nextNode       = NULL;
+	pn->m_parmId         = s_parmId; // take a ticket
+	pn->m_calledCallback = false;
+	pn->m_startTime      = getTimeLocal();
+	pn->m_state          = state;
+	pn->m_callback       = callback;
 
 	// store it ordered in our linked list of parm transmit nodes
 	if ( ! s_tailNode ) {
@@ -16594,8 +16804,16 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ) {
 	// pump the parms out to other hosts in the network
 	doParmSendingLoop ( );
 
-	// all done
-	return true;
+	// . if waiting for more replies to come in that should be in soon
+	// . doParmSendingLoop() is called when a reply comes in so that
+	//   the next requests can be sent out
+	//if ( waitingForLiveHostsToReply() ) return false;
+
+	// all done. how did this happen?
+	//return true;
+
+	// wait for replies
+	return false;
 }
 
 bool Conf::doParmSendingLoop ( ) {
@@ -16606,8 +16824,9 @@ bool Conf::doParmSendingLoop ( ) {
 	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		// get it
 		Host *h = g_hostdb.getHosts(i);
-		// skip ourselves, host #0
-		if ( h->m_hostId == g_hostdb.m_myHostId ) continue;
+		// skip ourselves, host #0. we now send to ourselves
+		// so updateParm() will be called on us...
+		//if ( h->m_hostId == g_hostdb.m_myHostId ) continue;
 		// if in progress, gotta wait for that to complete
 		if ( h->m_currentParmIdInProgress ) continue;
 		// if his last completed parmid is the current he is uptodate
@@ -16632,7 +16851,7 @@ bool Conf::doParmSendingLoop ( ) {
 						 NULL, // retslot
 						 (void *)h->m_hostId , // state
 						 gotParmReplyWrapper ,
-						 999999999) ) { // timeout secs
+						 4 ) ) { // timeout secs
 			log("parms: faild to send: %s",mstrerror(g_errno));
 			continue;
 		}
@@ -16643,20 +16862,100 @@ bool Conf::doParmSendingLoop ( ) {
 	return true;
 }
 
-// host #0 is requesting that we update some parms
-void handleRequest3f ( UdpSlot *slot , long niceness ) {
-	char *parmRecs = slot->m_readBuf;
-	long  parmEnd  = parmRecs + slot->m_readBufSize;
+
+void handleRequest3fLoop ( WaitEntry *we ) {
 	// process them
-	char *p = parmRecs;
+	char *p = we->m_parmRecs;
 	for ( ; p < parmEnd ; ) {
 		// get size
 		long dataSize = *(long *)(rec+sizeof(key96_t));
 		long recSize = sizeof(key96_t) + 4 + dataSize;
-		p += updateParm ( p );
+		char *rec = p;
+		// skip it
 		p += recSize;
+		// update it in case call blocks below
+		we->m_parmPtr = p;
+
+		// get the actual parm
+		Parm *parm = getParmFromParmRec ( rec );
+
+		// determine if it alters the url filters
+		if ( parm->m_flags & REBUILDURLFILTERS )
+			we->m_doRebuilds = true;
+
+		// get collnum i guess
+		if ( parm->m_type != TYPE_CMD )
+			we->m_collnum = getCollnumFromParmRec ( rec );
+
+		// . this returns false if blocked, returns true and sets
+		//   g_errno on error
+		// . it'll block if trying to delete a coll when the tree
+		//   is saving or something (CommandDeleteColl())
+		if ( ! updateParm ( rec , we ) ) return;
+		// error?
+		if ( ! g_errno ) continue;
+		// this could mean failed to add coll b/c out of disk or
+		// something else that is bad
+		we->m_errno = g_errno;
+	}
+
+	// one last thing... kinda hacky. if we change certain spidering parms
+	// we have to do a couple rebuilds.
+	CollectionRec *cr = NULL;
+	if ( we->m_collnum >= 0 )
+		cr = g_collectiondb.getRec(we->m_collnum);
+
+	// basically resetting the spider here...
+	if ( we->m_doRebuild && cr ) {
+		cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+		cr->rebuildUrlFilters();
+	}
+
+	// send back reply now
+	if ( we->m_errno )
+		g_udpServer.sendErrorReply ( we->m_slot,NULL,0 );
+	else
+		g_udpServer.sendReply ( we->m_slot,NULL,0 );
+	// all done
+	mfree ( we , "weparm" );
+	return;
+}
+
+// host #0 is requesting that we update some parms
+void handleRequest3f ( UdpSlot *slot , long niceness ) {
+	char *parmRecs = slot->m_readBuf;
+	long  parmEnd  = parmRecs + slot->m_readBufSize;
+	// make a new waiting entry
+	WaitEntry *we ;
+	we = (WaitEntry *) mmalloc ( sizeof(WaitEntry *),"weparm");
+	if ( ! we ) goto hadError;
+	we->m_slot = slot;
+	we->m_callback = handleRequest3fLoop;
+	we->m_parmPtr = parmRecs;
+	we->m_errno = 0;
+	we->m_doRebuilds = false;
+	we->m_collnum = -1;
+	handleRequest3fLoop ( we );
+}
+
+void tryToCallCallbacks ( ) {
+
+	ParmNode *pn = s_head;
+	long now = getTimeLocal();
+
+	for ( ; pn ; pn = pn->m_nextNode ) {
+		// skip if already called callback
+		if ( pn->m_calledCallback ) continue;
+		// 8 seconds is enough!
+		bool callIt = false;
+		if ( now - pn->m_startTime > 8000 ) callIt = true;
+		if ( pn->m_numReplies >= pn->m_numRequests ) callIt = true;
+		if ( ! callIt ) continue;
+		pn->m_callback ( pn->m_state );
+		pn->m_calledCallback = true;
 	}
 }
+
 
 void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 
@@ -16671,9 +16970,18 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 	h->m_currentParmIdInProgress = 0;
 	h->m_currentNodePtr = NULL;
 
+	// this is usually timeout on a dead host i guess
 	if ( g_errno ) {
 		log("parms: got parm update reply from host #%li: %s",
 		    h->m_hostId,mstrerror(g_errno));
+		// if a host timed out he could be dead, so try to call
+		// the callback for this "pn" anyway. if the only hosts we
+		// do not have replies for are dead, then we'll call the
+		// callback, but still keep trying to send to them.
+		tryToCallCallbacks ();
+		// try to send more i guess? i think this is right otherwise
+		// the callback might not ever get called
+		doParmSendingLoop();
 		return;
 	}
 
@@ -16682,6 +16990,12 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 
 	// inc this count
 	pn->m_numReplies++;
+
+	// . this will try to call any callback that can be called
+	// . for instances, if the "pn" has recvd all the replies
+	// . OR if the remaining hosts are "DEAD"
+	// . the callback is in the "pn"
+	tryToCallCallbacks ();
 
 	// nuke it?
 	if ( pn->m_numReplies >= pn->m_numRequests ) {
@@ -16948,11 +17262,14 @@ bool Parms::addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) {
 // . this adds the key if not a cmd key to parmdb rdbtree
 // . this executes cmds
 // . this updates the CollectionRec which may disappear later and be fully
-//   replaced by Parmdb
-// . returns false and sets g_errno on error
-bool Parms::updateParm ( char *rec ) {
+//   replaced by Parmdb, just an RdbTree really.
+// . returns false if blocked
+// . returns true and sets g_errno on error
+bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 
 	collnum_t collnum = getCollNumFromParmRec ( rec );
+
+	g_errno = 0;
 
 	// "cr" will remain null when updating g_conf and collnum -1
 	CollectionRec *cr = NULL;
@@ -16961,7 +17278,7 @@ bool Parms::updateParm ( char *rec ) {
 		if ( ! cr ) {
 			log("parmdb: invalid collnum for parm");
 			g_errno = ENOCOLL;
-			return false;
+			return true;
 		}
 	}
 
@@ -16970,7 +17287,7 @@ bool Parms::updateParm ( char *rec ) {
 	if ( ! parm ) {
 		log("parmdb: could not find parm for rec");
 		g_errno = EBADENGINEER;
-		return false;
+		return true;
 	}
 
 	// cmd to execute?
@@ -16983,8 +17300,19 @@ bool Parms::updateParm ( char *rec ) {
 		    , parm->m_title
 		    //, data 
 		    );
-		parm->m_function ( rec );
-		return true;
+
+		// sets g_errno on error
+		if ( parm->m_function ) {
+			parm->m_function ( rec );
+			return true;
+		}
+
+		// . returns true and sets g_errno on error
+		// . returns false if blocked
+		// . this is for CommandDeleteColl() and CommandResetColl()
+		if ( parm->m_function2 ( rec , we ) ) return true;
+		// it blocked! it will call we->m_callback when done
+		return false;
 	}
 
 	// what are we updating?

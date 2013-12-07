@@ -321,7 +321,7 @@ class Parms {
 				     Parm *m ) ;
 	bool convertHttpRequestToParmList (HttpRequest *hr,SafeBuf *parmList);
 	Parm *getParmFast2 ( long cgiHash32 ) ;
-	Parm *getParmFast1 ( char *cgi ) ;
+	Parm *getParmFast1 ( char *cgi , long *occNum ) ;
 	bool broadcastParmList ( SafeBuf *parmList ) ;
 	bool doParmSendingLoop ( ) ;
 	bool syncParmsWithHost0 ( ) ;

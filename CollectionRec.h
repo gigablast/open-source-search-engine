@@ -185,6 +185,9 @@ class CollectionRec {
 
 	void setUrlFiltersToDefaults();
 
+	// for customcrawls
+	bool rebuildUrlFilters();
+
 	// . when was the last time we changed?
 	//long long m_lastUpdateTime;
 

@@ -590,3 +590,167 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 	return false;
 }
 
+bool CollectionRec::rebuildUrlFilters ( ) {
+
+	char *ucp = m_diffbotUrlCrawlPattern.getBufStart();
+	if ( ucp && ! ucp[0] ) ucp = NULL;
+
+	// if we had a regex, that works for this purpose as well
+	if ( ! ucp ) ucp = m_diffbotUrlCrawlRegEx.getBufStart();
+	if ( ucp && ! ucp[0] ) ucp = NULL;
+
+
+
+	char *upp = m_diffbotUrlProcessPattern.getBufStart();
+	if ( upp && ! upp[0] ) upp = NULL;
+
+	// if we had a regex, that works for this purpose as well
+	if ( ! upp ) upp = m_diffbotUrlProcessRegEx.getBufStart();
+	if ( upp && ! upp[0] ) upp = NULL;
+
+
+	// what diffbot url to use for processing
+	char *api = m_diffbotApiUrl.getBufStart();
+	if ( api && ! api[0] ) api = NULL;
+
+	// convert from seconds to milliseconds. default is 250ms?
+	long wait = (long)(m_collectiveCrawlDelay * 1000.0);
+	// default to 250ms i guess. -1 means unset i think.
+	if ( m_collectiveCrawlDelay < 0.0 ) wait = 250;
+
+	// make the gigablast regex table just "default" so it does not
+	// filtering, but accepts all urls. we will add code to pass the urls
+	// through m_diffbotUrlCrawlPattern alternatively. if that itself
+	// is empty, we will just restrict to the seed urls subdomain.
+	for ( long i = 0 ; i < MAX_FILTERS ; i++ ) {
+		m_regExs[i].purge();
+		m_spiderPriorities[i] = 0;
+		m_maxSpidersPerRule [i] = 10;
+		m_spiderIpWaits     [i] = wait;
+		m_spiderIpMaxSpiders[i] = 7; // keep it respectful
+		m_spidersEnabled    [i] = 1;
+		m_spiderFreqs       [i] =m_collectiveRespiderFrequency;
+		m_spiderDiffbotApiUrl[i].purge();
+		m_harvestLinks[i] = true;
+	}
+
+	long i = 0;
+
+
+	// 1st default url filter
+	m_regExs[i].set("ismedia && !ismanualadd");
+	m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+	i++;
+
+	// 2nd default filter
+	if ( m_restrictDomain ) {
+		m_regExs[i].set("!isonsamedomain && !ismanualadd");
+		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		i++;
+	}
+
+	// 3rd rule for respidering
+	if ( m_collectiveRespiderFrequency > 0.0 ) {
+		m_regExs[i].set("lastspidertime>={roundstart}");
+		// do not "remove" from index
+		m_spiderPriorities   [i] = 10;
+		// just turn off spidering. if we were to set priority to
+		// filtered it would be removed from index!
+		m_spidersEnabled     [i] = 0;
+		i++;
+	}
+	// if collectiverespiderfreq is 0 or less then do not RE-spider
+	// documents already indexed.
+	else {
+		// this does NOT work! error docs continuosly respider
+		// because they are never indexed!!! like EDOCSIMPLIFIEDREDIR
+		//m_regExs[i].set("isindexed");
+		m_regExs[i].set("hasreply");
+		m_spiderPriorities   [i] = 10;
+		// just turn off spidering. if we were to set priority to
+		// filtered it would be removed from index!
+		m_spidersEnabled     [i] = 0;
+		i++;
+	}
+
+	// and for docs that have errors respider once every 5 hours
+	m_regExs[i].set("errorcount>0 && errcount<3");
+	m_spiderPriorities   [i] = 40;
+	m_spiderFreqs        [i] = 0.2; // half a day
+	i++;
+
+	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
+	m_regExs[i].set("errorcount>=3");
+	m_spiderPriorities   [i] = 30;
+	m_spiderFreqs        [i] = 30; // 30 days
+	i++;
+
+	// url crawl and process pattern
+	if ( ucp && upp ) {
+		m_regExs[i].set("matchesucp && matchesupp");
+		m_spiderPriorities   [i] = 55;
+		m_spiderDiffbotApiUrl[i].set ( api );
+		i++;
+		// if just matches ucp, just crawl it, do not process
+		m_regExs[i].set("matchesucp");
+		m_spiderPriorities   [i] = 54;
+		i++;
+		// just process, do not spider links if does not match ucp
+		m_regExs[i].set("matchesupp");
+		m_spiderPriorities   [i] = 53;
+		m_harvestLinks       [i] = false;
+		m_spiderDiffbotApiUrl[i].set ( api );
+		i++;
+		// do not crawl anything else
+		m_regExs[i].set("default");
+		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		i++;
+	}
+
+	// harvest links if we should crawl it
+	if ( ucp && ! upp ) {
+		m_regExs[i].set("matchesucp");
+		m_spiderPriorities   [i] = 54;
+		// process everything since upp is empty
+		m_spiderDiffbotApiUrl[i].set ( api );
+		i++;
+		// do not crawl anything else
+		m_regExs[i].set("default");
+		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		i++;
+	}
+
+	// just process
+	if ( upp && ! ucp ) {
+		m_regExs[i].set("matchesupp");
+		m_spiderPriorities   [i] = 53;
+		//m_harvestLinks       [i] = false;
+		m_spiderDiffbotApiUrl[i].set ( api );
+		i++;
+		// crawl everything by default, no processing
+		m_regExs[i].set("default");
+		m_spiderPriorities   [i] = 50;
+		i++;
+	}
+
+	// no restraints
+	if ( ! upp && ! ucp ) {
+		// crawl everything by default, no processing
+		m_regExs[i].set("default");
+		m_spiderPriorities   [i] = 50;
+		m_spiderDiffbotApiUrl[i].set ( api );
+		i++;
+	}
+
+	m_numRegExs   = i;
+	m_numRegExs2  = i;
+	m_numRegExs3  = i;
+	m_numRegExs10 = i;
+	m_numRegExs5  = i;
+	m_numRegExs6  = i;
+	m_numRegExs7  = i;
+	m_numRegExs8  = i;
+	m_numRegExs11 = i;
+
+	return true;
+}
