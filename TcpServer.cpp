@@ -1674,7 +1674,32 @@ connected:
 void TcpServer::destroySocket ( TcpSocket *s ) {
 	if ( ! s ) return ;
 	// sanity check
-	if ( s->m_udpSlot ) { char *xx=NULL;*xx = 0; }
+	if ( s->m_udpSlot ) { 
+		log("tcp: sending back error on udp slot err=%s",
+		    mstrerror(g_errno));
+		//char *sendBuf = "Error. destroying sock.";
+		//long sendBufUsed = gbstrlen(sendBuf);
+		long timeout = 30*1000;
+		// sen back the error i guess
+		g_udpServer.sendReply_ass ( NULL,//sendBuf      ,
+					    0,//sendBufUsed  ,
+					    NULL,//sendBuf      ,
+					    0,//sendBufSize  ,
+					    s->m_udpSlot ,
+					    timeout      , // timeout?
+					    NULL,//state        ,
+					    NULL         );// callback
+		// we now free the read buffer here since PageDirectory.cpp
+		// might have reallocated it.
+		if ( s->m_readBuf ) 
+			mfree (s->m_readBuf, s->m_readBufSize,"TcpUdp");
+		// free it! we allocated in HttpServer.cpp handleRequestfd()
+		mfree ( s , sizeof(TcpSocket) , "tcpudp" );
+		// assume did not block
+		return;
+		//char *xx=NULL;*xx = 0; }
+	}
+
 	// . you cannot destroy socket's who have called a handler and the
 	//   handler is still in progress, because when he's got a reply ready
 	//   he expects this TcpSocket to still be there

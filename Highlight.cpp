@@ -90,11 +90,12 @@ long Highlight::set ( SafeBuf *sb,
 		      long         niceness      ) {
 
 	Words words;
-	words.set ( content      , 
-		    contentLen   , 
-		    TITLEREC_CURRENT_VERSION,
-		    true         , // computeId
-		    true         ); // has html entites?
+	if ( ! words.set ( content      , 
+			   contentLen   , 
+			   TITLEREC_CURRENT_VERSION,
+			   true         , // computeId
+			   true         ) ) // has html entites?
+		return -1;
 
 	long version = TITLEREC_CURRENT_VERSION;
 

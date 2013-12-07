@@ -427,9 +427,9 @@ bool Msg39::getLists () {
 	bool useTwins = false;
 	if ( g_hostdb.getNumStripes() == 2 ) useTwins = true;
 	if ( useTwins ) {
-		long long delta = docIdEnd - docIdStart;
-		if ( m_r->m_stripe == 0 ) docIdEnd = docIdStart + delta;
-		else                      docIdStart = docIdStart + delta;
+		long long delta2 = ( docIdEnd - docIdStart ) / 2;
+		if ( m_r->m_stripe == 0 ) docIdEnd = docIdStart + delta2;
+		else                      docIdStart = docIdStart + delta2;
 	}
 	// TODO: add triplet support later for this to split the
 	// read 3 ways. 4 ways for quads, etc.
