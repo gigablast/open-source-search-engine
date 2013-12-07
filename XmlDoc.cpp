@@ -1874,7 +1874,7 @@ bool XmlDoc::indexDoc ( ) {
 
 	if ( ! m_spideredTimeValid ) {
 		m_spideredTimeValid = true;
-		m_spideredTime = 0;
+		m_spideredTime = getTimeGlobal();//0; use now!
 	}
 
 	// if this is EABANDONED or EHITCRAWLLIMIT or EHITPROCESSLIMIT
