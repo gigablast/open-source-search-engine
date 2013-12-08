@@ -1625,8 +1625,11 @@ void RdbBase::gotTokenForMerge ( ) {
 			if ( i >= m_numFiles ) {
 				log("merge: Number of files to merge has "
 				    "shrunk from %li to %li since time of "
-				    "last merge.",n,m_numFiles);
-				char *xx=NULL;*xx=0;
+				    "last merge. Probably because those files "
+				    "were deleted because they were "
+				    "exhausted and had no recs to offer."
+				    ,n,m_numFiles);
+				//char *xx=NULL;*xx=0;
 				break;
 			}
 			if ( ! m_files[i] ) {
