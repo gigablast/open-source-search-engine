@@ -834,8 +834,8 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 	// if we missed to many, then dump core
 	if ( g_niceness == 1 && g_missedQuickPolls >= 4 ) {
 		//g_inSigHandler = true;
-		// NOT SAFE! can block forever waiting for a printf lock!
-		//log("loop: missed quickpoll");
+	  // NOT SAFE!
+	  //log("loop: missed quickpoll");
 		//g_inSigHandler = false;
 		// seems to core a lot in gbcompress() we need to
 		// put a quickpoll into zlib deflate() or

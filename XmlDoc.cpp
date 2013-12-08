@@ -19261,7 +19261,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	bool *recycle = getRecycleDiffbotReply();
 	if ( ! recycle || recycle == (void *)-1) return (char *)recycle;
 	// in that case inherit this from the old doc...
-	if ( od && *recycle ) {
+	if ( od && *recycle && cr->m_isCustomCrawl ) {
 		m_diffbotJSONCount          = od->m_diffbotJSONCount;
 		m_sentToDiffbot             = od->m_sentToDiffbot;
 		m_gotDiffbotSuccessfulReply = od->m_gotDiffbotSuccessfulReply;
@@ -19273,6 +19273,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// were indexed with their own docids in the "m_dx" code below. so
 	// just delete them and we'll re-add from this doc's diffbot reply.
 	if ( od && od->m_diffbotJSONCount && ! *recycle && 
+	     cr->m_isCustomCrawl &&
 	     // do not remove old json objects if pageparser.cpp test
 	     // because that can not change the index, etc.
 	     ! getIsPageParser() ) {
