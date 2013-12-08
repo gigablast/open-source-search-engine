@@ -200,14 +200,16 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r , Query *q ) {
 	m_socket = sock;
 
 	// get coll rec
-	long  collLen;
-	char *coll = r->getString ( "c" , &collLen );
+	long  collLen9;
+	char *coll9 = r->getString ( "c" , &collLen9 );
 	//if (! coll){coll = g_conf.m_defaultColl; collLen = gbstrlen(coll); }
-	if ( ! coll )
-		coll = g_conf.getDefaultColl(r->getHost(), r->getHostLen());
-	if ( ! coll ) { g_errno = ENOCOLLREC; return false; }
-	collLen = gbstrlen(coll);
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	//if ( ! coll )
+	//	coll = g_conf.getDefaultColl(r->getHost(), r->getHostLen());
+	//if ( ! coll || ! coll[0] )
+	//	coll = "main";
+	//if ( ! coll ) { g_errno = ENOCOLLREC; return false; }
+	//collLen = gbstrlen(coll);
+	CollectionRec *cr = g_collectiondb.getRec ( coll9 );
 	if ( ! cr ) { 
 		g_errno = ENOCOLLREC;
 		g_msg = " (error: no such collection)";		
@@ -684,7 +686,7 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	if ( ! m_coll2 || ! m_coll2[0] ) { 
 		//m_coll = g_conf.m_defaultColl; 
 		m_coll2 = g_conf.getDefaultColl(r->getHost(), r->getHostLen());
-		m_collLen2 = gbstrlen(coll); 
+		m_collLen2 = gbstrlen(m_coll2); 
 	}
 
 	// reset this

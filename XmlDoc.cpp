@@ -1074,11 +1074,13 @@ CollectionRec *XmlDoc::getCollRec ( ) {
 		return NULL;
 	}
 	// was it reset since we started spidering this url?
-	if ( cr->m_lastResetCount != m_lastCollRecResetCount ) {
-		log("build: collection rec was reset. returning null.");
-		g_errno = ENOCOLLREC;
-		return NULL;
-	}
+	// we don't do it this way, when resetting a coll when delete it and
+	// re-add under a different collnum to avoid getting msg4 adds to it.
+	//if ( cr->m_lastResetCount != m_lastCollRecResetCount ) {
+	//	log("build: collection rec was reset. returning null.");
+	//	g_errno = ENOCOLLREC;
+	//	return NULL;
+	//}
 	return cr;
 }
 

@@ -92,10 +92,12 @@ bool sendReply ( State0 *st , char *reply ) {
 	if ( si && si->m_format == FORMAT_CSV ) ct = "text/csv";
 	char *charset = "utf-8";
 
+	char format = si->m_format;
+
 	// . filter anything < 0x20 to 0x20 to keep XML legal
 	// . except \t, \n and \r, they're ok
 	// . gotta set "f" down here in case it realloc'd the buf
-	if ( si->m_format == FORMAT_XML && reply ) {
+	if ( format == FORMAT_XML && reply ) {
 		unsigned char *f = (unsigned char *)reply;
 		for ( ; *f ; f++ ) 
 			if ( *f < 0x20 && *f!='\t' && *f!='\n' && *f!='\r' ) 
@@ -173,7 +175,7 @@ bool sendReply ( State0 *st , char *reply ) {
 	if ( savedErr != ENOPERM ) 
 		g_stats.m_numFails++;
 
-	if ( si->m_format == FORMAT_XML ) {
+	if ( format == FORMAT_XML ) {
 		SafeBuf sb;
 		sb.safePrintf("<?xml version=\"1.0\" "
 			      "encoding=\"UTF-8\" ?>\n"
@@ -209,7 +211,7 @@ bool sendReply ( State0 *st , char *reply ) {
 	g_httpServer.sendQueryErrorReply(s,
 					 status,
 					 mstrerror(savedErr),
-					 si->m_format,//xml,
+					 format,//xml,
 					 savedErr, 
 					 "There was an error!");
 	return true;
@@ -484,6 +486,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			 &st->m_hr, 
 			 &st->m_q ) ) {
 		log("query: set search input: %s",mstrerror(g_errno));
+		g_errno = EBADENGINEER;
 		return sendReply ( st, NULL );
 	}
 

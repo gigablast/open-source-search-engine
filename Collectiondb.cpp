@@ -1028,7 +1028,17 @@ char *Collectiondb::getCollName ( collnum_t collnum ) {
 
 collnum_t Collectiondb::getCollnum ( char *coll ) {
 
-	if ( ! coll ) coll = "";
+	long clen = 0;
+	if ( coll ) clen = gbstrlen(coll );
+	return getCollnum ( coll , clen );
+	/*
+	//if ( ! coll ) coll = "";
+
+	// default empty collection names
+	if ( coll && ! coll[0] ) coll = NULL;
+	if ( ! coll ) coll = g_conf.m_defaultColl;
+	if ( ! coll || ! coll[0] ) coll = "main";
+
 
 	// This is necessary for Statsdb to work, as it is
 	// not associated with any collection. Is this
@@ -1049,7 +1059,7 @@ collnum_t Collectiondb::getCollnum ( char *coll ) {
 	void *vp = g_collTable.getValue ( &h64 );
 	if ( ! vp ) return -1; // not found
 	return *(collnum_t *)vp;
-
+	*/
 	/*
 	for ( long i = 0 ; i < m_numRecs ; i++ ) {
 		if ( ! m_recs[i] ) continue;
@@ -1063,8 +1073,20 @@ collnum_t Collectiondb::getCollnum ( char *coll ) {
 
 collnum_t Collectiondb::getCollnum ( char *coll , long clen ) {
 
+	// default empty collection names
+	if ( coll && ! coll[0] ) coll = NULL;
+	if ( ! coll ) {
+		coll = g_conf.m_defaultColl;
+		if ( coll ) clen = gbstrlen(coll);
+		else clen = 0;
+	}
+	if ( ! coll || ! coll[0] ) {
+		coll = "main";
+		clen = gbstrlen(coll);
+	}
+
 	// This is necessary for Statsdb to work, as it is
-	if ( ! coll ) coll = "";
+	//if ( ! coll ) coll = "";
 
 	// not associated with any collection. Is this
 	// necessary for Catdb?
