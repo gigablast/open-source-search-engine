@@ -119,6 +119,8 @@ class UdpServer {
 	//   host. for niceness=0 requests the backoff is usually constant
 	//   and set to about 30 ms. so if you set maxResends to 10 that is
 	//   probably at least 300 ms of resending tries.
+	// . use an ip of 0 and port of 0 if you provide a hostId. use a hostid
+	//   of -1 to indicate no hostid.
 	bool sendRequest ( char     *msg          ,
 			   long      msgSize      ,
 			   unsigned char    msgType      ,

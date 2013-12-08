@@ -1513,10 +1513,15 @@ void SpiderColl::clear ( ) {
 	//m_lastDownloadCache.clear ( m_collnum );
 
 	// copied from reset() below
-	for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ )
+	for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ ) {
 		m_nextKeys[i] =	g_doledb.makeFirstKey2 ( i );
+		m_isDoledbEmpty[i] = 0;
+	}
 
+	// assume the whole thing is not empty
+	m_allDoledbPrioritiesEmpty = false;
 }
+
 void SpiderColl::reset ( ) {
 
 	// reset these for SpiderLoop;
@@ -1547,8 +1552,14 @@ void SpiderColl::reset ( ) {
 	// key annihilations related to starting at the top of the priority
 	// queue every time we scan it, which causes us to do upwards of
 	// 300 re-reads!
-	for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ )
+	for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ ) {
 		m_nextKeys[i] =	g_doledb.makeFirstKey2 ( i );
+		m_isDoledbEmpty[i] = 0;
+	}
+
+	// assume the whole thing is not empty
+	m_allDoledbPrioritiesEmpty = false;
+
 }
 
 bool SpiderColl::updateSiteNumInlinksTable ( long siteHash32, 
@@ -3774,6 +3785,17 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// a single ip address. maybe use msg1 here not msg4?
 	if ( ! addToDoleTable ( m_bestRequest ) ) return true;
 
+	// . if it was empty it is no longer
+	// . we have this flag here to avoid scanning empty doledb priorities
+	//   because it saves us a msg5 call to doledb in the scanning loop
+	long bp = m_bestRequest->m_priority;
+	if ( bp <  0                     ) { char *xx=NULL;*xx=0; }
+	if ( bp >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
+	m_isDoledbEmpty [ bp ] = 0;
+
+	// and the whole thing is no longer empty
+	m_allDoledbPrioritiesEmpty = false;
+
 	//
 	// delete the winner from ufntree as well
 	//
@@ -3947,15 +3969,15 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 	// update how many per ip we got doled
 	long *score = (long *)m_doleIpTable.getValue32 ( sreq->m_firstIp );
 	// debug point
-	if ( g_conf.m_logDebugSpider ) {
+	if ( g_conf.m_logDebugSpider && 1 == 2 ) { // disable for now, spammy
 		long long  uh48 = sreq->getUrlHash48();
 		long long pdocid = sreq->getParentDocId();
 		long ss = 1;
 		if ( score ) ss = *score + 1;
-		//log("spider: added to doletbl uh48=%llu parentdocid=%llu "
-		//    "ipdolecount=%li ufn=%li priority=%li firstip=%s",
-		//    uh48,pdocid,ss,(long)sreq->m_ufn,(long)sreq->m_priority,
-		//    iptoa(sreq->m_firstIp));
+		log("spider: added to doletbl uh48=%llu parentdocid=%llu "
+		    "ipdolecount=%li ufn=%li priority=%li firstip=%s",
+		    uh48,pdocid,ss,(long)sreq->m_ufn,(long)sreq->m_priority,
+		    iptoa(sreq->m_firstIp));
 	}
 	// we had a score there already, so inc it
 	if ( score ) {
@@ -4138,7 +4160,7 @@ void SpiderLoop::startLoop ( ) {
 	// spider some urls that were doled to us
 	//g_spiderLoop.spiderDoledUrls( );
 	// sleep for .1 seconds = 100ms
-	if (!g_loop.registerSleepCallback(10,this,doneSleepingWrapperSL))
+	if (!g_loop.registerSleepCallback(50,this,doneSleepingWrapperSL))
 		log("build: Failed to register timer callback. Spidering "
 		    "is permanently disabled. Restart to fix.");
 
@@ -4583,6 +4605,13 @@ void SpiderLoop::spiderDoledUrls ( ) {
 			// try next collection
 			continue;
 		}
+
+		// . if all doledb priorities are empty, skip it quickly
+		// . do this only after we update lastSpiderAttempt above
+		if ( cr->m_spiderColl && 
+		     cr->m_spiderColl->m_allDoledbPrioritiesEmpty )
+			continue;
+
 		// ok, we are good to launch a spider for coll m_cri
 		break;
 	}
@@ -4679,6 +4708,15 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//	m_sc->m_lastDoledbReadEmpty = true;
 		// and go up top
 		goto collLoop;
+	}
+
+	// . skip priority if we knows its empty in doledb
+	// . this will save us a call to msg5 below
+	if ( m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] ) {
+		// decrease the priority
+		m_sc->devancePriority();
+		// and try the one below
+		goto loop;
 	}
 
 	// shortcut
@@ -4879,6 +4917,18 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	// bail if list is empty
 	if ( m_list.getListSize() <= 0 ) {
+		// don't bother with this priority again until a key is
+		// added to it!
+		m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] = 1;
+
+		// if all priorities now empty set another flag
+		m_sc->m_allDoledbPrioritiesEmpty = true;
+		for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ ) {
+			if ( m_sc->m_isDoledbEmpty[m_sc->m_pri2] ) continue;
+			m_sc->m_allDoledbPrioritiesEmpty = false;
+			break;
+		}
+			
 		// if no spiders...
 		//if ( g_conf.m_logDebugSpider ) {
 		//	log("spider: empty doledblist collnum=%li "

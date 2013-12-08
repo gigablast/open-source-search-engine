@@ -3577,6 +3577,8 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 		if ( THIS != (char *)&g_conf && m->m_obj == OBJ_CONF) continue;
 		if ( m->m_type == TYPE_MONOD2  ) continue;
 		if ( m->m_type == TYPE_MONOM2  ) continue;
+		if ( m->m_type == TYPE_CMD ) continue;
+		if ( m->m_type == TYPE_BOOL2 ) continue;
 		// skip if we should not save to xml
 		if ( ! m->m_save ) continue;
 		// allow comments though
