@@ -379,6 +379,9 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	sb.safePrintf("\n");
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<form method=get action=/addurl name=f>\n");
+
+	CollectionRec *cr = g_collectiondb.getRec ( "main" );
+	//sb.safePrintf("<input type=hidden name=c value=\"%s\">",cr->m_coll);
 	sb.safePrintf("<input name=u type=text size=60 value=\"");
 	if ( url ) {
 		SafeBuf tmp;
@@ -397,7 +400,6 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	if ( ! g_conf.m_addUrlEnabled ) 
 		msg = "Add url is temporarily disabled";
 	// can also be turned off in the collection rec
-	CollectionRec *cr = g_collectiondb.getRec ( "main" );
 	if ( ! cr->m_addUrlEnabled    ) 
 		msg = "Add url is temporarily disabled";
 	// or if in read-only mode
@@ -438,7 +440,9 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 		unsigned long h32 = hash32n(url);
 		if ( h32 == 0 ) h32 = 1;
 		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		sb.safePrintf("&id=%lu&rand=%llu';\n"
+		// msg7 needs an explicit collection for /addurl for injecting
+		// in PageInject.cpp. it does not use defaults for safety.
+		sb.safePrintf("&id=%lu&c=main&rand=%llu';\n"
 			      "client.open('GET', url );\n"
 			      "client.send();\n"
 			      "</script>\n"
@@ -1248,15 +1252,15 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 		return g_httpServer.sendErrorReply(s,500,"url too long");
 	}
 	// get the collection
-	long  collLen = 0;
-	char *coll    = r->getString("c",&collLen);
-	if ( ! coll || ! coll[0] ) {
-		//coll    = g_conf.m_defaultColl;
-		coll = g_conf.getDefaultColl( r->getHost(), r->getHostLen() );
-		collLen = gbstrlen(coll);
-	}
+	//long  collLen = 0;
+	//char *coll9    = r->getString("c",NULL);//&collLen);
+	//if ( ! coll || ! coll[0] ) {
+	//	//coll    = g_conf.m_defaultColl;
+	//	coll = g_conf.getDefaultColl( r->getHost(), r->getHostLen() );
+	//	collLen = gbstrlen(coll);
+	//}
 	// get collection rec
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	CollectionRec *cr = g_collectiondb.getRec ( r );
 	// bitch if no collection rec found
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;
@@ -1401,9 +1405,11 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	st1->m_strip   = true;
 
 	// save the collection name in the State1 class
-	if ( collLen > MAX_COLL_LEN ) collLen = MAX_COLL_LEN;
-	strncpy ( st1->m_coll , coll , collLen );
-	st1->m_coll [ collLen ] = '\0';
+	//if ( collLen > MAX_COLL_LEN ) collLen = MAX_COLL_LEN;
+	//strncpy ( st1->m_coll , coll , collLen );
+	//st1->m_coll [ collLen ] = '\0';
+
+	strcpy ( st1->m_coll , cr->m_coll );
 
 	// assume they answered turing test correctly
 	st1->m_goodAnswer = true;
