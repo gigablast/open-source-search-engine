@@ -951,6 +951,8 @@ class XmlDoc {
 	char *m_metaList;
 	long  m_metaListSize;
 
+	SafeBuf  m_metaList2;
+
 	// . same thing, a little more complicated
 	// . these classes are only set on demand
 	Xml        m_xml;

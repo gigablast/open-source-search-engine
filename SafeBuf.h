@@ -332,11 +332,12 @@ struct SafeBuf {
 	//return a reference so we can use on lhs and rhs.
 	char& operator[](long i);
 	
-	//protected:
-	public:
+public:
 	long  m_capacity;
 	long  m_length;
+protected:
 	char *m_buf;
+public:
 	char *m_label;
 	bool  m_usingStack;
 	short m_encoding; // output charset

@@ -19,6 +19,9 @@ public:
 	void *m_state;
 	char *m_coll;
 	bool  m_purgeSeeds;
+	class CollectionRec *m_cr;
+	collnum_t m_collnum;
+	bool m_registered;
 };
 
 class Collectiondb  {
