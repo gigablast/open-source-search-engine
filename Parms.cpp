@@ -702,6 +702,19 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "This is true if we have tried to spider "
 			  "this url, even if we got an error while trying."
 			  "</td></tr>"
+
+			  "<tr><td>lastspidertime >= <b>{roundstart}</b></td>"
+			  "<td>"
+			  "This is true if the url's last spidered time "
+			  "indicates it was spidered already for this "
+			  "current round of spidering. When no more urls "
+			  "are available for spidering, then gigablast "
+			  "automatically sets {roundstart} to the current "
+			  "time so all the urls can be spidered again. This "
+			  "is how you do round-based spidering. "
+			  "You have to use the respider frequency as well "
+			  "to adjust how often you want things respidered."
+			  "</td></tr>"
 			  
 
 			  //"<tr><td>!newoutlink</td>"
@@ -725,7 +738,6 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 
 
-
 			  "<tr><td>isaddurl | !isaddurl</td>"
 			  "<td>"
 			  "This is true if the url was added from the add "
@@ -738,6 +750,28 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "This is true if the url was directly "
 			  "injected from the "
 			  "/inject page or API."
+			  "</td></tr>"
+
+			  "<tr><td>isdocidbased | !isdocidbased</td>"
+			  "<td>"
+			  "This is true if the url was added from the "
+			  "reindex interface. The request does not contain "
+			  "a url, but only a docid, that way we can add "
+			  "millions of search results very quickly without "
+			  "having to lookup each of their urls. You should "
+			  "definitely have this if you use the reindexing "
+			  "feature. You can temporarily disabled the "
+			  "spidering enabled checkbox for non "
+			  "docidbased requests while you reindex or delete "
+			  "the results of a query for extra speed."
+			  "</td></tr>"
+
+			  "<tr><td>ismanualadd | !ismanualadd</td>"
+			  "<td>"
+			  "This is true if the url was added manually. "
+			  "Which means it matches isaddurl, isinjected, "
+			  " or isdocidbased. as opposed to only "
+			  "being discovered from the spider. "
 			  "</td></tr>"
 
 			  "<tr><td><nobr>inpingserver | !inpingserver"

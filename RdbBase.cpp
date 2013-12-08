@@ -1672,6 +1672,9 @@ void RdbBase::gotTokenForMerge ( ) {
 	// . files must be consecutive, however
 	// . but ALWAYS make sure file i-1 is bigger than file i
 	n = numFiles - minToMerge + 2 ;
+	// limit for posdb since more than about 8 gets abnormally slow
+	if ( m_rdb && m_rdb->m_rdbId == RDB_POSDB && n > 8 )
+		n = 8;
 	// titledb should always merge at least 50 files no matter what though
 	// cuz i don't want it merging its huge root file and just one
 	// other file... i've seen that happen... but don't know why it didn't
