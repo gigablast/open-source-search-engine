@@ -2767,8 +2767,11 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 	if ( changedUrlFilters && THIS != (char *)&g_conf ) {
 		// cast it
 		CollectionRec *cr = (CollectionRec *)THIS;
+		// to prevent us having to rebuild doledb/waitingtree at startup
+		// we need to make the spidercoll here so it is not null
+		SpiderColl *sc = g_spiderCache.getSpiderColl(cr->m_collnum);
 		// get it
-		SpiderColl *sc = cr->m_spiderColl;
+		//SpiderColl *sc = cr->m_spiderColl;
 		// this will rebuild the waiting tree
 		if ( sc ) sc->urlFiltersChanged();
 	}
@@ -2890,6 +2893,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	// array whose "count" was not incremented like it should have been.
 	// HACK: make new line at bottom always have spidering enabled
 	// checkbox set and make it impossible to unset.
+	/*
 	if ( m->m_max > 1 && m->m_rowid >= 0 && mm > 0 &&
 	     m_parms[mm-1].m_rowid == m->m_rowid ) {
 		char *pos =  (char *)THIS + m_parms[mm-1].m_off - 4 ;
@@ -2902,6 +2906,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 			return;
 		}
 	}
+	*/
 
 	// ensure array count at least j+1
 	if ( m->m_max > 1 ) {

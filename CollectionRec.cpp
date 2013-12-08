@@ -8,6 +8,7 @@
 #include "Datedb.h"
 #include "Timedb.h"
 #include "Spider.h"
+#include "Process.h"
 
 static CollectionRec g_default;
 
@@ -85,6 +86,7 @@ CollectionRec::CollectionRec() {
 
 CollectionRec::~CollectionRec() {
 	//invalidateRegEx ();
+        reset();
 }
 
 // new collection recs get this called on them
@@ -109,6 +111,12 @@ void CollectionRec::reset() {
 	m_globalCrawlInfo.reset();
 	//m_requests = 0;
 	//m_replies = 0;
+	// free all RdbBases in each rdb
+	for ( long i = 0 ; i < g_process.m_numRdbs ; i++ ) {
+	     Rdb *rdb = g_process.m_rdbs[i];
+	     rdb->resetBase ( m_collnum );
+	}
+
 }
 
 CollectionRec *g_cr = NULL;

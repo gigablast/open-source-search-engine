@@ -1234,6 +1234,11 @@ bool readwrite_r ( FileState *fstate , ThreadEntry *t ) {
 bool BigFile::unlink ( ) {
 	return unlinkRename ( NULL , -1 , false, NULL, NULL );
 }
+
+bool BigFile::move ( char *newDir ) {
+	return rename ( m_baseFilename , newDir );
+}
+
 bool BigFile::rename ( char *newBaseFilename , char *newBaseFilenameDir ) {
 	return unlinkRename ( newBaseFilename, -1, false, NULL, NULL ,
 			      newBaseFilenameDir );

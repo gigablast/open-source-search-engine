@@ -555,7 +555,47 @@ bool Rdb::addColl2 ( collnum_t collnum ) {
 	return true;
 }
 
-bool Rdb::resetColl ( collnum_t collnum , collnum_t newCollnum ) {
+bool Rdb::resetBase ( collnum_t collnum ) {
+	CollectionRec *cr = g_collectiondb.getRec(collnum);
+	if ( ! cr ) return true;
+	RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
+	if ( ! base ) return true;
+	base->reset();
+	return true;
+}
+
+bool Rdb::deleteAllRecs ( collnum_t collnum ) {
+
+	// remove from tree
+	if(m_useTree) m_tree.delColl    ( collnum );
+	else          m_buckets.delColl ( collnum );
+
+	// only for doledb now, because we unlink we do not move the files
+	// into the trash subdir and doledb is easily regenerated. i don't
+	// want to take the risk with other files.
+	if ( m_rdbId != RDB_DOLEDB ) { char *xx=NULL;*xx=0; }
+
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+
+	RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
+	if ( ! base ) return true;
+
+	// scan files in there
+	for ( long i = 0 ; i < base->m_numFiles ; i++ ) {
+		BigFile *f = base->m_files[i];
+		// move to trash
+		char newdir[1024];
+		sprintf(newdir, "%strash/",g_hostdb.m_dir);
+		f->move ( newdir );
+	}
+
+	// nuke all the files
+	base->reset();
+	return true;
+}
+
+
+bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 
 	//char *coll = g_collectiondb.m_recs[collnum]->m_coll;
 
@@ -645,7 +685,7 @@ bool Rdb::delColl ( char *coll ) {
 	}
 
 	// move all files to trash and clear the tree/buckets
-	resetColl ( collnum , collnum );
+	deleteColl ( collnum , collnum );
 
 	// remove these collnums from tree
 	//if(m_useTree) m_tree.delColl    ( collnum );
@@ -2389,8 +2429,16 @@ bool Rdb::addRecord ( collnum_t collnum,
 			// don't actually add it if "fake". i.e. if it
 			// was an internal error of some sort... this will
 			// make it try over and over again i guess...
+			// no because we need some kinda reply so that gb knows
+			// the pagereindex docid-based spider requests are done,
+			// at least for now, because the replies were not being
+			// added for now. just for internal errors at least...
+			// we were not adding spider replies to the page reindexes
+			// as they completed and when i tried to rerun it
+			// the title recs were not found since they were deleted,
+			// so we gotta add the replies now.
 			long indexCode = rr->m_errCode;
-			if ( indexCode == EINTERNALERROR ||
+			if ( //indexCode == EINTERNALERROR ||
 			     indexCode == EABANDONED ||
 			     indexCode == EHITCRAWLLIMIT ||
 			     indexCode == EHITPROCESSLIMIT ) {

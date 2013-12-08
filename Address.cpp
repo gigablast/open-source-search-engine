@@ -15718,7 +15718,8 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 	g_cityBuf     = tbuf;
 	g_cityBufSize = tbufSize;
 	// do not let "sb" free it
-	sb.m_buf      = NULL;
+	//sb.m_buf      = NULL;
+	sb.detachBuf();
 
 	//if ( ! g_indicators.save ( g_hostdb.m_dir, "indicators.dat" ) )
 	//	return log("places: failed to save indicators.dat");

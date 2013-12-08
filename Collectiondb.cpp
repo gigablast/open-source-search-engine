@@ -891,13 +891,13 @@ bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we , bool purgeSeeds) {
 	// . updates RdbBase::m_collnum
 	// . so for the tree it just needs to mark the old collnum recs
 	//   with a collnum -1 in case it is saving...
-	g_posdb.getRdb()->resetColl     ( oldCollnum , newCollnum );
-	g_titledb.getRdb()->resetColl   ( oldCollnum , newCollnum );
-	g_tagdb.getRdb()->resetColl     ( oldCollnum , newCollnum );
-	g_spiderdb.getRdb()->resetColl  ( oldCollnum , newCollnum );
-	g_doledb.getRdb()->resetColl    ( oldCollnum , newCollnum );
-	g_clusterdb.getRdb()->resetColl ( oldCollnum , newCollnum );
-	g_linkdb.getRdb()->resetColl    ( oldCollnum , newCollnum );
+	g_posdb.getRdb()->deleteColl     ( oldCollnum , newCollnum );
+	g_titledb.getRdb()->deleteColl   ( oldCollnum , newCollnum );
+	g_tagdb.getRdb()->deleteColl     ( oldCollnum , newCollnum );
+	g_spiderdb.getRdb()->deleteColl  ( oldCollnum , newCollnum );
+	g_doledb.getRdb()->deleteColl    ( oldCollnum , newCollnum );
+	g_clusterdb.getRdb()->deleteColl ( oldCollnum , newCollnum );
+	g_linkdb.getRdb()->deleteColl    ( oldCollnum , newCollnum );
 
 	// reset crawl status too!
 	cr->m_spiderStatus = SP_INITIALIZING;

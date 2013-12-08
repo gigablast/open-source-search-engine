@@ -1900,8 +1900,15 @@ bool XmlDoc::indexDoc ( ) {
 	// to spiderdb to release the lock.
 	///
 
-	log("build: %s had internal error = %s. adding spider error reply.",
-	    m_firstUrl.m_url,mstrerror(g_errno));
+	if ( m_firstUrlValid ) 
+		log("build: %s had internal error = %s. adding spider "
+		    "error reply.",
+		    m_firstUrl.m_url,mstrerror(g_errno));
+	else
+		log("build: docid=%lli had internal error = %s. adding spider "
+		    "error reply.",
+		    m_docId,mstrerror(g_errno));
+
 
 	if ( ! m_indexCodeValid ) {
 		m_indexCode = EINTERNALERROR;//g_errno;
@@ -1945,21 +1952,27 @@ bool XmlDoc::indexDoc ( ) {
 	// url spider lock in SpiderLoop::m_lockTable.
 	SpiderReply *nsr = getNewSpiderReply ();
 	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
+	if ( nsr->getRecSize() <= 1) { char *xx=NULL;*xx=0; }
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return true;
 
-	SafeBuf metaList;
-	metaList.pushChar(RDB_SPIDERDB);
-	metaList.safeMemcpy ( (char *)nsr , nsr->getRecSize() );
+	//SafeBuf metaList;
+	m_metaList2.pushChar(RDB_SPIDERDB);
+	m_metaList2.safeMemcpy ( (char *)nsr , nsr->getRecSize() );
 
 	m_msg4Launched = true;
+
+	// log this for debug now
+	SafeBuf tmp;
+	nsr->print(&tmp);
+	log("xmldoc: added reply %s",tmp.getBufStart());
 
 	// clear g_errno
 	g_errno = 0;
 
-	if ( ! m_msg4.addMetaList ( metaList.getBufStart()     ,
-				    metaList.length() ,
+	if ( ! m_msg4.addMetaList ( m_metaList2.getBufStart()     ,
+				    m_metaList2.length() ,
 				    cr->m_coll         ,
 				    m_masterState  , // state
 				    m_masterLoop   ,
@@ -15793,7 +15806,7 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		// null term it
 		m_esbuf.pushChar('\0');
 		// and point to that buffer
-		m_expandedUtf8Content     = m_esbuf.m_buf;
+		m_expandedUtf8Content     = m_esbuf.getBufStart();//m_buf;
 		// include the \0 as part of the size
 		m_expandedUtf8ContentSize = m_esbuf.m_length; // + 1;
 	}
@@ -16012,7 +16025,7 @@ char **XmlDoc::getUtf8Content ( ) {
 		// final \0
 		*dst = '\0';
 		// re-assign these
-		m_expandedUtf8Content     = m_xbuf.m_buf;
+		m_expandedUtf8Content     = m_xbuf.getBufStart();//m_buf;
 		m_expandedUtf8ContentSize = m_xbuf.m_length + 1;
 		// free esbuf if we were referencing that to save mem
 		m_esbuf.purge();
