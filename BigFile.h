@@ -183,6 +183,8 @@ class BigFile {
 	// . use m_dir if newBaseFilenameDir is NULL
 	bool rename ( char *newBaseFilename , char *newBaseFilenameDir=NULL) ;
 
+	bool move ( char *newDir );
+
 	// . returns false and sets g_errno on failure
 	// . chop only parts LESS THAN "part"
 	bool chopHead ( long part );

@@ -92,10 +92,12 @@ bool sendReply ( State0 *st , char *reply ) {
 	if ( si && si->m_format == FORMAT_CSV ) ct = "text/csv";
 	char *charset = "utf-8";
 
+	char format = si->m_format;
+
 	// . filter anything < 0x20 to 0x20 to keep XML legal
 	// . except \t, \n and \r, they're ok
 	// . gotta set "f" down here in case it realloc'd the buf
-	if ( si->m_format == FORMAT_XML && reply ) {
+	if ( format == FORMAT_XML && reply ) {
 		unsigned char *f = (unsigned char *)reply;
 		for ( ; *f ; f++ ) 
 			if ( *f < 0x20 && *f!='\t' && *f!='\n' && *f!='\r' ) 
@@ -173,7 +175,7 @@ bool sendReply ( State0 *st , char *reply ) {
 	if ( savedErr != ENOPERM ) 
 		g_stats.m_numFails++;
 
-	if ( si->m_format == FORMAT_XML ) {
+	if ( format == FORMAT_XML ) {
 		SafeBuf sb;
 		sb.safePrintf("<?xml version=\"1.0\" "
 			      "encoding=\"UTF-8\" ?>\n"
@@ -209,7 +211,7 @@ bool sendReply ( State0 *st , char *reply ) {
 	g_httpServer.sendQueryErrorReply(s,
 					 status,
 					 mstrerror(savedErr),
-					 si->m_format,//xml,
+					 format,//xml,
 					 savedErr, 
 					 "There was an error!");
 	return true;
@@ -297,9 +299,14 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// . crap! also gotta encode apostrophe since "var url='..."
 		// . true = encodeApostrophes?
 		sb.urlEncode2 ( qstr , true );
+		// progate query language
+		char *qlang = hr->getString("qlang",NULL,NULL);
+		if ( qlang ) sb.safePrintf("&qlang=%s",qlang);
 		// propagate "admin" if set
 		long admin = hr->getLong("admin",-1);
 		if ( admin != -1 ) sb.safePrintf("&admin=%li",admin);
+		// propagate showing of banned results
+		if ( hr->getLong("sb",0) ) sb.safePrintf("&sb=1");
 		// propagate list of sites to restrict query to
 		long sitesLen;
 		char *sites = hr->getString("sites",&sitesLen,NULL);
@@ -329,7 +336,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		long dg = hr->getLong("dg",-1);
 		if ( dg >= 0 ) sb.safePrintf("&dg=%li",dg);
 		// show gigabits?
-		long gb = hr->getLong("gigabits",0);
+		long gb = hr->getLong("gigabits",1);
 		if ( gb >= 1 ) sb.safePrintf("&gigabits=%li",gb);
 		// show banned results?
 		long showBanned = hr->getLong("sb",0);
@@ -479,6 +486,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			 &st->m_hr, 
 			 &st->m_q ) ) {
 		log("query: set search input: %s",mstrerror(g_errno));
+		g_errno = EBADENGINEER;
 		return sendReply ( st, NULL );
 	}
 
@@ -1081,16 +1089,24 @@ bool gotResults ( void *state ) {
 			      "</a></b></font>",coll);
 		// print reindex link
 		// get the filename directly
+		char *langStr = getLangAbbr ( si->m_queryLang );
 		sb.safePrintf (" &nbsp; "
 			       "<font color=red><b>"
-			       "<a href=\"/admin/reindex?c=%s&q=%s\">"
-			       "[query reindex]</a></b>"
-			       "</font> ", coll , qe );
+			       "<a href=\"/admin/reindex?c=%s&"
+			       "qlang=%s&q=%s\">"
+			       "[reindex or delete these results]</a></b>"
+			       "</font> ", coll , langStr , qe );
 		sb.safePrintf (" &nbsp; "
 			       "<font color=red><b>"
 			       "<a href=\"/inject?c=%s&qts=%s\">"
 			       "[scrape]</a></b>"
 			       "</font> ", coll , qe );
+		sb.safePrintf (" &nbsp; "
+			       "<font color=red><b>"
+			       "<a href=\"/search?sb=1&c=%s&"
+			       "qlang=%s&q=%s\">"
+			       "[show banned results]</a></b>"
+			       "</font> ", coll , langStr , qe );
 	}
 
 	// if its an ip: or site: query, print ban link
@@ -1239,7 +1255,7 @@ bool gotResults ( void *state ) {
 		// print all sentences containing this gigabit
 		Gigabit *gi = &gigabits[i];
 		printGigabit ( st,sb , msg40 , gi , si );
-		sb.safePrintf("<br><br>");
+		sb.safePrintf("<br>");
 	}
 	if ( numGigabits && si->m_format == FORMAT_HTML )
 		sb.safePrintf("</td></tr></table>");
@@ -1771,12 +1787,24 @@ static int printResult ( SafeBuf &sb,
 	SearchInput *si    = &st->m_si;
 	Msg40       *msg40 = &st->m_msg40;
 
-	Highlight hi;
-
 	// ensure not all cluster levels are invisible
 	if ( si->m_debug )
 		logf(LOG_DEBUG,"query: result #%li clusterlevel=%li",
 		     ix, (long)msg40->getClusterLevel(ix));
+
+	long long d = msg40->getDocId(ix);
+
+	if ( si->m_docIdsOnly ) {
+		if ( si->m_format == FORMAT_XML )
+			sb.safePrintf("\t\t<docId>%lli</docId>\n"
+				      "\t</result>\n", 
+				      d );
+		else
+			sb.safePrintf("%lli<br/>\n", 
+				      d );
+		return true;
+	}
+
 
 	Msg20      *m20 = msg40->m_msg20[ix];
 	Msg20Reply *mr  = m20->m_r;
@@ -1816,16 +1844,7 @@ static int printResult ( SafeBuf &sb,
 
 	if ( si->m_format == FORMAT_XML ) sb.safePrintf("\t<result>\n" );
 
-	if ( si->m_docIdsOnly ) {
-		if ( si->m_format == FORMAT_XML )
-			sb.safePrintf("\t\t<docId>%lli</docId>\n"
-				      "\t</result>\n", 
-				      mr->m_docId );
-		else
-			sb.safePrintf("%lli<br/>\n", 
-				      mr->m_docId );
-		return true;
-	}
+	Highlight hi;
 
 	// get the url
 	char *url    = mr->ptr_ubuf      ;
@@ -2513,7 +2532,9 @@ static int printResult ( SafeBuf &sb,
 		
 		long urlFilterNum = (long)mr->m_urlFilterNum;
 		if(urlFilterNum != -1) {
-			sb.safePrintf (" - UrlFilter:%li", 
+			sb.safePrintf (" - <a href=/admin/filters?c=%s>"
+				       "UrlFilter</a>:%li", 
+				       coll ,
 				       urlFilterNum);
 		}					
 

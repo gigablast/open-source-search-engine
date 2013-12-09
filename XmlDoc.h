@@ -908,6 +908,7 @@ class XmlDoc {
 	// when set() was called by Msg20.cpp so we can time how long it took
 	// to generate the summary
 	long long    m_setTime;
+	long long    m_cpuSummaryStartTime;
 
 	// timers
 	long long m_beginSEOTime;
@@ -949,6 +950,8 @@ class XmlDoc {
 
 	char *m_metaList;
 	long  m_metaListSize;
+
+	SafeBuf  m_metaList2;
 
 	// . same thing, a little more complicated
 	// . these classes are only set on demand

@@ -1045,6 +1045,12 @@ class SpiderColl {
 	// doledb cursor keys for each priority to speed up performance
 	key_t m_nextKeys[MAX_SPIDER_PRIORITIES];
 
+	// save us scanning empty priorities
+	char m_isDoledbEmpty [MAX_SPIDER_PRIORITIES];
+
+	// are all priority slots empt?
+	bool m_allDoledbPrioritiesEmpty;
+
 	// maps priority to first ufn that uses that
 	// priority. map to -1 if no ufn uses it. that way when we scan
 	// priorities for spiderrequests to dole out we can start with

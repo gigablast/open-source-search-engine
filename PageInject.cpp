@@ -464,6 +464,9 @@ bool Msg7::inject ( TcpSocket *s ,
 	//if ( ! coll ) coll = r->getString("resetcoll");
 	if ( ! coll ) coll = collOveride;
 
+	// default to main
+	if ( ! coll || ! coll[0] ) coll = "main";
+
 	bool  quickReply     = r->getLong   ( "quick" , 0 );	
 	//char *pwd            = r->getString ( "pwd" , NULL );
 	char *url            = r->getString ( "u" , NULL , NULL /*default*/);

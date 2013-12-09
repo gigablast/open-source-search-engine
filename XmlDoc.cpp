@@ -1074,11 +1074,13 @@ CollectionRec *XmlDoc::getCollRec ( ) {
 		return NULL;
 	}
 	// was it reset since we started spidering this url?
-	if ( cr->m_lastResetCount != m_lastCollRecResetCount ) {
-		log("build: collection rec was reset. returning null.");
-		g_errno = ENOCOLLREC;
-		return NULL;
-	}
+	// we don't do it this way, when resetting a coll when delete it and
+	// re-add under a different collnum to avoid getting msg4 adds to it.
+	//if ( cr->m_lastResetCount != m_lastCollRecResetCount ) {
+	//	log("build: collection rec was reset. returning null.");
+	//	g_errno = ENOCOLLREC;
+	//	return NULL;
+	//}
 	return cr;
 }
 
@@ -1113,6 +1115,10 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 
 	// did page inject (pageinject) request to delete it?
 	m_deleteFromIndex = deleteFromIndex;
+
+	// PageReindex.cpp will set this in the spider request
+	if ( sreq->m_forceDelete )
+		m_deleteFromIndex = true;
 
 	char *utf8Content = utf8ContentArg;
 
@@ -1869,6 +1875,9 @@ void indexDocWrapper2 ( int fd , void *state ) {
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error and returns true
+// . this is now a WRAPPER for indexDoc2() and it will deal with
+//   g_errnos by adding an error spider reply so we offload the
+//   logic to the url filters table
 bool XmlDoc::indexDoc ( ) {
 
 	// return from the msg4 below?
@@ -1893,8 +1902,15 @@ bool XmlDoc::indexDoc ( ) {
 	// to spiderdb to release the lock.
 	///
 
-	log("build: %s had internal error = %s. adding spider error reply.",
-	    m_firstUrl.m_url,mstrerror(g_errno));
+	if ( m_firstUrlValid ) 
+		log("build: %s had internal error = %s. adding spider "
+		    "error reply.",
+		    m_firstUrl.m_url,mstrerror(g_errno));
+	else
+		log("build: docid=%lli had internal error = %s. adding spider "
+		    "error reply.",
+		    m_docId,mstrerror(g_errno));
+
 
 	if ( ! m_indexCodeValid ) {
 		m_indexCode = EINTERNALERROR;//g_errno;
@@ -1929,7 +1945,7 @@ bool XmlDoc::indexDoc ( ) {
 
 	if ( ! m_spideredTimeValid ) {
 		m_spideredTimeValid = true;
-		m_spideredTime = 0;
+		m_spideredTime = getTimeGlobal();//0; use now!
 	}
 
 	// if this is EABANDONED or EHITCRAWLLIMIT or EHITPROCESSLIMIT
@@ -1938,21 +1954,27 @@ bool XmlDoc::indexDoc ( ) {
 	// url spider lock in SpiderLoop::m_lockTable.
 	SpiderReply *nsr = getNewSpiderReply ();
 	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
+	if ( nsr->getRecSize() <= 1) { char *xx=NULL;*xx=0; }
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return true;
 
-	SafeBuf metaList;
-	metaList.pushChar(RDB_SPIDERDB);
-	metaList.safeMemcpy ( (char *)nsr , nsr->getRecSize() );
+	//SafeBuf metaList;
+	m_metaList2.pushChar(RDB_SPIDERDB);
+	m_metaList2.safeMemcpy ( (char *)nsr , nsr->getRecSize() );
 
 	m_msg4Launched = true;
+
+	// log this for debug now
+	SafeBuf tmp;
+	nsr->print(&tmp);
+	log("xmldoc: added reply %s",tmp.getBufStart());
 
 	// clear g_errno
 	g_errno = 0;
 
-	if ( ! m_msg4.addMetaList ( metaList.getBufStart()     ,
-				    metaList.length() ,
+	if ( ! m_msg4.addMetaList ( m_metaList2.getBufStart()     ,
+				    m_metaList2.length() ,
 				    cr->m_coll         ,
 				    m_masterState  , // state
 				    m_masterLoop   ,
@@ -1971,6 +1993,8 @@ bool XmlDoc::indexDoc ( ) {
 	return true;
 }
 
+// . returns false if blocked, true otherwise
+// . sets g_errno on error and returns true
 bool XmlDoc::indexDoc2 ( ) {
 
 	if ( g_isYippy ) return true;
@@ -9327,7 +9351,9 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 		return &m_oldDoc;
 	}
 
-	// cache age is 0... super fresh
+	// . cache age is 0... super fresh 
+	// . returns NULL w/ g_errno if not found unless isIndexed is false 
+	//   and valid, and it is not valid for pagereindexes.
 	char **otr = getOldTitleRec ( );
 	if ( ! otr || otr == (char **)-1 ) return (XmlDoc **)otr;
 	// if no title rec, return ptr to a null
@@ -9340,13 +9366,19 @@ XmlDoc **XmlDoc::getOldXmlDoc ( ) {
 	// if provided title rec matches our docid but not uh48 then there
 	// was a docid collision and we should null out our title rec
 	// and return with an error and no index this puppy!
-	long long uh48 = getFirstUrl()->getUrlHash48();
-	long long tuh48 = g_titledb.getUrlHash48 ( (key_t *)*otr );
-	if ( uh48 != tuh48 ) {
-		log("xmldoc: docid collision uh48 mismatch. cannot index "
-		    "%s",getFirstUrl()->getUrl() );
-		g_errno = EDOCIDCOLLISION;
-		return NULL;
+	// crap, we can't call getFirstUrl() because it might not be
+	// valid if we are a docid based doc and THIS function was called
+	// from getFirstUrl() -- we end up in a recursive loop.
+	if ( ! m_setFromDocId ) { 
+		long long uh48 = getFirstUrl()->getUrlHash48();
+		long long tuh48 = g_titledb.getUrlHash48 ( (key_t *)*otr );
+		if ( uh48 != tuh48 ) {
+			log("xmldoc: docid collision uh48 mismatch. cannot "
+			    "index "
+			    "%s",getFirstUrl()->getUrl() );
+			g_errno = EDOCIDCOLLISION;
+			return NULL;
+		}
 	}
 
 	// . if *otr is NULL that means not found
@@ -9732,7 +9764,12 @@ char **XmlDoc::getOldTitleRec ( ) {
 	// add it to the cache?
 	bool addToCache = false;
 	//if ( maxCacheAge > 0 ) addToCache = true;
+
 	// not if new! no we need to do this so XmlDoc::getDocId() works!
+	// this logic prevents us from setting g_errno to ENOTFOUND
+	// when m_msg22a below calls indexDocWrapper(). however, for
+	// doing a query delete on a not found docid will succumb to
+	// the g_errno because m_isIndexed is not valid i think...
 	if ( m_isIndexedValid && ! m_isIndexed && m_docIdValid ) {
 		m_oldTitleRec      = NULL;
 		m_oldTitleRecValid = true;
@@ -12007,7 +12044,7 @@ long *XmlDoc::getFinalCrawlDelay() {
 	}
 
 	// get manually specified crawl delay in seconds. convert to ms.
-	long manual = cr->m_collectiveCrawlDelay * 1000.0;
+	long manual = (long)(cr->m_collectiveCrawlDelay * 1000.0);
 	// negative means -1 means unknown or not specified
 	if ( manual < 0 ) manual = -1;
 
@@ -15771,7 +15808,7 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		// null term it
 		m_esbuf.pushChar('\0');
 		// and point to that buffer
-		m_expandedUtf8Content     = m_esbuf.m_buf;
+		m_expandedUtf8Content     = m_esbuf.getBufStart();//m_buf;
 		// include the \0 as part of the size
 		m_expandedUtf8ContentSize = m_esbuf.m_length; // + 1;
 	}
@@ -15990,7 +16027,7 @@ char **XmlDoc::getUtf8Content ( ) {
 		// final \0
 		*dst = '\0';
 		// re-assign these
-		m_expandedUtf8Content     = m_xbuf.m_buf;
+		m_expandedUtf8Content     = m_xbuf.getBufStart();//m_buf;
 		m_expandedUtf8ContentSize = m_xbuf.m_length + 1;
 		// free esbuf if we were referencing that to save mem
 		m_esbuf.purge();
@@ -18923,6 +18960,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		m_siteNumInlinks = 0;
 		m_isIndexed = true;
 		m_isIndexedValid = true;
+		m_ipValid = true;
+		m_ip = 123456;
 	}
 
 	// get our checksum
@@ -19224,7 +19263,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	bool *recycle = getRecycleDiffbotReply();
 	if ( ! recycle || recycle == (void *)-1) return (char *)recycle;
 	// in that case inherit this from the old doc...
-	if ( od && *recycle ) {
+	if ( od && *recycle && cr->m_isCustomCrawl ) {
 		m_diffbotJSONCount          = od->m_diffbotJSONCount;
 		m_sentToDiffbot             = od->m_sentToDiffbot;
 		m_gotDiffbotSuccessfulReply = od->m_gotDiffbotSuccessfulReply;
@@ -19236,6 +19275,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// were indexed with their own docids in the "m_dx" code below. so
 	// just delete them and we'll re-add from this doc's diffbot reply.
 	if ( od && od->m_diffbotJSONCount && ! *recycle && 
+	     cr->m_isCustomCrawl &&
 	     // do not remove old json objects if pageparser.cpp test
 	     // because that can not change the index, etc.
 	     ! getIsPageParser() ) {
@@ -19524,8 +19564,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//	if ( ! odp || odp==(void *)-1) return (char *)odp;
 	//}
 
+	// shit, we need a spider reply so that it will not re-add the
+	// spider request to waiting tree, we ignore docid-based
+	// recs that have spiderreplies in Spider.cpp
 	SpiderReply *newsr = NULL;
-	if ( m_useSpiderdb && ! m_deleteFromIndex ) {
+	if ( m_useSpiderdb ) { // && ! m_deleteFromIndex ) {
 		newsr = getNewSpiderReply();
 		if ( ! newsr || newsr == (void *)-1 ) return (char *)newsr;
 	}
@@ -21179,7 +21222,9 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	
 
 	// shortcut
-	Url *fu = getFirstUrl();
+	Url *fu = NULL;
+	// watch out for titlerec lookup errors for docid based spider reqs
+	if ( m_firstUrlValid ) fu = getFirstUrl();
 
 	// reset
 	m_newsr.reset();
@@ -21205,7 +21250,8 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	m_newsr.m_siteHash32 = m_siteHash32;
 
 	// need this for updating crawl delay table, m_cdTable in Spider.cpp
-	m_newsr.m_domHash32  = getDomHash32();
+	if ( fu ) m_newsr.m_domHash32  = getDomHash32();
+	else      m_newsr.m_domHash32  = 0;
 
 	if ( ! m_tagRecValid               ) { char *xx=NULL;*xx=0; }
 	if ( ! m_ipValid                   ) { char *xx=NULL;*xx=0; }
@@ -21240,7 +21286,10 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	//tag = gr->getTag ( "hascontactinfo"  );
 	//if ( tag ) {
 
-	long long uh48        = hash64b(fu->m_url) & 0x0000ffffffffffffLL;
+	long long uh48        = 0LL;
+	// we might be a docid based spider request so fu could be invalid
+	// if the titlerec lookup failed
+	if ( fu ) uh48 = hash64b(fu->m_url) & 0x0000ffffffffffffLL;
 	long long parentDocId = 0LL;
 	if ( m_oldsrValid )
 		parentDocId = m_oldsr.getParentDocId();
@@ -21304,7 +21353,8 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 		if ( m_isPermalinkValid ) m_newsr.m_isPermalink =m_isPermalink;
 		if ( m_httpStatusValid  ) m_newsr.m_httpStatus = m_httpStatus;
 		// stuff that is automatically valid
-		m_newsr.m_isPingServer = (bool)fu->isPingServer();
+		m_newsr.m_isPingServer = 0;
+		if ( fu ) m_newsr.m_isPingServer = (bool)fu->isPingServer();
 		// this was replaced by m_contentHash32
 		//m_newsr.m_newRequests  = 0;
 		m_newsr.m_errCode      = m_indexCode;
@@ -24868,8 +24918,10 @@ bool XmlDoc::hashLanguage ( HashTableX *tt ) {
 
 	setStatus ( "hashing language" );
 
-	char s[4]; // numeric langid
-	long slen = sprintf(s, "%li", (long)*getLangId());
+	long langId = (long)*getLangId();
+
+	char s[32]; // numeric langid
+	long slen = sprintf(s, "%li", langId );
 
 	// update hash parms
 	HashInfo hi;
@@ -24877,7 +24929,13 @@ bool XmlDoc::hashLanguage ( HashTableX *tt ) {
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_prefix    = "gblang";
 
-	return hashString ( s, slen, &hi );
+	if ( ! hashString ( s, slen, &hi ) ) return false;
+
+	// try lang abbreviation
+	sprintf(s , "%s ", getLangAbbr(langId) );
+	if ( ! hashString ( s, slen, &hi ) ) return false;
+
+	return true;
 }
 
 bool XmlDoc::hashCountry ( HashTableX *tt ) {
@@ -27056,6 +27114,10 @@ Summary *XmlDoc::getSummary () {
 	// shortcut
 	Summary *s = &m_summary;
 
+	// time cpu set time
+	long long start = gettimeofdayInMilliseconds();
+	m_cpuSummaryStartTime = start;
+
 	// make sure summary does not include title
 	char *tbuf    = ti->m_title;
 	// this does not include the terminating \0
@@ -27230,6 +27292,11 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 			if ( *z == '[' ) bracketCount++;
 		}
 		long naw = (b - sp->m_a) / 2;
+
+		// just skip even for gigabits if too long. most likely
+		// a spammy list of nouns.
+		if ( naw >= 130 ) continue;
+
 		if ( commaCount >= 3 && commaCount *4 >= naw )
 			isList = true;
 		if ( commaCount >= 10 )
@@ -27277,7 +27344,7 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 		      e[-2] == '!' ) )
 			endsInPeriod = true;
 
-		//long off = reply.length();
+		long off = reply.length();
 
 		if ( ! reply.safePrintFilterTagsAndLines ( p , e-p ,false ) )
 			return NULL;
@@ -27314,10 +27381,16 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 		*pc = '\0';
 
 		// debug
-		//char *x = reply.getBufStart() + off;
-		//log("fact: %s",x);
+		char *x = reply.getBufStart() + off;
+		log("fastfact: %s",x);
 		// revert back to |
 		*pc = '|';
+
+		// stop? this fixes the query 'lesbain vedeo porno' on
+		// my cluster taking 10 seconds to get gigabits for.
+		// bigsamplemaxlen is 1000 as of 12/4/2013.
+		if ( reply.length() >= m_req->m_bigSampleMaxLen )
+			break;
 	}
 	// a final \0
 	reply.pushChar('\0');

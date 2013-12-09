@@ -1193,6 +1193,8 @@ void HttpRequest::parseFields ( char *s , long slen ) {
 		m_fields [ n ] = s;
 		// point to = sign
 		char *equal = strchr ( s , '=' );
+		// try next field if none here
+		if ( ! equal ) { s += gbstrlen ( s ) + 1; continue; }
 		// if no equal sign, maybe it is one of diffbot's valueless
 		// fields, so support that now
 		if ( ! equal ) { 

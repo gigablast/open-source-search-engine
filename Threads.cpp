@@ -1962,7 +1962,7 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	if ( now == -1LL ) now = gettimeofdayInMilliseconds();
 	//t->m_launchedTime = g_now;
 	t->m_launchedTime = now;
- loop2:
+	// loop2:
 	// spawn the thread
 	long  count = 0;
 	pid_t pid;
@@ -2060,15 +2060,16 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 		return true;
 	}
 
-	#undef usleep
+	//#undef usleep
 
 	// forever loop
 	if ( g_errno == EAGAIN ) {
 		if ( count++ == 0 ) 
 			log("thread: Call to clone had error: %s.",
 			    mstrerror(g_errno));
-		usleep(1);
-		goto loop2;
+		//usleep(1);
+		//goto loop2;
+		goto hadError;
 	}
 	// debug msg
 	//	log("created tid=%li",(long)t->m_tid);
@@ -2079,9 +2080,9 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 		log("thread: Call to clone was interrupted. Trying again.");
 		goto loop;
 	}
-#ifndef PTHREADS
+	//#ifndef _PTHREADS_
  hadError:
-#endif
+	//#endif
 
 	if ( g_errno )
 		log("thread: pthread_create had error = %s",

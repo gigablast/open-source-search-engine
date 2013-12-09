@@ -981,7 +981,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 	if(m_docsToScanForTopics > 0 /*&& m_si->m_firstResultNum == 0*/) {
 		bigSampleRadius = 300;
 		//bigSampleMaxLen = m_si->m_topicGroups[0].m_topicSampleSize;
-		bigSampleMaxLen = 2000;
+		bigSampleMaxLen = 5000;
 	}
 	// . launch a msg20 getSummary() for each docid
 	// . m_numContiguous should preceed any gap, see below
@@ -1781,7 +1781,11 @@ bool Msg40::gotSummary ( ) {
 	//Query *q = m_si->m_q;
 	// english? TEST!
 	unsigned char lang = m_si->m_queryLang;
-	if ( lang == 0 ) { char *xx=NULL;*xx=0; }
+	// just print warning i guess
+	if ( lang == 0 ) { 
+		log("query: queryLang is 0 for q=%s",q->m_orig);
+		//char *xx=NULL;*xx=0; }
+	}
 	// we gotta use query TERMS not words, because the query may be
 	// 'cd rom' and the phrase term will be 'cdrom' which is a good one
 	// to use for gigabits! plus we got synonyms now!
@@ -1860,6 +1864,7 @@ bool Msg40::gotSummary ( ) {
 			return true;
 		}
 
+#ifdef NEEDLICENSE
 		// now make the fast facts from the gigabits and the
 		// samples. these are sentences containing the query and
 		// a gigabit.
@@ -1869,7 +1874,7 @@ bool Msg40::gotSummary ( ) {
 			// g_errno should be set on error here!
 			return true;
 		}
-		
+#endif
 
 		/*
 		long ng;
@@ -4290,6 +4295,9 @@ void setRepeatScores ( Words *words ,
 
 }
 
+// a separate license must be acq'd to use this code for commercial reasons
+#ifdef NEEDLICENSE
+
 ///////////////////
 //
 // FAST FACTS
@@ -4321,13 +4329,12 @@ static int factCmp ( const void *a, const void *b ) {
 	return 0;
 }
 
-
 // . now make the fast facts from the gigabits and the samples. 
 // . these are sentences containing the query and a gigabit.
 bool Msg40::computeFastFacts ( ) {
 
 	// skip for now
-	//return true;
+	return true;
 
 	bool debugGigabits = m_si->m_debugGigabits;
 
@@ -4347,7 +4354,12 @@ bool Msg40::computeFastFacts ( ) {
 		Words ww;
 		ww.setx ( gi->m_term , gi->m_termLen , 0 );
 		long long *wids = ww.getWordIds();
-		if ( ! wids[0] ) { char *xx=NULL;*xx=0; }
+		// fix mere here
+		//if ( ! wids[0] ) { char *xx=NULL;*xx=0; }
+		if ( ! wids[0] )  {
+			log("doc: wids[0] is null");
+			return true;
+		}
 		// . hash first word
 		// . so gigabit has # words in it so we can do a slower
 		//   compare function to make sure entire gigabit is matched
@@ -4375,7 +4387,7 @@ bool Msg40::computeFastFacts ( ) {
 
 
 	//
-	// store Facts (sentences) into this safebuf
+	// store Facts (sentences) into this safebuf (nuggets)
 	//
 	char ftmp[100000];
 	SafeBuf factBuf(ftmp,100000);
@@ -4611,3 +4623,5 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 	if ( ! factBuf->safeMemcpy ( &fact , sizeof(Fact) ) ) return false;
 	return true;
 }
+
+#endif

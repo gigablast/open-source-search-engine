@@ -1679,21 +1679,25 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 			       long  page ,
 			       //long  user ,
 			       char *username,
-			       char *coll ,
+			       char *collArg ,
 			       char *pwd  ,
 			       bool  top  ) {
 
 	bool status = true;
 	// prepare for printing these
-	if ( ! coll ) coll = "";
+	//if ( ! coll ) coll = "";
 	//if ( ! pwd  ) pwd  = "";
+
+	CollectionRec *cr = g_collectiondb.getRec ( collArg );
+	if ( ! cr ) return true;
+
 
 	if ( ! top ) {
 		// . if no collection do not print anything else
 		// . no, we accept as legit (print out as "main")
-		if ( ! coll[0] ) return status;
+		//if ( ! coll[0] ) return status;
 		if ( g_collectiondb.m_numRecsUsed == 0 ) return status;
-		if ( ! g_collectiondb.getRec ( coll )  ) return status;
+		//if ( ! g_collectiondb.getRec ( coll )  ) return status;
 	}
 
 	//sprintf(p,"<font size=+1>\n" );
@@ -1727,7 +1731,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 				"</span>"
 				" &nbsp; \n",s_pages[i].m_filename,
 				//username,pwd,
-				coll,
+				cr->m_coll,
 				buf,s_pages[i].m_name);
 		else if ( page == i )
 			sb->safePrintf(
@@ -1736,7 +1740,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 				"<font color=red>%s</font></b></a>"
 				"</span>"
 				" &nbsp; \n",s_pages[i].m_filename,
-				coll,
+				cr->m_coll,
 				buf,s_pages[i].m_name);
 		else
 			sb->safePrintf(
@@ -1744,7 +1748,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 				"<a href=\"/%s?c=%s%s\">%s</a>"
 				"</span>"
 				" &nbsp; \n",s_pages[i].m_filename,
-				coll,
+				cr->m_coll,
 				buf,s_pages[i].m_name);
 		// print <br> after the last master admin control
 		/*

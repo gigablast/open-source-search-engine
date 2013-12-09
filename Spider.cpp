@@ -1235,25 +1235,83 @@ char *SpiderColl::getCollName() {
 	return cr->m_coll;
 }
 
-// . call this when changing the url filters
-// . will make all entries in waiting tree have zero time basically
-void SpiderColl::urlFiltersChanged ( ) {
-	// log it
-	log("spider: rebuilding waiting tree for coll=%s",getCollName());
-	m_lastUrlFiltersUpdate = getTimeGlobal();
+//
+// remove all recs from doledb for the given collection
+//
+void doDoledbNuke ( int fd , void *state ) {
+
+	WaitEntry *we = (WaitEntry *)state;
+
+	if ( we->m_registered )
+		g_loop.unregisterSleepCallback ( we , doDoledbNuke );
+
+	// . nuke doledb for this collnum
+	// . it will unlink the files and maps for doledb for this collnum
+	// . it will remove all recs of this collnum from its tree too
+	if ( g_doledb.getRdb()->isSavingTree () ) {
+		g_loop.registerSleepCallback ( 100 , we , doDoledbNuke );
+		we->m_registered = true;
+		return;
+	}
+
+	// . ok, tree is not saving, it should complete entirely from this call
+	// . crap this is moving the whole directory!!!
+	// . say "false" to not move whole coll dira
+	g_doledb.getRdb()->deleteAllRecs ( we->m_cr->m_collnum );
+
+	// re-add it back so the RdbBase is new'd
+	//g_doledb.getRdb()->addColl2 ( we->m_collnum );
+
+	// shortcut
+	SpiderColl *sc = we->m_cr->m_spiderColl;
+
+	sc->m_lastUrlFiltersUpdate = getTimeGlobal();
 	// need to recompute this!
-	m_ufnMapValid = false;
+	sc->m_ufnMapValid = false;
 	// reset this cache
 	clearUfnTable();
 	// activate a scan if not already activated
-	m_waitingTreeNeedsRebuild = true;
+	sc->m_waitingTreeNeedsRebuild = true;
 	// if a scan is ongoing, this will re-set it
-	m_nextKey2.setMin();
+	sc->m_nextKey2.setMin();
 	// clear it?
-	m_waitingTree.clear();
-	m_waitingTable.clear();
-	// kick off the spiderdb scan
-	populateWaitingTreeFromSpiderdb(false);
+	sc->m_waitingTree.clear();
+	sc->m_waitingTable.clear();
+
+	// kick off the spiderdb scan to repopulate waiting tree and doledb
+	sc->populateWaitingTreeFromSpiderdb(false);
+
+	// nuke this state
+	mfree ( we , sizeof(WaitEntry) , "waitet" );
+
+	// note it
+	log("spider: finished clearing out doledb/waitingtree for %s",sc->m_coll);
+}
+
+// . call this when changing the url filters
+// . will make all entries in waiting tree have zero time basically
+// . and makes us repopulate doledb from these waiting tree entries
+void SpiderColl::urlFiltersChanged ( ) {
+
+	// log it
+	log("spider: rebuilding doledb/waitingtree for coll=%s",getCollName());
+
+	WaitEntry *we = (WaitEntry *)mmalloc ( sizeof(WaitEntry) , "waite2" );
+	if ( ! we ) {
+		log("spider: wait entry alloc: %s",mstrerror(g_errno));
+		g_errno = 0;
+		return;
+	}
+
+	// prepare our state in case the purge operation would block
+	we->m_registered = false;
+	we->m_cr = m_cr;
+	we->m_collnum = m_cr->m_collnum;
+	//we->m_callback = doDoledbNuke2;
+	//we->m_state = NULL;
+
+	// remove all recs from doledb for the given collection
+	doDoledbNuke ( 0 , we );
 }
 
 // this one has to scan all of spiderdb
@@ -1455,10 +1513,15 @@ void SpiderColl::clear ( ) {
 	//m_lastDownloadCache.clear ( m_collnum );
 
 	// copied from reset() below
-	for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ )
+	for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ ) {
 		m_nextKeys[i] =	g_doledb.makeFirstKey2 ( i );
+		m_isDoledbEmpty[i] = 0;
+	}
 
+	// assume the whole thing is not empty
+	m_allDoledbPrioritiesEmpty = false;
 }
+
 void SpiderColl::reset ( ) {
 
 	// reset these for SpiderLoop;
@@ -1489,8 +1552,14 @@ void SpiderColl::reset ( ) {
 	// key annihilations related to starting at the top of the priority
 	// queue every time we scan it, which causes us to do upwards of
 	// 300 re-reads!
-	for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ )
+	for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ ) {
 		m_nextKeys[i] =	g_doledb.makeFirstKey2 ( i );
+		m_isDoledbEmpty[i] = 0;
+	}
+
+	// assume the whole thing is not empty
+	m_allDoledbPrioritiesEmpty = false;
+
 }
 
 bool SpiderColl::updateSiteNumInlinksTable ( long siteHash32, 
@@ -1611,8 +1680,10 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	// . skip the rest if injecting
 	// . otherwise it triggers a lookup for this firstip in spiderdb to
 	//   get a new spider request to add to doledb
-	if ( srep->m_fromInjectionRequest )
-		return true;
+	// . no, because there might be more on disk from the same firstip
+	//   so comment this out again
+	//if ( srep->m_fromInjectionRequest )
+	//	return true;
 
 	// clear error for this
 	g_errno = 0;
@@ -1625,11 +1696,17 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	//   and the webmaster did not have one. then we can 
 	//   crawl more vigorously...
 	//if ( srep->m_crawlDelayMS >= 0 ) {
+
+	bool update = false;
 	// use the domain hash for this guy! since its from robots.txt
 	long *cdp = (long *)m_cdTable.getValue32(srep->m_domHash32);
 	// update it only if better or empty
-	bool update = false;
 	if ( ! cdp ) update = true;
+
+	// no update if injecting or from pagereindex (docid based spider request)
+	if ( srep->m_fromInjectionRequest )
+		update = false;
+
 	//else if (((*cdp)&0xffffffff)<(uint32_t)srep->m_spideredTime) 
 	//	update = true;
 	// update m_sniTable if we should
@@ -1668,19 +1745,26 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	// . TODO: consult crawldelay table here too! use that value if is
 	//   less than our sameIpWait
 	// . make m_lastDownloadTable an rdbcache ...
+	// . this is 0 for pagereindex docid-based replies
 	if ( srep->m_downloadEndTime )
 		m_lastDownloadCache.addLongLong ( m_collnum,
 						  srep->m_firstIp ,
 						  srep->m_downloadEndTime );
 	// log this for now
 	if ( g_conf.m_logDebugSpider )
-		log("spider: adding last download end time %lli for "
-		    "ip=%s uh48=%llu indexcode=\"%s\" coll=%li "
-		    "to SpiderColl::m_lastDownloadCache",
+		log("spider: adding spider reply, download end time %lli for "
+		    "ip=%s(%lu) uh48=%llu indexcode=\"%s\" coll=%li "
+		    "k.n1=%llu k.n0=%llu",
+		    //"to SpiderColl::m_lastDownloadCache",
 		    srep->m_downloadEndTime,
-		    iptoa(srep->m_firstIp),srep->getUrlHash48(),
+		    iptoa(srep->m_firstIp),
+		    srep->m_firstIp,
+		    srep->getUrlHash48(),
 		    mstrerror(srep->m_errCode),
-		    (long)m_collnum);
+		    (long)m_collnum,
+		    srep->m_key.n1,
+		    srep->m_key.n0);
+	
 	// ignore errors from that, it's just a cache
 	g_errno = 0;
 	// sanity check - test cache
@@ -2046,7 +2130,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 
 	// only if we are the responsible host in the shard
 	if ( ! isAssignedToUs ( firstIp ) ) 
-		return true;
+		return false;
 
 	// . do not add to waiting tree if already in doledb
 	// . an ip should not exist in both doledb and waiting tree.
@@ -3701,6 +3785,17 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// a single ip address. maybe use msg1 here not msg4?
 	if ( ! addToDoleTable ( m_bestRequest ) ) return true;
 
+	// . if it was empty it is no longer
+	// . we have this flag here to avoid scanning empty doledb priorities
+	//   because it saves us a msg5 call to doledb in the scanning loop
+	long bp = m_bestRequest->m_priority;
+	if ( bp <  0                     ) { char *xx=NULL;*xx=0; }
+	if ( bp >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
+	m_isDoledbEmpty [ bp ] = 0;
+
+	// and the whole thing is no longer empty
+	m_allDoledbPrioritiesEmpty = false;
+
 	//
 	// delete the winner from ufntree as well
 	//
@@ -3874,7 +3969,7 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 	// update how many per ip we got doled
 	long *score = (long *)m_doleIpTable.getValue32 ( sreq->m_firstIp );
 	// debug point
-	if ( g_conf.m_logDebugSpider ) {
+	if ( g_conf.m_logDebugSpider && 1 == 2 ) { // disable for now, spammy
 		long long  uh48 = sreq->getUrlHash48();
 		long long pdocid = sreq->getParentDocId();
 		long ss = 1;
@@ -4065,7 +4160,7 @@ void SpiderLoop::startLoop ( ) {
 	// spider some urls that were doled to us
 	//g_spiderLoop.spiderDoledUrls( );
 	// sleep for .1 seconds = 100ms
-	if (!g_loop.registerSleepCallback(10,this,doneSleepingWrapperSL))
+	if (!g_loop.registerSleepCallback(50,this,doneSleepingWrapperSL))
 		log("build: Failed to register timer callback. Spidering "
 		    "is permanently disabled. Restart to fix.");
 
@@ -4517,6 +4612,13 @@ void SpiderLoop::spiderDoledUrls ( ) {
 			// try next collection
 			continue;
 		}
+
+		// . if all doledb priorities are empty, skip it quickly
+		// . do this only after we update lastSpiderAttempt above
+		if ( cr->m_spiderColl && 
+		     cr->m_spiderColl->m_allDoledbPrioritiesEmpty )
+			continue;
+
 		// ok, we are good to launch a spider for coll m_cri
 		break;
 	}
@@ -4613,6 +4715,15 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//	m_sc->m_lastDoledbReadEmpty = true;
 		// and go up top
 		goto collLoop;
+	}
+
+	// . skip priority if we knows its empty in doledb
+	// . this will save us a call to msg5 below
+	if ( m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] ) {
+		// decrease the priority
+		m_sc->devancePriority();
+		// and try the one below
+		goto loop;
 	}
 
 	// shortcut
@@ -4813,6 +4924,18 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	// bail if list is empty
 	if ( m_list.getListSize() <= 0 ) {
+		// don't bother with this priority again until a key is
+		// added to it!
+		m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] = 1;
+
+		// if all priorities now empty set another flag
+		m_sc->m_allDoledbPrioritiesEmpty = true;
+		for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ ) {
+			if ( m_sc->m_isDoledbEmpty[m_sc->m_pri2] ) continue;
+			m_sc->m_allDoledbPrioritiesEmpty = false;
+			break;
+		}
+			
 		// if no spiders...
 		//if ( g_conf.m_logDebugSpider ) {
 		//	log("spider: empty doledblist collnum=%li "
@@ -5549,8 +5672,15 @@ bool SpiderLoop::spiderUrl2 ( ) {
 	//}
 
 	if ( g_conf.m_logDebugSpider )
-		logf(LOG_DEBUG,"spider: spidering uh48=%llu pdocid=%llu",
-		     m_sreq->getUrlHash48(),m_sreq->getParentDocId() );
+		logf(LOG_DEBUG,"spider: spidering firstip9=%s(%lu) "
+		     "uh48=%llu prntdocid=%llu k.n1=%llu k.n0=%llu",
+		     iptoa(m_sreq->m_firstIp),
+		     m_sreq->m_firstIp,
+		     m_sreq->getUrlHash48(),
+		     m_sreq->getParentDocId() ,
+		     m_sreq->m_key.n1,
+		     m_sreq->m_key.n0);
+
 
 	// this returns false and sets g_errno on error
 	if ( ! xd->set4 ( m_sreq       ,
@@ -6502,7 +6632,9 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 		     // this will just return true if we are not the 
 		     // responsible host for this firstip
 		    // DO NOT populate from this!!! say "false" here...
-		     ! sc->addToWaitingTree ( 0 , cq->m_firstIp, false ) ) {
+		     ! sc->addToWaitingTree ( 0 , cq->m_firstIp, false ) &&
+		     // must be an error...
+		     g_errno ) {
 			msg = "FAILED TO ADD TO WAITING TREE";
 			log("spider: %s %s",msg,mstrerror(g_errno));
 			us->sendErrorReply ( udpSlot , g_errno );
@@ -6665,7 +6797,7 @@ void removeExpiredLocks ( long hostId ) {
 	// when we last cleaned them out
 	static time_t s_lastTime = 0;
 
-	long nowGlobal = getTimeGlobal();
+	long nowGlobal = getTimeGlobalNoCore();
 	long niceness = MAX_NICENESS;
 
 	// only do this once per second at the most

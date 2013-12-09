@@ -143,7 +143,7 @@ bool HttpServer::getDoc ( char   *url      ,
 	long defPort = 80;
 	// check for a secured site
 	TcpServer *tcp = &m_tcp;
-	if ( strncasecmp(url, "https://", 8) == 0 ) {
+	if ( url && strncasecmp(url, "https://", 8) == 0 ) {
 		if (!m_ssltcp.m_ready) {
 			// TODO: set an error here
 			log("https: Trying to get HTTPS site when SSL "

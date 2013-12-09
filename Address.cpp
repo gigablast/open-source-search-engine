@@ -11792,7 +11792,9 @@ char getTimeZone2 ( char *city , char *state , char *useDST ) {
 	// get city hash
 	long long h = getWordXorHash(city);
 	// TODO: make state into two letter abbr?
-	if ( gbstrlen(state) != 2 ) { char *xx=NULL;*xx=0; }
+	// crap, if state is taken from class ZipDesc it is only
+	// 2 letters and has no \0 in it
+	//if ( gbstrlen(state) != 2 ) { char *xx=NULL;*xx=0; }
 	// use this now
 	uint32_t cid32 = (uint64_t)getCityId32(h,state);
 	// and call this
@@ -15716,7 +15718,8 @@ pd=(PlaceDesc *)g_cities.getValueFromSlot(pd->getSlot());
 	g_cityBuf     = tbuf;
 	g_cityBufSize = tbufSize;
 	// do not let "sb" free it
-	sb.m_buf      = NULL;
+	//sb.m_buf      = NULL;
+	sb.detachBuf();
 
 	//if ( ! g_indicators.save ( g_hostdb.m_dir, "indicators.dat" ) )
 	//	return log("places: failed to save indicators.dat");

@@ -999,6 +999,28 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "This is true if we have tried to spider "
 			  "this url, even if we got an error while trying."
 			  "</td></tr>"
+
+			  "<tr><td>isnew | !isnew</td>"
+			  "<td>"
+			  "This is the opposite of hasreply above. A url "
+			  "is new if it has no spider reply, including "
+			  "error replies. So once a url has been attempted to "
+			  "be spidered then this will be false even if there "
+			  "was any kind of error."
+			  "</td></tr>"
+
+			  "<tr><td>lastspidertime >= <b>{roundstart}</b></td>"
+			  "<td>"
+			  "This is true if the url's last spidered time "
+			  "indicates it was spidered already for this "
+			  "current round of spidering. When no more urls "
+			  "are available for spidering, then gigablast "
+			  "automatically sets {roundstart} to the current "
+			  "time so all the urls can be spidered again. This "
+			  "is how you do round-based spidering. "
+			  "You have to use the respider frequency as well "
+			  "to adjust how often you want things respidered."
+			  "</td></tr>"
 			  
 
 			  //"<tr><td>!newoutlink</td>"
@@ -1022,7 +1044,6 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 
 
-
 			  "<tr><td>isaddurl | !isaddurl</td>"
 			  "<td>"
 			  "This is true if the url was added from the add "
@@ -1035,6 +1056,28 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "This is true if the url was directly "
 			  "injected from the "
 			  "/inject page or API."
+			  "</td></tr>"
+
+			  "<tr><td>isdocidbased | !isdocidbased</td>"
+			  "<td>"
+			  "This is true if the url was added from the "
+			  "reindex interface. The request does not contain "
+			  "a url, but only a docid, that way we can add "
+			  "millions of search results very quickly without "
+			  "having to lookup each of their urls. You should "
+			  "definitely have this if you use the reindexing "
+			  "feature. You can temporarily disabled the "
+			  "spidering enabled checkbox for non "
+			  "docidbased requests while you reindex or delete "
+			  "the results of a query for extra speed."
+			  "</td></tr>"
+
+			  "<tr><td>ismanualadd | !ismanualadd</td>"
+			  "<td>"
+			  "This is true if the url was added manually. "
+			  "Which means it matches isaddurl, isinjected, "
+			  " or isdocidbased. as opposed to only "
+			  "being discovered from the spider. "
 			  "</td></tr>"
 
 			  "<tr><td><nobr>inpingserver | !inpingserver"
@@ -1072,8 +1115,12 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "<tr><td>errorcount==1</td>"
 			  "<td>"
 			  "The number of times the url has failed to "
-			  "download. 1 means just the last time, two means "
-			  "the last two times. etc."
+			  "be indexed. 1 means just the last time, two means "
+			  "the last two times. etc. Any kind of error parsing "
+			  "the document (bad utf8, bad charset, etc.) "
+			  "or any HTTP status error, like 404 or "
+			  "505 is included in this count, in addition to "
+			  "\"temporary\" errors like DNS timeouts."
 			  "</td></tr>"
 
 			  "<tr><td>hastmperror</td>"
@@ -1081,7 +1128,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "This is true if the last spider attempt resulted "
 			  "in an error like EDNSTIMEDOUT or a similar error, "
 			  "usually indicative of a temporary internet "
-			  "failure, and should be retried soon."
+			  "failure, or local resource failure, like out of "
+			  "memory, and should be retried soon."
 			  "</td></tr>"
 
 			  "<tr><td>percentchangedperday&lt=5</td>"
@@ -3059,8 +3107,11 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 	if ( changedUrlFilters && THIS != (char *)&g_conf ) {
 		// cast it
 		CollectionRec *cr = (CollectionRec *)THIS;
+		// to prevent us having to rebuild doledb/waitingtree at startup
+		// we need to make the spidercoll here so it is not null
+		SpiderColl *sc = g_spiderCache.getSpiderColl(cr->m_collnum);
 		// get it
-		SpiderColl *sc = cr->m_spiderColl;
+		//SpiderColl *sc = cr->m_spiderColl;
 		// this will rebuild the waiting tree
 		if ( sc ) sc->urlFiltersChanged();
 	}
@@ -3182,6 +3233,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	// array whose "count" was not incremented like it should have been.
 	// HACK: make new line at bottom always have spidering enabled
 	// checkbox set and make it impossible to unset.
+	/*
 	if ( m->m_max > 1 && m->m_rowid >= 0 && mm > 0 &&
 	     m_parms[mm-1].m_rowid == m->m_rowid ) {
 		char *pos =  (char *)THIS + m_parms[mm-1].m_off - 4 ;
@@ -3194,6 +3246,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 			return;
 		}
 	}
+	*/
 
 	// ensure array count at least j+1
 	if ( m->m_max > 1 ) {
@@ -3816,6 +3869,8 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 		if ( THIS != (char *)&g_conf && m->m_obj == OBJ_CONF) continue;
 		if ( m->m_type == TYPE_MONOD2  ) continue;
 		if ( m->m_type == TYPE_MONOM2  ) continue;
+		if ( m->m_type == TYPE_CMD ) continue;
+		if ( m->m_type == TYPE_BOOL2 ) continue;
 		// skip if we should not save to xml
 		if ( ! m->m_save ) continue;
 		// allow comments though

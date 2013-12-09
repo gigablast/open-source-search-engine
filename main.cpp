@@ -6160,6 +6160,7 @@ long dumpSpiderdb ( char *coll,
 		if ( ! g_spiderdb.isSpiderRequest((key128_t *)srec) ) {
 			// print it
 			if ( ! printStats ) {
+				printf( "offset=%lli ",curOff);
 				g_spiderdb.print ( srec );
 				printf("\n");
 			}
