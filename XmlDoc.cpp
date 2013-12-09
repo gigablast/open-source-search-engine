@@ -27258,7 +27258,9 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 	if ( ! sections ||sections==(Sections *)-1) return (SafeBuf *)sections;
 	Section *sp = sections->m_rootSection;
 	SafeBuf reply;
-	if ( ! reply.reserve ( m_contentLen + 1000 ) ) return NULL;
+	reply.setLabel("gbtrepbuf");
+	// m_contentLen is invalid, don't use that here use size_utf8Content
+	if ( ! reply.reserve ( size_utf8Content + 1000 ) ) return NULL;
 	for ( ; sp ; sp = sp->m_next ) {
 		QUICKPOLL(m_niceness);
 		// do not allow menu crap

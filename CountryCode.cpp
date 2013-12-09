@@ -1241,7 +1241,7 @@ int CountryCode::createHashTable(void) {
 
 	fprintf(stderr, "cat: Creating category country/language table.\n");
 
-	if(!ht.set(2)) {
+	if(!ht.set(2,NULL,0,"ctrycode")) {
 		fprintf(stderr, "cat: Could not allocate memory for table.\n");
 		return(0);
 	}
@@ -1281,6 +1281,7 @@ bool CountryCode::loadHashTable(void) {
 	init();
 	if(!m_init) return(false);
 	s_catToCountry.reset();
+	s_catToCountry.setLabel("ctrycode");
 	return(s_catToCountry.load(g_hostdb.m_dir, "catcountry.dat"));
 }
 

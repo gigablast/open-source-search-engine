@@ -977,6 +977,7 @@ bool HttpMime::init ( ) {
 	// make sure only called once
 	s_init = true;
 	//s_mimeTable.set ( 256 );
+	s_mimeTable.setLabel("mimetbl");
 	// set table from internal list
 	for ( unsigned long i = 0 ; i < sizeof(s_ext)/sizeof(char *) ; i+=2 ) {
 		long key = hash32n ( s_ext[i] );

@@ -657,7 +657,8 @@ bool Msg3a::gotAllSplitReplies ( ) {
 		}
 		// bad reply?
 		if ( ! mr ) {
-			log(LOG_LOGIC,"query: msg3a: Bad NULL reply.");
+			log(LOG_LOGIC,"query: msg3a: Bad NULL reply from "
+			    "host #%li. Timeout? OOM?",i);
 			m_reply       [i] = NULL;
 			m_replyMaxSize[i] = 0;
 			// it might have been timd out, just ignore it!!

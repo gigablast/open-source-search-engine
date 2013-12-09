@@ -8,11 +8,15 @@ HashTable::HashTable () {
 	m_numSlots     = 0;
 	m_numSlotsUsed = 0;
 	m_doFree       = true;
+	m_label = NULL;
 }
 
 // returns false and sets errno on error
-bool HashTable::set ( long initialNumTerms , char *buf , long bufSize ) {
+bool HashTable::set ( long initialNumTerms , char *buf , long bufSize ,
+		      char *label ) {
 	reset();
+	m_label = label;
+	if ( ! m_label ) m_label = "hashtablekv";
 	return setTableSize ( initialNumTerms , buf , bufSize );
 }
 
@@ -22,13 +26,16 @@ HashTable::~HashTable ( ) { reset ( ); }
 // . clean will rehash
 void HashTable::reset ( ) {
 	if ( m_doFree ) {
-		if (m_keys) mfree(m_keys,m_numSlots*sizeof(long),"HashTablek");
-		if (m_vals) mfree(m_vals,m_numSlots*sizeof(long),"HashTablev");
+		if (m_keys) mfree(m_keys,m_numSlots*sizeof(long),m_label);
+		if (m_vals) mfree(m_vals,m_numSlots*sizeof(long),m_label);
 	}
 	m_keys = NULL;
 	m_vals = NULL;
 	m_numSlots     = 0;
 	m_numSlotsUsed = 0;
+	// do not do this because then ::load() fails b/c you can't
+	// pass a label into that yet
+	//m_label = NULL;
 }
 
 void HashTable::clear ( ) {
@@ -173,11 +180,11 @@ bool HashTable::setTableSize ( long oldn , char *buf , long bufSize ) {
 	}
 	else {
 		m_doFree = true;
-		newKeys = (long *)mcalloc ( n * sizeof(long) , "HashTablek");
+		newKeys = (long *)mcalloc ( n * sizeof(long) , m_label);
 		if ( ! newKeys ) return false;
-		newVals = (long *)mmalloc ( n * sizeof(long) , "HashTablev");
+		newVals = (long *)mmalloc ( n * sizeof(long) , m_label);
 		if ( ! newVals ) {
-			mfree ( newKeys , n * sizeof(long) , "HashTablek" );
+			mfree ( newKeys , n * sizeof(long) , m_label );
 			return false;
 		}
 	}
@@ -199,8 +206,8 @@ bool HashTable::setTableSize ( long oldn , char *buf , long bufSize ) {
 	}
 	// free the old guys
 	if ( m_keys && savedDoFree ) {
-		mfree ( m_keys , m_numSlots * sizeof(long) , "HashTablek" );
-		mfree ( m_vals , m_numSlots * sizeof(long) , "HashTablev" );
+		mfree ( m_keys , m_numSlots * sizeof(long) , m_label );
+		mfree ( m_vals , m_numSlots * sizeof(long) , m_label );
 	}
 	// assign the new slots, m_numSlotsUsed should be the same
 	m_keys = newKeys;
