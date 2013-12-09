@@ -26,8 +26,8 @@ HashTable::~HashTable ( ) { reset ( ); }
 // . clean will rehash
 void HashTable::reset ( ) {
 	if ( m_doFree ) {
-		if (m_keys) mfree(m_keys,m_numSlots*sizeof(long),m_label);
-		if (m_vals) mfree(m_vals,m_numSlots*sizeof(long),m_label);
+		if (m_keys) mfree(m_keys,m_numSlots*sizeof(long),"hashtablev");
+		if (m_vals) mfree(m_vals,m_numSlots*sizeof(long),"hashtablev");
 	}
 	m_keys = NULL;
 	m_vals = NULL;
@@ -180,11 +180,13 @@ bool HashTable::setTableSize ( long oldn , char *buf , long bufSize ) {
 	}
 	else {
 		m_doFree = true;
-		newKeys = (long *)mcalloc ( n * sizeof(long) , m_label);
+		char *label = m_label;
+		if ( ! label ) label = "hashtablev";
+		newKeys = (long *)mcalloc ( n * sizeof(long) , label);
 		if ( ! newKeys ) return false;
-		newVals = (long *)mmalloc ( n * sizeof(long) , m_label);
+		newVals = (long *)mmalloc ( n * sizeof(long) , label);
 		if ( ! newVals ) {
-			mfree ( newKeys , n * sizeof(long) , m_label );
+			mfree ( newKeys , n * sizeof(long) , label );
 			return false;
 		}
 	}
@@ -206,8 +208,8 @@ bool HashTable::setTableSize ( long oldn , char *buf , long bufSize ) {
 	}
 	// free the old guys
 	if ( m_keys && savedDoFree ) {
-		mfree ( m_keys , m_numSlots * sizeof(long) , m_label );
-		mfree ( m_vals , m_numSlots * sizeof(long) , m_label );
+		mfree ( m_keys , m_numSlots * sizeof(long) , "hashtablev" );
+		mfree ( m_vals , m_numSlots * sizeof(long) , "hashtablev" );
 	}
 	// assign the new slots, m_numSlotsUsed should be the same
 	m_keys = newKeys;
