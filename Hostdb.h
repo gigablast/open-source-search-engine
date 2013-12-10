@@ -264,6 +264,14 @@ class Host {
 	char           m_inSync ;
 	char           m_isPermanentOutOfSync ;
 
+	// . used by Parms.cpp for broadcasting parm change requests
+	// . each parm change request has an id
+	// . this let's us know which id is in progress and what the last
+	//   id completed was
+	long m_currentParmIdInProgress;
+	long m_lastParmIdCompleted;
+	class ParmNode *m_currentNodePtr;
+
 	char  m_requestBuf[MAX_PING_SIZE];
 };
 

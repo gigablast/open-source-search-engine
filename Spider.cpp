@@ -4342,8 +4342,8 @@ void doneSendingNotification ( void *state ) {
 
 	// we have to send these two parms to all in cluster now
 	SafeBuf parmList;
-	g_parms.addParmToList2 ( &parmList , cr , "spiderRoundNum" ); 
-	g_parms.addParmToList2 ( &parmList , cr , "spiderRoundStart" ); 
+	g_parms.addCurrentParmToList1 ( &parmList , cr , "spiderRoundNum" ); 
+	g_parms.addCurrentParmToList1 ( &parmList , cr , "spiderRoundStart" ); 
 	// this uses msg4 so parm ordering is guaranteed
 	g_parms.broadcastParmList ( &parmList , NULL , NULL );
 

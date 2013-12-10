@@ -733,13 +733,29 @@ bool Process::gotPower ( TcpSocket *s ) {
 
 	log("powermo: sending notice to all hosts.");
 
+	SafeBuf parmList;
+
+	// add the parm rec as a parm cmd
+	if ( ! g_parms.addNewParmToList1 ( &parmList,
+					   (collnum_t)-1,
+					   NULL, // parmval (argument)
+					   -1, // collnum (-1 -> globalconf)
+					   "poweron") ) // CommandPowerOn()!
+		return true;
+
+	// . use the broadcast call here so things keep their order!
+	// . we do not need a callback when they have been completely
+	//   broadcasted to all hosts so use NULL for that
+	g_parms.broadcastParmList ( &parmList , NULL , NULL );
+
 	// . turn off spiders
 	// . also show that power is off now!
-	if ( ! m_msg28.massConfig ( m_r.getRequest() ,
-				    NULL           , // state
-				    doneCmdWrapper ) )
-		// return false if this blocked
-		return false;
+	//if ( ! m_msg28.massConfig ( m_r.getRequest() ,
+	//			    NULL           , // state
+	//			    doneCmdWrapper ) )
+	//	// return false if this blocked
+	//	return false;
+
 	// . hmmm.. it did not block
 	// . this does not block either
 	doneCmdWrapper ( NULL );
