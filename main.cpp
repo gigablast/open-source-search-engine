@@ -9,7 +9,7 @@
 //
 // maybe we should put this in a common header file so we don't have 
 // certain files compiled with the platform default, and some not -partap
-
+//
 //#include "GBVersion.h"
 #include "Mem.h"
 #include "Conf.h"
