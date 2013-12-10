@@ -20,8 +20,14 @@ public:
 	char *m_coll;
 	bool  m_purgeSeeds;
 	class CollectionRec *m_cr;
+	// ptr to list of parm recs for Parms.cpp
+	char *m_parmPtr;
+	char *m_parmEnd;
+	class UdpSlot *m_slot;
+	bool m_doRebuilds;
 	collnum_t m_collnum;
 	bool m_registered;
+	long m_errno;
 };
 
 class Collectiondb  {
@@ -78,7 +84,10 @@ class Collectiondb  {
 	// . uses the root collection record!
 	bool isAdmin ( class HttpRequest *r , class TcpSocket *s );
 
-	collnum_t getNextCollnum ( collnum_t collnum );
+	//collnum_t getNextCollnum ( collnum_t collnum );
+
+	// what collnum will be used the next time a coll is added?
+	collnum_t reserveCollNum ( ) ;
 
 	long long getLastUpdateTime () { return m_lastUpdateTime; };
 	// updates m_lastUpdateTime so g_spiderCache know when to reload
@@ -88,17 +97,34 @@ class Collectiondb  {
 
 	// . these are called by handleRequest
 	// . based on "action" cgi var, 1-->add,2-->delete,3-->update
-	bool addRec     ( char *coll , char *cc , long cclen , bool isNew ,
-			  collnum_t collnum , bool isDump , //  = false );
-			  bool saveRec ); // = true
+	//bool addRec     ( char *coll , char *cc , long cclen , bool isNew ,
+	//		  collnum_t collnum , bool isDump , //  = false );
+	//		  bool saveRec ); // = true
+
+
+	bool addExistingColl ( char *coll, 
+			       collnum_t collnum ,
+			       bool isDump ) ;
+	bool addNewColl ( char *coll , 
+			  char customCrawl ,
+			  char *cpc , 
+			  long cpclen , 
+			  bool saveIt ) ;
+	bool registerCollRec ( CollectionRec *cr ,
+			       bool isDump ,
+			       bool isNew ) ;
+
 
 	// returns false if blocked, true otherwise. 
 	bool deleteRec  ( char *coll , WaitEntry *we );
+	bool deleteRec2 ( collnum_t collnum , WaitEntry *we ) ;
+
 	//bool updateRec ( CollectionRec *newrec );
 	bool deleteRecs ( class HttpRequest *r ) ;
 
 	// returns false if blocked, true otherwise. 
 	bool resetColl ( char *coll , WaitEntry *we , bool purgeSeeds );
+	bool resetColl2 ( collnum_t collnum, WaitEntry *we , bool purgeSeeds );
 
 	// . keep up to 128 of them, these reference into m_list
 	// . COllectionRec now includes m_needsSave and m_lastUpdateTime

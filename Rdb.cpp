@@ -2614,6 +2614,7 @@ Rdb *getRdbFromId ( uint8_t rdbId ) {
 		s_table9 [ RDB_STATSDB   ] = g_statsdb.getRdb();
 		s_table9 [ RDB_REVDB     ] = g_revdb.getRdb();
 		//s_table9 [ RDB_FAKEDB    ] = NULL;
+		s_table9 [ RDB_PARMDB    ] = NULL;
 
 		s_table9 [ RDB2_INDEXDB2   ] = g_indexdb2.getRdb();
 		s_table9 [ RDB2_POSDB2     ] = g_posdb2.getRdb();
@@ -2769,6 +2770,7 @@ long getDataSizeFromRdbId ( uint8_t rdbId ) {
 				  i == RDB_SERPDB ||
 				  i == RDB_MONITORDB ||
 				  i == RDB_TAGDB   ||
+				  i == RDB_PARMDB ||
 				  i == RDB_SPIDERDB ||
 				  i == RDB_DOLEDB ||
 				  i == RDB_CATDB ||

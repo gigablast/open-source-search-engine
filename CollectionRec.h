@@ -185,6 +185,9 @@ class CollectionRec {
 
 	void setUrlFiltersToDefaults();
 
+	// for customcrawls
+	bool rebuildUrlFilters();
+
 	// . when was the last time we changed?
 	//long long m_lastUpdateTime;
 
@@ -1034,6 +1037,8 @@ class CollectionRec {
 	key128_t m_timedbEndKey;
 	RdbList  m_timedbList;
 
+	// used by Parms.cpp
+	char m_hackFlag;
 
 	// each Rdb has a tree, so keep the pos/neg key count here so
 	// that RdbTree does not have to have its own array limited by

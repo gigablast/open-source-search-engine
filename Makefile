@@ -36,7 +36,7 @@ OBJS =  Tfndb.o UdpSlot.o \
 	Stats.o BigFile.o Msg17.o \
 	Speller.o DiskPageCache.o \
 	PingServer.o StopWords.o TopTree.o \
-	Parms.o Pages.o Msg28.o \
+	Parms.o Pages.o \
 	Unicode.o iana_charset.o Iso8859.o \
 	SearchInput.o \
 	Categories.o Msg2a.o PageCatdb.o PageDirectory.o \
@@ -49,7 +49,7 @@ OBJS =  Tfndb.o UdpSlot.o \
 	PageSpam.o Proxy.o PageThreads.o Linkdb.o \
 	PageNetTest.o \
 	matches2.o LanguageIdentifier.o \
-	Language.o Repair.o Process.o Msg3e.o \
+	Language.o Repair.o Process.o \
 	Abbreviations.o \
 	RequestTable.o TuringTest.o Msg51.o geo_ip_table.o \
 	Msg40.o Msg4.o \

@@ -1212,6 +1212,7 @@ bool addMetaList ( char *p , UdpSlot *slot ) {
 		    "rdbId=%li. not in repair mode. dropping.",(long)rdbId);
 		char *xx=NULL;*xx=0;
 		// drop it for now!!
+		p += recSize;
 		if ( p < pend ) goto loop;
 		// all done
 		return true;

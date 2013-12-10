@@ -9,7 +9,7 @@
 //
 // maybe we should put this in a common header file so we don't have 
 // certain files compiled with the platform default, and some not -partap
-//
+
 //#include "GBVersion.h"
 #include "Mem.h"
 #include "Conf.h"
@@ -79,10 +79,11 @@
 //#include "Msg34.h"
 #include "Msg35.h"
 //#include "Msg24.h"
-#include "Msg28.h"
+//#include "Msg28.h"
 //#include "Msg30.h"
 //#include "MsgB.h"
-#include "Msg3e.h"
+//#include "Msg3e.h"
+#include "Parms.h"
 //#include "Msg50.h"
 //#include "MsgF.h"
 //#include "Msg33.h"
@@ -3171,9 +3172,15 @@ int main ( int argc , char *argv[] ) {
 	//	log("db: Failed to init Statsdb snapshot sleep callback.");
 
 	// check to make sure we have the latest parms
-	Msg3e msg3e;  
-	msg3e.checkForNewParms();
+	//Msg3e msg3e;  
+	//msg3e.checkForNewParms();
 
+	// this stuff is similar to alden's msg3e but will sync collections
+	// that were added/deleted
+	if ( ! g_parms.syncParmsWithHost0() ) {
+		log("parms: error syncing parms: %s",mstrerror(g_errno));
+		return 0;
+	}
 
 	if(recoveryMode) {
 		//now that everything is init-ed send the message.
@@ -3374,7 +3381,6 @@ long checkDirPerms ( char *dir ) {
 
 // save them all
 static       void doCmdAll   ( int fd, void *state ) ;
-static       void doneCmdAll ( void *state );
 static       bool  s_sendToHosts;
 static       bool  s_sendToProxies;
 static       long  s_hostId;
@@ -3420,9 +3426,45 @@ bool doCmd ( const char *cmd , long hostId , char *filename ,
 	return true;
 }
 
-static Msg28       s_msg28;
-static TcpSocket   s_s;
+//static Msg28       s_msg28;
+//static TcpSocket   s_s;
+
+void doneCmdAll ( void *state ) {
+	/*
+	if ( s_sendToProxies ){
+		if ( ! g_loop.registerSleepCallback(1, NULL, doCmdAll,0 ) ){
+			log("admin: Loop init failed.");
+			exit ( 0 );
+		}
+		return;
+	}
+	*/
+	log("cmd: completed command");
+	exit ( 0 );
+}
+
+
 void doCmdAll ( int fd, void *state ) { 
+
+	SafeBuf parmList;
+	// returns false and sets g_errno on error
+	if ( ! g_parms.convertHttpRequestToParmList ( &s_r , &parmList ) ) {
+		log("cmd: error converting command: %s",mstrerror(g_errno));
+		return;
+	}
+
+	// returns true with g_errno set on error
+	if ( g_parms.broadcastParmList ( &parmList ,
+					 NULL , 
+					 doneCmdAll , // callback when done
+					 s_sendToHosts ,
+					 s_sendToProxies ) ) {
+		log("cmd: error sending command: %s",mstrerror(g_errno));
+		return;
+	}
+	// wait for it
+	log("cmd: sent command");
+	/*
 	bool status = true;
 	if ( s_sendToHosts ){
 		s_sendToHosts = false;
@@ -3439,18 +3481,8 @@ void doCmdAll ( int fd, void *state ) {
 	g_loop.unregisterSleepCallback ( NULL, doCmdAll );
 	// if we did not block, call the callback directly
 	if ( status ) doneCmdAll(NULL);
+	*/
 }
-void doneCmdAll ( void *state ) {
-	if ( s_sendToProxies ){
-		if ( ! g_loop.registerSleepCallback(1, NULL, doCmdAll,0 ) ){
-			log("admin: Loop init failed.");
-			exit ( 0 );
-		}
-		return;
-	}
-	exit ( 0 );
-}
-
 
 // copy a collection from one network to another (defined by 2 hosts.conf's)
 int collcopy ( char *newHostsConf , char *coll , long collnum ) {
@@ -4910,6 +4942,9 @@ bool registerMsgHandlers2(){
 	if(! g_udpServer.registerHandler(0x4f,handleRequest4f)) return false;
 	if(! g_udpServer.registerHandler(0x95,handleRequest95)) return false;
 
+	if(! g_udpServer.registerHandler(0x3e,handleRequest3e)) return false;
+	if(! g_udpServer.registerHandler(0x3f,handleRequest3f)) return false;
+
 	return true;
 
 	/*
@@ -4933,7 +4968,7 @@ bool registerMsgHandlers3(){
 	//Msg24 msg24;    if ( ! msg24.registerHandler () ) return false;
 	//Msg40 msg40;    if ( ! msg40.registerHandler () ) return false;
 	//MsgB  msgb;     if ( ! msgb.registerHandler  () ) return false;
-       	Msg3e msg3e;    if ( ! msg3e.registerHandler () ) return false;
+       	//Msg3e msg3e;    if ( ! msg3e.registerHandler () ) return false;
 	//Msg42 msg42;    if ( ! msg42.registerHandler () ) return false;
 	//Msg33 msg33;    if ( ! msg33.registerHandler () ) return false;
 	//if ( ! g_pingServer.registerHandler() ) return false;
