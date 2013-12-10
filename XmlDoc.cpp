@@ -15108,24 +15108,28 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	//else            id = getpid();
 	// pass the input to the program through this file
 	// rather than a pipe, since popen() seems broken
-	char in[64];
-	sprintf ( in , "%s/in.%li", g_hostdb.m_dir , id );
-	unlink ( in );
+	//char in[64];
+	//sprintf ( in , "%s/in.%li", g_hostdb.m_dir , id );
+	SafeBuf in;
+	in.safePrintf("%s/in.%li", g_hostdb.m_dir , id );
+	unlink ( in.getBufStart() );
 	// collect the output from the filter from this file
-	char out[64];
-	sprintf ( out , "%s/out.%li", g_hostdb.m_dir , id );
-	unlink ( out );
+	//char out[64];
+	//sprintf ( out , "%s/out.%li", g_hostdb.m_dir , id );
+	SafeBuf out;
+	out.safePrintf("%s/out.%li", g_hostdb.m_dir , id );
+	unlink ( out.getBufStart() );
 	// ignore errno from those unlinks
 	errno = 0;
 	// open the input file
  retry11:
-	int fd = open ( in , O_WRONLY | O_CREAT , S_IRWXU );
+	int fd = open ( in.getBufStart() , O_WRONLY | O_CREAT , S_IRWXU );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry11;
 		m_errno = errno;
 		log("build: Could not open file %s for writing: %s.",
-		    in,mstrerror(m_errno));
+		    in.getBufStart(),mstrerror(m_errno));
 		return;
 	}
 	// we are in a thread, this must be valid!
@@ -15141,7 +15145,8 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 		//long w = fwrite ( m_buf , 1 , m_bufLen , pd );
 		//if ( w != m_bufLen ) {
 		m_errno = errno;
-		log("build: Error writing to %s: %s.",in,mstrerror(m_errno));
+		log("build: Error writing to %s: %s.",in.getBufStart(),
+		    mstrerror(m_errno));
 		close(fd);
 		return;
 	}
@@ -15153,7 +15158,8 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 
 	// . open a pipe to pdf2html program
 	// . the output will go to stdout
-	char cmd[2048];
+	//char cmd[2048];
+	SafeBuf cmd;
 	// different commands to filter differt ctypes
 	// -i     : ignore images
 	// -stdout: send output to stdout
@@ -15164,34 +15170,36 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	// These ulimit sizes are max virtual memory in kilobytes. let's
 	// keep them to 25 Megabytes
 	if      ( ctype == CT_PDF ) 
-		sprintf ( cmd , "ulimit -v 25000 -t 30 ; nice -n 19 %s/pdftohtml -q -i -noframes -stdout %s > %s", wdir , in ,out);
+		cmd.safePrintf( "ulimit -v 25000 -t 30 ; nice -n 19 %s/pdftohtml -q -i -noframes -stdout %s > %s", wdir , in.getBufStart() ,out.getBufStart());
 	else if ( ctype == CT_DOC ) 
 		// "wdir" include trailing '/'? not sure
-		sprintf ( cmd , "ulimit -v 25000 -t 30 ; ANTIWORDHOME=%s/antiword-dir ; nice -n 19 %s/antiword %s> %s" , wdir , wdir , in ,out);
+		cmd.safePrintf( "ulimit -v 25000 -t 30 ; ANTIWORDHOME=%s/antiword-dir ; nice -n 19 %s/antiword %s> %s" , wdir , wdir , in.getBufStart() ,out.getBufStart());
 	else if ( ctype == CT_XLS )
-		sprintf ( cmd , "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/xlhtml %s > %s" , wdir , in ,out);
+		cmd.safePrintf( "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/xlhtml %s > %s" , wdir , in.getBufStart() ,out.getBufStart() );
 	// this is too buggy for now... causes hanging threads because it
 	// hangs, so i added 'timeout 10s' but that only works on newer
 	// linux version, so it'll just error out otherwise.
 	else if ( ctype == CT_PPT )
-		sprintf ( cmd , "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/ppthtml %s > %s" , wdir , in ,out);
+		cmd.safePrintf( "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/ppthtml %s > %s" , wdir , in.getBufStart() ,out.getBufStart());
 	else if ( ctype == CT_PS  )
-		sprintf ( cmd , "ulimit -v 25000 -t 30; timeout 10s nice -n 19 %s/pstotext %s > %s" , wdir , in ,out);
+		cmd.safePrintf( "ulimit -v 25000 -t 30; timeout 10s nice -n 19 %s/pstotext %s > %s" , wdir , in.getBufStart() ,out.getBufStart());
 	else { char *xx=NULL;*xx=0; }
 
 	// breach sanity check
-	if ( gbstrlen(cmd) > 2040 ) { char *xx=NULL;*xx=0; }
+	//if ( gbstrlen(cmd) > 2040 ) { char *xx=NULL;*xx=0; }
 
 	// exectue it
-	int retVal = system ( cmd );
+	int retVal = system ( cmd.getBufStart() );
 	if ( retVal == -1 )
-	  log("gb: system(%s) : %s",cmd,mstrerror(g_errno));
+		log("gb: system(%s) : %s",
+		    cmd.getBufStart(),mstrerror(g_errno));
 
 	// all done with input file
 	// clean up the binary input file from disk
-	if ( unlink ( in ) != 0 ) {
+	if ( unlink ( in.getBufStart() ) != 0 ) {
 		// log error
-		log("gbfilter: unlink (%s): %s\n",in,strerror(errno)); 
+		log("gbfilter: unlink (%s): %s\n",in.getBufStart(),
+		    strerror(errno)); 
 		// ignore it, since it was not a processing error per se
 		errno = 0;
 	}
@@ -15204,13 +15212,13 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	//	fprintf (stderr,"gbfilter:setrlimit: %s", strerror(errno) );
 
  retry13:
-	fd = open ( out , O_RDONLY );
+	fd = open ( out.getBufStart() , O_RDONLY );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry13;
 		m_errno = errno;
 		log("gbfilter: Could not open file %s for reading: %s.",
-		    out,mstrerror(m_errno));
+		    out.getBufStart(),mstrerror(m_errno));
 		return;
 	}
 	// sanity -- need room to store a \0
@@ -15233,7 +15241,7 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	// clean up shop
 	close ( fd );
 	// delete output file
-	unlink ( out );
+	unlink ( out.getBufStart() );
 
 	// validate now
 	m_filteredContentValid = 1;
@@ -15335,11 +15343,12 @@ int startUp ( void *cmd ) {
 	argv[2] = (char *)cmd;
 	argv[3] = 0;
 	char *envp[2];
-	char  buf[128];
+	//char  buf[128];
+	SafeBuf sb;
 	// antiword needs this environment var so it can find 
 	// the .antiword/ dir , we should put it in gb's working dir
-	sprintf ( buf , "HOME=%s", g_hostdb.m_dir );
-	envp[0] = buf;
+	sb.safePrintf("HOME=%s", g_hostdb.m_dir );
+	envp[0] = sb.getBufStart(); // buf;
 	envp[1] = 0;
 	execve("/bin/sh", argv, envp );
 	//exit(127);
@@ -16791,14 +16800,18 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	if ( m_urlFilterNumValid ) return &m_urlFilterNum;
 	// note that
 	setStatus ( "getting url filter row num");
-	// make the partial new spider rec
-	//SpiderReply *newsr = getNewSpiderReply ( );
+
+	// . make the partial new spider rec
+	// . we need this for matching filters like lang==zh_cn
+	SpiderReply *newsr = getNewSpiderReply ( );
 	// note it
-	//if ( ! newsr )
-	//	log("doc: getNewSpiderReply: %s",mstrerror(g_errno));
+	if ( ! newsr )
+		log("doc: getNewSpiderReply: %s",mstrerror(g_errno));
 	// sanity check
 	//if ( ! newsr || newsr == (void *)-1 ) { char *xx=NULL;*xx=0; }
-	//if ( ! newsr || newsr == (void *)-1 ) return (long *)newsr;
+	if ( ! newsr || newsr == (void *)-1 ) return (long *)newsr;
+
+
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 	// this must be valid
@@ -16826,7 +16839,7 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	// . look it up
 	// . use the old spidered date for "nowGlobal" so we can be consistent
 	//   for injecting into the "test" coll
-	long ufn = ::getUrlFilterNum ( oldsr,NULL,spideredTime,false,
+	long ufn = ::getUrlFilterNum ( oldsr,newsr,spideredTime,false,
 				       m_niceness,cr);
 
 	// put it back
@@ -27885,6 +27898,9 @@ int gbcompress ( unsigned char *dest      ,
 	return err;
 }
 
+//
+// NO NO don't use until use replace in[64] with SafeBuf in and out below
+//
 int gbcompress7 ( unsigned char *dest      ,
 		  unsigned long *destLen   ,
 		  unsigned char *source    ,
@@ -27933,7 +27949,8 @@ int gbcompress7 ( unsigned char *dest      ,
 
 	// . open a pipe to pdf2html program
 	// . the output will go to stdout
-	char cmd[2048];
+	//char cmd[2048];
+	SafeBuf cmd;
 	// different commands to filter differt ctypes
 	// -i     : ignore images
 	// -stdout: send output to stdout
@@ -27946,19 +27963,20 @@ int gbcompress7 ( unsigned char *dest      ,
 	// . the newer 2.6 kernels do not support ulimit !!!
 	if ( compress )
 		// 7za a out.7z in.7z
-		sprintf ( cmd , "%s7za a %s %s > /dev/null", 
+		cmd.safePrintf( "%s7za a %s %s > /dev/null", 
 			  g_hostdb.m_dir , out,in);
 	else
 		// -y = yes on all. so we overwrite "in.7z"
-		sprintf ( cmd , "%s7za -o%s -y e %s > /dev/null",
+		cmd.safePrintf( "%s7za -o%s -y e %s > /dev/null",
 			  g_hostdb.m_dir,g_hostdb.m_dir , in);//,in);
 	// breach sanity check
-	if ( gbstrlen(cmd) > 2040 ) { char *xx=NULL;*xx=0; }
+	//if ( gbstrlen(cmd) > 2040 ) { char *xx=NULL;*xx=0; }
 
 	// exectue it
-	int retVal = system ( cmd );
+	int retVal = system ( cmd.getBufStart() );
 	if ( retVal == -1 )
-	  log("gb: system(%s) : %s",cmd,mstrerror(g_errno));
+		log("gb: system(%s) : %s",cmd.getBufStart(),
+		    mstrerror(g_errno));
 
 	// all done with input file
 	// clean up the binary input file from disk
