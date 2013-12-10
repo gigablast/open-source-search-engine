@@ -7,7 +7,7 @@
 #include "Dns.h"
 //#include "PageResults.h" // for query buf, g_qbuf
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Clusterdb.h"    // for getting # of docs indexed
 //#include "Checksumdb.h"   // should migrate to this one, though
 #include "Pages.h"
@@ -1175,7 +1175,7 @@ bool printTopDirectory ( SafeBuf& sb ) {
 #include "PageInject.h"
 #include "TuringTest.h"
 #include "AutoBan.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Users.h"
 #include "Spider.h"
 

@@ -20,6 +20,7 @@
 #include "XmlDoc.h"
 #include "HttpServer.h"
 #include "Pages.h"
+#include "Parms.h"
 
 Doledb g_doledb;
 

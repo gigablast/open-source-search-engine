@@ -25,7 +25,7 @@
 #include "Spider.h"
 #include "Revdb.h"
 #include "hash.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 
 void attemptMergeAll ( int fd , void *state ) ;
 

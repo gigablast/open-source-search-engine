@@ -22,6 +22,7 @@
 #include "XmlDoc.h" // for checkRegex()
 #include "PageInject.h" // Msg7
 //#include "Json.h"
+#include "Parms.h"
 
 // so user can specify the format of the reply/output
 #define FMT_HTML 1

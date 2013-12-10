@@ -46,6 +46,7 @@
 #include "seo.h" // Msg99Request etc.
 //#include <regex.h>
 #include "PingServer.h"
+#include "Parms.h"
 
 #define MAXDOCLEN (1024*1024)
 

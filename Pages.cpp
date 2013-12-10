@@ -4,7 +4,7 @@
 #include "Pages.h"
 #include "Parms.h"
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Tagdb.h"
 #include "Categories.h"
 #include "Proxy.h"

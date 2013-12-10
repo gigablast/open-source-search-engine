@@ -14,7 +14,7 @@
 #include "Msg40.h"
 #include "Conf.h"
 #include "Msg1.h" // getGroupId()
-#include "HashTableX.h"
+//#include "HashTableX.h"
 #include "XmlDoc.h"
 #include "Bits.h"
 #include "sort.h"

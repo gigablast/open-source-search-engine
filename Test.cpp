@@ -20,6 +20,7 @@
 #include "Placedb.h"
 #include "Threads.h"
 #include "Msge1.h"
+#include "Parms.h"
 
 //static void testWrapper ( int fd , void *state ) ;
 static void injectedWrapper ( void *state ) ;

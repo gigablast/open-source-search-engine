@@ -4,7 +4,7 @@
 #include "TcpSocket.h"
 #include "HttpRequest.h"
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Users.h"
 
 bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) ;

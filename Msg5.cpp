@@ -10,7 +10,7 @@
 #include "Msg0.h"
 #include "PingServer.h"
 //#include "Indexdb.h"  // g_indexdb.getTruncationLimit()
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 
 //#define _SANITYCHECK_
 

@@ -6,7 +6,7 @@
 #define _DAILYMERGE_H_
 
 #include "gb-include.h"
-#include "CollectionRec.h"
+#include "Collectiondb.h"
 
 class DailyMerge {
 public:

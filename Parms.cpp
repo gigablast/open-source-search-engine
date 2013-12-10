@@ -3,7 +3,7 @@
 #include "Parms.h"
 #include "File.h"
 #include "Conf.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "TcpSocket.h"
 #include "HttpRequest.h"
 #include "Pages.h"         // g_pages
@@ -3538,7 +3538,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
  changed:
 	// tell gigablast the value is EXPLICITLY given -- no longer based
 	// on default.conf
-	if ( m->m_obj == OBJ_COLL ) ((CollectionRec *)THIS)->m_orig[mm] = 2;
+	//if ( m->m_obj == OBJ_COLL ) ((CollectionRec *)THIS)->m_orig[mm] = 2;
 
 	// we do not recognize timezones corectly when this is serialized
 	// into coll.conf, it says UTC, which is ignored in HttpMime.cpp's
@@ -3657,7 +3657,7 @@ void Parms::setToDefault ( char *THIS ) {
 			//	log("hey");
 			setParm ( THIS , m, i, 0, m->m_def, false/*not enc.*/,
 				  false );
-			((CollectionRec *)THIS)->m_orig[i] = 1;
+			//((CollectionRec *)THIS)->m_orig[i] = 1;
 			//m->m_orig = 0; // set in setToDefaults()
 		}
 		// these are special, fixed size arrays
@@ -3666,7 +3666,7 @@ void Parms::setToDefault ( char *THIS ) {
 				setParm(THIS,m,i,k,m->m_def,false/*not enc.*/,
 					false);
 				//m->m_orig = 0; // set in setToDefaults()
-				((CollectionRec *)THIS)->m_orig[i] = 1;
+				//((CollectionRec *)THIS)->m_orig[i] = 1;
 			}
 			continue;
 		}
@@ -3833,7 +3833,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		setParm ( (char *)THIS, m, i, j, v, false/*is html encoded?*/,
 			  false );
 		// we were set from the explicit file
-		((CollectionRec *)THIS)->m_orig[i] = 2;
+		//((CollectionRec *)THIS)->m_orig[i] = 2;
 		// go back
 		//v[vlen] = c;
 		// do not repeat same node
@@ -3915,7 +3915,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		setParm ( (char *)THIS, m, i, j, v, false/*is html encoded?*/,
 			  false );
 		// we were set from the backup default file
-		((CollectionRec *)THIS)->m_orig[i] = 1;
+		//((CollectionRec *)THIS)->m_orig[i] = 1;
 		// go back
 		//v[vlen] = c;
 		// do not repeat same node
