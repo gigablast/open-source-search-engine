@@ -191,6 +191,10 @@ bool Collectiondb::addExistingColl ( char *coll,
 	// get the default.conf from working dir if there
 	g_parms.setToDefault( (char *)cr );
 
+	strcpy ( cr->m_coll , coll );
+	cr->m_collLen = gbstrlen ( coll );
+	cr->m_collnum = i;
+
 	// point to this, so Rdb and RdbBase can reference it
 	coll = cr->m_coll;
 
@@ -1069,8 +1073,12 @@ CollectionRec *Collectiondb::getRec ( char *coll , long collLen ) {
 
 CollectionRec *Collectiondb::getRec ( collnum_t collnum) { 
 	if ( collnum >= m_numRecs || collnum < 0 ) {
-		log("colldb: collnum %li > numrecs = %li",
-		    (long)collnum,(long)m_numRecs);
+		// Rdb::resetBase() gets here, so don't always log.
+		// it is called from CollectionRec::reset() which is called
+		// from the CollectionRec constructor and ::load() so
+		// it won't have anything in rdb at that time
+		//log("colldb: collnum %li > numrecs = %li",
+		//    (long)collnum,(long)m_numRecs);
 		return NULL;
 	}
 	return m_recs[collnum]; 
