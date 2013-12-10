@@ -16903,6 +16903,8 @@ public:
 	long m_startTime;
 	void *m_state;
 	void (* m_callback)(void *state);
+	bool m_sendToGrunts;
+	bool m_sendToProxies;
 };
 
 static ParmNode *s_headNode = NULL;
@@ -16916,7 +16918,9 @@ static long long s_parmId = 0LL;
 // . returns false if blocked and will call your callback
 bool Parms::broadcastParmList ( SafeBuf *parmList ,
 				void    *state ,
-				void   (* callback)(void *) ) {
+				void   (* callback)(void *) ,
+				bool sendToGrunts ,
+				bool sendToProxies ) {
 
 	// empty list?
 	if ( parmList->getLength() <= 0 ) return true;
@@ -16942,6 +16946,9 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 	pn->m_startTime      = getTimeLocal();
 	pn->m_state          = state;
 	pn->m_callback       = callback;
+	pn->m_sendToGrunts   = sendToGrunts;
+	pn->m_sendToProxies  = sendToProxies;
+	
 
 	// store it ordered in our linked list of parm transmit nodes
 	if ( ! s_tailNode ) {
@@ -17058,7 +17065,8 @@ bool Parms::doParmSendingLoop ( ) {
 		// skip ourselves, host #0. we now send to ourselves
 		// so updateParm() will be called on us...
 		//if ( h->m_hostId == g_hostdb.m_myHostId ) continue;
-		// if in progress, gotta wait for that to complete
+		// . if in progress, gotta wait for that to complete
+		// . 0 is not a legit parmid, it starts at 1
 		if ( h->m_currentParmIdInProgress ) continue;
 		// if his last completed parmid is the current he is uptodate
 		if ( h->m_lastParmIdCompleted == s_parmId ) continue;
@@ -17071,6 +17079,13 @@ bool Parms::doParmSendingLoop ( ) {
 		}
 		// nothing? strange. something is not right.
 		if ( ! pn ) { char *xx=NULL; *xx=0; }
+		// force completion if we should NOT send to him
+		if ( (h->isProxy() && ! pn->m_sendToProxies) ||
+		     (h->isGrunt() && ! pn->m_sendToGrunts ) ) {
+			h->m_lastParmIdCompleted = pn->m_parmId;
+			h->m_currentNodePtr = NULL;
+			continue;
+		}
 		// ok, he's available
 		if ( ! g_udpServer.sendRequest ( pn->m_parmList.getBufStart(),
 						 pn->m_parmList.length() ,
@@ -17226,6 +17241,13 @@ bool Parms::syncParmsWithHost0 ( ) {
 		m_inSyncWithHost0 = true;
 		return true;
 	}
+
+	// only grunts for now can sync, not proxies, so stop if we are proxy
+	if ( g_hostdb.m_myHost->m_type != HT_GRUNT ) {
+		m_inSyncWithHost0 = true;
+		return true;
+	}
+
 
 	SafeBuf hashList;
 	

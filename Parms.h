@@ -329,7 +329,9 @@ class Parms {
 	Parm *getParmFast1 ( char *cgi , long *occNum ) ;
 	bool broadcastParmList ( SafeBuf *parmList ,
 				 void    *state ,
-				 void   (* callback)(void *) );
+				 void   (* callback)(void *) ,
+				 bool sendToGrunts  = true ,
+				 bool sendToProxies = false );
 	bool doParmSendingLoop ( ) ;
 	bool syncParmsWithHost0 ( ) ;
 	bool makeSyncHashList ( SafeBuf *hashList ) ;

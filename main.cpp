@@ -79,7 +79,7 @@
 //#include "Msg34.h"
 #include "Msg35.h"
 //#include "Msg24.h"
-#include "Msg28.h"
+//#include "Msg28.h"
 //#include "Msg30.h"
 //#include "MsgB.h"
 //#include "Msg3e.h"
@@ -3381,7 +3381,6 @@ long checkDirPerms ( char *dir ) {
 
 // save them all
 static       void doCmdAll   ( int fd, void *state ) ;
-static       void doneCmdAll ( void *state );
 static       bool  s_sendToHosts;
 static       bool  s_sendToProxies;
 static       long  s_hostId;
@@ -3427,9 +3426,45 @@ bool doCmd ( const char *cmd , long hostId , char *filename ,
 	return true;
 }
 
-static Msg28       s_msg28;
-static TcpSocket   s_s;
+//static Msg28       s_msg28;
+//static TcpSocket   s_s;
+
+void doneCmdAll ( void *state ) {
+	/*
+	if ( s_sendToProxies ){
+		if ( ! g_loop.registerSleepCallback(1, NULL, doCmdAll,0 ) ){
+			log("admin: Loop init failed.");
+			exit ( 0 );
+		}
+		return;
+	}
+	*/
+	log("cmd: completed command");
+	exit ( 0 );
+}
+
+
 void doCmdAll ( int fd, void *state ) { 
+
+	SafeBuf parmList;
+	// returns false and sets g_errno on error
+	if ( ! g_parms.convertHttpRequestToParmList ( &s_r , &parmList ) ) {
+		log("cmd: error converting command: %s",mstrerror(g_errno));
+		return;
+	}
+
+	// returns true with g_errno set on error
+	if ( g_parms.broadcastParmList ( &parmList ,
+					 NULL , 
+					 doneCmdAll , // callback when done
+					 s_sendToHosts ,
+					 s_sendToProxies ) ) {
+		log("cmd: error sending command: %s",mstrerror(g_errno));
+		return;
+	}
+	// wait for it
+	log("cmd: sent command");
+	/*
 	bool status = true;
 	if ( s_sendToHosts ){
 		s_sendToHosts = false;
@@ -3446,18 +3481,8 @@ void doCmdAll ( int fd, void *state ) {
 	g_loop.unregisterSleepCallback ( NULL, doCmdAll );
 	// if we did not block, call the callback directly
 	if ( status ) doneCmdAll(NULL);
+	*/
 }
-void doneCmdAll ( void *state ) {
-	if ( s_sendToProxies ){
-		if ( ! g_loop.registerSleepCallback(1, NULL, doCmdAll,0 ) ){
-			log("admin: Loop init failed.");
-			exit ( 0 );
-		}
-		return;
-	}
-	exit ( 0 );
-}
-
 
 // copy a collection from one network to another (defined by 2 hosts.conf's)
 int collcopy ( char *newHostsConf , char *coll , long collnum ) {

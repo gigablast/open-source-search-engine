@@ -235,6 +235,9 @@ class Host {
 	// network to save on local loop bandwidth costs
 	char           m_type;
 
+	bool isProxy() { return (m_type == HT_PROXY); };
+	bool isGrunt() { return (m_type == HT_GRUNT); };
+
 	// for m_type == HT_QCPROXY, we forward the query to the regular proxy
 	// at this Ip:Port. we should receive a compressed 0xfd reply and
 	// we uncompress it and return it to the browser.
@@ -327,6 +330,7 @@ class Hostdb {
 	long           getMyMachineNum ( ) { return m_myMachineNum; };
 	unsigned long  getLoopbackIp   ( ) { return m_loopbackIp; };
 	Host          *getMyHost       ( ) { return m_myHost; };
+	bool           amProxy         ( ) { return m_myHost->isProxy(); };
 	Host          *getMyShard      ( ) { return m_myShard; };
 	long getMyShardNum ( ) { return m_myHost->m_shardNum; };
 	bool           isMyIp ( unsigned long ip ) {
