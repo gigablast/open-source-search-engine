@@ -108,6 +108,7 @@ rather your current working directory, where the 'gb' binary resides.
 <li> Reliable. Has been tested in live production since 2002 on billions of 
   queries on indexes of over 12 billion web pages.
 <li>Super fast and efficient. One of a small handful of search engines that have hit such big numbers.
+<li>A dual quad core, with 32GB ram, and two 160GB Intel SSDs can do about 8 qps (queries per second) on and index of 10 million pages. Drives will be close to maximum storage capacity.
 <li> Track record. Has been used by many clients. Has been successfully used
   in distributed enterprise software.
 <li> Cached web pages with query term highlighting.
@@ -118,6 +119,7 @@ rather your current working directory, where the 'gb' binary resides.
 <li> No TF/IDF or Cosine. Stores position and format information (fancy bits) of each word in an indexed document. It uses this to return results that contain the query terms in close proximity rather than relying on the probabilistic tf/idf approach of other search engines. The older version of Gigablast used tf/idf on Indexdb, whereas it now uses Posdb to hold the index data.
 <li> Complete scoring details are displayed in the search results.
 <li> Indexes anchor text of inlinks to a web page and uses many techniques to flag pages as link spam thereby discounting their link weights.
+<li> Demotes web pages if they are spammy.
 <li> Can cluster results from same site.
 <li> Duplicate removal from search results.
 <li> Distributed web crawler/spider.
