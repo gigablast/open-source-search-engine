@@ -15108,28 +15108,24 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	//else            id = getpid();
 	// pass the input to the program through this file
 	// rather than a pipe, since popen() seems broken
-	//char in[64];
-	//sprintf ( in , "%s/in.%li", g_hostdb.m_dir , id );
-	SafeBuf in;
-	in.safePrintf("%s/in.%li", g_hostdb.m_dir , id );
-	unlink ( in.getBufStart() );
+	char in[1024];
+	snprintf(in,1023,"%s/in.%li", g_hostdb.m_dir , id );
+	unlink ( in );
 	// collect the output from the filter from this file
-	//char out[64];
-	//sprintf ( out , "%s/out.%li", g_hostdb.m_dir , id );
-	SafeBuf out;
-	out.safePrintf("%s/out.%li", g_hostdb.m_dir , id );
-	unlink ( out.getBufStart() );
+	char out[1024];
+	snprintf ( out , 1023,"%s/out.%li", g_hostdb.m_dir , id );
+	unlink ( out );
 	// ignore errno from those unlinks
 	errno = 0;
 	// open the input file
  retry11:
-	int fd = open ( in.getBufStart() , O_WRONLY | O_CREAT , S_IRWXU );
+	int fd = open ( in , O_WRONLY | O_CREAT , S_IRWXU );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry11;
 		m_errno = errno;
 		log("build: Could not open file %s for writing: %s.",
-		    in.getBufStart(),mstrerror(m_errno));
+		    in,mstrerror(m_errno));
 		return;
 	}
 	// we are in a thread, this must be valid!
@@ -15145,7 +15141,7 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 		//long w = fwrite ( m_buf , 1 , m_bufLen , pd );
 		//if ( w != m_bufLen ) {
 		m_errno = errno;
-		log("build: Error writing to %s: %s.",in.getBufStart(),
+		log("build: Error writing to %s: %s.",in,
 		    mstrerror(m_errno));
 		close(fd);
 		return;
@@ -15170,19 +15166,19 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	// These ulimit sizes are max virtual memory in kilobytes. let's
 	// keep them to 25 Megabytes
 	if      ( ctype == CT_PDF ) 
-		cmd.safePrintf( "ulimit -v 25000 -t 30 ; nice -n 19 %s/pdftohtml -q -i -noframes -stdout %s > %s", wdir , in.getBufStart() ,out.getBufStart());
+		cmd.safePrintf( "ulimit -v 25000 -t 30 ; nice -n 19 %s/pdftohtml -q -i -noframes -stdout %s > %s", wdir , in ,out );
 	else if ( ctype == CT_DOC ) 
 		// "wdir" include trailing '/'? not sure
-		cmd.safePrintf( "ulimit -v 25000 -t 30 ; ANTIWORDHOME=%s/antiword-dir ; nice -n 19 %s/antiword %s> %s" , wdir , wdir , in.getBufStart() ,out.getBufStart());
+		cmd.safePrintf( "ulimit -v 25000 -t 30 ; ANTIWORDHOME=%s/antiword-dir ; nice -n 19 %s/antiword %s> %s" , wdir , wdir , in , out );
 	else if ( ctype == CT_XLS )
-		cmd.safePrintf( "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/xlhtml %s > %s" , wdir , in.getBufStart() ,out.getBufStart() );
+		cmd.safePrintf( "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/xlhtml %s > %s" , wdir , in , out );
 	// this is too buggy for now... causes hanging threads because it
 	// hangs, so i added 'timeout 10s' but that only works on newer
 	// linux version, so it'll just error out otherwise.
 	else if ( ctype == CT_PPT )
-		cmd.safePrintf( "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/ppthtml %s > %s" , wdir , in.getBufStart() ,out.getBufStart());
+		cmd.safePrintf( "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/ppthtml %s > %s" , wdir , in , out );
 	else if ( ctype == CT_PS  )
-		cmd.safePrintf( "ulimit -v 25000 -t 30; timeout 10s nice -n 19 %s/pstotext %s > %s" , wdir , in.getBufStart() ,out.getBufStart());
+		cmd.safePrintf( "ulimit -v 25000 -t 30; timeout 10s nice -n 19 %s/pstotext %s > %s" , wdir , in , out );
 	else { char *xx=NULL;*xx=0; }
 
 	// breach sanity check
@@ -15196,10 +15192,9 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 
 	// all done with input file
 	// clean up the binary input file from disk
-	if ( unlink ( in.getBufStart() ) != 0 ) {
+	if ( unlink ( in ) != 0 ) {
 		// log error
-		log("gbfilter: unlink (%s): %s\n",in.getBufStart(),
-		    strerror(errno)); 
+		log("gbfilter: unlink (%s): %s\n",in, strerror(errno)); 
 		// ignore it, since it was not a processing error per se
 		errno = 0;
 	}
@@ -15212,13 +15207,13 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	//	fprintf (stderr,"gbfilter:setrlimit: %s", strerror(errno) );
 
  retry13:
-	fd = open ( out.getBufStart() , O_RDONLY );
+	fd = open ( out , O_RDONLY );
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry13;
 		m_errno = errno;
 		log("gbfilter: Could not open file %s for reading: %s.",
-		    out.getBufStart(),mstrerror(m_errno));
+		    out,mstrerror(m_errno));
 		return;
 	}
 	// sanity -- need room to store a \0
@@ -15241,7 +15236,7 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	// clean up shop
 	close ( fd );
 	// delete output file
-	unlink ( out.getBufStart() );
+	unlink ( out );
 
 	// validate now
 	m_filteredContentValid = 1;
