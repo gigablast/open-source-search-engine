@@ -5800,7 +5800,7 @@ void Parms::init ( ) {
 
 	m->m_title = "all spiders on";
 	m->m_desc  = "Enable spidering on all hosts";
-	m->m_cgi   = "se";
+	m->m_cgi   = "ase";
 	m->m_def   = "1";
 	m->m_off   = (char *)&g_conf.m_spideringEnabled - g;
 	m->m_type  = TYPE_BOOL2; // no yes or no, just a link
@@ -5808,7 +5808,7 @@ void Parms::init ( ) {
 
 	m->m_title = "all spiders off";
 	m->m_desc  = "Disable spidering on all hosts";
-	m->m_cgi   = "se";
+	m->m_cgi   = "ase";
 	m->m_def   = "0";
 	m->m_off   = (char *)&g_conf.m_spideringEnabled - g;
 	m->m_type  = TYPE_BOOL2; // no yes or no, just a link
@@ -16603,6 +16603,7 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 		valSize = 8;
 	}
 	else if ( m->m_type == TYPE_BOOL ||
+		  m->m_type == TYPE_BOOL2 ||
 		  m->m_type == TYPE_CHAR ) {
 		val8 = atol(parmValString);
 		val = (char *)&val8;
@@ -16704,7 +16705,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList){
 	// this points into a static buf so be careful!
 	char *c = hr->getString("c",NULL);
 
-	if ( c && ! c[0] ) {
+	if ( ! c || ! c[0] ) {
 		log("parms: no coll given");
 		g_errno = ENOCOLLREC;
 		return false;
@@ -16841,7 +16842,20 @@ Parm *Parms::getParmFast2 ( long cgiHash32 ) {
 			// get its hash of its cgi
 			long ph32 = parm->m_cgiHash;
 			// sanity!
-			if ( s_pht.isInTable ( &ph32 ) ) {char *xx=NULL;*xx=0;}
+			if ( s_pht.isInTable ( &ph32 ) ) {
+				// get the dup guy
+				Parm *dup = *(Parm **)s_pht.getValue(&ph32);
+				// same underlying parm?
+				// like for "all spiders on" vs.
+				// "all spiders off"?
+				if ( dup->m_off == parm->m_off )
+					continue;
+				// otherwise bitch about it and drop core
+				log("parms: dup parm h32=%li "
+				    "\"%s\" vs \"%s\"",
+				    ph32, dup->m_title,parm->m_title);
+				char *xx=NULL;*xx=0;
+			}
 			// add that to hash table
 			s_pht.addKey ( &ph32 , &parm );
 		}
@@ -16849,8 +16863,9 @@ Parm *Parms::getParmFast2 ( long cgiHash32 ) {
 		s_init = true;
 	}
 
-	Parm *parm = (Parm *)s_pht.getValue ( &cgiHash32 );
-	return parm;
+	Parm **pp = (Parm **)s_pht.getValue ( &cgiHash32 );
+	if ( ! pp ) return NULL;
+	return *pp;
 }
 
 
@@ -16880,6 +16895,8 @@ Parm *Parms::getParmFast1 ( char *cgi , long *occNum ) {
 		h32 = hash32n ( cgi );
 
 	Parm *m = getParmFast2 ( h32 );
+
+	if ( ! m ) return NULL;
 
 	// the first element does not have a number after it
 	if ( m->isArray() && occNum && *occNum == -1 )
@@ -17187,7 +17204,7 @@ void handleRequest3f ( UdpSlot *slot , long niceness ) {
 	char *parmEnd  = parmRecs + slot->m_readBufSize;
 	// make a new waiting entry
 	WaitEntry *we ;
-	we = (WaitEntry *) mmalloc ( sizeof(WaitEntry *),"weparm");
+	we = (WaitEntry *) mmalloc ( sizeof(WaitEntry),"weparm");
 	if ( ! we ) {
 		g_udpServer.sendErrorReply(slot,g_errno,60);
 		return;
