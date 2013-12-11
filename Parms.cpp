@@ -3700,13 +3700,14 @@ bool Parms::setFromFile ( void *THIS        ,
 	// . all the collectionRecs have the same default file in
 	//   the workingDir/collections/default.conf
 	// . so use our built in buffer for that
+	/*
 	if ( THIS != &g_conf && ! m_isDefaultLoaded ) {
 		m_isDefaultLoaded = true;
 		File f;
 		f.set ( filenameDef );
 		if ( ! f.doesExist() ) {
 			log(LOG_INIT,
-			    "admin: Default collection configuration file "
+			    "db: Default collection configuration file "
 			    "%s was not found. Newly created collections "
 			    "will use hard coded defaults.",f.getFilename());
 			goto skip;
@@ -3718,6 +3719,7 @@ bool Parms::setFromFile ( void *THIS        ,
 	}
 
  skip:
+	*/
 	long  vlen;
 	char *v ;
 	//char  c ;
@@ -3928,9 +3930,9 @@ bool Parms::setFromFile ( void *THIS        ,
 
 	// always make sure we got some admin security
 	if ( g_conf.m_numMasterIps <= 0 && g_conf.m_numMasterPwds <= 0 ) {
-		log(LOG_INFO,
-		    "conf: No master IP or password provided. Using default "
-		    "password 'footbar23'." );
+		//log(LOG_INFO,
+		//    "conf: No master IP or password provided. Using default "
+		//    "password 'footbar23'." );
 		//g_conf.m_masterIps[0] = atoip ( "64.139.94.202", 13 );
 		//g_conf.m_numMasterIps = 1;
 		strcpy ( g_conf.m_masterPwds[0] , "footbar23" );

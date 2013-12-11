@@ -100,7 +100,7 @@ void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
 	if ( ! cr ) return;
 	if ( cr->m_bases[(unsigned char)m_rdbId] ) { char *xx=NULL;*xx=0; }
 	cr->m_bases[(unsigned char)m_rdbId] = base;
-	log("rdb: added base to collrec "
+	log ( LOG_INFO,"db: added base to collrec "
 	    "for rdb=%s rdbid=%li coll=%s collnum=%li base=0x%lx",
 	    m_dbname,(long)m_rdbId,cr->m_coll,(long)collnum,(long)base);
 }

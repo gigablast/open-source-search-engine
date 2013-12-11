@@ -915,7 +915,7 @@ bool SpiderCache::needsSave ( ) {
 }
 
 void SpiderCache::reset ( ) {
-	log("spider: resetting spidercache");
+	log(LOG_DEBUG,"spider: resetting spidercache");
 	// loop over all SpiderColls and get the best
 	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
 		SpiderColl *sc = getSpiderCollIffNonNull(i);
@@ -970,7 +970,7 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	//m_spiderColls [ collnum ] = sc;
 	cr->m_spiderColl = sc;
 	// note it
-	log("spider: made spidercoll=%lx for cr=%lx",
+	log(LOG_DEBUG,"spider: made spidercoll=%lx for cr=%lx",
 	    (long)sc,(long)cr);
 	// update this
 	//if ( m_numSpiderColls < collnum + 1 )
@@ -992,7 +992,8 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	// sanity check
 	if ( ! cr ) { char *xx=NULL;*xx=0; }
 	// note it!
-	log("spider: adding new spider collection for %s",cr->m_coll);
+	log(LOG_DEBUG,"spider: adding new spider collection for %s",
+	    cr->m_coll);
 	// that was it
 	return sc;
 }
@@ -1130,7 +1131,7 @@ bool SpiderColl::load ( ) {
 //   this should block since we are at startup...
 bool SpiderColl::makeDoleIPTable ( ) {
 
-	log("spider: making dole ip table for %s",m_coll);
+	log(LOG_DEBUG,"spider: making dole ip table for %s",m_coll);
 
 	key_t startKey ; startKey.setMin();
 	key_t endKey   ; endKey.setMax();
@@ -1203,7 +1204,7 @@ bool SpiderColl::makeDoleIPTable ( ) {
 	// watch out for wrap around
 	if ( startKey >= *(key_t *)list.getLastKey() ) goto loop;
  done:
-	log("spider: making dole ip table done.");
+	log(LOG_DEBUG,"spider: making dole ip table done.");
 	// re-enable threads
 	if ( enabled ) g_threads.enableThreads();
 	// we wrapped, all done
@@ -1317,7 +1318,8 @@ void SpiderColl::urlFiltersChanged ( ) {
 
 // this one has to scan all of spiderdb
 bool SpiderColl::makeWaitingTree ( ) {
-	log("spider: making waiting tree for %s",m_coll);
+
+	log(LOG_DEBUG,"spider: making waiting tree for %s",m_coll);
 
 	key128_t startKey ; startKey.setMin();
 	key128_t endKey   ; endKey.setMax();
@@ -1408,7 +1410,7 @@ bool SpiderColl::makeWaitingTree ( ) {
 	// watch out for wrap around
 	if ( startKey >= *(key128_t *)list.getLastKey() ) goto loop;
  done:
-	log("spider: making waiting tree done.");
+	log(LOG_DEBUG,"spider: making waiting tree done.");
 	// re-enable threads
 	if ( enabled ) g_threads.enableThreads();
 	// we wrapped, all done
@@ -1444,7 +1446,7 @@ long long SpiderColl::getEarliestSpiderTimeFromWaitingTree ( long firstIp ) {
 
 
 bool SpiderColl::makeWaitingTable ( ) {
-	logf(LOG_INFO,"spider: making waiting table for %s.",m_coll);
+	log(LOG_DEBUG,"spider: making waiting table for %s.",m_coll);
 	long node = m_waitingTree.getFirstNode();
 	for ( ; node >= 0 ; node = m_waitingTree.getNextNode(node) ) {
 		// breathe
@@ -1460,7 +1462,7 @@ bool SpiderColl::makeWaitingTable ( ) {
 		// store in waiting table
 		if ( ! m_waitingTable.addKey(&ip,&spiderTimeMS) ) return false;
 	}
-	logf(LOG_INFO,"spider: making waiting table done.");
+	log(LOG_DEBUG,"spider: making waiting table done.");
 	return true;
 }
 
@@ -1536,7 +1538,7 @@ void SpiderColl::reset ( ) {
 
 	char *coll = "unknown";
 	if ( m_coll[0] ) coll = m_coll;
-	logf(LOG_DEBUG,"spider: resetting spider cache coll=%s",coll);
+	log(LOG_DEBUG,"spider: resetting spider cache coll=%s",coll);
 
 	m_ufnMapValid = false;
 
@@ -4221,7 +4223,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 				// if a scan is ongoing, this will re-set it
 				sc->m_nextKey2.setMin();
 				sc->m_waitingTreeNeedsRebuild = true;
-				log("spider: hit rebuild timeout for %s",
+				log(LOG_INFO,
+				    "spider: hit rebuild timeout for %s",
 				    cr->m_coll);
 				// flush the ufn table
 				clearUfnTable();

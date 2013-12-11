@@ -37,7 +37,7 @@ Collectiondb::Collectiondb ( ) {
 
 // reset rdb
 void Collectiondb::reset() {
-	log("db: resetting collectiondb.");
+	log(LOG_INFO,"db: resetting collectiondb.");
 	for ( long i = 0 ; i < m_numRecs ; i++ ) {
 		if ( ! m_recs[i] ) continue;
 		mdelete ( m_recs[i], sizeof(CollectionRec), "CollectionRec" ); 
@@ -96,7 +96,7 @@ bool Collectiondb::load ( bool isDump ) {
 	if ( ! d.open ()) return log("admin: Could not load collection config "
 				     "files.");
 	// note it
-	log(LOG_INIT,"admin: Loading collection config files.");
+	log(LOG_INFO,"db: Loading collection config files.");
 	// . scan through all subdirs in the collections dir
 	// . they should be like, "coll.main/" and "coll.mycollection/"
 	char *f;
@@ -118,7 +118,7 @@ bool Collectiondb::load ( bool isDump ) {
 			return false;
 	}
 	// note it
-	log(LOG_INIT,"admin: Loaded data for %li collections. Ranging from "
+	log(LOG_INFO,"db: Loaded data for %li collections. Ranging from "
 	    "collection #0 to #%li.",m_numRecsUsed,m_numRecs-1);
 	// update the time
 	updateTime();
@@ -570,7 +570,7 @@ bool Collectiondb::registerCollRec ( CollectionRec *cr ,
 	if ( ! g_doledb.addColl     ( coll, verify ) ) goto hadError;
 
 	// debug message
-	log ( LOG_INFO, "admin: verified collection \"%s\" (%li).",
+	log ( LOG_INFO, "db: verified collection \"%s\" (%li).",
 	      coll,(long)i);
 
 	// tell SpiderCache about this collection, it will create a 
@@ -703,7 +703,7 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum , WaitEntry *we ) {
 	char *coll = cr->m_coll;
 
 	// note it
-	log("coll: deleting coll \"%s\"",coll);
+	log(LOG_INFO,"db: deleting coll \"%s\"",coll);
 	// we need a save
 	m_needsSave = true;
 
@@ -1437,7 +1437,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// LOAD LOCAL
 	sprintf ( tmp1 , "%scoll.%s.%li/localcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	log("coll: loading %s",tmp1);
+	log(LOG_INFO,"db: loading %s",tmp1);
 	m_localCrawlInfo.reset();
 	SafeBuf sb;
 	// fillfromfile returns 0 if does not exist, -1 on read error
@@ -1448,7 +1448,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// LOAD GLOBAL
 	sprintf ( tmp1 , "%scoll.%s.%li/globalcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	log("coll: loading %s",tmp1);
+	log(LOG_INFO,"db: loading %s",tmp1);
 	m_globalCrawlInfo.reset();
 	sb.reset();
 	if ( sb.fillFromFile ( tmp1 ) > 0 )
@@ -1694,7 +1694,7 @@ bool CollectionRec::save ( ) {
 	// binary now
 	sb.safeMemcpy ( &m_localCrawlInfo , sizeof(CrawlInfo) );
 	if ( sb.dumpToFile ( tmp ) == -1 ) {
-		log("coll: failed to save file %s : %s",
+		log("db: failed to save file %s : %s",
 		    tmp,mstrerror(g_errno));
 		g_errno = 0;
 	}
@@ -1707,7 +1707,7 @@ bool CollectionRec::save ( ) {
 	// binary now
 	sb.safeMemcpy ( &m_globalCrawlInfo , sizeof(CrawlInfo) );
 	if ( sb.dumpToFile ( tmp ) == -1 ) {
-		log("coll: failed to save file %s : %s",
+		log("db: failed to save file %s : %s",
 		    tmp,mstrerror(g_errno));
 		g_errno = 0;
 	}

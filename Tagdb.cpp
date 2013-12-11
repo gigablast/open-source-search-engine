@@ -1873,7 +1873,7 @@ bool Tagdb::verify ( char *coll ) {
 	char *rdbName = NULL;
 	rdbName = "Tagdb";
 	
-	log ( LOG_INFO, "tagdb: Verifying %s for coll %s...", rdbName, coll );
+	log ( LOG_INFO, "db: Verifying %s for coll %s...", rdbName, coll );
 	
 	g_threads.disableThreads();
 
@@ -1945,7 +1945,7 @@ bool Tagdb::verify ( char *coll ) {
 		g_threads.enableThreads();
 		return g_conf.m_bypassValidation;
 	}
-	log ( LOG_INFO, "tagdb: %s passed verification successfully for %li "
+	log ( LOG_INFO, "db: %s passed verification successfully for %li "
 	      "recs.",rdbName, count );
 
 	// turn threads back on

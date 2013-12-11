@@ -132,8 +132,9 @@ bool RdbBase::init ( char  *dir            ,
 	char tmp[1024];
 	sprintf ( tmp , "%scoll.%s.%li" , dir , coll , (long)collnum );
 
-	// debug
-	log("base: adding new base for dir=%s coll=%s collnum=%li db=%s",
+	// logDebugAdmin
+	log(LOG_INIT,"db: "
+	    "adding new base for dir=%s coll=%s collnum=%li db=%s",
 	    dir,coll,(long)collnum,dbname);
 
 	// catdb is collection independent
@@ -502,7 +503,7 @@ bool RdbBase::setFiles ( ) {
 		// we are getting this from a bogus m_dir
 		return log("db: Had error opening directory %s", getDir());
 	// note it
-	logf(LOG_INFO,"db: Loading files for %s coll=%s (%li).",
+	log(LOG_DEBUG,"db: Loading files for %s coll=%s (%li).",
 	     m_dbname,m_coll,(long)m_collnum );
 	// . set our m_files array
 	// . addFile() will return -1 and set g_errno on error
