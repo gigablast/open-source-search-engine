@@ -447,6 +447,8 @@ class Hostdb {
 
 	long  getNumHosts ( ) { return m_numHosts; };
 	long  getNumProxy ( ) { return m_numProxyHosts; };
+	long getNumProxies ( ) { return m_numProxyHosts; };
+	long getNumGrunts  ( ) { return m_numHosts; };
 	// how many of the hosts are non-dead?
 	long  getNumHostsAlive ( ) { return m_numHostsAlive; };
 	long  getNumProxyAlive ( ) { return m_numProxyAlive; };

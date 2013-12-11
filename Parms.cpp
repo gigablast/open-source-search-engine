@@ -16916,6 +16916,8 @@ public:
 	SafeBuf m_parmList;
 	long m_numRequests;
 	long m_numReplies;
+	long m_numGoodReplies;
+	long m_numHostsTotal;
 	class ParmNode *m_nextNode;
 	long long m_parmId;
 	bool m_calledCallback;
@@ -16959,6 +16961,8 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 	pn->m_parmList.stealBuf ( parmList );
 	pn->m_numRequests    = 0;
 	pn->m_numReplies     = 0;
+	pn->m_numGoodReplies = 0;
+	pn->m_numHostsTotal  = 0;
 	pn->m_nextNode       = NULL;
 	pn->m_parmId         = s_parmId; // take a ticket
 	pn->m_calledCallback = false;
@@ -16978,6 +16982,13 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 		s_tailNode->m_nextNode = pn;
 		s_tailNode = pn;
 	}
+
+	// just the regular proxies, not compression proxies
+	if ( pn->m_sendToProxies ) 
+		pn->m_numHostsTotal += g_hostdb.getNumProxies();
+
+	if ( pn->m_sendToGrunts )
+		pn->m_numHostsTotal += g_hostdb.getNumGrunts();
 
 	// pump the parms out to other hosts in the network
 	doParmSendingLoop ( );
@@ -17002,9 +17013,10 @@ void tryToCallCallbacks ( ) {
 	for ( ; pn ; pn = pn->m_nextNode ) {
 		// skip if already called callback
 		if ( pn->m_calledCallback ) continue;
-		// 8 seconds is enough!
+		// should we call the callback?
 		bool callIt = false;
-		if ( now - pn->m_startTime > 8000 ) callIt = true;
+		// 8 seconds is enough to wait for all replies to come in
+		if ( now - pn->m_startTime > 8 ) callIt = true;
 		if ( pn->m_numReplies >= pn->m_numRequests ) callIt = true;
 		if ( ! callIt ) continue;
 		pn->m_callback ( pn->m_state );
@@ -17014,12 +17026,18 @@ void tryToCallCallbacks ( ) {
 
 void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 
+	// don't let upserver free the send buf! that's the ParmNode parmlist
+	slot->m_sendBuf = NULL;
+
 	// in case host table is dynamically modified, go by #
 	Host *h = g_hostdb.getHost((long)state);
 
 	long parmId = h->m_currentParmIdInProgress;
 
 	ParmNode *pn = h->m_currentNodePtr;
+
+	// inc this count
+	pn->m_numReplies++;
 
 	// nothing in progress now
 	h->m_currentParmIdInProgress = 0;
@@ -17044,7 +17062,7 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 	h->m_lastParmIdCompleted = parmId;
 
 	// inc this count
-	pn->m_numReplies++;
+	pn->m_numGoodReplies++;
 
 	// . this will try to call any callback that can be called
 	// . for instances, if the "pn" has recvd all the replies
@@ -17053,13 +17071,16 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 	tryToCallCallbacks ();
 
 	// nuke it?
-	if ( pn->m_numReplies >= pn->m_numRequests ) {
+	if ( pn->m_numGoodReplies >= pn->m_numHostsTotal &&
+	     pn->m_numReplies >= pn->m_numRequests ) {
 		// we must always be the head lest we send out of order.
 		if ( pn != s_headNode ) { char *xx=NULL;*xx=0; }
 		// a new head
 		s_headNode = pn->m_nextNode;
 		// empty?
 		if ( ! s_headNode ) s_tailNode = NULL;
+		// wtf?
+		if ( ! pn->m_calledCallback ) { char *xx=NULL;*xx=0; }
 		// do callback first before freeing pn
 		//if ( pn->m_callback ) pn->m_callback ( pn->m_state );
 		//if ( pn->m_prevNode ) 
@@ -17073,6 +17094,9 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 	g_parms.doParmSendingLoop();
 }
 
+// . host #0 runs this to send out parms in the the parm queue (linked list)
+//   to all other hosts.
+// . he also sends to himself, if m_sendToGrunts is true
 bool Parms::doParmSendingLoop ( ) {
 
 	if ( ! s_headNode ) return true;
@@ -17105,6 +17129,8 @@ bool Parms::doParmSendingLoop ( ) {
 			h->m_currentNodePtr = NULL;
 			continue;
 		}
+		// count it
+		pn->m_numRequests++;
 		// ok, he's available
 		if ( ! g_udpServer.sendRequest ( pn->m_parmList.getBufStart(),
 						 pn->m_parmList.length() ,
