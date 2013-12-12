@@ -1571,6 +1571,7 @@ void RdbBase::gotTokenForMerge ( ) {
 	bool      minOld ;
 	long      id2  = -1;
 	long      minToMerge;
+	bool      overide = false;
 	//long      smini = - 1;
 	//long      sn ;
 	//long long tfndbSize = 0;
@@ -1883,7 +1884,7 @@ void RdbBase::gotTokenForMerge ( ) {
 
  startMerge:
 	// sanity check
-	if ( n <= 1 ) {
+	if ( n <= 1 && ! overide ) {
 	       log(LOG_LOGIC,"merge: gotTokenForMerge: Not merging %li files.",
 		    n);
 		g_msg35.releaseToken(); 

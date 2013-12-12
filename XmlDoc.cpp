@@ -7680,9 +7680,20 @@ long long *XmlDoc::getExactContentHash64 ( ) {
 	unsigned char *pend = (unsigned char *)p + plen;
 	unsigned long long h64 = 0LL;
 	unsigned char pos = 0;
+	bool lastWasSpace = true;
 	for ( ; p < pend ; p++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
+		// treat sequences of white space as a single ' ' (space)
+		if ( is_wspace_a(*p) ) {
+			if ( lastWasSpace ) continue;
+			lastWasSpace = true;
+			// treat all white space as a space
+			h64 ^= g_hashtab[pos][' '];
+			pos++;
+			continue;
+		}
+		lastWasSpace = false;
 		// xor this in right
 		h64 ^= g_hashtab[pos][p[0]];
 		pos++;

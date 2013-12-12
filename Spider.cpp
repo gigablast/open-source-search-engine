@@ -248,6 +248,7 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 		long long now = gettimeofdayInMilliseconds();
 		long long elapsed = now - xd->m_startTime;
 		sb->safePrintf(" <td>%llims</td>\n",elapsed);
+		sb->safePrintf(" <td>%li</td>\n",(long)xd->m_collnum);
 	}
 
 	sb->safePrintf(" <td><nobr>%s</nobr></td>\n",m_url);
@@ -345,8 +346,10 @@ long SpiderRequest::printTableHeaderSimple ( SafeBuf *sb ,
 	sb->safePrintf("<tr>\n");
 
 	// how long its been being spidered
-	if ( currentlySpidering )
+	if ( currentlySpidering ) {
 		sb->safePrintf(" <td><b>elapsed</b></td>\n");
+		sb->safePrintf(" <td><b>coll</b></td>\n");
+	}
 
 	sb->safePrintf(" <td><b>url</b></td>\n");
 	sb->safePrintf(" <td><b>status</b></td>\n");
@@ -447,8 +450,10 @@ long SpiderRequest::printTableHeader ( SafeBuf *sb , bool currentlySpidering) {
 	sb->safePrintf("<tr>\n");
 
 	// how long its been being spidered
-	if ( currentlySpidering )
+	if ( currentlySpidering ) {
 		sb->safePrintf(" <td><b>elapsed</b></td>\n");
+		sb->safePrintf(" <td><b>coll</b></td>\n");
+	}
 
 	sb->safePrintf(" <td><b>url</b></td>\n");
 	sb->safePrintf(" <td><b>status</b></td>\n");
@@ -4462,7 +4467,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( g_dailyMerge.m_mergeMode ) return;
 	// skip if too many udp slots being used
 	if ( g_udpServer.getNumUsedSlots() >= 1300 ) return;
-	// stop if too many out
+	// stop if too many out. this is now 50 down from 500.
 	if ( m_numSpidersOut >= MAX_SPIDERS ) return;
 	// bail if no collections
 	if ( g_collectiondb.m_numRecs <= 0 ) return;
@@ -6244,8 +6249,14 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 						 60*60*24*365    ) ) 
 				return false;
 			// error?
-			log("spider: error re-sending confirm request: %s",
-			    mstrerror(g_errno));
+			// don't spam the log!
+			static long s_last = 0;
+			long now = getTimeLocal();
+			if ( now - s_last >= 1 ) {
+				s_last = now;
+				log("spider: error re-sending confirm "
+				    "request: %s",  mstrerror(g_errno));
+			}
 		}
 		// only log every 10 seconds for ETRYAGAIN
 		if ( g_errno == ETRYAGAIN ) {

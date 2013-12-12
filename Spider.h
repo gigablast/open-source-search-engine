@@ -1274,8 +1274,9 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) ;
 // . supports <META NAME="ROBOTS" CONTENT="NOFOLLOW"> (no links)
 // . supports limiting spiders per domain
 
-// max spiders we can have going at once for this process
-#define MAX_SPIDERS 500
+// . max spiders we can have going at once for this process
+// . limit to 50 to preven OOM conditions
+#define MAX_SPIDERS 50
 
 class SpiderLoop {
 
