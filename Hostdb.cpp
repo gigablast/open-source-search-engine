@@ -1257,7 +1257,8 @@ bool Hostdb::hashHost (	bool udp , Host *h , uint32_t ip , uint16_t port ) {
 	if ( hh && port ) { 
 		log("db: Must hash hosts.conf first, then hosts2.conf.");
 		log("db: or there is a repeated ip/port in hosts.conf.");
-		log("db: repeated host ip=%s name=%s",iptoa(ip),h->m_hostname);
+		log("db: repeated host ip=%s port=%li "
+		    "name=%s",iptoa(ip),(long)port,h->m_hostname);
 		return false;//char *xx=NULL;*xx=0;
 	}
 

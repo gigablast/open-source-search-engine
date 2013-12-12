@@ -158,9 +158,17 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("<table cellpadding=3>\n");
 	sb.safePrintf("\n");
 
+	char *root = "";
+	if ( g_conf.m_isMattWells )
+		root = "http://www.gigablast.com";
 
 	sb.safePrintf("<tr valign=top>\n");
-	sb.safePrintf("<td align=center><div style=width:50px;height:50px;display:inline-block;background-color:red;></div></td>\n");
+
+	//sb.safePrintf("<td align=center><div style=width:50px;height:50px;display:inline-block;background-color:red;></div></td>\n");
+	sb.safePrintf("<td><img height=71px width=50px "
+		      "src=%s/opensource.png></td>\n"
+		      , root );
+
 	sb.safePrintf("<td><font size=+1><b>Open Source!</b>"
 	"</font><br>\n");
 	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=/admin.html#features>Features.</a> Limited support available for free."
@@ -168,10 +176,6 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("<br><br>");
 	sb.safePrintf("</td></tr>\n");
 
-
-	char *root = "";
-	if ( g_conf.m_isMattWells )
-		root = "http://www.gigablast.com";
 
 	sb.safePrintf("<tr valign=top>\n");
 	// 204x143
