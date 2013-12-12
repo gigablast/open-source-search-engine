@@ -50,17 +50,6 @@ Parms g_parms;
 // new functions to extricate info from parm recs
 //
 
-// . occNum is index # for parms that are arrays. it is -1 if not used.
-// . collnum is -1 for g_conf, which is not a collrec
-key96_t makeParmKey ( collnum_t collnum , Parm *m , long occNum ) {
-	key96_t k;
-	k.n1 = collnum;
-	k.n0 = m->m_cgiHash; // 32 bit
-	k.n0 <<= 31;
-	k.n0 |= occNum;
-	k.n0 <<= 1;
-	return k;
-}
 
 long getDataSizeFromParmRec ( char *rec ) {
 	return *(long *)(rec+sizeof(key96_t));
@@ -76,15 +65,34 @@ collnum_t getCollnumFromParmRec ( char *rec ) {
 }
 
 // for parms that are arrays...
-collnum_t getOccNumFromParmRec ( char *rec ) {
+short getOccNumFromParmRec ( char *rec ) {
 	key96_t *k = (key96_t *)rec;
-	return (collnum_t)((k->n0>>1)&0xffffffff);
+	return (short)((k->n0>>16));
 }
 
 Parm *getParmFromParmRec ( char *rec ) {
 	key96_t *k = (key96_t *)rec;
 	long cgiHash32 = (k->n0 >> 32);
 	return g_parms.getParmFast2 ( cgiHash32 );
+}
+
+// . occNum is index # for parms that are arrays. it is -1 if not used.
+// . collnum is -1 for g_conf, which is not a collrec
+// . occNUm is -1 for a non-array parm
+key96_t makeParmKey ( collnum_t collnum , Parm *m , short occNum ) {
+	key96_t k;
+	k.n1 = collnum;
+	k.n0 = (unsigned long)m->m_cgiHash; // 32 bit
+	k.n0 <<= 16;
+	k.n0 |= (unsigned short)occNum;
+	// blanks
+	k.n0 <<= 16;
+	// delbit. 1 means positive key
+	k.n0 |= 0x01;
+	// test
+	if ( getCollnumFromParmRec ((char *)&k)!=collnum){char*xx=NULL;*xx=0;}
+	if ( getOccNumFromParmRec ((char *)&k)!=occNum){char*xx=NULL;*xx=0;}
+	return k;
 }
 
 //////////////////////////////////////////////
@@ -16760,7 +16768,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList){
 		// if its a resetcoll/restartcoll/addcoll we have to
 		// get the next available collnum and use that for setting
 		// any additional parms. that is the coll it will act on.
-		if ( strcmp(m->m_title,"addcoll") ||
+		if ( strcmp(m->m_title,"addcoll") == 0 ||
 		     strcmp(m->m_title,"addcrawl") == 0 ||
 		     strcmp(m->m_title,"addbulk" ) == 0 ||
 		     strcmp(m->m_title,"resetcoll" ) == 0 ||
@@ -16811,11 +16819,12 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList){
 
 		// add it to a list now
 		if ( ! addNewParmToList2 ( parmList ,
-					   cr->m_collnum ,
-					   valString , 
 					   // HACK! operate on the to-be-added
-					   // collrec
-					   (long)parmCollnum , // occNum
+					   // collrec, if there was an addcoll
+					   // reset or restart coll cmd...
+					   parmCollnum ,
+					   valString , 
+					   occNum ,
 					   m ) )
 			return false;
 	}
@@ -17139,8 +17148,8 @@ bool Parms::doParmSendingLoop ( ) {
 						 pn->m_parmList.length() ,
 						 // a new msgtype
 						 0x3f,
-						 0, // ip
-						 0, // port
+						 h->m_ip, // ip
+						 h->m_port, // port
 						 h->m_hostId ,
 						 NULL, // retslot
 						 (void *)h->m_hostId , // state
@@ -17301,6 +17310,8 @@ bool Parms::syncParmsWithHost0 ( ) {
 	
 	if ( ! makeSyncHashList ( &hashList ) ) return false;
 
+	Host *h = g_hostdb.getHost(0);
+
 	// . send it off. use 3e i guess
 	// . host #0 will reply using msg4 really
 	// . msg4 guarantees ordering of requests
@@ -17309,9 +17320,9 @@ bool Parms::syncParmsWithHost0 ( ) {
 	if ( ! g_udpServer.sendRequest ( hashList.getBufStart() ,
 					 hashList.length() ,
 					 0x3e , // msgtype
-					 0, // ip
-					 0, // port
-					 0 , // hostid , host #0!!!
+					 h->m_ip, // ip
+					 h->m_port, // port
+					 h->m_hostId , // hostid , host #0!!!
 					 NULL, // retslot
 					 NULL , // state
 					 gotReplyFromHost0Wrapper ,
@@ -17573,9 +17584,13 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 
 	// what are we updating?
 	void *base = NULL;
-	if ( cr ) base = cr;
-	else      base = &g_conf;
 
+	// we might have a collnum specified even if parm is global,
+	// maybe there are some collection/local parms specified as well
+	// that that collnum applies to
+	if ( parm->m_obj == OBJ_COLL ) base = cr;
+	else                           base = &g_conf;
+		
 	long occNum = getOccNumFromParmRec ( rec );
 
 	// get data
