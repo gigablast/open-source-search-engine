@@ -98,35 +98,43 @@ rather your current working directory, where the 'gb' binary resides.
 <h1>Features</h1>
 
 <ul>
-<li> <b>The ONLY open source WEB search engine.</b> Scalable to thousands of servers. Has scaled to over 12 billion web pages on over 200 servers.
-<li> Live demo at http://www.gigablast.com/ (although what is there now as of Aug 11, 2013, is much older than this source code)
+<li> <b>The ONLY open source WEB search engine.</b> 
+<li> Scalable to thousands of servers. 
+<li> Has scaled to over 12 billion web pages on over 200 servers.
+<li> A dual quad core, with 32GB ram, and two 160GB Intel SSDs can do about 8 qps (queries per second) on an index of 10 million pages. Drives will be close to maximum storage capacity.
+<li> Live demo at <a href=http://www.gigablast.com/>http://www.gigablast.com/</a>
 <li> Written in C/C++ for optimal performance.
 <li> Over 500,000 lines of C/C++.
 
 <li> 100% custom. A single binary. The Web Server, Database and everything else 
-  is all contained in this source code in a highly efficient manner.
+  is all contained in this source code in a highly efficient manner. Makes administration and troubleshooting easier.
 <li> Reliable. Has been tested in live production since 2002 on billions of 
   queries on indexes of over 12 billion web pages.
-<li>Super fast and efficient. One of a small handful of search engines that have hit such big numbers.
+<li> Super fast and efficient. One of a small handful of search engines that have hit such big numbers.
+<li> Supports all languages. Can give results in specified languages a boost over others at query time. Uses UTF-8 representation internally.
 <li> Track record. Has been used by many clients. Has been successfully used
   in distributed enterprise software.
 <li> Cached web pages with query term highlighting.
-<li> Supports any document conversion plugin to convert PDF, etc. to HTML
-<li> Shows popular topics of search results (Gigabits)
+<li> Shows popular topics of search results (Gigabits), like a faceted search on all the possible phrases.
 <li> Email alert monitoring. Let's you know when the system is down in all or part, or if a server is overheating, or a drive has failed or a server is consistently going out of memory, etc.
 <li> "Synonyms" based on wiktionary data. Using query expansion method.
 <li> Customizable "synonym" file: my-synonyms.txt
-<li> Stores position and format information (fancy bits) of each word in an indexed document. It uses this to return results that contain the query terms in close proximity rather than relying on the probabilistic tf/idf approach of other search engines. The older version of Gigablast used tf/idf on Indexdb, whereas it now uses Posdb to hold the index data.
+<li> No TF/IDF or Cosine. Stores position and format information (fancy bits) of each word in an indexed document. It uses this to return results that contain the query terms in close proximity rather than relying on the probabilistic tf/idf approach of other search engines. The older version of Gigablast used tf/idf on Indexdb, whereas it now uses Posdb to hold the index data.
 <li> Complete scoring details are displayed in the search results.
 <li> Indexes anchor text of inlinks to a web page and uses many techniques to flag pages as link spam thereby discounting their link weights.
+<li> Demotes web pages if they are spammy.
 <li> Can cluster results from same site.
 <li> Duplicate removal from search results.
-<li> Distributed web crawler/spider.
-<li> Crawler/Spider is highly programmable and URLs are binned into priority queues. Each priority queue has several throttles.
+<li> Distributed web crawler/spider. Supports crawl delay and robots.txt.
+<li> Crawler/Spider is highly programmable and URLs are binned into priority queues. Each priority queue has several throttles and knobs.
 <li> Complete REST/XML API for doing queries as well as adding and deleting documents in real-time.
 <li> Automated data corruption detection and repair based on hardware failures.
 <li> Custom Search. (aka Custom Topic Search). Using a cgi parm like &sites=abc.com+xyz.com you can restrict the search results to a list of up to 500 subdomains.
 <li> DMOZ integration. Run DMOZ directory. Index and search over the pages in DMOZ. Tag all pages from all sites in DMOZ for searching and displaying of DMOZ topics under each search result.
+<li> Collections. Build tens of thousands of different collections, each treated as a separated search engine. Each can spider and be searched independently.
+<li> Plug-ins. For indexing any file format by calling Plug-ins to convert that format to HTML. Provided binary plug-ins: pdftohtml (PDF), ppthtml (PowerPoint), antiword (MS Word), pstotext (PostScript).
+<li> Indexes JSON and XML natively. Provides ability to search individual structured fields.
+<li> Sorting. Sort the search results by meta tags or JSON fields that contain numbers, simply by adding something like gbsortby:price or gbrevsortby:price as a query term, assuming you have meta price tags.
 </ul>
 
 <br>

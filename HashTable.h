@@ -13,10 +13,13 @@ class HashTable {
 
 	bool set ( long  initialNumSlots = 0    ,
 		   char *buf             = NULL ,
-		   long  bufSize         = 0    );
+		   long  bufSize         = 0    ,
+		   char *label           = NULL );
 
 	 HashTable       ( );
 	~HashTable       ( );
+
+	void setLabel ( char *label ) { m_label = label; };
 
 	// . add key/value entry to hash table
 	// . will grow hash table if it needs to
@@ -76,6 +79,8 @@ class HashTable {
 
 	char m_needsSave;
 	char m_doFree;
+
+	char *m_label;
 };
 
 #endif

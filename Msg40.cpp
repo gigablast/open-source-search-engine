@@ -3272,6 +3272,7 @@ void hashExcerpt ( Query *q ,
 	};
 	SafeBuf posBuf;
 	long need2 = MAX_QUERY_TERMS * sizeof(PosInfo);
+	posBuf.setLabel("m40posbuf");
 	if ( ! posBuf.reserve ( need2 ) ) {
 		log("gigabits: could not allocate 2 local buffer "
 		    "(%li bytes required)", need2);
