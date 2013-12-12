@@ -17131,6 +17131,7 @@ bool Parms::doParmSendingLoop ( ) {
 			h->m_currentNodePtr = NULL;
 			continue;
 		}
+
 		// count it
 		pn->m_numRequests++;
 		// ok, he's available
