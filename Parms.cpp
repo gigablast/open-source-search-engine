@@ -16706,9 +16706,11 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList){
 	char *c = hr->getString("c",NULL);
 
 	if ( ! c || ! c[0] ) {
-		log("parms: no coll given");
-		g_errno = ENOCOLLREC;
-		return false;
+		//log("parms: no coll given");
+		//g_errno = ENOCOLLREC;
+		//return false;
+		// might be a page without coll or parms that need it
+		return true;
 	}
 
 	// . this is the collection we are operating on
@@ -17027,7 +17029,7 @@ void tryToCallCallbacks ( ) {
 void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 
 	// don't let upserver free the send buf! that's the ParmNode parmlist
-	slot->m_sendBuf = NULL;
+	slot->m_sendBufAlloc = NULL;
 
 	// in case host table is dynamically modified, go by #
 	Host *h = g_hostdb.getHost((long)state);
