@@ -7689,7 +7689,7 @@ long long *XmlDoc::getExactContentHash64 ( ) {
 			if ( lastWasSpace ) continue;
 			lastWasSpace = true;
 			// treat all white space as a space
-			h64 ^= g_hashtab[pos][' '];
+			h64 ^= g_hashtab[pos][(unsigned char)' '];
 			pos++;
 			continue;
 		}
