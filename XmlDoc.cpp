@@ -44085,6 +44085,9 @@ SafeBuf *XmlDoc::getQueryLinkBuf(SafeBuf *docIdList, bool doMatchingQueries) {
 
 // this is still used by Title.cpp to get the title: field quickly
 char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
+
+	if ( ! json ) return NULL;
+
 	// get length
 	long fieldLen = gbstrlen(field);
 	// keep track of in a quote or not
