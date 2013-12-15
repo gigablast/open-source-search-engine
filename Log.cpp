@@ -11,6 +11,7 @@
 Log g_log;
 
 #ifdef PTHREADS
+#include <pthread.h>
 // the thread lock
 static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
