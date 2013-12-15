@@ -10,8 +10,10 @@
 // a global class extern'd in Log.h
 Log g_log;
 
+#ifdef PTHREADS
 // the thread lock
-//static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 // . g_pbuf points to the parser buffer
 // . we store text to be printed to html page in g_pbufPtr
@@ -179,8 +181,12 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	//if ( g_inSigHandler ) return false;
 	// get "msg"'s length
 	long msgLen = gbstrlen ( msg );
+
+#ifdef PTHREADS
 	// lock for threads
-	//pthread_mutex_lock ( &s_lock );
+	pthread_mutex_lock ( &s_lock );
+#endif
+
 	// do a timestamp, too. use the time synced with host #0 because
 	// it is easier to debug because all log timestamps are in sync.
 	if ( now == 0 ) now = gettimeofdayInMillisecondsGlobalNoCore();
@@ -240,7 +246,9 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 		// this sets m_bufPtr to 0
 		if ( ! dumpLog ( ) ) {
 			fprintf(stderr,"Log::log: could not dump to file!\n");
-			//pthread_mutex_unlock ( &s_lock );
+#ifdef PTHREADS
+			pthread_mutex_unlock ( &s_lock );
+#endif
 			return false;
 		}
 	}
@@ -273,8 +281,11 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	m_errorType     [m_numErrors] = type;
 	// increase the # of errors
 	m_numErrors++;
+
+#ifdef PTHREADS
 	// unlock for threads
-	//pthread_mutex_unlock ( &s_lock );
+	pthread_mutex_unlock ( &s_lock );
+#endif
 	return false;
 }
 
