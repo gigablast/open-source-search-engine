@@ -194,8 +194,12 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 
 	// . skip all logging if power out, we do not want to screw things up
 	// . allow logging for 10 seconds after power out though
-	if ( ! g_process.m_powerIsOn && now - g_process.m_powerOffTime > 10000)
+	if ( ! g_process.m_powerIsOn && now - g_process.m_powerOffTime >10000){
+#ifdef PTHREADS
+		pthread_mutex_unlock ( &s_lock );
+#endif
 		return false;
+	}
 
 	//if ( now == 0 ) now  = g_nowApprox;
 	// chop off any spaces at the end of the msg.
