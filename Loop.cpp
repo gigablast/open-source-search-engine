@@ -90,7 +90,7 @@ void Loop::setSigWaitTime ( long ms ) {
 // free up all our mem
 void Loop::reset() {
 	if ( m_slots ) {
-		log("db: resetting loop");
+		log(LOG_DEBUG,"db: resetting loop");
 		mfree ( m_slots , MAX_SLOTS * sizeof(Slot) , "Loop" );
 	}
 	m_slots = NULL;

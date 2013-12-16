@@ -5817,6 +5817,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Saves the data for all hosts. Does Not exit.";
 	m->m_cgi   = "js";
 	m->m_type  = TYPE_CMD;
+	m->m_func  = CommandJustSave;
 	m++;
 
 	m->m_title = "all spiders on";
@@ -5860,6 +5861,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Saves the data and exits for all hosts.";
 	m->m_cgi   = "save";
 	m->m_type  = TYPE_CMD;
+	m->m_func  = CommandSaveAndExit;
 	m++;
 
 	m->m_title = "dump to disk";
@@ -16752,7 +16754,9 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		//g_errno = ENOCOLLREC;
 		//return false;
 		// might be a page without coll or parms that need it
-		return true;
+		//return true;
+		// might be a collection-less command like 'gb stop'
+		c = NULL;
 	}
 
 	// . this is the collection we are operating on
@@ -16822,7 +16826,10 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 
 		// add the cmd parm
 		if ( ! addNewParmToList2 ( parmList ,
-					   cr->m_collnum ,
+					   // it might be a collection-less
+					   // command like 'gb stop' which
+					   // uses the "save=1" parm
+					   parmCollnum ,
 					   val , 
 					   occNum ,
 					   m ) )
@@ -16890,6 +16897,9 @@ Parm *Parms::getParmFast2 ( long cgiHash32 ) {
 		s_pht.set ( 4,4, 2048, s_phtBuf,25000, false,0,"phttab" );
 		// reduce hash collisions:
 		s_pht.m_useKeyMagic = true;
+		// wtf?
+		if ( m_numParms <= 0 ) init();
+		if ( m_numParms <= 0 ) { char *xx=NULL;*xx=0; }
 		// fill up hashtable
 		for ( long i = 0 ; i < m_numParms ; i++ ) {
 			// get it
