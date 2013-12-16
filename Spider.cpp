@@ -4412,6 +4412,8 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	ei->m_collnum       = cr->m_collnum;
 
 	SafeBuf *buf = &ei->m_spiderStatusMsg;
+	// stop it from accumulating status msgs
+	buf->reset();
 	long status = -1;
 	getSpiderStatusMsg ( cr , buf , &status );
 					 

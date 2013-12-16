@@ -2488,7 +2488,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// save seeds
 	if ( cr && restartColl && cast ) {
 		// bail on OOM saving seeds
-		if ( ! st->m_seedBank.safeMemcpy ( &cr->m_diffbotSeeds ) )
+		if ( ! st->m_seedBank.safeMemcpy ( &cr->m_diffbotSeeds ) ||
+		     ! st->m_seedBank.pushChar('\0') )
 			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
 	}
 

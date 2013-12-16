@@ -185,6 +185,8 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_metaList2.purge();
+
 	m_mySiteLinkInfoBuf.purge();
 	m_myPageLinkInfoBuf.purge();
 	m_myTempLinkInfoBuf.purge();
