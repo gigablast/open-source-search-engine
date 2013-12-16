@@ -28,6 +28,7 @@ public:
 	collnum_t m_collnum;
 	bool m_registered;
 	long m_errno;
+	bool m_sentReply;
 };
 
 class Collectiondb  {

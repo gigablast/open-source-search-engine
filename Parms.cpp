@@ -17224,6 +17224,11 @@ bool Parms::doParmSendingLoop ( ) {
 	return true;
 }
 
+void handleRequest3fLoop ( void *weArg ) ;
+
+void handleRequest3fLoop2 ( void *state , UdpSlot *slot ) {
+	handleRequest3fLoop(state);
+}
 
 // . host #0 is requesting that we update some parms
 void handleRequest3fLoop ( void *weArg ) {
@@ -17238,11 +17243,41 @@ void handleRequest3fLoop ( void *weArg ) {
 		long recSize = sizeof(key96_t) + 4 + dataSize;
 		// skip it
 		p += recSize;
-		// update it in case call blocks below
-		we->m_parmPtr = p;
 
 		// get the actual parm
 		Parm *parm = getParmFromParmRec ( rec );
+
+		if ( ! parm ) {
+			log("parms: unknown parm sent to us");
+			continue;
+		}
+
+		// if was the cmd to save & exit then first send a reply back
+		if ( ! we->m_sentReply &&
+		     parm->m_cgi && 
+		     parm->m_cgi[0] == 's' &&
+		     parm->m_cgi[1] == 'a' &&
+		     parm->m_cgi[2] == 'v' &&
+		     parm->m_cgi[3] == 'e' &&
+		     parm->m_cgi[4] == '\0' ) {
+			// do not re-do this
+			we->m_sentReply = 1;
+			// note it
+			log("parms: sending early parm update reply");
+			// wait for reply to be sent and ack'd
+			g_udpServer.sendReply_ass ( NULL,0,
+						    NULL,0,
+						    we->m_slot,
+						    8, // timeout in secs
+						    // come back here when done
+						    we ,
+						    handleRequest3fLoop2 );
+			return;
+		}
+
+
+		// update it in case call blocks below
+		we->m_parmPtr = p;
 
 		// . determine if it alters the url filters
 		// . if those were changed we have to nuke doledb and
@@ -17254,6 +17289,7 @@ void handleRequest3fLoop ( void *weArg ) {
 		// get collnum i guess
 		if ( parm->m_type != TYPE_CMD )
 			we->m_collnum = getCollnumFromParmRec ( rec );
+
 
 		// . this returns false if blocked, returns true and sets
 		//   g_errno on error
@@ -17284,10 +17320,14 @@ void handleRequest3fLoop ( void *weArg ) {
 		cr->rebuildUrlFilters();
 	}
 
+	// note it
+	if ( ! we->m_sentReply )
+		log("parms: sending parm update reply");
+
 	// send back reply now. empty reply for the most part
-	if ( we->m_errno )
+	if ( we->m_errno && ! we->m_sentReply )
 		g_udpServer.sendErrorReply ( we->m_slot,we->m_errno,0 );
-	else
+	else if ( ! we->m_sentReply )
 		g_udpServer.sendReply_ass ( NULL,0,NULL,0,we->m_slot);
 	// all done
 	mfree ( we , sizeof(WaitEntry) , "weparm" );
@@ -17299,6 +17339,10 @@ void handleRequest3fLoop ( void *weArg ) {
 void handleRequest3f ( UdpSlot *slot , long niceness ) {
 	char *parmRecs = slot->m_readBuf;
 	char *parmEnd  = parmRecs + slot->m_readBufSize;
+
+	log("parms: got parm update request. size=%li.",
+	    (long)(parmEnd-parmRecs));
+
 	// make a new waiting entry
 	WaitEntry *we ;
 	we = (WaitEntry *) mmalloc ( sizeof(WaitEntry),"weparm");
@@ -17313,6 +17357,8 @@ void handleRequest3f ( UdpSlot *slot , long niceness ) {
 	we->m_errno = 0;
 	we->m_doRebuilds = false;
 	we->m_collnum = -1;
+	we->m_sentReply = 0;
+
 	handleRequest3fLoop ( we );
 }
 

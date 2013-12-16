@@ -3455,7 +3455,7 @@ void doCmdAll ( int fd, void *state ) {
 	// make port -1 to indicate none to listen on
 	if ( ! g_udpServer.init( 18123 , // port to listen on
 				 &g_dp,
-				 2, // niceness
+				 0, // niceness
 				 20000000 ,   // readBufSIze
 				 20000000 ,   // writeBufSize
 				 20       ,   // pollTime in ms
