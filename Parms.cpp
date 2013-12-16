@@ -8764,7 +8764,7 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
-	m->m_cgi   = "notifyemail";
+	m->m_cgi   = "notifyEmail";
 	m->m_title = "notify email";
 	m->m_xml   = "notifyEmail";
 	m->m_off   = (char *)&cr.m_notifyEmail - x;
@@ -8774,9 +8774,9 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m++;
 
-	m->m_cgi   = "notifyurl";
-	m->m_xml   = "notifyUrl";
-	m->m_title = "notify url";
+	m->m_cgi   = "notifyWebhook";
+	m->m_xml   = "notifyWebhook";
+	m->m_title = "notify webhook";
 	m->m_off   = (char *)&cr.m_notifyUrl - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
@@ -8786,7 +8786,7 @@ void Parms::init ( ) {
 
 	// collective respider frequency (for pagecrawlbot.cpp)
 	m->m_title = "collective respider frequency (days)";
-	m->m_cgi   = "crf";
+	m->m_cgi   = "repeat";
 	m->m_xml   = "collectiveRespiderFrequency";
 	m->m_off   = (char *)&cr.m_collectiveRespiderFrequency - x;
 	m->m_type  = TYPE_FLOAT;
@@ -8796,7 +8796,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "collective crawl delay (seconds)";
-	m->m_cgi   = "ccd";
+	m->m_cgi   = "crawlDelay";
 	m->m_xml   = "collectiveCrawlDelay";
 	m->m_off   = (char *)&cr.m_collectiveCrawlDelay - x;
 	m->m_type  = TYPE_FLOAT;
@@ -8805,63 +8805,70 @@ void Parms::init ( ) {
 	m->m_units = "seconds";
 	m++;
 
-	m->m_cgi   = "dbapi";
+	m->m_cgi   = "apiUrl";
 	m->m_xml   = "diffbotApiUrl";
+	m->m_title = "diffbot api url";
 	m->m_off   = (char *)&cr.m_diffbotApiUrl - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
 	m++;
 
-	m->m_cgi   = "dbucp";
+	m->m_cgi   = "urlCrawlPattern";
 	m->m_xml   = "diffbotUrlCrawlPattern";
+	m->m_title = "url crawl pattern";
 	m->m_off   = (char *)&cr.m_diffbotUrlCrawlPattern - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
 	m++;
 
-	m->m_cgi   = "dbupp";
+	m->m_cgi   = "urlProcessPattern";
 	m->m_xml   = "diffbotUrlProcessPattern";
+	m->m_title = "url process pattern";
 	m->m_off   = (char *)&cr.m_diffbotUrlProcessPattern - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
 	m++;
 
-	m->m_cgi   = "dbppp";
+	m->m_cgi   = "pageProcessPattern";
 	m->m_xml   = "diffbotPageProcessPattern";
+	m->m_title = "page process pattern";
 	m->m_off   = (char *)&cr.m_diffbotPageProcessPattern - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
 	m++;
 
-	m->m_cgi   = "dbucre";
+	m->m_cgi   = "urlCrawlRegEx";
 	m->m_xml   = "diffbotUrlCrawlRegEx";
+	m->m_title = "url crawl regex";
 	m->m_off   = (char *)&cr.m_diffbotUrlCrawlRegEx - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
 	m++;
 
-	m->m_cgi   = "dbupre";
+	m->m_cgi   = "urlProcessRegEx";
 	m->m_xml   = "diffbotUrlProcessRegEx";
+	m->m_title = "url process regex";
 	m->m_off   = (char *)&cr.m_diffbotUrlProcessRegEx - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
 	m++;
 
-	m->m_cgi   = "dbopn";
+	m->m_cgi   = "onlyProcessIfNew";
 	m->m_xml   = "diffbotOnlyProcessIfNew";
+	m->m_title = "onlyProcessIfNew";
 	m->m_off   = (char *)&cr.m_diffbotOnlyProcessIfNew - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "1";
 	m++;
 
-	m->m_cgi   = "dbseed";
+	m->m_cgi   = "seeds";
 	m->m_xml   = "diffbotSeeds";
 	m->m_off   = (char *)&cr.m_diffbotSeeds - x;
 	m->m_type  = TYPE_SAFEBUF;
@@ -8877,7 +8884,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m++;
 
-	m->m_cgi   = "maxtocrawl";
+	m->m_cgi   = "maxToCrawl";
 	m->m_title = "max to crawl";
 	m->m_xml   = "maxToCrawl";
 	m->m_off   = (char *)&cr.m_maxToCrawl - x;
@@ -8886,7 +8893,7 @@ void Parms::init ( ) {
 	m->m_def   = "100001";
 	m++;
 
-	m->m_cgi   = "maxtoprocess";
+	m->m_cgi   = "maxToProcess";
 	m->m_title = "max to process";
 	m->m_xml   = "maxToProcess";
 	m->m_off   = (char *)&cr.m_maxToProcess - x;
@@ -16608,12 +16615,15 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	     m->m_type == TYPE_SAFEBUF ||
 	     m->m_type == TYPE_STRINGNONEMPTY ) {
 		// point to string
-		val = obj + m->m_off;
+		//val = obj + m->m_off;
 		// Parm::m_size is the max string size
-		if ( occNum > 0 ) val += occNum * m->m_size;
+		//if ( occNum > 0 ) val += occNum * m->m_size;
 		// stringlength + 1. no just make it the whole string in
 		// case it does not use the \0 protocol
-		valSize = m->m_max;
+		//valSize = m->m_max;
+		val = parmValString;
+		// include \0
+		valSize = gbstrlen(val) + 1;
 	}
 	else if ( m->m_type == TYPE_LONG ) {
 		// watch out for unsigned 32-bit numbers, so use atoLL()
@@ -16628,7 +16638,7 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	}
 	else if ( m->m_type == TYPE_LONG_LONG ) {
 		val64 = atoll(parmValString);
-		val = (char *)&val32;
+		val = (char *)&val64;
 		valSize = 8;
 	}
 	else if ( m->m_type == TYPE_BOOL ||
@@ -16746,29 +16756,12 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 					  long page ){
 
-	// this points into a static buf so be careful!
-	char *c = hr->getString("c",NULL);
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
 
-	if ( ! c || ! c[0] ) {
-		//log("parms: no coll given");
-		//g_errno = ENOCOLLREC;
-		//return false;
-		// might be a page without coll or parms that need it
-		//return true;
-		// might be a collection-less command like 'gb stop'
-		c = NULL;
-	}
-
-	// . this is the collection we are operating on
-	// . returns -1 if no collection, it's the global g_conf record
-	// . if crawl was deleted this will be -1 ?
-	// . assume we are operating on the g_conf class, not a collrec
-	CollectionRec *cr = NULL;
-
-	if ( c ) {
-		cr = g_collectiondb.getRec ( hr );
-		if ( ! cr ) log("parms: coll not found");
-	}
+	//if ( c ) {
+	//	cr = g_collectiondb.getRec ( hr );
+	//	if ( ! cr ) log("parms: coll not found");
+	//}
 	
 	// might be g_conf specific, not coll specific
 	bool hasPerm = false;
@@ -17711,6 +17704,23 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 			return false;
 		}
 		dst += parm->m_size * occNum;
+	}
+
+	// show it
+	log("parms: updating parm \"%s\" (%s) (datasize=%li)",
+	    parm->m_title,parm->m_cgi,dataSize);
+
+	// if parm is a safebuf...
+	if ( parm->m_type == TYPE_SAFEBUF ) {
+		// point to it
+		SafeBuf *sb = (SafeBuf *)dst;
+		// nuke it
+		sb->purge();
+		// this means that we can not use string POINTERS as parms!!
+		sb->safeMemcpy ( data , dataSize );
+		// ensure null terminated
+		sb->nullTerm();
+		return true;
 	}
 
 	// and copy the data into collrec or g_conf

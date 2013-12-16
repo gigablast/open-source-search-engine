@@ -2206,14 +2206,17 @@ static class HelpItem s_his[] = {
 	 "be ignored. "
 	 "An empty regular expression matches all urls."},
 
+	{"apiUrl","Diffbot api url to use. We automatically append "
+	 "token and url to it."},
 
-	{"expression","A pattern to match in a URL. List up to 100 "
-	 "expression/action pairs in the HTTP request. "
-	 "Example expressions:"},
-	{"action","Take the appropriate action when preceeding pattern is "
-	 "matched. Specify multiple expression/action pairs to build a "
-	 "table of filters. Each URL being spidered will take the given "
-	 "action of the first expression it matches. Example actions:"},
+
+	//{"expression","A pattern to match in a URL. List up to 100 "
+	// "expression/action pairs in the HTTP request. "
+	// "Example expressions:"},
+	//{"action","Take the appropriate action when preceeding pattern is "
+	// "matched. Specify multiple expression/action pairs to build a "
+	// "table of filters. Each URL being spidered will take the given "
+	// "action of the first expression it matches. Example actions:"},
 
 
 	{NULL,NULL}

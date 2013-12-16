@@ -1055,10 +1055,24 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 	return true;
 }
 
-
 // get coll rec specified in the HTTP request
 CollectionRec *Collectiondb::getRec ( HttpRequest *r ) {
 	char *coll = r->getString ( "c" );
+	if ( coll && ! coll[0] ) coll = NULL;
+	// maybe it is crawlbot?
+	char *name = NULL;
+	char *token = NULL;
+	if ( ! coll ) {
+		name = r->getString("name");
+		token = r->getString("token");
+	}
+	char tmp[MAX_COLL_LEN+1];
+	if ( ! coll && token && name ) {
+		snprintf(tmp,MAX_COLL_LEN,"%s-%s",token,name);
+		coll = tmp;
+	}
+	// give up?
+	if ( ! coll ) return NULL;
 	//if ( ! coll || ! coll[0] ) coll = g_conf.m_defaultColl;
 	return g_collectiondb.getRec ( coll );
 }
