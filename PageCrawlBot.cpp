@@ -2487,9 +2487,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		unsigned long long rand64 = (unsigned long long) r1;
 		rand64 <<= 32;
 		rand64 |=  r2;
+		char newCollName[MAX_COLL_LEN+1];
+		snprintf(newCollName,MAX_COLL_LEN,"%s-%016llx",
+			 token , rand64 );
 		// first print "add new collection"
 		sb.safePrintf("[ <a href=/crawlbot?name=%016llx&token=%s&"
-			      "format=html>"
+			      "format=html&addcrawl=%s>"
 			      "add new crawl"
 			      "</a> ] &nbsp; "
 			      "[ <a href=/crawlbot?token=%s>"
@@ -2497,6 +2500,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</a> ] &nbsp; "
 			      , rand64
 			      , token
+			      , newCollName
 			      , token
 			      );
 	}

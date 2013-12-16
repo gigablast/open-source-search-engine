@@ -190,7 +190,7 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 // 0 for regular collection
 // 1 for custom crawl
 // 2 for bulk job
-bool CommandAddColl2 ( char *rec , char customCrawl ) {
+bool CommandAddColl ( char *rec , char customCrawl ) {
 
 	// caller must specify collnum
 	collnum_t collnum = getCollnumFromParmRec ( rec );
@@ -228,16 +228,16 @@ bool CommandAddColl2 ( char *rec , char customCrawl ) {
 }
 
 // all nodes are guaranteed to add the same collnum for the given name
-bool CommandAddColl ( char *rec ) {
-	return CommandAddColl2 ( rec , 0 );
+bool CommandAddColl0 ( char *rec ) { // regular collection
+	return CommandAddColl ( rec , 0 );
 }
 
-bool CommandAddCustomCrawl ( char *rec ) {
-	return CommandAddColl2 ( rec , 1 );
+bool CommandAddColl1 ( char *rec ) { // custom crawl
+	return CommandAddColl ( rec , 1 );
 }
 
-bool CommandAddBulkJob ( char *rec ) {
-	return CommandAddColl2 ( rec , 2 );
+bool CommandAddColl2 ( char *rec ) { // bulk job
+	return CommandAddColl ( rec , 2 );
 }
 
 // . returns true and sets g_errno on error
@@ -8947,10 +8947,28 @@ void Parms::init ( ) {
 
 	m->m_title = "add collection";
 	m->m_desc  = "add a new collection";
-	m->m_cgi   = "add";
+	m->m_cgi   = "addColl";
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
-	m->m_func  = CommandAddColl;
+	m->m_func  = CommandAddColl0;
+	m->m_cast  = 1;
+	m++;
+
+	m->m_title = "add custom crawl";
+	m->m_desc  = "add custom crawl";
+	m->m_cgi   = "addCrawl";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_func  = CommandAddColl1;
+	m->m_cast  = 1;
+	m++;
+
+	m->m_title = "add bulk job";
+	m->m_desc  = "add bulk job";
+	m->m_cgi   = "addBulk";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_func  = CommandAddColl2;
 	m->m_cast  = 1;
 	m++;
 
@@ -16598,16 +16616,24 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	char val8;
 	float valf;
 
+	/*
 	char *obj = NULL;
-
+	// we might be adding a collnum if a collection that is being
+	// added via the CommandAddColl0() "addColl" or "addCrawl" or
+	// "addBulk" commands. they will reserve the collnum, so it might
+	// not be ready yet.
 	if ( collnum != -1 ) {
 		CollectionRec *cr = g_collectiondb.getRec ( collnum );
-		if ( ! cr ) return false;
-		obj = (char *)cr;
+		if ( cr ) obj = (char *)cr;
+		//	log("parms: no coll rec for %li",(long)collnum);
+		//	return false;
+		//}
+		//obj = (char *)cr;
 	}
 	else {
 		obj = (char *)&g_conf;
 	}
+	*/
 
 
 	if ( m->m_type == TYPE_STRING || 
@@ -16659,9 +16685,9 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	}
 	else if ( m->m_type == TYPE_IP ) {
 		// point to string
-		val = obj + m->m_off;
+		//val = obj + m->m_off;
 		// Parm::m_size is the max string size
-		if ( occNum > 0 ) val += occNum * m->m_size;
+		//if ( occNum > 0 ) val += occNum * m->m_size;
 		// stringlength + 1. no just make it the whole string in
 		// case it does not use the \0 protocol
 		val32 = atoip(parmValString);
@@ -16799,11 +16825,11 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// if its a resetcoll/restartcoll/addcoll we have to
 		// get the next available collnum and use that for setting
 		// any additional parms. that is the coll it will act on.
-		if ( strcmp(m->m_title,"addcoll") == 0 ||
-		     strcmp(m->m_title,"addcrawl") == 0 ||
-		     strcmp(m->m_title,"addbulk" ) == 0 ||
-		     strcmp(m->m_title,"resetcoll" ) == 0 ||
-		     strcmp(m->m_title,"restartcoll" ) == 0 ) {
+		if ( strcmp(m->m_cgi,"addColl") == 0 ||
+		     strcmp(m->m_cgi,"addCrawl") == 0 ||
+		     strcmp(m->m_cgi,"addBulk" ) == 0 ||
+		     strcmp(m->m_cgi,"reset" ) == 0 ||
+		     strcmp(m->m_cgi,"restart" ) == 0 ) {
 			// if we wanted to we could make the data the
 			// new parmCollnum since we already store the old
 			// collnum in the parm rec key
@@ -17636,17 +17662,6 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 
 	g_errno = 0;
 
-	// "cr" will remain null when updating g_conf and collnum -1
-	CollectionRec *cr = NULL;
-	if ( collnum >= 0 ) {
-		cr = g_collectiondb.getRec ( collnum );
-		if ( ! cr ) {
-			log("parmdb: invalid collnum for parm");
-			g_errno = ENOCOLLREC;
-			return true;
-		}
-	}
-
 	Parm *parm = getParmFromParmRec ( rec );
 
 	if ( ! parm ) {
@@ -17678,6 +17693,17 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		if ( parm->m_func2 ( rec , we ) ) return true;
 		// it blocked! it will call we->m_callback when done
 		return false;
+	}
+
+	// "cr" will remain null when updating g_conf and collnum -1
+	CollectionRec *cr = NULL;
+	if ( collnum >= 0 ) {
+		cr = g_collectiondb.getRec ( collnum );
+		if ( ! cr ) {
+			log("parmdb: invalid collnum for parm");
+			g_errno = ENOCOLLREC;
+			return true;
+		}
 	}
 
 	// what are we updating?
