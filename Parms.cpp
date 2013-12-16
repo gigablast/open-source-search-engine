@@ -267,10 +267,10 @@ bool CommandRestartColl ( char *rec , WaitEntry *we ) {
 		return false;
 	// . it is a NEW ptr now!
 	// . collname is same but collnum will be different.
-	CollectionRec *cr = g_collectiondb.getRec( collnum );
+	//CollectionRec *cr = g_collectiondb.getRec( we->m_newCollnum );
 	// if reset from crawlbot api page then enable spiders
 	// to avoid user confusion
-	if ( cr ) cr->m_spideringEnabled = 1;
+	//if ( cr ) cr->m_spideringEnabled = 1;
 	// all done
 	return true;
 }
@@ -8938,7 +8938,7 @@ void Parms::init ( ) {
 
 	m->m_title = "delete collection";
 	m->m_desc  = "delete a collection";
-	m->m_cgi   = "delcoll";
+	m->m_cgi   = "delete";
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
 	m->m_func2 = CommandDeleteColl;
@@ -8947,7 +8947,7 @@ void Parms::init ( ) {
 
 	m->m_title = "add collection";
 	m->m_desc  = "add a new collection";
-	m->m_cgi   = "addcoll";
+	m->m_cgi   = "add";
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
 	m->m_func  = CommandAddColl;
@@ -8956,7 +8956,7 @@ void Parms::init ( ) {
 
 	m->m_title = "reset collection";
 	m->m_desc  = "reset collection";
-	m->m_cgi   = "resetcoll";
+	m->m_cgi   = "reset";
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
 	m->m_func2 = CommandResetColl;
@@ -8965,7 +8965,7 @@ void Parms::init ( ) {
 
 	m->m_title = "restart collection";
 	m->m_desc  = "restart collection";
-	m->m_cgi   = "restartcoll";
+	m->m_cgi   = "restart";
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
 	m->m_func2 = CommandRestartColl;
