@@ -324,7 +324,8 @@ class Parms {
 				     collnum_t collnum , 
 				     long occNum ,
 				     Parm *m ) ;
-	bool convertHttpRequestToParmList (HttpRequest *hr,SafeBuf *parmList);
+	bool convertHttpRequestToParmList (HttpRequest *hr,SafeBuf *parmList,
+					   long page);
 	Parm *getParmFast2 ( long cgiHash32 ) ;
 	Parm *getParmFast1 ( char *cgi , long *occNum ) ;
 	bool broadcastParmList ( SafeBuf *parmList ,

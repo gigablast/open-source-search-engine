@@ -379,7 +379,7 @@ class CollectionRec {
 	char  m_scrapingEnabledNews     ;
 	char  m_scrapingEnabledBlogs    ;
 	char  m_scrapingEnabledProCog   ;
-	char  m_subsiteDetectionEnabled ;
+	//char  m_subsiteDetectionEnabled ;
 
 	// do not re-add outlinks to spiderdb if less than this many days
 	// have elapsed since the last time we added them to spiderdb
@@ -407,8 +407,8 @@ class CollectionRec {
 	char  m_doChineseDetection      ;
 	//char  m_breakWebRings           ;
 	char  m_delete404s              ;
-	char  m_enforceOldQuotas        ;
-	char  m_exactQuotas             ;
+	//char  m_enforceOldQuotas        ;
+	//char  m_exactQuotas             ;
 	//char  m_sequentialTitledbLookup ; // obsoleted
 	//char  m_restrictVotesToRoots    ;
 	char  m_restrictIndexdbForQuery ;
@@ -417,7 +417,7 @@ class CollectionRec {
 	char  m_defaultRatForHTML       ;
 	//char  m_indexLinkText         ;
 	//char  m_restrictIndexdbForQueryRaw ;
-	char  m_restrictIndexdbForSpider;
+	//char  m_restrictIndexdbForSpider;
 	char  m_siteClusterByDefault    ;
 	char  m_doInnerLoopSiteClustering;
 	char  m_enforceNewQuotas        ;
@@ -561,10 +561,10 @@ class CollectionRec {
 	char m_getDocIdScoringInfo;
 
 	// # of times to retry url b4 nuke
-	char  m_numRetries ;
+	//char  m_numRetries ;
 
 	// priority of urls being retried, usually higher than normal
-	char  m_retryPriority; 
+	//char  m_retryPriority; 
 
 	// new diffbot parms
 	SafeBuf m_diffbotToken;

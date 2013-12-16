@@ -3448,7 +3448,7 @@ void doCmdAll ( int fd, void *state ) {
 
 	SafeBuf parmList;
 	// returns false and sets g_errno on error
-	if ( ! g_parms.convertHttpRequestToParmList ( &s_r , &parmList ) ) {
+	if ( ! g_parms.convertHttpRequestToParmList ( &s_r , &parmList ,0) ) {
 		log("cmd: error converting command: %s",mstrerror(g_errno));
 		return;
 	}

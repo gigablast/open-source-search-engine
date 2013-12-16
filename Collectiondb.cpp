@@ -62,6 +62,12 @@ bool Collectiondb::init ( bool isDump ) {
 	updateTime();
 	// so we don't save again
 	m_needsSave = false;
+	// sanity
+	if ( RDB_END2 < RDB_END ) { 
+		log("db: increase RDB_END2 to at least %li in "
+		    "Collectiondb.h",(long)RDB_END);
+		char *xx=NULL;*xx=0;
+	}
 	// if it set g_errno, return false
 	//if ( g_errno ) return log("admin: Had init error: %s.",
 	//			  mstrerror(g_errno));

@@ -9276,6 +9276,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
+	/*
 	m->m_title = "subsite detection enabled";
 	m->m_desc  = "Add the \"sitepathdepth\" to tagdb if a hostname "
 		"is determined to have subsites at a particular depth.";
@@ -9284,6 +9285,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m++;
+	*/
 
 	m->m_title = "deduping enabled";
 	m->m_desc  = "When enabled, the spider will "
@@ -9429,6 +9431,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m++;
 
+	/*
 	m->m_title = "hours before adding unspiderable url to spiderdb";
 	m->m_desc  = "Hours to wait after trying to add an unspiderable url "
 		"to spiderdb again.";
@@ -9437,6 +9440,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "24";
 	m++;
+	*/
 
 	//m->m_title = "link text anomaly threshold";
 	//m->m_desc  = "Prevent pages from link voting for "
@@ -9449,6 +9453,7 @@ void Parms::init ( ) {
 	//m->m_def   = "2";
 	//m++;
 
+	/*
 	m->m_title = "enforce domain quotas on new docs";
 	m->m_desc  = "If this is true then new documents will be removed "
 		"from the index if the quota for their domain "
@@ -9489,6 +9494,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m++;
+	*/
 
 	/*
 	m->m_title = "indexdb max total files to merge";
@@ -10476,6 +10482,7 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	/*
 	m->m_title = "number retries per url";
 	m->m_desc  = "How many times should the spider be "
 		"allowed to fail to download a particular web page before "
@@ -10500,7 +10507,6 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	/*
 	m->m_title = "max pages in index";
 	m->m_desc  = "What is the maximum number of "
 		"pages that are permitted for this collection?";
@@ -16595,9 +16601,9 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 		valSize = m->m_max;
 	}
 	else if ( m->m_type == TYPE_LONG ) {
-		// TODO: what about an unsigned long 0xffffffff will overflow
-		val32 = atol(parmValString);
-		val = (char *)&val32;
+		// watch out for unsigned 32-bit numbers, so use atoLL()
+		val64 = atoll(parmValString);
+		val = (char *)&val64;
 		valSize = 4;
 	}
 	else if ( m->m_type == TYPE_FLOAT ) {
@@ -16612,6 +16618,8 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	}
 	else if ( m->m_type == TYPE_BOOL ||
 		  m->m_type == TYPE_BOOL2 ||
+		  m->m_type == TYPE_CHECKBOX ||
+		  m->m_type == TYPE_PRIORITY2 ||
 		  m->m_type == TYPE_CHAR ) {
 		val8 = atol(parmValString);
 		val = (char *)&val8;
@@ -16623,6 +16631,18 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 		valSize = gbstrlen(val)+1;
 		// scan for holes if we hit the limit
 		//if ( g_collectiondb.m_numRecs >= 1LL>>sizeof(collnum_t) )
+	}
+	else if ( m->m_type == TYPE_IP ) {
+		// point to string
+		val = obj + m->m_off;
+		// Parm::m_size is the max string size
+		if ( occNum > 0 ) val += occNum * m->m_size;
+		// stringlength + 1. no just make it the whole string in
+		// case it does not use the \0 protocol
+		val32 = atoip(parmValString);
+		// store ip in binary format
+		val = (char *)&val32;
+		valSize = 4;
 	}
 	else {
 		log("parms: shit unsupported parm type");
@@ -16708,7 +16728,8 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 
 
 // returns false and sets g_errno on error
-bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList){
+bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
+					  long page ){
 
 	// this points into a static buf so be careful!
 	char *c = hr->getString("c",NULL);
@@ -16793,6 +16814,16 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList){
 					   occNum ,
 					   m ) )
 			return false;
+	}
+
+	// if we are one page url filters, turn off all checkboxes!
+	// html should really transmit them as =0 if they are unchecked!!
+	// "fe" is a url filter expression for the first row.
+	if ( hr->hasField("fe") && page == PAGE_FILTERS && cr ) {
+		for ( long i = 0 ; i < MAX_FILTERS ; i++ ) {
+			cr->m_harvestLinks  [i] = 0;
+			cr->m_spidersEnabled[i] = 0;
+		}
 	}
 
 	//
@@ -16963,6 +16994,7 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 	// make a new parm transmit node
 	ParmNode *pn = (ParmNode *)mmalloc ( sizeof(ParmNode) , "parmnode" );
 	if ( ! pn ) return true;
+	pn->m_parmList.constructor();
 
 	// update the ticket #. we use this to keep things ordered too.
 	// this should never be zero since it starts off at zero.
