@@ -2418,10 +2418,10 @@ bool Parms::printParm ( SafeBuf* sb,
 	}
 	char cgi[64];
 	if ( m->m_cgi ) {
-		//if ( j > 0 ) sprintf ( cgi , "%s%li" , m->m_cgi , j );
-		//else         sprintf ( cgi , "%s"    , m->m_cgi     );
+		if ( j > 0 ) sprintf ( cgi , "%s%li" , m->m_cgi , j );
+		else         sprintf ( cgi , "%s"    , m->m_cgi     );
 		// let's try dropping the index # and just doing dup parms
-		sprintf ( cgi , "%s"    , m->m_cgi     );
+		//sprintf ( cgi , "%s"    , m->m_cgi     );
 	}
 	// . display title and description of the control/parameter
 	// . the input cell of some parameters are colored
@@ -2611,8 +2611,10 @@ bool Parms::printParm ( SafeBuf* sb,
 					 cgi,m->m_def, m->m_title);
 	}
 	else if ( t == TYPE_CHECKBOX ) {
-		char *ddd = "";
-		if ( *s ) ddd = " checked";
+		char *ddd1 = "";
+		char *ddd2 = "";
+		if ( *s ) ddd1 = " checked";
+		else      ddd2 = " checked";
 		// just show the parm name and value if printing in json
 		if ( isJSON ) {
 			if ( ! lastRow ) {
@@ -2622,21 +2624,32 @@ bool Parms::printParm ( SafeBuf* sb,
 			}
 		}
 		else {
+			sb->safePrintf("<center><nobr>");
 			// this is part of the "HACK" fix below. you have to
 			// specify the cgi parm in the POST request, and 
 			// unchecked checkboxes are not included in the POST 
 			// request.
 			if ( lastRow && m->m_page == PAGE_FILTERS ) 
-				sb->safePrintf("<center><input type=hidden ");
+				sb->safePrintf("<input type=hidden ");
 			else
-				sb->safePrintf("<center>"
-					       "<input type=checkbox ");
+				sb->safePrintf(//"<input type=checkbox ");
+					       "<nobr>On:<input type=radio ");
 			if ( m->m_page == PAGE_FILTERS)
 				sb->safePrintf("id=id_%s ",cgi);
 			
-			sb->safePrintf("value=1 name=%s%s>"
-				       "</center>",
-				       cgi,ddd);
+			sb->safePrintf("value=1 name=%s%s>",
+				       cgi,ddd1);
+			//
+			// repeat for off position
+			//
+			if ( ! lastRow || m->m_page != PAGE_FILTERS )  {
+				sb->safePrintf(" Off:<input type=radio ");
+				if ( m->m_page == PAGE_FILTERS)
+					sb->safePrintf("id=id_%s ",cgi);
+				sb->safePrintf("value=0 name=%s%s>",
+					       cgi,ddd2);
+			}
+			sb->safePrintf("</nobr></center>");
 		}
 	}
 	else if ( t == TYPE_CHAR )
@@ -16819,12 +16832,16 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	// if we are one page url filters, turn off all checkboxes!
 	// html should really transmit them as =0 if they are unchecked!!
 	// "fe" is a url filter expression for the first row.
-	if ( hr->hasField("fe") && page == PAGE_FILTERS && cr ) {
-		for ( long i = 0 ; i < MAX_FILTERS ; i++ ) {
-			cr->m_harvestLinks  [i] = 0;
-			cr->m_spidersEnabled[i] = 0;
-		}
-	}
+	//if ( hr->hasField("fe") && page == PAGE_FILTERS && cr ) {
+	//	for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
+	//		//cr->m_harvestLinks  [i] = 0;
+	//		//cr->m_spidersEnabled[i] = 0;
+	//		if ( ! addNewParmToList2 ( parmList ,
+	//					   cr->m_collnum,
+	//					   "0",
+	//					   i,
+	//	}
+	//}
 
 	//
 	// now add the parms that are NOT commands
