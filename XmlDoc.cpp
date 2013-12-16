@@ -186,6 +186,8 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_metaList2.purge();
+
 	m_mySiteLinkInfoBuf.purge();
 	m_myPageLinkInfoBuf.purge();
 	m_myTempLinkInfoBuf.purge();
@@ -1956,6 +1958,12 @@ bool XmlDoc::indexDoc ( ) {
 	SpiderReply *nsr = getNewSpiderReply ();
 	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
 	if ( nsr->getRecSize() <= 1) { char *xx=NULL;*xx=0; }
+	if ( ! nsr ) {
+		log("doc: crap, could not even add spider reply "
+		    "to indicate internal error: %s",mstrerror(g_errno));
+		if ( ! g_errno ) g_errno = EBADENGINEER;
+		return true;
+	}
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return true;
@@ -7690,7 +7698,7 @@ long long *XmlDoc::getExactContentHash64 ( ) {
 			if ( lastWasSpace ) continue;
 			lastWasSpace = true;
 			// treat all white space as a space
-			h64 ^= g_hashtab[pos][' '];
+			h64 ^= g_hashtab[pos][(unsigned char)' '];
 			pos++;
 			continue;
 		}
@@ -44097,6 +44105,9 @@ SafeBuf *XmlDoc::getQueryLinkBuf(SafeBuf *docIdList, bool doMatchingQueries) {
 
 // this is still used by Title.cpp to get the title: field quickly
 char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
+
+	if ( ! json ) return NULL;
+
 	// get length
 	long fieldLen = gbstrlen(field);
 	// keep track of in a quote or not

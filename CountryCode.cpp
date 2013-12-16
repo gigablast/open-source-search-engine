@@ -1144,59 +1144,59 @@ int CountryCode::fillRegexTable(void) {
 		switch(regcomp(&s_countryRegex[x], s_countryRegexSource[x],
 					REG_EXTENDED | REG_ICASE | REG_NEWLINE | REG_NOSUB)) {
 			case REG_BADBR:
-				fprintf(stderr, "init: Country regex: %d: Invalid use of back reference operator.", x);
+				log( "init: Country regex: %d: Invalid use of back reference operator.", x);
 				break;
 
 			case REG_BADPAT:
-				fprintf(stderr, "init: Country regex: %d: Invalid use of pattern operators such as group or list.", x);
+				log( "init: Country regex: %d: Invalid use of pattern operators such as group or list.", x);
 				break;
 
 			case REG_BADRPT:
-				fprintf(stderr, "init: Country regex: %d: Invalid use of repetition operators.", x);
+				log( "init: Country regex: %d: Invalid use of repetition operators.", x);
 				break;
 
 			case REG_EBRACE:
-				fprintf(stderr, "init: Country regex: %d: Un-matched brace interval operators.", x);
+				log( "init: Country regex: %d: Un-matched brace interval operators.", x);
 				break;
 
 			case REG_EBRACK:
-				fprintf(stderr, "init: Country regex: %d: Un-matched bracket list operators.", x);
+				log( "init: Country regex: %d: Un-matched bracket list operators.", x);
 				break;
 
 			case REG_ECOLLATE:
-				fprintf(stderr, "init: Country regex: %d: Invalid collating element.", x);
+				log( "init: Country regex: %d: Invalid collating element.", x);
 				break;
 
 			case REG_ECTYPE:
-				fprintf(stderr, "init: Country regex: %d: Unknown character class name.", x);
+				log( "init: Country regex: %d: Unknown character class name.", x);
 				break;
 
 			case REG_EEND:
-				fprintf(stderr, "init: Country regex: %d: Non specific error.", x);
+				log( "init: Country regex: %d: Non specific error.", x);
 				break;
 
 			case REG_EESCAPE:
-				fprintf(stderr, "init: Country regex: %d: Trailing backslash.", x);
+				log( "init: Country regex: %d: Trailing backslash.", x);
 				break;
 
 			case REG_EPAREN:
-				fprintf(stderr, "init: Country regex: %d: Un-matched parenthesis group operators.", x);
+				log( "init: Country regex: %d: Un-matched parenthesis group operators.", x);
 				break;
 
 			case REG_ERANGE:
-				fprintf(stderr, "init: Country regex: %d: Invalid use of the range operator.", x);
+				log( "init: Country regex: %d: Invalid use of the range operator.", x);
 				break;
 
 			case REG_ESIZE:
-				fprintf(stderr, "init: Country regex: %d: Compiled regular expression requires a pattern buffer larger than 64Kb.", x);
+				log( "init: Country regex: %d: Compiled regular expression requires a pattern buffer larger than 64Kb.", x);
 				break;
 
 			case REG_ESPACE:
-				fprintf(stderr, "init: Country regex: %d: The regex routines ran out of memory.", x);
+				log( "init: Country regex: %d: The regex routines ran out of memory.", x);
 				break;
 
 			case REG_ESUBREG:
-				fprintf(stderr, "init: Country regex: %d: Invalid back reference to a subexpression.", x);
+				log( "init: Country regex: %d: Invalid back reference to a subexpression.", x);
 				break;
 		}
 	}
@@ -1239,10 +1239,10 @@ int CountryCode::createHashTable(void) {
 	catcountryrec_t ccr;
 	SafeBuf sb(tmpbuf, 2048);
 
-	fprintf(stderr, "cat: Creating category country/language table.\n");
+	log( "cat: Creating category country/language table.\n");
 
 	if(!ht.set(2,NULL,0,"ctrycode")) {
-		fprintf(stderr, "cat: Could not allocate memory for table.\n");
+		log( "cat: Could not allocate memory for table.\n");
 		return(0);
 	}
 	for(long idx = 0; idx < numcats; idx++) {
@@ -1251,7 +1251,7 @@ int CountryCode::createHashTable(void) {
 		g_categories->printPathFromId(&sb, catid, true);
 		if(!sb.getBufStart()) continue;
 		if(!(numcats % 1000))
-			fprintf(stderr, "init: %ld/%ld Generated %llu so far...\n",
+			log( "init: %ld/%ld Generated %llu so far...\n",
 					numcats,
 					idx,
 					entries);
@@ -1263,15 +1263,15 @@ int CountryCode::createHashTable(void) {
 			char *xx = NULL; *xx = 0;
 		}
 		if(!ht.addKey(catid, ccr.lval)) {
-			fprintf(stderr, "init: Could not add %ld (%ld)\n", catid, ccr.lval);
+			log( "init: Could not add %ld (%ld)\n", catid, ccr.lval);
 			continue;
 		}
 		entries++;
 	}
 
 	ht.save(g_hostdb.m_dir, "catcountry.dat");
-	fprintf(stderr, "Added %llu country entries from DMOZ to %s/catcountry.dat.\n", entries,g_hostdb.m_dir);
-	fprintf(stderr, "Slots %ld, Used Slots %ld.\n", ht.getNumSlots(), ht.getNumSlotsUsed());
+	log( "Added %llu country entries from DMOZ to %s/catcountry.dat.\n", entries,g_hostdb.m_dir);
+	log( "Slots %ld, Used Slots %ld.\n", ht.getNumSlots(), ht.getNumSlotsUsed());
 
 	freeRegexTable();
 	return(1);
@@ -1360,7 +1360,7 @@ void CountryCode::debugDumpNumbers(void) {
 		ccr.lval = 0L;
 		ccr.lval = s_catToCountry.getValueFromSlot(slot);
 		if(ccr.lval)
-			fprintf(stderr, "Slot %ld has lang %d, country %d (%ld)\n",
+			log( "Slot %ld has lang %d, country %d (%ld)\n",
 					slot, ccr.sval.lang, ccr.sval.country, ccr.lval);
 	}
 }

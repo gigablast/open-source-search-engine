@@ -212,7 +212,7 @@ bool CommandAddColl2 ( char *rec , char customCrawl ) {
 
 	if ( gbstrlen(collName) > MAX_COLL_LEN ) {
 		log("crawlbot: collection name too long");
-		return NULL;
+		return false;
 	}
 
 	// this saves it to disk! returns false and sets g_errno on error.
@@ -16689,7 +16689,7 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 
 	if ( collnum != -1 ) {
 		CollectionRec *cr = g_collectiondb.getRec ( collnum );
-		if ( ! cr ) return NULL;
+		if ( ! cr ) return false;
 		obj = (char *)cr;
 	}
 	else {

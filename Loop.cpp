@@ -783,6 +783,12 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 		// do not spam for msg99 handler so much
 		if ( g_callSlot->m_msgType == 0x99 && g_transIdCount != 50 )
 			logIt = false;
+		// it's not safe to call fprintf() even with 
+		// mutex locks for sig handlers with pthreads
+		// going on!!!
+#ifdef PTHREADS
+		logIt = false;
+#endif
 		// panic if hogging
 		if ( logIt ) {
 			if ( g_callSlot->m_callback )
@@ -813,8 +819,10 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 	     // likewise if doing a page parser test...
 	     ! g_inPageParser &&
 	     ! g_inPageInject     ) {
+#ifndef PTHREADS
 		// i guess sometimes niceness 1 things call niceness 0 things?
 		log("loop: crap crap crap!!!");
+#endif
 		//char *xx=NULL;*xx=0; }
 	}
 	// basically ignore this alarm if already in a quickpoll
@@ -834,8 +842,10 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 	// if we missed to many, then dump core
 	if ( g_niceness == 1 && g_missedQuickPolls >= 4 ) {
 		//g_inSigHandler = true;
-	  // NOT SAFE!
-	  //log("loop: missed quickpoll");
+		// NOT SAFE for pthreads cuz we're in sig handler
+#ifndef PTHREADS
+		log("loop: missed quickpoll");
+#endif
 		//g_inSigHandler = false;
 		// seems to core a lot in gbcompress() we need to
 		// put a quickpoll into zlib deflate() or
@@ -865,7 +875,9 @@ void sigalrmHandler ( int x , siginfo_t *info , void *y ) {
 	if ( g_conf.m_maxHeartbeatDelay <= 0 ) return;
 	if ( g_nowApprox - g_process.m_lastHeartbeatApprox > 
 	     g_conf.m_maxHeartbeatDelay ) {
+#ifndef PTHREADS
 		logf(LOG_DEBUG,"gb: CPU seems blocked. Forcing core.");
+#endif
 		//char *xx=NULL; *xx=0; 
 	}
 

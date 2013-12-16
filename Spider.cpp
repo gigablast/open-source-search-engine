@@ -4416,9 +4416,8 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	ei->m_collnum       = cr->m_collnum;
 
 	SafeBuf *buf = &ei->m_spiderStatusMsg;
-	// stop it from accumulating
+	// stop it from accumulating status msgs
 	buf->reset();
-
 	long status = -1;
 	getSpiderStatusMsg ( cr , buf , &status );
 					 
@@ -10643,11 +10642,17 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		// this is now needed for alignment by the receiver
 		ci->m_collnum = i;
 
+		SpiderColl *sc = cr->m_spiderColl;
+
 		// if we haven't spidered anything in 1 min assume the
 		// queue is basically empty...
 		if ( ci->m_lastSpiderAttempt &&
 		     ci->m_lastSpiderCouldLaunch &&
 		     ci->m_hasUrlsReadyToSpider &&
+		     // no spiders currently out. i've seen a couple out
+		     // waiting for a diffbot reply. wait for them to
+		     // return before ending the round...
+		     sc && sc->m_spidersOut == 0 &&
 		     // it must have launched at least one url! this should
 		     // prevent us from incrementing the round # at the gb
 		     // process startup
