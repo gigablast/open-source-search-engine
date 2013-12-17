@@ -637,7 +637,7 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 	}
 
 	
-	log("rdb: %s base from collrec "
+	log(LOG_DEBUG,"rdb: %s base from collrec "
 	    "rdb=%s rdbid=%li coll=%s collnum=%li newcollnum=%li",
 	    msg,m_dbname,(long)m_rdbId,coll,(long)collnum,
 	    (long)newCollnum);
@@ -668,7 +668,7 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 	// move into that dir
 	::rename ( oldname , newname );
 
-	logf ( LOG_INFO, "admin: cleared data for coll \"%s\" (%li) rdb=%s.",
+	log ( LOG_DEBUG, "db: cleared data for coll \"%s\" (%li) rdb=%s.",
 	       coll,(long)collnum ,getDbnameFromId(m_rdbId));
 
 	return true;

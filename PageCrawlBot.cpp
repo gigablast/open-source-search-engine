@@ -2492,7 +2492,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			 token , rand64 );
 		// first print "add new collection"
 		sb.safePrintf("[ <a href=/crawlbot?name=%016llx&token=%s&"
-			      "format=html&addcrawl=%s>"
+			      "format=html&addCrawl=%s>"
 			      "add new crawl"
 			      "</a> ] &nbsp; "
 			      "[ <a href=/crawlbot?token=%s>"

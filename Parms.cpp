@@ -9446,7 +9446,7 @@ void Parms::init ( ) {
 	m->m_title = "use robots.txt";
 	m->m_desc  = "If this is true Gigablast will respect "
 		"the robots.txt convention.";
-	m->m_cgi   = "urt";
+	m->m_cgi   = "obeyRobots";
 	m->m_off   = (char *)&cr.m_useRobotsTxt - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
@@ -9454,7 +9454,7 @@ void Parms::init ( ) {
 
 	m->m_title = "restrict domain";
 	m->m_desc  = "Keep crawler on same domain as seed urls?";
-	m->m_cgi   = "rsd";
+	m->m_cgi   = "restrictDomain";
 	m->m_off   = (char *)&cr.m_restrictDomain - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
@@ -16648,8 +16648,8 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 		// case it does not use the \0 protocol
 		//valSize = m->m_max;
 		val = parmValString;
-		// include \0
-		valSize = gbstrlen(val) + 1;
+		// do not include \0
+		valSize = gbstrlen(val);
 	}
 	else if ( m->m_type == TYPE_LONG ) {
 		// watch out for unsigned 32-bit numbers, so use atoLL()
@@ -16756,7 +16756,12 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 	if ( m->m_type == TYPE_SAFEBUF ) {
 		SafeBuf *sb = (SafeBuf *)data;
 		data = sb->getBufStart();
-		dataSize = sb->length() + 1; // include \0
+		dataSize = sb->length(); // do not include \0
+		// if just a \0 then make it empty
+		if ( dataSize && !data[0] ) {
+			data = NULL;
+			dataSize = 0;
+		}
 	}
 
 	//long occNum = -1;
@@ -17733,8 +17738,8 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	}
 
 	// show it
-	log("parms: updating parm \"%s\" (%s) (datasize=%li)",
-	    parm->m_title,parm->m_cgi,dataSize);
+	log("parms: updating parm (%s) (datasize=%li)",
+	    parm->m_cgi,dataSize);
 
 	// if parm is a safebuf...
 	if ( parm->m_type == TYPE_SAFEBUF ) {
@@ -17743,7 +17748,8 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		// nuke it
 		sb->purge();
 		// this means that we can not use string POINTERS as parms!!
-		sb->safeMemcpy ( data , dataSize );
+		if ( data && dataSize && data[0] )
+			sb->safeMemcpy ( data , dataSize );
 		// ensure null terminated
 		sb->nullTerm();
 		return true;
