@@ -181,6 +181,7 @@ bool Collectiondb::addExistingColl ( char *coll,
 	// ensure does not already exist in memory
 	if ( getCollnum ( coll ) >= 0 ) {
 		g_errno = EEXIST;
+		char *xx=NULL;*xx=0;
 		return log("admin: Trying to create collection \"%s\" but "
 			   "already exists in memory.",coll);
 	}
@@ -231,7 +232,10 @@ bool Collectiondb::addNewColl ( char *coll ,
 				char customCrawl ,
 				char *cpc , 
 				long cpclen , 
-				bool saveIt ) {
+				bool saveIt ,
+				// Parms.cpp reserves this so it can be sure
+				// to add the same collnum to every shard
+				collnum_t newCollnum ) {
 
 	// ensure coll name is legit
 	char *p = coll;
@@ -249,31 +253,31 @@ bool Collectiondb::addNewColl ( char *coll ,
 	}
 	// . scan for holes
 	// . i is also known as the collection id
-	long i;
+	//long i = (long)newCollnum;
 	// no longer fill empty slots because if they do a reset then
 	// a new rec right away it will be filled with msg4 recs not
 	// destined for it. Later we will have to recycle some how!!
 	//else for ( i = 0 ; i < m_numRecs ; i++ ) if ( ! m_recs[i] ) break;
 	// right now we #define collnum_t short. so do not breach that!
-	if ( m_numRecs < 0x7fff ) {
-		// set it
-		i = m_numRecs;
-		// claim it
-		// we don't do it here, because we check i below and
-		// increment m_numRecs below.
-		//m_numRecs++;
-	}
+	//if ( m_numRecs < 0x7fff ) {
+	//	// set it
+	//	i = m_numRecs;
+	//	// claim it
+	//	// we don't do it here, because we check i below and
+	//	// increment m_numRecs below.
+	//	//m_numRecs++;
+	//}
 	// TODO: scan for holes here...
-	else { 
-		char *xx=NULL;*xx=0; }
+	//else { 
+	if ( newCollnum < 0 ) { char *xx=NULL;*xx=0; }
 
 	// ceiling?
-	long long maxColls = 1LL<<(sizeof(collnum_t)*8);
-	if ( i >= maxColls ) {
-		g_errno = ENOBUFS;
-		return log("admin: Limit of %lli collection reached. "
-			   "Collection not created.",maxColls);
-	}
+	//long long maxColls = 1LL<<(sizeof(collnum_t)*8);
+	//if ( i >= maxColls ) {
+	//	g_errno = ENOBUFS;
+	//	return log("admin: Limit of %lli collection reached. "
+	//		   "Collection not created.",maxColls);
+	//}
 	// if empty... bail, no longer accepted, use "main"
 	if ( ! coll || !coll[0] ) {
 		g_errno = EBADENGINEER;
@@ -293,12 +297,13 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// ensure does not already exist in memory
 	if ( getCollnum ( coll ) >= 0 ) {
 		g_errno = EEXIST;
+		char *xx=NULL;*xx=0;
 		return log("admin: Trying to create collection \"%s\" but "
 			   "already exists in memory.",coll);
 	}
 	// MDW: ensure not created on disk since time of last load
 	char dname[512];
-	sprintf(dname, "%scoll.%s.%li/",g_hostdb.m_dir,coll,i);
+	sprintf(dname, "%scoll.%s.%li/",g_hostdb.m_dir,coll,(long)newCollnum);
 	DIR *dir = opendir ( dname );
 	if ( dir ) closedir ( dir );
 	if ( dir ) {
@@ -346,7 +351,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// set coll id and coll name for coll id #i
 	strcpy ( cr->m_coll , coll );
 	cr->m_collLen = gbstrlen ( coll );
-	cr->m_collnum = i;
+	cr->m_collnum = newCollnum;
 
 	// point to this, so Rdb and RdbBase can reference it
 	coll = cr->m_coll;
@@ -533,6 +538,9 @@ bool Collectiondb::registerCollRec ( CollectionRec *cr ,
 	if ( ! g_collTable.addKey ( &h64 , &i ) ) 
 		goto hadError;
 
+	log("coll: adding key4 %llu for coll \"%s\" (%li)",h64,cr->m_coll,
+	    (long)i);
+
 	// store our collrec ptr in there
 	m_recs[i] = cr;
 
@@ -711,7 +719,9 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	char *coll = cr->m_coll;
 
 	// note it
-	log(LOG_INFO,"db: deleting coll \"%s\"",coll);
+	log(LOG_INFO,"db: deleting coll \"%s\" (%li)",coll,
+	    (long)cr->m_collnum);
+
 	// we need a save
 	m_needsSave = true;
 
@@ -763,6 +773,12 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		cr->m_spiderColl = NULL;
 	}
 
+	// remove it from the hashtable that maps name to collnum too
+	long long h64 = hash64n(cr->m_coll);
+	g_collTable.removeKey ( &h64 );
+	log("coll: removing key %llu for coll \"%s\"",h64,coll);
+
+
 	// free it
 	mdelete ( cr, sizeof(CollectionRec),  "CollectionRec" ); 
 	delete ( cr );
@@ -774,10 +790,6 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	// and they added a new coll right away and it ended up getting
 	// recs from the deleted coll!!
 	//while ( ! m_recs[m_numRecs-1] ) m_numRecs--;
-
-	// remove it from the hashtable that maps name to collnum too
-	long long h64 = hash64n(coll);
-	g_collTable.removeKey ( &h64 );
 
 	// update the time
 	updateTime();
@@ -1034,9 +1046,16 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 
 	// readd it to the hashtable that maps name to collnum too
 	long long h64 = hash64n(cr->m_coll);
+
 	g_collTable.removeKey ( &h64 );
+
+	log("coll: removing key2 %llu for coll \"%s\" (%li)",h64,cr->m_coll,
+	    (long)oldCollnum);
+
 	g_collTable.addKey ( &h64 , &newCollnum );
 
+	log("coll: adding key3 %llu for coll \"%s\" (%li)",h64,cr->m_coll,
+	    (long)newCollnum);
 
 
 	// update RdbBase::m_collnum to new collnum

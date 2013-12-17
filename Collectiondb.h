@@ -110,7 +110,9 @@ class Collectiondb  {
 			  char customCrawl ,
 			  char *cpc , 
 			  long cpclen , 
-			  bool saveIt ) ;
+			  bool saveIt ,
+			  collnum_t newCollnum ) ;
+
 	bool registerCollRec ( CollectionRec *cr ,
 			       bool isDump ,
 			       bool isNew ) ;

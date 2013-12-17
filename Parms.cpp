@@ -192,10 +192,10 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 bool CommandAddColl ( char *rec , char customCrawl ) {
 
 	// caller must specify collnum
-	collnum_t collnum = getCollnumFromParmRec ( rec );
+	collnum_t newCollnum = getCollnumFromParmRec ( rec );
 
 	// sanity.
-	if ( collnum < 0 ) {
+	if ( newCollnum < 0 ) {
 		g_errno = ENOCOLLREC;
 		log("parms: bad collnum for AddColl");
 		return true;
@@ -219,7 +219,8 @@ bool CommandAddColl ( char *rec , char customCrawl ) {
 					   customCrawl ,
 					   NULL ,  // copy from
 					   0  , // copy from len
-					   true // save?
+					   true , // save?
+					   newCollnum
 					   ) )
 		return false;
 
@@ -16820,6 +16821,12 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	// know the token, so you have permission
 	if ( cr && cr->m_isCustomCrawl ) hasPerm = true;
 	if ( hr->isLocal() ) hasPerm = true;
+
+	// fix jenkins "GET /v2/crawl?token=crawlbottesting" request
+	char *name  = hr->getString("name");
+	char *token = hr->getString("token");
+	if ( ! cr && token ) hasPerm = true;
+
 	if ( ! hasPerm ) {
 		log("parms: no permission to set parms");
 		g_errno = ENOPERM;
@@ -16849,8 +16856,6 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	if ( strncmp(path,"/crawlbot",9) == 0 ) customCrawl = 1;
 	if ( strncmp(path,"/v2/crawl",9) == 0 ) customCrawl = 1;
 	if ( strncmp(path,"/v2/bulk" ,8) == 0 ) customCrawl = 2;
-	char *name  = hr->getString("name");
-	char *token = hr->getString("token");
 	bool hasAddCrawl = hr->hasField("addCrawl");
 	bool hasAddBulk  = hr->hasField("addBulk");
 	bool hasAddColl  = hr->hasField("addColl");
@@ -17865,11 +17870,12 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	if ( parm->m_type == TYPE_CMD ) {
 		// all parm rec data for TYPE_CMD should be ascii/utf8 chars
 		// and should be \0 terminated
-		//char *data = getDataFromRec();
+		char *data = getDataFromParmRec ( rec );
 		log("parmdb: running function for "
-		    "parm \"%s\" " // val=\"%s\"",
+		    "parm \"%s\" (collnum=%li) args=\"%s\""
 		    , parm->m_title
-		    //, data 
+		    , (long)collnum
+		    , data 
 		    );
 
 		// sets g_errno on error
@@ -17926,8 +17932,8 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	}
 
 	// show it
-	log("parms: updating parm (%s) (datasize=%li)",
-	    parm->m_cgi,dataSize);
+	log("parms: updating parm (%s) (cn=%li) (datasize=%li)",
+	    parm->m_cgi,(long)collnum,dataSize);
 
 	// if parm is a safebuf...
 	if ( parm->m_type == TYPE_SAFEBUF ) {
