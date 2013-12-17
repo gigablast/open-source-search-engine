@@ -113,7 +113,6 @@ key96_t makeParmKey ( collnum_t collnum , Parm *m , short occNum ) {
 //
 ////////
 
-
 bool CommandInsertUrlFiltersRow ( char *rec ) {
 	// caller must specify collnum
 	collnum_t collnum = getCollnumFromParmRec ( rec );

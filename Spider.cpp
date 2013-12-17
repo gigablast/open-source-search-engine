@@ -1044,7 +1044,12 @@ bool SpiderColl::load ( ) {
 	// make the dir
 	char *coll = g_collectiondb.getColl(m_collnum);
 	// sanity check
-	if ( ! coll || coll[0]=='\0' ) { char *xx=NULL;*xx=0; }
+	if ( ! coll || coll[0]=='\0' ) {
+		log("spider: bad collnum of %li",(long)m_collnum);
+		g_errno = ENOCOLLREC;
+		return false;
+		//char *xx=NULL;*xx=0; }
+	}
 
 	// reset this once
 	m_msg4Avail    = true;

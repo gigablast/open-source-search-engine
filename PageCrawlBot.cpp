@@ -1688,10 +1688,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// /v2/bulk api support:
 	if ( ! spots ) spots = hr->getString("urls");
+
+	if ( spots && ! spots[0] ) spots = NULL;
+	if ( seeds && ! seeds[0] ) seeds = NULL;
+
 	//if ( ! delColl   ) delColl   = hr->hasField("delete");
 	//if ( ! resetColl ) resetColl = hr->hasField("reset");
 
-	//bool restartColl = hr->hasField("restart");
+	bool restartColl = hr->hasField("restart");
 
 
 	char *name = hr->getString("name");
@@ -1712,7 +1716,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// case of a delete operation...
 	char *msg = NULL;
 	if ( hr->hasField("delete") ) msg = "deleted";
-	if ( hr->hasField("restart") ) msg = "restarted";
+	// need to re-add urls for a restart
+	//if ( hr->hasField("restart") ) msg = "restarted";
 	if ( hr->hasField("reset") ) msg = "reset";
 	if ( msg ) { // delColl && cast ) {
 		// this was deleted... so is invalid now
@@ -1743,7 +1748,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( spots ) break;
 		//if ( delColl ) break;
 		//if ( resetColl ) break;
-		//if ( restartColl ) break;
+		if ( restartColl ) break;
 		CollectionRec *cx = g_collectiondb.m_recs[i];
 		// deleted collections leave a NULL slot
 		if ( ! cx ) continue;
@@ -1831,12 +1836,12 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	else      st->m_collnum = -1;
 
 	// save seeds
-	//if ( cr && restartColl && cast ) {
-	//	// bail on OOM saving seeds
-	//	if ( ! st->m_seedBank.safeMemcpy ( &cr->m_diffbotSeeds ) ||
-	//	     ! st->m_seedBank.pushChar('\0') )
-	//		return sendErrorReply2(socket,fmt,mstrerror(g_errno));
-	//}
+	if ( cr && restartColl ) { // && cast ) {
+		// bail on OOM saving seeds
+		if ( ! st->m_seedBank.safeMemcpy ( &cr->m_diffbotSeeds ) ||
+		     ! st->m_seedBank.pushChar('\0') )
+			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
+	}
 
 	//
 	// if we can't compile the provided regexes, return error
@@ -2023,11 +2028,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	//char *spots = hr->getString("spots",NULL,NULL);
 	//char *seeds = hr->getString("seeds",NULL,NULL);
+	*/
 
 	// check seed bank now too for restarting a crawl
 	if ( st->m_seedBank.length() && ! seeds )
 		seeds = st->m_seedBank.getBufStart();
-	*/
 
 	if ( seeds )
 		log("crawlbot: adding seeds=\"%s\"",seeds);
