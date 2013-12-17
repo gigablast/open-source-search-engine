@@ -117,6 +117,7 @@ class Collectiondb  {
 			       bool isDump ,
 			       bool isNew ) ;
 
+	bool setRecPtr ( collnum_t collnum , CollectionRec *cr ) ;
 
 	// returns false if blocked, true otherwise. 
 	//bool deleteRec  ( char *coll , WaitEntry *we );

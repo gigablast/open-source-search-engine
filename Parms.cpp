@@ -9281,7 +9281,7 @@ void Parms::init ( ) {
 
 	m->m_title = "spider round start time";
 	m->m_desc  = "When the spider round started";
-	m->m_cgi   = "srst";
+	m->m_cgi   = "spiderRoundStart";
 	m->m_off   = (char *)&cr.m_spiderRoundStartTime - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
@@ -9290,7 +9290,7 @@ void Parms::init ( ) {
 
 	m->m_title = "spider round num";
 	m->m_desc  = "The spider round number.";
-	m->m_cgi   = "srn";
+	m->m_cgi   = "spiderRoundNum";
 	m->m_off   = (char *)&cr.m_spiderRoundNum - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
@@ -16738,6 +16738,7 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	return true;
 }
 
+// g_parms.addCurrentParmToList1 ( &parmList , cr , "spiderRoundNum" ); 
 bool Parms::addCurrentParmToList1 ( SafeBuf *parmList ,
 				    CollectionRec *cr , 
 				    char *parmName ) {
@@ -17232,7 +17233,9 @@ void tryToCallCallbacks ( ) {
 		if ( now - pn->m_startTime > 8 ) callIt = true;
 		if ( pn->m_numReplies >= pn->m_numRequests ) callIt = true;
 		if ( ! callIt ) continue;
-		pn->m_callback ( pn->m_state );
+		// callback is NULL for updating parms like spiderRoundNum
+		// in Spider.cpp
+		if ( pn->m_callback ) pn->m_callback ( pn->m_state );
 		pn->m_calledCallback = true;
 	}
 }

@@ -179,11 +179,14 @@ bool Collectiondb::addExistingColl ( char *coll,
 	long i = collnum;
 
 	// ensure does not already exist in memory
-	if ( getCollnum ( coll ) >= 0 ) {
+	collnum_t oldCollnum = getCollnum(coll);
+	if ( oldCollnum >= 0 ) {
 		g_errno = EEXIST;
+		log("admin: Trying to create collection \"%s\" but "
+		    "already exists in memory. Do an ls on "
+		    "the working dir to see if there are two "
+		    "collection dirs with the same coll name",coll);
 		char *xx=NULL;*xx=0;
-		return log("admin: Trying to create collection \"%s\" but "
-			   "already exists in memory.",coll);
 	}
 
 	// create the record in memory
@@ -485,79 +488,19 @@ bool Collectiondb::addNewColl ( char *coll ,
 	return registerCollRec ( cr , false , true );
 }
 
+// . called only by addNewColl() and by addExistingColl()
 bool Collectiondb::registerCollRec ( CollectionRec *cr ,
 				     bool isDump ,
 				     bool isNew ) {
 
-	long i = cr->m_collnum;
-	long need;
-	long have;
 
-	// grow the ptr buf if we could not plug a hole and it has not the
-	// capacity for us already...
-	if ( i >= m_numRecs && 
-	     (i+1)*4 > m_recPtrBuf.getCapacity() ) {
-		need = (i+1)*sizeof(CollectionRec *);
-		have = m_recPtrBuf.getLength();
-		need -= have;
-		// true here means to clear the new space to zeroes
-		if ( ! m_recPtrBuf.reserve ( need ,NULL, true ) )  {
-		hadError:
-			log("admin: Had error adding new collection: %s.",
-			    mstrerror(g_errno));
-			// do not delete it, might have failed to add because 
-			// not enough memory to read in the tree *-saved.dat 
-			// file on disk!! and if you delete in then core the 
-			// *-saved.dat file gets overwritten!!!
-			return false;
-		}
-		// don't forget to do this...
-		m_recPtrBuf.setLength ( need );
-	}
-
-	// re-ref it in case it is different
-	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
-
+	// add m_recs[] and to hashtable
+	if ( ! setRecPtr ( cr->m_collnum , cr ) )
+		return false;
 
 	bool verify = true;
-	long long h64;
 
 	char *coll = cr->m_coll;
-
-
-	// first time init?
-	if ( g_collTable.m_numSlots == 0 )
-		// the hash table that maps name to collnum
-		if(!g_collTable.set(8,sizeof(collnum_t), 256,NULL,0,
-				    false,0,"nhshtbl"))
-			goto hadError;
-
-
-	// add to hash table to map name to collnum_t
-	h64 = hash64n(coll);
-	if ( ! g_collTable.addKey ( &h64 , &i ) ) 
-		goto hadError;
-
-	log("coll: adding key4 %llu for coll \"%s\" (%li)",h64,cr->m_coll,
-	    (long)i);
-
-	// store our collrec ptr in there
-	m_recs[i] = cr;
-
-	// reserve it
-	if ( i >= m_numRecs ) m_numRecs = i + 1;
-
-	// sanity to make sure collectionrec ptrs are legit
-	for ( long j = 0 ; j < m_numRecs ; j++ ) {
-		if ( ! m_recs[j] ) continue;
-		if ( m_recs[j]->m_collnum == 1 ) continue;
-	}
-
-	// count it
-	m_numRecsUsed++;
-
-	// update the time
-	updateTime();
 
 	// if we are doing a dump from the command line, skip this stuff
 	if ( isDump ) return true;
@@ -585,7 +528,7 @@ bool Collectiondb::registerCollRec ( CollectionRec *cr ,
 
 	// debug message
 	log ( LOG_INFO, "db: verified collection \"%s\" (%li).",
-	      coll,(long)i);
+	      coll,(long)cr->m_collnum);
 
 	// tell SpiderCache about this collection, it will create a 
 	// SpiderCollection class for it.
@@ -593,6 +536,10 @@ bool Collectiondb::registerCollRec ( CollectionRec *cr ,
 
 	// success
 	return true;
+
+ hadError:
+	log("db: error registering coll: %s",mstrerror(g_errno));
+	return false;
 }
 
 
@@ -773,18 +720,16 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		cr->m_spiderColl = NULL;
 	}
 
-	// remove it from the hashtable that maps name to collnum too
-	long long h64 = hash64n(cr->m_coll);
-	g_collTable.removeKey ( &h64 );
-	log("coll: removing key %llu for coll \"%s\"",h64,coll);
-
+	//////
+	//
+	// remove from m_recs[]
+	//
+	//////
+	setRecPtr ( cr->m_collnum , NULL );
 
 	// free it
 	mdelete ( cr, sizeof(CollectionRec),  "CollectionRec" ); 
 	delete ( cr );
-	m_recs[(long)collnum] = NULL;
-	// dec counts
-	m_numRecsUsed--;
 
 	// do not do this here in case spiders were outstanding 
 	// and they added a new coll right away and it ended up getting
@@ -792,7 +737,7 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	//while ( ! m_recs[m_numRecs-1] ) m_numRecs--;
 
 	// update the time
-	updateTime();
+	//updateTime();
 	// done
 	return true;
 }
@@ -823,6 +768,103 @@ bool Collectiondb::resetColl ( char *coll ,  bool purgeSeeds) {
 	return resetColl2 ( cr->m_collnum, purgeSeeds);
 }
 */
+
+
+bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
+
+	// first time init hashtable that maps coll to collnum
+	if ( g_collTable.m_numSlots == 0 &&
+	     ! g_collTable.set(8,sizeof(collnum_t), 256,NULL,0,
+			       false,0,"nhshtbl"))
+		return false;
+
+	// sanity
+	if ( collnum < 0 ) { char *xx=NULL;*xx=0; }
+
+	// sanity
+	long max = m_recPtrBuf.getCapacity() / sizeof(CollectionRec *);
+
+	// set it
+	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
+
+	// a delete?
+	if ( ! cr ) {
+		// sanity
+		if ( collnum >= max ) { char *xx=NULL;*xx=0; }
+		// get what's there
+		CollectionRec *oc = m_recs[collnum];
+		// let it go
+		m_recs[collnum] = NULL;
+		// if nothing already, done
+		if ( ! oc ) return true;
+		// tally it up
+		m_numRecsUsed--;
+		// delete key
+		long long h64 = hash64n(oc->m_coll);
+		// if in the hashtable UNDER OUR COLLNUM then nuke it
+		// otherwise, we might be called from resetColl2()
+		void *vp = g_collTable.getValue ( &h64 );
+		if ( ! vp ) return true;
+		collnum_t ct = *(collnum_t *)vp;
+		if ( ct != collnum ) return true;
+		g_collTable.removeKey ( &h64 );
+		return true;
+	}
+
+	// an add, make sure big enough
+	long need = ((long)collnum+1)*sizeof(CollectionRec *);
+	long have = m_recPtrBuf.getLength();
+	long need2 = need - have;
+	// . true here means to clear the new space to zeroes
+	// . this shit works based on m_length not m_capacity
+	if ( need2 > 0 && ! m_recPtrBuf.reserve ( need2 ,NULL, true ) ) {
+		log("admin: error growing rec ptr buf2.");
+		return false;
+	}
+
+	// sanity
+	if ( cr->m_collnum != collnum ) { char *xx=NULL;*xx=0; }
+	// update length of used bytes in case we re-alloc
+	m_recPtrBuf.setLength ( need );
+	// sanity
+	if ( m_recPtrBuf.getCapacity() < need ) { char *xx=NULL;*xx=0; }
+	// re-ref it in case it is different
+	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
+	// re-max
+	max = m_recPtrBuf.getCapacity() / sizeof(CollectionRec *);
+	// sanity
+	if ( collnum >= max ) { char *xx=NULL;*xx=0; }
+
+	// add to hash table to map name to collnum_t
+	long long h64 = hash64n(cr->m_coll);
+	// debug
+	//log("coll: adding key %lli for %s",h64,cr->m_coll);
+	if ( ! g_collTable.addKey ( &h64 , &collnum ) ) 
+		return false;
+
+	// ensure last is NULL
+	m_recs[collnum] = cr;
+
+	// count it
+	m_numRecsUsed++;
+
+	//log("coll: adding key4 %llu for coll \"%s\" (%li)",h64,cr->m_coll,
+	//    (long)i);
+
+	// reserve it
+	if ( collnum >= m_numRecs ) m_numRecs = collnum + 1;
+
+	// sanity to make sure collectionrec ptrs are legit
+	for ( long j = 0 ; j < m_numRecs ; j++ ) {
+		if ( ! m_recs[j] ) continue;
+		if ( m_recs[j]->m_collnum == 1 ) continue;
+	}
+
+	// update the time
+	updateTime();
+
+	return true;
+}
 
 // . returns false if we need a re-call, true if we completed
 // . returns true with g_errno set on error
@@ -857,99 +899,11 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// CAUTION: tree might be in the middle of saving
 	// we deal with this in Process.cpp now
 	if ( g_process.isAnyTreeSaving() ) {
-		/*
-		// note it
-		log("admin: tree is saving. waiting1.");
-		// try again in 100ms
-		if ( ! g_loop.registerSleepCallback ( 100 , 
-						      we ,
-						      savingCheckWrapper1 ,
-						      0 ) ) // niceness
-			return true;
-		*/
 		// we could not complete...
 		return false;
 	}
 
-	
-
-
-	// inc the rec ptr buf i guess
-	long need = ((long)newCollnum+1)*sizeof(CollectionRec *);
-	long have = m_recPtrBuf.getLength();
-	long need2 = need - have;
-	// true here means to clear the new space to zeroes
-	if ( need2 > 0 && ! m_recPtrBuf.reserve ( need2 ,NULL, true ) ) {
-		log("admin: error growing rec ptr buf2.");
-		return true;
-	}
-	// re-ref it in case it is different
-	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
-	// ensure last is NULL
-	m_recs[newCollnum] = NULL;
-	// update length of used bytes
-	if ( need2 > 0 ) m_recPtrBuf.setLength ( need );
-
-	CollectionRec *cr = m_recs[oldCollnum];
-	if ( ! cr ) { char *xx=NULL;*xx=0; }
-	
-	/*
-	// make sure an update not in progress
-	if ( cr->m_inProgress ) { char *xx=NULL;*xx=0; }
-
-	CollectionRec tmp; 
-
-	// copy it to "tmp"
-	long size = (char *)&(cr->m_END_COPY) - (char *)cr;
-	// do not copy the hashtable crap since you will have to re-init it!
-	memcpy ( &tmp , cr , size ); // sizeof(CollectionRec) );
-
-	// tell cr's SafeBufs not to free their buffers since we did the
-	// memcpy and their ptrs are now handled by "tmp" and will be passed
-	// on to the new rec.
-	g_parms.detachSafeBufs( cr );
-
-	// delete the test coll now
-	if ( ! deleteRec ( coll , resetTurkdb  ) ) 
-		return log("admin: reset coll failed");
-
-	// make a collection called "test2" so that we copy "test"'s parms
-	bool status = addRec ( coll ,
-			       NULL , 
-			       0 ,
-			       true , // bool isNew ,
-			       (collnum_t) -1 ,
-			       // not a dump
-			       false ,
-			       // do not save it!
-			       false );
-	// bail on error
-	if ( ! status ) return log("admin: failed to add new coll for reset");
-	// get its rec
-	CollectionRec *nr = getRec ( coll );
-	// must be there
-	if ( ! nr ) { char *xx=NULL;*xx=0; }
-	// save this though, this might have changed!
-	collnum_t cn = nr->m_collnum;
-
-	// CAUTION: do not ovewrite his m_bases[] array, those RdbBases
-	// should have been deleted by the call to deleteRec(), so
-	// ensure that CollectionRec::m_bases[] is left out of the copy.
-	// Plus addRec() above should have made all new RdbBases that
-	// m_bases will point to
-
-	// overwrite its rec
-	memcpy ( nr , &tmp , size ) ; // sizeof(CollectionRec) );
-	// put that collnum back
-	nr->m_collnum = cn;
-	// set the flag
-	m_needsSave = true;
-
-	// tell cr's SafeBufs not to free their buffers since we did the
-	// memcpy and their ptrs are now stored in "tmp"'s SafeBufs and will 
-	// be passed on to the new rec.
-	g_parms.detachSafeBufs( &tmp );
-	*/
+	CollectionRec *cr = m_recs [ oldCollnum ];
 
 	// let's reset crawlinfo crap
 	cr->m_globalCrawlInfo.reset();
@@ -996,9 +950,15 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// to any rdb...
 	cr->m_collnum = newCollnum;
 
+	////////
+	//
+	// ALTER m_recs[] array
+	//
+	////////
+
 	// Rdb::resetColl() needs to know the new cr so it can move
 	// the RdbBase into cr->m_bases[rdbId] array. recycling.
-	m_recs[newCollnum] = cr;
+	setRecPtr ( newCollnum , cr );
 
 	// a new directory then since we changed the collnum
 	char dname[512];
@@ -1042,24 +1002,9 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// reset crawl status too!
 	cr->m_spiderStatus = SP_INITIALIZING;
 
-	m_recs[oldCollnum] = NULL;
-
-	// readd it to the hashtable that maps name to collnum too
-	long long h64 = hash64n(cr->m_coll);
-
-	g_collTable.removeKey ( &h64 );
-
-	log("coll: removing key2 %llu for coll \"%s\" (%li)",h64,cr->m_coll,
-	    (long)oldCollnum);
-
-	g_collTable.addKey ( &h64 , &newCollnum );
-
-	log("coll: adding key3 %llu for coll \"%s\" (%li)",h64,cr->m_coll,
-	    (long)newCollnum);
-
-
-	// update RdbBase::m_collnum to new collnum
-
+	// . set m_recs[oldCollnum] to NULL and remove from hash table
+	// . do after calls to deleteColl() above so it wont crash
+	setRecPtr ( oldCollnum , NULL );
 
 
 	// save coll.conf to new directory
