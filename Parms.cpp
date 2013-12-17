@@ -16831,6 +16831,13 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	collnum_t parmCollnum = -1;
 	if ( cr ) parmCollnum = cr->m_collnum;
 
+	// turn the collnum into an ascii string for providing as args
+	// when &reset=1 &restart=1 &delete=1 is given along with a
+	// &c= or a &name=/&token= pair.
+	char oldCollName[MAX_COLL_LEN+1];
+	oldCollName[0] = '\0';
+	if ( cr ) sprintf(oldCollName,"%li",(long)cr->m_collnum);
+
 
 	////////
 	//
@@ -16922,13 +16929,35 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 			}
 		}
 
+		// if a collection name was also provided, assume that is
+		// the target of the reset/delete/restart. we still
+		// need PageAddDelete.cpp to work...
+		if ( cr &&
+		     ( strcmp(m->m_cgi,"reset" ) == 0 ||
+		       strcmp(m->m_cgi,"delete" ) == 0 ||
+		       strcmp(m->m_cgi,"restart" ) == 0 ) ) 
+			// the collnum to reset/restart/del
+			// given as a string.
+			val = oldCollName;
+
 		// add the cmd parm
 		if ( ! addNewParmToList2 ( parmList ,
 					   // it might be a collection-less
 					   // command like 'gb stop' which
-					   // uses the "save=1" parm
+					   // uses the "save=1" parm.
+					   // this is the "new" collnum to
+					   // create in the case of
+					   // add/reset/restart, but in the
+					   // case of delete it is -1 or old.
 					   parmCollnum ,
-					   val , 
+					   // the argument to the function...
+					   // in the case of delete, the 
+					   // collnum to delete in ascii.
+					   // in the case of add, the name
+					   // of the new coll. in the case
+					   // of reset/restart the OLD 
+					   // collnum is ascii to delete.
+					   val,
 					   occNum ,
 					   m ) )
 			return false;

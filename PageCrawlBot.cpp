@@ -3582,7 +3582,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      );
 		sb.safePrintf(
 
-			      "<input type=hidden name=reset value=%li>"
+			      "<input type=hidden name=reset value=1>"
 			      // also show it in the display, so set "c"
 			      "<input type=submit name=button value=\""
 			      "Reset this collection\">"
@@ -3595,13 +3595,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      // delete collection form
 			      "<form method=get action=/crawlbot>"
 			      "%s"
-			      , (long)cr->m_collnum
+			      //, (long)cr->m_collnum
 			      , hb.getBufStart()
 			      );
 
 		sb.safePrintf(
 
-			      "<input type=hidden name=delete value=%li>"
+			      "<input type=hidden name=delete value=1>"
 			      "<input type=submit name=button value=\""
 			      "Delete this collection\">"
 			      "</form>"
@@ -3613,7 +3613,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td>"
 			      "<form method=get action=/crawlbot>"
 			      "%s"
-			      "<input type=hidden name=restart value=%li>"
+			      "<input type=hidden name=restart value=1>"
 			      "<input type=submit name=button value=\""
 			      "Restart this collection\">"
 			      "</form>"
@@ -3622,9 +3622,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 			      "</table>"
 
-			      , (long)cr->m_collnum
+			      //, (long)cr->m_collnum
 			      , hb.getBufStart()
-			      , (long)cr->m_collnum
+			      //, (long)cr->m_collnum
 			      );
 	}
 
