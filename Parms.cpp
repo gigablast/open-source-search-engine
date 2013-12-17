@@ -4314,11 +4314,10 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 		sprintf (p,"%lli",*(long long *)s);
 	else if ( t == TYPE_SAFEBUF ) {
 		SafeBuf *sb = (SafeBuf *)s;
-		p = htmlEncode ( p , 
-				 pend , 
-				 sb->getBufStart(),
-				 sb->getBufStart() + sb->length(),
-				 true ); // #?*
+		char *buf = sb->getBufStart();
+		long blen = 0;
+		if ( buf ) blen = gbstrlen(buf);
+		p = htmlEncode ( p , pend , buf , buf + blen , true ); // #?*
 	}
 	else if ( t == TYPE_STRING         || 
 		  t == TYPE_STRINGBOX      ||
@@ -16832,6 +16831,49 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	collnum_t parmCollnum = -1;
 	if ( cr ) parmCollnum = cr->m_collnum;
 
+
+	////////
+	//
+	// HACK: if crawlbot user supplies a token and a name, and the
+	// corresponding collection does not exist then assume it is an add
+	//
+	////////
+	char customCrawl = 0;
+	char *path = hr->getPath();
+	if ( strncmp(path,"/crawlbot",9) == 0 ) customCrawl = 1;
+	if ( strncmp(path,"/v2/crawl",9) == 0 ) customCrawl = 1;
+	if ( strncmp(path,"/v2/bulk" ,8) == 0 ) customCrawl = 2;
+	char *name  = hr->getString("name");
+	char *token = hr->getString("token");
+	if ( ! cr && token && name && customCrawl ) {
+		// reserve a new collnum for adding this crawl
+		parmCollnum = g_collectiondb.reserveCollNum();
+		// must be there!
+		if ( parmCollnum == -1 ) {
+			g_errno = EBADENGINEER;
+			return false;
+		}
+		// log it for now
+		log("parms: trying to add custom crawl (%li)",
+		    (long)parmCollnum);
+		// formulate name
+		char newName[MAX_COLL_LEN+1];
+		snprintf(newName,MAX_COLL_LEN,"%s-%s",token,name);
+		char *cmdStr = "addCrawl";
+		if ( customCrawl == 2 ) cmdStr = "addBulk";
+		// add to parm list
+		if ( ! addNewParmToList1 ( parmList ,
+					   parmCollnum ,
+					   newName ,
+					   -1 , // occNum
+					   cmdStr ) )
+			return false;
+	}
+
+
+
+
+
 	// loop through cgi parms
 	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
 		// get cgi parm name
@@ -16932,7 +16974,6 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 			else if ( val && val[0] == '1' ) val = "0";
 			if ( ! m ) { char *xx=NULL;*xx=0; }
 		}
-
 
 		if ( ! m ) continue;
 		if ( m->m_type == TYPE_CMD ) continue;
@@ -17582,7 +17623,7 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 							 c,
 							 NULL,
 							 -1,
-							 "delcoll"))
+							 "delete"))
 				goto hadError;
 			// ok, get next collection hash
 			continue;
@@ -17609,12 +17650,15 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		if ( ! cr ) continue;
 		// clear flag
 		if ( cr->m_hackFlag ) continue;
+		char *cmdStr = "addColl";
+		if ( cr->m_isCustomCrawl == 1 ) cmdStr = "addCrawl";
+		if ( cr->m_isCustomCrawl == 2 ) cmdStr = "addBulk";
 		// add the parm rec as a parm cmd
 		if ( ! g_parms.addNewParmToList1 ( &replyBuf,
 						   (collnum_t)i,
 						   NULL,
 						   -1,
-						   "addcoll"))
+						   cmdStr ) )
 			goto hadError;
 		// and the parmlist for it
 		if (!g_parms.addAllParmsToList (&replyBuf, i ) ) goto hadError;

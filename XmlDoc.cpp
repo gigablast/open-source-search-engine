@@ -1957,13 +1957,13 @@ bool XmlDoc::indexDoc ( ) {
 	// url spider lock in SpiderLoop::m_lockTable.
 	SpiderReply *nsr = getNewSpiderReply ();
 	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
-	if ( nsr->getRecSize() <= 1) { char *xx=NULL;*xx=0; }
 	if ( ! nsr ) {
 		log("doc: crap, could not even add spider reply "
 		    "to indicate internal error: %s",mstrerror(g_errno));
 		if ( ! g_errno ) g_errno = EBADENGINEER;
 		return true;
 	}
+	//if ( nsr->getRecSize() <= 1) { char *xx=NULL;*xx=0; }
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return true;

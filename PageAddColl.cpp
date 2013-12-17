@@ -92,7 +92,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 			  "</td></tr>\n",LIGHT_BLUE,DARK_BLUE);
 		p.safePrintf (
 			  "<tr><td><b>name of new collection to add</td>\n"
-			  "<td><input type=text name=addcoll size=30>"
+			  "<td><input type=text name=addColl size=30>"
 			  "</td></tr>\n");
 		// now list collections from which to copy the config
 		//p.safePrintf (
@@ -137,7 +137,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		if ( ! cr ) continue;
 		p.safePrintf (
 			  "<tr><td>"
-			  "<input type=checkbox name=deletecoll value=\"%s\"> "
+			  "<input type=checkbox name=delete value=\"%s\"> "
 			  "%s</td></tr>\n",cr->m_coll,cr->m_coll);
 	}
 	p.safePrintf( "</table></center></td></tr></table><br>\n" );
