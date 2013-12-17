@@ -246,7 +246,7 @@ bool CommandDeleteColl ( char *rec , WaitEntry *we ) {
 	collnum_t collnum = getCollnumFromParmRec ( rec );
 	// the delete might block because the tree is saving and we can't
 	// remove our collnum recs from it while it is doing that
-	if ( ! g_collectiondb.deleteRec2 ( collnum , we ) )
+	if ( ! g_collectiondb.deleteRec2 ( collnum ) )
 		// we blocked, we->m_callback will be called when done
 		return false;
 	// delete is successful
@@ -256,21 +256,32 @@ bool CommandDeleteColl ( char *rec , WaitEntry *we ) {
 // . returns true and sets g_errno on error
 // . returns false if would block
 bool CommandRestartColl ( char *rec , WaitEntry *we ) {
-	collnum_t collnum = getCollnumFromParmRec ( rec );
+
+	collnum_t newCollnum = getCollnumFromParmRec ( rec );
+
+	// . data is the collnum in ascii.
+	// . from "&restart=467" for example
+	char *data = rec + sizeof(key96_t) + 4;
+	long dataSize = *(long *)(rec + sizeof(key96_t));
+	if ( dataSize < 1 ) { char *xx=NULL;*xx=0; }
+	collnum_t oldCollnum = atol(data);
+
 	// this can block if tree is saving, it has to wait
 	// for tree save to complete before removing old
 	// collnum recs from tree
-	if ( ! g_collectiondb.resetColl2 ( collnum ,
-					   we ,
+	if ( ! g_collectiondb.resetColl2 ( oldCollnum ,
+					   newCollnum ,
 					   false ) ) // purgeSeeds?
 		// we blocked, we->m_callback will be called when done
 		return false;
-	// . it is a NEW ptr now!
-	// . collname is same but collnum will be different.
-	//CollectionRec *cr = g_collectiondb.getRec( we->m_newCollnum );
+
+	// turn on spiders on new collrec. collname is same but collnum
+	// will be different.
+	CollectionRec *cr = g_collectiondb.getRec ( newCollnum );
 	// if reset from crawlbot api page then enable spiders
 	// to avoid user confusion
-	//if ( cr ) cr->m_spideringEnabled = 1;
+	if ( cr ) cr->m_spideringEnabled = 1;
+
 	// all done
 	return true;
 }
@@ -278,18 +289,29 @@ bool CommandRestartColl ( char *rec , WaitEntry *we ) {
 // . returns true and sets g_errno on error
 // . returns false if would block
 bool CommandResetColl ( char *rec , WaitEntry *we ) {
-	collnum_t collnum = getCollnumFromParmRec ( rec );
-	// this can block if tree is saving, it has to wait
+
+	collnum_t newCollnum = getCollnumFromParmRec ( rec );
+
+	// . data is the collnum in ascii.
+	// . from "&restart=467" for example
+	char *data = rec + sizeof(key96_t) + 4;
+	long dataSize = *(long *)(rec + sizeof(key96_t));
+	if ( dataSize < 1 ) { char *xx=NULL;*xx=0; }
+	collnum_t oldCollnum = atol(data);
+
+	// this will not go through if tree is saving, it has to wait
 	// for tree save to complete before removing old
-	// collnum recs from tree
-	if ( ! g_collectiondb.resetColl2 ( collnum ,
-					   we ,
+	// collnum recs from tree. so return false in that case so caller
+	// will know to re-call later.
+	if ( ! g_collectiondb.resetColl2 ( oldCollnum ,
+					   newCollnum ,
 					   true ) ) // purgeSeeds?
 		// we blocked, we->m_callback will be called when done
 		return false;
+
 	// turn on spiders on new collrec. collname is same but collnum
 	// will be different.
-	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+	CollectionRec *cr = g_collectiondb.getRec ( newCollnum );
 	// if reset from crawlbot api page then enable spiders
 	// to avoid user confusion
 	if ( cr ) cr->m_spideringEnabled = 1;
@@ -16648,8 +16670,8 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 		// case it does not use the \0 protocol
 		//valSize = m->m_max;
 		val = parmValString;
-		// do not include \0
-		valSize = gbstrlen(val);
+		// include \0
+		valSize = gbstrlen(val)+1;
 	}
 	else if ( m->m_type == TYPE_LONG ) {
 		// watch out for unsigned 32-bit numbers, so use atoLL()
@@ -16839,6 +16861,12 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 			// new parmCollnum since we already store the old
 			// collnum in the parm rec key
 			parmCollnum = g_collectiondb.reserveCollNum();
+			//
+			//
+			// NOTE: the old collnum is in the "val" already
+			// like "&reset=462" or "&addColl=test"
+			//
+			//
 			// sanity. if all are full! we hit our limit of
 			// 32k collections. should increase collnum_t from
 			// short to long...
@@ -17254,6 +17282,14 @@ void handleRequest3fLoop2 ( void *state , UdpSlot *slot ) {
 	handleRequest3fLoop(state);
 }
 
+// if a tree is saving while we are trying to delete a collnum (or reset)
+// then the call to updateParm() below returns false and we must re-call
+// in this sleep wrapper here
+void handleRequest3fLoop3 ( int fd , void *state ) {
+	g_loop.unregisterSleepCallback(state,handleRequest3fLoop3);
+	handleRequest3fLoop(state);	
+}
+
 // . host #0 is requesting that we update some parms
 void handleRequest3fLoop ( void *weArg ) {
 	WaitEntry *we = (WaitEntry *)weArg;
@@ -17300,9 +17336,6 @@ void handleRequest3fLoop ( void *weArg ) {
 		}
 
 
-		// update it in case call blocks below
-		we->m_parmPtr = p;
-
 		// . determine if it alters the url filters
 		// . if those were changed we have to nuke doledb and
 		//   waiting tree in Spider.cpp and rebuild them!
@@ -17314,12 +17347,31 @@ void handleRequest3fLoop ( void *weArg ) {
 		if ( parm->m_type != TYPE_CMD )
 			we->m_collnum = getCollnumFromParmRec ( rec );
 
-
 		// . this returns false if blocked, returns true and sets
 		//   g_errno on error
 		// . it'll block if trying to delete a coll when the tree
 		//   is saving or something (CommandDeleteColl())
-		if ( ! g_parms.updateParm ( rec , we ) ) return;
+		if ( ! g_parms.updateParm ( rec , we ) ) {
+			////////////
+			//
+			// . it blocked! it will call we->m_callback when done
+			// . we must re-call
+			// . try again in 100ms
+			//
+			////////////
+			if(!g_loop.registerSleepCallback(100, 
+							 we ,
+							 handleRequest3fLoop3,
+							 0 ) ){// niceness
+				log("parms: failed to reg sleeper");
+				return;
+			}
+			return;
+		}
+
+		// do the next parm
+		we->m_parmPtr = p;
+
 		// error?
 		if ( ! g_errno ) continue;
 		// this could mean failed to add coll b/c out of disk or
@@ -17696,7 +17748,9 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		// . returns false if blocked
 		// . this is for CommandDeleteColl() and CommandResetColl()
 		if ( parm->m_func2 ( rec , we ) ) return true;
-		// it blocked! it will call we->m_callback when done
+
+		// . it did not complete.
+		// . we need to re-call it using sleep wrapper above
 		return false;
 	}
 

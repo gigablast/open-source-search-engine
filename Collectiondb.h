@@ -117,15 +117,18 @@ class Collectiondb  {
 
 
 	// returns false if blocked, true otherwise. 
-	bool deleteRec  ( char *coll , WaitEntry *we );
-	bool deleteRec2 ( collnum_t collnum , WaitEntry *we ) ;
+	//bool deleteRec  ( char *coll , WaitEntry *we );
+	bool deleteRec2 ( collnum_t collnum );//, WaitEntry *we ) ;
 
 	//bool updateRec ( CollectionRec *newrec );
 	bool deleteRecs ( class HttpRequest *r ) ;
 
 	// returns false if blocked, true otherwise. 
-	bool resetColl ( char *coll , WaitEntry *we , bool purgeSeeds );
-	bool resetColl2 ( collnum_t collnum, WaitEntry *we , bool purgeSeeds );
+	//bool resetColl ( char *coll , WaitEntry *we , bool purgeSeeds );
+	bool resetColl2 ( collnum_t oldCollnum, 
+			  collnum_t newCollnum,
+			  //WaitEntry *we , 
+			  bool purgeSeeds );
 
 	// . keep up to 128 of them, these reference into m_list
 	// . COllectionRec now includes m_needsSave and m_lastUpdateTime

@@ -133,7 +133,7 @@ bool RdbBase::init ( char  *dir            ,
 	sprintf ( tmp , "%scoll.%s.%li" , dir , coll , (long)collnum );
 
 	// logDebugAdmin
-	log(LOG_INIT,"db: "
+	log(LOG_DEBUG,"db: "
 	    "adding new base for dir=%s coll=%s collnum=%li db=%s",
 	    dir,coll,(long)collnum,dbname);
 

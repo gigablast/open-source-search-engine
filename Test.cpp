@@ -122,12 +122,16 @@ void Test::removeFiles ( ) {
 	long saved = g_conf.m_useQuickpoll;
 	g_conf.m_useQuickpoll = false;
 
+	CollectionRec *cr = g_collectiondb.getRec("test");
+
 	// . reset the qatest collection to zero docs
 	// . TODO: implement this. only allow it for qatest coll.
 	// . kinda like Collectiondb::deleteRec() i guess but we need to
 	//   preserve the parms!!
 	// . deletetagdb = false
-	g_collectiondb.resetColl ( "test"  , NULL , true );
+	if ( cr ) g_collectiondb.resetColl2 ( cr->m_collnum , 
+					      cr->m_collnum ,
+					      true );
 
 	// reset event count
 	//g_collectiondb.countEvents();

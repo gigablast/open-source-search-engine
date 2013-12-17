@@ -600,6 +600,7 @@ bool Collectiondb::isAdmin ( HttpRequest *r , TcpSocket *s ) {
 	//return cr->hasPermission ( r , s );
 }
 
+/*
 void savingCheckWrapper1 ( int fd , void *state ) {
 	WaitEntry *we = (WaitEntry *)state;
 	// no state?
@@ -607,7 +608,9 @@ void savingCheckWrapper1 ( int fd , void *state ) {
 	// unregister too
 	g_loop.unregisterSleepCallback ( state,savingCheckWrapper1 );
 	// if it blocked again i guess tree is still saving
-	if ( ! g_collectiondb.resetColl ( we->m_coll , we , we->m_purgeSeeds))
+	if ( ! g_collectiondb.resetColl ( we->m_coll ,
+					  we ,
+					  we->m_purgeSeeds))
 		return;
 	// all done
 	we->m_callback ( we->m_state );
@@ -624,7 +627,9 @@ void savingCheckWrapper2 ( int fd , void *state ) {
 	// all done
 	we->m_callback ( we->m_state );
 }
+*/
 
+/*
 // delete all records checked in the list
 bool Collectiondb::deleteRecs ( HttpRequest *r ) {
 	for ( long i = 0 ; i < r->getNumFields() ; i++ ) {
@@ -637,7 +642,9 @@ bool Collectiondb::deleteRecs ( HttpRequest *r ) {
 	}
 	return true;
 }
+*/
 
+/*
 // . delete a collection
 // . this uses blocking unlinks, may make non-blocking later
 // . returns false if blocked, true otherwise
@@ -662,8 +669,9 @@ bool Collectiondb::deleteRec ( char *coll , WaitEntry *we ) {
 	collnum_t collnum = getCollnum ( coll );
 	return deleteRec2 ( collnum , we );
 }
+*/
 
-bool Collectiondb::deleteRec2 ( collnum_t collnum , WaitEntry *we ) {
+bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	// do not allow this if in repair mode
 	if ( g_repairMode > 0 ) {
 		log("admin: Can not delete collection while in repair mode.");
@@ -687,12 +695,6 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum , WaitEntry *we ) {
 	if ( g_process.isAnyTreeSaving() ) {
 		// note it
 		log("admin: tree is saving. waiting2.");
-		// try again in 100ms
-		if ( ! g_loop.registerSleepCallback ( 100 , 
-						      we ,
-						      savingCheckWrapper2 ,
-						      0 ) ) // niceness
-			return true;
 		// all done
 		return false;
 	}
@@ -785,9 +787,10 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum , WaitEntry *we ) {
 
 //#include "PageTurk.h"
 
+/*
 // . reset a collection
 // . returns false if blocked and will call callback
-bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we , bool purgeSeeds) {
+bool Collectiondb::resetColl ( char *coll ,  bool purgeSeeds) {
 
 	// ensure it's not NULL
 	if ( ! coll ) {
@@ -805,14 +808,19 @@ bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we , bool purgeSeeds) {
 		char *xx=NULL;*xx=0; 
 	}
 
-	return resetColl2 ( cr->m_collnum,we,purgeSeeds);
+	return resetColl2 ( cr->m_collnum, purgeSeeds);
 }
+*/
 
-
-bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
+// . returns false if we need a re-call, true if we completed
+// . returns true with g_errno set on error
+bool Collectiondb::resetColl2( collnum_t oldCollnum,
+			       collnum_t newCollnum,
+			       //WaitEntry *we,
+			       bool purgeSeeds){
 
 	// save parms in case we block
-	we->m_purgeSeeds = purgeSeeds;
+	//we->m_purgeSeeds = purgeSeeds;
 
 	// now must be "test" only for now
 	//if ( strcmp(coll,"test") ) { char *xx=NULL;*xx=0; }
@@ -832,11 +840,12 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 		return true;
 	}
 
-	log("admin: resetting collnum %li",(long)collnum);
+	log("admin: resetting collnum %li",(long)oldCollnum);
 
 	// CAUTION: tree might be in the middle of saving
 	// we deal with this in Process.cpp now
 	if ( g_process.isAnyTreeSaving() ) {
+		/*
 		// note it
 		log("admin: tree is saving. waiting1.");
 		// try again in 100ms
@@ -845,7 +854,8 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 						      savingCheckWrapper1 ,
 						      0 ) ) // niceness
 			return true;
-		// all done
+		*/
+		// we could not complete...
 		return false;
 	}
 
@@ -853,22 +863,22 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 
 
 	// inc the rec ptr buf i guess
-	long need = (m_numRecs+1)*sizeof(CollectionRec *);
+	long need = ((long)newCollnum+1)*sizeof(CollectionRec *);
 	long have = m_recPtrBuf.getLength();
-	need -= have;
+	long need2 = need - have;
 	// true here means to clear the new space to zeroes
-	if ( ! m_recPtrBuf.reserve ( need ,NULL, true ) ) {
+	if ( need2 > 0 && ! m_recPtrBuf.reserve ( need2 ,NULL, true ) ) {
 		log("admin: error growing rec ptr buf2.");
 		return true;
 	}
 	// re-ref it in case it is different
 	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
 	// ensure last is NULL
-	m_recs[m_numRecs] = NULL;
+	m_recs[newCollnum] = NULL;
 	// update length of used bytes
-	m_recPtrBuf.setLength ( need );
+	if ( need2 > 0 ) m_recPtrBuf.setLength ( need );
 
-	CollectionRec *cr = m_recs[collnum];
+	CollectionRec *cr = m_recs[oldCollnum];
 	if ( ! cr ) { char *xx=NULL;*xx=0; }
 	
 	/*
@@ -933,8 +943,8 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 	cr->m_globalCrawlInfo.reset();
 	cr->m_localCrawlInfo.reset();
 
-	collnum_t oldCollnum = cr->m_collnum;
-	collnum_t newCollnum = m_numRecs;
+	//collnum_t oldCollnum = cr->m_collnum;
+	//collnum_t newCollnum = m_numRecs;
 
 	// reset spider info
 	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(oldCollnum);
@@ -964,7 +974,7 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 	cr->m_lastResetCount++;
 
 
-	m_numRecs++;
+	if ( newCollnum >= m_numRecs ) m_numRecs = (long)newCollnum + 1;
 
 	// advance sanity check. did we wrap around?
 	// right now we #define collnum_t short
@@ -977,30 +987,6 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 	// Rdb::resetColl() needs to know the new cr so it can move
 	// the RdbBase into cr->m_bases[rdbId] array. recycling.
 	m_recs[newCollnum] = cr;
-
-	// . unlink all the *.dat and *.map files for this coll in its subdir
-	// . remove all recs from this collnum from m_tree/m_buckets
-	// . updates RdbBase::m_collnum
-	// . so for the tree it just needs to mark the old collnum recs
-	//   with a collnum -1 in case it is saving...
-	g_posdb.getRdb()->deleteColl     ( oldCollnum , newCollnum );
-	g_titledb.getRdb()->deleteColl   ( oldCollnum , newCollnum );
-	g_tagdb.getRdb()->deleteColl     ( oldCollnum , newCollnum );
-	g_spiderdb.getRdb()->deleteColl  ( oldCollnum , newCollnum );
-	g_doledb.getRdb()->deleteColl    ( oldCollnum , newCollnum );
-	g_clusterdb.getRdb()->deleteColl ( oldCollnum , newCollnum );
-	g_linkdb.getRdb()->deleteColl    ( oldCollnum , newCollnum );
-
-	// reset crawl status too!
-	cr->m_spiderStatus = SP_INITIALIZING;
-
-	m_recs[oldCollnum] = NULL;
-
-	// readd it to the hashtable that maps name to collnum too
-	long long h64 = hash64n(cr->m_coll);
-	g_collTable.removeKey ( &h64 );
-	g_collTable.addKey ( &h64 , &newCollnum );
-
 
 	// a new directory then since we changed the collnum
 	char dname[512];
@@ -1026,6 +1012,31 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 		log("admin: Creating directory %s had error: "
 		    "%s.", dname,mstrerror(g_errno));
 	}
+
+
+	// . unlink all the *.dat and *.map files for this coll in its subdir
+	// . remove all recs from this collnum from m_tree/m_buckets
+	// . updates RdbBase::m_collnum
+	// . so for the tree it just needs to mark the old collnum recs
+	//   with a collnum -1 in case it is saving...
+	g_posdb.getRdb()->deleteColl     ( oldCollnum , newCollnum );
+	g_titledb.getRdb()->deleteColl   ( oldCollnum , newCollnum );
+	g_tagdb.getRdb()->deleteColl     ( oldCollnum , newCollnum );
+	g_spiderdb.getRdb()->deleteColl  ( oldCollnum , newCollnum );
+	g_doledb.getRdb()->deleteColl    ( oldCollnum , newCollnum );
+	g_clusterdb.getRdb()->deleteColl ( oldCollnum , newCollnum );
+	g_linkdb.getRdb()->deleteColl    ( oldCollnum , newCollnum );
+
+	// reset crawl status too!
+	cr->m_spiderStatus = SP_INITIALIZING;
+
+	m_recs[oldCollnum] = NULL;
+
+	// readd it to the hashtable that maps name to collnum too
+	long long h64 = hash64n(cr->m_coll);
+	g_collTable.removeKey ( &h64 );
+	g_collTable.addKey ( &h64 , &newCollnum );
+
 
 
 	// update RdbBase::m_collnum to new collnum
