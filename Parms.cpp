@@ -16911,7 +16911,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// get cgi parm name
 		char *field = hr->getField    ( i );
 		// get value of the cgi field
-		char *valString  = hr->getValue   (i);
+		char *val  = hr->getValue   (i);
 
 		// get the occurence # if its regex. this is the row #
 		// in the url filters table, since those parms repeat names.
@@ -16921,6 +16921,19 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// convert field to parm
 		long occNum;
 		Parm *m = getParmFast1 ( field , &occNum );
+
+		//
+		// map "pause" to spidering enabled
+		//
+		if ( strcmp(field,"pause"     ) == 0 ||
+		     strcmp(field,"pauseCrawl") == 0 ) {
+			m = getParmFast1 ( "cse",  &occNum);
+			if      ( val && val[0] == '0' ) val = "1";
+			else if ( val && val[0] == '1' ) val = "0";
+			if ( ! m ) { char *xx=NULL;*xx=0; }
+		}
+
+
 		if ( ! m ) continue;
 		if ( m->m_type == TYPE_CMD ) continue;
 
@@ -16930,7 +16943,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 					   // collrec, if there was an addcoll
 					   // reset or restart coll cmd...
 					   parmCollnum ,
-					   valString , 
+					   val ,
 					   occNum ,
 					   m ) )
 			return false;

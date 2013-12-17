@@ -2877,6 +2877,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td>%s</td>"
 			      "</tr>"
 
+			      "<tr>"
+			      "<td><b>Crawl Type:</td>"
+			      "<td>%li</td>"
+			      "</tr>"
+
 			      //"<tr>"
 			      //"<td><b>Collection Alias:</td>"
 			      //"<td>%s%s</td>"
@@ -2947,6 +2952,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      
 			      , cr->m_diffbotCrawlName.getBufStart()
+			      
+			      , (long)cr->m_isCustomCrawl
+
 			      , cr->m_diffbotToken.getBufStart()
 
 			      , crawlStatus
