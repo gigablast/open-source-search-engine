@@ -362,7 +362,7 @@ bool RdbBase::init ( char  *dir            ,
 	if ( ! preloadDiskPageCache ) return true;
 	char buf [ 512000 ];
 	long total = m_pc->getMemMax();
-	logf(LOG_INFO,"db: %s: Preloading page cache. Total mem to use =%lu",
+	log(LOG_DEBUG,"db: %s: Preloading page cache. Total mem to use =%lu",
 	     m_dbname,total);
 	//log("max=%li",total);
 	for ( long i = 0 ; i < m_numFiles ; i++ ) {

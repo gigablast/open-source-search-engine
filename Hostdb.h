@@ -274,6 +274,8 @@ class Host {
 	long m_currentParmIdInProgress;
 	long m_lastParmIdCompleted;
 	class ParmNode *m_currentNodePtr;
+	long m_lastTryError;
+	long m_lastTryTime;
 
 	char  m_requestBuf[MAX_PING_SIZE];
 };

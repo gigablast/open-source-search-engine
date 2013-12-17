@@ -16845,7 +16845,11 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	if ( strncmp(path,"/v2/bulk" ,8) == 0 ) customCrawl = 2;
 	char *name  = hr->getString("name");
 	char *token = hr->getString("token");
-	if ( ! cr && token && name && customCrawl ) {
+	bool hasAddCrawl = hr->hasField("addCrawl");
+	bool hasAddBulk  = hr->hasField("addBulk");
+	bool hasAddColl  = hr->hasField("addColl");
+	if ( ! cr && token && name && customCrawl &&
+	     ! hasAddCrawl && ! hasAddBulk && ! hasAddColl ) {
 		// reserve a new collnum for adding this crawl
 		parmCollnum = g_collectiondb.reserveCollNum();
 		// must be there!
@@ -17223,6 +17227,20 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 	if ( g_errno ) {
 		log("parms: got parm update reply from host #%li: %s",
 		    h->m_hostId,mstrerror(g_errno));
+	}
+
+
+	// . note it so we do not retry every 1ms!
+	// . and only retry on time outs or no mem errors for now...
+	// . it'll retry once every 10 seconds using the sleep
+	//   wrapper below
+	if ( g_errno != EUDPTIMEDOUT &&  g_errno != ENOMEM ) 
+		g_errno = 0;
+
+	if ( g_errno ) {
+		// remember error info for retry
+		h->m_lastTryError = g_errno;
+		h->m_lastTryTime = getTimeLocal();
 		// if a host timed out he could be dead, so try to call
 		// the callback for this "pn" anyway. if the only hosts we
 		// do not have replies for are dead, then we'll call the
@@ -17233,6 +17251,9 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 		g_parms.doParmSendingLoop();
 		return;
 	}
+
+	// no error, otherwise
+	h->m_lastTryError = 0;
 
 	// successfully completed
 	h->m_lastParmIdCompleted = parmId;
@@ -17270,12 +17291,32 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 	g_parms.doParmSendingLoop();
 }
 
+void parmLoop ( int fd , void *state ) {
+	g_parms.doParmSendingLoop();
+}
+
+static bool s_registeredSleep = false;
+static bool s_inLoop = false;
+
 // . host #0 runs this to send out parms in the the parm queue (linked list)
 //   to all other hosts.
 // . he also sends to himself, if m_sendToGrunts is true
 bool Parms::doParmSendingLoop ( ) {
 
 	if ( ! s_headNode ) return true;
+
+	if ( s_inLoop ) return true;
+
+	s_inLoop = true;
+
+	if ( ! s_registeredSleep &&
+	     ! g_loop.registerSleepCallback(2000,NULL,parmLoop,0) )
+		log("parms: failed to reg parm loop");
+
+	// do not re-register
+	s_registeredSleep = true;
+
+	long now = getTimeLocal();
 
 	// try to send a parm update request to each host
 	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
@@ -17289,6 +17330,11 @@ bool Parms::doParmSendingLoop ( ) {
 		if ( h->m_currentParmIdInProgress ) continue;
 		// if his last completed parmid is the current he is uptodate
 		if ( h->m_lastParmIdCompleted == s_parmId ) continue;
+		// if last try had an error, wait 10 secs i guess
+		if ( h->m_lastTryError &&
+		     h->m_lastTryError != EUDPTIMEDOUT &&
+		     now - h->m_lastTryTime < 10 )
+			continue;
 		// otherwise get him the next to send
 		ParmNode *pn = s_headNode;
 		for ( ; pn ; pn = pn->m_nextNode ) {
@@ -17327,6 +17373,9 @@ bool Parms::doParmSendingLoop ( ) {
 		h->m_currentParmIdInProgress = pn->m_parmId;
 		h->m_currentNodePtr = pn;
 	}
+
+	s_inLoop = false;
+
 	return true;
 }
 
