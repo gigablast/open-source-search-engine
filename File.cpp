@@ -698,8 +698,10 @@ bool File::unlink ( ) {
 	if ( status == 0 ) return true;
 	// return false and set g_errno on error
 	if ( status  < 0 ) return false;
-	// log it so we can see what happened to timedb!
-	log(LOG_INFO,"disk: unlinking %s", m_filename );
+	// . log it so we can see what happened to timedb!
+	// . don't log startup unlinks of "tmpfile"
+	if ( ! strstr(m_filename,"tmpfile") )
+		log(LOG_INFO,"disk: unlinking %s", m_filename );
 	// remove ourselves from the disk
 	if ( ::unlink ( m_filename ) == 0 ) return true;
 	// sync it to disk in case power goes out

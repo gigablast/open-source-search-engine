@@ -527,8 +527,8 @@ bool Collectiondb::registerCollRec ( CollectionRec *cr ,
 	if ( ! g_doledb.addColl     ( coll, verify ) ) goto hadError;
 
 	// debug message
-	log ( LOG_INFO, "db: verified collection \"%s\" (%li).",
-	      coll,(long)cr->m_collnum);
+	//log ( LOG_INFO, "db: verified collection \"%s\" (%li).",
+	//      coll,(long)cr->m_collnum);
 
 	// tell SpiderCache about this collection, it will create a 
 	// SpiderCollection class for it.
@@ -1383,6 +1383,8 @@ bool CollectionRec::load ( char *coll , long i ) {
 	m_collLen = gbstrlen ( coll );
 	strcpy ( m_coll , coll );
 
+	log(LOG_INFO,"db: loading data for %s",coll);
+
 	// collection name HACK for backwards compatibility
 	//if ( strcmp ( coll , "main" ) == 0 ) {
 	//	m_coll[0] = '\0';
@@ -1432,7 +1434,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// LOAD LOCAL
 	sprintf ( tmp1 , "%scoll.%s.%li/localcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	log(LOG_INFO,"db: loading %s",tmp1);
+	log(LOG_DEBUG,"db: loading %s",tmp1);
 	m_localCrawlInfo.reset();
 	SafeBuf sb;
 	// fillfromfile returns 0 if does not exist, -1 on read error
@@ -1443,7 +1445,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// LOAD GLOBAL
 	sprintf ( tmp1 , "%scoll.%s.%li/globalcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	log(LOG_INFO,"db: loading %s",tmp1);
+	log(LOG_DEBUG,"db: loading %s",tmp1);
 	m_globalCrawlInfo.reset();
 	sb.reset();
 	if ( sb.fillFromFile ( tmp1 ) > 0 )

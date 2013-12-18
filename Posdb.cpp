@@ -122,7 +122,7 @@ bool Posdb::init ( ) {
 	long nodeSize      = (sizeof(key144_t)+12+4) + sizeof(collnum_t);
 	long maxTreeNodes = maxTreeMem  / nodeSize ;
 
-	long pageSize = GB_INDEXDB_PAGE_SIZE;
+	//long pageSize = GB_INDEXDB_PAGE_SIZE;
 	// we now use a disk page cache as opposed to the
 	// old rec cache. i am trying to do away with the Rdb::m_cache rec
 	// cache in favor of cleverly used disk page caches, because
@@ -141,6 +141,7 @@ bool Posdb::init ( ) {
 	//pcmem = 0;
 	// . init the page cache
 	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
+	/*
 	if ( ! m_pc.init ( "posdb",
 			   RDB_POSDB,
 			   pcmem    ,
@@ -148,6 +149,7 @@ bool Posdb::init ( ) {
 			   true     ,  // use RAM disk?
 			   false    )) // minimize disk seeks?
 		return log("db: Posdb init failed.");
+	*/
 
 	// . set our own internal rdb
 	// . max disk space for bin tree is same as maxTreeMem so that we
@@ -169,7 +171,10 @@ bool Posdb::init ( ) {
 			   0 , // maxCacheNodes 	       ,
 			   true                        , // use half keys?
 			   false                       , // g_conf.m_posdbSav
-			   &m_pc                       ,
+			   // newer systems have tons of ram to use
+			   // for their disk page cache. it is slower than
+			   // ours but the new engine has much slower things
+			   NULL,//&m_pc                       ,
 			   false , // istitledb?
 			   false , // preloaddiskpagecache?
 			   sizeof(key144_t)
@@ -235,7 +240,7 @@ bool Posdb::addColl ( char *coll, bool doVerify ) {
 
 bool Posdb::verify ( char *coll ) {
 	return true;
-	log ( LOG_INFO, "db: Verifying Posdb for coll %s...", coll );
+	log ( LOG_DEBUG, "db: Verifying Posdb for coll %s...", coll );
 	g_threads.disableThreads();
 
 	Msg5 msg5;
@@ -314,7 +319,7 @@ bool Posdb::verify ( char *coll ) {
 		g_threads.enableThreads();
 		return g_conf.m_bypassValidation;
 	}
-	log ( LOG_INFO, "db: Posdb passed verification successfully for %li "
+	log ( LOG_DEBUG, "db: Posdb passed verification successfully for %li "
 			"recs.", count );
 	// DONE
 	g_threads.enableThreads();

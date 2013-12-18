@@ -625,7 +625,7 @@ bool Spiderdb::addColl ( char *coll, bool doVerify ) {
 
 bool Spiderdb::verify ( char *coll ) {
 	//return true;
-	log ( LOG_INFO, "db: Verifying Spiderdb for coll %s...", coll );
+	log ( LOG_DEBUG, "db: Verifying Spiderdb for coll %s...", coll );
 	g_threads.disableThreads();
 
 	Msg5 msg5;
@@ -688,7 +688,7 @@ bool Spiderdb::verify ( char *coll ) {
 		g_threads.enableThreads();
 		return g_conf.m_bypassValidation;
 	}
-	log ( LOG_INFO,"db: Spiderdb passed verification successfully for %li "
+	log (LOG_DEBUG,"db: Spiderdb passed verification successfully for %li "
 	      "recs.", count );
 	// DONE
 	g_threads.enableThreads();

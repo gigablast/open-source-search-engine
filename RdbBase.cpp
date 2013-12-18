@@ -771,7 +771,7 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		g_statsdb.m_disabled = false;
 		if ( ! status ) return log("db: Save failed.");
 	}
-	if ( ! isNew ) logf(LOG_INFO,"db: Added %s for collnum=%li pages=%li",
+	if ( ! isNew ) log(LOG_DEBUG,"db: Added %s for collnum=%li pages=%li",
 			    name ,(long)m_collnum,m->getNumPages());
 	// open this big data file for reading only
 	if ( ! isNew ) {
