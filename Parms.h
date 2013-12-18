@@ -132,9 +132,6 @@ class Parm {
 	//bool (*m_func)(TcpSocket *s , HttpRequest *r,
 	//	       bool (*cb)(TcpSocket *s , HttpRequest *r));
 	bool (*m_func)(char *parmRec);
-	// some functions can block, like when deleting a coll because
-	// the tree might be saving, so they take a "we" ptr
-	bool (*m_func2)(char *parmRec,class WaitEntry *we);
 	long  m_plen;  // offset of length for TYPE_STRINGS (m_htmlHeadLen...)
 	char  m_group; // start of a new group of controls?
 	// m_priv = 1 means gigablast's software license clients cannot see
@@ -167,8 +164,6 @@ class Parm {
 	bool   getValueAsBool   ( class SearchInput *si ) ;
 	long   getValueAsLong   ( class SearchInput *si ) ;
 	char * getValueAsString ( class SearchInput *si ) ;	
-
-	long getNumInArray ( collnum_t collnum ) ;
 };
 
 #define MAX_PARMS 940
@@ -255,8 +250,8 @@ class Parms {
 			      bool (*callback)(TcpSocket *s , HttpRequest *r),
 			      class CollectionRec *newcr = NULL );
 	
-	bool insertParm ( long i , long an , char *THIS ) ;
-	bool removeParm ( long i , long an , char *THIS ) ;
+	//void insertParm ( long i , long an , char *THIS ) ;
+	//void removeParm ( long i , long an , char *THIS ) ;
 
 	void setParm ( char *THIS, Parm *m, long mm, long j, char *s,
 		       bool isHtmlEncoded , bool fromRequest ) ;
@@ -327,23 +322,18 @@ class Parms {
 	bool convertHttpRequestToParmList (HttpRequest *hr,SafeBuf *parmList);
 	Parm *getParmFast2 ( long cgiHash32 ) ;
 	Parm *getParmFast1 ( char *cgi , long *occNum ) ;
-	bool broadcastParmList ( SafeBuf *parmList ,
-				 void    *state ,
-				 void   (* callback)(void *) ,
-				 bool sendToGrunts  = true ,
-				 bool sendToProxies = false );
+	bool broadcastParmList ( SafeBuf *parmList ) ;
 	bool doParmSendingLoop ( ) ;
 	bool syncParmsWithHost0 ( ) ;
 	bool makeSyncHashList ( SafeBuf *hashList ) ;
 	long getNumInArray ( collnum_t collnum ) ;
 	bool addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) ;
-	bool updateParm ( char *rec , class WaitEntry *we ) ;
+	bool updateParm ( char *rec ) ;
 
 	//
 	// end new functions
 	//
 
-	bool m_inSyncWithHost0;
 
 	bool m_isDefaultLoaded;
 

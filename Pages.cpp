@@ -425,8 +425,7 @@ void doneBroadcastingParms ( void *state ) {
 	sock->m_handyBuf.purge();
 	// set another http request again
 	HttpRequest r;
-	//bool status = r.set ( sock->m_readBuf , sock->m_readOffset , sock ) ;
-	r.set ( sock->m_readBuf , sock->m_readOffset , sock ) ;
+	bool status = r.set ( sock->m_readBuf , sock->m_readOffset , sock ) ;
 	// we stored the page # below
 	WebPage *pg = &s_pages[sock->m_pageNum];
 	// call the page specifc function which will send data back on socket

@@ -641,6 +641,12 @@ bool Collectiondb::deleteRec ( char *coll , WaitEntry *we ) {
 	//	    "spiders are enabled or active.");
 	//	return false;
 	//}
+	// do not allow this if in repair mode
+	if ( g_repairMode > 0 ) {
+		log("admin: Can not delete collection while in repair mode.");
+		g_errno = EBADENGINEER;
+		return true;
+	}
 	// ensure it's not NULL
 	if ( ! coll ) {
 		log(LOG_LOGIC,"admin: Collection name to delete is NULL.");
@@ -649,21 +655,11 @@ bool Collectiondb::deleteRec ( char *coll , WaitEntry *we ) {
 	}
 	// find the rec for this collection
 	collnum_t collnum = getCollnum ( coll );
-	return deleteRec2 ( collnum , we );
-}
-
-bool Collectiondb::deleteRec2 ( collnum_t collnum , WaitEntry *we ) {
-	// do not allow this if in repair mode
-	if ( g_repairMode > 0 ) {
-		log("admin: Can not delete collection while in repair mode.");
-		g_errno = EBADENGINEER;
-		return true;
-	}
 	// bitch if not found
 	if ( collnum < 0 ) {
 		g_errno = ENOTFOUND;
-		log(LOG_LOGIC,"admin: Collection #%li is bad, "
-		    "delete failed.",(long)collnum);
+		log(LOG_LOGIC,"admin: Collection \"%s\" not found, "
+		    "delete failed.",coll);
 		return true;
 	}
 	CollectionRec *cr = m_recs [ collnum ];
@@ -694,11 +690,8 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum , WaitEntry *we ) {
 	//	    "spiders and wait for them to exit.");
 	//	return false;
 	//}
-
-	char *coll = cr->m_coll;
-
 	// note it
-	log("coll: deleting coll \"%s\"",coll);
+	log("coll: deleting coll \"%s\"",cr->m_coll);
 	// we need a save
 	m_needsSave = true;
 
@@ -778,31 +771,15 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum , WaitEntry *we ) {
 // . returns false if blocked and will call callback
 bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we , bool purgeSeeds) {
 
+	// save parms in case we block
+	we->m_purgeSeeds = purgeSeeds;
+
 	// ensure it's not NULL
 	if ( ! coll ) {
 		log(LOG_LOGIC,"admin: Collection name to delete is NULL.");
 		g_errno = ENOCOLLREC;
 		return true;
 	}
-
-	// get the CollectionRec for "test"
-	CollectionRec *cr = getRec ( coll ); // "test" );
-
-	// must be there. if not, we create test i guess
-	if ( ! cr ) { 
-		log("db: could not get coll rec \"%s\" to reset", coll);
-		char *xx=NULL;*xx=0; 
-	}
-
-	return resetColl2 ( cr->m_collnum,we,purgeSeeds);
-}
-
-
-bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
-
-	// save parms in case we block
-	we->m_purgeSeeds = purgeSeeds;
-
 	// now must be "test" only for now
 	//if ( strcmp(coll,"test") ) { char *xx=NULL;*xx=0; }
 	// no spiders can be out. they may be referencing the CollectionRec
@@ -813,7 +790,6 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 	//	    "spiders are enabled or active.");
 	//	return false;
 	//}
-
 	// do not allow this if in repair mode
 	if ( g_repairMode > 0 ) {
 		log("admin: Can not delete collection while in repair mode.");
@@ -821,7 +797,7 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 		return true;
 	}
 
-	log("admin: resetting collnum %li",(long)collnum);
+	log("admin: resetting coll \"%s\"",coll);
 
 	// CAUTION: tree might be in the middle of saving
 	// we deal with this in Process.cpp now
@@ -840,6 +816,14 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 
 	
 
+	// get the CollectionRec for "test"
+	CollectionRec *cr = getRec ( coll ); // "test" );
+
+	// must be there. if not, we create test i guess
+	if ( ! cr ) { 
+		log("db: could not get coll rec \"%s\" to reset", coll);
+		char *xx=NULL;*xx=0; 
+	}
 
 	// inc the rec ptr buf i guess
 	long need = (m_numRecs+1)*sizeof(CollectionRec *);
@@ -857,8 +841,6 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 	// update length of used bytes
 	m_recPtrBuf.setLength ( need );
 
-	CollectionRec *cr = m_recs[collnum];
-	if ( ! cr ) { char *xx=NULL;*xx=0; }
 	
 	/*
 	// make sure an update not in progress
@@ -1003,7 +985,7 @@ bool Collectiondb::resetColl2(collnum_t collnum,WaitEntry *we,bool purgeSeeds){
 	if ( dir ) {
 		//g_errno = EEXIST;
 		log("admin: Trying to create collection %s but "
-		    "directory %s already exists on disk.",cr->m_coll,dname);
+		    "directory %s already exists on disk.",coll,dname);
 	}
 	if ( ::mkdir ( dname , 
 		       S_IRUSR | S_IWUSR | S_IXUSR | 
@@ -1201,29 +1183,10 @@ collnum_t Collectiondb::getCollnum ( char *coll , long clen ) {
 	*/
 }
 
-//collnum_t Collectiondb::getNextCollnum ( collnum_t collnum ) {
-//	for ( long i = (long)collnum + 1 ; i < m_numRecs ; i++ ) 
-//		if ( m_recs[i] ) return i;
-//	// no next one, use -1
-//	return (collnum_t) -1;
-//}
-
-// what collnum will be used the next time a coll is added?
-collnum_t Collectiondb::reserveCollNum ( ) {
-
-	if ( m_numRecs < 0x7fff ) {
-		collnum_t next = m_numRecs;
-		m_numRecs++;
-		return next;
-	}
-
-	// search for an empty slot
-	for ( long i = 0 ; i < m_numRecs ; i++ ) {
-		if ( ! m_recs[i] ) return (collnum_t)i;
-	}
-
-	log("colldb: no new collnum available. consider upping collnum_t");
-	// none available!!
-	return -1;
+collnum_t Collectiondb::getNextCollnum ( collnum_t collnum ) {
+	for ( long i = (long)collnum + 1 ; i < m_numRecs ; i++ ) 
+		if ( m_recs[i] ) return i;
+	// no next one, use -1
+	return (collnum_t) -1;
 }
 

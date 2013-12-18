@@ -600,11 +600,6 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 
 bool CollectionRec::rebuildUrlFilters ( ) {
 
-	// only for diffbot custom crawls
-	if ( m_isCustomCrawl != 1 && // crawl api
-	     m_isCustomCrawl != 2 )  // bulk api
-		return true;
-
 	char *ucp = m_diffbotUrlCrawlPattern.getBufStart();
 	if ( ucp && ! ucp[0] ) ucp = NULL;
 
