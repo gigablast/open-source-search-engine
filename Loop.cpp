@@ -90,7 +90,7 @@ void Loop::setSigWaitTime ( long ms ) {
 // free up all our mem
 void Loop::reset() {
 	if ( m_slots ) {
-		log("db: resetting loop");
+		log(LOG_DEBUG,"db: resetting loop");
 		mfree ( m_slots , MAX_SLOTS * sizeof(Slot) , "Loop" );
 	}
 	m_slots = NULL;
@@ -567,7 +567,7 @@ bool Loop::init ( ) {
 	m_slots = (Slot *) mmalloc ( MAX_SLOTS * (long)sizeof(Slot) , "Loop" );
 	if ( ! m_slots ) return false;
 	// log it
-	log(LOG_INIT,"loop: Allocated %li bytes for %li callbacks.",
+	log(LOG_DEBUG,"loop: Allocated %li bytes for %li callbacks.",
 	     MAX_SLOTS * (long)sizeof(Slot),(long)MAX_SLOTS);
 	// init link list ptr
 	for ( long i = 0 ; i < MAX_SLOTS - 1 ; i++ ) {

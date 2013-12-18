@@ -350,7 +350,7 @@ bool Clusterdb::addColl ( char *coll, bool doVerify ) {
 }
 
 bool Clusterdb::verify ( char *coll ) {
-	log ( LOG_INFO, "db: Verifying Clusterdb for coll %s...", coll );
+	log ( LOG_DEBUG, "db: Verifying Clusterdb for coll %s...", coll );
 	g_threads.disableThreads();
 
 	Msg5 msg5;
@@ -411,7 +411,7 @@ bool Clusterdb::verify ( char *coll ) {
 		g_threads.enableThreads();
 		return g_conf.m_bypassValidation;
 	}
-	log ( LOG_INFO, "db: Clusterdb passed verification successfully for "
+	log ( LOG_DEBUG, "db: Clusterdb passed verification successfully for "
 			"%li recs.", count );
 	// DONE
 	g_threads.enableThreads();

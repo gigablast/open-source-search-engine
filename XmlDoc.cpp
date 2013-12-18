@@ -46,6 +46,7 @@
 #include "seo.h" // Msg99Request etc.
 //#include <regex.h>
 #include "PingServer.h"
+#include "Parms.h"
 
 #define MAXDOCLEN (1024*1024)
 
@@ -1956,13 +1957,13 @@ bool XmlDoc::indexDoc ( ) {
 	// url spider lock in SpiderLoop::m_lockTable.
 	SpiderReply *nsr = getNewSpiderReply ();
 	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
-	if ( nsr->getRecSize() <= 1) { char *xx=NULL;*xx=0; }
 	if ( ! nsr ) {
 		log("doc: crap, could not even add spider reply "
 		    "to indicate internal error: %s",mstrerror(g_errno));
 		if ( ! g_errno ) g_errno = EBADENGINEER;
 		return true;
 	}
+	//if ( nsr->getRecSize() <= 1) { char *xx=NULL;*xx=0; }
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return true;
@@ -16816,6 +16817,10 @@ long *XmlDoc::getUrlFilterNum ( ) {
 
 	// . make the partial new spider rec
 	// . we need this for matching filters like lang==zh_cn
+	// . crap, but then it matches "hasReply" when it should not
+	// . PROBLEM! this is the new reply not the OLD reply, so it may
+	//   end up matching a DIFFERENT url filter num then what it did
+	//   before we started spidering it...
 	SpiderReply *newsr = getNewSpiderReply ( );
 	// note it
 	if ( ! newsr )
@@ -17452,6 +17457,15 @@ bool XmlDoc::logIt ( ) {
 
 	if ( m_firstIpValid ) 
 		sb.safePrintf("firstip=%s ",iptoa(m_firstIp) );
+
+	// . first ip from spider req if it is fake
+	// . we end up spidering the same url twice because it will have
+	//   different "firstips" in the SpiderRequest key. maybe just
+	//   use domain hash instead of firstip, and then let msg13
+	//   make queues in the case of hammering an ip, which i think
+	//   it already does...
+	if ( m_oldsrValid && m_oldsr.m_firstIp != m_firstIp )
+		sb.safePrintf("fakesreqfirstip=%s ",iptoa(m_firstIp) );
 
 	//
 	// print when this spider request was added

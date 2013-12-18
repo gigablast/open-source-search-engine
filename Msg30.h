@@ -6,7 +6,7 @@
 #ifndef _MSG30_H_
 #define _MSG30_H_
 
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 
 class Msg30 {
 

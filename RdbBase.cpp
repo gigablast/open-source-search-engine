@@ -19,7 +19,7 @@
 #include "Linkdb.h"
 #include "Syncdb.h"
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Repair.h"
 //#include "Msg3.h" // debug include
 
@@ -132,8 +132,9 @@ bool RdbBase::init ( char  *dir            ,
 	char tmp[1024];
 	sprintf ( tmp , "%scoll.%s.%li" , dir , coll , (long)collnum );
 
-	// debug
-	log("base: adding new base for dir=%s coll=%s collnum=%li db=%s",
+	// logDebugAdmin
+	log(LOG_DEBUG,"db: "
+	    "adding new base for dir=%s coll=%s collnum=%li db=%s",
 	    dir,coll,(long)collnum,dbname);
 
 	// catdb is collection independent
@@ -361,7 +362,7 @@ bool RdbBase::init ( char  *dir            ,
 	if ( ! preloadDiskPageCache ) return true;
 	char buf [ 512000 ];
 	long total = m_pc->getMemMax();
-	logf(LOG_INFO,"db: %s: Preloading page cache. Total mem to use =%lu",
+	log(LOG_DEBUG,"db: %s: Preloading page cache. Total mem to use =%lu",
 	     m_dbname,total);
 	//log("max=%li",total);
 	for ( long i = 0 ; i < m_numFiles ; i++ ) {
@@ -502,7 +503,7 @@ bool RdbBase::setFiles ( ) {
 		// we are getting this from a bogus m_dir
 		return log("db: Had error opening directory %s", getDir());
 	// note it
-	logf(LOG_INFO,"db: Loading files for %s coll=%s (%li).",
+	log(LOG_DEBUG,"db: Loading files for %s coll=%s (%li).",
 	     m_dbname,m_coll,(long)m_collnum );
 	// . set our m_files array
 	// . addFile() will return -1 and set g_errno on error
@@ -770,7 +771,7 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		g_statsdb.m_disabled = false;
 		if ( ! status ) return log("db: Save failed.");
 	}
-	if ( ! isNew ) logf(LOG_INFO,"db: Added %s for collnum=%li pages=%li",
+	if ( ! isNew ) log(LOG_DEBUG,"db: Added %s for collnum=%li pages=%li",
 			    name ,(long)m_collnum,m->getNumPages());
 	// open this big data file for reading only
 	if ( ! isNew ) {

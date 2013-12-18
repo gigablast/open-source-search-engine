@@ -184,7 +184,7 @@ bool Linkdb::addColl ( char *coll, bool doVerify ) {
 }
 
 bool Linkdb::verify ( char *coll ) {
-	log ( LOG_INFO, "db: Verifying Linkdb for coll %s...", coll );
+	log ( LOG_DEBUG, "db: Verifying Linkdb for coll %s...", coll );
 	g_threads.disableThreads();
 
 	Msg5 msg5;
@@ -265,7 +265,7 @@ bool Linkdb::verify ( char *coll ) {
 		g_threads.enableThreads();
 		return g_conf.m_bypassValidation;
 	}
-	log ( LOG_INFO, "db: Linkdb passed verification successfully for "
+	log ( LOG_DEBUG, "db: Linkdb passed verification successfully for "
 	      "%li recs.", count );
 	// DONE
 	g_threads.enableThreads();
@@ -378,7 +378,7 @@ key224_t Linkdb::makeKey_uk ( uint32_t  linkeeSiteHash32       ,
 /////////
 
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "matches2.h"
 
 // 1MB read size for now

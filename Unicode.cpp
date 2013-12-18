@@ -1,5 +1,7 @@
 #include "gb-include.h"
 
+#include "UCNormalizer.h"
+
 #include "Mem.h"
 #include "HashTable.h"
 #include "iana_charset.h"

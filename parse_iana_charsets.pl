@@ -117,6 +117,7 @@ print CFILE "// DO NOT EDIT!!!\n\n";
 print CFILE "#include \"gb-include.h\"\n";
 print CFILE "#include \"iana_charset.h\"\n";
 print CFILE "#include \"HashTableX.h\"\n";
+print CFILE "#include \"Conf.h\"\n";
 print CFILE "#include \"hash.h\"\n";
 
 print CFILE<<EOL;

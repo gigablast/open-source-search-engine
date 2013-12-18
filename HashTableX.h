@@ -5,7 +5,7 @@
 #ifndef _HASHTABLEX_H_
 #define _HASHTABLEX_H_
 
-#include "Mem.h"     // for mcalloc and mmalloc
+#include "SafeBuf.h"
 
 class HashTableX {
 

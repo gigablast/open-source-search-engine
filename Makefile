@@ -10,7 +10,7 @@ OBJS =  Tfndb.o UdpSlot.o \
 	PageTitledb.o \
 	PageAddColl.o PageOverview.o \
 	hash.o Domains.o \
-	Collectiondb.o CollectionRec.o \
+	Collectiondb.o \
 	linkspam.o ip.o sort.o \
 	fctypes.o XmlNode.o XmlDoc.o Xml.o \
 	Words.o Url.o UdpServer.o \

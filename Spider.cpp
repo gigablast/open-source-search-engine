@@ -20,6 +20,7 @@
 #include "XmlDoc.h"
 #include "HttpServer.h"
 #include "Pages.h"
+#include "Parms.h"
 
 Doledb g_doledb;
 
@@ -624,7 +625,7 @@ bool Spiderdb::addColl ( char *coll, bool doVerify ) {
 
 bool Spiderdb::verify ( char *coll ) {
 	//return true;
-	log ( LOG_INFO, "db: Verifying Spiderdb for coll %s...", coll );
+	log ( LOG_DEBUG, "db: Verifying Spiderdb for coll %s...", coll );
 	g_threads.disableThreads();
 
 	Msg5 msg5;
@@ -687,7 +688,7 @@ bool Spiderdb::verify ( char *coll ) {
 		g_threads.enableThreads();
 		return g_conf.m_bypassValidation;
 	}
-	log ( LOG_INFO,"db: Spiderdb passed verification successfully for %li "
+	log (LOG_DEBUG,"db: Spiderdb passed verification successfully for %li "
 	      "recs.", count );
 	// DONE
 	g_threads.enableThreads();
@@ -919,7 +920,7 @@ bool SpiderCache::needsSave ( ) {
 }
 
 void SpiderCache::reset ( ) {
-	log("spider: resetting spidercache");
+	log(LOG_DEBUG,"spider: resetting spidercache");
 	// loop over all SpiderColls and get the best
 	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
 		SpiderColl *sc = getSpiderCollIffNonNull(i);
@@ -974,7 +975,7 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	//m_spiderColls [ collnum ] = sc;
 	cr->m_spiderColl = sc;
 	// note it
-	log("spider: made spidercoll=%lx for cr=%lx",
+	log(LOG_DEBUG,"spider: made spidercoll=%lx for cr=%lx",
 	    (long)sc,(long)cr);
 	// update this
 	//if ( m_numSpiderColls < collnum + 1 )
@@ -996,7 +997,8 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	// sanity check
 	if ( ! cr ) { char *xx=NULL;*xx=0; }
 	// note it!
-	log("spider: adding new spider collection for %s",cr->m_coll);
+	log(LOG_DEBUG,"spider: adding new spider collection for %s",
+	    cr->m_coll);
 	// that was it
 	return sc;
 }
@@ -1042,7 +1044,12 @@ bool SpiderColl::load ( ) {
 	// make the dir
 	char *coll = g_collectiondb.getColl(m_collnum);
 	// sanity check
-	if ( ! coll || coll[0]=='\0' ) { char *xx=NULL;*xx=0; }
+	if ( ! coll || coll[0]=='\0' ) {
+		log("spider: bad collnum of %li",(long)m_collnum);
+		g_errno = ENOCOLLREC;
+		return false;
+		//char *xx=NULL;*xx=0; }
+	}
 
 	// reset this once
 	m_msg4Avail    = true;
@@ -1134,7 +1141,7 @@ bool SpiderColl::load ( ) {
 //   this should block since we are at startup...
 bool SpiderColl::makeDoleIPTable ( ) {
 
-	log("spider: making dole ip table for %s",m_coll);
+	log(LOG_DEBUG,"spider: making dole ip table for %s",m_coll);
 
 	key_t startKey ; startKey.setMin();
 	key_t endKey   ; endKey.setMax();
@@ -1207,7 +1214,7 @@ bool SpiderColl::makeDoleIPTable ( ) {
 	// watch out for wrap around
 	if ( startKey >= *(key_t *)list.getLastKey() ) goto loop;
  done:
-	log("spider: making dole ip table done.");
+	log(LOG_DEBUG,"spider: making dole ip table done.");
 	// re-enable threads
 	if ( enabled ) g_threads.enableThreads();
 	// we wrapped, all done
@@ -1321,7 +1328,8 @@ void SpiderColl::urlFiltersChanged ( ) {
 
 // this one has to scan all of spiderdb
 bool SpiderColl::makeWaitingTree ( ) {
-	log("spider: making waiting tree for %s",m_coll);
+
+	log(LOG_DEBUG,"spider: making waiting tree for %s",m_coll);
 
 	key128_t startKey ; startKey.setMin();
 	key128_t endKey   ; endKey.setMax();
@@ -1412,7 +1420,7 @@ bool SpiderColl::makeWaitingTree ( ) {
 	// watch out for wrap around
 	if ( startKey >= *(key128_t *)list.getLastKey() ) goto loop;
  done:
-	log("spider: making waiting tree done.");
+	log(LOG_DEBUG,"spider: making waiting tree done.");
 	// re-enable threads
 	if ( enabled ) g_threads.enableThreads();
 	// we wrapped, all done
@@ -1448,7 +1456,7 @@ long long SpiderColl::getEarliestSpiderTimeFromWaitingTree ( long firstIp ) {
 
 
 bool SpiderColl::makeWaitingTable ( ) {
-	logf(LOG_INFO,"spider: making waiting table for %s.",m_coll);
+	log(LOG_DEBUG,"spider: making waiting table for %s.",m_coll);
 	long node = m_waitingTree.getFirstNode();
 	for ( ; node >= 0 ; node = m_waitingTree.getNextNode(node) ) {
 		// breathe
@@ -1464,7 +1472,7 @@ bool SpiderColl::makeWaitingTable ( ) {
 		// store in waiting table
 		if ( ! m_waitingTable.addKey(&ip,&spiderTimeMS) ) return false;
 	}
-	logf(LOG_INFO,"spider: making waiting table done.");
+	log(LOG_DEBUG,"spider: making waiting table done.");
 	return true;
 }
 
@@ -1540,7 +1548,7 @@ void SpiderColl::reset ( ) {
 
 	char *coll = "unknown";
 	if ( m_coll[0] ) coll = m_coll;
-	logf(LOG_DEBUG,"spider: resetting spider cache coll=%s",coll);
+	log(LOG_DEBUG,"spider: resetting spider cache coll=%s",coll);
 
 	m_ufnMapValid = false;
 
@@ -4225,7 +4233,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 				// if a scan is ongoing, this will re-set it
 				sc->m_nextKey2.setMin();
 				sc->m_waitingTreeNeedsRebuild = true;
-				log("spider: hit rebuild timeout for %s",
+				log(LOG_INFO,
+				    "spider: hit rebuild timeout for %s",
 				    cr->m_coll);
 				// flush the ufn table
 				clearUfnTable();
@@ -4347,8 +4356,8 @@ void doneSendingNotification ( void *state ) {
 
 	// we have to send these two parms to all in cluster now
 	SafeBuf parmList;
-	g_parms.addParmToList2 ( &parmList , cr , "spiderRoundNum" ); 
-	g_parms.addParmToList2 ( &parmList , cr , "spiderRoundStart" ); 
+	g_parms.addCurrentParmToList1 ( &parmList , cr , "spiderRoundNum" ); 
+	g_parms.addCurrentParmToList1 ( &parmList , cr , "spiderRoundStart" ); 
 	// this uses msg4 so parm ordering is guaranteed
 	g_parms.broadcastParmList ( &parmList , NULL , NULL );
 
@@ -6852,7 +6861,7 @@ void removeExpiredLocks ( long hostId ) {
 		if ( lock->m_expires == 0 ) continue;
 		if ( lock->m_expires >= nowGlobal ) continue;
 		// note it for now
-		//if ( g_conf.m_logDebugSpider )
+		if ( g_conf.m_logDebugSpider )
 			log("spider: removing lock after waiting. elapsed=%li."
 			    " lockKey=%llu hid=%li expires=%lu nowGlobal=%lu",
 			    (nowGlobal - lock->m_timestamp),
@@ -8951,7 +8960,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// if we got a reply, we are not new!!
-			if ( (bool)srep == (bool)val ) continue;
+			//if ( (bool)srep == (bool)val ) continue;
+			if ( (bool)(sreq->m_hadReply) == (bool)val ) continue;
 			// skip it for speed
 			p += 8;
 			// check for &&
@@ -9440,7 +9450,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// if we got a reply, we are not new!!
-			if ( (bool)srep != (bool)val ) continue;
+			if ( (bool)sreq->m_hadReply != (bool)val ) continue;
 			// skip it for speed
 			p += 5;
 			// check for &&

@@ -4,7 +4,7 @@
 #include "Pages.h"
 #include "Parms.h"
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Tagdb.h"
 #include "Categories.h"
 #include "Proxy.h"
@@ -425,7 +425,8 @@ void doneBroadcastingParms ( void *state ) {
 	sock->m_handyBuf.purge();
 	// set another http request again
 	HttpRequest r;
-	bool status = r.set ( sock->m_readBuf , sock->m_readOffset , sock ) ;
+	//bool status = r.set ( sock->m_readBuf , sock->m_readOffset , sock ) ;
+	r.set ( sock->m_readBuf , sock->m_readOffset , sock ) ;
 	// we stored the page # below
 	WebPage *pg = &s_pages[sock->m_pageNum];
 	// call the page specifc function which will send data back on socket
@@ -588,7 +589,8 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	
 	// . convert http request to list of parmdb records
 	// . will only add parm recs we have permission to modify
-	if ( ! g_parms.convertHttpRequestToParmList ( r , parmList ) )
+	// . if no collection supplied will just return true with no g_errno
+	if ( ! g_parms.convertHttpRequestToParmList ( r , parmList , page ) )
 		return g_httpServer.sendErrorReply(s,505,mstrerror(g_errno));
 		
 

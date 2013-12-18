@@ -4,7 +4,7 @@
 
 #include "Msg40.h"
 #include "Stats.h"        // for timing and graphing time to get all summaries
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Collectiondb.h"
 //#include "TitleRec.h"      // containsAdultWords ()
 #include "LanguageIdentifier.h"

@@ -25,7 +25,7 @@
 #include "Spider.h"
 #include "Revdb.h"
 #include "hash.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 
 void attemptMergeAll ( int fd , void *state ) ;
 
@@ -100,7 +100,7 @@ void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
 	if ( ! cr ) return;
 	if ( cr->m_bases[(unsigned char)m_rdbId] ) { char *xx=NULL;*xx=0; }
 	cr->m_bases[(unsigned char)m_rdbId] = base;
-	log("rdb: added base to collrec "
+	log ( LOG_DEBUG,"db: added base to collrec "
 	    "for rdb=%s rdbid=%li coll=%s collnum=%li base=0x%lx",
 	    m_dbname,(long)m_rdbId,cr->m_coll,(long)collnum,(long)base);
 }
@@ -512,6 +512,14 @@ bool Rdb::addColl2 ( collnum_t collnum ) {
 	// add it to CollectionRec::m_bases[] base ptrs array
 	addBase ( collnum , newColl );
 
+	// . set CollectionRec::m_numPos/NegKeysInTree[rdbId]
+	// . these counts are now stored in the CollectionRec and not
+	//   in RdbTree since the # of collections can be huge!
+	if ( m_useTree ) {
+		m_tree.setNumKeys ( cr );
+	}
+
+
 	RdbTree    *tree = NULL;
 	RdbBuckets *buckets = NULL;
 	if(m_useTree) tree    = &m_tree;
@@ -541,13 +549,6 @@ bool Rdb::addColl2 ( collnum_t collnum ) {
 		     "collection \"%s\".", m_dbname,coll);
 		//exit(-1);
 		return false;
-	}
-
-	// . set CollectionRec::m_numPos/NegKeysInTree[rdbId]
-	// . these counts are now stored in the CollectionRec and not
-	//   in RdbTree since the # of collections can be huge!
-	if ( m_useTree ) {
-		m_tree.setNumKeys ( cr );
 	}
 
 	//if ( (long)collnum >= m_numBases ) m_numBases = (long)collnum + 1;
@@ -636,7 +637,7 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 	}
 
 	
-	log("rdb: %s base from collrec "
+	log(LOG_DEBUG,"db: %s base from collrec "
 	    "rdb=%s rdbid=%li coll=%s collnum=%li newcollnum=%li",
 	    msg,m_dbname,(long)m_rdbId,coll,(long)collnum,
 	    (long)newCollnum);
@@ -667,7 +668,7 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 	// move into that dir
 	::rename ( oldname , newname );
 
-	logf ( LOG_INFO, "admin: cleared data for coll \"%s\" (%li) rdb=%s.",
+	log ( LOG_DEBUG, "db: cleared data for coll \"%s\" (%li) rdb=%s.",
 	       coll,(long)collnum ,getDbnameFromId(m_rdbId));
 
 	return true;

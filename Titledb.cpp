@@ -55,13 +55,16 @@ bool Titledb::init ( ) {
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
-	long pageSize = GB_INDEXDB_PAGE_SIZE;
+	//long pageSize = GB_INDEXDB_PAGE_SIZE;
 	// init the page cache
+	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
+	/*
 	if ( ! m_pc.init ( "titledb",
 			   RDB_TITLEDB,
 			   pcmem    ,
 			   pageSize ) )
 		return log("db: Titledb init failed.");
+	*/
 
 	// each entry in the cache is usually just a single record, no lists
 	//long maxCacheNodes = g_conf.m_titledbMaxCacheMem / (10*1024);
@@ -87,7 +90,7 @@ bool Titledb::init ( ) {
 			    0,//maxCacheNodes               ,
 			    false                       ,// half keys?
 			    false                       ,// g_conf.m_titledbSav
-			    &m_pc                       , // page cache ptr
+			    NULL,//&m_pc               , // page cache ptr
 			    true                        ) )// is titledb?
 		return false;
 	return true;
@@ -136,7 +139,7 @@ bool Titledb::addColl ( char *coll, bool doVerify ) {
 }
 
 bool Titledb::verify ( char *coll ) {
-	log ( LOG_INFO, "db: Verifying Titledb for coll %s...", coll );
+	log ( LOG_DEBUG, "db: Verifying Titledb for coll %s...", coll );
 	g_threads.disableThreads();
 
 	Msg5 msg5;
@@ -209,7 +212,7 @@ bool Titledb::verify ( char *coll ) {
 		return g_conf.m_bypassValidation;
 	}
 
-	log ( LOG_INFO, "db: Titledb passed verification successfully for %li"
+	log ( LOG_DEBUG, "db: Titledb passed verification successfully for %li"
 			" recs.", count );
 	// DONE
 	g_threads.enableThreads();

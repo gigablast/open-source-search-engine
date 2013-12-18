@@ -1,10 +1,11 @@
 // iana_charset.h
-// Generated automatically by parse_iana_charsets.pl Thu Dec 12 20:57:59 2013
+// Generated automatically by parse_iana_charsets.pl Mon Dec 16 19:05:16 2013
 // DO NOT EDIT!!!
 
 #include "gb-include.h"
 #include "iana_charset.h"
 #include "HashTableX.h"
+#include "Conf.h"
 #include "hash.h"
 
 typedef struct {

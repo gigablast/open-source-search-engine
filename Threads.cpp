@@ -183,13 +183,15 @@ bool Threads::init ( ) {
 	// set s_pid to the main process id
 #ifdef PTHREADS
 	s_pid = pthread_self();
-	log("threads: main process THREAD id = %lu",(long unsigned)s_pid);
+	log(LOG_INFO,
+	    "threads: main process THREAD id = %lu",(long unsigned)s_pid);
 	pthread_t tid = pthread_self();
 	sched_param param;
 	int policy;
 	// scheduling parameters of target thread
 	pthread_getschedparam ( tid, &policy, &param);
-	log("threads: min/max thread priority settings = %li/%li (policy=%li)",
+	log(LOG_INFO,
+	    "threads: min/max thread priority settings = %li/%li (policy=%li)",
 	    (long)sched_get_priority_min(policy),
 	    (long)sched_get_priority_max(policy),
 	    (long)policy);

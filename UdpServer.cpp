@@ -167,7 +167,7 @@ bool UdpServer::useSharedMem() {
 void UdpServer::reset() {
 	// clear our slots
 	if ( ! m_slots ) return;
-	log("db: resetting udp server");
+	log(LOG_DEBUG,"db: resetting udp server");
 	mfree ( m_slots , m_maxSlots * sizeof(UdpSlot) , "UdpServer" );
 	m_slots = NULL;
 	if ( m_buf ) mfree ( m_buf , m_bufSize , "UdpServer");
@@ -227,11 +227,11 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 	m_slots =(UdpSlot *)mmalloc(maxSlots*sizeof(UdpSlot),"UdpServer");
 	if ( ! m_slots ) return log("udp: Failed to allocate %li bytes.",
 				    maxSlots*sizeof(UdpSlot));
-	log(LOG_INIT,"udp: Allocated %li bytes for %li sockets.",
+	log(LOG_DEBUG,"udp: Allocated %li bytes for %li sockets.",
 	     maxSlots*(long)sizeof(UdpSlot),maxSlots);
 	m_maxSlots = maxSlots;
 	// dgram size
-	log(LOG_INIT,"udp: Using dgram size of %li bytes.",
+	log(LOG_DEBUG,"udp: Using dgram size of %li bytes.",
 	    (long)DGRAM_SIZE);
 	// set up linked list of available slots
 	m_head = &m_slots[0];
@@ -255,7 +255,7 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 	m_ptrs = (UdpSlot **)m_buf;
 	// clear
 	memset ( m_ptrs , 0 , sizeof(UdpSlot *)*m_numBuckets );
-	log(LOG_INIT,"udp: Allocated %li bytes for table.",m_bufSize);
+	log(LOG_DEBUG,"udp: Allocated %li bytes for table.",m_bufSize);
 
 	m_numUsedSlots   = 0;
 	// clear this
@@ -386,9 +386,9 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 		     opt,mstrerror(errno));
 	// log the buffer sizes
 	getsockopt( m_sock , SOL_SOCKET , SO_RCVBUF , &opt , &optLen );
-	log(LOG_INIT,"udp: Receive buffer size is %i bytes.",opt);
+	log(LOG_DEBUG,"udp: Receive buffer size is %i bytes.",opt);
 	getsockopt( m_sock , SOL_SOCKET , SO_SNDBUF , &opt , &optLen );
-	log(LOG_INIT,"udp: Send    buffer size is %i bytes.",opt);
+	log(LOG_DEBUG,"udp: Send    buffer size is %i bytes.",opt);
         // bind this name to the socket
         if ( bind ( m_sock, (struct sockaddr *)&name, sizeof(name)) < 0) {
 		// copy errno to g_errno
@@ -446,7 +446,7 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 	// log an innocent msg
 	//log ( 0, "udp: listening on port %hu with sd=%li and "
 	//      "niceness=%li", m_port, m_sock, m_niceness );
-	logf ( LOG_INIT, "udp: Listening on UDP port %hu with niceness=%li.", 
+	log ( LOG_INIT, "udp: Listening on UDP port %hu with niceness=%li.", 
 	       m_port, niceness );
 	// print dgram sizes
 	//log("udp:  using max dgram size of %li bytes", DGRAM_SIZE );

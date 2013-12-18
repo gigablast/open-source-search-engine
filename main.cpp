@@ -79,7 +79,7 @@
 //#include "Msg34.h"
 #include "Msg35.h"
 //#include "Msg24.h"
-#include "Msg28.h"
+//#include "Msg28.h"
 //#include "Msg30.h"
 //#include "MsgB.h"
 //#include "Msg3e.h"
@@ -3381,7 +3381,6 @@ long checkDirPerms ( char *dir ) {
 
 // save them all
 static       void doCmdAll   ( int fd, void *state ) ;
-static       void doneCmdAll ( void *state );
 static       bool  s_sendToHosts;
 static       bool  s_sendToProxies;
 static       long  s_hostId;
@@ -3406,8 +3405,8 @@ bool doCmd ( const char *cmd , long hostId , char *filename ,
 	g_conf.m_httpMaxSockets = 512;
 	sprintf ( g_conf.m_spiderUserAgent ,"Gigabot/1.0");
 	// then webserver, client side only
-	if ( ! g_httpServer.init( -1, -1 ) ) 
-		return log("db: HttpServer init failed." ); 
+	//if ( ! g_httpServer.init( -1, -1 ) ) 
+	//	return log("db: HttpServer init failed." ); 
 	// no, we just need udp server
 	//if ( ! g_udpServer.init( 6345/*port*/,&g_dp,-1/*niceness*/,
 	//			  10000000,10000000,20,1000) ) {
@@ -3420,6 +3419,9 @@ bool doCmd ( const char *cmd , long hostId , char *filename ,
 	// make a fake http request
 	sprintf ( s_buffer , "GET /%s?%s HTTP/1.0" , filename , cmd );
 	TcpSocket sock; sock.m_ip = 0;
+	// make it local loopback so it passes the permission test in
+	// doCmdAll()'s call to convertHttpRequestToParmList
+	sock.m_ip = atoip("127.0.0.1");
 	s_r.set ( s_buffer , gbstrlen ( s_buffer ) , &sock );
 	// run the loop
 	if ( ! g_loop.runLoop() ) 
@@ -3427,9 +3429,73 @@ bool doCmd ( const char *cmd , long hostId , char *filename ,
 	return true;
 }
 
-static Msg28       s_msg28;
-static TcpSocket   s_s;
+//static Msg28       s_msg28;
+//static TcpSocket   s_s;
+
+void doneCmdAll ( void *state ) {
+	/*
+	if ( s_sendToProxies ){
+		if ( ! g_loop.registerSleepCallback(1, NULL, doCmdAll,0 ) ){
+			log("admin: Loop init failed.");
+			exit ( 0 );
+		}
+		return;
+	}
+	*/
+	log("cmd: completed command");
+	exit ( 0 );
+}
+
+
 void doCmdAll ( int fd, void *state ) { 
+
+	// do not keep calling it!
+	g_loop.unregisterSleepCallback ( NULL, doCmdAll );
+
+	// make port -1 to indicate none to listen on
+	if ( ! g_udpServer.init( 18123 , // port to listen on
+				 &g_dp,
+				 0, // niceness
+				 20000000 ,   // readBufSIze
+				 20000000 ,   // writeBufSize
+				 20       ,   // pollTime in ms
+				 3500     ,   // max udp slots
+				 false    )){ // is dns?
+		log("db: UdpServer init  on port 18123 failed: %s" ,
+		    mstrerror(g_errno)); 
+		exit(0);
+	}
+
+	// udpserver::sendRequest() checks we have a handle for msgs we send!
+	// so fake it out with this lest it cores
+	g_udpServer.registerHandler(0x3f,handleRequest3f);
+	
+
+	SafeBuf parmList;
+	// returns false and sets g_errno on error
+	if ( ! g_parms.convertHttpRequestToParmList ( &s_r , &parmList ,0) ) {
+		log("cmd: error converting command: %s",mstrerror(g_errno));
+		exit(0);
+	}
+
+	if ( parmList.length() <= 0 ) {
+		log("cmd: no parmlist to send");
+		exit(0);
+	}
+
+	// returns true with g_errno set on error. uses g_udpServer
+	if ( g_parms.broadcastParmList ( &parmList ,
+					 NULL , 
+					 doneCmdAll , // callback when done
+					 s_sendToHosts ,
+					 s_sendToProxies ) ) {
+		log("cmd: error sending command: %s",mstrerror(g_errno));
+		exit(0);
+		return;
+	}
+	// wait for it
+	log("cmd: sent command");
+	/*
 	bool status = true;
 	if ( s_sendToHosts ){
 		s_sendToHosts = false;
@@ -3446,18 +3512,8 @@ void doCmdAll ( int fd, void *state ) {
 	g_loop.unregisterSleepCallback ( NULL, doCmdAll );
 	// if we did not block, call the callback directly
 	if ( status ) doneCmdAll(NULL);
+	*/
 }
-void doneCmdAll ( void *state ) {
-	if ( s_sendToProxies ){
-		if ( ! g_loop.registerSleepCallback(1, NULL, doCmdAll,0 ) ){
-			log("admin: Loop init failed.");
-			exit ( 0 );
-		}
-		return;
-	}
-	exit ( 0 );
-}
-
 
 // copy a collection from one network to another (defined by 2 hosts.conf's)
 int collcopy ( char *newHostsConf , char *coll , long collnum ) {

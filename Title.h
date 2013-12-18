@@ -4,7 +4,7 @@
 #define _TITLE_H_
 #include "SafeBuf.h"
 #include "Query.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 
 #define TITLE_LOCAL_SIZE 2048
 

@@ -51,7 +51,7 @@ http://igoogledeveloper.blogspot.com/
 #include "gb-include.h"
 
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Stats.h"
 #include "Statsdb.h"
 #include "Ads.h"
@@ -17156,7 +17156,7 @@ bool sendPageSiteMap ( TcpSocket *s , HttpRequest *r ) {
 #include "HashTable.h"
 #include "Msg4.h"
 #include "AutoBan.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 //#include "Links.h"
 #include "Users.h"
 #include "HashTableT.h"
