@@ -88,6 +88,7 @@ public:
 	bool m_needHeaderRow;
 
 	SafeBuf m_seedBank;
+	SafeBuf m_listBuf;
 
 	bool m_needsMime;
 	char m_rdbId;
@@ -2052,22 +2053,22 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		//spiderLinks      = hr->getLong("spiderlinks",spiderLinks);
 		//bool spiderLinks = false;
 		// make a list of spider requests from these urls
-		SafeBuf listBuf;
+		//SafeBuf listBuf;
 		// this returns NULL with g_errno set
 		bool status = true;
 		if ( ! getSpiderRequestMetaList ( seeds,
-						  &listBuf ,
+						  &st->m_listBuf ,
 						  true , // spiderLinks?
 						  cr ) )
 			status = false;
 		// do not spider links for spots
 		if ( ! getSpiderRequestMetaList ( spots,
-						  &listBuf ,
+						  &st->m_listBuf ,
 						  false , // spiderLinks?
 						  NULL ) )
 			status = false;
 		// empty?
-		long size = listBuf.length();
+		long size = st->m_listBuf.length();
 		// error?
 		if ( ! status ) {
 			// nuke it
@@ -2083,8 +2084,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			return sendErrorReply2(socket,fmt,"no urls found");
 		}
 		// add to spiderdb
-		if ( ! st->m_msg4.addMetaList( listBuf.getBufStart() ,
-					       listBuf.length(),
+		if ( ! st->m_msg4.addMetaList( st->m_listBuf.getBufStart() ,
+					       st->m_listBuf.length(),
 					       cr->m_coll,
 					       st ,
 					       addedUrlsToSpiderdbWrapper,
