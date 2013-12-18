@@ -1847,6 +1847,8 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	     m_isCustomCrawl != 2 )  // bulk api
 		return true;
 
+	log(LOG_DEBUG,"db: rebuilding url filters");
+
 	char *ucp = m_diffbotUrlCrawlPattern.getBufStart();
 	if ( ucp && ! ucp[0] ) ucp = NULL;
 

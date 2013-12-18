@@ -8960,7 +8960,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// if we got a reply, we are not new!!
-			if ( (bool)srep == (bool)val ) continue;
+			//if ( (bool)srep == (bool)val ) continue;
+			if ( (bool)(sreq->m_hadReply) == (bool)val ) continue;
 			// skip it for speed
 			p += 8;
 			// check for &&
@@ -9449,7 +9450,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// if we got a reply, we are not new!!
-			if ( (bool)srep != (bool)val ) continue;
+			if ( (bool)sreq->m_hadReply != (bool)val ) continue;
 			// skip it for speed
 			p += 5;
 			// check for &&

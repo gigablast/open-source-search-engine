@@ -16817,6 +16817,10 @@ long *XmlDoc::getUrlFilterNum ( ) {
 
 	// . make the partial new spider rec
 	// . we need this for matching filters like lang==zh_cn
+	// . crap, but then it matches "hasReply" when it should not
+	// . PROBLEM! this is the new reply not the OLD reply, so it may
+	//   end up matching a DIFFERENT url filter num then what it did
+	//   before we started spidering it...
 	SpiderReply *newsr = getNewSpiderReply ( );
 	// note it
 	if ( ! newsr )
