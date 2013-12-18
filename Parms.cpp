@@ -17809,7 +17809,7 @@ long Parm::getNumInArray ( collnum_t collnum ) {
 		obj = (char *)cr;
 	}
 	// # in array is before it
-	return *(long *)(obj-4);
+	return *(long *)(obj+m_off-4);
 }
 
 // . we use this for syncing parms between hosts
