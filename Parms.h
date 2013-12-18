@@ -91,6 +91,7 @@ class Page {
 #define PF_SUBMENU_HEADER  0x04
 #define PF_WIDGET_PARM     0x08
 #define PF_API             0x10
+#define PF_REBUILDURLFILTERS 0x20
 
 class Parm {
  public:

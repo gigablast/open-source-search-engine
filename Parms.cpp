@@ -8814,6 +8814,7 @@ void Parms::init ( ) {
 	m->m_def   = "0.0"; // 0.0
 	m->m_page  = PAGE_NONE;
 	m->m_units = "days";
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "collective crawl delay (seconds)";
@@ -8823,6 +8824,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = ".250"; // 250 ms
 	m->m_page  = PAGE_NONE;
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m->m_units = "seconds";
 	m++;
 
@@ -8832,6 +8834,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_diffbotApiUrl - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m->m_def   = "";
 	m++;
 
@@ -8842,6 +8845,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_cgi   = "urlProcessPattern";
@@ -8851,6 +8855,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_cgi   = "pageProcessPattern";
@@ -8860,6 +8865,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_cgi   = "urlCrawlRegEx";
@@ -8869,6 +8875,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_cgi   = "urlProcessRegEx";
@@ -8878,6 +8885,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_cgi   = "onlyProcessIfNew";
@@ -8887,6 +8895,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "1";
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_cgi   = "seeds";
@@ -13460,6 +13469,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1; // if we START a new row
 	m->m_def   = "";
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "harvest links";
@@ -13471,6 +13481,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "spidering enabled";
@@ -13482,6 +13493,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "respider frequency (days)";
@@ -13494,6 +13506,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_FILTERS;
 	m->m_units = "days";
 	m->m_rowid = 1;
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "max spiders";
@@ -13507,6 +13520,7 @@ void Parms::init ( ) {
 	m->m_def   = "99";
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "max spiders per ip";
@@ -13519,6 +13533,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "same ip wait (ms)";
@@ -13534,6 +13549,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_FILTERS;
 	m->m_units = "milliseconds";
 	m->m_rowid = 1;
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	/*
@@ -13559,6 +13575,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
 	m->m_def   = "";
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "diffbot api";
@@ -13577,6 +13594,7 @@ void Parms::init ( ) {
 	m->m_size  = sizeof(SafeBuf);
 	m->m_rowid = 1;
 	m->m_addin = 1; // "insert" follows?
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	//m->m_title = "<a href=/overview.html#ruleset>ruleset</a>";
@@ -17478,8 +17496,7 @@ void handleRequest3fLoop ( void *weArg ) {
 		// . determine if it alters the url filters
 		// . if those were changed we have to nuke doledb and
 		//   waiting tree in Spider.cpp and rebuild them!
-		//if ( parm->m_flags & REBUILDURLFILTERS )
-		if ( parm->m_page == PAGE_FILTERS )
+		if ( parm->m_flags & PF_REBUILDURLFILTERS )
 			we->m_doRebuilds = true;
 
 		// get collnum i guess
@@ -17526,8 +17543,11 @@ void handleRequest3fLoop ( void *weArg ) {
 
 	// basically resetting the spider here...
 	if ( we->m_doRebuilds && cr ) {
-		// this tells Spider.cpp to rebuild the spider queues
-		cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+		// . this tells Spider.cpp to rebuild the spider queues
+		// . this is NULL if spider stuff never initialized yet,
+		//   like if you just added the collection
+		if ( cr->m_spiderColl )
+			cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
 		// . reconstruct the url filters if we were a custom crawl
 		// . this is used to abstract away the complexity of url
 		//   filters in favor of simple regular expressions and
