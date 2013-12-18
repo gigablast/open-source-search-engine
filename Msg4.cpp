@@ -669,10 +669,16 @@ bool Msg4::addMetaList2 ( ) {
 		// room for the data yet, and try again later
 		return false;
 	}
+
+	// . send out all bufs
+	// . before we were caching to reduce packet traffic, but
+	//   since we don't use the network for sending termlists let's
+	//   try going back to making it even more real-time
+	//if ( ! isClockInSync() ) return true;
+	// flush them buffers
+	//flushLocal();
 			       
 	return true;
-
-
 }
 
 // . modify each Msg4 request as follows

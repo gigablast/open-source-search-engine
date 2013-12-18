@@ -6861,7 +6861,7 @@ void removeExpiredLocks ( long hostId ) {
 		if ( lock->m_expires == 0 ) continue;
 		if ( lock->m_expires >= nowGlobal ) continue;
 		// note it for now
-		//if ( g_conf.m_logDebugSpider )
+		if ( g_conf.m_logDebugSpider )
 			log("spider: removing lock after waiting. elapsed=%li."
 			    " lockKey=%llu hid=%li expires=%lu nowGlobal=%lu",
 			    (nowGlobal - lock->m_timestamp),

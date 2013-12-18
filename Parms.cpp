@@ -8932,7 +8932,7 @@ void Parms::init ( ) {
 	m->m_def   = "100001";
 	m++;
 
-	m->m_cgi   = "maxCrawlRounds";
+	m->m_cgi   = "maxRounds";
 	m->m_title = "max crawl rounds";
 	m->m_xml   = "maxCrawlRounds";
 	m->m_off   = (char *)&cr.m_maxCrawlRounds - x;

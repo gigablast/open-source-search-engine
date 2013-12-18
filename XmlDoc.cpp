@@ -17458,6 +17458,15 @@ bool XmlDoc::logIt ( ) {
 	if ( m_firstIpValid ) 
 		sb.safePrintf("firstip=%s ",iptoa(m_firstIp) );
 
+	// . first ip from spider req if it is fake
+	// . we end up spidering the same url twice because it will have
+	//   different "firstips" in the SpiderRequest key. maybe just
+	//   use domain hash instead of firstip, and then let msg13
+	//   make queues in the case of hammering an ip, which i think
+	//   it already does...
+	if ( m_oldsrValid && m_oldsr.m_firstIp != m_firstIp )
+		sb.safePrintf("fakesreqfirstip=%s ",iptoa(m_firstIp) );
+
 	//
 	// print when this spider request was added
 	//
