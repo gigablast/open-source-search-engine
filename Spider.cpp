@@ -1533,7 +1533,8 @@ void SpiderColl::clear ( ) {
 	}
 
 	// assume the whole thing is not empty
-	m_allDoledbPrioritiesEmpty = false;
+	m_allDoledbPrioritiesEmpty = 0;//false;
+	m_lastEmptyCheck = 0;
 }
 
 void SpiderColl::reset ( ) {
@@ -1572,7 +1573,8 @@ void SpiderColl::reset ( ) {
 	}
 
 	// assume the whole thing is not empty
-	m_allDoledbPrioritiesEmpty = false;
+	m_allDoledbPrioritiesEmpty = 0;//false;
+	m_lastEmptyCheck = 0;
 
 }
 
@@ -3808,7 +3810,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	m_isDoledbEmpty [ bp ] = 0;
 
 	// and the whole thing is no longer empty
-	m_allDoledbPrioritiesEmpty = false;
+	m_allDoledbPrioritiesEmpty = 0;//false;
+	m_lastEmptyCheck = 0;
 
 	//
 	// delete the winner from ufntree as well
@@ -4630,10 +4633,21 @@ void SpiderLoop::spiderDoledUrls ( ) {
 			continue;
 		}
 
+		// . reset our doledb empty timer every 3 minutes and also
+		// . reset our doledb empty status
+		if ( cr->m_spiderColl &&
+		     nowGlobal - cr->m_spiderColl->m_lastEmptyCheck >= 180 ) {
+			// assume doledb not empty
+			cr->m_spiderColl->m_allDoledbPrioritiesEmpty = 0;
+			// reset the timer
+			cr->m_spiderColl->m_lastEmptyCheck = nowGlobal;
+		}
+
 		// . if all doledb priorities are empty, skip it quickly
 		// . do this only after we update lastSpiderAttempt above
+		// . this is broken!! why??
 		if ( cr->m_spiderColl && 
-		     cr->m_spiderColl->m_allDoledbPrioritiesEmpty )
+		     cr->m_spiderColl->m_allDoledbPrioritiesEmpty >= 3 )
 			continue;
 
 		// ok, we are good to launch a spider for coll m_cri
@@ -4946,10 +4960,13 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] = 1;
 
 		// if all priorities now empty set another flag
-		m_sc->m_allDoledbPrioritiesEmpty = true;
+		m_sc->m_allDoledbPrioritiesEmpty++;
 		for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ ) {
 			if ( m_sc->m_isDoledbEmpty[m_sc->m_pri2] ) continue;
-			m_sc->m_allDoledbPrioritiesEmpty = false;
+			// must get empties 3 times in a row to ignore it
+			// in case something was added to doledb while
+			// we were reading from doledb.
+			m_sc->m_allDoledbPrioritiesEmpty--;
 			break;
 		}
 			
