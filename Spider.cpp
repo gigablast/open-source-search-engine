@@ -4633,21 +4633,27 @@ void SpiderLoop::spiderDoledUrls ( ) {
 			continue;
 		}
 
+		// shortcut
+		SpiderColl *sc = cr->m_spiderColl;
+
 		// . reset our doledb empty timer every 3 minutes and also
 		// . reset our doledb empty status
-		if ( cr->m_spiderColl &&
-		     nowGlobal - cr->m_spiderColl->m_lastEmptyCheck >= 180 ) {
+		if ( sc && nowGlobal - sc->m_lastEmptyCheck >= 180 ) {
 			// assume doledb not empty
-			cr->m_spiderColl->m_allDoledbPrioritiesEmpty = 0;
+			sc->m_allDoledbPrioritiesEmpty = 0;
 			// reset the timer
-			cr->m_spiderColl->m_lastEmptyCheck = nowGlobal;
+			sc->m_lastEmptyCheck = nowGlobal;
+			// reset all empty flags for each priority
+			for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ ) {
+				sc->m_nextKeys[i] = g_doledb.makeFirstKey2(i);
+				sc->m_isDoledbEmpty[i] = 0;
+			}
 		}
 
 		// . if all doledb priorities are empty, skip it quickly
 		// . do this only after we update lastSpiderAttempt above
 		// . this is broken!! why??
-		if ( cr->m_spiderColl && 
-		     cr->m_spiderColl->m_allDoledbPrioritiesEmpty >= 3 )
+		if ( sc && sc->m_allDoledbPrioritiesEmpty >= 3 )
 			continue;
 
 		// ok, we are good to launch a spider for coll m_cri
@@ -4680,7 +4686,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// start at the top each time now
 	//m_sc->m_nextDoledbKey.setMin();
 
-	// set the key to this at start
+	// set the key to this at start (break Spider.cpp:4683
 	//m_sc->m_nextDoledbKey = g_doledb.makeFirstKey2 ( m_sc->m_pri );
 
 	// init the m_priorityToUfn map array?
@@ -4819,7 +4825,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	     m_sc->m_msg5StartKey != m_sc->m_nextDoledbKey )
 		log("spider: msg5startKey differs from nextdoledbkey");
 
-	// get a spider rec for us to spider from doledb
+	// get a spider rec for us to spider from doledb (mdw)
 	if ( ! m_msg5.getList ( RDB_DOLEDB      ,
 				coll            ,
 				&m_list         ,
@@ -5084,7 +5090,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		    m_sc->m_pri2,KEYSTR(&m_sc->m_nextDoledbKey,12));
 
 	// update next doledbkey for this priority to avoid having to
-	// process excessive positive/negative key annihilations
+	// process excessive positive/negative key annihilations (mdw)
 	m_sc->m_nextKeys [ m_sc->m_pri2 ] = m_sc->m_nextDoledbKey;
 
 	// sanity
