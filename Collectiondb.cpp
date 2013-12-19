@@ -221,7 +221,11 @@ bool Collectiondb::addExistingColl ( char *coll,
 			   "\"%s\".",coll);
 	}
 
-	return registerCollRec ( cr , isDump , false );
+	if ( ! registerCollRec ( cr , isDump , false ) ) return false;
+
+	// we need to compile the regular expressions or update the url
+	// filters with new logic that maps crawlbot parms to url filters
+	return cr->rebuildUrlFilters ( );
 }
 
 // . add a new rec
@@ -1826,7 +1830,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	     m_isCustomCrawl != 2 )  // bulk api
 		return true;
 
-	logf(LOG_DEBUG,"db: rebuilding url filters");
+	//logf(LOG_DEBUG,"db: rebuilding url filters");
 
 	char *ucp = m_diffbotUrlCrawlPattern.getBufStart();
 	if ( ucp && ! ucp[0] ) ucp = NULL;
