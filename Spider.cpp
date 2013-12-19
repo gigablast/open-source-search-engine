@@ -3748,11 +3748,6 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		char *xx=NULL;*xx=0; 
 	}
 
-	// set this bit so url filters works right on "hasReply" filter
-	// so XmlDoc::getUrlFilterNum() works right
-	if ( hadReply ) m_bestRequest->m_hadReply = true;
-	else            m_bestRequest->m_hadReply = false;
-	
 	// make the doledb key first for this so we can add it
 	key_t doleKey = g_doledb.makeKey ( m_bestRequest->m_priority     ,
 					   // convert to seconds from ms
