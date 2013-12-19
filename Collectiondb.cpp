@@ -24,6 +24,8 @@
 #include "Users.h"
 #include "Parms.h"
 
+void testRegex ( ) ;
+
 HashTableX g_collTable;
 
 // a global class extern'd in .h file
@@ -1402,31 +1404,8 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// add default reg ex IFF there are no url filters there now
 	if ( m_numRegExs == 0 ) setUrlFiltersToDefaults();
 
-	// compile regexs here
-	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
-	if ( rx && ! rx[0] ) rx = NULL;
-	if ( rx ) m_hasucr = true;
-	if ( rx && regcomp ( &m_ucr , rx ,
-		       REG_EXTENDED|REG_ICASE|
-		       REG_NEWLINE|REG_NOSUB) ) {
-			// error!
-			return log("xmldoc: regcomp %s failed: %s. "
-				   "Ignoring.",
-				   rx,mstrerror(errno));
-	}
-
-	rx = m_diffbotUrlProcessRegEx.getBufStart();
-	if ( rx && ! rx[0] ) rx = NULL;
-	if ( rx ) m_hasupr = true;
-	if ( rx && regcomp ( &m_upr , rx ,
-		       REG_EXTENDED|REG_ICASE|
-		       REG_NEWLINE|REG_NOSUB) ) {
-			// error!
-			return log("xmldoc: regcomp %s failed: %s. "
-				   "Ignoring.",
-				   rx,mstrerror(errno));
-	}
-
+	// temp check
+	//testRegex();
 
 	//
 	// LOAD the crawlinfo class in the collectionrec for diffbot
@@ -1847,7 +1826,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	     m_isCustomCrawl != 2 )  // bulk api
 		return true;
 
-	log(LOG_DEBUG,"db: rebuilding url filters");
+	logf(LOG_DEBUG,"db: rebuilding url filters");
 
 	char *ucp = m_diffbotUrlCrawlPattern.getBufStart();
 	if ( ucp && ! ucp[0] ) ucp = NULL;
@@ -2009,5 +1988,80 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	m_numRegExs8  = i;
 	m_numRegExs11 = i;
 
+	///////
+	//
+	// recompile regular expressions
+	//
+	///////
+
+
+	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
+	if ( rx && ! rx[0] ) rx = NULL;
+	if ( rx ) m_hasucr = true;
+	if ( rx && regcomp ( &m_ucr , rx ,
+		       REG_EXTENDED|REG_ICASE|
+		       REG_NEWLINE|REG_NOSUB) ) {
+		// error!
+		log("coll: regcomp %s failed: %s. "
+			   "Ignoring.",
+			   rx,mstrerror(errno));
+		regfree ( &m_ucr );
+		m_hasucr = false;
+	}
+
+
+	rx = m_diffbotUrlProcessRegEx.getBufStart();
+	if ( rx && ! rx[0] ) rx = NULL;
+	if ( rx ) m_hasupr = true;
+	if ( rx && regcomp ( &m_upr , rx ,
+		       REG_EXTENDED|REG_ICASE|
+		       REG_NEWLINE|REG_NOSUB) ) {
+		// error!
+		log("coll: regcomp %s failed: %s. "
+		    "Ignoring.",
+		    rx,mstrerror(errno));
+		regfree ( &m_upr );
+		m_hasupr = false;
+	}
+
 	return true;
+}
+
+void testRegex ( ) {
+
+	//
+	// TEST
+	//
+
+	char *rx;
+
+	rx = "(http://)?(www.)?vault.com/rankings-reviews/company-rankings/law/vault-law-100/\\.aspx\\?pg=\\d";
+
+	rx = "(http://)?(www.)?vault.com/rankings-reviews/company-rankings/law/vault-law-100/\\.aspx\\?pg=[0-9]";
+
+	regex_t ucr;
+
+	if ( regcomp ( &ucr , rx ,
+		       REG_ICASE
+		       |REG_EXTENDED
+		       //|REG_NEWLINE
+		       //|REG_NOSUB
+		       ) ) {
+		// error!
+		log("xmldoc: regcomp %s failed: %s. "
+		    "Ignoring.",
+		    rx,mstrerror(errno));
+	}
+
+	logf(LOG_DEBUG,"db: compiled '%s' for crawl pattern",rx);
+
+	char *url = "http://www.vault.com/rankings-reviews/company-rankings/law/vault-law-100/.aspx?pg=2";
+
+	if ( regexec(&ucr,url,0,NULL,0) )
+		logf(LOG_DEBUG,"db: failed to match %s on %s",
+		     url,rx);
+	else
+		logf(LOG_DEBUG,"db: MATCHED %s on %s",
+		     url,rx);
+	exit(0);
 }

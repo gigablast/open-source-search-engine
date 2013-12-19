@@ -8781,7 +8781,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 	long  urlLen = sreq->getUrlLen();
 	char *url    = sreq->m_url;
 
-	//if ( strstr(url,"login.yahoo.com/") )
+	//if ( strstr(url,"http://www.vault.com/rankings-reviews/company-rankings/law/vault-law-100/.aspx?pg=2" ))
 	//	log("hey");
 
 	//initAggregatorTable();
