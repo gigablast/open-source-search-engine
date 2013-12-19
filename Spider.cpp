@@ -22,6 +22,12 @@
 #include "Pages.h"
 #include "Parms.h"
 
+// . this was 10 but cpu is getting pegged, maybe set to 30 now
+// . we consider the collection done spidering when no urls to spider
+//   for this many seconds
+#define SPIDER_DONE_TIMER 45
+
+
 Doledb g_doledb;
 
 RdbTree *g_tree = NULL;
@@ -4636,9 +4642,18 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// shortcut
 		SpiderColl *sc = cr->m_spiderColl;
 
+		// . HACK. 
+		// . TODO: we set spidercoll->m_gotDoledbRec to false above,
+		//   then make Rdb.cpp set spidercoll->m_gotDoledbRec to
+		//   true if it receives a rec. then if we see that it
+		//   got set to true do not update m_nextKeys[i] or
+		//   m_isDoledbEmpty[i] etc. because we might have missed
+		//   the new doledb rec coming in.
 		// . reset our doledb empty timer every 3 minutes and also
 		// . reset our doledb empty status
-		if ( sc && nowGlobal - sc->m_lastEmptyCheck >= 180 ) {
+		long wait = SPIDER_DONE_TIMER - 10;
+		if ( wait < 10 ) { char *xx=NULL;*xx=0; }
+		if ( sc && nowGlobal - sc->m_lastEmptyCheck >= wait ) {
 			// assume doledb not empty
 			sc->m_allDoledbPrioritiesEmpty = 0;
 			// reset the timer
@@ -10603,9 +10618,6 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	s_requests = 0;
 	s_inUse    = false;
 }
-
-// this was 10 but cpu is getting pegged, maybe set to 30 now
-#define SPIDER_DONE_TIMER 30
 
 void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	//char *request = slot->m_readBuf;
