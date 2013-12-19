@@ -1072,7 +1072,8 @@ bool SpiderColl::load ( ) {
 	if (!m_cdTable.set    (4,4,3000,NULL,0,false,MAX_NICENESS,"cdtbl"))
 		return false;
 	// doledb seems to have like 32000 entries in it
-	if (!m_doleIpTable.set(4,4,128000,NULL,0,false,MAX_NICENESS,"doleip"))
+	long numSlots = 0; // was 128000
+	if(!m_doleIpTable.set(4,4,numSlots,NULL,0,false,MAX_NICENESS,"doleip"))
 		return false;
 	// this should grow dynamically...
 	if (!m_waitingTable.set (4,8,3000,NULL,0,false,MAX_NICENESS,"waittbl"))

@@ -1318,7 +1318,7 @@ bool sendReply2 (TcpSocket *socket , long fmt , char *msg ) {
 bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 
 	// log it
-	log("crawlbot: %s",msg);
+	log("crawlbot: sending back 500 http status '%s'",msg);
 
 	char *ct = "text/html";
 
@@ -1336,7 +1336,7 @@ bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 			      , msg );
 
 	// log it
-	log("crawlbot: %s",msg );
+	//log("crawlbot: %s",msg );
 
 	//return g_httpServer.sendErrorReply(socket,500,sb.getBufStart());
 	return g_httpServer.sendDynamicPage (socket, 
@@ -1344,7 +1344,8 @@ bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 					     sb.length(),
 					     0, // cachetime
 					     false, // POST reply?
-					     ct );
+					     ct ,
+					     500 ); // error! not 200...
 }
 
 bool printCrawlBotPage2 ( class TcpSocket *s , 
@@ -3838,6 +3839,11 @@ bool getSpiderRequestMetaList ( char *doc ,
 		strcpy ( sreq.m_url , url.getUrl() );
 		// finally, we can set the key. isDel = false
 		sreq.setKey ( sreq.m_firstIp , probDocId , false );
+
+		if ( ! listBuf->reserve ( 100 + sreq.getRecSize() ) )
+			// return false with g_errno set
+			return false;
+
 		// store rdbid first
 		if ( ! listBuf->pushChar(RDB_SPIDERDB) )
 			// return false with g_errno set

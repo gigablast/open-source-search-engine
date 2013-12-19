@@ -49,9 +49,9 @@ RdbBase::RdbBase ( ) {
 
 void RdbBase::reset ( ) {
 	for ( long i = 0 ; i < m_numFiles ; i++ ) {
-		mdelete ( m_files[i] , sizeof(BigFile),"RdbBase");
+		mdelete ( m_files[i] , sizeof(BigFile),"RdbBFile");
 		delete (m_files[i]);
-		mdelete ( m_maps[i] , sizeof(RdbMap),"RdbBase");
+		mdelete ( m_maps[i] , sizeof(RdbMap),"RdbBMap");
 		delete (m_maps[i]);
 	}
 	m_numFiles  = 0;
@@ -667,7 +667,7 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		    sizeof(BigFile),mstrerror(g_errno));
 		return -1; 
 	}
-	mnew ( f , sizeof(BigFile) , "RdbBase" );
+	mnew ( f , sizeof(BigFile) , "RdbBFile" );
 	RdbMap  *m ;
 	try { m = new (RdbMap); }
 	catch ( ... ) { 
@@ -675,11 +675,11 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		g_errno = ENOMEM;
 		log("RdbBase: new(%i): %s", 
 		    sizeof(RdbMap),mstrerror(g_errno));
-		mdelete ( f , sizeof(BigFile),"RdbBase");
+		mdelete ( f , sizeof(BigFile),"RdbBFile");
 		delete (f); 
 		return -1; 
 	}
-	mnew ( m , sizeof(RdbMap) , "RdbBase" );
+	mnew ( m , sizeof(RdbMap) , "RdbBMap" );
 	// reinstate the memory limit
 	g_mem.m_maxMem = mm;
 	// sanity check
