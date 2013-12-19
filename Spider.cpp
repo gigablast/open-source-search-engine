@@ -4608,9 +4608,10 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 		// . if all doledb priorities are empty, skip it quickly
 		// . do this only after we update lastSpiderAttempt above
-		if ( cr->m_spiderColl && 
-		     cr->m_spiderColl->m_allDoledbPrioritiesEmpty )
-			continue;
+		// . this is broken, take out for now
+		//if ( cr->m_spiderColl && 
+		//     cr->m_spiderColl->m_allDoledbPrioritiesEmpty )
+		//	continue;
 
 		// ok, we are good to launch a spider for coll m_cri
 		break;
