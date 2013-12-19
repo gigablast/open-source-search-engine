@@ -17938,7 +17938,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	else                           base = &g_conf;
 
 	if ( ! base ) {
-		log("parms: no collrec (%li) to change parm",collnum);
+		log("parms: no collrec (%li) to change parm",(long)collnum);
 		g_errno = ENOCOLLREC;
 		return true;
 	}
