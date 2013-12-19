@@ -1995,6 +1995,16 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	///////
 
 
+	if ( m_hasucr ) {
+		regfree ( &m_ucr );
+		m_hasucr = false;
+	}
+
+	if ( m_hasupr ) {
+		regfree ( &m_upr );
+		m_hasupr = false;
+	}
+
 	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
 	if ( rx && ! rx[0] ) rx = NULL;
 	if ( rx ) m_hasucr = true;
