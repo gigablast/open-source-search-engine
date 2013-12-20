@@ -2039,7 +2039,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( rx ) {
 		tmp.safeStrcpy ( rx );
 		expandRegExShortcuts ( &tmp );
-		m_hasucr = true;
+		m_hasupr = true;
 	}
 	if ( rx && regcomp ( &m_upr , tmp.getBufStart() ,
 		       REG_EXTENDED|REG_ICASE|
