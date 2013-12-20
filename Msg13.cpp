@@ -2191,11 +2191,18 @@ void scanHammerQueue ( int fd , void *state ) {
 
 	long long nowms = gettimeofdayInMilliseconds();
 
+ top:
+
 	Msg13Request *prev = NULL;
 	long long waited = -1LL;
+	Msg13Request *nextLink = NULL;
 
 	// scan down the linked list of queued of msg13 requests
-	for ( ; r ; prev = r , r = r->m_nextLink ) { 
+	for ( ; r ; prev = r , r = nextLink ) { 
+
+		// downloadTheDocForReals() could free "r" so save this here
+		nextLink = r->m_nextLink;
+
 		long long last;
 		last = s_hammerCache.getLongLong(0,r->m_firstIp,30,true);
 		// is one from this ip outstanding?
@@ -2210,19 +2217,25 @@ void scanHammerQueue ( int fd , void *state ) {
 		//log("spider: downloading %s from crawldelay queue "
 		//    "waited=%llims crawldelay=%lims", 
 		//    r->m_url,waited,r->m_crawlDelayMS);
+
 		// good to go
 		downloadTheDocForReals ( r );
 		//
 		// remove from future scans
 		//
 		if ( prev ) 
-			prev->m_nextLink = r->m_nextLink;
+			prev->m_nextLink = nextLink;
 
 		if ( s_hammerQueueHead == r )
-			s_hammerQueueHead = r->m_nextLink;
+			s_hammerQueueHead = nextLink;
 
 		if ( s_hammerQueueTail == r )
 			s_hammerQueueTail = prev;
+
+		// if "r" was freed by downloadTheDocForReals() then
+		// in the next iteration of this loop, "prev" will point
+		// to a freed memory area, so start from the top again
+		goto top;
 
 		// try to download some more i guess...
 	}
