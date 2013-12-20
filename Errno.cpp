@@ -163,6 +163,7 @@ case    EHITCRAWLLIMIT: return "Hit the page download limit";
 case    EHITPROCESSLIMIT: return "Hit the page process limit";
 case    EINTERNALERROR: return "Internal error";
 case	EBADJSONPARSER: return "Bad JSON parser";
+case	EFAKEFIRSTIP: return "Fake firstIp";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );
