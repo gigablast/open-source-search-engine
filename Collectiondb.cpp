@@ -1823,6 +1823,8 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 	return false;
 }
 
+bool expandRegExShortcuts ( SafeBuf *sb ) ;
+
 bool CollectionRec::rebuildUrlFilters ( ) {
 
 	// only for diffbot custom crawls
@@ -2009,10 +2011,17 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_hasupr = false;
 	}
 
+	// copy into tmpbuf
+	SafeBuf tmp;
+
 	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
 	if ( rx && ! rx[0] ) rx = NULL;
-	if ( rx ) m_hasucr = true;
-	if ( rx && regcomp ( &m_ucr , rx ,
+	if ( rx ) {
+		tmp.safeStrcpy ( rx );
+		expandRegExShortcuts ( &tmp );
+		m_hasucr = true;
+	}
+	if ( rx && regcomp ( &m_ucr , tmp.getBufStart() ,
 		       REG_EXTENDED|REG_ICASE|
 		       REG_NEWLINE|REG_NOSUB) ) {
 		// error!
@@ -2027,7 +2036,12 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	rx = m_diffbotUrlProcessRegEx.getBufStart();
 	if ( rx && ! rx[0] ) rx = NULL;
 	if ( rx ) m_hasupr = true;
-	if ( rx && regcomp ( &m_upr , rx ,
+	if ( rx ) {
+		tmp.safeStrcpy ( rx );
+		expandRegExShortcuts ( &tmp );
+		m_hasucr = true;
+	}
+	if ( rx && regcomp ( &m_upr , tmp.getBufStart() ,
 		       REG_EXTENDED|REG_ICASE|
 		       REG_NEWLINE|REG_NOSUB) ) {
 		// error!
@@ -2040,6 +2054,20 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 
 	return true;
 }
+
+// for some reason the libc we use doesn't support these shortcuts,
+// so expand them to something it does support
+bool expandRegExShortcuts ( SafeBuf *sb ) {
+	if ( ! sb->safeReplace3 ( "\\d" , "[0-9]" ) ) return false;
+	if ( ! sb->safeReplace3 ( "\\D" , "[^0-9]" ) ) return false;
+	if ( ! sb->safeReplace3 ( "\\l" , "[a-z]" ) ) return false;
+	if ( ! sb->safeReplace3 ( "\\a" , "[A-Za-z]" ) ) return false;
+	if ( ! sb->safeReplace3 ( "\\u" , "[A-Z]" ) ) return false;
+	if ( ! sb->safeReplace3 ( "\\w" , "[A-Za-z0-9_]" ) ) return false;
+	if ( ! sb->safeReplace3 ( "\\W" , "[^A-Za-z0-9_]" ) ) return false;
+	return true;
+}
+
 
 void testRegex ( ) {
 

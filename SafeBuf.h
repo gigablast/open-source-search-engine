@@ -153,6 +153,7 @@ struct SafeBuf {
 			     char *t , long tlen ,
 			     long niceness ,
 			     long startOff = 0 );
+	bool  safeReplace3 ( char *s, char *t , long niceness = 0 ) ;
 	void replaceChar ( char src , char dst );
 	bool  copyToken(char* s);;
 	//output encoding
