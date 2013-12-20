@@ -20,6 +20,13 @@
 #include "XmlDoc.h"
 #include "HttpServer.h"
 #include "Pages.h"
+#include "Parms.h"
+
+// . this was 10 but cpu is getting pegged, maybe set to 30 now
+// . we consider the collection done spidering when no urls to spider
+//   for this many seconds
+#define SPIDER_DONE_TIMER 45
+
 
 Doledb g_doledb;
 
@@ -248,6 +255,7 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 		long long now = gettimeofdayInMilliseconds();
 		long long elapsed = now - xd->m_startTime;
 		sb->safePrintf(" <td>%llims</td>\n",elapsed);
+		sb->safePrintf(" <td>%li</td>\n",(long)xd->m_collnum);
 	}
 
 	sb->safePrintf(" <td><nobr>%s</nobr></td>\n",m_url);
@@ -345,8 +353,10 @@ long SpiderRequest::printTableHeaderSimple ( SafeBuf *sb ,
 	sb->safePrintf("<tr>\n");
 
 	// how long its been being spidered
-	if ( currentlySpidering )
+	if ( currentlySpidering ) {
 		sb->safePrintf(" <td><b>elapsed</b></td>\n");
+		sb->safePrintf(" <td><b>coll</b></td>\n");
+	}
 
 	sb->safePrintf(" <td><b>url</b></td>\n");
 	sb->safePrintf(" <td><b>status</b></td>\n");
@@ -447,8 +457,10 @@ long SpiderRequest::printTableHeader ( SafeBuf *sb , bool currentlySpidering) {
 	sb->safePrintf("<tr>\n");
 
 	// how long its been being spidered
-	if ( currentlySpidering )
+	if ( currentlySpidering ) {
 		sb->safePrintf(" <td><b>elapsed</b></td>\n");
+		sb->safePrintf(" <td><b>coll</b></td>\n");
+	}
 
 	sb->safePrintf(" <td><b>url</b></td>\n");
 	sb->safePrintf(" <td><b>status</b></td>\n");
@@ -619,7 +631,7 @@ bool Spiderdb::addColl ( char *coll, bool doVerify ) {
 
 bool Spiderdb::verify ( char *coll ) {
 	//return true;
-	log ( LOG_INFO, "db: Verifying Spiderdb for coll %s...", coll );
+	log ( LOG_DEBUG, "db: Verifying Spiderdb for coll %s...", coll );
 	g_threads.disableThreads();
 
 	Msg5 msg5;
@@ -682,7 +694,7 @@ bool Spiderdb::verify ( char *coll ) {
 		g_threads.enableThreads();
 		return g_conf.m_bypassValidation;
 	}
-	log ( LOG_INFO,"db: Spiderdb passed verification successfully for %li "
+	log (LOG_DEBUG,"db: Spiderdb passed verification successfully for %li "
 	      "recs.", count );
 	// DONE
 	g_threads.enableThreads();
@@ -914,7 +926,7 @@ bool SpiderCache::needsSave ( ) {
 }
 
 void SpiderCache::reset ( ) {
-	log("spider: resetting spidercache");
+	log(LOG_DEBUG,"spider: resetting spidercache");
 	// loop over all SpiderColls and get the best
 	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
 		SpiderColl *sc = getSpiderCollIffNonNull(i);
@@ -969,7 +981,7 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	//m_spiderColls [ collnum ] = sc;
 	cr->m_spiderColl = sc;
 	// note it
-	log("spider: made spidercoll=%lx for cr=%lx",
+	log(LOG_DEBUG,"spider: made spidercoll=%lx for cr=%lx",
 	    (long)sc,(long)cr);
 	// update this
 	//if ( m_numSpiderColls < collnum + 1 )
@@ -991,7 +1003,8 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	// sanity check
 	if ( ! cr ) { char *xx=NULL;*xx=0; }
 	// note it!
-	log("spider: adding new spider collection for %s",cr->m_coll);
+	log(LOG_DEBUG,"spider: adding new spider collection for %s",
+	    cr->m_coll);
 	// that was it
 	return sc;
 }
@@ -1037,7 +1050,12 @@ bool SpiderColl::load ( ) {
 	// make the dir
 	char *coll = g_collectiondb.getColl(m_collnum);
 	// sanity check
-	if ( ! coll || coll[0]=='\0' ) { char *xx=NULL;*xx=0; }
+	if ( ! coll || coll[0]=='\0' ) {
+		log("spider: bad collnum of %li",(long)m_collnum);
+		g_errno = ENOCOLLREC;
+		return false;
+		//char *xx=NULL;*xx=0; }
+	}
 
 	// reset this once
 	m_msg4Avail    = true;
@@ -1060,7 +1078,8 @@ bool SpiderColl::load ( ) {
 	if (!m_cdTable.set    (4,4,3000,NULL,0,false,MAX_NICENESS,"cdtbl"))
 		return false;
 	// doledb seems to have like 32000 entries in it
-	if (!m_doleIpTable.set(4,4,128000,NULL,0,false,MAX_NICENESS,"doleip"))
+	long numSlots = 0; // was 128000
+	if(!m_doleIpTable.set(4,4,numSlots,NULL,0,false,MAX_NICENESS,"doleip"))
 		return false;
 	// this should grow dynamically...
 	if (!m_waitingTable.set (4,8,3000,NULL,0,false,MAX_NICENESS,"waittbl"))
@@ -1129,7 +1148,7 @@ bool SpiderColl::load ( ) {
 //   this should block since we are at startup...
 bool SpiderColl::makeDoleIPTable ( ) {
 
-	log("spider: making dole ip table for %s",m_coll);
+	log(LOG_DEBUG,"spider: making dole ip table for %s",m_coll);
 
 	key_t startKey ; startKey.setMin();
 	key_t endKey   ; endKey.setMax();
@@ -1202,7 +1221,7 @@ bool SpiderColl::makeDoleIPTable ( ) {
 	// watch out for wrap around
 	if ( startKey >= *(key_t *)list.getLastKey() ) goto loop;
  done:
-	log("spider: making dole ip table done.");
+	log(LOG_DEBUG,"spider: making dole ip table done.");
 	// re-enable threads
 	if ( enabled ) g_threads.enableThreads();
 	// we wrapped, all done
@@ -1316,7 +1335,8 @@ void SpiderColl::urlFiltersChanged ( ) {
 
 // this one has to scan all of spiderdb
 bool SpiderColl::makeWaitingTree ( ) {
-	log("spider: making waiting tree for %s",m_coll);
+
+	log(LOG_DEBUG,"spider: making waiting tree for %s",m_coll);
 
 	key128_t startKey ; startKey.setMin();
 	key128_t endKey   ; endKey.setMax();
@@ -1407,7 +1427,7 @@ bool SpiderColl::makeWaitingTree ( ) {
 	// watch out for wrap around
 	if ( startKey >= *(key128_t *)list.getLastKey() ) goto loop;
  done:
-	log("spider: making waiting tree done.");
+	log(LOG_DEBUG,"spider: making waiting tree done.");
 	// re-enable threads
 	if ( enabled ) g_threads.enableThreads();
 	// we wrapped, all done
@@ -1443,7 +1463,7 @@ long long SpiderColl::getEarliestSpiderTimeFromWaitingTree ( long firstIp ) {
 
 
 bool SpiderColl::makeWaitingTable ( ) {
-	logf(LOG_INFO,"spider: making waiting table for %s.",m_coll);
+	log(LOG_DEBUG,"spider: making waiting table for %s.",m_coll);
 	long node = m_waitingTree.getFirstNode();
 	for ( ; node >= 0 ; node = m_waitingTree.getNextNode(node) ) {
 		// breathe
@@ -1459,7 +1479,7 @@ bool SpiderColl::makeWaitingTable ( ) {
 		// store in waiting table
 		if ( ! m_waitingTable.addKey(&ip,&spiderTimeMS) ) return false;
 	}
-	logf(LOG_INFO,"spider: making waiting table done.");
+	log(LOG_DEBUG,"spider: making waiting table done.");
 	return true;
 }
 
@@ -1519,7 +1539,8 @@ void SpiderColl::clear ( ) {
 	}
 
 	// assume the whole thing is not empty
-	m_allDoledbPrioritiesEmpty = false;
+	m_allDoledbPrioritiesEmpty = 0;//false;
+	m_lastEmptyCheck = 0;
 }
 
 void SpiderColl::reset ( ) {
@@ -1535,7 +1556,7 @@ void SpiderColl::reset ( ) {
 
 	char *coll = "unknown";
 	if ( m_coll[0] ) coll = m_coll;
-	logf(LOG_DEBUG,"spider: resetting spider cache coll=%s",coll);
+	log(LOG_DEBUG,"spider: resetting spider cache coll=%s",coll);
 
 	m_ufnMapValid = false;
 
@@ -1558,7 +1579,8 @@ void SpiderColl::reset ( ) {
 	}
 
 	// assume the whole thing is not empty
-	m_allDoledbPrioritiesEmpty = false;
+	m_allDoledbPrioritiesEmpty = 0;//false;
+	m_lastEmptyCheck = 0;
 
 }
 
@@ -3794,7 +3816,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	m_isDoledbEmpty [ bp ] = 0;
 
 	// and the whole thing is no longer empty
-	m_allDoledbPrioritiesEmpty = false;
+	m_allDoledbPrioritiesEmpty = 0;//false;
+	m_lastEmptyCheck = 0;
 
 	//
 	// delete the winner from ufntree as well
@@ -4220,7 +4243,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 				// if a scan is ongoing, this will re-set it
 				sc->m_nextKey2.setMin();
 				sc->m_waitingTreeNeedsRebuild = true;
-				log("spider: hit rebuild timeout for %s",
+				log(LOG_INFO,
+				    "spider: hit rebuild timeout for %s",
 				    cr->m_coll);
 				// flush the ufn table
 				clearUfnTable();
@@ -4400,6 +4424,8 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	ei->m_collnum       = cr->m_collnum;
 
 	SafeBuf *buf = &ei->m_spiderStatusMsg;
+	// stop it from accumulating status msgs
+	buf->reset();
 	long status = -1;
 	getSpiderStatusMsg ( cr , buf , &status );
 					 
@@ -4455,7 +4481,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( g_dailyMerge.m_mergeMode ) return;
 	// skip if too many udp slots being used
 	if ( g_udpServer.getNumUsedSlots() >= 1300 ) return;
-	// stop if too many out
+	// stop if too many out. this is now 50 down from 500.
 	if ( m_numSpidersOut >= MAX_SPIDERS ) return;
 	// bail if no collections
 	if ( g_collectiondb.m_numRecs <= 0 ) return;
@@ -4606,12 +4632,37 @@ void SpiderLoop::spiderDoledUrls ( ) {
 			continue;
 		}
 
+		// shortcut
+		SpiderColl *sc = cr->m_spiderColl;
+
+		// . HACK. 
+		// . TODO: we set spidercoll->m_gotDoledbRec to false above,
+		//   then make Rdb.cpp set spidercoll->m_gotDoledbRec to
+		//   true if it receives a rec. then if we see that it
+		//   got set to true do not update m_nextKeys[i] or
+		//   m_isDoledbEmpty[i] etc. because we might have missed
+		//   the new doledb rec coming in.
+		// . reset our doledb empty timer every 3 minutes and also
+		// . reset our doledb empty status
+		long wait = SPIDER_DONE_TIMER - 10;
+		if ( wait < 10 ) { char *xx=NULL;*xx=0; }
+		if ( sc && nowGlobal - sc->m_lastEmptyCheck >= wait ) {
+			// assume doledb not empty
+			sc->m_allDoledbPrioritiesEmpty = 0;
+			// reset the timer
+			sc->m_lastEmptyCheck = nowGlobal;
+			// reset all empty flags for each priority
+			for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ ) {
+				sc->m_nextKeys[i] = g_doledb.makeFirstKey2(i);
+				sc->m_isDoledbEmpty[i] = 0;
+			}
+		}
+
 		// . if all doledb priorities are empty, skip it quickly
 		// . do this only after we update lastSpiderAttempt above
-		// . this is broken, take out for now
-		//if ( cr->m_spiderColl && 
-		//     cr->m_spiderColl->m_allDoledbPrioritiesEmpty )
-		//	continue;
+		// . this is broken!! why??
+		if ( sc && sc->m_allDoledbPrioritiesEmpty >= 3 )
+			continue;
 
 		// ok, we are good to launch a spider for coll m_cri
 		break;
@@ -4643,7 +4694,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// start at the top each time now
 	//m_sc->m_nextDoledbKey.setMin();
 
-	// set the key to this at start
+	// set the key to this at start (break Spider.cpp:4683
 	//m_sc->m_nextDoledbKey = g_doledb.makeFirstKey2 ( m_sc->m_pri );
 
 	// init the m_priorityToUfn map array?
@@ -4782,7 +4833,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	     m_sc->m_msg5StartKey != m_sc->m_nextDoledbKey )
 		log("spider: msg5startKey differs from nextdoledbkey");
 
-	// get a spider rec for us to spider from doledb
+	// get a spider rec for us to spider from doledb (mdw)
 	if ( ! m_msg5.getList ( RDB_DOLEDB      ,
 				coll            ,
 				&m_list         ,
@@ -4923,10 +4974,13 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] = 1;
 
 		// if all priorities now empty set another flag
-		m_sc->m_allDoledbPrioritiesEmpty = true;
+		m_sc->m_allDoledbPrioritiesEmpty++;
 		for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ ) {
 			if ( m_sc->m_isDoledbEmpty[m_sc->m_pri2] ) continue;
-			m_sc->m_allDoledbPrioritiesEmpty = false;
+			// must get empties 3 times in a row to ignore it
+			// in case something was added to doledb while
+			// we were reading from doledb.
+			m_sc->m_allDoledbPrioritiesEmpty--;
 			break;
 		}
 			
@@ -5044,7 +5098,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		    m_sc->m_pri2,KEYSTR(&m_sc->m_nextDoledbKey,12));
 
 	// update next doledbkey for this priority to avoid having to
-	// process excessive positive/negative key annihilations
+	// process excessive positive/negative key annihilations (mdw)
 	m_sc->m_nextKeys [ m_sc->m_pri2 ] = m_sc->m_nextDoledbKey;
 
 	// sanity
@@ -6238,8 +6292,14 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 						 60*60*24*365    ) ) 
 				return false;
 			// error?
-			log("spider: error re-sending confirm request: %s",
-			    mstrerror(g_errno));
+			// don't spam the log!
+			static long s_last = 0;
+			long now = getTimeLocal();
+			if ( now - s_last >= 1 ) {
+				s_last = now;
+				log("spider: error re-sending confirm "
+				    "request: %s",  mstrerror(g_errno));
+			}
 		}
 		// only log every 10 seconds for ETRYAGAIN
 		if ( g_errno == ETRYAGAIN ) {
@@ -6833,7 +6893,7 @@ void removeExpiredLocks ( long hostId ) {
 		if ( lock->m_expires == 0 ) continue;
 		if ( lock->m_expires >= nowGlobal ) continue;
 		// note it for now
-		//if ( g_conf.m_logDebugSpider )
+		if ( g_conf.m_logDebugSpider )
 			log("spider: removing lock after waiting. elapsed=%li."
 			    " lockKey=%llu hid=%li expires=%lu nowGlobal=%lu",
 			    (nowGlobal - lock->m_timestamp),
@@ -8714,7 +8774,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 	long  urlLen = sreq->getUrlLen();
 	char *url    = sreq->m_url;
 
-	//if ( strstr(url,"login.yahoo.com/") )
+	//if ( strstr(url,"http://www.vault.com/rankings-reviews/company-rankings/law/vault-law-100/.aspx?pg=2" ))
 	//	log("hey");
 
 	//initAggregatorTable();
@@ -8932,7 +8992,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// if we got a reply, we are not new!!
-			if ( (bool)srep == (bool)val ) continue;
+			//if ( (bool)srep == (bool)val ) continue;
+			if ( (bool)(sreq->m_hadReply) == (bool)val ) continue;
 			// skip it for speed
 			p += 8;
 			// check for &&
@@ -9421,7 +9482,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// if we got a reply, we are not new!!
-			if ( (bool)srep != (bool)val ) continue;
+			if ( (bool)sreq->m_hadReply != (bool)val ) continue;
 			// skip it for speed
 			p += 5;
 			// check for &&
@@ -10551,9 +10612,6 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	s_inUse    = false;
 }
 
-// this was 10 but cpu is getting pegged, maybe set to 30 now
-#define SPIDER_DONE_TIMER 30
-
 void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	//char *request = slot->m_readBuf;
 	// just a single collnum
@@ -10619,11 +10677,17 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		// this is now needed for alignment by the receiver
 		ci->m_collnum = i;
 
+		SpiderColl *sc = cr->m_spiderColl;
+
 		// if we haven't spidered anything in 1 min assume the
 		// queue is basically empty...
 		if ( ci->m_lastSpiderAttempt &&
 		     ci->m_lastSpiderCouldLaunch &&
 		     ci->m_hasUrlsReadyToSpider &&
+		     // no spiders currently out. i've seen a couple out
+		     // waiting for a diffbot reply. wait for them to
+		     // return before ending the round...
+		     sc && sc->m_spidersOut == 0 &&
 		     // it must have launched at least one url! this should
 		     // prevent us from incrementing the round # at the gb
 		     // process startup

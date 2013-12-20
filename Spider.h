@@ -1049,7 +1049,8 @@ class SpiderColl {
 	char m_isDoledbEmpty [MAX_SPIDER_PRIORITIES];
 
 	// are all priority slots empt?
-	bool m_allDoledbPrioritiesEmpty;
+	long m_allDoledbPrioritiesEmpty;
+	long m_lastEmptyCheck; 
 
 	// maps priority to first ufn that uses that
 	// priority. map to -1 if no ufn uses it. that way when we scan
@@ -1274,8 +1275,9 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) ;
 // . supports <META NAME="ROBOTS" CONTENT="NOFOLLOW"> (no links)
 // . supports limiting spiders per domain
 
-// max spiders we can have going at once for this process
-#define MAX_SPIDERS 500
+// . max spiders we can have going at once for this process
+// . limit to 50 to preven OOM conditions
+#define MAX_SPIDERS 100
 
 class SpiderLoop {
 
