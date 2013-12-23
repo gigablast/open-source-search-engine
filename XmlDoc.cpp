@@ -2022,6 +2022,9 @@ bool XmlDoc::indexDoc ( ) {
 
 	m_msg4Launched = true;
 
+	// display the url that had the error
+	logIt();
+
 	// log this for debug now
 	SafeBuf tmp;
 	nsr->print(&tmp);
@@ -2037,12 +2040,14 @@ bool XmlDoc::indexDoc ( ) {
 				    m_masterLoop   ,
 				    m_niceness     ) ) {
 		// spider hang bug
-		if ( g_conf.m_testSpiderEnabled )
-			logf(LOG_DEBUG,"build: msg4 meta add3 blocked" 
-			     "msg4=0x%lx" ,(long)&m_msg4);
+		//if ( g_conf.m_testSpiderEnabled )
+		//	logf(LOG_DEBUG,"build: msg4 meta add3 blocked" 
+		//	     "msg4=0x%lx" ,(long)&m_msg4);
 		m_msg4Waiting = true;
 		return false;
 	}
+
+	//logf(LOG_DEBUG,"build: msg4 meta add3 did NOT block" );
 
 	m_msg4Launched = false;
 
@@ -2068,7 +2073,9 @@ bool XmlDoc::indexDoc2 ( ) {
 
 	// do this before we increment pageDownloadAttempts below so that
 	// john's smoke tests, which use those counts, are not affected
-	if ( m_oldsrValid && m_oldsr.m_fakeFirstIp ) {
+	if ( m_oldsrValid && m_oldsr.m_fakeFirstIp &&
+	     // diffbot requests are ok though!
+	     ! strstr(m_oldsr.m_url,"-diffbotxyz") ) {
 		m_indexCodeValid = true;
 		m_indexCode = EFAKEFIRSTIP;
 		return true;
@@ -7910,8 +7917,9 @@ char *XmlDoc::getIsDup ( ) {
 		//	continue;
 		//}
 		// for debug
-		log("build: doc %s is dup of doid %lli",
-		    m_firstUrl.m_url,d);
+		if ( d != m_docId )
+			log("build: doc %s is dup of doid %lli",
+			    m_firstUrl.m_url,d);
 		// get the winner
 		//if ( score > maxScore ) maxScore = score;
 		if ( sr > maxSiteRank || maxSiteRank == -1 ) {
@@ -17523,7 +17531,7 @@ bool XmlDoc::logIt ( ) {
 	//   make queues in the case of hammering an ip, which i think
 	//   it already does...
 	if ( m_oldsrValid && m_oldsr.m_firstIp != m_firstIp )
-		sb.safePrintf("fakesreqfirstip=%s ",iptoa(m_firstIp) );
+		sb.safePrintf("fakesreqfirstip=%s ",iptoa(m_oldsr.m_firstIp) );
 
 	//
 	// print when this spider request was added

@@ -69,7 +69,9 @@ public:
 	bool printJsonItemInCsv ( char *json , SafeBuf *sb ) ;
 
 	long long m_lastUh48;
+	long m_lastFirstIp;
 	long long m_prevReplyUh48;
+	long m_prevReplyFirstIp;
 	long m_prevReplyError;
 	time_t m_prevReplyDownloadTime;
 
@@ -247,7 +249,9 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	st->m_needHeaderRow = true;
 
 	st->m_lastUh48 = 0LL;
+	st->m_lastFirstIp = 0;
 	st->m_prevReplyUh48 = 0LL;
+	st->m_prevReplyFirstIp = 0;
 	st->m_prevReplyError = 0;
 	st->m_prevReplyDownloadTime = 0LL;
 
@@ -714,6 +718,7 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 			else if ( srep->m_spideredTime > lastSpidered )
 				lastSpidered = srep->m_spideredTime;
 			m_prevReplyUh48 = srep->getUrlHash48();
+			m_prevReplyFirstIp = srep->m_firstIp;
 			// 0 means indexed successfully. not sure if
 			// this includes http status codes like 404 etc.
 			// i don't think it includes those types of errors!
@@ -734,11 +739,17 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 
 		// print the url if not yet printed
 		long long uh48 = sreq->getUrlHash48  ();
+		long firstIp = sreq->m_firstIp;
 		bool printIt = false;
 		// there can be multiple spiderrequests for the same url!
 		if ( m_lastUh48 != uh48 ) printIt = true;
+		// sometimes the same url has different firstips now that
+		// we have the EFAKEFIRSTIP spider error to avoid spidering
+		// seeds twice...
+		if ( m_lastFirstIp != firstIp ) printIt = true;
 		if ( ! printIt ) continue;
 		m_lastUh48 = uh48;
+		m_lastFirstIp = firstIp;
 
 		// make sure spiderreply is for the same url!
 		if ( srep && srep->getUrlHash48() != sreq->getUrlHash48() )
@@ -762,6 +773,7 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// so set "status" to 0 to indicate hasn't been 
 		// downloaded yet.
 		if ( m_lastUh48 != m_prevReplyUh48 ) status = 0;
+		if ( m_lastFirstIp != m_prevReplyFirstIp ) status = 0;
 		// if it matches, perhaps an error spidering it?
 		if ( status && m_prevReplyError ) status = -1;
 
