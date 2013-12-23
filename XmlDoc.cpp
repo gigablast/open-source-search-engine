@@ -1898,18 +1898,26 @@ bool XmlDoc::indexDoc ( ) {
 	if ( ! status ) return false;
 
 	// done with no error?
-	if ( status && ! g_errno ) return true;
+	bool success = true;
+	if ( g_errno ) success = false;
+	// if we were trying to spider a fakefirstip request then
+	// pass through because we lookup the real firstip below and
+	// add a new request as well as a reply for this one
+	if ( m_indexCodeValid && m_indexCode == EFAKEFIRSTIP ) success = false;
+	if ( success ) return true;
 
 	///
 	// otherwise, an internal error. we must add a SpiderReply
 	// to spiderdb to release the lock.
 	///
 
-	if ( m_firstUrlValid ) 
+ logErr:
+
+	if ( m_firstUrlValid && g_errno ) 
 		log("build: %s had internal error = %s. adding spider "
 		    "error reply.",
 		    m_firstUrl.m_url,mstrerror(g_errno));
-	else
+	else if ( g_errno )
 		log("build: docid=%lli had internal error = %s. adding spider "
 		    "error reply.",
 		    m_docId,mstrerror(g_errno));
@@ -1919,6 +1927,43 @@ bool XmlDoc::indexDoc ( ) {
 		m_indexCode = EINTERNALERROR;//g_errno;
 		m_indexCodeValid = true;
 	}
+
+	// if our spiderrequest had a fake "firstip" so that it could be
+	// injected quickly into spiderdb, then do the firstip lookup here
+	// and re-add the new spider request with that, and add the reply
+	// to the fake firstip request below.
+	if ( m_indexCodeValid && m_indexCode == EFAKEFIRSTIP ) {
+		// at least get this if possible
+		long *fip = getFirstIp();
+		if ( fip == (void *) -1 ) return false;
+		// error? g_errno will be changed if this is NULL
+		if ( ! fip ) {
+			log("build: error getting real firstip: %s",
+			    mstrerror(g_errno));
+			m_indexCode = EINTERNALERROR;
+			m_indexCodeValid = true;
+			goto logErr;
+		}
+		// store the new request (store reply for this below)
+		m_metaList2.pushChar(RDB_SPIDERDB);
+		if ( ! m_oldsrValid ) { char *xx=NULL;*xx=0; }
+		// 
+		SpiderRequest sreq;
+		memcpy ( &sreq , &m_oldsr , m_oldsr.getRecSize() );
+		sreq.m_firstIp = *fip;
+		// but turn off this flag! the whole point of all this...
+		sreq.m_fakeFirstIp = 0;
+		// firstip is part of the key!
+		long long uh48 = sreq.getUrlHash48();
+		sreq.setKey ( sreq.m_firstIp ,
+			      0LL , // parentDocId , 
+			      uh48 , 
+			      false ); // del?
+		// and store that new request for adding
+		if ( ! m_metaList2.safeMemcpy ( &sreq , sreq.getRecSize() ) )
+			return true;
+	}
+
 
 	////
 	//
@@ -1969,8 +2014,11 @@ bool XmlDoc::indexDoc ( ) {
 	if ( ! cr ) return true;
 
 	//SafeBuf metaList;
-	m_metaList2.pushChar(RDB_SPIDERDB);
-	m_metaList2.safeMemcpy ( (char *)nsr , nsr->getRecSize() );
+	if ( ! m_metaList2.pushChar(RDB_SPIDERDB) )
+		return true;
+
+	if ( ! m_metaList2.safeMemcpy ( (char *)nsr , nsr->getRecSize() ) )
+		return true;
 
 	m_msg4Launched = true;
 
@@ -2016,6 +2064,16 @@ bool XmlDoc::indexDoc2 ( ) {
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return true;
+
+
+	// do this before we increment pageDownloadAttempts below so that
+	// john's smoke tests, which use those counts, are not affected
+	if ( m_oldsrValid && m_oldsr.m_fakeFirstIp ) {
+		m_indexCodeValid = true;
+		m_indexCode = EFAKEFIRSTIP;
+		return true;
+	}
+
 
 	// ensure that CollectionRec::m_globalCrawlInfo (spider stats)
 	// is at least 1 minute in sync with counts of
