@@ -2022,8 +2022,8 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_hasucr = true;
 	}
 	if ( rx && regcomp ( &m_ucr , tmp.getBufStart() ,
-		       REG_EXTENDED|REG_ICASE|
-		       REG_NEWLINE|REG_NOSUB) ) {
+			     REG_EXTENDED| //REG_ICASE|
+			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
 		// error!
 		log("coll: regcomp %s failed: %s. "
 			   "Ignoring.",
@@ -2042,8 +2042,8 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_hasupr = true;
 	}
 	if ( rx && regcomp ( &m_upr , tmp.getBufStart() ,
-		       REG_EXTENDED|REG_ICASE|
-		       REG_NEWLINE|REG_NOSUB) ) {
+			     REG_EXTENDED| // REG_ICASE|
+			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
 		// error!
 		log("coll: regcomp %s failed: %s. "
 		    "Ignoring.",
