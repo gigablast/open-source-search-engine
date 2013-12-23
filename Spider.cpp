@@ -3169,6 +3169,21 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			continue;
 		}
 
+		// if the spiderrequest has a fake firstip that means it
+		// was injected without doing a proper ip lookup for speed.
+		// xmldoc.cpp will check for m_fakeFirstIp and it that is
+		// set in the spiderrequest it will simply add a new request
+		// with the correct firstip. it will be a completely different
+		// spiderrequest key then. so no need to keep the "fakes".
+		// it will log the EFAKEFIRSTIP error msg.
+		if ( sreq->m_fakeFirstIp &&
+		     srep && 
+		     srep->m_spideredTime > sreq->m_addedTime ) {
+			if ( g_conf.m_logDebugSpider )
+				log("spider: skipping6 %s", sreq->m_url);
+			continue;
+		}
+
 		// once we have a spiderreply, even i guess if its an error,
 		// for a url, then bail if respidering is disabled
 		if ( m_cr->m_isCustomCrawl && 
@@ -10314,6 +10329,14 @@ void dedupSpiderdbList ( RdbList *list , long niceness , bool removeNegRecs ) {
 			// if request was a page reindex docid based request 
 			// and url has since been spidered, nuke it!
 			if ( sreq->m_urlIsDocId ) continue;
+
+			// same if indexcode was EFAKEFIRSTIP which XmlDoc.cpp
+			// re-adds to spiderdb with the right firstip. once
+			// those guys have a reply we can ignore them.
+			// TODO: what about diffbotxyz spider requests? those
+			// have a fakefirstip... they should not have requests
+			// though, since their parent url has that.
+			if ( sreq->m_fakeFirstIp ) continue;
 
 			SpiderReply *old = oldRep;
 			sreq->m_inGoogle           = old->m_inGoogle;

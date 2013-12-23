@@ -2081,6 +2081,8 @@ void testRegex ( ) {
 
 	rx = "(http://)?(www.)?vault.com/rankings-reviews/company-rankings/law/vault-law-100/\\.aspx\\?pg=[0-9]";
 
+	rx = ".*?article[0-9]*?.html";
+
 	regex_t ucr;
 
 	if ( regcomp ( &ucr , rx ,
@@ -2097,7 +2099,8 @@ void testRegex ( ) {
 
 	logf(LOG_DEBUG,"db: compiled '%s' for crawl pattern",rx);
 
-	char *url = "http://www.vault.com/rankings-reviews/company-rankings/law/vault-law-100/.aspx?pg=2";
+	//char *url = "http://www.vault.com/rankings-reviews/company-rankings/law/vault-law-100/.aspx?pg=2";
+	char *url = "http://staticpages.diffbot.com/testCrawl/regex/article1.html";
 
 	if ( regexec(&ucr,url,0,NULL,0) )
 		logf(LOG_DEBUG,"db: failed to match %s on %s",
