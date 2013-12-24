@@ -4377,7 +4377,8 @@ void doneSendingNotification ( void *state ) {
 
 	// waiting tree will usually be empty for this coll since no
 	// spider requests had a valid spider priority, so let's rebuild!
-	cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+	if ( cr->m_spiderColl )
+		cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
 
 	// we have to send these two parms to all in cluster now
 	SafeBuf parmList;
