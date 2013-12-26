@@ -96,6 +96,12 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	m_useTmpCluster    = useTmpCluster;
 	m_initialized = true;
 
+	// try localhosts.conf first
+	if ( strcmp ( filename , "./hosts.conf" ) == 0 )
+		filename = "./localhosts.conf";
+
+ retry:
+
 	/*
 	// for yippy use host as port
 	long yippyPort;
@@ -151,6 +157,11 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		g_errno = ENOHOSTSFILE; 
 		log(
 		    "conf: Filename %s does not exist." ,filename);
+		// if doing localhosts.conf now try hosts.conf
+		if ( strcmp(filename,"./localhosts.conf") == 0 ) {
+			filename = "./hosts.conf";
+			goto retry;
+		}
 		return false; 
 	}
 	// get file size
