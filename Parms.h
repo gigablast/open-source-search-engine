@@ -170,6 +170,8 @@ class Parm {
 	char * getValueAsString ( class SearchInput *si ) ;	
 
 	long getNumInArray ( collnum_t collnum ) ;
+
+	bool printVal ( class SafeBuf *sb , collnum_t collnum , long occNum ) ;
 };
 
 #define MAX_PARMS 940
@@ -333,7 +335,9 @@ class Parms {
 				 void    *state ,
 				 void   (* callback)(void *) ,
 				 bool sendToGrunts  = true ,
-				 bool sendToProxies = false );
+				 bool sendToProxies = false ,
+				 // send to this single hostid? -1 means all
+				 long hostId = -1 );
 	bool doParmSendingLoop ( ) ;
 	bool syncParmsWithHost0 ( ) ;
 	bool makeSyncHashList ( SafeBuf *hashList ) ;

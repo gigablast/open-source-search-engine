@@ -16646,7 +16646,7 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 				Parm *m ) {
 	// get value
 	char *val = NULL;
-	long valSize;
+	long valSize = 0;
 
 	//char buf[2+MAX_COLL_LEN];
 
@@ -16715,10 +16715,12 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 		val = (char *)&val8;
 		valSize = 1;
 	}
-	// you'll have to say ?addcoll=abc ?addcrawl=abc ?addbulk=abc
+	// for resetting or restarting a coll i think the ascii arg is
+	// the NEW reserved collnum, but for other commands then parmValString
+	// will be NULL
 	else if ( m->m_type == TYPE_CMD ) {
 		val = parmValString;
-		valSize = gbstrlen(val)+1;
+		if ( val ) valSize = gbstrlen(val)+1;
 		// scan for holes if we hit the limit
 		//if ( g_collectiondb.m_numRecs >= 1LL>>sizeof(collnum_t) )
 	}
@@ -17157,6 +17159,7 @@ public:
 	void (* m_callback)(void *state);
 	bool m_sendToGrunts;
 	bool m_sendToProxies;
+	long m_hostId; // -1 means send parm update to all hosts
 };
 
 static ParmNode *s_headNode = NULL;
@@ -17172,7 +17175,9 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 				void    *state ,
 				void   (* callback)(void *) ,
 				bool sendToGrunts ,
-				bool sendToProxies ) {
+				bool sendToProxies ,
+				// this is -1 if sending to all hosts
+				long hostId ) {
 
 	// empty list?
 	if ( parmList->getLength() <= 0 ) return true;
@@ -17203,7 +17208,7 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 	pn->m_callback       = callback;
 	pn->m_sendToGrunts   = sendToGrunts;
 	pn->m_sendToProxies  = sendToProxies;
-	
+	pn->m_hostId         = hostId;
 
 	// store it ordered in our linked list of parm transmit nodes
 	if ( ! s_tailNode ) {
@@ -17398,6 +17403,16 @@ bool Parms::doParmSendingLoop ( ) {
 		}
 		// nothing? strange. something is not right.
 		if ( ! pn ) { char *xx=NULL; *xx=0; }
+
+		// give him a free pass? some parm updates are directed to 
+		// a single host, we use this for syncing parms at startup.
+		if ( pn->m_hostId >= 0 && h->m_hostId != pn->m_hostId ) {
+			// assume we sent it to him
+			h->m_lastParmIdCompleted = pn->m_parmId;
+			h->m_currentNodePtr = NULL;
+			continue;
+		}
+			
 		// force completion if we should NOT send to him
 		if ( (h->isProxy() && ! pn->m_sendToProxies) ||
 		     (h->isGrunt() && ! pn->m_sendToGrunts ) ) {
@@ -17572,6 +17587,10 @@ void handleRequest3fLoop ( void *weArg ) {
 // . host #0 is requesting that we update some parms
 // . the readbuf in the request is the list of the parms
 void handleRequest3f ( UdpSlot *slot , long niceness ) {
+
+	// sending to host #0 is not right...
+	//if ( g_hostdb.m_hostId == 0 ) { char *xx=NULL;*xx=0; }
+
 	char *parmRecs = slot->m_readBuf;
 	char *parmEnd  = parmRecs + slot->m_readBufSize;
 
@@ -17650,6 +17669,17 @@ bool Parms::syncParmsWithHost0 ( ) {
 	
 	if ( ! makeSyncHashList ( &hashList ) ) return false;
 
+	// copy for sending
+	SafeBuf sendBuf;
+	if ( ! sendBuf.safeMemcpy ( &hashList ) ) return false;
+	if ( sendBuf.getCapacity() != hashList.length() ){char *xx=NULL;*xx=0;}
+	if ( sendBuf.length() != hashList.length()  ){char *xx=NULL;*xx=0;}
+
+	// allow udpserver to free it
+	char *request = sendBuf.getBufStart();
+	long  requestLen = sendBuf.length();
+	sendBuf.detachBuf();
+
 	Host *h = g_hostdb.getHost(0);
 
 	// . send it off. use 3e i guess
@@ -17657,8 +17687,8 @@ bool Parms::syncParmsWithHost0 ( ) {
 	// . msg4 guarantees ordering of requests
 	// . there will be a record that is CMD_INSYNC so when we get
 	//   that we set g_parms.m_inSyncWithHost0 to true
-	if ( ! g_udpServer.sendRequest ( hashList.getBufStart() ,
-					 hashList.length() ,
+	if ( ! g_udpServer.sendRequest ( request ,//hashList.getBufStart() ,
+					 requestLen, //hashList.length() ,
 					 0x3e , // msgtype
 					 h->m_ip, // ip
 					 h->m_port, // port
@@ -17703,6 +17733,10 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		cr->m_hackFlag = 0;
 	}
 
+	Host *host = slot->m_host;
+	long hostId = -1;
+	if ( host ) hostId = host->m_hostId;
+
 	SafeBuf replyBuf;
 
 	//
@@ -17716,13 +17750,19 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		// get collnum
 		collnum_t c = *(collnum_t *)p;
 		p += sizeof(collnum_t);
+		// sanity check. -1 means g_conf. i guess.
+		if ( c < -1 ) { char *xx=NULL;*xx=0; }
 		// and parm hash
 		long long h64 = *(long long *)p;
 		p += 8;
 		// if we being host #0 do not have this collnum tell 
 		// him to delete it!
-		CollectionRec *cr = g_collectiondb.getRec ( c );
-		if ( ! cr ) {
+		CollectionRec *cr = NULL;
+		if ( c >= 0 ) cr = g_collectiondb.getRec ( c );
+		if ( c >= 0 && ! cr ) {
+			// note in log
+			logf(LOG_INFO,"sync: telling host #%li to delete "
+			     "collnum %li", hostId,(long)c);
 			// add the parm rec as a parm cmd
 			if (! g_parms.addNewParmToList1( &replyBuf,
 							 c,
@@ -17734,14 +17774,18 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 			continue;
 		}
 		// set our hack flag so we know he has this collection
-		cr->m_hackFlag = 1;
+		if ( cr ) cr->m_hackFlag = 1;
 		// get our parmlist for that collnum
 		tmp.reset();
+		// c is -1 for g_conf
 		if ( ! g_parms.addAllParmsToList ( &tmp, c ) ) goto hadError;
 		// get checksum of that
 		long long m64 = hash64 ( tmp.getBufStart(),tmp.length() );
 		// if match, keep chugging, that's in sync
 		if ( h64 == m64 ) continue;
+		// note in log
+		logf(LOG_INFO,"sync: sending all parms for collnum %li "
+		     "to host #%li", (long)c, hostId);
 		// otherwise, send him the list
 		if ( ! replyBuf.safeMemcpy ( &tmp ) ) goto hadError;
 	}
@@ -17758,10 +17802,13 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		char *cmdStr = "addColl";
 		if ( cr->m_isCustomCrawl == 1 ) cmdStr = "addCrawl";
 		if ( cr->m_isCustomCrawl == 2 ) cmdStr = "addBulk";
+		// note in log
+		logf(LOG_INFO,"sync: telling host #%li to add "
+		     "collnum %li", hostId,(long)cr->m_collnum);
 		// add the parm rec as a parm cmd
 		if ( ! g_parms.addNewParmToList1 ( &replyBuf,
 						   (collnum_t)i,
-						   NULL,
+						   cr->m_coll, // parm val
 						   -1,
 						   cmdStr ) )
 			goto hadError;
@@ -17777,12 +17824,16 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 
 	// this should at least have the in sync command
 	log("parms: sending %li bytes of parms to sync to host #%li",
-	    replyBuf.length(),slot->m_hostId);
+	    replyBuf.length(),hostId);
 
 	// . use the broadcast call here so things keep their order!
 	// . we do not need a callback when they have been completely
 	//   broadcasted to all hosts so use NULL for that
-	g_parms.broadcastParmList ( &replyBuf , NULL , NULL );
+	// . crap, we only want to send this to host #x ...
+	g_parms.broadcastParmList ( &replyBuf , NULL , NULL , 
+				    true , // sendToGrunts?
+				    false ,  // sendToProxies?
+				    hostId );
 
 	// but do send back an empty reply to this 0x3e request
 	g_udpServer.sendReply_ass ( NULL,0,NULL,0,slot);
@@ -17801,9 +17852,11 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 // get the hash of every collection's parmlist
 bool Parms::makeSyncHashList ( SafeBuf *hashList ) {
 	SafeBuf tmp;
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+
+	// first do g_conf, collnum -1!
+	for ( long i = -1 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		// skip if empty
-		if ( ! g_collectiondb.m_recs[i] ) continue;
+		if ( i >=0 && ! g_collectiondb.m_recs[i] ) continue;
 		// clear since last time
 		tmp.reset();
 		// g_conf?
@@ -17847,6 +17900,13 @@ bool Parms::addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) {
 		// cmds
 		if ( parm->m_type == TYPE_CMD ) continue;
 		if ( parm->m_type == TYPE_BOOL2 ) continue;
+
+		// daily merge last started. do not sync this...
+		if ( parm->m_type == TYPE_LONG_CONST ) continue;
+
+		if ( collnum == -1 && parm->m_obj != OBJ_CONF ) continue;
+		if ( collnum >=  0 && parm->m_obj != OBJ_COLL ) continue;
+		if ( collnum < -1 ) { char *xx=NULL;*xx=0; }
 
 		long occNum = -1;
 		long maxOccNum = 0;
@@ -17960,9 +18020,11 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		dst += parm->m_size * occNum;
 	}
 
-	// show it
-	log("parms: updating parm (%s) (cn=%li) (datasize=%li)",
-	    parm->m_cgi,(long)collnum,dataSize);
+	//
+	// compare parm to see if it changed value
+	//
+	SafeBuf val1;
+	parm->printVal ( &val1 , collnum , occNum );
 
 	// if parm is a safebuf...
 	if ( parm->m_type == TYPE_SAFEBUF ) {
@@ -17981,6 +18043,95 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	// and copy the data into collrec or g_conf
 	memcpy ( dst , data , dataSize );
 
+	SafeBuf val2;
+	parm->printVal ( &val2 , collnum , occNum );
+
+	// all done if value was unchanged
+	if ( strcmp ( val1.getBufStart() , val2.getBufStart() ) == 0 )
+		return true;
+
+	// show it
+	log("parms: updating parm \"%s\" "
+	    "(%s[%li]) (collnum=%li) from %s -> %s",
+	    parm->m_title,
+	    parm->m_cgi,
+	    occNum,
+	    (long)collnum,
+	    val1.getBufStart(),
+	    val2.getBufStart());
+
 	// all done
 	return true;
+}
+
+bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
+
+	CollectionRec *cr = NULL;
+	if ( collnum >= 0 ) cr = g_collectiondb.getRec ( collnum );
+
+	char *base;
+	if ( m_obj == OBJ_COLL ) base = (char *)cr;
+	else                     base = (char *)&g_conf;
+
+	if ( ! base ) {
+		log("parms: no collrec (%li) to change parm",(long)collnum);
+		g_errno = ENOCOLLREC;
+		return true;
+	}
+		
+	// point to where to copy the data into collrect
+	char *val = (char *)base + m_off;
+
+	if ( isArray() && occNum < 0 ) {
+		log("parms: bad occnum for %s",m_title);
+		return false;
+	}
+
+	// add array index to ptr
+	if ( isArray() ) val += m_size * occNum;
+
+
+	if ( m_type == TYPE_SAFEBUF ) {
+		// point to it
+		SafeBuf *sb2 = (SafeBuf *)val;
+		return sb->safePrintf("%s",sb2->getBufStart());
+	}
+
+	if ( m_type == TYPE_STRING || 
+	     m_type == TYPE_STRINGBOX || 
+	     m_type == TYPE_SAFEBUF ||
+	     m_type == TYPE_STRINGNONEMPTY )
+		return sb->safePrintf("%s",val);
+
+
+	if ( m_type == TYPE_LONG ) 
+		return sb->safePrintf("%li",*(long *)val);
+
+	if ( m_type == TYPE_DATE ) 
+		return sb->safePrintf("%li",*(long *)val);
+
+	if ( m_type == TYPE_DATE2 ) 
+		return sb->safePrintf("%li",*(long *)val);
+
+	if ( m_type == TYPE_FLOAT ) 
+		return sb->safePrintf("%f",*(float *)val);
+
+	if ( m_type == TYPE_LONG_LONG ) 
+		return sb->safePrintf("%lli",*(long long *)val);
+
+	if ( m_type == TYPE_BOOL ||
+	     m_type == TYPE_BOOL2 ||
+	     m_type == TYPE_CHECKBOX ||
+	     m_type == TYPE_PRIORITY2 ||
+	     m_type == TYPE_CHAR )
+		return sb->safePrintf("%hhx",*val);
+
+	if ( m_type == TYPE_CMD ) 
+		return sb->safePrintf("CMD");
+
+	if ( m_type == TYPE_IP )
+		return sb->safePrintf("%s",iptoa(*(long *)val) );
+
+	char *xx=NULL;*xx=0;
+	return false;
 }

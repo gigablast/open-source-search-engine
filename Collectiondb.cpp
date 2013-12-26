@@ -433,8 +433,10 @@ bool Collectiondb::addNewColl ( char *coll ,
 		cr->m_collectiveRespiderFrequency = 0.0;
 		cr->m_restrictDomain = true;
 		// reset the crawl stats
+		// . this will core if a host was dead and then when it came
+		//   back up host #0's parms.cpp told it to add a new coll
 		cr->m_diffbotCrawlStartTime=
-			gettimeofdayInMillisecondsGlobal();
+			gettimeofdayInMillisecondsGlobalNoCore();
 		cr->m_diffbotCrawlEndTime   = 0LL;
 		// . just the basics on these for now
 		// . if certain parms are changed then the url filters
