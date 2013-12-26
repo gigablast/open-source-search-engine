@@ -92,6 +92,7 @@ class Page {
 #define PF_WIDGET_PARM     0x08
 #define PF_API             0x10
 #define PF_REBUILDURLFILTERS 0x20
+#define PF_NOSYNC            0x40
 
 class Parm {
  public:

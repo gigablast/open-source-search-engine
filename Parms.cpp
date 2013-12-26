@@ -76,6 +76,12 @@ Parm *getParmFromParmRec ( char *rec ) {
 	return g_parms.getParmFast2 ( cgiHash32 );
 }
 
+long getHashFromParmRec ( char *rec ) {
+	key96_t *k = (key96_t *)rec;
+	long cgiHash32 = (k->n0 >> 32);
+	return cgiHash32;
+}
+
 // . occNum is index # for parms that are arrays. it is -1 if not used.
 // . collnum is -1 for g_conf, which is not a collrec
 // . occNUm is -1 for a non-array parm
@@ -5073,6 +5079,7 @@ void Parms::init ( ) {
 		"to fragmentation.";
 	m->m_off   = (char *)&g_conf.m_maxMem - g;
 	m->m_def   = "4000000000";
+	m->m_cgi   = "maxmem";
 	m->m_type  = TYPE_LONG_LONG;
 	m++;
 
@@ -5140,6 +5147,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_dnsMaxCacheMem - g;
 	m->m_def   = "128000";
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	// g_dnsDistributed always saves now. main.cpp inits it that way.
@@ -5158,6 +5166,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_tagdbMaxTreeMem - g;
 	m->m_def   = "1028000"; 
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	m->m_title = "tagdb max page cache mem";
@@ -5165,6 +5174,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_tagdbMaxDiskPageCacheMem - g;
 	m->m_def   = "200000"; 
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	//m->m_title = "tagdb max cache mem";
@@ -5189,6 +5199,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_catdbMaxTreeMem - g;
 	m->m_def   = "1000000"; 
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	m->m_title = "catdb max page cache mem";
@@ -5196,6 +5207,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_catdbMaxDiskPageCacheMem - g;
 	m->m_def   = "25000000";
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	m->m_title = "catdb max cache mem";
@@ -5203,6 +5215,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_catdbMaxCacheMem - g;
 	m->m_def   = "0"; 
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	/*
@@ -5268,6 +5281,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_clusterdbMaxTreeMem - g;
 	m->m_def   = "1000000";
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	/*
@@ -5289,6 +5303,7 @@ void Parms::init ( ) {
 	// this is overridden by collection
 	m->m_title = "clusterdb min files to merge";
 	m->m_desc  = "";
+	m->m_cgi   = "cmftm";
 	m->m_off   = (char *)&g_conf.m_clusterdbMinFilesToMerge - g;
 	//m->m_def   = "2";
 	m->m_def   = "-1"; // -1 means to use collection rec
@@ -5298,6 +5313,7 @@ void Parms::init ( ) {
 
 	m->m_title = "clusterdb save cache";
 	m->m_desc  = "";
+	m->m_cgi   = "cdbsc";
 	m->m_off   = (char *)&g_conf.m_clusterdbSaveCache - g;
 	m->m_def   = "0"; 
 	m->m_type  = TYPE_BOOL;
@@ -5308,6 +5324,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_maxVectorCacheMem - g;
 	m->m_def   = "10000000";
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	/*
@@ -5410,9 +5427,11 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_robotdbMaxCacheMem - g;
 	m->m_def   = "128000"; 
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	m->m_title = "robotdb save cache";
+	m->m_cgi   = "rdbsc";
 	m->m_desc  = "";
 	m->m_off   = (char *)&g_conf.m_robotdbSaveCache - g;
 	m->m_def   = "0"; 
@@ -5448,6 +5467,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_linkdbMaxDiskPageCacheMem - g;
 	m->m_def   = "0";
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	/*
@@ -5559,6 +5579,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_statsdbMaxTreeMem - g;
 	m->m_def   = "5000000";
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	m->m_title = "statsdb max cache mem";
@@ -5566,6 +5587,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_statsdbMaxCacheMem - g;
 	m->m_def   = "0";
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	m->m_title = "statsdb max disk page cache mem";
@@ -5573,6 +5595,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_statsdbMaxDiskPageCacheMem - g;
 	m->m_def   = "1000000";
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	//m->m_title = "statsdb min files to merge";
@@ -5597,6 +5620,7 @@ void Parms::init ( ) {
 	m->m_title = "http max send buf size";
 	m->m_desc  = "Maximum bytes of a doc that can be sent before having "
 		"to read more from disk";
+	m->m_cgi   = "hmsbs";
 	m->m_off   = (char *)&g_conf.m_httpMaxSendBufSize - g;
 	m->m_def   = "128000"; 
 	m->m_type  = TYPE_LONG;
@@ -5607,6 +5631,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_searchResultsMaxCacheMem - g;
 	m->m_def   = "100000"; 
 	m->m_type  = TYPE_LONG;
+	m->m_flags = PF_NOSYNC;
 	m++;
 
 	//m->m_title = "search results max cache age";
@@ -5675,6 +5700,7 @@ void Parms::init ( ) {
 
 	m->m_title = "read only mode";
 	m->m_desc  = "Read only mode does not allow spidering.";
+	m->m_cgi   = "readonlymode";
 	m->m_off   = (char *)&g_conf.m_readOnlyMode - g;
 	m->m_def   = "0"; 
 	m->m_type  = TYPE_BOOL;
@@ -5697,6 +5723,7 @@ void Parms::init ( ) {
 	m->m_title = "do spell checking";
 	m->m_desc  = "Spell check using the dictionary.";
 	m->m_off   = (char *)&g_conf.m_doSpellChecking - g;
+	m->m_cgi   = "dospellchecking";
 	m->m_def   = "1"; 
 	m->m_type  = TYPE_BOOL;
 	m++;
@@ -5704,6 +5731,7 @@ void Parms::init ( ) {
 	m->m_title = "do narrow search";
 	m->m_desc  = "give narrow search suggestions.";
 	m->m_off   = (char *)&g_conf.m_doNarrowSearch - g;
+	m->m_cgi   = "donarrowsearch";
 	m->m_def   = "0"; 
 	m->m_type  = TYPE_BOOL;
 	m++;
@@ -8911,6 +8939,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_isCustomCrawl - x;
 	m->m_type  = TYPE_CHAR;
 	m->m_page  = PAGE_NONE;
+	m->m_cgi   = "isCustomCrawl";
 	m->m_def   = "0";
 	m++;
 
@@ -17480,7 +17509,14 @@ void handleRequest3fLoop ( void *weArg ) {
 		Parm *parm = getParmFromParmRec ( rec );
 
 		if ( ! parm ) {
-			log("parms: unknown parm sent to us");
+			long h32 = getHashFromParmRec(rec);
+			log("parms: unknown parm sent to us hash=%li",h32);
+			for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
+				Parm *x = &g_parms.m_parms[i];
+				if ( x->m_cgiHash != h32 ) continue;
+				log("parms: unknown parm=%s",x->m_title);
+				break;
+			}
 			continue;
 		}
 
@@ -17908,6 +17944,16 @@ bool Parms::addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) {
 		if ( collnum >=  0 && parm->m_obj != OBJ_COLL ) continue;
 		if ( collnum < -1 ) { char *xx=NULL;*xx=0; }
 
+		// like 'statsdb max cache mem' etc.
+		if ( parm->m_flags & PF_NOSYNC ) continue;
+
+		// sanity, need cgi hash to look up the parm on the 
+		// receiving end
+		if ( parm->m_cgiHash == 0 ) { 
+			log("parms: no cgi for parm %s",parm->m_title);
+			char *xx=NULL; *xx=0;
+		}
+
 		long occNum = -1;
 		long maxOccNum = 0;
 
@@ -17954,6 +18000,8 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		// all parm rec data for TYPE_CMD should be ascii/utf8 chars
 		// and should be \0 terminated
 		char *data = getDataFromParmRec ( rec );
+		long dataSize = getDataSizeFromParmRec ( rec );
+		if ( dataSize == 0 ) data = NULL;
 		log("parmdb: running function for "
 		    "parm \"%s\" (collnum=%li) args=\"%s\""
 		    , parm->m_title
@@ -18017,6 +18065,11 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 			log("parms: bad occnum for %s",parm->m_title);
 			return false;
 		}
+		// the long before the array is the # of elements
+		long currentCount = *((long *)(dst-4));
+		// update our # elements in our array if this is bigger
+		if ( occNum > currentCount ) *((long *)(dst-4)) = occNum;
+		// now point "dst" to the occNum-th element
 		dst += parm->m_size * occNum;
 	}
 
