@@ -1466,7 +1466,7 @@ bool Rdb::dumpCollLoop ( ) {
 	// . RdbMap should dump itself out CLOSE!
 	// . it returns false if blocked, true otherwise & sets g_errno on err
 	// . but we only return false on error here
-	if ( ! m_dump.set (  base->m_coll   ,
+	if ( ! m_dump.set (  base->m_collnum   ,
 			     base->m_files[m_fn]  ,
 			     id2            , // to set tfndb recs for titledb
 			     m_isTitledb,// tdb2? this == g_titledb.getRdb() ,
@@ -2834,6 +2834,18 @@ RdbBase *getRdbBase ( uint8_t rdbId , char *coll ) {
 		collnum = g_collectiondb.getCollnum ( coll );
 	if(collnum == -1) return NULL;
 	//return rdb->m_bases [ collnum ];
+	return rdb->getBase(collnum);
+}
+
+
+// get the RdbBase class for an rdbId and collection name
+RdbBase *getRdbBase ( uint8_t rdbId , collnum_t collnum ) {
+	Rdb *rdb = getRdbFromId ( rdbId );
+	if ( ! rdb ) {
+		log("db: Collection #%li does not exist.",(long)collnum);
+		return NULL;
+	}
+	if ( rdb->m_isCollectionLess ) collnum = (collnum_t) 0;
 	return rdb->getBase(collnum);
 }
 

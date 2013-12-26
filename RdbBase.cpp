@@ -1929,7 +1929,7 @@ void RdbBase::gotTokenForMerge ( ) {
 	// . start the merge
 	// . returns false if blocked, true otherwise & sets g_errno
 	if ( ! m->merge ( rdbId  ,
-			  m_coll ,
+			  m_collnum ,
 			  m_files[mergeFileNum] ,
 			  m_maps [mergeFileNum] ,
 			  id2                   ,

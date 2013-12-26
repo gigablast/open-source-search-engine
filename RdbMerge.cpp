@@ -29,7 +29,8 @@ void RdbMerge::reset () { m_isMerging = false; m_isSuspended = false; }
 //   there's too much contention from spider lookups on disk for the merge
 //   to finish in a decent amount of time and we end up getting too many files!
 bool RdbMerge::merge ( char     rdbId        ,
-		       char    *coll         , //RdbBase *base         , 
+		       //char    *coll         , //RdbBase *base         , 
+		       collnum_t collnum,
 		       BigFile *target       , 
 		       RdbMap  *targetMap    ,
 		       long     id2          , // target's secondary id
@@ -45,16 +46,20 @@ bool RdbMerge::merge ( char     rdbId        ,
 	m_rdbId = rdbId;
 	Rdb *rdb = getRdbFromId ( rdbId );
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,coll))) return true;
+	RdbBase *base; if (!(base=getRdbBase(m_rdbId,collnum))) return true;
 	// don't breech the max
 	//if ( numFiles > m_maxFilesToMerge ) numFiles = m_maxFilesToMerge;
 	// reset this map! it's m_crcs needs to be reset
 	//targetMap->reset();
 	// remember some parms
-	if ( ! coll && rdb->m_isCollectionLess )
-		strcpy ( m_coll , rdb->m_dbname );
-	else
-		strcpy ( m_coll , coll );
+	//if ( ! coll && rdb->m_isCollectionLess )
+	//	strcpy ( m_coll , rdb->m_dbname );
+	//else
+	//	strcpy ( m_coll , coll );
+
+	m_collnum = collnum;
+	if ( rdb->m_isCollectionLess ) m_collnum = 0;
+
 	m_target          = target;
 	m_targetMap       = targetMap;
 	m_id2             = id2;
@@ -179,12 +184,12 @@ bool RdbMerge::gotLock ( ) {
 	else                   KEYMIN(prevLastKey,m_ks);
 
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return true;
+	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
 
 	// . set up a a file to dump the records into
 	// . returns false and sets g_errno on error
 	// . this will open m_target as O_RDWR | O_NONBLOCK | O_ASYNC ...
-	m_dump.set ( m_coll             ,
+	m_dump.set ( m_collnum          ,
 		     m_target           ,
 		     m_id2              ,
 		     //m_startFileNum - 1 , // merge fileNum in Rdb::m_files[]
@@ -297,7 +302,7 @@ bool RdbMerge::getNextList ( ) {
 	// no chop threads
 	m_numThreads = 0;
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return true;
+	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
 	// . if a contributor has just surpassed a "part" in his BigFile
 	//   then we can delete that part from the BigFile and the map
 	for ( long i = m_startFileNum ; i < m_startFileNum + m_numFiles; i++ ){
@@ -358,12 +363,16 @@ bool RdbMerge::getAnotherList ( ) {
 	// clear it up in case it was already set
 	g_errno = 0;
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return true;
+	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
 	// if merging titledb files, we must adjust m_endKey so we do
 	// not have to read a huge 200MB+ tfndb list
 	//key_t newEndKey = m_endKey;
 	char newEndKey[MAX_KEY_BYTES];
 	KEYSET(newEndKey,m_endKey,m_ks);
+
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	char *coll = cr->m_coll;
+
 	/*
 	if ( m_rdbId == RDB_TITLEDB ) { // && m_rdbId == RDB_TFNDB ) {
 		//long long docId1 = g_titledb.getDocIdFromKey ( m_startKey );
@@ -430,7 +439,7 @@ bool RdbMerge::getAnotherList ( ) {
 	long bufSize = 100000; // g_conf.m_mergeBufSize , // minRecSizes
 	// get it
 	return m_msg5.getList ( m_rdbId        ,
-				m_coll         ,
+				coll           ,
 				&m_list        ,
 				m_startKey     ,
 				newEndKey      , // usually is maxed!
@@ -494,7 +503,10 @@ void dumpListWrapper ( void *state ) {
 	log(LOG_DEBUG,"db: Dump of list completed: %s.",mstrerror(g_errno));
 	// get a ptr to ourselves
 	RdbMerge *THIS = (RdbMerge *)state;
+
  loop:
+	// collection reset or deleted while RdbDump.cpp was writing out?
+	if ( g_errno == ENOCOLLREC ) { THIS->doneMerging(); return; }
 	// return if this blocked
 	if ( ! THIS->getNextList() ) return;
 	// if g_errno is out of memory then msg3 wasn't able to get the lists
@@ -576,6 +588,8 @@ bool RdbMerge::dumpList ( ) {
 }
 
 void RdbMerge::doneMerging ( ) {
+	// save this
+	long saved = g_errno;
 	// let RdbDump free its m_verifyBuf buffer if it existed
 	m_dump.reset();
 	// debug msg
@@ -599,8 +613,13 @@ void RdbMerge::doneMerging ( ) {
 	//   will call attemptMerge() on all the other dbs
 	m_isMerging     = false;
 	m_isSuspended   = false;
+
+	// if collection rec was deleted while merging files for it
+	// then the rdbbase should be NULL i guess.
+	if ( saved == ENOCOLLREC ) return;
+
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return;
+	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return;
 	// pass g_errno on to incorporate merge so merged file can be unlinked
 	base->incorporateMerge ( );
 	// nuke the lock so others can merge

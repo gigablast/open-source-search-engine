@@ -62,6 +62,7 @@ extern long g_numUrgentMerges;
 
 // get the RdbBase class for an rdbId and collection name
 class RdbBase *getRdbBase ( uint8_t rdbId , char *coll );
+class RdbBase *getRdbBase ( uint8_t rdbId , collnum_t collnum );
 // maps an rdbId to an Rdb
 class Rdb *getRdbFromId ( uint8_t rdbId ) ;
 // the reverse of the above
