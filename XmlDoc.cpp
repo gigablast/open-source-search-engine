@@ -22216,6 +22216,20 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		else
 			ksr.m_parentPrevSpiderTime = 0;
 
+		//
+		// . inherit manual add bit if redirecting to simplified url
+		// . so we always spider seed url even if prohibited by
+		//   the regex, and even if it simplified redirects
+		//
+		if ( m_indexCodeValid && 
+		     m_indexCode == EDOCSIMPLIFIEDREDIR &&
+		     m_oldsrValid ) {
+			if ( m_oldsr.m_isInjecting ) 
+				ksr.m_isInjecting = 1;
+			if ( m_oldsr.m_isAddUrl )
+				ksr.m_isAddUrl = 1;
+		}
+
 		// don't forget this one!
 		//ksr.m_spiderTime = nowGlobal;
 
