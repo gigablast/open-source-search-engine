@@ -2190,17 +2190,19 @@ void gotIframeExpandedContent ( void *state ) {
 // we respect crawl delay for sure
 void scanHammerQueue ( int fd , void *state ) {
 
-	Msg13Request *r = s_hammerQueueHead;
-	if ( ! r ) return;
+	if ( ! s_hammerQueueHead ) return;
 
 	long long nowms = gettimeofdayInMilliseconds();
 
  top:
 
+	Msg13Request *r = s_hammerQueueHead;
+	if ( ! r ) return;
+
 	Msg13Request *prev = NULL;
 	long long waited = -1LL;
 	Msg13Request *nextLink = NULL;
-
+	
 	// scan down the linked list of queued of msg13 requests
 	for ( ; r ; prev = r , r = nextLink ) { 
 

@@ -306,9 +306,11 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// ensure does not already exist in memory
 	if ( getCollnum ( coll ) >= 0 ) {
 		g_errno = EEXIST;
-		char *xx=NULL;*xx=0;
-		return log("admin: Trying to create collection \"%s\" but "
-			   "already exists in memory.",coll);
+		log("admin: Trying to create collection \"%s\" but "
+		    "already exists in memory.",coll);
+		// just let it pass...
+		g_errno = 0 ;
+		return true;
 	}
 	// MDW: ensure not created on disk since time of last load
 	char dname[512];

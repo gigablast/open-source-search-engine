@@ -18141,11 +18141,12 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 			sb->safeMemcpy ( data , dataSize );
 		// ensure null terminated
 		sb->nullTerm();
-		return true;
+		//return true;
 	}
-
-	// and copy the data into collrec or g_conf
-	memcpy ( dst , data , dataSize );
+	else {
+		// and copy the data into collrec or g_conf
+		memcpy ( dst , data , dataSize );
+	}
 
 	SafeBuf val2;
 	parm->printVal ( &val2 , collnum , occNum );
