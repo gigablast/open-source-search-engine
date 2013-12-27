@@ -4100,11 +4100,11 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
-				"./gb -c %shosts.conf dumpmissing %s %li "
+				"./gb dumpmissing %s %li "
 				">& ./missing%li &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				coll           ,
 				h2->m_hostId   ,
 				h2->m_hostId   );
@@ -4118,11 +4118,11 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
-				"./gb -c %shosts.conf dumpdups %s %li "
+				"./gb dumpdups %s %li "
 				">& ./dups%li &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				coll           ,
 				h2->m_hostId   ,
 				h2->m_hostId   );
@@ -4137,12 +4137,12 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
-				"./gb -c %shosts.conf %li "
+				"./gb %li "
 				"removedocids %s %s %li "
 				">& ./removelog%03li &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				h2->m_hostId   ,
 				coll           ,
 				dir            , // really docidsFile
@@ -4384,11 +4384,11 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; %s"
-				"./gb -c %shosts.conf %li >& ./log%03li &\" &",
+				"./gb %li >& ./log%03li &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 				tmp2           ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				h2->m_hostId   ,
 				h2->m_hostId   );
 			// log it
@@ -4433,11 +4433,11 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; %s"
-				"./gb -c %shosts.conf %li >& ./log%03li &\" &",
+				"./gb %li >& ./log%03li &\" &",
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir      ,
 				tmp2           ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				h2->m_hostId   ,
 				h2->m_hostId   );
 			// log it
@@ -4470,7 +4470,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
  				"{ "
 				"mv ./log%03li ./log%03li-\\`date '+"
 				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
-				"./gb -c %shosts.conf %li "
+				"./gb %li "
 				"\\$ADDARGS "
 				" >& ./log%03li ;"
 				"EXITSTATUS=\\$? ; "
@@ -4481,7 +4481,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				h2->m_dir      ,
 				h2->m_hostId   ,
 				h2->m_hostId   ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				h2->m_hostId   ,
 				h2->m_hostId   );
 
@@ -4698,11 +4698,11 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			sprintf(tmp,
 				"ssh %s \"cd %s ;"
 				//"%s"
-				"./gb -c %shosts.conf genclusterdb %s %li >&"
+				"./gb genclusterdb %s %li >&"
 				"./log%03li-genclusterdb &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				//tmp2           ,
 				coll           ,
 				h2->m_hostId   ,

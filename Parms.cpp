@@ -16823,6 +16823,13 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 	long dataSize = m->m_size;
 	if ( occNum > 0 ) data += occNum * m->m_size;
 
+	if ( m->m_type == TYPE_STRING || 
+	     m->m_type == TYPE_STRINGBOX || 
+	     m->m_type == TYPE_SAFEBUF ||
+	     m->m_type == TYPE_STRINGNONEMPTY )
+		// include \0 in string
+		dataSize = gbstrlen(data) + 1;
+
 	// if a safebuf, point to the string within
 	if ( m->m_type == TYPE_SAFEBUF ) {
 		SafeBuf *sb = (SafeBuf *)data;
@@ -17968,7 +17975,20 @@ bool Parms::addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) {
 						       collnum ,
 						       occNum ,
 						       parm ) )
-			return false;
+				return false;
+			/*
+			  //
+			  // use this to debug parm list checksums being off
+			  //
+			long long h64 ;
+			h64 = hash64 ( parmList->getBufStart(),
+				       parmList->length() );
+			// note it for debugging hash
+			SafeBuf xb;
+			parm->printVal ( &xb ,collnum,occNum);
+			log("parms: adding (h=%llx) parm %s = %s",
+			    h64,parm->m_title,xb.getBufStart());
+			*/
 		}
 
 	}
