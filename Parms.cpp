@@ -17187,6 +17187,7 @@ public:
 	long m_numReplies;
 	long m_numGoodReplies;
 	long m_numHostsTotal;
+	class ParmNode *m_prevNode;
 	class ParmNode *m_nextNode;
 	long long m_parmId;
 	bool m_calledCallback;
@@ -17236,6 +17237,7 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 	pn->m_numReplies     = 0;
 	pn->m_numGoodReplies = 0;
 	pn->m_numHostsTotal  = 0;
+	pn->m_prevNode       = NULL;
 	pn->m_nextNode       = NULL;
 	pn->m_parmId         = s_parmId; // take a ticket
 	pn->m_calledCallback = false;
@@ -17252,7 +17254,10 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 		s_tailNode = pn;
 	}
 	else {
+		// link pn at end of tail
 		s_tailNode->m_nextNode = pn;
+		pn->m_prevNode = s_tailNode;
+		// pn becomes the new tail
 		s_tailNode = pn;
 	}
 
@@ -17368,20 +17373,43 @@ void gotParmReplyWrapper ( void *state , UdpSlot *slot ) {
 	// nuke it?
 	if ( pn->m_numGoodReplies >= pn->m_numHostsTotal &&
 	     pn->m_numReplies >= pn->m_numRequests ) {
-		// we must always be the head lest we send out of order.
-		if ( pn != s_headNode ) { char *xx=NULL;*xx=0; }
+
+		// . we must always be the head lest we send out of order.
+		// . ParmNodes only destined to a specific hostid are ignored
+		//   for this check, only look at those whose m_hostId is -1
+		if(pn != s_headNode && pn->m_hostId==-1){char *xx=NULL;*xx=0; }
+
 		// a new head
-		s_headNode = pn->m_nextNode;
+		if ( pn == s_headNode ) {
+			// sanity
+			if ( pn->m_prevNode ) { char *xx=NULL;*xx=0; }
+			// the guy after us is the new head
+			s_headNode = pn->m_nextNode;
+		}
+
+		// a new tail?
+		if ( pn == s_tailNode ) {
+			// sanity
+			if ( pn->m_nextNode ) { char *xx=NULL;*xx=0; }
+			// the guy before us is the new tail
+			s_tailNode = pn->m_prevNode;
+		}
+
 		// empty?
 		if ( ! s_headNode ) s_tailNode = NULL;
+
 		// wtf?
 		if ( ! pn->m_calledCallback ) { char *xx=NULL;*xx=0; }
+
 		// do callback first before freeing pn
 		//if ( pn->m_callback ) pn->m_callback ( pn->m_state );
-		//if ( pn->m_prevNode ) 
-		//	pn->m_prevNode->m_nextNode = pn->m_nextNode;
-		//if ( pn->m_nextNode )
-		//	pn->m_nextNode->m_prevNode = pn->m_prevNode;
+
+		if ( pn->m_prevNode ) 
+			pn->m_prevNode->m_nextNode = pn->m_nextNode;
+
+		if ( pn->m_nextNode )
+			pn->m_nextNode->m_prevNode = pn->m_prevNode;
+
 		mfree ( pn , sizeof(ParmNode) , "pndfr");
 	}
 

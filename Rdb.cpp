@@ -484,9 +484,13 @@ bool Rdb::addColl2 ( collnum_t collnum ) {
 	}
 
 
-	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	CollectionRec *cr = NULL;
 	char *coll = NULL;
+	if ( ! m_isCollectionLess ) cr = g_collectiondb.m_recs[collnum];
 	if ( cr ) coll = cr->m_coll;
+
+	if ( m_isCollectionLess )
+		coll = "collectionless";
 
 	// . ensure no previous one exists
 	// . well it will be there but will be uninitialized, m_rdb will b NULL
