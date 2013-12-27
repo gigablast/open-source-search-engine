@@ -482,6 +482,10 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	// . an empty rec is a cached not found (no robot.txt file)
 	// . therefore it's allowed, so set *reply to 1 (true)
 	if ( inCache ) {
+		// helpful for debugging. even though you may see a robots.txt
+		// redirect and think we are downloading that each time,
+		// we are not... the redirect is cached here as well.
+		//log("spider: %s was in cache",r->m_url);
 		// . send the cached reply back
 		// . this will free send/read bufs on completion/g_errno
 		g_udpServer.sendReply_ass ( rec , recSize , rec, recSize,slot);
