@@ -17263,6 +17263,9 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 	if ( pn->m_sendToGrunts )
 		pn->m_numHostsTotal += g_hostdb.getNumGrunts();
 
+	if ( hostId >= 0 )
+		pn->m_numHostsTotal = 1;
+
 	// pump the parms out to other hosts in the network
 	doParmSendingLoop ( );
 
