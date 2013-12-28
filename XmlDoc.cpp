@@ -1883,12 +1883,35 @@ void indexDocWrapper2 ( int fd , void *state ) {
 //   logic to the url filters table
 bool XmlDoc::indexDoc ( ) {
 
-	// return from the msg4 below?
+	// return from the msg4.addMetaList() below?
 	if ( m_msg4Launched ) {
 		// must have been waiting
 		if ( ! m_msg4Waiting ) { char *xx=NULL;*xx=0; }
 		return true;
 	}
+
+	// return true with g_errno set on error
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return true;
+
+	// . even if not using diffbot, keep track of these counts
+	// . even if we had something like EFAKEFIRSTIP, OOM, or whatever
+	//   it was an attempt we made to crawl this url
+	if ( ! m_isDiffbotJSONObject && 
+	     ! m_incrementedAttemptsCount ) {
+		// do not repeat
+		m_incrementedAttemptsCount = true;
+		// this is just how many urls we tried to index
+		//cr->m_localCrawlInfo.m_urlsConsidered++;
+		cr->m_localCrawlInfo.m_pageDownloadAttempts++;
+		cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
+		// need to save collection rec now during auto save
+		cr->m_needsSave = true;
+		// update this just in case we are the last url crawled
+		long long now = gettimeofdayInMillisecondsGlobal();
+		cr->m_diffbotCrawlEndTime = now;
+	}
+
 
 	bool status = true;
 
@@ -2010,8 +2033,8 @@ bool XmlDoc::indexDoc ( ) {
 	}
 	//if ( nsr->getRecSize() <= 1) { char *xx=NULL;*xx=0; }
 
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return true;
+	//CollectionRec *cr = getCollRec();
+	//if ( ! cr ) return true;
 
 	//SafeBuf metaList;
 	if ( ! m_metaList2.pushChar(RDB_SPIDERDB) )
