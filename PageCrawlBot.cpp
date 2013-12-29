@@ -426,6 +426,12 @@ bool StateCD::sendList ( ) {
 		m_printedFirstBracket = true;
 	}
 
+	// these are csv files not xls
+	//if ( ! m_printedFirstBracket && m_fmt == FMT_CSV ) {
+	//	sb.safePrintf("sep=,\n");
+	//	m_printedFirstBracket = true;
+	//}
+
 
 	// we set this to true below if any one shard has more spiderdb
 	// records left to read
