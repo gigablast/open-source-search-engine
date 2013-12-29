@@ -1901,6 +1901,9 @@ bool XmlDoc::indexDoc ( ) {
 	     ! m_incrementedAttemptsCount ) {
 		// do not repeat
 		m_incrementedAttemptsCount = true;
+		// log debug
+		//log("build: attempted %s count=%lli",m_firstUrl.getUrl(),
+		//    cr->m_localCrawlInfo.m_pageDownloadAttempts);
 		// this is just how many urls we tried to index
 		//cr->m_localCrawlInfo.m_urlsConsidered++;
 		cr->m_localCrawlInfo.m_pageDownloadAttempts++;
