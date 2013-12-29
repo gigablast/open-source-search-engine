@@ -1345,9 +1345,10 @@ bool Rdb::dumpCollLoop ( ) {
 	if ( g_errno ) {
 		RdbBase *base = getBase(m_dumpCollnum);
 		log("build: Error dumping collection: %s.",mstrerror(g_errno));
-		// if we wrote nothing, remove the file
-		if ( ! base->m_files[m_fn]->doesExist() ||
-		     base->m_files[m_fn]->getFileSize() <= 0 ) {
+		// . if we wrote nothing, remove the file
+		// . if coll was deleted under us, base will be NULL!
+		if ( base &&   (! base->m_files[m_fn]->doesExist() ||
+		      base->m_files[m_fn]->getFileSize() <= 0) ) {
 			log("build: File %s is zero bytes, removing from "
 			    "memory.",base->m_files[m_fn]->getFilename());
 			base->buryFiles ( m_fn , m_fn+1 );
