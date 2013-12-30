@@ -272,6 +272,13 @@ bool CommandRestartColl ( char *rec , WaitEntry *we ) {
 	if ( dataSize < 1 ) { char *xx=NULL;*xx=0; }
 	collnum_t oldCollnum = atol(data);
 
+	if ( oldCollnum < 0 || 
+	     oldCollnum >= g_collectiondb.m_numRecs ||
+	     ! g_collectiondb.m_recs[oldCollnum] ) {
+		log("parms: invalid collnum %li to restart",(long)oldCollnum);
+		return true;
+	}
+
 	// this can block if tree is saving, it has to wait
 	// for tree save to complete before removing old
 	// collnum recs from tree
@@ -304,6 +311,13 @@ bool CommandResetColl ( char *rec , WaitEntry *we ) {
 	long dataSize = *(long *)(rec + sizeof(key96_t));
 	if ( dataSize < 1 ) { char *xx=NULL;*xx=0; }
 	collnum_t oldCollnum = atol(data);
+
+	if ( oldCollnum < 0 || 
+	     oldCollnum >= g_collectiondb.m_numRecs ||
+	     ! g_collectiondb.m_recs[oldCollnum] ) {
+		log("parms: invalid collnum %li to reset",(long)oldCollnum);
+		return true;
+	}
 
 	// this will not go through if tree is saving, it has to wait
 	// for tree save to complete before removing old
@@ -16916,8 +16930,21 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	bool hasAddCrawl = hr->hasField("addCrawl");
 	bool hasAddBulk  = hr->hasField("addBulk");
 	bool hasAddColl  = hr->hasField("addColl");
-	if ( ! cr && token && name && customCrawl &&
-	     ! hasAddCrawl && ! hasAddBulk && ! hasAddColl ) {
+	// sometimes they try to delete a collection that is not there so do
+	// not apply this logic in that case!
+	bool hasDelete   = hr->hasField("delete");
+	bool hasRestart  = hr->hasField("restart");
+	bool hasReset    = hr->hasField("reset");
+	if ( ! cr          && 
+	     token         && 
+	     name          && 
+	     customCrawl   &&
+	     ! hasDelete   &&
+	     ! hasRestart  &&
+	     ! hasReset    &&
+	     ! hasAddCrawl && 
+	     ! hasAddBulk  && 
+	     ! hasAddColl     ) {
 		// reserve a new collnum for adding this crawl
 		parmCollnum = g_collectiondb.reserveCollNum();
 		// must be there!
