@@ -17488,6 +17488,9 @@ bool Parms::doParmSendingLoop ( ) {
 			continue;
 		}
 
+		// debug log
+		log("parms: sending parm request to hostid %li",h->m_hostId);
+
 		// count it
 		pn->m_numRequests++;
 		// ok, he's available

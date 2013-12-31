@@ -10567,6 +10567,11 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		if ( stats->m_hasUrlsReadyToSpider ) {
 			// inc the count otherwise
 			cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider++;
+			// . no longer initializing?
+			// . sometimes other shards get the spider requests
+			//   and not us!!!
+			if ( cr->m_spiderStatus == SP_INITIALIZING )
+				cr->m_spiderStatus = SP_INPROGRESS;
 			// unflag the sent flag if we had sent an alert
 			// but only if it was a crawl round done alert,
 			// not a maxToCrawl or maxToProcess or 
