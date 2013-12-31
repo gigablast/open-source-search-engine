@@ -24331,8 +24331,24 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 	sprintf(buf2,"%llu",(m_docId) );
 	if ( ! hashSingleTerm(buf2,gbstrlen(buf2),&hi) ) return false;
 
-	// hash
-
+	// if indexing a json diffbot object, index 
+	// gbparenturl:xxxx of the original url from which the json was
+	// datamined. we use this so we can act as a diffbot json cache.
+	if ( m_isDiffbotJSONObject ) {
+		setStatus ( "hashing gbparenturl term");
+		char *p = fu->getUrl() + fu->getUrlLen() - 1;
+		// back up to - as in "http://xyz.com/foo-diffbotxyz13"
+		for ( ; *p && *p != '-' ; p-- );
+		// set up the hashing parms
+		hi.m_hashGroup = HASHGROUP_INTAG;
+		hi.m_tt        = tt;
+		hi.m_desc      = "diffbot parent url";
+		// append a "www." as part of normalization
+		uw.set ( fu->getUrl() , p - fu->getUrl() , true );
+		hi.m_prefix    = "gbparenturl";
+		if ( ! hashSingleTerm(uw.getUrl(),uw.getUrlLen(),&hi) ) 
+			return false;
+	}
 
 	return true;
 }
