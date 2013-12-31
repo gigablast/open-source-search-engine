@@ -722,6 +722,8 @@ bool gotResults ( void *state ) {
 	// reserve 1.5MB now!
 	if ( ! sb.reserve(1500000 ,"pgresbuf" ) ) // 128000) )
 		return true;
+	// just in case it is empty, make it null terminated
+	sb.nullTerm();
 
 	SearchInput *si = &st->m_si;
 
@@ -978,7 +980,7 @@ bool gotResults ( void *state ) {
 	Query *qq2;
 	bool firstIgnored;
 	bool isAdmin = si->m_isAdmin;
-	if ( si->m_format == FORMAT_XML ) isAdmin = false;
+	if ( si->m_format != FORMAT_HTML ) isAdmin = false;
 
 	// otherwise, we had no error
 	if ( numResults == 0 && si->m_format == FORMAT_HTML ) {
@@ -1509,6 +1511,9 @@ bool gotResults ( void *state ) {
 	}
 
 
+	if ( sb.length() == 0 )
+		sb.pushChar('\n');
+
 	return sendReply ( st , sb.getBufStart() );
 }
 
@@ -1819,6 +1824,7 @@ static int printResult ( SafeBuf &sb,
 		char *json = mr->ptr_content;
 		// only print header row once, so pass in that flag
 		if ( ! st->m_printedHeaderRow ) {
+			sb.reset();
 			printCSVHeaderRow ( &sb , st );
 			st->m_printedHeaderRow = true;
 		}
