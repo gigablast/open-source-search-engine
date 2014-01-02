@@ -13488,8 +13488,8 @@ int injectFile ( char *filename , char *ips ,
 		//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 		//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
 		//g_conf.m_urldbMaxDiskPageCacheMem = 0;
-		g_titledb.init ();
 		g_collectiondb.init(true);
+		g_titledb.init ();
 		g_titledb.addColl ( coll, false );
 	}
 	else {
