@@ -867,7 +867,7 @@ int main ( int argc , char *argv[] ) {
 			);
 		SafeBuf sb2;
 		sb2.brify2 ( sb.getBufStart() , 60 , "\n\t" , false );
-		fprintf(stdout,sb2.getBufStart());
+		fprintf(stdout,"%s",sb2.getBufStart());
 		// disable printing of used memory
 		g_mem.m_used = 0;
 		return 0;
