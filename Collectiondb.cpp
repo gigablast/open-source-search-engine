@@ -963,6 +963,15 @@ bool Collectiondb::resetColl ( char *coll ,  WaitEntry *we , bool purgeSeeds) {
 	return true;
 }
 
+// a hack function
+bool addCollToTable ( char *coll , collnum_t collnum ) {
+	// readd it to the hashtable that maps name to collnum too
+	long long h64 = hash64n(coll);
+	g_collTable.set(8,sizeof(collnum_t), 256,NULL,0,
+			false,0,"nhshtbl");
+	return g_collTable.addKey ( &h64 , &collnum );
+}
+
 
 // get coll rec specified in the HTTP request
 CollectionRec *Collectiondb::getRec ( HttpRequest *r ) {

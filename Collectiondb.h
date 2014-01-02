@@ -13,6 +13,8 @@
 
 #include "SafeBuf.h"
 
+bool addCollToTable ( char *coll , collnum_t collnum ) ;
+
 class WaitEntry {
 public:
 	void (* m_callback) (void *state);

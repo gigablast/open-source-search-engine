@@ -2982,14 +2982,16 @@ bool SafeBuf::brify ( char *s , long slen , long niceness ) {
 }
 */
 
-bool SafeBuf::brify2 ( char *s , long cols ) {
-	return brify ( s, gbstrlen(s), 0 , cols ); 
+bool SafeBuf::brify2 ( char *s , long cols , char *sep , bool isHtml ) {
+	return brify ( s, gbstrlen(s), 0 , cols , sep , isHtml ); 
 }
 
 bool SafeBuf::brify ( char *s , 
 		      long slen , 
 		      long niceness ,
-		      long maxCharsPerLine ) {
+		      long maxCharsPerLine ,
+		      char *sep ,
+		      bool isHtml ) {
 	// count the xml tags so we know how much buf to allocated
 	char *p = s;
 	char *pend = s + slen;
@@ -3001,6 +3003,8 @@ bool SafeBuf::brify ( char *s ,
 	char *pstart = s;
 	char *breakPoint = NULL;
 	bool inTag = false;
+	long sepLen = gbstrlen(sep);
+	bool forced = false;
 
  redo:
 
@@ -3012,12 +3016,18 @@ bool SafeBuf::brify ( char *s ,
 			if ( *p == '>' ) inTag = false;
 			continue;
 		}
-		if ( *p == '<' ) {
+		if ( *p == '<' && isHtml ) {
 			inTag = true;
 			continue;
 		}
 		col++;
 		if ( is_wspace_utf8(p) ) {
+			// reset?
+			if ( ! isHtml && *p == '\n' ) {
+				forced = true;
+				breakPoint = p;
+				goto forceBreak;
+			}
 			// apostrophe exceptions
 			//if ( *p == '\'' ) continue;
 			// break AFTER this punct
@@ -3025,17 +3035,22 @@ bool SafeBuf::brify ( char *s ,
 			continue;
 		}
 		if ( col < maxCharsPerLine ) continue;
+
+	forceBreak:
 		// now add the break point i guess
 		// if none, gotta break here for sure!!!
 		if ( ! breakPoint ) breakPoint = p;
 		// count that
-		brSizes += 4;
+		brSizes += sepLen;//4;
 		// print only for last round
 		if ( lastRound ) {
-			// print up to that
+			// . print up to that
+			// . this includes the \n if forced is true
 			safeMemcpy ( pstart , breakPoint - pstart + 1 );
 			// then br
-			safeMemcpy ( "<br>" , 4 );
+			//if ( forced ) pushChar('\n');
+			if ( ! forced ) safeMemcpy ( sep , sepLen ) ; // "<br>"
+			forced = false;
 		}
 		// start right after breakpoint for next line
 		p = breakPoint;
