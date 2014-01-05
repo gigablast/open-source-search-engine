@@ -1719,6 +1719,27 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	//   crawl more vigorously...
 	//if ( srep->m_crawlDelayMS >= 0 ) {
 
+	///////
+	//
+	// update page count table
+	//
+	///////
+	if ( srep->m_wasIndexed && ! srep->m_isIndexed ) {
+		if ( m_scanningIp == srep->m_firstIp )
+			log("spider: crap. got reply for ip counting pages for");
+		m_cr->m_pageCountTable.addScore ( &srep->m_domHash32 , -1 );
+		m_cr->m_pageCountTable.addScore ( &srep->m_siteHash32 , -1 );
+		m_cr->m_pageCountTable.addScore ( &srep->m_firstIp , -1 );
+	}
+	else if ( ! srep->m_wasIndexed && srep->m_isIndexed ) {
+		if ( m_scanningIp == srep->m_firstIp )
+			log("spider: crap. got reply for ip counting pages for");
+		m_cr->m_pageCountTable.addScore ( &srep->m_domHash32 , 1 );
+		m_cr->m_pageCountTable.addScore ( &srep->m_siteHash32 , 1 );
+		m_cr->m_pageCountTable.addScore ( &srep->m_firstIp , 1 );
+	}
+
+
 	bool update = false;
 	// use the domain hash for this guy! since its from robots.txt
 	long *cdp = (long *)m_cdTable.getValue32(srep->m_domHash32);
@@ -2897,6 +2918,33 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	if ( ! needList )
 		m_gettingList1 = false;
 
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	if ( ! cr ) {
+		log("spider: lost collnum %li",(long)m_collnum);
+		g_errno = ENOCOLLREC;
+		return true;
+	}
+
+	// if we do not have a pg count entry for this then enter count mode
+	// where we just scan all the spider records for m_scanningIp
+	// and count how many pages are in the index for each subdomain/site
+	// and when it is over we re-do the scan from the top. 
+	m_countingPagesIndexed = false;
+	// don't bother with this stuff though if url filters do not specify 
+	// "pagesinip" or "pagesinsubdomain"
+	if ( cr->m_urlFiltersHavePageCounts &&
+	     // and only do this if we do not have an entry for this ip yet
+	     ! cr->m_pageCountTable.isInTable ( &m_scanningIp ) ) {
+		// it is on
+		m_countingPagesIndexed = true;
+		// reset this
+		m_lastReqUh48 = 0LL;
+		m_lastRepUh48 = 0LL;
+		// and setup the LOCAL counting table if not initialized
+		if ( m_localTable.m_ks == 0 ) 
+			m_localTable.set ( 4 ,4,0,NULL,0,false,0,"ltpct" );
+	}
+
 	// i guess we are always restricted to an ip, because
 	// populateWaitingTreeFromSpiderdb calls its own msg5.
 	long firstIp0 = g_spiderdb.getFirstIp(&m_nextKey);
@@ -3184,6 +3232,39 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			continue;
 		}
 
+		//
+		// just calculating page counts? if the url filters are based
+		// on the # of pages indexed per ip or subdomain/site then
+		// we have to maintain a page count table.
+		//
+		if ( m_countingPagesIndexed ) {
+			// get request url hash48
+			long long uh48 = sreq->getUrlHash48();
+			// manually added? count these. call them seeds!
+			if ( (sreq->m_isAddUrl || sreq->m_isInjecting) && 
+			     m_lastReqUh48 != uh48 ) {
+				long h32;
+				h32 = sreq->m_siteHash32 ^ 0x123456;
+				m_localTable.addScore(&h32);
+				h32 = sreq->m_domHash32 ^ 0x123456;
+				m_localTable.addScore(&h32);
+				// do not repeat count the same url
+				m_lastReqUh48 = uh48;
+			}
+			// now count pages indexed below here
+			if ( ! srep ) continue;
+			if ( srepUh48 == m_lastRepUh48 ) continue;
+			m_lastRepUh48 = srepUh48;
+			if ( ! srep ) continue;
+			if ( ! srep->m_isIndexed ) continue;
+			// keep count per site and firstip
+			m_localTable.addScore(&sreq->m_siteHash32);
+			m_localTable.addScore(&sreq->m_firstIp);
+			m_localTable.addScore(&sreq->m_domHash32);
+			continue;
+		}
+
+
 		// once we have a spiderreply, even i guess if its an error,
 		// for a url, then bail if respidering is disabled
 		if ( m_cr->m_isCustomCrawl && 
@@ -3239,6 +3320,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			log("spider: got corrupt 4 spiderReply in scan");
 			srep = NULL;
 		}
+
 		// . get the url filter we match
 		// . if this is slow see the TODO below in dedupSpiderdbList()
 		//   which can pre-store these values assuming url filters do
@@ -3617,6 +3699,33 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// print out here
 	//log("spider: got best req=%s ip=%s uh48=%llu",m_bestRequest->m_url,
 	//    iptoa(m_bestRequest->m_firstIp),m_bestRequest->getUrlHash48());
+
+	if ( m_countingPagesIndexed ) {
+		// now try to get a winning rec if we computed the page counts
+		m_countingPagesIndexed = false;
+		// . add our counts into our global hashtable
+		// . we keep a local hashtable for all subdomains (sites)
+		//   from this firstIp then we add them to the global hash
+		//   table when the scan completes
+		for ( long i = 0 ; i < m_localTable.getNumSlots() ; i++ ) {
+			// skip empty hash buckets
+			if ( ! m_localTable.m_flags[i] ) continue;
+			// transfer to global table
+			long *key = (long *)m_localTable.getKeyFromSlot(i);
+			long *cnt = (long *)m_localTable.getValueFromSlot(i);
+			// this will overwrite anything there
+			cr->m_pageCountTable.addKey ( key , cnt );
+		}
+		// free local hash table memory
+		m_localTable.reset();
+		// pagecount table is updated, collrec needs save now
+		cr->m_needsSave = 1;
+		// start at the top again
+		m_nextKey = g_spiderdb.makeFirstKey(m_scanningIp);
+		// read the list again from the very top for this ip
+		needList = true;
+		goto readLoop;
+	}
 
 	// gotta check this again since we might have done a QUICKPOLL() above
 	// to call g_process.shutdown() so now tree might be unwritable
@@ -7326,6 +7435,7 @@ bool sendPage ( State11 *st ) {
 		       "robots.txt file for this url."
 		       "</td></tr>"
 
+		       /*
 		       "<tr>"
 		       "<td>checking quota exact</td><td>doing an exact "
 		       "quota check. Does a realtime site: query to see how "
@@ -7338,6 +7448,7 @@ bool sendPage ( State11 *st ) {
 		       "quota check. Usually accurate to the nearest 5000 "
 		       "pages or so."
 		       "</td></tr>"
+		       */
 
 		       "<tr>"
 		       "<td>checking for dup</td><td>looking up the url's "
@@ -9587,6 +9698,152 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		// skip whitespace after the operator
 		while ( *s && is_wspace_a(*s) ) s++;
 
+
+		// seed counts. how many seeds this subdomain has. 'siteadds'
+		if ( *p == 's' &&
+		     p[1] == 'i' &&
+		     p[2] == 't' &&
+		     p[3] == 'e' &&
+		     p[4] == 'a' &&
+		     p[5] == 'd' &&
+		     p[6] == 'd' &&
+		     p[7] == 's' ) {
+			// a special hack so it is seeds so we can use the same table
+			long h32 = sreq->m_siteHash32 ^ 0x123456;
+			long *valPtr =(long *)cr->m_pageCountTable.getValue(&h32);
+			// if no count in table, that is strange, i guess
+			// skip for now???
+			if ( ! valPtr ) { char *xx=NULL;*xx=0; }
+			// shortcut
+			long a = *valPtr;
+			// what is the provided value in the url filter rule?
+			long b = atoi(s);
+			// compare
+			if ( sign == SIGN_EQ && a != b ) continue;
+			if ( sign == SIGN_NE && a == b ) continue;
+			if ( sign == SIGN_GT && a <= b ) continue;
+			if ( sign == SIGN_LT && a >= b ) continue;
+			if ( sign == SIGN_GE && a <  b ) continue;
+			if ( sign == SIGN_LE && a >  b ) continue;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
+		// domain seeds. 'domainadds'
+		if ( *p == 'd' &&
+		     p[1] == 'o' &&
+		     p[2] == 'm' &&
+		     p[3] == 'a' &&
+		     p[4] == 'i' &&
+		     p[5] == 'n' &&
+		     p[6] == 'a' &&
+		     p[7] == 'd' &&
+		     p[8] == 'd' &&
+		     p[9] == 's' ) {
+			// a special hack so it is seeds so we can use the same table
+			long h32 = sreq->m_domHash32 ^ 0x123456;
+			long *valPtr =(long *)cr->m_pageCountTable.getValue(&h32);
+			// if no count in table, that is strange, i guess
+			// skip for now???
+			if ( ! valPtr ) { char *xx=NULL;*xx=0; }
+			// shortcut
+			long a = *valPtr;
+			// what is the provided value in the url filter rule?
+			long b = atoi(s);
+			// compare
+			if ( sign == SIGN_EQ && a != b ) continue;
+			if ( sign == SIGN_NE && a == b ) continue;
+			if ( sign == SIGN_GT && a <= b ) continue;
+			if ( sign == SIGN_LT && a >= b ) continue;
+			if ( sign == SIGN_GE && a <  b ) continue;
+			if ( sign == SIGN_LE && a >  b ) continue;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
+
+
+		// new quotas. 'sitepages' = pages from site.
+		// 'sitepages > 20 && seedcount <= 1 --> FILTERED'
+		if ( *p == 's' &&
+		     p[1] == 'i' &&
+		     p[2] == 't' &&
+		     p[3] == 'e' &&
+		     p[4] == 'p' &&
+		     p[5] == 'a' &&
+		     p[6] == 'g' &&
+		     p[7] == 'e' &&
+		     p[8] == 's' ) {
+			long *valPtr ;
+			valPtr=(long *)cr->m_pageCountTable.
+				getValue(&sreq->m_siteHash32);
+			// if no count in table, that is strange, i guess
+			// skip for now???
+			if ( ! valPtr ) { char *xx=NULL;*xx=0; }
+			// shortcut
+			long a = *valPtr;
+			// what is the provided value in the url filter rule?
+			long b = atoi(s);
+			// compare
+			if ( sign == SIGN_EQ && a != b ) continue;
+			if ( sign == SIGN_NE && a == b ) continue;
+			if ( sign == SIGN_GT && a <= b ) continue;
+			if ( sign == SIGN_LT && a >= b ) continue;
+			if ( sign == SIGN_GE && a <  b ) continue;
+			if ( sign == SIGN_LE && a >  b ) continue;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
+		// domain quotas. 'domainpages > 10 && hopcount >= 1 --> FILTERED'
+		if ( *p == 'd' &&
+		     p[1] == 'o' &&
+		     p[2] == 'm' &&
+		     p[3] == 'a' &&
+		     p[4] == 'i' &&
+		     p[5] == 'n' &&
+		     p[6] == 'p' &&
+		     p[7] == 'a' &&
+		     p[8] == 'g' &&
+		     p[9] == 'e' &&
+		     p[10] == 's' ) {
+			long *valPtr ;
+			valPtr=(long *)cr->m_pageCountTable.
+				getValue(&sreq->m_domHash32);
+			// if no count in table, that is strange, i guess
+			// skip for now???
+			if ( ! valPtr ) { char *xx=NULL;*xx=0; }
+			// shortcut
+			long a = *valPtr;
+			// what is the provided value in the url filter rule?
+			long b = atoi(s);
+			// compare
+			if ( sign == SIGN_EQ && a != b ) continue;
+			if ( sign == SIGN_NE && a == b ) continue;
+			if ( sign == SIGN_GT && a <= b ) continue;
+			if ( sign == SIGN_LT && a >= b ) continue;
+			if ( sign == SIGN_GE && a <  b ) continue;
+			if ( sign == SIGN_LE && a >  b ) continue;
+			p = strstr(s, "&&");
+			//if nothing, else then it is a match
+			if ( ! p ) return i;
+			//skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+		}
+
 		// tld:cn 
 		if ( *p=='t' && strncmp(p,"tld",3)==0){
 			// set it on demand
@@ -10903,3 +11160,52 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 	return false;
 }
 
+// returns false and sets g_errno on error
+bool SpiderRequest::setFromAddUrl ( char *url ) {
+	// reset it
+	reset();
+	// make the probable docid
+	long long probDocId = g_titledb.getProbableDocId ( url );
+	// make one up, like we do in PageReindex.cpp
+	long firstIp = (probDocId & 0xffffffff);
+	// . now fill it up
+	// . TODO: calculate the other values... lazy!!! (m_isRSSExt, 
+	//         m_siteNumInlinks,...)
+	m_isNewOutlink = 1;
+	m_isAddUrl     = 1;
+	m_addedTime    = getTimeGlobal();//now;
+	m_fakeFirstIp   = 1;
+	m_probDocId     = probDocId;
+	m_firstIp       = firstIp;
+	m_hopCount      = 0;
+	// its valid if root
+	Url uu; uu.set ( url );
+	if ( uu.isRoot() ) m_hopCountValid = true;
+	// too big?
+	if ( gbstrlen(url) > MAX_URL_LEN ) {
+		g_errno = EURLTOOLONG;
+		return false;
+	}
+	// the url! includes \0
+	strcpy ( m_url , url );
+	// call this to set m_dataSize now
+	setDataSize();
+	// make the key dude -- after setting url
+	setKey ( firstIp , 0LL, false );
+	// need a fake first ip lest we core!
+	//m_firstIp = (pdocId & 0xffffffff);
+	// how to set m_firstIp? i guess addurl can be throttled independently
+	// of the other urls???  use the hash of the domain for it!
+	long  dlen;
+	char *dom = getDomFast ( url , &dlen );
+	// fake it for this...
+	//m_firstIp = hash32 ( dom , dlen );
+	// sanity
+	if ( ! dom ) {
+		g_errno = EBADURL;
+		return false;
+		//return sendReply ( st1 , true );
+	}
+
+	return true;
+}

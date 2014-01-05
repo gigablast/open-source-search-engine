@@ -144,6 +144,7 @@ class Msg20Request {
 	//char       m_hackFixWords              :1;
 	//char       m_hackFixPhrases            :1;
 	char       m_includeCachedCopy         :1;
+	char       m_getSectionVotingInfo      :1; // in JSON for now
 	char       m_getMatches                :1;
 	char       m_useLinkdbForInlinks       :1;
 	char       m_getTermListBuf            :1;
@@ -468,6 +469,7 @@ public:
 	char       *ptr_gigabitQuery         ; // , separated list of gigabits
 	long       *ptr_gigabitScores        ; // 1-1 with the terms in query
 	char       *ptr_content              ; // page content in utf8
+	char       *ptr_sectionVotingInfo    ; // in JSON
 	char       *ptr_tr                   ; // like just using msg22
 	char       *ptr_tlistBuf             ;
 	char       *ptr_tiBuf                ; // terminfobuf
@@ -554,6 +556,7 @@ public:
 	long       size_gigabitQuery         ;
 	long       size_gigabitScores        ;
 	long       size_content              ; // page content in utf8
+	long       size_sectionVotingInfo    ; // in json, includes \0
 	long       size_tr                   ;
 	long       size_tlistBuf             ;
 	long       size_tiBuf                ;

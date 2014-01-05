@@ -1138,6 +1138,33 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "site rules table) have a hop count of 0. Their "
 			  "outlinks have a hop count of 1, and the outlinks "
 			  "of those outlinks a hop count of 2, etc."
+			  "</td></tr>"
+
+			  "<tr><td>sitepages</td>"
+			  "<td>The number of pages that are currently indexed "
+			  "for the subdomain of the URL. "
+			  "Used for doing quotas."
+			  "</td></tr>"
+
+			  "<tr><td>domainpages</td>"
+			  "<td>The number of pages that are currently indexed "
+			  "for the domain of the URL. "
+			  "Used for doing quotas."
+			  "</td></tr>"
+
+			  "<tr><td>siteadds</td>"
+			  "<td>The number URLs manually added to the "
+			  "subdomain of the URL. Used to guage a subdomain's "
+			  "popularity."
+			  "</td></tr>"
+
+			  "<tr><td>domainadds</td>"
+			  "<td>The number URLs manually added to the "
+			  "domain of the URL. Used to guage a domain's "
+			  "popularity."
+			  "</td></tr>"
+
+
 
 			  "<tr><td>isrss | !isrss</td>"
 			  "<td>Matches if document is an rss feed. "
@@ -2487,6 +2514,9 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( mm > 0 && m->m_rowid >= 0 && m_parms[mm-1].m_rowid == m->m_rowid )
 		firstInRow = false;
 
+	CollectionRec *cr = NULL;
+	if ( coll ) cr = g_collectiondb.getRec ( coll );
+
 	long firstRow = 0;
 	//if ( m->m_page==PAGE_PRIORITIES ) firstRow = MAX_PRIORITY_QUEUES - 1;
 	// . use a separate table for arrays
@@ -2516,6 +2546,12 @@ bool Parms::printParm ( SafeBuf* sb,
 			Parm *mk = &m_parms[k];
 			// not if printing json
 			if ( isJSON ) continue;
+
+			// skip if hidden
+			if ( cr && ! cr->m_isCustomCrawl &&
+			     (mk->m_flags & PF_CUSTOMCRAWLONLY) )
+				continue;
+			     
 			// . hide table column headers that are too advanced
 			// . we repeat this logic above for the actual parms
 			//char *vt = "";
@@ -2553,6 +2589,11 @@ bool Parms::printParm ( SafeBuf* sb,
 		}
 		if ( ! isJSON ) sb->safePrintf ( "</tr>\n" ); // mdw added
 	}
+
+	// skip if hidden. diffbot api url only for custom crawls.
+	if ( cr && ! cr->m_isCustomCrawl && (m->m_flags & PF_CUSTOMCRAWLONLY) )
+		return true;
+
 	// print row start for single parm
 	if ( m->m_max <= 1 && ! m->m_hdrs ) {
 		if ( firstInRow ) {
@@ -2671,11 +2712,11 @@ bool Parms::printParm ( SafeBuf* sb,
 			// specify the cgi parm in the POST request, and 
 			// unchecked checkboxes are not included in the POST 
 			// request.
-			if ( lastRow && m->m_page == PAGE_FILTERS ) 
-				sb->safePrintf("<input type=hidden ");
-			else
-				sb->safePrintf(//"<input type=checkbox ");
-					       "<nobr>On:<input type=radio ");
+			//if ( lastRow && m->m_page == PAGE_FILTERS ) 
+			//	sb->safePrintf("<input type=hidden ");
+			//else
+			sb->safePrintf(//"<input type=checkbox ");
+				       "<nobr>On:<input type=radio ");
 			if ( m->m_page == PAGE_FILTERS)
 				sb->safePrintf("id=id_%s ",cgi);
 			
@@ -8998,6 +9039,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_func  = CommandInsertUrlFiltersRow;
 	m->m_cast  = 1;
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "remove parm row";
@@ -9007,6 +9049,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_func  = CommandRemoveUrlFiltersRow;
 	m->m_cast  = 1;
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "delete collection";
@@ -13637,7 +13680,7 @@ void Parms::init ( ) {
 	m->m_size  = sizeof(SafeBuf);
 	m->m_rowid = 1;
 	m->m_addin = 1; // "insert" follows?
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CUSTOMCRAWLONLY;
 	m++;
 
 	//m->m_title = "<a href=/overview.html#ruleset>ruleset</a>";
@@ -16170,6 +16213,15 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_scgi  = "icc";
+	m++;
+
+	m->m_title = "get section voting info in json";
+	m->m_desc  = "Will cause section voting info to be returned.";
+	m->m_sparm = 1;
+	m->m_soff  = (char *)&si.m_getSectionVotingInfo - y;
+	m->m_type  = TYPE_CHAR;
+	m->m_def   = "0";
+	m->m_scgi  = "sectionvotes";
 	m++;
 
 	// for /get

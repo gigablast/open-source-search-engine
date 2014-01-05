@@ -2716,9 +2716,11 @@ int main ( int argc , char *argv[] ) {
 		log("db: Serpdb init failed."   ); return 1; }
 	if ( ! g_monitordb.init()     ) {
 		log("db: Monitordb init failed."   ); return 1; }
-	// sectiondb
-	//if ( ! g_sectiondb.init()     ) {
-	//	log("db: Sectiondb init failed."   ); return 1; }
+	// use sectiondb again for its immense voting power for detecting and
+	// removing web page chrome, categories, etc. only use if 
+	// CollectionRec::m_isCustomCrawl perhaps to save space.
+	if ( ! g_sectiondb.init()     ) {
+		log("db: Sectiondb init failed."   ); return 1; }
 	//if ( ! g_placedb.init()     ) {
 	//	log("db: Placedb init failed."   ); return 1; }
 	// collectiondb, does not use rdb, loads directly from disk
