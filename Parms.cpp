@@ -843,7 +843,9 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 				"      if( i > 0) nombre = name + i;\n"
 				"      else nombre = name;\n"
 				"   var e = document.getElementById(nombre);\n"
-				"      e.checked = !e.checked;\n"
+				//"      e.checked = !e.checked;\n"
+				"      if ( e.value == 'Y' ) e.value='N';"
+				"      else if ( e.value == 'N' ) e.value='Y';"
 				"    }\n"
 				"}\n"
 				"</script>");
@@ -2694,10 +2696,10 @@ bool Parms::printParm ( SafeBuf* sb,
 					 cgi,m->m_def, m->m_title);
 	}
 	else if ( t == TYPE_CHECKBOX ) {
-		char *ddd1 = "";
-		char *ddd2 = "";
-		if ( *s ) ddd1 = " checked";
-		else      ddd2 = " checked";
+		//char *ddd1 = "";
+		//char *ddd2 = "";
+		//if ( *s ) ddd1 = " checked";
+		//else      ddd2 = " checked";
 		// just show the parm name and value if printing in json
 		if ( isJSON ) {
 			if ( ! lastRow ) {
@@ -2714,24 +2716,48 @@ bool Parms::printParm ( SafeBuf* sb,
 			// request.
 			//if ( lastRow && m->m_page == PAGE_FILTERS ) 
 			//	sb->safePrintf("<input type=hidden ");
+			char *val = "Y";
+			if ( ! *s ) val = "N";
 			//else
 			sb->safePrintf(//"<input type=checkbox ");
-				       "<nobr>On:<input type=radio ");
+				       "<nobr><input type=button ");
 			if ( m->m_page == PAGE_FILTERS)
 				sb->safePrintf("id=id_%s ",cgi);
 			
-			sb->safePrintf("value=1 name=%s%s>",
-				       cgi,ddd1);
+			sb->safePrintf("value=%s name=%s "
+				       "onmouseup=\""
+				       "if ( this.value=='N' ) {"
+				       "this.value='Y';"
+				       //"this.checked=false; "
+				       //"alert ('up'+this.checked); "
+				       //"alert(this.checked); }"
+				       //"return false;"
+				       // prevent from other handle
+				       // from turning it back on!!
+				       //"this.disabled=true;"
+				       //"return false;"
+				       "} "
+				       "else if ( this.value=='Y' ) {"
+				       "this.value='N';"
+				       "}"
+				       "\" "
+				       //"onmousedown=\""
+				       //"alert('down'+this.checked);"
+				       //"this.checked=true;"
+				       //"this.disabled=false\"; "
+				       //"\" "
+				       //"%s>",
+				       ,val,cgi);//,ddd);
 			//
 			// repeat for off position
 			//
-			if ( ! lastRow || m->m_page != PAGE_FILTERS )  {
-				sb->safePrintf(" Off:<input type=radio ");
-				if ( m->m_page == PAGE_FILTERS)
-					sb->safePrintf("id=id_%s ",cgi);
-				sb->safePrintf("value=0 name=%s%s>",
-					       cgi,ddd2);
-			}
+			//if ( ! lastRow || m->m_page != PAGE_FILTERS )  {
+			//	sb->safePrintf(" Off:<input type=radio ");
+			//	if ( m->m_page == PAGE_FILTERS)
+			//		sb->safePrintf("id=id_%s ",cgi);
+			//	sb->safePrintf("value=0 name=%s%s>",
+			//		       cgi,ddd2);
+			//}
 			sb->safePrintf("</nobr></center>");
 		}
 	}
@@ -16807,6 +16833,10 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 		  m->m_type == TYPE_PRIORITY2 ||
 		  m->m_type == TYPE_CHAR ) {
 		val8 = atol(parmValString);
+		if ( parmValString && to_lower_a(parmValString[0]) == 'y' )
+			val8 = 1;
+		if ( parmValString && to_lower_a(parmValString[0]) == 'n' )
+			val8 = 0;
 		val = (char *)&val8;
 		valSize = 1;
 	}
