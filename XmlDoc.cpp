@@ -9213,7 +9213,9 @@ Url **XmlDoc::getRedirUrl() {
 	// . 301 means moved PERMANENTLY...
 	// . many people use 301 on their root pages though, so treat
 	//   it like a temporary redirect, like exclusivelyequine.com
-	if ( simplifiedRedir && ! m_allowSimplifiedRedirs ) {
+	if ( simplifiedRedir && ! m_allowSimplifiedRedirs &&
+	     // for custom crawling clients don't like this i guess
+	     ! cr->m_isCustomCrawl ) {
 		// returns false if blocked, true otherwise
 		//return addSimplifiedRedirect();
 		m_redirError = EDOCSIMPLIFIEDREDIR;
