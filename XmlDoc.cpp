@@ -2025,6 +2025,12 @@ bool XmlDoc::indexDoc ( ) {
 		m_spideredTime = getTimeGlobal();//0; use now!
 	}
 
+	// if error is EFAKEFIRSTIP, do not core
+	//if ( ! m_isIndexedValid ) {
+	//	m_isIndexed = false;
+	//	m_isIndexedValid = true;
+	//}
+
 	// if this is EABANDONED or EHITCRAWLLIMIT or EHITPROCESSLIMIT
 	// or ECORRUPTDATA (corrupt gzip reply)
 	// then this should not block. we need a spiderReply to release the 
@@ -21350,6 +21356,11 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	long long *de = getDownloadEndTime();
 	if ( ! de || de == (void *)-1 ) return (SpiderReply *)de;
 
+	// was the doc index when we started trying to spider this url?
+	//char *wasIndexed = getIsIndexed();
+	//if ( ! wasIndexed || wasIndexed == (void *)-1 ) 
+	//	return (SpiderReply *)wasIndexed;
+
 	//Tag *vt = m_oldTagRec.getTag("venueaddress");
 	//bool siteHasVenue = (bool)vt;
 	
@@ -21462,18 +21473,24 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	else
 		m_newsr.m_hadDiffbotError = false;
 
+	m_newsr.m_wasIndexed = false;
+
 	if ( m_oldDocValid && m_oldDoc ) m_newsr.m_wasIndexed = true;
 
-	// was the doc index when we started trying to spider this url?
-	char wasIndexed = *getIsIndexed();
+	// note whether m_wasIndexed is valid because if it isn't then
+	// we shouldn't be counting this reply towards the page counts.
+	// if we never made it this far i guess we should not forcibly call
+	// getIsIndexed() at this point so our performance is fast in case
+	// this is an EFAKEFIRSTIP error or something similar where we
+	// basically just add this reply and we're done.
+	// NOTE: this also pertains to SpiderReply::m_isIndexed.
+	if ( m_oldDocValid ) m_newsr.m_wasIndexedValid = true;
 
-	// was it indexed when we started? we need to know this so we can
-	// update the page quota table for the subdomain, 
-	// SpiderColl::m_quotaTable in Spider.cpp.
-	m_newsr.m_wasIndexed = wasIndexed;
 	// likewise, we need to know if we deleted it so we can decrement the
 	// quota count for this subdomain/host in SpiderColl::m_quotaTable
-	if ( wasIndexed && ! m_didDelete ) m_newsr.m_isIndexed = true;
+	if ( m_newsr.m_wasIndexed ) m_newsr.m_isIndexed = true;
+
+	if ( m_didDelete ) m_newsr.m_isIndexed = false;
 
 	// treat error replies special i guess, since langId, etc. will be
 	// invalid

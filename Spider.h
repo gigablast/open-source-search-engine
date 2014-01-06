@@ -847,7 +847,8 @@ class SpiderReply {
 	//   this m_siteHash32 which is basically just the subdomain/host
 	//   for SpiderColl::m_quotaTable
 	long    m_wasIndexed              :1;
-	long    m_reserved4 :1;
+	// this also pertains to m_isIndexed as well:
+	long    m_wasIndexedValid         :1;
 
 	// how much buf will we need to serialize ourselves?
 	long getRecSize () { return m_dataSize + 4 + sizeof(key128_t); }

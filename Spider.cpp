@@ -1724,16 +1724,20 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	// update page count table
 	//
 	///////
-	if ( srep->m_wasIndexed && ! srep->m_isIndexed ) {
+	if ( srep->m_wasIndexed && 
+	     ! srep->m_isIndexed &&
+	     srep->m_wasIndexedValid ) {
 		if ( m_scanningIp == srep->m_firstIp )
-			log("spider: crap. got reply for ip counting pages for");
+			log("spider: crap. got reply for ip counting pages");
 		m_cr->m_pageCountTable.addScore ( &srep->m_domHash32 , -1 );
 		m_cr->m_pageCountTable.addScore ( &srep->m_siteHash32 , -1 );
 		m_cr->m_pageCountTable.addScore ( &srep->m_firstIp , -1 );
 	}
-	else if ( ! srep->m_wasIndexed && srep->m_isIndexed ) {
+	else if ( ! srep->m_wasIndexed && 
+		  srep->m_isIndexed &&
+		  srep->m_wasIndexedValid ) {
 		if ( m_scanningIp == srep->m_firstIp )
-			log("spider: crap. got reply for ip counting pages for");
+			log("spider: crap. got reply for ip counting pages");
 		m_cr->m_pageCountTable.addScore ( &srep->m_domHash32 , 1 );
 		m_cr->m_pageCountTable.addScore ( &srep->m_siteHash32 , 1 );
 		m_cr->m_pageCountTable.addScore ( &srep->m_firstIp , 1 );
