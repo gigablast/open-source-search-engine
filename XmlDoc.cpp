@@ -755,9 +755,9 @@ void XmlDoc::reset ( ) {
 	m_launchedSpecialMsg8a     = false;
 	m_launchedMsg8a2           = false;
 
-	//m_numSectiondbReads        = 0;
-	//m_numSectiondbNeeds        = 0;
-	//m_sectiondbRecall          = 0;
+	m_numSectiondbReads        = 0;
+	m_numSectiondbNeeds        = 0;
+	m_sectiondbRecall          = 0;
 
 	//m_triedVoteCache           = false;
 	//m_storedVoteCache          = false;
