@@ -843,9 +843,9 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 				"      if( i > 0) nombre = name + i;\n"
 				"      else nombre = name;\n"
 				"   var e = document.getElementById(nombre);\n"
-				//"      e.checked = !e.checked;\n"
-				"      if ( e.value == 'Y' ) e.value='N';"
-				"      else if ( e.value == 'N' ) e.value='Y';"
+				"      e.checked = !e.checked;\n"
+				//"      if ( e.value == 'Y' ) e.value='N';"
+				//"    else if ( e.value == 'N' ) e.value='Y';"
 				"    }\n"
 				"}\n"
 				"</script>");
@@ -2716,38 +2716,32 @@ bool Parms::printParm ( SafeBuf* sb,
 			// request.
 			//if ( lastRow && m->m_page == PAGE_FILTERS ) 
 			//	sb->safePrintf("<input type=hidden ");
-			char *val = "Y";
-			if ( ! *s ) val = "N";
+			//char *val = "Y";
+			//if ( ! *s ) val = "N";
+			char *val = "";
+			if ( *s ) val = " checked";
+			// in case it is not checked, submit that!
+			// if it gets checked this should be overridden then
+			sb->safePrintf("<input type=hidden name=%s value=0>"
+				       , cgi );
 			//else
-			sb->safePrintf(//"<input type=checkbox ");
-				       "<nobr><input type=button ");
+			sb->safePrintf("<input type=checkbox value=1 ");
+				       //"<nobr><input type=button ");
 			if ( m->m_page == PAGE_FILTERS)
 				sb->safePrintf("id=id_%s ",cgi);
 			
-			sb->safePrintf("value=%s name=%s "
-				       "onmouseup=\""
-				       "if ( this.value=='N' ) {"
-				       "this.value='Y';"
-				       //"this.checked=false; "
-				       //"alert ('up'+this.checked); "
-				       //"alert(this.checked); }"
-				       //"return false;"
-				       // prevent from other handle
-				       // from turning it back on!!
-				       //"this.disabled=true;"
-				       //"return false;"
-				       "} "
-				       "else if ( this.value=='Y' ) {"
-				       "this.value='N';"
-				       "}"
-				       "\" "
-				       //"onmousedown=\""
-				       //"alert('down'+this.checked);"
-				       //"this.checked=true;"
-				       //"this.disabled=false\"; "
+			sb->safePrintf("name=%s%s"
+				       //" onmouseup=\""
+				       //"if ( this.value=='N' ) {"
+				       //"this.value='Y';"
+				       //"} "
+				       //"else if ( this.value=='Y' ) {"
+				       //"this.value='N';"
+				       //"}"
 				       //"\" "
-				       //"%s>",
-				       ,val,cgi);//,ddd);
+				       ">"
+				       ,cgi
+				       ,val);//,ddd);
 			//
 			// repeat for off position
 			//
@@ -16810,6 +16804,8 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 		val = parmValString;
 		// include \0
 		valSize = gbstrlen(val)+1;
+		// sanity
+		if ( val[valSize-1] != '\0' ) { char *xx=NULL;*xx=0; }
 	}
 	else if ( m->m_type == TYPE_LONG ) {
 		// watch out for unsigned 32-bit numbers, so use atoLL()
@@ -16833,10 +16829,10 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 		  m->m_type == TYPE_PRIORITY2 ||
 		  m->m_type == TYPE_CHAR ) {
 		val8 = atol(parmValString);
-		if ( parmValString && to_lower_a(parmValString[0]) == 'y' )
-			val8 = 1;
-		if ( parmValString && to_lower_a(parmValString[0]) == 'n' )
-			val8 = 0;
+		//if ( parmValString && to_lower_a(parmValString[0]) == 'y' )
+		//	val8 = 1;
+		//if ( parmValString && to_lower_a(parmValString[0]) == 'n' )
+		//	val8 = 0;
 		val = (char *)&val8;
 		valSize = 1;
 	}
@@ -17147,6 +17143,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	//	}
 	//}
 
+
 	//
 	// now add the parms that are NOT commands
 	//
@@ -17192,6 +17189,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 					   m ) )
 			return false;
 	}
+
 
 	return true;
 }
@@ -18250,10 +18248,13 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		sb->purge();
 		// this means that we can not use string POINTERS as parms!!
 		if ( data && dataSize && data[0] )
-			sb->safeMemcpy ( data , dataSize );
+			// don't include \0 as part of length
+			sb->safeStrcpy ( data ); // , dataSize );
 		// ensure null terminated
 		sb->nullTerm();
 		//return true;
+		// sanity
+		if ( data[dataSize-1] != '\0' ) { char *xx=NULL;*xx=0; }
 	}
 	else {
 		// and copy the data into collrec or g_conf
