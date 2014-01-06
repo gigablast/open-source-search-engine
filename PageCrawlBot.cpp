@@ -1781,9 +1781,19 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	if ( ! name ) {
+		// if the token is valid
+		char *ct = "application/json";
+		char *msg = "{}\n";
+		return g_httpServer.sendDynamicPage ( socket, 
+						      msg,
+						      gbstrlen(msg) ,
+						      -1 , // cachetime
+						      false ,
+						      ct ,
+						      200 ); // http status
 		//log("crawlbot: no crawl name given");
-		char *msg = "invalid or missing name";
-		return sendErrorReply2 (socket,fmt,msg);
+		//char *msg = "invalid or missing name";
+		//return sendErrorReply2 (socket,fmt,msg);
 	}
 
 
