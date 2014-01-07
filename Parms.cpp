@@ -1456,7 +1456,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "<i>foo.somesite.com</i> would NOT match."
 			  "</td></tr>"
 
-			  "<tr><td>issamedomain | !isonsamedomain</td>"
+			  "<tr><td>isonsamedomain | !isonsamedomain</td>"
 			  "<td>"
 			  "This is true if the url is from the same "
 			  "DOMAIN as the page from which it was "
@@ -1468,7 +1468,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 
 			  "<tr><td><nobr>"
-			  "issamesubdomain | !isonsamesubdomain"
+			  "isonsamesubdomain | !isonsamesubdomain"
 			  "</nobr></td>"
 			  "<td>"
 			  "This is true if the url is from the same "
