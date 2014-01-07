@@ -129,8 +129,8 @@ bool CommandInsertUrlFiltersRow ( char *rec ) {
 	}
 	// sanity
 	long dataSize = getDataSizeFromParmRec ( rec );
-	if ( dataSize != 4 ) {
-		log("parms: insert row data size not 4");
+	if ( dataSize <= 1 ) {
+		log("parms: insert row data size = %li bad!",dataSize);
 		g_errno = EBADENGINEER;
 		return true;
 	}
@@ -138,7 +138,7 @@ bool CommandInsertUrlFiltersRow ( char *rec ) {
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	// get the row #
 	char *data = getDataFromParmRec ( rec );
-	long rowNum = *(long *)data;
+	long rowNum = atol(data);//*(long *)data;
 	// scan all parms for url filter parms
 	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
@@ -165,8 +165,8 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 	}
 	// sanity
 	long dataSize = getDataSizeFromParmRec ( rec );
-	if ( dataSize != 4 ) {
-		log("parms: insert row data size not 4");
+	if ( dataSize <= 1 ) {
+		log("parms: insert row data size = %li bad!",dataSize);
 		g_errno = EBADENGINEER;
 		return true;
 	}
@@ -174,7 +174,7 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	// get the row #
 	char *data = getDataFromParmRec ( rec );
-	long rowNum = *(long *)data;
+	long rowNum = atol(data);
 	// scan all parms for url filter parms
 	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
@@ -3036,8 +3036,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		sb->safePrintf ( "<td><a href=\"?c=%s&cast=1&"
 				 //"ins_%s=1\">insert</td>\n",coll,cgi );
 				 // insert=<rowNum>
-				 "insert=%li\">insert</td>\n",coll,
-				 (long)m->m_rowid);
+				 // "j" is the row #
+				 "insert=%li\">insert</td>\n",coll,j );
 	}
 
 	// does next guy start a new row?
@@ -3067,7 +3067,7 @@ bool Parms::printParm ( SafeBuf* sb,
 					// remove=<rownum>
 					"remove=%li\">"
 					"remove</td>\n",coll,//cgi );
-					(long)m->m_rowid);
+					j); // j is row #
 					
 		else
 			sb->safePrintf ( "<td></td>\n");
@@ -13608,7 +13608,8 @@ void Parms::init ( ) {
 	m->m_max   = MAX_FILTERS;
 	m->m_off   = (char *)cr.m_spiderFreqs - x;
 	m->m_type  = TYPE_FLOAT;
-	m->m_def   = "0.0"; // 0.0
+	// why was this default 0 days?
+	m->m_def   = "30.0"; // 0.0
 	m->m_page  = PAGE_FILTERS;
 	m->m_units = "days";
 	m->m_rowid = 1;
@@ -13680,8 +13681,9 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_PRIORITY2; // includes UNDEFINED priority in dropdown
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
-	m->m_def   = "";
+	m->m_def   = "50";
 	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_addin = 1; // "insert" follows?
 	m++;
 
 	/*

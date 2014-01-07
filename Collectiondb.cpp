@@ -1625,6 +1625,9 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_spidersEnabled[n] = 1;
 	m_numRegExs7++;
 
+	m_harvestLinks[n] = 1;
+	m_numRegExs8++;
+
 	//m_spiderDiffbotApiNum[n] = 1;
 	//m_numRegExs11++;
 	//m_spiderDiffbotApiUrl[n].set("");
@@ -1868,6 +1871,12 @@ bool expandRegExShortcuts ( SafeBuf *sb ) ;
 // . anytime the url filters are updated, this function is called
 // . it is also called on load of the collection at startup
 bool CollectionRec::rebuildUrlFilters ( ) {
+
+	// if not a custom crawl, and no expressions, add a default one
+	if ( m_numRegExs == 0 && ! m_isCustomCrawl ) {
+		setUrlFiltersToDefaults();
+	}
+
 
 	// set this so we know whether we have to keep track of page counts
 	// per subdomain/site and per domain. if the url filters have

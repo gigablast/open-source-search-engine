@@ -765,9 +765,12 @@ bool gotResults ( void *state ) {
 	char *addUrl = st->m_hr.getString("addurl",NULL);
 	if ( addUrl && cr->m_isCustomCrawl ) {
 
+		Url norm;
+		norm.set ( addUrl );
+
 		SpiderRequest sreq;
 		// returns false and sets g_errno on error
-		if ( ! sreq.setFromAddUrl ( addUrl ) ) {
+		if ( ! sreq.setFromAddUrl ( norm.getUrl() ) ) { //addUrl ) ) {
 			log("addurl: url had problem: %s",mstrerror(g_errno));
 			return true;
 		}
