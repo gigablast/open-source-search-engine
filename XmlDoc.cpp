@@ -13062,14 +13062,22 @@ SafeBuf *XmlDoc::getDiffbotApiUrl ( ) {
 		return &m_diffbotApiUrl;
 	}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+
+	m_diffbotApiUrl.safeMemcpy ( &cr->m_diffbotApiUrl );
+	m_diffbotApiUrl.nullTerm();
+	m_diffbotApiUrlValid = true;
+
 	// this now automatically sets m_diffbotApiUrl and m_diffbotApiUrlValid
 	// in case the url filters table changes while spidering this!!!
 	// gotta be careful of that.
-	long *ufn = getUrlFilterNum();
-	if ( ! ufn || ufn == (void *)-1 ) return (SafeBuf *)ufn;
+	//long *ufn = getUrlFilterNum();
+	//if ( ! ufn || ufn == (void *)-1 ) return (SafeBuf *)ufn;
 
 	// ensure it does set it!
-	if ( ! m_diffbotApiUrlValid ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_diffbotApiUrlValid ) { char *xx=NULL;*xx=0; }
 
 	//m_diffbotApiNum = cr->m_spiderDiffbotApiNum[*ufn];
 
@@ -16994,12 +17002,12 @@ long *XmlDoc::getUrlFilterNum ( ) {
 
 	// set this too in case the url filters table changes while
 	// we are spidering this and a row is inserted or deleted or something
-	SafeBuf *yy = &cr->m_spiderDiffbotApiUrl[ufn];
+	//SafeBuf *yy = &cr->m_spiderDiffbotApiUrl[ufn];
 	// copy to ours
-	m_diffbotApiUrl.safeMemcpy ( yy );
+	//m_diffbotApiUrl.safeMemcpy ( yy );
 	// ensure null term
-	m_diffbotApiUrl.nullTerm();
-	m_diffbotApiUrlValid = true;
+	//m_diffbotApiUrl.nullTerm();
+	//m_diffbotApiUrlValid = true;
 
 
 	return &m_urlFilterNum;

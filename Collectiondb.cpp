@@ -1627,9 +1627,9 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 
 	//m_spiderDiffbotApiNum[n] = 1;
 	//m_numRegExs11++;
-	m_spiderDiffbotApiUrl[n].set("");
-	m_spiderDiffbotApiUrl[n].nullTerm();
-	m_numRegExs11++;
+	//m_spiderDiffbotApiUrl[n].set("");
+	//m_spiderDiffbotApiUrl[n].nullTerm();
+	//m_numRegExs11++;
 }
 
 /*
@@ -1933,7 +1933,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_spiderIpMaxSpiders[i] = 7; // keep it respectful
 		m_spidersEnabled    [i] = 1;
 		m_spiderFreqs       [i] =m_collectiveRespiderFrequency;
-		m_spiderDiffbotApiUrl[i].purge();
+		//m_spiderDiffbotApiUrl[i].purge();
 		m_harvestLinks[i] = true;
 	}
 
@@ -1992,7 +1992,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( ucp && upp ) {
 		m_regExs[i].set("matchesucp && matchesupp");
 		m_spiderPriorities   [i] = 55;
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// if just matches ucp, just crawl it, do not process
 		m_regExs[i].set("matchesucp");
@@ -2002,7 +2002,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("matchesupp");
 		m_spiderPriorities   [i] = 53;
 		m_harvestLinks       [i] = false;
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// do not crawl anything else
 		m_regExs[i].set("default");
@@ -2015,7 +2015,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("matchesucp");
 		m_spiderPriorities   [i] = 54;
 		// process everything since upp is empty
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// do not crawl anything else
 		m_regExs[i].set("default");
@@ -2028,7 +2028,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("matchesupp");
 		m_spiderPriorities   [i] = 53;
 		//m_harvestLinks       [i] = false;
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// crawl everything by default, no processing
 		m_regExs[i].set("default");
@@ -2041,7 +2041,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// crawl everything by default, no processing
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = 50;
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 	}
 
@@ -2053,7 +2053,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	m_numRegExs6  = i;
 	m_numRegExs7  = i;
 	m_numRegExs8  = i;
-	m_numRegExs11 = i;
+	//m_numRegExs11 = i;
 
 	///////
 	//

@@ -118,7 +118,7 @@ bool ucInit(char *path, bool verifyFiles){
 	if (setenv("LD_RUN_PATH", gbLibDir, 1)){
 		log(LOG_INIT, "Failed to set LD_RUN_PATH");
 	}
-	char *ldpath = getenv("LD_RUN_PATH");
+	//char *ldpath = getenv("LD_RUN_PATH");
 	// i don't think this is used any more because we don't have it!
 	//log(LOG_DEBUG, "ucinit: LD_RUN_PATH: %s\n", ldpath);
 

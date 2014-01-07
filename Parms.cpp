@@ -2593,8 +2593,8 @@ bool Parms::printParm ( SafeBuf* sb,
 	}
 
 	// skip if hidden. diffbot api url only for custom crawls.
-	if ( cr && ! cr->m_isCustomCrawl && (m->m_flags & PF_CUSTOMCRAWLONLY) )
-		return true;
+	//if(cr && ! cr->m_isCustomCrawl && (m->m_flags & PF_CUSTOMCRAWLONLY) )
+	//	return true;
 
 	// print row start for single parm
 	if ( m->m_max <= 1 && ! m->m_hdrs ) {
@@ -13684,6 +13684,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
+	/*
 	m->m_title = "diffbot api";
 	m->m_cgi   = "dapi";
 	m->m_xml   = "diffbotAPI";
@@ -13702,6 +13703,7 @@ void Parms::init ( ) {
 	m->m_addin = 1; // "insert" follows?
 	m->m_flags = PF_REBUILDURLFILTERS | PF_CUSTOMCRAWLONLY;
 	m++;
+	*/
 
 	//m->m_title = "<a href=/overview.html#ruleset>ruleset</a>";
 	//m->m_cgi   = "frs";

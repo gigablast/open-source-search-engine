@@ -699,8 +699,8 @@ class CollectionRec {
 	//long      m_numRegExs11;
 	//char      m_spiderDiffbotApiNum [ MAX_FILTERS ];
 
-	long      m_numRegExs11;
-	SafeBuf   m_spiderDiffbotApiUrl [ MAX_FILTERS ];
+	//long      m_numRegExs11;
+	//SafeBuf   m_spiderDiffbotApiUrl [ MAX_FILTERS ];
 
 	long      m_numRegExs8;
 	char      m_harvestLinks     [ MAX_FILTERS ];
