@@ -4543,7 +4543,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		}
 
 		// hit pages to crawl max?
-		if ( cr->m_globalCrawlInfo.m_pageDownloadSuccesses >=
+		if ( cr->m_maxToCrawl > 0 &&
+		     cr->m_globalCrawlInfo.m_pageDownloadSuccesses >=
 		     cr->m_maxToCrawl ) {
 			cr->m_spiderStatus = SP_MAXTOCRAWL;
 			sendNotificationForCollRec ( cr );
@@ -4551,7 +4552,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		}
 
 		// hit pages to process max?
-		if ( cr->m_globalCrawlInfo.m_pageProcessSuccesses >=
+		if ( cr->m_maxToProcess > 0 &&
+		     cr->m_globalCrawlInfo.m_pageProcessSuccesses >=
 		     cr->m_maxToProcess ) {
 			cr->m_spiderStatus = SP_MAXTOPROCESS;
 			sendNotificationForCollRec ( cr );
