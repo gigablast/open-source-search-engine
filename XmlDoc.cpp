@@ -2947,8 +2947,8 @@ long *XmlDoc::getIndexCode2 ( ) {
 	// validate this here so getSpiderPriority(), which calls 
 	// getUrlFilterNum(), which calls getNewSpiderReply(), which calls
 	// us, getIndexCode() does not repeat all this junk
-	m_indexCodeValid = true;
-	m_indexCode      = 0;
+	//m_indexCodeValid = true;
+	//m_indexCode      = 0;
 
 	// this needs to be last!
 	long *priority = getSpiderPriority();
@@ -2977,7 +2977,9 @@ long *XmlDoc::getIndexCode2 ( ) {
 	}
 
 	// if using diffbot and the diffbot reply had a time out error
-	// or otherwise... diffbot failure demands a re-try always i guess
+	// or otherwise... diffbot failure demands a re-try always i guess.
+	// put this above getSpiderPriority() call otherwise we end up in
+	// a recursive loop with getIndexCode() and getNewSpiderReply()
 	SafeBuf *dbr = getDiffbotReply();
 	if ( ! dbr || dbr == (void *)-1 ) return (long *)dbr;
 	if ( m_diffbotReplyValid && m_diffbotReplyError ) {
@@ -13316,7 +13318,10 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
-	if ( *getIndexCode() ) 
+	// getIndexCode() calls getDiffbotReply(), so avoid a loop!
+	//if ( *getIndexCode() ) 
+	//	return &m_diffbotReply;
+	if ( m_indexCodeValid && m_indexCode )
 		return &m_diffbotReply;
 
 	// if already processed and onlyprocessifnew is enabled then
@@ -13602,6 +13607,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	diffbotUrl.nullTerm();
 
 	// mark as tried
+	if ( m_newsrValid ) { char *xx=NULL;*xx=0; }
 	m_sentToDiffbot = 1;
 	
 	// count it for stats
@@ -16924,13 +16930,21 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	// . PROBLEM! this is the new reply not the OLD reply, so it may
 	//   end up matching a DIFFERENT url filter num then what it did
 	//   before we started spidering it...
-	SpiderReply *newsr = getNewSpiderReply ( );
+	//SpiderReply *newsr = getNewSpiderReply ( );
 	// note it
-	if ( ! newsr )
-		log("doc: getNewSpiderReply: %s",mstrerror(g_errno));
-	// sanity check
-	//if ( ! newsr || newsr == (void *)-1 ) { char *xx=NULL;*xx=0; }
-	if ( ! newsr || newsr == (void *)-1 ) return (long *)newsr;
+	//if ( ! newsr )
+	//	log("doc: getNewSpiderReply: %s",mstrerror(g_errno));
+	//if ( ! newsr || newsr == (void *)-1 ) return (long *)newsr;
+
+	// need language i guess
+	uint8_t *langId = getLangId();
+	if ( ! langId || langId == (uint8_t *)-1 ) return (long *)langId;
+
+
+	// make a fake one for now
+	SpiderReply fakeReply;
+	// just language for now, so we can FILTER by language
+	if ( m_langIdValid ) fakeReply.m_langId = m_langId;
 
 
 	CollectionRec *cr = getCollRec();
@@ -16960,7 +16974,7 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	// . look it up
 	// . use the old spidered date for "nowGlobal" so we can be consistent
 	//   for injecting into the "test" coll
-	long ufn = ::getUrlFilterNum ( oldsr,newsr,spideredTime,false,
+	long ufn = ::getUrlFilterNum ( oldsr,&fakeReply,spideredTime,false,
 				       m_niceness,cr);
 
 	// put it back
@@ -17753,8 +17767,8 @@ bool XmlDoc::logIt ( ) {
 	//   that we used to get the diffbot reply (array of json objects)
 	//   will have the spider priority
 	if ( ! getIsInjecting() && ! m_isDiffbotJSONObject ) {
-		long *priority = getSpiderPriority();
-		if ( ! priority || priority==(void *)-1){char *xx=NULL;*xx=0;}
+		//long *priority = getSpiderPriority();
+		//if ( ! priority ||priority==(void *)-1){char *xx=NULL;*xx=0;}
 		if ( m_priorityValid )
 			sb.safePrintf("priority=%li ",
 				      (long)m_priority);
@@ -21357,6 +21371,11 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 
 	long long *de = getDownloadEndTime();
 	if ( ! de || de == (void *)-1 ) return (SpiderReply *)de;
+
+	// need to set m_sentToDiffbot!!
+	SafeBuf *dbr = getDiffbotReply();
+	if ( ! dbr || dbr == (void *)-1 ) return (SpiderReply *)dbr;
+	
 
 	// was the doc index when we started trying to spider this url?
 	//char *wasIndexed = getIsIndexed();
