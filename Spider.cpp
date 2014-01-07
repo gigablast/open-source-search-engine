@@ -9481,6 +9481,10 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 				     to_lower_a(ext[2]) == 'p' &&
 				     to_lower_a(ext[3]) == '4' )
 					goto gotOne;
+				if ( to_lower_a(ext[1]) == 'm' &&
+				     to_lower_a(ext[2]) == 'o' &&
+				     to_lower_a(ext[3]) == 'v' )
+					goto gotOne;
 				if ( to_lower_a(ext[1]) == 'a' &&
 				     to_lower_a(ext[2]) == 'v' &&
 				     to_lower_a(ext[3]) == 'i' )
