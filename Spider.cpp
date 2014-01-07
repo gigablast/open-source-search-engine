@@ -3221,6 +3221,66 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			continue;
 		}
 
+		// only add firstip if manually added and not fake
+		
+
+		//
+		// just calculating page counts? if the url filters are based
+		// on the # of pages indexed per ip or subdomain/site then
+		// we have to maintain a page count table.
+		//
+		if ( m_countingPagesIndexed && sreq->m_fakeFirstIp ) {
+			// get request url hash48
+			long long uh48 = sreq->getUrlHash48();
+			// manually added? count these. call them seeds!
+			if ( (sreq->m_isAddUrl || sreq->m_isInjecting) && 
+			     // only add dom/site hash seeds if it is
+			     // a fake firstIp to avoid double counting seeds
+			     sreq->m_fakeFirstIp &&
+			     m_lastReqUh48 != uh48 ) {
+				long h32;
+				// sanity
+				if ( ! sreq->m_siteHash32){char*xx=NULL;*xx=0;}
+				if ( ! sreq->m_domHash32){char*xx=NULL;*xx=0;}
+				h32 = sreq->m_siteHash32 ^ 0x123456;
+				m_localTable.addScore(&h32);
+				h32 = sreq->m_domHash32 ^ 0x123456;
+				m_localTable.addScore(&h32);
+				// add the fake ip to seed table as well
+				// so we do not re-do countingPages for it.
+				// but add a "0" entry since fakeip pages
+				// are not indexed
+				m_localTable.addScore(&sreq->m_firstIp,0);
+				// add these 0 entries to at least indicate
+				// 0 pages indexed for this site/dom
+				m_localTable.addScore(&sreq->m_siteHash32,0);
+				m_localTable.addScore(&sreq->m_domHash32,0);
+				// do not repeat count the same url
+				m_lastReqUh48 = uh48;
+				// it's a fakeip, should not be indexed
+				continue;
+			}
+			// do not re-compute page count for this firstip
+			m_localTable.addScore(&sreq->m_firstIp,0);
+			m_localTable.addScore(&sreq->m_siteHash32,0);
+			m_localTable.addScore(&sreq->m_domHash32,0);
+			// now count pages indexed below here
+			if ( ! srep ) continue;
+			if ( srepUh48 == m_lastRepUh48 ) continue;
+			m_lastRepUh48 = srepUh48;
+			if ( ! srep ) continue;
+			if ( ! srep->m_isIndexed ) continue;
+			// keep count per site and firstip
+			m_localTable.addScore(&sreq->m_firstIp,1);
+			// don't double count if fake firstip though
+			// not necessary, should not be indexed
+			//if ( sreq->m_fakeFirstIp ) continue;
+			m_localTable.addScore(&sreq->m_siteHash32);
+			m_localTable.addScore(&sreq->m_domHash32);
+			continue;
+		}
+
+
 		// if the spiderrequest has a fake firstip that means it
 		// was injected without doing a proper ip lookup for speed.
 		// xmldoc.cpp will check for m_fakeFirstIp and it that is
@@ -3235,39 +3295,6 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 				log("spider: skipping6 %s", sreq->m_url);
 			continue;
 		}
-
-		//
-		// just calculating page counts? if the url filters are based
-		// on the # of pages indexed per ip or subdomain/site then
-		// we have to maintain a page count table.
-		//
-		if ( m_countingPagesIndexed ) {
-			// get request url hash48
-			long long uh48 = sreq->getUrlHash48();
-			// manually added? count these. call them seeds!
-			if ( (sreq->m_isAddUrl || sreq->m_isInjecting) && 
-			     m_lastReqUh48 != uh48 ) {
-				long h32;
-				h32 = sreq->m_siteHash32 ^ 0x123456;
-				m_localTable.addScore(&h32);
-				h32 = sreq->m_domHash32 ^ 0x123456;
-				m_localTable.addScore(&h32);
-				// do not repeat count the same url
-				m_lastReqUh48 = uh48;
-			}
-			// now count pages indexed below here
-			if ( ! srep ) continue;
-			if ( srepUh48 == m_lastRepUh48 ) continue;
-			m_lastRepUh48 = srepUh48;
-			if ( ! srep ) continue;
-			if ( ! srep->m_isIndexed ) continue;
-			// keep count per site and firstip
-			m_localTable.addScore(&sreq->m_siteHash32);
-			m_localTable.addScore(&sreq->m_firstIp);
-			m_localTable.addScore(&sreq->m_domHash32);
-			continue;
-		}
-
 
 		// once we have a spiderreply, even i guess if its an error,
 		// for a url, then bail if respidering is disabled
@@ -11214,6 +11241,12 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 		return false;
 		//return sendReply ( st1 , true );
 	}
+
+	m_domHash32 = hash32 ( dom , dlen );
+	// and "site"
+	long hlen = 0;
+	char *host = getHostFast ( url , &hlen );
+	m_siteHash32 = hash32 ( host , hlen );
 
 	return true;
 }

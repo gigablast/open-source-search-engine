@@ -1462,7 +1462,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// log it up if there on disk
 	snprintf ( tmp1 , 1023, "/coll.%s.%li/pagecounts.dat",
 		   m_coll , (long)m_collnum );
-	if ( ! m_pageCountTable.load ( g_hostdb.m_dir , tmp1 ) )
+	if ( ! m_pageCountTable.load ( g_hostdb.m_dir , tmp1 ) && g_errno )
 		log("db: failed to load page count table: %s",
 		    mstrerror(g_errno));
 

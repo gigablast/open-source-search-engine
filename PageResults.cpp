@@ -763,7 +763,7 @@ bool gotResults ( void *state ) {
 	//
 	//////////
 	char *addUrl = st->m_hr.getString("addurl",NULL);
-	if ( addUrl && cr->m_isCustomCrawl ) {
+	if ( addUrl ) { // && cr->m_isCustomCrawl ) {
 
 		Url norm;
 		norm.set ( addUrl );
