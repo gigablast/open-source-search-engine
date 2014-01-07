@@ -162,9 +162,11 @@ struct SafeBuf {
 
 	void zeroOut() { memset ( m_buf , 0 , m_capacity ); }
 
-	bool brify2 ( char *s , long cols ) ;
+	bool brify2 ( char *s , long cols , char *sep = "<br>" ,
+		      bool isHtml = true ) ;
 
-	bool brify ( char *s , long slen , long niceness , long cols );
+	bool brify ( char *s , long slen , long niceness , long cols ,
+		     char *sep = "<br>" , bool isHtml = true );
 
 	bool fixIsolatedPeriods ( ) ;
 
