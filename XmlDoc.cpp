@@ -15339,12 +15339,11 @@ int startUp ( void *cmd ) {
 	argv[2] = (char *)cmd;
 	argv[3] = 0;
 	char *envp[2];
-	//char  buf[128];
-	SafeBuf sb;
+	char  buf[1024];
 	// antiword needs this environment var so it can find 
 	// the .antiword/ dir , we should put it in gb's working dir
-	sb.safePrintf("HOME=%s", g_hostdb.m_dir );
-	envp[0] = sb.getBufStart(); // buf;
+	snprintf(buf,1023,"HOME=%s", g_hostdb.m_dir );
+	envp[0] = buf;
 	envp[1] = 0;
 	execve("/bin/sh", argv, envp );
 	//exit(127);
