@@ -1434,13 +1434,15 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 		errno = g_errno = ENOMEM;
 		return NULL;
 	}
-	// copy over to it
-	memcpy ( mem , ptr , oldSize );
-	// free the old
-	mfree ( ptr , oldSize , note );
 	// log a note
 	log(LOG_INFO,"mem: had to use malloc/memcpy instead of "
 	    "realloc.");
+	// copy over to it
+	memcpy ( mem , ptr , oldSize );
+	// we already called rmMem() so don't double call
+	sysfree ( (char *)ptr - UNDERPAD );	
+	// free the old. this was coring because it was double calling rmMem()
+	//mfree ( ptr , oldSize , note );
 	// mmalloc() and mfree() should have taken care of it
 	return mem;
 }
