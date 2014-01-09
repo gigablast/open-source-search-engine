@@ -2508,7 +2508,7 @@ int main ( int argc , char *argv[] ) {
 		log("db: setrlimit RLIMIT_NOFILE failed!");
 		char *xx=NULL;*xx=0;
 	}
-	log("db: RLIMIT_NOFILE = %li",(long)rlim.rlim_max);
+	//log("db: RLIMIT_NOFILE = %li",(long)rlim.rlim_max);
 	//exit(0);
 	// . disable o/s's and hard drive's read ahead 
 	// . set multcount to 16 --> 1 interrupt for every 16 sectors read

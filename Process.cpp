@@ -73,7 +73,9 @@ static long s_nextTime = 0;
 
 char *g_files[] = {
 	"gb.conf",
-	"hosts.conf",
+
+	// might have localhosts.conf
+	//"hosts.conf",
 	
 	"catcountry.dat",
 	"badcattable.dat",
@@ -155,13 +157,13 @@ char *g_files[] = {
 	//"/usr/bin/ppmtojpeg",
 	//"/usr/sbin/smartctl",
 
-	"giftopnm",
-	"tifftopnm",
-	"pngtopnm",
-	"jpegtopnm",
-	"bmptopnm",
-	"pnmscale",
-	"ppmtojpeg",
+	//"giftopnm",
+	//"tifftopnm",
+	//"pngtopnm",
+	//"jpegtopnm",
+	//"bmptopnm",
+	//"pnmscale",
+	//"ppmtojpeg",
 
 	//"smartctl",
 
@@ -196,11 +198,13 @@ bool Process::checkFiles ( char *dir ) {
 	if ( //( ! f3.doesExist() || ! f4.doesExist() ) && 
 	    ( ! f4.doesExist() ) && 
 	     ( ! f1.doesExist() || ! f2.doesExist() ) ) {
+		/*
 		log("db: need either (%s and %s) or (%s and %s)",
 		    f3.getFilename() ,
 		    f4.getFilename() ,
 		    f1.getFilename() ,
 		    f2.getFilename() );
+		*/
 		//return false;
 	}
 
@@ -256,11 +260,11 @@ bool Process::checkFiles ( char *dir ) {
 			
 	}
 
-	if ( needsFiles ) {
-	  log("db: use 'apt-get install -y netpbm' to install "
-	      "pnmfiles");
-	  return false;
-	}
+	//if ( needsFiles ) {
+	//  log("db: use 'apt-get install -y netpbm' to install "
+	//      "pnmfiles");
+	//  return false;
+	//}
 
 	// . check for tagdb files tagdb0.xml to tagdb50.xml
 	// . MDW - i am phased these annoying files out 100%

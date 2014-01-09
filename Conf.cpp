@@ -301,6 +301,8 @@ void Conf::setRootIps ( ) {
 
 	// default this to off on startup for now until it works better
 	m_askRootNameservers = false;
+	// and return as well
+	return;
 
 	char *rootIps[] = {
 		"192.228.79.201",
