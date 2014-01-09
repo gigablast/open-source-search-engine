@@ -497,11 +497,11 @@ class CollectionRec {
 	long m_sectiondbMinFilesToMerge ;
 	//long m_indexdbMinFilesToMerge ;
 	//long m_indexdbMinTotalFilesToMerge ;
-	long m_spiderdbMinFilesToMerge ;
-	long m_checksumdbMinFilesToMerge ;
-	long m_clusterdbMinFilesToMerge ;
-	long m_datedbMinFilesToMerge ;
-	long m_linkdbMinFilesToMerge ;
+	//long m_spiderdbMinFilesToMerge ;
+	//long m_checksumdbMinFilesToMerge ;
+	//long m_clusterdbMinFilesToMerge ;
+	//long m_datedbMinFilesToMerge ;
+	//long m_linkdbMinFilesToMerge ;
 	//long m_tagdbMinFilesToMerge ;
 
 	//char  m_spiderdbRootUrlPriority   ; // 0-(MAX_SPIDER_PRIORITIES-1)

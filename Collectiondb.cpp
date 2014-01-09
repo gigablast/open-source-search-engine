@@ -455,8 +455,8 @@ bool Collectiondb::addNewColl ( char *coll ,
 	memset ( &cr->m_globalCrawlInfo , 0 , sizeof(CrawlInfo) );
 
 	// set some defaults. max spiders for all priorities in this 
-	// collection
-	cr->m_maxNumSpiders = 10;
+	// collection. NO, default is in Parms.cpp.
+	//cr->m_maxNumSpiders = 10;
 
 	//cr->m_needsSave = 1;
 

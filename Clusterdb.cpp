@@ -296,7 +296,7 @@ bool Clusterdb::init ( ) {
 			    true          , // dedup
 			    //CLUSTER_REC_SIZE - sizeof(key_t),//fixedDataSize 
 			    0             , // no data now! just docid/s/c
-			    g_conf.m_clusterdbMinFilesToMerge,
+			    2, // g_conf.m_clusterdbMinFilesToMerge,
 			    g_conf.m_clusterdbMaxTreeMem,
 			    maxTreeNodes  , // maxTreeNodes  ,
 			    true          , //false         , // balance tree?

@@ -9205,7 +9205,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "mns";
 	m->m_off   = (char *)&cr.m_maxNumSpiders - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "200";
+	m->m_def   = "100";
 	m->m_group = 0;
 	m++;
 
@@ -9215,7 +9215,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "aue";
 	m->m_off   = (char *)&cr.m_addUrlEnabled - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_def   = "1";
 	m++;
 
 	m->m_title = "daily merge time";
@@ -9703,7 +9703,6 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
 	m++;
-	*/
 
 	m->m_title = "spiderdb min files needed to trigger to merge";
 	m->m_desc  = "Merge is triggered when this many spiderdb data files "
@@ -9715,7 +9714,6 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	/*
 	m->m_title = "checksumdb min files needed to trigger to merge";
 	m->m_desc  = "Merge is triggered when this many checksumdb data files "
 		"are on disk.";
@@ -9725,7 +9723,6 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
 	m++;
-	*/
 
 	m->m_title = "clusterdb min files needed to trigger to merge";
 	m->m_desc  = "Merge is triggered when this many clusterdb data files "
@@ -9746,6 +9743,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
 	m++;
+	*/
 
 	//m->m_title = "tagdb min files to merge";
 	//m->m_desc  = "Merge is triggered when this many linkdb data files "
@@ -10990,7 +10988,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_siteClusterByDefault - x;
 	m->m_soff  = (char *)&si.m_doSiteClustering - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_def   = "1";
 	m->m_sparm = 1;
 	m->m_scgi  = "sc";
 	m++;
@@ -11238,7 +11236,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_pqr_docsToScan - x;
 	m->m_soff  = (char *)&si.m_docsToScanForReranking - y;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "50";
+	m->m_def   = "0";
 	m->m_group = 1;
 	m->m_sparm = 1;
 	m->m_scgi  = "pqrds";
@@ -12919,7 +12917,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "ddc";
 	m->m_off   = (char *)&cr.m_displayDmozCategories - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_def   = "1";
 	m++;
 
 	m->m_title = "display indirect dmoz categories in results";

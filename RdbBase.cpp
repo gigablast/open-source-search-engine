@@ -1316,25 +1316,25 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		m_minToMerge = cr->m_posdbMinFilesToMerge;
 	if ( cr && m_rdb == g_titledb.getRdb() ) 
 		m_minToMerge = cr->m_titledbMinFilesToMerge;
-	if ( cr && m_rdb == g_spiderdb.getRdb() ) 
-		m_minToMerge = cr->m_spiderdbMinFilesToMerge;
+	//if ( cr && m_rdb == g_spiderdb.getRdb() ) 
+	//	m_minToMerge = cr->m_spiderdbMinFilesToMerge;
 	//if ( cr && m_rdb == g_sectiondb.getRdb() ) 
 	//	m_minToMerge = cr->m_sectiondbMinFilesToMerge;
 	//if ( cr && m_rdb == g_sectiondb.getRdb() ) 
 	//	m_minToMerge = cr->m_sectiondbMinFilesToMerge;
 	//if ( cr && m_rdb == g_checksumdb.getRdb() ) 
 	//	m_minToMerge = cr->m_checksumdbMinFilesToMerge;
-	if ( cr && m_rdb == g_clusterdb.getRdb() ) 
-		m_minToMerge = cr->m_clusterdbMinFilesToMerge;
-	if ( cr && m_rdb == g_datedb.getRdb() ) 
-		m_minToMerge = cr->m_datedbMinFilesToMerge;
+	//if ( cr && m_rdb == g_clusterdb.getRdb() ) 
+	//	m_minToMerge = cr->m_clusterdbMinFilesToMerge;
+	//if ( cr && m_rdb == g_datedb.getRdb() ) 
+	//	m_minToMerge = cr->m_datedbMinFilesToMerge;
 	//if ( cr && m_rdb == g_statsdb.getRdb() )
 	//if ( m_rdb == g_statsdb.getRdb() )
 	//	m_minToMerge = g_conf.m_statsdbMinFilesToMerge;
 	if ( m_rdb == g_syncdb.getRdb() )
 		m_minToMerge = g_syncdb.m_rdb.m_minToMerge;
-	if ( cr && m_rdb == g_linkdb.getRdb() )
-		m_minToMerge = cr->m_linkdbMinFilesToMerge;
+	//if ( cr && m_rdb == g_linkdb.getRdb() )
+	//	m_minToMerge = cr->m_linkdbMinFilesToMerge;
 	if ( cr && m_rdb == g_cachedb.getRdb() )
 		m_minToMerge = 4;
 	if ( cr && m_rdb == g_serpdb.getRdb() )
