@@ -1722,8 +1722,8 @@ bool Msg5::doneMerging ( ) {
 	//   our first merge
 	if ( m_hadCorruption ) {
 		// log it here, cuz logging in thread doesn't work too well
-		log("net: Encountered a corrupt list in rdb=%s",
-		    base->m_dbname);
+		log("net: Encountered a corrupt list in rdb=%s coll=%s",
+		    base->m_dbname,m_coll);
 		// remove error condition, we removed the bad data in thread
 		
 		m_hadCorruption = false;

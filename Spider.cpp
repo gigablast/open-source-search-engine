@@ -538,6 +538,8 @@ bool Spiderdb::init ( ) {
 	// keep this low if we are the tmp cluster
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 
+	//pcmem = 0;
+
 	// key parser checks
 	//long      ip         = 0x1234;
 	char      priority   = 12;
@@ -571,7 +573,7 @@ bool Spiderdb::init ( ) {
 			   RDB_SPIDERDB ,
 			   pcmem     ,
 			   pageSize  ,
-			   true      ,  // use shared mem?
+			   false     ,  // use shared mem?
 			   false     )) // minimizeDiskSeeks?
 		return log(LOG_INIT,"spiderdb: Init failed.");
 
@@ -9344,6 +9346,10 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 					goto gotOne;
 				if ( to_lower_a(ext[1]) == 'w' &&
 				     to_lower_a(ext[2]) == 'm' &&
+				     to_lower_a(ext[3]) == 'v' )
+					goto gotOne;
+				if ( to_lower_a(ext[1]) == 'w' &&
+				     to_lower_a(ext[2]) == 'a' &&
 				     to_lower_a(ext[3]) == 'v' )
 					goto gotOne;
 				if ( to_lower_a(ext[1]) == 'j' &&

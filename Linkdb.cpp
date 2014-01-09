@@ -109,6 +109,8 @@ bool Linkdb::init ( ) {
 	long maxTreeNodes = maxTreeMem /(sizeof(key224_t)+16);
 	// disk page cache mem, 100MB on gk0 now
 	long pcmem = 0; // g_conf.m_linkdbMaxDiskPageCacheMem;
+	// give it a little
+	pcmem = 10000000; // 10MB
 	// keep this low if we are the tmp cluster
 	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// TODO: would be nice to just do page caching on the satellite files;
