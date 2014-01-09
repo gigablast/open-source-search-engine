@@ -2111,7 +2111,7 @@ class XmlDoc {
 	long          m_niceness;
 
 	bool m_usePosdb     ;
-	bool m_useDatedb    ;
+	//bool m_useDatedb    ;
 	bool m_useClusterdb ;
 	bool m_useLinkdb    ;
 	bool m_useSpiderdb  ;

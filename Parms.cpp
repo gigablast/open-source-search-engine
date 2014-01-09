@@ -9267,6 +9267,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
+	/*
 	m->m_title = "use datedb";
 	m->m_desc  = "Index documents for generating results sorted by date "
 		"or constrained by date range. Only documents indexed while "
@@ -9299,6 +9300,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_group = 0;
 	m++;
+	*/
 
 	//m->m_title = "days before now to index";
 	//m->m_desc  = "Only index page if the datedb date was found to be "

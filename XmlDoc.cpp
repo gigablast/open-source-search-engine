@@ -806,7 +806,7 @@ void XmlDoc::reset ( ) {
 
 	// Repair.cpp now explicitly sets these to false if needs to
 	m_usePosdb     = true;
-	m_useDatedb    = true;
+	//m_useDatedb    = true;
 	m_useClusterdb = true;
 	m_useLinkdb    = true;
 	m_useSpiderdb  = true;
