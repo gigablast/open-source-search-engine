@@ -4441,26 +4441,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
-		// start up a dummy cluster using hosts.conf ports + 1
-		else if ( installFlag == ifk_tmpstart ) {
-			// . assume conf file name gbHID.conf
-			// . assume working dir ends in a '/'
-			sprintf(tmp,
-				"ssh %s \"cd %s ; "
-				"cp -f tmpgb tmpgb.oldsave ; "
-				"mv -f tmpgb.installed tmpgb ; "
-				"./tmpgb -c %shosts.conf tmpstarthost "
-				"%li >& ./tmplog%03li &\" &",
-				iptoa(h2->m_ip),
-				h2->m_dir      ,
-				h2->m_dir      ,
-				h2->m_hostId   ,
-				h2->m_hostId   );
-			// log it
-			log(LOG_INIT,"admin: %s", tmp);
-			// execute it
-			system ( tmp );
-		}
+		// SEQUENTIALLY start
 		else if ( installFlag == ifk_start2 ) {
 			// . save old log now, too
 			char tmp2[1024];
@@ -4474,15 +4455,38 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				h2->m_hostId   );
 			// . assume conf file name gbHID.conf
 			// . assume working dir ends in a '/'
+			char *amp = " &";
+			if ( i > 0 && (i%5) == 0 ) amp = "";
 			sprintf(tmp,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; %s"
-				"./gb %li >& ./log%03li &\" &",
+				"./gb %li >& ./log%03li &\"%s",
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir      ,
 				tmp2           ,
 				//h2->m_dir      ,
+				h2->m_hostId   ,
+				h2->m_hostId   ,
+				amp );
+			// log it
+			log(LOG_INIT,"admin: %s", tmp);
+			// execute it
+			system ( tmp );
+		}
+		// start up a dummy cluster using hosts.conf ports + 1
+		else if ( installFlag == ifk_tmpstart ) {
+			// . assume conf file name gbHID.conf
+			// . assume working dir ends in a '/'
+			sprintf(tmp,
+				"ssh %s \"cd %s ; "
+				"cp -f tmpgb tmpgb.oldsave ; "
+				"mv -f tmpgb.installed tmpgb ; "
+				"./tmpgb -c %shosts.conf tmpstarthost "
+				"%li >& ./tmplog%03li &\" &",
+				iptoa(h2->m_ip),
+				h2->m_dir      ,
+				h2->m_dir      ,
 				h2->m_hostId   ,
 				h2->m_hostId   );
 			// log it
@@ -4757,13 +4761,14 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
+		// SEQUENTIAL rcps
 		else if ( installFlag == ifk_installgb2 ) {
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
 				"rcp "
 				"%sgb.new "
-				"%s:%s/gb.installed &",
+				"%s:%s/gb.installed ",
 				dir,
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir);

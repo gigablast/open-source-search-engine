@@ -1691,7 +1691,10 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	//if ( ! pwd  ) pwd  = "";
 
 	CollectionRec *cr = g_collectiondb.getRec ( collArg );
-	if ( ! cr ) return true;
+	// sometimes there are no collections!
+	//if ( ! cr ) return true;
+	char *coll = NULL;
+	if ( cr ) coll = cr->m_coll;
 
 
 	if ( ! top ) {
@@ -1733,7 +1736,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 				"</span>"
 				" &nbsp; \n",s_pages[i].m_filename,
 				//username,pwd,
-				cr->m_coll,
+				coll,
 				buf,s_pages[i].m_name);
 		else if ( page == i )
 			sb->safePrintf(
@@ -1742,7 +1745,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 				"<font color=red>%s</font></b></a>"
 				"</span>"
 				" &nbsp; \n",s_pages[i].m_filename,
-				cr->m_coll,
+				coll,
 				buf,s_pages[i].m_name);
 		else
 			sb->safePrintf(
@@ -1750,7 +1753,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 				"<a href=\"/%s?c=%s%s\">%s</a>"
 				"</span>"
 				" &nbsp; \n",s_pages[i].m_filename,
-				cr->m_coll,
+				coll,
 				buf,s_pages[i].m_name);
 		// print <br> after the last master admin control
 		/*
