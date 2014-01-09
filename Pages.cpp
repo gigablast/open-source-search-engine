@@ -1693,9 +1693,9 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	CollectionRec *cr = g_collectiondb.getRec ( collArg );
 	// sometimes there are no collections!
 	//if ( ! cr ) return true;
-	char *coll = NULL;
+	char *coll = "";
 	if ( cr ) coll = cr->m_coll;
-
+	
 
 	if ( ! top ) {
 		// . if no collection do not print anything else

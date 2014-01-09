@@ -925,38 +925,44 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		return g_httpServer.sendErrorReply ( s , 505 , "Bad Request");
 	}
 
-	CollectionRec *cr = (CollectionRec *)THIS;
+	//CollectionRec *cr = (CollectionRec *)THIS;
 
 	char bb [ 256];//MAX_COLL_LEN + 60 ];
 	bb[0]='\0';
 	//if ( user == USER_MASTER && page >= PAGE_OVERVIEW && c && c[0] ) 
 	//	sprintf ( bb , " (%s)", c);
-	if ( page == PAGE_FILTERS )
-		sprintf(bb,"(roundtime=%li roundnum=%li)"
-			, cr->m_spiderRoundStartTime
-			, cr->m_spiderRoundNum
-			);
+	//if ( page == PAGE_FILTERS )
+	//	sprintf(bb,"(roundtime=%li roundnum=%li)"
+	//		, cr->m_spiderRoundStartTime
+	//		, cr->m_spiderRoundNum
+	//		);
 
 	// start the table
-	if ( ! isJSON ) 
+	if ( ! isJSON ) {
 		sb->safePrintf( 
 			       "\n"
 			       "<table width=100%% bgcolor=#%s "
 			       "cellpadding=4 border=1 "
 			       "id=\"parmtable\">"
 			       "<tr><td colspan=20 bgcolor=#%s>"
-			       
-			       "<div style=\"float:left;\">" 
-			       "filter:<input type=\"text\" "
-			       "onkeyup=\"filterRow(this.value)\" "
-			       "value=\"\"></div>"
-			       "<div style=\"margin-left:45%%;\">"
+			       ,LIGHT_BLUE,DARK_BLUE
+				);
+
+		if ( page != PAGE_FILTERS )
+			sb->safePrintf("<div style=\"float:left;\">" 
+				       "filter:<input type=\"text\" "
+				       "onkeyup=\"filterRow(this.value)\" "
+				       "value=\"\"></div>"
+				       );
+
+		sb->safePrintf("<div style=\"margin-left:45%%;\">"
 			       //"<font size=+1>"
 			       "<b>%s</b>%s"
 			       //"</font>"
 			       "</div>"
 			       "</td></tr>%s%s\n",
-			       LIGHT_BLUE,DARK_BLUE,tt,bb,e1,e2);
+			       tt,bb,e1,e2);
+	}
 
 	bool isCrawlbot = false;
 	if ( collOveride ) isCrawlbot = true;
@@ -1090,7 +1096,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 
 			  "<tr><td>^http://whatever</td>"
-			  "<td>Matches if the url begins with this."
+			  "<td>Matches if the url begins with "
+			  "<i>http://whatever</i>"
 			  "</td></tr>"
 
 			  "<tr><td>$.css</td>"
@@ -1438,7 +1445,12 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "<td>Matches if "
 			  "the url's content is in the language \"zh_cn\" or "
 			  "\"de\". See table below for supported language "
-			  "abbreviations.</td></tr>"
+			  "abbreviations. Used to only keep certain languages "
+			  "in the index. This is hacky because the language "
+			  "may not be known at spider time, so Gigablast "
+			  "will check after downloading the document to "
+			  "see if the language <i>spider priority</i> is "
+			  "FILTERED or BANNED thereby discarding it.</td></tr>"
 			  //"NOTE: Until we move the language "
 			  //"detection up before any call to XmlDoc::set1() "
 			  //"in Msg16.cpp, we can not use for purposes of "
@@ -13500,8 +13512,8 @@ void Parms::init ( ) {
 		"spider priority, etc. on the MATCHING ROW when spidering "
 		//"and <a href=/overview.html#ruleset>ruleset</a> to "
 		"that URL. "
-		"The "
-		"<i><b>default</b></i> line MATCHES ALL URLs. "
+		"If you specify the <i>expression</i> as "
+		"<i><b>default</b></i> then that MATCHES ALL URLs. "
 		"URLs with high spider priorities take spidering "
 		"precedence over "
 		"URLs with lower spider priorities. "
@@ -13511,7 +13523,7 @@ void Parms::init ( ) {
 		"See the help table below for examples of all the supported "
 		"expressions. "
 		"Use the <i>&&</i> operator to string multiple expressions "
-		"together in the same text box. "
+		"together in the same expression text box. "
 		"<br><br>";
 		
 		/*
