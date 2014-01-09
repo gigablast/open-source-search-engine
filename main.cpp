@@ -4765,13 +4765,16 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		else if ( installFlag == ifk_installgb2 ) {
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
+			char *amp = " &";
+			if ( i > 0 && (i%5) == 0 ) amp = "";
 			sprintf(tmp,
 				"rcp "
 				"%sgb.new "
-				"%s:%s/gb.installed ",
+				"%s:%s/gb.installed %s",
 				dir,
 				iptoa(h2->m_ipShotgun),
-				h2->m_dir);
+				h2->m_dir,
+				amp);
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 		}
