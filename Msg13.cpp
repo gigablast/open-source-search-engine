@@ -2202,7 +2202,7 @@ void scanHammerQueue ( int fd , void *state ) {
 	Msg13Request *prev = NULL;
 	long long waited = -1LL;
 	Msg13Request *nextLink = NULL;
-	
+
 	// scan down the linked list of queued of msg13 requests
 	for ( ; r ; prev = r , r = nextLink ) { 
 

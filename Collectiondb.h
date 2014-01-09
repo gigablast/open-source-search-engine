@@ -13,6 +13,8 @@
 
 #include "SafeBuf.h"
 
+bool addCollToTable ( char *coll , collnum_t collnum ) ;
+
 class WaitEntry {
 public:
 	void (* m_callback) (void *state);
@@ -342,6 +344,11 @@ class CollectionRec {
 
 	// for customcrawls
 	bool rebuildUrlFilters();
+
+	bool m_urlFiltersHavePageCounts;
+
+	// moved from SpiderColl so we can load up at startup
+	HashTableX m_pageCountTable;
 
 	// . when was the last time we changed?
 	//long long m_lastUpdateTime;
@@ -692,8 +699,8 @@ class CollectionRec {
 	//long      m_numRegExs11;
 	//char      m_spiderDiffbotApiNum [ MAX_FILTERS ];
 
-	long      m_numRegExs11;
-	SafeBuf   m_spiderDiffbotApiUrl [ MAX_FILTERS ];
+	//long      m_numRegExs11;
+	//SafeBuf   m_spiderDiffbotApiUrl [ MAX_FILTERS ];
 
 	long      m_numRegExs8;
 	char      m_harvestLinks     [ MAX_FILTERS ];

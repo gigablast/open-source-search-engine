@@ -996,14 +996,15 @@ class XmlDoc {
 	char m_logLangId;
 	long m_logSiteNumInlinks;
 
-	//SectionVotingTable m_nsvt;
+	SectionVotingTable m_nsvt;
 
-	//SectionVotingTable m_osvt;
-	//long m_numSectiondbReads;
-	//long m_numSectiondbNeeds;
-	//key128_t m_sectiondbStartKey;
-	//RdbList m_secdbList;
-	//long m_sectiondbRecall;
+	SectionVotingTable m_osvt;
+	long m_numSectiondbReads;
+	long m_numSectiondbNeeds;
+	key128_t m_sectiondbStartKey;
+	RdbList m_secdbList;
+	long m_sectiondbRecall;
+	SafeBuf m_tmpBuf3;
 
 	//HashTableX m_rvt;
 	//Msg17 m_msg17;
@@ -1135,8 +1136,8 @@ class XmlDoc {
 	//char     m_weightsValid;
 	char     m_sectionsValid;
 	char     m_subSentsValid;
-	//char     m_osvtValid;
-	//char     m_nsvtValid;
+	char     m_osvtValid;
+	char     m_nsvtValid;
 	//char   m_rvtValid;
 	char     m_turkVotingTableValid;
 	char     m_turkBitsTableValid;
@@ -1271,7 +1272,7 @@ class XmlDoc {
 	bool m_datesValid;
 	bool m_sectionsReplyValid;
 	bool m_sectionsVotesValid;
-	//bool m_sectiondbDataValid;
+	bool m_sectiondbDataValid;
 	bool m_placedbDataValid;
 	bool m_siteHash64Valid;
 	bool m_siteHash32Valid;
@@ -2067,6 +2068,7 @@ class XmlDoc {
 	// flags for spider
 	//bool m_isAddUrl;
 	//bool m_forceDelete;
+	bool m_didDelete;
 
 	// this is non-zero if we decided not to index the doc
 	long m_indexCode;
@@ -2117,7 +2119,7 @@ class XmlDoc {
 	bool m_useTagdb     ;
 	bool m_usePlacedb   ;
 	//bool m_useTimedb    ;
-	//bool m_useSectiondb ;
+	bool m_useSectiondb ;
 	//bool m_useRevdb     ;
 	bool m_useSecondaryRdbs ;
 
@@ -2130,7 +2132,7 @@ class XmlDoc {
 	bool     m_storeTermListInfo;
 	char     m_sortTermListBy;
 
-	//SafeBuf m_sectiondbData;
+	SafeBuf m_sectiondbData;
 	//char *m_sectiondbData;
 	char *m_placedbData;
 	//long  m_sectiondbDataSize;

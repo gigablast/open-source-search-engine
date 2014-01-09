@@ -440,12 +440,13 @@ bool Collectiondb::addNewColl ( char *coll ,
 		cr->m_diffbotCrawlStartTime=
 			gettimeofdayInMillisecondsGlobalNoCore();
 		cr->m_diffbotCrawlEndTime   = 0LL;
-		// . just the basics on these for now
-		// . if certain parms are changed then the url filters
-		//   must be rebuilt, as well as possibly the waiting tree!!!
-		cr->rebuildUrlFilters ( );
 	}
 
+	// . just the basics on these for now
+	// . if certain parms are changed then the url filters
+	//   must be rebuilt, as well as possibly the waiting tree!!!
+	// . need to set m_urlFiltersHavePageCounts etc.
+	cr->rebuildUrlFilters ( );
 
 	cr->m_useRobotsTxt = true;
 
@@ -1040,6 +1041,16 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	return true;
 }
 
+// a hack function
+bool addCollToTable ( char *coll , collnum_t collnum ) {
+	// readd it to the hashtable that maps name to collnum too
+	long long h64 = hash64n(coll);
+	g_collTable.set(8,sizeof(collnum_t), 256,NULL,0,
+			false,0,"nhshtbl");
+	return g_collTable.addKey ( &h64 , &collnum );
+}
+
+
 // get coll rec specified in the HTTP request
 CollectionRec *Collectiondb::getRec ( HttpRequest *r ) {
 	char *coll = r->getString ( "c" );
@@ -1403,7 +1414,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 
 	// the default conf file
 	char tmp1[1024];
-	sprintf ( tmp1 , "%sdefault.conf" , g_hostdb.m_dir );
+	snprintf ( tmp1 , 1023, "%sdefault.conf" , g_hostdb.m_dir );
 
 	// . set our parms from the file.
 	// . accepts OBJ_COLLECTIONREC or OBJ_CONF
@@ -1419,7 +1430,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// LOAD the crawlinfo class in the collectionrec for diffbot
 	//
 	// LOAD LOCAL
-	sprintf ( tmp1 , "%scoll.%s.%li/localcrawlinfo.dat",
+	snprintf ( tmp1 , 1023, "%scoll.%s.%li/localcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
 	log(LOG_DEBUG,"db: loading %s",tmp1);
 	m_localCrawlInfo.reset();
@@ -1430,7 +1441,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 		// it is binary now
 		memcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
 	// LOAD GLOBAL
-	sprintf ( tmp1 , "%scoll.%s.%li/globalcrawlinfo.dat",
+	snprintf ( tmp1 , 1023, "%scoll.%s.%li/globalcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
 	log(LOG_DEBUG,"db: loading %s",tmp1);
 	m_globalCrawlInfo.reset();
@@ -1439,6 +1450,21 @@ bool CollectionRec::load ( char *coll , long i ) {
 		//m_globalCrawlInfo.setFromSafeBuf(&sb);
 		// it is binary now
 		memcpy ( &m_globalCrawlInfo , sb.getBufStart(),sb.length() );
+
+	////////////
+	//
+	// PAGE COUNT TABLE for doing quotas in url filters
+	//
+	/////////////
+	// . grows dynamically
+	// . setting to 0 buckets should never have error
+	m_pageCountTable.set ( 4,4,0,NULL,0,false,MAX_NICENESS,"pctbl" );
+	// log it up if there on disk
+	snprintf ( tmp1 , 1023, "/coll.%s.%li/pagecounts.dat",
+		   m_coll , (long)m_collnum );
+	if ( ! m_pageCountTable.load ( g_hostdb.m_dir , tmp1 ) && g_errno )
+		log("db: failed to load page count table: %s",
+		    mstrerror(g_errno));
 
 	// ignore errors i guess
 	g_errno = 0;
@@ -1599,11 +1625,14 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_spidersEnabled[n] = 1;
 	m_numRegExs7++;
 
+	m_harvestLinks[n] = 1;
+	m_numRegExs8++;
+
 	//m_spiderDiffbotApiNum[n] = 1;
 	//m_numRegExs11++;
-	m_spiderDiffbotApiUrl[n].set("");
-	m_spiderDiffbotApiUrl[n].nullTerm();
-	m_numRegExs11++;
+	//m_spiderDiffbotApiUrl[n].set("");
+	//m_spiderDiffbotApiUrl[n].nullTerm();
+	//m_numRegExs11++;
 }
 
 /*
@@ -1660,7 +1689,7 @@ bool CollectionRec::save ( ) {
 	//if ( m_collLen == 0 )
 	//	sprintf ( tmp , "%scoll.main/coll.conf", g_hostdb.m_dir);
 	//else
-	sprintf ( tmp , "%scoll.%s.%li/coll.conf", 
+	snprintf ( tmp , 1023, "%scoll.%s.%li/coll.conf", 
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
 	if ( ! g_parms.saveToXml ( (char *)this , tmp ) ) return false;
 	// log msg
@@ -1670,7 +1699,7 @@ bool CollectionRec::save ( ) {
 	// save the crawlinfo class in the collectionrec for diffbot
 	//
 	// SAVE LOCAL
-	sprintf ( tmp , "%scoll.%s.%li/localcrawlinfo.dat",
+	snprintf ( tmp , 1023, "%scoll.%s.%li/localcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
 	//log("coll: saving %s",tmp);
 	SafeBuf sb;
@@ -1683,7 +1712,7 @@ bool CollectionRec::save ( ) {
 		g_errno = 0;
 	}
 	// SAVE GLOBAL
-	sprintf ( tmp , "%scoll.%s.%li/globalcrawlinfo.dat",
+	snprintf ( tmp , 1023, "%scoll.%s.%li/globalcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
 	//log("coll: saving %s",tmp);
 	sb.reset();
@@ -1696,6 +1725,16 @@ bool CollectionRec::save ( ) {
 		g_errno = 0;
 	}
 	
+	// save page count table which has # of pages indexed per 
+	// subdomain/site and firstip for doing quotas in url filters table
+	snprintf ( tmp , 1023, "coll.%s.%li/pagecounts.dat",
+		   m_coll , (long)m_collnum );
+	if ( ! m_pageCountTable.save ( g_hostdb.m_dir , tmp ) ) {
+		log("db: failed to save file %s : %s",tmp,mstrerror(g_errno));
+		g_errno = 0;
+	}
+
+
 	// do not need a save now
 	m_needsSave = false;
 	return true;
@@ -1829,7 +1868,34 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 
 bool expandRegExShortcuts ( SafeBuf *sb ) ;
 
+// . anytime the url filters are updated, this function is called
+// . it is also called on load of the collection at startup
 bool CollectionRec::rebuildUrlFilters ( ) {
+
+	// if not a custom crawl, and no expressions, add a default one
+	if ( m_numRegExs == 0 && ! m_isCustomCrawl ) {
+		setUrlFiltersToDefaults();
+	}
+
+
+	// set this so we know whether we have to keep track of page counts
+	// per subdomain/site and per domain. if the url filters have
+	// 'sitepages' 'domainpages' 'domainadds' or 'siteadds' we have to keep
+	// the count table SpiderColl::m_pageCountTable.
+	m_urlFiltersHavePageCounts = false;
+	for ( long i = 0 ; i < m_numRegExs ; i++ ) {
+		// get the ith rule
+		SafeBuf *sb = &m_regExs[i];
+		char *p = sb->getBufStart();
+		if ( strstr(p,"sitepages") ||
+		     strstr(p,"domainpages") ||
+		     strstr(p,"siteadds") ||
+		     strstr(p,"domainadds") ) {
+			m_urlFiltersHavePageCounts = true;
+			break;
+		}
+	}
+
 
 	// only for diffbot custom crawls
 	if ( m_isCustomCrawl != 1 && // crawl api
@@ -1876,7 +1942,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_spiderIpMaxSpiders[i] = 7; // keep it respectful
 		m_spidersEnabled    [i] = 1;
 		m_spiderFreqs       [i] =m_collectiveRespiderFrequency;
-		m_spiderDiffbotApiUrl[i].purge();
+		//m_spiderDiffbotApiUrl[i].purge();
 		m_harvestLinks[i] = true;
 	}
 
@@ -1935,7 +2001,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( ucp && upp ) {
 		m_regExs[i].set("matchesucp && matchesupp");
 		m_spiderPriorities   [i] = 55;
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// if just matches ucp, just crawl it, do not process
 		m_regExs[i].set("matchesucp");
@@ -1945,7 +2011,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("matchesupp");
 		m_spiderPriorities   [i] = 53;
 		m_harvestLinks       [i] = false;
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// do not crawl anything else
 		m_regExs[i].set("default");
@@ -1958,7 +2024,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("matchesucp");
 		m_spiderPriorities   [i] = 54;
 		// process everything since upp is empty
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// do not crawl anything else
 		m_regExs[i].set("default");
@@ -1971,7 +2037,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("matchesupp");
 		m_spiderPriorities   [i] = 53;
 		//m_harvestLinks       [i] = false;
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// crawl everything by default, no processing
 		m_regExs[i].set("default");
@@ -1984,7 +2050,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// crawl everything by default, no processing
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = 50;
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 	}
 
@@ -1996,7 +2062,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	m_numRegExs6  = i;
 	m_numRegExs7  = i;
 	m_numRegExs8  = i;
-	m_numRegExs11 = i;
+	//m_numRegExs11 = i;
 
 	///////
 	//

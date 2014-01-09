@@ -16,6 +16,7 @@ void HashTableX::constructor() {
 	m_isWritable = true;
 	m_txtBuf = NULL;
 	m_useKeyMagic = false;
+	m_ks = 0;
 }
 
 void HashTableX::destructor() {
@@ -28,7 +29,9 @@ HashTableX::HashTableX () {
 	m_doFree = false;
 	m_isWritable = true;
 	m_txtBuf = NULL;
-
+	m_useKeyMagic = false;
+	m_ks = 0;
+	
 	reset();
 }
 

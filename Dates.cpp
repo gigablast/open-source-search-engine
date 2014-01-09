@@ -7551,7 +7551,6 @@ bool Dates::isCloseHeader ( Section *si ) {
 	return false;
 }
 
-/*
 // add our votes to the new section voting table
 bool Dates::addVotes ( SectionVotingTable *nsvt ) {
 
@@ -7634,7 +7633,6 @@ bool Dates::addVotes ( SectionVotingTable *nsvt ) {
 
 	return true;
 }
-*/
 
 // setting the Addresses needs the D_IS_IN_DATE bit we set above, so we
 // have to interlace these functions!

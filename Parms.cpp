@@ -129,8 +129,8 @@ bool CommandInsertUrlFiltersRow ( char *rec ) {
 	}
 	// sanity
 	long dataSize = getDataSizeFromParmRec ( rec );
-	if ( dataSize != 4 ) {
-		log("parms: insert row data size not 4");
+	if ( dataSize <= 1 ) {
+		log("parms: insert row data size = %li bad!",dataSize);
 		g_errno = EBADENGINEER;
 		return true;
 	}
@@ -138,7 +138,7 @@ bool CommandInsertUrlFiltersRow ( char *rec ) {
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	// get the row #
 	char *data = getDataFromParmRec ( rec );
-	long rowNum = *(long *)data;
+	long rowNum = atol(data);//*(long *)data;
 	// scan all parms for url filter parms
 	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
@@ -165,8 +165,8 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 	}
 	// sanity
 	long dataSize = getDataSizeFromParmRec ( rec );
-	if ( dataSize != 4 ) {
-		log("parms: insert row data size not 4");
+	if ( dataSize <= 1 ) {
+		log("parms: insert row data size = %li bad!",dataSize);
 		g_errno = EBADENGINEER;
 		return true;
 	}
@@ -174,7 +174,7 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	// get the row #
 	char *data = getDataFromParmRec ( rec );
-	long rowNum = *(long *)data;
+	long rowNum = atol(data);
 	// scan all parms for url filter parms
 	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
 		Parm *m = &g_parms.m_parms[i];
@@ -844,6 +844,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 				"      else nombre = name;\n"
 				"   var e = document.getElementById(nombre);\n"
 				"      e.checked = !e.checked;\n"
+				//"      if ( e.value == 'Y' ) e.value='N';"
+				//"    else if ( e.value == 'N' ) e.value='Y';"
 				"    }\n"
 				"}\n"
 				"</script>");
@@ -1138,6 +1140,33 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "site rules table) have a hop count of 0. Their "
 			  "outlinks have a hop count of 1, and the outlinks "
 			  "of those outlinks a hop count of 2, etc."
+			  "</td></tr>"
+
+			  "<tr><td>sitepages</td>"
+			  "<td>The number of pages that are currently indexed "
+			  "for the subdomain of the URL. "
+			  "Used for doing quotas."
+			  "</td></tr>"
+
+			  "<tr><td>domainpages</td>"
+			  "<td>The number of pages that are currently indexed "
+			  "for the domain of the URL. "
+			  "Used for doing quotas."
+			  "</td></tr>"
+
+			  "<tr><td>siteadds</td>"
+			  "<td>The number URLs manually added to the "
+			  "subdomain of the URL. Used to guage a subdomain's "
+			  "popularity."
+			  "</td></tr>"
+
+			  "<tr><td>domainadds</td>"
+			  "<td>The number URLs manually added to the "
+			  "domain of the URL. Used to guage a domain's "
+			  "popularity."
+			  "</td></tr>"
+
+
 
 			  "<tr><td>isrss | !isrss</td>"
 			  "<td>Matches if document is an rss feed. "
@@ -1456,7 +1485,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "<i>foo.somesite.com</i> would NOT match."
 			  "</td></tr>"
 
-			  "<tr><td>issamedomain | !isonsamedomain</td>"
+			  "<tr><td>isonsamedomain | !isonsamedomain</td>"
 			  "<td>"
 			  "This is true if the url is from the same "
 			  "DOMAIN as the page from which it was "
@@ -1468,7 +1497,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 
 			  "<tr><td><nobr>"
-			  "issamesubdomain | !isonsamesubdomain"
+			  "isonsamesubdomain | !isonsamesubdomain"
 			  "</nobr></td>"
 			  "<td>"
 			  "This is true if the url is from the same "
@@ -2487,6 +2516,9 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( mm > 0 && m->m_rowid >= 0 && m_parms[mm-1].m_rowid == m->m_rowid )
 		firstInRow = false;
 
+	CollectionRec *cr = NULL;
+	if ( coll ) cr = g_collectiondb.getRec ( coll );
+
 	long firstRow = 0;
 	//if ( m->m_page==PAGE_PRIORITIES ) firstRow = MAX_PRIORITY_QUEUES - 1;
 	// . use a separate table for arrays
@@ -2516,6 +2548,12 @@ bool Parms::printParm ( SafeBuf* sb,
 			Parm *mk = &m_parms[k];
 			// not if printing json
 			if ( isJSON ) continue;
+
+			// skip if hidden
+			if ( cr && ! cr->m_isCustomCrawl &&
+			     (mk->m_flags & PF_CUSTOMCRAWLONLY) )
+				continue;
+			     
 			// . hide table column headers that are too advanced
 			// . we repeat this logic above for the actual parms
 			//char *vt = "";
@@ -2553,6 +2591,11 @@ bool Parms::printParm ( SafeBuf* sb,
 		}
 		if ( ! isJSON ) sb->safePrintf ( "</tr>\n" ); // mdw added
 	}
+
+	// skip if hidden. diffbot api url only for custom crawls.
+	//if(cr && ! cr->m_isCustomCrawl && (m->m_flags & PF_CUSTOMCRAWLONLY) )
+	//	return true;
+
 	// print row start for single parm
 	if ( m->m_max <= 1 && ! m->m_hdrs ) {
 		if ( firstInRow ) {
@@ -2653,10 +2696,10 @@ bool Parms::printParm ( SafeBuf* sb,
 					 cgi,m->m_def, m->m_title);
 	}
 	else if ( t == TYPE_CHECKBOX ) {
-		char *ddd1 = "";
-		char *ddd2 = "";
-		if ( *s ) ddd1 = " checked";
-		else      ddd2 = " checked";
+		//char *ddd1 = "";
+		//char *ddd2 = "";
+		//if ( *s ) ddd1 = " checked";
+		//else      ddd2 = " checked";
 		// just show the parm name and value if printing in json
 		if ( isJSON ) {
 			if ( ! lastRow ) {
@@ -2671,26 +2714,44 @@ bool Parms::printParm ( SafeBuf* sb,
 			// specify the cgi parm in the POST request, and 
 			// unchecked checkboxes are not included in the POST 
 			// request.
-			if ( lastRow && m->m_page == PAGE_FILTERS ) 
-				sb->safePrintf("<input type=hidden ");
-			else
-				sb->safePrintf(//"<input type=checkbox ");
-					       "<nobr>On:<input type=radio ");
+			//if ( lastRow && m->m_page == PAGE_FILTERS ) 
+			//	sb->safePrintf("<input type=hidden ");
+			//char *val = "Y";
+			//if ( ! *s ) val = "N";
+			char *val = "";
+			if ( *s ) val = " checked";
+			// in case it is not checked, submit that!
+			// if it gets checked this should be overridden then
+			sb->safePrintf("<input type=hidden name=%s value=0>"
+				       , cgi );
+			//else
+			sb->safePrintf("<input type=checkbox value=1 ");
+				       //"<nobr><input type=button ");
 			if ( m->m_page == PAGE_FILTERS)
 				sb->safePrintf("id=id_%s ",cgi);
 			
-			sb->safePrintf("value=1 name=%s%s>",
-				       cgi,ddd1);
+			sb->safePrintf("name=%s%s"
+				       //" onmouseup=\""
+				       //"if ( this.value=='N' ) {"
+				       //"this.value='Y';"
+				       //"} "
+				       //"else if ( this.value=='Y' ) {"
+				       //"this.value='N';"
+				       //"}"
+				       //"\" "
+				       ">"
+				       ,cgi
+				       ,val);//,ddd);
 			//
 			// repeat for off position
 			//
-			if ( ! lastRow || m->m_page != PAGE_FILTERS )  {
-				sb->safePrintf(" Off:<input type=radio ");
-				if ( m->m_page == PAGE_FILTERS)
-					sb->safePrintf("id=id_%s ",cgi);
-				sb->safePrintf("value=0 name=%s%s>",
-					       cgi,ddd2);
-			}
+			//if ( ! lastRow || m->m_page != PAGE_FILTERS )  {
+			//	sb->safePrintf(" Off:<input type=radio ");
+			//	if ( m->m_page == PAGE_FILTERS)
+			//		sb->safePrintf("id=id_%s ",cgi);
+			//	sb->safePrintf("value=0 name=%s%s>",
+			//		       cgi,ddd2);
+			//}
 			sb->safePrintf("</nobr></center>");
 		}
 	}
@@ -2975,8 +3036,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		sb->safePrintf ( "<td><a href=\"?c=%s&cast=1&"
 				 //"ins_%s=1\">insert</td>\n",coll,cgi );
 				 // insert=<rowNum>
-				 "insert=%li\">insert</td>\n",coll,
-				 (long)m->m_rowid);
+				 // "j" is the row #
+				 "insert=%li\">insert</td>\n",coll,j );
 	}
 
 	// does next guy start a new row?
@@ -3006,7 +3067,7 @@ bool Parms::printParm ( SafeBuf* sb,
 					// remove=<rownum>
 					"remove=%li\">"
 					"remove</td>\n",coll,//cgi );
-					(long)m->m_rowid);
+					j); // j is row #
 					
 		else
 			sb->safePrintf ( "<td></td>\n");
@@ -8998,6 +9059,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_func  = CommandInsertUrlFiltersRow;
 	m->m_cast  = 1;
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "remove parm row";
@@ -9007,6 +9069,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_func  = CommandRemoveUrlFiltersRow;
 	m->m_cast  = 1;
+	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "delete collection";
@@ -13545,7 +13608,8 @@ void Parms::init ( ) {
 	m->m_max   = MAX_FILTERS;
 	m->m_off   = (char *)cr.m_spiderFreqs - x;
 	m->m_type  = TYPE_FLOAT;
-	m->m_def   = "0.0"; // 0.0
+	// why was this default 0 days?
+	m->m_def   = "30.0"; // 0.0
 	m->m_page  = PAGE_FILTERS;
 	m->m_units = "days";
 	m->m_rowid = 1;
@@ -13617,10 +13681,12 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_PRIORITY2; // includes UNDEFINED priority in dropdown
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
-	m->m_def   = "";
+	m->m_def   = "50";
 	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_addin = 1; // "insert" follows?
 	m++;
 
+	/*
 	m->m_title = "diffbot api";
 	m->m_cgi   = "dapi";
 	m->m_xml   = "diffbotAPI";
@@ -13637,8 +13703,9 @@ void Parms::init ( ) {
 	m->m_size  = sizeof(SafeBuf);
 	m->m_rowid = 1;
 	m->m_addin = 1; // "insert" follows?
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CUSTOMCRAWLONLY;
 	m++;
+	*/
 
 	//m->m_title = "<a href=/overview.html#ruleset>ruleset</a>";
 	//m->m_cgi   = "frs";
@@ -16172,6 +16239,15 @@ void Parms::init ( ) {
 	m->m_scgi  = "icc";
 	m++;
 
+	m->m_title = "get section voting info in json";
+	m->m_desc  = "Will cause section voting info to be returned.";
+	m->m_sparm = 1;
+	m->m_soff  = (char *)&si.m_getSectionVotingInfo - y;
+	m->m_type  = TYPE_CHAR;
+	m->m_def   = "0";
+	m->m_scgi  = "sectionvotes";
+	m++;
+
 	// for /get
 	m->m_title = "docId";
 	m->m_desc  = "X is the docid of the cached page to view.";
@@ -16732,6 +16808,8 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 		val = parmValString;
 		// include \0
 		valSize = gbstrlen(val)+1;
+		// sanity
+		if ( val[valSize-1] != '\0' ) { char *xx=NULL;*xx=0; }
 	}
 	else if ( m->m_type == TYPE_LONG ) {
 		// watch out for unsigned 32-bit numbers, so use atoLL()
@@ -16755,6 +16833,10 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 		  m->m_type == TYPE_PRIORITY2 ||
 		  m->m_type == TYPE_CHAR ) {
 		val8 = atol(parmValString);
+		//if ( parmValString && to_lower_a(parmValString[0]) == 'y' )
+		//	val8 = 1;
+		//if ( parmValString && to_lower_a(parmValString[0]) == 'n' )
+		//	val8 = 0;
 		val = (char *)&val8;
 		valSize = 1;
 	}
@@ -17065,6 +17147,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	//	}
 	//}
 
+
 	//
 	// now add the parms that are NOT commands
 	//
@@ -17110,6 +17193,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 					   m ) )
 			return false;
 	}
+
 
 	return true;
 }
@@ -18168,10 +18252,13 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		sb->purge();
 		// this means that we can not use string POINTERS as parms!!
 		if ( data && dataSize && data[0] )
-			sb->safeMemcpy ( data , dataSize );
+			// don't include \0 as part of length
+			sb->safeStrcpy ( data ); // , dataSize );
 		// ensure null terminated
 		sb->nullTerm();
 		//return true;
+		// sanity
+		if ( data[dataSize-1] != '\0' ) { char *xx=NULL;*xx=0; }
 	}
 	else {
 		// and copy the data into collrec or g_conf

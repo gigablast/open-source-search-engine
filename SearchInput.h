@@ -96,6 +96,7 @@ class SearchInput {
 	char   m_excludeMetaText;
 	char   m_doBotDetection;
 	long   m_includeCachedCopy;
+	char   m_getSectionVotingInfo;
 	char   m_familyFilter;            // msg40
 	char   m_restrictIndexdbForQuery; // msg40
 	char   m_doSiteClustering;        // msg40

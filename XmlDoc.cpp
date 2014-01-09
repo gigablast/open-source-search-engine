@@ -186,6 +186,8 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_didDelete = false;
+
 	m_metaList2.purge();
 
 	m_mySiteLinkInfoBuf.purge();
@@ -753,9 +755,9 @@ void XmlDoc::reset ( ) {
 	m_launchedSpecialMsg8a     = false;
 	m_launchedMsg8a2           = false;
 
-	//m_numSectiondbReads        = 0;
-	//m_numSectiondbNeeds        = 0;
-	//m_sectiondbRecall          = 0;
+	m_numSectiondbReads        = 0;
+	m_numSectiondbNeeds        = 0;
+	m_sectiondbRecall          = 0;
 
 	//m_triedVoteCache           = false;
 	//m_storedVoteCache          = false;
@@ -812,7 +814,8 @@ void XmlDoc::reset ( ) {
 	m_useTagdb     = true;
 	m_usePlacedb   = true;
 	//m_useTimedb    = true;
-	//m_useSectiondb = true;
+	// only use for custom crawls for now to save disk space
+	m_useSectiondb = false;
 	//m_useRevdb     = true;
 	m_useSecondaryRdbs = false;
 
@@ -2022,6 +2025,12 @@ bool XmlDoc::indexDoc ( ) {
 		m_spideredTime = getTimeGlobal();//0; use now!
 	}
 
+	// if error is EFAKEFIRSTIP, do not core
+	//if ( ! m_isIndexedValid ) {
+	//	m_isIndexed = false;
+	//	m_isIndexedValid = true;
+	//}
+
 	// if this is EABANDONED or EHITCRAWLLIMIT or EHITPROCESSLIMIT
 	// or ECORRUPTDATA (corrupt gzip reply)
 	// then this should not block. we need a spiderReply to release the 
@@ -2938,8 +2947,8 @@ long *XmlDoc::getIndexCode2 ( ) {
 	// validate this here so getSpiderPriority(), which calls 
 	// getUrlFilterNum(), which calls getNewSpiderReply(), which calls
 	// us, getIndexCode() does not repeat all this junk
-	m_indexCodeValid = true;
-	m_indexCode      = 0;
+	//m_indexCodeValid = true;
+	//m_indexCode      = 0;
 
 	// this needs to be last!
 	long *priority = getSpiderPriority();
@@ -2968,7 +2977,9 @@ long *XmlDoc::getIndexCode2 ( ) {
 	}
 
 	// if using diffbot and the diffbot reply had a time out error
-	// or otherwise... diffbot failure demands a re-try always i guess
+	// or otherwise... diffbot failure demands a re-try always i guess.
+	// put this above getSpiderPriority() call otherwise we end up in
+	// a recursive loop with getIndexCode() and getNewSpiderReply()
 	SafeBuf *dbr = getDiffbotReply();
 	if ( ! dbr || dbr == (void *)-1 ) return (long *)dbr;
 	if ( m_diffbotReplyValid && m_diffbotReplyError ) {
@@ -5799,14 +5810,19 @@ Sections *XmlDoc::getSections ( ) {
 	//HashTableX *rvt = getRootVotingTable();
 	//if ( ! rvt || rvt == (void *)-1 ) return (Sections *)rvt;
 
-	//SectionVotingTable *osvt = getOldSectionVotingTable();
-	//if ( ! osvt || osvt == (void *)-1 ) return (Sections *)osvt;
+	SectionVotingTable *osvt = getOldSectionVotingTable();
+	if ( ! osvt || osvt == (void *)-1 ) return (Sections *)osvt;
 
 	uint32_t *tph = getTagPairHash32();
 	if ( ! tph || tph == (uint32_t *)-1 ) return (Sections *)tph;
 
+	if ( ! m_useSectiondb ) {
+		m_sectionsValid = true;
+		return &m_sections;
+	}
+
 	// start here
-	//Section *si;
+	Section *si;
 
 	/*
 	// get first sentence in doc
@@ -5907,7 +5923,6 @@ Sections *XmlDoc::getSections ( ) {
 	//
 	///////////////////////////////////////
 
-	/*
 	// get first sentence in doc
 	si = ss->m_firstSent;
 	// do not bother scanning if no votes
@@ -5947,13 +5962,11 @@ Sections *XmlDoc::getSections ( ) {
 		//     ! (si->m_flags & SEC_HAS_NONFUZZYDATE) )
 		//	si->m_sentFlags |= SENT_DUP_SECTION;
 	}
-	*/
 
 	m_sectionsValid = true;
 	return &m_sections;
 }
 
-/*
 SectionVotingTable *XmlDoc::getNewSectionVotingTable ( ) {
 	if ( m_nsvtValid ) return &m_nsvt;
 	// need sections
@@ -5985,10 +5998,7 @@ SectionVotingTable *XmlDoc::getNewSectionVotingTable ( ) {
 	m_nsvtValid = true;
 	return &m_nsvt;
 }
-*/
 
-
-//*/
 
 // . scan every section and look up its tag and content hashes in
 //   sectiondb to find out how many pages and sites have the same hash
@@ -6273,7 +6283,6 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
 	return &msg3a->m_sectionStats;
 }
 
-/*
 // . for all urls from this subdomain...
 // . EXCEPT root url since we use msg17 to cache that, etc.
 SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
@@ -6313,6 +6322,9 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 	// the docid
 	long long *d = getDocId();
 	if ( ! d || d == (long long *)-1 ) return (SectionVotingTable *)d;
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
 
 	// . for us, dates are really containers of the flags and tag hash
 	// . init this up here, it is re-set if we re-call getSectiondbList()
@@ -6375,10 +6387,10 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 		// shortcut
 		Msg0 *m = &m_msg0;
 		// get the group this list is in (split = false)
-		unsigned long gid = getGroupId ( RDB_SECTIONDB,
-						 (char *)&m_sectiondbStartKey);
+		unsigned long shardNum;
+		shardNum = getShardNum ( RDB_SECTIONDB,(char *)&m_sectiondbStartKey);
 		// we need a group # from the groupId
-		long split = g_hostdb.getGroupNum ( gid );
+		//long split = g_hostdb.getGroupNum ( gid );
 		// note it
 		//logf(LOG_DEBUG,"sections: "
 		//     "reading list from sectiondb: "
@@ -6397,7 +6409,7 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 				    0                       , // maxCacheAge
 				    false                   , // addToCache
 				    RDB_SECTIONDB           , // was RDB_DATEDB
-				    m_coll                  ,
+				    cr->m_coll                  ,
 				    &m_secdbList            ,
 				    (char *)&m_sectiondbStartKey ,
 				    (char *)&end            ,
@@ -6421,7 +6433,7 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 				    true  ,  // allowpagecache?
 				    false ,  // forceLocalIndexdb?
 				    false ,  // doIndexdbSplit?
-				    split ))
+				    shardNum ) )//split ))
 			// return -1 if blocks
 			return (SectionVotingTable *)-1;
 		// error?
@@ -6526,7 +6538,6 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 	m_osvtValid = true;
 	return &m_osvt;
 }
-*/
 
 long *XmlDoc::getLinkSiteHashes ( ) {
 	if ( m_linkSiteHashesValid ) 
@@ -13051,14 +13062,22 @@ SafeBuf *XmlDoc::getDiffbotApiUrl ( ) {
 		return &m_diffbotApiUrl;
 	}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+
+	m_diffbotApiUrl.safeMemcpy ( &cr->m_diffbotApiUrl );
+	m_diffbotApiUrl.nullTerm();
+	m_diffbotApiUrlValid = true;
+
 	// this now automatically sets m_diffbotApiUrl and m_diffbotApiUrlValid
 	// in case the url filters table changes while spidering this!!!
 	// gotta be careful of that.
-	long *ufn = getUrlFilterNum();
-	if ( ! ufn || ufn == (void *)-1 ) return (SafeBuf *)ufn;
+	//long *ufn = getUrlFilterNum();
+	//if ( ! ufn || ufn == (void *)-1 ) return (SafeBuf *)ufn;
 
 	// ensure it does set it!
-	if ( ! m_diffbotApiUrlValid ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_diffbotApiUrlValid ) { char *xx=NULL;*xx=0; }
 
 	//m_diffbotApiNum = cr->m_spiderDiffbotApiNum[*ufn];
 
@@ -13307,7 +13326,10 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
-	if ( *getIndexCode() ) 
+	// getIndexCode() calls getDiffbotReply(), so avoid a loop!
+	//if ( *getIndexCode() ) 
+	//	return &m_diffbotReply;
+	if ( m_indexCodeValid && m_indexCode )
 		return &m_diffbotReply;
 
 	// if already processed and onlyprocessifnew is enabled then
@@ -13593,6 +13615,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	diffbotUrl.nullTerm();
 
 	// mark as tried
+	if ( m_newsrValid ) { char *xx=NULL;*xx=0; }
 	m_sentToDiffbot = 1;
 	
 	// count it for stats
@@ -15451,12 +15474,11 @@ int startUp ( void *cmd ) {
 	argv[2] = (char *)cmd;
 	argv[3] = 0;
 	char *envp[2];
-	//char  buf[128];
-	SafeBuf sb;
+	char  buf[1024];
 	// antiword needs this environment var so it can find 
 	// the .antiword/ dir , we should put it in gb's working dir
-	sb.safePrintf("HOME=%s", g_hostdb.m_dir );
-	envp[0] = sb.getBufStart(); // buf;
+	snprintf(buf,1023,"HOME=%s", g_hostdb.m_dir );
+	envp[0] = buf;
 	envp[1] = 0;
 	execve("/bin/sh", argv, envp );
 	//exit(127);
@@ -16915,13 +16937,21 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	// . PROBLEM! this is the new reply not the OLD reply, so it may
 	//   end up matching a DIFFERENT url filter num then what it did
 	//   before we started spidering it...
-	SpiderReply *newsr = getNewSpiderReply ( );
+	//SpiderReply *newsr = getNewSpiderReply ( );
 	// note it
-	if ( ! newsr )
-		log("doc: getNewSpiderReply: %s",mstrerror(g_errno));
-	// sanity check
-	//if ( ! newsr || newsr == (void *)-1 ) { char *xx=NULL;*xx=0; }
-	if ( ! newsr || newsr == (void *)-1 ) return (long *)newsr;
+	//if ( ! newsr )
+	//	log("doc: getNewSpiderReply: %s",mstrerror(g_errno));
+	//if ( ! newsr || newsr == (void *)-1 ) return (long *)newsr;
+
+	// need language i guess
+	uint8_t *langId = getLangId();
+	if ( ! langId || langId == (uint8_t *)-1 ) return (long *)langId;
+
+
+	// make a fake one for now
+	SpiderReply fakeReply;
+	// just language for now, so we can FILTER by language
+	if ( m_langIdValid ) fakeReply.m_langId = m_langId;
 
 
 	CollectionRec *cr = getCollRec();
@@ -16951,7 +16981,7 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	// . look it up
 	// . use the old spidered date for "nowGlobal" so we can be consistent
 	//   for injecting into the "test" coll
-	long ufn = ::getUrlFilterNum ( oldsr,newsr,spideredTime,false,
+	long ufn = ::getUrlFilterNum ( oldsr,&fakeReply,spideredTime,false,
 				       m_niceness,cr);
 
 	// put it back
@@ -16972,12 +17002,12 @@ long *XmlDoc::getUrlFilterNum ( ) {
 
 	// set this too in case the url filters table changes while
 	// we are spidering this and a row is inserted or deleted or something
-	SafeBuf *yy = &cr->m_spiderDiffbotApiUrl[ufn];
+	//SafeBuf *yy = &cr->m_spiderDiffbotApiUrl[ufn];
 	// copy to ours
-	m_diffbotApiUrl.safeMemcpy ( yy );
+	//m_diffbotApiUrl.safeMemcpy ( yy );
 	// ensure null term
-	m_diffbotApiUrl.nullTerm();
-	m_diffbotApiUrlValid = true;
+	//m_diffbotApiUrl.nullTerm();
+	//m_diffbotApiUrlValid = true;
 
 
 	return &m_urlFilterNum;
@@ -17744,8 +17774,8 @@ bool XmlDoc::logIt ( ) {
 	//   that we used to get the diffbot reply (array of json objects)
 	//   will have the spider priority
 	if ( ! getIsInjecting() && ! m_isDiffbotJSONObject ) {
-		long *priority = getSpiderPriority();
-		if ( ! priority || priority==(void *)-1){char *xx=NULL;*xx=0;}
+		//long *priority = getSpiderPriority();
+		//if ( ! priority ||priority==(void *)-1){char *xx=NULL;*xx=0;}
 		if ( m_priorityValid )
 			sb.safePrintf("priority=%li ",
 				      (long)m_priority);
@@ -19659,7 +19689,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	long long *pch64 = getExactContentHash64();
 	if ( ! pch64 || pch64 == (void *)-1 ) return (char *)pch64;
 
-	/*
 	// get the voting table which we will add to sectiondb
 	SectionVotingTable *nsvt = NULL;
 	SectionVotingTable *osvt = NULL;
@@ -19668,6 +19697,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// cuz then there is revdb, so we are 30%. so that's a no go.
 	bool addSectionVotes = false;
 	if ( nd ) addSectionVotes = true;
+	if ( ! m_useSectiondb ) addSectionVotes = false;
 	// to save disk space no longer add the roots! nto only saves sectiondb
 	// but also saves space in revdb
 	//if ( nd && *isRoot ) addSectionVotes = true;
@@ -19678,7 +19708,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		osvt = getNewSectionVotingTable();
 		if ( ! osvt || osvt == (void *)-1 ) return (char *)osvt;
 	}
-	*/
 
 	// get the addresses for hashing tag hashes that indicate place names
 	Addresses *na = NULL;
@@ -20013,7 +20042,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//if ( ! od && m_skipIndexing && needNoSplit ) { char *xx=NULL;*xx=0; }
 
 
-	/*
 	setStatus ( "hashing sectiondb keys" );
 	// add in special sections keys. "ns" = "new sections", etc.
 	// add in the special nosplit datedb terms from the Sections class
@@ -20045,7 +20073,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//needSectiondb += st2.m_numSlotsUsed * (16+svs+1);
 	// add it in
 	need += needSectiondb;
-	*/
 
 
 	// Sections::respiderLineWaiters() adds one docid-based spider rec
@@ -20395,7 +20422,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	verifyMetaList( m_metaList , m_p );
 	*/
 
-	/*
 	//
 	// ADD SECTIONS SPECIAL TERMS
 	//
@@ -20413,7 +20439,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//st2.reset();
 	// sanity check
 	verifyMetaList( m_metaList , m_p , forDelete );
-	*/
 
 
 	//
@@ -21162,6 +21187,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	}
 
 
+	// if we only removed it from index, set this flag
+	if ( oldList && ! nd ) m_didDelete = true;
+
 	//
 	// repeat this logic special for linkdb since we keep lost links
 	// and may update the discovery date or lost date in the keys
@@ -21351,6 +21379,16 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	long long *de = getDownloadEndTime();
 	if ( ! de || de == (void *)-1 ) return (SpiderReply *)de;
 
+	// need to set m_sentToDiffbot!!
+	SafeBuf *dbr = getDiffbotReply();
+	if ( ! dbr || dbr == (void *)-1 ) return (SpiderReply *)dbr;
+	
+
+	// was the doc index when we started trying to spider this url?
+	//char *wasIndexed = getIsIndexed();
+	//if ( ! wasIndexed || wasIndexed == (void *)-1 ) 
+	//	return (SpiderReply *)wasIndexed;
+
 	//Tag *vt = m_oldTagRec.getTag("venueaddress");
 	//bool siteHasVenue = (bool)vt;
 	
@@ -21463,6 +21501,25 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	else
 		m_newsr.m_hadDiffbotError = false;
 
+	m_newsr.m_wasIndexed = false;
+
+	if ( m_oldDocValid && m_oldDoc ) m_newsr.m_wasIndexed = true;
+
+	// note whether m_wasIndexed is valid because if it isn't then
+	// we shouldn't be counting this reply towards the page counts.
+	// if we never made it this far i guess we should not forcibly call
+	// getIsIndexed() at this point so our performance is fast in case
+	// this is an EFAKEFIRSTIP error or something similar where we
+	// basically just add this reply and we're done.
+	// NOTE: this also pertains to SpiderReply::m_isIndexed.
+	if ( m_oldDocValid ) m_newsr.m_wasIndexedValid = true;
+
+	// likewise, we need to know if we deleted it so we can decrement the
+	// quota count for this subdomain/host in SpiderColl::m_quotaTable
+	if ( m_newsr.m_wasIndexed ) m_newsr.m_isIndexed = true;
+
+	if ( m_didDelete ) m_newsr.m_isIndexed = false;
+
 	// treat error replies special i guess, since langId, etc. will be
 	// invalid
 	if ( m_indexCode ) {
@@ -21570,8 +21627,9 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	if ( ! m_downloadEndTimeValid ) { char *xx=NULL;*xx=0; }
 	m_newsr.m_downloadEndTime      = m_downloadEndTime;
 
-	// if m_indexCode was 0, we are indexed then...
-	m_newsr.m_isIndexed = 1;
+	// . if m_indexCode was 0, we are indexed then...
+	// . this logic is now above
+	//m_newsr.m_isIndexed = 1;
 
 	// get ptr to old doc/titlerec
 	XmlDoc **pod = getOldXmlDoc ( );
@@ -24333,8 +24391,24 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 	sprintf(buf2,"%llu",(m_docId) );
 	if ( ! hashSingleTerm(buf2,gbstrlen(buf2),&hi) ) return false;
 
-	// hash
-
+	// if indexing a json diffbot object, index 
+	// gbparenturl:xxxx of the original url from which the json was
+	// datamined. we use this so we can act as a diffbot json cache.
+	if ( m_isDiffbotJSONObject ) {
+		setStatus ( "hashing gbparenturl term");
+		char *p = fu->getUrl() + fu->getUrlLen() - 1;
+		// back up to - as in "http://xyz.com/foo-diffbotxyz13"
+		for ( ; *p && *p != '-' ; p-- );
+		// set up the hashing parms
+		hi.m_hashGroup = HASHGROUP_INTAG;
+		hi.m_tt        = tt;
+		hi.m_desc      = "diffbot parent url";
+		// append a "www." as part of normalization
+		uw.set ( fu->getUrl() , p - fu->getUrl() , true );
+		hi.m_prefix    = "gbparenturl";
+		if ( ! hashSingleTerm(uw.getUrl(),uw.getUrlLen(),&hi) ) 
+			return false;
+	}
 
 	return true;
 }
@@ -26415,6 +26489,16 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	if ( m_req->m_includeCachedCopy ) {
 		reply-> ptr_content =  ptr_utf8Content;
 		reply->size_content = size_utf8Content;
+	}
+
+	if ( m_req->m_getSectionVotingInfo && m_tmpBuf3.getCapacity() <= 0 ) {
+		Sections *ss = getSections();
+		if ( ! ss || ss == (void *)-1) return (Msg20Reply *)ss;
+		// will at least store a \0 in there, but will not count
+		// as part of the m_tmpBuf.length()
+	        ss->printVotingInfoInJSON ( &m_tmpBuf3 );
+		reply-> ptr_sectionVotingInfo = m_tmpBuf3.getBufStart();
+		reply->size_sectionVotingInfo = m_tmpBuf3.length() + 1;
 	}
 
 	// breathe
