@@ -5832,6 +5832,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "dospellchecking";
 	m->m_def   = "1"; 
 	m->m_type  = TYPE_BOOL;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "do narrow search";
@@ -5840,6 +5841,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "donarrowsearch";
 	m->m_def   = "0"; 
 	m->m_type  = TYPE_BOOL;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	///////////////////////////////////////////
@@ -8341,6 +8343,7 @@ void Parms::init ( ) {
 	m->m_size = USERS_TEXT_SIZE;
 	m->m_plen = (char *)&g_conf.m_superTurksLen - g;
 	m->m_page = PAGE_SECURITY;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -8422,6 +8425,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m->m_priv  = 2;
 	m->m_def   = "";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	///////////////////////////////////////////
