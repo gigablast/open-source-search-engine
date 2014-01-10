@@ -2048,7 +2048,10 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	while ( b < g_collectiondb.m_numRecs && countb < 16 )
 		if ( g_collectiondb.m_recs[b++] ) countb++;
 
-	sb->safePrintf ( "<center><b>Collections</b></center><br><br>\n" );
+	char *s = "";
+	if ( g_collectiondb.m_numRecsUsed == 1 ) s = "s";
+	sb->safePrintf ( "<center><b>%li Collection%s</b></center><br>\n",
+			 g_collectiondb.m_numRecsUsed , s );
 
 	char *color = "red";
 	//if ( page >= PAGE_CGIPARMS ) color = "red";
