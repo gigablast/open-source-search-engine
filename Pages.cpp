@@ -1721,7 +1721,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 
 	//long matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
 	//long matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
-	for ( long i = PAGE_STATS ; i < s_numPages ; i++ ) {
+	for ( long i = PAGE_MASTER ; i < s_numPages ; i++ ) {
 		// do not print link if no permission for that page
 		//if ( (s_pages[i].m_perm & user) == 0 ) continue;
 		//if ( ! g_users.hasPermission(username,i) ) continue;
@@ -1918,7 +1918,7 @@ char *Pages::printAdminLinks ( char *p    ,
 
 	//long matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
 	//long matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
-	for ( long i = PAGE_STATS ; i < s_numPages ; i++ ) {
+	for ( long i = PAGE_MASTER ; i < s_numPages ; i++ ) {
 		// do not print link if no permission for that page
 		//if ( (s_pages[i].m_perm & user) == 0 ) continue;
 		//if ( ! g_users.hasPermission(username,i) ) continue;

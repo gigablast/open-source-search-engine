@@ -172,6 +172,9 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	// hack this off until the overrun bug is fixed
 	g_conf.m_datedbMaxCacheMem = 0;
 
+	// force on for now
+	g_conf.m_useStatsdb = true;
+
 	// hard-code disable this -- could be dangerous
 	g_conf.m_bypassValidation = true;//false;
 	// this could too! (need this)

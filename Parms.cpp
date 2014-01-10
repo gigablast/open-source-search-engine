@@ -5833,14 +5833,13 @@ void Parms::init ( ) {
 	// MASTER CONTROLS
 	///////////////////////////////////////////
 
-	m->m_title = "local spidering enabled";
-	m->m_desc  = "Overrides all spidering for all collections on just "
-		  "this host.";
+	m->m_title = "spidering enabled";
+	m->m_desc  = "Controls all spidering for all collections";
 	m->m_cgi   = "se";
 	m->m_off   = (char *)&g_conf.m_spideringEnabled - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
-	m->m_cast  = 0;
+	m->m_def   = "1";
+	//m->m_cast  = 0;
 	m->m_page  = PAGE_MASTER;
 	m++;
 
@@ -5864,6 +5863,51 @@ void Parms::init ( ) {
 	//m->m_cast  = 0;
 	m++;
 
+	m->m_title = "auto save frequency";
+	m->m_desc  = "Copy data in memory to disk after this many minutes "
+		"have passed without the data having been dumped or saved "
+		"to disk. Use 0 to disable.";
+	m->m_cgi   = "asf";
+	m->m_off   = (char *)&g_conf.m_autoSaveFrequency - g;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "30";
+	m->m_units = "mins";
+	m++;
+
+	m->m_title = "max http sockets";
+	m->m_desc  = "Maximum sockets available to serve incoming HTTP "
+		"requests. Too many outstanding requests will increase "
+		"query latency. Excess requests will simply have their "
+		"sockets closed.";
+	m->m_cgi   = "ms";
+	m->m_off   = (char *)&g_conf.m_httpMaxSockets - g;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "100";
+	m++;
+
+	m->m_title = "max https sockets";
+	m->m_desc  = "Maximum sockets available to serve incoming HTTPS "
+		"requests. Like max http sockets, but for secure sockets.";
+	m->m_cgi   = "mss";
+	m->m_off   = (char *)&g_conf.m_httpsMaxSockets - g;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "100";
+	m->m_group = 0;
+	m++;
+
+	m->m_title = "spider user agent";
+	m->m_desc  = "Identification seen by web servers when "
+		"the Gigablast spider downloads their web pages. "
+		"It is polite to insert a contact email address here so "
+		"webmaster that experience problems from the Gigablast "
+		"spider have somewhere to vent.";
+	m->m_cgi   = "sua";
+	m->m_off   = (char *)&g_conf.m_spiderUserAgent - g;
+	m->m_type  = TYPE_STRING;
+	m->m_size  = USERAGENTMAXSIZE;
+	m->m_def   = "GigablastOpenSource/1.0";
+	m++;
+
         m->m_title = "use temporary cluster";
         m->m_desc  = "Used by proxy to point to a temporary cluster while the "
 		"original cluster is updated with a new binary. The "
@@ -5874,6 +5918,7 @@ void Parms::init ( ) {
         m->m_off   = (char *)&g_conf.m_useTmpCluster - g;
         m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
         m++;
 
 	/*
@@ -5895,6 +5940,7 @@ void Parms::init ( ) {
 	m->m_func  = CommandParserTestInit;
 	m->m_def   = "1";
 	m->m_cast  = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
@@ -5908,6 +5954,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_cast  = 1;
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "continue spider test run";
@@ -5918,6 +5965,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_cast  = 1;
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -5941,6 +5989,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	//m->m_cast  = 0;
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -5962,6 +6011,7 @@ void Parms::init ( ) {
 	m->m_func  = CommandJustSave;
 	m++;
 
+	/*
 	m->m_title = "all spiders on";
 	m->m_desc  = "Enable spidering on all hosts";
 	m->m_cgi   = "ase";
@@ -5977,6 +6027,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_spideringEnabled - g;
 	m->m_type  = TYPE_BOOL2; // no yes or no, just a link
 	m++;
+	*/
 
 	/*
 	m->m_title = "save & exit";
@@ -6004,18 +6055,19 @@ void Parms::init ( ) {
 	m->m_cgi   = "save";
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandSaveAndExit;
+	m->m_group = 0;
 	m++;
 
 	m->m_title = "dump to disk";
-	m->m_desc  = "Flushes all records in memory to the disk.";
+	m->m_desc  = "Flushes all records in memory to the disk on all hosts.";
 	m->m_cgi   = "dump";
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandDiskDump;
-	m->m_cast  = 0;
+	m->m_cast  = 1;
 	m++;
 
 	m->m_title = "tight merge posdb";
-	m->m_desc  = "Merges all outstanding indexdb files.";
+	m->m_desc  = "Merges all outstanding posdb (index) files.";
 	m->m_cgi   = "pmerge";
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandMergePosdb;
@@ -6031,11 +6083,12 @@ void Parms::init ( ) {
 	//m++;
 
 	m->m_title = "tight merge titledb";
-	m->m_desc  = "Merges all outstanding titledb files.";
+	m->m_desc  = "Merges all outstanding titledb (web page cache) files.";
 	m->m_cgi   = "tmerge";
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandMergeTitledb;
 	m->m_cast  = 1;
+	m->m_group = 0;
 	m++;
 
 	m->m_title = "tight merge spiderdb";
@@ -6044,16 +6097,28 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandMergeSpiderdb;
 	m->m_cast  = 1;
+	m->m_group = 0;
+	m++;
+
+	m->m_title = "clear kernel error message";
+	m->m_desc  = "Clears the kernel error message. You must do this "
+		"to stop getting email alerts for a kernel ring buffer "
+		"error alert.";
+	m->m_cgi   = "clrkrnerr";
+	m->m_type  = TYPE_CMD;
+	m->m_func  = CommandClearKernelError;
+	m->m_cast  = 1;
 	m++;
 
 	m->m_title = "disk page cache off";
 	m->m_desc  = "Disable all disk page caches to save mem for "
-		"tmp cluster. Just for this host. Run "
+		"tmp cluster. Run "
 		"gb cacheoff to do for all hosts.";
 	m->m_cgi   = "dpco";
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandDiskPageCacheOff;
-	m->m_cast  = 0;
+	m->m_cast  = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	//m->m_title = "http server enabled";
@@ -6066,6 +6131,7 @@ void Parms::init ( ) {
 	//m->m_def   = "1";
 	//m++;
 
+	/*
 	m->m_title = "ad feed enabled";
 	m->m_desc  = "Serves ads unless pure=1 is in cgi parms.";
 	m->m_cgi   = "afe";
@@ -6077,6 +6143,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;	
 	m->m_priv  = 2;
 	m++;
+	*/
 
 	m->m_title = "do stripe balancing";
 	m->m_desc  = "Stripe #n contains twin #n from each group. Doing "
@@ -6095,6 +6162,7 @@ void Parms::init ( ) {
 	//m->m_scgi  = "dsb";
 	//m->m_soff  = (char *)&si.m_doStripeBalancing - y;
 	//m->m_sparm = 1;	
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "is live cluster";
@@ -6106,6 +6174,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_isLive - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -6125,15 +6194,66 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_isWikipedia - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
-	m->m_title = "max hard drive temperature";
-	m->m_desc  = "At what temperature in Celsius should we send "
-		"an email alert if a hard drive reaches it?";
-	m->m_cgi   = "mhdt";
-	m->m_off   = (char *)&g_conf.m_maxHardDriveTemp - g;
+
+        m->m_title = "ask for gzipped docs when downloading";
+        m->m_desc  = "If this is true, gb will send accept-encoding: gzip"
+		"when doing http downloads.";
+        m->m_cgi   = "afgdwd";
+        m->m_off   = (char *)&g_conf.m_gzipDownloads - g;
+        m->m_type  = TYPE_BOOL;
+        m->m_def   = "0";
+        m++;
+	
+	m->m_title = "search results cache max age";
+	m->m_desc = "How many seconds should we cache a search results "
+		"page for?";
+	m->m_cgi  = "srcma";
+	m->m_off  = (char *)&g_conf.m_searchResultsMaxCacheAge - g;
+	m->m_def  = "10800"; // 3 hrs
+	m->m_type = TYPE_LONG;
+	m->m_units = "seconds";
+	m++;
+
+	m->m_title = "autoban IPs which violate the queries per day quotas";
+	m->m_desc  = "Keep track of ips which do queries, disallow "
+		"non-customers from hitting us too hard.";
+	m->m_cgi   = "ab";
+	m->m_off   = (char *)&g_conf.m_doAutoBan - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m++;
+
+	if ( g_isYippy ) {
+	m->m_title = "Max outstanding search requests out for yippy";
+	m->m_desc  = "Max outstanding search requests out for yippy";
+	m->m_cgi   = "ymo";
+	m->m_off   = (char *)&g_conf.m_maxYippyOut - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "45";
+	m->m_def   = "150";
+	m++;
+	}
+
+	m->m_title = "free queries per day ";
+	m->m_desc  = "Non-customers get this many queries per day before"
+		"being autobanned";
+	m->m_cgi   = "nfqpd";
+	m->m_off   = (char *)&g_conf.m_numFreeQueriesPerDay - g;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "1024";
+	m->m_flags = PF_HIDDEN;
+	m++;
+
+	m->m_title = "free queries per minute ";
+	m->m_desc  = "Non-customers get this many queries per minute before"
+		"being autobanned";
+	m->m_cgi   = "nfqpm";
+	m->m_off   = (char *)&g_conf.m_numFreeQueriesPerMinute - g;
+	m->m_type  = TYPE_CHAR;
+	m->m_def   = "30";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max heartbeat delay in milliseconds";
@@ -6145,6 +6265,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_maxHeartbeatDelay - g;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max delay before logging a callback or handler";
@@ -6158,7 +6279,6 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_maxCallbackDelay - g;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "-1";
-	m->m_group = 0;
 	m++;
 
 
@@ -6171,13 +6291,26 @@ void Parms::init ( ) {
 	m->m_def   = "10.5.54.47";
 	m->m_size  = MAX_MX_LEN;
 	m->m_priv  = 2;
-	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "send email alerts";
 	m->m_desc  = "Sends emails to admin if a host goes down.";
 	m->m_cgi   = "sea";
 	m->m_off   = (char *)&g_conf.m_sendEmailAlerts - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 2;
+	m++;
+
+	m->m_title = "delay non critical email alerts";
+	m->m_desc  = "Do not send email alerts about dead hosts to "
+		"anyone except sysadmin@gigablast.com between the times "
+		"given below unless all the twins of the dead host are "
+		"also dead. Instead, wait till after if the host "
+		"is still dead. ";
+	m->m_cgi   = "dnca";
+	m->m_off   = (char *)&g_conf.m_delayNonCriticalEmailAlerts - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 2;
@@ -6248,14 +6381,23 @@ void Parms::init ( ) {
 // 	m->m_group = 0;
 // 	m++;
 
+	m->m_title = "cluster name";
+	m->m_desc  = "Email alerts will include the cluster name";
+	m->m_cgi   = "cn";
+	m->m_off   = (char *)&g_conf.m_clusterName - g;
+	m->m_type  = TYPE_STRING;
+	m->m_size  = 32;
+	m->m_def   = "unspecified";
+	m++;
+
 	m->m_title = "send email alerts to sysadmin";
 	m->m_desc  = "Sends to sysadmin@gigablast.com.";
 	m->m_cgi   = "seatsa";
 	m->m_off   = (char *)&g_conf.m_sendEmailAlertsToSysadmin - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m->m_priv  = 2;
-	m->m_group = 0;
 	m++;
 
 	/*
@@ -6280,6 +6422,186 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	m->m_title = "dead host timeout";
+	m->m_desc  = "Consider a host in the Gigablast network to be dead if "
+		"it does not respond to successive pings for this number of "
+		"seconds. Gigablast does not send requests to dead hosts. "
+		"Outstanding requests may be re-routed to a twin.";
+	m->m_cgi   = "dht";
+	m->m_off   = (char *)&g_conf.m_deadHostTimeout - g;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "4000";
+	m->m_units = "milliseconds";
+	m->m_flags = PF_HIDDEN;
+	m++;
+
+	m->m_title = "send email timeout";
+	m->m_desc  = "Send an email after a host has not responded to "
+		"successive pings for this many milliseconds.";
+	m->m_cgi   = "set";
+	m->m_off   = (char *)&g_conf.m_sendEmailTimeout - g;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "62000";
+	m->m_priv  = 2;
+	m->m_units = "milliseconds";
+	m++;
+
+	m->m_title = "ping spacer";
+	m->m_desc  = "Wait this many milliseconds before pinging the next "
+		"host. Each host pings all other hosts in the network.";
+	m->m_cgi   = "ps";
+	m->m_off   = (char *)&g_conf.m_pingSpacer - g;
+	m->m_min   = 50; // i've seen values of 0 hammer the cpu
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "100";
+	m->m_units = "milliseconds";
+	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
+	m++;
+
+	//m->m_title = "max query time";
+	//m->m_desc  = "When computing the avgerage query latency "
+	//	"truncate query latency times to this so that "
+	//	"a single insanely long query latency time does "
+	//	"not trigger the alarm. This is in seconds.";
+	//m->m_cgi   = "mqlr";
+	//m->m_off   = (char *)&g_conf.m_maxQueryTime - g;
+	//m->m_type  = TYPE_FLOAT;
+	//m->m_def   = "30.0";
+	//m->m_priv  = 2;
+	//m->m_group = 0;
+	//m++;
+
+	m->m_title = "query success rate threshold";
+	m->m_desc  = "Send email alerts when query success rate goes below "
+		"this threshold.";
+	m->m_cgi   = "qsrt";
+	m->m_off   = (char *)&g_conf.m_querySuccessThreshold - g;
+	m->m_type  = TYPE_FLOAT;
+	m->m_def   = "0.85";
+	m->m_priv  = 2;
+	m++;
+
+	m->m_title = "average query latency threshold";
+	m->m_desc  = "Send email alerts when average query latency goes above "
+		"this threshold.";
+	m->m_cgi   = "aqpst";
+	m->m_off   = (char *)&g_conf.m_avgQueryTimeThreshold - g;
+	m->m_type  = TYPE_FLOAT;
+	// a titlerec fetch times out after 2 seconds and is re-routed
+	m->m_def   = "2.0";
+	m->m_priv  = 2;
+	m->m_units = "seconds";
+	m++;
+
+	m->m_title = "number of query times in average";
+	m->m_desc  = "Record this number of query times before calculating "
+		"average query latency.";
+	m->m_cgi   = "nqt";
+	m->m_off   = (char *)&g_conf.m_numQueryTimes - g;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "300";
+	m->m_priv  = 2;
+	m->m_group = 0;
+	m++;
+
+
+	m->m_title = "max corrupt index lists";
+	m->m_desc  = "If we reach this many corrupt index lists, send "
+		"an admin email.  Set to -1 to disable.";
+	m->m_cgi   = "mcil";
+	m->m_off   = (char *)&g_conf.m_maxCorruptLists - g;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "5";
+	m->m_priv  = 2;
+	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
+	m++;
+
+	m->m_title = "max hard drive temperature";
+	m->m_desc  = "At what temperature in Celsius should we send "
+		"an email alert if a hard drive reaches it?";
+	m->m_cgi   = "mhdt";
+	m->m_off   = (char *)&g_conf.m_maxHardDriveTemp - g;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "45";
+	m++;
+
+	/*
+	m->m_title = "delay emails after";
+	m->m_desc  = "If delay non critical email alerts is on, don't send "
+		"emails after this time. Time is hh:mm. Time is take from "
+		"host #0's system clock in UTC.";
+	m->m_cgi   = "dea";
+	m->m_off   = (char *)&g_conf.m_delayEmailsAfter - g;
+	m->m_type  = TYPE_TIME; // time format -- very special
+	m->m_def   = "00:00";
+	m->m_priv  = 2;
+	m++;
+
+	m->m_title = "delay emails before";
+	m->m_desc  = "If delay non critical email alerts is on, don't send "
+		"emails before this time. Time is hh:mm Time is take from "
+		"host #0's system clock in UTC.";
+	m->m_cgi   = "deb";
+	m->m_off   = (char *)&g_conf.m_delayEmailsBefore - g;
+	m->m_type  = TYPE_TIME; // time format -- very special
+	m->m_def   = "00:00";
+	m->m_priv  = 2;
+	m++;
+	*/
+
+
+	/*
+	  Disable this until it works.
+	m->m_title = "use merge token";
+	m->m_desc  = "If used, prevents twins, or hosts on the same ide "
+		"channel, from merging simultaneously.";
+	m->m_cgi   = "umt";
+	m->m_off   = (char *)&g_conf.m_useMergeToken - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m++;
+	*/
+
+	m->m_title = "error string 1";
+	m->m_desc  = "Look for this string in the kernel buffer for sending "
+		"email alert. Useful for detecting some strange "
+		"hard drive failures that really slow performance.";
+	m->m_cgi   = "errstrone";
+	m->m_off   = (char *)&g_conf.m_errstr1 - g;
+	m->m_type  = TYPE_STRING;
+	m->m_def   = "";
+	m->m_size  = MAX_URL_LEN;
+	m->m_priv  = 2;
+	m++;
+
+	m->m_title = "error string 2";
+	m->m_desc  = "Look for this string in the kernel buffer for sending "
+		"email alert. Useful for detecting some strange "
+		"hard drive failures that really slow performance.";
+	m->m_cgi   = "errstrtwo";
+	m->m_off   = (char *)&g_conf.m_errstr2 - g;
+	m->m_type  = TYPE_STRING;
+	m->m_def   = "";
+	m->m_size  = MAX_URL_LEN;
+	m->m_priv  = 2;
+	m->m_group = 0;
+	m++;
+
+	m->m_title = "error string 3";
+	m->m_desc  = "Look for this string in the kernel buffer for sending "
+		"email alert. Useful for detecting some strange "
+		"hard drive failures that really slow performance.";
+	m->m_cgi   = "errstrthree";
+	m->m_off   = (char *)&g_conf.m_errstr3 - g;
+	m->m_type  = TYPE_STRING;
+	m->m_def   = "";
+	m->m_size  = MAX_URL_LEN;
+	m->m_priv  = 2;
+	m->m_group = 0;
+	m++;
+
 	m->m_title = "send email alerts to email 1";
 	m->m_desc  = "Sends to email address 1 through email server 1.";
 	m->m_cgi   = "seatone";
@@ -6287,7 +6609,6 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 2;
-	m->m_group = 0;
 	m++;
 
 	m->m_title = "send parm change email alerts to email 1";
@@ -6341,7 +6662,6 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 2;
-	m->m_group = 0;
 	m++;
 
 	m->m_title = "send parm change email alerts to email 2";
@@ -6395,7 +6715,6 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 2;
-	m->m_group = 0;
 	m++;
 
 	m->m_title = "send parm change email alerts to email 3";
@@ -6450,7 +6769,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 2;
-	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "send parm change email alerts to email 4";
@@ -6462,6 +6781,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_priv  = 2;
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "email server 4";
@@ -6473,6 +6793,7 @@ void Parms::init ( ) {
 	m->m_size  = MAX_MX_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "email address 4";
@@ -6484,6 +6805,7 @@ void Parms::init ( ) {
 	m->m_size  = MAX_EMAIL_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "from email address 4";
@@ -6495,96 +6817,10 @@ void Parms::init ( ) {
 	m->m_size  = MAX_EMAIL_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
-
-	m->m_title = "delay non critical email alerts";
-	m->m_desc  = "Do not send email alerts about dead hosts to "
-		"anyone except sysadmin@gigablast.com between the times "
-		"given below unless all the twins of the dead host are "
-		"also dead. Instead, wait till after if the host "
-		"is still dead. ";
-	m->m_cgi   = "dnca";
-	m->m_off   = (char *)&g_conf.m_delayNonCriticalEmailAlerts - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
-	m->m_priv  = 2;
-	m->m_group = 0;
-	m++;
-
-	/*
-	m->m_title = "delay emails after";
-	m->m_desc  = "If delay non critical email alerts is on, don't send "
-		"emails after this time. Time is hh:mm. Time is take from "
-		"host #0's system clock in UTC.";
-	m->m_cgi   = "dea";
-	m->m_off   = (char *)&g_conf.m_delayEmailsAfter - g;
-	m->m_type  = TYPE_TIME; // time format -- very special
-	m->m_def   = "00:00";
-	m->m_priv  = 2;
-	m++;
-
-	m->m_title = "delay emails before";
-	m->m_desc  = "If delay non critical email alerts is on, don't send "
-		"emails before this time. Time is hh:mm Time is take from "
-		"host #0's system clock in UTC.";
-	m->m_cgi   = "deb";
-	m->m_off   = (char *)&g_conf.m_delayEmailsBefore - g;
-	m->m_type  = TYPE_TIME; // time format -- very special
-	m->m_def   = "00:00";
-	m->m_priv  = 2;
-	m++;
-	*/
-
-
-	/*
-	  Disable this until it works.
-	m->m_title = "use merge token";
-	m->m_desc  = "If used, prevents twins, or hosts on the same ide "
-		"channel, from merging simultaneously.";
-	m->m_cgi   = "umt";
-	m->m_off   = (char *)&g_conf.m_useMergeToken - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m++;
-	*/
-
-	m->m_title = "error string 1";
-	m->m_desc  = "Look for this string in the kernel buffer for sending "
-		"email ";
-	m->m_cgi   = "errstrone";
-	m->m_off   = (char *)&g_conf.m_errstr1 - g;
-	m->m_type  = TYPE_STRING;
-	m->m_def   = "";
-	m->m_size  = MAX_URL_LEN;
-	m->m_priv  = 2;
-	m->m_group = 0;
-	m++;
-
-	m->m_title = "error string 2";
-	m->m_desc  = "Look for this string in the kernel buffer for sending "
-		"email ";
-	m->m_cgi   = "errstrtwo";
-	m->m_off   = (char *)&g_conf.m_errstr2 - g;
-	m->m_type  = TYPE_STRING;
-	m->m_def   = "";
-	m->m_size  = MAX_URL_LEN;
-	m->m_priv  = 2;
-	m->m_group = 0;
-	m++;
-
-	m->m_title = "error string 3";
-	m->m_desc  = "Look for this string in the kernel buffer for sending "
-		"email ";
-	m->m_cgi   = "errstrthree";
-	m->m_off   = (char *)&g_conf.m_errstr3 - g;
-	m->m_type  = TYPE_STRING;
-	m->m_def   = "";
-	m->m_size  = MAX_URL_LEN;
-	m->m_priv  = 2;
-	m->m_group = 0;
-	m++;
 
 	m->m_title = "prefer local reads";
 	m->m_desc  = "If you have scsi drives or a slow network, say yes here "
@@ -6593,6 +6829,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_preferLocalReads - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -6610,15 +6847,6 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "do synchronous writes";
-	m->m_desc  = "If enabled then all writes will be flushed to disk. "
-		"This is generally a good thing.";
-	m->m_cgi   = "fw";
-	m->m_off   = (char *)&g_conf.m_flushWrites - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m++;
-
 	m->m_title = "verify disk writes";
 	m->m_desc  = "Read what was written in a verification step. Decreases "
 		"performance, but may help fight disk corruption mostly on "
@@ -6628,6 +6856,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	// this is ifdef'd out in Msg3.cpp for performance reasons,
@@ -6655,6 +6884,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_doIncrementalUpdating - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	// you can really screw up the index if this is false, so 
@@ -6680,6 +6910,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useEtcHosts - g;
 	m->m_def   = "0"; 
 	m->m_type  = TYPE_BOOL;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "twins are split";
@@ -6691,6 +6922,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_splitTwins - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "do out of memory testing";
@@ -6700,6 +6932,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_testMem - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "do consistency testing";
@@ -6712,6 +6945,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use shotgun";
@@ -6723,6 +6957,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useShotgun - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use quickpoll";
@@ -6732,6 +6967,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useQuickpoll - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 // 	m->m_title = "quickpoll core on error";
@@ -6750,6 +6986,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useThreads - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	// . this will leak the shared mem if the process is Ctrl+C'd
@@ -6767,6 +7004,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useSHM - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	// disable disk caches... for testing really
@@ -6786,6 +7024,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useDiskPageCachePosdb - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use disk page cache for datedb";
@@ -6794,6 +7033,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useDiskPageCacheDatedb - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use disk page cache for titledb";
@@ -6803,6 +7043,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use disk page cache for spiderdb";
@@ -6812,6 +7053,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -6832,6 +7074,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use disk page cache for checksumdb";
@@ -6841,6 +7084,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use disk page cache for clusterdb";
@@ -6850,6 +7094,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use disk page cache for catdb";
@@ -6859,6 +7104,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use disk page cache for linkdb";
@@ -6868,6 +7114,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -6904,6 +7151,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_scanAllIfNotFound - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "interface machine";
@@ -6915,6 +7163,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 2;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "generate vector at query time";
@@ -6925,44 +7174,10 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_generateVectorAtQueryTime - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
-	m->m_title = "autoban IPs which violate the queries per day quotas";
-	m->m_desc  = "Keep track of ips which do queries, disallow "
-		"non-customers from hitting us too hard.";
-	m->m_cgi   = "ab";
-	m->m_off   = (char *)&g_conf.m_doAutoBan - g;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
-	m++;
 
-	if ( g_isYippy ) {
-	m->m_title = "Max outstanding search requests out for yippy";
-	m->m_desc  = "Max outstanding search requests out for yippy";
-	m->m_cgi   = "ymo";
-	m->m_off   = (char *)&g_conf.m_maxYippyOut - g;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "150";
-	m++;
-	}
-
-	m->m_title = "free queries per day ";
-	m->m_desc  = "Non-customers get this many queries per day before"
-		"being autobanned";
-	m->m_cgi   = "nfqpd";
-	m->m_off   = (char *)&g_conf.m_numFreeQueriesPerDay - g;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "1024";
-	m++;
-
-	m->m_title = "free queries per minute ";
-	m->m_desc  = "Non-customers get this many queries per minute before"
-		"being autobanned";
-	m->m_cgi   = "nfqpm";
-	m->m_off   = (char *)&g_conf.m_numFreeQueriesPerMinute - g;
-	m->m_type  = TYPE_CHAR;
-	m->m_def   = "30";
-	m++;
 
         m->m_title = "redirect non-raw traffic";
         m->m_desc  = "If this is non empty, http traffic will be redirected "
@@ -6972,6 +7187,7 @@ void Parms::init ( ) {
         m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_URL_LEN;
         m->m_def   = "";
+	m->m_flags = PF_HIDDEN;
         m++;
 
         m->m_title = "send requests to compression proxy";
@@ -6982,6 +7198,7 @@ void Parms::init ( ) {
         m->m_off   = (char *)&g_conf.m_useCompressionProxy - g;
         m->m_type  = TYPE_BOOL;
         m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
         m++;
 
         m->m_title = "synchronize proxy to cluster time";
@@ -6991,6 +7208,7 @@ void Parms::init ( ) {
         m->m_off   = (char *)&g_conf.m_timeSyncProxy - g;
         m->m_type  = TYPE_BOOL;
         m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
         m++;
 
 	/*
@@ -7048,6 +7266,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_allowScale - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "allow bypass of db validation";
@@ -7059,6 +7278,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_bypassValidation - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -7076,15 +7296,6 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CMD;
 	m++;
 	*/
-
-	m->m_title = "clear kernel error message";
-	m->m_desc  = "clears the kernel error message that the host may be "
-		"sending to other hosts.";
-	m->m_cgi   = "clrkrnerr";
-	m->m_type  = TYPE_CMD;
-	m->m_func  = CommandClearKernelError;
-	m->m_cast  = 0;
-	m++;
 
 	// do we need this any more?
 	/*
@@ -7246,7 +7457,8 @@ void Parms::init ( ) {
 
 	m->m_title = "dns 0";
 	m->m_desc  = "IP address of the primary DNS server. Assumes UDP "
-		"port 53.";
+		"port 53. REQUIRED FOR SPIDERING! Use Google's "
+		"public DNS 8.8.8.8 as default.";
 	m->m_cgi   = "pdns";
 	m->m_off   = (char *)&g_conf.m_dnsIps[0] - g;
 	m->m_type  = TYPE_IP;
@@ -7258,7 +7470,7 @@ void Parms::init ( ) {
 	m->m_desc  = "IP address of the secondary DNS server. Assumes UDP "
 	"port 53. Will be accessed in conjunction with the primary "
 	"dns, so make sure this is always up. An ip of 0 means "
-	"disabled.";
+	"disabled. Google's secondary public DNS is 8.8.4.4.";
 	m->m_cgi   = "sdns";
 	m->m_off   = (char *)&g_conf.m_dnsIps[1] - g;
 	m->m_type  = TYPE_IP;
@@ -7268,7 +7480,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "dns 2";
-	m->m_desc  = "";
+	m->m_desc  = "All hosts send to these DNSes based on hash "
+		"of the subdomain to try to split DNS load evenly.";
 	m->m_cgi   = "sdnsa";
 	m->m_off   = (char *)&g_conf.m_dnsIps[2] - g;
 	m->m_type  = TYPE_IP;
@@ -7400,6 +7613,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_geocoderIps[0] - g;
 	m->m_type  = TYPE_IP;
 	m->m_def   = "10.5.66.11"; // sp1
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "geocoder IP #2";
@@ -7409,6 +7623,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "geocoder IP #3";
@@ -7418,6 +7633,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "geocoder IP #4";
@@ -7427,6 +7643,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "wiki proxy ip";
@@ -7435,6 +7652,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_wikiProxyIp - g;
 	m->m_type  = TYPE_IP;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
@@ -7445,40 +7663,10 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
-	m->m_title = "cluster name";
-	m->m_desc  = "Email alerts will include the cluster name";
-	m->m_cgi   = "cn";
-	m->m_off   = (char *)&g_conf.m_clusterName - g;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 32;
-	m->m_def   = "unspecified";
-	m++;
-
-	m->m_title = "spider user agent";
-	m->m_desc  = "Identification seen by web servers when "
-		"the Gigablast spider downloads their web pages. "
-		"It is polite to insert a contact email address here so "
-		"webmaster that experience problems from the Gigablast "
-		"spider have somewhere to vent.";
-	m->m_cgi   = "sua";
-	m->m_off   = (char *)&g_conf.m_spiderUserAgent - g;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = USERAGENTMAXSIZE;
-	m->m_def   = "GigaBot/1.0";
-	m++;
-
-        m->m_title = "ask for gzipped docs when downloading";
-        m->m_desc  = "If this is true, gb will send accept-encoding: gzip"
-		"when doing http downloads.";
-        m->m_cgi   = "afgdwd";
-        m->m_off   = (char *)&g_conf.m_gzipDownloads - g;
-        m->m_type  = TYPE_BOOL;
-        m->m_def   = "0";
-        m++;
-	
 	m->m_title = "default collection";
 	m->m_desc  = "When no collection is explicitly specified, assume "
 		"this collection name.";
@@ -7487,6 +7675,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_COLL_LEN+1;
 	m->m_def   = "";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "directory collection";
@@ -7497,6 +7686,8 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_COLL_LEN+1;
 	m->m_def   = "main";
+	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "directory hostname";
@@ -7507,6 +7698,8 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_URL_LEN;
 	m->m_def   = "";
+	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max incoming bandwidth for spider";
@@ -7517,6 +7710,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "999999.0";
 	m->m_units = "Kbps";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max 1-minute sliding-window loadavg";
@@ -7529,20 +7723,7 @@ void Parms::init ( ) {
 	m->m_def   = "0.0";
 	m->m_units = "";
 	m->m_group = 0;
-	m++;
-
-	m->m_title = "max cpu threads";
-	m->m_desc  = "Maximum number of threads to use per Gigablast process "
-		"for intersecting docid lists. Generally, set this to the "
-		"number of CPUs on the machine.";
-	m->m_cgi   = "mct";
-	m->m_off   = (char *)&g_conf.m_maxCpuThreads - g;
-	m->m_type  = TYPE_LONG;
-	// make it 3 for new gb in case one query takes way longer 
-	// than the others
-	m->m_def   = "3"; // "2";
-	m->m_units = "threads";
-	m->m_min   = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max pages per second";
@@ -7554,6 +7735,7 @@ void Parms::init ( ) {
 	m->m_def   = "999999.0";
 	m->m_units = "pages/second";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -7582,101 +7764,6 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "dead host timeout";
-	m->m_desc  = "Consider a host in the Gigablast network to be dead if "
-		"it does not respond to successive pings for this number of "
-		"seconds. Gigablast does not send requests to dead hosts. "
-		"Outstanding requests may be re-routed to a twin.";
-	m->m_cgi   = "dht";
-	m->m_off   = (char *)&g_conf.m_deadHostTimeout - g;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "4000";
-	m->m_units = "milliseconds";
-	m++;
-
-	m->m_title = "send email timeout";
-	m->m_desc  = "Send an email after a host has not responded to "
-		"successive pings for this many milliseconds.";
-	m->m_cgi   = "set";
-	m->m_off   = (char *)&g_conf.m_sendEmailTimeout - g;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "62000";
-	m->m_priv  = 2;
-	m->m_units = "milliseconds";
-	m->m_group = 0;
-	m++;
-
-	m->m_title = "ping spacer";
-	m->m_desc  = "Wait this many milliseconds before pinging the next "
-		"host. Each host pings all other hosts in the network.";
-	m->m_cgi   = "ps";
-	m->m_off   = (char *)&g_conf.m_pingSpacer - g;
-	m->m_min   = 50; // i've seen values of 0 hammer the cpu
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "100";
-	m->m_units = "milliseconds";
-	m->m_group = 0;
-	m++;
-
-	m->m_title = "average query latency threshold";
-	m->m_desc  = "Send email alerts when average query latency goes above "
-		"this threshold.";
-	m->m_cgi   = "aqpst";
-	m->m_off   = (char *)&g_conf.m_avgQueryTimeThreshold - g;
-	m->m_type  = TYPE_FLOAT;
-	// a titlerec fetch times out after 2 seconds and is re-routed
-	m->m_def   = "2.0";
-	m->m_priv  = 2;
-	m->m_group = 0;
-	m->m_units = "seconds";
-	m++;
-
-	//m->m_title = "max query time";
-	//m->m_desc  = "When computing the avgerage query latency "
-	//	"truncate query latency times to this so that "
-	//	"a single insanely long query latency time does "
-	//	"not trigger the alarm. This is in seconds.";
-	//m->m_cgi   = "mqlr";
-	//m->m_off   = (char *)&g_conf.m_maxQueryTime - g;
-	//m->m_type  = TYPE_FLOAT;
-	//m->m_def   = "30.0";
-	//m->m_priv  = 2;
-	//m->m_group = 0;
-	//m++;
-
-	m->m_title = "query success rate threshold";
-	m->m_desc  = "Send email alerts when query success rate goes below "
-		"this threshold.";
-	m->m_cgi   = "qsrt";
-	m->m_off   = (char *)&g_conf.m_querySuccessThreshold - g;
-	m->m_type  = TYPE_FLOAT;
-	m->m_def   = "0.85";
-	m->m_priv  = 2;
-	m->m_group = 0;
-	m++;
-
-	m->m_title = "number of query times in average";
-	m->m_desc  = "Record this number of query times before calculating "
-		"average query latency.";
-	m->m_cgi   = "nqt";
-	m->m_off   = (char *)&g_conf.m_numQueryTimes - g;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "300";
-	m->m_priv  = 2;
-	m->m_group = 0;
-	m++;
-
-
-	m->m_title = "max corrupt index lists";
-	m->m_desc  = "If we reach this many corrupt index lists, send "
-		"an admin email.  Set to -1 to disable.";
-	m->m_cgi   = "mcil";
-	m->m_off   = (char *)&g_conf.m_maxCorruptLists - g;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "5";
-	m->m_priv  = 2;
-	m->m_group = 0;
-	m++;
 
 	/*
 	m->m_title = "root quality max cache age base";
@@ -7695,6 +7782,20 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	m->m_title = "max cpu threads";
+	m->m_desc  = "Maximum number of threads to use per Gigablast process "
+		"for intersecting docid lists.";
+	m->m_cgi   = "mct";
+	m->m_off   = (char *)&g_conf.m_maxCpuThreads - g;
+	m->m_type  = TYPE_LONG;
+	// make it 3 for new gb in case one query takes way longer 
+	// than the others
+	m->m_def   = "2"; // "2";
+	m->m_units = "threads";
+	m->m_min   = 1;
+	m->m_flags = PF_HIDDEN;
+	m++;
+
 	m->m_title = "max write threads";
 	m->m_desc  = "Maximum number of threads to use per Gigablast process "
 		"for writing data to the disk. "
@@ -7705,6 +7806,18 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1";
 	m->m_units = "threads";
+	m->m_flags = PF_HIDDEN;
+	m++;
+
+	m->m_title = "do synchronous writes";
+	m->m_desc  = "If enabled then all writes will be flushed to disk. "
+		"This is generally a good thing.";
+	m->m_cgi   = "fw";
+	m->m_off   = (char *)&g_conf.m_flushWrites - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max spider read threads";
@@ -7718,6 +7831,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "7";
 	m->m_units = "threads";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max spider big read threads";
@@ -7728,6 +7842,7 @@ void Parms::init ( ) {
 	m->m_def   = "3"; // 1
 	m->m_units = "threads";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max spider medium read threads";
@@ -7738,6 +7853,7 @@ void Parms::init ( ) {
 	m->m_def   = "4"; // 3
 	m->m_units = "threads";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max spider small read threads";
@@ -7748,6 +7864,7 @@ void Parms::init ( ) {
 	m->m_def   = "5";
 	m->m_units = "threads";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max query read threads";
@@ -7761,6 +7878,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "20";
 	m->m_units = "threads";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max query big read threads";
@@ -7771,6 +7889,7 @@ void Parms::init ( ) {
 	m->m_def   = "20"; // 1
 	m->m_units = "threads";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max query medium read threads";
@@ -7781,6 +7900,7 @@ void Parms::init ( ) {
 	m->m_def   = "20"; // 3
 	m->m_units = "threads";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max query small read threads";
@@ -7791,6 +7911,7 @@ void Parms::init ( ) {
 	m->m_def   = "20";
 	m->m_units = "threads";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "min popularity for speller";
@@ -7803,6 +7924,7 @@ void Parms::init ( ) {
 	m->m_def   = ".01";
 	m->m_units = "%%";
 	m->m_priv  = 2;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "phrase weight";
@@ -7814,6 +7936,7 @@ void Parms::init ( ) {
 	// emphasized the phrase terms too much!!
 	m->m_def   = "100"; 
 	m->m_units = "%%";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "weights.cpp slider parm (tmp)";
@@ -7823,6 +7946,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "90";
 	m->m_units = "%%";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -7892,6 +8016,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "8192";
 	m->m_units = "bytes";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "merge buf size";
@@ -7906,6 +8031,7 @@ void Parms::init ( ) {
 	// to be way better performance for qps
 	m->m_def   = "500000";
 	m->m_units = "bytes";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "catdb minRecSizes";
@@ -7914,27 +8040,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_catdbMinRecSizes - g;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100000000"; // 100 million
-	m++;
-
-	m->m_title = "max http sockets";
-	m->m_desc  = "Maximum sockets available to serve incoming HTTP "
-		"requests. Too many outstanding requests will increase "
-		"query latency. Excess requests will simply have their "
-		"sockets closed.";
-	m->m_cgi   = "ms";
-	m->m_off   = (char *)&g_conf.m_httpMaxSockets - g;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "100";
-	m++;
-
-	m->m_title = "max https sockets";
-	m->m_desc  = "Maximum sockets available to serve incoming HTTPS "
-		"requests. Like max http sockets, but for secure sockets.";
-	m->m_cgi   = "mss";
-	m->m_off   = (char *)&g_conf.m_httpsMaxSockets - g;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "100";
-	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -7949,17 +8055,6 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "auto save frequency";
-	m->m_desc  = "Copy data in memory to disk after this many minutes "
-		"have passed without the data having been dumped or saved "
-		"to disk. Use 0 to disable.";
-	m->m_cgi   = "asf";
-	m->m_off   = (char *)&g_conf.m_autoSaveFrequency - g;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "30";
-	m->m_units = "mins";
-	m++;
-
 	m->m_title = "doc count adjustment";
 	m->m_desc  = "Add this number to the total document count in the "
 		"index. Just used for displaying on the homepage.";
@@ -7967,6 +8062,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_docCountAdjustment - g;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "dynamic performance graph";
@@ -7976,6 +8072,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_dynamicPerfGraph - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "enable profiling";
@@ -7984,7 +8081,8 @@ void Parms::init ( ) {
 	m->m_cgi   = "enp";
 	m->m_off   = (char *)&g_conf.m_profilingEnabled - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "minimum profiling threshold";
@@ -7996,6 +8094,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "10";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
@@ -8008,6 +8107,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 	
 	m->m_title = "use statsdb";
@@ -8015,8 +8115,9 @@ void Parms::init ( ) {
 	m->m_cgi   = "usdb"; 
 	m->m_off   = (char *)&g_conf.m_useStatsdb - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -8122,16 +8223,6 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 	*/
-
-	m->m_title = "search results cache max age";
-	m->m_desc = "How many seconds should we cache a search results "
-		"page for?";
-	m->m_cgi  = "srcma";
-	m->m_off  = (char *)&g_conf.m_searchResultsMaxCacheAge - g;
-	m->m_def  = "10800"; // 3 hrs
-	m->m_type = TYPE_LONG;
-	m->m_units = "seconds";
-	m++;
 
 
 	///////////////////////////////////////////
@@ -9170,8 +9261,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "spidering enabled";
-	m->m_desc  = "When enabled the spider adds pages to your index. ";
-	m->m_cgi  = "cse";
+	m->m_desc  = "Controls just the spiders for this collection.";
+	m->m_cgi   = "cse";
 	m->m_off   = (char *)&cr.m_spideringEnabled - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
@@ -13693,6 +13784,9 @@ void Parms::init ( ) {
 		"expressions. "
 		"Use the <i>&&</i> operator to string multiple expressions "
 		"together in the same expression text box. "
+		"A <i>spider priority</i> of <i>FILTERED</i> or <i>BANNED</i> "
+		"will cause the URL to not be spidered, or if it has already "
+		"been indexed, it will be deleted when it is respidered."
 		"<br><br>";
 		
 		/*
