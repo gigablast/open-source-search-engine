@@ -13,6 +13,7 @@
 #include "DailyMerge.h"
 #include "Spider.h"
 #include "Test.h"
+#include "Rebalance.h"
 
 #define PAGER_BUF_SIZE (10*1024)
 
@@ -415,6 +416,11 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	*(long*)p = g_stats.m_slowDiskReads;
 	p += sizeof(long);
 
+	// and hosts.conf crc
+	*(long *)p = g_hostdb.getCRC(); p += 4;
+	// ensure crc is legit
+	if ( g_hostdb.getCRC() == 0 ) { char *xx=NULL;*xx=0; }
+
 
 	// flags indicating our state
 	long flags = 0;
@@ -425,6 +431,8 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	if ( g_spiderLoop.m_numSpidersOut > 0 ) flags |= PFLAG_HASSPIDERS;
 	if ( g_process.isRdbMerging()         ) flags |= PFLAG_MERGING;
 	if ( g_process.isRdbDumping()         ) flags |= PFLAG_DUMPING;
+	if ( g_rebalancing.m_isScanning       ) flags |= PFLAG_REBALANCING;
+	if ( g_rebalancing.m_foreignRecs      ) flags |= PFLAG_FOREIGNRECS;
 	if ( g_dailyMerge.m_mergeMode    == 0 ) flags |= PFLAG_MERGEMODE0;
 	if ( g_dailyMerge.m_mergeMode ==0 || g_dailyMerge.m_mergeMode == 6 )
 		flags |= PFLAG_MERGEMODE0OR6;
@@ -845,7 +853,9 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 	// . it can only be advanced to 2 when we receive ping replies from
 	//   everyone that they are not spidering or merging titledb...
 	if ( requestSize == MAX_PING_SIZE){//14+4+4+4+4+sizeof(collnum_t)+1 ) {
+
 		char* p = request + 10;
+
 		// fetch load avg...
 		h->m_loadAvg = ((double)(*((long*)(p)))) / 100.0;
 		p += sizeof(long);
@@ -871,6 +881,11 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 		// slow disk reads is important
 		h->m_slowDiskReads = *(long*)(p);
 		p += sizeof(long);
+
+		h->m_hostsConfCRC = *(long*)(p);
+		p += sizeof(long);
+		// sanity
+		if ( h->m_hostsConfCRC == 0 ) { char *xx=NULL;*xx=0; }
 
 		// put the state flags
 		h->m_flags = *(long *)(p);
@@ -937,6 +952,31 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 		// make it a normal ping now
 		requestSize = 8;
 	}
+
+	//
+	// do all hosts have the same hosts.conf????
+	//
+	// if some hosts are dead then we will not set either flag.
+	//
+	// scan all grunts for agreement. do this line once per sec?
+	//
+	long agree = 0;
+	long i; for ( i = 0 ; i < g_hostdb.getNumGrunts() ; i++ ) {
+		Host *h = &g_hostdb.m_hosts[i];			
+		// skip if not received yet
+		if ( ! h->m_hostsConfCRC ) continue;
+		// badness?
+		if ( h->m_hostsConfCRC != g_hostdb.m_crc ) {
+			g_hostdb.m_hostsConfInDisagreement = true;
+			break;
+		}
+		// count towards agreement
+		agree++;
+	}
+	// iff all in agreement, set this flag
+	if ( agree == g_hostdb.getNumGrunts() )
+		g_hostdb.m_hostsConfInAgreement = true;
+			
 
 	// if request is 5 bytes, must be a host telling us he's shutting down
 	if ( requestSize == 5 ) {

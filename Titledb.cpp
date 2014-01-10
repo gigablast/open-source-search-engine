@@ -187,6 +187,8 @@ bool Titledb::verify ( char *coll ) {
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
+		// tally it up
+		g_rebalance.m_foreignRecs += count - got;
 		log ("db: Out of first %li records in titledb, "
 		     "only %li belong to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
@@ -209,8 +211,8 @@ bool Titledb::verify ( char *coll ) {
 		//if ( g_conf.m_allowScale ) return true;
 		// don't exit any more, allow it, but do not delete
 		// recs that belong to different shards when we merge now!
-		log ( "db: Titledb shards unbalanced. "
-		      "Click rebalance shards.");
+		log ( "db: db shards unbalanced. "
+		      "Click autoscale in master controls.");
 		//return false;
 		return true;
 	}

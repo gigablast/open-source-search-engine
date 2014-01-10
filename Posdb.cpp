@@ -307,6 +307,8 @@ bool Posdb::verify ( char *coll ) {
 		}
 	}
 	if ( got != count ) {
+		// tally it up
+		g_rebalance.m_foreignRecs += count - got;
 		log ("db: Out of first %li records in posdb, only %li belong "
 		     "to our group.",count,got);
 		// exit if NONE, we probably got the wrong data

@@ -4652,6 +4652,19 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( g_collectiondb.m_numRecs <= 0 ) return;
 	// not while repairing
 	if ( g_repairMode ) return;
+	// don't spider until we can be sure all hosts have same hosts.conf
+	if ( ! g_rebalance.m_hostsConfInAgreement ) return;
+	// don't spider if we have records that don't belong to our shard,
+	// we have to use Rebalance.cpp to send them to where they belong.
+	// this is the auto-scaling feature.
+	if ( g_rebalance.m_inRebalanceLoop ) return;
+	// if on startup some hosts reported having recs that do not belong
+	// to their shard then we need to rebalance i guess... but do not
+	// automatically start rebalancing because the user could have just
+	// put a bad hosts.conf file in there!!!!
+	if ( g_process.m_numShardMisses ) return;
+	if ( g_rebalance.m_hostsConfChanged ) return;
+
 
 	//if ( g_conf.m_logDebugSpider )
 	//	log("spider: trying to get a doledb rec to spider. "

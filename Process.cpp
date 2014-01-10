@@ -1075,6 +1075,15 @@ void processSleepWrapper ( int fd , void *state ) {
 
 	// do not do autosave if no power
 	if ( ! g_process.m_powerIsOn ) return;
+
+	// . i guess try to autoscale the cluster in cast hosts.conf changed
+	// . if all pings came in and all hosts have the same hosts.conf
+	//   and if we detected any shard imbalance at startup we have to
+	//   scan all rdbs for records that don't belong to us and send them
+	//   where they should go
+	// . returns right away in most cases
+	g_rebalance.rebalanceLoop();
+
 	// autosave? override this if power is off, we need to save the data!
 	//if (g_conf.m_autoSaveFrequency <= 0 && g_process.m_powerIsOn) return;
 	if ( g_conf.m_autoSaveFrequency <= 0 ) return;
@@ -1610,6 +1619,10 @@ bool Process::saveBlockingFiles1 ( ) {
 	// . this is repeated above too
 	// . keep it here for auto-save
 	g_repair.save();
+
+	// save our place during a rebalance
+	g_rebalance.save();
+
 	// save the login table
 	g_users.save();
 

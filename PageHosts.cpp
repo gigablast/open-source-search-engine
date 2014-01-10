@@ -381,26 +381,43 @@ skipReplaceHost:
 		if ( h->m_splitsDone ) 
 			splitTime = h->m_splitTimes / h->m_splitsDone;
 
-		char flagString[32];
-		char *fs = flagString;
-		*fs = '\0';
+		//char flagString[32];
+		char tmpfb[64];
+		SafeBuf fb(tmpfb,64);
+		//char *fs = flagString;
+		//*fs = '\0';
+
+		// does its hosts.conf file disagree with ours?
+		if ( h->m_hostsConfCRC &&
+		     h->m_hostsConfCRC != g_hostdb.getCRC() )
+			fb.safePrintf("<font color=red>H</font>");
+		// rebalancing?
+		if ( h->m_flags & PFLAG_REBALANCING )
+			fb.safePrintf("<blink>R</blink>");
+		// has recs that should be in another shard? indicates
+		// we need to rebalance or there is a bad hosts.conf
+		if ( h->m_flags & PFLAG_FOREIGNRECS )
+			fb.safePrintf("<font color=red><blink>F"
+				      "</blink></font");
 		// if it has spiders going on say "S"
 		if ( h->m_flags & PFLAG_HASSPIDERS )
-			strcat ( fs , "S");
+			fb.safePrintf ( "S");
 		// say "M" if merging
 		if (   h->m_flags & PFLAG_MERGING )
-			strcat ( fs , "M");
+			fb.safePrintf ( "M");
 		// say "D" if dumping
 		if (   h->m_flags & PFLAG_DUMPING )
-			strcat ( fs , "D");
+			fb.safePrintf ( "D");
 		// say "y" if doing the daily merge
 		if (  !(h->m_flags & PFLAG_MERGEMODE0) )
-			strcat ( fs , "y");
+			fb.safePrintf ( "y");
 		// clear it if it is us, this is invalid
-		if ( ! h->m_gotPingReply )
-			strcpy(flagString,"??");
-		if ( fs[0] == '\0' )
-			strcpy(flagString,"&nbsp;");
+		if ( ! h->m_gotPingReply ) {
+			fb.reset();
+			fb.safePrintf("??");
+		}
+		if ( fb.length() == 0 )
+			fb.safePrintf("&nbsp;");
 
 		// print it
 		sb.safePrintf (
@@ -506,7 +523,7 @@ skipReplaceHost:
 			  splitTime,
 			  h->m_splitsDone,
 
-			  flagString,
+			  fb.getBufStart(),//flagString,
 
 			  h->m_slowDiskReads,
 			  h->m_docsIndexed,

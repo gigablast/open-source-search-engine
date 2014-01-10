@@ -48,9 +48,11 @@ enum {
 // between all the hosts in the cluster
 #define PFLAG_MERGEMODE0     0x08
 #define PFLAG_MERGEMODE0OR6  0x10
+#define PFLAG_REBALANCING    0x20
+#define PFLAG_FOREIGNRECS    0x40
 
 // added slow disk reads to it, 4 bytes (was 52)
-#define MAX_PING_SIZE 44
+#define MAX_PING_SIZE (44+4)
 
 #define HT_GRUNT   0x01
 #define HT_SPARE   0x02
@@ -108,6 +110,10 @@ class Host {
 	unsigned long  m_ipShotgun;  
 	unsigned short m_externalHttpPort;
 	unsigned short m_externalHttpsPort;
+
+	// his checksum of his hosts.conf so we can ensure we have the
+	// same hosts.conf file! 0 means not legit.
+	long m_hostsConfCRC;
 
 	// used by Process.cpp to do midnight stat dumps and emails
 	EventStats m_eventStats;
@@ -305,6 +311,9 @@ class Hostdb {
 
 	// for dealing with pings
 	bool registerHandler ( );
+
+	// if config changes this *should* change
+	long getCRC();
 
 	// . to prevent script kiddies from sending bogus udp packets to
 	//   our udp servers we make sure they are from an IP in our hosts.conf
@@ -610,6 +619,13 @@ class Hostdb {
 	long  m_numTotalHosts;
 
 	bool m_initialized;
+
+	long m_crc;
+	long m_crcValid;
+
+	// are all hosts.conf in sync with one another?
+	bool m_hostsConfInAgreement;
+	bool m_hostsConfInDisagreement;
 
 	// for sync
 	Host *m_syncHost;

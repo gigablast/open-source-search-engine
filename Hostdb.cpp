@@ -59,6 +59,10 @@ Hostdb::Hostdb ( ) {
 	m_ips = NULL;
 	m_syncHost = NULL;
 	m_initialized = false;
+	m_crcValid = false;
+	m_crc = 0;
+	m_hostsConfInAgreement = false;
+	m_hostsConfInDisagreement = false;
 }
 
 Hostdb::~Hostdb () {
@@ -2473,3 +2477,32 @@ Host *Hostdb::getBestSpiderCompressionProxy ( long *key ) {
 	// got a live one
 	return h;
 }
+
+long Hostdb::getCRC ( ) {
+	if ( m_crcValid ) return m_crc;
+	// hash up all host entries, just the grunts really.
+	SafeBuf str;
+	for ( long i = 0 ; i < getNumGrunts() ; i++ ) {
+		Host *h = &m_hosts[i];
+		// dns client port not so important
+		str.safePrintf("%li,", i);
+		str.safePrintf("%s," , iptoa(h->m_ip));
+		str.safePrintf("%s," , iptoa(h->m_ipShotgun));
+		str.safePrintf("%li,", (long)h->m_httpPort);
+		str.safePrintf("%li,", (long)h->m_httpsPort);
+		str.safePrintf("%li,", (long)h->m_port);
+		str.pushChar('\n');
+	}
+	str.nullTerm();
+
+	m_crc = hash32n ( str.getBufStart() );
+
+	// make sure it is legit
+	if ( m_crc == 0 ) m_crc = 1;
+
+	m_crcValid = true;
+	return m_crc;
+}
+
+
+	

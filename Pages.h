@@ -355,12 +355,12 @@ enum {
 	//PAGE_PRIORITIES  ,  // priority queue controls
 	PAGE_FILTERS     ,
 	PAGE_INJECT      , 
+	PAGE_ADDURL2     ,
 	PAGE_REINDEX     ,	
 	//PAGE_KEYWORDS    ,
 	PAGE_SEO         ,
 	PAGE_ACCESS      ,  //40	
 	PAGE_SEARCHBOX   ,
-	PAGE_ADDURL2     ,
 	PAGE_PARSER      ,
 	PAGE_SITEDB      ,  
 	PAGE_CATDB       ,

@@ -10009,6 +10009,22 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m++;
 
+	m->m_title = "restrict link voting by ip";
+	m->m_desc  = "If this is true Gigablast will "
+		"only allow one vote per the top 2 significant bytes "
+		"of the IP address. Otherwise, multiple pages "
+		"from the same top IP can contribute to the link text and "
+		"link-based quality ratings of a particular URL. "
+		"Furthermore, no votes will be accepted from IPs that have "
+		"the same top 2 significant bytes as the IP of the page "
+		"being indexed.";
+	m->m_cgi   = "ovpid";
+	m->m_off   = (char *)&cr.m_oneVotePerIpDom - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_group = 0;
+	m++;
+
 	m->m_title = "use new link algo";
 	m->m_desc  = "Use the links: termlists instead of link:. Also "
 		"allows pages linking from the same domain or IP to all "
@@ -10093,22 +10109,6 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 	*/
-
-	m->m_title = "restrict link voting by ip";
-	m->m_desc  = "If this is true Gigablast will "
-		"only allow one vote per the top 2 significant bytes "
-		"of the IP address. Otherwise, multiple pages "
-		"from the same top IP can contribute to the link text and "
-		"link-based quality ratings of a particular URL. "
-		"Furthermore, no votes will be accepted from IPs that have "
-		"the same top 2 significant bytes as the IP of the page "
-		"being indexed.";
-	m->m_cgi   = "ovpid";
-	m->m_off   = (char *)&cr.m_oneVotePerIpDom - x;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_group = 0;
-	m++;
 
 	/*
 	m->m_title = "index link text";
@@ -10355,15 +10355,6 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "apply filter to text pages";
-	m->m_desc  = "If this is false then the filter "
-		"will not be used on html or text pages.";
-	m->m_cgi   = "aft";
-	m->m_off   = (char *)&cr.m_applyFilterToText - x;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
-	m++;
-
 	m->m_title = "allow HTTPS pages using SSL";
 	m->m_desc  = "If this is true, spiders will read "
 		     "HTTPS pages using SSL Protocols.";
@@ -10466,6 +10457,15 @@ void Parms::init ( ) {
 	//m->m_min   = MIN_TRUNC; // from Indexdb.h
 	//m++;
 
+	m->m_title = "apply filter to text pages";
+	m->m_desc  = "If this is false then the filter "
+		"will not be used on html or text pages.";
+	m->m_cgi   = "aft";
+	m->m_off   = (char *)&cr.m_applyFilterToText - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m++;
+
 	m->m_title = "filter name";
 	m->m_desc  = "Program to spawn to filter all HTTP "
 		"replies the spider receives. Leave blank for none.";
@@ -10474,6 +10474,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_filter - x;
 	m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_FILTER_LEN+1;
+	m->m_group = 0;
 	m++;
 
 	m->m_title = "filter timeout";
