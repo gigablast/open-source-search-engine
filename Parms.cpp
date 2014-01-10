@@ -6642,7 +6642,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "esrvone";
 	m->m_off   = (char *)&g_conf.m_email1MX - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "mail.mydomain.com";
+	m->m_def   = "10.5.54.47";
 	m->m_size  = MAX_MX_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
@@ -6653,7 +6653,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "eaddrone";
 	m->m_off   = (char *)&g_conf.m_email1Addr - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "";
+	m->m_def   = "4081234567@vtext.com";
 	m->m_size  = MAX_EMAIL_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
