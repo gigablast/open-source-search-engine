@@ -2533,7 +2533,11 @@ bool Parms::printParm ( SafeBuf* sb,
 		firstInRow = false;
 
 	CollectionRec *cr = NULL;
-	if ( coll ) cr = g_collectiondb.getRec ( coll );
+	collnum_t collnum = -1;
+	if ( coll ) {
+		cr = g_collectiondb.getRec ( coll );
+		if ( cr ) collnum = cr->m_collnum;
+	}
 
 	long firstRow = 0;
 	//if ( m->m_page==PAGE_PRIORITIES ) firstRow = MAX_PRIORITY_QUEUES - 1;
@@ -2619,6 +2623,15 @@ bool Parms::printParm ( SafeBuf* sb,
 		}
 		sb->safePrintf ( "<td width=%li%%>" , 100/nc/2 );
 	}
+
+	// if parm value is not defaut, use orange!
+	char rr[1024];
+	SafeBuf val1(rr,1024);
+	m->printVal ( &val1 , collnum , j ); // occNum );
+	// test it
+	if ( m->m_def && strcmp ( val1.getBufStart() , m->m_def ) )
+		bg = "organge";
+
 
 	// print the title/description in current table for non-arrays
 	if ( m->m_max <= 1 && m->m_hdrs ) { // j == 0 && m->m_rowid < 0 ) {
@@ -5870,7 +5883,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "asf";
 	m->m_off   = (char *)&g_conf.m_autoSaveFrequency - g;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "30";
+	m->m_def   = "5";
 	m->m_units = "mins";
 	m++;
 
@@ -6474,22 +6487,22 @@ void Parms::init ( ) {
 
 	m->m_title = "query success rate threshold";
 	m->m_desc  = "Send email alerts when query success rate goes below "
-		"this threshold.";
+		"this threshold. (percent rate between 0.0 and 1.0)";
 	m->m_cgi   = "qsrt";
 	m->m_off   = (char *)&g_conf.m_querySuccessThreshold - g;
 	m->m_type  = TYPE_FLOAT;
-	m->m_def   = "0.85";
+	m->m_def   = "0.850000";
 	m->m_priv  = 2;
 	m++;
 
 	m->m_title = "average query latency threshold";
 	m->m_desc  = "Send email alerts when average query latency goes above "
-		"this threshold.";
+		"this threshold. (in seconds)";
 	m->m_cgi   = "aqpst";
 	m->m_off   = (char *)&g_conf.m_avgQueryTimeThreshold - g;
 	m->m_type  = TYPE_FLOAT;
 	// a titlerec fetch times out after 2 seconds and is re-routed
-	m->m_def   = "2.0";
+	m->m_def   = "2.000000";
 	m->m_priv  = 2;
 	m->m_units = "seconds";
 	m++;
@@ -6627,7 +6640,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "esrvone";
 	m->m_off   = (char *)&g_conf.m_email1MX - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "mail.gigablast.com";
+	m->m_def   = "mail.mydomain.com";
 	m->m_size  = MAX_MX_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
@@ -6649,7 +6662,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "efaddrone";
 	m->m_off   = (char *)&g_conf.m_email1From - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "sysadmin@gigablast.com";
+	m->m_def   = "sysadmin@mydomain.com";
 	m->m_size  = MAX_EMAIL_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
@@ -6680,7 +6693,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "esrvtwo";
 	m->m_off   = (char *)&g_conf.m_email2MX - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "mail.gigablast.com";
+	m->m_def   = "mail.mydomain.com";
 	m->m_size  = MAX_MX_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
@@ -6702,7 +6715,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "efaddrtwo";
 	m->m_off   = (char *)&g_conf.m_email2From - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "sysadmin@gigablast.com";
+	m->m_def   = "sysadmin@mydomain.com";
 	m->m_size  = MAX_EMAIL_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
@@ -6733,7 +6746,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "esrvthree";
 	m->m_off   = (char *)&g_conf.m_email3MX - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "mail.gigablast.com";
+	m->m_def   = "mail.mydomain.com";
 	m->m_size  = MAX_MX_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
@@ -6755,7 +6768,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "efaddrthree";
 	m->m_off   = (char *)&g_conf.m_email3From - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "sysadmin@gigablast.com";
+	m->m_def   = "sysadmin@mydomain.com";
 	m->m_size  = MAX_EMAIL_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
@@ -6789,7 +6802,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "esrvfour";
 	m->m_off   = (char *)&g_conf.m_email4MX - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "mail.gigablast.com";
+	m->m_def   = "mail.mydomain.com";
 	m->m_size  = MAX_MX_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
@@ -6813,7 +6826,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "efaddrfour";
 	m->m_off   = (char *)&g_conf.m_email4From - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "sysadmin@gigablast.com";
+	m->m_def   = "sysadmin@mydomain.com";
 	m->m_size  = MAX_EMAIL_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
@@ -7485,7 +7498,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsa";
 	m->m_off   = (char *)&g_conf.m_dnsIps[2] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7494,7 +7507,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsb";
 	m->m_off   = (char *)&g_conf.m_dnsIps[3] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7503,7 +7516,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsc";
 	m->m_off   = (char *)&g_conf.m_dnsIps[4] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7512,7 +7525,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsd";
 	m->m_off   = (char *)&g_conf.m_dnsIps[5] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7521,7 +7534,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnse";
 	m->m_off   = (char *)&g_conf.m_dnsIps[6] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7530,7 +7543,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsf";
 	m->m_off   = (char *)&g_conf.m_dnsIps[7] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7539,7 +7552,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsg";
 	m->m_off   = (char *)&g_conf.m_dnsIps[8] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7548,7 +7561,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsh";
 	m->m_off   = (char *)&g_conf.m_dnsIps[9] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7557,7 +7570,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsi";
 	m->m_off   = (char *)&g_conf.m_dnsIps[10] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7566,7 +7579,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsj";
 	m->m_off   = (char *)&g_conf.m_dnsIps[11] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7575,7 +7588,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsk";
 	m->m_off   = (char *)&g_conf.m_dnsIps[12] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7584,7 +7597,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsl";
 	m->m_off   = (char *)&g_conf.m_dnsIps[13] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7593,7 +7606,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsm";
 	m->m_off   = (char *)&g_conf.m_dnsIps[14] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7602,7 +7615,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "sdnsn";
 	m->m_off   = (char *)&g_conf.m_dnsIps[15] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m++;
 
@@ -7621,7 +7634,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "gcb";
 	m->m_off   = (char *)&g_conf.m_geocoderIps[1] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m->m_flags = PF_HIDDEN;
 	m++;
@@ -7631,7 +7644,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "gcc";
 	m->m_off   = (char *)&g_conf.m_geocoderIps[2] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m->m_flags = PF_HIDDEN;
 	m++;
@@ -7641,7 +7654,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "gcd";
 	m->m_off   = (char *)&g_conf.m_geocoderIps[3] - g;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
 	m->m_flags = PF_HIDDEN;
 	m++;
@@ -10032,7 +10045,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "uvf";
 	m->m_off   = (char *)&cr.m_updateVotesFreq - x;
 	m->m_type  = TYPE_FLOAT;
-	m->m_def   = "60.0";
+	m->m_def   = "60.000000";
 	m->m_group = 0;
 	m++;
 
@@ -10472,7 +10485,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "proxyip";
 	m->m_off   = (char *)&cr.m_proxyIp - x;
 	m->m_type  = TYPE_IP;
-	m->m_def   = "0";
+	m->m_def   = "0.0.0.0";
 	m++;
 
 	m->m_title = "proxy port";
@@ -18598,8 +18611,7 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
 	     m_type == TYPE_STRINGNONEMPTY )
 		return sb->safePrintf("%s",val);
 
-
-	if ( m_type == TYPE_LONG ) 
+	if ( m_type == TYPE_LONG || m_type == TYPE_LONG_CONST ) 
 		return sb->safePrintf("%li",*(long *)val);
 
 	if ( m_type == TYPE_DATE ) 
