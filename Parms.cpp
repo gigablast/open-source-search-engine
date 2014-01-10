@@ -888,7 +888,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			"Add url is temporarily disabled in Master Controls."
 			"</font></td></tr>\n";
 
-	if ( page >= PAGE_OVERVIEW && (! coll || !coll[0]) ) {
+	if ( page >= PAGE_CGIPARMS && (! coll || !coll[0]) ) {
 		// WATCH OUT FOR RECURSION! sendPageLogin calls us!!!
 		if ( !g_users.hasPermission(username,PAGE_ADMIN) && 
 				!g_users.hasPermission(username,PAGE_MASTER) )
@@ -3109,7 +3109,7 @@ bool Parms::printParm ( SafeBuf* sb,
 // get the object of our desire
 char *Parms::getTHIS ( HttpRequest *r , long page ) {
 	// if not master controls, must be a collection rec
-	if ( page < PAGE_OVERVIEW ) return (char *)&g_conf;
+	if ( page < PAGE_CGIPARMS ) return (char *)&g_conf;
 	char *coll = r->getString ( "c" );
 	// support john wanting to use "id" for the crawl id which is really
 	// the collection id, hopefully won't conflict with other things.
@@ -3796,11 +3796,11 @@ void Parms::setToDefault ( char *THIS ) {
 		//if ( m->m_page == PAGE_PRIORITIES )
 		//	log("hey");
 		// or 
-		if ( m->m_page > PAGE_OVERVIEW && 
+		if ( m->m_page > PAGE_CGIPARMS &&
 		     m->m_page != PAGE_NONE &&
 		     m->m_obj == OBJ_CONF ) {
 			log(LOG_LOGIC,"admin: Page can not reference "
-			    "g_conf and be declared AFTER PAGE_OVERVIEW in "
+			    "g_conf and be declared AFTER PAGE_CGIPARMS in "
 			    "Pages.h. Title=%s",m->m_title);
 			char *xx = NULL; *xx = 0;
 		}
@@ -5879,7 +5879,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "auto save frequency";
-	m->m_desc  = "Copy data in memory to disk after this many minutes "
+	m->m_desc  = "Save data in memory to disk after this many minutes "
 		"have passed without the data having been dumped or saved "
 		"to disk. Use 0 to disable.";
 	m->m_cgi   = "asf";
@@ -5914,7 +5914,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Identification seen by web servers when "
 		"the Gigablast spider downloads their web pages. "
 		"It is polite to insert a contact email address here so "
-		"webmaster that experience problems from the Gigablast "
+		"webmasters that experience problems from the Gigablast "
 		"spider have somewhere to vent.";
 	m->m_cgi   = "sua";
 	m->m_off   = (char *)&g_conf.m_spiderUserAgent - g;
@@ -6214,8 +6214,8 @@ void Parms::init ( ) {
 
 
         m->m_title = "ask for gzipped docs when downloading";
-        m->m_desc  = "If this is true, gb will send accept-encoding: gzip"
-		"when doing http downloads.";
+        m->m_desc  = "If this is true, gb will send Accept-Encoding: gzip "
+		"to web servers when doing http downloads.";
         m->m_cgi   = "afgdwd";
         m->m_off   = (char *)&g_conf.m_gzipDownloads - g;
         m->m_type  = TYPE_BOOL;
@@ -9477,7 +9477,7 @@ void Parms::init ( ) {
 	m->m_cgi = "mau";
 	m->m_off = (char *)&cr.m_maxAddUrlsPerIpDomPerDay - x;
 	m->m_type = TYPE_LONG;
-	m->m_def = "100";
+	m->m_def = "0";
 	m->m_group = 0;
 	m++;
 
@@ -9651,7 +9651,9 @@ void Parms::init ( ) {
 		"that are already in the index AND that are from the same "
 		"hostname. An example of a hostname is www1.ibm.com. "
 		"However, root urls, urls that have no path, are never "
-		"discarded. ";
+		"discarded. It most likely has to hit disk to do these "
+		"checks so it does cause some slow down. Only use it if you "
+		"need it.";
 	m->m_cgi   = "de";
 	m->m_off   = (char *)&cr.m_dedupingEnabled - x;
 	m->m_type  = TYPE_BOOL;
@@ -11218,7 +11220,6 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxSearchResultsPerQuery - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100";
-	m->m_group = 0;
 	m++;
 
 	m->m_title = "max search results for paying clients";

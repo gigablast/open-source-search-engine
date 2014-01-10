@@ -30,7 +30,7 @@
 //#include "Thesaurus.h"
 #include "Spider.h"
 #include "Profiler.h"
-#include "PageNetTest.h"
+//#include "PageNetTest.h"
 #include "LangList.h"
 #include "AutoBan.h"
 //#include "SiteBonus.h"
@@ -1733,7 +1733,7 @@ void Process::resetAll ( ) {
 	g_autoBan         .reset();
 	//g_qtable          .reset();
 	//g_pageTopDocs     .destruct();
-	g_pageNetTest     .destructor();
+	//g_pageNetTest     .destructor();
 
 	for ( long i = 0; i < MAX_GENERIC_CACHES; i++ )
 		g_genericCache[i].reset();

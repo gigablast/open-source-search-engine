@@ -8,7 +8,7 @@ OBJS =  Tfndb.o UdpSlot.o \
 	PageParser.o PageInject.o PagePerf.o PageReindex.o PageResults.o \
 	PageRoot.o PageSockets.o PageStats.o \
 	PageTitledb.o \
-	PageAddColl.o PageOverview.o \
+	PageAddColl.o \
 	hash.o Domains.o \
 	Collectiondb.o \
 	linkspam.o ip.o sort.o \
@@ -47,7 +47,6 @@ OBJS =  Tfndb.o UdpSlot.o \
 	AutoBan.o Msg3a.o HashTableT.o HashTableX.o \
 	PageLogView.o Msg1f.o Blaster.o MsgC.o \
 	PageSpam.o Proxy.o PageThreads.o Linkdb.o \
-	PageNetTest.o \
 	matches2.o LanguageIdentifier.o \
 	Language.o Repair.o Process.o \
 	Abbreviations.o \

@@ -139,11 +139,11 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	strncpy ( st->m_coll , coll , MAX_COLL_LEN+1 );
 	// store query for query highlighting
 	st->m_netTestResults    = r->getLong ("rnettest", false );
-	if( st->m_netTestResults ) {
-		mdelete ( st , sizeof(State2) , "PageGet1" );
-		delete ( st );
-		return sendPageNetResult( s );
-	}
+	//if( st->m_netTestResults ) {
+	//	mdelete ( st , sizeof(State2) , "PageGet1" );
+	//	delete ( st );
+	//	return sendPageNetResult( s );
+	//}
 	if ( q && qlen > 0 ) strcpy ( st->m_q , q );
 	else                 st->m_q[0] = '\0';
 	st->m_qlen = qlen;

@@ -175,10 +175,10 @@ static WebPage s_pages[] = {
 
 
 	// collection admin pages
-	{ PAGE_OVERVIEW , "admin/overview"     , 0 , "overview" ,  0 , 0,
-	  //USER_MASTER | USER_ADMIN ,
-	  "overview page",
-	  sendPageOverview  , 0 } ,
+	//{ PAGE_OVERVIEW , "admin/overview"     , 0 , "overview" ,  0 , 0,
+	//  //USER_MASTER | USER_ADMIN ,
+	//  "overview page",
+	//  sendPageOverview  , 0 } ,
 	{ PAGE_CGIPARMS , "admin/api"         , 0 , "api" , 0 , 0 ,
 	  //USER_MASTER | USER_ADMIN , 
 	  "cgi params page",
@@ -878,7 +878,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 }
 
 
-
+/*
 char *Pages::printAdminTop ( char        *p    , 
 			     char        *pend , 
 			     TcpSocket   *s    ,
@@ -895,7 +895,7 @@ char *Pages::printAdminTop ( char        *p    ,
 	                       coll, NULL, fromIp , qs ,
 			       bodyJavascript);
 }
-
+*/
 
 
 bool Pages::printAdminTop ( SafeBuf *sb    ,
@@ -963,11 +963,27 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	// end table
 	sb->safePrintf ("</td></tr></table><br/><br/>\n");
 
-	// print the links
-	status &= printAdminLinks ( sb, page , username , coll , pwd, true );
 
+	// a new table. on the left is collections, on right is other stuff
+	sb->safePrintf("<TABLE border=1><TR>"
+		       "<TD valign=top>"
+		       "<div "
+		       "style="
+		       "max-height:600px;"
+		       "max-width:325px;"
+		       "min-width:325px;"
+		       "overflow-y:auto;"
+		       "overflow-x:hidden>"
+		       );
+	
 	// collection under that
 	status &= printCollectionNavBar ( sb, page , username , coll,pwd, qs );
+
+	// then collection page links and parms
+	sb->safePrintf("</div></TD><TD valign=top><br>");
+
+	// print the links
+	status &= printAdminLinks ( sb, page , username , coll , pwd, true );
 
 	// print the links
 	status &= printAdminLinks ( sb, page , username , coll ,pwd , false );
@@ -1005,7 +1021,7 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 
 
 
-
+/*
 
 char *Pages::printAdminTop ( char *p        , 
 			     char *pend     , 
@@ -1107,7 +1123,8 @@ char *Pages::printAdminTop ( char *p        ,
 
 	return p;
 }
-
+*/
+/*
 bool Pages::printAdminTop2 (SafeBuf     *sb   ,
 			   TcpSocket   *s    ,
 			   HttpRequest *r    ,
@@ -1213,6 +1230,7 @@ bool Pages::printAdminTop2 ( SafeBuf *sb    ,
 	sb->safePrintf( "</div>\n" );
 	return true;
 }
+*/
 
 void Pages::printFormTop( SafeBuf *sb, HttpRequest *r ) {
 	long  page   = getDynamicPageNumber ( r );
@@ -1728,8 +1746,8 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		// do not print Sync link if only one host
 		//if ( i == PAGE_SYNC && g_hostdb.getNumHosts() == 1 ) continue;
 		// top or bottom
-		if (   top && i >= PAGE_OVERVIEW ) continue;
-		if ( ! top && i  < PAGE_OVERVIEW ) continue;
+		if (   top && i >= PAGE_CGIPARMS ) continue;
+		if ( ! top && i  < PAGE_CGIPARMS ) continue;
 
 		// skip seo link
 		if ( ! g_conf.m_isMattWells && i == PAGE_SEO ) 
@@ -1738,7 +1756,6 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		// ignore these for now
 		if ( i == PAGE_SECURITY ) continue;
 		if ( i == PAGE_ACCESS ) continue;
-		if ( i == PAGE_OVERVIEW ) continue;
 		if ( i == PAGE_INDEXDB ) continue;
 		if ( i == PAGE_RULES ) continue;
 		if ( i == PAGE_SEARCHBOX ) continue;
@@ -1925,8 +1942,8 @@ char *Pages::printAdminLinks ( char *p    ,
 		// do not print Sync link if only one host
 		//if ( i == PAGE_SYNC && g_hostdb.getNumHosts() == 1 ) continue;
 		// top or bottom
-		if (   top && i >= PAGE_OVERVIEW ) continue;
-		if ( ! top && i  < PAGE_OVERVIEW ) continue;
+		if (   top && i >= PAGE_CGIPARMS ) continue;
+		if ( ! top && i  < PAGE_CGIPARMS ) continue;
 
 		// skip seo link
 		if ( ! g_conf.m_isMattWells && i == PAGE_SEO ) 
@@ -1935,7 +1952,6 @@ char *Pages::printAdminLinks ( char *p    ,
 		// ignore these for now
 		if ( i == PAGE_SECURITY ) continue;
 		if ( i == PAGE_ACCESS ) continue;
-		if ( i == PAGE_OVERVIEW ) continue;
 		if ( i == PAGE_INDEXDB ) continue;
 		if ( i == PAGE_RULES ) continue;
 		if ( i == PAGE_SEARCHBOX ) continue;
@@ -2032,13 +2048,14 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	while ( b < g_collectiondb.m_numRecs && countb < 16 )
 		if ( g_collectiondb.m_recs[b++] ) countb++;
 
-	sb->safePrintf ( "<center><br/>Collections: &nbsp;\n" );
+	sb->safePrintf ( "<center><b>Collections</b></center><br><br>\n" );
 
-	char *color;
-	if ( page >= PAGE_OVERVIEW ) color = "red";
-	else                         color = "black";
+	char *color = "red";
+	//if ( page >= PAGE_CGIPARMS ) color = "red";
+	//else                         color = "black";
 
-	for ( long i = a ; i < b ; i++ ) {
+	//for ( long i = a ; i < b ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
 		char *cname = cc->m_coll;
@@ -2046,24 +2063,32 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 		// collection name HACK for backwards compatibility
 		//if ( ! cname[0] ) cname = "main";
 
+		sb->safePrintf("<nobr>");
+
 		if ( i != collnum || ! highlight )// || ! coll || ! coll[0])
-			sb->safePrintf ( "<a href=\"/%s?c=%s%s\">%s"
+			sb->safePrintf ( "<a title=\"%s\" "
+					 "href=\"/%s?c=%s%s\">%s"
 				  "</a> &nbsp;",
-				  s_pages[page].m_filename,
-					 cc->m_coll ,
-				  qs, cname );
+					 cname,
+					 s_pages[page].m_filename,
+					 cname ,
+					 qs, cname );
 		else
-			sb->safePrintf ( "<b><font color=%s>%s</font></b> "
-					 "&nbsp; ",  color , cname );
+			sb->safePrintf ( "<b><font title=\"%s\" "
+					 "color=%s>%s</font></b> "
+					 "&nbsp; ",  
+					 cname, color , cname );
+		sb->safePrintf("</nobr>");
+		sb->safePrintf("<br>\n");
 	}
 
-	sb->safePrintf ( "</center><br/>" );
+	//sb->safePrintf ( "</center><br/>" );
 
 	return status;
 }
 
 
-
+/*
 char *Pages::printCollectionNavBar ( char *p        ,
 				     char *pend     ,
 				     long  page     ,
@@ -2139,7 +2164,7 @@ char *Pages::printCollectionNavBar ( char *p        ,
 
 	return p;
 }
-
+*/
 /*
 // print the drop down menu of rulesets used by Sitedb and URL Filters page
 char *Pages::printRulesetDropDown ( char *p            , 

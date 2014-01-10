@@ -134,12 +134,13 @@ bool sendReply ( void *state ) {
 
 
 	// page is not more than 32k
-	char buf[1024*32];
+	//char buf[1024*32];
 
 
 	// . if we're talking w/ a robot he doesn't care about this crap
 	// . send him back the error code (0 means success)
 	if ( msg7->m_quickReply ) {
+		char buf[1024*32];
 		char *p = buf;
 		// set g_errno to index code
 		if ( xd->m_indexCodeValid &&
@@ -161,15 +162,18 @@ bool sendReply ( void *state ) {
 	}
 
 	// get an active ptr into buf
-	char *p    = buf;
-	char *pend = buf + 1024*32;
+	//char *p    = buf;
+	//char *pend = buf + 1024*32;
+
+	SafeBuf sb;
 
 	// print admin bar
-	p = g_pages.printAdminTop ( p , pend , PAGE_INJECT, 
-				    NULL, // msg7->m_username ,
-				    msg7->m_coll , 
-				    NULL ,  // pwd
-				    s->m_ip );
+	g_pages.printAdminTop ( &sb, // p , pend , 
+				PAGE_INJECT, 
+				NULL, // msg7->m_username ,
+				msg7->m_coll , 
+				NULL ,  // pwd
+				s->m_ip );
 
 	// if there was an error let them know
 	char msg[1024];
@@ -195,7 +199,7 @@ bool sendReply ( void *state ) {
 	//if ( c && c[0] ) sprintf ( bb , " (%s)", c);
 
 	// make a table, each row will be an injectable parameter
-	sprintf ( p ,
+	sb.safePrintf (
 		  "<center>"
 		  "<b>%s</b>\n\n" // the url msg
 		  //"<FORM method=POST action=/inject>\n\n" 
@@ -345,7 +349,7 @@ bool sendReply ( void *state ) {
 		  LIGHT_BLUE , DARK_BLUE , bb , msg7->m_coll );
 
 
-	p += gbstrlen(p);
+	//p += gbstrlen(p);
 
 	// . print pulldown menu of different site filenums
 	// . 0 - default site
@@ -377,7 +381,7 @@ bool sendReply ( void *state ) {
 	*/
 
 	// make a table, each row will be an injectable parameter
-	sprintf ( p ,
+	sb.safePrintf (
 		  "<tr><td><b>content has mime</b><br>"
 		  "<font size=1>IP address of the url. If blank then "
 		  "Gigablast will look up. "
@@ -407,15 +411,15 @@ bool sendReply ( void *state ) {
 		  "</td></tr></table>\n"
 		  "</form>\n"
 		  );
-	p += gbstrlen ( p );	
 
-	p += sprintf(p, "\n</body>\n</html>\n");
+
+	sb.safePrintf( "\n</body>\n</html>\n");
 	// print the final tail
 	//p += g_httpServer.printTail ( p , pend - p , true /*adminLink?*/);
 	// clear g_errno, if any, so our reply send goes through
 	g_errno = 0;
 	// calculate buffer length
-	long bufLen = p - buf;
+	//long bufLen = p - buf;
 	// nuke state
 	mdelete ( msg7, sizeof(Msg7) , "PageInject" );
 	delete (msg7);
@@ -423,7 +427,10 @@ bool sendReply ( void *state ) {
 	// . encapsulates in html header and tail
 	// . make a Mime
 	// . i thought we need -2 for cacheTime, but i guess not
-	return g_httpServer.sendDynamicPage (s, buf, bufLen, -1/*cachetime*/);
+	return g_httpServer.sendDynamicPage (s, 
+					     sb.getBufStart(),
+					     sb.length(), 
+					     -1/*cachetime*/);
 }
 
 

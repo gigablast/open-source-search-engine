@@ -89,7 +89,7 @@
 //#include "Msg33.h"
 //#include "mmseg.h"  // open_lexicon(), etc. for Chinese parsing
 //#include "PageTopDocs.h"
-#include "PageNetTest.h"
+//#include "PageNetTest.h"
 //#include "Sync.h"
 #include "Pages.h"
 //#include "Msg1c.h"
@@ -2880,10 +2880,10 @@ int main ( int argc , char *argv[] ) {
 	//	return 1;
 	//}
 
-	if( !g_pageNetTest.init() ) {
-		log( "init: PageNetTest init failed." );
-		return 1;
-	}
+	//if( !g_pageNetTest.init() ) {
+	//	log( "init: PageNetTest init failed." );
+	//	return 1;
+	//}
 
 	//if(!Msg6a::init()) {
 	//	log( "init: Quality Agent init failed." );

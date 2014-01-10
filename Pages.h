@@ -44,7 +44,7 @@ bool sendPageParser   ( TcpSocket *s , HttpRequest *r );
 bool sendPageSecurity ( TcpSocket *s , HttpRequest *r );
 bool sendPageAddColl  ( TcpSocket *s , HttpRequest *r );
 bool sendPageDelColl  ( TcpSocket *s , HttpRequest *r );
-bool sendPageOverview ( TcpSocket *s , HttpRequest *r );
+//bool sendPageOverview ( TcpSocket *s , HttpRequest *r );
 bool sendPageSpiderdb ( TcpSocket *s , HttpRequest *r );
 bool sendPageFilters  ( TcpSocket *s , HttpRequest *r );
 bool sendPageReindex  ( TcpSocket *s , HttpRequest *r );
@@ -340,7 +340,7 @@ enum {
 
 	// . non master-admin pages (collection controls)
 	// . PAGE_OVERVIEW acts as a cutoff point (search Parms.cpp for it)
-	PAGE_OVERVIEW    ,  //25
+	//PAGE_OVERVIEW    ,  //25
 	PAGE_CGIPARMS    ,  
 
 	PAGE_RULES       ,
