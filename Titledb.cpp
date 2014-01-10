@@ -204,10 +204,15 @@ bool Titledb::verify ( char *coll ) {
 			log("db: docid=%lli shard=%li",
 			    getDocId(&k),shardNum);
 		}
-
-		log ( "db: Exiting due to Titledb inconsistency." );
 		g_threads.enableThreads();
-		return g_conf.m_bypassValidation;
+		//if ( g_conf.m_bypassValidation ) return true;
+		//if ( g_conf.m_allowScale ) return true;
+		// don't exit any more, allow it, but do not delete
+		// recs that belong to different shards when we merge now!
+		log ( "db: Titledb shards unbalanced. "
+		      "Click rebalance shards.");
+		//return false;
+		return true;
 	}
 
 	log ( LOG_DEBUG, "db: Titledb passed verification successfully for %li"

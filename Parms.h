@@ -95,6 +95,9 @@ class Page {
 #define PF_NOSYNC            0x40
 #define PF_CUSTOMCRAWLONLY   0x80
 
+#define PF_HIDDEN 0x0100
+
+
 class Parm {
  public:
 	char *m_title; // displayed above m_desc on admin gui page
@@ -127,7 +130,7 @@ class Parm {
 	char  m_hdrs;  // print headers for row or print title/desc for single?
 	char  m_perms; // 0 means same as WebPages' m_perms
 	char  m_subMenu;
-	char  m_flags;
+	short m_flags;
 	char *m_class;
 	char *m_icon;
 	char *m_qterm;

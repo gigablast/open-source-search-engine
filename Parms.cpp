@@ -1937,6 +1937,8 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 		     m->m_type != TYPE_MONOD2 &&
 		     m->m_type != TYPE_MONOM2 &&
 		     m->m_type != TYPE_CMD     ) continue;
+		// skip if hidden
+		if ( m->m_flags & PF_HIDDEN ) continue;
 		// might have an array, do not exceed the array size
 		long  jend = m->m_max;
 		long  size = jend ;
@@ -2473,6 +2475,8 @@ bool Parms::printParm ( SafeBuf* sb,
 	// priv of 4 means do not print at all
 	if ( m->m_priv == 4 ) return status;
 
+	if ( m->m_flags & PF_HIDDEN ) return status;
+
 	// . if printing on crawlbot page hide these
 	// . we repeat this logic below when printing parm titles
 	//   for the column headers in the table
@@ -2565,7 +2569,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			if ( cr && ! cr->m_isCustomCrawl &&
 			     (mk->m_flags & PF_CUSTOMCRAWLONLY) )
 				continue;
-			     
+
 			// . hide table column headers that are too advanced
 			// . we repeat this logic above for the actual parms
 			//char *vt = "";
@@ -2641,7 +2645,7 @@ bool Parms::printParm ( SafeBuf* sb,
 							  false);
 			// and cgi parm if it exists
 			if ( m->m_def && m->m_scgi )
-				sb->safePrintf(" Cgi: %s.", m->m_scgi );
+				sb->safePrintf(" CGI override: %s.",m->m_scgi);
 			// and default value if it exists
 			if ( m->m_def && m->m_def[0] && t != TYPE_CMD ) {
 				char *d = m->m_def;
@@ -4159,6 +4163,8 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 		if ( m->m_type == TYPE_MONOM2  ) continue;
 		if ( m->m_type == TYPE_CMD ) continue;
 		if ( m->m_type == TYPE_BOOL2 ) continue;
+		// ignore if hidden as well
+		if ( m->m_flags & PF_HIDDEN ) continue;
 		// skip if we should not save to xml
 		if ( ! m->m_save ) continue;
 		// allow comments though
@@ -5848,14 +5854,14 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "local add url enabled";
-	m->m_desc  = "Overrides all add urls for all collections on just this "
-		"host.";
+	m->m_title = "add url enabled";
+	m->m_desc  = "Can people use the add url interface to add urls "
+		"to the index?";
 	m->m_cgi   = "ae";
 	m->m_off   = (char *)&g_conf.m_addUrlEnabled - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
-	m->m_cast  = 0;
+	m->m_def   = "1";
+	//m->m_cast  = 0;
 	m++;
 
         m->m_title = "use temporary cluster";
@@ -8514,6 +8520,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "log debug query messages";
@@ -9201,15 +9208,6 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "spider delay in milliseconds";
-	m->m_desc  = "make each spider wait this many milliseconds before "
-		"getting the ip and downloading the page.";
-	m->m_cgi  = "sdms";
-	m->m_off   = (char *)&cr.m_spiderDelayInMilliseconds - x; 
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "0";
-	m++; 
-
 	m->m_title = "max spiders";
 	m->m_desc  = "What is the maximum number of web "
 		"pages the spider is allowed to download "
@@ -9218,9 +9216,47 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxNumSpiders - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100";
+	m++;
+
+	m->m_title = "spider delay in milliseconds";
+	m->m_desc  = "make each spider wait this many milliseconds before "
+		"getting the ip and downloading the page.";
+	m->m_cgi  = "sdms";
+	m->m_off   = (char *)&cr.m_spiderDelayInMilliseconds - x; 
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m++; 
+
+
+	m->m_title = "use robots.txt";
+	m->m_desc  = "If this is true Gigablast will respect "
+		"the robots.txt convention.";
+	m->m_cgi   = "obeyRobots";
+	m->m_off   = (char *)&cr.m_useRobotsTxt - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m++;
+
+	m->m_title = "max robots.txt cache age";
+	m->m_desc  = "How many second to cache a robots.txt file for. "
+		"86400 is 1 day. 0 means Gigablast will not read from the "
+		"cache at all and will download the robots.txt before every "
+		"page if robots.txt use is enabled above. However, if this is "
+		"0 then Gigablast will still store robots.txt files into the "
+		"cache.";
+	m->m_cgi   = "mrca";
+	m->m_off   = (char *)&cr.m_maxRobotsCacheAge - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "86400"; // 24*60*60 = 1day
+	m->m_units = "seconds";
 	m->m_group = 0;
 	m++;
 
+
+
+
+	/*
 	m->m_title = "add url enabled";
 	m->m_desc  = "If this is enabled others can add "
 		"web pages to your index via the add url page.";
@@ -9229,9 +9265,10 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m++;
+	*/
 
 	m->m_title = "daily merge time";
-	m->m_desc  = "Do a tight merge on indexdb and datedb at this time "
+	m->m_desc  = "Do a tight merge on posdb and titledb at this time "
 		"every day. This is expressed in MINUTES past midnight UTC. "
 		"UTC is 5 hours ahead "
 		"of EST and 7 hours ahead of MST. Leave this as -1 to "
@@ -9255,6 +9292,7 @@ void Parms::init ( ) {
 	m->m_size  = 48;
 	// make sunday the default
 	m->m_def   = "0";
+	m->m_group = 0;
 	m++;
 
 	m->m_title = "daily merge last started";
@@ -9323,6 +9361,21 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m++;
 
+	m->m_title = "max add urls";
+	m->m_desc = "Maximum number of urls that can be "
+		"submitted via the addurl interface, per IP domain, per "
+		"24 hour period. A value less than or equal to zero "
+		"implies no limit.";
+	m->m_cgi = "mau";
+	m->m_off = (char *)&cr.m_maxAddUrlsPerIpDomPerDay - x;
+	m->m_type = TYPE_LONG;
+	m->m_def = "100";
+	m->m_group = 0;
+	m++;
+
+
+	// use url filters harvest links parm for this now
+	/*
 	m->m_title = "spider links";
 	m->m_desc  = "If this is false, the spider will not "
 		"harvest links from web pages it visits. Links that it does "
@@ -9332,6 +9385,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m++;
+	*/
 
 	/*
 
@@ -9364,7 +9418,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_outlinksRecycleFrequencyDays - x;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "30";
-	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -9415,6 +9469,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "spider round num";
@@ -9424,6 +9479,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "scraping enabled procog";
@@ -9433,6 +9489,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_scrapingEnabledProCog - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "scraping enabled web";
@@ -9442,6 +9499,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_scrapingEnabledWeb - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "scraping enabled news";
@@ -9453,6 +9511,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "scraping enabled blogs";
@@ -9464,6 +9523,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -9530,6 +9590,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use simplified redirects";
@@ -9566,6 +9627,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_buildVecFromCont - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use content similarity to index publish date";
@@ -9578,6 +9640,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max percentage similar to update publish date";
@@ -9591,23 +9654,17 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "80";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
-	m->m_title = "use robots.txt";
-	m->m_desc  = "If this is true Gigablast will respect "
-		"the robots.txt convention.";
-	m->m_cgi   = "obeyRobots";
-	m->m_off   = (char *)&cr.m_useRobotsTxt - x;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m++;
-
+	// use url filters for this. this is a crawlbot parm really.
 	m->m_title = "restrict domain";
 	m->m_desc  = "Keep crawler on same domain as seed urls?";
 	m->m_cgi   = "restrictDomain";
 	m->m_off   = (char *)&cr.m_restrictDomain - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "do url sporn checking";
@@ -9619,6 +9676,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_doUrlSpamCheck - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -9778,7 +9836,7 @@ void Parms::init ( ) {
 	m->m_def   = "6"; 
 	m->m_type  = TYPE_LONG;
 	//m->m_save  = 0;
-	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	//m->m_title = "sectiondb min files to merge";
@@ -9799,6 +9857,7 @@ void Parms::init ( ) {
 	m->m_def   = "6"; 
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "recycle content";
@@ -9815,6 +9874,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_recycleContent - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "enable link voting";
@@ -9825,6 +9885,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_getLinkInfo - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "do link spam checking";
@@ -9836,7 +9897,6 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_doLinkSpamCheck - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_group = 0;
 	m++;
 
 	m->m_title = "use new link algo";
@@ -9850,6 +9910,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -9976,6 +10037,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -10029,6 +10091,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_COLL_LEN+1;
 	m->m_def   = "";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "catdb lookups enabled";
@@ -10040,6 +10103,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "recycle catdb info";
@@ -10052,6 +10116,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "allow banning of pages in catdb";
@@ -10063,6 +10128,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "override spider errors for catdb";
@@ -10073,6 +10139,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	//m->m_title = "only spider root urls";
@@ -10092,6 +10159,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "allow adult docs";
@@ -10103,6 +10171,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group =  0 ;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "allow xml docs";
@@ -10112,8 +10181,9 @@ void Parms::init ( ) {
 	m->m_cgi   = "axd";
 	m->m_off   = (char *)&cr.m_allowXmlDocs - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "do serp detection";
@@ -10124,7 +10194,6 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_doSerpDetection - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_group =  0 ;
 	m++;
 
 
@@ -10136,6 +10205,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_doIpLookups - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use old IPs";
@@ -10148,6 +10218,7 @@ void Parms::init ( ) {
 	m->m_type = TYPE_BOOL;
 	m->m_def = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "remove banned pages";
@@ -10157,6 +10228,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_removeBannedPages - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -10188,7 +10260,8 @@ void Parms::init ( ) {
 	m->m_cgi   = "ahttps";
 	m->m_off   = (char *)&cr.m_allowHttps - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -10237,6 +10310,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_followRSSLinks - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "only index articles from RSS feeds";
@@ -10247,17 +10321,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m++;
-
-	m->m_title = "max add urls";
-	m->m_desc = "Maximum number of urls that can be "
-		"submitted via the addurl interface, per IP domain, per "
-		"24 hour period. A value less than or equal to zero "
-		"implies no limit.";
-	m->m_cgi = "mau";
-	m->m_off = (char *)&cr.m_maxAddUrlsPerIpDomPerDay - x;
-	m->m_type = TYPE_LONG;
-	m->m_def = "100";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -10330,20 +10394,6 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "max robots.txt cache age";
-	m->m_desc  = "How many second to cache a robots.txt file for. "
-		"86400 is 1 day. 0 means Gigablast will not read from the "
-		"cache at all and will download the robots.txt before every "
-		"page if robots.txt use is enabled above. However, if this is "
-		"0 then Gigablast will still store robots.txt files into the "
-		"cache.";
-	m->m_cgi   = "mrca";
-	m->m_off   = (char *)&cr.m_maxRobotsCacheAge - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "86400"; // 24*60*60 = 1day
-	m->m_units = "seconds";
-	m++;
-
 	m->m_title = "spider start time";
 	m->m_desc  = "Only spider URLs scheduled to be spidered "
 		"at this time or after. In UTC.";
@@ -10351,6 +10401,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_spiderTimeMin - x;
 	m->m_type  = TYPE_DATE; // date format -- very special
 	m->m_def   = "01 Jan 1970";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "spider end time";
@@ -10363,6 +10414,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_DATE2;
 	m->m_def   = "01 Jan 2010";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use current time";
@@ -10372,6 +10424,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -10962,6 +11015,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "ri";
 	m->m_soff  = (char *)&si.m_restrictIndexdbForQuery - y;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "restrict indexdb for xml feed";
@@ -10969,8 +11023,9 @@ void Parms::init ( ) {
 	m->m_cgi   = "rix";
 	m->m_off   = (char *)&cr.m_restrictIndexdbForXML - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	//m->m_title = "restrict indexdb for queries in xml feed";
@@ -10994,7 +11049,118 @@ void Parms::init ( ) {
 	m->m_scgi  = "rcache";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
+
+	m->m_title = "do spell checking";
+	m->m_desc  = "If enabled while using the XML feed, "
+		"when Gigablast finds a spelling recommendation it will be "
+		"included in the XML <spell> tag. Default is 0 if using an "
+		"XML feed, 1 otherwise.";
+	m->m_cgi   = "spell";
+	m->m_off   = (char *)&cr.m_spellCheck - x;
+	m->m_soff  = (char *)&si.m_spellCheck - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
+	m++;
+
+	m->m_title = "get docid scoring info";
+	m->m_desc  = "Get scoring information for each result so you "
+		"can see how each result is scored? You must explicitly "
+		"request this using &scores=1 for the XML feed because it "
+		"is not included by default.";
+	m->m_cgi   = "scores"; // dedupResultsByDefault";
+	m->m_off   = (char *)&cr.m_getDocIdScoringInfo - x;
+	m->m_soff  = (char *)&si.m_getDocIdScoringInfo - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_sparm = 1;
+	m->m_scgi  = "scores";
+	m++;
+
+	m->m_title = "do query expansion";
+	m->m_desc  = "Query expansion will include word stems and synonyms in "
+		"its search results.";
+	m->m_def   = "1";
+	m->m_off   = (char *)&cr.m_queryExpansion - x;
+	m->m_soff  = (char *)&si.m_queryExpansion - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_sparm = 1;
+	m->m_cgi  = "qe";
+	m->m_scgi  = "qe";
+	m++;
+
+
+	// more general parameters
+	m->m_title = "max search results";
+	m->m_desc  = "What is the limit to the total number "
+		"of returned search results.";
+	m->m_cgi   = "msr";
+	m->m_off   = (char *)&cr.m_maxSearchResults - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "1000";
+	m++;
+
+	m->m_title = "max search results per query";
+	m->m_desc  = "What is the limit to the total number "
+		"of returned search results per query?";
+	m->m_cgi   = "msrpq";
+	m->m_off   = (char *)&cr.m_maxSearchResultsPerQuery - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "100";
+	m->m_group = 0;
+	m++;
+
+	m->m_title = "max search results for paying clients";
+	m->m_desc  = "What is the limit to the total number "
+		"of returned search results for clients.";
+	m->m_cgi   = "msrfpc";
+	m->m_off   = (char *)&cr.m_maxSearchResultsForClients - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "1000";
+	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
+	m++;
+
+	m->m_title = "max search results per query for paying clients";
+	m->m_desc  = "What is the limit to the total number "
+		"of returned search results per query for paying clients? "
+		"Auto ban must be enabled for this to work.";
+	m->m_cgi   = "msrpqfc";
+	m->m_off   = (char *)&cr.m_maxSearchResultsPerQueryForClients - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "1000";
+	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
+	m++;
+
+
+
+	m->m_title = "max title len";
+	m->m_desc  = "What is the maximum number of "
+		"characters allowed in titles displayed in the search "
+		"results?";
+	m->m_cgi   = "tml";
+	m->m_off   = (char *)&cr.m_titleMaxLen - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "80";
+	m++;
+
+	m->m_title = "consider titles from body";
+	m->m_desc = "Can Gigablast make titles from the document content? "
+		"Used mostly for the news collection where the title tags "
+		"are not very reliable.";
+	m->m_cgi   = "gtfb";
+	m->m_off   = (char *)&cr.m_considerTitlesFromBody - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_sparm = 1;
+	m->m_soff  = (char *)&si.m_considerTitlesFromBody - y;
+	m++;
+
 
 	m->m_title = "site cluster by default";
 	m->m_desc  = "Should search results be site clustered by default?";
@@ -11086,7 +11252,7 @@ void Parms::init ( ) {
 	m->m_soff  = (char *)&si.m_doDupContentRemoval - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_group = 0;
+	m->m_group = 1;
 	m->m_sparm = 1;
 	m->m_scgi  = "dr";
 	m++;
@@ -11104,6 +11270,37 @@ void Parms::init ( ) {
 	m->m_scgi  = "ddu";
 	m++;
 
+	m->m_title = "percent similar dedup summary";
+	m->m_desc  = "If document summary is this percent similar "
+		"to a document summary above it, then remove it from the search "
+		"results. 100 means only to remove if exactly the same. 0 means"
+		" no summary deduping.";
+	m->m_cgi   = "psds";
+	m->m_off   = (char *)&cr.m_percentSimilarSummary - x;
+	m->m_soff  = (char *)&si.m_percentSimilarSummary - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "90";
+	m->m_group = 0;
+	m->m_sparm = 1;
+	m->m_scgi  = "pss";
+	m->m_smin  = 0;
+	m->m_smax  = 100;
+	m++;       
+
+	m->m_title = "number of lines to use in summary to dedup";
+	m->m_desc  = "Sets the number of lines to generate for summary deduping."
+		" This is to help the deduping process not thorw out valid "
+		"summaries when normally displayed summaries are smaller values."
+		" Requires percent similar dedup summary to be enabled.";
+	m->m_cgi   = "msld";
+	m->m_off   = (char *)&cr.m_summDedupNumLines - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "4";
+	m->m_group = 0;
+	m++;       
+	
+
+
 	m->m_title = "use vhost language detection";
 	m->m_desc  = "Use language specific pages for home, etc.";
 	m->m_cgi   = "vhost";
@@ -11114,6 +11311,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "vhost";
 	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -11132,22 +11330,22 @@ void Parms::init ( ) {
 
 	m->m_title = "use language weights";
 	m->m_desc  = "Use Language weights to sort query results. "
-		"This will give results of a similar language a higher "
-		"priority.";
+		"This will give results that match the specified &qlang "
+		"higher ranking.";
 	m->m_cgi   = "lsort";
 	m->m_off   = (char *)&cr.m_enableLanguageSorting - x;
 	m->m_soff  = (char *)&si.m_enableLanguageSorting - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_group = 0;
+	m->m_group = 1;
 	m->m_sparm = 1;
 	m->m_scgi  = "lsort";
 	m->m_smin  = 0;
 	m++;
 
 	m->m_title = "sort language preference";
-	m->m_desc  = "Default language for post query rerank. "
-		"This should only be used on limited collections. "
+	m->m_desc  = "Default language to use for ranking results. "
+		//"This should only be used on limited collections. "
 		"Value should be any language abbreviation, for example "
 		"\"en\" for English.";
 	m->m_cgi   = "qlang";
@@ -11162,8 +11360,8 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "sort country preference";
-	m->m_desc  = "Default country for post query rerank. "
-		"This should only be used on limited collections. "
+	m->m_desc  = "Default country to use for ranking results. "
+		//"This should only be used on limited collections. "
 		"Value should be any country code abbreviation, for example "
 		"\"us\" for United States.";
 	m->m_cgi   = "qcountry";
@@ -11254,6 +11452,7 @@ void Parms::init ( ) {
 	m->m_group = 1;
 	m->m_sparm = 1;
 	m->m_scgi  = "pqrds";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for foreign languages";
@@ -11270,6 +11469,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "pqrlang";
 	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for unknown languages";
@@ -11288,6 +11488,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "pqrlangunk";
 	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for pages where the country of the page writes "
@@ -11304,6 +11505,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.98";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for query terms or gigabits in url";
@@ -11331,6 +11533,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max value for pages with query terms or gigabits "
@@ -11351,6 +11554,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "10";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for pages that are not high quality";
@@ -11367,6 +11571,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max value for pages that are not high quality";
@@ -11378,6 +11583,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for pages that are not "
@@ -11395,6 +11601,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max value for pages that have many paths in the url";
@@ -11407,6 +11614,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "16";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for pages that do not have a catid";
@@ -11418,6 +11626,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for pages where smallest "
@@ -11438,6 +11647,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max value for pages where smallest catid has a lot "
@@ -11455,6 +11665,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "11";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for larger pages";
@@ -11470,6 +11681,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max value for larger pages";
@@ -11481,6 +11693,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "524288";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for non-location specific queries "
@@ -11502,6 +11715,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.99";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for non-location specific queries "
@@ -11523,6 +11737,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.95";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for non-location specific queries "
@@ -11544,6 +11759,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.95";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demote locations that appear in gigabits";
@@ -11556,6 +11772,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max value for non-location specific queries "
@@ -11570,6 +11787,7 @@ void Parms::init ( ) {
 	// charlottesville was getting missed when this was 1M
 	m->m_def   = "100000";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for non-html";
@@ -11583,6 +11801,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for xml";
@@ -11597,6 +11816,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.95";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for pages with other pages from same "
@@ -11615,6 +11835,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max value for pages with other pages from same "
@@ -11627,6 +11848,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "12";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "initial demotion for pages with common "
@@ -11649,6 +11871,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "decay for pages with common topics in dmoz "
@@ -11664,6 +11887,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max value for pages with common topics in dmoz "
@@ -11677,6 +11901,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "32"; 
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for pages where dmoz category names "
@@ -11695,6 +11920,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 	
 	m->m_title = "max value for pages where dmoz category names "
@@ -11709,6 +11935,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "10"; 
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for pages where dmoz category names "
@@ -11727,6 +11954,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max value for pages where dmoz category names "
@@ -11740,6 +11968,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "16"; 
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for pages based on datedb date";
@@ -11758,6 +11987,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 	
 	m->m_title = "min value for demotion based on datedb date ";
@@ -11777,6 +12007,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "631177"; // Jan 01, 1990 
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max value for demotion based on datedb date ";
@@ -11792,6 +12023,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0"; 
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for pages based on proximity";
@@ -11807,6 +12039,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion for pages based on query terms section";
@@ -11822,6 +12055,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "weight of indexed score on pqr";
@@ -11837,6 +12071,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
@@ -11850,6 +12085,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100000"; 
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
@@ -11865,6 +12101,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "demotion based on common inlinks";
@@ -11878,6 +12115,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = ".5";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "number of document calls multiplier";
@@ -11889,6 +12127,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "1.2";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -11915,46 +12154,8 @@ void Parms::init ( ) {
 	m->m_scgi  = "mrti";
 	m->m_smin  = 0;
 	m->m_smax  = 100000;
+	m->m_flags = PF_HIDDEN;
 	m++;
-
-	m->m_title = "percent similar dedup summary";
-	m->m_desc  = "If document summary is this percent similar "
-		"to a document summary above it, then remove it from the search "
-		"results. 100 means only to remove if exactly the same. 0 means"
-		" no summary deduping.";
-	m->m_cgi   = "psds";
-	m->m_off   = (char *)&cr.m_percentSimilarSummary - x;
-	m->m_soff  = (char *)&si.m_percentSimilarSummary - y;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "90";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "pss";
-	m->m_smin  = 0;
-	m->m_smax  = 100;
-	m++;       
-
-	m->m_title = "number of lines to use in summary to dedup";
-	m->m_desc  = "Sets the number of lines to generate for summary deduping."
-		" This is to help the deduping process not thorw out valid "
-		"summaries when normally displayed summaries are smaller values."
-		" Requires percent similar dedup summary to be enabled.";
-	m->m_cgi   = "msld";
-	m->m_off   = (char *)&cr.m_summDedupNumLines - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "4";
-	m->m_group = 0;
-	m++;       
-	
-	m->m_title = "bytes of doc to scan for summary generation";
-	m->m_desc  = "Truncating this will miss out on good summaries, but "
-		"performance will increase.";
-	m->m_cgi   = "clmfs";
-	m->m_off   = (char *)&cr.m_contentLenMaxForSummary - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "70000";
-	m->m_group = 0;
-	m++;       
 
 	m->m_title = "percent topic similar default";
 	m->m_desc  = "Like above, but used for deciding when to cluster "
@@ -11964,6 +12165,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "50";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;	
 	m++;
 
 	//m->m_title = "max query terms";
@@ -11990,137 +12192,6 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "ip restriction for topics";
-	m->m_desc  = "Should Gigablast only get one document per IP domain "
-		"and per domain for topic generation?";
-	m->m_cgi   = "ipr";
-	m->m_off   = (char *)&cr.m_ipRestrict - x;
-	m->m_soff  = (char *)&si.m_ipRestrictForTopics - y;
-	m->m_type  = TYPE_BOOL;
-	// default to 0 since newspaperarchive only has docs from same IP dom
-	m->m_def   = "0";
-	m->m_sparm = 1;
-	m++;
-
-	m->m_title = "remove overlapping topics";
-	m->m_desc  = "Should Gigablast remove overlapping topics?";
-	m->m_cgi   = "rot";
-	m->m_off   = (char *)&cr.m_topicRemoveOverlaps - x;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_group = 0;
-	m++;
-
-	m->m_title = "docs to scan for topics";
-	m->m_desc  = "How many search results should we "
-		"scan for related topics per query?";
-	m->m_cgi   = "dsrt";
-	m->m_off   = (char *)&cr.m_docsToScanForTopics - x;
-	m->m_soff  = (char *)&si.m_docsToScanForTopics - y;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "300";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m++;
-
-	m->m_title = "number of related topics";
-	m->m_desc  = "What is the number of "
-		"related topics displayed per query? Set to 0 to save "
-		"CPU time.";
-	m->m_cgi   = "nrt";
-	m->m_off   = (char *)&cr.m_numTopics - x;
-	m->m_soff  = (char *)&si.m_numTopicsToDisplay - y;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "11";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_sprpg = 0; // do not propagate
-        m->m_sprpp = 0; // do not propagate
-	m++;
-
-	m->m_title = "min topics score";
-	m->m_desc  = "Related topics with scores below this "
-		"will be excluded. Scores range from 0% to over 100%.";
-	m->m_cgi   = "mts";
-	m->m_off   = (char *)&cr.m_minTopicScore - x;
-	m->m_soff  = (char *)&si.m_minTopicScore - y;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "5";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m++;
-
-	m->m_title = "min topic doc count";
-	m->m_desc  = "How many documents must contain the topic for it to "
-		"be displayed.";
-	m->m_cgi   = "mdc";
-	m->m_off   = (char *)&cr.m_minDocCount - x;
-	m->m_soff  = (char *)&si.m_minDocCount - y;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "2";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m++;
-
-	m->m_title = "dedup doc percent for topics";
-	m->m_desc  = "If a document is this percent similar to another "
-		"document with a higher score, then it will not contribute "
-		"to the topic generation.";
-	m->m_cgi   = "dsp";
-	m->m_off   = (char *)&cr.m_dedupSamplePercent - x;
-	m->m_soff  = (char *)&si.m_dedupSamplePercent - y;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "80";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m++;
-
-	m->m_title = "max words per topic";
-	m->m_desc  = "Maximum number of words a topic can have. Affects "
-		"raw feeds, too.";
-	m->m_cgi   = "mwpt";
-	m->m_off   = (char *)&cr.m_maxWordsPerTopic - x;
-	m->m_soff  = (char *)&si.m_maxWordsPerTopic - y;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "6";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m++;
-
-	m->m_title = "topic max sample size";
-	m->m_desc  = "Max chars to sample from each doc for topics.";
-	m->m_cgi   = "tmss";
-	m->m_off   = (char *)&cr.m_topicSampleSize - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "4096";
-	m->m_group = 0;
-	m++;
-
-	m->m_title = "topic max punct len";
-	m->m_desc  = "Max sequential punct chars allowed in a topic. "
-		"Set to 1 for speed, 5 or more for best topics but twice as "
-		"slow.";
-	m->m_cgi   = "tmpl";
-	m->m_off   = (char *)&cr.m_topicMaxPunctLen - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "1";
-	m->m_group = 0;
-	m++;
-
-	m->m_title = "do spell checking";
-	m->m_desc  = "If enabled while using the XML feed, "
-		"when Gigablast finds a spelling recommendation it will be "
-		"included in the XML <spell> tag. Default is 0 if using an "
-		"XML feed, 1 otherwise.";
-	m->m_cgi   = "spell";
-	m->m_off   = (char *)&cr.m_spellCheck - x;
-	m->m_soff  = (char *)&si.m_spellCheck - y;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_sparm = 1;
-	m->m_group = 0;
-	m++;
-
 	/*
 	m->m_title = "allow links: searches";
 	m->m_desc  = "Allows anyone access to perform links: searches on this "
@@ -12146,6 +12217,7 @@ void Parms::init ( ) {
 	m->m_priv  = 0;
 	m->m_sparm = 1;
 	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "number of reference pages to display";
@@ -12161,6 +12233,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_sprpg = 0; // do not propagate
         m->m_sprpp = 0; // do not propagate
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "docs to scan for reference pages";
@@ -12176,6 +12249,7 @@ void Parms::init ( ) {
 	m->m_priv  = 0;
 	m->m_sparm = 1;
 	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "min references quality";
@@ -12190,6 +12264,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "min links per references";
@@ -12203,6 +12278,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max linkers to consider for references per page";
@@ -12218,6 +12294,7 @@ void Parms::init ( ) {
 	m->m_priv  = 2;
 	m->m_sparm = 1;
 	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "page fetch multiplier for references";
@@ -12233,6 +12310,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "number of links coefficient";
@@ -12246,6 +12324,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "quality coefficient";
@@ -12259,6 +12338,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "link density coefficient";
@@ -12272,6 +12352,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "add or multipy quality times link density";
@@ -12285,6 +12366,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	// reference pages ceiling parameters
@@ -12298,6 +12380,7 @@ void Parms::init ( ) {
 	m->m_def   = "100";
 	m->m_group = 0;
 	m->m_priv  = 2;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "maximum allowed value for "
@@ -12310,6 +12393,7 @@ void Parms::init ( ) {
 	m->m_def   = "100";
 	m->m_group = 0;
 	m->m_priv  = 2;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "maximum allowed value for "
@@ -12322,6 +12406,7 @@ void Parms::init ( ) {
 	m->m_def   = "5000";
 	m->m_group = 0;
 	m->m_priv  = 2;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "maximum allowed value for "
@@ -12334,6 +12419,7 @@ void Parms::init ( ) {
 	m->m_def   = "10";
 	m->m_group = 0;
 	m->m_priv  = 2;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	// related pages parameters
@@ -12348,6 +12434,7 @@ void Parms::init ( ) {
 	m->m_priv  = 0;
 	m->m_sparm = 1;
 	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "number of related pages to display";
@@ -12362,6 +12449,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_sprpg = 0; // do not propagate
         m->m_sprpp = 0; // do not propagate
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "number of links to scan for related pages";
@@ -12377,6 +12465,7 @@ void Parms::init ( ) {
 	m->m_priv  = 2;
 	m->m_sparm = 1;
 	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "min related page quality";
@@ -12390,6 +12479,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "min related page score";
@@ -12403,6 +12493,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "min related page links";
@@ -12416,6 +12507,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "coefficient for number of links in related pages score "
@@ -12430,6 +12522,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "coefficient for average linker quality in related pages "
@@ -12444,6 +12537,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "coefficient for page quality in related pages "
@@ -12458,6 +12552,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "coefficient for search result links in related pages "
@@ -12472,6 +12567,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "number of related page summary excerpts";
@@ -12487,6 +12583,7 @@ void Parms::init ( ) {
 	m->m_priv  = 2;
 	m->m_sparm = 1;
 	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
@@ -12498,6 +12595,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_group = 0;
 	m->m_priv  = 2;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
@@ -12513,6 +12611,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use results pages as references";
@@ -12526,6 +12625,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "get related pages from other cluster";
@@ -12541,6 +12641,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "collection for other related pages cluster";
@@ -12555,6 +12656,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	// relate pages ceiling parameters
@@ -12566,6 +12668,7 @@ void Parms::init ( ) {
 	m->m_def   = "100";
 	m->m_group = 0;
 	m->m_priv  = 2;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "maximum allowed value for numRPLinksPerDoc parameter";
@@ -12576,6 +12679,7 @@ void Parms::init ( ) {
 	m->m_def   = "5000";
 	m->m_group = 0;
 	m->m_priv  = 2;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "maximum allowed value for numSummaryLines parameter";
@@ -12586,6 +12690,7 @@ void Parms::init ( ) {
 	m->m_def   = "10";
 	m->m_group = 0;
 	m->m_priv  = 2;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	// import search results controls
@@ -12601,6 +12706,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "imported score weight";
@@ -12617,6 +12723,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "how many linkers must each imported result have";
@@ -12630,6 +12737,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "num linkers weight";
@@ -12646,6 +12754,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "the name of the collection to import from";
@@ -12661,46 +12770,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m++;
-
-	// more general parameters
-	m->m_title = "max search results";
-	m->m_desc  = "What is the limit to the total number "
-		"of returned search results.";
-	m->m_cgi   = "msr";
-	m->m_off   = (char *)&cr.m_maxSearchResults - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "1000";
-	m++;
-
-	m->m_title = "max search results per query";
-	m->m_desc  = "What is the limit to the total number "
-		"of returned search results per query?";
-	m->m_cgi   = "msrpq";
-	m->m_off   = (char *)&cr.m_maxSearchResultsPerQuery - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "100";
-	m->m_group = 0;
-	m++;
-
-	m->m_title = "max search results for paying clients";
-	m->m_desc  = "What is the limit to the total number "
-		"of returned search results for clients.";
-	m->m_cgi   = "msrfpc";
-	m->m_off   = (char *)&cr.m_maxSearchResultsForClients - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "1000";
-	m++;
-
-	m->m_title = "max search results per query for paying clients";
-	m->m_desc  = "What is the limit to the total number "
-		"of returned search results per query for paying clients? "
-		"Auto ban must be enabled for this to work.";
-	m->m_cgi   = "msrpqfc";
-	m->m_off   = (char *)&cr.m_maxSearchResultsPerQueryForClients - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "1000";
-	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max similar results for cluster by topic";
@@ -12713,6 +12783,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "ncbt";
 	m->m_soff  = (char *)&si.m_maxClusterByTopicResults - y;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "number of extra results to get for cluster by topic";
@@ -12725,18 +12796,9 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "ntwo";
 	m->m_soff  = (char *)&si.m_numExtraClusterByTopicResults - y;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
-
-	m->m_title = "max title len";
-	m->m_desc  = "What is the maximum number of "
-		"characters allowed in titles displayed in the search "
-		"results?";
-	m->m_cgi   = "tml";
-	m->m_off   = (char *)&cr.m_titleMaxLen - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "80";
-	m++;
 
 	m->m_title = "Minimum number of in linkers required to consider getting"
 		" the title from in linkers";
@@ -12746,6 +12808,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_minTitleInLinkers - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "10";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "Max number of in linkers to consider";
@@ -12755,6 +12818,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxTitleInLinkers - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "128";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -12770,19 +12834,6 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "get docid scoring info";
-	m->m_desc  = "Get docid scoring info?";
-	m->m_cgi   = "scores"; // dedupResultsByDefault";
-	m->m_off   = (char *)&cr.m_getDocIdScoringInfo - x;
-	m->m_soff  = (char *)&si.m_getDocIdScoringInfo - y;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "scores";
-	m++;
-
-
 	m->m_title = "summary mode";
 	m->m_desc  = "0 = old compatibility mode, 1 = UTF-8 mode, "
 		"2 = fast ASCII mode, "
@@ -12797,6 +12848,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "smd";
 	m->m_soff  = (char*) &si.m_summaryMode - y;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "max summary len";
@@ -12806,7 +12858,6 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_summaryMaxLen - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "512";
-	m->m_group = 0;
 	m++;
 
 	m->m_title = "max summary excerpts";
@@ -12857,6 +12908,16 @@ void Parms::init ( ) {
 	m->m_soff  = (char *)&si.m_summaryMaxWidth - y;
 	m++;
 
+	m->m_title = "bytes of doc to scan for summary generation";
+	m->m_desc  = "Truncating this will miss out on good summaries, but "
+		"performance will increase.";
+	m->m_cgi   = "clmfs";
+	m->m_off   = (char *)&cr.m_contentLenMaxForSummary - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "70000";
+	m->m_group = 0;
+	m++;       
+
 	m->m_title = "Prox summary carver radius";
 	m->m_desc  = "Maximum number of characters to allow in between "
 		"search terms.";
@@ -12865,6 +12926,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "256";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "front highlight tag";
@@ -12900,30 +12962,127 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "do query expansion";
-	m->m_desc  = "Query expansion will include word stems and synonyms in "
-		"its search results.";
-	m->m_def   = "1";
-	m->m_off   = (char *)&cr.m_queryExpansion - x;
-	m->m_soff  = (char *)&si.m_queryExpansion - y;
-	m->m_type  = TYPE_BOOL;
+	m->m_title = "docs to scan for topics";
+	m->m_desc  = "How many search results should we "
+		"scan for related topics (gigabits) per query?";
+	m->m_cgi   = "dsrt";
+	m->m_off   = (char *)&cr.m_docsToScanForTopics - x;
+	m->m_soff  = (char *)&si.m_docsToScanForTopics - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "300";
 	m->m_sparm = 1;
-	m->m_cgi  = "qe";
-	m->m_scgi  = "qe";
 	m++;
 
-	m->m_title = "consider titles from body";
-	m->m_desc = "Can Gigablast make titles from the document content? "
-		"Used mostly for the news collection where the title tags "
-		"are not very reliable.";
-	m->m_cgi   = "gtfb";
-	m->m_off   = (char *)&cr.m_considerTitlesFromBody - x;
+	m->m_title = "ip restriction for topics";
+	m->m_desc  = "Should Gigablast only get one document per IP domain "
+		"and per domain for topic (gigabit) generation?";
+	m->m_cgi   = "ipr";
+	m->m_off   = (char *)&cr.m_ipRestrict - x;
+	m->m_soff  = (char *)&si.m_ipRestrictForTopics - y;
 	m->m_type  = TYPE_BOOL;
+	// default to 0 since newspaperarchive only has docs from same IP dom
 	m->m_def   = "0";
+	m->m_sparm = 1;
+	m->m_group = 0;
+	m++;
+
+	m->m_title = "remove overlapping topics";
+	m->m_desc  = "Should Gigablast remove overlapping topics (gigabits)?";
+	m->m_cgi   = "rot";
+	m->m_off   = (char *)&cr.m_topicRemoveOverlaps - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_group = 0;
+	m++;
+
+	m->m_title = "number of related topics";
+	m->m_desc  = "What is the number of "
+		"related topics (gigabits) "
+		"displayed per query? Set to 0 to save "
+		"CPU time.";
+	m->m_cgi   = "nrt";
+	m->m_off   = (char *)&cr.m_numTopics - x;
+	m->m_soff  = (char *)&si.m_numTopicsToDisplay - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "11";
 	m->m_group = 0;
 	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_considerTitlesFromBody - y;
+	m->m_sprpg = 0; // do not propagate
+        m->m_sprpp = 0; // do not propagate
 	m++;
+
+	m->m_title = "min topics score";
+	m->m_desc  = "Related topics (gigabits) with scores below this "
+		"will be excluded. Scores range from 0% to over 100%.";
+	m->m_cgi   = "mts";
+	m->m_off   = (char *)&cr.m_minTopicScore - x;
+	m->m_soff  = (char *)&si.m_minTopicScore - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "5";
+	m->m_group = 0;
+	m->m_sparm = 1;
+	m++;
+
+	m->m_title = "min topic doc count";
+	m->m_desc  = "How many documents must contain the topic (gigabit) "
+		"for it to be displayed.";
+	m->m_cgi   = "mdc";
+	m->m_off   = (char *)&cr.m_minDocCount - x;
+	m->m_soff  = (char *)&si.m_minDocCount - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "2";
+	m->m_group = 0;
+	m->m_sparm = 1;
+	m++;
+
+	m->m_title = "dedup doc percent for topics";
+	m->m_desc  = "If a document is this percent similar to another "
+		"document with a higher score, then it will not contribute "
+		"to the topic (gigabit) generation.";
+	m->m_cgi   = "dsp";
+	m->m_off   = (char *)&cr.m_dedupSamplePercent - x;
+	m->m_soff  = (char *)&si.m_dedupSamplePercent - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "80";
+	m->m_group = 0;
+	m->m_sparm = 1;
+	m++;
+
+	m->m_title = "max words per topic";
+	m->m_desc  = "Maximum number of words a topic (gigabit) can have. "
+		"Affects "
+		"raw feeds, too.";
+	m->m_cgi   = "mwpt";
+	m->m_off   = (char *)&cr.m_maxWordsPerTopic - x;
+	m->m_soff  = (char *)&si.m_maxWordsPerTopic - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "6";
+	m->m_group = 0;
+	m->m_sparm = 1;
+	m++;
+
+	m->m_title = "topic max sample size";
+	m->m_desc  = "Max chars to sample from each doc for topics "
+		"(gigabits).";
+	m->m_cgi   = "tmss";
+	m->m_off   = (char *)&cr.m_topicSampleSize - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "4096";
+	m->m_group = 0;
+	m++;
+
+	m->m_title = "topic max punct len";
+	m->m_desc  = "Max sequential punct chars allowed in a topic (gigabit)."
+		" Set to 1 for speed, 5 or more for best topics but twice as "
+		"slow.";
+	m->m_cgi   = "tmpl";
+	m->m_off   = (char *)&cr.m_topicMaxPunctLen - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "1";
+	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
+	m++;
+
 
 	m->m_title = "display dmoz categories in results";
 	m->m_desc  = "If enabled, results in dmoz will display their "
@@ -13002,6 +13161,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_displayIndexedDate - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "display last modified date";
@@ -13011,22 +13171,26 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "display published date";
-	m->m_desc  = "Display the published (datedb) date along with results.";
+	m->m_desc  = "Display the published date along with results.";
 	m->m_cgi   = "dipt";
 	m->m_off   = (char *)&cr.m_displayPublishDate - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_def   = "1";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "enable click 'n' scroll";
-	m->m_desc  = "The [cached] link on results pages loads click n scroll.";
+	m->m_desc  = "The [cached] link on results pages loads click n "
+		"scroll.";
 	m->m_cgi   = "ecns";
 	m->m_off   = (char *)&cr.m_clickNScrollEnabled - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
         m->m_title = "use data feed account server";
@@ -13036,6 +13200,7 @@ void Parms::init ( ) {
         m->m_off   = (char *)&cr.m_useDFAcctServer - x;
         m->m_type  = TYPE_BOOL;
         m->m_def   = "0";
+	m->m_flags = PF_HIDDEN;
         m++;
 
         m->m_title = "data feed server ip";
@@ -13046,6 +13211,7 @@ void Parms::init ( ) {
         m->m_type  = TYPE_IP;
         m->m_def   = "2130706433";
         m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
         m++;
 
         m->m_title = "data feed server port";
@@ -13056,6 +13222,7 @@ void Parms::init ( ) {
         m->m_type  = TYPE_LONG;
         m->m_def   = "8040";
         m->m_group = 0;
+	m->m_flags = PF_HIDDEN;
         m++;
 
 	/*

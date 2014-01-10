@@ -15,6 +15,13 @@
 #include "Linkdb.h"
 #include "sched.h"
 
+/////
+//
+// we no longer do ALLOW_SCALE! now user can click "rebalance shards"
+// to scan all rdbs of every coll and move the recs to the appropriate
+// shard in real time.
+//
+/////
 //#define ALLOW_SCALE
 
 void RdbList::constructor () { 
@@ -1818,7 +1825,6 @@ void RdbList::merge_r ( RdbList **lists         ,
 
 	// if we are scaling, skip this stuff
 	//if ( g_conf.m_allowScale ) goto skipfilter;
-
 
 #ifdef ALLOW_SCALE
 

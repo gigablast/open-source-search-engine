@@ -319,21 +319,21 @@ enum {
 	//PAGE_WORDVECTOR  ,
 	
 	// master admin pages
-	PAGE_STATS       , // 10
+	PAGE_MASTER      , 
 	PAGE_HOSTS       ,
+	PAGE_STATS       , // 10
+	PAGE_STATSDB	 ,
+	PAGE_PERF        ,
 	PAGE_SOCKETS     ,
 	PAGE_LOG         ,
-	PAGE_MASTER      , 
+	PAGE_LOGVIEW     ,
 //	PAGE_SYNC        , 
-	PAGE_PERF        ,
-	PAGE_STATSDB	 ,
 	PAGE_SECURITY    ,
 	PAGE_ADDCOLL     ,	
 	PAGE_DELCOLL     , 
 	PAGE_AUTOBAN     , // 20
 	//PAGE_SPIDERLOCKS ,
 	PAGE_PROFILER    ,
-	PAGE_LOGVIEW     ,
 	PAGE_THREADS     ,
 	PAGE_REPAIR      ,
 //	PAGE_THESAURUS   , 
@@ -343,12 +343,9 @@ enum {
 	PAGE_OVERVIEW    ,  //25
 	PAGE_CGIPARMS    ,  
 
-	PAGE_SITEDB      ,  
 	PAGE_RULES       ,
-	PAGE_CATDB       ,
 	PAGE_INDEXDB     ,  //30
 	PAGE_TITLEDB     ,  
-	PAGE_PARSER      ,
 	//PAGE_STATSDB	 ,
 
 	PAGE_SEARCH      ,  
@@ -357,13 +354,16 @@ enum {
 	PAGE_SPIDERDB    , 
 	//PAGE_PRIORITIES  ,  // priority queue controls
 	PAGE_FILTERS     ,
-	PAGE_REINDEX     ,	
 	PAGE_INJECT      , 
+	PAGE_REINDEX     ,	
 	//PAGE_KEYWORDS    ,
 	PAGE_SEO         ,
 	PAGE_ACCESS      ,  //40	
 	PAGE_SEARCHBOX   ,
 	PAGE_ADDURL2     ,
+	PAGE_PARSER      ,
+	PAGE_SITEDB      ,  
+	PAGE_CATDB       ,
 	PAGE_LOGIN2      ,
 //	PAGE_TOPDOCS     ,
 // 	PAGE_TOPICS      ,

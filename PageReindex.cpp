@@ -341,6 +341,8 @@ char *printInterface (char *p , char *pend , char *q , //long user ,
 
 	p += gbstrlen ( p );
 
+	if ( ! qlangStr ) qlangStr = "";
+
 	sprintf ( p , 
 
 		  "<tr><td><b>start result number</b>"

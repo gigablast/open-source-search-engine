@@ -7314,7 +7314,7 @@ bool sendPage ( State11 *st ) {
 	sb.safePrintf ( "<table width=100%% border=1 cellpadding=4 "
 			"bgcolor=#%s>\n" 
 			"<tr><td colspan=50 bgcolor=#%s>"
-			"<b>Waiting to Spider (coll = "
+			"<b>Ready to Spider (doledb)(coll = "
 			"<font color=red><b>%s</b>"
 			"</font>)"
 			,
@@ -7360,7 +7360,7 @@ bool sendPage ( State11 *st ) {
 	sb.safePrintf ( "<table width=100%% border=1 cellpadding=4 "
 			"bgcolor=#%s>\n" 
 			"<tr><td colspan=50 bgcolor=#%s>"
-			"<b>Next Url to Spider per IP (coll = "
+			"<b>IPs Waiting for Scan (coll = "
 			"<font color=red><b>%s</b>"
 			"</font>)"
 			,

@@ -384,7 +384,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<form method=get action=/addurl name=f>\n");
 
-	CollectionRec *cr = g_collectiondb.getRec ( "main" );
+	//CollectionRec *cr = g_collectiondb.getRec ( "main" );
 	//sb.safePrintf("<input type=hidden name=c value=\"%s\">",cr->m_coll);
 	sb.safePrintf("<input name=u type=text size=60 value=\"");
 	if ( url ) {
@@ -404,8 +404,8 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	if ( ! g_conf.m_addUrlEnabled ) 
 		msg = "Add url is temporarily disabled";
 	// can also be turned off in the collection rec
-	if ( ! cr->m_addUrlEnabled    ) 
-		msg = "Add url is temporarily disabled";
+	//if ( ! cr->m_addUrlEnabled    ) 
+	//	msg = "Add url is temporarily disabled";
 	// or if in read-only mode
 	if (   g_conf.m_readOnlyMode  ) 
 		msg = "Add url is temporarily disabled";
@@ -1340,8 +1340,8 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	if ( ! g_conf.m_addUrlEnabled ) 
 		msg = "Add url is temporarily disabled";
 	// can also be turned off in the collection rec
-	if ( ! cr->m_addUrlEnabled    ) 
-		msg = "Add url is temporarily disabled";
+	//if ( ! cr->m_addUrlEnabled    ) 
+	//	msg = "Add url is temporarily disabled";
 	// or if in read-only mode
 	if (   g_conf.m_readOnlyMode  ) 
 		msg = "Add url is temporarily disabled";

@@ -171,10 +171,12 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	g_conf.m_maxQualityCacheAge = 3600*24;
 	// hack this off until the overrun bug is fixed
 	g_conf.m_datedbMaxCacheMem = 0;
+
 	// hard-code disable this -- could be dangerous
-	g_conf.m_bypassValidation = false;
+	g_conf.m_bypassValidation = true;//false;
 	// this could too! (need this)
-	g_conf.m_allowScale = false;
+	g_conf.m_allowScale = true;//false;
+
 	// . until we fix spell checker
 	// . the hosts splitting count isn't right and it just sends to like
 	//   host #0 or something...

@@ -93,40 +93,48 @@ static WebPage s_pages[] = {
 	//  "word vectors page",
 	//  sendPageWordVec , 0 } ,
 
+	{ PAGE_MASTER    , "master"  , 0 , "master controls" ,  1 , 0 , 
+	  //USER_MASTER | USER_PROXY ,
+	  "master controls page",
+	  sendPageGeneric  , 0 } ,
+
+	{ PAGE_HOSTS     , "master/hosts"   , 0 , "hosts" ,  0 , 0 ,
+	  //USER_MASTER | USER_PROXY,
+	  "hosts page",
+	  sendPageHosts    , 0 } ,
+
 	// master admin pages
 	{ PAGE_STATS     , "master/stats"   , 0 , "stats" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY , 
 	  "statistics page",
 	  sendPageStats    , 0 } ,
-	{ PAGE_HOSTS     , "master/hosts"   , 0 , "hosts" ,  0 , 0 ,
-	  //USER_MASTER | USER_PROXY,
-	  "hosts page",
-	  sendPageHosts    , 0 } ,
-	{ PAGE_SOCKETS   , "master/sockets" , 0 , "sockets" ,  0 , 0 ,
-	  //USER_MASTER | USER_PROXY,
-	  "sockets page",
-	  sendPageSockets  , 0 } ,
-	{ PAGE_LOG       , "master/log"     , 0 , "log"     ,  1 , 0 ,
-	  //USER_MASTER | USER_PROXY,
-	  "log page",
-	  sendPageGeneric  , 0 } ,
-	{ PAGE_MASTER    , "master"  , 0 , "master controls" ,  1 , 0 , 
-	  //USER_MASTER | USER_PROXY ,
-	  "master controls page",
-	  sendPageGeneric  , 0 } ,
-//	{ PAGE_SYNC      , "master/sync"    , 0 , "sync"            ,  0 , 0 ,
-//	  //USER_MASTER , 
-//	  "sync page",
-//	  sendPageGeneric  , 0 } ,
+
+	{ PAGE_STATSDB , "master/statsdb"  , 0 , "graph"  ,  0 , 0 ,
+	  //USER_MASTER , 
+	  "statistics page",
+	  sendPageStatsdb  , 2 /*niceness*/ },
+
 	{ PAGE_PERF      , "master/perf"    , 0 , "performance"     ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
 	  "master performance page",
 	  sendPagePerf     , 0 } ,
 
-	{ PAGE_STATSDB , "master/statsdb"  , 0 , "statsdb"  ,  0 , 0 ,
-	  //USER_MASTER , 
-	  "statistics page",
-	  sendPageStatsdb  , 2 /*niceness*/ },
+	{ PAGE_SOCKETS   , "master/sockets" , 0 , "sockets" ,  0 , 0 ,
+	  //USER_MASTER | USER_PROXY,
+	  "sockets page",
+	  sendPageSockets  , 0 } ,
+	{ PAGE_LOG       , "master/log"     , 0 , "log controls"     ,  1 , 0 ,
+	  //USER_MASTER | USER_PROXY,
+	  "log page",
+	  sendPageGeneric  , 0 } ,
+	{ PAGE_LOGVIEW    , "admin/logview"   , 0 , "log view" ,  0 , 0 ,
+	  //USER_MASTER ,  
+	  "logview page",
+	  sendPageLogView  , 0 },
+//	{ PAGE_SYNC      , "master/sync"    , 0 , "sync"            ,  0 , 0 ,
+//	  //USER_MASTER , 
+//	  "sync page",
+//	  sendPageGeneric  , 0 } ,
 
 	{ PAGE_SECURITY, "master/security", 0 , "security"     ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
@@ -152,10 +160,6 @@ static WebPage s_pages[] = {
 	  //USER_MASTER , 
 	  "profiler page",
 	  sendPageProfiler   , 0 } ,
-	{ PAGE_LOGVIEW    , "admin/logview"   , 0 , "logview" ,  0 , 0 ,
-	  //USER_MASTER ,  
-	  "logview page",
-	  sendPageLogView  , 0 },
 	{ PAGE_THREADS    , "admin/threads"   , 0 , "threads" ,  0 , 0 ,
 	  //USER_MASTER ,
 	  "threads page",
@@ -179,18 +183,10 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_ADMIN , 
 	  "cgi params page",
 	  sendPageCgiParms , 0 } ,
-	{ PAGE_SITEDB    , "master/tagdb"  , 0 , "tagdb"  ,  0 , 1,
-	  //USER_MASTER | USER_ADMIN,
-	  "tagdb page to add/remove/get tags",
-	  sendPageTagdb ,  0} ,	  
 	{ PAGE_RULES  , "admin/siterules", 0 , "site rules", 1, 1,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "site rules page",
 	  sendPageGeneric , 0} ,
-	{ PAGE_CATDB     , "master/catdb"   , 0 , "catdb"           ,  0 , 1,
-	  //USER_MASTER | USER_ADMIN,
-	  "catdb page",
-	  sendPageCatdb    , 0 } ,
 	{ PAGE_INDEXDB   , "master/indexdb" , 0 , "indexdb"         ,  0 , 0,
 	  //USER_MASTER ,
 	  "indexdb page",
@@ -200,10 +196,6 @@ static WebPage s_pages[] = {
 	  "titledb page",
 	  sendPageTitledb  , 2 } ,
 	// 1 = usePost
-	{ PAGE_PARSER    , "master/parser"  , 0 , "parser"          ,  0 , 1,
-	  //USER_MASTER ,
-	  "page parser page",
-	  sendPageParser   , 2 } ,
 	{ PAGE_SEARCH    , "admin"   , 0 , "search controls" ,  1 , 1,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "search controls page",
@@ -229,14 +221,14 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER   , 
 	  "page filter page",
 	  sendPageGeneric  , 0 } ,
-	{ PAGE_REINDEX   , "admin/reindex"  , 0 , "reindex" ,  0 , 0 ,
-	  //USER_ADMIN | USER_MASTER, 
-	  "reindex url page",
-	  sendPageReindex  , 0 } ,
 	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject" ,  0 , 1 ,
 	  //USER_ADMIN | USER_MASTER   ,
 	  "inject url in the index here",
 	  sendPageInject   , 2 } ,
+	{ PAGE_REINDEX   , "admin/reindex"  , 0 , "query reindex" ,  0 , 0 ,
+	  //USER_ADMIN | USER_MASTER, 
+	  "reindex url page",
+	  sendPageReindex  , 0 } ,
 
 	//{ PAGE_KEYWORDS, "admin/queries",0,"queries" ,  0 , 1 ,
 	//  "get queries a url matches",
@@ -258,6 +250,18 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER   ,
 	  "add url page",
 	  sendPageAddUrl   , 0 } ,
+	{ PAGE_PARSER    , "master/parser"  , 0 , "parser"          ,  0 , 1,
+	  //USER_MASTER ,
+	  "page parser page",
+	  sendPageParser   , 2 } ,
+	{ PAGE_SITEDB    , "master/tagdb"  , 0 , "tagdb"  ,  0 , 1,
+	  //USER_MASTER | USER_ADMIN,
+	  "tagdb page to add/remove/get tags",
+	  sendPageTagdb ,  0} ,	  
+	{ PAGE_CATDB     , "master/catdb"   , 0 , "catdb"           ,  0 , 1,
+	  //USER_MASTER | USER_ADMIN,
+	  "catdb page",
+	  sendPageCatdb    , 0 } ,
 	//{ PAGE_LOGIN2    , "admin/login"         , 0 , "login" ,  0 , 0,
 	//  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
 	//"login link - also logoffs user",
@@ -1726,6 +1730,23 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		// top or bottom
 		if (   top && i >= PAGE_OVERVIEW ) continue;
 		if ( ! top && i  < PAGE_OVERVIEW ) continue;
+
+		// skip seo link
+		if ( ! g_conf.m_isMattWells && i == PAGE_SEO ) 
+			continue;
+
+		// ignore these for now
+		if ( i == PAGE_SECURITY ) continue;
+		if ( i == PAGE_ACCESS ) continue;
+		if ( i == PAGE_OVERVIEW ) continue;
+		if ( i == PAGE_INDEXDB ) continue;
+		if ( i == PAGE_RULES ) continue;
+		if ( i == PAGE_SEARCHBOX ) continue;
+		if ( i == PAGE_TITLEDB ) continue;
+
+		if ( cr && ! cr->m_isCustomCrawl && i == PAGE_CRAWLBOT )
+			continue;
+
 		// print it out
 		if ( i == PAGE_LOGIN || i == PAGE_LOGIN2 ) 
 			sb->safePrintf(
@@ -1860,21 +1881,28 @@ char *Pages::printAdminLinks ( char *p    ,
 			       long  page ,
 			       //long  user ,
 			       char *username,
-			       char *coll ,
+			       char *collArg ,
 			       char *pwd  ,
 			       bool  top  ) {
 
 	// prepare for printing these
-	if ( ! coll ) coll = "";
+	if ( ! collArg ) collArg = "";
 	//if ( ! pwd  ) pwd  = "";
 
 	if ( ! top ) {
 		// . if no collection do not print anything else
 		// . no, we accept as legit (print out as "main")
-		if ( ! coll[0] ) return p;
+		if ( ! collArg[0] ) return p;
 		if ( g_collectiondb.m_numRecsUsed == 0 ) return p;
-		if ( ! g_collectiondb.getRec ( coll )  ) return p;
+		if ( ! g_collectiondb.getRec ( collArg )  ) return p;
 	}
+
+	CollectionRec *cr = g_collectiondb.getRec ( collArg );
+	// sometimes there are no collections!
+	//if ( ! cr ) return true;
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+
 
 	//sprintf(p,"<font size=+1>\n" );
 	//p += gbstrlen(p);
@@ -1899,6 +1927,24 @@ char *Pages::printAdminLinks ( char *p    ,
 		// top or bottom
 		if (   top && i >= PAGE_OVERVIEW ) continue;
 		if ( ! top && i  < PAGE_OVERVIEW ) continue;
+
+		// skip seo link
+		if ( ! g_conf.m_isMattWells && i == PAGE_SEO ) 
+			continue;
+
+		// ignore these for now
+		if ( i == PAGE_SECURITY ) continue;
+		if ( i == PAGE_ACCESS ) continue;
+		if ( i == PAGE_OVERVIEW ) continue;
+		if ( i == PAGE_INDEXDB ) continue;
+		if ( i == PAGE_RULES ) continue;
+		if ( i == PAGE_SEARCHBOX ) continue;
+		if ( i == PAGE_TITLEDB ) continue;
+
+		if ( cr && ! cr->m_isCustomCrawl && i == PAGE_CRAWLBOT )
+			continue;
+
+
 		// print it out
 		if ( i == PAGE_LOGIN || i == PAGE_LOGIN2 ) 
 			sprintf(p,
