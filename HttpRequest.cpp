@@ -643,6 +643,25 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 // titan
 	 if ( sock && strncmp(iptoa(sock->m_ip),"66.162.42.131",13) == 0) 
 	 	 m_isLocal = true;
+	 
+	 // gotta scan all ips in hosts.conf as well...
+	 // if we are coming from any of our own hosts.conf c blocks
+	 // consider ourselves local
+	 unsigned long last = 0;
+	 for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		 Host *h = g_hostdb.getHost(i);
+		 // save time with this check
+		 if ( h->m_ip == last ) continue;
+		 // update it
+		 last = h->m_ip;
+		 // returns number of top bytes in comon
+		 long nt = ipCmp ( sock->m_ip , h->m_ip );
+		 // at least be in the same c-block as a host in hosts.conf
+		 if ( nt < 3 ) continue;
+		 m_isLocal = true;
+		 break;
+	 }
+		 
 
 
 	 // roadrunner ip

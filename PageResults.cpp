@@ -59,7 +59,7 @@ public:
 	long         m_numCSVColumns;
 };
 
-static int printResult ( SafeBuf &sb,
+static bool printResult ( SafeBuf &sb,
 			 State0 *st,
 			 long ix , 
 			 CollectionRec *cr ,
@@ -1340,12 +1340,23 @@ bool gotResults ( void *state ) {
 
 	// don't display more than docsWanted results
 	long count = msg40->getDocsWanted();
+	bool hadPrintError = false;
 
 	for ( long i = 0 ; count > 0 && i < numResults ; i++ ) {
 		// prints in xml or html
-		printResult ( sb , st , i , cr , qe );
+		if ( ! printResult ( sb , st , i , cr , qe ) ) {
+			hadPrintError = true;
+			break;
+		}
 		// limit it
 		count--;
+	}
+
+
+	if ( hadPrintError ) {
+		if ( ! g_errno ) g_errno = EBADENGINEER;
+		log("query: had error: %s",mstrerror(g_errno));
+		return sendReply ( st , sb.getBufStart() );
 	}
 
 
@@ -1777,7 +1788,7 @@ static bool printDMOZCategoryUnderResult ( SafeBuf &sb ,
 
 
 // use this for xml as well as html
-static int printResult ( SafeBuf &sb,
+static bool printResult ( SafeBuf &sb,
 			 State0 *st,
 			 long ix , 
 			 CollectionRec *cr ,
@@ -1808,6 +1819,11 @@ static int printResult ( SafeBuf &sb,
 
 	Msg20      *m20 = msg40->m_msg20[ix];
 	Msg20Reply *mr  = m20->m_r;
+
+	// . sometimes the msg20reply is NULL so prevent it coring
+	// . i think this happens if all hosts in a shard are down or timeout
+	//   or something
+	if ( ! mr ) return false;
 
 	// each "result" is the actual cached page, in this case, a json
 	// object, because we were called with &icc=1. in that situation

@@ -101,7 +101,9 @@ rather your current working directory, where the 'gb' binary resides.
 <li> <b>The ONLY open source WEB search engine.</b> 
 <li> Scalable to thousands of servers. 
 <li> Has scaled to over 12 billion web pages on over 200 servers.
-<li> A dual quad core, with 32GB ram, and two 160GB Intel SSDs, running 8 gb instances, can do about 8 qps (queries per second) on an index of 10 million pages. Drives will be close to maximum storage capacity.
+<li> A dual quad core, with 32GB ram, and two 160GB Intel SSDs, running 8 Gigablast instances, can do about 8 qps (queries per second) on an index of 10 million pages. Drives will be close to maximum storage capacity. Doubling index size will more or less halve qps rate.
+<li> 1 million web pages requires 28.6GB of drive space. That includes the index, meta information and the compressed HTML of all the web pages.
+<li> 4GB of RAM required per Gigablast instance. (instance = process)
 <li> Live demo at <a href=http://www.gigablast.com/>http://www.gigablast.com/</a> (running on old hardware so it is a bit slow)
 <li> Written in C/C++ for optimal performance.
 <li> Over 500,000 lines of C/C++.
