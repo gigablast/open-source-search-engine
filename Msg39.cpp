@@ -263,23 +263,26 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 
 	// . set up docid range cursor
 	// . do twin splitting
-	if ( m_r->m_stripe == 1 ) {
-		m_ddd = MAX_DOCID / 2LL;
-		m_dddEnd = MAX_DOCID + 1LL;
-	}
-	else if ( m_r->m_stripe == 0 ) {
-		m_ddd = 0;
-		m_dddEnd = MAX_DOCID / 2LL;
-	}
+	// . we do no do it this way any more... we subsplit each split
+	//   into two halves...!!! see logic in getLists() below!!!
+	//if ( m_r->m_stripe == 1 ) {
+	//	m_ddd = MAX_DOCID / 2LL;
+	//	m_dddEnd = MAX_DOCID + 1LL;
+	//}
+	//else if ( m_r->m_stripe == 0 ) {
+	//	m_ddd = 0;
+	//	m_dddEnd = MAX_DOCID / 2LL;
+	//}
 	// support triplets, etc. later
-	else {
-		char *xx=NULL;*xx=0; 
-	}
+	//else {
+	//	char *xx=NULL;*xx=0; 
+	//}
+
 	// do not do twin splitting if only one host per group
-	if ( g_hostdb.getNumStripes() == 1 ) {
-		m_ddd    = 0;
-		m_dddEnd = MAX_DOCID;
-	}
+	//if ( g_hostdb.getNumStripes() == 1 ) {
+	m_ddd    = 0;
+	m_dddEnd = MAX_DOCID;
+	//}
 
 
 	// . otherwise, to prevent oom, split up docids into ranges
