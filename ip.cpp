@@ -66,8 +66,8 @@ long  isIpTop ( long ip ) { return ( (ip & 0xffff0000) == 0 ); };
 
 // returns number of top bytes in comon
 long  ipCmp ( long ip1 , long ip2 ) {
-	char *a = (char *)ip1;
-	char *b = (char *)ip2;
+	char *a = (char *)&ip1;
+	char *b = (char *)&ip2;
 	// little endian compare
 	if ( a[3] != b[3] ) return 0;
 	if ( a[2] != b[2] ) return 1;
