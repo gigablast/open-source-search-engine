@@ -18574,7 +18574,9 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		sb->nullTerm();
 		//return true;
 		// sanity
-		if ( data[dataSize-1] != '\0' ) { char *xx=NULL;*xx=0; }
+		// we no longer include the \0 in the dataSize... so a dataSize
+		// of 0 means empty string...
+		//if ( data[dataSize-1] != '\0' ) { char *xx=NULL;*xx=0; }
 	}
 	else {
 		// and copy the data into collrec or g_conf

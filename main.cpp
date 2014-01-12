@@ -4362,11 +4362,18 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		else if ( installFlag == ifk_installgb ) {
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
+
+			File f;
+			char *target = "gb.new";
+			f.set(h2->m_dir,target);
+			if ( ! f.doesExist() ) target = "gb";
+			
 			sprintf(tmp,
 				"rcp "
-				"%sgb.new "
+				"%s%s "
 				"%s:%s/gb.installed &",
 				dir,
+				target,
 				iptoa(h2->m_ip),
 				h2->m_dir);
 			log(LOG_INIT,"admin: %s", tmp);
@@ -4767,11 +4774,18 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			char *amp = " &";
 			if ( i > 0 && (i%5) == 0 ) amp = "";
+
+			File f;
+			char *target = "gb.new";
+			f.set(h2->m_dir,target);
+			if ( ! f.doesExist() ) target = "gb";
+
 			sprintf(tmp,
 				"rcp "
-				"%sgb.new "
+				"%s%s "
 				"%s:%s/gb.installed %s",
 				dir,
+				target ,
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir,
 				amp);

@@ -7,6 +7,7 @@
 #include "sort.h"
 #include "Users.h"
 
+static int defaultSort    ( const void *i1, const void *i2 );
 static int pingSort1      ( const void *i1, const void *i2 );
 static int pingSort2      ( const void *i1, const void *i2 );
 static int pingAgeSort    ( const void *i1, const void *i2 );
@@ -37,8 +38,8 @@ bool sendPageHosts ( TcpSocket *s , HttpRequest *r ) {
 	SafeBuf sb(buf, 64*1024);
 	// check for a sort request
 	long sort  = r->getLong ( "sort", -1 );
-	// sort by ping times by default now, we are usually always doing that
-	if ( sort == -1 ) sort = 1;
+	// sort by hostid with dead on top by default
+	if ( sort == -1 ) sort = 16;
 	char *coll = r->getString ( "c" );
 	//char *pwd  = r->getString ( "pwd" );
 	// check for setnote command
@@ -292,6 +293,7 @@ skipReplaceHost:
 	case 13:gbsort ( hostSort, nh, sizeof(long), splitTimeSort  ); break;
 	case 14:gbsort ( hostSort, nh, sizeof(long), pingMaxSort    ); break;
 	case 15:gbsort ( hostSort, nh, sizeof(long), slowDiskSort    ); break;
+	case 16:gbsort ( hostSort, nh, sizeof(long), defaultSort    ); break;
 	}
 
 	// we are the only one that uses these flags, so set them now
@@ -390,24 +392,26 @@ skipReplaceHost:
 		// does its hosts.conf file disagree with ours?
 		if ( h->m_hostsConfCRC &&
 		     h->m_hostsConfCRC != g_hostdb.getCRC() )
-			fb.safePrintf("<font color=red>H</font>");
+			fb.safePrintf("<font color=red><b title=\"Hosts.conf "
+				      "in disagreement with ours.\">H</b></font>");
 		// rebalancing?
 		if ( h->m_flags & PFLAG_REBALANCING )
-			fb.safePrintf("<blink>R</blink>");
+			fb.safePrintf("<b title=\"Current rebalancing\">R</b>");
 		// has recs that should be in another shard? indicates
 		// we need to rebalance or there is a bad hosts.conf
 		if ( h->m_flags & PFLAG_FOREIGNRECS )
-			fb.safePrintf("<font color=red><blink>F"
-				      "</blink></font");
+			fb.safePrintf("<font color=red><b title=\"Foreign data "
+				      "detected. Needs rebalance.\">F"
+				      "</b></font");
 		// if it has spiders going on say "S"
 		if ( h->m_flags & PFLAG_HASSPIDERS )
-			fb.safePrintf ( "S");
+			fb.safePrintf ( "<span title=\"Spidering\">S</span>");
 		// say "M" if merging
 		if (   h->m_flags & PFLAG_MERGING )
-			fb.safePrintf ( "M");
+			fb.safePrintf ( "<span title=\"Merging\">M</span>");
 		// say "D" if dumping
 		if (   h->m_flags & PFLAG_DUMPING )
-			fb.safePrintf ( "D");
+			fb.safePrintf ( "<span title=\"Dumping\">D</span>");
 		// say "y" if doing the daily merge
 		if (  !(h->m_flags & PFLAG_MERGEMODE0) )
 			fb.safePrintf ( "y");
@@ -978,6 +982,24 @@ long generatePingMsg( Host *h, long long nowms, char *buf ) {
         }
 
         return pingAge;
+}
+
+int defaultSort   ( const void *i1, const void *i2 ) {
+	Host *h1 = g_hostdb.getHost ( *(long*)i1 );
+	Host *h2 = g_hostdb.getHost ( *(long*)i2 );
+	// float up to the top if the host is reporting kernel errors
+	// even if the ping is normal
+	if ( h1->m_kernelErrors  > 0 && h2->m_kernelErrors <= 0 ) return -1;
+	if ( h2->m_kernelErrors  > 0 && h1->m_kernelErrors <= 0 ) return  1;
+	if ( h2->m_kernelErrors  > 0 && h1->m_kernelErrors > 0 ) {
+		if ( h1->m_hostId < h2->m_hostId ) return -1;
+		return 1;
+	}
+	if ( g_hostdb.isDead(h1) && ! g_hostdb.isDead(h2) ) return -1;
+	if ( g_hostdb.isDead(h2) && ! g_hostdb.isDead(h1) ) return  1;
+
+	if ( h1->m_hostId < h2->m_hostId ) return -1;
+	return 1;
 }
 
 int pingSort1    ( const void *i1, const void *i2 ) {

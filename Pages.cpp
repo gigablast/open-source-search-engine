@@ -2048,8 +2048,8 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	while ( b < g_collectiondb.m_numRecs && countb < 16 )
 		if ( g_collectiondb.m_recs[b++] ) countb++;
 
-	char *s = "";
-	if ( g_collectiondb.m_numRecsUsed == 1 ) s = "s";
+	char *s = "s";
+	if ( g_collectiondb.m_numRecsUsed == 1 ) s = "";
 	sb->safePrintf ( "<center><b>%li Collection%s</b></center><br>\n",
 			 g_collectiondb.m_numRecsUsed , s );
 
