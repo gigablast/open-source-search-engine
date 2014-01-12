@@ -80,7 +80,7 @@ class Host {
 
  public:
 
-	//bool isDead ( ) { return m_hostdb->m_isDead ( this ); };
+	//bool isDead ( ) { return m_hostdb->m_isDead (); };
 
 	long           m_hostId ;
 	//unsigned long  m_groupId ;
@@ -272,9 +272,6 @@ class Host {
 	// Syncdb.cpp uses these
 	char           m_inSync ;
 	char           m_isPermanentOutOfSync ;
-
-	bool m_hostsConfInAgreement;
-	bool m_hostsConfInDisagreement;
 
 	// . used by Parms.cpp for broadcasting parm change requests
 	// . each parm change request has an id

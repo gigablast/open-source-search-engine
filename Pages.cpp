@@ -897,7 +897,6 @@ char *Pages::printAdminTop ( char        *p    ,
 }
 */
 
-
 bool Pages::printAdminTop ( SafeBuf *sb    ,
 			    long    page   ,
 			    //long    user   ,
@@ -962,6 +961,38 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	}
 	// end table
 	sb->safePrintf ("</td></tr></table><br/><br/>\n");
+
+	SafeBuf mb;
+	long adds = 0;
+
+	PingServer *ps = &g_pingServer;
+
+	mb.safePrintf("<center><table><tr><td bgcolor=#ff6666>");
+
+	// emergency message box
+	if ( ! g_hostdb.m_hostsConfInDisagreement ) {
+		adds++;
+		mb.safePrintf("The hosts.conf or localhosts.conf file "
+			      "is not the same over all hosts");
+	}
+
+	// if any host had foreign recs, not that
+	if ( ps->m_numHostsWithForeignRecs ) {
+		adds++;
+		mb.safePrintf("One or more hosts require shard rebalance. "
+			      "Click 'rebalance shards' in master controls.");
+	}
+
+	if ( ps->m_numHostsDead ) {
+		adds++;
+		mb.safePrintf("%li hosts are dead and not responding to "
+			      "pings",ps->m_numHostsDead );
+	}
+
+	mb.safePrintf("</td></tr></table></center>");
+
+	if ( adds )
+		sb->safePrintf("%s",sb->getBufStart());
 
 
 	// a new table. on the left is collections, on right is other stuff
@@ -1891,120 +1922,6 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 
 
 
-// . print the master     admin links if "user" is USER_MASTER 
-// . print the collection admin links if "user" is USER_ADMIN
-char *Pages::printAdminLinks ( char *p    , 
-			       char *pend , 
-			       long  page ,
-			       //long  user ,
-			       char *username,
-			       char *collArg ,
-			       char *pwd  ,
-			       bool  top  ) {
-
-	// prepare for printing these
-	if ( ! collArg ) collArg = "";
-	//if ( ! pwd  ) pwd  = "";
-
-	if ( ! top ) {
-		// . if no collection do not print anything else
-		// . no, we accept as legit (print out as "main")
-		if ( ! collArg[0] ) return p;
-		if ( g_collectiondb.m_numRecsUsed == 0 ) return p;
-		if ( ! g_collectiondb.getRec ( collArg )  ) return p;
-	}
-
-	CollectionRec *cr = g_collectiondb.getRec ( collArg );
-	// sometimes there are no collections!
-	//if ( ! cr ) return true;
-	char *coll = "";
-	if ( cr ) coll = cr->m_coll;
-
-
-	//sprintf(p,"<font size=+1>\n" );
-	//p += gbstrlen(p);
-	sprintf(p,"<center>\n" );
-	p += gbstrlen(p);
-
-	// soemtimes we do not want to be USER_MASTER for testing
-	char buf [ 64 ];
-	buf[0] = '\0';
-	//if ( user == USER_ADMIN ) 
-	//if (g_users.hasPermission(username,PAGE_ADMIN) )
-	//	sprintf(buf,"&master=0");
-
-	//long matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
-	//long matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
-	for ( long i = PAGE_MASTER ; i < s_numPages ; i++ ) {
-		// do not print link if no permission for that page
-		//if ( (s_pages[i].m_perm & user) == 0 ) continue;
-		//if ( ! g_users.hasPermission(username,i) ) continue;
-		// do not print Sync link if only one host
-		//if ( i == PAGE_SYNC && g_hostdb.getNumHosts() == 1 ) continue;
-		// top or bottom
-		if (   top && i >= PAGE_CGIPARMS ) continue;
-		if ( ! top && i  < PAGE_CGIPARMS ) continue;
-
-		// skip seo link
-		if ( ! g_conf.m_isMattWells && i == PAGE_SEO ) 
-			continue;
-
-		// ignore these for now
-		if ( i == PAGE_SECURITY ) continue;
-		if ( i == PAGE_ACCESS ) continue;
-		if ( i == PAGE_INDEXDB ) continue;
-		if ( i == PAGE_RULES ) continue;
-		if ( i == PAGE_SEARCHBOX ) continue;
-		if ( i == PAGE_TITLEDB ) continue;
-
-		if ( cr && ! cr->m_isCustomCrawl && i == PAGE_CRAWLBOT )
-			continue;
-
-
-		// print it out
-		if ( i == PAGE_LOGIN || i == PAGE_LOGIN2 ) 
-			sprintf(p,
-				"<span style=\"white-space:nowrap\">"
-				"<a href=\"/%s\">%s</a>"
-				"</span>"
-				" &nbsp; \n",s_pages[i].m_filename,
-				s_pages[i].m_name);
-		else if ( page == i )
-			sprintf(p,
-				"<span style=\"white-space:nowrap\">"
-				"<a href=\"/%s?c=%s%s\"><b>"
-				"<font color=red>%s</font></b></a>"
-				"</span>"
-				" &nbsp; \n",s_pages[i].m_filename,coll,
-				buf,s_pages[i].m_name);
-		else
-			sprintf(p,
-				"<span style=\"white-space:nowrap\">"
-				"<a href=\"/%s?c=%s%s\">%s</a>"
-				"</span>"
-				" &nbsp; \n",s_pages[i].m_filename,coll,
-				buf,s_pages[i].m_name);
-		p += gbstrlen ( p );
-		// print <br> after the last master admin control
-		/*
-		if ( i == PAGE_DELCOLL && user == USER_MASTER ) {
-			// . if no collection do not print anything else
-			// . no, we accept as legit (print out as "main")
-			//if ( ! coll[0] ) break;
-			if ( g_collectiondb.m_numRecsUsed == 0 ) break;
-			// or if no collection selected, same thing
-			if ( ! coll[0] ) break;
-			sprintf ( p , "<br><br>\n");
-			p += gbstrlen(p);
-		}
-		*/
-	}
-	sprintf(p,"</center><br/>" );
-	p += gbstrlen(p);
-	//sprintf(p,"</font>\n" );
-	//p += gbstrlen(p);
-	return p ;
-}
 
 bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 				    long  page     ,

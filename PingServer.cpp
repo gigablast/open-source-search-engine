@@ -120,6 +120,10 @@ bool PingServer::init ( ) {
 	m_bestPing     = -1;
 	m_bestPingDate =  0;
 
+	m_numHostsWithForeignRecs = 0;
+	m_numHostsDead = 0;
+	m_hostsConfInDisagreement = false;
+	m_hostsConfInAgreement = false;
 
 	// . send a ping request to everybody on the network right now!
 	// . no, sleepWrapper needs to do it when g_loop is working
@@ -953,6 +957,13 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 		requestSize = 8;
 	}
 
+	PingServer *ps = &g_pingServer;
+	ps->m_numHostsWithForeignRecs = 0;
+	ps->m_numHostsDead = 0;
+	ps->m_hostsConfInDisagreement = false;
+	ps->m_hostsConfInAgreement = false;
+
+
 	//
 	// do all hosts have the same hosts.conf????
 	//
@@ -963,20 +974,31 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 	long agree = 0;
 	long i; for ( i = 0 ; i < g_hostdb.getNumGrunts() ; i++ ) {
 		Host *h = &g_hostdb.m_hosts[i];			
+
+		if ( h->m_flags & PFLAG_FOREIGNRECS )
+			ps->m_numHostsWithForeignRecs++;
+
+		if ( ! g_hostdb.isDead ( h ) )
+			ps->m_numHostsDead++;
+
 		// skip if not received yet
 		if ( ! h->m_hostsConfCRC ) continue;
 		// badness?
 		if ( h->m_hostsConfCRC != g_hostdb.m_crc ) {
-			g_hostdb.m_hostsConfInDisagreement = true;
+			ps->m_hostsConfInDisagreement = true;
 			break;
 		}
 		// count towards agreement
 		agree++;
 	}
+
 	// iff all in agreement, set this flag
 	if ( agree == g_hostdb.getNumGrunts() )
-		g_hostdb.m_hostsConfInAgreement = true;
+		ps->m_hostsConfInAgreement = true;
 			
+
+
+
 
 	// if request is 5 bytes, must be a host telling us he's shutting down
 	if ( requestSize == 5 ) {
