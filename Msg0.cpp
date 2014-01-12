@@ -210,7 +210,14 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 		m_shardNum = forceParitySplit;
 	else
 		//m_groupId = getGroupId ( m_rdbId , startKey , ! noSplit );
-		m_shardNum = getShardNum ( m_rdbId , startKey , ! noSplit );
+		m_shardNum = getShardNum ( m_rdbId , startKey );
+
+	// if we are looking up a termlist in posdb that is split by termid and
+	// not the usual docid then we have to set this posdb key bit that tells
+	// us that ...
+	if ( noSplit && m_rdbId == RDB_POSDB )
+		m_shardNum = g_hostdb.getShardNumByTermId ( startKey );
+
 	// how is this used?
 	//if ( forceLocalIndexdb ) m_groupId = g_hostdb.m_groupId;
 	if ( forceLocalIndexdb ) m_shardNum = getMyShardNum();

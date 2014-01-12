@@ -43,6 +43,7 @@
 #include "Wiktionary.h"
 #include "Users.h"
 #include "Proxy.h"
+#include "Rebalance.h"
 
 // the query log hashtable defined in XmlDoc.cpp
 //extern HashTableX g_qt;
@@ -1621,7 +1622,7 @@ bool Process::saveBlockingFiles1 ( ) {
 	g_repair.save();
 
 	// save our place during a rebalance
-	g_rebalance.save();
+	g_rebalance.saveRebalanceFile();
 
 	// save the login table
 	g_users.save();

@@ -4,6 +4,7 @@
 #include "linkspam.h"
 #include "sort.h"
 #include "XmlDoc.h" // score32to8()
+#include "Rebalance.h"
 
 Linkdb g_linkdb;
 Linkdb g_linkdb2;
@@ -238,7 +239,7 @@ bool Linkdb::verify ( char *coll ) {
 	}
 	if ( got != count ) {
 		// tally it up
-		g_rebalance.m_foreignRecs += count - got;
+		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %li records in Linkdb , "
 		     "only %li belong to our group.",count,got);
 

@@ -90,7 +90,7 @@ bool Msg36::getTermFreq ( char      *coll       ,
 		groupId = g_indexdb.getGroupIdFromKey(&key);
 	*/
 	//groupId = g_indexdb.getNoSplitGroupId(&key);
-	uint32_t shardNum = getShardNum ( RDB_POSDB , &key , false );
+	uint32_t shardNum = getShardNum ( RDB_POSDB , &key );
 	
 	log(LOG_DEBUG,"quota: msg36 termid=%lli inc=%li dec=%li "
 	    "sending to shard=%li\n",termId,(long)incCount,(long)decCount,

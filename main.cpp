@@ -11017,8 +11017,7 @@ void dumpSectiondb(char *coll,long startFileNum,long numFiles,
 		firstKey = false;
 		// copy it
 		memcpy ( &lastk , k , sizeof(key128_t) );
-		unsigned long shardNum;
-		shardNum =  getShardNum (RDB_SECTIONDB,k,true);
+		long shardNum =  getShardNum (RDB_SECTIONDB,k);
 		//long groupNum = g_hostdb.getGroupNum ( gid );
 		// point to the data
 		char  *p       = data;
@@ -13227,7 +13226,7 @@ void dumpLinkdb ( char *coll,
 		//unsigned char hc = g_linkdb.getLinkerHopCount_uk(&k);
 		//unsigned long gid = g_hostdb.getGroupId (RDB_LINKDB,&k,true);
 		//long groupNum = g_hostdb.getGroupNum ( gid );
-		unsigned long shardNum = getShardNum(RDB_LINKDB,&k,true);
+		long shardNum = getShardNum(RDB_LINKDB,&k);
 		//if ( hc != 0 ) { char *xx=NULL;*xx=0; }
 		// is it an ip or url record?
 		//bool isHost = g_linkdb.isHostRecord ( &k );

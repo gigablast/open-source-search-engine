@@ -1157,7 +1157,7 @@ bool Rdb::dumpTree ( long niceness ) {
 	     //! g_repair.m_fullRebuild &&
 	     //! g_repair.m_rebuildNoSplits &&
 	     //! g_repair.m_removeBadPages &&
-	     ! isSecondaryRdb ( m_rdbId ) && 
+	     ! ::isSecondaryRdb ( m_rdbId ) && 
 	     m_rdbId != RDB_TAGDB )
 		return true;
 

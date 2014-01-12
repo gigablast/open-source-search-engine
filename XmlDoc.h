@@ -725,19 +725,19 @@ class XmlDoc {
 
 	char *addOutlinkSpiderRecsToMetaList ( );
 
-	bool addTable96 ( class HashTableX *tt1     , 
-			  long       date1   ,
-			  bool       nosplit ) ;
+	//bool addTable96 ( class HashTableX *tt1     , 
+	//		  long       date1   ,
+	//		  bool       nosplit ) ;
 
 	long getSiteRank ();
-	bool addTable144 ( class HashTableX *tt1     , 
-			   bool       nosplit ) ;
+	bool addTable144 ( class HashTableX *tt1 );
+
 	bool addTable224 ( HashTableX *tt1 ) ;
 
-	bool addTableDate ( class HashTableX *tt1     , //T<key128_t,char> *tt1
-                            uint64_t    docId   ,
-                            uint8_t     rdbId   ,
-                            bool        nosplit ) ;
+	//bool addTableDate ( class HashTableX *tt1     , //T<key128_t,char> *tt1
+	//                           uint64_t    docId   ,
+	//                           uint8_t     rdbId   ,
+	//                           bool        nosplit ) ;
 
 	bool addTable128 ( class HashTableX *tt1     , // T <key128_t,char>*tt1
                            uint8_t     rdbId   ,
@@ -2247,7 +2247,7 @@ class TermDebugInfo {
 	long      m_prefixOff; // the prefix offset, like "site" or "gbadid"
 	long long m_termId;
 	long      m_date;
-	bool      m_noSplit;
+	bool      m_shardByTermId;
 
 	//float     m_weight;
 	char      m_langId;
@@ -2273,7 +2273,11 @@ public:
 		m_prefix                  = NULL;
 		m_desc                    = NULL;
 		m_date                    = 0;
-		m_noSplit                 = false;
+		// should we do sharding based on termid and not the usual docid???
+		// in general this is false, but for checksum we want to shard
+		// by the checksum and not docid to avoid having to do a 
+		// gbchecksum:xxxxx search on ALL shards. much more efficient.
+		m_shardByTermId = false;
 		//m_useWeights              = false;
 		m_useSynonyms             = false;
 		m_hashGroup = -1;
@@ -2285,7 +2289,7 @@ public:
 	// "m_desc" should detail the algorithm
 	char             *m_desc;
 	long              m_date;
-	char              m_noSplit;
+	char              m_shardByTermId;
 	char              m_linkerSiteRank;
 	//char              m_useWeights;
 	char              m_useSynonyms;

@@ -167,6 +167,8 @@ class Rdb {
 	//bool deleteRecord ( collnum_t collnum , key_t &key ) ;
 	bool deleteRecord ( collnum_t collnum , char *key );
 
+	bool isSecondaryRdb () { return ::isSecondaryRdb((unsigned char)m_rdbId); };
+
 	// get the directory name where this rdb stores it's files
 	//char *getDir       ( ) { return m_dir.getDirname(); };
 	char *getDir       ( ) { return g_hostdb.m_dir; };

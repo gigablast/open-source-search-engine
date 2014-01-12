@@ -94,7 +94,8 @@ class Msg4 {
 	char      m_inUse;
 	collnum_t m_collnum;
 	long      m_niceness;
-	//bool      m_splitList;
+
+	long m_shardOverride;
 
 	char *m_metaList     ;
 	long  m_metaListSize ;

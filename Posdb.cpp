@@ -8,6 +8,7 @@
 //#include "Checksumdb.h"
 #include "Threads.h"
 #include "Posdb.h"
+#include "Rebalance.h"
 
 // a global class extern'd in .h file
 Posdb g_posdb;
@@ -32,7 +33,8 @@ bool Posdb::init ( ) {
 	long siteRank = 13;
 	long hashGroup = 1;
 	long langId = 59;
-	long multiplier = 29;
+	long multiplier = 13;
+	char shardedByTermId = 1;
 	char isSynonym = 1;
 	g_posdb.makeKey ( &k ,
 			  termId ,
@@ -46,7 +48,8 @@ bool Posdb::init ( ) {
 			  langId,
 			  multiplier,
 			  isSynonym , // syn?
-			  false ); // delkey?
+			  false , // delkey?
+			  shardedByTermId );
 	// test it out
 	if ( g_posdb.getTermId ( &k ) != termId ) { char *xx=NULL;*xx=0; }
 	//long long d2 = g_posdb.getDocId(&k);
@@ -60,7 +63,7 @@ bool Posdb::init ( ) {
 	if ( g_posdb.getLangId ( &k ) != langId ) { char *xx=NULL;*xx=0; }
 	if ( g_posdb.getMultiplier ( &k ) !=multiplier){char *xx=NULL;*xx=0; }
 	if ( g_posdb.getIsSynonym ( &k ) != isSynonym) { char *xx=NULL;*xx=0; }
-
+	if ( g_posdb.isShardedByTermId(&k)!=shardedByTermId){char *xx=NULL;*xx=0; }
 	// more tests
 	setDocIdBits ( &k, docId );
 	setMultiplierBits ( &k, multiplier );
@@ -308,7 +311,7 @@ bool Posdb::verify ( char *coll ) {
 	}
 	if ( got != count ) {
 		// tally it up
-		g_rebalance.m_foreignRecs += count - got;
+		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %li records in posdb, only %li belong "
 		     "to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
@@ -379,7 +382,8 @@ void Posdb::makeKey ( void              *vkp            ,
 		      char               langId         ,
 		      long               multiplier     ,
 		      bool               isSynonym      ,
-		      bool               isDelKey       ) {
+		      bool               isDelKey       ,
+		      bool shardedByTermId ) {
 
 	// sanity
 	if ( siteRank      > MAXSITERANK      ) { char *xx=NULL;*xx=0; }
@@ -445,6 +449,8 @@ void Posdb::makeKey ( void              *vkp            ,
 	// delbit
 	kp->n0 <<= 1;
 	if ( ! isDelKey ) kp->n0 |= 0x01;
+
+	if ( shardedByTermId ) setShardedByTermIdBit ( kp );
 }
 
 RdbCache g_termFreqCache;

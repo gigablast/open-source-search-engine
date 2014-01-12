@@ -30,6 +30,7 @@
 #include "Proxy.h"
 #include "hash.h"
 #include "Test.h"
+#include "Rebalance.h"
 
 // width of input box in characters for url filter expression
 #define REGEX_TXT_MAX 80
@@ -118,6 +119,17 @@ key96_t makeParmKey ( collnum_t collnum , Parm *m , short occNum ) {
 // . they return true with g_errno set on error, set to 0 on success
 //
 ////////
+
+// . require user manually execute this to prevent us fucking up the data
+//   at first initially because of a bad hosts.conf file!!!
+// . maybe put a red 'A' in the hosts table on the web page to indicate
+//   we detected records that don't belong to our shard so user knows to
+//   rebalance?
+// . we'll show it in a special msg box on all admin pages if required
+bool CommandRebalance ( char *rec ) {
+	g_rebalance.m_userApproved = true;
+	return true;
+}
 
 bool CommandInsertUrlFiltersRow ( char *rec ) {
 	// caller must specify collnum
@@ -6070,6 +6082,18 @@ void Parms::init ( ) {
 	m->m_cgi   = "save";
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandSaveAndExit;
+	m->m_group = 0;
+	m++;
+
+	m->m_title = "rebalance shards";
+	m->m_desc  = "Tell all hosts to scan all records in all databases, "
+		"and move "
+		"records to the shard they belong to. You only need to run "
+		"this if Gigablast tells you to, when you are changing "
+		"hosts.conf to add or remove more nodes/hosts.";
+	m->m_cgi   = "rebalance";
+	m->m_type  = TYPE_CMD;
+	m->m_func  = CommandRebalance;
 	m->m_group = 0;
 	m++;
 

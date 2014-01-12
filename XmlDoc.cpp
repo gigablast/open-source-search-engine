@@ -697,8 +697,6 @@ void XmlDoc::reset ( ) {
 	m_usePageLinkBuf = false;
 	m_printInXml = false;
 
-	//m_inHashNoSplit = false;
-
 	m_check1   = false;
 	m_check2   = false;
 	m_prepared = false;
@@ -7882,7 +7880,7 @@ RdbList *XmlDoc::getDupList ( ) {
 				false , // isRealMerge
 				true , // allow page cache
 				false , // forcelocalindexdb
-				true ) ) // NOSPLIT! THIS IS DIFFERENT
+				true ) ) // shardByTermId? THIS IS DIFFERENT!!!
 		// return -1 if this blocks
 		return (RdbList *)-1;
 	// assume valid!
@@ -18142,7 +18140,7 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 		"<tr>"
 		"<td><b>rdb</b></td>"
 		"<td><b>del?</b></td>"
-		"<td><b>nosplit?</b></td>"
+		"<td><b>shardByTermId?</b></td>"
 		// illustrates key size
 		"<td><b>key</b></td>"
 		// break it down. based on rdb, of course.
@@ -18156,8 +18154,6 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 	for ( ; p < pend ; p += recSize ) {
 		// get rdbid
 		uint8_t rdbId = *p & 0x7f;
-		// get nosplit flag
-		char noSplit = *p & 0x80;
 		// skip
 		p++;
 		// get key size
@@ -18175,6 +18171,10 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 		// is it a negative key?
 		char neg = false;
 		if ( ! ( p[0] & 0x01 ) ) neg = true;
+		// this is now a bit in the posdb key so we can rebalance
+		char shardByTermId = false;
+		if ( rdbId==RDB_POSDB && g_posdb.isShardedByTermId(k)) 
+			shardByTermId = true;
 		// skip it
 		p += ks;
 		// get datasize
@@ -18215,7 +18215,7 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 		if ( neg ) sb->safePrintf("<td>D</td>");
 		else       sb->safePrintf("<td>&nbsp;</td>");
 
-		if ( noSplit ) sb->safePrintf("<td>nosplit</td>");
+		if ( shardByTermId ) sb->safePrintf("<td>shardByTermId</td>");
 		else           sb->safePrintf("<td>&nbsp;</td>");
 
 		sb->safePrintf("<td><nobr>%s</nobr></td>", KEYSTR(k,ks));
@@ -18492,8 +18492,6 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		//char rdbId = -1; // m_rdbId;
 		//if ( rdbId < 0 ) rdbId = *p++;
 		uint8_t rdbId = *p++;
-		// get nosplit
-		bool nosplit = ( rdbId & 0x80 ) ;
 		// mask off rdbId
 		rdbId &= 0x7f;
 		// get the key of the current record
@@ -18534,10 +18532,12 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		//	if ( hc != 0 ){ char *xx=NULL;*xx=0; }
 		//}
 
+		// set this
+		//bool split = true;
+		//if(rdbId == RDB_POSDB && g_posdb.isShardedByTermId(p) ) 
+		// split =false;
 		// skip key
 		p += ks;
-		// set this
-		bool split = true; if ( nosplit ) split = false;
 		// . if key belongs to same group as firstKey then continue
 		// . titledb now uses last bits of docId to determine groupId
 		// . but uses the top 32 bits of key still
@@ -18635,8 +18635,6 @@ bool XmlDoc::hashMetaList ( HashTableX *ht        ,
 		QUICKPOLL(m_niceness);
 		// get rdbid
 		char rdbId = *p & 0x7f;
-		// get nosplit flag
-		char noSplit = *p & 0x80;
 		// skip rdb id
 		p++;
 		// save that
@@ -18698,18 +18696,19 @@ bool XmlDoc::hashMetaList ( HashTableX *ht        ,
 		if ( slot < 0 && ks==12 ) {
 			key144_t *k2 = (key144_t *)k;
 			long long tid = g_posdb.getTermId(k2);
+			char shardByTermId = g_posdb.isShardedByTermId(k2);
 			//uint8_t score8 = g_indexdb.getScore ( *k2 );
 			//uint32_t score32 = score8to32 ( score8 );
 			log("build: missing key #%li rdb=%s ks=%li ds=%li "
 			    "tid=%llu "
 			    "key=%s "
 			    //"score8=%lu score32=%lu "
-			    "nosplit=%li",
+			    "shardByTermId=%li",
 			    count,getDbnameFromId(rdbId),(long)ks,
 			    (long)dataSize,tid ,
 			    //(long)score8,(long)score32,
 			    KEYSTR(k2,ks),
-			    (long)noSplit);
+			    (long)shardByTermId);
 			// look it up
 
 
@@ -18759,9 +18758,8 @@ bool XmlDoc::hashMetaList ( HashTableX *ht        ,
 				continue;
 			log("build: missing key #%li rdb=%s ks=%li ds=%li "
 			    "ks=%s "
-			    "nosplit=%li",
-			    count,getDbnameFromId(rdbId),(long)ks,
-			    (long)dataSize,KEYSTR(k,ks),(long)noSplit);
+			    ,count,getDbnameFromId(rdbId),(long)ks,
+			    (long)dataSize,KEYSTR(k,ks));
 			char *xx=NULL; *xx=0; 
 			// count it for PageStats.cpp
 			g_stats.m_parsingInconsistencies++;
@@ -18786,10 +18784,13 @@ bool XmlDoc::hashMetaList ( HashTableX *ht        ,
 		// keep on chugging if they match
 		if ( recSize2==recSize && !memcmp(rec,rec2,recSize) ) continue;
 		// otherwise, bitch
+		char shardByTermId = false;
+		if ( rdbId == RDB_POSDB ) 
+			shardByTermId = g_posdb.isShardedByTermId(rec2);
 		log("build: data not equal for key=%s "
-		    "rdb=%s nosplit=%li dataSize=%li",
+		    "rdb=%s splitbytermid=%li dataSize=%li",
 		    KEYSTR(k,ks2),
-		    getDbnameFromId(rdbId),(long)noSplit,dataSize);
+		    getDbnameFromId(rdbId),(long)shardByTermId,dataSize);
 
 		// print into here
 		SafeBuf sb1;
@@ -19037,7 +19038,6 @@ XmlDoc *g_od = NULL;
 // . called by Msg14.cpp
 // . a meta list is just a buffer of Rdb records of the following format:
 //   rdbid | rdbRecord
-// . rdbId may have the 0x80 bit set to indicate "nosplit"
 // . meta list does not include title rec since Msg14 adds that using Msg1
 // . returns false and sets g_errno on error
 // . sets m_metaList ptr and m_metaListSize
@@ -20019,7 +20019,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 
 
-
+	/*
+	  now we have the bit in the posdb key, so this should not be needed...
+	  use Posdb::isShardedByTermId() to see if it is such a spcial case key
+	  like Hostdb::getShardNum() now does...
 
 	setStatus ( "hashing nosplit keys" );
 	// hash no split terms into ns1 and ns2
@@ -20040,6 +20043,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	need += needNoSplit1;
 	// sanity check
 	//if ( ! od && m_skipIndexing && needNoSplit ) { char *xx=NULL;*xx=0; }
+	*/
 
 
 	setStatus ( "hashing sectiondb keys" );
@@ -20378,7 +20382,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// checkpoint
 	saved = m_p;
 	// store indexdb terms into m_metaList[]
-	if ( m_usePosdb && ! addTable144 ( &tt1, false)) return NULL;
+	if ( m_usePosdb && ! addTable144 ( &tt1 )) return NULL;
 	//if(!addTable96 ( &tt2, &tt1, date2, date1, true ,false)) return NULL;
 	//if ( od ) tt2.clear();
 	// sanity check
@@ -20392,12 +20396,18 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//
 	// ADD NOSPLIT INDEXDB/DATEDB TERMS
 	//
-	setStatus ( "adding posdb nosplit terms");
+	/*
+	  we added these now in hashAll() to tt1, no longer ns1 since we
+	  have the sharded by termid bit in the actual posdb key now so
+	  Rebalance.cpp works
+
+	setStatus ( "adding posdb shardByTermId terms");
 	// checkpoint
 	saved = m_p;
-	// . add them to the meta list!!!!! nosplit = true!!!
-	// . set dates to -1 to avoid adding to datedb
-	if ( m_usePosdb && ! addTable144 ( &ns1, true)) return NULL;
+	// no longer anything special now since the 
+	// Posdb::isShardedyTermId() bit
+	// is in the key now so Rebalance.cpp can work
+	if ( m_usePosdb && ! addTable144 ( &ns1 )) return NULL;
 	//if(! addTable96 ( &ns2, &ns1, -1, -1, true ,true)) return NULL;
 	// sanity check
 	if ( m_p - saved > needNoSplit1 ) { char*xx=NULL;*xx=0; }
@@ -20405,6 +20415,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	ns1.reset();
 	// sanity check
 	verifyMetaList( m_metaList , m_p , forDelete );
+	*/
 
 
 	/*
@@ -22518,17 +22529,10 @@ bool XmlDoc::addTable96 ( HashTableX *tt1     ,
 
 bool XmlDoc::addTable128 ( HashTableX *tt1     , // T <key128_t,char> *tt1
 			   uint8_t     rdbId   ,
-			   //bool        nosplit ,
 			   bool        forDelete ) {
 	
-	//uint8_t f = 0;
-	//if ( nosplit ) f = 0x80;
-
 	// sanity check
 	if ( rdbId == 0 ) { char *xx=NULL;*xx=0; }
-
-	// sanity checks
-	//if ( nosplit ) { char *xx=NULL;*xx=0; }
 
 	bool useRdb2 = m_useSecondaryRdbs;//g_repair.isRepairActive();
 	//if ( g_repair.m_fullRebuild            ) useRdb2 = false;
@@ -22568,7 +22572,7 @@ bool XmlDoc::addTable128 ( HashTableX *tt1     , // T <key128_t,char> *tt1
 		// no key is allowed to have the del bit clear at this point
 		// because we reserve that for making negative keys!
 		if ( ! ( k->n0 & 0x0000000000000001LL ) ){char*xx=NULL;*xx=0;}
-		// store rdbid with optional "nosplit" flag
+		// store rdbid
 		*m_p++ = useRdbId; // (useRdbId | f);
 		// store it
 		// *(key128_t *)m_p = *k; does this work?
@@ -22618,7 +22622,7 @@ long XmlDoc::getSiteRank ( ) {
 }
 
 // add keys/recs from the table into the metalist
-bool XmlDoc::addTable144 ( HashTableX *tt1 , bool nosplit ) {
+bool XmlDoc::addTable144 ( HashTableX *tt1 ) {
 
 	// sanity check
 	if ( tt1->m_numSlots ) {
@@ -22629,9 +22633,6 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , bool nosplit ) {
 	long siteRank = getSiteRank ();
 
 	if ( ! m_langIdValid ) { char *xx=NULL;*xx=0; }
-
-	uint8_t f = 0;
-	if ( nosplit ) f = 0x80;
 
 	char rdbId = RDB_POSDB;
 	if ( m_useSecondaryRdbs ) rdbId = RDB2_POSDB2;
@@ -22645,7 +22646,7 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , bool nosplit ) {
 		// get its key
 		char *kp = (char *)tt1->getKey ( i );
 		// store rdbid
-		*m_p++ = (rdbId | f);
+		*m_p++ = rdbId; // (rdbId | f);
 		// store it as is
 		memcpy ( m_p , kp , sizeof(key144_t) );
 		// sanity check
@@ -22713,10 +22714,6 @@ bool XmlDoc::addTable224 ( HashTableX *tt1 ) {
 		if ( tt1->m_ds != 0                ) {char *xx=NULL;*xx=0;}
 	}
 
-	//bool nosplit = true;
-	//uint8_t f = 0;
-	//if ( nosplit ) f = 0x80;
-
 	char rdbId = RDB_LINKDB;
 	if ( m_useSecondaryRdbs ) rdbId = RDB2_LINKDB2;
 
@@ -22738,6 +22735,7 @@ bool XmlDoc::addTable224 ( HashTableX *tt1 ) {
 	return true;
 }
 
+/*
 // . add table into our metalist pointed to by m_p
 // . k.n1 = date   (see hashWords() below)
 // . k.n0 = termId (see hashWords() below)
@@ -22799,6 +22797,7 @@ bool XmlDoc::addTableDate ( HashTableX *tt1     , // T <key128_t,char> *tt1
 	}
 	return true;
 }
+*/
 
 /*
 // add keys/recs from the table into the metalist
@@ -23094,8 +23093,6 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 	//	m_pbuf->safePrintf("<h3>Terms which are immune to indexdb "
 	//			   "splitting:</h3>");
 
-	//m_inHashNoSplit = true;
-
 	//if ( m_skipIndexing ) return true;
 
 	// this should be ready to go and not block!
@@ -23107,20 +23104,11 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 
 	if ( ! hashVectors ( tt ) ) return false;
 	
-	setStatus ( "hashing no-split qdom keys" );
-
-	char *dom  = fu->getDomain   ();
-	long  dlen = fu->getDomainLen();
-
 	// constructor should set to defaults automatically
 	HashInfo hi;
 	hi.m_hashGroup = HASHGROUP_INTAG;
-	hi.m_prefix    = "qdom";
 	hi.m_tt        = tt;
-	hi.m_noSplit   = true;
-
-	// desc is NULL, prefix will be used as desc
-	if ( ! hashString ( dom,dlen,&hi ) ) return false;
+	hi.m_shardByTermId   = true;
 
 
 	// for exact content deduping
@@ -23129,6 +23117,26 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 	long clen = sprintf(cbuf,"%llu",*pch64);
 	hi.m_prefix    = "gbcontenthash";
 	if ( ! hashString ( cbuf,clen,&hi ) ) return false;
+
+	////
+	//
+	// let's stop here for now, until other stuff is actually used again
+	//
+	////
+
+	return true;
+
+
+
+
+	setStatus ( "hashing no-split qdom keys" );
+
+	char *dom  = fu->getDomain   ();
+	long  dlen = fu->getDomainLen();
+
+	// desc is NULL, prefix will be used as desc
+	hi.m_prefix    = "qdom";
+	if ( ! hashString ( dom,dlen,&hi ) ) return false;
 
 
 
@@ -23186,14 +23194,10 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 	// hash the clocks into indexdb
 	//if ( ! dp->hash ( m_docId , tt , this ) ) return false;
 
-	//m_inHashNoSplit = false;
-
 	// . hash special site/hopcount thing for permalinks
 	// . used by Images.cpp for doing thumbnails
 	// . this returns false and sets g_errno on error
 	if ( ! *getIsPermalink() ) return true;
-
-	//m_inHashNoSplit = true;
 
 	setStatus ( "hashing no-split gbsitetemplate keys" );
 
@@ -23236,8 +23240,6 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 		// hash each one
 		if ( ! hashString ( u,ulen,&hi ) ) return false;
 	}
-
-	//m_inHashNoSplit = true;
 
 	return true;
 }
@@ -23502,6 +23504,10 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 
 	// hash sectionhash:xxxx terms
 	if ( ! hashSections   ( table ) ) return NULL;
+
+	// now hash the terms sharded by termid and not docid here since they
+	// just set a special bit in posdb key so Rebalance.cpp can work
+	if ( ! hashNoSplit ( table ) ) return NULL;
 
 	// we set this now in hashWords3()
 	if ( m_doingSEO )
@@ -24290,7 +24296,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 	if ( ! m_links.hasSubdirOutlink() ) add = false;
 	// tags from here out
 	hi.m_hashGroup = HASHGROUP_INTAG;
-	hi.m_noSplit   = true;
+	hi.m_shardByTermId = true;
 	// hash it
 	if ( add ) {
 		// remove the last path component
@@ -24301,7 +24307,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 		hi.m_prefix    = "siteterm";
 		if ( ! hashSingleTerm ( host,end2-host,&hi) ) return false;
 	}
-	hi.m_noSplit   = false;
+	hi.m_shardByTermId  = false;
 
 	setStatus ( "hashing site colon terms");
 
@@ -25389,7 +25395,7 @@ bool XmlDoc::hashVectors ( HashTableX *tt ) {
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_prefix    = "gbtagvector";
 	hi.m_desc      = "tag vector hash";
-	hi.m_noSplit   = true;
+	hi.m_shardByTermId = true;
 
 	// this returns false on failure
 	if ( ! hashString ( buf,blen, &hi ) ) return false;
@@ -28341,7 +28347,7 @@ bool storeTerm ( char       *s        ,
 	ti.m_descOff   = doff;
 	ti.m_prefixOff = poff;
 	ti.m_date      = hi->m_date;
-	ti.m_noSplit   = hi->m_noSplit;
+	ti.m_shardByTermId = hi->m_shardByTermId;
 	ti.m_termId    = termId;
 	//ti.m_weight    = 1.0;
 	//ti.m_spam    = -1.0;
@@ -28452,7 +28458,8 @@ bool XmlDoc::hashSingleTerm ( char       *s         ,
 			  langUnknown,// langid
 			  0, // multiplier
 			  0, // syn?
-			  false); // delkey?
+			  false , // delkey?
+			  hi->m_shardByTermId );
 
 	//
 	// HACK: mangle the key if its a gbsitehash:xxxx term
@@ -28883,7 +28890,9 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 				  langUnknown, // langid
 				  0 , // multiplier
 				  false , // syn?
-				  false ); // delkey?
+				  false , // delkey?
+				  hi->m_shardByTermId );
+
 		// key should NEVER collide since we are always incrementing
 		// the distance cursor, m_dist
 		dt->addTerm144 ( &k );
@@ -28955,7 +28964,8 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 					  langUnknown, // langid
 					  0 , // multiplier
 					  true  , // syn?
-					  false ); // delkey?
+					  false , // delkey?
+					  hi->m_shardByTermId );
 			// key should NEVER collide since we are always 
 			// incrementing the distance cursor, m_dist
 			dt->addTerm144 ( &k );
@@ -29076,7 +29086,8 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 					  langUnknown, // langid
 					  0 , // multiplier
 					  true  , // syn?
-					  false ); // delkey?
+					  false , // delkey?
+					  hi->m_shardByTermId );
 			// key should NEVER collide since we are always 
 			// incrementing the distance cursor, m_dist
 			dt->addTerm144 ( &k );
@@ -29278,7 +29289,8 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 			  langUnknown,
 			  0 , // multiplier
 			  false, // syn?
-			  false ); // delkey?
+			  false , // delkey?
+			  hi->m_shardByTermId );
 
 	//long long final = hash64n("products.offerprice",0);
 	//long long prefix = hash64n("gbsortby",0);
@@ -30499,7 +30511,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		
 		"<td><b>Desc</b></td>"
 		"<td><b>TermId</b></td>"
-		"<td><b>NoSplit?</b></td>"
+		"<td><b>ShardByTermId?</b></td>"
 		"</tr>\n"
 		//,fbuf
 		);
@@ -30628,7 +30640,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 				 (unsigned long long)tp[i]->m_termId 
 				 & TERMID_MASK );
 
-		if ( tp[i]->m_noSplit ) sb->safePrintf("<td><b>1</b></td>" );
+		if ( tp[i]->m_shardByTermId ) sb->safePrintf("<td><b>1</b></td>" );
 		else                    sb->safePrintf("<td>0</td>" );
 
 		sb->safePrintf("</tr>\n");
@@ -31609,7 +31621,6 @@ bool XmlDoc::printTermList ( SafeBuf *sb , HttpRequest *hr ) {
 		//"<td><b>Date</b></td>"
 		//"<td><b>Desc</b></td>"
 		//"<td><b>TermId</b></td>"
-		//"<td><b>NoSplit?</b></td>"
 		"</tr>\n"
 		//,fbuf
 		);

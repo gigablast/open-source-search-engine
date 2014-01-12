@@ -2,6 +2,7 @@
 
 #include "Titledb.h"
 #include "Threads.h"
+#include "Rebalance.h"
 
 Titledb g_titledb;
 Titledb g_titledb2;
@@ -188,7 +189,7 @@ bool Titledb::verify ( char *coll ) {
 	}
 	if ( got != count ) {
 		// tally it up
-		g_rebalance.m_foreignRecs += count - got;
+		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %li records in titledb, "
 		     "only %li belong to our group.",count,got);
 		// exit if NONE, we probably got the wrong data

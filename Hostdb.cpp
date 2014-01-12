@@ -2267,69 +2267,27 @@ long Hostdb::getBestHosts2IP ( Host  *h ) {
 	return h->m_ip;
 }
 
+// assume to be from posdb here
+uint32_t Hostdb::getShardNumByTermId ( void *k ) {
+	return m_map [(*(uint16_t *)((char *)k + 16))>>3];
+}
+
 // . if false, we don't split index and date lists, other dbs are unaffected
 // . this obsolets the g_*.getGroupId() functions
 // . this allows us to have any # of groups in a stripe, not just power of 2
 // . now we can use 3 stripes of 96 hosts each so spiders will almost never
 //   go down
 //uint32_t Hostdb::getGroupId ( char rdbId,void *k,bool split ) {
-uint32_t Hostdb::getShardNum ( char rdbId,void *k,bool split ) {
+uint32_t Hostdb::getShardNum ( char rdbId,void *k ) { // ,bool split ) {
 
-	if ( ! split ) {
-		// based on termid for nosplits
-		if ( rdbId == RDB_POSDB || rdbId == RDB2_POSDB2 ) {
-			// use top 13 bits of key
-			return m_map [(*(uint16_t *)((char *)k + 16))>>3];
-		}
-		//if ( rdbId == RDB_INDEXDB || rdbId == RDB2_INDEXDB2 ) {
-		//	// use top 13 bits of key
-		//	return m_map [(*(uint16_t *)((char *)k + 10))>>3];
-		//}
-		// . i don't think we need this one now
-		// . XmlDoc::hashNoSplit() only seems to use indexdb
-		// . no, now events have gbeventdeduphash!
-		if ( rdbId == RDB_DATEDB || rdbId == RDB2_DATEDB2 ) {
-			// . use termid
-			// . this is kinda slow, but since it is rare, that
-			//   is fine
-			uint64_t tid = g_datedb.getTermId ( (key128_t *)k );
-			// use lower 16 bits of termid i guess
-			return m_map [ (*((uint16_t *)&tid)) & (MAX_KSLOTS-1)];
-		}
-		// this one is the same as below! just makes calls to
-		// getGroupId() more flexible i guess
-		/*
-		else if ( rdbId == RDB_TAGDB ) {
-			return m_map [(*(uint16_t *)((char *)k + 10))>>3];
-		}
-		else if ( rdbId == RDB_CATDB ) {
-			// use top 13 bits of key, just like indexdb above
-			return m_map [(*(uint16_t *)((char *)k + 10))>>3];
-		}
-		else if ( rdbId == RDB_LINKDB || rdbId == RDB2_LINKDB2 ) {
-			//return m_map [(*(uint16_t *)((char *)k + 14))>>3];
-			return m_map [(*(uint16_t *)((char *)k + 26))>>3];
-			
-		}
-		// treat this key like a datedb key
-		else if ( rdbId == RDB_SECTIONDB || rdbId == RDB2_SECTIONDB2){
-			// use top 13 bits of key
-			return m_map [(*(uint16_t *)((char *)k + 14))>>3];
-		}
-		// treat this key like a datedb key
-		else if ( rdbId == RDB_PLACEDB || rdbId == RDB2_PLACEDB2){
-			// use top 13 bits of key
-			return m_map [(*(uint16_t *)((char *)k + 14))>>3];
-		}
-		else if ( rdbId == RDB_REVDB || rdbId == RDB2_REVDB2 ) {
-			// key is formed like title key is
-			//long long d = g_titledb.getDocId ( (key_t *)k );
-			unsigned long long d = g_revdb.getDocId( (key_t *)k );
-			return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
-		}
-		*/
-		// nobody else can be "no split" i guess
-		char *xx = NULL; *xx = 0;
+	if ( (rdbId == RDB_POSDB || rdbId == RDB2_POSDB2) &&
+	     // split by termid and not docid?
+	     g_posdb.isShardedByTermId ( k ) ) {
+		// based on termid NOT docid!!!!!!
+		// good for page checksums so we only have to do disk
+		// seek on one shard, not all shards.
+		// use top 13 bits of key.
+		return m_map [(*(uint16_t *)((char *)k + 16))>>3];
 	}
 
 	// try to put those most popular ones first for speed

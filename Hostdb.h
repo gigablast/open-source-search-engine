@@ -273,6 +273,9 @@ class Host {
 	char           m_inSync ;
 	char           m_isPermanentOutOfSync ;
 
+	bool m_hostsConfInAgreement;
+	bool m_hostsConfInDisagreement;
+
 	// . used by Parms.cpp for broadcasting parm change requests
 	// . each parm change request has an id
 	// . this let's us know which id is in progress and what the last
@@ -636,8 +639,11 @@ class Hostdb {
 	//uint32_t getGroupId (char rdbId, void *key, bool split = true);
 	//uint32_t getGroupIdFromDocId ( long long d ) ;
 
-	uint32_t getShardNum (char rdbId, void *key, bool split = true);
+	uint32_t getShardNum (char rdbId, void *key );
 	uint32_t getShardNumFromDocId ( long long d ) ;
+
+	// assume to be for posdb here
+	uint32_t getShardNumByTermId ( void *key );
 
 	uint32_t m_map[MAX_KSLOTS];
 };
@@ -650,8 +656,8 @@ extern uint32_t  g_listIps   [ MAX_HOSTS * 4 ];
 extern uint16_t  g_listPorts [ MAX_HOSTS * 4 ];
 extern long      g_listNumTotal;
 
-inline uint32_t getShardNum ( char rdbId, void *key,bool split = true) {
-	return g_hostdb.getShardNum ( rdbId , key , split );
+inline uint32_t getShardNum ( char rdbId, void *key ) {
+	return g_hostdb.getShardNum ( rdbId , key );
 };
 
 inline uint32_t getMyShardNum ( ) { 

@@ -431,8 +431,8 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	if ( g_spiderLoop.m_numSpidersOut > 0 ) flags |= PFLAG_HASSPIDERS;
 	if ( g_process.isRdbMerging()         ) flags |= PFLAG_MERGING;
 	if ( g_process.isRdbDumping()         ) flags |= PFLAG_DUMPING;
-	if ( g_rebalancing.m_isScanning       ) flags |= PFLAG_REBALANCING;
-	if ( g_rebalancing.m_foreignRecs      ) flags |= PFLAG_FOREIGNRECS;
+	if ( g_rebalance.m_isScanning       ) flags |= PFLAG_REBALANCING;
+	if ( g_rebalance.m_numForeignRecs      ) flags |= PFLAG_FOREIGNRECS;
 	if ( g_dailyMerge.m_mergeMode    == 0 ) flags |= PFLAG_MERGEMODE0;
 	if ( g_dailyMerge.m_mergeMode ==0 || g_dailyMerge.m_mergeMode == 6 )
 		flags |= PFLAG_MERGEMODE0OR6;

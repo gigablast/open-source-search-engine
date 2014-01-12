@@ -489,8 +489,8 @@ bool Msg4::addMetaList ( SafeBuf *sb ,
 			 long       niceness                 ,
 			 char       rdbId                    ,
 			 long       shardOverride ) {
-	return addMetaList ( sb.getBufStart() ,
-			     sb.length() ,
+	return addMetaList ( sb->getBufStart() ,
+			     sb->length() ,
 			     collnum ,
 			     state ,
 			     callback ,
@@ -603,7 +603,7 @@ bool Msg4::addMetaList2 ( ) {
 		char rdbId = m_rdbId;
 		if ( rdbId < 0 ) rdbId = *p++;
 		// get nosplit
-		bool nosplit = ( rdbId & 0x80 ) ;
+		//bool nosplit = ( rdbId & 0x80 ) ;
 		// mask off rdbId
 		rdbId &= 0x7f;
 		// get the key of the current record
@@ -620,14 +620,14 @@ bool Msg4::addMetaList2 ( ) {
 		// skip key
 		p += ks;
 		// set this
-		bool split = true; if ( nosplit ) split = false;
+		//bool split = true; if ( nosplit ) split = false;
 		// . if key belongs to same group as firstKey then continue
 		// . titledb now uses last bits of docId to determine groupId
 		// . but uses the top 32 bits of key still
 		// . spiderdb uses last 64 bits to determine groupId
 		// . tfndb now is like titledb(top 32 bits are top 32 of docId)
 		//uint32_t gid = getGroupId ( rdbId , key , split );
-		unsigned long shardNum = getShardNum( rdbId , key , split );
+		unsigned long shardNum = getShardNum( rdbId , key );
 		// override it from Rebalance.cpp for redistributing records
 		// after updating hosts.conf?
 		if ( m_shardOverride >= 0 ) shardNum = m_shardOverride;
@@ -1085,18 +1085,21 @@ void storeLineWaiters ( ) {
 //   read/send bufs can be freed
 void handleRequest4 ( UdpSlot *slot , long netnice ) {
 
+	// easy var
+	UdpServer *us = &g_udpServer;
+
 	// if we just came up we need to make sure our hosts.conf is in
 	// sync with everyone else before accepting this! it might have
 	// been the case that the sender thinks our hosts.conf is the same
 	// since last time we were up, so it is up to us to check this
-	if ( g_hostdb.m_hostsInDisagreement ) {
+	if ( g_hostdb.m_hostsConfInDisagreement ) {
 		g_errno = EBADHOSTSCONF;
 		us->sendErrorReply ( slot , g_errno );
 		return;
 	}
 
 	// need to be in sync first
-	if ( ! g_hostdb.m_hostsInAgreement ) {
+	if ( ! g_hostdb.m_hostsConfInAgreement ) {
 		// . if we do not know the sender's hosts.conf crc, wait 4 it
 		// . this is 0 if not received yet
 		if ( ! slot->m_host->m_hostsConfCRC ) {
@@ -1117,8 +1120,6 @@ void handleRequest4 ( UdpSlot *slot , long netnice ) {
 	// extract what we read
 	char *readBuf     = slot->m_readBuf;
 	long  readBufSize = slot->m_readBufSize;
-	// easy var
-	UdpServer *us = &g_udpServer;
 	// must at least have an rdbId
 	if ( readBufSize < 7 ) {
 		g_errno = EREQUESTTOOSHORT;

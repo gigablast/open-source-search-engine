@@ -21,6 +21,7 @@
 #include "HttpServer.h"
 #include "Pages.h"
 #include "Parms.h"
+#include "Rebalance.h"
 
 // . this was 10 but cpu is getting pegged, maybe set to 30 now
 // . we consider the collection done spidering when no urls to spider
@@ -4652,19 +4653,14 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( g_collectiondb.m_numRecs <= 0 ) return;
 	// not while repairing
 	if ( g_repairMode ) return;
-	// don't spider until we can be sure all hosts have same hosts.conf
-	if ( ! g_rebalance.m_hostsConfInAgreement ) return;
-	// don't spider if we have records that don't belong to our shard,
-	// we have to use Rebalance.cpp to send them to where they belong.
-	// this is the auto-scaling feature.
-	if ( g_rebalance.m_inRebalanceLoop ) return;
-	// if on startup some hosts reported having recs that do not belong
-	// to their shard then we need to rebalance i guess... but do not
-	// automatically start rebalancing because the user could have just
-	// put a bad hosts.conf file in there!!!!
-	if ( g_process.m_numShardMisses ) return;
-	if ( g_rebalance.m_hostsConfChanged ) return;
+	// do not spider until collections/parms in sync with host #0
+	if ( ! g_parms.m_inSyncWithHost0 ) return;
+	// don't spider if not all hosts are up, or they do not all
+	// have the same hosts.conf.
+	if ( ! g_hostdb.m_hostsConfInAgreement ) return;
 
+	char *reb = g_rebalance.getNeedsRebalance();
+	if ( ! reb || *reb ) return;
 
 	//if ( g_conf.m_logDebugSpider )
 	//	log("spider: trying to get a doledb rec to spider. "

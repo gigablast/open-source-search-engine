@@ -1063,7 +1063,7 @@ long long htolonglong ( const char *s, long len ) {
 	return val;
 }
 
-// convert hex-encoded binary string back to binary
+// convert hex ascii string into binary at "dst"
 void hexToBin ( char *src , long srcLen , char *dst ) {
 	char *srcEnd = src + srcLen;
 	for ( ; src && src < srcEnd ; ) {
