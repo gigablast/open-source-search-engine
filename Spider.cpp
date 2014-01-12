@@ -259,7 +259,9 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 		sb->safePrintf(" <td>%li</td>\n",(long)xd->m_collnum);
 	}
 
-	sb->safePrintf(" <td><nobr>%s</nobr></td>\n",m_url);
+	sb->safePrintf(" <td><nobr>");
+	sb->safeTruncateEllipsis ( m_url , 64 );
+	sb->safePrintf("</nobr></td>\n");
 	sb->safePrintf(" <td><nobr>%s</nobr></td>\n",status );
 
 	sb->safePrintf(" <td>%li</td>\n",(long)m_priority);
@@ -270,9 +272,10 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 
 	sb->safePrintf(" <td>%llu</td>\n",getUrlHash48());
 
-	sb->safePrintf(" <td>0x%lx</td>\n",m_hostHash32 );
-	sb->safePrintf(" <td>0x%lx</td>\n",m_domHash32 );
-	sb->safePrintf(" <td>0x%lx</td>\n",m_siteHash32 );
+	//sb->safePrintf(" <td>0x%lx</td>\n",m_hostHash32 );
+	//sb->safePrintf(" <td>0x%lx</td>\n",m_domHash32 );
+	//sb->safePrintf(" <td>0x%lx</td>\n",m_siteHash32 );
+
 	sb->safePrintf(" <td>%li</td>\n",m_siteNumInlinks );
 	//sb->safePrintf(" <td>%li</td>\n",m_pageNumInlinks );
 	sb->safePrintf(" <td>%li</td>\n",m_hopCount );
@@ -294,9 +297,11 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 	//sb->safePrintf(" <td>%lims</td>\n",m_crawlDelay );
 	sb->safePrintf(" <td>%s</td>\n",iptoa(m_parentFirstIp) );
 	sb->safePrintf(" <td>%llu</td>\n",getParentDocId() );
-	sb->safePrintf(" <td>0x%lx</td>\n",m_parentHostHash32);
-	sb->safePrintf(" <td>0x%lx</td>\n",m_parentDomHash32 );
-	sb->safePrintf(" <td>0x%lx</td>\n",m_parentSiteHash32 );
+
+	//sb->safePrintf(" <td>0x%lx</td>\n",m_parentHostHash32);
+	//sb->safePrintf(" <td>0x%lx</td>\n",m_parentDomHash32 );
+	//sb->safePrintf(" <td>0x%lx</td>\n",m_parentSiteHash32 );
+
 	//sb->safePrintf(" <td>%li</td>\n",(long)m_httpStatus );
 	//sb->safePrintf(" <td>%li</td>\n",(long)m_retryNum );
 	//sb->safePrintf(" <td>%s(%li)</td>\n",
@@ -472,9 +477,9 @@ long SpiderRequest::printTableHeader ( SafeBuf *sb , bool currentlySpidering) {
 	sb->safePrintf(" <td><b>firstIp</b></td>\n");
 	sb->safePrintf(" <td><b>errCount</b></td>\n");
 	sb->safePrintf(" <td><b>urlHash48</b></td>\n");
-	sb->safePrintf(" <td><b>hostHash32</b></td>\n");
-	sb->safePrintf(" <td><b>domHash32</b></td>\n");
-	sb->safePrintf(" <td><b>siteHash32</b></td>\n");
+	//sb->safePrintf(" <td><b>hostHash32</b></td>\n");
+	//sb->safePrintf(" <td><b>domHash32</b></td>\n");
+	//sb->safePrintf(" <td><b>siteHash32</b></td>\n");
 	sb->safePrintf(" <td><b>siteInlinks</b></td>\n");
 	//sb->safePrintf(" <td><b>pageNumInlinks</b></td>\n");
 	sb->safePrintf(" <td><b>hops</b></td>\n");
@@ -485,9 +490,9 @@ long SpiderRequest::printTableHeader ( SafeBuf *sb , bool currentlySpidering) {
 	//sb->safePrintf(" <td><b>crawlDelay</b></td>\n");
 	sb->safePrintf(" <td><b>parentIp</b></td>\n");
 	sb->safePrintf(" <td><b>parentDocId</b></td>\n");
-	sb->safePrintf(" <td><b>parentHostHash32</b></td>\n");
-	sb->safePrintf(" <td><b>parentDomHash32</b></td>\n");
-	sb->safePrintf(" <td><b>parentSiteHash32</b></td>\n");
+	//sb->safePrintf(" <td><b>parentHostHash32</b></td>\n");
+	//sb->safePrintf(" <td><b>parentDomHash32</b></td>\n");
+	//sb->safePrintf(" <td><b>parentSiteHash32</b></td>\n");
 	//sb->safePrintf(" <td><b>httpStatus</b></td>\n");
 	//sb->safePrintf(" <td><b>retryNum</b></td>\n");
 	//sb->safePrintf(" <td><b>langId</b></td>\n");
@@ -4659,8 +4664,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	// have the same hosts.conf.
 	if ( ! g_hostdb.m_hostsConfInAgreement ) return;
 
-	char *reb = g_rebalance.getNeedsRebalance();
-	if ( ! reb || *reb ) return;
+	//char *reb = g_rebalance.getNeedsRebalance();
+	//if ( ! reb || *reb ) {return;
 
 	//if ( g_conf.m_logDebugSpider )
 	//	log("spider: trying to get a doledb rec to spider. "
@@ -7284,6 +7289,35 @@ bool sendPage ( State11 *st ) {
 
 	g_pages.printAdminTop ( &sb, st->m_socket , &st->m_r , qs );
 
+
+	// get spider coll
+	collnum_t collnum = g_collectiondb.getCollnum ( st->m_coll );
+	// and coll rec
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+
+
+	// print reason why spiders are not active for this collection
+	long tmp2;
+	SafeBuf mb;
+	if ( cr ) getSpiderStatusMsg ( cr , &mb , &tmp2 );
+	if ( mb.length() && tmp2 != SP_INITIALIZING )
+		sb.safePrintf("<center>"
+			      "<table cellpadding=5 "
+			      //"style=\""
+			      //"border:2px solid black;"
+			      "max-width:600px\" "
+			      "border=0"
+			      ">"
+			      "<tr>"
+			      //"<td bgcolor=#ff6666>"
+			      "<td>"
+			      "<b><font color=red>%s</font></b>"
+			      "</td>"
+			      "</tr>"
+			      "</table>\n"
+			      , mb.getBufStart() );
+
+
 	// begin the table
 	sb.safePrintf ( "<table width=100%% border=1 cellpadding=4 "
 			"bgcolor=#%s>\n" 
@@ -7352,8 +7386,6 @@ bool sendPage ( State11 *st ) {
 
 
 
-	// get spider coll
-	collnum_t collnum = g_collectiondb.getCollnum ( st->m_coll );
 	// then spider collection
 	//SpiderColl *sc = g_spiderCache.m_spiderColls[collnum];
 	SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
@@ -7452,6 +7484,10 @@ bool sendPage ( State11 *st ) {
 	}
 	*/
 
+	/*
+
+	  // try to put these in tool tips
+
 	// describe the various parms
 	sb.safePrintf ( 
 		       "<table width=100%% bgcolor=#%s "
@@ -7479,20 +7515,6 @@ bool sendPage ( State11 *st ) {
 		       "robots.txt file for this url."
 		       "</td></tr>"
 
-		       /*
-		       "<tr>"
-		       "<td>checking quota exact</td><td>doing an exact "
-		       "quota check. Does a realtime site: query to see how "
-		       "many pages are indexed from this site. Uses a special "
-		       "counting cache to speed this procedure up."
-		       "</td></tr>"
-
-		       "<tr>"
-		       "<td>checking quota</td><td>doing a fuzzy (but fast) "
-		       "quota check. Usually accurate to the nearest 5000 "
-		       "pages or so."
-		       "</td></tr>"
-		       */
 
 		       "<tr>"
 		       "<td>checking for dup</td><td>looking up the url's "
@@ -7527,6 +7549,8 @@ bool sendPage ( State11 *st ) {
 
 		       LIGHT_BLUE ,
 		       DARK_BLUE  );
+	*/
+
 
 	//
 	// spiderdb rec stats, from scanning spiderdb
@@ -11060,9 +11084,36 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 
 bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 
-	//char *ss = "Crawl in progress.";
-	//if ( cx->m_spiderStatusMsg )
-	//	ss = cx->m_spiderStatusMsg;
+	if ( ! g_conf.m_spideringEnabled && ! cx->m_isCustomCrawl )
+		return msg->safePrintf("Spidering disabled in "
+				       "master controls. You can turn it "
+				       "back on there.");
+
+	if ( g_conf.m_readOnlyMode ) 
+		return msg->safePrintf("In read-only mode. Spidering off.");
+
+	if ( g_dailyMerge.m_mergeMode )
+		return msg->safePrintf("Daily merge engaged, spidering "
+				       "paused.");
+
+	if ( g_udpServer.getNumUsedSlots() >= 1300 ) 
+		return msg->safePrintf("Too many UDP slots in use, "
+				       "spidering paused.");
+
+	if ( g_repairMode ) 
+		return msg->safePrintf("In repair mode, spidering paused.");
+
+	// do not spider until collections/parms in sync with host #0
+	if ( ! g_parms.m_inSyncWithHost0 )
+		return msg->safePrintf("Parms not in sync with host #0, "
+				       "spidering paused");
+
+	// don't spider if not all hosts are up, or they do not all
+	// have the same hosts.conf.
+	if ( g_hostdb.m_hostsConfInDisagreement )
+		return msg->safePrintf("Hosts.conf discrepancy, "
+				       "spidering paused.");
+
 
 	if ( cx->m_spiderStatus == SP_MAXTOCRAWL ) {
 		*status = SP_MAXTOCRAWL;
@@ -11095,7 +11146,11 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 
 	if ( ! cx->m_spideringEnabled ) {
 		*status = SP_PAUSED;
-		return msg->safePrintf("Job paused.");
+		if ( cx->m_isCustomCrawl )
+			return msg->safePrintf("Job paused.");
+		else
+			return msg->safePrintf("Spidering disabled "
+					       "in spider controls.");
 	}
 
 	if ( ! g_conf.m_spideringEnabled ) {
@@ -11134,7 +11189,10 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 
 	// otherwise in progress?
 	*status = SP_INPROGRESS;
-	return msg->safePrintf("Job is in progress.");
+	if ( cx->m_isCustomCrawl )
+		return msg->safePrintf("Job is in progress.");
+	else
+		return true;
 }
 
 // pattern is a ||-separted list of substrings

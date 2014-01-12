@@ -995,8 +995,10 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	if ( ps->m_numHostsDead ) {
 		if ( adds ) mb.safePrintf("<br><br>");
 		adds++;
-		mb.safePrintf("%li hosts are dead and not responding to "
-			      "pings",ps->m_numHostsDead );
+		char *s = "hosts are";
+		if ( ps->m_numHostsDead == 1 ) s = "host is";
+		mb.safePrintf("%li %s dead and not responding to "
+			      "pings.",ps->m_numHostsDead ,s );
 	}
 
 	mb.safePrintf("</td></tr></table></center><br>");

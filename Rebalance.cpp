@@ -1,3 +1,10 @@
+// Matt Wells, 2014
+
+// TODO: if a host is being removed put # removed after it like we do # retired
+//       and we can at least load it up and it will move its records to the 
+//       new guys.
+
+
 #include "Rebalance.h"
 
 #include "gb-include.h"
