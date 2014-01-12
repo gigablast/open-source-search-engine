@@ -978,7 +978,7 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 		if ( h->m_flags & PFLAG_FOREIGNRECS )
 			ps->m_numHostsWithForeignRecs++;
 
-		if ( ! g_hostdb.isDead ( h ) )
+		if ( g_hostdb.isDead ( h ) )
 			ps->m_numHostsDead++;
 
 		// skip if not received yet

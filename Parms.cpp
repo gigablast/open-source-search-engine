@@ -960,12 +960,18 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			       ,LIGHT_BLUE,DARK_BLUE
 				);
 
+		/*
+
+		  take this out since we took out a ton of parms for
+		  simplicties sake
+
 		if ( page != PAGE_FILTERS )
 			sb->safePrintf("<div style=\"float:left;\">" 
 				       "filter:<input type=\"text\" "
 				       "onkeyup=\"filterRow(this.value)\" "
 				       "value=\"\"></div>"
 				       );
+		*/
 
 		sb->safePrintf("<div style=\"margin-left:45%%;\">"
 			       //"<font size=+1>"

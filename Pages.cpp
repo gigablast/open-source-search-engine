@@ -967,36 +967,44 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 
 	PingServer *ps = &g_pingServer;
 
-	mb.safePrintf("<center><table><tr><td bgcolor=#ff6666>");
+	mb.safePrintf("<center>"
+		      "<table cellpadding=5 "
+		      "style=\""
+		      //"border:2px solid black;"
+		      "max-width:600px\" "
+		      "border=0"
+		      ">"
+		      "<tr><td bgcolor=#ff6666>");
 
 	// emergency message box
-	if ( ! g_hostdb.m_hostsConfInDisagreement ) {
+	if ( g_hostdb.m_hostsConfInDisagreement ) {
+		if ( adds ) mb.safePrintf("<br>");
 		adds++;
 		mb.safePrintf("The hosts.conf or localhosts.conf file "
-			      "is not the same over all hosts");
+			      "is not the same over all hosts.");
 	}
 
 	// if any host had foreign recs, not that
 	if ( ps->m_numHostsWithForeignRecs ) {
+		if ( adds ) mb.safePrintf("<br><br>");
 		adds++;
 		mb.safePrintf("One or more hosts require shard rebalance. "
 			      "Click 'rebalance shards' in master controls.");
 	}
 
 	if ( ps->m_numHostsDead ) {
+		if ( adds ) mb.safePrintf("<br><br>");
 		adds++;
 		mb.safePrintf("%li hosts are dead and not responding to "
 			      "pings",ps->m_numHostsDead );
 	}
 
-	mb.safePrintf("</td></tr></table></center>");
-
-	if ( adds )
-		sb->safePrintf("%s",sb->getBufStart());
-
+	mb.safePrintf("</td></tr></table></center><br>");
 
 	// a new table. on the left is collections, on right is other stuff
-	sb->safePrintf("<TABLE border=1><TR>"
+	sb->safePrintf("<TABLE "
+		       "cellpadding=5 border=0>"
+		       "<TR>"
 		       "<TD valign=top>"
 		       "<div "
 		       "style="
@@ -1012,6 +1020,10 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 
 	// then collection page links and parms
 	sb->safePrintf("</div></TD><TD valign=top><br>");
+
+	// print emergency msg box
+	if ( adds )
+		sb->safePrintf("%s",mb.getBufStart());
 
 	// print the links
 	status &= printAdminLinks ( sb, page , username , coll , pwd, true );
