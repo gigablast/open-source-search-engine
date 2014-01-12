@@ -470,6 +470,8 @@ class RdbTree {
 
 	bool m_allowDups;
 
+	//char m_countsInitialized;
+
 	long m_corrupt;
 
 	//long m_numPosKeysPerColl[MAX_COLL_RECS];
