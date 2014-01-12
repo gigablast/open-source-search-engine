@@ -1374,11 +1374,12 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		//m_minToMerge = 2;
 		char *xx = NULL; *xx = 0;
 	}
+	// mdw: comment this out to reduce log spam when we have 800 colls!
 	// print it
-	if ( doLog ) 
-		log(LOG_INFO,"merge: Attempting to merge %li %s files on disk."
-		    " %li files needed to trigger a merge.",
-		    numFiles,m_dbname,m_minToMerge);
+	//if ( doLog ) 
+	//	log(LOG_INFO,"merge: Attempting to merge %li %s files on disk."
+	//	    " %li files needed to trigger a merge.",
+	//	    numFiles,m_dbname,m_minToMerge);
 	// . even though another merge may be going on, we can speed it up
 	//   by entering urgent merge mode. this will prefer the merge disk
 	//   ops over dump disk ops... essentially starving the dumps and

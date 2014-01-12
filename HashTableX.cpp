@@ -427,7 +427,7 @@ bool HashTableX::load ( char *dir, char *filename, char **tbuf, long *tsize ) {
 	if ( ! f.doesExist() ) return false;
 	char *pdir = dir;
 	if ( ! pdir ) pdir = "";
-	log(LOG_INFO,"admin: Loading hashtablex from %s%s",pdir,filename);
+	//log(LOG_INFO,"admin: Loading hashtablex from %s%s",pdir,filename);
 	if ( ! f.open ( O_RDONLY) ) return false;
 	long numSlots;
 	long numSlotsUsed;
