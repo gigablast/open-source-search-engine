@@ -14255,6 +14255,13 @@ long long *XmlDoc::getDownloadEndTime ( ) {
 	// log it
 	setStatus ( "getting download end time");
 
+	// do not cause us to core in getHttpReply2() because m_deleteFromIndex
+	// is set to true...
+	if ( m_deleteFromIndex ) {
+		m_downloadEndTime = 0;
+		m_downloadEndTimeValid = true;
+	}
+
 	// if recycling content use its download end time
 	if ( m_recycleContent ) {
 		// get the old xml doc from the old title rec
