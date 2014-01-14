@@ -1092,14 +1092,14 @@ void handleRequest4 ( UdpSlot *slot , long netnice ) {
 	// sync with everyone else before accepting this! it might have
 	// been the case that the sender thinks our hosts.conf is the same
 	// since last time we were up, so it is up to us to check this
-	if ( g_hostdb.m_hostsConfInDisagreement ) {
+	if ( g_pingServer.m_hostsConfInDisagreement ) {
 		g_errno = EBADHOSTSCONF;
 		us->sendErrorReply ( slot , g_errno );
 		return;
 	}
 
 	// need to be in sync first
-	if ( ! g_hostdb.m_hostsConfInAgreement ) {
+	if ( ! g_pingServer.m_hostsConfInAgreement ) {
 		// . if we do not know the sender's hosts.conf crc, wait 4 it
 		// . this is 0 if not received yet
 		if ( ! slot->m_host->m_hostsConfCRC ) {

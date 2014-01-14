@@ -623,10 +623,6 @@ class Hostdb {
 	long m_crc;
 	long m_crcValid;
 
-	// are all hosts.conf in sync with one another?
-	bool m_hostsConfInAgreement;
-	bool m_hostsConfInDisagreement;
-
 	// for sync
 	Host *m_syncHost;
 	bool  m_syncSecondaryIps;

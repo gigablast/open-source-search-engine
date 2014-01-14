@@ -61,8 +61,6 @@ Hostdb::Hostdb ( ) {
 	m_initialized = false;
 	m_crcValid = false;
 	m_crc = 0;
-	m_hostsConfInAgreement = false;
-	m_hostsConfInDisagreement = false;
 }
 
 Hostdb::~Hostdb () {

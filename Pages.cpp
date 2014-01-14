@@ -977,7 +977,7 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 		      "<tr><td bgcolor=#ff6666>");
 
 	// emergency message box
-	if ( g_hostdb.m_hostsConfInDisagreement ) {
+	if ( g_pingServer.m_hostsConfInDisagreement ) {
 		if ( adds ) mb.safePrintf("<br>");
 		adds++;
 		mb.safePrintf("The hosts.conf or localhosts.conf file "

@@ -4662,7 +4662,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( ! g_parms.m_inSyncWithHost0 ) return;
 	// don't spider if not all hosts are up, or they do not all
 	// have the same hosts.conf.
-	if ( ! g_hostdb.m_hostsConfInAgreement ) return;
+	if ( ! g_pingServer.m_hostsConfInAgreement ) return;
 
 	//char *reb = g_rebalance.getNeedsRebalance();
 	//if ( ! reb || *reb ) {return;
@@ -11110,7 +11110,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 
 	// don't spider if not all hosts are up, or they do not all
 	// have the same hosts.conf.
-	if ( g_hostdb.m_hostsConfInDisagreement )
+	if ( g_pingServer.m_hostsConfInDisagreement )
 		return msg->safePrintf("Hosts.conf discrepancy, "
 				       "spidering paused.");
 
