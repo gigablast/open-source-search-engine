@@ -4079,10 +4079,21 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		return 0;
 	}
 
+	HashTableX iptab;
+	char tmpBuf[2048];
+	iptab.set(4,4,64,tmpBuf,2048,true,0,"iptsu");
 
 	// go through each host
 	for ( long i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
 		Host *h2 = g_hostdb.getHost(i);
+
+		// if host ip is like the 10th occurence then do
+		// not do ampersand
+		iptab.addScore((long *)&h2->m_ip);
+		long score = iptab.getScore32(&h2->m_ip);
+		char *amp = " &";
+		if ( (score % 10) == 0 ) amp = "";
+			
 		// limit install to this hostId if it is >= 0
 		//if ( hostId >= 0 && h2->m_hostId != hostId ) continue;
 		if ( hostId >= 0 && hostId2 == -1 ) {
@@ -4367,15 +4378,16 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			char *target = "gb.new";
 			f.set(h2->m_dir,target);
 			if ( ! f.doesExist() ) target = "gb";
-			
+
 			sprintf(tmp,
 				"rcp "
 				"%s%s "
-				"%s:%s/gb.installed &",
+				"%s:%s/gb.installed%s",
 				dir,
 				target,
 				iptoa(h2->m_ip),
-				h2->m_dir);
+				h2->m_dir,
+				amp);
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 		}
@@ -4436,18 +4448,20 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; %s"
-				"./gb %li >& ./log%03li &\" &",
+				"./gb %li >& ./log%03li &\" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 				tmp2           ,
 				//h2->m_dir      ,
 				h2->m_hostId   ,
-				h2->m_hostId   );
+				h2->m_hostId   ,
+				amp);
 			// log it
 			log(LOG_INIT,"admin: %s", tmp);
 			// execute it
 			system ( tmp );
 		}
+		/*
 		// SEQUENTIALLY start
 		else if ( installFlag == ifk_start2 ) {
 			// . save old log now, too
@@ -4481,6 +4495,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
+		*/
 		// start up a dummy cluster using hosts.conf ports + 1
 		else if ( installFlag == ifk_tmpstart ) {
 			// . assume conf file name gbHID.conf
@@ -4532,14 +4547,15 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"EXITSTATUS=\\$? ; "
 				"ADDARGS='-r' ; "
 				"} " 
- 				"done >& /dev/null & \" & ",
+ 				"done >& /dev/null & \" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 				h2->m_hostId   ,
 				h2->m_hostId   ,
 				//h2->m_dir      ,
 				h2->m_hostId   ,
-				h2->m_hostId   );
+				h2->m_hostId   ,
+				amp );
 
 			// log it
 			log(LOG_INIT,"admin: %s", tmp);
@@ -4768,6 +4784,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
+		/*
 		// SEQUENTIAL rcps
 		else if ( installFlag == ifk_installgb2 ) {
 			// don't copy to ourselves
@@ -4792,6 +4809,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 		}
+		*/
 		// dsh
 		else if ( installFlag == ifk_dsh ) {
 			// don't copy to ourselves
