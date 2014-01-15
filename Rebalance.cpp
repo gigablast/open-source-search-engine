@@ -124,6 +124,9 @@ char *Rebalance::getNeedsRebalance ( ) {
 	if ( y != g_hostdb.m_numShards          ) m_needsRebalance = true;
 	if ( rebalancing                        ) m_needsRebalance = true;
 
+	// how can this be?
+	if ( m_numForeignRecs ) m_needsRebalance = true;
+
 	// and we don't need user consent, they already did last time
 	if ( rebalancing ) {
 		m_warnedUser   = true;
