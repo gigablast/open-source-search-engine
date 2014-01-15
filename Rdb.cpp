@@ -36,6 +36,7 @@ Rdb::Rdb ( ) {
 	//m_numBases = 0;
 	m_inAddList = false;
 	m_collectionlessBase = NULL;
+	m_initialized = false;
 	//memset ( m_bases , 0 , sizeof(RdbBase *) * MAX_COLLS );
 	reset();
 }
@@ -326,6 +327,8 @@ bool Rdb::init ( char          *dir                  ,
 	// set this for use below
 	//*(long long *)m_gbcounteventsTermId =
 	//	hash64n("gbeventcount")&TERMID_MASK;
+
+	m_initialized = true;
 
 	// success
 	return true;

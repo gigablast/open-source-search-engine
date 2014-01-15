@@ -441,6 +441,13 @@ bool Process::init ( ) {
 	m_rdbs[m_numRdbs++] = g_linkdb2.getRdb     ();
 	//m_rdbs[m_numRdbs++] = g_placedb2.getRdb    ();
 	m_rdbs[m_numRdbs++] = g_tagdb2.getRdb      ();
+	/////////////////
+	// CAUTION!!!
+	/////////////////
+	// Add any new rdbs to the END of the list above so 
+	// it doesn't screw up Rebalance.cpp which uses this list too!!!!
+	/////////////////
+
 
 	//call these back right before we shutdown the
 	//httpserver.

@@ -1083,6 +1083,8 @@ void binToHex ( unsigned char *src , long srcLen , char *dst ) {
 		*dst++ = btoh(*src&15);
 		src++;
 	}
+	// always null term!
+	*dst = '\0';
 	// sanity check
 	if ( src != srcEnd ) { char *xx=NULL;*xx=0; }
 }

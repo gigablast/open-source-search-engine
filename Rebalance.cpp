@@ -27,7 +27,7 @@ Rebalance::Rebalance ( ) {
 	m_rdbNum = 0;
 	m_collnum = 0;
 	KEYMIN ( m_nextKey , MAX_KEY_BYTES );
-	KEYMIN ( m_endKey , MAX_KEY_BYTES );
+	KEYMAX ( m_endKey , MAX_KEY_BYTES );
 	m_needsRebalanceValid = false;
 	m_needsRebalance = false;
 	m_warnedUser = false;
@@ -179,15 +179,25 @@ void Rebalance::scanLoop ( ) {
 
 	// scan all rdbs in each coll
 	for ( ; m_collnum < g_collectiondb.m_numRecs ; m_collnum++ ) {
+		// get collrec i guess
+		CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
+		// skip if none... like statsdb, i guess don't rebalance!!
+		if ( ! cr ) continue;
 		// scan all rdbs in that collection
 		for ( ; m_rdbNum < g_process.m_numRdbs ; m_rdbNum++ ) {
 			// skip if not good
 			Rdb *rdb = g_process.m_rdbs[m_rdbNum];
 			// not an RDB2
 			if ( rdb->isSecondaryRdb() ) continue;
+			// or if uninitialized
+			if ( ! rdb->isInitialized() ) continue;
+			// skip statsdb, do not rebalance that
+			if ( rdb->m_rdbId == RDB_STATSDB ) continue;
 			// scan it. returns true if done, false if blocked
 			if ( ! scanRdb ( ) ) return;
 		}
+		// reset it for next colls
+		m_rdbNum = 0;
 	}
 
 	// all done
@@ -244,10 +254,9 @@ bool Rebalance::scanRdb ( ) {
 	Rdb *rdb = g_process.m_rdbs[m_rdbNum];
 
 	// skip empty collrecs, unless like statsdb or something
-	if ( ! cr && ! rdb->m_isCollectionLess ) return true;
+	//if ( ! cr && ! rdb->m_isCollectionLess ) return true;
 
-	char *coll = NULL;
-	if ( cr ) coll = cr->m_coll;
+	char *coll = cr->m_coll;
 
  readAnother:
 
@@ -348,7 +357,7 @@ void Rebalance::gotList ( ) {
 		m_posMetaList.safeMemcpy ( key , keySize );
 	}
 
-	if ( ! m_blocked ) { char *xx=NULL;*xx=0; }
+	if ( m_blocked ) { char *xx=NULL;*xx=0; }
 
 	if ( ! m_msg4a.addMetaList ( &m_posMetaList ,
 				     m_collnum ,
