@@ -2633,7 +2633,8 @@ Pages.o: Pages.cpp gb-include.h types.h fctypes.h Unicode.h \
  Events.h Msg22.h CatRec.h Catdb.h Msge1.h Msg4.h Msg8b.h SearchInput.h \
  Msg40.h Msg39.h Msg37.h Posdb.h TopTree.h Clusterdb.h IndexTable2.h \
  Msg51.h Msg17.h Msg3a.h PostQueryRerank.h Sanity.h Msg1.h Datedb.h \
- SiteGetter.h Title.h Address.h zlib.h zconf.h Spider.h Users.h
+ SiteGetter.h Title.h Address.h zlib.h zconf.h Spider.h Users.h \
+ Rebalance.h
 PageSockets.o: PageSockets.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h \
  TcpServer.h openssl/ssl.h openssl/e_os2.h openssl/opensslconf.h \

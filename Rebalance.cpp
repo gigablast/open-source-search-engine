@@ -23,9 +23,12 @@ Rebalance g_rebalance;
 Rebalance::Rebalance ( ) {
 	m_inRebalanceLoop = false;
 	m_numForeignRecs = 0;
+	m_rebalanceCount = 0LL;
 	// reset 
 	m_rdbNum = 0;
 	m_collnum = 0;
+	m_lastCollnum = -1;
+	m_lastRdb = NULL;
 	KEYMIN ( m_nextKey , MAX_KEY_BYTES );
 	KEYMAX ( m_endKey , MAX_KEY_BYTES );
 	m_needsRebalanceValid = false;
@@ -183,6 +186,13 @@ void Rebalance::scanLoop ( ) {
 		CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
 		// skip if none... like statsdb, i guess don't rebalance!!
 		if ( ! cr ) continue;
+
+		// new?
+		//if ( m_lastCollnum != m_collnum ) {
+		//	log("rebalance: rebalancing %s", cr->m_coll);
+		//	m_lastCollnum = m_collnum;
+		//}
+
 		// scan all rdbs in that collection
 		for ( ; m_rdbNum < g_process.m_numRdbs ; m_rdbNum++ ) {
 			// skip if not good
@@ -193,8 +203,20 @@ void Rebalance::scanLoop ( ) {
 			if ( ! rdb->isInitialized() ) continue;
 			// skip statsdb, do not rebalance that
 			if ( rdb->m_rdbId == RDB_STATSDB ) continue;
+			// log it as well
+			if ( m_lastRdb != rdb ) {
+				log("rebalance: scanning %s [%s]",
+				    cr->m_coll,rdb->m_dbname);
+				// only do this once per rdb/coll
+				m_lastRdb = rdb;
+				// reset key cursor as well!!!
+				KEYMIN ( m_nextKey , MAX_KEY_BYTES );
+			}
 			// scan it. returns true if done, false if blocked
 			if ( ! scanRdb ( ) ) return;
+			// note it
+			log("rebalance: did %lli recs",m_rebalanceCount);
+			m_rebalanceCount = 0;
 		}
 		// reset it for next colls
 		m_rdbNum = 0;
@@ -204,10 +226,16 @@ void Rebalance::scanLoop ( ) {
 	m_isScanning     = false;
 	m_needsRebalance = false;
 
+	// get rid of the 'F' flag in PageHosts.cpp
+	m_numForeignRecs = 0;
+
 	// save the file then, but with these stats:
 	m_collnum = 0;
 	m_rdbNum = 0;
 	KEYMIN(m_nextKey,MAX_KEY_BYTES);
+
+	log("rebalance: done rebalancing all collections. "
+	    "Saving rebalance.txt.");
 
 	saveRebalanceFile();
 }
@@ -217,6 +245,8 @@ bool Rebalance::saveRebalanceFile ( ) {
 	char keyStr[128];
 	// convert m_nextKey 
 	binToHex ( (unsigned char *)&m_nextKey , MAX_KEY_BYTES , keyStr );
+
+	//log("db: saving rebalance.txt");
 
 	SafeBuf sb;
 	sb.safePrintf (
@@ -266,7 +296,7 @@ bool Rebalance::scanRdb ( ) {
 				&m_list          ,
 				m_nextKey        ,
 				m_endKey         , // should be maxed!
-				1024             , // min rec sizes
+				100024             , // min rec sizes
 				true             , // include tree?
 				false            , // includeCache
 				false            , // addToCache
@@ -325,6 +355,11 @@ bool Rebalance::gotList ( ) {
 	m_posMetaList.reset();
 	m_negMetaList.reset();
 
+	if ( m_list.isEmpty() ) {
+	        KEYSET ( m_nextKey , m_endKey , ks );
+		return true;
+	}
+
 	char *last = NULL;
 
 	for ( ; ! m_list.isExhausted() ; m_list.skipCurrentRec() ) {
@@ -336,6 +371,8 @@ bool Rebalance::gotList ( ) {
 		last = rec;
 		// skip it if it belongs with us
 		if ( shard == myShard ) continue;
+		// count it
+		m_rebalanceCount++;
 		// otherwise, it does not!
 		//long recSize = m_list.getCurrentRecSize();
 		// copy the full key into "key" buf because might be compressed
@@ -364,7 +401,7 @@ bool Rebalance::gotList ( ) {
 		// make key a delete
 		key[0] &= 0xfe;
 		// and store that negative key
-		m_posMetaList.safeMemcpy ( key , ks );
+		m_negMetaList.safeMemcpy ( key , ks );
 	}
 
 	//  update nextkey

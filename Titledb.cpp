@@ -191,12 +191,14 @@ bool Titledb::verify ( char *coll ) {
 		// tally it up
 		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %li records in titledb, "
-		     "only %li belong to our group.",count,got);
+		     "only %li belong to our shard. c=%s",count,got,coll);
 		// exit if NONE, we probably got the wrong data
 		if ( count > 10 && got == 0 ) 
 			log("db: Are you sure you have the right "
 				   "data in the right directory? "
-				   "Exiting.");
+			    "coll=%s "
+			    "Exiting.",
+			    coll);
 		// repeat with log
 		for ( list.resetListPtr() ; ! list.isExhausted() ;
 		      list.skipCurrentRecord() ) {

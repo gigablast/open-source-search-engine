@@ -25,9 +25,12 @@ class Rebalance {
 
 	bool m_inRebalanceLoop;
 	long m_numForeignRecs;
+	long long m_rebalanceCount;
 
 	long m_rdbNum;
 	collnum_t m_collnum;
+	collnum_t m_lastCollnum;
+	class Rdb *m_lastRdb;
 	char m_nextKey[MAX_KEY_BYTES];
 	char m_endKey[MAX_KEY_BYTES];
 	bool m_needsRebalanceValid;

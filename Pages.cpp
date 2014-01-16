@@ -10,6 +10,7 @@
 #include "Proxy.h"
 #include "PageParser.h" // g_inPageParser
 #include "Users.h"
+#include "Rebalance.h"
 
 // a global class extern'd in Pages.h
 Pages g_pages;
@@ -984,11 +985,19 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 			      "is not the same over all hosts.");
 	}
 
-	// if any host had foreign recs, not that
-	if ( ps->m_numHostsWithForeignRecs ) {
+	if ( g_rebalance.m_isScanning ) {
 		if ( adds ) mb.safePrintf("<br><br>");
 		adds++;
-		mb.safePrintf("One or more hosts require shard rebalance. "
+		mb.safePrintf("Rebalancer is currently running.");
+	}
+	// if any host had foreign recs, not that
+	char *needsRebalance = g_rebalance.getNeedsRebalance();
+	if ( ! g_rebalance.m_isScanning &&
+	     needsRebalance &&
+	     *needsRebalance ) {
+		if ( adds ) mb.safePrintf("<br><br>");
+		adds++;
+		mb.safePrintf("This host requires a shard rebalance. "
 			      "Click 'rebalance shards' in master controls.");
 	}
 
