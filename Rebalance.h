@@ -20,7 +20,7 @@ class Rebalance {
 	void rebalanceLoop ( ) ;
 	void scanLoop ( ) ;
 	bool scanRdb ( ) ;
-	void gotList ( ) ;
+	bool gotList ( ) ;
 	bool saveRebalanceFile ( ) ;
 
 	bool m_inRebalanceLoop;
