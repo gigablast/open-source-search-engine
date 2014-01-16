@@ -10809,7 +10809,7 @@ void updateAllCrawlInfosSleepWrapper ( int fd , void *state ) {
 		Host *h = g_hostdb.getHost(i);
 		// skip if dead
 		if ( g_hostdb.isDead(i) ) {
-			//if ( g_conf.m_logDebugSpider )
+			if ( g_conf.m_logDebugSpider )
 				log("spider: skipping dead host #%li "
 				    "when getting "
 				    "crawl info",i);
