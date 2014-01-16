@@ -21,6 +21,7 @@
 Rebalance g_rebalance;
 
 Rebalance::Rebalance ( ) {
+	m_allowSave = false;
 	m_inRebalanceLoop = false;
 	m_numForeignRecs = 0;
 	m_rebalanceCount = 0LL;
@@ -29,6 +30,7 @@ Rebalance::Rebalance ( ) {
 	m_collnum = 0;
 	m_lastCollnum = -1;
 	m_lastRdb = NULL;
+	m_lastPercent = -1;
 	KEYMIN ( m_nextKey , MAX_KEY_BYTES );
 	KEYMAX ( m_endKey , MAX_KEY_BYTES );
 	m_needsRebalanceValid = false;
@@ -59,6 +61,10 @@ char *Rebalance::getNeedsRebalance ( ) {
 		m_needsRebalance = false;
 		return &m_needsRebalance;
 	}
+
+	// allow it to save to file now that we have almost had a chance to
+	// load in case it cores at startup and overwrites the file!!
+	m_allowSave = true;
 
 	// the last time we loaded hosts.conf we saved the checksum.
 	// if it changed we should think about auto-scaling. spidering
@@ -132,8 +138,9 @@ char *Rebalance::getNeedsRebalance ( ) {
 
 	// and we don't need user consent, they already did last time
 	if ( rebalancing ) {
-		m_warnedUser   = true;
-		m_userApproved = true;
+		// this was causing a core from starting too early!
+		//m_warnedUser   = true;
+		//m_userApproved = true;
 	}
 
 	return &m_needsRebalance;
@@ -212,11 +219,20 @@ void Rebalance::scanLoop ( ) {
 				// reset key cursor as well!!!
 				KEYMIN ( m_nextKey , MAX_KEY_BYTES );
 			}
+			// percent update?
+			long percent = (unsigned char)m_nextKey[rdb->m_ks-1];
+			percent *= 100;
+			percent /= 256;
+			if ( percent != m_lastPercent && percent ) {
+				log("rebalance: %li%% complete",percent);
+				m_lastPercent = percent;
+			}
 			// scan it. returns true if done, false if blocked
 			if ( ! scanRdb ( ) ) return;
 			// note it
-			log("rebalance: did %lli recs",m_rebalanceCount);
+			log("rebalance: moved %lli recs",m_rebalanceCount);
 			m_rebalanceCount = 0;
+			m_lastPercent = -1;
 		}
 		// reset it for next colls
 		m_rdbNum = 0;
@@ -241,6 +257,8 @@ void Rebalance::scanLoop ( ) {
 }
 
 bool Rebalance::saveRebalanceFile ( ) {
+
+	if ( ! m_allowSave ) return true;
 
 	char keyStr[128];
 	// convert m_nextKey 

@@ -826,11 +826,13 @@ bool Msg5::needsRecall ( ) {
 	logIt = true;
 	// seems to be very common for doledb, so don't log unless extreme
 	//if ( m_rdbId == RDB_DOLEDB && m_round < 15 ) logIt = false;
+	if ( m_round > 100 && (m_round % 1000) != 0 ) logIt = false;
 	if ( logIt )
 		logf(LOG_DEBUG,"db: Reading %li again from %s (need %li total "
 		     "got %li) this=0x%lx round=%li.", 
 		     m_newMinRecSizes , base->m_dbname , m_minRecSizes, 
-		     m_list->m_listSize, (long)this , m_round++ );
+		     m_list->m_listSize, (long)this , m_round );
+	m_round++;
 	// record how many screw ups we had so we know if it hurts performance
 	base->m_rdb->didReSeek ( );
 
@@ -1846,6 +1848,10 @@ bool Msg5::doneMerging ( ) {
 		else                         m_newMinRecSizes = 0x7fffffff;
 	}
 	else m_newMinRecSizes = nn;
+
+	// . for every round we get call increase by 10 percent
+	// . try to fix all those negative recs in the rebalance re-run
+	m_newMinRecSizes *= (1.0 + (m_round * .10));
 
 	
 	QUICKPOLL(m_niceness);

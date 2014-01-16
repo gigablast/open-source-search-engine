@@ -3369,7 +3369,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// sanity check
 		if ( ufn == -1 ) { 
 			log("spider: failed to match url filter for "
-			    "url = %s", sreq->m_url);
+			    "url = %s coll=%s", sreq->m_url,cr->m_coll);
 			g_errno = EBADENGINEER;
 			return true;
 		}

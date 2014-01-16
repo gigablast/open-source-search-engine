@@ -31,6 +31,7 @@ class Rebalance {
 	collnum_t m_collnum;
 	collnum_t m_lastCollnum;
 	class Rdb *m_lastRdb;
+	long m_lastPercent;
 	char m_nextKey[MAX_KEY_BYTES];
 	char m_endKey[MAX_KEY_BYTES];
 	bool m_needsRebalanceValid;
@@ -39,6 +40,7 @@ class Rebalance {
 	bool m_userApproved;
 	bool m_isScanning;
 	long m_blocked;
+	bool m_allowSave;
 
 	RdbList m_list;
 	SafeBuf m_posMetaList;
