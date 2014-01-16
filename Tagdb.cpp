@@ -2758,14 +2758,16 @@ bool Msg8a::launchGetRequests ( ) {
 	unsigned long shardNum = getShardNum ( m_rdbId , &startKey , true );
 	Host *group = g_hostdb.getShard ( shardNum );
 
-	long numTwins = g_hostdb.getNumHostsPerShard();
+	//long numTwins = g_hostdb.getNumHostsPerShard();
 	// use top byte!
 	uint8_t *sks = (uint8_t *)&startKey;
 	uint8_t top = sks[sizeof(TAGDB_KEY)-1];
-	long hostNum = 0;
-	if ( numTwins == 2 && (top & 0x80) ) hostNum = 1;
+	//long hostNum = 0;
+	//if ( numTwins == 2 && (top & 0x80) ) hostNum = 1;
 	// TODO: fix this!
-	if ( numTwins >= 3 ) { char *xx=NULL;*xx=0; }
+	//if ( numTwins >= 3 ) { char *xx=NULL;*xx=0; }
+	// support more than 2 stripes now...
+	long hostNum = top % g_hostdb.getNumHostsPerShard();
 	long hostId = group[hostNum].m_hostId;
 
 

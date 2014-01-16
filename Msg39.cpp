@@ -427,16 +427,24 @@ bool Msg39::getLists () {
 	
 	// if we have twins, then make sure the twins read different
 	// pieces of the same docid range to make things 2x faster
-	bool useTwins = false;
-	if ( g_hostdb.getNumStripes() == 2 ) useTwins = true;
-	if ( useTwins ) {
-		long long delta2 = ( docIdEnd - docIdStart ) / 2;
-		if ( m_r->m_stripe == 0 ) docIdEnd = docIdStart + delta2;
-		else                      docIdStart = docIdStart + delta2;
-	}
+	//bool useTwins = false;
+	//if ( g_hostdb.getNumStripes() == 2 ) useTwins = true;
+	//if ( useTwins ) {
+	//	long long delta2 = ( docIdEnd - docIdStart ) / 2;
+	//	if ( m_r->m_stripe == 0 ) docIdEnd = docIdStart + delta2;
+	//	else                      docIdStart = docIdStart + delta2;
+	//}
+	// new striping logic:
+	long numStripes = g_hostdb.getNumStripes();
+	long long delta2 = ( docIdEnd - docIdStart ) / numStripes;
+	long stripe = g_hostdb.getMyHost()->m_stripe;
+	docIdStart += delta2 * stripe; // is this right?
+	docIdEnd = docIdStart + delta2;
+	// add 1 to be safe so we don't lose a docid
+	docIdEnd++;
 	// TODO: add triplet support later for this to split the
 	// read 3 ways. 4 ways for quads, etc.
-	if ( g_hostdb.getNumStripes() >= 3 ) { char *xx=NULL;*xx=0;}
+	//if ( g_hostdb.getNumStripes() >= 3 ) { char *xx=NULL;*xx=0;}
 	// do not go over MAX_DOCID  because it gets masked and
 	// ends up being 0!!! and we get empty lists
 	if ( docIdEnd > MAX_DOCID ) docIdEnd = MAX_DOCID;
