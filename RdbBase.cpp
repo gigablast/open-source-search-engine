@@ -43,6 +43,7 @@ class RdbMerge g_merge2;
 RdbBase::RdbBase ( ) {
 	m_numFiles  = 0;
 	m_rdb = NULL;
+	m_nextMergeForced = false;
 	//m_dummy = NULL;
 	reset();
 }
@@ -873,6 +874,8 @@ bool RdbBase::incorporateMerge ( ) {
 	long b = m_mergeStartFileNum + m_numFilesToMerge;
 	// shouldn't be called if no files merged
 	if ( a == b ) {
+		// decrement this count
+		if ( m_isMerging ) m_rdb->m_numMergesOut--;
 		// exit merge mode
 		m_isMerging = false;
 		// return the merge token, no need for a callback
@@ -1153,6 +1156,8 @@ void RdbBase::doneWrapper4 ( ) {
 			log(LOG_INFO,"merge: Exiting urgent "
 			    "merge mode for %s.",m_dbname);
 	}
+	// decrement this count
+	if ( m_isMerging ) m_rdb->m_numMergesOut--;
 	// exit merge mode
 	m_isMerging = false;
 	// return the merge token, no need for a callback
@@ -1241,6 +1246,10 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	// sanity checks
 	if (   g_loop.m_inQuickPoll ) { char *xx=NULL;*xx=0; }
 	if (   niceness == 0 ) { char *xx=NULL;*xx=0; }
+
+	if ( forceMergeAll ) m_nextMergeForced = true;
+
+	if ( m_nextMergeForced ) forceMergeAll = true;
 
 	// if we are trying to merge titledb but a titledb dump is going on
 	// then do not do the merge, we do not want to overwrite tfndb via
@@ -1440,7 +1449,7 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	// log a note
 	//log(0,"RdbBase::attemptMerge: attempting merge for %s",m_dbname );
 	// this merge forced?
-	m_nextMergeForced = forceMergeAll;
+	//m_nextMergeForced = forceMergeAll;
 	// . bail if already merging
 	// . no, RdbMerge will sleep in 5 sec cycles into they're done
 	// . we may have multiple hosts running on the same cpu/hardDrive
@@ -1510,9 +1519,9 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		return;
 	}
 	// debug msg
-	if ( doLog )
-	log(LOG_INFO,"merge: Got merge token for %s without blocking.",
-	    m_dbname);
+	//if ( doLog )
+	//log(LOG_INFO,"merge: Got merge token for %s without blocking.",
+	//    m_dbname);
 	// if did not block
 	gotTokenForMerge ( );
 }
@@ -1923,6 +1932,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	// assume we are now officially merging
 	m_isMerging = true;
 
+	m_rdb->m_numMergesOut++;
+
 	char rdbId = getIdFromRdb ( m_rdb );
 
 	// sanity check
@@ -1943,6 +1954,8 @@ void RdbBase::gotTokenForMerge ( ) {
 			  m_ks                  ) ) return;
 	// hey, we're no longer merging i guess
 	m_isMerging = false;
+	// decerment this count
+	m_rdb->m_numMergesOut--;
 	// . if we have no g_errno that is bad!!!
 	// . we should dump core here or something cuz we have to remove the
 	//   merge file still to be correct
@@ -1958,6 +1971,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	g_errno = 0;
 	// give token back
 	g_msg35.releaseToken();
+	// try again
+	m_rdb->attemptMerge( m_niceness, false , true );
 }
 
 // . use the maps and tree to estimate the size of this list w/o hitting disk

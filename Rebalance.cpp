@@ -98,6 +98,7 @@ char *Rebalance::getNeedsRebalance ( ) {
 	// mid-stream i guess.
 	unsigned long x = 0;
 	long y = 0;
+	long z = 0;
 	long rebalancing = 0;
 	long cn;
 	// parse the file
@@ -105,12 +106,14 @@ char *Rebalance::getNeedsRebalance ( ) {
 	sscanf(sb.getBufStart(),
 	       "myshard: %li\n"
 	       "numshards: %li\n"
+	       "numhostspershard: %li\n"
 	       "rebalancing: %li\n"
 	       "collnum: %li\n"
 	       "rdbnum: %li\n"
 	       "nextkey: %s\n",
 	       &x,
 	       &y,
+	       &z,
 	       // were we rebalancing last time?
 	       &rebalancing,
 	       // how far did we get?
@@ -131,6 +134,7 @@ char *Rebalance::getNeedsRebalance ( ) {
 	// shard then we must auto scale
 	if ( x != g_hostdb.m_myHost->m_shardNum ) m_needsRebalance = true;
 	if ( y != g_hostdb.m_numShards          ) m_needsRebalance = true;
+	if ( z != g_hostdb.getNumHostsPerShard()) m_needsRebalance = true;
 	if ( rebalancing                        ) m_needsRebalance = true;
 
 	// how can this be?
@@ -196,7 +200,7 @@ void Rebalance::scanLoop ( ) {
 
 		// new?
 		//if ( m_lastCollnum != m_collnum ) {
-		//	log("rebalance: rebalancing %s", cr->m_coll);
+		//	log("rebal: rebalancing %s", cr->m_coll);
 		//	m_lastCollnum = m_collnum;
 		//}
 
@@ -212,7 +216,7 @@ void Rebalance::scanLoop ( ) {
 			if ( rdb->m_rdbId == RDB_STATSDB ) continue;
 			// log it as well
 			if ( m_lastRdb != rdb ) {
-				log("rebalance: scanning %s [%s]",
+				log("rebal: scanning %s [%s]",
 				    cr->m_coll,rdb->m_dbname);
 				// only do this once per rdb/coll
 				m_lastRdb = rdb;
@@ -224,13 +228,13 @@ void Rebalance::scanLoop ( ) {
 			percent *= 100;
 			percent /= 256;
 			if ( percent != m_lastPercent && percent ) {
-				log("rebalance: %li%% complete",percent);
+				log("rebal: %li%% complete",percent);
 				m_lastPercent = percent;
 			}
 			// scan it. returns true if done, false if blocked
 			if ( ! scanRdb ( ) ) return;
 			// note it
-			log("rebalance: moved %lli recs",m_rebalanceCount);
+			log("rebal: moved %lli recs",m_rebalanceCount);
 			m_rebalanceCount = 0;
 			m_lastPercent = -1;
 		}
@@ -250,7 +254,7 @@ void Rebalance::scanLoop ( ) {
 	m_rdbNum = 0;
 	KEYMIN(m_nextKey,MAX_KEY_BYTES);
 
-	log("rebalance: done rebalancing all collections. "
+	log("rebal: done rebalancing all collections. "
 	    "Saving rebalance.txt.");
 
 	saveRebalanceFile();
@@ -270,12 +274,14 @@ bool Rebalance::saveRebalanceFile ( ) {
 	sb.safePrintf (
 		       "myshard: %li\n"
 		       "numshards: %li\n"
+		       "numhostspershard: %li\n"
 		       "rebalancing: %li\n"
 		       "collnum: %li\n"
 		       "rdbnum: %li\n"
 		       "nextkey: %s\n",
 		       (long)g_hostdb.m_myHost->m_shardNum,
 		       (long)g_hostdb.m_numShards,
+		       (long)g_hostdb.getNumHostsPerShard(),
 		       // were we rebalancing last time?
 		       (long)m_isScanning,
 		       // how far did we get?

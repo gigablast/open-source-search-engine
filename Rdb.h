@@ -382,6 +382,8 @@ class Rdb {
 
 	bool m_inAddList;
 
+	long m_numMergesOut;
+
 	// . this is now static in Rdb.cpp
 	// . for merging many rdb files into one 
 	// . no we brought it back so tfndb can merge while titledb is merging

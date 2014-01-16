@@ -10809,7 +10809,7 @@ void updateAllCrawlInfosSleepWrapper ( int fd , void *state ) {
 		Host *h = g_hostdb.getHost(i);
 		// skip if dead
 		if ( g_hostdb.isDead(i) ) {
-			if ( g_conf.m_logDebugSpider )
+			//if ( g_conf.m_logDebugSpider )
 				log("spider: skipping dead host #%li "
 				    "when getting "
 				    "crawl info",i);
@@ -10862,6 +10862,8 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 	// inc it
 	s_replies++;
+
+	if ( s_replies > s_requests ) { char *xx=NULL;*xx=0; }
 
 	// the sendbuf should never be freed! it points into collrec
 	slot->m_sendBufAlloc = NULL;
@@ -10974,6 +10976,9 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 		// deal with next collection rec
 	}
+
+	// wait for more replies to come in
+	if ( s_replies < s_requests ) return;
 
 	// initialize
 	s_replies  = 0;

@@ -804,6 +804,16 @@ bool Msg5::needsRecall ( ) {
 		goto done;
 	//if ( m_list->getEndKey() >= m_endKey ) goto done;
 	if ( KEYCMP(m_list->getEndKey(),m_endKey,m_ks)>=0 ) goto done;
+
+	// if this is NOT the first round and the sum of all our list sizes
+	// did not increase, then we hit the end...
+	if ( m_round >= 1 && m_totalSize == m_lastTotalSize ) {
+		log("msg5: increasing minrecsizes did nothing. assuming done");
+		goto done;
+	}
+	// ok, make sure if we go another round at least one list gains!
+	m_lastTotalSize = m_totalSize;
+
 	/*
 	// sanity check
 	if ( m_indexdbTruncationLimit < MIN_TRUNC ) {
@@ -1853,14 +1863,18 @@ bool Msg5::doneMerging ( ) {
 	// . try to fix all those negative recs in the rebalance re-run
 	m_newMinRecSizes *= (1.0 + (m_round * .10));
 
+	// wrap around?
+	if ( m_newMinRecSizes < 0 || m_newMinRecSizes > 1000000000 )
+		m_newMinRecSizes = 1000000000;
+
 	
 	QUICKPOLL(m_niceness);
 	// . don't exceed original min rec sizes by 5 i guess
 	// . watch out for wrap
-	long max = 5 * m_minRecSizes ;
-	if ( max < m_minRecSizes ) max = 0x7fffffff;
-	if ( m_newMinRecSizes > max && max > m_minRecSizes )
-		m_newMinRecSizes = max;
+	//long max = 5 * m_minRecSizes ;
+	//if ( max < m_minRecSizes ) max = 0x7fffffff;
+	//if ( m_newMinRecSizes > max && max > m_minRecSizes )
+	//	m_newMinRecSizes = max;
 
 	// keep this above a certain point because if we didn't make it now
 	// we got negative records messing with us

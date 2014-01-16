@@ -37,6 +37,7 @@ Rdb::Rdb ( ) {
 	m_inAddList = false;
 	m_collectionlessBase = NULL;
 	m_initialized = false;
+	m_numMergesOut = 0;
 	//memset ( m_bases , 0 , sizeof(RdbBase *) * MAX_COLLS );
 	reset();
 }
@@ -2586,6 +2587,9 @@ long long Rdb::getDiskSpaceUsed ( ) {
 }
 
 bool Rdb::isMerging ( ) {
+	// use this for speed
+	return (bool)m_numMergesOut;
+
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
 		RdbBase *base = getBase(i);
 		if ( ! base ) continue;
