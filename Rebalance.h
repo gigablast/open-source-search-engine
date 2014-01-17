@@ -26,6 +26,7 @@ class Rebalance {
 	bool m_inRebalanceLoop;
 	long m_numForeignRecs;
 	long long m_rebalanceCount;
+	long long m_scannedCount;
 
 	long m_rdbNum;
 	collnum_t m_collnum;

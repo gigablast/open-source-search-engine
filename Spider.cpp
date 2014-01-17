@@ -62,17 +62,21 @@ long SpiderRequest::print ( SafeBuf *sbarg ) {
 	SafeBuf tmp;
 	if ( ! sb ) sb = &tmp;
 
-	sb->safePrintf("k.n1=0x%llx ",m_key.n1);
-	sb->safePrintf("k.n0=0x%llx ",m_key.n0);
+	//sb->safePrintf("k.n1=0x%llx ",m_key.n1);
+	//sb->safePrintf("k.n0=0x%llx ",m_key.n0);
+	sb->safePrintf("k=%s ",KEYSTR(this,
+				      getKeySizeFromRdbId(RDB_SPIDERDB)));
 
 	sb->safePrintf("uh48=%llu ",getUrlHash48());
-	sb->safePrintf("parentDocId=%llu ",getParentDocId());
 	// if negtaive bail early now
 	if ( (m_key.n0 & 0x01) == 0x00 ) {
 		sb->safePrintf("[DELETE]");
 		if ( ! sbarg ) printf("%s",sb->getBufStart() );
 		return sb->length();
 	}
+
+	sb->safePrintf("recsize=%li ",getRecSize());
+	sb->safePrintf("parentDocId=%llu ",getParentDocId());
 
 	sb->safePrintf("firstip=%s ",iptoa(m_firstIp) );
 	sb->safePrintf("hostHash32=0x%lx ",m_hostHash32 );
@@ -691,6 +695,8 @@ bool Spiderdb::verify ( char *coll ) {
 		if ( shardNum == g_hostdb.getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
+		// tally it up
+		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %li records in spiderdb, "
 		     "only %li belong to our shard.",count,got);
 		// exit if NONE, we probably got the wrong data

@@ -6332,7 +6332,9 @@ long dumpSpiderdb ( char *coll,
 			printf( "offset=%lli ",curOff);
 			g_spiderdb.print ( srec );
 			printf(" age=%lis",now-sreq->m_addedTime);
-			printf(" hadReply=%li\n",(long)hadReply);
+			printf(" hadReply=%li",(long)hadReply);
+			printf(" shard=%li\n",
+			       (long)g_hostdb.getShardNum(RDB_SPIDERDB,sreq));
 		}
 
 		// print a counter

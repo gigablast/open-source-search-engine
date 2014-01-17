@@ -2061,8 +2061,8 @@ void RdbList::merge_r ( RdbList **lists         ,
 		char*xx=NULL;*xx=0; }
 
 	// dedup for spiderdb
-	if ( rdbId == RDB_SPIDERDB )
-		dedupSpiderdbList ( this , niceness , removeNegRecs );
+	//if ( rdbId == RDB_SPIDERDB )
+	//	dedupSpiderdbList ( this , niceness , removeNegRecs );
 
 	/*
 	if ( rdbId  == RDB_POSDB ) {

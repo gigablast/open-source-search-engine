@@ -25,6 +25,7 @@ Rebalance::Rebalance ( ) {
 	m_inRebalanceLoop = false;
 	m_numForeignRecs = 0;
 	m_rebalanceCount = 0LL;
+	m_scannedCount = 0LL;
 	// reset 
 	m_rdbNum = 0;
 	m_collnum = 0;
@@ -234,8 +235,10 @@ void Rebalance::scanLoop ( ) {
 			// scan it. returns true if done, false if blocked
 			if ( ! scanRdb ( ) ) return;
 			// note it
-			log("rebal: moved %lli recs",m_rebalanceCount);
+			log("rebal: moved %lli of %lli recs scanned",
+			    m_rebalanceCount,m_scannedCount);
 			m_rebalanceCount = 0;
+			m_scannedCount = 0;
 			m_lastPercent = -1;
 		}
 		// reset it for next colls
@@ -315,6 +318,8 @@ bool Rebalance::scanRdb ( ) {
 
  readAnother:
 
+	//log("rebal: loading list start = %s",KEYSTR(m_nextKey,rdb->m_ks));
+
 	if ( ! m_msg5.getList ( rdb->m_rdbId     ,
 				coll             ,
 				&m_list          ,
@@ -376,6 +381,8 @@ bool Rebalance::gotList ( ) {
 
 	m_list.resetListPtr();
 
+	//log("rebal: got list of %li bytes",m_list.getListSize());
+
 	m_posMetaList.reset();
 	m_negMetaList.reset();
 
@@ -393,6 +400,11 @@ bool Rebalance::gotList ( ) {
 		long shard = getShardNum ( rdbId , rec );
 		// save last ptr
 		last = rec;
+		// debug!
+		//m_list.getKey  ( rec , m_nextKey );
+		//log("rebal: checking key %s",KEYSTR(m_nextKey,ks));
+		// count as scanned
+		m_scannedCount++;
 		// skip it if it belongs with us
 		if ( shard == myShard ) continue;
 		// count it
@@ -424,9 +436,13 @@ bool Rebalance::gotList ( ) {
 		//m_negMetaList.pushChar ( rdbId );
 		// make key a delete
 		key[0] &= 0xfe;
+		// for debug...
+		//log("rebal: rm key %s",KEYSTR(key,ks));
 		// and store that negative key
 		m_negMetaList.safeMemcpy ( key , ks );
 	}
+
+	//log("rebal: done reading list");
 
 	//  update nextkey
 	if ( last ) {
