@@ -13048,6 +13048,7 @@ skip:
 	THIS->m_masterLoop ( THIS->m_masterState );
 }
 
+/*
 SafeBuf *XmlDoc::getDiffbotApiUrl ( ) {
 
 	if ( m_diffbotApiUrlValid )
@@ -13085,6 +13086,7 @@ SafeBuf *XmlDoc::getDiffbotApiUrl ( ) {
 	//m_diffbotApiNumValid = true;
 	return &m_diffbotApiUrl;
 }
+*/
 
 // if only processing NEW is enabled, then do not
 bool *XmlDoc::getRecycleDiffbotReply ( ) {
@@ -13330,16 +13332,6 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	if ( m_indexCodeValid && m_indexCode )
 		return &m_diffbotReply;
 
-	// if already processed and onlyprocessifnew is enabled then
-	// we recycle and do not bother with this, we also do not nuke
-	// the diffbot json objects we have already indexed by calling
-	// nukeJSONObjects()
-	bool *recycle = getRecycleDiffbotReply();
-	if ( ! recycle || recycle == (void *)-1) return (SafeBuf *)recycle;
-	if ( *recycle ) {
-		m_diffbotReplyValid = true;
-		return &m_diffbotReply;
-	}
 
 	if ( m_isDiffbotJSONObject ) {
 		m_diffbotReplyValid = true;
@@ -13354,6 +13346,52 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// get list of substring patterns
+	char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
+	char *upp = cr->m_diffbotUrlProcessPattern.getBufStart();
+	if ( upp && ! upp[0] ) upp = NULL;
+	if ( ucp && ! ucp[0] ) ucp = NULL;
+	// do we match the url process pattern or regex?
+	// get the compiled regular expressions
+	regex_t *ucr = &cr->m_ucr;
+	regex_t *upr = &cr->m_upr;
+	if ( ! cr->m_hasucr ) ucr = NULL;
+	if ( ! cr->m_hasupr ) upr = NULL;
+	// get the url
+	Url *f = getFirstUrl();
+	char *url = f->getUrl();
+	// . "upp" is a ||-separated list of substrings
+	// . "upr" is a regex
+	// . regexec returns 0 for a match
+	if ( upr && regexec(upr,url,0,NULL,0) ) {
+		// return empty reply
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+	if ( upp && !upr &&!doesStringContainPattern(url,upp)) {
+		// return empty reply
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
+
+	
+
+	// if already processed and onlyprocessifnew is enabled then
+	// we recycle and do not bother with this, we also do not nuke
+	// the diffbot json objects we have already indexed by calling
+	// nukeJSONObjects()
+	bool *recycle = getRecycleDiffbotReply();
+	if ( ! recycle || recycle == (void *)-1) return (SafeBuf *)recycle;
+	if ( *recycle ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
+
 	// if set from title rec, do not do it. we are possibly an "old doc"
 	// and we should only call diffbot.com with new docs
 	if ( m_setFromTitleRec ) {
@@ -13363,8 +13401,9 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	// . check the url filters table to see if diffbot api is specified
 	// . just return "\0" if none, but NULL means error i guess
-	SafeBuf *au = getDiffbotApiUrl();
-	if ( ! au || au == (void *)-1 ) return (SafeBuf *)au;
+	//SafeBuf *au = getDiffbotApiUrl();
+	//if ( ! au || au == (void *)-1 ) return (SafeBuf *)au;
+	SafeBuf *au = &cr->m_diffbotApiUrl;
 
 	// if no url, assume do not access diffbot
 	if ( au->length() <= 0 ) {
@@ -13588,8 +13627,8 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	}
 	*/
 
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
+	//CollectionRec *cr = getCollRec();
+	//if ( ! cr ) return NULL;
 
 	// add a '?' if none
 	if ( ! strchr ( apiUrl.getUrl() , '?' ) )
