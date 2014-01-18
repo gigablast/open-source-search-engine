@@ -55,8 +55,12 @@ struct SafeBuf {
 	// . returns -1 on error and sets g_errno
 	long saveToFile ( char *dir , char *filename ) ;
 	long dumpToFile(char *filename);
-	bool safePrintFilterTagsAndLines ( char *p , long plen ,
-					   bool oneWordPerLine ) ;
+	long save ( char *dir, char *fname){return saveToFile(dir,fname); };
+
+	long  fillFromFile(char *filename);
+	long  fillFromFile(char *dir,char *filename);
+	long  load(char *dir,char *fname) { return fillFromFile(dir,fname);};
+
 	void filterTags();
 	void filterQuotes();
 	bool truncateLongWords ( char *src, long srcLen , long minmax );
@@ -116,6 +120,9 @@ struct SafeBuf {
 	void  purge(); // Clear all data and free all allocated memory
 	bool  advance ( long i ) ;
 
+	bool safePrintFilterTagsAndLines ( char *p , long plen ,
+					   bool oneWordPerLine ) ;
+
 	// . if clearIt is true we init the new buffer space to zeroes
 	// . used by Collectiondb.cpp
 	bool  reserve(long i, char *label=NULL , bool clearIt = false );
@@ -135,8 +142,6 @@ struct SafeBuf {
 	void  setLength(long i) { m_length = i; };
 	char *getNextLine ( char *p ) ;
 	long  catFile(char *filename) ;
-	long  fillFromFile(char *filename);
-	long  fillFromFile(char *dir,char *filename);
 	//long  load(char *dir,char *filename) { 
 	//	return fillFromFile(dir,filename);};
 	bool  safeLatin1ToUtf8(char *s, long len);
@@ -162,9 +167,11 @@ struct SafeBuf {
 
 	void zeroOut() { memset ( m_buf , 0 , m_capacity ); }
 
-	bool brify2 ( char *s , long cols ) ;
+	bool brify2 ( char *s , long cols , char *sep = "<br>" ,
+		      bool isHtml = true ) ;
 
-	bool brify ( char *s , long slen , long niceness , long cols );
+	bool brify ( char *s , long slen , long niceness , long cols ,
+		     char *sep = "<br>" , bool isHtml = true );
 
 	bool fixIsolatedPeriods ( ) ;
 

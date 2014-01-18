@@ -48,9 +48,11 @@ enum {
 // between all the hosts in the cluster
 #define PFLAG_MERGEMODE0     0x08
 #define PFLAG_MERGEMODE0OR6  0x10
+#define PFLAG_REBALANCING    0x20
+#define PFLAG_FOREIGNRECS    0x40
 
 // added slow disk reads to it, 4 bytes (was 52)
-#define MAX_PING_SIZE 44
+#define MAX_PING_SIZE (44+4)
 
 #define HT_GRUNT   0x01
 #define HT_SPARE   0x02
@@ -78,7 +80,7 @@ class Host {
 
  public:
 
-	//bool isDead ( ) { return m_hostdb->m_isDead ( this ); };
+	//bool isDead ( ) { return m_hostdb->m_isDead (); };
 
 	long           m_hostId ;
 	//unsigned long  m_groupId ;
@@ -108,6 +110,10 @@ class Host {
 	unsigned long  m_ipShotgun;  
 	unsigned short m_externalHttpPort;
 	unsigned short m_externalHttpsPort;
+
+	// his checksum of his hosts.conf so we can ensure we have the
+	// same hosts.conf file! 0 means not legit.
+	long m_hostsConfCRC;
 
 	// used by Process.cpp to do midnight stat dumps and emails
 	EventStats m_eventStats;
@@ -305,6 +311,9 @@ class Hostdb {
 
 	// for dealing with pings
 	bool registerHandler ( );
+
+	// if config changes this *should* change
+	long getCRC();
 
 	// . to prevent script kiddies from sending bogus udp packets to
 	//   our udp servers we make sure they are from an IP in our hosts.conf
@@ -611,6 +620,9 @@ class Hostdb {
 
 	bool m_initialized;
 
+	long m_crc;
+	long m_crcValid;
+
 	// for sync
 	Host *m_syncHost;
 	bool  m_syncSecondaryIps;
@@ -620,8 +632,11 @@ class Hostdb {
 	//uint32_t getGroupId (char rdbId, void *key, bool split = true);
 	//uint32_t getGroupIdFromDocId ( long long d ) ;
 
-	uint32_t getShardNum (char rdbId, void *key, bool split = true);
+	uint32_t getShardNum (char rdbId, void *key );
 	uint32_t getShardNumFromDocId ( long long d ) ;
+
+	// assume to be for posdb here
+	uint32_t getShardNumByTermId ( void *key );
 
 	uint32_t m_map[MAX_KSLOTS];
 };
@@ -634,8 +649,8 @@ extern uint32_t  g_listIps   [ MAX_HOSTS * 4 ];
 extern uint16_t  g_listPorts [ MAX_HOSTS * 4 ];
 extern long      g_listNumTotal;
 
-inline uint32_t getShardNum ( char rdbId, void *key,bool split = true) {
-	return g_hostdb.getShardNum ( rdbId , key , split );
+inline uint32_t getShardNum ( char rdbId, void *key ) {
+	return g_hostdb.getShardNum ( rdbId , key );
 };
 
 inline uint32_t getMyShardNum ( ) { 

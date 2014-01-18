@@ -11,6 +11,7 @@
 #include "Linkdb.h"
 
 RdbTree::RdbTree () {
+	//m_countsInitialized = false;
 	m_collnums= NULL;
 	m_keys    = NULL;
 	m_data    = NULL;
@@ -2769,7 +2770,7 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 	// define ending node for all loops
 	long end = start + n ;
 	// shortcut
-	//CollectionRec **recs = g_collectiondb.m_recs;
+	CollectionRec **recs = g_collectiondb.m_recs;
 	// store into tree in the appropriate nodes
 	for ( long i = start ; i < end ; i++ ) {
 		// skip if empty
@@ -2777,6 +2778,11 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 		// watch out for bad collnums... corruption...
 		collnum_t c = m_collnums[i];
 		if ( c < 0 || c >= max ) {
+			m_corrupt++;
+			continue;
+		}
+		// must have rec as well
+		if ( ! recs[c] ) {
 			m_corrupt++;
 			continue;
 		}
@@ -2788,14 +2794,14 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 			//m_numNegKeysPerColl[c]++;
 			// this is only used for Rdb::m_trees
 			//if ( m_isRealTree )
-			//recs[c]->m_numNegKeysInTree[(unsigned char)m_rdbId]++
+			recs[c]->m_numNegKeysInTree[(unsigned char)m_rdbId]++;
 		}
 		else {
 			m_numPositiveKeys++;
 			//m_numPosKeysPerColl[c]++;
 			// this is only used for Rdb::m_trees
 			//if ( m_isRealTree )
-			//recs[c]->m_numPosKeysInTree[(unsigned char)m_rdbId]++
+			recs[c]->m_numPosKeysInTree[(unsigned char)m_rdbId]++;
 		}
 	}
 	// bail now if we can 
@@ -3079,6 +3085,7 @@ long  RdbTree::getNumNegativeKeys ( collnum_t collnum ) {
 	if ( m_rdbId < 0 ) { char *xx=NULL;*xx=0; }
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return 0;
+	//if ( ! m_countsInitialized ) { char *xx=NULL;*xx=0; }
 	return cr->m_numNegKeysInTree[(unsigned char)m_rdbId]; 
 }
 
@@ -3086,6 +3093,7 @@ long  RdbTree::getNumPositiveKeys ( collnum_t collnum ) {
 	if ( m_rdbId < 0 ) { char *xx=NULL;*xx=0; }
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return 0;
+	//if ( ! m_countsInitialized ) { char *xx=NULL;*xx=0; }
 	return cr->m_numPosKeysInTree[(unsigned char)m_rdbId]; 
 }
 
@@ -3093,11 +3101,16 @@ void RdbTree::setNumKeys ( CollectionRec *cr ) {
 
 	if ( ! cr ) return;
 
+	//m_countsInitialized = true;
+
+	return;
+
 	if ( ((unsigned char)m_rdbId) >= RDB_END ) { char *xx=NULL;*xx=0; }
 
 	collnum_t collnum = cr->m_collnum;
 	cr->m_numNegKeysInTree[(unsigned char)m_rdbId] = 0;
 	cr->m_numPosKeysInTree[(unsigned char)m_rdbId] = 0;
+
 
 	for ( long i = 0 ; i < m_numNodes ; i++ ) {
 		//QUICKPOLL(niceness);

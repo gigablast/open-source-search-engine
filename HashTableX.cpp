@@ -16,6 +16,7 @@ void HashTableX::constructor() {
 	m_isWritable = true;
 	m_txtBuf = NULL;
 	m_useKeyMagic = false;
+	m_ks = 0;
 }
 
 void HashTableX::destructor() {
@@ -28,7 +29,9 @@ HashTableX::HashTableX () {
 	m_doFree = false;
 	m_isWritable = true;
 	m_txtBuf = NULL;
-
+	m_useKeyMagic = false;
+	m_ks = 0;
+	
 	reset();
 }
 
@@ -424,7 +427,7 @@ bool HashTableX::load ( char *dir, char *filename, char **tbuf, long *tsize ) {
 	if ( ! f.doesExist() ) return false;
 	char *pdir = dir;
 	if ( ! pdir ) pdir = "";
-	log(LOG_INFO,"admin: Loading hashtablex from %s%s",pdir,filename);
+	//log(LOG_INFO,"admin: Loading hashtablex from %s%s",pdir,filename);
 	if ( ! f.open ( O_RDONLY) ) return false;
 	long numSlots;
 	long numSlotsUsed;

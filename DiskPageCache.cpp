@@ -349,7 +349,7 @@ void DiskPageCache::getPages   ( long       vfd         ,
 		// dumping more than what was end the tree because stuff was
 		// added to the tree while dumping!
 		log("db: pagecache: Caught get breach. "
-		    "ep=%li max=%li", ep,m_maxPagesInFile[vfd] );
+		    "ep=%li max=%li vfd=%li", ep,m_maxPagesInFile[vfd] ,vfd);
 		return;
 		//char *xx = NULL; *xx = 0; 
 	}

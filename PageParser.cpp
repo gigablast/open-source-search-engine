@@ -259,6 +259,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "</td>"
 		  "</tr>"
 
+			  /*
 		  "<tr>"
 		  "<td>"
 		  "Hop count to use: "
@@ -270,6 +271,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "(-1 is unknown. For root urls hopcount is always 0)<br>"
 		  "</td>"
 		  "</tr>"
+			  */
 
 		  "<tr>"
 		  "<td>"
@@ -309,6 +311,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "</td>"
 		  "</tr>"
 
+			  /*
 		  "<tr>"
 		  "<td>"
 		  "Recycle Link Info Imported:"
@@ -320,6 +323,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "Recycle the link info imported from other coll"
 		  "</td>"
 		  "</tr>"
+			  */
 
 		  "<tr>"
 		  "<td>"
@@ -333,6 +337,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "</td>"
 		  "</tr>"
 
+			  /*
 		  "<tr>"
 		  "<td>"
 		  "Lookup outlinks' ruleset, ips, quality:"
@@ -357,6 +362,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "Leave empty usually. Uses this coll to lookup link info."
 		  "</td>"
 		  "</tr>"
+			  */
 
 		  "<tr>"
 		  "<td>"
@@ -402,14 +408,14 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "</form>"
 		  "<br>",
 			  us ,
-			   (long)st->m_hopCount,
+			  //(long)st->m_hopCount,
 			   //rtu,
 			   dd,
 			  //artr , 
 			   rr, 
-			   rr2, 
+			  //rr2, 
 			   render , 
-			   oips ,
+			  //oips ,
 			  contentParm );
 
 

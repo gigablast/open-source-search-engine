@@ -186,6 +186,8 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_didDelete = false;
+
 	m_metaList2.purge();
 
 	m_mySiteLinkInfoBuf.purge();
@@ -695,8 +697,6 @@ void XmlDoc::reset ( ) {
 	m_usePageLinkBuf = false;
 	m_printInXml = false;
 
-	//m_inHashNoSplit = false;
-
 	m_check1   = false;
 	m_check2   = false;
 	m_prepared = false;
@@ -753,9 +753,9 @@ void XmlDoc::reset ( ) {
 	m_launchedSpecialMsg8a     = false;
 	m_launchedMsg8a2           = false;
 
-	//m_numSectiondbReads        = 0;
-	//m_numSectiondbNeeds        = 0;
-	//m_sectiondbRecall          = 0;
+	m_numSectiondbReads        = 0;
+	m_numSectiondbNeeds        = 0;
+	m_sectiondbRecall          = 0;
 
 	//m_triedVoteCache           = false;
 	//m_storedVoteCache          = false;
@@ -804,7 +804,7 @@ void XmlDoc::reset ( ) {
 
 	// Repair.cpp now explicitly sets these to false if needs to
 	m_usePosdb     = true;
-	m_useDatedb    = true;
+	//m_useDatedb    = true;
 	m_useClusterdb = true;
 	m_useLinkdb    = true;
 	m_useSpiderdb  = true;
@@ -812,7 +812,8 @@ void XmlDoc::reset ( ) {
 	m_useTagdb     = true;
 	m_usePlacedb   = true;
 	//m_useTimedb    = true;
-	//m_useSectiondb = true;
+	// only use for custom crawls for now to save disk space
+	m_useSectiondb = false;
 	//m_useRevdb     = true;
 	m_useSecondaryRdbs = false;
 
@@ -1901,6 +1902,9 @@ bool XmlDoc::indexDoc ( ) {
 	     ! m_incrementedAttemptsCount ) {
 		// do not repeat
 		m_incrementedAttemptsCount = true;
+		// log debug
+		//log("build: attempted %s count=%lli",m_firstUrl.getUrl(),
+		//    cr->m_localCrawlInfo.m_pageDownloadAttempts);
 		// this is just how many urls we tried to index
 		//cr->m_localCrawlInfo.m_urlsConsidered++;
 		cr->m_localCrawlInfo.m_pageDownloadAttempts++;
@@ -2018,6 +2022,12 @@ bool XmlDoc::indexDoc ( ) {
 		m_spideredTimeValid = true;
 		m_spideredTime = getTimeGlobal();//0; use now!
 	}
+
+	// if error is EFAKEFIRSTIP, do not core
+	//if ( ! m_isIndexedValid ) {
+	//	m_isIndexed = false;
+	//	m_isIndexedValid = true;
+	//}
 
 	// if this is EABANDONED or EHITCRAWLLIMIT or EHITPROCESSLIMIT
 	// or ECORRUPTDATA (corrupt gzip reply)
@@ -2935,8 +2945,8 @@ long *XmlDoc::getIndexCode2 ( ) {
 	// validate this here so getSpiderPriority(), which calls 
 	// getUrlFilterNum(), which calls getNewSpiderReply(), which calls
 	// us, getIndexCode() does not repeat all this junk
-	m_indexCodeValid = true;
-	m_indexCode      = 0;
+	//m_indexCodeValid = true;
+	//m_indexCode      = 0;
 
 	// this needs to be last!
 	long *priority = getSpiderPriority();
@@ -2965,7 +2975,9 @@ long *XmlDoc::getIndexCode2 ( ) {
 	}
 
 	// if using diffbot and the diffbot reply had a time out error
-	// or otherwise... diffbot failure demands a re-try always i guess
+	// or otherwise... diffbot failure demands a re-try always i guess.
+	// put this above getSpiderPriority() call otherwise we end up in
+	// a recursive loop with getIndexCode() and getNewSpiderReply()
 	SafeBuf *dbr = getDiffbotReply();
 	if ( ! dbr || dbr == (void *)-1 ) return (long *)dbr;
 	if ( m_diffbotReplyValid && m_diffbotReplyError ) {
@@ -5796,14 +5808,19 @@ Sections *XmlDoc::getSections ( ) {
 	//HashTableX *rvt = getRootVotingTable();
 	//if ( ! rvt || rvt == (void *)-1 ) return (Sections *)rvt;
 
-	//SectionVotingTable *osvt = getOldSectionVotingTable();
-	//if ( ! osvt || osvt == (void *)-1 ) return (Sections *)osvt;
+	SectionVotingTable *osvt = getOldSectionVotingTable();
+	if ( ! osvt || osvt == (void *)-1 ) return (Sections *)osvt;
 
 	uint32_t *tph = getTagPairHash32();
 	if ( ! tph || tph == (uint32_t *)-1 ) return (Sections *)tph;
 
+	if ( ! m_useSectiondb ) {
+		m_sectionsValid = true;
+		return &m_sections;
+	}
+
 	// start here
-	//Section *si;
+	Section *si;
 
 	/*
 	// get first sentence in doc
@@ -5904,7 +5921,6 @@ Sections *XmlDoc::getSections ( ) {
 	//
 	///////////////////////////////////////
 
-	/*
 	// get first sentence in doc
 	si = ss->m_firstSent;
 	// do not bother scanning if no votes
@@ -5944,13 +5960,11 @@ Sections *XmlDoc::getSections ( ) {
 		//     ! (si->m_flags & SEC_HAS_NONFUZZYDATE) )
 		//	si->m_sentFlags |= SENT_DUP_SECTION;
 	}
-	*/
 
 	m_sectionsValid = true;
 	return &m_sections;
 }
 
-/*
 SectionVotingTable *XmlDoc::getNewSectionVotingTable ( ) {
 	if ( m_nsvtValid ) return &m_nsvt;
 	// need sections
@@ -5982,10 +5996,7 @@ SectionVotingTable *XmlDoc::getNewSectionVotingTable ( ) {
 	m_nsvtValid = true;
 	return &m_nsvt;
 }
-*/
 
-
-//*/
 
 // . scan every section and look up its tag and content hashes in
 //   sectiondb to find out how many pages and sites have the same hash
@@ -6270,7 +6281,6 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
 	return &msg3a->m_sectionStats;
 }
 
-/*
 // . for all urls from this subdomain...
 // . EXCEPT root url since we use msg17 to cache that, etc.
 SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
@@ -6310,6 +6320,9 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 	// the docid
 	long long *d = getDocId();
 	if ( ! d || d == (long long *)-1 ) return (SectionVotingTable *)d;
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
 
 	// . for us, dates are really containers of the flags and tag hash
 	// . init this up here, it is re-set if we re-call getSectiondbList()
@@ -6372,10 +6385,10 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 		// shortcut
 		Msg0 *m = &m_msg0;
 		// get the group this list is in (split = false)
-		unsigned long gid = getGroupId ( RDB_SECTIONDB,
-						 (char *)&m_sectiondbStartKey);
+		unsigned long shardNum;
+		shardNum = getShardNum ( RDB_SECTIONDB,(char *)&m_sectiondbStartKey);
 		// we need a group # from the groupId
-		long split = g_hostdb.getGroupNum ( gid );
+		//long split = g_hostdb.getGroupNum ( gid );
 		// note it
 		//logf(LOG_DEBUG,"sections: "
 		//     "reading list from sectiondb: "
@@ -6394,7 +6407,7 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 				    0                       , // maxCacheAge
 				    false                   , // addToCache
 				    RDB_SECTIONDB           , // was RDB_DATEDB
-				    m_coll                  ,
+				    cr->m_coll                  ,
 				    &m_secdbList            ,
 				    (char *)&m_sectiondbStartKey ,
 				    (char *)&end            ,
@@ -6418,7 +6431,7 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 				    true  ,  // allowpagecache?
 				    false ,  // forceLocalIndexdb?
 				    false ,  // doIndexdbSplit?
-				    split ))
+				    shardNum ) )//split ))
 			// return -1 if blocks
 			return (SectionVotingTable *)-1;
 		// error?
@@ -6523,7 +6536,6 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 	m_osvtValid = true;
 	return &m_osvt;
 }
-*/
 
 long *XmlDoc::getLinkSiteHashes ( ) {
 	if ( m_linkSiteHashesValid ) 
@@ -7868,7 +7880,7 @@ RdbList *XmlDoc::getDupList ( ) {
 				false , // isRealMerge
 				true , // allow page cache
 				false , // forcelocalindexdb
-				true ) ) // NOSPLIT! THIS IS DIFFERENT
+				true ) ) // shardByTermId? THIS IS DIFFERENT!!!
 		// return -1 if this blocks
 		return (RdbList *)-1;
 	// assume valid!
@@ -9201,7 +9213,9 @@ Url **XmlDoc::getRedirUrl() {
 	// . 301 means moved PERMANENTLY...
 	// . many people use 301 on their root pages though, so treat
 	//   it like a temporary redirect, like exclusivelyequine.com
-	if ( simplifiedRedir && ! m_allowSimplifiedRedirs ) {
+	if ( simplifiedRedir && ! m_allowSimplifiedRedirs &&
+	     // for custom BULK clients don't like this i guess
+	     cr->m_isCustomCrawl != 2 ) {
 		// returns false if blocked, true otherwise
 		//return addSimplifiedRedirect();
 		m_redirError = EDOCSIMPLIFIEDREDIR;
@@ -12958,8 +12972,10 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 	if ( ! THIS->m_diffbotReplyError ) {
 		char *ttt = strstr ( page , "\"url\":\"");
 		if ( ! ttt ) {
-			log("xmldoc: diffbot reply for %s using %s missing url: field",
-			    THIS->m_firstUrl.m_url,THIS->m_diffbotApiUrl.getBufStart());
+			log("xmldoc: diffbot reply for %s using %s is missing "
+			    "the url: field in the json reply",
+			    THIS->m_firstUrl.m_url,
+			    THIS->m_diffbotApiUrl.getBufStart());
 			THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
 		}
 	}
@@ -13046,14 +13062,22 @@ SafeBuf *XmlDoc::getDiffbotApiUrl ( ) {
 		return &m_diffbotApiUrl;
 	}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+
+	m_diffbotApiUrl.safeMemcpy ( &cr->m_diffbotApiUrl );
+	m_diffbotApiUrl.nullTerm();
+	m_diffbotApiUrlValid = true;
+
 	// this now automatically sets m_diffbotApiUrl and m_diffbotApiUrlValid
 	// in case the url filters table changes while spidering this!!!
 	// gotta be careful of that.
-	long *ufn = getUrlFilterNum();
-	if ( ! ufn || ufn == (void *)-1 ) return (SafeBuf *)ufn;
+	//long *ufn = getUrlFilterNum();
+	//if ( ! ufn || ufn == (void *)-1 ) return (SafeBuf *)ufn;
 
 	// ensure it does set it!
-	if ( ! m_diffbotApiUrlValid ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_diffbotApiUrlValid ) { char *xx=NULL;*xx=0; }
 
 	//m_diffbotApiNum = cr->m_spiderDiffbotApiNum[*ufn];
 
@@ -13302,19 +13326,12 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
-	if ( *getIndexCode() ) 
+	// getIndexCode() calls getDiffbotReply(), so avoid a loop!
+	//if ( *getIndexCode() ) 
+	//	return &m_diffbotReply;
+	if ( m_indexCodeValid && m_indexCode )
 		return &m_diffbotReply;
 
-	// if already processed and onlyprocessifnew is enabled then
-	// we recycle and do not bother with this, we also do not nuke
-	// the diffbot json objects we have already indexed by calling
-	// nukeJSONObjects()
-	bool *recycle = getRecycleDiffbotReply();
-	if ( ! recycle || recycle == (void *)-1) return (SafeBuf *)recycle;
-	if ( *recycle ) {
-		m_diffbotReplyValid = true;
-		return &m_diffbotReply;
-	}
 
 	if ( m_isDiffbotJSONObject ) {
 		m_diffbotReplyValid = true;
@@ -13328,6 +13345,52 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
 	}
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// get list of substring patterns
+	char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
+	char *upp = cr->m_diffbotUrlProcessPattern.getBufStart();
+	if ( upp && ! upp[0] ) upp = NULL;
+	if ( ucp && ! ucp[0] ) ucp = NULL;
+	// do we match the url process pattern or regex?
+	// get the compiled regular expressions
+	regex_t *ucr = &cr->m_ucr;
+	regex_t *upr = &cr->m_upr;
+	if ( ! cr->m_hasucr ) ucr = NULL;
+	if ( ! cr->m_hasupr ) upr = NULL;
+	// get the url
+	Url *f = getFirstUrl();
+	char *url = f->getUrl();
+	// . "upp" is a ||-separated list of substrings
+	// . "upr" is a regex
+	// . regexec returns 0 for a match
+	if ( upr && regexec(upr,url,0,NULL,0) ) {
+		// return empty reply
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+	if ( upp && !upr &&!doesStringContainPattern(url,upp)) {
+		// return empty reply
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
+
+	
+
+	// if already processed and onlyprocessifnew is enabled then
+	// we recycle and do not bother with this, we also do not nuke
+	// the diffbot json objects we have already indexed by calling
+	// nukeJSONObjects()
+	bool *recycle = getRecycleDiffbotReply();
+	if ( ! recycle || recycle == (void *)-1) return (SafeBuf *)recycle;
+	if ( *recycle ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
 
 	// if set from title rec, do not do it. we are possibly an "old doc"
 	// and we should only call diffbot.com with new docs
@@ -13563,8 +13626,8 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	}
 	*/
 
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
+	//CollectionRec *cr = getCollRec();
+	//if ( ! cr ) return NULL;
 
 	// add a '?' if none
 	if ( ! strchr ( apiUrl.getUrl() , '?' ) )
@@ -13588,6 +13651,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	diffbotUrl.nullTerm();
 
 	// mark as tried
+	if ( m_newsrValid ) { char *xx=NULL;*xx=0; }
 	m_sentToDiffbot = 1;
 	
 	// count it for stats
@@ -14228,6 +14292,13 @@ long long *XmlDoc::getDownloadEndTime ( ) {
 	if ( m_downloadEndTimeValid ) return &m_downloadEndTime;
 	// log it
 	setStatus ( "getting download end time");
+
+	// do not cause us to core in getHttpReply2() because m_deleteFromIndex
+	// is set to true...
+	if ( m_deleteFromIndex ) {
+		m_downloadEndTime = 0;
+		m_downloadEndTimeValid = true;
+	}
 
 	// if recycling content use its download end time
 	if ( m_recycleContent ) {
@@ -15446,12 +15517,11 @@ int startUp ( void *cmd ) {
 	argv[2] = (char *)cmd;
 	argv[3] = 0;
 	char *envp[2];
-	//char  buf[128];
-	SafeBuf sb;
+	char  buf[1024];
 	// antiword needs this environment var so it can find 
 	// the .antiword/ dir , we should put it in gb's working dir
-	sb.safePrintf("HOME=%s", g_hostdb.m_dir );
-	envp[0] = sb.getBufStart(); // buf;
+	snprintf(buf,1023,"HOME=%s", g_hostdb.m_dir );
+	envp[0] = buf;
 	envp[1] = 0;
 	execve("/bin/sh", argv, envp );
 	//exit(127);
@@ -16910,13 +16980,21 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	// . PROBLEM! this is the new reply not the OLD reply, so it may
 	//   end up matching a DIFFERENT url filter num then what it did
 	//   before we started spidering it...
-	SpiderReply *newsr = getNewSpiderReply ( );
+	//SpiderReply *newsr = getNewSpiderReply ( );
 	// note it
-	if ( ! newsr )
-		log("doc: getNewSpiderReply: %s",mstrerror(g_errno));
-	// sanity check
-	//if ( ! newsr || newsr == (void *)-1 ) { char *xx=NULL;*xx=0; }
-	if ( ! newsr || newsr == (void *)-1 ) return (long *)newsr;
+	//if ( ! newsr )
+	//	log("doc: getNewSpiderReply: %s",mstrerror(g_errno));
+	//if ( ! newsr || newsr == (void *)-1 ) return (long *)newsr;
+
+	// need language i guess
+	uint8_t *langId = getLangId();
+	if ( ! langId || langId == (uint8_t *)-1 ) return (long *)langId;
+
+
+	// make a fake one for now
+	SpiderReply fakeReply;
+	// just language for now, so we can FILTER by language
+	if ( m_langIdValid ) fakeReply.m_langId = m_langId;
 
 
 	CollectionRec *cr = getCollRec();
@@ -16946,7 +17024,7 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	// . look it up
 	// . use the old spidered date for "nowGlobal" so we can be consistent
 	//   for injecting into the "test" coll
-	long ufn = ::getUrlFilterNum ( oldsr,newsr,spideredTime,false,
+	long ufn = ::getUrlFilterNum ( oldsr,&fakeReply,spideredTime,false,
 				       m_niceness,cr);
 
 	// put it back
@@ -16967,12 +17045,12 @@ long *XmlDoc::getUrlFilterNum ( ) {
 
 	// set this too in case the url filters table changes while
 	// we are spidering this and a row is inserted or deleted or something
-	SafeBuf *yy = &cr->m_spiderDiffbotApiUrl[ufn];
+	//SafeBuf *yy = &cr->m_spiderDiffbotApiUrl[ufn];
 	// copy to ours
-	m_diffbotApiUrl.safeMemcpy ( yy );
+	//m_diffbotApiUrl.safeMemcpy ( yy );
 	// ensure null term
-	m_diffbotApiUrl.nullTerm();
-	m_diffbotApiUrlValid = true;
+	//m_diffbotApiUrl.nullTerm();
+	//m_diffbotApiUrlValid = true;
 
 
 	return &m_urlFilterNum;
@@ -17739,8 +17817,8 @@ bool XmlDoc::logIt ( ) {
 	//   that we used to get the diffbot reply (array of json objects)
 	//   will have the spider priority
 	if ( ! getIsInjecting() && ! m_isDiffbotJSONObject ) {
-		long *priority = getSpiderPriority();
-		if ( ! priority || priority==(void *)-1){char *xx=NULL;*xx=0;}
+		//long *priority = getSpiderPriority();
+		//if ( ! priority ||priority==(void *)-1){char *xx=NULL;*xx=0;}
 		if ( m_priorityValid )
 			sb.safePrintf("priority=%li ",
 				      (long)m_priority);
@@ -18107,7 +18185,7 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 		"<tr>"
 		"<td><b>rdb</b></td>"
 		"<td><b>del?</b></td>"
-		"<td><b>nosplit?</b></td>"
+		"<td><b>shardByTermId?</b></td>"
 		// illustrates key size
 		"<td><b>key</b></td>"
 		// break it down. based on rdb, of course.
@@ -18121,8 +18199,6 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 	for ( ; p < pend ; p += recSize ) {
 		// get rdbid
 		uint8_t rdbId = *p & 0x7f;
-		// get nosplit flag
-		char noSplit = *p & 0x80;
 		// skip
 		p++;
 		// get key size
@@ -18140,6 +18216,10 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 		// is it a negative key?
 		char neg = false;
 		if ( ! ( p[0] & 0x01 ) ) neg = true;
+		// this is now a bit in the posdb key so we can rebalance
+		char shardByTermId = false;
+		if ( rdbId==RDB_POSDB && g_posdb.isShardedByTermId(k)) 
+			shardByTermId = true;
 		// skip it
 		p += ks;
 		// get datasize
@@ -18180,7 +18260,7 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 		if ( neg ) sb->safePrintf("<td>D</td>");
 		else       sb->safePrintf("<td>&nbsp;</td>");
 
-		if ( noSplit ) sb->safePrintf("<td>nosplit</td>");
+		if ( shardByTermId ) sb->safePrintf("<td>shardByTermId</td>");
 		else           sb->safePrintf("<td>&nbsp;</td>");
 
 		sb->safePrintf("<td><nobr>%s</nobr></td>", KEYSTR(k,ks));
@@ -18457,8 +18537,6 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		//char rdbId = -1; // m_rdbId;
 		//if ( rdbId < 0 ) rdbId = *p++;
 		uint8_t rdbId = *p++;
-		// get nosplit
-		bool nosplit = ( rdbId & 0x80 ) ;
 		// mask off rdbId
 		rdbId &= 0x7f;
 		// get the key of the current record
@@ -18499,10 +18577,12 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		//	if ( hc != 0 ){ char *xx=NULL;*xx=0; }
 		//}
 
+		// set this
+		//bool split = true;
+		//if(rdbId == RDB_POSDB && g_posdb.isShardedByTermId(p) ) 
+		// split =false;
 		// skip key
 		p += ks;
-		// set this
-		bool split = true; if ( nosplit ) split = false;
 		// . if key belongs to same group as firstKey then continue
 		// . titledb now uses last bits of docId to determine groupId
 		// . but uses the top 32 bits of key still
@@ -18600,8 +18680,6 @@ bool XmlDoc::hashMetaList ( HashTableX *ht        ,
 		QUICKPOLL(m_niceness);
 		// get rdbid
 		char rdbId = *p & 0x7f;
-		// get nosplit flag
-		char noSplit = *p & 0x80;
 		// skip rdb id
 		p++;
 		// save that
@@ -18663,18 +18741,19 @@ bool XmlDoc::hashMetaList ( HashTableX *ht        ,
 		if ( slot < 0 && ks==12 ) {
 			key144_t *k2 = (key144_t *)k;
 			long long tid = g_posdb.getTermId(k2);
+			char shardByTermId = g_posdb.isShardedByTermId(k2);
 			//uint8_t score8 = g_indexdb.getScore ( *k2 );
 			//uint32_t score32 = score8to32 ( score8 );
 			log("build: missing key #%li rdb=%s ks=%li ds=%li "
 			    "tid=%llu "
 			    "key=%s "
 			    //"score8=%lu score32=%lu "
-			    "nosplit=%li",
+			    "shardByTermId=%li",
 			    count,getDbnameFromId(rdbId),(long)ks,
 			    (long)dataSize,tid ,
 			    //(long)score8,(long)score32,
 			    KEYSTR(k2,ks),
-			    (long)noSplit);
+			    (long)shardByTermId);
 			// look it up
 
 
@@ -18724,9 +18803,8 @@ bool XmlDoc::hashMetaList ( HashTableX *ht        ,
 				continue;
 			log("build: missing key #%li rdb=%s ks=%li ds=%li "
 			    "ks=%s "
-			    "nosplit=%li",
-			    count,getDbnameFromId(rdbId),(long)ks,
-			    (long)dataSize,KEYSTR(k,ks),(long)noSplit);
+			    ,count,getDbnameFromId(rdbId),(long)ks,
+			    (long)dataSize,KEYSTR(k,ks));
 			char *xx=NULL; *xx=0; 
 			// count it for PageStats.cpp
 			g_stats.m_parsingInconsistencies++;
@@ -18751,10 +18829,13 @@ bool XmlDoc::hashMetaList ( HashTableX *ht        ,
 		// keep on chugging if they match
 		if ( recSize2==recSize && !memcmp(rec,rec2,recSize) ) continue;
 		// otherwise, bitch
+		char shardByTermId = false;
+		if ( rdbId == RDB_POSDB ) 
+			shardByTermId = g_posdb.isShardedByTermId(rec2);
 		log("build: data not equal for key=%s "
-		    "rdb=%s nosplit=%li dataSize=%li",
+		    "rdb=%s splitbytermid=%li dataSize=%li",
 		    KEYSTR(k,ks2),
-		    getDbnameFromId(rdbId),(long)noSplit,dataSize);
+		    getDbnameFromId(rdbId),(long)shardByTermId,dataSize);
 
 		// print into here
 		SafeBuf sb1;
@@ -19002,7 +19083,6 @@ XmlDoc *g_od = NULL;
 // . called by Msg14.cpp
 // . a meta list is just a buffer of Rdb records of the following format:
 //   rdbid | rdbRecord
-// . rdbId may have the 0x80 bit set to indicate "nosplit"
 // . meta list does not include title rec since Msg14 adds that using Msg1
 // . returns false and sets g_errno on error
 // . sets m_metaList ptr and m_metaListSize
@@ -19654,7 +19734,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	long long *pch64 = getExactContentHash64();
 	if ( ! pch64 || pch64 == (void *)-1 ) return (char *)pch64;
 
-	/*
 	// get the voting table which we will add to sectiondb
 	SectionVotingTable *nsvt = NULL;
 	SectionVotingTable *osvt = NULL;
@@ -19663,6 +19742,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// cuz then there is revdb, so we are 30%. so that's a no go.
 	bool addSectionVotes = false;
 	if ( nd ) addSectionVotes = true;
+	if ( ! m_useSectiondb ) addSectionVotes = false;
 	// to save disk space no longer add the roots! nto only saves sectiondb
 	// but also saves space in revdb
 	//if ( nd && *isRoot ) addSectionVotes = true;
@@ -19673,7 +19753,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		osvt = getNewSectionVotingTable();
 		if ( ! osvt || osvt == (void *)-1 ) return (char *)osvt;
 	}
-	*/
 
 	// get the addresses for hashing tag hashes that indicate place names
 	Addresses *na = NULL;
@@ -19985,7 +20064,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 
 
-
+	/*
+	  now we have the bit in the posdb key, so this should not be needed...
+	  use Posdb::isShardedByTermId() to see if it is such a spcial case key
+	  like Hostdb::getShardNum() now does...
 
 	setStatus ( "hashing nosplit keys" );
 	// hash no split terms into ns1 and ns2
@@ -20006,9 +20088,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	need += needNoSplit1;
 	// sanity check
 	//if ( ! od && m_skipIndexing && needNoSplit ) { char *xx=NULL;*xx=0; }
+	*/
 
 
-	/*
 	setStatus ( "hashing sectiondb keys" );
 	// add in special sections keys. "ns" = "new sections", etc.
 	// add in the special nosplit datedb terms from the Sections class
@@ -20040,7 +20122,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//needSectiondb += st2.m_numSlotsUsed * (16+svs+1);
 	// add it in
 	need += needSectiondb;
-	*/
 
 
 	// Sections::respiderLineWaiters() adds one docid-based spider rec
@@ -20346,7 +20427,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// checkpoint
 	saved = m_p;
 	// store indexdb terms into m_metaList[]
-	if ( m_usePosdb && ! addTable144 ( &tt1, false)) return NULL;
+	if ( m_usePosdb && ! addTable144 ( &tt1 )) return NULL;
 	//if(!addTable96 ( &tt2, &tt1, date2, date1, true ,false)) return NULL;
 	//if ( od ) tt2.clear();
 	// sanity check
@@ -20360,12 +20441,18 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//
 	// ADD NOSPLIT INDEXDB/DATEDB TERMS
 	//
-	setStatus ( "adding posdb nosplit terms");
+	/*
+	  we added these now in hashAll() to tt1, no longer ns1 since we
+	  have the sharded by termid bit in the actual posdb key now so
+	  Rebalance.cpp works
+
+	setStatus ( "adding posdb shardByTermId terms");
 	// checkpoint
 	saved = m_p;
-	// . add them to the meta list!!!!! nosplit = true!!!
-	// . set dates to -1 to avoid adding to datedb
-	if ( m_usePosdb && ! addTable144 ( &ns1, true)) return NULL;
+	// no longer anything special now since the 
+	// Posdb::isShardedyTermId() bit
+	// is in the key now so Rebalance.cpp can work
+	if ( m_usePosdb && ! addTable144 ( &ns1 )) return NULL;
 	//if(! addTable96 ( &ns2, &ns1, -1, -1, true ,true)) return NULL;
 	// sanity check
 	if ( m_p - saved > needNoSplit1 ) { char*xx=NULL;*xx=0; }
@@ -20373,6 +20460,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	ns1.reset();
 	// sanity check
 	verifyMetaList( m_metaList , m_p , forDelete );
+	*/
 
 
 	/*
@@ -20390,7 +20478,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	verifyMetaList( m_metaList , m_p );
 	*/
 
-	/*
 	//
 	// ADD SECTIONS SPECIAL TERMS
 	//
@@ -20408,7 +20495,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//st2.reset();
 	// sanity check
 	verifyMetaList( m_metaList , m_p , forDelete );
-	*/
 
 
 	//
@@ -21157,6 +21243,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	}
 
 
+	// if we only removed it from index, set this flag
+	if ( oldList && ! nd ) m_didDelete = true;
+
 	//
 	// repeat this logic special for linkdb since we keep lost links
 	// and may update the discovery date or lost date in the keys
@@ -21346,6 +21435,16 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	long long *de = getDownloadEndTime();
 	if ( ! de || de == (void *)-1 ) return (SpiderReply *)de;
 
+	// need to set m_sentToDiffbot!!
+	SafeBuf *dbr = getDiffbotReply();
+	if ( ! dbr || dbr == (void *)-1 ) return (SpiderReply *)dbr;
+	
+
+	// was the doc index when we started trying to spider this url?
+	//char *wasIndexed = getIsIndexed();
+	//if ( ! wasIndexed || wasIndexed == (void *)-1 ) 
+	//	return (SpiderReply *)wasIndexed;
+
 	//Tag *vt = m_oldTagRec.getTag("venueaddress");
 	//bool siteHasVenue = (bool)vt;
 	
@@ -21458,6 +21557,25 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	else
 		m_newsr.m_hadDiffbotError = false;
 
+	m_newsr.m_wasIndexed = false;
+
+	if ( m_oldDocValid && m_oldDoc ) m_newsr.m_wasIndexed = true;
+
+	// note whether m_wasIndexed is valid because if it isn't then
+	// we shouldn't be counting this reply towards the page counts.
+	// if we never made it this far i guess we should not forcibly call
+	// getIsIndexed() at this point so our performance is fast in case
+	// this is an EFAKEFIRSTIP error or something similar where we
+	// basically just add this reply and we're done.
+	// NOTE: this also pertains to SpiderReply::m_isIndexed.
+	if ( m_oldDocValid ) m_newsr.m_wasIndexedValid = true;
+
+	// likewise, we need to know if we deleted it so we can decrement the
+	// quota count for this subdomain/host in SpiderColl::m_quotaTable
+	if ( m_newsr.m_wasIndexed ) m_newsr.m_isIndexed = true;
+
+	if ( m_didDelete ) m_newsr.m_isIndexed = false;
+
 	// treat error replies special i guess, since langId, etc. will be
 	// invalid
 	if ( m_indexCode ) {
@@ -21565,8 +21683,9 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	if ( ! m_downloadEndTimeValid ) { char *xx=NULL;*xx=0; }
 	m_newsr.m_downloadEndTime      = m_downloadEndTime;
 
-	// if m_indexCode was 0, we are indexed then...
-	m_newsr.m_isIndexed = 1;
+	// . if m_indexCode was 0, we are indexed then...
+	// . this logic is now above
+	//m_newsr.m_isIndexed = 1;
 
 	// get ptr to old doc/titlerec
 	XmlDoc **pod = getOldXmlDoc ( );
@@ -22455,17 +22574,10 @@ bool XmlDoc::addTable96 ( HashTableX *tt1     ,
 
 bool XmlDoc::addTable128 ( HashTableX *tt1     , // T <key128_t,char> *tt1
 			   uint8_t     rdbId   ,
-			   //bool        nosplit ,
 			   bool        forDelete ) {
 	
-	//uint8_t f = 0;
-	//if ( nosplit ) f = 0x80;
-
 	// sanity check
 	if ( rdbId == 0 ) { char *xx=NULL;*xx=0; }
-
-	// sanity checks
-	//if ( nosplit ) { char *xx=NULL;*xx=0; }
 
 	bool useRdb2 = m_useSecondaryRdbs;//g_repair.isRepairActive();
 	//if ( g_repair.m_fullRebuild            ) useRdb2 = false;
@@ -22505,7 +22617,7 @@ bool XmlDoc::addTable128 ( HashTableX *tt1     , // T <key128_t,char> *tt1
 		// no key is allowed to have the del bit clear at this point
 		// because we reserve that for making negative keys!
 		if ( ! ( k->n0 & 0x0000000000000001LL ) ){char*xx=NULL;*xx=0;}
-		// store rdbid with optional "nosplit" flag
+		// store rdbid
 		*m_p++ = useRdbId; // (useRdbId | f);
 		// store it
 		// *(key128_t *)m_p = *k; does this work?
@@ -22555,7 +22667,7 @@ long XmlDoc::getSiteRank ( ) {
 }
 
 // add keys/recs from the table into the metalist
-bool XmlDoc::addTable144 ( HashTableX *tt1 , bool nosplit ) {
+bool XmlDoc::addTable144 ( HashTableX *tt1 ) {
 
 	// sanity check
 	if ( tt1->m_numSlots ) {
@@ -22566,9 +22678,6 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , bool nosplit ) {
 	long siteRank = getSiteRank ();
 
 	if ( ! m_langIdValid ) { char *xx=NULL;*xx=0; }
-
-	uint8_t f = 0;
-	if ( nosplit ) f = 0x80;
 
 	char rdbId = RDB_POSDB;
 	if ( m_useSecondaryRdbs ) rdbId = RDB2_POSDB2;
@@ -22582,7 +22691,7 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , bool nosplit ) {
 		// get its key
 		char *kp = (char *)tt1->getKey ( i );
 		// store rdbid
-		*m_p++ = (rdbId | f);
+		*m_p++ = rdbId; // (rdbId | f);
 		// store it as is
 		memcpy ( m_p , kp , sizeof(key144_t) );
 		// sanity check
@@ -22650,10 +22759,6 @@ bool XmlDoc::addTable224 ( HashTableX *tt1 ) {
 		if ( tt1->m_ds != 0                ) {char *xx=NULL;*xx=0;}
 	}
 
-	//bool nosplit = true;
-	//uint8_t f = 0;
-	//if ( nosplit ) f = 0x80;
-
 	char rdbId = RDB_LINKDB;
 	if ( m_useSecondaryRdbs ) rdbId = RDB2_LINKDB2;
 
@@ -22675,6 +22780,7 @@ bool XmlDoc::addTable224 ( HashTableX *tt1 ) {
 	return true;
 }
 
+/*
 // . add table into our metalist pointed to by m_p
 // . k.n1 = date   (see hashWords() below)
 // . k.n0 = termId (see hashWords() below)
@@ -22736,6 +22842,7 @@ bool XmlDoc::addTableDate ( HashTableX *tt1     , // T <key128_t,char> *tt1
 	}
 	return true;
 }
+*/
 
 /*
 // add keys/recs from the table into the metalist
@@ -23031,8 +23138,6 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 	//	m_pbuf->safePrintf("<h3>Terms which are immune to indexdb "
 	//			   "splitting:</h3>");
 
-	//m_inHashNoSplit = true;
-
 	//if ( m_skipIndexing ) return true;
 
 	// this should be ready to go and not block!
@@ -23044,20 +23149,11 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 
 	if ( ! hashVectors ( tt ) ) return false;
 	
-	setStatus ( "hashing no-split qdom keys" );
-
-	char *dom  = fu->getDomain   ();
-	long  dlen = fu->getDomainLen();
-
 	// constructor should set to defaults automatically
 	HashInfo hi;
 	hi.m_hashGroup = HASHGROUP_INTAG;
-	hi.m_prefix    = "qdom";
 	hi.m_tt        = tt;
-	hi.m_noSplit   = true;
-
-	// desc is NULL, prefix will be used as desc
-	if ( ! hashString ( dom,dlen,&hi ) ) return false;
+	hi.m_shardByTermId   = true;
 
 
 	// for exact content deduping
@@ -23066,6 +23162,26 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 	long clen = sprintf(cbuf,"%llu",*pch64);
 	hi.m_prefix    = "gbcontenthash";
 	if ( ! hashString ( cbuf,clen,&hi ) ) return false;
+
+	////
+	//
+	// let's stop here for now, until other stuff is actually used again
+	//
+	////
+
+	return true;
+
+
+
+
+	setStatus ( "hashing no-split qdom keys" );
+
+	char *dom  = fu->getDomain   ();
+	long  dlen = fu->getDomainLen();
+
+	// desc is NULL, prefix will be used as desc
+	hi.m_prefix    = "qdom";
+	if ( ! hashString ( dom,dlen,&hi ) ) return false;
 
 
 
@@ -23123,14 +23239,10 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 	// hash the clocks into indexdb
 	//if ( ! dp->hash ( m_docId , tt , this ) ) return false;
 
-	//m_inHashNoSplit = false;
-
 	// . hash special site/hopcount thing for permalinks
 	// . used by Images.cpp for doing thumbnails
 	// . this returns false and sets g_errno on error
 	if ( ! *getIsPermalink() ) return true;
-
-	//m_inHashNoSplit = true;
 
 	setStatus ( "hashing no-split gbsitetemplate keys" );
 
@@ -23173,8 +23285,6 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 		// hash each one
 		if ( ! hashString ( u,ulen,&hi ) ) return false;
 	}
-
-	//m_inHashNoSplit = true;
 
 	return true;
 }
@@ -23439,6 +23549,10 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 
 	// hash sectionhash:xxxx terms
 	if ( ! hashSections   ( table ) ) return NULL;
+
+	// now hash the terms sharded by termid and not docid here since they
+	// just set a special bit in posdb key so Rebalance.cpp can work
+	if ( ! hashNoSplit ( table ) ) return NULL;
 
 	// we set this now in hashWords3()
 	if ( m_doingSEO )
@@ -24227,7 +24341,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 	if ( ! m_links.hasSubdirOutlink() ) add = false;
 	// tags from here out
 	hi.m_hashGroup = HASHGROUP_INTAG;
-	hi.m_noSplit   = true;
+	hi.m_shardByTermId = true;
 	// hash it
 	if ( add ) {
 		// remove the last path component
@@ -24238,7 +24352,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 		hi.m_prefix    = "siteterm";
 		if ( ! hashSingleTerm ( host,end2-host,&hi) ) return false;
 	}
-	hi.m_noSplit   = false;
+	hi.m_shardByTermId  = false;
 
 	setStatus ( "hashing site colon terms");
 
@@ -24328,8 +24442,24 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 	sprintf(buf2,"%llu",(m_docId) );
 	if ( ! hashSingleTerm(buf2,gbstrlen(buf2),&hi) ) return false;
 
-	// hash
-
+	// if indexing a json diffbot object, index 
+	// gbparenturl:xxxx of the original url from which the json was
+	// datamined. we use this so we can act as a diffbot json cache.
+	if ( m_isDiffbotJSONObject ) {
+		setStatus ( "hashing gbparenturl term");
+		char *p = fu->getUrl() + fu->getUrlLen() - 1;
+		// back up to - as in "http://xyz.com/foo-diffbotxyz13"
+		for ( ; *p && *p != '-' ; p-- );
+		// set up the hashing parms
+		hi.m_hashGroup = HASHGROUP_INTAG;
+		hi.m_tt        = tt;
+		hi.m_desc      = "diffbot parent url";
+		// append a "www." as part of normalization
+		uw.set ( fu->getUrl() , p - fu->getUrl() , true );
+		hi.m_prefix    = "gbparenturl";
+		if ( ! hashSingleTerm(uw.getUrl(),uw.getUrlLen(),&hi) ) 
+			return false;
+	}
 
 	return true;
 }
@@ -25310,7 +25440,7 @@ bool XmlDoc::hashVectors ( HashTableX *tt ) {
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_prefix    = "gbtagvector";
 	hi.m_desc      = "tag vector hash";
-	hi.m_noSplit   = true;
+	hi.m_shardByTermId = true;
 
 	// this returns false on failure
 	if ( ! hashString ( buf,blen, &hi ) ) return false;
@@ -26410,6 +26540,16 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	if ( m_req->m_includeCachedCopy ) {
 		reply-> ptr_content =  ptr_utf8Content;
 		reply->size_content = size_utf8Content;
+	}
+
+	if ( m_req->m_getSectionVotingInfo && m_tmpBuf3.getCapacity() <= 0 ) {
+		Sections *ss = getSections();
+		if ( ! ss || ss == (void *)-1) return (Msg20Reply *)ss;
+		// will at least store a \0 in there, but will not count
+		// as part of the m_tmpBuf.length()
+	        ss->printVotingInfoInJSON ( &m_tmpBuf3 );
+		reply-> ptr_sectionVotingInfo = m_tmpBuf3.getBufStart();
+		reply->size_sectionVotingInfo = m_tmpBuf3.length() + 1;
 	}
 
 	// breathe
@@ -28252,7 +28392,7 @@ bool storeTerm ( char       *s        ,
 	ti.m_descOff   = doff;
 	ti.m_prefixOff = poff;
 	ti.m_date      = hi->m_date;
-	ti.m_noSplit   = hi->m_noSplit;
+	ti.m_shardByTermId = hi->m_shardByTermId;
 	ti.m_termId    = termId;
 	//ti.m_weight    = 1.0;
 	//ti.m_spam    = -1.0;
@@ -28363,7 +28503,8 @@ bool XmlDoc::hashSingleTerm ( char       *s         ,
 			  langUnknown,// langid
 			  0, // multiplier
 			  0, // syn?
-			  false); // delkey?
+			  false , // delkey?
+			  hi->m_shardByTermId );
 
 	//
 	// HACK: mangle the key if its a gbsitehash:xxxx term
@@ -28794,7 +28935,9 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 				  langUnknown, // langid
 				  0 , // multiplier
 				  false , // syn?
-				  false ); // delkey?
+				  false , // delkey?
+				  hi->m_shardByTermId );
+
 		// key should NEVER collide since we are always incrementing
 		// the distance cursor, m_dist
 		dt->addTerm144 ( &k );
@@ -28866,7 +29009,8 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 					  langUnknown, // langid
 					  0 , // multiplier
 					  true  , // syn?
-					  false ); // delkey?
+					  false , // delkey?
+					  hi->m_shardByTermId );
 			// key should NEVER collide since we are always 
 			// incrementing the distance cursor, m_dist
 			dt->addTerm144 ( &k );
@@ -28987,7 +29131,8 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 					  langUnknown, // langid
 					  0 , // multiplier
 					  true  , // syn?
-					  false ); // delkey?
+					  false , // delkey?
+					  hi->m_shardByTermId );
 			// key should NEVER collide since we are always 
 			// incrementing the distance cursor, m_dist
 			dt->addTerm144 ( &k );
@@ -29189,7 +29334,8 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 			  langUnknown,
 			  0 , // multiplier
 			  false, // syn?
-			  false ); // delkey?
+			  false , // delkey?
+			  hi->m_shardByTermId );
 
 	//long long final = hash64n("products.offerprice",0);
 	//long long prefix = hash64n("gbsortby",0);
@@ -30410,7 +30556,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		
 		"<td><b>Desc</b></td>"
 		"<td><b>TermId</b></td>"
-		"<td><b>NoSplit?</b></td>"
+		"<td><b>ShardByTermId?</b></td>"
 		"</tr>\n"
 		//,fbuf
 		);
@@ -30539,7 +30685,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 				 (unsigned long long)tp[i]->m_termId 
 				 & TERMID_MASK );
 
-		if ( tp[i]->m_noSplit ) sb->safePrintf("<td><b>1</b></td>" );
+		if ( tp[i]->m_shardByTermId ) sb->safePrintf("<td><b>1</b></td>" );
 		else                    sb->safePrintf("<td>0</td>" );
 
 		sb->safePrintf("</tr>\n");
@@ -31520,7 +31666,6 @@ bool XmlDoc::printTermList ( SafeBuf *sb , HttpRequest *hr ) {
 		//"<td><b>Date</b></td>"
 		//"<td><b>Desc</b></td>"
 		//"<td><b>TermId</b></td>"
-		//"<td><b>NoSplit?</b></td>"
 		"</tr>\n"
 		//,fbuf
 		);

@@ -231,6 +231,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	       return g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno));
 	}
 	mnew ( st , sizeof(StateCD), "statecd");
+
 	// initialize the new state
 	st->m_rdbId = rdbId;
 	st->m_downloadJSON = downloadJSON;
@@ -266,6 +267,35 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	return true;
 }
 
+
+// . all wrappers call this
+// . returns false if would block, true otherwise
+bool readAndSendLoop ( StateCD *st , bool readFirst ) {
+
+ subloop:
+
+	// are we all done?
+	if ( readFirst && ! st->m_someoneNeedsMore ) {
+		log("crawlbot: done sending for download request");
+		mdelete ( st , sizeof(StateCD) , "stcd" );
+		delete st;
+		return true;
+	}
+
+	// begin reading from each shard and sending the spiderdb records
+	// over the network. return if that blocked
+	if ( readFirst && ! st->readDataFromRdb ( ) ) return false;
+
+	// send it to the browser socket. returns false if blocks.
+	if ( ! st->sendList() ) return false;
+
+	// read again i guess
+	readFirst = true;
+
+	// hey, it did not block... tcpserver caches writes...
+	goto subloop;
+}
+
 void StateCD::sendBackDump2 ( ) {
 
 	m_numRequests = 0;
@@ -284,20 +314,22 @@ void StateCD::sendBackDump2 ( ) {
 		KEYMIN((char *)&m_titledbStartKeys[i],sizeof(key_t));
 	}
 
- subloop:
-	// begin reading from each shard and sending the spiderdb records
-	// over the network. return if that blocked
-	if ( ! readDataFromRdb ( ) ) return;
-	// send it to the browser socket
-	if ( ! sendList() ) return;
-	// . hey, it did not block... i guess no data to send out
-	// . but if all shards are exhausted from the dump, just return
-	if ( m_someoneNeedsMore ) goto subloop;
-	// note it
-	log("crawlbot: nobody needs more 1");
+	// begin reading from the shards and trasmitting back on m_socket
+	readAndSendLoop ( this , true );
 }
 
-void sendListWrapper ( void *state ) ;
+
+static void gotListWrapper7 ( void *state ) {
+	// get the Crawler dump State
+	StateCD *st = (StateCD *)state;
+	// inc it up here
+	st->m_numReplies++;
+	// wait for all
+	if ( st->m_numReplies < st->m_numRequests ) return;
+	// read and send loop
+	readAndSendLoop( st , false );
+}
+	
 
 bool StateCD::readDataFromRdb ( ) {
 
@@ -341,7 +373,7 @@ bool StateCD::readDataFromRdb ( ) {
 					   // records
 					   m_minRecSizes,
 					   this,
-					   sendListWrapper ,
+					    gotListWrapper7 ,
 					    niceness ) ) {
 			log("crawlbot: blocked getting list from shard");
 			// continue if it blocked
@@ -360,22 +392,6 @@ bool StateCD::readDataFromRdb ( ) {
 	return true;
 }
 
-void sendListWrapper ( void *state ) {
-	// get the Crawler dump State
-	StateCD *st = (StateCD *)state;
-	// inc it up here
-	st->m_numReplies++;
- subloop:
-	// if this blocked sending back some data, return
-	if ( ! st->sendList() ) return;
-	// otherwise, read more, maybe had no data to send from list
-	if ( ! st->readDataFromRdb () ) return;
-	// send and read more
-	if ( st->m_someoneNeedsMore ) goto subloop;
-	// note it
-	log("crawlbot: nobody needs more 2");
-}
-	
 bool StateCD::sendList ( ) {
 	// get the Crawler dump State
 	// inc it
@@ -403,6 +419,7 @@ bool StateCD::sendList ( ) {
 	//   then do so here, the content-length will not be in there
 	//   because we might have to call for more spiderdb data
 	if ( m_needsMime ) {
+		m_needsMime = false;
 		HttpMime mime;
 		mime.makeMime ( -1, // totel content-lenght is unknown!
 				0 , // do not cache (cacheTime)
@@ -425,6 +442,12 @@ bool StateCD::sendList ( ) {
 		sb.safePrintf("[\n");
 		m_printedFirstBracket = true;
 	}
+
+	// these are csv files not xls
+	//if ( ! m_printedFirstBracket && m_fmt == FMT_CSV ) {
+	//	sb.safePrintf("sep=,\n");
+	//	m_printedFirstBracket = true;
+	//}
 
 
 	// we set this to true below if any one shard has more spiderdb
@@ -490,6 +513,11 @@ bool StateCD::sendList ( ) {
 		list->freeList();
 	}
 
+	//log("rdbid=%li fmt=%li some=%li printed=%li",
+	//    (long)m_rdbId,(long)m_fmt,(long)m_someoneNeedsMore,
+	//    (long)m_printedEndingBracket);
+
+	bool lastChunk = false;
 
 	// if nobody needs to read more...
 	if ( m_rdbId == RDB_TITLEDB && 
@@ -498,113 +526,32 @@ bool StateCD::sendList ( ) {
 	     ! m_printedEndingBracket ) {
 		m_printedEndingBracket = true;
 		// end array of json objects. might be empty!
-		sb.safePrintf("\n]");
+		sb.safePrintf("\n]\n");
+		//log("adding ]. len=%li",sb.length());
+		lastChunk = true;
 	}
 
-	// if first time, send it back
-	if ( m_needsMime ) {
-		// only do once
-		m_needsMime = false;
+	TcpServer *tcp = &g_httpServer.m_tcp;
 
-	sendLoop:
-		// start the send process
-		TcpServer *tcp = &g_httpServer.m_tcp;
-		if (  ! tcp->sendMsg ( m_socket ,
-				       sb.getBufStart(), // sendBuf     ,
-				       sb.getCapacity(),//sendBufSize ,
-				       sb.length(),//sendBufSize ,
-				       sb.length(), // msgtotalsize
-				       this       ,   // data for callback
-				       doneSendingWrapper  ) ) { // callback
-			// do not free sendbuf we are transmitting it
-			sb.detachBuf();
-			return false;
-		}
-		// error?
-		//TcpSocket *s = m_socket;
-		// sometimes it does not block and is successful because
-		// it just writes its buffer out in one write call.
-		//if ( ! g_errno ) 
-		sb.detachBuf();
+	// . transmit the chunk in sb
+	// . steals the allocated buffer from sb and stores in the 
+	//   TcpSocket::m_sendBuf, which it frees when socket is
+	//   ultimately destroyed or we call sendChunk() again.
+	// . when TcpServer is done transmitting, it does not close the
+	//   socket but rather calls doneSendingWrapper() which can call
+	//   this function again to send another chunk
+	// . when we are truly done sending all the data, then we set lastChunk
+	//   to true and TcpServer.cpp will destroy m_socket when done
+	if ( ! tcp->sendChunk ( m_socket , 
+				&sb  ,
+				this ,
+				doneSendingWrapper ,
+				lastChunk ) )
+		return false;
 
-		// log it
-		//log("crawlbot: nuking state. strange");
-
-		// nuke state
-		//delete this;
-		//mdelete ( this , sizeof(StateCD) , "stcd" );
-		//if ( g_errno )
-		log("diffbot: tcp sendmsg did not block: %s",
-		    mstrerror(g_errno));
-		//g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
-		// wait for doneSendingWrapper to be called.
-		//return false;
-		//
-		// it did not block... so just keep going. that just
-		// means the socket sent the data. it's probably buffered.
-		//
-		// but we DO have to free the sendbuffer here since
-		// we did not block
-		mfree ( m_socket->m_sendBuf ,
-			m_socket->m_sendBufSize ,
-			"dbsbuf");
-		m_socket->m_sendBuf = NULL;
-
-		return true;
-	}
-
-
-	// if nothing to send back we are done. return true since we
-	// did not block sending back.
-	if ( sb.length() == 0 ) {
-		//log("crawlbot: nuking state.");		
-		//delete this;
-		//mdelete ( this , sizeof(StateCD) , "stcd" );
-		return true;
-	}
-
-	// how can this be?
-	if ( m_socket->m_sendBuf ) { char *xx=NULL;*xx=0; }
-
-	// put socket in sending-again mode
-	m_socket->m_sendBuf     = sb.getBufStart();
-	m_socket->m_sendBufSize = sb.getCapacity();
-	m_socket->m_sendBufUsed = sb.length();
-	m_socket->m_sendOffset  = 0;
-	m_socket->m_totalSent   = 0;
-	m_socket->m_totalToSend = sb.length();
-
-	// tell TcpServer.cpp to send this latest buffer! HACK!
-	//m_socket->m_sockState = ST_SEND_AGAIN;//ST_WRITING;//SEND_AGAIN;
-
-	// this does nothing if we were not called indirectly by
-	// TcpServer::writeSocketWrapper_r(). so if we should call
-	// sendMsg() ourselves in such a situation.
-	// so if the sendMsg() did not block, the first time, and we came
-	// here empty except for the ending ']' the 2nd time, then
-	// write it out this way... calling sendMsg() directly
-	if ( m_socket->m_sockState == ST_NEEDS_CLOSE ) {
-		//m_socket->m_sockState = ST_SEND_AGAIN;
-		goto sendLoop;
-	}
-
-	// do not let safebuf free this, we will take care of it
-	sb.detachBuf();
-
-	// . when it is done sending call this callback, don't hang up!
-	// . if m_someoneNeedsMore is false then this callback should just
-	//   destroy the socket and delete "this"
-	m_socket->m_callback = doneSendingWrapper;
-	m_socket->m_state    = this;
-
-	//if ( m_socket->m_sendBufUsed == 79 )
-	//	log("hey");
-	
-	// log it
-	log("crawlbot: resending %li bytes on socket",m_socket->m_sendBufUsed);
-
-	// we blocked sending back
-	return false;
+	// we are done sending this chunk, i guess tcp write was cached
+	// in the network card buffer or something
+	return true;
 }
 
 // TcpServer.cpp calls this when done sending TcpSocket's m_sendBuf
@@ -612,83 +559,16 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 
 	StateCD *st = (StateCD *)state;
 
-	TcpSocket *socket = st->m_socket;
+	//TcpSocket *socket = st->m_socket;
 
 	log("crawlbot: done sending on socket %li/%li bytes",
 	    sock->m_totalSent,
 	    sock->m_sendBufUsed);
 
-	// . if the final callback
-	// . sometimes m_sendBuf is NULL if we freed it below and tried to
-	//   read more, only to read 0 bytes
-	// . but it will be non-null if we read 0 bytes the first time
-	//   and just have a mime to send. because sendReply() above 
-	//   returned true, and then doneSendingWrapper() got called.
-	if ( //! socket->m_sendBuf &&
-	     st->m_numRequests <= st->m_numReplies &&
-	     ! st->m_someoneNeedsMore ) {
-		log("crawlbot: done sending for download request");
-		delete st;
-		mdelete ( st , sizeof(StateCD) , "stcd" );
-		//log("mdel1: st=%lx",(long)st);
-		return;
-	}
 
-	// if the timer called us, just return
-	if ( ! socket->m_sendBuf ) {
-		log("crawlbot: timer callback");
-		socket->m_sockState = ST_SEND_AGAIN;
-		return;
-	}
+	readAndSendLoop ( st , true );
 
-
-	// free the old sendbuf then i guess since we might replace it
-	// in the above function.
-	mfree ( socket->m_sendBuf ,
-		socket->m_sendBufSize ,
-		"dbsbuf");
-
-	// in case we have nothing to send back do not let socket free
-	// what we just freed above. it'll core.
-	socket->m_sendBuf = NULL;
-
-	// sometimes this wrapper is called just from the timer...
-	// so if we have outstanding msg0s then we gotta wait
-	if ( st->m_numRequests > st->m_numReplies ) {
-		char *xx=NULL;*xx=0;
-		socket->m_sockState = ST_SEND_AGAIN;
-		return;
-	}
-
-
-	// all done?
-	if ( st->m_someoneNeedsMore ) {
-		// make sure socket doesn't close up on us!
-		socket->m_sockState = ST_SEND_AGAIN;
-		log("crawlbot: reading more download data");
-		// just enter the little loop here
-	subloop:
-		// otherwise, read more, maybe had no data to send from list
-		if ( ! st->readDataFromRdb () ) return;
-		// if this blocked sending back some data, return
-		if ( ! st->sendList() ) return;
-		// note that
-		log("crawlbot: sendList did not block");
-		// send and read more
-		if ( st->m_someoneNeedsMore ) goto subloop;
-		// note it
-		log("crawlbot: nobody needs more 3");
-		// sanity
-		if ( st->m_numRequests>st->m_numReplies){char *xx=NULL;*xx=0;}
-	}
-
-
-	log("crawlbot: no more data available");
-
-	// it's possible that readDataFromRdb() did not block and called
-	// sendList which set the socket m_sendBuf again... so check
-	// for that... it needs to be sent yet before we delete this state
-	//if ( st->m_socket->m_sendBuf ) return;
+	return;
 }
 
 void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
@@ -1126,8 +1006,8 @@ void printCrawlStatsWrapper ( void *state ) {
 	// save before nuking state
 	TcpSocket *sock = sxx->m_socket;
 	// nuke the state
-	delete sxx;
 	mdelete ( sxx , sizeof(StateXX) , "stxx" );
+	delete sxx;
 	// and send back now
 	g_httpServer.sendDynamicPage ( sock ,
 				       sb.getBufStart(), 
@@ -1377,8 +1257,8 @@ void addedUrlsToSpiderdbWrapper ( void *state ) {
 			     NULL ,
 			     &rr ,
 			     st->m_collnum );
-	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	delete st;
 	//log("mdel2: st=%lx",(long)st);
 }
 /*
@@ -1454,8 +1334,8 @@ void injectedUrlWrapper ( void *state ) {
 			     response,
 			     NULL ,
 			     st->m_collnum );
-	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	delete st;
 }
 */	
 
@@ -1581,8 +1461,8 @@ void collOpDoneWrapper ( void *state ) {
 	StateCD *st = (StateCD *)state;
 	TcpSocket *socket = st->m_socket;
 	log("crawlbot: done with blocked op.");
-	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	delete st;
 	//log("mdel3: st=%lx",(long)st);
 	g_httpServer.sendDynamicPage (socket,"OK",2);
 }
@@ -1775,9 +1655,19 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	if ( ! name ) {
+		// if the token is valid
+		char *ct = "application/json";
+		char *msg = "{}\n";
+		return g_httpServer.sendDynamicPage ( socket, 
+						      msg,
+						      gbstrlen(msg) ,
+						      -1 , // cachetime
+						      false ,
+						      ct ,
+						      200 ); // http status
 		//log("crawlbot: no crawl name given");
-		char *msg = "invalid or missing name";
-		return sendErrorReply2 (socket,fmt,msg);
+		//char *msg = "invalid or missing name";
+		//return sendErrorReply2 (socket,fmt,msg);
 	}
 
 
@@ -1890,8 +1780,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			em.safePrintf("Invalid regular expresion: %s",rx2);
 		}
 		if ( status1 || status2 ) {
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			char *msg = em.getBufStart();
 			return sendErrorReply2(socket,fmt,msg);
 		}
@@ -1949,8 +1839,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			if ( resetColl ) msg = "No such collection";
 			if ( restartColl ) msg = "No such collection";
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			// log it
 			log("crawlbot: cr is null. %s",msg);
 			// make sure this returns in json if required
@@ -1976,8 +1866,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			if ( ! g_collectiondb.deleteRec ( collName , we ) )
 				return false;
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			// all done
 			return g_httpServer.sendDynamicPage (socket,"OK",2);
 		}
@@ -2001,14 +1891,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			// to avoid user confusion
 			if ( cr ) cr->m_spideringEnabled = 1;
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			// all done
 			return g_httpServer.sendDynamicPage (socket,"OK",2);
 		}
 		// nuke it
-		delete st;
 		mdelete ( st , sizeof(StateCD) , "stcd" );
+		delete st;
 		// this will set the the collection parms from json
 		//setSpiderParmsFromJSONPost ( socket , hr , cr , &JS );
 		// this is a cast, so just return simple response
@@ -2034,8 +1924,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( name && name[0] )
 			msg = "Failed to add crawl. Crawl name is illegal.";
 		// nuke it
-		delete st;
 		mdelete ( st , sizeof(StateCD) , "stcd" );
+		delete st;
 		//log("crawlbot: no collection found. need to add a crawl");
 		return sendErrorReply2(socket,fmt, msg);
 	}
@@ -2085,15 +1975,15 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		// error?
 		if ( ! status ) {
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
 		}
 		// if not list
 		if ( ! size ) {
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			return sendErrorReply2(socket,fmt,"no urls found");
 		}
 		// add to spiderdb
@@ -2147,8 +2037,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	printCrawlBotPage2 ( socket,hr,fmt,NULL,NULL,cr->m_collnum);
 
 	// get rid of that state
-	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	delete st;
 	//log("mdel4: st=%lx",(long)st);
 	return true;
 }

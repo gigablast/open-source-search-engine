@@ -43,6 +43,7 @@ class RdbMerge g_merge2;
 RdbBase::RdbBase ( ) {
 	m_numFiles  = 0;
 	m_rdb = NULL;
+	m_nextMergeForced = false;
 	//m_dummy = NULL;
 	reset();
 }
@@ -360,6 +361,7 @@ bool RdbBase::init ( char  *dir            ,
 	// now fill up the page cache
 	// preload:
 	if ( ! preloadDiskPageCache ) return true;
+	if ( ! m_pc ) return true;
 	char buf [ 512000 ];
 	long total = m_pc->getMemMax();
 	log(LOG_DEBUG,"db: %s: Preloading page cache. Total mem to use =%lu",
@@ -872,6 +874,8 @@ bool RdbBase::incorporateMerge ( ) {
 	long b = m_mergeStartFileNum + m_numFilesToMerge;
 	// shouldn't be called if no files merged
 	if ( a == b ) {
+		// decrement this count
+		if ( m_isMerging ) m_rdb->m_numMergesOut--;
 		// exit merge mode
 		m_isMerging = false;
 		// return the merge token, no need for a callback
@@ -1152,6 +1156,8 @@ void RdbBase::doneWrapper4 ( ) {
 			log(LOG_INFO,"merge: Exiting urgent "
 			    "merge mode for %s.",m_dbname);
 	}
+	// decrement this count
+	if ( m_isMerging ) m_rdb->m_numMergesOut--;
 	// exit merge mode
 	m_isMerging = false;
 	// return the merge token, no need for a callback
@@ -1241,6 +1247,10 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	if (   g_loop.m_inQuickPoll ) { char *xx=NULL;*xx=0; }
 	if (   niceness == 0 ) { char *xx=NULL;*xx=0; }
 
+	if ( forceMergeAll ) m_nextMergeForced = true;
+
+	if ( m_nextMergeForced ) forceMergeAll = true;
+
 	// if we are trying to merge titledb but a titledb dump is going on
 	// then do not do the merge, we do not want to overwrite tfndb via
 	// RdbDump::updateTfndbLoop() 
@@ -1315,25 +1325,25 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		m_minToMerge = cr->m_posdbMinFilesToMerge;
 	if ( cr && m_rdb == g_titledb.getRdb() ) 
 		m_minToMerge = cr->m_titledbMinFilesToMerge;
-	if ( cr && m_rdb == g_spiderdb.getRdb() ) 
-		m_minToMerge = cr->m_spiderdbMinFilesToMerge;
+	//if ( cr && m_rdb == g_spiderdb.getRdb() ) 
+	//	m_minToMerge = cr->m_spiderdbMinFilesToMerge;
 	//if ( cr && m_rdb == g_sectiondb.getRdb() ) 
 	//	m_minToMerge = cr->m_sectiondbMinFilesToMerge;
 	//if ( cr && m_rdb == g_sectiondb.getRdb() ) 
 	//	m_minToMerge = cr->m_sectiondbMinFilesToMerge;
 	//if ( cr && m_rdb == g_checksumdb.getRdb() ) 
 	//	m_minToMerge = cr->m_checksumdbMinFilesToMerge;
-	if ( cr && m_rdb == g_clusterdb.getRdb() ) 
-		m_minToMerge = cr->m_clusterdbMinFilesToMerge;
-	if ( cr && m_rdb == g_datedb.getRdb() ) 
-		m_minToMerge = cr->m_datedbMinFilesToMerge;
+	//if ( cr && m_rdb == g_clusterdb.getRdb() ) 
+	//	m_minToMerge = cr->m_clusterdbMinFilesToMerge;
+	//if ( cr && m_rdb == g_datedb.getRdb() ) 
+	//	m_minToMerge = cr->m_datedbMinFilesToMerge;
 	//if ( cr && m_rdb == g_statsdb.getRdb() )
 	//if ( m_rdb == g_statsdb.getRdb() )
 	//	m_minToMerge = g_conf.m_statsdbMinFilesToMerge;
 	if ( m_rdb == g_syncdb.getRdb() )
 		m_minToMerge = g_syncdb.m_rdb.m_minToMerge;
-	if ( cr && m_rdb == g_linkdb.getRdb() )
-		m_minToMerge = cr->m_linkdbMinFilesToMerge;
+	//if ( cr && m_rdb == g_linkdb.getRdb() )
+	//	m_minToMerge = cr->m_linkdbMinFilesToMerge;
 	if ( cr && m_rdb == g_cachedb.getRdb() )
 		m_minToMerge = 4;
 	if ( cr && m_rdb == g_serpdb.getRdb() )
@@ -1373,11 +1383,12 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		//m_minToMerge = 2;
 		char *xx = NULL; *xx = 0;
 	}
+	// mdw: comment this out to reduce log spam when we have 800 colls!
 	// print it
-	if ( doLog ) 
-		log(LOG_INFO,"merge: Attempting to merge %li %s files on disk."
-		    " %li files needed to trigger a merge.",
-		    numFiles,m_dbname,m_minToMerge);
+	//if ( doLog ) 
+	//	log(LOG_INFO,"merge: Attempting to merge %li %s files on disk."
+	//	    " %li files needed to trigger a merge.",
+	//	    numFiles,m_dbname,m_minToMerge);
 	// . even though another merge may be going on, we can speed it up
 	//   by entering urgent merge mode. this will prefer the merge disk
 	//   ops over dump disk ops... essentially starving the dumps and
@@ -1438,7 +1449,7 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	// log a note
 	//log(0,"RdbBase::attemptMerge: attempting merge for %s",m_dbname );
 	// this merge forced?
-	m_nextMergeForced = forceMergeAll;
+	//m_nextMergeForced = forceMergeAll;
 	// . bail if already merging
 	// . no, RdbMerge will sleep in 5 sec cycles into they're done
 	// . we may have multiple hosts running on the same cpu/hardDrive
@@ -1508,9 +1519,9 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		return;
 	}
 	// debug msg
-	if ( doLog )
-	log(LOG_INFO,"merge: Got merge token for %s without blocking.",
-	    m_dbname);
+	//if ( doLog )
+	//log(LOG_INFO,"merge: Got merge token for %s without blocking.",
+	//    m_dbname);
 	// if did not block
 	gotTokenForMerge ( );
 }
@@ -1921,6 +1932,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	// assume we are now officially merging
 	m_isMerging = true;
 
+	m_rdb->m_numMergesOut++;
+
 	char rdbId = getIdFromRdb ( m_rdb );
 
 	// sanity check
@@ -1941,6 +1954,8 @@ void RdbBase::gotTokenForMerge ( ) {
 			  m_ks                  ) ) return;
 	// hey, we're no longer merging i guess
 	m_isMerging = false;
+	// decerment this count
+	m_rdb->m_numMergesOut--;
 	// . if we have no g_errno that is bad!!!
 	// . we should dump core here or something cuz we have to remove the
 	//   merge file still to be correct
@@ -1956,6 +1971,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	g_errno = 0;
 	// give token back
 	g_msg35.releaseToken();
+	// try again
+	m_rdb->attemptMerge( m_niceness, false , true );
 }
 
 // . use the maps and tree to estimate the size of this list w/o hitting disk

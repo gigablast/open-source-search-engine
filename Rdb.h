@@ -167,6 +167,11 @@ class Rdb {
 	//bool deleteRecord ( collnum_t collnum , key_t &key ) ;
 	bool deleteRecord ( collnum_t collnum , char *key );
 
+	bool isSecondaryRdb () {
+		return ::isSecondaryRdb((unsigned char)m_rdbId); };
+	
+	bool isInitialized () { return m_initialized; };
+
 	// get the directory name where this rdb stores it's files
 	//char *getDir       ( ) { return m_dir.getDirname(); };
 	char *getDir       ( ) { return g_hostdb.m_dir; };
@@ -377,6 +382,8 @@ class Rdb {
 
 	bool m_inAddList;
 
+	long m_numMergesOut;
+
 	// . this is now static in Rdb.cpp
 	// . for merging many rdb files into one 
 	// . no we brought it back so tfndb can merge while titledb is merging
@@ -493,6 +500,8 @@ class Rdb {
 	char m_rdbId;
 	char m_ks; // key size
 	long m_pageSize;
+
+	bool m_initialized;
 
 	int8_t m_gbcounteventsTermId[8];
 

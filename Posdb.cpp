@@ -8,6 +8,7 @@
 //#include "Checksumdb.h"
 #include "Threads.h"
 #include "Posdb.h"
+#include "Rebalance.h"
 
 // a global class extern'd in .h file
 Posdb g_posdb;
@@ -32,7 +33,8 @@ bool Posdb::init ( ) {
 	long siteRank = 13;
 	long hashGroup = 1;
 	long langId = 59;
-	long multiplier = 29;
+	long multiplier = 13;
+	char shardedByTermId = 1;
 	char isSynonym = 1;
 	g_posdb.makeKey ( &k ,
 			  termId ,
@@ -46,7 +48,8 @@ bool Posdb::init ( ) {
 			  langId,
 			  multiplier,
 			  isSynonym , // syn?
-			  false ); // delkey?
+			  false , // delkey?
+			  shardedByTermId );
 	// test it out
 	if ( g_posdb.getTermId ( &k ) != termId ) { char *xx=NULL;*xx=0; }
 	//long long d2 = g_posdb.getDocId(&k);
@@ -60,7 +63,7 @@ bool Posdb::init ( ) {
 	if ( g_posdb.getLangId ( &k ) != langId ) { char *xx=NULL;*xx=0; }
 	if ( g_posdb.getMultiplier ( &k ) !=multiplier){char *xx=NULL;*xx=0; }
 	if ( g_posdb.getIsSynonym ( &k ) != isSynonym) { char *xx=NULL;*xx=0; }
-
+	if ( g_posdb.isShardedByTermId(&k)!=shardedByTermId){char *xx=NULL;*xx=0; }
 	// more tests
 	setDocIdBits ( &k, docId );
 	setMultiplierBits ( &k, multiplier );
@@ -122,12 +125,12 @@ bool Posdb::init ( ) {
 	long nodeSize      = (sizeof(key144_t)+12+4) + sizeof(collnum_t);
 	long maxTreeNodes = maxTreeMem  / nodeSize ;
 
-	//long pageSize = GB_INDEXDB_PAGE_SIZE;
+	long pageSize = GB_INDEXDB_PAGE_SIZE;
 	// we now use a disk page cache as opposed to the
 	// old rec cache. i am trying to do away with the Rdb::m_cache rec
 	// cache in favor of cleverly used disk page caches, because
 	// the rec caches are not real-time and get stale. 
-	long pcmem    = 50000000; // 50MB
+	long pcmem    = 30000000; // 30MB
 	// make sure at least 30MB
 	//if ( pcmem < 30000000 ) pcmem = 30000000;
 	// keep this low if we are the tmp cluster, 30MB
@@ -136,12 +139,12 @@ bool Posdb::init ( ) {
 	// prevent swapping
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// save more mem!!! allow os to cache it i guess...
-	pcmem = 0;
+	// let's go back to using it
+	//pcmem = 0;
 	// disable for now... for rebuild
 	//pcmem = 0;
 	// . init the page cache
 	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
-	/*
 	if ( ! m_pc.init ( "posdb",
 			   RDB_POSDB,
 			   pcmem    ,
@@ -149,7 +152,6 @@ bool Posdb::init ( ) {
 			   true     ,  // use RAM disk?
 			   false    )) // minimize disk seeks?
 		return log("db: Posdb init failed.");
-	*/
 
 	// . set our own internal rdb
 	// . max disk space for bin tree is same as maxTreeMem so that we
@@ -174,7 +176,7 @@ bool Posdb::init ( ) {
 			   // newer systems have tons of ram to use
 			   // for their disk page cache. it is slower than
 			   // ours but the new engine has much slower things
-			   NULL,//&m_pc                       ,
+			   &m_pc                       ,
 			   false , // istitledb?
 			   false , // preloaddiskpagecache?
 			   sizeof(key144_t)
@@ -308,6 +310,8 @@ bool Posdb::verify ( char *coll ) {
 		}
 	}
 	if ( got != count ) {
+		// tally it up
+		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %li records in posdb, only %li belong "
 		     "to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
@@ -378,7 +382,8 @@ void Posdb::makeKey ( void              *vkp            ,
 		      char               langId         ,
 		      long               multiplier     ,
 		      bool               isSynonym      ,
-		      bool               isDelKey       ) {
+		      bool               isDelKey       ,
+		      bool shardedByTermId ) {
 
 	// sanity
 	if ( siteRank      > MAXSITERANK      ) { char *xx=NULL;*xx=0; }
@@ -444,6 +449,8 @@ void Posdb::makeKey ( void              *vkp            ,
 	// delbit
 	kp->n0 <<= 1;
 	if ( ! isDelKey ) kp->n0 |= 0x01;
+
+	if ( shardedByTermId ) setShardedByTermIdBit ( kp );
 }
 
 RdbCache g_termFreqCache;

@@ -804,6 +804,16 @@ bool Msg5::needsRecall ( ) {
 		goto done;
 	//if ( m_list->getEndKey() >= m_endKey ) goto done;
 	if ( KEYCMP(m_list->getEndKey(),m_endKey,m_ks)>=0 ) goto done;
+
+	// if this is NOT the first round and the sum of all our list sizes
+	// did not increase, then we hit the end...
+	if ( m_round >= 1 && m_totalSize == m_lastTotalSize ) {
+		log("msg5: increasing minrecsizes did nothing. assuming done");
+		goto done;
+	}
+	// ok, make sure if we go another round at least one list gains!
+	m_lastTotalSize = m_totalSize;
+
 	/*
 	// sanity check
 	if ( m_indexdbTruncationLimit < MIN_TRUNC ) {
@@ -826,11 +836,13 @@ bool Msg5::needsRecall ( ) {
 	logIt = true;
 	// seems to be very common for doledb, so don't log unless extreme
 	//if ( m_rdbId == RDB_DOLEDB && m_round < 15 ) logIt = false;
+	if ( m_round > 100 && (m_round % 1000) != 0 ) logIt = false;
 	if ( logIt )
 		logf(LOG_DEBUG,"db: Reading %li again from %s (need %li total "
 		     "got %li) this=0x%lx round=%li.", 
 		     m_newMinRecSizes , base->m_dbname , m_minRecSizes, 
-		     m_list->m_listSize, (long)this , m_round++ );
+		     m_list->m_listSize, (long)this , m_round );
+	m_round++;
 	// record how many screw ups we had so we know if it hurts performance
 	base->m_rdb->didReSeek ( );
 
@@ -1722,8 +1734,8 @@ bool Msg5::doneMerging ( ) {
 	//   our first merge
 	if ( m_hadCorruption ) {
 		// log it here, cuz logging in thread doesn't work too well
-		log("net: Encountered a corrupt list in rdb=%s",
-		    base->m_dbname);
+		log("net: Encountered a corrupt list in rdb=%s coll=%s",
+		    base->m_dbname,m_coll);
 		// remove error condition, we removed the bad data in thread
 		
 		m_hadCorruption = false;
@@ -1847,14 +1859,22 @@ bool Msg5::doneMerging ( ) {
 	}
 	else m_newMinRecSizes = nn;
 
+	// . for every round we get call increase by 10 percent
+	// . try to fix all those negative recs in the rebalance re-run
+	m_newMinRecSizes *= (1.0 + (m_round * .10));
+
+	// wrap around?
+	if ( m_newMinRecSizes < 0 || m_newMinRecSizes > 1000000000 )
+		m_newMinRecSizes = 1000000000;
+
 	
 	QUICKPOLL(m_niceness);
 	// . don't exceed original min rec sizes by 5 i guess
 	// . watch out for wrap
-	long max = 5 * m_minRecSizes ;
-	if ( max < m_minRecSizes ) max = 0x7fffffff;
-	if ( m_newMinRecSizes > max && max > m_minRecSizes )
-		m_newMinRecSizes = max;
+	//long max = 5 * m_minRecSizes ;
+	//if ( max < m_minRecSizes ) max = 0x7fffffff;
+	//if ( m_newMinRecSizes > max && max > m_minRecSizes )
+	//	m_newMinRecSizes = max;
 
 	// keep this above a certain point because if we didn't make it now
 	// we got negative records messing with us

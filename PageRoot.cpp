@@ -76,7 +76,7 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 		      //" &nbsp; &nbsp; <a href=/logout>Logout</a>"
 		      );
 	if ( r->isLocal() )
-	     sb.safePrintf("&nbsp; &nbsp;[<a href=\"/crawlbot?\">Admin</a>]");
+	     sb.safePrintf("&nbsp; &nbsp;[<a href=\"/master?\">Admin</a>]");
 	sb.safePrintf("</p></b></center></body></html>");
 	return true;
 }
@@ -136,10 +136,12 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; "
-		      "<a href=http://www.gigablast.com/seo>seo</a> "
-		      "&nbsp;&nbsp;&nbsp;&nbsp; "
-		      "<a href=\"/Top\">directory</a> "
+	sb.safePrintf("<b>web</b> &nbsp;&nbsp;&nbsp;&nbsp; ");
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo</a> "
+			      "&nbsp;&nbsp;&nbsp;&nbsp; "
+			      );
+	sb.safePrintf( "<a href=\"/Top\">directory</a> "
 		      "&nbsp;&nbsp;&nbsp;&nbsp; \n");
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
@@ -177,6 +179,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("</td></tr>\n");
 
 
+	/*
 	sb.safePrintf("<tr valign=top>\n");
 	// 204x143
 	sb.safePrintf("<td><img height=52px width=75px "
@@ -187,6 +190,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("<br><br></td></tr>\n");
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
+	*/
 
 
 	/*
@@ -200,6 +204,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	*/
 
 
+	/*
 	sb.safePrintf("<tr valign=top>\n");
 	sb.safePrintf("<td align=center><img src=%s/gears.png "
 		      "height=50 width=50></div></td>\n"
@@ -210,15 +215,17 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("</td></tr>\n");
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
+	*/
 
-	sb.safePrintf("<tr valign=top>\n");
-	sb.safePrintf("<td align=center><center><img src=%s/dollargear.png "
-		      "height=50 width=50></center></div></center></td>\n"
-		      , root );
-	sb.safePrintf("<td><font size=+1><b>The SEO Search Engine</b></font><br>\n");
-	sb.brify2("When it comes to search-engine based SEO, Gigablast is the place to be. With a frothy set of unique and effective <a href=http://www.gigablast.com/seo>SEO tools</a>, you will find all you need to execute a simple yet effective SEO strategy. Stop the guesswork, and let a search engine tell you how to SEO it.",85);
-	sb.safePrintf("</td></tr>\n");
-
+	if ( g_conf.m_isMattWells ) {
+		sb.safePrintf("<tr valign=top>\n");
+		sb.safePrintf("<td align=center><center><img src=%s/dollargear.png "
+			      "height=50 width=50></center></div></center></td>\n"
+			      , root );
+		sb.safePrintf("<td><font size=+1><b>The SEO Search Engine</b></font><br>\n");
+		sb.brify2("When it comes to search-engine based SEO, Gigablast is the place to be. With a frothy set of unique and effective <a href=http://www.gigablast.com/seo>SEO tools</a>, you will find all you need to execute a simple yet effective SEO strategy. Stop the guesswork, and let a search engine tell you how to SEO it.",85);
+		sb.safePrintf("</td></tr>\n");
+	}
 
 	/*
 	sb.safePrintf("<tr valign=top>\n");
@@ -384,7 +391,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<form method=get action=/addurl name=f>\n");
 
-	CollectionRec *cr = g_collectiondb.getRec ( "main" );
+	//CollectionRec *cr = g_collectiondb.getRec ( "main" );
 	//sb.safePrintf("<input type=hidden name=c value=\"%s\">",cr->m_coll);
 	sb.safePrintf("<input name=u type=text size=60 value=\"");
 	if ( url ) {
@@ -404,8 +411,8 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	if ( ! g_conf.m_addUrlEnabled ) 
 		msg = "Add url is temporarily disabled";
 	// can also be turned off in the collection rec
-	if ( ! cr->m_addUrlEnabled    ) 
-		msg = "Add url is temporarily disabled";
+	//if ( ! cr->m_addUrlEnabled    ) 
+	//	msg = "Add url is temporarily disabled";
 	// or if in read-only mode
 	if (   g_conf.m_readOnlyMode  ) 
 		msg = "Add url is temporarily disabled";
@@ -1340,8 +1347,8 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	if ( ! g_conf.m_addUrlEnabled ) 
 		msg = "Add url is temporarily disabled";
 	// can also be turned off in the collection rec
-	if ( ! cr->m_addUrlEnabled    ) 
-		msg = "Add url is temporarily disabled";
+	//if ( ! cr->m_addUrlEnabled    ) 
+	//	msg = "Add url is temporarily disabled";
 	// or if in read-only mode
 	if (   g_conf.m_readOnlyMode  ) 
 		msg = "Add url is temporarily disabled";

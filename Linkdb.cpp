@@ -4,6 +4,7 @@
 #include "linkspam.h"
 #include "sort.h"
 #include "XmlDoc.h" // score32to8()
+#include "Rebalance.h"
 
 Linkdb g_linkdb;
 Linkdb g_linkdb2;
@@ -109,6 +110,8 @@ bool Linkdb::init ( ) {
 	long maxTreeNodes = maxTreeMem /(sizeof(key224_t)+16);
 	// disk page cache mem, 100MB on gk0 now
 	long pcmem = 0; // g_conf.m_linkdbMaxDiskPageCacheMem;
+	// give it a little
+	pcmem = 10000000; // 10MB
 	// keep this low if we are the tmp cluster
 	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// TODO: would be nice to just do page caching on the satellite files;
@@ -125,7 +128,7 @@ bool Linkdb::init ( ) {
 			    "linkdb" ,
 			    true     , // dedup
 			    0        , // fixeddatasize is 0 since no data
-			    g_conf.m_linkdbMinFilesToMerge ,
+			    3,//g_conf.m_linkdbMinFilesToMerge ,
 			    // fix this to 15 and rely on the page cache of
 			    // just the satellite files and the daily merge to
 			    // keep things fast.
@@ -235,6 +238,8 @@ bool Linkdb::verify ( char *coll ) {
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
+		// tally it up
+		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %li records in Linkdb , "
 		     "only %li belong to our group.",count,got);
 

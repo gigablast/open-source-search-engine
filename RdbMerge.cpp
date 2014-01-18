@@ -5,6 +5,7 @@
 #include "Msg3.h"
 #include "Indexdb.h"
 #include "Process.h"
+#include "Spider.h"
 
 // declare the lock unlocked
 //static bool s_isMergeLocked = false;
@@ -565,6 +566,14 @@ bool RdbMerge::dumpList ( ) {
 	//m_startKey += (unsigned long)1;
 	KEYADD(m_startKey,1,m_ks);
 
+	/////
+	//
+	// dedup for spiderdb before we dump it. try to save disk space.
+	//
+	/////
+	if ( m_rdbId == RDB_SPIDERDB )
+		// removeNegRecs? = false
+		dedupSpiderdbList(&m_list,m_niceness,false); 
 
 	// if the startKey rolled over we're done
 	//if ( m_startKey.n0 == 0LL && m_startKey.n1 == 0 ) m_doneMerging=true;

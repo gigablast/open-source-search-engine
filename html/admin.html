@@ -101,7 +101,9 @@ rather your current working directory, where the 'gb' binary resides.
 <li> <b>The ONLY open source WEB search engine.</b> 
 <li> Scalable to thousands of servers. 
 <li> Has scaled to over 12 billion web pages on over 200 servers.
-<li> A dual quad core, with 32GB ram, and two 160GB Intel SSDs, running 8 gb instances, can do about 8 qps (queries per second) on an index of 10 million pages. Drives will be close to maximum storage capacity.
+<li> A dual quad core, with 32GB ram, and two 160GB Intel SSDs, running 8 Gigablast instances, can do about 8 qps (queries per second) on an index of 10 million pages. Drives will be close to maximum storage capacity. Doubling index size will more or less halve qps rate.
+<li> 1 million web pages requires 28.6GB of drive space. That includes the index, meta information and the compressed HTML of all the web pages.
+<li> 4GB of RAM required per Gigablast instance. (instance = process)
 <li> Live demo at <a href=http://www.gigablast.com/>http://www.gigablast.com/</a> (running on old hardware so it is a bit slow)
 <li> Written in C/C++ for optimal performance.
 <li> Over 500,000 lines of C/C++.
@@ -135,6 +137,7 @@ rather your current working directory, where the 'gb' binary resides.
 <li> Plug-ins. For indexing any file format by calling Plug-ins to convert that format to HTML. Provided binary plug-ins: pdftohtml (PDF), ppthtml (PowerPoint), antiword (MS Word), pstotext (PostScript).
 <li> Indexes JSON and XML natively. Provides ability to search individual structured fields.
 <li> Sorting. Sort the search results by meta tags or JSON fields that contain numbers, simply by adding something like gbsortby:price or gbrevsortby:price as a query term, assuming you have meta price tags.
+<li>Easy Scaling. Add new servers to the hosts.conf file then click 'rebalance shards' to automatically rebalance the sharded data.
 </ul>
 
 <br>
@@ -177,7 +180,7 @@ Also, keep in mind not to use these weighting operators between another query op
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Hardware Requirements</td></tr></table>
 <br>
-At least one computer with 512MB RAM, 10GB of hard drive space and any distribution of Linux with the 2.4.25 kernel or higher. For decent performance invest in Intel Solid State Drives. I tested other brands around 2010 and found that they would freeze for up for 500ms every hour or so to do "garbage collection". That is unacceptable in general for a search engine. 
+At least one computer with 4GB RAM, 10GB of hard drive space and any distribution of Linux with the 2.4.25 kernel or higher. For decent performance invest in Intel Solid State Drives. I tested other brands around 2010 and found that they would freeze for up for 500ms every hour or so to do "garbage collection". That is unacceptable in general for a search engine. 
 Plus, Gigablast, reads and writes a lot of data at the same time under heavy spider and query loads, and disk will probably be your MAJOR bottleneck.<br><br>
 <br>
 <a name=perf></a>

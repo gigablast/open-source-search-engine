@@ -95,6 +95,8 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 	need += p - json;
 	// plus a \0 for the value and a \0 for the name of each jsonitem
 	need += 2;
+	// prevent cores for now
+	need += 10000;
 	// this should be enough
 	if ( ! m_sb.reserve ( need ) ) return NULL;
 	// for testing if we realloc

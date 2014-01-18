@@ -120,6 +120,9 @@ class HashTableX {
 		else                                 *val = *val + score;
 		return true;
 	};
+	bool addScore ( long *key , long score = 1 ) {
+		return addTerm32 ( key , score ); 
+	};
 	uint32_t getScore32 ( long *wid ) {
 		long slot = getSlot ( wid );
 		if ( slot < 0 ) return 0;

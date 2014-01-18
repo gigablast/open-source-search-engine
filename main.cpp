@@ -89,7 +89,7 @@
 //#include "Msg33.h"
 //#include "mmseg.h"  // open_lexicon(), etc. for Chinese parsing
 //#include "PageTopDocs.h"
-#include "PageNetTest.h"
+//#include "PageNetTest.h"
 //#include "Sync.h"
 #include "Pages.h"
 //#include "Msg1c.h"
@@ -387,25 +387,32 @@ int main ( int argc , char *argv[] ) {
 
 	if (argc < 1) {
 	printHelp:
-		fprintf(stdout,
-			"Usage: gb [-c hostsConf] <CMD>\n\n");
-		fprintf (stdout,
-			 "Items in []'s are optional, and items in <>'s are "
-			 "required.\n\n");
-		fprintf (stdout,
+		SafeBuf sb;
+		sb.safePrintf(
+			"Usage: gb [-c hostsConf] <CMD>\n");
+		sb.safePrintf(
+			      "\tItems in []'s are optional, and items "
+			      "in <>'s are "
+			      "required.");
+		sb.safePrintf(
+			      "\n\t"
 			 "[hostsConf] is the hosts.conf config file as "
-			 "described in overview.html. If not\nprovided then "
-			 "it is assumed to be ./hosts.conf.\n\n" );
-		fprintf(stdout,
+			 "described in overview.html. If not provided then "
+			 "it is assumed to be ./hosts.conf. If "
+			      "./localhosts.conf exists then that will be "
+			      "used instead of ./hosts.conf. That is "
+			      "convenient to use since it will not be "
+			      "overwritten from git pulls.\n\n" );
+		sb.safePrintf(
 			"<CMD> can have the following values:\n\n"
 
 			"-h\tprint this help.\n\n"
 			"-v\tprint version and exit.\n\n"
 			"-o\tprint the overview documentation in HTML. "
-			"Contains the format of\n\thosts.conf.\n\n"
+			"Contains the format of hosts.conf.\n\n"
 			"-r\tindicates recovery mode, "
 			"sends email to addresses "
-			"specified in Conf.h\n\tupon startup.\n\n"
+			"specified in Conf.h upon startup.\n\n"
 
 			"<hostId>\n"
 			"\tstart the gb process for this <hostId> locally.\n\n"
@@ -432,19 +439,19 @@ int main ( int argc , char *argv[] ) {
 
 			"tmpstart [hostId]\n"
 			"\tstart the gb process on all hosts or just on "
-			"[hostId] if specified, but\n\t"
+			"[hostId] if specified, but "
 			"use the ports specified in hosts.conf PLUS one. "
-			"Then you can switch the\n\t"
+			"Then you can switch the "
 			"proxy over to point to those and upgrade the "
-			"original cluster's gb.\n\t"
+			"original cluster's gb. "
 			"That can be done in the Master Controls of the "
-			"proxy using the 'use\n\t"
+			"proxy using the 'use "
 			"temporary cluster'. Also, this assumes the binary "
 			"name is tmpgb not gb.\n\n"
 
 			"tmpstop [hostId]\n"
 			"\tsaves and exits for all gb hosts or "
-			"just on [hostId] if specified, for\n\tthe "
+			"just on [hostId] if specified, for the "
 			"tmpstart command.\n\n"
 
 			"spidersoff [hostId]\n"
@@ -457,7 +464,7 @@ int main ( int argc , char *argv[] ) {
 
 			"cacheoff [hostId]\n"
 			"\tdisables all disk PAGE caches on all hosts or "
-			"just on [hostId] if\n\tspecified.\n\n"
+			"just on [hostId] if specified.\n\n"
 
 			"freecache [maxShmid]\n"
 			"\tfinds and frees all shared memory up to shmid "
@@ -485,18 +492,18 @@ int main ( int argc , char *argv[] ) {
 
 			"dsh <CMD>\n"
 			"\trun this command on the primary IPs of "
-			"all active hosts in\n\thosts.conf. Example: "
+			"all active hosts in hosts.conf. Example: "
 			"gb dsh 'ps auxw; uptime'\n\n"
 
 			"dsh2 <CMD>\n"
 			"\trun this command on the secondary IPs of "
-			"all active hosts in\n\thosts.conf. Example: "
+			"all active hosts in hosts.conf. Example: "
 			"gb dsh2 'ps auxw; uptime'\n\n"
 
 			"install [hostId]\n"
 			"\tinstall all required files for gb from "
-			"current working directory\n"
-			"\tto [hostId]. If no [hostId] is specified install "
+			"current working directory "
+			"to [hostId]. If no [hostId] is specified install "
 			"to ALL hosts.\n\n"
 
 			"install2 [hostId]\n"
@@ -539,30 +546,30 @@ int main ( int argc , char *argv[] ) {
 
 			"backupcopy <backupSubdir>\n"
 			"\tsave a copy of all xml, config, data and map files "
-			"into <backupSubdir>\n\twhich is relative "
+			"into <backupSubdir> which is relative "
 			"to the working dir. Done for all hosts.\n\n"
 
 			"backupmove <backupSubdir>\n"
 			"\tmove all all xml, config, data and map files "
-			"into <backupSubdir> which \n\tis relative "
+			"into <backupSubdir> which  is relative "
 			"to the working dir. Done for all hosts.\n\n"
 
 			"backuprestore <backupSubdir>\n"
 			"\tmove all all xml, config, data and map files "
-			"in <backupSubdir>,  which\n\tis relative "
+			"in <backupSubdir>,  which is relative "
 			"to the working dir, into the working dir. "
-			"Will NOT\n\toverwrite anything. Done for all "
+			"Will NOT overwrite anything. Done for all "
 			"hosts.\n\n"
 			
 			"proxy start [proxyId]\n"
 			"\tStart a proxy that acts as a frontend to gb "
-			"and passes on\n\trequests to random machines on "
-			"the cluster given in hosts.conf.\n\tHelps to "
+			"and passes on requests to random machines on "
+			"the cluster given in hosts.conf. Helps to "
 			"distribute the load evenly across all machines.\n\n"
 
 			"proxy load <proxyId>\n"
 			"\tStart a proxy process directly without calling "
-			"ssh. Called\n\tby 'gb proxy start'.\n\n"
+			"ssh. Called by 'gb proxy start'.\n\n"
 
 			"proxy stop [proxyId]\n"
 			"\tStop a proxy that acts as a frontend to gb.\n\n"
@@ -570,22 +577,22 @@ int main ( int argc , char *argv[] ) {
 			"blasterdiff [-v] [-j] [-p] <file1> <file2> "
 			"<maxNumThreads> <wait>\n"
 			"\tcompare search results between urls in file1 and"
-			"file2 and output the\n\tsearch results in the url"
-			" from file1 not found in the url from file2\n\t"
+			"file2 and output the search results in the url"
+			" from file1 not found in the url from file2 "
 			"maxNumThreads is the number of concurrent "
 			"comparisons "
-			"that should be\n\tdone at one time and wait is the"
-			"time to wait between comparisons. \n\t-v is for "
+			"that should be done at one time and wait is the"
+			"time to wait between comparisons.  -v is for "
 			"verbose "
 			" and -j is to just display links not found and "
-			"not\n\t"
+			"not "
 			"search for them on server2. If you do not want to"
-			" use the proxy server\n\t"
+			" use the proxy server "
 			"on gk10, use -p\n\n"
 
 			"blaster [-l|-u|-i] <file> <maxNumThreads> <wait>\n"
 			"\tget documents from the urls given in file. The "
-			"-l argument is to\n\t"
+			"-l argument is to "
 			"automatically get documents "
 			"from the gigablast log file.\n"
 			"\t-u means to inject/index the url into gb.\n"
@@ -595,35 +602,44 @@ int main ( int argc , char *argv[] ) {
 			"which also entails a DNS lookup on each outlink.\n"
 			"\tmaxNumThreads is the"
 			" number of concurrent threads at one time and wait "
-			"\n\tis the time to wait between threads.\n\n"
+			" is the time to wait between threads.\n\n"
 
 			"scale <newHosts.conf>\n"
 			"\tGenerate a script to be called to migrate the "
-			"data to the new places.\n\tRemaining hosts will "
-			"keep the data they have, but it will be\n\t"
+			"data to the new places. Remaining hosts will "
+			"keep the data they have, but it will be "
 			"filtered during the next merge operations.\n\n"
 
 			"collcopy <newHosts.conf> <coll> <collnum>\n"
 			"\tGenerate a script to copy the collection data on "
-			"the cluster defined by\n\tnewHosts.conf to the "
+			"the cluster defined by newHosts.conf to the "
 			"current cluster. Remote network must have "
-			"called\n\t\"gb ddump\" twice in a row just before to "
-			"ensure all of its data is\n\ton disk.\n\n"
+			"called \"gb ddump\" twice in a row just before to "
+			"ensure all of its data is on disk.\n\n"
 
 
 
 			// gb inject <file> <ip:port> [startdocid]
 			// gb inject titledb <newhosts.conf> [startdocid]
 			"inject <file> <ip:port> [startdocid]\n"
-			"inject titledb <newhosts.conf> [startdocid]\n"
-			"\tInject all documents in <file> into [hostId]. If "
-			"[hostId] not given,\n\t0 is assumed. Each document "
-			"must be preceeded by a valid HTTP mime with\n\t"
-			"a Content-Length: field.\n\n"
+			"\tInject all documents in <file> into the host "
+			"at ip:port. "
+			"Each document "
+			"must be preceeded by a valid HTTP mime with "
+			"a Content-Length: field. "
+			"\n\n"
+
+			"inject titledb-<DIR> <newhosts.conf> [startdocid]\n"
+			"\tInject all pages from all the titledb "
+			"files in the <DIR> directory into the appropriate "
+			"host defined by the newhosts.conf config file. This "
+			"is useful for populating one search engine with "
+			"another. "
+			"\n\n"
 
 			"injecttest <requestLen> [hostId]\n"
 			"\tinject random documents into [hostId]. If [hostId] "
-			"not given\n\t0 is assumed.\n\n"
+			"not given 0 is assumed.\n\n"
 
 			"ping <hostId> [clientport]\n"
 			"\tperforms pings to <hostId>. [clientport] defaults "
@@ -634,7 +650,7 @@ int main ( int argc , char *argv[] ) {
 
 			"dictlookuptest <file>\n"
 			"\tgets the popularities of the entries in the "
-			"<file>.\n Used to only check performance of "
+			"<file>. Used to only check performance of "
 			"getPhrasePopularity.\n\n"
 
 			//"stemmertest <file>\n"
@@ -648,18 +664,18 @@ int main ( int argc , char *argv[] ) {
 			// less common things
 			"gendict <coll> [numWordsToDump]\n\tgenerate "
 			"dictionary used for spellchecker "
-			"from titledb\n\tfiles in collection <coll>. Use "
+			"from titledb files in collection <coll>. Use "
 			"first [numWordsToDump] words.\n\n"
 			//#ifndef _LARS_
 			//"gendbs <coll> [hostId]\n\tgenerate missing spiderdb, "
-			//"tfndb and checksumdb files from titledb\n\tfiles.\n\n"
+			//"tfndb and checksumdb files from titledb files.\n\n"
 
 			//"gentfndb <coll> [hostId]\n\tgenerate missing tfndb. "
-			//"titledb disk dumps and tight merges are no\n\t"
+			//"titledb disk dumps and tight merges are no "
 			//"longer necessary. Also "
-			//"generates tfndb from spiderdb. tfndb-saved.dat\n\t"
+			//"generates tfndb from spiderdb. tfndb-saved.dat "
 			//"and all tfndb* files in the collection subdir "
-			//"must not exist, so move\n\tthem to a temp dir.\n\n"
+			//"must not exist, so move them to a temp dir.\n\n"
 
 			//"fixtfndb <coll> [hostId]\n\tremove tfndb recs "
 			//"referring to non-existent titledb recs.\n\n"
@@ -695,8 +711,8 @@ int main ( int argc , char *argv[] ) {
 			// Quality Tests
 			"countdomains <coll> <X>\n"
 			"\tCounts the domains and IPs in collection coll and "
-			"in the first X\n\ttitledb records.  Results are sorted"
-			"by popularity and stored in\n\tthe log file. \n\n"
+			"in the first X titledb records.  Results are sorted"
+			"by popularity and stored in the log file. \n\n"
 
 			"cachetest\n\t"
 			"cache stability and speed tests\n\n"
@@ -706,7 +722,7 @@ int main ( int argc , char *argv[] ) {
 
 			"dosopen <ip> <port> <numThreads>\n"
 			"\tOpen  numThreads tcp sockets to ip:port and just "
-			"sit there.  For\n\ttestingthe robustness of gb.\n\n"
+			"sit there.  For testingthe robustness of gb.\n\n"
 
 			"xmldiff [-td] <file1> <file2>\n"
 			"\tTest xml diff routine on file1 and file2.\n"
@@ -769,9 +785,10 @@ int main ( int argc , char *argv[] ) {
 #endif
 			"\tT is the first docId to dump. Applies only to "
 			"titledb. "
-			"(default none)\n\n"
+			//"(default none)\n\n"
 			"\tV is c to dump cached recs.\n"
 
+			"\n"
 			
 
 			"dump s [X [Y [Z [C]]]\n"
@@ -806,22 +823,22 @@ int main ( int argc , char *argv[] ) {
 			"dumpmissing <coll> [hostId]\n\t"
 			"dump the docIds in indexdb but not "
 			"in tfndb/titledb to stderr. "
-			"\n\tUsed for passing in to removedocids.\n"
+			" Used for passing in to removedocids.\n"
 			"\n"
 
 			"dumpdups <coll> [hostId]\n\t"
 			"dump the docIds in duplicated in indexdb when "
-			"they should not be to\n\tstderr. Usually a sign "
-			"of mis-indexing. Used for passing in to\n\t"
+			"they should not be to stderr. Usually a sign "
+			"of mis-indexing. Used for passing in to "
 			"removedocids.\n"
 			"\n"
 
 			"removedocids <coll> <fileOfDocIds> "
 			"[hostId|hostId1-hostId2]"
 			"\n\tremoves the docids in fileOfDocIds from indexdb, "
-			"clusterdb, checksumdb\n\tand tfndb. Effectively "
+			"clusterdb, checksumdb and tfndb. Effectively "
 			"completely deleting that docid. "
-			"fileOfDocIds\n\tcontains one "
+			"fileOfDocIds contains one "
 			"docId per line, and nothing more.\n"
 			"\n"
 
@@ -837,18 +854,21 @@ int main ( int argc , char *argv[] ) {
 
 			"replacehost <hostid> <spareid>"
 			"\n\treplaces host with hostid <hostid> with the "
-			"spare that has the spareid\n\t<spareid>.  the host "
+			"spare that has the spareid <spareid>.  the host "
 			"being replaced should already be shut down or dead.\n"
 			"\n"
 
 			"synchost <hostid>"
 			"\n\trecopies this host from its twin. host directory "
-			"must be empty and\n\tthe host must be marked as dead "
+			"must be empty and the host must be marked as dead "
 			"in the current gb. Use synchost2 to use secondary "
 			"IPs.\n"
 			"\n"
 			//#endif
 			);
+		SafeBuf sb2;
+		sb2.brify2 ( sb.getBufStart() , 60 , "\n\t" , false );
+		fprintf(stdout,"%s",sb2.getBufStart());
 		// disable printing of used memory
 		g_mem.m_used = 0;
 		return 0;
@@ -1197,6 +1217,25 @@ int main ( int argc , char *argv[] ) {
 		// we need to parse out the hostid too!
 		if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
 		else goto printHelp;
+	}
+
+	// gb inject <file> <ip:port> [startdocid]
+	// gb inject titledb-coll.main.0 <newhosts.conf> [startdocid]
+	// gb inject titledb-somedir <newhosts.conf> [startdocid]
+	// gb inject titledb-coll.foobar.5 <newhosts.conf> [startdocid]
+	if ( strcmp ( cmd , "inject"  ) == 0 ) {
+		if ( argc != cmdarg+3 && 
+		     argc != cmdarg+4 &&
+		     argc != cmdarg+5 ) 
+			goto printHelp;
+		char *file = argv[cmdarg+1];
+		char *ips  = argv[cmdarg+2];
+		long long startDocId = 0LL;
+		long long endDocId   = DOCID_MASK;
+		if ( cmdarg+3 < argc ) startDocId = atoll(argv[cmdarg+3]);
+		if ( cmdarg+4 < argc ) endDocId   = atoll(argv[cmdarg+4]);
+		injectFile ( file , ips , startDocId , endDocId , false );
+		return 0;
 	}
 
 	// load up hosts.conf
@@ -1608,6 +1647,7 @@ int main ( int argc , char *argv[] ) {
 		return 0;
 	}
 	*/
+	/*
 	// gb inject <file> <ip:port> [startdocid]
 	// gb inject titledb <newhosts.conf> [startdocid]
 	if ( strcmp ( cmd , "inject"  ) == 0 ) {
@@ -1624,6 +1664,7 @@ int main ( int argc , char *argv[] ) {
 		injectFile ( file , ips , startDocId , endDocId , false );
 		return 0;
 	}
+	*/
 	if ( strcmp ( cmd , "reject"  ) == 0 ) {
 		if ( argc != cmdarg+3 && 
 		     argc != cmdarg+4 &&
@@ -2467,7 +2508,7 @@ int main ( int argc , char *argv[] ) {
 		log("db: setrlimit RLIMIT_NOFILE failed!");
 		char *xx=NULL;*xx=0;
 	}
-	log("db: RLIMIT_NOFILE = %li",(long)rlim.rlim_max);
+	//log("db: RLIMIT_NOFILE = %li",(long)rlim.rlim_max);
 	//exit(0);
 	// . disable o/s's and hard drive's read ahead 
 	// . set multcount to 16 --> 1 interrupt for every 16 sectors read
@@ -2716,9 +2757,11 @@ int main ( int argc , char *argv[] ) {
 		log("db: Serpdb init failed."   ); return 1; }
 	if ( ! g_monitordb.init()     ) {
 		log("db: Monitordb init failed."   ); return 1; }
-	// sectiondb
-	//if ( ! g_sectiondb.init()     ) {
-	//	log("db: Sectiondb init failed."   ); return 1; }
+	// use sectiondb again for its immense voting power for detecting and
+	// removing web page chrome, categories, etc. only use if 
+	// CollectionRec::m_isCustomCrawl perhaps to save space.
+	if ( ! g_sectiondb.init()     ) {
+		log("db: Sectiondb init failed."   ); return 1; }
 	//if ( ! g_placedb.init()     ) {
 	//	log("db: Placedb init failed."   ); return 1; }
 	// collectiondb, does not use rdb, loads directly from disk
@@ -2837,10 +2880,10 @@ int main ( int argc , char *argv[] ) {
 	//	return 1;
 	//}
 
-	if( !g_pageNetTest.init() ) {
-		log( "init: PageNetTest init failed." );
-		return 1;
-	}
+	//if( !g_pageNetTest.init() ) {
+	//	log( "init: PageNetTest init failed." );
+	//	return 1;
+	//}
 
 	//if(!Msg6a::init()) {
 	//	log( "init: Quality Agent init failed." );
@@ -4036,10 +4079,21 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		return 0;
 	}
 
+	HashTableX iptab;
+	char tmpBuf[2048];
+	iptab.set(4,4,64,tmpBuf,2048,true,0,"iptsu");
 
 	// go through each host
 	for ( long i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
 		Host *h2 = g_hostdb.getHost(i);
+
+		// if host ip is like the 10th occurence then do
+		// not do ampersand
+		iptab.addScore((long *)&h2->m_ip);
+		long score = iptab.getScore32(&h2->m_ip);
+		char *amp = " &";
+		if ( (score % 6) == 0 ) amp = "";
+			
 		// limit install to this hostId if it is >= 0
 		//if ( hostId >= 0 && h2->m_hostId != hostId ) continue;
 		if ( hostId >= 0 && hostId2 == -1 ) {
@@ -4319,13 +4373,21 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		else if ( installFlag == ifk_installgb ) {
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
+
+			File f;
+			char *target = "gb.new";
+			f.set(h2->m_dir,target);
+			if ( ! f.doesExist() ) target = "gb";
+
 			sprintf(tmp,
 				"rcp "
-				"%sgb.new "
-				"%s:%s/gb.installed &",
+				"%s%s "
+				"%s:%s/gb.installed%s",
 				dir,
+				target,
 				iptoa(h2->m_ip),
-				h2->m_dir);
+				h2->m_dir,
+				amp);
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 		}
@@ -4386,38 +4448,21 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; %s"
-				"./gb %li >& ./log%03li &\" &",
+				"./gb %li >& ./log%03li &\" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 				tmp2           ,
 				//h2->m_dir      ,
 				h2->m_hostId   ,
-				h2->m_hostId   );
-			// log it
-			log(LOG_INIT,"admin: %s", tmp);
-			// execute it
-			system ( tmp );
-		}
-		// start up a dummy cluster using hosts.conf ports + 1
-		else if ( installFlag == ifk_tmpstart ) {
-			// . assume conf file name gbHID.conf
-			// . assume working dir ends in a '/'
-			sprintf(tmp,
-				"ssh %s \"cd %s ; "
-				"cp -f tmpgb tmpgb.oldsave ; "
-				"mv -f tmpgb.installed tmpgb ; "
-				"./tmpgb -c %shosts.conf tmpstarthost "
-				"%li >& ./tmplog%03li &\" &",
-				iptoa(h2->m_ip),
-				h2->m_dir      ,
-				h2->m_dir      ,
 				h2->m_hostId   ,
-				h2->m_hostId   );
+				amp);
 			// log it
 			log(LOG_INIT,"admin: %s", tmp);
 			// execute it
 			system ( tmp );
 		}
+		/*
+		// SEQUENTIALLY start
 		else if ( installFlag == ifk_start2 ) {
 			// . save old log now, too
 			char tmp2[1024];
@@ -4431,15 +4476,39 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				h2->m_hostId   );
 			// . assume conf file name gbHID.conf
 			// . assume working dir ends in a '/'
+			char *amp = " &";
+			if ( i > 0 && (i%5) == 0 ) amp = "";
 			sprintf(tmp,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; %s"
-				"./gb %li >& ./log%03li &\" &",
+				"./gb %li >& ./log%03li &\"%s",
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir      ,
 				tmp2           ,
 				//h2->m_dir      ,
+				h2->m_hostId   ,
+				h2->m_hostId   ,
+				amp );
+			// log it
+			log(LOG_INIT,"admin: %s", tmp);
+			// execute it
+			system ( tmp );
+		}
+		*/
+		// start up a dummy cluster using hosts.conf ports + 1
+		else if ( installFlag == ifk_tmpstart ) {
+			// . assume conf file name gbHID.conf
+			// . assume working dir ends in a '/'
+			sprintf(tmp,
+				"ssh %s \"cd %s ; "
+				"cp -f tmpgb tmpgb.oldsave ; "
+				"mv -f tmpgb.installed tmpgb ; "
+				"./tmpgb -c %shosts.conf tmpstarthost "
+				"%li >& ./tmplog%03li &\" &",
+				iptoa(h2->m_ip),
+				h2->m_dir      ,
+				h2->m_dir      ,
 				h2->m_hostId   ,
 				h2->m_hostId   );
 			// log it
@@ -4478,14 +4547,15 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"EXITSTATUS=\\$? ; "
 				"ADDARGS='-r' ; "
 				"} " 
- 				"done >& /dev/null & \" & ",
+ 				"done >& /dev/null & \" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 				h2->m_hostId   ,
 				h2->m_hostId   ,
 				//h2->m_dir      ,
 				h2->m_hostId   ,
-				h2->m_hostId   );
+				h2->m_hostId   ,
+				amp );
 
 			// log it
 			log(LOG_INIT,"admin: %s", tmp);
@@ -4714,19 +4784,32 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
+		/*
+		// SEQUENTIAL rcps
 		else if ( installFlag == ifk_installgb2 ) {
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
+			char *amp = " &";
+			if ( i > 0 && (i%5) == 0 ) amp = "";
+
+			File f;
+			char *target = "gb.new";
+			f.set(h2->m_dir,target);
+			if ( ! f.doesExist() ) target = "gb";
+
 			sprintf(tmp,
 				"rcp "
-				"%sgb.new "
-				"%s:%s/gb.installed &",
+				"%s%s "
+				"%s:%s/gb.installed %s",
 				dir,
+				target ,
 				iptoa(h2->m_ipShotgun),
-				h2->m_dir);
+				h2->m_dir,
+				amp);
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 		}
+		*/
 		// dsh
 		else if ( installFlag == ifk_dsh ) {
 			// don't copy to ourselves
@@ -6249,7 +6332,9 @@ long dumpSpiderdb ( char *coll,
 			printf( "offset=%lli ",curOff);
 			g_spiderdb.print ( srec );
 			printf(" age=%lis",now-sreq->m_addedTime);
-			printf(" hadReply=%li\n",(long)hadReply);
+			printf(" hadReply=%li",(long)hadReply);
+			printf(" shard=%li\n",
+			       (long)g_hostdb.getShardNum(RDB_SPIDERDB,sreq));
 		}
 
 		// print a counter
@@ -10966,8 +11051,7 @@ void dumpSectiondb(char *coll,long startFileNum,long numFiles,
 		firstKey = false;
 		// copy it
 		memcpy ( &lastk , k , sizeof(key128_t) );
-		unsigned long shardNum;
-		shardNum =  getShardNum (RDB_SECTIONDB,k,true);
+		long shardNum =  getShardNum (RDB_SECTIONDB,k);
 		//long groupNum = g_hostdb.getGroupNum ( gid );
 		// point to the data
 		char  *p       = data;
@@ -13176,7 +13260,7 @@ void dumpLinkdb ( char *coll,
 		//unsigned char hc = g_linkdb.getLinkerHopCount_uk(&k);
 		//unsigned long gid = g_hostdb.getGroupId (RDB_LINKDB,&k,true);
 		//long groupNum = g_hostdb.getGroupNum ( gid );
-		unsigned long shardNum = getShardNum(RDB_LINKDB,&k,true);
+		long shardNum = getShardNum(RDB_LINKDB,&k);
 		//if ( hc != 0 ) { char *xx=NULL;*xx=0; }
 		// is it an ip or url record?
 		//bool isHost = g_linkdb.isHostRecord ( &k );
@@ -13454,7 +13538,7 @@ int injectFile ( char *filename , char *ips ,
 		 long long endDocId ,
 		 bool isDelete ) {
 
-	g_mem.init ( 50000000 );
+	g_mem.init ( 4000000000LL );
 
 	// set up the loop
 	if ( ! g_loop.init() ) return log("build: inject: Loop init "
@@ -13512,13 +13596,14 @@ int injectFile ( char *filename , char *ips ,
 	}
 
 	s_injectTitledb = false;
-	char *coll = "main";
-	if ( strcmp(filename,"titledb") == 0 ) {
-		long hostId = 0;
-		Host *h = g_hostdb.getHost ( hostId );
-		if ( ! h ) { log("db: No host has id %li.",hostId); exit(0);}
-		if ( ! g_conf.init ( h->m_dir ) ) { // , h->m_hostId ) ) {
-			log("db: Conf init failed." ); exit(0); }
+	//char *coll = "main";
+	if ( strncmp(filename,"titledb",7) == 0 ) {
+		//long hostId = 0;
+		//Host *h = g_hostdb.getHost ( hostId );
+		//if ( ! h ) { log("db: No host has id %li.",hostId); exit(0);}
+		//if ( ! g_conf.init ( h->m_dir ) ) { // , h->m_hostId ) ) {
+		//	log("db: Conf init failed." ); exit(0); }
+		// a new thing, titledb-gk144 or titledb-coll.main.0
 		// init the loop, needs g_conf
 		if ( ! g_loop.init() ) {
 			log("db: Loop init failed." ); exit(0); }
@@ -13530,7 +13615,8 @@ int injectFile ( char *filename , char *ips ,
 
 		// read where we left off from file if possible
 		char fname[256];
-		sprintf(fname,"%s/lastinjectdocid.dat",g_hostdb.m_dir);
+		//sprintf(fname,"%s/lastinjectdocid.dat",g_hostdb.m_dir);
+		sprintf(fname,"./lastinjectdocid.dat");
 		SafeBuf ff;
 		ff.fillFromFile(fname);
 		if ( ff.length() > 1 ) {
@@ -13560,9 +13646,69 @@ int injectFile ( char *filename , char *ips ,
 		//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 		//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
 		//g_conf.m_urldbMaxDiskPageCacheMem = 0;
+
+		// . add a fake coll just for it.
+		// . make the subdir just gk144 not coll.gk144.0 so rick
+		//   can inject the titledb bigfile
+		//g_collectiondb.init(true);
+		/*
+		g_collectiondb.addRec ( "poo" , // char *coll , 
+					NULL , // char *cpc , 
+					0 , // long cpclen , 
+					false , // bool isNew ,
+					-1 , // collnum_t collnum , 
+					false , // bool isDump ,
+					false ); // bool saveIt
+		*/
+		CollectionRec *cr = new (CollectionRec);
+		SafeBuf *rb = &g_collectiondb.m_recPtrBuf;
+		rb->reserve(4);
+		g_collectiondb.m_recs = (CollectionRec **)rb->getBufStart();
+		g_collectiondb.m_recs[0] = cr;
+
+		// right now this is just for the main collection
+		char *coll = "main";
+		addCollToTable ( coll , (collnum_t) 0 );
+
+		// force RdbTree.cpp not to bitch about corruption
+		// assume we are only getting out collnum 0 recs i guess
+		g_collectiondb.m_numRecs = 1;
 		g_titledb.init ();
-		g_collectiondb.init(true);
-		g_titledb.addColl ( coll, false );
+		//g_titledb.addColl ( coll, false );
+		// msg5::readList() requires the RdbBase for collnum 0
+		// which holds the array of files and the tree
+		Rdb *rdb = g_titledb.getRdb();
+		static RdbBase *s_base = new ( RdbBase );
+		// so getRdbBase always returns 
+		rdb->m_collectionlessBase = s_base;
+		rdb->m_isCollectionLess = true;
+		//CollectionRec *pcr = g_collectiondb.getRec((collnum_t)0);
+		//pcr->m_bases[RDB_TITLEDB] = s_base;
+		// dir for tree loading
+		sprintf(g_hostdb.m_dir , "./" );
+		rdb->loadTree();
+		// titledb-
+		if ( gbstrlen(filename)<=8 )
+			return log("build: need titledb-coll.main.0 or "
+			    "titledb-gk144 not just 'titledb'");
+		char *coll2 = filename + 8;
+
+		char tmp[1024];
+		sprintf(tmp,"./%s",coll2);
+		s_base->m_dir.set(tmp);
+		strcpy(s_base->m_dbname,rdb->m_dbname);
+		s_base->m_dbnameLen = gbstrlen(rdb->m_dbname);
+		s_base->m_coll = "main";
+		s_base->m_collnum = (collnum_t)0;
+		s_base->m_rdb = rdb;
+		s_base->m_fixedDataSize = rdb->m_fixedDataSize;
+		s_base->m_useHalfKeys = rdb->m_useHalfKeys;
+		s_base->m_ks = rdb->m_ks;
+		s_base->m_pageSize = rdb->m_pageSize;
+		s_base->m_isTitledb = rdb->m_isTitledb;
+		s_base->m_minToMerge = 99999;
+		// try to set the file info now!
+		s_base->setFiles();
 	}
 	else {
 		// open file
@@ -13680,6 +13826,7 @@ void doInject ( int fd , void *state ) {
 		if ( contentLen > 0 ) contentLen--;
 		char c = content[contentLen];
 		content[contentLen] = '\0';
+		//log("inject: %s",xd.m_firstUrl.m_url);
 		// form what we would read from disk
 		reqLen = sprintf(req,
 				 // print as unencoded content for speed
@@ -14071,7 +14218,8 @@ void injectedWrapper ( void *state , TcpSocket *s ) {
 			SafeBuf sb;
 			sb.safePrintf("%lli\n",minDocId);
 			char fname[256];
-			sprintf(fname,"%s/lastinjectdocid.dat",g_hostdb.m_dir);
+			//sprintf(fname,"%s/lastinjectdocid.dat",g_hostdb.m_dir
+			sprintf(fname,"./lastinjectdocid.dat");
 			sb.dumpToFile(fname);
 		}
 	}

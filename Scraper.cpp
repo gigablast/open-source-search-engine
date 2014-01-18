@@ -205,7 +205,7 @@ void Scraper::gotPhrase ( ) {
 
 	// scraper is special
 	m_xd.m_usePosdb     = false;
-	m_xd.m_useDatedb    = false;
+	//m_xd.m_useDatedb    = false;
 	m_xd.m_useClusterdb = false;
 	m_xd.m_useLinkdb    = false;
 	m_xd.m_useSpiderdb  = true; // only this one i guess
