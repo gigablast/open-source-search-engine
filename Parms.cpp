@@ -2589,7 +2589,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 			// skip if hidden
 			if ( cr && ! cr->m_isCustomCrawl &&
-			     (mk->m_flags & PF_CUSTOMCRAWLONLY) )
+			     (mk->m_flags & PF_DIFFBOT) )
 				continue;
 
 			// . hide table column headers that are too advanced
@@ -2631,7 +2631,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	}
 
 	// skip if hidden. diffbot api url only for custom crawls.
-	//if(cr && ! cr->m_isCustomCrawl && (m->m_flags & PF_CUSTOMCRAWLONLY) )
+	//if(cr && ! cr->m_isCustomCrawl && (m->m_flags & PF_DIFFBOT) )
 	//	return true;
 
 	// print row start for single parm
@@ -2916,7 +2916,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		long size = m->m_size;
 		// give regular expression box on url filters page more room
 		if ( m->m_page == PAGE_FILTERS ) {
-			if ( size > REGEX_TXT_MAX ) size = REGEX_TXT_MAX;
+			//if ( size > REGEX_TXT_MAX ) size = REGEX_TXT_MAX;
+			size = 30;
 		}
 		else {
 			if ( size > 20 ) size = 20;
@@ -4181,6 +4182,8 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 	long  j   ;
 	long  count;
 	char *s;
+	CollectionRec *cr = NULL;
+	if ( THIS != (char *)&g_conf ) cr = (CollectionRec *)THIS;
 	// now set THIS based on the parameters in the xml file
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		// get it
@@ -4196,6 +4199,10 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 		if ( m->m_type == TYPE_BOOL2 ) continue;
 		// ignore if hidden as well
 		if ( m->m_flags & PF_HIDDEN ) continue;
+		// ignore if diffbot and we are not a diffbot/custom crawl
+		if ( cr && 
+		     ! cr->m_isCustomCrawl &&
+		     (m->m_flags & PF_DIFFBOT) ) continue;
 		// skip if we should not save to xml
 		if ( ! m->m_save ) continue;
 		// allow comments though
@@ -9035,6 +9042,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "dbcrawlname";
@@ -9043,6 +9051,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "notifyEmail";
@@ -9053,6 +9062,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "notifyWebhook";
@@ -9063,6 +9073,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	// collective respider frequency (for pagecrawlbot.cpp)
@@ -9074,7 +9085,7 @@ void Parms::init ( ) {
 	m->m_def   = "0.0"; // 0.0
 	m->m_page  = PAGE_NONE;
 	m->m_units = "days";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_title = "collective crawl delay (seconds)";
@@ -9084,18 +9095,8 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = ".250"; // 250 ms
 	m->m_page  = PAGE_NONE;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m->m_units = "seconds";
-	m++;
-
-	m->m_cgi   = "apiUrl";
-	m->m_xml   = "diffbotApiUrl";
-	m->m_title = "diffbot api url";
-	m->m_off   = (char *)&cr.m_diffbotApiUrl - x;
-	m->m_type  = TYPE_SAFEBUF;
-	m->m_page  = PAGE_NONE;
-	m->m_flags = PF_REBUILDURLFILTERS;
-	m->m_def   = "";
 	m++;
 
 	m->m_cgi   = "urlCrawlPattern";
@@ -9105,7 +9106,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "urlProcessPattern";
@@ -9115,7 +9116,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "pageProcessPattern";
@@ -9125,7 +9126,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "urlCrawlRegEx";
@@ -9135,7 +9136,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "urlProcessRegEx";
@@ -9145,7 +9146,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "onlyProcessIfNew";
@@ -9155,7 +9156,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "1";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "seeds";
@@ -9164,6 +9165,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_DIFFBOT;
 	m->m_def   = "";
 	m++;
 
@@ -9173,6 +9175,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_cgi   = "isCustomCrawl";
 	m->m_def   = "0";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "maxToCrawl";
@@ -9181,7 +9184,8 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxToCrawl - x;
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_page  = PAGE_NONE;
-	m->m_def   = "100001";
+	m->m_def   = "100000";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "maxToProcess";
@@ -9190,7 +9194,8 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxToProcess - x;
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_page  = PAGE_NONE;
-	m->m_def   = "100001";
+	m->m_def   = "-1";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "maxRounds";
@@ -9200,6 +9205,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "-1";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	/////////////////////
@@ -10546,6 +10552,22 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m++;
+
+	m->m_cgi   = "apiUrl";
+	m->m_desc  = "Send every spidered url to this diffbot.com "
+		"by appending a "
+		"&url=<url> to it before trinyg to downloading it. We "
+		"expect get get back a JSON reply which we index. You will "
+		"need to supply your token to this as well.";
+	m->m_xml   = "diffbotApiUrl";
+	m->m_title = "diffbot api url";
+	m->m_off   = (char *)&cr.m_diffbotApiUrl - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_SPIDER;
+	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_def   = "";
+	m++;
+
 
 	m->m_title = "spider start time";
 	m->m_desc  = "Only spider URLs scheduled to be spidered "
@@ -14037,7 +14059,7 @@ void Parms::init ( ) {
 	m->m_size  = sizeof(SafeBuf);
 	m->m_rowid = 1;
 	m->m_addin = 1; // "insert" follows?
-	m->m_flags = PF_REBUILDURLFILTERS | PF_CUSTOMCRAWLONLY;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 	*/
 
