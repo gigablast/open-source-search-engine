@@ -797,7 +797,7 @@ class XmlDoc {
 	char *getIsNoArchive ( ) ;
 	long *getUrlFilterNum();
 	//long *getDiffbotApiNum();
-	//SafeBuf *getDiffbotApiUrl();
+	SafeBuf *getDiffbotApiUrl();
 	long long **getAdVector ( ) ;
 	char *getIsLinkSpam ( ) ;
 	char *getIsHijacked();

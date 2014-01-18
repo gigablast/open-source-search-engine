@@ -12972,8 +12972,10 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 	if ( ! THIS->m_diffbotReplyError ) {
 		char *ttt = strstr ( page , "\"url\":\"");
 		if ( ! ttt ) {
-			log("xmldoc: diffbot reply for %s using %s missing url: field",
-			    THIS->m_firstUrl.m_url,THIS->m_diffbotApiUrl.getBufStart());
+			log("xmldoc: diffbot reply for %s using %s is missing "
+			    "the url: field in the json reply",
+			    THIS->m_firstUrl.m_url,
+			    THIS->m_diffbotApiUrl.getBufStart());
 			THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
 		}
 	}
@@ -13048,7 +13050,6 @@ skip:
 	THIS->m_masterLoop ( THIS->m_masterState );
 }
 
-/*
 SafeBuf *XmlDoc::getDiffbotApiUrl ( ) {
 
 	if ( m_diffbotApiUrlValid )
@@ -13086,7 +13087,6 @@ SafeBuf *XmlDoc::getDiffbotApiUrl ( ) {
 	//m_diffbotApiNumValid = true;
 	return &m_diffbotApiUrl;
 }
-*/
 
 // if only processing NEW is enabled, then do not
 bool *XmlDoc::getRecycleDiffbotReply ( ) {
@@ -13401,9 +13401,8 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	// . check the url filters table to see if diffbot api is specified
 	// . just return "\0" if none, but NULL means error i guess
-	//SafeBuf *au = getDiffbotApiUrl();
-	//if ( ! au || au == (void *)-1 ) return (SafeBuf *)au;
-	SafeBuf *au = &cr->m_diffbotApiUrl;
+	SafeBuf *au = getDiffbotApiUrl();
+	if ( ! au || au == (void *)-1 ) return (SafeBuf *)au;
 
 	// if no url, assume do not access diffbot
 	if ( au->length() <= 0 ) {

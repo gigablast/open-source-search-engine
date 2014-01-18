@@ -4092,7 +4092,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		iptab.addScore((long *)&h2->m_ip);
 		long score = iptab.getScore32(&h2->m_ip);
 		char *amp = " &";
-		if ( (score % 10) == 0 ) amp = "";
+		if ( (score % 6) == 0 ) amp = "";
 			
 		// limit install to this hostId if it is >= 0
 		//if ( hostId >= 0 && h2->m_hostId != hostId ) continue;

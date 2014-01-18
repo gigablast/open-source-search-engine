@@ -117,6 +117,7 @@ class TcpSocket {
 	long        m_maxOtherDocLen; // if reading other doc types
 
 	char        m_niceness;
+	char        m_streamingMode;
 
 	long m_shutdownStart;
 

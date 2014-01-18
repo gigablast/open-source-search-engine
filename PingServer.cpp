@@ -2677,7 +2677,7 @@ void checkKernelErrors( int fd, void *state ){
 	// klogctl reads the last 4k lines of the kernel ring buffer
 	short bufLen = klogctl(3,buf,4096);
 	long long took = gettimeofdayInMilliseconds() - st;
-	if ( took > 1 )
+	if ( took >= 3 )
 		log("db: klogctl took %lli ms to read %s",took, buf);
 
 	if ( bufLen < 0 ){
