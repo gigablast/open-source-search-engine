@@ -11335,6 +11335,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_sparm = 1;
 	m->m_soff  = (char *)&si.m_considerTitlesFromBody - y;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
@@ -11360,6 +11361,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_sparm = 1;
 	m->m_scgi  = "uma";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
@@ -11373,6 +11375,7 @@ void Parms::init ( ) {
 	m->m_def   = "10";
 	m->m_sparm = 1;
 	m->m_scgi  = "mit";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use new ranking algo";
@@ -11384,6 +11387,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_sparm = 1;
 	m->m_scgi  = "una";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "do max score algo";
@@ -11394,6 +11398,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_sparm = 1;
 	m->m_scgi  = "dmsa";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
@@ -11406,6 +11411,7 @@ void Parms::init ( ) {
 	m->m_def   = "-1";
 	m->m_sparm = 1;
 	m->m_scgi  = "fi";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 
@@ -11517,6 +11523,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "lsort";
 	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "sort language preference";
@@ -13171,7 +13178,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "number of related topics";
+	m->m_title = "number of related topics (gigabits)";
 	m->m_desc  = "What is the number of "
 		"related topics (gigabits) "
 		"displayed per query? Set to 0 to save "
@@ -15899,6 +15906,7 @@ void Parms::init ( ) {
 	m->m_size  = MAX_QUERY_LEN;
 	m->m_sprpg = 0; // do not store query, needs to be last so related 
         m->m_sprpp = 0; // topics can append to it
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -16101,6 +16109,7 @@ void Parms::init ( ) {
 	m->m_scgi  = "dh";
 	m->m_smin  = 0;
 	m->m_smax  = 8;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	/*
@@ -16260,6 +16269,7 @@ void Parms::init ( ) {
 	m->m_soff  = (char *)&si.m_returnDocIdCount - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_scgi  = "rdc";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "return docids per topic";
@@ -16280,6 +16290,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_sparm = 1;
 	m->m_scgi  = "rp";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "niceness";
@@ -16370,6 +16381,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_STRING;
 	m->m_scgi  = "pwd";
 	m->m_size  = 32;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "admin override";
@@ -16475,6 +16487,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_scgi  = "apip";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "use ad feed num";
@@ -16484,6 +16497,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_scgi  = "uafn";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "do bot detection";
@@ -16494,6 +16508,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_scgi  = "bd";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "bot detection query";
@@ -16507,6 +16522,7 @@ void Parms::init ( ) {
 	m->m_scgi  = "bdq";
         m->m_def   = "";
 	m->m_size  = MAX_QUERY_LEN;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "queryCharset";
@@ -16550,6 +16566,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_scgi  = "tf";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	// buzz
@@ -16562,6 +16579,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "-1";
 	m->m_scgi  = "spiderresults";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	// buzz
@@ -16574,6 +16592,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "-1";
 	m->m_scgi  = "spiderresultroots";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	// buzz
@@ -16585,6 +16604,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_scgi  = "jmcl";
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "include cached copy of page";
@@ -16656,7 +16676,7 @@ void Parms::init ( ) {
 
 	// for /addurl
 	m->m_title = "url to add";
-	m->m_desc  = "X is 1 to return only docids as query results.";
+	m->m_desc  = "Used by add url page.";
 	m->m_sparm = 1;
 	m->m_scmd  = "/addurl";
 	m->m_type  = TYPE_STRING;
@@ -18683,6 +18703,8 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	    (long)collnum,
 	    val1.getBufStart(),
 	    val2.getBufStart());
+
+	if ( cr ) cr->m_needsSave = true;
 
 	// all done
 	return true;

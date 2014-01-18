@@ -1030,11 +1030,11 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	status &= printCollectionNavBar ( sb, page , username , coll,pwd, qs );
 
 	// then collection page links and parms
-	sb->safePrintf("</div></TD><TD valign=top><br>");
+	sb->safePrintf("</div></TD><TD valign=top>");
 
 	// print emergency msg box
 	if ( adds )
-		sb->safePrintf("%s",mb.getBufStart());
+		sb->safePrintf("<br>%s",mb.getBufStart());
 
 	// print the links
 	status &= printAdminLinks ( sb, page , username , coll , pwd, true );
@@ -2386,11 +2386,13 @@ bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
 	// 	p.incrementLength ( pp - p.getBuf() );
 	// 	}
 
-	p.safePrintf ( "<table width=100%% cellpadding=2 "
+	p.safePrintf ( "<table width=100%% cellpadding=4 "
 		       "bgcolor=#%s border=1>"
-		       "<tr><td colspan=4 bgcolor=#%s>"
+		       "<tr><td colspan=8 bgcolor=#%s>"
 		       "<center><b>CGI Parameters</b></tr></tr>"
-		       "<tr><td><b>CGI</b></td><td><b>Type</b></td>"
+		       "<tr><td><b>CGI</b></td>"
+		       "<td><b>Page</b></td>"
+		       "<td><b>Type</b></td>"
 		       "<td><b>Name</b></td><td><b>Description</b></td></tr>\n",
 		       LIGHT_BLUE, DARK_BLUE );
 	for ( long i = 0; i < g_parms.m_numParms; i++ ) {
@@ -2399,8 +2401,17 @@ bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
 		// use m_cgi if no m_scgi
 		char *cgi = parm->m_cgi;
 		if ( parm->m_scgi ) cgi = parm->m_scgi;
+
+		// skip if hidden
+		if ( parm->m_flags & PF_HIDDEN ) continue;
+
+		char *page = parm->m_scmd;
+		if ( ! page ) page = "";
+
 		// print the parm
-		p.safePrintf ( "<tr><td><b>%s</b></td><td nowrap=1>", cgi );
+		p.safePrintf ( "<tr><td><b>%s</b></td>", cgi );
+		p.safePrintf("<td>%s</td>",page);
+		p.safePrintf("<td nowrap=1>");
 		switch ( parm->m_type ) {
 		case TYPE_BOOL: p.safePrintf ( "BOOL" ); break;
 		case TYPE_BOOL2: p.safePrintf ( "BOOL" ); break;
