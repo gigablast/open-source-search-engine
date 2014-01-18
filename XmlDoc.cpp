@@ -23503,6 +23503,16 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 		return hashJSON ( table ); 
 	}
 
+	if ( ! hashContentType   ( table ) ) return NULL;
+	if ( ! hashUrl           ( table ) ) return NULL;
+	if ( ! hashLanguage      ( table ) ) return NULL;
+	if ( ! hashCountry       ( table ) ) return NULL;
+	if ( ! hashSiteNumInlinks( table ) ) return NULL;
+	if ( ! hashTagRec        ( table ) ) return NULL;
+	if ( ! hashAds           ( table ) ) return NULL;
+	if ( ! hashSubmitUrls    ( table ) ) return NULL;
+	if ( ! hashIsAdult       ( table ) ) return NULL;
+
 	// . hash sectionhash:xxxx terms
 	// . diffbot still needs to hash this for voting info
 	if ( ! hashSections   ( table ) ) return NULL;
@@ -23552,23 +23562,15 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// necessarily and we do not want to ruin our precision
 	if ( ! hashNeighborhoods ( table ) ) return NULL;
 
+
 	if ( ! hashLinks         ( table ) ) return NULL;
-	if ( ! hashContentType   ( table ) ) return NULL;
-	if ( ! hashUrl           ( table ) ) return NULL;
 	if ( ! hashDateNumbers   ( table ) ) return NULL;
 	if ( ! hashMetaTags      ( table ) ) return NULL;
 	if ( ! hashMetaZip       ( table ) ) return NULL;
 	if ( ! hashDMOZCategories( table ) ) return NULL;
-	if ( ! hashLanguage      ( table ) ) return NULL;
-	if ( ! hashCountry       ( table ) ) return NULL;
-	if ( ! hashSiteNumInlinks( table ) ) return NULL;
 	if ( ! hashCharset       ( table ) ) return NULL;
 	if ( ! hashRSSInfo       ( table ) ) return NULL;
 	if ( ! hashPermalink     ( table ) ) return NULL;
-	if ( ! hashTagRec        ( table ) ) return NULL;
-	if ( ! hashAds           ( table ) ) return NULL;
-	if ( ! hashSubmitUrls    ( table ) ) return NULL;
-	if ( ! hashIsAdult       ( table ) ) return NULL;
 
 	// we set this now in hashWords3()
 	if ( m_doingSEO )
