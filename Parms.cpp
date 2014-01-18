@@ -9271,24 +9271,6 @@ void Parms::init ( ) {
 	m->m_cast  = 1;
 	m++;
 
-	m->m_title = "reset collection";
-	m->m_desc  = "reset collection";
-	m->m_cgi   = "reset";
-	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
-	m->m_func2 = CommandResetColl;
-	m->m_cast  = 1;
-	m++;
-
-	m->m_title = "restart collection";
-	m->m_desc  = "restart collection";
-	m->m_cgi   = "restart";
-	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
-	m->m_func2 = CommandRestartColl;
-	m->m_cast  = 1;
-	m++;
-
 	m->m_title = "in sync";
 	m->m_desc  = "signify in sync with host 0";
 	m->m_cgi   = "insync";
@@ -9319,6 +9301,26 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_spideringEnabled - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m++;
+
+	m->m_title = "reset collection";
+	m->m_desc  = "Remove all documents from the collection and turn "
+		"spiders off.";
+	m->m_cgi   = "reset";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_SPIDER;
+	m->m_func2 = CommandResetColl;
+	m->m_cast  = 1;
+	m++;
+
+	m->m_title = "restart collection";
+	m->m_desc  = "Remove all documents from the collection and start "
+		"spidering over again.";
+	m->m_cgi   = "restart";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_SPIDER;
+	m->m_func2 = CommandRestartColl;
+	m->m_cast  = 1;
 	m++;
 
 	/*

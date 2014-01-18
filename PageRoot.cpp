@@ -391,8 +391,15 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<form method=get action=/addurl name=f>\n");
 
+
 	//CollectionRec *cr = g_collectiondb.getRec ( "main" );
-	//sb.safePrintf("<input type=hidden name=c value=\"%s\">",cr->m_coll);
+
+	// the collection we want to add the url to
+	char *coll = r->getString("c");
+	if ( ! coll ) coll = "";
+	if ( coll )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">",coll);
+
 	sb.safePrintf("<input name=u type=text size=60 value=\"");
 	if ( url ) {
 		SafeBuf tmp;
@@ -453,11 +460,12 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
 		// msg7 needs an explicit collection for /addurl for injecting
 		// in PageInject.cpp. it does not use defaults for safety.
-		sb.safePrintf("&id=%lu&c=main&rand=%llu';\n"
+		sb.safePrintf("&id=%lu&c=%s&rand=%llu';\n"
 			      "client.open('GET', url );\n"
 			      "client.send();\n"
 			      "</script>\n"
 			      , h32
+			      , coll
 			      , rand64
 			      );
 		sb.safePrintf("</div>\n");
@@ -1552,6 +1560,8 @@ void doneInjectingWrapper3 ( void *st ) {
 	//CollectionRec *cr = g_collectiondb.getRec ( st1->m_coll );
 	
 	// collection name
+	char *coll = st1->m_coll;
+	if ( ! coll ) coll = "";
 
 	//char tt [ 128 ];
 	//tt[0] = '\0';
@@ -1658,8 +1668,10 @@ void doneInjectingWrapper3 ( void *st ) {
 			unsigned long rand32 = rand();
 			// in the mime to 0 seconds!
 			sb.safePrintf("<b>Url successfully added. "
-				      "<a href=/search?rand=%lu&q=url%%3A",
-				      rand32);
+				      "<a href=/search?rand=%lu&"
+				      "c=%s&q=url%%3A",
+				      rand32,
+				      coll);
 			sb.urlEncode(url);
 			sb.safePrintf(">Check it</a> or "
 				      "<a href=http://www.gigablast.com/seo?u=");

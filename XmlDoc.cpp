@@ -2106,7 +2106,13 @@ bool XmlDoc::indexDoc2 ( ) {
 
 	// do this before we increment pageDownloadAttempts below so that
 	// john's smoke tests, which use those counts, are not affected
-	if ( m_oldsrValid && m_oldsr.m_fakeFirstIp &&
+	if ( m_oldsrValid && 
+	     m_oldsr.m_fakeFirstIp &&
+	     // only do for add url, not for injects. injects expect
+	     // the doc to be indexed while the browser waits. add url
+	     // is really just adding the spider request and returning
+	     // to the browser without delay.
+	     ! m_oldsr.m_isInjecting &&
 	     // diffbot requests are ok though!
 	     ! strstr(m_oldsr.m_url,"-diffbotxyz") ) {
 		m_indexCodeValid = true;
