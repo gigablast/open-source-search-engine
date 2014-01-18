@@ -10821,7 +10821,9 @@ skip:
 	// unset lock
 	//s_lock = 0;
 	// sleep til done
+#undef sleep
 	while ( 1 == 1 ) sleep(1000);
+#define sleep(a) { char *xx=NULL;*xx=0; }
 	//int status;
 	//for ( long i = 0 ; i < s_numThreads ; i++ ) waitpid(pid,&status,0);
 }
@@ -10876,7 +10878,9 @@ void *startUp ( void *state , ThreadEntry *t ) {
 		s_f.read ( buf , size , off );
 		//fprintf(stderr,"%li) i=%li done\n",id,i );
 		long long now = gettimeofdayInMilliseconds();
+#undef usleep
 		usleep(0);
+#define usleep(a) { char *xx=NULL;*xx=0; }
 		s_count++;
 		float sps = (float)((float)s_count * 1000.0) / 
 			(float)(now - s_startTime);
