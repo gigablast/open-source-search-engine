@@ -23340,6 +23340,9 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! gr ) return (char *)gr;
 	if ( gr == (void *)-1 ) {char *xx=NULL;*xx=0; }
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
 	// just keep it somewhat sane...
 	//if ( nw > 30000 ) nw = 30000;
 
@@ -23495,6 +23498,16 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 		return hashJSON ( table ); 
 	}
 
+	// . hash sectionhash:xxxx terms
+	// . diffbot still needs to hash this for voting info
+	if ( ! hashSections   ( table ) ) return NULL;
+
+	// we don't hash the "body" of the doc for doing the diffbot
+	// global index unless this is a json object in which case it is
+	// hased above in the call to hashJSON(). this will decrease disk
+	// usage by about half, posdb* files are pretty big.
+	if ( cr->m_isCustomCrawl ) return (char *)1;
+	     
 
 	// hash the body of the doc first so m_dist is 0 to match
 	// the rainbow display of sections
@@ -23546,9 +23559,6 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashAds           ( table ) ) return NULL;
 	if ( ! hashSubmitUrls    ( table ) ) return NULL;
 	if ( ! hashIsAdult       ( table ) ) return NULL;
-
-	// hash sectionhash:xxxx terms
-	if ( ! hashSections   ( table ) ) return NULL;
 
 	// now hash the terms sharded by termid and not docid here since they
 	// just set a special bit in posdb key so Rebalance.cpp can work
