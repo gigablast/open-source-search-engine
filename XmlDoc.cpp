@@ -23476,6 +23476,9 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 			);
 	*/
 
+	// do not repeat this if the cachedb storage call blocks
+	m_allHashed = true;
+
 	// reset distance cursor
 	m_dist = 0;
 
@@ -23502,7 +23505,12 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// . diffbot still needs to hash this for voting info
 	if ( ! hashSections   ( table ) ) return NULL;
 
-	// we don't hash the "body" of the doc for doing the diffbot
+	// now hash the terms sharded by termid and not docid here since they
+	// just set a special bit in posdb key so Rebalance.cpp can work.
+	// this will hash the content checksum which we need for deduping
+	// which we use for diffbot custom crawls as well.
+	if ( ! hashNoSplit ( table ) ) return NULL;
+
 	// global index unless this is a json object in which case it is
 	// hased above in the call to hashJSON(). this will decrease disk
 	// usage by about half, posdb* files are pretty big.
@@ -23560,16 +23568,9 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashSubmitUrls    ( table ) ) return NULL;
 	if ( ! hashIsAdult       ( table ) ) return NULL;
 
-	// now hash the terms sharded by termid and not docid here since they
-	// just set a special bit in posdb key so Rebalance.cpp can work
-	if ( ! hashNoSplit ( table ) ) return NULL;
-
 	// we set this now in hashWords3()
 	if ( m_doingSEO )
 		m_wordPosInfoBufValid = true;
-
-	// do not repeat the above if the cachedb storage call blocks
-	m_allHashed = true;
 
 	// store the m_wordPosInfoBuf into cachedb
 	// NO! we are not allowed to block in here it messes shit up!!!
