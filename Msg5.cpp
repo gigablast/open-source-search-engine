@@ -22,6 +22,7 @@ long g_numCorrupt = 0;
 
 Msg5::Msg5() {
 	m_waitingForList = false;
+	m_waitingForMerge = false;
 	m_numListPtrs = 0;
 	m_mergeLists = true;
 	reset();
@@ -33,7 +34,7 @@ Msg5::~Msg5() {
 
 // frees m_treeList
 void Msg5::reset() {
-	if ( m_waitingForList ) {
+	if ( m_waitingForList || m_waitingForMerge ) {
 		log("disk: Trying to reset a class waiting for a reply.");
 		// might being doing an urgent exit (mainShutdown(1)) or
 		// g_process.shutdown(), so do not core here
@@ -1365,6 +1366,8 @@ bool Msg5::gotList2 ( ) {
 	// skip it for now
 	//goto skipThread;
 
+	m_waitingForMerge = true;
+
 	// . if size is big, make a thread
 	// . let's always make niceness 0 since it wasn't being very
 	//   aggressive before
@@ -1374,6 +1377,9 @@ bool Msg5::gotList2 ( ) {
 			      threadDoneWrapper   ,
 			      mergeListsWrapper_r ) ) 
 		return false;
+
+	m_waitingForMerge = false;
+
 	// thread creation failed
 	if ( ! g_threads.areThreadsDisabled() )
 		log(LOG_INFO,
@@ -1704,6 +1710,8 @@ void Msg5::mergeLists_r ( ) {
 // . we are left with an empty list
 bool Msg5::doneMerging ( ) {
 
+	m_waitingForMerge = false;
+
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
 	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return true;
 
@@ -1722,8 +1730,8 @@ bool Msg5::doneMerging ( ) {
 	//   our first merge
 	if ( m_hadCorruption ) {
 		// log it here, cuz logging in thread doesn't work too well
-		log("net: Encountered a corrupt list in rdb=%s",
-		    base->m_dbname);
+		log("net: Encountered a corrupt list in rdb=%s coll=%s",
+		    base->m_dbname,m_coll);
 		// remove error condition, we removed the bad data in thread
 		
 		m_hadCorruption = false;

@@ -104,7 +104,7 @@ char *g_files[] = {
 	"antiword" ,  // msword
 	"pdftohtml",  // pdf
 	"pstotext" ,  // postscript
-	"ppthtml"  ,  // powerpoint
+	//"ppthtml"  ,  // powerpoint
 	
 	//"dict/unifiedDict",
 	//"dict/thesaurus.txt",

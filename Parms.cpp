@@ -17531,7 +17531,12 @@ bool Parms::doParmSendingLoop ( ) {
 						 NULL, // retslot
 						 (void *)h->m_hostId , // state
 						 gotParmReplyWrapper ,
-						 4 ) ) { // timeout secs
+						 30 , // timeout secs
+						 -1 , // backoff
+						 -1 , // maxwait
+						 NULL , // replybuf
+						 0 , // replybufmaxsize
+						 0 ) ) { // niceness
 			log("parms: faild to send: %s",mstrerror(g_errno));
 			continue;
 		}

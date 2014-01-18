@@ -21,7 +21,8 @@
 
 // . max # of VIRTUAL file descriptors
 // . man, chris has 958 files, lets crank it up from 2k to 5k
-#define MAX_NUM_VFDS (5*1024)
+// . boost up to 50,000 since we are hitting this limit with crawlbot
+#define MAX_NUM_VFDS (50*1024)
 
 #include <sys/types.h>       // for open/lseek
 #include <sys/stat.h>        // for open

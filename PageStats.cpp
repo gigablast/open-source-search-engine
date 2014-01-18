@@ -488,7 +488,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		  "<tr><td><b>Kernel Version</b></td><td>%s</td></tr>\n"
 		  //"<tr><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
 		  "<tr><td><b>Parsing Inconsistencies</b></td><td>%li</td>\n"
-		  "<tr><td><b>Indexdb Splits</b></td><td>%li</td>\n"
+		  "<tr><td><b>Indexdb Shards</b></td><td>%li</td>\n"
 		  //"<tr><td><b>Fully Split</b></td><td>%li</td>\n"
 		  //"<tr><td><b>Tfndb Extension Bits</b></td><td>%li</td>\n"
 		  "</tr>\n"

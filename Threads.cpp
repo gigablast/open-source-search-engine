@@ -284,7 +284,7 @@ bool Threads::init ( ) {
 	//   with high niceness cuz it would hold up high priority ones!
 	// . TODO: is there a better way? cancel it when UdpServer calls
 	//   Threads::suspendLowPriorityThreads() ?
-	if ( ! g_threads.registerType ( MERGE_THREAD , 2/*maxThreads*/,100) ) 
+	if ( ! g_threads.registerType ( MERGE_THREAD , 2/*maxThreads*/,1000) ) 
 		return log("thread: Failed to register thread type." );
 	// will raising this from 1 to 2 make it faster too?
 	// i raised since global specs new servers have 2 (hyperthreaded?) cpus
@@ -1120,7 +1120,7 @@ void makeCallback ( ThreadEntry *t ) {
 	// then set it
 	if ( t->m_niceness >= 1 ) g_niceness = 1;
 	else                      g_niceness = 0;
-	
+
 	t->m_callback ( t->m_state , t );
 
 	// time it?

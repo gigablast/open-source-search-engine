@@ -254,6 +254,10 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	long long probDocId = g_titledb.getProbableDocId ( st1->m_url );
 	// make one up, like we do in PageReindex.cpp
 	long firstIp = (probDocId & 0xffffffff);
+
+	// avoid ips of 0 or -1
+	if ( firstIp == 0 || firstIp == -1 ) firstIp = 1;
+
 	// . now fill it up
 	// . TODO: calculate the other values... lazy!!! (m_isRSSExt, 
 	//         m_siteNumInlinks,...)

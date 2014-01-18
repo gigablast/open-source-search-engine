@@ -537,7 +537,6 @@ bool Spiderdb::init ( ) {
 	long pcmem = 20000000;//g_conf.m_spiderdbMaxDiskPageCacheMem;
 	// keep this low if we are the tmp cluster
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
-
 	// key parser checks
 	//long      ip         = 0x1234;
 	char      priority   = 12;
@@ -571,7 +570,7 @@ bool Spiderdb::init ( ) {
 			   RDB_SPIDERDB ,
 			   pcmem     ,
 			   pageSize  ,
-			   true      ,  // use shared mem?
+			   false     ,  // use shared mem?
 			   false     )) // minimizeDiskSeeks?
 		return log(LOG_INIT,"spiderdb: Init failed.");
 
@@ -1014,9 +1013,11 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 /////////////////////////
 
 SpiderColl::SpiderColl () {
+	m_deleteMyself = false;
 	m_gettingList1 = false;
 	m_gettingList2 = false;
 	m_lastScanTime = 0;
+	m_isPopulating = false;
 	m_numAdded = 0;
 	m_numBytesScanned = 0;
 	m_lastPrintCount = 0;
@@ -1488,7 +1489,7 @@ SpiderColl::~SpiderColl () {
 }
 
 // we call this now instead of reset when Collectiondb::resetColl() is used
-void SpiderColl::clear ( ) {
+void SpiderColl::clearLocks ( ) {
 
 	// remove locks from locktable for all spiders out i guess
 	HashTableX *ht = &g_spiderLoop.m_lockTable;
@@ -1508,6 +1509,7 @@ void SpiderColl::clear ( ) {
 		goto top;
 	}
 
+	/*
 	// reset these for SpiderLoop;
 	m_nextDoledbKey.setMin();
 	m_didRound = false;
@@ -1541,6 +1543,7 @@ void SpiderColl::clear ( ) {
 	// assume the whole thing is not empty
 	m_allDoledbPrioritiesEmpty = 0;//false;
 	m_lastEmptyCheck = 0;
+	*/
 }
 
 void SpiderColl::reset ( ) {
@@ -1553,6 +1556,8 @@ void SpiderColl::reset ( ) {
 	m_pri2 = -1; // MAX_SPIDER_PRIORITIES - 1;
 	m_twinDied = false;
 	m_lastUrlFiltersUpdate = 0;
+
+	m_isPopulating = false;
 
 	char *coll = "unknown";
 	if ( m_coll[0] ) coll = m_coll;
@@ -2251,6 +2256,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	// what is this?
 	if ( firstIp == 0 || firstIp == -1 ) {
 		log("spider: got ip of %s. wtf?",iptoa(firstIp) );
+		return false;
 		char *xx=NULL; *xx=0;
 	}
 
@@ -2447,6 +2453,11 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		if ( ! m_waitingTreeNeedsRebuild ) return;
 		// a double call? can happen if list read is slow...
 		if ( m_gettingList2 ) return;
+
+		// . borrow a msg5
+		// . if none available just return, we will be called again
+		//   by the sleep/timer function
+
 		// . read in a replacement SpiderRequest to add to doledb from
 		//   this ip
 		// . get the list of spiderdb records
@@ -2460,7 +2471,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		// flag it
 		m_gettingList2 = true;
 		// make state
-		long state2 = (long)m_cr->m_collnum;
+		//long state2 = (long)m_cr->m_collnum;
 		// read the list from local disk
 		if ( ! m_msg5b.getList ( RDB_SPIDERDB   ,
 					 m_cr->m_coll   ,
@@ -2473,7 +2484,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 					 0              , // max cache age
 					 0              , // startFileNum
 					 -1             , // numFiles (all)
-					 (void *)state2,//this//state
+					 this,//(void *)state2,//this//state
 					 gotSpiderdbListWrapper2 ,
 					 MAX_NICENESS   , // niceness
 					 true          )) // do error correct?
@@ -2774,20 +2785,35 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 	//   calls this function again with re-entry set to true
 	if ( ! scanSpiderdb ( true ) ) return;
 	// oom error? i've seen this happen and we end up locking up!
-	if ( g_errno ) return;
+	if ( g_errno ) { 
+		log("spider: scandspiderdb: %s",mstrerror(g_errno));
+		m_isPopulating = false; 
+		return; 
+	}
 	// try more
 	goto loop;
 }
 
 static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
 
-	collnum_t collnum = (collnum_t)(long)state;
+	//collnum_t collnum = (collnum_t)(long)state;
+	//SpiderColl *THIS = g_spiderCache.getSpiderColl(collnum);
+	//if ( ! THIS ) {
+	//	log("spider: lost1 collnum %li while scanning spiderdb",
+	//	    (long)collnum);
+	//	return;
+	//}
 
-	SpiderColl *THIS = g_spiderCache.getSpiderColl(collnum);
+	SpiderColl *THIS = (SpiderColl *)state;
 
-	if ( ! THIS ) {
-		log("spider: lost1 collnum %li while scanning spiderdb",
-		    (long)collnum);
+	// did our collection rec get deleted? since we were doing a read
+	// the SpiderColl will have been preserved in that case but its
+	// m_deleteMyself flag will have been set.
+	if ( THIS->m_deleteMyself &&
+	     ! THIS->m_msg5b.m_waitingForMerge &&
+	     ! THIS->m_msg5b.m_waitingForList ) {
+		mdelete ( THIS , sizeof(SpiderColl),"postdel1");
+		delete ( THIS );
 		return;
 	}
 
@@ -2800,6 +2826,10 @@ static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
 	// . finish processing the list we read now
 	// . if that blocks, it will call doledWrapper
 	if ( ! THIS->scanSpiderdb ( false ) ) return;
+
+	// no longer populating doledb. we also set to false in doledwrapper
+	//THIS->m_isPopulating = false;
+
 	// . otherwise, do more from tree
 	// . re-entry is true because we just got the msg5 reply
 	THIS->populateDoledbFromWaitingTree ( true );
@@ -2807,15 +2837,28 @@ static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
 
 static void gotSpiderdbListWrapper2( void *state , RdbList *list , Msg5 *msg5){
 
-	collnum_t collnum = (collnum_t)(long)state;
+	//collnum_t collnum = (collnum_t)(long)state;
+	//SpiderColl *THIS = g_spiderCache.getSpiderColl(collnum);
+	//if ( ! THIS ) {
+	//	log("spider: lost2 collnum %li while scanning spiderdb",
+	//	    (long)collnum);
+	//	return;
+	//}
 
-	SpiderColl *THIS = g_spiderCache.getSpiderColl(collnum);
 
-	if ( ! THIS ) {
-		log("spider: lost2 collnum %li while scanning spiderdb",
-		    (long)collnum);
+	SpiderColl *THIS = (SpiderColl *)state;
+
+	// did our collection rec get deleted? since we were doing a read
+	// the SpiderColl will have been preserved in that case but its
+	// m_deleteMyself flag will have been set.
+	if ( THIS->m_deleteMyself &&
+	     ! THIS->m_msg5.m_waitingForMerge &&
+	     ! THIS->m_msg5.m_waitingForList ) {
+		mdelete ( THIS , sizeof(SpiderColl),"postdel1");
+		delete ( THIS );
 		return;
 	}
+
 
 	//SpiderColl *THIS = (SpiderColl *)state;
 	// re-entry is true because we just got the msg5 reply
@@ -2828,6 +2871,10 @@ static void doledWrapper ( void *state ) {
 	SpiderColl *THIS = (SpiderColl *)state;
 	// msg4 is available again
 	THIS->m_msg4Avail = true;
+
+	// no longer populating doledb. we also set to false in 
+	// gotSpiderListWrapper
+	//THIS->m_isPopulating = false;
 
 	long long now = gettimeofdayInMilliseconds();
 	long long diff = now - THIS->m_msg4Start;
@@ -2969,7 +3016,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// flag it
 		m_gettingList1 = true;
 		// make state
-		long state2 = (long)m_cr->m_collnum;
+		//long state2 = (long)m_cr->m_collnum;
 		// . read the list from local disk
 		// . if a niceness 0 intersect thread is taking a LONG time
 		//   then this will not complete in a long time and we
@@ -2987,7 +3034,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 					0              , // max cache age
 					0              , // startFileNum
 					-1             , // numFiles (all)
-					(void *)state2,//this,//state 
+					this,//(void *)state2,//this,//state 
 					gotSpiderdbListWrapper ,
 					MAX_NICENESS   , // niceness
 					true          )) // do error correct?
@@ -9344,6 +9391,10 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 					goto gotOne;
 				if ( to_lower_a(ext[1]) == 'w' &&
 				     to_lower_a(ext[2]) == 'm' &&
+				     to_lower_a(ext[3]) == 'v' )
+					goto gotOne;
+				if ( to_lower_a(ext[1]) == 'w' &&
+				     to_lower_a(ext[2]) == 'a' &&
 				     to_lower_a(ext[3]) == 'v' )
 					goto gotOne;
 				if ( to_lower_a(ext[1]) == 'j' &&

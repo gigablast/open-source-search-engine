@@ -636,6 +636,23 @@ bool Collectiondb::deleteRec ( char *coll , WaitEntry *we ) {
 }
 */
 
+// if there is an outstanding disk read thread or merge thread then
+// Spider.cpp will handle the delete in the callback.
+void Collectiondb::deleteSpiderColl ( SpiderColl *sc ) {
+
+	sc->m_deleteMyself = true;
+
+	// if not currently being accessed nuke it now
+	if ( ! sc->m_msg5.m_waitingForList &&
+	     ! sc->m_msg5.m_waitingForMerge &&
+	     ! sc->m_msg5b.m_waitingForList &&
+	     ! sc->m_msg5b.m_waitingForMerge ) {
+		mdelete ( sc, sizeof(SpiderColl),"nukecr2");
+		delete ( sc );
+		return;
+	}
+}
+
 bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	// do not allow this if in repair mode
 	if ( g_repairMode > 0 ) {
@@ -723,10 +740,14 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(collnum);
 	if ( sc ) {
 		// remove locks from lock table:
-		sc->clear();
+		sc->clearLocks();
 		//sc->m_collnum = newCollnum;
-		sc->reset();
-		mdelete ( sc, sizeof(SpiderColl),"nukecr2");
+		//sc->reset();
+		// this will put it on "death row" so it will be deleted
+		// once Msg5::m_waitingForList/Merge is NULL
+		deleteSpiderColl ( sc );
+		//mdelete ( sc, sizeof(SpiderColl),"nukecr2");
+		//delete ( sc );
 		cr->m_spiderColl = NULL;
 	}
 
@@ -925,8 +946,19 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// reset spider info
 	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(oldCollnum);
 	if ( sc ) {
-		sc->clear();
-		sc->m_collnum = newCollnum;
+		// remove locks from lock table:
+		sc->clearLocks();
+		// don't do this anymore, just nuke it in case
+		// m_populatingDoledb was true etc. there are too many
+		// flags to worry about
+		//sc->m_collnum = newCollnum;
+		//sc->reset();
+		// this will put it on "death row" so it will be deleted
+		// once Msg5::m_waitingForList/Merge is NULL
+		deleteSpiderColl ( sc );
+		//mdelete ( sc, sizeof(SpiderColl),"nukecr2");
+		//delete ( sc );
+		cr->m_spiderColl = NULL;
 	}
 
 	// reset spider round
@@ -1903,6 +1935,9 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// just turn off spidering. if we were to set priority to
 		// filtered it would be removed from index!
 		m_spidersEnabled     [i] = 0;
+		// temp hack so it processes in xmldoc.cpp::getUrlFilterNum()
+		// which has been obsoleted, but we are running old code now!
+		m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 	}
 	// if collectiverespiderfreq is 0 or less then do not RE-spider
@@ -1916,6 +1951,9 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// just turn off spidering. if we were to set priority to
 		// filtered it would be removed from index!
 		m_spidersEnabled     [i] = 0;
+		// temp hack so it processes in xmldoc.cpp::getUrlFilterNum()
+		// which has been obsoleted, but we are running old code now!
+		m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 	}
 

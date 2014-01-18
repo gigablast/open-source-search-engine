@@ -981,7 +981,7 @@ class SpiderColl {
 	~SpiderColl ( );
 	SpiderColl  ( ) ;
 
-	void clear();
+	void clearLocks();
 
 	// called by main.cpp on exit to free memory
 	void      reset();
@@ -1124,6 +1124,8 @@ class SpiderColl {
 	bool       m_waitingTreeKeyValid;
 	long       m_scanningIp;
 	bool       m_gotNewRequestsForScanningIp;
+
+	char m_deleteMyself;
 
 	// start key for reading doledb
 	key_t m_msg5StartKey;

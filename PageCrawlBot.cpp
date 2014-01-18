@@ -3841,6 +3841,9 @@ bool getSpiderRequestMetaList ( char *doc ,
 		SpiderRequest sreq;
 		sreq.reset();
 		sreq.m_firstIp = url.getHostHash32(); // fakeip!
+		// avoid ips of 0 or -1
+		if ( sreq.m_firstIp == 0 || sreq.m_firstIp == -1 )
+			sreq.m_firstIp = 1;
 		sreq.m_hostHash32 = url.getHostHash32();
 		sreq.m_domHash32  = url.getDomainHash32();
 		sreq.m_siteHash32 = url.getHostHash32();
