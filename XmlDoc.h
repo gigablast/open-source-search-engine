@@ -725,19 +725,19 @@ class XmlDoc {
 
 	char *addOutlinkSpiderRecsToMetaList ( );
 
-	bool addTable96 ( class HashTableX *tt1     , 
-			  long       date1   ,
-			  bool       nosplit ) ;
+	//bool addTable96 ( class HashTableX *tt1     , 
+	//		  long       date1   ,
+	//		  bool       nosplit ) ;
 
 	long getSiteRank ();
-	bool addTable144 ( class HashTableX *tt1     , 
-			   bool       nosplit ) ;
+	bool addTable144 ( class HashTableX *tt1 );
+
 	bool addTable224 ( HashTableX *tt1 ) ;
 
-	bool addTableDate ( class HashTableX *tt1     , //T<key128_t,char> *tt1
-                            uint64_t    docId   ,
-                            uint8_t     rdbId   ,
-                            bool        nosplit ) ;
+	//bool addTableDate ( class HashTableX *tt1     , //T<key128_t,char> *tt1
+	//                           uint64_t    docId   ,
+	//                           uint8_t     rdbId   ,
+	//                           bool        nosplit ) ;
 
 	bool addTable128 ( class HashTableX *tt1     , // T <key128_t,char>*tt1
                            uint8_t     rdbId   ,
@@ -996,14 +996,15 @@ class XmlDoc {
 	char m_logLangId;
 	long m_logSiteNumInlinks;
 
-	//SectionVotingTable m_nsvt;
+	SectionVotingTable m_nsvt;
 
-	//SectionVotingTable m_osvt;
-	//long m_numSectiondbReads;
-	//long m_numSectiondbNeeds;
-	//key128_t m_sectiondbStartKey;
-	//RdbList m_secdbList;
-	//long m_sectiondbRecall;
+	SectionVotingTable m_osvt;
+	long m_numSectiondbReads;
+	long m_numSectiondbNeeds;
+	key128_t m_sectiondbStartKey;
+	RdbList m_secdbList;
+	long m_sectiondbRecall;
+	SafeBuf m_tmpBuf3;
 
 	//HashTableX m_rvt;
 	//Msg17 m_msg17;
@@ -1135,8 +1136,8 @@ class XmlDoc {
 	//char     m_weightsValid;
 	char     m_sectionsValid;
 	char     m_subSentsValid;
-	//char     m_osvtValid;
-	//char     m_nsvtValid;
+	char     m_osvtValid;
+	char     m_nsvtValid;
 	//char   m_rvtValid;
 	char     m_turkVotingTableValid;
 	char     m_turkBitsTableValid;
@@ -1271,7 +1272,7 @@ class XmlDoc {
 	bool m_datesValid;
 	bool m_sectionsReplyValid;
 	bool m_sectionsVotesValid;
-	//bool m_sectiondbDataValid;
+	bool m_sectiondbDataValid;
 	bool m_placedbDataValid;
 	bool m_siteHash64Valid;
 	bool m_siteHash32Valid;
@@ -2067,6 +2068,7 @@ class XmlDoc {
 	// flags for spider
 	//bool m_isAddUrl;
 	//bool m_forceDelete;
+	bool m_didDelete;
 
 	// this is non-zero if we decided not to index the doc
 	long m_indexCode;
@@ -2109,7 +2111,7 @@ class XmlDoc {
 	long          m_niceness;
 
 	bool m_usePosdb     ;
-	bool m_useDatedb    ;
+	//bool m_useDatedb    ;
 	bool m_useClusterdb ;
 	bool m_useLinkdb    ;
 	bool m_useSpiderdb  ;
@@ -2117,7 +2119,7 @@ class XmlDoc {
 	bool m_useTagdb     ;
 	bool m_usePlacedb   ;
 	//bool m_useTimedb    ;
-	//bool m_useSectiondb ;
+	bool m_useSectiondb ;
 	//bool m_useRevdb     ;
 	bool m_useSecondaryRdbs ;
 
@@ -2130,7 +2132,7 @@ class XmlDoc {
 	bool     m_storeTermListInfo;
 	char     m_sortTermListBy;
 
-	//SafeBuf m_sectiondbData;
+	SafeBuf m_sectiondbData;
 	//char *m_sectiondbData;
 	char *m_placedbData;
 	//long  m_sectiondbDataSize;
@@ -2245,7 +2247,7 @@ class TermDebugInfo {
 	long      m_prefixOff; // the prefix offset, like "site" or "gbadid"
 	long long m_termId;
 	long      m_date;
-	bool      m_noSplit;
+	bool      m_shardByTermId;
 
 	//float     m_weight;
 	char      m_langId;
@@ -2271,7 +2273,11 @@ public:
 		m_prefix                  = NULL;
 		m_desc                    = NULL;
 		m_date                    = 0;
-		m_noSplit                 = false;
+		// should we do sharding based on termid and not the usual docid???
+		// in general this is false, but for checksum we want to shard
+		// by the checksum and not docid to avoid having to do a 
+		// gbchecksum:xxxxx search on ALL shards. much more efficient.
+		m_shardByTermId = false;
 		//m_useWeights              = false;
 		m_useSynonyms             = false;
 		m_hashGroup = -1;
@@ -2283,7 +2289,7 @@ public:
 	// "m_desc" should detail the algorithm
 	char             *m_desc;
 	long              m_date;
-	char              m_noSplit;
+	char              m_shardByTermId;
 	char              m_linkerSiteRank;
 	//char              m_useWeights;
 	char              m_useSynonyms;

@@ -36,6 +36,8 @@ Rdb::Rdb ( ) {
 	//m_numBases = 0;
 	m_inAddList = false;
 	m_collectionlessBase = NULL;
+	m_initialized = false;
+	m_numMergesOut = 0;
 	//memset ( m_bases , 0 , sizeof(RdbBase *) * MAX_COLLS );
 	reset();
 }
@@ -326,6 +328,8 @@ bool Rdb::init ( char          *dir                  ,
 	// set this for use below
 	//*(long long *)m_gbcounteventsTermId =
 	//	hash64n("gbeventcount")&TERMID_MASK;
+
+	m_initialized = true;
 
 	// success
 	return true;
@@ -1157,7 +1161,7 @@ bool Rdb::dumpTree ( long niceness ) {
 	     //! g_repair.m_fullRebuild &&
 	     //! g_repair.m_rebuildNoSplits &&
 	     //! g_repair.m_removeBadPages &&
-	     ! isSecondaryRdb ( m_rdbId ) && 
+	     ! ::isSecondaryRdb ( m_rdbId ) && 
 	     m_rdbId != RDB_TAGDB )
 		return true;
 
@@ -2583,6 +2587,9 @@ long long Rdb::getDiskSpaceUsed ( ) {
 }
 
 bool Rdb::isMerging ( ) {
+	// use this for speed
+	return (bool)m_numMergesOut;
+
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
 		RdbBase *base = getBase(i);
 		if ( ! base ) continue;

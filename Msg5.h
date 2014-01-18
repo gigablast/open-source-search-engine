@@ -226,6 +226,7 @@ class Msg5 {
 	long      m_newMinRecSizes;
 	long      m_round;
 	long      m_totalSize;
+	long      m_lastTotalSize;
 	long      m_treeMinRecSizes;
 	bool      m_readAbsolutelyNothing;
 

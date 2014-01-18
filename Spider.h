@@ -718,6 +718,9 @@ class SpiderRequest {
 	static long printTableHeader ( SafeBuf *sb , bool currentlSpidering ) ;
 	static long printTableHeaderSimple ( SafeBuf *sb , 
 					     bool currentlSpidering ) ;
+
+	// returns false and sets g_errno on error
+	bool setFromAddUrl ( char *url ) ;
 };
 
 // . XmlDoc adds this record to spiderdb after attempting to spider a url
@@ -839,8 +842,13 @@ class SpiderReply {
 	// did we TRY to send it to the diffbot backend filter? might be err?
 	long    m_sentToDiffbot           :1;
 	long    m_hadDiffbotError         :1;
-	long    m_reserved3 :1;
-	long    m_reserved4 :1;
+	// . was it in the index when we started?
+	// . we use this with m_isIndexed above to adjust quota counts for
+	//   this m_siteHash32 which is basically just the subdomain/host
+	//   for SpiderColl::m_quotaTable
+	long    m_wasIndexed              :1;
+	// this also pertains to m_isIndexed as well:
+	long    m_wasIndexedValid         :1;
 
 	// how much buf will we need to serialize ourselves?
 	long getRecSize () { return m_dataSize + 4 + sizeof(key128_t); }
@@ -1101,6 +1109,13 @@ class SpiderColl {
 
 	RdbCache m_lastDownloadCache;
 
+	bool m_countingPagesIndexed;
+	HashTableX m_localTable;
+	long long m_lastReqUh48;
+	long long m_lastRepUh48;
+	// move to CollectionRec so it can load at startup and save it
+	//HashTableX m_pageCountTable;
+
 	bool makeDoleIPTable     ( );
 	bool makeWaitingTable    ( );
 	bool makeWaitingTree     ( );
@@ -1278,8 +1293,8 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) ;
 // . supports limiting spiders per domain
 
 // . max spiders we can have going at once for this process
-// . limit to 50 to preven OOM conditions
-#define MAX_SPIDERS 50
+// . limit to 70 to preven OOM conditions
+#define MAX_SPIDERS 70
 
 class SpiderLoop {
 

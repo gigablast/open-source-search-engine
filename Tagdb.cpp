@@ -13,6 +13,7 @@
 #include "HashTableX.h"
 #include "Users.h"
 #include "Process.h"
+#include "Rebalance.h"
 
 static void gotMsg0ReplyWrapper ( void *state );
 //static void gotReplyWrapper9a   ( void *state , UdpSlot *slot ) ;
@@ -1934,6 +1935,8 @@ bool Tagdb::verify ( char *coll ) {
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
+		// tally it up
+		g_rebalance.m_numForeignRecs += count - got;
 		log ("tagdb: Out of first %li records in %s, only %li belong "
 		     "to our group.",count,rdbName,got);
 		// exit if NONE, we probably got the wrong data
@@ -2755,17 +2758,19 @@ bool Msg8a::launchGetRequests ( ) {
 	// bias based on the top 64 bits which is the hash of the "site" now
 	//uint32_t gid = g_hostdb.getGroupId ( m_rdbId , &startKey , true );
 	//Host *group = g_hostdb.getGroup ( gid );
-	unsigned long shardNum = getShardNum ( m_rdbId , &startKey , true );
+	long shardNum = getShardNum ( m_rdbId , &startKey );//, true );
 	Host *group = g_hostdb.getShard ( shardNum );
 
-	long numTwins = g_hostdb.getNumHostsPerShard();
+	//long numTwins = g_hostdb.getNumHostsPerShard();
 	// use top byte!
 	uint8_t *sks = (uint8_t *)&startKey;
 	uint8_t top = sks[sizeof(TAGDB_KEY)-1];
-	long hostNum = 0;
-	if ( numTwins == 2 && (top & 0x80) ) hostNum = 1;
+	//long hostNum = 0;
+	//if ( numTwins == 2 && (top & 0x80) ) hostNum = 1;
 	// TODO: fix this!
-	if ( numTwins >= 3 ) { char *xx=NULL;*xx=0; }
+	//if ( numTwins >= 3 ) { char *xx=NULL;*xx=0; }
+	// support more than 2 stripes now...
+	long hostNum = top % g_hostdb.getNumHostsPerShard();
 	long hostId = group[hostNum].m_hostId;
 
 

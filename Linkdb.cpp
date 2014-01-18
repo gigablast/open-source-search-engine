@@ -4,6 +4,7 @@
 #include "linkspam.h"
 #include "sort.h"
 #include "XmlDoc.h" // score32to8()
+#include "Rebalance.h"
 
 Linkdb g_linkdb;
 Linkdb g_linkdb2;
@@ -127,7 +128,7 @@ bool Linkdb::init ( ) {
 			    "linkdb" ,
 			    true     , // dedup
 			    0        , // fixeddatasize is 0 since no data
-			    g_conf.m_linkdbMinFilesToMerge ,
+			    3,//g_conf.m_linkdbMinFilesToMerge ,
 			    // fix this to 15 and rely on the page cache of
 			    // just the satellite files and the daily merge to
 			    // keep things fast.
@@ -237,6 +238,8 @@ bool Linkdb::verify ( char *coll ) {
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
+		// tally it up
+		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %li records in Linkdb , "
 		     "only %li belong to our group.",count,got);
 

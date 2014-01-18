@@ -30,7 +30,7 @@
 //#include "Thesaurus.h"
 #include "Spider.h"
 #include "Profiler.h"
-#include "PageNetTest.h"
+//#include "PageNetTest.h"
 #include "LangList.h"
 #include "AutoBan.h"
 //#include "SiteBonus.h"
@@ -43,6 +43,7 @@
 #include "Wiktionary.h"
 #include "Users.h"
 #include "Proxy.h"
+#include "Rebalance.h"
 
 // the query log hashtable defined in XmlDoc.cpp
 //extern HashTableX g_qt;
@@ -73,7 +74,9 @@ static long s_nextTime = 0;
 
 char *g_files[] = {
 	"gb.conf",
-	"hosts.conf",
+
+	// might have localhosts.conf
+	//"hosts.conf",
 	
 	"catcountry.dat",
 	"badcattable.dat",
@@ -155,13 +158,13 @@ char *g_files[] = {
 	//"/usr/bin/ppmtojpeg",
 	//"/usr/sbin/smartctl",
 
-	"giftopnm",
-	"tifftopnm",
-	"pngtopnm",
-	"jpegtopnm",
-	"bmptopnm",
-	"pnmscale",
-	"ppmtojpeg",
+	//"giftopnm",
+	//"tifftopnm",
+	//"pngtopnm",
+	//"jpegtopnm",
+	//"bmptopnm",
+	//"pnmscale",
+	//"ppmtojpeg",
 
 	//"smartctl",
 
@@ -196,11 +199,13 @@ bool Process::checkFiles ( char *dir ) {
 	if ( //( ! f3.doesExist() || ! f4.doesExist() ) && 
 	    ( ! f4.doesExist() ) && 
 	     ( ! f1.doesExist() || ! f2.doesExist() ) ) {
+		/*
 		log("db: need either (%s and %s) or (%s and %s)",
 		    f3.getFilename() ,
 		    f4.getFilename() ,
 		    f1.getFilename() ,
 		    f2.getFilename() );
+		*/
 		//return false;
 	}
 
@@ -256,11 +261,11 @@ bool Process::checkFiles ( char *dir ) {
 			
 	}
 
-	if ( needsFiles ) {
-	  log("db: use 'apt-get install -y netpbm' to install "
-	      "pnmfiles");
-	  return false;
-	}
+	//if ( needsFiles ) {
+	//  log("db: use 'apt-get install -y netpbm' to install "
+	//      "pnmfiles");
+	//  return false;
+	//}
 
 	// . check for tagdb files tagdb0.xml to tagdb50.xml
 	// . MDW - i am phased these annoying files out 100%
@@ -436,6 +441,13 @@ bool Process::init ( ) {
 	m_rdbs[m_numRdbs++] = g_linkdb2.getRdb     ();
 	//m_rdbs[m_numRdbs++] = g_placedb2.getRdb    ();
 	m_rdbs[m_numRdbs++] = g_tagdb2.getRdb      ();
+	/////////////////
+	// CAUTION!!!
+	/////////////////
+	// Add any new rdbs to the END of the list above so 
+	// it doesn't screw up Rebalance.cpp which uses this list too!!!!
+	/////////////////
+
 
 	//call these back right before we shutdown the
 	//httpserver.
@@ -1071,6 +1083,15 @@ void processSleepWrapper ( int fd , void *state ) {
 
 	// do not do autosave if no power
 	if ( ! g_process.m_powerIsOn ) return;
+
+	// . i guess try to autoscale the cluster in cast hosts.conf changed
+	// . if all pings came in and all hosts have the same hosts.conf
+	//   and if we detected any shard imbalance at startup we have to
+	//   scan all rdbs for records that don't belong to us and send them
+	//   where they should go
+	// . returns right away in most cases
+	g_rebalance.rebalanceLoop();
+
 	// autosave? override this if power is off, we need to save the data!
 	//if (g_conf.m_autoSaveFrequency <= 0 && g_process.m_powerIsOn) return;
 	if ( g_conf.m_autoSaveFrequency <= 0 ) return;
@@ -1606,6 +1627,10 @@ bool Process::saveBlockingFiles1 ( ) {
 	// . this is repeated above too
 	// . keep it here for auto-save
 	g_repair.save();
+
+	// save our place during a rebalance
+	g_rebalance.saveRebalanceFile();
+
 	// save the login table
 	g_users.save();
 
@@ -1729,7 +1754,7 @@ void Process::resetAll ( ) {
 	g_autoBan         .reset();
 	//g_qtable          .reset();
 	//g_pageTopDocs     .destruct();
-	g_pageNetTest     .destructor();
+	//g_pageNetTest     .destructor();
 
 	for ( long i = 0; i < MAX_GENERIC_CACHES; i++ )
 		g_genericCache[i].reset();

@@ -332,7 +332,7 @@ bool Images::launchRequests ( ) {
 		// no split is true for this one, so we do not split by docid
 		//uint32_t gid = getGroupId(RDB_INDEXDB,&startKey,false);
 		unsigned long shardNum;
-		shardNum = getShardNum(RDB_INDEXDB,&startKey,false);
+		shardNum = getShardNum(RDB_INDEXDB,&startKey);
 		// get the termlist
 		if ( ! m_msg0.getList ( -1    , // hostid
 					-1    , // ip

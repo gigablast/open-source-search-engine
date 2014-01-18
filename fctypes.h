@@ -82,8 +82,9 @@ bool is_urlchar(char s);
 // convert hex digit to value
 long htob ( char s ) ;
 char btoh ( char s ) ;
-// convert hex-encoded binary string back to binary
+// convert hex ascii string into binary
 void hexToBin ( char *src , long srcLen , char *dst );
+// convert binary number of size srcLen bytes into hex string in "dst"
 void binToHex ( unsigned char *src , long srcLen , char *dst );
 
 // the _a suffix denotes an ascii string

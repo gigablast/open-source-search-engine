@@ -277,6 +277,7 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 	m_requestsInWaiting = 0;
 	// special count
 	m_msg10sInWaiting = 0;
+	m_msgc1sInWaiting = 0;
 	//m_msgDsInWaiting = 0;
 	//m_msg23sInWaiting = 0;
 	m_msg25sInWaiting = 0;
@@ -1405,6 +1406,9 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		bool getSlot = true;
 		if ( msgType == 0x10 && m_msg10sInWaiting >= 50 ) 
 			getSlot = false;
+		// crawl update info from Spider.cpp
+		if ( msgType == 0xc1 && m_msgc1sInWaiting >= 100 ) 
+			getSlot = false;
 		//batch url lookup for siterec, rootQuality and ips, so spawns 
 		//msg8 and msgc and msg50
 		//if ( msgType == 0xd && m_msgDsInWaiting >= 100 ) 
@@ -1553,6 +1557,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 			m_requestsInWaiting++;
 			// special count
 			if ( msgType == 0x10 ) m_msg10sInWaiting++;
+			if ( msgType == 0xc1 ) m_msgc1sInWaiting++;
 			//if ( msgType == 0xd  ) m_msgDsInWaiting++;
 			//if ( msgType == 0x23 ) m_msg23sInWaiting++;
 			if ( msgType == 0x25 ) m_msg25sInWaiting++;
@@ -2920,6 +2925,7 @@ void UdpServer::destroySlot ( UdpSlot *slot ) {
 		m_requestsInWaiting--;
 		// special count
 		if ( slot->m_msgType == 0x10 ) m_msg10sInWaiting--;
+		if ( slot->m_msgType == 0xc1 ) m_msgc1sInWaiting--;
 		//if ( slot->m_msgType == 0xd  ) m_msgDsInWaiting--;
 		//if ( slot->m_msgType == 0x23 ) m_msg23sInWaiting--;
 		if ( slot->m_msgType == 0x25 ) m_msg25sInWaiting--;

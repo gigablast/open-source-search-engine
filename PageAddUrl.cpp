@@ -248,50 +248,15 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	//
 
 	SpiderRequest *sreq = &st1->m_sreq;
-	// reset it
-	sreq->reset();
-	// make the probable docid
-	long long probDocId = g_titledb.getProbableDocId ( st1->m_url );
-	// make one up, like we do in PageReindex.cpp
-	long firstIp = (probDocId & 0xffffffff);
-
-	// avoid ips of 0 or -1
-	if ( firstIp == 0 || firstIp == -1 ) firstIp = 1;
-
-	// . now fill it up
-	// . TODO: calculate the other values... lazy!!! (m_isRSSExt, 
-	//         m_siteNumInlinks,...)
-	sreq->m_isNewOutlink = 1;
-	sreq->m_isAddUrl     = 1;
-	sreq->m_addedTime    = now;
-	sreq->m_fakeFirstIp   = 1;
-	sreq->m_probDocId     = probDocId;
-	sreq->m_firstIp       = firstIp;
-	sreq->m_hopCount      = 0;
-	// its valid if root
-	Url uu; uu.set ( st1->m_url );
-	if ( uu.isRoot() ) sreq->m_hopCountValid = true;
-	// too big?
-	//long len = st1->m_urlLen;
-	// the url! includes \0
-	strcpy ( sreq->m_url , st1->m_url );
-	// call this to set sreq->m_dataSize now
-	sreq->setDataSize();
-	// make the key dude -- after setting url
-	sreq->setKey ( firstIp , 0LL, false );
-	// need a fake first ip lest we core!
-	//sreq->m_firstIp = (pdocId & 0xffffffff);
-	// how to set m_firstIp? i guess addurl can be throttled independently
-	// of the other urls???  use the hash of the domain for it!
-	long  dlen;
-	char *dom = getDomFast ( st1->m_url , &dlen );
-	// fake it for this...
-	//sreq->m_firstIp = hash32 ( dom , dlen );
-	// sanity
-	if ( ! dom ) {
-		g_errno = EBADURL;
+	// set the SpiderRequest from this add url
+	if ( ! sreq->setFromAddUrl ( st1->m_url ) ) {
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		// send reply back with g_errno set if this returned false
 		return sendReply ( st1 , true );
 	}
+
+
+
 	// shortcut
 	Msg4 *m = &st1->m_msg4;
 	// now add that to spiderdb using msg4

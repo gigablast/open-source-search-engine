@@ -2,6 +2,7 @@
 
 #include "Titledb.h"
 #include "Threads.h"
+#include "Rebalance.h"
 
 Titledb g_titledb;
 Titledb g_titledb2;
@@ -187,13 +188,17 @@ bool Titledb::verify ( char *coll ) {
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
+		// tally it up
+		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %li records in titledb, "
-		     "only %li belong to our group.",count,got);
+		     "only %li belong to our shard. c=%s",count,got,coll);
 		// exit if NONE, we probably got the wrong data
 		if ( count > 10 && got == 0 ) 
 			log("db: Are you sure you have the right "
 				   "data in the right directory? "
-				   "Exiting.");
+			    "coll=%s "
+			    "Exiting.",
+			    coll);
 		// repeat with log
 		for ( list.resetListPtr() ; ! list.isExhausted() ;
 		      list.skipCurrentRecord() ) {
@@ -204,10 +209,15 @@ bool Titledb::verify ( char *coll ) {
 			log("db: docid=%lli shard=%li",
 			    getDocId(&k),shardNum);
 		}
-
-		log ( "db: Exiting due to Titledb inconsistency." );
 		g_threads.enableThreads();
-		return g_conf.m_bypassValidation;
+		//if ( g_conf.m_bypassValidation ) return true;
+		//if ( g_conf.m_allowScale ) return true;
+		// don't exit any more, allow it, but do not delete
+		// recs that belong to different shards when we merge now!
+		log ( "db: db shards unbalanced. "
+		      "Click autoscale in master controls.");
+		//return false;
+		return true;
 	}
 
 	log ( LOG_DEBUG, "db: Titledb passed verification successfully for %li"

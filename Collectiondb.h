@@ -13,6 +13,8 @@
 
 #include "SafeBuf.h"
 
+bool addCollToTable ( char *coll , collnum_t collnum ) ;
+
 class WaitEntry {
 public:
 	void (* m_callback) (void *state);
@@ -345,6 +347,11 @@ class CollectionRec {
 	// for customcrawls
 	bool rebuildUrlFilters();
 
+	bool m_urlFiltersHavePageCounts;
+
+	// moved from SpiderColl so we can load up at startup
+	HashTableX m_pageCountTable;
+
 	// . when was the last time we changed?
 	//long long m_lastUpdateTime;
 
@@ -381,8 +388,8 @@ class CollectionRec {
 	long   m_spiderRoundNum;
 
 	char  m_useDatedb               ;
-	char  m_addUrlEnabled           ; // TODO: use at http interface lvl
-	char  m_spiderLinks             ;
+	//char  m_addUrlEnabled           ; // TODO: use at http interface lvl
+	//char  m_spiderLinks             ; use url filters now!
 	char  m_sameHostLinks           ; // spider links from same host only?
 	char  m_scrapingEnabledWeb      ;
 	char  m_scrapingEnabledNews     ;
@@ -492,11 +499,11 @@ class CollectionRec {
 	long m_sectiondbMinFilesToMerge ;
 	//long m_indexdbMinFilesToMerge ;
 	//long m_indexdbMinTotalFilesToMerge ;
-	long m_spiderdbMinFilesToMerge ;
-	long m_checksumdbMinFilesToMerge ;
-	long m_clusterdbMinFilesToMerge ;
-	long m_datedbMinFilesToMerge ;
-	long m_linkdbMinFilesToMerge ;
+	//long m_spiderdbMinFilesToMerge ;
+	//long m_checksumdbMinFilesToMerge ;
+	//long m_clusterdbMinFilesToMerge ;
+	//long m_datedbMinFilesToMerge ;
+	//long m_linkdbMinFilesToMerge ;
 	//long m_tagdbMinFilesToMerge ;
 
 	//char  m_spiderdbRootUrlPriority   ; // 0-(MAX_SPIDER_PRIORITIES-1)
@@ -694,8 +701,8 @@ class CollectionRec {
 	//long      m_numRegExs11;
 	//char      m_spiderDiffbotApiNum [ MAX_FILTERS ];
 
-	long      m_numRegExs11;
-	SafeBuf   m_spiderDiffbotApiUrl [ MAX_FILTERS ];
+	//long      m_numRegExs11;
+	//SafeBuf   m_spiderDiffbotApiUrl [ MAX_FILTERS ];
 
 	long      m_numRegExs8;
 	char      m_harvestLinks     [ MAX_FILTERS ];

@@ -59,7 +59,7 @@ public:
 	long         m_numCSVColumns;
 };
 
-static int printResult ( SafeBuf &sb,
+static bool printResult ( SafeBuf &sb,
 			 State0 *st,
 			 long ix , 
 			 CollectionRec *cr ,
@@ -702,6 +702,19 @@ static bool printGigabit ( State0 *st,
 	return true;
 }
 
+class StateAU {
+public:
+	SafeBuf m_metaListBuf;
+	Msg4    m_msg4;
+};
+	
+
+void freeMsg4Wrapper( void *st ) {
+	StateAU *stau = (StateAU *)st;
+	mdelete(stau, sizeof(StateAU), "staud");
+	delete stau;
+}
+
 // . make a web page from results stored in msg40
 // . send it on TcpSocket "s" when done
 // . returns false if blocked, true otherwise
@@ -716,6 +729,87 @@ bool gotResults ( void *state ) {
 	// record that
 	st->m_took = took;
 
+
+	// grab the query
+	Msg40 *msg40 = &(st->m_msg40);
+	char  *q    = msg40->getQuery();
+	long   qlen = msg40->getQueryLen();
+
+	SearchInput *si = &st->m_si;
+
+	// shortcuts
+	char        *coll    = si->m_coll2;
+	long         collLen = si->m_collLen2;
+	
+	// collection rec must still be there since SearchInput references 
+	// into it, and it must be the SAME ptr too!
+	CollectionRec *cr = g_collectiondb.getRec ( coll , collLen );
+	if ( ! cr || cr != si->m_cr ) {
+	       g_errno = ENOCOLLREC;
+	       return sendReply(st,NULL);
+	}
+
+
+	//
+	// BEGIN ADDING URL
+	//
+
+	//////////
+	//
+	// if its a special request to get diffbot json objects for
+	// a given parent url, it often contains the same url in "addurl"
+	// to add as a spider request to spiderdb so that 
+	// it gets spidered and processed through diffbot.
+	//
+	//////////
+	char *addUrl = st->m_hr.getString("addurl",NULL);
+	if ( addUrl ) { // && cr->m_isCustomCrawl ) {
+
+		Url norm;
+		norm.set ( addUrl );
+
+		SpiderRequest sreq;
+		// returns false and sets g_errno on error
+		if ( ! sreq.setFromAddUrl ( norm.getUrl() ) ) { //addUrl ) ) {
+			log("addurl: url had problem: %s",mstrerror(g_errno));
+			return true;
+		}
+
+		// addurl state
+		StateAU *stau;
+		try { stau = new(StateAU); }
+		catch ( ... ) {
+			g_errno = ENOMEM;
+			return true;
+		}
+		mnew ( stau , sizeof(StateAU) , "stau");
+		
+		// fill it up
+		SafeBuf *mlist = &stau->m_metaListBuf;
+		if ( ! mlist->pushChar(RDB_SPIDERDB) )
+			return true;
+		if ( ! mlist->safeMemcpy ( &sreq , sreq.getRecSize() ) )
+			return true;
+
+		Msg4 *msg4 = &stau->m_msg4;
+		// this should copy the recs from list into the buffers
+		if ( msg4->addMetaList ( mlist->getBufStart() ,
+					 mlist->getLength() ,
+					 cr->m_collnum,
+					 stau ,
+					 freeMsg4Wrapper ,
+					 MAX_NICENESS ) ) {
+			// if it copied everything ok, nuke our msg4
+			// otherwise it will call freeMsg4Wraper when it
+			// completes!
+			freeMsg4Wrapper( stau );
+		}
+	}
+	//
+	// DONE ADDING URL
+	//
+
+
   	//char  local[ 128000 ];
 	//SafeBuf sb(local, 128000);
 	SafeBuf sb;
@@ -724,8 +818,6 @@ bool gotResults ( void *state ) {
 		return true;
 	// just in case it is empty, make it null terminated
 	sb.nullTerm();
-
-	SearchInput *si = &st->m_si;
 
 	// . if not matt wells we do not do ajax
 	// . the ajax is just there to prevent bots from slamming me 
@@ -763,23 +855,7 @@ bool gotResults ( void *state ) {
 		g_errno = st->m_errno;
 		return sendReply(st,sb.getBufStart());
 	}
-	// shortcuts
-	char        *coll    = si->m_coll2;
-	long         collLen = si->m_collLen2;
-	Msg40 *msg40 = &(st->m_msg40);
-	
-	// collection rec must still be there since SearchInput references 
-	// into it, and it must be the SAME ptr too!
-	CollectionRec *cr = g_collectiondb.getRec ( coll , collLen );
-	if ( ! cr || cr != si->m_cr ) {
-	       g_errno = ENOCOLLREC;
-	       return sendReply(st,NULL);
-	}
 
-
-	// grab the query
-	char  *q    = msg40->getQuery();
-	long   qlen = msg40->getQueryLen();
 
 	//bool xml = si->m_xml;
 
@@ -862,6 +938,7 @@ bool gotResults ( void *state ) {
 	// numResults may be more than we requested now!
 	long n = msg40->getDocsWanted();
 	if ( n > numResults )  n = numResults;
+
 	// . make the query class here for highlighting
 	// . keepAllSingles means to convert all individual words into
 	//   QueryTerms even if they're in quotes or in a connection (cd-rom).
@@ -1342,12 +1419,23 @@ bool gotResults ( void *state ) {
 
 	// don't display more than docsWanted results
 	long count = msg40->getDocsWanted();
+	bool hadPrintError = false;
 
 	for ( long i = 0 ; count > 0 && i < numResults ; i++ ) {
 		// prints in xml or html
-		printResult ( sb , st , i , cr , qe );
+		if ( ! printResult ( sb , st , i , cr , qe ) ) {
+			hadPrintError = true;
+			break;
+		}
 		// limit it
 		count--;
+	}
+
+
+	if ( hadPrintError ) {
+		if ( ! g_errno ) g_errno = EBADENGINEER;
+		log("query: had error: %s",mstrerror(g_errno));
+		return sendReply ( st , sb.getBufStart() );
 	}
 
 
@@ -1782,7 +1870,7 @@ static bool printDMOZCategoryUnderResult ( SafeBuf &sb ,
 
 
 // use this for xml as well as html
-static int printResult ( SafeBuf &sb,
+static bool printResult ( SafeBuf &sb,
 			 State0 *st,
 			 long ix , 
 			 CollectionRec *cr ,
@@ -1813,6 +1901,17 @@ static int printResult ( SafeBuf &sb,
 
 	Msg20      *m20 = msg40->m_msg20[ix];
 	Msg20Reply *mr  = m20->m_r;
+
+	// . sometimes the msg20reply is NULL so prevent it coring
+	// . i think this happens if all hosts in a shard are down or timeout
+	//   or something
+	if ( ! mr ) return false;
+
+	// . if section voting info was request, display now, it's in json
+	// . so if in csv it will mess things up!!!
+	if ( mr->ptr_sectionVotingInfo )
+		// it is possible this is just "\0"
+		sb.safeStrcpy ( mr->ptr_sectionVotingInfo );
 
 	// each "result" is the actual cached page, in this case, a json
 	// object, because we were called with &icc=1. in that situation

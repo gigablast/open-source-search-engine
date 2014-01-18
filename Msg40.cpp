@@ -1098,6 +1098,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		//req.m_excludeLinkText    = m_si->m_excludeLinkText ;
 		//req.m_excludeMetaText    = m_si->m_excludeMetaText ;
 		req.m_includeCachedCopy  = m_si->m_includeCachedCopy;//bigsmpl
+		req.m_getSectionVotingInfo   = m_si->m_getSectionVotingInfo;
 		req.m_considerTitlesFromBody = m_si->m_considerTitlesFromBody;
 		if ( cr->m_considerTitlesFromBody )
 			req.m_considerTitlesFromBody = true;
