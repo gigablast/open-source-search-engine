@@ -3735,7 +3735,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	//m_isReadDone = ( list->getListSize() < (long)SR_READ_SIZE ) ;
 
 	//
-	// try to fix the bug of reading like only 150k when we asked for 512k
+	// . try to fix the bug of reading like only 150k when we asked for 512
+	// . that bug was because of dedupList() function
 	//
 	if ( list->isEmpty() )
 		m_isReadDone = true;
@@ -9836,12 +9837,15 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[5] == 'd' &&
 		     p[6] == 'd' &&
 		     p[7] == 's' ) {
-			// a special hack so it is seeds so we can use the same table
+			// a special hack so it is seeds so we can use same tbl
 			long h32 = sreq->m_siteHash32 ^ 0x123456;
-			long *valPtr =(long *)cr->m_pageCountTable.getValue(&h32);
+			long *valPtr ;
+			valPtr =(long *)cr->m_pageCountTable.getValue(&h32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
-			if ( ! valPtr ) { char *xx=NULL;*xx=0; }
+			// this happens if INJECTING a url from the
+			// "add url" function on homepage
+			if ( ! valPtr ) continue;//{ char *xx=NULL;*xx=0; }
 			// shortcut
 			long a = *valPtr;
 			// what is the provided value in the url filter rule?
@@ -9872,12 +9876,13 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[7] == 'd' &&
 		     p[8] == 'd' &&
 		     p[9] == 's' ) {
-			// a special hack so it is seeds so we can use the same table
+			// a special hack so it is seeds so we can use same tbl
 			long h32 = sreq->m_domHash32 ^ 0x123456;
-			long *valPtr =(long *)cr->m_pageCountTable.getValue(&h32);
+			long *valPtr ;
+			valPtr = (long *)cr->m_pageCountTable.getValue(&h32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
-			if ( ! valPtr ) { char *xx=NULL;*xx=0; }
+			if ( ! valPtr ) continue;//{ char *xx=NULL;*xx=0; }
 			// shortcut
 			long a = *valPtr;
 			// what is the provided value in the url filter rule?
@@ -9915,7 +9920,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 				getValue(&sreq->m_siteHash32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
-			if ( ! valPtr ) { char *xx=NULL;*xx=0; }
+			if ( ! valPtr ) continue;//{ char *xx=NULL;*xx=0; }
 			// shortcut
 			long a = *valPtr;
 			// what is the provided value in the url filter rule?
@@ -9952,7 +9957,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 				getValue(&sreq->m_domHash32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
-			if ( ! valPtr ) { char *xx=NULL;*xx=0; }
+			if ( ! valPtr ) continue;//{ char *xx=NULL;*xx=0; }
 			// shortcut
 			long a = *valPtr;
 			// what is the provided value in the url filter rule?

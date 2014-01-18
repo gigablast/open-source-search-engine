@@ -1061,7 +1061,8 @@ bool gotResults ( void *state ) {
 
 	// otherwise, we had no error
 	if ( numResults == 0 && si->m_format == FORMAT_HTML ) {
-		sb.safePrintf ( "No results found." );
+		sb.safePrintf ( "No results found in <b>%s</b> collection.",
+				cr->m_coll);
 	}
 	else if ( moreFollow && si->m_format == FORMAT_HTML ) {
 		if ( isAdmin && si->m_docsToScanForReranking > 1 )
@@ -1129,9 +1130,9 @@ bool gotResults ( void *state ) {
 
 	// print "in collection ***" if we had a collection
 	if ( collLen > 0 && ! isMain && isAdmin ) {
-		sb.safePrintf (" in collection '<b>");
+		sb.safePrintf (" in collection <b>");
 		sb.safeMemcpy ( coll , collLen );
-		sb.safeMemcpy ( "</b>'" , 5 );
+		sb.safeMemcpy ( "</b>" , 5 );
 	}
 
 

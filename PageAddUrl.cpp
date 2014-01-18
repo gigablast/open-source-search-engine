@@ -89,7 +89,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 		collLen = gbstrlen(coll);
 	}
 	// get collection rec
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	CollectionRec *cr = g_collectiondb.getRec ( r ); // coll );
 	// bitch if no collection rec found
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;

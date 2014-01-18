@@ -61,20 +61,23 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 		      "<a href=%s/privacy.html>Privacy Policy</a>"
 		      " &nbsp; &nbsp; "
 		      "<a href=%s/searchfeed.html>Search API</a>"
-		      " &nbsp; &nbsp; "
-		      "<a href=%s/seoapi.html>SEO API</a>"
-		      " &nbsp; &nbsp; "
-		      "<a href=%s/account>My Account</a> "
 		      , root
 		      , root
 		      , root
 		      , root
 		      , root
-		      , root
-		      , rootSecure
-
-		      //" &nbsp; &nbsp; <a href=/logout>Logout</a>"
 		      );
+
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf(" &nbsp; &nbsp; "
+			      "<a href=%s/seoapi.html>SEO API</a>"
+			      " &nbsp; &nbsp; "
+			      "<a href=%s/account>My Account</a> "
+			      , root
+			      , rootSecure
+			      //" &nbsp; &nbsp; <a href=/logout>Logout</a>"
+			      );
+
 	if ( r->isLocal() )
 	     sb.safePrintf("&nbsp; &nbsp;[<a href=\"/master?\">Admin</a>]");
 	sb.safePrintf("</p></b></center></body></html>");
@@ -381,7 +384,12 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=http://www.gigablast.com/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"/Top\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
+	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; ");
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo"
+			      "</a> &nbsp;&nbsp;&nbsp;&nbsp; " );
+	sb.safePrintf("<a href=\"/Top\">directory</a> "
+		      "&nbsp;&nbsp;&nbsp;&nbsp; \n");
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
 	sb.safePrintf("<b title=\"Instantly add your url to Gigablast's "
@@ -392,13 +400,15 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	sb.safePrintf("<form method=get action=/addurl name=f>\n");
 
 
-	//CollectionRec *cr = g_collectiondb.getRec ( "main" );
-
+	CollectionRec *cr = g_collectiondb.getRec ( r );
 	// the collection we want to add the url to
-	char *coll = r->getString("c");
-	if ( ! coll ) coll = "";
+	char *coll = NULL;
+	if ( cr ) 
+		coll = cr->m_coll;
 	if ( coll )
 		sb.safePrintf("<input type=hidden name=c value=\"%s\">",coll);
+	if ( ! coll ) 
+		coll = "";
 
 	sb.safePrintf("<input name=u type=text size=60 value=\"");
 	if ( url ) {
@@ -423,6 +433,9 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	// or if in read-only mode
 	if (   g_conf.m_readOnlyMode  ) 
 		msg = "Add url is temporarily disabled";
+
+	sb.safePrintf("<br><br>Add a url to the <b>%s</b> collection",coll);
+
 	// if url is non-empty the ajax will receive this identical msg
 	// and display it in the div, so do not duplicate the msg!
 	if ( msg && ! url )
@@ -534,9 +547,21 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=http://www.gigablast.com/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <b>directory</b> &nbsp;&nbsp;&nbsp;&nbsp; \n");
-	sb.safePrintf("<a href=http://www.gigablast.com/events>events</a>"
-		      " &nbsp;&nbsp;&nbsp;&nbsp; \n");
+
+	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; ");
+
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo"
+			      "</a> &nbsp;&nbsp;&nbsp;&nbsp; " );
+
+	sb.safePrintf("<a href=\"/Top\"><b>directory</b></a> "
+		      "&nbsp;&nbsp;&nbsp;&nbsp; \n");
+
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<a href=http://www.gigablast.com/events>"
+			      "events</a>"
+			      " &nbsp;&nbsp;&nbsp;&nbsp; \n");
+
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
 	char *root = "";
@@ -586,18 +611,13 @@ bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 	//long  qlen;
 	//char *q = r->getString ( "q" , &qlen , NULL );
 	// insert collection name too
-	long collLen;
-	char *coll    = r->getString("c",&collLen);
-	if ( ! coll || ! coll[0] ) {
-		//coll    = g_conf.m_defaultColl;
-		coll = g_conf.getDefaultColl( r->getHost(), r->getHostLen() );
-		collLen = gbstrlen(coll);
-	}
-	// ensure collection not too big
-	if ( collLen >= MAX_COLL_LEN ) { 
-		g_errno = ECOLLTOOBIG; 
+	CollectionRec *cr = g_collectiondb.getRec(r);
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno)); 
 	}
+
+
 	// get the collection rec
 	/*
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
@@ -1279,7 +1299,9 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	//	collLen = gbstrlen(coll);
 	//}
 	// get collection rec
+
 	CollectionRec *cr = g_collectiondb.getRec ( r );
+
 	// bitch if no collection rec found
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;

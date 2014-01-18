@@ -1099,6 +1099,18 @@ CollectionRec *Collectiondb::getRec ( HttpRequest *r ) {
 		snprintf(tmp,MAX_COLL_LEN,"%s-%s",token,name);
 		coll = tmp;
 	}
+
+	// default to main first
+	if ( ! coll ) {
+		CollectionRec *cr = g_collectiondb.getRec("main");
+		if ( cr ) return cr;
+	}
+
+	// try next in line
+	if ( ! coll ) {
+		return getFirstRec ();
+	}
+
 	// give up?
 	if ( ! coll ) return NULL;
 	//if ( ! coll || ! coll[0] ) coll = g_conf.m_defaultColl;
