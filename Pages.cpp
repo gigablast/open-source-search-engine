@@ -1020,7 +1020,7 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 		       "<div "
 		       "style="
 		       "max-height:600px;"
-		       //"max-width:225px;"
+		       "max-width:225px;"
 		       //"min-width:225px;"
 		       "overflow-y:auto;"
 		       "overflow-x:hidden>"

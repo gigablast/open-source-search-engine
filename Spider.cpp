@@ -26,6 +26,7 @@
 // . this was 10 but cpu is getting pegged, maybe set to 30 now
 // . we consider the collection done spidering when no urls to spider
 //   for this many seconds
+// . i'd like to set back to 10 for speed... maybe even 5 or less
 #define SPIDER_DONE_TIMER 45
 
 

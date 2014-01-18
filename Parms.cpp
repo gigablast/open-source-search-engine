@@ -9607,7 +9607,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_REBUILDURLFILTERS;
 	m++;
 
 	m->m_title = "spider round num";
