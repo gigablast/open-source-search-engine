@@ -1129,11 +1129,8 @@ bool gotResults ( void *state ) {
 	if ( collLen == 4 && strncmp ( coll, "main", 4) == 0 ) isMain = true;
 
 	// print "in collection ***" if we had a collection
-	if ( collLen > 0 && ! isMain && isAdmin ) {
-		sb.safePrintf (" in collection <b>");
-		sb.safeMemcpy ( coll , collLen );
-		sb.safeMemcpy ( "</b>" , 5 );
-	}
+	if ( collLen > 0 && ! isMain ) // && isAdmin )
+		sb.safePrintf (" in collection <b>%s</b>",coll);
 
 
 	char *pwd = si->m_pwd;
@@ -2410,7 +2407,7 @@ static bool printResult ( SafeBuf &sb,
 				mr->m_docId ); 
 
 	// the new links
-	if ( si->m_format == FORMAT_HTML ) {
+	if ( si->m_format == FORMAT_HTML && g_conf.m_isMattWells ) {
 		//sb.safePrintf(" - <a href=\"/scoring?"
 		//	      "c=%s&\">scoring</a>",
 		//	      coll );
@@ -4725,21 +4722,26 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 	else
 		sb.safePrintf("<a title=\"Search the web\" href=/>web</a>");
 
-		      
+
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; "  );
-	//  SEO functionality not included yet - so redir to gigablast.
-	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<a title=\"Rank higher in "
-			      "Google\" href='/seo'>");
-	else
-		sb.safePrintf("<a title=\"Rank higher in "
-			      "Google\" href='https://www.gigablast."
-			      "com/seo'>");
+
+
+	if ( g_conf.m_isMattWells ) {
+		//  SEO functionality not included yet - so redir to gigablast.
+		if ( g_conf.m_isMattWells )
+			sb.safePrintf("<a title=\"Rank higher in "
+				      "Google\" href='/seo'>");
+		else
+			sb.safePrintf("<a title=\"Rank higher in "
+				      "Google\" href='https://www.gigablast."
+				      "com/seo'>");
 	
-	sb.safePrintf(
-		      "seo</a>"
-		      " &nbsp;&nbsp;&nbsp;&nbsp; "
-		      );
+		sb.safePrintf(
+			      "seo</a>"
+			      " &nbsp;&nbsp;&nbsp;&nbsp; "
+			      );
+	}
+
 
 	if (catId <= 0 )
 		sb.safePrintf("<a title=\"Browse the DMOZ directory\" "
@@ -4758,12 +4760,12 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 		      // i'm not sure why this was removed. perhaps
 		      // because it is not working yet because of
 		      // some bugs...
-		      "<!-- <a title=\"Advanced web search\" "
+		      "<a title=\"Advanced web search\" "
 		      "href=/adv.html>"
 		      "advanced"
 		      "</a>"
 		      
-		      " &nbsp;&nbsp;&nbsp;&nbsp; -->"
+		      " &nbsp;&nbsp;&nbsp;&nbsp;"
 		      
 		      "<a title=\"Add your url to the index\" "
 		      "href=/addurl>"

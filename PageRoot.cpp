@@ -155,7 +155,15 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	// submit to https now
 	sb.safePrintf("<form method=get "
 		      "action=/search name=f>\n");
+
+	CollectionRec *cr = g_collectiondb.getRec ( r );
+	if ( cr )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
+			      cr->m_coll);
+
 	sb.safePrintf("<input name=q type=text size=60 value=\"\">&nbsp;<input type=\"submit\" value=\"Search\">\n");
+
+
 	sb.safePrintf("\n");
 	sb.safePrintf("</form>\n");
 	sb.safePrintf("<br>\n");
