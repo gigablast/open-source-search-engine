@@ -67,7 +67,6 @@ public:
 	void printTitledbList ( RdbList *list , SafeBuf *sb ,
 				char **lastKeyPtr );
 	bool printJsonItemInCsv ( char *json , SafeBuf *sb ) ;
-	bool readAndSendLoop ( bool readFirst ) ;
 
 	long long m_lastUh48;
 	long m_lastFirstIp;
@@ -232,6 +231,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	       return g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno));
 	}
 	mnew ( st , sizeof(StateCD), "statecd");
+
 	// initialize the new state
 	st->m_rdbId = rdbId;
 	st->m_downloadJSON = downloadJSON;
@@ -267,6 +267,35 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	return true;
 }
 
+
+// . all wrappers call this
+// . returns false if would block, true otherwise
+bool readAndSendLoop ( StateCD *st , bool readFirst ) {
+
+ subloop:
+
+	// are we all done?
+	if ( readFirst && ! st->m_someoneNeedsMore ) {
+		log("crawlbot: done sending for download request");
+		mdelete ( st , sizeof(StateCD) , "stcd" );
+		delete st;
+		return true;
+	}
+
+	// begin reading from each shard and sending the spiderdb records
+	// over the network. return if that blocked
+	if ( readFirst && ! st->readDataFromRdb ( ) ) return false;
+
+	// send it to the browser socket. returns false if blocks.
+	if ( ! st->sendList() ) return false;
+
+	// read again i guess
+	readFirst = true;
+
+	// hey, it did not block... tcpserver caches writes...
+	goto subloop;
+}
+
 void StateCD::sendBackDump2 ( ) {
 
 	m_numRequests = 0;
@@ -286,37 +315,8 @@ void StateCD::sendBackDump2 ( ) {
 	}
 
 	// begin reading from the shards and trasmitting back on m_socket
-	readAndSendLoop ( true );
+	readAndSendLoop ( this , true );
 }
-
-// . all wrappers call this
-// . returns false if would block, true otherwise
-bool StateCD::readAndSendLoop ( bool readFirst ) {
-
- subloop:
-
-	// are we all done?
-	if ( readFirst && ! m_someoneNeedsMore ) {
-		log("crawlbot: done sending for download request");
-		delete this;
-		mdelete ( this , sizeof(StateCD) , "stcd" );
-		return true;
-	}
-
-	// begin reading from each shard and sending the spiderdb records
-	// over the network. return if that blocked
-	if ( readFirst && ! readDataFromRdb ( ) ) return false;
-
-	// send it to the browser socket. returns false if blocks.
-	if ( ! sendList() ) return false;
-
-	// read again i guess
-	readFirst = true;
-
-	// hey, it did not block... tcpserver caches writes...
-	goto subloop;
-}
-
 
 
 static void gotListWrapper7 ( void *state ) {
@@ -327,7 +327,7 @@ static void gotListWrapper7 ( void *state ) {
 	// wait for all
 	if ( st->m_numReplies < st->m_numRequests ) return;
 	// read and send loop
-	st->readAndSendLoop( false );
+	readAndSendLoop( st , false );
 }
 	
 
@@ -566,7 +566,7 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 	    sock->m_sendBufUsed);
 
 
-	st->readAndSendLoop ( true );
+	readAndSendLoop ( st , true );
 
 	return;
 }
@@ -1006,8 +1006,8 @@ void printCrawlStatsWrapper ( void *state ) {
 	// save before nuking state
 	TcpSocket *sock = sxx->m_socket;
 	// nuke the state
-	delete sxx;
 	mdelete ( sxx , sizeof(StateXX) , "stxx" );
+	delete sxx;
 	// and send back now
 	g_httpServer.sendDynamicPage ( sock ,
 				       sb.getBufStart(), 
@@ -1257,8 +1257,8 @@ void addedUrlsToSpiderdbWrapper ( void *state ) {
 			     NULL ,
 			     &rr ,
 			     st->m_collnum );
-	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	delete st;
 	//log("mdel2: st=%lx",(long)st);
 }
 /*
@@ -1334,8 +1334,8 @@ void injectedUrlWrapper ( void *state ) {
 			     response,
 			     NULL ,
 			     st->m_collnum );
-	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	delete st;
 }
 */	
 
@@ -1461,8 +1461,8 @@ void collOpDoneWrapper ( void *state ) {
 	StateCD *st = (StateCD *)state;
 	TcpSocket *socket = st->m_socket;
 	log("crawlbot: done with blocked op.");
-	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	delete st;
 	//log("mdel3: st=%lx",(long)st);
 	g_httpServer.sendDynamicPage (socket,"OK",2);
 }
@@ -1780,8 +1780,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			em.safePrintf("Invalid regular expresion: %s",rx2);
 		}
 		if ( status1 || status2 ) {
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			char *msg = em.getBufStart();
 			return sendErrorReply2(socket,fmt,msg);
 		}
@@ -1839,8 +1839,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			if ( resetColl ) msg = "No such collection";
 			if ( restartColl ) msg = "No such collection";
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			// log it
 			log("crawlbot: cr is null. %s",msg);
 			// make sure this returns in json if required
@@ -1866,8 +1866,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			if ( ! g_collectiondb.deleteRec ( collName , we ) )
 				return false;
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			// all done
 			return g_httpServer.sendDynamicPage (socket,"OK",2);
 		}
@@ -1891,14 +1891,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			// to avoid user confusion
 			if ( cr ) cr->m_spideringEnabled = 1;
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			// all done
 			return g_httpServer.sendDynamicPage (socket,"OK",2);
 		}
 		// nuke it
-		delete st;
 		mdelete ( st , sizeof(StateCD) , "stcd" );
+		delete st;
 		// this will set the the collection parms from json
 		//setSpiderParmsFromJSONPost ( socket , hr , cr , &JS );
 		// this is a cast, so just return simple response
@@ -1924,8 +1924,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( name && name[0] )
 			msg = "Failed to add crawl. Crawl name is illegal.";
 		// nuke it
-		delete st;
 		mdelete ( st , sizeof(StateCD) , "stcd" );
+		delete st;
 		//log("crawlbot: no collection found. need to add a crawl");
 		return sendErrorReply2(socket,fmt, msg);
 	}
@@ -1975,15 +1975,15 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		// error?
 		if ( ! status ) {
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
 		}
 		// if not list
 		if ( ! size ) {
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			return sendErrorReply2(socket,fmt,"no urls found");
 		}
 		// add to spiderdb
@@ -2037,8 +2037,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	printCrawlBotPage2 ( socket,hr,fmt,NULL,NULL,cr->m_collnum);
 
 	// get rid of that state
-	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	delete st;
 	//log("mdel4: st=%lx",(long)st);
 	return true;
 }

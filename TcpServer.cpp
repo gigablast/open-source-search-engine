@@ -1443,7 +1443,7 @@ void writeSocketWrapper ( int sd , void *state ) {
 	// if socket has nothing to send yet cuz we're waiting, wait...
 	if ( s->m_sendBufUsed == 0 ) return;
 
- sendAgain:
+	// sendAgain:
 
 	// . writeSocket returns false if blocked, true otherwise
 	// . it also sets g_errno on errro
@@ -1460,13 +1460,16 @@ void writeSocketWrapper ( int sd , void *state ) {
 
 	// if callback changed socket status to ST_SEND_AGAIN 
 	// then let's send the new buffer that it has. Diffbot.cpp uses this.
-	if ( s->m_sockState == ST_SEND_AGAIN ) {
-		s->m_sockState = ST_WRITING;
-		// if nothing left to send just return
-		if ( ! s->m_sendBuf ) return;
-		// otherwise send it
-		goto sendAgain;
-	}
+	//if ( s->m_sockState == ST_SEND_AGAIN ) {
+	//	s->m_sockState = ST_WRITING;
+	//	// if nothing left to send just return
+	//	if ( ! s->m_sendBuf ) return;
+	//	// otherwise send it
+	//	goto sendAgain;
+	//}
+
+	// wait for it to exit streaming mode before destroying
+	if ( s->m_streamingMode ) return;
 
 	// . destroy the socket on error, recycle on transaction completion
 	// . this will also unregister all our callbacks for the socket
@@ -1682,6 +1685,10 @@ connected:
 // . calls the callback governing "s" if it has one
 void TcpServer::destroySocket ( TcpSocket *s ) {
 	if ( ! s ) return ;
+
+	// sanity, must exit streaming mode before destruction
+	if ( s->m_streamingMode ) { char *xx=NULL;*xx=0; }
+
 	// sanity check
 	if ( s->m_udpSlot ) { 
 		log("tcp: sending back error on udp slot err=%s",
@@ -2263,7 +2270,7 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 			  sb->getCapacity(),//sendBufSize ,
 			  sb->length(),//sendBufSize ,
 			  sb->length(), // msgtotalsize
-			  this       ,   // data for callback
+			  state       ,   // data for callback
 			  doneSendingWrapper  ) ) { // callback
 		// do not free sendbuf we are transmitting it
 		sb->detachBuf();

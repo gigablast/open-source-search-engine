@@ -29,7 +29,7 @@
 // hack to repopulate the socket's send buf when its done sending
 // it's current sendbuf in order to transmit large amounts of data that
 // can't all fit in memory at the same time:
-#define ST_SEND_AGAIN       10
+//#define ST_SEND_AGAIN       10
 
 #define TCP_READ_BUF_SIZE 1024
 

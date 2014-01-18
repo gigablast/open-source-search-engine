@@ -3334,7 +3334,12 @@ RdbMerge.o: RdbMerge.cpp gb-include.h types.h fctypes.h Unicode.h \
  openssl/ssl23.h openssl/srtp.h Collectiondb.h HashTableX.h PingServer.h \
  RdbScan.h BigFile.h RdbMap.h RdbList.h RdbDump.h RdbTree.h RdbMem.h \
  RdbBuckets.h RdbCache.h Msg5.h Msg3.h RdbMerge.h Dir.h Indexdb.h \
- DiskPageCache.h Titledb.h Process.h
+ DiskPageCache.h Titledb.h Process.h Spider.h Msg4.h Msg1.h UdpServer.h \
+ UdpSlot.h UdpProtocol.h Multicast.h Threads.h Msg0.h Clusterdb.h \
+ Linkdb.h Msg2.h Query.h Msg20.h Summary.h matches2.h Words.h StopWords.h \
+ Bits.h Pos.h Matches.h HashTableT.h Domains.h CountryCode.h Tagdb.h \
+ Events.h Sections.h IndexList.h Dates.h Msg22.h CatRec.h Categories.h \
+ HashTable.h Catdb.h Datedb.h
 RdbScan.o: RdbScan.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h RdbScan.h \
  BigFile.h File.h Mem.h Conf.h Xml.h XmlNode.h Lang.h Iso8859.h \
