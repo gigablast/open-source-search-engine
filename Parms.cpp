@@ -17252,12 +17252,23 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 	if ( m->m_type == TYPE_SAFEBUF ) {
 		SafeBuf *sb = (SafeBuf *)data;
 		data = sb->getBufStart();
-		dataSize = sb->length(); // do not include \0
-		// if just a \0 then make it empty
-		if ( dataSize && !data[0] ) {
-			data = NULL;
-			dataSize = 0;
+		dataSize = sb->length();
+		// sanity
+		if ( dataSize > 0 && !data[dataSize-1]){char *xx=NULL;*xx=0;}
+		// include the \0 since we do it for strings above
+		if ( dataSize > 0 ) dataSize++;
+		// empty? make it \0 then to be like strings i guess
+		if ( dataSize == 0 ) {
+			data = "\0";
+			dataSize = 1;
 		}
+		// sanity check
+		if ( dataSize > 0 && data[dataSize-1] ) {char *xx=NULL;*xx=0;}
+		// if just a \0 then make it empty
+		//if ( dataSize && !data[0] ) {
+		//	data = NULL;
+		//	dataSize = 0;
+		//}
 	}
 
 	//long occNum = -1;
@@ -18555,7 +18566,8 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		// the long before the array is the # of elements
 		long currentCount = *((long *)(dst-4));
 		// update our # elements in our array if this is bigger
-		if ( occNum > currentCount ) *((long *)(dst-4)) = occNum;
+		long newCount = occNum + 1;
+		if ( newCount > currentCount ) *((long *)(dst-4)) = newCount;
 		// now point "dst" to the occNum-th element
 		dst += parm->m_size * occNum;
 	}
@@ -18572,12 +18584,17 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		SafeBuf *sb = (SafeBuf *)dst;
 		// nuke it
 		sb->purge();
-		// this means that we can not use string POINTERS as parms!!
-		if ( data && dataSize && data[0] )
-			// don't include \0 as part of length
+		// require that the \0 be part of the update i guess
+		//if ( ! data || dataSize <= 0 ) { char *xx=NULL;*xx=0; }
+		// check for \0
+		if ( data && dataSize > 0 ) {
+			if ( data[dataSize-1] != '\0') { char *xx=NULL;*xx=0; }
+			// this means that we can not use string POINTERS as 
+			// parms!! don't include \0 as part of length
 			sb->safeStrcpy ( data ); // , dataSize );
-		// ensure null terminated
-		sb->nullTerm();
+			// ensure null terminated
+			sb->nullTerm();
+		}
 		//return true;
 		// sanity
 		// we no longer include the \0 in the dataSize... so a dataSize
@@ -18598,7 +18615,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 
 	// show it
 	log("parms: updating parm \"%s\" "
-	    "(%s[%li]) (collnum=%li) from %s -> %s",
+	    "(%s[%li]) (collnum=%li) from \"%s\" -> \"%s\"",
 	    parm->m_title,
 	    parm->m_cgi,
 	    occNum,
