@@ -342,7 +342,8 @@ class Parms {
 				 bool sendToGrunts  = true ,
 				 bool sendToProxies = false ,
 				 // send to this single hostid? -1 means all
-				 long hostId = -1 );
+				 long hostId = -1 ,
+				 long hostId2 = -1 ); // hostid range?
 	bool doParmSendingLoop ( ) ;
 	bool syncParmsWithHost0 ( ) ;
 	bool makeSyncHashList ( SafeBuf *hashList ) ;

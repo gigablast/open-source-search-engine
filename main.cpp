@@ -3526,12 +3526,16 @@ void doCmdAll ( int fd, void *state ) {
 		exit(0);
 	}
 
+	// restrict broadcast to this hostid range!
+
 	// returns true with g_errno set on error. uses g_udpServer
 	if ( g_parms.broadcastParmList ( &parmList ,
 					 NULL , 
 					 doneCmdAll , // callback when done
 					 s_sendToHosts ,
-					 s_sendToProxies ) ) {
+					 s_sendToProxies ,
+					 s_hostId ,  // -1 means all
+					 s_hostId2 ) ) { // -1 means all
 		log("cmd: error sending command: %s",mstrerror(g_errno));
 		exit(0);
 		return;

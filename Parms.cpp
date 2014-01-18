@@ -17641,6 +17641,9 @@ public:
 	bool m_sendToGrunts;
 	bool m_sendToProxies;
 	long m_hostId; // -1 means send parm update to all hosts
+	// . if not -1 then [m_hostId,m_hostId2] is a range
+	// . used by main.cpp cmd line cmds like 'gb stop 3-5'
+	long m_hostId2; 
 };
 
 static ParmNode *s_headNode = NULL;
@@ -17658,7 +17661,9 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 				bool sendToGrunts ,
 				bool sendToProxies ,
 				// this is -1 if sending to all hosts
-				long hostId ) {
+				long hostId ,
+				// this is not -1 if its range [hostId,hostId2]
+				long hostId2 ) {
 
 	// empty list?
 	if ( parmList->getLength() <= 0 ) return true;
@@ -17691,6 +17696,7 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 	pn->m_sendToGrunts   = sendToGrunts;
 	pn->m_sendToProxies  = sendToProxies;
 	pn->m_hostId         = hostId;
+	pn->m_hostId2        = hostId2; // a range? then not -1 here.
 
 	// store it ordered in our linked list of parm transmit nodes
 	if ( ! s_tailNode ) {
@@ -17917,12 +17923,26 @@ bool Parms::doParmSendingLoop ( ) {
 
 		// give him a free pass? some parm updates are directed to 
 		// a single host, we use this for syncing parms at startup.
-		if ( pn->m_hostId >= 0 && h->m_hostId != pn->m_hostId ) {
+		if ( pn->m_hostId >= 0 && 
+		     pn->m_hostId2 == -1 && // not a range
+		     h->m_hostId != pn->m_hostId ) {
 			// assume we sent it to him
 			h->m_lastParmIdCompleted = pn->m_parmId;
 			h->m_currentNodePtr = NULL;
 			continue;
 		}
+
+		// range? if not in range, give free pass
+		if ( pn->m_hostId >= 0 && 
+		     pn->m_hostId2 >= 0 &&
+		     ( h->m_hostId < pn->m_hostId ||
+		       h->m_hostId > pn->m_hostId2 ) ) {
+			// assume we sent it to him
+			h->m_lastParmIdCompleted = pn->m_parmId;
+			h->m_currentNodePtr = NULL;
+			continue;
+		}
+
 			
 		// force completion if we should NOT send to him
 		if ( (h->isProxy() && ! pn->m_sendToProxies) ||

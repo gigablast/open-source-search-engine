@@ -5814,6 +5814,8 @@ Sections *XmlDoc::getSections ( ) {
 	uint32_t *tph = getTagPairHash32();
 	if ( ! tph || tph == (uint32_t *)-1 ) return (Sections *)tph;
 
+	// need a getUseSectiondb() function...
+
 	if ( ! m_useSectiondb ) {
 		m_sectionsValid = true;
 		return &m_sections;
@@ -23122,9 +23124,9 @@ bool XmlDoc::addTable128 ( HashTableX *tt1     , // T <key128_t,char> *tt1
 
 
 
-
-
-// . hash the "no split" terms
+//
+// . hash terms that are sharded by TERMID not DOCID!!
+//
 // . returns false and sets g_errno on error
 // . these terms are stored in indexdb/datedb, but all terms with the same
 //   termId reside in one and only one group. whereas normally the records

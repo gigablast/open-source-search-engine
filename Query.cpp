@@ -2190,6 +2190,7 @@ bool Query::setQWords ( char boolFlag ,
 		// if we're hashing a url:, link:, site: or ip: term, 
 		// then we need to hash ALL up to the first space
 		if ( fieldCode == FIELD_URL  || 
+		     fieldCode == FIELD_GBPARENTURL ||
 		     fieldCode == FIELD_EXT  || 
 		     fieldCode == FIELD_LINK ||
 		     fieldCode == FIELD_ILINK||
@@ -2225,6 +2226,7 @@ bool Query::setQWords ( char boolFlag ,
 
 			// should we have normalized before hashing?
 			if ( fieldCode == FIELD_URL ||
+			     fieldCode == FIELD_GBPARENTURL ||
 			     fieldCode == FIELD_LINK ||
 			     fieldCode == FIELD_ILINK ||
 			     fieldCode == FIELD_SITELINK ||
@@ -2237,6 +2239,8 @@ bool Query::setQWords ( char boolFlag ,
 				if ( fieldCode == FIELD_ILINK) addwww = true;
 				if ( fieldCode == FIELD_LINKS) addwww = true;
 				if ( fieldCode == FIELD_URL  ) addwww = true;
+				if ( fieldCode == FIELD_GBPARENTURL ) 
+					addwww = true;
 				if ( fieldCode == FIELD_SITELINK) 
 					addwww = true;
 				url.set ( w , wlen , addwww );
@@ -3071,6 +3075,7 @@ struct QueryField g_fields[] = {
 
 	{"gbpermalink",FIELD_GBPERMALINK,false,""},
 	{"gbcsenum",FIELD_GBCSENUM,false,""},
+	{"gbparenturl", FIELD_GBPARENTURL, true,"Match the json urls that were extract from this parent url. Example: gbparenturl:www.gigablast.com/addurl.htm"},
 	{"gbdocid",FIELD_GBDOCID,false,"restrict results to this docid"}
 	
 };
