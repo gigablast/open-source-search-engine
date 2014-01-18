@@ -1783,7 +1783,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 
 	//sprintf(p,"<font size=+1>\n" );
 	//p += gbstrlen(p);
-	sb->safePrintf ("<center>\n" );
+	//sb->safePrintf ("<center>\n" );
 
 	// soemtimes we do not want to be USER_MASTER for testing
 	char buf [ 64 ];
@@ -1861,7 +1861,9 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		}
 		*/
 	}
-	sb->safePrintf("</center><br/>" );
+	//sb->safePrintf("</center>" );
+	sb->safePrintf("<br/>" );
+	sb->safePrintf("<br/>" );
 
 	if ( top ) return status;
 
@@ -1990,7 +1992,8 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 
 	char *s = "s";
 	if ( g_collectiondb.m_numRecsUsed == 1 ) s = "";
-	sb->safePrintf ( "<center><b>%li Collection%s</b></center><br>\n",
+	sb->safePrintf ( "<center><nobr><b>%li Collection%s</b></nobr>"
+			 "</center><br>\n",
 			 g_collectiondb.m_numRecsUsed , s );
 
 	char *color = "red";

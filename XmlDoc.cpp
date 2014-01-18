@@ -23523,10 +23523,12 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	// which we use for diffbot custom crawls as well.
 	if ( ! hashNoSplit ( table ) ) return NULL;
 
+
 	// global index unless this is a json object in which case it is
 	// hased above in the call to hashJSON(). this will decrease disk
 	// usage by about half, posdb* files are pretty big.
-	if ( cr->m_isCustomCrawl ) return (char *)1;
+	if ( cr->m_isCustomCrawl || ! cr->m_indexBody ) return (char *)1;
+
 	     
 
 	// hash the body of the doc first so m_dist is 0 to match

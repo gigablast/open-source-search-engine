@@ -387,7 +387,9 @@ class CollectionRec {
 	// spidered and begin the next round
 	long   m_spiderRoundNum;
 
-	char  m_useDatedb               ;
+	char  m_indexBody;
+
+	//char  m_useDatedb               ;
 	//char  m_addUrlEnabled           ; // TODO: use at http interface lvl
 	//char  m_spiderLinks             ; use url filters now!
 	char  m_sameHostLinks           ; // spider links from same host only?

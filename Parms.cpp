@@ -2847,7 +2847,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		else
 			sb->safePrintf ("<input type=text name=%s "
 					"value=\"%f\" "
-					"size=12>",cgi,*(float *)s);
+					"size=3>",cgi,*(float *)s);
 	}
 	else if ( t == TYPE_IP ) {
 		if ( m->m_max > 0 && j == jend ) 
@@ -2855,7 +2855,7 @@ bool Parms::printParm ( SafeBuf* sb,
 					"size=12>",cgi);
 		else
 			sb->safePrintf ("<input type=text name=%s value=\"%s\" "
-					"size=12>",cgi,iptoa(*(long *)s));
+					"size=6>",cgi,iptoa(*(long *)s));
 	}
 	else if ( t == TYPE_LONG ) {
 		// just show the parm name and value if printing in json
@@ -2864,7 +2864,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		else
 			sb->safePrintf ("<input type=text name=%s "
 					"value=\"%li\" "
-					"size=12>",cgi,*(long *)s);
+					"size=3>",cgi,*(long *)s);
 	}
 	else if ( t == TYPE_LONG_CONST ) 
 		sb->safePrintf ("%li",*(long *)s);
@@ -10533,6 +10533,18 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m++;
+
+	// i put this in here so i can save disk space for my global
+	// diffbot json index
+	m->m_title = "index body";
+	m->m_desc  = "Index the body of the documents so you can search it. "
+		"Required for searching that. You wil pretty much always "
+		"want to keep this enabled.";
+	m->m_cgi   = "ib";
+	m->m_off   = (char *)&cr.m_indexBody - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
 	m++;
 
 	m->m_title = "spider start time";
