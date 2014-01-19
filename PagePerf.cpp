@@ -115,12 +115,13 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 	// now try using absolute divs instead of a GIF
 	g_stats.printGraphInHtml ( p );
 
+	/*
 	if(autoRefresh > 0) {
 		if(refresh) *(refresh+4) = '0';
 		p.safePrintf(
 			     "<center><a href=\"%s\">Auto Refresh Off</a>"
 			     "</center>",
-			     rbuf + 4/*skip over GET*/); 
+			     rbuf + 4);  // skip over GET
 		p.safePrintf( "<input type=\"hidden\" "
 			      "name=\"dontlog\" value=\"1\">");
 		
@@ -132,20 +133,26 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf(
 			     "<center><a href=\"%s%s\">Auto Refresh</a>"
 			     "</center>",
-			     rbuf + 4/*skip over GET*/, rr); 
+			     rbuf + 4, rr);  // skip over "GET "
 	}
+	*/
 
 	// print the key
 	p.safePrintf (
+		      "<br>"
 		       "<center>"
-		       "<table border=1 cellpadding=2>"
+		       //"<table %s>"
+		       //"<tr>%s</tr></table>"
 
-		       "<tr>%s</tr></table>"
+		       "<style>"
+		       ".poo { background-color:#%s;}\n"
+		       "</style>\n"
 
-		       "<table border=1 cellpadding=2>"
+
+		       "<table %s>"
 
 		       // black
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td bgcolor=#000000>&nbsp; &nbsp;</td>"
 		       "<td> High priority disk read. "
 		       "Thicker lines for bigger reads.</td>"
@@ -158,7 +165,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 
 
 		       // red
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td bgcolor=#ff0000>&nbsp; &nbsp;</td>"
 		       "<td> Disk write. "
 		       "Thicker lines for bigger writes.</td>"
@@ -170,7 +177,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 
 
 		       // dark brown
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td bgcolor=#753d30>&nbsp; &nbsp;</td>"
 		       "<td> Processing raw query. Has raw= parm.</td>"
 
@@ -181,7 +188,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 
 
 		       // pinkish purple
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td bgcolor=#aa00aa>&nbsp; &nbsp;</td>"
 		       "<td> Send data over network. (low priority)"
 		       "Thicker lines for bigger sends.</td>"
@@ -193,7 +200,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 		       "</tr>"
 
 		       // pinkish purple
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td bgcolor=#ff00ff>&nbsp; &nbsp;</td>"
 		       "<td> Send data over network.  (high priority)"
 		       "Thicker lines for bigger sends.</td>"
@@ -206,7 +213,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 
 
 		       // dark purple
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td bgcolor=#8220ff>&nbsp; &nbsp;</td>"
 		       "<td> Get all summaries for results.</td>"
 
@@ -218,7 +225,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 
 
 		       // white
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td bgcolor=#ffffff>&nbsp; &nbsp;</td>"
 		       "<td> Uncompress cached document.</td>"
 
@@ -229,7 +236,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 
 
 		       // bright green
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td bgcolor=#00ff00>&nbsp; &nbsp;</td>"
 		       "<td> Compute search results. "
 		       "All terms required. rat=1.</td>"
@@ -241,7 +248,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 		       "</tr>"
 
 		       // bright green
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td bgcolor=#ccffcc>&nbsp; &nbsp;</td>"
 		       "<td> Compute reference pages. "
 		       "</td>"
@@ -252,7 +259,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 		       "</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 
 		       "<td bgcolor=#d1e1ff>&nbsp; &nbsp;</td>"
 		       "<td> Compute Gigabits. "
@@ -265,7 +272,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 		       "</tr>"
 
 
-		       "<tr>"
+		       "<tr class=poo>"
 
 		       "<td bgcolor=#0000b0>&nbsp; &nbsp;</td>"
 		       "<td> \"Summary\" extraction (low priority) "
@@ -279,10 +286,12 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 		       
 
 		       "</table>"
-		       "</center>",
-		       g_stats.m_keyCols.getBufStart() && 
-		       g_conf.m_dynamicPerfGraph ? 
-		       g_stats.m_keyCols.getBufStart() : ""
+		       "</center>"
+		       , LIGHT_BLUE 
+		       , TABLE_STYLE
+		       //,g_stats.m_keyCols.getBufStart() && 
+		       //g_conf.m_dynamicPerfGraph ? 
+		       //g_stats.m_keyCols.getBufStart() : ""
 		       );
 
 	if(autoRefresh > 0) p.safePrintf("</body>"); 

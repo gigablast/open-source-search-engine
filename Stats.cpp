@@ -557,6 +557,11 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 	//
 	sb.safePrintf("<div style=\"position:relative;"
 		      "background-color:#c0c0c0;"
+
+		      // match style of tables
+		      "border-radius:10px;"
+		      "border:#6060f0 2px solid;"
+		      
 		      //"overflow-y:hidden;"
 		      "overflow-x:hidden;"
 		      "z-index:-10;"
