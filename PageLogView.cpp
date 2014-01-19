@@ -80,9 +80,9 @@ bool sendPageLogView    ( TcpSocket *s , HttpRequest *r ) {
 	p->safePrintf("<form name=\"fo\">");
 
 	p->safePrintf("\n<table %s>\n",TABLE_STYLE);
-	p->safePrintf("<tr bgcolor=#%s><td colspan=2>"
+	p->safePrintf("<tr class=hdrow><td colspan=2>"
 		      "<center><b>Log View</b></center>"
-		      "</td></tr>",DARK_BLUE);
+		      "</td></tr>");
 	
 	p->safePrintf("<tr bgcolor=%s>"
 		      "<td>Refresh Rate:</td><td><input type=\"text\""

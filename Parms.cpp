@@ -971,16 +971,18 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	if ( ! isJSON ) {
 		sb->safePrintf( 
 			       "\n"
-			       "<table style=\"border-radius:15px;"
-			       "border:#6060f0 2px solid;"
-			       "\" "
-			       "width=100%% bgcolor=#%s "
-			       "bgcolor=black "
-			       "cellpadding=4 "
-			       "border=0 "//border=1 "
+			       "<table %s "
+			       //"style=\"border-radius:15px;"
+			       //"border:#6060f0 2px solid;"
+			       //"\" "
+			       //"width=100%% bgcolor=#%s "
+			       //"bgcolor=black "
+			       //"cellpadding=4 "
+			       //"border=0 "//border=1 "
 			       "id=\"parmtable\">"
 			       "<tr><td colspan=20>"// bgcolor=#%s>"
-			       ,DARKER_BLUE
+			       ,TABLE_STYLE
+			       //,DARKER_BLUE
 			       //,DARK_BLUE
 				);
 

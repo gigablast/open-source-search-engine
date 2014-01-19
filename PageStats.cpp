@@ -118,8 +118,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// memory in general table
 	p.safePrintf (
 		  "<table %s>"
-		  "<tr class=poo>"
-		  "<td colspan=2 bgcolor=#%s>"
+		  "<tr class=hdrow>"
+		  "<td colspan=2>"
 		  "<center><b>Memory</b></td></tr>\n"
 		  "<tr class=poo><td><b>memory allocated</b></td><td>%lli</td></tr>\n"
 		  "<tr class=poo><td><b>max memory limit</b></td><td>%lli</td></tr>\n" 
@@ -131,7 +131,6 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		  "<tr class=poo><td>swaps</td><td>%lli</td></tr>\n",
 		  //"<tr class=poo><td>num alloc chunks</td><td>%li</td></tr>\n",
 		  TABLE_STYLE ,
-		  DARK_BLUE ,
 		  g_mem.getUsedMem() ,
 		  g_mem.getMaxMem() ,
 		  //g_mem.getAvailMem(),
@@ -182,13 +181,12 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf ( 
 		       "<br>"
 		       "<table %s>"
-		       "<tr class=poo>"
-		       "<td colspan=2 bgcolor=#%s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=2>"
 		       "<center><b>Queries</b></td></tr>\n"
 
 		       "<tr class=poo><td><b>Average Query Latency for last %li queries"
 		       ,TABLE_STYLE
-		       ,DARK_BLUE
 		       ,g_stats.m_numQueries
 		       );
 
@@ -290,11 +288,10 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		p.safePrintf ( 
 			      "<br>"
 			      "<table %s>"
-			      "<tr class=poo>"
-			      "<td colspan=4 bgcolor=#%s>"
+			      "<tr class=hdrow>"
+			      "<td colspan=4>"
 			      "<center><b>Stripe Loads</b></td></tr>\n" ,
-			      TABLE_STYLE , 
-			      DARK_BLUE );
+			      TABLE_STYLE  );
 		p.safePrintf("<tr class=poo><td><b>Stripe #</b></td>"
 			     "<td><b>Queries Out</b></td>"
 			     "<td><b>Query Terms Out</b></td>"
@@ -344,12 +341,12 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 	p.safePrintf (
 		  "<table %s>"
-		  "<tr class=poo>"
-		  "<td colspan=%li bgcolor=#%s>"
+		  "<tr class=hdrow>"
+		  "<td colspan=%li>"
 		  "<center><b>Caches"
 		  "</b></td></tr>\n",
 		  TABLE_STYLE,
-		  numCaches+2, DARK_BLUE );
+		  numCaches+2 );
 
 	// hack since some are not init'd yet
 	//g_qtable.m_dbname = "quota";
@@ -499,8 +496,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	
 	p.safePrintf (
 		  "<table %s>"
-		  "<tr class=poo>"
-		  "<td colspan=2 bgcolor=#%s>"
+		  "<tr class=hdrow>"
+		  "<td colspan=2>"
 		  "<center><b>General Info</b></td></tr>\n"
 		  "<tr class=poo><td><b>Uptime</b></td><td>%s</td></tr>\n"
 		  "<tr class=poo><td><b>Corrupted Disk Reads</b></td><td>%li</td></tr>\n"
@@ -517,7 +514,6 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		  "<tr class=poo><td><b>Spider Locks</b></td><td>%li</td></tr>\n"
                   "<tr class=poo><td><b>Local Time</b></td><td>%s</td></tr>\n",
 		  TABLE_STYLE ,
-		  DARK_BLUE ,
 		  ubuf.getBufStart(),
 		  g_numCorrupt,
 		  g_numAlarms,
@@ -550,8 +546,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//
 	p.safePrintf ( 
 		       "<table %s>"
-		       "<tr class=poo>"
-		       "<td colspan=2 bgcolor=#%s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=2 class=hdrow>"
 		       "<center><b>Network</b></td></tr>\n"
 
 		       "<tr class=poo><td><b>ip1 bytes/packets in</b>"
@@ -577,7 +573,6 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 		       ,
 		       TABLE_STYLE,
-		       DARK_BLUE, 
 		       g_udpServer.m_eth0BytesIn,
 		       g_udpServer.m_eth0PacketsIn,
 
@@ -618,8 +613,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 	p.safePrintf ( 
 		       "<table %s>"
-		       "<tr class=poo>"
-		       "<td colspan=50 bgcolor=#%s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=50>"
 		       "<center><b>Spider Compression Proxy Stats</b> "
 
 		       " &nbsp; [<a href=\"/master/stats?reset=2\">"
@@ -710,7 +705,6 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		       "</tr>"
 		       ,
 		       TABLE_STYLE,
-		       DARK_BLUE ,
 
 		       "All",
 		       g_stats.m_compressAllDocs,
@@ -827,8 +821,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//
 	p.safePrintf ( 
 		       "<table %s>"
-		       "<tr class=poo>"
-		       "<td colspan=50 bgcolor=#%s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=50>"
 		       "<center><b>Message Stats</b> "
 
 		       " &nbsp; [<a href=\"/master/stats?reset=1\">"
@@ -851,8 +845,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		       "<td><b>timeouts</td>\n" 
 		       "<td><b>no mem</td>\n" 
 		       ,
-		       TABLE_STYLE,  
-		       DARK_BLUE );
+		       TABLE_STYLE);
 	p.safePrintf("</tr>\n");
 	// loop over niceness
 	for ( long i3 = 0 ; i3 < 2 ; i3++ ) {
@@ -910,8 +903,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//
 	p.safePrintf ( 
 		       "<table %s>"
-		       "<tr class=poo>"
-		       "<td colspan=50 bgcolor=#%s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=50>"
 		       "<center><b>Message Send Times</b></td></tr>\n"
 
 		       "<tr class=poo>"
@@ -920,8 +913,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		       "<td><b>msgtype</td>\n"
 		       "<td><b>total sent</td>\n"
 		       "<td><b>avg send time</td>\n" ,
-		       TABLE_STYLE,
-		       DARK_BLUE );
+		       TABLE_STYLE);
 	// print bucket headers
 	for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
 		p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
@@ -973,8 +965,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//
 	p.safePrintf ( 
 		       "<table %s>"
-		       "<tr class=poo>"
-		       "<td colspan=50 bgcolor=#%s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=50>"
 		       "<center><b>Message Queued Times</b></td></tr>\n"
 
 		       "<tr class=poo>"
@@ -983,8 +975,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		       "<td><b>msgtype</td>\n"
 		       "<td><b>total queued</td>\n"
 		       "<td><b>avg queued time</td>\n" ,
-		       TABLE_STYLE,
-		       DARK_BLUE );
+		       TABLE_STYLE);
 	// print bucket headers
 	for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
 		p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
@@ -1031,8 +1022,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//
 	p.safePrintf ( 
 		       "<table %s>"
-		       "<tr class=poo>"
-		       "<td colspan=50 bgcolor=#%s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=50>"
 		       "<center><b>Message Reply Generation Times</b>"
 		       "</td></tr>\n"
 
@@ -1042,8 +1033,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		       "<td><b>msgtype</td>\n"
 		       "<td><b>total replies</td>\n"
 		       "<td><b>avg gen time</td>\n" ,
-		       TABLE_STYLE,
-		       DARK_BLUE );
+		       TABLE_STYLE);
 	// print bucket headers
 	for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
 		p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
@@ -1099,13 +1089,12 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// columns are the dbs
 	p.safePrintf (
 		  "<table %s>"
-		  "<tr class=poo>"
-		  "<td colspan=50 bgcolor=#%s>"
+		  "<tr class=hdrow>"
+		  "<td colspan=50>"
 		  "<center><b>Databases"
 		  "</b></td>"
 		  "</tr>\n" ,
-		  TABLE_STYLE , 
-		  DARK_BLUE );
+		  TABLE_STYLE );
 
 	// make the rdbs
 	Rdb *rdbs[] = {

@@ -139,7 +139,7 @@ skipReplaceHost:
 	// print host table
 	sb.safePrintf ( 
 		  "<table %s>"
-		  "<tr><td colspan=%s bgcolor=#%s><center>"
+		  "<tr><td colspan=%s><center>"
 		  //"<font size=+1>"
 		  "<b>Hosts "
 		  "(<a href=\"/master/hosts?c=%s&sort=%li&reset=1\">"
@@ -239,7 +239,6 @@ skipReplaceHost:
 		  "<td><b>note</td>",
 		  TABLE_STYLE ,
 		  colspan    ,
-		  DARK_BLUE  ,
 
 		  coll, sort,
 		  DARK_BLUE  ,

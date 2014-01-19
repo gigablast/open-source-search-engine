@@ -35,7 +35,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 		long      total    = loActive + mdActive + hiActive;
 		
 		p.safePrintf ( "<table %s>"
-			       "<tr><td bgcolor=#c0c0f0 colspan=\"11\">"
+			       "<tr class=hdrow><td colspan=\"11\">"
 			       //"<center>"
 				//"<font size=+1>"
 				"<b>Thread Type: %s"
@@ -163,7 +163,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 	long hiActiveSma = disk->m_hiLaunchedSma - disk->m_hiReturnedSma;
 	long activeWrites = disk->m_writesLaunched - disk->m_writesReturned;
 	p.safePrintf ( "<table %s>"
-		       "<tr><td bgcolor=#c0c0f0 colspan=\"5\">"
+		       "<tr class=hdrow><td colspan=\"5\">"
 		       , TABLE_STYLE );
 	p.safePrintf ( "<center><b>Active Read Threads</b></center></td></tr>"
 		       "<tr bgcolor=#%s>"
@@ -204,10 +204,9 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 		       hiActiveBig);
 
 	p.safePrintf ("<table %s>",TABLE_STYLE);
-	p.safePrintf ("<tr bgcolor=#%s>"
+	p.safePrintf ("<tr class=hdrow>"
 		      "<td><b>Active Write Threads</b></td><td>%li</td>"
 		      "</tr></table>",
-		      DARK_BLUE,
 		      activeWrites);
 
 

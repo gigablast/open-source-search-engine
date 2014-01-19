@@ -86,11 +86,10 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	if ( add /*&& (! nc[0] || g_errno ) */ ) {
 		p.safePrintf (
 			  "<center>\n<table %s>\n"
-			   "<tr><td colspan=2 bgcolor=#%s>"
+			   "<tr class=hdrow><td colspan=2>"
 			  "<center><b>Add Collection</b></center>"
 			  "</td></tr>\n",
-			  TABLE_STYLE,
-			  DARK_BLUE);
+			  TABLE_STYLE);
 		p.safePrintf (
 			  "<tr bgcolor=#%s>"
 			  "<td><b>name of new collection to add</td>\n"
@@ -123,7 +122,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// ones you want to delete, the values will be the id of that collectn
 	p.safePrintf (
 		  "<center>\n<table %s>\n"
-		  "<tr><td bgcolor=#%s><center><b>Delete Collections"
+		  "<tr class=hdrow><td><center><b>Delete Collections"
 		  "</b></center></td></tr>\n"
 		  "<tr bgcolor=#%s><td>"
 		  "<center><b>Select the collections you wish to delete. "
@@ -134,7 +133,6 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		  // table within a table
 		  "<center><table width=20%%>\n",
 		  TABLE_STYLE,
-		  DARK_BLUE,
 		  LIGHT_BLUE,
 		  DARK_BLUE
 		      );

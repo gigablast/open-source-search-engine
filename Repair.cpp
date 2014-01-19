@@ -2259,7 +2259,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 "<table%s"
 			 " id=\"repairstatustable\">"
 
-			 "<tr bgcolor=#%s><td colspan=2><b><center>"
+			 "<tr class=hdrow><td colspan=2><b><center>"
 			 "Repair Status</center></b></td></tr>\n"
 
 			 "<tr bgcolor=#%s><td colspan=2>"
@@ -2295,7 +2295,6 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 
 			 ,
 			 TABLE_STYLE ,
-			 DARK_BLUE ,
 
 
 			 LIGHT_BLUE ,
@@ -2531,7 +2530,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 "id=\"repairstatustable2\">"
 
 			 // current collection being repaired
-			 "<tr bgcolor=#%s><td colspan=2><b><center>"
+			 "<tr class=hdrow><td colspan=2><b><center>"
 			 "Repair Settings In Use</center></b></td></tr>"
 
 			 // . print parms for this repair
@@ -2593,8 +2592,6 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 "<br>\n"
 			 ,
 			 TABLE_STYLE,
-			 //LIGHT_BLUE,
-			 DARK_BLUE,
 
 			 LIGHT_BLUE,
 			 rr[0],

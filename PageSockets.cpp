@@ -132,7 +132,7 @@ bool sendPageSockets ( TcpSocket *s , HttpRequest *r ) {
 void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 	// table headers for urls current being spiderd
 	p->safePrintf ( "<table %s>"
-		       "<tr><td bgcolor=#%s colspan=19>"
+		       "<tr class=hdrow><td colspan=19>"
 		       "<center>"
 		       //"<font size=+1>"
 		       "<b>%s</b>"
@@ -153,7 +153,6 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 		       "<td><b>bytes to send</td>"
 		       "</tr>\n"
 			, TABLE_STYLE
-			, DARK_BLUE
 			, title 
 			, DARK_BLUE
 			);
@@ -307,7 +306,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 	}
 	// print the counts
 	p->safePrintf ( "<table %s>"
-			"<tr><td bgcolor=#%s colspan=19>"
+			"<tr class=hdrow><td colspan=19>"
 			"<center>"
 			"<b>%s Summary</b> (%li transactions)"
 			"</td></tr>"
@@ -317,7 +316,6 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"<td><b>total</td>"
 			"</tr>",
 			TABLE_STYLE,
-			DARK_BLUE,
 			title , server->getNumUsedSlots() ,
 			DARK_BLUE );
 	for ( long i = 0; i < 96; i++ ) {
@@ -343,7 +341,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 	}
 	// table headers for urls current being spiderd
 	p->safePrintf ( "<table %s>"
-			"<tr><td bgcolor=#%s colspan=19>"
+			"<tr class=hdrow><td colspan=19>"
 			"<center>"
 			//"<font size=+1>"
 			"<b>%s</b> (%li transactions)"
@@ -372,7 +370,6 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"<td><b>resends</td>"
 			"</tr>\n" , 
 			TABLE_STYLE,
-			DARK_BLUE,
 			title , server->getNumUsedSlots() , 
 			DARK_BLUE ,
 			dd );
