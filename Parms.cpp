@@ -1129,63 +1129,69 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "<td>%s</td></tr></table><br><br>\n" ,
 			  LIGHT_BLUE , DARK_BLUE , testUrl , matchString );
 		*/
+
+		sb->safePrintf(
+			       "<style>"
+			       ".poo { background-color:#%s;}\n"
+			       "</style>\n" ,
+			       LIGHT_BLUE );
+
 		sb->safePrintf (
-			  "<table width=100%% cellpadding=4 border=1 "
-			  "bgcolor=#%s>"
-			  "<tr><td colspan=2 bgcolor=#%s><center>"
+			  "<table %s>"
+			  "<tr><td colspan=2><center>"
 			  "<b>"
 			  "Supported URL Expressions</b>"
 			  "</td></tr>"
 
-			  "<tr><td>default</td>"
+			  "<tr class=poo><td>default</td>"
 			  "<td>Matches every url."
 			  "</td></tr>"
 
-			  "<tr><td>^http://whatever</td>"
+			  "<tr class=poo><td>^http://whatever</td>"
 			  "<td>Matches if the url begins with "
 			  "<i>http://whatever</i>"
 			  "</td></tr>"
 
-			  "<tr><td>$.css</td>"
+			  "<tr class=poo><td>$.css</td>"
 			  "<td>Matches if the url ends with \".css\"."
 			  "</td></tr>"
 
-			  "<tr><td>foobar</td>"
+			  "<tr class=poo><td>foobar</td>"
 			  "<td>Matches if the url CONTAINS <i>foobar</i>."
 			  "</td></tr>"
 
-			  "<tr><td>tld==uk,jp</td>"
+			  "<tr class=poo><td>tld==uk,jp</td>"
 			  "<td>Matches if url's TLD ends in \"uk\" or \"jp\"."
 			  "</td></tr>"
 
 			  /*
-			  "<tr><td>doc:quality&lt;40</td>"
+			  "<tr class=poo><td>doc:quality&lt;40</td>"
 			  "<td>Matches if document quality is "
 			  "less than 40. Can be used for assigning to spider "
 			  "priority.</td></tr>"
 
-			  "<tr><td>doc:quality&lt;40 && tag:ruleset==22</td>"
+			  "<tr class=poo><td>doc:quality&lt;40 && tag:ruleset==22</td>"
 			  "<td>Matches if document quality less than 40 and "
 			  "belongs to ruleset 22. Only for assinging to "
 			  "spider priority.</td></tr>"
 
-			  "<tr><td><nobr>"
+			  "<tr class=poo><td><nobr>"
 			  "doc:quality&lt;40 && tag:manualban==1</nobr></td>"
 			  "<td>Matches if document quality less than 40 and "
 			  "is has a value of \"1\" for its \"manualban\" "
 			  "tag.</td></tr>"
 
-			  "<tr><td>tag:ruleset==33 && doc:quality&lt;40</td>"
+			  "<tr class=poo><td>tag:ruleset==33 && doc:quality&lt;40</td>"
 			  "<td>Matches if document quality less than 40 and "
 			  "belongs to ruleset 33. Only for assigning to "
 			  "spider priority or a banned ruleset.</td></tr>"
 			  */
 
-			  "<tr><td>hopcount<4 && iswww</td>"
+			  "<tr class=poo><td>hopcount<4 && iswww</td>"
 			  "<td>Matches if document has a hop count of 4, and "
 			  "is a \"www\" url (or domain-only url).</td></tr>"
 			  
-			  "<tr><td>hopcount</td>"
+			  "<tr class=poo><td>hopcount</td>"
 			  "<td>All root urls, those that have only a single "
 			  "slash for their path, and no cgi parms, have a "
 			  "hop count of 0. Also, all RSS urls, ping "
@@ -1195,25 +1201,25 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "of those outlinks a hop count of 2, etc."
 			  "</td></tr>"
 
-			  "<tr><td>sitepages</td>"
+			  "<tr class=poo><td>sitepages</td>"
 			  "<td>The number of pages that are currently indexed "
 			  "for the subdomain of the URL. "
 			  "Used for doing quotas."
 			  "</td></tr>"
 
-			  "<tr><td>domainpages</td>"
+			  "<tr class=poo><td>domainpages</td>"
 			  "<td>The number of pages that are currently indexed "
 			  "for the domain of the URL. "
 			  "Used for doing quotas."
 			  "</td></tr>"
 
-			  "<tr><td>siteadds</td>"
+			  "<tr class=poo><td>siteadds</td>"
 			  "<td>The number URLs manually added to the "
 			  "subdomain of the URL. Used to guage a subdomain's "
 			  "popularity."
 			  "</td></tr>"
 
-			  "<tr><td>domainadds</td>"
+			  "<tr class=poo><td>domainadds</td>"
 			  "<td>The number URLs manually added to the "
 			  "domain of the URL. Used to guage a domain's "
 			  "popularity."
@@ -1221,29 +1227,29 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 
 
-			  "<tr><td>isrss | !isrss</td>"
+			  "<tr class=poo><td>isrss | !isrss</td>"
 			  "<td>Matches if document is an rss feed. "
 			  "When harvesting outlinks we <i>guess</i> if they "
 			  "are an rss feed by seeing if their file extension "
 			  "is xml, rss or rdf. Or if they are in an "
 			  "alternative link tag.</td></tr>"
 
-			  //"<tr><td>!isrss</td>"
+			  //"<tr class=poo><td>!isrss</td>"
 			  //"<td>Matches if document is NOT an rss feed."
 			  //"</td></tr>"
 
-			  "<tr><td>ispermalink | !ispermalink</td>"
+			  "<tr class=poo><td>ispermalink | !ispermalink</td>"
 			  "<td>Matches if document is a permalink. "
 			  "When harvesting outlinks we <i>guess</i> if they "
 			  "are a permalink by looking at the structure "
 			  "of the url.</td></tr>"
 
-			  //"<tr><td>!ispermalink</td>"
+			  //"<tr class=poo><td>!ispermalink</td>"
 			  //"<td>Matches if document is NOT a permalink."
 			  //"</td></tr>"
 
 			  /*
-			  "<tr><td>outlink | !outlink</td>"
+			  "<tr class=poo><td>outlink | !outlink</td>"
 			  "<td>"
 			  "<b>This is true if url being added to spiderdb "
 			  "is an outlink from the page being spidered. "
@@ -1254,7 +1260,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 			  */
 
-			  "<tr><td><nobr>isnewoutlink | !isnewoutlink"
+			  "<tr class=poo><td><nobr>isnewoutlink | !isnewoutlink"
 			  "</nobr></td>"
 			  "<td>"
 			  "This is true since the outlink was not there "
@@ -1262,13 +1268,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "it from."
 			  "</td></tr>"
 
-			  "<tr><td>hasreply | !hasreply</td>"
+			  "<tr class=poo><td>hasreply | !hasreply</td>"
 			  "<td>"
 			  "This is true if we have tried to spider "
 			  "this url, even if we got an error while trying."
 			  "</td></tr>"
 
-			  "<tr><td>isnew | !isnew</td>"
+			  "<tr class=poo><td>isnew | !isnew</td>"
 			  "<td>"
 			  "This is the opposite of hasreply above. A url "
 			  "is new if it has no spider reply, including "
@@ -1277,7 +1283,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "was any kind of error."
 			  "</td></tr>"
 
-			  "<tr><td>lastspidertime >= <b>{roundstart}</b></td>"
+			  "<tr class=poo><td>lastspidertime >= <b>{roundstart}</b></td>"
 			  "<td>"
 			  "This is true if the url's last spidered time "
 			  "indicates it was spidered already for this "
@@ -1291,11 +1297,11 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 			  
 
-			  //"<tr><td>!newoutlink</td>"
+			  //"<tr class=poo><td>!newoutlink</td>"
 			  //"<td>Matches if document is NOT a new outlink."
 			  //"</td></tr>"
 
-			  "<tr><td>age</td>"
+			  "<tr class=poo><td>age</td>"
 			  "<td>"
 			  "How old is the doucment <b>in seconds</b>. "
 			  "The age is based on the publication date of "
@@ -1312,21 +1318,21 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 
 
-			  "<tr><td>isaddurl | !isaddurl</td>"
+			  "<tr class=poo><td>isaddurl | !isaddurl</td>"
 			  "<td>"
 			  "This is true if the url was added from the add "
 			  "url interface. This replaces the add url priority "
 			  "parm."
 			  "</td></tr>"
 
-			  "<tr><td>isinjected | !isinjected</td>"
+			  "<tr class=poo><td>isinjected | !isinjected</td>"
 			  "<td>"
 			  "This is true if the url was directly "
 			  "injected from the "
 			  "/inject page or API."
 			  "</td></tr>"
 
-			  "<tr><td>isdocidbased | !isdocidbased</td>"
+			  "<tr class=poo><td>isdocidbased | !isdocidbased</td>"
 			  "<td>"
 			  "This is true if the url was added from the "
 			  "reindex interface. The request does not contain "
@@ -1341,7 +1347,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "the results of a query for extra speed."
 			  "</td></tr>"
 
-			  "<tr><td>ismanualadd | !ismanualadd</td>"
+			  "<tr class=poo><td>ismanualadd | !ismanualadd</td>"
 			  "<td>"
 			  "This is true if the url was added manually. "
 			  "Which means it matches isaddurl, isinjected, "
@@ -1349,7 +1355,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "being discovered from the spider. "
 			  "</td></tr>"
 
-			  "<tr><td><nobr>inpingserver | !inpingserver"
+			  "<tr class=poo><td><nobr>inpingserver | !inpingserver"
 			  "</nobr></td>"
 			  "<td>"
 			  "This is true if the url has an inlink from "
@@ -1359,14 +1365,14 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</font></b>"
 			  "</td></tr>"
 
-			  "<tr><td>isparentrss | !isparentrss</td>"
+			  "<tr class=poo><td>isparentrss | !isparentrss</td>"
 			  "<td>"
 			  "If a parent of the URL was an RSS page "
 			  "then this will be matched."
 			  "</td></tr>"
 
 			  /*
-			  "<tr><td>parentisnew | !parentisnew</td>"
+			  "<tr class=poo><td>parentisnew | !parentisnew</td>"
 			  "<td>"
 			  "<b>Parent providing this outlink is not currently "
 			  "in the index but is trying to be added right now. "
@@ -1376,12 +1382,12 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 			  */
 
-			  "<tr><td>isindexed | !isindexed</td>"
+			  "<tr class=poo><td>isindexed | !isindexed</td>"
 			  "<td>"
 			  "This url matches this if in the index already. "
 			  "</td></tr>"
 
-			  "<tr><td>errorcount==1</td>"
+			  "<tr class=poo><td>errorcount==1</td>"
 			  "<td>"
 			  "The number of times the url has failed to "
 			  "be indexed. 1 means just the last time, two means "
@@ -1392,7 +1398,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "\"temporary\" errors like DNS timeouts."
 			  "</td></tr>"
 
-			  "<tr><td>hastmperror</td>"
+			  "<tr class=poo><td>hastmperror</td>"
 			  "<td>"
 			  "This is true if the last spider attempt resulted "
 			  "in an error like EDNSTIMEDOUT or a similar error, "
@@ -1401,7 +1407,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "memory, and should be retried soon."
 			  "</td></tr>"
 
-			  "<tr><td>percentchangedperday&lt=5</td>"
+			  "<tr class=poo><td>percentchangedperday&lt=5</td>"
 			  "<td>"
 			  "Looks at how much a url's page content has changed "
 			  "between the last two times it was spidered, and "
@@ -1412,7 +1418,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "Can use <, >, <=, >=, ==, != comparison operators. "
 			  "</td></tr>"
 
-			  "<tr><td>sitenuminlinks&gt;20</td>"
+			  "<tr class=poo><td>sitenuminlinks&gt;20</td>"
 			  "<td>"
 			  "How many inlinks does the URL's site have? "
 			  "We only count non-spammy inlinks, and at most only "
@@ -1423,7 +1429,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "Can use <, >, <=, >=, ==, != comparison operators. "
 			  "</td></tr>"
 
-			  "<tr><td>httpstatus==404</td>"
+			  "<tr class=poo><td>httpstatus==404</td>"
 			  "<td>"
 			  "For matching the URL based on the http status "
 			  "of its last download. Does not apply to URLs "
@@ -1432,14 +1438,14 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 
 			  /*
-			  "<tr><td>priority==30</td>"
+			  "<tr class=poo><td>priority==30</td>"
 			  "<td>"
 			  "<b>If the current priority of the url is 30, then "
 			  "it will match this expression. Does not apply "
 			  "to outlinks, of course."
 			  "</td></tr>"
 
-			  "<tr><td>parentpriority==30</td>"
+			  "<tr class=poo><td>parentpriority==30</td>"
 			  "<td>"
 			  "<b>This is a special expression in that "
 			  "it only applies to assigning spider priorities "
@@ -1460,7 +1466,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "spiderdb but rather a url being spidered."
 			  "</td></tr>"
 
-			  "<tr><td>inlink==...</td>"
+			  "<tr class=poo><td>inlink==...</td>"
 			  "<td>"
 			  "If the url has an inlinker which contains the "
 			  "given substring, then this rule is matched. "
@@ -1479,7 +1485,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  //"can not involve doc:quality for purposes of "
 			  //"assigning a ruleset, unless banning it.</td>"
 
-			  "<tr><td><nobr>tld!=com,org,edu"// && "
+			  "<tr class=poo><td><nobr>tld!=com,org,edu"// && "
 			  //"doc:quality&lt;70"
 			  "</nobr></td>"
 			  "<td>Matches if the "
@@ -1487,7 +1493,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "\"edu\". "
 			  "</td></tr>"
 
-			  "<tr><td><nobr>lang==zh_cn,de"
+			  "<tr class=poo><td><nobr>lang==zh_cn,de"
 			  "</nobr></td>"
 			  "<td>Matches if "
 			  "the url's content is in the language \"zh_cn\" or "
@@ -1504,7 +1510,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  //"assigning a ruleset, unless banning it.</td>"
 			  //"</tr>"
 
-			  "<tr><td><nobr>lang!=xx,en,de"
+			  "<tr class=poo><td><nobr>lang!=xx,en,de"
 			  "</nobr></td>"
 			  "<td>Matches if "
 			  "the url's content is NOT in the language \"xx\" "
@@ -1513,21 +1519,21 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "abbreviations.</td></tr>"
 
 			  /*
-			  "<tr><td>link:gigablast</td>"
+			  "<tr class=poo><td>link:gigablast</td>"
 			  "<td>Matches if the document links to gigablast."
 			  "</td></tr>"
 
-			  "<tr><td>searchbox:gigablast</td>"
+			  "<tr class=poo><td>searchbox:gigablast</td>"
 			  "<td>Matches if the document has a submit form "
 			  "to gigablast."
 			  "</td></tr>"
 
-			  "<tr><td>site:dmoz</td>"
+			  "<tr class=poo><td>site:dmoz</td>"
 			  "<td>Matches if the document is directly or "
 			  "indirectly in the DMOZ directory."
 			  "</td></tr>"
 
-			  "<tr><td>tag:spam>X</td>"
+			  "<tr class=poo><td>tag:spam>X</td>"
 			  "<td>Matches if the document's tagdb record "
 			  "has a score greater than X for the sitetype, "
 			  "'spam' in this case. "
@@ -1537,14 +1543,14 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 			  */
 
-			  "<tr><td>iswww | !iswww</td>"
+			  "<tr class=poo><td>iswww | !iswww</td>"
 			  "<td>Matches if the url's hostname is www or domain "
 			  "only. For example: <i>www.xyz.com</i> would match, "
 			  "and so would <i>abc.com</i>, but "
 			  "<i>foo.somesite.com</i> would NOT match."
 			  "</td></tr>"
 
-			  "<tr><td>isonsamedomain | !isonsamedomain</td>"
+			  "<tr class=poo><td>isonsamedomain | !isonsamedomain</td>"
 			  "<td>"
 			  "This is true if the url is from the same "
 			  "DOMAIN as the page from which it was "
@@ -1555,7 +1561,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 
 
-			  "<tr><td><nobr>"
+			  "<tr class=poo><td><nobr>"
 			  "isonsamesubdomain | !isonsamesubdomain"
 			  "</nobr></td>"
 			  "<td>"
@@ -1567,7 +1573,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  //"not preserved in the titleRec."
 			  "</td></tr>"
 
-			  "<tr><td>ismedia | !ismedia</td>"
+			  "<tr class=poo><td>ismedia | !ismedia</td>"
 			  "<td>"
 			  "Does the url have a media or css related "
 			  "extension. Like gif, jpg, mpeg, css, etc.? "
@@ -1575,24 +1581,24 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 
 			  "</td></tr></table><br><br>\n",
-			  LIGHT_BLUE , DARK_BLUE );
+			  TABLE_STYLE );
 
 
 		// show the languages you can use
 		sb->safePrintf (
-			  "<table width=100%% cellpadding=4 border=1 "
-			  "bgcolor=#%s>"
-			  "<tr><td colspan=2 bgcolor=#%s><center>"
+			  "<table %s>"
+			  "<tr><td colspan=2><center>"
 			  "<b>"
 			  "Supported Language Abbreviations "
 			  "for lang== Filter</b>"
 			  "</td></tr>",
-			  LIGHT_BLUE , DARK_BLUE );
+			  TABLE_STYLE );
 		for ( long i = 0 ; i < 256 ; i++ ) {
 			char *lang1 = getLanguageAbbr   ( i );
 			char *lang2 = getLanguageString ( i );
 			if ( ! lang1 ) continue;
-			sb->safePrintf("<tr><td>%s</td><td>%s</td></tr>\n",
+			sb->safePrintf("<tr class=poo>"
+				       "<td>%s</td><td>%s</td></tr>\n",
 				      lang1,lang2);
 		}
 		// wrap it up
