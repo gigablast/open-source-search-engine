@@ -6382,6 +6382,7 @@ long dumpSpiderdb ( char *coll,
 			// is not set right... so this is useless
 			//printf(" shard=%li\n",
 			//     (long)g_hostdb.getShardNum(RDB_SPIDERDB,sreq));
+			printf("\n");
 		}
 
 		// print a counter

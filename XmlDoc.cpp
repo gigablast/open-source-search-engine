@@ -20878,14 +20878,30 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// if we are injecting we must add the spider request
 	// we are injecting from so the url can be scheduled to be
 	// spidered again
-	if ( m_sreqValid && m_sreq.m_isInjecting ) {
+	if ( m_sreqValid && 
+	     m_sreq.m_isInjecting &&
+	     /// don't add requests like http://xyz.com/xxx-diffbotxyz0 though
+	     ! m_isDiffbotJSONObject ) {
 		// note it
 		setStatus("adding spider request");
 		// checkpoint
 		saved = m_p;
 		// copy it
 		*m_p++ = RDB_SPIDERDB;
-		memcpy ( m_p , &m_sreq , m_sreq.getRecSize() );
+		// store it here
+		SpiderRequest *stored = (SpiderRequest *)m_p;
+		memcpy ( stored , &m_sreq , m_sreq.getRecSize() );
+		// modify the firstip to be right!
+		if ( ! m_ipValid ) { char *xx=NULL;*xx=0; }
+		stored->m_firstIp = m_ip;
+		// re-make the key since it contains m_firstIp
+		long long uh48 = m_sreq.getUrlHash48();
+		stored->m_key = g_spiderdb.makeKey ( stored->m_firstIp,
+						     uh48,
+						     true, // is request?
+						     0,//parentDocId , 
+						     false );// isDel );
+		// skip over it
 		m_p += m_sreq.getRecSize();
 		// sanity check
 		if ( m_p - saved > needSpiderdb3 ) { char *xx=NULL;*xx=0; }
@@ -21651,8 +21667,21 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	Tag *tag = m_tagRec.getTag("firstip");
 	// tag must be there?
 	if ( tag ) firstIp = atoip(tag->getTagData());
+
+	// this is usually the authority
+	if ( m_firstIpValid )
+		firstIp = m_firstIp;
+
 	// otherwise, inherit from oldsr to be safe
-	if ( m_sreqValid ) firstIp = m_sreq.m_firstIp;
+	// BUT NOT if it was a fakeip and we were injecting because
+	// the SpiderRequest was manufactured and not actually taken
+	// from spiderdb! see XmlDoc::injectDoc() because that is where
+	// it came from!! if it has m_sreq.m_isAddUrl and 
+	// m_sreq.m_fakeFirstIp then we actually do add the reply with that
+	// fake ip so that they will exist in the same shard.
+	if ( m_sreqValid && ! m_sreq.m_isInjecting ) 
+		firstIp = m_sreq.m_firstIp;
+
 	// sanity
 	if ( firstIp == 0 || firstIp == -1 ) { char *xx=NULL;*xx=0; }
 	// store it
