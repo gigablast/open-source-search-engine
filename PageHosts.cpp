@@ -150,7 +150,7 @@ skipReplaceHost:
 		  "<td><a href=\"/master/hosts?c=%s&sort=0&username=%s&"
 		  "password=%s\">"
 		  "<b>hostId</b></td>"
-		  "<td><b>host name</b></td>"
+		  "<td><b>host ip</b></td>"
 		  "<td><b>shard</b></td>" // mirror group
 		  "<td><b>stripe</b></td>"
 
@@ -737,7 +737,7 @@ skipReplaceHost:
 		  "<td>shard</td>"
 		  "<td>"
 		  "The index is split into shards. Which shard does this "
-		  "host server?"
+		  "host serve?"
 		  "</td>"
 		  "</tr>\n"
 

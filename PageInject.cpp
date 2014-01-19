@@ -302,6 +302,7 @@ bool sendReply ( void *state ) {
 		  "<input type=radio name=recycle value=1>yes "
 		  "</td></tr>\n\n"
 
+		  /*
 		  "<tr><td><b>ip</b><br>"
 		  "<font size=1>IP address of the url. If blank then "
 		  "Gigablast will look up. "
@@ -309,6 +310,7 @@ bool sendReply ( void *state ) {
 		  "</td>"
 		  "<td>\n<input type=text name=ip value=\"\" size=15>"
 		  "</td></tr>\n\n"
+		  */
 
 		  /*
 		  "<tr><td><b>do ip lookups?</b><br>"

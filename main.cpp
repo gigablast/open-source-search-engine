@@ -903,7 +903,7 @@ int main ( int argc , char *argv[] ) {
 		return 0;
 	}
 
-	hostId = -1;
+	bool hadHostId = false;
 
  	// assume our hostId is the command!
 	// now we advance 'cmd' past the hostId if we detect
@@ -913,6 +913,7 @@ int main ( int argc , char *argv[] ) {
 		if(argc > cmdarg+1) {
 			cmd = argv[++cmdarg];
 		}
+		hadHostId = true;
 	}
 
 	if ( strcmp ( cmd , "dosopen" ) == 0 ) {	
@@ -2283,6 +2284,12 @@ int main ( int argc , char *argv[] ) {
 	// gb dump i [fileNum] [off]
 	if ( strcmp ( cmd , "dump" ) == 0 && argc > cmdarg + 1 &&
 	     argv[cmdarg+1][0]=='I')  {		
+
+		if ( ! hadHostId ) {
+			log("you must supply hostid in the dump cmd");
+			return 0;
+		}
+
 		long      fileNum = 0;
 		long long off     = 0LL;
 		char     *NAME = NULL;
@@ -2296,6 +2303,12 @@ int main ( int argc , char *argv[] ) {
 	}
 	if ( strcmp ( cmd , "dump" ) == 0 && argc > cmdarg + 1 &&
 	     argv[cmdarg+1][0]=='T')  {		
+
+		if ( ! hadHostId ) {
+			log("you must supply hostid in the dump cmd");
+			return 0;
+		}
+
 		long      fileNum = 0;
 		long long off     = 0LL;
 		if ( cmdarg + 2 < argc ) fileNum = atoi  (argv[cmdarg+2]);
@@ -2312,6 +2325,12 @@ int main ( int argc , char *argv[] ) {
 	//   gb dump s [coll][fileNum] [numFiles] [includeTree] [0=old|1=new]
 	//           [priority] [printStats?]
 	if ( strcmp ( cmd , "dump" ) == 0 ) {
+
+		if ( ! hadHostId ) {
+			log("you must supply hostid in the dump cmd");
+			return 0;
+		}
+
 		//
 		// tell Collectiondb, not to verify each rdb's data
 		//
