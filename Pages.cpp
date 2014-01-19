@@ -1866,7 +1866,10 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		else
 			sb->safePrintf(
 				"<span style=\"white-space:nowrap\">"
-				"<a href=\"/%s?c=%s%s\">%s</a>"
+				"<b>"
+				"<a style=text-decoration:none; "
+				"href=\"/%s?c=%s%s\">%s</a>"
+				"</b>"
 				"</span>"
 				" &nbsp; \n",s_pages[i].m_filename,
 				coll,
@@ -1888,9 +1891,15 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 
 	// print documentation links
 	if ( top ) {
-		sb->safePrintf(" <a href=/admin.html>admin guide</a> "
+		sb->safePrintf(" <a style=text-decoration:none "
+			       "href=/admin.html>"
+			       "<b>"
+			       "admin guide"
+			       "</b></a> "
 			       "&nbsp; "
-			       " <a href=/developer.html>dev guide</a>" );
+			       " <a style=text-decoration:none; "
+			       "href=/developer.html>"
+			       "<b>dev guide</b></a>" );
 	}
 
 	//sb->safePrintf("</center>" );

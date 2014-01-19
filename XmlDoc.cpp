@@ -20896,10 +20896,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		stored->m_firstIp = m_ip;
 		// re-make the key since it contains m_firstIp
 		long long uh48 = m_sreq.getUrlHash48();
+		long long parentDocId = m_sreq.getParentDocId();
 		stored->m_key = g_spiderdb.makeKey ( stored->m_firstIp,
 						     uh48,
 						     true, // is request?
-						     0,//parentDocId , 
+						     parentDocId , 
 						     false );// isDel );
 		// skip over it
 		m_p += m_sreq.getRecSize();

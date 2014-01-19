@@ -223,9 +223,11 @@ bool sendReply ( void *state ) {
 		  "Inject URL</b>%s"
 		  //"</font>"
 		  "</td></tr>\n\n"
-		  "<tr bgcolor=#%s><td colspan=2>"
+
+		  "<tr class=poo><td><b>url</b>"
+		  "<br>"
 		  "<font size=-2>"
-		  "Specify a URL that will be immediately crawled and "
+		  "Specify the URL that will be immediately crawled and "
 		  "indexed in real time "
 		  "while you wait. The browser will return the "
 		  "final index status code. Alternatively, "
@@ -234,13 +236,9 @@ bool sendReply ( void *state ) {
 		  "without having to wait for the page or pages to be "
 		  "actually indexed in realtime."
 		  "</font>"
-		  //"Enter the information below to inject "
-		  //"a URL. This allows you to specify the URL as well as the "
-		  //"content for the URL."
-		  "</td></tr>\n\n"
+		  "</td>"
 
-		  "<tr class=poo><td><b>url</b></td>"
-		  "<td>\n"
+		  "<td width=50%%>\n"
 		  "<input type=text name=u value=\"\" size=50>"
 		  "</td></tr>\n\n"
 
@@ -368,7 +366,7 @@ bool sendReply ( void *state ) {
 		  //"<td>\n<select name=rs>" ,
 		  pm , // msg7->m_pwd , 
 		  //msg7->m_username,
-		  TABLE_STYLE , bb , DARK_BLUE , msg7->m_coll );
+		  TABLE_STYLE , bb , msg7->m_coll );
 
 
 	//p += gbstrlen(p);
@@ -417,7 +415,10 @@ bool sendReply ( void *state ) {
 		  "<tr class=poo><td colspan=2>"
 		  "<center>"
 		  "<b>content</b><br>"
-		  "<font size=1>Enter the content here. Enter MIME header "
+		  "<font size=1>If you want to supply the URL's content "
+		  "rather than have Gigablast download it, then "
+		  "enter the content here. "
+		  "Enter MIME header "
 		  "first if \"content has mime\" is set to true above. "
 		  "Separate MIME from actual content with two returns."
 		  "<br>"
