@@ -194,6 +194,12 @@ bool sendReply ( void *state ) {
 	//	pm = msg;
 	//}
 
+	sb.safePrintf(
+		      "<style>"
+		      ".poo { background-color:#%s;}\n"
+		      "</style>\n" ,
+		      LIGHT_BLUE );
+
 	//char *c = msg7->m_coll;
 	char bb [ MAX_COLL_LEN + 60 ];
 	bb[0]='\0';
@@ -209,15 +215,15 @@ bool sendReply ( void *state ) {
 
 		  //"<input type=hidden name=pwd value=\"%s\">\n"
 		  //"<input type=hidden name=username value=\"%s\">\n"
-		  "<table width=100%% bgcolor=#%s cellpadding=4 border=1>"
-		  "<tr><td  bgcolor=#%s colspan=2>"
+		  "<table %s>"
+		  "<tr class=hdrow><td colspan=2>"
 		  "<center>"
 		  //"<font size=+1>"
 		  "<b>"
 		  "Inject URL</b>%s"
 		  //"</font>"
 		  "</td></tr>\n\n"
-		  "<tr><td colspan=2>"
+		  "<tr bgcolor=#%s><td colspan=2>"
 		  "<font size=-2>"
 		  "Specify a URL that will be immediately crawled and "
 		  "indexed in real time "
@@ -233,24 +239,24 @@ bool sendReply ( void *state ) {
 		  //"content for the URL."
 		  "</td></tr>\n\n"
 
-		  "<tr><td><b>url</b></td>"
+		  "<tr class=poo><td><b>url</b></td>"
 		  "<td>\n"
 		  "<input type=text name=u value=\"\" size=50>"
 		  "</td></tr>\n\n"
 
-		  "<tr><td><b>query to scrape</b></td>"
+		  "<tr class=poo><td><b>query to scrape</b></td>"
 		  "<td>\n"
 		  "<input type=text name=qts value=\"\" size=50>"
 		  "</td></tr>\n\n"
 
-		  //"<tr><td><b>use ahrefs.com</b></td>"
+		  //"<tr class=poo><td><b>use ahrefs.com</b></td>"
 		  //"<td>\n"
 		  //"<input type=radio name=useahrefs value=0 checked>no &nbsp; "
 		  //"<input type=radio name=useahrefs value=1>yes "
 		  //"</td></tr>\n\n"
 
 		  
-		  "<tr><td><b>spider links</b></td>"
+		  "<tr class=poo><td><b>spider links</b></td>"
 		  "<td>\n"
 		  "<input type=radio name=spiderlinks value=0>no &nbsp; "
 		  "<input type=radio name=spiderlinks value=1 checked>yes "
@@ -263,18 +269,18 @@ bool sendReply ( void *state ) {
 
 
 
-		  "<tr><td><b>inject scraped links</b></td>"
+		  "<tr class=poo><td><b>inject scraped links</b></td>"
 		  "<td>\n"
 		  "<input type=radio name=injectlinks value=0 checked>no &nbsp; "
 		  "<input type=radio name=injectlinks value=1>yes "
 		  "</td></tr>\n\n"
 
-		  "<tr><td><b>collection</b></td>"
+		  "<tr class=poo><td><b>collection</b></td>"
 		  "<td>\n"
 		  "<input type=text name=c value=\"%s\" size=15>"
 		  "</td></tr>\n\n"
 
-		  "<tr><td><b>quick reply?</b><br>"
+		  "<tr class=poo><td><b>quick reply?</b><br>"
 		  "<font size=1>Should reply be short? "
 		  "Default: no"
 		  "</td>"
@@ -283,7 +289,7 @@ bool sendReply ( void *state ) {
 		  "<input type=radio name=quick value=1>yes "
 		  "</td></tr>\n\n"
 
-		  "<tr><td><b>only inject new docs?</b><br>"
+		  "<tr class=poo><td><b>only inject new docs?</b><br>"
 		  "<font size=1>Skips injection if docs already indexed. "
 		  "Default: no"
 		  "</td>"
@@ -293,7 +299,7 @@ bool sendReply ( void *state ) {
 		  "</td></tr>\n\n"
 
 
-		  "<tr><td><b>delete url?</b><br>"
+		  "<tr class=poo><td><b>delete url?</b><br>"
 		  "<font size=1>Should this url be deleted from the index? "
 		  "Default: no"
 		  "</td>"
@@ -303,7 +309,7 @@ bool sendReply ( void *state ) {
 		  "</td></tr>\n\n"
 
 
-		  "<tr><td><b>recycle content?</b><br>"
+		  "<tr class=poo><td><b>recycle content?</b><br>"
 		  "<font size=1>Should page content be recycled if "
 		  "reindexing? "
 		  "Default: no"
@@ -314,7 +320,7 @@ bool sendReply ( void *state ) {
 		  "</td></tr>\n\n"
 
 		  /*
-		  "<tr><td><b>ip</b><br>"
+		  "<tr class=poo><td><b>ip</b><br>"
 		  "<font size=1>IP address of the url. If blank then "
 		  "Gigablast will look up. "
 		  "Default: blank"
@@ -324,7 +330,7 @@ bool sendReply ( void *state ) {
 		  */
 
 		  /*
-		  "<tr><td><b>do ip lookups?</b><br>"
+		  "<tr class=poo><td><b>do ip lookups?</b><br>"
 		  "<font size=1>Should Gigablast look up the IP address "
 		  "of the url, if it is not provided. "
 		  "Default: yes"
@@ -335,7 +341,7 @@ bool sendReply ( void *state ) {
 		  "</td></tr>\n\n"
 		  */
 
-		  //"<tr><td><b>is url new?</b><br>"
+		  //"<tr class=poo><td><b>is url new?</b><br>"
 		  //"<font size=1>Is this url new to the index? If unsure "
 		  //"then you should say no here. "
 		  //"Default: yes"
@@ -345,7 +351,7 @@ bool sendReply ( void *state ) {
 		  //"<input type=radio name=isnew value=1 checked>yes "
 		  //"</td></tr>\n\n"
 
-		  "<tr><td><b>dedup?</b><br>"
+		  "<tr class=poo><td><b>dedup?</b><br>"
 		  "<font size=1>Should this url be skipped if there is "
 		  "already  a url in the index from this same domain with "
 		  "this same content? "
@@ -355,14 +361,14 @@ bool sendReply ( void *state ) {
 		  "<input type=radio name=dedup value=0>no &nbsp; "
 		  "<input type=radio name=dedup value=1 checked>yes "
 		  "</td></tr>\n\n" ,
-		  //"<tr><td><b>ruleset</b><br>"
+		  //"<tr class=poo><td><b>ruleset</b><br>"
 		  //"<font size=1>Use this ruleset to index the URL. "
 		  //"Default: auto"
 		  //"</td>"
 		  //"<td>\n<select name=rs>" ,
 		  pm , // msg7->m_pwd , 
 		  //msg7->m_username,
-		  LIGHT_BLUE , DARK_BLUE , bb , msg7->m_coll );
+		  TABLE_STYLE , bb , DARK_BLUE , msg7->m_coll );
 
 
 	//p += gbstrlen(p);
@@ -398,7 +404,7 @@ bool sendReply ( void *state ) {
 
 	// make a table, each row will be an injectable parameter
 	sb.safePrintf (
-		  "<tr><td><b>content has mime</b><br>"
+		  "<tr class=poo><td><b>content has mime</b><br>"
 		  "<font size=1>IP address of the url. If blank then "
 		  "Gigablast will look up. "
 		  "Default: blank"
@@ -408,7 +414,7 @@ bool sendReply ( void *state ) {
 		  "<input type=radio name=hasmime value=1>yes "
 		  "</td></tr>\n\n" 
 
-		  "<tr><td colspan=2>"
+		  "<tr class=poo><td colspan=2>"
 		  "<center>"
 		  "<b>content</b><br>"
 		  "<font size=1>Enter the content here. Enter MIME header "
@@ -420,11 +426,15 @@ bool sendReply ( void *state ) {
 		  "\n"
 		  "<textarea rows=32 cols=80 name=content>"
 		  "</textarea>"
-		  "<br>"
-		  "<br>\n\n"
-		  "<input type=submit value=Submit>"
 		  "</center>"
 		  "</td></tr></table>\n"
+
+		  "<br>"
+		  "<br>\n\n"
+		  "<center>"
+		  "<input type=submit value=Submit>"
+		  "</center>"
+
 		  "</form>\n"
 		  );
 

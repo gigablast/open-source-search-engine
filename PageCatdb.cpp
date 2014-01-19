@@ -149,30 +149,54 @@ bool sendReply ( void *state ) {
 	// . do not print big links if only an assassin, just print host ids
 	g_pages.printAdminTop ( &sb, st->m_socket , &st->m_r );
 
-	sb.safePrintf ( "<table width=100%% bgcolor=#%s border=1 cellpadding=4>"
-			"<tr><td bgcolor=#%s colspan=2>"
+	sb.safePrintf(
+		      "<style>"
+		      ".poo { background-color:#%s;}\n"
+		      "</style>\n" ,
+		      LIGHT_BLUE );
+
+
+	sb.safePrintf ( "<table %s>"
+			"<tr><td colspan=2>"
 			"<center><font size=+1><b>Catdb</b></font></center>"
-			"</td></tr>", LIGHT_BLUE , DARK_BLUE );
+			"</td></tr>", TABLE_STYLE );
+
+	// instructions
+	sb.safePrintf("<tr bgcolor=#%s>"
+		      "<td colspan=3>"
+		      "<font size=-2>"
+		      "<center>"
+		      "Don't just start using this, you need to follow the "
+		      "instructions in the <i>admin guide</i> for adding "
+		      "DMOZ support."
+		      "</center>"
+		      "</font>"
+		      "</td>"
+		      "</tr>"
+		      ,DARK_BLUE
+		      );
 
 	// print the generate Catdb link
-	sb.safePrintf ( "<tr><td>Update Catdb from DMOZ data.</td>"
+	sb.safePrintf ( "<tr class=poo><td>Update Catdb from DMOZ data.</td>"
 			"<td><center>"
 			"<a href=\"/master/catdb?c=%s&gencatdb=2\">"
 			"Update Catdb</a> "
 			"</center></td></tr>",
 			st->m_coll );
-	sb.safePrintf ( "<tr><td>Generate New Catdb from DMOZ data.</td>"
+	sb.safePrintf ( "<tr class=poo>"
+			"<td>Generate New Catdb from DMOZ data.</td>"
 			"<td><center>"
 			"<a href=\"/master/catdb?c=%s&gencatdb=1\">"
 			"Generate Catdb</a> "
 			"</center></td></tr>",
 			st->m_coll );
 	if (st->m_genCatdb)
-		sb.safePrintf ( "<tr><td> Catdb Generation took %lli ms."
+		sb.safePrintf ( "<tr class=poo>"
+				"<td> Catdb Generation took %lli ms."
 				"</td></tr>",
 				endTime - st->m_startTime );
 	// print Url Catgory Lookup
-	sb.safePrintf ( "<tr><td>Lookup Category of Url.</td>"
+	sb.safePrintf ( "<tr class=poo><td>Lookup Category of Url.</td>"
 			"<td><input type=text name=caturl size=80"
 			" value=\"");
 	if (st->m_catLookup) {

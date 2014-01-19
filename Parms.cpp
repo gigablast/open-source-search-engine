@@ -2595,12 +2595,17 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( j == firstRow && m->m_rowid >= 0 && firstInRow && m->m_hdrs ) {
 		// print description as big comment
 		if ( m->m_desc && pd == 1 && ! isJSON ) {
-			sb->safePrintf ( "<td colspan=20><font size=-1>\n" );
+			// url FILTERS table description row
+			sb->safePrintf ( "<td colspan=20 bgcolor=#%s>"
+					 "<font size=-1>\n" , DARK_BLUE);
 
 			//p = htmlEncode ( p , pend , m->m_desc ,
 			//		 m->m_desc + gbstrlen ( m->m_desc ) );
 			sb->safePrintf ( "%s" , m->m_desc );
-			sb->safePrintf ( "</font></td></tr><tr>\n" );
+			sb->safePrintf ( "</font></td></tr>"
+					 // for "#,expression,harvestlinks.."
+					 // header row in url FILTERS table
+					 "<tr bgcolor=#%s>\n" ,DARK_BLUE);
 		}
 		// # column
 		// do not show this for PAGE_PRIORITIES it is confusing
@@ -2677,7 +2682,8 @@ bool Parms::printParm ( SafeBuf* sb,
 	m->printVal ( &val1 , collnum , j ); // occNum );
 	// test it
 	if ( m->m_def && strcmp ( val1.getBufStart() , m->m_def ) )
-		bg = "organge";
+		// put non-default valued parms in orange!
+		bg = "ffa500";
 
 
 	// print the title/description in current table for non-arrays
@@ -2729,12 +2735,18 @@ bool Parms::printParm ( SafeBuf* sb,
 	// . print number in row if array, start at 1 for clarity's sake
 	// . used for url filters table, etc.
 	if ( m->m_max > 1 ) {
+		// bg color alternates
+		char *bgc = LIGHT_BLUE;
+		if ( j % 2 ) bgc = DARK_BLUE;
 		// do not print this if doing json
 		if ( isJSON ) ;
 		// but if it is in same row as previous, do not repeat it
 		// for this same row, silly
 		else if ( firstInRow ) // && m->m_page != PAGE_PRIORITIES ) 
-			sb->safePrintf ( "<tr><td>%li</td>\n<td>", j );//j+1
+			sb->safePrintf ( "<tr bgcolor=#%s>"
+					 "<td>%li</td>\n<td>", 
+					 bgc,
+					 j );//j+1
 		else if ( firstInRow ) 
 			sb->safePrintf ( "<tr><td>" );
 		else    
