@@ -66,7 +66,7 @@ bool Profiler::init() {
 			return false;
 	if ( ! m_activeFns.set(4,4,256,NULL,0,false,0,"activefns") )
 		return false;
-	return m_fn.set(4,sizeof(FnInfo),256,NULL,0,false,0,"fntbl");
+	return m_fn.set(4,sizeof(FnInfo),65536,NULL,0,false,0,"fntbl");
 }
 
 

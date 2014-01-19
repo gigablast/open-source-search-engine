@@ -1139,6 +1139,8 @@ class SpiderColl {
 	bool       m_waitingTreeKeyValid;
 	long       m_scanningIp;
 	bool       m_gotNewRequestsForScanningIp;
+	long       m_lastListSize;
+	long       m_lastScanningIp;
 
 	char m_deleteMyself;
 

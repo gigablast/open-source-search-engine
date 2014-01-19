@@ -209,17 +209,17 @@ bool Statsdb::init ( ) {
 	// will init the CollectionRec::m_rdbBase, which is what
 	// Rdb::getBase(collnum_t) will return. however, for collectionless
 	// rdb databases we set Rdb::m_collectionlessBase special here.
-	return m_rdb.addColl ( NULL );
+	return m_rdb.addRdbBase1 ( NULL );
 }
 
 
 
 // Make sure we need this function.
 // main.cpp currently uses the addColl from m_rdb
-bool Statsdb::addColl ( char *coll, bool doVerify ) {
-	if ( ! m_rdb.addColl ( coll ) ) return false;
-	return true;
-}
+//bool Statsdb::addColl ( char *coll, bool doVerify ) {
+//	if ( ! m_rdb.addColl ( coll ) ) return false;
+//	return true;
+//}
 
 void flushStatsWrapper ( int fd , void *state ) {
 	g_statsdb.addDocsIndexed();

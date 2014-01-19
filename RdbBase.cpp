@@ -21,6 +21,7 @@
 #include "Collectiondb.h"
 //#include "CollectionRec.h"
 #include "Repair.h"
+#include "Rebalance.h"
 //#include "Msg3.h" // debug include
 
 // how many rdbs are in "urgent merge" mode?
@@ -614,6 +615,9 @@ bool RdbBase::setFiles ( ) {
 	}
 
 	m_dir.close();
+
+	// ensure files are sharded correctly
+	verifyFileSharding();
 
 	if ( ! converting ) return true;
 
@@ -2185,3 +2189,103 @@ void RdbBase::verifyDiskPageCache ( ) {
 		m_pc->verify(f);
 	}
 }
+
+bool RdbBase::verifyFileSharding ( ) {
+
+	if ( m_rdb->m_isCollectionLess ) return true;
+
+	//log ( "db: Verifying %s for coll %s (collnum=%li)...", 
+	//      m_dbname , m_coll , (long)m_collnum );
+
+	g_threads.disableThreads();
+
+	Msg5 msg5;
+	//Msg5 msg5b;
+	RdbList list;
+	char startKey[MAX_KEY_BYTES];
+	char endKey[MAX_KEY_BYTES];
+	KEYMIN(startKey,MAX_KEY_BYTES);
+	KEYMAX(endKey,MAX_KEY_BYTES);
+	long minRecSizes = 64000;
+	char rdbId = m_rdb->m_rdbId;
+	if ( rdbId == RDB_TITLEDB ) minRecSizes = 640000;
+	
+	if ( ! msg5.getList ( m_rdb->m_rdbId, //RDB_POSDB   ,
+			      m_coll          ,
+			      &list         ,
+			      startKey      ,
+			      endKey        ,
+			      minRecSizes   ,
+			      true          , // includeTree   ,
+			      false         , // add to cache?
+			      0             , // max cache age
+			      0             , // startFileNum  ,
+			      -1            , // numFiles      ,
+			      NULL          , // state
+			      NULL          , // callback
+			      0             , // niceness
+			      false         , // err correction?
+			      NULL          ,
+			      0             ,
+			      -1            ,
+			      true          ,
+			      -1LL          ,
+			      NULL          , // &msg5b        ,
+			      true          )) {
+		g_threads.enableThreads();
+		return log("db: HEY! it did not block");
+	}
+
+	long count = 0;
+	long got   = 0;
+	long printed = 0;
+	char k[MAX_KEY_BYTES];
+
+	for ( list.resetListPtr() ; ! list.isExhausted() ;
+	      list.skipCurrentRecord() ) {
+		//key144_t k;
+		list.getCurrentKey(k);
+		count++;
+		//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
+		//unsigned long groupId = getGroupId ( RDB_POSDB , &k );
+		//if ( groupId == g_hostdb.m_groupId ) got++;
+		unsigned long shardNum = getShardNum( rdbId , k );
+
+		if ( shardNum == getMyShardNum() ) {
+			got++;
+			continue;
+		}
+
+		if ( ++printed > 100 ) continue;
+
+		log ( "db: Found bad key in list belongs to shard %li",
+		      shardNum);
+	}
+
+	g_threads.enableThreads();
+
+	//if ( got ) 
+	//	log("db: verified %li recs for %s in coll %s",
+	//	    got,m_dbname,m_coll);
+       
+	if ( got == count ) return true;
+
+	// tally it up
+	g_rebalance.m_numForeignRecs += count - got;
+	log ("db: Out of first %li records in %s for %s, only %li belong "
+	     "to our group.",count,m_dbname,m_coll,got);
+	// exit if NONE, we probably got the wrong data
+	if ( got == 0 ) log("db: Are you sure you have the "
+			    "right data in the right directory? ");
+
+	//log ( "db: Exiting due to Posdb inconsistency." );
+	g_threads.enableThreads();
+	return true;//g_conf.m_bypassValidation;
+
+	//log(LOG_DEBUG, "db: Posdb passed verification successfully for %li "
+	//		"recs.", count );
+	// DONE
+	//return true;
+}
+
+

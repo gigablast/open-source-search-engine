@@ -2613,12 +2613,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			// skip if empty
 			if ( ! xd ) continue;
 			// sanity check
-			if ( ! xd->m_oldsrValid ) { char *xx=NULL;*xx=0; }
+			if ( ! xd->m_sreqValid ) { char *xx=NULL;*xx=0; }
 			// skip if not our coll rec!
 			//if ( xd->m_cr != cr ) continue;
 			if ( xd->m_collnum != cr->m_collnum ) continue;
 			// grab it
-			SpiderRequest *oldsr = &xd->m_oldsr;
+			SpiderRequest *oldsr = &xd->m_sreq;
 			// get status
 			char *status = xd->m_statusMsg;
 			// show that

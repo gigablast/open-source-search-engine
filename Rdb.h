@@ -86,8 +86,8 @@ class Rdb {
 	 Rdb ( );
 	~Rdb ( );
 
-	bool addColl ( char *coll );
-	bool addColl2 ( collnum_t collnum );
+	bool addRdbBase1 ( char *coll );
+	bool addRdbBase2 ( collnum_t collnum );
 	bool delColl ( char *coll );
 
 	bool resetBase ( collnum_t collnum );

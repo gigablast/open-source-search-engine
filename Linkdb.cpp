@@ -173,7 +173,7 @@ bool Linkdb::init2 ( long treeMem ) {
 			    sizeof(key224_t), // key size
 			    true          );// bias disk page cache
 }
-
+/*
 bool Linkdb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -185,7 +185,7 @@ bool Linkdb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
-
+*/
 bool Linkdb::verify ( char *coll ) {
 	log ( LOG_DEBUG, "db: Verifying Linkdb for coll %s...", coll );
 	g_threads.disableThreads();

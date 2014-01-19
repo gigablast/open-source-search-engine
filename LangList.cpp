@@ -378,7 +378,7 @@ void LangList::reset ( ) {
 // . looks under the langlist/ directory for langlist.# files
 //   each number corrisponds to a language
 bool LangList::loadLists ( ) {
-	log ( LOG_INIT, "lang: Loading Language Lists.");
+	//log ( LOG_INIT, "lang: Loading Language Lists.");
 	// init the term table
 	m_langTable.set(8,4,100000*MAX_LANGUAGES,NULL,0,false,0,"tbl-lang");
 	// loop over the languages and load the files
@@ -476,6 +476,7 @@ bool LangList::loadLists ( ) {
 		// count the list
 		listCount++;
 		
+		if ( wordsInList > 0 )
 		log ( LOG_DEBUG, 
 		      "lang: Successfully Loaded %li out of %li (%li bytes) "
 		      "words from %s dictionary.",

@@ -144,8 +144,8 @@ bool Users::init(){
 	 	return false; 
 
 	// call this userlogin.dat, not turkLoginTable.dat!!
-	if ( ! m_loginTable.load(g_hostdb.m_dir,"userlogin.dat", NULL,NULL) )
-		log("users: failed to load userlogin.dat");
+	//if ( ! m_loginTable.load(g_hostdb.m_dir,"userlogin.dat", NULL,NULL) )
+	//	log("users: failed to load userlogin.dat");
 
 	// try to load the turk test results
 	loadTestResults();
@@ -553,7 +553,7 @@ bool Users::loadUserHashTable ( ) {
 
 	// no users?
 	if ( bufSize <= 0 ) {
-		log("users: no <users> tag in gb.conf?");
+		//log("users: no <users> tag in gb.conf?");
 		return true;
 	}
 

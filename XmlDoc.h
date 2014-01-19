@@ -1154,8 +1154,9 @@ class XmlDoc {
 	//char   m_sampleVectorValid;
 	char     m_gigabitHashesValid;
 	char     m_tagPairHashValid;
-	char     m_oldsrValid;
-	char     m_newsrValid;
+	//char     m_oldsrValid;
+	char     m_sreqValid;
+	char     m_srepValid;
 	char     m_titleRecValid;
 
 	bool m_ipValid;
@@ -1961,8 +1962,8 @@ class XmlDoc {
 	*/
 
 	key_t     m_doledbKey;
-	SpiderRequest m_oldsr;
-	SpiderReply   m_newsr;
+	SpiderRequest m_sreq;
+	SpiderReply   m_srep;//newsr;
 
 	// bool flags for what procedures we have done
 	bool m_checkedUrlFilters;
@@ -2210,6 +2211,22 @@ class XmlDoc {
 	// frag vector (repeated fragments). 0 means repeated, 1 means not.
 	// vector is 1-1 with words in the document body.
 	char *getFragVec ( );
+
+	bool injectDoc ( char *url ,
+			 class CollectionRec *cr ,
+			 char *content ,
+			 bool contentHasMime ,
+			 long hopCount,
+			 long charset,
+
+			 bool deleteUrl,
+			 char contentType, // CT_HTML, CT_XML
+			 bool spiderLinks ,
+			 bool newOnly, // index iff new
+
+			 void *state,
+			 void (*callback)(void *state) );
+
 
 	bool injectLinks  ( HashTableX *linkDedupTable ,
 			    HashTableX *domDedupTable ,

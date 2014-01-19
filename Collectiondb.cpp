@@ -34,7 +34,13 @@ Collectiondb g_collectiondb;
 Collectiondb::Collectiondb ( ) {
 	m_numRecs = 0;
 	m_numRecsUsed = 0;
-	m_lastUpdateTime = 0LL;
+	//m_lastUpdateTime = 0LL;
+	m_needsSave = false;
+	// sanity
+	if ( RDB_END2 >= RDB_END ) return;
+	log("db: increase RDB_END2 to at least %li in "
+	    "Collectiondb.h",(long)RDB_END);
+	char *xx=NULL;*xx=0;
 }
 
 // reset rdb
@@ -51,6 +57,7 @@ void Collectiondb::reset() {
 	g_collTable.reset();
 }
 
+/*
 bool Collectiondb::init ( bool isDump ) {
 	reset();
 	if ( g_isYippy ) return true;
@@ -77,6 +84,7 @@ bool Collectiondb::init ( bool isDump ) {
 	// otherwise, true, even if reloadList() blocked
 	return true;
 }
+*/
 
 // . save to disk
 // . returns false if blocked, true otherwise
@@ -95,7 +103,12 @@ bool Collectiondb::save ( ) {
 	return true;
 }
 
-bool Collectiondb::load ( bool isDump ) {
+///////////
+//
+// fill up our m_recs[] array based on the coll.*.*/coll.conf files
+//
+///////////
+bool Collectiondb::loadAllCollRecs ( ) {
 	char dname[1024];
 	// MDW: sprintf ( dname , "%s/collections/" , g_hostdb.m_dir );
 	sprintf ( dname , "%s" , g_hostdb.m_dir );
@@ -104,7 +117,7 @@ bool Collectiondb::load ( bool isDump ) {
 	if ( ! d.open ()) return log("admin: Could not load collection config "
 				     "files.");
 	// note it
-	log(LOG_INFO,"db: Loading collection config files.");
+	//log(LOG_INFO,"db: loading collection config files.");
 	// . scan through all subdirs in the collections dir
 	// . they should be like, "coll.main/" and "coll.mycollection/"
 	char *f;
@@ -122,16 +135,23 @@ bool Collectiondb::load ( bool isDump ) {
 		// get collnum
 		collnum_t collnum = atol ( pp + 1 );
 		// add it
-		if ( ! addExistingColl ( coll , collnum ,isDump ) )
+		if ( ! addExistingColl ( coll , collnum ) )
 			return false;
 	}
 	// note it
-	log(LOG_INFO,"db: Loaded data for %li collections. Ranging from "
-	    "collection #0 to #%li.",m_numRecsUsed,m_numRecs-1);
+	//log(LOG_INFO,"db: Loaded data for %li collections. Ranging from "
+	//    "collection #0 to #%li.",m_numRecsUsed,m_numRecs-1);
 	// update the time
-	updateTime();
+	//updateTime();
 	// don't clean the tree if just dumpin
-	if ( isDump ) return true;
+	//if ( isDump ) return true;
+	return true;
+}
+
+// after we've initialized all rdbs in main.cpp call this to clean out
+// our rdb trees
+bool Collectiondb::cleanTrees ( ) {
+
 	// remove any nodes with illegal collnums
 	Rdb *r;
 	//r = g_indexdb.getRdb();
@@ -158,7 +178,7 @@ bool Collectiondb::load ( bool isDump ) {
 	// success
 	return true;
 }
-
+/*
 void Collectiondb::updateTime() {
 	// get time now in milliseconds
 	long long newTime = gettimeofdayInMilliseconds();
@@ -169,14 +189,13 @@ void Collectiondb::updateTime() {
 	// we need a save
 	m_needsSave = true;
 }
+*/
 
 #include "Statsdb.h"
 #include "Cachedb.h"
 #include "Syncdb.h"
 
-bool Collectiondb::addExistingColl ( char *coll, 
-				     collnum_t collnum ,
-				     bool isDump ) {
+bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 
 	long i = collnum;
 
@@ -221,7 +240,7 @@ bool Collectiondb::addExistingColl ( char *coll,
 			   "\"%s\".",coll);
 	}
 
-	if ( ! registerCollRec ( cr , isDump , false ) ) return false;
+	if ( ! registerCollRec ( cr , false ) ) return false;
 
 	// we need to compile the regular expressions or update the url
 	// filters with new logic that maps crawlbot parms to url filters
@@ -496,46 +515,59 @@ bool Collectiondb::addNewColl ( char *coll ,
 	}
 
 
-	return registerCollRec ( cr , false , true );
+	return registerCollRec ( cr , true );
 }
 
 // . called only by addNewColl() and by addExistingColl()
-bool Collectiondb::registerCollRec ( CollectionRec *cr ,
-				     bool isDump ,
-				     bool isNew ) {
-
+bool Collectiondb::registerCollRec ( CollectionRec *cr ,  bool isNew ) {
 
 	// add m_recs[] and to hashtable
 	if ( ! setRecPtr ( cr->m_collnum , cr ) )
 		return false;
 
-	bool verify = true;
+	return true;
+}
+
+bool Collectiondb::addRdbBaseToAllRdbsForEachCollRec ( ) {
+	for ( long i = 0 ; i < m_numRecs ; i++ ) {
+		CollectionRec *cr = m_recs[i];
+		if ( ! cr ) continue;
+		// add rdb base files etc. for it
+		addRdbBaseForCollRec ( cr );
+	}
+	return true;
+}
+
+bool Collectiondb::addRdbBaseForCollRec ( CollectionRec *cr ) {
 
 	char *coll = cr->m_coll;
 
+	//////
+	//
 	// if we are doing a dump from the command line, skip this stuff
-	if ( isDump ) return true;
-
-
-	if ( isNew ) verify = false;
-
+	//
+	//////
+	if ( g_dumpMode ) return true;
 
 	// tell rdbs to add one, too
-	//if ( ! g_indexdb.addColl    ( coll, verify ) ) goto hadError;
-	if ( ! g_posdb.addColl    ( coll, verify ) ) goto hadError;
-	//if ( ! g_datedb.addColl     ( coll, verify ) ) goto hadError;
+	//if ( ! g_indexdb.getRdb()->addRdbBase1    ( coll ) ) goto hadError;
+	if ( ! g_posdb.getRdb()->addRdbBase1        ( coll ) ) goto hadError;
+	//if ( ! g_datedb.getRdb()->addRdbBase1     ( coll ) ) goto hadError;
 	
-	if ( ! g_titledb.addColl    ( coll, verify ) ) goto hadError;
-	//if ( ! g_revdb.addColl      ( coll, verify ) ) goto hadError;
-	//if ( ! g_sectiondb.addColl  ( coll, verify ) ) goto hadError;
-	if ( ! g_tagdb.addColl      ( coll, verify ) ) goto hadError;
-	//if ( ! g_catdb.addColl      ( coll, verify ) ) goto hadError;
-	//if ( ! g_checksumdb.addColl ( coll, verify ) ) goto hadError;
-	//if ( ! g_tfndb.addColl      ( coll, verify ) ) goto hadError;
-	if ( ! g_clusterdb.addColl  ( coll, verify ) ) goto hadError;
-	if ( ! g_linkdb.addColl     ( coll, verify ) ) goto hadError;
-	if ( ! g_spiderdb.addColl   ( coll, verify ) ) goto hadError;
-	if ( ! g_doledb.addColl     ( coll, verify ) ) goto hadError;
+	if ( ! g_titledb.getRdb()->addRdbBase1      ( coll ) ) goto hadError;
+	//if ( ! g_revdb.getRdb()->addRdbBase1      ( coll ) ) goto hadError;
+	//if ( ! g_sectiondb.getRdb()->addRdbBase1  ( coll ) ) goto hadError;
+	if ( ! g_tagdb.getRdb()->addRdbBase1        ( coll ) ) goto hadError;
+	//if ( ! g_catdb.getRdb()->addRdbBase1      ( coll ) ) goto hadError;
+	//if ( ! g_checksumdb.getRdb()->addRdbBase1 ( coll ) ) goto hadError;
+	//if ( ! g_tfndb.getRdb()->addRdbBase1      ( coll ) ) goto hadError;
+	if ( ! g_clusterdb.getRdb()->addRdbBase1    ( coll ) ) goto hadError;
+	if ( ! g_linkdb.getRdb()->addRdbBase1       ( coll ) ) goto hadError;
+	if ( ! g_spiderdb.getRdb()->addRdbBase1     ( coll ) ) goto hadError;
+	if ( ! g_doledb.getRdb()->addRdbBase1       ( coll ) ) goto hadError;
+
+	// now clean the trees
+	cleanTrees();
 
 	// debug message
 	//log ( LOG_INFO, "db: verified collection \"%s\" (%li).",
@@ -893,7 +925,7 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 	}
 
 	// update the time
-	updateTime();
+	//updateTime();
 
 	return true;
 }
@@ -1340,7 +1372,7 @@ CollectionRec::CollectionRec() {
 	//m_spiderStatusMsg = NULL;
 	// for Url::getSite()
 	m_updateSiteRulesTable = 1;
-	m_lastUpdateTime = 0LL;
+	//m_lastUpdateTime = 0LL;
 	m_clickNScrollEnabled = false;
 	// inits for sortbydatetable
 	m_inProgress = false;
@@ -1451,7 +1483,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	m_collLen = gbstrlen ( coll );
 	strcpy ( m_coll , coll );
 
-	log(LOG_INFO,"db: loading data for %s",coll);
+	log(LOG_INFO,"db: loading conf for collection %s",coll);
 
 	// collection name HACK for backwards compatibility
 	//if ( strcmp ( coll , "main" ) == 0 ) {

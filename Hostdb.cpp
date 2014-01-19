@@ -121,8 +121,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	// make sure our hostId is in our conf file
 	if ( hostId < 0 ) 
 		return log(
-			   "conf: Negative hostId %li supplied in "
-			   "hosts.conf.",hostId);
+			   "conf: Negative hostId %li supplied",hostId);
 	// set early for calling log()
 	m_hostId = hostId;
 	// set clock in sync in fctypes.cpp

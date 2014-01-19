@@ -626,7 +626,7 @@ bool Spiderdb::init2 ( long treeMem ) {
 			    NULL          );// &m_pc 
 }
 
-
+/*
 bool Spiderdb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -638,6 +638,7 @@ bool Spiderdb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
+*/
 
 bool Spiderdb::verify ( char *coll ) {
 	//return true;
@@ -788,7 +789,7 @@ bool Doledb::init ( ) {
 		return false;
 	return true;
 }
-
+/*
 bool Doledb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	//if ( ! doVerify ) return true;
@@ -800,6 +801,7 @@ bool Doledb::addColl ( char *coll, bool doVerify ) {
 	//log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
+*/
 
 /////////////////////////
 /////////////////////////      SpiderCache
@@ -1750,6 +1752,9 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 		m_cr->m_pageCountTable.addScore ( &srep->m_domHash32 , -1 );
 		m_cr->m_pageCountTable.addScore ( &srep->m_siteHash32 , -1 );
 		m_cr->m_pageCountTable.addScore ( &srep->m_firstIp , -1 );
+		// debug note
+		log("spider: pct: adding -1 for %lu",srep->m_domHash32);
+		log("spider: pct: adding -1 for %lu",srep->m_siteHash32);
 	}
 	else if ( ! srep->m_wasIndexed && 
 		  srep->m_isIndexed &&
@@ -1759,6 +1764,9 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 		m_cr->m_pageCountTable.addScore ( &srep->m_domHash32 , 1 );
 		m_cr->m_pageCountTable.addScore ( &srep->m_siteHash32 , 1 );
 		m_cr->m_pageCountTable.addScore ( &srep->m_firstIp , 1 );
+		// debug note
+		log("spider: pct: adding 1 for %lu",srep->m_domHash32);
+		log("spider: pct: adding 1 for %lu",srep->m_siteHash32);
 	}
 
 
@@ -2818,6 +2826,8 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 	//   while we were doing the scan
 	m_gotNewRequestsForScanningIp = false;
 
+	m_lastListSize = -1;
+
 	// . look up in spiderdb otherwise and add best req to doledb from ip
 	// . if it blocks ultimately it calls gotSpiderdbListWrapper() which
 	//   calls this function again with re-entry set to true
@@ -2865,37 +2875,6 @@ static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
 	// ensure collection rec still there
 	CollectionRec *cr = g_collectiondb.getRec ( THIS->m_collnum );
 	if ( ! cr ) return;
-
-
-	// if we do not have a pg count entry for this then enter count mode
-	// where we just scan all the spider records for m_scanningIp
-	// and count how many pages are in the index for each subdomain/site
-	// and when it is over we re-do the scan from the top. 
-	THIS->m_countingPagesIndexed = false;
-	// don't bother with this stuff though if url filters do not specify 
-	// "pagesinip" or "pagesinsubdomain"
-	if ( cr->m_urlFiltersHavePageCounts &&
-	     // and only do this if we do not have an entry for this ip yet
-	     ! cr->m_pageCountTable.isInTable ( &THIS->m_scanningIp ) ) {
-		// it is on
-		THIS->m_countingPagesIndexed = true;
-		// reset this
-		THIS->m_lastReqUh48 = 0LL;
-		THIS->m_lastRepUh48 = 0LL;
-		// and setup the LOCAL counting table if not initialized
-		if ( THIS->m_localTable.m_ks == 0 ) 
-			THIS->m_localTable.set (4,4,0,NULL,0,false,0,"ltpct" );
-		// do not recompute this in case all records for this ip
-		// are missing or have issues, like maybe there was only
-		// a spiderreply
-		if ( ! cr->m_pageCountTable.addScore( &THIS->m_scanningIp,1)){
-			log("spider: error adding to pg cnt tbl: %s",
-			    mstrerror(g_errno));
-			return;
-		}
-	}
-
-	     
 
 	// . finish processing the list we read now
 	// . if that blocks, it will call doledWrapper
@@ -3221,6 +3200,50 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	}
 
 
+
+	// if we do not have a pg count entry for this then enter count mode
+	// where we just scan all the spider records for m_scanningIp
+	// and count how many pages are in the index for each subdomain/site
+	// and when it is over we re-do the scan from the top. 
+	m_countingPagesIndexed = false;
+	// don't bother with this stuff though if url filters do not specify 
+	// "pagesinip" or "pagesinsubdomain"
+	if ( cr->m_urlFiltersHavePageCounts &&
+	     // and only do this if we do not have an entry for this ip yet
+	     ! cr->m_pageCountTable.isInTable ( &m_scanningIp ) ) {
+		// it is on
+		m_countingPagesIndexed = true;
+		// reset this
+		m_lastReqUh48 = 0LL;
+		m_lastRepUh48 = 0LL;
+		// and setup the LOCAL counting table if not initialized
+		if ( m_localTable.m_ks == 0 ) 
+			m_localTable.set (4,4,0,NULL,0,false,0,"ltpct" );
+		// do not recompute this in case all records for this ip
+		// are missing or have issues, like maybe there was only
+		// a spiderreply
+		//if ( ! cr->m_pageCountTable.addScore( &m_scanningIp,1)){
+		//	log("spider: error adding to pg cnt tbl: %s",
+		//	    mstrerror(g_errno));
+		//	return;
+		//}
+	}
+
+	     
+
+	// if we don't read minRecSizes worth of data that MUST indicate
+	// there is no more data to read. put this theory to the test
+	// before we use it to indcate an end of list condition.
+	if ( list->getListSize() > 0 && 
+	     m_lastScanningIp == m_scanningIp &&
+	     m_lastListSize < (long)SR_READ_SIZE &&
+	     m_lastListSize >= 0 ) {
+		char *xx=NULL;*xx=0; }
+
+	m_lastListSize = list->getListSize();
+	m_lastScanningIp = m_scanningIp;
+
+
 	if ( list->isEmpty() && g_conf.m_logDebugSpider )
 		log("spider: failed to get rec for ip=%s",iptoa(firstIp0));
 
@@ -3305,41 +3328,39 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// on the # of pages indexed per ip or subdomain/site then
 		// we have to maintain a page count table.
 		//
-		if ( m_countingPagesIndexed && sreq->m_fakeFirstIp ) {
+		if ( m_countingPagesIndexed ) { //&& sreq->m_fakeFirstIp ) {
 			// get request url hash48
 			long long uh48 = sreq->getUrlHash48();
-			// manually added? count these. call them seeds!
-			if ( (sreq->m_isAddUrl || sreq->m_isInjecting) && 
-			     // only add dom/site hash seeds if it is
-			     // a fake firstIp to avoid double counting seeds
-			     sreq->m_fakeFirstIp &&
-			     m_lastReqUh48 != uh48 ) {
+			// skip dups
+			if ( m_lastReqUh48 == uh48 ) continue;
+			// do not repeat count the same url
+			m_lastReqUh48 = uh48;
+			// do not repeatedly page count if we just have
+			// a single fake firstip request. this just adds
+			// an entry to the table that will end up in
+			// m_pageCountTable so we avoid doing this count
+			// again over and over. also gives url filters
+			// table a zero-entry...
+			m_localTable.addScore(&sreq->m_firstIp,0);
+			m_localTable.addScore(&sreq->m_siteHash32,0);
+			m_localTable.addScore(&sreq->m_domHash32,0);
+			// only add dom/site hash seeds if it is
+			// a fake firstIp to avoid double counting seeds
+			if ( sreq->m_fakeFirstIp ) continue;
+			// count the manual additions separately. mangle their
+			// hash with 0x123456 so they are separate.
+			if ( (sreq->m_isAddUrl || sreq->m_isInjecting) ) {
 				long h32;
 				// sanity
 				if ( ! sreq->m_siteHash32){char*xx=NULL;*xx=0;}
 				if ( ! sreq->m_domHash32){char*xx=NULL;*xx=0;}
+				// do a little magic because we count
+				// seeds as "manual adds" as well as normal pg
 				h32 = sreq->m_siteHash32 ^ 0x123456;
 				m_localTable.addScore(&h32);
 				h32 = sreq->m_domHash32 ^ 0x123456;
 				m_localTable.addScore(&h32);
-				// add the fake ip to seed table as well
-				// so we do not re-do countingPages for it.
-				// but add a "0" entry since fakeip pages
-				// are not indexed
-				m_localTable.addScore(&sreq->m_firstIp,0);
-				// add these 0 entries to at least indicate
-				// 0 pages indexed for this site/dom
-				m_localTable.addScore(&sreq->m_siteHash32,0);
-				m_localTable.addScore(&sreq->m_domHash32,0);
-				// do not repeat count the same url
-				m_lastReqUh48 = uh48;
-				// it's a fakeip, should not be indexed
-				continue;
 			}
-			// do not re-compute page count for this firstip
-			m_localTable.addScore(&sreq->m_firstIp,0);
-			m_localTable.addScore(&sreq->m_siteHash32,0);
-			m_localTable.addScore(&sreq->m_domHash32,0);
 			// now count pages indexed below here
 			if ( ! srep ) continue;
 			if ( srepUh48 == m_lastRepUh48 ) continue;
@@ -3348,11 +3369,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			if ( ! srep->m_isIndexed ) continue;
 			// keep count per site and firstip
 			m_localTable.addScore(&sreq->m_firstIp,1);
-			// don't double count if fake firstip though
-			// not necessary, should not be indexed
-			//if ( sreq->m_fakeFirstIp ) continue;
-			m_localTable.addScore(&sreq->m_siteHash32);
-			m_localTable.addScore(&sreq->m_domHash32);
+			m_localTable.addScore(&sreq->m_siteHash32,1);
+			m_localTable.addScore(&sreq->m_domHash32,1);
 			continue;
 		}
 
@@ -3823,6 +3841,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			long *cnt = (long *)m_localTable.getValueFromSlot(i);
 			// this will overwrite anything there
 			cr->m_pageCountTable.addKey ( key , cnt );
+			log("spider: pct: set %li for %lu",*cnt,*key);
 		}
 		// free local hash table memory
 		m_localTable.reset();
@@ -4476,7 +4495,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 				sc->m_nextKey2.setMin();
 				sc->m_waitingTreeNeedsRebuild = true;
 				log(LOG_INFO,
-				    "spider: hit rebuild timeout for %s",
+				    "spider: hit spider queue "
+				    "rebuild timeout for %s",
 				    cr->m_coll);
 				// flush the ufn table
 				clearUfnTable();
@@ -5726,7 +5746,7 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 			// get it
 			XmlDoc *xd = m_docs[i];
 			if ( ! xd                      ) continue;
-			//if ( xd->m_oldsr.m_isInjecting ) continue;
+			//if ( xd->m_sreq.m_isInjecting ) continue;
 			// let everyone know, TcpServer::cancel() uses this in
 			// destroySocket()
 			g_errno = ECANCELLED;
@@ -6111,7 +6131,7 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	//if ( i < 0 || i >= MAX_SPIDERS ) i = -1;
 
 	//char injecting = false;
-	//if ( xd->m_oldsr.m_isInjecting ) injecting = true;
+	//if ( xd->m_sreq.m_isInjecting ) injecting = true;
 
 	// save it for Msg7.cpp to pass docid of injected doc back 
 	//s_lastDocId = xd->m_docId;
@@ -6133,7 +6153,7 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	// decrement this
 	if ( sc ) sc->m_spidersOut--;
 	// get the original request from xmldoc
-	SpiderRequest *sreq = &xd->m_oldsr;
+	SpiderRequest *sreq = &xd->m_sreq;
 	// update this. 
 	if ( sc ) sc->m_outstandingSpiders[(unsigned char)sreq->m_priority]--;
 
@@ -6285,7 +6305,7 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 
 	// set this in case we need to call removeAllLocks
 	//m_uh48 = 0LL;
-	//if ( xd->m_oldsrValid ) m_uh48 = xd->m_oldsr.getUrlHash48();
+	//if ( xd->m_sreqValid ) m_uh48 = xd->m_sreq.getUrlHash48();
 
 	// we are responsible for deleting doc now
 	mdelete ( m_docs[i] , sizeof(XmlDoc) , "Doc" );
@@ -7409,9 +7429,9 @@ bool sendPage ( State11 *st ) {
 		// skip if empty
 		if ( ! xd ) continue;
 		// sanity check
-		if ( ! xd->m_oldsrValid ) { char *xx=NULL;*xx=0; }
+		if ( ! xd->m_sreqValid ) { char *xx=NULL;*xx=0; }
 		// grab it
-		SpiderRequest *oldsr = &xd->m_oldsr;
+		SpiderRequest *oldsr = &xd->m_sreq;
 		// get status
 		char *status = xd->m_statusMsg;
 		// show that
@@ -9857,13 +9877,15 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			long h32 = sreq->m_siteHash32 ^ 0x123456;
 			long *valPtr ;
 			valPtr =(long *)cr->m_pageCountTable.getValue(&h32);
+			long a;
 			// if no count in table, that is strange, i guess
 			// skip for now???
 			// this happens if INJECTING a url from the
 			// "add url" function on homepage
-			if ( ! valPtr ) continue;//{ char *xx=NULL;*xx=0; }
+			if ( ! valPtr ) a=0;//continue;//{char *xx=NULL;*xx=0;}
 			// shortcut
-			long a = *valPtr;
+			else a = *valPtr;
+			log("siteadds=%li for %s",a,sreq->m_url);
 			// what is the provided value in the url filter rule?
 			long b = atoi(s);
 			// compare

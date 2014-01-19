@@ -90,7 +90,7 @@ RdbBase *Rdb::getBase ( collnum_t collnum )  {
 	return cr->m_bases[(unsigned char)m_rdbId];
 }
 
-// used by Rdb::addColl
+// used by Rdb::addBase1()
 void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
 	// if we are collectionless, like g_statsdb.m_rdb or
 	// g_cachedb.m_rdb, etc.. shared by all collections essentially.
@@ -468,12 +468,17 @@ bool Rdb::updateToRebuildFiles ( Rdb *rdb2 , char *coll ) {
 
 // . returns false and sets g_errno on error, returns true on success
 // . if this rdb is collectionless we set m_collectionlessBase in addBase()
-bool Rdb::addColl ( char *coll ) {
+bool Rdb::addRdbBase1 ( char *coll ) { // addColl()
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
-	return addColl2 ( collnum );
+	return addRdbBase2 ( collnum );
 }
 
-bool Rdb::addColl2 ( collnum_t collnum ) {
+bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
+
+	if ( ! m_initialized ) {
+		g_errno = EBADENGINEER;
+		return log("db: adding coll to uninitialized rdb!");
+	}
 
 	// catdb,statsbaccessdb,facebookdb,syncdb
 	if ( m_isCollectionLess )
@@ -501,8 +506,9 @@ bool Rdb::addColl2 ( collnum_t collnum ) {
 	RdbBase *base = getBase ( collnum );
 	if ( base ) { // m_bases [ collnum ] ) {
 		g_errno = EBADENGINEER;
-		return log("db: %s: Rdb for collection \"%s\" exists.",
-			   m_dbname,coll);
+		return log("db: Rdb for db \"%s\" and "
+			   "collection \"%s\" (collnum %li) exists.",
+			   m_dbname,coll,(long)collnum);
 	}
 	// make a new one
 	RdbBase *newColl = NULL;
@@ -616,7 +622,7 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 	// . TODO: what about outstanding merge or dump operations?
 	// . it seems like we can't really recycle this too easily 
 	//   because reset it not resetting filenames or directory name?
-	//   just nuke it and rebuild using addColl2()...
+	//   just nuke it and rebuild using addRdbBase2()...
 	RdbBase *oldBase = getBase ( collnum );
 	mdelete (oldBase, sizeof(RdbBase), "Rdb Coll");
 	delete  (oldBase);
@@ -632,7 +638,7 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 
 	// if just resetting recycle base
 	if ( collnum != newCollnum ) {
-		addColl2 ( newCollnum );
+		addRdbBase2 ( newCollnum );
 		// make a new base now
 		//RdbBase *newBase = mnew
 		// new cr

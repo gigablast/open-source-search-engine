@@ -883,14 +883,14 @@ char *XmlDoc::getTestDir ( ) {
 	if ( strcmp(cr->m_coll,"test") ) return NULL;
 	// if Test.cpp explicitly set SpiderRequest::m_useTestSpiderDir bit
 	// then return "test-spider" otherwise...
-	if ( m_oldsrValid && m_oldsr.m_useTestSpiderDir ) 
+	if ( m_sreqValid && m_sreq.m_useTestSpiderDir ) 
 		return "test-spider";
 	// ... default to "test-parser"
 	return "test-parser";
 	/*
 	if ( getIsPageParser() )
 		return "test-page-parser";
-	//if ( m_oldsrValid && m_oldsr.m_isInjecting )
+	//if ( m_sreqValid && m_sreq.m_isInjecting )
 	//	return "test-page-inject";
 	else if ( g_conf.m_testParserEnabled )
 		return "test-parser";
@@ -1248,10 +1248,10 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	//     ! g_hostdb.m_myHost->m_isProxy ) {
 	//	char *xx=NULL; *xx=0; }
 
-	m_oldsrValid    = true;
+	m_sreqValid    = true;
 
 	// store the whole rec, key+dataSize+data, in case it disappears.
-	memcpy ( &m_oldsr , sreq , sreq->getRecSize() );
+	memcpy ( &m_sreq , sreq , sreq->getRecSize() );
 
 	// set m_collnum etc.
 	if ( ! setCollNum ( coll ) ) 
@@ -1368,8 +1368,8 @@ bool XmlDoc::set2 ( char    *titleRec ,
 
 	// store the whole rec, key+dataSize+data, in case it disappears.
 	if ( sreq ) {
-		memcpy ( &m_oldsr , sreq , sreq->getRecSize() );
-		m_oldsrValid = true;
+		memcpy ( &m_sreq , sreq , sreq->getRecSize() );
+		m_sreqValid = true;
 	}
 
 	m_hashedTitle        = false;
@@ -1790,9 +1790,9 @@ void XmlDoc::setStatus ( char *s ) {
 	if ( s == s_last ) return;
 
 	bool timeIt = false;
-	if ( m_oldsrValid &&
-	     m_oldsr.m_isInjecting &&
-	     m_oldsr.m_isPageInject ) 
+	if ( m_sreqValid &&
+	     m_sreq.m_isInjecting &&
+	     m_sreq.m_isPageInject ) 
 		timeIt = true;
 	if ( g_conf.m_logDebugBuildTime )
 		timeIt = true;
@@ -1872,6 +1872,167 @@ void indexDocWrapper ( void *state ) {
 void indexDocWrapper2 ( int fd , void *state ) {
 	indexDocWrapper ( state );
 }
+
+// . inject from http request
+// . replace more of Msg7.cpp logic with this?
+//bool XmlDoc::injectDoc ( HttpRequest *hr ) {
+//}
+
+// . the highest level function in here
+// . user is requesting to inject this url
+// . returns false if blocked and your callback will be called when done
+// . returns true and sets g_errno on error
+bool XmlDoc::injectDoc ( char *url ,
+			 CollectionRec *cr ,
+			 char *content ,
+			 bool contentHasMime ,
+			 long hopCount,
+			 long charset,
+
+			 bool deleteUrl,
+			 char contentType, // CT_HTML, CT_XML
+			 bool spiderLinks ,
+			 bool newOnly, // index iff new
+
+			 void *state,
+			 void (*callback)(void *state) ) {
+
+	// normalize url
+	Url uu;
+	uu.set(url,gbstrlen(url),true);
+
+	// remove >'s i guess and store in st1->m_url[] buffer
+	char cleanUrl[MAX_URL_LEN+1];
+	cleanInput ( cleanUrl,
+		     MAX_URL_LEN, 
+		     uu.getUrl(),
+		     uu.getUrlLen() );
+
+
+	// this can go on the stack since set4() copies it
+	SpiderRequest sreq;
+	sreq.reset();
+
+	strcpy(sreq.m_url, cleanUrl );
+
+	long firstIp = hash32n ( cleanUrl );
+	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
+
+	sreq.setKey( firstIp,0LL, false );
+
+	sreq.m_isInjecting   = 1; 
+	sreq.m_isPageInject  = 1;
+	sreq.m_hopCount      = hopCount;
+	sreq.m_hopCountValid = 1;
+	sreq.m_fakeFirstIp   = 1;
+	sreq.m_firstIp       = firstIp;
+
+	sreq.m_addedTime = getTimeGlobal();
+	
+	//static char s_dummy[3];
+	// sometims the content is indeed NULL...
+	//if ( newOnly && ! content ) { 
+	//	// don't let it be NULL because then xmldoc will
+	//	// try to download the page!
+	//	s_dummy[0] = '\0';
+	//	content = s_dummy;
+	//	//char *xx=NULL;*xx=0; }
+	//}
+
+	// . use the enormous power of our new XmlDoc class
+	// . this returns false with g_errno set on error
+	if ( ! set4 ( &sreq       ,
+		      NULL        ,
+		      cr->m_coll  ,
+		      NULL        , // pbuf
+		      // from PageInject.cpp:
+		      // give it a niceness of 1, we have to be
+		      // careful since we are a niceness of 0!!!!
+		      1, // niceness, // 1 , 
+		      // inject this content
+		      content ,
+		      deleteUrl, // false, // deleteFromIndex ,
+		      0,//forcedIp ,
+		      contentType ,
+		      0,//lastSpidered ,
+		      contentHasMime )) {
+		// g_errno should be set if that returned false
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		return true;
+	}
+
+	//m_doConsistencyTesting = doConsistencyTesting;
+
+	// . set xd from the old title rec if recycle is true
+	// . can also use XmlDoc::m_loadFromOldTitleRec flag
+	//if ( recycleContent ) m_recycleContent = true;
+
+	// othercrap
+	//if ( firstIndexed ) {
+	//	m_firstIndexedDate = firstIndexed;
+	//	m_firstIndexedDateValid = true;
+	//}
+
+	//if ( lastSpidered ) {
+	//	m_spideredTime      = lastSpidered;
+	//	m_spideredTimeValid = true;
+	//}
+
+	if ( hopCount != -1 ) {
+		m_hopCount = hopCount;
+		m_hopCountValid = true;
+	}
+
+	if ( charset != -1 && charset != csUnknown ) {
+		m_charset = charset;
+		m_charsetValid = true;
+	}
+
+	// avoid looking up ip of each outlink to add "firstip" tag to tagdb
+	// because that can be slow!!!!!!!
+	m_spiderLinks = spiderLinks;
+	m_spiderLinks2 = spiderLinks;
+	m_spiderLinksValid = true;
+
+	// . newOnly is true --> do not inject if document is already indexed!
+	// . maybe just set indexCode
+	m_newOnly = newOnly;
+
+	// do not re-lookup the robots.txt
+	m_isAllowed      = true;
+	m_isAllowedValid = true;
+	m_crawlDelay     = -1; // unknown
+	m_crawlDelayValid = true;
+
+
+	m_isInjecting = true;
+	m_isInjectingValid = true;
+
+	// set this now
+	//g_inPageInject = true;
+
+	// log it now
+	//log("inject: indexing injected doc %s",cleanUrl);
+
+	// make this our callback in case something blocks
+	setCallback ( state , callback );
+
+	// . now tell it to index
+	// . this returns false if blocked
+	// . eventually it will call "callback" when done if it blocks
+	bool status = indexDoc ( );
+	if ( ! status ) return false;
+
+	// log it. i guess only for errors when it does not block?
+	// because xmldoc.cpp::indexDoc calls logIt()
+	if ( status ) logIt();
+
+	// undo it
+	//g_inPageInject = false;
+
+	return true;
+}
+
 
 ////////////////////////////////////////////////////////////////////
 //   THIS IS THE HEART OF HOW THE PARSER ADDS TO THE RDBS
@@ -1973,10 +2134,10 @@ bool XmlDoc::indexDoc ( ) {
 		}
 		// store the new request (store reply for this below)
 		m_metaList2.pushChar(RDB_SPIDERDB);
-		if ( ! m_oldsrValid ) { char *xx=NULL;*xx=0; }
+		if ( ! m_sreqValid ) { char *xx=NULL;*xx=0; }
 		// 
 		SpiderRequest sreq;
-		memcpy ( &sreq , &m_oldsr , m_oldsr.getRecSize() );
+		memcpy ( &sreq , &m_sreq , m_sreq.getRecSize() );
 		sreq.m_firstIp = *fip;
 		// but turn off this flag! the whole point of all this...
 		sreq.m_fakeFirstIp = 0;
@@ -2106,15 +2267,15 @@ bool XmlDoc::indexDoc2 ( ) {
 
 	// do this before we increment pageDownloadAttempts below so that
 	// john's smoke tests, which use those counts, are not affected
-	if ( m_oldsrValid && 
-	     m_oldsr.m_fakeFirstIp &&
+	if ( m_sreqValid && 
+	     m_sreq.m_fakeFirstIp &&
 	     // only do for add url, not for injects. injects expect
 	     // the doc to be indexed while the browser waits. add url
 	     // is really just adding the spider request and returning
 	     // to the browser without delay.
-	     ! m_oldsr.m_isInjecting &&
+	     ! m_sreq.m_isInjecting &&
 	     // diffbot requests are ok though!
-	     ! strstr(m_oldsr.m_url,"-diffbotxyz") ) {
+	     ! strstr(m_sreq.m_url,"-diffbotxyz") ) {
 		m_indexCodeValid = true;
 		m_indexCode = EFAKEFIRSTIP;
 		return true;
@@ -2352,7 +2513,7 @@ bool XmlDoc::indexDoc2 ( ) {
 
 	bool flush = false;
 	if ( m_contentInjected ) flush = true;
-	if ( m_oldsrValid && m_oldsr.m_isPageInject ) flush = true;
+	if ( m_sreqValid && m_sreq.m_isPageInject ) flush = true;
 	if ( ! m_listAdded ) flush = false;
 	if ( m_listFlushed ) flush = false;
 	// HACK: flush it if we are injecting it in case the next thing we 
@@ -2506,7 +2667,7 @@ long *XmlDoc::getIndexCode ( ) {
 	// so that we can be assured to have exactly the same urls the dmoz 
 	// has in our index. so when we do a gbcatid:xxx query we get the same
 	// urls in the search results that dmoz has for that category id.
-	if ( ! m_oldsrValid || ! m_oldsr.m_ignoreExternalErrors ) 
+	if ( ! m_sreqValid || ! m_sreq.m_ignoreExternalErrors ) 
 		return indexCode;
 
 	// only neutralize certain errors
@@ -9054,7 +9215,7 @@ Url **XmlDoc::getRedirUrl() {
 
 	//bool injected = false;
 	// get from spider request if there
-	//if ( m_oldsrValid && m_oldsr.m_isInjecting ) injected = true;
+	//if ( m_sreqValid && m_sreq.m_isInjecting ) injected = true;
 
 	// . if redirect url is nothing new, then bail (infinite loop)
 	// . www.xbox.com/SiteRequirements.htm redirects to itself 
@@ -9691,7 +9852,7 @@ bool XmlDoc::getIsPageParser ( ) {
 	// assume not
 	m_isPageParser = false;
 	// and set otherwise
-	if ( m_oldsrValid && m_oldsr.m_isPageParser ) m_isPageParser = true;
+	if ( m_sreqValid && m_sreq.m_isPageParser ) m_isPageParser = true;
 	// and validate
 	m_isPageParserValid = true;
 	return m_isPageParser;
@@ -9773,9 +9934,9 @@ XmlDoc **XmlDoc::getRootXmlDoc ( long maxCacheAge ) {
 		// spider the url "u"
 		strcpy ( sreq.m_url , mysite );
 		// set this
-		if ( m_oldsrValid ) {
+		if ( m_sreqValid ) {
 			// this will avoid it adding to tagdb!
-			sreq.m_isPageParser = m_oldsr.m_isPageParser;
+			sreq.m_isPageParser = m_sreq.m_isPageParser;
 		}
 		// reset the data size
 	        sreq.setDataSize ();
@@ -11719,7 +11880,7 @@ LinkInfo *XmlDoc::getSiteLinkInfo() {
 	// not if pageparser though
 	if ( m_pbuf ) canBeCancelled = false;
 	// not if injecting
-	if ( ! m_oldsrValid ) canBeCancelled = false;
+	if ( ! m_sreqValid ) canBeCancelled = false;
 	// assume valid when it returns
 	m_siteLinkInfoValid = true;
 	// use this buffer so XmlDoc::print() can display it where it wants
@@ -11733,7 +11894,7 @@ LinkInfo *XmlDoc::getSiteLinkInfo() {
 	long lastUpdateTime = getTimeGlobal();
 	// get from spider request if there
 	//bool injected = false;
-	//if ( m_oldsrValid && m_oldsr.m_isInjecting ) injected = true;
+	//if ( m_sreqValid && m_sreq.m_isInjecting ) injected = true;
 	// but be consistent if doing the "test" collection
 	if ( ! strcmp(cr->m_coll,"test") ) {
 		//if ( ! m_spideredTimeValid ) {char *xx=NULL;*xx=0;}
@@ -11834,7 +11995,7 @@ long *XmlDoc::getIp ( ) {
 	bool useTestCache = false;
 	if ( ! strcmp(cr->m_coll,"test") ) useTestCache = true;
 	// unless its the pagesubmit.cpp event submission tool
-	//if ( m_oldsrValid && m_oldsr.m_isPageSubmit ) useTestCache = false;
+	//if ( m_sreqValid && m_sreq.m_isPageSubmit ) useTestCache = false;
 
 
 	// when building the "test" collection try to get the ip from
@@ -11874,9 +12035,9 @@ long *XmlDoc::getIp ( ) {
 	// ignore for testing
 	if ( ! strcmp(cr->m_coll,"test") ) delay = 0;
 	// injected?
-	if ( m_oldsrValid && m_oldsr.m_isInjecting  ) delay = 0;
-	if ( m_oldsrValid && m_oldsr.m_isPageParser ) delay = 0;
-	if ( m_oldsrValid && m_oldsr.m_isScraping   ) delay = 0;
+	if ( m_sreqValid && m_sreq.m_isInjecting  ) delay = 0;
+	if ( m_sreqValid && m_sreq.m_isPageParser ) delay = 0;
+	if ( m_sreqValid && m_sreq.m_isScraping   ) delay = 0;
 	// . don't do the delay when downloading extra doc, robots.txt etc.
 	// . this also reports a status msg of "getting new doc" when it
 	//   really means "delaying spider"
@@ -11951,7 +12112,7 @@ long *XmlDoc::gotIp ( bool save ) {
 	bool useTestCache = false;
 	if ( ! strcmp(cr->m_coll,"test") ) useTestCache = true;
 	// unless its the pagesubmit.cpp event submission tool
-	//if ( m_oldsrValid && m_oldsr.m_isPageSubmit ) useTestCache = false;
+	//if ( m_sreqValid && m_sreq.m_isPageSubmit ) useTestCache = false;
 	
 
 	// when building the "test" collection try to get the ip from
@@ -12621,7 +12782,7 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 		// not if pageparser though
 		if ( m_pbuf ) canBeCancelled = false;
 		// not if injecting
-		if ( ! m_oldsrValid ) canBeCancelled = false;
+		if ( ! m_sreqValid ) canBeCancelled = false;
 		// use this buffer so XmlDoc::print() can display wherever
 		SafeBuf *sb = NULL;
 		if ( m_pbuf ) sb = &m_pageLinkBuf;
@@ -12629,7 +12790,7 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 		if ( m_usePageLinkBuf ) sb = &m_pageLinkBuf;
 		// get from spider request if there
 		//bool injected = false;
-		//if ( m_oldsrValid && m_oldsr.m_isInjecting ) injected = true;
+		//if ( m_sreqValid && m_sreq.m_isInjecting ) injected = true;
 		// we do not want to waste time computing the page title
 		// of bad inlinks if we only want the good inlinks, because
 		// as of oct 25, 2012 we only store the "good" inlinks
@@ -12775,7 +12936,7 @@ LinkInfo **XmlDoc::getLinkInfo2 ( ) {
 		// not if pageparser though
 		if ( m_pbuf ) canBeCancelled = false;
 		// not if injecting
-		if ( ! m_oldsrValid ) canBeCancelled = false;
+		if ( ! m_sreqValid ) canBeCancelled = false;
 		// use this buffer so XmlDoc::print() can display wherever
 		//SafeBuf *sb = NULL;
 		//if ( m_pbuf ) sb = &m_pageLinkBuf2;
@@ -12843,7 +13004,7 @@ char *XmlDoc::getSite ( ) {
 	long timestamp = getSpideredTime();//m_spideredTime;
 	// add tags to tagdb?
 	//bool addTags = true;
-	//if ( m_oldsrValid && m_oldsr.m_isPageParser ) addTags = false;
+	//if ( m_sreqValid && m_sreq.m_isPageParser ) addTags = false;
 	//if ( getIsPageParser() ) addTags = false;
 	// do it
 	if ( ! m_siteGetter.getSite ( f->getUrl()    ,
@@ -13659,7 +13820,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	diffbotUrl.nullTerm();
 
 	// mark as tried
-	if ( m_newsrValid ) { char *xx=NULL;*xx=0; }
+	if ( m_srepValid ) { char *xx=NULL;*xx=0; }
 	m_sentToDiffbot = 1;
 	
 	// count it for stats
@@ -13917,7 +14078,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 	bool useTestCache = false;
 	if ( ! strcmp(cr->m_coll,"test") ) useTestCache = true;
 	// unless its the pagesubmit.cpp event submission tool
-	//if ( m_oldsrValid && m_oldsr.m_isPageSubmit ) useTestCache = false;
+	//if ( m_sreqValid && m_sreq.m_isPageSubmit ) useTestCache = false;
 
 	// sanity check
 	//if ( ! m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
@@ -13982,8 +14143,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// if valid in SpiderRequest, use it. if spider compression proxy
 	// sees the content is unchanged it will not send it back! it will
 	// send back g_errno = EDOCUNCHANGED or something
-	if ( m_oldsrValid )
-		r->m_contentHash32 = m_oldsr.m_contentHash32;
+	if ( m_sreqValid )
+		r->m_contentHash32 = m_sreq.m_contentHash32;
 
 	// eventgurubot is the max
 	//char *userAgent = g_conf.m_spiderUserAgent;
@@ -14019,7 +14180,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 	if ( td ) strncpy ( r->m_testDir, td, 31);
 
 	//r->m_isPageParser = getIsPageParser();
-	//r->m_isPageInject = ( m_oldsrValid && m_oldsr.m_isInjecting );
+	//r->m_isPageInject = ( m_sreqValid && m_sreq.m_isInjecting );
 
 	// if current url IS NOT EQUAL to first url then set redir flag
 	if ( strcmp(cu->m_url,m_firstUrl.m_url) )
@@ -14029,7 +14190,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 	if ( m_isChildDoc )
 		r->m_skipHammerCheck = 1;
 
-	if ( m_contentInjected ) // oldsrValid && m_oldsr.m_isInjecting )
+	if ( m_contentInjected ) // oldsrValid && m_sreq.m_isInjecting )
 		r->m_skipHammerCheck = 1;
 
 	// or if ahrefs
@@ -14045,7 +14206,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 	}
 
 	// tell msg13 he is scraping...
-	if ( m_oldsrValid && m_oldsr.m_isScraping )
+	if ( m_sreqValid && m_sreq.m_isScraping )
 		r->m_isScraping = 1;
 
 	// if doing frame expansion on a doc we just downloaded as the
@@ -16882,7 +17043,7 @@ long **XmlDoc::getOutlinkFirstIpVector () {
 	long nowGlobal = getSpideredTime();//m_spideredTime;
 	// add tags to tagdb?
 	bool addTags = true;
-	//if ( m_oldsrValid && m_oldsr.m_isPageParser ) addTags = false;
+	//if ( m_sreqValid && m_sreq.m_isPageParser ) addTags = false;
 	if ( getIsPageParser() ) addTags = false;
 	// get this
 	char *testDir = getTestDir();
@@ -17011,9 +17172,9 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	//if ( ! m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
 	long spideredTime = getSpideredTime();
 	// get the spider request
-	SpiderRequest *oldsr = &m_oldsr;
+	SpiderRequest *oldsr = &m_sreq;
 	// null it out if invalid...
-	if ( ! m_oldsrValid ) oldsr = NULL;
+	if ( ! m_sreqValid ) oldsr = NULL;
 	// do not set the spideredTime in the spiderReply to 0
 	// so we do not trigger the lastSpiderTime
 	//long saved = newsr->m_spideredTime;
@@ -17204,7 +17365,7 @@ int8_t *XmlDoc::getHopCount ( ) {
 	// . fix bad original hop counts
 	// . assign this hop count from the spider rec
 	long origHopCount = -1;
-	if ( m_oldsrValid ) origHopCount = m_oldsr.m_hopCount;
+	if ( m_sreqValid ) origHopCount = m_sreq.m_hopCount;
 	// derive our hop count from our parent hop count
 	long hc = -1;
 	// . BUT use inlinker if better
@@ -17344,7 +17505,7 @@ char *XmlDoc::getSpiderLinks ( ) {
 	// spider request forbade it? diffbot.cpp crawlbot api when
 	// specifying urldata (list of urls to add to spiderdb) usually
 	// they do not want the links crawled i'd imagine.
-	if ( m_oldsrValid && m_oldsr.m_avoidSpiderLinks )
+	if ( m_sreqValid && m_sreq.m_avoidSpiderLinks )
 		m_spiderLinks = false;
 
 
@@ -17597,7 +17758,7 @@ bool XmlDoc::logIt ( ) {
 	//char isIndexed = -1;
 	//if ( m_isIndexedValid ) isIndexed = m_isIndexed;
 	bool isNew = true;
-	if ( m_oldsrValid && m_oldsr.m_hadReply ) isNew = false;
+	if ( m_sreqValid && m_sreq.m_hadReply ) isNew = false;
 
 	// keep track of stats
 	g_stats.addSpiderPoint ( errCode, isNew ); // !isIndexed );
@@ -17639,17 +17800,17 @@ bool XmlDoc::logIt ( ) {
 	//   use domain hash instead of firstip, and then let msg13
 	//   make queues in the case of hammering an ip, which i think
 	//   it already does...
-	if ( m_oldsrValid && m_oldsr.m_firstIp != m_firstIp )
-		sb.safePrintf("fakesreqfirstip=%s ",iptoa(m_oldsr.m_firstIp) );
+	if ( m_sreqValid && m_sreq.m_firstIp != m_firstIp )
+		sb.safePrintf("fakesreqfirstip=%s ",iptoa(m_sreq.m_firstIp) );
 
 	//
 	// print when this spider request was added
 	//
-	//if ( m_oldsrValid && m_oldsr.m_addedTime ) {
-	//	struct tm *timeStruct = gmtime ( &m_oldsr.m_addedTime );
+	//if ( m_sreqValid && m_sreq.m_addedTime ) {
+	//	struct tm *timeStruct = gmtime ( &m_sreq.m_addedTime );
 	//	char tmp[64];
 	//	strftime(tmp,64,"requestadded=%b-%d-%Y(%H:%M:%S)", timeStruct);
-	//	sb.safePrintf("%s(%lu) ",tmp,m_oldsr.m_addedTime);
+	//	sb.safePrintf("%s(%lu) ",tmp,m_sreq.m_addedTime);
 	//}
 
 	//
@@ -17663,12 +17824,12 @@ bool XmlDoc::logIt ( ) {
 	sb.safePrintf("%s(%lu) ",tmp,spideredTime);
 
 	// when it was scheduled to be spidered
-	if ( m_oldsrValid && m_oldsr.m_addedTime ) {
-		struct tm *timeStruct = gmtime ( &m_oldsr.m_addedTime );
+	if ( m_sreqValid && m_sreq.m_addedTime ) {
+		struct tm *timeStruct = gmtime ( &m_sreq.m_addedTime );
 		char tmp[64];
 		strftime ( tmp , 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct );
 		sb.safePrintf("scheduledtime=%s(%lu) ",
-			      tmp,m_oldsr.m_addedTime);
+			      tmp,m_sreq.m_addedTime);
 	}
 
 	// print first indexed time
@@ -17683,9 +17844,9 @@ bool XmlDoc::logIt ( ) {
 
 	// just use the oldurlfilternum for grepping i guess
 	//if ( m_oldDocValid && m_oldDoc ) 
-	if ( m_oldsrValid && m_oldsr.m_hadReply )
+	if ( m_sreqValid && m_sreq.m_hadReply )
 		sb.safePrintf("firsttime=0 ");
-	else if ( m_oldsrValid )
+	else if ( m_sreqValid )
 		sb.safePrintf("firsttime=1 ");
 	else
 		sb.safePrintf("firsttime=? ");
@@ -17873,13 +18034,13 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("hasrssitem=1 ");
 
 	// was the content itself injected?
-	if ( m_wasInjected ) // m_oldsrValid && m_oldsr.m_isInjecting )
+	if ( m_wasInjected ) // m_sreqValid && m_sreq.m_isInjecting )
 		sb.safePrintf("contentinjected=1 ");
 	else
 		sb.safePrintf("contentinjected=0 ");
 
 	// might have just injected the url and downloaded the content?
-	if ( m_oldsrValid && m_oldsr.m_isInjecting )
+	if ( m_sreqValid && m_sreq.m_isInjecting )
 		sb.safePrintf("urlinjected=1 ");
 	else
 		sb.safePrintf("urlinjected=0 ");
@@ -17911,15 +18072,15 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("olddocid=%llu ",m_oldDoc->m_docId);
 
 	// only print if different now! good for grepping changes
-	if ( m_oldsrValid && m_oldsr.m_ufn >= 0 && 
-	     m_oldsr.m_ufn != m_urlFilterNum )
+	if ( m_sreqValid && m_sreq.m_ufn >= 0 && 
+	     m_sreq.m_ufn != m_urlFilterNum )
 		sb.safePrintf("oldurlfilternum=%li ",
-			      (long)m_oldsr.m_ufn);
+			      (long)m_sreq.m_ufn);
 
-	if ( m_oldsrValid && m_oldsr.m_priority >= 0 &&
-	     m_oldsr.m_priority != m_priority )
+	if ( m_sreqValid && m_sreq.m_priority >= 0 &&
+	     m_sreq.m_priority != m_priority )
 		sb.safePrintf("oldpriority=%li ",
-			      (long)m_oldsr.m_priority);
+			      (long)m_sreq.m_priority);
 
 	if ( m_oldDoc && m_oldDoc->m_langIdValid &&
 	     m_oldDoc->m_langId != m_langId )
@@ -17971,8 +18132,8 @@ bool XmlDoc::logIt ( ) {
 
 
 
-	if ( m_oldsrValid && m_oldsr.m_errCount )
-		sb.safePrintf("olderrcount=%li ",(long)m_oldsr.m_errCount );
+	if ( m_sreqValid && m_sreq.m_errCount )
+		sb.safePrintf("olderrcount=%li ",(long)m_sreq.m_errCount );
 
 	if ( ptr_redirUrl ) { // m_redirUrlValid && m_redirUrlPtr ) {
 		sb.safePrintf("redir=%s ",ptr_redirUrl);//m_redirUrl.getUrl());
@@ -18048,7 +18209,7 @@ bool XmlDoc::doConsistencyTest ( bool forceTest ) {
 	if ( ! doc->set2 ( m_titleRec , -1 , cr->m_coll , NULL , m_niceness ,
 			  // no we provide the same SpiderRequest so that
 			  // it can add the same SpiderReply to the metaList
-			   &m_oldsr ) ) {
+			   &m_sreq ) ) {
 		mdelete ( doc , sizeof(XmlDoc) , "xdnuke");
 		delete ( doc );
 		return false;
@@ -19273,7 +19434,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		//|| diffbotEmptyReply
 	     // . treat this as a temporary error i guess
 	     // . getNewSpiderReply() below will clear the error in it and
-	     //   copy stuff over from m_oldsr and m_oldDoc for this case
+	     //   copy stuff over from m_sreq and m_oldDoc for this case
 		//|| *indexCode == EDOCUNCHANGED
 		) {
 		// sanity - in repair mode?
@@ -19296,9 +19457,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// all done!
 		bool addReply = true;
 		// Scraper.cpp uses this
-		if ( m_oldsrValid && m_oldsr.m_isScraping ) addReply = false;
+		if ( m_sreqValid && m_sreq.m_isScraping ) addReply = false;
 		// page parser calls set4 and sometimes gets a dns time out!
-		if ( m_oldsrValid && m_oldsr.m_isPageParser ) addReply = false;
+		if ( m_sreqValid && m_sreq.m_isPageParser ) addReply = false;
 		// return nothing if done
 		if ( ! addReply ) {
 			m_metaListSize = 0;
@@ -19317,8 +19478,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// but set our m_contentHash32 from the spider request
 		// which got it from the spiderreply in the case of
 		// EDOCUNCHANGED. this way ch32=xxx will log correctly.
-		if ( *indexCode == EDOCUNCHANGED && m_oldsrValid ) {
-			m_contentHash32      = m_oldsr.m_contentHash32;
+		if ( *indexCode == EDOCUNCHANGED && m_sreqValid ) {
+			m_contentHash32      = m_sreq.m_contentHash32;
 			m_contentHash32Valid = true;
 		}
 		// get our spider reply
@@ -19402,7 +19563,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( m_useSecondaryRdbs ) *m_p = RDB2_SPIDERDB2;
 		m_p++;
 		// get this
-		if ( ! m_newsrValid ) { char *xx=NULL;*xx=0; }
+		if ( ! m_srepValid ) { char *xx=NULL;*xx=0; }
 		// store the spider rec
 		long newsrSize = newsr->getRecSize();
 		memcpy ( m_p , newsr , newsrSize );
@@ -19523,14 +19684,14 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( od && *tagHash != od->m_tagHash32 ) unchanged = false;
 
 	// do not do this if from pageparser.cpp
-	//if ( m_oldsrValid && m_oldsr.m_isPageParser ) unchanged = false;
+	//if ( m_sreqValid && m_sreq.m_isPageParser ) unchanged = false;
 	if ( getIsPageParser() ) unchanged = false;
 
 	// force reindex if it was from query reindex (docid based spider req)
-	if ( m_oldsrValid && m_oldsr.m_urlIsDocId ) unchanged = false;
+	if ( m_sreqValid && m_sreq.m_urlIsDocId ) unchanged = false;
 
 	// if we were turked... how to tell????
-	if ( m_oldsrValid && m_oldsr.m_isInjecting ) unchanged = false;
+	if ( m_sreqValid && m_sreq.m_isInjecting ) unchanged = false;
 
 	// just turn it all off for now because our parsing logic might
 	// have changed
@@ -19551,7 +19712,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// all done!
 		bool addReply = true;
 		// Scraper.cpp uses this
-		if ( m_oldsrValid && m_oldsr.m_isScraping ) addReply = false;
+		if ( m_sreqValid && m_sreq.m_isScraping ) addReply = false;
 		// return nothing if done
 		if ( ! addReply ) {
 			m_metaListSize = 0;
@@ -19631,7 +19792,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( m_useSecondaryRdbs ) *m_p = RDB2_SPIDERDB2;
 		m_p++;
 		// get this
-		if ( ! m_newsrValid ) { char *xx=NULL;*xx=0; }
+		if ( ! m_srepValid ) { char *xx=NULL;*xx=0; }
 		// store the spider rec
 		long newsrSize = newsr->getRecSize();
 		memcpy ( m_p , newsr , newsrSize );
@@ -20250,8 +20411,12 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( forDelete ) needSpiderdb1 = 0;
 	need += needSpiderdb1;
 
+	long needSpiderdb3 = 0;
+	if ( m_sreqValid && m_sreq.m_isInjecting ) 
+		needSpiderdb3 = m_sreq.getRecSize() + 1;
+
 	//long needSpiderdb3 = 0;
-	//if ( m_oldsrValid ) needSpiderdb3 = m_oldsr.getRecSize() + 1;
+	//if ( m_sreqValid ) needSpiderdb3 = m_sreq.getRecSize() + 1;
 	//need += needSpiderdb3;
 
 	// . for adding our outlinks to spiderdb
@@ -20710,6 +20875,22 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	verifyMetaList( m_metaList , m_p );
 	*/
 
+	// if we are injecting we must add the spider request
+	// we are injecting from so the url can be scheduled to be
+	// spidered again
+	if ( m_sreqValid && m_sreq.m_isInjecting ) {
+		// note it
+		setStatus("adding spider request");
+		// checkpoint
+		saved = m_p;
+		// copy it
+		*m_p++ = RDB_SPIDERDB;
+		memcpy ( m_p , &m_sreq , m_sreq.getRecSize() );
+		m_p += m_sreq.getRecSize();
+		// sanity check
+		if ( m_p - saved > needSpiderdb3 ) { char *xx=NULL;*xx=0; }
+	}
+
 	// 
 	// ADD SPIDERDB RECORDS of outlinks
 	//
@@ -20798,7 +20979,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//
 
 	// but not if injecting!
-	//if ( ! m_oldsrValid ) {
+	//if ( ! m_sreqValid ) {
 	//	// set the list size, different from the alloc size
 	//	m_metaListSize = m_p - m_metaList;
 	//	// all done
@@ -20813,9 +20994,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//if ( m_useSecondaryRdbs ) *p = RDB2_SPIDERDB2;
 	//p++;
 	// must be legit
-	//if ( ! m_oldsrValid ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_sreqValid ) { char *xx=NULL;*xx=0; }
 	// then the key
-	// *(key_t *)p = m_oldsr.m_key;
+	// *(key_t *)p = m_sreq.m_key;
 	// nukey, clear del bit to delete it
 	// *p &= 0xfe;
 	// skip key
@@ -20880,7 +21061,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	bool addReply = true;
 	// Scraper.cpp uses this
-	if ( m_oldsrValid && m_oldsr.m_isScraping ) addReply = false;
+	if ( m_sreqValid && m_sreq.m_isScraping ) addReply = false;
 	// save it
 	saved = m_p;
 	// now add the new rescheduled time
@@ -20893,7 +21074,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( m_useSecondaryRdbs ) *m_p = RDB2_SPIDERDB2;
 		m_p++;
 		// get this
-		if ( ! m_newsrValid ) { char *xx=NULL;*xx=0; }
+		if ( ! m_srepValid ) { char *xx=NULL;*xx=0; }
 		// store the spider rec
 		long newsrSize = newsr->getRecSize();
 		memcpy ( m_p , newsr , newsrSize );
@@ -20921,11 +21102,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// way of getting it back into the cache.
 	// now, we add this first since now Rdb.cpp calls evaluateAllReqeusts()
 	// AFTER the REPLY now
-	if ( m_oldsrValid &&
+	if ( m_sreqValid &&
 	     // page parser has an invalid firstIp which causes printMetaList()
 	     // to core when trying to print this out, so don't add it when
 	     // doing page parser
-	     ! m_oldsr.m_isPageParser ) {
+	     ! m_sreq.m_isPageParser ) {
 		// note it
 		setStatus ( "adding SpiderRequest back to spiderdb" );
 		// rdbid first
@@ -20934,8 +21115,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( m_useSecondaryRdbs ) *m_p = RDB2_SPIDERDB2;
 		m_p++;
 		// store the spider rec
-		long size = m_oldsr.getRecSize();
-		memcpy ( m_p , &m_oldsr , size );
+		long size = m_sreq.getRecSize();
+		memcpy ( m_p , &m_sreq , size );
 		// set this one bit 
 		SpiderRequest *rr = (SpiderRequest *)m_p;
 		rr->m_readd = 1;
@@ -20947,7 +21128,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// skip over the whole rec
 		m_p += size;
 		// sanity check - must not be a request, this is a reply
-		if ( ! g_spiderdb.isSpiderRequest( &m_oldsr.m_key ) ) {
+		if ( ! g_spiderdb.isSpiderRequest( &m_sreq.m_key ) ) {
 			char *xx=NULL;*xx=0; }
 		// sanity check
 		if ( m_p - saved != needSpiderdb3 ) { char *xx=NULL;*xx=0; }
@@ -21379,7 +21560,7 @@ void XmlDoc::copyFromOldDoc ( XmlDoc *od ) {
 
 SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 
-	if ( m_newsrValid ) return &m_newsr;
+	if ( m_srepValid ) return &m_srep;
 
 	setStatus ( "getting spider reply" );
 
@@ -21407,25 +21588,25 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	     *indexCode == EHITCRAWLLIMIT ||
 	     *indexCode == EHITPROCESSLIMIT ) {
 		// clear everything
-		m_newsr.reset();
+		m_srep.reset();
 		// get from spider request, if there
 		long firstIp = 0;
-		if ( m_oldsrValid ) firstIp = m_oldsr.m_firstIp;
+		if ( m_sreqValid ) firstIp = m_sreq.m_firstIp;
 		// otherwise, wtf?
 		if ( ! firstIp ) 
 			log("build: no first ip to make fake spiderReply. "
 			    "injected?");
 		// we at least need this
-		m_newsr.m_firstIp = firstIp;
+		m_srep.m_firstIp = firstIp;
 		Url *fu = getFirstUrl();
 		// this is the lock key
 		long long uh48 = hash64b(fu->m_url) & 0x0000ffffffffffffLL;
-		m_newsr.setKey (  firstIp, 0 , uh48 , false );
+		m_srep.setKey (  firstIp, 0 , uh48 , false );
 		// tell it we are fake and not to really add us to
 		// spiderdb, but just to release the lock
-		m_newsr.m_errCode = *indexCode;
-		m_newsrValid = true;
-		return &m_newsr;
+		m_srep.m_errCode = *indexCode;
+		m_srepValid = true;
+		return &m_srep;
 	}
 	*/
 
@@ -21463,7 +21644,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	if ( m_firstUrlValid ) fu = getFirstUrl();
 
 	// reset
-	m_newsr.reset();
+	m_srep.reset();
 
 	long firstIp = -1;
 	// inherit firstIp
@@ -21471,23 +21652,23 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// tag must be there?
 	if ( tag ) firstIp = atoip(tag->getTagData());
 	// otherwise, inherit from oldsr to be safe
-	if ( m_oldsrValid ) firstIp = m_oldsr.m_firstIp;
+	if ( m_sreqValid ) firstIp = m_sreq.m_firstIp;
 	// sanity
 	if ( firstIp == 0 || firstIp == -1 ) { char *xx=NULL;*xx=0; }
 	// store it
-	m_newsr.m_firstIp = firstIp;
+	m_srep.m_firstIp = firstIp;
 	// assume no error
-	m_newsr.m_errCount = 0;
+	m_srep.m_errCount = 0;
 	// otherwise, inherit from oldsr to be safe
-	//if ( m_oldsrValid ) 
-	//	m_newsr.m_firstIp = m_oldsr.m_firstIp;
+	//if ( m_sreqValid ) 
+	//	m_srep.m_firstIp = m_sreq.m_firstIp;
 
 	// do not inherit this one, it MIGHT HAVE CHANGE!
-	m_newsr.m_siteHash32 = m_siteHash32;
+	m_srep.m_siteHash32 = m_siteHash32;
 
 	// need this for updating crawl delay table, m_cdTable in Spider.cpp
-	if ( fu ) m_newsr.m_domHash32  = getDomHash32();
-	else      m_newsr.m_domHash32  = 0;
+	if ( fu ) m_srep.m_domHash32  = getDomHash32();
+	else      m_srep.m_domHash32  = 0;
 
 	if ( ! m_tagRecValid               ) { char *xx=NULL;*xx=0; }
 	if ( ! m_ipValid                   ) { char *xx=NULL;*xx=0; }
@@ -21497,7 +21678,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// . set other fields besides key
 	// . crap! if we are the "test" collection then m_spideredTime
 	//   was read from disk usually and is way in the past! watch out!!
-	m_newsr.m_spideredTime = getSpideredTime();//m_spideredTime;
+	m_srep.m_spideredTime = getSpideredTime();//m_spideredTime;
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -21506,18 +21687,18 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// causes the spider request to be repeatedly executed, so let's
 	// fix that
 	if ( ! strcmp(cr->m_coll,"test") ) 
-		m_newsr.m_spideredTime = getTimeGlobal();
+		m_srep.m_spideredTime = getTimeGlobal();
 
 
 	// TODO: expire these when "ownershipchanged" tag is newer!!
 	if ( gr->getTag ( "ingoogle"        ) ) {
-		m_newsr.m_inGoogle      = 1;
-		m_newsr.m_inGoogleValid = 1;
+		m_srep.m_inGoogle      = 1;
+		m_srep.m_inGoogleValid = 1;
 	}
 	if ( gr->getTag ( "authorityinlink" ) ) 
-		m_newsr.m_hasAuthorityInlink = 1;
+		m_srep.m_hasAuthorityInlink = 1;
 	// automatically valid either way
-	m_newsr.m_hasAuthorityInlinkValid = 1;
+	m_srep.m_hasAuthorityInlinkValid = 1;
 	// but for this tag, it must exist even if it has no contact info
 	//tag = gr->getTag ( "hascontactinfo"  );
 	//if ( tag ) {
@@ -21527,47 +21708,47 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// if the titlerec lookup failed
 	if ( fu ) uh48 = hash64b(fu->m_url) & 0x0000ffffffffffffLL;
 	long long parentDocId = 0LL;
-	if ( m_oldsrValid )
-		parentDocId = m_oldsr.getParentDocId();
+	if ( m_sreqValid )
+		parentDocId = m_sreq.getParentDocId();
 	else { char *xx=NULL;*xx=0; }
 
 	// for docid based urls from PageReindex.cpp we have to make
 	// sure to set the urlhash48 correctly from that. 
-	if ( m_oldsrValid ) uh48 = m_oldsr.getUrlHash48();
+	if ( m_sreqValid ) uh48 = m_sreq.getUrlHash48();
 		
 	// note it
 	if ( g_conf.m_logDebugSpider )
 		log("xmldoc: uh48=%llu parentdocid=%llu",uh48,parentDocId);
 
-	// set the key, m_newsr.m_key
-	m_newsr.setKey (  firstIp, parentDocId , uh48 , false );
+	// set the key, m_srep.m_key
+	m_srep.setKey (  firstIp, parentDocId , uh48 , false );
 
 	// . did we download a page? even if indexcode is set we might have
 	// . if this is non-zero that means its valid
 	if ( m_contentHash32Valid )
-		m_newsr.m_contentHash32 = m_contentHash32;
+		m_srep.m_contentHash32 = m_contentHash32;
 
 	// injecting the content (url implied)
-	if ( m_contentInjected ) // m_oldsrValid && m_oldsr.m_isInjecting )
-		m_newsr.m_fromInjectionRequest = 1;
+	if ( m_contentInjected ) // m_sreqValid && m_sreq.m_isInjecting )
+		m_srep.m_fromInjectionRequest = 1;
 
 	// can be injecting a url too, content not necessarily implied
-	if ( m_oldsrValid && m_oldsr.m_isInjecting )
-		m_newsr.m_fromInjectionRequest = 1;
+	if ( m_sreqValid && m_sreq.m_isInjecting )
+		m_srep.m_fromInjectionRequest = 1;
 
 	if ( m_sentToDiffbot )
-		m_newsr.m_sentToDiffbot = true;
+		m_srep.m_sentToDiffbot = true;
 	else
-		m_newsr.m_sentToDiffbot = false;
+		m_srep.m_sentToDiffbot = false;
 
 	if ( m_diffbotReplyError )
-		m_newsr.m_hadDiffbotError = true;
+		m_srep.m_hadDiffbotError = true;
 	else
-		m_newsr.m_hadDiffbotError = false;
+		m_srep.m_hadDiffbotError = false;
 
-	m_newsr.m_wasIndexed = false;
+	m_srep.m_wasIndexed = false;
 
-	if ( m_oldDocValid && m_oldDoc ) m_newsr.m_wasIndexed = true;
+	if ( m_oldDocValid && m_oldDoc ) m_srep.m_wasIndexed = true;
 
 	// note whether m_wasIndexed is valid because if it isn't then
 	// we shouldn't be counting this reply towards the page counts.
@@ -21576,58 +21757,58 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// this is an EFAKEFIRSTIP error or something similar where we
 	// basically just add this reply and we're done.
 	// NOTE: this also pertains to SpiderReply::m_isIndexed.
-	if ( m_oldDocValid ) m_newsr.m_wasIndexedValid = true;
+	if ( m_oldDocValid ) m_srep.m_wasIndexedValid = true;
 
 	// likewise, we need to know if we deleted it so we can decrement the
 	// quota count for this subdomain/host in SpiderColl::m_quotaTable
-	if ( m_newsr.m_wasIndexed ) m_newsr.m_isIndexed = true;
+	if ( m_srep.m_wasIndexed ) m_srep.m_isIndexed = true;
 
-	if ( m_didDelete ) m_newsr.m_isIndexed = false;
+	if ( m_didDelete ) m_srep.m_isIndexed = false;
 
 	// treat error replies special i guess, since langId, etc. will be
 	// invalid
 	if ( m_indexCode ) {
 		// validate
-		m_newsrValid = true;
+		m_srepValid = true;
 		// set these items if valid already, but don't bother
 		// trying to compute them, since we are not indexing.
 		if ( m_siteNumInlinksValid       ) {
-			m_newsr.m_siteNumInlinks = m_siteNumInlinks;
-			m_newsr.m_siteNumInlinksValid = true;
+			m_srep.m_siteNumInlinks = m_siteNumInlinks;
+			m_srep.m_siteNumInlinksValid = true;
 		}
 		//if ( m_percentChangedValid )
-		//	m_newsr.m_percentChangedPerDay = m_percentChanged;
+		//	m_srep.m_percentChangedPerDay = m_percentChanged;
 		if ( m_crawlDelayValid && m_crawlDelay >= 0 )
 			// we already multiply x1000 in isAllowed2()
-			m_newsr.m_crawlDelayMS = m_crawlDelay;// * 1000;
+			m_srep.m_crawlDelayMS = m_crawlDelay;// * 1000;
 		else
-			m_newsr.m_crawlDelayMS = -1;
-		if ( m_pubDateValid     ) m_newsr.m_pubDate = m_pubDate;
-		if ( m_langIdValid      ) m_newsr.m_langId = m_langId;
-		if ( m_isRSSValid       ) m_newsr.m_isRSS = m_isRSS;
-		if ( m_isPermalinkValid ) m_newsr.m_isPermalink =m_isPermalink;
-		if ( m_httpStatusValid  ) m_newsr.m_httpStatus = m_httpStatus;
+			m_srep.m_crawlDelayMS = -1;
+		if ( m_pubDateValid     ) m_srep.m_pubDate = m_pubDate;
+		if ( m_langIdValid      ) m_srep.m_langId = m_langId;
+		if ( m_isRSSValid       ) m_srep.m_isRSS = m_isRSS;
+		if ( m_isPermalinkValid ) m_srep.m_isPermalink =m_isPermalink;
+		if ( m_httpStatusValid  ) m_srep.m_httpStatus = m_httpStatus;
 		// stuff that is automatically valid
-		m_newsr.m_isPingServer = 0;
-		if ( fu ) m_newsr.m_isPingServer = (bool)fu->isPingServer();
+		m_srep.m_isPingServer = 0;
+		if ( fu ) m_srep.m_isPingServer = (bool)fu->isPingServer();
 		// this was replaced by m_contentHash32
-		//m_newsr.m_newRequests  = 0;
-		m_newsr.m_errCode      = m_indexCode;
+		//m_srep.m_newRequests  = 0;
+		m_srep.m_errCode      = m_indexCode;
 		if ( m_downloadEndTimeValid )
-			m_newsr.m_downloadEndTime = m_downloadEndTime;
+			m_srep.m_downloadEndTime = m_downloadEndTime;
 		else
-			m_newsr.m_downloadEndTime = 0;
+			m_srep.m_downloadEndTime = 0;
 		// is the original spider request valid?
-		if ( m_oldsrValid ) {
+		if ( m_sreqValid ) {
 			// preserve the content hash in case m_indexCode is
 			// EDOCUNCHANGED. so we can continue to get that
 			// in the future. also, if we had the doc indexed,
 			// just carry the contentHash32 forward for the other
 			// errors like EDNSTIMEDOUT or whatever.
-			m_newsr.m_contentHash32 = m_oldsr.m_contentHash32;
+			m_srep.m_contentHash32 = m_sreq.m_contentHash32;
 			// shortcuts
-			SpiderReply   *n = &m_newsr;
-			SpiderRequest *o = &m_oldsr;
+			SpiderReply   *n = &m_srep;
+			SpiderRequest *o = &m_sreq;
 			// more stuff
 			n->m_inGoogle           = o->m_inGoogle;
 			n->m_hasContactInfo     = o->m_hasContactInfo;
@@ -21641,13 +21822,13 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 			n->m_hasAuthorityInlinkValid = 
 				o->m_hasAuthorityInlinkValid;
 			// get error count from original spider request
-			long newc = m_oldsr.m_errCount;
+			long newc = m_sreq.m_errCount;
 			// inc for us, since we had an error
 			newc++;
 			// contain to one byte
 			if ( newc > 255 ) newc = 255;
 			// store in our spiderreply
-			m_newsr.m_errCount = newc;
+			m_srep.m_errCount = newc;
 		}
 		// . and do not really consider this an error
 		// . i don't want the url filters treating it as an error reply
@@ -21657,43 +21838,43 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 			// we should have had a spider request, because that's
 			// where we got the m_contentHash32 we passed to 
 			// Msg13Request.
-			if ( ! m_oldsrValid ) { char *xx=NULL;*xx=0; }
+			if ( ! m_sreqValid ) { char *xx=NULL;*xx=0; }
 			// make it a success
-			m_newsr.m_errCode = 0;
+			m_srep.m_errCode = 0;
 			// and no error count, it wasn't an error per se
-			m_newsr.m_errCount = 0;
+			m_srep.m_errCount = 0;
 			// call it 200
-			m_newsr.m_httpStatus = 200;
+			m_srep.m_httpStatus = 200;
 		}
 		// copy flags and data from old doc...
 		if ( m_indexCode == EDOCUNCHANGED && 
 		     m_oldDocValid &&
 		     m_oldDoc ) {
-			m_newsr.m_pubDate        = m_oldDoc->m_pubDate;
-			m_newsr.m_langId         = m_oldDoc->m_langId;
-			m_newsr.m_isRSS          = m_oldDoc->m_isRSS;
-			m_newsr.m_isPermalink    = m_oldDoc->m_isPermalink;
-			m_newsr.m_hasAddress     = m_oldDoc->m_hasAddress;
-			m_newsr.m_hasTOD         = m_oldDoc->m_hasTOD;
-			m_newsr.m_hasSiteVenue   = m_oldDoc->m_hasSiteVenue;
-			m_newsr.m_siteNumInlinks = m_oldDoc->m_siteNumInlinks;
+			m_srep.m_pubDate        = m_oldDoc->m_pubDate;
+			m_srep.m_langId         = m_oldDoc->m_langId;
+			m_srep.m_isRSS          = m_oldDoc->m_isRSS;
+			m_srep.m_isPermalink    = m_oldDoc->m_isPermalink;
+			m_srep.m_hasAddress     = m_oldDoc->m_hasAddress;
+			m_srep.m_hasTOD         = m_oldDoc->m_hasTOD;
+			m_srep.m_hasSiteVenue   = m_oldDoc->m_hasSiteVenue;
+			m_srep.m_siteNumInlinks = m_oldDoc->m_siteNumInlinks;
 			// they're all valid
-			m_newsr.m_hasAddressValid     = true;
-			m_newsr.m_hasTODValid         = true;
-			m_newsr.m_hasSiteVenueValid   = true;
-			m_newsr.m_siteNumInlinksValid = true;
+			m_srep.m_hasAddressValid     = true;
+			m_srep.m_hasTODValid         = true;
+			m_srep.m_hasSiteVenueValid   = true;
+			m_srep.m_siteNumInlinksValid = true;
 		}
 		// do special things if
-		return &m_newsr;
+		return &m_srep;
 	}
 	
 	// this will help us avoid hammering ips & respect same ip wait
 	if ( ! m_downloadEndTimeValid ) { char *xx=NULL;*xx=0; }
-	m_newsr.m_downloadEndTime      = m_downloadEndTime;
+	m_srep.m_downloadEndTime      = m_downloadEndTime;
 
 	// . if m_indexCode was 0, we are indexed then...
 	// . this logic is now above
-	//m_newsr.m_isIndexed = 1;
+	//m_srep.m_isIndexed = 1;
 
 	// get ptr to old doc/titlerec
 	XmlDoc **pod = getOldXmlDoc ( );
@@ -21751,8 +21932,8 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 
 	if ( ! m_hasContactInfoValid ) { char *xx=NULL;*xx=0; }
 	if ( m_hasContactInfo ) {
-		m_newsr.m_hasContactInfo = 1;
-		m_newsr.m_hasContactInfoValid = 1;
+		m_srep.m_hasContactInfo = 1;
+		m_srep.m_hasContactInfoValid = 1;
 	}
 
 	// this is only know if we download the robots.tt...
@@ -21762,7 +21943,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	}
 
 	// sanity checks
-	//if(! m_oldsrValid                ) { char *xx=NULL;*xx=0; }
+	//if(! m_sreqValid                ) { char *xx=NULL;*xx=0; }
 	if ( ! m_siteNumInlinksValid       ) { char *xx=NULL;*xx=0; }
 	if ( ! m_hopCountValid             ) { char *xx=NULL;*xx=0; }
 	if ( ! m_pubDateValid              ) { char *xx=NULL;*xx=0; }
@@ -21775,17 +21956,17 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	if ( ! m_crawlDelayValid           ) { char *xx=NULL;*xx=0; }
 
 	// httpStatus is -1 if not found (like for empty http replies)
-	m_newsr.m_httpStatus = *hs;
+	m_srep.m_httpStatus = *hs;
 
 	// zero if none
-	//m_newsr.m_percentChangedPerDay = 0;
+	//m_srep.m_percentChangedPerDay = 0;
 	// . only if had old one
 	// . we use this in url filters to set the respider wait time usually
 	if ( od ) {
 		long spideredTime = getSpideredTime();
 		long oldSpideredTime = od->getSpideredTime();
 		float numDays = spideredTime - oldSpideredTime;
-		m_newsr.m_percentChangedPerDay = (m_percentChanged+.5)/numDays;
+		m_srep.m_percentChangedPerDay = (m_percentChanged+.5)/numDays;
 	}
 
 	// . update crawl delay, but we must store now as milliseconds
@@ -21793,10 +21974,10 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// . -1 implies crawl delay unknown or not found
 	if ( m_crawlDelay >= 0 )
 		// we already multiply x1000 in isAllowed2()
-		m_newsr.m_crawlDelayMS = m_crawlDelay;// * 1000;
+		m_srep.m_crawlDelayMS = m_crawlDelay;// * 1000;
 	else
 		// -1 means invalid/unknown
-		m_newsr.m_crawlDelayMS = -1;
+		m_srep.m_crawlDelayMS = -1;
 
 	if ( ! m_hasAddressValid    ) { char *xx=NULL;*xx=0; }
 	if ( ! m_hasTODValid        ) { char *xx=NULL;*xx=0; }
@@ -21810,44 +21991,44 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// . TODO: how to represent "ETCPTIMEDOUT"????
 	// . EUDPTIMEDOUT, EDNSTIMEDOUT, ETCPTIMEDOUT, EDNSDEAD, EBADIP,
 	//   ENETUNREACH,EBADMIME,ECONNREFUED,ECHOSTUNREACH
-	m_newsr.m_siteNumInlinks       = m_siteNumInlinks;
-	m_newsr.m_pubDate              = *pubDate;
+	m_srep.m_siteNumInlinks       = m_siteNumInlinks;
+	m_srep.m_pubDate              = *pubDate;
 	// this was replaced by m_contentHash32
-	//m_newsr.m_newRequests          = 0;
-	m_newsr.m_langId               = *langId;
-	m_newsr.m_isRSS                = (bool)*isRSS;
-	m_newsr.m_isPermalink          = (bool)*pl;
-        m_newsr.m_isPingServer         = (bool)fu->isPingServer();
-	//m_newsr.m_isSpam             = m_isSpam;
+	//m_srep.m_newRequests          = 0;
+	m_srep.m_langId               = *langId;
+	m_srep.m_isRSS                = (bool)*isRSS;
+	m_srep.m_isPermalink          = (bool)*pl;
+        m_srep.m_isPingServer         = (bool)fu->isPingServer();
+	//m_srep.m_isSpam             = m_isSpam;
 
-	m_newsr.m_siteNumInlinksValid = true;
+	m_srep.m_siteNumInlinksValid = true;
 
 	// . ignore address in dup sections (nondup/non-dup addresses only)
 	// . this way if the place always has their address in the header or
 	//   footer of every web page we will ignore it
-	m_newsr.m_hasAddress    = *hasAddress;
-	m_newsr.m_isContacty    =  *hci;//getIsContacty(fu,
+	m_srep.m_hasAddress    = *hasAddress;
+	m_srep.m_isContacty    =  *hci;//getIsContacty(fu,
 					//	 info1,
 					//	 m_hopCount ,
 					//	 *ct , // contentType 
 					//	 *isRoot ,
 					//	 m_niceness );
-	m_newsr.m_hasTOD        = *hasTOD;
-	m_newsr.m_hasSiteVenue  = *hasSiteVenue;
+	m_srep.m_hasTOD        = *hasTOD;
+	m_srep.m_hasSiteVenue  = *hasSiteVenue;
 
 	// validate all
-	m_newsr.m_inGoogleValid           = 1;
-	m_newsr.m_hasContactInfoValid     = 1;
-	m_newsr.m_hasAuthorityInlinkValid = 1;
-	m_newsr.m_isContactyValid         = 1;
-	m_newsr.m_hasAddressValid         = 1;
-	m_newsr.m_hasTODValid             = 1;
-	m_newsr.m_hasSiteVenueValid       = 1;
+	m_srep.m_inGoogleValid           = 1;
+	m_srep.m_hasContactInfoValid     = 1;
+	m_srep.m_hasAuthorityInlinkValid = 1;
+	m_srep.m_isContactyValid         = 1;
+	m_srep.m_hasAddressValid         = 1;
+	m_srep.m_hasTODValid             = 1;
+	m_srep.m_hasSiteVenueValid       = 1;
 
 	// validate
-	m_newsrValid = true;
+	m_srepValid = true;
 
-	return &m_newsr;
+	return &m_srep;
 }
 
 // . so Msg20 can see if we are banned now or not...
@@ -21895,10 +22076,10 @@ void XmlDoc::setSpiderReqForMsg20 ( SpiderRequest *sreq   ,
 	//sreq->m_pageNumInlinks     = m_pageNumInlinks;
 	sreq->m_hopCount             = m_hopCount;
 
-	sreq->m_parentHostHash32     = 0;//m_oldsr.m_parentHostHash32;
-	sreq->m_parentDomHash32      = 0;//m_oldsr.m_parentDomHash32;
-	sreq->m_parentSiteHash32     = 0;//m_oldsr.m_parentSiteHash32;
-	sreq->m_parentFirstIp        = 0;//m_oldsr.m_parentFirstIp;
+	sreq->m_parentHostHash32     = 0;//m_sreq.m_parentHostHash32;
+	sreq->m_parentDomHash32      = 0;//m_sreq.m_parentDomHash32;
+	sreq->m_parentSiteHash32     = 0;//m_sreq.m_parentSiteHash32;
+	sreq->m_parentFirstIp        = 0;//m_sreq.m_parentFirstIp;
 
 	sreq->m_isNewOutlink         = 0;
 	sreq->m_isAddUrl             = 0;//m_isAddUrl;
@@ -21907,13 +22088,13 @@ void XmlDoc::setSpiderReqForMsg20 ( SpiderRequest *sreq   ,
 
 	// transcribe from old spider rec, stuff should be the same
 	sreq->m_addedTime          = m_firstIndexedDate;
-	sreq->m_sameDom              = 0;//m_oldsr.m_sameDom;
-	sreq->m_sameHost             = 0;//m_oldsr.m_sameHost;
-	sreq->m_sameSite             = 0;//m_oldsr.m_sameSite;
-	sreq->m_wasParentIndexed     = 0;//m_oldsr.m_parentWasIndexed;
-	sreq->m_parentIsRSS          = 0;//m_oldsr.m_parentIsRSS;
-	sreq->m_parentIsPermalink    = 0;//m_oldsr.m_parentIsPermalink;
-	sreq->m_parentIsPingServer   = 0;//m_oldsr.m_parentIsPingServer;
+	sreq->m_sameDom              = 0;//m_sreq.m_sameDom;
+	sreq->m_sameHost             = 0;//m_sreq.m_sameHost;
+	sreq->m_sameSite             = 0;//m_sreq.m_sameSite;
+	sreq->m_wasParentIndexed     = 0;//m_sreq.m_parentWasIndexed;
+	sreq->m_parentIsRSS          = 0;//m_sreq.m_parentIsRSS;
+	sreq->m_parentIsPermalink    = 0;//m_sreq.m_parentIsPermalink;
+	sreq->m_parentIsPingServer   = 0;//m_sreq.m_parentIsPingServer;
 
 	// validate the stuff so getUrlFilterNum() acks it
 	sreq->m_hopCountValid = 1;
@@ -22065,8 +22246,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	if ( cu && cu->isPingServer() ) isParentPingServer = true;
 
 	// shortcut
-	bool isScraping = (m_oldsrValid && m_oldsr.m_isScraping);
-	bool useTestSpiderDir = (m_oldsrValid && m_oldsr.m_useTestSpiderDir);
+	bool isScraping = (m_sreqValid && m_sreq.m_isScraping);
+	bool useTestSpiderDir = (m_sreqValid && m_sreq.m_useTestSpiderDir);
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -22373,10 +22554,10 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//
 		if ( m_indexCodeValid && 
 		     m_indexCode == EDOCSIMPLIFIEDREDIR &&
-		     m_oldsrValid ) {
-			if ( m_oldsr.m_isInjecting ) 
+		     m_sreqValid ) {
+			if ( m_sreq.m_isInjecting ) 
 				ksr.m_isInjecting = 1;
-			if ( m_oldsr.m_isAddUrl )
+			if ( m_sreq.m_isAddUrl )
 				ksr.m_isAddUrl = 1;
 		}
 
@@ -29928,7 +30109,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 
 
 	// sanity check
-	//if ( ! m_oldsrValid ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_sreqValid ) { char *xx=NULL;*xx=0; }
 
 	/*
 	sb->safePrintf("<tr><td>next spider date</td>"
@@ -29945,9 +30126,9 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 	// show the host that should spider it
 	//long domLen ; char *dom = getDomFast ( fu , &domLen , true );
 	//long hostId;
-	if ( m_oldsrValid ) {
+	if ( m_sreqValid ) {
 		// must not block
-		SpiderRequest *oldsr = &m_oldsr;
+		SpiderRequest *oldsr = &m_sreq;
 		unsigned long shard = g_hostdb.getShardNum(RDB_SPIDERDB,oldsr);
 		sb->safePrintf ("<tr><td><b>assigned spider shard</b>"
 				"</td>\n"
@@ -40361,8 +40542,8 @@ void XmlDoc::pumpSocketWriteBuf ( ) {
 
 bool XmlDoc::getIsInjecting ( ) {
 	bool isInjecting = false;
-	if ( g_inPageInject ) isInjecting = true;
-	if ( m_oldsrValid && m_oldsr.m_isInjecting ) isInjecting = true;
+	//if ( g_inPageInject ) isInjecting = true;
+	if ( m_sreqValid && m_sreq.m_isInjecting ) isInjecting = true;
 	if ( m_isInjecting && m_isInjectingValid ) isInjecting = true;
 	return isInjecting;
 }

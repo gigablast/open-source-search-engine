@@ -39,7 +39,7 @@ class Titledb {
 
 	bool verify ( char *coll );
 
-	bool addColl ( char *coll, bool doVerify = true );
+	//bool addColl ( char *coll, bool doVerify = true );
 
 	// init m_rdb
 	bool init ();

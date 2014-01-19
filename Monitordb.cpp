@@ -53,7 +53,7 @@ bool Monitordb::init ( ) {
 			    sizeof(key96_t) ,
 			    true             ); // bias page cache? (true!)
 }
-
+/*
 bool Monitordb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -65,7 +65,7 @@ bool Monitordb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
-
+*/
 bool Monitordb::verify ( char *coll ) {
 	log ( LOG_INFO, "db: Verifying Monitordb for coll %s...", coll );
 	g_threads.disableThreads();

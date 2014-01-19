@@ -84,7 +84,7 @@ bool Catdb::init (  ) {
 	// Rdb::getBase(collnum_t) will return. however, for collectionless
 	// rdb databases we set Rdb::m_collectionlessBase special here.
 	// This was in Rdb.cpp::init().
-	return m_rdb.addColl ( NULL );
+	return m_rdb.addRdbBase1 ( NULL );
 }
 
 bool Catdb::init2 ( long treeMem ) {
@@ -112,6 +112,7 @@ bool Catdb::init2 ( long treeMem ) {
 // end support for "cache recs"
 //	
 
+/*
 bool Catdb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	// verify
@@ -123,6 +124,7 @@ bool Catdb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
+*/
 
 bool Catdb::verify ( char *coll ) {
 	char *rdbName = "Catdb";

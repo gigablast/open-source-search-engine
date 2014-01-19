@@ -45,10 +45,18 @@ class Collectiondb  {
 	// . returns false and sets errno on error
 	// . each collection as a CollectionRec class for it and
 	//   is loaded up from the appropriate config file
-	bool init ( bool isDump = false );
+	bool init ( );
 
 	// this loads all the recs from host #0 
-	bool load ( bool isDump = false );
+	//bool load ( bool isDump = false );
+
+	// called by main.cpp to fill in our m_recs[] array with
+	// all the coll.*.*/coll.conf info
+	bool loadAllCollRecs ( );
+
+	// after main.cpp loads all rdb trees it calls this to remove
+	// bogus collnums from the trees i guess
+	bool cleanTrees ( ) ;
 
 	// . this will save all conf files back to disk that need it
 	// . returns false and sets g_errno on error, true on success
@@ -92,9 +100,9 @@ class Collectiondb  {
 	// what collnum will be used the next time a coll is added?
 	collnum_t reserveCollNum ( ) ;
 
-	long long getLastUpdateTime () { return m_lastUpdateTime; };
+	//long long getLastUpdateTime () { return m_lastUpdateTime; };
 	// updates m_lastUpdateTime so g_spiderCache know when to reload
-	void     updateTime         ();
+	//void     updateTime         ();
 
 	// private:
 
@@ -105,9 +113,8 @@ class Collectiondb  {
 	//		  bool saveRec ); // = true
 
 
-	bool addExistingColl ( char *coll, 
-			       collnum_t collnum ,
-			       bool isDump ) ;
+	bool addExistingColl ( char *coll, collnum_t collnum );
+
 	bool addNewColl ( char *coll , 
 			  char customCrawl ,
 			  char *cpc , 
@@ -115,9 +122,10 @@ class Collectiondb  {
 			  bool saveIt ,
 			  collnum_t newCollnum ) ;
 
-	bool registerCollRec ( CollectionRec *cr ,
-			       bool isDump ,
-			       bool isNew ) ;
+	bool registerCollRec ( CollectionRec *cr ,  bool isNew ) ;
+
+	bool addRdbBaseToAllRdbsForEachCollRec ( ) ;
+	bool addRdbBaseForCollRec ( CollectionRec *cr ) ;
 
 	bool setRecPtr ( collnum_t collnum , CollectionRec *cr ) ;
 
@@ -151,7 +159,7 @@ class Collectiondb  {
 	long            m_numRecs;
 	long            m_numRecsUsed;
 
-	long long            m_lastUpdateTime;
+	//long long            m_lastUpdateTime;
 };
 
 extern class Collectiondb g_collectiondb;

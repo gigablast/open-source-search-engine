@@ -1854,7 +1854,7 @@ bool Tagdb::init2 ( long treeMem ) {
 			    false ); // bias disk page cache?
 }
 
-
+/*
 bool Tagdb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;//false;
@@ -1867,7 +1867,7 @@ bool Tagdb::addColl ( char *coll, bool doVerify ) {
 	//return true;
 	return false;
 }
-
+*/
 
 
 bool Tagdb::verify ( char *coll ) {

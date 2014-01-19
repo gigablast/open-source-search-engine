@@ -836,7 +836,8 @@ void Repair::getNextCollToRepair ( ) {
 
 	// add collection to secondary rdbs
 	if ( m_rebuildTitledb ) {
-		if ( ! g_titledb2.addColl    ( m_coll ) &&
+		if ( //! g_titledb2.addColl    ( m_coll ) &&
+		    ! g_titledb2.getRdb()->addRdbBase1(m_coll) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
@@ -851,7 +852,7 @@ void Repair::getNextCollToRepair ( ) {
 	//}
 
 	if ( m_rebuildPosdb ) {
-		if ( ! g_posdb2.addColl    ( m_coll ) &&
+		if ( ! g_posdb2.getRdb()->addRdbBase1 ( m_coll ) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
@@ -861,7 +862,7 @@ void Repair::getNextCollToRepair ( ) {
 	//}
 
 	if ( m_rebuildClusterdb ) {
-		if ( ! g_clusterdb2.addColl  ( m_coll ) &&
+		if ( ! g_clusterdb2.getRdb()->addRdbBase1 ( m_coll ) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
@@ -871,7 +872,7 @@ void Repair::getNextCollToRepair ( ) {
 	//}
 
 	if ( m_rebuildSpiderdb ) {
-		if ( ! g_spiderdb2.addColl   ( m_coll ) &&
+		if ( ! g_spiderdb2.getRdb()->addRdbBase1 ( m_coll ) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
@@ -881,7 +882,7 @@ void Repair::getNextCollToRepair ( ) {
 	//}
 
 	if ( m_rebuildLinkdb ) {
-		if ( ! g_linkdb2.addColl     ( m_coll ) &&
+		if ( ! g_linkdb2.getRdb()->addRdbBase1 ( m_coll ) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 

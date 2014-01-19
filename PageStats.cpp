@@ -489,6 +489,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		  //"<tr><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
 		  "<tr><td><b>Parsing Inconsistencies</b></td><td>%li</td>\n"
 		  "<tr><td><b>Index Shards</b></td><td>%li</td>\n"
+		  "<tr><td><b>Hosts per Shard</b></td><td>%li</td>\n"
 		  //"<tr><td><b>Fully Split</b></td><td>%li</td>\n"
 		  //"<tr><td><b>Tfndb Extension Bits</b></td><td>%li</td>\n"
 		  "</tr>\n"
@@ -503,7 +504,8 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		  //GBPROJECTNAME,
 		  //GBVersion ,
 		  g_stats.m_parsingInconsistencies ,
-		  (long)g_hostdb.m_indexSplits,//g_hostdb.m_indexSplits,
+		  (long)g_hostdb.getNumShards(),//g_hostdb.m_indexSplits,
+		  (long)g_hostdb.getNumHostsPerShard(),
 		  g_spiderLoop.m_lockTable.m_numSlotsUsed,
 		  //(long)g_conf.m_fullSplit,
 		  //(long)g_conf.m_tfndbExtBits,

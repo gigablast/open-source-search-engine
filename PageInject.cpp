@@ -52,6 +52,8 @@ bool sendPageInject ( TcpSocket *s , HttpRequest *r ) {
 
 	msg7->m_crawlbotAPI = crawlbotAPI;
 
+	strncpy(msg7->m_coll,coll,MAX_COLL_LEN);
+
 	// for diffbot
 	if ( crawlbotAPI ) 
 		msg7->m_hr.copy ( r );
@@ -63,7 +65,6 @@ bool sendPageInject ( TcpSocket *s , HttpRequest *r ) {
 		// qts is html encoded? NO! fix that below then...
 		//char *uf="http://www.google.com/search?num=50&"
 		//	"q=%s&scoring=d&filter=0";
-		strncpy(msg7->m_coll,coll,MAX_COLL_LEN);
 		msg7->m_isScrape = true;
 		msg7->m_qbuf.safeStrcpy(qts);
 		msg7->m_linkDedupTable.set(4,0,512,NULL,0,false,0,"ldtab");
@@ -494,14 +495,15 @@ bool Msg7::inject ( TcpSocket *s ,
 	char *url            = r->getString ( "u" , NULL , NULL /*default*/);
 	// for diffbot.cpp api
 	if ( ! url ) url = r->getString("injecturl",NULL,NULL);
+	if ( ! url ) url = r->getString("url",NULL,NULL);
 	// PageCrawlBot.cpp uses "seed"
 	if ( ! url ) url = r->getString("seed",NULL,NULL);
 
 	bool  recycleContent = r->getLong   ( "recycle",0);
-	char *ips            = r->getString ( "ip" , NULL , NULL );
+	//char *ips            = r->getString ( "ip" , NULL , NULL );
 	//char *username       = g_users.getUsername(r);
-	long firstIndexed = r->getLongLong("firstindexed",0LL);
-	long lastSpidered = r->getLongLong("lastspidered",0LL);
+	//long firstIndexed = r->getLongLong("firstindexed",0LL);
+	//long lastSpidered = r->getLongLong("lastspidered",0LL);
 	long hopCount     = r->getLong("hopcount",-1);
 	long newOnly      = r->getLong("newonly",0);
 	long charset      = r->getLong("charset",-1);
@@ -517,7 +519,7 @@ bool Msg7::inject ( TcpSocket *s ,
 
 	long  forcedIp  = 0;
 	
-	if ( ips ) forcedIp = atoip ( ips , gbstrlen(ips) );
+	//if ( ips ) forcedIp = atoip ( ips , gbstrlen(ips) );
 
 	char *content        = r->getString ( "content" , &contentLen , NULL );
 	// mark doesn't like to url-encode his content
@@ -558,8 +560,8 @@ bool Msg7::inject ( TcpSocket *s ,
 			niceness,
 			state,
 			callback,
-			firstIndexed,
-			lastSpidered,
+			//firstIndexed,
+			//lastSpidered,
 			hopCount,
 			newOnly,
 			charset,
@@ -569,6 +571,9 @@ bool Msg7::inject ( TcpSocket *s ,
 			doConsistencyTesting);
 }
 
+// . returns false if blocked, true otherwise
+// . if returns false will call your callback(state) when is done
+// . returns true and sets g_errno on error
 bool Msg7::inject ( char *url ,
 		    long  forcedIp ,
 		    char *content ,
@@ -582,8 +587,8 @@ bool Msg7::inject ( char *url ,
 		    long  niceness,
 		    void *state ,
 		    void (*callback)(void *state),
-		    long firstIndexed,
-		    long lastSpidered,
+		    //long firstIndexed,
+		    //long lastSpidered,
 		    long hopCount,
 		    char newOnly,
 		    short charset,
@@ -596,11 +601,14 @@ bool Msg7::inject ( char *url ,
 	m_quickReply = quickReply;
 
 	// store coll
-	if ( ! coll ) { g_errno = ENOCOLLREC; return true; }
-        long collLen = gbstrlen ( coll );
-	if ( collLen > MAX_COLL_LEN ) collLen = MAX_COLL_LEN;
-	strncpy ( m_coll , coll , collLen );
-	m_coll [ collLen ] = '\0';
+	//if ( ! coll ) { g_errno = ENOCOLLREC; return true; }
+	//      long collLen = gbstrlen ( coll );
+	//if ( collLen > MAX_COLL_LEN ) collLen = MAX_COLL_LEN;
+	//strncpy ( m_coll , coll , collLen );
+	//m_coll [ collLen ] = '\0';
+
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	if ( ! cr ) { g_errno = ENOCOLLREC; return true; }
 
 	// store user
 	//long ulen = 0;
@@ -627,148 +635,35 @@ bool Msg7::inject ( char *url ,
 	if ( g_repairMode ) { g_errno = EREPAIRING; return true; }
 
 	// send template reply if no content supplied
-	if ( ! content && ! recycleContent ) {
-		log("inject: no content supplied to inject command and "
-		    "recycleContent is false.");
-		//return true;
-	}
-
-	// clean url?
-	// normalize and add www. if it needs it
-	Url uu;
-	uu.set ( url , gbstrlen(url) , true );
-	// remove >'s i guess and store in st1->m_url[] buffer
-	char cleanUrl[MAX_URL_LEN+1];
-	urlLen = cleanInput ( cleanUrl,
-			      MAX_URL_LEN, 
-			      uu.getUrl(),
-			      uu.getUrlLen() );
-
-
-	// this can go on the stack since set4() copies it
-	SpiderRequest sreq;
-	sreq.reset();
-	strcpy(sreq.m_url, cleanUrl );
-	// parentdocid of 0
-	long firstIp = hash32n(cleanUrl);
-	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
-	sreq.setKey( firstIp,0LL, false );
-	sreq.m_isInjecting   = 1; 
-	sreq.m_isPageInject  = 1;
-	sreq.m_hopCount      = hopCount;
-	sreq.m_hopCountValid = 1;
-	sreq.m_fakeFirstIp   = 1;
-	sreq.m_firstIp       = firstIp;
+	//if ( ! content && ! recycleContent ) {
+	//	log("inject: no content supplied to inject command and "
+	//	    "recycleContent is false.");
+	//	//return true;
+	//}
 
 	// shortcut
 	XmlDoc *xd = &m_xd;
 
-	// log it now
-	//log("inject: injecting doc %s",cleanUrl);
+	if ( ! xd->injectDoc ( url ,
+			       cr ,
+			       content ,
+			       hasMime , // content starts with http mime?
+			       hopCount,
+			       charset,
 
-	static char s_dummy[3];
-	// sometims the content is indeed NULL...
-	if ( newOnly && ! content ) { 
-		// don't let it be NULL because then xmldoc will
-		// try to download the page!
-		s_dummy[0] = '\0';
-		content = s_dummy;
-		//char *xx=NULL;*xx=0; }
-	}
+			       deleteUrl,
+			       contentType, // CT_HTML, CT_XML
+			       spiderLinks ,
+			       newOnly, // index iff new
 
+			       state,
+			       callback ) )
+		// we blocked...
+		return false;
 
-	// . use the enormous power of our new XmlDoc class
-	// . this returns false with g_errno set on error
-	if ( //m_needsSet &&
-	     ! xd->set4 ( &sreq       ,
-			  NULL        ,
-			  m_coll  ,
-			  NULL        , // pbuf
-			  // give it a niceness of 1, we have to be
-			  // careful since we are a niceness of 0!!!!
-			  niceness, // 1 , 
-			  // inject this content
-			  content ,
-			  deleteUrl, // false, // deleteFromIndex ,
-			  forcedIp ,
-			  contentType ,
-			  lastSpidered ,
-			  hasMime )) {
-		// g_errno should be set if that returned false
-		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
-		return true;
-	}
-	// do not re-call the set
-	//m_needsSet = false;
-	// make this our callback in case something blocks
-	xd->setCallback ( state , callback );
-
-	xd->m_doConsistencyTesting = doConsistencyTesting;
-
-	// . set xd from the old title rec if recycle is true
-	// . can also use XmlDoc::m_loadFromOldTitleRec flag
-	if ( recycleContent ) xd->m_recycleContent = true;
-
-	// othercrap
-	if ( firstIndexed ) {
-		xd->m_firstIndexedDate = firstIndexed;
-		xd->m_firstIndexedDateValid = true;
-	}
-
-	if ( lastSpidered ) {
-		xd->m_spideredTime      = lastSpidered;
-		xd->m_spideredTimeValid = true;
-	}
-
-	if ( hopCount != -1 ) {
-		xd->m_hopCount = hopCount;
-		xd->m_hopCountValid = true;
-	}
-
-	if ( charset != -1 && charset != csUnknown ) {
-		xd->m_charset = charset;
-		xd->m_charsetValid = true;
-	}
-
-	// avoid looking up ip of each outlink to add "firstip" tag to tagdb
-	// because that can be slow!!!!!!!
-	xd->m_spiderLinks = spiderLinks;
-	xd->m_spiderLinks2 = spiderLinks;
-	xd->m_spiderLinksValid = true;
-
-	// . newOnly is true --> do not inject if document is already indexed!
-	// . maybe just set indexCode
-	xd->m_newOnly = newOnly;
-
-	// do not re-lookup the robots.txt
-	xd->m_isAllowed      = true;
-	xd->m_isAllowedValid = true;
-	xd->m_crawlDelay     = -1; // unknown
-	xd->m_crawlDelayValid = true;
-
-	// set this now
-	g_inPageInject = true;
-
-	// log it now
-	//log("inject: indexing injected doc %s",cleanUrl);
-
-	// . now tell it to index
-	// . this returns false if blocked
-	bool status = xd->indexDoc ( );
-
-	// log it. i guess only for errors when it does not block?
-	// because xmldoc.cpp::indexDoc calls logIt()
-	if ( status ) xd->logIt();
-
-	// undo it
-	g_inPageInject = false;
-
-	// note that it blocked
-	//if ( ! status ) log("inject: blocked for %s",cleanUrl);
-
-	// return false if it blocked
-	return status;
+	return true;
 }
+
 
 ///////////////
 //
