@@ -252,14 +252,15 @@ long SpiderReply::print ( SafeBuf *sbarg ) {
 
 
 long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
-				   XmlDoc *xd ) {
+				   XmlDoc *xd , long row ) {
 
-	sb->safePrintf("<tr>\n");
+	sb->safePrintf("<tr bgcolor=#%s>\n",LIGHT_BLUE);
 
 	// show elapsed time
 	if ( xd ) {
 		long long now = gettimeofdayInMilliseconds();
 		long long elapsed = now - xd->m_startTime;
+		sb->safePrintf(" <td>%li</td>\n",row);
 		sb->safePrintf(" <td>%llims</td>\n",elapsed);
 		sb->safePrintf(" <td>%li</td>\n",(long)xd->m_collnum);
 	}
@@ -361,10 +362,11 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 long SpiderRequest::printTableHeaderSimple ( SafeBuf *sb , 
 					     bool currentlySpidering) {
 
-	sb->safePrintf("<tr>\n");
+	sb->safePrintf("<tr bgcolor=#%s>\n",DARK_BLUE);
 
 	// how long its been being spidered
 	if ( currentlySpidering ) {
+		sb->safePrintf(" <td><b>#</b></td>\n");
 		sb->safePrintf(" <td><b>elapsed</b></td>\n");
 		sb->safePrintf(" <td><b>coll</b></td>\n");
 	}
@@ -384,14 +386,15 @@ long SpiderRequest::printTableHeaderSimple ( SafeBuf *sb ,
 }
 
 long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
-					 XmlDoc *xd ) {
+					 XmlDoc *xd , long row ) {
 
-	sb->safePrintf("<tr>\n");
+	sb->safePrintf("<tr bgcolor=#%s>\n",LIGHT_BLUE);
 
 	// show elapsed time
 	if ( xd ) {
 		long long now = gettimeofdayInMilliseconds();
 		long long elapsed = now - xd->m_startTime;
+		sb->safePrintf(" <td>%li</td>\n",row);
 		sb->safePrintf(" <td>%llims</td>\n",elapsed);
 	}
 
@@ -465,10 +468,11 @@ long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
 
 long SpiderRequest::printTableHeader ( SafeBuf *sb , bool currentlySpidering) {
 
-	sb->safePrintf("<tr>\n");
+	sb->safePrintf("<tr bgcolor=#%s>\n",DARK_BLUE);
 
 	// how long its been being spidered
 	if ( currentlySpidering ) {
+		sb->safePrintf(" <td><b>#</b></td>\n");
 		sb->safePrintf(" <td><b>elapsed</b></td>\n");
 		sb->safePrintf(" <td><b>coll</b></td>\n");
 	}
@@ -7309,6 +7313,8 @@ bool printList ( State11 *st ) {
 	SafeBuf *sbTable = &st->m_safeBuf;
 	// shorcuts
 	RdbList *list = &st->m_list;
+	// row count
+	long j = 0;
 	// put it in there
 	for ( ; ! list->isExhausted() ; list->skipCurrentRecord() ) {
 		// stop if we got enough
@@ -7337,7 +7343,10 @@ bool printList ( State11 *st ) {
 		// get the spider rec, encapsed in the data of the doledb rec
 		SpiderRequest *sreq = (SpiderRequest *)rec;
 		// print it into sbTable
-		if ( ! sreq->printToTable ( sbTable,"ready",NULL))return false;
+		if ( ! sreq->printToTable ( sbTable,"ready",NULL,j))
+			return false;
+		// count row
+		j++;
 	}
 	// need to load more?
 	if ( st->m_count >= st->m_numRecs ||
@@ -7408,21 +7417,24 @@ bool sendPage ( State11 *st ) {
 
 
 	// begin the table
-	sb.safePrintf ( "<table width=100%% border=1 cellpadding=4 "
-			"bgcolor=#%s>\n" 
-			"<tr><td colspan=50 bgcolor=#%s>"
-			"<b>Currently Spidering on This Host</b> (%li spiders)"
+	sb.safePrintf ( "<table %s>\n"
+			"<tr><td colspan=50>"
+			"<center>"
+			"<b>Currently Spidering on This Host</b>"
+			//" (%li spiders)"
 			//" (%li locks)"
+			"</center>"
 			"</td></tr>\n" ,
-			LIGHT_BLUE,
-			DARK_BLUE,
-			(long)g_spiderLoop.m_numSpidersOut
+			TABLE_STYLE
+			//(long)g_spiderLoop.m_numSpidersOut
 			//g_spiderLoop.m_lockTable.m_numSlotsUsed);
 			);
 	// the table headers so SpiderRequest::printToTable() works
 	if ( ! SpiderRequest::printTableHeader ( &sb , true ) ) return false;
 	// shortcut
 	XmlDoc **docs = g_spiderLoop.m_docs;
+	// count # of spiders out
+	long j = 0;
 	// first print the spider recs we are spidering
 	for ( long i = 0 ; i < (long)MAX_SPIDERS ; i++ ) {
 		// get it
@@ -7436,108 +7448,10 @@ bool sendPage ( State11 *st ) {
 		// get status
 		char *status = xd->m_statusMsg;
 		// show that
-		if ( ! oldsr->printToTable ( &sb , status,xd) ) return false;
+		if ( ! oldsr->printToTable ( &sb , status,xd,j) ) return false;
+		// inc count
+		j++;
 	}
-	// end the table
-	sb.safePrintf ( "</table>\n" );
-	sb.safePrintf ( "<br>\n" );
-
-
-	// begin the table
-	sb.safePrintf ( "<table width=100%% border=1 cellpadding=4 "
-			"bgcolor=#%s>\n" 
-			"<tr><td colspan=50 bgcolor=#%s>"
-			"<b>Ready to Spider (doledb)(coll = "
-			"<font color=red><b>%s</b>"
-			"</font>)"
-			,
-			LIGHT_BLUE,
-			DARK_BLUE ,
-			st->m_coll );
-
-	// print time format: 7/23/1971 10:45:32
-	time_t nowUTC = getTimeGlobal();
-	struct tm *timeStruct ;
-	char time[256];
-	timeStruct = gmtime ( &nowUTC );
-	strftime ( time , 256 , "%b %e %T %Y UTC", timeStruct );
-	sb.safePrintf("</b> (current time = %s = %lu) "
-		      "</td></tr>\n" 
-		      ,time,nowUTC);
-
-	// the table headers so SpiderRequest::printToTable() works
-	if ( ! SpiderRequest::printTableHeader ( &sb ,false ) ) return false;
-	// the the doledb spider recs
-	char *bs = sbTable->getBufStart();
-	if ( bs && ! sb.safePrintf("%s",bs) ) return false;
-	// end the table
-	sb.safePrintf ( "</table>\n" );
-	sb.safePrintf ( "<br>\n" );
-
-
-
-	// then spider collection
-	//SpiderColl *sc = g_spiderCache.m_spiderColls[collnum];
-	SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
-
-
-	/////////////////
-	//
-	// PRINT WAITING TREE
-	//
-	// each row is an ip. print the next url to spider for that ip.
-	//
-	/////////////////
-	sb.safePrintf ( "<table width=100%% border=1 cellpadding=4 "
-			"bgcolor=#%s>\n" 
-			"<tr><td colspan=50 bgcolor=#%s>"
-			"<b>IPs Waiting for Selection Scan (coll = "
-			"<font color=red><b>%s</b>"
-			"</font>)"
-			,
-			LIGHT_BLUE,
-			DARK_BLUE ,
-			st->m_coll );
-	// print time format: 7/23/1971 10:45:32
-	long long timems = gettimeofdayInMillisecondsGlobal();
-	sb.safePrintf("</b> (current time = %llu)(totalcount=%li)"
-		      "(waittablecount=%li)</td></tr>\n",
-		      timems,
-		      sc->m_waitingTree.getNumUsedNodes(),
-		      sc->m_waitingTable.getNumUsedSlots());
-	sb.safePrintf("<tr>");
-	sb.safePrintf("<td><b>spidertime (MS)</b></td>\n");
-	sb.safePrintf("<td><b>firstip</b></td>\n");
-	sb.safePrintf("</tr>\n");
-	// the the waiting tree
-	long node = sc->m_waitingTree.getFirstNode();
-	long count = 0;
-	for ( ; node >= 0 ; node = sc->m_waitingTree.getNextNode(node) ) {
-		// breathe
-		QUICKPOLL(MAX_NICENESS);
-		// get key
-		key_t *key = (key_t *)sc->m_waitingTree.getKey(node);
-		// get ip from that
-		long firstIp = (key->n0) & 0xffffffff;
-		// get the time
-		unsigned long long spiderTimeMS = key->n1;
-		// shift upp
-		spiderTimeMS <<= 32;
-		// or in
-		spiderTimeMS |= (key->n0 >> 32);
-		// get the rest of the data
-		sb.safePrintf("<tr>"
-			      "<td>%llu</td>"
-			      "<td>%s</td>"
-			      "</tr>\n",
-			      spiderTimeMS,
-			      iptoa(firstIp));
-		// stop after 20
-		if ( ++count == 20 ) break;
-	}
-	// ...
-	if ( count ) 
-		sb.safePrintf("<tr><td colspan=10>...</td></tr>\n");
 	// end the table
 	sb.safePrintf ( "</table>\n" );
 	sb.safePrintf ( "<br>\n" );
@@ -7642,6 +7556,11 @@ bool sendPage ( State11 *st ) {
 	*/
 
 
+	// then spider collection
+	//SpiderColl *sc = g_spiderCache.m_spiderColls[collnum];
+	SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
+
+
 	//
 	// spiderdb rec stats, from scanning spiderdb
 	//
@@ -7697,12 +7616,19 @@ bool sendPage ( State11 *st ) {
 				      (double)(sampleOld);
 	}
 
+	sb.safePrintf(
+		      "<style>"
+		      ".poo { background-color:#%s;}\n"
+		      "</style>\n" ,
+		      LIGHT_BLUE );
+
 	sb.safePrintf (
-		       "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
+
+		       "<table %s>"
 		       "<tr>"
-		       "<td colspan=7 bgcolor=#%s>"
+		       "<td colspan=7>"
 		       "<center><b>Spider Stats</b></td></tr>\n"
-		       "<tr><td>"
+		       "<tr bgcolor=#%s><td>"
 		       "</td><td><b>Total</b></td>"
 		       "<td><b>Total New</b></td>"
 		       "<td><b>Total Old</b></td>"
@@ -7711,20 +7637,21 @@ bool sendPage ( State11 *st ) {
 		       "<td><b>Sample Old</b></b>"
 		       "</td></tr>"
 
-		       "<tr><td><b>Total Spiders</n>"
+		       "<tr class=poo><td><b>Total Spiders</n>"
 		       "</td><td>%lli</td><td>%lli</td><td>%lli</td>\n"
 		       "</td><td>%li</td><td>%li</td><td>%li</td></tr>\n"
-		       //"<tr><td><b>Successful Spiders</n>"
+		       //"<tr class=poo><td><b>Successful Spiders</n>"
 		       //"</td><td>%lli</td><td>%lli</td><td>%lli</td>\n"
 		       //"</td><td>%li</td><td>%li</td><td>%li</td></tr>\n"
-		       //"<tr><td><b>Failed Spiders</n>"
+		       //"<tr class=poo><td><b>Failed Spiders</n>"
 		       //"</td><td>%lli</td><td>%lli</td><td>%lli</td>\n"
 		       //"</td><td>%li</td><td>%li</td><td>%li</td></tr>\n"
-		       "<tr><td><b>Success Rate</b>"
+		       "<tr class=poo><td><b>Success Rate</b>"
 		       "</td><td>%.02f%%</td><td>%.02f%%</td>"
 		       "</td><td>%.02f%%</td><td>%.02f%%</td>"
 		       "</td><td>%.02f%%</td><td>%.02f%%</td></tr>",
-		       LIGHT_BLUE,  DARK_BLUE,
+		       TABLE_STYLE,  
+		       DARK_BLUE,
 		       totalPoints,
 		       totalNew,
 		       totalOld,
@@ -7772,7 +7699,7 @@ bool sendPage ( State11 *st ) {
 		     g_stats.m_allErrorsOld[i] == 0 &&
 		     bucketsNew[i] == 0 && bucketsOld[i] == 0 ) continue;
 		sb.safePrintf (
-			       "<tr><td><b>%s</b></td>"
+			       "<tr bgcolor=#%s><td><b>%s</b></td>"
 			       "<td>%lli</td>"
 			       "<td>%lli</td>"
 			       "<td>%lli</td>"
@@ -7780,6 +7707,7 @@ bool sendPage ( State11 *st ) {
 			       "<td>%li</td>"
 			       "<td>%li</td>"
 			       "</tr>\n" ,
+			       LIGHT_BLUE,
 			       mstrerror(i),
 			       g_stats.m_allErrorsNew[i] +
 			       g_stats.m_allErrorsOld[i],
@@ -7790,7 +7718,7 @@ bool sendPage ( State11 *st ) {
 			       bucketsOld[i] );
 	}
 
-	sb.safePrintf ( "</table><br><br>\n" );
+	sb.safePrintf ( "</table><br>\n" );
 
 
 
@@ -7799,48 +7727,48 @@ bool sendPage ( State11 *st ) {
 	sb.safePrintf ( 
 		       "<table width=100%% bgcolor=#%s "
 		       "cellpadding=4 border=1>"
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td colspan=2 bgcolor=#%s>"
 		       "<b>Field descriptions</b>"
 		       "</td>"
 		       "</tr>\n"
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>hits</td><td>The number of  attempts that were "
 		       "made by the spider to read a url from the spider "
 		       "queue cache.</td>"
 		       "</tr>\n"
 
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>misses</td><td>The number of those attempts that "
 		       "failed to get a url to spider.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>cached</td><td>The number of urls that are "
 		       "currently in the spider queue cache.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>water</td><td>The number of urls that were in the "
 		       "spider queue cache at any one time, since the start "
 		       "of the last disk scan.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>kicked</td><td>The number of urls that were "
 		       "replaced in the spider queue cache with urls loaded "
 		       "from disk, since the start of the last disk scan.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>added</td><td>The number of urls that were added "
 		       "to the spider queue cache since the start of the last "
 		       "disk scan. After a document is spidered its url "
 		       "if often added again to the spider queue cache.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>attempted</td><td>The number of urls that "
 		       "Gigablast attempted to add to the spider queue cache "
 		       "since the start of the last disk scan. In "
@@ -7852,42 +7780,42 @@ bool sendPage ( State11 *st ) {
 		       "spider time.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>nl</td><td>This is 1 iff Gigablast currently "
 		       "needs to reload the spider queue cache from disk.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>rnl</td><td>This is 1 iff Gigablast currently "
 		       "really needs to reload the spider queue cache from "
 		       "disk.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>more</td><td>This is 1 iff there are urls on "
 		       "the disk that are not in the spider queue cache.</td>"
 		       "</tr>\n"
 
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>loading</td><td>This is 1 iff Gigablast is "
 		       "currently loading this spider cache queue from "
 		       "disk.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>scanned</td><td>The number of bytes that were "
 		       "read from disk since the start of the last disk "
 		       "scan.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>reads</td><td>The number of disk read "
 		       "operations since the start of the last disk "
 		       "scan.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>elapsed</td><td>The time in seconds that has "
 		       "elapsed since the start or end of the last disk "
 		       "scan, depending on if a scan is currently in "
@@ -7899,6 +7827,106 @@ bool sendPage ( State11 *st ) {
 		       LIGHT_BLUE ,
 		       DARK_BLUE  );
 	*/
+
+	/////
+	//
+	// READY TO SPIDER table
+	//
+	/////
+
+	// begin the table
+	sb.safePrintf ( "<table %s>\n"
+			"<tr><td colspan=50>"
+			"<b>URLs Ready to Spider for collection "
+			"<font color=red><b>%s</b>"
+			"</font>"
+			,
+			TABLE_STYLE,
+			st->m_coll );
+
+	// print time format: 7/23/1971 10:45:32
+	time_t nowUTC = getTimeGlobal();
+	struct tm *timeStruct ;
+	char time[256];
+	timeStruct = gmtime ( &nowUTC );
+	strftime ( time , 256 , "%b %e %T %Y UTC", timeStruct );
+	sb.safePrintf("</b>" //  (current time = %s = %lu) "
+		      "</td></tr>\n" 
+		      //,time,nowUTC
+		      );
+
+	// the table headers so SpiderRequest::printToTable() works
+	if ( ! SpiderRequest::printTableHeader ( &sb ,false ) ) return false;
+	// the the doledb spider recs
+	char *bs = sbTable->getBufStart();
+	if ( bs && ! sb.safePrintf("%s",bs) ) return false;
+	// end the table
+	sb.safePrintf ( "</table>\n" );
+	sb.safePrintf ( "<br>\n" );
+
+
+
+	/////////////////
+	//
+	// PRINT WAITING TREE
+	//
+	// each row is an ip. print the next url to spider for that ip.
+	//
+	/////////////////
+	sb.safePrintf ( "<table %s>\n"
+			"<tr><td colspan=50>"
+			"<b>IPs Waiting for Selection Scan for collection "
+			"<font color=red><b>%s</b>"
+			"</font>"
+			,
+			TABLE_STYLE,
+			st->m_coll );
+	// print time format: 7/23/1971 10:45:32
+	long long timems = gettimeofdayInMillisecondsGlobal();
+	sb.safePrintf("</b> (current time = %llu)(totalcount=%li)"
+		      "(waittablecount=%li)</td></tr>\n",
+		      timems,
+		      sc->m_waitingTree.getNumUsedNodes(),
+		      sc->m_waitingTable.getNumUsedSlots());
+	sb.safePrintf("<tr bgcolor=#%s>",DARK_BLUE);
+	sb.safePrintf("<td><b>spidertime (MS)</b></td>\n");
+	sb.safePrintf("<td><b>firstip</b></td>\n");
+	sb.safePrintf("</tr>\n");
+	// the the waiting tree
+	long node = sc->m_waitingTree.getFirstNode();
+	long count = 0;
+	for ( ; node >= 0 ; node = sc->m_waitingTree.getNextNode(node) ) {
+		// breathe
+		QUICKPOLL(MAX_NICENESS);
+		// get key
+		key_t *key = (key_t *)sc->m_waitingTree.getKey(node);
+		// get ip from that
+		long firstIp = (key->n0) & 0xffffffff;
+		// get the time
+		unsigned long long spiderTimeMS = key->n1;
+		// shift upp
+		spiderTimeMS <<= 32;
+		// or in
+		spiderTimeMS |= (key->n0 >> 32);
+		// get the rest of the data
+		sb.safePrintf("<tr bgcolor=#%s>"
+			      "<td>%llu</td>"
+			      "<td>%s</td>"
+			      "</tr>\n",
+			      LIGHT_BLUE,
+			      spiderTimeMS,
+			      iptoa(firstIp));
+		// stop after 20
+		if ( ++count == 20 ) break;
+	}
+	// ...
+	if ( count ) 
+		sb.safePrintf("<tr bgcolor=#%s>"
+			      "<td colspan=10>...</td></tr>\n",
+			      LIGHT_BLUE);
+	// end the table
+	sb.safePrintf ( "</table>\n" );
+	sb.safePrintf ( "<br>\n" );
 
 	// get the socket
 	TcpSocket *s = st->m_socket;

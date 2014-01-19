@@ -557,7 +557,7 @@ skipReplaceHost:
 	// print spare hosts table
 	sb.safePrintf ( 
 		  "<table %s>"
-		  "<tr><td colspan=10 bgcolor=#%s><center>"
+		  "<tr class=hdrow><td colspan=10><center>"
 		  //"<font size=+1>"
 		  "<b>Spares</b>"
 		  //"</font>"
@@ -578,7 +578,6 @@ skipReplaceHost:
 
 		  "<td><b>note</td>",
 		  TABLE_STYLE,
-		  DARK_BLUE ,
 		  DARK_BLUE  );
 
 	for ( long i = 0; i < g_hostdb.m_numSpareHosts; i++ ) {
@@ -623,7 +622,7 @@ skipReplaceHost:
 	// print proxy hosts table
 	sb.safePrintf ( 
 		  "<table %s>"
-		  "<tr><td colspan=12 bgcolor=#%s><center>"
+		  "<tr class=hdrow><td colspan=12><center>"
 		  //"<font size=+1>"
 		  "<b>Proxies</b>"
 		  //"</font>"
@@ -650,7 +649,6 @@ skipReplaceHost:
 
 		  "<td><b>note</td>",
 		  TABLE_STYLE,
-		  DARK_BLUE  ,
 		  DARK_BLUE 
 			);
 	for ( long i = 0; i < g_hostdb.m_numProxyHosts; i++ ) {
@@ -739,7 +737,7 @@ skipReplaceHost:
 	// print help table
 	sb.safePrintf ( 
 		  "<table %s>"
-		  "<tr><td colspan=10 bgcolor=#%s><center>"
+		  "<tr class=hdrow><td colspan=10><center>"
 		  //"<font size=+1>"
 		  "<b>Key</b>"
 		  //"</font>"
@@ -926,8 +924,8 @@ skipReplaceHost:
 
 
 		  ,
-		  TABLE_STYLE ,
-		  DARK_BLUE  );
+		  TABLE_STYLE
+			);
 
 	sb.safePrintf ( "</table><br></form><br>" );
 

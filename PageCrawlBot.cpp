@@ -2606,6 +2606,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			return false;
 		// shortcut
 		XmlDoc **docs = g_spiderLoop.m_docs;
+		// row count
+		long j = 0;
 		// first print the spider recs we are spidering
 		for ( long i = 0 ; i < (long)MAX_SPIDERS ; i++ ) {
 			// get it
@@ -2622,8 +2624,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			// get status
 			char *status = xd->m_statusMsg;
 			// show that
-			if ( ! oldsr->printToTableSimple ( &sb , status,xd) ) 
+			if ( ! oldsr->printToTableSimple ( &sb , status,xd,j)) 
 				return false;
+			j++;
 		}
 
 		// end the table

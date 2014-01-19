@@ -711,10 +711,10 @@ class SpiderRequest {
 	long print( class SafeBuf *sb );
 
 	long printToTable     ( SafeBuf *sb , char *status ,
-				class XmlDoc *xd ) ;
+				class XmlDoc *xd , long row ) ;
 	// for diffbot...
 	long printToTableSimple     ( SafeBuf *sb , char *status ,
-				class XmlDoc *xd ) ;
+				      class XmlDoc *xd , long row ) ;
 	static long printTableHeader ( SafeBuf *sb , bool currentlSpidering ) ;
 	static long printTableHeaderSimple ( SafeBuf *sb , 
 					     bool currentlSpidering ) ;

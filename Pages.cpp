@@ -2390,15 +2390,14 @@ bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
 	// 	p.incrementLength ( pp - p.getBuf() );
 	// 	}
 
-	p.safePrintf ( "<table width=100%% cellpadding=4 "
-		       "bgcolor=#%s border=1>"
-		       "<tr><td colspan=8 bgcolor=#%s>"
+	p.safePrintf ( "<table %s>"
+		       "<tr class=hdrow><td colspan=8>"
 		       "<center><b>CGI Parameters</b></tr></tr>"
-		       "<tr><td><b>CGI</b></td>"
+		       "<tr bgcolor=#%s><td><b>CGI</b></td>"
 		       "<td><b>Page</b></td>"
 		       "<td><b>Type</b></td>"
 		       "<td><b>Name</b></td><td><b>Description</b></td></tr>\n",
-		       LIGHT_BLUE, DARK_BLUE );
+		       TABLE_STYLE , DARK_BLUE);
 	for ( long i = 0; i < g_parms.m_numParms; i++ ) {
 		Parm *parm = &g_parms.m_parms[i];
 		if ( !parm->m_sparm ) continue;
@@ -2413,7 +2412,8 @@ bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
 		if ( ! page ) page = "";
 
 		// print the parm
-		p.safePrintf ( "<tr><td><b>%s</b></td>", cgi );
+		p.safePrintf ( "<tr bgcolor=#%s><td><b>%s</b></td>", 
+			       LIGHT_BLUE , cgi );
 		p.safePrintf("<td>%s</td>",page);
 		p.safePrintf("<td nowrap=1>");
 		switch ( parm->m_type ) {
@@ -2435,14 +2435,13 @@ bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
 	}
 	p.safePrintf ( "</table><br><br>" );
 
-	p.safePrintf ( "<table width=100%% cellpadding=2 "
-		       "bgcolor=#%s border=1>"
-		       "<tr><td colspan=2 bgcolor=#%s>"
+	p.safePrintf ( "<table %s>"
+		       "<tr class=hdrow><td colspan=2>"
 		       "<center><b>Query Operators</b></td></tr>"
 		       "<tr><td><b>Operator</b></td>"
 		       "<td><b>Description</b>"
 		       "</td></tr>\n",
-		       LIGHT_BLUE, DARK_BLUE );
+		       TABLE_STYLE );
 	// table of the query keywords
 	long n = getNumFieldCodes();
 	for ( long i = 0 ; i < n ; i++ ) {
@@ -2452,8 +2451,9 @@ bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
 		char *d = f->desc;
 		// fix table internal cell bordering
 		if ( d[0] == '\0' ) d = "&nbsp;";
-		p.safePrintf("<tr><td><b>%s</b>:</td><td>%s</td></tr>\n",
-			     f->text,d);
+		p.safePrintf("<tr bgcolor=#%s>"
+			     "<td><b>%s</b>:</td><td>%s</td></tr>\n",
+			     LIGHT_BLUE,f->text,d);
 	}
 	
 	p.safePrintf("</body></html>");
