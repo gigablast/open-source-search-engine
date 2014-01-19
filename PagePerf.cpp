@@ -106,7 +106,8 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 	// columns are the dbs
 	p.safePrintf(
 		       //"<center>Disk Statistics<br><br>"
-		       "<center><br>"
+		       "<center>"
+		       //"<br>"
 		       //"<img name=\"diskgraph\" 
 		       //src=/diskGraph%li.gif><br><br>",
 		       //g_hostdb.m_hostId );

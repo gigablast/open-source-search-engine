@@ -572,10 +572,11 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 		      "min-height:%lipx;"
 		      //"width:100%%;"
 		      //"min-height:600px;"
-		      "margin-top:10px;"
+		      //"margin-top:10px;"
 		      "margin-bottom:10px;"
-		      "margin-right:10px;"
-		      "margin-left:10px;\">"
+		      //"margin-right:10px;"
+		      //"margin-left:10px;"
+		      "\">"
 		      ,(long)DX
 		      ,(long)DY +20); // add 10 more for "2s" labels etc.
 

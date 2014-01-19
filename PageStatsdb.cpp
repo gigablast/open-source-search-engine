@@ -194,9 +194,6 @@ void sendReply ( void *state ) {
 	//g_pages.printAdminTop2 ( &buf , st->m_socket , &st->m_request, NULL ,
 	//			 tmpBuf.getBufStart(), tmpBuf.length() ); 
 
-	// write the controls section of the page
-	writeControls( &buf, st );
-
 	// Debug print of CGI parameters and errors
 	char startTimeStr[30];
 	char endTimeStr[30];
@@ -211,10 +208,10 @@ void sendReply ( void *state ) {
 			       "Turn on in the master controls.</b>"
 			       "</font>\n" );
 
-	buf.safePrintf("<table cellpadding=10 border=0>\n");
+	buf.safePrintf("<table %s>\n",TABLE_STYLE);
 
-	buf.safePrintf("<tr><td>"
-		       "<center>");
+	buf.safePrintf("<tr><td bgcolor=#%s>"
+		       "<center>",LIGHT_BLUE);
 
 	/////////////////////////
 	//
@@ -245,6 +242,9 @@ void sendReply ( void *state ) {
 	buf.safePrintf( "</table>\n" );
 
 	buf.safePrintf("</center>");
+
+	// write the controls section of the page
+	writeControls( &buf, st );
 
 	// print the bottom of the page
 	g_pages.printAdminBottom2( &buf );

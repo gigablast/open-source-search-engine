@@ -532,7 +532,8 @@ bool Statsdb::makeGIF ( long t1Arg ,
 
 #define MAX_POINTS 6000
 #define MAX_WIDTH  6
-#define DY2        600              // pixels vertical
+//#define DY2        600              // pixels vertical
+#define DY2        400              // pixels vertical
 #define DX2        1000             // pixels across
 #define MAX_LINES2  (DY2 / (MAX_WIDTH+1)) // leave free pixel above each line
 
