@@ -1865,6 +1865,14 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		}
 		*/
 	}
+
+	// print documentation links
+	if ( top ) {
+		sb->safePrintf(" <a href=/admin.html>admin guide</a> "
+			       "&nbsp; "
+			       " <a href=/developer.html>dev guide</a>" );
+	}
+
 	//sb->safePrintf("</center>" );
 	sb->safePrintf("<br/>" );
 	sb->safePrintf("<br/>" );
