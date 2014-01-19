@@ -6095,8 +6095,8 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "all just save";
-	m->m_desc  = "Saves the data for all hosts. Does Not exit.";
+	m->m_title = "save";
+	m->m_desc  = "Saves in-memory data for ALL hosts. Does Not exit.";
 	m->m_cgi   = "js";
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandJustSave;
@@ -6141,8 +6141,8 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "all save & exit";
-	m->m_desc  = "Saves the data and exits for all hosts.";
+	m->m_title = "save & exit";
+	m->m_desc  = "Saves the data and exits for ALL hosts.";
 	m->m_cgi   = "save";
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandSaveAndExit;
@@ -9417,7 +9417,7 @@ void Parms::init ( ) {
 	m->m_title = "max spiders";
 	m->m_desc  = "What is the maximum number of web "
 		"pages the spider is allowed to download "
-		"simultaneously?";
+		"simultaneously PER HOST?";
 	m->m_cgi   = "mns";
 	m->m_off   = (char *)&cr.m_maxNumSpiders - x;
 	m->m_type  = TYPE_LONG;

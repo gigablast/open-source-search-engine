@@ -1016,21 +1016,12 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	sb->safePrintf("<TABLE "
 		       "cellpadding=5 border=0>"
 		       "<TR>"
-		       "<TD valign=top>"
-		       "<div "
-		       "style="
-		       "max-height:600px;"
-		       "max-width:225px;"
-		       //"min-width:225px;"
-		       "overflow-y:auto;"
-		       "overflow-x:hidden>"
+		       "<td></td>"
 		       );
-	
-	// collection under that
-	status &= printCollectionNavBar ( sb, page , username , coll,pwd, qs );
+
 
 	// then collection page links and parms
-	sb->safePrintf("</div></TD><TD valign=top>");
+	sb->safePrintf("<TD valign=top>");
 
 	// print emergency msg box
 	if ( adds )
@@ -1069,6 +1060,35 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	// should any changes be broadcasted to all hosts?
 	sb->safePrintf ("<input type=hidden name=cast value=\"%li\">\n",
 			(long)s_pages[page].m_cast);
+
+
+	// begin 2nd row in big table
+	sb->safePrintf("</td></TR>");
+
+	sb->safePrintf(
+		       "<TR>"
+		       "<TD valign=top>"
+		       "<div "
+		       "style="
+		       "max-height:600px;"
+		       "max-width:200px;"
+		       "min-width:200px;"
+		       "padding:4px;" // same as TABLE_STYLE
+		       "background-color:#c0c0c0;"
+		       "border-radius:10px;"
+		       "border-width:2px;"
+		       "border-color:#606060;"
+		       "overflow-y:auto;"
+		       "overflow-x:hidden;"
+		       ">"
+		       );
+	// collection under that
+	status &= printCollectionNavBar ( sb, page , username , coll,pwd, qs );
+
+	sb->safePrintf("</div></TD>");
+
+	// the controls will go here
+	sb->safePrintf("<TD>");
 
 	return true;
 }
@@ -1875,7 +1895,8 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 
 	//sb->safePrintf("</center>" );
 	sb->safePrintf("<br/>" );
-	sb->safePrintf("<br/>" );
+
+	if ( top ) sb->safePrintf("<br/>" );
 
 	if ( top ) return status;
 
@@ -1970,6 +1991,7 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	bool status = true;
 	//if ( ! pwd ) pwd = "";
 	if ( ! qs  ) qs  = "";
+
 	// if not admin just print collection name
 	if ( g_collectiondb.m_numRecsUsed == 0 ) {
 		sb->safePrintf ( "<center>"
