@@ -1807,6 +1807,10 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		if ( ! g_conf.m_isMattWells && i == PAGE_SEO ) 
 			continue;
 
+		// skip page autoban link
+		if ( ! g_conf.m_isMattWells && i == PAGE_AUTOBAN )
+			continue;
+
 		// ignore these for now
 		if ( i == PAGE_SECURITY ) continue;
 		if ( i == PAGE_ACCESS ) continue;

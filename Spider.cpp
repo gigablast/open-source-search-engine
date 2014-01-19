@@ -7411,13 +7411,14 @@ bool sendPage ( State11 *st ) {
 	sb.safePrintf ( "<table width=100%% border=1 cellpadding=4 "
 			"bgcolor=#%s>\n" 
 			"<tr><td colspan=50 bgcolor=#%s>"
-			"<b>Currently Spidering</b> (%li spiders)"
-			" (%li locks)"
+			"<b>Currently Spidering on This Host</b> (%li spiders)"
+			//" (%li locks)"
 			"</td></tr>\n" ,
 			LIGHT_BLUE,
 			DARK_BLUE,
-			(long)g_spiderLoop.m_numSpidersOut,
-			g_spiderLoop.m_lockTable.m_numSlotsUsed);
+			(long)g_spiderLoop.m_numSpidersOut
+			//g_spiderLoop.m_lockTable.m_numSlotsUsed);
+			);
 	// the table headers so SpiderRequest::printToTable() works
 	if ( ! SpiderRequest::printTableHeader ( &sb , true ) ) return false;
 	// shortcut
@@ -7490,7 +7491,7 @@ bool sendPage ( State11 *st ) {
 	sb.safePrintf ( "<table width=100%% border=1 cellpadding=4 "
 			"bgcolor=#%s>\n" 
 			"<tr><td colspan=50 bgcolor=#%s>"
-			"<b>IPs Waiting for Scan (coll = "
+			"<b>IPs Waiting for Selection Scan (coll = "
 			"<font color=red><b>%s</b>"
 			"</font>)"
 			,
@@ -11276,11 +11277,20 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 	// if we sent an email simply because no urls
 	// were left and we are not recrawling!
 	if ( cx->m_collectiveRespiderFrequency <= 0.0 &&
+	     cx->m_isCustomCrawl &&
 	     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
 		*status = SP_COMPLETED;
 		return msg->safePrintf("Job has completed and no "
 			"repeat is scheduled.");
 	}
+
+	if ( cx->m_spiderStatus == SP_ROUNDDONE &&
+	     ! cx->m_isCustomCrawl ) {
+		*status = SP_ROUNDDONE;
+		return msg->safePrintf ( "Nothing currently "
+					 "available to spider.");
+	}
+		
 
 	if ( cx->m_spiderStatus == SP_ROUNDDONE ) {
 		*status = SP_ROUNDDONE;

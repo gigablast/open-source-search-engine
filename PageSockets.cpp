@@ -131,14 +131,14 @@ bool sendPageSockets ( TcpSocket *s , HttpRequest *r ) {
 
 void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 	// table headers for urls current being spiderd
-	p->safePrintf ( "<table width=100%% bgcolor=#d0d0f0 border=1>"
-		       "<tr><td bgcolor=#c0c0f0 colspan=19>"
+	p->safePrintf ( "<table %s>"
+		       "<tr><td bgcolor=#%s colspan=19>"
 		       "<center>"
 		       //"<font size=+1>"
 		       "<b>%s</b>"
 		       //"</font>"
 		       "</td></tr>"
-		       "<tr>"
+		       "<tr bgcolor=#%s>"
 		       "<td><b>#</td>"
 		       "<td><b>fd</td>"
 		       "<td><b>age</td>"
@@ -151,7 +151,12 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 		       "<td><b>bytes to read</td>"
 		       "<td><b>bytes sent</td>"
 		       "<td><b>bytes to send</td>"
-		       "</tr>\n" , title );
+		       "</tr>\n"
+			, TABLE_STYLE
+			, DARK_BLUE
+			, title 
+			, DARK_BLUE
+			);
 	// current time in milliseconds
 	long long now = gettimeofdayInMilliseconds();
 	// store in buffer for sorting
@@ -202,12 +207,12 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 		case ST_CLOSE_CALLED:    st="close called";    break;
 		}
 		// bgcolor is lighter for incoming requests
-		char *bg = "#c0c0f0";
-		if ( s->m_isIncoming ) bg = "#e8e8ff";
+		char *bg = "c0c0f0";
+		if ( s->m_isIncoming ) bg = "e8e8ff";
 		// times
 		long elapsed1 = now - s->m_startTime      ;
 		long elapsed2 = now - s->m_lastActionTime ;
-		p->safePrintf ("<tr bgcolor=%s>"
+		p->safePrintf ("<tr bgcolor=#%s>"
 			       "<td>%li</td>" // i
 			       "<td>%i</td>" // fd
 			       "<td>%lims</td>"  // elapsed seconds since start
@@ -301,17 +306,20 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			msgCount1[s->m_msgType]++;
 	}
 	// print the counts
-	p->safePrintf ( "<table bgcolor=#d0d0f0 border=1>"
-			"<tr><td bgcolor=#c0c0f0 colspan=19>"
+	p->safePrintf ( "<table %s>"
+			"<tr><td bgcolor=#%s colspan=19>"
 			"<center>"
 			"<b>%s Summary</b> (%li transactions)"
 			"</td></tr>"
-			"<tr>"
+			"<tr bgcolor=%s>"
 			"<td><b>niceness</td>"
 			"<td><b>msg type</td>"
 			"<td><b>total</td>"
 			"</tr>",
-			title , server->getNumUsedSlots() );
+			TABLE_STYLE,
+			DARK_BLUE,
+			title , server->getNumUsedSlots() ,
+			DARK_BLUE );
 	for ( long i = 0; i < 96; i++ ) {
 		if ( msgCount0[i] <= 0 ) continue;
 		p->safePrintf("<tr><td>0</td><td>0x%lx</td><td>%li</td></tr>",
@@ -334,14 +342,14 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		     "<td><b>hostname</b></td>";
 	}
 	// table headers for urls current being spiderd
-	p->safePrintf ( "<table width=100%% bgcolor=#d0d0f0 border=1>"
-			"<tr><td bgcolor=#c0c0f0 colspan=19>"
+	p->safePrintf ( "<table %s>"
+			"<tr><td bgcolor=#%s colspan=19>"
 			"<center>"
 			//"<font size=+1>"
 			"<b>%s</b> (%li transactions)"
 			//"</font>"
 			"</td></tr>"
-			"<tr>"
+			"<tr bgcolor=%s>"
 			"<td><b>age</td>"
 			"<td><b>last read</td>"
 			"<td><b>last send</td>"
@@ -362,7 +370,12 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"<td><b>dgrams to send</td>"
 			"<td><b>acks read</td>"
 			"<td><b>resends</td>"
-			"</tr>\n" , title , server->getNumUsedSlots() , dd );
+			"</tr>\n" , 
+			TABLE_STYLE,
+			DARK_BLUE,
+			title , server->getNumUsedSlots() , 
+			DARK_BLUE ,
+			dd );
 
 
 	// now fill in the columns
@@ -494,7 +507,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		if ( msgType == 0x25 ) desc = "get link info";
 		if ( msgType == 0xfd ) desc = "proxy forward";
 		
-		p->safePrintf ( "<tr bgcolor=%s>"
+		p->safePrintf ( "<tr bgcolor=#%s>"
 				"<td>%s</td>"  // age
 				"<td>%s</td>"  // last read
 				"<td>%s</td>"  // last send

@@ -971,11 +971,17 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	if ( ! isJSON ) {
 		sb->safePrintf( 
 			       "\n"
-			       "<table width=100%% bgcolor=#%s "
-			       "cellpadding=4 border=1 "
+			       "<table style=\"border-radius:15px;"
+			       "border:#6060f0 2px solid;"
+			       "\" "
+			       "width=100%% bgcolor=#%s "
+			       "bgcolor=black "
+			       "cellpadding=4 "
+			       "border=0 "//border=1 "
 			       "id=\"parmtable\">"
-			       "<tr><td colspan=20 bgcolor=#%s>"
-			       ,LIGHT_BLUE,DARK_BLUE
+			       "<tr><td colspan=20>"// bgcolor=#%s>"
+			       ,DARKER_BLUE
+			       //,DARK_BLUE
 				);
 
 		/*
@@ -991,11 +997,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 				       );
 		*/
 
-		sb->safePrintf("<div style=\"margin-left:45%%;\">"
+		sb->safePrintf(//"<div style=\"margin-left:45%%;\">"
 			       //"<font size=+1>"
+			       "<center>"
 			       "<b>%s</b>%s"
 			       //"</font>"
-			       "</div>"
+			       "</center>"
+			       //"</div>"
 			       "</td></tr>%s%s\n",
 			       tt,bb,e1,e2);
 	}
@@ -1095,7 +1103,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  //"<input type=hidden name="
 			  "<table width=100%% cellpadding=4 border=1 "
 			  "bgcolor=#%s>"
-			  "<tr><td colspan=2 bgcolor=%s><center>"
+			  "<tr><td colspan=2 bgcolor=#%s><center>"
 			  //"<font size=+1>"
 			  "<b>"
 			  "URL Filters Test</b>"
@@ -1122,7 +1130,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		sb->safePrintf (
 			  "<table width=100%% cellpadding=4 border=1 "
 			  "bgcolor=#%s>"
-			  "<tr><td colspan=2 bgcolor=%s><center>"
+			  "<tr><td colspan=2 bgcolor=#%s><center>"
 			  "<b>"
 			  "Supported URL Expressions</b>"
 			  "</td></tr>"
@@ -1572,7 +1580,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		sb->safePrintf (
 			  "<table width=100%% cellpadding=4 border=1 "
 			  "bgcolor=#%s>"
-			  "<tr><td colspan=2 bgcolor=%s><center>"
+			  "<tr><td colspan=2 bgcolor=#%s><center>"
 			  "<b>"
 			  "Supported Language Abbreviations "
 			  "for lang== Filter</b>"
@@ -2175,7 +2183,7 @@ char *Parms::printParm ( char *p    ,
 	// print row start for single parm
 	if ( m->m_max <= 1 && ! m->m_hdrs ) {
 		if ( firstInRow ) {
-			sprintf ( p , "<tr bgcolor=%s><td>" , bg );
+			sprintf ( p , "<tr bgcolor=#%s><td>" , bg );
 			p += gbstrlen ( p );
 		}
 		p += sprintf ( p , "<td width=%li%%>" , 100/nc/2 );
@@ -2184,7 +2192,7 @@ char *Parms::printParm ( char *p    ,
 	// print the title/description in current table for non-arrays
 	if ( m->m_max <= 1 && m->m_hdrs ) { // j == 0 && m->m_rowid < 0 ) {
 		if ( firstInRow )
-			p += sprintf ( p , "<tr bgcolor=%s>",bg);
+			p += sprintf ( p , "<tr bgcolor=#%s>",bg);
 		if ( t == TYPE_STRINGBOX ) {
 			sprintf ( p , "<td colspan=2><center>"
 				  "<b>%s</b><br><font size=1>",m->m_title );
@@ -2656,7 +2664,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	// print row start for single parm
 	if ( m->m_max <= 1 && ! m->m_hdrs ) {
 		if ( firstInRow ) {
-			sb->safePrintf ( "<tr bgcolor=%s><td>" , bg );
+			sb->safePrintf ( "<tr bgcolor=#%s><td>" , bg );
 		}
 		sb->safePrintf ( "<td width=%li%%>" , 100/nc/2 );
 	}
@@ -2673,7 +2681,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	// print the title/description in current table for non-arrays
 	if ( m->m_max <= 1 && m->m_hdrs ) { // j == 0 && m->m_rowid < 0 ) {
 		if ( firstInRow )
-			sb->safePrintf ( "<tr bgcolor=%s>",bg);
+			sb->safePrintf ( "<tr bgcolor=#%s>",bg);
 		if ( t == TYPE_STRINGBOX ) {
 			sb->safePrintf ( "<td colspan=2><center>"
 				  "<b>%s</b><br><font size=-1>",m->m_title );
@@ -2866,7 +2874,9 @@ bool Parms::printParm ( SafeBuf* sb,
 		else
 			sb->safePrintf ("<input type=text name=%s "
 					"value=\"%f\" "
-					"size=3>",cgi,*(float *)s);
+					// 3 was ok on firefox but need 6
+					// on chrome
+					"size=6>",cgi,*(float *)s);
 	}
 	else if ( t == TYPE_IP ) {
 		if ( m->m_max > 0 && j == jend ) 
@@ -2883,7 +2893,9 @@ bool Parms::printParm ( SafeBuf* sb,
 		else
 			sb->safePrintf ("<input type=text name=%s "
 					"value=\"%li\" "
-					"size=3>",cgi,*(long *)s);
+					// 3 was ok on firefox but need 6
+					// on chrome
+					"size=6>",cgi,*(long *)s);
 	}
 	else if ( t == TYPE_LONG_CONST ) 
 		sb->safePrintf ("%li",*(long *)s);
@@ -2936,7 +2948,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		// give regular expression box on url filters page more room
 		if ( m->m_page == PAGE_FILTERS ) {
 			//if ( size > REGEX_TXT_MAX ) size = REGEX_TXT_MAX;
-			size = 30;
+			size = 40;
 		}
 		else {
 			if ( size > 20 ) size = 20;
@@ -8757,7 +8769,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "ldseo";
 	m->m_off   = (char *)&g_conf.m_logDebugSEO - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_priv  = 1;
 	m++;
 

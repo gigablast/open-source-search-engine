@@ -28,8 +28,8 @@ struct StateLogView {
 
 static char *s_magicStr = "4j3.8x*";
 #define BABY_BLUE  "e0e0d0"
-#define LIGHT_BLUE "d0d0e0"
-#define DARK_BLUE  "c0c0f0"
+//#define LIGHT_BLUE "d0d0e0"
+//#define DARK_BLUE  "c0c0f0"
 
 bool sendPageLogView    ( TcpSocket *s , HttpRequest *r ) {
 
@@ -79,15 +79,21 @@ bool sendPageLogView    ( TcpSocket *s , HttpRequest *r ) {
 		      "</SCRIPT> ");
 	p->safePrintf("<form name=\"fo\">");
 
-	p->safePrintf("\n<table width=100%% bgcolor=#%s "
-		      "cellpadding=4 border=1>\n", BABY_BLUE);
+	p->safePrintf("\n<table %s>\n",TABLE_STYLE);
+	p->safePrintf("<tr bgcolor=#%s><td colspan=2>"
+		      "<center><b>Log View</b></center>"
+		      "</td></tr>",DARK_BLUE);
 	
-	p->safePrintf("<tr><td>Refresh Rate:</td><td><input type=\"text\""
+	p->safePrintf("<tr bgcolor=%s>"
+		      "<td>Refresh Rate:</td><td><input type=\"text\""
 		      " name=\"rr\" value=\"%li\" size=\"4\"></td></tr>", 
+		      LIGHT_BLUE,
 		      refreshRate);
 
-	p->safePrintf("<tr><td>Sample Size:</td><td><input type=\"text\""
-		      " name=\"ss\" value=\"%li\" size=\"4\"></td></tr>", 
+	p->safePrintf("<tr bgcolor=%s>"
+		      "<td>Sample Size:</td><td><input type=\"text\""
+		      " name=\"ss\" value=\"%li\" size=\"4\">",
+		      LIGHT_BLUE,
 		      sampleSize);
 
 	p->safePrintf("<input type=\"hidden\" "
@@ -96,6 +102,7 @@ bool sendPageLogView    ( TcpSocket *s , HttpRequest *r ) {
 	p->safePrintf("<input type=\"hidden\" "
 		      "name=\"dontlog\" value=\"1\">");
 
+	p->safePrintf("</td></tr>");
 
 	// . count the number of hosts we are getting logs for:
 	long numOn = 0;
@@ -134,7 +141,8 @@ bool sendPageLogView    ( TcpSocket *s , HttpRequest *r ) {
 	st->m_filterStr[6] = "INFO";
 	st->m_filterStr[7] = "INIT";
 
-	p->safePrintf("<tr><td>Filter Types:</td><td>");
+	p->safePrintf("<tr bgcolor=#%s><td>Filter Types:</td><td>",
+		      LIGHT_BLUE);
 	char *checked;
 	st->m_numFilts = 0;
 	for(long i = 7; i >= 0; i--) {
@@ -183,7 +191,8 @@ bool sendPageLogView    ( TcpSocket *s , HttpRequest *r ) {
 
 
 
-	p->safePrintf("<tr><td>Hosts:</td><td>");
+	p->safePrintf("<tr bgcolor=#%s><td>Hosts:</td><td>",
+		      LIGHT_BLUE);
 	for ( long i = 0 ; i < nh ; i++ ) {
 		// skip dead hosts, i don't want to wait for them to timeout.
 		if ( g_hostdb.isDead ( i ) ) continue;
@@ -214,9 +223,9 @@ bool sendPageLogView    ( TcpSocket *s , HttpRequest *r ) {
 	
 	p->safePrintf("</td></tr>\n");
 	
-	p->safePrintf("<tr><td>\n");
+	p->safePrintf("<tr bgcolor=#%s><td>\n",LIGHT_BLUE);
 	p->safePrintf("<input type=\"submit\" value=\"Update\"> ");
-	p->safePrintf("</td></tr></table>\n");
+	p->safePrintf("</td><td></td></tr></table>\n");
 	p->safePrintf("</form>");
 
 	if(!blocked)
@@ -227,6 +236,14 @@ bool sendPageLogView    ( TcpSocket *s , HttpRequest *r ) {
 }
 
 
+bool showLine ( SafeBuf *sb , char *s , long len ) {
+
+	return sb->brify ( s , len , 
+			   0 , // niceness 
+			   80 , // cols
+			   "<br>",
+			   false ); // isHtml?
+}
 
 
 void gotRemoteLogWrapper(void *state, UdpSlot *slot) {
@@ -329,25 +346,25 @@ void gotRemoteLogWrapper(void *state, UdpSlot *slot) {
 		if(matchNum >= 0 || st->m_numFilts == 0) {
 			if(matchNum == 0) {
 				p->safePrintf("<font color=red>");
-				p->safeMemcpy(st->m_readBufPtrs[ndx], lineLen);
+				showLine(p,st->m_readBufPtrs[ndx], lineLen);
 				p->safePrintf("\n");
 				p->safePrintf("</font>");
 			}
 			else if(matchNum == 1) {
 				p->safePrintf("<font color=green>");
-				p->safeMemcpy(st->m_readBufPtrs[ndx], lineLen);
+				showLine(p,st->m_readBufPtrs[ndx], lineLen);
 				p->safePrintf("\n");
 				p->safePrintf("</font>");
 
 			}
 			else if(matchNum == 2) {
 				p->safePrintf("<font color=blue>");
-				p->safeMemcpy(st->m_readBufPtrs[ndx], lineLen);
+				showLine(p,st->m_readBufPtrs[ndx], lineLen);
 				p->safePrintf("\n");
 				p->safePrintf("</font>");
 			}
 			else {
-				p->safeMemcpy(st->m_readBufPtrs[ndx], lineLen);
+				showLine(p,st->m_readBufPtrs[ndx], lineLen);
 				p->safePrintf("\n");
 			}
 		}

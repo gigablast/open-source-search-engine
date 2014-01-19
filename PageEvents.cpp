@@ -7527,7 +7527,7 @@ bool printTopBarNav ( SafeBuf &sb , State7 *st ) {
 			"</tr>"
 			// - shadow row
 			//"<tr cellspacing=5 height=5px><td colspan=9 "
-			//"bgcolor=%s></td></tr>"
+			//"bgcolor=#%s></td></tr>"
 			// END TOP TABLE
 			"</table>" 
 			//, GRAD2
@@ -12671,7 +12671,7 @@ bool gotResults ( void *state ) {
 				">"
 				"<tr>"
 				"<td valign=top>" 
-				// bgcolor=%s
+				// bgcolor=#%s
 				//, GRAD1
 				//, bg
 				);

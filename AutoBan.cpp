@@ -849,9 +849,8 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 		setCodesFromConf();
 	}
 
-	sb.safePrintf("\n<br><br><table width=100%% bgcolor=#%s "
-		      "cellpadding=4 border=1>\n", 
-		      BABY_BLUE);
+	sb.safePrintf("\n<br><br><table %s>\n",TABLE_STYLE);
+
 	getCalendarFromMs((now - m_codeResetTime) * 1000,
 			  &days, 
 			  &hours, 
@@ -1134,9 +1133,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 
 
 
-	sb.safePrintf("\n<table width=100%% bgcolor=#%s "
-		      "cellpadding=4 border=1>\n", 
-		      BABY_BLUE);
+	sb.safePrintf("\n<table %s>\n",TABLE_STYLE);
 	sb.safePrintf("<tr><td colspan=2 bgcolor=#%s>"
 		      "<center><b>Add IPs</b></center></td></tr>", 
 		      DARK_BLUE);
@@ -1174,9 +1171,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 
 	/////////////////////////////////////////////////////////////////////
 
-	sb.safePrintf("\n<table width=100%% bgcolor=#%s "
-		      "cellpadding=4 border=1>\n", 
-		      BABY_BLUE);
+	sb.safePrintf("\n<table %s>\n",TABLE_STYLE);
 
 	sb.safePrintf("<tr><td colspan=3 bgcolor=#%s>"
 		      "<center><b>Watched Ips</b></center></td></tr>", 
@@ -1315,9 +1310,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 
 	// MDW moved from here
 
-	sb.safePrintf("\n<br><br><table width=100%% bgcolor=#%s "
-		      "cellpadding=4 border=1>\n", 
-		      BABY_BLUE);
+	sb.safePrintf("\n<br><br><table %s>\n",TABLE_STYLE);
 
 	sb.safePrintf("<tr><td colspan=5 bgcolor=#%s>"
 		      "<center><b>Control Panel</b></center></td></tr>", 
@@ -1362,9 +1355,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 	}
 	
 
-	sb.safePrintf("\n<br><br><table width=100%% bgcolor=#%s "
-		      "cellpadding=4 border=1>\n", 
-		      BABY_BLUE);
+	sb.safePrintf("\n<br><br><table %s>\n",TABLE_STYLE);
 
 	sb.safePrintf("<tr><td colspan=6 bgcolor=#%s>"
 		      "<center><b>Queries Today</b></center></td></tr>", 

@@ -4540,7 +4540,7 @@ bool sendReply2 ( void *state ) {
 			      "</td></tr>\n" );
 
 	// headers
-	sb.safePrintf("<tr bgcolor=%s>"
+	sb.safePrintf("<tr bgcolor=#%s>"
 		      //"<td><b>delete?</b></td>"
 		      "<td><b>del?</b></td>"
 		      "<td><b>tag name</b></td>"
@@ -4576,9 +4576,9 @@ bool sendReply2 ( void *state ) {
 		// if we are NULL, print out 3 empty tags
 		if ( ! ctag ) empty++;
 		// start the section
-		sb.safePrintf("<tr bgcolor=%s>",DARK_BLUE);
+		sb.safePrintf("<tr bgcolor=#%s>",DARK_BLUE);
 		// the delete tag checkbox
-		//sb.safePrintf("<tr bgcolor=%s><td>",DARK_BLUE);
+		//sb.safePrintf("<tr bgcolor=#%s><td>",DARK_BLUE);
 		sb.safePrintf("<td>");
 		if ( ctag && canEdit ) // && tag->m_type != ST_SITE ) 
 			sb.safePrintf("<input name=deltag%li "
@@ -4695,7 +4695,7 @@ bool sendReply2 ( void *state ) {
 	// do not print add or del tags buttons if we got tags from more
 	// than one TagRec!
 	if ( canEdit )
-		sb.safePrintf ("<tr bgcolor=%s><td colspan=21><center>"
+		sb.safePrintf ("<tr bgcolor=#%s><td colspan=21><center>"
 			       
 			       "<input type=submit name=add "
 			       "value=\"add tags\" border=0>"

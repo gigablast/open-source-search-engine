@@ -10,6 +10,7 @@
 //#include "MemPoolVar.h"
 //#include "malloc.h"
 //#include "Stats.h"
+#include "Pages.h"
 
 // put me back
 //#define _EFENCE_
@@ -659,17 +660,17 @@ bool Mem::printMemBreakdownTable ( SafeBuf* sb,
 	sb->safePrintf (
 		       "<table>"
 
-		       "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
+		       "<table %s>"
 		       "<tr>"
 		       "<td colspan=3 bgcolor=#%s>"
 		       "<center><b>Mem Breakdown%s</b></td></tr>\n"
 
-		       "<tr>"
+		       "<tr bgcolor=#%s>"
 		       "<td><b>allocator</b></td>"
 		       "<td><b>num allocs</b></td>"
 		       "<td><b>allocated</b></td>"
 		       "</tr>" ,
-		       lightblue, darkblue , ss );
+		       TABLE_STYLE, darkblue , ss , darkblue );
 
 	long n = m_numAllocated * 2;
 	MemEntry *e = (MemEntry *)mcalloc ( sizeof(MemEntry) * n , "Mem" );
@@ -756,11 +757,12 @@ bool Mem::printMemBreakdownTable ( SafeBuf* sb,
 	// now print into buffer
 	for ( long i = 0 ; i < count ; i++ ) 
 		sb->safePrintf (
-			       "<tr>"
+			       "<tr bgcolor=%s>"
 			       "<td>%s</td>"
 			       "<td>%li</td>"
 			       "<td>%li</td>"
 			       "</tr>\n",
+			       LIGHT_BLUE,
 			       winners[i]->m_label,
 			       winners[i]->m_numAllocs,
 			       winners[i]->m_allocated);

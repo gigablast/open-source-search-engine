@@ -85,15 +85,19 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// print the add collection box
 	if ( add /*&& (! nc[0] || g_errno ) */ ) {
 		p.safePrintf (
-			  "<center>\n<table border=1 cellpadding=4 "
-			  "width=100%% bgcolor=#%s>\n"
+			  "<center>\n<table %s>\n"
 			   "<tr><td colspan=2 bgcolor=#%s>"
 			  "<center><b>Add Collection</b></center>"
-			  "</td></tr>\n",LIGHT_BLUE,DARK_BLUE);
+			  "</td></tr>\n",
+			  TABLE_STYLE,
+			  DARK_BLUE);
 		p.safePrintf (
-			  "<tr><td><b>name of new collection to add</td>\n"
+			  "<tr bgcolor=#%s>"
+			  "<td><b>name of new collection to add</td>\n"
 			  "<td><input type=text name=addColl size=30>"
-			  "</td></tr>\n");
+			  "</td></tr>\n"
+			  , LIGHT_BLUE
+			      );
 		// now list collections from which to copy the config
 		//p.safePrintf (
 		//	  "<tr><td><b>copy configuration from this "
@@ -118,27 +122,32 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// print all collections out in a checklist so you can check the
 	// ones you want to delete, the values will be the id of that collectn
 	p.safePrintf (
-		  "<center>\n<table border=1 cellpadding=4 "
-		  "width=100%% bgcolor=#%s>\n"
+		  "<center>\n<table %s>\n"
 		  "<tr><td bgcolor=#%s><center><b>Delete Collections"
 		  "</b></center></td></tr>\n"
-		  "<tr><td>"
+		  "<tr bgcolor=#%s><td>"
 		  "<center><b>Select the collections you wish to delete. "
 		  //"<font color=red>This feature is currently under "
 		  //"development.</font>"
 		  "</b></center></td></tr>\n"
-		  "<tr><td>"
+		  "<tr bgcolor=#%s><td>"
 		  // table within a table
 		  "<center><table width=20%%>\n",
-		  LIGHT_BLUE,DARK_BLUE);
+		  TABLE_STYLE,
+		  DARK_BLUE,
+		  LIGHT_BLUE,
+		  DARK_BLUE
+		      );
 
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
 		p.safePrintf (
-			  "<tr><td>"
+			  "<tr bgcolor=#%s><td>"
 			  "<input type=checkbox name=delColl value=\"%s\"> "
-			  "%s</td></tr>\n",cr->m_coll,cr->m_coll);
+			  "%s</td></tr>\n",
+			  DARK_BLUE,
+			  cr->m_coll,cr->m_coll);
 	}
 	p.safePrintf( "</table></center></td></tr></table><br>\n" );
 skip:
