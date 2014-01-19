@@ -23181,7 +23181,10 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 
 
 
+	char *host = fu->getHost    ();
+	//long  hlen = fu->getHostLen ();
 
+	/*
 	setStatus ( "hashing no-split qdom keys" );
 
 	char *dom  = fu->getDomain   ();
@@ -23192,15 +23195,13 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 	if ( ! hashString ( dom,dlen,&hi ) ) return false;
 
 
-
 	setStatus ( "hashing no-split qhost keys" );
-
-	char *host = fu->getHost    ();
-	long  hlen = fu->getHostLen ();
 
 	// desc is NULL, prefix will be used as desc
 	hi.m_prefix = "qhost";
 	if ( ! hashString ( host,hlen,&hi ) ) return false;
+	*/
+
 
 	// now hash the site
 

@@ -273,6 +273,24 @@ bool CommandDeleteColl ( char *rec , WaitEntry *we ) {
 
 // . returns true and sets g_errno on error
 // . returns false if would block
+bool CommandDeleteColl2 ( char *rec , WaitEntry *we ) {
+	char *coll = (char *)rec;
+	collnum_t collnum = g_collectiondb.getCollnum ( coll );
+	if ( collnum < 0 ) {
+		g_errno = ENOCOLLREC;
+		return true;;
+	}
+	// the delete might block because the tree is saving and we can't
+	// remove our collnum recs from it while it is doing that
+	if ( ! g_collectiondb.deleteRec2 ( collnum ) )
+		// we blocked, we->m_callback will be called when done
+		return false;
+	// delete is successful
+	return true;
+}
+
+// . returns true and sets g_errno on error
+// . returns false if would block
 bool CommandRestartColl ( char *rec , WaitEntry *we ) {
 
 	collnum_t newCollnum = getCollnumFromParmRec ( rec );
@@ -1306,8 +1324,9 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "millions of search results very quickly without "
 			  "having to lookup each of their urls. You should "
 			  "definitely have this if you use the reindexing "
-			  "feature. You can temporarily disabled the "
-			  "spidering enabled checkbox for non "
+			  "feature. "
+			  "You can set max spiders to 0 "
+			  "for non "
 			  "docidbased requests while you reindex or delete "
 			  "the results of a query for extra speed."
 			  "</td></tr>"
@@ -9244,6 +9263,15 @@ void Parms::init ( ) {
 	m->m_cast  = 1;
 	m++;
 
+	m->m_title = "delete collection";
+	m->m_desc  = "delete the specified collection";
+	m->m_cgi   = "delColl";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_func2 = CommandDeleteColl2;
+	m->m_cast  = 1;
+	m++;
+
 	m->m_title = "add collection";
 	m->m_desc  = "add a new collection";
 	m->m_cgi   = "addColl";
@@ -13178,7 +13206,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "number of related topics (gigabits)";
+	m->m_title = "number of related topics";
 	m->m_desc  = "What is the number of "
 		"related topics (gigabits) "
 		"displayed per query? Set to 0 to save "
@@ -13955,6 +13983,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
+	/*
 	m->m_title = "spidering enabled";
 	m->m_cgi   = "cspe";
 	m->m_xml   = "spidersEnabled";
@@ -13966,6 +13995,7 @@ void Parms::init ( ) {
 	m->m_rowid = 1;
 	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
+	*/
 
 	m->m_title = "respider frequency (days)";
 	m->m_cgi   = "fsf";

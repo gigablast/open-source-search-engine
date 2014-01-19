@@ -204,6 +204,8 @@ bool sendReply ( void *state ) {
 		  "<b>%s</b>\n\n" // the url msg
 		  //"<FORM method=POST action=/inject>\n\n" 
 
+		  "<FORM method=GET action=/inject>\n\n" 
+
 		  //"<input type=hidden name=pwd value=\"%s\">\n"
 		  //"<input type=hidden name=username value=\"%s\">\n"
 		  "<table width=100%% bgcolor=#%s cellpadding=4 border=1>"
@@ -279,13 +281,13 @@ bool sendReply ( void *state ) {
 		  "</td></tr>\n\n"
 
 
-		  "<tr><td><b>delete?</b><br>"
+		  "<tr><td><b>delete url?</b><br>"
 		  "<font size=1>Should this url be deleted from the index? "
 		  "Default: no"
 		  "</td>"
 		  "<td>\n"
-		  "<input type=radio name=delete value=0 checked>no &nbsp; "
-		  "<input type=radio name=delete value=1>yes "
+		  "<input type=radio name=deleteurl value=0 checked>no &nbsp; "
+		  "<input type=radio name=deleteurl value=1>yes "
 		  "</td></tr>\n\n"
 
 
@@ -463,16 +465,29 @@ bool Msg7::inject ( TcpSocket *s ,
 	long  contentLen;
 
 	// get the junk
-	char *coll           = r->getString ( "c" , NULL  , NULL /*default*/);
+	//char *coll        = r->getString ( "c" , NULL  , NULL /*default*/);
 	//if ( ! coll ) coll = "main";
 	// sometimes crawlbot will add or reset a coll and do an inject
 	// in PageCrawlBot.cpp
 	//if ( ! coll ) coll = r->getString("addcoll");
 	//if ( ! coll ) coll = r->getString("resetcoll");
-	if ( ! coll ) coll = collOveride;
+	//if ( ! coll ) coll = collOveride;
 
 	// default to main
-	if ( ! coll || ! coll[0] ) coll = "main";
+	//if ( ! coll || ! coll[0] ) coll = "main";
+
+	if ( collOveride && ! collOveride[0] ) collOveride = NULL;
+
+	CollectionRec *cr = NULL;
+	if ( collOveride ) cr = g_collectiondb.getRec ( collOveride );
+	else cr = g_collectiondb.getRec ( r );
+
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
+		return true;
+	}
+
+	char *coll = cr->m_coll;
 
 	bool  quickReply     = r->getLong   ( "quick" , 0 );	
 	//char *pwd            = r->getString ( "pwd" , NULL );
@@ -490,7 +505,7 @@ bool Msg7::inject ( TcpSocket *s ,
 	long hopCount     = r->getLong("hopcount",-1);
 	long newOnly      = r->getLong("newonly",0);
 	long charset      = r->getLong("charset",-1);
-	long deleteIt     = r->getLong("delete",0);
+	long deleteUrl    = r->getLong("deleteurl",0);
 	char hasMime      = r->getLong("hasmime",0);
 	// do consistency testing?
 	bool doConsistencyTesting = r->getLong("dct",0);
@@ -549,7 +564,7 @@ bool Msg7::inject ( TcpSocket *s ,
 			newOnly,
 			charset,
 			spiderLinks,
-			deleteIt,
+			deleteUrl,
 			hasMime,
 			doConsistencyTesting);
 }
@@ -573,7 +588,7 @@ bool Msg7::inject ( char *url ,
 		    char newOnly,
 		    short charset,
 		    char spiderLinks,
-		    char deleteIt,
+		    char deleteUrl,
 		    char hasMime,
 		    bool doConsistencyTesting
 		    ) {
@@ -674,7 +689,7 @@ bool Msg7::inject ( char *url ,
 			  niceness, // 1 , 
 			  // inject this content
 			  content ,
-			  deleteIt, // false, // deleteFromIndex ,
+			  deleteUrl, // false, // deleteFromIndex ,
 			  forcedIp ,
 			  contentType ,
 			  lastSpidered ,

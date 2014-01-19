@@ -187,6 +187,8 @@ bool HashTableX::addKey ( void *key , void *val , long *slot ) {
 		g_errno = ETRYAGAIN; 
 		return false;
 	}
+	// never got initialized? call HashTableX::init()
+	if ( m_ks <= 0 ){ char *xx=NULL; *xx=0; }
 	// check to see if we should grow the table. now we grow
 	// when 25% full to make operations faster so getLongestString()
 	// doesn't return such big numbers!

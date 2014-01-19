@@ -137,7 +137,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		if ( ! cr ) continue;
 		p.safePrintf (
 			  "<tr><td>"
-			  "<input type=checkbox name=delete value=\"%s\"> "
+			  "<input type=checkbox name=delColl value=\"%s\"> "
 			  "%s</td></tr>\n",cr->m_coll,cr->m_coll);
 	}
 	p.safePrintf( "</table></center></td></tr></table><br>\n" );

@@ -1129,7 +1129,7 @@ bool gotResults ( void *state ) {
 	if ( collLen == 4 && strncmp ( coll, "main", 4) == 0 ) isMain = true;
 
 	// print "in collection ***" if we had a collection
-	if ( collLen > 0 && ! isMain ) // && isAdmin )
+	if ( collLen > 0 && ! isMain && si->m_format == FORMAT_HTML )
 		sb.safePrintf (" in collection <b>%s</b>",coll);
 
 

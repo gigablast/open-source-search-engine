@@ -1403,6 +1403,10 @@ void CollectionRec::setToDefaults ( ) {
 
 void CollectionRec::reset() {
 
+	// . grows dynamically
+	// . setting to 0 buckets should never have error
+	m_pageCountTable.set ( 4,4,0,NULL,0,false,MAX_NICENESS,"pctbl" );
+
 	// regex_t types
 	if ( m_hasucr ) regfree ( &m_ucr );
 	if ( m_hasupr ) regfree ( &m_upr );
@@ -1421,7 +1425,6 @@ void CollectionRec::reset() {
 	     Rdb *rdb = g_process.m_rdbs[i];
 	     rdb->resetBase ( m_collnum );
 	}
-
 }
 
 CollectionRec *g_cr = NULL;
@@ -1500,9 +1503,6 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// PAGE COUNT TABLE for doing quotas in url filters
 	//
 	/////////////
-	// . grows dynamically
-	// . setting to 0 buckets should never have error
-	m_pageCountTable.set ( 4,4,0,NULL,0,false,MAX_NICENESS,"pctbl" );
 	// log it up if there on disk
 	snprintf ( tmp1 , 1023, "/coll.%s.%li/pagecounts.dat",
 		   m_coll , (long)m_collnum );

@@ -2861,6 +2861,42 @@ static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
 	if ( g_conf.m_logDebugSpider )
 		log("spider: back from msg5 spiderdb read2");
 
+
+	// ensure collection rec still there
+	CollectionRec *cr = g_collectiondb.getRec ( THIS->m_collnum );
+	if ( ! cr ) return;
+
+
+	// if we do not have a pg count entry for this then enter count mode
+	// where we just scan all the spider records for m_scanningIp
+	// and count how many pages are in the index for each subdomain/site
+	// and when it is over we re-do the scan from the top. 
+	THIS->m_countingPagesIndexed = false;
+	// don't bother with this stuff though if url filters do not specify 
+	// "pagesinip" or "pagesinsubdomain"
+	if ( cr->m_urlFiltersHavePageCounts &&
+	     // and only do this if we do not have an entry for this ip yet
+	     ! cr->m_pageCountTable.isInTable ( &THIS->m_scanningIp ) ) {
+		// it is on
+		THIS->m_countingPagesIndexed = true;
+		// reset this
+		THIS->m_lastReqUh48 = 0LL;
+		THIS->m_lastRepUh48 = 0LL;
+		// and setup the LOCAL counting table if not initialized
+		if ( THIS->m_localTable.m_ks == 0 ) 
+			THIS->m_localTable.set (4,4,0,NULL,0,false,0,"ltpct" );
+		// do not recompute this in case all records for this ip
+		// are missing or have issues, like maybe there was only
+		// a spiderreply
+		if ( ! cr->m_pageCountTable.addScore( &THIS->m_scanningIp,1)){
+			log("spider: error adding to pg cnt tbl: %s",
+			    mstrerror(g_errno));
+			return;
+		}
+	}
+
+	     
+
 	// . finish processing the list we read now
 	// . if that blocks, it will call doledWrapper
 	if ( ! THIS->scanSpiderdb ( false ) ) return;
@@ -2987,26 +3023,6 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		log("spider: lost collnum %li",(long)m_collnum);
 		g_errno = ENOCOLLREC;
 		return true;
-	}
-
-	// if we do not have a pg count entry for this then enter count mode
-	// where we just scan all the spider records for m_scanningIp
-	// and count how many pages are in the index for each subdomain/site
-	// and when it is over we re-do the scan from the top. 
-	m_countingPagesIndexed = false;
-	// don't bother with this stuff though if url filters do not specify 
-	// "pagesinip" or "pagesinsubdomain"
-	if ( cr->m_urlFiltersHavePageCounts &&
-	     // and only do this if we do not have an entry for this ip yet
-	     ! cr->m_pageCountTable.isInTable ( &m_scanningIp ) ) {
-		// it is on
-		m_countingPagesIndexed = true;
-		// reset this
-		m_lastReqUh48 = 0LL;
-		m_lastRepUh48 = 0LL;
-		// and setup the LOCAL counting table if not initialized
-		if ( m_localTable.m_ks == 0 ) 
-			m_localTable.set ( 4 ,4,0,NULL,0,false,0,"ltpct" );
 	}
 
 	// i guess we are always restricted to an ip, because
