@@ -973,11 +973,14 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	mb.safePrintf("<center>"
 		      "<table cellpadding=5 "
 		      "style=\""
-		      //"border:2px solid black;"
-		      "max-width:600px\" "
+		      "background-color:#ff6666;"
+		      "border:2px #8f0000 solid;"
+		      "border-radius:5px;"
+		      "max-width:600px;"
+		      "\" "
 		      "border=0"
 		      ">"
-		      "<tr><td bgcolor=#ff6666>");
+		      "<tr><td>");
 
 	// emergency message box
 	if ( g_pingServer.m_hostsConfInDisagreement ) {

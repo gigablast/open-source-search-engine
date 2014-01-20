@@ -1911,24 +1911,9 @@ bool XmlDoc::injectDoc ( char *url ,
 
 	// this can go on the stack since set4() copies it
 	SpiderRequest sreq;
-	sreq.reset();
+	sreq.setFromInject ( cleanUrl );
 
-	strcpy(sreq.m_url, cleanUrl );
 
-	long firstIp = hash32n ( cleanUrl );
-	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
-
-	sreq.setKey( firstIp,0LL, false );
-
-	sreq.m_isInjecting   = 1; 
-	sreq.m_isPageInject  = 1;
-	sreq.m_hopCount      = hopCount;
-	sreq.m_hopCountValid = 1;
-	sreq.m_fakeFirstIp   = 1;
-	sreq.m_firstIp       = firstIp;
-
-	sreq.m_addedTime = getTimeGlobal();
-	
 	//static char s_dummy[3];
 	// sometims the content is indeed NULL...
 	//if ( newOnly && ! content ) { 
@@ -2033,6 +2018,42 @@ bool XmlDoc::injectDoc ( char *url ,
 	return true;
 }
 
+// XmlDoc::injectDoc uses a fake spider request so we have to add
+// a real spider request into spiderdb so that the injected doc can
+// be spidered again in the future by the spidering process, otherwise,
+// injected docs can never be re-spidered. they would end up having
+// a SpiderReply in spiderdb but no matching SpiderRequest as well.
+void XmlDoc::getRevisedSpiderRequest ( SpiderRequest *revisedReq ) {
+
+	if ( ! m_sreqValid ) { char *xx=NULL; *xx=0; }
+
+	// we are doing this because it has a fake first ip
+	if ( ! m_sreq.m_fakeFirstIp ) { char *xx=NULL;*xx=0; }
+
+	// copy it over from our current spiderrequest
+	memcpy ( revisedReq , &m_sreq , m_sreq.getRecSize() );
+
+	// this must be valid for us of course
+	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+
+	// store the real ip in there now
+	revisedReq->m_firstIp = m_firstIp;
+
+	// but turn off this flag! the whole point of all this...
+	revisedReq->m_fakeFirstIp = 0;
+
+	// re-make the key since it contains m_firstIp
+	long long uh48 = m_sreq.getUrlHash48();
+	long long parentDocId = m_sreq.getParentDocId();
+
+	// set the key properly to reflect the new "first ip" since
+	// we shard spiderdb by that.
+	revisedReq->m_key = g_spiderdb.makeKey ( m_firstIp,
+						 uh48,
+						 true, // is request?
+						 parentDocId , 
+						 false );// isDel );
+}
 
 ////////////////////////////////////////////////////////////////////
 //   THIS IS THE HEART OF HOW THE PARSER ADDS TO THE RDBS
@@ -2134,21 +2155,13 @@ bool XmlDoc::indexDoc ( ) {
 		}
 		// store the new request (store reply for this below)
 		m_metaList2.pushChar(RDB_SPIDERDB);
-		if ( ! m_sreqValid ) { char *xx=NULL;*xx=0; }
-		// 
-		SpiderRequest sreq;
-		memcpy ( &sreq , &m_sreq , m_sreq.getRecSize() );
-		sreq.m_firstIp = *fip;
-		// but turn off this flag! the whole point of all this...
-		sreq.m_fakeFirstIp = 0;
-		// firstip is part of the key!
-		long long uh48 = sreq.getUrlHash48();
-		sreq.setKey ( sreq.m_firstIp ,
-			      0LL , // parentDocId , 
-			      uh48 , 
-			      false ); // del?
+		// store it here
+		SpiderRequest revisedReq;
+		// this fills it in
+		getRevisedSpiderRequest ( &revisedReq );
 		// and store that new request for adding
-		if ( ! m_metaList2.safeMemcpy ( &sreq , sreq.getRecSize() ) )
+		if ( ! m_metaList2.safeMemcpy (&revisedReq,
+					       revisedReq.getRecSize()))
 			return true;
 	}
 
@@ -20889,21 +20902,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// copy it
 		*m_p++ = RDB_SPIDERDB;
 		// store it here
-		SpiderRequest *stored = (SpiderRequest *)m_p;
-		memcpy ( stored , &m_sreq , m_sreq.getRecSize() );
-		// modify the firstip to be right!
-		if ( ! m_ipValid ) { char *xx=NULL;*xx=0; }
-		stored->m_firstIp = m_ip;
-		// re-make the key since it contains m_firstIp
-		long long uh48 = m_sreq.getUrlHash48();
-		long long parentDocId = m_sreq.getParentDocId();
-		stored->m_key = g_spiderdb.makeKey ( stored->m_firstIp,
-						     uh48,
-						     true, // is request?
-						     parentDocId , 
-						     false );// isDel );
+		SpiderRequest revisedReq;
+		// this fills it in
+		getRevisedSpiderRequest ( &revisedReq );
+		// store it back
+		memcpy ( m_p , &revisedReq , revisedReq.getRecSize() );
 		// skip over it
-		m_p += m_sreq.getRecSize();
+		m_p += revisedReq.getRecSize();
 		// sanity check
 		if ( m_p - saved > needSpiderdb3 ) { char *xx=NULL;*xx=0; }
 	}

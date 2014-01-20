@@ -310,7 +310,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"<center>"
 			"<b>%s Summary</b> (%li transactions)"
 			"</td></tr>"
-			"<tr bgcolor=%s>"
+			"<tr bgcolor=#%s>"
 			"<td><b>niceness</td>"
 			"<td><b>msg type</td>"
 			"<td><b>total</td>"
@@ -339,7 +339,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		dd = //"<td><b>dns ip</b></td>"
 		     "<td><b>hostname</b></td>";
 	}
-	// table headers for urls current being spiderd
+
 	p->safePrintf ( "<table %s>"
 			"<tr class=hdrow><td colspan=19>"
 			"<center>"
@@ -347,7 +347,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"<b>%s</b> (%li transactions)"
 			//"</font>"
 			"</td></tr>"
-			"<tr bgcolor=%s>"
+			"<tr bgcolor=#%s>"
 			"<td><b>age</td>"
 			"<td><b>last read</td>"
 			"<td><b>last send</td>"
@@ -395,9 +395,9 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		if ( s->m_lastReadTime == 0LL ) strcpy ( e1 , "--" );
 		if ( s->m_lastSendTime == 0LL ) strcpy ( e2 , "--" );
 		// bgcolor is lighter for incoming requests
-		char *bg = "#c0c0f0";
+		char *bg = LIGHT_BLUE;//"c0c0f0";
 		// is it incoming
-		if ( ! s->m_callback ) bg = "#e8e8ff";
+		if ( ! s->m_callback ) bg = LIGHTER_BLUE;//"e8e8ff";
 		Host *h = g_hostdb.getHost ( s->m_ip , s->m_port );
 		char           *eip     = "??";
 		unsigned short  eport   =  0 ;

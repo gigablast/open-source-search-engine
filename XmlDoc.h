@@ -484,6 +484,7 @@ class XmlDoc {
 	void setCallback ( void *state, void (*callback) (void *state) ) ;
 	void setCallback ( void *state, bool (*callback) (void *state) ) ;
 	bool addToSpiderdb ( ) ;
+	void getRevisedSpiderRequest ( class SpiderRequest *revisedReq );
 	bool indexDoc ( );
 	bool indexDoc2 ( );
 	key_t *getTitleRecKey() ;

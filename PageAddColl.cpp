@@ -31,7 +31,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	char *msg = NULL;
 
 	// if any host in network is dead, do not do this
-	if ( g_hostdb.hasDeadHost() ) msg = "A host in the network is dead.";
+	//if ( g_hostdb.hasDeadHost() ) msg = "A host in the network is dead.";
 
 	// . are we adding a collection?
 	// . return if error adding, might already exist!

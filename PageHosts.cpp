@@ -424,6 +424,10 @@ skipReplaceHost:
 		if ( fb.length() == 0 )
 			fb.safePrintf("&nbsp;");
 
+		char *bg = LIGHT_BLUE;
+		if ( h->m_ping >= g_conf.m_deadHostTimeout ) 
+			bg = "ffa6a6";
+
 		// print it
 		sb.safePrintf (
 			  "<tr bgcolor=#%s>"
@@ -497,7 +501,7 @@ skipReplaceHost:
 			  //"<td>%lims</td>"
 			  "<td nowrap=1>%s</td>"
 			  "</tr>" , 
-			  LIGHT_BLUE ,
+			  bg,//LIGHT_BLUE ,
 			  ipbuf3, h->m_httpPort, 
 			  coll, sort,
 			  i , 

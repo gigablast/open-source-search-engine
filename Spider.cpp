@@ -130,6 +130,7 @@ long SpiderRequest::print ( SafeBuf *sbarg ) {
 	if ( m_isRSSExt ) sb->safePrintf("ISRSSEXT ");
 	if ( m_isUrlPermalinkFormat ) sb->safePrintf("ISURLPERMALINKFORMAT ");
 	if ( m_isPingServer ) sb->safePrintf("ISPINGSERVER ");
+	if ( m_fakeFirstIp ) sb->safePrintf("ISFAKEFIRSTIP ");
 	if ( m_isInjecting ) sb->safePrintf("ISINJECTING ");
 	if ( m_forceDelete ) sb->safePrintf("FORCEDELETE ");
 	if ( m_sameDom ) sb->safePrintf("SAMEDOM ");
@@ -3218,8 +3219,9 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// it is on
 		m_countingPagesIndexed = true;
 		// reset this
-		m_lastReqUh48 = 0LL;
-		m_lastRepUh48 = 0LL;
+		m_lastReqUh48a = 0LL;
+		m_lastReqUh48b = 0LL;
+		m_lastRepUh48  = 0LL;
 		// and setup the LOCAL counting table if not initialized
 		if ( m_localTable.m_ks == 0 ) 
 			m_localTable.set (4,4,0,NULL,0,false,0,"ltpct" );
@@ -3333,12 +3335,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// we have to maintain a page count table.
 		//
 		if ( m_countingPagesIndexed ) { //&& sreq->m_fakeFirstIp ) {
-			// get request url hash48
+			// get request url hash48 (jez= 220459274533043 )
 			long long uh48 = sreq->getUrlHash48();
-			// skip dups
-			if ( m_lastReqUh48 == uh48 ) continue;
-			// do not repeat count the same url
-			m_lastReqUh48 = uh48;
 			// do not repeatedly page count if we just have
 			// a single fake firstip request. this just adds
 			// an entry to the table that will end up in
@@ -3353,23 +3351,31 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			if ( sreq->m_fakeFirstIp ) continue;
 			// count the manual additions separately. mangle their
 			// hash with 0x123456 so they are separate.
-			if ( (sreq->m_isAddUrl || sreq->m_isInjecting) ) {
-				long h32;
+			if ( (sreq->m_isAddUrl || sreq->m_isInjecting) &&
+			     // unique votes per seed
+			     uh48 != m_lastReqUh48a ) {
+				// do not repeat count the same url
+				m_lastReqUh48a = uh48;
 				// sanity
 				if ( ! sreq->m_siteHash32){char*xx=NULL;*xx=0;}
 				if ( ! sreq->m_domHash32){char*xx=NULL;*xx=0;}
 				// do a little magic because we count
 				// seeds as "manual adds" as well as normal pg
+				long h32;
 				h32 = sreq->m_siteHash32 ^ 0x123456;
 				m_localTable.addScore(&h32);
 				h32 = sreq->m_domHash32 ^ 0x123456;
 				m_localTable.addScore(&h32);
 			}
+			// unique votes per other for quota
+			if ( uh48 == m_lastReqUh48b ) continue;
+			// update this to ensure unique voting
+			m_lastReqUh48b = uh48;
 			// now count pages indexed below here
 			if ( ! srep ) continue;
 			if ( srepUh48 == m_lastRepUh48 ) continue;
 			m_lastRepUh48 = srepUh48;
-			if ( ! srep ) continue;
+			//if ( ! srep ) continue;
 			if ( ! srep->m_isIndexed ) continue;
 			// keep count per site and firstip
 			m_localTable.addScore(&sreq->m_firstIp,1);
@@ -11414,8 +11420,13 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 	reset();
 	// make the probable docid
 	long long probDocId = g_titledb.getProbableDocId ( url );
+
 	// make one up, like we do in PageReindex.cpp
 	long firstIp = (probDocId & 0xffffffff);
+
+	// ensure not crazy
+	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
+
 	// . now fill it up
 	// . TODO: calculate the other values... lazy!!! (m_isRSSExt, 
 	//         m_siteNumInlinks,...)
@@ -11426,6 +11437,10 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 	m_probDocId     = probDocId;
 	m_firstIp       = firstIp;
 	m_hopCount      = 0;
+
+	// new: validate it?
+	m_hopCountValid = 1;
+
 	// its valid if root
 	Url uu; uu.set ( url );
 	if ( uu.isRoot() ) m_hopCountValid = true;
@@ -11463,3 +11478,13 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 
 	return true;
 }
+
+bool SpiderRequest::setFromInject ( char *url ) {
+	// just like add url
+	if ( ! setFromAddUrl ( url ) ) return false;
+	// but fix this
+	m_isAddUrl = 0;
+	m_isInjecting = 1;
+	return true;
+}
+

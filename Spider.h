@@ -721,6 +721,7 @@ class SpiderRequest {
 
 	// returns false and sets g_errno on error
 	bool setFromAddUrl ( char *url ) ;
+	bool setFromInject ( char *url ) ;
 };
 
 // . XmlDoc adds this record to spiderdb after attempting to spider a url
@@ -1111,7 +1112,8 @@ class SpiderColl {
 
 	bool m_countingPagesIndexed;
 	HashTableX m_localTable;
-	long long m_lastReqUh48;
+	long long m_lastReqUh48a;
+	long long m_lastReqUh48b;
 	long long m_lastRepUh48;
 	// move to CollectionRec so it can load at startup and save it
 	//HashTableX m_pageCountTable;
