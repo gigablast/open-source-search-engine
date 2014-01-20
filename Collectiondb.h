@@ -703,8 +703,8 @@ class CollectionRec {
 	//long      m_respiderWaits      [ MAX_FILTERS ];
 	//long      m_numRegExs8;
 	// spidering on or off?
-	long      m_numRegExs7;
-	char      m_spidersEnabled     [ MAX_FILTERS ];
+	//long      m_numRegExs7;
+	//char      m_spidersEnabled     [ MAX_FILTERS ];
 
 	// should urls in this queue be sent to diffbot for processing
 	// when we are trying to index them?

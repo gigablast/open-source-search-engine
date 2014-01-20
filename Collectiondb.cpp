@@ -1698,8 +1698,8 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_spiderIpMaxSpiders[n] = 1;
 	m_numRegExs6++;
 
-	m_spidersEnabled[n] = 1;
-	m_numRegExs7++;
+	//m_spidersEnabled[n] = 1;
+	//m_numRegExs7++;
 
 	m_harvestLinks[n] = 1;
 	m_numRegExs8++;
@@ -2016,7 +2016,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_maxSpidersPerRule [i] = 10;
 		m_spiderIpWaits     [i] = wait;
 		m_spiderIpMaxSpiders[i] = 7; // keep it respectful
-		m_spidersEnabled    [i] = 1;
+		//m_spidersEnabled    [i] = 1;
 		m_spiderFreqs       [i] =m_collectiveRespiderFrequency;
 		//m_spiderDiffbotApiUrl[i].purge();
 		m_harvestLinks[i] = true;
@@ -2044,7 +2044,8 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_spiderPriorities   [i] = 10;
 		// just turn off spidering. if we were to set priority to
 		// filtered it would be removed from index!
-		m_spidersEnabled     [i] = 0;
+		//m_spidersEnabled     [i] = 0;
+		m_maxSpidersPerRule[i] = 0;
 		// temp hack so it processes in xmldoc.cpp::getUrlFilterNum()
 		// which has been obsoleted, but we are running old code now!
 		//m_spiderDiffbotApiUrl[i].set ( api );
@@ -2060,7 +2061,8 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_spiderPriorities   [i] = 10;
 		// just turn off spidering. if we were to set priority to
 		// filtered it would be removed from index!
-		m_spidersEnabled     [i] = 0;
+		//m_spidersEnabled     [i] = 0;
+		m_maxSpidersPerRule[i] = 0;
 		// temp hack so it processes in xmldoc.cpp::getUrlFilterNum()
 		// which has been obsoleted, but we are running old code now!
 		//m_spiderDiffbotApiUrl[i].set ( api );
@@ -2142,7 +2144,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	m_numRegExs10 = i;
 	m_numRegExs5  = i;
 	m_numRegExs6  = i;
-	m_numRegExs7  = i;
+	//m_numRegExs7  = i;
 	m_numRegExs8  = i;
 	//m_numRegExs11 = i;
 

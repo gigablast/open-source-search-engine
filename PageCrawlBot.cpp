@@ -695,7 +695,9 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// when spidering rounds we use the 
 		// lastspidertime>={roundstart} --> spiders disabled rule
 		// so that we do not spider a url twice in the same round
-		if ( ufn >= 0 && ! cr->m_spidersEnabled[ufn] ) {
+		if ( ufn >= 0 && //! cr->m_spidersEnabled[ufn] ) {
+		     // we set this to 0 instead of using the checkbox
+		     cr->m_maxSpidersPerRule[ufn] <= 0 ) {
 			priority = -5;
 		}
 

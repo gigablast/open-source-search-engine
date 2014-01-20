@@ -1165,6 +1165,8 @@ class XmlDoc {
 	bool m_spideredTimeValid;
 	//bool m_nextSpiderTimeValid;
 	bool m_firstIndexedValid;
+	bool m_isInIndexValid;
+	bool m_wasInIndexValid;
 	bool m_outlinksAddedDateValid;
 	bool m_countryIdValid;
 	/*
@@ -1431,6 +1433,12 @@ class XmlDoc {
 	//char   *m_contactTitleRec;
 	//long    m_contactTitleRecSize;
 	char    m_isIndexed;
+
+	// confusing, i know! these are used exclsusively by
+	// getNewSpiderReply() for now
+	char m_isInIndex;
+	char m_wasInIndex;
+
 	Msg8a   m_msg8a;
 	char   *m_tagdbColl;
 	long    m_tagdbCollLen;

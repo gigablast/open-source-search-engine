@@ -19495,6 +19495,12 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			m_contentHash32      = m_sreq.m_contentHash32;
 			m_contentHash32Valid = true;
 		}
+		// we need these got getNewSpiderReply()
+		m_wasInIndex = false;
+		if ( od ) m_wasInIndex = true;
+		m_isInIndex       = m_wasInIndex;
+		m_wasInIndexValid = true;
+		m_isInIndexValid  = true;
 		// get our spider reply
 		SpiderReply *newsr = getNewSpiderReply();
 		// return on error
@@ -19876,6 +19882,16 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	if ( ! nd )
 		spideringLinks = false;
+
+	// set these for getNewSpiderReply() so it can set
+	// SpiderReply::m_wasIndexed and m_isIndexed...
+	m_wasInIndex = false;
+	m_isInIndex  = false;
+	if ( od ) m_wasInIndex = true;
+	if ( nd ) m_isInIndex  = true;
+	m_wasInIndexValid = true;
+	m_isInIndexValid  = true;
+
 
 	// if we are adding a simplified redirect as a link to spiderdb
 	if ( m_indexCode == EDOCSIMPLIFIEDREDIR )
@@ -21650,7 +21666,6 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	SafeBuf *dbr = getDiffbotReply();
 	if ( ! dbr || dbr == (void *)-1 ) return (SpiderReply *)dbr;
 	
-
 	// was the doc index when we started trying to spider this url?
 	//char *wasIndexed = getIsIndexed();
 	//if ( ! wasIndexed || wasIndexed == (void *)-1 ) 
@@ -21781,9 +21796,12 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	else
 		m_srep.m_hadDiffbotError = false;
 
-	m_srep.m_wasIndexed = false;
+	// sanity
+	if ( ! m_wasInIndexValid ) { char *xx=NULL;*xx=0; }
+	if ( ! m_isInIndexValid  ) { char *xx=NULL;*xx=0; }
 
-	if ( m_oldDocValid && m_oldDoc ) m_srep.m_wasIndexed = true;
+	// were we already in titledb before we started spidering?
+	m_srep.m_wasIndexed = m_wasInIndex;
 
 	// note whether m_wasIndexed is valid because if it isn't then
 	// we shouldn't be counting this reply towards the page counts.
@@ -21792,13 +21810,14 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// this is an EFAKEFIRSTIP error or something similar where we
 	// basically just add this reply and we're done.
 	// NOTE: this also pertains to SpiderReply::m_isIndexed.
-	if ( m_oldDocValid ) m_srep.m_wasIndexedValid = true;
+	m_srep.m_wasIndexedValid = true;
+
+	// assume no change
+	m_srep.m_isIndexed = m_isInIndex;
 
 	// likewise, we need to know if we deleted it so we can decrement the
 	// quota count for this subdomain/host in SpiderColl::m_quotaTable
-	if ( m_srep.m_wasIndexed ) m_srep.m_isIndexed = true;
-
-	if ( m_didDelete ) m_srep.m_isIndexed = false;
+	//if ( m_srep.m_wasIndexed ) m_srep.m_isIndexed = true;
 
 	// treat error replies special i guess, since langId, etc. will be
 	// invalid

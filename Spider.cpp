@@ -3244,7 +3244,9 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	     m_lastScanningIp == m_scanningIp &&
 	     m_lastListSize < (long)SR_READ_SIZE &&
 	     m_lastListSize >= 0 ) {
-		char *xx=NULL;*xx=0; }
+		//char *xx=NULL;*xx=0; }
+		log("spider: shucks. spiderdb reads not full.");
+	}
 
 	m_lastListSize = list->getListSize();
 	m_lastScanningIp = m_scanningIp;
@@ -3476,7 +3478,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		if ( priority >= MAX_SPIDER_PRIORITIES) {char *xx=NULL;*xx=0;}
 
 		// spiders disabled for this row in url filteres?
-		if ( ! m_cr->m_spidersEnabled[ufn] ) continue;
+		//if ( ! m_cr->m_spidersEnabled[ufn] ) continue;
+		if ( m_cr->m_maxSpidersPerRule[ufn] <= 0 ) continue;
 
 		// skip if banned
 		if ( priority == SPIDER_PRIORITY_FILTERED ) continue;
@@ -3759,7 +3762,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// sanity
 		if ( (long long)winTimeMS < 0 ) { char *xx=NULL;*xx=0; }
 		// note it
-		if ( g_conf.m_logDebugSpider )
+		if ( g_conf.m_logDebugSpider ) {
 			log("spider: found winning request ip=%s "
 			    "spiderTimeMS=%lli "
 			    "pri=%li uh48=%lli url=%s",
@@ -3768,6 +3771,9 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			    (long)m_bestRequest->m_priority,
 			    m_bestRequest->getUrlHash48(),
 			    m_bestRequest->m_url);
+			// debug why not sticking to our site!
+			if ( strstr(m_bestRequest->m_url,"//www.jezebelgallery.com") == NULL ) { char *xx=NULL;*xx=0; }
+		}
 	}
 	else if ( g_conf.m_logDebugSpider ) {
 		log("spider: did not find winning request for %s but "
@@ -5061,7 +5067,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	long max = 0;
 	for ( long i =0 ; i < cr->m_numRegExs ; i++ ) {
 		if ( cr->m_spiderPriorities[i] != m_sc->m_pri2 ) continue;
-		if ( ! cr->m_spidersEnabled[i] ) continue;
+		//if ( ! cr->m_spidersEnabled[i] ) continue;
 		if ( cr->m_maxSpidersPerRule[i] > max )
 			max = cr->m_maxSpidersPerRule[i];
 	}
@@ -5396,7 +5402,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	long maxSpidersOutPerIp = 1;
 	for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
 		if ( cr->m_spiderPriorities[i] != m_sc->m_pri2 ) continue;
-		if ( ! cr->m_spidersEnabled[i] ) continue;
+		//if ( ! cr->m_spidersEnabled[i] ) continue;
 		if ( cr->m_maxSpidersPerRule[i] > max )
 			max = cr->m_maxSpidersPerRule[i];
 		if ( cr->m_spiderIpWaits[i] < sameIpWaitTime )
@@ -9993,9 +9999,11 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 				getValue(&sreq->m_siteHash32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
-			if ( ! valPtr ) continue;//{ char *xx=NULL;*xx=0; }
+			long a;
+			if ( ! valPtr ) a = 0;//{ char *xx=NULL;*xx=0; }
+			else a = *valPtr;
 			// shortcut
-			long a = *valPtr;
+			log("sitepgs=%li for %s",a,sreq->m_url);
 			// what is the provided value in the url filter rule?
 			long b = atoi(s);
 			// compare

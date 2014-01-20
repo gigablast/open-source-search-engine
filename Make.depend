@@ -1325,13 +1325,14 @@ Mem.o: Mem.cpp gb-include.h types.h fctypes.h Unicode.h \
  openssl/pem2.h openssl/hmac.h openssl/kssl.h openssl/ssl2.h \
  openssl/ssl3.h openssl/tls1.h openssl/dtls1.h openssl/pqueue.h \
  openssl/ssl23.h openssl/srtp.h Collectiondb.h HashTableX.h PingServer.h \
- Threads.h malloc.c Msg20.h UdpServer.h UdpSlot.h UdpProtocol.h \
- Multicast.h Summary.h matches2.h Query.h Words.h StopWords.h Titledb.h \
- Rdb.h RdbBase.h RdbScan.h BigFile.h RdbMap.h RdbList.h RdbDump.h \
- RdbTree.h RdbMem.h RdbBuckets.h RdbCache.h Msg5.h Msg3.h RdbMerge.h \
- Dir.h DiskPageCache.h Bits.h Pos.h Matches.h HashTableT.h Domains.h \
- CountryCode.h Tagdb.h Msg0.h Indexdb.h Events.h Sections.h IndexList.h \
- Dates.h
+ Threads.h Pages.h HttpServer.h TcpServer.h openssl/err.h MsgC.h \
+ UdpServer.h UdpSlot.h UdpProtocol.h Dns.h DnsProtocol.h RdbCache.h \
+ RdbList.h Multicast.h Rdb.h RdbBase.h RdbScan.h BigFile.h RdbMap.h \
+ RdbDump.h RdbTree.h RdbMem.h RdbBuckets.h Msg5.h Msg3.h RdbMerge.h Dir.h \
+ HttpMime.h PageCrawlBot.h malloc.c Msg20.h Summary.h matches2.h Query.h \
+ Words.h StopWords.h Titledb.h DiskPageCache.h Bits.h Pos.h Matches.h \
+ HashTableT.h Domains.h CountryCode.h Tagdb.h Msg0.h Indexdb.h Events.h \
+ Sections.h IndexList.h Dates.h
 MemPool.o: MemPool.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h MemPool.h \
  MemPoolTree.h Mem.h Conf.h Xml.h XmlNode.h Lang.h Iso8859.h \
@@ -3178,7 +3179,8 @@ RdbBase.o: RdbBase.cpp gb-include.h types.h fctypes.h Unicode.h \
  Repair.h XmlDoc.h Phrases.h LangList.h Images.h Msg36.h Msg13.h Msge0.h \
  Msge1.h MsgC.h Dns.h DnsProtocol.h Msg8b.h SearchInput.h Msg40.h Msg39.h \
  Msg37.h TopTree.h IndexTable2.h Msg51.h Msg17.h Msg3a.h \
- PostQueryRerank.h Sanity.h SiteGetter.h Title.h Address.h HttpMime.h
+ PostQueryRerank.h Sanity.h SiteGetter.h Title.h Address.h HttpMime.h \
+ Rebalance.h
 RdbBuckets.o: RdbBuckets.cpp RdbBuckets.h Mem.h Conf.h Xml.h XmlNode.h \
  gb-include.h types.h fctypes.h Unicode.h UnicodeProperties.h \
  UCPropTable.h iconv.h hash.h Errno.h Log.h Lang.h Iso8859.h \
