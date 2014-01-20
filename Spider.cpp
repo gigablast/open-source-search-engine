@@ -1744,37 +1744,6 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	//   crawl more vigorously...
 	//if ( srep->m_crawlDelayMS >= 0 ) {
 
-	///////
-	//
-	// update page count table
-	//
-	///////
-	if ( srep->m_wasIndexed && 
-	     ! srep->m_isIndexed &&
-	     srep->m_wasIndexedValid ) {
-		if ( m_scanningIp == srep->m_firstIp )
-			log("spider: crap. got reply for ip counting pages");
-		m_cr->m_pageCountTable.addScore ( &srep->m_domHash32 , -1 );
-		m_cr->m_pageCountTable.addScore ( &srep->m_siteHash32 , -1 );
-		m_cr->m_pageCountTable.addScore ( &srep->m_firstIp , -1 );
-		// debug note
-		log("spider: pct: adding -1 for %lu",srep->m_domHash32);
-		log("spider: pct: adding -1 for %lu",srep->m_siteHash32);
-	}
-	else if ( ! srep->m_wasIndexed && 
-		  srep->m_isIndexed &&
-		  srep->m_wasIndexedValid ) {
-		if ( m_scanningIp == srep->m_firstIp )
-			log("spider: crap. got reply for ip counting pages");
-		m_cr->m_pageCountTable.addScore ( &srep->m_domHash32 , 1 );
-		m_cr->m_pageCountTable.addScore ( &srep->m_siteHash32 , 1 );
-		m_cr->m_pageCountTable.addScore ( &srep->m_firstIp , 1 );
-		// debug note
-		log("spider: pct: adding 1 for %lu",srep->m_domHash32);
-		log("spider: pct: adding 1 for %lu",srep->m_siteHash32);
-	}
-
-
 	bool update = false;
 	// use the domain hash for this guy! since its from robots.txt
 	long *cdp = (long *)m_cdTable.getValue32(srep->m_domHash32);
@@ -2759,6 +2728,31 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 	m_nextKey = g_spiderdb.makeFirstKey(ip);
 	m_endKey  = g_spiderdb.makeLastKey (ip);
 
+	//////
+	//
+	// do TWO PASSES, one to count pages, the other to get the best url!!
+	//
+	//////
+	// assume we don't have to do two passes
+	m_countingPagesIndexed = false;
+	// get the collectionrec
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	// but if we have quota based url filters we do have to count
+	if ( cr && cr->m_urlFiltersHavePageCounts ) {
+		// tell scanSpiderdb() to count first
+		m_countingPagesIndexed = true;
+		// reset this stuff used for counting UNIQUE votes
+		m_lastReqUh48a = 0LL;
+		m_lastReqUh48b = 0LL;
+		m_lastRepUh48  = 0LL;
+		// and setup the LOCAL counting table if not initialized
+		if ( m_localTable.m_ks == 0 ) 
+			m_localTable.set (4,4,0,NULL,0,false,0,"ltpct" );
+		// otherwise, just reset it so we can repopulate it
+		else m_localTable.reset();
+	}
+
+
 	// debug output
 	if ( g_conf.m_logDebugSpider )
 		log(LOG_DEBUG,"spider: scanSpiderdb: waitingtree nextip=%s "
@@ -2832,6 +2826,11 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 	m_gotNewRequestsForScanningIp = false;
 
 	m_lastListSize = -1;
+
+
+	// we always need quota info
+
+
 
 	// . look up in spiderdb otherwise and add best req to doledb from ip
 	// . if it blocks ultimately it calls gotSpiderdbListWrapper() which
@@ -3204,39 +3203,6 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 				false );
 	}
 
-
-
-	// if we do not have a pg count entry for this then enter count mode
-	// where we just scan all the spider records for m_scanningIp
-	// and count how many pages are in the index for each subdomain/site
-	// and when it is over we re-do the scan from the top. 
-	m_countingPagesIndexed = false;
-	// don't bother with this stuff though if url filters do not specify 
-	// "pagesinip" or "pagesinsubdomain"
-	if ( cr->m_urlFiltersHavePageCounts &&
-	     // and only do this if we do not have an entry for this ip yet
-	     ! cr->m_pageCountTable.isInTable ( &m_scanningIp ) ) {
-		// it is on
-		m_countingPagesIndexed = true;
-		// reset this
-		m_lastReqUh48a = 0LL;
-		m_lastReqUh48b = 0LL;
-		m_lastRepUh48  = 0LL;
-		// and setup the LOCAL counting table if not initialized
-		if ( m_localTable.m_ks == 0 ) 
-			m_localTable.set (4,4,0,NULL,0,false,0,"ltpct" );
-		// do not recompute this in case all records for this ip
-		// are missing or have issues, like maybe there was only
-		// a spiderreply
-		//if ( ! cr->m_pageCountTable.addScore( &m_scanningIp,1)){
-		//	log("spider: error adding to pg cnt tbl: %s",
-		//	    mstrerror(g_errno));
-		//	return;
-		//}
-	}
-
-	     
-
 	// if we don't read minRecSizes worth of data that MUST indicate
 	// there is no more data to read. put this theory to the test
 	// before we use it to indcate an end of list condition.
@@ -3345,9 +3311,9 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			// m_pageCountTable so we avoid doing this count
 			// again over and over. also gives url filters
 			// table a zero-entry...
-			m_localTable.addScore(&sreq->m_firstIp,0);
-			m_localTable.addScore(&sreq->m_siteHash32,0);
-			m_localTable.addScore(&sreq->m_domHash32,0);
+			//m_localTable.addScore(&sreq->m_firstIp,0);
+			//m_localTable.addScore(&sreq->m_siteHash32,0);
+			//m_localTable.addScore(&sreq->m_domHash32,0);
 			// only add dom/site hash seeds if it is
 			// a fake firstIp to avoid double counting seeds
 			if ( sreq->m_fakeFirstIp ) continue;
@@ -3462,8 +3428,14 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// . if this is slow see the TODO below in dedupSpiderdbList()
 		//   which can pre-store these values assuming url filters do
 		//   not change and siteNumInlinks is about the same.
-		long ufn = ::getUrlFilterNum(sreq,srep,nowGlobal,false,
-					     MAX_NICENESS,m_cr);
+		long ufn = ::getUrlFilterNum(sreq,
+					     srep,
+					     nowGlobal,
+					     false,
+					     MAX_NICENESS,
+					     m_cr,
+					     // provide the page quota table
+					     &m_localTable);
 		// sanity check
 		if ( ufn == -1 ) { 
 			log("spider: failed to match url filter for "
@@ -3845,24 +3817,6 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	if ( m_countingPagesIndexed ) {
 		// now try to get a winning rec if we computed the page counts
 		m_countingPagesIndexed = false;
-		// . add our counts into our global hashtable
-		// . we keep a local hashtable for all subdomains (sites)
-		//   from this firstIp then we add them to the global hash
-		//   table when the scan completes
-		for ( long i = 0 ; i < m_localTable.getNumSlots() ; i++ ) {
-			// skip empty hash buckets
-			if ( ! m_localTable.m_flags[i] ) continue;
-			// transfer to global table
-			long *key = (long *)m_localTable.getKeyFromSlot(i);
-			long *cnt = (long *)m_localTable.getValueFromSlot(i);
-			// this will overwrite anything there
-			cr->m_pageCountTable.addKey ( key , cnt );
-			log("spider: pct: set %li for %lu",*cnt,*key);
-		}
-		// free local hash table memory
-		m_localTable.reset();
-		// pagecount table is updated, collrec needs save now
-		cr->m_needsSave = 1;
 		// start at the top again
 		m_nextKey = g_spiderdb.makeFirstKey(m_scanningIp);
 		// read the list again from the very top for this ip
@@ -9089,7 +9043,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		       bool           isForMsg20 ,
 		       long           niceness   ,
 		       CollectionRec *cr         ,
-		       bool           isOutlink  ) {
+			bool           isOutlink  ,
+			HashTableX   *quotaTable ) {
 
 	// convert lang to string
 	char *lang    = NULL;
@@ -9914,10 +9869,11 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[5] == 'd' &&
 		     p[6] == 'd' &&
 		     p[7] == 's' ) {
+			// need a quota table for this
+			if ( ! quotaTable ) continue;
 			// a special hack so it is seeds so we can use same tbl
 			long h32 = sreq->m_siteHash32 ^ 0x123456;
-			long *valPtr ;
-			valPtr =(long *)cr->m_pageCountTable.getValue(&h32);
+			long *valPtr =(long *)quotaTable->getValue(&h32);
 			long a;
 			// if no count in table, that is strange, i guess
 			// skip for now???
@@ -9955,10 +9911,12 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[7] == 'd' &&
 		     p[8] == 'd' &&
 		     p[9] == 's' ) {
+			// need a quota table for this
+			if ( ! quotaTable ) continue;
 			// a special hack so it is seeds so we can use same tbl
 			long h32 = sreq->m_domHash32 ^ 0x123456;
 			long *valPtr ;
-			valPtr = (long *)cr->m_pageCountTable.getValue(&h32);
+			valPtr = (long *)quotaTable->getValue(&h32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
 			if ( ! valPtr ) continue;//{ char *xx=NULL;*xx=0; }
@@ -9994,8 +9952,9 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[6] == 'g' &&
 		     p[7] == 'e' &&
 		     p[8] == 's' ) {
-			long *valPtr ;
-			valPtr=(long *)cr->m_pageCountTable.
+			// need a quota table for this
+			if ( ! quotaTable ) continue;
+			long *valPtr = (long *)quotaTable->
 				getValue(&sreq->m_siteHash32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
@@ -10033,9 +9992,10 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[8] == 'g' &&
 		     p[9] == 'e' &&
 		     p[10] == 's' ) {
+			// need a quota table for this
+			if ( ! quotaTable ) continue;
 			long *valPtr ;
-			valPtr=(long *)cr->m_pageCountTable.
-				getValue(&sreq->m_domHash32);
+			valPtr=(long*)quotaTable->getValue(&sreq->m_domHash32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
 			if ( ! valPtr ) continue;//{ char *xx=NULL;*xx=0; }
@@ -10628,7 +10588,8 @@ long getUrlFilterNum ( SpiderRequest *sreq       ,
 		       bool           isForMsg20 ,
 		       long           niceness   ,
 		       CollectionRec *cr         ,
-		       bool           isOutlink  ) {
+		       bool           isOutlink  ,
+		       HashTableX    *quotaTable ) {
 
 	/*
 	  turn this off for now to save memory on the g0 cluster.
@@ -10660,7 +10621,8 @@ long getUrlFilterNum ( SpiderRequest *sreq       ,
 				      isForMsg20,
 				      niceness,
 				      cr,
-				      isOutlink);
+				      isOutlink,
+				      quotaTable );
 
 	/*
 	// is table full? clear it if so

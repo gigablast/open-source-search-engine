@@ -99,7 +99,7 @@ bool sendPagePerf ( TcpSocket *s , HttpRequest *r ) {
 	//skip request path
 	while (!isspace(*rbufEnd)) rbufEnd++;
 	*rbufEnd = '\0';
-	char* refresh = strstr(rbuf, "&rr=");
+	//char* refresh = strstr(rbuf, "&rr=");
 
 
 	// print resource table

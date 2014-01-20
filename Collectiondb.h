@@ -358,7 +358,7 @@ class CollectionRec {
 	bool m_urlFiltersHavePageCounts;
 
 	// moved from SpiderColl so we can load up at startup
-	HashTableX m_pageCountTable;
+	//HashTableX m_pageCountTable;
 
 	// . when was the last time we changed?
 	//long long m_lastUpdateTime;

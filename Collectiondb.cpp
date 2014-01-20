@@ -1437,7 +1437,7 @@ void CollectionRec::reset() {
 
 	// . grows dynamically
 	// . setting to 0 buckets should never have error
-	m_pageCountTable.set ( 4,4,0,NULL,0,false,MAX_NICENESS,"pctbl" );
+	//m_pageCountTable.set ( 4,4,0,NULL,0,false,MAX_NICENESS,"pctbl" );
 
 	// regex_t types
 	if ( m_hasucr ) regfree ( &m_ucr );
@@ -1536,11 +1536,11 @@ bool CollectionRec::load ( char *coll , long i ) {
 	//
 	/////////////
 	// log it up if there on disk
-	snprintf ( tmp1 , 1023, "/coll.%s.%li/pagecounts.dat",
-		   m_coll , (long)m_collnum );
-	if ( ! m_pageCountTable.load ( g_hostdb.m_dir , tmp1 ) && g_errno )
-		log("db: failed to load page count table: %s",
-		    mstrerror(g_errno));
+	//snprintf ( tmp1 , 1023, "/coll.%s.%li/pagecounts.dat",
+	//	   m_coll , (long)m_collnum );
+	//if ( ! m_pageCountTable.load ( g_hostdb.m_dir , tmp1 ) && g_errno )
+	//	log("db: failed to load page count table: %s",
+	//	    mstrerror(g_errno));
 
 	// ignore errors i guess
 	g_errno = 0;
@@ -1803,12 +1803,12 @@ bool CollectionRec::save ( ) {
 	
 	// save page count table which has # of pages indexed per 
 	// subdomain/site and firstip for doing quotas in url filters table
-	snprintf ( tmp , 1023, "coll.%s.%li/pagecounts.dat",
-		   m_coll , (long)m_collnum );
-	if ( ! m_pageCountTable.save ( g_hostdb.m_dir , tmp ) ) {
-		log("db: failed to save file %s : %s",tmp,mstrerror(g_errno));
-		g_errno = 0;
-	}
+	//snprintf ( tmp , 1023, "coll.%s.%li/pagecounts.dat",
+	//	   m_coll , (long)m_collnum );
+	//if ( ! m_pageCountTable.save ( g_hostdb.m_dir , tmp ) ) {
+	//	log("db: failed to save file %s : %s",tmp,mstrerror(g_errno));
+	//	g_errno = 0;
+	//}
 
 
 	// do not need a save now
