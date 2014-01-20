@@ -242,10 +242,10 @@ bool getSpiderStatusMsg ( class CollectionRec *cx ,
 // can spider any request/url in doledb provided they get the lock.
 
 
-// scanSpiderdb()
+// evalIpLoop()
 //
 // The waiting tree is populated at startup by scanning spiderdb (see
-// SpiderColl::scanSpiderdb()), which might take a while to complete, 
+// SpiderColl::evalIpLoop()), which might take a while to complete, 
 // so it is running in the background while the gb server is up. it will
 // log "10836674298 spiderdb bytes scanned for waiting tree re-population"
 // periodically in the log as it tries to do a complete spiderdb scan 
@@ -255,7 +255,7 @@ bool getSpiderStatusMsg ( class CollectionRec *cx ,
 // It will also perform a background scan if the admin changes the url
 // filters table, which dictates that we recompute everything.
 //
-// scanSpiderdb() will recompute the "url filter number" (matching row)
+// evalIpLoop() will recompute the "url filter number" (matching row)
 // in the url filters table for each url in each SpiderRequest it reads.
 // it will ignore spider requests whose urls
 // are "filtered" or "banned". otherwise they will have a spider priority >= 0.
@@ -270,18 +270,18 @@ bool getSpiderStatusMsg ( class CollectionRec *cx ,
 // by preferring those with the highest priority. Tied spider priorities
 // should be resolved by minimum hopCount probably. 
 //
-// If the spidertime of the URL is overdue then scanSpiderdb() will NOT add
+// If the spidertime of the URL is overdue then evalIpLoop() will NOT add
 // it to waiting tree, but will add it to doledb directly to make it available
 // for spidering immediately. It calls m_msg4.addMetaList() to add it to 
 // doledb on all hosts in its group (shard). It uses s_ufnTree for keeping 
 // track of the best urls to spider for a given IP/spiderPriority.
 //
-// scanSpiderdb() can also be called with its m_nextKey/m_endKey limited
+// evalIpLoop() can also be called with its m_nextKey/m_endKey limited
 // to just scan the SpiderRequests for a specific IP address. It does
 // this after adding a SpiderReply. addSpiderReply() calls addToWaitingTree()
 // with the "0" time entry, and addToWaitingTree() calls 
 // populateDoledbFromWaitingTree() which will see that "0" entry and call
-// scanSpiderdb(true) after setting m_nextKey/m_endKey for that IP.
+// evalIpLoop(true) after setting m_nextKey/m_endKey for that IP.
 
 
 
@@ -289,7 +289,7 @@ bool getSpiderStatusMsg ( class CollectionRec *cx ,
 //
 // SpiderColl::populateDoledbFromWaitingTree() scans the waiting tree for
 // entries whose spider time is due. so it gets the IP address and spider
-// priority from the waiting tree. but then it calls scanSpiderdb() 
+// priority from the waiting tree. but then it calls evalIpLoop() 
 // restricted to that IP (using m_nextKey,m_endKey) to get the best
 // SpiderRequest from spiderdb for that IP to add to doledb for immediate 
 // spidering. populateDoledbFromWaitingTree() is called a lot to try to
@@ -1029,7 +1029,8 @@ class SpiderColl {
 	// for scanning the wait tree...
 	bool m_isPopulating;
 	// for reading from spiderdb
-	bool m_isReadDone;
+	//bool m_isReadDone;
+	bool m_didRead;
 
 	Msg4 m_msg4;
 	Msg1 m_msg1;
@@ -1129,8 +1130,17 @@ class SpiderColl {
 	bool addToWaitingTree    ( uint64_t spiderTime , long firstIp ,
 				   bool callForScan );
 	long getNextIpFromWaitingTree ( );
-	void populateDoledbFromWaitingTree ( bool reentry );
-	bool scanSpiderdb        ( bool needList );
+	void populateDoledbFromWaitingTree ( );
+
+	//bool scanSpiderdb        ( bool needList );
+
+
+	// broke up scanSpiderdb into simpler functions:
+	bool evalIpLoop ( ) ;
+	bool readListFromSpiderdb ( ) ;
+	bool scanListForWinners ( ) ;
+	bool addWinnerToDoledb ( ) ;
+
 
 	void populateWaitingTreeFromSpiderdb ( bool reentry ) ;
 
