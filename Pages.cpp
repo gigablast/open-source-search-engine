@@ -913,7 +913,9 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	if ( user ) pwd = user->m_password;
 
 	sb->safePrintf(
-		     "<html>\n"
+		       "<html>\n");
+
+	sb->safePrintf(
 		     "<head>\n"
 		     "<title>%s | gigablast admin</title>\n"
 		     "<meta http-equiv=\"Content-Type\" "
@@ -1069,17 +1071,20 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 		       "<TR>"
 		       "<TD valign=top>"
 		       "<div "
-		       "style="
+		       "style=\""
 		       "max-height:600px;"
 		       "max-width:200px;"
 		       "min-width:200px;"
 		       "padding:4px;" // same as TABLE_STYLE
-		       "background-color:#c0c0c0;"
+		       "background-color:#d0d0d0;"
 		       "border-radius:10px;"
-		       "border-width:2px;"
-		       "border-color:#606060;"
+		       "border:2px #606060 solid;"
+		       //"border-width:2px;"
+		       //"border-color:#606060;"
 		       "overflow-y:auto;"
 		       "overflow-x:hidden;"
+		       "line-height:23px;"
+		       "\""
 		       ">"
 		       );
 	// collection under that
@@ -2043,6 +2048,10 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	//if ( page >= PAGE_CGIPARMS ) color = "red";
 	//else                         color = "black";
 
+	// style for printing collection names
+	sb->safePrintf("<style>.x{text-decoration:none;font-weight:bold;}"
+		       "</style>\n");
+
 	//for ( long i = a ; i < b ; i++ ) {
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
@@ -2056,6 +2065,7 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 
 		if ( i != collnum || ! highlight )// || ! coll || ! coll[0])
 			sb->safePrintf ( "<a title=\"%s\" "
+					 "class=x "
 					 "href=\"/%s?c=%s%s\">%s"
 				  "</a> &nbsp;",
 					 cname,
@@ -2063,8 +2073,8 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 					 cname ,
 					 qs, cname );
 		else
-			sb->safePrintf ( "<b><font title=\"%s\" "
-					 "color=%s>%s</font></b> "
+			sb->safePrintf ( "<u><b><font title=\"%s\" "
+					 "color=%s>%s</font></b></u> "
 					 "&nbsp; ",  
 					 cname, color , cname );
 		sb->safePrintf("</nobr>");
