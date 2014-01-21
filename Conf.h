@@ -216,6 +216,7 @@ class Conf {
 	//long long  m_tfndbMaxUrls;
 
 	long  m_maxCpuThreads;
+	long  m_maxCpuMergeThreads;
 
 	long  m_deadHostTimeout;
 	long  m_sendEmailTimeout;

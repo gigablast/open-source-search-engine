@@ -284,7 +284,12 @@ bool Threads::init ( ) {
 	//   with high niceness cuz it would hold up high priority ones!
 	// . TODO: is there a better way? cancel it when UdpServer calls
 	//   Threads::suspendLowPriorityThreads() ?
-	if ( ! g_threads.registerType ( MERGE_THREAD , 2/*maxThreads*/,1000) ) 
+	// . this used to be 2 but now defaults to 10 in Parms.cpp. i found
+	//   i have less long gray lines in the performance graph when i
+	//   did that on trinity.
+	long max2 = g_conf.m_maxCpuMergeThreads;
+	if ( max2 < 1 ) max2 = 1;
+	if ( ! g_threads.registerType ( MERGE_THREAD , max2,1000) ) 
 		return log("thread: Failed to register thread type." );
 	// will raising this from 1 to 2 make it faster too?
 	// i raised since global specs new servers have 2 (hyperthreaded?) cpus
