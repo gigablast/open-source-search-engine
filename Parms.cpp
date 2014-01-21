@@ -7902,11 +7902,11 @@ void Parms::init ( ) {
 	m->m_title = "max cpu merge threads";
 	m->m_desc  = "Maximum number of threads to use per Gigablast process "
 		"for merging lists read from disk.";
-	m->m_cgi   = "mct";
+	m->m_cgi   = "mcmt";
 	m->m_off   = (char *)&g_conf.m_maxCpuMergeThreads - g;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "10";
-	m->m_units = "mcmt";
+	m->m_units = "threads";
 	m->m_min   = 1;
 	m->m_flags = PF_HIDDEN;
 	m++;
