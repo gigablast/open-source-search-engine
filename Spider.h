@@ -505,8 +505,28 @@ class SpiderRequest {
 	// . this is zero if none or invalid
 	long    m_contentHash32;
 
+	/*
+	char    m_reserved1;
+
+	// the new add url control will allow user to control link spidering
+	// on each url they add. they can also specify file:// instead of
+	// http:// to index local files. so we have to allow file://
+	char    m_onlyAddSameDomainLinks        :1;
+	char    m_onlyAddSameSubdomainLinks     :1;
+	char    m_onlyDoNotAddLinksLinks        :1; // max hopcount 1
+	char    m_onlyDoNotAddLinksLinksLinks   :1; // max hopcount 2
+	char    m_reserved2d:1;
+	char    m_reserved2e:1;
+	char    m_reserved2f:1;
+	char    m_reserved2g:1;
+	char    m_reserved2h:1;
+
+
 	// . each request can have a different hop count
 	// . this is only valid if m_hopCountValid is true!
+	short   m_hopCount;
+	*/
+	
 	long    m_hopCount;
 
 	// . this is now computed dynamically often based on the latest

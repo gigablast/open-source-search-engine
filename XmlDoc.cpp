@@ -22489,7 +22489,11 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		ksr.m_probDocId = g_titledb.getProbableDocId(&url);
 
 		//ksr.m_pageNumInlinks = 0;
-		ksr.m_hopCount         = m_hopCount + 1;
+
+		// hop count is now 16 bits so do not wrap that around
+		long hc = m_hopCount + 1;
+		if ( hc > 65535 ) hc = 65535;
+		ksr.m_hopCount         = hc;
 
 		if ( issiteroot   ) ksr.m_hopCount = 0;
 		if ( ispingserver ) ksr.m_hopCount = 0;

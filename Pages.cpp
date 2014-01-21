@@ -2067,16 +2067,26 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 
 	// style for printing collection names
 	sb->safePrintf("<style>.x{text-decoration:none;font-weight:bold;}"
+		       ".e{background-color:#e0e0e0;}"
 		       "</style>\n");
+
+	long row = 0;
 
 	//for ( long i = a ; i < b ; i++ ) {
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
 		char *cname = cc->m_coll;
+
+		row++;
+
 		//if ( p + gbstrlen(cname) + 100 >= pend ) return p;
 		// collection name HACK for backwards compatibility
 		//if ( ! cname[0] ) cname = "main";
+
+		// every other coll in a darker div
+		if ( (row % 2) == 0 )
+			sb->safePrintf("<div class=e>");
 
 		sb->safePrintf("<nobr>");
 
@@ -2095,7 +2105,12 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 					 "&nbsp; ",  
 					 cname, color , cname );
 		sb->safePrintf("</nobr>");
-		sb->safePrintf("<br>\n");
+
+		// every other coll in a darker div
+		if ( (row % 2) == 0 )
+			sb->safePrintf("</div>");
+		else
+			sb->safePrintf("<br>\n");
 	}
 
 	//sb->safePrintf ( "</center><br/>" );
