@@ -17207,7 +17207,9 @@ long *XmlDoc::getUrlFilterNum ( ) {
 	// . use the old spidered date for "nowGlobal" so we can be consistent
 	//   for injecting into the "test" coll
 	long ufn = ::getUrlFilterNum ( oldsr,&fakeReply,spideredTime,false,
-				       m_niceness,cr);
+				       m_niceness,cr,
+				       false, // isOutlink?
+				       NULL);
 
 	// put it back
 	//newsr->m_spideredTime = saved;
@@ -20904,11 +20906,51 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	verifyMetaList( m_metaList , m_p );
 	*/
 
+	//////
+	//
+	// add SPIDERREPLY BEFORE and SPIDERREQUEST!!!
+	//
+	// add spider reply first so we do not immediately respider
+	// this same url if we were injecting it because no SpiderRequest
+	// may have existed, and SpiderColl::addSpiderRequest() will 
+	// spawn a spider of this url again unless there is already a REPLY
+	// in spiderdb!!! crazy...
+	bool addReply = true;
+	// Scraper.cpp uses this
+	if ( m_sreqValid && m_sreq.m_isScraping ) addReply = false;
+	// save it
+	saved = m_p;
+	// now add the new rescheduled time
+	if ( addReply && m_useSpiderdb && ! forDelete ) {
+		// note it
+		setStatus ( "adding SpiderReply to spiderdb" );
+		// rdbid first
+		*m_p = RDB_SPIDERDB;
+		// use secondary?
+		if ( m_useSecondaryRdbs ) *m_p = RDB2_SPIDERDB2;
+		m_p++;
+		// get this
+		if ( ! m_srepValid ) { char *xx=NULL;*xx=0; }
+		// store the spider rec
+		long newsrSize = newsr->getRecSize();
+		memcpy ( m_p , newsr , newsrSize );
+		m_p += newsrSize;
+		// sanity check - must not be a request, this is a reply
+		if ( g_spiderdb.isSpiderRequest( &newsr->m_key ) ) {
+			char *xx=NULL;*xx=0; }
+		// sanity check
+		if ( m_p - saved != needSpiderdb1 ) { char *xx=NULL;*xx=0; }
+		// sanity check
+		verifyMetaList( m_metaList , m_p , forDelete );
+	}		
+
+
 	// if we are injecting we must add the spider request
 	// we are injecting from so the url can be scheduled to be
 	// spidered again
 	if ( m_sreqValid && 
 	     m_sreq.m_isInjecting &&
+	     m_sreq.m_fakeFirstIp &&
 	     /// don't add requests like http://xyz.com/xxx-diffbotxyz0 though
 	     ! m_isDiffbotJSONObject ) {
 		// note it
@@ -21095,36 +21137,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//	//= g_titledb.makeKey ( m_docId , 0LL , true );
 	//	m_p += sizeof(key_t);
 	//}
-
-
-	bool addReply = true;
-	// Scraper.cpp uses this
-	if ( m_sreqValid && m_sreq.m_isScraping ) addReply = false;
-	// save it
-	saved = m_p;
-	// now add the new rescheduled time
-	if ( addReply && m_useSpiderdb && ! forDelete ) {
-		// note it
-		setStatus ( "adding SpiderReply to spiderdb" );
-		// rdbid first
-		*m_p = RDB_SPIDERDB;
-		// use secondary?
-		if ( m_useSecondaryRdbs ) *m_p = RDB2_SPIDERDB2;
-		m_p++;
-		// get this
-		if ( ! m_srepValid ) { char *xx=NULL;*xx=0; }
-		// store the spider rec
-		long newsrSize = newsr->getRecSize();
-		memcpy ( m_p , newsr , newsrSize );
-		m_p += newsrSize;
-		// sanity check - must not be a request, this is a reply
-		if ( g_spiderdb.isSpiderRequest( &newsr->m_key ) ) {
-			char *xx=NULL;*xx=0; }
-		// sanity check
-		if ( m_p - saved != needSpiderdb1 ) { char *xx=NULL;*xx=0; }
-		// sanity check
-		verifyMetaList( m_metaList , m_p , forDelete );
-	}		
 
 
 	// MDW: new spider algo does not need this
@@ -26497,7 +26509,9 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		// get it
 		long ufn;
 		ufn=::getUrlFilterNum(&sreq,&srep,spideredTime,true,
-				      m_niceness,cr);
+				      m_niceness,cr,
+				      false, // isOutlink?
+				      NULL );
 		// sanity check
 		if ( ufn < 0 ) { 
 			log("msg20: bad url filter for url %s", sreq.m_url);

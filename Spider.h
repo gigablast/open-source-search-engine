@@ -1428,7 +1428,7 @@ long getUrlFilterNum ( class SpiderRequest *sreq ,
 		       bool isForMsg20 ,
 		       long niceness , 
 		       class CollectionRec *cr ,
-		       bool isOutlink = false ,
-		       HashTableX *quotaTable = NULL ) ;
+		       bool isOutlink , // = false ,
+		       HashTableX *quotaTable );//= NULL ) ;
 
 #endif

@@ -2930,6 +2930,8 @@ void removeExpiredLocks ( long hostId );
 
 static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
 	SpiderColl *THIS = (SpiderColl *)state;
+	// prevent a core
+	THIS->m_gettingList1 = false;
 	// return if that blocked
 	if ( ! THIS->evalIpLoop() ) return;
 	// we are done, re-entry popuatedoledb
@@ -2980,6 +2982,8 @@ bool SpiderColl::evalIpLoop ( ) {
 		m_list.reset();
 		// assume we did a read now
 		m_didRead = true;
+		// reset some stuff
+		m_lastScanningIp = 0;
 		// do a read. if it blocks it will recall this loop
 		if ( ! readListFromSpiderdb () ) return false;
 	}
@@ -3525,6 +3529,7 @@ bool SpiderColl::scanListForWinners ( ) {
 					     false,
 					     MAX_NICENESS,
 					     m_cr,
+					     false, // isOutlink?
 					     // provide the page quota table
 					     &m_localTable);
 		// sanity check
@@ -3830,11 +3835,15 @@ bool SpiderColl::scanListForWinners ( ) {
 		if ( (long long)winTimeMS < 0 ) { char *xx=NULL;*xx=0; }
 		// note it
 		if ( g_conf.m_logDebugSpider ) {
-			log("spider: found winning request ip=%s "
+			log("spider: found winning request IN THIS LIST ip=%s "
 			    "spiderTimeMS=%lli "
+			    "ufn=%li "
+			    "hadreply=%li "
 			    "pri=%li uh48=%lli url=%s",
 			    iptoa(m_bestRequest->m_firstIp),
 			    m_bestSpiderTimeMS,
+			    (long)m_bestRequest->m_ufn,
+			    (long)m_bestRequest->m_hadReply,
 			    (long)m_bestRequest->m_priority,
 			    m_bestRequest->getUrlHash48(),
 			    m_bestRequest->m_url);
@@ -9963,7 +9972,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( ! valPtr ) a=0;//continue;//{char *xx=NULL;*xx=0;}
 			// shortcut
 			else a = *valPtr;
-			log("siteadds=%li for %s",a,sreq->m_url);
+			//log("siteadds=%li for %s",a,sreq->m_url);
 			// what is the provided value in the url filter rule?
 			long b = atoi(s);
 			// compare
@@ -10000,9 +10009,9 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			valPtr = (long *)quotaTable->getValue(&h32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
-			if ( ! valPtr ) continue;//{ char *xx=NULL;*xx=0; }
-			// shortcut
-			long a = *valPtr;
+			long a;
+			if ( ! valPtr ) a = 0;//{ char *xx=NULL;*xx=0; }
+			else a = *valPtr;
 			// what is the provided value in the url filter rule?
 			long b = atoi(s);
 			// compare
@@ -10043,7 +10052,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( ! valPtr ) a = 0;//{ char *xx=NULL;*xx=0; }
 			else a = *valPtr;
 			// shortcut
-			log("sitepgs=%li for %s",a,sreq->m_url);
+			//log("sitepgs=%li for %s",a,sreq->m_url);
 			// what is the provided value in the url filter rule?
 			long b = atoi(s);
 			// compare
@@ -10079,9 +10088,9 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			valPtr=(long*)quotaTable->getValue(&sreq->m_domHash32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
-			if ( ! valPtr ) continue;//{ char *xx=NULL;*xx=0; }
-			// shortcut
-			long a = *valPtr;
+			long a;
+			if ( ! valPtr ) a = 0;//{ char *xx=NULL;*xx=0; }
+			else a = *valPtr;
 			// what is the provided value in the url filter rule?
 			long b = atoi(s);
 			// compare

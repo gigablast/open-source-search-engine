@@ -678,7 +678,9 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 					nowGlobalMS,
 					false,
 					MAX_NICENESS,
-					cr);
+					cr,
+					false, // isoutlink?
+					NULL);
 		char *expression = NULL;
 		long  priority = -4;
 		// sanity check
