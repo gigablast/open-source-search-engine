@@ -1695,7 +1695,7 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_spiderIpWaits[n] = 1000;
 	m_numRegExs5++;
 
-	m_spiderIpMaxSpiders[n] = 1;
+	m_spiderIpMaxSpiders[n] = 7;
 	m_numRegExs6++;
 
 	//m_spidersEnabled[n] = 1;
@@ -2013,7 +2013,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	for ( long i = 0 ; i < MAX_FILTERS ; i++ ) {
 		m_regExs[i].purge();
 		m_spiderPriorities[i] = 0;
-		m_maxSpidersPerRule [i] = 10;
+		m_maxSpidersPerRule [i] = 100;
 		m_spiderIpWaits     [i] = wait;
 		m_spiderIpMaxSpiders[i] = 7; // keep it respectful
 		//m_spidersEnabled    [i] = 1;

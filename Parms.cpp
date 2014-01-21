@@ -14064,7 +14064,7 @@ void Parms::init ( ) {
 	m->m_max   = MAX_FILTERS;
 	m->m_off   = (char *)cr.m_spiderIpMaxSpiders - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "1";
+	m->m_def   = "7";
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
 	m->m_flags = PF_REBUILDURLFILTERS;
