@@ -325,7 +325,7 @@ class XmlDoc {
 	uint16_t  m_isLinkSpam:1;
 	uint16_t  m_hasAddress:1;
 	uint16_t  m_hasTOD:1;
-	uint16_t  m_hasSiteVenue:1;
+	uint16_t  m_reserved_sv:1;//hasSiteVenue:1;
 	uint16_t  m_hasContactInfo:1;
 	uint16_t  m_isSiteRoot:1;
 
@@ -1220,7 +1220,7 @@ class XmlDoc {
 	bool m_isAdultValid;
 	bool m_hasAddressValid;
 	bool m_hasTODValid;
-	bool m_hasSiteVenueValid;
+	//bool m_hasSiteVenueValid;
 	bool m_catRecValid;
 	bool m_urlPubDateValid;
 	bool m_isUrlPermalinkFormatValid;
@@ -1342,7 +1342,7 @@ class XmlDoc {
 	char m_isLinkSpam2;
 	bool m_hasAddress2;
 	bool m_hasTOD2;
-	bool m_hasSiteVenue2;
+	//bool m_hasSiteVenue2;
 	char m_hasContactInfo2;
 	char m_isSiteRoot2;
 

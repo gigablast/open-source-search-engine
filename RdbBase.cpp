@@ -1562,10 +1562,11 @@ void RdbBase::gotTokenForMerge ( ) {
 	if ( m_rdb == g_tfndb.getRdb() ) m = &g_merge2;
 	// sanity check
 	if ( m_isMerging || m->isMerging() ) {
-		if ( m_doLog )
-		log(LOG_INFO,
-		    "merge: Someone already merging. Waiting for merge token "
-		    "in order to merge %s.",m_dbname);
+		//if ( m_doLog )
+			//log(LOG_INFO,
+			//"merge: Someone already merging. Waiting for "
+			//"merge token "
+			//"in order to merge %s.",m_dbname);
 		return;
 	}
 	// clear for take-off
@@ -2258,8 +2259,9 @@ bool RdbBase::verifyFileSharding ( ) {
 
 		if ( ++printed > 100 ) continue;
 
-		log ( "db: Found bad key in list belongs to shard %li",
-		      shardNum);
+		// avoid log spam... comment this out
+		//log ( "db: Found bad key in list belongs to shard %li",
+		//      shardNum);
 	}
 
 	g_threads.enableThreads();
@@ -2275,8 +2277,8 @@ bool RdbBase::verifyFileSharding ( ) {
 	log ("db: Out of first %li records in %s for %s, only %li belong "
 	     "to our group.",count,m_dbname,m_coll,got);
 	// exit if NONE, we probably got the wrong data
-	if ( got == 0 ) log("db: Are you sure you have the "
-			    "right data in the right directory? ");
+	//if ( got == 0 ) log("db: Are you sure you have the "
+	//		    "right data in the right directory? ");
 
 	//log ( "db: Exiting due to Posdb inconsistency." );
 	g_threads.enableThreads();

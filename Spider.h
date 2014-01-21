@@ -847,7 +847,11 @@ class SpiderReply {
 	long    m_isContacty    :1;
 	long    m_hasAddress    :1;
 	long    m_hasTOD        :1;
-	long    m_hasSiteVenue  :1;
+
+	// make this "INvalid" not valid since it was set to 0 before
+	// and we want to be backwards compatible
+	long    m_isIndexedINValid :1;
+	//long    m_hasSiteVenue  :1;
 
 	// expires after a certain time or if ownership changed
 	long    m_inGoogleValid           :1;
@@ -856,7 +860,8 @@ class SpiderReply {
 	long    m_isContactyValid         :1;
 	long    m_hasAddressValid         :1;
 	long    m_hasTODValid             :1;
-	long    m_hasSiteVenueValid       :1;
+	//long    m_hasSiteVenueValid       :1;
+	long    m_reserved2               :1;
 	long    m_siteNumInlinksValid     :1;
 	// was the request an injection request
 	long    m_fromInjectionRequest    :1; 

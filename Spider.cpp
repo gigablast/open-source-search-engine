@@ -150,7 +150,7 @@ long SpiderRequest::print ( SafeBuf *sbarg ) {
 	if ( m_hasAuthorityInlink ) sb->safePrintf("HASAUTHORITYINLINK ");
 	if ( m_hasContactInfo ) sb->safePrintf("HASCONTACTINFO ");
 
-	if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
+	//if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
 	if ( m_isContacty      ) sb->safePrintf("CONTACTY ");
 	if ( m_isWWWSubdomain  ) sb->safePrintf("WWWSUBDOMAIN ");
 	if ( m_avoidSpiderLinks ) sb->safePrintf("AVOIDSPIDERLINKS ");
@@ -235,11 +235,11 @@ long SpiderReply::print ( SafeBuf *sbarg ) {
 	if ( m_isPermalink ) sb->safePrintf("ISPERMALINK ");
 	if ( m_isPingServer ) sb->safePrintf("ISPINGSERVER ");
 	//if ( m_deleted ) sb->safePrintf("DELETED ");
-	if ( m_isIndexed ) sb->safePrintf("ISINDEXED ");
+	if ( m_isIndexed && ! m_isIndexedINValid) sb->safePrintf("ISINDEXED ");
 
 	if ( m_hasAddress    ) sb->safePrintf("HASADDRESS ");
 	if ( m_hasTOD        ) sb->safePrintf("HASTOD ");
-	if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
+	//if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
 	if ( m_isContacty    ) sb->safePrintf("CONTACTY ");
 
 	//sb->safePrintf("url=%s",m_url);
@@ -344,7 +344,7 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 	if ( m_hasAuthorityInlink ) sb->safePrintf("HASAUTHORITYINLINK ");
 	if ( m_hasContactInfo ) sb->safePrintf("HASCONTACTINFO ");
 
-	if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
+	//if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
 	if ( m_isContacty      ) sb->safePrintf("CONTACTY ");
 
 	//if ( m_inOrderTree ) sb->safePrintf("INORDERTREE ");
@@ -3439,6 +3439,7 @@ bool SpiderColl::scanListForWinners ( ) {
 			if ( srepUh48 == m_lastRepUh48 ) continue;
 			m_lastRepUh48 = srepUh48;
 			//if ( ! srep ) continue;
+			// TODO: what is srep->m_isIndexedINValid is set????
 			if ( ! srep->m_isIndexed ) continue;
 			// keep count per site and firstip
 			m_localTable.addScore(&sreq->m_firstIp,1);
@@ -9415,6 +9416,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		/*
 		if ( *p=='h' && strncmp(p,"hassitevenue",12) == 0 ) {
 			// if we do not have enough info for outlink, all done
 			if ( isOutlink ) return -1;
@@ -9435,6 +9437,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			p += 2;
 			goto checkNextRule;
 		}
+		*/
 
 		if ( *p != 'i' ) goto skipi;
 
@@ -9573,6 +9576,11 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			//if ( ! srep ) continue;
 			// skip for msg20
 			if ( isForMsg20 ) continue;
+			// skip if reply does not KNOW because of an error
+			// since XmDoc::indexDoc() called
+			// XmlDoc::getNewSpiderReply() and did not have this
+			// info...
+			if ( srep && (bool)srep->m_isIndexedINValid ) continue;
 			// if no match continue
 			if ( srep && (bool)srep->m_isIndexed==val ) continue;
 			// allow "!isindexed" if no SpiderReply at all
@@ -10866,7 +10874,7 @@ void dedupSpiderdbList ( RdbList *list , long niceness , bool removeNegRecs ) {
 			sreq->m_inGoogle           = old->m_inGoogle;
 			sreq->m_hasAuthorityInlink = old->m_hasAuthorityInlink;
 			sreq->m_hasContactInfo     = old->m_hasContactInfo;
-			sreq->m_hasSiteVenue       = old->m_hasSiteVenue;
+			//sreq->m_hasSiteVenue       = old->m_hasSiteVenue;
 		}
 
 		// if we are not the same url as last request, add it

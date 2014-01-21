@@ -515,7 +515,14 @@ bool Collectiondb::addNewColl ( char *coll ,
 	}
 
 
-	return registerCollRec ( cr , true );
+	if ( ! registerCollRec ( cr , true ) )
+		return false;
+
+	// add the rdbbases for this coll, CollectionRec::m_bases[]
+	if ( ! addRdbBasesForCollRec ( cr ) )
+		return false;
+
+	return true;
 }
 
 // . called only by addNewColl() and by addExistingColl()
@@ -533,12 +540,12 @@ bool Collectiondb::addRdbBaseToAllRdbsForEachCollRec ( ) {
 		CollectionRec *cr = m_recs[i];
 		if ( ! cr ) continue;
 		// add rdb base files etc. for it
-		addRdbBaseForCollRec ( cr );
+		addRdbBasesForCollRec ( cr );
 	}
 	return true;
 }
 
-bool Collectiondb::addRdbBaseForCollRec ( CollectionRec *cr ) {
+bool Collectiondb::addRdbBasesForCollRec ( CollectionRec *cr ) {
 
 	char *coll = cr->m_coll;
 

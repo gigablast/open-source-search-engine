@@ -1590,7 +1590,7 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	m_isLinkSpam2         = m_isLinkSpam;
 	m_hasAddress2         = m_hasAddress;
 	m_hasTOD2             = m_hasTOD;
-	m_hasSiteVenue2       = m_hasSiteVenue;
+	//m_hasSiteVenue2       = m_hasSiteVenue;
 	m_hasContactInfo2     = m_hasContactInfo;
 	//m_skipIndexingByte    = m_skipIndexing;
 	m_isSiteRoot2         = m_isSiteRoot;
@@ -11410,6 +11410,7 @@ bool *XmlDoc::getHasTOD ( ) {
 	return &m_hasTOD2;
 }
 
+/*
 bool *XmlDoc::getHasSiteVenue ( ) {
 	if ( m_hasSiteVenueValid ) return &m_hasSiteVenue2;
 	// get the tag rec
@@ -11423,7 +11424,7 @@ bool *XmlDoc::getHasSiteVenue ( ) {
 	m_hasSiteVenueValid = true;
 	return &m_hasSiteVenue2;
 }
-
+*/
 
 
 // do not include addresses that are always in the header/footer of every page!
@@ -21540,7 +21541,7 @@ void XmlDoc::copyFromOldDoc ( XmlDoc *od ) {
 	m_httpStatus    = od->m_httpStatus;
 	m_hasAddress    = od->m_hasAddress;
 	m_hasTOD        = od->m_hasTOD;
-	m_hasSiteVenue  = od->m_hasSiteVenue;
+	//m_hasSiteVenue  = od->m_hasSiteVenue;
 	m_isRSS         = od->m_isRSS;
 	m_isPermalink   = od->m_isPermalink;
 	m_hasContactInfo= od->m_hasContactInfo;
@@ -21550,7 +21551,7 @@ void XmlDoc::copyFromOldDoc ( XmlDoc *od ) {
 	// do not forget the shadow members of the bit members
 	m_hasAddress2    = m_hasAddress;
 	m_hasTOD2        = m_hasTOD;
-	m_hasSiteVenue2  = m_hasSiteVenue;
+	//m_hasSiteVenue2  = m_hasSiteVenue;
 	m_isRSS2         = m_isRSS;
 	m_isPermalink2   = m_isPermalink;
 
@@ -21561,7 +21562,7 @@ void XmlDoc::copyFromOldDoc ( XmlDoc *od ) {
 	m_httpStatusValid    = true;
 	m_hasAddressValid    = true;
 	m_hasTODValid        = true;
-	m_hasSiteVenueValid  = true;
+	//m_hasSiteVenueValid  = true;
 	m_isRSSValid         = true;
 	m_isPermalinkValid   = true;
 	m_hasContactInfoValid= true;
@@ -21808,9 +21809,11 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	else
 		m_srep.m_hadDiffbotError = false;
 
-	// sanity
-	if ( ! m_wasInIndexValid ) { char *xx=NULL;*xx=0; }
-	if ( ! m_isInIndexValid  ) { char *xx=NULL;*xx=0; }
+	// sanity. if being called directly from indexDoc() because of
+	// an error like out of memory, then we do not know if it is
+	// indexed or not or was indexed...
+	//if ( ! m_wasInIndexValid ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_isInIndexValid  ) { char *xx=NULL;*xx=0; }
 
 	// were we already in titledb before we started spidering?
 	m_srep.m_wasIndexed = m_wasInIndex;
@@ -21822,10 +21825,16 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// this is an EFAKEFIRSTIP error or something similar where we
 	// basically just add this reply and we're done.
 	// NOTE: this also pertains to SpiderReply::m_isIndexed.
-	m_srep.m_wasIndexedValid = true;
+	m_srep.m_wasIndexedValid = m_wasInIndexValid;
 
 	// assume no change
 	m_srep.m_isIndexed = m_isInIndex;
+
+	// we need to know if the m_isIndexed bit is valid or not
+	// because sometimes like if we are being called directly from
+	// indexDoc() because of an error situation, we do not know!
+	if ( m_isInIndexValid ) m_srep.m_isIndexedINValid = false;
+	else                    m_srep.m_isIndexedINValid = true;
 
 	// likewise, we need to know if we deleted it so we can decrement the
 	// quota count for this subdomain/host in SpiderColl::m_quotaTable
@@ -21922,12 +21931,12 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 			m_srep.m_isPermalink    = m_oldDoc->m_isPermalink;
 			m_srep.m_hasAddress     = m_oldDoc->m_hasAddress;
 			m_srep.m_hasTOD         = m_oldDoc->m_hasTOD;
-			m_srep.m_hasSiteVenue   = m_oldDoc->m_hasSiteVenue;
+			//m_srep.m_hasSiteVenue   = m_oldDoc->m_hasSiteVenue;
 			m_srep.m_siteNumInlinks = m_oldDoc->m_siteNumInlinks;
 			// they're all valid
 			m_srep.m_hasAddressValid     = true;
 			m_srep.m_hasTODValid         = true;
-			m_srep.m_hasSiteVenueValid   = true;
+			//m_srep.m_hasSiteVenueValid   = true;
 			m_srep.m_siteNumInlinksValid = true;
 		}
 		// do special things if
@@ -21967,9 +21976,9 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	if ( ! hasTOD || hasTOD == (void *)-1 )
 		return (SpiderReply *)hasTOD;
 	// does it have a venue address?
-	bool *hasSiteVenue = getHasSiteVenue();
-	if ( ! hasSiteVenue || hasSiteVenue == (void *)-1 )
-		return (SpiderReply *)hasSiteVenue;
+	//bool *hasSiteVenue = getHasSiteVenue();
+	//if ( ! hasSiteVenue || hasSiteVenue == (void *)-1 )
+	//	return (SpiderReply *)hasSiteVenue;
 	// get the content type
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;
@@ -22047,7 +22056,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 
 	if ( ! m_hasAddressValid    ) { char *xx=NULL;*xx=0; }
 	if ( ! m_hasTODValid        ) { char *xx=NULL;*xx=0; }
-	if ( ! m_hasSiteVenueValid  ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_hasSiteVenueValid  ) { char *xx=NULL;*xx=0; }
 	if ( ! m_hasContactInfoValid) { char *xx=NULL;*xx=0; }
 
 	// . we use this to store "bad" spider recs to keep from respidering
@@ -22080,7 +22089,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 					//	 *isRoot ,
 					//	 m_niceness );
 	m_srep.m_hasTOD        = *hasTOD;
-	m_srep.m_hasSiteVenue  = *hasSiteVenue;
+	//m_srep.m_hasSiteVenue  = *hasSiteVenue;
 
 	// validate all
 	m_srep.m_inGoogleValid           = 1;
@@ -22089,7 +22098,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	m_srep.m_isContactyValid         = 1;
 	m_srep.m_hasAddressValid         = 1;
 	m_srep.m_hasTODValid             = 1;
-	m_srep.m_hasSiteVenueValid       = 1;
+	//m_srep.m_hasSiteVenueValid       = 1;
 
 	// validate
 	m_srepValid = true;

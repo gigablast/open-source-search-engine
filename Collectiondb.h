@@ -125,7 +125,7 @@ class Collectiondb  {
 	bool registerCollRec ( CollectionRec *cr ,  bool isNew ) ;
 
 	bool addRdbBaseToAllRdbsForEachCollRec ( ) ;
-	bool addRdbBaseForCollRec ( CollectionRec *cr ) ;
+	bool addRdbBasesForCollRec ( CollectionRec *cr ) ;
 
 	bool setRecPtr ( collnum_t collnum , CollectionRec *cr ) ;
 
