@@ -11378,11 +11378,12 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 			"repeat is scheduled.");
 	}
 
-	if ( cx->m_spiderStatus == SP_ROUNDDONE &&
-	     ! cx->m_isCustomCrawl ) {
+	if ( cx->m_spiderStatus == SP_ROUNDDONE && ! cx->m_isCustomCrawl ) {
 		*status = SP_ROUNDDONE;
 		return msg->safePrintf ( "Nothing currently "
-					 "available to spider.");
+					 "available to spider. "
+					 "Change your url filters or try "
+					 "adding new urls.");
 	}
 		
 

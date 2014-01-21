@@ -1847,41 +1847,55 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		if ( i == PAGE_SEARCHBOX ) continue;
 		if ( i == PAGE_TITLEDB ) continue;
 
+		// print "url download" before "inject url"
+		// GET /mycollname_urls.csv
+		if ( i == PAGE_INJECT ) {
+			sb->safePrintf (
+					"<b>"
+					"<a style=text-decoration:none; "
+					"href=\"/download/%s_urls.txt\">"
+					"url download"
+					"</a>"
+					"</b>"
+					" &nbsp; \n",
+					coll );
+		}		
+
 		if ( cr && ! cr->m_isCustomCrawl && i == PAGE_CRAWLBOT )
 			continue;
 
 		// print it out
 		if ( i == PAGE_LOGIN || i == PAGE_LOGIN2 ) 
 			sb->safePrintf(
-				"<span style=\"white-space:nowrap\">"
-				"<a href=\"/%s?"
-				//"user=%s&pwd=%s&"
-				"c=%s%s\">%s</a>"
-				"</span>"
-				" &nbsp; \n",s_pages[i].m_filename,
-				//username,pwd,
-				coll,
-				buf,s_pages[i].m_name);
+				       //"<span style=\"white-space:nowrap\">"
+				       "<a href=\"/%s?"
+				       //"user=%s&pwd=%s&"
+				       "c=%s%s\">%s</a>"
+				       //"</span>"
+				       " &nbsp; \n",s_pages[i].m_filename,
+				       //username,pwd,
+				       coll,
+				       buf,s_pages[i].m_name);
 		else if ( page == i )
 			sb->safePrintf(
-				"<span style=\"white-space:nowrap\">"
-				"<a href=\"/%s?c=%s%s\"><b>"
-				"<font color=red>%s</font></b></a>"
-				"</span>"
-				" &nbsp; \n",s_pages[i].m_filename,
-				coll,
-				buf,s_pages[i].m_name);
+				       //"<span style=\"white-space:nowrap\">"
+				       "<a href=\"/%s?c=%s%s\"><b>"
+				       "<font color=red>%s</font></b></a>"
+				       //"</span>"
+				       " &nbsp; \n",s_pages[i].m_filename,
+				       coll,
+				       buf,s_pages[i].m_name);
 		else
 			sb->safePrintf(
-				"<span style=\"white-space:nowrap\">"
-				"<b>"
-				"<a style=text-decoration:none; "
-				"href=\"/%s?c=%s%s\">%s</a>"
-				"</b>"
-				"</span>"
-				" &nbsp; \n",s_pages[i].m_filename,
-				coll,
-				buf,s_pages[i].m_name);
+				       //"<span style=\"white-space:nowrap\">"
+				       "<b>"
+				       "<a style=text-decoration:none; "
+				       "href=\"/%s?c=%s%s\">%s</a>"
+				       "</b>"
+				       //"</span>"
+				       " &nbsp; \n",s_pages[i].m_filename,
+				       coll,
+				       buf,s_pages[i].m_name);
 		// print <br> after the last master admin control
 		/*
 		if ( i == PAGE_DELCOLL && user == USER_MASTER ) {

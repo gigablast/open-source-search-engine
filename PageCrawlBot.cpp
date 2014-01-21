@@ -160,6 +160,10 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		rdbId = RDB_SPIDERDB;
 		fmt = FMT_CSV;
 	}
+	else if ( ( xx = strstr ( path , "_urls.txt" ) ) ) {
+		rdbId = RDB_SPIDERDB;
+		fmt = FMT_TXT;
+	}
 	else if ( ( xx = strstr ( path , "_pages.txt" ) ) ) {
 		rdbId = RDB_TITLEDB;
 		fmt = FMT_TXT;
@@ -518,6 +522,8 @@ bool StateCD::sendList ( ) {
 	//    (long)m_printedEndingBracket);
 
 	bool lastChunk = false;
+	if ( ! m_someoneNeedsMore )
+		lastChunk = true;
 
 	// if nobody needs to read more...
 	if ( m_rdbId == RDB_TITLEDB && 
@@ -528,7 +534,6 @@ bool StateCD::sendList ( ) {
 		// end array of json objects. might be empty!
 		sb.safePrintf("\n]\n");
 		//log("adding ]. len=%li",sb.length());
-		lastChunk = true;
 	}
 
 	TcpServer *tcp = &g_httpServer.m_tcp;
@@ -715,7 +720,10 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 			m_isFirstTime = false;
 			sb->safePrintf("\"Url\","
 				       "\"Entry Method\","
-				       "\"Processed?\","
+				       );
+			if ( cr->m_isCustomCrawl )
+				sb->safePrintf("\"Processed?\",");
+			sb->safePrintf(
 				       "\"Add Time\","
 				       "\"Last Crawled\","
 				       "\"Last Status\","
@@ -747,12 +755,15 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// but default to csv
 		else {
 			sb->safePrintf("\"%s\",\"%s\","
-				       "%li,%lu,%lu,\"%s\",\"%s\",\""
-				       //",%s"
-				       //"\n"
 				       , sreq->m_url
 				       , as
-				       , (long)isProcessed
+				       );
+			if ( cr->m_isCustomCrawl )
+				sb->safePrintf("%li,",(long)isProcessed);
+			sb->safePrintf(
+				       "%lu,%lu,\"%s\",\"%s\",\""
+				       //",%s"
+				       //"\n"
 				       // when was it first added to spiderdb?
 				       , sreq->m_addedTime
 				       // last time spidered, 0 if none

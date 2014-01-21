@@ -925,6 +925,10 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	     strncmp ( path , "/v2/bulk/download/"  ,18 ) == 0 )
 		return sendBackDump ( s , r );
 
+	// "GET /download/mycoll_urls.csv"
+	if ( strncmp ( path , "/download/", 10 ) == 0 )
+		return sendBackDump ( s , r );
+
 	// . is it a diffbot api request, like "GET /api/*"
 	// . ie "/api/startcrawl" or "/api/stopcrawl" etc.?
 	//if ( strncmp ( path , "/api/" , 5 ) == 0 )
