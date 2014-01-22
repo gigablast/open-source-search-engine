@@ -109,7 +109,7 @@ bool DiskPageCache::init ( const char *dbname ,
 	reset();
 
 	// fix cores while rebalancing
-	maxMem = 0;
+	//maxMem = 0;
 
 	m_rdbId = rdbId;
 
