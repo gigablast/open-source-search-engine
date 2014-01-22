@@ -108,6 +108,10 @@ char *g_files[] = {
 	"pdftohtml",  // pdf
 	"pstotext" ,  // postscript
 	//"ppthtml"  ,  // powerpoint
+
+	// required for SSL server support for both getting web pages
+	// on https:// sites and for serving https:// pages
+	"gb.pem",
 	
 	//"dict/unifiedDict",
 	//"dict/thesaurus.txt",
@@ -187,6 +191,7 @@ char *g_files[] = {
 
 bool Process::checkFiles ( char *dir ) {
 
+	/*
 	// check these by hand since you need one or the other
 	File f1;
 	File f2;
@@ -199,15 +204,14 @@ bool Process::checkFiles ( char *dir ) {
 	if ( //( ! f3.doesExist() || ! f4.doesExist() ) && 
 	    ( ! f4.doesExist() ) && 
 	     ( ! f1.doesExist() || ! f2.doesExist() ) ) {
-		/*
 		log("db: need either (%s and %s) or (%s and %s)",
 		    f3.getFilename() ,
 		    f4.getFilename() ,
 		    f1.getFilename() ,
 		    f2.getFilename() );
-		*/
 		//return false;
 	}
+	*/
 
 	// check for email subdir
 	//f1.set ( dir , "/html/email/");
