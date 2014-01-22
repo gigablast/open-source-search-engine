@@ -2275,8 +2275,13 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	key_t wk = makeWaitingTreeKey ( spiderTimeMS, firstIp );
 	// what is this?
 	if ( firstIp == 0 || firstIp == -1 ) {
-		log("spider: got ip of %s. wtf?",iptoa(firstIp) );
-		return false;
+		log("spider: got ip of %s. wtf? failed to add to "
+		    "waiting tree, but return true anyway.",iptoa(firstIp) );
+		// don't return true lest m_nextKey2 never gets updated
+		// and we end up in an infinite loop doing 
+		// populateWaitingTreeFromSpiderdb()
+		return true;
+		//return false;
 		char *xx=NULL; *xx=0;
 	}
 
@@ -2292,9 +2297,11 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 		log("spider: growing waiting tree to from %li to %li nodes",
 		    max , newNum );
 		if ( ! m_waitingTree.growTree ( newNum , MAX_NICENESS ) )
-			return false;
+			return log("spider: failed to grow waiting tree to "
+				   "add firstip %s",iptoa(firstIp) );
 		if ( ! m_waitingTable.setTableSize ( newNum , NULL , 0 ) )
-			return false;
+			return log("spider: failed to grow waiting table to "
+				   "add firstip %s",iptoa(firstIp) );
 	}
 
 
@@ -2610,7 +2617,15 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		// otherwise, we want to add it with 0 time so the doledb
 		// scan will evaluate it properly
 		// this will return false if we are saving the tree i guess
-		if ( ! addToWaitingTree ( 0 , firstIp , false ) ) return;
+		if ( ! addToWaitingTree ( 0 , firstIp , false ) ) {
+			log("spider: failed to add ip %s to waiting tree. "
+			    "ip will not get spidered then and our "
+			    "population of waiting tree will repeat until "
+			    "this add happens."
+			    , iptoa(firstIp) );
+			return;
+		}
+
 		// count it
 		m_numAdded++;
 		// ignore errors for this

@@ -1761,7 +1761,12 @@ Tag *SafeBuf::addTag ( char *mysite ,
 bool SafeBuf::addTag ( Tag *tag ) {
 	long recSize = tag->getSize();
 	//tag->setDataSize();
-	if ( tag->m_recDataSize <= 16 ) { char *xx=NULL;*xx=0; }
+	if ( tag->m_recDataSize <= 16 ) { 
+		// note it
+		return log("safebuf: encountered corrupted tag datasize=%li.",
+			   tag->m_recDataSize);
+		//char *xx=NULL;*xx=0; }
+	}
 	return safeMemcpy ( (char *)tag , recSize );
 }
 
