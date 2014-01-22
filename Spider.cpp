@@ -2444,7 +2444,8 @@ static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 	// m_deleteMyself flag will have been set.
 	if ( THIS->m_deleteMyself &&
 	     ! THIS->m_msg5b.m_waitingForMerge &&
-	     ! THIS->m_msg5b.m_waitingForList ) {
+	     ! THIS->m_msg5b.m_waitingForList &&
+	     ! THIS->m_msg1.m_mcast.m_inUse ) {
 		mdelete ( THIS , sizeof(SpiderColl),"postdel1");
 		delete ( THIS );
 		return;
@@ -2882,6 +2883,19 @@ static void doledWrapper ( void *state ) {
 
 	// we are done!! that was the final step...
 	THIS->m_isPopulating = false;
+
+	// did collection get nuked while we were waiting for msg1 reply?
+	if ( THIS->m_deleteMyself &&
+	     ! THIS->m_msg5.m_waitingForMerge &&
+	     ! THIS->m_msg5.m_waitingForList &&
+	     ! THIS->m_msg5b.m_waitingForMerge &&
+	     ! THIS->m_msg5b.m_waitingForList ) {
+		mdelete ( THIS , sizeof(SpiderColl),"postdel1");
+		delete ( THIS );
+		return;
+	}
+	
+
 	// . we added a rec to doledb for the firstIp in m_waitingTreeKey, so
 	//   now go to the next node in the wait tree.
 	// . it will get the next key after m_waitingTreeKey
@@ -2967,7 +2981,8 @@ bool SpiderColl::evalIpLoop ( ) {
 	// m_deleteMyself flag will have been set.
 	if ( m_deleteMyself &&
 	     ! m_msg5b.m_waitingForMerge &&
-	     ! m_msg5b.m_waitingForList ) {
+	     ! m_msg5b.m_waitingForList &&
+	     ! m_msg1.m_mcast.m_inUse ) {
 		mdelete ( this , sizeof(SpiderColl),"postdel1");
 		delete ( this );
 		// pretend to block since we got deleted!!!
@@ -7476,15 +7491,15 @@ bool sendPage ( State11 *st ) {
 	// begin the table
 	sb.safePrintf ( "<table %s>\n"
 			"<tr><td colspan=50>"
-			"<center>"
+			//"<center>"
 			"<b>Currently Spidering on This Host</b>"
-			//" (%li spiders)"
+			" (%li spiders)"
 			//" (%li locks)"
-			"</center>"
-			"</td></tr>\n" ,
-			TABLE_STYLE
-			//(long)g_spiderLoop.m_numSpidersOut
-			//g_spiderLoop.m_lockTable.m_numSlotsUsed);
+			//"</center>"
+			"</td></tr>\n"
+			, TABLE_STYLE
+			, (long)g_spiderLoop.m_numSpidersOut
+			//, g_spiderLoop.m_lockTable.m_numSlotsUsed
 			);
 	// the table headers so SpiderRequest::printToTable() works
 	if ( ! SpiderRequest::printTableHeader ( &sb , true ) ) return false;

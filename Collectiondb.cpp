@@ -686,7 +686,8 @@ void Collectiondb::deleteSpiderColl ( SpiderColl *sc ) {
 	if ( ! sc->m_msg5.m_waitingForList &&
 	     ! sc->m_msg5.m_waitingForMerge &&
 	     ! sc->m_msg5b.m_waitingForList &&
-	     ! sc->m_msg5b.m_waitingForMerge ) {
+	     ! sc->m_msg5b.m_waitingForMerge &&
+	     ! sc->m_msg1.m_mcast.m_inUse ) {
 		mdelete ( sc, sizeof(SpiderColl),"nukecr2");
 		delete ( sc );
 		return;

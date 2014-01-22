@@ -1393,7 +1393,7 @@ bool Msg5::gotList2 ( ) {
 	m_waitingForMerge = false;
 
 	// thread creation failed
-	if ( ! g_threads.areThreadsDisabled() )
+	if ( g_conf.m_useThreads )
 		log(LOG_INFO,
 		    "net: Failed to create thread to merge lists. Doing "
 		    "blocking merge. Hurts performance.");

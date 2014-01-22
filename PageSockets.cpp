@@ -320,13 +320,15 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			DARK_BLUE );
 	for ( long i = 0; i < 96; i++ ) {
 		if ( msgCount0[i] <= 0 ) continue;
-		p->safePrintf("<tr><td>0</td><td>0x%lx</td><td>%li</td></tr>",
-			      i, msgCount0[i]);
+		p->safePrintf("<tr bgcolor=#%s>"
+			      "<td>0</td><td>0x%lx</td><td>%li</td></tr>",
+			      LIGHT_BLUE,i, msgCount0[i]);
 	}
 	for ( long i = 0; i < 96; i++ ) {
 		if ( msgCount1[i] <= 0 ) continue;
-		p->safePrintf("<tr><td>1</td><td>0x%lx</td><td>%li</td></tr>",
-			      i, msgCount1[i]);
+		p->safePrintf("<tr bgcolor=#%s>"
+			      "<td>1</td><td>0x%lx</td><td>%li</td></tr>",
+			      LIGHT_BLUE,i, msgCount1[i]);
 	}
 	p->safePrintf ( "</table><br>" );
 

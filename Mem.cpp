@@ -13,9 +13,10 @@
 #include "Pages.h"
 
 // put me back
-//#define _EFENCE_
+//#define EFENCE
+#define EFENCE_SIZE 100000
 
-// uncomment this for _EFENCE_ to do underflow checks instead of the
+// uncomment this for EFENCE to do underflow checks instead of the
 // default overflow checks
 //#define _CHECKUNDERFLOW_
 
@@ -51,7 +52,7 @@
 // there because it will hit a different PAGE, to be more sure we could
 // make UNDERPAD and OVERPAD PAGE bytes, although the overrun could still write
 // to another allocated area of memory and we can never catch it.
-#ifdef _EFENCE_
+#ifdef EFENCE
 #define UNDERPAD 0
 #define OVERPAD  0
 #else
@@ -67,7 +68,7 @@ extern bool g_isYippy;
 
 bool freeCacheMem();
 
-#ifdef _EFENCE_
+#ifdef EFENCE
 static void *getElecMem ( long size ) ;
 static void  freeElecMem ( void *p  ) ;
 #endif
@@ -249,7 +250,7 @@ void * operator new (size_t size) throw (std::bad_alloc) {
 		throw std::bad_alloc();
 		//throw 1;
 	}
-#ifdef _EFENCE_
+#ifdef EFENCE
 	void *mem = getElecMem(size);
 #else
 	//void *mem = dlmalloc ( size );
@@ -267,7 +268,7 @@ newmemloop:
 		//return NULL;
 	}
 	if ( (unsigned long)mem < 0x00010000 ) {
-#ifdef _EFENCE_
+#ifdef EFENCE
 		void *remem = getElecMem(size);
 #else
 		void *remem = sysmalloc(size);
@@ -275,7 +276,7 @@ newmemloop:
 		log ( LOG_WARN, "mem: Caught low memory allocation at %08lx, "
 				"reallocated to %08lx", (unsigned long)mem,
 				(unsigned long)remem );
-#ifdef _EFENCE_
+#ifdef EFENCE
 		freeElecMem (mem);
 #else
 		sysfree(mem);
@@ -327,7 +328,7 @@ void * operator new [] (size_t size) throw (std::bad_alloc) {
 		throw std::bad_alloc();
 		//throw 1;
 	}
-#ifdef _EFENCE_
+#ifdef EFENCE
 	void *mem = getElecMem(size);
 #else
 	//void *mem = dlmalloc ( size );
@@ -346,7 +347,7 @@ newmemloop:
 		//return NULL;
 	}
 	if ( (unsigned long)mem < 0x00010000 ) {
-#ifdef _EFENCE_
+#ifdef EFENCE
 		void *remem = getElecMem(size);
 #else
 		void *remem = sysmalloc(size);
@@ -354,7 +355,7 @@ newmemloop:
 		log ( LOG_WARN, "mem: Caught low memory allocation at %08lx, "
 				"reallocated to %08lx", 
 		      (long)mem, (long)remem );
-#ifdef _EFENCE_
+#ifdef EFENCE
 		freeElecMem (mem);
 #else
 		sysfree(mem);
@@ -424,6 +425,7 @@ pid_t Mem::getPid() {
 bool Mem::init  ( long long maxMem ) { 
 	// set main process pid
 	s_pid = getpid();
+
 	// . don't swap our memory out, man...
 	// . damn, linux 2.4.17 seems to crash the kernel sometimes w/ this
 	//if ( mlockall( MCL_CURRENT | MCL_FUTURE ) == -1 ) {
@@ -441,9 +443,36 @@ bool Mem::init  ( long long maxMem ) {
 	if ( g_conf.m_detectMemLeaks )
 		log(LOG_INIT,"mem: Memory leak checking is enabled.");
 
-#ifdef _EFENCE_
+#ifdef EFENCE
 	log(LOG_INIT,"mem: using electric fence!!!!!!!");
 #endif
+
+	// if we can't alloc 3gb exit and retry
+	long long start = gettimeofdayInMilliseconds();
+	char *pools[30];
+	long long count = 0LL;
+	long long chunk = 100000000LL; // 100MB chunks
+	long long need = 3000000000LL; // 3GB
+	long i = 0; for ( i = 0 ; i < 30 ; i++ ) {
+		pools[i] = (char *)mmalloc(chunk,"testmem");
+		count += chunk;
+		if ( pools[i] ) continue;
+		count -= chunk;
+		log("mem: could only alloc %lli bytes of the "
+		    "%lli required to run gigablast. exiting.",
+		    count , need );
+	}
+	for ( long j = 0 ; j < i ; j++ )
+		mfree ( pools[j] , chunk , "testmem" );
+	long long now = gettimeofdayInMilliseconds();
+	long long took = now - start;
+	if ( took > 20 ) log("mem: took %lli ms to check memory ceiling",took);
+	// return if could not alloc the full 3GB
+	if ( i < 30 ) return false;
+
+	// reset this, our max mem used over time ever because we don't
+	// want the mem test we did above to count towards it
+	m_maxAlloced = 0;
 
 	// init or own malloc stuff in malloc.c (from doug leay)
 	//if ( mdw_init_sbrk ( maxMem ) ) return true;
@@ -653,7 +682,7 @@ bool Mem::printMemBreakdownTable ( SafeBuf* sb,
 
 	// make sure the admin viewing this table knows that there will be
 	// frees in here that are delayed if electric fence is enabled.
-#ifdef _EFENCE_
+#ifdef EFENCE
 	ss = " <font color=red>*DELAYED FREES ENABLED*</font>";
 #endif
 
@@ -1244,14 +1273,24 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 		return NULL;
 	}
 
+	void *mem;
+
 	// to find bug that cores on malloc do this
 	//printBreeches(true);
 	//g_errno=ENOMEM;return (void *)log("Mem::malloc: reached mem limit");}
-#ifdef _EFENCE_
-	void *mem = getElecMem(size+UNDERPAD+OVERPAD);
-#else
+#ifdef EFENCE
+	mem = getElecMem(size+UNDERPAD+OVERPAD);
+
+	// conditional electric fence?
+#elif EFENCE_BIG
+	if ( size >= EFENCE_SIZE )
+		mem = getElecMem(size+0+0);
+	else
+		mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
+#else			
+
 	//void *mem = dlmalloc ( size );
-	void *mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
+	mem = (void *)sysmalloc ( size + UNDERPAD + OVERPAD );
 #endif
 	// initialization debug
 	//char *pend = (char *)mem + UNDERPAD + size;
@@ -1323,7 +1362,7 @@ mallocmemloop:
 		return NULL;
 	}
 	if ( (unsigned long)mem < 0x00010000 ) {
-#ifdef _EFENCE_
+#ifdef EFENCE
 		void *remem = getElecMem(size);
 #else
 		void *remem = sysmalloc(size);
@@ -1331,7 +1370,7 @@ mallocmemloop:
 		log ( LOG_WARN, "mem: Caught low memory allocation at %08lx, "
 				"reallocated to %08lx",
 				(unsigned long)mem, (unsigned long)remem );
-#ifdef _EFENCE_
+#ifdef EFENCE
 		freeElecMem (mem);
 #else
 		sysfree(mem);
@@ -1394,7 +1433,9 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 
 	char *mem;
 
-#ifdef _EFENCE_
+	// even though size may be < 100k for EFENCE_BIG, do it this way
+	// for simplicity...
+#if defined(EFENCE) || defined(EFENCE_BIG)
 	mem = (char *)mmalloc ( newSize , note );
 	if ( ! mem ) return NULL;
 	// copy over to it
@@ -1473,10 +1514,19 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 		char *xx = NULL; *xx = 0;
 	}
 
-#ifdef _EFENCE_
+#ifdef EFENCE
 	// this does a delayed free so do not call rmMem() just yet
 	freeElecMem ((char *)ptr - UNDERPAD );
-#else
+	return;
+#endif
+
+#ifdef EFENCE_BIG
+	if ( size >= EFENCE_SIZE ) {
+		freeElecMem ((char *)ptr - 0 );
+		return;
+	}
+#endif	
+
 	bool isnew = s_isnew[slot];
 
 	// if this returns false it was an unbalanced free
@@ -1484,7 +1534,6 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 
 	if ( isnew ) sysfree ( (char *)ptr );
 	else         sysfree ( (char *)ptr - UNDERPAD );
-#endif
 }
 
 long getLowestLitBitLL ( unsigned long long bits ) {

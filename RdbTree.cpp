@@ -279,7 +279,7 @@ long RdbTree::clear ( ) {
 	for ( long i = 0 ; i < nc ; i++ ) {
 		CollectionRec *cr = g_collectiondb.getRec(i);
 		if ( ! cr ) continue;
-		//if ( ((unsigned char)m_rdbId)>=RDB_END){char *xx=NULL;*xx=0; }
+		//if (((unsigned char)m_rdbId)>=RDB_END){char *xx=NULL;*xx=0; }
 		cr->m_numNegKeysInTree[(unsigned char)m_rdbId] = 0;
 		cr->m_numPosKeysInTree[(unsigned char)m_rdbId] = 0;
 	}
@@ -633,9 +633,11 @@ long RdbTree::addNode ( collnum_t collnum ,
 		// crap, when fixing a tree this will segfault because
 		// m_recs[collnum] is NULL.
 		if ( m_rdbId >= 0 && g_collectiondb.m_recs[collnum] ) {
-			//if( ((unsigned char)m_rdbId)>=RDB_END){char *xx=NULL;*xx=0; }
-			g_collectiondb.m_recs[collnum]->
-				m_numNegKeysInTree[(unsigned char)m_rdbId]++;
+			//if( ((unsigned char)m_rdbId)>=RDB_END){
+			//char *xx=NULL;*xx=0; }
+			CollectionRec *cr ;
+			cr = g_collectiondb.m_recs[collnum];
+			if(cr)cr->m_numNegKeysInTree[(unsigned char)m_rdbId]++;
 		}
 	}
 	else {
@@ -644,9 +646,11 @@ long RdbTree::addNode ( collnum_t collnum ,
 		// crap, when fixing a tree this will segfault because
 		// m_recs[collnum] is NULL.
 		if ( m_rdbId >= 0 && g_collectiondb.m_recs[collnum] ) {
-			//if( ((unsigned char)m_rdbId)>=RDB_END){char *xx=NULL;*xx=0; }
-			g_collectiondb.m_recs[collnum]->
-				m_numPosKeysInTree[(unsigned char)m_rdbId]++;
+			//if( ((unsigned char)m_rdbId)>=RDB_END){
+			//char *xx=NULL;*xx=0; }
+			CollectionRec *cr ;
+			cr = g_collectiondb.m_recs[collnum];
+			if(cr)cr->m_numPosKeysInTree[(unsigned char)m_rdbId]++;
 		}
 	}
 	// debug2 msg
@@ -839,16 +843,20 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	if ( KEYNEG(m_keys,i,m_ks) ) {
 		m_numNegativeKeys--;
 		//m_numNegKeysPerColl[m_collnums[i]]--;
-		if ( m_rdbId >= 0 )
-			g_collectiondb.m_recs[m_collnums[i]]->
-				m_numPosKeysInTree[(unsigned char)m_rdbId]--;
+		if ( m_rdbId >= 0 ) {
+			CollectionRec *cr;
+			cr = g_collectiondb.m_recs[m_collnums[i]];
+			if(cr)cr->m_numNegKeysInTree[(unsigned char)m_rdbId]--;
+		}
 	}
 	else {
 		m_numPositiveKeys--;
 		//m_numPosKeysPerColl[m_collnums[i]]--;
-		if ( m_rdbId >= 0 )
-			g_collectiondb.m_recs[m_collnums[i]]->
-				m_numPosKeysInTree[(unsigned char)m_rdbId]--;
+		if ( m_rdbId >= 0 ) {
+			CollectionRec *cr;
+			cr = g_collectiondb.m_recs[m_collnums[i]];
+			if(cr)cr->m_numPosKeysInTree[(unsigned char)m_rdbId]--;
+		}
 	}
 	// debug step -- check chain from iparent down making sure that
 	//printTree();
@@ -945,8 +953,9 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 		//m_numNegKeysPerColl[m_collnums[i]]--;
 		if ( m_rdbId >= 0 ) {
 			//if( ((unsigned char)m_rdbId)>=RDB_END){char *xx=NULL;*xx=0; }
-			g_collectiondb.m_recs[m_collnums[i]]->
-				m_numNegKeysInTree[(unsigned char)m_rdbId]--;
+			CollectionRec *cr ;
+			cr = g_collectiondb.m_recs[m_collnums[i]];
+			if(cr)cr->m_numNegKeysInTree[(unsigned char)m_rdbId]--;
 		}
 	}
 	else {
@@ -954,8 +963,9 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 		//m_numPosKeysPerColl[m_collnums[i]]--;
 		if ( m_rdbId >= 0 ) {
 			//if( ((unsigned char)m_rdbId)>=RDB_END){char *xx=NULL;*xx=0; }
-			g_collectiondb.m_recs[m_collnums[i]]->
-				m_numPosKeysInTree[(unsigned char)m_rdbId]--;
+			CollectionRec *cr ;
+			cr = g_collectiondb.m_recs[m_collnums[i]];
+			if(cr)cr->m_numPosKeysInTree[(unsigned char)m_rdbId]--;
 		}
 	}
 	// debug step -- check chain from iparent down making sure that

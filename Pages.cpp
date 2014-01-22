@@ -963,14 +963,14 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 					   coll, NULL, fromIp, qs );
 	}
 	// end table
-	sb->safePrintf ("</td></tr></table><br/><br/>\n");
+	sb->safePrintf ("</td></tr></table><br/>\n");//<br/>\n");
 
 	SafeBuf mb;
 	long adds = 0;
 
 	PingServer *ps = &g_pingServer;
 
-	mb.safePrintf("<center>"
+	mb.safePrintf(//"<center>"
 		      "<table cellpadding=5 "
 		      "style=\""
 		      "background-color:#ff6666;"
@@ -1015,7 +1015,16 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 			      "pings.",ps->m_numHostsDead ,s );
 	}
 
-	mb.safePrintf("</td></tr></table></center><br>");
+	if ( ! g_conf.m_useThreads ) {
+		if ( adds ) mb.safePrintf("<br><br>");
+		adds++;
+		mb.safePrintf("Threads are disabled. Severely hurts "
+			      "performance.");
+	}
+
+	mb.safePrintf("</td></tr></table>"
+		      //"</center>"
+		      "<br>");
 
 	// a new table. on the left is collections, on right is other stuff
 	sb->safePrintf("<TABLE "
@@ -1096,7 +1105,7 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	sb->safePrintf("</div></TD>");
 
 	// the controls will go here
-	sb->safePrintf("<TD>");
+	sb->safePrintf("<TD valign=top>");
 
 	return true;
 }

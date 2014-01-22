@@ -1964,8 +1964,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	// . if we have no g_errno that is bad!!!
 	// . we should dump core here or something cuz we have to remove the
 	//   merge file still to be correct
-	if ( ! g_errno )
-		log(LOG_INFO,"merge: Got token without blocking.");
+	//if ( ! g_errno )
+	//	log(LOG_INFO,"merge: Got token without blocking.");
 	// we now set this in init() by calling m_merge.init() so it
 	// can pre-alloc it's lists in it's s_msg3 class
 	//		       g_conf.m_mergeMaxBufSize ) ) return ;

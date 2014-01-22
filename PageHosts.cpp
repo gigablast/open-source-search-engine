@@ -397,13 +397,14 @@ skipReplaceHost:
 				      "in disagreement with ours.\">H</b></font>");
 		// rebalancing?
 		if ( h->m_flags & PFLAG_REBALANCING )
-			fb.safePrintf("<b title=\"Current rebalancing\">R</b>");
+			fb.safePrintf("<b title=\"Currently "
+				      "rebalancing\">R</b>");
 		// has recs that should be in another shard? indicates
 		// we need to rebalance or there is a bad hosts.conf
 		if ( h->m_flags & PFLAG_FOREIGNRECS )
 			fb.safePrintf("<font color=red><b title=\"Foreign data "
 				      "detected. Needs rebalance.\">F"
-				      "</b></font");
+				      "</b></font>");
 		// if it has spiders going on say "S"
 		if ( h->m_flags & PFLAG_HASSPIDERS )
 			fb.safePrintf ( "<span title=\"Spidering\">S</span>");
