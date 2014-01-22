@@ -2286,8 +2286,8 @@ bool RdbBase::verifyFileSharding ( ) {
 
 	// tally it up
 	g_rebalance.m_numForeignRecs += count - got;
-	log ("db: Out of first %li records in %s for %s, only %li belong "
-	     "to our group.",count,m_dbname,m_coll,got);
+	log ("db: Out of first %li records in %s for %s.%li, only %li belong "
+	     "to our group.",count,m_dbname,m_coll,(long)m_collnum,got);
 	// exit if NONE, we probably got the wrong data
 	//if ( got == 0 ) log("db: Are you sure you have the "
 	//		    "right data in the right directory? ");

@@ -217,8 +217,9 @@ void Rebalance::scanLoop ( ) {
 			if ( rdb->m_rdbId == RDB_STATSDB ) continue;
 			// log it as well
 			if ( m_lastRdb != rdb ) {
-				log("rebal: scanning %s [%s]",
-				    cr->m_coll,rdb->m_dbname);
+				log("rebal: scanning %s (%li) [%s]",
+				    cr->m_coll,(long)cr->m_collnum,
+				    rdb->m_dbname);
 				// only do this once per rdb/coll
 				m_lastRdb = rdb;
 				// reset key cursor as well!!!
@@ -235,8 +236,11 @@ void Rebalance::scanLoop ( ) {
 			// scan it. returns true if done, false if blocked
 			if ( ! scanRdb ( ) ) return;
 			// note it
-			log("rebal: moved %lli of %lli recs scanned",
-			    m_rebalanceCount,m_scannedCount);
+			log("rebal: moved %lli of %lli recs scanned in "
+			    "%s for coll.%s.%li",
+			    m_rebalanceCount,m_scannedCount,
+			    rdb->m_dbname,cr->m_coll,(long)cr->m_collnum);
+			//if ( m_rebalanceCount ) goto done;
 			m_rebalanceCount = 0;
 			m_scannedCount = 0;
 			m_lastPercent = -1;
@@ -245,6 +249,7 @@ void Rebalance::scanLoop ( ) {
 		m_rdbNum = 0;
 	}
 
+	// done:
 	// all done
 	m_isScanning     = false;
 	m_needsRebalance = false;
@@ -395,18 +400,23 @@ bool Rebalance::gotList ( ) {
 
 	for ( ; ! m_list.isExhausted() ; m_list.skipCurrentRec() ) {
 		// get tht rec
-		char *rec = m_list.getCurrentRec();
+		//char *rec = m_list.getCurrentRec();
+		// get it
+		m_list.getCurrentKey  ( m_nextKey );
+		// skip if negative... wtf?
+		if ( KEYNEG(m_nextKey) ) continue;
 		// get shard
-		long shard = getShardNum ( rdbId , rec );
+		long shard = getShardNum ( rdbId , m_nextKey );
 		// save last ptr
 		//last = rec;
-		m_list.getKey  ( rec , m_nextKey );
 		// debug!
 		//log("rebal: checking key %s",KEYSTR(m_nextKey,ks));
 		// count as scanned
 		m_scannedCount++;
 		// skip it if it belongs with us
 		if ( shard == myShard ) continue;
+		// note it
+		//log("rebal: shard is %li",shard);
 		// count it
 		m_rebalanceCount++;
 		// otherwise, it does not!
@@ -457,7 +467,9 @@ bool Rebalance::gotList ( ) {
 		if ( KEYCMP ( m_nextKey , KEYMAX() , ks ) != 0 )
 			KEYADD ( m_nextKey , 1 , ks );
 	}
-
+	//else {
+	//	log("rebal: got empty list");
+	//}
 
 	if ( ! m_msg4a.addMetaList ( &m_posMetaList ,
 				     m_collnum ,
