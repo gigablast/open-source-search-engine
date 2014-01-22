@@ -1,11 +1,5 @@
 // Matt Wells, copyright Nov 2002
 
-//
-// . Spider.h/.cpp contains all the code related to spider scheduling
-// . Spiderdb holds the SpiderRecs which indicate the time to spider a url
-// . there are 2 types of SpiderRecs: SpiderRequest and SpiderReply recs
-//
-
 #ifndef _SPIDER_H_
 #define _SPIDER_H_
 
@@ -57,6 +51,29 @@ bool getSpiderStatusMsg ( class CollectionRec *cx ,
 // this new spider algorithm ensures that urls get spidered even if a host
 // is dead. and even if the url was being spidered by a host that suddenly went
 // dead.
+//
+// . Spider.h/.cpp contains all the code related to spider scheduling
+// . Spiderdb holds the SpiderRecs which indicate the time to spider a url
+// . there are 2 types of SpiderRecs: SpiderRequest and SpiderReply recs
+//
+//
+// There are 3 main components to the spidering process:
+// 1) spiderdb
+// 2) the "waiting tree"
+// 3) doledb
+//
+// spiderdb holds all the spiderrequests/spiderreplies sorted by 
+// their IP
+//
+// the waiting tree holds at most one entry for an IP indicating that
+// we should scan all the spiderrequests/spiderreplies for that IP in
+// spiderdb, find the "best" one(s) and add it (them) to doledb.
+//
+// doledb holds the best spiderrequests from spiderdb sorted by
+// "priority".  priorities range from 0 to 127, the highest priority.
+// basically doledb holds the urls that are ready for spidering now.
+
+
 
 
 // Spiderdb
