@@ -1065,8 +1065,15 @@ bool Msg5::gotList2 ( ) {
 		// sanity check
 		//if ( KEYNEG(m_listPtrs[i]->getEndKey()) ) {
 		//	char *xx=NULL;*xx=0; }
-		if ( KEYCMP(m_listPtrs[i]->getEndKey(),m_minEndKey,m_ks)<0 ) 
+		if ( KEYCMP(m_listPtrs[i]->getEndKey(),m_minEndKey,m_ks)<0 ) {
 			KEYSET(m_minEndKey,m_listPtrs[i]->getEndKey(),m_ks);
+			// crap, if list is all negative keys, then the
+			// end key seems negative too! however in this
+			// case RdbScan::m_endKey seems positive so
+			// maybe we got a negative endkey in constrain?
+			//if (! (m_minEndKey[0] & 0x01) )
+			//	log("msg5: list had bad endkey");
+		}
 	}
 	// sanity check
 	//if ( KEYNEG( m_minEndKey) ) {char *xx=NULL;*xx=0; }
@@ -1393,7 +1400,7 @@ bool Msg5::gotList2 ( ) {
 	m_waitingForMerge = false;
 
 	// thread creation failed
-	if ( g_conf.m_useThreads )
+	if ( g_conf.m_useThreads && ! g_threads.m_disabled )
 		log(LOG_INFO,
 		    "net: Failed to create thread to merge lists. Doing "
 		    "blocking merge. Hurts performance.");

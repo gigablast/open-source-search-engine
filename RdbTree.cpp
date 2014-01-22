@@ -3084,8 +3084,8 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 	if ( count == 0 ) return;
 	log(LOG_LOGIC,"db: Removed %li records from %s tree for invalid "
 	    "collection number %i.",count,m_dbname,collnum);
-	log(LOG_LOGIC,"db: Records not actually removed for safety. Except "
-	    "for those with negative colnums.");
+	//log(LOG_LOGIC,"db: Records not actually removed for safety. Except "
+	//    "for those with negative colnums.");
 	static bool s_print = true;
 	if ( ! s_print ) return;
 	s_print = false;

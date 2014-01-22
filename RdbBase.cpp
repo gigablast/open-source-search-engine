@@ -614,6 +614,17 @@ bool RdbBase::setFiles ( ) {
 			return false;
 	}
 
+	// everyone should start with file 0001.dat or 0000.dat
+	if ( m_numFiles > 0 && m_fileIds[0] > 1 ) {
+		log("db: missing file id 0001.dat for %s in coll %s. "
+		    "Fix this or it'll core later. Just rename the next file "
+		    "in line to 0001.dat/map. We probably cored at a "
+		    "really bad time during the end of a merge process.",
+		    m_dbname, m_coll );
+		char *xx=NULL; *xx=0;
+	}
+
+
 	m_dir.close();
 
 	// ensure files are sharded correctly
@@ -659,6 +670,7 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		    (long)MAX_RDB_FILES);
 		return -1;
 	}
+
 	// HACK: skip to avoid a OOM lockup. if RdbBase cannot dump
 	// its data to disk it can backlog everyone and memory will
 	// never get freed up.

@@ -391,7 +391,7 @@ bool Rebalance::gotList ( ) {
 		return true;
 	}
 
-	char *last = NULL;
+	//char *last = NULL;
 
 	for ( ; ! m_list.isExhausted() ; m_list.skipCurrentRec() ) {
 		// get tht rec
@@ -399,9 +399,9 @@ bool Rebalance::gotList ( ) {
 		// get shard
 		long shard = getShardNum ( rdbId , rec );
 		// save last ptr
-		last = rec;
+		//last = rec;
+		m_list.getKey  ( rec , m_nextKey );
 		// debug!
-		//m_list.getKey  ( rec , m_nextKey );
 		//log("rebal: checking key %s",KEYSTR(m_nextKey,ks));
 		// count as scanned
 		m_scannedCount++;
@@ -445,12 +445,13 @@ bool Rebalance::gotList ( ) {
 	//log("rebal: done reading list");
 
 	//  update nextkey
-	if ( last ) {
+	//if ( last ) {
+	if ( ! m_list.isEmpty() ) {
 		// get the last key we scanned, all "ks" bytes of it.
 		// because some keys are compressed and we take the
 		// more significant compressed out bytes from m_list.m_*
 		// member vars
-		m_list.getKey  ( last , m_nextKey );
+		//m_list.getKey  ( last , m_nextKey );
 		// if it is not maxxed out, then incremenet it for the
 		// next scan round
 		if ( KEYCMP ( m_nextKey , KEYMAX() , ks ) != 0 )
