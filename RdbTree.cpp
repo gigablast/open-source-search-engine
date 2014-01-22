@@ -882,11 +882,14 @@ void RdbTree::deleteNode ( long i , bool freeData ) {
 	//m_numNegKeysPerColl[m_collnums[i]] = 0;
 	//m_numPosKeysPerColl[m_collnums[i]] = 0;
 	if ( m_rdbId >= 0 ) {
-		//if ( ((unsigned char)m_rdbId)>=RDB_END){char *xx=NULL;*xx=0; }
-		g_collectiondb.m_recs[m_collnums[i]]->
-			m_numNegKeysInTree[(unsigned char)m_rdbId] = 0;
-		g_collectiondb.m_recs[m_collnums[i]]->
-			m_numPosKeysInTree[(unsigned char)m_rdbId] = 0;
+		//if ( ((unsigned char)m_rdbId)>=RDB_END){
+		//char *xx=NULL;*xx=0; }
+		CollectionRec *cr ;
+		cr = g_collectiondb.m_recs[m_collnums[i]];
+		if(cr){
+			cr->m_numNegKeysInTree[(unsigned char)m_rdbId] = 0;
+			cr->m_numPosKeysInTree[(unsigned char)m_rdbId] = 0;
+		}
 	}
 
 
@@ -3069,8 +3072,9 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 			deleteNode ( i , true );
 		// remove it otherwise
 		// don't actually remove it!!!! in case collection gets
-		// moved accidentally
-		//deleteNode ( i , true );
+		// moved accidentally.
+		// no... otherwise it can clog up the tree forever!!!!
+		deleteNode ( i , true );
 		count++;
 		// save it
 		collnum = m_collnums[i];
