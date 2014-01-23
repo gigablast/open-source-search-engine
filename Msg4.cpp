@@ -1079,7 +1079,7 @@ void storeLineWaiters ( ) {
 	goto loop;
 }
 
-
+#include "Process.h"
 
 // . destroys the slot if false is returned
 // . this is registered in Msg4::set() to handle add rdb record msgs

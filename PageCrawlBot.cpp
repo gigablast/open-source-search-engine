@@ -306,7 +306,9 @@ void StateCD::sendBackDump2 ( ) {
 	m_numReplies  = 0;
 
 	// read 10MB from each shard's spiderdb at a time
-	m_minRecSizes = 9999999;
+	//m_minRecSizes = 9999999;
+	// 1ook to be more fluid
+	m_minRecSizes = 99999;
 
 	// we stop reading from all shards when this becomes false
 	m_someoneNeedsMore = true;

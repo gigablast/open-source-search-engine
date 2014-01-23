@@ -888,14 +888,19 @@ void SpiderCache::save ( bool useThread ) {
 	// assume saving
 	//m_isSaving = true;
 	// loop over all SpiderColls and get the best
-	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = getSpiderCollIffNonNull(i);//m_spiderColls[i];
 		if ( ! sc ) continue;
 		RdbTree *tree = &sc->m_waitingTree;
+		if ( ! tree->m_needsSave ) continue;
+		// if already saving from a thread
+		if ( tree->m_isSaving ) continue;
 		char *filename = "waitingtree";
 		char dir[1024];
 		sprintf(dir,"%scoll.%s.%li",g_hostdb.m_dir,
 			sc->m_coll,(long)sc->m_collnum);
+		// log it for now
+		log("spider: saving waiting tree for cn=%li",(long)i);
 		// returns false if it blocked, callback will be called
 		tree->fastSave ( dir, // g_hostdb.m_dir ,
 				 filename ,
@@ -938,7 +943,7 @@ void SpiderCache::save ( bool useThread ) {
 }
 
 bool SpiderCache::needsSave ( ) {
-	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = getSpiderCollIffNonNull(i);//m_spiderColls[i];
 		if ( ! sc ) continue;
 		if ( sc->m_waitingTree.m_needsSave ) return true;
@@ -951,7 +956,7 @@ bool SpiderCache::needsSave ( ) {
 void SpiderCache::reset ( ) {
 	log(LOG_DEBUG,"spider: resetting spidercache");
 	// loop over all SpiderColls and get the best
-	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = getSpiderCollIffNonNull(i);
 		if ( ! sc ) continue;
 		sc->reset();
