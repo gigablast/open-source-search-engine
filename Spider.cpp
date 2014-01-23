@@ -4685,6 +4685,9 @@ void doneSendingNotification ( void *state ) {
 	if ( cr->m_spiderStatus == SP_MAXTOCRAWL && respiderFreq <= 0.0)return;
 	if ( cr->m_spiderStatus == SP_MAXTOPROCESS && respiderFreq<=0.0)return;
 
+	// if we hit the max to crawl rounds, then stop!!! do not
+	// increment the round...
+	if ( cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) return;
 
 	// this should have been set below
 	//if ( cr->m_spiderRoundStartTime == 0 ) { char *xx=NULL;*xx=0; }
@@ -4716,7 +4719,7 @@ void doneSendingNotification ( void *state ) {
 	//cr->m_spiderRoundStartTime += respiderFreq;
 	char roundTime[128];
 	sprintf(roundTime,"%lu", (long)(getTimeGlobal() + seconds));
-
+	// roundNum++ round++
 	char roundStr[128];
 	sprintf(roundStr,"%li", cr->m_spiderRoundNum + 1);
 
@@ -4755,11 +4758,11 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	// do not send email for maxrounds hit, it will send a round done
 	// email for that. otherwise we end up calling doneSendingEmail()
 	// twice and increment the round twice
-	if ( cr->m_spiderStatus == SP_MAXROUNDS ) {
-		log("spider: not sending email for max rounds limit "
-		    "since already sent for round done.");
-		return true;
-	}
+	//if ( cr->m_spiderStatus == SP_MAXROUNDS ) {
+	//	log("spider: not sending email for max rounds limit "
+	//	    "since already sent for round done.");
+	//	return true;
+	//}
 
 	// wtf? caller must set this
 	if ( ! cr->m_spiderStatus ) { char *xx=NULL; *xx=0; }
@@ -11101,6 +11104,32 @@ void updateAllCrawlInfosSleepWrapper ( int fd , void *state ) {
 	//return true;
 }
 
+// . Parms.cpp calls this when it receives our "spiderRoundNum" increment above
+// . all hosts should get it at *about* the same time
+void spiderRoundIncremented ( CollectionRec *cr ) {
+
+	log("spider: incrementing spider round for coll %s to %li (%lu)",
+	    cr->m_coll,cr->m_spiderRoundNum,cr->m_spiderRoundStartTime);
+
+	// . need to send a notification for this round
+	cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
+
+	// . if we set sentCrawlDoneALert to 0 it will immediately
+	//   trigger another round increment !! so we have to set these
+	//   to true to prevent that.
+	// . if we learnt that there really are no more urls ready to spider
+	//   then we'll go to the next round. but that can take like
+	//   SPIDER_DONE_TIMER seconds of getting nothing.
+	cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = true;
+	cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
+
+
+	cr->m_localCrawlInfo.m_pageDownloadSuccessesThisRound = 0;
+	cr->m_localCrawlInfo.m_pageProcessSuccessesThisRound  = 0;
+	cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound = 0;
+	cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound  = 0;
+}
+
 void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 	// reply is error?
@@ -11246,10 +11275,10 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 		// update status if nto already SP_MAXTOCRAWL, etc. we might
 		// just be flat out of urls
-		if ( ! cr->m_spiderStatus || 
-		     cr->m_spiderStatus == SP_INPROGRESS ||
-		     cr->m_spiderStatus == SP_INITIALIZING )
-			cr->m_spiderStatus = SP_ROUNDDONE;
+		//if ( ! cr->m_spiderStatus || 
+		//     cr->m_spiderStatus == SP_INPROGRESS ||
+		//     cr->m_spiderStatus == SP_INITIALIZING )
+		//	cr->m_spiderStatus = SP_ROUNDDONE;
 
 
 		// only host #0 sends emails
@@ -11332,6 +11361,8 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	//long now = getTimeGlobal();
 	SafeBuf replyBuf;
 
+	long now = getTimeGlobal();
+
 	//SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
 
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
@@ -11347,11 +11378,23 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 
 		SpiderColl *sc = cr->m_spiderColl;
 
+		/////////
+		//
+		// ARE WE DONE SPIDERING?????
+		//
+		/////////
+
 		// if we haven't spidered anything in 1 min assume the
 		// queue is basically empty...
 		if ( ci->m_lastSpiderAttempt &&
 		     ci->m_lastSpiderCouldLaunch &&
 		     ci->m_hasUrlsReadyToSpider &&
+		     // the next round we are waiting for, if any, must
+		     // have had some time to get urls! otherwise we
+		     // will increment the round # and wait just
+		     // SPIDER_DONE_TIMER seconds and end up setting
+		     // hasUrlsReadyToSpider to false!
+		     now > cr->m_spiderRoundStartTime + SPIDER_DONE_TIMER &&
 		     // no spiders currently out. i've seen a couple out
 		     // waiting for a diffbot reply. wait for them to
 		     // return before ending the round...
@@ -11363,9 +11406,13 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		     //cr->m_spideringEnabled &&
 		     //g_conf.m_spideringEnabled &&
 		     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 
-		     (long) SPIDER_DONE_TIMER )
+		     (long) SPIDER_DONE_TIMER ) {
+			// this is the MOST IMPORTANT variable so note it
+			log("spider: coll %s has no more urls to spider",
+			    cr->m_coll);
 			// assume our crawl on this host is completed i guess
 			ci->m_hasUrlsReadyToSpider = 0;
+		}
 		
 		// save it
 		replyBuf.safeMemcpy ( ci , sizeof(CrawlInfo) );

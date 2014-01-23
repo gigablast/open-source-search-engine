@@ -18266,11 +18266,9 @@ void handleRequest3fLoop ( void *weArg ) {
 
 	// reset page round counts
 	if ( we->m_updatedRound && cx ) {
-		log("parms: clearing this round page counts");
-		cx->m_localCrawlInfo.m_pageDownloadSuccessesThisRound = 0;
-		cx->m_localCrawlInfo.m_pageProcessSuccessesThisRound  = 0;
-		cx->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound = 0;
-		cx->m_globalCrawlInfo.m_pageProcessSuccessesThisRound  = 0;
+		// Spider.cpp will reset the *ThisRound page counts and
+		// the sent notification flag
+		spiderRoundIncremented ( cx );
 	}
 
 	// basically resetting the spider here...

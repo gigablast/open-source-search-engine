@@ -39,6 +39,7 @@
 #define SP_ADMIN_PAUSED 8 // g_conf.m_spideringEnabled = false
 #define SP_COMPLETED    9 // crawl is done, and no repeatCrawl is scheduled
 
+void spiderRoundIncremented ( class CollectionRec *cr ) ;
 bool testPatterns ( ) ;
 bool doesStringContainPattern ( char *content , char *pattern ) ;
 
