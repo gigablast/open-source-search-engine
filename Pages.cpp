@@ -1015,7 +1015,7 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 			      "pings.",ps->m_numHostsDead ,s );
 	}
 
-	if ( ! g_conf.m_useThreads ) {
+	if ( ! g_conf.m_useThreads || g_threads.m_disabled ) {
 		if ( adds ) mb.safePrintf("<br><br>");
 		adds++;
 		mb.safePrintf("Threads are disabled. Severely hurts "

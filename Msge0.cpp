@@ -151,7 +151,8 @@ bool Msge0::launchRequests ( long starti ) {
 	// . grab a slot
 	// . m_msg8as[i], m_msgCs[i], m_msg50s[i], m_msg20s[i]
 	long i;
-	for ( i = starti ; i < MAX_OUTSTANDING_MSGE0 ; i++ )
+	// make this 0 since "maxOut" now changes!!
+	for ( i = 0 /*starti*/ ; i < MAX_OUTSTANDING_MSGE0 ; i++ )
 		if ( ! m_used[i] ) break;
 	// sanity check
 	if ( i >= MAX_OUTSTANDING_MSGE0 ) { char *xx = NULL; *xx = 0; }
