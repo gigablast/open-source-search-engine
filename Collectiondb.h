@@ -89,7 +89,7 @@ class Collectiondb  {
 
 	// . how many collections we have in here
 	// . only counts valid existing collections
-	long getNumRecs() { return m_numRecsUsed; };
+	long getNumRecsUsed() { return m_numRecsUsed; };
 
 	// . does this requester have root admin privledges???
 	// . uses the root collection record!
