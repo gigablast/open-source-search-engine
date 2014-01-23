@@ -13156,9 +13156,10 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		char *ttt = strstr ( page , "\"url\":\"");
 		if ( ! ttt ) {
 			log("xmldoc: diffbot reply for %s using %s is missing "
-			    "the url: field in the json reply",
+			    "the url: field in the json reply. reply=%s",
 			    THIS->m_firstUrl.m_url,
-			    THIS->m_diffbotUrl.getBufStart()
+			    THIS->m_diffbotUrl.getBufStart(),
+			    page 
 			    );
 			THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
 		}

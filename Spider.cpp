@@ -4834,6 +4834,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( g_udpServer.getNumUsedSlots() >= 1300 ) return;
 	// stop if too many out. this is now 50 down from 500.
 	if ( m_numSpidersOut >= MAX_SPIDERS ) return;
+	// a new global conf rule
+	if ( m_numSpidersOut >= g_conf.m_maxTotalSpiders ) return;
 	// bail if no collections
 	if ( g_collectiondb.m_numRecs <= 0 ) return;
 	// not while repairing
@@ -7486,7 +7488,7 @@ bool sendPage ( State11 *st ) {
 	SafeBuf mb;
 	if ( cr ) getSpiderStatusMsg ( cr , &mb , &tmp2 );
 	if ( mb.length() && tmp2 != SP_INITIALIZING )
-		sb.safePrintf("<center>"
+		sb.safePrintf(//"<center>"
 			      "<table cellpadding=5 "
 			      //"style=\""
 			      //"border:2px solid black;"
@@ -9431,6 +9433,10 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( errCode != EDNSTIMEDOUT &&
 			     errCode != ETCPTIMEDOUT &&
 			     errCode != EDNSDEAD &&
+			     // assume diffbot is temporarily experiencing errs
+			     errCode != EDIFFBOTINTERNALERROR &&
+			     // out of memory while crawling?
+			     errCode != ENOMEM &&
 			     errCode != ENETUNREACH &&
 			     errCode != EHOSTUNREACH )
 				errCode = 0;

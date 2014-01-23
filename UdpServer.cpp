@@ -1460,13 +1460,23 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		// 2c is clogging crap up
 		if ( msgType == 0x2c && m_msg2csInWaiting >= 100 && niceness )
 			getSlot = false;
-		// avoid slamming thread queues with sectiondb disk reads
+
+		// . avoid slamming thread queues with sectiondb disk reads
+		// . mdw 1/22/2014 take this out now too, we got ssds
+		//   let's see if taking this out fixes the jam described
+		//   below
 		if ( msgType == 0x00 && m_numUsedSlots > 500 && niceness )
 			getSlot = false;
+
 		// added this because host #14 was clogging on
-		// State00's and ThreadReadBuf taking all the mem
-		if ( msgType == 0x00 && m_msg0sInWaiting> 70 && niceness )
-			getSlot = false;
+		// State00's and ThreadReadBuf taking all the mem.
+		//
+		// mdw 1/22/2014 seems to be jamming up now with 50 crawlers
+		// per host on 16 hosts on tagdb lookups using msg8a so
+		// take this out for now...
+		//if ( msgType == 0x00 && m_msg0sInWaiting> 70 && niceness )
+		//	getSlot = false;
+
 		// really avoid slamming if we're trying to merge some stuff
 		//if ( msgType == 0x00 && m_numUsedSlots > 100 && niceness &&
 		//     g_numUrgentMerges )

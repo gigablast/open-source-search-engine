@@ -1283,7 +1283,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "was any kind of error."
 			  "</td></tr>"
 
-			  "<tr class=poo><td>lastspidertime >= <b>{roundstart}</b></td>"
+			  "<tr class=poo><td>lastspidertime >= "
+			  "<b>{roundstart}</b></td>"
 			  "<td>"
 			  "This is true if the url's last spidered time "
 			  "indicates it was spidered already for this "
@@ -1404,7 +1405,15 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "in an error like EDNSTIMEDOUT or a similar error, "
 			  "usually indicative of a temporary internet "
 			  "failure, or local resource failure, like out of "
-			  "memory, and should be retried soon."
+			  "memory, and should be retried soon. "
+			  "Currently: "
+			  "dns timed out, "
+			  "tcp timed out, "
+			  "dns dead, "
+			  "network unreachable, "
+			  "host unreachable, "
+			  "diffbot internal error, "
+			  "out of memory."
 			  "</td></tr>"
 
 			  "<tr class=poo><td>percentchangedperday&lt=5</td>"
@@ -5934,6 +5943,17 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_MASTER;
 	m++;
 
+	m->m_title = "max total spiders";
+	m->m_desc  = "What is the maximum number of web "
+		"pages the spider is allowed to download "
+		"simultaneously for ALL collections PER HOST?";
+	m->m_cgi   = "mtsp";
+	m->m_off   = (char *)&g_conf.m_maxTotalSpiders - g;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "100";
+	m->m_group = 0;
+	m++;
+
 	/*
 	m->m_title = "web spidering enabled";
 	m->m_desc  = "Spiders events on web";
@@ -9429,7 +9449,7 @@ void Parms::init ( ) {
 	m->m_title = "max spiders";
 	m->m_desc  = "What is the maximum number of web "
 		"pages the spider is allowed to download "
-		"simultaneously PER HOST?";
+		"simultaneously PER HOST for THIS collection?";
 	m->m_cgi   = "mns";
 	m->m_off   = (char *)&cr.m_maxNumSpiders - x;
 	m->m_type  = TYPE_LONG;
@@ -16848,7 +16868,8 @@ void Parms::init ( ) {
 		if ( m_parms[i].m_off   > mm ||
 		     m_parms[i].m_soff  > mm ||
 		     m_parms[i].m_smaxc > mm   ) {
-			log(LOG_LOGIC,"conf: Bad offset in parm #%li.",i);
+			log(LOG_LOGIC,"conf: Bad offset in parm #%li %s.",
+			    i,m_parms[i].m_title);
 			exit(-1);
 		}
 		// do not allow numbers in cgi parms, they are used for

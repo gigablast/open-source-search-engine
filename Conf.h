@@ -301,6 +301,8 @@ class Conf {
 	long  m_robotdbMaxCacheMem  ;
 	bool  m_robotdbSaveCache;
 
+	long  m_maxTotalSpiders;
+
 	// indexdb has a max cached age for getting IndexLists (10 mins deflt)
 	long  m_indexdbMaxTreeMem   ;
 	long  m_indexdbMaxCacheMem;

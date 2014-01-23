@@ -2045,6 +2045,24 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		i++;
 	}
 
+	// and for docs that have errors respider once every 5 hours
+	m_regExs[i].set("errorcount==1");
+	m_spiderPriorities   [i] = 40;
+	m_spiderFreqs        [i] = 0.001; // 86 seconds
+	i++;
+
+	// and for docs that have errors respider once every 5 hours
+	m_regExs[i].set("errorcount==2");
+	m_spiderPriorities   [i] = 40;
+	m_spiderFreqs        [i] = 0.1; // 2.4 hrs
+	i++;
+
+	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
+	m_regExs[i].set("errorcount>=3");
+	m_spiderPriorities   [i] = 30;
+	m_spiderFreqs        [i] = 30; // 30 days
+	i++;
+
 	// 3rd rule for respidering
 	if ( m_collectiveRespiderFrequency > 0.0 ) {
 		m_regExs[i].set("lastspidertime>={roundstart}");
@@ -2076,18 +2094,6 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 	}
-
-	// and for docs that have errors respider once every 5 hours
-	m_regExs[i].set("errorcount>0 && errcount<3");
-	m_spiderPriorities   [i] = 40;
-	m_spiderFreqs        [i] = 0.2; // half a day
-	i++;
-
-	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
-	m_regExs[i].set("errorcount>=3");
-	m_spiderPriorities   [i] = 30;
-	m_spiderFreqs        [i] = 30; // 30 days
-	i++;
 
 	// url crawl and process pattern
 	if ( ucp && upp ) {

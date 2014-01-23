@@ -552,16 +552,18 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 				      cf2);
 		}
 
-		if ( ! isDns ) 
+		if ( ! isDns ) {
 			//"<td>%s</td>"  // ip
 			//"<td>%hu</td>" // port
 			// clickable hostId
+			char *toFrom = "to";
+			if ( ! s->m_callback ) toFrom = "from";
 			//"<td><a href=http://%s:%hu/cgi/15.cgi>%li</a></td>"
 			p->safePrintf (	"<td>0x%hhx</td>"  // msgtype
 					"<td><nobr>%s</nobr></td>"  // desc
 					"<td><a href=http://%s:%hu/"
 					"master/sockets?"
-					"c=%s>%s</a></td>"
+					"c=%s>%s %s</a></td>"
 					"<td>%s%li%s</td>" , // niceness
 					s->m_msgType ,
 					desc,
@@ -571,12 +573,14 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 					eip     ,
 					eport   ,
 					coll ,
+					toFrom,
 					ehostId ,
 					cf1,
 					(long)s->m_niceness,
 					cf2
 					// end clickable hostId
 					);
+		}
 
 		p->safePrintf ( "<td>%lu</td>" // transId
 				"<td>%i</td>" // called handler
