@@ -414,7 +414,7 @@ bool Process::init ( ) {
 	//m_rdbs[m_numRdbs++] = g_tfndb.getRdb       ();
 	m_rdbs[m_numRdbs++] = g_titledb.getRdb     ();
 	//m_rdbs[m_numRdbs++] = g_revdb.getRdb       ();
-	//m_rdbs[m_numRdbs++] = g_sectiondb.getRdb   ();
+	m_rdbs[m_numRdbs++] = g_sectiondb.getRdb   ();
 	m_rdbs[m_numRdbs++] = g_posdb.getRdb     ();
 	//m_rdbs[m_numRdbs++] = g_datedb.getRdb      ();
 	m_rdbs[m_numRdbs++] = g_spiderdb.getRdb    ();
@@ -434,7 +434,7 @@ bool Process::init ( ) {
 	//m_rdbs[m_numRdbs++] = g_tfndb2.getRdb      ();
 	m_rdbs[m_numRdbs++] = g_titledb2.getRdb    ();
 	//m_rdbs[m_numRdbs++] = g_revdb2.getRdb      ();
-	//m_rdbs[m_numRdbs++] = g_sectiondb2.getRdb  ();
+	m_rdbs[m_numRdbs++] = g_sectiondb2.getRdb  ();
 	m_rdbs[m_numRdbs++] = g_posdb2.getRdb    ();
 	//m_rdbs[m_numRdbs++] = g_datedb2.getRdb     ();
 	m_rdbs[m_numRdbs++] = g_spiderdb2.getRdb   ();
@@ -1782,6 +1782,8 @@ void Process::resetAll ( ) {
 
 	g_wiktionary.reset();
 
+	g_countryCode.reset();
+
 	s_clusterdbQuickCache.reset();
 	s_hammerCache.reset();
 	s_table32.reset();
@@ -1835,7 +1837,7 @@ void Process::resetPageCaches ( ) {
 	//g_datedb          .getDiskPageCache()->reset();
 	g_linkdb          .getDiskPageCache()->reset();
 	g_titledb         .getDiskPageCache()->reset();
-	//g_sectiondb       .getDiskPageCache()->reset();
+	g_sectiondb       .getDiskPageCache()->reset();
 	g_tagdb           .getDiskPageCache()->reset();
 	g_spiderdb        .getDiskPageCache()->reset();
 	//g_tfndb           .getDiskPageCache()->reset();

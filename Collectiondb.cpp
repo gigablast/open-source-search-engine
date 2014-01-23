@@ -1465,6 +1465,13 @@ void CollectionRec::reset() {
 	     Rdb *rdb = g_process.m_rdbs[i];
 	     rdb->resetBase ( m_collnum );
 	}
+
+	for ( long i = 0 ; i < g_process.m_numRdbs ; i++ ) {
+		RdbBase *base = m_bases[i];
+		if ( ! base ) continue;
+		mdelete (base, sizeof(RdbBase), "Rdb Coll");
+		delete  (base);
+	}
 }
 
 CollectionRec *g_cr = NULL;

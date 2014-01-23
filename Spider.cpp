@@ -263,7 +263,11 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 		long long elapsed = now - xd->m_startTime;
 		sb->safePrintf(" <td>%li</td>\n",row);
 		sb->safePrintf(" <td>%llims</td>\n",elapsed);
-		sb->safePrintf(" <td>%li</td>\n",(long)xd->m_collnum);
+		collnum_t collnum = xd->m_collnum;
+		CollectionRec *cr = g_collectiondb.getRec(collnum);
+		char *cs = ""; if ( cr ) cs = cr->m_coll;
+		sb->safePrintf(" <td><a href=/crawlbot?c=%s>%li</a></td>\n",
+			       cs,(long)collnum);
 	}
 
 	sb->safePrintf(" <td><nobr>");

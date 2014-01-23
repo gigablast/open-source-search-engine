@@ -1537,6 +1537,29 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// . put in xml or json if format=xml or format=json or
 	//   xml=1 or json=1 ...
 	char fmt = FMT_JSON;
+
+	// token is always required. get from json or html form input
+	//char *token = getInputString ( "token" );
+	char *token = hr->getString("token");
+	char *name = hr->getString("name");
+
+	// . try getting token-name from ?c= 
+	// . the name of the collection is encoded as <token>-<crawlname>
+	char *c = hr->getString("c");
+	char tmp[MAX_COLL_LEN+100];
+	if ( ! token && c ) {
+		strncpy ( tmp , c , MAX_COLL_LEN );
+		token = tmp;
+		name = strstr(tmp,"-");
+		if ( name ) {
+			*name = '\0';
+			name++;
+		}
+		// change default formatting to html
+		fmt = FMT_HTML;
+	}
+
+
 	char *fs = hr->getString("format",NULL,NULL);
 	// give john a json api
 	if ( fs && strcmp(fs,"html") == 0 ) fmt = FMT_HTML;
@@ -1545,9 +1568,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// if we got json as input, give it as output
 	//if ( JS.getFirstItem() ) fmt = FMT_JSON;
 
-	// token is always required. get from json or html form input
-	//char *token = getInputString ( "token" );
-	char *token = hr->getString("token");
+
 
 	if ( ! token && fmt == FMT_JSON ) { // (cast==0|| fmt == FMT_JSON ) ) {
 		char *msg = "invalid token";
@@ -1606,8 +1627,6 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	bool restartColl = hr->hasField("restart");
 
-
-	char *name = hr->getString("name");
 
 	//if ( delColl && !  && cast == 0 ) {
 	//	log("crawlbot: no collection found to delete.");
