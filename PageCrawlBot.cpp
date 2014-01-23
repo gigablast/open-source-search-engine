@@ -278,6 +278,14 @@ bool readAndSendLoop ( StateCD *st , bool readFirst ) {
 
  subloop:
 
+	// if we had a broken pipe on the sendChunk() call then hopefully
+	// this will kick in...
+	if ( g_errno ) {
+		log("crawlbot: readAndSendLoop: %s",mstrerror(g_errno));
+		readFirst = true;
+		st->m_someoneNeedsMore = false;
+	}
+
 	// are we all done?
 	if ( readFirst && ! st->m_someoneNeedsMore ) {
 		log("crawlbot: done sending for download request");
