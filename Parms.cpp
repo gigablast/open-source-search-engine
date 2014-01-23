@@ -17445,7 +17445,8 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 					  long page ){
 
-	CollectionRec *cr = g_collectiondb.getRec ( hr );
+	// false = useDefaultRec?
+	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
 
 	//if ( c ) {
 	//	cr = g_collectiondb.getRec ( hr );

@@ -71,7 +71,8 @@ class Collectiondb  {
 	char *getColl     ( collnum_t collnum ) {return getCollName(collnum);};
 
 	// get coll rec specified in the HTTP request
-	class CollectionRec *getRec ( class HttpRequest *r );
+	class CollectionRec *getRec ( class HttpRequest *r ,
+				      bool useDefaultRec = true );
 
 	// . get collectionRec from name
 	// returns NULL if not available

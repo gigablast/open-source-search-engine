@@ -1124,7 +1124,7 @@ bool addCollToTable ( char *coll , collnum_t collnum ) {
 
 
 // get coll rec specified in the HTTP request
-CollectionRec *Collectiondb::getRec ( HttpRequest *r ) {
+CollectionRec *Collectiondb::getRec ( HttpRequest *r , bool useDefaultRec ) {
 	char *coll = r->getString ( "c" );
 	if ( coll && ! coll[0] ) coll = NULL;
 	// maybe it is crawlbot?
@@ -1141,13 +1141,13 @@ CollectionRec *Collectiondb::getRec ( HttpRequest *r ) {
 	}
 
 	// default to main first
-	if ( ! coll ) {
+	if ( ! coll && useDefaultRec ) {
 		CollectionRec *cr = g_collectiondb.getRec("main");
 		if ( cr ) return cr;
 	}
 
 	// try next in line
-	if ( ! coll ) {
+	if ( ! coll && useDefaultRec ) {
 		return getFirstRec ();
 	}
 
