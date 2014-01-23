@@ -13158,7 +13158,8 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 			log("xmldoc: diffbot reply for %s using %s is missing "
 			    "the url: field in the json reply",
 			    THIS->m_firstUrl.m_url,
-			    THIS->m_diffbotApiUrl.getBufStart());
+			    THIS->m_diffbotUrl.getBufStart()
+			    );
 			THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
 		}
 	}
@@ -13764,7 +13765,8 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	// url can be on the stack since httpserver.cpp makes an http mime
 	// from this url
-	SafeBuf diffbotUrl;
+	//SafeBuf diffbotUrl;
+	
 	// TODO: make sure "api" works as hostname for not just product...
 	//diffbotUrl.safePrintf("http://www.diffbot.com/");
 	// skip extra '/'?
@@ -13774,7 +13776,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// append the custom url. i.e. /api/analyze?mode=auto&u=
 	//if ( api ) diffbotUrl.safeMemcpy ( api , apiLen );
 	// store the api url into here
-	diffbotUrl.safeMemcpy ( apiUrl.getUrl() , apiUrl.getUrlLen() );
+	m_diffbotUrl.safeMemcpy ( apiUrl.getUrl() , apiUrl.getUrlLen() );
 
 	// . m_diffbotApi Is like "article" or "product" etc.
 	// . if classify is true we always return the classification 
@@ -13814,15 +13816,15 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	// add a '?' if none
 	if ( ! strchr ( apiUrl.getUrl() , '?' ) )
-		diffbotUrl.pushChar('?');
+		m_diffbotUrl.pushChar('?');
 	else
-		diffbotUrl.pushChar('&');
+		m_diffbotUrl.pushChar('&');
 
 	//diffbotUrl.safePrintf("http://54.212.86.74/api/%s?token=%s&u="
-	diffbotUrl.safePrintf("token=%s",cr->m_diffbotToken.getBufStart());
-	diffbotUrl.safePrintf("&url=");
+	m_diffbotUrl.safePrintf("token=%s",cr->m_diffbotToken.getBufStart());
+	m_diffbotUrl.safePrintf("&url=");
 	// give diffbot the url to process
-	diffbotUrl.urlEncode ( m_firstUrl.getUrl() );
+	m_diffbotUrl.urlEncode ( m_firstUrl.getUrl() );
 	// append this just in case the next thing doesn't have it.
 	//if ( cr->m_diffbotApiQueryString.length() &&
 	//     cr->m_diffbotApiQueryString.getBufStart()[0] != '&' ) 
@@ -13831,7 +13833,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// article, product, etc. like "&dontstripads=1" or whatever
 	//diffbotUrl.safeStrcpy ( cr->m_diffbotApiQueryString.getBufStart());
 	// null term it
-	diffbotUrl.nullTerm();
+	m_diffbotUrl.nullTerm();
 
 	// mark as tried
 	if ( m_srepValid ) { char *xx=NULL;*xx=0; }
@@ -13845,10 +13847,10 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	if ( headers.length() > 0 )
 		additionalHeaders = headers.getBufStart();
 
-	log("diffbot: getting %s headers=%s",diffbotUrl.getBufStart(),
+	log("diffbot: getting %s headers=%s",m_diffbotUrl.getBufStart(),
 	    additionalHeaders);
 
-	if ( ! g_httpServer.getDoc ( diffbotUrl.getBufStart() ,
+	if ( ! g_httpServer.getDoc ( m_diffbotUrl.getBufStart() ,
 				     0 , // ip
 				     0 , // offset
 				     -1 , // size

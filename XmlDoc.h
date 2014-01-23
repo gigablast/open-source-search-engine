@@ -1589,6 +1589,7 @@ class XmlDoc {
 	//bool m_useDiffbot;
 	// url to access diffbot with
 	SafeBuf m_diffbotApiUrl;
+	SafeBuf m_diffbotUrl; // exact url used to fetch reply from diffbot
 
 	bool *getRecycleDiffbotReply ( ) ;
 	SafeBuf *getTokenizedDiffbotReply ( ) ;
