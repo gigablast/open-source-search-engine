@@ -561,19 +561,19 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			//"<td><a href=http://%s:%hu/cgi/15.cgi>%li</a></td>"
 			p->safePrintf (	"<td>0x%hhx</td>"  // msgtype
 					"<td><nobr>%s</nobr></td>"  // desc
-					"<td><a href=http://%s:%hu/"
+					"<td><nobr>%s <a href=http://%s:%hu/"
 					"master/sockets?"
-					"c=%s>%s %s</a></td>"
+					"c=%s>%s</a></nobr></td>"
 					"<td>%s%li%s</td>" , // niceness
 					s->m_msgType ,
 					desc,
 					//iptoa(s->m_ip) ,
 					//s->m_port ,
 					// begin clickable hostId
+					toFrom,
 					eip     ,
 					eport   ,
 					coll ,
-					toFrom,
 					ehostId ,
 					cf1,
 					(long)s->m_niceness,
