@@ -1687,7 +1687,11 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	if ( ! s ) return ;
 
 	// sanity, must exit streaming mode before destruction
-	if ( s->m_streamingMode ) { char *xx=NULL;*xx=0; }
+	if ( s->m_streamingMode ) { 
+		log("tcp: destroying socket in streaming mode. err=%s",
+		    mstrerror(g_errno));
+		//char *xx=NULL;*xx=0; }
+	}
 
 	// sanity check
 	if ( s->m_udpSlot ) { 
