@@ -13147,6 +13147,9 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
 	}
 
+	CollectionRec *cr = THIS->getCollRec();
+
+
 	// . verify that it contains legit json and has the last field
 	//   b/c we saw a case where the diffbot reply was truncated
 	//   somehow
@@ -13163,13 +13166,28 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 			    );
 			THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
 		}
+		// a hack for detecting if token is expired
+		if ( ! ttt && cr && strstr ( page , ":429}" ) ) {
+			// note it
+			log("xmldoc: pausing crawl %s (%li) because "
+			    "token is expired",cr->m_coll,(long)cr->m_collnum);
+			// pause the crawl
+			SafeBuf parmList;
+			// spidering enabled is the "cse" cgi parm in Parms.cpp
+			g_parms.addNewParmToList1 ( &parmList ,
+						    cr->m_collnum,
+						    "0", // val
+						    -1 ,
+						    "cse");
+			// this uses msg4 so parm ordering is guaranteed
+			g_parms.broadcastParmList ( &parmList , NULL , NULL );
+		}
 	}
 
 
 	// reply is now valid but might be empty
 	THIS->m_diffbotReplyValid = true;
 
-	CollectionRec *cr = THIS->getCollRec();
 	//if ( ! cr ) return;
 
 	// increment this counter on a successful reply from diffbot
