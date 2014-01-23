@@ -1472,6 +1472,23 @@ void CollectionRec::reset() {
 		mdelete (base, sizeof(RdbBase), "Rdb Coll");
 		delete  (base);
 	}
+
+	SpiderColl *sc = m_spiderColl;
+	// if never made one, we are done
+	if ( ! sc ) return;
+
+	// spider coll also!
+	sc->m_deleteMyself = true;
+
+	// if not currently being accessed nuke it now
+	if ( ! sc->m_msg5.m_waitingForList &&
+	     ! sc->m_msg5.m_waitingForMerge &&
+	     ! sc->m_msg5b.m_waitingForList &&
+	     ! sc->m_msg5b.m_waitingForMerge &&
+	     ! sc->m_msg1.m_mcast.m_inUse ) {
+		mdelete ( sc, sizeof(SpiderColl),"nukecr2");
+		delete ( sc );
+	}
 }
 
 CollectionRec *g_cr = NULL;
@@ -1815,7 +1832,14 @@ bool CollectionRec::save ( ) {
 		    tmp,mstrerror(g_errno));
 		g_errno = 0;
 	}
-	
+
+	// do not need a save now
+	m_needsSave = false;
+
+	// waiting tree is saved in SpiderCache::save() called by Process.cpp
+	//SpiderColl *sc = m_spiderColl;
+	//if ( ! sc ) return true;
+
 	// save page count table which has # of pages indexed per 
 	// subdomain/site and firstip for doing quotas in url filters table
 	//snprintf ( tmp , 1023, "coll.%s.%li/pagecounts.dat",
@@ -1826,8 +1850,6 @@ bool CollectionRec::save ( ) {
 	//}
 
 
-	// do not need a save now
-	m_needsSave = false;
 	return true;
 }
 
