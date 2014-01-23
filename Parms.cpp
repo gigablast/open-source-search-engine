@@ -18156,6 +18156,9 @@ void handleRequest3fLoop3 ( int fd , void *state ) {
 // . host #0 is requesting that we update some parms
 void handleRequest3fLoop ( void *weArg ) {
 	WaitEntry *we = (WaitEntry *)weArg;
+
+	CollectionRec *cx = NULL;
+
 	// process them
 	char *p = we->m_parmPtr;
 	for ( ; p < we->m_parmEnd ; ) {
@@ -18216,6 +18219,13 @@ void handleRequest3fLoop ( void *weArg ) {
 		if ( parm->m_type != TYPE_CMD )
 			we->m_collnum = getCollnumFromParmRec ( rec );
 
+		// see if our spider round changes
+		long oldRound; 
+		if ( we->m_collnum >= 0 && ! cx ) {
+			cx = g_collectiondb.getRec ( we->m_collnum );
+			oldRound = cx->m_spiderRoundNum;
+		}
+
 		// . this returns false if blocked, returns true and sets
 		//   g_errno on error
 		// . it'll block if trying to delete a coll when the tree
@@ -18238,6 +18248,9 @@ void handleRequest3fLoop ( void *weArg ) {
 			return;
 		}
 
+		if ( cx && oldRound != cx->m_spiderRoundNum )
+			we->m_updatedRound = true;
+
 		// do the next parm
 		we->m_parmPtr = p;
 
@@ -18250,22 +18263,34 @@ void handleRequest3fLoop ( void *weArg ) {
 
 	// one last thing... kinda hacky. if we change certain spidering parms
 	// we have to do a couple rebuilds.
-	CollectionRec *cr = NULL;
-	if ( we->m_collnum >= 0 )
-		cr = g_collectiondb.getRec(we->m_collnum);
+
+	// reset page round counts
+	if ( we->m_updatedRound && cx ) {
+		log("parms: clearing this round page counts");
+		cx->m_localCrawlInfo.m_pageDownloadSuccessesThisRound = 0;
+		cx->m_localCrawlInfo.m_pageProcessSuccessesThisRound  = 0;
+		cx->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound = 0;
+		cx->m_globalCrawlInfo.m_pageProcessSuccessesThisRound  = 0;
+	}
 
 	// basically resetting the spider here...
-	if ( we->m_doRebuilds && cr ) {
+	if ( we->m_doRebuilds && cx ) {
 		// . this tells Spider.cpp to rebuild the spider queues
 		// . this is NULL if spider stuff never initialized yet,
 		//   like if you just added the collection
-		if ( cr->m_spiderColl )
-			cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+		if ( cx->m_spiderColl )
+			cx->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+		// . assume we have urls ready to spider too
+		// . no, because if they change the filters and there are
+		//   still no urls to spider i don't want to get another
+		//   email alert!!
+		//cr->m_localCrawlInfo .m_hasUrlsReadyToSpider = true;
+		//cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
 		// . reconstruct the url filters if we were a custom crawl
 		// . this is used to abstract away the complexity of url
 		//   filters in favor of simple regular expressions and
 		//   substring matching for diffbot
-		cr->rebuildUrlFilters();
+		cx->rebuildUrlFilters();
 	}
 
 	// note it
@@ -18308,6 +18333,7 @@ void handleRequest3f ( UdpSlot *slot , long niceness ) {
 	we->m_parmEnd = parmEnd;
 	we->m_errno = 0;
 	we->m_doRebuilds = false;
+	we->m_updatedRound = false;
 	we->m_collnum = -1;
 	we->m_sentReply = 0;
 

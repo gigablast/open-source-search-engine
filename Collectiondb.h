@@ -27,6 +27,7 @@ public:
 	char *m_parmEnd;
 	class UdpSlot *m_slot;
 	bool m_doRebuilds;
+	bool m_updatedRound;
 	collnum_t m_collnum;
 	bool m_registered;
 	long m_errno;
@@ -260,6 +261,7 @@ class CrawlInfo {
 	long long m_pageProcessSuccesses;  // 7
 	long long m_urlsHarvested;         // 8
 
+
 	long m_lastUpdateTime;
 
 	// this is non-zero if urls are available to be spidered right now.
@@ -278,6 +280,12 @@ class CrawlInfo {
 
 	//long m_numUrlsLaunched;
 	long m_dummy1;
+
+	// keep separate because when we receive a crawlinfo struct from
+	// a host we only add these in if it matches our round #
+	long long m_pageDownloadSuccessesThisRound;
+	long long m_pageProcessSuccessesThisRound;
+
 
 	void reset() { memset ( this , 0 , sizeof(CrawlInfo) ); };
 	//bool print (class SafeBuf *sb ) ;

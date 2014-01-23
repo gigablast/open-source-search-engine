@@ -1931,7 +1931,7 @@ Msg4.o: Msg4.cpp gb-include.h types.h fctypes.h Unicode.h \
  Msg13.h Msge0.h Msge1.h Msg8b.h SearchInput.h Msg40.h Msg39.h Msg37.h \
  Posdb.h TopTree.h IndexTable2.h Msg51.h Msg17.h IndexReadInfo.h Msg3a.h \
  Stats.h PostQueryRerank.h Sanity.h SiteGetter.h Title.h Address.h zlib.h \
- zconf.h Syncdb.h
+ zconf.h Syncdb.h Process.h
 Msg51.o: Msg51.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h Msg51.h \
  Msg0.h UdpServer.h Mem.h Conf.h Xml.h XmlNode.h Lang.h Iso8859.h \

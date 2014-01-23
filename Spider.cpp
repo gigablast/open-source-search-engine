@@ -4645,12 +4645,14 @@ void doneSendingNotification ( void *state ) {
 	// pingserver.cpp sets this
 	//ei->m_inUse = false;
 
-	log("spider: setting current spider status to %li",
-	    (long)cr->m_spiderStatus);
+	// so we do not send for this status again, mark it as sent for
+	// but we reset sentCrawlDoneAlert to 0 on round increment below
+	//log("spider: setting sentCrawlDoneAlert status to %li",
+	//    (long)cr->m_spiderStatus);
 
 	// mark it as sent. anytime a new url is spidered will mark this
 	// as false again! use LOCAL crawlInfo, since global is reset often.
-	cr->m_localCrawlInfo.m_sentCrawlDoneAlert = cr->m_spiderStatus;//1;
+	cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 1;//cr->m_spiderStatus;//1;
 
 	// be sure to save state so we do not re-send emails
 	cr->m_needsSave = 1;
@@ -4662,11 +4664,26 @@ void doneSendingNotification ( void *state ) {
 	// sanity check
 	//if ( g_hostdb.m_myHost->m_hostId != 0 ) { char *xx=NULL;*xx=0; }
 
+	//float respiderFreq = -1.0;
+	float respiderFreq = cr->m_collectiveRespiderFrequency;
+
+	// if not REcrawling, set this to 0 so we at least update our
+	// round # and round start time...
+	if ( respiderFreq < 0.0 ) //== -1.0 ) 
+		respiderFreq = 0.0;
+
+	//if ( respiderFreq < 0.0 ) {
+	//	log("spider: bad respiderFreq of %f. making 0.",
+	//	    respiderFreq);
+	//	respiderFreq = 0.0;
+	//}
+
 	// advance round if that round has completed, or there are no
 	// more urls to spider. if we hit maxToProcess/maxToCrawl then 
 	// do not increment the round #. otherwise we should increment it.
-	if ( cr->m_spiderStatus == SP_MAXTOCRAWL ) return;
-	if ( cr->m_spiderStatus == SP_MAXTOPROCESS ) return;
+	// do allow maxtocrawl guys through if they repeat, however!
+	if ( cr->m_spiderStatus == SP_MAXTOCRAWL && respiderFreq <= 0.0)return;
+	if ( cr->m_spiderStatus == SP_MAXTOPROCESS && respiderFreq<=0.0)return;
 
 
 	// this should have been set below
@@ -4675,30 +4692,18 @@ void doneSendingNotification ( void *state ) {
 	// how is this possible
 	//if ( getTimeGlobal() 
 
-	float respiderFreq = -1.0;
 
 	// find the "respider frequency" from the first line in the url
 	// filters table whose expressions contains "{roundstart}" i guess
-	for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
-		// get it
-		char *ex = cr->m_regExs[i].getBufStart();
-		// compare
-		if ( ! strstr ( ex , "roundstart" ) ) continue;
-		// that's good enough
-		respiderFreq = cr->m_spiderFreqs[i];
-		break;
-	}
-
-	// if not REcrawling, set this to 0 so we at least update our
-	// round # and round start time...
-	if ( respiderFreq == -1.0 ) 
-		respiderFreq = 0.0;
-
-	if ( respiderFreq < 0.0 ) {
-		log("spider: bad respiderFreq of %f. making 0.",
-		    respiderFreq);
-		respiderFreq = 0.0;
-	}
+	//for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
+	//	// get it
+	//	char *ex = cr->m_regExs[i].getBufStart();
+	//	// compare
+	//	if ( ! strstr ( ex , "roundstart" ) ) continue;
+	//	// that's good enough
+	//	respiderFreq = cr->m_spiderFreqs[i];
+	//	break;
+	//}
 
 	long seconds = (long)(respiderFreq * 24*3600);
 	// add 1 for lastspidertime round off errors so we can be assured
@@ -4709,18 +4714,31 @@ void doneSendingNotification ( void *state ) {
 	// now update this round start time. all the other hosts should
 	// sync with us using the parm sync code, msg3e, every 13.5 seconds.
 	//cr->m_spiderRoundStartTime += respiderFreq;
-	cr->m_spiderRoundStartTime = getTimeGlobal() + seconds;
-	cr->m_spiderRoundNum++;
+	char roundTime[128];
+	sprintf(roundTime,"%lu", (long)(getTimeGlobal() + seconds));
+
+	char roundStr[128];
+	sprintf(roundStr,"%li", cr->m_spiderRoundNum + 1);
 
 	// waiting tree will usually be empty for this coll since no
 	// spider requests had a valid spider priority, so let's rebuild!
-	if ( cr->m_spiderColl )
-		cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+	// this is not necessary because PF_REBUILD is set for the
+	// "spiderRoundStart" parm in Parms.cpp so it will rebuild if that parm
+	// changes already.
+	//if ( cr->m_spiderColl )
+	//	cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
 
-	// we have to send these two parms to all in cluster now
+	// we have to send these two parms to all in cluster now INCLUDING
+	// ourselves, when we get it in Parms.cpp there's special
+	// code to set this *ThisRound counts to 0!!!
 	SafeBuf parmList;
-	g_parms.addCurrentParmToList1 ( &parmList , cr , "spiderRoundNum" ); 
-	g_parms.addCurrentParmToList1 ( &parmList , cr , "spiderRoundStart" ); 
+	g_parms.addNewParmToList1 ( &parmList,cr->m_collnum,roundStr,-1 ,
+				    "spiderRoundNum");
+	g_parms.addNewParmToList1 ( &parmList,cr->m_collnum,roundTime, -1 ,
+				    "spiderRoundStart");
+
+	//g_parms.addParmToList1 ( &parmList , cr , "spiderRoundNum" ); 
+	//g_parms.addParmToList1 ( &parmList , cr , "spiderRoundStart" ); 
 	// this uses msg4 so parm ordering is guaranteed
 	g_parms.broadcastParmList ( &parmList , NULL , NULL );
 
@@ -4734,18 +4752,6 @@ void doneSendingNotification ( void *state ) {
 
 bool sendNotificationForCollRec ( CollectionRec *cr )  {
 
-	// only host #0 sends emails
-	if ( g_hostdb.m_myHost->m_hostId != 0 )
-		return true;
-
-	// . if already sent email for this, skip
-	// . localCrawlInfo stores this value on disk so it is persistent
-	// . we do it this way so SP_ROUNDDONE can be emailed and then
-	//   we'd email SP_MAXROUNDS to indicate we've hit the maximum
-	//   round count. 
-	if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert == cr->m_spiderStatus )
-		return true;
-
 	// do not send email for maxrounds hit, it will send a round done
 	// email for that. otherwise we end up calling doneSendingEmail()
 	// twice and increment the round twice
@@ -4758,11 +4764,13 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	// wtf? caller must set this
 	if ( ! cr->m_spiderStatus ) { char *xx=NULL; *xx=0; }
 
-	log("spider: trying to send notification for new crawl status %li. "
-	    "current status is %li",
-	    (long)cr->m_spiderStatus,
+	log("spider: sending notification for crawl status %li in coll %s. "
+	    //"current sent state is %li"
+	    ,(long)cr->m_spiderStatus
+	    ,cr->m_coll
 	    //cr->m_spiderStatusMsg,
-	    (long)cr->m_localCrawlInfo.m_sentCrawlDoneAlert);
+	    //,(long)cr->m_localCrawlInfo.m_sentCrawlDoneAlert);
+	    );
 
 	// if we already sent it return now. we set this to false everytime
 	// we spider a url, which resets it. use local crawlinfo for this
@@ -4905,28 +4913,28 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( cr->m_maxCrawlRounds > 0 &&
 		     cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) {
 			cr->m_spiderStatus = SP_MAXROUNDS;
-			// it'll send a SP_ROUNDDONE email first
-			// so no need to repeat it, but we do want to
-			// update the status msg
-			//sendNotificationForCollRec ( cr );
+			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
 			continue;
 		}
 
 		// hit pages to crawl max?
 		if ( cr->m_maxToCrawl > 0 &&
-		     cr->m_globalCrawlInfo.m_pageDownloadSuccesses >=
+		     cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound >=
 		     cr->m_maxToCrawl ) {
 			cr->m_spiderStatus = SP_MAXTOCRAWL;
-			sendNotificationForCollRec ( cr );
+			// now once all hosts have no urls ready to spider
+			// then the send email code will be called.
+			// do it this way for code simplicity.
+			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
 			continue;
 		}
 
 		// hit pages to process max?
 		if ( cr->m_maxToProcess > 0 &&
-		     cr->m_globalCrawlInfo.m_pageProcessSuccesses >=
+		     cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound >=
 		     cr->m_maxToProcess ) {
 			cr->m_spiderStatus = SP_MAXTOPROCESS;
-			sendNotificationForCollRec ( cr );
+			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
 			continue;
 		}
 
@@ -11141,6 +11149,15 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			ss++;
 		}
 
+		// . special counts
+		// . assume round #'s match!
+		//if ( ss->m_spiderRoundNum == 
+		//     cr->m_localCrawlInfo.m_spiderRoundNum ) {
+		cr->m_tmpCrawlInfo.m_pageDownloadSuccessesThisRound +=
+			stats->m_pageDownloadSuccessesThisRound;
+		cr->m_tmpCrawlInfo.m_pageProcessSuccessesThisRound +=
+			stats->m_pageProcessSuccessesThisRound;
+		//}
 
 		if ( stats->m_hasUrlsReadyToSpider ) {
 			// inc the count otherwise
@@ -11150,6 +11167,10 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			//   and not us!!!
 			if ( cr->m_spiderStatus == SP_INITIALIZING )
 				cr->m_spiderStatus = SP_INPROGRESS;
+			// i guess we are back in business even if
+			// m_spiderStatus was SP_MAXTOCRAWL or 
+			// SP_ROUNDDONE...
+			cr->m_spiderStatus = SP_INPROGRESS;
 			// unflag the sent flag if we had sent an alert
 			// but only if it was a crawl round done alert,
 			// not a maxToCrawl or maxToProcess or 
@@ -11172,7 +11193,17 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		memcpy ( &cr->m_globalCrawlInfo , 
 			 &cr->m_tmpCrawlInfo ,
 			 sizeof(CrawlInfo) );
-		
+
+		// should we reset our "sent email" flag?
+		bool reset = false;
+
+		// can't reset if we've never sent an email out yet
+		if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert ) reset = true;
+		    
+		// must have some urls ready to spider now so we can send
+		// another email after another round of spidering
+		if (!cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider) reset=false;
+
 		// . if we have urls ready to be spidered then prepare to send
 		//   another email/webhook notification.
 		// . do not reset this flag if SP_MAXTOCRAWL etc otherwise we 
@@ -11180,11 +11211,13 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		//   is only for when we are done spidering a round, which 
 		//   happens when hasUrlsReadyToSpider goes false for all 
 		//   shards.
-		if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider &&
-		     cr->m_localCrawlInfo.m_sentCrawlDoneAlert ==SP_ROUNDDONE){
-			log("spider: resetting sent crawl done alert to 0");
+		if ( reset ) {
+			log("spider: resetting sent crawl done alert to 0 "
+			    "for coll %s",cr->m_coll);
 			cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
 		}
+
+
 
 		// update cache time
 		cr->m_globalCrawlInfo.m_lastUpdateTime = getTime();
@@ -11211,9 +11244,27 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) 
 			continue;
 
-		// update status
-		cr->m_spiderStatus = SP_ROUNDDONE;
+		// update status if nto already SP_MAXTOCRAWL, etc. we might
+		// just be flat out of urls
+		if ( ! cr->m_spiderStatus || 
+		     cr->m_spiderStatus == SP_INPROGRESS ||
+		     cr->m_spiderStatus == SP_INITIALIZING )
+			cr->m_spiderStatus = SP_ROUNDDONE;
 
+
+		// only host #0 sends emails
+		if ( g_hostdb.m_myHost->m_hostId != 0 )
+			continue;
+
+		// . if already sent email for this, skip
+		// . localCrawlInfo stores this value on disk so persistent
+		// . we do it this way so SP_ROUNDDONE can be emailed and then
+		//   we'd email SP_MAXROUNDS to indicate we've hit the maximum
+		//   round count. 
+		if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert )
+			continue;
+
+		
 		// do email and web hook...
 		sendNotificationForCollRec ( cr );
 
@@ -11363,6 +11414,31 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 				       "spidering paused.");
 
 
+	long now = getTimeGlobal();
+
+	// . 0 means not to RE-crawl
+	// . indicate if we are WAITING for next round...
+	if ( cx->m_spiderStatus == SP_MAXTOCRAWL &&
+	     cx->m_collectiveRespiderFrequency > 0.0 &&
+	     now < cx->m_spiderRoundStartTime ) {
+		*status = SP_ROUNDDONE;
+		return msg->safePrintf("Jobs has reached maxToCrawl limit. "
+				       "Next crawl round to start "
+				       "in %li seconds.",
+				       cx->m_spiderRoundStartTime-now );
+	}
+
+	if ( cx->m_spiderStatus == SP_MAXTOPROCESS &&
+	     cx->m_collectiveRespiderFrequency > 0.0 &&
+	     now < cx->m_spiderRoundStartTime ) {
+		*status = SP_ROUNDDONE;
+		return msg->safePrintf("Jobs has reached maxToProcess limit. "
+				       "Next crawl round to start "
+				       "in %li seconds.",
+				       cx->m_spiderRoundStartTime-now );
+	}
+
+
 	if ( cx->m_spiderStatus == SP_MAXTOCRAWL ) {
 		*status = SP_MAXTOCRAWL;
 		return msg->safePrintf ( "Job has reached maxToCrawl "
@@ -11381,7 +11457,6 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 					 "limit." );
 	}
 
-	long now = getTimeGlobal();
 	// . 0 means not to RE-crawl
 	// . indicate if we are WAITING for next round...
 	if ( cx->m_collectiveRespiderFrequency > 0.0 &&

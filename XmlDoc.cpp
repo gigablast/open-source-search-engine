@@ -13197,6 +13197,9 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		// count it for stats
 		cr->m_localCrawlInfo.m_pageProcessSuccesses++;
 		cr->m_globalCrawlInfo.m_pageProcessSuccesses++;
+		// per round as well
+		cr->m_localCrawlInfo.m_pageProcessSuccessesThisRound++;
+		cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound++;
 		// log it
 		log("build: processed page %s (pageLen=%li)",
 		    THIS->m_firstUrl.m_url,
@@ -14367,6 +14370,8 @@ char **XmlDoc::gotHttpReply ( ) {
 	if ( ! m_isChildDoc && ! m_incrementedDownloadCount ) {
 		cr->m_localCrawlInfo.m_pageDownloadSuccesses++;
 		cr->m_globalCrawlInfo.m_pageDownloadSuccesses++;
+		cr->m_localCrawlInfo.m_pageDownloadSuccessesThisRound++;
+		cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound++;
 		m_incrementedDownloadCount = true;
 	}
 

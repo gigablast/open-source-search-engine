@@ -2191,8 +2191,11 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 		      //"\"urlsExamined\":%lli,\n"
 		      "\"pageCrawlAttempts\":%lli,\n"
 		      "\"pageCrawlSuccesses\":%lli,\n"
+		      "\"pageCrawlSuccessesThisRound\":%lli,\n"
+
 		      "\"pageProcessAttempts\":%lli,\n"
 		      "\"pageProcessSuccesses\":%lli,\n"
+		      "\"pageProcessSuccessesThisRound\":%lli,\n"
 
 		      "\"maxRounds\":%li,\n"
 		      "\"repeat\":%f,\n"
@@ -2213,8 +2216,11 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 		      //,cx->m_globalCrawlInfo.m_urlsConsidered
 		      , cx->m_globalCrawlInfo.m_pageDownloadAttempts
 		      , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
+		      , cx->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound
+
 		      , cx->m_globalCrawlInfo.m_pageProcessAttempts
 		      , cx->m_globalCrawlInfo.m_pageProcessSuccesses
+		      , cx->m_globalCrawlInfo.m_pageProcessSuccessesThisRound
 
 		      , (long)cx->m_maxCrawlRounds
 		      , cx->m_collectiveRespiderFrequency
@@ -2529,8 +2535,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td><b>URLs Examined</b></td>"
 			      "<td><b>Page Download Attempts</b></td>"
 			      "<td><b>Page Download Successes</b></td>"
+			      "<td><b>Page Download Successes This Round"
+			      "</b></td>"
 			      "<td><b>Page Process Attempts</b></td>"
 			      "<td><b>Page Process Successes</b></td>"
+			      "<td><b>Page Process Successes This Round"
+			      "</b></td>"
 			      "</tr>"
 			      );
 	}
@@ -2577,6 +2587,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td>%lli</td>"
 			      "<td>%lli</td>"
 			      "<td>%lli</td>"
+			      "<td>%lli</td>"
+			      "<td>%lli</td>"
 			      "</tr>"
 			      , cx->m_coll
 			      , cx->m_globalCrawlInfo.m_objectsAdded -
@@ -2585,8 +2597,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      //, cx->m_globalCrawlInfo.m_urlsConsidered
 			      , cx->m_globalCrawlInfo.m_pageDownloadAttempts
 			      , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
+			      , cx->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound
 			      , cx->m_globalCrawlInfo.m_pageProcessAttempts
 			      , cx->m_globalCrawlInfo.m_pageProcessSuccesses
+			      , cx->m_globalCrawlInfo.m_pageProcessSuccessesThisRound
 			      );
 	}
 	if ( summary && fmt == FMT_HTML ) {
@@ -2889,12 +2903,22 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      "<tr>"
+			      "<td><b>Page Crawl Successes This Round</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
 			      "<td><b>Page Process Attempts</b></td>"
 			      "<td>%lli</td>"
 			      "</tr>"
 
 			      "<tr>"
 			      "<td><b>Page Process Successes</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Process Successes This Round</b></td>"
 			      "<td>%lli</td>"
 			      "</tr>"
 
@@ -2916,9 +2940,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
+			      , cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound
 
 			      , cr->m_globalCrawlInfo.m_pageProcessAttempts
 			      , cr->m_globalCrawlInfo.m_pageProcessSuccesses
+			      , cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound
 			      );
 
 
