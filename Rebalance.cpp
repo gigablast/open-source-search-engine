@@ -127,6 +127,7 @@ char *Rebalance::getNeedsRebalance ( ) {
 	hexToBin(keyStr,gbstrlen(keyStr), (char *)&m_nextKey);
 
 	m_collnum = cn;
+	//m_collnum = 4695; //debug skip
 	// we are valid now either way
 	m_needsRebalanceValid = true;
 	// assume ok
@@ -322,6 +323,8 @@ bool Rebalance::scanRdb ( ) {
 	char *coll = cr->m_coll;
 
  readAnother:
+
+	if ( g_process.m_mode == EXIT_MODE ) return false;
 
 	//log("rebal: loading list start = %s",KEYSTR(m_nextKey,rdb->m_ks));
 

@@ -1551,6 +1551,28 @@ bool CollectionRec::load ( char *coll , long i ) {
 		//m_localCrawlInfo.setFromSafeBuf(&sb);
 		// it is binary now
 		memcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
+
+
+	// we introduced the this round counts, so don't start them at 0!!
+	if ( m_spiderRoundNum == 0 &&
+	     m_localCrawlInfo.m_pageDownloadSuccessesThisRound <
+	     m_localCrawlInfo.m_pageDownloadSuccesses ) {
+		log("coll: fixing process count this round for %s",m_coll);
+		m_localCrawlInfo.m_pageDownloadSuccessesThisRound =
+			m_localCrawlInfo.m_pageDownloadSuccesses;
+	}
+
+	// we introduced the this round counts, so don't start them at 0!!
+	if ( m_spiderRoundNum == 0 &&
+	     m_localCrawlInfo.m_pageProcessSuccessesThisRound <
+	     m_localCrawlInfo.m_pageProcessSuccesses ) {
+		log("coll: fixing process count this round for %s",m_coll);
+		m_localCrawlInfo.m_pageProcessSuccessesThisRound =
+			m_localCrawlInfo.m_pageProcessSuccesses;
+	}
+
+
+
 	// LOAD GLOBAL
 	snprintf ( tmp1 , 1023, "%scoll.%s.%li/globalcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
