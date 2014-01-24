@@ -207,6 +207,7 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 // 0 for regular collection
 // 1 for custom crawl
 // 2 for bulk job
+// . returns false if blocks true otherwise
 bool CommandAddColl ( char *rec , char customCrawl ) {
 
 	// caller must specify collnum
@@ -229,7 +230,7 @@ bool CommandAddColl ( char *rec , char customCrawl ) {
 
 	if ( gbstrlen(collName) > MAX_COLL_LEN ) {
 		log("crawlbot: collection name too long");
-		return false;
+		return true;
 	}
 
 	// this saves it to disk! returns false and sets g_errno on error.
@@ -240,7 +241,8 @@ bool CommandAddColl ( char *rec , char customCrawl ) {
 					   true , // save?
 					   newCollnum
 					   ) )
-		return false;
+		// error! g_errno should be set
+		return true;
 
 	return true;
 }

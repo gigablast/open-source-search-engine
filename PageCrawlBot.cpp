@@ -286,6 +286,14 @@ bool readAndSendLoop ( StateCD *st , bool readFirst ) {
 		st->m_someoneNeedsMore = false;
 	}
 
+	// wait if some are outstanding. how can this happen?
+	if ( st->m_numRequests > st->m_numReplies ) {
+		log("crawlbot: only got %li of %li replies. waiting for "
+		    "all to come back in.",
+		    st->m_numReplies,st->m_numRequests);
+		return false;
+	}
+
 	// are we all done?
 	if ( readFirst && ! st->m_someoneNeedsMore ) {
 		log("crawlbot: done sending for download request");

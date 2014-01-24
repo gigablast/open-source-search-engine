@@ -46,6 +46,10 @@ void SpiderRequest::setKey (long firstIp,
 			    long long parentDocId,
 			    long long uh48,
 			    bool isDel) {
+
+	// sanity
+	if ( firstIp == 0 || firstIp == -1 ) { char *xx=NULL;*xx=0; }
+
 	m_key = g_spiderdb.makeKey ( firstIp,uh48,true,parentDocId , isDel );
 	// set dataSize too!
 	setDataSize();
@@ -4801,7 +4805,11 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	getSpiderStatusMsg ( cr , buf , &status );
 					 
 	// if no email address or webhook provided this will not block!
-	if ( ! sendNotification ( ei ) ) return false;
+	// DISABLE THIS UNTIL FIXED
+
+	log("spider: SENDING EMAIL NOT");
+	//if ( ! sendNotification ( ei ) ) return false;
+
 	// so handle this ourselves in that case:
 	doneSendingNotification ( ei );
 	return true;
@@ -11148,9 +11156,14 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// the sendbuf should never be freed! it points into collrec
 	slot->m_sendBufAlloc = NULL;
 
-	// loop over each global crawlinfo
+	// loop over each LOCAL crawlinfo we received from this host
 	CrawlInfo *ptr = (CrawlInfo *)(slot->m_readBuf);
 	CrawlInfo *end = (CrawlInfo *)(slot->m_readBuf+ slot->m_readBufSize);
+
+	/////
+	//  SCAN the list of CrawlInfos we received from this host, 
+	//  one for each non-null collection
+	/////
 
 	// . add the LOCAL stats we got from the remote into the GLOBAL stats
 	// . readBuf is null on an error, so check for that...
@@ -11211,17 +11224,36 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			//if(cr->m_localCrawlInfo.m_sentCrawlDoneAlert
 			//== SP_ROUNDDONE )
 			//cr->m_localCrawlInfo.m_sentCrawlDoneAlert=0;
+			// revival?
+			if ( ! cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider )
+				log("spider: reviving crawl %s",
+				    cr->m_coll);
 		}
 		
 		// if not the last reply, skip this part
 		if ( s_replies < s_requests ) continue;
 
+		// revival?
+		//if ( cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider &&
+		//     ! cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
+		//	log("spider: reviving crawl %s (%li)",cr->m_coll,
+		//	    cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider);
+		//}
+
+		bool has = cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider;
+
 		// now copy over to global crawl info so things are not
 		// half ass should we try to read globalcrawlinfo
-		// in between packets received
+		// in between packets received.
 		memcpy ( &cr->m_globalCrawlInfo , 
 			 &cr->m_tmpCrawlInfo ,
 			 sizeof(CrawlInfo) );
+
+		// turn not assume we are out of urls just yet if a host
+		// in the network has not reported...
+		if ( g_hostdb.hasDeadHost() && has )
+			cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
+		     
 
 		// should we reset our "sent email" flag?
 		bool reset = false;
@@ -11318,6 +11350,10 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	//char *request = slot->m_readBuf;
 	// just a single collnum
 	if ( slot->m_readBufSize != 0 ) { char *xx=NULL;*xx=0;}
+
+	//if ( ! isClockSynced() ) {
+	//}
+
 	//collnum_t collnum = *(collnum_t *)request;
 	//CollectionRec *cr = g_collectiondb.getRec(collnum);
 
@@ -11366,7 +11402,7 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	//long now = getTimeGlobal();
 	SafeBuf replyBuf;
 
-	long now = getTimeGlobal();
+	long now = getTimeGlobalNoCore();
 
 	//SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
 

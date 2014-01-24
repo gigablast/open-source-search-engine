@@ -2020,7 +2020,7 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 	xd->m_r   = r;
 
 	// so XmlDoc::getExtraDoc doesn't have any issues
-	xd->m_firstIp = 0;
+	xd->m_firstIp = 123456;
 	xd->m_firstIpValid = true;
 
 	// try using xmldoc to do it

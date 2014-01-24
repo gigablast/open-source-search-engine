@@ -2113,6 +2113,14 @@ bool XmlDoc::indexDoc ( ) {
 	// pass through because we lookup the real firstip below and
 	// add a new request as well as a reply for this one
 	if ( m_indexCodeValid && m_indexCode == EFAKEFIRSTIP ) success = false;
+
+	// ignore failed child docs like diffbot pages
+	if ( m_isChildDoc ) {
+		log("build: child doc had internal error. not adding "
+		    "spider reply for %s",m_firstUrl.m_url);
+		success = true;
+	}
+
 	if ( success ) return true;
 
 	///
@@ -2130,7 +2138,6 @@ bool XmlDoc::indexDoc ( ) {
 		log("build: docid=%lli had internal error = %s. adding spider "
 		    "error reply.",
 		    m_docId,mstrerror(g_errno));
-
 
 	if ( ! m_indexCodeValid ) {
 		m_indexCode = EINTERNALERROR;//g_errno;
@@ -2207,6 +2214,8 @@ bool XmlDoc::indexDoc ( ) {
 	// or ECORRUPTDATA (corrupt gzip reply)
 	// then this should not block. we need a spiderReply to release the 
 	// url spider lock in SpiderLoop::m_lockTable.
+	// if m_isChildDoc is true, like for diffbot url, this should be
+	// a bogus one.
 	SpiderReply *nsr = getNewSpiderReply ();
 	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
 	if ( ! nsr ) {
@@ -5799,6 +5808,16 @@ Synonyms *XmlDoc::getSynonyms ( ) {
 Sections *XmlDoc::getExplicitSections ( ) {
 	// these sections might or might not have the implied sections in them
 	if ( m_explicitSectionsValid ) return &m_sections;
+
+	// if json forget this it is only html
+	//uint8_t *ct = getContentType();
+	//if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
+	//if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
+	//	m_sectionsValid = true;
+	//	return &m_sections;
+	//}
+
+
 	setStatus ( "getting explicit sections" );
 	// use the old title rec to make sure we parse consistently!
 	XmlDoc **pod = getOldXmlDoc ( );
@@ -5895,6 +5914,15 @@ Sections *XmlDoc::getExplicitSections ( ) {
 
 Sections *XmlDoc::getImpliedSections ( ) {
 	if ( m_impliedSectionsValid ) return &m_sections;
+
+	// if json forget this it is only html
+	//uint8_t *ct = getContentType();
+	//if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
+	//if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
+	//	m_sectionsValid = true;
+	//	return &m_sections;
+	//}
+
 	// get the sections without implied sections
 	Sections *sections = getExplicitSections();
 	if ( ! sections || sections==(void *)-1) return (Sections *)sections;
@@ -5974,6 +6002,14 @@ Sections *XmlDoc::getImpliedSections ( ) {
 
 // add in Section::m_sentFlags bits having to do with our voting tables
 Sections *XmlDoc::getSections ( ) {
+
+	// if json forget this it is only html
+	//uint8_t *ct = getContentType();
+	//if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
+	//if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
+	//	m_sectionsValid = true;
+	//	return &m_sections;
+	//}
 
 	// get the sections without implied sections
 	Sections *ss = getImpliedSections();
@@ -21641,6 +21677,9 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 
 	setStatus ( "getting spider reply" );
 
+	// diffbot guys, robots.txt, frames, sshould not be here
+	if ( m_isChildDoc ) { char *xx=NULL;*xx=0; }
+
 	// . get the mime first
 	// . if we are setting XmlDoc from a titleRec, this causes 
 	//   doConsistencyCheck() to block and core
@@ -21743,7 +21782,11 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 		firstIp = m_sreq.m_firstIp;
 
 	// sanity
-	if ( firstIp == 0 || firstIp == -1 ) { char *xx=NULL;*xx=0; }
+	if ( firstIp == 0 || firstIp == -1 ) { 
+		log("xmldoc: BAD FIRST IP for %s",m_firstUrl.getUrl());
+		firstIp = 12345;
+		//char *xx=NULL;*xx=0; }
+	}
 	// store it
 	m_srep.m_firstIp = firstIp;
 	// assume no error

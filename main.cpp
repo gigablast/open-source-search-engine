@@ -4486,7 +4486,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// . assume conf file name gbHID.conf
 			// . assume working dir ends in a '/'
 			sprintf(tmp,
-				"ssh %s \"cd %s ; "
+				"ssh %s \"cd %s ; ulimit -c unlimited; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; %s"
 				"./gb %li >& ./log%03li &\" %s",
@@ -4573,7 +4573,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// . assume working dir ends in a '/'
 			//to test add: ulimit -t 10; to the ssh cmd
 			sprintf(tmp,
-				"ssh %s \"cd %s ; "
+				"ssh %s \"cd %s ; ulimit -c unlimited; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
 				"ADDARGS='' ; "
