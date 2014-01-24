@@ -473,6 +473,9 @@ bool Collectiondb::addNewColl ( char *coll ,
 	memset ( &cr->m_localCrawlInfo , 0 , sizeof(CrawlInfo) );
 	memset ( &cr->m_globalCrawlInfo , 0 , sizeof(CrawlInfo) );
 
+	// note that
+	log("colldb: initial revival for %s",cr->m_coll);
+
 	// . assume we got some urls ready to spider
 	// . Spider.cpp will wait SPIDER_DONE_TIME seconds and if it has no
 	//   urls it spidered in that time these will get set to 0 and it

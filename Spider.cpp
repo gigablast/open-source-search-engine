@@ -5731,6 +5731,10 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// so that the crawl could continue.
 	//ci->m_sentCrawlDoneAlert = 0;
 
+	// if we thought we were done, note it if something comes back up
+	if ( ! ci->m_hasUrlsReadyToSpider ) 
+		log("spider: got a reviving url to crawl %s",sreq->m_url);
+
 	// there are urls ready to spider
 	ci->m_hasUrlsReadyToSpider = true;
 
@@ -11226,8 +11230,8 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			//cr->m_localCrawlInfo.m_sentCrawlDoneAlert=0;
 			// revival?
 			if ( ! cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider )
-				log("spider: reviving crawl %s",
-				    cr->m_coll);
+				log("spider: reviving crawl %s from host %li",
+				    cr->m_coll,slot->m_host->m_hostId);
 		}
 		
 		// if not the last reply, skip this part
