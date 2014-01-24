@@ -305,7 +305,11 @@ bool Threads::init ( ) {
 		return log("thread: Failed to register thread type." );
 	// . File.cpp spawns a rename thread for doing renames and unlinks
 	// . doing a tight merge on titldb can be ~250 unlinks
-	if ( ! g_threads.registerType ( UNLINK_THREAD,1/*maxThreads*/,3000) ) 
+	// . MDW up from 1 to 30 max, after doing a ddump on 3000+ collections
+	//   it was taking forever to go one at a time through the unlink
+	//   thread queue. seemed like a 1 second space between unlinks.
+	//   1/23/1014
+	if ( ! g_threads.registerType ( UNLINK_THREAD,30/*maxThreads*/,3000) ) 
 		return log("thread: Failed to register thread type." );
 	// generic multipurpose
 	if ( ! g_threads.registerType (GENERIC_THREAD,100/*maxThreads*/,100) ) 

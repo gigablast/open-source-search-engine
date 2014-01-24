@@ -11275,10 +11275,15 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 		// update status if nto already SP_MAXTOCRAWL, etc. we might
 		// just be flat out of urls
-		//if ( ! cr->m_spiderStatus || 
-		//     cr->m_spiderStatus == SP_INPROGRESS ||
-		//     cr->m_spiderStatus == SP_INITIALIZING )
-		//	cr->m_spiderStatus = SP_ROUNDDONE;
+		if ( ! cr->m_spiderStatus || 
+		     cr->m_spiderStatus == SP_INPROGRESS ||
+		     cr->m_spiderStatus == SP_INITIALIZING )
+			cr->m_spiderStatus = SP_ROUNDDONE;
+
+		//
+		// TODO: set the spiderstatus outright here...
+		// maxtocrawl, maxtoprocess, etc. based on the counts.
+		//
 
 
 		// only host #0 sends emails
