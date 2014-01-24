@@ -2823,6 +2823,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	if ( fmt == FMT_HTML ) {
 
+		char *seedStr = cr->m_diffbotSeeds.getBufStart();
+		if ( ! seedStr ) seedStr = "";
+
 		SafeBuf tmp;
 		long crawlStatus = -1;
 		getSpiderStatusMsg ( cr , &tmp , &crawlStatus );
@@ -2859,6 +2862,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      "<tr>"
 			      "<td><b>Token:</td>"
+			      "<td>%s</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Seeds:</td>"
 			      "<td>%s</td>"
 			      "</tr>"
 
@@ -2936,6 +2944,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , (long)cr->m_isCustomCrawl
 
 			      , cr->m_diffbotToken.getBufStart()
+
+			      , seedStr
 
 			      , crawlStatus
 			      , tmp.getBufStart()

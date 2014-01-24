@@ -473,6 +473,13 @@ bool Collectiondb::addNewColl ( char *coll ,
 	memset ( &cr->m_localCrawlInfo , 0 , sizeof(CrawlInfo) );
 	memset ( &cr->m_globalCrawlInfo , 0 , sizeof(CrawlInfo) );
 
+	// . assume we got some urls ready to spider
+	// . Spider.cpp will wait SPIDER_DONE_TIME seconds and if it has no
+	//   urls it spidered in that time these will get set to 0 and it
+	//   will send out an email alert if m_sentCrawlDoneAlert is not true.
+	cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = 1;
+	cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = 1;
+
 	// set some defaults. max spiders for all priorities in this 
 	// collection. NO, default is in Parms.cpp.
 	//cr->m_maxNumSpiders = 10;
