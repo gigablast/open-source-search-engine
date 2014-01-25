@@ -2114,14 +2114,17 @@ bool XmlDoc::indexDoc ( ) {
 	// add a new request as well as a reply for this one
 	if ( m_indexCodeValid && m_indexCode == EFAKEFIRSTIP ) success = false;
 
-	// ignore failed child docs like diffbot pages
-	if ( m_isChildDoc ) {
-		log("build: child doc had internal error. not adding "
-		    "spider reply for %s",m_firstUrl.m_url);
-		success = true;
-	}
-
 	if ( success ) return true;
+
+	// . ignore failed child docs like diffbot pages
+	// . they are getting EMALFORMEDSECTIONS
+	if ( m_isChildDoc ) {
+		log("build: done indexing child doc. error=%s. not adding "
+		    "spider reply for %s",
+		    mstrerror(g_errno),
+		    m_firstUrl.m_url);
+		return true;
+	}
 
 	///
 	// otherwise, an internal error. we must add a SpiderReply
