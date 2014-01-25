@@ -2893,6 +2893,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td>%li</td>"
 			      "</tr>"
 
+			      "<tr>"
+			      "<td><b>Has Urls Ready to Spider:</td>"
+			      "<td>%li</td>"
+			      "</tr>"
+
 
 			      // this will  have to be in crawlinfo too!
 			      //"<tr>"
@@ -2958,6 +2963,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , crawlStatus
 			      , tmp.getBufStart()
 			      , cr->m_spiderRoundNum
+			      , cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
 
 			      , cr->m_globalCrawlInfo.m_objectsAdded -
 			        cr->m_globalCrawlInfo.m_objectsDeleted
