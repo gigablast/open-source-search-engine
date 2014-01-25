@@ -1588,6 +1588,15 @@ bool CollectionRec::load ( char *coll , long i ) {
 			m_localCrawlInfo.m_pageProcessSuccesses;
 	}
 
+	// fix from old bug that was fixed
+	//if ( m_spiderRoundNum == 0 &&
+	//     m_collectiveRespiderFrequency > 0.0 &&
+	//     m_localCrawlInfo.m_sentCrawlDoneAlert ) {
+	//	log("coll: bug fix: resending email alert for coll %s (%li) "
+	//	    "of respider freq %f",m_coll,(long)m_collnum,
+	//	    m_collectiveRespiderFrequency);
+	//	m_localCrawlInfo.m_sentCrawlDoneAlert = false;
+	//}
 
 
 	// LOAD GLOBAL
