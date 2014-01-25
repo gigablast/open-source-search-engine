@@ -1447,7 +1447,7 @@ bool SpiderColl::makeWaitingTree ( ) {
 		}
 		// note it
 		if ( g_conf.m_logDebugSpider )
-			log(LOG_DEBUG,"spider: added time=1 ip=%s to waiting "
+			logf(LOG_DEBUG,"spider: added time=1 ip=%s to waiting "
 			    "tree (node#=%li)", iptoa(firstIp),wn);
 		// a tmp var
 		long long fakeone = 1LL;
@@ -1455,6 +1455,7 @@ bool SpiderColl::makeWaitingTree ( ) {
 		if ( ! m_waitingTable.addKey ( &firstIp , &fakeone ) ) {
 			log("spider: makeWaitTree2: %s",mstrerror(g_errno));
 			m_waitingTree.deleteNode ( wn , true );
+			//log("sper: 6 del node %li for %s",wn,iptoa(firstIp));
 			return false;
 		}
 	}
@@ -2024,17 +2025,6 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	// was doled then we should probably delete the old doledb key
 	// and add the new one. hmm, the waitingtree scan code ...
 
-
-	// if we are also currently scanning spiderdb to find a spiderrequest
-	// to add to doledb, let the scan know so that it does not remove
-	// the waitingtree key if it does not find a suitable url. i've
-	// seen us miss out when new ones come in during a scan. we end up
-	// logging "nuking misleading entry" because the new guys were still
-	// in the msg4 cache. the new guys tried to call addToWaitingTree()
-	// but because there was still an entry in there, they did not
-	// add themselves. this happend while spidering outlier.cc.
-	m_gotNewRequestsForScanningIp = true;
-
 	// sanity check
 	//long long ttt=getEarliestSpiderTimeFromWaitingTree(sreq->m_firstIp);
 	//logf (LOG_DEBUG,"spider: earliestime=%lli for firstip=%s",
@@ -2177,6 +2167,23 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	if ( g_conf.m_logDebugSpider )
 		log("spider: addtowaitingtree ip=%s",iptoa(firstIp));
 
+	// we are currently reading spiderdb for this ip and trying to find
+	// a best SpiderRequest or requests to add to doledb. so if this 
+	// happens, let the scan know that more replies or requests came in
+	// while we were scanning so that it should not delete the rec from
+	// waiting tree and not add to doledb, then we'd lose it forever or
+	// until the next waitingtree rebuild was triggered in time.
+	//
+	// Before i was only setting this in addSpiderRequest() so if a new
+	// reply came in it was not setting m_gotNewDataForScanninIp and
+	// we ended up losing the IP from the waiting tree forever (or until
+	// the next timed rebuild). putting it here seems to fix that.
+	if ( firstIp == m_scanningIp ) {
+		m_gotNewDataForScanningIp = m_scanningIp;
+		//log("spider: got new data for %s",iptoa(firstIp));
+		//return true;
+	}
+
 	// . this can now be only 0
 	// . only evalIpLoop() will add a waiting tree key with a non-zero
 	//   value after it figures out the EARLIEST time that a 
@@ -2271,6 +2278,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 			    iptoa(firstIp));
 		// remove from tree so we can add it below
 		m_waitingTree.deleteNode ( tn , false );
+		//log("spider: 4 del node %li for %s",tn,iptoa(firstIp));
 	}
 	else {
 		char *s="";
@@ -2333,15 +2341,15 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 
 	// note it
 	if ( g_conf.m_logDebugSpider )
-		log(LOG_DEBUG,"spider: added time=%lli ip=%s to waiting tree "
-		    "scan=%li",
-		    spiderTimeMS , iptoa(firstIp),(long)callForScan);
+		logf(LOG_DEBUG,"spider: added time=%lli ip=%s to waiting tree "
+		    "scan=%li node=%li",
+		    spiderTimeMS , iptoa(firstIp),(long)callForScan,wn);
 
 	// add to table now since its in the tree
 	if ( ! m_waitingTable.addKey ( &firstIp , &spiderTimeMS ) ) {
 		// remove from tree then
 		m_waitingTree.deleteNode ( wn , false );
-		log("spider: wait table add failed ip=%s",iptoa(firstIp));
+		//log("spider: 5 del node %li for %s",wn,iptoa(firstIp));
 		return false;
 	}
 	// . kick off a scan, i don't care if this blocks or not!
@@ -2414,7 +2422,7 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 		// and becase the trees/tables for spidercache are saving
 		// in Process.cpp's g_spiderCache::save() call
 		m_waitingTree.deleteNode ( node , true );
-
+		//log("spdr: 8 del node node %li for %s",node,iptoa(firstIp));
 		// note it
 		if ( g_conf.m_logDebugSpider )
 			log(LOG_DEBUG,"spider: removed1 ip=%s from waiting "
@@ -2872,7 +2880,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	// . initialize this before scanning the spiderdb recs of an ip
 	// . it lets us know if we recvd new spider requests for m_scanningIp
 	//   while we were doing the scan
-	m_gotNewRequestsForScanningIp = false;
+	m_gotNewDataForScanningIp = 0;
 
 	m_lastListSize = -1;
 
@@ -3147,6 +3155,11 @@ bool SpiderColl::readListFromSpiderdb ( ) {
 	if ( ! m_waitingTable.isInTable ( &m_scanningIp ) ) return true;
 	// sanity check
 	long wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
+	// it gets removed because addSpiderReply() calls addToWaitingTree
+	// and replaces the node we are scanning with one that has a better
+	// time, an earlier time, even though that time may have come and
+	// we are scanning it now. perhaps addToWaitingTree() should ignore
+	// the ip if it equals m_scanningIp?
 	if ( wn < 0 ) { 
 		log("spider: waiting tree key removed while reading list "
 		    "for %s (%li)",
@@ -3899,7 +3912,7 @@ bool SpiderColl::scanListForWinners ( ) {
 			    m_bestRequest->getUrlHash48(),
 			    m_bestRequest->m_url);
 			// debug why not sticking to our site!
-			if ( strstr(m_bestRequest->m_url,"//www.jezebelgallery.com") == NULL ) { char *xx=NULL;*xx=0; }
+			//if ( strstr(m_bestRequest->m_url,"//www.jezebelgallery.com") == NULL ) { char *xx=NULL;*xx=0; }
 		}
 	}
 	else if ( g_conf.m_logDebugSpider ) {
@@ -3979,8 +3992,8 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 	if ( ! m_bestRequestValid ) { // ! g_errno
 		// if we received new incoming requests while we were
 		// scanning, which is happening for some crawls, then do
-		// not nuke! just repeat
-		if ( m_gotNewRequestsForScanningIp ) {
+		// not nuke! just repeat later in populateDoledbFromWaitingTree
+		if ( m_gotNewDataForScanningIp ) {
 			if ( g_conf.m_logDebugSpider )
 				log("spider: received new requests, not "
 				    "nuking misleading key");
@@ -3991,6 +4004,7 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 			log("spider: nuking misleading waitingtree key "
 			    "firstIp=%s", iptoa(m_scanningIp));
 		m_waitingTree.deleteNode ( 0,(char *)&m_waitingTreeKey,true);
+		//log("spider: 7 del node for %s",iptoa(m_scanningIp));
 		m_waitingTreeKeyValid = false;
 		// note it
 		unsigned long long timestamp64 = m_waitingTreeKey.n1;
@@ -4032,10 +4046,19 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 	// how many spiders currently out for this ip?
 	long outNow=g_spiderLoop.getNumSpidersOutPerIp(m_scanningIp,m_collnum);
 
-	// sanity check
+	// sanity check. how did this happen? it messes up our crawl!
+	// maybe a doledb add went through? so we should add again?
 	long wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
 	if ( wn < 0 ) { 
-		log("spider: waiting tree key removed while reading list");
+		log("spider: waiting tree key removed while reading list for "
+		    "%s (%li)",m_coll,(long)m_collnum);
+		// play it safe and add it back for now...
+		// when i try to break here in gdb it never happens because
+		// of timing issues. heisenbug...
+		// false = callForScan
+		//if ( ! addToWaitingTree ( 0 , m_scanningIp , false ) )
+		//	log("spider: failed to add wk2 to waiting tree: %s"
+		//	    ,mstrerror(g_errno));
 		return true;
 	}
 
@@ -4052,7 +4075,11 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 		// when his SpiderReply comes back it will call 
 		// addWaitingTree with a "0" time so he'll get back in there
 		//if ( wn < 0 ) { char *xx=NULL; *xx=0; }
-		m_waitingTree.deleteNode (wn,false );
+		if ( wn >= 0 ) {
+			m_waitingTree.deleteNode (wn,false );
+			// note that
+			//log("spdr: 1 del node %li for %s",wn,iptoa(firstIp));
+		}
 		// keep the table in sync now with the time
 		m_waitingTable.removeKey( &m_bestRequest->m_firstIp );
 		return true;
@@ -4076,7 +4103,7 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 
 		// before you set a time too far into the future, if we
 		// did receive new spider requests, entertain those
-		if ( m_gotNewRequestsForScanningIp ) {
+		if ( m_gotNewDataForScanningIp ) {
 			if ( g_conf.m_logDebugSpider )
 				log("spider: received new requests, not "
 				    "updating waiting tree with future time");
@@ -4088,9 +4115,13 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 		oldSpiderTimeMS <<= 32;
 		oldSpiderTimeMS |= (m_waitingTreeKey.n0 >> 32);
 		// delete old node
-		long wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
-		if ( wn < 0 ) { char *xx=NULL;*xx=0; }
-		m_waitingTree.deleteNode (wn,false );
+		//long wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
+		//if ( wn < 0 ) { char *xx=NULL;*xx=0; }
+		if ( wn >= 0 ) {
+			m_waitingTree.deleteNode (wn,false );
+			//log("spdr: 2 del node %li for %s",wn,iptoa(firstIp));
+		}
+
 		// invalidate
 		m_waitingTreeKeyValid = false;
 		long  fip = m_bestRequest->m_firstIp;
@@ -4106,13 +4137,12 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 			    (long)m_bestRequest->m_priority,
 			    m_bestRequest->m_url);
 		// this should never fail since we deleted one above
-		m_waitingTree.addKey ( &wk2 );
-
+		long dn = m_waitingTree.addKey ( &wk2 );
 		// note it
 		if ( g_conf.m_logDebugSpider )
-			log(LOG_DEBUG,"spider: RE-added time=%lli ip=%s to "
-			    "waiting tree",
-			    m_bestSpiderTimeMS , iptoa(fip));
+			logf(LOG_DEBUG,"spider: RE-added time=%lli ip=%s to "
+			    "waiting tree node %li",
+			    m_bestSpiderTimeMS , iptoa(fip),dn);
 
 		// keep the table in sync now with the time
 		m_waitingTable.addKey( &fip, &m_bestSpiderTimeMS );
@@ -4236,6 +4266,7 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 	// to readd to doledb...
 	m_waitingTree.deleteNode ( 0, (char *)&m_waitingTreeKey , true);
 	m_waitingTable.removeKey  ( &storedFirstIp );
+	//log("spider: 3 del node for %s",iptoa(storedFirstIp));
 	
 	// invalidate
 	m_waitingTreeKeyValid = false;
@@ -4698,7 +4729,10 @@ void doneSendingNotification ( void *state ) {
 
 	// if we hit the max to crawl rounds, then stop!!! do not
 	// increment the round...
-	if ( cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) return;
+	if ( cr->m_spiderRoundNum >= cr->m_maxCrawlRounds &&
+	     // there was a bug when maxCrawlRounds was 0, which should
+	     // mean NO max, so fix that here:
+	     cr->m_maxCrawlRounds > 0 ) return;
 
 	// this should have been set below
 	//if ( cr->m_spiderRoundStartTime == 0 ) { char *xx=NULL;*xx=0; }
@@ -11088,14 +11122,16 @@ void updateAllCrawlInfosSleepWrapper ( int fd , void *state ) {
 	// send out the msg request
 	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = g_hostdb.getHost(i);
-		// skip if dead
-		if ( g_hostdb.isDead(i) ) {
-			if ( g_conf.m_logDebugSpider )
-				log("spider: skipping dead host #%li "
-				    "when getting "
-				    "crawl info",i);
-			continue;
-		}
+		// skip if dead. no! we need replies from all hosts
+		// otherwise our counts could be short and we might end up
+		// re-spidering stuff even though we've really hit maxToCrawl
+		//if ( g_hostdb.isDead(i) ) {
+		//	if ( g_conf.m_logDebugSpider )
+		//		log("spider: skipping dead host #%li "
+		//		    "when getting "
+		//		    "crawl info",i);
+		//	continue;
+		//}
 		// count it as launched
 		s_requests++;
 		// launch it
@@ -11312,6 +11348,11 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		//}
 
 		//bool has = cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider;
+		if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider &&
+		     ! cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider )
+			log("spider: all %li hosts report %s (%li) has no "
+			    "more urls ready to spider",
+			    s_replies,cr->m_coll,(long)cr->m_collnum);
 
 		// now copy over to global crawl info so things are not
 		// half ass should we try to read globalcrawlinfo

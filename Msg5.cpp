@@ -1160,7 +1160,7 @@ bool Msg5::gotList2 ( ) {
 	// filter happens and we have a chance to weed out old titleRecs
 	if ( m_rdbId == RDB_TITLEDB && m_numFiles != 1 && n == 1 &&
 	     m_isRealMerge ) {
-		log(LOG_LOGIC,"db: Adding dummy list.");
+		//log(LOG_LOGIC,"db: Adding dummy list.");
 		//m_tfns [n] = 255;
 		m_dummy.set ( NULL                      , // list data
 			      0                         , // list data size

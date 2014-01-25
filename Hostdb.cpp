@@ -69,7 +69,7 @@ Hostdb::~Hostdb () {
 
 void Hostdb::reset ( ) {
 
-	for ( long i = 0 ; i < m_numHosts ; i++ ) {
+	for ( long i = 0 ; m_hosts && i < m_numHosts ; i++ ) {
 		Host *h = &m_hosts[i];
 		if ( ! h->m_lastKnownGoodCrawlInfoReply ) continue;
 		mfree ( h->m_lastKnownGoodCrawlInfoReply ,
