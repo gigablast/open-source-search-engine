@@ -11192,6 +11192,8 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// add in the new good in case he goes down in the future
 		h->m_lastKnownGoodCrawlInfoReply    = (char *)ptr;
 		h->m_lastKnownGoodCrawlInfoReplyEnd = (char *)end;
+		// if valid, don't let him free it now!
+		slot->m_readBuf = NULL;
 	}
 
 	// inc it
