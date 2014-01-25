@@ -96,6 +96,7 @@ class Page {
 #define PF_DIFFBOT           0x80
 
 #define PF_HIDDEN 0x0100
+#define PF_NOSAVE 0x0200
 
 
 class Parm {

@@ -407,6 +407,11 @@ long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
 		long long elapsed = now - xd->m_startTime;
 		sb->safePrintf(" <td>%li</td>\n",row);
 		sb->safePrintf(" <td>%llims</td>\n",elapsed);
+		// print collection
+		CollectionRec *cr = g_collectiondb.getRec ( xd->m_collnum );
+		char *coll = "";
+		if ( cr ) coll = cr->m_coll;
+		sb->safePrintf("<td>%s</td>",coll);
 	}
 
 	sb->safePrintf(" <td><nobr>");
@@ -4724,8 +4729,23 @@ void doneSendingNotification ( void *state ) {
 	// more urls to spider. if we hit maxToProcess/maxToCrawl then 
 	// do not increment the round #. otherwise we should increment it.
 	// do allow maxtocrawl guys through if they repeat, however!
-	if ( cr->m_spiderStatus == SP_MAXTOCRAWL && respiderFreq <= 0.0)return;
-	if ( cr->m_spiderStatus == SP_MAXTOPROCESS && respiderFreq<=0.0)return;
+	//if(cr->m_spiderStatus == SP_MAXTOCRAWL && respiderFreq <= 0.0)return;
+	//if(cr->m_spiderStatus == SP_MAXTOPROCESS && respiderFreq<=0.0)return;
+
+	
+	////////
+	//
+	// . we are here because hasUrlsReadyToSpider is false
+	// . we just got done sending an email alert
+	// . now increment the round only if doing rounds!
+	//
+	///////
+
+
+	// if not doing rounds, keep the round 0. they might want to up
+	// their maxToCrawl limit or something.
+	if ( respiderFreq <= 0.0 ) return;
+
 
 	// if we hit the max to crawl rounds, then stop!!! do not
 	// increment the round...
@@ -4736,10 +4756,6 @@ void doneSendingNotification ( void *state ) {
 
 	// this should have been set below
 	//if ( cr->m_spiderRoundStartTime == 0 ) { char *xx=NULL;*xx=0; }
-
-	// how is this possible
-	//if ( getTimeGlobal() 
-
 
 	// find the "respider frequency" from the first line in the url
 	// filters table whose expressions contains "{roundstart}" i guess
@@ -4848,8 +4864,10 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	// if no email address or webhook provided this will not block!
 	// DISABLE THIS UNTIL FIXED
 
-	log("spider: SENDING EMAIL NOT");
-	//if ( ! sendNotification ( ei ) ) return false;
+	//log("spider: SENDING EMAIL NOT");
+
+	// ok, put it back...
+	if ( ! sendNotification ( ei ) ) return false;
 
 	// so handle this ourselves in that case:
 	doneSendingNotification ( ei );
@@ -11175,7 +11193,10 @@ void spiderRoundIncremented ( CollectionRec *cr ) {
 	    cr->m_coll,cr->m_spiderRoundNum,cr->m_spiderRoundStartTime);
 
 	// . need to send a notification for this round
-	cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
+	// . we are only here because the round was incremented and
+	//   Parms.cpp just called us... and that only happens in 
+	//   doneSending... so do not send again!!!
+	//cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
 
 	// . if we set sentCrawlDoneALert to 0 it will immediately
 	//   trigger another round increment !! so we have to set these
