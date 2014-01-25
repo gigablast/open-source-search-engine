@@ -4226,7 +4226,10 @@ bool Parms::setXmlFromFile(Xml *xml, char *filename, char *buf, long bufSize){
 			  false   , // ownData
 			  0       , // allocSize
 			  false   , // pureXml?
-			  0       );// version
+			  0       , // version
+			  true    , // setParents
+			  0       , // niceness
+			  CT_XML  );
 }
 
 #define MAX_CONF_SIZE 200000

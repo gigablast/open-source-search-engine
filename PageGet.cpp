@@ -712,7 +712,7 @@ bool processLoop ( void *state ) {
 		//Words *ww = xd->getWords();
 		if ( ! xml.set ( content , contentLen , false ,
 				 0 , false , TITLEREC_CURRENT_VERSION ,
-				 false , 0 ) ) { // niceness is 0
+				 false , 0 , CT_HTML ) ) { // niceness is 0
 			//if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );
 			return sendErrorReply ( st , g_errno );
 		}			

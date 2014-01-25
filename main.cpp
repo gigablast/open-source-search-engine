@@ -11464,7 +11464,10 @@ bool parseTest ( char *coll , long long docId , char *query ) {
 	t = gettimeofdayInMilliseconds();
 	for ( long i = 0 ; i < 100 ; i++ ) 
 		if ( ! xml.set ( content , contentLen , 
-				 false, 0, false, xd.m_version ) )
+				 false, 0, false, xd.m_version ,
+				 true , // setparents
+				 0 , // niceness 
+				 CT_HTML ) )
 			return log("build: speedtestxml: xml set: %s",
 				   mstrerror(g_errno));
 	// print time it took
@@ -11480,7 +11483,8 @@ bool parseTest ( char *coll , long long docId , char *query ) {
 	t = gettimeofdayInMilliseconds();
 	for ( long i = 0 ; i < 100 ; i++ ) 
 		if ( ! xml.set ( content , contentLen , 
-				 false, 0, false, xd.m_version , false ) )
+				 false, 0, false, xd.m_version , false ,
+				 0 , CT_HTML ) )
 			return log("build: xml(setparents=false): %s",
 				   mstrerror(g_errno));
 	// print time it took
@@ -11842,7 +11846,10 @@ bool summaryTest1   ( char *rec , long listSize, char *coll , long long docId ,
 		// now parse into xhtml (takes 15ms on lenny)
 		Xml xml;
 		xml.set ( content, contentLen , 
-			  false/*ownData?*/, 0, false, xd.m_version );
+			  false/*ownData?*/, 0, false, xd.m_version ,
+			  true , // setparents
+			  0 , // niceness
+			  CT_HTML );
 
 		xd.getSummary();
 

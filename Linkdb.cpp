@@ -3648,7 +3648,8 @@ bool Inlink::setXmlFromRSS ( Xml *xml , long niceness ) {
 			  true                     , // pure xml?
 			  TITLEREC_CURRENT_VERSION ,
 			  false                    , // no need to now
-			  niceness                 );
+			  niceness                 ,
+			  CT_XML );
 }
 
 // only Title.cpp uses this right now

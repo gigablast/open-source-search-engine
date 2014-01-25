@@ -4727,7 +4727,8 @@ void XmlDoc::gotWikiResults ( UdpSlot *slot ) {
 			 false                    ,
 			 TITLEREC_CURRENT_VERSION ,
 			 false                    , // setParents?
-			 m_niceness               ))
+			 m_niceness               ,
+			 CT_HTML                  ))
 		// return if g_errno got set
 		return;
 
@@ -5206,6 +5207,10 @@ Xml *XmlDoc::getXml ( ) {
 	char **u8 = getUtf8Content();
 	if ( ! u8 || u8 == (char **)-1 ) return (Xml *)u8;
 	long u8len = size_utf8Content - 1;
+	
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (Xml *)ct;
+
 	// note it
 	setStatus ( "getting xml");
 	// set it
@@ -5216,7 +5221,8 @@ Xml *XmlDoc::getXml ( ) {
 			   false      ,  // pure xml?
 			   m_version  ,
 			   false      ,  // setParentsArg? 
-			   m_niceness ) )
+			   m_niceness ,
+			   *ct ) )
 		// return NULL on error with g_errno set
 		return NULL;
 	// set just once
@@ -5813,13 +5819,12 @@ Sections *XmlDoc::getExplicitSections ( ) {
 	if ( m_explicitSectionsValid ) return &m_sections;
 
 	// if json forget this it is only html
-	uint8_t *ct = getContentType();
-	if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
-	if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
-		m_sectionsValid = true;
-		return &m_sections;
-	}
-
+	//uint8_t *ct = getContentType();
+	//if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
+	//if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
+	//	m_sectionsValid = true;
+	//	return &m_sections;
+	//}
 
 	setStatus ( "getting explicit sections" );
 	// use the old title rec to make sure we parse consistently!
@@ -5856,8 +5861,8 @@ Sections *XmlDoc::getExplicitSections ( ) {
 	long long *d = getDocId();
 	if ( ! d || d == (long long *)-1 ) return (Sections *)d;
 	// get the content type
-	//uint8_t *ct = getContentType();
-	//if ( ! ct ) return NULL;
+	uint8_t *ct = getContentType();
+	if ( ! ct ) return NULL;
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -5873,6 +5878,8 @@ Sections *XmlDoc::getExplicitSections ( ) {
 	// this uses the sectionsReply to see which sections are "text", etc.
 	// rather than compute it expensively
 	if ( ! m_calledSections &&
+	     // we get malformed sections error for some diffbot replies
+	     //*ct != CT_JSON &&
 	     ! m_sections.set ( &m_words      ,
 				&m_phrases    ,
 				bits          ,
@@ -5918,14 +5925,6 @@ Sections *XmlDoc::getExplicitSections ( ) {
 Sections *XmlDoc::getImpliedSections ( ) {
 	if ( m_impliedSectionsValid ) return &m_sections;
 
-	// if json forget this it is only html
-	uint8_t *ct = getContentType();
-	if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
-	if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
-		m_sectionsValid = true;
-		return &m_sections;
-	}
-
 	// get the sections without implied sections
 	Sections *sections = getExplicitSections();
 	if ( ! sections || sections==(void *)-1) return (Sections *)sections;
@@ -5944,8 +5943,8 @@ Sections *XmlDoc::getImpliedSections ( ) {
 	// bail on error
 	if ( ! bits ) return NULL;
 	// get the content type
-	//uint8_t *ct = getContentType();
-	//if ( ! ct ) return NULL;
+	uint8_t *ct = getContentType();
+	if ( ! ct ) return NULL;
 
 	if ( ! m_firstUrlValid ) { char *xx=NULL;*xx=0; }
 
@@ -6005,14 +6004,6 @@ Sections *XmlDoc::getImpliedSections ( ) {
 
 // add in Section::m_sentFlags bits having to do with our voting tables
 Sections *XmlDoc::getSections ( ) {
-
-	// if json forget this it is only html
-	uint8_t *ct = getContentType();
-	if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
-	if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
-		m_sectionsValid = true;
-		return &m_sections;
-	}
 
 	// get the sections without implied sections
 	Sections *ss = getImpliedSections();
@@ -17865,6 +17856,7 @@ bool XmlDoc::logIt ( ) {
 	// coll
 	//
 	sb.safePrintf("coll=%s ",coll);
+	sb.safePrintf("collnum=%li ",(long)m_collnum);
 
 	//
 	// print ip
@@ -25077,6 +25069,9 @@ bool XmlDoc::hashRSSInfo ( HashTableX *tt ) {
 
 	setStatus ( "hashing rss info" );
 
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) { char *xx=NULL;*xx=0; }
+
 	// . finally hash in the linkText terms from the LinkInfo
 	// . the LinkInfo class has all the terms of hashed anchor text for us
 	// . if we're using an old TitleRec linkTermList is just a ptr to
@@ -25190,7 +25185,10 @@ bool XmlDoc::hashRSSInfo ( HashTableX *tt ) {
 				  false            , // own data?
 				  0                , // allocSize
 				  false            , // pure xml?
-				  m_version ) )
+				  m_version ,
+				  true , // set parents?
+				  m_niceness ,
+				  *ct ) )
 			return false;
 		// set the words class from the xml, returns false and sets
 		// g_errno on error
