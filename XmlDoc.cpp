@@ -13896,6 +13896,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// count it for stats
 	cr->m_localCrawlInfo.m_pageProcessAttempts++;
 	cr->m_globalCrawlInfo.m_pageProcessAttempts++;
+	cr->m_needsSave = true;
 
 	char *additionalHeaders = NULL;
 	if ( headers.length() > 0 )
@@ -14405,6 +14406,7 @@ char **XmlDoc::gotHttpReply ( ) {
 		cr->m_localCrawlInfo.m_pageDownloadSuccessesThisRound++;
 		cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound++;
 		m_incrementedDownloadCount = true;
+		cr->m_needsSave = true;
 	}
 
 	// this means the spider compression proxy's reply got corrupted
@@ -19279,6 +19281,7 @@ long *XmlDoc::nukeJSONObjects ( ) {
 		// count as deleted
 		cr->m_localCrawlInfo.m_objectsDeleted++;
 		cr->m_globalCrawlInfo.m_objectsDeleted++;
+		cr->m_needsSave = true;
 		// but gotta set this crap back
 		//log("diffbot: resetting %s",m_dx->m_firstUrl.m_url);
 		// clear for next guy if there is one. clears 
@@ -20202,6 +20205,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// count as deleted
 		cr->m_localCrawlInfo.m_objectsAdded++;
 		cr->m_globalCrawlInfo.m_objectsAdded++;
+		cr->m_needsSave = true;
 		// we successfully index the json object, skip to next one
 		m_diffbotObj += gbstrlen(m_diffbotObj) + 1;
 		// but gotta set this crap back
@@ -22831,6 +22835,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	// this is just how many urls we tried to index
 	cr->m_localCrawlInfo.m_urlsHarvested += numAdded;
 	cr->m_globalCrawlInfo.m_urlsHarvested += numAdded;
+	cr->m_needsSave = true;
 
 	// save it
 	m_numOutlinksAdded      = numAdded;

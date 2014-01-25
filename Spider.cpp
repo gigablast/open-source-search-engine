@@ -38,6 +38,8 @@ SpiderRequest *g_sreq = NULL;
 
 long g_corruptCount = 0;
 
+static char s_countsAreValid = 1;
+
 /////////////////////////
 /////////////////////////      SPIDEREC
 /////////////////////////
@@ -2307,8 +2309,9 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 		if ( more < 10 ) more = 10;
 		if ( more > 100000 ) more = 100000;
 		long newNum = max + more;
-		log("spider: growing waiting tree to from %li to %li nodes",
-		    max , newNum );
+		log("spider: growing waiting tree to from %li to %li nodes "
+		    "for collnum %li",
+		    max , newNum , (long)m_collnum );
 		if ( ! m_waitingTree.growTree ( newNum , MAX_NICENESS ) )
 			return log("spider: failed to grow waiting tree to "
 				   "add firstip %s",iptoa(firstIp) );
@@ -3145,7 +3148,9 @@ bool SpiderColl::readListFromSpiderdb ( ) {
 	// sanity check
 	long wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
 	if ( wn < 0 ) { 
-		log("spider: waiting tree key removed while reading list");
+		log("spider: waiting tree key removed while reading list "
+		    "for %s (%li)",
+		    cr->m_coll,(long)m_collnum);
 		return true;
 	}
 	// sanity. if first time, this must be invalid
@@ -4602,8 +4607,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 				sc->m_waitingTreeNeedsRebuild = true;
 				log(LOG_INFO,
 				    "spider: hit spider queue "
-				    "rebuild timeout for %s",
-				    cr->m_coll);
+				    "rebuild timeout for %s (%li)",
+				    cr->m_coll,(long)cr->m_collnum);
 				// flush the ufn table
 				//clearUfnTable();
 			}
@@ -4853,6 +4858,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 	// must be spidering to dole out
 	if ( ! g_conf.m_spideringEnabled ) return;
+	// if we don't have all the url counts from all hosts, then wait.
+	// one host is probably down and was never up to begin with
+	if ( ! s_countsAreValid ) return;
 	//if ( ! g_conf.m_webSpideringEnabled )  return;
 	// if we do not overlap ourselves
 	if ( m_gettingDoledbList ) return;
@@ -4927,6 +4935,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		     cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) {
 			cr->m_spiderStatus = SP_MAXROUNDS;
 			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
+			cr->m_needsSave = true;
 			continue;
 		}
 
@@ -4939,6 +4948,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 			// then the send email code will be called.
 			// do it this way for code simplicity.
 			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
+			cr->m_needsSave = true;
 			continue;
 		}
 
@@ -4948,6 +4958,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		     cr->m_maxToProcess ) {
 			cr->m_spiderStatus = SP_MAXTOPROCESS;
 			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
+			cr->m_needsSave = true;
 			continue;
 		}
 
@@ -5735,7 +5746,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 
 	// if we thought we were done, note it if something comes back up
 	if ( ! ci->m_hasUrlsReadyToSpider ) 
-		log("spider: got a reviving url to crawl %s",sreq->m_url);
+		log("spider: got a reviving url for coll %s (%li) to crawl %s",
+		    cr->m_coll,(long)cr->m_collnum,sreq->m_url);
 
 	// there are urls ready to spider
 	ci->m_hasUrlsReadyToSpider = true;
@@ -11040,6 +11052,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot);
 
 static long s_requests = 0;
 static long s_replies  = 0;
+static long s_validReplies  = 0;
 static bool s_inUse = false;
 
 // . just call this once per second for all collections
@@ -11137,21 +11150,48 @@ void spiderRoundIncremented ( CollectionRec *cr ) {
 	cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = true;
 	cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
 
-
 	cr->m_localCrawlInfo.m_pageDownloadSuccessesThisRound = 0;
 	cr->m_localCrawlInfo.m_pageProcessSuccessesThisRound  = 0;
 	cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound = 0;
 	cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound  = 0;
+
+	cr->m_needsSave = true;
 }
 
 void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
-	// reply is error?
+	// loop over each LOCAL crawlinfo we received from this host
+	CrawlInfo *ptr = (CrawlInfo *)(slot->m_readBuf);
+	CrawlInfo *end = (CrawlInfo *)(slot->m_readBuf+ slot->m_readBufSize);
+
+	// host sending us this reply
+	Host *h = slot->m_host;
+
+	// assume it is a valid reply, not an error, like a udptimedout
+	s_validReplies++;
+
+	// reply is error? then use the last known good reply we had from him
 	if ( ! slot->m_readBuf || g_errno ) {
 		log("spider: got crawlinfo reply error: %s",
 		    mstrerror(g_errno));
 		// just clear it
 		g_errno = 0;
+		// just use his last known good reply
+		ptr = (CrawlInfo *)h->m_lastKnownGoodCrawlInfoReply;
+		end = (CrawlInfo *)h->m_lastKnownGoodCrawlInfoReplyEnd;
+		// if never had any reply... can't be valid then
+		if ( ! ptr ) s_validReplies--;
+	}
+	// otherwise, if reply was good it is the last known good now!
+	else {
+		// free the old good
+		long size = 
+			h->m_lastKnownGoodCrawlInfoReplyEnd -
+			h->m_lastKnownGoodCrawlInfoReply;
+		mfree ( h->m_lastKnownGoodCrawlInfoReply , size , "lknown");
+		// add in the new good in case he goes down in the future
+		h->m_lastKnownGoodCrawlInfoReply    = (char *)ptr;
+		h->m_lastKnownGoodCrawlInfoReplyEnd = (char *)end;
 	}
 
 	// inc it
@@ -11159,12 +11199,19 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 	if ( s_replies > s_requests ) { char *xx=NULL;*xx=0; }
 
+
+	// crap, if any host is dead and not reporting it's number then
+	// that seriously fucks us up because our global count will drop
+	// and something that had hit a max limit, like maxToCrawl, will
+	// now be under the limit and the crawl will resume.
+	// what's the best way to fix this?
+	//
+	// perhaps, let's just keep the dead host's counts the same
+	// as the last time we got them. or maybe the simplest way is to
+	// just not allow spidering if a host is dead 
+
 	// the sendbuf should never be freed! it points into collrec
 	slot->m_sendBufAlloc = NULL;
-
-	// loop over each LOCAL crawlinfo we received from this host
-	CrawlInfo *ptr = (CrawlInfo *)(slot->m_readBuf);
-	CrawlInfo *end = (CrawlInfo *)(slot->m_readBuf+ slot->m_readBufSize);
 
 	/////
 	//  SCAN the list of CrawlInfos we received from this host, 
@@ -11239,6 +11286,22 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// if not the last reply, skip this part
 		if ( s_replies < s_requests ) continue;
 
+		// if it's the last reply we are to receive, and 1 or more 
+		// hosts did not have a valid reply, and not even a
+		// "last known good reply" then then we can't do
+		// much, so do not spider then because our counts could be
+		// way off and cause us to start spidering again even though
+		// we hit a maxtocrawl limit!!!!!
+		if ( s_validReplies < s_replies ) {
+			// this will tell us to halt all spidering
+			// because a host is essentially down!
+			s_countsAreValid = false;
+			// might as well stop the loop here since we are
+			// not updating our crawlinfo states.
+			break;
+		}
+
+
 		// revival?
 		//if ( cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider &&
 		//     ! cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
@@ -11246,7 +11309,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		//	    cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider);
 		//}
 
-		bool has = cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider;
+		//bool has = cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider;
 
 		// now copy over to global crawl info so things are not
 		// half ass should we try to read globalcrawlinfo
@@ -11257,8 +11320,8 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 		// turn not assume we are out of urls just yet if a host
 		// in the network has not reported...
-		if ( g_hostdb.hasDeadHost() && has )
-			cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
+		//if ( g_hostdb.hasDeadHost() && has )
+		//	cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
 		     
 
 		// should we reset our "sent email" flag?
@@ -11349,6 +11412,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// initialize
 	s_replies  = 0;
 	s_requests = 0;
+	s_validReplies = 0;
 	s_inUse    = false;
 }
 
@@ -11459,6 +11523,8 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 			    cr->m_coll);
 			// assume our crawl on this host is completed i guess
 			ci->m_hasUrlsReadyToSpider = 0;
+			// save that!
+			cr->m_needsSave = true;
 		}
 		
 		// save it
@@ -11576,6 +11642,16 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 				       "by root administrator for "
 				       "maintenance.");
 	}
+
+	// out CollectionRec::m_globalCrawlInfo counts do not have a dead
+	// host's counts tallied into it, which could make a difference on
+	// whether we have exceed a maxtocrawl limit or some such, so wait...
+	if ( ! s_countsAreValid ) {
+		*status = SP_ADMIN_PAUSED;
+		return msg->safePrintf("All crawling temporarily paused "
+				       "because a shard is down.");
+	}
+
 
 	// if spiderdb is empty for this coll, then no url
 	// has been added to spiderdb yet.. either seed or spot

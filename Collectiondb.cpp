@@ -1525,7 +1525,8 @@ bool CollectionRec::load ( char *coll , long i ) {
 	m_collLen = gbstrlen ( coll );
 	strcpy ( m_coll , coll );
 
-	log(LOG_INFO,"db: loading conf for collection %s",coll);
+	log(LOG_INFO,"db: loading conf for collection %s (%li)",coll,
+	    (long)m_collnum);
 
 	// collection name HACK for backwards compatibility
 	//if ( strcmp ( coll , "main" ) == 0 ) {
@@ -1562,6 +1563,12 @@ bool CollectionRec::load ( char *coll , long i ) {
 		// it is binary now
 		memcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
 
+	
+	log("coll: loaded %s (%li) local hasurlsready=%li",
+	    m_coll,
+	    (long)m_collnum,
+	    (long)m_localCrawlInfo.m_hasUrlsReadyToSpider);
+
 
 	// we introduced the this round counts, so don't start them at 0!!
 	if ( m_spiderRoundNum == 0 &&
@@ -1593,6 +1600,12 @@ bool CollectionRec::load ( char *coll , long i ) {
 		//m_globalCrawlInfo.setFromSafeBuf(&sb);
 		// it is binary now
 		memcpy ( &m_globalCrawlInfo , sb.getBufStart(),sb.length() );
+
+	log("coll: loaded %s (%li) global hasurlsready=%li",
+	    m_coll,
+	    (long)m_collnum,
+	    (long)m_globalCrawlInfo.m_hasUrlsReadyToSpider);
+	
 
 	////////////
 	//
