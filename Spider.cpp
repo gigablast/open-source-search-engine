@@ -3373,6 +3373,8 @@ bool SpiderColl::scanListForWinners ( ) {
 	for ( ; ! list->isExhausted() ; ) {
 		// breathe
 		QUICKPOLL ( MAX_NICENESS );
+		// stop coring on empty lists
+		if ( list->isEmpty() ) break;
 		// get spiderdb rec in its serialized form
 		char *rec = list->getCurrentRec();
 		// sanity

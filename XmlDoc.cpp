@@ -5810,12 +5810,12 @@ Sections *XmlDoc::getExplicitSections ( ) {
 	if ( m_explicitSectionsValid ) return &m_sections;
 
 	// if json forget this it is only html
-	//uint8_t *ct = getContentType();
-	//if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
-	//if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
-	//	m_sectionsValid = true;
-	//	return &m_sections;
-	//}
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
+	if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
+		m_sectionsValid = true;
+		return &m_sections;
+	}
 
 
 	setStatus ( "getting explicit sections" );
@@ -5853,8 +5853,8 @@ Sections *XmlDoc::getExplicitSections ( ) {
 	long long *d = getDocId();
 	if ( ! d || d == (long long *)-1 ) return (Sections *)d;
 	// get the content type
-	uint8_t *ct = getContentType();
-	if ( ! ct ) return NULL;
+	//uint8_t *ct = getContentType();
+	//if ( ! ct ) return NULL;
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -5916,12 +5916,12 @@ Sections *XmlDoc::getImpliedSections ( ) {
 	if ( m_impliedSectionsValid ) return &m_sections;
 
 	// if json forget this it is only html
-	//uint8_t *ct = getContentType();
-	//if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
-	//if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
-	//	m_sectionsValid = true;
-	//	return &m_sections;
-	//}
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
+	if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
+		m_sectionsValid = true;
+		return &m_sections;
+	}
 
 	// get the sections without implied sections
 	Sections *sections = getExplicitSections();
@@ -5941,8 +5941,8 @@ Sections *XmlDoc::getImpliedSections ( ) {
 	// bail on error
 	if ( ! bits ) return NULL;
 	// get the content type
-	uint8_t *ct = getContentType();
-	if ( ! ct ) return NULL;
+	//uint8_t *ct = getContentType();
+	//if ( ! ct ) return NULL;
 
 	if ( ! m_firstUrlValid ) { char *xx=NULL;*xx=0; }
 
@@ -6004,12 +6004,12 @@ Sections *XmlDoc::getImpliedSections ( ) {
 Sections *XmlDoc::getSections ( ) {
 
 	// if json forget this it is only html
-	//uint8_t *ct = getContentType();
-	//if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
-	//if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
-	//	m_sectionsValid = true;
-	//	return &m_sections;
-	//}
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (Sections *)ct;
+	if ( *ct != CT_HTML && *ct != CT_TEXT && *ct != CT_XML ) {
+		m_sectionsValid = true;
+		return &m_sections;
+	}
 
 	// get the sections without implied sections
 	Sections *ss = getImpliedSections();
