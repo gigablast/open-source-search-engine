@@ -2252,9 +2252,11 @@ bool XmlDoc::indexDoc ( ) {
 	// clear g_errno
 	g_errno = 0;
 
+	// "cr" might have been deleted by calling indexDoc() above i think
+	// so use collnum here, not "cr"
 	if ( ! m_msg4.addMetaList ( m_metaList2.getBufStart()     ,
 				    m_metaList2.length() ,
-				    cr->m_coll         ,
+				    m_collnum,//cr->m_coll         ,
 				    m_masterState  , // state
 				    m_masterLoop   ,
 				    m_niceness     ) ) {
@@ -2511,7 +2513,7 @@ bool XmlDoc::indexDoc2 ( ) {
 		// do it
 		if ( ! m_msg4.addMetaList ( m_metaList     ,
 					    m_metaListSize ,
-					    cr->m_coll         ,
+					    m_collnum,//cr->m_coll         ,
 					    m_masterState  , // state
 					    m_masterLoop   ,
 					    m_niceness     ) ) {
