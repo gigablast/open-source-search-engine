@@ -1702,9 +1702,13 @@ int main ( int argc , char *argv[] ) {
 	// gb install
 	if ( strcmp ( cmd , "install" ) == 0 ) {	
 		// get hostId to install TO (-1 means all)
-		long hostId = -1;
-		if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
-		return install ( ifk_install , hostId );
+		long h1 = -1;
+		long h2 = -1;
+		if ( cmdarg + 1 < argc ) h1 = atoi ( argv[cmdarg+1] );
+		// might have a range
+		if (cmdarg + 1 < argc && strstr(argv[cmdarg+1],"-") )
+			sscanf ( argv[cmdarg+1],"%li-%li",&h1,&h2);
+		return install ( ifk_install , h1 , NULL , NULL , h2 );
 	}
 	// gb install
 	if ( strcmp ( cmd , "install2" ) == 0 ) {	
