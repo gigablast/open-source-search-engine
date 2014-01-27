@@ -1002,8 +1002,9 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	     *needsRebalance ) {
 		if ( adds ) mb.safePrintf("<br><br>");
 		adds++;
-		mb.safePrintf("This host requires a shard rebalance. "
-			      "Click 'rebalance shards' in master controls.");
+		mb.safePrintf("A host requires a shard rebalance. "
+			      "Click 'rebalance shards' in master controls to "
+			      "rebalance all hosts.");
 	}
 
 	if ( ps->m_numHostsDead ) {

@@ -276,7 +276,8 @@ bool CommandDeleteColl ( char *rec , WaitEntry *we ) {
 // . returns true and sets g_errno on error
 // . returns false if would block
 bool CommandDeleteColl2 ( char *rec , WaitEntry *we ) {
-	char *coll = (char *)rec;
+	char *data = rec + sizeof(key96_t) + 4;
+	char *coll = (char *)data;
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
 	if ( collnum < 0 ) {
 		g_errno = ENOCOLLREC;
@@ -9333,7 +9334,7 @@ void Parms::init ( ) {
 	m->m_cast  = 1;
 	m++;
 
-	m->m_title = "delete collection";
+	m->m_title = "delete collection 2";
 	m->m_desc  = "delete the specified collection";
 	m->m_cgi   = "delColl";
 	m->m_type  = TYPE_CMD;
