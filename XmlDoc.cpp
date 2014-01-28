@@ -3125,6 +3125,8 @@ long *XmlDoc::getIndexCode2 ( ) {
 	if ( *isRoot ) spamCheck = false;
 	// if we are being spidered deep, allow repeat spam
 	if ( gr->getLong("deep",0) ) spamCheck = false;
+	// not for crawlbot
+	if ( cr->m_isCustomCrawl ) spamCheck = false;
 	// otherwise, check the weights
 	if ( spamCheck ) {
 		char *ws = getWordSpamVec();
@@ -13512,6 +13514,8 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 			if ( curlies != 0 ) continue;
 			// unreciprocated '{'? wtf???
 			if ( ! xstart ) continue;
+			// skip empty curlies
+			if ( x[-1] == '{' ) continue;
 			//
 			// ok, we got an item!
 			//
