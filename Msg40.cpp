@@ -1190,8 +1190,6 @@ bool gotSummaryWrapper ( void *state ) {
 		    THIS->m_msg3a.m_numDocIds);
 	// it returns false if we're still awaiting replies
 	if ( ! THIS->gotSummary ( ) ) return false;
-	// it seems to return true when requests are outstanding...
-	if ( THIS->m_numReplies < THIS->m_numRequests ) return false;
 	// now call callback, we're done
 	THIS->m_callback ( THIS->m_state );
 	return true;
@@ -1224,11 +1222,6 @@ bool Msg40::gotSummary ( ) {
 		g_errno = 0;
 	}
 
-	// . ok, now i wait for everybody.
-	// . TODO: evaluate if this hurts us
-	//if ( m_numReplies < m_numRequests )
-	//	return false;
-
  doAgain:
 
 	// do we need to launch another batch of summary requests?
@@ -1250,6 +1243,11 @@ bool Msg40::gotSummary ( ) {
 		goto doAgain;
 		//char *xx=NULL; *xx=0;
 	}
+
+	// . ok, now i wait for everybody.
+	// . TODO: evaluate if this hurts us
+	if ( m_numReplies < m_numRequests )
+		return false;
 
 
 	// save this before we increment m_numContiguous
