@@ -5940,6 +5940,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			(long)xd->m_hopCount,
 			ru,
 			u->getUrl() );
+		//printf("%s\n",xd->ptr_utf8Content);
 		// free the mem
 		xd->reset();
 		//g_mem.printMem();

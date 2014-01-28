@@ -898,8 +898,11 @@ void StateCD::printTitledbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 
 		m_printedItem = true;
 
-		if ( ! sb->safeStrcpyPrettyJSON ( json ) ) 
-			log("diffbot: error printing json in dump");
+		//if ( ! sb->safeStrcpyPrettyJSON ( json ) ) 
+		//	log("diffbot: error printing json in dump");
+		sb->safeStrcpy ( json );
+
+		sb->nullTerm();
 
 		// separate each JSON object with \n i guess
 		//sb->pushChar('\n');
