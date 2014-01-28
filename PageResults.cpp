@@ -57,6 +57,11 @@ public:
 	// for printing our search result json items in csv:
 	HashTableX   m_columnTable;
 	long         m_numCSVColumns;
+
+	// stuff for doing redownloads
+	bool    m_didRedownload;
+	XmlDoc *m_xd;
+	long    m_oldContentHash32;
 };
 
 static bool printResult ( SafeBuf &sb,
@@ -467,6 +472,11 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	}
 	mnew ( st , sizeof(State0) , "PageResults2" );
 
+	// init some stuff
+	st->m_didRedownload    = false;
+	st->m_xd               = NULL;
+	st->m_oldContentHash32 = 0;
+
 	// copy yhits
 	if ( ! st->m_hr.copy ( hr ) )
 		return sendReply ( st , NULL );
@@ -615,6 +625,15 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	return status2;
 }
 
+// if returned json result is > maxagebeforedownload then we redownload the
+// page and if its checksum has changed we return empty results
+void doneRedownloadingWrapper ( void *state ) {
+	// cast our State0 class from this
+	State0 *st = (State0 *) state;
+	// resume
+	gotResults ( st );
+}
+
 /*
 void gotSpellingWrapper( void *state ){
 	// cast our State0 class from this
@@ -749,6 +768,85 @@ bool gotResults ( void *state ) {
 	       return sendReply(st,NULL);
 	}
 
+	/*
+	//
+	// BEGIN REDOWNLOAD LOGIC
+	//
+
+	////////////
+	//
+	// if caller wants a certain freshness we might have to redownload the
+	// parent url to get the new json
+	//
+	////////////
+	// get the first result
+	Msg20 *m20first = msg40->m_msg20[0];
+	long mabr = st->m_hr.getLong("maxagebeforeredownload",-1);
+	if ( mabr >= 0 && 
+	     numResults > 0 &&
+	     // only do this once
+	     ! st->m_didRedownload &&
+	     // need at least one result
+	     m20first &&
+	     // get the last spidered time from the msg20 reply of that result
+	     m20first->m_r->m_lastSpidered - now > mabr ) {
+		// make a new xmldoc to do the redownload
+		XmlDoc *xd;
+		try { xd = new (XmlDoc); }
+		catch ( ... ) {
+			g_errno = ENOMEM;
+			log("query: Failed to alloc xmldoc.");
+		}
+		if ( g_errno ) return sendReply (st,NULL);
+		mnew ( xd , sizeof(XmlDoc) , "mabrxd");
+		// save it
+		st->m_xd = xd;
+		// get this
+		st->m_oldContentHash32 = m20rep->m_contentHash32;
+		// do not re-do redownload
+		st->m_didRedownload = true;
+		// set it
+		xd->setUrl(parentUrl);
+		xd->setCallback ( st , doneRedownloadingWrapper );
+		// get the checksum
+		if ( xd->getContentChecksum32Fast() == (void *)-1 )
+			// return false if it blocked
+			return false;
+		// error?
+		if ( g_errno ) return sendReply (st,NULL);
+		// how did this not block
+		log("page: redownload did not would block adding parent");
+	}
+	     
+	// if we did the redownload and checksum changed, return 0 results
+	if ( st->m_didRedownload ) {
+		// get the doc we downloaded
+		XmlDoc *xd = st->m_xd;
+		// get it
+		long newHash32 = xd->getContentHash32();
+		// log it
+		if ( newHash32 != st->m_oldContentHash32 ) 
+			// note it in logs for now
+			log("results: content changed for %s",xd->m_firstUrl.m_url);
+		// free it
+		mdelete(xd, sizeof(XmlDoc), "mabrxd" );
+		delete xd;
+		// null it out so we don't try to re-free
+		st->m_xd = NULL;
+		// if content is significantly different, return 0 results
+		if ( newHash32 != st->m_oldContentHash32 ) {
+			SafeBuf sb;
+			// empty json i guess
+			sb.safePrintf("[]\n");
+			return sendReply(st,sb.getBufStart());
+		}
+		// otherwise, print the diffbot json results, they are still valid
+	}
+
+	//
+	// END REDOWNLOAD LOGIC
+	//
+	*/
 
 	//
 	// BEGIN ADDING URL
