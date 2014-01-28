@@ -2708,6 +2708,7 @@ bool SafeBuf::decodeJSONToUtf8 ( long niceness ) {
 //   diffbot
 // . really we could leave the newlines decoded etc, but it is prettier
 //   for printing
+/*
 bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
 	// how much space do we need?
 	// each single byte \t char for instance will need 2 bytes
@@ -2767,6 +2768,7 @@ bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
 
 	return true;
 }
+*/
 
 bool SafeBuf::safeUtf8ToJSON ( char *utf8 ) {
 
