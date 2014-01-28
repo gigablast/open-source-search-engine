@@ -150,7 +150,9 @@ void mutexUnlock ( ) {
 // make it big for production machines
 //#define DMEMTABLESIZE (1024*602)
 // there should not be too many mallocs any more
-#define DMEMTABLESIZE (1024*302)
+// i boosted from 300k to 600k so we can get summaries for 150k results
+// for the csv download...
+#define DMEMTABLESIZE (1024*602)
 //#define DMEMTABLESIZE (1024*202)
 // and small for local machine
 //#define DMEMTABLESIZE (1024*50)

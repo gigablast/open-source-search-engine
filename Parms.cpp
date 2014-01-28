@@ -9911,7 +9911,8 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_restrictDomain - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	// we need to save this it is a diffbot parm
+	m->m_flags = PF_HIDDEN | PF_DIFFBOT;// | PF_NOSAVE;
 	m++;
 
 	m->m_title = "do url sporn checking";

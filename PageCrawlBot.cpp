@@ -208,6 +208,10 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		SafeBuf sb2(tmp2,5000);
 		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&dr=0&"
 			      "c=%s&n=1000000&"
+			       // no gigabits
+			       "dsrt=0&"
+			       // do not compute summary. 0 lines.
+			       "ns=0&"
 			      "q=gbsortby%%3Agbspiderdate&"
 			      "prepend=type%%3Ajson"
 			      "\r\n\r\n"

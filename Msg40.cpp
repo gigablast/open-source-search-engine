@@ -17,7 +17,7 @@
 
 // increasing this doesn't seem to improve performance any on a single
 // node cluster....
-#define MAX_OUTSTANDING_MSG20S 50
+#define MAX_OUTSTANDING_MSG20S 200
 
 //static void handleRequest40              ( UdpSlot *slot , long netnice );
 //static void gotExternalReplyWrapper      ( void *state , void *state2 ) ;
@@ -1184,8 +1184,14 @@ bool gotSummaryWrapper ( void *state ) {
 	Msg40 *THIS  = (Msg40 *)state;
 	// inc it here
 	THIS->m_numReplies++;
+	// log every 1000 i guess
+	if ( (THIS->m_numReplies % 1000) == 0 )
+		log("msg40: got %li summaries out of %li",THIS->m_numReplies,
+		    THIS->m_msg3a.m_numDocIds);
 	// it returns false if we're still awaiting replies
 	if ( ! THIS->gotSummary ( ) ) return false;
+	// it seems to return true when requests are outstanding...
+	if ( THIS->m_numReplies < THIS->m_numRequests ) return false;
 	// now call callback, we're done
 	THIS->m_callback ( THIS->m_state );
 	return true;
@@ -1220,8 +1226,8 @@ bool Msg40::gotSummary ( ) {
 
 	// . ok, now i wait for everybody.
 	// . TODO: evaluate if this hurts us
-	if ( m_numReplies < m_numRequests )
-		return false;
+	//if ( m_numReplies < m_numRequests )
+	//	return false;
 
  doAgain:
 

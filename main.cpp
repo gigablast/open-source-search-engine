@@ -1791,12 +1791,15 @@ int main ( int argc , char *argv[] ) {
 			long h2 = -1;
 			sscanf ( argv[cmdarg+1],"%li-%li",&h1,&h2);
 			if ( h1 != -1 && h2 != -1 && h1 <= h2 )
-				return install ( ifk_start , h1, 
+				//
+				// default to keepalive start for now!!
+				//
+				return install ( ifk_kstart , h1, 
 						 NULL,NULL,h2 );
 		}
 		// if it is us, do it
 		//if ( hostId != -1 ) goto mainStart;
-		return install ( ifk_start , hostId );
+		return install ( ifk_kstart , hostId );
 	}
 	// gb tmpstart [hostId]
 	if ( strcmp ( cmd , "tmpstart" ) == 0 ) {	
@@ -5916,6 +5919,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			"version=%02li "
 			//"maxLinkTextWeight=%06lu%% "
 			"hc=%li "
+			//"diffbot=%li "
 			"redir=%s "
 			"url=%s\n", 
 			k.n1 , k.n0 , 
@@ -5938,6 +5942,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			(long)xd->m_version,
 			//ms,
 			(long)xd->m_hopCount,
+			//(long)xd->m_isDiffbotJSONObject,
 			ru,
 			u->getUrl() );
 		//printf("%s\n",xd->ptr_utf8Content);

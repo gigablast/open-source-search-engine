@@ -5046,6 +5046,11 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 		Msg20      *m20 = msg40->m_msg20[i];
 		Msg20Reply *mr  = m20->m_r;
 
+		if ( ! mr ) {
+			log("results: missing msg20 reply for result #%li",i);
+			continue;
+		}
+
 		// get content
 		char *json = mr->ptr_content;
 		// how can it be empty?
