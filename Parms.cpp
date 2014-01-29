@@ -18231,7 +18231,8 @@ void handleRequest3fLoop ( void *weArg ) {
 		long oldRound; 
 		if ( we->m_collnum >= 0 && ! cx ) {
 			cx = g_collectiondb.getRec ( we->m_collnum );
-			oldRound = cx->m_spiderRoundNum;
+			// i guess coll might gotten deleted! so check cx
+			if ( cx ) oldRound = cx->m_spiderRoundNum;
 		}
 
 		// . this returns false if blocked, returns true and sets

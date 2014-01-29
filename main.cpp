@@ -2362,7 +2362,17 @@ int main ( int argc , char *argv[] ) {
 		if ( cmdarg+6 < argc ) {
 			char *targ = argv[cmdarg+6];
 			if ( is_alpha_a(targ[0]) ) {
+				char *colon = strstr(targ,":");
+				long long prefix64 = 0LL;
+				if ( colon ) {
+					*colon = '\0';
+					prefix64 = hash64n(targ);
+					targ = colon + 1;
+				}
+				// hash the term itself
 				termId = hash64n(targ);
+				// hash prefix with termhash
+				termId = hash64(termId,prefix64);
 				termId &= TERMID_MASK;
 			}
 			else {

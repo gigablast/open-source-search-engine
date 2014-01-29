@@ -2479,7 +2479,6 @@ static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 	// the SpiderColl will have been preserved in that case but its
 	// m_deleteMyself flag will have been set.
 	if ( THIS->m_deleteMyself &&
-	     ! THIS->m_msg5b.m_waitingForMerge &&
 	     ! THIS->m_msg5b.m_waitingForList &&
 	     ! THIS->m_msg1.m_mcast.m_inUse ) {
 		mdelete ( THIS , sizeof(SpiderColl),"postdel1");
@@ -2930,9 +2929,7 @@ static void doledWrapper ( void *state ) {
 
 	// did collection get nuked while we were waiting for msg1 reply?
 	if ( THIS->m_deleteMyself &&
-	     ! THIS->m_msg5.m_waitingForMerge &&
 	     ! THIS->m_msg5.m_waitingForList &&
-	     ! THIS->m_msg5b.m_waitingForMerge &&
 	     ! THIS->m_msg5b.m_waitingForList ) {
 		mdelete ( THIS , sizeof(SpiderColl),"postdel1");
 		delete ( THIS );
@@ -3024,7 +3021,6 @@ bool SpiderColl::evalIpLoop ( ) {
 	// the SpiderColl will have been preserved in that case but its
 	// m_deleteMyself flag will have been set.
 	if ( m_deleteMyself &&
-	     ! m_msg5b.m_waitingForMerge &&
 	     ! m_msg5b.m_waitingForList &&
 	     ! m_msg1.m_mcast.m_inUse ) {
 		mdelete ( this , sizeof(SpiderColl),"postdel1");
