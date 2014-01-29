@@ -1027,6 +1027,40 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 		      //"</center>"
 		      "<br>");
 
+	////////
+	//
+	// . the form
+	//
+	////////
+	// . we cannot use the GET method if there is more than a few k of
+	//   parameters, like in the case of the Search Controls page. The
+	//   browser simply will not send the request if it is that big.
+	if ( s_pages[page].m_usePost )
+		sb->safePrintf ("<form name=\"SubmitInput\" method=\"post\" "
+				"action=\"/%s\">\n",
+				s_pages[page].m_filename);
+	else
+		sb->safePrintf ("<form name=\"SubmitInput\" method=\"get\" "
+				"action=\"/%s\">\n",
+				s_pages[page].m_filename);
+	// pass on this stuff
+	//if ( ! pwd ) pwd = "";
+	//sb->safePrintf ( "<input type=hidden name=pwd value=\"%s\">\n",pwd);
+	if ( ! coll ) coll = "";
+	sb->safePrintf ( "<input type=hidden name=c value=\"%s\">\n",coll);
+	// sometimes we do not want to be USER_MASTER for testing
+	//if ( user == USER_ADMIN ) {
+	if ( g_users.hasPermission ( username, PAGE_ADMIN ) ){
+		sb->safePrintf("<input type=hidden name=master value=0>\n");
+	}
+	// should any changes be broadcasted to all hosts?
+	sb->safePrintf ("<input type=hidden name=cast value=\"%li\">\n",
+			(long)s_pages[page].m_cast);
+
+
+
+
+
 	// a new table. on the left is collections, on right is other stuff
 	sb->safePrintf("<TABLE "
 		       "cellpadding=5 border=0>"
@@ -1047,35 +1081,6 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 
 	// print the links
 	status &= printAdminLinks ( sb, page , username , coll ,pwd , false );
-
-	// . the form
-	// . we cannot use the GET method if there is more than a few k of
-	//   parameters, like in the case of the Search Controls page. The
-	//   browser simply will not send the request if it is that big.
-	if ( s_pages[page].m_usePost )
-		sb->safePrintf ("<form name=\"SubmitInput\" method=\"post\" "
-				"action=\"/%s\">\n",
-				s_pages[page].m_filename);
-	else
-		sb->safePrintf ("<form name=\"SubmitInput\" method=\"get\" "
-				"action=\"/%s\">\n",
-				s_pages[page].m_filename);
-
-	// pass on this stuff
-	//if ( ! pwd ) pwd = "";
-	//sb->safePrintf ( "<input type=hidden name=pwd value=\"%s\">\n",pwd);
-	if ( ! coll ) coll = "";
-	sb->safePrintf ( "<input type=hidden name=c value=\"%s\">\n",coll);
-	// sometimes we do not want to be USER_MASTER for testing
-	//if ( user == USER_ADMIN ) {
-	if ( g_users.hasPermission ( username, PAGE_ADMIN ) ){
-		sb->safePrintf("<input type=hidden name=master value=0>\n");
-	}
-
-	// should any changes be broadcasted to all hosts?
-	sb->safePrintf ("<input type=hidden name=cast value=\"%li\">\n",
-			(long)s_pages[page].m_cast);
-
 
 	// begin 2nd row in big table
 	sb->safePrintf("</td></TR>");
