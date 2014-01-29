@@ -1156,10 +1156,12 @@ void gotHttpReply2 ( void *state ,
 		// . if no user-agent line matches * or gigabot/flurbot we
 		//   will get just a \0 for the reply, replySize=1!
 		//char *ua = "ProCogBot";//"EventGuruBot";//r->m_userAgent;
-		char *ua = "Gigabot";
-		long uaLen = gbstrlen(ua);
-		replySize = filterRobotsTxt (reply,replySize,&mime,niceness,
-					     ua,uaLen);
+		// take this out until it works for 
+		// user-agent: *\ndisallow: blah
+		//char *ua = "Gigabot";
+		//long uaLen = gbstrlen(ua);
+		//replySize = filterRobotsTxt (reply,replySize,&mime,niceness,
+		//			     ua,uaLen);
 		// record in the stats
 		docsPtr     = &g_stats.m_compressRobotsTxtDocs;
 		bytesInPtr  = &g_stats.m_compressRobotsTxtBytesIn;
