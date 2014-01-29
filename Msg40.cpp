@@ -1221,6 +1221,24 @@ bool Msg40::gotSummary ( ) {
 		// reset g_errno
 		g_errno = 0;
 	}
+	/*
+	// sanity check
+	for ( long i = 0 ; i < m_msg3a.m_numDocIds ; i++ ) {
+		// stop as soon as we hit a gap breaking our contiguity... 
+		Msg20 *m = m_msg20[i];
+		if ( ! m ) continue;
+		Msg20Reply *mr = m->m_r;
+		if ( ! mr ) continue;
+		char *cc = mr->ptr_content;
+		if ( ! cc ) continue;
+		//if ( ! strstr(cc,"Modern Marketing KF400032MA") )  continue;
+		//log("hey");
+		//fprintf(stderr,"msg %li = %s\n",i,cc );
+		if ( i == 48329 ) { char *xx=NULL;*xx=0; }
+		mr->ptr_content = NULL;
+	}
+	*/
+
 
  doAgain:
 
