@@ -1752,25 +1752,26 @@ to compute the similarity of two Gigabit Vectors.
 <h2>Deduping at Spider Time</h2>
 <i>Last Updated 1/29/2014 by MDW</i>
 <br><br>
-Many URLs contain essentially the same content as other URLs. Therefore we need to dedup URLs and prevent them from entering the index. Deduping in this fashion is disabled by default so you will need to enabled it in the Spider Controls for your collection. You will note such duplicate urls in the logs with the "Doc is a dup" message. Those urls are not indexed. The error is not treated as "temporary" so it might not be retried if you have it so that the url filters only retry temporary errors.
+Many URLs contain essentially the same content as other URLs. Therefore we need to dedup URLs and prevent them from entering the index. Deduping in this fashion is disabled by default so you will need to enabled it in the Spider Controls for your collection. You will note such duplicate urls in the logs with the "Doc is a dup" (<a href=#indexcodes>EDOCDUP</a>) message. Those urls are not indexed, and if they were indexed, they will be removed.
 <br><br>
-When a page is indexed we store a hash of its content into a singe "posdb" key.
+When a page is indexed we store a hash of its content into a single "posdb" key.
 We set the "sharded by termid" bit for that posdb key, so it is not sharded by docid which is the norm. Hostdb::getShard() checks for that bit and shards by termid when it is present. In that way all the pages with the same content hash will be together on disk in posdb.
 <br><br>
 We perform a lookup of all other docids that share the same content hash as the document we are indexing. If another docid has the same content hash and its site rank is the same as ours or higher, then we are a duplicate docid and we do not index our docid and getIndexCode() returns <a href=#indexcode>EDOCDUP</a>. Our document will be deleted if it was indexed. If another docid with the same content hash as us has a siterank lower than ours, then he is the dup and he will be removed when he is reindexed the next time with the <a href=#indexcode>EDOCDUP</a> error. If another docid with the same content hash as us as the SAME site rank as us, then we assume we are the dup. We go first come first server approach in that scenario, site rank trumps.
 <br><br>
 We use the getContentHashExact64() function to generate the 64-bit dup checksum. It hashes the document pretty much verbatim for safety. It does treat sequences of white space as a single space character however.
 <br><br>
-Other hash functions exist that hash all the month names and day of week names and ALL DIGITS a specific number in order to ignore the clocks one finds on web pages. Additinoally tags can be ignored unless they are a frame or iframe tag. Pure text is hashed as lower case alnum. Punctuatuation and spaces can be skipped over. But these are in the unused getLooseContentHash() function.
+Other hash functions exist that hash all the month names and day of week names and ALL DIGITS to a specific number in order to ignore the clocks one finds on web pages. Additionally tags can be ignored unless they are a frame or iframe tag. Pure text is hashed as lower case alnum. Punctuatuation and spaces can be skipped over. This algoritm is currently unused but is available in the getLooseContentHash() function.
 <br><br>
-If we see a <link href=xxx rel=canonical> tag in the page and our url is different than xxx, then we do not index the url and use the <a href=#indexcode>ENOTCANONICAL</a> error put we do a a spider request for the canonical url so it can get picked up. It shows up as "Url was dup of canonical page" in the logs. The canonical URL should inherit the same SpiderRequest::m_isInjecting or SpiderRequest::m_isAddUrl bits of the page it came from, similar to how simplified meta redirects work.
+If we see a &lt;link href=<i>xxx</i> rel=canonical&gt; tag in the page and our url is different than <i>xxx</i>, then we do not index the url and use the <a href=#indexcode>ENOTCANONICAL</a> error, but we do insrt a spider request for the referenced canonical url so it can get picked up. The error when downloading such urlsshows up as "Url was dup of canonical page" in the logs. The canonical URL we insert should inherit the same SpiderRequest::m_isInjecting or SpiderRequest::m_isAddUrl bits of the "dup" url it came from, similar to how simplified meta redirects work.
 <br><br>
 
 
 <a name="indexcode"></a>
 <h2>Indexing Error Codes</h2>
-Msg16, and sometimes Msg14, will set Msg16::m_indexCode to various things to 
-indicate conditions as to why the document did not get indexed. These error 
+When trying to index a document we call XmlDoc::getIndexCode() to see if there was a problem. 0 means everything is good. Typically an error will be indicative of not indexing the document, or sometimes even removing it if it was indexed. Sometimes an error code will just do knowthing except add a SpiderReply to Spiderdb indicating the error so that the document might be tried again in the future. Sometimes, like in the case of simplified meta rediriects we will add the new url's SpiderRequest to spiderdb as well. So we handle all errors on an individual basis.
+<br><br>
+hese error 
 codes are all in <a href="#errno">Errno.h</a>.
 <br><br>
 <table cellpadding=3 border=1>
@@ -1789,6 +1790,7 @@ codes are all in <a href="#errno">Errno.h</a>.
 <tr><td>EDOCTOOMANYREDIRECTS</td><td>Url had more than 6 redirects.</td></tr>
 <tr><td>EDOCBADREDIRECTURL</td><td>The redirect url was empty.</td></tr>
 <tr><td>EDOCSIMPLIFIEDREDIR</td><td>The document redirected to a simpler url, which had less path components, did not have cgi, or for whatever reason was prettier to look at. The current url will be discarded and the redirect url will be added to spiderdb.</td></tr>
+<tr><td>EDOCNONCANONICAL</td><td>Doc has a canonical link reference a url that was not itself. Used for deduping at spider time.</td></tr>
 <tr><td>EDOCNODOLLAR</td><td>Document did not contain a dollar sign followed by a price. Used for building shopping indexes.</td></tr>
 <tr><td>EDOCHASBADRSS</td><td>This should not happen.</td></tr>
 <tr><td>EDOCISANCHORRSS</td><td>This should not happen.</td></tr>
@@ -1822,7 +1824,6 @@ error, or something on our side. These errors are also in Errno.h.
 <tr><td>EDNSTIMEDOUT</td><td>If we timed out looking up the IP of the url.</td></tr>
 <tr><td>EBADREPLY</td><td>DNS server sent us a bad reply.</td></tr>
 <tr><td>EDNSDEAD</td><td>DNS server was dead</td></tr>
-<tr><td>EDOCNONCANONICAL</td><td>Doc has a canonical link reference a url that was not itself. Used for deduping at spider time.</td></tr>
 </table>
 
 <br><br>
