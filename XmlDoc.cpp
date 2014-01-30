@@ -3033,6 +3033,17 @@ long *XmlDoc::getIndexCode2 ( ) {
 		return &m_indexCode;
 	}
 
+	// . i moved this up to perhaps fix problems of two dup pages being downloaded
+	//   at about the same time
+	// . are we a dup of another doc from any other site already indexed?
+	char *isDup = getIsDup();
+	if ( ! isDup || isDup == (char *)-1 ) return (long *)isDup;
+	if ( *isDup ) {
+		m_indexCode      = EDOCDUP;
+		m_indexCodeValid = true;
+		return &m_indexCode;
+	}
+
 	// . is a non-canonical page that have <link ahref=xxx rel=canonical>
 	// . also sets m_canonicanlUrl.m_url to it if we are not
 	// . returns NULL if we are the canonical url
@@ -3116,15 +3127,6 @@ long *XmlDoc::getIndexCode2 ( ) {
 	}
 	if ( ! aa || aa == (void *)-1 ) return (long *)aa;
 
-
-	// are we a dup of another doc from any other site already indexed?
-	char *isDup = getIsDup();
-	if ( ! isDup || isDup == (char *)-1 ) return (long *)isDup;
-	if ( *isDup ) {
-		m_indexCode      = EDOCDUP;
-		m_indexCodeValid = true;
-		return &m_indexCode;
-	}
 
 	// are we a root?
 	char *isRoot = getIsSiteRoot();

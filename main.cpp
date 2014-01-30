@@ -16629,18 +16629,22 @@ bool isRecoveryFutile ( ) {
 	char *filename;
 
 	long now = getTimeLocal();
+
 	long fresh = 0;
 
 	// getNextFilename() writes into this
-	char pattern[8]; strcpy ( pattern , "log*-*" );
+	char pattern[8]; strcpy ( pattern , "*"); // log*-*" );
 
 	while ( ( filename = dir.getNextFilename ( pattern ) ) ) {
 		// filename must be a certain length
 		//long filenameLen = gbstrlen(filename);
 
 		char *p = filename;
+
+		if ( !strstr ( filename,"log") ) continue;
+
 		// skip "log"
-		p += 4;
+		p += 3;
 		// skip digits for hostid
 		while ( isdigit(*p) ) p++;
 
@@ -16648,19 +16652,25 @@ bool isRecoveryFutile ( ) {
 		if ( *p != '-' ) continue;
 		p++;
 
-		// get the time stamp, local time
-		long timestamp = (long)atoi(p);
+		// open file
+		File ff;
+		ff.set ( dir.getDir() , filename );
+		// skip if 0 bytes or had error calling ff.getFileSize()
+		long fsize = ff.getFileSize();
+		if ( fsize == 0 ) continue;
+		ff.open ( O_RDONLY );
+		// get time stamp
+		long timestamp = ff.getLastModifiedTime ( );
 
 		// skip if not iwthin last minute
 		if ( timestamp < now - 60 ) continue;
 
 		// open it up to see if ends with sighandle
-		char cmd[2048];
-		sprintf(cmd,"tail -300 %s%s | grep sigbadhandler | wc",
-			dir.getDir() , filename );
-		log("init: %s",cmd);
-		long val = system ( cmd );
-		if ( val <= 0 ) continue;
+		long toRead = 3000;
+		if ( toRead > fsize ) toRead = fsize;
+		char mbuf[3002];
+		ff.read ( mbuf , toRead , fsize - toRead );
+		if ( ! strstr (mbuf,"sigbadhandler") ) continue;
 
 		// count it otherwise
 		fresh++;
