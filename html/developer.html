@@ -1763,7 +1763,7 @@ We use the getContentHashExact64() function to generate the 64-bit dup checksum.
 <br><br>
 Other hash functions exist that hash all the month names and day of week names and ALL DIGITS a specific number in order to ignore the clocks one finds on web pages. Additinoally tags can be ignored unless they are a frame or iframe tag. Pure text is hashed as lower case alnum. Punctuatuation and spaces can be skipped over. But these are in the unused getLooseContentHash() function.
 <br><br>
-If we see a <link href=xxx rel=canonical> tag in the page and our url is different than xxx, then we do not index the url and use the <a href=#indexcode>ENOTCANONICAL</a> error put we do a a spider request for the canonical url so it can get picked up.
+If we see a <link href=xxx rel=canonical> tag in the page and our url is different than xxx, then we do not index the url and use the <a href=#indexcode>ENOTCANONICAL</a> error put we do a a spider request for the canonical url so it can get picked up. It shows up as "Url was dup of canonical page" in the logs. The canonical URL should inherit the same SpiderRequest::m_isInjecting or SpiderRequest::m_isAddUrl bits of the page it came from, similar to how simplified meta redirects work.
 <br><br>
 
 

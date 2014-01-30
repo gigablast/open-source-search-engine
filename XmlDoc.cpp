@@ -14855,10 +14855,19 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 	// return if we got it
 	if ( m_canonicalRedirUrlValid ) return &m_canonicalRedirUrlPtr;
 
-	if ( ! m_httpReplyValid ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_httpReplyValid ) { char *xx=NULL;*xx=0; }
 
 	// assume none in doc
 	m_canonicalRedirUrlPtr = NULL;
+
+	uint8_t *ct = getContentType();
+	if ( ! ct ) return NULL;
+
+	// these canonical links only supported in xml/html i think
+	if ( *ct != CT_HTML && *ct != CT_XML ) {
+		m_canonicalRedirUrlValid = true;
+		return &m_canonicalRedirUrlPtr;
+	}
 
 	Xml *xml = getXml();
 	if ( ! xml || xml == (Xml *)-1 ) return (Url **)xml;
@@ -14872,6 +14881,12 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 		char *link = (char *) xml->getString ( i, "href", &linkLen );
 		// skip if not valid
 		if ( ! link || linkLen == 0 ) continue;
+		// must also have rel=canoncial
+		long relLen;
+		char *rel = xml->getString(i,"rel",&relLen);
+		if ( ! rel ) continue;
+		// skip if does not match "canonical"
+		if ( strncasecmp(rel,"canonical",relLen) ) continue;
 		// set base to it. addWWW=true
 		m_canonicalRedirUrl.set(link,linkLen,false);//true
 		// assume it is not our url
