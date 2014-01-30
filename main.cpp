@@ -177,6 +177,7 @@ void dumpLinkdb          ( char *coll,long sfn,long numFiles,bool includeTree,
 
 void exitWrapper ( void *state ) { exit(0); };
 	
+bool isRecoveryFutile ( ) ;
 
 //////
 //
@@ -2200,6 +2201,17 @@ int main ( int argc , char *argv[] ) {
 	Host *h = g_hostdb.getHost ( hostId );
 	if ( ! h ) { log("db: No host has id %li.",hostId); return 1;}
 
+	// once we are in recoverymode, that means we are being restarted
+	// from having cored, so to prevent immediate core and restart
+	// ad inifinitum, look got "sigbadhandler" at the end of the 
+	// last 5 logs in the last 60 seconds. if we see that then something
+	// is prevent is from starting up so give up and exit gracefully
+	if ( recoveryMode && isRecoveryFutile () )
+		// exiting with 0 means no error and should tell our
+		// keep alive loop to not restart us and exit himself.
+		exit (0);
+
+
 	// HACK: enable logging for Conf.cpp, etc.
 	g_process.m_powerIsOn = true;
 
@@ -3278,6 +3290,7 @@ int main ( int argc , char *argv[] ) {
 		log("parms: error syncing parms: %s",mstrerror(g_errno));
 		return 0;
 	}
+
 
 	if(recoveryMode) {
 		//now that everything is init-ed send the message.
@@ -16603,4 +16616,59 @@ int collinject ( char *newHostsConf ) {
 		       );
 	}
 	return 1;
+}
+
+bool isRecoveryFutile ( ) {
+
+	// scan logs in last 60 seconds
+	Dir dir;
+	dir.set ( g_hostdb.m_dir );
+	dir.open ();
+
+	// scan files in dir
+	char *filename;
+
+	long now = getTimeLocal();
+	long fresh = 0;
+
+	// getNextFilename() writes into this
+	char pattern[8]; strcpy ( pattern , "log*-*" );
+
+	while ( ( filename = dir.getNextFilename ( pattern ) ) ) {
+		// filename must be a certain length
+		//long filenameLen = gbstrlen(filename);
+
+		char *p = filename;
+		// skip "log"
+		p += 4;
+		// skip digits for hostid
+		while ( isdigit(*p) ) p++;
+
+		// skip hyphen
+		if ( *p != '-' ) continue;
+		p++;
+
+		// get the time stamp, local time
+		long timestamp = (long)atoi(p);
+
+		// skip if not iwthin last minute
+		if ( timestamp < now - 60 ) continue;
+
+		// open it up to see if ends with sighandle
+		char cmd[2048];
+		sprintf(cmd,"tail -300 %s%s | grep sigbadhandler | wc",
+			dir.getDir() , filename );
+		log("init: %s",cmd);
+		long val = system ( cmd );
+		if ( val <= 0 ) continue;
+
+		// count it otherwise
+		fresh++;
+	}
+
+	// if we had less than 5 do not consider futile
+	if ( fresh < 5 ) return false;
+
+	// otherwise, give up!
+	return true;
 }
