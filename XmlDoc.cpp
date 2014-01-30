@@ -2703,6 +2703,7 @@ long *XmlDoc::getIndexCode ( ) {
 		&& *indexCode != EUDPTIMEDOUT
 		// from m_redirError
 		&& *indexCode != EDOCSIMPLIFIEDREDIR
+		&& *indexCode != EDOCNONCANONICAL
 		&& *indexCode != EDNSDEAD
 		&& *indexCode != ENETUNREACH
 		&& *indexCode != EHOSTUNREACH
@@ -3028,6 +3029,19 @@ long *XmlDoc::getIndexCode2 ( ) {
 	if ( !isErrorPage||isErrorPage==(void *)-1) return (long *)isErrorPage;
 	if ( *isErrorPage ) {
 		m_indexCode      = EDOCISERRPG;
+		m_indexCodeValid = true;
+		return &m_indexCode;
+	}
+
+	// . is a non-canonical page that have <link ahref=xxx rel=canonical>
+	// . also sets m_canonicanlUrl.m_url to it if we are not
+	// . returns NULL if we are the canonical url
+	Url **canon = getCanonicalRedirUrl();
+	if ( ! canon || canon == (void *)-1 ) return (long *)canon;
+	// if there is one then we are it's leaf, it is the primary page
+	// so we should not index ourselves
+	if ( *canon ) {
+		m_indexCode = EDOCNONCANONICAL;
 		m_indexCodeValid = true;
 		return &m_indexCode;
 	}
@@ -6911,6 +6925,13 @@ Links *XmlDoc::getLinks ( bool doQuickSet ) {
 		m_linksValid = true;
 		return &m_links;
 	}
+
+	if ( m_indexCodeValid && m_indexCode == EDOCNONCANONICAL ) {
+		m_links.set(m_canonicalRedirUrl.getUrl(),
+			    m_canonicalRedirUrl.getUrlLen());
+		m_linksValid = true;
+		return &m_links;
+	}
 		
 	// . set it
 	// . if parent is a permalink we can avoid its suburl outlinks 
@@ -8050,6 +8071,7 @@ RdbList *XmlDoc::getDupList ( ) {
 	if ( ! cr ) return NULL;
 
 	long long *ph64 = getExactContentHash64();
+	//long long *ph64 = getLooseContentHash64();
 	if ( ! ph64 || ph64 == (void *)-1 ) return (RdbList *)ph64;
 
 	// must match term in XmlDoc::hashVectors()
@@ -14826,6 +14848,57 @@ uint8_t *XmlDoc::getContentType ( ) {
 	return &m_contentType;
 }
 
+
+// . similar to getMetaRedirUrl but look for different strings
+// . rel="canonical" or rel=canonical in a link tag.
+Url **XmlDoc::getCanonicalRedirUrl ( ) {
+	// return if we got it
+	if ( m_canonicalRedirUrlValid ) return &m_canonicalRedirUrlPtr;
+
+	if ( ! m_httpReplyValid ) { char *xx=NULL;*xx=0; }
+
+	// assume none in doc
+	m_canonicalRedirUrlPtr = NULL;
+
+	Xml *xml = getXml();
+	if ( ! xml || xml == (Xml *)-1 ) return (Url **)xml;
+
+	// scan nodes looking for a <link> node. like getBaseUrl()
+	for ( long i=0 ; i < xml->getNumNodes() ; i++ ) {
+		// 12 is the <base href> tag id
+		if ( xml->getNodeId ( i ) != TAG_LINK ) continue;
+		// get the href field of this base tag
+		long linkLen;
+		char *link = (char *) xml->getString ( i, "href", &linkLen );
+		// skip if not valid
+		if ( ! link || linkLen == 0 ) continue;
+		// set base to it. addWWW=true
+		m_canonicalRedirUrl.set(link,linkLen,false);//true
+		// assume it is not our url
+		bool isMe = false;
+		// if it is us, then skip!
+		if(strcmp(m_canonicalRedirUrl.getUrl(),m_firstUrl.getUrl())==0)
+			isMe = true;
+		// might also be our redir url i guess
+		if(strcmp(m_canonicalRedirUrl.getUrl(),m_redirUrl.getUrl())==0)
+			isMe = true;
+		// if it is us, keep it NULL, it's not a redirect. we are
+		// the canonical url.
+		if ( isMe ) break;
+		// otherwise, it is not us, we are NOT the canonical url
+		// and we should not be indexed, but just ass the canonical
+		// url as a spiderrequest into spiderdb, just like
+		// simplified meta redirect does.
+		m_canonicalRedirUrlPtr = &m_canonicalRedirUrl;
+		break;
+	}
+
+	m_canonicalRedirUrlValid = true;
+	return &m_canonicalRedirUrlPtr;
+}
+
+
+
 // scan document for <meta http-equiv="refresh" content="0;URL=xxx">
 Url **XmlDoc::getMetaRedirUrl ( ) {
 	if ( m_metaRedirUrlValid ) return &m_metaRedirUrlPtr;
@@ -16875,6 +16948,51 @@ long *XmlDoc::getContentHash32 ( ) {
 	// validate
 	m_contentHash32Valid = true;
 	return &m_contentHash32;
+}
+
+
+// do not consider tags except frame and iframe... make all months
+// and days of weeks and digits basically the same
+long long *XmlDoc::getLooseContentHash64 ( ) {
+
+	if ( m_looseContentHash64Valid )
+		return &m_looseContentHash64;
+
+
+	Xml *xml = getXml();
+	if ( ! xml || xml == (Xml *)-1 ) return (long long *)xml;
+
+	long long h64 = 0LL;
+
+	long n = xml->getNumNodes();
+	XmlNode *nodes = xml->getNodes   ();
+	for ( long i = 0 ; i < n ; i++ ) {
+
+		// breathe
+		QUICKPOLL(m_niceness);
+
+		// skip if not the right kinda tag
+		if ( nodes[i].isTag() &&
+		     nodes[i].getNodeId() != TAG_FRAME  &&
+		     nodes[i].getNodeId() != TAG_IFRAME &&
+		     nodes[i].getNodeId() != TAG_IMG      ) 
+			continue;
+
+		// hash that node up
+		long long ch64;
+
+		// this is really a 32-bit hash
+		ch64=getContentHash32Fast((unsigned char *)nodes[i].getNode() ,
+					  nodes[i].getNodeLen() ,
+					  m_niceness );
+
+		// incorporate hash from that node
+		h64 = hash64h ( ch64 , h64 );
+	}
+
+	m_looseContentHash64Valid = true;
+	m_looseContentHash64 = h64;
+	return &m_looseContentHash64;
 }
 
 long XmlDoc::getHostHash32a ( ) {
@@ -19967,8 +20085,23 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	// shortcut
 	XmlDoc *nd = this;
+
+	///////////////////////////////////
+	///////////////////////////////////
+	//
+	//
 	// if we had an error, do not add us regardless to the index
+	// although we might add SOME things depending on the error.
+	// Like add the redirecting url if we had a ESIMPLIFIEDREDIR error.
+	// So what we had to the Rdbs depends on the indexCode.
+	//
+
 	if ( m_indexCode ) nd = NULL;
+
+	//
+	//
+	///////////////////////////////////
+	///////////////////////////////////
 
 	if ( ! nd )
 		spideringLinks = false;
@@ -19986,6 +20119,12 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// if we are adding a simplified redirect as a link to spiderdb
 	if ( m_indexCode == EDOCSIMPLIFIEDREDIR )
 		spideringLinks = true;
+
+	// likewise if there error was ENONCANONICAL treat it like that
+	if ( m_indexCode == EDOCNONCANONICAL )
+		spideringLinks = true;
+	
+
 
 	//
 	// . prepare the outlink info if we are adding links to spiderdb!
@@ -20020,6 +20159,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( ! ww || ww == (void *)-1 ) return (char *)ww;
 
 	long long *pch64 = getExactContentHash64();
+	//long long *pch64 = getLooseContentHash64();
 	if ( ! pch64 || pch64 == (void *)-1 ) return (char *)pch64;
 
 	// get the voting table which we will add to sectiondb
@@ -20450,7 +20590,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	Links *nl = NULL; if ( spideringLinks ) nl = &m_links;
 	// do not bother if deleting. but we do add simplified redirects
 	// to spiderdb as SpiderRequests now.
-	if ( m_indexCode && m_indexCode != EDOCSIMPLIFIEDREDIR ) nl = NULL;
+	long code = m_indexCode;
+	if  ( code == EDOCSIMPLIFIEDREDIR ) code = 0;
+	if  ( code == EDOCNONCANONICAL    ) code = 0;
+	if  ( code ) nl = NULL;
 	//Links *ol = NULL; if ( od ) ol = od->getLinks();
 	// . set key/data size
 	// . use a 16 byte key, not the usual 12
@@ -22727,7 +22870,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//   the regex, and even if it simplified redirects
 		//
 		if ( m_indexCodeValid && 
-		     m_indexCode == EDOCSIMPLIFIEDREDIR &&
+		     ( m_indexCode == EDOCSIMPLIFIEDREDIR ||
+		       m_indexCode == EDOCNONCANONICAL ) &&
 		     m_sreqValid ) {
 			if ( m_sreq.m_isInjecting ) 
 				ksr.m_isInjecting = 1;
@@ -23506,6 +23650,7 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 
 	// this should be ready to go and not block!
 	long long *pch64 = getExactContentHash64();
+	//long long *pch64 = getLooseContentHash64();
 	if ( ! pch64 || pch64 == (void *)-1 ) { char *xx=NULL;*xx=0; }
 
 	// shortcut

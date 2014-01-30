@@ -1749,28 +1749,21 @@ to compute the similarity of two Gigabit Vectors.
 <br><br>
 
 <a name="deduping"></a>
-<h2>Deduping</h2>
-Msg16 calls g_checksumdb::makeDedupKey() to set Msg16::m_dupKey from the hash
-of the content of the document. That hash is computed by
-g_checksumdb.getContentHash() which takes the content as input. Basically,
-it is a direct hash, but tags are ignored, unless they are frame or iframe
-tags and the pure text is hashed as lower cases alnum so that punctuation
-and spaces are ignored. This key is then added to checksumdb if and only if
-it is different than what the old TitleRec contained, if any. If incremental
-indexing is disabled, then the key is always added to checksumdb.
+<h2>Deduping at Spider Time</h2>
+<i>Last Updated 1/29/2014 by MDW</i>
 <br><br>
-<a name="msg19"></a>
-Before indexing the document, though, Msg16 will call Msg19 to see if the
-url is a dup of another from the same hostname. If it is then the index will
-fail with EDOCDUP.
+Many URLs contain essentially the same content as other URLs. Therefore we need to dedup URLs and prevent them from entering the index. Deduping in this fashion is disabled by default so you will need to enabled it in the Spider Controls for your collection. You will note such duplicate urls in the logs with the "Doc is a dup" message. Those urls are not indexed. The error is not treated as "temporary" so it might not be retried if you have it so that the url filters only retry temporary errors.
 <br><br>
-<a name="loosechecksum"></a>
-As of 2006, Gigablast can support <i>loose checksums</i>, which exclude what
-Gigablast deems to be menu text when computing the hash. This hash is computed
-by XmlDoc::set1() by just XORing all of the word hashes in the doucment 
-together, provided they are not a part of a menu, and therefore should have
-positive scores. To implement loose checksums you must have 
-<i>useLooseChecksums</i> set to true in the ruleset.
+When a page is indexed we store a hash of its content into a singe "posdb" key.
+We set the "sharded by termid" bit for that posdb key, so it is not sharded by docid which is the norm. Hostdb::getShard() checks for that bit and shards by termid when it is present. In that way all the pages with the same content hash will be together on disk in posdb.
+<br><br>
+We perform a lookup of all other docids that share the same content hash as the document we are indexing. If another docid has the same content hash and its site rank is the same as ours or higher, then we are a duplicate docid and we do not index our docid and getIndexCode() returns <a href=#indexcode>EDOCDUP</a>. Our document will be deleted if it was indexed. If another docid with the same content hash as us has a siterank lower than ours, then he is the dup and he will be removed when he is reindexed the next time with the <a href=#indexcode>EDOCDUP</a> error. If another docid with the same content hash as us as the SAME site rank as us, then we assume we are the dup. We go first come first server approach in that scenario, site rank trumps.
+<br><br>
+We use the getContentHashExact64() function to generate the 64-bit dup checksum. It hashes the document pretty much verbatim for safety. It does treat sequences of white space as a single space character however.
+<br><br>
+Other hash functions exist that hash all the month names and day of week names and ALL DIGITS a specific number in order to ignore the clocks one finds on web pages. Additinoally tags can be ignored unless they are a frame or iframe tag. Pure text is hashed as lower case alnum. Punctuatuation and spaces can be skipped over. But these are in the unused getLooseContentHash() function.
+<br><br>
+If we see a <link href=xxx rel=canonical> tag in the page and our url is different than xxx, then we do not index the url and use the <a href=#indexcode>ENOTCANONICAL</a> error put we do a a spider request for the canonical url so it can get picked up.
 <br><br>
 
 
@@ -1829,6 +1822,7 @@ error, or something on our side. These errors are also in Errno.h.
 <tr><td>EDNSTIMEDOUT</td><td>If we timed out looking up the IP of the url.</td></tr>
 <tr><td>EBADREPLY</td><td>DNS server sent us a bad reply.</td></tr>
 <tr><td>EDNSDEAD</td><td>DNS server was dead</td></tr>
+<tr><td>EDOCNONCANONICAL</td><td>Doc has a canonical link reference a url that was not itself. Used for deduping at spider time.</td></tr>
 </table>
 
 <br><br>

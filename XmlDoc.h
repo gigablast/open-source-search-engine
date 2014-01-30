@@ -553,6 +553,7 @@ class XmlDoc {
 	float *getPercentChanged ( );
 	uint64_t *getFuzzyDupHash ( );
 	long long *getExactContentHash64();
+	long long *getLooseContentHash64();
 	class RdbList *getDupList ( ) ;
 	class RdbList *getLikedbListForReq ( );
 	class RdbList *getLikedbListForIndexing ( );
@@ -580,6 +581,7 @@ class XmlDoc {
 	long long getFirstUrlHash64();
 	class Url **getRedirUrl() ;
 	class Url **getMetaRedirUrl() ;
+	class Url **getCanonicalRedirUrl ( ) ;
 	long *getFirstIndexedDate ( ) ;
 	long *getOutlinksAddedDate ( ) ;
 	//long *getNumBannedOutlinks ( ) ;
@@ -606,7 +608,6 @@ class XmlDoc {
 	char *getIsThisDocContacty ( );
 	bool *getHasTOD();
 	bool *getHasSiteVenue();
-
 	// non-dup/nondup addresses only
 	bool *getHasAddress();
 	class Addresses *getAddresses ( ) ;
@@ -930,6 +931,8 @@ class XmlDoc {
 	Url       *m_redirUrlPtr;
 	Url        m_metaRedirUrl;
 	Url       *m_metaRedirUrlPtr;
+	Url        m_canonicalRedirUrl;
+	Url       *m_canonicalRedirUrlPtr;
 	long       m_redirError;
 	char       m_allowSimplifiedRedirs;
 	Url        m_firstUrl;
@@ -1198,6 +1201,7 @@ class XmlDoc {
 	//bool m_eliminateMenusValid;
 	bool m_redirUrlValid;
 	bool m_metaRedirUrlValid;
+	bool m_canonicalRedirUrlValid;
 	bool m_statusMsgValid;
 	bool m_mimeValid;
 	bool m_pubDateValid;
@@ -1332,6 +1336,7 @@ class XmlDoc {
 	bool m_isHijackedValid;
 	bool m_dupHashValid;
 	bool m_exactContentHash64Valid;
+	bool m_looseContentHash64Valid;
 
 	// shadows
 	char m_isRSS2;
@@ -1386,6 +1391,7 @@ class XmlDoc {
 	RdbList m_likedbList;
 	uint64_t m_dupHash;
 	long long m_exactContentHash64;
+	long long m_looseContentHash64;
 	Msg0 m_msg0;
 	Msg5 m_msg5;
 	char m_isDup;

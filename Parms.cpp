@@ -9785,8 +9785,9 @@ void Parms::init ( ) {
 	m->m_title = "deduping enabled";
 	m->m_desc  = "When enabled, the spider will "
 		"discard web pages which are identical to other web pages "
-		"that are already in the index AND that are from the same "
-		"hostname. An example of a hostname is www1.ibm.com. "
+		"that are already in the index. "//AND that are from the same "
+		//"hostname. 
+		//"An example of a hostname is www1.ibm.com. "
 		"However, root urls, urls that have no path, are never "
 		"discarded. It most likely has to hit disk to do these "
 		"checks so it does cause some slow down. Only use it if you "
