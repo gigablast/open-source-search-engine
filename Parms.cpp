@@ -207,6 +207,7 @@ bool CommandRemoveUrlFiltersRow ( char *rec ) {
 // 0 for regular collection
 // 1 for custom crawl
 // 2 for bulk job
+// . returns false if blocks true otherwise
 bool CommandAddColl ( char *rec , char customCrawl ) {
 
 	// caller must specify collnum
@@ -229,7 +230,7 @@ bool CommandAddColl ( char *rec , char customCrawl ) {
 
 	if ( gbstrlen(collName) > MAX_COLL_LEN ) {
 		log("crawlbot: collection name too long");
-		return false;
+		return true;
 	}
 
 	// this saves it to disk! returns false and sets g_errno on error.
@@ -240,7 +241,8 @@ bool CommandAddColl ( char *rec , char customCrawl ) {
 					   true , // save?
 					   newCollnum
 					   ) )
-		return false;
+		// error! g_errno should be set
+		return true;
 
 	return true;
 }
@@ -262,6 +264,25 @@ bool CommandAddColl2 ( char *rec ) { // bulk job
 // . returns false if would block
 bool CommandDeleteColl ( char *rec , WaitEntry *we ) {
 	collnum_t collnum = getCollnumFromParmRec ( rec );
+	// the delete might block because the tree is saving and we can't
+	// remove our collnum recs from it while it is doing that
+	if ( ! g_collectiondb.deleteRec2 ( collnum ) )
+		// we blocked, we->m_callback will be called when done
+		return false;
+	// delete is successful
+	return true;
+}
+
+// . returns true and sets g_errno on error
+// . returns false if would block
+bool CommandDeleteColl2 ( char *rec , WaitEntry *we ) {
+	char *data = rec + sizeof(key96_t) + 4;
+	char *coll = (char *)data;
+	collnum_t collnum = g_collectiondb.getCollnum ( coll );
+	if ( collnum < 0 ) {
+		g_errno = ENOCOLLREC;
+		return true;;
+	}
 	// the delete might block because the tree is saving and we can't
 	// remove our collnum recs from it while it is doing that
 	if ( ! g_collectiondb.deleteRec2 ( collnum ) )
@@ -953,11 +974,19 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	if ( ! isJSON ) {
 		sb->safePrintf( 
 			       "\n"
-			       "<table width=100%% bgcolor=#%s "
-			       "cellpadding=4 border=1 "
+			       "<table %s "
+			       //"style=\"border-radius:15px;"
+			       //"border:#6060f0 2px solid;"
+			       //"\" "
+			       //"width=100%% bgcolor=#%s "
+			       //"bgcolor=black "
+			       //"cellpadding=4 "
+			       //"border=0 "//border=1 "
 			       "id=\"parmtable\">"
-			       "<tr><td colspan=20 bgcolor=#%s>"
-			       ,LIGHT_BLUE,DARK_BLUE
+			       "<tr><td colspan=20>"// bgcolor=#%s>"
+			       ,TABLE_STYLE
+			       //,DARKER_BLUE
+			       //,DARK_BLUE
 				);
 
 		/*
@@ -973,11 +1002,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 				       );
 		*/
 
-		sb->safePrintf("<div style=\"margin-left:45%%;\">"
+		sb->safePrintf(//"<div style=\"margin-left:45%%;\">"
 			       //"<font size=+1>"
+			       "<center>"
 			       "<b>%s</b>%s"
 			       //"</font>"
-			       "</div>"
+			       "</center>"
+			       //"</div>"
 			       "</td></tr>%s%s\n",
 			       tt,bb,e1,e2);
 	}
@@ -1077,7 +1108,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  //"<input type=hidden name="
 			  "<table width=100%% cellpadding=4 border=1 "
 			  "bgcolor=#%s>"
-			  "<tr><td colspan=2 bgcolor=%s><center>"
+			  "<tr><td colspan=2 bgcolor=#%s><center>"
 			  //"<font size=+1>"
 			  "<b>"
 			  "URL Filters Test</b>"
@@ -1101,63 +1132,69 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "<td>%s</td></tr></table><br><br>\n" ,
 			  LIGHT_BLUE , DARK_BLUE , testUrl , matchString );
 		*/
+
+		sb->safePrintf(
+			       "<style>"
+			       ".poo { background-color:#%s;}\n"
+			       "</style>\n" ,
+			       LIGHT_BLUE );
+
 		sb->safePrintf (
-			  "<table width=100%% cellpadding=4 border=1 "
-			  "bgcolor=#%s>"
-			  "<tr><td colspan=2 bgcolor=%s><center>"
+			  "<table %s>"
+			  "<tr><td colspan=2><center>"
 			  "<b>"
 			  "Supported URL Expressions</b>"
 			  "</td></tr>"
 
-			  "<tr><td>default</td>"
+			  "<tr class=poo><td>default</td>"
 			  "<td>Matches every url."
 			  "</td></tr>"
 
-			  "<tr><td>^http://whatever</td>"
+			  "<tr class=poo><td>^http://whatever</td>"
 			  "<td>Matches if the url begins with "
 			  "<i>http://whatever</i>"
 			  "</td></tr>"
 
-			  "<tr><td>$.css</td>"
+			  "<tr class=poo><td>$.css</td>"
 			  "<td>Matches if the url ends with \".css\"."
 			  "</td></tr>"
 
-			  "<tr><td>foobar</td>"
+			  "<tr class=poo><td>foobar</td>"
 			  "<td>Matches if the url CONTAINS <i>foobar</i>."
 			  "</td></tr>"
 
-			  "<tr><td>tld==uk,jp</td>"
+			  "<tr class=poo><td>tld==uk,jp</td>"
 			  "<td>Matches if url's TLD ends in \"uk\" or \"jp\"."
 			  "</td></tr>"
 
 			  /*
-			  "<tr><td>doc:quality&lt;40</td>"
+			  "<tr class=poo><td>doc:quality&lt;40</td>"
 			  "<td>Matches if document quality is "
 			  "less than 40. Can be used for assigning to spider "
 			  "priority.</td></tr>"
 
-			  "<tr><td>doc:quality&lt;40 && tag:ruleset==22</td>"
+			  "<tr class=poo><td>doc:quality&lt;40 && tag:ruleset==22</td>"
 			  "<td>Matches if document quality less than 40 and "
 			  "belongs to ruleset 22. Only for assinging to "
 			  "spider priority.</td></tr>"
 
-			  "<tr><td><nobr>"
+			  "<tr class=poo><td><nobr>"
 			  "doc:quality&lt;40 && tag:manualban==1</nobr></td>"
 			  "<td>Matches if document quality less than 40 and "
 			  "is has a value of \"1\" for its \"manualban\" "
 			  "tag.</td></tr>"
 
-			  "<tr><td>tag:ruleset==33 && doc:quality&lt;40</td>"
+			  "<tr class=poo><td>tag:ruleset==33 && doc:quality&lt;40</td>"
 			  "<td>Matches if document quality less than 40 and "
 			  "belongs to ruleset 33. Only for assigning to "
 			  "spider priority or a banned ruleset.</td></tr>"
 			  */
 
-			  "<tr><td>hopcount<4 && iswww</td>"
+			  "<tr class=poo><td>hopcount<4 && iswww</td>"
 			  "<td>Matches if document has a hop count of 4, and "
 			  "is a \"www\" url (or domain-only url).</td></tr>"
 			  
-			  "<tr><td>hopcount</td>"
+			  "<tr class=poo><td>hopcount</td>"
 			  "<td>All root urls, those that have only a single "
 			  "slash for their path, and no cgi parms, have a "
 			  "hop count of 0. Also, all RSS urls, ping "
@@ -1167,25 +1204,25 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "of those outlinks a hop count of 2, etc."
 			  "</td></tr>"
 
-			  "<tr><td>sitepages</td>"
+			  "<tr class=poo><td>sitepages</td>"
 			  "<td>The number of pages that are currently indexed "
 			  "for the subdomain of the URL. "
 			  "Used for doing quotas."
 			  "</td></tr>"
 
-			  "<tr><td>domainpages</td>"
+			  "<tr class=poo><td>domainpages</td>"
 			  "<td>The number of pages that are currently indexed "
 			  "for the domain of the URL. "
 			  "Used for doing quotas."
 			  "</td></tr>"
 
-			  "<tr><td>siteadds</td>"
+			  "<tr class=poo><td>siteadds</td>"
 			  "<td>The number URLs manually added to the "
 			  "subdomain of the URL. Used to guage a subdomain's "
 			  "popularity."
 			  "</td></tr>"
 
-			  "<tr><td>domainadds</td>"
+			  "<tr class=poo><td>domainadds</td>"
 			  "<td>The number URLs manually added to the "
 			  "domain of the URL. Used to guage a domain's "
 			  "popularity."
@@ -1193,29 +1230,29 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 
 
-			  "<tr><td>isrss | !isrss</td>"
+			  "<tr class=poo><td>isrss | !isrss</td>"
 			  "<td>Matches if document is an rss feed. "
 			  "When harvesting outlinks we <i>guess</i> if they "
 			  "are an rss feed by seeing if their file extension "
 			  "is xml, rss or rdf. Or if they are in an "
 			  "alternative link tag.</td></tr>"
 
-			  //"<tr><td>!isrss</td>"
+			  //"<tr class=poo><td>!isrss</td>"
 			  //"<td>Matches if document is NOT an rss feed."
 			  //"</td></tr>"
 
-			  "<tr><td>ispermalink | !ispermalink</td>"
+			  "<tr class=poo><td>ispermalink | !ispermalink</td>"
 			  "<td>Matches if document is a permalink. "
 			  "When harvesting outlinks we <i>guess</i> if they "
 			  "are a permalink by looking at the structure "
 			  "of the url.</td></tr>"
 
-			  //"<tr><td>!ispermalink</td>"
+			  //"<tr class=poo><td>!ispermalink</td>"
 			  //"<td>Matches if document is NOT a permalink."
 			  //"</td></tr>"
 
 			  /*
-			  "<tr><td>outlink | !outlink</td>"
+			  "<tr class=poo><td>outlink | !outlink</td>"
 			  "<td>"
 			  "<b>This is true if url being added to spiderdb "
 			  "is an outlink from the page being spidered. "
@@ -1226,7 +1263,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 			  */
 
-			  "<tr><td><nobr>isnewoutlink | !isnewoutlink"
+			  "<tr class=poo><td><nobr>isnewoutlink | !isnewoutlink"
 			  "</nobr></td>"
 			  "<td>"
 			  "This is true since the outlink was not there "
@@ -1234,13 +1271,13 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "it from."
 			  "</td></tr>"
 
-			  "<tr><td>hasreply | !hasreply</td>"
+			  "<tr class=poo><td>hasreply | !hasreply</td>"
 			  "<td>"
 			  "This is true if we have tried to spider "
 			  "this url, even if we got an error while trying."
 			  "</td></tr>"
 
-			  "<tr><td>isnew | !isnew</td>"
+			  "<tr class=poo><td>isnew | !isnew</td>"
 			  "<td>"
 			  "This is the opposite of hasreply above. A url "
 			  "is new if it has no spider reply, including "
@@ -1249,7 +1286,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "was any kind of error."
 			  "</td></tr>"
 
-			  "<tr><td>lastspidertime >= <b>{roundstart}</b></td>"
+			  "<tr class=poo><td>lastspidertime >= "
+			  "<b>{roundstart}</b></td>"
 			  "<td>"
 			  "This is true if the url's last spidered time "
 			  "indicates it was spidered already for this "
@@ -1263,11 +1301,11 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 			  
 
-			  //"<tr><td>!newoutlink</td>"
+			  //"<tr class=poo><td>!newoutlink</td>"
 			  //"<td>Matches if document is NOT a new outlink."
 			  //"</td></tr>"
 
-			  "<tr><td>age</td>"
+			  "<tr class=poo><td>age</td>"
 			  "<td>"
 			  "How old is the doucment <b>in seconds</b>. "
 			  "The age is based on the publication date of "
@@ -1284,21 +1322,21 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 
 
-			  "<tr><td>isaddurl | !isaddurl</td>"
+			  "<tr class=poo><td>isaddurl | !isaddurl</td>"
 			  "<td>"
 			  "This is true if the url was added from the add "
 			  "url interface. This replaces the add url priority "
 			  "parm."
 			  "</td></tr>"
 
-			  "<tr><td>isinjected | !isinjected</td>"
+			  "<tr class=poo><td>isinjected | !isinjected</td>"
 			  "<td>"
 			  "This is true if the url was directly "
 			  "injected from the "
 			  "/inject page or API."
 			  "</td></tr>"
 
-			  "<tr><td>isdocidbased | !isdocidbased</td>"
+			  "<tr class=poo><td>isdocidbased | !isdocidbased</td>"
 			  "<td>"
 			  "This is true if the url was added from the "
 			  "reindex interface. The request does not contain "
@@ -1306,13 +1344,14 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "millions of search results very quickly without "
 			  "having to lookup each of their urls. You should "
 			  "definitely have this if you use the reindexing "
-			  "feature. You can temporarily disabled the "
-			  "spidering enabled checkbox for non "
+			  "feature. "
+			  "You can set max spiders to 0 "
+			  "for non "
 			  "docidbased requests while you reindex or delete "
 			  "the results of a query for extra speed."
 			  "</td></tr>"
 
-			  "<tr><td>ismanualadd | !ismanualadd</td>"
+			  "<tr class=poo><td>ismanualadd | !ismanualadd</td>"
 			  "<td>"
 			  "This is true if the url was added manually. "
 			  "Which means it matches isaddurl, isinjected, "
@@ -1320,7 +1359,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "being discovered from the spider. "
 			  "</td></tr>"
 
-			  "<tr><td><nobr>inpingserver | !inpingserver"
+			  "<tr class=poo><td><nobr>inpingserver | !inpingserver"
 			  "</nobr></td>"
 			  "<td>"
 			  "This is true if the url has an inlink from "
@@ -1330,14 +1369,14 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</font></b>"
 			  "</td></tr>"
 
-			  "<tr><td>isparentrss | !isparentrss</td>"
+			  "<tr class=poo><td>isparentrss | !isparentrss</td>"
 			  "<td>"
 			  "If a parent of the URL was an RSS page "
 			  "then this will be matched."
 			  "</td></tr>"
 
 			  /*
-			  "<tr><td>parentisnew | !parentisnew</td>"
+			  "<tr class=poo><td>parentisnew | !parentisnew</td>"
 			  "<td>"
 			  "<b>Parent providing this outlink is not currently "
 			  "in the index but is trying to be added right now. "
@@ -1347,12 +1386,12 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 			  */
 
-			  "<tr><td>isindexed | !isindexed</td>"
+			  "<tr class=poo><td>isindexed | !isindexed</td>"
 			  "<td>"
 			  "This url matches this if in the index already. "
 			  "</td></tr>"
 
-			  "<tr><td>errorcount==1</td>"
+			  "<tr class=poo><td>errorcount==1</td>"
 			  "<td>"
 			  "The number of times the url has failed to "
 			  "be indexed. 1 means just the last time, two means "
@@ -1363,16 +1402,24 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "\"temporary\" errors like DNS timeouts."
 			  "</td></tr>"
 
-			  "<tr><td>hastmperror</td>"
+			  "<tr class=poo><td>hastmperror</td>"
 			  "<td>"
 			  "This is true if the last spider attempt resulted "
 			  "in an error like EDNSTIMEDOUT or a similar error, "
 			  "usually indicative of a temporary internet "
 			  "failure, or local resource failure, like out of "
-			  "memory, and should be retried soon."
+			  "memory, and should be retried soon. "
+			  "Currently: "
+			  "dns timed out, "
+			  "tcp timed out, "
+			  "dns dead, "
+			  "network unreachable, "
+			  "host unreachable, "
+			  "diffbot internal error, "
+			  "out of memory."
 			  "</td></tr>"
 
-			  "<tr><td>percentchangedperday&lt=5</td>"
+			  "<tr class=poo><td>percentchangedperday&lt=5</td>"
 			  "<td>"
 			  "Looks at how much a url's page content has changed "
 			  "between the last two times it was spidered, and "
@@ -1383,7 +1430,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "Can use <, >, <=, >=, ==, != comparison operators. "
 			  "</td></tr>"
 
-			  "<tr><td>sitenuminlinks&gt;20</td>"
+			  "<tr class=poo><td>sitenuminlinks&gt;20</td>"
 			  "<td>"
 			  "How many inlinks does the URL's site have? "
 			  "We only count non-spammy inlinks, and at most only "
@@ -1394,7 +1441,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "Can use <, >, <=, >=, ==, != comparison operators. "
 			  "</td></tr>"
 
-			  "<tr><td>httpstatus==404</td>"
+			  "<tr class=poo><td>httpstatus==404</td>"
 			  "<td>"
 			  "For matching the URL based on the http status "
 			  "of its last download. Does not apply to URLs "
@@ -1403,14 +1450,14 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 
 			  /*
-			  "<tr><td>priority==30</td>"
+			  "<tr class=poo><td>priority==30</td>"
 			  "<td>"
 			  "<b>If the current priority of the url is 30, then "
 			  "it will match this expression. Does not apply "
 			  "to outlinks, of course."
 			  "</td></tr>"
 
-			  "<tr><td>parentpriority==30</td>"
+			  "<tr class=poo><td>parentpriority==30</td>"
 			  "<td>"
 			  "<b>This is a special expression in that "
 			  "it only applies to assigning spider priorities "
@@ -1431,7 +1478,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "spiderdb but rather a url being spidered."
 			  "</td></tr>"
 
-			  "<tr><td>inlink==...</td>"
+			  "<tr class=poo><td>inlink==...</td>"
 			  "<td>"
 			  "If the url has an inlinker which contains the "
 			  "given substring, then this rule is matched. "
@@ -1450,7 +1497,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  //"can not involve doc:quality for purposes of "
 			  //"assigning a ruleset, unless banning it.</td>"
 
-			  "<tr><td><nobr>tld!=com,org,edu"// && "
+			  "<tr class=poo><td><nobr>tld!=com,org,edu"// && "
 			  //"doc:quality&lt;70"
 			  "</nobr></td>"
 			  "<td>Matches if the "
@@ -1458,7 +1505,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "\"edu\". "
 			  "</td></tr>"
 
-			  "<tr><td><nobr>lang==zh_cn,de"
+			  "<tr class=poo><td><nobr>lang==zh_cn,de"
 			  "</nobr></td>"
 			  "<td>Matches if "
 			  "the url's content is in the language \"zh_cn\" or "
@@ -1475,7 +1522,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  //"assigning a ruleset, unless banning it.</td>"
 			  //"</tr>"
 
-			  "<tr><td><nobr>lang!=xx,en,de"
+			  "<tr class=poo><td><nobr>lang!=xx,en,de"
 			  "</nobr></td>"
 			  "<td>Matches if "
 			  "the url's content is NOT in the language \"xx\" "
@@ -1484,21 +1531,21 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "abbreviations.</td></tr>"
 
 			  /*
-			  "<tr><td>link:gigablast</td>"
+			  "<tr class=poo><td>link:gigablast</td>"
 			  "<td>Matches if the document links to gigablast."
 			  "</td></tr>"
 
-			  "<tr><td>searchbox:gigablast</td>"
+			  "<tr class=poo><td>searchbox:gigablast</td>"
 			  "<td>Matches if the document has a submit form "
 			  "to gigablast."
 			  "</td></tr>"
 
-			  "<tr><td>site:dmoz</td>"
+			  "<tr class=poo><td>site:dmoz</td>"
 			  "<td>Matches if the document is directly or "
 			  "indirectly in the DMOZ directory."
 			  "</td></tr>"
 
-			  "<tr><td>tag:spam>X</td>"
+			  "<tr class=poo><td>tag:spam>X</td>"
 			  "<td>Matches if the document's tagdb record "
 			  "has a score greater than X for the sitetype, "
 			  "'spam' in this case. "
@@ -1508,14 +1555,14 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 			  */
 
-			  "<tr><td>iswww | !iswww</td>"
+			  "<tr class=poo><td>iswww | !iswww</td>"
 			  "<td>Matches if the url's hostname is www or domain "
 			  "only. For example: <i>www.xyz.com</i> would match, "
 			  "and so would <i>abc.com</i>, but "
 			  "<i>foo.somesite.com</i> would NOT match."
 			  "</td></tr>"
 
-			  "<tr><td>isonsamedomain | !isonsamedomain</td>"
+			  "<tr class=poo><td>isonsamedomain | !isonsamedomain</td>"
 			  "<td>"
 			  "This is true if the url is from the same "
 			  "DOMAIN as the page from which it was "
@@ -1526,7 +1573,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "</td></tr>"
 
 
-			  "<tr><td><nobr>"
+			  "<tr class=poo><td><nobr>"
 			  "isonsamesubdomain | !isonsamesubdomain"
 			  "</nobr></td>"
 			  "<td>"
@@ -1538,7 +1585,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  //"not preserved in the titleRec."
 			  "</td></tr>"
 
-			  "<tr><td>ismedia | !ismedia</td>"
+			  "<tr class=poo><td>ismedia | !ismedia</td>"
 			  "<td>"
 			  "Does the url have a media or css related "
 			  "extension. Like gif, jpg, mpeg, css, etc.? "
@@ -1546,24 +1593,24 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 
 			  "</td></tr></table><br><br>\n",
-			  LIGHT_BLUE , DARK_BLUE );
+			  TABLE_STYLE );
 
 
 		// show the languages you can use
 		sb->safePrintf (
-			  "<table width=100%% cellpadding=4 border=1 "
-			  "bgcolor=#%s>"
-			  "<tr><td colspan=2 bgcolor=%s><center>"
+			  "<table %s>"
+			  "<tr><td colspan=2><center>"
 			  "<b>"
 			  "Supported Language Abbreviations "
 			  "for lang== Filter</b>"
 			  "</td></tr>",
-			  LIGHT_BLUE , DARK_BLUE );
+			  TABLE_STYLE );
 		for ( long i = 0 ; i < 256 ; i++ ) {
 			char *lang1 = getLanguageAbbr   ( i );
 			char *lang2 = getLanguageString ( i );
 			if ( ! lang1 ) continue;
-			sb->safePrintf("<tr><td>%s</td><td>%s</td></tr>\n",
+			sb->safePrintf("<tr class=poo>"
+				       "<td>%s</td><td>%s</td></tr>\n",
 				      lang1,lang2);
 		}
 		// wrap it up
@@ -2156,7 +2203,7 @@ char *Parms::printParm ( char *p    ,
 	// print row start for single parm
 	if ( m->m_max <= 1 && ! m->m_hdrs ) {
 		if ( firstInRow ) {
-			sprintf ( p , "<tr bgcolor=%s><td>" , bg );
+			sprintf ( p , "<tr bgcolor=#%s><td>" , bg );
 			p += gbstrlen ( p );
 		}
 		p += sprintf ( p , "<td width=%li%%>" , 100/nc/2 );
@@ -2165,7 +2212,7 @@ char *Parms::printParm ( char *p    ,
 	// print the title/description in current table for non-arrays
 	if ( m->m_max <= 1 && m->m_hdrs ) { // j == 0 && m->m_rowid < 0 ) {
 		if ( firstInRow )
-			p += sprintf ( p , "<tr bgcolor=%s>",bg);
+			p += sprintf ( p , "<tr bgcolor=#%s>",bg);
 		if ( t == TYPE_STRINGBOX ) {
 			sprintf ( p , "<td colspan=2><center>"
 				  "<b>%s</b><br><font size=1>",m->m_title );
@@ -2566,12 +2613,17 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( j == firstRow && m->m_rowid >= 0 && firstInRow && m->m_hdrs ) {
 		// print description as big comment
 		if ( m->m_desc && pd == 1 && ! isJSON ) {
-			sb->safePrintf ( "<td colspan=20><font size=-1>\n" );
+			// url FILTERS table description row
+			sb->safePrintf ( "<td colspan=20 bgcolor=#%s>"
+					 "<font size=-1>\n" , DARK_BLUE);
 
 			//p = htmlEncode ( p , pend , m->m_desc ,
 			//		 m->m_desc + gbstrlen ( m->m_desc ) );
 			sb->safePrintf ( "%s" , m->m_desc );
-			sb->safePrintf ( "</font></td></tr><tr>\n" );
+			sb->safePrintf ( "</font></td></tr>"
+					 // for "#,expression,harvestlinks.."
+					 // header row in url FILTERS table
+					 "<tr bgcolor=#%s>\n" ,DARK_BLUE);
 		}
 		// # column
 		// do not show this for PAGE_PRIORITIES it is confusing
@@ -2589,7 +2641,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 			// skip if hidden
 			if ( cr && ! cr->m_isCustomCrawl &&
-			     (mk->m_flags & PF_CUSTOMCRAWLONLY) )
+			     (mk->m_flags & PF_DIFFBOT) )
 				continue;
 
 			// . hide table column headers that are too advanced
@@ -2631,13 +2683,13 @@ bool Parms::printParm ( SafeBuf* sb,
 	}
 
 	// skip if hidden. diffbot api url only for custom crawls.
-	//if(cr && ! cr->m_isCustomCrawl && (m->m_flags & PF_CUSTOMCRAWLONLY) )
+	//if(cr && ! cr->m_isCustomCrawl && (m->m_flags & PF_DIFFBOT) )
 	//	return true;
 
 	// print row start for single parm
 	if ( m->m_max <= 1 && ! m->m_hdrs ) {
 		if ( firstInRow ) {
-			sb->safePrintf ( "<tr bgcolor=%s><td>" , bg );
+			sb->safePrintf ( "<tr bgcolor=#%s><td>" , bg );
 		}
 		sb->safePrintf ( "<td width=%li%%>" , 100/nc/2 );
 	}
@@ -2648,13 +2700,14 @@ bool Parms::printParm ( SafeBuf* sb,
 	m->printVal ( &val1 , collnum , j ); // occNum );
 	// test it
 	if ( m->m_def && strcmp ( val1.getBufStart() , m->m_def ) )
-		bg = "organge";
+		// put non-default valued parms in orange!
+		bg = "ffa500";
 
 
 	// print the title/description in current table for non-arrays
 	if ( m->m_max <= 1 && m->m_hdrs ) { // j == 0 && m->m_rowid < 0 ) {
 		if ( firstInRow )
-			sb->safePrintf ( "<tr bgcolor=%s>",bg);
+			sb->safePrintf ( "<tr bgcolor=#%s>",bg);
 		if ( t == TYPE_STRINGBOX ) {
 			sb->safePrintf ( "<td colspan=2><center>"
 				  "<b>%s</b><br><font size=-1>",m->m_title );
@@ -2700,12 +2753,18 @@ bool Parms::printParm ( SafeBuf* sb,
 	// . print number in row if array, start at 1 for clarity's sake
 	// . used for url filters table, etc.
 	if ( m->m_max > 1 ) {
+		// bg color alternates
+		char *bgc = LIGHT_BLUE;
+		if ( j % 2 ) bgc = DARK_BLUE;
 		// do not print this if doing json
 		if ( isJSON ) ;
 		// but if it is in same row as previous, do not repeat it
 		// for this same row, silly
 		else if ( firstInRow ) // && m->m_page != PAGE_PRIORITIES ) 
-			sb->safePrintf ( "<tr><td>%li</td>\n<td>", j );//j+1
+			sb->safePrintf ( "<tr bgcolor=#%s>"
+					 "<td>%li</td>\n<td>", 
+					 bgc,
+					 j );//j+1
 		else if ( firstInRow ) 
 			sb->safePrintf ( "<tr><td>" );
 		else    
@@ -2847,7 +2906,9 @@ bool Parms::printParm ( SafeBuf* sb,
 		else
 			sb->safePrintf ("<input type=text name=%s "
 					"value=\"%f\" "
-					"size=12>",cgi,*(float *)s);
+					// 3 was ok on firefox but need 6
+					// on chrome
+					"size=6>",cgi,*(float *)s);
 	}
 	else if ( t == TYPE_IP ) {
 		if ( m->m_max > 0 && j == jend ) 
@@ -2855,7 +2916,7 @@ bool Parms::printParm ( SafeBuf* sb,
 					"size=12>",cgi);
 		else
 			sb->safePrintf ("<input type=text name=%s value=\"%s\" "
-					"size=12>",cgi,iptoa(*(long *)s));
+					"size=6>",cgi,iptoa(*(long *)s));
 	}
 	else if ( t == TYPE_LONG ) {
 		// just show the parm name and value if printing in json
@@ -2864,7 +2925,9 @@ bool Parms::printParm ( SafeBuf* sb,
 		else
 			sb->safePrintf ("<input type=text name=%s "
 					"value=\"%li\" "
-					"size=12>",cgi,*(long *)s);
+					// 3 was ok on firefox but need 6
+					// on chrome
+					"size=6>",cgi,*(long *)s);
 	}
 	else if ( t == TYPE_LONG_CONST ) 
 		sb->safePrintf ("%li",*(long *)s);
@@ -2916,7 +2979,8 @@ bool Parms::printParm ( SafeBuf* sb,
 		long size = m->m_size;
 		// give regular expression box on url filters page more room
 		if ( m->m_page == PAGE_FILTERS ) {
-			if ( size > REGEX_TXT_MAX ) size = REGEX_TXT_MAX;
+			//if ( size > REGEX_TXT_MAX ) size = REGEX_TXT_MAX;
+			size = 40;
 		}
 		else {
 			if ( size > 20 ) size = 20;
@@ -4163,7 +4227,10 @@ bool Parms::setXmlFromFile(Xml *xml, char *filename, char *buf, long bufSize){
 			  false   , // ownData
 			  0       , // allocSize
 			  false   , // pureXml?
-			  0       );// version
+			  0       , // version
+			  true    , // setParents
+			  0       , // niceness
+			  CT_XML  );
 }
 
 #define MAX_CONF_SIZE 200000
@@ -4181,6 +4248,8 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 	long  j   ;
 	long  count;
 	char *s;
+	CollectionRec *cr = NULL;
+	if ( THIS != (char *)&g_conf ) cr = (CollectionRec *)THIS;
 	// now set THIS based on the parameters in the xml file
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		// get it
@@ -4194,8 +4263,13 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 		if ( m->m_type == TYPE_MONOM2  ) continue;
 		if ( m->m_type == TYPE_CMD ) continue;
 		if ( m->m_type == TYPE_BOOL2 ) continue;
-		// ignore if hidden as well
-		if ( m->m_flags & PF_HIDDEN ) continue;
+		// ignore if hidden as well! no, have to keep those separate
+		// since spiderroundnum/starttime is hidden but should be saved
+		if ( m->m_flags & PF_NOSAVE ) continue;
+		// ignore if diffbot and we are not a diffbot/custom crawl
+		if ( cr && 
+		     ! cr->m_isCustomCrawl &&
+		     (m->m_flags & PF_DIFFBOT) ) continue;
 		// skip if we should not save to xml
 		if ( ! m->m_save ) continue;
 		// allow comments though
@@ -5850,7 +5924,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "dospellchecking";
 	m->m_def   = "1"; 
 	m->m_type  = TYPE_BOOL;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "do narrow search";
@@ -5859,7 +5933,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "donarrowsearch";
 	m->m_def   = "0"; 
 	m->m_type  = TYPE_BOOL;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	///////////////////////////////////////////
@@ -5874,6 +5948,17 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	//m->m_cast  = 0;
 	m->m_page  = PAGE_MASTER;
+	m++;
+
+	m->m_title = "max total spiders";
+	m->m_desc  = "What is the maximum number of web "
+		"pages the spider is allowed to download "
+		"simultaneously for ALL collections PER HOST?";
+	m->m_cgi   = "mtsp";
+	m->m_off   = (char *)&g_conf.m_maxTotalSpiders - g;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "100";
+	m->m_group = 0;
 	m++;
 
 	/*
@@ -5951,7 +6036,7 @@ void Parms::init ( ) {
         m->m_off   = (char *)&g_conf.m_useTmpCluster - g;
         m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
         m++;
 
 	/*
@@ -5973,7 +6058,7 @@ void Parms::init ( ) {
 	m->m_func  = CommandParserTestInit;
 	m->m_def   = "1";
 	m->m_cast  = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -5987,7 +6072,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_cast  = 1;
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "continue spider test run";
@@ -5998,7 +6083,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_cast  = 1;
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -6022,7 +6107,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	//m->m_cast  = 0;
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -6037,8 +6122,8 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "all just save";
-	m->m_desc  = "Saves the data for all hosts. Does Not exit.";
+	m->m_title = "save";
+	m->m_desc  = "Saves in-memory data for ALL hosts. Does Not exit.";
 	m->m_cgi   = "js";
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandJustSave;
@@ -6083,8 +6168,8 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "all save & exit";
-	m->m_desc  = "Saves the data and exits for all hosts.";
+	m->m_title = "save & exit";
+	m->m_desc  = "Saves the data and exits for ALL hosts.";
 	m->m_cgi   = "save";
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandSaveAndExit;
@@ -6163,7 +6248,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CMD;
 	m->m_func  = CommandDiskPageCacheOff;
 	m->m_cast  = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	//m->m_title = "http server enabled";
@@ -6207,7 +6292,7 @@ void Parms::init ( ) {
 	//m->m_scgi  = "dsb";
 	//m->m_soff  = (char *)&si.m_doStripeBalancing - y;
 	//m->m_sparm = 1;	
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "is live cluster";
@@ -6219,7 +6304,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_isLive - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -6239,7 +6324,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_isWikipedia - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -6288,7 +6373,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_numFreeQueriesPerDay - g;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1024";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "free queries per minute ";
@@ -6298,7 +6383,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_numFreeQueriesPerMinute - g;
 	m->m_type  = TYPE_CHAR;
 	m->m_def   = "30";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max heartbeat delay in milliseconds";
@@ -6310,7 +6395,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_maxHeartbeatDelay - g;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max delay before logging a callback or handler";
@@ -6336,7 +6421,7 @@ void Parms::init ( ) {
 	m->m_def   = "10.5.54.47";
 	m->m_size  = MAX_MX_LEN;
 	m->m_priv  = 2;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "send email alerts";
@@ -6441,7 +6526,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_sendEmailAlertsToSysadmin - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_priv  = 2;
 	m++;
 
@@ -6477,7 +6562,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "4000";
 	m->m_units = "milliseconds";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "send email timeout";
@@ -6501,7 +6586,7 @@ void Parms::init ( ) {
 	m->m_def   = "100";
 	m->m_units = "milliseconds";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	//m->m_title = "max query time";
@@ -6560,7 +6645,7 @@ void Parms::init ( ) {
 	m->m_def   = "5";
 	m->m_priv  = 2;
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max hard drive temperature";
@@ -6814,7 +6899,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 2;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "send parm change email alerts to email 4";
@@ -6826,7 +6911,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_priv  = 2;
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "email server 4";
@@ -6838,7 +6923,7 @@ void Parms::init ( ) {
 	m->m_size  = MAX_MX_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "email address 4";
@@ -6850,7 +6935,7 @@ void Parms::init ( ) {
 	m->m_size  = MAX_EMAIL_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "from email address 4";
@@ -6862,7 +6947,7 @@ void Parms::init ( ) {
 	m->m_size  = MAX_EMAIL_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -6874,7 +6959,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_preferLocalReads - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -6901,7 +6986,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	// this is ifdef'd out in Msg3.cpp for performance reasons,
@@ -6929,7 +7014,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_doIncrementalUpdating - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	// you can really screw up the index if this is false, so 
@@ -6955,7 +7040,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useEtcHosts - g;
 	m->m_def   = "0"; 
 	m->m_type  = TYPE_BOOL;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "twins are split";
@@ -6967,7 +7052,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_splitTwins - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "do out of memory testing";
@@ -6977,7 +7062,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_testMem - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "do consistency testing";
@@ -6990,7 +7075,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use shotgun";
@@ -7002,7 +7087,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useShotgun - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use quickpoll";
@@ -7012,7 +7097,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useQuickpoll - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 // 	m->m_title = "quickpoll core on error";
@@ -7031,7 +7116,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useThreads - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	// . this will leak the shared mem if the process is Ctrl+C'd
@@ -7049,7 +7134,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useSHM - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	// disable disk caches... for testing really
@@ -7069,7 +7154,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useDiskPageCachePosdb - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use disk page cache for datedb";
@@ -7078,7 +7163,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_useDiskPageCacheDatedb - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use disk page cache for titledb";
@@ -7088,7 +7173,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use disk page cache for spiderdb";
@@ -7098,7 +7183,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -7119,7 +7204,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use disk page cache for checksumdb";
@@ -7129,7 +7214,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use disk page cache for clusterdb";
@@ -7139,7 +7224,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use disk page cache for catdb";
@@ -7149,7 +7234,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use disk page cache for linkdb";
@@ -7159,7 +7244,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -7196,7 +7281,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_scanAllIfNotFound - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "interface machine";
@@ -7208,7 +7293,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 2;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "generate vector at query time";
@@ -7219,7 +7304,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_generateVectorAtQueryTime - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -7232,7 +7317,7 @@ void Parms::init ( ) {
         m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_URL_LEN;
         m->m_def   = "";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
         m++;
 
         m->m_title = "send requests to compression proxy";
@@ -7243,7 +7328,7 @@ void Parms::init ( ) {
         m->m_off   = (char *)&g_conf.m_useCompressionProxy - g;
         m->m_type  = TYPE_BOOL;
         m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
         m++;
 
         m->m_title = "synchronize proxy to cluster time";
@@ -7253,7 +7338,7 @@ void Parms::init ( ) {
         m->m_off   = (char *)&g_conf.m_timeSyncProxy - g;
         m->m_type  = TYPE_BOOL;
         m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
         m++;
 
 	/*
@@ -7311,7 +7396,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_allowScale - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "allow bypass of db validation";
@@ -7323,7 +7408,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_bypassValidation - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -7658,7 +7743,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_geocoderIps[0] - g;
 	m->m_type  = TYPE_IP;
 	m->m_def   = "10.5.66.11"; // sp1
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "geocoder IP #2";
@@ -7668,7 +7753,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "geocoder IP #3";
@@ -7678,7 +7763,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "geocoder IP #4";
@@ -7688,7 +7773,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m->m_def   = "0.0.0.0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "wiki proxy ip";
@@ -7697,7 +7782,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_wikiProxyIp - g;
 	m->m_type  = TYPE_IP;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -7708,7 +7793,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -7720,7 +7805,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_COLL_LEN+1;
 	m->m_def   = "";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "directory collection";
@@ -7732,7 +7817,7 @@ void Parms::init ( ) {
 	m->m_size  = MAX_COLL_LEN+1;
 	m->m_def   = "main";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "directory hostname";
@@ -7744,7 +7829,7 @@ void Parms::init ( ) {
 	m->m_size  = MAX_URL_LEN;
 	m->m_def   = "";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max incoming bandwidth for spider";
@@ -7755,7 +7840,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "999999.0";
 	m->m_units = "Kbps";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max 1-minute sliding-window loadavg";
@@ -7768,7 +7853,7 @@ void Parms::init ( ) {
 	m->m_def   = "0.0";
 	m->m_units = "";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max pages per second";
@@ -7780,7 +7865,7 @@ void Parms::init ( ) {
 	m->m_def   = "999999.0";
 	m->m_units = "pages/second";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -7835,10 +7920,22 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	// make it 3 for new gb in case one query takes way longer 
 	// than the others
-	m->m_def   = "2"; // "2";
+	m->m_def   = "6"; // "2";
 	m->m_units = "threads";
 	m->m_min   = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m++;
+
+	m->m_title = "max cpu merge threads";
+	m->m_desc  = "Maximum number of threads to use per Gigablast process "
+		"for merging lists read from disk.";
+	m->m_cgi   = "mcmt";
+	m->m_off   = (char *)&g_conf.m_maxCpuMergeThreads - g;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "10";
+	m->m_units = "threads";
+	m->m_min   = 1;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max write threads";
@@ -7851,7 +7948,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1";
 	m->m_units = "threads";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "do synchronous writes";
@@ -7862,7 +7959,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max spider read threads";
@@ -7876,7 +7973,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "7";
 	m->m_units = "threads";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max spider big read threads";
@@ -7887,7 +7984,7 @@ void Parms::init ( ) {
 	m->m_def   = "3"; // 1
 	m->m_units = "threads";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max spider medium read threads";
@@ -7898,7 +7995,7 @@ void Parms::init ( ) {
 	m->m_def   = "4"; // 3
 	m->m_units = "threads";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max spider small read threads";
@@ -7909,7 +8006,7 @@ void Parms::init ( ) {
 	m->m_def   = "5";
 	m->m_units = "threads";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max query read threads";
@@ -7923,7 +8020,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "20";
 	m->m_units = "threads";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max query big read threads";
@@ -7934,7 +8031,7 @@ void Parms::init ( ) {
 	m->m_def   = "20"; // 1
 	m->m_units = "threads";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max query medium read threads";
@@ -7945,7 +8042,7 @@ void Parms::init ( ) {
 	m->m_def   = "20"; // 3
 	m->m_units = "threads";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max query small read threads";
@@ -7956,7 +8053,7 @@ void Parms::init ( ) {
 	m->m_def   = "20";
 	m->m_units = "threads";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "min popularity for speller";
@@ -7969,7 +8066,7 @@ void Parms::init ( ) {
 	m->m_def   = ".01";
 	m->m_units = "%%";
 	m->m_priv  = 2;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "phrase weight";
@@ -7981,7 +8078,7 @@ void Parms::init ( ) {
 	// emphasized the phrase terms too much!!
 	m->m_def   = "100"; 
 	m->m_units = "%%";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "weights.cpp slider parm (tmp)";
@@ -7991,7 +8088,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "90";
 	m->m_units = "%%";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -8061,7 +8158,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "8192";
 	m->m_units = "bytes";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "merge buf size";
@@ -8076,7 +8173,7 @@ void Parms::init ( ) {
 	// to be way better performance for qps
 	m->m_def   = "500000";
 	m->m_units = "bytes";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "catdb minRecSizes";
@@ -8085,7 +8182,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_catdbMinRecSizes - g;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100000000"; // 100 million
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -8107,7 +8204,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_docCountAdjustment - g;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "dynamic performance graph";
@@ -8117,7 +8214,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_dynamicPerfGraph - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "enable profiling";
@@ -8127,7 +8224,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_profilingEnabled - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "minimum profiling threshold";
@@ -8139,7 +8236,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "10";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -8152,7 +8249,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 	
 	m->m_title = "use statsdb";
@@ -8162,7 +8259,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -8373,7 +8470,7 @@ void Parms::init ( ) {
 	m->m_size = USERS_TEXT_SIZE;
 	m->m_plen = (char *)&g_conf.m_superTurksLen - g;
 	m->m_page = PAGE_SECURITY;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -8455,7 +8552,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m->m_priv  = 2;
 	m->m_def   = "";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	///////////////////////////////////////////
@@ -8658,7 +8755,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "log debug query messages";
@@ -8731,7 +8828,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "ldseo";
 	m->m_off   = (char *)&g_conf.m_logDebugSEO - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_priv  = 1;
 	m++;
 
@@ -9035,6 +9132,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "dbcrawlname";
@@ -9043,6 +9141,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "notifyEmail";
@@ -9053,6 +9152,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "notifyWebhook";
@@ -9063,6 +9163,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	// collective respider frequency (for pagecrawlbot.cpp)
@@ -9074,7 +9175,7 @@ void Parms::init ( ) {
 	m->m_def   = "0.0"; // 0.0
 	m->m_page  = PAGE_NONE;
 	m->m_units = "days";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_title = "collective crawl delay (seconds)";
@@ -9084,18 +9185,8 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = ".250"; // 250 ms
 	m->m_page  = PAGE_NONE;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m->m_units = "seconds";
-	m++;
-
-	m->m_cgi   = "apiUrl";
-	m->m_xml   = "diffbotApiUrl";
-	m->m_title = "diffbot api url";
-	m->m_off   = (char *)&cr.m_diffbotApiUrl - x;
-	m->m_type  = TYPE_SAFEBUF;
-	m->m_page  = PAGE_NONE;
-	m->m_flags = PF_REBUILDURLFILTERS;
-	m->m_def   = "";
 	m++;
 
 	m->m_cgi   = "urlCrawlPattern";
@@ -9105,7 +9196,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "urlProcessPattern";
@@ -9115,7 +9206,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "pageProcessPattern";
@@ -9125,7 +9216,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "urlCrawlRegEx";
@@ -9135,7 +9226,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "urlProcessRegEx";
@@ -9145,7 +9236,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "onlyProcessIfNew";
@@ -9155,7 +9246,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "1";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "seeds";
@@ -9164,6 +9255,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_DIFFBOT;
 	m->m_def   = "";
 	m++;
 
@@ -9173,6 +9265,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_NONE;
 	m->m_cgi   = "isCustomCrawl";
 	m->m_def   = "0";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "maxToCrawl";
@@ -9181,7 +9274,8 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxToCrawl - x;
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_page  = PAGE_NONE;
-	m->m_def   = "100001";
+	m->m_def   = "100000";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "maxToProcess";
@@ -9190,7 +9284,8 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxToProcess - x;
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_page  = PAGE_NONE;
-	m->m_def   = "100001";
+	m->m_def   = "-1";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "maxRounds";
@@ -9200,6 +9295,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "-1";
+	m->m_flags = PF_DIFFBOT;
 	m++;
 
 	/////////////////////
@@ -9238,6 +9334,15 @@ void Parms::init ( ) {
 	m->m_cast  = 1;
 	m++;
 
+	m->m_title = "delete collection 2";
+	m->m_desc  = "delete the specified collection";
+	m->m_cgi   = "delColl";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_func2 = CommandDeleteColl2;
+	m->m_cast  = 1;
+	m++;
+
 	m->m_title = "add collection";
 	m->m_desc  = "add a new collection";
 	m->m_cgi   = "addColl";
@@ -9262,24 +9367,6 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
 	m->m_func  = CommandAddColl2;
-	m->m_cast  = 1;
-	m++;
-
-	m->m_title = "reset collection";
-	m->m_desc  = "reset collection";
-	m->m_cgi   = "reset";
-	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
-	m->m_func2 = CommandResetColl;
-	m->m_cast  = 1;
-	m++;
-
-	m->m_title = "restart collection";
-	m->m_desc  = "restart collection";
-	m->m_cgi   = "restart";
-	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_NONE;
-	m->m_func2 = CommandRestartColl;
 	m->m_cast  = 1;
 	m++;
 
@@ -9313,6 +9400,26 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_spideringEnabled - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
+	m++;
+
+	m->m_title = "reset collection";
+	m->m_desc  = "Remove all documents from the collection and turn "
+		"spiders off.";
+	m->m_cgi   = "reset";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_SPIDER;
+	m->m_func2 = CommandResetColl;
+	m->m_cast  = 1;
+	m++;
+
+	m->m_title = "restart collection";
+	m->m_desc  = "Remove all documents from the collection and start "
+		"spidering over again.";
+	m->m_cgi   = "restart";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_SPIDER;
+	m->m_func2 = CommandRestartColl;
+	m->m_cast  = 1;
 	m++;
 
 	/*
@@ -9349,7 +9456,7 @@ void Parms::init ( ) {
 	m->m_title = "max spiders";
 	m->m_desc  = "What is the maximum number of web "
 		"pages the spider is allowed to download "
-		"simultaneously?";
+		"simultaneously PER HOST for THIS collection?";
 	m->m_cgi   = "mns";
 	m->m_off   = (char *)&cr.m_maxNumSpiders - x;
 	m->m_type  = TYPE_LONG;
@@ -9556,7 +9663,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_outlinksRecycleFrequencyDays - x;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "30";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -9607,7 +9714,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_REBUILDURLFILTERS ;
 	m++;
 
 	m->m_title = "spider round num";
@@ -9617,7 +9724,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN ;
 	m++;
 
 	m->m_title = "scraping enabled procog";
@@ -9627,7 +9734,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_scrapingEnabledProCog - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "scraping enabled web";
@@ -9637,7 +9744,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_scrapingEnabledWeb - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "scraping enabled news";
@@ -9649,7 +9756,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "scraping enabled blogs";
@@ -9661,7 +9768,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -9678,8 +9785,9 @@ void Parms::init ( ) {
 	m->m_title = "deduping enabled";
 	m->m_desc  = "When enabled, the spider will "
 		"discard web pages which are identical to other web pages "
-		"that are already in the index AND that are from the same "
-		"hostname. An example of a hostname is www1.ibm.com. "
+		"that are already in the index. "//AND that are from the same "
+		//"hostname. 
+		//"An example of a hostname is www1.ibm.com. "
 		"However, root urls, urls that have no path, are never "
 		"discarded. It most likely has to hit disk to do these "
 		"checks so it does cause some slow down. Only use it if you "
@@ -9730,7 +9838,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use simplified redirects";
@@ -9767,7 +9875,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_buildVecFromCont - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use content similarity to index publish date";
@@ -9780,7 +9888,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max percentage similar to update publish date";
@@ -9794,7 +9902,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "80";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	// use url filters for this. this is a crawlbot parm really.
@@ -9804,7 +9912,8 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_restrictDomain - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	// we need to save this it is a diffbot parm
+	m->m_flags = PF_HIDDEN | PF_DIFFBOT;// | PF_NOSAVE;
 	m++;
 
 	m->m_title = "do url sporn checking";
@@ -9816,7 +9925,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_doUrlSpamCheck - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -9976,7 +10085,7 @@ void Parms::init ( ) {
 	m->m_def   = "6"; 
 	m->m_type  = TYPE_LONG;
 	//m->m_save  = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	//m->m_title = "sectiondb min files to merge";
@@ -9997,7 +10106,7 @@ void Parms::init ( ) {
 	m->m_def   = "6"; 
 	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "recycle content";
@@ -10014,7 +10123,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_recycleContent - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "enable link voting";
@@ -10025,7 +10134,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_getLinkInfo - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "do link spam checking";
@@ -10066,7 +10175,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -10177,7 +10286,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -10231,7 +10340,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_COLL_LEN+1;
 	m->m_def   = "";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "catdb lookups enabled";
@@ -10243,7 +10352,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "recycle catdb info";
@@ -10256,7 +10365,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "allow banning of pages in catdb";
@@ -10268,7 +10377,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "override spider errors for catdb";
@@ -10279,7 +10388,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	//m->m_title = "only spider root urls";
@@ -10299,7 +10408,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "allow adult docs";
@@ -10311,7 +10420,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group =  0 ;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "allow xml docs";
@@ -10323,7 +10432,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "do serp detection";
@@ -10345,7 +10454,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_doIpLookups - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use old IPs";
@@ -10358,7 +10467,7 @@ void Parms::init ( ) {
 	m->m_type = TYPE_BOOL;
 	m->m_def = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "remove banned pages";
@@ -10368,7 +10477,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_removeBannedPages - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -10392,7 +10501,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_allowHttps - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -10441,7 +10550,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_followRSSLinks - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "only index articles from RSS feeds";
@@ -10452,7 +10561,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -10535,6 +10644,34 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
+	// i put this in here so i can save disk space for my global
+	// diffbot json index
+	m->m_title = "index body";
+	m->m_desc  = "Index the body of the documents so you can search it. "
+		"Required for searching that. You wil pretty much always "
+		"want to keep this enabled.";
+	m->m_cgi   = "ib";
+	m->m_off   = (char *)&cr.m_indexBody - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m++;
+
+	m->m_cgi   = "apiUrl";
+	m->m_desc  = "Send every spidered url to this diffbot.com "
+		"by appending a "
+		"&url=<url> to it before trinyg to downloading it. We "
+		"expect get get back a JSON reply which we index. You will "
+		"need to supply your token to this as well.";
+	m->m_xml   = "diffbotApiUrl";
+	m->m_title = "diffbot api url";
+	m->m_off   = (char *)&cr.m_diffbotApiUrl - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_page  = PAGE_SPIDER;
+	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_def   = "";
+	m++;
+
+
 	m->m_title = "spider start time";
 	m->m_desc  = "Only spider URLs scheduled to be spidered "
 		"at this time or after. In UTC.";
@@ -10542,7 +10679,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_spiderTimeMin - x;
 	m->m_type  = TYPE_DATE; // date format -- very special
 	m->m_def   = "01 Jan 1970";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "spider end time";
@@ -10555,7 +10692,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_DATE2;
 	m->m_def   = "01 Jan 2010";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use current time";
@@ -10565,7 +10702,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -11156,7 +11293,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "ri";
 	m->m_soff  = (char *)&si.m_restrictIndexdbForQuery - y;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "restrict indexdb for xml feed";
@@ -11166,7 +11303,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	//m->m_title = "restrict indexdb for queries in xml feed";
@@ -11190,7 +11327,7 @@ void Parms::init ( ) {
 	m->m_scgi  = "rcache";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "do spell checking";
@@ -11204,7 +11341,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "get docid scoring info";
@@ -11261,7 +11398,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1000";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max search results per query for paying clients";
@@ -11273,7 +11410,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1000";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -11299,6 +11436,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_sparm = 1;
 	m->m_soff  = (char *)&si.m_considerTitlesFromBody - y;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -11324,6 +11462,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_sparm = 1;
 	m->m_scgi  = "uma";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -11337,6 +11476,7 @@ void Parms::init ( ) {
 	m->m_def   = "10";
 	m->m_sparm = 1;
 	m->m_scgi  = "mit";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use new ranking algo";
@@ -11348,6 +11488,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_sparm = 1;
 	m->m_scgi  = "una";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "do max score algo";
@@ -11358,6 +11499,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_sparm = 1;
 	m->m_scgi  = "dmsa";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -11370,6 +11512,7 @@ void Parms::init ( ) {
 	m->m_def   = "-1";
 	m->m_sparm = 1;
 	m->m_scgi  = "fi";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -11451,7 +11594,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "vhost";
 	m->m_smin  = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -11481,6 +11624,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "lsort";
 	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "sort language preference";
@@ -11592,7 +11736,7 @@ void Parms::init ( ) {
 	m->m_group = 1;
 	m->m_sparm = 1;
 	m->m_scgi  = "pqrds";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for foreign languages";
@@ -11609,7 +11753,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "pqrlang";
 	m->m_smin  = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for unknown languages";
@@ -11628,7 +11772,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "pqrlangunk";
 	m->m_smin  = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for pages where the country of the page writes "
@@ -11645,7 +11789,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.98";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for query terms or gigabits in url";
@@ -11673,7 +11817,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max value for pages with query terms or gigabits "
@@ -11694,7 +11838,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "10";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for pages that are not high quality";
@@ -11711,7 +11855,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max value for pages that are not high quality";
@@ -11723,7 +11867,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for pages that are not "
@@ -11741,7 +11885,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max value for pages that have many paths in the url";
@@ -11754,7 +11898,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "16";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for pages that do not have a catid";
@@ -11766,7 +11910,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for pages where smallest "
@@ -11787,7 +11931,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max value for pages where smallest catid has a lot "
@@ -11805,7 +11949,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "11";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for larger pages";
@@ -11821,7 +11965,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max value for larger pages";
@@ -11833,7 +11977,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "524288";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for non-location specific queries "
@@ -11855,7 +11999,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.99";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for non-location specific queries "
@@ -11877,7 +12021,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.95";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for non-location specific queries "
@@ -11899,7 +12043,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.95";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demote locations that appear in gigabits";
@@ -11912,7 +12056,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max value for non-location specific queries "
@@ -11927,7 +12071,7 @@ void Parms::init ( ) {
 	// charlottesville was getting missed when this was 1M
 	m->m_def   = "100000";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for non-html";
@@ -11941,7 +12085,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for xml";
@@ -11956,7 +12100,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.95";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for pages with other pages from same "
@@ -11975,7 +12119,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max value for pages with other pages from same "
@@ -11988,7 +12132,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "12";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "initial demotion for pages with common "
@@ -12011,7 +12155,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "decay for pages with common topics in dmoz "
@@ -12027,7 +12171,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max value for pages with common topics in dmoz "
@@ -12041,7 +12185,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "32"; 
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for pages where dmoz category names "
@@ -12060,7 +12204,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 	
 	m->m_title = "max value for pages where dmoz category names "
@@ -12075,7 +12219,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "10"; 
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for pages where dmoz category names "
@@ -12094,7 +12238,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max value for pages where dmoz category names "
@@ -12108,7 +12252,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "16"; 
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for pages based on datedb date";
@@ -12127,7 +12271,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 	
 	m->m_title = "min value for demotion based on datedb date ";
@@ -12147,7 +12291,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "631177"; // Jan 01, 1990 
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max value for demotion based on datedb date ";
@@ -12163,7 +12307,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0"; 
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for pages based on proximity";
@@ -12179,7 +12323,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion for pages based on query terms section";
@@ -12195,7 +12339,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "weight of indexed score on pqr";
@@ -12211,7 +12355,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -12225,7 +12369,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100000"; 
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -12241,7 +12385,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "demotion based on common inlinks";
@@ -12255,7 +12399,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = ".5";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "number of document calls multiplier";
@@ -12267,7 +12411,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "1.2";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -12294,7 +12438,7 @@ void Parms::init ( ) {
 	m->m_scgi  = "mrti";
 	m->m_smin  = 0;
 	m->m_smax  = 100000;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "percent topic similar default";
@@ -12305,7 +12449,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "50";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;	
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;	
 	m++;
 
 	//m->m_title = "max query terms";
@@ -12357,7 +12501,7 @@ void Parms::init ( ) {
 	m->m_priv  = 0;
 	m->m_sparm = 1;
 	m->m_smin  = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "number of reference pages to display";
@@ -12373,7 +12517,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_sprpg = 0; // do not propagate
         m->m_sprpp = 0; // do not propagate
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "docs to scan for reference pages";
@@ -12389,7 +12533,7 @@ void Parms::init ( ) {
 	m->m_priv  = 0;
 	m->m_sparm = 1;
 	m->m_smin  = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "min references quality";
@@ -12404,7 +12548,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "min links per references";
@@ -12418,7 +12562,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max linkers to consider for references per page";
@@ -12434,7 +12578,7 @@ void Parms::init ( ) {
 	m->m_priv  = 2;
 	m->m_sparm = 1;
 	m->m_smin  = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "page fetch multiplier for references";
@@ -12450,7 +12594,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "number of links coefficient";
@@ -12464,7 +12608,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "quality coefficient";
@@ -12478,7 +12622,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "link density coefficient";
@@ -12492,7 +12636,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "add or multipy quality times link density";
@@ -12506,7 +12650,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	// reference pages ceiling parameters
@@ -12520,7 +12664,7 @@ void Parms::init ( ) {
 	m->m_def   = "100";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "maximum allowed value for "
@@ -12533,7 +12677,7 @@ void Parms::init ( ) {
 	m->m_def   = "100";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "maximum allowed value for "
@@ -12546,7 +12690,7 @@ void Parms::init ( ) {
 	m->m_def   = "5000";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "maximum allowed value for "
@@ -12559,7 +12703,7 @@ void Parms::init ( ) {
 	m->m_def   = "10";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	// related pages parameters
@@ -12574,7 +12718,7 @@ void Parms::init ( ) {
 	m->m_priv  = 0;
 	m->m_sparm = 1;
 	m->m_smin  = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "number of related pages to display";
@@ -12589,7 +12733,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_sprpg = 0; // do not propagate
         m->m_sprpp = 0; // do not propagate
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "number of links to scan for related pages";
@@ -12605,7 +12749,7 @@ void Parms::init ( ) {
 	m->m_priv  = 2;
 	m->m_sparm = 1;
 	m->m_smin  = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "min related page quality";
@@ -12619,7 +12763,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "min related page score";
@@ -12633,7 +12777,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "min related page links";
@@ -12647,7 +12791,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "coefficient for number of links in related pages score "
@@ -12662,7 +12806,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "coefficient for average linker quality in related pages "
@@ -12677,7 +12821,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "coefficient for page quality in related pages "
@@ -12692,7 +12836,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "coefficient for search result links in related pages "
@@ -12707,7 +12851,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "number of related page summary excerpts";
@@ -12723,7 +12867,7 @@ void Parms::init ( ) {
 	m->m_priv  = 2;
 	m->m_sparm = 1;
 	m->m_smin  = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -12735,7 +12879,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -12751,7 +12895,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use results pages as references";
@@ -12765,7 +12909,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "get related pages from other cluster";
@@ -12781,7 +12925,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "collection for other related pages cluster";
@@ -12796,7 +12940,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	// relate pages ceiling parameters
@@ -12808,7 +12952,7 @@ void Parms::init ( ) {
 	m->m_def   = "100";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "maximum allowed value for numRPLinksPerDoc parameter";
@@ -12819,7 +12963,7 @@ void Parms::init ( ) {
 	m->m_def   = "5000";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "maximum allowed value for numSummaryLines parameter";
@@ -12830,7 +12974,7 @@ void Parms::init ( ) {
 	m->m_def   = "10";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	// import search results controls
@@ -12846,7 +12990,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "imported score weight";
@@ -12863,7 +13007,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "how many linkers must each imported result have";
@@ -12877,7 +13021,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "num linkers weight";
@@ -12894,7 +13038,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "the name of the collection to import from";
@@ -12910,7 +13054,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_priv  = 2;
 	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max similar results for cluster by topic";
@@ -12923,7 +13067,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "ncbt";
 	m->m_soff  = (char *)&si.m_maxClusterByTopicResults - y;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "number of extra results to get for cluster by topic";
@@ -12936,7 +13080,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "ntwo";
 	m->m_soff  = (char *)&si.m_numExtraClusterByTopicResults - y;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -12948,7 +13092,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_minTitleInLinkers - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "10";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "Max number of in linkers to consider";
@@ -12958,7 +13102,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxTitleInLinkers - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "128";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -12988,7 +13132,7 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_scgi  = "smd";
 	m->m_soff  = (char*) &si.m_summaryMode - y;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max summary len";
@@ -13066,7 +13210,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "256";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "front highlight tag";
@@ -13220,7 +13364,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
@@ -13301,7 +13445,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_displayIndexedDate - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "display last modified date";
@@ -13311,7 +13455,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "display published date";
@@ -13320,7 +13464,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_displayPublishDate - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "enable click 'n' scroll";
@@ -13330,7 +13474,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_clickNScrollEnabled - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
         m->m_title = "use data feed account server";
@@ -13340,7 +13484,7 @@ void Parms::init ( ) {
         m->m_off   = (char *)&cr.m_useDFAcctServer - x;
         m->m_type  = TYPE_BOOL;
         m->m_def   = "0";
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
         m++;
 
         m->m_title = "data feed server ip";
@@ -13351,7 +13495,7 @@ void Parms::init ( ) {
         m->m_type  = TYPE_IP;
         m->m_def   = "2130706433";
         m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
         m++;
 
         m->m_title = "data feed server port";
@@ -13362,7 +13506,7 @@ void Parms::init ( ) {
         m->m_type  = TYPE_LONG;
         m->m_def   = "8040";
         m->m_group = 0;
-	m->m_flags = PF_HIDDEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
         m++;
 
 	/*
@@ -13912,6 +14056,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
 
+	/*
 	m->m_title = "spidering enabled";
 	m->m_cgi   = "cspe";
 	m->m_xml   = "spidersEnabled";
@@ -13923,6 +14068,7 @@ void Parms::init ( ) {
 	m->m_rowid = 1;
 	m->m_flags = PF_REBUILDURLFILTERS;
 	m++;
+	*/
 
 	m->m_title = "respider frequency (days)";
 	m->m_cgi   = "fsf";
@@ -13959,7 +14105,7 @@ void Parms::init ( ) {
 	m->m_max   = MAX_FILTERS;
 	m->m_off   = (char *)cr.m_spiderIpMaxSpiders - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "1";
+	m->m_def   = "7";
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
 	m->m_flags = PF_REBUILDURLFILTERS;
@@ -14025,7 +14171,7 @@ void Parms::init ( ) {
 	m->m_size  = sizeof(SafeBuf);
 	m->m_rowid = 1;
 	m->m_addin = 1; // "insert" follows?
-	m->m_flags = PF_REBUILDURLFILTERS | PF_CUSTOMCRAWLONLY;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_DIFFBOT;
 	m++;
 	*/
 
@@ -15863,6 +16009,7 @@ void Parms::init ( ) {
 	m->m_size  = MAX_QUERY_LEN;
 	m->m_sprpg = 0; // do not store query, needs to be last so related 
         m->m_sprpp = 0; // topics can append to it
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -16065,6 +16212,7 @@ void Parms::init ( ) {
 	m->m_scgi  = "dh";
 	m->m_smin  = 0;
 	m->m_smax  = 8;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	/*
@@ -16224,6 +16372,7 @@ void Parms::init ( ) {
 	m->m_soff  = (char *)&si.m_returnDocIdCount - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_scgi  = "rdc";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "return docids per topic";
@@ -16244,6 +16393,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_sparm = 1;
 	m->m_scgi  = "rp";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "niceness";
@@ -16334,6 +16484,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_STRING;
 	m->m_scgi  = "pwd";
 	m->m_size  = 32;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "admin override";
@@ -16439,6 +16590,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_scgi  = "apip";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use ad feed num";
@@ -16448,6 +16600,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_scgi  = "uafn";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "do bot detection";
@@ -16458,6 +16611,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_scgi  = "bd";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "bot detection query";
@@ -16471,6 +16625,7 @@ void Parms::init ( ) {
 	m->m_scgi  = "bdq";
         m->m_def   = "";
 	m->m_size  = MAX_QUERY_LEN;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "queryCharset";
@@ -16514,6 +16669,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_scgi  = "tf";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	// buzz
@@ -16526,6 +16682,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "-1";
 	m->m_scgi  = "spiderresults";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	// buzz
@@ -16538,6 +16695,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "-1";
 	m->m_scgi  = "spiderresultroots";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	// buzz
@@ -16549,6 +16707,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_scgi  = "jmcl";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "include cached copy of page";
@@ -16620,7 +16779,7 @@ void Parms::init ( ) {
 
 	// for /addurl
 	m->m_title = "url to add";
-	m->m_desc  = "X is 1 to return only docids as query results.";
+	m->m_desc  = "Used by add url page.";
 	m->m_sparm = 1;
 	m->m_scmd  = "/addurl";
 	m->m_type  = TYPE_STRING;
@@ -16718,7 +16877,8 @@ void Parms::init ( ) {
 		if ( m_parms[i].m_off   > mm ||
 		     m_parms[i].m_soff  > mm ||
 		     m_parms[i].m_smaxc > mm   ) {
-			log(LOG_LOGIC,"conf: Bad offset in parm #%li.",i);
+			log(LOG_LOGIC,"conf: Bad offset in parm #%li %s.",
+			    i,m_parms[i].m_title);
 			exit(-1);
 		}
 		// do not allow numbers in cgi parms, they are used for
@@ -17252,12 +17412,23 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 	if ( m->m_type == TYPE_SAFEBUF ) {
 		SafeBuf *sb = (SafeBuf *)data;
 		data = sb->getBufStart();
-		dataSize = sb->length(); // do not include \0
-		// if just a \0 then make it empty
-		if ( dataSize && !data[0] ) {
-			data = NULL;
-			dataSize = 0;
+		dataSize = sb->length();
+		// sanity
+		if ( dataSize > 0 && !data[dataSize-1]){char *xx=NULL;*xx=0;}
+		// include the \0 since we do it for strings above
+		if ( dataSize > 0 ) dataSize++;
+		// empty? make it \0 then to be like strings i guess
+		if ( dataSize == 0 ) {
+			data = "\0";
+			dataSize = 1;
 		}
+		// sanity check
+		if ( dataSize > 0 && data[dataSize-1] ) {char *xx=NULL;*xx=0;}
+		// if just a \0 then make it empty
+		//if ( dataSize && !data[0] ) {
+		//	data = NULL;
+		//	dataSize = 0;
+		//}
 	}
 
 	//long occNum = -1;
@@ -17283,7 +17454,8 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 					  long page ){
 
-	CollectionRec *cr = g_collectiondb.getRec ( hr );
+	// false = useDefaultRec?
+	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
 
 	//if ( c ) {
 	//	cr = g_collectiondb.getRec ( hr );
@@ -17630,6 +17802,9 @@ public:
 	bool m_sendToGrunts;
 	bool m_sendToProxies;
 	long m_hostId; // -1 means send parm update to all hosts
+	// . if not -1 then [m_hostId,m_hostId2] is a range
+	// . used by main.cpp cmd line cmds like 'gb stop 3-5'
+	long m_hostId2; 
 };
 
 static ParmNode *s_headNode = NULL;
@@ -17647,7 +17822,9 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 				bool sendToGrunts ,
 				bool sendToProxies ,
 				// this is -1 if sending to all hosts
-				long hostId ) {
+				long hostId ,
+				// this is not -1 if its range [hostId,hostId2]
+				long hostId2 ) {
 
 	// empty list?
 	if ( parmList->getLength() <= 0 ) return true;
@@ -17680,6 +17857,7 @@ bool Parms::broadcastParmList ( SafeBuf *parmList ,
 	pn->m_sendToGrunts   = sendToGrunts;
 	pn->m_sendToProxies  = sendToProxies;
 	pn->m_hostId         = hostId;
+	pn->m_hostId2        = hostId2; // a range? then not -1 here.
 
 	// store it ordered in our linked list of parm transmit nodes
 	if ( ! s_tailNode ) {
@@ -17906,12 +18084,26 @@ bool Parms::doParmSendingLoop ( ) {
 
 		// give him a free pass? some parm updates are directed to 
 		// a single host, we use this for syncing parms at startup.
-		if ( pn->m_hostId >= 0 && h->m_hostId != pn->m_hostId ) {
+		if ( pn->m_hostId >= 0 && 
+		     pn->m_hostId2 == -1 && // not a range
+		     h->m_hostId != pn->m_hostId ) {
 			// assume we sent it to him
 			h->m_lastParmIdCompleted = pn->m_parmId;
 			h->m_currentNodePtr = NULL;
 			continue;
 		}
+
+		// range? if not in range, give free pass
+		if ( pn->m_hostId >= 0 && 
+		     pn->m_hostId2 >= 0 &&
+		     ( h->m_hostId < pn->m_hostId ||
+		       h->m_hostId > pn->m_hostId2 ) ) {
+			// assume we sent it to him
+			h->m_lastParmIdCompleted = pn->m_parmId;
+			h->m_currentNodePtr = NULL;
+			continue;
+		}
+
 			
 		// force completion if we should NOT send to him
 		if ( (h->isProxy() && ! pn->m_sendToProxies) ||
@@ -17937,7 +18129,12 @@ bool Parms::doParmSendingLoop ( ) {
 						 NULL, // retslot
 						 (void *)h->m_hostId , // state
 						 gotParmReplyWrapper ,
-						 4 ) ) { // timeout secs
+						 30 , // timeout secs
+						 -1 , // backoff
+						 -1 , // maxwait
+						 NULL , // replybuf
+						 0 , // replybufmaxsize
+						 0 ) ) { // niceness
 			log("parms: faild to send: %s",mstrerror(g_errno));
 			continue;
 		}
@@ -17968,6 +18165,9 @@ void handleRequest3fLoop3 ( int fd , void *state ) {
 // . host #0 is requesting that we update some parms
 void handleRequest3fLoop ( void *weArg ) {
 	WaitEntry *we = (WaitEntry *)weArg;
+
+	CollectionRec *cx = NULL;
+
 	// process them
 	char *p = we->m_parmPtr;
 	for ( ; p < we->m_parmEnd ; ) {
@@ -18028,6 +18228,14 @@ void handleRequest3fLoop ( void *weArg ) {
 		if ( parm->m_type != TYPE_CMD )
 			we->m_collnum = getCollnumFromParmRec ( rec );
 
+		// see if our spider round changes
+		long oldRound; 
+		if ( we->m_collnum >= 0 && ! cx ) {
+			cx = g_collectiondb.getRec ( we->m_collnum );
+			// i guess coll might gotten deleted! so check cx
+			if ( cx ) oldRound = cx->m_spiderRoundNum;
+		}
+
 		// . this returns false if blocked, returns true and sets
 		//   g_errno on error
 		// . it'll block if trying to delete a coll when the tree
@@ -18050,6 +18258,9 @@ void handleRequest3fLoop ( void *weArg ) {
 			return;
 		}
 
+		if ( cx && oldRound != cx->m_spiderRoundNum )
+			we->m_updatedRound = true;
+
 		// do the next parm
 		we->m_parmPtr = p;
 
@@ -18062,22 +18273,32 @@ void handleRequest3fLoop ( void *weArg ) {
 
 	// one last thing... kinda hacky. if we change certain spidering parms
 	// we have to do a couple rebuilds.
-	CollectionRec *cr = NULL;
-	if ( we->m_collnum >= 0 )
-		cr = g_collectiondb.getRec(we->m_collnum);
+
+	// reset page round counts
+	if ( we->m_updatedRound && cx ) {
+		// Spider.cpp will reset the *ThisRound page counts and
+		// the sent notification flag
+		spiderRoundIncremented ( cx );
+	}
 
 	// basically resetting the spider here...
-	if ( we->m_doRebuilds && cr ) {
+	if ( we->m_doRebuilds && cx ) {
 		// . this tells Spider.cpp to rebuild the spider queues
 		// . this is NULL if spider stuff never initialized yet,
 		//   like if you just added the collection
-		if ( cr->m_spiderColl )
-			cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+		if ( cx->m_spiderColl )
+			cx->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+		// . assume we have urls ready to spider too
+		// . no, because if they change the filters and there are
+		//   still no urls to spider i don't want to get another
+		//   email alert!!
+		//cr->m_localCrawlInfo .m_hasUrlsReadyToSpider = true;
+		//cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
 		// . reconstruct the url filters if we were a custom crawl
 		// . this is used to abstract away the complexity of url
 		//   filters in favor of simple regular expressions and
 		//   substring matching for diffbot
-		cr->rebuildUrlFilters();
+		cx->rebuildUrlFilters();
 	}
 
 	// note it
@@ -18120,6 +18341,7 @@ void handleRequest3f ( UdpSlot *slot , long niceness ) {
 	we->m_parmEnd = parmEnd;
 	we->m_errno = 0;
 	we->m_doRebuilds = false;
+	we->m_updatedRound = false;
 	we->m_collnum = -1;
 	we->m_sentReply = 0;
 
@@ -18555,7 +18777,8 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		// the long before the array is the # of elements
 		long currentCount = *((long *)(dst-4));
 		// update our # elements in our array if this is bigger
-		if ( occNum > currentCount ) *((long *)(dst-4)) = occNum;
+		long newCount = occNum + 1;
+		if ( newCount > currentCount ) *((long *)(dst-4)) = newCount;
 		// now point "dst" to the occNum-th element
 		dst += parm->m_size * occNum;
 	}
@@ -18572,12 +18795,17 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		SafeBuf *sb = (SafeBuf *)dst;
 		// nuke it
 		sb->purge();
-		// this means that we can not use string POINTERS as parms!!
-		if ( data && dataSize && data[0] )
-			// don't include \0 as part of length
+		// require that the \0 be part of the update i guess
+		//if ( ! data || dataSize <= 0 ) { char *xx=NULL;*xx=0; }
+		// check for \0
+		if ( data && dataSize > 0 ) {
+			if ( data[dataSize-1] != '\0') { char *xx=NULL;*xx=0; }
+			// this means that we can not use string POINTERS as 
+			// parms!! don't include \0 as part of length
 			sb->safeStrcpy ( data ); // , dataSize );
-		// ensure null terminated
-		sb->nullTerm();
+			// ensure null terminated
+			sb->nullTerm();
+		}
 		//return true;
 		// sanity
 		// we no longer include the \0 in the dataSize... so a dataSize
@@ -18598,13 +18826,15 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 
 	// show it
 	log("parms: updating parm \"%s\" "
-	    "(%s[%li]) (collnum=%li) from %s -> %s",
+	    "(%s[%li]) (collnum=%li) from \"%s\" -> \"%s\"",
 	    parm->m_title,
 	    parm->m_cgi,
 	    occNum,
 	    (long)collnum,
 	    val1.getBufStart(),
 	    val2.getBufStart());
+
+	if ( cr ) cr->m_needsSave = true;
 
 	// all done
 	return true;

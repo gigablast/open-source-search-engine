@@ -1533,6 +1533,6 @@ bool openIconvDescriptors() {
 	if (gbiconv_open("UTF-8", "WINDOWS-1252") < 0) return false;
 	if (gbiconv_open("WINDOWS-1252", "UTF-8") < 0) return false;
 	
-	log(LOG_INIT, "uni: Successfully loaded all iconv descriptors");
+	//log(LOG_INIT, "uni: Successfully loaded all iconv descriptors");
 	return true;
 }

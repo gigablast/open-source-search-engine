@@ -127,6 +127,7 @@ char *Rebalance::getNeedsRebalance ( ) {
 	hexToBin(keyStr,gbstrlen(keyStr), (char *)&m_nextKey);
 
 	m_collnum = cn;
+	//m_collnum = 4695; //debug skip
 	// we are valid now either way
 	m_needsRebalanceValid = true;
 	// assume ok
@@ -217,8 +218,9 @@ void Rebalance::scanLoop ( ) {
 			if ( rdb->m_rdbId == RDB_STATSDB ) continue;
 			// log it as well
 			if ( m_lastRdb != rdb ) {
-				log("rebal: scanning %s [%s]",
-				    cr->m_coll,rdb->m_dbname);
+				log("rebal: scanning %s (%li) [%s]",
+				    cr->m_coll,(long)cr->m_collnum,
+				    rdb->m_dbname);
 				// only do this once per rdb/coll
 				m_lastRdb = rdb;
 				// reset key cursor as well!!!
@@ -235,8 +237,11 @@ void Rebalance::scanLoop ( ) {
 			// scan it. returns true if done, false if blocked
 			if ( ! scanRdb ( ) ) return;
 			// note it
-			log("rebal: moved %lli of %lli recs scanned",
-			    m_rebalanceCount,m_scannedCount);
+			log("rebal: moved %lli of %lli recs scanned in "
+			    "%s for coll.%s.%li",
+			    m_rebalanceCount,m_scannedCount,
+			    rdb->m_dbname,cr->m_coll,(long)cr->m_collnum);
+			//if ( m_rebalanceCount ) goto done;
 			m_rebalanceCount = 0;
 			m_scannedCount = 0;
 			m_lastPercent = -1;
@@ -245,6 +250,7 @@ void Rebalance::scanLoop ( ) {
 		m_rdbNum = 0;
 	}
 
+	// done:
 	// all done
 	m_isScanning     = false;
 	m_needsRebalance = false;
@@ -317,6 +323,8 @@ bool Rebalance::scanRdb ( ) {
 	char *coll = cr->m_coll;
 
  readAnother:
+
+	if ( g_process.m_mode == EXIT_MODE ) return false;
 
 	//log("rebal: loading list start = %s",KEYSTR(m_nextKey,rdb->m_ks));
 
@@ -391,22 +399,27 @@ bool Rebalance::gotList ( ) {
 		return true;
 	}
 
-	char *last = NULL;
+	//char *last = NULL;
 
 	for ( ; ! m_list.isExhausted() ; m_list.skipCurrentRec() ) {
 		// get tht rec
-		char *rec = m_list.getCurrentRec();
+		//char *rec = m_list.getCurrentRec();
+		// get it
+		m_list.getCurrentKey  ( m_nextKey );
+		// skip if negative... wtf?
+		if ( KEYNEG(m_nextKey) ) continue;
 		// get shard
-		long shard = getShardNum ( rdbId , rec );
+		long shard = getShardNum ( rdbId , m_nextKey );
 		// save last ptr
-		last = rec;
+		//last = rec;
 		// debug!
-		//m_list.getKey  ( rec , m_nextKey );
 		//log("rebal: checking key %s",KEYSTR(m_nextKey,ks));
 		// count as scanned
 		m_scannedCount++;
 		// skip it if it belongs with us
 		if ( shard == myShard ) continue;
+		// note it
+		//log("rebal: shard is %li",shard);
 		// count it
 		m_rebalanceCount++;
 		// otherwise, it does not!
@@ -445,18 +458,21 @@ bool Rebalance::gotList ( ) {
 	//log("rebal: done reading list");
 
 	//  update nextkey
-	if ( last ) {
+	//if ( last ) {
+	if ( ! m_list.isEmpty() ) {
 		// get the last key we scanned, all "ks" bytes of it.
 		// because some keys are compressed and we take the
 		// more significant compressed out bytes from m_list.m_*
 		// member vars
-		m_list.getKey  ( last , m_nextKey );
+		//m_list.getKey  ( last , m_nextKey );
 		// if it is not maxxed out, then incremenet it for the
 		// next scan round
 		if ( KEYCMP ( m_nextKey , KEYMAX() , ks ) != 0 )
 			KEYADD ( m_nextKey , 1 , ks );
 	}
-
+	//else {
+	//	log("rebal: got empty list");
+	//}
 
 	if ( ! m_msg4a.addMetaList ( &m_posMetaList ,
 				     m_collnum ,

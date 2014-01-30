@@ -96,7 +96,13 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 	// plus a \0 for the value and a \0 for the name of each jsonitem
 	need += 2;
 	// prevent cores for now
-	need += 10000;
+	need += 10;
+	// . to prevent safebuf from reallocating do this
+	// . safeMemcpy() calls reserve(m_length+len) and reserves
+	//   tries to alloc m_length + (m_length+len) so since,
+	//   m_length+len should never be more than "need" we need to
+	//   double up here
+	need *= 2;
 	// this should be enough
 	if ( ! m_sb.reserve ( need ) ) return NULL;
 	// for testing if we realloc

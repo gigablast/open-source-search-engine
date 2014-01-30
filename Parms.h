@@ -93,9 +93,10 @@ class Page {
 #define PF_API             0x10
 #define PF_REBUILDURLFILTERS 0x20
 #define PF_NOSYNC            0x40
-#define PF_CUSTOMCRAWLONLY   0x80
+#define PF_DIFFBOT           0x80
 
 #define PF_HIDDEN 0x0100
+#define PF_NOSAVE 0x0200
 
 
 class Parm {
@@ -342,7 +343,8 @@ class Parms {
 				 bool sendToGrunts  = true ,
 				 bool sendToProxies = false ,
 				 // send to this single hostid? -1 means all
-				 long hostId = -1 );
+				 long hostId = -1 ,
+				 long hostId2 = -1 ); // hostid range?
 	bool doParmSendingLoop ( ) ;
 	bool syncParmsWithHost0 ( ) ;
 	bool makeSyncHashList ( SafeBuf *hashList ) ;

@@ -104,7 +104,7 @@ struct SafeBuf {
 	bool  safeMemcpy(SafeBuf *c){return safeMemcpy(c->m_buf,c->m_length);};
 	bool  safeMemcpy ( class Words *w , long a , long b ) ;
 	bool  safeStrcpy ( char *s ) ;
-	bool  safeStrcpyPrettyJSON ( char *decodedJson ) ;
+	//bool  safeStrcpyPrettyJSON ( char *decodedJson ) ;
 	bool  safeUtf8ToJSON ( char *utf8 ) ;
 
 	bool  csvEncode ( char *s , long len , long niceness = 0 );

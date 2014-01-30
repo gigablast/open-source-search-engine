@@ -118,8 +118,14 @@ bool Msge0::launchRequests ( long starti ) {
  loop:
 	// stop if no more urls. return true if we got all replies! no block.
 	if ( m_n >= m_numUrls ) return (m_numRequests == m_numReplies);
+	// if all hosts are getting a diffbot reply with 50 spiders and they
+	// all timeout at the same time we can very easily clog up the
+	// udp sockets, so use this to limit... i've seen the whole
+	// spider tables stuck with "getting outlink tag rec vector"statuses
+	long maxOut = MAX_OUTSTANDING_MSGE0;
+	if ( g_udpServer.m_numUsedSlots > 500 ) maxOut = 1;
 	// if we are maxed out, we basically blocked!
-	if (m_numRequests - m_numReplies >= MAX_OUTSTANDING_MSGE0)return false;
+	if (m_numRequests - m_numReplies >= maxOut ) return false;
 	// . skip if "old"
 	// . we are not planning on adding this to spiderdb, so Msg16
 	//   want to skip the ip lookup, etc.
@@ -145,7 +151,8 @@ bool Msge0::launchRequests ( long starti ) {
 	// . grab a slot
 	// . m_msg8as[i], m_msgCs[i], m_msg50s[i], m_msg20s[i]
 	long i;
-	for ( i = starti ; i < MAX_OUTSTANDING_MSGE0 ; i++ )
+	// make this 0 since "maxOut" now changes!!
+	for ( i = 0 /*starti*/ ; i < MAX_OUTSTANDING_MSGE0 ; i++ )
 		if ( ! m_used[i] ) break;
 	// sanity check
 	if ( i >= MAX_OUTSTANDING_MSGE0 ) { char *xx = NULL; *xx = 0; }

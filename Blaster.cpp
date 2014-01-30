@@ -651,7 +651,10 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 		     false,
 		     0,
 		     false,
-		     TITLEREC_CURRENT_VERSION)){
+		      TITLEREC_CURRENT_VERSION ,
+		      true , // set parents
+		      0 , // niceness 
+		      CT_XML )){ // content type
 		log(LOG_WARN,"blaster: Couldn't set XML1 Class in gotDoc2");
 	}
 	Links links1;
@@ -679,7 +682,10 @@ void Blaster::gotDoc2 ( void *state, TcpSocket *s){
 		     false,
 		     0,
 		     false,
-		     TITLEREC_CURRENT_VERSION)){
+		      TITLEREC_CURRENT_VERSION,
+		      true , // setparents
+		      0 , // niceness
+		      CT_XML )){
 		log(LOG_WARN,"blaster: Couldn't set XML2 Class in gotDoc2");
 	}
 	Links links2;
@@ -1170,7 +1176,10 @@ void Blaster::gotDoc4 ( void *state, TcpSocket *s){
 		     false,
 		     0,
 		     false,
-		     TITLEREC_CURRENT_VERSION)){
+		     TITLEREC_CURRENT_VERSION,
+		     true, // setparents
+		     0, // niceness
+		     CT_XML )){
 		log(LOG_WARN,"blaster: Couldn't set XML Class in gotDoc4");
 	}
 	Links links;

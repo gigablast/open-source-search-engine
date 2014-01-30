@@ -131,14 +131,14 @@ bool sendPageSockets ( TcpSocket *s , HttpRequest *r ) {
 
 void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 	// table headers for urls current being spiderd
-	p->safePrintf ( "<table width=100%% bgcolor=#d0d0f0 border=1>"
-		       "<tr><td bgcolor=#c0c0f0 colspan=19>"
+	p->safePrintf ( "<table %s>"
+		       "<tr class=hdrow><td colspan=19>"
 		       "<center>"
 		       //"<font size=+1>"
 		       "<b>%s</b>"
 		       //"</font>"
 		       "</td></tr>"
-		       "<tr>"
+		       "<tr bgcolor=#%s>"
 		       "<td><b>#</td>"
 		       "<td><b>fd</td>"
 		       "<td><b>age</td>"
@@ -151,7 +151,11 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 		       "<td><b>bytes to read</td>"
 		       "<td><b>bytes sent</td>"
 		       "<td><b>bytes to send</td>"
-		       "</tr>\n" , title );
+		       "</tr>\n"
+			, TABLE_STYLE
+			, title 
+			, DARK_BLUE
+			);
 	// current time in milliseconds
 	long long now = gettimeofdayInMilliseconds();
 	// store in buffer for sorting
@@ -202,12 +206,12 @@ void printTcpTable ( SafeBuf* p, char *title, TcpServer *server ) {
 		case ST_CLOSE_CALLED:    st="close called";    break;
 		}
 		// bgcolor is lighter for incoming requests
-		char *bg = "#c0c0f0";
-		if ( s->m_isIncoming ) bg = "#e8e8ff";
+		char *bg = "c0c0f0";
+		if ( s->m_isIncoming ) bg = "e8e8ff";
 		// times
 		long elapsed1 = now - s->m_startTime      ;
 		long elapsed2 = now - s->m_lastActionTime ;
-		p->safePrintf ("<tr bgcolor=%s>"
+		p->safePrintf ("<tr bgcolor=#%s>"
 			       "<td>%li</td>" // i
 			       "<td>%i</td>" // fd
 			       "<td>%lims</td>"  // elapsed seconds since start
@@ -301,26 +305,30 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			msgCount1[s->m_msgType]++;
 	}
 	// print the counts
-	p->safePrintf ( "<table bgcolor=#d0d0f0 border=1>"
-			"<tr><td bgcolor=#c0c0f0 colspan=19>"
+	p->safePrintf ( "<table %s>"
+			"<tr class=hdrow><td colspan=19>"
 			"<center>"
 			"<b>%s Summary</b> (%li transactions)"
 			"</td></tr>"
-			"<tr>"
+			"<tr bgcolor=#%s>"
 			"<td><b>niceness</td>"
 			"<td><b>msg type</td>"
 			"<td><b>total</td>"
 			"</tr>",
-			title , server->getNumUsedSlots() );
+			TABLE_STYLE,
+			title , server->getNumUsedSlots() ,
+			DARK_BLUE );
 	for ( long i = 0; i < 96; i++ ) {
 		if ( msgCount0[i] <= 0 ) continue;
-		p->safePrintf("<tr><td>0</td><td>0x%lx</td><td>%li</td></tr>",
-			      i, msgCount0[i]);
+		p->safePrintf("<tr bgcolor=#%s>"
+			      "<td>0</td><td>0x%lx</td><td>%li</td></tr>",
+			      LIGHT_BLUE,i, msgCount0[i]);
 	}
 	for ( long i = 0; i < 96; i++ ) {
 		if ( msgCount1[i] <= 0 ) continue;
-		p->safePrintf("<tr><td>1</td><td>0x%lx</td><td>%li</td></tr>",
-			      i, msgCount1[i]);
+		p->safePrintf("<tr bgcolor=#%s>"
+			      "<td>1</td><td>0x%lx</td><td>%li</td></tr>",
+			      LIGHT_BLUE,i, msgCount1[i]);
 	}
 	p->safePrintf ( "</table><br>" );
 
@@ -333,15 +341,15 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		dd = //"<td><b>dns ip</b></td>"
 		     "<td><b>hostname</b></td>";
 	}
-	// table headers for urls current being spiderd
-	p->safePrintf ( "<table width=100%% bgcolor=#d0d0f0 border=1>"
-			"<tr><td bgcolor=#c0c0f0 colspan=19>"
+
+	p->safePrintf ( "<table %s>"
+			"<tr class=hdrow><td colspan=19>"
 			"<center>"
 			//"<font size=+1>"
 			"<b>%s</b> (%li transactions)"
 			//"</font>"
 			"</td></tr>"
-			"<tr>"
+			"<tr bgcolor=#%s>"
 			"<td><b>age</td>"
 			"<td><b>last read</td>"
 			"<td><b>last send</td>"
@@ -362,7 +370,11 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			"<td><b>dgrams to send</td>"
 			"<td><b>acks read</td>"
 			"<td><b>resends</td>"
-			"</tr>\n" , title , server->getNumUsedSlots() , dd );
+			"</tr>\n" , 
+			TABLE_STYLE,
+			title , server->getNumUsedSlots() , 
+			DARK_BLUE ,
+			dd );
 
 
 	// now fill in the columns
@@ -385,9 +397,9 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		if ( s->m_lastReadTime == 0LL ) strcpy ( e1 , "--" );
 		if ( s->m_lastSendTime == 0LL ) strcpy ( e2 , "--" );
 		// bgcolor is lighter for incoming requests
-		char *bg = "#c0c0f0";
+		char *bg = LIGHT_BLUE;//"c0c0f0";
 		// is it incoming
-		if ( ! s->m_callback ) bg = "#e8e8ff";
+		if ( ! s->m_callback ) bg = LIGHTER_BLUE;//"e8e8ff";
 		Host *h = g_hostdb.getHost ( s->m_ip , s->m_port );
 		char           *eip     = "??";
 		unsigned short  eport   =  0 ;
@@ -494,7 +506,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 		if ( msgType == 0x25 ) desc = "get link info";
 		if ( msgType == 0xfd ) desc = "proxy forward";
 		
-		p->safePrintf ( "<tr bgcolor=%s>"
+		p->safePrintf ( "<tr bgcolor=#%s>"
 				"<td>%s</td>"  // age
 				"<td>%s</td>"  // last read
 				"<td>%s</td>"  // last send
@@ -540,22 +552,25 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 				      cf2);
 		}
 
-		if ( ! isDns ) 
+		if ( ! isDns ) {
 			//"<td>%s</td>"  // ip
 			//"<td>%hu</td>" // port
 			// clickable hostId
+			char *toFrom = "to";
+			if ( ! s->m_callback ) toFrom = "from";
 			//"<td><a href=http://%s:%hu/cgi/15.cgi>%li</a></td>"
 			p->safePrintf (	"<td>0x%hhx</td>"  // msgtype
 					"<td><nobr>%s</nobr></td>"  // desc
-					"<td><a href=http://%s:%hu/"
+					"<td><nobr>%s <a href=http://%s:%hu/"
 					"master/sockets?"
-					"c=%s>%s</a></td>"
+					"c=%s>%s</a></nobr></td>"
 					"<td>%s%li%s</td>" , // niceness
 					s->m_msgType ,
 					desc,
 					//iptoa(s->m_ip) ,
 					//s->m_port ,
 					// begin clickable hostId
+					toFrom,
 					eip     ,
 					eport   ,
 					coll ,
@@ -565,6 +580,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 					cf2
 					// end clickable hostId
 					);
+		}
 
 		p->safePrintf ( "<td>%lu</td>" // transId
 				"<td>%i</td>" // called handler

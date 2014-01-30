@@ -27,6 +27,7 @@ public:
 	char *m_parmEnd;
 	class UdpSlot *m_slot;
 	bool m_doRebuilds;
+	bool m_updatedRound;
 	collnum_t m_collnum;
 	bool m_registered;
 	long m_errno;
@@ -45,10 +46,18 @@ class Collectiondb  {
 	// . returns false and sets errno on error
 	// . each collection as a CollectionRec class for it and
 	//   is loaded up from the appropriate config file
-	bool init ( bool isDump = false );
+	bool init ( );
 
 	// this loads all the recs from host #0 
-	bool load ( bool isDump = false );
+	//bool load ( bool isDump = false );
+
+	// called by main.cpp to fill in our m_recs[] array with
+	// all the coll.*.*/coll.conf info
+	bool loadAllCollRecs ( );
+
+	// after main.cpp loads all rdb trees it calls this to remove
+	// bogus collnums from the trees i guess
+	bool cleanTrees ( ) ;
 
 	// . this will save all conf files back to disk that need it
 	// . returns false and sets g_errno on error, true on success
@@ -63,7 +72,8 @@ class Collectiondb  {
 	char *getColl     ( collnum_t collnum ) {return getCollName(collnum);};
 
 	// get coll rec specified in the HTTP request
-	class CollectionRec *getRec ( class HttpRequest *r );
+	class CollectionRec *getRec ( class HttpRequest *r ,
+				      bool useDefaultRec = true );
 
 	// . get collectionRec from name
 	// returns NULL if not available
@@ -81,7 +91,7 @@ class Collectiondb  {
 
 	// . how many collections we have in here
 	// . only counts valid existing collections
-	long getNumRecs() { return m_numRecsUsed; };
+	long getNumRecsUsed() { return m_numRecsUsed; };
 
 	// . does this requester have root admin privledges???
 	// . uses the root collection record!
@@ -92,9 +102,9 @@ class Collectiondb  {
 	// what collnum will be used the next time a coll is added?
 	collnum_t reserveCollNum ( ) ;
 
-	long long getLastUpdateTime () { return m_lastUpdateTime; };
+	//long long getLastUpdateTime () { return m_lastUpdateTime; };
 	// updates m_lastUpdateTime so g_spiderCache know when to reload
-	void     updateTime         ();
+	//void     updateTime         ();
 
 	// private:
 
@@ -105,9 +115,8 @@ class Collectiondb  {
 	//		  bool saveRec ); // = true
 
 
-	bool addExistingColl ( char *coll, 
-			       collnum_t collnum ,
-			       bool isDump ) ;
+	bool addExistingColl ( char *coll, collnum_t collnum );
+
 	bool addNewColl ( char *coll , 
 			  char customCrawl ,
 			  char *cpc , 
@@ -115,9 +124,10 @@ class Collectiondb  {
 			  bool saveIt ,
 			  collnum_t newCollnum ) ;
 
-	bool registerCollRec ( CollectionRec *cr ,
-			       bool isDump ,
-			       bool isNew ) ;
+	bool registerCollRec ( CollectionRec *cr ,  bool isNew ) ;
+
+	bool addRdbBaseToAllRdbsForEachCollRec ( ) ;
+	bool addRdbBasesForCollRec ( CollectionRec *cr ) ;
 
 	bool setRecPtr ( collnum_t collnum , CollectionRec *cr ) ;
 
@@ -127,6 +137,8 @@ class Collectiondb  {
 
 	//bool updateRec ( CollectionRec *newrec );
 	bool deleteRecs ( class HttpRequest *r ) ;
+
+	void deleteSpiderColl ( class SpiderColl *sc );
 
 	// returns false if blocked, true otherwise. 
 	//bool resetColl ( char *coll , WaitEntry *we , bool purgeSeeds );
@@ -149,7 +161,7 @@ class Collectiondb  {
 	long            m_numRecs;
 	long            m_numRecsUsed;
 
-	long long            m_lastUpdateTime;
+	//long long            m_lastUpdateTime;
 };
 
 extern class Collectiondb g_collectiondb;
@@ -249,6 +261,7 @@ class CrawlInfo {
 	long long m_pageProcessSuccesses;  // 7
 	long long m_urlsHarvested;         // 8
 
+
 	long m_lastUpdateTime;
 
 	// this is non-zero if urls are available to be spidered right now.
@@ -267,6 +280,12 @@ class CrawlInfo {
 
 	//long m_numUrlsLaunched;
 	long m_dummy1;
+
+	// keep separate because when we receive a crawlinfo struct from
+	// a host we only add these in if it matches our round #
+	long long m_pageDownloadSuccessesThisRound;
+	long long m_pageProcessSuccessesThisRound;
+
 
 	void reset() { memset ( this , 0 , sizeof(CrawlInfo) ); };
 	//bool print (class SafeBuf *sb ) ;
@@ -348,7 +367,7 @@ class CollectionRec {
 	bool m_urlFiltersHavePageCounts;
 
 	// moved from SpiderColl so we can load up at startup
-	HashTableX m_pageCountTable;
+	//HashTableX m_pageCountTable;
 
 	// . when was the last time we changed?
 	//long long m_lastUpdateTime;
@@ -385,7 +404,9 @@ class CollectionRec {
 	// spidered and begin the next round
 	long   m_spiderRoundNum;
 
-	char  m_useDatedb               ;
+	char  m_indexBody;
+
+	//char  m_useDatedb               ;
 	//char  m_addUrlEnabled           ; // TODO: use at http interface lvl
 	//char  m_spiderLinks             ; use url filters now!
 	char  m_sameHostLinks           ; // spider links from same host only?
@@ -691,8 +712,8 @@ class CollectionRec {
 	//long      m_respiderWaits      [ MAX_FILTERS ];
 	//long      m_numRegExs8;
 	// spidering on or off?
-	long      m_numRegExs7;
-	char      m_spidersEnabled     [ MAX_FILTERS ];
+	//long      m_numRegExs7;
+	//char      m_spidersEnabled     [ MAX_FILTERS ];
 
 	// should urls in this queue be sent to diffbot for processing
 	// when we are trying to index them?

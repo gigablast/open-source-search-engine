@@ -1854,7 +1854,7 @@ bool Tagdb::init2 ( long treeMem ) {
 			    false ); // bias disk page cache?
 }
 
-
+/*
 bool Tagdb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;//false;
@@ -1867,7 +1867,7 @@ bool Tagdb::addColl ( char *coll, bool doVerify ) {
 	//return true;
 	return false;
 }
-
+*/
 
 
 bool Tagdb::verify ( char *coll ) {
@@ -2761,14 +2761,16 @@ bool Msg8a::launchGetRequests ( ) {
 	long shardNum = getShardNum ( m_rdbId , &startKey );//, true );
 	Host *group = g_hostdb.getShard ( shardNum );
 
-	long numTwins = g_hostdb.getNumHostsPerShard();
+	//long numTwins = g_hostdb.getNumHostsPerShard();
 	// use top byte!
 	uint8_t *sks = (uint8_t *)&startKey;
 	uint8_t top = sks[sizeof(TAGDB_KEY)-1];
-	long hostNum = 0;
-	if ( numTwins == 2 && (top & 0x80) ) hostNum = 1;
+	//long hostNum = 0;
+	//if ( numTwins == 2 && (top & 0x80) ) hostNum = 1;
 	// TODO: fix this!
-	if ( numTwins >= 3 ) { char *xx=NULL;*xx=0; }
+	//if ( numTwins >= 3 ) { char *xx=NULL;*xx=0; }
+	// support more than 2 stripes now...
+	long hostNum = top % g_hostdb.getNumHostsPerShard();
 	long hostId = group[hostNum].m_hostId;
 
 
@@ -4440,27 +4442,62 @@ bool sendReply2 ( void *state ) {
 	char bb [ MAX_COLL_LEN + 60 ];
 	bb[0]='\0';
 
+	sb.safePrintf(
+		      "<style>"
+		      ".poo { background-color:#%s;}\n"
+		      "</style>\n" ,
+		      LIGHT_BLUE );
+
 	// print interface to add sites
 	sb.safePrintf (
-		  "<table width=100%% bgcolor=#%s border=1 cellpadding=4>"
-		  "<tr><td bgcolor=#%s colspan=21>"
-		  "<center><font size=+1><b>Tagdb</b>%s</font></center>"
-		  "</td></tr>", LIGHT_BLUE , DARK_BLUE , bb );
+		  "<table %s>"
+		  "<tr><td colspan=2>"
+		  "<center><b>Tagdb</b>%s</center>"
+		  "</td></tr>", TABLE_STYLE , bb );
 
 	// sometimes we add a huge # of urls, so don't display them because
 	// it like freezes the silly browser
 	char *uu = st->m_urls;
 	if ( st->m_urlsLen > 100000 ) uu = "";
 	
-	sb.safePrintf ( "<tr><td colspan=21>");
+
+	//sb.safePrintf ( "<tr bgcolor=#%s><td colspan=2>"
+	//		"<center>"
+	//		"</center>"
+	//		"</td></tr>",
+	//		DARK_BLUE);
+	
+
+	sb.safePrintf ( "<tr class=poo><td>"
+			"<b>urls</b>"
+			"<br>"
+
+			"<font size=-2>"
+			"Enter a single URL and then click <i>Get Tags</i> to "
+			"get back its tags. Enter multiple URLs and select "
+			"the tags names and values in the other table "
+			"below in order to tag "
+			"them all with those tags when you click "
+			"<i>Add Tags</i>. "
+			"On the command line you can also issue a "
+			"<i>./gb 0 dump S main 0 -1 1</i>"
+			"command, for instance, to dump out the tagdb "
+			"contents for the <i>main</i> collection on "
+			"<i>host #0</i>. "
+			"</font>"
+
+
+			"</td>");
+
 	// text area for adding space separated sites/urls
 	//char *pp = "put sites here";
 	//char *pp = "";
 	//if ( st->m_bufLen > 0 ) pp = st->m_buf; // no, print out "urls"
-	sb.safePrintf ("<center>"
+	sb.safePrintf (""
+		       "<td width=70%%>"
 		       "<br>"
 		       "<textarea rows=16 cols=64 name=u>"
-		       "%s</textarea><br><br>" , uu );
+		       "%s</textarea></td></tr>" , uu );
 
 	// spam assassins should not use this much power, too risky
 	//if ( st->m_isAdmin ) {
@@ -4470,30 +4507,61 @@ bool sendReply2 ( void *state ) {
 
 	// allow filename to load them from
 	//if ( st->m_isAdmin ) {
-	sb.safePrintf("or specify a file of them: <input name=ufu "
-		      "type=text size=40><br>"
-		      "<i>file can also be dumped output of "
-		      "tagdb from the <b>gb dump S ...</b> "
-		      "command.</i>"
-		      "<br><br>" );
+	sb.safePrintf("<tr class=poo>"
+		      "<td>"
+		      "<b>file of urls to tag</b>"
+		      "<br>"
+		      "<font size=-2>"
+		      "If provided, Gigablast will read the URLs from "
+		      "this file as if you pasted them into the text "
+		      "area above. The text area will also be ignored."
+		      "</font>"
+		      "</td>"
+		      "<td><input name=ufu "
+		      "type=text size=40>"//<br>"
+		      //"<i>file can also be dumped output of "
+		      //"tagdb from the <b>gb dump S ...</b> "
+		      //"command.</i>"
+		      //"<br><br>" );
+		      "</td></tr>"
+		      );
 	//}
 
 	// this is applied to every tag that is added for accountability
-	sb.safePrintf("<br>Username: <input name=username type=text size=6 "
-		      "value=\"admin\"> " );//,st->m_username);
+	sb.safePrintf("<tr class=poo><td>"
+		      "<b>username</b>"
+		      "<br><font size=-2>"
+		      "Stored with each tag you add for accountability."
+		      "</font>"
+		      "</td><td>"
+		      "<input name=username type=text size=6 "
+		      "value=\"admin\"> " 
+		      "</td></tr>"
+		      );//,st->m_username);
 
 	// as a safety, this must be checked for any delete operation
-	sb.safePrintf ("&nbsp; delete operation<input type=\"checkbox\" "
-		       "value=\"1\" name=\"delop\"><br>");
+	sb.safePrintf ("<tr class=poo><td><b>delete operation</b>"
+		       "<br>"
+		       "<font size=-2>"
+
+			"If checked "
+			"then the tag names you specify below will be "
+			"deleted for the URLs you provide in the text area "
+			"when you click <i>Add Tags</i>."
+		       "</font>"
+
+
+		       "</td><td><input type=\"checkbox\" "
+		       "value=\"1\" name=\"delop\"></td></tr>");
 
 	// close up
-	sb.safePrintf ("<br><center>"
-
+	sb.safePrintf ("<tr bgcolor=#%s><td colspan=2>"
+		       "<center>"
 		       // this is merge all by default right now but since
 		       // zak is really only using eventtaghashxxxx.com we
 		       // should be ok
 		       "<input type=submit name=get "
-		       "value=\"get tags\" border=0>"
+		       "value=\"Get Tags\" border=0>"
 
 		       //"<input type=submit name=get "
 		       //"value=\"get best rec\" border=0>"
@@ -4506,7 +4574,11 @@ bool sendReply2 ( void *state ) {
 
 		       //		  "</form>"
 		       "</center>"
-		       "</tr>\n");
+		       "</td></tr></table>"
+		       "<br><br>"
+		       , DARK_BLUE
+		       );
+
 
 	// . show all tags we got values for
 	// . put a delete checkbox next to each one
@@ -4514,6 +4586,13 @@ bool sendReply2 ( void *state ) {
 
 	// for some reason the "selected" option tags do not show up below
 	// on firefox unless i have this line.
+
+	sb.safePrintf (
+		       "<table %s>"
+		       "<tr><td colspan=20>"
+		       "<center><b>Add Tag</b></center>"
+		       "</td></tr>", TABLE_STYLE );
+
 
 	// count how many "tagRecs" we are taking tags from
 	Tag *jtag  = st->m_tagRec.getFirstTag();
@@ -4532,13 +4611,14 @@ bool sendReply2 ( void *state ) {
 	bool canEdit = (numTagRecs <= 1);
 
 	if ( ! canEdit )
-		sb.safePrintf("<tr><td colspan=20><center><font color=red>"
+		sb.safePrintf("<tr class=poo>"
+			      "<td colspan=10><center><font color=red>"
 			      "<b>Can not edit because more than one "
 			      "TagRecs were merged</b></font></center>"
 			      "</td></tr>\n" );
 
 	// headers
-	sb.safePrintf("<tr bgcolor=%s>"
+	sb.safePrintf("<tr bgcolor=#%s>"
 		      //"<td><b>delete?</b></td>"
 		      "<td><b>del?</b></td>"
 		      "<td><b>tag name</b></td>"
@@ -4574,9 +4654,9 @@ bool sendReply2 ( void *state ) {
 		// if we are NULL, print out 3 empty tags
 		if ( ! ctag ) empty++;
 		// start the section
-		sb.safePrintf("<tr bgcolor=%s>",DARK_BLUE);
+		sb.safePrintf("<tr class=poo>");
 		// the delete tag checkbox
-		//sb.safePrintf("<tr bgcolor=%s><td>",DARK_BLUE);
+		//sb.safePrintf("<tr bgcolor=#%s><td>",DARK_BLUE);
 		sb.safePrintf("<td>");
 		if ( ctag && canEdit ) // && tag->m_type != ST_SITE ) 
 			sb.safePrintf("<input name=deltag%li "
@@ -4624,7 +4704,7 @@ bool sendReply2 ( void *state ) {
 		// was selected will have this score
 		if ( canEdit )
 			sb.safePrintf("<input type=text name=tagdata%li "
-				      "size=70 value=\"",count);
+				      "size=50 value=\"",count);
 		// show the value
 		if ( ctag ) ctag->printDataToBuf ( &sb );
 		// close up the input tag
@@ -4693,10 +4773,10 @@ bool sendReply2 ( void *state ) {
 	// do not print add or del tags buttons if we got tags from more
 	// than one TagRec!
 	if ( canEdit )
-		sb.safePrintf ("<tr bgcolor=%s><td colspan=21><center>"
+		sb.safePrintf ("<tr bgcolor=#%s><td colspan=10><center>"
 			       
 			       "<input type=submit name=add "
-			       "value=\"add tags\" border=0>"
+			       "value=\"Add Tags\" border=0>"
 			       
 			       "</center></td>"
 			       "</tr>\n",DARK_BLUE);

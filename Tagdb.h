@@ -115,7 +115,7 @@ char *getTagStrFromType ( long tagType ) ;
 //#define MAX_TAGREC_SIZE 1024
 
 // max "oustanding" msg0 requests sent by TagRec::lookup()
-#define MAX_TAGDB_REQUESTS 5
+#define MAX_TAGDB_REQUESTS 3
 
 // . the latest version of the TagRec
 //#define TAGREC_CURRENT_VERSION 0

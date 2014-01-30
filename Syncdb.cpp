@@ -992,7 +992,7 @@ bool Syncdb::init ( ) {
 	// clear it all!
 	m_qt.clear();
 	// add the base since it is a collectionless rdb
-	return m_rdb.addColl ( NULL );
+	return m_rdb.addRdbBase1 ( NULL );
 }
 
 // . save our crap
@@ -1432,9 +1432,10 @@ void Syncdb::syncDone ( ) {
 	m_rcpStarted = false;
 }
 
-
+/*
 // TODO: Provide verification.
 bool Syncdb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	return true;
 }
+*/

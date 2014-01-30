@@ -124,7 +124,7 @@ bool Titledb::init2 ( long treeMem ) {
 	// validate
 	//return verify ( );
 }
-
+/*
 bool Titledb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -136,7 +136,7 @@ bool Titledb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
-
+*/
 bool Titledb::verify ( char *coll ) {
 	log ( LOG_DEBUG, "db: Verifying Titledb for coll %s...", coll );
 	g_threads.disableThreads();

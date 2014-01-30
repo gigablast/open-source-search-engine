@@ -71,9 +71,9 @@ bool Cachedb::init ( ) {
 		return false;
 
 	// add the base since it is a collectionless rdb
-	return m_rdb.addColl ( NULL );
+	return m_rdb.addRdbBase1 ( NULL );
 }
-
+/*
 bool Cachedb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -85,7 +85,7 @@ bool Cachedb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
-
+*/
 bool Cachedb::verify ( char *coll ) {
 	// coll is NULL here methinks
 	log ( LOG_DEBUG, "db: Verifying %s...",m_name );

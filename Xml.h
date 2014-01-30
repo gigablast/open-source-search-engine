@@ -30,8 +30,10 @@ class Xml {
 		 bool ownData , long allocSize, //=0, 
 		 bool pureXml, // =false );
 		 long version ,
-		 bool setParents = true,
-		 long niceness = 0);
+		 bool setParents , // = true,
+		 long niceness , // = 0
+		 char contentType );
+
 
 
 	void  reset ( );

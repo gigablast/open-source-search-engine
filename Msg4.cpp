@@ -541,8 +541,9 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 		s_msg4Tail->m_next = this;
 		// we are the new tail
 		s_msg4Tail = this;
-		// debug log
-		log("msg4: queueing body msg4=0x%lx",(long)this);
+		// debug log. seems to happen a lot if not using threads..
+		if ( g_conf.m_useThreads )
+			log("msg4: queueing body msg4=0x%lx",(long)this);
 		// mark it
 		m_inUse = true;
 		// all done then, but return false so caller does not free
@@ -556,8 +557,10 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 	// sanity check
 	if ( s_msg4Head || s_msg4Tail ) { char *xx=NULL; *xx=0; }
 
-	// spider hang bug
-	logf(LOG_DEBUG,"msg4: queueing head msg4=0x%lx",(long)this);
+	// . spider hang bug
+	// . debug log. seems to happen a lot if not using threads..
+	if ( g_conf.m_useThreads )
+		logf(LOG_DEBUG,"msg4: queueing head msg4=0x%lx",(long)this);
 
 	// mark it
 	m_inUse = true;
@@ -1062,8 +1065,10 @@ void storeLineWaiters ( ) {
 	// . if his callback was NULL, then was loaded in loadAddsInProgress()
 	// . we no longer do that so callback should never be null now
 	if ( ! msg4->m_callback ) { char *xx=NULL;*xx=0; }
-	// log this now i guess
-	logf(LOG_DEBUG,"msg4: calling callback for msg4=0x%lx",(long)msg4);
+	// log this now i guess. seems to happen a lot if not using threads
+	if ( g_conf.m_useThreads )
+		logf(LOG_DEBUG,"msg4: calling callback for msg4=0x%lx",
+		     (long)msg4);
 	// release it
 	msg4->m_inUse = false;
 	// call his callback
@@ -1074,7 +1079,7 @@ void storeLineWaiters ( ) {
 	goto loop;
 }
 
-
+#include "Process.h"
 
 // . destroys the slot if false is returned
 // . this is registered in Msg4::set() to handle add rdb record msgs

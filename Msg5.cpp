@@ -22,6 +22,7 @@ long g_numCorrupt = 0;
 
 Msg5::Msg5() {
 	m_waitingForList = false;
+	//m_waitingForMerge = false;
 	m_numListPtrs = 0;
 	m_mergeLists = true;
 	reset();
@@ -33,7 +34,7 @@ Msg5::~Msg5() {
 
 // frees m_treeList
 void Msg5::reset() {
-	if ( m_waitingForList ) {
+	if ( m_waitingForList ) { // || m_waitingForMerge ) {
 		log("disk: Trying to reset a class waiting for a reply.");
 		// might being doing an urgent exit (mainShutdown(1)) or
 		// g_process.shutdown(), so do not core here
@@ -45,7 +46,6 @@ void Msg5::reset() {
 	m_prevCount = 0;
 	//m_prevKey.setMin();
 	KEYMIN(m_prevKey,MAX_KEY_BYTES);// m_ks); m_ks is invalid
-	m_waitingForList = false;
 	// free lists if m_mergeLists was false
 	for ( long i = 0 ; ! m_mergeLists && i < m_numListPtrs ; i++ )
 		m_listPtrs[i]->freeList();
@@ -203,6 +203,13 @@ bool Msg5::getList ( char     rdbId         ,
 	// remember stuff
 	m_rdbId         = rdbId;
 	m_coll          = coll;
+
+	m_collnum = g_collectiondb.getCollnum ( coll );
+	if ( m_collnum < 0 ) {
+		g_errno = ENOCOLLREC;
+		return true;
+	}
+
 	m_list          = list;
 	//m_startKey      = startKey;
 	//m_endKey        = endKey;
@@ -466,7 +473,12 @@ bool Msg5::getList ( char     rdbId         ,
 	// timing debug
 	//log("Msg5:getting list startKey.n1=%lu",m_startKey.n1);
 	// start the read loop - hopefully, will only loop once
-	return readList ( );
+	if ( readList ( ) ) return true;
+
+	// tell Spider.cpp not to nuke us until we get back!!!
+	m_waitingForList = true;
+	// we blocked!!! must call m_callback
+	return false;
 }
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
@@ -725,7 +737,7 @@ bool Msg5::readList ( ) {
 	if ( m_treeList.m_ks != m_ks ) { char *xx = NULL; *xx = 0; }
 
 	// we are waiting for the list
-	m_waitingForList = true;
+	//m_waitingForList = true;
 
 	// clear just in case
 	g_errno = 0;
@@ -915,6 +927,8 @@ void gotListWrapper ( void *state ) {
 	if ( THIS->m_calledCallback ) { char *xx=NULL;*xx=0; }
 	// set it now
 	THIS->m_calledCallback = 1;
+	// we are no longer waiting for the list
+	THIS->m_waitingForList = false;
 	// when completely done call the callback
 	THIS->m_callback ( THIS->m_state , THIS->m_list , THIS );
 }
@@ -931,7 +945,7 @@ static void *mergeListsWrapper_r ( void *state , ThreadEntry *t ) ;
 bool Msg5::gotList ( ) {
 
 	// we are no longer waiting for the list
-	m_waitingForList = false;
+	//m_waitingForList = false;
 
 	// debug msg
 	//log("msg5 got lists from msg3 (msg5=%lu)",(long)this);
@@ -1064,8 +1078,15 @@ bool Msg5::gotList2 ( ) {
 		// sanity check
 		//if ( KEYNEG(m_listPtrs[i]->getEndKey()) ) {
 		//	char *xx=NULL;*xx=0; }
-		if ( KEYCMP(m_listPtrs[i]->getEndKey(),m_minEndKey,m_ks)<0 ) 
+		if ( KEYCMP(m_listPtrs[i]->getEndKey(),m_minEndKey,m_ks)<0 ) {
 			KEYSET(m_minEndKey,m_listPtrs[i]->getEndKey(),m_ks);
+			// crap, if list is all negative keys, then the
+			// end key seems negative too! however in this
+			// case RdbScan::m_endKey seems positive so
+			// maybe we got a negative endkey in constrain?
+			//if (! (m_minEndKey[0] & 0x01) )
+			//	log("msg5: list had bad endkey");
+		}
 	}
 	// sanity check
 	//if ( KEYNEG( m_minEndKey) ) {char *xx=NULL;*xx=0; }
@@ -1152,7 +1173,7 @@ bool Msg5::gotList2 ( ) {
 	// filter happens and we have a chance to weed out old titleRecs
 	if ( m_rdbId == RDB_TITLEDB && m_numFiles != 1 && n == 1 &&
 	     m_isRealMerge ) {
-		log(LOG_LOGIC,"db: Adding dummy list.");
+		//log(LOG_LOGIC,"db: Adding dummy list.");
 		//m_tfns [n] = 255;
 		m_dummy.set ( NULL                      , // list data
 			      0                         , // list data size
@@ -1377,6 +1398,8 @@ bool Msg5::gotList2 ( ) {
 	// skip it for now
 	//goto skipThread;
 
+	//m_waitingForMerge = true;
+
 	// . if size is big, make a thread
 	// . let's always make niceness 0 since it wasn't being very
 	//   aggressive before
@@ -1386,8 +1409,11 @@ bool Msg5::gotList2 ( ) {
 			      threadDoneWrapper   ,
 			      mergeListsWrapper_r ) ) 
 		return false;
+
+	//m_waitingForMerge = false;
+
 	// thread creation failed
-	if ( ! g_threads.areThreadsDisabled() )
+	if ( g_conf.m_useThreads && ! g_threads.m_disabled )
 		log(LOG_INFO,
 		    "net: Failed to create thread to merge lists. Doing "
 		    "blocking merge. Hurts performance.");
@@ -1441,6 +1467,8 @@ void threadDoneWrapper ( void *state , ThreadEntry *t ) {
 	if ( THIS->needsRecall() && ! THIS->readList() ) return;
 	// sanity check
 	if ( THIS->m_calledCallback ) { char *xx=NULL;*xx=0; }
+	// we are no longer waiting for the list
+	THIS->m_waitingForList = false;
 	// set it now
 	THIS->m_calledCallback = 3;
 	// when completely done call the callback
@@ -1715,6 +1743,8 @@ void Msg5::mergeLists_r ( ) {
 // . all recs in tree are negative and annihilate the 1000 recs from disk
 // . we are left with an empty list
 bool Msg5::doneMerging ( ) {
+
+	//m_waitingForMerge = false;
 
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
 	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return true;
@@ -2017,6 +2047,8 @@ void gotRemoteListWrapper( void *state ) { // , RdbList *list ) {
 	if ( ! THIS->gotRemoteList() ) return;
 	// sanity check
 	if ( THIS->m_calledCallback ) { char *xx=NULL;*xx=0; }
+	// we are no longer waiting for the list
+	THIS->m_waitingForList = false;
 	// set it now
 	THIS->m_calledCallback = 4;
 	// if it doesn't block call the callback, g_errno may be set

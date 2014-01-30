@@ -147,8 +147,8 @@ bool loadUnicodeTable(UCPropTable *table, char *filename, bool useChecksum, unsi
 	}
 
 	unsigned long chksum = calculateChecksum(buf, fileSize);
-	log(LOG_INFO, "uni: checksum for %s: %ld",
-	    filename, chksum);
+	//log(LOG_INFO, "uni: checksum for %s: %ld",
+	//    filename, chksum);
 	if (useChecksum && (expectedChecksum != chksum)) {
 		fclose(fp);
 		mfree(buf, fileSize, "Unicode");

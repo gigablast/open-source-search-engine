@@ -14,8 +14,12 @@
 #include "SafeBuf.h"
 #include "PageCrawlBot.h" // sendPageCrawlBot()
 
+#define LIGHTER_BLUE "e8e8ff"
 #define LIGHT_BLUE "d0d0e0"
 #define DARK_BLUE  "c0c0f0"
+#define DARKER_BLUE  "a0a0f0"
+#define DARKEST_BLUE  "8080f0"
+#define TABLE_STYLE " style=\"border-radius:10px;border:#6060f0 2px solid;\" width=100% bgcolor=#a0a0f0 cellpadding=4 border=0 "
 
 extern char *g_msg;
 

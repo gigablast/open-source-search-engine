@@ -89,7 +89,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 		collLen = gbstrlen(coll);
 	}
 	// get collection rec
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	CollectionRec *cr = g_collectiondb.getRec ( r ); // coll );
 	// bitch if no collection rec found
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;
@@ -248,8 +248,6 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	//
 
 	SpiderRequest *sreq = &st1->m_sreq;
-
-
 	// set the SpiderRequest from this add url
 	if ( ! sreq->setFromAddUrl ( st1->m_url ) ) {
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }

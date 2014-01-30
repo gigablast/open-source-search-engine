@@ -1,11 +1,5 @@
 // Matt Wells, copyright Nov 2002
 
-//
-// . Spider.h/.cpp contains all the code related to spider scheduling
-// . Spiderdb holds the SpiderRecs which indicate the time to spider a url
-// . there are 2 types of SpiderRecs: SpiderRequest and SpiderReply recs
-//
-
 #ifndef _SPIDER_H_
 #define _SPIDER_H_
 
@@ -45,6 +39,7 @@
 #define SP_ADMIN_PAUSED 8 // g_conf.m_spideringEnabled = false
 #define SP_COMPLETED    9 // crawl is done, and no repeatCrawl is scheduled
 
+void spiderRoundIncremented ( class CollectionRec *cr ) ;
 bool testPatterns ( ) ;
 bool doesStringContainPattern ( char *content , char *pattern ) ;
 
@@ -57,6 +52,29 @@ bool getSpiderStatusMsg ( class CollectionRec *cx ,
 // this new spider algorithm ensures that urls get spidered even if a host
 // is dead. and even if the url was being spidered by a host that suddenly went
 // dead.
+//
+// . Spider.h/.cpp contains all the code related to spider scheduling
+// . Spiderdb holds the SpiderRecs which indicate the time to spider a url
+// . there are 2 types of SpiderRecs: SpiderRequest and SpiderReply recs
+//
+//
+// There are 3 main components to the spidering process:
+// 1) spiderdb
+// 2) the "waiting tree"
+// 3) doledb
+//
+// spiderdb holds all the spiderrequests/spiderreplies sorted by 
+// their IP
+//
+// the waiting tree holds at most one entry for an IP indicating that
+// we should scan all the spiderrequests/spiderreplies for that IP in
+// spiderdb, find the "best" one(s) and add it (them) to doledb.
+//
+// doledb holds the best spiderrequests from spiderdb sorted by
+// "priority".  priorities range from 0 to 127, the highest priority.
+// basically doledb holds the urls that are ready for spidering now.
+
+
 
 
 // Spiderdb
@@ -242,10 +260,10 @@ bool getSpiderStatusMsg ( class CollectionRec *cx ,
 // can spider any request/url in doledb provided they get the lock.
 
 
-// scanSpiderdb()
+// evalIpLoop()
 //
 // The waiting tree is populated at startup by scanning spiderdb (see
-// SpiderColl::scanSpiderdb()), which might take a while to complete, 
+// SpiderColl::evalIpLoop()), which might take a while to complete, 
 // so it is running in the background while the gb server is up. it will
 // log "10836674298 spiderdb bytes scanned for waiting tree re-population"
 // periodically in the log as it tries to do a complete spiderdb scan 
@@ -255,7 +273,7 @@ bool getSpiderStatusMsg ( class CollectionRec *cx ,
 // It will also perform a background scan if the admin changes the url
 // filters table, which dictates that we recompute everything.
 //
-// scanSpiderdb() will recompute the "url filter number" (matching row)
+// evalIpLoop() will recompute the "url filter number" (matching row)
 // in the url filters table for each url in each SpiderRequest it reads.
 // it will ignore spider requests whose urls
 // are "filtered" or "banned". otherwise they will have a spider priority >= 0.
@@ -270,18 +288,18 @@ bool getSpiderStatusMsg ( class CollectionRec *cx ,
 // by preferring those with the highest priority. Tied spider priorities
 // should be resolved by minimum hopCount probably. 
 //
-// If the spidertime of the URL is overdue then scanSpiderdb() will NOT add
+// If the spidertime of the URL is overdue then evalIpLoop() will NOT add
 // it to waiting tree, but will add it to doledb directly to make it available
 // for spidering immediately. It calls m_msg4.addMetaList() to add it to 
 // doledb on all hosts in its group (shard). It uses s_ufnTree for keeping 
 // track of the best urls to spider for a given IP/spiderPriority.
 //
-// scanSpiderdb() can also be called with its m_nextKey/m_endKey limited
+// evalIpLoop() can also be called with its m_nextKey/m_endKey limited
 // to just scan the SpiderRequests for a specific IP address. It does
 // this after adding a SpiderReply. addSpiderReply() calls addToWaitingTree()
 // with the "0" time entry, and addToWaitingTree() calls 
 // populateDoledbFromWaitingTree() which will see that "0" entry and call
-// scanSpiderdb(true) after setting m_nextKey/m_endKey for that IP.
+// evalIpLoop(true) after setting m_nextKey/m_endKey for that IP.
 
 
 
@@ -289,7 +307,7 @@ bool getSpiderStatusMsg ( class CollectionRec *cx ,
 //
 // SpiderColl::populateDoledbFromWaitingTree() scans the waiting tree for
 // entries whose spider time is due. so it gets the IP address and spider
-// priority from the waiting tree. but then it calls scanSpiderdb() 
+// priority from the waiting tree. but then it calls evalIpLoop() 
 // restricted to that IP (using m_nextKey,m_endKey) to get the best
 // SpiderRequest from spiderdb for that IP to add to doledb for immediate 
 // spidering. populateDoledbFromWaitingTree() is called a lot to try to
@@ -505,8 +523,28 @@ class SpiderRequest {
 	// . this is zero if none or invalid
 	long    m_contentHash32;
 
+	/*
+	char    m_reserved1;
+
+	// the new add url control will allow user to control link spidering
+	// on each url they add. they can also specify file:// instead of
+	// http:// to index local files. so we have to allow file://
+	char    m_onlyAddSameDomainLinks        :1;
+	char    m_onlyAddSameSubdomainLinks     :1;
+	char    m_onlyDoNotAddLinksLinks        :1; // max hopcount 1
+	char    m_onlyDoNotAddLinksLinksLinks   :1; // max hopcount 2
+	char    m_reserved2d:1;
+	char    m_reserved2e:1;
+	char    m_reserved2f:1;
+	char    m_reserved2g:1;
+	char    m_reserved2h:1;
+
+
 	// . each request can have a different hop count
 	// . this is only valid if m_hopCountValid is true!
+	short   m_hopCount;
+	*/
+	
 	long    m_hopCount;
 
 	// . this is now computed dynamically often based on the latest
@@ -711,16 +749,17 @@ class SpiderRequest {
 	long print( class SafeBuf *sb );
 
 	long printToTable     ( SafeBuf *sb , char *status ,
-				class XmlDoc *xd ) ;
+				class XmlDoc *xd , long row ) ;
 	// for diffbot...
 	long printToTableSimple     ( SafeBuf *sb , char *status ,
-				class XmlDoc *xd ) ;
+				      class XmlDoc *xd , long row ) ;
 	static long printTableHeader ( SafeBuf *sb , bool currentlSpidering ) ;
 	static long printTableHeaderSimple ( SafeBuf *sb , 
 					     bool currentlSpidering ) ;
 
 	// returns false and sets g_errno on error
 	bool setFromAddUrl ( char *url ) ;
+	bool setFromInject ( char *url ) ;
 };
 
 // . XmlDoc adds this record to spiderdb after attempting to spider a url
@@ -826,7 +865,11 @@ class SpiderReply {
 	long    m_isContacty    :1;
 	long    m_hasAddress    :1;
 	long    m_hasTOD        :1;
-	long    m_hasSiteVenue  :1;
+
+	// make this "INvalid" not valid since it was set to 0 before
+	// and we want to be backwards compatible
+	long    m_isIndexedINValid :1;
+	//long    m_hasSiteVenue  :1;
 
 	// expires after a certain time or if ownership changed
 	long    m_inGoogleValid           :1;
@@ -835,7 +878,8 @@ class SpiderReply {
 	long    m_isContactyValid         :1;
 	long    m_hasAddressValid         :1;
 	long    m_hasTODValid             :1;
-	long    m_hasSiteVenueValid       :1;
+	//long    m_hasSiteVenueValid       :1;
+	long    m_reserved2               :1;
 	long    m_siteNumInlinksValid     :1;
 	// was the request an injection request
 	long    m_fromInjectionRequest    :1; 
@@ -989,7 +1033,7 @@ class SpiderColl {
 	~SpiderColl ( );
 	SpiderColl  ( ) ;
 
-	void clear();
+	void clearLocks();
 
 	// called by main.cpp on exit to free memory
 	void      reset();
@@ -1028,7 +1072,8 @@ class SpiderColl {
 	// for scanning the wait tree...
 	bool m_isPopulating;
 	// for reading from spiderdb
-	bool m_isReadDone;
+	//bool m_isReadDone;
+	bool m_didRead;
 
 	Msg4 m_msg4;
 	Msg1 m_msg1;
@@ -1111,7 +1156,8 @@ class SpiderColl {
 
 	bool m_countingPagesIndexed;
 	HashTableX m_localTable;
-	long long m_lastReqUh48;
+	long long m_lastReqUh48a;
+	long long m_lastReqUh48b;
 	long long m_lastRepUh48;
 	// move to CollectionRec so it can load at startup and save it
 	//HashTableX m_pageCountTable;
@@ -1127,8 +1173,17 @@ class SpiderColl {
 	bool addToWaitingTree    ( uint64_t spiderTime , long firstIp ,
 				   bool callForScan );
 	long getNextIpFromWaitingTree ( );
-	void populateDoledbFromWaitingTree ( bool reentry );
-	bool scanSpiderdb        ( bool needList );
+	void populateDoledbFromWaitingTree ( );
+
+	//bool scanSpiderdb        ( bool needList );
+
+
+	// broke up scanSpiderdb into simpler functions:
+	bool evalIpLoop ( ) ;
+	bool readListFromSpiderdb ( ) ;
+	bool scanListForWinners ( ) ;
+	bool addWinnerToDoledb ( ) ;
+
 
 	void populateWaitingTreeFromSpiderdb ( bool reentry ) ;
 
@@ -1138,7 +1193,11 @@ class SpiderColl {
 	key_t      m_waitingTreeKey;
 	bool       m_waitingTreeKeyValid;
 	long       m_scanningIp;
-	bool       m_gotNewRequestsForScanningIp;
+	long       m_gotNewDataForScanningIp;
+	long       m_lastListSize;
+	long       m_lastScanningIp;
+
+	char m_deleteMyself;
 
 	// start key for reading doledb
 	key_t m_msg5StartKey;
@@ -1292,7 +1351,7 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) ;
 
 // . max spiders we can have going at once for this process
 // . limit to 70 to preven OOM conditions
-#define MAX_SPIDERS 70
+#define MAX_SPIDERS 100
 
 class SpiderLoop {
 
@@ -1412,6 +1471,7 @@ long getUrlFilterNum ( class SpiderRequest *sreq ,
 		       bool isForMsg20 ,
 		       long niceness , 
 		       class CollectionRec *cr ,
-		       bool isOutlink = false ) ;
+		       bool isOutlink , // = false ,
+		       HashTableX *quotaTable );//= NULL ) ;
 
 #endif

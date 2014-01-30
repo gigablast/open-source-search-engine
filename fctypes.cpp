@@ -2046,6 +2046,7 @@ char* getNextNum(char* input, char** numPtr) {
 	return nextspace;
 }
 
+#include "HttpMime.h" // CT_HTML
 
 // returns length of stripped content, but will set g_errno and return -1
 // on error
@@ -2066,7 +2067,7 @@ long stripHtml( char *content, long contentLen, long version, long strip ) {
 	// . parse as utf8 since all we are doing is messing with 
 	//   the tags...content manipulation comes later
 	if ( ! tmpXml.set ( content , contentLen,
-			    false, 0, false, version ) )
+			    false, 0, false, version , true , 0 , CT_HTML ) )
 		return -1;
 
 	//if( strip == 4 )

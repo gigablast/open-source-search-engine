@@ -68,6 +68,16 @@ Hostdb::~Hostdb () {
 }
 
 void Hostdb::reset ( ) {
+
+	for ( long i = 0 ; m_hosts && i < m_numHosts ; i++ ) {
+		Host *h = &m_hosts[i];
+		if ( ! h->m_lastKnownGoodCrawlInfoReply ) continue;
+		mfree ( h->m_lastKnownGoodCrawlInfoReply ,
+			h->m_lastKnownGoodCrawlInfoReplyEnd -
+			h->m_lastKnownGoodCrawlInfoReply , "lknown" );
+		h->m_lastKnownGoodCrawlInfoReply = NULL;
+	}
+
 	if ( m_hosts ) 
 		mfree ( m_hosts, m_allocSize,"Hostdb" );
 	if ( m_ips   ) mfree ( m_ips  , m_numIps * 4, "Hostdb" );
@@ -121,8 +131,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	// make sure our hostId is in our conf file
 	if ( hostId < 0 ) 
 		return log(
-			   "conf: Negative hostId %li supplied in "
-			   "hosts.conf.",hostId);
+			   "conf: Negative hostId %li supplied",hostId);
 	// set early for calling log()
 	m_hostId = hostId;
 	// set clock in sync in fctypes.cpp

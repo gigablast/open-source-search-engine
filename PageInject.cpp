@@ -52,6 +52,8 @@ bool sendPageInject ( TcpSocket *s , HttpRequest *r ) {
 
 	msg7->m_crawlbotAPI = crawlbotAPI;
 
+	strncpy(msg7->m_coll,coll,MAX_COLL_LEN);
+
 	// for diffbot
 	if ( crawlbotAPI ) 
 		msg7->m_hr.copy ( r );
@@ -63,7 +65,6 @@ bool sendPageInject ( TcpSocket *s , HttpRequest *r ) {
 		// qts is html encoded? NO! fix that below then...
 		//char *uf="http://www.google.com/search?num=50&"
 		//	"q=%s&scoring=d&filter=0";
-		strncpy(msg7->m_coll,coll,MAX_COLL_LEN);
 		msg7->m_isScrape = true;
 		msg7->m_qbuf.safeStrcpy(qts);
 		msg7->m_linkDedupTable.set(4,0,512,NULL,0,false,0,"ldtab");
@@ -193,6 +194,12 @@ bool sendReply ( void *state ) {
 	//	pm = msg;
 	//}
 
+	sb.safePrintf(
+		      "<style>"
+		      ".poo { background-color:#%s;}\n"
+		      "</style>\n" ,
+		      LIGHT_BLUE );
+
 	//char *c = msg7->m_coll;
 	char bb [ MAX_COLL_LEN + 60 ];
 	bb[0]='\0';
@@ -204,39 +211,50 @@ bool sendReply ( void *state ) {
 		  "<b>%s</b>\n\n" // the url msg
 		  //"<FORM method=POST action=/inject>\n\n" 
 
+		  "<FORM method=GET action=/inject>\n\n" 
+
 		  //"<input type=hidden name=pwd value=\"%s\">\n"
 		  //"<input type=hidden name=username value=\"%s\">\n"
-		  "<table width=100%% bgcolor=#%s cellpadding=4 border=1>"
-		  "<tr><td  bgcolor=#%s colspan=2>"
+		  "<table %s>"
+		  "<tr class=hdrow><td colspan=2>"
 		  "<center>"
 		  //"<font size=+1>"
 		  "<b>"
 		  "Inject URL</b>%s"
 		  //"</font>"
-		  "<br>"
-		  //"Enter the information below to inject "
-		  //"a URL. This allows you to specify the URL as well as the "
-		  //"content for the URL."
 		  "</td></tr>\n\n"
 
-		  "<tr><td><b>url</b></td>"
-		  "<td>\n"
+		  "<tr class=poo><td><b>url</b>"
+		  "<br>"
+		  "<font size=-2>"
+		  "Specify the URL that will be immediately crawled and "
+		  "indexed in real time "
+		  "while you wait. The browser will return the "
+		  "final index status code. Alternatively, "
+		  "use the <i>add urls</i> page "
+		  "to add URLs in bulk or to just add to the spider queue "
+		  "without having to wait for the page or pages to be "
+		  "actually indexed in realtime."
+		  "</font>"
+		  "</td>"
+
+		  "<td width=50%%>\n"
 		  "<input type=text name=u value=\"\" size=50>"
 		  "</td></tr>\n\n"
 
-		  "<tr><td><b>query to scrape</b></td>"
+		  "<tr class=poo><td><b>query to scrape</b></td>"
 		  "<td>\n"
 		  "<input type=text name=qts value=\"\" size=50>"
 		  "</td></tr>\n\n"
 
-		  //"<tr><td><b>use ahrefs.com</b></td>"
+		  //"<tr class=poo><td><b>use ahrefs.com</b></td>"
 		  //"<td>\n"
 		  //"<input type=radio name=useahrefs value=0 checked>no &nbsp; "
 		  //"<input type=radio name=useahrefs value=1>yes "
 		  //"</td></tr>\n\n"
 
 		  
-		  "<tr><td><b>spider links</b></td>"
+		  "<tr class=poo><td><b>spider links</b></td>"
 		  "<td>\n"
 		  "<input type=radio name=spiderlinks value=0>no &nbsp; "
 		  "<input type=radio name=spiderlinks value=1 checked>yes "
@@ -249,18 +267,18 @@ bool sendReply ( void *state ) {
 
 
 
-		  "<tr><td><b>inject scraped links</b></td>"
+		  "<tr class=poo><td><b>inject scraped links</b></td>"
 		  "<td>\n"
 		  "<input type=radio name=injectlinks value=0 checked>no &nbsp; "
 		  "<input type=radio name=injectlinks value=1>yes "
 		  "</td></tr>\n\n"
 
-		  "<tr><td><b>collection</b></td>"
+		  "<tr class=poo><td><b>collection</b></td>"
 		  "<td>\n"
 		  "<input type=text name=c value=\"%s\" size=15>"
 		  "</td></tr>\n\n"
 
-		  "<tr><td><b>quick reply?</b><br>"
+		  "<tr class=poo><td><b>quick reply?</b><br>"
 		  "<font size=1>Should reply be short? "
 		  "Default: no"
 		  "</td>"
@@ -269,7 +287,7 @@ bool sendReply ( void *state ) {
 		  "<input type=radio name=quick value=1>yes "
 		  "</td></tr>\n\n"
 
-		  "<tr><td><b>only inject new docs?</b><br>"
+		  "<tr class=poo><td><b>only inject new docs?</b><br>"
 		  "<font size=1>Skips injection if docs already indexed. "
 		  "Default: no"
 		  "</td>"
@@ -279,17 +297,17 @@ bool sendReply ( void *state ) {
 		  "</td></tr>\n\n"
 
 
-		  "<tr><td><b>delete?</b><br>"
+		  "<tr class=poo><td><b>delete url?</b><br>"
 		  "<font size=1>Should this url be deleted from the index? "
 		  "Default: no"
 		  "</td>"
 		  "<td>\n"
-		  "<input type=radio name=delete value=0 checked>no &nbsp; "
-		  "<input type=radio name=delete value=1>yes "
+		  "<input type=radio name=deleteurl value=0 checked>no &nbsp; "
+		  "<input type=radio name=deleteurl value=1>yes "
 		  "</td></tr>\n\n"
 
 
-		  "<tr><td><b>recycle content?</b><br>"
+		  "<tr class=poo><td><b>recycle content?</b><br>"
 		  "<font size=1>Should page content be recycled if "
 		  "reindexing? "
 		  "Default: no"
@@ -299,16 +317,18 @@ bool sendReply ( void *state ) {
 		  "<input type=radio name=recycle value=1>yes "
 		  "</td></tr>\n\n"
 
-		  "<tr><td><b>ip</b><br>"
+		  /*
+		  "<tr class=poo><td><b>ip</b><br>"
 		  "<font size=1>IP address of the url. If blank then "
 		  "Gigablast will look up. "
 		  "Default: blank"
 		  "</td>"
 		  "<td>\n<input type=text name=ip value=\"\" size=15>"
 		  "</td></tr>\n\n"
+		  */
 
 		  /*
-		  "<tr><td><b>do ip lookups?</b><br>"
+		  "<tr class=poo><td><b>do ip lookups?</b><br>"
 		  "<font size=1>Should Gigablast look up the IP address "
 		  "of the url, if it is not provided. "
 		  "Default: yes"
@@ -319,7 +339,7 @@ bool sendReply ( void *state ) {
 		  "</td></tr>\n\n"
 		  */
 
-		  //"<tr><td><b>is url new?</b><br>"
+		  //"<tr class=poo><td><b>is url new?</b><br>"
 		  //"<font size=1>Is this url new to the index? If unsure "
 		  //"then you should say no here. "
 		  //"Default: yes"
@@ -329,7 +349,7 @@ bool sendReply ( void *state ) {
 		  //"<input type=radio name=isnew value=1 checked>yes "
 		  //"</td></tr>\n\n"
 
-		  "<tr><td><b>dedup?</b><br>"
+		  "<tr class=poo><td><b>dedup?</b><br>"
 		  "<font size=1>Should this url be skipped if there is "
 		  "already  a url in the index from this same domain with "
 		  "this same content? "
@@ -339,14 +359,14 @@ bool sendReply ( void *state ) {
 		  "<input type=radio name=dedup value=0>no &nbsp; "
 		  "<input type=radio name=dedup value=1 checked>yes "
 		  "</td></tr>\n\n" ,
-		  //"<tr><td><b>ruleset</b><br>"
+		  //"<tr class=poo><td><b>ruleset</b><br>"
 		  //"<font size=1>Use this ruleset to index the URL. "
 		  //"Default: auto"
 		  //"</td>"
 		  //"<td>\n<select name=rs>" ,
 		  pm , // msg7->m_pwd , 
 		  //msg7->m_username,
-		  LIGHT_BLUE , DARK_BLUE , bb , msg7->m_coll );
+		  TABLE_STYLE , bb , msg7->m_coll );
 
 
 	//p += gbstrlen(p);
@@ -382,7 +402,7 @@ bool sendReply ( void *state ) {
 
 	// make a table, each row will be an injectable parameter
 	sb.safePrintf (
-		  "<tr><td><b>content has mime</b><br>"
+		  "<tr class=poo><td><b>content has mime</b><br>"
 		  "<font size=1>IP address of the url. If blank then "
 		  "Gigablast will look up. "
 		  "Default: blank"
@@ -392,10 +412,13 @@ bool sendReply ( void *state ) {
 		  "<input type=radio name=hasmime value=1>yes "
 		  "</td></tr>\n\n" 
 
-		  "<tr><td colspan=2>"
+		  "<tr class=poo><td colspan=2>"
 		  "<center>"
 		  "<b>content</b><br>"
-		  "<font size=1>Enter the content here. Enter MIME header "
+		  "<font size=1>If you want to supply the URL's content "
+		  "rather than have Gigablast download it, then "
+		  "enter the content here. "
+		  "Enter MIME header "
 		  "first if \"content has mime\" is set to true above. "
 		  "Separate MIME from actual content with two returns."
 		  "<br>"
@@ -404,11 +427,15 @@ bool sendReply ( void *state ) {
 		  "\n"
 		  "<textarea rows=32 cols=80 name=content>"
 		  "</textarea>"
-		  "<br>"
-		  "<br>\n\n"
-		  "<input type=submit value=Submit>"
 		  "</center>"
 		  "</td></tr></table>\n"
+
+		  "<br>"
+		  "<br>\n\n"
+		  "<center>"
+		  "<input type=submit value=Submit>"
+		  "</center>"
+
 		  "</form>\n"
 		  );
 
@@ -463,34 +490,48 @@ bool Msg7::inject ( TcpSocket *s ,
 	long  contentLen;
 
 	// get the junk
-	char *coll           = r->getString ( "c" , NULL  , NULL /*default*/);
+	//char *coll        = r->getString ( "c" , NULL  , NULL /*default*/);
 	//if ( ! coll ) coll = "main";
 	// sometimes crawlbot will add or reset a coll and do an inject
 	// in PageCrawlBot.cpp
 	//if ( ! coll ) coll = r->getString("addcoll");
 	//if ( ! coll ) coll = r->getString("resetcoll");
-	if ( ! coll ) coll = collOveride;
+	//if ( ! coll ) coll = collOveride;
 
 	// default to main
-	if ( ! coll || ! coll[0] ) coll = "main";
+	//if ( ! coll || ! coll[0] ) coll = "main";
+
+	if ( collOveride && ! collOveride[0] ) collOveride = NULL;
+
+	CollectionRec *cr = NULL;
+	if ( collOveride ) cr = g_collectiondb.getRec ( collOveride );
+	else cr = g_collectiondb.getRec ( r );
+
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
+		return true;
+	}
+
+	char *coll = cr->m_coll;
 
 	bool  quickReply     = r->getLong   ( "quick" , 0 );	
 	//char *pwd            = r->getString ( "pwd" , NULL );
 	char *url            = r->getString ( "u" , NULL , NULL /*default*/);
 	// for diffbot.cpp api
 	if ( ! url ) url = r->getString("injecturl",NULL,NULL);
+	if ( ! url ) url = r->getString("url",NULL,NULL);
 	// PageCrawlBot.cpp uses "seed"
 	if ( ! url ) url = r->getString("seed",NULL,NULL);
 
 	bool  recycleContent = r->getLong   ( "recycle",0);
-	char *ips            = r->getString ( "ip" , NULL , NULL );
+	//char *ips            = r->getString ( "ip" , NULL , NULL );
 	//char *username       = g_users.getUsername(r);
-	long firstIndexed = r->getLongLong("firstindexed",0LL);
-	long lastSpidered = r->getLongLong("lastspidered",0LL);
+	//long firstIndexed = r->getLongLong("firstindexed",0LL);
+	//long lastSpidered = r->getLongLong("lastspidered",0LL);
 	long hopCount     = r->getLong("hopcount",-1);
 	long newOnly      = r->getLong("newonly",0);
 	long charset      = r->getLong("charset",-1);
-	long deleteIt     = r->getLong("delete",0);
+	long deleteUrl    = r->getLong("deleteurl",0);
 	char hasMime      = r->getLong("hasmime",0);
 	// do consistency testing?
 	bool doConsistencyTesting = r->getLong("dct",0);
@@ -502,7 +543,7 @@ bool Msg7::inject ( TcpSocket *s ,
 
 	long  forcedIp  = 0;
 	
-	if ( ips ) forcedIp = atoip ( ips , gbstrlen(ips) );
+	//if ( ips ) forcedIp = atoip ( ips , gbstrlen(ips) );
 
 	char *content        = r->getString ( "content" , &contentLen , NULL );
 	// mark doesn't like to url-encode his content
@@ -543,17 +584,20 @@ bool Msg7::inject ( TcpSocket *s ,
 			niceness,
 			state,
 			callback,
-			firstIndexed,
-			lastSpidered,
+			//firstIndexed,
+			//lastSpidered,
 			hopCount,
 			newOnly,
 			charset,
 			spiderLinks,
-			deleteIt,
+			deleteUrl,
 			hasMime,
 			doConsistencyTesting);
 }
 
+// . returns false if blocked, true otherwise
+// . if returns false will call your callback(state) when is done
+// . returns true and sets g_errno on error
 bool Msg7::inject ( char *url ,
 		    long  forcedIp ,
 		    char *content ,
@@ -567,13 +611,13 @@ bool Msg7::inject ( char *url ,
 		    long  niceness,
 		    void *state ,
 		    void (*callback)(void *state),
-		    long firstIndexed,
-		    long lastSpidered,
+		    //long firstIndexed,
+		    //long lastSpidered,
 		    long hopCount,
 		    char newOnly,
 		    short charset,
 		    char spiderLinks,
-		    char deleteIt,
+		    char deleteUrl,
 		    char hasMime,
 		    bool doConsistencyTesting
 		    ) {
@@ -581,11 +625,14 @@ bool Msg7::inject ( char *url ,
 	m_quickReply = quickReply;
 
 	// store coll
-	if ( ! coll ) { g_errno = ENOCOLLREC; return true; }
-        long collLen = gbstrlen ( coll );
-	if ( collLen > MAX_COLL_LEN ) collLen = MAX_COLL_LEN;
-	strncpy ( m_coll , coll , collLen );
-	m_coll [ collLen ] = '\0';
+	//if ( ! coll ) { g_errno = ENOCOLLREC; return true; }
+	//      long collLen = gbstrlen ( coll );
+	//if ( collLen > MAX_COLL_LEN ) collLen = MAX_COLL_LEN;
+	//strncpy ( m_coll , coll , collLen );
+	//m_coll [ collLen ] = '\0';
+
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	if ( ! cr ) { g_errno = ENOCOLLREC; return true; }
 
 	// store user
 	//long ulen = 0;
@@ -612,148 +659,35 @@ bool Msg7::inject ( char *url ,
 	if ( g_repairMode ) { g_errno = EREPAIRING; return true; }
 
 	// send template reply if no content supplied
-	if ( ! content && ! recycleContent ) {
-		log("inject: no content supplied to inject command and "
-		    "recycleContent is false.");
-		//return true;
-	}
-
-	// clean url?
-	// normalize and add www. if it needs it
-	Url uu;
-	uu.set ( url , gbstrlen(url) , true );
-	// remove >'s i guess and store in st1->m_url[] buffer
-	char cleanUrl[MAX_URL_LEN+1];
-	urlLen = cleanInput ( cleanUrl,
-			      MAX_URL_LEN, 
-			      uu.getUrl(),
-			      uu.getUrlLen() );
-
-
-	// this can go on the stack since set4() copies it
-	SpiderRequest sreq;
-	sreq.reset();
-	strcpy(sreq.m_url, cleanUrl );
-	// parentdocid of 0
-	long firstIp = hash32n(cleanUrl);
-	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
-	sreq.setKey( firstIp,0LL, false );
-	sreq.m_isInjecting   = 1; 
-	sreq.m_isPageInject  = 1;
-	sreq.m_hopCount      = hopCount;
-	sreq.m_hopCountValid = 1;
-	sreq.m_fakeFirstIp   = 1;
-	sreq.m_firstIp       = firstIp;
+	//if ( ! content && ! recycleContent ) {
+	//	log("inject: no content supplied to inject command and "
+	//	    "recycleContent is false.");
+	//	//return true;
+	//}
 
 	// shortcut
 	XmlDoc *xd = &m_xd;
 
-	// log it now
-	//log("inject: injecting doc %s",cleanUrl);
+	if ( ! xd->injectDoc ( url ,
+			       cr ,
+			       content ,
+			       hasMime , // content starts with http mime?
+			       hopCount,
+			       charset,
 
-	static char s_dummy[3];
-	// sometims the content is indeed NULL...
-	if ( newOnly && ! content ) { 
-		// don't let it be NULL because then xmldoc will
-		// try to download the page!
-		s_dummy[0] = '\0';
-		content = s_dummy;
-		//char *xx=NULL;*xx=0; }
-	}
+			       deleteUrl,
+			       contentType, // CT_HTML, CT_XML
+			       spiderLinks ,
+			       newOnly, // index iff new
 
+			       state,
+			       callback ) )
+		// we blocked...
+		return false;
 
-	// . use the enormous power of our new XmlDoc class
-	// . this returns false with g_errno set on error
-	if ( //m_needsSet &&
-	     ! xd->set4 ( &sreq       ,
-			  NULL        ,
-			  m_coll  ,
-			  NULL        , // pbuf
-			  // give it a niceness of 1, we have to be
-			  // careful since we are a niceness of 0!!!!
-			  niceness, // 1 , 
-			  // inject this content
-			  content ,
-			  deleteIt, // false, // deleteFromIndex ,
-			  forcedIp ,
-			  contentType ,
-			  lastSpidered ,
-			  hasMime )) {
-		// g_errno should be set if that returned false
-		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
-		return true;
-	}
-	// do not re-call the set
-	//m_needsSet = false;
-	// make this our callback in case something blocks
-	xd->setCallback ( state , callback );
-
-	xd->m_doConsistencyTesting = doConsistencyTesting;
-
-	// . set xd from the old title rec if recycle is true
-	// . can also use XmlDoc::m_loadFromOldTitleRec flag
-	if ( recycleContent ) xd->m_recycleContent = true;
-
-	// othercrap
-	if ( firstIndexed ) {
-		xd->m_firstIndexedDate = firstIndexed;
-		xd->m_firstIndexedDateValid = true;
-	}
-
-	if ( lastSpidered ) {
-		xd->m_spideredTime      = lastSpidered;
-		xd->m_spideredTimeValid = true;
-	}
-
-	if ( hopCount != -1 ) {
-		xd->m_hopCount = hopCount;
-		xd->m_hopCountValid = true;
-	}
-
-	if ( charset != -1 && charset != csUnknown ) {
-		xd->m_charset = charset;
-		xd->m_charsetValid = true;
-	}
-
-	// avoid looking up ip of each outlink to add "firstip" tag to tagdb
-	// because that can be slow!!!!!!!
-	xd->m_spiderLinks = spiderLinks;
-	xd->m_spiderLinks2 = spiderLinks;
-	xd->m_spiderLinksValid = true;
-
-	// . newOnly is true --> do not inject if document is already indexed!
-	// . maybe just set indexCode
-	xd->m_newOnly = newOnly;
-
-	// do not re-lookup the robots.txt
-	xd->m_isAllowed      = true;
-	xd->m_isAllowedValid = true;
-	xd->m_crawlDelay     = -1; // unknown
-	xd->m_crawlDelayValid = true;
-
-	// set this now
-	g_inPageInject = true;
-
-	// log it now
-	//log("inject: indexing injected doc %s",cleanUrl);
-
-	// . now tell it to index
-	// . this returns false if blocked
-	bool status = xd->indexDoc ( );
-
-	// log it. i guess only for errors when it does not block?
-	// because xmldoc.cpp::indexDoc calls logIt()
-	if ( status ) xd->logIt();
-
-	// undo it
-	g_inPageInject = false;
-
-	// note that it blocked
-	//if ( ! status ) log("inject: blocked for %s",cleanUrl);
-
-	// return false if it blocked
-	return status;
+	return true;
 }
+
 
 ///////////////
 //

@@ -23,10 +23,11 @@
 #include "Parms.h"
 #include "Rebalance.h"
 
-// . this was 10 but cpu is getting pegged, maybe set to 30 now
+// . this was 10 but cpu is getting pegged, so i set to 45
 // . we consider the collection done spidering when no urls to spider
 //   for this many seconds
-#define SPIDER_DONE_TIMER 45
+// . i'd like to set back to 10 for speed... maybe even 5 or less
+#define SPIDER_DONE_TIMER 20
 
 
 Doledb g_doledb;
@@ -37,6 +38,8 @@ SpiderRequest *g_sreq = NULL;
 
 long g_corruptCount = 0;
 
+static char s_countsAreValid = 1;
+
 /////////////////////////
 /////////////////////////      SPIDEREC
 /////////////////////////
@@ -45,6 +48,10 @@ void SpiderRequest::setKey (long firstIp,
 			    long long parentDocId,
 			    long long uh48,
 			    bool isDel) {
+
+	// sanity
+	if ( firstIp == 0 || firstIp == -1 ) { char *xx=NULL;*xx=0; }
+
 	m_key = g_spiderdb.makeKey ( firstIp,uh48,true,parentDocId , isDel );
 	// set dataSize too!
 	setDataSize();
@@ -129,6 +136,7 @@ long SpiderRequest::print ( SafeBuf *sbarg ) {
 	if ( m_isRSSExt ) sb->safePrintf("ISRSSEXT ");
 	if ( m_isUrlPermalinkFormat ) sb->safePrintf("ISURLPERMALINKFORMAT ");
 	if ( m_isPingServer ) sb->safePrintf("ISPINGSERVER ");
+	if ( m_fakeFirstIp ) sb->safePrintf("ISFAKEFIRSTIP ");
 	if ( m_isInjecting ) sb->safePrintf("ISINJECTING ");
 	if ( m_forceDelete ) sb->safePrintf("FORCEDELETE ");
 	if ( m_sameDom ) sb->safePrintf("SAMEDOM ");
@@ -148,7 +156,7 @@ long SpiderRequest::print ( SafeBuf *sbarg ) {
 	if ( m_hasAuthorityInlink ) sb->safePrintf("HASAUTHORITYINLINK ");
 	if ( m_hasContactInfo ) sb->safePrintf("HASCONTACTINFO ");
 
-	if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
+	//if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
 	if ( m_isContacty      ) sb->safePrintf("CONTACTY ");
 	if ( m_isWWWSubdomain  ) sb->safePrintf("WWWSUBDOMAIN ");
 	if ( m_avoidSpiderLinks ) sb->safePrintf("AVOIDSPIDERLINKS ");
@@ -233,11 +241,11 @@ long SpiderReply::print ( SafeBuf *sbarg ) {
 	if ( m_isPermalink ) sb->safePrintf("ISPERMALINK ");
 	if ( m_isPingServer ) sb->safePrintf("ISPINGSERVER ");
 	//if ( m_deleted ) sb->safePrintf("DELETED ");
-	if ( m_isIndexed ) sb->safePrintf("ISINDEXED ");
+	if ( m_isIndexed && ! m_isIndexedINValid) sb->safePrintf("ISINDEXED ");
 
 	if ( m_hasAddress    ) sb->safePrintf("HASADDRESS ");
 	if ( m_hasTOD        ) sb->safePrintf("HASTOD ");
-	if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
+	//if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
 	if ( m_isContacty    ) sb->safePrintf("CONTACTY ");
 
 	//sb->safePrintf("url=%s",m_url);
@@ -251,16 +259,21 @@ long SpiderReply::print ( SafeBuf *sbarg ) {
 
 
 long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
-				   XmlDoc *xd ) {
+				   XmlDoc *xd , long row ) {
 
-	sb->safePrintf("<tr>\n");
+	sb->safePrintf("<tr bgcolor=#%s>\n",LIGHT_BLUE);
 
 	// show elapsed time
 	if ( xd ) {
 		long long now = gettimeofdayInMilliseconds();
 		long long elapsed = now - xd->m_startTime;
+		sb->safePrintf(" <td>%li</td>\n",row);
 		sb->safePrintf(" <td>%llims</td>\n",elapsed);
-		sb->safePrintf(" <td>%li</td>\n",(long)xd->m_collnum);
+		collnum_t collnum = xd->m_collnum;
+		CollectionRec *cr = g_collectiondb.getRec(collnum);
+		char *cs = ""; if ( cr ) cs = cr->m_coll;
+		sb->safePrintf(" <td><a href=/crawlbot?c=%s>%li</a></td>\n",
+			       cs,(long)collnum);
 	}
 
 	sb->safePrintf(" <td><nobr>");
@@ -341,7 +354,7 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 	if ( m_hasAuthorityInlink ) sb->safePrintf("HASAUTHORITYINLINK ");
 	if ( m_hasContactInfo ) sb->safePrintf("HASCONTACTINFO ");
 
-	if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
+	//if ( m_hasSiteVenue  ) sb->safePrintf("HASSITEVENUE ");
 	if ( m_isContacty      ) sb->safePrintf("CONTACTY ");
 
 	//if ( m_inOrderTree ) sb->safePrintf("INORDERTREE ");
@@ -360,10 +373,11 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 long SpiderRequest::printTableHeaderSimple ( SafeBuf *sb , 
 					     bool currentlySpidering) {
 
-	sb->safePrintf("<tr>\n");
+	sb->safePrintf("<tr bgcolor=#%s>\n",DARK_BLUE);
 
 	// how long its been being spidered
 	if ( currentlySpidering ) {
+		sb->safePrintf(" <td><b>#</b></td>\n");
 		sb->safePrintf(" <td><b>elapsed</b></td>\n");
 		sb->safePrintf(" <td><b>coll</b></td>\n");
 	}
@@ -383,15 +397,21 @@ long SpiderRequest::printTableHeaderSimple ( SafeBuf *sb ,
 }
 
 long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
-					 XmlDoc *xd ) {
+					 XmlDoc *xd , long row ) {
 
-	sb->safePrintf("<tr>\n");
+	sb->safePrintf("<tr bgcolor=#%s>\n",LIGHT_BLUE);
 
 	// show elapsed time
 	if ( xd ) {
 		long long now = gettimeofdayInMilliseconds();
 		long long elapsed = now - xd->m_startTime;
+		sb->safePrintf(" <td>%li</td>\n",row);
 		sb->safePrintf(" <td>%llims</td>\n",elapsed);
+		// print collection
+		CollectionRec *cr = g_collectiondb.getRec ( xd->m_collnum );
+		char *coll = "";
+		if ( cr ) coll = cr->m_coll;
+		sb->safePrintf("<td>%s</td>",coll);
 	}
 
 	sb->safePrintf(" <td><nobr>");
@@ -464,10 +484,11 @@ long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
 
 long SpiderRequest::printTableHeader ( SafeBuf *sb , bool currentlySpidering) {
 
-	sb->safePrintf("<tr>\n");
+	sb->safePrintf("<tr bgcolor=#%s>\n",DARK_BLUE);
 
 	// how long its been being spidered
 	if ( currentlySpidering ) {
+		sb->safePrintf(" <td><b>#</b></td>\n");
 		sb->safePrintf(" <td><b>elapsed</b></td>\n");
 		sb->safePrintf(" <td><b>coll</b></td>\n");
 	}
@@ -547,9 +568,6 @@ bool Spiderdb::init ( ) {
 	long pcmem = 20000000;//g_conf.m_spiderdbMaxDiskPageCacheMem;
 	// keep this low if we are the tmp cluster
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
-
-	//pcmem = 0;
-
 	// key parser checks
 	//long      ip         = 0x1234;
 	char      priority   = 12;
@@ -628,7 +646,7 @@ bool Spiderdb::init2 ( long treeMem ) {
 			    NULL          );// &m_pc 
 }
 
-
+/*
 bool Spiderdb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -640,6 +658,7 @@ bool Spiderdb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
+*/
 
 bool Spiderdb::verify ( char *coll ) {
 	//return true;
@@ -790,7 +809,7 @@ bool Doledb::init ( ) {
 		return false;
 	return true;
 }
-
+/*
 bool Doledb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	//if ( ! doVerify ) return true;
@@ -802,6 +821,7 @@ bool Doledb::addColl ( char *coll, bool doVerify ) {
 	//log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
+*/
 
 /////////////////////////
 /////////////////////////      SpiderCache
@@ -820,7 +840,7 @@ bool Doledb::addColl ( char *coll, bool doVerify ) {
 #define SR_READ_SIZE (512*1024)
 
 // for caching in s_ufnTree
-#define MAX_NODES (30)
+//#define MAX_NODES (30)
 
 // a global class extern'd in .h file
 SpiderCache g_spiderCache;
@@ -879,14 +899,19 @@ void SpiderCache::save ( bool useThread ) {
 	// assume saving
 	//m_isSaving = true;
 	// loop over all SpiderColls and get the best
-	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = getSpiderCollIffNonNull(i);//m_spiderColls[i];
 		if ( ! sc ) continue;
 		RdbTree *tree = &sc->m_waitingTree;
+		if ( ! tree->m_needsSave ) continue;
+		// if already saving from a thread
+		if ( tree->m_isSaving ) continue;
 		char *filename = "waitingtree";
 		char dir[1024];
 		sprintf(dir,"%scoll.%s.%li",g_hostdb.m_dir,
 			sc->m_coll,(long)sc->m_collnum);
+		// log it for now
+		log("spider: saving waiting tree for cn=%li",(long)i);
 		// returns false if it blocked, callback will be called
 		tree->fastSave ( dir, // g_hostdb.m_dir ,
 				 filename ,
@@ -929,7 +954,7 @@ void SpiderCache::save ( bool useThread ) {
 }
 
 bool SpiderCache::needsSave ( ) {
-	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = getSpiderCollIffNonNull(i);//m_spiderColls[i];
 		if ( ! sc ) continue;
 		if ( sc->m_waitingTree.m_needsSave ) return true;
@@ -942,7 +967,7 @@ bool SpiderCache::needsSave ( ) {
 void SpiderCache::reset ( ) {
 	log(LOG_DEBUG,"spider: resetting spidercache");
 	// loop over all SpiderColls and get the best
-	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = getSpiderCollIffNonNull(i);
 		if ( ! sc ) continue;
 		sc->reset();
@@ -1028,9 +1053,11 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 /////////////////////////
 
 SpiderColl::SpiderColl () {
+	m_deleteMyself = false;
 	m_gettingList1 = false;
 	m_gettingList2 = false;
 	m_lastScanTime = 0;
+	m_isPopulating = false;
 	m_numAdded = 0;
 	m_numBytesScanned = 0;
 	m_lastPrintCount = 0;
@@ -1302,7 +1329,7 @@ void doDoledbNuke ( int fd , void *state ) {
 	// need to recompute this!
 	sc->m_ufnMapValid = false;
 	// reset this cache
-	clearUfnTable();
+	//clearUfnTable();
 	// activate a scan if not already activated
 	sc->m_waitingTreeNeedsRebuild = true;
 	// if a scan is ongoing, this will re-set it
@@ -1425,7 +1452,7 @@ bool SpiderColl::makeWaitingTree ( ) {
 		}
 		// note it
 		if ( g_conf.m_logDebugSpider )
-			log(LOG_DEBUG,"spider: added time=1 ip=%s to waiting "
+			logf(LOG_DEBUG,"spider: added time=1 ip=%s to waiting "
 			    "tree (node#=%li)", iptoa(firstIp),wn);
 		// a tmp var
 		long long fakeone = 1LL;
@@ -1433,6 +1460,7 @@ bool SpiderColl::makeWaitingTree ( ) {
 		if ( ! m_waitingTable.addKey ( &firstIp , &fakeone ) ) {
 			log("spider: makeWaitTree2: %s",mstrerror(g_errno));
 			m_waitingTree.deleteNode ( wn , true );
+			//log("sper: 6 del node %li for %s",wn,iptoa(firstIp));
 			return false;
 		}
 	}
@@ -1502,7 +1530,7 @@ SpiderColl::~SpiderColl () {
 }
 
 // we call this now instead of reset when Collectiondb::resetColl() is used
-void SpiderColl::clear ( ) {
+void SpiderColl::clearLocks ( ) {
 
 	// remove locks from locktable for all spiders out i guess
 	HashTableX *ht = &g_spiderLoop.m_lockTable;
@@ -1522,6 +1550,7 @@ void SpiderColl::clear ( ) {
 		goto top;
 	}
 
+	/*
 	// reset these for SpiderLoop;
 	m_nextDoledbKey.setMin();
 	m_didRound = false;
@@ -1555,6 +1584,7 @@ void SpiderColl::clear ( ) {
 	// assume the whole thing is not empty
 	m_allDoledbPrioritiesEmpty = 0;//false;
 	m_lastEmptyCheck = 0;
+	*/
 }
 
 void SpiderColl::reset ( ) {
@@ -1567,6 +1597,8 @@ void SpiderColl::reset ( ) {
 	m_pri2 = -1; // MAX_SPIDER_PRIORITIES - 1;
 	m_twinDied = false;
 	m_lastUrlFiltersUpdate = 0;
+
+	m_isPopulating = false;
 
 	char *coll = "unknown";
 	if ( m_coll[0] ) coll = m_coll;
@@ -1732,31 +1764,6 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	//   and the webmaster did not have one. then we can 
 	//   crawl more vigorously...
 	//if ( srep->m_crawlDelayMS >= 0 ) {
-
-	///////
-	//
-	// update page count table
-	//
-	///////
-	if ( srep->m_wasIndexed && 
-	     ! srep->m_isIndexed &&
-	     srep->m_wasIndexedValid ) {
-		if ( m_scanningIp == srep->m_firstIp )
-			log("spider: crap. got reply for ip counting pages");
-		m_cr->m_pageCountTable.addScore ( &srep->m_domHash32 , -1 );
-		m_cr->m_pageCountTable.addScore ( &srep->m_siteHash32 , -1 );
-		m_cr->m_pageCountTable.addScore ( &srep->m_firstIp , -1 );
-	}
-	else if ( ! srep->m_wasIndexed && 
-		  srep->m_isIndexed &&
-		  srep->m_wasIndexedValid ) {
-		if ( m_scanningIp == srep->m_firstIp )
-			log("spider: crap. got reply for ip counting pages");
-		m_cr->m_pageCountTable.addScore ( &srep->m_domHash32 , 1 );
-		m_cr->m_pageCountTable.addScore ( &srep->m_siteHash32 , 1 );
-		m_cr->m_pageCountTable.addScore ( &srep->m_firstIp , 1 );
-	}
-
 
 	bool update = false;
 	// use the domain hash for this guy! since its from robots.txt
@@ -2023,17 +2030,6 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	// was doled then we should probably delete the old doledb key
 	// and add the new one. hmm, the waitingtree scan code ...
 
-
-	// if we are also currently scanning spiderdb to find a spiderrequest
-	// to add to doledb, let the scan know so that it does not remove
-	// the waitingtree key if it does not find a suitable url. i've
-	// seen us miss out when new ones come in during a scan. we end up
-	// logging "nuking misleading entry" because the new guys were still
-	// in the msg4 cache. the new guys tried to call addToWaitingTree()
-	// but because there was still an entry in there, they did not
-	// add themselves. this happend while spidering outlier.cc.
-	m_gotNewRequestsForScanningIp = true;
-
 	// sanity check
 	//long long ttt=getEarliestSpiderTimeFromWaitingTree(sreq->m_firstIp);
 	//logf (LOG_DEBUG,"spider: earliestime=%lli for firstip=%s",
@@ -2145,21 +2141,21 @@ bool SpiderLoop::printLockTable ( ) {
 // . 1. called by addSpiderReply(). it should have the sameIpWait available
 //      or at least that will be in the crawldelay cache table.
 //      SpiderReply::m_crawlDelayMS. Unfortunately, no maxSpidersPerIP!!!
-//      we just add a "0" in the waiting tree which means scanSpiderdb() will
+//      we just add a "0" in the waiting tree which means evalIpLoop() will
 //      be called and can get the maxSpidersPerIP from the winning candidate
 //      and add to the waiting tree based on that.
 // . 2. called by addSpiderRequests(). It SHOULD maybe just add a "0" as well
 //      to offload the logic. try that.
 // . 3. called by populateWaitingTreeFromSpiderdb(). it just adds "0" as well,
 //      if not doled
-// . 4. UPDATED in scanSpiderdb() if the best SpiderRequest for a firstIp is
+// . 4. UPDATED in evalIpLoop() if the best SpiderRequest for a firstIp is
 //      in the future, this is the only time we will add a waiting tree key
 //      whose spider time is non-zero. that is where we also take 
-//      sameIpWait and maxSpidersPerIP into consideration. scanSpiderdb()
+//      sameIpWait and maxSpidersPerIP into consideration. evalIpLoop() 
 //      will actually REMOVE the entry from the waiting tree if that IP
 //      already has the max spiders outstanding per IP. when a spiderReply
 //      is received it will populate the waiting tree again with a "0" entry
-//      and scanSpiderdb() will re-do its check.
+//      and evalIpLoop() will re-do its check.
 //
 //////
 
@@ -2176,8 +2172,25 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	if ( g_conf.m_logDebugSpider )
 		log("spider: addtowaitingtree ip=%s",iptoa(firstIp));
 
+	// we are currently reading spiderdb for this ip and trying to find
+	// a best SpiderRequest or requests to add to doledb. so if this 
+	// happens, let the scan know that more replies or requests came in
+	// while we were scanning so that it should not delete the rec from
+	// waiting tree and not add to doledb, then we'd lose it forever or
+	// until the next waitingtree rebuild was triggered in time.
+	//
+	// Before i was only setting this in addSpiderRequest() so if a new
+	// reply came in it was not setting m_gotNewDataForScanninIp and
+	// we ended up losing the IP from the waiting tree forever (or until
+	// the next timed rebuild). putting it here seems to fix that.
+	if ( firstIp == m_scanningIp ) {
+		m_gotNewDataForScanningIp = m_scanningIp;
+		//log("spider: got new data for %s",iptoa(firstIp));
+		//return true;
+	}
+
 	// . this can now be only 0
-	// . only scanSpiderdb will add a waiting tree key with a non-zero
+	// . only evalIpLoop() will add a waiting tree key with a non-zero
 	//   value after it figures out the EARLIEST time that a 
 	//   SpiderRequest from this firstIp can be spidered.
 	if ( spiderTimeMS != 0 ) { char *xx=NULL;*xx=0; }
@@ -2270,6 +2283,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 			    iptoa(firstIp));
 		// remove from tree so we can add it below
 		m_waitingTree.deleteNode ( tn , false );
+		//log("spider: 4 del node %li for %s",tn,iptoa(firstIp));
 	}
 	else {
 		char *s="";
@@ -2289,7 +2303,13 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	key_t wk = makeWaitingTreeKey ( spiderTimeMS, firstIp );
 	// what is this?
 	if ( firstIp == 0 || firstIp == -1 ) {
-		log("spider: got ip of %s. wtf?",iptoa(firstIp) );
+		log("spider: got ip of %s. wtf? failed to add to "
+		    "waiting tree, but return true anyway.",iptoa(firstIp) );
+		// don't return true lest m_nextKey2 never gets updated
+		// and we end up in an infinite loop doing 
+		// populateWaitingTreeFromSpiderdb()
+		return true;
+		//return false;
 		char *xx=NULL; *xx=0;
 	}
 
@@ -2302,12 +2322,15 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 		if ( more < 10 ) more = 10;
 		if ( more > 100000 ) more = 100000;
 		long newNum = max + more;
-		log("spider: growing waiting tree to from %li to %li nodes",
-		    max , newNum );
+		log("spider: growing waiting tree to from %li to %li nodes "
+		    "for collnum %li",
+		    max , newNum , (long)m_collnum );
 		if ( ! m_waitingTree.growTree ( newNum , MAX_NICENESS ) )
-			return false;
+			return log("spider: failed to grow waiting tree to "
+				   "add firstip %s",iptoa(firstIp) );
 		if ( ! m_waitingTable.setTableSize ( newNum , NULL , 0 ) )
-			return false;
+			return log("spider: failed to grow waiting table to "
+				   "add firstip %s",iptoa(firstIp) );
 	}
 
 
@@ -2323,15 +2346,15 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 
 	// note it
 	if ( g_conf.m_logDebugSpider )
-		log(LOG_DEBUG,"spider: added time=%lli ip=%s to waiting tree "
-		    "scan=%li",
-		    spiderTimeMS , iptoa(firstIp),(long)callForScan);
+		logf(LOG_DEBUG,"spider: added time=%lli ip=%s to waiting tree "
+		    "scan=%li node=%li",
+		    spiderTimeMS , iptoa(firstIp),(long)callForScan,wn);
 
 	// add to table now since its in the tree
 	if ( ! m_waitingTable.addKey ( &firstIp , &spiderTimeMS ) ) {
 		// remove from tree then
 		m_waitingTree.deleteNode ( wn , false );
-		log("spider: wait table add failed ip=%s",iptoa(firstIp));
+		//log("spider: 5 del node %li for %s",wn,iptoa(firstIp));
 		return false;
 	}
 	// . kick off a scan, i don't care if this blocks or not!
@@ -2342,7 +2365,7 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	// . calling this everytime msg4 adds a spider request is super slow!!!
 	//   SO TAKE THIS OUT FOR NOW
 	// . no that was not it. mdw. put it back.
-	if ( callForScan ) populateDoledbFromWaitingTree ( false );
+	if ( callForScan ) populateDoledbFromWaitingTree ( );
 	// tell caller there was no error
 	return true;
 }
@@ -2404,7 +2427,7 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 		// and becase the trees/tables for spidercache are saving
 		// in Process.cpp's g_spiderCache::save() call
 		m_waitingTree.deleteNode ( node , true );
-
+		//log("spdr: 8 del node node %li for %s",node,iptoa(firstIp));
 		// note it
 		if ( g_conf.m_logDebugSpider )
 			log(LOG_DEBUG,"spider: removed1 ip=%s from waiting "
@@ -2436,7 +2459,7 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 	// sanity
 	if ( firstIp == 0 || firstIp == -1 ) { char *xx=NULL;*xx=0; }
 	// we set this to true when done
-	m_isReadDone = false;
+	//m_isReadDone = false;
 	// compute the best request from spiderdb list, not valid yet
 	m_bestRequestValid = false;
 	m_lastReplyValid   = false;
@@ -2448,7 +2471,23 @@ long SpiderColl::getNextIpFromWaitingTree ( ) {
 	return firstIp;
 }
 
-static void gotSpiderdbListWrapper2( void *state , RdbList *list , Msg5 *msg5);
+static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
+
+	SpiderColl *THIS = (SpiderColl *)state;
+
+	// did our collection rec get deleted? since we were doing a read
+	// the SpiderColl will have been preserved in that case but its
+	// m_deleteMyself flag will have been set.
+	if ( THIS->m_deleteMyself &&
+	     ! THIS->m_msg5b.m_waitingForList &&
+	     ! THIS->m_msg1.m_mcast.m_inUse ) {
+		mdelete ( THIS , sizeof(SpiderColl),"postdel1");
+		delete ( THIS );
+		return;
+	}
+
+	THIS->populateWaitingTreeFromSpiderdb ( true );
+}
 
 //////////////////
 //////////////////
@@ -2486,6 +2525,11 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		if ( ! m_waitingTreeNeedsRebuild ) return;
 		// a double call? can happen if list read is slow...
 		if ( m_gettingList2 ) return;
+
+		// . borrow a msg5
+		// . if none available just return, we will be called again
+		//   by the sleep/timer function
+
 		// . read in a replacement SpiderRequest to add to doledb from
 		//   this ip
 		// . get the list of spiderdb records
@@ -2499,7 +2543,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		// flag it
 		m_gettingList2 = true;
 		// make state
-		long state2 = (long)m_cr->m_collnum;
+		//long state2 = (long)m_cr->m_collnum;
 		// read the list from local disk
 		if ( ! m_msg5b.getList ( RDB_SPIDERDB   ,
 					 m_cr->m_coll   ,
@@ -2512,7 +2556,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 					 0              , // max cache age
 					 0              , // startFileNum
 					 -1             , // numFiles (all)
-					 (void *)state2,//this//state
+					 this,//(void *)state2,//this//state
 					 gotSpiderdbListWrapper2 ,
 					 MAX_NICENESS   , // niceness
 					 true          )) // do error correct?
@@ -2601,7 +2645,15 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		// otherwise, we want to add it with 0 time so the doledb
 		// scan will evaluate it properly
 		// this will return false if we are saving the tree i guess
-		if ( ! addToWaitingTree ( 0 , firstIp , false ) ) return;
+		if ( ! addToWaitingTree ( 0 , firstIp , false ) ) {
+			log("spider: failed to add ip %s to waiting tree. "
+			    "ip will not get spidered then and our "
+			    "population of waiting tree will repeat until "
+			    "this add happens."
+			    , iptoa(firstIp) );
+			return;
+		}
+
 		// count it
 		m_numAdded++;
 		// ignore errors for this
@@ -2665,9 +2717,9 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	return;
 }
 
-static bool    s_ufnTreeSet = false;
-static RdbTree s_ufnTree;
-static time_t  s_lastUfnTreeFlushTime = 0;
+//static bool    s_ufnTreeSet = false;
+//static RdbTree s_ufnTree;
+//static time_t  s_lastUfnTreeFlushTime = 0;
 
 //////////////////////////
 //////////////////////////
@@ -2696,11 +2748,10 @@ static time_t  s_lastUfnTreeFlushTime = 0;
 //   which one should be the next to be spidered. and put that one in doledb.
 // . we call this a lot, like if the admin changes the url filters table
 //   we have to re-scan all of spiderdb basically and re-do doledb
-// . "rentry" if true means we are re-entering from a callback because the
-//   call to scanSpiderdb() blocked
-void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
+void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 	// only one loop can run at a time!
-	if ( ! reentry && m_isPopulating ) return;
+	//if ( ! reentry && m_isPopulating ) return;
+	if ( m_isPopulating ) return;
 	// skip if in repair mode
 	if ( g_repairMode ) return;
 	// try skipping!!!!!!!!!!!
@@ -2726,7 +2777,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 	}
 
 	// . get next IP that is due to be spidered from
-	// . also sets m_waitingTreeKey so scanSpiderdb can delete it easily!
+	// . also sets m_waitingTreeKey so we can delete it easily!
 	long ip = getNextIpFromWaitingTree();
 	// . return if none. all done. unset populating flag.
 	// . it returns 0 if the next firstip has a spidertime in the future
@@ -2736,11 +2787,37 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 	m_nextKey = g_spiderdb.makeFirstKey(ip);
 	m_endKey  = g_spiderdb.makeLastKey (ip);
 
+	//////
+	//
+	// do TWO PASSES, one to count pages, the other to get the best url!!
+	//
+	//////
+	// assume we don't have to do two passes
+	m_countingPagesIndexed = false;
+	// get the collectionrec
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	// but if we have quota based url filters we do have to count
+	if ( cr && cr->m_urlFiltersHavePageCounts ) {
+		// tell evalIpLoop() to count first
+		m_countingPagesIndexed = true;
+		// reset this stuff used for counting UNIQUE votes
+		m_lastReqUh48a = 0LL;
+		m_lastReqUh48b = 0LL;
+		m_lastRepUh48  = 0LL;
+		// and setup the LOCAL counting table if not initialized
+		if ( m_localTable.m_ks == 0 ) 
+			m_localTable.set (4,4,0,NULL,0,false,0,"ltpct" );
+		// otherwise, just reset it so we can repopulate it
+		else m_localTable.reset();
+	}
+
+
 	// debug output
 	if ( g_conf.m_logDebugSpider )
-		log(LOG_DEBUG,"spider: scanSpiderdb: waitingtree nextip=%s "
+		log(LOG_DEBUG,"spider: evalIpLoop: waitingtree nextip=%s "
 		    "numUsedNodes=%li",iptoa(ip),m_waitingTree.m_numUsedNodes);
 
+	/*
 	// assume using tree
 	m_useTree = true;
 
@@ -2797,6 +2874,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 		// do not add the recs to the tree!
 		m_useTree = false;
 	}
+	*/
 	// turn this off until we figure out why it sux
 	m_useTree = false;
 
@@ -2806,67 +2884,37 @@ void SpiderColl::populateDoledbFromWaitingTree ( bool reentry ) {
 	// . initialize this before scanning the spiderdb recs of an ip
 	// . it lets us know if we recvd new spider requests for m_scanningIp
 	//   while we were doing the scan
-	m_gotNewRequestsForScanningIp = false;
+	m_gotNewDataForScanningIp = 0;
 
+	m_lastListSize = -1;
+
+	// let evalIpLoop() know it has not yet tried to read from spiderdb
+	m_didRead = false;
+	
 	// . look up in spiderdb otherwise and add best req to doledb from ip
 	// . if it blocks ultimately it calls gotSpiderdbListWrapper() which
 	//   calls this function again with re-entry set to true
-	if ( ! scanSpiderdb ( true ) ) return;
+	if ( ! evalIpLoop ( ) ) return ;
+
 	// oom error? i've seen this happen and we end up locking up!
-	if ( g_errno ) return;
+	if ( g_errno ) { 
+		log("spider: evalIpLoop: %s",mstrerror(g_errno));
+		m_isPopulating = false; 
+		return; 
+	}
 	// try more
 	goto loop;
 }
-
-static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
-
-	collnum_t collnum = (collnum_t)(long)state;
-
-	SpiderColl *THIS = g_spiderCache.getSpiderColl(collnum);
-
-	if ( ! THIS ) {
-		log("spider: lost1 collnum %li while scanning spiderdb",
-		    (long)collnum);
-		return;
-	}
-
-	//SpiderColl *THIS = (SpiderColl *)state;
-
-	// note its return
-	if ( g_conf.m_logDebugSpider )
-		log("spider: back from msg5 spiderdb read2");
-
-	// . finish processing the list we read now
-	// . if that blocks, it will call doledWrapper
-	if ( ! THIS->scanSpiderdb ( false ) ) return;
-	// . otherwise, do more from tree
-	// . re-entry is true because we just got the msg5 reply
-	THIS->populateDoledbFromWaitingTree ( true );
-}
-
-static void gotSpiderdbListWrapper2( void *state , RdbList *list , Msg5 *msg5){
-
-	collnum_t collnum = (collnum_t)(long)state;
-
-	SpiderColl *THIS = g_spiderCache.getSpiderColl(collnum);
-
-	if ( ! THIS ) {
-		log("spider: lost2 collnum %li while scanning spiderdb",
-		    (long)collnum);
-		return;
-	}
-
-	//SpiderColl *THIS = (SpiderColl *)state;
-	// re-entry is true because we just got the msg5 reply
-	THIS->populateWaitingTreeFromSpiderdb ( true );
-}
-
 
 // replace this func with the one above...
 static void doledWrapper ( void *state ) {
 	SpiderColl *THIS = (SpiderColl *)state;
 	// msg4 is available again
 	THIS->m_msg4Avail = true;
+
+	// no longer populating doledb. we also set to false in 
+	// gotSpiderListWrapper
+	//THIS->m_isPopulating = false;
 
 	long long now = gettimeofdayInMilliseconds();
 	long long diff = now - THIS->m_msg4Start;
@@ -2876,11 +2924,24 @@ static void doledWrapper ( void *state ) {
 	if ( diff > 10 ) 
 		log("spider: adding to doledb took %llims",diff);
 
+	// we are done!! that was the final step...
+	THIS->m_isPopulating = false;
+
+	// did collection get nuked while we were waiting for msg1 reply?
+	if ( THIS->m_deleteMyself &&
+	     ! THIS->m_msg5.m_waitingForList &&
+	     ! THIS->m_msg5b.m_waitingForList ) {
+		mdelete ( THIS , sizeof(SpiderColl),"postdel1");
+		delete ( THIS );
+		return;
+	}
+	
+
 	// . we added a rec to doledb for the firstIp in m_waitingTreeKey, so
 	//   now go to the next node in the wait tree.
 	// . it will get the next key after m_waitingTreeKey
 	// . re-entry is true because we just got the msg4 reply
-	THIS->populateDoledbFromWaitingTree ( true );
+	THIS->populateDoledbFromWaitingTree ( );
 }
 
 key128_t makeUfnTreeKey ( long      firstIp      ,
@@ -2922,45 +2983,165 @@ void parseUfnTreeKey ( key128_t  *k ,
 void removeExpiredLocks ( long hostId );
 
 
-// . this is ONLY CALLED from populatedDoledbFromWaitingTree() above
+static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
+	SpiderColl *THIS = (SpiderColl *)state;
+	// prevent a core
+	THIS->m_gettingList1 = false;
+	// return if that blocked
+	if ( ! THIS->evalIpLoop() ) return;
+	// we are done, re-entry popuatedoledb
+	THIS->m_isPopulating = false;
+	// gotta set m_isPopulating to false lest it won't work
+	THIS->populateDoledbFromWaitingTree ( );
+}
+
+
+///////////////////
+//
+// KEYSTONE FUNCTION
+//
+// . READ ALL spiderdb recs for IP of m_scanningIp
+// . add winner to doledb
+// . called ONLY by populateDoledbFromWaitingTree()
+//
+// . continually scan spiderdb requests for a particular ip, m_scanningIp
+// . compute the best spider request to spider next
+// . add it to doledb
+// . getNextIpFromWaitingTree() must have been called to set m_scanningIp
+//   otherwise m_bestRequestValid might not have been reset to false
+//
+///////////////////
+
+bool SpiderColl::evalIpLoop ( ) {
+
+	// sanity
+	if ( m_scanningIp == 0 || m_scanningIp == -1 ) { char *xx=NULL;*xx=0;}
+
+	// did our collection rec get deleted? since we were doing a read
+	// the SpiderColl will have been preserved in that case but its
+	// m_deleteMyself flag will have been set.
+	if ( m_deleteMyself &&
+	     ! m_msg5b.m_waitingForList &&
+	     ! m_msg1.m_mcast.m_inUse ) {
+		mdelete ( this , sizeof(SpiderColl),"postdel1");
+		delete ( this );
+		// pretend to block since we got deleted!!!
+		return false;
+	}
+
+ top:
+
+	// if first time here, let's do a read first
+	if ( ! m_didRead ) {
+		// reset list size to 0
+		m_list.reset();
+		// assume we did a read now
+		m_didRead = true;
+		// reset some stuff
+		m_lastScanningIp = 0;
+		// do a read. if it blocks it will recall this loop
+		if ( ! readListFromSpiderdb () ) return false;
+	}
+
+ loop:
+
+	// . did reading the list from spiderdb have an error?
+	// . i guess we don't add to doledb then
+	if ( g_errno ) {
+		log("spider: Had error getting list of urls "
+		    "from spiderdb: %s.",mstrerror(g_errno));
+		// save mem
+		m_list.freeList();
+		//m_isReadDone = true;
+		return true;
+	}
+
+
+	// if we started reading, then assume we got a fresh list here
+	if ( g_conf.m_logDebugSpider )
+		log("spider: back from msg5 spiderdb read2");
+
+
+	// . set the winning request for all lists we read so far
+	// . if m_countingPagesIndexed is true this will just fill in
+	//   quota info into m_localTable...
+	scanListForWinners();
+
+	// if list not empty, keep reading!
+	if ( ! m_list.isEmpty() ) {
+		// update m_nextKey for successive reads of spiderdb by
+		// calling readListFromSpiderdb()
+		key128_t endKey  = *(key128_t *)m_list.getLastKey();
+		// sanity
+		//if ( endKey != finalKey ) { char *xx=NULL;*xx=0; }
+		m_nextKey        = endKey;
+		m_nextKey       += (unsigned long) 1;
+		// . watch out for wrap around
+		// . normally i would go by this to indicate that we are
+		//   done reading, but there's some bugs... so we go
+		//   by whether our list is empty or not for now
+		if ( m_nextKey < endKey ) m_nextKey = endKey;
+		// reset list to save mem
+		m_list.reset();
+		// read more! return if it blocked
+		if ( ! readListFromSpiderdb() ) return false;
+		// we got a list without blocking
+		goto loop;
+	}
+
+
+	// . we are all done if last list read was empty
+	// . if we were just counting pages for quota, do a 2nd pass!
+	if ( m_countingPagesIndexed ) {
+		// do not do again. 
+		m_countingPagesIndexed = false;
+		// start at the top again
+		m_nextKey = g_spiderdb.makeFirstKey(m_scanningIp);
+		// this time m_localTable should have the quota info in it so 
+		// getUrlFilterNum() can use that
+		m_didRead = false;
+		// do the 2nd pass. read list from the very top.
+		goto top;
+	}
+
+	// free list to save memory
+	m_list.freeList();
+
+
+	// . if list was empty, then reading is all done so take the winner we 
+	//   got from all the lists we did read for this IP and add him 
+	//   to doledb
+	// . if no winner exists, then remove m_scanningIp from m_waitingTree
+	//   so we do not waste our time again. if url filters change then
+	//   waiting tree will be rebuilt and we'll try again... or if
+	//   a new spider request or reply for this ip comes in we'll try
+	//   again as well...
+	// . this returns false if blocked adding to doledb using msg1
+	if ( ! addWinnerToDoledb() ) return false;
+
+	// . do more from tree
+	// . re-entry is true because we just got the  msg5 reply
+	// . don't do this because populateDoledb calls us in a loop
+	//   and we call it from all our callbacks if we blocked...
+	//populateDoledbFromWaitingTree ( true );
+
+	// we are done...
+	return true;
+}
+
+// . this is ONLY CALLED from evalIpLoop() above
 // . returns false if blocked, true otherwise
 // . returns true and sets g_errno on error
-bool SpiderColl::scanSpiderdb ( bool needList ) {
+bool SpiderColl::readListFromSpiderdb ( ) {
 
 	if ( ! m_waitingTreeKeyValid ) { char *xx=NULL;*xx=0; }
 	if ( ! m_scanningIp ) { char *xx=NULL;*xx=0; }
-
-	//
-	// no longer getting list
-	//
-	if ( ! needList )
-		m_gettingList1 = false;
 
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 	if ( ! cr ) {
 		log("spider: lost collnum %li",(long)m_collnum);
 		g_errno = ENOCOLLREC;
 		return true;
-	}
-
-	// if we do not have a pg count entry for this then enter count mode
-	// where we just scan all the spider records for m_scanningIp
-	// and count how many pages are in the index for each subdomain/site
-	// and when it is over we re-do the scan from the top. 
-	m_countingPagesIndexed = false;
-	// don't bother with this stuff though if url filters do not specify 
-	// "pagesinip" or "pagesinsubdomain"
-	if ( cr->m_urlFiltersHavePageCounts &&
-	     // and only do this if we do not have an entry for this ip yet
-	     ! cr->m_pageCountTable.isInTable ( &m_scanningIp ) ) {
-		// it is on
-		m_countingPagesIndexed = true;
-		// reset this
-		m_lastReqUh48 = 0LL;
-		m_lastRepUh48 = 0LL;
-		// and setup the LOCAL counting table if not initialized
-		if ( m_localTable.m_ks == 0 ) 
-			m_localTable.set ( 4 ,4,0,NULL,0,false,0,"ltpct" );
 	}
 
 	// i guess we are always restricted to an ip, because
@@ -2975,13 +3156,20 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	if ( ! m_waitingTable.isInTable ( &m_scanningIp ) ) return true;
 	// sanity check
 	long wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
+	// it gets removed because addSpiderReply() calls addToWaitingTree
+	// and replaces the node we are scanning with one that has a better
+	// time, an earlier time, even though that time may have come and
+	// we are scanning it now. perhaps addToWaitingTree() should ignore
+	// the ip if it equals m_scanningIp?
 	if ( wn < 0 ) { 
-		log("spider: waiting tree key removed while reading list");
+		log("spider: waiting tree key removed while reading list "
+		    "for %s (%li)",
+		    cr->m_coll,(long)m_collnum);
 		return true;
 	}
 	// sanity. if first time, this must be invalid
-	if ( needList && m_nextKey == m_firstKey && m_bestRequestValid ) {
-		char *xx=NULL; *xx=0 ; }
+	//if ( needList && m_nextKey == m_firstKey && m_bestRequestValid ) {
+	//	char *xx=NULL; *xx=0 ; }
 
 	// . if the scanning ip has too many outstanding spiders
 	// . looks a UrlLock::m_firstIp and UrlLock::m_isSpiderOutstanding
@@ -3000,86 +3188,95 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	//	return true;
 	//}
 
- readLoop:
+	// readLoop:
 
 	// if we re-entered from the read wrapper, jump down
-	if ( needList ) {
-		// sanity check
-		if ( m_gettingList1 ) { char *xx=NULL;*xx=0; }
-		// . read in a replacement SpiderRequest to add to doledb from
-		//   this ip
-		// . get the list of spiderdb records
-		// . do not include cache, those results are old and will mess
-		//   us up
-		if (g_conf.m_logDebugSpider ) {
-			// got print each out individually because KEYSTR
-			// uses a static buffer to store the string
-			SafeBuf tmp;
-			tmp.safePrintf("spider: scanSpiderdb: "
-				       "calling msg5: ");
-			tmp.safePrintf("firstKey=%s "
-				       ,KEYSTR(&m_firstKey,sizeof(key128_t)));
-			tmp.safePrintf("endKey=%s "
-				       ,KEYSTR(&m_endKey,sizeof(key128_t)));
-			tmp.safePrintf("nextKey=%s "
-				       ,KEYSTR(&m_nextKey,sizeof(key128_t)));
-			tmp.safePrintf("firstip=%s"
-				       ,iptoa(firstIp0));
-			log(LOG_DEBUG,"%s",tmp.getBufStart());
-		}
-		// log this better
-		if ( g_conf.m_logDebugSpider )
-			log("spider: scanSpiderdb. firstip=%s key=%s"
-			    ,iptoa(firstIp0)
-			    ,KEYSTR(&m_nextKey,sizeof(key128_t) ) );
-		// flag it
-		m_gettingList1 = true;
-		// make state
-		long state2 = (long)m_cr->m_collnum;
-		// . read the list from local disk
-		// . if a niceness 0 intersect thread is taking a LONG time
-		//   then this will not complete in a long time and we
-		//   end up timing out the round. so try checking for
-		//   m_gettingList in spiderDoledUrls() and setting
-		//   m_lastSpiderCouldLaunch
-		if ( ! m_msg5.getList ( RDB_SPIDERDB   ,
-					m_cr->m_coll   ,
-					&m_list        ,
-					&m_nextKey      ,
-					&m_endKey       ,
-					SR_READ_SIZE   , // minRecSizes (512k)
-					true           , // includeTree
-					false          , // addToCache
-					0              , // max cache age
-					0              , // startFileNum
-					-1             , // numFiles (all)
-					(void *)state2,//this,//state 
-					gotSpiderdbListWrapper ,
-					MAX_NICENESS   , // niceness
-					true          )) // do error correct?
-			// return false if blocked
-			return false ;
-		// note its return
-		if ( g_conf.m_logDebugSpider )
-			log("spider: back from msg5 spiderdb read");
-		// no longer getting list
-		m_gettingList1 = false;
-	}
+	//if ( needList ) {
 
-	// show list stats
+	// sanity check
+	if ( m_gettingList1 ) { char *xx=NULL;*xx=0; }
+	// . read in a replacement SpiderRequest to add to doledb from
+	//   this ip
+	// . get the list of spiderdb records
+	// . do not include cache, those results are old and will mess
+	//   us up
+	if (g_conf.m_logDebugSpider ) {
+		// got print each out individually because KEYSTR
+		// uses a static buffer to store the string
+		SafeBuf tmp;
+		tmp.safePrintf("spider: readListFromSpiderdb: "
+			       "calling msg5: ");
+		tmp.safePrintf("firstKey=%s "
+			       ,KEYSTR(&m_firstKey,sizeof(key128_t)));
+		tmp.safePrintf("endKey=%s "
+			       ,KEYSTR(&m_endKey,sizeof(key128_t)));
+		tmp.safePrintf("nextKey=%s "
+			       ,KEYSTR(&m_nextKey,sizeof(key128_t)));
+		tmp.safePrintf("firstip=%s"
+			       ,iptoa(m_scanningIp));
+		log(LOG_DEBUG,"%s",tmp.getBufStart());
+	}
+	// log this better
 	if ( g_conf.m_logDebugSpider )
-		log("spider: scanSpiderdb: got list of size %li "
-		    "for firstip=%s",
-		    m_list.m_listSize,iptoa(m_scanningIp));
+		log("spider: readListFromSpiderdb: firstip=%s key=%s"
+		    ,iptoa(m_scanningIp)
+		    ,KEYSTR(&m_nextKey,sizeof(key128_t) ) );
+	// flag it
+	m_gettingList1 = true;
+	// make state
+	//long state2 = (long)m_cr->m_collnum;
+	// . read the list from local disk
+	// . if a niceness 0 intersect thread is taking a LONG time
+	//   then this will not complete in a long time and we
+	//   end up timing out the round. so try checking for
+	//   m_gettingList in spiderDoledUrls() and setting
+	//   m_lastSpiderCouldLaunch
+	if ( ! m_msg5.getList ( RDB_SPIDERDB   ,
+				m_cr->m_coll   ,
+				&m_list        ,
+				&m_nextKey      ,
+				&m_endKey       ,
+				SR_READ_SIZE   , // minRecSizes (512k)
+				true           , // includeTree
+				false          , // addToCache
+				0              , // max cache age
+				0              , // startFileNum
+				-1             , // numFiles (all)
+				this,//(void *)state2,//this,//state 
+				gotSpiderdbListWrapper ,
+				MAX_NICENESS   , // niceness
+				true          )) // do error correct?
+		// return false if blocked
+		return false ;
+	// note its return
+	if ( g_conf.m_logDebugSpider )
+		log("spider: back from msg5 spiderdb read");
+	// no longer getting list
+	m_gettingList1 = false;
+
+	// got it without blocking. maybe all in tree or in cache
+	return true;
 
 	// unflag it
 	//m_gettingList = false;
 	// stop if we are done
-	if ( m_isReadDone ) return true;
+	//if ( m_isReadDone ) return true;
+}
+
+// . this is ONLY CALLED from evalIpLoop() above
+// . scan m_list that we read from spiderdb for m_scanningIp IP
+// . set m_bestRequest if an request in m_list is better than what is
+//   in m_bestRequest from previous lists for this IP
+bool SpiderColl::scanListForWinners ( ) {
+
+	// if list is empty why are we here?
+	if ( m_list.isEmpty() ) return true;
 
 	// if waitingtree is locked for writing because it is saving or
 	// writes were disabled then just bail and let the scan be re-called
 	// later
+	//
+	// MDW: move this up in evalIpLoop() i think
 	RdbTree *wt = &m_waitingTree;
 	if ( wt->m_isSaving || ! wt->m_isWritable )
 		return true;
@@ -3088,13 +3285,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	RdbList *list = &m_list;
 	// ensure we point to the top of the list
 	list->resetListPtr();
-	// bail on error
-	if ( g_errno ) {
-		log("spider: Had error getting list of urls "
-		    "from spiderdb: %s.",mstrerror(g_errno));
-		m_isReadDone = true;
-		return true;
-	}
+
 	// get this
 	uint64_t nowGlobalMS = gettimeofdayInMillisecondsGlobal();//Local();
 	uint32_t nowGlobal   = nowGlobalMS / 1000;
@@ -3107,8 +3298,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	long long      srepUh48;
 
 	// for getting the top MAX_NODES nodes
-	long           tailPriority = -10;
-	uint64_t       tailTimeMS   = 0xffffffffffffffffLL;
+	//long           tailPriority = -10;
+	//uint64_t       tailTimeMS   = 0xffffffffffffffffLL;
 
 	// if we are continuing from another list...
 	if ( m_lastReplyValid ) {
@@ -3117,6 +3308,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	}
 
 	// sanity, if it was in ufntree it should be on disk then...
+	/*
 	if ( list->isEmpty() && m_nextKey == m_firstKey && ! m_useTree ) {
 		SafeBuf sb;
 		sb.safePrintf("startkey=%s,",
@@ -3133,8 +3325,10 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// delete the exact node #
 		m_waitingTree.deleteNode ( wn , false );
 	}
+	*/
 	//char *xx=NULL;*xx=0; }
 
+	/*
 	// use the ufntree?
 	bool useTree = m_useTree;
 	// if we are the first read and list is not full do not bother
@@ -3157,15 +3351,37 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 				false,
 				false );
 	}
+	*/
+
+	// show list stats
+	if ( g_conf.m_logDebugSpider )
+		log("spider: readListFromSpiderdb: got list of size %li "
+		    "for firstip=%s",
+		    m_list.m_listSize,iptoa(m_scanningIp));
+
+
+	// if we don't read minRecSizes worth of data that MUST indicate
+	// there is no more data to read. put this theory to the test
+	// before we use it to indcate an end of list condition.
+	if ( list->getListSize() > 0 && 
+	     m_lastScanningIp == m_scanningIp &&
+	     m_lastListSize < (long)SR_READ_SIZE &&
+	     m_lastListSize >= 0 ) {
+		//char *xx=NULL;*xx=0; }
+		log("spider: shucks. spiderdb reads not full.");
+	}
+
+	m_lastListSize = list->getListSize();
+	m_lastScanningIp = m_scanningIp;
 
 
 	if ( list->isEmpty() && g_conf.m_logDebugSpider )
-		log("spider: failed to get rec for ip=%s",iptoa(firstIp0));
+		log("spider: failed to get rec for ip=%s",iptoa(m_scanningIp));
 
 	long firstIp = m_waitingTreeKey.n0 & 0xffffffff;
 
-	long numNodes = 0;
-	long tailNode = -1;
+	//long numNodes = 0;
+	//long tailNode = -1;
 
 	key128_t finalKey;
 
@@ -3176,6 +3392,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	for ( ; ! list->isExhausted() ; ) {
 		// breathe
 		QUICKPOLL ( MAX_NICENESS );
+		// stop coring on empty lists
+		if ( list->isEmpty() ) break;
 		// get spiderdb rec in its serialized form
 		char *rec = list->getCurrentRec();
 		// sanity
@@ -3243,54 +3461,54 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// on the # of pages indexed per ip or subdomain/site then
 		// we have to maintain a page count table.
 		//
-		if ( m_countingPagesIndexed && sreq->m_fakeFirstIp ) {
-			// get request url hash48
+		if ( m_countingPagesIndexed ) { //&& sreq->m_fakeFirstIp ) {
+			// get request url hash48 (jez= 220459274533043 )
 			long long uh48 = sreq->getUrlHash48();
-			// manually added? count these. call them seeds!
-			if ( (sreq->m_isAddUrl || sreq->m_isInjecting) && 
-			     // only add dom/site hash seeds if it is
-			     // a fake firstIp to avoid double counting seeds
-			     sreq->m_fakeFirstIp &&
-			     m_lastReqUh48 != uh48 ) {
-				long h32;
+			// do not repeatedly page count if we just have
+			// a single fake firstip request. this just adds
+			// an entry to the table that will end up in
+			// m_pageCountTable so we avoid doing this count
+			// again over and over. also gives url filters
+			// table a zero-entry...
+			//m_localTable.addScore(&sreq->m_firstIp,0);
+			//m_localTable.addScore(&sreq->m_siteHash32,0);
+			//m_localTable.addScore(&sreq->m_domHash32,0);
+			// only add dom/site hash seeds if it is
+			// a fake firstIp to avoid double counting seeds
+			if ( sreq->m_fakeFirstIp ) continue;
+			// count the manual additions separately. mangle their
+			// hash with 0x123456 so they are separate.
+			if ( (sreq->m_isAddUrl || sreq->m_isInjecting) &&
+			     // unique votes per seed
+			     uh48 != m_lastReqUh48a ) {
+				// do not repeat count the same url
+				m_lastReqUh48a = uh48;
 				// sanity
 				if ( ! sreq->m_siteHash32){char*xx=NULL;*xx=0;}
 				if ( ! sreq->m_domHash32){char*xx=NULL;*xx=0;}
+				// do a little magic because we count
+				// seeds as "manual adds" as well as normal pg
+				long h32;
 				h32 = sreq->m_siteHash32 ^ 0x123456;
 				m_localTable.addScore(&h32);
 				h32 = sreq->m_domHash32 ^ 0x123456;
 				m_localTable.addScore(&h32);
-				// add the fake ip to seed table as well
-				// so we do not re-do countingPages for it.
-				// but add a "0" entry since fakeip pages
-				// are not indexed
-				m_localTable.addScore(&sreq->m_firstIp,0);
-				// add these 0 entries to at least indicate
-				// 0 pages indexed for this site/dom
-				m_localTable.addScore(&sreq->m_siteHash32,0);
-				m_localTable.addScore(&sreq->m_domHash32,0);
-				// do not repeat count the same url
-				m_lastReqUh48 = uh48;
-				// it's a fakeip, should not be indexed
-				continue;
 			}
-			// do not re-compute page count for this firstip
-			m_localTable.addScore(&sreq->m_firstIp,0);
-			m_localTable.addScore(&sreq->m_siteHash32,0);
-			m_localTable.addScore(&sreq->m_domHash32,0);
+			// unique votes per other for quota
+			if ( uh48 == m_lastReqUh48b ) continue;
+			// update this to ensure unique voting
+			m_lastReqUh48b = uh48;
 			// now count pages indexed below here
 			if ( ! srep ) continue;
 			if ( srepUh48 == m_lastRepUh48 ) continue;
 			m_lastRepUh48 = srepUh48;
-			if ( ! srep ) continue;
+			//if ( ! srep ) continue;
+			// TODO: what is srep->m_isIndexedINValid is set????
 			if ( ! srep->m_isIndexed ) continue;
 			// keep count per site and firstip
 			m_localTable.addScore(&sreq->m_firstIp,1);
-			// don't double count if fake firstip though
-			// not necessary, should not be indexed
-			//if ( sreq->m_fakeFirstIp ) continue;
-			m_localTable.addScore(&sreq->m_siteHash32);
-			m_localTable.addScore(&sreq->m_domHash32);
+			m_localTable.addScore(&sreq->m_siteHash32,1);
+			m_localTable.addScore(&sreq->m_domHash32,1);
 			continue;
 		}
 
@@ -3370,12 +3588,19 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// . if this is slow see the TODO below in dedupSpiderdbList()
 		//   which can pre-store these values assuming url filters do
 		//   not change and siteNumInlinks is about the same.
-		long ufn = ::getUrlFilterNum(sreq,srep,nowGlobal,false,
-					     MAX_NICENESS,m_cr);
+		long ufn = ::getUrlFilterNum(sreq,
+					     srep,
+					     nowGlobal,
+					     false,
+					     MAX_NICENESS,
+					     m_cr,
+					     false, // isOutlink?
+					     // provide the page quota table
+					     &m_localTable);
 		// sanity check
 		if ( ufn == -1 ) { 
 			log("spider: failed to match url filter for "
-			    "url = %s coll=%s", sreq->m_url,cr->m_coll);
+			    "url = %s coll=%s", sreq->m_url,m_cr->m_coll);
 			g_errno = EBADENGINEER;
 			return true;
 		}
@@ -3386,7 +3611,8 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		if ( priority >= MAX_SPIDER_PRIORITIES) {char *xx=NULL;*xx=0;}
 
 		// spiders disabled for this row in url filteres?
-		if ( ! m_cr->m_spidersEnabled[ufn] ) continue;
+		//if ( ! m_cr->m_spidersEnabled[ufn] ) continue;
+		if ( m_cr->m_maxSpidersPerRule[ufn] <= 0 ) continue;
 
 		// skip if banned
 		if ( priority == SPIDER_PRIORITY_FILTERED ) continue;
@@ -3484,6 +3710,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		//if ( priority == winPriority && spiderTimeMS > winTimeMS ) 
 		//	continue;
 
+		/*
 		// only compare to min winner in tree if we got 100 in
 		// tree from this firstip already
 		if ( numNodes >= MAX_NODES && useTree ) {
@@ -3506,6 +3733,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			// cut tail
 			s_ufnTree.deleteNode ( tailNode , true );
 		}
+		*/
 
 		// somestimes the firstip in its key does not match the
 		// firstip in the record!
@@ -3517,6 +3745,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			continue;
 		}
 
+		/*
 		// make the key
 		if ( useTree ) {
 			long long uh48 = sreq->getUrlHash48();
@@ -3555,6 +3784,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			// sanity
 			if ( tailIp != firstIp ) { char *xx=NULL;*xx=0;}
 		}
+		*/
 
 		// skip if not the best
 		uint64_t tm1 = spiderTimeMS;
@@ -3578,7 +3808,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// msg12::confirmLockAcquisition() after we get the lock,
 		// which deletes the doledb record from doledb and doleiptable
 		// rightaway and adds a "0" entry into the waiting tree so
-		// that scanSpiderdb() repopulates doledb again with that
+		// that evalIpLoop() repopulates doledb again with that
 		// "firstIp". this way we can spider multiple urls from the
 		// same ip at the same time.
 		long long key = makeLockTableKey ( sreq );
@@ -3669,15 +3899,22 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// sanity
 		if ( (long long)winTimeMS < 0 ) { char *xx=NULL;*xx=0; }
 		// note it
-		if ( g_conf.m_logDebugSpider )
-			log("spider: found winning request ip=%s "
+		if ( g_conf.m_logDebugSpider ) {
+			log("spider: found winning request IN THIS LIST ip=%s "
 			    "spiderTimeMS=%lli "
+			    "ufn=%li "
+			    "hadreply=%li "
 			    "pri=%li uh48=%lli url=%s",
 			    iptoa(m_bestRequest->m_firstIp),
 			    m_bestSpiderTimeMS,
+			    (long)m_bestRequest->m_ufn,
+			    (long)m_bestRequest->m_hadReply,
 			    (long)m_bestRequest->m_priority,
 			    m_bestRequest->getUrlHash48(),
 			    m_bestRequest->m_url);
+			// debug why not sticking to our site!
+			//if ( strstr(m_bestRequest->m_url,"//www.jezebelgallery.com") == NULL ) { char *xx=NULL;*xx=0; }
+		}
 	}
 	else if ( g_conf.m_logDebugSpider ) {
 		log("spider: did not find winning request for %s but "
@@ -3689,15 +3926,16 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	//m_isReadDone = ( list->getListSize() < (long)SR_READ_SIZE ) ;
 
 	//
-	// try to fix the bug of reading like only 150k when we asked for 512k
+	// . try to fix the bug of reading like only 150k when we asked for 512
+	// . that bug was because of dedupList() function
 	//
-	if ( list->isEmpty() )
-		m_isReadDone = true;
+	//if ( list->isEmpty() )
+	//	m_isReadDone = true;
 
 	// if no spiderreply for the current url, invalidate this
 	m_lastReplyValid = false;
 	// if read is not yet done, save the reply in case next list needs it
-	if ( srep && ! m_isReadDone ) {
+	if ( srep ) { // && ! m_isReadDone ) {
 		long rsize = srep->getRecSize();
 		if ( rsize > (long)MAX_SP_REPLY_SIZE ) { char *xx=NULL;*xx=0; }
 		memcpy ( m_lastReplyBuf, srep, rsize );
@@ -3712,68 +3950,27 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// reset any errno cuz we're just a cache
 	g_errno = 0;
 
-	//
-	// end list processing
-	//
+	// ok we've updated m_bestRequest!!!
+	return true;
+}
 
-	// if not done, keep going
-	if ( ! m_isReadDone ) { 
-		// . inc it here
-		// . it can also be reset on a collection rec update
-		key128_t endKey  = *(key128_t *)list->getLastKey();
-		// sanity
-		if ( endKey != finalKey ) { char *xx=NULL;*xx=0; }
-		m_nextKey        = endKey;
-		m_nextKey       += (unsigned long) 1;
-		// watch out for wrap around
-		if ( m_nextKey < endKey ) {
-			m_nextKey = endKey;
-			m_isReadDone = true;
-		}
-	}
 
-	// free list to save memory
-	list->freeList();
+// . this is ONLY CALLED from evalIpLoop() above
+// . add another 0 entry into waiting tree, unless we had no winner
+// . add winner in here into doledb
+// . returns false if blocked and doledWrapper() will be called
+// . returns true and sets g_errno on error
+bool SpiderColl::addWinnerToDoledb ( ) {
 
-	if ( ! m_isReadDone ) {
-		// read more now!
-		needList = true; 
-		goto readLoop; 
-	}
-
-	// print out here
-	//log("spider: got best req=%s ip=%s uh48=%llu",m_bestRequest->m_url,
-	//    iptoa(m_bestRequest->m_firstIp),m_bestRequest->getUrlHash48());
-
-	if ( m_countingPagesIndexed ) {
-		// now try to get a winning rec if we computed the page counts
-		m_countingPagesIndexed = false;
-		// . add our counts into our global hashtable
-		// . we keep a local hashtable for all subdomains (sites)
-		//   from this firstIp then we add them to the global hash
-		//   table when the scan completes
-		for ( long i = 0 ; i < m_localTable.getNumSlots() ; i++ ) {
-			// skip empty hash buckets
-			if ( ! m_localTable.m_flags[i] ) continue;
-			// transfer to global table
-			long *key = (long *)m_localTable.getKeyFromSlot(i);
-			long *cnt = (long *)m_localTable.getValueFromSlot(i);
-			// this will overwrite anything there
-			cr->m_pageCountTable.addKey ( key , cnt );
-		}
-		// free local hash table memory
-		m_localTable.reset();
-		// pagecount table is updated, collrec needs save now
-		cr->m_needsSave = 1;
-		// start at the top again
-		m_nextKey = g_spiderdb.makeFirstKey(m_scanningIp);
-		// read the list again from the very top for this ip
-		needList = true;
-		goto readLoop;
+	if ( g_errno ) {
+		log("spider: got error when trying to add winner to doledb: "
+		    "%s",mstrerror(g_errno));
+		return true;
 	}
 
 	// gotta check this again since we might have done a QUICKPOLL() above
 	// to call g_process.shutdown() so now tree might be unwritable
+	RdbTree *wt = &m_waitingTree;
 	if ( wt->m_isSaving || ! wt->m_isWritable )
 		return true;
 
@@ -3793,11 +3990,11 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// ok, all done if nothing to add to doledb. i guess we were misled
 	// that firstIp had something ready for us. maybe the url filters
 	// table changed to filter/ban them all.
-	if ( ! g_errno && ! m_bestRequestValid ) {
+	if ( ! m_bestRequestValid ) { // ! g_errno
 		// if we received new incoming requests while we were
 		// scanning, which is happening for some crawls, then do
-		// not nuke! just repeat
-		if ( m_gotNewRequestsForScanningIp ) {
+		// not nuke! just repeat later in populateDoledbFromWaitingTree
+		if ( m_gotNewDataForScanningIp ) {
 			if ( g_conf.m_logDebugSpider )
 				log("spider: received new requests, not "
 				    "nuking misleading key");
@@ -3806,8 +4003,9 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		// note it - this can happen if no more to spider right now!
 		if ( g_conf.m_logDebugSpider )
 			log("spider: nuking misleading waitingtree key "
-			    "firstIp=%s", iptoa(firstIp));
+			    "firstIp=%s", iptoa(m_scanningIp));
 		m_waitingTree.deleteNode ( 0,(char *)&m_waitingTreeKey,true);
+		//log("spider: 7 del node for %s",iptoa(m_scanningIp));
 		m_waitingTreeKeyValid = false;
 		// note it
 		unsigned long long timestamp64 = m_waitingTreeKey.n1;
@@ -3826,10 +4024,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		return true;
 	}
 
-	if ( g_errno ) {
-		log("spider: scanSpiderdb: %s",mstrerror(g_errno));
-		return true;
-	}
+	long firstIp = m_waitingTreeKey.n0 & 0xffffffff;
 
 	if ( m_bestRequest->m_firstIp != firstIp ) { char *xx=NULL;*xx=0; }
 
@@ -3849,6 +4044,25 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	//
 	////////////////////
 
+	// how many spiders currently out for this ip?
+	long outNow=g_spiderLoop.getNumSpidersOutPerIp(m_scanningIp,m_collnum);
+
+	// sanity check. how did this happen? it messes up our crawl!
+	// maybe a doledb add went through? so we should add again?
+	long wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
+	if ( wn < 0 ) { 
+		log("spider: waiting tree key removed while reading list for "
+		    "%s (%li)",m_coll,(long)m_collnum);
+		// play it safe and add it back for now...
+		// when i try to break here in gdb it never happens because
+		// of timing issues. heisenbug...
+		// false = callForScan
+		//if ( ! addToWaitingTree ( 0 , m_scanningIp , false ) )
+		//	log("spider: failed to add wk2 to waiting tree: %s"
+		//	    ,mstrerror(g_errno));
+		return true;
+	}
+
 	// even if hadn't gotten list we can bail early if too many
 	// spiders from this ip are out! 
 	//long out = g_spiderLoop.getNumSpidersOutPerIp ( m_scanningIp );
@@ -3861,13 +4075,19 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			    );
 		// when his SpiderReply comes back it will call 
 		// addWaitingTree with a "0" time so he'll get back in there
-		if ( wn < 0 ) { char *xx=NULL; *xx=0; }
-		m_waitingTree.deleteNode (wn,false );
+		//if ( wn < 0 ) { char *xx=NULL; *xx=0; }
+		if ( wn >= 0 ) {
+			m_waitingTree.deleteNode (wn,false );
+			// note that
+			//log("spdr: 1 del node %li for %s",wn,iptoa(firstIp));
+		}
 		// keep the table in sync now with the time
 		m_waitingTable.removeKey( &m_bestRequest->m_firstIp );
 		return true;
 	}		
 
+
+	uint64_t nowGlobalMS = gettimeofdayInMillisecondsGlobal();//Local();
 
 	// if best request has a future spiderTime, at least update
 	// the wait tree with that since we will not be doling this request
@@ -3884,7 +4104,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 
 		// before you set a time too far into the future, if we
 		// did receive new spider requests, entertain those
-		if ( m_gotNewRequestsForScanningIp ) {
+		if ( m_gotNewDataForScanningIp ) {
 			if ( g_conf.m_logDebugSpider )
 				log("spider: received new requests, not "
 				    "updating waiting tree with future time");
@@ -3896,9 +4116,13 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		oldSpiderTimeMS <<= 32;
 		oldSpiderTimeMS |= (m_waitingTreeKey.n0 >> 32);
 		// delete old node
-		long wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
-		if ( wn < 0 ) { char *xx=NULL;*xx=0; }
-		m_waitingTree.deleteNode (wn,false );
+		//long wn = m_waitingTree.getNode(0,(char *)&m_waitingTreeKey);
+		//if ( wn < 0 ) { char *xx=NULL;*xx=0; }
+		if ( wn >= 0 ) {
+			m_waitingTree.deleteNode (wn,false );
+			//log("spdr: 2 del node %li for %s",wn,iptoa(firstIp));
+		}
+
 		// invalidate
 		m_waitingTreeKeyValid = false;
 		long  fip = m_bestRequest->m_firstIp;
@@ -3914,13 +4138,12 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 			    (long)m_bestRequest->m_priority,
 			    m_bestRequest->m_url);
 		// this should never fail since we deleted one above
-		m_waitingTree.addKey ( &wk2 );
-
+		long dn = m_waitingTree.addKey ( &wk2 );
 		// note it
 		if ( g_conf.m_logDebugSpider )
-			log(LOG_DEBUG,"spider: RE-added time=%lli ip=%s to "
-			    "waiting tree",
-			    m_bestSpiderTimeMS , iptoa(fip));
+			logf(LOG_DEBUG,"spider: RE-added time=%lli ip=%s to "
+			    "waiting tree node %li",
+			    m_bestSpiderTimeMS , iptoa(fip),dn);
 
 		// keep the table in sync now with the time
 		m_waitingTable.addKey( &fip, &m_bestSpiderTimeMS );
@@ -3991,6 +4214,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	//
 	// delete the winner from ufntree as well
 	//
+	/*
 	long long buh48 = m_bestRequest->getUrlHash48();
 	key128_t bkey = makeUfnTreeKey ( m_bestRequest->m_firstIp ,
 					 m_bestRequest->m_priority ,
@@ -4006,7 +4230,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 		//    node,iptoa(firstIp),uh48);
 		s_ufnTree.deleteNode ( node , true );
 	}
-	
+	*/
 
 	m_msg4Start = gettimeofdayInMilliseconds();
 
@@ -4043,6 +4267,7 @@ bool SpiderColl::scanSpiderdb ( bool needList ) {
 	// to readd to doledb...
 	m_waitingTree.deleteNode ( 0, (char *)&m_waitingTreeKey , true);
 	m_waitingTable.removeKey  ( &storedFirstIp );
+	//log("spider: 3 del node for %s",iptoa(storedFirstIp));
 	
 	// invalidate
 	m_waitingTreeKeyValid = false;
@@ -4413,17 +4638,18 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 				sc->m_nextKey2.setMin();
 				sc->m_waitingTreeNeedsRebuild = true;
 				log(LOG_INFO,
-				    "spider: hit rebuild timeout for %s",
-				    cr->m_coll);
+				    "spider: hit spider queue "
+				    "rebuild timeout for %s (%li)",
+				    cr->m_coll,(long)cr->m_collnum);
 				// flush the ufn table
-				clearUfnTable();
+				//clearUfnTable();
 			}
 			// try this then. it just returns if
 			// sc->m_waitingTreeNeedsRebuild is false
 			sc->populateWaitingTreeFromSpiderdb ( false );
 		}
 		// re-entry is false because we are entering for the first time
-		sc->populateDoledbFromWaitingTree ( false );
+		sc->populateDoledbFromWaitingTree ( );
 		// skip if still loading doledb lists from disk this round
 		if ( ! sc->m_didRound ) continue;
 		// ensure at the top!
@@ -4462,12 +4688,14 @@ void doneSendingNotification ( void *state ) {
 	// pingserver.cpp sets this
 	//ei->m_inUse = false;
 
-	log("spider: setting current spider status to %li",
-	    (long)cr->m_spiderStatus);
+	// so we do not send for this status again, mark it as sent for
+	// but we reset sentCrawlDoneAlert to 0 on round increment below
+	//log("spider: setting sentCrawlDoneAlert status to %li",
+	//    (long)cr->m_spiderStatus);
 
 	// mark it as sent. anytime a new url is spidered will mark this
 	// as false again! use LOCAL crawlInfo, since global is reset often.
-	cr->m_localCrawlInfo.m_sentCrawlDoneAlert = cr->m_spiderStatus;//1;
+	cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 1;//cr->m_spiderStatus;//1;
 
 	// be sure to save state so we do not re-send emails
 	cr->m_needsSave = 1;
@@ -4479,43 +4707,63 @@ void doneSendingNotification ( void *state ) {
 	// sanity check
 	//if ( g_hostdb.m_myHost->m_hostId != 0 ) { char *xx=NULL;*xx=0; }
 
+	//float respiderFreq = -1.0;
+	float respiderFreq = cr->m_collectiveRespiderFrequency;
+
+	// if not REcrawling, set this to 0 so we at least update our
+	// round # and round start time...
+	if ( respiderFreq < 0.0 ) //== -1.0 ) 
+		respiderFreq = 0.0;
+
+	//if ( respiderFreq < 0.0 ) {
+	//	log("spider: bad respiderFreq of %f. making 0.",
+	//	    respiderFreq);
+	//	respiderFreq = 0.0;
+	//}
+
 	// advance round if that round has completed, or there are no
 	// more urls to spider. if we hit maxToProcess/maxToCrawl then 
 	// do not increment the round #. otherwise we should increment it.
-	if ( cr->m_spiderStatus == SP_MAXTOCRAWL ) return;
-	if ( cr->m_spiderStatus == SP_MAXTOPROCESS ) return;
+	// do allow maxtocrawl guys through if they repeat, however!
+	//if(cr->m_spiderStatus == SP_MAXTOCRAWL && respiderFreq <= 0.0)return;
+	//if(cr->m_spiderStatus == SP_MAXTOPROCESS && respiderFreq<=0.0)return;
 
+	
+	////////
+	//
+	// . we are here because hasUrlsReadyToSpider is false
+	// . we just got done sending an email alert
+	// . now increment the round only if doing rounds!
+	//
+	///////
+
+
+	// if not doing rounds, keep the round 0. they might want to up
+	// their maxToCrawl limit or something.
+	if ( respiderFreq <= 0.0 ) return;
+
+
+	// if we hit the max to crawl rounds, then stop!!! do not
+	// increment the round...
+	if ( cr->m_spiderRoundNum >= cr->m_maxCrawlRounds &&
+	     // there was a bug when maxCrawlRounds was 0, which should
+	     // mean NO max, so fix that here:
+	     cr->m_maxCrawlRounds > 0 ) return;
 
 	// this should have been set below
 	//if ( cr->m_spiderRoundStartTime == 0 ) { char *xx=NULL;*xx=0; }
 
-	// how is this possible
-	//if ( getTimeGlobal() 
-
-	float respiderFreq = -1.0;
-
 	// find the "respider frequency" from the first line in the url
 	// filters table whose expressions contains "{roundstart}" i guess
-	for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
-		// get it
-		char *ex = cr->m_regExs[i].getBufStart();
-		// compare
-		if ( ! strstr ( ex , "roundstart" ) ) continue;
-		// that's good enough
-		respiderFreq = cr->m_spiderFreqs[i];
-		break;
-	}
-
-	// if not REcrawling, set this to 0 so we at least update our
-	// round # and round start time...
-	if ( respiderFreq == -1.0 ) 
-		respiderFreq = 0.0;
-
-	if ( respiderFreq < 0.0 ) {
-		log("spider: bad respiderFreq of %f. making 0.",
-		    respiderFreq);
-		respiderFreq = 0.0;
-	}
+	//for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
+	//	// get it
+	//	char *ex = cr->m_regExs[i].getBufStart();
+	//	// compare
+	//	if ( ! strstr ( ex , "roundstart" ) ) continue;
+	//	// that's good enough
+	//	respiderFreq = cr->m_spiderFreqs[i];
+	//	break;
+	//}
 
 	long seconds = (long)(respiderFreq * 24*3600);
 	// add 1 for lastspidertime round off errors so we can be assured
@@ -4526,18 +4774,31 @@ void doneSendingNotification ( void *state ) {
 	// now update this round start time. all the other hosts should
 	// sync with us using the parm sync code, msg3e, every 13.5 seconds.
 	//cr->m_spiderRoundStartTime += respiderFreq;
-	cr->m_spiderRoundStartTime = getTimeGlobal() + seconds;
-	cr->m_spiderRoundNum++;
+	char roundTime[128];
+	sprintf(roundTime,"%lu", (long)(getTimeGlobal() + seconds));
+	// roundNum++ round++
+	char roundStr[128];
+	sprintf(roundStr,"%li", cr->m_spiderRoundNum + 1);
 
 	// waiting tree will usually be empty for this coll since no
 	// spider requests had a valid spider priority, so let's rebuild!
-	if ( cr->m_spiderColl )
-		cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+	// this is not necessary because PF_REBUILD is set for the
+	// "spiderRoundStart" parm in Parms.cpp so it will rebuild if that parm
+	// changes already.
+	//if ( cr->m_spiderColl )
+	//	cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
 
-	// we have to send these two parms to all in cluster now
+	// we have to send these two parms to all in cluster now INCLUDING
+	// ourselves, when we get it in Parms.cpp there's special
+	// code to set this *ThisRound counts to 0!!!
 	SafeBuf parmList;
-	g_parms.addCurrentParmToList1 ( &parmList , cr , "spiderRoundNum" ); 
-	g_parms.addCurrentParmToList1 ( &parmList , cr , "spiderRoundStart" ); 
+	g_parms.addNewParmToList1 ( &parmList,cr->m_collnum,roundStr,-1 ,
+				    "spiderRoundNum");
+	g_parms.addNewParmToList1 ( &parmList,cr->m_collnum,roundTime, -1 ,
+				    "spiderRoundStart");
+
+	//g_parms.addParmToList1 ( &parmList , cr , "spiderRoundNum" ); 
+	//g_parms.addParmToList1 ( &parmList , cr , "spiderRoundStart" ); 
 	// this uses msg4 so parm ordering is guaranteed
 	g_parms.broadcastParmList ( &parmList , NULL , NULL );
 
@@ -4551,35 +4812,25 @@ void doneSendingNotification ( void *state ) {
 
 bool sendNotificationForCollRec ( CollectionRec *cr )  {
 
-	// only host #0 sends emails
-	if ( g_hostdb.m_myHost->m_hostId != 0 )
-		return true;
-
-	// . if already sent email for this, skip
-	// . localCrawlInfo stores this value on disk so it is persistent
-	// . we do it this way so SP_ROUNDDONE can be emailed and then
-	//   we'd email SP_MAXROUNDS to indicate we've hit the maximum
-	//   round count. 
-	if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert == cr->m_spiderStatus )
-		return true;
-
 	// do not send email for maxrounds hit, it will send a round done
 	// email for that. otherwise we end up calling doneSendingEmail()
 	// twice and increment the round twice
-	if ( cr->m_spiderStatus == SP_MAXROUNDS ) {
-		log("spider: not sending email for max rounds limit "
-		    "since already sent for round done.");
-		return true;
-	}
+	//if ( cr->m_spiderStatus == SP_MAXROUNDS ) {
+	//	log("spider: not sending email for max rounds limit "
+	//	    "since already sent for round done.");
+	//	return true;
+	//}
 
 	// wtf? caller must set this
 	if ( ! cr->m_spiderStatus ) { char *xx=NULL; *xx=0; }
 
-	log("spider: trying to send notification for new crawl status %li. "
-	    "current status is %li",
-	    (long)cr->m_spiderStatus,
+	log("spider: sending notification for crawl status %li in coll %s. "
+	    //"current sent state is %li"
+	    ,(long)cr->m_spiderStatus
+	    ,cr->m_coll
 	    //cr->m_spiderStatusMsg,
-	    (long)cr->m_localCrawlInfo.m_sentCrawlDoneAlert);
+	    //,(long)cr->m_localCrawlInfo.m_sentCrawlDoneAlert);
+	    );
 
 	// if we already sent it return now. we set this to false everytime
 	// we spider a url, which resets it. use local crawlinfo for this
@@ -4607,7 +4858,13 @@ bool sendNotificationForCollRec ( CollectionRec *cr )  {
 	getSpiderStatusMsg ( cr , buf , &status );
 					 
 	// if no email address or webhook provided this will not block!
+	// DISABLE THIS UNTIL FIXED
+
+	//log("spider: SENDING EMAIL NOT");
+
+	// ok, put it back...
 	if ( ! sendNotification ( ei ) ) return false;
+
 	// so handle this ourselves in that case:
 	doneSendingNotification ( ei );
 	return true;
@@ -4649,6 +4906,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 	// must be spidering to dole out
 	if ( ! g_conf.m_spideringEnabled ) return;
+	// if we don't have all the url counts from all hosts, then wait.
+	// one host is probably down and was never up to begin with
+	if ( ! s_countsAreValid ) return;
 	//if ( ! g_conf.m_webSpideringEnabled )  return;
 	// if we do not overlap ourselves
 	if ( m_gettingDoledbList ) return;
@@ -4660,6 +4920,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	if ( g_udpServer.getNumUsedSlots() >= 1300 ) return;
 	// stop if too many out. this is now 50 down from 500.
 	if ( m_numSpidersOut >= MAX_SPIDERS ) return;
+	// a new global conf rule
+	if ( m_numSpidersOut >= g_conf.m_maxTotalSpiders ) return;
 	// bail if no collections
 	if ( g_collectiondb.m_numRecs <= 0 ) return;
 	// not while repairing
@@ -4720,28 +4982,31 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( cr->m_maxCrawlRounds > 0 &&
 		     cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) {
 			cr->m_spiderStatus = SP_MAXROUNDS;
-			// it'll send a SP_ROUNDDONE email first
-			// so no need to repeat it, but we do want to
-			// update the status msg
-			//sendNotificationForCollRec ( cr );
+			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
+			cr->m_needsSave = true;
 			continue;
 		}
 
 		// hit pages to crawl max?
 		if ( cr->m_maxToCrawl > 0 &&
-		     cr->m_globalCrawlInfo.m_pageDownloadSuccesses >=
+		     cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound >=
 		     cr->m_maxToCrawl ) {
 			cr->m_spiderStatus = SP_MAXTOCRAWL;
-			sendNotificationForCollRec ( cr );
+			// now once all hosts have no urls ready to spider
+			// then the send email code will be called.
+			// do it this way for code simplicity.
+			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
+			cr->m_needsSave = true;
 			continue;
 		}
 
 		// hit pages to process max?
 		if ( cr->m_maxToProcess > 0 &&
-		     cr->m_globalCrawlInfo.m_pageProcessSuccesses >=
+		     cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound >=
 		     cr->m_maxToProcess ) {
 			cr->m_spiderStatus = SP_MAXTOPROCESS;
-			sendNotificationForCollRec ( cr );
+			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
+			cr->m_needsSave = true;
 			continue;
 		}
 
@@ -4768,7 +5033,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		ci->m_lastSpiderAttempt = nowGlobal;
 
 		// sometimes our read of spiderdb to populate the waiting
-		// tree using scanSpiderdb() takes a LONG time because
+		// tree using evalIpLoop() takes a LONG time because
 		// a niceness 0 thread is taking a LONG time! so do not
 		// set hasUrlsReadyToSpider to false because of that!!
 		if ( m_sc->m_gettingList1 )
@@ -4968,7 +5233,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	long max = 0;
 	for ( long i =0 ; i < cr->m_numRegExs ; i++ ) {
 		if ( cr->m_spiderPriorities[i] != m_sc->m_pri2 ) continue;
-		if ( ! cr->m_spidersEnabled[i] ) continue;
+		//if ( ! cr->m_spidersEnabled[i] ) continue;
 		if ( cr->m_maxSpidersPerRule[i] > max )
 			max = cr->m_maxSpidersPerRule[i];
 	}
@@ -5303,7 +5568,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	long maxSpidersOutPerIp = 1;
 	for ( long i = 0 ; i < cr->m_numRegExs ; i++ ) {
 		if ( cr->m_spiderPriorities[i] != m_sc->m_pri2 ) continue;
-		if ( ! cr->m_spidersEnabled[i] ) continue;
+		//if ( ! cr->m_spidersEnabled[i] ) continue;
 		if ( cr->m_maxSpidersPerRule[i] > max )
 			max = cr->m_maxSpidersPerRule[i];
 		if ( cr->m_spiderIpWaits[i] < sameIpWaitTime )
@@ -5527,6 +5792,11 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// so that the crawl could continue.
 	//ci->m_sentCrawlDoneAlert = 0;
 
+	// if we thought we were done, note it if something comes back up
+	if ( ! ci->m_hasUrlsReadyToSpider ) 
+		log("spider: got a reviving url for coll %s (%li) to crawl %s",
+		    cr->m_coll,(long)cr->m_collnum,sreq->m_url);
+
 	// there are urls ready to spider
 	ci->m_hasUrlsReadyToSpider = true;
 
@@ -5663,7 +5933,7 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 			// get it
 			XmlDoc *xd = m_docs[i];
 			if ( ! xd                      ) continue;
-			//if ( xd->m_oldsr.m_isInjecting ) continue;
+			//if ( xd->m_sreq.m_isInjecting ) continue;
 			// let everyone know, TcpServer::cancel() uses this in
 			// destroySocket()
 			g_errno = ECANCELLED;
@@ -6048,7 +6318,7 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	//if ( i < 0 || i >= MAX_SPIDERS ) i = -1;
 
 	//char injecting = false;
-	//if ( xd->m_oldsr.m_isInjecting ) injecting = true;
+	//if ( xd->m_sreq.m_isInjecting ) injecting = true;
 
 	// save it for Msg7.cpp to pass docid of injected doc back 
 	//s_lastDocId = xd->m_docId;
@@ -6070,7 +6340,7 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	// decrement this
 	if ( sc ) sc->m_spidersOut--;
 	// get the original request from xmldoc
-	SpiderRequest *sreq = &xd->m_oldsr;
+	SpiderRequest *sreq = &xd->m_sreq;
 	// update this. 
 	if ( sc ) sc->m_outstandingSpiders[(unsigned char)sreq->m_priority]--;
 
@@ -6222,7 +6492,7 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 
 	// set this in case we need to call removeAllLocks
 	//m_uh48 = 0LL;
-	//if ( xd->m_oldsrValid ) m_uh48 = xd->m_oldsr.getUrlHash48();
+	//if ( xd->m_sreqValid ) m_uh48 = xd->m_sreq.getUrlHash48();
 
 	// we are responsible for deleting doc now
 	mdelete ( m_docs[i] , sizeof(XmlDoc) , "Doc" );
@@ -6549,7 +6819,7 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 		///////
 		//
 		// now tell our group (shard) to remove from doledb
-		// and re-add to waiting tree. the scanSpiderdb() function
+		// and re-add to waiting tree. the evalIpLoop() function
 		// should skip this probable docid because it is in the 
 		// LOCK TABLE!
 		//
@@ -7226,6 +7496,8 @@ bool printList ( State11 *st ) {
 	SafeBuf *sbTable = &st->m_safeBuf;
 	// shorcuts
 	RdbList *list = &st->m_list;
+	// row count
+	long j = 0;
 	// put it in there
 	for ( ; ! list->isExhausted() ; list->skipCurrentRecord() ) {
 		// stop if we got enough
@@ -7254,7 +7526,10 @@ bool printList ( State11 *st ) {
 		// get the spider rec, encapsed in the data of the doledb rec
 		SpiderRequest *sreq = (SpiderRequest *)rec;
 		// print it into sbTable
-		if ( ! sreq->printToTable ( sbTable,"ready",NULL))return false;
+		if ( ! sreq->printToTable ( sbTable,"ready",NULL,j))
+			return false;
+		// count row
+		j++;
 	}
 	// need to load more?
 	if ( st->m_count >= st->m_numRecs ||
@@ -7307,7 +7582,7 @@ bool sendPage ( State11 *st ) {
 	SafeBuf mb;
 	if ( cr ) getSpiderStatusMsg ( cr , &mb , &tmp2 );
 	if ( mb.length() && tmp2 != SP_INITIALIZING )
-		sb.safePrintf("<center>"
+		sb.safePrintf(//"<center>"
 			      "<table cellpadding=5 "
 			      //"style=\""
 			      //"border:2px solid black;"
@@ -7325,20 +7600,24 @@ bool sendPage ( State11 *st ) {
 
 
 	// begin the table
-	sb.safePrintf ( "<table width=100%% border=1 cellpadding=4 "
-			"bgcolor=#%s>\n" 
-			"<tr><td colspan=50 bgcolor=#%s>"
-			"<b>Currently Spidering</b> (%li spiders)"
-			" (%li locks)"
-			"</td></tr>\n" ,
-			LIGHT_BLUE,
-			DARK_BLUE,
-			(long)g_spiderLoop.m_numSpidersOut,
-			g_spiderLoop.m_lockTable.m_numSlotsUsed);
+	sb.safePrintf ( "<table %s>\n"
+			"<tr><td colspan=50>"
+			//"<center>"
+			"<b>Currently Spidering on This Host</b>"
+			" (%li spiders)"
+			//" (%li locks)"
+			//"</center>"
+			"</td></tr>\n"
+			, TABLE_STYLE
+			, (long)g_spiderLoop.m_numSpidersOut
+			//, g_spiderLoop.m_lockTable.m_numSlotsUsed
+			);
 	// the table headers so SpiderRequest::printToTable() works
 	if ( ! SpiderRequest::printTableHeader ( &sb , true ) ) return false;
 	// shortcut
 	XmlDoc **docs = g_spiderLoop.m_docs;
+	// count # of spiders out
+	long j = 0;
 	// first print the spider recs we are spidering
 	for ( long i = 0 ; i < (long)MAX_SPIDERS ; i++ ) {
 		// get it
@@ -7346,114 +7625,16 @@ bool sendPage ( State11 *st ) {
 		// skip if empty
 		if ( ! xd ) continue;
 		// sanity check
-		if ( ! xd->m_oldsrValid ) { char *xx=NULL;*xx=0; }
+		if ( ! xd->m_sreqValid ) { char *xx=NULL;*xx=0; }
 		// grab it
-		SpiderRequest *oldsr = &xd->m_oldsr;
+		SpiderRequest *oldsr = &xd->m_sreq;
 		// get status
 		char *status = xd->m_statusMsg;
 		// show that
-		if ( ! oldsr->printToTable ( &sb , status,xd) ) return false;
+		if ( ! oldsr->printToTable ( &sb , status,xd,j) ) return false;
+		// inc count
+		j++;
 	}
-	// end the table
-	sb.safePrintf ( "</table>\n" );
-	sb.safePrintf ( "<br>\n" );
-
-
-	// begin the table
-	sb.safePrintf ( "<table width=100%% border=1 cellpadding=4 "
-			"bgcolor=#%s>\n" 
-			"<tr><td colspan=50 bgcolor=#%s>"
-			"<b>Ready to Spider (doledb)(coll = "
-			"<font color=red><b>%s</b>"
-			"</font>)"
-			,
-			LIGHT_BLUE,
-			DARK_BLUE ,
-			st->m_coll );
-
-	// print time format: 7/23/1971 10:45:32
-	time_t nowUTC = getTimeGlobal();
-	struct tm *timeStruct ;
-	char time[256];
-	timeStruct = gmtime ( &nowUTC );
-	strftime ( time , 256 , "%b %e %T %Y UTC", timeStruct );
-	sb.safePrintf("</b> (current time = %s = %lu) "
-		      "</td></tr>\n" 
-		      ,time,nowUTC);
-
-	// the table headers so SpiderRequest::printToTable() works
-	if ( ! SpiderRequest::printTableHeader ( &sb ,false ) ) return false;
-	// the the doledb spider recs
-	char *bs = sbTable->getBufStart();
-	if ( bs && ! sb.safePrintf("%s",bs) ) return false;
-	// end the table
-	sb.safePrintf ( "</table>\n" );
-	sb.safePrintf ( "<br>\n" );
-
-
-
-	// then spider collection
-	//SpiderColl *sc = g_spiderCache.m_spiderColls[collnum];
-	SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
-
-
-	/////////////////
-	//
-	// PRINT WAITING TREE
-	//
-	// each row is an ip. print the next url to spider for that ip.
-	//
-	/////////////////
-	sb.safePrintf ( "<table width=100%% border=1 cellpadding=4 "
-			"bgcolor=#%s>\n" 
-			"<tr><td colspan=50 bgcolor=#%s>"
-			"<b>IPs Waiting for Scan (coll = "
-			"<font color=red><b>%s</b>"
-			"</font>)"
-			,
-			LIGHT_BLUE,
-			DARK_BLUE ,
-			st->m_coll );
-	// print time format: 7/23/1971 10:45:32
-	long long timems = gettimeofdayInMillisecondsGlobal();
-	sb.safePrintf("</b> (current time = %llu)(totalcount=%li)"
-		      "(waittablecount=%li)</td></tr>\n",
-		      timems,
-		      sc->m_waitingTree.getNumUsedNodes(),
-		      sc->m_waitingTable.getNumUsedSlots());
-	sb.safePrintf("<tr>");
-	sb.safePrintf("<td><b>spidertime (MS)</b></td>\n");
-	sb.safePrintf("<td><b>firstip</b></td>\n");
-	sb.safePrintf("</tr>\n");
-	// the the waiting tree
-	long node = sc->m_waitingTree.getFirstNode();
-	long count = 0;
-	for ( ; node >= 0 ; node = sc->m_waitingTree.getNextNode(node) ) {
-		// breathe
-		QUICKPOLL(MAX_NICENESS);
-		// get key
-		key_t *key = (key_t *)sc->m_waitingTree.getKey(node);
-		// get ip from that
-		long firstIp = (key->n0) & 0xffffffff;
-		// get the time
-		unsigned long long spiderTimeMS = key->n1;
-		// shift upp
-		spiderTimeMS <<= 32;
-		// or in
-		spiderTimeMS |= (key->n0 >> 32);
-		// get the rest of the data
-		sb.safePrintf("<tr>"
-			      "<td>%llu</td>"
-			      "<td>%s</td>"
-			      "</tr>\n",
-			      spiderTimeMS,
-			      iptoa(firstIp));
-		// stop after 20
-		if ( ++count == 20 ) break;
-	}
-	// ...
-	if ( count ) 
-		sb.safePrintf("<tr><td colspan=10>...</td></tr>\n");
 	// end the table
 	sb.safePrintf ( "</table>\n" );
 	sb.safePrintf ( "<br>\n" );
@@ -7558,6 +7739,11 @@ bool sendPage ( State11 *st ) {
 	*/
 
 
+	// then spider collection
+	//SpiderColl *sc = g_spiderCache.m_spiderColls[collnum];
+	SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
+
+
 	//
 	// spiderdb rec stats, from scanning spiderdb
 	//
@@ -7613,12 +7799,19 @@ bool sendPage ( State11 *st ) {
 				      (double)(sampleOld);
 	}
 
+	sb.safePrintf(
+		      "<style>"
+		      ".poo { background-color:#%s;}\n"
+		      "</style>\n" ,
+		      LIGHT_BLUE );
+
 	sb.safePrintf (
-		       "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
+
+		       "<table %s>"
 		       "<tr>"
-		       "<td colspan=7 bgcolor=#%s>"
+		       "<td colspan=7>"
 		       "<center><b>Spider Stats</b></td></tr>\n"
-		       "<tr><td>"
+		       "<tr bgcolor=#%s><td>"
 		       "</td><td><b>Total</b></td>"
 		       "<td><b>Total New</b></td>"
 		       "<td><b>Total Old</b></td>"
@@ -7627,20 +7820,21 @@ bool sendPage ( State11 *st ) {
 		       "<td><b>Sample Old</b></b>"
 		       "</td></tr>"
 
-		       "<tr><td><b>Total Spiders</n>"
+		       "<tr class=poo><td><b>Total Spiders</n>"
 		       "</td><td>%lli</td><td>%lli</td><td>%lli</td>\n"
 		       "</td><td>%li</td><td>%li</td><td>%li</td></tr>\n"
-		       //"<tr><td><b>Successful Spiders</n>"
+		       //"<tr class=poo><td><b>Successful Spiders</n>"
 		       //"</td><td>%lli</td><td>%lli</td><td>%lli</td>\n"
 		       //"</td><td>%li</td><td>%li</td><td>%li</td></tr>\n"
-		       //"<tr><td><b>Failed Spiders</n>"
+		       //"<tr class=poo><td><b>Failed Spiders</n>"
 		       //"</td><td>%lli</td><td>%lli</td><td>%lli</td>\n"
 		       //"</td><td>%li</td><td>%li</td><td>%li</td></tr>\n"
-		       "<tr><td><b>Success Rate</b>"
+		       "<tr class=poo><td><b>Success Rate</b>"
 		       "</td><td>%.02f%%</td><td>%.02f%%</td>"
 		       "</td><td>%.02f%%</td><td>%.02f%%</td>"
 		       "</td><td>%.02f%%</td><td>%.02f%%</td></tr>",
-		       LIGHT_BLUE,  DARK_BLUE,
+		       TABLE_STYLE,  
+		       DARK_BLUE,
 		       totalPoints,
 		       totalNew,
 		       totalOld,
@@ -7688,7 +7882,7 @@ bool sendPage ( State11 *st ) {
 		     g_stats.m_allErrorsOld[i] == 0 &&
 		     bucketsNew[i] == 0 && bucketsOld[i] == 0 ) continue;
 		sb.safePrintf (
-			       "<tr><td><b>%s</b></td>"
+			       "<tr bgcolor=#%s><td><b>%s</b></td>"
 			       "<td>%lli</td>"
 			       "<td>%lli</td>"
 			       "<td>%lli</td>"
@@ -7696,6 +7890,7 @@ bool sendPage ( State11 *st ) {
 			       "<td>%li</td>"
 			       "<td>%li</td>"
 			       "</tr>\n" ,
+			       LIGHT_BLUE,
 			       mstrerror(i),
 			       g_stats.m_allErrorsNew[i] +
 			       g_stats.m_allErrorsOld[i],
@@ -7706,7 +7901,7 @@ bool sendPage ( State11 *st ) {
 			       bucketsOld[i] );
 	}
 
-	sb.safePrintf ( "</table><br><br>\n" );
+	sb.safePrintf ( "</table><br>\n" );
 
 
 
@@ -7715,48 +7910,48 @@ bool sendPage ( State11 *st ) {
 	sb.safePrintf ( 
 		       "<table width=100%% bgcolor=#%s "
 		       "cellpadding=4 border=1>"
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td colspan=2 bgcolor=#%s>"
 		       "<b>Field descriptions</b>"
 		       "</td>"
 		       "</tr>\n"
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>hits</td><td>The number of  attempts that were "
 		       "made by the spider to read a url from the spider "
 		       "queue cache.</td>"
 		       "</tr>\n"
 
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>misses</td><td>The number of those attempts that "
 		       "failed to get a url to spider.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>cached</td><td>The number of urls that are "
 		       "currently in the spider queue cache.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>water</td><td>The number of urls that were in the "
 		       "spider queue cache at any one time, since the start "
 		       "of the last disk scan.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>kicked</td><td>The number of urls that were "
 		       "replaced in the spider queue cache with urls loaded "
 		       "from disk, since the start of the last disk scan.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>added</td><td>The number of urls that were added "
 		       "to the spider queue cache since the start of the last "
 		       "disk scan. After a document is spidered its url "
 		       "if often added again to the spider queue cache.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>attempted</td><td>The number of urls that "
 		       "Gigablast attempted to add to the spider queue cache "
 		       "since the start of the last disk scan. In "
@@ -7768,42 +7963,42 @@ bool sendPage ( State11 *st ) {
 		       "spider time.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>nl</td><td>This is 1 iff Gigablast currently "
 		       "needs to reload the spider queue cache from disk.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>rnl</td><td>This is 1 iff Gigablast currently "
 		       "really needs to reload the spider queue cache from "
 		       "disk.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>more</td><td>This is 1 iff there are urls on "
 		       "the disk that are not in the spider queue cache.</td>"
 		       "</tr>\n"
 
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>loading</td><td>This is 1 iff Gigablast is "
 		       "currently loading this spider cache queue from "
 		       "disk.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>scanned</td><td>The number of bytes that were "
 		       "read from disk since the start of the last disk "
 		       "scan.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>reads</td><td>The number of disk read "
 		       "operations since the start of the last disk "
 		       "scan.</td>"
 		       "</tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>elapsed</td><td>The time in seconds that has "
 		       "elapsed since the start or end of the last disk "
 		       "scan, depending on if a scan is currently in "
@@ -7815,6 +8010,106 @@ bool sendPage ( State11 *st ) {
 		       LIGHT_BLUE ,
 		       DARK_BLUE  );
 	*/
+
+	/////
+	//
+	// READY TO SPIDER table
+	//
+	/////
+
+	// begin the table
+	sb.safePrintf ( "<table %s>\n"
+			"<tr><td colspan=50>"
+			"<b>URLs Ready to Spider for collection "
+			"<font color=red><b>%s</b>"
+			"</font>"
+			,
+			TABLE_STYLE,
+			st->m_coll );
+
+	// print time format: 7/23/1971 10:45:32
+	time_t nowUTC = getTimeGlobal();
+	struct tm *timeStruct ;
+	char time[256];
+	timeStruct = gmtime ( &nowUTC );
+	strftime ( time , 256 , "%b %e %T %Y UTC", timeStruct );
+	sb.safePrintf("</b>" //  (current time = %s = %lu) "
+		      "</td></tr>\n" 
+		      //,time,nowUTC
+		      );
+
+	// the table headers so SpiderRequest::printToTable() works
+	if ( ! SpiderRequest::printTableHeader ( &sb ,false ) ) return false;
+	// the the doledb spider recs
+	char *bs = sbTable->getBufStart();
+	if ( bs && ! sb.safePrintf("%s",bs) ) return false;
+	// end the table
+	sb.safePrintf ( "</table>\n" );
+	sb.safePrintf ( "<br>\n" );
+
+
+
+	/////////////////
+	//
+	// PRINT WAITING TREE
+	//
+	// each row is an ip. print the next url to spider for that ip.
+	//
+	/////////////////
+	sb.safePrintf ( "<table %s>\n"
+			"<tr><td colspan=50>"
+			"<b>IPs Waiting for Selection Scan for collection "
+			"<font color=red><b>%s</b>"
+			"</font>"
+			,
+			TABLE_STYLE,
+			st->m_coll );
+	// print time format: 7/23/1971 10:45:32
+	long long timems = gettimeofdayInMillisecondsGlobal();
+	sb.safePrintf("</b> (current time = %llu)(totalcount=%li)"
+		      "(waittablecount=%li)</td></tr>\n",
+		      timems,
+		      sc->m_waitingTree.getNumUsedNodes(),
+		      sc->m_waitingTable.getNumUsedSlots());
+	sb.safePrintf("<tr bgcolor=#%s>",DARK_BLUE);
+	sb.safePrintf("<td><b>spidertime (MS)</b></td>\n");
+	sb.safePrintf("<td><b>firstip</b></td>\n");
+	sb.safePrintf("</tr>\n");
+	// the the waiting tree
+	long node = sc->m_waitingTree.getFirstNode();
+	long count = 0;
+	for ( ; node >= 0 ; node = sc->m_waitingTree.getNextNode(node) ) {
+		// breathe
+		QUICKPOLL(MAX_NICENESS);
+		// get key
+		key_t *key = (key_t *)sc->m_waitingTree.getKey(node);
+		// get ip from that
+		long firstIp = (key->n0) & 0xffffffff;
+		// get the time
+		unsigned long long spiderTimeMS = key->n1;
+		// shift upp
+		spiderTimeMS <<= 32;
+		// or in
+		spiderTimeMS |= (key->n0 >> 32);
+		// get the rest of the data
+		sb.safePrintf("<tr bgcolor=#%s>"
+			      "<td>%llu</td>"
+			      "<td>%s</td>"
+			      "</tr>\n",
+			      LIGHT_BLUE,
+			      spiderTimeMS,
+			      iptoa(firstIp));
+		// stop after 20
+		if ( ++count == 20 ) break;
+	}
+	// ...
+	if ( count ) 
+		sb.safePrintf("<tr bgcolor=#%s>"
+			      "<td colspan=10>...</td></tr>\n",
+			      LIGHT_BLUE);
+	// end the table
+	sb.safePrintf ( "</table>\n" );
+	sb.safePrintf ( "<br>\n" );
 
 	// get the socket
 	TcpSocket *s = st->m_socket;
@@ -8965,7 +9260,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		       bool           isForMsg20 ,
 		       long           niceness   ,
 		       CollectionRec *cr         ,
-		       bool           isOutlink  ) {
+			bool           isOutlink  ,
+			HashTableX   *quotaTable ) {
 
 	// convert lang to string
 	char *lang    = NULL;
@@ -9231,6 +9527,10 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( errCode != EDNSTIMEDOUT &&
 			     errCode != ETCPTIMEDOUT &&
 			     errCode != EDNSDEAD &&
+			     // assume diffbot is temporarily experiencing errs
+			     errCode != EDIFFBOTINTERNALERROR &&
+			     // out of memory while crawling?
+			     errCode != ENOMEM &&
 			     errCode != ENETUNREACH &&
 			     errCode != EHOSTUNREACH )
 				errCode = 0;
@@ -9246,6 +9546,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		/*
 		if ( *p=='h' && strncmp(p,"hassitevenue",12) == 0 ) {
 			// if we do not have enough info for outlink, all done
 			if ( isOutlink ) return -1;
@@ -9266,6 +9567,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			p += 2;
 			goto checkNextRule;
 		}
+		*/
 
 		if ( *p != 'i' ) goto skipi;
 
@@ -9404,6 +9706,11 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			//if ( ! srep ) continue;
 			// skip for msg20
 			if ( isForMsg20 ) continue;
+			// skip if reply does not KNOW because of an error
+			// since XmDoc::indexDoc() called
+			// XmlDoc::getNewSpiderReply() and did not have this
+			// info...
+			if ( srep && (bool)srep->m_isIndexedINValid ) continue;
 			// if no match continue
 			if ( srep && (bool)srep->m_isIndexed==val ) continue;
 			// allow "!isindexed" if no SpiderReply at all
@@ -9790,14 +10097,20 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[5] == 'd' &&
 		     p[6] == 'd' &&
 		     p[7] == 's' ) {
-			// a special hack so it is seeds so we can use the same table
+			// need a quota table for this
+			if ( ! quotaTable ) continue;
+			// a special hack so it is seeds so we can use same tbl
 			long h32 = sreq->m_siteHash32 ^ 0x123456;
-			long *valPtr =(long *)cr->m_pageCountTable.getValue(&h32);
+			long *valPtr =(long *)quotaTable->getValue(&h32);
+			long a;
 			// if no count in table, that is strange, i guess
 			// skip for now???
-			if ( ! valPtr ) { char *xx=NULL;*xx=0; }
+			// this happens if INJECTING a url from the
+			// "add url" function on homepage
+			if ( ! valPtr ) a=0;//continue;//{char *xx=NULL;*xx=0;}
 			// shortcut
-			long a = *valPtr;
+			else a = *valPtr;
+			//log("siteadds=%li for %s",a,sreq->m_url);
 			// what is the provided value in the url filter rule?
 			long b = atoi(s);
 			// compare
@@ -9826,14 +10139,17 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[7] == 'd' &&
 		     p[8] == 'd' &&
 		     p[9] == 's' ) {
-			// a special hack so it is seeds so we can use the same table
+			// need a quota table for this
+			if ( ! quotaTable ) continue;
+			// a special hack so it is seeds so we can use same tbl
 			long h32 = sreq->m_domHash32 ^ 0x123456;
-			long *valPtr =(long *)cr->m_pageCountTable.getValue(&h32);
+			long *valPtr ;
+			valPtr = (long *)quotaTable->getValue(&h32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
-			if ( ! valPtr ) { char *xx=NULL;*xx=0; }
-			// shortcut
-			long a = *valPtr;
+			long a;
+			if ( ! valPtr ) a = 0;//{ char *xx=NULL;*xx=0; }
+			else a = *valPtr;
 			// what is the provided value in the url filter rule?
 			long b = atoi(s);
 			// compare
@@ -9864,14 +10180,17 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[6] == 'g' &&
 		     p[7] == 'e' &&
 		     p[8] == 's' ) {
-			long *valPtr ;
-			valPtr=(long *)cr->m_pageCountTable.
+			// need a quota table for this
+			if ( ! quotaTable ) continue;
+			long *valPtr = (long *)quotaTable->
 				getValue(&sreq->m_siteHash32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
-			if ( ! valPtr ) { char *xx=NULL;*xx=0; }
+			long a;
+			if ( ! valPtr ) a = 0;//{ char *xx=NULL;*xx=0; }
+			else a = *valPtr;
 			// shortcut
-			long a = *valPtr;
+			//log("sitepgs=%li for %s",a,sreq->m_url);
 			// what is the provided value in the url filter rule?
 			long b = atoi(s);
 			// compare
@@ -9901,14 +10220,15 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		     p[8] == 'g' &&
 		     p[9] == 'e' &&
 		     p[10] == 's' ) {
+			// need a quota table for this
+			if ( ! quotaTable ) continue;
 			long *valPtr ;
-			valPtr=(long *)cr->m_pageCountTable.
-				getValue(&sreq->m_domHash32);
+			valPtr=(long*)quotaTable->getValue(&sreq->m_domHash32);
 			// if no count in table, that is strange, i guess
 			// skip for now???
-			if ( ! valPtr ) { char *xx=NULL;*xx=0; }
-			// shortcut
-			long a = *valPtr;
+			long a;
+			if ( ! valPtr ) a = 0;//{ char *xx=NULL;*xx=0; }
+			else a = *valPtr;
 			// what is the provided value in the url filter rule?
 			long b = atoi(s);
 			// compare
@@ -10483,12 +10803,12 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 }
 
 //static bool s_ufnInit = false;
-static HashTableX s_ufnTable;
+//static HashTableX s_ufnTable;
 
-void clearUfnTable ( ) { 
-	s_ufnTable.clear(); 
-	s_ufnTree.clear();
-}
+//void clearUfnTable ( ) { 
+//	s_ufnTable.clear(); 
+//	s_ufnTree.clear();
+//}
 
 long getUrlFilterNum ( SpiderRequest *sreq       ,
 		       SpiderReply   *srep       ,
@@ -10496,7 +10816,8 @@ long getUrlFilterNum ( SpiderRequest *sreq       ,
 		       bool           isForMsg20 ,
 		       long           niceness   ,
 		       CollectionRec *cr         ,
-		       bool           isOutlink  ) {
+		       bool           isOutlink  ,
+		       HashTableX    *quotaTable ) {
 
 	/*
 	  turn this off for now to save memory on the g0 cluster.
@@ -10528,7 +10849,8 @@ long getUrlFilterNum ( SpiderRequest *sreq       ,
 				      isForMsg20,
 				      niceness,
 				      cr,
-				      isOutlink);
+				      isOutlink,
+				      quotaTable );
 
 	/*
 	// is table full? clear it if so
@@ -10682,7 +11004,7 @@ void dedupSpiderdbList ( RdbList *list , long niceness , bool removeNegRecs ) {
 			sreq->m_inGoogle           = old->m_inGoogle;
 			sreq->m_hasAuthorityInlink = old->m_hasAuthorityInlink;
 			sreq->m_hasContactInfo     = old->m_hasContactInfo;
-			sreq->m_hasSiteVenue       = old->m_hasSiteVenue;
+			//sreq->m_hasSiteVenue       = old->m_hasSiteVenue;
 		}
 
 		// if we are not the same url as last request, add it
@@ -10778,6 +11100,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot);
 
 static long s_requests = 0;
 static long s_replies  = 0;
+static long s_validReplies  = 0;
 static bool s_inUse = false;
 
 // . just call this once per second for all collections
@@ -10813,14 +11136,16 @@ void updateAllCrawlInfosSleepWrapper ( int fd , void *state ) {
 	// send out the msg request
 	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
 		Host *h = g_hostdb.getHost(i);
-		// skip if dead
-		if ( g_hostdb.isDead(i) ) {
-			if ( g_conf.m_logDebugSpider )
-				log("spider: skipping dead host #%li "
-				    "when getting "
-				    "crawl info",i);
-			continue;
-		}
+		// skip if dead. no! we need replies from all hosts
+		// otherwise our counts could be short and we might end up
+		// re-spidering stuff even though we've really hit maxToCrawl
+		//if ( g_hostdb.isDead(i) ) {
+		//	if ( g_conf.m_logDebugSpider )
+		//		log("spider: skipping dead host #%li "
+		//		    "when getting "
+		//		    "crawl info",i);
+		//	continue;
+		//}
 		// count it as launched
 		s_requests++;
 		// launch it
@@ -10856,14 +11181,72 @@ void updateAllCrawlInfosSleepWrapper ( int fd , void *state ) {
 	//return true;
 }
 
+// . Parms.cpp calls this when it receives our "spiderRoundNum" increment above
+// . all hosts should get it at *about* the same time
+void spiderRoundIncremented ( CollectionRec *cr ) {
+
+	log("spider: incrementing spider round for coll %s to %li (%lu)",
+	    cr->m_coll,cr->m_spiderRoundNum,cr->m_spiderRoundStartTime);
+
+	// . need to send a notification for this round
+	// . we are only here because the round was incremented and
+	//   Parms.cpp just called us... and that only happens in 
+	//   doneSending... so do not send again!!!
+	//cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
+
+	// . if we set sentCrawlDoneALert to 0 it will immediately
+	//   trigger another round increment !! so we have to set these
+	//   to true to prevent that.
+	// . if we learnt that there really are no more urls ready to spider
+	//   then we'll go to the next round. but that can take like
+	//   SPIDER_DONE_TIMER seconds of getting nothing.
+	cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = true;
+	cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
+
+	cr->m_localCrawlInfo.m_pageDownloadSuccessesThisRound = 0;
+	cr->m_localCrawlInfo.m_pageProcessSuccessesThisRound  = 0;
+	cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound = 0;
+	cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound  = 0;
+
+	cr->m_needsSave = true;
+}
+
 void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
-	// reply is error?
+	// loop over each LOCAL crawlinfo we received from this host
+	CrawlInfo *ptr = (CrawlInfo *)(slot->m_readBuf);
+	CrawlInfo *end = (CrawlInfo *)(slot->m_readBuf+ slot->m_readBufSize);
+
+	// host sending us this reply
+	Host *h = slot->m_host;
+
+	// assume it is a valid reply, not an error, like a udptimedout
+	s_validReplies++;
+
+	// reply is error? then use the last known good reply we had from him
 	if ( ! slot->m_readBuf || g_errno ) {
 		log("spider: got crawlinfo reply error: %s",
 		    mstrerror(g_errno));
 		// just clear it
 		g_errno = 0;
+		// just use his last known good reply
+		ptr = (CrawlInfo *)h->m_lastKnownGoodCrawlInfoReply;
+		end = (CrawlInfo *)h->m_lastKnownGoodCrawlInfoReplyEnd;
+		// if never had any reply... can't be valid then
+		if ( ! ptr ) s_validReplies--;
+	}
+	// otherwise, if reply was good it is the last known good now!
+	else {
+		// free the old good
+		long size = 
+			h->m_lastKnownGoodCrawlInfoReplyEnd -
+			h->m_lastKnownGoodCrawlInfoReply;
+		mfree ( h->m_lastKnownGoodCrawlInfoReply , size , "lknown");
+		// add in the new good in case he goes down in the future
+		h->m_lastKnownGoodCrawlInfoReply    = (char *)ptr;
+		h->m_lastKnownGoodCrawlInfoReplyEnd = (char *)end;
+		// if valid, don't let him free it now!
+		slot->m_readBuf = NULL;
 	}
 
 	// inc it
@@ -10871,12 +11254,24 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 	if ( s_replies > s_requests ) { char *xx=NULL;*xx=0; }
 
+
+	// crap, if any host is dead and not reporting it's number then
+	// that seriously fucks us up because our global count will drop
+	// and something that had hit a max limit, like maxToCrawl, will
+	// now be under the limit and the crawl will resume.
+	// what's the best way to fix this?
+	//
+	// perhaps, let's just keep the dead host's counts the same
+	// as the last time we got them. or maybe the simplest way is to
+	// just not allow spidering if a host is dead 
+
 	// the sendbuf should never be freed! it points into collrec
 	slot->m_sendBufAlloc = NULL;
 
-	// loop over each global crawlinfo
-	CrawlInfo *ptr = (CrawlInfo *)(slot->m_readBuf);
-	CrawlInfo *end = (CrawlInfo *)(slot->m_readBuf+ slot->m_readBufSize);
+	/////
+	//  SCAN the list of CrawlInfos we received from this host, 
+	//  one for each non-null collection
+	/////
 
 	// . add the LOCAL stats we got from the remote into the GLOBAL stats
 	// . readBuf is null on an error, so check for that...
@@ -10904,6 +11299,15 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			ss++;
 		}
 
+		// . special counts
+		// . assume round #'s match!
+		//if ( ss->m_spiderRoundNum == 
+		//     cr->m_localCrawlInfo.m_spiderRoundNum ) {
+		cr->m_tmpCrawlInfo.m_pageDownloadSuccessesThisRound +=
+			stats->m_pageDownloadSuccessesThisRound;
+		cr->m_tmpCrawlInfo.m_pageProcessSuccessesThisRound +=
+			stats->m_pageProcessSuccessesThisRound;
+		//}
 
 		if ( stats->m_hasUrlsReadyToSpider ) {
 			// inc the count otherwise
@@ -10913,6 +11317,10 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			//   and not us!!!
 			if ( cr->m_spiderStatus == SP_INITIALIZING )
 				cr->m_spiderStatus = SP_INPROGRESS;
+			// i guess we are back in business even if
+			// m_spiderStatus was SP_MAXTOCRAWL or 
+			// SP_ROUNDDONE...
+			cr->m_spiderStatus = SP_INPROGRESS;
 			// unflag the sent flag if we had sent an alert
 			// but only if it was a crawl round done alert,
 			// not a maxToCrawl or maxToProcess or 
@@ -10924,18 +11332,68 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			//if(cr->m_localCrawlInfo.m_sentCrawlDoneAlert
 			//== SP_ROUNDDONE )
 			//cr->m_localCrawlInfo.m_sentCrawlDoneAlert=0;
+			// revival?
+			if ( ! cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider )
+				log("spider: reviving crawl %s from host %li",
+				    cr->m_coll,slot->m_host->m_hostId);
 		}
 		
 		// if not the last reply, skip this part
 		if ( s_replies < s_requests ) continue;
 
+		// if it's the last reply we are to receive, and 1 or more 
+		// hosts did not have a valid reply, and not even a
+		// "last known good reply" then then we can't do
+		// much, so do not spider then because our counts could be
+		// way off and cause us to start spidering again even though
+		// we hit a maxtocrawl limit!!!!!
+		if ( s_validReplies < s_replies ) {
+			// this will tell us to halt all spidering
+			// because a host is essentially down!
+			s_countsAreValid = false;
+			// might as well stop the loop here since we are
+			// not updating our crawlinfo states.
+			break;
+		}
+
+
+		// revival?
+		//if ( cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider &&
+		//     ! cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
+		//	log("spider: reviving crawl %s (%li)",cr->m_coll,
+		//	    cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider);
+		//}
+
+		//bool has = cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider;
+		if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider &&
+		     ! cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider )
+			log("spider: all %li hosts report %s (%li) has no "
+			    "more urls ready to spider",
+			    s_replies,cr->m_coll,(long)cr->m_collnum);
+
 		// now copy over to global crawl info so things are not
 		// half ass should we try to read globalcrawlinfo
-		// in between packets received
+		// in between packets received.
 		memcpy ( &cr->m_globalCrawlInfo , 
 			 &cr->m_tmpCrawlInfo ,
 			 sizeof(CrawlInfo) );
-		
+
+		// turn not assume we are out of urls just yet if a host
+		// in the network has not reported...
+		//if ( g_hostdb.hasDeadHost() && has )
+		//	cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
+		     
+
+		// should we reset our "sent email" flag?
+		bool reset = false;
+
+		// can't reset if we've never sent an email out yet
+		if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert ) reset = true;
+		    
+		// must have some urls ready to spider now so we can send
+		// another email after another round of spidering
+		if (!cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider) reset=false;
+
 		// . if we have urls ready to be spidered then prepare to send
 		//   another email/webhook notification.
 		// . do not reset this flag if SP_MAXTOCRAWL etc otherwise we 
@@ -10943,11 +11401,13 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		//   is only for when we are done spidering a round, which 
 		//   happens when hasUrlsReadyToSpider goes false for all 
 		//   shards.
-		if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider &&
-		     cr->m_localCrawlInfo.m_sentCrawlDoneAlert ==SP_ROUNDDONE){
-			log("spider: resetting sent crawl done alert to 0");
+		if ( reset ) {
+			log("spider: resetting sent crawl done alert to 0 "
+			    "for coll %s",cr->m_coll);
 			cr->m_localCrawlInfo.m_sentCrawlDoneAlert = 0;
 		}
+
+
 
 		// update cache time
 		cr->m_globalCrawlInfo.m_lastUpdateTime = getTime();
@@ -10974,9 +11434,32 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) 
 			continue;
 
-		// update status
-		cr->m_spiderStatus = SP_ROUNDDONE;
+		// update status if nto already SP_MAXTOCRAWL, etc. we might
+		// just be flat out of urls
+		if ( ! cr->m_spiderStatus || 
+		     cr->m_spiderStatus == SP_INPROGRESS ||
+		     cr->m_spiderStatus == SP_INITIALIZING )
+			cr->m_spiderStatus = SP_ROUNDDONE;
 
+		//
+		// TODO: set the spiderstatus outright here...
+		// maxtocrawl, maxtoprocess, etc. based on the counts.
+		//
+
+
+		// only host #0 sends emails
+		if ( g_hostdb.m_myHost->m_hostId != 0 )
+			continue;
+
+		// . if already sent email for this, skip
+		// . localCrawlInfo stores this value on disk so persistent
+		// . we do it this way so SP_ROUNDDONE can be emailed and then
+		//   we'd email SP_MAXROUNDS to indicate we've hit the maximum
+		//   round count. 
+		if ( cr->m_localCrawlInfo.m_sentCrawlDoneAlert )
+			continue;
+
+		
 		// do email and web hook...
 		sendNotificationForCollRec ( cr );
 
@@ -10989,6 +11472,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// initialize
 	s_replies  = 0;
 	s_requests = 0;
+	s_validReplies = 0;
 	s_inUse    = false;
 }
 
@@ -10996,6 +11480,10 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	//char *request = slot->m_readBuf;
 	// just a single collnum
 	if ( slot->m_readBufSize != 0 ) { char *xx=NULL;*xx=0;}
+
+	//if ( ! isClockSynced() ) {
+	//}
+
 	//collnum_t collnum = *(collnum_t *)request;
 	//CollectionRec *cr = g_collectiondb.getRec(collnum);
 
@@ -11044,6 +11532,8 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	//long now = getTimeGlobal();
 	SafeBuf replyBuf;
 
+	long now = getTimeGlobalNoCore();
+
 	//SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
 
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
@@ -11059,11 +11549,23 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 
 		SpiderColl *sc = cr->m_spiderColl;
 
+		/////////
+		//
+		// ARE WE DONE SPIDERING?????
+		//
+		/////////
+
 		// if we haven't spidered anything in 1 min assume the
 		// queue is basically empty...
 		if ( ci->m_lastSpiderAttempt &&
 		     ci->m_lastSpiderCouldLaunch &&
 		     ci->m_hasUrlsReadyToSpider &&
+		     // the next round we are waiting for, if any, must
+		     // have had some time to get urls! otherwise we
+		     // will increment the round # and wait just
+		     // SPIDER_DONE_TIMER seconds and end up setting
+		     // hasUrlsReadyToSpider to false!
+		     now > cr->m_spiderRoundStartTime + SPIDER_DONE_TIMER &&
 		     // no spiders currently out. i've seen a couple out
 		     // waiting for a diffbot reply. wait for them to
 		     // return before ending the round...
@@ -11075,9 +11577,15 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		     //cr->m_spideringEnabled &&
 		     //g_conf.m_spideringEnabled &&
 		     ci->m_lastSpiderAttempt - ci->m_lastSpiderCouldLaunch > 
-		     (long) SPIDER_DONE_TIMER )
+		     (long) SPIDER_DONE_TIMER ) {
+			// this is the MOST IMPORTANT variable so note it
+			log("spider: coll %s has no more urls to spider",
+			    cr->m_coll);
 			// assume our crawl on this host is completed i guess
 			ci->m_hasUrlsReadyToSpider = 0;
+			// save that!
+			cr->m_needsSave = true;
+		}
 		
 		// save it
 		replyBuf.safeMemcpy ( ci , sizeof(CrawlInfo) );
@@ -11126,6 +11634,31 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 				       "spidering paused.");
 
 
+	long now = getTimeGlobal();
+
+	// . 0 means not to RE-crawl
+	// . indicate if we are WAITING for next round...
+	if ( cx->m_spiderStatus == SP_MAXTOCRAWL &&
+	     cx->m_collectiveRespiderFrequency > 0.0 &&
+	     now < cx->m_spiderRoundStartTime ) {
+		*status = SP_ROUNDDONE;
+		return msg->safePrintf("Jobs has reached maxToCrawl limit. "
+				       "Next crawl round to start "
+				       "in %li seconds.",
+				       cx->m_spiderRoundStartTime-now );
+	}
+
+	if ( cx->m_spiderStatus == SP_MAXTOPROCESS &&
+	     cx->m_collectiveRespiderFrequency > 0.0 &&
+	     now < cx->m_spiderRoundStartTime ) {
+		*status = SP_ROUNDDONE;
+		return msg->safePrintf("Jobs has reached maxToProcess limit. "
+				       "Next crawl round to start "
+				       "in %li seconds.",
+				       cx->m_spiderRoundStartTime-now );
+	}
+
+
 	if ( cx->m_spiderStatus == SP_MAXTOCRAWL ) {
 		*status = SP_MAXTOCRAWL;
 		return msg->safePrintf ( "Job has reached maxToCrawl "
@@ -11144,7 +11677,6 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 					 "limit." );
 	}
 
-	long now = getTimeGlobal();
 	// . 0 means not to RE-crawl
 	// . indicate if we are WAITING for next round...
 	if ( cx->m_collectiveRespiderFrequency > 0.0 &&
@@ -11171,6 +11703,16 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 				       "maintenance.");
 	}
 
+	// out CollectionRec::m_globalCrawlInfo counts do not have a dead
+	// host's counts tallied into it, which could make a difference on
+	// whether we have exceed a maxtocrawl limit or some such, so wait...
+	if ( ! s_countsAreValid ) {
+		*status = SP_ADMIN_PAUSED;
+		return msg->safePrintf("All crawling temporarily paused "
+				       "because a shard is down.");
+	}
+
+
 	// if spiderdb is empty for this coll, then no url
 	// has been added to spiderdb yet.. either seed or spot
 	//CrawlInfo *cg = &cx->m_globalCrawlInfo;
@@ -11187,11 +11729,21 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 	// if we sent an email simply because no urls
 	// were left and we are not recrawling!
 	if ( cx->m_collectiveRespiderFrequency <= 0.0 &&
+	     cx->m_isCustomCrawl &&
 	     ! cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
 		*status = SP_COMPLETED;
 		return msg->safePrintf("Job has completed and no "
 			"repeat is scheduled.");
 	}
+
+	if ( cx->m_spiderStatus == SP_ROUNDDONE && ! cx->m_isCustomCrawl ) {
+		*status = SP_ROUNDDONE;
+		return msg->safePrintf ( "Nothing currently "
+					 "available to spider. "
+					 "Change your url filters or try "
+					 "adding new urls.");
+	}
+		
 
 	if ( cx->m_spiderStatus == SP_ROUNDDONE ) {
 		*status = SP_ROUNDDONE;
@@ -11287,8 +11839,13 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 	reset();
 	// make the probable docid
 	long long probDocId = g_titledb.getProbableDocId ( url );
+
 	// make one up, like we do in PageReindex.cpp
 	long firstIp = (probDocId & 0xffffffff);
+
+	// ensure not crazy
+	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
+
 	// . now fill it up
 	// . TODO: calculate the other values... lazy!!! (m_isRSSExt, 
 	//         m_siteNumInlinks,...)
@@ -11299,6 +11856,10 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 	m_probDocId     = probDocId;
 	m_firstIp       = firstIp;
 	m_hopCount      = 0;
+
+	// new: validate it?
+	m_hopCountValid = 1;
+
 	// its valid if root
 	Url uu; uu.set ( url );
 	if ( uu.isRoot() ) m_hopCountValid = true;
@@ -11336,3 +11897,13 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 
 	return true;
 }
+
+bool SpiderRequest::setFromInject ( char *url ) {
+	// just like add url
+	if ( ! setFromAddUrl ( url ) ) return false;
+	// but fix this
+	m_isAddUrl = 0;
+	m_isInjecting = 1;
+	return true;
+}
+

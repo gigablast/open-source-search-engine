@@ -61,20 +61,23 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 		      "<a href=%s/privacy.html>Privacy Policy</a>"
 		      " &nbsp; &nbsp; "
 		      "<a href=%s/searchfeed.html>Search API</a>"
-		      " &nbsp; &nbsp; "
-		      "<a href=%s/seoapi.html>SEO API</a>"
-		      " &nbsp; &nbsp; "
-		      "<a href=%s/account>My Account</a> "
 		      , root
 		      , root
 		      , root
 		      , root
 		      , root
-		      , root
-		      , rootSecure
-
-		      //" &nbsp; &nbsp; <a href=/logout>Logout</a>"
 		      );
+
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf(" &nbsp; &nbsp; "
+			      "<a href=%s/seoapi.html>SEO API</a>"
+			      " &nbsp; &nbsp; "
+			      "<a href=%s/account>My Account</a> "
+			      , root
+			      , rootSecure
+			      //" &nbsp; &nbsp; <a href=/logout>Logout</a>"
+			      );
+
 	if ( r->isLocal() )
 	     sb.safePrintf("&nbsp; &nbsp;[<a href=\"/master?\">Admin</a>]");
 	sb.safePrintf("</p></b></center></body></html>");
@@ -152,7 +155,15 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	// submit to https now
 	sb.safePrintf("<form method=get "
 		      "action=/search name=f>\n");
+
+	CollectionRec *cr = g_collectiondb.getRec ( r );
+	if ( cr )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
+			      cr->m_coll);
+
 	sb.safePrintf("<input name=q type=text size=60 value=\"\">&nbsp;<input type=\"submit\" value=\"Search\">\n");
+
+
 	sb.safePrintf("\n");
 	sb.safePrintf("</form>\n");
 	sb.safePrintf("<br>\n");
@@ -381,7 +392,12 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=http://www.gigablast.com/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=\"/Top\">directory</a> &nbsp;&nbsp;&nbsp;&nbsp; \n");
+	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; ");
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo"
+			      "</a> &nbsp;&nbsp;&nbsp;&nbsp; " );
+	sb.safePrintf("<a href=\"/Top\">directory</a> "
+		      "&nbsp;&nbsp;&nbsp;&nbsp; \n");
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
 	sb.safePrintf("<b title=\"Instantly add your url to Gigablast's "
@@ -391,8 +407,17 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<form method=get action=/addurl name=f>\n");
 
-	//CollectionRec *cr = g_collectiondb.getRec ( "main" );
-	//sb.safePrintf("<input type=hidden name=c value=\"%s\">",cr->m_coll);
+
+	CollectionRec *cr = g_collectiondb.getRec ( r );
+	// the collection we want to add the url to
+	char *coll = NULL;
+	if ( cr ) 
+		coll = cr->m_coll;
+	if ( coll )
+		sb.safePrintf("<input type=hidden name=c value=\"%s\">",coll);
+	if ( ! coll ) 
+		coll = "";
+
 	sb.safePrintf("<input name=u type=text size=60 value=\"");
 	if ( url ) {
 		SafeBuf tmp;
@@ -416,6 +441,9 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	// or if in read-only mode
 	if (   g_conf.m_readOnlyMode  ) 
 		msg = "Add url is temporarily disabled";
+
+	sb.safePrintf("<br><br>Add a url to the <b>%s</b> collection",coll);
+
 	// if url is non-empty the ajax will receive this identical msg
 	// and display it in the div, so do not duplicate the msg!
 	if ( msg && ! url )
@@ -453,11 +481,12 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
 		// msg7 needs an explicit collection for /addurl for injecting
 		// in PageInject.cpp. it does not use defaults for safety.
-		sb.safePrintf("&id=%lu&c=main&rand=%llu';\n"
+		sb.safePrintf("&id=%lu&c=%s&rand=%llu';\n"
 			      "client.open('GET', url );\n"
 			      "client.send();\n"
 			      "</script>\n"
 			      , h32
+			      , coll
 			      , rand64
 			      );
 		sb.safePrintf("</div>\n");
@@ -526,9 +555,21 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	sb.safePrintf("<br><br>\n");
 	sb.safePrintf("<br><br><br>\n");
-	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href=http://www.gigablast.com/seo>seo</a> &nbsp;&nbsp;&nbsp;&nbsp; <b>directory</b> &nbsp;&nbsp;&nbsp;&nbsp; \n");
-	sb.safePrintf("<a href=http://www.gigablast.com/events>events</a>"
-		      " &nbsp;&nbsp;&nbsp;&nbsp; \n");
+
+	sb.safePrintf("<a href=/>web</a> &nbsp;&nbsp;&nbsp;&nbsp; ");
+
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<a href=http://www.gigablast.com/seo>seo"
+			      "</a> &nbsp;&nbsp;&nbsp;&nbsp; " );
+
+	sb.safePrintf("<a href=\"/Top\"><b>directory</b></a> "
+		      "&nbsp;&nbsp;&nbsp;&nbsp; \n");
+
+	if ( g_conf.m_isMattWells )
+		sb.safePrintf("<a href=http://www.gigablast.com/events>"
+			      "events</a>"
+			      " &nbsp;&nbsp;&nbsp;&nbsp; \n");
+
 	sb.safePrintf("<a href=/adv.html>advanced search</a>");
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; ");
 	char *root = "";
@@ -578,18 +619,13 @@ bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 	//long  qlen;
 	//char *q = r->getString ( "q" , &qlen , NULL );
 	// insert collection name too
-	long collLen;
-	char *coll    = r->getString("c",&collLen);
-	if ( ! coll || ! coll[0] ) {
-		//coll    = g_conf.m_defaultColl;
-		coll = g_conf.getDefaultColl( r->getHost(), r->getHostLen() );
-		collLen = gbstrlen(coll);
-	}
-	// ensure collection not too big
-	if ( collLen >= MAX_COLL_LEN ) { 
-		g_errno = ECOLLTOOBIG; 
+	CollectionRec *cr = g_collectiondb.getRec(r);
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno)); 
 	}
+
+
 	// get the collection rec
 	/*
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
@@ -1271,7 +1307,9 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	//	collLen = gbstrlen(coll);
 	//}
 	// get collection rec
+
 	CollectionRec *cr = g_collectiondb.getRec ( r );
+
 	// bitch if no collection rec found
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;
@@ -1552,6 +1590,8 @@ void doneInjectingWrapper3 ( void *st ) {
 	//CollectionRec *cr = g_collectiondb.getRec ( st1->m_coll );
 	
 	// collection name
+	char *coll = st1->m_coll;
+	if ( ! coll ) coll = "";
 
 	//char tt [ 128 ];
 	//tt[0] = '\0';
@@ -1658,8 +1698,10 @@ void doneInjectingWrapper3 ( void *st ) {
 			unsigned long rand32 = rand();
 			// in the mime to 0 seconds!
 			sb.safePrintf("<b>Url successfully added. "
-				      "<a href=/search?rand=%lu&q=url%%3A",
-				      rand32);
+				      "<a href=/search?rand=%lu&"
+				      "c=%s&q=url%%3A",
+				      rand32,
+				      coll);
 			sb.urlEncode(url);
 			sb.safePrintf(">Check it</a> or "
 				      "<a href=http://www.gigablast.com/seo?u=");

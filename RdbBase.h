@@ -262,6 +262,8 @@ class RdbBase {
 
 	void verifyDiskPageCache ( );
 
+	bool verifyFileSharding ( );
+
 	// . add a (new) file to the m_files/m_maps/m_fileIds arrays
 	// . both return array position we added it to
 	// . both return -1 and set errno on error

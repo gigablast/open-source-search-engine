@@ -196,6 +196,8 @@ void Xml::reset ( ) {
 	m_allocSize   = 0;
 }
 
+#include "HttpMime.h" // CT_JSON
+
 // "s" must be in utf8
 bool Xml::set ( char  *s             , 
 	        long   slen          , 
@@ -204,7 +206,8 @@ bool Xml::set ( char  *s             ,
 	        bool   pureXml       ,
 	        long   version       ,
 	        bool   setParentsArg ,
-	        long   niceness      ) {
+	        long   niceness      ,
+		char   contentType ) {
 
 	// just in case
 	reset();
@@ -233,6 +236,28 @@ bool Xml::set ( char  *s             ,
 		g_errno = EBADENGINEER;
 		return false;
 	}
+
+	// if json go no further. TODO: also do this for CT_TEXT etc.
+	if ( contentType == CT_JSON ) {
+		m_numNodes = 0;
+		// make the array
+		m_maxNumNodes = 1;
+		m_nodes =(XmlNode *)mmalloc(sizeof(XmlNode)*m_maxNumNodes,"x");
+		if ( ! m_nodes ) return false;
+		XmlNode *xd = &m_nodes[m_numNodes];
+		// hack the node
+		xd->m_node       = s;
+		xd->m_nodeLen    = slen;
+		xd->m_isSelfLink = 0;
+		// . nodeId for text nodes is 0
+		xd->m_nodeId     = 0;
+		xd->m_hasBackTag = false;
+		xd->m_hash       = 0;
+		xd->m_pairTagNum = -1;
+		m_numNodes++;
+		return true;
+	}
+
 
 	QUICKPOLL((niceness));
 	long i;

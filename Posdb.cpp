@@ -227,7 +227,7 @@ bool Posdb::init2 ( long treeMem ) {
 
 
 bool Posdb::addColl ( char *coll, bool doVerify ) {
-	if ( ! m_rdb.addColl ( coll ) ) return false;
+	if ( ! m_rdb.addRdbBase1 ( coll ) ) return false;
 	if ( ! doVerify ) return true;
 	// verify
 	if ( verify(coll) ) return true;

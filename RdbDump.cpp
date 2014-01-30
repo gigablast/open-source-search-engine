@@ -204,11 +204,14 @@ void RdbDump::doneDumping ( ) {
 	     m_totalPosDumped , m_totalNegDumped ,
 	     m_totalPosDumped + m_totalNegDumped );
 
-	// map verify
-	log("db: map # pos=%lli neg=%lli",
-	    m_map->getNumPositiveRecs(),
-	    m_map->getNumNegativeRecs()
-	    );
+	// . map verify
+	// . if continueDumping called us with no collectionrec, it got
+	//   deleted so RdbBase::m_map is nuked too i guess
+	if ( saved != ENOCOLLREC )
+		log("db: map # pos=%lli neg=%lli",
+		    m_map->getNumPositiveRecs(),
+		    m_map->getNumNegativeRecs()
+		    );
 
 	// free the list's memory
 	if ( m_list ) m_list->freeList();
@@ -1015,11 +1018,16 @@ void RdbDump::continueDumping() {
 
 	// if someone reset/deleted the collection we were dumping...
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
-	if ( ! cr ) g_errno = ENOCOLLREC;
-
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
+		// m_file is invalid if collrec got nuked because so did
+		// the Rdbbase which has the files
+		log("db: continue dumping lost collection");
+	}
 	// bitch about errors
-	if (g_errno)log("db: Dump to %s had error writing: %s.",
-			m_file->getFilename(),mstrerror(g_errno));
+	else if (g_errno)log("db: Dump to %s had error writing: %s.",
+			     m_file->getFilename(),mstrerror(g_errno));
+
 	// go back now if we were NOT dumping a tree
 	if ( ! (m_tree || m_buckets) ) {
 		m_isDumping = false;

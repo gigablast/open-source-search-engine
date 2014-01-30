@@ -325,7 +325,7 @@ class XmlDoc {
 	uint16_t  m_isLinkSpam:1;
 	uint16_t  m_hasAddress:1;
 	uint16_t  m_hasTOD:1;
-	uint16_t  m_hasSiteVenue:1;
+	uint16_t  m_reserved_sv:1;//hasSiteVenue:1;
 	uint16_t  m_hasContactInfo:1;
 	uint16_t  m_isSiteRoot:1;
 
@@ -484,6 +484,7 @@ class XmlDoc {
 	void setCallback ( void *state, void (*callback) (void *state) ) ;
 	void setCallback ( void *state, bool (*callback) (void *state) ) ;
 	bool addToSpiderdb ( ) ;
+	void getRevisedSpiderRequest ( class SpiderRequest *revisedReq );
 	bool indexDoc ( );
 	bool indexDoc2 ( );
 	key_t *getTitleRecKey() ;
@@ -552,6 +553,7 @@ class XmlDoc {
 	float *getPercentChanged ( );
 	uint64_t *getFuzzyDupHash ( );
 	long long *getExactContentHash64();
+	long long *getLooseContentHash64();
 	class RdbList *getDupList ( ) ;
 	class RdbList *getLikedbListForReq ( );
 	class RdbList *getLikedbListForIndexing ( );
@@ -579,6 +581,7 @@ class XmlDoc {
 	long long getFirstUrlHash64();
 	class Url **getRedirUrl() ;
 	class Url **getMetaRedirUrl() ;
+	class Url **getCanonicalRedirUrl ( ) ;
 	long *getFirstIndexedDate ( ) ;
 	long *getOutlinksAddedDate ( ) ;
 	//long *getNumBannedOutlinks ( ) ;
@@ -605,7 +608,6 @@ class XmlDoc {
 	char *getIsThisDocContacty ( );
 	bool *getHasTOD();
 	bool *getHasSiteVenue();
-
 	// non-dup/nondup addresses only
 	bool *getHasAddress();
 	class Addresses *getAddresses ( ) ;
@@ -797,7 +799,7 @@ class XmlDoc {
 	char *getIsNoArchive ( ) ;
 	long *getUrlFilterNum();
 	//long *getDiffbotApiNum();
-	//SafeBuf *getDiffbotApiUrl();
+	SafeBuf *getDiffbotApiUrl();
 	long long **getAdVector ( ) ;
 	char *getIsLinkSpam ( ) ;
 	char *getIsHijacked();
@@ -929,6 +931,8 @@ class XmlDoc {
 	Url       *m_redirUrlPtr;
 	Url        m_metaRedirUrl;
 	Url       *m_metaRedirUrlPtr;
+	Url        m_canonicalRedirUrl;
+	Url       *m_canonicalRedirUrlPtr;
 	long       m_redirError;
 	char       m_allowSimplifiedRedirs;
 	Url        m_firstUrl;
@@ -1154,8 +1158,9 @@ class XmlDoc {
 	//char   m_sampleVectorValid;
 	char     m_gigabitHashesValid;
 	char     m_tagPairHashValid;
-	char     m_oldsrValid;
-	char     m_newsrValid;
+	//char     m_oldsrValid;
+	char     m_sreqValid;
+	char     m_srepValid;
 	char     m_titleRecValid;
 
 	bool m_ipValid;
@@ -1163,6 +1168,8 @@ class XmlDoc {
 	bool m_spideredTimeValid;
 	//bool m_nextSpiderTimeValid;
 	bool m_firstIndexedValid;
+	bool m_isInIndexValid;
+	bool m_wasInIndexValid;
 	bool m_outlinksAddedDateValid;
 	bool m_countryIdValid;
 	/*
@@ -1194,6 +1201,7 @@ class XmlDoc {
 	//bool m_eliminateMenusValid;
 	bool m_redirUrlValid;
 	bool m_metaRedirUrlValid;
+	bool m_canonicalRedirUrlValid;
 	bool m_statusMsgValid;
 	bool m_mimeValid;
 	bool m_pubDateValid;
@@ -1216,7 +1224,7 @@ class XmlDoc {
 	bool m_isAdultValid;
 	bool m_hasAddressValid;
 	bool m_hasTODValid;
-	bool m_hasSiteVenueValid;
+	//bool m_hasSiteVenueValid;
 	bool m_catRecValid;
 	bool m_urlPubDateValid;
 	bool m_isUrlPermalinkFormatValid;
@@ -1328,6 +1336,7 @@ class XmlDoc {
 	bool m_isHijackedValid;
 	bool m_dupHashValid;
 	bool m_exactContentHash64Valid;
+	bool m_looseContentHash64Valid;
 
 	// shadows
 	char m_isRSS2;
@@ -1338,7 +1347,7 @@ class XmlDoc {
 	char m_isLinkSpam2;
 	bool m_hasAddress2;
 	bool m_hasTOD2;
-	bool m_hasSiteVenue2;
+	//bool m_hasSiteVenue2;
 	char m_hasContactInfo2;
 	char m_isSiteRoot2;
 
@@ -1382,6 +1391,7 @@ class XmlDoc {
 	RdbList m_likedbList;
 	uint64_t m_dupHash;
 	long long m_exactContentHash64;
+	long long m_looseContentHash64;
 	Msg0 m_msg0;
 	Msg5 m_msg5;
 	char m_isDup;
@@ -1429,6 +1439,12 @@ class XmlDoc {
 	//char   *m_contactTitleRec;
 	//long    m_contactTitleRecSize;
 	char    m_isIndexed;
+
+	// confusing, i know! these are used exclsusively by
+	// getNewSpiderReply() for now
+	char m_isInIndex;
+	char m_wasInIndex;
+
 	Msg8a   m_msg8a;
 	char   *m_tagdbColl;
 	long    m_tagdbCollLen;
@@ -1579,6 +1595,7 @@ class XmlDoc {
 	//bool m_useDiffbot;
 	// url to access diffbot with
 	SafeBuf m_diffbotApiUrl;
+	SafeBuf m_diffbotUrl; // exact url used to fetch reply from diffbot
 
 	bool *getRecycleDiffbotReply ( ) ;
 	SafeBuf *getTokenizedDiffbotReply ( ) ;
@@ -1961,8 +1978,8 @@ class XmlDoc {
 	*/
 
 	key_t     m_doledbKey;
-	SpiderRequest m_oldsr;
-	SpiderReply   m_newsr;
+	SpiderRequest m_sreq;
+	SpiderReply   m_srep;//newsr;
 
 	// bool flags for what procedures we have done
 	bool m_checkedUrlFilters;
@@ -2210,6 +2227,22 @@ class XmlDoc {
 	// frag vector (repeated fragments). 0 means repeated, 1 means not.
 	// vector is 1-1 with words in the document body.
 	char *getFragVec ( );
+
+	bool injectDoc ( char *url ,
+			 class CollectionRec *cr ,
+			 char *content ,
+			 bool contentHasMime ,
+			 long hopCount,
+			 long charset,
+
+			 bool deleteUrl,
+			 char contentType, // CT_HTML, CT_XML
+			 bool spiderLinks ,
+			 bool newOnly, // index iff new
+
+			 void *state,
+			 void (*callback)(void *state) );
+
 
 	bool injectLinks  ( HashTableX *linkDedupTable ,
 			    HashTableX *domDedupTable ,

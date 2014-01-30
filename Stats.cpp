@@ -557,6 +557,11 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 	//
 	sb.safePrintf("<div style=\"position:relative;"
 		      "background-color:#c0c0c0;"
+
+		      // match style of tables
+		      "border-radius:10px;"
+		      "border:#6060f0 2px solid;"
+		      
 		      //"overflow-y:hidden;"
 		      "overflow-x:hidden;"
 		      "z-index:-10;"
@@ -567,10 +572,11 @@ void Stats::printGraphInHtml ( SafeBuf &sb ) {
 		      "min-height:%lipx;"
 		      //"width:100%%;"
 		      //"min-height:600px;"
-		      "margin-top:10px;"
+		      //"margin-top:10px;"
 		      "margin-bottom:10px;"
-		      "margin-right:10px;"
-		      "margin-left:10px;\">"
+		      //"margin-right:10px;"
+		      //"margin-left:10px;"
+		      "\">"
 		      ,(long)DX
 		      ,(long)DY +20); // add 10 more for "2s" labels etc.
 

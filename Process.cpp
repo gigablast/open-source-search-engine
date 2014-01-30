@@ -108,6 +108,10 @@ char *g_files[] = {
 	"pdftohtml",  // pdf
 	"pstotext" ,  // postscript
 	//"ppthtml"  ,  // powerpoint
+
+	// required for SSL server support for both getting web pages
+	// on https:// sites and for serving https:// pages
+	"gb.pem",
 	
 	//"dict/unifiedDict",
 	//"dict/thesaurus.txt",
@@ -187,6 +191,7 @@ char *g_files[] = {
 
 bool Process::checkFiles ( char *dir ) {
 
+	/*
 	// check these by hand since you need one or the other
 	File f1;
 	File f2;
@@ -199,15 +204,14 @@ bool Process::checkFiles ( char *dir ) {
 	if ( //( ! f3.doesExist() || ! f4.doesExist() ) && 
 	    ( ! f4.doesExist() ) && 
 	     ( ! f1.doesExist() || ! f2.doesExist() ) ) {
-		/*
 		log("db: need either (%s and %s) or (%s and %s)",
 		    f3.getFilename() ,
 		    f4.getFilename() ,
 		    f1.getFilename() ,
 		    f2.getFilename() );
-		*/
 		//return false;
 	}
+	*/
 
 	// check for email subdir
 	//f1.set ( dir , "/html/email/");
@@ -410,7 +414,7 @@ bool Process::init ( ) {
 	//m_rdbs[m_numRdbs++] = g_tfndb.getRdb       ();
 	m_rdbs[m_numRdbs++] = g_titledb.getRdb     ();
 	//m_rdbs[m_numRdbs++] = g_revdb.getRdb       ();
-	//m_rdbs[m_numRdbs++] = g_sectiondb.getRdb   ();
+	m_rdbs[m_numRdbs++] = g_sectiondb.getRdb   ();
 	m_rdbs[m_numRdbs++] = g_posdb.getRdb     ();
 	//m_rdbs[m_numRdbs++] = g_datedb.getRdb      ();
 	m_rdbs[m_numRdbs++] = g_spiderdb.getRdb    ();
@@ -430,7 +434,7 @@ bool Process::init ( ) {
 	//m_rdbs[m_numRdbs++] = g_tfndb2.getRdb      ();
 	m_rdbs[m_numRdbs++] = g_titledb2.getRdb    ();
 	//m_rdbs[m_numRdbs++] = g_revdb2.getRdb      ();
-	//m_rdbs[m_numRdbs++] = g_sectiondb2.getRdb  ();
+	m_rdbs[m_numRdbs++] = g_sectiondb2.getRdb  ();
 	m_rdbs[m_numRdbs++] = g_posdb2.getRdb    ();
 	//m_rdbs[m_numRdbs++] = g_datedb2.getRdb     ();
 	m_rdbs[m_numRdbs++] = g_spiderdb2.getRdb   ();
@@ -1426,6 +1430,13 @@ bool Process::shutdown2 ( ) {
 		// at least destroy the page caches that have shared memory
 		// because they seem to not clean it up
 		resetPageCaches();
+
+		// let's ensure our core file can dump
+		struct rlimit lim;
+		lim.rlim_cur = lim.rlim_max = RLIM_INFINITY;
+		if ( setrlimit(RLIMIT_CORE,&lim) )
+			log("gb: setrlimit: %s.", mstrerror(errno) );
+
 		// . force an abnormal termination which will cause a core dump
 		// . do not dump core on SIGHUP signals any more though
 		abort();
@@ -1478,7 +1489,7 @@ void Process::disableTreeWrites ( ) {
 		rdb->disableWrites();
 	}
 	// disable all spider trees and tables
-	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(i);
 		if ( ! sc ) continue;
 		sc->m_waitingTree .disableWrites();
@@ -1495,7 +1506,7 @@ void Process::enableTreeWrites ( ) {
 		rdb->enableWrites();
 	}
 	// enable all waiting trees
-	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(i);
 		if ( ! sc ) continue;
 		sc->m_waitingTree .enableWrites();
@@ -1771,6 +1782,8 @@ void Process::resetAll ( ) {
 
 	g_wiktionary.reset();
 
+	g_countryCode.reset();
+
 	s_clusterdbQuickCache.reset();
 	s_hammerCache.reset();
 	s_table32.reset();
@@ -1824,7 +1837,7 @@ void Process::resetPageCaches ( ) {
 	//g_datedb          .getDiskPageCache()->reset();
 	g_linkdb          .getDiskPageCache()->reset();
 	g_titledb         .getDiskPageCache()->reset();
-	//g_sectiondb       .getDiskPageCache()->reset();
+	g_sectiondb       .getDiskPageCache()->reset();
 	g_tagdb           .getDiskPageCache()->reset();
 	g_spiderdb        .getDiskPageCache()->reset();
 	//g_tfndb           .getDiskPageCache()->reset();

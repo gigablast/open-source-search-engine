@@ -337,7 +337,7 @@ bool Clusterdb::init2 ( long treeMem ) {
 			    12            ,     // key size
 			    true          ); // bias disk page cache
 }
-
+/*
 bool Clusterdb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -349,7 +349,7 @@ bool Clusterdb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
-
+*/
 bool Clusterdb::verify ( char *coll ) {
 	log ( LOG_DEBUG, "db: Verifying Clusterdb for coll %s...", coll );
 	g_threads.disableThreads();

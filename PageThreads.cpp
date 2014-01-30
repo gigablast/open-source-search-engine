@@ -34,8 +34,8 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 		long hiActive = q->m_hiLaunched - q->m_hiReturned;
 		long      total    = loActive + mdActive + hiActive;
 		
-		p.safePrintf ( "<table width=100%% bgcolor=#d0d0f0 border=1>"
-			       "<tr><td bgcolor=#c0c0f0 colspan=\"11\">"
+		p.safePrintf ( "<table %s>"
+			       "<tr class=hdrow><td colspan=\"11\">"
 			       //"<center>"
 				//"<font size=+1>"
 				"<b>Thread Type: %s"
@@ -43,12 +43,13 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 				"  med: %li"
 				"  high: %li"
 				"  total: %li)</td></tr>",
+			       TABLE_STYLE,
 				q->getThreadType(), 
 				loActive, mdActive, 
 				hiActive, total);
 
 
-		p.safePrintf ("<tr>"
+		p.safePrintf ("<tr bgcolor=#%s>"
 			      "<td><b>Status</b></td>"
 			      "<td><b>Niceness</b></td>"
 			      "<td><b>Queued Time</b></td>"
@@ -60,7 +61,9 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 			      "<td><b>Bytes Done</b></td>"
 			      "<td><b>KBytes/Sec</b></td>"
 			      "<td><b>Read|Write</b></td>"
-			      "</tr>");
+			      "</tr>"
+			      , LIGHT_BLUE
+			      );
 
 		for ( long j = 0 ; j < q->m_top ; j++ ) {
 			ThreadEntry *t = &q->m_entries[j];
@@ -73,7 +76,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 			// might have got pre-called from EDISKSTUCK
 			if ( ! t->m_callback ) fs = NULL;
 
-			p.safePrintf("<tr>"); 
+			p.safePrintf("<tr bgcolor=#%s>", DARK_BLUE ); 
 			
 			if(t->m_isDone) {
 				p.safePrintf("<td><font color='red'><b>done</b></font></td>");
@@ -109,7 +112,7 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 				if(diskThread && fs ) {
 					long long took = (now - t->m_launchedTime);
 					if(took <= 0) took = 1;
-					p.safePrintf("<td>???/%li</td>", t->m_bytesToGo);
+					p.safePrintf("<td>%c%c%c/%li</td>", '?','?','?',t->m_bytesToGo);
 					p.safePrintf("<td>%.2f kbps</td>", 0.0);//(float)fs->m_bytesDone/took);
 					p.safePrintf("<td>%s</td>",t->m_doWrite? "Write":"Read");
 				}
@@ -159,41 +162,50 @@ bool sendPageThreads ( TcpSocket *s , HttpRequest *r ) {
 	long hiActiveMed = disk->m_hiLaunchedMed - disk->m_hiReturnedMed;
 	long hiActiveSma = disk->m_hiLaunchedSma - disk->m_hiReturnedSma;
 	long activeWrites = disk->m_writesLaunched - disk->m_writesReturned;
-	p.safePrintf ( "<table width=100%% bgcolor=#d0d0f0 border=1>"
-		       "<tr><td bgcolor=#c0c0f0 colspan=\"5\">");
+	p.safePrintf ( "<table %s>"
+		       "<tr class=hdrow><td colspan=\"5\">"
+		       , TABLE_STYLE );
 	p.safePrintf ( "<center><b>Active Read Threads</b></center></td></tr>"
-		       "<tr><td></td><td colspan='3'><center><b>Priority</b></center></td></tr>"
-		       "<tr>"
+		       "<tr bgcolor=#%s>"
+		       "<td></td><td colspan='3'>"
+		       "<center><b>Priority</b></center></td></tr>"
+		       "<tr bgcolor=#%s>"
 		       "<td><b>Size</b></td><td>Low</td><td>Medium</td><td>High</td>"
 		       "</tr>"
 		       // 			       "<tr>"
 		       // 			       "<td>Size</td>"
 		       // 			       "</tr>"
-		       "<tr>"
+		       "<tr bgcolor=#%s>"
 		       "<td>Small</td> <td>%li</td><td>%li</td><td>%li</td>"
 		       "</tr>"
-		       "<tr>"
+		       "<tr bgcolor=#%s>"
 		       "<td>Medium</td> <td>%li</td><td>%li</td><td>%li</td>"
 		       "</tr>"
-		       "<tr>"
+		       "<tr bgcolor=#%s>"
 		       "<td>Large</td> <td>%li</td><td>%li</td><td>%li</td>"
 		       "</tr>"
 		       "</table><br><br>",
+		       LIGHT_BLUE,
+		       LIGHT_BLUE,
+
+		       DARK_BLUE,
 		       loActiveSma,
 		       mdActiveSma,
 		       hiActiveSma,
 
+		       DARK_BLUE,
 		       loActiveMed,
 		       mdActiveMed,
 		       hiActiveMed,
 
+		       DARK_BLUE,
 		       loActiveBig,
 		       mdActiveBig,
 		       hiActiveBig);
 
-	p.safePrintf ("<table width=100%% bgcolor=#d0d0f0 border=1>");
-	p.safePrintf ("<tr>"
-		      "<td bgcolor=#c0c0f0><b>Active Write Threads</b></td><td>%li</td>"
+	p.safePrintf ("<table %s>",TABLE_STYLE);
+	p.safePrintf ("<tr class=hdrow>"
+		      "<td><b>Active Write Threads</b></td><td>%li</td>"
 		      "</tr></table>",
 		      activeWrites);
 

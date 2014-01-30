@@ -273,6 +273,9 @@ class Host {
 	char           m_inSync ;
 	char           m_isPermanentOutOfSync ;
 
+	char *m_lastKnownGoodCrawlInfoReply;
+	char *m_lastKnownGoodCrawlInfoReplyEnd;
+
 	// . used by Parms.cpp for broadcasting parm change requests
 	// . each parm change request has an id
 	// . this let's us know which id is in progress and what the last

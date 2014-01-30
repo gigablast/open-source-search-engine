@@ -108,7 +108,7 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	// if they are NOT submitting a request print the interface
 	// and we're not running, just print the interface
 	t = r->getString ("action" , &len );
-	if ( len != 2 ) { // && ! s_isRunning ) {
+	if ( len < 2 ) { // && ! s_isRunning ) {
 		//p = g_pages.printAdminTop ( p , pend , s , r );
 		//p = printInterface ( p , pend,q,username,coll,NULL,qlangStr);
 		g_pages.printAdminTop ( &sb , s , r );
@@ -315,19 +315,25 @@ bool printInterface (SafeBuf *sb, char *q , //long user ,
 			errmsg );
 	}
 
+	sb->safePrintf(
+		       "<style>"
+		       ".poo { background-color:#%s;}\n"
+		       "</style>\n" ,
+		       LIGHT_BLUE );
+
 	char bb [ MAX_COLL_LEN + 60 ];
 	bb[0]='\0';
 	//if ( user == USER_MASTER && c && c[0] ) sprintf ( bb , " (%s)", c);
 
 	// print the reindex interface
 	sb->safePrintf (
-		  "<table width=100%% bgcolor=#%s cellpadding=4 border=1>"
-		  "<tr><td colspan=3 bgcolor=#%s><center>"
+		  "<table %s>"
+		  "<tr><td colspan=3><center>"
 		  //"<font size=+1>"
 		  "<b>"
 		  "Reindex Urls"
 		  "</b>%s</td></tr>"
-		  "<tr><td colspan=3>"
+		  "<tr bgcolor=#%s><td colspan=3>"
 		  "<font size=1>"
 		  "Reindex the URLs that match this query. If URLs are "
 		  "banned in tagdb they will be removed from the index. "
@@ -339,7 +345,7 @@ bool printInterface (SafeBuf *sb, char *q , //long user ,
 		  "whatever rule they match in the URL Filters table."
 		  "</td></tr>"
 
-		  "<tr><td><b>query</b>"
+		  "<tr class=poo><td><b>query</b>"
 		  "<br><font size=1>"
 		  "URLs matching this query will be added to the spider "
 		  "queue for re-spidering."
@@ -359,32 +365,32 @@ bool printInterface (SafeBuf *sb, char *q , //long user ,
 		  "name=updatetags>"
 		  "</td></tr>"
 		  */
-		  , LIGHT_BLUE , DARK_BLUE , bb , q );
+		  , TABLE_STYLE , bb , DARK_BLUE , q );
 
 	if ( ! qlangStr ) qlangStr = "";
 
 	sb->safePrintf (
 
-		  "<tr><td><b>start result number</b>"
+		  "<tr class=poo><td><b>start result number</b>"
 		  "<font size=1>"
 		  "<br>Start at this search result number. Default 0.</td>"
 		  "<td><input type=text name=srn value=0 size=10>"
 		  "</td></tr>"
 
-		  "<tr><td><b>end result number</b>"
+		  "<tr class=poo><td><b>end result number</b>"
 		  "<font size=1>"
 		  "<br>Stop at this search result number. "
 		  "Default 2000000. (2M)</td>"
 		  "<td><input type=text name=ern size=10 value=2000000>"
 		  "</td></tr>" 
 
-		  "<tr><td><b>query language</b>"
+		  "<tr class=poo><td><b>query language</b>"
 		  "<font size=1>"
 		  "<br>Language that helps determine sort result ranking.</td>"
 		  "<td><input type=text name=qlang size=6 value=\"%s\">"
 		  "</td></tr>"
 
-		  "<tr><td><b>FORCE DELETE</b>"
+		  "<tr class=poo><td><b>FORCE DELETE</b>"
 		  "<font size=1>"
 		  "<br>Check this checkbox to "
 		  "delete every search result matching the above "
@@ -434,7 +440,7 @@ bool printInterface (SafeBuf *sb, char *q , //long user ,
 	// submit button
 	sb->safePrintf(
 		  "<center>"
-		  "<input type=submit name=action value=OK>" 
+		  "<input type=submit name=action value=Submit>" 
 		  "</center>"
 		  "</form></html>");
 	

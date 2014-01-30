@@ -293,6 +293,8 @@ class Msg5 {
 	bool  m_mergeLists;
 
 	char m_waitingForList;
+	//char m_waitingForMerge;
+	collnum_t m_collnum;
 	
 	// actually part of a different algo than m_waitingForList!
 	unsigned long long m_waitingKey;

@@ -105,7 +105,7 @@ bool Tfndb::init2 ( long treeMem ) {
 		return false;
 	return true;
 }
-
+/*
 bool Tfndb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -117,7 +117,7 @@ bool Tfndb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
-
+*/
 bool Tfndb::verify ( char *coll ) {
 	log ( LOG_INFO, "db: Verifying Tfndb for coll %s...", coll );
 	g_threads.disableThreads();
