@@ -203,8 +203,8 @@ bool Msg5::getList ( char     rdbId         ,
 	// remember stuff
 	m_rdbId         = rdbId;
 	m_coll          = coll;
-	m_collnum = g_collectiondb.getCollnum ( coll );
 
+	m_collnum = g_collectiondb.getCollnum ( coll );
 	if ( m_collnum < 0 ) {
 		g_errno = ENOCOLLREC;
 		return true;
@@ -473,7 +473,7 @@ bool Msg5::getList ( char     rdbId         ,
 	// timing debug
 	//log("Msg5:getting list startKey.n1=%lu",m_startKey.n1);
 	// start the read loop - hopefully, will only loop once
-	if ( ! readList ( ) ) return true;
+	if ( readList ( ) ) return true;
 
 	// tell Spider.cpp not to nuke us until we get back!!!
 	m_waitingForList = true;

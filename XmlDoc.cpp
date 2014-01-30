@@ -8140,11 +8140,14 @@ char *XmlDoc::getIsDup ( ) {
 	//	// do not repeat
 	//	m_didQuickDupCheck = true;
 
+
+	long myRank = getSiteRank ( );
+
 	// init
 	//uint8_t maxScore = 0;
 	//uint8_t myScore  = 0;
-	char maxSiteRank = -1;
-	long long maxDocId = -1LL;
+	//char maxSiteRank = -1;
+	//long long maxDocId = -1LL;
 	// assume not a dup
 	m_isDup = false;
 	// get the docid that we are a dup of
@@ -8167,33 +8170,51 @@ char *XmlDoc::getIsDup ( ) {
 		//	mySiteRank = sr;
 		//	continue;
 		//}
+
+		// skip if us
+		if ( d == m_docId ) continue;
+
 		// for debug
-		if ( d != m_docId )
-			log("build: doc %s is dup of doid %lli",
+		//if ( d != m_docId )
+		//log("build: doc %s is dup of docid %lli",
+		//    m_firstUrl.m_url,d);
+
+		// if his rank is <= ours then he was here first and we
+		// are the dup i guess...
+		if ( sr >= myRank ) {
+			log("build: doc %s is dup of docid %lli",
 			    m_firstUrl.m_url,d);
+			m_isDup = true;
+			m_isDupValid = true; 
+			return &m_isDup; 
+		}
+
 		// get the winner
 		//if ( score > maxScore ) maxScore = score;
-		if ( sr > maxSiteRank || maxSiteRank == -1 ) {
-			maxSiteRank = sr;
-			maxDocId = d;
-			continue;
-		}
-		if ( sr < maxSiteRank ) continue;
+		//if ( sr > maxSiteRank || maxSiteRank == -1 ) {
+		//	maxSiteRank = sr;
+		//	maxDocId = d;
+		//	continue;
+		//}
+		//if ( sr < maxSiteRank ) continue;
 		// fallback to docid?
-		if ( d < maxDocId ) {
-			maxDocId = d;
-			continue;
-		}
+		// do it first come first server othereise i guess
+		// this will prevent dups from existing in the index at least
+		// if they have the same siterank...
+		//if ( d < maxDocId ) {
+		//	maxDocId = d;
+		//	continue;
+		//}
 	}
 	// are we the highest scoring doc with this template?
 	// corollary: if all dups have equal scores they will be
 	// removed until there is only one doc that matches the pattern
 	//if ( myScore >= maxScore ) {
-	if ( maxDocId >= 0 && maxDocId != *mydocid ) {
-		m_isDup = true;
-		m_isDupValid = true; 
-		return &m_isDup; 
-	}
+	//if ( maxDocId >= 0 && maxDocId != *mydocid && out) {
+	//	m_isDup = true;
+	//	m_isDupValid = true; 
+	//	return &m_isDup; 
+	//}
 
 	m_isDup = false;
 	m_isDupValid = true; 
