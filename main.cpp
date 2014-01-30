@@ -2243,6 +2243,10 @@ int main ( int argc , char *argv[] ) {
 	if ( ! g_loop.init() ) {
 		log("db: Loop init failed." ); return 1; }
 
+
+	// test the inifinite keep alive bug fix. is recovery futile bug.
+	//char *xx=NULL;*xx=0; 
+
 	// the new way to save all rdbs and conf
 	// if g_process.m_powerIsOn is false, logging will not work, so init
 	// this up here. must call after Loop::init() so it can register
@@ -16678,6 +16682,8 @@ bool isRecoveryFutile ( ) {
 
 	// if we had less than 5 do not consider futile
 	if ( fresh < 5 ) return false;
+
+	log("process: KEEP ALIVE LOOP GIVING UP. Five or more cores in last 60 seconds.");
 
 	// otherwise, give up!
 	return true;
