@@ -3017,6 +3017,8 @@ bool SpiderColl::evalIpLoop ( ) {
 	// sanity
 	if ( m_scanningIp == 0 || m_scanningIp == -1 ) { char *xx=NULL;*xx=0;}
 
+ top:
+
 	// did our collection rec get deleted? since we were doing a read
 	// the SpiderColl will have been preserved in that case but its
 	// m_deleteMyself flag will have been set.
@@ -3028,8 +3030,6 @@ bool SpiderColl::evalIpLoop ( ) {
 		// pretend to block since we got deleted!!!
 		return false;
 	}
-
- top:
 
 	// if first time here, let's do a read first
 	if ( ! m_didRead ) {
@@ -3044,6 +3044,19 @@ bool SpiderColl::evalIpLoop ( ) {
 	}
 
  loop:
+
+	// did our collection rec get deleted? since we were doing a read
+	// the SpiderColl will have been preserved in that case but its
+	// m_deleteMyself flag will have been set.
+	if ( m_deleteMyself &&
+	     ! m_msg5b.m_waitingForList &&
+	     ! m_msg1.m_mcast.m_inUse ) {
+		mdelete ( this , sizeof(SpiderColl),"postdel1");
+		delete ( this );
+		// pretend to block since we got deleted!!!
+		return false;
+	}
+
 
 	// . did reading the list from spiderdb have an error?
 	// . i guess we don't add to doledb then
@@ -3268,6 +3281,8 @@ bool SpiderColl::readListFromSpiderdb ( ) {
 // . set m_bestRequest if an request in m_list is better than what is
 //   in m_bestRequest from previous lists for this IP
 bool SpiderColl::scanListForWinners ( ) {
+
+	
 
 	// if list is empty why are we here?
 	if ( m_list.isEmpty() ) return true;
