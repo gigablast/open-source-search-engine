@@ -8138,7 +8138,9 @@ char *XmlDoc::getIsDup ( ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 	// skip if we should
-	if ( ! cr->m_dedupingEnabled ) {
+	if ( ! cr->m_dedupingEnabled || 
+	     // bulk jobs never dedup
+	     cr->m_isCustomCrawl == 2 ) {
 		m_isDupValid = true;
 		return &m_isDup;
 	}
@@ -14861,6 +14863,10 @@ Url **XmlDoc::getCanonicalRedirUrl ( ) {
 
 	// assume none in doc
 	m_canonicalRedirUrlPtr = NULL;
+
+	// disable for now, not good really for deduping
+	m_canonicalRedirUrlValid = true;
+	return &m_canonicalRedirUrlPtr;
 
 	uint8_t *ct = getContentType();
 	if ( ! ct ) return NULL;

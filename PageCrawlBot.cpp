@@ -79,6 +79,8 @@ public:
 	Msg4 m_msg4;
 	HttpRequest m_hr;
 	Msg7 m_msg7;
+	long m_dumpRound;
+	long long m_accumulated;
 
 	WaitEntry m_waitEntry;
 
@@ -263,6 +265,8 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	st->m_prevReplyFirstIp = 0;
 	st->m_prevReplyError = 0;
 	st->m_prevReplyDownloadTime = 0LL;
+	st->m_dumpRound = 0;
+	st->m_accumulated = 0LL;
 
 	// debug
 	//log("mnew1: st=%lx",(long)st);
@@ -382,6 +386,10 @@ bool StateCD::readDataFromRdb ( ) {
 			sk = (char *)&m_titledbStartKeys[i];
 		// get host
 		Host *h = g_hostdb.getLiveHostInShard(i);
+		// show it
+		long ks = getKeySizeFromRdbId(m_rdbId);
+		log("dump: asking host #%li for list sk=%s",
+		    h->m_hostId,KEYSTR(sk,ks));
 		// msg0 uses multicast in case one of the hosts in a shard is
 		// dead or dies during this call.
 		if ( ! m_msg0s[i].getList ( h->m_hostId , // use multicast
@@ -463,7 +471,6 @@ bool StateCD::sendList ( ) {
 
 	//CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 
-
 	if ( ! m_printedFirstBracket && m_fmt == FMT_JSON ) {
 		sb.safePrintf("[\n");
 		m_printedFirstBracket = true;
@@ -490,6 +497,11 @@ bool StateCD::sendList ( ) {
 
 		// should we try to read more?
 		m_needMore[i] = false;
+
+		// report it
+		log("dump: got list of %li bytes from host #%li round #%li",
+		    list->getListSize(),i,m_dumpRound);
+
 
 		if ( list->isEmpty() ) {
 			list->freeList();
@@ -539,6 +551,8 @@ bool StateCD::sendList ( ) {
 		list->freeList();
 	}
 
+	m_dumpRound++;
+
 	//log("rdbid=%li fmt=%li some=%li printed=%li",
 	//    (long)m_rdbId,(long)m_fmt,(long)m_someoneNeedsMore,
 	//    (long)m_printedEndingBracket);
@@ -587,10 +601,12 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 	StateCD *st = (StateCD *)state;
 
 	//TcpSocket *socket = st->m_socket;
+	st->m_accumulated += sock->m_totalSent;
 
-	log("crawlbot: done sending on socket %li/%li bytes",
+	log("crawlbot: done sending on socket %li/%li [%lli] bytes",
 	    sock->m_totalSent,
-	    sock->m_sendBufUsed);
+	    sock->m_sendBufUsed,
+	    st->m_accumulated);
 
 
 	readAndSendLoop ( st , true );

@@ -1882,7 +1882,8 @@ void TcpServer::recycleSocket ( TcpSocket *s ) {
 	s->m_totalRead         = 0;
 	s->m_totalToRead       = 0;
 	//s->m_timeout           = 60*1000;
-	s->m_timeout           = 10*60*1000;
+	// boost from 10 mins to 1000 mins for downloading large json data files
+	s->m_timeout           = 1000*60*1000;
 	s->m_udpSlot           = NULL;
 	s->m_streamingMode     = false;
 	// keep it alive for other dialogs
