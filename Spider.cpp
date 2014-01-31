@@ -11229,8 +11229,9 @@ void spiderRoundIncremented ( CollectionRec *cr ) {
 void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 	// loop over each LOCAL crawlinfo we received from this host
-	CrawlInfo *ptr = (CrawlInfo *)(slot->m_readBuf);
-	CrawlInfo *end = (CrawlInfo *)(slot->m_readBuf+ slot->m_readBufSize);
+	CrawlInfo *ptr   = (CrawlInfo *)(slot->m_readBuf);
+	CrawlInfo *end   = (CrawlInfo *)(slot->m_readBuf+ slot->m_readBufSize);
+	long       allocSize           = slot->m_readBufMaxSize;
 
 	// host sending us this reply
 	Host *h = slot->m_host;
@@ -11252,14 +11253,16 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	}
 	// otherwise, if reply was good it is the last known good now!
 	else {
-		// free the old good
-		long size = 
-			h->m_lastKnownGoodCrawlInfoReplyEnd -
-			h->m_lastKnownGoodCrawlInfoReply;
-		mfree ( h->m_lastKnownGoodCrawlInfoReply , size , "lknown");
+		// free the old good one and replace it with the new one
+		if ( h->m_lastKnownGoodCrawlInfoReply )
+			mfree ( h->m_lastKnownGoodCrawlInfoReply , 
+				h->m_replyAllocSize , 
+				"lknown" );
 		// add in the new good in case he goes down in the future
 		h->m_lastKnownGoodCrawlInfoReply    = (char *)ptr;
 		h->m_lastKnownGoodCrawlInfoReplyEnd = (char *)end;
+		// set new alloc size
+		h->m_replyAllocSize = allocSize;
 		// if valid, don't let him free it now!
 		slot->m_readBuf = NULL;
 	}

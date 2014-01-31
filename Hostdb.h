@@ -275,6 +275,7 @@ class Host {
 
 	char *m_lastKnownGoodCrawlInfoReply;
 	char *m_lastKnownGoodCrawlInfoReplyEnd;
+	long  m_replyAllocSize;
 
 	// . used by Parms.cpp for broadcasting parm change requests
 	// . each parm change request has an id
