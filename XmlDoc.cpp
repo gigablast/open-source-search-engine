@@ -20694,6 +20694,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	long needSpiderdb3 = 0;
 	if ( m_sreqValid && m_sreq.m_isInjecting ) 
 		needSpiderdb3 = m_sreq.getRecSize() + 1;
+	need += needSpiderdb3;
 
 	//long needSpiderdb3 = 0;
 	//if ( m_sreqValid ) needSpiderdb3 = m_sreq.getRecSize() + 1;
