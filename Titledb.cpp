@@ -2,6 +2,7 @@
 
 #include "Titledb.h"
 #include "Threads.h"
+#include "Rebalance.h"
 
 Titledb g_titledb;
 Titledb g_titledb2;
@@ -51,12 +52,13 @@ bool Titledb::init ( ) {
 	// . just hard-code 30MB for now
 	long pcmem    = 30000000; // = g_conf.m_titledbMaxDiskPageCacheMem;
 	// fuck that we need all the mem!
-	pcmem = 0;
+	//pcmem = 0;
 	// do not use any page cache if doing tmp cluster in order to
 	// prevent swapping
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	long pageSize = GB_INDEXDB_PAGE_SIZE;
 	// init the page cache
+	// . MDW: "minimize disk seeks" not working otherwise i'd enable it!
 	if ( ! m_pc.init ( "titledb",
 			   RDB_TITLEDB,
 			   pcmem    ,
@@ -87,7 +89,7 @@ bool Titledb::init ( ) {
 			    0,//maxCacheNodes               ,
 			    false                       ,// half keys?
 			    false                       ,// g_conf.m_titledbSav
-			    &m_pc                       , // page cache ptr
+			    &m_pc               , // page cache ptr
 			    true                        ) )// is titledb?
 		return false;
 	return true;
@@ -122,7 +124,7 @@ bool Titledb::init2 ( long treeMem ) {
 	// validate
 	//return verify ( );
 }
-
+/*
 bool Titledb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -134,9 +136,9 @@ bool Titledb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
-
+*/
 bool Titledb::verify ( char *coll ) {
-	log ( LOG_INFO, "db: Verifying Titledb for coll %s...", coll );
+	log ( LOG_DEBUG, "db: Verifying Titledb for coll %s...", coll );
 	g_threads.disableThreads();
 
 	Msg5 msg5;
@@ -186,13 +188,17 @@ bool Titledb::verify ( char *coll ) {
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
+		// tally it up
+		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %li records in titledb, "
-		     "only %li belong to our group.",count,got);
+		     "only %li belong to our shard. c=%s",count,got,coll);
 		// exit if NONE, we probably got the wrong data
 		if ( count > 10 && got == 0 ) 
 			log("db: Are you sure you have the right "
 				   "data in the right directory? "
-				   "Exiting.");
+			    "coll=%s "
+			    "Exiting.",
+			    coll);
 		// repeat with log
 		for ( list.resetListPtr() ; ! list.isExhausted() ;
 		      list.skipCurrentRecord() ) {
@@ -203,13 +209,18 @@ bool Titledb::verify ( char *coll ) {
 			log("db: docid=%lli shard=%li",
 			    getDocId(&k),shardNum);
 		}
-
-		log ( "db: Exiting due to Titledb inconsistency." );
 		g_threads.enableThreads();
-		return g_conf.m_bypassValidation;
+		//if ( g_conf.m_bypassValidation ) return true;
+		//if ( g_conf.m_allowScale ) return true;
+		// don't exit any more, allow it, but do not delete
+		// recs that belong to different shards when we merge now!
+		log ( "db: db shards unbalanced. "
+		      "Click autoscale in master controls.");
+		//return false;
+		return true;
 	}
 
-	log ( LOG_INFO, "db: Titledb passed verification successfully for %li"
+	log ( LOG_DEBUG, "db: Titledb passed verification successfully for %li"
 			" recs.", count );
 	// DONE
 	g_threads.enableThreads();

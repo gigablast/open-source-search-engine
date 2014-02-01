@@ -604,6 +604,7 @@ bool TcpServer::sendMsg ( long   ip       ,
 	s->m_maxOtherDocLen   = maxOtherDocLen ;
 	s->m_ssl              = NULL;
 	s->m_udpSlot          = NULL;
+	s->m_streamingMode    = false;
 	// . call the connect routine to try to connect it asap
 	// . this does not block however
 	// . this returns false if blocked, true otherwise
@@ -694,11 +695,17 @@ bool TcpServer::sendMsg ( TcpSocket *s            ,
 	// . this will also unregister all our callbacks for the socket
 	// . TODO: deleting nodes from under Loop::callCallbacks is dangerous!!
 	if      ( g_errno      ) { destroySocket ( s ); return true; }
+
+	// if in streaming mode just return true, do not set sockState
+	// to ST_NEEDS_CLOSE lest it be destroyed. streaming mode needs
+	// to get more data to send on the socket.
+	if ( s->m_streamingMode ) return true;
+
 	// reset the socket iff it was a reply that we finished writing
 	// hmmm else if ( s->m_readBuf ) { recycleSocket ( s ); return true; }
-	// we can't close it here any more for some reason the browser truncates
-	// the content we transmit otherwise... i've tried SO_LINGER and couldnt get
-	// that to work...
+	// we can't close it here any more for some reason the browser truncats
+	// the content we transmit otherwise... i've tried SO_LINGER and 
+	// couldnt get that to work...
 	if ( s->m_readBuf ) { s->m_sockState = ST_NEEDS_CLOSE; return true; }
 	// we're blocking on the reply (readBuf is empty)
 	return false;
@@ -906,6 +913,8 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 	s->m_lastActionTime = s->m_startTime;
 	// set if it's incoming connection or not
 	s->m_isIncoming = isIncoming;
+	// turn this off
+	s->m_streamingMode = false;
 	// . a 30 sec timeout, we don't want slow guys using all our sockets
 	// . they could easily flood us anyway though
 	// . we need to wait possibly a few minutes for a large inject of
@@ -1434,7 +1443,7 @@ void writeSocketWrapper ( int sd , void *state ) {
 	// if socket has nothing to send yet cuz we're waiting, wait...
 	if ( s->m_sendBufUsed == 0 ) return;
 
- sendAgain:
+	// sendAgain:
 
 	// . writeSocket returns false if blocked, true otherwise
 	// . it also sets g_errno on errro
@@ -1451,13 +1460,16 @@ void writeSocketWrapper ( int sd , void *state ) {
 
 	// if callback changed socket status to ST_SEND_AGAIN 
 	// then let's send the new buffer that it has. Diffbot.cpp uses this.
-	if ( s->m_sockState == ST_SEND_AGAIN ) {
-		s->m_sockState = ST_WRITING;
-		// if nothing left to send just return
-		if ( ! s->m_sendBuf ) return;
-		// otherwise send it
-		goto sendAgain;
-	}
+	//if ( s->m_sockState == ST_SEND_AGAIN ) {
+	//	s->m_sockState = ST_WRITING;
+	//	// if nothing left to send just return
+	//	if ( ! s->m_sendBuf ) return;
+	//	// otherwise send it
+	//	goto sendAgain;
+	//}
+
+	// wait for it to exit streaming mode before destroying
+	if ( s->m_streamingMode ) return;
 
 	// . destroy the socket on error, recycle on transaction completion
 	// . this will also unregister all our callbacks for the socket
@@ -1673,6 +1685,14 @@ connected:
 // . calls the callback governing "s" if it has one
 void TcpServer::destroySocket ( TcpSocket *s ) {
 	if ( ! s ) return ;
+
+	// sanity, must exit streaming mode before destruction
+	if ( s->m_streamingMode ) { 
+		log("tcp: destroying socket in streaming mode. err=%s",
+		    mstrerror(g_errno));
+		//char *xx=NULL;*xx=0; }
+	}
+
 	// sanity check
 	if ( s->m_udpSlot ) { 
 		log("tcp: sending back error on udp slot err=%s",
@@ -1862,8 +1882,10 @@ void TcpServer::recycleSocket ( TcpSocket *s ) {
 	s->m_totalRead         = 0;
 	s->m_totalToRead       = 0;
 	//s->m_timeout           = 60*1000;
-	s->m_timeout           = 10*60*1000;
+	// boost from 10 mins to 1000 mins for downloading large json data files
+	s->m_timeout           = 1000*60*1000;
 	s->m_udpSlot           = NULL;
+	s->m_streamingMode     = false;
 	// keep it alive for other dialogs
 	s->m_sockState         = ST_AVAILABLE;
 	s->m_startTime         = gettimeofdayInMilliseconds();
@@ -2097,6 +2119,7 @@ TcpSocket *TcpServer::acceptSocket ( ) {
 	s->m_sockState = ST_READING;
 	s->m_this      = this;
 	s->m_udpSlot   = NULL;
+	s->m_streamingMode = false;
 
 	if ( ! m_useSSL ) return s;
 
@@ -2213,4 +2236,57 @@ void TcpServer::cancel ( void *state ) {
 		makeCallback  ( s );
 		destroySocket ( s );
 	}
+}
+
+#include "SafeBuf.h"
+
+bool TcpServer::sendChunk ( TcpSocket *s ,
+			    SafeBuf *sb ,
+			    void *state ,
+			    // call this function when done sending this chunk
+			    // so that it can read another chunk and call 
+			    // sendChunk() again.
+			    void (* doneSendingWrapper)( void *,TcpSocket *) ,
+			    bool lastChunk ) {
+
+	log("tcp: sending chunk of %li bytes", sb->length() );
+
+	// if socket had shit on there already, free that memory
+	// just like TcpServer::destroySocket would
+	if ( s->m_sendBuf ) {
+		mfree (s->m_sendBuf, s->m_sendBufSize,"TcpServer");
+		s->m_sendBuf = NULL;
+	}
+
+	// reset send stats just in case
+	s->m_sendOffset        = 0;
+	s->m_totalSent         = 0;
+	s->m_totalToSend       = 0;
+
+	// let it know not to close the socket while this is set
+	if ( ! lastChunk ) s->m_streamingMode = true;
+	else               s->m_streamingMode = false;
+
+	// . start the send process
+	// . returns false if send did not complete
+	// . returns true and sets g_errno on error
+	if (  ! sendMsg ( s ,
+			  sb->getBufStart(), // sendBuf     ,
+			  sb->getCapacity(),//sendBufSize ,
+			  sb->length(),//sendBufSize ,
+			  sb->length(), // msgtotalsize
+			  state       ,   // data for callback
+			  doneSendingWrapper  ) ) { // callback
+		// do not free sendbuf we are transmitting it
+		sb->detachBuf();
+		return false;
+	}
+
+	// we sent without blocking
+	sb->detachBuf();
+
+	// a problem?
+	if ( g_errno ) return true;
+
+	return true;
 }

@@ -89,7 +89,7 @@ bool Placedb::init2 ( long treeMem ) {
 		return false;
 	return true;
 }
-
+/*
 bool Placedb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -101,7 +101,7 @@ bool Placedb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
-
+*/
 bool Placedb::verify ( char *coll ) {
 	log ( LOG_INFO, "db: Verifying Placedb for coll %s...", coll );
 	g_threads.disableThreads();

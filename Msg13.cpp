@@ -482,6 +482,10 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	// . an empty rec is a cached not found (no robot.txt file)
 	// . therefore it's allowed, so set *reply to 1 (true)
 	if ( inCache ) {
+		// helpful for debugging. even though you may see a robots.txt
+		// redirect and think we are downloading that each time,
+		// we are not... the redirect is cached here as well.
+		//log("spider: %s was in cache",r->m_url);
 		// . send the cached reply back
 		// . this will free send/read bufs on completion/g_errno
 		g_udpServer.sendReply_ass ( rec , recSize , rec, recSize,slot);
@@ -1152,10 +1156,12 @@ void gotHttpReply2 ( void *state ,
 		// . if no user-agent line matches * or gigabot/flurbot we
 		//   will get just a \0 for the reply, replySize=1!
 		//char *ua = "ProCogBot";//"EventGuruBot";//r->m_userAgent;
-		char *ua = "Gigabot";
-		long uaLen = gbstrlen(ua);
-		replySize = filterRobotsTxt (reply,replySize,&mime,niceness,
-					     ua,uaLen);
+		// take this out until it works for 
+		// user-agent: *\ndisallow: blah
+		//char *ua = "Gigabot";
+		//long uaLen = gbstrlen(ua);
+		//replySize = filterRobotsTxt (reply,replySize,&mime,niceness,
+		//			     ua,uaLen);
 		// record in the stats
 		docsPtr     = &g_stats.m_compressRobotsTxtDocs;
 		bytesInPtr  = &g_stats.m_compressRobotsTxtBytesIn;
@@ -2016,7 +2022,7 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 	xd->m_r   = r;
 
 	// so XmlDoc::getExtraDoc doesn't have any issues
-	xd->m_firstIp = 0;
+	xd->m_firstIp = 123456;
 	xd->m_firstIpValid = true;
 
 	// try using xmldoc to do it
@@ -2219,16 +2225,17 @@ void scanHammerQueue ( int fd , void *state ) {
 		//log("spider: downloading %s from crawldelay queue "
 		//    "waited=%llims crawldelay=%lims", 
 		//    r->m_url,waited,r->m_crawlDelayMS);
+
 		// good to go
 		downloadTheDocForReals ( r );
 		//
 		// remove from future scans
 		//
 		if ( prev ) 
-			prev->m_nextLink = r->m_nextLink;
+			prev->m_nextLink = nextLink;
 
 		if ( s_hammerQueueHead == r )
-			s_hammerQueueHead = r->m_nextLink;
+			s_hammerQueueHead = nextLink;
 
 		if ( s_hammerQueueTail == r )
 			s_hammerQueueTail = prev;

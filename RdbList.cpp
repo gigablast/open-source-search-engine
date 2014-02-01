@@ -15,6 +15,13 @@
 #include "Linkdb.h"
 #include "sched.h"
 
+/////
+//
+// we no longer do ALLOW_SCALE! now user can click "rebalance shards"
+// to scan all rdbs of every coll and move the recs to the appropriate
+// shard in real time.
+//
+/////
 //#define ALLOW_SCALE
 
 void RdbList::constructor () { 
@@ -1624,9 +1631,12 @@ void RdbList::merge_r ( RdbList **lists         ,
 	// . we don't want any positive recs to go un annhilated
 	// . but don't worry about this check if start and end keys are equal
 	//if ( m_startKey != m_endKey && (m_endKey.n0 & 0x01) == 0x00 )
-	if ( KEYCMP(m_startKey,m_endKey,m_ks)!=0 && KEYNEG(m_endKey) )
+	if ( KEYCMP(m_startKey,m_endKey,m_ks)!=0 && KEYNEG(m_endKey) ) {
 		log(LOG_LOGIC,"db: rdblist: merge_r: Illegal endKey for "
-		    "merging.");
+		    "merging. fixing.");
+		// make it legal so it will be read first NEXT time
+		KEYSUB(m_endKey,1,m_ks);
+	}
 	// do nothing if no lists passed in
 	if ( numLists <= 0 ) return;
 	// inherit the key size of what we merge
@@ -1818,7 +1828,6 @@ void RdbList::merge_r ( RdbList **lists         ,
 
 	// if we are scaling, skip this stuff
 	//if ( g_conf.m_allowScale ) goto skipfilter;
-
 
 #ifdef ALLOW_SCALE
 
@@ -2055,8 +2064,8 @@ void RdbList::merge_r ( RdbList **lists         ,
 		char*xx=NULL;*xx=0; }
 
 	// dedup for spiderdb
-	if ( rdbId == RDB_SPIDERDB )
-		dedupSpiderdbList ( this , niceness , removeNegRecs );
+	//if ( rdbId == RDB_SPIDERDB )
+	//	dedupSpiderdbList ( this , niceness , removeNegRecs );
 
 	/*
 	if ( rdbId  == RDB_POSDB ) {

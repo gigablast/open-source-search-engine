@@ -226,6 +226,7 @@ class Msg5 {
 	long      m_newMinRecSizes;
 	long      m_round;
 	long      m_totalSize;
+	long      m_lastTotalSize;
 	long      m_treeMinRecSizes;
 	bool      m_readAbsolutelyNothing;
 
@@ -292,6 +293,8 @@ class Msg5 {
 	bool  m_mergeLists;
 
 	char m_waitingForList;
+	//char m_waitingForMerge;
+	collnum_t m_collnum;
 	
 	// actually part of a different algo than m_waitingForList!
 	unsigned long long m_waitingKey;

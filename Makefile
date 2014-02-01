@@ -2,15 +2,15 @@ SHELL = /bin/bash
 
 CC=g++
 
-OBJS =  Tfndb.o UdpSlot.o \
+OBJS =  Tfndb.o UdpSlot.o Rebalance.o \
 	Msg13.o Mime.o IndexReadInfo.o \
 	PageGet.o PageHosts.o PageIndexdb.o PageLogin.o \
 	PageParser.o PageInject.o PagePerf.o PageReindex.o PageResults.o \
 	PageRoot.o PageSockets.o PageStats.o \
 	PageTitledb.o \
-	PageAddColl.o PageOverview.o \
+	PageAddColl.o \
 	hash.o Domains.o \
-	Collectiondb.o CollectionRec.o \
+	Collectiondb.o \
 	linkspam.o ip.o sort.o \
 	fctypes.o XmlNode.o XmlDoc.o Xml.o \
 	Words.o Url.o UdpServer.o \
@@ -36,7 +36,7 @@ OBJS =  Tfndb.o UdpSlot.o \
 	Stats.o BigFile.o Msg17.o \
 	Speller.o DiskPageCache.o \
 	PingServer.o StopWords.o TopTree.o \
-	Parms.o Pages.o Msg28.o \
+	Parms.o Pages.o \
 	Unicode.o iana_charset.o Iso8859.o \
 	SearchInput.o \
 	Categories.o Msg2a.o PageCatdb.o PageDirectory.o \
@@ -47,9 +47,8 @@ OBJS =  Tfndb.o UdpSlot.o \
 	AutoBan.o Msg3a.o HashTableT.o HashTableX.o \
 	PageLogView.o Msg1f.o Blaster.o MsgC.o \
 	PageSpam.o Proxy.o PageThreads.o Linkdb.o \
-	PageNetTest.o \
 	matches2.o LanguageIdentifier.o \
-	Language.o Repair.o Process.o Msg3e.o \
+	Language.o Repair.o Process.o \
 	Abbreviations.o \
 	RequestTable.o TuringTest.o Msg51.o geo_ip_table.o \
 	Msg40.o Msg4.o \

@@ -15,7 +15,7 @@
 #include <sys/ioctl.h>            // ioctl() - get our ip address from a socket
 #include <net/if.h>               // for struct ifreq passed to ioctl()    
 //#include "../../rsa/rsa.h"        // public_key private_key vlong (seals)
-#include "Conf.h"       // for getting m_groupId/m_groupMask
+//#include "Conf.h"       // for getting m_groupId/m_groupMask
 #include "Xml.h" // host file in xml
 
 // the default mattster udp port (also re-defined in conf/Conf.cpp) TODO: unify
@@ -48,9 +48,12 @@ enum {
 // between all the hosts in the cluster
 #define PFLAG_MERGEMODE0     0x08
 #define PFLAG_MERGEMODE0OR6  0x10
+#define PFLAG_REBALANCING    0x20
+#define PFLAG_FOREIGNRECS    0x40
+#define PFLAG_RECOVERYMODE   0x80
 
 // added slow disk reads to it, 4 bytes (was 52)
-#define MAX_PING_SIZE 44
+#define MAX_PING_SIZE (44+4)
 
 #define HT_GRUNT   0x01
 #define HT_SPARE   0x02
@@ -78,7 +81,7 @@ class Host {
 
  public:
 
-	//bool isDead ( ) { return m_hostdb->m_isDead ( this ); };
+	//bool isDead ( ) { return m_hostdb->m_isDead (); };
 
 	long           m_hostId ;
 	//unsigned long  m_groupId ;
@@ -108,6 +111,10 @@ class Host {
 	unsigned long  m_ipShotgun;  
 	unsigned short m_externalHttpPort;
 	unsigned short m_externalHttpsPort;
+
+	// his checksum of his hosts.conf so we can ensure we have the
+	// same hosts.conf file! 0 means not legit.
+	long m_hostsConfCRC;
 
 	// used by Process.cpp to do midnight stat dumps and emails
 	EventStats m_eventStats;
@@ -235,6 +242,9 @@ class Host {
 	// network to save on local loop bandwidth costs
 	char           m_type;
 
+	bool isProxy() { return (m_type == HT_PROXY); };
+	bool isGrunt() { return (m_type == HT_GRUNT); };
+
 	// for m_type == HT_QCPROXY, we forward the query to the regular proxy
 	// at this Ip:Port. we should receive a compressed 0xfd reply and
 	// we uncompress it and return it to the browser.
@@ -263,6 +273,20 @@ class Host {
 	// Syncdb.cpp uses these
 	char           m_inSync ;
 	char           m_isPermanentOutOfSync ;
+
+	char *m_lastKnownGoodCrawlInfoReply;
+	char *m_lastKnownGoodCrawlInfoReplyEnd;
+	long  m_replyAllocSize;
+
+	// . used by Parms.cpp for broadcasting parm change requests
+	// . each parm change request has an id
+	// . this let's us know which id is in progress and what the last
+	//   id completed was
+	long m_currentParmIdInProgress;
+	long m_lastParmIdCompleted;
+	class ParmNode *m_currentNodePtr;
+	long m_lastTryError;
+	long m_lastTryTime;
 
 	char  m_requestBuf[MAX_PING_SIZE];
 };
@@ -293,6 +317,9 @@ class Hostdb {
 	// for dealing with pings
 	bool registerHandler ( );
 
+	// if config changes this *should* change
+	long getCRC();
+
 	// . to prevent script kiddies from sending bogus udp packets to
 	//   our udp servers we make sure they are from an IP in our hosts.conf
 	//   file. If not, then we drop it. If the script kiddie spoofed us
@@ -319,6 +346,7 @@ class Hostdb {
 	long           getMyMachineNum ( ) { return m_myMachineNum; };
 	unsigned long  getLoopbackIp   ( ) { return m_loopbackIp; };
 	Host          *getMyHost       ( ) { return m_myHost; };
+	bool           amProxy         ( ) { return m_myHost->isProxy(); };
 	Host          *getMyShard      ( ) { return m_myShard; };
 	long getMyShardNum ( ) { return m_myHost->m_shardNum; };
 	bool           isMyIp ( unsigned long ip ) {
@@ -435,6 +463,8 @@ class Hostdb {
 
 	long  getNumHosts ( ) { return m_numHosts; };
 	long  getNumProxy ( ) { return m_numProxyHosts; };
+	long getNumProxies ( ) { return m_numProxyHosts; };
+	long getNumGrunts  ( ) { return m_numHosts; };
 	// how many of the hosts are non-dead?
 	long  getNumHostsAlive ( ) { return m_numHostsAlive; };
 	long  getNumProxyAlive ( ) { return m_numProxyAlive; };
@@ -595,6 +625,9 @@ class Hostdb {
 
 	bool m_initialized;
 
+	long m_crc;
+	long m_crcValid;
+
 	// for sync
 	Host *m_syncHost;
 	bool  m_syncSecondaryIps;
@@ -604,8 +637,11 @@ class Hostdb {
 	//uint32_t getGroupId (char rdbId, void *key, bool split = true);
 	//uint32_t getGroupIdFromDocId ( long long d ) ;
 
-	uint32_t getShardNum (char rdbId, void *key, bool split = true);
+	uint32_t getShardNum (char rdbId, void *key );
 	uint32_t getShardNumFromDocId ( long long d ) ;
+
+	// assume to be for posdb here
+	uint32_t getShardNumByTermId ( void *key );
 
 	uint32_t m_map[MAX_KSLOTS];
 };
@@ -618,8 +654,8 @@ extern uint32_t  g_listIps   [ MAX_HOSTS * 4 ];
 extern uint16_t  g_listPorts [ MAX_HOSTS * 4 ];
 extern long      g_listNumTotal;
 
-inline uint32_t getShardNum ( char rdbId, void *key,bool split = true) {
-	return g_hostdb.getShardNum ( rdbId , key , split );
+inline uint32_t getShardNum ( char rdbId, void *key ) {
+	return g_hostdb.getShardNum ( rdbId , key );
 };
 
 inline uint32_t getMyShardNum ( ) { 

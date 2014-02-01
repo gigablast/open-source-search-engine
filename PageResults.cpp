@@ -1,7 +1,7 @@
 #include "gb-include.h"
 
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Stats.h"
 #include "Statsdb.h"
 #include "Ads.h"
@@ -57,6 +57,11 @@ public:
 	// for printing our search result json items in csv:
 	HashTableX   m_columnTable;
 	long         m_numCSVColumns;
+
+	// stuff for doing redownloads
+	bool    m_didRedownload;
+	XmlDoc *m_xd;
+	long    m_oldContentHash32;
 };
 
 static bool printResult ( SafeBuf &sb,
@@ -467,6 +472,11 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	}
 	mnew ( st , sizeof(State0) , "PageResults2" );
 
+	// init some stuff
+	st->m_didRedownload    = false;
+	st->m_xd               = NULL;
+	st->m_oldContentHash32 = 0;
+
 	// copy yhits
 	if ( ! st->m_hr.copy ( hr ) )
 		return sendReply ( st , NULL );
@@ -615,6 +625,15 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	return status2;
 }
 
+// if returned json result is > maxagebeforedownload then we redownload the
+// page and if its checksum has changed we return empty results
+void doneRedownloadingWrapper ( void *state ) {
+	// cast our State0 class from this
+	State0 *st = (State0 *) state;
+	// resume
+	gotResults ( st );
+}
+
 /*
 void gotSpellingWrapper( void *state ){
 	// cast our State0 class from this
@@ -702,6 +721,19 @@ static bool printGigabit ( State0 *st,
 	return true;
 }
 
+class StateAU {
+public:
+	SafeBuf m_metaListBuf;
+	Msg4    m_msg4;
+};
+	
+
+void freeMsg4Wrapper( void *st ) {
+	StateAU *stau = (StateAU *)st;
+	mdelete(stau, sizeof(StateAU), "staud");
+	delete stau;
+}
+
 // . make a web page from results stored in msg40
 // . send it on TcpSocket "s" when done
 // . returns false if blocked, true otherwise
@@ -716,14 +748,174 @@ bool gotResults ( void *state ) {
 	// record that
 	st->m_took = took;
 
+
+	// grab the query
+	Msg40 *msg40 = &(st->m_msg40);
+	char  *q    = msg40->getQuery();
+	long   qlen = msg40->getQueryLen();
+
+	SearchInput *si = &st->m_si;
+
+	// shortcuts
+	char        *coll    = si->m_coll2;
+	long         collLen = si->m_collLen2;
+	
+	// collection rec must still be there since SearchInput references 
+	// into it, and it must be the SAME ptr too!
+	CollectionRec *cr = g_collectiondb.getRec ( coll , collLen );
+	if ( ! cr || cr != si->m_cr ) {
+	       g_errno = ENOCOLLREC;
+	       return sendReply(st,NULL);
+	}
+
+	/*
+	//
+	// BEGIN REDOWNLOAD LOGIC
+	//
+
+	////////////
+	//
+	// if caller wants a certain freshness we might have to redownload the
+	// parent url to get the new json
+	//
+	////////////
+	// get the first result
+	Msg20 *m20first = msg40->m_msg20[0];
+	long mabr = st->m_hr.getLong("maxagebeforeredownload",-1);
+	if ( mabr >= 0 && 
+	     numResults > 0 &&
+	     // only do this once
+	     ! st->m_didRedownload &&
+	     // need at least one result
+	     m20first &&
+	     // get the last spidered time from the msg20 reply of that result
+	     m20first->m_r->m_lastSpidered - now > mabr ) {
+		// make a new xmldoc to do the redownload
+		XmlDoc *xd;
+		try { xd = new (XmlDoc); }
+		catch ( ... ) {
+			g_errno = ENOMEM;
+			log("query: Failed to alloc xmldoc.");
+		}
+		if ( g_errno ) return sendReply (st,NULL);
+		mnew ( xd , sizeof(XmlDoc) , "mabrxd");
+		// save it
+		st->m_xd = xd;
+		// get this
+		st->m_oldContentHash32 = m20rep->m_contentHash32;
+		// do not re-do redownload
+		st->m_didRedownload = true;
+		// set it
+		xd->setUrl(parentUrl);
+		xd->setCallback ( st , doneRedownloadingWrapper );
+		// get the checksum
+		if ( xd->getContentChecksum32Fast() == (void *)-1 )
+			// return false if it blocked
+			return false;
+		// error?
+		if ( g_errno ) return sendReply (st,NULL);
+		// how did this not block
+		log("page: redownload did not would block adding parent");
+	}
+	     
+	// if we did the redownload and checksum changed, return 0 results
+	if ( st->m_didRedownload ) {
+		// get the doc we downloaded
+		XmlDoc *xd = st->m_xd;
+		// get it
+		long newHash32 = xd->getContentHash32();
+		// log it
+		if ( newHash32 != st->m_oldContentHash32 ) 
+			// note it in logs for now
+			log("results: content changed for %s",xd->m_firstUrl.m_url);
+		// free it
+		mdelete(xd, sizeof(XmlDoc), "mabrxd" );
+		delete xd;
+		// null it out so we don't try to re-free
+		st->m_xd = NULL;
+		// if content is significantly different, return 0 results
+		if ( newHash32 != st->m_oldContentHash32 ) {
+			SafeBuf sb;
+			// empty json i guess
+			sb.safePrintf("[]\n");
+			return sendReply(st,sb.getBufStart());
+		}
+		// otherwise, print the diffbot json results, they are still valid
+	}
+
+	//
+	// END REDOWNLOAD LOGIC
+	//
+	*/
+
+	//
+	// BEGIN ADDING URL
+	//
+
+	//////////
+	//
+	// if its a special request to get diffbot json objects for
+	// a given parent url, it often contains the same url in "addurl"
+	// to add as a spider request to spiderdb so that 
+	// it gets spidered and processed through diffbot.
+	//
+	//////////
+	char *addUrl = st->m_hr.getString("addurl",NULL);
+	if ( addUrl ) { // && cr->m_isCustomCrawl ) {
+
+		Url norm;
+		norm.set ( addUrl );
+
+		SpiderRequest sreq;
+		// returns false and sets g_errno on error
+		if ( ! sreq.setFromAddUrl ( norm.getUrl() ) ) { //addUrl ) ) {
+			log("addurl: url had problem: %s",mstrerror(g_errno));
+			return true;
+		}
+
+		// addurl state
+		StateAU *stau;
+		try { stau = new(StateAU); }
+		catch ( ... ) {
+			g_errno = ENOMEM;
+			return true;
+		}
+		mnew ( stau , sizeof(StateAU) , "stau");
+		
+		// fill it up
+		SafeBuf *mlist = &stau->m_metaListBuf;
+		if ( ! mlist->pushChar(RDB_SPIDERDB) )
+			return true;
+		if ( ! mlist->safeMemcpy ( &sreq , sreq.getRecSize() ) )
+			return true;
+
+		Msg4 *msg4 = &stau->m_msg4;
+		// this should copy the recs from list into the buffers
+		if ( msg4->addMetaList ( mlist->getBufStart() ,
+					 mlist->getLength() ,
+					 cr->m_collnum,
+					 stau ,
+					 freeMsg4Wrapper ,
+					 MAX_NICENESS ) ) {
+			// if it copied everything ok, nuke our msg4
+			// otherwise it will call freeMsg4Wraper when it
+			// completes!
+			freeMsg4Wrapper( stau );
+		}
+	}
+	//
+	// DONE ADDING URL
+	//
+
+
   	//char  local[ 128000 ];
 	//SafeBuf sb(local, 128000);
 	SafeBuf sb;
 	// reserve 1.5MB now!
 	if ( ! sb.reserve(1500000 ,"pgresbuf" ) ) // 128000) )
 		return true;
-
-	SearchInput *si = &st->m_si;
+	// just in case it is empty, make it null terminated
+	sb.nullTerm();
 
 	// . if not matt wells we do not do ajax
 	// . the ajax is just there to prevent bots from slamming me 
@@ -761,23 +953,7 @@ bool gotResults ( void *state ) {
 		g_errno = st->m_errno;
 		return sendReply(st,sb.getBufStart());
 	}
-	// shortcuts
-	char        *coll    = si->m_coll2;
-	long         collLen = si->m_collLen2;
-	Msg40 *msg40 = &(st->m_msg40);
-	
-	// collection rec must still be there since SearchInput references 
-	// into it, and it must be the SAME ptr too!
-	CollectionRec *cr = g_collectiondb.getRec ( coll , collLen );
-	if ( ! cr || cr != si->m_cr ) {
-	       g_errno = ENOCOLLREC;
-	       return sendReply(st,NULL);
-	}
 
-
-	// grab the query
-	char  *q    = msg40->getQuery();
-	long   qlen = msg40->getQueryLen();
 
 	//bool xml = si->m_xml;
 
@@ -860,6 +1036,7 @@ bool gotResults ( void *state ) {
 	// numResults may be more than we requested now!
 	long n = msg40->getDocsWanted();
 	if ( n > numResults )  n = numResults;
+
 	// . make the query class here for highlighting
 	// . keepAllSingles means to convert all individual words into
 	//   QueryTerms even if they're in quotes or in a connection (cd-rom).
@@ -978,11 +1155,12 @@ bool gotResults ( void *state ) {
 	Query *qq2;
 	bool firstIgnored;
 	bool isAdmin = si->m_isAdmin;
-	if ( si->m_format == FORMAT_XML ) isAdmin = false;
+	if ( si->m_format != FORMAT_HTML ) isAdmin = false;
 
 	// otherwise, we had no error
 	if ( numResults == 0 && si->m_format == FORMAT_HTML ) {
-		sb.safePrintf ( "No results found." );
+		sb.safePrintf ( "No results found in <b>%s</b> collection.",
+				cr->m_coll);
 	}
 	else if ( moreFollow && si->m_format == FORMAT_HTML ) {
 		if ( isAdmin && si->m_docsToScanForReranking > 1 )
@@ -1049,11 +1227,8 @@ bool gotResults ( void *state ) {
 	if ( collLen == 4 && strncmp ( coll, "main", 4) == 0 ) isMain = true;
 
 	// print "in collection ***" if we had a collection
-	if ( collLen > 0 && ! isMain && isAdmin ) {
-		sb.safePrintf (" in collection '<b>");
-		sb.safeMemcpy ( coll , collLen );
-		sb.safeMemcpy ( "</b>'" , 5 );
-	}
+	if ( collLen > 0 && ! isMain && si->m_format == FORMAT_HTML )
+		sb.safePrintf (" in collection <b>%s</b>",coll);
 
 
 	char *pwd = si->m_pwd;
@@ -1520,6 +1695,9 @@ bool gotResults ( void *state ) {
 	}
 
 
+	if ( sb.length() == 0 )
+		sb.pushChar('\n');
+
 	return sendReply ( st , sb.getBufStart() );
 }
 
@@ -1825,6 +2003,12 @@ static bool printResult ( SafeBuf &sb,
 	//   or something
 	if ( ! mr ) return false;
 
+	// . if section voting info was request, display now, it's in json
+	// . so if in csv it will mess things up!!!
+	if ( mr->ptr_sectionVotingInfo )
+		// it is possible this is just "\0"
+		sb.safeStrcpy ( mr->ptr_sectionVotingInfo );
+
 	// each "result" is the actual cached page, in this case, a json
 	// object, because we were called with &icc=1. in that situation
 	// ptr_content is set in the msg20reply.
@@ -1835,6 +2019,7 @@ static bool printResult ( SafeBuf &sb,
 		char *json = mr->ptr_content;
 		// only print header row once, so pass in that flag
 		if ( ! st->m_printedHeaderRow ) {
+			sb.reset();
 			printCSVHeaderRow ( &sb , st );
 			st->m_printedHeaderRow = true;
 		}
@@ -2320,7 +2505,7 @@ static bool printResult ( SafeBuf &sb,
 				mr->m_docId ); 
 
 	// the new links
-	if ( si->m_format == FORMAT_HTML ) {
+	if ( si->m_format == FORMAT_HTML && g_conf.m_isMattWells && 1 == 0 ) {
 		//sb.safePrintf(" - <a href=\"/scoring?"
 		//	      "c=%s&\">scoring</a>",
 		//	      coll );
@@ -4615,6 +4800,7 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 		      "<td rowspan=2 valign=top>"
 		      "<a href=/>"
 		      "<img "
+		      "border=0 "
 		      "src=%s/logo-small.png "
 		      "height=64 width=295>"
 		      "</a>"
@@ -4635,21 +4821,26 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 	else
 		sb.safePrintf("<a title=\"Search the web\" href=/>web</a>");
 
-		      
+
 	sb.safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; "  );
-	//  SEO functionality not included yet - so redir to gigablast.
-	if ( g_conf.m_isMattWells )
-		sb.safePrintf("<a title=\"Rank higher in "
-			      "Google\" href='/seo'>");
-	else
-		sb.safePrintf("<a title=\"Rank higher in "
-			      "Google\" href='https://www.gigablast."
-			      "com/seo'>");
+
+
+	if ( g_conf.m_isMattWells ) {
+		//  SEO functionality not included yet - so redir to gigablast.
+		if ( g_conf.m_isMattWells )
+			sb.safePrintf("<a title=\"Rank higher in "
+				      "Google\" href='/seo'>");
+		else
+			sb.safePrintf("<a title=\"Rank higher in "
+				      "Google\" href='https://www.gigablast."
+				      "com/seo'>");
 	
-	sb.safePrintf(
-		      "seo</a>"
-		      " &nbsp;&nbsp;&nbsp;&nbsp; "
-		      );
+		sb.safePrintf(
+			      "seo</a>"
+			      " &nbsp;&nbsp;&nbsp;&nbsp; "
+			      );
+	}
+
 
 	if (catId <= 0 )
 		sb.safePrintf("<a title=\"Browse the DMOZ directory\" "
@@ -4668,12 +4859,12 @@ bool printLogoAndSearchBox ( SafeBuf &sb , HttpRequest *hr , long catId ) {
 		      // i'm not sure why this was removed. perhaps
 		      // because it is not working yet because of
 		      // some bugs...
-		      "<!-- <a title=\"Advanced web search\" "
+		      "<a title=\"Advanced web search\" "
 		      "href=/adv.html>"
 		      "advanced"
 		      "</a>"
 		      
-		      " &nbsp;&nbsp;&nbsp;&nbsp; -->"
+		      " &nbsp;&nbsp;&nbsp;&nbsp;"
 		      
 		      "<a title=\"Add your url to the index\" "
 		      "href=/addurl>"
@@ -4855,6 +5046,11 @@ bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) {
 		// get the msg20 reply for search result #i
 		Msg20      *m20 = msg40->m_msg20[i];
 		Msg20Reply *mr  = m20->m_r;
+
+		if ( ! mr ) {
+			log("results: missing msg20 reply for result #%li",i);
+			continue;
+		}
 
 		// get content
 		char *json = mr->ptr_content;

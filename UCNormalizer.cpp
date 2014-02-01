@@ -131,8 +131,8 @@ static char s_compBuf[COMPBUFSIZE];
 // Kompatible Decomposition table must be loaded before calling this
 bool initCompositionTable(){
 	if ( ! s_isInitialized ) {
-		log(LOG_INFO,"conf: UCNormalizer: "
-		    "initializing Full Composition table");
+		//log(LOG_INFO,"conf: UCNormalizer: "
+		//    "initializing Full Composition table");
 		// set up the hash table
 		//if ( ! s_compositions.set ( 8,4,16384 ) )
 		if (!s_compositions.set(8,4,65536,s_compBuf,(long)COMPBUFSIZE,

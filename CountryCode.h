@@ -25,6 +25,7 @@ class CountryCode {
 		uint8_t getLanguageFromDMOZ(long catid);
 		int createHashTable(void);
 		bool loadHashTable(void);
+		void reset();
 		long getNumEntries(void);
 		void debugDumpNumbers(void);
          	uint64_t getLanguagesWritten(int index);

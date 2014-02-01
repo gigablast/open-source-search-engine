@@ -6,7 +6,7 @@
 #include "Pages.h"
 //#include "Links.h"
 //#include "TitleRec.h" // hasAdultWords()
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 //#include "TitleRec.h" 	// containsAdultWords()
 #include "XmlDoc.h"
 #include "Title.h"

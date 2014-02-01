@@ -21,7 +21,7 @@
 #include "PageInject.h" // Msg7
 #include "PageReindex.h"
 
-static char *printInterface ( char *p , char *pend , char *q ,//long user ,
+static bool printInterface ( SafeBuf *sb , char *q ,//long user ,
                               char *username, char *c , char *errmsg ,
 			      char *qlangStr ) ;
 
@@ -35,9 +35,11 @@ public:
 	char       m_coll [ MAX_COLL_LEN + 1];
 	long       m_collLen;
 	TcpSocket *m_socket;
-	char       m_replyBuf[64*1024];
-	long       m_replyBufSize;
-	char      *m_place;
+	//char       m_replyBuf[64*1024];
+	//long       m_replyBufSize;
+	SafeBuf m_replyBuf;
+	//char      *m_place;
+	long m_placeOff;
 	char       m_updateTags;
 	//Query      m_qq;
 };
@@ -90,9 +92,10 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	long  collLen = gbstrlen ( coll );
 
 
-	char buf[64*1024];
-	char *p    = buf;
-	char *pend = buf + 64*1024;
+	//char buf[64*1024];
+	//char *p    = buf;
+	//char *pend = buf + 64*1024;
+	SafeBuf sb;
 
 	long  qlen;
 	char *q = r->getString ("q",&qlen);
@@ -105,10 +108,16 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	// if they are NOT submitting a request print the interface
 	// and we're not running, just print the interface
 	t = r->getString ("action" , &len );
-	if ( len != 2 ) { // && ! s_isRunning ) {
-		p = g_pages.printAdminTop ( p , pend , s , r );
-		p = printInterface ( p , pend,q,username,coll,NULL,qlangStr);
-		return g_httpServer.sendDynamicPage (s,buf,p-buf,-1,false);
+	if ( len < 2 ) { // && ! s_isRunning ) {
+		//p = g_pages.printAdminTop ( p , pend , s , r );
+		//p = printInterface ( p , pend,q,username,coll,NULL,qlangStr);
+		g_pages.printAdminTop ( &sb , s , r );
+		printInterface ( &sb,q,username,coll,NULL,qlangStr);
+		return g_httpServer.sendDynamicPage (s,
+						     sb.getBufStart(),
+						     sb.length(),
+						     -1,
+						     false);
 	}		
 
 	// make a state
@@ -167,9 +176,15 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	if ( ! st->m_query[0] ) {
 		log("admin: Query reindex was given no query terms.");
 		errmsg = "Empty Query. You must supply a query.";
- 		p = g_pages.printAdminTop ( p , pend , s , r );
- 		p = printInterface ( p,pend , q , username , coll , errmsg,"");
- 		return g_httpServer.sendDynamicPage (s,buf,p-buf,-1,false);
+ 		//p = g_pages.printAdminTop ( p , pend , s , r );
+ 		//p = printInterface ( p,pend , q , username ,coll, errmsg,"");
+		g_pages.printAdminTop ( &sb , s , r );
+		printInterface ( &sb,q,username,coll,errmsg,"");
+ 		return g_httpServer.sendDynamicPage (s,
+						     sb.getBufStart(),
+						     sb.length(),
+						     -1,
+						     false);
 	}
 
 	// now lets get the index list, loop through each docId, getting the
@@ -178,20 +193,24 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	// save socket for retuning a page when we're done
 	st->m_socket = s;
 	// save the reply page, for when add is done
-	char *rp    = st->m_replyBuf;
-	char *rpend = rp + 64*1024;
-	rp = g_pages.printAdminTop ( rp , rpend , s , r );
+	//char *rp    = st->m_replyBuf;
+	SafeBuf *rp = &st->m_replyBuf;
+	//char *rpend = rp + 64*1024;
+	//rp = g_pages.printAdminTop ( rp , rpend , s , r );
+	g_pages.printAdminTop ( rp , s , r );
 
 	// place holder, for holding response when we're done adding
 	// all these docids to the spider queue
-	st->m_place = rp ;
-	memset ( rp , ' ' , 100 );
-	rp += 100;
+	st->m_placeOff = rp->length() ;
+	for ( long i = 0 ; i < 100 ; i++ )
+		rp->pushChar(' ');
+	//memset ( rp , ' ' , 100 );
+	//rp += 100;
 
-	rp = printInterface ( rp,rpend,q,username , coll , errmsg ,qlangStr );
+	printInterface ( rp,q,username , coll , errmsg ,qlangStr );
 
 	// save length
-	st->m_replyBufSize = rp - st->m_replyBuf;
+	//st->m_replyBufSize = rp - st->m_replyBuf;
 
 	// log it
 	log(LOG_INFO,"admin: Performing query reindex for query: "
@@ -263,16 +282,20 @@ void doneReindexing ( void *state ) {
 			  st->m_msg1d.m_numDocIds );
 	else
 	*/
-		sprintf ( mesg , "<center><font color=red><b>Success. "
-			  "Added %li docid(s) to "
-			  "spider queue.</b></font></center><br>" , 
-			  st->m_msg1c.m_numDocIdsAdded );
+	sprintf ( mesg , "<center><font color=red><b>Success. "
+		  "Added %li docid(s) to "
+		  "spider queue.</b></font></center><br>" , 
+		  st->m_msg1c.m_numDocIdsAdded );
 
-	memcpy ( st->m_place, mesg , gbstrlen(mesg) );
+	SafeBuf *rp = &st->m_replyBuf;
+	char *p = rp->getBufStart() + st->m_placeOff;
+
+	// insert the reply there
+	memcpy ( p , mesg , gbstrlen(mesg) );
 
 	g_httpServer.sendDynamicPage ( sock,
-				       st->m_replyBuf,
-				       st->m_replyBufSize,
+				       st->m_replyBuf.getBufStart(),
+				       st->m_replyBuf.length(),
 				       -1,
 				       false);
 
@@ -280,32 +303,37 @@ void doneReindexing ( void *state ) {
 	delete (st);
 }
 
-char *printInterface (char *p , char *pend , char *q , //long user , 
+bool printInterface (SafeBuf *sb, char *q , //long user , 
                       char *username, char *c , char *errmsg ,
 		      char *qlangStr ) {
 	if ( ! q ) q = "";
 
 	// print error msg if any
 	if ( errmsg ) {
-		sprintf(p,"<br><center><b><font color=red>%s"
+		sb->safePrintf("<br><center><b><font color=red>%s"
 			"</font></b></center><br>",
 			errmsg );
-		p += gbstrlen ( p );
 	}
+
+	sb->safePrintf(
+		       "<style>"
+		       ".poo { background-color:#%s;}\n"
+		       "</style>\n" ,
+		       LIGHT_BLUE );
 
 	char bb [ MAX_COLL_LEN + 60 ];
 	bb[0]='\0';
 	//if ( user == USER_MASTER && c && c[0] ) sprintf ( bb , " (%s)", c);
 
 	// print the reindex interface
-	sprintf ( p , 
-		  "<table width=100%% bgcolor=#%s cellpadding=4 border=1>"
-		  "<tr><td colspan=3 bgcolor=#%s><center>"
+	sb->safePrintf (
+		  "<table %s>"
+		  "<tr><td colspan=3><center>"
 		  //"<font size=+1>"
 		  "<b>"
 		  "Reindex Urls"
 		  "</b>%s</td></tr>"
-		  "<tr><td colspan=3>"
+		  "<tr bgcolor=#%s><td colspan=3>"
 		  "<font size=1>"
 		  "Reindex the URLs that match this query. If URLs are "
 		  "banned in tagdb they will be removed from the index. "
@@ -317,7 +345,7 @@ char *printInterface (char *p , char *pend , char *q , //long user ,
 		  "whatever rule they match in the URL Filters table."
 		  "</td></tr>"
 
-		  "<tr><td><b>query</b>"
+		  "<tr class=poo><td><b>query</b>"
 		  "<br><font size=1>"
 		  "URLs matching this query will be added to the spider "
 		  "queue for re-spidering."
@@ -337,32 +365,32 @@ char *printInterface (char *p , char *pend , char *q , //long user ,
 		  "name=updatetags>"
 		  "</td></tr>"
 		  */
-		  , LIGHT_BLUE , DARK_BLUE , bb , q );
+		  , TABLE_STYLE , bb , DARK_BLUE , q );
 
-	p += gbstrlen ( p );
+	if ( ! qlangStr ) qlangStr = "";
 
-	sprintf ( p , 
+	sb->safePrintf (
 
-		  "<tr><td><b>start result number</b>"
+		  "<tr class=poo><td><b>start result number</b>"
 		  "<font size=1>"
 		  "<br>Start at this search result number. Default 0.</td>"
 		  "<td><input type=text name=srn value=0 size=10>"
 		  "</td></tr>"
 
-		  "<tr><td><b>end result number</b>"
+		  "<tr class=poo><td><b>end result number</b>"
 		  "<font size=1>"
 		  "<br>Stop at this search result number. "
 		  "Default 2000000. (2M)</td>"
 		  "<td><input type=text name=ern size=10 value=2000000>"
 		  "</td></tr>" 
 
-		  "<tr><td><b>query language</b>"
+		  "<tr class=poo><td><b>query language</b>"
 		  "<font size=1>"
 		  "<br>Language that helps determine sort result ranking.</td>"
 		  "<td><input type=text name=qlang size=6 value=\"%s\">"
 		  "</td></tr>"
 
-		  "<tr><td><b>FORCE DELETE</b>"
+		  "<tr class=poo><td><b>FORCE DELETE</b>"
 		  "<font size=1>"
 		  "<br>Check this checkbox to "
 		  "delete every search result matching the above "
@@ -373,8 +401,6 @@ char *printInterface (char *p , char *pend , char *q , //long user ,
 		  , qlangStr
 
 		  );
-
-	p += gbstrlen ( p );
 
 	/*
 		  //"<tr><td><b>just list results</b>"
@@ -409,17 +435,16 @@ char *printInterface (char *p , char *pend , char *q , //long user ,
 	p += gbstrlen ( p );
 	  */
 
-	sprintf(p,"</table><br>" );
+	sb->safePrintf("</table><br>" );
 
 	// submit button
-	sprintf ( p , 
+	sb->safePrintf(
 		  "<center>"
-		  "<input type=submit name=action value=OK>" 
+		  "<input type=submit name=action value=Submit>" 
 		  "</center>"
 		  "</form></html>");
-	p += gbstrlen ( p );
 	
-	return p;
+	return true;
 }
 
 

@@ -2,7 +2,7 @@
 
 #include "SafeBuf.h"
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Msg22.h"
 #include "Query.h"
 #include "HttpServer.h"
@@ -139,11 +139,11 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	strncpy ( st->m_coll , coll , MAX_COLL_LEN+1 );
 	// store query for query highlighting
 	st->m_netTestResults    = r->getLong ("rnettest", false );
-	if( st->m_netTestResults ) {
-		mdelete ( st , sizeof(State2) , "PageGet1" );
-		delete ( st );
-		return sendPageNetResult( s );
-	}
+	//if( st->m_netTestResults ) {
+	//	mdelete ( st , sizeof(State2) , "PageGet1" );
+	//	delete ( st );
+	//	return sendPageNetResult( s );
+	//}
 	if ( q && qlen > 0 ) strcpy ( st->m_q , q );
 	else                 st->m_q[0] = '\0';
 	st->m_qlen = qlen;
@@ -712,7 +712,7 @@ bool processLoop ( void *state ) {
 		//Words *ww = xd->getWords();
 		if ( ! xml.set ( content , contentLen , false ,
 				 0 , false , TITLEREC_CURRENT_VERSION ,
-				 false , 0 ) ) { // niceness is 0
+				 false , 0 , CT_HTML ) ) { // niceness is 0
 			//if ( buf ) mfree ( buf , bufMaxSize , "PageGet2" );
 			return sendErrorReply ( st , g_errno );
 		}			

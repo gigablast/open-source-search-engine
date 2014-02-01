@@ -29,9 +29,11 @@
 // hack to repopulate the socket's send buf when its done sending
 // it's current sendbuf in order to transmit large amounts of data that
 // can't all fit in memory at the same time:
-#define ST_SEND_AGAIN       10
+//#define ST_SEND_AGAIN       10
 
 #define TCP_READ_BUF_SIZE 1024
+
+#include "SafeBuf.h"
 
 class TcpSocket {
 
@@ -115,6 +117,7 @@ class TcpSocket {
 	long        m_maxOtherDocLen; // if reading other doc types
 
 	char        m_niceness;
+	char        m_streamingMode;
 
 	long m_shutdownStart;
 
@@ -122,6 +125,14 @@ class TcpSocket {
 	SSL  *m_ssl;
 
 	class UdpSlot *m_udpSlot;
+
+	// m_handyBuf is used to hold the parmlist we generate in Pages.cpp
+	// which we then broadcast to all the nodes in the cluster. so its
+	// just a substitute for avoid the new of a state class.
+	SafeBuf m_handyBuf;
+	// this maps the requested http path to a service in our
+	// WebPages[] array. like "search" or "admin controls" etc.
+	long m_pageNum;
 
 	// used for debugging, PageResults.cpp sets this to the State0 ptr
 	char *m_tmp;

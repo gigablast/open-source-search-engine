@@ -2,6 +2,7 @@
 
 #include "Clusterdb.h"
 #include "Threads.h"
+#include "Rebalance.h"
 
 // a global class extern'd in .h file
 Clusterdb g_clusterdb;
@@ -296,7 +297,7 @@ bool Clusterdb::init ( ) {
 			    true          , // dedup
 			    //CLUSTER_REC_SIZE - sizeof(key_t),//fixedDataSize 
 			    0             , // no data now! just docid/s/c
-			    g_conf.m_clusterdbMinFilesToMerge,
+			    2, // g_conf.m_clusterdbMinFilesToMerge,
 			    g_conf.m_clusterdbMaxTreeMem,
 			    maxTreeNodes  , // maxTreeNodes  ,
 			    true          , //false         , // balance tree?
@@ -336,7 +337,7 @@ bool Clusterdb::init2 ( long treeMem ) {
 			    12            ,     // key size
 			    true          ); // bias disk page cache
 }
-
+/*
 bool Clusterdb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -348,9 +349,9 @@ bool Clusterdb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
-
+*/
 bool Clusterdb::verify ( char *coll ) {
-	log ( LOG_INFO, "db: Verifying Clusterdb for coll %s...", coll );
+	log ( LOG_DEBUG, "db: Verifying Clusterdb for coll %s...", coll );
 	g_threads.disableThreads();
 
 	Msg5 msg5;
@@ -400,6 +401,8 @@ bool Clusterdb::verify ( char *coll ) {
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
+		// tally it up
+		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %li records in clusterdb, "
 		     "only %li belong to our group.",count,got);
 		// exit if NONE, we probably got the wrong data
@@ -411,7 +414,7 @@ bool Clusterdb::verify ( char *coll ) {
 		g_threads.enableThreads();
 		return g_conf.m_bypassValidation;
 	}
-	log ( LOG_INFO, "db: Clusterdb passed verification successfully for "
+	log ( LOG_DEBUG, "db: Clusterdb passed verification successfully for "
 			"%li recs.", count );
 	// DONE
 	g_threads.enableThreads();

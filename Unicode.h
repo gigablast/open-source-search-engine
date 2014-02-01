@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "UnicodeProperties.h"
 #include "iconv.h"
-#include "UCNormalizer.h"
+//#include "UCNormalizer.h"
 
 //U_CFUNC uint32_t
 //u_getUnicodeProperties(UChar32 c, int32_t column);

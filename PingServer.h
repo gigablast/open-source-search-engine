@@ -5,6 +5,7 @@
 
 #include "gb-include.h"
 #include "Hostdb.h"
+#include "SafeBuf.h"
 //#include "Repair.h"
 
 extern char g_repairMode;
@@ -161,6 +162,12 @@ class PingServer {
 	int32_t m_bestPing     ;
 	time_t  m_bestPingDate ;
 
+
+	// some cluster stats
+	long m_numHostsWithForeignRecs;
+	long m_numHostsDead;
+	long m_hostsConfInAgreement;
+	bool m_hostsConfInDisagreement;
 };
 
 extern class PingServer g_pingServer;

@@ -630,6 +630,10 @@ public:
 
 #define SECTIONS_LOCALBUFSIZE 500
 
+#define FMT_HTML   1
+#define FMT_PROCOG 2
+#define FMT_JSON   3
+
 class Sections {
 
  public:
@@ -661,7 +665,7 @@ class Sections {
 		   long            bufSize     ) ;
 
 
-	//bool addVotes(class SectionVotingTable *nsvt, uint32_t tagPairHash );
+	bool addVotes(class SectionVotingTable *nsvt, uint32_t tagPairHash );
 
 	bool verifySections ( ) ;
 
@@ -706,6 +710,9 @@ class Sections {
 
 	bool swoggleTables ( ) ;
 	bool swoggleTable ( long dn , class Section *ts ) ;
+	
+	bool printVotingInfoInJSON ( SafeBuf *sb ) ;
+
 	bool print2 ( SafeBuf *sbuf ,
 		      long hiPos,
 		      long *wposVec,
@@ -716,8 +723,9 @@ class Sections {
 		      class HashTableX *st2 ,
 		      class HashTableX *tt  ,
 		      class Addresses  *aa  ,
-		      bool forProCog );
-	bool printSectionDiv ( class Section *sk , bool forProCog = false ) ;
+		      char format = FMT_HTML ); // bool forProCog );
+	bool printSectionDiv ( class Section *sk , char format = FMT_HTML );
+	//bool forProCog = false ) ;
 	class SafeBuf *m_sbuf;
 	//class HashTableX *m_pt;
 	//class HashTableX *m_et;
@@ -1023,7 +1031,7 @@ public:
 	float m_numSampled;
 };
 
-/*
+
 class SectionVotingTable {
  public:
 
@@ -1090,7 +1098,7 @@ class SectionVotingTable {
 	long m_totalSiteVoters;
 	//long m_totalSimilarLayouts;
 };
-*/
+
 
 //
 // BEGIN SECTION TYPES

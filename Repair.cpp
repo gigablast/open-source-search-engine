@@ -836,7 +836,8 @@ void Repair::getNextCollToRepair ( ) {
 
 	// add collection to secondary rdbs
 	if ( m_rebuildTitledb ) {
-		if ( ! g_titledb2.addColl    ( m_coll ) &&
+		if ( //! g_titledb2.addColl    ( m_coll ) &&
+		    ! g_titledb2.getRdb()->addRdbBase1(m_coll) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
@@ -851,7 +852,7 @@ void Repair::getNextCollToRepair ( ) {
 	//}
 
 	if ( m_rebuildPosdb ) {
-		if ( ! g_posdb2.addColl    ( m_coll ) &&
+		if ( ! g_posdb2.getRdb()->addRdbBase1 ( m_coll ) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
@@ -861,7 +862,7 @@ void Repair::getNextCollToRepair ( ) {
 	//}
 
 	if ( m_rebuildClusterdb ) {
-		if ( ! g_clusterdb2.addColl  ( m_coll ) &&
+		if ( ! g_clusterdb2.getRdb()->addRdbBase1 ( m_coll ) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
@@ -871,7 +872,7 @@ void Repair::getNextCollToRepair ( ) {
 	//}
 
 	if ( m_rebuildSpiderdb ) {
-		if ( ! g_spiderdb2.addColl   ( m_coll ) &&
+		if ( ! g_spiderdb2.getRdb()->addRdbBase1 ( m_coll ) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
@@ -881,7 +882,7 @@ void Repair::getNextCollToRepair ( ) {
 	//}
 
 	if ( m_rebuildLinkdb ) {
-		if ( ! g_linkdb2.addColl     ( m_coll ) &&
+		if ( ! g_linkdb2.getRdb()->addRdbBase1 ( m_coll ) &&
 		     g_errno != EEXIST ) goto hadError;
 	}
 
@@ -2254,80 +2255,116 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 	}
 
 	// now show the rebuild status
-	sb->safePrintf ( "<table>"
+	sb->safePrintf ( 
+			 "<table%s"
+			 " id=\"repairstatustable\">"
 
-			 "<table width=100%% bgcolor=#%s cellpadding=4 "
-			 "border=1 id=\"repairstatustable\">"
-
-			 "<tr><td bgcolor=%s colspan=2><b><center>"
+			 "<tr class=hdrow><td colspan=2><b><center>"
 			 "Repair Status</center></b></td></tr>\n"
 
+			 "<tr bgcolor=#%s><td colspan=2>"
+			 "<font size=-2>"
+			 "Use this to rebuild a database or to reindex "
+			 "all pages to pick up new link text."
+			 "</font>"
+			 "</td></tr>"
+
 			 // status (see list of above statuses)
-			 "<tr><td width=50%%><b>status</b></td>"
+			 "<tr bgcolor=#%s><td width=50%%><b>status</b></td>"
 			 "<td>%s</td></tr>\n"
 
-			 "<tr><td width=50%%><b>repair mode</b></td>"
+			 "<tr bgcolor=#%s><td width=50%%><b>repair mode</b>"
+			 "</td>"
 			 "<td>%li</td></tr>\n"
 
-			 "<tr><td width=50%%><b>min repair mode</b></td>"
+			 "<tr bgcolor=#%s>"
+			 "<td width=50%%><b>min repair mode</b></td>"
 			 "<td>%li</td></tr>\n"
 
-			 "<tr><td width=50%%><b>host ID with min repair mode"
+			 "<tr bgcolor=#%s>"
+			 "<td width=50%%><b>host ID with min repair mode"
 			 "</b></td>"
 			 "<td><a href=\"http://%s:%hu/master/repair\">"
 			 "%li</a></td></tr>\n"
 
-			 "<tr><td><b>old collection</b></td>"
+			 "<tr bgcolor=#%s><td><b>old collection</b></td>"
 			 "<td>%s</td></tr>"
 
-			 "<tr><td><b>new collection</b></td>"
+			 "<tr bgcolor=#%s><td><b>new collection</b></td>"
 			 "<td>%s</td></tr>"
 
+			 ,
+			 TABLE_STYLE ,
+
+
+			 LIGHT_BLUE ,
+			 LIGHT_BLUE ,
+			 status ,
+
+			 LIGHT_BLUE ,
+			 (long)g_repairMode,
+
+			 LIGHT_BLUE ,
+			 (long)g_pingServer.m_minRepairMode,
+
+			 LIGHT_BLUE ,
+			 minIpBuf, // ip string
+			 minPort,  // port
+			 (long)minHostId,
+
+			 LIGHT_BLUE ,
+			 oldColl ,
+
+			 LIGHT_BLUE ,
+			 newColl
+			 );
+
+	sb->safePrintf ( 
 			 // docs done, includes overwritten title recs
-			 "<tr bgcolor=%s><td><b>titledb recs scanned</b></td>"
+			 "<tr bgcolor=#%s><td><b>titledb recs scanned</b></td>"
 			 "<td>%lli of %lli</td></tr>\n"
 
 			 // percent complete
-			 "<tr bgcolor=%s><td><b>titledb recs scanned "
+			 "<tr bgcolor=#%s><td><b>titledb recs scanned "
 			 "progress</b></td>"
 			 "<td>%.2f%%</td></tr>\n"
 
 			 // title recs set errors, parsing errors, etc.
-			 //"<tr bgcolor=%s><td><b>title recs injected</b></td>"
+			 //"<tr bgcolor=#%s><td><b>title recs injected</b></td>"
 			 //"<td>%lli</td></tr>\n"
 
 			 // title recs set errors, parsing errors, etc.
-			 "<tr bgcolor=%s><td><b>titledb rec error count</b></td>"
+			 "<tr bgcolor=#%s><td><b>titledb rec error count</b></td>"
 			 "<td>%lli</td></tr>\n"
 
 			 // sub errors
-			 "<tr bgcolor=%s><td> &nbsp; key out of order</b></td>"
+			 "<tr bgcolor=#%s><td> &nbsp; key out of order</b></td>"
 			 "<td>%lli</td></tr>\n"
-			 "<tr bgcolor=%s><td> &nbsp; set errors</b></td>"
+			 "<tr bgcolor=#%s><td> &nbsp; set errors</b></td>"
 			 "<td>%lli</td></tr>\n"
-			 "<tr bgcolor=%s><td> &nbsp; corrupt errors</b></td>"
+			 "<tr bgcolor=#%s><td> &nbsp; corrupt errors</b></td>"
 			 "<td>%lli</td></tr>\n"
-			 "<tr bgcolor=%s><td> &nbsp; xml errors</b></td>"
+			 "<tr bgcolor=#%s><td> &nbsp; xml errors</b></td>"
 			 "<td>%lli</td></tr>\n"
-			 "<tr bgcolor=%s><td> &nbsp; dup docid errors</b></td>"
+			 "<tr bgcolor=#%s><td> &nbsp; dup docid errors</b></td>"
 			 "<td>%lli</td></tr>\n"
-			 "<tr bgcolor=%s><td> &nbsp; negative keys</b></td>"
+			 "<tr bgcolor=#%s><td> &nbsp; negative keys</b></td>"
 			 "<td>%lli</td></tr>\n"
-			 //"<tr bgcolor=%s><td> &nbsp; overwritten recs</b></td>"
+			 //"<tr bgcolor=#%s><td> &nbsp; overwritten recs</b></td>"
 			 //"<td>%lli</td></tr>\n"
-			 "<tr bgcolor=%s><td> &nbsp; twin's "
+			 "<tr bgcolor=#%s><td> &nbsp; twin's "
 			 "respsponsibility</b></td>"
 			 "<td>%lli</td></tr>\n"
 
-			 "<tr bgcolor=%s><td> &nbsp; wrong shard</b></td>"
+			 "<tr bgcolor=#%s><td> &nbsp; wrong shard</b></td>"
 			 "<td>%lli</td></tr>\n"
 
-			 "<tr bgcolor=%s><td> &nbsp; root urls</b></td>"
+			 "<tr bgcolor=#%s><td> &nbsp; root urls</b></td>"
 			 "<td>%lli</td></tr>\n"
-			 "<tr bgcolor=%s><td> &nbsp; non-root urls</b></td>"
+			 "<tr bgcolor=#%s><td> &nbsp; non-root urls</b></td>"
 			 "<td>%lli</td></tr>\n"
 
-			 "<tr bgcolor=%s><td> &nbsp; no title rec</b></td>"
+			 "<tr bgcolor=#%s><td> &nbsp; no title rec</b></td>"
 			 "<td>%lli</td></tr>\n"
 
 			 //"<tr><td><b> &nbsp; Other errors</b></td>"
@@ -2337,49 +2374,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 //"<tr><td><b>Time Left in Phase %li</b></td>"
 			 //"<td>%.2f hrs</td></tr>\n"
 
-
-
-
-
-			 // spider recs done
-			 "<tr><td><b>spider recs scanned</b></td>"
-			 "<td>%lli of %lli</td></tr>\n"
-
-			 // percent complete
-			 "<tr><td><b>spider recs scanned progress</b></td>"
-			 "<td>%.2f%%</td></tr>\n"
-
-			 // spider recs set errors, parsing errors, etc.
-			 "<tr><td><b>spider rec not assigned to us</b></td>"
-			 "<td>%li</td></tr>\n"
-
-			 // spider recs set errors, parsing errors, etc.
-			 "<tr><td><b>spider rec errors</b></td>"
-			 "<td>%lli</td></tr>\n"
-
-			 // spider recs set errors, parsing errors, etc.
-			 "<tr><td><b>spider rec bad tld</b></td>"
-			 "<td>%li</td></tr>\n"
-
-			 // time left in hours
-			 //"<tr><td><b>Time Left in Phase %li</b></td>"
-			 //"<td>%.2f hrs</td></tr>\n"
-
-
 			 ,
-			 LIGHT_BLUE ,
-			 DARK_BLUE ,
-			 status ,
-
-			 (long)g_repairMode,
-			 (long)g_pingServer.m_minRepairMode,
-			 minIpBuf, // ip string
-			 minPort,  // port
-			 (long)minHostId,
-
-			 oldColl ,
-			 newColl ,
-
 			 DARK_BLUE,
 			 ns     ,
 			 nr     ,
@@ -2415,13 +2410,49 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 m_recsNonRoot ,
 
 			 DARK_BLUE,
-			 m_noTitleRecs,
+			 m_noTitleRecs
+			 );
 
+
+	sb->safePrintf(
+			 // spider recs done
+			 "<tr bgcolor=#%s><td><b>spider recs scanned</b></td>"
+			 "<td>%lli of %lli</td></tr>\n"
+
+			 // percent complete
+			 "<tr bgcolor=#%s><td><b>spider recs scanned "
+			 "progress</b></td>"
+			 "<td>%.2f%%</td></tr>\n"
+
+			 // spider recs set errors, parsing errors, etc.
+			 "<tr bgcolor=#%s><td><b>spider rec not "
+			 "assigned to us</b></td>"
+			 "<td>%li</td></tr>\n"
+
+			 // spider recs set errors, parsing errors, etc.
+			 "<tr bgcolor=#%s><td><b>spider rec errors</b></td>"
+			 "<td>%lli</td></tr>\n"
+
+			 // spider recs set errors, parsing errors, etc.
+			 "<tr bgcolor=#%s><td><b>spider rec bad tld</b></td>"
+			 "<td>%li</td></tr>\n"
+
+			 // time left in hours
+			 //"<tr bgcolor=#%s><td><b>"
+			 //"Time Left in Phase %li</b></td>"
+			 //"<td>%.2f hrs</td></tr>\n"
+
+			 ,
+			 LIGHT_BLUE ,
 			 ns2    ,
 			 nr2    ,
+			 LIGHT_BLUE ,
 			 ratio2 ,
+			 LIGHT_BLUE ,
 			 m_spiderRecNotAssigned ,
+			 LIGHT_BLUE ,
 			 errors2,
+			 LIGHT_BLUE ,
 			 m_spiderRecBadTLD
 			 );
 
@@ -2439,7 +2470,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 		// m_dbname will be 0
 		if ( tr == 0 ) continue;
 		sb->safePrintf(
-			 "<tr bgcolor=%s><td><b>%s2 recs</b></td>"
+			 "<tr bgcolor=#%s><td><b>%s2 recs</b></td>"
 			 "<td>%lli</td></tr>\n" ,
 			 bg,
 			 rdb->m_dbname,
@@ -2495,81 +2526,94 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 
 	sb->safePrintf ( 
 
-			 "<table width=100%% bgcolor=#%s cellpadding=4 "
-			 "border=1 id=\"repairstatustable2\">"
+			 "<table %s "
+			 "id=\"repairstatustable2\">"
 
 			 // current collection being repaired
-			 "<tr><td bgcolor=%s colspan=2><b><center>"
+			 "<tr class=hdrow><td colspan=2><b><center>"
 			 "Repair Settings In Use</center></b></td></tr>"
 
 			 // . print parms for this repair
 			 // . they may differ than current controls because
 			 //   the current controls were changed after the
 			 //   repair started
-			 "<tr><td width=50%%><b>full rebuild</b></td>"
+			 "<tr bgcolor=#%s>"
+			 "<td width=50%%><b>full rebuild</b></td>"
 			 "<td>%s</td></tr>\n"
 
-			 //"<tr><td><b>recycle link info</b></td>"
+			 //"<tr bgcolor=#%s><td><b>recycle link info</b></td>"
 			 //"<td>%s</td></tr>\n"
 
-			 "<tr><td><b>rebuild titledb</b></td>"
+			 "<tr bgcolor=#%s><td><b>rebuild titledb</b></td>"
 			 "<td>%s</td></tr>\n"
 
-			 //"<tr><td><b>rebuild tfndb</b></td>"
+			 //"<tr bgcolor=#%s><td><b>rebuild tfndb</b></td>"
 			 //"<td>%s</td></tr>\n"
 
-			 //"<tr><td><b>rebuild indexdb</b></td>"
+			 //"<tr bgcolor=#%s><td><b>rebuild indexdb</b></td>"
 			 //"<td>%s</td></tr>\n"
 
-			 "<tr><td><b>rebuild posdb</b></td>"
+			 "<tr bgcolor=#%s><td><b>rebuild posdb</b></td>"
 			 "<td>%s</td></tr>\n"
 
-			 //"<tr><td><b>rebuild datedb</b></td>"
+			 //"<tr bgcolor=#%s><td><b>rebuild datedb</b></td>"
 			 //"<td>%s</td></tr>\n"
 
-			 "<tr><td><b>rebuild clusterdb</b></td>"
+			 "<tr bgcolor=#%s><td><b>rebuild clusterdb</b></td>"
 			 "<td>%s</td></tr>\n"
 
-			 //"<tr><td><b>rebuild checksumdb</b></td>"
+			 //"<tr bgcolor=#%s><td><b>rebuild checksumdb</b></td>"
 			 //"<td>%s</td></tr>\n"
 
-			 "<tr><td><b>rebuild spiderdb</b></td>"
+			 "<tr bgcolor=#%s><td><b>rebuild spiderdb</b></td>"
 			 "<td>%s</td></tr>\n" 
 
-			 "<tr><td><b>rebuild linkdb</b></td>"
+			 "<tr bgcolor=#%s><td><b>rebuild linkdb</b></td>"
 			 "<td>%s</td></tr>\n" 
 
-			 //"<tr><td><b>rebuild tagdb</b></td>"
+			 //"<tr bgcolor=#%s><td><b>rebuild tagdb</b></td>"
 			 //"<td>%s</td></tr>\n" 
-			 //"<tr><td><b>rebuild placedb</b></td>"
+			 //"<tr bgcolor=#%s><td><b>rebuild placedb</b></td>"
 			 //"<td>%s</td></tr>\n" 
-			 //"<tr><td><b>rebuild sectiondb</b></td>"
+			 //"<tr bgcolor=#%s><td><b>rebuild sectiondb</b></td>"
 			 //"<td>%s</td></tr>\n" 
-			 //"<tr><td><b>rebuild revdb</b></td>"
+			 //"<tr bgcolor=#%s><td><b>rebuild revdb</b></td>"
 			 //"<td>%s</td></tr>\n" 
 
 
-			 "<tr><td><b>rebuild root urls</b></td>"
+			 "<tr bgcolor=#%s><td><b>rebuild root urls</b></td>"
 			 "<td>%s</td></tr>\n" 
 
-			 "<tr><td><b>rebuild non-root urls</b></td>"
+			 "<tr bgcolor=#%s>"
+			 "<td><b>rebuild non-root urls</b></td>"
 			 "<td>%s</td></tr>\n" 
 
 			 "</table>\n"
 			 "<br>\n"
 			 ,
+			 TABLE_STYLE,
+
 			 LIGHT_BLUE,
-			 DARK_BLUE,
 			 rr[0],
 			 //rr[10],
+
+			 LIGHT_BLUE,
 			 rr[1],
 			 //rr[2],
+
+			 LIGHT_BLUE,
 			 rr[3],
 			 //rr[4],
+
+			 LIGHT_BLUE,
 			 rr[5],
 			 //rr[6],
+
+			 LIGHT_BLUE,
 			 rr[7],
 			 //rr[8],
+
+			 LIGHT_BLUE,
 			 rr[9],
 
 			 //rr[13],
@@ -2578,7 +2622,10 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 //rr[16],
 			 //rr[17],
 
+			 LIGHT_BLUE,
 			 rr[11],
+
+			 LIGHT_BLUE,
 			 rr[12] 
 			 );
 	return true;

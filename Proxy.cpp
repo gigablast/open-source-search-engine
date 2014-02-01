@@ -280,7 +280,7 @@ bool Proxy::initProxy ( long proxyId, unsigned short udpPort,
 	//need to init collectiondb too because of addurl
 	//set isdump to true because we aren't going to store any data in the
 	//collection
-	if ( !g_collectiondb.init( true ) ){ //isDump
+	if ( !g_collectiondb.loadAllCollRecs( ) ){ //isDump
 		log ("db: collectiondb init failed.");
 		return false;
 	}

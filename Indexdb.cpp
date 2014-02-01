@@ -173,7 +173,7 @@ bool Indexdb::init2 ( long treeMem ) {
 	return true;
 }
 
-
+/*
 bool Indexdb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -187,6 +187,7 @@ bool Indexdb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
+*/
 
 bool Indexdb::verify ( char *coll ) {
 	return true;

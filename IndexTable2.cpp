@@ -9,7 +9,7 @@
 #include "sort.h"
 #include "RdbBase.h"
 #include "Msg39.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "SearchInput.h"
 #include "Timedb.h"
 

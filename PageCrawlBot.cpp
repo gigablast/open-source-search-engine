@@ -22,6 +22,7 @@
 #include "XmlDoc.h" // for checkRegex()
 #include "PageInject.h" // Msg7
 //#include "Json.h"
+#include "Parms.h"
 
 // so user can specify the format of the reply/output
 #define FMT_HTML 1
@@ -30,689 +31,16 @@
 #define FMT_CSV  4
 #define FMT_TXT  5
 
-//void printCrawlStats ( SafeBuf *sb , CollectionRec *cr ) ;
 void doneSendingWrapper ( void *state , TcpSocket *sock ) ;
 bool sendBackDump ( TcpSocket *s,HttpRequest *hr );
-//void gotMsg4ReplyWrapper ( void *state ) ;
-//bool showAllCrawls ( TcpSocket *s , HttpRequest *hr ) ;
-//char *getTokenFromHttpRequest ( HttpRequest *hr ) ;
-//char *getCrawlIdFromHttpRequest ( HttpRequest *hr ) ;
-//CollectionRec *getCollRecFromHttpRequest ( HttpRequest *hr ) ;
-//CollectionRec *getCollRecFromCrawlId ( char *crawlId );
-//void printCrawlStatsWrapper ( void *state ) ;
 CollectionRec *addNewDiffbotColl ( char *addColl , char *token,char *name ,
 				   class HttpRequest *hr ) ;
-//bool isAliasUnique ( CollectionRec *cr , char *token , char *alias ) ;
 bool resetUrlFilters ( CollectionRec *cr ) ;
 
 bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 				     HttpRequest *hr , 
 				     CollectionRec *cr ) ;
 
-/*
-char *g_diffbotFields [] = {
-	"Unused-ERROR",
-	"None",
-	"All", // /api/analyze?mode=auto
-	"Article (force)", // /api/article
-	"Article (autodetect)", // /api/analyze?mode=article
-	"Product (force)",
-	"Product (autodetect)",
-	"Image (force)",
-	"Image (autodetect)",
-	"FrontPage (force)",
-	"FrontPage (autodetect)",
-	//
-	// last field must be empty. add new fields above this.
-	//
-	NULL
-};
-*/
-
-/*
-class StateNC {
-public:
-	Msg4 m_msg4;
-	collnum_t m_collnum;
-	TcpSocket *m_socket;
-};
-
-class StateXX {
-public:
-	TcpSocket *m_socket;
-	collnum_t m_collnum;
-};
-
-// . HttpServer.cpp calls handleDiffbotRequest() when it senses
-//   a diffbot api request, like "GET /api/ *"
-// . incoming request format described in diffbot.com/dev/docs/
-// . use incoming request to create a new collection and set the crawl
-//   parameters of the collection if it is "/api/startcrawl"
-// . url format is like: live.diffbot.com/api/startcrawl
-//   or /api/stopcrawl etc.
-// . it does not seem to matter if the handler returns true or false!
-bool handleDiffbotRequest ( TcpSocket *s , HttpRequest *hr ) {
-
-	// . parse out stuff out of the url call
-	// . these 3 are required
-	long tokenLen = 0;
-	char *token = hr->getString("token",&tokenLen);
-
-	// the seed url
-	char *seed  = hr->getString("seed");
-
-	// this can be "article" "product" "frontpage" "image"
-	char *api   = hr->getString("api");
-
-	// apiQueryString holds the cgi parms to pass to the specific diffbot
-	// api like /api/article?...<apiQueryString>
-	char *apiQueryString = hr->getString("apiQueryString",NULL);
-
-	// these are regular expressions
-	char *urlCrawlPattern = hr->getString("urlCrawlPattern",NULL);
-	char *urlProcessPattern = hr->getString("urlProcessPattern",NULL);
-	char *pageProcessPattern = hr->getString("pageProcessPattern",NULL);
-
-	// this is 1 or 0. if enabled then diffbot.com will only try to
-	// extract json objects from page types that match "api" page type
-	// specified above. so if "api" is "product" and a page is identified
-	// as "image" then no json objects will be extracted.
-	long classify = hr->getLong("classify",0);
-
-	// default to 100,000 pages? max pages successfully downloaded,
-	// so does not include tcptimeouts, dnstimeouts, but does include
-	// bad http status codes, like 404.
-	long long maxCrawled = hr->getLongLong("maxCrawled",100000LL);
-	// default to 100,000 pages? # of pages SUCCESSFULLY got a reply
-	// from diffbot for.
-	long long maxToProcess = hr->getLongLong("maxProcessed",100000LL);
-	char *id = hr->getString("id",NULL); // crawl id
-
-	// start or stop a crawl or download? /api/startcrawl /api/stopcrawl or
-	// /api/downloadcrawl /api/activecrawls
-	char *path = hr->getPath();
-	if ( ! path || strncmp(path,"/api/",5) != 0 ) {
-		g_errno = EBADREQUEST;
-		g_msg = " (error: diffbot api path invalid)";
-		return g_httpServer.sendErrorReply(s,500,"invalid diffbot "
-						   "api path");
-	}
-
-	#define DB_STARTCRAWL    1
-	#define DB_STOPCRAWL     2
-	#define DB_CRAWLS        3
-	#define DB_ACTIVECRAWLS  4
-	#define DB_DOWNLOADURLS  5
-	#define DB_DOWNLOADOBJECTS 6
-	#define DB_RESUMECRAWL     7
-
-	long func = 0;
-
-	bool hasFormat = hr->hasField("format");
-
-	if ( strncmp(path,"/api/startcrawl"   ,15) == 0 ) func=DB_STARTCRAWL;
-	if ( strncmp(path,"/api/stopcrawl"    ,14) == 0 ) func=DB_STOPCRAWL;
-	if ( strncmp(path,"/api/resumecrawl"  ,16) == 0 ) func=DB_RESUMECRAWL;
-	if ( strncmp(path,"/api/crawls"       ,11) == 0 ) func=DB_CRAWLS;
-	if ( strncmp(path,"/api/activecrawls" ,17) == 0 ) func=DB_ACTIVECRAWLS;
-	if ( strncmp(path,"/api/downloadurls" ,17) == 0 ) func=DB_DOWNLOADURLS;
-	if ( strncmp(path,"/api/downloadcrawl",18) == 0 ) {
-		if ( ! hasFormat ) func = DB_DOWNLOADURLS;
-		else               func = DB_DOWNLOADOBJECTS;
-	}
-
-	if ( ! func ) {
-		g_errno = EBADREQUEST;
-		g_msg = " (error: diffbot api command invalid)";
-		return g_httpServer.sendErrorReply(s,500,"invalid diffbot "
-						   "api command");
-	}
-
-	// token is not required for /api/activecrawls or stopcrawl, only id
-	if ( (func == DB_STARTCRAWL ||
-	      func == DB_CRAWLS ) && 
-	     ! token ) {
-		g_errno = EBADREQUEST;
-		g_msg = " (error: need \"token\" parm)";
-		return g_httpServer.sendErrorReply(s,500,
-						   "missing \"token\" parm");
-	}
-
-	if ( (func == DB_STOPCRAWL ||
-	      func == DB_RESUMECRAWL ||
-	      func == DB_ACTIVECRAWLS ||
-	      func == DB_DOWNLOADURLS ||
-	      func == DB_DOWNLOADOBJECTS ) && 
-	     ! id ) {
-		g_errno = EBADREQUEST;
-		g_msg = " (error: need \"id\" parm)";
-		return g_httpServer.sendErrorReply(s,500,
-						   "missing \"id\" parm");
-	}
-
-	CollectionRec *cr = NULL;
-
-	// get collrec
-	if ( func == DB_STOPCRAWL    ||
-	     func == DB_RESUMECRAWL  ||
-	     func == DB_ACTIVECRAWLS ||
-	     func == DB_DOWNLOADURLS ||
-	     func == DB_DOWNLOADOBJECTS ) {
-		// the crawlid needs a valid collection
-		cr = getCollRecFromCrawlId ( id );
-		// complain if not there
-		if ( ! cr ) {
-			g_errno = EBADREQUEST;
-			g_msg = " (error: invalid diffbot crawl id or token)";
-			return g_httpServer.sendErrorReply(s,500,"invalid "
-							   "diffbot crawl id "
-							   "or token");
-		}
-	}
-
-	// if stopping crawl...
-	if ( func == DB_STOPCRAWL ) {
-		cr->m_spideringEnabled = 0;
-		char *reply = "{\"reply\":\"success\"}";
-		return g_httpServer.sendDynamicPage( s,
-						     reply,
-						     gbstrlen(reply),
-						     0, // cacheTime
-						     true, // POSTReply?
-						     "application/json"
-						     );
-	}
-
-	// resuming crawl
-	if ( func == DB_RESUMECRAWL ) {
-		cr->m_spideringEnabled = 1;
-		char *reply = "{\"reply\":\"success\"}";
-		return g_httpServer.sendDynamicPage( s,
-						     reply,
-						     gbstrlen(reply),
-						     0, // cacheTime
-						     true, // POSTReply?
-						     "application/json"
-						     );
-	}
-
-	// downloading the urls from spiderdb... sorted by time?
-	if ( func == DB_DOWNLOADURLS )
-		return sendBackDump ( s , hr , RDB_SPIDERDB );
-
-	if ( func == DB_DOWNLOADOBJECTS )
-		return sendBackDump ( s , hr , RDB_TITLEDB );
-
-	// viewing crawl stats just for this one collection/crawl
-	if ( func == DB_ACTIVECRAWLS ) {
-		// state class in case update blocks
-		StateXX *sxx;
-		try { sxx = new (StateXX); }
-		catch ( ... ) {
-			g_msg = "(error: no mem for diffbot2)";
-			return g_httpServer.sendErrorReply(s,500,
-							   mstrerror(g_errno));
-		}
-		mnew ( sxx , sizeof(StateXX), "statexx");
-		// set this shit
-		sxx->m_collnum = cr->m_collnum;
-		sxx->m_socket = s;
-		// . if blocks then return and wait for callback 2 be called
-		// . set useCache to false to get semi-exact stats
-		if ( ! updateCrawlInfo ( cr , 
-					 sxx ,
-					 printCrawlStatsWrapper , 
-					 false )) 
-			return false;
-		// it did not block, so call wrapper directly
-		printCrawlStatsWrapper ( sxx );
-		// all done
-		return true;
-	}
-
-	// show stats of ALL crawls done by this token
-	if ( func == DB_CRAWLS )
-		return showAllCrawls ( s , hr );
-
-	// at this point they must be starting a new crawl.no other cmds remain
-	if ( func != DB_STARTCRAWL ) {
-		g_errno = EBADREQUEST;
-		g_msg = " (error: diffbot api command invalid)";
-		return g_httpServer.sendErrorReply(s,500,"invalid diffbot "
-						   "api command");
-	}
-
-
-	////////////////
-	//
-	// SUPPORT FOR GET /api/startcrawl
-	//
-	// Adds a new CollectionRec, injects the seed url into it, and
-	// turns spidering on.
-	//
-	////////////////
-
-	if ( ! seed ) {
-		g_errno = EBADREQUEST;
-		g_msg = " (error: need seed parm)";
-		return g_httpServer.sendErrorReply(s,500,"need seed parm");
-	}
-
-	if ( ! api ) {
-		g_errno = EBADREQUEST;
-		g_msg = " (error: need seed api)";
-		return g_httpServer.sendErrorReply(s,500,"need api parm");
-	}
-
-	// sanity
-	if ( gbstrlen(seed)+1 >= MAX_URL_LEN ) {
-		g_errno = EBADREQUEST;
-		g_msg = " (error: seed url too long)";
-		return g_httpServer.sendErrorReply(s,500,"seed url must "
-						   "be less than 1023 "
-						   "bytes");
-	}
-
-
-	// make sure the provided regular expressions compile ok
-	SafeBuf sb;
-	bool boolVal;
-	bool boolValValid;
-	long compileError;
-	// test the url crawl pattern
-	sb.set ( urlCrawlPattern );
-	checkRegex (&sb,"x",&boolVal,&boolValValid,&compileError,cr);
-	if ( compileError ) {
-		g_errno = EBADREQUEST;
-		g_msg = "(error: bad url crawl pattern)";
-		return g_httpServer.sendErrorReply(s,500,
-						   "bad url crawl pattern");
-	}
-	// test the url process pattern
-	sb.set ( urlProcessPattern );
-	checkRegex (&sb,"x",&boolVal,&boolValValid,&compileError,cr);
-	if ( compileError ) {
-		g_errno = EBADREQUEST;
-		g_msg = "(error: bad url process pattern)";
-		return g_httpServer.sendErrorReply(s,500,
-						   "bad url process pattern");
-	}
-	// test the page process pattern
-	sb.set ( pageProcessPattern );
-	checkRegex (&sb,"x",&boolVal,&boolValValid,&compileError,cr);
-	if ( compileError ) {
-		g_errno = EBADREQUEST;
-		g_msg = "(error: bad page process pattern)";
-		return g_httpServer.sendErrorReply(s,500,
-						   "bad page process pattern");
-	}
-
-	//
-	// crap we need a new state: NC = New Collection state
-	// because we do a msg4 below that could block...
-	//
-	StateNC *nc;
-	try { nc = new (StateNC); }
-	catch ( ... ) {
-		g_msg = "(error: no mem for diffbot)";
-		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
-	}
-	mnew ( nc , sizeof(StateNC), "statenc");
-	
-
-
-
-	// let's create a new crawl id. dan was making it 32 characters
-	// with 4 hyphens in it for a total of 36 bytes, but since
-	// MAX_COLL_LEN, the maximum length of a collection name, is just
-	// 64 bytes, and the token is already 32, let's limit to 16 bytes
-	// for the crawlerid. so if we print that out in hex, 16 hex chars
-	// 0xffffffff 0xffffffff is 64 bits. so let's make a random 64-bit
-	// value here.
-	unsigned long r1 = rand();
-	unsigned long r2 = rand();
-	unsigned long long crawlId64 = (unsigned long long) r1;
-	crawlId64 <<= 32;
-	crawlId64 |= r2;
-
-	// the name of the new collection we are creating for this crawl
-	// will be <tokenId>-<crawlId>. if it is a "test" crawl as
-	// specified as an option in the diffbot crawlbot api page,
-	// then make it <tokenId>-<crawlId>-test. Test crawls do not index,
-	// they only crawl.
-	char collBuf[MAX_COLL_LEN+1];
-	// include a +5 for "-test"
-	// include 16 for crawlid (16 char hex #)
-	if ( tokenLen + 16 + 5>= MAX_COLL_LEN ) { char *xx=NULL;*xx=0;}
-	char *testStr = "";
-	//if ( cr->m_isDiffbotTestCrawl ) testStr = "-test";
-	// ensure the crawlid is the full 16 characters long so we
-	// can quickly extricate the crawlid from the collection name
-	sprintf(collBuf,"%s-%016llx%s",token,crawlId64,testStr);
-
-	/////////////
-	//
-	// . make a new collection! "cr" is the collectionRec.
-	// . collection Name is the crawl id
-	//
-	/////////////
-	if ( ! g_collectiondb.addRec ( collBuf ,
-				     NULL ,  // copy from
-				     0  , // copy from len
-				     true , // it is a brand new one
-				     -1 , // we are new, this is -1
-				     false , // is NOT a dump
-				     true // save it for sure!
-				       ) ) {
-		log("diffbot: failed to add new coll rec");
-		g_msg = " (error: diffbot failed to allocate crawl)";
-		return g_httpServer.sendErrorReply(s,500,"diffbot crawl "
-						   "alloc failed?");
-	}
-
-	// get the collrec
-	cr = g_collectiondb.getRec ( collBuf );
-
-	// did an alloc fail?
-	if ( ! cr ) { char *xx=NULL;*xx=0; }
-
-
-	// noralize the seed url
-	Url norm;
-	norm.set ( seed );
-	cr->m_diffbotSeed.set ( norm.getUrl() );
-	
-    
-	// these must be there too
-	//cr->m_diffbotToken.set ( token );
-	cr->m_diffbotApi.set ( api );
-
-
-	// these are optional, may be NULL
-	cr->m_diffbotApiQueryString.set ( apiQueryString );
-	cr->m_diffbotUrlCrawlPattern.set ( urlCrawlPattern );
-	cr->m_diffbotUrlProcessPattern.set ( urlProcessPattern );
-	cr->m_diffbotPageProcessPattern.set ( pageProcessPattern );
-	cr->m_diffbotClassify = classify;
-
-	// let's make these all NULL terminated strings
-	cr->m_diffbotSeed.nullTerm();
-	//cr->m_diffbotToken.nullTerm();
-	cr->m_diffbotApi.nullTerm();
-	cr->m_diffbotApiQueryString.nullTerm();
-	cr->m_diffbotUrlCrawlPattern.nullTerm();
-	cr->m_diffbotUrlProcessPattern.nullTerm();
-	cr->m_diffbotPageProcessPattern.nullTerm();
-
-	// do not spider more than this many urls total. -1 means no max.
-	cr->m_maxToCrawl = maxCrawled;
-	// do not process more than this. -1 means no max.
-	cr->m_maxToProcess = maxToProcess;
-
-	// reset the crawl stats
-	cr->m_diffbotCrawlStartTime = gettimeofdayInMillisecondsGlobal();
-	cr->m_diffbotCrawlEndTime   = 0LL;
-
-	// reset crawler stats. they should be loaded from crawlinfo.txt
-	memset ( &cr->m_localCrawlInfo , 0 , sizeof(CrawlInfo) );
-	memset ( &cr->m_globalCrawlInfo , 0 , sizeof(CrawlInfo) );
-	//cr->m_globalCrawlInfoUpdateTime = 0;
-	cr->m_replies = 0;
-	cr->m_requests = 0;
-
-	// support current web page api i guess for test crawls
-	//cr->m_isDiffbotTestCrawl = false;
-	//char *strange = hr->getString("href",NULL);
-	//if ( strange && strcmp ( strange,"/dev/crawl#testCrawl" ) == 0 )
-	//	cr->m_isDiffbotTestCrawl = true;
-
-	///////
-	//
-	// extra diffbot ARTICLE parms
-	//
-	///////
-	// . ppl mostly use meta, html and tags.
-	// . dropping support for dontStripAds. mike is ok with that.
-	// . use for jsonp requests. needed for cross-domain ajax.
-	//char *callback = hr->getString("callback",NULL);
-	// a download timeout
-	//long timeout = hr->getLong("timeout",5000);
-	// "xml" or "json"
-	char *format = hr->getString("format",NULL,"json");
-
-	// save that
-	cr->m_diffbotFormat.safeStrcpy(format);
-
-	// return all content from page? for frontpage api.
-	// TODO: can we put "all" into "fields="?
-	//bool all = hr->hasField("all");
-
-	
-	/////////
-	//
-	// specify diffbot fields to return in the json output
-	//
-	/////////
-	// point to the safebuf that holds the fields the user wants to
-	// extract from each url. comma separated list of supported diffbot
-	// fields like "meta","tags", ...
-	SafeBuf *f = &cr->m_diffbotFields;
-	// transcribe provided fields if any
-	char *fields = hr->getString("fields",NULL);
-	// appends those to our field buf
-	if ( fields ) f->safeStrcpy(fields);
-	// if something there push a comma in case we add more below
-	if ( f->length() ) f->pushChar(',');
-	// return contents of the page's meta tags? twitter card metadata, ..
-	if ( hr->hasField("meta"    ) ) f->safeStrcpy("meta,");
-	if ( hr->hasField("html"    ) ) f->safeStrcpy("html,");
-	if ( hr->hasField("tags"    ) ) f->safeStrcpy("tags,");
-	if ( hr->hasField("comments") ) f->safeStrcpy("comments,");
-	if ( hr->hasField("summary" ) ) f->safeStrcpy("summary,");
-	if ( hr->hasField("all"     ) ) f->safeStrcpy("all,");
-	// if we added crap to "fields" safebuf remove trailing comma
-	f->removeLastChar(',');
-
-
-	// set some defaults. max spiders for all priorities in this collection
-	cr->m_maxNumSpiders = 10;
-
-	// make the gigablast regex table just "default" so it does not
-	// filtering, but accepts all urls. we will add code to pass the urls
-	// through m_diffbotUrlCrawlPattern alternatively. if that itself
-	// is empty, we will just restrict to the seed urls subdomain.
-	for ( long i = 0 ; i < MAX_FILTERS ; i++ ) {
-		cr->m_regExs[i].purge();
-		cr->m_spiderPriorities[i] = 0;
-		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = 250; // 250 ms for now
-		cr->m_spiderIpMaxSpiders[i] = 10;
-		cr->m_spidersEnabled    [i] = 1;
-		cr->m_spiderFreqs       [i] = 7.0;
-	}
-
-
-	// 
-	// by default to not spider image or movie links or
-	// links with /print/ in them
-	//
-	long i = 0;
-	cr->m_regExs[i].safePrintf("$.css");
-	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	cr->m_regExs[i].safePrintf("$.mpeg");
-	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	cr->m_regExs[i].safePrintf("$.mpg");
-	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	cr->m_regExs[i].safePrintf("$.wmv");
-	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	cr->m_regExs[i].safePrintf(".css?");
-	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	cr->m_regExs[i].safePrintf("$.jpg");
-	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	cr->m_regExs[i].safePrintf("$.JPG");
-	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	cr->m_regExs[i].safePrintf("$.gif");
-	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	cr->m_regExs[i].safePrintf("$.GIF");
-	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	cr->m_regExs[i].safePrintf("$.ico");
-	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	cr->m_regExs[i].safePrintf("/print/");
-	cr->m_spiderPriorities[i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	// if user did not specify a url crawl pattern then keep
-	// the crawl limited to the same subdomain of the seed url
-	if ( cr->m_diffbotUrlCrawlPattern.length() == 0 ) {
-		// first limit to http://subdomain
-		cr->m_regExs[i].safePrintf("^http://");
-		cr->m_regExs[i].safeMemcpy(norm.getHost(),norm.getHostLen());
-		cr->m_regExs[i].pushChar('/');
-		cr->m_regExs[i].nullTerm();
-		cr->m_spiderPriorities  [i] = 50;
-		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
-		cr->m_spiderIpMaxSpiders[i] = 10;
-		cr->m_spidersEnabled    [i] = 1;
-		i++;
-		// then include HTTPS
-		cr->m_regExs[i].safePrintf("^https://");
-		cr->m_regExs[i].safeMemcpy(norm.getHost(),norm.getHostLen());
-		cr->m_regExs[i].pushChar('/');
-		cr->m_regExs[i].nullTerm();
-		cr->m_spiderPriorities  [i] = 50;
-		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
-		cr->m_spiderIpMaxSpiders[i] = 10;
-		cr->m_spidersEnabled    [i] = 1;
-		i++;
-		// and make all else filtered
-		cr->m_regExs[i].safePrintf("default");
-		cr->m_spiderPriorities  [i] = SPIDER_PRIORITY_FILTERED;
-		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
-		cr->m_spiderIpMaxSpiders[i] = 10;
-		cr->m_spidersEnabled    [i] = 1;
-		i++;
-	}
-	else {
-		cr->m_regExs[i].safePrintf("default");
-		cr->m_spiderPriorities  [i] = 50;
-		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = 250; // 500 ms for now
-		cr->m_spiderIpMaxSpiders[i] = 10;
-		cr->m_spidersEnabled    [i] = 1;
-		i++;
-	}
-
-	
-
-	// just the default rule!
-	cr->m_numRegExs   = i;
-	cr->m_numRegExs2  = i;
-	cr->m_numRegExs3  = i;
-	cr->m_numRegExs10 = i;
-	cr->m_numRegExs5  = i;
-	cr->m_numRegExs6  = i;
-	cr->m_numRegExs7  = i;
-
-	//cr->m_spiderPriorities  [1] = -1; // filtered? or banned?
-	//cr->m_maxSpidersPerRule [1] = 10;
-	//cr->m_spiderIpWaits     [1] = 500; // 500 ms for now
-
-	cr->m_needsSave = 1;
-
-
-	// start the spiders!
-	cr->m_spideringEnabled = true;
-
-	// and global spider must be on...
-	// do not turn it off on shutdown i guess, too
-	g_conf.m_spideringEnabled = true;
-
-	// . add the seed url to spiderdb
-	// . make a "meta" list to add to spiderdb using msg4 below
-	SafeBuf listBuf;
-	listBuf.pushChar ( RDB_SPIDERDB );
-	SpiderRequest sreq;
-	// constructor does not use reset i guess so we must call it
-	sreq.reset();
-	// string ptr
-	char *url = cr->m_diffbotSeed.getBufStart();
-	// use this as the url
-	strcpy( sreq.m_url, url );
-	// parentdocid of 0
-	long firstIp = hash32n ( url );
-	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
-	sreq.setKey( firstIp,0LL, false );
-	sreq.m_isInjecting   = 0; 
-	sreq.m_isPageInject  = 0;
-	sreq.m_hopCount      = 0;
-	sreq.m_hopCountValid = 1;
-	sreq.m_fakeFirstIp   = 1;
-	sreq.m_firstIp       = firstIp;
-
-	// store it into list to add to spiderdb
-	listBuf.safeMemcpy ( (char *)&sreq , sreq.getRecSize() );
-
-	// allow search queries to take precedence over this operation.
-	// otherwise, we'd make it niceness 0.
-	long niceness = 1;
-
-	Msg4 *m4 = &nc->m_msg4;
-	// save this in our state
-	nc->m_collnum = cr->m_collnum;
-	nc->m_socket  = s;
-
-	if ( m4->addMetaList ( listBuf.getBufStart(),
-			       listBuf.length() ,
-			       // add spiderrequest to our new coll name
-			       collBuf,
-			       nc ,
-			       gotMsg4ReplyWrapper ,
-			       niceness ) ) {
-		// i guess it did not block
-		gotMsg4ReplyWrapper ( nc );
-		return true;
-	}
-
-	// it blocked
-	return false;
-}
-
-// . come here after the SpiderRequest was added to Spiderdb
-// . just transmit back the crawlerid, just like dan does now
-void gotMsg4ReplyWrapper ( void *state ) {
-	// cast it
-	StateNC *nc = (StateNC *)state;
-	// get the special ptr we hid in there
-	CollectionRec *cr = g_collectiondb.getRec(nc->m_collnum);
-	// the crawlid is the last 16 characters of the collection name
-	char *crawlIdStr = cr->m_coll + cr->m_collLen - 16;
-	// get it
-	TcpSocket *socket = nc->m_socket;
-	// nuke it
-	delete nc;
-	mdelete ( nc , sizeof(StateNC) , "stnc" );
-	// httpserver.cpp copies the reply so don't worry that it is on
-	// the stack
-	//char reply[128];
-	//sprintf(reply,"%016llx", crawlIdStr );
-	// we successfully started the crawl...
-	g_httpServer.sendDynamicPage ( socket , 
-				       crawlIdStr, 
-				       gbstrlen(crawlIdStr) );
-}
-*/
 
 ////////////////
 //
@@ -741,7 +69,9 @@ public:
 	bool printJsonItemInCsv ( char *json , SafeBuf *sb ) ;
 
 	long long m_lastUh48;
+	long m_lastFirstIp;
 	long long m_prevReplyUh48;
+	long m_prevReplyFirstIp;
 	long m_prevReplyError;
 	time_t m_prevReplyDownloadTime;
 
@@ -749,6 +79,8 @@ public:
 	Msg4 m_msg4;
 	HttpRequest m_hr;
 	Msg7 m_msg7;
+	long m_dumpRound;
+	long long m_accumulated;
 
 	WaitEntry m_waitEntry;
 
@@ -760,6 +92,7 @@ public:
 	bool m_needHeaderRow;
 
 	SafeBuf m_seedBank;
+	SafeBuf m_listBuf;
 
 	bool m_needsMime;
 	char m_rdbId;
@@ -829,6 +162,10 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		rdbId = RDB_SPIDERDB;
 		fmt = FMT_CSV;
 	}
+	else if ( ( xx = strstr ( path , "_urls.txt" ) ) ) {
+		rdbId = RDB_SPIDERDB;
+		fmt = FMT_TXT;
+	}
 	else if ( ( xx = strstr ( path , "_pages.txt" ) ) ) {
 		rdbId = RDB_TITLEDB;
 		fmt = FMT_TXT;
@@ -873,6 +210,10 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		SafeBuf sb2(tmp2,5000);
 		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&dr=0&"
 			      "c=%s&n=1000000&"
+			       // no gigabits
+			       "dsrt=0&"
+			       // do not compute summary. 0 lines.
+			       "ns=0&"
 			      "q=gbsortby%%3Agbspiderdate&"
 			      "prepend=type%%3Ajson"
 			      "\r\n\r\n"
@@ -900,6 +241,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	       return g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno));
 	}
 	mnew ( st , sizeof(StateCD), "statecd");
+
 	// initialize the new state
 	st->m_rdbId = rdbId;
 	st->m_downloadJSON = downloadJSON;
@@ -918,9 +260,13 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	st->m_needHeaderRow = true;
 
 	st->m_lastUh48 = 0LL;
+	st->m_lastFirstIp = 0;
 	st->m_prevReplyUh48 = 0LL;
+	st->m_prevReplyFirstIp = 0;
 	st->m_prevReplyError = 0;
 	st->m_prevReplyDownloadTime = 0LL;
+	st->m_dumpRound = 0;
+	st->m_accumulated = 0LL;
 
 	// debug
 	//log("mnew1: st=%lx",(long)st);
@@ -933,13 +279,60 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	return true;
 }
 
+
+// . all wrappers call this
+// . returns false if would block, true otherwise
+bool readAndSendLoop ( StateCD *st , bool readFirst ) {
+
+ subloop:
+
+	// if we had a broken pipe on the sendChunk() call then hopefully
+	// this will kick in...
+	if ( g_errno ) {
+		log("crawlbot: readAndSendLoop: %s",mstrerror(g_errno));
+		readFirst = true;
+		st->m_someoneNeedsMore = false;
+	}
+
+	// wait if some are outstanding. how can this happen?
+	if ( st->m_numRequests > st->m_numReplies ) {
+		log("crawlbot: only got %li of %li replies. waiting for "
+		    "all to come back in.",
+		    st->m_numReplies,st->m_numRequests);
+		return false;
+	}
+
+	// are we all done?
+	if ( readFirst && ! st->m_someoneNeedsMore ) {
+		log("crawlbot: done sending for download request");
+		mdelete ( st , sizeof(StateCD) , "stcd" );
+		delete st;
+		return true;
+	}
+
+	// begin reading from each shard and sending the spiderdb records
+	// over the network. return if that blocked
+	if ( readFirst && ! st->readDataFromRdb ( ) ) return false;
+
+	// send it to the browser socket. returns false if blocks.
+	if ( ! st->sendList() ) return false;
+
+	// read again i guess
+	readFirst = true;
+
+	// hey, it did not block... tcpserver caches writes...
+	goto subloop;
+}
+
 void StateCD::sendBackDump2 ( ) {
 
 	m_numRequests = 0;
 	m_numReplies  = 0;
 
 	// read 10MB from each shard's spiderdb at a time
-	m_minRecSizes = 9999999;
+	//m_minRecSizes = 9999999;
+	// 1ook to be more fluid
+	m_minRecSizes = 99999;
 
 	// we stop reading from all shards when this becomes false
 	m_someoneNeedsMore = true;
@@ -951,20 +344,22 @@ void StateCD::sendBackDump2 ( ) {
 		KEYMIN((char *)&m_titledbStartKeys[i],sizeof(key_t));
 	}
 
- subloop:
-	// begin reading from each shard and sending the spiderdb records
-	// over the network. return if that blocked
-	if ( ! readDataFromRdb ( ) ) return;
-	// send it to the browser socket
-	if ( ! sendList() ) return;
-	// . hey, it did not block... i guess no data to send out
-	// . but if all shards are exhausted from the dump, just return
-	if ( m_someoneNeedsMore ) goto subloop;
-	// note it
-	log("crawlbot: nobody needs more 1");
+	// begin reading from the shards and trasmitting back on m_socket
+	readAndSendLoop ( this , true );
 }
 
-void sendListWrapper ( void *state ) ;
+
+static void gotListWrapper7 ( void *state ) {
+	// get the Crawler dump State
+	StateCD *st = (StateCD *)state;
+	// inc it up here
+	st->m_numReplies++;
+	// wait for all
+	if ( st->m_numReplies < st->m_numRequests ) return;
+	// read and send loop
+	readAndSendLoop( st , false );
+}
+	
 
 bool StateCD::readDataFromRdb ( ) {
 
@@ -991,6 +386,10 @@ bool StateCD::readDataFromRdb ( ) {
 			sk = (char *)&m_titledbStartKeys[i];
 		// get host
 		Host *h = g_hostdb.getLiveHostInShard(i);
+		// show it
+		long ks = getKeySizeFromRdbId(m_rdbId);
+		log("dump: asking host #%li for list sk=%s",
+		    h->m_hostId,KEYSTR(sk,ks));
 		// msg0 uses multicast in case one of the hosts in a shard is
 		// dead or dies during this call.
 		if ( ! m_msg0s[i].getList ( h->m_hostId , // use multicast
@@ -1008,7 +407,7 @@ bool StateCD::readDataFromRdb ( ) {
 					   // records
 					   m_minRecSizes,
 					   this,
-					   sendListWrapper ,
+					    gotListWrapper7 ,
 					    niceness ) ) {
 			log("crawlbot: blocked getting list from shard");
 			// continue if it blocked
@@ -1027,22 +426,6 @@ bool StateCD::readDataFromRdb ( ) {
 	return true;
 }
 
-void sendListWrapper ( void *state ) {
-	// get the Crawler dump State
-	StateCD *st = (StateCD *)state;
-	// inc it up here
-	st->m_numReplies++;
- subloop:
-	// if this blocked sending back some data, return
-	if ( ! st->sendList() ) return;
-	// otherwise, read more, maybe had no data to send from list
-	if ( ! st->readDataFromRdb () ) return;
-	// send and read more
-	if ( st->m_someoneNeedsMore ) goto subloop;
-	// note it
-	log("crawlbot: nobody needs more 2");
-}
-	
 bool StateCD::sendList ( ) {
 	// get the Crawler dump State
 	// inc it
@@ -1070,6 +453,7 @@ bool StateCD::sendList ( ) {
 	//   then do so here, the content-length will not be in there
 	//   because we might have to call for more spiderdb data
 	if ( m_needsMime ) {
+		m_needsMime = false;
 		HttpMime mime;
 		mime.makeMime ( -1, // totel content-lenght is unknown!
 				0 , // do not cache (cacheTime)
@@ -1087,11 +471,16 @@ bool StateCD::sendList ( ) {
 
 	//CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 
-
 	if ( ! m_printedFirstBracket && m_fmt == FMT_JSON ) {
 		sb.safePrintf("[\n");
 		m_printedFirstBracket = true;
 	}
+
+	// these are csv files not xls
+	//if ( ! m_printedFirstBracket && m_fmt == FMT_CSV ) {
+	//	sb.safePrintf("sep=,\n");
+	//	m_printedFirstBracket = true;
+	//}
 
 
 	// we set this to true below if any one shard has more spiderdb
@@ -1108,6 +497,11 @@ bool StateCD::sendList ( ) {
 
 		// should we try to read more?
 		m_needMore[i] = false;
+
+		// report it
+		log("dump: got list of %li bytes from host #%li round #%li",
+		    list->getListSize(),i,m_dumpRound);
+
 
 		if ( list->isEmpty() ) {
 			list->freeList();
@@ -1157,6 +551,15 @@ bool StateCD::sendList ( ) {
 		list->freeList();
 	}
 
+	m_dumpRound++;
+
+	//log("rdbid=%li fmt=%li some=%li printed=%li",
+	//    (long)m_rdbId,(long)m_fmt,(long)m_someoneNeedsMore,
+	//    (long)m_printedEndingBracket);
+
+	bool lastChunk = false;
+	if ( ! m_someoneNeedsMore )
+		lastChunk = true;
 
 	// if nobody needs to read more...
 	if ( m_rdbId == RDB_TITLEDB && 
@@ -1165,113 +568,31 @@ bool StateCD::sendList ( ) {
 	     ! m_printedEndingBracket ) {
 		m_printedEndingBracket = true;
 		// end array of json objects. might be empty!
-		sb.safePrintf("\n]");
+		sb.safePrintf("\n]\n");
+		//log("adding ]. len=%li",sb.length());
 	}
 
-	// if first time, send it back
-	if ( m_needsMime ) {
-		// only do once
-		m_needsMime = false;
+	TcpServer *tcp = &g_httpServer.m_tcp;
 
-	sendLoop:
-		// start the send process
-		TcpServer *tcp = &g_httpServer.m_tcp;
-		if (  ! tcp->sendMsg ( m_socket ,
-				       sb.getBufStart(), // sendBuf     ,
-				       sb.getCapacity(),//sendBufSize ,
-				       sb.length(),//sendBufSize ,
-				       sb.length(), // msgtotalsize
-				       this       ,   // data for callback
-				       doneSendingWrapper  ) ) { // callback
-			// do not free sendbuf we are transmitting it
-			sb.detachBuf();
-			return false;
-		}
-		// error?
-		//TcpSocket *s = m_socket;
-		// sometimes it does not block and is successful because
-		// it just writes its buffer out in one write call.
-		//if ( ! g_errno ) 
-		sb.detachBuf();
+	// . transmit the chunk in sb
+	// . steals the allocated buffer from sb and stores in the 
+	//   TcpSocket::m_sendBuf, which it frees when socket is
+	//   ultimately destroyed or we call sendChunk() again.
+	// . when TcpServer is done transmitting, it does not close the
+	//   socket but rather calls doneSendingWrapper() which can call
+	//   this function again to send another chunk
+	// . when we are truly done sending all the data, then we set lastChunk
+	//   to true and TcpServer.cpp will destroy m_socket when done
+	if ( ! tcp->sendChunk ( m_socket , 
+				&sb  ,
+				this ,
+				doneSendingWrapper ,
+				lastChunk ) )
+		return false;
 
-		// log it
-		//log("crawlbot: nuking state. strange");
-
-		// nuke state
-		//delete this;
-		//mdelete ( this , sizeof(StateCD) , "stcd" );
-		//if ( g_errno )
-		log("diffbot: tcp sendmsg did not block: %s",
-		    mstrerror(g_errno));
-		//g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
-		// wait for doneSendingWrapper to be called.
-		//return false;
-		//
-		// it did not block... so just keep going. that just
-		// means the socket sent the data. it's probably buffered.
-		//
-		// but we DO have to free the sendbuffer here since
-		// we did not block
-		mfree ( m_socket->m_sendBuf ,
-			m_socket->m_sendBufSize ,
-			"dbsbuf");
-		m_socket->m_sendBuf = NULL;
-
-		return true;
-	}
-
-
-	// if nothing to send back we are done. return true since we
-	// did not block sending back.
-	if ( sb.length() == 0 ) {
-		//log("crawlbot: nuking state.");		
-		//delete this;
-		//mdelete ( this , sizeof(StateCD) , "stcd" );
-		return true;
-	}
-
-	// how can this be?
-	if ( m_socket->m_sendBuf ) { char *xx=NULL;*xx=0; }
-
-	// put socket in sending-again mode
-	m_socket->m_sendBuf     = sb.getBufStart();
-	m_socket->m_sendBufSize = sb.getCapacity();
-	m_socket->m_sendBufUsed = sb.length();
-	m_socket->m_sendOffset  = 0;
-	m_socket->m_totalSent   = 0;
-	m_socket->m_totalToSend = sb.length();
-
-	// tell TcpServer.cpp to send this latest buffer! HACK!
-	//m_socket->m_sockState = ST_SEND_AGAIN;//ST_WRITING;//SEND_AGAIN;
-
-	// this does nothing if we were not called indirectly by
-	// TcpServer::writeSocketWrapper_r(). so if we should call
-	// sendMsg() ourselves in such a situation.
-	// so if the sendMsg() did not block, the first time, and we came
-	// here empty except for the ending ']' the 2nd time, then
-	// write it out this way... calling sendMsg() directly
-	if ( m_socket->m_sockState == ST_NEEDS_CLOSE ) {
-		//m_socket->m_sockState = ST_SEND_AGAIN;
-		goto sendLoop;
-	}
-
-	// do not let safebuf free this, we will take care of it
-	sb.detachBuf();
-
-	// . when it is done sending call this callback, don't hang up!
-	// . if m_someoneNeedsMore is false then this callback should just
-	//   destroy the socket and delete "this"
-	m_socket->m_callback = doneSendingWrapper;
-	m_socket->m_state    = this;
-
-	//if ( m_socket->m_sendBufUsed == 79 )
-	//	log("hey");
-	
-	// log it
-	log("crawlbot: resending %li bytes on socket",m_socket->m_sendBufUsed);
-
-	// we blocked sending back
-	return false;
+	// we are done sending this chunk, i guess tcp write was cached
+	// in the network card buffer or something
+	return true;
 }
 
 // TcpServer.cpp calls this when done sending TcpSocket's m_sendBuf
@@ -1279,83 +600,18 @@ void doneSendingWrapper ( void *state , TcpSocket *sock ) {
 
 	StateCD *st = (StateCD *)state;
 
-	TcpSocket *socket = st->m_socket;
+	//TcpSocket *socket = st->m_socket;
+	st->m_accumulated += sock->m_totalSent;
 
-	log("crawlbot: done sending on socket %li/%li bytes",
+	log("crawlbot: done sending on socket %li/%li [%lli] bytes",
 	    sock->m_totalSent,
-	    sock->m_sendBufUsed);
-
-	// . if the final callback
-	// . sometimes m_sendBuf is NULL if we freed it below and tried to
-	//   read more, only to read 0 bytes
-	// . but it will be non-null if we read 0 bytes the first time
-	//   and just have a mime to send. because sendReply() above 
-	//   returned true, and then doneSendingWrapper() got called.
-	if ( //! socket->m_sendBuf &&
-	     st->m_numRequests <= st->m_numReplies &&
-	     ! st->m_someoneNeedsMore ) {
-		log("crawlbot: done sending for download request");
-		delete st;
-		mdelete ( st , sizeof(StateCD) , "stcd" );
-		//log("mdel1: st=%lx",(long)st);
-		return;
-	}
-
-	// if the timer called us, just return
-	if ( ! socket->m_sendBuf ) {
-		log("crawlbot: timer callback");
-		socket->m_sockState = ST_SEND_AGAIN;
-		return;
-	}
+	    sock->m_sendBufUsed,
+	    st->m_accumulated);
 
 
-	// free the old sendbuf then i guess since we might replace it
-	// in the above function.
-	mfree ( socket->m_sendBuf ,
-		socket->m_sendBufSize ,
-		"dbsbuf");
+	readAndSendLoop ( st , true );
 
-	// in case we have nothing to send back do not let socket free
-	// what we just freed above. it'll core.
-	socket->m_sendBuf = NULL;
-
-	// sometimes this wrapper is called just from the timer...
-	// so if we have outstanding msg0s then we gotta wait
-	if ( st->m_numRequests > st->m_numReplies ) {
-		char *xx=NULL;*xx=0;
-		socket->m_sockState = ST_SEND_AGAIN;
-		return;
-	}
-
-
-	// all done?
-	if ( st->m_someoneNeedsMore ) {
-		// make sure socket doesn't close up on us!
-		socket->m_sockState = ST_SEND_AGAIN;
-		log("crawlbot: reading more download data");
-		// just enter the little loop here
-	subloop:
-		// otherwise, read more, maybe had no data to send from list
-		if ( ! st->readDataFromRdb () ) return;
-		// if this blocked sending back some data, return
-		if ( ! st->sendList() ) return;
-		// note that
-		log("crawlbot: sendList did not block");
-		// send and read more
-		if ( st->m_someoneNeedsMore ) goto subloop;
-		// note it
-		log("crawlbot: nobody needs more 3");
-		// sanity
-		if ( st->m_numRequests>st->m_numReplies){char *xx=NULL;*xx=0;}
-	}
-
-
-	log("crawlbot: no more data available");
-
-	// it's possible that readDataFromRdb() did not block and called
-	// sendList which set the socket m_sendBuf again... so check
-	// for that... it needs to be sent yet before we delete this state
-	//if ( st->m_socket->m_sendBuf ) return;
+	return;
 }
 
 void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
@@ -1385,6 +641,7 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 			else if ( srep->m_spideredTime > lastSpidered )
 				lastSpidered = srep->m_spideredTime;
 			m_prevReplyUh48 = srep->getUrlHash48();
+			m_prevReplyFirstIp = srep->m_firstIp;
 			// 0 means indexed successfully. not sure if
 			// this includes http status codes like 404 etc.
 			// i don't think it includes those types of errors!
@@ -1405,11 +662,17 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 
 		// print the url if not yet printed
 		long long uh48 = sreq->getUrlHash48  ();
+		long firstIp = sreq->m_firstIp;
 		bool printIt = false;
 		// there can be multiple spiderrequests for the same url!
 		if ( m_lastUh48 != uh48 ) printIt = true;
+		// sometimes the same url has different firstips now that
+		// we have the EFAKEFIRSTIP spider error to avoid spidering
+		// seeds twice...
+		if ( m_lastFirstIp != firstIp ) printIt = true;
 		if ( ! printIt ) continue;
 		m_lastUh48 = uh48;
+		m_lastFirstIp = firstIp;
 
 		// make sure spiderreply is for the same url!
 		if ( srep && srep->getUrlHash48() != sreq->getUrlHash48() )
@@ -1433,6 +696,7 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// so set "status" to 0 to indicate hasn't been 
 		// downloaded yet.
 		if ( m_lastUh48 != m_prevReplyUh48 ) status = 0;
+		if ( m_lastFirstIp != m_prevReplyFirstIp ) status = 0;
 		// if it matches, perhaps an error spidering it?
 		if ( status && m_prevReplyError ) status = -1;
 
@@ -1457,7 +721,9 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 					nowGlobalMS,
 					false,
 					MAX_NICENESS,
-					cr);
+					cr,
+					false, // isoutlink?
+					NULL);
 		char *expression = NULL;
 		long  priority = -4;
 		// sanity check
@@ -1474,7 +740,9 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// when spidering rounds we use the 
 		// lastspidertime>={roundstart} --> spiders disabled rule
 		// so that we do not spider a url twice in the same round
-		if ( ufn >= 0 && ! cr->m_spidersEnabled[ufn] ) {
+		if ( ufn >= 0 && //! cr->m_spidersEnabled[ufn] ) {
+		     // we set this to 0 instead of using the checkbox
+		     cr->m_maxSpidersPerRule[ufn] <= 0 ) {
 			priority = -5;
 		}
 
@@ -1490,7 +758,10 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 			m_isFirstTime = false;
 			sb->safePrintf("\"Url\","
 				       "\"Entry Method\","
-				       "\"Processed?\","
+				       );
+			if ( cr->m_isCustomCrawl )
+				sb->safePrintf("\"Processed?\",");
+			sb->safePrintf(
 				       "\"Add Time\","
 				       "\"Last Crawled\","
 				       "\"Last Status\","
@@ -1522,12 +793,15 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		// but default to csv
 		else {
 			sb->safePrintf("\"%s\",\"%s\","
-				       "%li,%lu,%lu,\"%s\",\"%s\",\""
-				       //",%s"
-				       //"\n"
 				       , sreq->m_url
 				       , as
-				       , (long)isProcessed
+				       );
+			if ( cr->m_isCustomCrawl )
+				sb->safePrintf("%li,",(long)isProcessed);
+			sb->safePrintf(
+				       "%lu,%lu,\"%s\",\"%s\",\""
+				       //",%s"
+				       //"\n"
 				       // when was it first added to spiderdb?
 				       , sreq->m_addedTime
 				       // last time spidered, 0 if none
@@ -1644,8 +918,11 @@ void StateCD::printTitledbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 
 		m_printedItem = true;
 
-		if ( ! sb->safeStrcpyPrettyJSON ( json ) ) 
-			log("diffbot: error printing json in dump");
+		//if ( ! sb->safeStrcpyPrettyJSON ( json ) ) 
+		//	log("diffbot: error printing json in dump");
+		sb->safeStrcpy ( json );
+
+		sb->nullTerm();
 
 		// separate each JSON object with \n i guess
 		//sb->pushChar('\n');
@@ -1785,8 +1062,8 @@ void printCrawlStatsWrapper ( void *state ) {
 	// save before nuking state
 	TcpSocket *sock = sxx->m_socket;
 	// nuke the state
-	delete sxx;
 	mdelete ( sxx , sizeof(StateXX) , "stxx" );
+	delete sxx;
 	// and send back now
 	g_httpServer.sendDynamicPage ( sock ,
 				       sb.getBufStart(), 
@@ -1989,7 +1266,7 @@ bool sendReply2 (TcpSocket *socket , long fmt , char *msg ) {
 bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 
 	// log it
-	log("crawlbot: %s",msg);
+	log("crawlbot: sending back 500 http status '%s'",msg);
 
 	char *ct = "text/html";
 
@@ -2007,7 +1284,7 @@ bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 			      , msg );
 
 	// log it
-	log("crawlbot: %s",msg );
+	//log("crawlbot: %s",msg );
 
 	//return g_httpServer.sendErrorReply(socket,500,sb.getBufStart());
 	return g_httpServer.sendDynamicPage (socket, 
@@ -2015,7 +1292,8 @@ bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 					     sb.length(),
 					     0, // cachetime
 					     false, // POST reply?
-					     ct );
+					     ct ,
+					     500 ); // error! not 200...
 }
 
 bool printCrawlBotPage2 ( class TcpSocket *s , 
@@ -2035,8 +1313,8 @@ void addedUrlsToSpiderdbWrapper ( void *state ) {
 			     NULL ,
 			     &rr ,
 			     st->m_collnum );
-	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	delete st;
 	//log("mdel2: st=%lx",(long)st);
 }
 /*
@@ -2112,8 +1390,8 @@ void injectedUrlWrapper ( void *state ) {
 			     response,
 			     NULL ,
 			     st->m_collnum );
-	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	delete st;
 }
 */	
 
@@ -2205,14 +1483,17 @@ static class HelpItem s_his[] = {
 	 "be ignored. "
 	 "An empty regular expression matches all urls."},
 
+	{"apiUrl","Diffbot api url to use. We automatically append "
+	 "token and url to it."},
 
-	{"expression","A pattern to match in a URL. List up to 100 "
-	 "expression/action pairs in the HTTP request. "
-	 "Example expressions:"},
-	{"action","Take the appropriate action when preceeding pattern is "
-	 "matched. Specify multiple expression/action pairs to build a "
-	 "table of filters. Each URL being spidered will take the given "
-	 "action of the first expression it matches. Example actions:"},
+
+	//{"expression","A pattern to match in a URL. List up to 100 "
+	// "expression/action pairs in the HTTP request. "
+	// "Example expressions:"},
+	//{"action","Take the appropriate action when preceeding pattern is "
+	// "matched. Specify multiple expression/action pairs to build a "
+	// "table of filters. Each URL being spidered will take the given "
+	// "action of the first expression it matches. Example actions:"},
 
 
 	{NULL,NULL}
@@ -2236,8 +1517,8 @@ void collOpDoneWrapper ( void *state ) {
 	StateCD *st = (StateCD *)state;
 	TcpSocket *socket = st->m_socket;
 	log("crawlbot: done with blocked op.");
-	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	delete st;
 	//log("mdel3: st=%lx",(long)st);
 	g_httpServer.sendDynamicPage (socket,"OK",2);
 }
@@ -2285,7 +1566,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//   explicitly given
 	// . Msg28::massConfig() puts a &cast=0 on the secondary requests 
 	//   sent to each host in the network
-	long cast = hr->getLong("cast",1);
+	//long cast = hr->getLong("cast",1);
 
 	// httpserver/httprequest should not try to decode post if
 	// it's application/json.
@@ -2297,6 +1578,29 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// . put in xml or json if format=xml or format=json or
 	//   xml=1 or json=1 ...
 	char fmt = FMT_JSON;
+
+	// token is always required. get from json or html form input
+	//char *token = getInputString ( "token" );
+	char *token = hr->getString("token");
+	char *name = hr->getString("name");
+
+	// . try getting token-name from ?c= 
+	// . the name of the collection is encoded as <token>-<crawlname>
+	char *c = hr->getString("c");
+	char tmp[MAX_COLL_LEN+100];
+	if ( ! token && c ) {
+		strncpy ( tmp , c , MAX_COLL_LEN );
+		token = tmp;
+		name = strstr(tmp,"-");
+		if ( name ) {
+			*name = '\0';
+			name++;
+		}
+		// change default formatting to html
+		fmt = FMT_HTML;
+	}
+
+
 	char *fs = hr->getString("format",NULL,NULL);
 	// give john a json api
 	if ( fs && strcmp(fs,"html") == 0 ) fmt = FMT_HTML;
@@ -2305,11 +1609,9 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// if we got json as input, give it as output
 	//if ( JS.getFirstItem() ) fmt = FMT_JSON;
 
-	// token is always required. get from json or html form input
-	//char *token = getInputString ( "token" );
-	char *token = hr->getString("token");
 
-	if ( ! token && ( cast == 0 || fmt == FMT_JSON ) ) {
+
+	if ( ! token && fmt == FMT_JSON ) { // (cast==0|| fmt == FMT_JSON ) ) {
 		char *msg = "invalid token";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
@@ -2352,18 +1654,20 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	char *spots = hr->getString("spots");
 
 	// just existence is the operation
-	bool delColl   = hr->hasField("deleteCrawl");
-	bool resetColl = hr->hasField("resetCrawl");
+	//bool delColl   = hr->hasField("deleteCrawl");
+	//bool resetColl = hr->hasField("resetCrawl");
 
 	// /v2/bulk api support:
 	if ( ! spots ) spots = hr->getString("urls");
-	if ( ! delColl   ) delColl   = hr->hasField("delete");
-	if ( ! resetColl ) resetColl = hr->hasField("reset");
+
+	if ( spots && ! spots[0] ) spots = NULL;
+	if ( seeds && ! seeds[0] ) seeds = NULL;
+
+	//if ( ! delColl   ) delColl   = hr->hasField("delete");
+	//if ( ! resetColl ) resetColl = hr->hasField("reset");
 
 	bool restartColl = hr->hasField("restart");
 
-
-	char *name = hr->getString("name");
 
 	//if ( delColl && !  && cast == 0 ) {
 	//	log("crawlbot: no collection found to delete.");
@@ -2379,13 +1683,21 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// default name to next available collection crawl name in the
 	// case of a delete operation...
-	if ( delColl && cast ) {
+	char *msg = NULL;
+	if ( hr->hasField("delete") ) msg = "deleted";
+	// need to re-add urls for a restart
+	//if ( hr->hasField("restart") ) msg = "restarted";
+	if ( hr->hasField("reset") ) msg = "reset";
+	if ( msg ) { // delColl && cast ) {
 		// this was deleted... so is invalid now
 		name = NULL;
 		// no longer a delete function, we need to set "name" below
-		delColl = false;//NULL;
+		//delColl = false;//NULL;
 		// john wants just a brief success reply
-		char *reply = "{\"response\":\"Successfully deleted job.\"}";
+		SafeBuf tmp;
+		tmp.safePrintf("{\"response\":\"Successfully %s job.\"}",
+			       msg);
+		char *reply = tmp.getBufStart();
 		return g_httpServer.sendDynamicPage( socket,
 						     reply,
 						     gbstrlen(reply),
@@ -2397,14 +1709,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// if name is missing default to name of first existing
 	// collection for this token. 
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs && cast ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) { // cast
 		if (  name ) break;
 		// do not do this if doing an
 		// injection (seed) or add url or del coll or reset coll !!
 		if ( seeds ) break;
 		if ( spots ) break;
-		if ( delColl ) break;
-		if ( resetColl ) break;
+		//if ( delColl ) break;
+		//if ( resetColl ) break;
 		if ( restartColl ) break;
 		CollectionRec *cx = g_collectiondb.m_recs[i];
 		// deleted collections leave a NULL slot
@@ -2418,9 +1730,19 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	if ( ! name ) {
+		// if the token is valid
+		char *ct = "application/json";
+		char *msg = "{}\n";
+		return g_httpServer.sendDynamicPage ( socket, 
+						      msg,
+						      gbstrlen(msg) ,
+						      -1 , // cachetime
+						      false ,
+						      ct ,
+						      200 ); // http status
 		//log("crawlbot: no crawl name given");
-		char *msg = "invalid or missing name";
-		return sendErrorReply2 (socket,fmt,msg);
+		//char *msg = "invalid or missing name";
+		//return sendErrorReply2 (socket,fmt,msg);
 	}
 
 
@@ -2441,6 +1763,13 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// then cr will be NULL and we'll add it below
 	CollectionRec *cr = g_collectiondb.getRec(collName);
 
+	// i guess bail if not there?
+	if ( ! cr ) {
+		char *msg = "invalid or missing collection rec";
+		return sendErrorReply2 (socket,fmt,msg);
+	}
+
+
 	// if no token... they need to login or signup
 	//char *token = getTokenFromHttpRequest ( hr );
 
@@ -2456,16 +1785,16 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//if ( JS.getInputString("deleteCrawl") ) delColl = true;
 	//if ( JS.getInputString("resetCrawl") ) resetColl = true;
 
-	if ( resetColl && ! cr ) {
-		//log("crawlbot: no collection found to reset.");
-		char *msg = "Could not find crawl to reset.";
-		return sendErrorReply2 (socket,fmt,msg);
-	}
+	//if ( resetColl && ! cr ) {
+	//	//log("crawlbot: no collection found to reset.");
+	//	char *msg = "Could not find crawl to reset.";
+	//	return sendErrorReply2 (socket,fmt,msg);
+	//}
 
-	if ( restartColl && ! cr ) {
-		char *msg = "Could not find crawl to restart.";
-		return sendErrorReply2 (socket,fmt,msg);
-	}
+	//if ( restartColl && ! cr ) {
+	//	char *msg = "Could not find crawl to restart.";
+	//	return sendErrorReply2 (socket,fmt,msg);
+	//}
 
 	// make a new state
 	StateCD *st;
@@ -2486,9 +1815,10 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	else      st->m_collnum = -1;
 
 	// save seeds
-	if ( cr && restartColl && cast ) {
+	if ( cr && restartColl ) { // && cast ) {
 		// bail on OOM saving seeds
-		if ( ! st->m_seedBank.safeMemcpy ( &cr->m_diffbotSeeds ) )
+		if ( ! st->m_seedBank.safeMemcpy ( &cr->m_diffbotSeeds ) ||
+		     ! st->m_seedBank.pushChar('\0') )
 			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
 	}
 
@@ -2525,8 +1855,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			em.safePrintf("Invalid regular expresion: %s",rx2);
 		}
 		if ( status1 || status2 ) {
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			char *msg = em.getBufStart();
 			return sendErrorReply2(socket,fmt,msg);
 		}
@@ -2545,6 +1875,10 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//   pg->m_function(). even though maxtocrawl is on "PAGE_NONE" 
 	//   hopefully it will still be set
 	// . but we should take care of add/del/reset coll here.
+	// . i guess this will be handled by the new parm syncing logic
+	//   which deals with add/del coll requests
+
+	/*
 	if ( cast == 0 ) {
 		// add a new collection by default
 		if ( ! cr && name && name[0] ) 
@@ -2580,8 +1914,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			if ( resetColl ) msg = "No such collection";
 			if ( restartColl ) msg = "No such collection";
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			// log it
 			log("crawlbot: cr is null. %s",msg);
 			// make sure this returns in json if required
@@ -2607,8 +1941,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			if ( ! g_collectiondb.deleteRec ( collName , we ) )
 				return false;
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			// all done
 			return g_httpServer.sendDynamicPage (socket,"OK",2);
 		}
@@ -2632,19 +1966,20 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			// to avoid user confusion
 			if ( cr ) cr->m_spideringEnabled = 1;
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			// all done
 			return g_httpServer.sendDynamicPage (socket,"OK",2);
 		}
 		// nuke it
-		delete st;
 		mdelete ( st , sizeof(StateCD) , "stcd" );
+		delete st;
 		// this will set the the collection parms from json
 		//setSpiderParmsFromJSONPost ( socket , hr , cr , &JS );
 		// this is a cast, so just return simple response
 		return g_httpServer.sendDynamicPage (socket,"OK",2);
 	}
+	*/
 
 	/////////
 	//
@@ -2654,6 +1989,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//
 	/////////
 
+	/*
 	// in case collection was just added above... try this!!
 	cr = g_collectiondb.getRec(collName);
 
@@ -2663,14 +1999,15 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( name && name[0] )
 			msg = "Failed to add crawl. Crawl name is illegal.";
 		// nuke it
-		delete st;
 		mdelete ( st , sizeof(StateCD) , "stcd" );
+		delete st;
 		//log("crawlbot: no collection found. need to add a crawl");
 		return sendErrorReply2(socket,fmt, msg);
 	}
 
 	//char *spots = hr->getString("spots",NULL,NULL);
 	//char *seeds = hr->getString("seeds",NULL,NULL);
+	*/
 
 	// check seed bank now too for restarting a crawl
 	if ( st->m_seedBank.length() && ! seeds )
@@ -2694,39 +2031,39 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		//spiderLinks      = hr->getLong("spiderlinks",spiderLinks);
 		//bool spiderLinks = false;
 		// make a list of spider requests from these urls
-		SafeBuf listBuf;
+		//SafeBuf listBuf;
 		// this returns NULL with g_errno set
 		bool status = true;
 		if ( ! getSpiderRequestMetaList ( seeds,
-						  &listBuf ,
+						  &st->m_listBuf ,
 						  true , // spiderLinks?
 						  cr ) )
 			status = false;
 		// do not spider links for spots
 		if ( ! getSpiderRequestMetaList ( spots,
-						  &listBuf ,
+						  &st->m_listBuf ,
 						  false , // spiderLinks?
 						  NULL ) )
 			status = false;
 		// empty?
-		long size = listBuf.length();
+		long size = st->m_listBuf.length();
 		// error?
 		if ( ! status ) {
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
 		}
 		// if not list
 		if ( ! size ) {
 			// nuke it
-			delete st;
 			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			return sendErrorReply2(socket,fmt,"no urls found");
 		}
 		// add to spiderdb
-		if ( ! st->m_msg4.addMetaList( listBuf.getBufStart() ,
-					       listBuf.length(),
+		if ( ! st->m_msg4.addMetaList( st->m_listBuf.getBufStart() ,
+					       st->m_listBuf.length(),
 					       cr->m_coll,
 					       st ,
 					       addedUrlsToSpiderdbWrapper,
@@ -2775,14 +2112,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	printCrawlBotPage2 ( socket,hr,fmt,NULL,NULL,cr->m_collnum);
 
 	// get rid of that state
-	delete st;
 	mdelete ( st , sizeof(StateCD) , "stcd" );
+	delete st;
 	//log("mdel4: st=%lx",(long)st);
 	return true;
 }
 
 
-
+/*
 bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 
 	if ( fmt == FMT_JSON )
@@ -2859,6 +2196,7 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 
 	return true;
 }
+*/
 
 bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 
@@ -2892,8 +2230,11 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 		      //"\"urlsExamined\":%lli,\n"
 		      "\"pageCrawlAttempts\":%lli,\n"
 		      "\"pageCrawlSuccesses\":%lli,\n"
+		      "\"pageCrawlSuccessesThisRound\":%lli,\n"
+
 		      "\"pageProcessAttempts\":%lli,\n"
 		      "\"pageProcessSuccesses\":%lli,\n"
+		      "\"pageProcessSuccessesThisRound\":%lli,\n"
 
 		      "\"maxRounds\":%li,\n"
 		      "\"repeat\":%f,\n"
@@ -2914,8 +2255,11 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 		      //,cx->m_globalCrawlInfo.m_urlsConsidered
 		      , cx->m_globalCrawlInfo.m_pageDownloadAttempts
 		      , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
+		      , cx->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound
+
 		      , cx->m_globalCrawlInfo.m_pageProcessAttempts
 		      , cx->m_globalCrawlInfo.m_pageProcessSuccesses
+		      , cx->m_globalCrawlInfo.m_pageProcessSuccessesThisRound
 
 		      , (long)cx->m_maxCrawlRounds
 		      , cx->m_collectiveRespiderFrequency
@@ -3133,9 +2477,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		unsigned long long rand64 = (unsigned long long) r1;
 		rand64 <<= 32;
 		rand64 |=  r2;
+		char newCollName[MAX_COLL_LEN+1];
+		snprintf(newCollName,MAX_COLL_LEN,"%s-%016llx",
+			 token , rand64 );
 		// first print "add new collection"
 		sb.safePrintf("[ <a href=/crawlbot?name=%016llx&token=%s&"
-			      "format=html>"
+			      "format=html&addCrawl=%s>"
 			      "add new crawl"
 			      "</a> ] &nbsp; "
 			      "[ <a href=/crawlbot?token=%s>"
@@ -3143,6 +2490,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</a> ] &nbsp; "
 			      , rand64
 			      , token
+			      , newCollName
 			      , token
 			      );
 	}
@@ -3176,9 +2524,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		sb.safePrintf("&name=");
 		sb.urlEncode(cx->m_diffbotCrawlName.getBufStart());
 		sb.safePrintf("&format=html>"
-			      "%s"
+			      "%s (%li)"
 			      "</a> &nbsp; "
 			      , cx->m_diffbotCrawlName.getBufStart()
+			      , (long)cx->m_collnum
 			      );
 		if ( highlight )
 			sb.safePrintf("</font></b>");
@@ -3225,8 +2574,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td><b>URLs Examined</b></td>"
 			      "<td><b>Page Download Attempts</b></td>"
 			      "<td><b>Page Download Successes</b></td>"
+			      "<td><b>Page Download Successes This Round"
+			      "</b></td>"
 			      "<td><b>Page Process Attempts</b></td>"
 			      "<td><b>Page Process Successes</b></td>"
+			      "<td><b>Page Process Successes This Round"
+			      "</b></td>"
 			      "</tr>"
 			      );
 	}
@@ -3273,6 +2626,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td>%lli</td>"
 			      "<td>%lli</td>"
 			      "<td>%lli</td>"
+			      "<td>%lli</td>"
+			      "<td>%lli</td>"
 			      "</tr>"
 			      , cx->m_coll
 			      , cx->m_globalCrawlInfo.m_objectsAdded -
@@ -3281,8 +2636,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      //, cx->m_globalCrawlInfo.m_urlsConsidered
 			      , cx->m_globalCrawlInfo.m_pageDownloadAttempts
 			      , cx->m_globalCrawlInfo.m_pageDownloadSuccesses
+			      , cx->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound
 			      , cx->m_globalCrawlInfo.m_pageProcessAttempts
 			      , cx->m_globalCrawlInfo.m_pageProcessSuccesses
+			      , cx->m_globalCrawlInfo.m_pageProcessSuccessesThisRound
 			      );
 	}
 	if ( summary && fmt == FMT_HTML ) {
@@ -3338,6 +2695,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			return false;
 		// shortcut
 		XmlDoc **docs = g_spiderLoop.m_docs;
+		// row count
+		long j = 0;
 		// first print the spider recs we are spidering
 		for ( long i = 0 ; i < (long)MAX_SPIDERS ; i++ ) {
 			// get it
@@ -3345,17 +2704,18 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			// skip if empty
 			if ( ! xd ) continue;
 			// sanity check
-			if ( ! xd->m_oldsrValid ) { char *xx=NULL;*xx=0; }
+			if ( ! xd->m_sreqValid ) { char *xx=NULL;*xx=0; }
 			// skip if not our coll rec!
 			//if ( xd->m_cr != cr ) continue;
 			if ( xd->m_collnum != cr->m_collnum ) continue;
 			// grab it
-			SpiderRequest *oldsr = &xd->m_oldsr;
+			SpiderRequest *oldsr = &xd->m_sreq;
 			// get status
 			char *status = xd->m_statusMsg;
 			// show that
-			if ( ! oldsr->printToTableSimple ( &sb , status,xd) ) 
+			if ( ! oldsr->printToTableSimple ( &sb , status,xd,j)) 
 				return false;
+			j++;
 		}
 
 		// end the table
@@ -3494,6 +2854,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	if ( fmt == FMT_HTML ) {
 
+		char *seedStr = cr->m_diffbotSeeds.getBufStart();
+		if ( ! seedStr ) seedStr = "";
+
 		SafeBuf tmp;
 		long crawlStatus = -1;
 		getSpiderStatusMsg ( cr , &tmp , &crawlStatus );
@@ -3518,6 +2881,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td>%s</td>"
 			      "</tr>"
 
+			      "<tr>"
+			      "<td><b>Crawl Type:</td>"
+			      "<td>%li</td>"
+			      "</tr>"
+
 			      //"<tr>"
 			      //"<td><b>Collection Alias:</td>"
 			      //"<td>%s%s</td>"
@@ -3525,6 +2893,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      "<tr>"
 			      "<td><b>Token:</td>"
+			      "<td>%s</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Seeds:</td>"
 			      "<td>%s</td>"
 			      "</tr>"
 
@@ -3540,6 +2913,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      "<tr>"
 			      "<td><b>Rounds Completed:</td>"
+			      "<td>%li</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Has Urls Ready to Spider:</td>"
 			      "<td>%li</td>"
 			      "</tr>"
 
@@ -3577,6 +2955,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      "<tr>"
+			      "<td><b>Page Crawl Successes This Round</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
 			      "<td><b>Page Process Attempts</b></td>"
 			      "<td>%lli</td>"
 			      "</tr>"
@@ -3586,13 +2969,24 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<td>%lli</td>"
 			      "</tr>"
 
+			      "<tr>"
+			      "<td><b>Page Process Successes This Round</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
 			      
 			      , cr->m_diffbotCrawlName.getBufStart()
+			      
+			      , (long)cr->m_isCustomCrawl
+
 			      , cr->m_diffbotToken.getBufStart()
+
+			      , seedStr
 
 			      , crawlStatus
 			      , tmp.getBufStart()
 			      , cr->m_spiderRoundNum
+			      , cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
 
 			      , cr->m_globalCrawlInfo.m_objectsAdded -
 			        cr->m_globalCrawlInfo.m_objectsDeleted
@@ -3601,9 +2995,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
+			      , cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound
 
 			      , cr->m_globalCrawlInfo.m_pageProcessAttempts
 			      , cr->m_globalCrawlInfo.m_pageProcessSuccesses
+			      , cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound
 			      );
 
 
@@ -4228,6 +3624,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      // delete collection form
 			      "<form method=get action=/crawlbot>"
 			      "%s"
+			      //, (long)cr->m_collnum
 			      , hb.getBufStart()
 			      );
 
@@ -4254,7 +3651,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 			      "</table>"
 
+			      //, (long)cr->m_collnum
 			      , hb.getBufStart()
+			      //, (long)cr->m_collnum
 			      );
 	}
 
@@ -4358,142 +3757,6 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 */
 }
 
-CollectionRec *addNewDiffbotColl ( char *collName, char *token, char *name ,
-				   HttpRequest *hr ) {
-
-	//char *token = getTokenFromHttpRequest ( hr );
-	//if ( ! token ) {
-	//	log("crawlbot: need token to add new coll");
-	//	return NULL;
-	//}
-
-	if ( gbstrlen(collName) > MAX_COLL_LEN ) {
-		log("crawlbot: collection name too long");
-		return NULL;
-	}
-
-	// this saves it to disk!
-	if ( ! g_collectiondb.addRec ( collName,
-				       NULL ,  // copy from
-				       0  , // copy from len
-				       true , // it is a brand new one
-				       -1 , // we are new, this is -1
-				       false , // is NOT a dump
-				       false // save it below
-				       ) )
-		return NULL;
-
-	// get the collrec
-	CollectionRec *cr = g_collectiondb.getRec ( collName );
-
-	// did an alloc fail?
-	if ( ! cr ) { char *xx=NULL;*xx=0; }
-
-	log("crawlbot: added new collection \"%s\"", collName );
-
-	// normalize the seed url
-	//Url norm;
-	//norm.set ( seed );
-	//cr->m_diffbotSeed.set ( norm.getUrl() );
-
-	// remember the token
-	cr->m_diffbotToken.set ( token );
-	cr->m_diffbotCrawlName.set ( name );
-
-	/* this stuff can be set later.
-
-	cr->m_diffbotApi.set ( api );
-
-	// these are optional, may be NULL
-	cr->m_diffbotApiQueryString.set ( apiQueryString );
-	cr->m_diffbotUrlCrawlPattern.set ( urlCrawlPattern );
-	cr->m_diffbotUrlProcessPattern.set ( urlProcessPattern );
-	cr->m_diffbotClassify = classify;
-
-	// let's make these all NULL terminated strings
-	cr->m_diffbotSeed.nullTerm();
-	cr->m_diffbotApi.nullTerm();
-	cr->m_diffbotApiQueryString.nullTerm();
-	cr->m_diffbotUrlCrawlPattern.nullTerm();
-	cr->m_diffbotUrlProcessPattern.nullTerm();
-	cr->m_diffbotPageProcessPattern.nullTerm();
-	*/
-
-	// bring this back
-	cr->m_diffbotApiUrl.set ( "" );
-	cr->m_diffbotUrlCrawlPattern.set ( "" );
-	cr->m_diffbotUrlProcessPattern.set ( "" );
-	cr->m_diffbotPageProcessPattern.set ( "" );
-	cr->m_diffbotUrlCrawlRegEx.set ( "" );
-	cr->m_diffbotUrlProcessRegEx.set ( "" );
-
-	cr->m_spiderStatus = SP_INITIALIZING;
-
-	// do not spider more than this many urls total. -1 means no max.
-	cr->m_maxToCrawl = 100000;
-	// do not process more than this. -1 means no max.
-	cr->m_maxToProcess = 100000;
-
-	// -1 means no max
-	cr->m_maxCrawlRounds = -1;
-
-	// john want's deduping on by default to avoid processing similar pgs
-	cr->m_dedupingEnabled = true;
-
-	// this collection should always hit diffbot
-	//cr->m_useDiffbot = true;
-
-	// show the ban links in the search results. the collection name
-	// is cryptographic enough to show that
-	cr->m_isCustomCrawl = 1;//true;
-
-	// john wants tp print out "type":"bulk" or "type":"crawl"
-	char *filename = hr->getFilename();
-	long flen = hr->getFilenameLen();
-	if ( filename && flen >= 5 &&
-	     ( strncmp(filename+flen-4,"bulk",4)==0 ||
-	       strncmp(filename+flen-5,"bulk/",5)==0 ) )
-		cr->m_isCustomCrawl = 2;
-
-
-	cr->m_diffbotOnlyProcessIfNew = true;
-
-	// just the basics on these for now
-	resetUrlFilters ( cr );
-
-	// default respider to off
-	cr->m_collectiveRespiderFrequency = 0.0;
-
-	cr->m_useRobotsTxt = true;
-
-	cr->m_restrictDomain = true;
-
-	// reset the crawl stats
-	cr->m_diffbotCrawlStartTime = gettimeofdayInMillisecondsGlobal();
-	cr->m_diffbotCrawlEndTime   = 0LL;
-
-	// reset crawler stats. they should be loaded from crawlinfo.txt
-	memset ( &cr->m_localCrawlInfo , 0 , sizeof(CrawlInfo) );
-	memset ( &cr->m_globalCrawlInfo , 0 , sizeof(CrawlInfo) );
-	//cr->m_globalCrawlInfoUpdateTime = 0;
-	//cr->m_replies = 0;
-	//cr->m_requests = 0;
-
-	// set some defaults. max spiders for all priorities in this collection
-	cr->m_maxNumSpiders = 10;
-
-	cr->m_needsSave = 1;
-
-	// start the spiders!
-	cr->m_spideringEnabled = true;
-
-	// save it again!
-	if ( ! cr->save() ) 
-		log("crawlbot: failed to save collrec");
-
-	return cr;
-}
-
 // . do not add dups into m_diffbotSeeds safebuf
 // . return 0 if not in table, 1 if in table. -1 on error adding to table.
 long isInSeedBuf ( CollectionRec *cr , Url *url ) {
@@ -4572,6 +3835,9 @@ bool getSpiderRequestMetaList ( char *doc ,
 		SpiderRequest sreq;
 		sreq.reset();
 		sreq.m_firstIp = url.getHostHash32(); // fakeip!
+		// avoid ips of 0 or -1
+		if ( sreq.m_firstIp == 0 || sreq.m_firstIp == -1 )
+			sreq.m_firstIp = 1;
 		sreq.m_hostHash32 = url.getHostHash32();
 		sreq.m_domHash32  = url.getDomainHash32();
 		sreq.m_siteHash32 = url.getHostHash32();
@@ -4598,6 +3864,11 @@ bool getSpiderRequestMetaList ( char *doc ,
 		strcpy ( sreq.m_url , url.getUrl() );
 		// finally, we can set the key. isDel = false
 		sreq.setKey ( sreq.m_firstIp , probDocId , false );
+
+		if ( ! listBuf->reserve ( 100 + sreq.getRecSize() ) )
+			// return false with g_errno set
+			return false;
+
 		// store rdbid first
 		if ( ! listBuf->pushChar(RDB_SPIDERDB) )
 			// return false with g_errno set
@@ -4848,171 +4119,9 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket ,
 }
 */
 
-bool resetUrlFilters ( CollectionRec *cr ) {
 
-	char *ucp = cr->m_diffbotUrlCrawlPattern.getBufStart();
-	if ( ucp && ! ucp[0] ) ucp = NULL;
-
-	// if we had a regex, that works for this purpose as well
-	if ( ! ucp ) ucp = cr->m_diffbotUrlCrawlRegEx.getBufStart();
-	if ( ucp && ! ucp[0] ) ucp = NULL;
-
-
-
-	char *upp = cr->m_diffbotUrlProcessPattern.getBufStart();
-	if ( upp && ! upp[0] ) upp = NULL;
-
-	// if we had a regex, that works for this purpose as well
-	if ( ! upp ) upp = cr->m_diffbotUrlProcessRegEx.getBufStart();
-	if ( upp && ! upp[0] ) upp = NULL;
-
-
-	// what diffbot url to use for processing
-	char *api = cr->m_diffbotApiUrl.getBufStart();
-	if ( api && ! api[0] ) api = NULL;
-
-	// convert from seconds to milliseconds. default is 250ms?
-	long wait = (long)(cr->m_collectiveCrawlDelay * 1000.0);
-	// default to 250ms i guess. -1 means unset i think.
-	if ( cr->m_collectiveCrawlDelay < 0.0 ) wait = 250;
-
-	// make the gigablast regex table just "default" so it does not
-	// filtering, but accepts all urls. we will add code to pass the urls
-	// through m_diffbotUrlCrawlPattern alternatively. if that itself
-	// is empty, we will just restrict to the seed urls subdomain.
-	for ( long i = 0 ; i < MAX_FILTERS ; i++ ) {
-		cr->m_regExs[i].purge();
-		cr->m_spiderPriorities[i] = 0;
-		cr->m_maxSpidersPerRule [i] = 10;
-		cr->m_spiderIpWaits     [i] = wait;
-		cr->m_spiderIpMaxSpiders[i] = 7; // keep it respectful
-		cr->m_spidersEnabled    [i] = 1;
-		cr->m_spiderFreqs       [i] =cr->m_collectiveRespiderFrequency;
-		cr->m_spiderDiffbotApiUrl[i].purge();
-		cr->m_harvestLinks[i] = true;
-	}
-
-	long i = 0;
-
-
-	// 1st default url filter
-	cr->m_regExs[i].set("ismedia && !ismanualadd");
-	cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-
-	// 2nd default filter
-	if ( cr->m_restrictDomain ) {
-		cr->m_regExs[i].set("!isonsamedomain && !ismanualadd");
-		cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
-		i++;
-	}
-
-	// 3rd rule for respidering
-	if ( cr->m_collectiveRespiderFrequency > 0.0 ) {
-		cr->m_regExs[i].set("lastspidertime>={roundstart}");
-		// do not "remove" from index
-		cr->m_spiderPriorities   [i] = 10;
-		// just turn off spidering. if we were to set priority to
-		// filtered it would be removed from index!
-		cr->m_spidersEnabled     [i] = 0;
-		i++;
-	}
-	// if collectiverespiderfreq is 0 or less then do not RE-spider
-	// documents already indexed.
-	else {
-		// this does NOT work! error docs continuosly respider
-		// because they are never indexed!!! like EDOCSIMPLIFIEDREDIR
-		//cr->m_regExs[i].set("isindexed");
-		cr->m_regExs[i].set("hasreply");
-		cr->m_spiderPriorities   [i] = 10;
-		// just turn off spidering. if we were to set priority to
-		// filtered it would be removed from index!
-		cr->m_spidersEnabled     [i] = 0;
-		i++;
-	}
-
-	// and for docs that have errors respider once every 5 hours
-	cr->m_regExs[i].set("errorcount>0 && errcount<3");
-	cr->m_spiderPriorities   [i] = 40;
-	cr->m_spiderFreqs        [i] = 0.2; // half a day
-	i++;
-
-	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
-	cr->m_regExs[i].set("errorcount>=3");
-	cr->m_spiderPriorities   [i] = 30;
-	cr->m_spiderFreqs        [i] = 30; // 30 days
-	i++;
-
-	// url crawl and process pattern
-	if ( ucp && upp ) {
-		cr->m_regExs[i].set("matchesucp && matchesupp");
-		cr->m_spiderPriorities   [i] = 55;
-		cr->m_spiderDiffbotApiUrl[i].set ( api );
-		i++;
-		// if just matches ucp, just crawl it, do not process
-		cr->m_regExs[i].set("matchesucp");
-		cr->m_spiderPriorities   [i] = 54;
-		i++;
-		// just process, do not spider links if does not match ucp
-		cr->m_regExs[i].set("matchesupp");
-		cr->m_spiderPriorities   [i] = 53;
-		cr->m_harvestLinks       [i] = false;
-		cr->m_spiderDiffbotApiUrl[i].set ( api );
-		i++;
-		// do not crawl anything else
-		cr->m_regExs[i].set("default");
-		cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
-		i++;
-	}
-
-	// harvest links if we should crawl it
-	if ( ucp && ! upp ) {
-		cr->m_regExs[i].set("matchesucp");
-		cr->m_spiderPriorities   [i] = 54;
-		// process everything since upp is empty
-		cr->m_spiderDiffbotApiUrl[i].set ( api );
-		i++;
-		// do not crawl anything else
-		cr->m_regExs[i].set("default");
-		cr->m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
-		i++;
-	}
-
-	// just process
-	if ( upp && ! ucp ) {
-		cr->m_regExs[i].set("matchesupp");
-		cr->m_spiderPriorities   [i] = 53;
-		//cr->m_harvestLinks       [i] = false;
-		cr->m_spiderDiffbotApiUrl[i].set ( api );
-		i++;
-		// crawl everything by default, no processing
-		cr->m_regExs[i].set("default");
-		cr->m_spiderPriorities   [i] = 50;
-		i++;
-	}
-
-	// no restraints
-	if ( ! upp && ! ucp ) {
-		// crawl everything by default, no processing
-		cr->m_regExs[i].set("default");
-		cr->m_spiderPriorities   [i] = 50;
-		cr->m_spiderDiffbotApiUrl[i].set ( api );
-		i++;
-	}
-
-	cr->m_numRegExs   = i;
-	cr->m_numRegExs2  = i;
-	cr->m_numRegExs3  = i;
-	cr->m_numRegExs10 = i;
-	cr->m_numRegExs5  = i;
-	cr->m_numRegExs6  = i;
-	cr->m_numRegExs7  = i;
-	cr->m_numRegExs8  = i;
-	cr->m_numRegExs11 = i;
-
-	return true;
-}
-
+/*
+  THIS IS NOW AUTOMATIC from new Parms.cpp broadcast logic
 
 bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 				     HttpRequest *hr , 
@@ -5376,6 +4485,7 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 
 	return true;
 }
+*/
 
 
 ///////////

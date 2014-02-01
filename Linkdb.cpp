@@ -4,6 +4,7 @@
 #include "linkspam.h"
 #include "sort.h"
 #include "XmlDoc.h" // score32to8()
+#include "Rebalance.h"
 
 Linkdb g_linkdb;
 Linkdb g_linkdb2;
@@ -109,6 +110,8 @@ bool Linkdb::init ( ) {
 	long maxTreeNodes = maxTreeMem /(sizeof(key224_t)+16);
 	// disk page cache mem, 100MB on gk0 now
 	long pcmem = 0; // g_conf.m_linkdbMaxDiskPageCacheMem;
+	// give it a little
+	pcmem = 10000000; // 10MB
 	// keep this low if we are the tmp cluster
 	//if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
 	// TODO: would be nice to just do page caching on the satellite files;
@@ -125,7 +128,7 @@ bool Linkdb::init ( ) {
 			    "linkdb" ,
 			    true     , // dedup
 			    0        , // fixeddatasize is 0 since no data
-			    g_conf.m_linkdbMinFilesToMerge ,
+			    3,//g_conf.m_linkdbMinFilesToMerge ,
 			    // fix this to 15 and rely on the page cache of
 			    // just the satellite files and the daily merge to
 			    // keep things fast.
@@ -170,7 +173,7 @@ bool Linkdb::init2 ( long treeMem ) {
 			    sizeof(key224_t), // key size
 			    true          );// bias disk page cache
 }
-
+/*
 bool Linkdb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -182,9 +185,9 @@ bool Linkdb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
-
+*/
 bool Linkdb::verify ( char *coll ) {
-	log ( LOG_INFO, "db: Verifying Linkdb for coll %s...", coll );
+	log ( LOG_DEBUG, "db: Verifying Linkdb for coll %s...", coll );
 	g_threads.disableThreads();
 
 	Msg5 msg5;
@@ -235,6 +238,8 @@ bool Linkdb::verify ( char *coll ) {
 		if ( shardNum == getMyShardNum() ) got++;
 	}
 	if ( got != count ) {
+		// tally it up
+		g_rebalance.m_numForeignRecs += count - got;
 		log ("db: Out of first %li records in Linkdb , "
 		     "only %li belong to our group.",count,got);
 
@@ -265,7 +270,7 @@ bool Linkdb::verify ( char *coll ) {
 		g_threads.enableThreads();
 		return g_conf.m_bypassValidation;
 	}
-	log ( LOG_INFO, "db: Linkdb passed verification successfully for "
+	log ( LOG_DEBUG, "db: Linkdb passed verification successfully for "
 	      "%li recs.", count );
 	// DONE
 	g_threads.enableThreads();
@@ -378,7 +383,7 @@ key224_t Linkdb::makeKey_uk ( uint32_t  linkeeSiteHash32       ,
 /////////
 
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "matches2.h"
 
 // 1MB read size for now
@@ -958,6 +963,9 @@ bool Msg25::sendRequests ( ) {
 	long ourMax = (long)(ratio * (float)MAX_MSG20_OUTSTANDING);
 	if ( ourMax > MAX_MSG20_OUTSTANDING )
 		ourMax = MAX_MSG20_OUTSTANDING;
+
+	// if more than 300 sockets in use max this 1. prevent udp socket clog.
+	if ( g_udpServer.m_numUsedSlots >= 300 ) ourMax = 1;
 
 	// keep sending requests
 	while ( 1 == 1 ) {
@@ -3643,7 +3651,8 @@ bool Inlink::setXmlFromRSS ( Xml *xml , long niceness ) {
 			  true                     , // pure xml?
 			  TITLEREC_CURRENT_VERSION ,
 			  false                    , // no need to now
-			  niceness                 );
+			  niceness                 ,
+			  CT_XML );
 }
 
 // only Title.cpp uses this right now

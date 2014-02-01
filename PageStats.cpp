@@ -109,22 +109,28 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	if ( getrusage ( RUSAGE_SELF , &ru ) )
 		log("admin: getrusage: %s.",mstrerror(errno));
 
+	p.safePrintf(
+		     "<style>"
+		     ".poo { background-color:#%s;}\n"
+		     "</style>\n" ,
+		     LIGHT_BLUE );
+
 	// memory in general table
 	p.safePrintf (
-		  "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
-		  "<tr>"
-		  "<td colspan=2 bgcolor=#%s>"
+		  "<table %s>"
+		  "<tr class=hdrow>"
+		  "<td colspan=2>"
 		  "<center><b>Memory</b></td></tr>\n"
-		  "<tr><td><b>memory allocated</b></td><td>%lli</td></tr>\n"
-		  "<tr><td><b>max memory limit</b></td><td>%lli</td></tr>\n" 
-		  //"<tr><td>mem available</td><td>%lli</td></tr>\n"
-		  "<tr><td>max allocated</td><td>%lli</td></tr>\n"
-		  "<tr><td>max single alloc</td><td>%lli</td></tr>\n"
-		  "<tr><td>max single alloc by</td><td>%s</td></tr>\n" 
-		  "<tr><td>shared mem used</td><td>%lli</td></tr>\n"
-		  "<tr><td>swaps</td><td>%lli</td></tr>\n",
-		  //"<tr><td>num alloc chunks</td><td>%li</td></tr>\n",
-		  LIGHT_BLUE , DARK_BLUE ,
+		  "<tr class=poo><td><b>memory allocated</b></td><td>%lli</td></tr>\n"
+		  "<tr class=poo><td><b>max memory limit</b></td><td>%lli</td></tr>\n" 
+		  //"<tr class=poo><td>mem available</td><td>%lli</td></tr>\n"
+		  "<tr class=poo><td>max allocated</td><td>%lli</td></tr>\n"
+		  "<tr class=poo><td>max single alloc</td><td>%lli</td></tr>\n"
+		  "<tr class=poo><td>max single alloc by</td><td>%s</td></tr>\n" 
+		  "<tr class=poo><td>shared mem used</td><td>%lli</td></tr>\n"
+		  "<tr class=poo><td>swaps</td><td>%lli</td></tr>\n",
+		  //"<tr class=poo><td>num alloc chunks</td><td>%li</td></tr>\n",
+		  TABLE_STYLE ,
 		  g_mem.getUsedMem() ,
 		  g_mem.getMaxMem() ,
 		  //g_mem.getAvailMem(),
@@ -136,9 +142,9 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	          //g_mem.getNumChunks());
 
 	p.safePrintf (
-		       "<tr><td><b>current allocations</b></td>"
+		       "<tr class=poo><td><b>current allocations</b></td>"
 		       "<td>%li</td></tr>\n" 
-		       "<tr><td><b>total allocations</b></td>"
+		       "<tr class=poo><td><b>total allocations</b></td>"
 		       "<td>%lli</td></tr>\n" ,
 		       g_mem.getNumAllocated() ,
 		       (long long)g_mem.getNumTotalAllocated() );
@@ -174,34 +180,39 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			(long long)g_stats.m_tierHits[2];
 	p.safePrintf ( 
 		       "<br>"
-		       "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
-		       "<tr>"
-		       "<td colspan=2 bgcolor=#%s>"
+		       "<table %s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=2>"
 		       "<center><b>Queries</b></td></tr>\n"
 
-		       "<tr><td><b>Average Query Latency for last %li queries"
+		       "<tr class=poo><td><b>Average Query Latency for last %li queries"
+		       ,TABLE_STYLE
+		       ,g_stats.m_numQueries
+		       );
+
+
+	p.safePrintf(
 		       "</b></td><td>%f seconds</td></tr>\n"
 
-		       "<tr><td><b>Average queries/sec. for last %li queries"
+		       "<tr class=poo><td><b>Average queries/sec. for last %li queries"
 		       "</b></td><td>%f queries/sec.</td></tr>\n"
 
-		       "<tr><td><b>Query Success Rate for last %li queries"
+		       "<tr class=poo><td><b>Query Success Rate for last %li queries"
 		       "</b></td><td>%f"
 
-		       "<tr><td><b>Total Queries Served</b></td><td>%li"
-		       "<tr><td><b>Total Successful Queries</b></td><td>%li"
-		       "<tr><td><b>Total Failed Queries</b></td><td>%li"
-		       "<tr><td><b>Total Query Success Rate</b></td><td>%f"
+		       "<tr class=poo><td><b>Total Queries Served</b></td><td>%li"
+		       "<tr class=poo><td><b>Total Successful Queries</b></td><td>%li"
+		       "<tr class=poo><td><b>Total Failed Queries</b></td><td>%li"
+		       "<tr class=poo><td><b>Total Query Success Rate</b></td><td>%f"
 		       "</td></tr>"
-		       "<tr><td><b>Uptime</b></td><td>%li days %li hrs %li min %li sec"
+		       "<tr class=poo><td><b>Uptime</b></td><td>%li days %li hrs %li min %li sec"
 		       "</td></tr>"
-		       "<tr><td><b>Sockets Closed Because We Hit the Limit"
+		       "<tr class=poo><td><b>Sockets Closed Because We Hit the Limit"
 		       "</b></td><td>%li"
 		       "</td></tr>",
-		       LIGHT_BLUE , DARK_BLUE ,
-		       g_stats.m_numQueries,
-		       g_stats.m_avgQueryTime, 
 
+		       g_stats.m_avgQueryTime, 
+	
 		       g_stats.m_numQueries,
 		       g_stats.m_avgQueriesPerSec, 
 
@@ -221,38 +232,44 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	for ( long i = 0 ; i <= CR_OK ; i++ )
 		total += g_stats.m_filterStats[i];
 
-	p.safePrintf ( "<tr><td><b>Total DocIds Generated</b></td><td>%lli"
+	p.safePrintf ( "<tr class=poo><td><b>Total DocIds Generated</b></td><td>%lli"
 		       "</td></tr>\n" , total );
 
 	// print each filter stat
 	for ( long i = 0 ; i < CR_END ; i++ )
-		p.safePrintf("<tr><td>&nbsp;&nbsp;%s</td>"
+		p.safePrintf("<tr class=poo><td>&nbsp;&nbsp;%s</td>"
 			     "<td>%li</td></tr>\n" , 
 			     g_crStrings[i],g_stats.m_filterStats[i] );
 
+	// unless we bring indexdb back, don't need these
+	/*
 	p.safePrintf(
-		     "<tr><td><b>Tier 0 Hits</b></td><td>%li</td></tr>"
-		     "<tr><td><b>Tier 1 Hits</b></td><td>%li</td></tr>"
-		     "<tr><td><b>Tier 2 Hits</b></td><td>%li</td></tr>"
-		     "<tr><td><b>Tier 2 Exhausted</b></td><td>%li</td></tr>"
-		     "<tr><td><b>Avg Tier 0 Time</b></td><td>%llims</td></tr>"
-		     "<tr><td><b>Avg Tier 1 Time</b></td><td>%llims</td></tr>"
-		     "<tr><td><b>Avg Tier 2 Time</b></td><td>%llims</td></tr>"
-		     "<tr><td><b>Msg3a Slow Recalls</b></td><td>%li</td></tr>"
-		     "<tr><td><b>Msg3a Quick Recalls</b></td><td>%li</td></tr>"
-		     "<tr><td><b>Msg3a Msg40 Recalls</b></td><td>%li</td></tr>"
-
-		     "<tr><td><b>Unjustified iCache Misses</b></td>"
-		     "<td>%li</td></tr>"
-
-		     "<tr><td>&nbsp;&nbsp;&nbsp;2</td><td>%li</td></tr>"
-		     "<tr><td>&nbsp;&nbsp;&nbsp;3</td><td>%li</td></tr>"
-		     "<tr><td>&nbsp;&nbsp;&nbsp;4</td><td>%li</td></tr>"
-		     "<tr><td>&nbsp;&nbsp;&nbsp;5+</td><td>%li</td></tr>"
-		     "</table><br><br>\n",
+		     "<tr class=poo><td><b>Tier 0 Hits</b></td><td>%li</td></tr>"
+		     "<tr class=poo><td><b>Tier 1 Hits</b></td><td>%li</td></tr>"
+		     "<tr class=poo><td><b>Tier 2 Hits</b></td><td>%li</td></tr>"
+		     "<tr class=poo><td><b>Tier 2 Exhausted</b></td><td>%li</td></tr>"
+		     "<tr class=poo><td><b>Avg Tier 0 Time</b></td><td>%llims</td></tr>"
+		     "<tr class=poo><td><b>Avg Tier 1 Time</b></td><td>%llims</td></tr>"
+		     "<tr class=poo><td><b>Avg Tier 2 Time</b></td><td>%llims</td></tr>",
 		     g_stats.m_tierHits[0], g_stats.m_tierHits[1],
 		     g_stats.m_tierHits[2], g_stats.m_tier2Misses,
 		     avgTier0Time, avgTier1Time, avgTier2Time,
+);
+	*/
+
+	/*
+	p.safePrintf(
+		     "<tr class=poo><td><b>Msg3a Slow Recalls</b></td><td>%li</td></tr>"
+		     "<tr class=poo><td><b>Msg3a Quick Recalls</b></td><td>%li</td></tr>"
+		     "<tr class=poo><td><b>Msg3a Msg40 Recalls</b></td><td>%li</td></tr>"
+
+		     "<tr class=poo><td><b>Unjustified iCache Misses</b></td>"
+		     "<td>%li</td></tr>"
+
+		     "<tr class=poo><td>&nbsp;&nbsp;&nbsp;2</td><td>%li</td></tr>"
+		     "<tr class=poo><td>&nbsp;&nbsp;&nbsp;3</td><td>%li</td></tr>"
+		     "<tr class=poo><td>&nbsp;&nbsp;&nbsp;4</td><td>%li</td></tr>"
+		     "<tr class=poo><td>&nbsp;&nbsp;&nbsp;5+</td><td>%li</td></tr>"
 		     g_stats.m_msg3aSlowRecalls,
 		     g_stats.m_msg3aFastRecalls,
 		     g_stats.m_msg3aRecallCnt,
@@ -262,20 +279,20 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 		     g_stats.m_msg3aRecalls[2], g_stats.m_msg3aRecalls[3],
 		     g_stats.m_msg3aRecalls[4], g_stats.m_msg3aRecalls[5]);
-	
+	*/
 
+	p.safePrintf("</table><br><br>\n");
 
 	// stripe loads
 	if ( g_hostdb.m_myHost->m_isProxy ) {
 		p.safePrintf ( 
 			      "<br>"
-			      "<table cellpadding=4 width=100%% "
-			      "bgcolor=#%s border=1>"
-			      "<tr>"
-			      "<td colspan=4 bgcolor=#%s>"
+			      "<table %s>"
+			      "<tr class=hdrow>"
+			      "<td colspan=4>"
 			      "<center><b>Stripe Loads</b></td></tr>\n" ,
-			      LIGHT_BLUE , DARK_BLUE );
-		p.safePrintf("<tr><td><b>Stripe #</b></td>"
+			      TABLE_STYLE  );
+		p.safePrintf("<tr class=poo><td><b>Stripe #</b></td>"
 			     "<td><b>Queries Out</b></td>"
 			     "<td><b>Query Terms Out</b></td>"
 			     "<td><b>Last HostId Used</b></td>"
@@ -283,7 +300,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		// print out load of each stripe
 		long numStripes = g_hostdb.getNumStripes();
 		for ( long i = 0 ; i < numStripes ; i++ )
-			p.safePrintf("<tr><td>%li</td>"
+			p.safePrintf("<tr class=poo><td>%li</td>"
 				     "<td>%li</td>"
 				     "<td>%li</td>"
 				     "<td>%li</td></tr>\n" ,
@@ -323,12 +340,13 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	long numCaches = 5;
 
 	p.safePrintf (
-		  "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
-		  "<tr>"
-		  "<td colspan=%li bgcolor=#%s>"
+		  "<table %s>"
+		  "<tr class=hdrow>"
+		  "<td colspan=%li>"
 		  "<center><b>Caches"
 		  "</b></td></tr>\n",
-		  LIGHT_BLUE , numCaches+2, DARK_BLUE );
+		  TABLE_STYLE,
+		  numCaches+2 );
 
 	// hack since some are not init'd yet
 	//g_qtable.m_dbname = "quota";
@@ -338,13 +356,13 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	//g_msg20Cache.m_dbname = "parser";
 	//g_tagdb.m_listCache.m_dbname = "tagdbList";
 
-	p.safePrintf ("<tr><td>&nbsp;</td>");  // 1st column is empty
+	p.safePrintf ("<tr class=poo><td>&nbsp;</td>");  // 1st column is empty
 	for ( long i = 0 ; i < numCaches ; i++ ) {
 		p.safePrintf("<td><b>%s</b></td>",caches[i]->getDbname() );
 	}
 	//p.safePrintf ("<td><b><i>Total</i></b></td></tr>\n" );
 
-	p.safePrintf ("</tr>\n<tr><td><b><nobr>hit ratio</td>" );
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>hit ratio</td>" );
 	for ( long i = 0 ; i < numCaches ; i++ ) {
 		long long a = caches[i]->getNumHits();
 		long long b = caches[i]->getNumMisses();
@@ -355,50 +373,50 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 			p.safePrintf("<td>--</td>");
 	}
 
-	p.safePrintf ("</tr>\n<tr><td><b><nobr>hits</td>" );
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>hits</td>" );
 	for ( long i = 0 ; i < numCaches ; i++ ) {
 		long long a = caches[i]->getNumHits();
 		p.safePrintf("<td>%lli</td>",a);
 	}
 
-	p.safePrintf ("</tr>\n<tr><td><b><nobr>tries</td>" );
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>tries</td>" );
 	for ( long i = 0 ; i < numCaches ; i++ ) {
 		long long a = caches[i]->getNumHits();
 		long long b = caches[i]->getNumMisses();
 		p.safePrintf("<td>%lli</td>",a+b);
 	}
 
-	p.safePrintf ("</tr>\n<tr><td><b><nobr>used slots</td>" );
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>used slots</td>" );
 	for ( long i = 0 ; i < numCaches ; i++ ) {
 		long long a = caches[i]->getNumUsedNodes();
 		p.safePrintf("<td>%lli</td>",a);
 	}
 
-	p.safePrintf ("</tr>\n<tr><td><b><nobr>max slots</td>" );
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>max slots</td>" );
 	for ( long i = 0 ; i < numCaches ; i++ ) {
 		long long a = caches[i]->getNumTotalNodes();
 		p.safePrintf("<td>%lli</td>",a);
 	}
 
-	p.safePrintf ("</tr>\n<tr><td><b><nobr>used bytes</td>" );
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>used bytes</td>" );
 	for ( long i = 0 ; i < numCaches ; i++ ) {
 		long long a = caches[i]->getMemOccupied();
 		p.safePrintf("<td>%lli</td>",a);
 	}
 
-	p.safePrintf ("</tr>\n<tr><td><b><nobr>max bytes</td>" );
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>max bytes</td>" );
 	for ( long i = 0 ; i < numCaches ; i++ ) {
 		long long a = caches[i]->getMaxMem();
 		p.safePrintf("<td>%lli</td>",a);
 	}
 
-	//p.safePrintf ("</tr>\n<tr><td><b><nobr>max age</td>" );
+	//p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>max age</td>" );
 	//for ( long i = 0 ; i < numCaches ; i++ ) {
 	//	long long a = caches[i]->getMaxMem();
 	//	p.safePrintf("<td>%lli</td>",a);
 	//}
 
-	p.safePrintf ("</tr>\n<tr><td><b><nobr>save to disk</td>" );
+	p.safePrintf ("</tr>\n<tr class=poo><td><b><nobr>save to disk</td>" );
 	for ( long i = 0 ; i < numCaches ; i++ ) {
 		long long a = caches[i]->useDisk();
 		p.safePrintf("<td>%lli</td>",a);
@@ -413,10 +431,10 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// Query Term Tiers Tables
 	//
 	/*
-	p.safePrintf ("<tr><td><b>Query Terms</b></td>" );
+	p.safePrintf ("<tr class=poo><td><b>Query Terms</b></td>" );
 	for ( long i = 0; i < MAX_TIERS; i++ )
 		p.safePrintf ( "<td><b>Tier #%li</b></td>",i );
-	p.safePrintf ( "</tr><tr>");
+	p.safePrintf ( "</tr><tr class=poo>");
 	for ( long i = 0; i < 14; i++ ){
 		p.safePrintf ( "<td>&nbsp;&nbsp;&nbsp;%li</td>", i+1 );
 		for ( long j = 0; j < MAX_TIERS; j++ )
@@ -428,10 +446,10 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	
 	p.safePrintf ( "<br>"
 		       "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
-		       "<tr><td colspan=8 bgcolor=#%s>"
+		       "<tr class=poo><td colspan=8 bgcolor=#%s>"
 		       "<center><b>Query Terms and Tier Vs Explicit "
 		       "Matches</b></td></tr>\n"
-		       "<tr><td width=\"40%%\"><b>Query Terms and Tier</b></td>"
+		       "<tr class=poo><td width=\"40%%\"><b>Query Terms and Tier</b></td>"
 		       "<td><b> 0+</b></td><td><b> 8+</b></td>"
 		       "<td><b> 16+</b></td><td><b> 32+</b></td>"
 		       "<td><b> 64+</b></td><td><b> 128+</b></td>"
@@ -439,7 +457,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		       LIGHT_BLUE , DARK_BLUE );
 	for ( long i = 0; i < 14; i++ )
 		for ( long j = 0; j < MAX_TIERS; j++ ){
-			p.safePrintf( "<tr><td>query terms=%li, tier=%li</td>",
+			p.safePrintf( "<tr class=poo><td>query terms=%li, tier=%li</td>",
 				      i+1, j );
 			for ( long k = 0; k < 7; k++ ){
 				long n = g_stats.m_termsVsTierExp[i][j][k];
@@ -477,24 +495,25 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	printUptime ( ubuf );
 	
 	p.safePrintf (
-		  "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
-		  "<tr>"
-		  "<td colspan=2 bgcolor=#%s>"
+		  "<table %s>"
+		  "<tr class=hdrow>"
+		  "<td colspan=2>"
 		  "<center><b>General Info</b></td></tr>\n"
-		  "<tr><td><b>Uptime</b></td><td>%s</td></tr>\n"
-		  "<tr><td><b>Corrupted Disk Reads</b></td><td>%li</td></tr>\n"
-		  "<tr><td><b>SIGVTALRMS</b></td><td>%li</td></tr>\n"
-		  "<tr><td><b>quickpolls</b></td><td>%li</td></tr>\n"
-		  "<tr><td><b>Kernel Version</b></td><td>%s</td></tr>\n"
-		  //"<tr><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
-		  "<tr><td><b>Parsing Inconsistencies</b></td><td>%li</td>\n"
-		  "<tr><td><b>Indexdb Splits</b></td><td>%li</td>\n"
-		  //"<tr><td><b>Fully Split</b></td><td>%li</td>\n"
-		  //"<tr><td><b>Tfndb Extension Bits</b></td><td>%li</td>\n"
+		  "<tr class=poo><td><b>Uptime</b></td><td>%s</td></tr>\n"
+		  "<tr class=poo><td><b>Corrupted Disk Reads</b></td><td>%li</td></tr>\n"
+		  "<tr class=poo><td><b>SIGVTALRMS</b></td><td>%li</td></tr>\n"
+		  "<tr class=poo><td><b>quickpolls</b></td><td>%li</td></tr>\n"
+		  "<tr class=poo><td><b>Kernel Version</b></td><td>%s</td></tr>\n"
+		  //"<tr class=poo><td><b>Gigablast Version</b></td><td>%s %s</td></tr>\n"
+		  "<tr class=poo><td><b>Parsing Inconsistencies</b></td><td>%li</td>\n"
+		  "<tr class=poo><td><b>Index Shards</b></td><td>%li</td>\n"
+		  "<tr class=poo><td><b>Hosts per Shard</b></td><td>%li</td>\n"
+		  //"<tr class=poo><td><b>Fully Split</b></td><td>%li</td>\n"
+		  //"<tr class=poo><td><b>Tfndb Extension Bits</b></td><td>%li</td>\n"
 		  "</tr>\n"
-		  "<tr><td><b>Spider Locks</b></td><td>%li</td></tr>\n"
-                  "<tr><td><b>Local Time</b></td><td>%s</td></tr>\n",
-		  LIGHT_BLUE , DARK_BLUE ,
+		  "<tr class=poo><td><b>Spider Locks</b></td><td>%li</td></tr>\n"
+                  "<tr class=poo><td><b>Local Time</b></td><td>%s (%li)</td></tr>\n",
+		  TABLE_STYLE ,
 		  ubuf.getBufStart(),
 		  g_numCorrupt,
 		  g_numAlarms,
@@ -503,56 +522,60 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		  //GBPROJECTNAME,
 		  //GBVersion ,
 		  g_stats.m_parsingInconsistencies ,
-		  (long)g_hostdb.m_indexSplits,//g_hostdb.m_indexSplits,
+		  (long)g_hostdb.getNumShards(),//g_hostdb.m_indexSplits,
+		  (long)g_hostdb.getNumHostsPerShard(),
 		  g_spiderLoop.m_lockTable.m_numSlotsUsed,
 		  //(long)g_conf.m_fullSplit,
 		  //(long)g_conf.m_tfndbExtBits,
-                  nowStr);//ctime(&time));
+                  nowStr,
+		  (long)now);//ctime(&time));
+
+	long nowg = 0;
 
 	// end table
         if ( ! isClockInSync() ) {
 		sprintf(nowStr,"not in sync with host #0");
 	}
 	else {
-		long nowg = getTimeGlobal();
+		nowg = getTimeGlobal();
 		sprintf ( nowStr , "%s UTC", asctime(gmtime(&nowg)) );
 	}
-	p.safePrintf ( "<tr><td><b>Global Time</b></td><td>%s</td></tr>\n" 
-                       "</table><br><br>", nowStr);//ctime(&time));
+	p.safePrintf ( "<tr class=poo><td><b>Global Time</b></td><td>%s (%li)</td></tr>\n" 
+                       "</table><br><br>", nowStr,nowg);//ctime(&time));
 
 
 	//
 	// print network stats
 	//
 	p.safePrintf ( 
-		       "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
-		       "<tr>"
-		       "<td colspan=2 bgcolor=#%s>"
+		       "<table %s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=2 class=hdrow>"
 		       "<center><b>Network</b></td></tr>\n"
 
-		       "<tr><td><b>ip1 bytes/packets in</b>"
+		       "<tr class=poo><td><b>ip1 bytes/packets in</b>"
 		       "</td><td>%llu / %llu</td></tr>\n" 
 
-		       "<tr><td><b>ip1 bytes/packets out</b>"
+		       "<tr class=poo><td><b>ip1 bytes/packets out</b>"
 		       "</td><td>%llu / %llu</td></tr>\n" 
 
-		       "<tr><td><b>ip2 bytes/packets in</b>"
+		       "<tr class=poo><td><b>ip2 bytes/packets in</b>"
 		       "</td><td>%llu / %llu</td></tr>\n" 
 
-		       "<tr><td><b>ip2 bytes/packets out</b>"
+		       "<tr class=poo><td><b>ip2 bytes/packets out</b>"
 		       "</td><td>%llu / %llu</td></tr>\n" 
 
-		       "<tr><td><b>cancel acks sent</b>"
+		       "<tr class=poo><td><b>cancel acks sent</b>"
 		       "</td><td>%li</td></tr>\n" 
-		       "<tr><td><b>cancel acks read</b>"
+		       "<tr class=poo><td><b>cancel acks read</b>"
 		       "</td><td>%li</td></tr>\n" 
-		       "<tr><td><b>dropped dgrams</b>"
+		       "<tr class=poo><td><b>dropped dgrams</b>"
 		       "</td><td>%li</td></tr>\n" 
-		       "<tr><td><b>corrupt dns reply dgrams</b>"
+		       "<tr class=poo><td><b>corrupt dns reply dgrams</b>"
 		       "</td><td>%li</td></tr>\n" 
 
 		       ,
-		       LIGHT_BLUE,  DARK_BLUE, 
+		       TABLE_STYLE,
 		       g_udpServer.m_eth0BytesIn,
 		       g_udpServer.m_eth0PacketsIn,
 
@@ -574,13 +597,13 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// break dropped dgrams down by msg type
 	//for ( long i = 0 ; i < 128 ; i++ ) {
 	//	if ( ! g_udpServer.m_droppedNiceness0[i] ) continue;
-	//	p.safePrintf("<tr><td>msg%x niceness 0 dropped</td>"
+	//	p.safePrintf("<tr class=poo><td>msg%x niceness 0 dropped</td>"
 	//		     "<td>%li</td></tr>\n",
 	//		     i,g_udpServer.m_droppedNiceness0[i]);
 	//}
 	//for ( long i = 0 ; i < 128 ; i++ ) {
 	//	if ( ! g_udpServer.m_droppedNiceness1[i] ) continue;
-	//	p.safePrintf("<tr><td>msg%x dropped</td>"
+	//	p.safePrintf("<tr class=poo><td>msg%x dropped</td>"
 	//		     "<td>%li</td></tr>\n",
 	//		     i,g_udpServer.m_droppedNiceness1[i]);
 	//}
@@ -592,99 +615,99 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	if ( g_hostdb.m_myHost->m_isProxy ) {
 
 	p.safePrintf ( 
-		       "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
-		       "<tr>"
-		       "<td colspan=50 bgcolor=#%s>"
+		       "<table %s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=50>"
 		       "<center><b>Spider Compression Proxy Stats</b> "
 
 		       " &nbsp; [<a href=\"/master/stats?reset=2\">"
 		       "reset</a>]</td></tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td><b>type</b></td>\n"
 		       "<td><b>#docs</b></td>\n"
 		       "<td><b>bytesIn / bytesOut (ratio)</b></td>\n"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td>%s</td>"
 		       "<td>%llu</td>"
 		       "<td>%llu / %llu (%.02f)</td>"
 		       "</tr>"
 		       ,
-		       LIGHT_BLUE,  DARK_BLUE ,
+		       TABLE_STYLE,
 
 		       "All",
 		       g_stats.m_compressAllDocs,
@@ -800,15 +823,15 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// print msg re-routes
 	//
 	p.safePrintf ( 
-		       "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
-		       "<tr>"
-		       "<td colspan=50 bgcolor=#%s>"
+		       "<table %s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=50>"
 		       "<center><b>Message Stats</b> "
 
 		       " &nbsp; [<a href=\"/master/stats?reset=1\">"
 		       "reset</a>]</td></tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td><b>niceness</td>\n"
 		       "<td><b>msgtype</td>\n"
 
@@ -825,7 +848,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		       "<td><b>timeouts</td>\n" 
 		       "<td><b>no mem</td>\n" 
 		       ,
-		       LIGHT_BLUE,  DARK_BLUE );
+		       TABLE_STYLE);
 	p.safePrintf("</tr>\n");
 	// loop over niceness
 	for ( long i3 = 0 ; i3 < 2 ; i3++ ) {
@@ -844,7 +867,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		continue;
 		// print it all out.
 		p.safePrintf( 
-			     "<tr>"
+			     "<tr class=poo>"
 			      "<td>%li</td>"    // niceness, 0 or 1
 			     "<td>0x%hhx</td>" // msgType
 			      //"<td>%li</td>"    // request?
@@ -882,18 +905,18 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// print msg send times
 	//
 	p.safePrintf ( 
-		       "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
-		       "<tr>"
-		       "<td colspan=50 bgcolor=#%s>"
+		       "<table %s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=50>"
 		       "<center><b>Message Send Times</b></td></tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       "<td><b>niceness</td>\n"
 		       "<td><b>request?</td>\n"
 		       "<td><b>msgtype</td>\n"
 		       "<td><b>total sent</td>\n"
 		       "<td><b>avg send time</td>\n" ,
-		       LIGHT_BLUE,  DARK_BLUE );
+		       TABLE_STYLE);
 	// print bucket headers
 	for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
 		p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
@@ -916,7 +939,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		long      avg   = 0;
 		if ( nt > 0 ) avg = total / nt;
 		p.safePrintf( 
-			     "<tr>"
+			     "<tr class=poo>"
 			      "<td>%li</td>"    // niceness, 0 or 1
 			      "<td>%li</td>"    // request?
 			      "<td>0x%hhx</td>" // msgType
@@ -944,18 +967,18 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// print msg queued times
 	//
 	p.safePrintf ( 
-		       "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
-		       "<tr>"
-		       "<td colspan=50 bgcolor=#%s>"
+		       "<table %s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=50>"
 		       "<center><b>Message Queued Times</b></td></tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       //"<td>request?</td>\n"
 		       "<td><b>niceness</td>\n"
 		       "<td><b>msgtype</td>\n"
 		       "<td><b>total queued</td>\n"
 		       "<td><b>avg queued time</td>\n" ,
-		       LIGHT_BLUE,  DARK_BLUE );
+		       TABLE_STYLE);
 	// print bucket headers
 	for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
 		p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
@@ -974,7 +997,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		long      avg   = 0;
 		if ( nt > 0 ) avg = total / nt;
 		p.safePrintf( 
-			     "<tr>"
+			     "<tr class=poo>"
 			      "<td>%li</td>"    // niceness, 0 or 1
 			     "<td>0x%hhx</td>" // msgType
 			      //"<td>%li</td>"    // request?
@@ -1001,19 +1024,19 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// print msg handler times
 	//
 	p.safePrintf ( 
-		       "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
-		       "<tr>"
-		       "<td colspan=50 bgcolor=#%s>"
+		       "<table %s>"
+		       "<tr class=hdrow>"
+		       "<td colspan=50>"
 		       "<center><b>Message Reply Generation Times</b>"
 		       "</td></tr>\n"
 
-		       "<tr>"
+		       "<tr class=poo>"
 		       //"<td>request?</td>\n"
 		       "<td><b>niceness</td>\n"
 		       "<td><b>msgtype</td>\n"
 		       "<td><b>total replies</td>\n"
 		       "<td><b>avg gen time</td>\n" ,
-		       LIGHT_BLUE,  DARK_BLUE );
+		       TABLE_STYLE);
 	// print bucket headers
 	for ( long i = 0 ; i < MAX_BUCKETS ; i++ ) 
 		p.safePrintf("<td>%i+</td>\n",(1<<i)-1);
@@ -1032,7 +1055,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		long      avg   = 0;
 		if ( nt > 0 ) avg = total / nt;
 		p.safePrintf( 
-			     "<tr>"
+			     "<tr class=poo>"
 			      "<td>%li</td>"    // niceness, 0 or 1
 			     "<td>0x%hhx</td>" // msgType
 			      //"<td>%li</td>"    // request?
@@ -1068,13 +1091,13 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	// print db table
 	// columns are the dbs
 	p.safePrintf (
-		  "<table cellpadding=4 width=100%% bgcolor=#%s border=1>"
-		  "<tr>"
-		  "<td colspan=50 bgcolor=#%s>"
+		  "<table %s>"
+		  "<tr class=hdrow>"
+		  "<td colspan=50>"
 		  "<center><b>Databases"
 		  "</b></td>"
 		  "</tr>\n" ,
-		  LIGHT_BLUE , DARK_BLUE );
+		  TABLE_STYLE );
 
 	// make the rdbs
 	Rdb *rdbs[] = {
@@ -1099,7 +1122,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	long nr = sizeof(rdbs) / 4;
 
 	// print dbname
-	p.safePrintf("<tr><td>&nbsp;</td>");
+	p.safePrintf("<tr class=poo><td>&nbsp;</td>");
 	for ( long i = 0 ; i < nr ; i++ ) 
 		p.safePrintf("<td><b>%s</b></td>",rdbs[i]->m_dbname);
 	p.safePrintf("<td><i><b>Total</b></i></tr>\n");
@@ -1108,7 +1131,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	float totalf ;
 
 	// print # big files
-	p.safePrintf("<tr><td><b># big files</b>*</td>");
+	p.safePrintf("<tr class=poo><td><b># big files</b>*</td>");
 	total = 0LL;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNumFiles();
@@ -1119,7 +1142,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// print # small files
-	p.safePrintf("<tr><td><b># small files</b>*</td>");
+	p.safePrintf("<tr class=poo><td><b># small files</b>*</td>");
 	total = 0LL;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNumSmallFiles();
@@ -1130,7 +1153,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// print disk space used
-	p.safePrintf("<tr><td><b>disk space (MB)</b></td>");
+	p.safePrintf("<tr class=poo><td><b>disk space (MB)</b></td>");
 	total = 0LL;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getDiskSpaceUsed()/1000000;
@@ -1141,7 +1164,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// print # recs total
-	p.safePrintf("<tr><td><b># recs</b></td>");
+	p.safePrintf("<tr class=poo><td><b># recs</b></td>");
 	total = 0LL;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNumTotalRecs();
@@ -1152,7 +1175,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// print # recs in mem
-	p.safePrintf("<tr><td><b># recs in mem</b></td>");
+	p.safePrintf("<tr class=poo><td><b># recs in mem</b></td>");
 	total = 0LL;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNumUsedNodes();
@@ -1162,7 +1185,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%lli</td></tr>\n",total);
 
 	// print # negative recs in mem
-	p.safePrintf("<tr><td><b># negative in mem</b></td>");
+	p.safePrintf("<tr class=poo><td><b># negative in mem</b></td>");
 	total = 0LL;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNumNegativeKeys();
@@ -1172,7 +1195,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%lli</td></tr>\n",total);
 
 	// print mem occupied
-	p.safePrintf("<tr><td><b>mem occupied</b></td>");
+	p.safePrintf("<tr class=poo><td><b>mem occupied</b></td>");
 	total = 0LL;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getTreeMemOccupied();
@@ -1182,7 +1205,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%lli</td></tr>\n",total);
 
 	// print mem allocated
-	p.safePrintf("<tr><td><b>mem allocated</b></td>");
+	p.safePrintf("<tr class=poo><td><b>mem allocated</b></td>");
 	total = 0LL;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getTreeMemAlloced();
@@ -1193,7 +1216,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%lli</td></tr>\n",total);
 
 	// print mem max
-	p.safePrintf("<tr><td><b>mem max</b></td>");
+	p.safePrintf("<tr class=poo><td><b>mem max</b></td>");
 	total = 0LL;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getMaxTreeMem();
@@ -1204,7 +1227,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%lli</td></tr>\n",total);
 
 	// print rdb mem used
-	p.safePrintf("<tr><td><b>rdb mem used</b></td>");
+	p.safePrintf("<tr class=poo><td><b>rdb mem used</b></td>");
 	total = 0LL;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getRdbMem()->getUsedMem();
@@ -1215,7 +1238,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%lli</td></tr>\n",total);
 
 	// print rdb mem avail
-	p.safePrintf("<tr><td><b><nobr>rdb mem available</nobr></b></td>");
+	p.safePrintf("<tr class=poo><td><b><nobr>rdb mem available</nobr></b></td>");
 	total = 0LL;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getRdbMem()->getAvailMem();
@@ -1227,7 +1250,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// print map mem
-	p.safePrintf("<tr><td><b>map mem</b></td>");
+	p.safePrintf("<tr class=poo><td><b>map mem</b></td>");
 	total = 0LL;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getMapMemAlloced();
@@ -1238,7 +1261,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 	/*
 	// print rec cache hits %
-	p.safePrintf("<tr><td><b>rec cache hits %%</b></td>");
+	p.safePrintf("<tr class=poo><td><b>rec cache hits %%</b></td>");
 	totalf = 0.0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long hits   = rdbs[i]->m_cache.getNumHits();
@@ -1253,7 +1276,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// print rec cache hits
-	p.safePrintf("<tr><td><b>rec cache hits</b></td>");
+	p.safePrintf("<tr class=poo><td><b>rec cache hits</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->m_cache.getNumHits();
@@ -1264,7 +1287,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// print rec cache misses
-	p.safePrintf("<tr><td><b>rec cache misses</b></td>");
+	p.safePrintf("<tr class=poo><td><b>rec cache misses</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->m_cache.getNumMisses();
@@ -1274,7 +1297,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 	// print rec cache tries
-	p.safePrintf("<tr><td><b>rec cache tries</b></td>");
+	p.safePrintf("<tr class=poo><td><b>rec cache tries</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long hits   = rdbs[i]->m_cache.getNumHits();
@@ -1285,7 +1308,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	}
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
-	p.safePrintf("<tr><td><b>rec cache used slots</b></td>");
+	p.safePrintf("<tr class=poo><td><b>rec cache used slots</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->m_cache.getNumUsedNodes();
@@ -1295,7 +1318,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b>rec cache max slots</b></td>");
+	p.safePrintf("<tr class=poo><td><b>rec cache max slots</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->m_cache.getNumTotalNodes();
@@ -1305,7 +1328,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b>rec cache used bytes</b></td>");
+	p.safePrintf("<tr class=poo><td><b>rec cache used bytes</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->m_cache.getMemOccupied();
@@ -1315,7 +1338,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b>rec cache max bytes</b></td>");
+	p.safePrintf("<tr class=poo><td><b>rec cache max bytes</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->m_cache.getMaxMem();
@@ -1326,7 +1349,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	*/
 
 
-	p.safePrintf("<tr><td><b>page cache hits %%</b></td>");
+	p.safePrintf("<tr class=poo><td><b>page cache hits %%</b></td>");
 	totalf = 0.0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		if ( ! rdbs[i]->m_pc ) {
@@ -1347,7 +1370,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 
 
-	p.safePrintf("<tr><td><b>page cache hits</b></td>");
+	p.safePrintf("<tr class=poo><td><b>page cache hits</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		if ( ! rdbs[i]->m_pc ) {
@@ -1361,7 +1384,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b>page cache misses</b></td>");
+	p.safePrintf("<tr class=poo><td><b>page cache misses</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		if ( ! rdbs[i]->m_pc ) {
@@ -1375,7 +1398,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b>page cache tries</b></td>");
+	p.safePrintf("<tr class=poo><td><b>page cache tries</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		if ( ! rdbs[i]->m_pc ) {
@@ -1391,7 +1414,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b>page cache used</b></td>");
+	p.safePrintf("<tr class=poo><td><b>page cache used</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		if ( ! rdbs[i]->m_pc ) {
@@ -1405,7 +1428,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b><nobr>page cache allocated</nobr></b></td>");
+	p.safePrintf("<tr class=poo><td><b><nobr>page cache allocated</nobr></b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		if ( ! rdbs[i]->m_pc ) {
@@ -1421,7 +1444,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 
 
-	p.safePrintf("<tr><td><b># disk seeks</b></td>");
+	p.safePrintf("<tr class=poo><td><b># disk seeks</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNumSeeks();
@@ -1431,7 +1454,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b># disk re-seeks</b></td>");
+	p.safePrintf("<tr class=poo><td><b># disk re-seeks</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNumReSeeks();
@@ -1441,7 +1464,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b># bytes read</b></td>");
+	p.safePrintf("<tr class=poo><td><b># bytes read</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNumRead();
@@ -1451,7 +1474,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b># get requests read</b></td>");
+	p.safePrintf("<tr class=poo><td><b># get requests read</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNumRequestsGet();
@@ -1461,7 +1484,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b># get requests bytes</b></td>");
+	p.safePrintf("<tr class=poo><td><b># get requests bytes</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNetReadGet();
@@ -1471,7 +1494,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b># get replies sent</b></td>");
+	p.safePrintf("<tr class=poo><td><b># get replies sent</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNumRepliesGet();
@@ -1481,7 +1504,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b># get reply bytes</b></td>");
+	p.safePrintf("<tr class=poo><td><b># get reply bytes</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNetSentGet();
@@ -1492,7 +1515,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 
 
 
-	p.safePrintf("<tr><td><b># add requests read</b></td>");
+	p.safePrintf("<tr class=poo><td><b># add requests read</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNumRequestsAdd();
@@ -1502,7 +1525,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b># add requests bytes</b></td>");
+	p.safePrintf("<tr class=poo><td><b># add requests bytes</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNetReadAdd();
@@ -1511,7 +1534,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	}
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
-	p.safePrintf("<tr><td><b># add replies sent</b></td>");
+	p.safePrintf("<tr class=poo><td><b># add replies sent</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNumRepliesAdd();
@@ -1521,7 +1544,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 	p.safePrintf("<td>%llu</td></tr>\n",total);
 
 
-	p.safePrintf("<tr><td><b># add reply bytes</b></td>");
+	p.safePrintf("<tr class=poo><td><b># add reply bytes</b></td>");
 	total = 0;
 	for ( long i = 0 ; i < nr ; i++ ) {
 		long long val = rdbs[i]->getNetSentAdd();

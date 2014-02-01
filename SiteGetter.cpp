@@ -278,8 +278,12 @@ top:
 	// get the group this list is in
 	//unsigned long gid ;
 	//gid = getGroupId ( RDB_POSDB , (char *)&start , false ); //split?
-	unsigned long shardNum ;
-	shardNum = getShardNum( RDB_POSDB , (char *)&start , false ); //split?
+	//unsigned long shardNum ;
+	//shardNum = getShardNum( RDB_POSDB , (char *)&start , false ); //split?
+
+	// i guess this is split by termid and not docid????
+	long shardNum = g_hostdb.getShardNumByTermId ( &start );
+
 	// we need a group #. the column #.
 	//long split = g_hostdb.getGroupNum ( gid );
 	// shortcut

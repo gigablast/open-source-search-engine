@@ -25,7 +25,7 @@
 #include "Spider.h"
 #include "Revdb.h"
 #include "hash.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 
 void attemptMergeAll ( int fd , void *state ) ;
 
@@ -36,6 +36,8 @@ Rdb::Rdb ( ) {
 	//m_numBases = 0;
 	m_inAddList = false;
 	m_collectionlessBase = NULL;
+	m_initialized = false;
+	m_numMergesOut = 0;
 	//memset ( m_bases , 0 , sizeof(RdbBase *) * MAX_COLLS );
 	reset();
 }
@@ -88,7 +90,7 @@ RdbBase *Rdb::getBase ( collnum_t collnum )  {
 	return cr->m_bases[(unsigned char)m_rdbId];
 }
 
-// used by Rdb::addColl
+// used by Rdb::addBase1()
 void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
 	// if we are collectionless, like g_statsdb.m_rdb or
 	// g_cachedb.m_rdb, etc.. shared by all collections essentially.
@@ -100,7 +102,7 @@ void Rdb::addBase ( collnum_t collnum , RdbBase *base ) {
 	if ( ! cr ) return;
 	if ( cr->m_bases[(unsigned char)m_rdbId] ) { char *xx=NULL;*xx=0; }
 	cr->m_bases[(unsigned char)m_rdbId] = base;
-	log("rdb: added base to collrec "
+	log ( LOG_DEBUG,"db: added base to collrec "
 	    "for rdb=%s rdbid=%li coll=%s collnum=%li base=0x%lx",
 	    m_dbname,(long)m_rdbId,cr->m_coll,(long)collnum,(long)base);
 }
@@ -327,6 +329,8 @@ bool Rdb::init ( char          *dir                  ,
 	//*(long long *)m_gbcounteventsTermId =
 	//	hash64n("gbeventcount")&TERMID_MASK;
 
+	m_initialized = true;
+
 	// success
 	return true;
 }
@@ -464,12 +468,17 @@ bool Rdb::updateToRebuildFiles ( Rdb *rdb2 , char *coll ) {
 
 // . returns false and sets g_errno on error, returns true on success
 // . if this rdb is collectionless we set m_collectionlessBase in addBase()
-bool Rdb::addColl ( char *coll ) {
+bool Rdb::addRdbBase1 ( char *coll ) { // addColl()
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
-	return addColl2 ( collnum );
+	return addRdbBase2 ( collnum );
 }
 
-bool Rdb::addColl2 ( collnum_t collnum ) {
+bool Rdb::addRdbBase2 ( collnum_t collnum ) { // addColl2()
+
+	if ( ! m_initialized ) {
+		g_errno = EBADENGINEER;
+		return log("db: adding coll to uninitialized rdb!");
+	}
 
 	// catdb,statsbaccessdb,facebookdb,syncdb
 	if ( m_isCollectionLess )
@@ -484,17 +493,22 @@ bool Rdb::addColl2 ( collnum_t collnum ) {
 	}
 
 
-	CollectionRec *cr = g_collectiondb.m_recs[collnum];
+	CollectionRec *cr = NULL;
 	char *coll = NULL;
+	if ( ! m_isCollectionLess ) cr = g_collectiondb.m_recs[collnum];
 	if ( cr ) coll = cr->m_coll;
+
+	if ( m_isCollectionLess )
+		coll = "collectionless";
 
 	// . ensure no previous one exists
 	// . well it will be there but will be uninitialized, m_rdb will b NULL
 	RdbBase *base = getBase ( collnum );
 	if ( base ) { // m_bases [ collnum ] ) {
 		g_errno = EBADENGINEER;
-		return log("db: %s: Rdb for collection \"%s\" exists.",
-			   m_dbname,coll);
+		return log("db: Rdb for db \"%s\" and "
+			   "collection \"%s\" (collnum %li) exists.",
+			   m_dbname,coll,(long)collnum);
 	}
 	// make a new one
 	RdbBase *newColl = NULL;
@@ -511,6 +525,14 @@ bool Rdb::addColl2 ( collnum_t collnum ) {
 	base = newColl;
 	// add it to CollectionRec::m_bases[] base ptrs array
 	addBase ( collnum , newColl );
+
+	// . set CollectionRec::m_numPos/NegKeysInTree[rdbId]
+	// . these counts are now stored in the CollectionRec and not
+	//   in RdbTree since the # of collections can be huge!
+	if ( m_useTree ) {
+		m_tree.setNumKeys ( cr );
+	}
+
 
 	RdbTree    *tree = NULL;
 	RdbBuckets *buckets = NULL;
@@ -541,13 +563,6 @@ bool Rdb::addColl2 ( collnum_t collnum ) {
 		     "collection \"%s\".", m_dbname,coll);
 		//exit(-1);
 		return false;
-	}
-
-	// . set CollectionRec::m_numPos/NegKeysInTree[rdbId]
-	// . these counts are now stored in the CollectionRec and not
-	//   in RdbTree since the # of collections can be huge!
-	if ( m_useTree ) {
-		m_tree.setNumKeys ( cr );
 	}
 
 	//if ( (long)collnum >= m_numBases ) m_numBases = (long)collnum + 1;
@@ -607,7 +622,7 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 	// . TODO: what about outstanding merge or dump operations?
 	// . it seems like we can't really recycle this too easily 
 	//   because reset it not resetting filenames or directory name?
-	//   just nuke it and rebuild using addColl2()...
+	//   just nuke it and rebuild using addRdbBase2()...
 	RdbBase *oldBase = getBase ( collnum );
 	mdelete (oldBase, sizeof(RdbBase), "Rdb Coll");
 	delete  (oldBase);
@@ -623,7 +638,7 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 
 	// if just resetting recycle base
 	if ( collnum != newCollnum ) {
-		addColl2 ( newCollnum );
+		addRdbBase2 ( newCollnum );
 		// make a new base now
 		//RdbBase *newBase = mnew
 		// new cr
@@ -636,7 +651,7 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 	}
 
 	
-	log("rdb: %s base from collrec "
+	log(LOG_DEBUG,"db: %s base from collrec "
 	    "rdb=%s rdbid=%li coll=%s collnum=%li newcollnum=%li",
 	    msg,m_dbname,(long)m_rdbId,coll,(long)collnum,
 	    (long)newCollnum);
@@ -667,7 +682,7 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 	// move into that dir
 	::rename ( oldname , newname );
 
-	logf ( LOG_INFO, "admin: cleared data for coll \"%s\" (%li) rdb=%s.",
+	log ( LOG_DEBUG, "db: cleared data for coll \"%s\" (%li) rdb=%s.",
 	       coll,(long)collnum ,getDbnameFromId(m_rdbId));
 
 	return true;
@@ -1152,7 +1167,7 @@ bool Rdb::dumpTree ( long niceness ) {
 	     //! g_repair.m_fullRebuild &&
 	     //! g_repair.m_rebuildNoSplits &&
 	     //! g_repair.m_removeBadPages &&
-	     ! isSecondaryRdb ( m_rdbId ) && 
+	     ! ::isSecondaryRdb ( m_rdbId ) && 
 	     m_rdbId != RDB_TAGDB )
 		return true;
 
@@ -1340,9 +1355,10 @@ bool Rdb::dumpCollLoop ( ) {
 	if ( g_errno ) {
 		RdbBase *base = getBase(m_dumpCollnum);
 		log("build: Error dumping collection: %s.",mstrerror(g_errno));
-		// if we wrote nothing, remove the file
-		if ( ! base->m_files[m_fn]->doesExist() ||
-		     base->m_files[m_fn]->getFileSize() <= 0 ) {
+		// . if we wrote nothing, remove the file
+		// . if coll was deleted under us, base will be NULL!
+		if ( base &&   (! base->m_files[m_fn]->doesExist() ||
+		      base->m_files[m_fn]->getFileSize() <= 0) ) {
 			log("build: File %s is zero bytes, removing from "
 			    "memory.",base->m_files[m_fn]->getFilename());
 			base->buryFiles ( m_fn , m_fn+1 );
@@ -1465,7 +1481,7 @@ bool Rdb::dumpCollLoop ( ) {
 	// . RdbMap should dump itself out CLOSE!
 	// . it returns false if blocked, true otherwise & sets g_errno on err
 	// . but we only return false on error here
-	if ( ! m_dump.set (  base->m_coll   ,
+	if ( ! m_dump.set (  base->m_collnum   ,
 			     base->m_files[m_fn]  ,
 			     id2            , // to set tfndb recs for titledb
 			     m_isTitledb,// tdb2? this == g_titledb.getRdb() ,
@@ -2577,6 +2593,9 @@ long long Rdb::getDiskSpaceUsed ( ) {
 }
 
 bool Rdb::isMerging ( ) {
+	// use this for speed
+	return (bool)m_numMergesOut;
+
 	for ( long i = 0 ; i < getNumBases() ; i++ ) {
 		RdbBase *base = getBase(i);
 		if ( ! base ) continue;
@@ -2614,6 +2633,7 @@ Rdb *getRdbFromId ( uint8_t rdbId ) {
 		s_table9 [ RDB_STATSDB   ] = g_statsdb.getRdb();
 		s_table9 [ RDB_REVDB     ] = g_revdb.getRdb();
 		//s_table9 [ RDB_FAKEDB    ] = NULL;
+		s_table9 [ RDB_PARMDB    ] = NULL;
 
 		s_table9 [ RDB2_INDEXDB2   ] = g_indexdb2.getRdb();
 		s_table9 [ RDB2_POSDB2     ] = g_posdb2.getRdb();
@@ -2769,6 +2789,7 @@ long getDataSizeFromRdbId ( uint8_t rdbId ) {
 				  i == RDB_SERPDB ||
 				  i == RDB_MONITORDB ||
 				  i == RDB_TAGDB   ||
+				  i == RDB_PARMDB ||
 				  i == RDB_SPIDERDB ||
 				  i == RDB_DOLEDB ||
 				  i == RDB_CATDB ||
@@ -2831,6 +2852,18 @@ RdbBase *getRdbBase ( uint8_t rdbId , char *coll ) {
 		collnum = g_collectiondb.getCollnum ( coll );
 	if(collnum == -1) return NULL;
 	//return rdb->m_bases [ collnum ];
+	return rdb->getBase(collnum);
+}
+
+
+// get the RdbBase class for an rdbId and collection name
+RdbBase *getRdbBase ( uint8_t rdbId , collnum_t collnum ) {
+	Rdb *rdb = getRdbFromId ( rdbId );
+	if ( ! rdb ) {
+		log("db: Collection #%li does not exist.",(long)collnum);
+		return NULL;
+	}
+	if ( rdb->m_isCollectionLess ) collnum = (collnum_t) 0;
 	return rdb->getBase(collnum);
 }
 

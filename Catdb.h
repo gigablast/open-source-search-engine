@@ -22,7 +22,7 @@
 #include "Url.h"
 #include "Loop.h"
 #include "DiskPageCache.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 
 class Catdb  {
 

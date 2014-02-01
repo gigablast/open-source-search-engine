@@ -9,7 +9,7 @@
 
 #include "MetaContainer.h"
 //#include "Customer.h"
-#include "CollectionRec.h" // for MAX_PRICE
+//#include "CollectionRec.h" // for MAX_PRICE
 
 #define DATAFEEDCOUNT_REQUESTS    1
 #define DATAFEEDCOUNT_CURRENTBILL 2

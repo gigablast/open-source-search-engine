@@ -5,7 +5,7 @@
 #ifndef _HASHTABLEX_H_
 #define _HASHTABLEX_H_
 
-#include "Mem.h"     // for mcalloc and mmalloc
+#include "SafeBuf.h"
 
 class HashTableX {
 
@@ -119,6 +119,9 @@ class HashTableX {
 		if ( *val + (uint32_t)score < *val ) *val = 0xffffffff;
 		else                                 *val = *val + score;
 		return true;
+	};
+	bool addScore ( long *key , long score = 1 ) {
+		return addTerm32 ( key , score ); 
 	};
 	uint32_t getScore32 ( long *wid ) {
 		long slot = getSlot ( wid );

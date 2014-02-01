@@ -4,7 +4,7 @@
 #include "TcpSocket.h"
 #include "HttpRequest.h"
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Users.h"
 
 bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) ;
@@ -19,23 +19,26 @@ bool sendPageDelColl ( TcpSocket *s , HttpRequest *r ) {
 
 bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// get collection name
-	long  nclen;
-	char *nc   = r->getString ( "nc" , &nclen );
-	long  cpclen;
-	char *cpc  = r->getString ( "cpc" , &cpclen );
+	//long  nclen;
+	//char *nc   = r->getString ( "nc" , &nclen );
+	//long  cpclen;
+	//char *cpc  = r->getString ( "cpc" , &cpclen );
 
 	g_errno = 0;
 
-	bool cast = r->getLong("cast",0);
+	//bool cast = r->getLong("cast",0);
 
 	char *msg = NULL;
 
 	// if any host in network is dead, do not do this
-	if ( g_hostdb.hasDeadHost() ) msg = "A host in the network is dead.";
+	//if ( g_hostdb.hasDeadHost() ) msg = "A host in the network is dead.";
 
 	// . are we adding a collection?
 	// . return if error adding, might already exist!
 	// . g_errno should be set
+	// . WE DO NOT NEED THIS ANYMORE. Pages.cpp now broadcasts
+	//   addcoll as CommandAddColl() parm.
+	/*
 	if ( nclen > 0 && add && ! cast ) {
 		// do not allow "main" that is used for the "" collection
 		// for backwards compatibility
@@ -48,6 +51,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	}
 
 	if ( ! add && ! cast ) g_collectiondb.deleteRecs ( r )   ;
+	*/
 
 	char  buf [ 64*1024 ];
 	SafeBuf p(buf, 64*1024);
@@ -55,12 +59,13 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	g_pages.printAdminTop ( &p , s , r );
 
 	//long  page     = g_pages.getDynamicPageNumber ( r );
-	char *coll     = r->getString    ( "c"    );
+	//char *coll     = r->getString    ( "c"    );
 	//char *pwd      = r->getString    ( "pwd" );
 	//char *username = g_users.getUsername( r );
 	//long  user = g_pages.getUserType ( s , r );
 	//if ( ! coll )  coll = "";
-	if ( ! nc   )    nc = "";
+
+	//if ( ! nc   )    nc = "";
 	//if ( ! pwd  )   pwd = "";
 
 	if ( g_errno ) msg = mstrerror(g_errno);
@@ -80,21 +85,25 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// print the add collection box
 	if ( add /*&& (! nc[0] || g_errno ) */ ) {
 		p.safePrintf (
-			  "<center>\n<table border=1 cellpadding=4 "
-			  "width=100%% bgcolor=#%s>\n"
-			   "<tr><td colspan=2 bgcolor=#%s>"
+			  "<center>\n<table %s>\n"
+			   "<tr class=hdrow><td colspan=2>"
 			  "<center><b>Add Collection</b></center>"
-			  "</td></tr>\n",LIGHT_BLUE,DARK_BLUE);
+			  "</td></tr>\n",
+			  TABLE_STYLE);
 		p.safePrintf (
-			  "<tr><td><b>name of new collection to add</td>\n"
-			  "<td><input type=text name=nc size=30></td></tr>\n");
+			  "<tr bgcolor=#%s>"
+			  "<td><b>name of new collection to add</td>\n"
+			  "<td><input type=text name=addColl size=30>"
+			  "</td></tr>\n"
+			  , LIGHT_BLUE
+			      );
 		// now list collections from which to copy the config
-		p.safePrintf (
-			  "<tr><td><b>copy configuration from this "
-			  "collection</b><br><font size=1>Leave blank to "
-			  "accept default values.</font></td>\n"
-			  "<td><input type=text name=cpc value=\"%s\" size=30>"
-			  "</td></tr>\n",coll);
+		//p.safePrintf (
+		//	  "<tr><td><b>copy configuration from this "
+		//	  "collection</b><br><font size=1>Leave blank to "
+		//	  "accept default values.</font></td>\n"
+		//	  "<td><input type=text name=cpc value=\"%s\" size=30>"
+		//	  "</td></tr>\n",coll);
 		p.safePrintf ( "</table></center><br>\n");
 		// wrap up the form started by printAdminTop
 		g_pages.printAdminBottom ( &p );
@@ -112,27 +121,31 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// print all collections out in a checklist so you can check the
 	// ones you want to delete, the values will be the id of that collectn
 	p.safePrintf (
-		  "<center>\n<table border=1 cellpadding=4 "
-		  "width=100%% bgcolor=#%s>\n"
-		  "<tr><td bgcolor=#%s><center><b>Delete Collections"
+		  "<center>\n<table %s>\n"
+		  "<tr class=hdrow><td><center><b>Delete Collections"
 		  "</b></center></td></tr>\n"
-		  "<tr><td>"
+		  "<tr bgcolor=#%s><td>"
 		  "<center><b>Select the collections you wish to delete. "
 		  //"<font color=red>This feature is currently under "
 		  //"development.</font>"
 		  "</b></center></td></tr>\n"
-		  "<tr><td>"
+		  "<tr bgcolor=#%s><td>"
 		  // table within a table
 		  "<center><table width=20%%>\n",
-		  LIGHT_BLUE,DARK_BLUE);
+		  TABLE_STYLE,
+		  LIGHT_BLUE,
+		  DARK_BLUE
+		      );
 
 	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cr = g_collectiondb.m_recs[i];
 		if ( ! cr ) continue;
 		p.safePrintf (
-			  "<tr><td>"
-			  "<input type=checkbox name=del%s value=1> "
-			  "%s</td></tr>\n",cr->m_coll,cr->m_coll);
+			  "<tr bgcolor=#%s><td>"
+			  "<input type=checkbox name=delColl value=\"%s\"> "
+			  "%s</td></tr>\n",
+			  DARK_BLUE,
+			  cr->m_coll,cr->m_coll);
 	}
 	p.safePrintf( "</table></center></td></tr></table><br>\n" );
 skip:

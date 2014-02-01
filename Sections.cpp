@@ -14,7 +14,7 @@
 #include "Msg40.h"
 #include "Conf.h"
 #include "Msg1.h" // getGroupId()
-#include "HashTableX.h"
+//#include "HashTableX.h"
 #include "XmlDoc.h"
 #include "Bits.h"
 #include "sort.h"
@@ -11831,7 +11831,7 @@ void gotSectiondbListWrapper ( void *state ) {
 	THIS->m_callback ( THIS->m_state );
 }
 */
-/*
+
 // returns false and sets g_errno on error
 bool Sections::addVotes ( SectionVotingTable *nsvt , uint32_t tagPairHash ) {
 
@@ -11881,8 +11881,7 @@ SectionVotingTable::SectionVotingTable ( ) {
 	m_totalSiteVoters     = 0;
 	//m_totalSimilarLayouts = 0;
 }
-*/
-/*
+
 // . returns false if blocked, returns true and sets g_errno on error
 // . compile the datedb list into a hash table
 // . we serialize this hash table into TitleRec::ptr_sectionsData during
@@ -11994,7 +11993,6 @@ bool SectionVotingTable::addListOfVotes ( RdbList *list,
 	// we are done
 	return true;
 }
-*/
 
 // this is a function because we also call it from addImpliedSections()!
 void Sections::setNextBrotherPtrs ( bool setContainer ) {
@@ -12172,7 +12170,6 @@ void Sections::setNextSentPtrs ( ) {
 	}
 }
 
-/*
 // returns false and sets g_errno on error
 bool SectionVotingTable::addVote3 ( long        turkTagHash ,
 				    long        sectionType ,
@@ -12219,7 +12216,6 @@ bool SectionVotingTable::addVote3 ( long        turkTagHash ,
 
 	return true;
 }
-*/
 
 /*
 // . no longer use single bit flags, sec_t
@@ -12298,7 +12294,7 @@ float SectionVotingTable::getNewScore ( Section *sn , long sectionType ) {
 	return score / numSampled;
 }
 */
-/*
+
 // just like getScore() above basically
 float SectionVotingTable::getNumSampled ( long turkTagHash, long sectionType) {
 	// make the vote key
@@ -12324,7 +12320,7 @@ float SectionVotingTable::getNumSampled ( long turkTagHash, long sectionType) {
 	// normalize
 	return numSampled;
 }
-*/
+
 /*
 // just like getScore() above basically
 float SectionVotingTable::getOldNumSampled ( Section *sn , long sectionType ) {
@@ -12383,7 +12379,7 @@ void Sections::getArticleRange ( long *start , long *end ) {
 	*end   = m_articleEndWord;
 }
 */
-/*
+
 // . store our "votes" into datedb
 // . each vote key is:
 //   siteAndTagPairHash(termId)|tagHash(date)|secTypeEnum(score)|docId
@@ -12492,7 +12488,6 @@ bool SectionVotingTable::hash ( long long docId ,
 
 	return true;
 }
-*/
 
 /*
 // add docid-based forced spider recs into the metalist
@@ -15147,6 +15142,37 @@ bool Sections::swoggleTable ( long dn , Section *ts ) {
 	return true;
 }
 */
+
+
+// . just the voting info for passing into diffbot in json
+// . along w/ the title/summary/etc. we can return this json blob for each search result
+bool Sections::printVotingInfoInJSON ( SafeBuf *sb ) {
+
+	// save ptrs
+	m_sbuf = sb;
+	m_sbuf->setLabel ("sectprnt2");
+
+	// print sections out
+	for ( Section *sk = m_rootSection ; sk ; ) {
+		// breathe
+		QUICKPOLL ( m_niceness );
+		// print this section
+		printSectionDiv ( sk , FMT_JSON ); // forProCog );
+		// advance
+		long b = sk->m_b;
+		// stop if last
+		if ( b >= m_nw ) break;
+		// get section after that
+		sk = m_sectionPtrs[b];
+	}
+
+	// ensure ends in \0
+	if ( ! sb->nullTerm() ) return false;
+
+	return true;
+}
+
+
 // make this replace ::print() when it works
 bool Sections::print2 ( SafeBuf *sbuf ,
 			long hiPos,
@@ -15158,7 +15184,7 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 			HashTableX *st2 ,
 			HashTableX *tt  ,
 			Addresses *aa ,
-			bool forProCog ) {
+			char format ) { // bool forProCog ){//FMT_PROCOG FMT_JSON HTML
 
 	//sbuf->safePrintf("<b>Sections in Document</b>\n");
 
@@ -15203,7 +15229,7 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// print this section
-		printSectionDiv ( sk , forProCog );
+		printSectionDiv ( sk , format );//forProCog );
 		// advance
 		long b = sk->m_b;
 		// stop if last
@@ -15212,7 +15238,7 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 		sk = m_sectionPtrs[b];
 	}
 
-	if ( forProCog ) return true;
+	if ( format != FMT_HTML ) return true; // forProCog
 
 	// print header
 	char *hdr =
@@ -15475,7 +15501,7 @@ bool SectionVotingTable::print ( SafeBuf *sbuf , char *title ) {
 }
 */
 
-bool Sections::printSectionDiv ( Section *sk , bool forProCog ) {
+bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog ) {
 	//log("sk=%li",sk->m_a);
 	// enter a new div section now
 	m_sbuf->safePrintf("<br>");
@@ -15521,7 +15547,7 @@ bool Sections::printSectionDiv ( Section *sk , bool forProCog ) {
 	//	m_sbuf->safePrintf("A=%li ",sk->m_a);
 
 
-	if ( forProCog && sk->m_stats.m_numUniqueSites >= 2 ) {
+	if ( format == FMT_PROCOG && sk->m_stats.m_numUniqueSites >= 2 ) {
 		// do not count our own site!
 		m_sbuf->safePrintf("<i>"
 				   "<font size=-1>"
@@ -15541,7 +15567,7 @@ bool Sections::printSectionDiv ( Section *sk , bool forProCog ) {
 
 	m_sbuf->safePrintf("<i>");
 
-	if ( forProCog && (sk->m_flags & SEC_SENTENCE) ) {
+	if ( format == FMT_PROCOG && (sk->m_flags & SEC_SENTENCE) ) {
 		sec_t f = sk->m_flags;
 		//if ( f & SEC_SENTENCE )
 		//	m_sbuf->safePrintf("sentence " );
@@ -15566,7 +15592,7 @@ bool Sections::printSectionDiv ( Section *sk , bool forProCog ) {
 	//	m_sbuf->safePrintf("notdupvotes=%li ",
 	//			   sk->m_votesForNotDup);
 	
-	if ( ! forProCog ) {
+	if ( format != FMT_PROCOG ) {
 		// print the flags
 		m_sbuf->safePrintf("A=%li ",sk->m_a);
 		
@@ -15662,7 +15688,7 @@ bool Sections::printSectionDiv ( Section *sk , bool forProCog ) {
 		// if it belongs to another sections, print that section
 		if ( ws != sk ) {
 			// print out this subsection
-			printSectionDiv ( ws , forProCog );
+			printSectionDiv ( ws , format ); // forProCog );
 			// advance to end of that then
 			i = ws->m_b - 1;
 			// and try next word
@@ -17212,7 +17238,7 @@ bool Sectiondb::init2 ( long treeMem ) {
 		return false;
 	return true;
 }
-
+/*
 bool Sectiondb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -17224,7 +17250,7 @@ bool Sectiondb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: sectiondb verify failed, but scaling is allowed, passing.");
 	return true;
 }
-
+*/
 bool Sectiondb::verify ( char *coll ) {
 	log ( LOG_INFO, "db: Verifying Sectiondb for coll %s...", coll );
 	g_threads.disableThreads();

@@ -183,13 +183,15 @@ bool Threads::init ( ) {
 	// set s_pid to the main process id
 #ifdef PTHREADS
 	s_pid = pthread_self();
-	log("threads: main process THREAD id = %lu",(long unsigned)s_pid);
+	log(LOG_INFO,
+	    "threads: main process THREAD id = %lu",(long unsigned)s_pid);
 	pthread_t tid = pthread_self();
 	sched_param param;
 	int policy;
 	// scheduling parameters of target thread
 	pthread_getschedparam ( tid, &policy, &param);
-	log("threads: min/max thread priority settings = %li/%li (policy=%li)",
+	log(LOG_INFO,
+	    "threads: min/max thread priority settings = %li/%li (policy=%li)",
 	    (long)sched_get_priority_min(policy),
 	    (long)sched_get_priority_max(policy),
 	    (long)policy);
@@ -282,7 +284,12 @@ bool Threads::init ( ) {
 	//   with high niceness cuz it would hold up high priority ones!
 	// . TODO: is there a better way? cancel it when UdpServer calls
 	//   Threads::suspendLowPriorityThreads() ?
-	if ( ! g_threads.registerType ( MERGE_THREAD , 2/*maxThreads*/,100) ) 
+	// . this used to be 2 but now defaults to 10 in Parms.cpp. i found
+	//   i have less long gray lines in the performance graph when i
+	//   did that on trinity.
+	long max2 = g_conf.m_maxCpuMergeThreads;
+	if ( max2 < 1 ) max2 = 1;
+	if ( ! g_threads.registerType ( MERGE_THREAD , max2,1000) ) 
 		return log("thread: Failed to register thread type." );
 	// will raising this from 1 to 2 make it faster too?
 	// i raised since global specs new servers have 2 (hyperthreaded?) cpus
@@ -298,7 +305,11 @@ bool Threads::init ( ) {
 		return log("thread: Failed to register thread type." );
 	// . File.cpp spawns a rename thread for doing renames and unlinks
 	// . doing a tight merge on titldb can be ~250 unlinks
-	if ( ! g_threads.registerType ( UNLINK_THREAD,1/*maxThreads*/,3000) ) 
+	// . MDW up from 1 to 30 max, after doing a ddump on 3000+ collections
+	//   it was taking forever to go one at a time through the unlink
+	//   thread queue. seemed like a 1 second space between unlinks.
+	//   1/23/1014
+	if ( ! g_threads.registerType ( UNLINK_THREAD,30/*maxThreads*/,3000) ) 
 		return log("thread: Failed to register thread type." );
 	// generic multipurpose
 	if ( ! g_threads.registerType (GENERIC_THREAD,100/*maxThreads*/,100) ) 
@@ -1118,7 +1129,7 @@ void makeCallback ( ThreadEntry *t ) {
 	// then set it
 	if ( t->m_niceness >= 1 ) g_niceness = 1;
 	else                      g_niceness = 0;
-	
+
 	t->m_callback ( t->m_state , t );
 
 	// time it?

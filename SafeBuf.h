@@ -2,8 +2,8 @@
 #define _SAFEBUF_H_
 
 //#include "Mem.h"
-#include "Unicode.h"
-
+//#include "Unicode.h"
+#include "gb-include.h"
 
 struct SafeBuf {
 	//*TRUCTORS
@@ -55,8 +55,12 @@ struct SafeBuf {
 	// . returns -1 on error and sets g_errno
 	long saveToFile ( char *dir , char *filename ) ;
 	long dumpToFile(char *filename);
-	bool safePrintFilterTagsAndLines ( char *p , long plen ,
-					   bool oneWordPerLine ) ;
+	long save ( char *dir, char *fname){return saveToFile(dir,fname); };
+
+	long  fillFromFile(char *filename);
+	long  fillFromFile(char *dir,char *filename);
+	long  load(char *dir,char *fname) { return fillFromFile(dir,fname);};
+
 	void filterTags();
 	void filterQuotes();
 	bool truncateLongWords ( char *src, long srcLen , long minmax );
@@ -100,7 +104,7 @@ struct SafeBuf {
 	bool  safeMemcpy(SafeBuf *c){return safeMemcpy(c->m_buf,c->m_length);};
 	bool  safeMemcpy ( class Words *w , long a , long b ) ;
 	bool  safeStrcpy ( char *s ) ;
-	bool  safeStrcpyPrettyJSON ( char *decodedJson ) ;
+	//bool  safeStrcpyPrettyJSON ( char *decodedJson ) ;
 	bool  safeUtf8ToJSON ( char *utf8 ) ;
 
 	bool  csvEncode ( char *s , long len , long niceness = 0 );
@@ -115,6 +119,9 @@ struct SafeBuf {
 	void  reset() { m_length = 0; }
 	void  purge(); // Clear all data and free all allocated memory
 	bool  advance ( long i ) ;
+
+	bool safePrintFilterTagsAndLines ( char *p , long plen ,
+					   bool oneWordPerLine ) ;
 
 	// . if clearIt is true we init the new buffer space to zeroes
 	// . used by Collectiondb.cpp
@@ -135,8 +142,6 @@ struct SafeBuf {
 	void  setLength(long i) { m_length = i; };
 	char *getNextLine ( char *p ) ;
 	long  catFile(char *filename) ;
-	long  fillFromFile(char *filename);
-	long  fillFromFile(char *dir,char *filename);
 	//long  load(char *dir,char *filename) { 
 	//	return fillFromFile(dir,filename);};
 	bool  safeLatin1ToUtf8(char *s, long len);
@@ -153,6 +158,7 @@ struct SafeBuf {
 			     char *t , long tlen ,
 			     long niceness ,
 			     long startOff = 0 );
+	bool  safeReplace3 ( char *s, char *t , long niceness = 0 ) ;
 	void replaceChar ( char src , char dst );
 	bool  copyToken(char* s);;
 	//output encoding
@@ -219,7 +225,7 @@ struct SafeBuf {
 	//bool  utf16Encode(UChar *s, long len, bool htmlEncode=false);
 	//bool  utf16Encode(char *s, long len, bool htmlEncode=false) {
 	//	return utf16Encode((UChar*)s, len>>1, htmlEncode); };
-	bool  utf32Encode(UChar32 c);
+	//bool  utf32Encode(UChar32 c);
 	bool  htmlEncode(char *s, long len,bool encodePoundSign,
 			 long niceness=0);
 	bool  javascriptEncode(char *s, long len );

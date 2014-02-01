@@ -1063,7 +1063,7 @@ long long htolonglong ( const char *s, long len ) {
 	return val;
 }
 
-// convert hex-encoded binary string back to binary
+// convert hex ascii string into binary at "dst"
 void hexToBin ( char *src , long srcLen , char *dst ) {
 	char *srcEnd = src + srcLen;
 	for ( ; src && src < srcEnd ; ) {
@@ -1083,6 +1083,8 @@ void binToHex ( unsigned char *src , long srcLen , char *dst ) {
 		*dst++ = btoh(*src&15);
 		src++;
 	}
+	// always null term!
+	*dst = '\0';
 	// sanity check
 	if ( src != srcEnd ) { char *xx=NULL;*xx=0; }
 }
@@ -2044,6 +2046,7 @@ char* getNextNum(char* input, char** numPtr) {
 	return nextspace;
 }
 
+#include "HttpMime.h" // CT_HTML
 
 // returns length of stripped content, but will set g_errno and return -1
 // on error
@@ -2064,7 +2067,7 @@ long stripHtml( char *content, long contentLen, long version, long strip ) {
 	// . parse as utf8 since all we are doing is messing with 
 	//   the tags...content manipulation comes later
 	if ( ! tmpXml.set ( content , contentLen,
-			    false, 0, false, version ) )
+			    false, 0, false, version , true , 0 , CT_HTML ) )
 		return -1;
 
 	//if( strip == 4 )

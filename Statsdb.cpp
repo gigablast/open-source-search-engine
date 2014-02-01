@@ -7,6 +7,7 @@
 #include "gb-include.h"
 #include "Statsdb.h"
 #include "hash.h"
+#include "Parms.h"
 
 Statsdb g_statsdb;
 
@@ -208,17 +209,17 @@ bool Statsdb::init ( ) {
 	// will init the CollectionRec::m_rdbBase, which is what
 	// Rdb::getBase(collnum_t) will return. however, for collectionless
 	// rdb databases we set Rdb::m_collectionlessBase special here.
-	return m_rdb.addColl ( NULL );
+	return m_rdb.addRdbBase1 ( NULL );
 }
 
 
 
 // Make sure we need this function.
 // main.cpp currently uses the addColl from m_rdb
-bool Statsdb::addColl ( char *coll, bool doVerify ) {
-	if ( ! m_rdb.addColl ( coll ) ) return false;
-	return true;
-}
+//bool Statsdb::addColl ( char *coll, bool doVerify ) {
+//	if ( ! m_rdb.addColl ( coll ) ) return false;
+//	return true;
+//}
 
 void flushStatsWrapper ( int fd , void *state ) {
 	g_statsdb.addDocsIndexed();
@@ -531,7 +532,8 @@ bool Statsdb::makeGIF ( long t1Arg ,
 
 #define MAX_POINTS 6000
 #define MAX_WIDTH  6
-#define DY2        600              // pixels vertical
+//#define DY2        600              // pixels vertical
+#define DY2        400              // pixels vertical
 #define DX2        1000             // pixels across
 #define MAX_LINES2  (DY2 / (MAX_WIDTH+1)) // leave free pixel above each line
 

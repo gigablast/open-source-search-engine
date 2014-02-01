@@ -637,6 +637,16 @@ bool SafeBuf::safeReplace ( char *s, long len, long pos, long replaceLen ) {
 	return true;
 }
 
+bool SafeBuf::safeReplace3 ( char *s, char *t , long niceness ) {
+	if ( ! safeReplace2 ( s , gbstrlen(s) ,
+			      t , gbstrlen(t) ,
+			      niceness ) )
+		return false;
+	if ( ! nullTerm() ) 
+		return false;
+	return true;
+}
+
 // return false and set g_errno on error
 bool SafeBuf::safeReplace2 ( char *s, long slen, 
 			     char *t , long tlen ,
@@ -657,6 +667,9 @@ bool SafeBuf::safeReplace2 ( char *s, long slen,
 		// count them
 		count++;
 	}
+
+	// nothing to replace? all done then
+	if ( count == 0 ) return true;
 	
 	long extra = (tlen - slen) * count;
 	// allocate new space
@@ -729,6 +742,7 @@ bool  SafeBuf::utf8Encode2(char *s, long len, bool encodeHTML,long niceness) {
 	return htmlEncode(m_length-tmp,niceness);
 }
 
+/*
 bool SafeBuf::utf32Encode(UChar32 c) {
 	if(!reserve2x(8)) return false;
 
@@ -747,7 +761,7 @@ bool SafeBuf::utf32Encode(UChar32 c) {
 	}
 	return false;
 }
-
+*/
 
 bool  SafeBuf::latin1Encode(char *s, long len, bool encodeHTML,long niceness) {
 	long tmp = m_length;
@@ -1747,7 +1761,12 @@ Tag *SafeBuf::addTag ( char *mysite ,
 bool SafeBuf::addTag ( Tag *tag ) {
 	long recSize = tag->getSize();
 	//tag->setDataSize();
-	if ( tag->m_recDataSize <= 16 ) { char *xx=NULL;*xx=0; }
+	if ( tag->m_recDataSize <= 16 ) { 
+		// note it
+		return log("safebuf: encountered corrupted tag datasize=%li.",
+			   tag->m_recDataSize);
+		//char *xx=NULL;*xx=0; }
+	}
 	return safeMemcpy ( (char *)tag , recSize );
 }
 
@@ -2689,6 +2708,7 @@ bool SafeBuf::decodeJSONToUtf8 ( long niceness ) {
 //   diffbot
 // . really we could leave the newlines decoded etc, but it is prettier
 //   for printing
+/*
 bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
 	// how much space do we need?
 	// each single byte \t char for instance will need 2 bytes
@@ -2748,6 +2768,7 @@ bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
 
 	return true;
 }
+*/
 
 bool SafeBuf::safeUtf8ToJSON ( char *utf8 ) {
 

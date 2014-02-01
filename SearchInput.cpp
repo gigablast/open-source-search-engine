@@ -2,7 +2,7 @@
 
 #include "SearchInput.h"
 #include "Parms.h"         // g_parms
-#include "CollectionRec.h" // cr
+//#include "CollectionRec.h" // cr
 #include "Pages.h"         // g_msg
 #include "LanguageIdentifier.h"
 #include "CountryCode.h"

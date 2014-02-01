@@ -19,8 +19,9 @@
 #include "Linkdb.h"
 #include "Syncdb.h"
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Repair.h"
+#include "Rebalance.h"
 //#include "Msg3.h" // debug include
 
 // how many rdbs are in "urgent merge" mode?
@@ -43,15 +44,16 @@ class RdbMerge g_merge2;
 RdbBase::RdbBase ( ) {
 	m_numFiles  = 0;
 	m_rdb = NULL;
+	m_nextMergeForced = false;
 	//m_dummy = NULL;
 	reset();
 }
 
 void RdbBase::reset ( ) {
 	for ( long i = 0 ; i < m_numFiles ; i++ ) {
-		mdelete ( m_files[i] , sizeof(BigFile),"RdbBase");
+		mdelete ( m_files[i] , sizeof(BigFile),"RdbBFile");
 		delete (m_files[i]);
-		mdelete ( m_maps[i] , sizeof(RdbMap),"RdbBase");
+		mdelete ( m_maps[i] , sizeof(RdbMap),"RdbBMap");
 		delete (m_maps[i]);
 	}
 	m_numFiles  = 0;
@@ -120,6 +122,10 @@ bool RdbBase::init ( char  *dir            ,
 		     bool           isTitledb            ,
 		     bool           preloadDiskPageCache ,
 		     bool           biasDiskPageCache    ) {
+
+
+	m_didRepair = false;
+ top:
 	// reset all
 	reset();
 	// sanity
@@ -132,8 +138,9 @@ bool RdbBase::init ( char  *dir            ,
 	char tmp[1024];
 	sprintf ( tmp , "%scoll.%s.%li" , dir , coll , (long)collnum );
 
-	// debug
-	log("base: adding new base for dir=%s coll=%s collnum=%li db=%s",
+	// logDebugAdmin
+	log(LOG_DEBUG,"db: "
+	    "adding new base for dir=%s coll=%s collnum=%li db=%s",
 	    dir,coll,(long)collnum,dbname);
 
 	// catdb is collection independent
@@ -270,7 +277,12 @@ bool RdbBase::init ( char  *dir            ,
 	m_minToMergeArg = minToMergeArg;
 	// . set our m_files array
 	// . m_dir is bogus causing this to fail
-	if ( ! setFiles () ) return false;
+	if ( ! setFiles () ) {
+		// try again if we did a repair
+		if ( m_didRepair ) goto top;
+		// if no repair, give up
+		return false;
+	}
 	//long dataMem;
 	// if we're in read only mode, don't bother with *ANY* trees
 	//if ( g_conf.m_readOnlyMode ) goto preload;
@@ -359,9 +371,10 @@ bool RdbBase::init ( char  *dir            ,
 	// now fill up the page cache
 	// preload:
 	if ( ! preloadDiskPageCache ) return true;
+	if ( ! m_pc ) return true;
 	char buf [ 512000 ];
 	long total = m_pc->getMemMax();
-	logf(LOG_INFO,"db: %s: Preloading page cache. Total mem to use =%lu",
+	log(LOG_DEBUG,"db: %s: Preloading page cache. Total mem to use =%lu",
 	     m_dbname,total);
 	//log("max=%li",total);
 	for ( long i = 0 ; i < m_numFiles ; i++ ) {
@@ -502,7 +515,7 @@ bool RdbBase::setFiles ( ) {
 		// we are getting this from a bogus m_dir
 		return log("db: Had error opening directory %s", getDir());
 	// note it
-	logf(LOG_INFO,"db: Loading files for %s coll=%s (%li).",
+	log(LOG_DEBUG,"db: Loading files for %s coll=%s (%li).",
 	     m_dbname,m_coll,(long)m_collnum );
 	// . set our m_files array
 	// . addFile() will return -1 and set g_errno on error
@@ -610,7 +623,55 @@ bool RdbBase::setFiles ( ) {
 			return false;
 	}
 
+	// everyone should start with file 0001.dat or 0000.dat
+	if ( m_numFiles > 0 && m_fileIds[0] > 1 && m_rdb->m_rdbId == RDB_SPIDERDB ) {
+		log("db: missing file id 0001.dat for %s in coll %s. "
+		    "Fix this or it'll core later. Just rename the next file "
+		    "in line to 0001.dat/map. We probably cored at a "
+		    "really bad time during the end of a merge process.",
+		    m_dbname, m_coll );
+
+		// do not re-do repair! hmmm
+		if ( m_didRepair ) return false;
+
+		// just fix it for them
+		BigFile bf;
+		SafeBuf oldName;
+		oldName.safePrintf("%s%04li.dat",m_dbname,m_fileIds[0]);
+		bf.set ( m_dir.getDir() , oldName.getBufStart() );
+
+		// rename it to like "spiderdb.0001.dat"
+		SafeBuf newName;
+		newName.safePrintf("%s/%s0001.dat",m_dir.getDir(),m_dbname);
+		bf.rename ( newName.getBufStart() );
+
+		// and delete the old map
+		SafeBuf oldMap;
+		oldMap.safePrintf("%s/%s0001.map",m_dir.getDir(),m_dbname);
+		File omf;
+		omf.set ( oldMap.getBufStart() );
+		omf.unlink();
+
+		// get the map file name we want to move to 0001.map
+		BigFile cmf;
+		SafeBuf curMap;
+		curMap.safePrintf("%s%04li.map",m_dbname,m_fileIds[0]);
+		cmf.set ( m_dir.getDir(), curMap.getBufStart());
+
+		// rename to spiderdb0081.map to spiderdb0001.map
+		cmf.rename ( oldMap.getBufStart() );
+
+		// replace that first file then
+		m_didRepair = true;
+		return true;
+		//char *xx=NULL; *xx=0;
+	}
+
+
 	m_dir.close();
+
+	// ensure files are sharded correctly
+	verifyFileSharding();
 
 	if ( ! converting ) return true;
 
@@ -652,6 +713,7 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		    (long)MAX_RDB_FILES);
 		return -1;
 	}
+
 	// HACK: skip to avoid a OOM lockup. if RdbBase cannot dump
 	// its data to disk it can backlog everyone and memory will
 	// never get freed up.
@@ -666,7 +728,7 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		    sizeof(BigFile),mstrerror(g_errno));
 		return -1; 
 	}
-	mnew ( f , sizeof(BigFile) , "RdbBase" );
+	mnew ( f , sizeof(BigFile) , "RdbBFile" );
 	RdbMap  *m ;
 	try { m = new (RdbMap); }
 	catch ( ... ) { 
@@ -674,11 +736,11 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		g_errno = ENOMEM;
 		log("RdbBase: new(%i): %s", 
 		    sizeof(RdbMap),mstrerror(g_errno));
-		mdelete ( f , sizeof(BigFile),"RdbBase");
+		mdelete ( f , sizeof(BigFile),"RdbBFile");
 		delete (f); 
 		return -1; 
 	}
-	mnew ( m , sizeof(RdbMap) , "RdbBase" );
+	mnew ( m , sizeof(RdbMap) , "RdbBMap" );
 	// reinstate the memory limit
 	g_mem.m_maxMem = mm;
 	// sanity check
@@ -770,7 +832,7 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		g_statsdb.m_disabled = false;
 		if ( ! status ) return log("db: Save failed.");
 	}
-	if ( ! isNew ) logf(LOG_INFO,"db: Added %s for collnum=%li pages=%li",
+	if ( ! isNew ) log(LOG_DEBUG,"db: Added %s for collnum=%li pages=%li",
 			    name ,(long)m_collnum,m->getNumPages());
 	// open this big data file for reading only
 	if ( ! isNew ) {
@@ -871,6 +933,8 @@ bool RdbBase::incorporateMerge ( ) {
 	long b = m_mergeStartFileNum + m_numFilesToMerge;
 	// shouldn't be called if no files merged
 	if ( a == b ) {
+		// decrement this count
+		if ( m_isMerging ) m_rdb->m_numMergesOut--;
 		// exit merge mode
 		m_isMerging = false;
 		// return the merge token, no need for a callback
@@ -1151,6 +1215,8 @@ void RdbBase::doneWrapper4 ( ) {
 			log(LOG_INFO,"merge: Exiting urgent "
 			    "merge mode for %s.",m_dbname);
 	}
+	// decrement this count
+	if ( m_isMerging ) m_rdb->m_numMergesOut--;
 	// exit merge mode
 	m_isMerging = false;
 	// return the merge token, no need for a callback
@@ -1240,6 +1306,10 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	if (   g_loop.m_inQuickPoll ) { char *xx=NULL;*xx=0; }
 	if (   niceness == 0 ) { char *xx=NULL;*xx=0; }
 
+	if ( forceMergeAll ) m_nextMergeForced = true;
+
+	if ( m_nextMergeForced ) forceMergeAll = true;
+
 	// if we are trying to merge titledb but a titledb dump is going on
 	// then do not do the merge, we do not want to overwrite tfndb via
 	// RdbDump::updateTfndbLoop() 
@@ -1314,25 +1384,25 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		m_minToMerge = cr->m_posdbMinFilesToMerge;
 	if ( cr && m_rdb == g_titledb.getRdb() ) 
 		m_minToMerge = cr->m_titledbMinFilesToMerge;
-	if ( cr && m_rdb == g_spiderdb.getRdb() ) 
-		m_minToMerge = cr->m_spiderdbMinFilesToMerge;
+	//if ( cr && m_rdb == g_spiderdb.getRdb() ) 
+	//	m_minToMerge = cr->m_spiderdbMinFilesToMerge;
 	//if ( cr && m_rdb == g_sectiondb.getRdb() ) 
 	//	m_minToMerge = cr->m_sectiondbMinFilesToMerge;
 	//if ( cr && m_rdb == g_sectiondb.getRdb() ) 
 	//	m_minToMerge = cr->m_sectiondbMinFilesToMerge;
 	//if ( cr && m_rdb == g_checksumdb.getRdb() ) 
 	//	m_minToMerge = cr->m_checksumdbMinFilesToMerge;
-	if ( cr && m_rdb == g_clusterdb.getRdb() ) 
-		m_minToMerge = cr->m_clusterdbMinFilesToMerge;
-	if ( cr && m_rdb == g_datedb.getRdb() ) 
-		m_minToMerge = cr->m_datedbMinFilesToMerge;
+	//if ( cr && m_rdb == g_clusterdb.getRdb() ) 
+	//	m_minToMerge = cr->m_clusterdbMinFilesToMerge;
+	//if ( cr && m_rdb == g_datedb.getRdb() ) 
+	//	m_minToMerge = cr->m_datedbMinFilesToMerge;
 	//if ( cr && m_rdb == g_statsdb.getRdb() )
 	//if ( m_rdb == g_statsdb.getRdb() )
 	//	m_minToMerge = g_conf.m_statsdbMinFilesToMerge;
 	if ( m_rdb == g_syncdb.getRdb() )
 		m_minToMerge = g_syncdb.m_rdb.m_minToMerge;
-	if ( cr && m_rdb == g_linkdb.getRdb() )
-		m_minToMerge = cr->m_linkdbMinFilesToMerge;
+	//if ( cr && m_rdb == g_linkdb.getRdb() )
+	//	m_minToMerge = cr->m_linkdbMinFilesToMerge;
 	if ( cr && m_rdb == g_cachedb.getRdb() )
 		m_minToMerge = 4;
 	if ( cr && m_rdb == g_serpdb.getRdb() )
@@ -1372,11 +1442,12 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		//m_minToMerge = 2;
 		char *xx = NULL; *xx = 0;
 	}
+	// mdw: comment this out to reduce log spam when we have 800 colls!
 	// print it
-	if ( doLog ) 
-		log(LOG_INFO,"merge: Attempting to merge %li %s files on disk."
-		    " %li files needed to trigger a merge.",
-		    numFiles,m_dbname,m_minToMerge);
+	//if ( doLog ) 
+	//	log(LOG_INFO,"merge: Attempting to merge %li %s files on disk."
+	//	    " %li files needed to trigger a merge.",
+	//	    numFiles,m_dbname,m_minToMerge);
 	// . even though another merge may be going on, we can speed it up
 	//   by entering urgent merge mode. this will prefer the merge disk
 	//   ops over dump disk ops... essentially starving the dumps and
@@ -1437,7 +1508,7 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	// log a note
 	//log(0,"RdbBase::attemptMerge: attempting merge for %s",m_dbname );
 	// this merge forced?
-	m_nextMergeForced = forceMergeAll;
+	//m_nextMergeForced = forceMergeAll;
 	// . bail if already merging
 	// . no, RdbMerge will sleep in 5 sec cycles into they're done
 	// . we may have multiple hosts running on the same cpu/hardDrive
@@ -1507,9 +1578,9 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		return;
 	}
 	// debug msg
-	if ( doLog )
-	log(LOG_INFO,"merge: Got merge token for %s without blocking.",
-	    m_dbname);
+	//if ( doLog )
+	//log(LOG_INFO,"merge: Got merge token for %s without blocking.",
+	//    m_dbname);
 	// if did not block
 	gotTokenForMerge ( );
 }
@@ -1546,10 +1617,11 @@ void RdbBase::gotTokenForMerge ( ) {
 	if ( m_rdb == g_tfndb.getRdb() ) m = &g_merge2;
 	// sanity check
 	if ( m_isMerging || m->isMerging() ) {
-		if ( m_doLog )
-		log(LOG_INFO,
-		    "merge: Someone already merging. Waiting for merge token "
-		    "in order to merge %s.",m_dbname);
+		//if ( m_doLog )
+			//log(LOG_INFO,
+			//"merge: Someone already merging. Waiting for "
+			//"merge token "
+			//"in order to merge %s.",m_dbname);
 		return;
 	}
 	// clear for take-off
@@ -1571,6 +1643,7 @@ void RdbBase::gotTokenForMerge ( ) {
 	bool      minOld ;
 	long      id2  = -1;
 	long      minToMerge;
+	bool      overide = false;
 	//long      smini = - 1;
 	//long      sn ;
 	//long long tfndbSize = 0;
@@ -1883,7 +1956,7 @@ void RdbBase::gotTokenForMerge ( ) {
 
  startMerge:
 	// sanity check
-	if ( n <= 1 ) {
+	if ( n <= 1 && ! overide ) {
 	       log(LOG_LOGIC,"merge: gotTokenForMerge: Not merging %li files.",
 		    n);
 		g_msg35.releaseToken(); 
@@ -1919,6 +1992,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	// assume we are now officially merging
 	m_isMerging = true;
 
+	m_rdb->m_numMergesOut++;
+
 	char rdbId = getIdFromRdb ( m_rdb );
 
 	// sanity check
@@ -1927,7 +2002,7 @@ void RdbBase::gotTokenForMerge ( ) {
 	// . start the merge
 	// . returns false if blocked, true otherwise & sets g_errno
 	if ( ! m->merge ( rdbId  ,
-			  m_coll ,
+			  m_collnum ,
 			  m_files[mergeFileNum] ,
 			  m_maps [mergeFileNum] ,
 			  id2                   ,
@@ -1939,11 +2014,13 @@ void RdbBase::gotTokenForMerge ( ) {
 			  m_ks                  ) ) return;
 	// hey, we're no longer merging i guess
 	m_isMerging = false;
+	// decerment this count
+	m_rdb->m_numMergesOut--;
 	// . if we have no g_errno that is bad!!!
 	// . we should dump core here or something cuz we have to remove the
 	//   merge file still to be correct
-	if ( ! g_errno )
-		log(LOG_INFO,"merge: Got token without blocking.");
+	//if ( ! g_errno )
+	//	log(LOG_INFO,"merge: Got token without blocking.");
 	// we now set this in init() by calling m_merge.init() so it
 	// can pre-alloc it's lists in it's s_msg3 class
 	//		       g_conf.m_mergeMaxBufSize ) ) return ;
@@ -1954,6 +2031,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	g_errno = 0;
 	// give token back
 	g_msg35.releaseToken();
+	// try again
+	m_rdb->attemptMerge( m_niceness, false , true );
 }
 
 // . use the maps and tree to estimate the size of this list w/o hitting disk
@@ -2166,3 +2245,104 @@ void RdbBase::verifyDiskPageCache ( ) {
 		m_pc->verify(f);
 	}
 }
+
+bool RdbBase::verifyFileSharding ( ) {
+
+	if ( m_rdb->m_isCollectionLess ) return true;
+
+	//log ( "db: Verifying %s for coll %s (collnum=%li)...", 
+	//      m_dbname , m_coll , (long)m_collnum );
+
+	g_threads.disableThreads();
+
+	Msg5 msg5;
+	//Msg5 msg5b;
+	RdbList list;
+	char startKey[MAX_KEY_BYTES];
+	char endKey[MAX_KEY_BYTES];
+	KEYMIN(startKey,MAX_KEY_BYTES);
+	KEYMAX(endKey,MAX_KEY_BYTES);
+	long minRecSizes = 64000;
+	char rdbId = m_rdb->m_rdbId;
+	if ( rdbId == RDB_TITLEDB ) minRecSizes = 640000;
+	
+	if ( ! msg5.getList ( m_rdb->m_rdbId, //RDB_POSDB   ,
+			      m_coll          ,
+			      &list         ,
+			      startKey      ,
+			      endKey        ,
+			      minRecSizes   ,
+			      true          , // includeTree   ,
+			      false         , // add to cache?
+			      0             , // max cache age
+			      0             , // startFileNum  ,
+			      -1            , // numFiles      ,
+			      NULL          , // state
+			      NULL          , // callback
+			      0             , // niceness
+			      false         , // err correction?
+			      NULL          ,
+			      0             ,
+			      -1            ,
+			      true          ,
+			      -1LL          ,
+			      NULL          , // &msg5b        ,
+			      true          )) {
+		g_threads.enableThreads();
+		return log("db: HEY! it did not block");
+	}
+
+	long count = 0;
+	long got   = 0;
+	long printed = 0;
+	char k[MAX_KEY_BYTES];
+
+	for ( list.resetListPtr() ; ! list.isExhausted() ;
+	      list.skipCurrentRecord() ) {
+		//key144_t k;
+		list.getCurrentKey(k);
+		count++;
+		//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
+		//unsigned long groupId = getGroupId ( RDB_POSDB , &k );
+		//if ( groupId == g_hostdb.m_groupId ) got++;
+		unsigned long shardNum = getShardNum( rdbId , k );
+
+		if ( shardNum == getMyShardNum() ) {
+			got++;
+			continue;
+		}
+
+		if ( ++printed > 100 ) continue;
+
+		// avoid log spam... comment this out
+		//log ( "db: Found bad key in list belongs to shard %li",
+		//      shardNum);
+	}
+
+	g_threads.enableThreads();
+
+	//if ( got ) 
+	//	log("db: verified %li recs for %s in coll %s",
+	//	    got,m_dbname,m_coll);
+       
+	if ( got == count ) return true;
+
+	// tally it up
+	g_rebalance.m_numForeignRecs += count - got;
+	log ("db: Out of first %li records in %s for %s.%li, only %li belong "
+	     "to our group.",count,m_dbname,m_coll,(long)m_collnum,got);
+	// exit if NONE, we probably got the wrong data
+	//if ( got == 0 ) log("db: Are you sure you have the "
+	//		    "right data in the right directory? ");
+
+	//log ( "db: Exiting due to Posdb inconsistency." );
+	g_threads.enableThreads();
+	return true;//g_conf.m_bypassValidation;
+
+	//log(LOG_DEBUG, "db: Posdb passed verification successfully for %li "
+	//		"recs.", count );
+	// DONE
+	//return true;
+}
+
+
