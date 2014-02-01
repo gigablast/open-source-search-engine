@@ -1465,6 +1465,12 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		// . mdw 1/22/2014 take this out now too, we got ssds
 		//   let's see if taking this out fixes the jam described
 		//   below
+		// . mdw 1/31/2014 got stuck doing linktext 0x20 lookups leading to
+		//   tagdb lookups with not enough slots left!!! so decrease 0x20
+		//   and/or increase 0x00. ill boost from 500 to 1500 although i
+		//   think we should limit the msg20 niceness 1 requests really
+		//   when slot usage is high... ok, i changed Msg25.cpp to only
+		//   allow 1 msg20 out if 300+ sockets are in use.
 		if ( msgType == 0x00 && m_numUsedSlots > 500 && niceness )
 			getSlot = false;
 

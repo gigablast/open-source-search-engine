@@ -122,6 +122,10 @@ bool RdbBase::init ( char  *dir            ,
 		     bool           isTitledb            ,
 		     bool           preloadDiskPageCache ,
 		     bool           biasDiskPageCache    ) {
+
+
+	m_didRepair = false;
+ top:
 	// reset all
 	reset();
 	// sanity
@@ -273,7 +277,12 @@ bool RdbBase::init ( char  *dir            ,
 	m_minToMergeArg = minToMergeArg;
 	// . set our m_files array
 	// . m_dir is bogus causing this to fail
-	if ( ! setFiles () ) return false;
+	if ( ! setFiles () ) {
+		// try again if we did a repair
+		if ( m_didRepair ) goto top;
+		// if no repair, give up
+		return false;
+	}
 	//long dataMem;
 	// if we're in read only mode, don't bother with *ANY* trees
 	//if ( g_conf.m_readOnlyMode ) goto preload;
@@ -615,13 +624,47 @@ bool RdbBase::setFiles ( ) {
 	}
 
 	// everyone should start with file 0001.dat or 0000.dat
-	if ( m_numFiles > 0 && m_fileIds[0] > 1 ) {
+	if ( m_numFiles > 0 && m_fileIds[0] > 1 && m_rdb->m_rdbId == RDB_SPIDERDB ) {
 		log("db: missing file id 0001.dat for %s in coll %s. "
 		    "Fix this or it'll core later. Just rename the next file "
 		    "in line to 0001.dat/map. We probably cored at a "
 		    "really bad time during the end of a merge process.",
 		    m_dbname, m_coll );
-		char *xx=NULL; *xx=0;
+
+		// do not re-do repair! hmmm
+		if ( m_didRepair ) return false;
+
+		// just fix it for them
+		BigFile bf;
+		SafeBuf oldName;
+		oldName.safePrintf("%s%04li.dat",m_dbname,m_fileIds[0]);
+		bf.set ( m_dir.getDir() , oldName.getBufStart() );
+
+		// rename it to like "spiderdb.0001.dat"
+		SafeBuf newName;
+		newName.safePrintf("%s/%s0001.dat",m_dir.getDir(),m_dbname);
+		bf.rename ( newName.getBufStart() );
+
+		// and delete the old map
+		SafeBuf oldMap;
+		oldMap.safePrintf("%s/%s0001.map",m_dir.getDir(),m_dbname);
+		File omf;
+		omf.set ( oldMap.getBufStart() );
+		omf.unlink();
+
+		// get the map file name we want to move to 0001.map
+		BigFile cmf;
+		SafeBuf curMap;
+		curMap.safePrintf("%s%04li.map",m_dbname,m_fileIds[0]);
+		cmf.set ( m_dir.getDir(), curMap.getBufStart());
+
+		// rename to spiderdb0081.map to spiderdb0001.map
+		cmf.rename ( oldMap.getBufStart() );
+
+		// replace that first file then
+		m_didRepair = true;
+		return true;
+		//char *xx=NULL; *xx=0;
 	}
 
 

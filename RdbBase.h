@@ -352,6 +352,8 @@ class RdbBase {
 	char      *m_coll;
 	collnum_t  m_collnum;
 
+	bool m_didRepair;
+
 	//RdbCache  m_cache;
 	// for storing records in memory
 	RdbTree    *m_tree;  

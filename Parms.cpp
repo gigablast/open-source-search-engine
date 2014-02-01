@@ -18080,7 +18080,11 @@ bool Parms::doParmSendingLoop ( ) {
 			if ( pn->m_parmId > h->m_lastParmIdCompleted ) break;
 		}
 		// nothing? strange. something is not right.
-		if ( ! pn ) { char *xx=NULL; *xx=0; }
+		if ( ! pn ) { 
+			log("pn is null");
+			break;
+			char *xx=NULL; *xx=0; 
+		}
 
 		// give him a free pass? some parm updates are directed to 
 		// a single host, we use this for syncing parms at startup.

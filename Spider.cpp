@@ -568,6 +568,8 @@ bool Spiderdb::init ( ) {
 	long pcmem = 20000000;//g_conf.m_spiderdbMaxDiskPageCacheMem;
 	// keep this low if we are the tmp cluster
 	if ( g_hostdb.m_useTmpCluster ) pcmem = 0;
+	// turn off to prevent blocking up cpu
+	pcmem = 0;
 	// key parser checks
 	//long      ip         = 0x1234;
 	char      priority   = 12;
@@ -11254,10 +11256,12 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// otherwise, if reply was good it is the last known good now!
 	else {
 		// free the old good one and replace it with the new one
-		if ( h->m_lastKnownGoodCrawlInfoReply )
+		if ( h->m_lastKnownGoodCrawlInfoReply ) {
+			//log("spider: skiipping possible bad free!!!! until we fix");
 			mfree ( h->m_lastKnownGoodCrawlInfoReply , 
 				h->m_replyAllocSize , 
 				"lknown" );
+		}
 		// add in the new good in case he goes down in the future
 		h->m_lastKnownGoodCrawlInfoReply    = (char *)ptr;
 		h->m_lastKnownGoodCrawlInfoReplyEnd = (char *)end;
