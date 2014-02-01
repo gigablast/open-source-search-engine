@@ -394,7 +394,12 @@ skipReplaceHost:
 		if ( h->m_hostsConfCRC &&
 		     h->m_hostsConfCRC != g_hostdb.getCRC() )
 			fb.safePrintf("<font color=red><b title=\"Hosts.conf "
-				      "in disagreement with ours.\">H</b></font>");
+				      "in disagreement with ours.\">H"
+				      "</b></font>");
+		// recovery mode? reocvered from coring?
+		if ( h->m_flags & PFLAG_RECOVERYMODE )
+			fb.safePrintf("<b title=\"Recovered from core"
+				      "\">x</b>");
 		// rebalancing?
 		if ( h->m_flags & PFLAG_REBALANCING )
 			fb.safePrintf("<b title=\"Currently "

@@ -176,6 +176,8 @@ void dumpLinkdb          ( char *coll,long sfn,long numFiles,bool includeTree,
 			   char *url );
 
 void exitWrapper ( void *state ) { exit(0); };
+
+bool g_recoveryMode = false;
 	
 bool isRecoveryFutile ( ) ;
 
@@ -938,9 +940,8 @@ int main ( int argc , char *argv[] ) {
 
 	//send an email on startup for -r, like if we are recovering from an
 	//unclean shutdown.
-	bool recoveryMode = false;
-	if ( strcmp ( cmd , "-r" ) == 0 ) recoveryMode = true;		
-
+	g_recoveryMode = false;
+	if ( strcmp ( cmd , "-r" ) == 0 ) g_recoveryMode = true;		
 	bool testMandrill = false;
 	if ( strcmp ( cmd , "emailmandrill" ) == 0 ) {
 		testMandrill = true;
@@ -2206,7 +2207,7 @@ int main ( int argc , char *argv[] ) {
 	// ad inifinitum, look got "sigbadhandler" at the end of the 
 	// last 5 logs in the last 60 seconds. if we see that then something
 	// is prevent is from starting up so give up and exit gracefully
-	if ( recoveryMode && isRecoveryFutile () )
+	if ( g_recoveryMode && isRecoveryFutile () )
 		// exiting with 0 means no error and should tell our
 		// keep alive loop to not restart us and exit himself.
 		exit (0);
@@ -3296,7 +3297,7 @@ int main ( int argc , char *argv[] ) {
 	}
 
 
-	if(recoveryMode) {
+	if(g_recoveryMode) {
 		//now that everything is init-ed send the message.
 		char buf[256];
 		log("admin: Sending emails.");

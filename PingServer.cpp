@@ -17,6 +17,9 @@
 
 #define PAGER_BUF_SIZE (10*1024)
 
+// from main.cpp. when keepalive script restarts us this is true
+extern bool g_recoveryMode;
+
 // a global class extern'd in .h file
 PingServer g_pingServer;
 
@@ -435,8 +438,9 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	if ( g_spiderLoop.m_numSpidersOut > 0 ) flags |= PFLAG_HASSPIDERS;
 	if ( g_process.isRdbMerging()         ) flags |= PFLAG_MERGING;
 	if ( g_process.isRdbDumping()         ) flags |= PFLAG_DUMPING;
-	if ( g_rebalance.m_isScanning       ) flags |= PFLAG_REBALANCING;
-	if ( g_rebalance.m_numForeignRecs      ) flags |= PFLAG_FOREIGNRECS;
+	if ( g_rebalance.m_isScanning         ) flags |= PFLAG_REBALANCING;
+	if ( g_recoveryMode                   ) flags |= PFLAG_RECOVERYMODE;
+	if ( g_rebalance.m_numForeignRecs     ) flags |= PFLAG_FOREIGNRECS;
 	if ( g_dailyMerge.m_mergeMode    == 0 ) flags |= PFLAG_MERGEMODE0;
 	if ( g_dailyMerge.m_mergeMode ==0 || g_dailyMerge.m_mergeMode == 6 )
 		flags |= PFLAG_MERGEMODE0OR6;

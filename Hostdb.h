@@ -50,6 +50,7 @@ enum {
 #define PFLAG_MERGEMODE0OR6  0x10
 #define PFLAG_REBALANCING    0x20
 #define PFLAG_FOREIGNRECS    0x40
+#define PFLAG_RECOVERYMODE   0x80
 
 // added slow disk reads to it, 4 bytes (was 52)
 #define MAX_PING_SIZE (44+4)
