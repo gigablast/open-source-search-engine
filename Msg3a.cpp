@@ -451,7 +451,7 @@ bool Msg3a::gotCacheReply ( ) {
 		// because they suck really bad anyway compared to full
 		// split indexes. "gid" is already set if we are not split.
 		//unsigned long gid = h->m_groupId;//g_hostdb.getGroupId(i);
-		unsigned long shardNum = h->m_shardNum;
+		long shardNum = h->m_shardNum;
 		long firstHostId = h->m_hostId;
 		// get strip num
 		char *req = m_rbufPtr;
@@ -467,7 +467,7 @@ bool Msg3a::gotCacheReply ( ) {
 			key_t         k    = g_indexdb.makeKey(tid,1,1,false );
 			// split = false! do not split 
 			//gid = getGroupId ( RDB_POSDB,&k,false);
-			shardNum = getShardNum(RDB_POSDB,&k,false);
+			shardNum = g_hostdb.getShardNumByTermId(&k);
 			firstHostId = -1;
 		}
 		// debug log

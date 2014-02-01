@@ -325,7 +325,7 @@ class XmlDoc {
 	uint16_t  m_isLinkSpam:1;
 	uint16_t  m_hasAddress:1;
 	uint16_t  m_hasTOD:1;
-	uint16_t  m_hasSiteVenue:1;
+	uint16_t  m_reserved_sv:1;//hasSiteVenue:1;
 	uint16_t  m_hasContactInfo:1;
 	uint16_t  m_isSiteRoot:1;
 
@@ -484,6 +484,7 @@ class XmlDoc {
 	void setCallback ( void *state, void (*callback) (void *state) ) ;
 	void setCallback ( void *state, bool (*callback) (void *state) ) ;
 	bool addToSpiderdb ( ) ;
+	void getRevisedSpiderRequest ( class SpiderRequest *revisedReq );
 	bool indexDoc ( );
 	bool indexDoc2 ( );
 	key_t *getTitleRecKey() ;
@@ -552,6 +553,7 @@ class XmlDoc {
 	float *getPercentChanged ( );
 	uint64_t *getFuzzyDupHash ( );
 	long long *getExactContentHash64();
+	long long *getLooseContentHash64();
 	class RdbList *getDupList ( ) ;
 	class RdbList *getLikedbListForReq ( );
 	class RdbList *getLikedbListForIndexing ( );
@@ -579,6 +581,7 @@ class XmlDoc {
 	long long getFirstUrlHash64();
 	class Url **getRedirUrl() ;
 	class Url **getMetaRedirUrl() ;
+	class Url **getCanonicalRedirUrl ( ) ;
 	long *getFirstIndexedDate ( ) ;
 	long *getOutlinksAddedDate ( ) ;
 	//long *getNumBannedOutlinks ( ) ;
@@ -605,7 +608,6 @@ class XmlDoc {
 	char *getIsThisDocContacty ( );
 	bool *getHasTOD();
 	bool *getHasSiteVenue();
-
 	// non-dup/nondup addresses only
 	bool *getHasAddress();
 	class Addresses *getAddresses ( ) ;
@@ -725,19 +727,19 @@ class XmlDoc {
 
 	char *addOutlinkSpiderRecsToMetaList ( );
 
-	bool addTable96 ( class HashTableX *tt1     , 
-			  long       date1   ,
-			  bool       nosplit ) ;
+	//bool addTable96 ( class HashTableX *tt1     , 
+	//		  long       date1   ,
+	//		  bool       nosplit ) ;
 
 	long getSiteRank ();
-	bool addTable144 ( class HashTableX *tt1     , 
-			   bool       nosplit ) ;
+	bool addTable144 ( class HashTableX *tt1 );
+
 	bool addTable224 ( HashTableX *tt1 ) ;
 
-	bool addTableDate ( class HashTableX *tt1     , //T<key128_t,char> *tt1
-                            uint64_t    docId   ,
-                            uint8_t     rdbId   ,
-                            bool        nosplit ) ;
+	//bool addTableDate ( class HashTableX *tt1     , //T<key128_t,char> *tt1
+	//                           uint64_t    docId   ,
+	//                           uint8_t     rdbId   ,
+	//                           bool        nosplit ) ;
 
 	bool addTable128 ( class HashTableX *tt1     , // T <key128_t,char>*tt1
                            uint8_t     rdbId   ,
@@ -929,6 +931,8 @@ class XmlDoc {
 	Url       *m_redirUrlPtr;
 	Url        m_metaRedirUrl;
 	Url       *m_metaRedirUrlPtr;
+	Url        m_canonicalRedirUrl;
+	Url       *m_canonicalRedirUrlPtr;
 	long       m_redirError;
 	char       m_allowSimplifiedRedirs;
 	Url        m_firstUrl;
@@ -996,14 +1000,15 @@ class XmlDoc {
 	char m_logLangId;
 	long m_logSiteNumInlinks;
 
-	//SectionVotingTable m_nsvt;
+	SectionVotingTable m_nsvt;
 
-	//SectionVotingTable m_osvt;
-	//long m_numSectiondbReads;
-	//long m_numSectiondbNeeds;
-	//key128_t m_sectiondbStartKey;
-	//RdbList m_secdbList;
-	//long m_sectiondbRecall;
+	SectionVotingTable m_osvt;
+	long m_numSectiondbReads;
+	long m_numSectiondbNeeds;
+	key128_t m_sectiondbStartKey;
+	RdbList m_secdbList;
+	long m_sectiondbRecall;
+	SafeBuf m_tmpBuf3;
 
 	//HashTableX m_rvt;
 	//Msg17 m_msg17;
@@ -1135,8 +1140,8 @@ class XmlDoc {
 	//char     m_weightsValid;
 	char     m_sectionsValid;
 	char     m_subSentsValid;
-	//char     m_osvtValid;
-	//char     m_nsvtValid;
+	char     m_osvtValid;
+	char     m_nsvtValid;
 	//char   m_rvtValid;
 	char     m_turkVotingTableValid;
 	char     m_turkBitsTableValid;
@@ -1153,8 +1158,9 @@ class XmlDoc {
 	//char   m_sampleVectorValid;
 	char     m_gigabitHashesValid;
 	char     m_tagPairHashValid;
-	char     m_oldsrValid;
-	char     m_newsrValid;
+	//char     m_oldsrValid;
+	char     m_sreqValid;
+	char     m_srepValid;
 	char     m_titleRecValid;
 
 	bool m_ipValid;
@@ -1162,6 +1168,8 @@ class XmlDoc {
 	bool m_spideredTimeValid;
 	//bool m_nextSpiderTimeValid;
 	bool m_firstIndexedValid;
+	bool m_isInIndexValid;
+	bool m_wasInIndexValid;
 	bool m_outlinksAddedDateValid;
 	bool m_countryIdValid;
 	/*
@@ -1193,6 +1201,7 @@ class XmlDoc {
 	//bool m_eliminateMenusValid;
 	bool m_redirUrlValid;
 	bool m_metaRedirUrlValid;
+	bool m_canonicalRedirUrlValid;
 	bool m_statusMsgValid;
 	bool m_mimeValid;
 	bool m_pubDateValid;
@@ -1215,7 +1224,7 @@ class XmlDoc {
 	bool m_isAdultValid;
 	bool m_hasAddressValid;
 	bool m_hasTODValid;
-	bool m_hasSiteVenueValid;
+	//bool m_hasSiteVenueValid;
 	bool m_catRecValid;
 	bool m_urlPubDateValid;
 	bool m_isUrlPermalinkFormatValid;
@@ -1271,7 +1280,7 @@ class XmlDoc {
 	bool m_datesValid;
 	bool m_sectionsReplyValid;
 	bool m_sectionsVotesValid;
-	//bool m_sectiondbDataValid;
+	bool m_sectiondbDataValid;
 	bool m_placedbDataValid;
 	bool m_siteHash64Valid;
 	bool m_siteHash32Valid;
@@ -1327,6 +1336,7 @@ class XmlDoc {
 	bool m_isHijackedValid;
 	bool m_dupHashValid;
 	bool m_exactContentHash64Valid;
+	bool m_looseContentHash64Valid;
 
 	// shadows
 	char m_isRSS2;
@@ -1337,7 +1347,7 @@ class XmlDoc {
 	char m_isLinkSpam2;
 	bool m_hasAddress2;
 	bool m_hasTOD2;
-	bool m_hasSiteVenue2;
+	//bool m_hasSiteVenue2;
 	char m_hasContactInfo2;
 	char m_isSiteRoot2;
 
@@ -1381,6 +1391,7 @@ class XmlDoc {
 	RdbList m_likedbList;
 	uint64_t m_dupHash;
 	long long m_exactContentHash64;
+	long long m_looseContentHash64;
 	Msg0 m_msg0;
 	Msg5 m_msg5;
 	char m_isDup;
@@ -1428,6 +1439,12 @@ class XmlDoc {
 	//char   *m_contactTitleRec;
 	//long    m_contactTitleRecSize;
 	char    m_isIndexed;
+
+	// confusing, i know! these are used exclsusively by
+	// getNewSpiderReply() for now
+	char m_isInIndex;
+	char m_wasInIndex;
+
 	Msg8a   m_msg8a;
 	char   *m_tagdbColl;
 	long    m_tagdbCollLen;
@@ -1578,6 +1595,7 @@ class XmlDoc {
 	//bool m_useDiffbot;
 	// url to access diffbot with
 	SafeBuf m_diffbotApiUrl;
+	SafeBuf m_diffbotUrl; // exact url used to fetch reply from diffbot
 
 	bool *getRecycleDiffbotReply ( ) ;
 	SafeBuf *getTokenizedDiffbotReply ( ) ;
@@ -1960,8 +1978,8 @@ class XmlDoc {
 	*/
 
 	key_t     m_doledbKey;
-	SpiderRequest m_oldsr;
-	SpiderReply   m_newsr;
+	SpiderRequest m_sreq;
+	SpiderReply   m_srep;//newsr;
 
 	// bool flags for what procedures we have done
 	bool m_checkedUrlFilters;
@@ -2067,6 +2085,7 @@ class XmlDoc {
 	// flags for spider
 	//bool m_isAddUrl;
 	//bool m_forceDelete;
+	bool m_didDelete;
 
 	// this is non-zero if we decided not to index the doc
 	long m_indexCode;
@@ -2109,7 +2128,7 @@ class XmlDoc {
 	long          m_niceness;
 
 	bool m_usePosdb     ;
-	bool m_useDatedb    ;
+	//bool m_useDatedb    ;
 	bool m_useClusterdb ;
 	bool m_useLinkdb    ;
 	bool m_useSpiderdb  ;
@@ -2117,7 +2136,7 @@ class XmlDoc {
 	bool m_useTagdb     ;
 	bool m_usePlacedb   ;
 	//bool m_useTimedb    ;
-	//bool m_useSectiondb ;
+	bool m_useSectiondb ;
 	//bool m_useRevdb     ;
 	bool m_useSecondaryRdbs ;
 
@@ -2130,7 +2149,7 @@ class XmlDoc {
 	bool     m_storeTermListInfo;
 	char     m_sortTermListBy;
 
-	//SafeBuf m_sectiondbData;
+	SafeBuf m_sectiondbData;
 	//char *m_sectiondbData;
 	char *m_placedbData;
 	//long  m_sectiondbDataSize;
@@ -2209,6 +2228,22 @@ class XmlDoc {
 	// vector is 1-1 with words in the document body.
 	char *getFragVec ( );
 
+	bool injectDoc ( char *url ,
+			 class CollectionRec *cr ,
+			 char *content ,
+			 bool contentHasMime ,
+			 long hopCount,
+			 long charset,
+
+			 bool deleteUrl,
+			 char contentType, // CT_HTML, CT_XML
+			 bool spiderLinks ,
+			 bool newOnly, // index iff new
+
+			 void *state,
+			 void (*callback)(void *state) );
+
+
 	bool injectLinks  ( HashTableX *linkDedupTable ,
 			    HashTableX *domDedupTable ,
 			    void *finalState , 
@@ -2245,7 +2280,7 @@ class TermDebugInfo {
 	long      m_prefixOff; // the prefix offset, like "site" or "gbadid"
 	long long m_termId;
 	long      m_date;
-	bool      m_noSplit;
+	bool      m_shardByTermId;
 
 	//float     m_weight;
 	char      m_langId;
@@ -2271,7 +2306,11 @@ public:
 		m_prefix                  = NULL;
 		m_desc                    = NULL;
 		m_date                    = 0;
-		m_noSplit                 = false;
+		// should we do sharding based on termid and not the usual docid???
+		// in general this is false, but for checksum we want to shard
+		// by the checksum and not docid to avoid having to do a 
+		// gbchecksum:xxxxx search on ALL shards. much more efficient.
+		m_shardByTermId = false;
 		//m_useWeights              = false;
 		m_useSynonyms             = false;
 		m_hashGroup = -1;
@@ -2283,7 +2322,7 @@ public:
 	// "m_desc" should detail the algorithm
 	char             *m_desc;
 	long              m_date;
-	char              m_noSplit;
+	char              m_shardByTermId;
 	char              m_linkerSiteRank;
 	//char              m_useWeights;
 	char              m_useSynonyms;

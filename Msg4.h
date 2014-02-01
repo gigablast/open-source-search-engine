@@ -53,6 +53,15 @@ class Msg4 {
 			   long  niceness                 ,
 			   char  rdbId = -1               );
 
+
+	bool addMetaList ( class SafeBuf *sb ,
+			   collnum_t  collnum                  ,
+			   void      *state                    ,
+			   void      (* callback)(void *state) ,
+			   long       niceness                 ,
+			   char       rdbId = -1               ,
+			   long       shardOverride = -1       );
+
 	// this one is faster...
 	// returns false if blocked
 	bool addMetaList ( char      *metaList                 ,
@@ -61,7 +70,8 @@ class Msg4 {
 			   void      *state                    ,
 			   void      (* callback)(void *state) ,
 			   long       niceness                 ,
-			   char       rdbId = -1               );
+			   char       rdbId = -1               ,
+			   long       shardOverride = -1       );
 
 	bool addMetaList2 ( );
 
@@ -84,7 +94,8 @@ class Msg4 {
 	char      m_inUse;
 	collnum_t m_collnum;
 	long      m_niceness;
-	//bool      m_splitList;
+
+	long m_shardOverride;
 
 	char *m_metaList     ;
 	long  m_metaListSize ;

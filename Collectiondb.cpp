@@ -24,6 +24,8 @@
 #include "Users.h"
 #include "Parms.h"
 
+void testRegex ( ) ;
+
 HashTableX g_collTable;
 
 // a global class extern'd in .h file
@@ -32,7 +34,13 @@ Collectiondb g_collectiondb;
 Collectiondb::Collectiondb ( ) {
 	m_numRecs = 0;
 	m_numRecsUsed = 0;
-	m_lastUpdateTime = 0LL;
+	//m_lastUpdateTime = 0LL;
+	m_needsSave = false;
+	// sanity
+	if ( RDB_END2 >= RDB_END ) return;
+	log("db: increase RDB_END2 to at least %li in "
+	    "Collectiondb.h",(long)RDB_END);
+	char *xx=NULL;*xx=0;
 }
 
 // reset rdb
@@ -49,6 +57,7 @@ void Collectiondb::reset() {
 	g_collTable.reset();
 }
 
+/*
 bool Collectiondb::init ( bool isDump ) {
 	reset();
 	if ( g_isYippy ) return true;
@@ -75,6 +84,7 @@ bool Collectiondb::init ( bool isDump ) {
 	// otherwise, true, even if reloadList() blocked
 	return true;
 }
+*/
 
 // . save to disk
 // . returns false if blocked, true otherwise
@@ -93,7 +103,12 @@ bool Collectiondb::save ( ) {
 	return true;
 }
 
-bool Collectiondb::load ( bool isDump ) {
+///////////
+//
+// fill up our m_recs[] array based on the coll.*.*/coll.conf files
+//
+///////////
+bool Collectiondb::loadAllCollRecs ( ) {
 	char dname[1024];
 	// MDW: sprintf ( dname , "%s/collections/" , g_hostdb.m_dir );
 	sprintf ( dname , "%s" , g_hostdb.m_dir );
@@ -102,7 +117,7 @@ bool Collectiondb::load ( bool isDump ) {
 	if ( ! d.open ()) return log("admin: Could not load collection config "
 				     "files.");
 	// note it
-	log(LOG_INFO,"db: Loading collection config files.");
+	//log(LOG_INFO,"db: loading collection config files.");
 	// . scan through all subdirs in the collections dir
 	// . they should be like, "coll.main/" and "coll.mycollection/"
 	char *f;
@@ -120,16 +135,23 @@ bool Collectiondb::load ( bool isDump ) {
 		// get collnum
 		collnum_t collnum = atol ( pp + 1 );
 		// add it
-		if ( ! addExistingColl ( coll , collnum ,isDump ) )
+		if ( ! addExistingColl ( coll , collnum ) )
 			return false;
 	}
 	// note it
-	log(LOG_INFO,"db: Loaded data for %li collections. Ranging from "
-	    "collection #0 to #%li.",m_numRecsUsed,m_numRecs-1);
+	//log(LOG_INFO,"db: Loaded data for %li collections. Ranging from "
+	//    "collection #0 to #%li.",m_numRecsUsed,m_numRecs-1);
 	// update the time
-	updateTime();
+	//updateTime();
 	// don't clean the tree if just dumpin
-	if ( isDump ) return true;
+	//if ( isDump ) return true;
+	return true;
+}
+
+// after we've initialized all rdbs in main.cpp call this to clean out
+// our rdb trees
+bool Collectiondb::cleanTrees ( ) {
+
 	// remove any nodes with illegal collnums
 	Rdb *r;
 	//r = g_indexdb.getRdb();
@@ -156,7 +178,7 @@ bool Collectiondb::load ( bool isDump ) {
 	// success
 	return true;
 }
-
+/*
 void Collectiondb::updateTime() {
 	// get time now in milliseconds
 	long long newTime = gettimeofdayInMilliseconds();
@@ -167,22 +189,25 @@ void Collectiondb::updateTime() {
 	// we need a save
 	m_needsSave = true;
 }
+*/
 
 #include "Statsdb.h"
 #include "Cachedb.h"
 #include "Syncdb.h"
 
-bool Collectiondb::addExistingColl ( char *coll, 
-				     collnum_t collnum ,
-				     bool isDump ) {
+bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 
 	long i = collnum;
 
 	// ensure does not already exist in memory
-	if ( getCollnum ( coll ) >= 0 ) {
+	collnum_t oldCollnum = getCollnum(coll);
+	if ( oldCollnum >= 0 ) {
 		g_errno = EEXIST;
-		return log("admin: Trying to create collection \"%s\" but "
-			   "already exists in memory.",coll);
+		log("admin: Trying to create collection \"%s\" but "
+		    "already exists in memory. Do an ls on "
+		    "the working dir to see if there are two "
+		    "collection dirs with the same coll name",coll);
+		char *xx=NULL;*xx=0;
 	}
 
 	// create the record in memory
@@ -215,7 +240,11 @@ bool Collectiondb::addExistingColl ( char *coll,
 			   "\"%s\".",coll);
 	}
 
-	return registerCollRec ( cr , isDump , false );
+	if ( ! registerCollRec ( cr , false ) ) return false;
+
+	// we need to compile the regular expressions or update the url
+	// filters with new logic that maps crawlbot parms to url filters
+	return cr->rebuildUrlFilters ( );
 }
 
 // . add a new rec
@@ -231,7 +260,10 @@ bool Collectiondb::addNewColl ( char *coll ,
 				char customCrawl ,
 				char *cpc , 
 				long cpclen , 
-				bool saveIt ) {
+				bool saveIt ,
+				// Parms.cpp reserves this so it can be sure
+				// to add the same collnum to every shard
+				collnum_t newCollnum ) {
 
 	// ensure coll name is legit
 	char *p = coll;
@@ -249,31 +281,31 @@ bool Collectiondb::addNewColl ( char *coll ,
 	}
 	// . scan for holes
 	// . i is also known as the collection id
-	long i;
+	//long i = (long)newCollnum;
 	// no longer fill empty slots because if they do a reset then
 	// a new rec right away it will be filled with msg4 recs not
 	// destined for it. Later we will have to recycle some how!!
 	//else for ( i = 0 ; i < m_numRecs ; i++ ) if ( ! m_recs[i] ) break;
 	// right now we #define collnum_t short. so do not breach that!
-	if ( m_numRecs < 0x7fff ) {
-		// set it
-		i = m_numRecs;
-		// claim it
-		// we don't do it here, because we check i below and
-		// increment m_numRecs below.
-		//m_numRecs++;
-	}
+	//if ( m_numRecs < 0x7fff ) {
+	//	// set it
+	//	i = m_numRecs;
+	//	// claim it
+	//	// we don't do it here, because we check i below and
+	//	// increment m_numRecs below.
+	//	//m_numRecs++;
+	//}
 	// TODO: scan for holes here...
-	else { 
-		char *xx=NULL;*xx=0; }
+	//else { 
+	if ( newCollnum < 0 ) { char *xx=NULL;*xx=0; }
 
 	// ceiling?
-	long long maxColls = 1LL<<(sizeof(collnum_t)*8);
-	if ( i >= maxColls ) {
-		g_errno = ENOBUFS;
-		return log("admin: Limit of %lli collection reached. "
-			   "Collection not created.",maxColls);
-	}
+	//long long maxColls = 1LL<<(sizeof(collnum_t)*8);
+	//if ( i >= maxColls ) {
+	//	g_errno = ENOBUFS;
+	//	return log("admin: Limit of %lli collection reached. "
+	//		   "Collection not created.",maxColls);
+	//}
 	// if empty... bail, no longer accepted, use "main"
 	if ( ! coll || !coll[0] ) {
 		g_errno = EBADENGINEER;
@@ -293,12 +325,15 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// ensure does not already exist in memory
 	if ( getCollnum ( coll ) >= 0 ) {
 		g_errno = EEXIST;
-		return log("admin: Trying to create collection \"%s\" but "
-			   "already exists in memory.",coll);
+		log("admin: Trying to create collection \"%s\" but "
+		    "already exists in memory.",coll);
+		// just let it pass...
+		g_errno = 0 ;
+		return true;
 	}
 	// MDW: ensure not created on disk since time of last load
 	char dname[512];
-	sprintf(dname, "%scoll.%s.%li/",g_hostdb.m_dir,coll,i);
+	sprintf(dname, "%scoll.%s.%li/",g_hostdb.m_dir,coll,(long)newCollnum);
 	DIR *dir = opendir ( dname );
 	if ( dir ) closedir ( dir );
 	if ( dir ) {
@@ -346,7 +381,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// set coll id and coll name for coll id #i
 	strcpy ( cr->m_coll , coll );
 	cr->m_collLen = gbstrlen ( coll );
-	cr->m_collnum = i;
+	cr->m_collnum = newCollnum;
 
 	// point to this, so Rdb and RdbBase can reference it
 	coll = cr->m_coll;
@@ -419,15 +454,18 @@ bool Collectiondb::addNewColl ( char *coll ,
 		cr->m_collectiveRespiderFrequency = 0.0;
 		cr->m_restrictDomain = true;
 		// reset the crawl stats
+		// . this will core if a host was dead and then when it came
+		//   back up host #0's parms.cpp told it to add a new coll
 		cr->m_diffbotCrawlStartTime=
-			gettimeofdayInMillisecondsGlobal();
+			gettimeofdayInMillisecondsGlobalNoCore();
 		cr->m_diffbotCrawlEndTime   = 0LL;
-		// . just the basics on these for now
-		// . if certain parms are changed then the url filters
-		//   must be rebuilt, as well as possibly the waiting tree!!!
-		cr->rebuildUrlFilters ( );
 	}
 
+	// . just the basics on these for now
+	// . if certain parms are changed then the url filters
+	//   must be rebuilt, as well as possibly the waiting tree!!!
+	// . need to set m_urlFiltersHavePageCounts etc.
+	cr->rebuildUrlFilters ( );
 
 	cr->m_useRobotsTxt = true;
 
@@ -435,9 +473,19 @@ bool Collectiondb::addNewColl ( char *coll ,
 	memset ( &cr->m_localCrawlInfo , 0 , sizeof(CrawlInfo) );
 	memset ( &cr->m_globalCrawlInfo , 0 , sizeof(CrawlInfo) );
 
+	// note that
+	log("colldb: initial revival for %s",cr->m_coll);
+
+	// . assume we got some urls ready to spider
+	// . Spider.cpp will wait SPIDER_DONE_TIME seconds and if it has no
+	//   urls it spidered in that time these will get set to 0 and it
+	//   will send out an email alert if m_sentCrawlDoneAlert is not true.
+	cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = 1;
+	cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = 1;
+
 	// set some defaults. max spiders for all priorities in this 
-	// collection
-	cr->m_maxNumSpiders = 10;
+	// collection. NO, default is in Parms.cpp.
+	//cr->m_maxNumSpiders = 10;
 
 	//cr->m_needsSave = 1;
 
@@ -477,107 +525,70 @@ bool Collectiondb::addNewColl ( char *coll ,
 	}
 
 
-	return registerCollRec ( cr , false , true );
+	if ( ! registerCollRec ( cr , true ) )
+		return false;
+
+	// add the rdbbases for this coll, CollectionRec::m_bases[]
+	if ( ! addRdbBasesForCollRec ( cr ) )
+		return false;
+
+	return true;
 }
 
-bool Collectiondb::registerCollRec ( CollectionRec *cr ,
-				     bool isDump ,
-				     bool isNew ) {
+// . called only by addNewColl() and by addExistingColl()
+bool Collectiondb::registerCollRec ( CollectionRec *cr ,  bool isNew ) {
 
-	long i = cr->m_collnum;
-	long need;
-	long have;
+	// add m_recs[] and to hashtable
+	if ( ! setRecPtr ( cr->m_collnum , cr ) )
+		return false;
 
-	// grow the ptr buf if we could not plug a hole and it has not the
-	// capacity for us already...
-	if ( i >= m_numRecs && 
-	     (i+1)*4 > m_recPtrBuf.getCapacity() ) {
-		need = (i+1)*sizeof(CollectionRec *);
-		have = m_recPtrBuf.getLength();
-		need -= have;
-		// true here means to clear the new space to zeroes
-		if ( ! m_recPtrBuf.reserve ( need ,NULL, true ) )  {
-		hadError:
-			log("admin: Had error adding new collection: %s.",
-			    mstrerror(g_errno));
-			// do not delete it, might have failed to add because 
-			// not enough memory to read in the tree *-saved.dat 
-			// file on disk!! and if you delete in then core the 
-			// *-saved.dat file gets overwritten!!!
-			return false;
-		}
-		// don't forget to do this...
-		m_recPtrBuf.setLength ( need );
+	return true;
+}
+
+bool Collectiondb::addRdbBaseToAllRdbsForEachCollRec ( ) {
+	for ( long i = 0 ; i < m_numRecs ; i++ ) {
+		CollectionRec *cr = m_recs[i];
+		if ( ! cr ) continue;
+		// add rdb base files etc. for it
+		addRdbBasesForCollRec ( cr );
 	}
+	return true;
+}
 
-	// re-ref it in case it is different
-	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
-
-
-	bool verify = true;
-	long long h64;
+bool Collectiondb::addRdbBasesForCollRec ( CollectionRec *cr ) {
 
 	char *coll = cr->m_coll;
 
-
-	// first time init?
-	if ( g_collTable.m_numSlots == 0 )
-		// the hash table that maps name to collnum
-		if(!g_collTable.set(8,sizeof(collnum_t), 256,NULL,0,
-				    false,0,"nhshtbl"))
-			goto hadError;
-
-
-	// add to hash table to map name to collnum_t
-	h64 = hash64n(coll);
-	if ( ! g_collTable.addKey ( &h64 , &i ) ) 
-		goto hadError;
-
-	// store our collrec ptr in there
-	m_recs[i] = cr;
-
-	// reserve it
-	if ( i >= m_numRecs ) m_numRecs = i + 1;
-
-	// sanity to make sure collectionrec ptrs are legit
-	for ( long j = 0 ; j < m_numRecs ; j++ ) {
-		if ( ! m_recs[j] ) continue;
-		if ( m_recs[j]->m_collnum == 1 ) continue;
-	}
-
-	// count it
-	m_numRecsUsed++;
-
-	// update the time
-	updateTime();
-
+	//////
+	//
 	// if we are doing a dump from the command line, skip this stuff
-	if ( isDump ) return true;
-
-
-	if ( isNew ) verify = false;
-
+	//
+	//////
+	if ( g_dumpMode ) return true;
 
 	// tell rdbs to add one, too
-	//if ( ! g_indexdb.addColl    ( coll, verify ) ) goto hadError;
-	if ( ! g_posdb.addColl    ( coll, verify ) ) goto hadError;
-	//if ( ! g_datedb.addColl     ( coll, verify ) ) goto hadError;
+	//if ( ! g_indexdb.getRdb()->addRdbBase1    ( coll ) ) goto hadError;
+	if ( ! g_posdb.getRdb()->addRdbBase1        ( coll ) ) goto hadError;
+	//if ( ! g_datedb.getRdb()->addRdbBase1     ( coll ) ) goto hadError;
 	
-	if ( ! g_titledb.addColl    ( coll, verify ) ) goto hadError;
-	//if ( ! g_revdb.addColl      ( coll, verify ) ) goto hadError;
-	//if ( ! g_sectiondb.addColl  ( coll, verify ) ) goto hadError;
-	if ( ! g_tagdb.addColl      ( coll, verify ) ) goto hadError;
-	//if ( ! g_catdb.addColl      ( coll, verify ) ) goto hadError;
-	//if ( ! g_checksumdb.addColl ( coll, verify ) ) goto hadError;
-	//if ( ! g_tfndb.addColl      ( coll, verify ) ) goto hadError;
-	if ( ! g_clusterdb.addColl  ( coll, verify ) ) goto hadError;
-	if ( ! g_linkdb.addColl     ( coll, verify ) ) goto hadError;
-	if ( ! g_spiderdb.addColl   ( coll, verify ) ) goto hadError;
-	if ( ! g_doledb.addColl     ( coll, verify ) ) goto hadError;
+	if ( ! g_titledb.getRdb()->addRdbBase1      ( coll ) ) goto hadError;
+	//if ( ! g_revdb.getRdb()->addRdbBase1      ( coll ) ) goto hadError;
+	//if ( ! g_sectiondb.getRdb()->addRdbBase1  ( coll ) ) goto hadError;
+	if ( ! g_tagdb.getRdb()->addRdbBase1        ( coll ) ) goto hadError;
+	//if ( ! g_catdb.getRdb()->addRdbBase1      ( coll ) ) goto hadError;
+	//if ( ! g_checksumdb.getRdb()->addRdbBase1 ( coll ) ) goto hadError;
+	//if ( ! g_tfndb.getRdb()->addRdbBase1      ( coll ) ) goto hadError;
+	if ( ! g_clusterdb.getRdb()->addRdbBase1    ( coll ) ) goto hadError;
+	if ( ! g_linkdb.getRdb()->addRdbBase1       ( coll ) ) goto hadError;
+	if ( ! g_spiderdb.getRdb()->addRdbBase1     ( coll ) ) goto hadError;
+	if ( ! g_doledb.getRdb()->addRdbBase1       ( coll ) ) goto hadError;
+
+	// now clean the trees
+	cleanTrees();
 
 	// debug message
-	log ( LOG_INFO, "db: verified collection \"%s\" (%li).",
-	      coll,(long)i);
+	//log ( LOG_INFO, "db: verified collection \"%s\" (%li).",
+	//      coll,(long)cr->m_collnum);
 
 	// tell SpiderCache about this collection, it will create a 
 	// SpiderCollection class for it.
@@ -585,6 +596,10 @@ bool Collectiondb::registerCollRec ( CollectionRec *cr ,
 
 	// success
 	return true;
+
+ hadError:
+	log("db: error registering coll: %s",mstrerror(g_errno));
+	return false;
 }
 
 
@@ -671,6 +686,22 @@ bool Collectiondb::deleteRec ( char *coll , WaitEntry *we ) {
 }
 */
 
+// if there is an outstanding disk read thread or merge thread then
+// Spider.cpp will handle the delete in the callback.
+void Collectiondb::deleteSpiderColl ( SpiderColl *sc ) {
+
+	sc->m_deleteMyself = true;
+
+	// if not currently being accessed nuke it now
+	if ( ! sc->m_msg5.m_waitingForList &&
+	     ! sc->m_msg5b.m_waitingForList &&
+	     ! sc->m_msg1.m_mcast.m_inUse ) {
+		mdelete ( sc, sizeof(SpiderColl),"nukecr2");
+		delete ( sc );
+		return;
+	}
+}
+
 bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	// do not allow this if in repair mode
 	if ( g_repairMode > 0 ) {
@@ -711,7 +742,9 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	char *coll = cr->m_coll;
 
 	// note it
-	log(LOG_INFO,"db: deleting coll \"%s\"",coll);
+	log(LOG_INFO,"db: deleting coll \"%s\" (%li)",coll,
+	    (long)cr->m_collnum);
+
 	// we need a save
 	m_needsSave = true;
 
@@ -756,31 +789,35 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(collnum);
 	if ( sc ) {
 		// remove locks from lock table:
-		sc->clear();
+		sc->clearLocks();
 		//sc->m_collnum = newCollnum;
-		sc->reset();
-		mdelete ( sc, sizeof(SpiderColl),"nukecr2");
+		//sc->reset();
+		// this will put it on "death row" so it will be deleted
+		// once Msg5::m_waitingForList/Merge is NULL
+		deleteSpiderColl ( sc );
+		//mdelete ( sc, sizeof(SpiderColl),"nukecr2");
+		//delete ( sc );
 		cr->m_spiderColl = NULL;
 	}
+
+	//////
+	//
+	// remove from m_recs[]
+	//
+	//////
+	setRecPtr ( cr->m_collnum , NULL );
 
 	// free it
 	mdelete ( cr, sizeof(CollectionRec),  "CollectionRec" ); 
 	delete ( cr );
-	m_recs[(long)collnum] = NULL;
-	// dec counts
-	m_numRecsUsed--;
 
 	// do not do this here in case spiders were outstanding 
 	// and they added a new coll right away and it ended up getting
 	// recs from the deleted coll!!
 	//while ( ! m_recs[m_numRecs-1] ) m_numRecs--;
 
-	// remove it from the hashtable that maps name to collnum too
-	long long h64 = hash64n(coll);
-	g_collTable.removeKey ( &h64 );
-
 	// update the time
-	updateTime();
+	//updateTime();
 	// done
 	return true;
 }
@@ -811,6 +848,103 @@ bool Collectiondb::resetColl ( char *coll ,  bool purgeSeeds) {
 	return resetColl2 ( cr->m_collnum, purgeSeeds);
 }
 */
+
+
+bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
+
+	// first time init hashtable that maps coll to collnum
+	if ( g_collTable.m_numSlots == 0 &&
+	     ! g_collTable.set(8,sizeof(collnum_t), 256,NULL,0,
+			       false,0,"nhshtbl"))
+		return false;
+
+	// sanity
+	if ( collnum < 0 ) { char *xx=NULL;*xx=0; }
+
+	// sanity
+	long max = m_recPtrBuf.getCapacity() / sizeof(CollectionRec *);
+
+	// set it
+	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
+
+	// a delete?
+	if ( ! cr ) {
+		// sanity
+		if ( collnum >= max ) { char *xx=NULL;*xx=0; }
+		// get what's there
+		CollectionRec *oc = m_recs[collnum];
+		// let it go
+		m_recs[collnum] = NULL;
+		// if nothing already, done
+		if ( ! oc ) return true;
+		// tally it up
+		m_numRecsUsed--;
+		// delete key
+		long long h64 = hash64n(oc->m_coll);
+		// if in the hashtable UNDER OUR COLLNUM then nuke it
+		// otherwise, we might be called from resetColl2()
+		void *vp = g_collTable.getValue ( &h64 );
+		if ( ! vp ) return true;
+		collnum_t ct = *(collnum_t *)vp;
+		if ( ct != collnum ) return true;
+		g_collTable.removeKey ( &h64 );
+		return true;
+	}
+
+	// an add, make sure big enough
+	long need = ((long)collnum+1)*sizeof(CollectionRec *);
+	long have = m_recPtrBuf.getLength();
+	long need2 = need - have;
+	// . true here means to clear the new space to zeroes
+	// . this shit works based on m_length not m_capacity
+	if ( need2 > 0 && ! m_recPtrBuf.reserve ( need2 ,NULL, true ) ) {
+		log("admin: error growing rec ptr buf2.");
+		return false;
+	}
+
+	// sanity
+	if ( cr->m_collnum != collnum ) { char *xx=NULL;*xx=0; }
+	// update length of used bytes in case we re-alloc
+	m_recPtrBuf.setLength ( need );
+	// sanity
+	if ( m_recPtrBuf.getCapacity() < need ) { char *xx=NULL;*xx=0; }
+	// re-ref it in case it is different
+	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
+	// re-max
+	max = m_recPtrBuf.getCapacity() / sizeof(CollectionRec *);
+	// sanity
+	if ( collnum >= max ) { char *xx=NULL;*xx=0; }
+
+	// add to hash table to map name to collnum_t
+	long long h64 = hash64n(cr->m_coll);
+	// debug
+	//log("coll: adding key %lli for %s",h64,cr->m_coll);
+	if ( ! g_collTable.addKey ( &h64 , &collnum ) ) 
+		return false;
+
+	// ensure last is NULL
+	m_recs[collnum] = cr;
+
+	// count it
+	m_numRecsUsed++;
+
+	//log("coll: adding key4 %llu for coll \"%s\" (%li)",h64,cr->m_coll,
+	//    (long)i);
+
+	// reserve it
+	if ( collnum >= m_numRecs ) m_numRecs = collnum + 1;
+
+	// sanity to make sure collectionrec ptrs are legit
+	for ( long j = 0 ; j < m_numRecs ; j++ ) {
+		if ( ! m_recs[j] ) continue;
+		if ( m_recs[j]->m_collnum == 1 ) continue;
+	}
+
+	// update the time
+	//updateTime();
+
+	return true;
+}
 
 // . returns false if we need a re-call, true if we completed
 // . returns true with g_errno set on error
@@ -845,99 +979,11 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// CAUTION: tree might be in the middle of saving
 	// we deal with this in Process.cpp now
 	if ( g_process.isAnyTreeSaving() ) {
-		/*
-		// note it
-		log("admin: tree is saving. waiting1.");
-		// try again in 100ms
-		if ( ! g_loop.registerSleepCallback ( 100 , 
-						      we ,
-						      savingCheckWrapper1 ,
-						      0 ) ) // niceness
-			return true;
-		*/
 		// we could not complete...
 		return false;
 	}
 
-	
-
-
-	// inc the rec ptr buf i guess
-	long need = ((long)newCollnum+1)*sizeof(CollectionRec *);
-	long have = m_recPtrBuf.getLength();
-	long need2 = need - have;
-	// true here means to clear the new space to zeroes
-	if ( need2 > 0 && ! m_recPtrBuf.reserve ( need2 ,NULL, true ) ) {
-		log("admin: error growing rec ptr buf2.");
-		return true;
-	}
-	// re-ref it in case it is different
-	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
-	// ensure last is NULL
-	m_recs[newCollnum] = NULL;
-	// update length of used bytes
-	if ( need2 > 0 ) m_recPtrBuf.setLength ( need );
-
-	CollectionRec *cr = m_recs[oldCollnum];
-	if ( ! cr ) { char *xx=NULL;*xx=0; }
-	
-	/*
-	// make sure an update not in progress
-	if ( cr->m_inProgress ) { char *xx=NULL;*xx=0; }
-
-	CollectionRec tmp; 
-
-	// copy it to "tmp"
-	long size = (char *)&(cr->m_END_COPY) - (char *)cr;
-	// do not copy the hashtable crap since you will have to re-init it!
-	memcpy ( &tmp , cr , size ); // sizeof(CollectionRec) );
-
-	// tell cr's SafeBufs not to free their buffers since we did the
-	// memcpy and their ptrs are now handled by "tmp" and will be passed
-	// on to the new rec.
-	g_parms.detachSafeBufs( cr );
-
-	// delete the test coll now
-	if ( ! deleteRec ( coll , resetTurkdb  ) ) 
-		return log("admin: reset coll failed");
-
-	// make a collection called "test2" so that we copy "test"'s parms
-	bool status = addRec ( coll ,
-			       NULL , 
-			       0 ,
-			       true , // bool isNew ,
-			       (collnum_t) -1 ,
-			       // not a dump
-			       false ,
-			       // do not save it!
-			       false );
-	// bail on error
-	if ( ! status ) return log("admin: failed to add new coll for reset");
-	// get its rec
-	CollectionRec *nr = getRec ( coll );
-	// must be there
-	if ( ! nr ) { char *xx=NULL;*xx=0; }
-	// save this though, this might have changed!
-	collnum_t cn = nr->m_collnum;
-
-	// CAUTION: do not ovewrite his m_bases[] array, those RdbBases
-	// should have been deleted by the call to deleteRec(), so
-	// ensure that CollectionRec::m_bases[] is left out of the copy.
-	// Plus addRec() above should have made all new RdbBases that
-	// m_bases will point to
-
-	// overwrite its rec
-	memcpy ( nr , &tmp , size ) ; // sizeof(CollectionRec) );
-	// put that collnum back
-	nr->m_collnum = cn;
-	// set the flag
-	m_needsSave = true;
-
-	// tell cr's SafeBufs not to free their buffers since we did the
-	// memcpy and their ptrs are now stored in "tmp"'s SafeBufs and will 
-	// be passed on to the new rec.
-	g_parms.detachSafeBufs( &tmp );
-	*/
+	CollectionRec *cr = m_recs [ oldCollnum ];
 
 	// let's reset crawlinfo crap
 	cr->m_globalCrawlInfo.reset();
@@ -949,8 +995,19 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// reset spider info
 	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(oldCollnum);
 	if ( sc ) {
-		sc->clear();
-		sc->m_collnum = newCollnum;
+		// remove locks from lock table:
+		sc->clearLocks();
+		// don't do this anymore, just nuke it in case
+		// m_populatingDoledb was true etc. there are too many
+		// flags to worry about
+		//sc->m_collnum = newCollnum;
+		//sc->reset();
+		// this will put it on "death row" so it will be deleted
+		// once Msg5::m_waitingForList/Merge is NULL
+		deleteSpiderColl ( sc );
+		//mdelete ( sc, sizeof(SpiderColl),"nukecr2");
+		//delete ( sc );
+		cr->m_spiderColl = NULL;
 	}
 
 	// reset spider round
@@ -984,9 +1041,15 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// to any rdb...
 	cr->m_collnum = newCollnum;
 
+	////////
+	//
+	// ALTER m_recs[] array
+	//
+	////////
+
 	// Rdb::resetColl() needs to know the new cr so it can move
 	// the RdbBase into cr->m_bases[rdbId] array. recycling.
-	m_recs[newCollnum] = cr;
+	setRecPtr ( newCollnum , cr );
 
 	// a new directory then since we changed the collnum
 	char dname[512];
@@ -1030,17 +1093,9 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// reset crawl status too!
 	cr->m_spiderStatus = SP_INITIALIZING;
 
-	m_recs[oldCollnum] = NULL;
-
-	// readd it to the hashtable that maps name to collnum too
-	long long h64 = hash64n(cr->m_coll);
-	g_collTable.removeKey ( &h64 );
-	g_collTable.addKey ( &h64 , &newCollnum );
-
-
-
-	// update RdbBase::m_collnum to new collnum
-
+	// . set m_recs[oldCollnum] to NULL and remove from hash table
+	// . do after calls to deleteColl() above so it wont crash
+	setRecPtr ( oldCollnum , NULL );
 
 
 	// save coll.conf to new directory
@@ -1076,7 +1131,7 @@ bool addCollToTable ( char *coll , collnum_t collnum ) {
 }
 
 // get coll rec specified in the HTTP request
-CollectionRec *Collectiondb::getRec ( HttpRequest *r ) {
+CollectionRec *Collectiondb::getRec ( HttpRequest *r , bool useDefaultRec ) {
 	char *coll = r->getString ( "c" );
 	if ( coll && ! coll[0] ) coll = NULL;
 	// maybe it is crawlbot?
@@ -1091,6 +1146,18 @@ CollectionRec *Collectiondb::getRec ( HttpRequest *r ) {
 		snprintf(tmp,MAX_COLL_LEN,"%s-%s",token,name);
 		coll = tmp;
 	}
+
+	// default to main first
+	if ( ! coll && useDefaultRec ) {
+		CollectionRec *cr = g_collectiondb.getRec("main");
+		if ( cr ) return cr;
+	}
+
+	// try next in line
+	if ( ! coll && useDefaultRec ) {
+		return getFirstRec ();
+	}
+
 	// give up?
 	if ( ! coll ) return NULL;
 	//if ( ! coll || ! coll[0] ) coll = g_conf.m_defaultColl;
@@ -1320,7 +1387,7 @@ CollectionRec::CollectionRec() {
 	//m_spiderStatusMsg = NULL;
 	// for Url::getSite()
 	m_updateSiteRulesTable = 1;
-	m_lastUpdateTime = 0LL;
+	//m_lastUpdateTime = 0LL;
 	m_clickNScrollEnabled = false;
 	// inits for sortbydatetable
 	m_inProgress = false;
@@ -1383,6 +1450,10 @@ void CollectionRec::setToDefaults ( ) {
 
 void CollectionRec::reset() {
 
+	// . grows dynamically
+	// . setting to 0 buckets should never have error
+	//m_pageCountTable.set ( 4,4,0,NULL,0,false,MAX_NICENESS,"pctbl" );
+
 	// regex_t types
 	if ( m_hasucr ) regfree ( &m_ucr );
 	if ( m_hasupr ) regfree ( &m_upr );
@@ -1402,6 +1473,27 @@ void CollectionRec::reset() {
 	     rdb->resetBase ( m_collnum );
 	}
 
+	for ( long i = 0 ; i < g_process.m_numRdbs ; i++ ) {
+		RdbBase *base = m_bases[i];
+		if ( ! base ) continue;
+		mdelete (base, sizeof(RdbBase), "Rdb Coll");
+		delete  (base);
+	}
+
+	SpiderColl *sc = m_spiderColl;
+	// if never made one, we are done
+	if ( ! sc ) return;
+
+	// spider coll also!
+	sc->m_deleteMyself = true;
+
+	// if not currently being accessed nuke it now
+	if ( ! sc->m_msg5.m_waitingForList &&
+	     ! sc->m_msg5b.m_waitingForList &&
+	     ! sc->m_msg1.m_mcast.m_inUse ) {
+		mdelete ( sc, sizeof(SpiderColl),"nukecr2");
+		delete ( sc );
+	}
 }
 
 CollectionRec *g_cr = NULL;
@@ -1428,6 +1520,9 @@ bool CollectionRec::load ( char *coll , long i ) {
 	m_collLen = gbstrlen ( coll );
 	strcpy ( m_coll , coll );
 
+	log(LOG_INFO,"db: loading conf for collection %s (%li)",coll,
+	    (long)m_collnum);
+
 	// collection name HACK for backwards compatibility
 	//if ( strcmp ( coll , "main" ) == 0 ) {
 	//	m_coll[0] = '\0';
@@ -1436,7 +1531,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 
 	// the default conf file
 	char tmp1[1024];
-	sprintf ( tmp1 , "%sdefault.conf" , g_hostdb.m_dir );
+	snprintf ( tmp1 , 1023, "%sdefault.conf" , g_hostdb.m_dir );
 
 	// . set our parms from the file.
 	// . accepts OBJ_COLLECTIONREC or OBJ_CONF
@@ -1445,39 +1540,16 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// add default reg ex IFF there are no url filters there now
 	if ( m_numRegExs == 0 ) setUrlFiltersToDefaults();
 
-	// compile regexs here
-	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
-	if ( rx && ! rx[0] ) rx = NULL;
-	if ( rx ) m_hasucr = true;
-	if ( rx && regcomp ( &m_ucr , rx ,
-		       REG_EXTENDED|REG_ICASE|
-		       REG_NEWLINE|REG_NOSUB) ) {
-			// error!
-			return log("xmldoc: regcomp %s failed: %s. "
-				   "Ignoring.",
-				   rx,mstrerror(errno));
-	}
-
-	rx = m_diffbotUrlProcessRegEx.getBufStart();
-	if ( rx && ! rx[0] ) rx = NULL;
-	if ( rx ) m_hasupr = true;
-	if ( rx && regcomp ( &m_upr , rx ,
-		       REG_EXTENDED|REG_ICASE|
-		       REG_NEWLINE|REG_NOSUB) ) {
-			// error!
-			return log("xmldoc: regcomp %s failed: %s. "
-				   "Ignoring.",
-				   rx,mstrerror(errno));
-	}
-
+	// temp check
+	//testRegex();
 
 	//
 	// LOAD the crawlinfo class in the collectionrec for diffbot
 	//
 	// LOAD LOCAL
-	sprintf ( tmp1 , "%scoll.%s.%li/localcrawlinfo.dat",
+	snprintf ( tmp1 , 1023, "%scoll.%s.%li/localcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	log(LOG_INFO,"db: loading %s",tmp1);
+	log(LOG_DEBUG,"db: loading %s",tmp1);
 	m_localCrawlInfo.reset();
 	SafeBuf sb;
 	// fillfromfile returns 0 if does not exist, -1 on read error
@@ -1485,16 +1557,71 @@ bool CollectionRec::load ( char *coll , long i ) {
 		//m_localCrawlInfo.setFromSafeBuf(&sb);
 		// it is binary now
 		memcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
+
+	
+	log("coll: loaded %s (%li) local hasurlsready=%li",
+	    m_coll,
+	    (long)m_collnum,
+	    (long)m_localCrawlInfo.m_hasUrlsReadyToSpider);
+
+
+	// we introduced the this round counts, so don't start them at 0!!
+	if ( m_spiderRoundNum == 0 &&
+	     m_localCrawlInfo.m_pageDownloadSuccessesThisRound <
+	     m_localCrawlInfo.m_pageDownloadSuccesses ) {
+		log("coll: fixing process count this round for %s",m_coll);
+		m_localCrawlInfo.m_pageDownloadSuccessesThisRound =
+			m_localCrawlInfo.m_pageDownloadSuccesses;
+	}
+
+	// we introduced the this round counts, so don't start them at 0!!
+	if ( m_spiderRoundNum == 0 &&
+	     m_localCrawlInfo.m_pageProcessSuccessesThisRound <
+	     m_localCrawlInfo.m_pageProcessSuccesses ) {
+		log("coll: fixing process count this round for %s",m_coll);
+		m_localCrawlInfo.m_pageProcessSuccessesThisRound =
+			m_localCrawlInfo.m_pageProcessSuccesses;
+	}
+
+	// fix from old bug that was fixed
+	//if ( m_spiderRoundNum == 0 &&
+	//     m_collectiveRespiderFrequency > 0.0 &&
+	//     m_localCrawlInfo.m_sentCrawlDoneAlert ) {
+	//	log("coll: bug fix: resending email alert for coll %s (%li) "
+	//	    "of respider freq %f",m_coll,(long)m_collnum,
+	//	    m_collectiveRespiderFrequency);
+	//	m_localCrawlInfo.m_sentCrawlDoneAlert = false;
+	//}
+
+
 	// LOAD GLOBAL
-	sprintf ( tmp1 , "%scoll.%s.%li/globalcrawlinfo.dat",
+	snprintf ( tmp1 , 1023, "%scoll.%s.%li/globalcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	log(LOG_INFO,"db: loading %s",tmp1);
+	log(LOG_DEBUG,"db: loading %s",tmp1);
 	m_globalCrawlInfo.reset();
 	sb.reset();
 	if ( sb.fillFromFile ( tmp1 ) > 0 )
 		//m_globalCrawlInfo.setFromSafeBuf(&sb);
 		// it is binary now
 		memcpy ( &m_globalCrawlInfo , sb.getBufStart(),sb.length() );
+
+	log("coll: loaded %s (%li) global hasurlsready=%li",
+	    m_coll,
+	    (long)m_collnum,
+	    (long)m_globalCrawlInfo.m_hasUrlsReadyToSpider);
+	
+
+	////////////
+	//
+	// PAGE COUNT TABLE for doing quotas in url filters
+	//
+	/////////////
+	// log it up if there on disk
+	//snprintf ( tmp1 , 1023, "/coll.%s.%li/pagecounts.dat",
+	//	   m_coll , (long)m_collnum );
+	//if ( ! m_pageCountTable.load ( g_hostdb.m_dir , tmp1 ) && g_errno )
+	//	log("db: failed to load page count table: %s",
+	//	    mstrerror(g_errno));
 
 	// ignore errors i guess
 	g_errno = 0;
@@ -1649,17 +1776,20 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_spiderIpWaits[n] = 1000;
 	m_numRegExs5++;
 
-	m_spiderIpMaxSpiders[n] = 1;
+	m_spiderIpMaxSpiders[n] = 7;
 	m_numRegExs6++;
 
-	m_spidersEnabled[n] = 1;
-	m_numRegExs7++;
+	//m_spidersEnabled[n] = 1;
+	//m_numRegExs7++;
+
+	m_harvestLinks[n] = 1;
+	m_numRegExs8++;
 
 	//m_spiderDiffbotApiNum[n] = 1;
 	//m_numRegExs11++;
-	m_spiderDiffbotApiUrl[n].set("");
-	m_spiderDiffbotApiUrl[n].nullTerm();
-	m_numRegExs11++;
+	//m_spiderDiffbotApiUrl[n].set("");
+	//m_spiderDiffbotApiUrl[n].nullTerm();
+	//m_numRegExs11++;
 }
 
 /*
@@ -1716,7 +1846,7 @@ bool CollectionRec::save ( ) {
 	//if ( m_collLen == 0 )
 	//	sprintf ( tmp , "%scoll.main/coll.conf", g_hostdb.m_dir);
 	//else
-	sprintf ( tmp , "%scoll.%s.%li/coll.conf", 
+	snprintf ( tmp , 1023, "%scoll.%s.%li/coll.conf", 
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
 	if ( ! g_parms.saveToXml ( (char *)this , tmp ) ) return false;
 	// log msg
@@ -1726,7 +1856,7 @@ bool CollectionRec::save ( ) {
 	// save the crawlinfo class in the collectionrec for diffbot
 	//
 	// SAVE LOCAL
-	sprintf ( tmp , "%scoll.%s.%li/localcrawlinfo.dat",
+	snprintf ( tmp , 1023, "%scoll.%s.%li/localcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
 	//log("coll: saving %s",tmp);
 	SafeBuf sb;
@@ -1739,7 +1869,7 @@ bool CollectionRec::save ( ) {
 		g_errno = 0;
 	}
 	// SAVE GLOBAL
-	sprintf ( tmp , "%scoll.%s.%li/globalcrawlinfo.dat",
+	snprintf ( tmp , 1023, "%scoll.%s.%li/globalcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
 	//log("coll: saving %s",tmp);
 	sb.reset();
@@ -1751,9 +1881,24 @@ bool CollectionRec::save ( ) {
 		    tmp,mstrerror(g_errno));
 		g_errno = 0;
 	}
-	
+
 	// do not need a save now
 	m_needsSave = false;
+
+	// waiting tree is saved in SpiderCache::save() called by Process.cpp
+	//SpiderColl *sc = m_spiderColl;
+	//if ( ! sc ) return true;
+
+	// save page count table which has # of pages indexed per 
+	// subdomain/site and firstip for doing quotas in url filters table
+	//snprintf ( tmp , 1023, "coll.%s.%li/pagecounts.dat",
+	//	   m_coll , (long)m_collnum );
+	//if ( ! m_pageCountTable.save ( g_hostdb.m_dir , tmp ) ) {
+	//	log("db: failed to save file %s : %s",tmp,mstrerror(g_errno));
+	//	g_errno = 0;
+	//}
+
+
 	return true;
 }
 
@@ -1883,12 +2028,43 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 	return false;
 }
 
+bool expandRegExShortcuts ( SafeBuf *sb ) ;
+
+// . anytime the url filters are updated, this function is called
+// . it is also called on load of the collection at startup
 bool CollectionRec::rebuildUrlFilters ( ) {
+
+	// if not a custom crawl, and no expressions, add a default one
+	if ( m_numRegExs == 0 && ! m_isCustomCrawl ) {
+		setUrlFiltersToDefaults();
+	}
+
+
+	// set this so we know whether we have to keep track of page counts
+	// per subdomain/site and per domain. if the url filters have
+	// 'sitepages' 'domainpages' 'domainadds' or 'siteadds' we have to keep
+	// the count table SpiderColl::m_pageCountTable.
+	m_urlFiltersHavePageCounts = false;
+	for ( long i = 0 ; i < m_numRegExs ; i++ ) {
+		// get the ith rule
+		SafeBuf *sb = &m_regExs[i];
+		char *p = sb->getBufStart();
+		if ( strstr(p,"sitepages") ||
+		     strstr(p,"domainpages") ||
+		     strstr(p,"siteadds") ||
+		     strstr(p,"domainadds") ) {
+			m_urlFiltersHavePageCounts = true;
+			break;
+		}
+	}
+
 
 	// only for diffbot custom crawls
 	if ( m_isCustomCrawl != 1 && // crawl api
 	     m_isCustomCrawl != 2 )  // bulk api
 		return true;
+
+	//logf(LOG_DEBUG,"db: rebuilding url filters");
 
 	char *ucp = m_diffbotUrlCrawlPattern.getBufStart();
 	if ( ucp && ! ucp[0] ) ucp = NULL;
@@ -1923,12 +2099,12 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	for ( long i = 0 ; i < MAX_FILTERS ; i++ ) {
 		m_regExs[i].purge();
 		m_spiderPriorities[i] = 0;
-		m_maxSpidersPerRule [i] = 10;
+		m_maxSpidersPerRule [i] = 100;
 		m_spiderIpWaits     [i] = wait;
 		m_spiderIpMaxSpiders[i] = 7; // keep it respectful
-		m_spidersEnabled    [i] = 1;
+		//m_spidersEnabled    [i] = 1;
 		m_spiderFreqs       [i] =m_collectiveRespiderFrequency;
-		m_spiderDiffbotApiUrl[i].purge();
+		//m_spiderDiffbotApiUrl[i].purge();
 		m_harvestLinks[i] = true;
 	}
 
@@ -1947,6 +2123,24 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		i++;
 	}
 
+	// and for docs that have errors respider once every 5 hours
+	m_regExs[i].set("errorcount==1");
+	m_spiderPriorities   [i] = 40;
+	m_spiderFreqs        [i] = 0.001; // 86 seconds
+	i++;
+
+	// and for docs that have errors respider once every 5 hours
+	m_regExs[i].set("errorcount==2");
+	m_spiderPriorities   [i] = 40;
+	m_spiderFreqs        [i] = 0.1; // 2.4 hrs
+	i++;
+
+	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
+	m_regExs[i].set("errorcount>=3");
+	m_spiderPriorities   [i] = 30;
+	m_spiderFreqs        [i] = 30; // 30 days
+	i++;
+
 	// 3rd rule for respidering
 	if ( m_collectiveRespiderFrequency > 0.0 ) {
 		m_regExs[i].set("lastspidertime>={roundstart}");
@@ -1954,7 +2148,11 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_spiderPriorities   [i] = 10;
 		// just turn off spidering. if we were to set priority to
 		// filtered it would be removed from index!
-		m_spidersEnabled     [i] = 0;
+		//m_spidersEnabled     [i] = 0;
+		m_maxSpidersPerRule[i] = 0;
+		// temp hack so it processes in xmldoc.cpp::getUrlFilterNum()
+		// which has been obsoleted, but we are running old code now!
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 	}
 	// if collectiverespiderfreq is 0 or less then do not RE-spider
@@ -1967,27 +2165,19 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_spiderPriorities   [i] = 10;
 		// just turn off spidering. if we were to set priority to
 		// filtered it would be removed from index!
-		m_spidersEnabled     [i] = 0;
+		//m_spidersEnabled     [i] = 0;
+		m_maxSpidersPerRule[i] = 0;
+		// temp hack so it processes in xmldoc.cpp::getUrlFilterNum()
+		// which has been obsoleted, but we are running old code now!
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 	}
-
-	// and for docs that have errors respider once every 5 hours
-	m_regExs[i].set("errorcount>0 && errcount<3");
-	m_spiderPriorities   [i] = 40;
-	m_spiderFreqs        [i] = 0.2; // half a day
-	i++;
-
-	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
-	m_regExs[i].set("errorcount>=3");
-	m_spiderPriorities   [i] = 30;
-	m_spiderFreqs        [i] = 30; // 30 days
-	i++;
 
 	// url crawl and process pattern
 	if ( ucp && upp ) {
 		m_regExs[i].set("matchesucp && matchesupp");
 		m_spiderPriorities   [i] = 55;
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// if just matches ucp, just crawl it, do not process
 		m_regExs[i].set("matchesucp");
@@ -1997,7 +2187,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("matchesupp");
 		m_spiderPriorities   [i] = 53;
 		m_harvestLinks       [i] = false;
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// do not crawl anything else
 		m_regExs[i].set("default");
@@ -2010,7 +2200,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("matchesucp");
 		m_spiderPriorities   [i] = 54;
 		// process everything since upp is empty
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// do not crawl anything else
 		m_regExs[i].set("default");
@@ -2023,7 +2213,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("matchesupp");
 		m_spiderPriorities   [i] = 53;
 		//m_harvestLinks       [i] = false;
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 		// crawl everything by default, no processing
 		m_regExs[i].set("default");
@@ -2036,7 +2226,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// crawl everything by default, no processing
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = 50;
-		m_spiderDiffbotApiUrl[i].set ( api );
+		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 	}
 
@@ -2046,9 +2236,123 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	m_numRegExs10 = i;
 	m_numRegExs5  = i;
 	m_numRegExs6  = i;
-	m_numRegExs7  = i;
+	//m_numRegExs7  = i;
 	m_numRegExs8  = i;
-	m_numRegExs11 = i;
+	//m_numRegExs11 = i;
+
+	///////
+	//
+	// recompile regular expressions
+	//
+	///////
+
+
+	if ( m_hasucr ) {
+		regfree ( &m_ucr );
+		m_hasucr = false;
+	}
+
+	if ( m_hasupr ) {
+		regfree ( &m_upr );
+		m_hasupr = false;
+	}
+
+	// copy into tmpbuf
+	SafeBuf tmp;
+
+	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
+	if ( rx && ! rx[0] ) rx = NULL;
+	if ( rx ) {
+		tmp.safeStrcpy ( rx );
+		expandRegExShortcuts ( &tmp );
+		m_hasucr = true;
+	}
+	if ( rx && regcomp ( &m_ucr , tmp.getBufStart() ,
+			     REG_EXTENDED| //REG_ICASE|
+			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
+		// error!
+		log("coll: regcomp %s failed: %s. "
+			   "Ignoring.",
+			   rx,mstrerror(errno));
+		regfree ( &m_ucr );
+		m_hasucr = false;
+	}
+
+
+	rx = m_diffbotUrlProcessRegEx.getBufStart();
+	if ( rx && ! rx[0] ) rx = NULL;
+	if ( rx ) m_hasupr = true;
+	if ( rx ) {
+		tmp.safeStrcpy ( rx );
+		expandRegExShortcuts ( &tmp );
+		m_hasupr = true;
+	}
+	if ( rx && regcomp ( &m_upr , tmp.getBufStart() ,
+			     REG_EXTENDED| // REG_ICASE|
+			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
+		// error!
+		log("coll: regcomp %s failed: %s. "
+		    "Ignoring.",
+		    rx,mstrerror(errno));
+		regfree ( &m_upr );
+		m_hasupr = false;
+	}
 
 	return true;
+}
+
+// for some reason the libc we use doesn't support these shortcuts,
+// so expand them to something it does support
+bool expandRegExShortcuts ( SafeBuf *sb ) {
+	if ( ! sb->safeReplace3 ( "\\d" , "[0-9]" ) ) return false;
+	if ( ! sb->safeReplace3 ( "\\D" , "[^0-9]" ) ) return false;
+	if ( ! sb->safeReplace3 ( "\\l" , "[a-z]" ) ) return false;
+	if ( ! sb->safeReplace3 ( "\\a" , "[A-Za-z]" ) ) return false;
+	if ( ! sb->safeReplace3 ( "\\u" , "[A-Z]" ) ) return false;
+	if ( ! sb->safeReplace3 ( "\\w" , "[A-Za-z0-9_]" ) ) return false;
+	if ( ! sb->safeReplace3 ( "\\W" , "[^A-Za-z0-9_]" ) ) return false;
+	return true;
+}
+
+
+void testRegex ( ) {
+
+	//
+	// TEST
+	//
+
+	char *rx;
+
+	rx = "(http://)?(www.)?vault.com/rankings-reviews/company-rankings/law/vault-law-100/\\.aspx\\?pg=\\d";
+
+	rx = "(http://)?(www.)?vault.com/rankings-reviews/company-rankings/law/vault-law-100/\\.aspx\\?pg=[0-9]";
+
+	rx = ".*?article[0-9]*?.html";
+
+	regex_t ucr;
+
+	if ( regcomp ( &ucr , rx ,
+		       REG_ICASE
+		       |REG_EXTENDED
+		       //|REG_NEWLINE
+		       //|REG_NOSUB
+		       ) ) {
+		// error!
+		log("xmldoc: regcomp %s failed: %s. "
+		    "Ignoring.",
+		    rx,mstrerror(errno));
+	}
+
+	logf(LOG_DEBUG,"db: compiled '%s' for crawl pattern",rx);
+
+	//char *url = "http://www.vault.com/rankings-reviews/company-rankings/law/vault-law-100/.aspx?pg=2";
+	char *url = "http://staticpages.diffbot.com/testCrawl/regex/article1.html";
+
+	if ( regexec(&ucr,url,0,NULL,0) )
+		logf(LOG_DEBUG,"db: failed to match %s on %s",
+		     url,rx);
+	else
+		logf(LOG_DEBUG,"db: MATCHED %s on %s",
+		     url,rx);
+	exit(0);
 }

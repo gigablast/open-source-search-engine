@@ -89,7 +89,7 @@
 //#include "Msg33.h"
 //#include "mmseg.h"  // open_lexicon(), etc. for Chinese parsing
 //#include "PageTopDocs.h"
-#include "PageNetTest.h"
+//#include "PageNetTest.h"
 //#include "Sync.h"
 #include "Pages.h"
 //#include "Msg1c.h"
@@ -176,7 +176,10 @@ void dumpLinkdb          ( char *coll,long sfn,long numFiles,bool includeTree,
 			   char *url );
 
 void exitWrapper ( void *state ) { exit(0); };
+
+bool g_recoveryMode = false;
 	
+bool isRecoveryFutile ( ) ;
 
 //////
 //
@@ -902,6 +905,9 @@ int main ( int argc , char *argv[] ) {
 		//printOverview ( );
 		return 0;
 	}
+
+	bool hadHostId = false;
+
  	// assume our hostId is the command!
 	// now we advance 'cmd' past the hostId if we detect
 	// the presence of more args
@@ -910,6 +916,7 @@ int main ( int argc , char *argv[] ) {
 		if(argc > cmdarg+1) {
 			cmd = argv[++cmdarg];
 		}
+		hadHostId = true;
 	}
 
 	if ( strcmp ( cmd , "dosopen" ) == 0 ) {	
@@ -933,9 +940,8 @@ int main ( int argc , char *argv[] ) {
 
 	//send an email on startup for -r, like if we are recovering from an
 	//unclean shutdown.
-	bool recoveryMode = false;
-	if ( strcmp ( cmd , "-r" ) == 0 ) recoveryMode = true;		
-
+	g_recoveryMode = false;
+	if ( strcmp ( cmd , "-r" ) == 0 ) g_recoveryMode = true;		
 	bool testMandrill = false;
 	if ( strcmp ( cmd , "emailmandrill" ) == 0 ) {
 		testMandrill = true;
@@ -1631,7 +1637,7 @@ int main ( int argc , char *argv[] ) {
 			return 1; 
 		}
 		g_collectiondb.init(true);
-		g_checksumdb.getRdb()->addColl ( "finalmerge" );
+		g_checksumdb.getRdb()->addRdbBase1 ( "finalmerge" );
 		// no, otherwise won't be able to load into tree!
 		//g_conf.m_checksumdbMaxTreeMem = 50*1024*1024;
 		mergeChecksumFiles();
@@ -1698,9 +1704,13 @@ int main ( int argc , char *argv[] ) {
 	// gb install
 	if ( strcmp ( cmd , "install" ) == 0 ) {	
 		// get hostId to install TO (-1 means all)
-		long hostId = -1;
-		if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
-		return install ( ifk_install , hostId );
+		long h1 = -1;
+		long h2 = -1;
+		if ( cmdarg + 1 < argc ) h1 = atoi ( argv[cmdarg+1] );
+		// might have a range
+		if (cmdarg + 1 < argc && strstr(argv[cmdarg+1],"-") )
+			sscanf ( argv[cmdarg+1],"%li-%li",&h1,&h2);
+		return install ( ifk_install , h1 , NULL , NULL , h2 );
 	}
 	// gb install
 	if ( strcmp ( cmd , "install2" ) == 0 ) {	
@@ -1783,12 +1793,15 @@ int main ( int argc , char *argv[] ) {
 			long h2 = -1;
 			sscanf ( argv[cmdarg+1],"%li-%li",&h1,&h2);
 			if ( h1 != -1 && h2 != -1 && h1 <= h2 )
-				return install ( ifk_start , h1, 
+				//
+				// default to keepalive start for now!!
+				//
+				return install ( ifk_kstart , h1, 
 						 NULL,NULL,h2 );
 		}
 		// if it is us, do it
 		//if ( hostId != -1 ) goto mainStart;
-		return install ( ifk_start , hostId );
+		return install ( ifk_kstart , hostId );
 	}
 	// gb tmpstart [hostId]
 	if ( strcmp ( cmd , "tmpstart" ) == 0 ) {	
@@ -2189,6 +2202,17 @@ int main ( int argc , char *argv[] ) {
 	Host *h = g_hostdb.getHost ( hostId );
 	if ( ! h ) { log("db: No host has id %li.",hostId); return 1;}
 
+	// once we are in recoverymode, that means we are being restarted
+	// from having cored, so to prevent immediate core and restart
+	// ad inifinitum, look got "sigbadhandler" at the end of the 
+	// last 5 logs in the last 60 seconds. if we see that then something
+	// is prevent is from starting up so give up and exit gracefully
+	if ( g_recoveryMode && isRecoveryFutile () )
+		// exiting with 0 means no error and should tell our
+		// keep alive loop to not restart us and exit himself.
+		exit (0);
+
+
 	// HACK: enable logging for Conf.cpp, etc.
 	g_process.m_powerIsOn = true;
 
@@ -2219,6 +2243,10 @@ int main ( int argc , char *argv[] ) {
 	// init the loop, needs g_conf
 	if ( ! g_loop.init() ) {
 		log("db: Loop init failed." ); return 1; }
+
+
+	// test the inifinite keep alive bug fix. is recovery futile bug.
+	//char *xx=NULL;*xx=0; 
 
 	// the new way to save all rdbs and conf
 	// if g_process.m_powerIsOn is false, logging will not work, so init
@@ -2280,6 +2308,12 @@ int main ( int argc , char *argv[] ) {
 	// gb dump i [fileNum] [off]
 	if ( strcmp ( cmd , "dump" ) == 0 && argc > cmdarg + 1 &&
 	     argv[cmdarg+1][0]=='I')  {		
+
+		if ( ! hadHostId ) {
+			log("you must supply hostid in the dump cmd");
+			return 0;
+		}
+
 		long      fileNum = 0;
 		long long off     = 0LL;
 		char     *NAME = NULL;
@@ -2293,6 +2327,12 @@ int main ( int argc , char *argv[] ) {
 	}
 	if ( strcmp ( cmd , "dump" ) == 0 && argc > cmdarg + 1 &&
 	     argv[cmdarg+1][0]=='T')  {		
+
+		if ( ! hadHostId ) {
+			log("you must supply hostid in the dump cmd");
+			return 0;
+		}
+
 		long      fileNum = 0;
 		long long off     = 0LL;
 		if ( cmdarg + 2 < argc ) fileNum = atoi  (argv[cmdarg+2]);
@@ -2309,16 +2349,29 @@ int main ( int argc , char *argv[] ) {
 	//   gb dump s [coll][fileNum] [numFiles] [includeTree] [0=old|1=new]
 	//           [priority] [printStats?]
 	if ( strcmp ( cmd , "dump" ) == 0 ) {
+
+		if ( ! hadHostId ) {
+			log("you must supply hostid in the dump cmd");
+			return 0;
+		}
+
+		//
+		// tell Collectiondb, not to verify each rdb's data
+		//
+		g_dumpMode = true;
+
 		if ( cmdarg+1 >= argc ) goto printHelp;
 		long startFileNum =  0;
 		long numFiles     = -1;
 		long includeTree  =  1;
 		long long termId  = -1;
 		char *coll = "";
+
 		// we have to init collection db because we need to know if 
 		// the collnum is legit or not in the tree
-		if ( ! g_collectiondb.init(true)   ) {
+		if ( ! g_collectiondb.loadAllCollRecs()   ) {
 			log("db: Collectiondb init failed." ); return 1; }
+
 		if ( cmdarg+2 < argc ) coll         = argv[cmdarg+2];
 		if ( cmdarg+3 < argc ) startFileNum = atoi(argv[cmdarg+3]);
 		if ( cmdarg+4 < argc ) numFiles     = atoi(argv[cmdarg+4]);
@@ -2326,7 +2379,17 @@ int main ( int argc , char *argv[] ) {
 		if ( cmdarg+6 < argc ) {
 			char *targ = argv[cmdarg+6];
 			if ( is_alpha_a(targ[0]) ) {
+				char *colon = strstr(targ,":");
+				long long prefix64 = 0LL;
+				if ( colon ) {
+					*colon = '\0';
+					prefix64 = hash64n(targ);
+					targ = colon + 1;
+				}
+				// hash the term itself
 				termId = hash64n(targ);
+				// hash prefix with termhash
+				termId = hash64(termId,prefix64);
 				termId &= TERMID_MASK;
 			}
 			else {
@@ -2508,7 +2571,7 @@ int main ( int argc , char *argv[] ) {
 		log("db: setrlimit RLIMIT_NOFILE failed!");
 		char *xx=NULL;*xx=0;
 	}
-	log("db: RLIMIT_NOFILE = %li",(long)rlim.rlim_max);
+	//log("db: RLIMIT_NOFILE = %li",(long)rlim.rlim_max);
 	//exit(0);
 	// . disable o/s's and hard drive's read ahead 
 	// . set multcount to 16 --> 1 interrupt for every 16 sectors read
@@ -2623,9 +2686,9 @@ int main ( int argc , char *argv[] ) {
 	if ( g_conf.m_readOnlyMode )
 		log("db: -- Read Only Mode Set. Can Not Add New Data. --");
 //#ifdef SPLIT_INDEXDB
-	if ( g_hostdb.m_indexSplits > 1 )
-		log("db: -- Split Index ENABLED. Split count set to: %li --",
-		    g_hostdb.m_indexSplits);
+	//if ( g_hostdb.m_indexSplits > 1 )
+	//	log("db: -- Split Index ENABLED. Split count set to: %li --",
+	//	    g_hostdb.m_indexSplits);
 //#endif
 
 	// . set up shared mem now, only on udpServer2
@@ -2639,15 +2702,15 @@ int main ( int argc , char *argv[] ) {
 	// . collectiondb, does not use rdb, loads directly from disk
 	// . do this up here so RdbTree::fixTree() can fix RdbTree::m_collnums
 	// . this is a fake init, cuz we pass in "true"
-	if ( ! g_isYippy && ! g_collectiondb.init(true)   ) {
-		log("db: Collectiondb init failed." ); return 1; }
+	if ( ! g_isYippy && ! g_collectiondb.loadAllCollRecs() ) {
+		log("db: Collectiondb load failed." ); return 1; }
 
 	// a hack to rename files that were not renamed because of a bug
 	// in the repair/build process
 	/*
 	if ( ! g_titledb2.init2    ( 100000000 ) ) {
 		log("db: Titledb init2 failed." ); return 1; }
-	if ( ! g_titledb2.addColl  ( "mainRebuild" ) ) {
+	if ( ! g_titledb2.addRdbBase1  ( "mainRebuild" ) ) {
 		log("db: Titledb addcoll failed." ); return 1; }
 	g_titledb2
 	// get the base
@@ -2757,13 +2820,18 @@ int main ( int argc , char *argv[] ) {
 		log("db: Serpdb init failed."   ); return 1; }
 	if ( ! g_monitordb.init()     ) {
 		log("db: Monitordb init failed."   ); return 1; }
-	// sectiondb
-	//if ( ! g_sectiondb.init()     ) {
-	//	log("db: Sectiondb init failed."   ); return 1; }
+	// use sectiondb again for its immense voting power for detecting and
+	// removing web page chrome, categories, etc. only use if 
+	// CollectionRec::m_isCustomCrawl perhaps to save space.
+	if ( ! g_sectiondb.init()     ) {
+		log("db: Sectiondb init failed."   ); return 1; }
 	//if ( ! g_placedb.init()     ) {
 	//	log("db: Placedb init failed."   ); return 1; }
-	// collectiondb, does not use rdb, loads directly from disk
-	if ( ! g_collectiondb.init()   ) {
+	// now clean the trees since all rdbs have loaded their rdb trees
+	// from disk, we need to remove bogus collection data from teh trees
+	// like if a collection was delete but tree never saved right it'll
+	// still have the collection's data in it
+	if ( ! g_collectiondb.addRdbBaseToAllRdbsForEachCollRec ( ) ) {
 		log("db: Collectiondb init failed." ); return 1; }
 	// . now read in a little bit of each db and make sure the contained
 	//   records belong in our group
@@ -2878,10 +2946,10 @@ int main ( int argc , char *argv[] ) {
 	//	return 1;
 	//}
 
-	if( !g_pageNetTest.init() ) {
-		log( "init: PageNetTest init failed." );
-		return 1;
-	}
+	//if( !g_pageNetTest.init() ) {
+	//	log( "init: PageNetTest init failed." );
+	//	return 1;
+	//}
 
 	//if(!Msg6a::init()) {
 	//	log( "init: Quality Agent init failed." );
@@ -2909,8 +2977,13 @@ int main ( int argc , char *argv[] ) {
 
 	// Load the category language table
 	g_countryCode.loadHashTable();
-	log(LOG_INFO, "cat: Loaded %ld entries from Category country table.",
-			g_countryCode.getNumEntries());
+	long nce = g_countryCode.getNumEntries();
+	//log(LOG_INFO, "cat: Loaded %ld entries from Category country table.",
+	//		g_countryCode.getNumEntries());
+	if ( nce != 544729 )
+		log("cat: unsupported catcountry.dat file with %li entries",
+		    nce);
+
 	
 	//g_siteBonus.init();
 
@@ -3223,7 +3296,8 @@ int main ( int argc , char *argv[] ) {
 		return 0;
 	}
 
-	if(recoveryMode) {
+
+	if(g_recoveryMode) {
 		//now that everything is init-ed send the message.
 		char buf[256];
 		log("admin: Sending emails.");
@@ -3524,12 +3598,16 @@ void doCmdAll ( int fd, void *state ) {
 		exit(0);
 	}
 
+	// restrict broadcast to this hostid range!
+
 	// returns true with g_errno set on error. uses g_udpServer
 	if ( g_parms.broadcastParmList ( &parmList ,
 					 NULL , 
 					 doneCmdAll , // callback when done
 					 s_sendToHosts ,
-					 s_sendToProxies ) ) {
+					 s_sendToProxies ,
+					 s_hostId ,  // -1 means all
+					 s_hostId2 ) ) { // -1 means all
 		log("cmd: error sending command: %s",mstrerror(g_errno));
 		exit(0);
 		return;
@@ -4077,10 +4155,21 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		return 0;
 	}
 
+	HashTableX iptab;
+	char tmpBuf[2048];
+	iptab.set(4,4,64,tmpBuf,2048,true,0,"iptsu");
 
 	// go through each host
 	for ( long i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
 		Host *h2 = g_hostdb.getHost(i);
+
+		// if host ip is like the 10th occurence then do
+		// not do ampersand
+		iptab.addScore((long *)&h2->m_ip);
+		long score = iptab.getScore32(&h2->m_ip);
+		char *amp = " &";
+		if ( (score % 6) == 0 ) amp = "";
+			
 		// limit install to this hostId if it is >= 0
 		//if ( hostId >= 0 && h2->m_hostId != hostId ) continue;
 		if ( hostId >= 0 && hostId2 == -1 ) {
@@ -4141,11 +4230,11 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
-				"./gb -c %shosts.conf dumpmissing %s %li "
+				"./gb dumpmissing %s %li "
 				">& ./missing%li &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				coll           ,
 				h2->m_hostId   ,
 				h2->m_hostId   );
@@ -4159,11 +4248,11 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
-				"./gb -c %shosts.conf dumpdups %s %li "
+				"./gb dumpdups %s %li "
 				">& ./dups%li &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				coll           ,
 				h2->m_hostId   ,
 				h2->m_hostId   );
@@ -4178,12 +4267,12 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
-				"./gb -c %shosts.conf %li "
+				"./gb %li "
 				"removedocids %s %s %li "
 				">& ./removelog%03li &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				h2->m_hostId   ,
 				coll           ,
 				dir            , // really docidsFile
@@ -4205,6 +4294,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"%sgb "
 				//"%sgbfilter "
 				"%shosts.conf "
+				"%slocalhosts.conf "
 				//"%shosts2.conf "
 				"%sgb.conf "
 				"%stmpgb "
@@ -4247,6 +4337,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 				"%s:%s"
 				,
+				dir,
 				dir,
 				dir,
 				dir,
@@ -4358,13 +4449,21 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		else if ( installFlag == ifk_installgb ) {
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
+
+			File f;
+			char *target = "gb.new";
+			f.set(h2->m_dir,target);
+			if ( ! f.doesExist() ) target = "gb";
+
 			sprintf(tmp,
 				"rcp "
-				"%sgb.new "
-				"%s:%s/gb.installed &",
+				"%s%s "
+				"%s:%s/gb.installed%s",
 				dir,
+				target,
 				iptoa(h2->m_ip),
-				h2->m_dir);
+				h2->m_dir,
+				amp);
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 		}
@@ -4422,41 +4521,24 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// . assume conf file name gbHID.conf
 			// . assume working dir ends in a '/'
 			sprintf(tmp,
-				"ssh %s \"cd %s ; "
+				"ssh %s \"cd %s ; ulimit -c unlimited; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; %s"
-				"./gb -c %shosts.conf %li >& ./log%03li &\" &",
+				"./gb %li >& ./log%03li &\" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 				tmp2           ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				h2->m_hostId   ,
-				h2->m_hostId   );
+				h2->m_hostId   ,
+				amp);
 			// log it
 			log(LOG_INIT,"admin: %s", tmp);
 			// execute it
 			system ( tmp );
 		}
-		// start up a dummy cluster using hosts.conf ports + 1
-		else if ( installFlag == ifk_tmpstart ) {
-			// . assume conf file name gbHID.conf
-			// . assume working dir ends in a '/'
-			sprintf(tmp,
-				"ssh %s \"cd %s ; "
-				"cp -f tmpgb tmpgb.oldsave ; "
-				"mv -f tmpgb.installed tmpgb ; "
-				"./tmpgb -c %shosts.conf tmpstarthost "
-				"%li >& ./tmplog%03li &\" &",
-				iptoa(h2->m_ip),
-				h2->m_dir      ,
-				h2->m_dir      ,
-				h2->m_hostId   ,
-				h2->m_hostId   );
-			// log it
-			log(LOG_INIT,"admin: %s", tmp);
-			// execute it
-			system ( tmp );
-		}
+		/*
+		// SEQUENTIALLY start
 		else if ( installFlag == ifk_start2 ) {
 			// . save old log now, too
 			char tmp2[1024];
@@ -4470,14 +4552,38 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				h2->m_hostId   );
 			// . assume conf file name gbHID.conf
 			// . assume working dir ends in a '/'
+			char *amp = " &";
+			if ( i > 0 && (i%5) == 0 ) amp = "";
 			sprintf(tmp,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; %s"
-				"./gb -c %shosts.conf %li >& ./log%03li &\" &",
+				"./gb %li >& ./log%03li &\"%s",
 				iptoa(h2->m_ipShotgun),
 				h2->m_dir      ,
 				tmp2           ,
+				//h2->m_dir      ,
+				h2->m_hostId   ,
+				h2->m_hostId   ,
+				amp );
+			// log it
+			log(LOG_INIT,"admin: %s", tmp);
+			// execute it
+			system ( tmp );
+		}
+		*/
+		// start up a dummy cluster using hosts.conf ports + 1
+		else if ( installFlag == ifk_tmpstart ) {
+			// . assume conf file name gbHID.conf
+			// . assume working dir ends in a '/'
+			sprintf(tmp,
+				"ssh %s \"cd %s ; "
+				"cp -f tmpgb tmpgb.oldsave ; "
+				"mv -f tmpgb.installed tmpgb ; "
+				"./tmpgb -c %shosts.conf tmpstarthost "
+				"%li >& ./tmplog%03li &\" &",
+				iptoa(h2->m_ip),
+				h2->m_dir      ,
 				h2->m_dir      ,
 				h2->m_hostId   ,
 				h2->m_hostId   );
@@ -4502,7 +4608,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// . assume working dir ends in a '/'
 			//to test add: ulimit -t 10; to the ssh cmd
 			sprintf(tmp,
-				"ssh %s \"cd %s ; "
+				"ssh %s \"cd %s ; ulimit -c unlimited; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
 				"ADDARGS='' ; "
@@ -4511,20 +4617,21 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
  				"{ "
 				"mv ./log%03li ./log%03li-\\`date '+"
 				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
-				"./gb -c %shosts.conf %li "
+				"./gb %li "
 				"\\$ADDARGS "
 				" >& ./log%03li ;"
 				"EXITSTATUS=\\$? ; "
 				"ADDARGS='-r' ; "
 				"} " 
- 				"done >& /dev/null & \" & ",
+ 				"done >& /dev/null & \" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 				h2->m_hostId   ,
 				h2->m_hostId   ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				h2->m_hostId   ,
-				h2->m_hostId   );
+				h2->m_hostId   ,
+				amp );
 
 			// log it
 			log(LOG_INIT,"admin: %s", tmp);
@@ -4739,11 +4846,11 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			sprintf(tmp,
 				"ssh %s \"cd %s ;"
 				//"%s"
-				"./gb -c %shosts.conf genclusterdb %s %li >&"
+				"./gb genclusterdb %s %li >&"
 				"./log%03li-genclusterdb &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
-				h2->m_dir      ,
+				//h2->m_dir      ,
 				//tmp2           ,
 				coll           ,
 				h2->m_hostId   ,
@@ -4753,27 +4860,42 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// execute it
 			system ( tmp );
 		}
+		/*
+		// SEQUENTIAL rcps
 		else if ( installFlag == ifk_installgb2 ) {
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
+			char *amp = " &";
+			if ( i > 0 && (i%5) == 0 ) amp = "";
+
+			File f;
+			char *target = "gb.new";
+			f.set(h2->m_dir,target);
+			if ( ! f.doesExist() ) target = "gb";
+
 			sprintf(tmp,
 				"rcp "
-				"%sgb.new "
-				"%s:%s/gb.installed &",
+				"%s%s "
+				"%s:%s/gb.installed %s",
 				dir,
+				target ,
 				iptoa(h2->m_ipShotgun),
-				h2->m_dir);
+				h2->m_dir,
+				amp);
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 		}
+		*/
 		// dsh
 		else if ( installFlag == ifk_dsh ) {
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"ssh %s '%s' &",
+				"ssh %s 'cd %s ; %s' %s",
 				iptoa(h2->m_ip),
-				cmd );
+				h2->m_dir,
+				cmd ,
+				amp );
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 		}
@@ -4781,9 +4903,14 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		else if ( installFlag == ifk_dsh2 ) {
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
+			//sprintf(tmp,
+			//	"ssh %s '%s' &",
+			//	iptoa(h2->m_ipShotgun),
+			//	cmd );
 			sprintf(tmp,
-				"ssh %s '%s' &",
-				iptoa(h2->m_ipShotgun),
+				"ssh %s 'cd %s ; %s'",
+				iptoa(h2->m_ip),
+				h2->m_dir,
 				cmd );
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
@@ -5542,13 +5669,12 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	if ( ! hashinit() ) {
 		log("db: Failed to init hashtable." ); return ; }
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
-	g_dumpMode = true;
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
 	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	g_titledb.init ();
-	g_collectiondb.init(true);
-	g_titledb.addColl ( coll, false );
+	//g_collectiondb.init(true);
+	g_titledb.getRdb()->addRdbBase1(coll);
 	key_t startKey ;
 	key_t endKey   ;
 	key_t lastKey  ;
@@ -5821,6 +5947,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			"version=%02li "
 			//"maxLinkTextWeight=%06lu%% "
 			"hc=%li "
+			//"diffbot=%li "
 			"redir=%s "
 			"url=%s\n", 
 			k.n1 , k.n0 , 
@@ -5843,8 +5970,10 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			(long)xd->m_version,
 			//ms,
 			(long)xd->m_hopCount,
+			//(long)xd->m_isDiffbotJSONObject,
 			ru,
 			u->getUrl() );
+		//printf("%s\n",xd->ptr_utf8Content);
 		// free the mem
 		xd->reset();
 		//g_mem.printMem();
@@ -5858,14 +5987,13 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 
 void dumpTfndb (char *coll,long startFileNum,long numFiles,bool includeTree ,
 		bool verify) {
-	g_dumpMode = true;
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
 	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	g_tfndb.init ();
-	g_collectiondb.init(true);
-	g_tfndb.addColl ( coll, false );
+	//g_collectiondb.init(true);
+	g_tfndb.getRdb()->addRdbBase1(coll );
 	key_t startKey ;
 	key_t endKey   ;
 	startKey.setMin();
@@ -5968,14 +6096,13 @@ void dumpWaitingTree (char *coll ) {
 
 
 void dumpDoledb (char *coll,long startFileNum,long numFiles,bool includeTree){
-	g_dumpMode = true;
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
 	//g_conf.m_doledbMaxDiskPageCacheMem = 0;
 	g_doledb.init ();
-	g_collectiondb.init(true);
-	g_doledb.addColl ( coll, false );
+	//g_collectiondb.init(true);
+	g_doledb.getRdb()->addRdbBase1(coll );
 	key_t startKey ;
 	key_t endKey   ;
 	startKey.setMin();
@@ -6169,8 +6296,8 @@ long dumpSpiderdb ( char *coll,
 	//g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
 	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	g_spiderdb.init ();
-	g_collectiondb.init(true);
-	g_spiderdb.addColl ( coll, false );
+	//g_collectiondb.init(true);
+	g_spiderdb.getRdb()->addRdbBase1(coll );
 	key128_t startKey ;
 	key128_t endKey   ;
 	startKey.setMin();
@@ -6288,7 +6415,12 @@ long dumpSpiderdb ( char *coll,
 			printf( "offset=%lli ",curOff);
 			g_spiderdb.print ( srec );
 			printf(" age=%lis",now-sreq->m_addedTime);
-			printf(" hadReply=%li\n",(long)hadReply);
+			printf(" hadReply=%li",(long)hadReply);
+			// we haven't loaded hosts.conf so g_hostdb.m_map
+			// is not set right... so this is useless
+			//printf(" shard=%li\n",
+			//     (long)g_hostdb.getShardNum(RDB_SPIDERDB,sreq));
+			printf("\n");
 		}
 
 		// print a counter
@@ -7753,7 +7885,6 @@ if ( ! tr.set ( rec , listSize , false ) ) { // own data?
 // . for cleaning up indexdb
 // . print out docids in indexdb but not in our titledb, if they should be
 void dumpMissing ( char *coll ) {
-	g_dumpMode = true;
 	// load tfndb, assume it is a perfect reflection of titledb
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
@@ -7761,10 +7892,10 @@ void dumpMissing ( char *coll ) {
 	//g_conf.m_clusterdbMaxDiskPageCacheMem = 0;
 
 	g_tfndb.init ();
-	g_collectiondb.init(true); // isDump?
-	g_tfndb.getRdb()->addColl ( coll );
+	//g_collectiondb.init(true); // isDump?
+	g_tfndb.getRdb()->addRdbBase1 ( coll );
 	g_titledb.init();
-	g_titledb.getRdb()->addColl ( coll );
+	g_titledb.getRdb()->addRdbBase1 ( coll );
 	// if titledb has stuff in memory, do not do this, it needs to
 	// be dumped out. this way we can assume a tfn of 255 means the docid
 	// is probable and just in spiderdb. (see loop below)
@@ -7880,8 +8011,8 @@ void dumpMissing ( char *coll ) {
 
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_indexdb.init ();
-	g_collectiondb.init(true);
-	g_indexdb.getRdb()->addColl ( coll );
+	//g_collectiondb.init(true);
+	g_indexdb.getRdb()->addRdbBase1 ( coll );
 	startKey.setMin();
 	endKey.setMax();
 	// get a meg at a time
@@ -7970,15 +8101,14 @@ void dumpMissing ( char *coll ) {
 // . for cleaning up indexdb
 // . print out docids in the same termlist multiple times
 void dumpDups ( char *coll ) {
-	g_dumpMode = true;
 	// load tfndb, assume it is a perfect reflection of titledb
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_conf.m_indexdbMaxCacheMem = 0;
 
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_indexdb.init ();
-	g_collectiondb.init(true);
-	g_indexdb.getRdb()->addColl ( coll );
+	//g_collectiondb.init(true);
+	g_indexdb.getRdb()->addRdbBase1 ( coll );
 
 	key_t startKey ;
 	key_t endKey   ;
@@ -8534,11 +8664,11 @@ void removeDocIds  ( char *coll , char *filename ) {
 	g_indexdb.init ();
 	//g_checksumdb.init();
 	g_clusterdb.init();
-	g_collectiondb.init(true);
-	g_tfndb.getRdb()->addColl ( coll );
-	g_indexdb.getRdb()->addColl ( coll );
-	//g_checksumdb.getRdb()->addColl ( coll );
-	g_clusterdb.getRdb()->addColl ( coll );
+	//g_collectiondb.init(true);
+	g_tfndb.getRdb()->addRdbBase1 ( coll );
+	g_indexdb.getRdb()->addRdbBase1 ( coll );
+	//g_checksumdb.getRdb()->addRdbBase1 ( coll );
+	g_clusterdb.getRdb()->addRdbBase1 ( coll );
 	// this what set to 2 on me before, triggering a huge merge
 	// every dump!!! very bad, i had to gdb to each process and set
 	// this value to 50 myself.
@@ -9006,8 +9136,8 @@ bool fixTfndb ( char *coll ) {
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_tfndb.init ();
 	g_collectiondb.init(true); // isDump?
-	g_tfndb.addColl ( coll );
-	g_titledb.addColl ( coll );
+	g_tfndb.getRdb()->addRdbBase1 ( coll );
+	g_titledb.getRdb()->addRdbBase1 ( coll );
 	RdbBase *base = getRdbBase ( RDB_TITLEDB , coll );
 	long nf = base->getNumFiles();
 
@@ -9118,7 +9248,7 @@ bool syncIndexdb ( ) {
 	strcpy ( g_hostdb.m_dir , newdir );
 	// init the second indexdb with this new directory
 	if ( ! idb.init() ) return false;
-	//if ( ! idb.addColl ( "main" ) ) return false;
+	//if ( ! idb.getRdb()->addRdbBase1 ( "main" ) ) return false;
 	// restore working dir
 	strcpy ( g_hostdb.m_dir , olddir );
 	// count diffs
@@ -10939,11 +11069,10 @@ void *startUp ( void *state , ThreadEntry *t ) {
 
 void dumpSectiondb(char *coll,long startFileNum,long numFiles,
 		   bool includeTree) {
-	g_dumpMode = true;
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_sectiondb.init ();
-	g_collectiondb.init(true);
-	g_sectiondb.addColl ( coll, false );
+	//g_collectiondb.init(true);
+	g_sectiondb.getRdb()->addRdbBase1(coll );
 	key128_t startKey ;
 	key128_t endKey   ;
 	startKey.setMin();
@@ -11005,8 +11134,7 @@ void dumpSectiondb(char *coll,long startFileNum,long numFiles,
 		firstKey = false;
 		// copy it
 		memcpy ( &lastk , k , sizeof(key128_t) );
-		unsigned long shardNum;
-		shardNum =  getShardNum (RDB_SECTIONDB,k,true);
+		long shardNum =  getShardNum (RDB_SECTIONDB,k);
 		//long groupNum = g_hostdb.getGroupNum ( gid );
 		// point to the data
 		char  *p       = data;
@@ -11064,11 +11192,10 @@ void dumpSectiondb(char *coll,long startFileNum,long numFiles,
 }
 
 void dumpRevdb(char *coll,long startFileNum,long numFiles, bool includeTree) {
-	g_dumpMode = true;
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_revdb.init ();
-	g_collectiondb.init(true);
-	g_revdb.addColl ( coll, false );
+	//g_collectiondb.init(true);
+	g_revdb.getRdb()->addRdbBase1(coll );
 	key_t startKey ;
 	key_t endKey   ;
 	startKey.setMin();
@@ -11158,11 +11285,10 @@ void dumpRevdb(char *coll,long startFileNum,long numFiles, bool includeTree) {
 
 void dumpTagdb (char *coll,long startFileNum,long numFiles,bool includeTree, 
 		 long c , char req, long rdbId ) {
-	g_dumpMode = true;
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_tagdb.init ();
-	g_collectiondb.init(true);
-	if ( rdbId == RDB_TAGDB ) g_tagdb.addColl ( coll, false );
+	//g_collectiondb.init(true);
+	if ( rdbId == RDB_TAGDB ) g_tagdb.getRdb()->addRdbBase1(coll );
 	if ( rdbId == RDB_CATDB ) g_catdb.init();
 	key128_t startKey ;
 	key128_t endKey   ;
@@ -11276,8 +11402,8 @@ bool parseTest ( char *coll , long long docId , char *query ) {
 	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	//g_conf.m_titledbMaxTreeMem = 1024*1024*10;
 	g_titledb.init ();
-	g_collectiondb.init(true);
-	g_titledb.addColl ( coll );
+	//g_collectiondb.init(true);
+	g_titledb.getRdb()->addRdbBase1 ( coll );
 	log(LOG_INIT, "build: Testing parse speed of html docId %lli.",docId);
 	// get a title rec
 	g_threads.disableThreads();
@@ -11376,7 +11502,10 @@ bool parseTest ( char *coll , long long docId , char *query ) {
 	t = gettimeofdayInMilliseconds();
 	for ( long i = 0 ; i < 100 ; i++ ) 
 		if ( ! xml.set ( content , contentLen , 
-				 false, 0, false, xd.m_version ) )
+				 false, 0, false, xd.m_version ,
+				 true , // setparents
+				 0 , // niceness 
+				 CT_HTML ) )
 			return log("build: speedtestxml: xml set: %s",
 				   mstrerror(g_errno));
 	// print time it took
@@ -11392,7 +11521,8 @@ bool parseTest ( char *coll , long long docId , char *query ) {
 	t = gettimeofdayInMilliseconds();
 	for ( long i = 0 ; i < 100 ; i++ ) 
 		if ( ! xml.set ( content , contentLen , 
-				 false, 0, false, xd.m_version , false ) )
+				 false, 0, false, xd.m_version , false ,
+				 0 , CT_HTML ) )
 			return log("build: xml(setparents=false): %s",
 				   mstrerror(g_errno));
 	// print time it took
@@ -11754,7 +11884,10 @@ bool summaryTest1   ( char *rec , long listSize, char *coll , long long docId ,
 		// now parse into xhtml (takes 15ms on lenny)
 		Xml xml;
 		xml.set ( content, contentLen , 
-			  false/*ownData?*/, 0, false, xd.m_version );
+			  false/*ownData?*/, 0, false, xd.m_version ,
+			  true , // setparents
+			  0 , // niceness
+			  CT_HTML );
 
 		xd.getSummary();
 
@@ -12078,7 +12211,6 @@ void dumpIndexdbFile ( long fn , long long off , char *ff , long ks ,
 #ifdef _METALINCS_
 	return;
 #endif
-	g_dumpMode = true;
 	char buf [ 1000000 ];
 	long bufSize = 1000000;
 	char fname[64];
@@ -12164,11 +12296,10 @@ void dumpIndexdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 #ifdef _METALINCS_
 	return;
 #endif
-	g_dumpMode = true;
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	g_indexdb.init ();
-	g_collectiondb.init(true);
-	g_indexdb.addColl ( coll, false );
+	//g_collectiondb.init(true);
+	g_indexdb.getRdb()->addRdbBase1(coll );
 	key_t startKey ;
 	key_t endKey   ;
 	startKey.setMin();
@@ -12251,13 +12382,12 @@ void dumpIndexdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 
 void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree, 
 		   long long termId , bool justVerify ) {
-	g_dumpMode = true;
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 
 	if ( ! justVerify ) {
 		g_posdb.init ();
-		g_collectiondb.init(true);
-		g_posdb.addColl ( coll, false );
+		//g_collectiondb.init(true);
+		g_posdb.getRdb()->addRdbBase1(coll );
 	}
 
 	key144_t startKey ;
@@ -12491,12 +12621,11 @@ void dumpDatedb (char *coll,long startFileNum,long numFiles,bool includeTree,
 #ifdef _METALINCS_
 	return;
 #endif
-	g_dumpMode = true;
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
 	if ( ! justVerify ) {
 		g_datedb.init ();
-		g_collectiondb.init(true);
-		g_datedb.addColl ( coll, false );
+		//g_collectiondb.init(true);
+		g_datedb.getRdb()->addRdbBase1(coll );
 	}
 	char startKey[16];
 	char endKey  [16];
@@ -12711,10 +12840,9 @@ void dumpClusterdb ( char *coll,
 #ifdef _METALINCS_
 	return;
 #endif
-	g_dumpMode = true;
 	g_clusterdb.init ();
-	g_collectiondb.init(true);
-	g_clusterdb.addColl ( coll, false );
+	//g_collectiondb.init(true);
+	g_clusterdb.getRdb()->addRdbBase1(coll );
 	key_t startKey ;
 	key_t endKey   ;
 	startKey.setMin();
@@ -12816,7 +12944,7 @@ void dumpStatsdb( long startFileNum, long numFiles, bool includeTree,
 	// must not do a real init.
 	g_statsdb.init( );//false - Is full init? 
 	g_collectiondb.init( true ); // Is dump?
-	g_statsdb.getRdb()->addColl ( coll );
+	g_statsdb.getRdb()->addRdbBase1 ( coll );
 
 	uint64_t ss_keys = 0;
 	uint64_t dd_keys = 0;
@@ -13011,10 +13139,9 @@ void dumpChecksumdb( char *coll,
 #ifdef _METALINCS_
 	return;
 #endif
-	g_dumpMode = true;
 	g_checksumdb.init ();
 	g_collectiondb.init(true);
-	g_checksumdb.getRdb()->addColl ( coll );
+	g_checksumdb.getRdb()->addRdbBase1 ( coll );
 
 	//key_t startKey ;
 	//key_t endKey   ;
@@ -13143,10 +13270,9 @@ void dumpLinkdb ( char *coll,
 #ifdef _METALINCS_
 	return;
 #endif
-	g_dumpMode = true;
 	g_linkdb.init ();
-	g_collectiondb.init(true);
-	g_linkdb.addColl ( coll, false );
+	//g_collectiondb.init(true);
+	g_linkdb.getRdb()->addRdbBase1(coll );
 	key224_t startKey ;
 	key224_t endKey   ;
 	startKey.setMin();
@@ -13215,7 +13341,7 @@ void dumpLinkdb ( char *coll,
 		//unsigned char hc = g_linkdb.getLinkerHopCount_uk(&k);
 		//unsigned long gid = g_hostdb.getGroupId (RDB_LINKDB,&k,true);
 		//long groupNum = g_hostdb.getGroupNum ( gid );
-		unsigned long shardNum = getShardNum(RDB_LINKDB,&k,true);
+		long shardNum = getShardNum(RDB_LINKDB,&k);
 		//if ( hc != 0 ) { char *xx=NULL;*xx=0; }
 		// is it an ip or url record?
 		//bool isHost = g_linkdb.isHostRecord ( &k );
@@ -13629,7 +13755,7 @@ int injectFile ( char *filename , char *ips ,
 		// assume we are only getting out collnum 0 recs i guess
 		g_collectiondb.m_numRecs = 1;
 		g_titledb.init ();
-		//g_titledb.addColl ( coll, false );
+		//g_titledb.getRdb()->addRdbBase1(coll );
 		// msg5::readList() requires the RdbBase for collnum 0
 		// which holds the array of files and the tree
 		Rdb *rdb = g_titledb.getRdb();
@@ -14893,13 +15019,12 @@ void  dosOpenCB( void *state, TcpSocket *s) {
 void dumpCachedRecs (char *coll,long startFileNum,long numFiles,bool includeTree,
 		     long long docid) {
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
-	g_dumpMode = true;
 	//g_conf.m_checksumdbMaxDiskPageCacheMem = 0;
 	g_conf.m_spiderdbMaxDiskPageCacheMem   = 0;
 	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	g_titledb.init ();
 	g_collectiondb.init(true);
-	g_titledb.getRdb()->addColl ( coll );
+	g_titledb.getRdb()->addRdbBase1 ( coll );
 	key_t startKey ;
 	key_t endKey   ;
 	key_t lastKey  ;
@@ -14919,7 +15044,7 @@ void dumpCachedRecs (char *coll,long startFileNum,long numFiles,bool includeTree
 
 	g_tfndb.init ();
 	g_collectiondb.init(true);
-	g_tfndb.getRdb()->addColl ( coll );
+	g_tfndb.getRdb()->addRdbBase1 ( coll );
 
 	long long lastDocId = 0;
 	long compressBufSize = 0;
@@ -15162,8 +15287,8 @@ void countdomains( char* coll, long numRecs, long verbosity, long output ) {
 	lastKey.setMin();
 
 	g_titledb.init ();
-	g_collectiondb.init(true);
-	g_titledb.addColl ( coll, false );
+	//g_collectiondb.init(true);
+	g_titledb.getRdb()->addRdbBase1(coll );
 
 	log( LOG_INFO, "cntDm: parms: %s, %ld", coll, numRecs );
 	long long time_start = gettimeofdayInMilliseconds();
@@ -16302,7 +16427,7 @@ void testSpamRules(char *coll,
 	g_conf.m_tfndbMaxDiskPageCacheMem = 0;
 	g_titledb.init ();
 	g_collectiondb.init(true);
-	g_titledb.getRdb()->addColl ( coll );
+	g_titledb.getRdb()->addRdbBase1 ( coll );
 	key_t startKey ;
 	key_t endKey   ;
 	key_t lastKey  ;
@@ -16326,7 +16451,7 @@ void testSpamRules(char *coll,
 
 	g_tfndb.init ();
 	g_collectiondb.init(true);
-	g_tfndb.getRdb()->addColl ( coll );
+	g_tfndb.getRdb()->addRdbBase1 ( coll );
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
@@ -16496,4 +16621,71 @@ int collinject ( char *newHostsConf ) {
 		       );
 	}
 	return 1;
+}
+
+bool isRecoveryFutile ( ) {
+
+	// scan logs in last 60 seconds
+	Dir dir;
+	dir.set ( g_hostdb.m_dir );
+	dir.open ();
+
+	// scan files in dir
+	char *filename;
+
+	long now = getTimeLocal();
+
+	long fresh = 0;
+
+	// getNextFilename() writes into this
+	char pattern[8]; strcpy ( pattern , "*"); // log*-*" );
+
+	while ( ( filename = dir.getNextFilename ( pattern ) ) ) {
+		// filename must be a certain length
+		//long filenameLen = gbstrlen(filename);
+
+		char *p = filename;
+
+		if ( !strstr ( filename,"log") ) continue;
+
+		// skip "log"
+		p += 3;
+		// skip digits for hostid
+		while ( isdigit(*p) ) p++;
+
+		// skip hyphen
+		if ( *p != '-' ) continue;
+		p++;
+
+		// open file
+		File ff;
+		ff.set ( dir.getDir() , filename );
+		// skip if 0 bytes or had error calling ff.getFileSize()
+		long fsize = ff.getFileSize();
+		if ( fsize == 0 ) continue;
+		ff.open ( O_RDONLY );
+		// get time stamp
+		long timestamp = ff.getLastModifiedTime ( );
+
+		// skip if not iwthin last minute
+		if ( timestamp < now - 60 ) continue;
+
+		// open it up to see if ends with sighandle
+		long toRead = 3000;
+		if ( toRead > fsize ) toRead = fsize;
+		char mbuf[3002];
+		ff.read ( mbuf , toRead , fsize - toRead );
+		if ( ! strstr (mbuf,"sigbadhandler") ) continue;
+
+		// count it otherwise
+		fresh++;
+	}
+
+	// if we had less than 5 do not consider futile
+	if ( fresh < 5 ) return false;
+
+	log("process: KEEP ALIVE LOOP GIVING UP. Five or more cores in last 60 seconds.");
+
+	// otherwise, give up!
+	return true;
 }

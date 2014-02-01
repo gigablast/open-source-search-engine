@@ -16,6 +16,7 @@ void HashTableX::constructor() {
 	m_isWritable = true;
 	m_txtBuf = NULL;
 	m_useKeyMagic = false;
+	m_ks = 0;
 }
 
 void HashTableX::destructor() {
@@ -28,7 +29,9 @@ HashTableX::HashTableX () {
 	m_doFree = false;
 	m_isWritable = true;
 	m_txtBuf = NULL;
-
+	m_useKeyMagic = false;
+	m_ks = 0;
+	
 	reset();
 }
 
@@ -184,6 +187,8 @@ bool HashTableX::addKey ( void *key , void *val , long *slot ) {
 		g_errno = ETRYAGAIN; 
 		return false;
 	}
+	// never got initialized? call HashTableX::init()
+	if ( m_ks <= 0 ){ char *xx=NULL; *xx=0; }
 	// check to see if we should grow the table. now we grow
 	// when 25% full to make operations faster so getLongestString()
 	// doesn't return such big numbers!
@@ -424,7 +429,7 @@ bool HashTableX::load ( char *dir, char *filename, char **tbuf, long *tsize ) {
 	if ( ! f.doesExist() ) return false;
 	char *pdir = dir;
 	if ( ! pdir ) pdir = "";
-	log(LOG_INFO,"admin: Loading hashtablex from %s%s",pdir,filename);
+	//log(LOG_INFO,"admin: Loading hashtablex from %s%s",pdir,filename);
 	if ( ! f.open ( O_RDONLY) ) return false;
 	long numSlots;
 	long numSlotsUsed;

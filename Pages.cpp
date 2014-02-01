@@ -10,6 +10,7 @@
 #include "Proxy.h"
 #include "PageParser.h" // g_inPageParser
 #include "Users.h"
+#include "Rebalance.h"
 
 // a global class extern'd in Pages.h
 Pages g_pages;
@@ -93,40 +94,48 @@ static WebPage s_pages[] = {
 	//  "word vectors page",
 	//  sendPageWordVec , 0 } ,
 
+	{ PAGE_MASTER    , "master"  , 0 , "master controls" ,  1 , 0 , 
+	  //USER_MASTER | USER_PROXY ,
+	  "master controls page",
+	  sendPageGeneric  , 0 } ,
+
+	{ PAGE_HOSTS     , "master/hosts"   , 0 , "hosts" ,  0 , 0 ,
+	  //USER_MASTER | USER_PROXY,
+	  "hosts page",
+	  sendPageHosts    , 0 } ,
+
 	// master admin pages
 	{ PAGE_STATS     , "master/stats"   , 0 , "stats" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY , 
 	  "statistics page",
 	  sendPageStats    , 0 } ,
-	{ PAGE_HOSTS     , "master/hosts"   , 0 , "hosts" ,  0 , 0 ,
-	  //USER_MASTER | USER_PROXY,
-	  "hosts page",
-	  sendPageHosts    , 0 } ,
-	{ PAGE_SOCKETS   , "master/sockets" , 0 , "sockets" ,  0 , 0 ,
-	  //USER_MASTER | USER_PROXY,
-	  "sockets page",
-	  sendPageSockets  , 0 } ,
-	{ PAGE_LOG       , "master/log"     , 0 , "log"     ,  1 , 0 ,
-	  //USER_MASTER | USER_PROXY,
-	  "log page",
-	  sendPageGeneric  , 0 } ,
-	{ PAGE_MASTER    , "master"  , 0 , "master controls" ,  1 , 0 , 
-	  //USER_MASTER | USER_PROXY ,
-	  "master controls page",
-	  sendPageGeneric  , 0 } ,
-//	{ PAGE_SYNC      , "master/sync"    , 0 , "sync"            ,  0 , 0 ,
-//	  //USER_MASTER , 
-//	  "sync page",
-//	  sendPageGeneric  , 0 } ,
+
+	{ PAGE_STATSDB , "master/statsdb"  , 0 , "graph"  ,  0 , 0 ,
+	  //USER_MASTER , 
+	  "statistics page",
+	  sendPageStatsdb  , 2 /*niceness*/ },
+
 	{ PAGE_PERF      , "master/perf"    , 0 , "performance"     ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
 	  "master performance page",
 	  sendPagePerf     , 0 } ,
 
-	{ PAGE_STATSDB , "master/statsdb"  , 0 , "statsdb"  ,  0 , 0 ,
-	  //USER_MASTER , 
-	  "statistics page",
-	  sendPageStatsdb  , 2 /*niceness*/ },
+	{ PAGE_SOCKETS   , "master/sockets" , 0 , "sockets" ,  0 , 0 ,
+	  //USER_MASTER | USER_PROXY,
+	  "sockets page",
+	  sendPageSockets  , 0 } ,
+	{ PAGE_LOG       , "master/log"     , 0 , "log controls"     ,  1 , 0 ,
+	  //USER_MASTER | USER_PROXY,
+	  "log page",
+	  sendPageGeneric  , 0 } ,
+	{ PAGE_LOGVIEW    , "admin/logview"   , 0 , "log view" ,  0 , 0 ,
+	  //USER_MASTER ,  
+	  "logview page",
+	  sendPageLogView  , 0 },
+//	{ PAGE_SYNC      , "master/sync"    , 0 , "sync"            ,  0 , 0 ,
+//	  //USER_MASTER , 
+//	  "sync page",
+//	  sendPageGeneric  , 0 } ,
 
 	{ PAGE_SECURITY, "master/security", 0 , "security"     ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
@@ -152,10 +161,6 @@ static WebPage s_pages[] = {
 	  //USER_MASTER , 
 	  "profiler page",
 	  sendPageProfiler   , 0 } ,
-	{ PAGE_LOGVIEW    , "admin/logview"   , 0 , "logview" ,  0 , 0 ,
-	  //USER_MASTER ,  
-	  "logview page",
-	  sendPageLogView  , 0 },
 	{ PAGE_THREADS    , "admin/threads"   , 0 , "threads" ,  0 , 0 ,
 	  //USER_MASTER ,
 	  "threads page",
@@ -171,26 +176,18 @@ static WebPage s_pages[] = {
 
 
 	// collection admin pages
-	{ PAGE_OVERVIEW , "admin/overview"     , 0 , "overview" ,  0 , 0,
-	  //USER_MASTER | USER_ADMIN ,
-	  "overview page",
-	  sendPageOverview  , 0 } ,
+	//{ PAGE_OVERVIEW , "admin/overview"     , 0 , "overview" ,  0 , 0,
+	//  //USER_MASTER | USER_ADMIN ,
+	//  "overview page",
+	//  sendPageOverview  , 0 } ,
 	{ PAGE_CGIPARMS , "admin/api"         , 0 , "api" , 0 , 0 ,
 	  //USER_MASTER | USER_ADMIN , 
 	  "cgi params page",
 	  sendPageCgiParms , 0 } ,
-	{ PAGE_SITEDB    , "master/tagdb"  , 0 , "tagdb"  ,  0 , 1,
-	  //USER_MASTER | USER_ADMIN,
-	  "tagdb page to add/remove/get tags",
-	  sendPageTagdb ,  0} ,	  
 	{ PAGE_RULES  , "admin/siterules", 0 , "site rules", 1, 1,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "site rules page",
 	  sendPageGeneric , 0} ,
-	{ PAGE_CATDB     , "master/catdb"   , 0 , "catdb"           ,  0 , 1,
-	  //USER_MASTER | USER_ADMIN,
-	  "catdb page",
-	  sendPageCatdb    , 0 } ,
 	{ PAGE_INDEXDB   , "master/indexdb" , 0 , "indexdb"         ,  0 , 0,
 	  //USER_MASTER ,
 	  "indexdb page",
@@ -200,10 +197,6 @@ static WebPage s_pages[] = {
 	  "titledb page",
 	  sendPageTitledb  , 2 } ,
 	// 1 = usePost
-	{ PAGE_PARSER    , "master/parser"  , 0 , "parser"          ,  0 , 1,
-	  //USER_MASTER ,
-	  "page parser page",
-	  sendPageParser   , 2 } ,
 	{ PAGE_SEARCH    , "admin"   , 0 , "search controls" ,  1 , 1,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "search controls page",
@@ -229,14 +222,18 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER   , 
 	  "page filter page",
 	  sendPageGeneric  , 0 } ,
-	{ PAGE_REINDEX   , "admin/reindex"  , 0 , "reindex" ,  0 , 0 ,
-	  //USER_ADMIN | USER_MASTER, 
-	  "reindex url page",
-	  sendPageReindex  , 0 } ,
-	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject" ,  0 , 1 ,
+	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" ,  0 , 1 ,
 	  //USER_ADMIN | USER_MASTER   ,
 	  "inject url in the index here",
 	  sendPageInject   , 2 } ,
+	{ PAGE_ADDURL2   , "admin/addurl"   , 0 , "add urls" ,  0 , 0 ,
+	  //USER_ADMIN | USER_MASTER   ,
+	  "add url page",
+	  sendPageAddUrl   , 0 } ,
+	{ PAGE_REINDEX   , "admin/reindex"  , 0 , "query reindex" ,  0 , 0 ,
+	  //USER_ADMIN | USER_MASTER, 
+	  "reindex url page",
+	  sendPageReindex  , 0 } ,
 
 	//{ PAGE_KEYWORDS, "admin/queries",0,"queries" ,  0 , 1 ,
 	//  "get queries a url matches",
@@ -254,10 +251,18 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER   , 
 	  "search box",
 	  sendPageResults  , 0 } ,
-	{ PAGE_ADDURL2   , "admin/addurl"   , 0 , "add url" ,  0 , 0 ,
-	  //USER_ADMIN | USER_MASTER   ,
-	  "add url page",
-	  sendPageAddUrl   , 0 } ,
+	{ PAGE_PARSER    , "master/parser"  , 0 , "parser"          ,  0 , 1,
+	  //USER_MASTER ,
+	  "page parser page",
+	  sendPageParser   , 2 } ,
+	{ PAGE_SITEDB    , "master/tagdb"  , 0 , "tagdb"  ,  0 , 1,
+	  //USER_MASTER | USER_ADMIN,
+	  "tagdb page to add/remove/get tags",
+	  sendPageTagdb ,  0} ,	  
+	{ PAGE_CATDB     , "master/catdb"   , 0 , "catdb"           ,  0 , 1,
+	  //USER_MASTER | USER_ADMIN,
+	  "catdb page",
+	  sendPageCatdb    , 0 } ,
 	//{ PAGE_LOGIN2    , "admin/login"         , 0 , "login" ,  0 , 0,
 	//  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
 	//"login link - also logoffs user",
@@ -874,7 +879,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 }
 
 
-
+/*
 char *Pages::printAdminTop ( char        *p    , 
 			     char        *pend , 
 			     TcpSocket   *s    ,
@@ -891,8 +896,7 @@ char *Pages::printAdminTop ( char        *p    ,
 	                       coll, NULL, fromIp , qs ,
 			       bodyJavascript);
 }
-
-
+*/
 
 bool Pages::printAdminTop ( SafeBuf *sb    ,
 			    long    page   ,
@@ -909,7 +913,9 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	if ( user ) pwd = user->m_password;
 
 	sb->safePrintf(
-		     "<html>\n"
+		       "<html>\n");
+
+	sb->safePrintf(
 		     "<head>\n"
 		     "<title>%s | gigablast admin</title>\n"
 		     "<meta http-equiv=\"Content-Type\" "
@@ -957,18 +963,75 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 					   coll, NULL, fromIp, qs );
 	}
 	// end table
-	sb->safePrintf ("</td></tr></table><br/><br/>\n");
+	sb->safePrintf ("</td></tr></table><br/>\n");//<br/>\n");
 
-	// print the links
-	status &= printAdminLinks ( sb, page , username , coll , pwd, true );
+	SafeBuf mb;
+	long adds = 0;
 
-	// collection under that
-	status &= printCollectionNavBar ( sb, page , username , coll,pwd, qs );
+	PingServer *ps = &g_pingServer;
 
-	// print the links
-	status &= printAdminLinks ( sb, page , username , coll ,pwd , false );
+	mb.safePrintf(//"<center>"
+		      "<table cellpadding=5 "
+		      "style=\""
+		      "background-color:#ff6666;"
+		      "border:2px #8f0000 solid;"
+		      "border-radius:5px;"
+		      "max-width:600px;"
+		      "\" "
+		      "border=0"
+		      ">"
+		      "<tr><td>");
 
+	// emergency message box
+	if ( g_pingServer.m_hostsConfInDisagreement ) {
+		if ( adds ) mb.safePrintf("<br>");
+		adds++;
+		mb.safePrintf("The hosts.conf or localhosts.conf file "
+			      "is not the same over all hosts.");
+	}
+
+	if ( g_rebalance.m_isScanning ) {
+		if ( adds ) mb.safePrintf("<br><br>");
+		adds++;
+		mb.safePrintf("Rebalancer is currently running.");
+	}
+	// if any host had foreign recs, not that
+	char *needsRebalance = g_rebalance.getNeedsRebalance();
+	if ( ! g_rebalance.m_isScanning &&
+	     needsRebalance &&
+	     *needsRebalance ) {
+		if ( adds ) mb.safePrintf("<br><br>");
+		adds++;
+		mb.safePrintf("A host requires a shard rebalance. "
+			      "Click 'rebalance shards' in master controls to "
+			      "rebalance all hosts.");
+	}
+
+	if ( ps->m_numHostsDead ) {
+		if ( adds ) mb.safePrintf("<br><br>");
+		adds++;
+		char *s = "hosts are";
+		if ( ps->m_numHostsDead == 1 ) s = "host is";
+		mb.safePrintf("%li %s dead and not responding to "
+			      "pings.",ps->m_numHostsDead ,s );
+	}
+
+	if ( ! g_conf.m_useThreads || g_threads.m_disabled ) {
+		if ( adds ) mb.safePrintf("<br><br>");
+		adds++;
+		mb.safePrintf("Threads are disabled. Severely hurts "
+			      "performance.");
+	}
+
+	mb.safePrintf("</td></tr></table>"
+		      //"</center>"
+		      "<br>");
+
+	////////
+	//
 	// . the form
+	//
+	////////
 	// . we cannot use the GET method if there is more than a few k of
 	//   parameters, like in the case of the Search Controls page. The
 	//   browser simply will not send the request if it is that big.
@@ -980,7 +1043,6 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 		sb->safePrintf ("<form name=\"SubmitInput\" method=\"get\" "
 				"action=\"/%s\">\n",
 				s_pages[page].m_filename);
-
 	// pass on this stuff
 	//if ( ! pwd ) pwd = "";
 	//sb->safePrintf ( "<input type=hidden name=pwd value=\"%s\">\n",pwd);
@@ -991,17 +1053,72 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	if ( g_users.hasPermission ( username, PAGE_ADMIN ) ){
 		sb->safePrintf("<input type=hidden name=master value=0>\n");
 	}
-
 	// should any changes be broadcasted to all hosts?
 	sb->safePrintf ("<input type=hidden name=cast value=\"%li\">\n",
 			(long)s_pages[page].m_cast);
+
+
+
+
+
+	// a new table. on the left is collections, on right is other stuff
+	sb->safePrintf("<TABLE "
+		       "cellpadding=5 border=0>"
+		       "<TR>"
+		       "<td></td>"
+		       );
+
+
+	// then collection page links and parms
+	sb->safePrintf("<TD valign=top>");
+
+	// print emergency msg box
+	if ( adds )
+		sb->safePrintf("<br>%s",mb.getBufStart());
+
+	// print the links
+	status &= printAdminLinks ( sb, page , username , coll , pwd, true );
+
+	// print the links
+	status &= printAdminLinks ( sb, page , username , coll ,pwd , false );
+
+	// begin 2nd row in big table
+	sb->safePrintf("</td></TR>");
+
+	sb->safePrintf(
+		       "<TR>"
+		       "<TD valign=top>"
+		       "<div "
+		       "style=\""
+		       "max-height:600px;"
+		       "max-width:200px;"
+		       "min-width:200px;"
+		       "padding:4px;" // same as TABLE_STYLE
+		       "background-color:#d0d0d0;"
+		       "border-radius:10px;"
+		       "border:2px #606060 solid;"
+		       //"border-width:2px;"
+		       //"border-color:#606060;"
+		       "overflow-y:auto;"
+		       "overflow-x:hidden;"
+		       "line-height:23px;"
+		       "\""
+		       ">"
+		       );
+	// collection under that
+	status &= printCollectionNavBar ( sb, page , username , coll,pwd, qs );
+
+	sb->safePrintf("</div></TD>");
+
+	// the controls will go here
+	sb->safePrintf("<TD valign=top>");
 
 	return true;
 }
 
 
 
-
+/*
 
 char *Pages::printAdminTop ( char *p        , 
 			     char *pend     , 
@@ -1103,7 +1220,8 @@ char *Pages::printAdminTop ( char *p        ,
 
 	return p;
 }
-
+*/
+/*
 bool Pages::printAdminTop2 (SafeBuf     *sb   ,
 			   TcpSocket   *s    ,
 			   HttpRequest *r    ,
@@ -1209,6 +1327,7 @@ bool Pages::printAdminTop2 ( SafeBuf *sb    ,
 	sb->safePrintf( "</div>\n" );
 	return true;
 }
+*/
 
 void Pages::printFormTop( SafeBuf *sb, HttpRequest *r ) {
 	long  page   = getDynamicPageNumber ( r );
@@ -1691,8 +1810,11 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	//if ( ! pwd  ) pwd  = "";
 
 	CollectionRec *cr = g_collectiondb.getRec ( collArg );
-	if ( ! cr ) return true;
-
+	// sometimes there are no collections!
+	//if ( ! cr ) return true;
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+	
 
 	if ( ! top ) {
 		// . if no collection do not print anything else
@@ -1704,7 +1826,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 
 	//sprintf(p,"<font size=+1>\n" );
 	//p += gbstrlen(p);
-	sb->safePrintf ("<center>\n" );
+	//sb->safePrintf ("<center>\n" );
 
 	// soemtimes we do not want to be USER_MASTER for testing
 	char buf [ 64 ];
@@ -1714,44 +1836,81 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 
 	//long matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
 	//long matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
-	for ( long i = PAGE_STATS ; i < s_numPages ; i++ ) {
+	for ( long i = PAGE_MASTER ; i < s_numPages ; i++ ) {
 		// do not print link if no permission for that page
 		//if ( (s_pages[i].m_perm & user) == 0 ) continue;
 		//if ( ! g_users.hasPermission(username,i) ) continue;
 		// do not print Sync link if only one host
 		//if ( i == PAGE_SYNC && g_hostdb.getNumHosts() == 1 ) continue;
 		// top or bottom
-		if (   top && i >= PAGE_OVERVIEW ) continue;
-		if ( ! top && i  < PAGE_OVERVIEW ) continue;
+		if (   top && i >= PAGE_CGIPARMS ) continue;
+		if ( ! top && i  < PAGE_CGIPARMS ) continue;
+
+		// skip seo link
+		if ( ! g_conf.m_isMattWells && i == PAGE_SEO ) 
+			continue;
+
+		// skip page autoban link
+		if ( ! g_conf.m_isMattWells && i == PAGE_AUTOBAN )
+			continue;
+
+		// ignore these for now
+		if ( i == PAGE_SECURITY ) continue;
+		if ( i == PAGE_ACCESS ) continue;
+		if ( i == PAGE_INDEXDB ) continue;
+		if ( i == PAGE_RULES ) continue;
+		if ( i == PAGE_SEARCHBOX ) continue;
+		if ( i == PAGE_TITLEDB ) continue;
+
+		// print "url download" before "inject url"
+		// GET /mycollname_urls.csv
+		if ( i == PAGE_INJECT ) {
+			sb->safePrintf (
+					"<b>"
+					"<a style=text-decoration:none; "
+					"href=\"/download/%s_urls.txt\">"
+					"url download"
+					"</a>"
+					"</b>"
+					" &nbsp; \n",
+					coll );
+		}		
+
+		if ( cr && ! cr->m_isCustomCrawl && i == PAGE_CRAWLBOT )
+			continue;
+
 		// print it out
 		if ( i == PAGE_LOGIN || i == PAGE_LOGIN2 ) 
 			sb->safePrintf(
-				"<span style=\"white-space:nowrap\">"
-				"<a href=\"/%s?"
-				//"user=%s&pwd=%s&"
-				"c=%s%s\">%s</a>"
-				"</span>"
-				" &nbsp; \n",s_pages[i].m_filename,
-				//username,pwd,
-				cr->m_coll,
-				buf,s_pages[i].m_name);
+				       //"<span style=\"white-space:nowrap\">"
+				       "<a href=\"/%s?"
+				       //"user=%s&pwd=%s&"
+				       "c=%s%s\">%s</a>"
+				       //"</span>"
+				       " &nbsp; \n",s_pages[i].m_filename,
+				       //username,pwd,
+				       coll,
+				       buf,s_pages[i].m_name);
 		else if ( page == i )
 			sb->safePrintf(
-				"<span style=\"white-space:nowrap\">"
-				"<a href=\"/%s?c=%s%s\"><b>"
-				"<font color=red>%s</font></b></a>"
-				"</span>"
-				" &nbsp; \n",s_pages[i].m_filename,
-				cr->m_coll,
-				buf,s_pages[i].m_name);
+				       //"<span style=\"white-space:nowrap\">"
+				       "<a href=\"/%s?c=%s%s\"><b>"
+				       "<font color=red>%s</font></b></a>"
+				       //"</span>"
+				       " &nbsp; \n",s_pages[i].m_filename,
+				       coll,
+				       buf,s_pages[i].m_name);
 		else
 			sb->safePrintf(
-				"<span style=\"white-space:nowrap\">"
-				"<a href=\"/%s?c=%s%s\">%s</a>"
-				"</span>"
-				" &nbsp; \n",s_pages[i].m_filename,
-				cr->m_coll,
-				buf,s_pages[i].m_name);
+				       //"<span style=\"white-space:nowrap\">"
+				       "<b>"
+				       "<a style=text-decoration:none; "
+				       "href=\"/%s?c=%s%s\">%s</a>"
+				       "</b>"
+				       //"</span>"
+				       " &nbsp; \n",s_pages[i].m_filename,
+				       coll,
+				       buf,s_pages[i].m_name);
 		// print <br> after the last master admin control
 		/*
 		if ( i == PAGE_DELCOLL && user == USER_MASTER ) {
@@ -1766,7 +1925,24 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		}
 		*/
 	}
-	sb->safePrintf("</center><br/>" );
+
+	// print documentation links
+	if ( top ) {
+		sb->safePrintf(" <a style=text-decoration:none "
+			       "href=/admin.html>"
+			       "<b>"
+			       "admin guide"
+			       "</b></a> "
+			       "&nbsp; "
+			       " <a style=text-decoration:none; "
+			       "href=/developer.html>"
+			       "<b>dev guide</b></a>" );
+	}
+
+	//sb->safePrintf("</center>" );
+	sb->safePrintf("<br/>" );
+
+	if ( top ) sb->safePrintf("<br/>" );
 
 	if ( top ) return status;
 
@@ -1850,96 +2026,6 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 
 
 
-// . print the master     admin links if "user" is USER_MASTER 
-// . print the collection admin links if "user" is USER_ADMIN
-char *Pages::printAdminLinks ( char *p    , 
-			       char *pend , 
-			       long  page ,
-			       //long  user ,
-			       char *username,
-			       char *coll ,
-			       char *pwd  ,
-			       bool  top  ) {
-
-	// prepare for printing these
-	if ( ! coll ) coll = "";
-	//if ( ! pwd  ) pwd  = "";
-
-	if ( ! top ) {
-		// . if no collection do not print anything else
-		// . no, we accept as legit (print out as "main")
-		if ( ! coll[0] ) return p;
-		if ( g_collectiondb.m_numRecsUsed == 0 ) return p;
-		if ( ! g_collectiondb.getRec ( coll )  ) return p;
-	}
-
-	//sprintf(p,"<font size=+1>\n" );
-	//p += gbstrlen(p);
-	sprintf(p,"<center>\n" );
-	p += gbstrlen(p);
-
-	// soemtimes we do not want to be USER_MASTER for testing
-	char buf [ 64 ];
-	buf[0] = '\0';
-	//if ( user == USER_ADMIN ) 
-	//if (g_users.hasPermission(username,PAGE_ADMIN) )
-	//	sprintf(buf,"&master=0");
-
-	//long matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
-	//long matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
-	for ( long i = PAGE_STATS ; i < s_numPages ; i++ ) {
-		// do not print link if no permission for that page
-		//if ( (s_pages[i].m_perm & user) == 0 ) continue;
-		//if ( ! g_users.hasPermission(username,i) ) continue;
-		// do not print Sync link if only one host
-		//if ( i == PAGE_SYNC && g_hostdb.getNumHosts() == 1 ) continue;
-		// top or bottom
-		if (   top && i >= PAGE_OVERVIEW ) continue;
-		if ( ! top && i  < PAGE_OVERVIEW ) continue;
-		// print it out
-		if ( i == PAGE_LOGIN || i == PAGE_LOGIN2 ) 
-			sprintf(p,
-				"<span style=\"white-space:nowrap\">"
-				"<a href=\"/%s\">%s</a>"
-				"</span>"
-				" &nbsp; \n",s_pages[i].m_filename,
-				s_pages[i].m_name);
-		else if ( page == i )
-			sprintf(p,
-				"<span style=\"white-space:nowrap\">"
-				"<a href=\"/%s?c=%s%s\"><b>"
-				"<font color=red>%s</font></b></a>"
-				"</span>"
-				" &nbsp; \n",s_pages[i].m_filename,coll,
-				buf,s_pages[i].m_name);
-		else
-			sprintf(p,
-				"<span style=\"white-space:nowrap\">"
-				"<a href=\"/%s?c=%s%s\">%s</a>"
-				"</span>"
-				" &nbsp; \n",s_pages[i].m_filename,coll,
-				buf,s_pages[i].m_name);
-		p += gbstrlen ( p );
-		// print <br> after the last master admin control
-		/*
-		if ( i == PAGE_DELCOLL && user == USER_MASTER ) {
-			// . if no collection do not print anything else
-			// . no, we accept as legit (print out as "main")
-			//if ( ! coll[0] ) break;
-			if ( g_collectiondb.m_numRecsUsed == 0 ) break;
-			// or if no collection selected, same thing
-			if ( ! coll[0] ) break;
-			sprintf ( p , "<br><br>\n");
-			p += gbstrlen(p);
-		}
-		*/
-	}
-	sprintf(p,"</center><br/>" );
-	p += gbstrlen(p);
-	//sprintf(p,"</font>\n" );
-	//p += gbstrlen(p);
-	return p ;
-}
 
 bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 				    long  page     ,
@@ -1951,6 +2037,7 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	bool status = true;
 	//if ( ! pwd ) pwd = "";
 	if ( ! qs  ) qs  = "";
+
 	// if not admin just print collection name
 	if ( g_collectiondb.m_numRecsUsed == 0 ) {
 		sb->safePrintf ( "<center>"
@@ -1983,38 +2070,71 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	while ( b < g_collectiondb.m_numRecs && countb < 16 )
 		if ( g_collectiondb.m_recs[b++] ) countb++;
 
-	sb->safePrintf ( "<center><br/>Collections: &nbsp;\n" );
+	char *s = "s";
+	if ( g_collectiondb.m_numRecsUsed == 1 ) s = "";
+	sb->safePrintf ( "<center><nobr><b>%li Collection%s</b></nobr>"
+			 "</center><br>\n",
+			 g_collectiondb.m_numRecsUsed , s );
 
-	char *color;
-	if ( page >= PAGE_OVERVIEW ) color = "red";
-	else                         color = "black";
+	char *color = "red";
+	//if ( page >= PAGE_CGIPARMS ) color = "red";
+	//else                         color = "black";
 
-	for ( long i = a ; i < b ; i++ ) {
+	// style for printing collection names
+	sb->safePrintf("<style>.x{text-decoration:none;font-weight:bold;}"
+		       ".e{background-color:#e0e0e0;}"
+		       "</style>\n");
+
+	long row = 0;
+
+	//for ( long i = a ; i < b ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		CollectionRec *cc = g_collectiondb.m_recs[i];
 		if ( ! cc ) continue;
 		char *cname = cc->m_coll;
+
+		row++;
+
 		//if ( p + gbstrlen(cname) + 100 >= pend ) return p;
 		// collection name HACK for backwards compatibility
 		//if ( ! cname[0] ) cname = "main";
 
+		// every other coll in a darker div
+		if ( (row % 2) == 0 )
+			sb->safePrintf("<div class=e>");
+
+		sb->safePrintf("<nobr>");
+
 		if ( i != collnum || ! highlight )// || ! coll || ! coll[0])
-			sb->safePrintf ( "<a href=\"/%s?c=%s%s\">%s"
+			sb->safePrintf ( "<a title=\"%s\" "
+					 "class=x "
+					 "href=\"/%s?c=%s%s\">%s"
 				  "</a> &nbsp;",
-				  s_pages[page].m_filename,
-					 cc->m_coll ,
-				  qs, cname );
+					 cname,
+					 s_pages[page].m_filename,
+					 cname ,
+					 qs, cname );
 		else
-			sb->safePrintf ( "<b><font color=%s>%s</font></b> "
-					 "&nbsp; ",  color , cname );
+			sb->safePrintf ( "<u><b><font title=\"%s\" "
+					 "color=%s>%s</font></b></u> "
+					 "&nbsp; ",  
+					 cname, color , cname );
+		sb->safePrintf("</nobr>");
+
+		// every other coll in a darker div
+		if ( (row % 2) == 0 )
+			sb->safePrintf("</div>");
+		else
+			sb->safePrintf("<br>\n");
 	}
 
-	sb->safePrintf ( "</center><br/>" );
+	//sb->safePrintf ( "</center><br/>" );
 
 	return status;
 }
 
 
-
+/*
 char *Pages::printCollectionNavBar ( char *p        ,
 				     char *pend     ,
 				     long  page     ,
@@ -2090,7 +2210,7 @@ char *Pages::printCollectionNavBar ( char *p        ,
 
 	return p;
 }
-
+*/
 /*
 // print the drop down menu of rulesets used by Sitedb and URL Filters page
 char *Pages::printRulesetDropDown ( char *p            , 
@@ -2366,21 +2486,32 @@ bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
 	// 	p.incrementLength ( pp - p.getBuf() );
 	// 	}
 
-	p.safePrintf ( "<table width=100%% cellpadding=2 "
-		       "bgcolor=#%s border=1>"
-		       "<tr><td colspan=4 bgcolor=#%s>"
+	p.safePrintf ( "<table %s>"
+		       "<tr class=hdrow><td colspan=8>"
 		       "<center><b>CGI Parameters</b></tr></tr>"
-		       "<tr><td><b>CGI</b></td><td><b>Type</b></td>"
+		       "<tr bgcolor=#%s><td><b>CGI</b></td>"
+		       "<td><b>Page</b></td>"
+		       "<td><b>Type</b></td>"
 		       "<td><b>Name</b></td><td><b>Description</b></td></tr>\n",
-		       LIGHT_BLUE, DARK_BLUE );
+		       TABLE_STYLE , DARK_BLUE);
 	for ( long i = 0; i < g_parms.m_numParms; i++ ) {
 		Parm *parm = &g_parms.m_parms[i];
 		if ( !parm->m_sparm ) continue;
 		// use m_cgi if no m_scgi
 		char *cgi = parm->m_cgi;
 		if ( parm->m_scgi ) cgi = parm->m_scgi;
+
+		// skip if hidden
+		if ( parm->m_flags & PF_HIDDEN ) continue;
+
+		char *page = parm->m_scmd;
+		if ( ! page ) page = "";
+
 		// print the parm
-		p.safePrintf ( "<tr><td><b>%s</b></td><td nowrap=1>", cgi );
+		p.safePrintf ( "<tr bgcolor=#%s><td><b>%s</b></td>", 
+			       LIGHT_BLUE , cgi );
+		p.safePrintf("<td>%s</td>",page);
+		p.safePrintf("<td nowrap=1>");
 		switch ( parm->m_type ) {
 		case TYPE_BOOL: p.safePrintf ( "BOOL" ); break;
 		case TYPE_BOOL2: p.safePrintf ( "BOOL" ); break;
@@ -2400,14 +2531,13 @@ bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
 	}
 	p.safePrintf ( "</table><br><br>" );
 
-	p.safePrintf ( "<table width=100%% cellpadding=2 "
-		       "bgcolor=#%s border=1>"
-		       "<tr><td colspan=2 bgcolor=#%s>"
+	p.safePrintf ( "<table %s>"
+		       "<tr class=hdrow><td colspan=2>"
 		       "<center><b>Query Operators</b></td></tr>"
 		       "<tr><td><b>Operator</b></td>"
 		       "<td><b>Description</b>"
 		       "</td></tr>\n",
-		       LIGHT_BLUE, DARK_BLUE );
+		       TABLE_STYLE );
 	// table of the query keywords
 	long n = getNumFieldCodes();
 	for ( long i = 0 ; i < n ; i++ ) {
@@ -2417,8 +2547,9 @@ bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
 		char *d = f->desc;
 		// fix table internal cell bordering
 		if ( d[0] == '\0' ) d = "&nbsp;";
-		p.safePrintf("<tr><td><b>%s</b>:</td><td>%s</td></tr>\n",
-			     f->text,d);
+		p.safePrintf("<tr bgcolor=#%s>"
+			     "<td><b>%s</b>:</td><td>%s</td></tr>\n",
+			     LIGHT_BLUE,f->text,d);
 	}
 	
 	p.safePrintf("</body></html>");

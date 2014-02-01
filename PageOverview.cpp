@@ -8,12 +8,13 @@
 
 bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 
-	char buf [ 256*1024 ];
-	char *p = buf;
-	char *pend = buf + 256*1024;
+	//char buf [ 256*1024 ];
+	//char *p = buf;
+	//char *pend = buf + 256*1024;
 	// . print standard header
 	// . do not print big links if only an assassin, just print host ids
-	p = g_pages.printAdminTop ( p , pend , s , r );
+	SafeBuf sb;
+	g_pages.printAdminTop ( &sb , s , r );
 	//long user = g_pages.getUserType ( s , r );
 	//sprintf ( p , 
 	//"<html> \n"
@@ -23,7 +24,7 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 	//"\n" 
 	//		  );
 	//	p += gbstrlen ( p );
-	sprintf ( p , 
+	sb->safePrintf(
 		  //"<center><b><font color=red size=+3>Confidential</font></b></center>\n"
 "<center><b><font color=red>This Document is Confidential</font></b></center>\n"
 "<br>"
@@ -31,8 +32,8 @@ bool sendPageOverview ( TcpSocket *s , HttpRequest *r ) {
 "\n"
 		  );
 	//if ( user == USER_MASTER ) p += gbstrlen ( p );
-	if ( g_users.hasPermission( r, PAGE_MASTER ) ) p += gbstrlen(p); 
-	sprintf ( p , 
+	//if ( g_users.hasPermission( r, PAGE_MASTER ) ) p += gbstrlen(p); 
+	sb->safePrintf(
 		  //"<table><tr><td valign=bottom><a href=/><img width=210 height=25 border=0 src=/logo2.gif></a>&nbsp;&nbsp;</font></td><td><font size=+1><b>Admin Overview</td></tr></table>"
 		  //"\n"
 		  //"\n"

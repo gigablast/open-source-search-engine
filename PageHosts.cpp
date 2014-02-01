@@ -7,6 +7,7 @@
 #include "sort.h"
 #include "Users.h"
 
+static int defaultSort    ( const void *i1, const void *i2 );
 static int pingSort1      ( const void *i1, const void *i2 );
 static int pingSort2      ( const void *i1, const void *i2 );
 static int pingAgeSort    ( const void *i1, const void *i2 );
@@ -37,8 +38,8 @@ bool sendPageHosts ( TcpSocket *s , HttpRequest *r ) {
 	SafeBuf sb(buf, 64*1024);
 	// check for a sort request
 	long sort  = r->getLong ( "sort", -1 );
-	// sort by ping times by default now, we are usually always doing that
-	if ( sort == -1 ) sort = 1;
+	// sort by hostid with dead on top by default
+	if ( sort == -1 ) sort = 16;
 	char *coll = r->getString ( "c" );
 	//char *pwd  = r->getString ( "pwd" );
 	// check for setnote command
@@ -107,13 +108,13 @@ skipReplaceHost:
 			      refreshRate);
 
 	// ignore
-	char *username = g_users.getUsername ( r );
-	char *password = NULL;
-	User *user = NULL;
-	if ( username ) user = g_users.getUser (username );
-	if ( user     ) password = user->m_password;
-	if ( ! password ) password = "";
-	if ( ! username ) username = "";
+	//char *username = g_users.getUsername ( r );
+	//char *password = NULL;
+	//User *user = NULL;
+	//if ( username ) user = g_users.getUser (username );
+	//if ( user     ) password = user->m_password;
+	//if ( ! password ) password = "";
+	//if ( ! username ) username = "";
 
 	// print standard header
 	// 	char *pp    = sb.getBuf();
@@ -130,26 +131,26 @@ skipReplaceHost:
 		colspan = "31";
 		//shotcol = "<td><b>ip2</b></td>";
 		sprintf ( shotcol, "<td><a href=\"/master/hosts?c=%s"
-			 	   "&sort=2&username=%s&pwd=%s\">"
+			 	   "&sort=2\">"
 			  "<b>ping2</b></td></a>",
-			  coll,username,password);
+			  coll);
 	}
 
 	// print host table
 	sb.safePrintf ( 
-		  "<table cellpadding=4 border=1 width=100%% bgcolor=#%s>" 
-		  "<tr><td colspan=%s bgcolor=#%s><center>"
+		  "<table %s>"
+		  "<tr><td colspan=%s><center>"
 		  //"<font size=+1>"
 		  "<b>Hosts "
 		  "(<a href=\"/master/hosts?c=%s&sort=%li&reset=1\">"
 		  "reset)</b>"
 		  //"</font>"
 		  "</td></tr>" 
-		  "<tr>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=0&username=%s&"
-		  "password=%s\">"
+		  "<tr bgcolor=#%s>"
+		  "<td><a href=\"/master/hosts?c=%s&sort=0\">"
+
 		  "<b>hostId</b></td>"
-		  "<td><b>host name</b></td>"
+		  "<td><b>host ip</b></td>"
 		  "<td><b>shard</b></td>" // mirror group
 		  "<td><b>stripe</b></td>"
 
@@ -186,49 +187,49 @@ skipReplaceHost:
 		  //"<td><b>resends sent</td>"
 		  //"<td><b>errors recvd</td>"
 		  //"<td><b>ETRYAGAINS recvd</td>"
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=3\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=3\">"
 		  "<b>dgrams resent</a></td>"
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=4\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=4\">"
 		  "<b>errors recvd</a></td>"
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=5\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=5\">"
 		  "<b>ETRY AGAINS recvd</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=6\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=6\">"
 		  "<b>dgrams to</a></td>"
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=7\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=7\">"
 		  "<b>dgrams from</a></td>"
 
-		  //"<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=8\">"
+		  //"<td><a href=\"/master/hosts?c=%s&sort=8\">"
 		  //"<b>loadavg</a></td>"
 
 
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=13\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=13\">"
 		  "<b>avg split time</a></td>"
 
 		  "<td><b>splits done</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=12\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=12\">"
 		  "<b>status</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=15\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=15\">"
 		  "<b>slow reads</a></td>"
 
 		  "<td><b>docs indexed</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=9\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=9\">"
 		  "<b>mem used</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=10\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=10\">"
 		  "<b>cpu</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=14\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=14\">"
 		  "<b>max ping1</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=11\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=11\">"
 		  "<b>ping1 age</a></td>"
 
 		  //"<td><b>ip1</td>"
-		  "<td><a href=\"/master/hosts?c=%s&username=%s&pwd=%s&sort=1\">"
+		  "<td><a href=\"/master/hosts?c=%s&sort=1\">"
 		  "<b>ping1</a></td>"
 
 		  "%s"// "<td><b>ip2</td>"
@@ -236,25 +237,26 @@ skipReplaceHost:
 		  //"<td>avg roundtrip</td>"
 		  //"<td>std. dev.</td></tr>"
 		  "<td><b>note</td>",
-		  LIGHT_BLUE ,
+		  TABLE_STYLE ,
 		  colspan    ,
-		  DARK_BLUE  ,
+
 		  coll, sort,
-		  coll, username, password,
-		  coll, username, password,
-		  coll, username, password,
-		  coll, username, password,
-		  coll, username, password,
-		  coll, username, password,
-		  coll, username, password,
-		  coll, username, password,
-		  coll, username, password,
-		  coll, username, password,
-		  //coll,username, password,
-		  coll, username, password,
-		  coll, username, password,
-		  coll, username, password,
-		  coll, username, password,
+		  DARK_BLUE  ,
+
+		  coll,
+		  coll,
+		  coll,
+		  coll,
+		  coll,
+		  coll,
+		  coll,
+		  coll,
+		  coll,
+		  coll,
+		  coll,
+		  coll,
+		  coll,
+		  coll,
 		  shotcol    );
 
 	// loop through each host we know and print it's stats
@@ -292,6 +294,7 @@ skipReplaceHost:
 	case 13:gbsort ( hostSort, nh, sizeof(long), splitTimeSort  ); break;
 	case 14:gbsort ( hostSort, nh, sizeof(long), pingMaxSort    ); break;
 	case 15:gbsort ( hostSort, nh, sizeof(long), slowDiskSort    ); break;
+	case 16:gbsort ( hostSort, nh, sizeof(long), defaultSort    ); break;
 	}
 
 	// we are the only one that uses these flags, so set them now
@@ -381,32 +384,61 @@ skipReplaceHost:
 		if ( h->m_splitsDone ) 
 			splitTime = h->m_splitTimes / h->m_splitsDone;
 
-		char flagString[32];
-		char *fs = flagString;
-		*fs = '\0';
+		//char flagString[32];
+		char tmpfb[64];
+		SafeBuf fb(tmpfb,64);
+		//char *fs = flagString;
+		//*fs = '\0';
+
+		// does its hosts.conf file disagree with ours?
+		if ( h->m_hostsConfCRC &&
+		     h->m_hostsConfCRC != g_hostdb.getCRC() )
+			fb.safePrintf("<font color=red><b title=\"Hosts.conf "
+				      "in disagreement with ours.\">H"
+				      "</b></font>");
+		// recovery mode? reocvered from coring?
+		if ( h->m_flags & PFLAG_RECOVERYMODE )
+			fb.safePrintf("<b title=\"Recovered from core"
+				      "\">x</b>");
+		// rebalancing?
+		if ( h->m_flags & PFLAG_REBALANCING )
+			fb.safePrintf("<b title=\"Currently "
+				      "rebalancing\">R</b>");
+		// has recs that should be in another shard? indicates
+		// we need to rebalance or there is a bad hosts.conf
+		if ( h->m_flags & PFLAG_FOREIGNRECS )
+			fb.safePrintf("<font color=red><b title=\"Foreign data "
+				      "detected. Needs rebalance.\">F"
+				      "</b></font>");
 		// if it has spiders going on say "S"
 		if ( h->m_flags & PFLAG_HASSPIDERS )
-			strcat ( fs , "S");
+			fb.safePrintf ( "<span title=\"Spidering\">S</span>");
 		// say "M" if merging
 		if (   h->m_flags & PFLAG_MERGING )
-			strcat ( fs , "M");
+			fb.safePrintf ( "<span title=\"Merging\">M</span>");
 		// say "D" if dumping
 		if (   h->m_flags & PFLAG_DUMPING )
-			strcat ( fs , "D");
+			fb.safePrintf ( "<span title=\"Dumping\">D</span>");
 		// say "y" if doing the daily merge
 		if (  !(h->m_flags & PFLAG_MERGEMODE0) )
-			strcat ( fs , "y");
+			fb.safePrintf ( "y");
 		// clear it if it is us, this is invalid
-		if ( ! h->m_gotPingReply )
-			strcpy(flagString,"??");
-		if ( fs[0] == '\0' )
-			strcpy(flagString,"&nbsp;");
+		if ( ! h->m_gotPingReply ) {
+			fb.reset();
+			fb.safePrintf("??");
+		}
+		if ( fb.length() == 0 )
+			fb.safePrintf("&nbsp;");
+
+		char *bg = LIGHT_BLUE;
+		if ( h->m_ping >= g_conf.m_deadHostTimeout ) 
+			bg = "ffa6a6";
 
 		// print it
 		sb.safePrintf (
-			  "<tr>"
+			  "<tr bgcolor=#%s>"
 			  "<td><a href=\"http://%s:%hi/master/hosts?"
-			  "username=%s&pwd=%s&"
+			  ""
 			  "c=%s"
 			  "&sort=%li\">%li</a></td>"
 
@@ -475,8 +507,8 @@ skipReplaceHost:
 			  //"<td>%lims</td>"
 			  "<td nowrap=1>%s</td>"
 			  "</tr>" , 
+			  bg,//LIGHT_BLUE ,
 			  ipbuf3, h->m_httpPort, 
-			  username, password,
 			  coll, sort,
 			  i , 
 			  h->m_hostname,
@@ -506,7 +538,7 @@ skipReplaceHost:
 			  splitTime,
 			  h->m_splitsDone,
 
-			  flagString,
+			  fb.getBufStart(),//flagString,
 
 			  h->m_slowDiskReads,
 			  h->m_docsIndexed,
@@ -531,15 +563,16 @@ skipReplaceHost:
 	// end the table now
 	sb.safePrintf ( "</table><br>\n" );
 
+	
 	// print spare hosts table
 	sb.safePrintf ( 
-		  "<table cellpadding=4 border=1 width=100%% bgcolor=#%s>" 
-		  "<tr><td colspan=10 bgcolor=#%s><center>"
+		  "<table %s>"
+		  "<tr class=hdrow><td colspan=10><center>"
 		  //"<font size=+1>"
 		  "<b>Spares</b>"
 		  //"</font>"
 		  "</td></tr>" 
-		  "<tr>"
+		  "<tr bgcolor=#%s>"
 		  "<td><b>spareId</td>"
 		  "<td><b>host name</td>"
 		  "<td><b>ip1</td>"
@@ -554,7 +587,7 @@ skipReplaceHost:
 		  //"<td><b>ide channel</td>"
 
 		  "<td><b>note</td>",
-		  LIGHT_BLUE ,
+		  TABLE_STYLE,
 		  DARK_BLUE  );
 
 	for ( long i = 0; i < g_hostdb.m_numSpareHosts; i++ ) {
@@ -568,7 +601,7 @@ skipReplaceHost:
 
 		// print it
 		sb.safePrintf (
-			  "<tr>"
+			  "<tr bgcolor=#%s>"
 			  "<td>%li</td>"
 			  "<td>%s</td>"
 			  "<td>%s</td>"
@@ -581,6 +614,7 @@ skipReplaceHost:
 			  //"<td>%li</td>" // ide channel
 			  "<td>%s</td>"
 			  "</tr>" , 
+			  LIGHT_BLUE,
 			  i , 
 			  h->m_hostname,
 			  ipbuf1,
@@ -597,13 +631,13 @@ skipReplaceHost:
 
 	// print proxy hosts table
 	sb.safePrintf ( 
-		  "<table cellpadding=4 border=1 width=100%% bgcolor=#%s>" 
-		  "<tr><td colspan=12 bgcolor=#%s><center>"
+		  "<table %s>"
+		  "<tr class=hdrow><td colspan=12><center>"
 		  //"<font size=+1>"
 		  "<b>Proxies</b>"
 		  //"</font>"
 		  "</td></tr>" 
-		  "<tr>"
+		  "<tr bgcolor=#%s>"
 		  "<td><b>proxyId</b></td>"
 		  "<td><b>type</b></td>"
 		  "<td><b>host name</b></td>"
@@ -624,8 +658,9 @@ skipReplaceHost:
 		  //"<td><b>ide channel</td>"
 
 		  "<td><b>note</td>",
-		  LIGHT_BLUE ,
-		  DARK_BLUE  );
+		  TABLE_STYLE,
+		  DARK_BLUE 
+			);
 	for ( long i = 0; i < g_hostdb.m_numProxyHosts; i++ ) {
 		// get the ith host (hostId)
 		Host *h = g_hostdb.getProxy ( i );
@@ -656,10 +691,10 @@ skipReplaceHost:
 
 		// print it
 		sb.safePrintf (
-			  "<tr>"
+			  "<tr bgcolor=#%s>"
 
 			  "<td><a href=\"http://%s:%hi/master/hosts?"
-			  "username=%s&pwd=%s&"
+			  ""
 			  "c=%s\">"
 			  "%li</a></td>"
 
@@ -679,10 +714,9 @@ skipReplaceHost:
 			  "<td>%s </td>"
 			  "</tr>" , 
 
+			  LIGHT_BLUE,
 			  ipbuf3,
 			  h->m_httpPort,
-			  username,
-			  password,
 			  coll,
 			  i , 
 
@@ -703,70 +737,73 @@ skipReplaceHost:
 	}
 	sb.safePrintf ( "</table><br><br>" );
 
+	sb.safePrintf(
+		      "<style>"
+		      ".poo { background-color:#%s;}\n"
+		      "</style>\n" ,
+		      LIGHT_BLUE );
+
+
 	// print help table
 	sb.safePrintf ( 
-		  "<table cellpadding=4 border=1 width=100%% bgcolor=#%s>" 
-		  "<tr><td colspan=10 bgcolor=#%s><center>"
+		  "<table %s>"
+		  "<tr class=hdrow><td colspan=10><center>"
 		  //"<font size=+1>"
 		  "<b>Key</b>"
 		  //"</font>"
 		  "</td></tr>" 
 
-		  "<tr>"
-		  "<td>mirror group</td>"
+		  "<tr class=poo>"
+		  "<td>shard</td>"
 		  "<td>"
-		  "The active hosts are divded into groups. These are "
-		  "mirror groups. A host in group X ideally has exactly "
-		  "the same data as any other host in group X."
+		  "The index is split into shards. Which shard does this "
+		  "host serve?"
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>stripe</td>"
 		  "<td>"
-		  "Each stripe is a set of hosts, one from each mirror "
-		  "group. Each strip is basically a complete and independent "
-		  "search engine index. Although some functionality, like "
-		  "summary generation, is generally distributed across "
-		  "stripe boundaries."
+		  "Hosts with the same stripe serve the same shard "
+		  "of data."
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>ip1</td>"
 		  "<td>The primary IP address of the host."
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>ip2</td>"
 		  "<td>The secondary IP address of the host."
 		  "</td>"
 		  "</tr>\n"
 
 		  /*
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>udp port</td>"
 		  "<td>The UDP port the host uses to send and recieve "
 		  "datagrams."
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>dns client port</td>"
 		  "<td>The UDP port used to send and receive dns traffic with."
 		  "</td>"
 		  "</tr>\n"
 		  */
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>http port</td>"
 		  "<td>The port you can connect a browser to."
 		  "</td>"
 		  "</tr>\n"
 
 		  /*
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>best switch id</td>"
 		  "<td>The host prefers to be on this switch because it "
 		  "needs to send a lot of data to other hosts on this swtich. "
@@ -777,7 +814,7 @@ skipReplaceHost:
 		  */
 
 		  /*
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>switch id</td>"
 		  "<td>Hosts that share the same switch id are "
 		  "physically on the same switch."
@@ -785,7 +822,7 @@ skipReplaceHost:
 		  "</tr>\n"
 		  */
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>dgrams resent</td>"
 		  "<td>How many datagrams have had to be resent to a host "
 		  "because it was not ACKed quick enough or because it was "
@@ -794,7 +831,7 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>errors recvd</td>"
 		  "<td>How many errors were received from a host in response "
 		  "to a request to retrieve or insert data."
@@ -802,7 +839,7 @@ skipReplaceHost:
 		  "</tr>\n"
 
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>ETRYAGAINS recvd</td>"
 		  "<td>How many ETRYAGAIN were received in response to a "
 		  "request to add data. Usually because the host's memory "
@@ -813,7 +850,7 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>dgrams to</td>"
 		  "<td>How many datagrams were sent to the host from the "
 		  "selected host since startup. Includes ACK datagrams. This "
@@ -824,46 +861,46 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>dgrams from</td>"
 		  "<td>How many datagrams were received from the host by the "
 		  "selected host since startup. Includes ACK datagrams."
 		  "</td>"
 		  "</tr>\n"
 
-		  //"<tr>"
+		  //"<tr class=poo>"
 		  //"<td>loadavg</td>"
 		  //"<td>1-minute sliding-window load average from "
 		  //"/proc/loadavg."
 		  //"</td>"
 		  //"</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>mem used</td>"
 		  "<td>percentage of memory currently used."
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>cpu usage</td>"
 		  "<td>percentage of cpu resources in use by the gb process."
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>ping1 age</td>"
 		  "<td>How long ago the last ping request was sent to "
 		  "this host. Let's us know how fresh the ping time is."
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>ping1</td>"
 		  "<td>Ping time to this host on the primary network."
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>ping2</td>"
 		  "<td>Ping time to this host on the seconday/shotgun "
 		  "network. This column is not visible if the shotgun "
@@ -871,25 +908,25 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>M (status flag)</td>"
 		  "<td>Indicates host is merging files on disk."
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>D (status flag)</td>"
 		  "<td>Indicates host is dumping data to disk."
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>S (status flag)</td>"
 		  "<td>Indicates host has outstanding spiders."
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>y (status flag)</td>"
 		  "<td>Indicates host is performing the daily merge."
 		  "</td>"
@@ -897,8 +934,8 @@ skipReplaceHost:
 
 
 		  ,
-		  LIGHT_BLUE ,
-		  DARK_BLUE  );
+		  TABLE_STYLE
+			);
 
 	sb.safePrintf ( "</table><br></form><br>" );
 
@@ -965,6 +1002,24 @@ long generatePingMsg( Host *h, long long nowms, char *buf ) {
         }
 
         return pingAge;
+}
+
+int defaultSort   ( const void *i1, const void *i2 ) {
+	Host *h1 = g_hostdb.getHost ( *(long*)i1 );
+	Host *h2 = g_hostdb.getHost ( *(long*)i2 );
+	// float up to the top if the host is reporting kernel errors
+	// even if the ping is normal
+	if ( h1->m_kernelErrors  > 0 && h2->m_kernelErrors <= 0 ) return -1;
+	if ( h2->m_kernelErrors  > 0 && h1->m_kernelErrors <= 0 ) return  1;
+	if ( h2->m_kernelErrors  > 0 && h1->m_kernelErrors > 0 ) {
+		if ( h1->m_hostId < h2->m_hostId ) return -1;
+		return 1;
+	}
+	if ( g_hostdb.isDead(h1) && ! g_hostdb.isDead(h2) ) return -1;
+	if ( g_hostdb.isDead(h2) && ! g_hostdb.isDead(h1) ) return  1;
+
+	if ( h1->m_hostId < h2->m_hostId ) return -1;
+	return 1;
 }
 
 int pingSort1    ( const void *i1, const void *i2 ) {

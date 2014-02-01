@@ -99,6 +99,15 @@ class TcpServer {
 		       long   maxOtherDocLen );
 		       
 
+	bool sendChunk ( class TcpSocket *s ,
+			 class SafeBuf *sb ,
+			 void *state ,
+			 // call this function when done sending this chunk
+			 // so that it can read another chunk and call 
+			 // sendChunk() again.
+			 void (* doneSendingWrapper)( void *state,TcpSocket *),
+			 bool lastChunk );
+
 	// . returns false if blocked, true otherwise
 	// . sets errno on error
 	// . use this for sending a msg to another host

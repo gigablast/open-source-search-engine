@@ -1791,6 +1791,11 @@ void Loop::quickPoll(long niceness, const char* caller, long lineno) {
 	if(m_inQuickPoll) {
 		log(LOG_WARN, 
 		    "admin: tried to quickpoll from inside quickpoll");
+		// this happens when handleRequest3f is called from
+		// a quickpoll and it deletes a collection and BigFile::close
+		// calls ThreadQueue::removeThreads and Msg3::doneScanning()
+		// has niceness 2 and calls quickpoll again!
+		return;
 		//if(g_conf.m_quickpollCoreOnError) { 
 		char*xx=NULL;*xx=0;
 		//		}

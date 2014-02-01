@@ -58,7 +58,8 @@ class RdbMerge {
 	// . calls rdb->incorporateMerge() when done with merge or had error
 	// . "maxBufSize" is size of list to get then write (read/write buf)
 	bool merge ( char       rdbId        ,
-		     char      *coll         ,
+		     //char      *coll         ,
+		     collnum_t collnum ,
 		     BigFile   *target       ,
 		     RdbMap    *targetMap    ,
 		     long       id2          ,
@@ -156,7 +157,8 @@ class RdbMerge {
 
 	// for getting the RdbBase class doing the merge
 	uint8_t   m_rdbId;
-	char      m_coll [ MAX_COLL_LEN + 1 ];
+	//char      m_coll [ MAX_COLL_LEN + 1 ];
+	collnum_t m_collnum;
 
 	char      m_ks;
 };

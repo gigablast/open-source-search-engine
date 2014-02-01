@@ -59,6 +59,8 @@ Hostdb::Hostdb ( ) {
 	m_ips = NULL;
 	m_syncHost = NULL;
 	m_initialized = false;
+	m_crcValid = false;
+	m_crc = 0;
 }
 
 Hostdb::~Hostdb () {
@@ -66,6 +68,18 @@ Hostdb::~Hostdb () {
 }
 
 void Hostdb::reset ( ) {
+
+	for ( long i = 0 ; m_hosts && i < m_numHosts ; i++ ) {
+		Host *h = &m_hosts[i];
+		// if nothing do not try to free it
+		if ( ! h->m_lastKnownGoodCrawlInfoReply ) continue;
+		mfree ( h->m_lastKnownGoodCrawlInfoReply ,
+			h->m_replyAllocSize , 
+			"lknown" );
+		// do not re-free
+		h->m_lastKnownGoodCrawlInfoReply = NULL;
+	}
+
 	if ( m_hosts ) 
 		mfree ( m_hosts, m_allocSize,"Hostdb" );
 	if ( m_ips   ) mfree ( m_ips  , m_numIps * 4, "Hostdb" );
@@ -119,8 +133,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	// make sure our hostId is in our conf file
 	if ( hostId < 0 ) 
 		return log(
-			   "conf: Negative hostId %li supplied in "
-			   "hosts.conf.",hostId);
+			   "conf: Negative hostId %li supplied",hostId);
 	// set early for calling log()
 	m_hostId = hostId;
 	// set clock in sync in fctypes.cpp
@@ -2263,69 +2276,27 @@ long Hostdb::getBestHosts2IP ( Host  *h ) {
 	return h->m_ip;
 }
 
+// assume to be from posdb here
+uint32_t Hostdb::getShardNumByTermId ( void *k ) {
+	return m_map [(*(uint16_t *)((char *)k + 16))>>3];
+}
+
 // . if false, we don't split index and date lists, other dbs are unaffected
 // . this obsolets the g_*.getGroupId() functions
 // . this allows us to have any # of groups in a stripe, not just power of 2
 // . now we can use 3 stripes of 96 hosts each so spiders will almost never
 //   go down
 //uint32_t Hostdb::getGroupId ( char rdbId,void *k,bool split ) {
-uint32_t Hostdb::getShardNum ( char rdbId,void *k,bool split ) {
+uint32_t Hostdb::getShardNum ( char rdbId,void *k ) { // ,bool split ) {
 
-	if ( ! split ) {
-		// based on termid for nosplits
-		if ( rdbId == RDB_POSDB || rdbId == RDB2_POSDB2 ) {
-			// use top 13 bits of key
-			return m_map [(*(uint16_t *)((char *)k + 16))>>3];
-		}
-		//if ( rdbId == RDB_INDEXDB || rdbId == RDB2_INDEXDB2 ) {
-		//	// use top 13 bits of key
-		//	return m_map [(*(uint16_t *)((char *)k + 10))>>3];
-		//}
-		// . i don't think we need this one now
-		// . XmlDoc::hashNoSplit() only seems to use indexdb
-		// . no, now events have gbeventdeduphash!
-		if ( rdbId == RDB_DATEDB || rdbId == RDB2_DATEDB2 ) {
-			// . use termid
-			// . this is kinda slow, but since it is rare, that
-			//   is fine
-			uint64_t tid = g_datedb.getTermId ( (key128_t *)k );
-			// use lower 16 bits of termid i guess
-			return m_map [ (*((uint16_t *)&tid)) & (MAX_KSLOTS-1)];
-		}
-		// this one is the same as below! just makes calls to
-		// getGroupId() more flexible i guess
-		/*
-		else if ( rdbId == RDB_TAGDB ) {
-			return m_map [(*(uint16_t *)((char *)k + 10))>>3];
-		}
-		else if ( rdbId == RDB_CATDB ) {
-			// use top 13 bits of key, just like indexdb above
-			return m_map [(*(uint16_t *)((char *)k + 10))>>3];
-		}
-		else if ( rdbId == RDB_LINKDB || rdbId == RDB2_LINKDB2 ) {
-			//return m_map [(*(uint16_t *)((char *)k + 14))>>3];
-			return m_map [(*(uint16_t *)((char *)k + 26))>>3];
-			
-		}
-		// treat this key like a datedb key
-		else if ( rdbId == RDB_SECTIONDB || rdbId == RDB2_SECTIONDB2){
-			// use top 13 bits of key
-			return m_map [(*(uint16_t *)((char *)k + 14))>>3];
-		}
-		// treat this key like a datedb key
-		else if ( rdbId == RDB_PLACEDB || rdbId == RDB2_PLACEDB2){
-			// use top 13 bits of key
-			return m_map [(*(uint16_t *)((char *)k + 14))>>3];
-		}
-		else if ( rdbId == RDB_REVDB || rdbId == RDB2_REVDB2 ) {
-			// key is formed like title key is
-			//long long d = g_titledb.getDocId ( (key_t *)k );
-			unsigned long long d = g_revdb.getDocId( (key_t *)k );
-			return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
-		}
-		*/
-		// nobody else can be "no split" i guess
-		char *xx = NULL; *xx = 0;
+	if ( (rdbId == RDB_POSDB || rdbId == RDB2_POSDB2) &&
+	     // split by termid and not docid?
+	     g_posdb.isShardedByTermId ( k ) ) {
+		// based on termid NOT docid!!!!!!
+		// good for page checksums so we only have to do disk
+		// seek on one shard, not all shards.
+		// use top 13 bits of key.
+		return m_map [(*(uint16_t *)((char *)k + 16))>>3];
 	}
 
 	// try to put those most popular ones first for speed
@@ -2473,3 +2444,32 @@ Host *Hostdb::getBestSpiderCompressionProxy ( long *key ) {
 	// got a live one
 	return h;
 }
+
+long Hostdb::getCRC ( ) {
+	if ( m_crcValid ) return m_crc;
+	// hash up all host entries, just the grunts really.
+	SafeBuf str;
+	for ( long i = 0 ; i < getNumGrunts() ; i++ ) {
+		Host *h = &m_hosts[i];
+		// dns client port not so important
+		str.safePrintf("%li,", i);
+		str.safePrintf("%s," , iptoa(h->m_ip));
+		str.safePrintf("%s," , iptoa(h->m_ipShotgun));
+		str.safePrintf("%li,", (long)h->m_httpPort);
+		str.safePrintf("%li,", (long)h->m_httpsPort);
+		str.safePrintf("%li,", (long)h->m_port);
+		str.pushChar('\n');
+	}
+	str.nullTerm();
+
+	m_crc = hash32n ( str.getBufStart() );
+
+	// make sure it is legit
+	if ( m_crc == 0 ) m_crc = 1;
+
+	m_crcValid = true;
+	return m_crc;
+}
+
+
+	

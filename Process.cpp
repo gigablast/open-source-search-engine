@@ -30,7 +30,7 @@
 //#include "Thesaurus.h"
 #include "Spider.h"
 #include "Profiler.h"
-#include "PageNetTest.h"
+//#include "PageNetTest.h"
 #include "LangList.h"
 #include "AutoBan.h"
 //#include "SiteBonus.h"
@@ -43,6 +43,7 @@
 #include "Wiktionary.h"
 #include "Users.h"
 #include "Proxy.h"
+#include "Rebalance.h"
 
 // the query log hashtable defined in XmlDoc.cpp
 //extern HashTableX g_qt;
@@ -73,7 +74,9 @@ static long s_nextTime = 0;
 
 char *g_files[] = {
 	"gb.conf",
-	"hosts.conf",
+
+	// might have localhosts.conf
+	//"hosts.conf",
 	
 	"catcountry.dat",
 	"badcattable.dat",
@@ -104,7 +107,11 @@ char *g_files[] = {
 	"antiword" ,  // msword
 	"pdftohtml",  // pdf
 	"pstotext" ,  // postscript
-	"ppthtml"  ,  // powerpoint
+	//"ppthtml"  ,  // powerpoint
+
+	// required for SSL server support for both getting web pages
+	// on https:// sites and for serving https:// pages
+	"gb.pem",
 	
 	//"dict/unifiedDict",
 	//"dict/thesaurus.txt",
@@ -155,13 +162,13 @@ char *g_files[] = {
 	//"/usr/bin/ppmtojpeg",
 	//"/usr/sbin/smartctl",
 
-	"giftopnm",
-	"tifftopnm",
-	"pngtopnm",
-	"jpegtopnm",
-	"bmptopnm",
-	"pnmscale",
-	"ppmtojpeg",
+	//"giftopnm",
+	//"tifftopnm",
+	//"pngtopnm",
+	//"jpegtopnm",
+	//"bmptopnm",
+	//"pnmscale",
+	//"ppmtojpeg",
 
 	//"smartctl",
 
@@ -184,6 +191,7 @@ char *g_files[] = {
 
 bool Process::checkFiles ( char *dir ) {
 
+	/*
 	// check these by hand since you need one or the other
 	File f1;
 	File f2;
@@ -203,6 +211,7 @@ bool Process::checkFiles ( char *dir ) {
 		    f2.getFilename() );
 		//return false;
 	}
+	*/
 
 	// check for email subdir
 	//f1.set ( dir , "/html/email/");
@@ -256,11 +265,11 @@ bool Process::checkFiles ( char *dir ) {
 			
 	}
 
-	if ( needsFiles ) {
-	  log("db: use 'apt-get install -y netpbm' to install "
-	      "pnmfiles");
-	  return false;
-	}
+	//if ( needsFiles ) {
+	//  log("db: use 'apt-get install -y netpbm' to install "
+	//      "pnmfiles");
+	//  return false;
+	//}
 
 	// . check for tagdb files tagdb0.xml to tagdb50.xml
 	// . MDW - i am phased these annoying files out 100%
@@ -405,7 +414,7 @@ bool Process::init ( ) {
 	//m_rdbs[m_numRdbs++] = g_tfndb.getRdb       ();
 	m_rdbs[m_numRdbs++] = g_titledb.getRdb     ();
 	//m_rdbs[m_numRdbs++] = g_revdb.getRdb       ();
-	//m_rdbs[m_numRdbs++] = g_sectiondb.getRdb   ();
+	m_rdbs[m_numRdbs++] = g_sectiondb.getRdb   ();
 	m_rdbs[m_numRdbs++] = g_posdb.getRdb     ();
 	//m_rdbs[m_numRdbs++] = g_datedb.getRdb      ();
 	m_rdbs[m_numRdbs++] = g_spiderdb.getRdb    ();
@@ -425,7 +434,7 @@ bool Process::init ( ) {
 	//m_rdbs[m_numRdbs++] = g_tfndb2.getRdb      ();
 	m_rdbs[m_numRdbs++] = g_titledb2.getRdb    ();
 	//m_rdbs[m_numRdbs++] = g_revdb2.getRdb      ();
-	//m_rdbs[m_numRdbs++] = g_sectiondb2.getRdb  ();
+	m_rdbs[m_numRdbs++] = g_sectiondb2.getRdb  ();
 	m_rdbs[m_numRdbs++] = g_posdb2.getRdb    ();
 	//m_rdbs[m_numRdbs++] = g_datedb2.getRdb     ();
 	m_rdbs[m_numRdbs++] = g_spiderdb2.getRdb   ();
@@ -436,6 +445,13 @@ bool Process::init ( ) {
 	m_rdbs[m_numRdbs++] = g_linkdb2.getRdb     ();
 	//m_rdbs[m_numRdbs++] = g_placedb2.getRdb    ();
 	m_rdbs[m_numRdbs++] = g_tagdb2.getRdb      ();
+	/////////////////
+	// CAUTION!!!
+	/////////////////
+	// Add any new rdbs to the END of the list above so 
+	// it doesn't screw up Rebalance.cpp which uses this list too!!!!
+	/////////////////
+
 
 	//call these back right before we shutdown the
 	//httpserver.
@@ -1071,6 +1087,15 @@ void processSleepWrapper ( int fd , void *state ) {
 
 	// do not do autosave if no power
 	if ( ! g_process.m_powerIsOn ) return;
+
+	// . i guess try to autoscale the cluster in cast hosts.conf changed
+	// . if all pings came in and all hosts have the same hosts.conf
+	//   and if we detected any shard imbalance at startup we have to
+	//   scan all rdbs for records that don't belong to us and send them
+	//   where they should go
+	// . returns right away in most cases
+	g_rebalance.rebalanceLoop();
+
 	// autosave? override this if power is off, we need to save the data!
 	//if (g_conf.m_autoSaveFrequency <= 0 && g_process.m_powerIsOn) return;
 	if ( g_conf.m_autoSaveFrequency <= 0 ) return;
@@ -1087,7 +1112,12 @@ void processSleepWrapper ( int fd , void *state ) {
 	// get time the day started
 	long now;
 	if ( g_hostdb.m_myHost->m_isProxy ) now = getTimeLocal();
-	else now = getTimeGlobal();
+	else {
+		// need to be in sync with host #0's clock
+		if ( ! isClockInSync() ) return;
+		// that way autosaves all happen at about the same time
+		now = getTimeGlobal();
+	}
 
 	// set this for the first time
 	if ( g_process.m_lastSaveTime == 0 )
@@ -1400,6 +1430,13 @@ bool Process::shutdown2 ( ) {
 		// at least destroy the page caches that have shared memory
 		// because they seem to not clean it up
 		resetPageCaches();
+
+		// let's ensure our core file can dump
+		struct rlimit lim;
+		lim.rlim_cur = lim.rlim_max = RLIM_INFINITY;
+		if ( setrlimit(RLIMIT_CORE,&lim) )
+			log("gb: setrlimit: %s.", mstrerror(errno) );
+
 		// . force an abnormal termination which will cause a core dump
 		// . do not dump core on SIGHUP signals any more though
 		abort();
@@ -1452,7 +1489,7 @@ void Process::disableTreeWrites ( ) {
 		rdb->disableWrites();
 	}
 	// disable all spider trees and tables
-	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(i);
 		if ( ! sc ) continue;
 		sc->m_waitingTree .disableWrites();
@@ -1469,7 +1506,7 @@ void Process::enableTreeWrites ( ) {
 		rdb->enableWrites();
 	}
 	// enable all waiting trees
-	for ( long i = 0 ; i < g_collectiondb.getNumRecs() ; i++ ) {
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
 		SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(i);
 		if ( ! sc ) continue;
 		sc->m_waitingTree .enableWrites();
@@ -1601,6 +1638,10 @@ bool Process::saveBlockingFiles1 ( ) {
 	// . this is repeated above too
 	// . keep it here for auto-save
 	g_repair.save();
+
+	// save our place during a rebalance
+	g_rebalance.saveRebalanceFile();
+
 	// save the login table
 	g_users.save();
 
@@ -1724,7 +1765,7 @@ void Process::resetAll ( ) {
 	g_autoBan         .reset();
 	//g_qtable          .reset();
 	//g_pageTopDocs     .destruct();
-	g_pageNetTest     .destructor();
+	//g_pageNetTest     .destructor();
 
 	for ( long i = 0; i < MAX_GENERIC_CACHES; i++ )
 		g_genericCache[i].reset();
@@ -1740,6 +1781,8 @@ void Process::resetAll ( ) {
 	//g_waitingTable.reset();
 
 	g_wiktionary.reset();
+
+	g_countryCode.reset();
 
 	s_clusterdbQuickCache.reset();
 	s_hammerCache.reset();
@@ -1794,7 +1837,7 @@ void Process::resetPageCaches ( ) {
 	//g_datedb          .getDiskPageCache()->reset();
 	g_linkdb          .getDiskPageCache()->reset();
 	g_titledb         .getDiskPageCache()->reset();
-	//g_sectiondb       .getDiskPageCache()->reset();
+	g_sectiondb       .getDiskPageCache()->reset();
 	g_tagdb           .getDiskPageCache()->reset();
 	g_spiderdb        .getDiskPageCache()->reset();
 	//g_tfndb           .getDiskPageCache()->reset();

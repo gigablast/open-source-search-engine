@@ -930,9 +930,12 @@ bool Msg3::doneScanning ( ) {
 					      ff->getFilename() ,
 					      m_niceness ) ) {
 			log("net: Had error while constraining list read from "
-			    "%s: %s. This is likely caused by corrupted "
+			    "%s: %s%s. vfd=%li parts=%li. "
+			    "This is likely caused by corrupted "
 			    "data on disk.", 
-			    mstrerror(g_errno), ff->getFilename());
+			    mstrerror(g_errno), ff->m_dir ,
+			    ff->getFilename(), ff->m_vfd , 
+			    (long)ff->m_numParts );
 		}
 	}
 

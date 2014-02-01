@@ -91,6 +91,13 @@ class Page {
 #define PF_SUBMENU_HEADER  0x04
 #define PF_WIDGET_PARM     0x08
 #define PF_API             0x10
+#define PF_REBUILDURLFILTERS 0x20
+#define PF_NOSYNC            0x40
+#define PF_DIFFBOT           0x80
+
+#define PF_HIDDEN 0x0100
+#define PF_NOSAVE 0x0200
+
 
 class Parm {
  public:
@@ -124,7 +131,7 @@ class Parm {
 	char  m_hdrs;  // print headers for row or print title/desc for single?
 	char  m_perms; // 0 means same as WebPages' m_perms
 	char  m_subMenu;
-	char  m_flags;
+	short m_flags;
 	char *m_class;
 	char *m_icon;
 	char *m_qterm;
@@ -169,6 +176,8 @@ class Parm {
 	char * getValueAsString ( class SearchInput *si ) ;	
 
 	long getNumInArray ( collnum_t collnum ) ;
+
+	bool printVal ( class SafeBuf *sb , collnum_t collnum , long occNum ) ;
 };
 
 #define MAX_PARMS 940
@@ -332,7 +341,10 @@ class Parms {
 				 void    *state ,
 				 void   (* callback)(void *) ,
 				 bool sendToGrunts  = true ,
-				 bool sendToProxies = false );
+				 bool sendToProxies = false ,
+				 // send to this single hostid? -1 means all
+				 long hostId = -1 ,
+				 long hostId2 = -1 ); // hostid range?
 	bool doParmSendingLoop ( ) ;
 	bool syncParmsWithHost0 ( ) ;
 	bool makeSyncHashList ( SafeBuf *hashList ) ;

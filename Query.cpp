@@ -2190,6 +2190,7 @@ bool Query::setQWords ( char boolFlag ,
 		// if we're hashing a url:, link:, site: or ip: term, 
 		// then we need to hash ALL up to the first space
 		if ( fieldCode == FIELD_URL  || 
+		     fieldCode == FIELD_GBPARENTURL ||
 		     fieldCode == FIELD_EXT  || 
 		     fieldCode == FIELD_LINK ||
 		     fieldCode == FIELD_ILINK||
@@ -2225,6 +2226,7 @@ bool Query::setQWords ( char boolFlag ,
 
 			// should we have normalized before hashing?
 			if ( fieldCode == FIELD_URL ||
+			     fieldCode == FIELD_GBPARENTURL ||
 			     fieldCode == FIELD_LINK ||
 			     fieldCode == FIELD_ILINK ||
 			     fieldCode == FIELD_SITELINK ||
@@ -2237,6 +2239,8 @@ bool Query::setQWords ( char boolFlag ,
 				if ( fieldCode == FIELD_ILINK) addwww = true;
 				if ( fieldCode == FIELD_LINKS) addwww = true;
 				if ( fieldCode == FIELD_URL  ) addwww = true;
+				if ( fieldCode == FIELD_GBPARENTURL ) 
+					addwww = true;
 				if ( fieldCode == FIELD_SITELINK) 
 					addwww = true;
 				url.set ( w , wlen , addwww );
@@ -3006,7 +3010,7 @@ struct QueryField g_fields[] = {
 	{"ilink", FIELD_ILINK, true,"Similar to above."},
 	{"sitelink", FIELD_SITELINK, true,"Matches all pages that link to the given site. Example:sitelink:www.gigablast.com matches all pages that link to some page on the www.gigablast.com site."},
 	{"site", FIELD_SITE, true,"Matches all pages from the given site. Example: site:www.gigablast.com will return all the pages on the gigablast site"},
-	{"coll", FIELD_COLL, true,"Not sure if this works."},
+	//{"coll", FIELD_COLL, true,"Not sure if this works."},
 	{"ip", FIELD_IP, true,"Matches all pages with the given ip. Example:1.2.3.4 will match all pages whose urls have that IP address."},
 	{"inurl", FIELD_SUBURL, true,"Matches all pages that have the given terms in the url. Example inurl:water will match all pages whose url has the word water in it, but the word must be delineated by punctuation."},
 	{"suburl", FIELD_SUBURL, true,"Same as inurl."},
@@ -3038,8 +3042,8 @@ struct QueryField g_fields[] = {
 	{"gbhasext", FIELD_GBOTHER, false,""},
 	{"gbsubmiturl", FIELD_GBOTHER, false,""},
 
-	{"qdom", FIELD_QUOTA, false,""},
-	{"qhost", FIELD_QUOTA, false,""},
+	//{"qdom", FIELD_QUOTA, false,""},
+	//{"qhost", FIELD_QUOTA, false,""},
 	{"gbtagvector", FIELD_GBTAGVECTOR, false,""},
 
 	{"gbgigabitvector", FIELD_GBGIGABITVECTOR, false,""},
@@ -3061,7 +3065,7 @@ struct QueryField g_fields[] = {
 	{"gbduphash"                ,FIELD_GBOTHER,false,"Internal use only."},
 	{"gbsitetemplate"           ,FIELD_GBOTHER,false,"Internal use only."},
 	{"gboutlinkedtitle"         ,FIELD_GBOTHER,false,"gboutlinkedtitle:0 and gboutlinkedtitle:1 matches events whose title is not in and in a hyperlink, respectively."},
-	{"gbisaggregator"           ,FIELD_GBOTHER,false,"gbisaggregator:0|1 depending on if the event came from an event aggregator website, like eviesays.com."},
+	//{"gbisaggregator"           ,FIELD_GBOTHER,false,"gbisaggregator:0|1 depending on if the event came from an event aggregator website, like eviesays.com."},
 	{"gbdeduped"                ,FIELD_GBOTHER,false,""},
 
 	{"gbinjected", FIELD_GBOTHER,false,"Was the event injected?."},
@@ -3070,7 +3074,8 @@ struct QueryField g_fields[] = {
 	//{"gbendrange",FIELD_GBENDRANGE,false,""},
 
 	{"gbpermalink",FIELD_GBPERMALINK,false,""},
-	{"gbcsenum",FIELD_GBCSENUM,false,""},
+	//{"gbcsenum",FIELD_GBCSENUM,false,""},
+	{"gbparenturl", FIELD_GBPARENTURL, true,"Match the json urls that were extract from this parent url. Example: gbparenturl:www.gigablast.com/addurl.htm"},
 	{"gbdocid",FIELD_GBDOCID,false,"restrict results to this docid"}
 	
 };

@@ -20,9 +20,16 @@ void Msg20::constructor () {
 
 void Msg20::destructor  () { reset(); m_mcast.destructor(); }
 
+#include "Process.h"
+
 void Msg20::reset() { 
 	// not allowed to reset one in progress
-	if ( m_inProgress ) { char *xx=NULL;*xx=0; }
+	if ( m_inProgress ) { 
+		// do not core on abrupt exits!
+		if (g_process.m_mode == EXIT_MODE ) return;
+		// otherwise core
+		char *xx=NULL;*xx=0; 
+	}
 	m_launched = false;
 	if ( m_request && m_request   != m_requestBuf )
 		mfree ( m_request , m_requestSize  , "Msg20rb" );

@@ -113,12 +113,14 @@ bool ucInit(char *path, bool verifyFiles){
 	// but right now it's the only thing that uses .so files (?)
 	char gbLibDir[512];
 	snprintf(gbLibDir, 512, "%s/lib",path);
-	log(LOG_INIT, "ucinit: Setting LD_RUN_PATH to \"%s\"",gbLibDir);
+	// i don't think this is used any more because we don't have it!
+	//log(LOG_INIT, "ucinit: Setting LD_RUN_PATH to \"%s\"",gbLibDir);
 	if (setenv("LD_RUN_PATH", gbLibDir, 1)){
 		log(LOG_INIT, "Failed to set LD_RUN_PATH");
 	}
-	char *ldpath = getenv("LD_RUN_PATH");
-	log(LOG_DEBUG, "ucinit: LD_RUN_PATH: %s\n", ldpath);
+	//char *ldpath = getenv("LD_RUN_PATH");
+	// i don't think this is used any more because we don't have it!
+	//log(LOG_DEBUG, "ucinit: LD_RUN_PATH: %s\n", ldpath);
 
 
 	strcpy(file, path);
@@ -1531,6 +1533,6 @@ bool openIconvDescriptors() {
 	if (gbiconv_open("UTF-8", "WINDOWS-1252") < 0) return false;
 	if (gbiconv_open("WINDOWS-1252", "UTF-8") < 0) return false;
 	
-	log(LOG_INIT, "uni: Successfully loaded all iconv descriptors");
+	//log(LOG_INIT, "uni: Successfully loaded all iconv descriptors");
 	return true;
 }

@@ -216,6 +216,7 @@ class Conf {
 	//long long  m_tfndbMaxUrls;
 
 	long  m_maxCpuThreads;
+	long  m_maxCpuMergeThreads;
 
 	long  m_deadHostTimeout;
 	long  m_sendEmailTimeout;
@@ -299,6 +300,8 @@ class Conf {
 	// for holding robot.txt files for various hostnames
 	long  m_robotdbMaxCacheMem  ;
 	bool  m_robotdbSaveCache;
+
+	long  m_maxTotalSpiders;
 
 	// indexdb has a max cached age for getting IndexLists (10 mins deflt)
 	long  m_indexdbMaxTreeMem   ;

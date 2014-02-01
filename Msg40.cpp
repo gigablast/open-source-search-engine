@@ -17,7 +17,7 @@
 
 // increasing this doesn't seem to improve performance any on a single
 // node cluster....
-#define MAX_OUTSTANDING_MSG20S 50
+#define MAX_OUTSTANDING_MSG20S 200
 
 //static void handleRequest40              ( UdpSlot *slot , long netnice );
 //static void gotExternalReplyWrapper      ( void *state , void *state2 ) ;
@@ -1098,6 +1098,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		//req.m_excludeLinkText    = m_si->m_excludeLinkText ;
 		//req.m_excludeMetaText    = m_si->m_excludeMetaText ;
 		req.m_includeCachedCopy  = m_si->m_includeCachedCopy;//bigsmpl
+		req.m_getSectionVotingInfo   = m_si->m_getSectionVotingInfo;
 		req.m_considerTitlesFromBody = m_si->m_considerTitlesFromBody;
 		if ( cr->m_considerTitlesFromBody )
 			req.m_considerTitlesFromBody = true;
@@ -1183,6 +1184,10 @@ bool gotSummaryWrapper ( void *state ) {
 	Msg40 *THIS  = (Msg40 *)state;
 	// inc it here
 	THIS->m_numReplies++;
+	// log every 1000 i guess
+	if ( (THIS->m_numReplies % 1000) == 0 )
+		log("msg40: got %li summaries out of %li",THIS->m_numReplies,
+		    THIS->m_msg3a.m_numDocIds);
 	// it returns false if we're still awaiting replies
 	if ( ! THIS->gotSummary ( ) ) return false;
 	// now call callback, we're done
@@ -1216,11 +1221,24 @@ bool Msg40::gotSummary ( ) {
 		// reset g_errno
 		g_errno = 0;
 	}
+	/*
+	// sanity check
+	for ( long i = 0 ; i < m_msg3a.m_numDocIds ; i++ ) {
+		// stop as soon as we hit a gap breaking our contiguity... 
+		Msg20 *m = m_msg20[i];
+		if ( ! m ) continue;
+		Msg20Reply *mr = m->m_r;
+		if ( ! mr ) continue;
+		char *cc = mr->ptr_content;
+		if ( ! cc ) continue;
+		//if ( ! strstr(cc,"Modern Marketing KF400032MA") )  continue;
+		//log("hey");
+		//fprintf(stderr,"msg %li = %s\n",i,cc );
+		if ( i == 48329 ) { char *xx=NULL;*xx=0; }
+		mr->ptr_content = NULL;
+	}
+	*/
 
-	// . ok, now i wait for everybody.
-	// . TODO: evaluate if this hurts us
-	if ( m_numReplies < m_numRequests )
-		return false;
 
  doAgain:
 
@@ -1243,6 +1261,11 @@ bool Msg40::gotSummary ( ) {
 		goto doAgain;
 		//char *xx=NULL; *xx=0;
 	}
+
+	// . ok, now i wait for everybody.
+	// . TODO: evaluate if this hurts us
+	if ( m_numReplies < m_numRequests )
+		return false;
 
 
 	// save this before we increment m_numContiguous

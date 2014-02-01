@@ -1285,6 +1285,10 @@ bool CountryCode::loadHashTable(void) {
 	return(s_catToCountry.load(g_hostdb.m_dir, "catcountry.dat"));
 }
 
+void CountryCode::reset ( ) {
+	s_catToCountry.reset();
+}
+
 int CountryCode::getNumCodes(void) {
 	return(s_numCountryCodes);
 }

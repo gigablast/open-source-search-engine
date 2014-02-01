@@ -27,7 +27,7 @@ class Tfndb {
 
 	bool verify ( char *coll );
 
-	bool addColl ( char *coll, bool doVerify = true );
+	//bool addColl ( char *coll, bool doVerify = true );
 	
 	// set up our private rdb
 	bool init ( );

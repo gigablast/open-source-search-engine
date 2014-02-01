@@ -21,7 +21,8 @@ void doneReadingForVerifyWrapper ( void *state ) ;
 
 // . return false if blocked, true otherwise
 // . sets g_errno on error
-bool RdbDump::set ( char     *coll          ,
+bool RdbDump::set ( //char     *coll          ,
+		   collnum_t collnum ,
 		    BigFile  *file          ,
 		    long      id2           , // in Rdb::m_files[] array
 		    bool      isTitledb     ,
@@ -49,8 +50,14 @@ bool RdbDump::set ( char     *coll          ,
 		char *xx = NULL; *xx = 0;
 	}
 	//if ( ! coll &&
-	if ( ! coll && rdb->m_isCollectionLess )
-		strcpy(m_coll,rdb->m_dbname);
+	//if ( ! coll && rdb->m_isCollectionLess )
+	//	strcpy(m_coll,rdb->m_dbname);
+
+	m_collnum = collnum;
+
+	// use 0 for collectionless
+	if ( rdb && rdb->m_isCollectionLess ) m_collnum = 0;
+
 	/*
 	if ( ! coll && g_catdb.getRdb() == rdb )
 		strcpy(m_coll, "catdb");
@@ -59,8 +66,8 @@ bool RdbDump::set ( char     *coll          ,
 	else if ( ! coll && g_accessdb.getRdb() == rdb )
 		strcpy(m_coll, "accessdb");
 	*/
-	else
-		strcpy ( m_coll , coll );
+	//else
+	//	strcpy ( m_coll , coll );
 	m_file          = file;
 	m_id2           = id2;
 	m_isTitledb     = isTitledb;
@@ -187,6 +194,9 @@ void RdbDump::reset ( ) {
 }	
 
 void RdbDump::doneDumping ( ) {
+
+	long saved = g_errno;
+
 	m_isDumping = false;
 	// print stats
 	log(LOG_INFO,
@@ -194,16 +204,23 @@ void RdbDump::doneDumping ( ) {
 	     m_totalPosDumped , m_totalNegDumped ,
 	     m_totalPosDumped + m_totalNegDumped );
 
-	// map verify
-	log("db: map # pos=%lli neg=%lli",
-	    m_map->getNumPositiveRecs(),
-	    m_map->getNumNegativeRecs()
-	    );
+	// . map verify
+	// . if continueDumping called us with no collectionrec, it got
+	//   deleted so RdbBase::m_map is nuked too i guess
+	if ( saved != ENOCOLLREC )
+		log("db: map # pos=%lli neg=%lli",
+		    m_map->getNumPositiveRecs(),
+		    m_map->getNumNegativeRecs()
+		    );
 
 	// free the list's memory
 	if ( m_list ) m_list->freeList();
 	// reset verify buffer
 	reset();
+
+	// did collection get deleted/reset from under us?
+	if ( saved == ENOCOLLREC ) return;
+
 	// save the map to disk
 	m_map->writeMap();
 #ifdef _SANITYCHECK_
@@ -280,13 +297,16 @@ bool RdbDump::dumpTree ( bool recall ) {
 	// this list will hold the list of nodes/recs from m_tree
 	m_list = &m_ourList;
 	// convert coll to collnum
-	collnum_t collnum = g_collectiondb.getCollnum ( m_coll );
-	if ( collnum < 0 ) {
-		//if ( g_catdb->getRdb() == m_rdb )
-		if ( ! m_rdb->m_isCollectionLess ) return true;
-		g_errno = 0;
-		collnum = 0;
-	}
+	//collnum_t collnum = g_collectiondb.getCollnum ( m_coll );
+	// a collnum of -1 is for collectionless rdbs
+	//if ( collnum < 0 ) {
+	//	//if ( g_catdb->getRdb() == m_rdb )
+	//	if ( ! m_rdb->m_isCollectionLess ) {
+	//		char *xx=NULL;*xx=0; //return true;
+	//	}
+	//	g_errno = 0;
+	//	collnum = 0;
+	//}
 	// getMemOccupiedForList2() can take some time, so breathe
 	long niceness = 1;
  loop:
@@ -313,7 +333,7 @@ bool RdbDump::dumpTree ( bool recall ) {
 		//log("RdbDump:: getting list");
 		m_t1 = gettimeofdayInMilliseconds();
 		if(m_tree)
-			status = m_tree->getList ( collnum       ,
+			status = m_tree->getList ( m_collnum       ,
 					   m_nextKey     , 
 					   maxEndKey     ,
 					   m_maxBufSize  , // max recSizes
@@ -323,7 +343,7 @@ bool RdbDump::dumpTree ( bool recall ) {
 					   m_useHalfKeys ,
 						   niceness );
 		else if(m_buckets)
-			status = m_buckets->getList ( collnum,
+			status = m_buckets->getList ( m_collnum,
 					   m_nextKey     , 
 					   maxEndKey     ,
 					   m_maxBufSize  , // max recSizes
@@ -833,19 +853,19 @@ bool RdbDump::doneReadingForVerify ( ) {
 	//log("RdbDump:: deleting list");
 	long long t1 = gettimeofdayInMilliseconds();
 	// convert to number, this is -1 if no longer exists
-	collnum_t collnum = g_collectiondb.getCollnum ( m_coll );
-	if ( collnum < 0 && m_rdb->m_isCollectionLess ) {
-		collnum = 0;
-		g_errno = 0;
-	}
+	//collnum_t collnum = g_collectiondb.getCollnum ( m_coll );
+	//if ( collnum < 0 && m_rdb->m_isCollectionLess ) {
+	//	collnum = 0;
+	//	g_errno = 0;
+	//}
 	//m_tree->deleteOrderedList ( m_list , false /*do balancing?*/ );
 	// tree delete is slow due to checking for leaks, not balancing
 	bool s;
 	if(m_tree) {
-		s = m_tree->deleteList(collnum,m_list,true /*do balancing?*/);
+		s = m_tree->deleteList(m_collnum,m_list,true/*do balancing?*/);
 	}
 	else if(m_buckets) {
-		s = m_buckets->deleteList(collnum, m_list);
+		s = m_buckets->deleteList(m_collnum, m_list);
 	}
 	// problem?
 	if ( ! s && ! m_tried ) {
@@ -995,9 +1015,19 @@ void doneWritingWrapper ( void *state ) {
 }
 
 void RdbDump::continueDumping() {
+
+	// if someone reset/deleted the collection we were dumping...
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
+		// m_file is invalid if collrec got nuked because so did
+		// the Rdbbase which has the files
+		log("db: continue dumping lost collection");
+	}
 	// bitch about errors
-	if (g_errno)log("db: Dump to %s had error writing: %s.",
-			m_file->getFilename(),mstrerror(g_errno));
+	else if (g_errno)log("db: Dump to %s had error writing: %s.",
+			     m_file->getFilename(),mstrerror(g_errno));
+
 	// go back now if we were NOT dumping a tree
 	if ( ! (m_tree || m_buckets) ) {
 		m_isDumping = false;
@@ -1006,7 +1036,10 @@ void RdbDump::continueDumping() {
 	}
 	// . continue dumping the tree
 	// . return if this blocks
-	if ( ! dumpTree ( false ) ) return;
+	// . if the collrec was deleted or reset then g_errno will be
+	//   ENOCOLLREC and we want to skip call to dumpTree(
+	if ( g_errno != ENOCOLLREC && ! dumpTree ( false ) ) 
+		return;
 	// close it up
 	doneDumping ( );
 	// call the callback

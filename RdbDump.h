@@ -30,7 +30,8 @@ class RdbDump {
 
 	// . set up for a dump of rdb records to a file
 	// . returns false and sets errno on error
-        bool set  ( char      *coll          ,
+        bool set  ( //char      *coll          ,
+		   collnum_t collnum ,
 		    BigFile   *file          ,
 		    long       id2           , // in Rdb::m_files[] array
 		    bool       isTitledb     , // are we dumping TitleRecs?
@@ -179,7 +180,8 @@ class RdbDump {
 	// for setting m_rdb->m_needsSave after deleting list from tree
 	class Rdb *m_rdb;
 
-	char      m_coll [ MAX_COLL_LEN + 1 ];
+	//char      m_coll [ MAX_COLL_LEN + 1 ];
+	collnum_t m_collnum;
 
 	bool m_tried;
 

@@ -96,6 +96,7 @@ class SearchInput {
 	char   m_excludeMetaText;
 	char   m_doBotDetection;
 	long   m_includeCachedCopy;
+	char   m_getSectionVotingInfo;
 	char   m_familyFilter;            // msg40
 	char   m_restrictIndexdbForQuery; // msg40
 	char   m_doSiteClustering;        // msg40
@@ -223,8 +224,10 @@ class SearchInput {
 	//long  m_formatStrLen;
 	//char *m_formatStr;
 
+	char m_formatTmp[11];
+
 	// can be 0 for FORMAT_HTML, 1 = FORMAT_XML, 2=FORMAT_JSON, 3=csv
-	char m_format;
+	long m_format;
 
 	// this should be part of the key because it will affect the results!
 	char   m_queryExpansion;

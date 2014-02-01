@@ -22,6 +22,7 @@ long g_numCorrupt = 0;
 
 Msg5::Msg5() {
 	m_waitingForList = false;
+	//m_waitingForMerge = false;
 	m_numListPtrs = 0;
 	m_mergeLists = true;
 	reset();
@@ -33,7 +34,7 @@ Msg5::~Msg5() {
 
 // frees m_treeList
 void Msg5::reset() {
-	if ( m_waitingForList ) {
+	if ( m_waitingForList ) { // || m_waitingForMerge ) {
 		log("disk: Trying to reset a class waiting for a reply.");
 		// might being doing an urgent exit (mainShutdown(1)) or
 		// g_process.shutdown(), so do not core here
@@ -45,7 +46,6 @@ void Msg5::reset() {
 	m_prevCount = 0;
 	//m_prevKey.setMin();
 	KEYMIN(m_prevKey,MAX_KEY_BYTES);// m_ks); m_ks is invalid
-	m_waitingForList = false;
 	// free lists if m_mergeLists was false
 	for ( long i = 0 ; ! m_mergeLists && i < m_numListPtrs ; i++ )
 		m_listPtrs[i]->freeList();
@@ -203,6 +203,13 @@ bool Msg5::getList ( char     rdbId         ,
 	// remember stuff
 	m_rdbId         = rdbId;
 	m_coll          = coll;
+
+	m_collnum = g_collectiondb.getCollnum ( coll );
+	if ( m_collnum < 0 ) {
+		g_errno = ENOCOLLREC;
+		return true;
+	}
+
 	m_list          = list;
 	//m_startKey      = startKey;
 	//m_endKey        = endKey;
@@ -466,7 +473,12 @@ bool Msg5::getList ( char     rdbId         ,
 	// timing debug
 	//log("Msg5:getting list startKey.n1=%lu",m_startKey.n1);
 	// start the read loop - hopefully, will only loop once
-	return readList ( );
+	if ( readList ( ) ) return true;
+
+	// tell Spider.cpp not to nuke us until we get back!!!
+	m_waitingForList = true;
+	// we blocked!!! must call m_callback
+	return false;
 }
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
@@ -725,7 +737,7 @@ bool Msg5::readList ( ) {
 	if ( m_treeList.m_ks != m_ks ) { char *xx = NULL; *xx = 0; }
 
 	// we are waiting for the list
-	m_waitingForList = true;
+	//m_waitingForList = true;
 
 	// clear just in case
 	g_errno = 0;
@@ -804,6 +816,16 @@ bool Msg5::needsRecall ( ) {
 		goto done;
 	//if ( m_list->getEndKey() >= m_endKey ) goto done;
 	if ( KEYCMP(m_list->getEndKey(),m_endKey,m_ks)>=0 ) goto done;
+
+	// if this is NOT the first round and the sum of all our list sizes
+	// did not increase, then we hit the end...
+	if ( m_round >= 1 && m_totalSize == m_lastTotalSize ) {
+		log("msg5: increasing minrecsizes did nothing. assuming done");
+		goto done;
+	}
+	// ok, make sure if we go another round at least one list gains!
+	m_lastTotalSize = m_totalSize;
+
 	/*
 	// sanity check
 	if ( m_indexdbTruncationLimit < MIN_TRUNC ) {
@@ -826,11 +848,13 @@ bool Msg5::needsRecall ( ) {
 	logIt = true;
 	// seems to be very common for doledb, so don't log unless extreme
 	//if ( m_rdbId == RDB_DOLEDB && m_round < 15 ) logIt = false;
+	if ( m_round > 100 && (m_round % 1000) != 0 ) logIt = false;
 	if ( logIt )
 		logf(LOG_DEBUG,"db: Reading %li again from %s (need %li total "
 		     "got %li) this=0x%lx round=%li.", 
 		     m_newMinRecSizes , base->m_dbname , m_minRecSizes, 
-		     m_list->m_listSize, (long)this , m_round++ );
+		     m_list->m_listSize, (long)this , m_round );
+	m_round++;
 	// record how many screw ups we had so we know if it hurts performance
 	base->m_rdb->didReSeek ( );
 
@@ -903,6 +927,8 @@ void gotListWrapper ( void *state ) {
 	if ( THIS->m_calledCallback ) { char *xx=NULL;*xx=0; }
 	// set it now
 	THIS->m_calledCallback = 1;
+	// we are no longer waiting for the list
+	THIS->m_waitingForList = false;
 	// when completely done call the callback
 	THIS->m_callback ( THIS->m_state , THIS->m_list , THIS );
 }
@@ -919,7 +945,7 @@ static void *mergeListsWrapper_r ( void *state , ThreadEntry *t ) ;
 bool Msg5::gotList ( ) {
 
 	// we are no longer waiting for the list
-	m_waitingForList = false;
+	//m_waitingForList = false;
 
 	// debug msg
 	//log("msg5 got lists from msg3 (msg5=%lu)",(long)this);
@@ -1052,8 +1078,15 @@ bool Msg5::gotList2 ( ) {
 		// sanity check
 		//if ( KEYNEG(m_listPtrs[i]->getEndKey()) ) {
 		//	char *xx=NULL;*xx=0; }
-		if ( KEYCMP(m_listPtrs[i]->getEndKey(),m_minEndKey,m_ks)<0 ) 
+		if ( KEYCMP(m_listPtrs[i]->getEndKey(),m_minEndKey,m_ks)<0 ) {
 			KEYSET(m_minEndKey,m_listPtrs[i]->getEndKey(),m_ks);
+			// crap, if list is all negative keys, then the
+			// end key seems negative too! however in this
+			// case RdbScan::m_endKey seems positive so
+			// maybe we got a negative endkey in constrain?
+			//if (! (m_minEndKey[0] & 0x01) )
+			//	log("msg5: list had bad endkey");
+		}
 	}
 	// sanity check
 	//if ( KEYNEG( m_minEndKey) ) {char *xx=NULL;*xx=0; }
@@ -1140,7 +1173,7 @@ bool Msg5::gotList2 ( ) {
 	// filter happens and we have a chance to weed out old titleRecs
 	if ( m_rdbId == RDB_TITLEDB && m_numFiles != 1 && n == 1 &&
 	     m_isRealMerge ) {
-		log(LOG_LOGIC,"db: Adding dummy list.");
+		//log(LOG_LOGIC,"db: Adding dummy list.");
 		//m_tfns [n] = 255;
 		m_dummy.set ( NULL                      , // list data
 			      0                         , // list data size
@@ -1365,6 +1398,8 @@ bool Msg5::gotList2 ( ) {
 	// skip it for now
 	//goto skipThread;
 
+	//m_waitingForMerge = true;
+
 	// . if size is big, make a thread
 	// . let's always make niceness 0 since it wasn't being very
 	//   aggressive before
@@ -1374,8 +1409,11 @@ bool Msg5::gotList2 ( ) {
 			      threadDoneWrapper   ,
 			      mergeListsWrapper_r ) ) 
 		return false;
+
+	//m_waitingForMerge = false;
+
 	// thread creation failed
-	if ( ! g_threads.areThreadsDisabled() )
+	if ( g_conf.m_useThreads && ! g_threads.m_disabled )
 		log(LOG_INFO,
 		    "net: Failed to create thread to merge lists. Doing "
 		    "blocking merge. Hurts performance.");
@@ -1429,6 +1467,8 @@ void threadDoneWrapper ( void *state , ThreadEntry *t ) {
 	if ( THIS->needsRecall() && ! THIS->readList() ) return;
 	// sanity check
 	if ( THIS->m_calledCallback ) { char *xx=NULL;*xx=0; }
+	// we are no longer waiting for the list
+	THIS->m_waitingForList = false;
 	// set it now
 	THIS->m_calledCallback = 3;
 	// when completely done call the callback
@@ -1704,6 +1744,8 @@ void Msg5::mergeLists_r ( ) {
 // . we are left with an empty list
 bool Msg5::doneMerging ( ) {
 
+	//m_waitingForMerge = false;
+
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
 	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return true;
 
@@ -1722,8 +1764,8 @@ bool Msg5::doneMerging ( ) {
 	//   our first merge
 	if ( m_hadCorruption ) {
 		// log it here, cuz logging in thread doesn't work too well
-		log("net: Encountered a corrupt list in rdb=%s",
-		    base->m_dbname);
+		log("net: Encountered a corrupt list in rdb=%s coll=%s",
+		    base->m_dbname,m_coll);
 		// remove error condition, we removed the bad data in thread
 		
 		m_hadCorruption = false;
@@ -1847,14 +1889,22 @@ bool Msg5::doneMerging ( ) {
 	}
 	else m_newMinRecSizes = nn;
 
+	// . for every round we get call increase by 10 percent
+	// . try to fix all those negative recs in the rebalance re-run
+	m_newMinRecSizes *= (1.0 + (m_round * .10));
+
+	// wrap around?
+	if ( m_newMinRecSizes < 0 || m_newMinRecSizes > 1000000000 )
+		m_newMinRecSizes = 1000000000;
+
 	
 	QUICKPOLL(m_niceness);
 	// . don't exceed original min rec sizes by 5 i guess
 	// . watch out for wrap
-	long max = 5 * m_minRecSizes ;
-	if ( max < m_minRecSizes ) max = 0x7fffffff;
-	if ( m_newMinRecSizes > max && max > m_minRecSizes )
-		m_newMinRecSizes = max;
+	//long max = 5 * m_minRecSizes ;
+	//if ( max < m_minRecSizes ) max = 0x7fffffff;
+	//if ( m_newMinRecSizes > max && max > m_minRecSizes )
+	//	m_newMinRecSizes = max;
 
 	// keep this above a certain point because if we didn't make it now
 	// we got negative records messing with us
@@ -1997,6 +2047,8 @@ void gotRemoteListWrapper( void *state ) { // , RdbList *list ) {
 	if ( ! THIS->gotRemoteList() ) return;
 	// sanity check
 	if ( THIS->m_calledCallback ) { char *xx=NULL;*xx=0; }
+	// we are no longer waiting for the list
+	THIS->m_waitingForList = false;
 	// set it now
 	THIS->m_calledCallback = 4;
 	// if it doesn't block call the callback, g_errno may be set

@@ -108,6 +108,7 @@ typedef unsigned long long qvec_t;
 #define FIELD_GBREVSORTBY      55 // i.e. sortby:price -> low to high
 #define FIELD_GBNUMBERMIN      56
 #define FIELD_GBNUMBERMAX      57
+#define FIELD_GBPARENTURL      58
 
 #define FIELD_GBOTHER 92
 

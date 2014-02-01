@@ -14,8 +14,12 @@
 #include "SafeBuf.h"
 #include "PageCrawlBot.h" // sendPageCrawlBot()
 
+#define LIGHTER_BLUE "e8e8ff"
 #define LIGHT_BLUE "d0d0e0"
 #define DARK_BLUE  "c0c0f0"
+#define DARKER_BLUE  "a0a0f0"
+#define DARKEST_BLUE  "8080f0"
+#define TABLE_STYLE " style=\"border-radius:10px;border:#6060f0 2px solid;\" width=100% bgcolor=#a0a0f0 cellpadding=4 border=0 "
 
 extern char *g_msg;
 
@@ -44,7 +48,7 @@ bool sendPageParser   ( TcpSocket *s , HttpRequest *r );
 bool sendPageSecurity ( TcpSocket *s , HttpRequest *r );
 bool sendPageAddColl  ( TcpSocket *s , HttpRequest *r );
 bool sendPageDelColl  ( TcpSocket *s , HttpRequest *r );
-bool sendPageOverview ( TcpSocket *s , HttpRequest *r );
+//bool sendPageOverview ( TcpSocket *s , HttpRequest *r );
 bool sendPageSpiderdb ( TcpSocket *s , HttpRequest *r );
 bool sendPageFilters  ( TcpSocket *s , HttpRequest *r );
 bool sendPageReindex  ( TcpSocket *s , HttpRequest *r );
@@ -319,36 +323,33 @@ enum {
 	//PAGE_WORDVECTOR  ,
 	
 	// master admin pages
-	PAGE_STATS       , // 10
+	PAGE_MASTER      , 
 	PAGE_HOSTS       ,
+	PAGE_STATS       , // 10
+	PAGE_STATSDB	 ,
+	PAGE_PERF        ,
 	PAGE_SOCKETS     ,
 	PAGE_LOG         ,
-	PAGE_MASTER      , 
+	PAGE_LOGVIEW     ,
 //	PAGE_SYNC        , 
-	PAGE_PERF        ,
-	PAGE_STATSDB	 ,
 	PAGE_SECURITY    ,
 	PAGE_ADDCOLL     ,	
 	PAGE_DELCOLL     , 
 	PAGE_AUTOBAN     , // 20
 	//PAGE_SPIDERLOCKS ,
 	PAGE_PROFILER    ,
-	PAGE_LOGVIEW     ,
 	PAGE_THREADS     ,
 	PAGE_REPAIR      ,
 //	PAGE_THESAURUS   , 
 
 	// . non master-admin pages (collection controls)
 	// . PAGE_OVERVIEW acts as a cutoff point (search Parms.cpp for it)
-	PAGE_OVERVIEW    ,  //25
+	//PAGE_OVERVIEW    ,  //25
 	PAGE_CGIPARMS    ,  
 
-	PAGE_SITEDB      ,  
 	PAGE_RULES       ,
-	PAGE_CATDB       ,
 	PAGE_INDEXDB     ,  //30
 	PAGE_TITLEDB     ,  
-	PAGE_PARSER      ,
 	//PAGE_STATSDB	 ,
 
 	PAGE_SEARCH      ,  
@@ -357,13 +358,16 @@ enum {
 	PAGE_SPIDERDB    , 
 	//PAGE_PRIORITIES  ,  // priority queue controls
 	PAGE_FILTERS     ,
-	PAGE_REINDEX     ,	
 	PAGE_INJECT      , 
+	PAGE_ADDURL2     ,
+	PAGE_REINDEX     ,	
 	//PAGE_KEYWORDS    ,
 	PAGE_SEO         ,
 	PAGE_ACCESS      ,  //40	
 	PAGE_SEARCHBOX   ,
-	PAGE_ADDURL2     ,
+	PAGE_PARSER      ,
+	PAGE_SITEDB      ,  
+	PAGE_CATDB       ,
 	PAGE_LOGIN2      ,
 //	PAGE_TOPDOCS     ,
 // 	PAGE_TOPICS      ,

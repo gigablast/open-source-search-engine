@@ -211,11 +211,18 @@ bool sendPageParser2 ( TcpSocket   *s ,
 	if ( st->m_render             ) render = " checked";
 	if ( st->m_oips               ) oips   = " checked";
 
+	xbuf->safePrintf(
+			 "<style>"
+			 ".poo { background-color:#%s;}\n"
+			 "</style>\n" ,
+			 LIGHT_BLUE );
+
+
 	long clen;
 	char *contentParm = r->getString("content",&clen,"");
 	
 	// print the input form
-	xbuf->safePrintf ("<br>"
+	xbuf->safePrintf (
 		       "<style>\n"
 		       "h2{font-size: 12px; color: #666666;}\n"
 
@@ -233,21 +240,30 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		       ".hs {color: #009900;}"
 		       "</style>\n"
 		       "<center>"
-		  "<table cellpadding=3>"
-		  "<tr>"
+
+		  "<table %s>"
+
+			  "<tr><td colspan=5><center><b>"
+			  "Parser"
+			  "</b></center></td></tr>\n"
+
+		  "<tr class=poo>"
 		  "<td>"
-		  "Url:"
+		  "<b>url</b>"
+			  "<br><font size=-2>"
+			  "Type in <b>FULL</b> url to parse."
+			  "</font>"
+		  "</td>"
+
 		  "</td>"
 		  "<td>"
 		  "<input type=text name=u value=\"%s\" size=\"40\">\n"
 		  "</td>"
-		  "<td>"
-		  "Type in <b>FULL</b> url\n"
-		  "</td>"
 		  "</tr>"
 
 
-		  "<tr>"
+			  /*
+		  "<tr class=poo>"
 		  "<td>"
 		  "Parser version to use: "
 		  "</td>"
@@ -258,8 +274,10 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "(-1 means to use latest title rec version)<br>"
 		  "</td>"
 		  "</tr>"
+			  */
 
-		  "<tr>"
+			  /*
+		  "<tr class=poo>"
 		  "<td>"
 		  "Hop count to use: "
 		  "</td>"
@@ -270,21 +288,24 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "(-1 is unknown. For root urls hopcount is always 0)<br>"
 		  "</td>"
 		  "</tr>"
+			  */
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>"
-		  "Use cached:"
+			  "<b>use cached</b>"
+
+			  "<br><font size=-2>"
+			  "Load page from cache (titledb)?"
+			  "</font>"
+
 		  "</td>"
 		  "<td>"
 		  "<input type=checkbox name=old value=1%s> "
 		  "</td>"
-		  "<td>"
-		  "Load page from cache (titledb)?"
-		  "</td>"
 		  "</tr>"
 
 			  /*
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>"
 		  "Reparse root:"
 		  "</td>"
@@ -297,19 +318,23 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "</tr>"
 			  */
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>"
-		  "Recycle Link Info:"
+		  "<b>recycle link info</b>"
+
+			  "<br><font size=-2>"
+			  "Recycle the link info from the title rec"
+			  "Load page from cache (titledb)?"
+			  "</font>"
+
 		  "</td>"
 		  "<td>"
 		  "<input type=checkbox name=recycle value=1%s> "
 		  "</td>"
-		  "<td>"
-		  "Recycle the link info from the title rec"
-		  "</td>"
 		  "</tr>"
 
-		  "<tr>"
+			  /*
+		  "<tr class=poo>"
 		  "<td>"
 		  "Recycle Link Info Imported:"
 		  "</td>"
@@ -320,20 +345,24 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "Recycle the link info imported from other coll"
 		  "</td>"
 		  "</tr>"
+			  */
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>"
-		  "Render HTML:"
+		  "<b>render html</b>"
+
+			  "<br><font size=-2>"
+			  "Render document content as HTML"
+			  "</font>"
+
 		  "</td>"
 		  "<td>"
 		  "<input type=checkbox name=render value=1%s> "
 		  "</td>"
-		  "<td>"
-		  "Render document content as HTML"
-		  "</td>"
 		  "</tr>"
 
-		  "<tr>"
+			  /*
+		  "<tr class=poo>"
 		  "<td>"
 		  "Lookup outlinks' ruleset, ips, quality:"
 		  "</td>"
@@ -346,7 +375,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "</td>"
 		  "</tr>"
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>"
 		  "LinkInfo Coll:"
 		  "</td>"
@@ -357,65 +386,79 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "Leave empty usually. Uses this coll to lookup link info."
 		  "</td>"
 		  "</tr>"
+			  */
 
-		  "<tr>"
+		  "<tr class=poo>"
 		  "<td>"
-		  "Optional query:"
+		  "<b>optional query</b>"
+
+			  "<br><font size=-2>"
+			  "Leave empty usually. For title generation only."
+			  "</font>"
+
 		  "</td>"
 		  "<td>"
 		  "<input type=text name=\"q\" size=\"20\" value=\"\"> "
 		  "</td>"
-		  "<td>"
-		  "Leave empty usually. For title generation only."
-		  "</td>"
 		  "</tr>"
 
-		  "<tr>"
-		  "<td>"
-		  "Content Below is XML:"
-		  "</td>"
+
+
+		  "<tr class=poo>"
+			  "<td>"
+			  "<b>content below is xml</b>"
+			  "<br><font size=-2>"
+			  "Is the content below XML?"
+			  "</font>"
+			  "</td>"
+
 		  "<td>"
 		  "<input type=checkbox name=xml value=1> "
-		  "</td>"
-		  "<td>"
-			  //""
+
 		  "</td>"
 		  "</tr>"
 
 
 
-			  "<tr>"
-			  "<td colspan=3>"
+
+			  "<tr class=poo>"
+			  "<td><b>content</b>"
+			  "<br><font size=-2>"
+			  "Use this content for the provided <i>url</i> "
+			  "rather than downloading it from the web."
+			  "</td>"
+
+			  "<td>"
 			  "<textarea rows=10 cols=80 name=content>"
 			  "%s"
 			  "</textarea>"
 			  "</td>"
 			  "</tr>"
 
-		  "<tr>"
-		  "<td colspan=\"3\">"
-		  "<input type=submit value=OK>"
-		  "</td>"
-		  "</tr>"
 		  "</table>"
 		  "</center>"
 		  "</form>"
 		  "<br>",
+
+			  TABLE_STYLE,
 			  us ,
-			   (long)st->m_hopCount,
+			  //(long)st->m_hopCount,
 			   //rtu,
 			   dd,
 			  //artr , 
 			   rr, 
-			   rr2, 
+			  //rr2, 
 			   render , 
-			   oips ,
+			  //oips ,
 			  contentParm );
 
 
 
-
-
+	xbuf->safePrintf(
+			 "<center>"
+			 "<input type=submit value=Submit>"
+			 "</center>"
+			 );
 
 
 	// just print the page if no url given

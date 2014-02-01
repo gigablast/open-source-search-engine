@@ -288,9 +288,13 @@ long XmlNode::setCDATANode ( char *node ) {
 		if ( node[i  ] !=']' ) continue;
 		if ( node[i+1] !=']' ) continue;//{ i++; break; }
 		// but skip it if we got it
-		if ( node[i+2] == '>' ) { i+=3; break;}
+		if ( node[i+2] !='>' ) continue;
+		//if ( node[i+2] == '>' ) { i+=3; break;}
+		i += 3;
+		break;
 		// if does not end in '>', skip the ']' anyway
-		i+=2; break;
+		// no! hurts regex ending in [0-9]
+		//i+=2; break;
 	}
 
 	// skip i over the >, if any (could be end of doc)

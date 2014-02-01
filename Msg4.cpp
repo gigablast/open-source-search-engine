@@ -482,13 +482,36 @@ bool Msg4::addMetaList ( char  *metaList                ,
 			     rdbId        );
 }
 
+bool Msg4::addMetaList ( SafeBuf *sb ,
+			 collnum_t  collnum                  ,
+			 void      *state                    ,
+			 void      (* callback)(void *state) ,
+			 long       niceness                 ,
+			 char       rdbId                    ,
+			 long       shardOverride ) {
+	return addMetaList ( sb->getBufStart() ,
+			     sb->length() ,
+			     collnum ,
+			     state ,
+			     callback ,
+			     niceness ,
+			     rdbId ,
+			     shardOverride );
+}
+
+
 bool Msg4::addMetaList ( char      *metaList                 , 
 			 long       metaListSize             ,
 			 collnum_t  collnum                  ,
 			 void      *state                    ,
 			 void      (* callback)(void *state) ,
 			 long       niceness                 ,
-			 char       rdbId                    ) {
+			 char       rdbId                    ,
+			 // Rebalance.cpp needs to add negative keys to
+			 // remove foreign records from where they no
+			 // longer belong because of a new hosts.conf file.
+			 // This will be -1 if not be overridden.
+			 long       shardOverride ) {
 
 	// not in progress
 	m_inUse = false;
@@ -510,6 +533,7 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 	m_rdbId        = rdbId;
 	m_niceness     = niceness;
 	m_next         = NULL;
+	m_shardOverride = shardOverride;
 
 	// get in line if there's a line
 	if ( s_msg4Head ) {
@@ -517,8 +541,9 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 		s_msg4Tail->m_next = this;
 		// we are the new tail
 		s_msg4Tail = this;
-		// debug log
-		log("msg4: queueing body msg4=0x%lx",(long)this);
+		// debug log. seems to happen a lot if not using threads..
+		if ( g_conf.m_useThreads )
+			log("msg4: queueing body msg4=0x%lx",(long)this);
 		// mark it
 		m_inUse = true;
 		// all done then, but return false so caller does not free
@@ -532,8 +557,10 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 	// sanity check
 	if ( s_msg4Head || s_msg4Tail ) { char *xx=NULL; *xx=0; }
 
-	// spider hang bug
-	logf(LOG_DEBUG,"msg4: queueing head msg4=0x%lx",(long)this);
+	// . spider hang bug
+	// . debug log. seems to happen a lot if not using threads..
+	if ( g_conf.m_useThreads )
+		logf(LOG_DEBUG,"msg4: queueing head msg4=0x%lx",(long)this);
 
 	// mark it
 	m_inUse = true;
@@ -579,7 +606,7 @@ bool Msg4::addMetaList2 ( ) {
 		char rdbId = m_rdbId;
 		if ( rdbId < 0 ) rdbId = *p++;
 		// get nosplit
-		bool nosplit = ( rdbId & 0x80 ) ;
+		//bool nosplit = ( rdbId & 0x80 ) ;
 		// mask off rdbId
 		rdbId &= 0x7f;
 		// get the key of the current record
@@ -596,14 +623,17 @@ bool Msg4::addMetaList2 ( ) {
 		// skip key
 		p += ks;
 		// set this
-		bool split = true; if ( nosplit ) split = false;
+		//bool split = true; if ( nosplit ) split = false;
 		// . if key belongs to same group as firstKey then continue
 		// . titledb now uses last bits of docId to determine groupId
 		// . but uses the top 32 bits of key still
 		// . spiderdb uses last 64 bits to determine groupId
 		// . tfndb now is like titledb(top 32 bits are top 32 of docId)
 		//uint32_t gid = getGroupId ( rdbId , key , split );
-		unsigned long shardNum = getShardNum( rdbId , key , split );
+		unsigned long shardNum = getShardNum( rdbId , key );
+		// override it from Rebalance.cpp for redistributing records
+		// after updating hosts.conf?
+		if ( m_shardOverride >= 0 ) shardNum = m_shardOverride;
 		// get the record, is -1 if variable. a table lookup.
 		long dataSize;
 		if      ( rdbId==RDB_POSDB || rdbId==RDB2_POSDB2) dataSize = 0;
@@ -669,10 +699,16 @@ bool Msg4::addMetaList2 ( ) {
 		// room for the data yet, and try again later
 		return false;
 	}
+
+	// . send out all bufs
+	// . before we were caching to reduce packet traffic, but
+	//   since we don't use the network for sending termlists let's
+	//   try going back to making it even more real-time
+	//if ( ! isClockInSync() ) return true;
+	// flush them buffers
+	//flushLocal();
 			       
 	return true;
-
-
 }
 
 // . modify each Msg4 request as follows
@@ -1029,8 +1065,10 @@ void storeLineWaiters ( ) {
 	// . if his callback was NULL, then was loaded in loadAddsInProgress()
 	// . we no longer do that so callback should never be null now
 	if ( ! msg4->m_callback ) { char *xx=NULL;*xx=0; }
-	// log this now i guess
-	logf(LOG_DEBUG,"msg4: calling callback for msg4=0x%lx",(long)msg4);
+	// log this now i guess. seems to happen a lot if not using threads
+	if ( g_conf.m_useThreads )
+		logf(LOG_DEBUG,"msg4: calling callback for msg4=0x%lx",
+		     (long)msg4);
 	// release it
 	msg4->m_inUse = false;
 	// call his callback
@@ -1041,7 +1079,7 @@ void storeLineWaiters ( ) {
 	goto loop;
 }
 
-
+#include "Process.h"
 
 // . destroys the slot if false is returned
 // . this is registered in Msg4::set() to handle add rdb record msgs
@@ -1051,12 +1089,42 @@ void storeLineWaiters ( ) {
 // . NOTE: Must always call g_udpServer::sendReply or sendErrorReply() so
 //   read/send bufs can be freed
 void handleRequest4 ( UdpSlot *slot , long netnice ) {
+
+	// easy var
+	UdpServer *us = &g_udpServer;
+
+	// if we just came up we need to make sure our hosts.conf is in
+	// sync with everyone else before accepting this! it might have
+	// been the case that the sender thinks our hosts.conf is the same
+	// since last time we were up, so it is up to us to check this
+	if ( g_pingServer.m_hostsConfInDisagreement ) {
+		g_errno = EBADHOSTSCONF;
+		us->sendErrorReply ( slot , g_errno );
+		return;
+	}
+
+	// need to be in sync first
+	if ( ! g_pingServer.m_hostsConfInAgreement ) {
+		// . if we do not know the sender's hosts.conf crc, wait 4 it
+		// . this is 0 if not received yet
+		if ( ! slot->m_host->m_hostsConfCRC ) {
+			g_errno = EWAITINGTOSYNCHOSTSCONF;
+			us->sendErrorReply ( slot , g_errno );
+			return;
+		}
+		// compare our hosts.conf to sender's otherwise
+		if ( slot->m_host->m_hostsConfCRC != g_hostdb.getCRC() ) {
+			g_errno = EBADHOSTSCONF;
+			us->sendErrorReply ( slot , g_errno );
+			return;
+		}
+	}
+
+
 	//logf(LOG_DEBUG,"build: handling msg4 request");
 	// extract what we read
 	char *readBuf     = slot->m_readBuf;
 	long  readBufSize = slot->m_readBufSize;
-	// easy var
-	UdpServer *us = &g_udpServer;
 	// must at least have an rdbId
 	if ( readBufSize < 7 ) {
 		g_errno = EREQUESTTOOSHORT;

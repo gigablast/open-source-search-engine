@@ -5,7 +5,7 @@
 //   tttttttt tttttttt dddddddd dddddddd  d = docId (38 bits)
 //   dddddddd dddddddd dddddd0r rrrggggg  r = siterank, g = langid
 //   wwwwwwww wwwwwwww wwGGGGss ssvvvvFF  w = word postion , s = wordspamrank
-//   pppppb1M MMMMLZZD                    v = diversityrank, p = densityrank
+//   pppppb1N MMMMLZZD                    v = diversityrank, p = densityrank
 //                                        M = multiplier, b = in outlink text
 //                                        L = langIdShiftBit (upper bit)
 //   G: 0 = body 
@@ -23,6 +23,11 @@
 //      1 = conjugate/sing/plural
 //      2 = synonym
 //      3 = hyponym
+
+//   NOTE: N bit is 1 if the shard of the record is determined by the
+//   termid (t bits) and NOT the docid (d bits). N stands for "nosplit"
+//   and you can find that logic in XmlDoc.cpp and Msg4.cpp. We store 
+//   the hash of the content like this so we can see if it is a dup.
 
 //   NOTE: M bits hold scaling factor (logarithmic) for link text voting
 //   so we do not need to repeat the same link text over and over again.
@@ -61,7 +66,7 @@
 #define MAXWORDSPAMRANK  0x0f // 4 bits
 #define MAXDIVERSITYRANK 0x0f // 4 bits
 #define MAXHASHGROUP     0x0f // 4 bits
-#define MAXMULTIPLIER    0x1f // 5 bits
+#define MAXMULTIPLIER    0x0f // 4 bits
 #define MAXISSYNONYM     0x03 // 2 bits
 
 // values for G bits in the posdb key
@@ -149,7 +154,8 @@ class Posdb {
 		       // multiplier: we convert into 7 bits in this function
 		       long               multiplier     ,
 		       bool               isSynonym      ,
-		       bool               isDelKey       );
+		       bool               isDelKey       ,
+		       bool               shardByTermId  );
 
 	// make just the 6 byte key
 	void makeKey48 ( char              *kp             ,
@@ -230,7 +236,8 @@ class Posdb {
 				 0, // langid
 				 0, // multiplier
 				 0, // issynonym/etc.
-				 true );  // isdelkey
+				 true ,  // isdelkey
+				 false ); // shardbytermid?
 	};
 
 	void makeEndKey  ( void *kp,long long termId, 
@@ -247,7 +254,8 @@ class Posdb {
 				 MAXLANGID,
 				 MAXMULTIPLIER,
 				 MAXISSYNONYM, // issynonym/etc.
-				 false); // isdelkey
+				 false, // isdelkey
+				 true);// shard by termid?
 	};
 
 	// we got two compression bits!
@@ -350,6 +358,13 @@ class Posdb {
 		key[1] &= 0x07;
 		// or in
 		key[1] |= dr;
+	};
+
+	char isShardedByTermId ( void *key ){return ((char *)key)[1] & 0x01; };
+
+	void setShardedByTermIdBit ( void *key ) { 
+		char *k = (char *)key;
+		k[1] |= 0x01;
 	};
 
 	unsigned char getMultiplier ( void *key ) {

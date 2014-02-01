@@ -6,6 +6,8 @@
 
 RdbMap::RdbMap() {
 	m_numSegments = 0;
+	m_numSegmentPtrs = 0;
+	m_numSegmentOffs = 0;
 	reset ( );
 }
 
@@ -61,6 +63,14 @@ void RdbMap::reset ( ) {
 		m_keys   [i] = NULL;
 		m_offsets[i] = NULL;
 	}
+
+	// the ptrs themselves are now a dynamic array to save mem
+	// when we have thousands of collections
+	mfree(m_keys,m_numSegmentPtrs*sizeof(char *),"MapPtrs");
+	mfree(m_offsets,m_numSegmentOffs*sizeof(short *),"MapPtrs");
+	m_numSegmentPtrs = 0;
+	m_numSegmentOffs = 0;
+
 	m_needToWrite     = false;
 	m_fileStartOffset = 0LL;
 	m_numSegments     = 0;
@@ -1192,6 +1202,40 @@ long long RdbMap::getMemAlloced ( ) {
 	return (long long)m_numSegments * space;
 }
 
+bool RdbMap::addSegmentPtr ( long n ) {
+	// realloc
+	if ( n >= m_numSegmentPtrs ) {
+		char **k;
+		long nn = (long)((float)n * 1.20) + 1;
+		k = (char **) mrealloc (m_keys,
+					m_numSegmentPtrs * sizeof(char *) ,
+					nn * sizeof(char *) ,
+					"MapPtrs" );
+		// failed?
+		if ( ! k ) return false;
+		// succeeded
+		m_numSegmentPtrs = nn;
+		m_keys = k;
+	}
+
+	// try offsets 
+	if ( n >= m_numSegmentOffs ) {
+		short **o;
+		long nn = (long)((float)n * 1.20) + 1;
+		o = (short **) mrealloc (m_offsets,
+					 m_numSegmentOffs * sizeof(short *) ,
+					 nn * sizeof(short *) ,
+					 "MapPtrs" );
+		// failed?
+		if ( ! o ) return false;
+		// succeeded
+		m_numSegmentOffs = nn;
+		m_offsets = o;
+	}
+	return true;
+}
+	
+
 // . add "n" segments
 // . returns false and sets g_errno on error
 bool RdbMap::addSegment (  ) {
@@ -1202,8 +1246,17 @@ bool RdbMap::addSegment (  ) {
 	long n   = m_numSegments;
 	long pps = PAGES_PER_SEGMENT;
 	// ensure doesn't exceed the max
-	if ( n >= MAX_SEGMENTS ) return log("db: Mapped file is "
-					    "too big. Critical error.");
+	//if ( n >= MAX_SEGMENTS ) return log("db: Mapped file is "
+	//				    "too big. Critical error.");
+
+	// the array of up to MAX_SEGMENT pool ptrs is now dynamic too!
+	// because diffbot uses thousands of collections, this will save
+	// over 1GB of ram!
+	if ( ! addSegmentPtr ( n ) )
+		return log("db: Failed to allocate memory for adding seg ptr "
+			   "for map file %s.", m_file.getFilename());
+
+
 	// alloc spaces for each key segment
 	// allocate new segments now 
 	//m_keys[n]    = (key_t         *) mmalloc ( ks * pps , "RdbMap" );

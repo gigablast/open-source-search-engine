@@ -66,7 +66,7 @@ bool Profiler::init() {
 			return false;
 	if ( ! m_activeFns.set(4,4,256,NULL,0,false,0,"activefns") )
 		return false;
-	return m_fn.set(4,sizeof(FnInfo),256,NULL,0,false,0,"fntbl");
+	return m_fn.set(4,sizeof(FnInfo),65536,NULL,0,false,0,"fntbl");
 }
 
 
@@ -751,17 +751,19 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 	}
 
 
-	sb->safePrintf(  "<center>\n<table border=1 cellpadding=4 "
-			 "width=100%% bgcolor=#%s>\n"
-			 "<tr><td colspan=9 bgcolor=#%s>"
+	sb->safePrintf(  "<center>\n<table %s>\n"
+			 "<tr class=hdrow><td colspan=9>"
 			 "<center><b>Profiler "//- Since Startup</b></center>"
 			 "<a href=\"/admin/profiler?c=%s"//"
 			 "&profilerreset=1\">"
 			 "(reset)</a></b></center>"
-			 "</td></tr>\n",LIGHT_BLUE,DARK_BLUE,
+			 "</td></tr>\n",
+			 TABLE_STYLE,
 			 coll);
 
-       	sb->safePrintf("<tr><td><b>Address</b></td><td><b>Function</b></td>");
+       	sb->safePrintf("<tr bgcolor=#%s>"
+		       "<td><b>Address</b></td><td><b>Function</b></td>"
+		       , LIGHT_BLUE);
 	sb->safePrintf("<td><b><a href=/admin/profiler?sorts=3&c=%s>"
 		       "Times Called</a></b></td></td>",coll);
 	sb->safePrintf("<td><b><a href=/admin/profiler?sorts=4&c=%s>"
@@ -858,12 +860,13 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 
 
 	//Now to print the table of functions called in the last 10 seconds
-	sb->safePrintf(  "<center>\n<table border=1 cellpadding=4 "
-			 "width=100%% bgcolor=#%s>\n"
-			 "<tr><td colspan=8 bgcolor=#%s>"
+	sb->safePrintf(  "<center>\n<table %s>\n"
+			 "<tr class=hdrow><td colspan=8>"
 			 "<center><b>Profiler - Last 10 seconds</b></center>"
-			 "</td></tr>\n",LIGHT_BLUE,DARK_BLUE);
-       	sb->safePrintf("<tr><td><b>Address</b></td><td><b>Function</b></td>");
+			 "</td></tr>\n",TABLE_STYLE);
+       	sb->safePrintf("<tr bgcolor=#%s>"
+		       "<td><b>Address</b></td><td><b>Function</b></td>",
+		       LIGHT_BLUE);
 	sb->safePrintf("<td><b><a href=/admin/profiler?sort10=3&c=%s&"
 		       ">"
 		       "Times Called</a></b></td></td>",coll);
@@ -1003,22 +1006,24 @@ bool Profiler::printInfo(SafeBuf *sb,char *username, //long user,
 
 	numSlots = m_quickpolls.getNumSlots();
 	numSlotsUsed = m_quickpolls.getNumSlotsUsed();
-	sb->safePrintf("<center>\n<table border=1 cellpadding=4 "
-		       "width=100%% bgcolor=#%s>\n"
-		       "<tr><td colspan=5 bgcolor=#%s>"
+	sb->safePrintf("<center>\n<table %s>\n"
+		       "<tr class=hdrow><td colspan=5>"
 		       "<center><b>Triggered Quickpolls "
 		       "<a href=\"/admin/profiler?c=%s"
 		       "&qpreset=1\">"
 		       "(reset)</a></b></center>"
-		       "</td></tr>\n",LIGHT_BLUE,DARK_BLUE,
+		       "</td></tr>\n",
+		       TABLE_STYLE,
 		       coll);
 
-	sb->safePrintf("<tr><td><b>Between Functions</b></td>"
+	sb->safePrintf("<tr bgcolor=#%s>"
+		       "<td><b>Between Functions</b></td>"
 		       "<td><b>max blocked(msec)</b></td>"
 		       "<td><b>avg time(msec)</b></td>"
 		       "<td><b>times triggered</b></td>"
 		       "<td><b>total(msec)</b></td>"
-		       "</tr>");
+		       "</tr>"
+		       , LIGHT_BLUE );
 
 	if(numSlotsUsed == 0) {
 		sb->safePrintf("</table>");
@@ -1539,15 +1544,13 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 			    int realTimeSortMode,
 			    int realTimeShowAll) {
 	if(!m_realTimeProfilerRunning) {
-		sb->safePrintf("<table border=1 cellpadding=4 bgcolor=#%s "
-			       "width=100%%\n>",
-			LIGHT_BLUE);
-		sb->safePrintf("<tr><td colspan=7 bgcolor=#%s>"
+		sb->safePrintf("<table %s>",TABLE_STYLE);
+		sb->safePrintf("<tr class=hdrow><td colspan=7>"
 			 "<center><b>Real Time Profiler "
 			 "<a href=\"/admin/profiler?c=%s"
 			 "&rtstart=1\">"
 			 "(Start)</a></b></center>"
-			       "</td></tr>\n",DARK_BLUE,coll);
+			       "</td></tr>\n",coll);
 		sb->safePrintf("</table><br><br>\n");
 		return true;
 	}
@@ -1562,16 +1565,14 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 	//}
 	rtNumEntries = realTimeProfilerData.getNumUsedSlots();
 	if(!rtNumEntries) {
-		sb->safePrintf("<table border=1 cellpadding=4 bgcolor=#%s "
-			       "width=100%%\n>",
-			LIGHT_BLUE);
-		sb->safePrintf("<tr><td colspan=7 bgcolor=#%s>"
+		sb->safePrintf("<table %s>",TABLE_STYLE);
+		sb->safePrintf("<tr class=hdrow><td colspan=7>"
 			 "<center><b>Real Time Profiler started, refresh page "
 			 "after some time."
 			 "<a href=\"/admin/profiler?c=%s"
 			 "&rtstop=1\">"
 			 "(Stop)</a></b></center>"
-			       "</td></tr>\n",DARK_BLUE,coll);
+			       "</td></tr>\n",coll);
 		sb->safePrintf("</table><br><br>\n");
 		startRealTimeProfiler();
 		return true;
@@ -1626,9 +1627,7 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 			hitEntries[i].missedQuickPollsPerFunc=missedQuickPolls; 
 		}
 	}
-	sb->safePrintf("<table border=1 cellpadding=4 bgcolor=#%s "
-		       "width=100%%>\n",
-			LIGHT_BLUE);
+	sb->safePrintf("<table %s>",TABLE_STYLE);
 	char *showMessage;
 	int rtall;
 	if(realTimeShowAll) {
@@ -1638,11 +1637,11 @@ Profiler::printRealTimeInfo(SafeBuf *sb,
 		showMessage = "(show all)";
 		rtall = 1;
 	}
-	sb->safePrintf("<tr><td colspan=7 bgcolor=#%s>"
+	sb->safePrintf("<tr class=hdrow><td colspan=7>"
 			 "<center><b>Real Time Profiler "
 			 "<a href=\"/admin/profiler?c=%s"
 			 "&rtall=%i\">%s</a>"
-		       ,DARK_BLUE,coll,
+		       ,coll,
 			 rtall, showMessage);
 	sb->safePrintf("<a href=\"/admin/profiler?c=%s&rtstop=1\">"
 		       "(Stop)</a></b></center></td></tr>\n",

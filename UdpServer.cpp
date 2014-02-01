@@ -277,6 +277,7 @@ bool UdpServer::init ( unsigned short port, UdpProtocol *proto, long niceness,
 	m_requestsInWaiting = 0;
 	// special count
 	m_msg10sInWaiting = 0;
+	m_msgc1sInWaiting = 0;
 	//m_msgDsInWaiting = 0;
 	//m_msg23sInWaiting = 0;
 	m_msg25sInWaiting = 0;
@@ -1405,6 +1406,9 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		bool getSlot = true;
 		if ( msgType == 0x10 && m_msg10sInWaiting >= 50 ) 
 			getSlot = false;
+		// crawl update info from Spider.cpp
+		if ( msgType == 0xc1 && m_msgc1sInWaiting >= 100 ) 
+			getSlot = false;
 		//batch url lookup for siterec, rootQuality and ips, so spawns 
 		//msg8 and msgc and msg50
 		//if ( msgType == 0xd && m_msgDsInWaiting >= 100 ) 
@@ -1456,13 +1460,29 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 		// 2c is clogging crap up
 		if ( msgType == 0x2c && m_msg2csInWaiting >= 100 && niceness )
 			getSlot = false;
-		// avoid slamming thread queues with sectiondb disk reads
+
+		// . avoid slamming thread queues with sectiondb disk reads
+		// . mdw 1/22/2014 take this out now too, we got ssds
+		//   let's see if taking this out fixes the jam described
+		//   below
+		// . mdw 1/31/2014 got stuck doing linktext 0x20 lookups leading to
+		//   tagdb lookups with not enough slots left!!! so decrease 0x20
+		//   and/or increase 0x00. ill boost from 500 to 1500 although i
+		//   think we should limit the msg20 niceness 1 requests really
+		//   when slot usage is high... ok, i changed Msg25.cpp to only
+		//   allow 1 msg20 out if 300+ sockets are in use.
 		if ( msgType == 0x00 && m_numUsedSlots > 500 && niceness )
 			getSlot = false;
+
 		// added this because host #14 was clogging on
-		// State00's and ThreadReadBuf taking all the mem
-		if ( msgType == 0x00 && m_msg0sInWaiting> 70 && niceness )
-			getSlot = false;
+		// State00's and ThreadReadBuf taking all the mem.
+		//
+		// mdw 1/22/2014 seems to be jamming up now with 50 crawlers
+		// per host on 16 hosts on tagdb lookups using msg8a so
+		// take this out for now...
+		//if ( msgType == 0x00 && m_msg0sInWaiting> 70 && niceness )
+		//	getSlot = false;
+
 		// really avoid slamming if we're trying to merge some stuff
 		//if ( msgType == 0x00 && m_numUsedSlots > 100 && niceness &&
 		//     g_numUrgentMerges )
@@ -1553,6 +1573,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 			m_requestsInWaiting++;
 			// special count
 			if ( msgType == 0x10 ) m_msg10sInWaiting++;
+			if ( msgType == 0xc1 ) m_msgc1sInWaiting++;
 			//if ( msgType == 0xd  ) m_msgDsInWaiting++;
 			//if ( msgType == 0x23 ) m_msg23sInWaiting++;
 			if ( msgType == 0x25 ) m_msg25sInWaiting++;
@@ -2920,6 +2941,7 @@ void UdpServer::destroySlot ( UdpSlot *slot ) {
 		m_requestsInWaiting--;
 		// special count
 		if ( slot->m_msgType == 0x10 ) m_msg10sInWaiting--;
+		if ( slot->m_msgType == 0xc1 ) m_msgc1sInWaiting--;
 		//if ( slot->m_msgType == 0xd  ) m_msgDsInWaiting--;
 		//if ( slot->m_msgType == 0x23 ) m_msg23sInWaiting--;
 		if ( slot->m_msgType == 0x25 ) m_msg25sInWaiting--;

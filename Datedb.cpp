@@ -121,7 +121,7 @@ bool Datedb::init2 ( long treeMem ) {
 			   false            , // preload dskpagecache
 			   16               );// key size
 }
-
+/*
 bool Datedb::addColl ( char *coll, bool doVerify ) {
 	if ( ! m_rdb.addColl ( coll ) ) return false;
 	if ( ! doVerify ) return true;
@@ -133,7 +133,7 @@ bool Datedb::addColl ( char *coll, bool doVerify ) {
 	log ( "db: Verify failed, but scaling is allowed, passing." );
 	return true;
 }
-
+*/
 bool Datedb::verify ( char *coll ) {
 	log ( LOG_INFO, "db: Verifying Datedb for coll %s...", coll );
 	g_threads.disableThreads();

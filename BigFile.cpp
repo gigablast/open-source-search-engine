@@ -569,7 +569,9 @@ bool BigFile::readwrite ( void         *buf      ,
 	}
 	// otherwise, thread spawn failed, do it blocking then
 	g_errno = 0;
-	if ( ! g_threads.m_disabled ) {
+	// if threads are manually disabled don't print these msgs because
+	// we redbox the fact above the controls in Pages.cpp
+	if ( g_conf.m_useThreads && ! g_threads.m_disabled ) {
 		static long s_lastTime = 0;
 		long now = getTime();
 		if ( now - s_lastTime >= 1 ) {

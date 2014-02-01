@@ -1503,9 +1503,12 @@ bool RdbCache::load ( char *dbname ) {
 	// does the file exist?
 	File f;
 	f.set ( g_hostdb.m_dir , filename );
+	// having cache file not existing on disk is not so bad, it's a cache
 	if ( ! f.doesExist() )
-		return log("db: Could not load cache from %s: does not exist.",
-			   f.getFilename());
+		return false;
+	//	return log("db: Could not load cache from %s: does not exist.",
+	//		   f.getFilename());
+
 	// open the file
 	if ( ! f.open ( O_RDWR ) ) 
 		return log("db: Could not open cache save file for %s: %s.", 
