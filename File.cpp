@@ -699,7 +699,7 @@ bool File::unlink ( ) {
 	// return false and set g_errno on error
 	if ( status  < 0 ) return false;
 	// log it so we can see what happened to timedb!
-	log("disk: unlinking %s", m_filename );
+	log(LOG_INFO,"disk: unlinking %s", m_filename );
 	// remove ourselves from the disk
 	if ( ::unlink ( m_filename ) == 0 ) return true;
 	// sync it to disk in case power goes out

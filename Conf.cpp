@@ -2,7 +2,7 @@
 
 #include "Conf.h"
 #include "Parms.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Indexdb.h"
 #include "Users.h"
 #include "Proxy.h"
@@ -328,7 +328,7 @@ void Conf::setRootIps ( ) {
 	for ( long i = 0 ; i < n ; i++ ) {
 		m_rnsIps  [i] = atoip(rootIps[i],gbstrlen(rootIps[i]));
 		m_rnsPorts[i] = 53;
-		log("dns: Using root nameserver #%li %s.",
+		log(LOG_INIT,"dns: Using root nameserver #%li %s.",
 		    i,iptoa(m_rnsIps[i]));
 	}
 }

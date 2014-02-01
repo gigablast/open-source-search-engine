@@ -7,7 +7,7 @@
 
 #include "Url.h"
 #include "SafeBuf.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 
 #define MAX_BLOB_SIZE 2048
 

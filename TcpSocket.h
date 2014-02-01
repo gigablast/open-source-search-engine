@@ -33,6 +33,8 @@
 
 #define TCP_READ_BUF_SIZE 1024
 
+#include "SafeBuf.h"
+
 class TcpSocket {
 
  public:
@@ -122,6 +124,14 @@ class TcpSocket {
 	SSL  *m_ssl;
 
 	class UdpSlot *m_udpSlot;
+
+	// m_handyBuf is used to hold the parmlist we generate in Pages.cpp
+	// which we then broadcast to all the nodes in the cluster. so its
+	// just a substitute for avoid the new of a state class.
+	SafeBuf m_handyBuf;
+	// this maps the requested http path to a service in our
+	// WebPages[] array. like "search" or "admin controls" etc.
+	long m_pageNum;
 
 	// used for debugging, PageResults.cpp sets this to the State0 ptr
 	char *m_tmp;

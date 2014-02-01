@@ -27,7 +27,6 @@
 //   for this many seconds
 #define SPIDER_DONE_TIMER 45
 
-
 Doledb g_doledb;
 
 RdbTree *g_tree = NULL;
@@ -4363,6 +4362,13 @@ void doneSendingNotification ( void *state ) {
 	// waiting tree will usually be empty for this coll since no
 	// spider requests had a valid spider priority, so let's rebuild!
 	cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+
+	// we have to send these two parms to all in cluster now
+	SafeBuf parmList;
+	g_parms.addCurrentParmToList1 ( &parmList , cr , "spiderRoundNum" ); 
+	g_parms.addCurrentParmToList1 ( &parmList , cr , "spiderRoundStart" ); 
+	// this uses msg4 so parm ordering is guaranteed
+	g_parms.broadcastParmList ( &parmList , NULL , NULL );
 
 	// log it
 	log("spider: new round #%li starttime = %lu for %s"

@@ -2,6 +2,7 @@
 
 #include "HashTableX.h"
 #include "Domains.h"
+#include "Mem.h"
 
 char *getDomainOfIp ( char *host , long hostLen , long *dlen ) {
 	// get host length

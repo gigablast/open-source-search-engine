@@ -729,6 +729,7 @@ bool  SafeBuf::utf8Encode2(char *s, long len, bool encodeHTML,long niceness) {
 	return htmlEncode(m_length-tmp,niceness);
 }
 
+/*
 bool SafeBuf::utf32Encode(UChar32 c) {
 	if(!reserve2x(8)) return false;
 
@@ -747,7 +748,7 @@ bool SafeBuf::utf32Encode(UChar32 c) {
 	}
 	return false;
 }
-
+*/
 
 bool  SafeBuf::latin1Encode(char *s, long len, bool encodeHTML,long niceness) {
 	long tmp = m_length;

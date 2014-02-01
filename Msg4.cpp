@@ -1078,6 +1078,22 @@ void handleRequest4 ( UdpSlot *slot , long netnice ) {
 	// skip syncdb if we are just one host!
 	if ( g_hostdb.m_numHosts == 1 ) skipSyncdb = true;
 
+	// if we did not sync our parms up yet with host 0, wait...
+	if ( g_hostdb.m_hostId != 0 && ! g_parms.m_inSyncWithHost0 ) {
+		// limit logging to once per second
+		static long s_lastTime = 0;
+		long now = getTimeLocal();
+		if ( now - s_lastTime >= 1 ) {
+			s_lastTime = now;
+			log("msg4: waiting to sync with "
+			    "host #0 before accepting data");
+		}
+		// tell send to try again shortly
+		g_errno = ETRYAGAIN;
+		us->sendErrorReply(slot,g_errno);
+		return; 
+	}
+
 	// OK, just to get the ball rolling let's delay using/debugging
 	// syncdb until after launch in order to move up the launch date.
 	// we are going to be running solid states so there should be a lot
@@ -1212,6 +1228,7 @@ bool addMetaList ( char *p , UdpSlot *slot ) {
 		    "rdbId=%li. not in repair mode. dropping.",(long)rdbId);
 		char *xx=NULL;*xx=0;
 		// drop it for now!!
+		p += recSize;
 		if ( p < pend ) goto loop;
 		// all done
 		return true;

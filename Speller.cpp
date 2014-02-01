@@ -1021,7 +1021,7 @@ bool Speller::loadUnifiedDict() {
 		char *end   = start + m_unifiedBuf.length();
 		for ( char *p = start ; p < end ; p++ )
 			if ( *p == '\n' ) *p = '\0';
-		log("speller: done loading successfully");
+		log(LOG_DEBUG,"speller: done loading successfully");
 
 		// a quick little checksum
 		if ( ! g_conf.m_isLive ) return true;

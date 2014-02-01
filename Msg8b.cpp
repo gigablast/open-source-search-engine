@@ -2,7 +2,7 @@
 
 #include "Msg8b.h"
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 
 
 static void gotListWrapper           ( void *state );//, RdbList *list ) ;

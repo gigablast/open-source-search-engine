@@ -2,8 +2,8 @@
 #define _SAFEBUF_H_
 
 //#include "Mem.h"
-#include "Unicode.h"
-
+//#include "Unicode.h"
+#include "gb-include.h"
 
 struct SafeBuf {
 	//*TRUCTORS
@@ -219,7 +219,7 @@ struct SafeBuf {
 	//bool  utf16Encode(UChar *s, long len, bool htmlEncode=false);
 	//bool  utf16Encode(char *s, long len, bool htmlEncode=false) {
 	//	return utf16Encode((UChar*)s, len>>1, htmlEncode); };
-	bool  utf32Encode(UChar32 c);
+	//bool  utf32Encode(UChar32 c);
 	bool  htmlEncode(char *s, long len,bool encodePoundSign,
 			 long niceness=0);
 	bool  javascriptEncode(char *s, long len );

@@ -15,7 +15,7 @@
 #include <sys/ioctl.h>            // ioctl() - get our ip address from a socket
 #include <net/if.h>               // for struct ifreq passed to ioctl()    
 //#include "../../rsa/rsa.h"        // public_key private_key vlong (seals)
-#include "Conf.h"       // for getting m_groupId/m_groupMask
+//#include "Conf.h"       // for getting m_groupId/m_groupMask
 #include "Xml.h" // host file in xml
 
 // the default mattster udp port (also re-defined in conf/Conf.cpp) TODO: unify
@@ -235,6 +235,9 @@ class Host {
 	// network to save on local loop bandwidth costs
 	char           m_type;
 
+	bool isProxy() { return (m_type == HT_PROXY); };
+	bool isGrunt() { return (m_type == HT_GRUNT); };
+
 	// for m_type == HT_QCPROXY, we forward the query to the regular proxy
 	// at this Ip:Port. we should receive a compressed 0xfd reply and
 	// we uncompress it and return it to the browser.
@@ -263,6 +266,14 @@ class Host {
 	// Syncdb.cpp uses these
 	char           m_inSync ;
 	char           m_isPermanentOutOfSync ;
+
+	// . used by Parms.cpp for broadcasting parm change requests
+	// . each parm change request has an id
+	// . this let's us know which id is in progress and what the last
+	//   id completed was
+	long m_currentParmIdInProgress;
+	long m_lastParmIdCompleted;
+	class ParmNode *m_currentNodePtr;
 
 	char  m_requestBuf[MAX_PING_SIZE];
 };
@@ -319,6 +330,7 @@ class Hostdb {
 	long           getMyMachineNum ( ) { return m_myMachineNum; };
 	unsigned long  getLoopbackIp   ( ) { return m_loopbackIp; };
 	Host          *getMyHost       ( ) { return m_myHost; };
+	bool           amProxy         ( ) { return m_myHost->isProxy(); };
 	Host          *getMyShard      ( ) { return m_myShard; };
 	long getMyShardNum ( ) { return m_myHost->m_shardNum; };
 	bool           isMyIp ( unsigned long ip ) {
@@ -435,6 +447,8 @@ class Hostdb {
 
 	long  getNumHosts ( ) { return m_numHosts; };
 	long  getNumProxy ( ) { return m_numProxyHosts; };
+	long getNumProxies ( ) { return m_numProxyHosts; };
+	long getNumGrunts  ( ) { return m_numHosts; };
 	// how many of the hosts are non-dead?
 	long  getNumHostsAlive ( ) { return m_numHostsAlive; };
 	long  getNumProxyAlive ( ) { return m_numProxyAlive; };

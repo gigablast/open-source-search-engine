@@ -20,7 +20,7 @@
 #include "Xml.h"
 #include "Titledb.h"
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 
 bool initAllSortByDateTables ( ) ;
 bool initSortByDateTable ( char *coll ) ;

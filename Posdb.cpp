@@ -535,7 +535,7 @@ long long Posdb::getTermFreq ( char *coll, long long termId ) {
 #include "sort.h"
 #include "RdbBase.h"
 #include "Msg39.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "SearchInput.h"
 #include "Timedb.h"
 

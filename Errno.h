@@ -19,7 +19,7 @@ char *mstrerror ( int errnum ) ;
 //#define REMOTE_ERROR_BIT (0x40000000)
 
 enum {
-	EDUMPFAILED    = (0x00008000 | 0) , // tree dump failed
+	EDUMPFAILED    = (0x00008000 | 0) , // tree dump failed 32768
 	ETRYAGAIN        , // try doing it again
 	ECLOSING         , // can't add cuz we're closing the db
 	ENOTFOUND        , // can't find in the db
@@ -29,9 +29,9 @@ enum {
 	ENOSITEDEFAULT   , // tagdb record's default record missng
 	EBADREPLYSIZE    , // reply is wrong length
 	EBADREPLY        , // something is wrong w/ reply
-	EREPLYTOOSMALL   , // reply is too small
+	EREPLYTOOSMALL   , // reply is too small  32778
 	EREQUESTTOOSHORT , // request length too short
-	EBADREQUESTSIZE  , // request length not correct
+	EBADREQUESTSIZE  , // request length not correct 32780
 	EBADREQUEST      , // a bad request
 	ENOTSUPPORTED    , // operation not yet supported
 	EBADHOSTID       , // someone tried to use a bad hostId
@@ -41,7 +41,7 @@ enum {
 	EDATAUNPATCHABLE , // got unpatchable corrupt data
 	EBADRDBID        , // bad rdb id
 	EBUFTOOSMALL     , // used in SiteRec.cpp
-	ECOMPRESSFAILED  , // used in TitleRec.cpp
+	ECOMPRESSFAILED  , // used in TitleRec.cpp  32790
 	EUNCOMPRESSERROR , // used in TitleRec.cpp
 	EBADTITLEREC     , // used in TitleRec.cpp
 	EMISSINGQUERYTERMS,// used in Msg20.cpp for getting summary
@@ -51,7 +51,7 @@ enum {
 	ENOSLOTS         , // multicast can't use more than X slots
 	ENOTHREADSLOTS   , // no more room in thread queue
 	EBADNUMHOSTS     , // hostdb error
-	EFILEOPEN        , // error opening/reading a tagdb file
+	EFILEOPEN        , // error opening/reading a tagdb file  32800
 	EURLTOOLONG      , 
 	EDOCBINARY       , //parser/xml/XmlDoc.cpp
 	EDOCADULT        , //parser/xml/XmlDoc.cpp

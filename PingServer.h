@@ -5,6 +5,7 @@
 
 #include "gb-include.h"
 #include "Hostdb.h"
+#include "SafeBuf.h"
 //#include "Repair.h"
 
 extern char g_repairMode;

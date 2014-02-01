@@ -46,6 +46,7 @@
 #include "seo.h" // Msg99Request etc.
 //#include <regex.h>
 #include "PingServer.h"
+#include "Parms.h"
 
 #define MAXDOCLEN (1024*1024)
 
@@ -1956,7 +1957,13 @@ bool XmlDoc::indexDoc ( ) {
 	// url spider lock in SpiderLoop::m_lockTable.
 	SpiderReply *nsr = getNewSpiderReply ();
 	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
-	if ( nsr->getRecSize() <= 1) { char *xx=NULL;*xx=0; }
+	if ( ! nsr ) {
+		log("doc: crap, could not even add spider reply "
+		    "to indicate internal error: %s",mstrerror(g_errno));
+		if ( ! g_errno ) g_errno = EBADENGINEER;
+		return true;
+	}
+	//if ( nsr->getRecSize() <= 1) { char *xx=NULL;*xx=0; }
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return true;
@@ -7682,9 +7689,20 @@ long long *XmlDoc::getExactContentHash64 ( ) {
 	unsigned char *pend = (unsigned char *)p + plen;
 	unsigned long long h64 = 0LL;
 	unsigned char pos = 0;
+	bool lastWasSpace = true;
 	for ( ; p < pend ; p++ ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
+		// treat sequences of white space as a single ' ' (space)
+		if ( is_wspace_a(*p) ) {
+			if ( lastWasSpace ) continue;
+			lastWasSpace = true;
+			// treat all white space as a space
+			h64 ^= g_hashtab[pos][(unsigned char)' '];
+			pos++;
+			continue;
+		}
+		lastWasSpace = false;
 		// xor this in right
 		h64 ^= g_hashtab[pos][p[0]];
 		pos++;

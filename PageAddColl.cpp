@@ -4,7 +4,7 @@
 #include "TcpSocket.h"
 #include "HttpRequest.h"
 #include "Collectiondb.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Users.h"
 
 bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) ;
@@ -19,14 +19,14 @@ bool sendPageDelColl ( TcpSocket *s , HttpRequest *r ) {
 
 bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// get collection name
-	long  nclen;
-	char *nc   = r->getString ( "nc" , &nclen );
-	long  cpclen;
-	char *cpc  = r->getString ( "cpc" , &cpclen );
+	//long  nclen;
+	//char *nc   = r->getString ( "nc" , &nclen );
+	//long  cpclen;
+	//char *cpc  = r->getString ( "cpc" , &cpclen );
 
 	g_errno = 0;
 
-	bool cast = r->getLong("cast",0);
+	//bool cast = r->getLong("cast",0);
 
 	char *msg = NULL;
 
@@ -36,6 +36,9 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	// . are we adding a collection?
 	// . return if error adding, might already exist!
 	// . g_errno should be set
+	// . WE DO NOT NEED THIS ANYMORE. Pages.cpp now broadcasts
+	//   addcoll as CommandAddColl() parm.
+	/*
 	if ( nclen > 0 && add && ! cast ) {
 		// do not allow "main" that is used for the "" collection
 		// for backwards compatibility
@@ -48,6 +51,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	}
 
 	if ( ! add && ! cast ) g_collectiondb.deleteRecs ( r )   ;
+	*/
 
 	char  buf [ 64*1024 ];
 	SafeBuf p(buf, 64*1024);
@@ -55,12 +59,13 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	g_pages.printAdminTop ( &p , s , r );
 
 	//long  page     = g_pages.getDynamicPageNumber ( r );
-	char *coll     = r->getString    ( "c"    );
+	//char *coll     = r->getString    ( "c"    );
 	//char *pwd      = r->getString    ( "pwd" );
 	//char *username = g_users.getUsername( r );
 	//long  user = g_pages.getUserType ( s , r );
 	//if ( ! coll )  coll = "";
-	if ( ! nc   )    nc = "";
+
+	//if ( ! nc   )    nc = "";
 	//if ( ! pwd  )   pwd = "";
 
 	if ( g_errno ) msg = mstrerror(g_errno);
@@ -87,14 +92,15 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 			  "</td></tr>\n",LIGHT_BLUE,DARK_BLUE);
 		p.safePrintf (
 			  "<tr><td><b>name of new collection to add</td>\n"
-			  "<td><input type=text name=nc size=30></td></tr>\n");
+			  "<td><input type=text name=addColl size=30>"
+			  "</td></tr>\n");
 		// now list collections from which to copy the config
-		p.safePrintf (
-			  "<tr><td><b>copy configuration from this "
-			  "collection</b><br><font size=1>Leave blank to "
-			  "accept default values.</font></td>\n"
-			  "<td><input type=text name=cpc value=\"%s\" size=30>"
-			  "</td></tr>\n",coll);
+		//p.safePrintf (
+		//	  "<tr><td><b>copy configuration from this "
+		//	  "collection</b><br><font size=1>Leave blank to "
+		//	  "accept default values.</font></td>\n"
+		//	  "<td><input type=text name=cpc value=\"%s\" size=30>"
+		//	  "</td></tr>\n",coll);
 		p.safePrintf ( "</table></center><br>\n");
 		// wrap up the form started by printAdminTop
 		g_pages.printAdminBottom ( &p );
@@ -131,7 +137,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		if ( ! cr ) continue;
 		p.safePrintf (
 			  "<tr><td>"
-			  "<input type=checkbox name=del%s value=1> "
+			  "<input type=checkbox name=delete value=\"%s\"> "
 			  "%s</td></tr>\n",cr->m_coll,cr->m_coll);
 	}
 	p.safePrintf( "</table></center></td></tr></table><br>\n" );

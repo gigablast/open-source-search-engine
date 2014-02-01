@@ -346,10 +346,13 @@ void Json::test ( ) {
 
 
 	long niceness = 0;
+
 	JsonItem *ji = parseJsonStringIntoJsonItems ( json , niceness );
 
 	// print them out?
-	log("json: type0=%li",(long)ji->m_type);
+	//log("json: type0=%li",(long)ji->m_type);
+	// sanity test
+	if ( ji->m_type != 6 ) { char *xx=NULL;*xx=0; }
 
 	return;
 }

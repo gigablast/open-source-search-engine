@@ -9,7 +9,7 @@
 #include "Profiler.h"
 #include "sort.h"
 #include "HashTable.h"
-#include "CollectionRec.h"
+//#include "CollectionRec.h"
 #include "Indexdb.h"
 #include "XmlDoc.h"
 
