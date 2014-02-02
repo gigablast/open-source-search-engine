@@ -79,6 +79,7 @@ SafeBuf::SafeBuf(char *heapBuf, long bufMax, long bytesInUse, bool ownData) {
 SafeBuf::~SafeBuf() {
 	if(!m_usingStack && m_buf) 
 		mfree(m_buf, m_capacity, "SafeBuf");
+	m_buf = NULL;
 }
 
 bool SafeBuf::setBuf(char *newBuf, long bufMax, long bytesInUse, bool ownData,
