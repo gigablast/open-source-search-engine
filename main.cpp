@@ -16635,7 +16635,7 @@ bool isRecoveryFutile ( ) {
 
 	long now = getTimeLocal();
 
-	long fresh = 0;
+	long fails = 0;
 
 	// getNextFilename() writes into this
 	char pattern[8]; strcpy ( pattern , "*"); // log*-*" );
@@ -16675,16 +16675,24 @@ bool isRecoveryFutile ( ) {
 		if ( toRead > fsize ) toRead = fsize;
 		char mbuf[3002];
 		ff.read ( mbuf , toRead , fsize - toRead );
-		if ( ! strstr (mbuf,"sigbadhandler") ) continue;
+
+		bool failedToStart = false;
+
+		if ( strstr (mbuf,"sigbadhandler") ) failedToStart = true;
+		if ( strstr (mbuf,"Failed to bind") ) failedToStart = true;
+
+		if ( ! failedToStart ) continue;
 
 		// count it otherwise
-		fresh++;
+		fails++;
 	}
 
-	// if we had less than 5 do not consider futile
-	if ( fresh < 5 ) return false;
+	// if we had less than 5 failures to start in last 60 secs
+	// do not consider futile
+	if ( fails < 5 ) return false;
 
-	log("process: KEEP ALIVE LOOP GIVING UP. Five or more cores in last 60 seconds.");
+	log("process: KEEP ALIVE LOOP GIVING UP. Five or more cores in "
+	    "last 60 seconds.");
 
 	// otherwise, give up!
 	return true;
