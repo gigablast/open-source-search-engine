@@ -4122,6 +4122,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			//to test add: ulimit -t 10; to the ssh cmd
 			sprintf(tmp,
 				"ssh %s \"cd %s ; "
+				"export MALLOC_CHECK_=0;"
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
 				"ADDARGS='' ; "
@@ -4609,6 +4610,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			//to test add: ulimit -t 10; to the ssh cmd
 			sprintf(tmp,
 				"ssh %s \"cd %s ; ulimit -c unlimited; "
+				"export MALLOC_CHECK_=0;"
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
 				"ADDARGS='' ; "
