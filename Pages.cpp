@@ -602,6 +602,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . add parmList using Parms::m_msg4 to all hosts!
 	// . returns true and sets g_errno on error
 	// . returns false if would block
+	// . just returns true if parmList is empty
 	// . so then doneBroadcastingParms() is called when all hosts
 	//   have received the updated parms, unless a host is dead,
 	//   in which case he should sync up when he comes back up

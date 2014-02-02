@@ -17475,9 +17475,11 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	if ( ! cr && token ) hasPerm = true;
 
 	if ( ! hasPerm ) {
-		log("parms: no permission to set parms");
-		g_errno = ENOPERM;
-		return false;
+		//log("parms: no permission to set parms");
+		//g_errno = ENOPERM;
+		//return false;
+		// just leave the parm list empty and fail silently
+		return true;
 	}
 
 	// we set the parms in this collnum
