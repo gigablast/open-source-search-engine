@@ -13606,6 +13606,18 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	if ( m_diffbotReplyValid )
 		return &m_diffbotReply;
 
+	// . check the url filters table to see if diffbot api is specified
+	// . just return "\0" if none, but NULL means error i guess
+	SafeBuf *au = getDiffbotApiUrl();
+	if ( ! au || au == (void *)-1 ) return (SafeBuf *)au;
+
+	// if no url, assume do not access diffbot
+	if ( au->length() <= 0 ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
+
 	// we make a "fake" url for the diffbot reply when indexing it
 	// by appending -diffbotxyz%li. see "fakeUrl" below.
 	if ( m_firstUrl.getUrlLen() + 15 >= MAX_URL_LEN ) {
@@ -13688,16 +13700,6 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
-	// . check the url filters table to see if diffbot api is specified
-	// . just return "\0" if none, but NULL means error i guess
-	SafeBuf *au = getDiffbotApiUrl();
-	if ( ! au || au == (void *)-1 ) return (SafeBuf *)au;
-
-	// if no url, assume do not access diffbot
-	if ( au->length() <= 0 ) {
-		m_diffbotReplyValid = true;
-		return &m_diffbotReply;
-	}
 
 	// "none" means none too! Parms.cpp doesn't like &dapi1=& because
 	// it does not call setParm() on such things even though it probably 
