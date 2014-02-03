@@ -2148,7 +2148,7 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 	    "memused now =%lli.",g_mem.getUsedMem());
 	// free allocated buffer
 	if ( allocated ) {
-		mfree ( fs->m_buf , fs->m_allocSize , "ThreadReadBuf" );
+		mfree ( fs->m_allocBuf , fs->m_allocSize , "ThreadReadBuf" );
 		fs->m_buf = NULL;
 	}
 	// if this is the direct thread request do not call callback, just
