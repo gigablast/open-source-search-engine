@@ -167,6 +167,42 @@ bool CommandInsertUrlFiltersRow ( char *rec ) {
 	return true;
 }
 
+bool CommandRemoveConnectIpRow ( char *rec ) {
+	// caller must specify collnum
+	//collnum_t collnum = getCollnumFromParmRec ( rec );
+	//if ( collnum < 0 ) {
+	//	g_errno = ENOCOLLREC;
+	//	log("parms: bad collnum for remove row");
+	//	return true;
+	//}
+	// sanity
+	long dataSize = getDataSizeFromParmRec ( rec );
+	if ( dataSize <= 1 ) {
+		log("parms: insert row data size = %li bad!",dataSize);
+		g_errno = EBADENGINEER;
+		return true;
+	}
+	// need this
+	//CollectionRec *cr = g_collectiondb.getRec ( collnum );
+	// get the row #
+	char *data = getDataFromParmRec ( rec );
+	long rowNum = atol(data);
+	// scan all parms for url filter parms
+	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
+		Parm *m = &g_parms.m_parms[i];
+		// parm must be a url filters parm
+		if ( m->m_page != PAGE_SECURITY ) continue;
+		// must be an array!
+		if ( ! m->isArray() ) continue;
+		// sanity check
+		if ( m->m_obj != OBJ_CONF ) { char *xx=NULL;*xx=0; }
+		// . nuke that parm's element
+		// . returns false and sets g_errno on error
+		if (!g_parms.removeParm(i,rowNum,(char *)&g_conf))return true;
+	}
+	return true;
+}
+
 bool CommandRemoveUrlFiltersRow ( char *rec ) {
 	// caller must specify collnum
 	collnum_t collnum = getCollnumFromParmRec ( rec );
@@ -1023,7 +1059,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 	// end the table
 	if ( ! isJSON ) sb->safePrintf ( "</table>\n" );
-	
+
+	/*
 	// if page is security
 	if ( page == PAGE_SECURITY ){
 		// a table of page names and description
@@ -1050,6 +1087,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		}
 		sb->safePrintf (  "</table>\n");
 	}
+	*/
 
 	if ( ! isJSON ) sb->safePrintf ( "<br><br>\n" );
 
@@ -3172,12 +3210,15 @@ bool Parms::printParm ( SafeBuf* sb,
 		if ( j == *nr - 1 ) lastRow = true;
 		// do not allow removal of last default url filters rule
 		if ( lastRow && !strcmp(m->m_cgi,"fsp")) show = false;
+		char *suffix = "";
+		if ( m->m_page == PAGE_SECURITY ) suffix = "ip";
 		if ( show )
 			sb->safePrintf ("<td><a href=\"?c=%s&cast=1&"
 					//"rm_%s=1\">"
 					// remove=<rownum>
-					"remove=%li\">"
+					"remove%s=%li\">"
 					"remove</td>\n",coll,//cgi );
+					suffix,
 					j); // j is row #
 					
 		else
@@ -8457,6 +8498,40 @@ void Parms::init ( ) {
 	// SECURITY CONTROLS
 	///////////////////////////////////////////
 
+	m->m_title = "Admin IPs";
+	//m->m_desc = "Allow UDP requests from this list of IPs. Any datagram "
+	//	"received not coming from one of these IPs, or an IP in "
+	//	"hosts.conf, is dropped. If another cluster is accessing this "
+	//	"cluster for getting link text or whatever, you will need to "
+	//	"list the IPs of the accessing machines here. These IPs are "
+	//	"also used to allow access to the HTTP server even if it "
+	//	"was disabled in the Master Controls. IPs that have 0 has "
+	//	"their Least Significant Byte are treated as wildcards for "
+	//	"IP blocks. That is, 1.2.3.0 means 1.2.3.*.";
+	m->m_desc  = "Any IPs in this list will have administrative access "
+		"to the Gigablast search engine.";
+	m->m_cgi   = "adminip";
+	m->m_xml   = "adminIp";
+	m->m_page  = PAGE_SECURITY;
+	m->m_max   = MAX_CONNECT_IPS;
+	m->m_off   = (char *)g_conf.m_connectIps - g;
+	m->m_type  = TYPE_IP;
+	m->m_priv  = 2;
+	m->m_def   = "";
+	//m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m++;
+
+	m->m_title = "remove connect ip";
+	m->m_desc  = "remove a connect ip";
+	m->m_cgi   = "removeip";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_func  = CommandRemoveConnectIpRow;
+	m->m_cast  = 1;
+	m++;
+
+
+	/*
 	m->m_title = "Super Turks";
 	m->m_desc = "Add facebook user IDs here so those people can "
 		"turk the results. Later we may limit each person to "
@@ -8472,6 +8547,7 @@ void Parms::init ( ) {
 	m->m_page = PAGE_SECURITY;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
+	*/
 
 	/*
 	m->m_title = "Users";
@@ -8535,25 +8611,6 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m++;
 	*/
-	m->m_title = "Connect IPs";
-	m->m_desc  = "Allow UDP requests from this list of IPs. Any datagram "
-		"received not coming from one of these IPs, or an IP in "
-		"hosts.conf, is dropped. If another cluster is accessing this "
-		"cluster for getting link text or whatever, you will need to "
-		"list the IPs of the accessing machines here. These IPs are "
-		"also used to allow access to the HTTP server even if it "
-		"was disabled in the Master Controls. IPs that have 0 has "
-		"their Least Significant Byte are treated as wildcards for "
-		"IP blocks. That is, 1.2.3.0 means 1.2.3.*.";
-	m->m_cgi   = "connectip";
-	m->m_xml   = "connectIp";
-	m->m_max   = MAX_CONNECT_IPS;
-	m->m_off   = (char *)g_conf.m_connectIps - g;
-	m->m_type  = TYPE_IP;
-	m->m_priv  = 2;
-	m->m_def   = "";
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m++;
 
 	///////////////////////////////////////////
 	// LOG CONTROLS

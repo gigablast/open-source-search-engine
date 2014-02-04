@@ -1856,7 +1856,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 			continue;
 
 		// ignore these for now
-		if ( i == PAGE_SECURITY ) continue;
+		//if ( i == PAGE_SECURITY ) continue;
 		if ( i == PAGE_ACCESS ) continue;
 		if ( i == PAGE_INDEXDB ) continue;
 		if ( i == PAGE_RULES ) continue;

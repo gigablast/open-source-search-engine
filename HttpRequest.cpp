@@ -663,6 +663,12 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 }
 		 
 
+	 // connectips/adminips
+	 for ( long i = 0 ; i < g_conf.m_numConnectIps ; i++ ) {
+		 if ( sock->m_ip != g_conf.m_connectIps[i] ) continue;
+		 m_isLocal = true;
+		 break;
+	 }
 
 	 // roadrunner ip
 	 // if ( sock && strncmp(iptoa(sock->m_ip),"66.162.42.131",13) == 0) 
