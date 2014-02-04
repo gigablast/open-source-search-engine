@@ -4119,6 +4119,10 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// assume not sorting by a numeric termlist
 	m_sortByTermNum = -1;
 
+	// now we have score ranges for gbmin:price:1.99 etc.
+	m_minScoreTermNum = -1;
+	m_maxScoreTermNum = -1;
+
 	//for ( long i = 0 ; i < m_msg2->getNumLists() ; i++ ) {
 	for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
 		QueryTerm *qt = &m_q->m_qterms[i];
@@ -4137,6 +4141,15 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		if ( qt->m_fieldCode == FIELD_GBSORTBY ||
 		     qt->m_fieldCode == FIELD_GBREVSORTBY )
 			m_sortByTermNum = i;
+		// is it gbmin:price:1.99?
+		if ( qt->m_fieldCode == FIELD_GBNUMBERMIN ) {
+			m_minScoreTermNum = i;
+			m_minScoreVal = qt->m_float;
+		}
+		if ( qt->m_fieldCode == FIELD_GBNUMBERMAX ) {
+			m_maxScoreTermNum = i;
+			m_maxScoreVal = qt->m_float;
+		}
 		// count
 		long nn = 0;
 		// also add in bigram lists
@@ -5099,7 +5112,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		QueryTermInfo *qti = &qip[i];
 		// skip if negative query term
 		if ( qti->m_bigramFlags[0] & BF_NEGATIVE ) continue;
-		// skip if numeric field like gbsortby:price gbmin.price:1.23
+		// skip if numeric field like gbsortby:price gbmin:price:1.23
 		if ( qti->m_bigramFlags[0] & BF_NUMBER ) continue;
 		// set it
 		if ( qti->m_wikiPhraseId == 1 ) continue;
@@ -6476,6 +6489,19 @@ void PosdbTable::intersectLists10_r ( ) {
 	//
 	if ( m_sortByTermNum >= 0 )
 		score = g_posdb.getFloat ( miniMergedList[m_sortByTermNum] );
+
+	// skip docid if outside of range
+	if ( m_minScoreTermNum >= 0 ) {
+		float score2 = g_posdb.getFloat ( miniMergedList[m_minScoreTermNum] );
+		if ( score2 < m_minScoreVal ) goto advance;
+	}
+
+	// skip docid if outside of range
+	if ( m_maxScoreTermNum >= 0 ) {
+		float score2 = g_posdb.getFloat ( miniMergedList[m_maxScoreTermNum] );
+		if ( score2 > m_maxScoreVal ) goto advance;
+	}
+
 
 	// . seoDebug hack so we can set "dcs"
 	// . we only come here if we actually made it into m_topTree

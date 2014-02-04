@@ -36,6 +36,8 @@ static bool gotResults         ( void *state ) ;
 
 class State0 {
 public:
+
+	collnum_t    m_collnum;
         Query        m_q;
 	SearchInput  m_si;
 	Msg40        m_msg40;
@@ -53,6 +55,7 @@ public:
 	long long    m_took; // how long it took to get the results
 	HttpRequest  m_hr;
 	bool         m_printedHeaderRow;
+	char         m_qe[MAX_QUERY_LEN+1];
 
 	// for printing our search result json items in csv:
 	HashTableX   m_columnTable;
@@ -64,11 +67,10 @@ public:
 	long    m_oldContentHash32;
 };
 
-static bool printResult ( SafeBuf &sb,
-			 State0 *st,
-			 long ix , 
-			 CollectionRec *cr ,
-			 char *qe ) ;
+bool printSearchResultsHeader ( State0 *st ) ;
+bool printSearchResultsTail ( State0 *st ) ;
+
+bool printResult ( State0 *st,  long ix );
 
 bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) ;
 
@@ -505,6 +507,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// allow up to 1000 results per query for paying clients
 	CollectionRec *cr = si->m_cr;
 
+	// save collnum now
+	if ( cr ) st->m_collnum = cr->m_collnum;
+	else      st->m_collnum = -1;
 
 	// limit here
 	long maxpp = cr->m_maxSearchResultsPerQuery ;
@@ -754,7 +759,7 @@ bool gotResults ( void *state ) {
 	char  *q    = msg40->getQuery();
 	long   qlen = msg40->getQueryLen();
 
-	SearchInput *si = &st->m_si;
+	//SearchInput *si = &st->m_si;
 
 	// shortcuts
 	char        *coll    = si->m_coll2;
@@ -908,9 +913,53 @@ bool gotResults ( void *state ) {
 	//
 
 
+	// if already printed from Msg40.cpp, bail out now
+	if ( st->m_streamResults ) return true;
+
+	// print logo, search box, results x-y, ... into st->m_sb
+	printSearchResultsHeader ( st );
+
+	// then print each result
+	// don't display more than docsWanted results
+	long count = msg40->getDocsWanted();
+	bool hadPrintError = false;
+
+	for ( long i = 0 ; count > 0 && i < numResults ; i++ ) {
+		// prints in xml or html
+		if ( ! printResult ( st , i ) ) {
+			hadPrintError = true;
+			break;
+		}
+		// limit it
+		count--;
+	}
+
+
+	if ( hadPrintError ) {
+		if ( ! g_errno ) g_errno = EBADENGINEER;
+		log("query: had error: %s",mstrerror(g_errno));
+		return sendReply ( st , sb.getBufStart() );
+	}
+
+
+	// wrap it up with Next 10 etc.
+	printSearchResultsTail ( st );
+
+	return true;
+}
+
+bool printSearchResultsHeader ( State0 *st ) {
+
+	SearchInput *si = &st->m_si;
+
+	// grab the query
+	Msg40 *msg40 = &(st->m_msg40);
+	char  *q    = msg40->getQuery();
+	long   qlen = msg40->getQueryLen();
+
   	//char  local[ 128000 ];
 	//SafeBuf sb(local, 128000);
-	SafeBuf sb;
+	SafeBuf *sb = &st->m_sb;
 	// reserve 1.5MB now!
 	if ( ! sb.reserve(1500000 ,"pgresbuf" ) ) // 128000) )
 		return true;
@@ -1118,10 +1167,10 @@ bool gotResults ( void *state ) {
 	//Highlight h;
 
 	// encode query buf
-	char qe[MAX_QUERY_LEN+1];
+	//char qe[MAX_QUERY_LEN+1];
 	char *dq    = si->m_displayQuery;
 	long  dqlen = si->m_displayQueryLen;
-	urlEncode(qe,MAX_QUERY_LEN*2,dq,dqlen);
+	urlEncode(st->m_qe,MAX_QUERY_LEN*2,dq,dqlen);
 
 	// how many results were requested?
 	long docsWanted = msg40->getDocsWanted();
@@ -1270,18 +1319,18 @@ bool gotResults ( void *state ) {
 			       "<a href=\"/admin/reindex?c=%s&"
 			       "qlang=%s&q=%s\">"
 			       "[reindex or delete these results]</a></b>"
-			       "</font> ", coll , langStr , qe );
+			       "</font> ", coll , langStr , st->m_qe );
 		sb.safePrintf (" &nbsp; "
 			       "<font color=red><b>"
 			       "<a href=\"/inject?c=%s&qts=%s\">"
 			       "[scrape]</a></b>"
-			       "</font> ", coll , qe );
+			       "</font> ", coll , st->m_qe );
 		sb.safePrintf (" &nbsp; "
 			       "<font color=red><b>"
 			       "<a href=\"/search?sb=1&c=%s&"
 			       "qlang=%s&q=%s\">"
 			       "[show banned results]</a></b>"
-			       "</font> ", coll , langStr , qe );
+			       "</font> ", coll , langStr , st->m_qe );
 	}
 
 	// if its an ip: or site: query, print ban link
@@ -1362,7 +1411,7 @@ bool gotResults ( void *state ) {
 		// finish it
 		sb.safePrintf("&q=%s&rcache=0&seq=0&rtq=0\">"
 			      "[cache off]</a></b>"
-			      "</font> ", qe );
+			      "</font> ", st->m_qe );
 	}
 
 	// mention ignored query terms
@@ -1512,32 +1561,15 @@ bool gotResults ( void *state ) {
 			      "</a>");
 	*/
 
-
-	// don't display more than docsWanted results
-	long count = msg40->getDocsWanted();
-	bool hadPrintError = false;
-
-	for ( long i = 0 ; count > 0 && i < numResults ; i++ ) {
-		// prints in xml or html
-		if ( ! printResult ( sb , st , i , cr , qe ) ) {
-			hadPrintError = true;
-			break;
-		}
-		// limit it
-		count--;
-	}
-
-
-	if ( hadPrintError ) {
-		if ( ! g_errno ) g_errno = EBADENGINEER;
-		log("query: had error: %s",mstrerror(g_errno));
-		return sendReply ( st , sb.getBufStart() );
-	}
-
-
 	//
-	// END PRINT THE RESULTS
+	// DONE PRINTING SEARCH RESULTS HEADER
 	//
+	return true;
+}
+
+
+bool printSearchResultsTail ( State0 *st ) {
+
 
 	// end the two-pane table
 	if ( si->m_format == FORMAT_HTML ) sb.safePrintf("</td></tr></table>");
@@ -1581,7 +1613,7 @@ bool gotResults ( void *state ) {
 		long ss = firstNum - msg40->getDocsWanted();
 		sb.safePrintf("<a href=\"/search?s=%li&q=",ss);
 		// our current query parameters
-		sb.safeStrcpy ( qe );
+		sb.safeStrcpy ( st->m_qe );
 		// print other args if not zero
 		sb.safeMemcpy ( &args );
 		// close it up
@@ -1599,7 +1631,7 @@ bool gotResults ( void *state ) {
 		// add the query
 		sb.safePrintf ("<a href=\"/search?s=%li&q=",ss);
 		// our current query parameters
-		sb.safeStrcpy ( qe );
+		sb.safeStrcpy ( st->m_qe );
 		// print other args if not zero
 		sb.safeMemcpy ( &args );
 		// close it up
@@ -1966,11 +1998,17 @@ static bool printDMOZCategoryUnderResult ( SafeBuf &sb ,
 
 
 // use this for xml as well as html
-static bool printResult ( SafeBuf &sb,
-			 State0 *st,
-			 long ix , 
-			 CollectionRec *cr ,
-			 char *qe ) {
+static bool printResult ( State0 *st, long ix ) {
+
+	SafeBuf *sb = &st->m_sb;
+
+	CollectionRec *cr = NULL;
+	cr = g_collectiondb.getRec ( st->m_collnum );
+	if ( ! cr ) {
+		log("query: printResult: collnum %li gone",(long)st->m_collnum);
+		return true;
+	}
+
 
 	// shortcuts
 	SearchInput *si    = &st->m_si;
@@ -2489,7 +2527,7 @@ static bool printResult ( SafeBuf &sb,
 				"get?"
 				"q=%s&c=%s&d=%lli>"
 				"cached</a>",
-				qe , coll ,
+				st->m_qe , coll ,
 				mr->m_docId );
 	else if ( printCached )
 		sb.safePrintf ( "<a href=\""
@@ -2498,7 +2536,7 @@ static bool printResult ( SafeBuf &sb,
 				"qlang=%s&"
 				"c=%s&d=%lli&cnsp=0\">"
 				"cached</a>", 
-				qe , 
+				st->m_qe , 
 				// "qlang" parm
 				si->m_defaultSortLanguage,
 				coll , 
@@ -3189,7 +3227,7 @@ static bool printResult ( SafeBuf &sb,
 			       "q=%%2Bip%%3A%s+%s&sc=0&c=%s\">"
 			       "More from this ip</a> ]",
 			       iptoa ( mr->m_ip ) ,
-			       qe , coll );
+			       st->m_qe , coll );
 		if ( indent ) sb.safePrintf ( "</blockquote><br>\n");
 		else sb.safePrintf ( "<br><br>\n");
 	}
@@ -3202,7 +3240,7 @@ static bool printResult ( SafeBuf &sb,
 			       "q=%%2Bsite%%3A%s+%s&sc=0&c=%s\">"
 			       "More from this site</a></nobr>",
 			       hbuf ,
-			       qe , coll );
+			       st->m_qe , coll );
 		if ( indent ) sb.safePrintf ( "</blockquote><br>\n");
 		else sb.safePrintf ( "<br><br>\n");
 	}

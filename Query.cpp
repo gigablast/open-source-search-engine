@@ -527,6 +527,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		QueryTerm *qt = &m_qterms[n];
 		qt->m_qword     = qw ;
 		qt->m_piped     = qw->m_piped;
+		qt->m_float     = qw->m_float;
 		qt->m_isPhrase  = true ;
 		qt->m_isUORed   = false;
 		qt->m_UORedTerm   = NULL;
@@ -2202,27 +2203,48 @@ bool Query::setQWords ( char boolFlag ,
 		     fieldCode == FIELD_QUOTA ||
 		     fieldCode == FIELD_GBSORTBY ||
 		     fieldCode == FIELD_GBREVSORTBY ||
+		     // gbmin:price:1.23
 		     fieldCode == FIELD_GBNUMBERMIN ||
 		     fieldCode == FIELD_GBNUMBERMAX ||
 		     fieldCode == FIELD_GBAD  ) {
-			// find first space -- that terminates the field value
+			// . find first space -- that terminates the field value
+			// . make "end" point to the end of the entire query
 			char *end = 
 				(words.m_words[words.m_numWords-1] +
 				 words.m_wordLens[words.m_numWords-1]);
-			while ( w+wlen < end && 
-				! is_wspace_utf8(w+wlen) ) wlen++;
+			// use this for gbmin:price:1.99 etc.
+			long firstColonLen = -1;
+			// "w" points to the first alnumword after the field,
+			// so for site:xyz.com "w" points to the 'x' and wlen would
+			// be 3 in that case sinze xyz is a word of 3 chars. so advance
+			// wlen until we hit a space.
+			while ( w + wlen < end ) {
+				// stop at first white space
+				if ( is_wspace_utf8(w+wlen) ) break;
+				// in the case of gbmin:price:1.99 record first ':'
+				if ( w[wlen]==':' ) firstColonLen = wlen;
+				wlen++;
+			}
 			// ignore following words until we hit a space
 			ignoreTilSpace = true;
 			// the hash
 			unsigned long long wid = hash64 ( w , wlen, 0LL );
 
 			// i've decided not to make 
-			// gbsortby:products.offerPrice case sensitive
+			// gbsortby:products.offerPrice gbmin:price:1.23 case insensitive
 			if ( fieldCode == FIELD_GBSORTBY ||
-			     fieldCode == FIELD_GBREVSORTBY ||
-			     fieldCode == FIELD_GBNUMBERMIN ||
-			     fieldCode == FIELD_GBNUMBERMAX )
+			     fieldCode == FIELD_GBREVSORTBY )
 				wid = hash64Lower_utf8 ( w , wlen , 0LL );
+
+			// gbmin:price:1.23
+			if ( firstColonLen>0 &&
+			     ( fieldCode == FIELD_GBNUMBERMIN ||
+			       fieldCode == FIELD_GBNUMBERMAX ) ) {
+				// record the field
+				wid = hash64Lower_utf8 ( w , firstColonLen , 0LL );
+				// and also the floating point after that
+				qw->m_float = atof ( w + firstColonLen + 1 );
+			}
 
 			// should we have normalized before hashing?
 			if ( fieldCode == FIELD_URL ||
@@ -3049,11 +3071,15 @@ struct QueryField g_fields[] = {
 	{"gbgigabitvector", FIELD_GBGIGABITVECTOR, false,""},
 	{"gbsamplevector", FIELD_GBSAMPLEVECTOR, false,""},
 	{"gbcontenthash", FIELD_GBCONTENTHASH, false,""},
-	{"gbsortby", FIELD_GBSORTBY, false,""},
-	{"gbrevsortby", FIELD_GBREVSORTBY, false,""},
+	{"gbsortby", FIELD_GBSORTBY, false,"Example: gbsortby:price. Fields can be "
+	 "in JSON or in meta tag."},
+	{"gbrevsortby", FIELD_GBREVSORTBY, false,"Example: gbrevsortby:item.price . "
+	 "Fields can be in JSON or in meta tag."},
 
-	{"gbnumbermin", FIELD_GBNUMBERMIN, false,""},
-	{"gbnumbermax", FIELD_GBNUMBERMAX, false,""},
+	// gbmin:price:1.23
+	{"gbmin", FIELD_GBNUMBERMIN, false,"Usage: gbmin:price:1.99 . Numeric "
+	 "fields can be in JSON or in meta tag."},
+	{"gbmax", FIELD_GBNUMBERMAX, false,"Usage: gbmax:price:1.99"},
 
 	{"gbcountry",FIELD_GBCOUNTRY,false,""},
 	{"gbad",FIELD_GBAD,false,""},

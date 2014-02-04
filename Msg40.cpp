@@ -86,6 +86,13 @@ Msg40::Msg40() {
 	m_numMsg20s     = 0;
 	m_msg20StartBuf = NULL;
 	m_numToFree     = 0;
+	m_hadPrintError = false;
+	m_numPrinted    = 0;
+	m_printedHeader = false;
+	m_printedTail   = false;
+	m_streamResults = false;
+	m_sendsOut      = 0;
+	m_sendsIn       = 0;
 	//m_numGigabitInfos = 0;
 }
 
@@ -1195,6 +1202,16 @@ bool gotSummaryWrapper ( void *state ) {
 	return true;
 }
 
+void doneSendingWrapper9 ( void *state ) {
+	Msg40 *THIS = (Msg40 *)state;
+	// the send completed, count it
+	THIS->m_sendsIn++;
+	// try to send more... returns false if blocked on something
+	if ( ! THIS->gotSummary() ) return;
+	// all done!!!???
+	THIS->m_callback ( THIS->m_state );
+}
+
 // . returns false if not all replies have been received (or timed/erroredout)
 // . returns true if done (or an error finished us)
 // . sets g_errno on error
@@ -1242,6 +1259,61 @@ bool Msg40::gotSummary ( ) {
 
  doAgain:
 
+	st->m_sb.reset();
+
+
+	for ( ; m_streamResults && m_printi < m_msg3a.m_numDocIds ; m_printi++ ) {
+		// if we are waiting on our previous send to complete... wait...
+		if ( m_sendsOut > m_sendsIn ) break;
+		// otherwise, get the summary for result #m_printi
+		Msg20 *m20 = &m_msg20s[m_printi];
+		// get the next reply we are waiting on to print results in order
+		Msg20Reply *mr = m20->m_reply;
+		if ( ! mr ) break;
+
+		// primitive deduping. for diffbot json exclude url's from the
+		// XmlDoc::m_contentHash32...
+		if ( st->m_dedupTable.isInTable ( mr->m_contentHash32 ) )
+			continue;
+
+		// return true with g_errno set on error
+		if ( ! st->m_dedupTable.addKey ( &mr->m_contentHash32 ) ) {
+			m_hadPrintError = true;
+			log("msg40: error adding to dedup table: %s",mstrerror(g_errno));
+		}
+
+		// . ok, we got it, so print it and stream it
+		// . this might set m_hadPrintError to true
+		printSearchResult9 ( m_printi );
+
+		// now free the reply to save memory since we could be streaming back 1M+
+		m20->freeReply();
+	}
+
+
+	TcpServer *tcp = &g_httpServer.m_tcp;
+
+
+	// . transmit the chunk in sb if non-zero length
+	// . steals the allocated buffer from sb and stores in the 
+	//   TcpSocket::m_sendBuf, which it frees when socket is
+	//   ultimately destroyed or we call sendChunk() again.
+	// . when TcpServer is done transmitting, it does not close the
+	//   socket but rather calls doneSendingWrapper() which can call
+	//   this function again to send another chunk
+	// . when we are truly done sending all the data, then we set lastChunk
+	//   to true and TcpServer.cpp will destroy m_socket when done
+	if ( sb->length() &&
+	     ! tcp->sendChunk ( st->m_socket , 
+				sb  ,
+				this ,
+				doneSendingWrapper9 ,
+				lastChunk ) )
+		// if it blocked, inc this count. we'll only call m_callback above
+		// when m_sendsIn equals m_sendsOut... and m_numReplies == m_numRequests
+		m_sendsOut++;
+
+
 	// do we need to launch another batch of summary requests?
 	if ( m_numRequests < m_msg3a.m_numDocIds ) {
 		// . if we can launch another, do it
@@ -1266,6 +1338,15 @@ bool Msg40::gotSummary ( ) {
 	// . TODO: evaluate if this hurts us
 	if ( m_numReplies < m_numRequests )
 		return false;
+
+
+	// if streaming results, we are done
+	if ( m_streamResults ) {
+		// unless waiting for last transmit to complete
+		if ( m_sendsOut > m_sendsIn ) return false;
+		// otherwise, all done!
+		return true;
+	}
 
 
 	// save this before we increment m_numContiguous
@@ -1887,7 +1968,7 @@ bool Msg40::gotSummary ( ) {
 			return true;
 		}
 
-#ifdef NEEDLICENSE
+
 		// now make the fast facts from the gigabits and the
 		// samples. these are sentences containing the query and
 		// a gigabit.
@@ -1897,7 +1978,7 @@ bool Msg40::gotSummary ( ) {
 			// g_errno should be set on error here!
 			return true;
 		}
-#endif
+
 
 		/*
 		long ng;
@@ -4319,9 +4400,6 @@ void setRepeatScores ( Words *words ,
 
 }
 
-// a separate license must be acq'd to use this code for commercial reasons
-#ifdef NEEDLICENSE
-
 ///////////////////
 //
 // FAST FACTS
@@ -4648,4 +4726,62 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 	return true;
 }
 
-#endif
+
+// . printSearchResult into "sb"
+bool Msg40::printSearchResult9 ( long ix ) {
+
+	// . we stream results right onto the socket
+	// . useful for thousands of results... and saving mem
+	if ( ! m_streamResults ) { char *xx=NULL;*xx=0; }
+
+	// get state0
+	State0 *st = (State0 *)m_state;
+
+	SafeBuf *sb = st->m_sb;
+
+	// clear it since we are streaming
+	sb->reset();
+
+	// this is in PageResults.cpp
+	if ( ! m_printedHeader ) {
+		// only print header once
+		m_printedHeader = true;
+		printSearchResultsHeader ( st );
+	}
+
+
+	Msg40 *msg40 = &st->m_msg40;
+
+	// then print each result
+	// don't display more than docsWanted results
+	
+	// prints in xml or html
+	if ( m_numPrinted < msg40->getDocsWanted() ) {
+
+		// print that out into st->m_sb safebuf
+		if ( ! printResult ( st , ix ) ) {
+			// oom?
+			if ( ! g_errno ) g_errno = EBADENGINEER;
+			log("query: had error: %s",mstrerror(g_errno));
+			m_hadPrintError = true;
+		}
+
+		// count it
+		m_numPrinted++;
+
+	}
+
+	//bool lastChunk = false;
+
+	// . wrap it up with Next 10 etc.
+	// . this is in PageResults.cpp
+	if ( m_numPrinted >= m_numRequests && ! m_printedTail ) {
+		m_printedTail = true;
+		printSearchResultsTail ( st );
+		//lastChunk = true;
+	}
+
+
+	return true;
+}
+	

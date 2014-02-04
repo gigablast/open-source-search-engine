@@ -362,6 +362,9 @@ class QueryWord {
 	bool m_piped;
 	// used by Matches.cpp for highlighting under different colors
 	long m_colorNum;
+
+	// for min/max score ranges like gbmin:price:1.99
+	float m_float;
 };
 
 // . we filter the QueryWords and turn them into QueryTerms
@@ -487,6 +490,9 @@ class QueryTerm {
 	// used by Msg40.cpp for gigabits generation
 	long long m_hash64d;
 	long      m_popWeight;
+
+	// for min/max score ranges like gbmin:price:1.99
+	float m_float;
 };
 
 // . this is the main class for representing a query

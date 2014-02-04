@@ -608,7 +608,17 @@ class PosdbTable {
 
 	class Msg39Request *m_r;
 
+	// for gbsortby:item.price ...
 	long m_sortByTermNum;
+
+	// for gbmin:price:1.99
+	long m_minScoreTermNum;
+	long m_maxScoreTermNum;
+
+	// for gbmin:price:1.99
+	float m_minScoreVal;
+	float m_maxScoreVal;
+
 
 	// the new intersection/scoring algo
 	void intersectLists10_r ( );	

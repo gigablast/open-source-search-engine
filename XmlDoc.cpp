@@ -16966,6 +16966,11 @@ long *XmlDoc::getContentHash32 ( ) {
 		return &m_contentHash32;
 	}
 
+	// we set m_contentHash32 in ::hashJSON() below because it is special for diffbot
+	// since it ignores certain json fields like url: and the fields are
+	// independent, and numbers matter, like prices
+	if ( m_isDiffbotJSONObject ) { char *xx=NULL; *xx=0; }
+
 	// *pend should be \0
 	m_contentHash32 = getContentHash32Fast ( p , plen , m_niceness );
 	// validate
@@ -45022,6 +45027,8 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 	char nb[1024];
 	SafeBuf nameBuf(nb,1024);
 
+	long totalHash32 = 0;
+
 	for ( ; ji ; ji = ji->m_next ) {
 		QUICKPOLL(m_niceness);
 		// skip if not number or string
@@ -45086,12 +45093,31 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 		// a buffer, so ji->getValue() should be decoded completely
 		//
 
+		// get the value of the json field
+		char *val = ji->getValue();
+		long vlen = ji->getValueLen();
+
+
+		//
+		// for deduping search results we set m_contentHash32 here for
+		// diffbot json objects
+		//
+		if ( hi.m_hashGroup != HASHGROUP_INURL ) {
+			// make the content hash so we can set m_contentHash32 for deduping
+			long nh32 = hash32n ( name );
+			// do an exact hash for now...
+			long vh32 = hash32 ( val , vlen , m_niceness );
+			// accumulate, order independently
+			totalHash32 ^= nh32;
+			totalHash32 ^= vh32;
+		}
+
 		// index like "title:whatever"
 		hi.m_prefix = name;
-		hashString ( ji->getValue(),ji->getValueLen() , &hi );
+		hashString ( val , vlen , &hi );
 		// hash without the field name as well
 		hi.m_prefix = NULL;
-		hashString ( ji->getValue(),ji->getValueLen() , &hi );
+		hashString ( val , vlen , &hi );
 
 		/*
 		// a number? hash special then as well
@@ -45107,6 +45133,9 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 			return NULL;
 		*/
 	}
+
+	m_contentHash32 = totalHash32;
+	m_contentHash32Valid = true;
 
 	return (char *)0x01;
 }
