@@ -991,6 +991,16 @@ SpiderColl *SpiderCache::getSpiderCollIffNonNull ( collnum_t collnum ) {
 	return cr->m_spiderColl;
 }
 
+bool tryToDeleteSpiderColl ( SpiderColl *sc ) {
+	if ( ! sc->m_deleteMyself ) return false;
+	if ( sc->m_msg5b.m_waitingForList ) return false;
+	if ( sc->m_msg1.m_mcast.m_inUse ) return false;
+	if ( sc->m_isLoading ) return false;
+	mdelete ( sc , sizeof(SpiderColl),"postdel1");
+	delete ( sc );
+	return true;
+}
+
 // . get SpiderColl for a collection
 // . if it is NULL for that collection then make a new one
 SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
@@ -1037,10 +1047,18 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	
 	// set first doledb scan key
 	sc->m_nextDoledbKey.setMin();
-	// load its tables from disk
+	// mark it as loading so it can't be deleted while loading
+	sc->m_isLoading = true;
+	// . load its tables from disk
+	// . crap i think this might call quickpoll and we get a parm
+	//   update to delete this spider coll!
 	sc->load();
+	// mark it as loading
+	sc->m_isLoading = false;
 	// set this
 	sc->m_cr = cr;
+	// did crawlbottesting delete it right away?
+	if ( tryToDeleteSpiderColl( sc ) ) return NULL;
 	// sanity check
 	if ( ! cr ) { char *xx=NULL;*xx=0; }
 	// note it!
@@ -1056,6 +1074,7 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 
 SpiderColl::SpiderColl () {
 	m_deleteMyself = false;
+	m_isLoading = false;
 	m_gettingList1 = false;
 	m_gettingList2 = false;
 	m_lastScanTime = 0;
@@ -2480,13 +2499,7 @@ static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 	// did our collection rec get deleted? since we were doing a read
 	// the SpiderColl will have been preserved in that case but its
 	// m_deleteMyself flag will have been set.
-	if ( THIS->m_deleteMyself &&
-	     ! THIS->m_msg5b.m_waitingForList &&
-	     ! THIS->m_msg1.m_mcast.m_inUse ) {
-		mdelete ( THIS , sizeof(SpiderColl),"postdel1");
-		delete ( THIS );
-		return;
-	}
+	if ( tryToDeleteSpiderColl ( THIS ) ) return;
 
 	THIS->populateWaitingTreeFromSpiderdb ( true );
 }
@@ -2930,14 +2943,7 @@ static void doledWrapper ( void *state ) {
 	THIS->m_isPopulating = false;
 
 	// did collection get nuked while we were waiting for msg1 reply?
-	if ( THIS->m_deleteMyself &&
-	     ! THIS->m_msg5.m_waitingForList &&
-	     ! THIS->m_msg5b.m_waitingForList ) {
-		mdelete ( THIS , sizeof(SpiderColl),"postdel1");
-		delete ( THIS );
-		return;
-	}
-	
+	if ( tryToDeleteSpiderColl ( THIS ) ) return;
 
 	// . we added a rec to doledb for the firstIp in m_waitingTreeKey, so
 	//   now go to the next node in the wait tree.
@@ -3024,14 +3030,7 @@ bool SpiderColl::evalIpLoop ( ) {
 	// did our collection rec get deleted? since we were doing a read
 	// the SpiderColl will have been preserved in that case but its
 	// m_deleteMyself flag will have been set.
-	if ( m_deleteMyself &&
-	     ! m_msg5b.m_waitingForList &&
-	     ! m_msg1.m_mcast.m_inUse ) {
-		mdelete ( this , sizeof(SpiderColl),"postdel1");
-		delete ( this );
-		// pretend to block since we got deleted!!!
-		return false;
-	}
+	if ( tryToDeleteSpiderColl ( this ) ) return false;
 
 	// if first time here, let's do a read first
 	if ( ! m_didRead ) {
@@ -3050,14 +3049,9 @@ bool SpiderColl::evalIpLoop ( ) {
 	// did our collection rec get deleted? since we were doing a read
 	// the SpiderColl will have been preserved in that case but its
 	// m_deleteMyself flag will have been set.
-	if ( m_deleteMyself &&
-	     ! m_msg5b.m_waitingForList &&
-	     ! m_msg1.m_mcast.m_inUse ) {
-		mdelete ( this , sizeof(SpiderColl),"postdel1");
-		delete ( this );
+	if ( tryToDeleteSpiderColl ( this ) )
 		// pretend to block since we got deleted!!!
 		return false;
-	}
 
 
 	// . did reading the list from spiderdb have an error?
@@ -7190,7 +7184,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 			return;
 		}
 		// now remove from doleiptable since we removed from doledb
-		sc->removeFromDoledbTable ( cq->m_firstIp );
+		if ( sc ) sc->removeFromDoledbTable ( cq->m_firstIp );
 
 		// how many spiders outstanding for this coll and IP?
 		//long out=g_spiderLoop.getNumSpidersOutPerIp ( cq->m_firstIp);
@@ -7205,7 +7199,7 @@ void handleRequest12 ( UdpSlot *udpSlot , long niceness ) {
 		// . do not add to waiting tree if we have enough outstanding
 		//   spiders for this ip. we will add to waiting tree when
 		//   we receive a SpiderReply in addSpiderReply()
-		if ( //out < cq->m_maxSpidersOutPerIp &&
+		if ( sc && //out < cq->m_maxSpidersOutPerIp &&
 		     // this will just return true if we are not the 
 		     // responsible host for this firstip
 		    // DO NOT populate from this!!! say "false" here...
