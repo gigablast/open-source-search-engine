@@ -2969,7 +2969,7 @@ key128_t makeUfnTreeKey ( long      firstIp      ,
 	return key;
 }
 
-void parseUfnTreeKey ( key128_t  *k ,
+void parseWinnerTreeKey ( key128_t  *k ,
 		       long      *firstIp ,
 		       long      *priority ,
 		       uint64_t  *spiderTimeMS ,
@@ -3122,7 +3122,7 @@ bool SpiderColl::evalIpLoop ( ) {
 	// free list to save memory
 	m_list.freeList();
 
-
+	// . add all winners if we can in m_winnerTree into doledb
 	// . if list was empty, then reading is all done so take the winner we 
 	//   got from all the lists we did read for this IP and add him 
 	//   to doledb
@@ -3132,7 +3132,7 @@ bool SpiderColl::evalIpLoop ( ) {
 	//   a new spider request or reply for this ip comes in we'll try
 	//   again as well...
 	// . this returns false if blocked adding to doledb using msg1
-	if ( ! addWinnerToDoledb() ) return false;
+	if ( ! addWinnersIntoDoledb() ) return false;
 
 	// . do more from tree
 	// . re-entry is true because we just got the  msg5 reply
@@ -3278,6 +3278,7 @@ bool SpiderColl::readListFromSpiderdb ( ) {
 	//if ( m_isReadDone ) return true;
 }
 
+// . ADDS top X winners to m_winnerTree
 // . this is ONLY CALLED from evalIpLoop() above
 // . scan m_list that we read from spiderdb for m_scanningIp IP
 // . set m_bestRequest if an request in m_list is better than what is
@@ -3307,10 +3308,10 @@ bool SpiderColl::scanListForWinners ( ) {
 	uint64_t nowGlobalMS = gettimeofdayInMillisecondsGlobal();//Local();
 	uint32_t nowGlobal   = nowGlobalMS / 1000;
 
-	SpiderRequest *winReq      = NULL;
-	long           winPriority = -10;
-	uint64_t       winTimeMS   = 0xffffffffffffffffLL;
-	long           winMaxSpidersPerIp = 9999;
+	//SpiderRequest *winReq      = NULL;
+	//long           winPriority = -10;
+	//uint64_t       winTimeMS   = 0xffffffffffffffffLL;
+	//long           winMaxSpidersPerIp = 9999;
 	SpiderReply   *srep        = NULL;
 	long long      srepUh48;
 
@@ -3645,6 +3646,16 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 		}
 
+		//////
+		//
+		// MDW: no, take this out now that we allow multiple urls
+		// in doledb from this firstip for speeding up the spiders.
+		// the crawldelay will be used by Msg13.cpp when it tries
+		// to download the url.
+		//
+		//////
+		/*
+
 		// how many "ready" urls for this IP? urls in doledb
 		// can be spidered right now
 		long *score ;
@@ -3692,7 +3703,7 @@ bool SpiderColl::scanListForWinners ( ) {
 				continue;
 			}
 		}
-
+		*/
 
 		// debug. show candidates due to be spidered now.
 		//if(g_conf.m_logDebugSpider ) //&& spiderTimeMS< nowGlobalMS )
@@ -3727,10 +3738,13 @@ bool SpiderColl::scanListForWinners ( ) {
 		//if ( priority == winPriority && spiderTimeMS > winTimeMS ) 
 		//	continue;
 
-		/*
+
+		// get the top 100 spider requests by priority/time/etc.
+		long maxWinners = 40;//100;
+
 		// only compare to min winner in tree if we got 100 in
 		// tree from this firstip already
-		if ( numNodes >= MAX_NODES && useTree ) {
+		if ( m_winnerTree.m_numNodesUsed >= maxWinners ) {
 			uint64_t tm1 = spiderTimeMS;
 			uint64_t tm2 = tailTimeMS;
 			// if they are both overdue, make them the same
@@ -3740,17 +3754,18 @@ bool SpiderColl::scanListForWinners ( ) {
 			if ( tm1 > tm2 )
 				continue;
 			// if tied, use priority
-			if ( tm1 == tm2 && priority < tailPriority )
+			if ( tm1 == tm2 && priority < m_tailPriority )
 				continue;
 			// if tied, use actual times. assuming both 
 			// are < nowGlobalMS
-			if ( tm1 == tm2 && priority == tailPriority &&
-			     spiderTimeMS > tailTimeMS )
+			if ( tm1 == tm2 && priority == m_tailPriority &&
+			     spiderTimeMS > m_tailTimeMS )
 				continue;
+			// tail node is the last one
+			long tailNode = m_winnerTree.getLastNode();
 			// cut tail
-			s_ufnTree.deleteNode ( tailNode , true );
+			m_winnerTree.deleteNode ( tailNode , true );
 		}
-		*/
 
 		// somestimes the firstip in its key does not match the
 		// firstip in the record!
@@ -3762,64 +3777,57 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 		}
 
+		////
+		//
+		// add spider request to winner tree
+		//
+		////
+
 		/*
 		// make the key
-		if ( useTree ) {
-			long long uh48 = sreq->getUrlHash48();
-			key128_t k = makeUfnTreeKey ( firstIp ,priority,
-						      spiderTimeMS , uh48 );
-			//long nn =;
-			s_ufnTree.addNode(0,(char *)&k,NULL,8);
-			//log("adding node #%li firstip=%s uh48=%llu "
-			//    "ufntree.k.n1=0x%llx "
-			//    "spiderdb.k.n1=0x%llx "
-			//    "spiderdb.k.n0=0x%llx "
-			//    ,
-			//    nn,iptoa(firstIp),uh48,k.n1,
-			//    *(long long *)rec,
-			//    *(long long *)(rec+8)
-			//   );
-			numNodes++;
-		}
-
-		// compute new tail node
-		if ( numNodes >= MAX_NODES && useTree ) {
-			key128_t nk = makeUfnTreeKey (firstIp+1,255,0,0 );
-			tailNode = s_ufnTree.getPrevNode ( 0,(char *)&nk );
-			if ( tailNode < 0 ) { char *xx=NULL;*xx=0; }
-			// set new tail parms
-			key128_t *tailKey;
-			tailKey = (key128_t *)s_ufnTree.getKey ( tailNode );
-			// convert to char first then to signed long
-			long      tailIp;
-			long long tailUh48;
-			parseUfnTreeKey ( tailKey ,
-					  &tailIp ,
-					  &tailPriority,
-					  &tailTimeMS ,
-					  &tailUh48 );
-			// sanity
-			if ( tailIp != firstIp ) { char *xx=NULL;*xx=0;}
-		}
+		//if ( useTree ) {
+		long long uh48 = sreq->getUrlHash48();
+		key128_t k = makeUfnTreeKey ( firstIp ,priority,
+					      spiderTimeMS , uh48 );
+		//long nn =;
+		m_winnerTree.addNode(0,(char *)&k,NULL,8);
+		//log("adding node #%li firstip=%s uh48=%llu "
+		//    "ufntree.k.n1=0x%llx "
+		//    "spiderdb.k.n1=0x%llx "
+		//    "spiderdb.k.n0=0x%llx "
+		//    ,
+		//    nn,iptoa(firstIp),uh48,k.n1,
+		//    *(long long *)rec,
+		//    *(long long *)(rec+8)
+		//   );
+		//numNodes++;
+		//}
 		*/
 
-		// skip if not the best
-		uint64_t tm1 = spiderTimeMS;
-		uint64_t tm2 = winTimeMS;
-		// if they are both overdue, make them the same
-		if ( tm1 < nowGlobalMS ) tm1 = 1;
-		if ( tm2 < nowGlobalMS ) tm2 = 1;
-		// skip spider request if its time is past winner's
-		if ( tm1 > tm2 )
-			continue;
-		// if tied, use priority
-		if ( tm1 == tm2 && priority < winPriority )
-			continue;
-		// if tied, use actual times. assuming both 
-		// are < nowGlobalMS
-		if ( tm1 == tm2 && priority == winPriority &&
-		     spiderTimeMS > winTimeMS )
-			continue;
+		/////
+		// if tree is full already, compute the shittiest node's
+		// ip/priority/spidertime so we can kick him out if we
+		// are better than him.
+		/////
+		if ( m_winnerTree.getNumNodesUsed() >= maxWinners ) {
+			// skip if not the best
+			uint64_t tm1 = spiderTimeMS;
+			uint64_t tm2 = m_tailTimeMS;//winTimeMS;
+			// if they are both overdue, make them the same
+			if ( tm1 < nowGlobalMS ) tm1 = 1;
+			if ( tm2 < nowGlobalMS ) tm2 = 1;
+			// skip spider request if its time is beyond our worst
+			if ( tm1 > tm2 )
+				continue;
+			// if tied, use priority
+			if ( tm1 == tm2 && priority < m_tailPriority )
+				continue;
+			// if tied, use actual times. assuming both 
+			// are < nowGlobalMS
+			if ( tm1 == tm2 && priority == m_tailPriority &&
+			     spiderTimeMS > m_tailTimeMS )
+				continue;
+		}
 
 		// bail if it is locked! we now call 
 		// msg12::confirmLockAcquisition() after we get the lock,
@@ -3843,6 +3851,33 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 		}
 		     
+
+		// make key
+		key128_t wk = makeWinnerTreeKey();
+		// add it
+		m_winnerTree.addNode( &wk );
+
+		// set new tail priority and time for next compare
+		if ( m_winnerTree.getNumNodesUsed() >= maxWinners ) {
+			// for the worst node in the tree...
+			long tailNode = m_winnerTree.getLastNode();
+			if ( tailNode < 0 ) { char *xx=NULL;*xx=0; }
+			// set new tail parms
+			key128_t *tailKey;
+			tailKey = (key128_t *)m_winnerTree.getKey ( tailNode );
+			// convert to char first then to signed long
+			long      tailIp;
+			long long tailUh48;
+			parseWinnerTreeKey ( tailKey ,
+					     &m_tailIp ,
+					     &m_tailPriority,
+					     &m_tailTimeMS ,
+					     &m_tailUh48 );
+			// sanity
+			if ( m_tailIp != firstIp ) { char *xx=NULL;*xx=0;}
+		}
+
+		/*
 		// ok, we got a new winner
 		winPriority = priority;
 		winTimeMS   = spiderTimeMS;
@@ -3852,6 +3887,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		winReq->m_priority   = priority;
 		winReq->m_ufn        = ufn;
 		//winReq->m_spiderTime = spiderTime;
+		*/
 	}
 
 	// if its ready to spider now, that trumps one in the future always!
@@ -3977,7 +4013,7 @@ bool SpiderColl::scanListForWinners ( ) {
 // . add winner in here into doledb
 // . returns false if blocked and doledWrapper() will be called
 // . returns true and sets g_errno on error
-bool SpiderColl::addWinnerToDoledb ( ) {
+bool SpiderColl::addWinnersIntoDoledb ( ) {
 
 	if ( g_errno ) {
 		log("spider: got error when trying to add winner to doledb: "
@@ -3991,6 +4027,8 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 	if ( wt->m_isSaving || ! wt->m_isWritable )
 		return true;
 
+	/*
+	  MDW: let's print out recs we add to doledb
 	//if ( g_conf.m_logDebugSpider && m_bestRequestValid ) {
 	if ( g_conf.m_logDebugSpider && m_bestRequestValid ) {
 		log("spider: got best ip=%s sreq spiderTimeMS=%lli "
@@ -4003,11 +4041,12 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 	else if ( g_conf.m_logDebugSpider ) {
 		log("spider: no best request for ip=%s",iptoa(m_scanningIp));
 	}
-	
+	*/
+
 	// ok, all done if nothing to add to doledb. i guess we were misled
 	// that firstIp had something ready for us. maybe the url filters
 	// table changed to filter/ban them all.
-	if ( ! m_bestRequestValid ) { // ! g_errno
+	if ( ! m_winnerTree.isEmpty() ) { // bestRequestValid ) { // ! g_errno
 		// if we received new incoming requests while we were
 		// scanning, which is happening for some crawls, then do
 		// not nuke! just repeat later in populateDoledbFromWaitingTree
@@ -4041,16 +4080,26 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 		return true;
 	}
 
+
 	long firstIp = m_waitingTreeKey.n0 & 0xffffffff;
 
-	if ( m_bestRequest->m_firstIp != firstIp ) { char *xx=NULL;*xx=0; }
+	///////////
+	//
+	// make winner tree into doledb list to add
+	//
+	///////////
+	for ( ; ; node = getNextNode ( node ) ) {
+		// breathe
+		QUICKPOLL(m_niceness);
+		// sanity
+		if ( sreq->m_firstIp != firstIp ) { char *xx=NULL;*xx=0; }
+		if ( sreq->m_bestSpiderTimeMS < 0 ) { char *xx=NULL;*xx=0; }
+		if ( sreq->m_ufn          < 0 ) { char *xx=NULL;*xx=0; }
+		if ( sreq->m_priority ==   -1 ) { char *xx=NULL;*xx=0; }
+		// store in meta list
+		sb.safeMemcpy ( sreq , sreq->getRecSize() );
+	}
 
-	//uint64_t nowGlobalMS = gettimeofdayInMillisecondsGlobal();
-
-	// sanity checks
-	if ( (long long)m_bestSpiderTimeMS < 0 ) { char *xx=NULL;*xx=0; }
-	if ( m_bestRequest->m_ufn          < 0 ) { char *xx=NULL;*xx=0; }
-	if ( m_bestRequest->m_priority ==   -1 ) { char *xx=NULL;*xx=0; }
 
 	////////////////////
 	//
@@ -4060,9 +4109,6 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 	// a future time if it is not yet due for spidering.
 	//
 	////////////////////
-
-	// how many spiders currently out for this ip?
-	long outNow=g_spiderLoop.getNumSpidersOutPerIp(m_scanningIp,m_collnum);
 
 	// sanity check. how did this happen? it messes up our crawl!
 	// maybe a doledb add went through? so we should add again?
@@ -4079,6 +4125,9 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 		//	    ,mstrerror(g_errno));
 		return true;
 	}
+
+	// how many spiders currently out for this ip?
+	long outNow=g_spiderLoop.getNumSpidersOutPerIp(m_scanningIp,m_collnum);
 
 	// even if hadn't gotten list we can bail early if too many
 	// spiders from this ip are out! 
