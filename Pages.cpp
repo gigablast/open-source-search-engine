@@ -218,9 +218,9 @@ static WebPage s_pages[] = {
 	//  //USER_ADMIN | USER_MASTER   , 
 	//  "spider priorities page",
 	//  sendPageGeneric  , 0 } ,
-	{ PAGE_FILTERS   , "admin/filters"  , 0 , "url filters" ,  1 , 1,
+	{ PAGE_FILTERS   , "admin/filters"  , 0 , "spider scheduler" ,  1 , 1,
 	  //USER_ADMIN | USER_MASTER   , 
-	  "page filter page",
+	  "schedule urls to be spidered",
 	  sendPageGeneric  , 0 } ,
 	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" ,  0 , 1 ,
 	  //USER_ADMIN | USER_MASTER   ,
@@ -602,6 +602,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . add parmList using Parms::m_msg4 to all hosts!
 	// . returns true and sets g_errno on error
 	// . returns false if would block
+	// . just returns true if parmList is empty
 	// . so then doneBroadcastingParms() is called when all hosts
 	//   have received the updated parms, unless a host is dead,
 	//   in which case he should sync up when he comes back up
@@ -1855,7 +1856,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 			continue;
 
 		// ignore these for now
-		if ( i == PAGE_SECURITY ) continue;
+		//if ( i == PAGE_SECURITY ) continue;
 		if ( i == PAGE_ACCESS ) continue;
 		if ( i == PAGE_INDEXDB ) continue;
 		if ( i == PAGE_RULES ) continue;

@@ -678,8 +678,8 @@ class Conf {
 	char m_users [ USERS_TEXT_SIZE ];
 	long m_usersLen;
 
-	char m_superTurks [ USERS_TEXT_SIZE ];
-	long m_superTurksLen;
+	//char m_superTurks [ USERS_TEXT_SIZE ];
+	//long m_superTurksLen;
 
 	long m_maxYippyOut;
 

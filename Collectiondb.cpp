@@ -1130,7 +1130,6 @@ bool addCollToTable ( char *coll , collnum_t collnum ) {
 	return g_collTable.addKey ( &h64 , &collnum );
 }
 
-
 // get coll rec specified in the HTTP request
 CollectionRec *Collectiondb::getRec ( HttpRequest *r , bool useDefaultRec ) {
 	char *coll = r->getString ( "c" );

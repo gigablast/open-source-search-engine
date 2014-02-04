@@ -990,6 +990,11 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		//bigSampleMaxLen = m_si->m_topicGroups[0].m_topicSampleSize;
 		bigSampleMaxLen = 5000;
 	}
+
+	long maxOut = (long)MAX_OUTSTANDING_MSG20S;
+	if ( g_udpServer.getNumUsedSlots() > 500 ) maxOut = 10;
+	if ( g_udpServer.getNumUsedSlots() > 800 ) maxOut = 1;
+
 	// . launch a msg20 getSummary() for each docid
 	// . m_numContiguous should preceed any gap, see below
 	for ( long i = m_lastProcessedi+1 ; i < m_msg3a.m_numDocIds ; i++ ) {
@@ -1003,7 +1008,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// at a time.
 		//if ( m_numRequests-m_numReplies >= need ) break;
 		// hard limit
-		if ( m_numRequests-m_numReplies >=MAX_OUTSTANDING_MSG20S)break;
+		if ( m_numRequests-m_numReplies >= maxOut ) break;
 		// do not double count!
 		//if ( i <= m_lastProcessedi ) continue;
 		// do not repeat for this i

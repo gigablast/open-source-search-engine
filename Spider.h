@@ -1350,7 +1350,7 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) ;
 // . supports limiting spiders per domain
 
 // . max spiders we can have going at once for this process
-// . limit to 70 to preven OOM conditions
+// . limit to 50 to preven OOM conditions
 #define MAX_SPIDERS 100
 
 class SpiderLoop {
