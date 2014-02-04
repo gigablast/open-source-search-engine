@@ -4996,6 +4996,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 		// hit crawl round max?
 		if ( cr->m_maxCrawlRounds > 0 &&
+		     cr->m_isCustomCrawl &&
 		     cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) {
 			cr->m_spiderStatus = SP_MAXROUNDS;
 			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
@@ -5005,6 +5006,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 		// hit pages to crawl max?
 		if ( cr->m_maxToCrawl > 0 &&
+		     cr->m_isCustomCrawl &&
 		     cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound >=
 		     cr->m_maxToCrawl ) {
 			cr->m_spiderStatus = SP_MAXTOCRAWL;
@@ -5018,6 +5020,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 		// hit pages to process max?
 		if ( cr->m_maxToProcess > 0 &&
+		     cr->m_isCustomCrawl &&
 		     cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound >=
 		     cr->m_maxToProcess ) {
 			cr->m_spiderStatus = SP_MAXTOPROCESS;
