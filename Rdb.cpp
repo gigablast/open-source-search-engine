@@ -2369,7 +2369,24 @@ bool Rdb::addRecord ( collnum_t collnum,
 			return true;
 		}
 	}
-	else if ( (tn=m_tree.addNode ( collnum, key , data , dataSize ))>=0) {
+
+	// cancel any spider request that is a dup in the dupcache to save disk space
+	if ( m_rdbId == RDB_SPIDERDB && ! KEYNEG(key) ) {
+		// . this will create it if spiders are on and its NULL
+		// . even if spiders are off we need to create it so 
+		//   that the request can adds its ip to the waitingTree
+		SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
+		// skip if not there
+		if ( ! sc ) return true;
+		SpiderRequest *sreq=(SpiderRequest *)(orig-4-sizeof(key128_t));
+		// is it really a request and not a SpiderReply?
+		char isReq = g_spiderdb.isSpiderRequest ( &sreq->m_key );
+		// skip if in dup cache. do NOT add to cache since addToWaitingTree()
+		// in Spider.cpp will do that when called from addSpiderRequest() below
+		if ( isReq && sc->isInDupCache ( sreq , false ) ) return true;
+	}
+
+	if ( m_useTree && (tn=m_tree.addNode ( collnum, key , data , dataSize ))>=0) {
 		// if adding to spiderdb, add to cache, too
 		if ( m_rdbId != RDB_SPIDERDB && m_rdbId != RDB_DOLEDB ) 
 			return true;

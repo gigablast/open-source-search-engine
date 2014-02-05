@@ -1922,44 +1922,7 @@ void SpiderColl::removeFromDoledbTable ( long firstIp ) {
 }
 
 
-// . Rdb.cpp calls SpiderColl::addSpiderRequest/Reply() for every positive
-//   spiderdb record it adds to spiderdb. that way our cache is kept 
-//   uptodate incrementally
-// . returns false and sets g_errno on error
-// . if the spiderTime appears to be AFTER m_nextReloadTime then we should
-//   not add this spider request to keep the cache trimmed!!! (MDW: TODO)
-// . BUT! if we have 150,000 urls that is going to take a long time to
-//   spider, so it should have a high reload rate!
-bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq , 
-				    long long nowGlobalMS ) {
-	// don't add negative keys or data less thangs
-	if ( sreq->m_dataSize <= 0 ) {
-		if ( g_conf.m_logDebugSpider )
-			log("spider: add spider request is dataless for "
-			    "uh48=%llu",sreq->getUrlHash48());
-		char *xx=NULL;*xx=0;
-		return true;
-	}
-
-	// skip if not assigned to us for doling
-	if ( ! isAssignedToUs ( sreq->m_firstIp ) ) {
-		if ( g_conf.m_logDebugSpider )
-			log("spider: spider request not assigned to us. "
-			    "skipping.");
-		return true;
-	}
-
-	// . get the url's length contained in this record
-	// . it should be NULL terminated
-	// . we set the ip here too
-	long ulen = sreq->getUrlLen();
-	// watch out for corruption
-	if ( sreq->m_firstIp ==  0 || sreq->m_firstIp == -1 || ulen <= 0 ) {
-		log("spider: Corrupt spider req with url length of "
-		    "%li <= 0. dataSize=%li uh48=%llu. Skipping.",
-		    ulen,sreq->m_dataSize,sreq->getUrlHash48());
-		return true;
-	}
+bool SpiderColl::isInDupCache ( SpiderRequest *sreq , bool addToCache ) {
 
 	// init dup cache?
 	if ( ! m_dupCache.isInitialized() )
@@ -2008,6 +1971,9 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	     m_dupCache.getLong ( 0,dupKey64 ^ 0x02 ,86400,true ) != -1 ) 
 		goto dedup;
 
+
+	if ( ! addToCache ) return false;
+
 	long hc = sreq->m_hopCount;
 	// limit hopcount to 3 for making cache key so we don't flood cache
 	if ( hc >= 3 ) hc = 3;
@@ -2015,6 +1981,56 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	dupKey64 ^= hc;
 	// add it
 	m_dupCache.addLong(0,dupKey64 ,1);
+
+	return false;
+}
+
+// . Rdb.cpp calls SpiderColl::addSpiderRequest/Reply() for every positive
+//   spiderdb record it adds to spiderdb. that way our cache is kept 
+//   uptodate incrementally
+// . returns false and sets g_errno on error
+// . if the spiderTime appears to be AFTER m_nextReloadTime then we should
+//   not add this spider request to keep the cache trimmed!!! (MDW: TODO)
+// . BUT! if we have 150,000 urls that is going to take a long time to
+//   spider, so it should have a high reload rate!
+bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq , 
+				    long long nowGlobalMS ) {
+	// don't add negative keys or data less thangs
+	if ( sreq->m_dataSize <= 0 ) {
+		if ( g_conf.m_logDebugSpider )
+			log("spider: add spider request is dataless for "
+			    "uh48=%llu",sreq->getUrlHash48());
+		char *xx=NULL;*xx=0;
+		return true;
+	}
+
+	// skip if not assigned to us for doling
+	if ( ! isAssignedToUs ( sreq->m_firstIp ) ) {
+		if ( g_conf.m_logDebugSpider )
+			log("spider: spider request not assigned to us. "
+			    "skipping.");
+		return true;
+	}
+
+	// . get the url's length contained in this record
+	// . it should be NULL terminated
+	// . we set the ip here too
+	long ulen = sreq->getUrlLen();
+	// watch out for corruption
+	if ( sreq->m_firstIp ==  0 || sreq->m_firstIp == -1 || ulen <= 0 ) {
+		log("spider: Corrupt spider req with url length of "
+		    "%li <= 0. dataSize=%li uh48=%llu. Skipping.",
+		    ulen,sreq->m_dataSize,sreq->getUrlHash48());
+		return true;
+	}
+
+	// are we already more or less in spiderdb? true = addToCache
+	if ( isInDupCache ( sreq , true ) ) {
+		if ( g_conf.m_logDebugSpider )
+			log("spider: skipping dup request url=%s uh48=%llu",
+			    sreq->m_url,sreq->getUrlHash48());
+		return true;
+	}
 
 	// . if already have a request in doledb for this firstIp, forget it!
 	// . TODO: make sure we remove from doledb first before adding this

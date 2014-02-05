@@ -1092,6 +1092,8 @@ class SpiderColl {
 	Msg1 m_msg1;
 	bool m_msg4Avail;
 
+	bool isInDupCache ( SpiderRequest *sreq , bool addToCache ) ;
+
 	// Rdb.cpp calls this
 	bool  addSpiderReply   ( SpiderReply   *srep );
 	bool  addSpiderRequest ( SpiderRequest *sreq , long long nowGlobalMS );
