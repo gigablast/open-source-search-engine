@@ -2926,8 +2926,24 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 		return;
 	}
 
+	if ( ! m_winnerTable.isInitialized() &&
+	     ! m_winnerTable.set ( 8 , // uh48 is key
+				   sizeof(key192_t) , // winnertree key is data
+				   64 , // 64 slots initially
+				   NULL ,
+				   0 ,
+				   false , // allow dups?
+				   MAX_NICENESS ,
+				   "wtdedup" ) ) {
+		log("spider: wintable set: %s",mstrerror(g_errno));
+		return;
+	}
+
 	// clear it before evaluating this ip so it is empty
 	m_winnerTree.clear();
+
+	// and table as well now
+	m_winnerTable.clear();
 
 	// reset this as well
 	m_minFutureTimeMS = 0LL;
@@ -3853,8 +3869,33 @@ bool SpiderColl::scanListForWinners ( ) {
 				    "lock table",key);
 			continue;
 		}
-		     
 
+		long long uh48 = sreq->getUrlHash48();
+
+		// make key
+		key192_t wk = makeWinnerTreeKey( firstIp ,
+						 priority ,
+						 spiderTimeMS ,
+						 uh48 );
+
+		// if this url is already in the winnerTree then either we replace it
+		// or we skip ourselves. 
+		//
+		// watch out for dups in winner tree, the same url can have multiple
+		// spiderTimeMses somehow... i guess it could have different hop counts
+		// as well, resulting in different priorities...
+		// actually the dedup table could map to a priority and a node so
+		// we can kick out a lower priority version of the same url...
+		long winSlot = m_winnerTable.getSlot ( &uh48 );
+		if ( winSlot >= 0 ) {
+			key192_t *oldwk ;
+			oldwk = (key192_t *)m_winnerTable.getDataFromSlot ( winSlot );
+			// are we lower priority? (or equal)
+			if(KEYCMP((char *)&wk,(char *)oldwk,sizeof(key192_t))<=0) continue;
+			// otherwise we supplant it. remove old key from tree.
+			m_winnerTree.deleteNode ( 0 , oldwk );
+			// supplant in table and tree... just add below...
+		}
 
 		// get the top 100 spider requests by priority/time/etc.
 		long maxWinners = (long)MAX_WINNER_NODES; // 40
@@ -3924,11 +3965,9 @@ bool SpiderColl::scanListForWinners ( ) {
 		//}
 		*/
 
-		// make key
-		key192_t wk = makeWinnerTreeKey( firstIp ,
-						 priority ,
-						 spiderTimeMS ,
-						 sreq->getUrlHash48() );
+		// . add to table which allows us to ensure same url not repeated in tree
+		// . just skip if fail to add...
+		if ( m_winnerTable.addKey ( &uh48 , &wk ) < 0 ) continue;
 
 		// use an individually allocated buffer for each spiderrequest so if
 		// it gets removed from tree the memory can be freed by the tree
@@ -6823,6 +6862,7 @@ bool Msg12::getLocks ( long long uh48, // probDocId ,
 	m_callback = callback;
 	m_state = state;
 	m_hasLock = false;
+	m_origUh48 = uh48;
 	// support ability to spider multiple urls from same ip
 	m_doledbKey = *doledbKey;
 	m_collnum = collnum;
@@ -7031,7 +7071,7 @@ bool Msg12::gotLockReply ( UdpSlot *slot ) {
 		// note it
 		if ( g_conf.m_logDebugSpider )
 		      logf(LOG_DEBUG,"spider: done confirming all locks "
-			   "for %s",m_url);//m_sreq->m_url);
+			   "for %s uh48=%lli",m_url,m_origUh48);//m_sreq->m_url);
 		// we are done
 		m_gettingLocks = false;
 		// . keep processing

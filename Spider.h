@@ -1079,6 +1079,7 @@ class SpiderColl {
 	bool m_didRead;
 
 	RdbTree m_winnerTree;
+	HashTableX m_winnerTable;
 	long m_tailIp;
 	long m_tailPriority;
 	long long m_tailTimeMS;
@@ -1330,6 +1331,7 @@ class Msg12 {
 	unsigned long long  m_lockKeyUh48;
 	long                m_lockSequence;
 
+	long long  m_origUh48;
 	long       m_numReplies;
 	long       m_numRequests;
 	long       m_grants;
