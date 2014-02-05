@@ -1057,23 +1057,33 @@ class SpiderColl {
 	//bool m_encounteredDoledbRecs;
 	//long long m_numRoundsDone;
 
-	bool           m_bestRequestValid;
-	char           m_bestRequestBuf[MAX_BEST_REQUEST_SIZE];
-	SpiderRequest *m_bestRequest;
-	uint64_t       m_bestSpiderTimeMS;
-	long           m_bestMaxSpidersPerIp;
+	//bool           m_bestRequestValid;
+	//char           m_bestRequestBuf[MAX_BEST_REQUEST_SIZE];
+	//SpiderRequest *m_bestRequest;
+	//uint64_t       m_bestSpiderTimeMS;
+	//long           m_bestMaxSpidersPerIp;
 
 	bool           m_lastReplyValid;
 	char           m_lastReplyBuf[MAX_SP_REPLY_SIZE];
 
 	// doledbkey + dataSize + bestRequestRec
-	char m_doleBuf[MAX_DOLEREC_SIZE];
+	//char m_doleBuf[MAX_DOLEREC_SIZE];
+	SafeBuf m_doleBuf;
+
+	bool m_isLoading;
 
 	// for scanning the wait tree...
 	bool m_isPopulating;
 	// for reading from spiderdb
 	//bool m_isReadDone;
 	bool m_didRead;
+
+	RdbTree m_winnerTree;
+	long m_tailIp;
+	long m_tailPriority;
+	long long m_tailTimeMS;
+	long long m_tailUh48;
+	long long m_minFutureTimeMS;
 
 	Msg4 m_msg4;
 	Msg1 m_msg1;
@@ -1182,7 +1192,7 @@ class SpiderColl {
 	bool evalIpLoop ( ) ;
 	bool readListFromSpiderdb ( ) ;
 	bool scanListForWinners ( ) ;
-	bool addWinnerToDoledb ( ) ;
+	bool addWinnersIntoDoledb ( ) ;
 
 
 	void populateWaitingTreeFromSpiderdb ( bool reentry ) ;
