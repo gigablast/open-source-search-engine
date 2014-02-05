@@ -198,7 +198,3 @@ license that then you can arrange a licensing agreement with Matt Wells.
 
 Likewise, the Event datamining logic is in Events.cpp and must be separately licensed 
 as well.
-
-And any code in between "#ifdef NEEDLICENSE" and "#endif" statements is not
-covered by this license and must be licensed separately, too. That code is
-not compiled by default and only pertains to a few isolated things.

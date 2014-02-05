@@ -117,7 +117,7 @@ class Msg40 {
 	bool computeGigabits( class TopicGroup *tg );
 	SafeBuf m_gigabitBuf;
 
-#ifdef NEEDLICENSE
+	// nuggabits...
 	bool computeFastFacts ( );
 	bool addFacts ( HashTableX *queryTable,
 			HashTableX *gbitTable ,
@@ -126,7 +126,6 @@ class Msg40 {
 			bool debugGigabits ,
 			class Msg20Reply *reply,
 			SafeBuf *factBuf ) ;
-#endif
 
 	SafeBuf m_factBuf;
 
@@ -202,6 +201,10 @@ class Msg40 {
 	// Msg39 and all Msg20s must use the same clock timestamp
 	time_t m_nowUTC;
 
+	bool printSearchResult9 ( long ix ) ;
+
+	HashTableX m_dedupTable;
+
 	long m_msg3aRecallCnt;
 	Msg39Request m_r;
 
@@ -236,6 +239,17 @@ class Msg40 {
 
 	char      *m_msg20StartBuf;
 	long       m_numToFree;
+
+	bool m_hadPrintError ;
+	long m_numPrinted    ;
+	bool m_printedHeader ;
+	bool m_printedTail   ;
+	bool m_streamResults ;
+	bool m_lastChunk     ;
+	long m_sendsOut      ;
+	long m_sendsIn       ;
+	long m_printi        ;
+
 
 	// use msg3a to get docIds
 	Msg3a      m_msg3a;

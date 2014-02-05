@@ -34,46 +34,6 @@ static void gotResultsWrapper  ( void *state ) ;
 static void gotState           ( void *state ) ;
 static bool gotResults         ( void *state ) ;
 
-class State0 {
-public:
-
-	// store results page in this safebuf
-	SafeBuf      m_sb;
-
-	collnum_t    m_collnum;
-        Query        m_q;
-	SearchInput  m_si;
-	Msg40        m_msg40;
-	TcpSocket   *m_socket;
-	Msg0         m_msg0;
-	long long    m_startTime;
-	//Ads          m_ads;
-	bool         m_gotAds;
-	bool         m_gotResults;
-	char         m_spell  [MAX_FRAG_SIZE]; // spelling recommendation
-	bool         m_gotSpell;
-	long         m_errno;
-	Query        m_qq3;
-        long         m_numDocIds;
-	long long    m_took; // how long it took to get the results
-	HttpRequest  m_hr;
-	bool         m_printedHeaderRow;
-	char         m_qe[MAX_QUERY_LEN+1];
-
-	// for printing our search result json items in csv:
-	HashTableX   m_columnTable;
-	long         m_numCSVColumns;
-
-	// stuff for doing redownloads
-	bool    m_didRedownload;
-	XmlDoc *m_xd;
-	long    m_oldContentHash32;
-};
-
-bool printSearchResultsHeader ( State0 *st ) ;
-bool printSearchResultsTail ( State0 *st ) ;
-
-bool printResult ( State0 *st,  long ix );
 
 bool printCSVHeaderRow ( SafeBuf *sb , State0 *st ) ;
 
@@ -82,16 +42,10 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , class State0 *st ) ;
 bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		      Msg20Reply *mr , Msg40 *msg40 , bool first ) ;
 
-bool printTermPairs ( SafeBuf *sb , Query *q , PairScore *ps ) ;
-
-bool printSingleTerm ( SafeBuf *sb , Query *q , SingleScore *ss ) ;
-
 bool printScoresHeader ( SafeBuf *sb ) ;
 
 bool printSingleScore ( SafeBuf *sb , SearchInput *si , SingleScore *ss ,
 			Msg20Reply *mr , Msg40 *msg40 ) ;
-
-bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId );
 
 bool sendReply ( State0 *st , char *reply ) {
 
@@ -388,7 +342,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// 
 		// logo header
 		//
-		printLogoAndSearchBox ( sb , hr , -1 ); // catId = -1
+		printLogoAndSearchBox ( &sb , hr , -1 ); // catId = -1
 		//
 		// script to populate search results
 		//

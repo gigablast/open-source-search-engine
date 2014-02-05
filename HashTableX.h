@@ -21,6 +21,9 @@ class HashTableX {
 		   char *allocName       ,
 		   bool  useKeyMagic = false );
 
+	// key size is 0 if UNinitialized
+	bool isInitialized ( ) { return (m_ks != 0); };
+
 	 HashTableX       ( );
 	~HashTableX       ( );
 	void constructor ();

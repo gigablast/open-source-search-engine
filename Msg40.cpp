@@ -14,6 +14,8 @@
 //#include "Facebook.h" // msgfb
 #include "Speller.h"
 #include "Wiki.h"
+#include "HttpServer.h"
+#include "PageResults.h"
 
 // increasing this doesn't seem to improve performance any on a single
 // node cluster....
@@ -86,6 +88,7 @@ Msg40::Msg40() {
 	m_numMsg20s     = 0;
 	m_msg20StartBuf = NULL;
 	m_numToFree     = 0;
+	// new stuff for streaming results:
 	m_hadPrintError = false;
 	m_numPrinted    = 0;
 	m_printedHeader = false;
@@ -93,6 +96,8 @@ Msg40::Msg40() {
 	m_streamResults = false;
 	m_sendsOut      = 0;
 	m_sendsIn       = 0;
+	m_printi        = 0;
+	m_lastChunk     = false;
 	//m_numGigabitInfos = 0;
 }
 
@@ -1207,7 +1212,7 @@ bool gotSummaryWrapper ( void *state ) {
 	return true;
 }
 
-void doneSendingWrapper9 ( void *state ) {
+void doneSendingWrapper9 ( void *state , TcpSocket *sock ) {
 	Msg40 *THIS = (Msg40 *)state;
 	// the send completed, count it
 	THIS->m_sendsIn++;
@@ -1243,6 +1248,12 @@ bool Msg40::gotSummary ( ) {
 		// reset g_errno
 		g_errno = 0;
 	}
+
+	// initialize dedup table if we haven't already
+	if ( ! m_dedupTable.isInitialized() &&
+	     ! m_dedupTable.set ( 4,0,64,NULL,0,false,m_si->m_niceness,"srdt") )
+		log("query: error initializing dedup table: %s",mstrerror(g_errno));
+
 	/*
 	// sanity check
 	for ( long i = 0 ; i < m_msg3a.m_numDocIds ; i++ ) {
@@ -1264,25 +1275,30 @@ bool Msg40::gotSummary ( ) {
 
  doAgain:
 
-	st->m_sb.reset();
+	State0 *st = (State0 *)m_state;
 
+	SafeBuf *sb = &st->m_sb;
 
-	for ( ; m_streamResults && m_printi < m_msg3a.m_numDocIds ; m_printi++ ) {
+	sb->reset();
+
+	for ( ; m_si->m_streamResults && m_printi < m_msg3a.m_numDocIds ; m_printi++ ) {
 		// if we are waiting on our previous send to complete... wait...
 		if ( m_sendsOut > m_sendsIn ) break;
 		// otherwise, get the summary for result #m_printi
-		Msg20 *m20 = &m_msg20s[m_printi];
+		Msg20 *m20 = m_msg20[m_printi];
 		// get the next reply we are waiting on to print results in order
-		Msg20Reply *mr = m20->m_reply;
+		Msg20Reply *mr = m20->m_r;
 		if ( ! mr ) break;
 
 		// primitive deduping. for diffbot json exclude url's from the
-		// XmlDoc::m_contentHash32...
-		if ( st->m_dedupTable.isInTable ( mr->m_contentHash32 ) )
+		// XmlDoc::m_contentHash32... it will be zero if invalid i guess...
+		if ( mr->m_contentHash32 &&
+		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) )
 			continue;
 
 		// return true with g_errno set on error
-		if ( ! st->m_dedupTable.addKey ( &mr->m_contentHash32 ) ) {
+		if ( mr->m_contentHash32 &&
+		     ! m_dedupTable.addKey ( &mr->m_contentHash32 ) ) {
 			m_hadPrintError = true;
 			log("msg40: error adding to dedup table: %s",mstrerror(g_errno));
 		}
@@ -1298,7 +1314,6 @@ bool Msg40::gotSummary ( ) {
 
 	TcpServer *tcp = &g_httpServer.m_tcp;
 
-
 	// . transmit the chunk in sb if non-zero length
 	// . steals the allocated buffer from sb and stores in the 
 	//   TcpSocket::m_sendBuf, which it frees when socket is
@@ -1313,7 +1328,7 @@ bool Msg40::gotSummary ( ) {
 				sb  ,
 				this ,
 				doneSendingWrapper9 ,
-				lastChunk ) )
+				m_lastChunk ) )
 		// if it blocked, inc this count. we'll only call m_callback above
 		// when m_sendsIn equals m_sendsOut... and m_numReplies == m_numRequests
 		m_sendsOut++;
@@ -4742,7 +4757,7 @@ bool Msg40::printSearchResult9 ( long ix ) {
 	// get state0
 	State0 *st = (State0 *)m_state;
 
-	SafeBuf *sb = st->m_sb;
+	SafeBuf *sb = &st->m_sb;
 
 	// clear it since we are streaming
 	sb->reset();
@@ -4776,14 +4791,12 @@ bool Msg40::printSearchResult9 ( long ix ) {
 
 	}
 
-	//bool lastChunk = false;
-
 	// . wrap it up with Next 10 etc.
 	// . this is in PageResults.cpp
 	if ( m_numPrinted >= m_numRequests && ! m_printedTail ) {
 		m_printedTail = true;
 		printSearchResultsTail ( st );
-		//lastChunk = true;
+		m_lastChunk = true;
 	}
 
 

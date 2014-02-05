@@ -26757,6 +26757,10 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// we use this instead of nowGlobal
 	//if ( ! m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
 
+	// this should be valid, it is stored in title rec
+	if ( m_contentHash32Valid ) reply->m_contentHash32 = m_contentHash32;
+	else                        reply->m_contentHash32 = 0;
+
 	// if this page is potential spam, toss it!
 	//char *isSpam = getIsSpam();
 	//if ( ! isSpam || isSpam == (char *)-1 ) return (Msg20Reply *)isSpam;
