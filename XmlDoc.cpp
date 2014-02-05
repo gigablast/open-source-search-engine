@@ -16946,6 +16946,14 @@ long *XmlDoc::getContentHash32 ( ) {
 	// return it if we got it
 	if ( m_contentHash32Valid ) return &m_contentHash32;
 	setStatus ( "getting contenthash32" );
+
+	// if we are a diffbot json object, fake this for now, it will
+	// be set for real in hashJSON()
+	if ( m_isDiffbotJSONObject ) {
+		m_contentHash32 = 0;
+		return &m_contentHash32;
+	}
+
 	// . get the content. get the pure untouched content!!!
 	// . gotta be pure since that is what Msg13.cpp computes right
 	//   after it downloads the doc...
@@ -16968,9 +16976,9 @@ long *XmlDoc::getContentHash32 ( ) {
 		return &m_contentHash32;
 	}
 
-	// we set m_contentHash32 in ::hashJSON() below because it is special for diffbot
-	// since it ignores certain json fields like url: and the fields are
-	// independent, and numbers matter, like prices
+	// we set m_contentHash32 in ::hashJSON() below because it is special 
+	// for diffbot since it ignores certain json fields like url: and the 
+	// fields are independent, and numbers matter, like prices
 	if ( m_isDiffbotJSONObject ) { char *xx=NULL; *xx=0; }
 
 	// *pend should be \0
@@ -45084,24 +45092,25 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 		//
 		char *name = nameBuf.getBufStart();
 		hi.m_hashGroup = HASHGROUP_BODY;
-		if ( strstr(name,"title") == 0 )
+		if ( strstr(name,"title") )
 			hi.m_hashGroup = HASHGROUP_TITLE;
-		if ( strstr(name,"url") == 0 )
+		if ( strstr(name,"url") )
 			hi.m_hashGroup = HASHGROUP_INURL;
-		if ( strstr(name,"resolved_url") == 0 )
+		if ( strstr(name,"resolved_url") )
 			hi.m_hashGroup = HASHGROUP_INURL;
-		if ( strstr(name,"tags") == 0 )
+		if ( strstr(name,"tags") )
 			hi.m_hashGroup = HASHGROUP_INTAG;
-		if ( strstr(name,"meta") == 0 )
+		if ( strstr(name,"meta") )
 			hi.m_hashGroup = HASHGROUP_INMETATAG;
 		//
 		// now Json.cpp decodes and stores the value into
 		// a buffer, so ji->getValue() should be decoded completely
 		//
 
-		// get the value of the json field
-		char *val = ji->getValue();
-		long vlen = ji->getValueLen();
+		// . get the value of the json field
+		// . if it's a number or bool it converts into a string
+		long vlen;
+		char *val = ji->getValueAsString( &vlen );
 
 
 		//
@@ -45109,7 +45118,8 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 		// diffbot json objects
 		//
 		if ( hi.m_hashGroup != HASHGROUP_INURL ) {
-			// make the content hash so we can set m_contentHash32 for deduping
+			// make the content hash so we can set m_contentHash32
+			// for deduping
 			long nh32 = hash32n ( name );
 			// do an exact hash for now...
 			long vh32 = hash32 ( val , vlen , m_niceness );

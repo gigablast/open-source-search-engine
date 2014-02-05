@@ -18,6 +18,7 @@
 #include "Msg4.h"
 #include "Msg1.h"
 #include "hash.h"
+#include "RdbCache.h"
 
 // for diffbot, this is for xmldoc.cpp to update CollectionRec::m_crawlInfo
 // which has m_pagesCrawled and m_pagesProcessed.
@@ -1078,6 +1079,7 @@ class SpiderColl {
 	//bool m_isReadDone;
 	bool m_didRead;
 
+	RdbCache m_dupCache;
 	RdbTree m_winnerTree;
 	HashTableX m_winnerTable;
 	long m_tailIp;

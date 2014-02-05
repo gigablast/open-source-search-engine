@@ -29,7 +29,7 @@
 // . i'd like to set back to 10 for speed... maybe even 5 or less
 #define SPIDER_DONE_TIMER 20
 
-#define MAX_WINNER_NODES 40
+#define MAX_WINNER_NODES 400
 
 Doledb g_doledb;
 
@@ -1634,6 +1634,9 @@ void SpiderColl::reset ( ) {
 	m_waitingTable.reset();
 	m_waitingTree .reset();
 	m_waitingMem  .reset();
+	m_winnerTree  .reset();
+	m_winnerTable .reset();
+	m_dupCache    .reset();
 
 	// each spider priority in the collection has essentially a cursor
 	// that references the next spider rec in doledb to spider. it is
@@ -1958,6 +1961,49 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 		return true;
 	}
 
+	// init dup cache?
+	if ( ! m_dupCache.isInitialized() )
+		// use 50k i guess of 64bit numbers and linked list info
+		m_dupCache.init ( 50000, 
+				  4 , // fixeddatasize (don't really need this)
+				  false, // list support?
+				  5000, // maxcachenodes
+				  false, // usehalfkeys?
+				  "urldups", // dbname
+				  false, // loadfromdisk
+				  12, // cachekeysize
+				  0, // datakeysize
+				  -1 ); // numptrsmax
+
+	// quit add dups over and over again...
+	long long dupKey64 = sreq->getUrlHash48();
+	// . maxage=86400,promoteRec=yes. returns -1 if not in there
+	// . dupKey64 is for hopcount 0, so if this url is in the dupcache
+	//   with a hopcount of zero, do not add it
+	if ( m_dupCache.getLong ( 0,dupKey64,86400,true ) != -1 ) {
+	dedup:
+		if ( g_conf.m_logDebugSpider )
+			log("spider: skipping dup request url=%s uh48=%llu",
+			    sreq->m_url,sreq->getUrlHash48());
+		return true;
+	}
+	// if our hopcount is 2 and there is a hopcount 1 in there, do not add
+	if ( sreq->m_hopCount >= 2 &&
+	     m_dupCache.getLong ( 0,dupKey64 ^ 0x01 ,86400,true ) != -1 ) 
+		goto dedup;
+	// likewise, if there's a hopcount 2 in there, do not add if we are 3+
+	if ( sreq->m_hopCount >= 3 &&
+	     m_dupCache.getLong ( 0,dupKey64 ^ 0x02 ,86400,true ) != -1 ) 
+		goto dedup;
+
+	long hc = sreq->m_hopCount;
+	// limit hopcount to 3 for making cache key so we don't flood cache
+	if ( hc >= 3 ) hc = 3;
+	// mangle the key with hopcount before adding it to the cache
+	dupKey64 ^= hc;
+	// add it
+	m_dupCache.addLong(0,dupKey64 ,1);
+
 	// . if already have a request in doledb for this firstIp, forget it!
 	// . TODO: make sure we remove from doledb first before adding this
 	//   spider request
@@ -1986,22 +2032,30 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	//}
 
 
-	// we can't do this because we do not have the spiderReply!!!???
-	/*
+	// . we can't do this because we do not have the spiderReply!!!???
+	// . MDW: no, we have to do it because tradesy.com has links to twitter
+	//   on every page and twitter is not allowed so we continually
+	//   re-scan a big spiderdblist for twitter's firstip. major performace
+	//   degradation. so try to get ufn without reply. if we need
+	//   a reply to get the ufn then this function should return -1 which
+	//   means an unknown ufn and we'll add to waiting tree.
 	// get ufn/priority,because if filtered we do not want to add to doledb
 	long ufn ;
-	ufn = ::getUrlFilterNum(sreq,NULL,nowGlobalMS,false,MAX_NICENESS,m_cr);
+	// HACK: set isOutlink to true here since we don't know if we have sre
+	ufn = ::getUrlFilterNum(sreq,NULL,nowGlobalMS,false,MAX_NICENESS,m_cr,
+				true,//isoutlink? HACK!
+				NULL); // quota table
 	// sanity check
-	if ( ufn < 0 ) { 
-		log("spider: failed to add spider request for %s because "
-		    "it matched no url filter",
-		    sreq->m_url);
-		g_errno = EBADENGINEER;
-		return false;
-	}
+	//if ( ufn < 0 ) { 
+	//	log("spider: failed to add spider request for %s because "
+	//	    "it matched no url filter",
+	//	    sreq->m_url);
+	//	g_errno = EBADENGINEER;
+	//	return false;
+	//}
 
-	// spiders disabled for this row in url filteres?
-	if ( ! m_cr->m_spidersEnabled[ufn] ) {
+	// spiders disabled for this row in url filters?
+	if ( ufn >= 0 && m_cr->m_maxSpidersPerRule[ufn] == 0 ) {
 		if ( g_conf.m_logDebugSpider )
 			log("spider: request spidersoff ufn=%li url=%s",ufn,
 			    sreq->m_url);
@@ -2009,10 +2063,11 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	}
 
 	// set the priority (might be the same as old)
-	long priority = m_cr->m_spiderPriorities[ufn];
+	long priority = -1;
+	if ( ufn >= 0 ) priority = m_cr->m_spiderPriorities[ufn];
 
 	// sanity checks
-	if ( priority == -1 ) { char *xx=NULL;*xx=0; }
+	//if ( priority == -1 ) { char *xx=NULL;*xx=0; }
 	if ( priority >= MAX_SPIDER_PRIORITIES) {char *xx=NULL;*xx=0;}
 
 	// do not add to doledb if bad
@@ -2031,9 +2086,8 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	}
 
 	// set it for adding to doledb and computing spidertime
-	sreq->m_ufn      = ufn;
-	sreq->m_priority = priority;
-	*/
+	//sreq->m_ufn      = ufn;
+	//sreq->m_priority = priority;
 
 
 	// get spider time -- i.e. earliest time when we can spider it
@@ -2725,6 +2779,8 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		m_nextKey2.setMin();
 		// no longer need rebuild
 		m_waitingTreeNeedsRebuild = false;
+		// note it
+		log("spider: rebuild complete for %s",m_coll);
 	}
 
 	// free list to save memory
@@ -5863,6 +5919,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		if ( cr->m_spiderIpMaxSpiders[i] > maxSpidersOutPerIp )
 			maxSpidersOutPerIp = cr->m_spiderIpMaxSpiders[i];
 	}
+
 	//long ufn = m_sc->m_priorityToUfn[pri];
 	// how many can we have? crap, this is based on ufn, not priority
 	// so we need to map the priority to a ufn that uses that priority
@@ -5880,6 +5937,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	//if ( max <= 0 ) max = 1;
 	// skip? and re-get another doledb list from next priority...
 	if ( out >= max ) {
+		// come here if we hit our ip limit too
+	hitMax:
 		// assume we could have launched a spider
 		if ( max > 0 ) ci->m_lastSpiderCouldLaunch = nowGlobal;
 		// this priority is maxed out, try next
@@ -5929,6 +5988,12 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// otherwise, try the next doledb rec in this list
 		goto listLoop;
 	}		
+
+
+	// how many spiders out for this ip now?
+	long outPerIp = g_spiderLoop.getNumSpidersOutPerIp ( sreq->m_firstIp ,
+							     m_collnum );
+	if ( outPerIp >= maxSpidersOutPerIp ) goto hitMax;
 
 
 	// sometimes we have it locked, but is still in doledb i guess.
@@ -9701,8 +9766,6 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( ! sreq->m_hasAuthorityInlinkValid ) continue;
 			// if no match continue
 			if ( (bool)sreq->m_hasAuthorityInlink==val)continue;
-			// allow "!isindexed" if no SpiderReply at all
-			//if ( ! srep && val == 0 ) continue;
 			// skip
 			p += 18;
 			// skip to next constraint
@@ -9720,8 +9783,6 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( ! sreq->m_hasContactInfoValid ) continue;
 			// if no match continue
 			if ( (bool)sreq->m_hasContactInfo==val ) continue;
-			// allow "!isindexed" if no SpiderReply at all
-			//if ( ! srep && val == 0 ) continue;
 			// skip
 			p += 14;
 			// skip to next constraint
@@ -9743,8 +9804,6 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( ! srep->m_hasAddressValid ) continue;
 			// if no match continue
 			if ( (bool)srep->m_hasAddress==val ) continue;
-			// allow "!isindexed" if no SpiderReply at all
-			//if ( ! srep && val == 0 ) continue;
 			// skip
 			p += 10;
 			// skip to next constraint
@@ -9766,8 +9825,6 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( ! srep->m_hasTODValid ) continue;
 			// if no match continue
 			if ( (bool)srep->m_hasTOD==val ) continue;
-			// allow "!isindexed" if no SpiderReply at all
-			//if ( ! srep && val == 0 ) continue;
 			// skip
 			p += 6;
 			// skip to next constraint
@@ -9864,8 +9921,6 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( isForMsg20 ) continue;
 			// if no match continue
 			if ( (bool)sreq->m_isInjecting==val ) continue;
-			// allow "!isindexed" if no SpiderReply at all
-			//if ( ! srep && val == 0 ) continue;
 			// skip
 			p += 10;
 			// skip to next constraint
@@ -9898,8 +9953,6 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( ! sreq->m_isContactyValid ) continue;
 			// if no match continue
 			if ( (bool)sreq->m_isContacty==val ) continue;
-			// allow "!isindexed" if no SpiderReply at all
-			//if ( ! srep && val == 0 ) continue;
 			// skip
 			p += 10;
 			// skip to next constraint
@@ -9990,8 +10043,6 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		if ( strncmp(p,"isindexed",9) == 0 ) {
 			// if we do not have enough info for outlink, all done
 			if ( isOutlink ) return -1;
-			// must have a reply
-			//if ( ! srep ) continue;
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// skip if reply does not KNOW because of an error
@@ -10014,8 +10065,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		}
 
 		if ( strncmp(p,"ingoogle",8) == 0 ) {
-			// must have a reply
-			//if ( ! srep ) continue;
+			if ( isOutlink ) return -1;
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// skip if not valid (pageaddurl? injection?)
@@ -10195,6 +10245,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 
 		// check for "isrss" aka "rss"
 		if ( strncmp(p,"isrss",5) == 0 ) {
+			if ( isOutlink ) return -1;
 			// must have a reply
 			if ( ! srep ) continue;
 			// if we are not rss, we do not match this rule

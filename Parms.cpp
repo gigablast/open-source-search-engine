@@ -18361,8 +18361,10 @@ void handleRequest3fLoop ( void *weArg ) {
 		// . this tells Spider.cpp to rebuild the spider queues
 		// . this is NULL if spider stuff never initialized yet,
 		//   like if you just added the collection
-		if ( cx->m_spiderColl )
+		if ( cx->m_spiderColl ) {
+			log("parms: forcing waiting tree rebuild");
 			cx->m_spiderColl->m_waitingTreeNeedsRebuild = true;
+		}
 		// . assume we have urls ready to spider too
 		// . no, because if they change the filters and there are
 		//   still no urls to spider i don't want to get another
