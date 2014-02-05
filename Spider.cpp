@@ -2914,7 +2914,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 				  maxWinners , // maxnumnodes
 				  true , // balance?
 				  maxWinners * MAX_BEST_REQUEST_SIZE, // memmax
-				  false, // owndata?
+				  true, // owndata?
 				  "wintree", // allocname
 				  false, // datainptrs?
 				  NULL, // dbname
@@ -3025,6 +3025,7 @@ key192_t makeWinnerTreeKey ( long firstIp ,
 	k.n2 = firstIp;
 	k.n2 <<= 16;
 	k.n2 |= (255-priority);
+	k.n2 <<= 16;
 	k.n2 |= (spiderTimeMS >> 48);
 	k.n1 = spiderTimeMS << 16;
 	k.n1 |= uh48 >> 32;
@@ -3039,14 +3040,30 @@ void parseWinnerTreeKey ( key192_t  *k ,
 			  long long  *spiderTimeMS ,
 			  long long *uh48 ) {
 	*firstIp = (k->n2) >> 32;
-	*priority = (long)(char)((k->n2 >> 16)&0xff);
-	*priority = 255 - *priority; // uncomplement
+	*priority = 255 - ((k->n2 >> 16) & 0xffff);
 	*spiderTimeMS = k->n2 & 0xffffff;
 	*spiderTimeMS <<= (32+16);
 	*spiderTimeMS |= k->n1 >> 16;
 	*uh48 = k->n1 & 0xffff;
 	*uh48 <<= 32;
 	*uh48 |= (k->n0 >>32);
+}
+
+void testWinnerTreeKey ( ) {
+	long firstIp = 1234567;
+	long priority = 123;
+	long long spiderTimeMS = 456789123LL;
+	long long uh48 = 987654321888LL;
+	key192_t k = makeWinnerTreeKey ( firstIp,priority,spiderTimeMS,uh48);
+	long firstIp2;
+	long priority2;
+	long long spiderTimeMS2;
+	long long uh482;
+	parseWinnerTreeKey ( &k,&firstIp2,&priority2,&spiderTimeMS2,&uh482);
+	if ( firstIp != firstIp2 ) { char *xx=NULL;*xx=0; }
+	if ( priority != priority2 ) { char *xx=NULL;*xx=0; }
+	if ( spiderTimeMS != spiderTimeMS2 ) { char *xx=NULL;*xx=0; }
+	if ( uh48 != uh482 ) { char *xx=NULL;*xx=0; }
 }
 
 void removeExpiredLocks ( long hostId );
@@ -3082,6 +3099,8 @@ static void gotSpiderdbListWrapper ( void *state , RdbList *list , Msg5 *msg5){
 ///////////////////
 
 bool SpiderColl::evalIpLoop ( ) {
+
+	//testWinnerTreeKey ( );
 
 	// sanity
 	if ( m_scanningIp == 0 || m_scanningIp == -1 ) { char *xx=NULL;*xx=0;}
@@ -3701,6 +3720,10 @@ bool SpiderColl::scanListForWinners ( ) {
 			continue;
 		}
 
+		// save this shit for storing in doledb
+		sreq->m_ufn = ufn;
+		sreq->m_priority = priority;
+
 		// if it is in future, skip it and just set m_futureTime and
 		// and we will update the waiting tree
 		// with an entry based on that future time if the winnerTree turns
@@ -3907,11 +3930,22 @@ bool SpiderColl::scanListForWinners ( ) {
 						 spiderTimeMS ,
 						 sreq->getUrlHash48() );
 
+		// use an individually allocated buffer for each spiderrequest so if
+		// it gets removed from tree the memory can be freed by the tree
+		// which "owns" the data because m_winnerTree.set() above set ownsData
+		// to true above.
+		long need = sreq->getRecSize();
+		char *newMem = (char *)mdup ( sreq , need , "sreqbuf" );
+		if ( ! newMem ) continue;
+
 		// add it to the tree of the top urls to spider
 		m_winnerTree.addNode( 0, 
 				      (char *)&wk ,
-				      (char *)sreq ,
-				      sreq->getRecSize() );
+				      (char *)newMem ,
+				      need );
+
+		// sanity
+		//SpiderRequest *sreq2 = (SpiderRequest *)m_winnerTree.getData ( nn );
 
 		// set new tail priority and time for next compare
 		if ( m_winnerTree.getNumUsedNodes() >= maxWinners ) {
@@ -4165,8 +4199,36 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		//if ( sreq2->m_spiderTimeMS < 0 ) { char *xx=NULL;*xx=0; }
 		if ( sreq2->m_ufn          < 0 ) { char *xx=NULL;*xx=0; }
 		if ( sreq2->m_priority ==   -1 ) { char *xx=NULL;*xx=0; }
-		// store in meta list
-		if ( ! m_doleBuf.safeMemcpy ( sreq2 , sreq2->getRecSize() ) ) {
+		// check for errors
+		bool hadError = false;
+		// parse it up
+		long winIp;
+		long winPriority;
+		long long winSpiderTimeMS;
+		long long winUh48;
+		key192_t *winKey = (key192_t *)m_winnerTree.getKey ( node );
+		parseWinnerTreeKey ( winKey ,
+				     &winIp ,
+				     &winPriority,
+				     &winSpiderTimeMS ,
+				     &winUh48 );
+		// sanity
+		if ( winIp != firstIp ) { char *xx=NULL;*xx=0;}
+		if ( winUh48 != sreq2->getUrlHash48() ) { char *xx=NULL;*xx=0;}
+		// make the doledb key
+		key_t doleKey = g_doledb.makeKey ( winPriority,
+						   // convert to seconds from ms
+						   winSpiderTimeMS / 1000     ,
+						   winUh48 ,
+						   false                         );
+		// store doledb key first
+		if ( ! m_doleBuf.safeMemcpy ( &doleKey, sizeof(key_t) ) ) hadError = true;
+		// then size of spiderrequest
+		if ( ! m_doleBuf.pushLong ( sreq2->getRecSize() ) ) hadError = true;
+		// then the spiderrequest encapsulated
+		if ( ! m_doleBuf.safeMemcpy ( sreq2 , sreq2->getRecSize() )) hadError=true;
+		// note and error
+		if ( hadError ) {
 			log("spider: error making doledb list: %s",
 			    mstrerror(g_errno));
 			    return true;
@@ -4353,6 +4415,11 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	// . MDW: now we have a list of doledb records in a SafeBuf:
 	// . scan the requests in safebuf
 	for ( char *p = m_doleBuf.getBufStart() ; p < m_doleBuf.getBuf() ; ) {
+		// first is doledbkey
+		p += sizeof(key_t);
+		// then size of spider request
+		p += 4;
+		// the spider request encapsulated
 		SpiderRequest *sreq3;
 		sreq3 = (SpiderRequest *)p;
 		// point "p" to next spiderrequest
@@ -4570,7 +4637,8 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 		// sanity check
 		if ( *score <= 0 ) { char *xx=NULL;*xx=0; }
 		// only one per ip!
-		if ( *score > 1 )
+		// not any more! we allow MAX_WINNER_NODES per ip!
+		if ( *score > MAX_WINNER_NODES )
 			log("spider: crap. had %li recs in doledb from %s."
 			    "how did this happen?",
 			    (long)*score,iptoa(sreq->m_firstIp));
