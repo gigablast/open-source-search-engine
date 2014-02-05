@@ -6487,17 +6487,24 @@ void PosdbTable::intersectLists10_r ( ) {
 	//
 	// if we have a gbsortby:price term then score exclusively on that
 	//
-	if ( m_sortByTermNum >= 0 )
+	if ( m_sortByTermNum >= 0 ) {
+		// no term?
+		if ( ! miniMergedList[m_sortByTermNum] ) goto advance;
 		score = g_posdb.getFloat ( miniMergedList[m_sortByTermNum] );
+	}
 
 	// skip docid if outside of range
 	if ( m_minScoreTermNum >= 0 ) {
+		// no term?
+		if ( ! miniMergedList[m_minScoreTermNum] ) goto advance;
 		float score2 = g_posdb.getFloat ( miniMergedList[m_minScoreTermNum] );
 		if ( score2 < m_minScoreVal ) goto advance;
 	}
 
 	// skip docid if outside of range
 	if ( m_maxScoreTermNum >= 0 ) {
+		// no term?
+		if ( ! miniMergedList[m_maxScoreTermNum] ) goto advance;
 		float score2 = g_posdb.getFloat ( miniMergedList[m_maxScoreTermNum] );
 		if ( score2 > m_maxScoreVal ) goto advance;
 	}

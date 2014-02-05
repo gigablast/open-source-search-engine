@@ -111,9 +111,6 @@ bool sendReply ( State0 *st , char *reply ) {
 
 	g_stats.logAvgQueryTime(st->m_startTime);
 
-	mdelete(st, sizeof(State0), "PageResults2");
-	delete st;
-
 	if ( ! savedErr ) { // g_errno ) {
 		g_stats.m_numSuccess++;
 		// . one hour cache time... no 1000 hours, basically infinite
@@ -137,11 +134,18 @@ bool sendReply ( State0 *st , char *reply ) {
 					     -1, // httpstatus -1 -> 200
 					     NULL, // cookieptr
 					     charset );
+
+		// free st after sending reply since "st->m_sb" = "reply"
+		mdelete(st, sizeof(State0), "PageResults2");
+		delete st;
 		return true;
 	}
 	// error otherwise
 	if ( savedErr != ENOPERM ) 
 		g_stats.m_numFails++;
+
+	mdelete(st, sizeof(State0), "PageResults2");
+	delete st;
 
 	if ( format == FORMAT_XML ) {
 		SafeBuf sb;
