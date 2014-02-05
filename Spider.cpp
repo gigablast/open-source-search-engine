@@ -29,7 +29,7 @@
 // . i'd like to set back to 10 for speed... maybe even 5 or less
 #define SPIDER_DONE_TIMER 20
 
-#define MAX_WINNER_NODES 400
+#define MAX_WINNER_NODES 40
 
 Doledb g_doledb;
 
