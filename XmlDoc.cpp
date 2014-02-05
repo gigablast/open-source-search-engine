@@ -13965,7 +13965,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 				     0 , // ifmodifiedsince
 				     this , // state
 				     gotDiffbotReplyWrapper ,
-				     90*1000, // 90 sec timeout
+				     180*1000, // 180 sec timeout
 				     0,//proxyip
 				     0,//proxyport
 				     // unlimited replies i guess
