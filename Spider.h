@@ -1207,6 +1207,7 @@ class SpiderColl {
 	long       m_gotNewDataForScanningIp;
 	long       m_lastListSize;
 	long       m_lastScanningIp;
+	long long  m_totalBytesScanned;
 
 	char m_deleteMyself;
 

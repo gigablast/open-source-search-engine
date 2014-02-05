@@ -2947,6 +2947,8 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 
 	// reset this as well
 	m_minFutureTimeMS = 0LL;
+
+	m_totalBytesScanned = 0LL;
 	
 	// . look up in spiderdb otherwise and add best req to doledb from ip
 	// . if it blocks ultimately it calls gotSpiderdbListWrapper() which
@@ -3482,6 +3484,7 @@ bool SpiderColl::scanListForWinners ( ) {
 	m_lastListSize = list->getListSize();
 	m_lastScanningIp = m_scanningIp;
 
+	m_totalBytesScanned += list->getListSize();
 
 	if ( list->isEmpty() && g_conf.m_logDebugSpider )
 		log("spider: failed to get rec for ip=%s",iptoa(m_scanningIp));
@@ -3899,6 +3902,13 @@ bool SpiderColl::scanListForWinners ( ) {
 
 		// get the top 100 spider requests by priority/time/etc.
 		long maxWinners = (long)MAX_WINNER_NODES; // 40
+
+		// only put 40 urls from the same firstIp into doledb if
+		// we have a lot of urls in our spiderdb already.
+		if ( m_totalBytesScanned < 200000 ) maxWinners = 1;
+		// sanity. make sure read is somewhat hefty for our maxWinners=1 thing
+		if ( (long)SR_READ_SIZE < 500000 ) { char *xx=NULL;*xx=0; }
+
 
 		// only compare to min winner in tree if tree is full
 		if ( m_winnerTree.getNumUsedNodes() >= maxWinners ) {
