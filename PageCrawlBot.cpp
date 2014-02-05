@@ -2266,6 +2266,9 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 		      , cx->m_collectiveCrawlDelay
 		      );
 
+	sb.safePrintf("\"obeyRobots\":%li,\n"
+		      , (long)cx->m_useRobotsTxt );
+
 	// if not a "bulk" injection, show crawl stats
 	if ( cx->m_isCustomCrawl != 2 ) {
 
@@ -2273,12 +2276,10 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 			      // settable parms
 			      "\"maxToCrawl\":%lli,\n"
 			      "\"maxToProcess\":%lli,\n"
-			      "\"obeyRobots\":%li,\n"
 			      "\"restrictDomain\":%li,\n"
 			      "\"onlyProcessIfNew\":%li,\n"
 			      , cx->m_maxToCrawl
 			      , cx->m_maxToProcess
-			      , (long)cx->m_useRobotsTxt
 			      , (long)cx->m_restrictDomain
 			      , (long)cx->m_diffbotOnlyProcessIfNew
 			      );
