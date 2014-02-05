@@ -11572,7 +11572,6 @@ void Parms::init ( ) {
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
-
 	// buzz
 	m->m_title = "hide all clustered results";
 	m->m_desc  = "Hide all clustered results instead of displaying two "
@@ -16122,6 +16121,19 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m->m_flags = PF_REDBOX;
 	m++;
+
+	m->m_title = "stream search results";
+	m->m_desc  = "Stream search results back on socket as they arrive. Useful "
+		"when thousands of search results are requested.";
+	m->m_soff  = (char *)&si.m_streamResults - y;
+	m->m_type  = TYPE_CHAR;
+	m->m_obj   = OBJ_SI;
+	m->m_def   = "0";
+	m->m_sparm = 1;
+	m->m_scgi  = "stream";
+	m->m_flags = PF_API;
+	m++;
+
 
 	m->m_title = "restrict search to this url";
 	m->m_desc  = "X is the url.";
