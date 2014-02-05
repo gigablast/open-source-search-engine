@@ -1977,6 +1977,18 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 
 	// quit add dups over and over again...
 	long long dupKey64 = sreq->getUrlHash48();
+	// . these flags make big difference in url filters
+	// . NOTE: if you see a url that is not getting spidered that should be it might
+	//   be because we are not incorporating other flags here...
+	if ( sreq->m_fakeFirstIp ) dupKey64 ^= 12345;
+	if ( sreq->m_isAddUrl    ) dupKey64 ^= 49387333;
+	if ( sreq->m_isInjecting ) dupKey64 ^= 3276404;
+	if ( sreq->m_forceDelete ) dupKey64 ^= 29386239;
+	if ( sreq->m_hadReply    ) dupKey64 ^= 293294099;
+	if ( sreq->m_sameDom     ) dupKey64 ^= 963493311;
+	if ( sreq->m_sameHost    ) dupKey64 ^= 288844772;
+	if ( sreq->m_sameSite    ) dupKey64 ^= 58320355;
+
 	// . maxage=86400,promoteRec=yes. returns -1 if not in there
 	// . dupKey64 is for hopcount 0, so if this url is in the dupcache
 	//   with a hopcount of zero, do not add it
@@ -4744,9 +4756,10 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 		// only one per ip!
 		// not any more! we allow MAX_WINNER_NODES per ip!
 		if ( *score > MAX_WINNER_NODES )
-			log("spider: crap. had %li recs in doledb from %s."
+			log("spider: crap. had %li recs in doledb for %s "
+			    "from %s."
 			    "how did this happen?",
-			    (long)*score,iptoa(sreq->m_firstIp));
+			    (long)*score,m_coll,iptoa(sreq->m_firstIp));
 		// now we log it too
 		if ( g_conf.m_logDebugSpider )
 			log(LOG_DEBUG,"spider: added ip=%s to doleiptable "

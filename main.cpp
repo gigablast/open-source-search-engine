@@ -1796,12 +1796,12 @@ int main ( int argc , char *argv[] ) {
 				//
 				// default to keepalive start for now!!
 				//
-				return install ( ifk_kstart , h1, 
+				return install ( ifk_start , h1, 
 						 NULL,NULL,h2 );
 		}
 		// if it is us, do it
 		//if ( hostId != -1 ) goto mainStart;
-		return install ( ifk_kstart , hostId );
+		return install ( ifk_start , hostId );
 	}
 	// gb tmpstart [hostId]
 	if ( strcmp ( cmd , "tmpstart" ) == 0 ) {	
