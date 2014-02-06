@@ -326,8 +326,9 @@ Rdb.o:
 RdbBase.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
-RdbCache.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+# RdbCache.cpp gets "corrupted" with -O2... like RdbTree.cpp
+#RdbCache.o:
+#	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
 # fast dictionary generation and spelling recommendations
 #Speller.o:

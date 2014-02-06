@@ -6019,10 +6019,18 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	}		
 
 
-	// how many spiders out for this ip now?
-	long outPerIp = g_spiderLoop.getNumSpidersOutPerIp ( sreq->m_firstIp ,
-							     m_collnum );
-	if ( outPerIp >= maxSpidersOutPerIp ) goto hitMax;
+	// . how many spiders out for this ip now?
+	// . TODO: count locks in case twin is spidering... but it did not seem
+	//   to work right for some reason
+	long ipOut = 0;
+	for ( long i = 0 ; i <= m_maxUsed ; i++ ) {
+		// get it
+		XmlDoc *xd = m_docs[i];
+		if ( ! xd ) continue;
+		if ( ! xd->m_firstIpValid ) continue;
+		if ( xd->m_firstIp == sreq->m_firstIp ) ipOut++;
+	}
+	if ( ipOut >= maxSpidersOutPerIp ) goto hitMax;
 
 
 	// sometimes we have it locked, but is still in doledb i guess.
