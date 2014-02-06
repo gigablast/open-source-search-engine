@@ -613,7 +613,9 @@ bool Spiderdb::init ( ) {
 			    "spiderdb"   ,
 			    true    , // dedup
 			    -1      , // fixedDataSize
-			    2,//g_conf.m_spiderdbMinFilesToMerge , mintomerge
+			    // now that we have MAX_WINNER_NODES allowed in doledb
+			    // we don't have to keep spiderdb so tightly merged i guess..
+			    3,//g_conf.m_spiderdbMinFilesToMerge , mintomerge
 			    maxMem,//g_conf.m_spiderdbMaxTreeMem ,
 			    maxTreeNodes                ,
 			    true                        , // balance tree?
