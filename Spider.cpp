@@ -1879,8 +1879,22 @@ bool SpiderColl::addSpiderReply ( SpiderReply *srep ) {
 	// . add to wait tree and let it populate doledb on its batch run
 	// . use a spiderTime of 0 which means unknown and that it needs to
 	//   scan spiderdb to get that
-	// . returns false and sets g_errno on error
-	return addToWaitingTree ( 0LL, srep->m_firstIp , true );
+	// . returns false if did not add to waiting tree
+	// . returns false sets g_errno on error
+	bool added = addToWaitingTree ( 0LL, srep->m_firstIp , true );
+
+	// ignore errors i guess
+	g_errno = 0;
+
+	// if added to waiting tree, bail now, needs to scan spiderdb
+	// in order to add to doledb, because it won't add to waiting tree
+	// if we already have spiderrequests in doledb for this firstip
+	if ( added ) return true;
+
+	// spider some urls that were doled to us
+	g_spiderLoop.spiderDoledUrls( );
+
+	return true;
 }
 
 
@@ -5364,9 +5378,12 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( cr->m_maxCrawlRounds > 0 &&
 		     cr->m_isCustomCrawl &&
 		     cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) {
-			cr->m_spiderStatus = SP_MAXROUNDS;
 			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
-			cr->m_needsSave = true;
+			// prevent having to save all the time
+			if ( cr->m_spiderStatus != SP_MAXROUNDS ) {
+				cr->m_needsSave = true;
+				cr->m_spiderStatus = SP_MAXROUNDS;
+			}
 			continue;
 		}
 
@@ -5375,12 +5392,15 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		     cr->m_isCustomCrawl &&
 		     cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound >=
 		     cr->m_maxToCrawl ) {
-			cr->m_spiderStatus = SP_MAXTOCRAWL;
 			// now once all hosts have no urls ready to spider
 			// then the send email code will be called.
 			// do it this way for code simplicity.
 			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
-			cr->m_needsSave = true;
+			// prevent having to save all the time
+			if ( cr->m_spiderStatus != SP_MAXTOCRAWL ) {
+				cr->m_needsSave = true;
+				cr->m_spiderStatus = SP_MAXTOCRAWL;
+			}
 			continue;
 		}
 
@@ -5389,11 +5409,30 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		     cr->m_isCustomCrawl &&
 		     cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound >=
 		     cr->m_maxToProcess ) {
-			cr->m_spiderStatus = SP_MAXTOPROCESS;
 			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
-			cr->m_needsSave = true;
+			// prevent having to save all the time
+			if ( cr->m_spiderStatus != SP_MAXTOPROCESS ) {
+				cr->m_needsSave = true;
+				cr->m_spiderStatus = SP_MAXTOPROCESS;
+			}
 			continue;
 		}
+
+		// shortcut
+		CrawlInfo *ci = &cr->m_localCrawlInfo;
+
+		// . if nothing left to spider...
+		// . this is what makes us fast again! but the problem
+		//   is is that if they change the url filters so that 
+		//   something becomes ready to spider again we won't know
+		//   because we do not set this flag back to true in
+		//   Parms.cpp "doRebuild" because we don't want to get
+		//   another email alert if there is nothing ready to spider
+		//   after they change the parms. perhaps we should set
+		//   the # of urls spidered to the "sentEmail" flag so we
+		//   know if that changes to send another...
+		if ( cr->m_isCustomCrawl && ! ci->m_hasUrlsReadyToSpider ) 
+			continue;
 
 		// get the spider collection for this collnum
 		m_sc = g_spiderCache.getSpiderColl(m_cri);
@@ -5404,9 +5443,6 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( m_sc->m_didRound ) continue;
 		// set current time, synced with host #0
 		nowGlobal = getTimeGlobal();
-
-		// shortcut
-		CrawlInfo *ci = &cr->m_localCrawlInfo;
 
 		// the last time we attempted to spider a url for this coll
 		//m_sc->m_lastSpiderAttempt = nowGlobal;
