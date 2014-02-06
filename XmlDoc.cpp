@@ -22656,7 +22656,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	bool ignore = false;
 	if ( mbuf[0] == '1' ) ignore = true;
 
-	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
+	//SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
 
 	//
 	// serialize each link into the metalist now
@@ -22937,8 +22937,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		ksr.setKey ( firstIp, *d , false );
 
 		// if we've recently added this url to spiderdb in Spider.cpp, skip it
-		if ( sc && sc->isInDupCache ( &ksr , false ) )
-			continue;
+		//if ( sc && sc->isInDupCache ( &ksr , false ) )
+		//	continue;
 
 		// . technically speaking we do not have any reply so we
 		//   should not be calling this! cuz we don't have all the info

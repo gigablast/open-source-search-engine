@@ -2009,6 +2009,17 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 		return true;
 	}
 
+	// . are we already more or less in spiderdb? true = addToCache
+	// . put this above isAssignedToUs() so we *try* to keep twins in sync because
+	//   Rdb.cpp won't add the spiderrequest if its in this dup cache, and we add
+	//   it to the dupcache here...
+	if ( isInDupCache ( sreq , true ) ) {
+		if ( g_conf.m_logDebugSpider )
+			log("spider: skipping dup request url=%s uh48=%llu",
+			    sreq->m_url,sreq->getUrlHash48());
+		return true;
+	}
+
 	// skip if not assigned to us for doling
 	if ( ! isAssignedToUs ( sreq->m_firstIp ) ) {
 		if ( g_conf.m_logDebugSpider )
@@ -2026,14 +2037,6 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 		log("spider: Corrupt spider req with url length of "
 		    "%li <= 0. dataSize=%li uh48=%llu. Skipping.",
 		    ulen,sreq->m_dataSize,sreq->getUrlHash48());
-		return true;
-	}
-
-	// are we already more or less in spiderdb? true = addToCache
-	if ( isInDupCache ( sreq , true ) ) {
-		if ( g_conf.m_logDebugSpider )
-			log("spider: skipping dup request url=%s uh48=%llu",
-			    sreq->m_url,sreq->getUrlHash48());
 		return true;
 	}
 
