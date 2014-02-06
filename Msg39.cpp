@@ -777,7 +777,8 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 
 	// . create the thread
 	// . only one of these type of threads should be launched at a time
-	if ( g_threads.call ( INTERSECT_THREAD  , // threadType
+	if ( ! m_debug &&
+	     g_threads.call ( INTERSECT_THREAD  , // threadType
 			      m_r->m_niceness   ,
 			      this              , // top 4 bytes must be cback
 			      threadDoneWrapper ,

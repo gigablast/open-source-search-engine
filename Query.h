@@ -491,8 +491,6 @@ class QueryTerm {
 	long long m_hash64d;
 	long      m_popWeight;
 
-	// for min/max score ranges like gbmin:price:1.99
-	float m_float;
 };
 
 // . this is the main class for representing a query

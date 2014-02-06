@@ -527,7 +527,6 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		QueryTerm *qt = &m_qterms[n];
 		qt->m_qword     = qw ;
 		qt->m_piped     = qw->m_piped;
-		qt->m_float     = qw->m_float;
 		qt->m_isPhrase  = true ;
 		qt->m_isUORed   = false;
 		qt->m_UORedTerm   = NULL;
@@ -2180,6 +2179,14 @@ bool Query::setQWords ( char boolFlag ,
 		// make "suburl" map to "inurl"
 		if ( fieldCode == FIELD_SUBURL )
 			ph = hash64 ( "inurl", 5 );
+
+		// these are range constraints on the gbsortby: termlist
+		// which sorts numbers in a field from low to high
+		if ( fieldCode == FIELD_GBNUMBERMIN )
+			ph = hash64 ("gbsortby", 8);
+		if ( fieldCode == FIELD_GBNUMBERMAX )
+			ph = hash64 ("gbsortby", 8);
+
 		// ptr to field, if any
 
 		qw->m_fieldCode = fieldCode;

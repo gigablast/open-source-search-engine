@@ -3004,18 +3004,70 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      );
 
 
+		long now = getTimeGlobalNoCore();
+
 		sb.safePrintf("<tr>"
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
 			      "<a href=/crawlbot/download/%s_data.csv>"
 			      "csv</a>"
+
 			      " &nbsp; "
+
 			      "<a href=/crawlbot/download/%s_data.json>"
-			      "json</a>"
+			      "json full dump</a>"
+
+			      " &nbsp; "
+
+			      , cr->m_coll
+			      , cr->m_coll
+
+			      );
+
+		sb.safePrintf(
+			      // newest json on top of results
+			      "<a href=/search?icc=1&format=json&sc=0&dr=0&"
+			      "c=%s&n=10000000&rand=%llu&scores=0&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "json full search (newest on top)</a>"
+
+
+			      " &nbsp; "
+
+			      // newest json on top of results, last 10 mins
+			      "<a href=/search?icc=1&format=json&sc=0&dr=0&"
+			      "c=%s&n=10000000&rand=%llu&scores=0&id=1&"
+			      "stream=1&" // stream results back as we get them
+			      "q="
+			      "gbrevsortby%%3Agbspiderdate+"
+			      // min spider date = now - 10 mins
+			      "gbmin%%3Agbspiderdate%%3A%li&"
+			      "debug=1"
+			      //"prepend=type%%3Ajson"
+			      ">"
+			      "json search (last day)</a>"//60 seconds)</a>"
+
+
+
 			      "</td>"
 			      "</tr>"
+			      
+			      // json search with gbsortby:gbspiderdate
+			      , cr->m_coll
+			      , rand64
 
 
+			      // json search with gbmin:gbspiderdate
+			      , cr->m_coll
+			      , rand64
+			      , now - 86400 // 60 // last 1 minute
+
+			      );
+
+
+		sb.safePrintf (
 			      "<tr>"
 			      "<td><b>Download Products:</b> "
 			      "</td><td>"
@@ -3100,13 +3152,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      "</TD>"
 			      
-			      , cr->m_coll
-			      , cr->m_coll
-
+			      // download products html
 			      , cr->m_coll
 			      , rand64
 
-			      // download products html
 			      , cr->m_coll
 			      , rand64
 

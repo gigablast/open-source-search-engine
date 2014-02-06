@@ -93,7 +93,6 @@ Msg40::Msg40() {
 	m_numPrinted    = 0;
 	m_printedHeader = false;
 	m_printedTail   = false;
-	m_streamResults = false;
 	m_sendsOut      = 0;
 	m_sendsIn       = 0;
 	m_printi        = 0;
@@ -1286,6 +1285,9 @@ bool Msg40::gotSummary ( ) {
 		if ( m_sendsOut > m_sendsIn ) break;
 		// otherwise, get the summary for result #m_printi
 		Msg20 *m20 = m_msg20[m_printi];
+		if ( ! m20 ) continue;
+		if ( m20->m_errno ) continue;
+
 		// get the next reply we are waiting on to print results in order
 		Msg20Reply *mr = m20->m_r;
 		if ( ! mr ) break;
@@ -1361,7 +1363,7 @@ bool Msg40::gotSummary ( ) {
 
 
 	// if streaming results, we are done
-	if ( m_streamResults ) {
+	if ( m_si && m_si->m_streamResults ) {
 		// unless waiting for last transmit to complete
 		if ( m_sendsOut > m_sendsIn ) return false;
 		// otherwise, all done!
@@ -4752,7 +4754,7 @@ bool Msg40::printSearchResult9 ( long ix ) {
 
 	// . we stream results right onto the socket
 	// . useful for thousands of results... and saving mem
-	if ( ! m_streamResults ) { char *xx=NULL;*xx=0; }
+	if ( ! m_si || ! m_si->m_streamResults ) { char *xx=NULL;*xx=0; }
 
 	// get state0
 	State0 *st = (State0 *)m_state;

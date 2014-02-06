@@ -911,6 +911,9 @@ bool gotResults ( void *state ) {
 	// wrap it up with Next 10 etc.
 	printSearchResultsTail ( st );
 
+	// send it off
+	sendReply ( st , st->m_sb.getBufStart() );
+
 	return true;
 }
 
@@ -1553,6 +1556,20 @@ bool printSearchResultsTail ( State0 *st ) {
 	CollectionRec *cr = si->m_cr;
 	char *coll = cr->m_coll;
 
+
+	// if ended in ",\n" cuz it was json, remove that
+	if ( si->m_format == FORMAT_JSON && sb->length() >= 4 ) {
+		char *p = sb->getBuf() - 2;
+		if ( p[0] ==',' && p[1] == '\n' ) sb->incrementLength(-2);
+	}
+
+	if ( si->m_format == FORMAT_JSON ) {	
+		// print ending ] for json
+		sb->safePrintf("]\n");
+		// all done for json
+		return true;
+	}
+
 	// get some result info from msg40
 	long firstNum   = msg40->getFirstResultNum() ;
 
@@ -1715,10 +1732,15 @@ bool printSearchResultsTail ( State0 *st ) {
 	}
 
 
-	if ( sb->length() == 0 )
-		sb->pushChar('\n');
+	if ( sb->length() == 0 && si && si->m_format == FORMAT_JSON )
+		sb->safePrintf("[]\n");
 
-	return sendReply ( st , sb->getBufStart() );
+	if ( sb->length() == 0 ) {
+		sb->pushChar('\n');
+		sb->nullTerm();
+	}
+
+	return true;
 }
 
 bool printTimeAgo ( SafeBuf *sb , long ts , char *prefix , SearchInput *si ) {
@@ -2053,6 +2075,14 @@ bool printResult ( State0 *st, long ix ) {
 		return true;
 	}
 
+	// print first [ for json
+	if ( si->m_format == FORMAT_JSON &&
+	     mr->ptr_content &&
+	     mr->m_contentType == CT_JSON &&
+	     ! st->m_printedHeaderRow ) {
+		st->m_printedHeaderRow = true;
+		sb->safePrintf("[\n");
+	}
 
 
 	// just print cached web page?
@@ -2061,8 +2091,9 @@ bool printResult ( State0 *st, long ix ) {
 		//mr->size_content );
 		if ( si->m_format == FORMAT_HTML )
 			sb->safePrintf("\n\n<br><br>\n\n");
+		// for json items separate with \n
 		if ( si->m_format != FORMAT_HTML )
-			sb->safePrintf("\n\n");
+			sb->safePrintf("\n,\n");
 		// just in case
 		sb->nullTerm();
 		return true;

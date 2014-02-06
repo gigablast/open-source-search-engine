@@ -4144,11 +4144,11 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		// is it gbmin:price:1.99?
 		if ( qt->m_fieldCode == FIELD_GBNUMBERMIN ) {
 			m_minScoreTermNum = i;
-			m_minScoreVal = qt->m_float;
+			m_minScoreVal = qt->m_qword->m_float;
 		}
 		if ( qt->m_fieldCode == FIELD_GBNUMBERMAX ) {
 			m_maxScoreTermNum = i;
-			m_maxScoreVal = qt->m_float;
+			m_maxScoreVal = qt->m_qword->m_float;
 		}
 		// count
 		long nn = 0;

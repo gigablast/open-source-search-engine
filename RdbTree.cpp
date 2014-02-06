@@ -283,6 +283,7 @@ long RdbTree::clear ( ) {
 	for ( long i = 0 ; i < nc ; i++ ) {
 		CollectionRec *cr = g_collectiondb.getRec(i);
 		if ( ! cr ) continue;
+		if ( m_rdbId < 0 ) continue;
 		//if (((unsigned char)m_rdbId)>=RDB_END){char *xx=NULL;*xx=0; }
 		cr->m_numNegKeysInTree[(unsigned char)m_rdbId] = 0;
 		cr->m_numPosKeysInTree[(unsigned char)m_rdbId] = 0;
@@ -2811,14 +2812,16 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 			//m_numNegKeysPerColl[c]++;
 			// this is only used for Rdb::m_trees
 			//if ( m_isRealTree )
-			recs[c]->m_numNegKeysInTree[(unsigned char)m_rdbId]++;
+			if ( m_rdbId >= 0 )
+				recs[c]->m_numNegKeysInTree[(unsigned char)m_rdbId]++;
 		}
 		else {
 			m_numPositiveKeys++;
 			//m_numPosKeysPerColl[c]++;
 			// this is only used for Rdb::m_trees
 			//if ( m_isRealTree )
-			recs[c]->m_numPosKeysInTree[(unsigned char)m_rdbId]++;
+			if ( m_rdbId >= 0 )
+				recs[c]->m_numPosKeysInTree[(unsigned char)m_rdbId]++;
 		}
 	}
 	// bail now if we can 

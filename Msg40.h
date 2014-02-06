@@ -244,7 +244,6 @@ class Msg40 {
 	long m_numPrinted    ;
 	bool m_printedHeader ;
 	bool m_printedTail   ;
-	bool m_streamResults ;
 	bool m_lastChunk     ;
 	long m_sendsOut      ;
 	long m_sendsIn       ;
