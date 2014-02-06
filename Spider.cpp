@@ -6027,11 +6027,13 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// get it
 		XmlDoc *xd = m_docs[i];
 		if ( ! xd ) continue;
-		if ( ! xd->m_firstIpValid ) continue;
-		if ( xd->m_firstIp == sreq->m_firstIp ) ipOut++;
+		if ( ! xd->m_sreqValid ) continue;
+		if ( xd->m_sreq.m_firstIp == sreq->m_firstIp ) ipOut++;
 	}
 	if ( ipOut >= maxSpidersOutPerIp ) goto hitMax;
-
+	if ( g_conf.m_logDebugSpider )
+		log("spider: %li spiders out for %s for %s",ipOut,iptoa(sreq->m_firstIp),
+		    sreq->m_url);
 
 	// sometimes we have it locked, but is still in doledb i guess.
 	// seems like we might have give the lock to someone else and
