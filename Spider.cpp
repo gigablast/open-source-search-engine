@@ -3979,6 +3979,8 @@ bool SpiderColl::scanListForWinners ( ) {
 			oldwk = (key192_t *)m_winnerTable.getDataFromSlot ( winSlot );
 			// are we lower priority? (or equal)
 			if(KEYCMP((char *)&wk,(char *)oldwk,sizeof(key192_t))<=0) continue;
+			// from table too. no it's a dup uh48!
+			//m_winnerTable.deleteKey ( &uh48 );
 			// otherwise we supplant it. remove old key from tree.
 			m_winnerTree.deleteNode ( 0 , oldwk );
 			// supplant in table and tree... just add below...
@@ -4018,8 +4020,11 @@ bool SpiderColl::scanListForWinners ( ) {
 				continue;
 			// get lowest scoring node in tree
 			long tailNode = m_winnerTree.getLastNode();
+			// from table too
+			m_winnerTable.removeKey ( &m_tailUh48 );
 			// delete the tail so new spiderrequest can enter
 			m_winnerTree.deleteNode ( tailNode , true );
+
 		}
 
 		// somestimes the firstip in its key does not match the
