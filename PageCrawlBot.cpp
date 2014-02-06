@@ -2296,6 +2296,8 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 
 	sb.safePrintf("\"currentTime\":%lu,\n",
 		      getTimeGlobal() );
+	sb.safePrintf("\"currentTimeUTC\":%lu,\n",
+		      getTimeGlobal() );
 
 
 	sb.safePrintf("\"apiUrl\":\"");
@@ -3041,13 +3043,14 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "c=%s&n=10000000&rand=%llu&scores=0&id=1&"
 			      "stream=1&" // stream results back as we get them
 			      "q="
-			      "gbrevsortby%%3Agbspiderdate+"
+			      // put NEWEST on top
+			      "gbsortby%%3Agbspiderdate+"
 			      // min spider date = now - 10 mins
 			      "gbmin%%3Agbspiderdate%%3A%li&"
 			      "debug=1"
 			      //"prepend=type%%3Ajson"
 			      ">"
-			      "json search (last day)</a>"//60 seconds)</a>"
+			      "json search (last 30 seconds)</a>"
 
 
 
@@ -3062,7 +3065,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      // json search with gbmin:gbspiderdate
 			      , cr->m_coll
 			      , rand64
-			      , now - 86400 // 60 // last 1 minute
+			      , now - 30 // 60 // last 1 minute
 
 			      );
 
