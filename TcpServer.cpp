@@ -1690,6 +1690,8 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	if ( s->m_streamingMode ) { 
 		log("tcp: destroying socket in streaming mode. err=%s",
 		    mstrerror(g_errno));
+		// why is it being destroyed without g_errno set?
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		//char *xx=NULL;*xx=0; }
 	}
 

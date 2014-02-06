@@ -935,6 +935,12 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// just in case it is empty, make it null terminated
 	sb->nullTerm();
 
+	// print first [ for json
+	if ( si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("[\n");
+		return true;
+	}
+
 	// . if not matt wells we do not do ajax
 	// . the ajax is just there to prevent bots from slamming me 
 	//   with queries.
@@ -2074,16 +2080,6 @@ bool printResult ( State0 *st, long ix ) {
 		printJsonItemInCSV ( json , sb , st );
 		return true;
 	}
-
-	// print first [ for json
-	if ( si->m_format == FORMAT_JSON &&
-	     mr->ptr_content &&
-	     mr->m_contentType == CT_JSON &&
-	     ! st->m_printedHeaderRow ) {
-		st->m_printedHeaderRow = true;
-		sb->safePrintf("[\n");
-	}
-
 
 	// just print cached web page?
 	if ( mr->ptr_content ) {

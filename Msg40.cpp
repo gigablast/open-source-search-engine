@@ -1184,7 +1184,13 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 	// gotSummary() already, so do not call it again!!
 	if ( recalled ) return true;
 	// if we got nothing, that's it
-	if ( m_msg3a.m_numDocIds <= 0 ) return true;
+	if ( m_msg3a.m_numDocIds <= 0 ) {
+		// but if in streaming mode we still have to stream the
+		// empty results back
+		if ( m_si->m_streamResults ) return gotSummary ( );
+		// otherwise, we're done
+		return true;
+	}
 	// . i guess crash here for now
 	// . seems like we can call reallocMsg20Buf() and the first 50
 	//   can already be set, so we drop down to here... so don't core
@@ -1250,8 +1256,9 @@ bool Msg40::gotSummary ( ) {
 
 	// initialize dedup table if we haven't already
 	if ( ! m_dedupTable.isInitialized() &&
-	     ! m_dedupTable.set ( 4,0,64,NULL,0,false,m_si->m_niceness,"srdt") )
-		log("query: error initializing dedup table: %s",mstrerror(g_errno));
+	     ! m_dedupTable.set (4,0,64,NULL,0,false,m_si->m_niceness,"srdt") )
+		log("query: error initializing dedup table: %s",
+		    mstrerror(g_errno));
 
 	/*
 	// sanity check
@@ -1280,37 +1287,69 @@ bool Msg40::gotSummary ( ) {
 
 	sb->reset();
 
-	for ( ; m_si->m_streamResults && m_printi < m_msg3a.m_numDocIds ; m_printi++ ) {
-		// if we are waiting on our previous send to complete... wait...
+	// this is in PageResults.cpp
+	if ( m_si && m_si->m_streamResults && ! m_printedHeader ) {
+		// only print header once
+		m_printedHeader = true;
+		printSearchResultsHeader ( st );
+	}
+
+	for ( ; m_si && m_si->m_streamResults&&m_printi<m_msg3a.m_numDocIds ;
+	      m_printi++){
+		// if we are waiting on our previous send to complete... wait..
 		if ( m_sendsOut > m_sendsIn ) break;
 		// otherwise, get the summary for result #m_printi
 		Msg20 *m20 = m_msg20[m_printi];
-		if ( ! m20 ) continue;
-		if ( m20->m_errno ) continue;
+		if ( ! m20 ) {
+			log("msg40: m20 NULL #%li",m_printi);
+			continue;
+		}
+		if ( m20->m_errno ) {
+			log("msg40: sum #%li error: %s",
+			    m_printi,mstrerror(m20->m_errno));
+			continue;
+		}
 
-		// get the next reply we are waiting on to print results in order
+		// get the next reply we are waiting on to print results order
 		Msg20Reply *mr = m20->m_r;
 		if ( ! mr ) break;
 
 		// primitive deduping. for diffbot json exclude url's from the
-		// XmlDoc::m_contentHash32... it will be zero if invalid i guess...
+		// XmlDoc::m_contentHash32.. it will be zero if invalid i guess
 		if ( mr->m_contentHash32 &&
-		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) )
+		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) ) {
+			log("msg40: dup sum #%li",m_printi);
 			continue;
+		}
 
 		// return true with g_errno set on error
 		if ( mr->m_contentHash32 &&
 		     ! m_dedupTable.addKey ( &mr->m_contentHash32 ) ) {
 			m_hadPrintError = true;
-			log("msg40: error adding to dedup table: %s",mstrerror(g_errno));
+			log("msg40: error adding to dedup table: %s",
+			    mstrerror(g_errno));
 		}
+
+
+		log("msg40: printing #%li",m_printi);
 
 		// . ok, we got it, so print it and stream it
 		// . this might set m_hadPrintError to true
 		printSearchResult9 ( m_printi );
 
-		// now free the reply to save memory since we could be streaming back 1M+
+		// now free the reply to save memory since we could be 
+		// streaming back 1M+
 		m20->freeReply();
+	}
+
+
+	// . wrap it up with Next 10 etc.
+	// . this is in PageResults.cpp
+	if ( m_si && m_si->m_streamResults && ! m_printedTail &&
+	     m_printi >= m_msg3a.m_numDocIds ) {
+		m_printedTail = true;
+		printSearchResultsTail ( st );
+		m_lastChunk = true;
 	}
 
 
@@ -1331,8 +1370,9 @@ bool Msg40::gotSummary ( ) {
 				this ,
 				doneSendingWrapper9 ,
 				m_lastChunk ) )
-		// if it blocked, inc this count. we'll only call m_callback above
-		// when m_sendsIn equals m_sendsOut... and m_numReplies == m_numRequests
+		// if it blocked, inc this count. we'll only call m_callback 
+		// above when m_sendsIn equals m_sendsOut... and 
+		// m_numReplies == m_numRequests
 		m_sendsOut++;
 
 
@@ -4759,18 +4799,9 @@ bool Msg40::printSearchResult9 ( long ix ) {
 	// get state0
 	State0 *st = (State0 *)m_state;
 
-	SafeBuf *sb = &st->m_sb;
-
+	//SafeBuf *sb = &st->m_sb;
 	// clear it since we are streaming
-	sb->reset();
-
-	// this is in PageResults.cpp
-	if ( ! m_printedHeader ) {
-		// only print header once
-		m_printedHeader = true;
-		printSearchResultsHeader ( st );
-	}
-
+	//sb->reset();
 
 	Msg40 *msg40 = &st->m_msg40;
 
@@ -4792,15 +4823,6 @@ bool Msg40::printSearchResult9 ( long ix ) {
 		m_numPrinted++;
 
 	}
-
-	// . wrap it up with Next 10 etc.
-	// . this is in PageResults.cpp
-	if ( m_numPrinted >= m_numRequests && ! m_printedTail ) {
-		m_printedTail = true;
-		printSearchResultsTail ( st );
-		m_lastChunk = true;
-	}
-
 
 	return true;
 }
