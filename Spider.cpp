@@ -29,7 +29,8 @@
 // . i'd like to set back to 10 for speed... maybe even 5 or less
 #define SPIDER_DONE_TIMER 20
 
-#define MAX_WINNER_NODES 40
+// seems like timecity.com as gigabytes of spiderdb data so up from 40 to 400
+#define MAX_WINNER_NODES 400
 
 Doledb g_doledb;
 
@@ -615,7 +616,9 @@ bool Spiderdb::init ( ) {
 			    -1      , // fixedDataSize
 			    // now that we have MAX_WINNER_NODES allowed in doledb
 			    // we don't have to keep spiderdb so tightly merged i guess..
-			    3,//g_conf.m_spiderdbMinFilesToMerge , mintomerge
+			    // MDW: it seems to slow performance when not tightly merged
+			    // so put this back to "2"...
+			    2,//g_conf.m_spiderdbMinFilesToMerge , mintomerge
 			    maxMem,//g_conf.m_spiderdbMaxTreeMem ,
 			    maxTreeNodes                ,
 			    true                        , // balance tree?

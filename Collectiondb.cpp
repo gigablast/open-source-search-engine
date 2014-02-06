@@ -1105,10 +1105,11 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// and clear the robots.txt cache in case we recently spidered a
 	// robots.txt, we don't want to use it, we want to use the one we
 	// have in the test-parser subdir so we are consistent
-	RdbCache *robots = Msg13::getHttpCacheRobots();
-	RdbCache *others = Msg13::getHttpCacheOthers();
-	robots->clear ( oldCollnum );
-	others->clear ( oldCollnum );
+	//RdbCache *robots = Msg13::getHttpCacheRobots();
+	//RdbCache *others = Msg13::getHttpCacheOthers();
+	// clear() was removed do to possible corruption
+	//robots->clear ( oldCollnum );
+	//others->clear ( oldCollnum );
 
 	//g_templateTable.reset();
 	//g_templateTable.save( g_hostdb.m_dir , "turkedtemplates.dat" );

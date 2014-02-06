@@ -22656,6 +22656,8 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	bool ignore = false;
 	if ( mbuf[0] == '1' ) ignore = true;
 
+	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( m_collnum );
+
 	//
 	// serialize each link into the metalist now
 	//
@@ -22934,6 +22936,10 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		// set the key, ksr.m_key. isDel = false
 		ksr.setKey ( firstIp, *d , false );
 
+		// if we've recently added this url to spiderdb in Spider.cpp, skip it
+		if ( sc && sc->isInDupCache ( &ksr , false ) )
+			continue;
+
 		// . technically speaking we do not have any reply so we
 		//   should not be calling this! cuz we don't have all the info
 		// . see if banned or filtered, etc.
@@ -22986,6 +22992,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//	linksFiltered++; continue; }
 		//if ( priority == SPIDER_PRIORITY_BANNED   ) {
 		//	linksBanned++; continue; }
+
 
 		// serialize into the buffer
 		long need = ksr.getRecSize();

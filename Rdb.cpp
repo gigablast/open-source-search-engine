@@ -2370,7 +2370,10 @@ bool Rdb::addRecord ( collnum_t collnum,
 		}
 	}
 
-	// cancel any spider request that is a dup in the dupcache to save disk space
+	// . cancel any spider request that is a dup in the dupcache to save disk space
+	// . MDW: can't do it this way, it will end up in twins spiderdb then and they
+	//   will be out of sync. just rely on dedupSpiderList() in the merge.
+	/*
 	if ( m_rdbId == RDB_SPIDERDB && ! KEYNEG(key) ) {
 		// . this will create it if spiders are on and its NULL
 		// . even if spiders are off we need to create it so 
@@ -2385,6 +2388,7 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// in Spider.cpp will do that when called from addSpiderRequest() below
 		if ( isReq && sc->isInDupCache ( sreq , false ) ) return true;
 	}
+	*/
 
 	if ( m_useTree && (tn=m_tree.addNode ( collnum, key , data , dataSize ))>=0) {
 		// if adding to spiderdb, add to cache, too

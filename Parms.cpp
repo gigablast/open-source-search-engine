@@ -18364,8 +18364,8 @@ void handleRequest3fLoop ( void *weArg ) {
 		if ( cx->m_spiderColl ) {
 			log("parms: forcing waiting tree rebuild");
 			cx->m_spiderColl->m_waitingTreeNeedsRebuild = true;
-			// and the dup cache because rebuilding the waiting tree
-			cx->m_spiderColl->m_dupCache.clear(0);
+			// reset dup cache because rebuilding the waiting tree
+			cx->m_spiderColl->m_dupCache.reset();//clear(0);
 		}
 		// . assume we have urls ready to spider too
 		// . no, because if they change the filters and there are
