@@ -3047,9 +3047,9 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "stream=1&" // stream results back as we get them
 			      "q="
 			      // put NEWEST on top
-			      "gbsortby%%3Agbspiderdate+"
+			      "gbsortbyint%%3Agbspiderdate+"
 			      // min spider date = now - 10 mins
-			      "gbmin%%3Agbspiderdate%%3A%li&"
+			      "gbminint%%3Agbspiderdate%%3A%li&"
 			      //"debug=1"
 			      "prepend=type%%3Ajson"
 			      ">"

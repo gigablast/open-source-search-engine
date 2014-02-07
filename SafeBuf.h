@@ -306,6 +306,7 @@ struct SafeBuf {
 	bool  pushLong (long i);
 	bool  pushLongLong (long long i);
 	bool  pushFloat (float i);
+	bool  pushDouble (double i);
 	long  popLong();
 	float popFloat();
 

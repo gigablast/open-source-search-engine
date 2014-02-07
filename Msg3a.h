@@ -61,7 +61,7 @@ public:
 	// we basically turn the scores we get from each msg39 split into
 	// floats (rscore_t) and store them as floats so that PostQueryRerank
 	// has an easier time
-	float *getScores        ( ) { return m_scores;        };
+	double *getScores        ( ) { return m_scores;        };
 	long   getNumDocIds     ( ) { return m_numDocIds; };
 
 	long getSiteHash26 ( long i ) { 
@@ -160,7 +160,7 @@ public:
 
 	// final merged lists go here
 	long long      *m_docIds        ;
-	float          *m_scores        ;
+	double         *m_scores        ;
 	class DocIdScore **m_scoreInfos ;
 	//key_t          *m_recs          ; // clusterdb recs
 	key_t          *m_clusterRecs   ;

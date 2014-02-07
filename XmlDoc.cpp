@@ -29871,6 +29871,23 @@ bool XmlDoc::hashNumber ( char *beginBuf ,
 	if ( ! hashNumber2 ( f , hi , "gbrevsortby" ) )
 		return false;
 
+	//
+	// also hash as an int, 4 byte-integer so our lastSpidered timestamps
+	// dont lose 128 seconds of resolution
+	//
+
+	long i = (long) atoll2 ( p , bufEnd - p );
+
+	if ( ! hashNumber3 ( i , hi , "gbsortbyint" ) )
+		return false;
+
+	// also hash in reverse order for sorting from low to high
+	i = -1 * i;
+
+	if ( ! hashNumber3 ( i , hi , "gbrevsortbyint" ) )
+		return false;
+
+
 	return true;
 }
 
@@ -29955,6 +29972,113 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 	// store in buffer
 	char buf[128];
 	long bufLen = sprintf(buf,"%f",f);
+
+	// add to wts for PageParser.cpp display
+	// store it
+	if ( ! storeTerm ( buf,
+			   bufLen,
+			   truePrefix64,
+			   hi,
+			   0, // word#, i,
+			   0, // wordPos
+			   0,// densityRank , // 0-15
+			   0, // MAXDIVERSITYRANK,//phrase
+			   0, // ws,
+			   0, // hashGroup,
+			   //true,
+			   &m_wbuf,
+			   m_wts,
+			   // a hack for display in wts:
+			   SOURCE_NUMBER, // SOURCE_BIGRAM, // synsrc
+			   langUnknown ) )
+		return false;
+
+	return true;
+}
+
+bool XmlDoc::hashNumber3 ( long n , HashInfo *hi , char *sortByStr ) {
+
+	// prefix is something like price. like the meta "name" or
+	// the json name with dots in it like "product.info.price" or something
+	long long nameHash = 0LL;
+	long nameLen = 0;
+	if ( hi->m_prefix ) nameLen = gbstrlen ( hi->m_prefix );
+	if ( hi->m_prefix && nameLen ) 
+		nameHash = hash64Lower_utf8 ( hi->m_prefix , nameLen );
+	// need a prefix for hashing numbers... for now
+	else { char *xx=NULL; *xx=0; }
+		
+	// combine prefix hash with a special hash to make it unique to avoid
+	// collisions. this is the "TRUE" prefix.
+	long long truePrefix64 = hash64n ( sortByStr ); // "gbsortby");
+	// hash with the "TRUE" prefix
+	long long ph2 = hash64 ( nameHash , truePrefix64 );
+
+	// . now store it
+	// . use field hash as the termid. normally this would just be
+	//   a prefix hash
+	// . use mostly fake value otherwise
+	key144_t k;
+	g_posdb.makeKey ( &k ,
+			  ph2 ,
+			  0,//docid
+			  0,// word pos #
+			  0,// densityRank , // 0-15
+			  0 , // MAXDIVERSITYRANK
+			  0 , // wordSpamRank ,
+			  0 , //siterank
+			  0 , // hashGroup,
+			  // we set to docLang final hash loop
+			  //langUnknown, // langid
+			  // unless already set. so set to english here
+			  // so it will not be set to something else
+			  // otherwise our floats would be ordered by langid!
+			  // somehow we have to indicate that this is a float
+			  // termlist so it will not be mangled any more.
+			  //langEnglish,
+			  langUnknown,
+			  0 , // multiplier
+			  false, // syn?
+			  false , // delkey?
+			  hi->m_shardByTermId );
+
+	//long long final = hash64n("products.offerprice",0);
+	//long long prefix = hash64n("gbsortby",0);
+	//long long h64 = hash64 ( final , prefix);
+	//if ( ph2 == h64 )
+	//	log("hey: got offer price");
+
+	// now set the float in that key
+	//g_posdb.setFloat ( &k , f );
+	g_posdb.setInt ( &k , n );
+
+	// HACK: this bit is ALWAYS set by Posdb::makeKey() to 1
+	// so that we can b-step into a posdb list and make sure
+	// we are aligned on a 6 byte or 12 byte key, since they come
+	// in both sizes. but for this, hack it off to tell
+	// addTable144() that we are a special posdb key, a "numeric"
+	// key that has a float stored in it. then it will NOT
+	// set the siterank and langid bits which throw our sorting
+	// off!!
+	g_posdb.setAlignmentBit ( &k , 0 );
+
+	// sanity
+	//float t = g_posdb.getFloat ( &k );
+	long x = g_posdb.getInt ( &k );
+	if ( x != n ) { char *xx=NULL;*xx=0; }
+
+	HashTableX *dt = hi->m_tt;
+
+	// the key may indeed collide, but that's ok for this application
+	if ( ! dt->addTerm144 ( &k ) ) 
+		return false;
+
+	if ( ! m_wts ) 
+		return true;
+
+	// store in buffer
+	char buf[128];
+	long bufLen = sprintf(buf,"%li",n);
 
 	// add to wts for PageParser.cpp display
 	// store it

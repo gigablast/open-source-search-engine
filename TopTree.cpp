@@ -36,6 +36,7 @@ TopTree::~TopTree() { reset(); }
 void TopTree::reset ( ) {
 	if ( m_nodes ) mfree(m_nodes,m_allocSize,"TopTree");
 	m_nodes = NULL;
+	m_useIntScores = false;
 	//m_sampleVectors  = NULL;
 	m_numNodes = 0;
 	m_numUsedNodes = 0;
@@ -200,9 +201,18 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 	if ( m_vcount >= m_docsWanted ) {
 		long i = m_lowNode;
 
-		if ( t->m_score < m_nodes[i].m_score ) {
-			m_kickedOutDocIds = true; return false; }
-		if ( t->m_score > m_nodes[i].m_score ) goto addIt;
+		if ( m_useIntScores ) {
+			if ( t->m_intScore < m_nodes[i].m_intScore ) {
+				m_kickedOutDocIds = true; return false; }
+			if ( t->m_intScore > m_nodes[i].m_intScore) goto addIt;
+		}
+
+		else {
+			if ( t->m_score < m_nodes[i].m_score ) {
+				m_kickedOutDocIds = true; return false; }
+			if ( t->m_score > m_nodes[i].m_score ) goto addIt;
+		}
+
 		// . finally, compare docids, store lower ones first
 		// . docids should not tie...
 		if ( t->m_docId >= m_nodes[i].m_docId ) {
@@ -243,11 +253,23 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 	// . if a node exists with our key then do NOT replace it
 	else while ( i >= 0 ) {
 		iparent = i;
+
 		// . compare to the ith node
-		if ( t->m_score < m_nodes[i].m_score ) {
-			i = LEFT(i); dir = 0; continue; }
-		if ( t->m_score > m_nodes[i].m_score ) {
-			i = RIGHT(i); dir = 1; continue; }
+		if ( m_useIntScores ) {
+			if ( t->m_intScore < m_nodes[i].m_intScore ) {
+				i = LEFT(i); dir = 0; continue; }
+			if ( t->m_intScore > m_nodes[i].m_intScore ) {
+				i = RIGHT(i); dir = 1; continue; }
+
+		}
+		else {
+			if ( t->m_score < m_nodes[i].m_score ) {
+				i = LEFT(i); dir = 0; continue; }
+			if ( t->m_score > m_nodes[i].m_score ) {
+				i = RIGHT(i); dir = 1; continue; }
+		}
+
+
 		// . finally, compare docids, store lower ones first
 		// . docids should not tie...
 		if ( t->m_docId > m_nodes[i].m_docId ) {
@@ -293,7 +315,13 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 	// . WARNING: if t->m_score is fractional, the fraction will be
 	//   dropped and could result in the lower scoring of the two docids
 	//   being kept.
-	uint32_t cs = ((uint32_t)t->m_score);
+	uint32_t cs ;
+
+	if ( m_useIntScores )
+		cs = (uint32_t) t->m_intScore;
+	else
+		cs = ((uint32_t)t->m_score);
+
 	key_t k;
 	k.n1  =  domHash                 << 24; // 1 byte domHash
 	//k.n1 |= (t->m_bscore & ~0xc0)    << 16; // 1 byte bscore
@@ -421,7 +449,13 @@ bool TopTree::addNode ( TopNode *t , long tnn ) {
 		// WARNING: if t->m_score is fractional, the fraction will be
 		// dropped and could result in the lower scoring of the two 
 		// docids being kept.
-		uint32_t cs = ((uint32_t)t->m_score);
+		uint32_t cs ;
+
+		if ( m_useIntScores )
+			cs = (uint32_t) t->m_intScore;
+		else
+			cs = ((uint32_t)t->m_score);
+
 		k.n1  =  domHash2                << 24; // 1 byte domHash
 		//k.n1 |= (t->m_bscore & ~0xc0)    << 16; // 1 byte bscore
 		k.n1 |=  cs                      >> 16; // 4 byte score

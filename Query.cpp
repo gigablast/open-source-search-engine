@@ -2187,6 +2187,11 @@ bool Query::setQWords ( char boolFlag ,
 		if ( fieldCode == FIELD_GBNUMBERMAX )
 			ph = hash64 ("gbsortby", 8);
 
+		if ( fieldCode == FIELD_GBNUMBERMININT )
+			ph = hash64 ("gbsortbyint", 11);
+		if ( fieldCode == FIELD_GBNUMBERMAXINT )
+			ph = hash64 ("gbsortbyint", 11);
+
 		// ptr to field, if any
 
 		qw->m_fieldCode = fieldCode;
@@ -2213,8 +2218,14 @@ bool Query::setQWords ( char boolFlag ,
 		     // gbmin:price:1.23
 		     fieldCode == FIELD_GBNUMBERMIN ||
 		     fieldCode == FIELD_GBNUMBERMAX ||
+
+		     fieldCode == FIELD_GBSORTBYINT ||
+		     fieldCode == FIELD_GBREVSORTBYINT ||
+		     fieldCode == FIELD_GBNUMBERMININT ||
+		     fieldCode == FIELD_GBNUMBERMAXINT ||
+
 		     fieldCode == FIELD_GBAD  ) {
-			// . find first space -- that terminates the field value
+			// . find 1st space -- that terminates the field value
 			// . make "end" point to the end of the entire query
 			char *end = 
 				(words.m_words[words.m_numWords-1] +
@@ -2222,13 +2233,14 @@ bool Query::setQWords ( char boolFlag ,
 			// use this for gbmin:price:1.99 etc.
 			long firstColonLen = -1;
 			// "w" points to the first alnumword after the field,
-			// so for site:xyz.com "w" points to the 'x' and wlen would
-			// be 3 in that case sinze xyz is a word of 3 chars. so advance
+			// so for site:xyz.com "w" points to the 'x' and wlen 
+			// would be 3 in that case sinze xyz is a word of 3 
+			// chars. so advance
 			// wlen until we hit a space.
 			while ( w + wlen < end ) {
 				// stop at first white space
 				if ( is_wspace_utf8(w+wlen) ) break;
-				// in the case of gbmin:price:1.99 record first ':'
+				// in case of gbmin:price:1.99 record first ':'
 				if ( w[wlen]==':' ) firstColonLen = wlen;
 				wlen++;
 			}
@@ -2238,20 +2250,27 @@ bool Query::setQWords ( char boolFlag ,
 			unsigned long long wid = hash64 ( w , wlen, 0LL );
 
 			// i've decided not to make 
-			// gbsortby:products.offerPrice gbmin:price:1.23 case insensitive
+			// gbsortby:products.offerPrice 
+			// gbmin:price:1.23 case insensitive
 			if ( fieldCode == FIELD_GBSORTBY ||
-			     fieldCode == FIELD_GBREVSORTBY )
+			     fieldCode == FIELD_GBREVSORTBY ||
+			     fieldCode == FIELD_GBSORTBYINT ||
+			     fieldCode == FIELD_GBREVSORTBYINT )
 				wid = hash64Lower_utf8 ( w , wlen , 0LL );
 
 			// gbmin:price:1.23
 			if ( firstColonLen>0 &&
 			     ( fieldCode == FIELD_GBNUMBERMIN ||
-			       fieldCode == FIELD_GBNUMBERMAX ) ) {
+			       fieldCode == FIELD_GBNUMBERMAX ||
+			       fieldCode == FIELD_GBNUMBERMAXINT ||
+			       fieldCode == FIELD_GBNUMBERMAXINT ) ) {
 				// record the field
-				wid = hash64Lower_utf8 ( w , firstColonLen , 0LL );
+				wid = hash64Lower_utf8(w,firstColonLen , 0LL );
 				// and also the floating point after that
 				qw->m_float = atof ( w + firstColonLen + 1 );
+				qw->m_int = (long)atoll( w + firstColonLen+1);
 			}
+
 
 			// should we have normalized before hashing?
 			if ( fieldCode == FIELD_URL ||
@@ -3078,15 +3097,32 @@ struct QueryField g_fields[] = {
 	{"gbgigabitvector", FIELD_GBGIGABITVECTOR, false,""},
 	{"gbsamplevector", FIELD_GBSAMPLEVECTOR, false,""},
 	{"gbcontenthash", FIELD_GBCONTENTHASH, false,""},
-	{"gbsortby", FIELD_GBSORTBY, false,"Example: gbsortby:price. Fields can be "
+
+	{"gbsortby", FIELD_GBSORTBY, false,
+	 "Example: gbsortby:price. Fields can be "
 	 "in JSON or in meta tag."},
-	{"gbrevsortby", FIELD_GBREVSORTBY, false,"Example: gbrevsortby:item.price . "
+	{"gbrevsortby", FIELD_GBREVSORTBY, false,
+	 "Example: gbrevsortby:item.price . "
 	 "Fields can be in JSON or in meta tag."},
 
 	// gbmin:price:1.23
 	{"gbmin", FIELD_GBNUMBERMIN, false,"Usage: gbmin:price:1.99 . Numeric "
 	 "fields can be in JSON or in meta tag."},
 	{"gbmax", FIELD_GBNUMBERMAX, false,"Usage: gbmax:price:1.99"},
+
+
+	{"gbsortbyint", FIELD_GBSORTBYINT, false,
+	 "Example: gbsortbyint:intfield . Fields can be "
+	 "in JSON or in meta tag."},
+	{"gbrevsortbyint", FIELD_GBREVSORTBYINT, false,
+	 "Example: gbrevsortbyint:item.count . "
+	 "Fields can be in JSON or in meta tag."},
+	{"gbminint", FIELD_GBNUMBERMININT, false,
+	 "Usage: gbminint:count:99 . Numeric "
+	 "fields can be in JSON or in meta tag."},
+	{"gbmaxint", FIELD_GBNUMBERMAXINT, false,
+	 "Usage: gbmaxint:count:99"},
+
 
 	{"gbcountry",FIELD_GBCOUNTRY,false,""},
 	{"gbad",FIELD_GBAD,false,""},
@@ -3108,7 +3144,9 @@ struct QueryField g_fields[] = {
 
 	{"gbpermalink",FIELD_GBPERMALINK,false,""},
 	//{"gbcsenum",FIELD_GBCSENUM,false,""},
-	{"gbparenturl", FIELD_GBPARENTURL, true,"Match the json urls that were extract from this parent url. Example: gbparenturl:www.gigablast.com/addurl.htm"},
+	{"gbparenturl", FIELD_GBPARENTURL, true,"Match the json urls that "
+	 "were extract from this parent url. Example: "
+	 "gbparenturl:www.gigablast.com/addurl.htm"},
 	{"gbdocid",FIELD_GBDOCID,false,"restrict results to this docid"}
 	
 };

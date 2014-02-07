@@ -2100,8 +2100,10 @@ bool printResult ( State0 *st, long ix ) {
 			sb->incrementLength(-1);
 			// crap, we lose resolution storing as a float
 			// so fix that shit here...
-			float f = mr->m_lastSpidered;
-			sb->safePrintf(",\"lastSpiderTimeUTC\":%.0f}",f);
+			//float f = mr->m_lastSpidered;
+			//sb->safePrintf(",\"lastCrawlTimeUTC\":%.0f}",f);
+			sb->safePrintf(",\"lastCrawlTimeUTC\":%li}",
+				       mr->m_lastSpidered);
 		}
 
 		//mr->size_content );

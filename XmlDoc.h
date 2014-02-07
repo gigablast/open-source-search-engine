@@ -863,6 +863,10 @@ class XmlDoc {
 			   class HashInfo *hi ,
 			   char *gbsortByStr ) ;
 
+	bool hashNumber3 ( long x,
+			   class HashInfo *hi ,
+			   char *gbsortByStr ) ;
+
 	// print out for PageTitledb.cpp and PageParser.cpp
 	bool printDoc ( class SafeBuf *pbuf );
 	bool printMenu ( class SafeBuf *pbuf );
