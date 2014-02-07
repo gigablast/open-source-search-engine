@@ -989,6 +989,8 @@ void SpiderCache::reset ( ) {
 }
 
 SpiderColl *SpiderCache::getSpiderCollIffNonNull ( collnum_t collnum ) {
+	// "coll" must be invalid
+	if ( collnum < 0 ) return NULL;
 	// shortcut
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	// empty?
@@ -1010,6 +1012,8 @@ bool tryToDeleteSpiderColl ( SpiderColl *sc ) {
 // . get SpiderColl for a collection
 // . if it is NULL for that collection then make a new one
 SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
+	// "coll" must be invalid
+	if ( collnum < 0 ) return NULL;
 	// return it if non-NULL
 	//if ( m_spiderColls [ collnum ] ) return m_spiderColls [ collnum ];
 	// if spidering disabled, do not bother creating this!
