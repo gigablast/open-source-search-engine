@@ -557,10 +557,6 @@ bool StateCD::sendList ( ) {
 	//    (long)m_rdbId,(long)m_fmt,(long)m_someoneNeedsMore,
 	//    (long)m_printedEndingBracket);
 
-	bool lastChunk = false;
-	if ( ! m_someoneNeedsMore )
-		lastChunk = true;
-
 	// if nobody needs to read more...
 	if ( m_rdbId == RDB_TITLEDB && 
 	     m_fmt == FMT_JSON && 
@@ -572,6 +568,15 @@ bool StateCD::sendList ( ) {
 		//log("adding ]. len=%li",sb.length());
 	}
 
+	if ( ! m_someoneNeedsMore && sb.length() == 0 ) {
+		// i guess the send has completed. we are likely being
+		// called by TcpServer::writeSocketWrapper() makeCallback()
+		// so take us out of streaming mode so socket can be
+		// immediately destroyed
+		m_socket->m_streamingMode = false;
+		return true;
+	}
+
 	TcpServer *tcp = &g_httpServer.m_tcp;
 
 	// . transmit the chunk in sb
@@ -581,13 +586,10 @@ bool StateCD::sendList ( ) {
 	// . when TcpServer is done transmitting, it does not close the
 	//   socket but rather calls doneSendingWrapper() which can call
 	//   this function again to send another chunk
-	// . when we are truly done sending all the data, then we set lastChunk
-	//   to true and TcpServer.cpp will destroy m_socket when done
 	if ( ! tcp->sendChunk ( m_socket , 
 				&sb  ,
 				this ,
-				doneSendingWrapper ,
-				lastChunk ) )
+				doneSendingWrapper ) )
 		return false;
 
 	// we are done sending this chunk, i guess tcp write was cached

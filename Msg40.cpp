@@ -1298,6 +1298,7 @@ bool Msg40::gotSummary ( ) {
 	      m_printi++){
 		// if we are waiting on our previous send to complete... wait..
 		if ( m_sendsOut > m_sendsIn ) break;
+
 		// otherwise, get the summary for result #m_printi
 		Msg20 *m20 = m_msg20[m_printi];
 		if ( ! m20 ) {
@@ -1349,7 +1350,20 @@ bool Msg40::gotSummary ( ) {
 	     m_printi >= m_msg3a.m_numDocIds ) {
 		m_printedTail = true;
 		printSearchResultsTail ( st );
-		m_lastChunk = true;
+	}
+
+
+	// . if everything has been sent on the socket, then we are done!
+	// . we are likely being called from TcpServer::writeSOcketWrapper()
+	//   calling makeCallback()
+	if ( m_si && 
+	     m_si->m_streamResults &&
+	     m_sendsIn >= m_sendsOut &&
+	     sb->length() == 0 && m_printedTail ) {
+		// this will cause the socket to be destroyed immediately!
+		// and we are only here because our last write completed!
+		st->m_socket->m_streamingMode = false;
+		return true;
 	}
 
 
@@ -1368,8 +1382,7 @@ bool Msg40::gotSummary ( ) {
 	     ! tcp->sendChunk ( st->m_socket , 
 				sb  ,
 				this ,
-				doneSendingWrapper9 ,
-				m_lastChunk ) )
+				doneSendingWrapper9 ) )
 		// if it blocked, inc this count. we'll only call m_callback 
 		// above when m_sendsIn equals m_sendsOut... and 
 		// m_numReplies == m_numRequests

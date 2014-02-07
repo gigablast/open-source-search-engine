@@ -1455,7 +1455,12 @@ void writeSocketWrapper ( int sd , void *state ) {
 	if ( status == 1  &&  ! s->m_readBuf ) return;
 	// good?
 	g_errno = 0;
-	// otherwise, call callback on done writing or error
+	// . otherwise, call callback on done writing or error
+	// . in m_streamingMode this may call another sendChunk()!!!
+	//   OR it may set streamingMode to false.. it can only do one or
+	//   the other and not both!!! because if it sets streamingMode to
+	//   false then we destroy the socket below!!!! so it can't be
+	//   sending anything new!!!
 	THIS->makeCallback ( s );
 
 	// if callback changed socket status to ST_SEND_AGAIN 
@@ -1494,6 +1499,8 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
  loop:
 	// send some stuff
 	long toSend = s->m_sendBufUsed - s->m_sendOffset;
+	// if nothing to send we are done!
+	if ( ! toSend ) return 1;
 	// get a ptr to the msg piece to send
 	char *msg = s->m_sendBuf;
 	if ( ! msg ) return 1;
@@ -1545,7 +1552,11 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 	s->m_sendOffset += n;
 	// . if we sent less than we tried to send then block
 	// . we should be notified via sig/callback when we can send the rest
-	if ( n < toSend ) return 0;
+	if ( n < toSend ) {
+		//if ( g_conf.m_logDebugTcp )
+		//	log(".... Tcpserver: %li<%li",n,toSend);
+		return 0;
+	}
 	// . we sent all we were asked to, but our sendBuf may need a refill
 	// . call this routine to refill it
 	if ( s->m_totalSent  < s->m_totalToSend ) {
@@ -2248,8 +2259,7 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 			    // call this function when done sending this chunk
 			    // so that it can read another chunk and call 
 			    // sendChunk() again.
-			    void (* doneSendingWrapper)( void *,TcpSocket *) ,
-			    bool lastChunk ) {
+			    void (* doneSendingWrapper)( void *,TcpSocket *)){
 
 	log("tcp: sending chunk of %li bytes", sb->length() );
 
@@ -2264,10 +2274,26 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 	s->m_sendOffset        = 0;
 	s->m_totalSent         = 0;
 	s->m_totalToSend       = 0;
+	s->m_totalSent         = 0;
 
 	// let it know not to close the socket while this is set
-	if ( ! lastChunk ) s->m_streamingMode = true;
-	else               s->m_streamingMode = false;
+	//if ( ! lastChunk ) s->m_streamingMode = true;
+	//else               s->m_streamingMode = false;
+	s->m_streamingMode = true;
+
+	//g_conf.m_logDebugTcp = true;
+
+	long term = 20;
+	if ( sb->length() < term ) term = sb->length();
+	char *cp = sb->getBufStart() + term;
+	char c = *cp;
+	*cp = '\0';
+	log("tcp: chunkstart=%s",sb->getBufStart());
+	*cp = c;
+
+	long minus = 20;
+	if ( sb->length() < minus ) minus = sb->length() ;
+	log("tcp: chunkend=%s",sb->getBuf() - minus);
 
 	// . start the send process
 	// . returns false if send did not complete
