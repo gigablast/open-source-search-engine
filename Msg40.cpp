@@ -1332,14 +1332,16 @@ bool Msg40::gotSummary ( ) {
 
 		// primitive deduping. for diffbot json exclude url's from the
 		// XmlDoc::m_contentHash32.. it will be zero if invalid i guess
-		if ( mr->m_contentHash32 &&
+		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
+		     mr->m_contentHash32 &&
 		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) ) {
 			log("msg40: dup sum #%li",m_printi);
 			continue;
 		}
 
 		// return true with g_errno set on error
-		if ( mr->m_contentHash32 &&
+		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
+		     mr->m_contentHash32 &&
 		     ! m_dedupTable.addKey ( &mr->m_contentHash32 ) ) {
 			m_hadPrintError = true;
 			log("msg40: error adding to dedup table: %s",

@@ -2089,6 +2089,21 @@ bool printResult ( State0 *st, long ix ) {
 	// just print cached web page?
 	if ( mr->ptr_content ) {
 		sb->safeStrcpy ( mr->ptr_content );
+		// . let's hack the spidertime onto the end
+		// . so when we sort by that using gbsortby:spiderdate
+		//   we can ensure it is ordered correctly
+		char *end = sb->getBuf() -1;
+		if ( si->m_format == FORMAT_JSON &&
+		     end > sb->getBufStart() &&
+		     *end == '}' ) {
+			// replace trailing } with spidertime}
+			sb->incrementLength(-1);
+			// crap, we lose resolution storing as a float
+			// so fix that shit here...
+			float f = mr->m_lastSpidered;
+			sb->safePrintf(",\"lastSpiderTimeUTC\":%.0f}",f);
+		}
+
 		//mr->size_content );
 		if ( si->m_format == FORMAT_HTML )
 			sb->safePrintf("\n\n<br><br>\n\n");

@@ -3038,7 +3038,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      " &nbsp; "
 
 			      // newest json on top of results, last 10 mins
-			      "<a href=/search?icc=1&format=json&sc=0&dr=0&"
+			      "<a href=/search?icc=1&format=json&"
+			      // disable site clustering
+			      "sc=0&"
+			      // dodupcontentremoval:
+			      "dr=1&"
 			      "c=%s&n=10000000&rand=%llu&scores=0&id=1&"
 			      "stream=1&" // stream results back as we get them
 			      "q="
@@ -3046,8 +3050,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "gbsortby%%3Agbspiderdate+"
 			      // min spider date = now - 10 mins
 			      "gbmin%%3Agbspiderdate%%3A%li&"
-			      "debug=1"
-			      //"prepend=type%%3Ajson"
+			      //"debug=1"
+			      "prepend=type%%3Ajson"
 			      ">"
 			      "json search (last 30 seconds)</a>"
 
