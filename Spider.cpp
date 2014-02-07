@@ -5431,8 +5431,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//   after they change the parms. perhaps we should set
 		//   the # of urls spidered to the "sentEmail" flag so we
 		//   know if that changes to send another...
-		if ( cr->m_isCustomCrawl && ! ci->m_hasUrlsReadyToSpider ) 
-			continue;
+		// . bug in this...
+		//if ( cr->m_isCustomCrawl && ! ci->m_hasUrlsReadyToSpider ) 
+		//	continue;
 
 		// get the spider collection for this collnum
 		m_sc = g_spiderCache.getSpiderColl(m_cri);
