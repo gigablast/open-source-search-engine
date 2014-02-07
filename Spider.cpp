@@ -3987,20 +3987,24 @@ bool SpiderColl::scanListForWinners ( ) {
 						 spiderTimeMS ,
 						 uh48 );
 
-		// if this url is already in the winnerTree then either we replace it
-		// or we skip ourselves. 
+		// if this url is already in the winnerTree then either we 
+		// replace it or we skip ourselves. 
 		//
-		// watch out for dups in winner tree, the same url can have multiple
-		// spiderTimeMses somehow... i guess it could have different hop counts
+		// watch out for dups in winner tree, the same url can have 
+		// multiple spiderTimeMses somehow... i guess it could have 
+		// different hop counts
 		// as well, resulting in different priorities...
-		// actually the dedup table could map to a priority and a node so
-		// we can kick out a lower priority version of the same url...
+		// actually the dedup table could map to a priority and a node
+		// so we can kick out a lower priority version of the same url.
 		long winSlot = m_winnerTable.getSlot ( &uh48 );
 		if ( winSlot >= 0 ) {
 			key192_t *oldwk ;
-			oldwk = (key192_t *)m_winnerTable.getDataFromSlot ( winSlot );
+			oldwk = (key192_t *)m_winnerTable.
+				getDataFromSlot ( winSlot );
 			// are we lower priority? (or equal)
-			if(KEYCMP((char *)&wk,(char *)oldwk,sizeof(key192_t))<=0) continue;
+			if(KEYCMP((char *)&wk,(char *)oldwk,
+				  sizeof(key192_t))<=0) 
+				continue;
 			// from table too. no it's a dup uh48!
 			//m_winnerTable.deleteKey ( &uh48 );
 			// otherwise we supplant it. remove old key from tree.
@@ -4014,7 +4018,8 @@ bool SpiderColl::scanListForWinners ( ) {
 		// only put 40 urls from the same firstIp into doledb if
 		// we have a lot of urls in our spiderdb already.
 		if ( m_totalBytesScanned < 200000 ) maxWinners = 1;
-		// sanity. make sure read is somewhat hefty for our maxWinners=1 thing
+		// sanity. make sure read is somewhat hefty for our 
+		// maxWinners=1 thing
 		if ( (long)SR_READ_SIZE < 500000 ) { char *xx=NULL;*xx=0; }
 
 
@@ -4086,13 +4091,15 @@ bool SpiderColl::scanListForWinners ( ) {
 		//}
 		*/
 
-		// . add to table which allows us to ensure same url not repeated in tree
+		// . add to table which allows us to ensure same url not 
+		//   repeated in tree
 		// . just skip if fail to add...
 		if ( m_winnerTable.addKey ( &uh48 , &wk ) < 0 ) continue;
 
-		// use an individually allocated buffer for each spiderrequest so if
-		// it gets removed from tree the memory can be freed by the tree
-		// which "owns" the data because m_winnerTree.set() above set ownsData
+		// use an individually allocated buffer for each spiderrequest
+		// so if it gets removed from tree the memory can be freed by 
+		// the tree which "owns" the data because m_winnerTree.set() 
+		// above set ownsData
 		// to true above.
 		long need = sreq->getRecSize();
 		char *newMem = (char *)mdup ( sreq , need , "sreqbuf" );
@@ -4105,7 +4112,8 @@ bool SpiderColl::scanListForWinners ( ) {
 				      need );
 
 		// sanity
-		//SpiderRequest *sreq2 = (SpiderRequest *)m_winnerTree.getData ( nn );
+		//SpiderRequest *sreq2 = (SpiderRequest *)m_winnerTree.
+		//getData ( nn );
 
 		// set new tail priority and time for next compare
 		if ( m_winnerTree.getNumUsedNodes() >= maxWinners ) {
@@ -4299,10 +4307,11 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 
 	// ok, all done if nothing to add to doledb. i guess we were misled
 	// that firstIp had something ready for us. maybe the url filters
-	// table changed to filter/ban them all. if a new request/reply comes in for
-	// this firstIp then it will re-add an entry to waitingtree and we will
-	// re-scan spiderdb. if we had something to spider but it was in the future
-	// the m_minFutureTimeMS will be non-zero, and we deal with that below...
+	// table changed to filter/ban them all. if a new request/reply comes 
+	// in for this firstIp then it will re-add an entry to waitingtree and
+	// we will re-scan spiderdb. if we had something to spider but it was 
+	// in the future the m_minFutureTimeMS will be non-zero, and we deal
+	// with that below...
 	if ( m_winnerTree.isEmpty() && ! m_minFutureTimeMS ) {
 		// if we received new incoming requests while we were
 		// scanning, which is happening for some crawls, then do
@@ -4380,13 +4389,16 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 						   // convert to seconds from ms
 						   winSpiderTimeMS / 1000     ,
 						   winUh48 ,
-						   false                         );
+						   false                    );
 		// store doledb key first
-		if ( ! m_doleBuf.safeMemcpy ( &doleKey, sizeof(key_t) ) ) hadError = true;
+		if ( ! m_doleBuf.safeMemcpy ( &doleKey, sizeof(key_t) ) ) 
+			hadError = true;
 		// then size of spiderrequest
-		if ( ! m_doleBuf.pushLong ( sreq2->getRecSize() ) ) hadError = true;
+		if ( ! m_doleBuf.pushLong ( sreq2->getRecSize() ) ) 
+			hadError = true;
 		// then the spiderrequest encapsulated
-		if ( ! m_doleBuf.safeMemcpy ( sreq2 , sreq2->getRecSize() )) hadError=true;
+		if ( ! m_doleBuf.safeMemcpy ( sreq2 , sreq2->getRecSize() )) 
+			hadError=true;
 		// note and error
 		if ( hadError ) {
 			log("spider: error making doledb list: %s",
