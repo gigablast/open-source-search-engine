@@ -2262,7 +2262,7 @@ bool Query::setQWords ( char boolFlag ,
 			if ( firstColonLen>0 &&
 			     ( fieldCode == FIELD_GBNUMBERMIN ||
 			       fieldCode == FIELD_GBNUMBERMAX ||
-			       fieldCode == FIELD_GBNUMBERMAXINT ||
+			       fieldCode == FIELD_GBNUMBERMININT ||
 			       fieldCode == FIELD_GBNUMBERMAXINT ) ) {
 				// record the field
 				wid = hash64Lower_utf8(w,firstColonLen , 0LL );
@@ -3113,15 +3113,33 @@ struct QueryField g_fields[] = {
 
 	{"gbsortbyint", FIELD_GBSORTBYINT, false,
 	 "Example: gbsortbyint:intfield . Fields can be "
-	 "in JSON or in meta tag."},
+	 "in JSON or in meta tag. "
+	 "Use 'gbspiderdate' field for the last time the page was "
+	 "spidered in seconds since the epoch in UTC."
+	},
+
 	{"gbrevsortbyint", FIELD_GBREVSORTBYINT, false,
-	 "Example: gbrevsortbyint:item.count . "
-	 "Fields can be in JSON or in meta tag."},
+	 "Example: 'gbrevsortbyint:item.count'. "
+	 "Fields can be in JSON or in meta tag. "
+	 "Use 'gbspiderdate' field for the last time the page was "
+	 "spidered in seconds since the epoch in UTC."
+	},
+
 	{"gbminint", FIELD_GBNUMBERMININT, false,
-	 "Usage: gbminint:count:99 . Numeric "
-	 "fields can be in JSON or in meta tag."},
+	 "Example: 'gbminint:spiderdate:1391749680' "
+	 "'gbminint:count:99'. Numeric "
+	 "fields can be in JSON or in meta tag. "
+	 "Use 'gbspiderdate' field for the last time the page was "
+	 "spidered in seconds since the epoch in UTC."
+	},
+
 	{"gbmaxint", FIELD_GBNUMBERMAXINT, false,
-	 "Usage: gbmaxint:count:99"},
+	 "Example: 'gbmaxint:spiderdate:1391749680' "
+	 "'gbmaxint:count:99'. Numeric "
+	 "fields can be in JSON or in meta tag. "
+	 "Use 'gbspiderdate' field for the last time the page was "
+	 "spidered in seconds since the epoch in UTC."
+	},
 
 
 	{"gbcountry",FIELD_GBCOUNTRY,false,""},
