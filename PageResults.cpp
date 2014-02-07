@@ -726,6 +726,14 @@ bool gotResults ( void *state ) {
 
 	SearchInput *si = &st->m_si;
 
+	// if already printed from Msg40.cpp, bail out now
+	if ( si->m_streamResults ) {
+		log("msg40: done streaming. nuking state.");
+		mdelete(st, sizeof(State0), "PageResults2");
+		delete st;
+		return true;
+	}
+
 	// shortcuts
 	char        *coll    = si->m_coll2;
 	long         collLen = si->m_collLen2;
@@ -877,9 +885,6 @@ bool gotResults ( void *state ) {
 	// DONE ADDING URL
 	//
 
-
-	// if already printed from Msg40.cpp, bail out now
-	if ( si->m_streamResults ) return true;
 
 	// print logo, search box, results x-y, ... into st->m_sb
 	printSearchResultsHeader ( st );

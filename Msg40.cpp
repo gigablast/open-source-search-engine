@@ -21,6 +21,8 @@
 // node cluster....
 #define MAX_OUTSTANDING_MSG20S 200
 
+bool printHttpMime ( class State0 *st ) ;
+
 //static void handleRequest40              ( UdpSlot *slot , long netnice );
 //static void gotExternalReplyWrapper      ( void *state , void *state2 ) ;
 static void gotCacheReplyWrapper         ( void *state );
@@ -81,6 +83,7 @@ static bool gotSummaryWrapper            ( void *state );
 bool isSubDom(char *s , long len);
 
 Msg40::Msg40() {
+	m_socketHadError = 0;
 	m_buf           = NULL;
 	m_buf2          = NULL;
 	m_cachedResults = false;
@@ -919,6 +922,9 @@ void didTaskWrapper ( void* state ) {
 
 bool Msg40::launchMsg20s ( bool recalled ) {
 
+	// don't launch any more if client browser closed socket
+	if ( m_socketHadError ) { char *xx=NULL; *xx=0; }
+
 	// these are just like for passing to Msg39 above
 	long maxAge = 0 ;
 	//if ( m_si->m_rcache ) maxAge = g_conf.m_titledbMaxCacheAge;
@@ -1221,6 +1227,14 @@ void doneSendingWrapper9 ( void *state , TcpSocket *sock ) {
 	Msg40 *THIS = (Msg40 *)state;
 	// the send completed, count it
 	THIS->m_sendsIn++;
+	// socket error? if client closes the socket midstream we get one.
+	if ( g_errno ) {
+		THIS->m_socketHadError = g_errno;
+		log("msg40: streaming socket had error: %s",
+		    mstrerror(g_errno));
+	}
+	// clear it so we don't think it was a msg20 error below
+	g_errno = 0;
 	// try to send more... returns false if blocked on something
 	if ( ! THIS->gotSummary() ) return;
 	// all done!!!???
@@ -1291,6 +1305,7 @@ bool Msg40::gotSummary ( ) {
 	if ( m_si && m_si->m_streamResults && ! m_printedHeader ) {
 		// only print header once
 		m_printedHeader = true;
+		printHttpMime ( st );
 		printSearchResultsHeader ( st );
 	}
 
@@ -1332,7 +1347,7 @@ bool Msg40::gotSummary ( ) {
 		}
 
 
-		log("msg40: printing #%li",m_printi);
+		//log("msg40: printing #%li",m_printi);
 
 		// . ok, we got it, so print it and stream it
 		// . this might set m_hadPrintError to true
@@ -1343,6 +1358,9 @@ bool Msg40::gotSummary ( ) {
 		m20->freeReply();
 	}
 
+	// set it to true on all but the last thing we send!
+	if ( m_si->m_streamResults )
+		st->m_socket->m_streamingMode = true;
 
 	// . wrap it up with Next 10 etc.
 	// . this is in PageResults.cpp
@@ -1350,24 +1368,15 @@ bool Msg40::gotSummary ( ) {
 	     m_printi >= m_msg3a.m_numDocIds ) {
 		m_printedTail = true;
 		printSearchResultsTail ( st );
-	}
-
-
-	// . if everything has been sent on the socket, then we are done!
-	// . we are likely being called from TcpServer::writeSOcketWrapper()
-	//   calling makeCallback()
-	if ( m_si && 
-	     m_si->m_streamResults &&
-	     m_sendsIn >= m_sendsOut &&
-	     sb->length() == 0 && m_printedTail ) {
-		// this will cause the socket to be destroyed immediately!
-		// and we are only here because our last write completed!
+		if ( m_sendsIn < m_sendsOut ) { char *xx=NULL;*xx=0; }
+		// this will be our final send
 		st->m_socket->m_streamingMode = false;
-		return true;
 	}
 
 
 	TcpServer *tcp = &g_httpServer.m_tcp;
+
+	//g_conf.m_logDebugTcp = 1;
 
 	// . transmit the chunk in sb if non-zero length
 	// . steals the allocated buffer from sb and stores in the 
@@ -1379,6 +1388,8 @@ bool Msg40::gotSummary ( ) {
 	// . when we are truly done sending all the data, then we set lastChunk
 	//   to true and TcpServer.cpp will destroy m_socket when done
 	if ( sb->length() &&
+	     // did client browser close the socket on us midstream?
+	     ! m_socketHadError &&
 	     ! tcp->sendChunk ( st->m_socket , 
 				sb  ,
 				this ,
@@ -1389,8 +1400,14 @@ bool Msg40::gotSummary ( ) {
 		m_sendsOut++;
 
 
+	// writing on closed socket?
+	if ( g_errno ) {
+		m_socketHadError = g_errno;
+		log("msg40: got tcp error : %s",mstrerror(g_errno));
+	}
+
 	// do we need to launch another batch of summary requests?
-	if ( m_numRequests < m_msg3a.m_numDocIds ) {
+	if ( m_numRequests < m_msg3a.m_numDocIds && ! m_socketHadError ) {
 		// . if we can launch another, do it
 		// . say "true" here so it does not call us, gotSummary() and 
 		//   do a recursive stack explosion
@@ -1419,6 +1436,9 @@ bool Msg40::gotSummary ( ) {
 	if ( m_si && m_si->m_streamResults ) {
 		// unless waiting for last transmit to complete
 		if ( m_sendsOut > m_sendsIn ) return false;
+		// delete everything! no, doneSendingWrapper9 does...
+		//mdelete(st, sizeof(State0), "msg40st0");
+		//delete st;
 		// otherwise, all done!
 		return true;
 	}
@@ -4840,3 +4860,50 @@ bool Msg40::printSearchResult9 ( long ix ) {
 	return true;
 }
 	
+
+bool printHttpMime ( State0 *st ) {
+
+	SearchInput *si = &st->m_si;
+
+	// grab the query
+	//Msg40 *msg40 = &(st->m_msg40);
+	//char  *q    = msg40->getQuery();
+	//long   qlen = msg40->getQueryLen();
+
+  	//char  local[ 128000 ];
+	//SafeBuf sb(local, 128000);
+	SafeBuf *sb = &st->m_sb;
+	// reserve 1.5MB now!
+	if ( ! sb->reserve(1500000 ,"pgresbuf" ) ) // 128000) )
+		return true;
+	// just in case it is empty, make it null terminated
+	sb->nullTerm();
+
+	char *ct = "text/csv";
+	if ( si->m_format == FORMAT_JSON )
+		ct = "application/json";
+	if ( si->m_format == FORMAT_XML )
+		ct = "text/xml";
+	//if ( si->m_format == FORMAT_TEXT )
+	//	ct = "text/plain";
+	if ( si->m_format == FORMAT_CSV )
+		ct = "text/csv";
+
+	// . if we haven't yet sent an http mime back to the user
+	//   then do so here, the content-length will not be in there
+	//   because we might have to call for more spiderdb data
+	HttpMime mime;
+	mime.makeMime ( -1, // totel content-lenght is unknown!
+			0 , // do not cache (cacheTime)
+			0 , // lastModified
+			0 , // offset
+			-1 , // bytesToSend
+			NULL , // ext
+			false, // POSTReply
+			ct, // "text/csv", // contenttype
+			"utf-8" , // charset
+			-1 , // httpstatus
+			NULL ); //cookie
+	sb->safeMemcpy(mime.getMime(),mime.getMimeLen() );
+	return true;
+}

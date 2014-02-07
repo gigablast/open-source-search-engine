@@ -248,6 +248,7 @@ class Msg40 {
 	long m_sendsOut      ;
 	long m_sendsIn       ;
 	long m_printi        ;
+	long m_socketHadError;
 
 
 	// use msg3a to get docIds

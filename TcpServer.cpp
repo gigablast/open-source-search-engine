@@ -1104,7 +1104,7 @@ bool TcpServer::closeLeastUsed ( long maxIdleTime ) {
 // . g_errno will be set by Loop if there was a kinda socket reset error
 void readSocketWrapper ( int sd , void *state ) {
 	// debug msg
-	//log("........... TcpServer::readSocketWrapper\n");
+	//log("........... TcpServer::readSocketWrapper %li\n",sd);
 	// extract our this ptr
 	TcpServer *THIS = (TcpServer *)state;
 	// get a TcpSocket from sd
@@ -1391,7 +1391,7 @@ bool TcpServer::setTotalToRead ( TcpSocket *s ) {
 // . we call this when socket is connected, too
 void writeSocketWrapper ( int sd , void *state ) {
 	// debug msg
-	// log("........... TcpServer::writeSocketWrapper\n");
+	//log("........... TcpServer::writeSocketWrapper sd=%li\n",sd);
 	TcpServer *THIS = (TcpServer *)state;
 	// get the TcpSocket for this socket descriptor
 	TcpSocket *s = THIS->getSocket ( sd );
@@ -1416,7 +1416,7 @@ void writeSocketWrapper ( int sd , void *state ) {
 			 iptoa(s->m_ip),nowms-s->m_lastActionTime);
 		// . some http servers close socket as end of transmission
 		// . so it's not really an g_errno
-		g_errno = 0;
+		if ( ! s->m_streamingMode ) g_errno = 0;
 		THIS->makeCallback ( s );
 		THIS->destroySocket ( s ); 
 		return; 
@@ -1455,12 +1455,15 @@ void writeSocketWrapper ( int sd , void *state ) {
 	if ( status == 1  &&  ! s->m_readBuf ) return;
 	// good?
 	g_errno = 0;
-	// . otherwise, call callback on done writing or error
-	// . in m_streamingMode this may call another sendChunk()!!!
-	//   OR it may set streamingMode to false.. it can only do one or
-	//   the other and not both!!! because if it sets streamingMode to
-	//   false then we destroy the socket below!!!! so it can't be
-	//   sending anything new!!!
+
+	// in m_streamingMode this may call another sendChunk()!!!
+	// OR it may set streamingMode to false.. it can only do one or
+	// the other and not both!!! because if it sets streamingMode to
+	// false then we destroy the socket below!!!! so it can't be
+	// sending anything new!!!
+	bool wasStreaming = s->m_streamingMode;
+
+	// otherwise, call callback on done writing or error
 	THIS->makeCallback ( s );
 
 	// if callback changed socket status to ST_SEND_AGAIN 
@@ -1473,8 +1476,9 @@ void writeSocketWrapper ( int sd , void *state ) {
 	//	goto sendAgain;
 	//}
 
-	// wait for it to exit streaming mode before destroying
-	if ( s->m_streamingMode ) return;
+	// we have to do a final call to writeSocket with m_streamingMode
+	// set to false, so don't destroy socket just yet...
+	if ( wasStreaming ) return;
 
 	// . destroy the socket on error, recycle on transaction completion
 	// . this will also unregister all our callbacks for the socket
@@ -1500,7 +1504,7 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 	// send some stuff
 	long toSend = s->m_sendBufUsed - s->m_sendOffset;
 	// if nothing to send we are done!
-	if ( ! toSend ) return 1;
+	//if ( ! toSend ) return 1;
 	// get a ptr to the msg piece to send
 	char *msg = s->m_sendBuf;
 	if ( ! msg ) return 1;
@@ -1702,7 +1706,7 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 		log("tcp: destroying socket in streaming mode. err=%s",
 		    mstrerror(g_errno));
 		// why is it being destroyed without g_errno set?
-		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		//if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		//char *xx=NULL;*xx=0; }
 	}
 
@@ -2276,12 +2280,18 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 	s->m_totalToSend       = 0;
 	s->m_totalSent         = 0;
 
+	//
+	// caller must set it to true on all but the last thing they send!!
+	//
 	// let it know not to close the socket while this is set
 	//if ( ! lastChunk ) s->m_streamingMode = true;
 	//else               s->m_streamingMode = false;
-	s->m_streamingMode = true;
+	//s->m_streamingMode = true;
 
-	//g_conf.m_logDebugTcp = true;
+
+	/*
+
+	g_conf.m_logDebugTcp = true;
 
 	long term = 20;
 	if ( sb->length() < term ) term = sb->length();
@@ -2294,6 +2304,8 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 	long minus = 20;
 	if ( sb->length() < minus ) minus = sb->length() ;
 	log("tcp: chunkend=%s",sb->getBuf() - minus);
+	*/
+
 
 	// . start the send process
 	// . returns false if send did not complete

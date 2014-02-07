@@ -302,7 +302,8 @@ bool readAndSendLoop ( StateCD *st , bool readFirst ) {
 		return false;
 	}
 
-	// are we all done?
+	// are we all done? we still have to call sendList() to 
+	// set socket's streamingMode to false to close things up
 	if ( readFirst && ! st->m_someoneNeedsMore ) {
 		log("crawlbot: done sending for download request");
 		mdelete ( st , sizeof(StateCD) , "stcd" );
@@ -557,24 +558,20 @@ bool StateCD::sendList ( ) {
 	//    (long)m_rdbId,(long)m_fmt,(long)m_someoneNeedsMore,
 	//    (long)m_printedEndingBracket);
 
+	m_socket->m_streamingMode = true;
+
 	// if nobody needs to read more...
-	if ( m_rdbId == RDB_TITLEDB && 
-	     m_fmt == FMT_JSON && 
-	     ! m_someoneNeedsMore &&
-	     ! m_printedEndingBracket ) {
+	if ( ! m_someoneNeedsMore && ! m_printedEndingBracket ) {
+		// use this for printing out urls.csv as well...
 		m_printedEndingBracket = true;
 		// end array of json objects. might be empty!
-		sb.safePrintf("\n]\n");
+		if ( m_rdbId == RDB_TITLEDB && m_fmt == FMT_JSON )
+			sb.safePrintf("\n]\n");
 		//log("adding ]. len=%li",sb.length());
-	}
-
-	if ( ! m_someoneNeedsMore && sb.length() == 0 ) {
-		// i guess the send has completed. we are likely being
-		// called by TcpServer::writeSocketWrapper() makeCallback()
-		// so take us out of streaming mode so socket can be
-		// immediately destroyed
-		m_socket->m_streamingMode = false;
-		return true;
+		// i'd like to exit streaming mode here. i fixed tcpserver.cpp
+		// so if we are called from makecallback() there it won't
+		// call destroysocket if we WERE in streamingMode just yet
+		m_socket->m_streamingMode = false;		
 	}
 
 	TcpServer *tcp = &g_httpServer.m_tcp;
