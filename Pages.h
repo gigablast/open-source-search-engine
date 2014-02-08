@@ -26,6 +26,7 @@ extern char *g_msg;
 // . declare all dynamic functions here
 // . these are all defined in Page*.cpp files
 // . these are called to send a dynamic page
+bool sendPageBasic    ( TcpSocket *s , HttpRequest *r );
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r );
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r, char *cookie );
 bool sendPageResults  ( TcpSocket *s , HttpRequest *r );
@@ -292,7 +293,10 @@ enum {
 	PAGE_DIRECTORY   ,
 	PAGE_REPORTSPAM  ,
 	//PAGE_WORDVECTOR  ,
-	
+
+	// basic controls page /admin/basic
+	PAGE_BASIC ,
+
 	// master admin pages
 	PAGE_MASTER      , 
 	PAGE_HOSTS       ,

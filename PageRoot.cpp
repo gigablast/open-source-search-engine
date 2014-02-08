@@ -79,7 +79,7 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 			      );
 
 	if ( r->isLocal() )
-	     sb.safePrintf("&nbsp; &nbsp;[<a href=\"/master?\">Admin</a>]");
+	    sb.safePrintf("&nbsp; &nbsp;[<a href=\"/admin/basic\">Admin</a>]");
 	sb.safePrintf("</p></b></center></body></html>");
 	return true;
 }

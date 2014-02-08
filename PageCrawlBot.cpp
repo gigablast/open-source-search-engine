@@ -4510,3 +4510,43 @@ bool setSpiderParmsFromHtmlRequest ( TcpSocket *socket ,
 //bool sendPageLast100Urls ( TcpSocket *socket , HttpRequest *hr ) {
 
 
+//
+// BASIC admin controls
+//
+bool sendPageBasic ( TcpSocket *socket , HttpRequest *hr ) {
+
+	char  buf [ 128000 ];
+	SafeBuf sb(buf,128000);
+
+	char *fs = hr->getString("format",NULL,NULL);
+	char fmt = FMT_HTML;
+	if ( fs && strcmp(fs,"html") == 0 ) fmt = FMT_HTML;
+	if ( fs && strcmp(fs,"json") == 0 ) fmt = FMT_JSON;
+	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FMT_XML;
+
+
+	// print standard header 
+	if ( fmt == FMT_HTML )
+		g_pages.printAdminTop ( &sb , socket , hr );
+
+
+	sb.safePrintf("BASIC CONTROLS");
+
+	if ( fmt == FMT_HTML ) sb.safePrintf ( "<br><br>\n" );
+
+	if ( fmt != FMT_JSON )
+		// wrap up the form, print a submit button
+		g_pages.printAdminBottom ( &sb );
+
+
+	return g_httpServer.sendDynamicPage ( socket,
+					      sb.getBufStart() ,
+					      sb.length()      , 
+					      -1               ,
+					      false,//POSTReply        ,
+					      NULL             , // contType
+					      -1               , // httpstatus
+					      NULL,//cookie           ,
+					      NULL             );// charset
+}
+

@@ -94,37 +94,41 @@ static WebPage s_pages[] = {
 	//  "word vectors page",
 	//  sendPageWordVec , 0 } ,
 
-	{ PAGE_MASTER    , "master"  , 0 , "master controls" ,  1 , 0 , 
+	{ PAGE_BASIC    , "admin/basic"  , 0 , "basic controls" ,  1 , 0 , 
+	  "basic controls page",
+	  sendPageBasic  , 0 } ,
+
+	{ PAGE_MASTER    , "admin/master"  , 0 , "master controls" ,  1 , 0 , 
 	  //USER_MASTER | USER_PROXY ,
 	  "master controls page",
 	  sendPageGeneric  , 0 } ,
 
-	{ PAGE_HOSTS     , "master/hosts"   , 0 , "hosts" ,  0 , 0 ,
+	{ PAGE_HOSTS     , "admin/hosts"   , 0 , "hosts" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "hosts page",
 	  sendPageHosts    , 0 } ,
 
 	// master admin pages
-	{ PAGE_STATS     , "master/stats"   , 0 , "stats" ,  0 , 0 ,
+	{ PAGE_STATS     , "admin/stats"   , 0 , "stats" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY , 
 	  "statistics page",
 	  sendPageStats    , 0 } ,
 
-	{ PAGE_STATSDB , "master/statsdb"  , 0 , "graph"  ,  0 , 0 ,
+	{ PAGE_STATSDB , "admin/statsdb"  , 0 , "graph"  ,  0 , 0 ,
 	  //USER_MASTER , 
 	  "statistics page",
 	  sendPageStatsdb  , 2 /*niceness*/ },
 
-	{ PAGE_PERF      , "master/perf"    , 0 , "performance"     ,  0 , 0 ,
+	{ PAGE_PERF      , "admin/perf"    , 0 , "performance"     ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
 	  "master performance page",
 	  sendPagePerf     , 0 } ,
 
-	{ PAGE_SOCKETS   , "master/sockets" , 0 , "sockets" ,  0 , 0 ,
+	{ PAGE_SOCKETS   , "admin/sockets" , 0 , "sockets" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "sockets page",
 	  sendPageSockets  , 0 } ,
-	{ PAGE_LOG       , "master/log"     , 0 , "log controls"     ,  1 , 0 ,
+	{ PAGE_LOG       , "admin/log"     , 0 , "log controls"     ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "log page",
 	  sendPageGeneric  , 0 } ,
@@ -137,24 +141,24 @@ static WebPage s_pages[] = {
 //	  "sync page",
 //	  sendPageGeneric  , 0 } ,
 
-	{ PAGE_SECURITY, "master/security", 0 , "security"     ,  1 , 0 ,
+	{ PAGE_SECURITY, "admin/security", 0 , "security"     ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
 	  "master security page",
 	  sendPageGeneric , 0 } ,
-	{ PAGE_ADDCOLL   , "master/addcoll" , 0 , "add collection"  ,  1 , 0 ,
+	{ PAGE_ADDCOLL   , "admin/addcoll" , 0 , "add collection"  ,  1 , 0 ,
 	  //USER_MASTER , 
 	  "add a new collection using this page",
 	  sendPageAddColl  , 0 } ,
-	{ PAGE_DELCOLL   , "master/delcoll" , 0 , "delete collections" ,  1 ,0,
+	{ PAGE_DELCOLL   , "admin/delcoll" , 0 , "delete collections" ,  1 ,0,
 	  //USER_MASTER , 
 	  "delete a collection using this page",
 	  sendPageDelColl  , 0 } ,
-	{ PAGE_AUTOBAN    ,"master/autoban" , 0 , "autoban" ,  1 , 1 ,
+	{ PAGE_AUTOBAN    ,"admin/autoban" , 0 , "autoban" ,  1 , 1 ,
 	  //USER_MASTER | USER_PROXY , 
 	  "autobanned ips",
 	  sendPageAutoban   , 0 },
 	  /*
-	{ PAGE_SPIDERLOCKS,"master/spiderlocks" , 0 , "spider locks" ,  0 , 0 ,
+	{ PAGE_SPIDERLOCKS,"admin/spiderlocks" , 0 , "spider locks" ,  0 , 0 ,
 	  USER_MASTER , sendPageSpiderLocks , 0 },
 	  */
 	{ PAGE_PROFILER    , "admin/profiler"   , 0 , "profiler" ,  0 , 1 ,
@@ -165,11 +169,11 @@ static WebPage s_pages[] = {
 	  //USER_MASTER ,
 	  "threads page",
 	  sendPageThreads  , 0 },
-	{ PAGE_REPAIR    , "master/repair"   , 0 , "repair" ,  1 , 0 ,
+	{ PAGE_REPAIR    , "admin/repair"   , 0 , "repair" ,  1 , 0 ,
 	  //USER_MASTER ,
 	  "repair page",
 	  sendPageGeneric   , 0 },
-	//{ PAGE_THESAURUS, "master/thesaurus",    0 , "thesaurus", 0 , 0 ,
+	//{ PAGE_THESAURUS, "admin/thesaurus",    0 , "thesaurus", 0 , 0 ,
         //  //USER_MASTER ,
 	//  "thesaurus page",
 	//  sendPageThesaurus , 0 },
@@ -188,11 +192,11 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER   , 
 	  "site rules page",
 	  sendPageGeneric , 0} ,
-	{ PAGE_INDEXDB   , "master/indexdb" , 0 , "indexdb"         ,  0 , 0,
+	{ PAGE_INDEXDB   , "admin/indexdb" , 0 , "indexdb"         ,  0 , 0,
 	  //USER_MASTER ,
 	  "indexdb page",
 	  sendPageIndexdb  , 0 } ,
-	{ PAGE_TITLEDB   , "master/titledb" , 0 , "titledb"         ,  0 , 0,
+	{ PAGE_TITLEDB   , "admin/titledb" , 0 , "titledb"         ,  0 , 0,
 	  //USER_MASTER , 
 	  "titledb page",
 	  sendPageTitledb  , 2 } ,
@@ -251,15 +255,15 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER   , 
 	  "search box",
 	  sendPageResults  , 0 } ,
-	{ PAGE_PARSER    , "master/parser"  , 0 , "parser"          ,  0 , 1,
+	{ PAGE_PARSER    , "admin/parser"  , 0 , "parser"          ,  0 , 1,
 	  //USER_MASTER ,
 	  "page parser page",
 	  sendPageParser   , 2 } ,
-	{ PAGE_SITEDB    , "master/tagdb"  , 0 , "tagdb"  ,  0 , 1,
+	{ PAGE_SITEDB    , "admin/tagdb"  , 0 , "tagdb"  ,  0 , 1,
 	  //USER_MASTER | USER_ADMIN,
 	  "tagdb page to add/remove/get tags",
 	  sendPageTagdb ,  0} ,	  
-	{ PAGE_CATDB     , "master/catdb"   , 0 , "catdb"           ,  0 , 1,
+	{ PAGE_CATDB     , "admin/catdb"   , 0 , "catdb"           ,  0 , 1,
 	  //USER_MASTER | USER_ADMIN,
 	  "catdb page",
 	  sendPageCatdb    , 0 } ,
@@ -1047,11 +1051,24 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	if ( adds )
 		sb->safePrintf("<br>%s",mb.getBufStart());
 
-	// print the links
-	status &= printAdminLinks ( sb, page , username , coll , pwd, true );
-
-	// print the links
-	status &= printAdminLinks ( sb, page , username , coll ,pwd , false );
+	// print Basic | Advanced links
+	if ( page == PAGE_BASIC ) {
+		sb->safePrintf ( "<b><font color=red>Basic</font></b>"
+				 " &nbsp; "
+				 "<b><a href=/admin/master>Advanced</a>"
+				 );
+	}
+	else {
+		sb->safePrintf ( "<a href=/admin/basic><b>Basic</b></a>"
+				 " &nbsp; "
+				 "<b>Advanced</b>"
+				 "<br><br>"
+				 );
+		// print the links
+		status &= printAdminLinks ( sb, page , NULL,coll,NULL, true );
+		// print the links
+		status &= printAdminLinks ( sb, page , NULL,coll,NULL, false );
+	}
 
 	// begin 2nd row in big table
 	sb->safePrintf("</td></TR>");
