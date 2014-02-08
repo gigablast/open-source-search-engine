@@ -89,6 +89,25 @@ bool Conf::isMasterAdmin ( TcpSocket *s , HttpRequest *r ) {
 	return false;
 }
 
+
+// is user a root administrator?
+bool Conf::isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) {
+
+	if ( m_numMasterIps == 0 &&
+	     m_numConnectIps == 0 ) {
+		// from "local" ip?
+		return hr->isLocal();
+	}
+
+	if ( isAdminIp ( socket->m_ip ) ) return true;
+
+	if ( isConnectIp ( socket->m_ip ) ) return true;
+
+	return false;
+}
+
+
+
 // . check this ip in the list of admin ips
 bool Conf::isAdminIp ( unsigned long ip ) {
 	for ( long i = 0 ; i < m_numMasterIps ; i++ ) 

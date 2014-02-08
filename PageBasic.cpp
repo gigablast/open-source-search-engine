@@ -1,5 +1,8 @@
 #include "SafeBuf.h"
 #include "HttpRequest.h"
+#include "SearchInput.h"
+#include "Pages.h"
+#include "Parms.h"
 
 bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) ;
 
@@ -12,14 +15,14 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 	SafeBuf sb(buf,128000);
 
 	char *fs = hr->getString("format",NULL,NULL);
-	char fmt = FMT_HTML;
-	if ( fs && strcmp(fs,"html") == 0 ) fmt = FMT_HTML;
-	if ( fs && strcmp(fs,"json") == 0 ) fmt = FMT_JSON;
-	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FMT_XML;
+	char fmt = FORMAT_HTML;
+	if ( fs && strcmp(fs,"html") == 0 ) fmt = FORMAT_HTML;
+	if ( fs && strcmp(fs,"json") == 0 ) fmt = FORMAT_JSON;
+	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
 
 
 	// print standard header 
-	if ( fmt == FMT_HTML )
+	if ( fmt == FORMAT_HTML )
 		g_pages.printAdminTop ( &sb , socket , hr );
 
 
@@ -62,9 +65,9 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 	// also used in the advanced controls under the "add url" tab i guess
 	printSiteListBox ( &sb , hr );
 
-	if ( fmt == FMT_HTML ) sb.safePrintf ( "<br><br>\n" );
+	if ( fmt == FORMAT_HTML ) sb.safePrintf ( "<br><br>\n" );
 
-	if ( fmt != FMT_JSON )
+	if ( fmt != FORMAT_JSON )
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( &sb );
 
@@ -84,7 +87,7 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 
 bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 
-	CollectionRe *cr = getCollectionRec ( hr );
+	CollectionRec *cr = getCollectionRec ( hr );
 	if ( ! cr ) return true;
 
 	char *submittedSiteList = hr->getString("sitelist" );
@@ -263,7 +266,7 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 
 		      /*
 		      "<tr>"
-		      "<td>goodstuff.com/mydir/*boots*</td>"
+		      "<td>goodstuff.com/mydir/ *boots*</td>"
 		      "<td>"
 		      "Spider urls on any subdomain of goodstuff.com AND "
 		      "in the /mydir/ directory or subdirectory thereof "
@@ -272,7 +275,7 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 		      "</tr>"
 
 		      "<tr>"
-		      "<td>goodstuff.com/mydir/*boots$</td>"
+		      "<td>goodstuff.com/mydir/ *boots$</td>"
 		      "<td>"
 		      "Spider urls on any subdomain of goodstuff.com AND "
 		      "in the /mydir/ directory or subdirectory thereof "

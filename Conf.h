@@ -24,7 +24,7 @@
 #include "Collectiondb.h"
 
 #define MAX_MASTER_IPS        15
-#define MAX_MASTER_PASSWORDS  10
+#define MAX_MASTER_PASSWORDS  5
 
 #define USERAGENTMAXSIZE      128
 
@@ -49,6 +49,7 @@ class Conf {
 	
 	Conf();
 
+	bool isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) ;
 	bool isMasterAdmin  ( class TcpSocket *s , class HttpRequest *r );
 	bool isSpamAssassin ( class TcpSocket *s , class HttpRequest *r );
 	bool isAdminIp      ( unsigned long ip );

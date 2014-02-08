@@ -2,103 +2,84 @@
 
 #include "Pages.h"
 #include "Parms.h"
-#include "Users.h"
 
-bool sendPageLogin ( TcpSocket *s , HttpRequest *r ) {
-	return sendPageLogin ( s , r, NULL);
-}
 
-bool sendPageLogin ( TcpSocket *s , HttpRequest *r , char *emsg ) {
+// any admin page calls cr->hasPermission ( hr ) and if that returns false
+// then we call this function to give users a chance to login
+bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// get the collection
 	long  collLen = 0;
-	char *coll    = r->getString("c",&collLen);
-	if ( ! coll || ! coll[0] ) {
-		//coll    = g_conf.m_defaultColl;
-		coll = g_conf.getDefaultColl( r->getHost(), r->getHostLen() );
-		collLen = gbstrlen(coll);
-	}
+	char *coll    = hr->getString("c",&collLen);
+
+	// default to main collection. if you can login to main then you
+	// are considered the root admin here...
+	if ( ! coll ) coll = "main";
+
+	SafeBuf emsg;
 
 	// does collection exist? ...who cares, proxy doesn't have coll data.
-	//CollectionRec *cr = g_collectiondb.getRec ( coll );
-	//if ( ! cr ) emsg = "Collection does not exist.";
-
-
-	// log off user whose username is in the cookie
-	char *username = r->getStringFromCookie("username",NULL);
-	char *password = r->getString("pwd",NULL);
-	if ( username && !password ) g_users.logoffUser( username, s->m_ip );
-	
-	//  get username from the request
-	username = NULL;
-	username = r->getString("username",NULL);
-	
-	// reset emsg if user is coming for the first time
-	long page = g_pages.getDynamicPageNumber(r);
-	if ( !username && !password && 
-		(page == PAGE_LOGIN || page == PAGE_LOGIN2) && emsg)
-		emsg ="";
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
+	if ( ! cr )
+		emsg.safePrintf("Collection \"%s\" does not exist.",coll);
 
 	// just make cookie same format as an http request for ez parsing
 	char cookieData[2024];
-	char host[1024]="";
-	/*if ( cr && userType == USER_MASTER && username ) 
-		return g_parms.sendPageGeneric ( s , r , PAGE_MASTER , cookie);
-	if ( userType == USER_ADMIN && username )
-		return g_parms.sendPageGeneric ( s , r , PAGE_SEARCH , cookie);
-	*/
 
-
-	// print it
-	char  buf [ 2*1024 ];
-	char *p    = buf;
-	char *pend = buf + 2*1024;
+	SafeBuf sb;
 
 	// print colors
-	p = g_pages.printColors ( p , pend );
+	g_pages.printColors ( &sb );
 	// start table
-	sprintf ( p , "<table><tr><td>");
-	p += gbstrlen ( p );
+	sb.safePrintf( "<table><tr><td>");
 	// print logo
-	p = g_pages.printLogo   ( p , pend , coll );
+	g_pages.printLogo   ( &sb , coll );
 
-	// make it printable
-	char *pu = g_users.getUsername(r);
-	if ( ! pu ) pu = "";
+	// get password from cgi parms OR cookie
+	char *pwd = hr->getString("pwd",NULL);
 
-	// then Login
-	if ( r->getHostLen() < 1024 )
-		strncpy ( host, r->getHost(), r->getHostLen() );
+	bool hasPermission = false;
+
+	// this password applies to ALL collections. it's the root admin pwd
+	if ( cr && pwd && g_conf.isRootAdmin ( socket , hr ) ) 
+		hasPermission = true;
+
+	if ( emsg.length() == 0 && ! hasPermission )
+		emsg.safePrintf("Admin password incorrect");
+
+	// sanity
+	if ( hasPermission && emsg.length() ) { char *xx=NULL;*xx=0; }
+
+	// what page are they originally trying to get to?
+	long page = g_pages.getDynamicPageNumber(hr);
 
 	char *cookie = NULL;
-	User *user = NULL;
-	if ( username && host[0] ) user = g_users.getUser(username);
-	if ( user && !emsg ){	
-		sprintf ( cookieData , "username=%s;expires=0;"
-					,username);
-		
+
+	if ( hasPermission ) {
+		// "pwd" could be NULL... like when it is not required,
+		// perhaps only the right ip address is required, but if it
+		// is there then store it in a cookie with no expiration
+		if ( pwd ) sprintf ( cookieData, "pwd=%s;expires=0;",pwd);
 		// try to the get reference Page
-		long refPage = r->getLong("ref",-1);
-		if ( refPage >= 0 && refPage != PAGE_LOGIN && refPage != PAGE_LOGIN2
-			&& g_users.hasPermission(username,refPage)){
-			WebPage *page = g_pages.getPage(refPage);
-			sprintf ( p, "<meta http-equiv=\"refresh\" content=\"0;"
-		              	"http://%s/%s?c=%s\">",
-				host,page->m_filename,coll);
-		}
-		else{	
-			long pageNum = user->firstPage();
-			char *path = g_pages.getPath(pageNum); 
-			sprintf ( p, "<meta http-equiv=\"refresh\" content=\"0;"
-			              "http://%s/%s?c=%s\">",
-					host,path,coll);
-		}
-		p += gbstrlen ( p );
+		long refPage = hr->getLong("ref",-1);
+		// if they cam to login page directly... to to basic page then
+		if ( refPage == PAGE_LOGIN ||
+		     refPage == PAGE_LOGIN2 ||
+		     refPage < 0 )
+			refPage = PAGE_BASIC_SETTINGS;
+		// if they had an original destination, redirect there NOW
+		WebPage *page = g_pages.getPage(refPage);
+		// and redirect to it
+		sb.safePrintf("<meta http-equiv=\"refresh\" content=\"0;"
+			      "/%s?c=%s\">", page->m_filename,coll);
+		// return cookie in server reply if pwd was non-null
 		cookie = cookieData;
 	}
+
+	char *ep = emsg.getBufStart();
+	if ( !ep ) ep = "";
 	
-	if ( !emsg ) emsg = "";
-	sprintf ( p ,
+	sb.safePrintf(
 		  "&nbsp; &nbsp; "
 		  "</td><td><font size=+1><b>Login</b></font></td></tr>"
 		  "</table>" 
@@ -110,36 +91,27 @@ bool sendPageLogin ( TcpSocket *s , HttpRequest *r , char *emsg ) {
 		  "<br><br>"
 
 		  "<table cellpadding=2><tr><td>"
-		  "<b>Username</td><td>"
-		  "<input type=text name=username size=30 value=\"%s\">"
-		  "</td><td></td></tr>"
-		  "<tr><td>"
 
-		  "<b>Collection</td><td>"
-		  "<input type=text name=c size=30 value=\"%s\">"
-		  "</td><td></td></tr>"
-		  "<tr><td>"
-		  "<b>Password</td><td><input type=password name=pwd size=30>"
+		  //"<b>Collection</td><td>"
+		  "<input type=hidden name=c size=30 value=\"%s\">"
+		  //"</td><td></td></tr>"
+		  //"<tr><td>"
+
+		  "<b>Admin Password</td>"
+		  "<td><input type=password name=pwd size=30>"
 		  "</td><td>"
 		  "<input type=submit value=ok border=0></td>"
 		  "</tr></table>"
 		  "</center>"
-		  "<br><br>",
-		  page, emsg , pu , coll );
-	p += gbstrlen ( p );
-	// master test
-	/*
-	long user = g_pages.getUserType ( s , r );
-	if ( user != USER_MASTER ) {
-		sprintf ( p , "\n<input type=hidden name=master value=0>\n"
-			  "</form>" );
-		p += gbstrlen ( p );
-	}
-	*/
+		  "<br><br>"
+		  , page, ep , coll );
+
 	// print the tail
-	p = g_pages.printTail ( p , pend , r->isLocal() ); // pwd
+	g_pages.printTail ( &sb , hr->isLocal() ); // pwd
 	// send the page
-	return g_httpServer.sendDynamicPage ( s , buf , p - buf ,
+	return g_httpServer.sendDynamicPage ( socket , 
+					      sb.getBufStart(),
+					      sb.length(),
 					      -1    , // cacheTime
 					      false , // POSTReply?
 					      NULL  , // contentType

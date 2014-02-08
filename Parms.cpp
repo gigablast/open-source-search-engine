@@ -873,10 +873,10 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	//char *pend = buf + 128000;
 
 	//long  user     = g_pages.getUserType              ( s , r );
-	char *username = g_users.getUsername(r);
+	//char *username = g_users.getUsername(r);
 	long  fromIp   = s->m_ip;
 
-	char *pwd  = r->getString ("pwd");
+	//char *pwd  = r->getString ("pwd");
 
 	char *coll = r->getString ("c");
 	if ( ! coll || ! coll[0] )
@@ -951,19 +951,6 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		e2 = "<tr><td colspan=20><font color=#ff0000><b><center>"
 			"Add url is temporarily disabled in Master Controls."
 			"</font></td></tr>\n";
-
-	if ( page >= PAGE_CGIPARMS && (! coll || !coll[0]) ) {
-		// WATCH OUT FOR RECURSION! sendPageLogin calls us!!!
-		if ( !g_users.hasPermission(username,PAGE_ADMIN) && 
-				!g_users.hasPermission(username,PAGE_MASTER) )
-		//if ( user != USER_ADMIN && user != USER_MASTER )
-			// print login page
-			return sendPageLogin ( s , r );
-		//log("admin: No collection specified for a page that "
-		//"needs it.");
-		//return g_httpServer.sendErrorReply ( s , 505, "Bad Request");
-	}	      
-
 
 	// . page repair (PageRepair.cpp) has a status table BEFORE the parms
 	//   iff we are doing a repair
@@ -1049,7 +1036,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		
 	// print the table(s) of controls
 	//p= g_parms.printParms (p, pend, page, user, THIS, coll, pwd, nc, pd);
-	g_parms.printParms ( sb, page, username, THIS, coll, NULL, nc, pd,
+	g_parms.printParms ( sb, page, NULL , THIS, coll, NULL, nc, pd,
 			     isCrawlbot , isJSON );
 
 	// end the table
@@ -8493,6 +8480,23 @@ void Parms::init ( ) {
 	// SECURITY CONTROLS
 	///////////////////////////////////////////
 
+
+	m->m_title = "Admin Passwords";
+	m->m_desc  = "Passwords allowed to change Gigablast's general "
+		"parameters and also the parameters for any collection. "
+		"If no AdminPassword or Admin IP is specified then "
+		"Gigablast will only allow local IPs to connect to it "
+		"as the master admin.";
+	m->m_cgi   = "mpwd";
+	m->m_xml   = "masterPassword";
+	m->m_max   = MAX_MASTER_PASSWORDS;
+	m->m_off   = (char *)&g_conf.m_masterPwds - g;
+	m->m_type  = TYPE_STRINGNONEMPTY;
+	m->m_size  = PASSWORD_MAX_LEN+1;
+	m->m_page  = PAGE_SECURITY;
+	m++;
+
+
 	m->m_title = "Admin IPs";
 	//m->m_desc = "Allow UDP requests from this list of IPs. Any datagram "
 	//	"received not coming from one of these IPs, or an IP in "
@@ -8576,20 +8580,7 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	/*m->m_title = "Master Passwords";
-	m->m_desc  = "Passwords allowed to change Gigablast's general "
-		"parameters and also the parameters for any collection. "
-		"If no Master Password or Master IP is specified then "
-		"Gigablast will assign a default password of footbar23.";
-	m->m_cgi   = "mpwd";
-	m->m_xml   = "masterPassword";
-	m->m_max   = MAX_MASTER_PASSWORDS;
-	m->m_off   = (char *)&g_conf.m_masterPwds - g;
-	m->m_type  = TYPE_STRINGNONEMPTY;
-	m->m_size  = PASSWORD_MAX_LEN+1;
-	m->m_page  = PAGE_SECURITY;
-	m++;
-
+	/*
 	m->m_title = "Master IPs";
 	m->m_desc  = "If someone connects from one of these IPs "
 		"then they will have full "
@@ -17515,24 +17506,24 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	//}
 	
 	// might be g_conf specific, not coll specific
-	bool hasPerm = false;
+	//bool hasPerm = false;
 	// just knowing the collection name of a custom crawl means you
 	// know the token, so you have permission
-	if ( cr && cr->m_isCustomCrawl ) hasPerm = true;
-	if ( hr->isLocal() ) hasPerm = true;
+	//if ( cr && cr->m_isCustomCrawl ) hasPerm = true;
+	//if ( hr->isLocal() ) hasPerm = true;
 
 	// fix jenkins "GET /v2/crawl?token=crawlbottesting" request
 	char *name  = hr->getString("name");
 	char *token = hr->getString("token");
-	if ( ! cr && token ) hasPerm = true;
+	//if ( ! cr && token ) hasPerm = true;
 
-	if ( ! hasPerm ) {
-		//log("parms: no permission to set parms");
-		//g_errno = ENOPERM;
-		//return false;
-		// just leave the parm list empty and fail silently
-		return true;
-	}
+	//if ( ! hasPerm ) {
+	//	//log("parms: no permission to set parms");
+	//	//g_errno = ENOPERM;
+	//	//return false;
+	//	// just leave the parm list empty and fail silently
+	//	return true;
+	//}
 
 	// we set the parms in this collnum
 	collnum_t parmCollnum = -1;

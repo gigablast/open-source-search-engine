@@ -467,7 +467,6 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//bool userAccess = g_users.verifyUser(s,r);
 
 	// does public have permission?
-	//bool publicPage = g_users.hasPermission ( "public", page ) ;
 	bool publicPage = false;
 	if ( page == PAGE_ROOT ) publicPage = true;
 	// do not deny /NM/Albuquerque urls
@@ -478,8 +477,23 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	if ( page == PAGE_CRAWLBOT ) publicPage = true;
 
 	// get our host
-	Host *h = g_hostdb.m_myHost;
+	//Host *h = g_hostdb.m_myHost;
 
+	// now use this...
+	bool isAdmin = g_conf.isRootAdmin ( s , r );
+
+	////////////////////
+	////////////////////
+	//
+	// if it is an administrative page it requires permission!
+	//
+	////////////////////
+	////////////////////
+	if ( ! publicPage && ! isAdmin )
+		return sendPageLogin ( s , r );
+
+
+	/*
 	// is request coming from a local ip?
 	bool isLocal = false;
 	bool isLoopback = false;
@@ -521,12 +535,14 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//if ( page == PAGE_ROOT    ) forbidIp = false;
 	//if ( page == PAGE_RESULTS ) forbidIp = false;
 	//if ( page == PAGE_GET     ) forbidIp = false;
+	*/
 
 	// if the page is restricted access then they must be coming from
 	// an internal ip. our ip masked with 0xffff0000 is good. we assume
 	// that all administrators tunnel in through router0 and thus get a
 	// local ip.
 	// PAGE_TAGDB: allow zak to access tagdb, etc. 
+	/*
 	if ( forbidIp ) {
 		log("admin: must admin from internal ip"); 
 		log("login: access denied 1 from ip=%s",iptoa(s->m_ip));
@@ -534,6 +550,7 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 		//		      "in list of connect ips on security "
 		//		      "tab.");
 	}
+	*/
 
 	// . does client have permission for this page? they are coming from
 	//   an internal ip and they provided the correct password for their
@@ -551,10 +568,10 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	//	log("login: access denied 3 from ip=%s",iptoa(s->m_ip));
 	//	return sendPageLogin(s,r,"Access Denied. Bad or no password.");
 	//}
-	if ( ! publicPage && ! isLocal && ! isLoopback ) {
-		log("login: access denied 2 from ip=%s",iptoa(s->m_ip));
-		return sendPageLogin ( s , r, "Access Denied. No permission.");
-	}
+	//if ( ! publicPage && ! isLocal && ! isLoopback ) {
+	//	log("login: access denied 2 from ip=%s",iptoa(s->m_ip));
+	//	return sendPageLogin ( s , r, "Access Denied. No permission.");
+	//}
 
 	g_errno = 0;
 
@@ -605,7 +622,8 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . convert http request to list of parmdb records
 	// . will only add parm recs we have permission to modify
 	// . if no collection supplied will just return true with no g_errno
-	if ( ! g_parms.convertHttpRequestToParmList ( r , parmList , page ) )
+	if ( isAdmin &&
+	     ! g_parms.convertHttpRequestToParmList ( r , parmList , page ) )
 		return g_httpServer.sendErrorReply(s,505,mstrerror(g_errno));
 		
 
@@ -616,7 +634,8 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	// . so then doneBroadcastingParms() is called when all hosts
 	//   have received the updated parms, unless a host is dead,
 	//   in which case he should sync up when he comes back up
-	if ( ! g_parms.broadcastParmList ( parmList , 
+	if ( isAdmin &&
+	     ! g_parms.broadcastParmList ( parmList , 
 					   s , // state is socket i guess
 					   doneBroadcastingParms ) )
 		// this would block, so return false
@@ -924,25 +943,12 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//		//"&nbsp;&nbsp; split=%li tfndbext=%li" ,
 	//		GBVersion);//, split,
 	//                //g_conf.m_tfndbExtBits );
-	bool isLocal = false;
 
-	long fromIp = s->m_ip;
+	// print the hosts navigation bar
+	status &= printHostLinks ( sb, page , 
+				   username , pwd ,
+				   coll, NULL, s->m_ip, qs );
 
-	if ( strncmp(iptoa(fromIp),"192.168.",8) == 0) isLocal = true;
-	if ( strncmp(iptoa(fromIp),"10.",3) == 0) isLocal = true;
-
-	// . the the hosts
-	// . don't print host buttons if only 1 host
-	//bool isMaster = false;
-	//long linkPage = getPageNumber("hostlinks");
-	//if ( user == USER_MASTER && g_hostdb.m_numHosts > 1 ) {
-	if ( !g_users.hasPermission(username,PAGE_NOHOSTLINKS) ||
-	     isLocal ) {
-		// print the hosts navigation bar
-		status &= printHostLinks ( sb, page , 
-					   username , pwd ,
-					   coll, NULL, fromIp, qs );
-	}
 	// end table
 	sb->safePrintf ("</td></tr></table><br/>\n");//<br/>\n");
 
@@ -1031,9 +1037,9 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	sb->safePrintf ( "<input type=hidden name=c value=\"%s\">\n",coll);
 	// sometimes we do not want to be USER_MASTER for testing
 	//if ( user == USER_ADMIN ) {
-	if ( g_users.hasPermission ( username, PAGE_ADMIN ) ){
-		sb->safePrintf("<input type=hidden name=master value=0>\n");
-	}
+	//if ( g_users.hasPermission ( username, PAGE_ADMIN ) ){
+	//	sb->safePrintf("<input type=hidden name=master value=0>\n");
+	//}
 	// should any changes be broadcasted to all hosts?
 	//sb->safePrintf ("<input type=hidden name=cast value=\"%li\">\n",
 	//		(long)s_pages[page].m_cast);
@@ -1057,13 +1063,20 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	if ( adds )
 		sb->safePrintf("<br>%s",mb.getBufStart());
 
+        bool isBasic = false;
+	if ( page == PAGE_BASIC_SETTINGS ) isBasic = true;
+	if ( page == PAGE_BASIC_STATUS ) isBasic = true;
+	if ( page == PAGE_BASIC_DIFFBOT ) isBasic = true;
+	if ( page == PAGE_BASIC_PASSWORDS ) isBasic = true;
+
 	// print breadcrumb. main > Basic > Settings
 	char *menu = "Advanced";
-	if ( page == PAGE_BASIC ) menu = "Basic";
+	if ( isBasic ) menu = "Basic";
+
 	sb->safePrintf("<b>%s > %s > %s", coll, menu, s_pages[page].m_name);
 
 	// print Basic | Advanced links
-	if ( page == PAGE_BASIC ) {
+	if ( isBasic ) {
 		sb->safePrintf ( "<b><font color=red>Basic</font></b>"
 				 " &nbsp; "
 				 "<b><a href=/admin/master>Advanced</a>"
@@ -1360,10 +1373,10 @@ void Pages::printFormData( SafeBuf *sb, TcpSocket *s, HttpRequest *r ) {
 			 "value=\"%s\" />\n", coll);
 	// sometimes we do not want to be USER_MASTER for testing
 	//if ( user == USER_ADMIN ) {
-	if ( g_users.hasPermission( username, PAGE_ADMIN ) ){
-		sb->safePrintf( "<input type=\"hidden\" name=\"master\" "
-				"value=\"0\" />\n");
-	}
+	//if ( g_users.hasPermission( username, PAGE_ADMIN ) ){
+	//	sb->safePrintf( "<input type=\"hidden\" name=\"master\" "
+	//			"value=\"0\" />\n");
+	//}
 
 	// should any changes be broadcasted to all hosts?
 	sb->safePrintf ("<input type=\"hidden\" name=\"cast\" value=\"%li\" "
@@ -2054,12 +2067,12 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	}
 	// if not admin just print collection name
 	//if ( user == USER_ADMIN ) {
-	if (g_users.hasPermission(username,PAGE_ADMIN) ){
-		sb->safePrintf ( "<center><br/>Collection <b>"
-			  "<font color=red>%s</font></b>"
-			  "<br/><br/></center>" , coll );
-		return status ;
-	}
+	//if (g_users.hasPermission(username,PAGE_ADMIN) ){
+	sb->safePrintf ( "<center><br/>Collection <b>"
+			 "<font color=red>%s</font></b>"
+			 "<br/><br/></center>" , coll );
+	//	return status ;
+	//}
 	// print up to 10 names on there
 	collnum_t collnum = g_collectiondb.getCollnum ( coll );
 	bool highlight = true;
