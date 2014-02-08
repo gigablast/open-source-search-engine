@@ -94,9 +94,15 @@ static WebPage s_pages[] = {
 	//  "word vectors page",
 	//  sendPageWordVec , 0 } ,
 
-	{ PAGE_BASIC    , "admin/basic"  , 0 , "basic controls" ,  1 , 0 , 
-	  "basic controls page",
-	  sendPageBasic  , 0 } ,
+	{ PAGE_BASIC_SETTINGS, "admin/settings", 0 , "settings",1, 0 , 
+	  "Basic settings page.", sendPageBasicSettings  , 0 } ,
+	{ PAGE_BASIC_STATUS, "admin/status", 0 , "status",1, 0 , 
+	  "Basic status page.", sendPageBasicStatus  , 0 } ,
+	{ PAGE_BASIC_DIFFBOT, "admin/diffbot", 0 , "diffbot",1, 0 , 
+	  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 } ,
+	{ PAGE_BASIC_PASSWORDS, "admin/passwords", 0 , "passwords",1, 0 , 
+	  "Basic passwords page.", sendPageBasicPasswords  , 0 } ,
+
 
 	{ PAGE_MASTER    , "admin/master"  , 0 , "master controls" ,  1 , 0 , 
 	  //USER_MASTER | USER_PROXY ,
@@ -1029,8 +1035,8 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		sb->safePrintf("<input type=hidden name=master value=0>\n");
 	}
 	// should any changes be broadcasted to all hosts?
-	sb->safePrintf ("<input type=hidden name=cast value=\"%li\">\n",
-			(long)s_pages[page].m_cast);
+	//sb->safePrintf ("<input type=hidden name=cast value=\"%li\">\n",
+	//		(long)s_pages[page].m_cast);
 
 
 
@@ -1050,6 +1056,11 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	// print emergency msg box
 	if ( adds )
 		sb->safePrintf("<br>%s",mb.getBufStart());
+
+	// print breadcrumb. main > Basic > Settings
+	char *menu = "Advanced";
+	if ( page == PAGE_BASIC ) menu = "Basic";
+	sb->safePrintf("<b>%s > %s > %s", coll, menu, s_pages[page].m_name);
 
 	// print Basic | Advanced links
 	if ( page == PAGE_BASIC ) {
@@ -1361,6 +1372,7 @@ void Pages::printFormData( SafeBuf *sb, TcpSocket *s, HttpRequest *r ) {
 
 }
 
+/*
 char *Pages::printAdminBottom ( char *p , char *pend , HttpRequest *r ) {
 	return printAdminBottom ( p , pend );
 }
@@ -1376,6 +1388,7 @@ char *Pages::printAdminBottom ( char *p , char *pend ) {
 	p += gbstrlen ( p );			  	
 	return p;
 }
+*/
 
 bool Pages::printAdminBottom ( SafeBuf *sb, HttpRequest *r ) {
 	return printAdminBottom ( sb );
@@ -1404,6 +1417,7 @@ bool Pages::printAdminBottom2 ( SafeBuf *sb ) {
 	return status;
 }
 
+/*
 char *Pages::printTail ( char *p , char *pend , bool isLocal ) {
 	// don't breech the buffer
 	if ( p + 2000 >= pend ) return p;
@@ -1455,6 +1469,7 @@ char *Pages::printTail ( char *p , char *pend , bool isLocal ) {
 	// return length of bytes we stored
 	return p ;
 }
+*/
 
 bool Pages::printTail ( SafeBuf* sb, bool isLocal ) {
 	// now print the tail
@@ -1516,7 +1531,7 @@ bool Pages::printColors ( SafeBuf *sb, char* bodyJavascript ) {
 		  bodyJavascript);
 	return true;
 }
-
+/*
 char *Pages::printColors ( char *p , char *pend, char* bodyJavascript ) {
 	// print font and color stuff
 	sprintf ( p , 
@@ -1550,7 +1565,7 @@ char *Pages::printColors2 ( char *p , char *pend ) {
 		  "a:active,.fl:active{color:#f00}"
 
 		  "//--></style>\n"
-		  /*
+
 		  "<style><!--"
 		  "body,td,div,.p,a{font-family:arial,sans-serif }"
 		  "div,td{color:#000}"
@@ -1573,11 +1588,12 @@ char *Pages::printColors2 ( char *p , char *pend ) {
 		  ".ch{cursor:pointer;cursor:hand}"
 		  "//-->"
 		  "</style>" 
-		  */
+
 		  );
 	p += gbstrlen ( p );
 	return p;
 }
+*/
 
 bool Pages::printColors3 ( SafeBuf *sb ) {
 	// print font and color stuff
@@ -1590,7 +1606,7 @@ bool Pages::printColors3 ( SafeBuf *sb ) {
 		  );
 	return true;
 }
-
+/*
 char *Pages::printFocus ( char *p , char *pend ) {
 	// print the logo in upper right corner
 	sprintf ( p , 
@@ -1600,7 +1616,7 @@ char *Pages::printFocus ( char *p , char *pend ) {
 	p += gbstrlen ( p );
 	return p;
 }
-
+*/
 
 bool Pages::printLogo ( SafeBuf *sb, char *coll ) {
 	// print the logo in upper right corner
@@ -1613,7 +1629,7 @@ bool Pages::printLogo ( SafeBuf *sb, char *coll ) {
 	return true;
 }
 
-
+/*
 char *Pages::printLogo ( char *p , char *pend , char *coll ) {
 	// print the logo in upper right corner
 	if ( ! coll ) coll = "";
@@ -1625,6 +1641,7 @@ char *Pages::printLogo ( char *p , char *pend , char *coll ) {
 	p += gbstrlen ( p );
 	return p;
 }
+*/
 
 bool Pages::printHostLinks ( SafeBuf* sb     ,
 			     long     page   ,
@@ -1727,6 +1744,7 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 	return status;
 }
 
+/*
 char *Pages::printHostLinks ( char *p      ,
 			      char *pend   ,
 			      long  page   ,
@@ -1780,7 +1798,7 @@ char *Pages::printHostLinks ( char *p      ,
 	}		
 	return p;
 }
-
+*/
 
 // . print the master     admin links if "user" is USER_MASTER 
 // . print the collection admin links if "user" is USER_ADMIN
@@ -1829,7 +1847,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		//if ( (s_pages[i].m_perm & user) == 0 ) continue;
 		//if ( ! g_users.hasPermission(username,i) ) continue;
 		// do not print Sync link if only one host
-		//if ( i == PAGE_SYNC && g_hostdb.getNumHosts() == 1 ) continue;
+		//if ( i == PAGE_SYNC && g_hostdb.getNumHosts() == 1) continue;
 		// top or bottom
 		if (   top && i >= PAGE_CGIPARMS ) continue;
 		if ( ! top && i  < PAGE_CGIPARMS ) continue;
@@ -2480,7 +2498,8 @@ bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
 		       "<tr bgcolor=#%s><td><b>CGI</b></td>"
 		       "<td><b>Page</b></td>"
 		       "<td><b>Type</b></td>"
-		       "<td><b>Name</b></td><td><b>Description</b></td></tr>\n",
+		       "<td><b>Name</b></td>"
+		       "<td><b>Description</b></td></tr>\n",
 		       TABLE_STYLE , DARK_BLUE);
 	for ( long i = 0; i < g_parms.m_numParms; i++ ) {
 		Parm *parm = &g_parms.m_parms[i];

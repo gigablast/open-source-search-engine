@@ -26,7 +26,13 @@ extern char *g_msg;
 // . declare all dynamic functions here
 // . these are all defined in Page*.cpp files
 // . these are called to send a dynamic page
-bool sendPageBasic    ( TcpSocket *s , HttpRequest *r );
+bool sendPageBasicSettings   ( TcpSocket *s , HttpRequest *r );
+bool sendPageBasicStatus     ( TcpSocket *s , HttpRequest *r );
+bool sendPageBasicDiffbot    ( TcpSocket *s , HttpRequest *r );
+bool sendPageBasicPasswords  ( TcpSocket *s , HttpRequest *r );
+
+
+
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r );
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r, char *cookie );
 bool sendPageResults  ( TcpSocket *s , HttpRequest *r );
@@ -178,8 +184,8 @@ class Pages {
 	void printFormTop(  SafeBuf *sb, HttpRequest *r );
 	void printFormData( SafeBuf *sb, TcpSocket *s, HttpRequest *r );
 
-	char *printAdminBottom         ( char *p, char *pend, HttpRequest *r );
-	char *printAdminBottom         ( char *p, char *pend);
+	//char *printAdminBottom       ( char *p, char *pend, HttpRequest *r );
+	//char *printAdminBottom       ( char *p, char *pend);
 	bool  printAdminBottom         ( SafeBuf *sb, HttpRequest *r );
 	bool  printAdminBottom         ( SafeBuf *sb);
 	bool  printAdminBottom2        ( SafeBuf *sb, HttpRequest *r );
@@ -189,21 +195,21 @@ class Pages {
 					 //long user , 
 					 //char *username,
 					 //char *pwd );
-	char *printTail                ( char *p    ,
-					 char *pend ,
-					 bool isLocal );
+	//char *printTail                ( char *p    ,
+	//				 char *pend ,
+	//				 bool isLocal );
 	//long  user ,
 	//char *username,
 	//char *pwd  ) ;
 	bool  printColors              ( SafeBuf *sb , char* bodyJavascript = "" ) ;
-	char *printColors              ( char *p , char *pend , 
-					 char* bodyJavascript = "");
+	//char *printColors              ( char *p , char *pend , 
+	//				 char* bodyJavascript = "");
 
-	char *printColors2             ( char *p , char *pend ) ;
+	//char *printColors2           ( char *p , char *pend ) ;
 	bool  printColors3	       ( SafeBuf *sb ) ;
-	char *printFocus               ( char *p , char *pend ) ;
+	//char *printFocus             ( char *p , char *pend ) ;
 	bool  printLogo                ( SafeBuf *sb, char *coll ) ;
-	char *printLogo                ( char *p , char *pend , char *coll ) ;
+	//char *printLogo              ( char *p , char *pend , char *coll ) ;
 	bool  printHostLinks           ( SafeBuf *sb  ,
 					 long  page   ,
 					 char *username ,
@@ -212,7 +218,7 @@ class Pages {
 					 char *pwd    ,
 					 long  fromIp ,
 					 char *qs = NULL ) ;
-
+	/*
 	char *printHostLinks           ( char *p      ,
 					 char *pend   ,
 					 long  page   ,
@@ -220,6 +226,7 @@ class Pages {
 					 char *pwd    ,
 					 long  fromIp ,
 					 char *qs = NULL ) ;
+	*/
 	bool  printAdminLinks          ( SafeBuf *sb, 
 					 long  page ,
 					 //long  user ,
@@ -227,7 +234,7 @@ class Pages {
 					 char *coll ,
 					 char *pwd  ,
 					 bool  top  ) ;
-
+	/*
 	char *printAdminLinks          ( char *p    , 
 					 char *pend , 
 					 long  page ,
@@ -236,6 +243,7 @@ class Pages {
 					 char *coll ,
 					 char *pwd  ,
 					 bool  top  ) ;
+	*/
 	bool  printCollectionNavBar ( SafeBuf *sb     ,
 				      long  page     ,
 				      //long  user     ,
@@ -243,7 +251,7 @@ class Pages {
 				      char *coll     ,
 				      char *pwd      ,
 				      char *qs       );
-
+	/*
 	char *printCollectionNavBar    ( char *p    ,
 					 char *pend , 
 					 long  page ,
@@ -252,7 +260,7 @@ class Pages {
 					 char *coll ,
 					 char *pwd  ,
 					 char *qs = NULL );
-
+	*/
 	/*
 	bool printRulesetDropDown ( SafeBuf *sb        ,
 				    long  user         ,
@@ -295,7 +303,10 @@ enum {
 	//PAGE_WORDVECTOR  ,
 
 	// basic controls page /admin/basic
-	PAGE_BASIC ,
+	PAGE_BASIC_SETTINGS ,
+	PAGE_BASIC_STATUS ,
+	PAGE_BASIC_DIFFBOT ,
+	PAGE_BASIC_PASSWORDS ,
 
 	// master admin pages
 	PAGE_MASTER      , 
