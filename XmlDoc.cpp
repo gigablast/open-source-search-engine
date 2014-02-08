@@ -2897,7 +2897,7 @@ long *XmlDoc::getIndexCode2 ( ) {
 	}
 	*/
 
-	// . TCPTIMEDOUT, NOROUTETOHOST, etc.
+	// . TCPTIMEDOUT, NOROUTETOHOST, EDOCUNCHANGED, etc.
 	// . this will be the reply from diffbot.com if using diffbot
 	long *dstatus = getDownloadStatus();
 	if ( ! dstatus || dstatus == (void *)-1 ) return (long *)dstatus;
@@ -14269,6 +14269,10 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// send back g_errno = EDOCUNCHANGED or something
 	if ( m_sreqValid )
 		r->m_contentHash32 = m_sreq.m_contentHash32;
+
+	// if we have the old doc already set use that
+	if ( od )
+		r->m_contentHash32 = od->m_contentHash32;
 
 	// eventgurubot is the max
 	//char *userAgent = g_conf.m_spiderUserAgent;

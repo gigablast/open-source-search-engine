@@ -2144,6 +2144,8 @@ long long RdbBase::getNumTotalRecs ( ) {
 		numNegativeRecs += m_tree->getNumNegativeKeys(m_collnum);
 	}
 	else {
+		// i've seen this happen when adding a new coll i guess
+		if ( ! m_buckets ) return 0;
 		//these routines are slow because they count every time.
 		numPositiveRecs += m_buckets->getNumKeys(m_collnum);
 		//numPositiveRecs += m_buckets->getNumPositiveKeys(m_collnum);
