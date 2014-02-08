@@ -55,8 +55,8 @@ bool sendPageInject ( TcpSocket *s , HttpRequest *r ) {
 	strncpy(msg7->m_coll,coll,MAX_COLL_LEN);
 
 	// for diffbot
-	if ( crawlbotAPI ) 
-		msg7->m_hr.copy ( r );
+	//if ( crawlbotAPI ) 
+	msg7->m_hr.copy ( r );
 
 	// a scrape request?
 	char *qts = r->getString("qts",NULL);
@@ -169,12 +169,7 @@ bool sendReply ( void *state ) {
 	SafeBuf sb;
 
 	// print admin bar
-	g_pages.printAdminTop ( &sb, // p , pend , 
-				PAGE_INJECT, 
-				NULL, // msg7->m_username ,
-				msg7->m_coll , 
-				NULL ,  // pwd
-				s->m_ip );
+	g_pages.printAdminTop ( &sb, s , &msg7->m_hr );
 
 	// if there was an error let them know
 	char msg[1024];

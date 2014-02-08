@@ -49,9 +49,9 @@ bool sendPageLogView    ( TcpSocket *s , HttpRequest *r ) {
 	p->reserve2x(65535);
 	
  	//long  user     = g_pages.getUserType( s , r );
- 	char *username = g_users.getUsername(r);
-	char *pwd  = r->getString ("pwd");
- 	char *coll = r->getString ("c");
+ 	//char *username = g_users.getUsername(r);
+	//char *pwd  = r->getString ("pwd");
+ 	//char *coll = r->getString ("c");
 	long refreshRate = r->getLong("rr", 0);
 	long sampleSize  =  r->getLong("ss", 2048);
 	if(refreshRate > 0) 
@@ -61,8 +61,8 @@ bool sendPageLogView    ( TcpSocket *s , HttpRequest *r ) {
 
 	// 	char *ss = p->getBuf();
 	// 	char *ssend = p->getBufEnd();
-	g_pages.printAdminTop ( p , PAGE_LOGVIEW, username,
-				coll , pwd , s->m_ip );
+	g_pages.printAdminTop ( p, s, r );
+
 	//	p->incrementLength(sss - ss);
 
 	long nh = g_hostdb.getNumHosts();

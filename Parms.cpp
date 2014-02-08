@@ -921,12 +921,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	
 	// print standard header 
 	if ( ! pageBuf && ! isJSON )
-		g_pages.printAdminTop ( sb      ,
-					page     ,
-					username ,
-					coll     ,
-					pwd      , // NULL     , // pwd
-					fromIp   );
+		g_pages.printAdminTop ( sb , s , r );
 
 	
 

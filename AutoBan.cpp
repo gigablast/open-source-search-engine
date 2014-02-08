@@ -802,7 +802,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 	SafeBuf sb(512 * 512,"autobbuf");
 	//read in all of the possible cgi parms off the bat:
 	//long  user     = g_pages.getUserType( s , r );
-	char *username = g_users.getUsername(r);
+	//char *username = g_users.getUsername(r);
 	//char *pwd  = r->getString ("pwd");
 
 	char *coll = r->getString ("c");
@@ -831,8 +831,8 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 
 // 	char *ss = sb.getBuf();
 // 	char *ssend = sb.getBufEnd();
-	g_pages.printAdminTop ( &sb, PAGE_AUTOBAN, username,
-				coll , NULL , s->m_ip );
+	g_pages.printAdminTop ( &sb, s , r );
+
 	//sb.incrementLength(sss - ss);
 
 	// MDW: moved to here

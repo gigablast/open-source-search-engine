@@ -156,35 +156,6 @@ class Pages {
 				  char* bodyJavascript = "" );
 
 
-	char *printAdminTop            ( char        *p    , 
-					 char        *pend , 
-					 TcpSocket   *s    ,
-					 HttpRequest *r    ,
-					 char        *qs = NULL,
-					 char* bodyJavascript = "" ) ;
-
-	bool printAdminTop             ( SafeBuf *sb    ,
-					 long    page   ,
-					 //long    user   ,
-					 char   *username,
-					 char   *coll   ,
-					 char   *pwd    ,
-					 long    fromIp ,
-					 char   *qs = NULL, 
-					 char* bodyJavascript = "" );
-
-	char *printAdminTop            ( char *p      , 
-					 char *pend   , 
-					 long  page   ,
-					 //long  user   ,
-					 char *username,
-					 char *coll   ,
-					 char *pwd    ,
-					 long  fromIp ,
-					 char *qs     = "",
-					 char* bodyJavascript = "" ) ;
-
-
 	bool printAdminTop2 	       ( SafeBuf     *sb   ,
 					 TcpSocket   *s    ,
 					 HttpRequest *r    ,

@@ -868,50 +868,17 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 			   char* bodyJavascript) {
 	long  page   = getDynamicPageNumber ( r );
 	//long  user   = getUserType          ( s , r );
-	char *username   = g_users.getUsername ( r );
+	//char *username   = g_users.getUsername ( r );
+	char *username = NULL;
 	char *coll   = r->getString ( "c"   );
 	//char *pwd    = r->getString ( "pwd" );
 	// get username
 	
-	long  fromIp = s->m_ip;
-	return printAdminTop ( sb, page, username, //user, 
-	                       coll, NULL, fromIp , qs ,
-			       bodyJavascript);
-}
-
-
-/*
-char *Pages::printAdminTop ( char        *p    , 
-			     char        *pend , 
-			     TcpSocket   *s    ,
-			     HttpRequest *r    ,
-			     char        *qs   ,
-			     char* bodyJavascript) {
-	long  page   = getDynamicPageNumber ( r );
-	//long  user   = getUserType          ( s , r );
-	char *username   = g_users.getUsername ( r );
-	char *coll   = r->getString ( "c"   );
-	//char *pwd    = r->getString ( "pwd" );
-	long  fromIp = s->m_ip;
-	return printAdminTop ( p, pend, page, username,//user,
-	                       coll, NULL, fromIp , qs ,
-			       bodyJavascript);
-}
-*/
-
-bool Pages::printAdminTop ( SafeBuf *sb    ,
-			    long    page   ,
-			    //long    user   ,
-			    char   *username,
-			    char   *coll   ,
-			    char   *pwd    ,
-			    long    fromIp ,
-			    char   *qs     ,
-			    char* bodyJavascript ) {
 	bool status = true;
 
-	User *user = g_users.getUser (username );//,false );
-	if ( user ) pwd = user->m_password;
+	//User *user = g_users.getUser (username );//,false );
+	//if ( user ) pwd = user->m_password;
+	char *pwd = NULL;
 
 	sb->safePrintf(
 		       "<html>\n");
@@ -948,6 +915,9 @@ bool Pages::printAdminTop ( SafeBuf *sb    ,
 	//		GBVersion);//, split,
 	//                //g_conf.m_tfndbExtBits );
 	bool isLocal = false;
+
+	long fromIp = s->m_ip;
+
 	if ( strncmp(iptoa(fromIp),"192.168.",8) == 0) isLocal = true;
 	if ( strncmp(iptoa(fromIp),"10.",3) == 0) isLocal = true;
 
