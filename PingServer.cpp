@@ -3115,7 +3115,8 @@ void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
 	ei->m_finalCallback ( ei->m_finalState );
 }
 
-bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) ;
+// for printCrawlDetailsInJson()
+#include "PageCrawlBot.h"
 
 // . return false if would block, true otherwise
 // . used to send email and get a url when a crawl hits a maxToCrawl
@@ -3198,7 +3199,7 @@ bool sendNotification ( EmailInfo *ei ) {
 		// also in post body
 		SafeBuf postContent;
 		// the collection details
-		printCrawlDetailsInJson ( postContent , cr );
+		printCrawlDetailsInJson ( &postContent , cr );
 		// content-length of it
 		fullReq.safePrintf("Content-Length: %li\r\n",
 				   postContent.length());

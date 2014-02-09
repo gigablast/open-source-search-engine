@@ -2,6 +2,8 @@
 #ifndef CRAWLBOT_H
 #define CRAWLBOT_H
 
+bool printCrawlDetailsInJson ( class SafeBuf *sb , class CollectionRec *cx ) ;
+
 // values for the diffbot dropdown
 /*
 #define DBA_NONE 0

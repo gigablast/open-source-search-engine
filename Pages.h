@@ -28,8 +28,7 @@ extern char *g_msg;
 // . these are called to send a dynamic page
 bool sendPageBasicSettings   ( TcpSocket *s , HttpRequest *r );
 bool sendPageBasicStatus     ( TcpSocket *s , HttpRequest *r );
-bool sendPageBasicDiffbot    ( TcpSocket *s , HttpRequest *r );
-bool sendPageBasicPasswords  ( TcpSocket *s , HttpRequest *r );
+//bool sendPageBasicDiffbot    ( TcpSocket *s , HttpRequest *r );
 
 
 
@@ -228,11 +227,8 @@ class Pages {
 	*/
 	bool  printAdminLinks          ( SafeBuf *sb, 
 					 long  page ,
-					 //long  user ,
-					 char *username,
 					 char *coll ,
-					 char *pwd  ,
-					 bool  top  ) ;
+					 bool isBasic );
 	/*
 	char *printAdminLinks          ( char *p    , 
 					 char *pend , 
@@ -304,7 +300,8 @@ enum {
 	// basic controls page /admin/basic
 	PAGE_BASIC_SETTINGS ,
 	PAGE_BASIC_STATUS ,
-	PAGE_BASIC_DIFFBOT ,
+	//PAGE_BASIC_SEARCH , // TODO
+	//PAGE_BASIC_DIFFBOT , // TODO
 	PAGE_BASIC_PASSWORDS ,
 
 	// master admin pages

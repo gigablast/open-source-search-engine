@@ -2198,7 +2198,7 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 }
 */
 
-bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
+bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx ) {
 
 	SafeBuf tmp;
 	long crawlStatus = -1;
@@ -2215,7 +2215,7 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 	}
 
 
-	sb.safePrintf("\n\n{"
+	sb->safePrintf("\n\n{"
 		      "\"name\":\"%s\",\n"
 		      "\"type\":\"%s\",\n"
 		      //"\"alias\":\"%s\",\n"
@@ -2269,7 +2269,7 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 	// if not a "bulk" injection, show crawl stats
 	if ( cx->m_isCustomCrawl != 2 ) {
 
-		sb.safePrintf(
+		sb->safePrintf(
 			      // settable parms
 			      "\"maxToCrawl\":%lli,\n"
 			      "\"maxToProcess\":%lli,\n"
@@ -2282,46 +2282,46 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 			      , (long)cx->m_restrictDomain
 			      , (long)cx->m_diffbotOnlyProcessIfNew
 			      );
-		sb.safePrintf("\"seeds\":\"");
-		sb.safeUtf8ToJSON ( cx->m_diffbotSeeds.getBufStart());
-		sb.safePrintf("\",\n");
+		sb->safePrintf("\"seeds\":\"");
+		sb->safeUtf8ToJSON ( cx->m_diffbotSeeds.getBufStart());
+		sb->safePrintf("\",\n");
 	}
 
-	sb.safePrintf("\"roundsCompleted\":%li,\n",
+	sb->safePrintf("\"roundsCompleted\":%li,\n",
 		      cx->m_spiderRoundNum);
 
-	sb.safePrintf("\"roundStartTime\":%lu,\n",
+	sb->safePrintf("\"roundStartTime\":%lu,\n",
 		      cx->m_spiderRoundStartTime);
 
-	sb.safePrintf("\"currentTime\":%lu,\n",
+	sb->safePrintf("\"currentTime\":%lu,\n",
 		      getTimeGlobal() );
 
 
-	sb.safePrintf("\"apiUrl\":\"");
-	sb.safeUtf8ToJSON ( cx->m_diffbotApiUrl.getBufStart() );
-	sb.safePrintf("\",\n");
+	sb->safePrintf("\"apiUrl\":\"");
+	sb->safeUtf8ToJSON ( cx->m_diffbotApiUrl.getBufStart() );
+	sb->safePrintf("\",\n");
 
 
-	sb.safePrintf("\"urlCrawlPattern\":\"");
-	sb.safeUtf8ToJSON ( cx->m_diffbotUrlCrawlPattern.getBufStart() );
-	sb.safePrintf("\",\n");
+	sb->safePrintf("\"urlCrawlPattern\":\"");
+	sb->safeUtf8ToJSON ( cx->m_diffbotUrlCrawlPattern.getBufStart() );
+	sb->safePrintf("\",\n");
 
-	sb.safePrintf("\"urlProcessPattern\":\"");
-	sb.safeUtf8ToJSON ( cx->m_diffbotUrlProcessPattern.getBufStart() );
-	sb.safePrintf("\",\n");
+	sb->safePrintf("\"urlProcessPattern\":\"");
+	sb->safeUtf8ToJSON ( cx->m_diffbotUrlProcessPattern.getBufStart() );
+	sb->safePrintf("\",\n");
 
-	sb.safePrintf("\"pageProcessPattern\":\"");
-	sb.safeUtf8ToJSON ( cx->m_diffbotPageProcessPattern.getBufStart() );
-	sb.safePrintf("\",\n");
+	sb->safePrintf("\"pageProcessPattern\":\"");
+	sb->safeUtf8ToJSON ( cx->m_diffbotPageProcessPattern.getBufStart() );
+	sb->safePrintf("\",\n");
 
 
-	sb.safePrintf("\"urlCrawlRegEx\":\"");
-	sb.safeUtf8ToJSON ( cx->m_diffbotUrlCrawlRegEx.getBufStart() );
-	sb.safePrintf("\",\n");
+	sb->safePrintf("\"urlCrawlRegEx\":\"");
+	sb->safeUtf8ToJSON ( cx->m_diffbotUrlCrawlRegEx.getBufStart() );
+	sb->safePrintf("\",\n");
 
-	sb.safePrintf("\"urlProcessRegEx\":\"");
-	sb.safeUtf8ToJSON ( cx->m_diffbotUrlProcessRegEx.getBufStart() );
-	sb.safePrintf("\",\n");
+	sb->safePrintf("\"urlProcessRegEx\":\"");
+	sb->safeUtf8ToJSON ( cx->m_diffbotUrlProcessRegEx.getBufStart() );
+	sb->safePrintf("\",\n");
 
 
 
@@ -2335,7 +2335,7 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 	char *mt = "crawl";
 	if ( cx->m_isCustomCrawl == 2 ) mt = "bulk";
 
-	sb.safePrintf("\"downloadJson\":"
+	sb->safePrintf("\"downloadJson\":"
 		      "\"http://api.diffbot.com/v2/%s/download/"
 		      "%s-%s_data.json\",\n"
 		      , mt
@@ -2343,7 +2343,7 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 		      , name
 		      );
 
-	sb.safePrintf("\"downloadUrls\":"
+	sb->safePrintf("\"downloadUrls\":"
 		      "\"http://api.diffbot.com/v2/%s/download/"
 		      "%s-%s_urls.csv\",\n"
 		      , mt
@@ -2351,14 +2351,14 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 		      , name
 		      );
 
-	sb.safePrintf("\"notifyEmail\":\"");
-	sb.safeUtf8ToJSON ( cx->m_notifyEmail.getBufStart() );
-	sb.safePrintf("\",\n");
+	sb->safePrintf("\"notifyEmail\":\"");
+	sb->safeUtf8ToJSON ( cx->m_notifyEmail.getBufStart() );
+	sb->safePrintf("\",\n");
 
-	sb.safePrintf("\"notifyWebhook\":\"");
-	sb.safeUtf8ToJSON ( cx->m_notifyUrl.getBufStart() );
-	sb.safePrintf("\"\n");
-	//sb.safePrintf("\",\n");
+	sb->safePrintf("\"notifyWebhook\":\"");
+	sb->safeUtf8ToJSON ( cx->m_notifyUrl.getBufStart() );
+	sb->safePrintf("\"\n");
+	//sb->safePrintf("\",\n");
 
 	/////
 	//
@@ -2377,7 +2377,7 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 	*/
 	//printUrlFilters ( sb , cx , FMT_JSON );
 	// end that collection rec
-	sb.safePrintf("}\n");
+	sb->safePrintf("}\n");
 
 	return true;
 }
@@ -2610,7 +2610,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//long paused = 1;
 
 			//if ( cx->m_spideringEnabled ) paused = 0;
-			printCrawlDetailsInJson ( sb , cx );
+			printCrawlDetailsInJson ( &sb , cx );
 			// print the next one out
 			continue;
 		}

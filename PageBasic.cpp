@@ -7,9 +7,11 @@
 
 bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) ;
 
+///////////
 //
 // main > Basic > Settings
 //
+///////////
 bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 
 	char  buf [ 128000 ];
@@ -22,10 +24,6 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
 
 
-	// print standard header 
-	if ( fmt == FORMAT_HTML )
-		g_pages.printAdminTop ( &sb , socket , hr );
-
 	// false = usedefault coll?
 	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
 	if ( ! cr ) {
@@ -33,7 +31,11 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 		return true;
 	}
 
-	sb.safePrintf("<form method=POST submit=/basic/settings>\n");
+	// print standard header 
+	if ( fmt == FORMAT_HTML )
+		// this prints the <form tag as well
+		g_pages.printAdminTop ( &sb , socket , hr );
+
 	
 	// print pause or resume button
 	if ( cr->m_spideringEnabled )
@@ -666,3 +668,211 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 
 	return true;
 }
+
+// from pagecrawlbot.cpp for printCrawlDetailsInJson()
+#include "PageCrawlBot.h"
+
+///////////
+//
+// main > Basic > Status
+//
+///////////
+bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
+
+	char  buf [ 128000 ];
+	SafeBuf sb(buf,128000);
+
+	char *fs = hr->getString("format",NULL,NULL);
+	char fmt = FORMAT_HTML;
+	if ( fs && strcmp(fs,"html") == 0 ) fmt = FORMAT_HTML;
+	if ( fs && strcmp(fs,"json") == 0 ) fmt = FORMAT_JSON;
+	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
+
+
+	// false = usedefault coll?
+	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
+	if ( ! cr ) {
+		g_httpServer.sendErrorReply(socket,500,"invalid collection");
+		return true;
+	}
+
+	if ( fmt == FMT_JSON ) {
+		printCrawlDetailsInJson ( &sb , cr );
+		return g_httpServer.sendDynamicPage (socket, 
+						     sb.getBufStart(), 
+						     sb.length(),
+						     0); // cachetime
+	}
+
+
+	// print standard header 
+	if ( fmt == FORMAT_HTML )
+		// this prints the <form tag as well
+		g_pages.printAdminTop ( &sb , socket , hr );
+
+
+	//
+	// show stats
+	//
+	if ( fmt == FMT_HTML ) {
+
+		char *seedStr = cr->m_diffbotSeeds.getBufStart();
+		if ( ! seedStr ) seedStr = "";
+
+		SafeBuf tmp;
+		long crawlStatus = -1;
+		getSpiderStatusMsg ( cr , &tmp , &crawlStatus );
+		CrawlInfo *ci = &cr->m_localCrawlInfo;
+		long sentAlert = (long)ci->m_sentCrawlDoneAlert;
+		if ( sentAlert ) sentAlert = 1;
+
+		sb.safePrintf(
+
+			      "<form method=get action=/crawlbot>"
+			      "%s"
+			      , sb.getBufStart() // hidden input token/name/..
+			      );
+		sb.safePrintf("<TABLE border=0>"
+			      "<TR><TD valign=top>"
+
+			      "<table border=0 cellpadding=5>"
+
+			      //
+			      "<tr>"
+			      "<td><b>Crawl Name:</td>"
+			      "<td>%s</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Crawl Type:</td>"
+			      "<td>%li</td>"
+			      "</tr>"
+
+			      //"<tr>"
+			      //"<td><b>Collection Alias:</td>"
+			      //"<td>%s%s</td>"
+			      //"</tr>"
+
+			      "<tr>"
+			      "<td><b>Token:</td>"
+			      "<td>%s</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Seeds:</td>"
+			      "<td>%s</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Crawl Status:</td>"
+			      "<td>%li</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Crawl Status Msg:</td>"
+			      "<td>%s</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Rounds Completed:</td>"
+			      "<td>%li</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Has Urls Ready to Spider:</td>"
+			      "<td>%li</td>"
+			      "</tr>"
+
+
+			      // this will  have to be in crawlinfo too!
+			      //"<tr>"
+			      //"<td><b>pages indexed</b>"
+			      //"<td>%lli</td>"
+			      //"</tr>"
+
+			      "<tr>"
+			      "<td><b>Objects Found</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>URLs Harvested</b> (inc. dups)</td>"
+			      "<td>%lli</td>"
+     
+			      "</tr>"
+
+			      //"<tr>"
+			      //"<td><b>URLs Examined</b></td>"
+			      //"<td>%lli</td>"
+			      //"</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Crawl Attempts</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Crawl Successes</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Crawl Successes This Round</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Process Attempts</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Process Successes</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Page Process Successes This Round</b></td>"
+			      "<td>%lli</td>"
+			      "</tr>"
+
+			      
+			      , cr->m_diffbotCrawlName.getBufStart()
+			      
+			      , (long)cr->m_isCustomCrawl
+
+			      , cr->m_diffbotToken.getBufStart()
+
+			      , seedStr
+
+			      , crawlStatus
+			      , tmp.getBufStart()
+			      , cr->m_spiderRoundNum
+			      , cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
+
+			      , cr->m_globalCrawlInfo.m_objectsAdded -
+			        cr->m_globalCrawlInfo.m_objectsDeleted
+			      , cr->m_globalCrawlInfo.m_urlsHarvested
+			      //, cr->m_globalCrawlInfo.m_urlsConsidered
+
+			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
+			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
+			      , cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound
+
+			      , cr->m_globalCrawlInfo.m_pageProcessAttempts
+			      , cr->m_globalCrawlInfo.m_pageProcessSuccesses
+			      , cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound
+			      );
+
+	}
+
+	if ( fmt != FORMAT_JSON )
+		// wrap up the form, print a submit button
+		g_pages.printAdminBottom ( &sb );
+
+	return g_httpServer.sendDynamicPage (socket, 
+					     sb.getBufStart(), 
+					     sb.length(),
+					     0); // cachetime
+}
+	

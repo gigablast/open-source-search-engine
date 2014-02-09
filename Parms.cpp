@@ -930,6 +930,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	if ( page == PAGE_LOG        ) tt = "Log Controls";
 	if ( page == PAGE_MASTER     ) tt = "Master Controls";
 	if ( page == PAGE_SECURITY   ) tt = "Security Controls";
+	if ( page == PAGE_BASIC_PASSWORDS ) tt = "Security Controls";
 	if ( page == PAGE_SPIDER     ) tt = "Spider Controls";
 	if ( page == PAGE_SEARCH     ) tt = "Search Controls";
 	if ( page == PAGE_ACCESS     ) tt = "Access Controls";
@@ -1895,7 +1896,7 @@ char *Parms::printParms (char *p, char *pend, TcpSocket *s , HttpRequest *r) {
 bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	long  page = g_pages.getDynamicPageNumber ( r );
 	//long  user = g_pages.getUserType ( s , r );
-	char *username = g_users.getUsername(r);
+	//char *username = g_users.getUsername(r);
 	char *THIS = getTHIS ( r , page );
 	char *coll = r->getString ( "c"   );
 	//char *pwd  = r->getString ( "pwd" );
@@ -1903,7 +1904,7 @@ bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	//if ( ! pwd  ) pwd  = "";
 	long nc = r->getLong("nc",1);
 	long pd = r->getLong("pd",1);
-	return printParms ( sb, page, username, THIS, coll, NULL, nc, pd );
+	return printParms ( sb, page, NULL, THIS, coll, NULL, nc, pd );
 }
 
 static long s_count = 0;
@@ -2011,6 +2012,11 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 	char *bg2 = DARK_BLUE;
 	// background color
 	char *bg = NULL;
+
+	// page aliases
+	if ( page == PAGE_BASIC_PASSWORDS )
+		page = PAGE_SECURITY;
+
 	// find in parms list
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		// get it

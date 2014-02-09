@@ -98,10 +98,10 @@ static WebPage s_pages[] = {
 	  "Basic settings page.", sendPageBasicSettings  , 0 } ,
 	{ PAGE_BASIC_STATUS, "admin/status", 0 , "status",1, 0 , 
 	  "Basic status page.", sendPageBasicStatus  , 0 } ,
-	{ PAGE_BASIC_DIFFBOT, "admin/diffbot", 0 , "diffbot",1, 0 , 
-	  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 } ,
+	//{ PAGE_BASIC_DIFFBOT, "admin/diffbot", 0 , "diffbot",1, 0 , 
+	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 } ,
 	{ PAGE_BASIC_PASSWORDS, "admin/passwords", 0 , "passwords",1, 0 , 
-	  "Basic passwords page.", sendPageBasicPasswords  , 0 } ,
+	  "Basic passwords page.", sendPageGeneric  , 0 } ,
 
 
 	{ PAGE_MASTER    , "admin/master"  , 0 , "master controls" ,  1 , 0 , 
@@ -1068,7 +1068,8 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
         bool isBasic = false;
 	if ( page == PAGE_BASIC_SETTINGS ) isBasic = true;
 	if ( page == PAGE_BASIC_STATUS ) isBasic = true;
-	if ( page == PAGE_BASIC_DIFFBOT ) isBasic = true;
+	//if ( page == PAGE_BASIC_DIFFBOT ) isBasic = true;
+	//if ( page == PAGE_BASIC_SEARCH  ) isBasic = true;
 	if ( page == PAGE_BASIC_PASSWORDS ) isBasic = true;
 
 	// print breadcrumb. main > Basic > Settings
@@ -1078,23 +1079,20 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	sb->safePrintf("<b>%s > %s > %s", coll, menu, s_pages[page].m_name);
 
 	// print Basic | Advanced links
-	if ( isBasic ) {
+	if ( isBasic )
 		sb->safePrintf ( "<b><font color=red>Basic</font></b>"
 				 " &nbsp; "
 				 "<b><a href=/admin/master>Advanced</a>"
 				 );
-	}
-	else {
+	else
 		sb->safePrintf ( "<a href=/admin/basic><b>Basic</b></a>"
 				 " &nbsp; "
 				 "<b>Advanced</b>"
 				 "<br><br>"
 				 );
-		// print the links
-		status &= printAdminLinks ( sb, page , NULL,coll,NULL, true );
-		// print the links
-		status &= printAdminLinks ( sb, page , NULL,coll,NULL, false );
-	}
+
+	// print the menu links under that
+	status &= printAdminLinks ( sb, page , coll , isBasic );
 
 	// begin 2nd row in big table
 	sb->safePrintf("</td></TR>");
@@ -1196,10 +1194,10 @@ char *Pages::printAdminTop ( char *p        ,
 	p = printAdminLinks ( p , pend , page , username , coll , NULL, true );
 
 	// collection under that
-	p = printCollectionNavBar ( p , pend , page , username , coll , NULL, qs );
+	p = printCollectionNavBar(p,pend , page , username , coll , NULL, qs );
 
 	// print the links
-	p = printAdminLinks ( p , pend , page , username , coll , NULL, false );
+	p = printAdminLinks (p , pend , page , username , coll , NULL, false );
 
 	// . the form
 	// . we cannot use the GET method if there is more than a few k of
@@ -1333,7 +1331,7 @@ bool Pages::printAdminTop2 ( SafeBuf *sb    ,
 	status &= printAdminLinks ( sb, page , username , coll , NULL, true );
 
 	// collection under that
-	status &= printCollectionNavBar ( sb, page , username , coll , NULL, qs );
+	status &= printCollectionNavBar ( sb, page , username , coll ,NULL,qs);
 
 	// print the links
 	status &= printAdminLinks ( sb, page , username , coll , NULL, false );
@@ -1819,31 +1817,28 @@ char *Pages::printHostLinks ( char *p      ,
 // . print the collection admin links if "user" is USER_ADMIN
 bool  Pages::printAdminLinks ( SafeBuf *sb,
 			       long  page ,
-			       //long  user ,
-			       char *username,
-			       char *collArg ,
-			       char *pwd  ,
-			       bool  top  ) {
+			       char *coll ,
+			       bool  isBasic ) {
 
 	bool status = true;
 	// prepare for printing these
 	//if ( ! coll ) coll = "";
 	//if ( ! pwd  ) pwd  = "";
 
-	CollectionRec *cr = g_collectiondb.getRec ( collArg );
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
 	// sometimes there are no collections!
 	//if ( ! cr ) return true;
-	char *coll = "";
-	if ( cr ) coll = cr->m_coll;
+	//char *coll = "";
+	//if ( cr ) coll = cr->m_coll;
 	
 
-	if ( ! top ) {
-		// . if no collection do not print anything else
-		// . no, we accept as legit (print out as "main")
-		//if ( ! coll[0] ) return status;
-		if ( g_collectiondb.m_numRecsUsed == 0 ) return status;
-		//if ( ! g_collectiondb.getRec ( coll )  ) return status;
-	}
+	//if ( ! top ) {
+	//	// . if no collection do not print anything else
+	//	// . no, we accept as legit (print out as "main")
+	//	//if ( ! coll[0] ) return status;
+	//	if ( g_collectiondb.m_numRecsUsed == 0 ) return status;
+	//	//if ( ! g_collectiondb.getRec ( coll )  ) return status;
+	//}
 
 	//sprintf(p,"<font size=+1>\n" );
 	//p += gbstrlen(p);
@@ -1864,8 +1859,8 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		// do not print Sync link if only one host
 		//if ( i == PAGE_SYNC && g_hostdb.getNumHosts() == 1) continue;
 		// top or bottom
-		if (   top && i >= PAGE_CGIPARMS ) continue;
-		if ( ! top && i  < PAGE_CGIPARMS ) continue;
+		//if (   top && i >= PAGE_CGIPARMS ) continue;
+		//if ( ! top && i  < PAGE_CGIPARMS ) continue;
 
 		// skip seo link
 		if ( ! g_conf.m_isMattWells && i == PAGE_SEO ) 
@@ -1874,6 +1869,16 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		// skip page autoban link
 		if ( ! g_conf.m_isMattWells && i == PAGE_AUTOBAN )
 			continue;
+
+		// is this page basic?
+		bool pageBasic = false;
+		if ( i >= PAGE_BASIC_SETTINGS &&
+		     i <= PAGE_BASIC_PASSWORDS ) 
+			pageBasic = true;
+
+		// print basic pages under the basic menu, advanced pages
+		// under the advanced menu...
+		if ( isBasic != pageBasic ) continue;
 
 		// ignore these for now
 		//if ( i == PAGE_SECURITY ) continue;
@@ -1948,100 +1953,21 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	}
 
 	// print documentation links
-	if ( top ) {
-		sb->safePrintf(" <a style=text-decoration:none "
-			       "href=/admin.html>"
-			       "<b>"
-			       "admin guide"
-			       "</b></a> "
-			       "&nbsp; "
-			       " <a style=text-decoration:none; "
-			       "href=/developer.html>"
-			       "<b>dev guide</b></a>" );
-	}
+	sb->safePrintf(" <a style=text-decoration:none "
+		       "href=/admin.html>"
+		       "<b>"
+		       "admin guide"
+		       "</b></a> "
+		       "&nbsp; "
+		       " <a style=text-decoration:none; "
+		       "href=/developer.html>"
+		       "<b>dev guide</b></a>" );
 
 	//sb->safePrintf("</center>" );
 	sb->safePrintf("<br/>" );
 
-	if ( top ) sb->safePrintf("<br/>" );
+	sb->safePrintf("<br/>" );
 
-	if ( top ) return status;
-
-	/*
-	//
-	// if diffbot give the crawlbot api here mostly for testing
-	//
-	char *hyphen = NULL;
-	if ( g_conf.m_useDiffbot ) 
-		hyphen = strchr ( coll , '-');
-
-	if ( g_conf.m_useDiffbot ) {
-		sb->safePrintf("<br>"
-			       "<center>"
-			       "Diffbot API: &nbsp; " );
-		// /api/startcrawl
-		sb->safePrintf(" <a href=/dev/crawl>startcrawl</a>");
-	}
-
-	if ( hyphen ) {
-
-		// /api/stopcrawl
-		sb->safePrintf("&nbsp; <a href=/api/stopcrawl?token=");
-		sb->safeMemcpy ( coll, hyphen - coll );
-		sb->safePrintf("&id=%s>stopcrawl</a>"
-			       ,hyphen+1);
-
-		// /api/resumecrawl
-		sb->safePrintf("&nbsp; <a href=/api/resumecrawl?token=");
-		sb->safeMemcpy ( coll, hyphen - coll );
-		sb->safePrintf("&id=%s>resumecrawl</a>"
-			       ,hyphen+1);
-
-		// crawls
-		sb->safePrintf(" &nbsp; <a href=/api/crawls?token=");
-		sb->safeMemcpy ( coll, hyphen - coll );
-		sb->safePrintf(" title=\"show all crawl collections\">"
-			       "crawls</a>");
-
-		// activecrawls
-		sb->safePrintf(" &nbsp; <a href=/api/activecrawls?id=%s ",
-			       hyphen+1);
-		sb->safePrintf(" title=\"show stats on one crawl\">"
-			       "activecrawls</a>");
-
-
-		// downloadurls
-		sb->safePrintf(" &nbsp; <a href=/api/downloadurls?id=%s ",
-			       hyphen+1);
-		sb->safePrintf(" title=\"download urls in a crawl's "
-			       "spiderdb\">downloadurls</a>");
-
-		// download crawl urls
-		sb->safePrintf(" &nbsp; <a href=/api/downloadcrawl?id=%s ",
-			       hyphen+1);
-		sb->safePrintf(" title=\"download urls from crawl\">"
-			       "downloadcrawl (urls)</a>");
-
-
-		// download json objects
-		sb->safePrintf(" &nbsp; <a href=/api/downloadcrawl?"
-			       "id=%s&format=json ",
-			       hyphen+1);
-		sb->safePrintf(" title=\"download urls from crawl\">"
-			       "downloadcrawl (json)</a>");
-
-	}
-
-	if ( g_conf.m_useDiffbot ) {
-		sb->safePrintf("</center>\n");
-		sb->safePrintf("<br>");
-	}
-	*/
-
-
-
-	//sprintf(p,"</font>\n" );
-	//p += gbstrlen(p);
 	return status;
 }
 
