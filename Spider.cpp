@@ -1100,7 +1100,7 @@ bool SpiderColl::load ( ) {
 	}
 
 	// reset this once
-	m_msg4Avail    = true;
+	m_msg1Avail    = true;
 	m_isPopulating = false;
 
 	if ( ! m_lastDownloadCache.init ( 35000      , // maxcachemem,
@@ -2481,6 +2481,7 @@ static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 	// m_deleteMyself flag will have been set.
 	if ( THIS->m_deleteMyself &&
 	     ! THIS->m_msg5b.m_waitingForList &&
+	     ! THIS->m_msg4x.m_inUse &&
 	     ! THIS->m_msg1.m_mcast.m_inUse ) {
 		mdelete ( THIS , sizeof(SpiderColl),"postdel1");
 		delete ( THIS );
@@ -2911,7 +2912,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 static void doledWrapper ( void *state ) {
 	SpiderColl *THIS = (SpiderColl *)state;
 	// msg4 is available again
-	THIS->m_msg4Avail = true;
+	THIS->m_msg1Avail = true;
 
 	// no longer populating doledb. we also set to false in 
 	// gotSpiderListWrapper
@@ -4204,7 +4205,7 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 	// sanity check
 	if ( p - m_doleBuf > (long)MAX_DOLEREC_SIZE ) { char *xx=NULL;*xx=0; }
 	// how did this happen?
-	if ( ! m_msg4Avail ) { char *xx=NULL;*xx=0; }
+	if ( ! m_msg1Avail ) { char *xx=NULL;*xx=0; }
 
 	// add it to doledb ip table now so that waiting tree does not
 	// immediately get another spider request from this same ip added
@@ -4260,7 +4261,7 @@ bool SpiderColl::addWinnerToDoledb ( ) {
 					 doledWrapper  ,
 					 0 ); // niceness MAX_NICENESS  ,
 	// if it blocked set this to true so we do not reuse it
-	if ( ! status ) m_msg4Avail = false;
+	if ( ! status ) m_msg1Avail = false;
 
 	long storedFirstIp = (m_waitingTreeKey.n0) & 0xffffffff;
 

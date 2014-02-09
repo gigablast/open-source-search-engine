@@ -6,7 +6,7 @@ OBJS =  Tfndb.o UdpSlot.o Rebalance.o \
 	Msg13.o Mime.o IndexReadInfo.o \
 	PageGet.o PageHosts.o PageIndexdb.o PageLogin.o \
 	PageParser.o PageInject.o PagePerf.o PageReindex.o PageResults.o \
-	PageRoot.o PageSockets.o PageStats.o \
+	PageAddUrl.o PageRoot.o PageSockets.o PageStats.o \
 	PageTitledb.o \
 	PageAddColl.o \
 	hash.o Domains.o \

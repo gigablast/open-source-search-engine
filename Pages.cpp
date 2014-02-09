@@ -70,7 +70,7 @@ static WebPage s_pages[] = {
 	  sendPageResults, 0 },
 	{ PAGE_ADDURL    , "addurl"       , 0 , "add url" , 0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_PROXY, 
-	  "page where you can add url for spidering",
+	  "Page where you can add url for spidering",
 	  sendPageAddUrl, 0 },
 
 	{ PAGE_GET       , "get"           , 0 , "get" ,  0 , 0 ,
@@ -236,10 +236,12 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER   ,
 	  "inject url in the index here",
 	  sendPageInject   , 2 } ,
+
+	// this is the addurl page the the admin!
 	{ PAGE_ADDURL2   , "admin/addurl"   , 0 , "add urls" ,  0 , 0 ,
-	  //USER_ADMIN | USER_MASTER   ,
-	  "add url page",
-	  sendPageAddUrl   , 0 } ,
+	  "add url page for admin",
+	  sendPageAddUrl2   , 0 } ,
+
 	{ PAGE_REINDEX   , "admin/reindex"  , 0 , "query reindex" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER, 
 	  "reindex url page",

@@ -729,6 +729,22 @@ class SpiderRequest {
 				   // subtract the \0
 				   ((char *)m_url-(char *)&m_firstIp) - 1;};
 
+	char *getUrlPath() {
+		char *p = m_url;
+		for ( ; *p ; p++ ) {
+			if ( *p != ':' ) continue;
+			p++; if ( *p != '/' ) continue;
+			p++; if ( *p != '/' ) continue;
+			break;
+		}
+		if ( ! *p ) return NULL;
+		// skip until / then
+		for ( ; *p && *p !='/' ; p++ ) ;
+		if ( *p != '/' ) return NULL;
+		// return root path of / if there.
+		return p;
+	};		
+
 	//long getUrlLen() { return gbstrlen(m_url); };
 
 	void setKey ( long firstIp ,
@@ -1083,9 +1099,9 @@ class SpiderColl {
 	HashTableX m_siteListDomTable;
 
 
-	Msg4 m_msg4;
+	Msg4 m_msg4x;
 	Msg1 m_msg1;
-	bool m_msg4Avail;
+	bool m_msg1Avail;
 
 	// Rdb.cpp calls this
 	bool  addSpiderReply   ( SpiderReply   *srep );

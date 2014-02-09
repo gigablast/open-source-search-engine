@@ -97,14 +97,27 @@ public:
 };
 
 
-// CommandUpdateSiteList() should call this
-bool hashSiteList ( collnum_t collnum , char *siteList ) {
+// . CommandUpdateSiteList() should call this
+// . this returns false if it blocks
+// . returns true and sets g_errno on error
+// . uses msg4 to add seeds to spiderdb if necessary
+// . only adds seeds for the shard we are on iff we are responsible for
+//   the fake firstip!!!
+bool updateSiteList ( collnum_t collnum , char *siteList ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
-	if ( ! cr ) return false;
+	if ( ! cr ) return true;
 
 	// this might make a new spidercoll...
 	SpiderColl *sc = g_spiderCache.getSpiderColl ( cr->m_collnum );
+
+	// sanity. if in use we should not even be here
+	if ( sc->m_msg4x.m_inUse ) { 
+		log("basic: trying to update site list while previous "
+		    "update still outstanding.");
+		g_errno = EBADENGINEER;
+		return true;
+	}
 
 	// when sitelist is update Parms.cpp should invalidate this flag!
 	//if ( sc->m_siteListTableValid ) return true;
@@ -112,7 +125,7 @@ bool hashSiteList ( collnum_t collnum , char *siteList ) {
 	// hash current sitelist entries, each line so we don't add
 	// dup requests into spiderdb i guess...
 	HashTableX dedup;
-	if ( ! dedup.set ( 4,0,1024,NULL,0,false,0,"sldt") ) return false;
+	if ( ! dedup.set ( 4,0,1024,NULL,0,false,0,"sldt") ) return true;
 	// this is a safebuf PARM in Parms.cpp now HOWEVER, not really
 	// because we set it here from a call to CommandUpdateSiteList()
 	// because it requires all this computational crap.
@@ -126,7 +139,7 @@ bool hashSiteList ( collnum_t collnum , char *siteList ) {
 		// keep it simple
 		long h32 = hash32 ( s , op - s );
 		// for deduping
-		if ( ! dedup.addKey ( &h32 ) ) return false;
+		if ( ! dedup.addKey ( &h32 ) ) return true;
 	}
 
 	// get the old sitelist Domain Hash to PatternData mapping table
@@ -141,7 +154,7 @@ bool hashSiteList ( collnum_t collnum , char *siteList ) {
 			 true , // allow dup keys?
 			 0 , // niceness - at least for now
 			 "sldt" ) )
-		return false;
+		return true;
 
 
 	// we can now free the old site list methinks
@@ -152,7 +165,8 @@ bool hashSiteList ( collnum_t collnum , char *siteList ) {
 	sc->m_siteListHasNegatives = false;
 	sc->m_siteListIsEmpty = true;
 
-
+	// use this so it will be free automatically when msg4 completes!
+	SafeBuf *spiderReqBuf = &sc->m_msg4x.m_tmpBuf;
 
 	// scan the list
 	char *pn = siteList;
@@ -210,18 +224,23 @@ bool hashSiteList ( collnum_t collnum , char *siteList ) {
 			goto innerLoop;
 		}
 
-		// see if in existing table for existing site list
-		if ( ! dedup.isInTable ( &h32 ) ) {
-			// add this url to spiderdb as a spiderrequest
-			spiderList.addSpiderRequest ( s , pe - s );
-		}
-
 		u.set ( s , pe - s );
 
 		// error? skip it then...
 		if ( u.getHostLen() <= 0 ) {
 			log("basic: error on line #%li in sitelist",lineNum);
 			continue;
+		}
+
+		// see if in existing table for existing site list
+		if ( ! dedup.isInTable ( &h32 ) ) {
+			// make spider request
+			SpiderRequest sreq;
+			sreq.setFromAddUrl ( u.getUrl() );
+			// . add this url to spiderdb as a spiderrequest
+			// . calling msg4 will be the last thing we do
+			if(!spiderReqBuf->safeMemcpy(&sreq,sreq.getRecSize()))
+				return true;
 		}
 
 		// make the data node
@@ -259,7 +278,7 @@ bool hashSiteList ( collnum_t collnum , char *siteList ) {
 		// add to new dt
 		long domHash32 = u.getDomainHash32();
 		if ( ! dt->addKey ( &domHash32 , &pd ) )
-			return false;
+			return true;
 
 		// we have some patterns in there
 		sc->m_siteListIsEmpty = false;
@@ -270,6 +289,20 @@ bool hashSiteList ( collnum_t collnum , char *siteList ) {
 
 	long siteListLen = gbstrlen(siteList);
 	cr->m_siteListBuf.safeMemcpy ( siteList , siteListLen + 1 );
+
+
+	// use spidercoll to contain this msg4 but if in use it
+	// won't be able to be deleted until it comes back..
+	if ( ! sc->m_msg4x.addMetaList ( spiderReqBuf ,
+					 sc->m_collnum ,
+					 // no need for callback since m_msg4x
+					 // should set msg4::m_inUse to false
+					 // when it comes back
+					 NULL , // state
+					 NULL , // callback 
+					 MAX_NICENESS 
+					 ) )
+		return false;
 
 	return true;
 }
@@ -310,7 +343,7 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 		//	return NULL;
 		// otherwise, it has a path. skip if we don't match path ptrn
 		if ( pd->m_pathOff ) {
-			if ( ! myPath ) myPath = sreq->getPath();
+			if ( ! myPath ) myPath = sreq->getUrlPath();
 			if ( strncmp (myPath,
 				      pd->m_patternStr + pd->m_pathOff,
 				      pd->m_pathLen ) )
@@ -395,8 +428,15 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 	if ( ! msg2 ) msg2 = "";
 
 	// now list of sites to include, or exclude
-	sb->safePrintf ( "List of sites to spider, one per line:"
+	sb->safePrintf ( "List of sites to spider, one per line. "
+			 "Gigablast uses the \"insitelist\" directive in "
+			 "the <a href=/scheduler>spider scheduler</a> "
+			 "to make sure that the spider only indexed urls "
+			 "that match the patterns you specify here. "
+			 "See examples below."
+
 			 "<br>"
+
 			 "%s"
 			 "<br>"
 			 "<textarea cols=80 rows=40%s>"
@@ -428,7 +468,9 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 		       "perform the replacement. "
 
 		       "<br><br>"
+		       );
 
+	sb->safePrintf(
 		       "On the command like you can issue a command like "
 
 		       "<i>"
@@ -453,6 +495,16 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 		       );
 			      
 	sb->safePrintf("<br><br>");
+
+	sb->safePrintf("<input type=checkbox name=spiderToo value=1 checked>"
+		       " Attempt to spider and index urls in the \"spider "
+		       "sites\" above. Saves you "
+		       "from having to add the same list of sites on "
+		       "the <a href=/addurl>add urls</a> page."
+
+		       "<br><br>"
+		       "<input type=submit name=Submit value=1>"
+		       );
 
 	// example table
 	sb->safePrintf("<table>"
@@ -611,5 +663,6 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 
 		      "</table>"
 		      );
-	
+
+	return true;
 }

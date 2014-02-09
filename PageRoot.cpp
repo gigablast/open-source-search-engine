@@ -1277,7 +1277,7 @@ static bool s_inprogress = false;
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
-bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
+bool sendPageAddUrlForHomepage ( TcpSocket *s , HttpRequest *r ) {
 	// . get fields from cgi field of the requested url
 	// . get the search query
 	long  urlLen = 0;
