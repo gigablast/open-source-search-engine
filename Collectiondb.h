@@ -678,6 +678,8 @@ class CollectionRec {
 	// for storing callbacks waiting in line for freshest crawl info
 	//SafeBuf m_callbackQueue;
 	
+	// list of url patterns to be indexed.
+	SafeBuf m_siteListBuf;
 
 	// . now the url regular expressions
 	// . we chain down the regular expressions

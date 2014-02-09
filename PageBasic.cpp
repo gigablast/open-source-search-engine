@@ -3,6 +3,7 @@
 #include "SearchInput.h"
 #include "Pages.h"
 #include "Parms.h"
+#include "Spider.h"
 
 bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) ;
 
@@ -25,8 +26,8 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( fmt == FORMAT_HTML )
 		g_pages.printAdminTop ( &sb , socket , hr );
 
-
-	CollectionRec *cr = getCollRecFromHttpRequest ( hr );
+	// false = usedefault coll?
+	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
 	if ( ! cr ) {
 		g_httpServer.sendErrorReply(socket,500,"invalid collection");
 		return true;
@@ -84,20 +85,267 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 }
 
 
+class PatternData {
+public:
+	// hash of the subdomain or domain for this line in sitelist
+	long m_thingHash32;
+	// ptr to the line in CollectionRec::m_siteListBuf
+	char *m_patternStr;
+	// offset of the url path in the pattern, 0 means none
+	short m_pathOff; 
+	short m_pathLen;
+};
+
+
+// CommandUpdateSiteList() should call this
+bool hashSiteList ( collnum_t collnum , char *siteList ) {
+
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+	if ( ! cr ) return false;
+
+	// this might make a new spidercoll...
+	SpiderColl *sc = g_spiderCache.getSpiderColl ( cr->m_collnum );
+
+	// when sitelist is update Parms.cpp should invalidate this flag!
+	//if ( sc->m_siteListTableValid ) return true;
+
+	// hash current sitelist entries, each line so we don't add
+	// dup requests into spiderdb i guess...
+	HashTableX dedup;
+	if ( ! dedup.set ( 4,0,1024,NULL,0,false,0,"sldt") ) return false;
+	// this is a safebuf PARM in Parms.cpp now HOWEVER, not really
+	// because we set it here from a call to CommandUpdateSiteList()
+	// because it requires all this computational crap.
+	char *op = cr->m_siteListBuf.getBufStart();
+	// scan and hash each line in it
+	for ( ; *op ; op++ ) {
+		// get end
+		char *s = op;
+		// skip to end of line marker
+		for ( ; *op && *op != '\n' ; op++ ) ;
+		// keep it simple
+		long h32 = hash32 ( s , op - s );
+		// for deduping
+		if ( ! dedup.addKey ( &h32 ) ) return false;
+	}
+
+	// get the old sitelist Domain Hash to PatternData mapping table
+	HashTableX *dt = &sc->m_siteListDomTable;
+
+	// reset it
+	if ( ! dt->set ( 4 , 
+			 sizeof(PatternData),
+			 1024 ,
+			 NULL , 
+			 0 ,
+			 true , // allow dup keys?
+			 0 , // niceness - at least for now
+			 "sldt" ) )
+		return false;
+
+
+	// we can now free the old site list methinks
+	cr->m_siteListBuf.purge();
+
+	// reset flags
+	sc->m_siteListAsteriskLine = NULL;
+	sc->m_siteListHasNegatives = false;
+	sc->m_siteListIsEmpty = true;
+
+
+
+	// scan the list
+	char *pn = siteList;
+
+	// completely empty?
+	if ( ! pn ) return true;
+
+	long lineNum = 1;
+
+	Url u;
+
+	for ( ; *pn ; pn++ , lineNum++ ) {
+
+		// get end
+		char *s = pn;
+		// skip to end of line marker
+		for ( ; *pn && *pn != '\n' ; pn++ ) ;
+
+		char *start = s;
+
+		// back p up over spaces in case ended in spaces
+	        char *pe = pn;
+		for ( ; pe > s && pe[-1] == ' ' ; pe-- );
+
+		// make hash of the line
+		long h32 = hash32 ( s , pe - s );
+
+		bool exact = false;
+
+	innerLoop:
+		// skip spaces at start of line
+		if ( *s == ' ' ) s++;
+
+		// comment?
+		if ( *s == '#' ) continue;
+
+		// empty line?
+		if ( *s == '\n' ) continue;
+
+		// all?
+		if ( *s == '*' ) {
+			sc->m_siteListAsteriskLine = start;
+			continue;
+		}
+
+		if ( *s == '-' ) {
+			sc->m_siteListHasNegatives = true;
+			s++;
+		}
+
+		// exact:?
+		if ( strncmp(s,"exact:",6) == 0 ) {
+			exact = true;
+			s += 6;
+			goto innerLoop;
+		}
+
+		// see if in existing table for existing site list
+		if ( ! dedup.isInTable ( &h32 ) ) {
+			// add this url to spiderdb as a spiderrequest
+			spiderList.addSpiderRequest ( s , pe - s );
+		}
+
+		u.set ( s , pe - s );
+
+		// error? skip it then...
+		if ( u.getHostLen() <= 0 ) {
+			log("basic: error on line #%li in sitelist",lineNum);
+			continue;
+		}
+
+		// make the data node
+		PatternData pd;
+		// hash of the subdomain or domain for this line in sitelist
+		pd.m_thingHash32 = u.getHostHash32();
+		// . ptr to the line in CollectionRec::m_siteListBuf. 
+		// . includes pointing to "exact:" too i guess and tag: later.
+		pd.m_patternStr = start;
+		// offset of the url path in the pattern, 0 means none
+		pd.m_pathOff = 0;
+		// scan url pattern, it should start at "s"
+		char *x = s;
+		// go all the way to the end
+		for ( ; *x && x < pe ; x++ ) {
+			// skip ://
+			if ( x[0] == ':' && x[1] =='/' && x[2] == '/' ) {
+				x += 2;
+				continue;
+			}
+			// stop if we hit another /, that is path start
+			if ( x[0] != '/' ) continue;
+			x++;
+			// empty path besides the /?
+			if (  x >= pe   ) break;
+			// ok, we got something here i think
+			if ( u.getPathLen() <= 1 ) { char *xx=NULL;*xx=0; }
+			// calc length from "start" of line so we can
+			// jump to the path quickly for compares
+			pd.m_pathOff = x - start;
+			pd.m_pathLen = pe - x;
+			break;
+		}
+
+		// add to new dt
+		long domHash32 = u.getDomainHash32();
+		if ( ! dt->addKey ( &domHash32 , &pd ) )
+			return false;
+
+		// we have some patterns in there
+		sc->m_siteListIsEmpty = false;
+	}
+
+	// go back to a high niceness
+	dt->m_niceness = MAX_NICENESS;
+
+	long siteListLen = gbstrlen(siteList);
+	cr->m_siteListBuf.safeMemcpy ( siteList , siteListLen + 1 );
+
+	return true;
+}
+
+// . Spider.cpp calls this to see if a url it wants to spider is
+//   in our "site list"
+// . we should return the row of the FIRST match really
+// . the url patterns all contain a domain now, so this can use the domain
+//   hash to speed things up
+// . return ptr to the start of the line in case it has "tag:" i guess
+char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
+
+	// if it has * and no negatives, we are in!
+	if ( sc->m_siteListAsteriskLine && ! sc->m_siteListHasNegatives )
+		return sc->m_siteListAsteriskLine;
+
+	// if it is just a bunch of comments or blank lines, it is empty
+	if ( sc->m_siteListIsEmpty )
+		return NULL;
+
+	char *myPath = NULL;
+
+	// check domain specific tables
+	HashTableX *dt = &sc->m_siteListDomTable;
+
+	// sanity check
+	if ( dt->getNumSlotsUsed() == 0 ) { char *xx=NULL;*xx=0; }
+
+	long slot = dt->getSlot ( &sreq->m_domHash32 );
+
+	// loop over all the patterns that contain this domain and see
+	// the first one we match, and if we match a negative one.
+	for ( ; slot >= 0 ; slot = dt->getNextSlot(slot,&sreq->m_domHash32)) {
+		// get pattern
+		PatternData *pd = (PatternData *)dt->getValueFromSlot ( slot );
+		// is it negative? return NULL if so so url will be ignored
+		//if ( pd->m_patternStr[0] == '-' ) 
+		//	return NULL;
+		// otherwise, it has a path. skip if we don't match path ptrn
+		if ( pd->m_pathOff ) {
+			if ( ! myPath ) myPath = sreq->getPath();
+			if ( strncmp (myPath,
+				      pd->m_patternStr + pd->m_pathOff,
+				      pd->m_pathLen ) )
+				continue;
+		}
+		// is it just a plain domain?
+		if ( pd->m_thingHash32 == sreq->m_domHash32 )
+			// this will be false if negative pattern i guess
+			return pd->m_patternStr;
+		// is it just a subdomain?
+		if ( pd->m_thingHash32 == sreq->m_hostHash32 )
+			// this will be false if negative pattern i guess
+			return pd->m_patternStr;
+	}
+
+	// is there an '*' in the patterns?
+	if ( sc->m_siteListAsteriskLine ) return sc->m_siteListAsteriskLine;
+
+	return NULL;
+}
+
 
 bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 
-	CollectionRec *cr = getCollectionRec ( hr );
+	// false = useDefault?
+	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
 	if ( ! cr ) return true;
 
-	char *submittedSiteList = hr->getString("sitelist" );
-
+	//char *submittedSiteList = hr->getString("sitelist" );
 	// we do not automatically set this parm so that we can verify it
 	// before setting cr->m_siteListBuf
-	bool valid = true;
-	SafeBuf validMsg;
-	if ( submittedSiteList ) 
-		valid = validateSiteList (submittedSiteList,&validMsg);
+	//bool valid = true;
+	//SafeBuf validMsg;
+	//if ( submittedSiteList ) 
+	//	SiteListTable (submittedSiteList,&validMsg);
 
 
 	// if it is a valid list of sites... broadcast it to all hosts
@@ -105,35 +353,37 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 	// they will have to update their siteListTable hashtable so which
 	// we use to quickly determine if we should spider a url or not
 	// in Spider.cpp
-	if ( valid && submittedSiteList &&
-	     // if it was too big this might say oom i guess
-	     ! g_parms.broadcastParm( submittedSiteList , "sitelist" ) ) {
-		// tell the browser why we failed
-		validMsg.safePrintf("Error distributing site list: %s",
-				    mstrerror(g_errno));
-		valid = false;
-	}
+	//if ( submittedSiteList && // valid
+	//     // . if it was too big this might say oom i guess
+	//     // . use CommandUpdateSiteList() to hand setting hashtable
+	//     ! g_parms.broadcastParm( submittedSiteList , "sitelist" ) ) {
+	//	// tell the browser why we failed
+	//	validMsg.safePrintf("Error distributing site list: %s",
+	//			    mstrerror(g_errno));
+	//	valid = false;
+	//}
 	
 
-
 	// print if submitted site list is valid or not
-	if ( ! valid )
-		sb.safePrintf("<br><font color=red><b>"
-			      "%s"
-			      "</b></font>"
-			      "<br>"
-			      , validMsg.getBufStart() );
+	//if ( ! valid )
+	//	sb->safePrintf("<br><font color=red><b>"
+	//		       "%s"
+	//		       "</b></font>"
+	//		       "<br>"
+	//		       , validMsg.getBufStart() );
 	
 
 	// it is a safebuf parm
 	char *siteList = cr->m_siteListBuf.getBufStart();
+	if ( ! siteList ) siteList = "";
 
 	SafeBuf msgBuf;
 	char *status = "";
-	long max = 100000;
-	if ( cr->m_numSiteEntries > max ) {
+	long max = 1000000;
+	if ( cr->m_siteListBuf.length() > max ) {
 		msgBuf.safePrintf( "<font color=red><b>"
-				   "There are %li site entries, too many to "
+				   "Site list is over %li bytes large, "
+				   "too many to "
 				   "display on this web page. Please use the "
 				   "file upload feature only for now."
 				   "</b></font>"
@@ -155,7 +405,7 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 			 );
 
 	// print sites
-	sb->safeMemcpy ( &cr->m_siteListBuf );
+	sb->safeStrcpy ( siteList );
 
 	sb->safePrintf("</textarea>\n");
 
@@ -213,97 +463,149 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 
 		      "<tr>"
 		      "<td>*</td>"
-		      "<td>Spider all urls encountered. If you just enter "
+		      "<td>Spider all urls encountered. If you just submit "
 		      "this by itself, then Gigablast will initiate spidering "
 		      "automatically at dmoz.org, an internet "
 		      "directory of good sites.</td>"
 		      "</tr>"
 
+
+		      // protocol and subdomain match
+		      "<tr>"
+		      "<td>http://www.goodstuff.com/</td>"
+		      "<td>"
+		      "Matches urls beginning with "
+		      "http://www.goodstuff.com/. "
+		      "This is also used as a seed."
+		      "</td>"
+		      "</tr>"
+
+		      // subdomain match
+		      "<tr>"
+		      "<td>www.goodstuff.com</td>"
+		      "<td>"
+		      "Exact subdomain match. "
+		      "Spider urls on www.goodstuff.com."
+		      "This is also used as a seed."
+		      "</td>"
+		      "</tr>"
+
+		      // domain match
 		      "<tr>"
 		      "<td>goodstuff.com</td>"
 		      "<td>"
+		      "Exact domain match. "
 		      "Spider urls on goodstuff.com and on "
-		      "any subdomain of goodstuff.com"
+		      "any subdomain of goodstuff.com."
+		      "This is also used as a seed, but you might "
+		      "have to end up adding www.goodstuff.com separately."
 		      "</td>"
 		      "</tr>"
 
+		      // subdomain AND subdir match
 		      "<tr>"
-		      "<td>http://goodstuff.com</td>"
+		      "<td>www.goodstuff.com/goodir/anotherdir/</td>"
 		      "<td>"
-		      "Only spider urls beginning with http://goodstuff.com/ "
+		      "Exact subdomain match and parital subdir match. "
+		      "Matches urls on www.goodstuff.com and in the "
+		      "/gooddir/anotherdir/ subdirectory. "
+		      "This is also used as a seed, but you might "
+		      "have to end up adding another seed if it is 404."
 		      "</td>"
 		      "</tr>"
 
+
+		      // exact match
 		      "<tr>"
-		      "<td>https://goodstuff.com</td>"
+		      "<td>exact:http://xyz.goodstuff.com/</td>"
 		      "<td>"
-		      "Only spider urls beginning with https://goodstuff.com/ "
+		      "Seed url. "
+		      "Matches the single url "
+		      "http://xyz.goodstuff.com/."
+		      "This is also used as a seed."
 		      "</td>"
 		      "</tr>"
 
+		      // exact match
 		      "<tr>"
-		      "<td>http://*.goodstuff.com</td>"
+		      "<td>exact:http://xyz.goodstuff.com/mypage.html</td>"
 		      "<td>"
-		      "Only spider urls from a subdomain of goodstuff.com "
-		      "and only using the http, not https, protocol."
+		      "Matches the single url "
+		      "http://xyz.goodstuff.com/mypage.html."
+		      "This is also used as a seed."
 		      "</td>"
 		      "</tr>"
 
+		      // local subdir match
 		      "<tr>"
-		      "<td>http://xyz.goodstuff.com/$</td>"
+		      "<td>file://C/mydir/mysubdir/"
 		      "<td>"
-		      "Only spider the single url http://xyz.goodstuff.com/"
+		      "Matches all local files in the specified directory. "
+		      "This is also used as a seed."
 		      "</td>"
 		      "</tr>"
 
+		      // connect to a device and index it as a stream
+		      /*
 		      "<tr>"
-		      "<td>goodstuff.com/mydir/</td>"
+		      "<td>stream:/dev/eth0"
 		      "<td>"
-		      "Spider urls on any subdomain of goodstuff.com AND "
-		      "in the /mydir/ directory or subdirectory thereof."
+		      "Connect to a device and index it as a stream. "
+		      "It will be treated like a single huge document for "
+		      "searching purposes with chunks being indexed in "
+		      "realtime. Or chunk it up into individual document "
+		      "chunks, but proximity term searching will have to "
+		      "be adjusted to compute query term distances "
+		      "inter-document."
 		      "</td>"
+		      "</tr>"
+		      */
+
+		      // negative subdomain match
+		      "<tr>"
+		      "<td>-badstuff.com</td>"
+		      "<td>Exclude all pages from the badstuff.com domain. "
+		      "Start the url pattern with a - to exclude it from "
+		      "the spider set.</td>"
 		      "</tr>"
 
 		      /*
 		      "<tr>"
-		      "<td>goodstuff.com/mydir/ *boots*</td>"
-		      "<td>"
-		      "Spider urls on any subdomain of goodstuff.com AND "
-		      "in the /mydir/ directory or subdirectory thereof "
-		      "AND with the word boots somewhere in the url."
+		      "<td>regexp:-pid=[0-9A-Z]+/</td>"
+		      "<td>Url must match this regular expression. "
+		      "Try to avoid using these if possible; they can slow "
+		      "things down and are confusing to use."
 		      "</td>"
 		      "</tr>"
+		      
 
+		      // tag match
 		      "<tr>"
-		      "<td>goodstuff.com/mydir/ *boots$</td>"
+		      //"<td>tag:boots contains:boots<br>"
+		      "<td>tag:boots www.westernfootwear.com<br>"
+		      "<td>tag:boots www.cowboyshop.com</td>"
+		      "<td>tag:boots www.moreboots.com</td>"
+		      "<td>tag:boots www.lotsoffootwear.com</td>"
+		      //"<td>t:boots -contains:www.cowboyshop.com/shoes/</td>"
 		      "<td>"
-		      "Spider urls on any subdomain of goodstuff.com AND "
-		      "in the /mydir/ directory or subdirectory thereof "
-		      "AND ENDING in the word boots."
+		      "Advance users only. "
+		      "Tag any urls matching these 4 url patterns "
+		      "so we can use "
+		      "the expression <i>tag:boots</i> in the "
+		      "<a href=/scheduler>spider scheduler</a> and perhaps "
+		      "give such urls higher spider priority."
+		      "For more "
+		      "precise spidering control over url subsets. "
+		      "Preceed any pattern with the tagname followed by "
+		      "space to tag it."
 		      "</td>"
 		      "</tr>"
 		      */
 
 		      "<tr>"
-		      "<td>file://C/mydir/mysubdir/"
-		      "<td>"
-		      "Spider all local files in the specified directory."
-		      "</td>"
-		      "</tr>"
-
-		      "<tr>"
-		      "<td>-badstuff.com</td>"
-		      "<td>Exclude all pages from badstuff.com</td>"
-		      "</tr>"
-
-		      "<tr>"
-		      "<td>mytag goodstuff.com</td>"
-		      "<td>"
-		      "Advanced users only. "
-		      "Tag all urls from goodstuff.com with <i>mytag</i> "
-		      "which can be used like <i>tag:mytag</i> in the "
-		      "<a href=/scheduler>spider scheduler</a> for more "
-		      "precise spidering control over url subsets."
+		      "<td># This line is a comment.</td>"
+		      "<td>Empty lines and lines starting with # are "
+		      "ignored."
 		      "</td>"
 		      "</tr>"
 

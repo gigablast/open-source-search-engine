@@ -1361,7 +1361,7 @@ void Pages::printFormData( SafeBuf *sb, TcpSocket *s, HttpRequest *r ) {
 
 	long  page   = getDynamicPageNumber ( r );
 	//long  user   = getUserType          ( s , r );
-	char *username =g_users.getUsername(r);
+	//char *username =g_users.getUsername(r);
 	//char *pwd    = r->getString ( "pwd" );
 	char *coll   = r->getString ( "c"   );
 	// pass on this stuff
