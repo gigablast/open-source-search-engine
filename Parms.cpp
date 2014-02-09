@@ -4192,6 +4192,10 @@ bool Parms::setFromFile ( void *THIS        ,
 		continue;
 	}
 
+	/*
+
+	  // no! now we warn with a redbox alert
+
 	// always make sure we got some admin security
 	if ( g_conf.m_numMasterIps <= 0 && g_conf.m_numMasterPwds <= 0 ) {
 		//log(LOG_INFO,
@@ -4202,6 +4206,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		strcpy ( g_conf.m_masterPwds[0] , "footbar23" );
 		g_conf.m_numMasterPwds = 1;
 	}
+	*/
 
 	return true;
 }
@@ -8490,7 +8495,7 @@ void Parms::init ( ) {
 	m->m_title = "Admin Passwords";
 	m->m_desc  = "Passwords allowed to change Gigablast's general "
 		"parameters and also the parameters for any collection. "
-		"If no AdminPassword or Admin IP is specified then "
+		"If no Admin Password or Admin IP is specified then "
 		"Gigablast will only allow local IPs to connect to it "
 		"as the master admin.";
 	m->m_cgi   = "mpwd";

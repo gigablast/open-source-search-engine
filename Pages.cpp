@@ -902,6 +902,8 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//char *username   = g_users.getUsername ( r );
 	char *username = NULL;
 	char *coll   = r->getString ( "c"   );
+	if ( ! coll ) coll = "main";
+
 	//char *pwd    = r->getString ( "pwd" );
 	// get username
 	
@@ -926,30 +928,18 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//sprintf ( p , "<center>\n");
 	//p += gbstrlen ( p );
 	// table
-	sb->safePrintf( "<table border=0><tr><td>");
+	sb->safePrintf( "<table border=0>"
+			"<tr><td>");
 	// print the logo in upper left corner
 	status &= printLogo ( sb , coll );
-	// after logo text
-	//if ( user == USER_SPAM ) {
-	//	sb->safePrintf( " &nbsp; <font size=+1><b>"
-	//			"Quality Control</b></font>" );
-	//}
-//#ifdef SPLIT_INDEXDB
-//	long split = INDEXDB_SPLIT;
-//#else
-//	long split = 1;
-//#endif
-	//long split = g_hostdb.m_indexSplits;
-	// the version info
-	//sb->safePrintf ("<br/><b>%s</b>",
-	//		//"&nbsp;&nbsp; split=%li tfndbext=%li" ,
-	//		GBVersion);//, split,
-	//                //g_conf.m_tfndbExtBits );
+
+	sb->safePrintf("</td>\n<td>");
 
 	// print the hosts navigation bar
 	status &= printHostLinks ( sb, page , 
 				   username , pwd ,
 				   coll, NULL, s->m_ip, qs );
+
 
 	// end table
 	sb->safePrintf ("</td></tr></table><br/>\n");//<br/>\n");
@@ -1035,7 +1025,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	// pass on this stuff
 	//if ( ! pwd ) pwd = "";
 	//sb->safePrintf ( "<input type=hidden name=pwd value=\"%s\">\n",pwd);
-	if ( ! coll ) coll = "";
+	//if ( ! coll ) coll = "";
 	sb->safePrintf ( "<input type=hidden name=c value=\"%s\">\n",coll);
 	// sometimes we do not want to be USER_MASTER for testing
 	//if ( user == USER_ADMIN ) {
@@ -1051,8 +1041,13 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 
 	// a new table. on the left is collections, on right is other stuff
-	sb->safePrintf("<TABLE "
-		       "cellpadding=5 border=0>"
+	sb->safePrintf(
+		       //"<DIV "
+		       //"style=max-width:100%%;overflow-x:hidden;"
+		       //">"
+		       "<TABLE "
+		       "cellpadding=5 border=0 "
+		       ">"
 		       "<TR>"
 		       "<td></td>"
 		       );
@@ -1072,24 +1067,38 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//if ( page == PAGE_BASIC_SEARCH  ) isBasic = true;
 	if ( page == PAGE_BASIC_PASSWORDS ) isBasic = true;
 
+	//
 	// print breadcrumb. main > Basic > Settings
-	char *menu = "Advanced";
-	if ( isBasic ) menu = "Basic";
+	//
+	char *menu = "advanced";
+	if ( isBasic ) menu = "basic";
+	sb->safePrintf("<br>");
+	sb->safePrintf("<b><font color=gray size=+2>"
+		       "%s &gt; %s &gt; %s</font></b>"
+		       "<br><br>\n", 
+		       coll, menu, s_pages[page].m_name);
 
-	sb->safePrintf("<b>%s > %s > %s", coll, menu, s_pages[page].m_name);
+
 
 	// print Basic | Advanced links
 	if ( isBasic )
-		sb->safePrintf ( "<b><font color=red>Basic</font></b>"
+		sb->safePrintf ( "<u><b><font color=red>basic</font></b></u>"
 				 " &nbsp; "
-				 "<b><a href=/admin/master>Advanced</a>"
+				 "<b><a href=/admin/master "
+				 "style=text-decoration:none;>"
+				 "advanced</a></b>"
 				 );
 	else
-		sb->safePrintf ( "<a href=/admin/basic><b>Basic</b></a>"
+		sb->safePrintf ( "<b><a href=/admin/settings "
+				 "style=text-decoration:none;>"
+				 "basic</a></b>"
 				 " &nbsp; "
-				 "<b>Advanced</b>"
-				 "<br><br>"
+				 "<u><b><font color=red>"
+				 "advanced"
+				 "</font></b></u>"
 				 );
+
+	sb->safePrintf("<br><br>");
 
 	// print the menu links under that
 	status &= printAdminLinks ( sb, page , coll , isBasic );
@@ -1414,6 +1423,10 @@ bool Pages::printAdminBottom ( SafeBuf *sb ) {
 		  "<input type=submit name=action value=submit /></center>"
 		  "</br>\n" ) )
 		status = false;
+	if ( ! sb->safePrintf("</TABLE>\n"
+			      //"</DIV>\n"
+			      ) )
+		status = false;
 	// end form
 	if ( ! sb->safePrintf ( "</form>\n</body>\n</html>\n" ) )
 		status = false;
@@ -1683,7 +1696,7 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 	// don't print host buttons if only 1 host
 	if ( total <= 1 ) return status;
 
-	sb->safePrintf (  "</td>\n<td> &nbsp; &nbsp; &nbsp; hosts: ");
+	sb->safePrintf (  "&nbsp; &nbsp; &nbsp; hosts: ");
 
 	if ( ! qs   ) qs   = "";
 	//if ( ! pwd  ) pwd  = "";
@@ -1850,9 +1863,11 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	//if ( g_users.hasPermission(username,PAGE_ADMIN ) ) 
 	//	sprintf(buf,"&master=0");
 
+	//sb->safePrintf("<div style=max-width:1000px;>");
+
 	//long matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
 	//long matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
-	for ( long i = PAGE_MASTER ; i < s_numPages ; i++ ) {
+	for ( long i = PAGE_BASIC_SETTINGS ; i < s_numPages ; i++ ) {
 		// do not print link if no permission for that page
 		//if ( (s_pages[i].m_perm & user) == 0 ) continue;
 		//if ( ! g_users.hasPermission(username,i) ) continue;
@@ -1953,15 +1968,18 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	}
 
 	// print documentation links
-	sb->safePrintf(" <a style=text-decoration:none "
-		       "href=/admin.html>"
-		       "<b>"
-		       "admin guide"
-		       "</b></a> "
-		       "&nbsp; "
-		       " <a style=text-decoration:none; "
-		       "href=/developer.html>"
-		       "<b>dev guide</b></a>" );
+	if ( ! isBasic )
+		sb->safePrintf(" <a style=text-decoration:none "
+			       "href=/admin.html>"
+			       "<b>"
+			       "admin guide"
+			       "</b></a> "
+			       "&nbsp; "
+			       " <a style=text-decoration:none; "
+			       "href=/developer.html>"
+			       "<b>dev guide</b></a>" );
+	
+	//sb->safePrintf("</div>");
 
 	//sb->safePrintf("</center>" );
 	sb->safePrintf("<br/>" );
@@ -1996,9 +2014,9 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	// if not admin just print collection name
 	//if ( user == USER_ADMIN ) {
 	//if (g_users.hasPermission(username,PAGE_ADMIN) ){
-	sb->safePrintf ( "<center><br/>Collection <b>"
-			 "<font color=red>%s</font></b>"
-			 "<br/><br/></center>" , coll );
+	//sb->safePrintf ( "<center><br/>Collection <b>"
+	//		 "<font color=red>%s</font></b>"
+	//		 "<br/><br/></center>" , coll );
 	//	return status ;
 	//}
 	// print up to 10 names on there

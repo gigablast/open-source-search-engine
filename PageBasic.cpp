@@ -24,8 +24,8 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
 
 
-	// false = usedefault coll?
-	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
+	// true = usedefault coll?
+	CollectionRec *cr = g_collectiondb.getRec ( hr , true );
 	if ( ! cr ) {
 		g_httpServer.sendErrorReply(socket,500,"invalid collection");
 		return true;
@@ -370,8 +370,8 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 
 bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 
-	// false = useDefault?
-	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
+	// true = useDefault?
+	CollectionRec *cr = g_collectiondb.getRec ( hr , true );
 	if ( ! cr ) return true;
 
 	//char *submittedSiteList = hr->getString("sitelist" );
@@ -431,17 +431,19 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 
 	// now list of sites to include, or exclude
 	sb->safePrintf ( "List of sites to spider, one per line. "
-			 "Gigablast uses the \"insitelist\" directive in "
-			 "the <a href=/scheduler>spider scheduler</a> "
-			 "to make sure that the spider only indexed urls "
+			 "Gigablast uses the "
+			 "<a href=/admin/scheduler#insitelist</a> "
+			 "directive in "
+			 "the <a href=/admin/scheduler>spider scheduler</a> "
+			 "to make sure that the spider only indexes urls "
 			 "that match the patterns you specify here. "
-			 "See examples below."
+			 "See <a href=#examples>examples below</a>."
 
 			 "<br>"
 
 			 "%s"
 			 "<br>"
-			 "<textarea cols=80 rows=40%s>"
+			 "<textarea cols=80 rows=20%s>"
 			 , msg2
 			 , status
 			 );
@@ -689,8 +691,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
 
 
-	// false = usedefault coll?
-	CollectionRec *cr = g_collectiondb.getRec ( hr , false );
+	// true = usedefault coll?
+	CollectionRec *cr = g_collectiondb.getRec ( hr , true );
 	if ( ! cr ) {
 		g_httpServer.sendErrorReply(socket,500,"invalid collection");
 		return true;
