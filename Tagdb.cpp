@@ -4053,7 +4053,7 @@ bool sendPageTagdb ( TcpSocket *s , HttpRequest *req ) {
 	//&& ! cr->hasPermission ( req , s ) ) {
 		log("admin: Bad collection name or password. Could not add "
 		    "sites to tagdb. Permission denied.");
-		return sendPageLogin ( s , req , 
+		return sendPagexxxx( s , req , 
 						    "Collection name or "
 						    "password is incorrect");
 	}

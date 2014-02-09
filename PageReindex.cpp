@@ -29,7 +29,7 @@ static bool printInterface ( SafeBuf *sb , char *q ,//long user ,
 class State13 {
 public:
 	char       m_query [ MAX_QUERY_LEN + 1];
-	char       m_isAdmin;
+	//char       m_isAdmin;
 	Msg1c      m_msg1c;
 	//Msg1d      m_msg1d;
 	char       m_coll [ MAX_COLL_LEN + 1];
@@ -61,7 +61,7 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	pwd [ len ] = '\0';
 
 	// are we the admin?
-	bool isAdmin = g_collectiondb.isAdmin ( r , s );
+	//bool isAdmin = g_collectiondb.isAdmin ( r , s );
 	//long user    = g_pages.getUserType ( s , r );
 	char *username = g_users.getUsername ( r );
 	char *errmsg = NULL;
@@ -75,6 +75,7 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 		return g_httpServer.sendErrorReply ( s , 500 ,
 						"Collection does not exist.");
 	}
+	/*
 	bool isAssassin = cr->isAssassin ( s->m_ip );
 	if ( isAdmin ) isAssassin = true;
 
@@ -82,11 +83,11 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	if ( ! isAssassin && ! cr->hasPermission ( r , s ) ) {
 		log("admin: Bad collection name "
 		    "or password. Query reindex failed. Permission denied.");
-		return sendPageLogin ( s , r , 
+		return sendPagexxxx ( s , r , 
 				       "Collection name or "
 				       "password is incorrect.");
 	}
-
+	*/
 	// get collection name and its length
 	char *coll    = cr->m_coll;
 	long  collLen = gbstrlen ( coll );
@@ -131,7 +132,7 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	mnew ( st , sizeof(State13) , "PageReindex" );
 
 	// set stuff now
-	st->m_isAdmin    = isAdmin;
+	//st->m_isAdmin    = isAdmin;
 	
 
 	// save the query to static buffer

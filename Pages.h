@@ -39,7 +39,6 @@ bool sendPageResults  ( TcpSocket *s , HttpRequest *r );
 //bool sendPageEvents   ( TcpSocket *s , HttpRequest *r );
 bool sendPageAddUrl   ( TcpSocket *s , HttpRequest *r );
 bool sendPageGet      ( TcpSocket *s , HttpRequest *r );
-bool sendPageLogin    ( TcpSocket *s , HttpRequest *r , char  *emsg );
 bool sendPageLogin    ( TcpSocket *s , HttpRequest *r );
 bool sendPageStats    ( TcpSocket *s , HttpRequest *r );
 bool sendPageHosts    ( TcpSocket *s , HttpRequest *r );
