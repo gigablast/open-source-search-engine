@@ -928,21 +928,53 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//sprintf ( p , "<center>\n");
 	//p += gbstrlen ( p );
 	// table
-	sb->safePrintf( "<table border=0>"
-			"<tr><td>");
+	sb->safePrintf( "<TABLE "
+			"cellpadding=5 border=0>"
+			"<tr><td valign=top>");
 	// print the logo in upper left corner
 	status &= printLogo ( sb , coll );
 
-	sb->safePrintf("</td>\n<td>");
+	/*
+	sb->safePrintf("<br><br><br>");
+
+	sb->safePrintf(
+		       "<div "
+		       "style=\""
+		       "max-height:600px;"
+		       "max-width:200px;"
+		       "min-width:200px;"
+		       "padding:4px;" // same as TABLE_STYLE
+		       "background-color:#d0d0d0;"
+		       "border-radius:10px;"
+		       "border:2px #606060 solid;"
+		       //"border-width:2px;"
+		       //"border-color:#606060;"
+		       "overflow-y:auto;"
+		       "overflow-x:hidden;"
+		       "line-height:23px;"
+		       "\""
+		       ">"
+		       );
+	// collection under that
+	status &= printCollectionNavBar ( sb, page , username , coll,pwd, qs );
+	*/
+
+
+	//
+	// begin the 2nd column of the display
+	//
+	sb->safePrintf("</TD>\n<TD>");
 
 	// print the hosts navigation bar
 	status &= printHostLinks ( sb, page , 
 				   username , pwd ,
 				   coll, NULL, s->m_ip, qs );
 
+	if ( g_hostdb.getNumHosts() > 1 )
+		sb->safePrintf("<br><br>");
 
 	// end table
-	sb->safePrintf ("</td></tr></table><br/>\n");//<br/>\n");
+	//sb->safePrintf ("</td></tr></table><br/>\n");//<br/>\n");
 
 	SafeBuf mb;
 	long adds = 0;
@@ -1041,6 +1073,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 
 	// a new table. on the left is collections, on right is other stuff
+	/*
 	sb->safePrintf(
 		       //"<DIV "
 		       //"style=max-width:100%%;overflow-x:hidden;"
@@ -1051,10 +1084,10 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       "<TR>"
 		       "<td></td>"
 		       );
-
-
 	// then collection page links and parms
 	sb->safePrintf("<TD valign=top>");
+	*/
+
 
 	// print emergency msg box
 	if ( adds )
@@ -1082,20 +1115,22 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 	// print Basic | Advanced links
 	if ( isBasic )
-		sb->safePrintf ( "<u><b><font color=red>basic</font></b></u>"
+		sb->safePrintf ( "<b><font color=red>basic</font></b>"
 				 " &nbsp; "
-				 "<b><a href=/admin/master "
+				 "<b><a href=/admin/master?c=%s "
 				 "style=text-decoration:none;>"
 				 "advanced</a></b>"
+				 , coll
 				 );
 	else
-		sb->safePrintf ( "<b><a href=/admin/settings "
+		sb->safePrintf ( "<b><a href=/admin/settings?c=%s "
 				 "style=text-decoration:none;>"
 				 "basic</a></b>"
 				 " &nbsp; "
-				 "<u><b><font color=red>"
+				 "<b><font color=red>"
 				 "advanced"
-				 "</font></b></u>"
+				 "</font></b>"
+				 , coll
 				 );
 
 	sb->safePrintf("<br><br>");
@@ -1649,7 +1684,7 @@ bool Pages::printLogo ( SafeBuf *sb, char *coll ) {
 	if ( ! coll ) coll = "";
 	sb->safePrintf (
 		  "<a href=\"/?c=%s\">"
-		  "<img width=\"295\" height=\"64\" border=\"0\" "
+		  "<img width=\"200\" height=\"40\" border=\"0\" "
 		  "alt=\"Gigablast\" src=\"/logo-small.png\" />"
 		  "</a>\n",coll);
 	return true;
@@ -1935,12 +1970,14 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		else if ( page == i )
 			sb->safePrintf(
 				       //"<span style=\"white-space:nowrap\">"
-				       "<a href=\"/%s?c=%s%s\"><b>"
-				       "<font color=red>%s</font></b></a>"
+				       "<b>"
+				       "<font color=red>%s</font></b>"
 				       //"</span>"
-				       " &nbsp; \n",s_pages[i].m_filename,
-				       coll,
-				       buf,s_pages[i].m_name);
+				       " &nbsp; \n"
+				       //,s_pages[i].m_filename
+				       //,coll
+				       //,buf
+				       ,s_pages[i].m_name);
 		else
 			sb->safePrintf(
 				       //"<span style=\"white-space:nowrap\">"
@@ -1982,9 +2019,8 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	//sb->safePrintf("</div>");
 
 	//sb->safePrintf("</center>" );
-	sb->safePrintf("<br/>" );
-
-	sb->safePrintf("<br/>" );
+	//sb->safePrintf("<br/>" );
+	//sb->safePrintf("<br/>" );
 
 	return status;
 }
@@ -2080,8 +2116,8 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 					 cname ,
 					 qs, cname );
 		else
-			sb->safePrintf ( "<u><b><font title=\"%s\" "
-					 "color=%s>%s</font></b></u> "
+			sb->safePrintf ( "<b><font title=\"%s\" "
+					 "color=%s>%s</font></b> "
 					 "&nbsp; ",  
 					 cname, color , cname );
 		sb->safePrintf("</nobr>");
