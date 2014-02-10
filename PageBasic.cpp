@@ -40,24 +40,24 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 	// print pause or resume button
 	if ( cr->m_spideringEnabled )
 		sb.safePrintf("<input type=submit "
-			      "style=\""
-			      "font:Helvetica Neue,Helvetica Arial;"
-			      "\" "
+			      //"style=\""
+			      //"font:Helvetica Neue,Helvetica Arial;"
+			      //"\" "
 			      "text=\"Pause Spidering\" "
-			      "name=pause value=1>");
+			      "name=pause value=\"Pause Spidering\">");
 	else
 		sb.safePrintf("<input type=submit "
-			      "style=\""
-			      "font:Helvetica Neue,Helvetica Arial;"
-			      "\" "
+			      //"style=\""
+			      //"font:Helvetica Neue,Helvetica Arial;"
+			      //"\" "
 			      "text=\"Resume Spidering\" "
-			      "name=pause value=0>");
+			      "name=pause value=\"Resume Spidering\">");
 
 	sb.safePrintf(" &nbsp; &nbsp; ");
 
 	// the restart button
 	sb.safePrintf("<input type=submit text=\"Restart Collection\" "
-		      "name=restart value=1 title=\"Reset "
+		      "name=restart value=Restart title=\"Reset "
 		      "the current collection's index and start spidering "
 		      "over, but keep all the settings and "
 		      "the site list below.\">");
@@ -429,49 +429,45 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 	char *msg2 = msgBuf.getBufStart();
 	if ( ! msg2 ) msg2 = "";
 
+
+	sb->safePrintf("%s",msg2);
+
+	sb->safePrintf ( "<table %s>"
+		       "<tr class=hdrow><td colspan=2>"
+		       "<center><b>Settings</b></tr></tr>"
+		       "<tr bgcolor=#%s>"
+		       "<td width=40%%>"
+		       ,TABLE_STYLE , DARK_BLUE);
+
 	// now list of sites to include, or exclude
 	sb->safePrintf ( "List of sites to spider, one per line. "
 			 "Gigablast uses the "
-			 "<a href=/admin/scheduler#insitelist</a> "
-			 "directive in "
+			 "<a href=/admin/scheduler#insitelist>insitelist</a> "
+			 "directive on "
 			 "the <a href=/admin/scheduler>spider scheduler</a> "
+			 "page "
 			 "to make sure that the spider only indexes urls "
 			 "that match the patterns you specify here. "
 			 "See <a href=#examples>examples below</a>."
 
-			 "<br>"
-
-			 "%s"
-			 "<br>"
+			 "</td><td>"
 			 "<textarea cols=80 rows=20%s>"
-			 , msg2
 			 , status
 			 );
 
 	// print sites
 	sb->safeStrcpy ( siteList );
 
-	sb->safePrintf("</textarea>\n");
+	sb->safePrintf("</textarea>\n"
+		       "</td></tr>");
 
 
-	sb->safePrintf("<br>"
-		       "<br>"
+	sb->safePrintf("<tr><td>"
 		       //"Alternatively you can edit the local "
 		       //"file %s/coll.%s.%li/sitelist.txt and "
 		       //"then click this link: <a>reload file</a>. "
 		       //"Or you can <a>upload a file</a> "
-		       "Alternatively, you can "
-		       "<input "
-		       "size=20 "
-		       "type=file "
-		       "name=\"Upload a File\"> of "
-		       "urls "
-		       "to REPLACE all the urls in here now. If there "
-		       "is an error with your submission then "
-		       "Gigablast will tell you and not "
-		       "perform the replacement. "
-
-		       "<br><br>"
+		       "Alternatively, you can upload the sites."
 		       );
 
 	sb->safePrintf(
@@ -496,29 +492,54 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 		       "to schedule downloads or inject content directly "
 		       "into Gigablast."
 
+		       "</td><td>"
+
+		       "<input "
+		       "size=20 "
+		       "type=file "
+		       "name=urls>"
+		       "</td></tr>"
+
 		       );
 			      
-	sb->safePrintf("<br><br>");
 
-	sb->safePrintf("<input type=checkbox name=spiderToo value=1 checked>"
+	sb->safePrintf("<tr><td>"
 		       " Attempt to spider and index urls in the \"spider "
 		       "sites\" above. Saves you "
 		       "from having to add the same list of sites on "
 		       "the <a href=/addurl>add urls</a> page."
 
-		       "<br><br>"
-		       "<input type=submit name=Submit value=1>"
+		       "</td><td>"
+
+		       "<input type=checkbox name=spiderToo value=1 checked>"
+
+		       "</td></tr>"
+		       // end the table
+		       "</table>"
+		       );
+
+
+
+	sb->safePrintf("<br>"
+		       "<center>"
+		       "<input type=submit name=Submit value=submit>"
+		       "</center>"
+		       "<br>"
+		       "<br>"
 		       );
 
 	// example table
-	sb->safePrintf("<table>"
-		      "<tr><td colspan=2><center>Examples"
-		      "</center></td></tr>" );
+	sb->safePrintf ( "<a name=examples></a>"
+			 "<table %s>"
+			 "<tr class=hdrow><td colspan=2>"
+			 "<center><b>Examples</b></tr></tr>"
+			 "<tr bgcolor=#%s>"
+			 "<td>"
+			 ,TABLE_STYLE , DARK_BLUE);
 
 	sb->safePrintf(
-
-		      "<tr>"
-		      "<td>*</td>"
+		      "*"
+		      "</td>"
 		      "<td>Spider all urls encountered. If you just submit "
 		      "this by itself, then Gigablast will initiate spidering "
 		      "automatically at dmoz.org, an internet "
@@ -633,17 +654,18 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 		      "things down and are confusing to use."
 		      "</td>"
 		      "</tr>"
+		      */
 		      
 
 		      // tag match
-		      "<tr>"
+		      "<tr><td>"
 		      //"<td>tag:boots contains:boots<br>"
-		      "<td>tag:boots www.westernfootwear.com<br>"
-		      "<td>tag:boots www.cowboyshop.com</td>"
-		      "<td>tag:boots www.moreboots.com</td>"
-		      "<td>tag:boots www.lotsoffootwear.com</td>"
+		      "tag:boots www.westernfootwear.com<br>"
+		      "tag:boots www.cowboyshop.com<br>"
+		      "tag:boots www.moreboots.com<br>"
+		      "tag:boots www.lotsoffootwear.com<br>"
 		      //"<td>t:boots -contains:www.cowboyshop.com/shoes/</td>"
-		      "<td>"
+		      "</td><td>"
 		      "Advance users only. "
 		      "Tag any urls matching these 4 url patterns "
 		      "so we can use "
@@ -656,7 +678,6 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 		      "space to tag it."
 		      "</td>"
 		      "</tr>"
-		      */
 
 		      "<tr>"
 		      "<td># This line is a comment.</td>"

@@ -9270,6 +9270,9 @@ bool isAggregator ( long siteHash32,long domHash32,char *url,long urlLen ) {
 #define SIGN_GE 5
 #define SIGN_LE 6
 
+// from PageBasic.cpp
+char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) ;
+
 // . this is called by SpiderCache.cpp for every url it scans in spiderdb
 // . we must skip certain rules in getUrlFilterNum() when doing to for Msg20
 //   because things like "parentIsRSS" can be both true or false since a url
@@ -9297,6 +9300,10 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 
 	long  urlLen = sreq->getUrlLen();
 	char *url    = sreq->m_url;
+
+	char *row;
+	bool checkedRow = false;
+	SpiderColl *sc = cr->m_spiderColl;
 
 	//if ( strstr(url,"http://www.vault.com/rankings-reviews/company-rankings/law/vault-law-100/.aspx?pg=2" ))
 	//	log("hey");
@@ -9641,6 +9648,29 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			p += 2;
 			goto checkNextRule;
 		}
+
+		// is it in the big list of sites?
+		if ( strncmp(p,"insitelist",10) == 0 ) {
+			// skip for msg20
+			//if ( isForMsg20 ) continue;
+			if ( ! checkedRow ) {
+				// only do once for speed
+				checkedRow = true;
+				// this function is in PageBasic.cpp
+				row = getMatchingUrlPattern ( sc, sreq );
+			}
+			// if we are not submitted from the add url api, skip
+			if ( (bool)row == val ) continue;
+			// skip
+			p += 10;
+			// skip to next constraint
+			p = strstr(p, "&&");
+			// all done?
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+		
 
 		// . was it submitted from PageAddUrl.cpp?
 		// . replaces the "add url priority" parm

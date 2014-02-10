@@ -10257,7 +10257,7 @@ void Addresses::print ( SafeBuf *pbuf , long long uh64 ) {
 			 "be a KEY in placedb. So you generally need two "
 			 "places inlining the same name before that will "
 			 "happen.</i>");
-	pbuf->safePrintf("</br>\n");
+	pbuf->safePrintf("<br>\n");
 
 }
 

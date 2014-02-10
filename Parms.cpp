@@ -1342,6 +1342,21 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "older permalinks into a slower spider queue."
 			  "</td></tr>"
 
+			  "<tr class=poo><td>"
+			  "<a name=insitelist>"
+			  "insitelist | !insitelist"
+			  "</a>"
+			  "</td>"
+			  "<td>"
+			  "This is true if the url matches a pattern in "
+			  "the list of sites on the <a href=/admin/sites>"
+			  "site list</a> page. That site list is useful for "
+			  "adding a large number of sites that can not be "
+			  "accomodated by the spider scheduler table. Plus "
+			  "it is higher performance and easier to use, but "
+			  "lacks the spider scheduler's "
+			  "fine level of control."
+			  "</td></tr>"
 
 			  "<tr class=poo><td>isaddurl | !isaddurl</td>"
 			  "<td>"
@@ -1536,7 +1551,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			  "may not be known at spider time, so Gigablast "
 			  "will check after downloading the document to "
 			  "see if the language <i>spider priority</i> is "
-			  "FILTERED or BANNED thereby discarding it.</td></tr>"
+			  "DELETE thereby discarding it.</td></tr>"
 			  //"NOTE: Until we move the language "
 			  //"detection up before any call to XmlDoc::set1() "
 			  //"in Msg16.cpp, we can not use for purposes of "
@@ -1812,11 +1827,13 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 		if ( i == select ) s = " selected";
 		else               s = "";
 		if      ( i == -3 ) 
-			sb->safePrintf ("<option value=%li%s>FILTERED",i,s);
+			sb->safePrintf ("<option value=%li%s>DELETE",i,s);
 		else if ( i == -2 ) 
-			sb->safePrintf ("<option value=%li%s>BANNED",i,s);
+			//sb->safePrintf ("<option value=%li%s>BANNED",i,s);
+			continue;
 		else if ( i == -1 ) 
-			sb->safePrintf ("<option value=%li%s>undefined",i,s);
+			//sb->safePrintf ("<option value=%li%s>undefined",i,s);
+			continue;
 		else    
 			sb->safePrintf ("<option value=%li%s>%li",i,s,i);
 	}
@@ -14031,7 +14048,9 @@ void Parms::init ( ) {
 		"expressions. "
 		"Use the <i>&&</i> operator to string multiple expressions "
 		"together in the same expression text box. "
-		"A <i>spider priority</i> of <i>FILTERED</i> or <i>BANNED</i> "
+		"A <i>spider priority</i> of "
+		//"<i>FILTERED</i> or <i>BANNED</i> "
+		"<i>DELETE</i> "
 		"will cause the URL to not be spidered, or if it has already "
 		"been indexed, it will be deleted when it is respidered."
 		"<br><br>";

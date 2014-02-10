@@ -339,6 +339,7 @@ enum {
 	PAGE_CRAWLBOT    , // 35
 	PAGE_SPIDERDB    , 
 	//PAGE_PRIORITIES  ,  // priority queue controls
+	PAGE_SITES , // site filters
 	PAGE_FILTERS     ,
 	PAGE_INJECT      , 
 	PAGE_ADDURL2     ,

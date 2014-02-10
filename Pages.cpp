@@ -228,10 +228,17 @@ static WebPage s_pages[] = {
 	//  //USER_ADMIN | USER_MASTER   , 
 	//  "spider priorities page",
 	//  sendPageGeneric  , 0 } ,
-	{ PAGE_FILTERS   , "admin/filters"  , 0 , "spider scheduler" ,  1 , 1,
+
+	{ PAGE_SITES   , "admin/sites", 0 , "site list" ,  1 , 1,
+	  //USER_ADMIN | USER_MASTER   , 
+	  "what sites can be spidered",
+	  sendPageBasicSettings  , 0 } ,
+
+	{ PAGE_FILTERS   , "admin/scheduler", 0 , "spider scheduler" ,  1 , 1,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "schedule urls to be spidered",
 	  sendPageGeneric  , 0 } ,
+
 	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" ,  0 , 1 ,
 	  //USER_ADMIN | USER_MASTER   ,
 	  "inject url in the index here",
@@ -913,8 +920,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//if ( user ) pwd = user->m_password;
 	char *pwd = NULL;
 
-	sb->safePrintf(
-		       "<html>\n");
+	sb->safePrintf("<html>\n");
 
 	sb->safePrintf(
 		     "<head>\n"
@@ -922,8 +928,43 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		     "<meta http-equiv=\"Content-Type\" "
 		     "content=\"text/html;charset=utf8\" />\n"
 		     "</head>\n",  s_pages[page].m_name);
+
 	// print bg colors
 	status &= printColors ( sb, bodyJavascript);
+
+	// print form to encompass table now
+
+	////////
+	//
+	// . the form
+	//
+	////////
+	// . we cannot use the GET method if there is more than a few k of
+	//   parameters, like in the case of the Search Controls page. The
+	//   browser simply will not send the request if it is that big.
+	if ( s_pages[page].m_usePost )
+		sb->safePrintf ("<form name=\"SubmitInput\" method=\"post\" "
+				"action=\"/%s\">\n",
+				s_pages[page].m_filename);
+	else
+		sb->safePrintf ("<form name=\"SubmitInput\" method=\"get\" "
+				"action=\"/%s\">\n",
+				s_pages[page].m_filename);
+	// pass on this stuff
+	//if ( ! pwd ) pwd = "";
+	//sb->safePrintf ( "<input type=hidden name=pwd value=\"%s\">\n",pwd);
+	//if ( ! coll ) coll = "";
+	sb->safePrintf ( "<input type=hidden name=c value=\"%s\">\n",coll);
+	// sometimes we do not want to be USER_MASTER for testing
+	//if ( user == USER_ADMIN ) {
+	//if ( g_users.hasPermission ( username, PAGE_ADMIN ) ){
+	//	sb->safePrintf("<input type=hidden name=master value=0>\n");
+	//}
+	// should any changes be broadcasted to all hosts?
+	//sb->safePrintf ("<input type=hidden name=cast value=\"%li\">\n",
+	//		(long)s_pages[page].m_cast);
+
+
 	// center all
 	//sprintf ( p , "<center>\n");
 	//p += gbstrlen ( p );
@@ -1038,35 +1079,6 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		      //"</center>"
 		      "<br>");
 
-	////////
-	//
-	// . the form
-	//
-	////////
-	// . we cannot use the GET method if there is more than a few k of
-	//   parameters, like in the case of the Search Controls page. The
-	//   browser simply will not send the request if it is that big.
-	if ( s_pages[page].m_usePost )
-		sb->safePrintf ("<form name=\"SubmitInput\" method=\"post\" "
-				"action=\"/%s\">\n",
-				s_pages[page].m_filename);
-	else
-		sb->safePrintf ("<form name=\"SubmitInput\" method=\"get\" "
-				"action=\"/%s\">\n",
-				s_pages[page].m_filename);
-	// pass on this stuff
-	//if ( ! pwd ) pwd = "";
-	//sb->safePrintf ( "<input type=hidden name=pwd value=\"%s\">\n",pwd);
-	//if ( ! coll ) coll = "";
-	sb->safePrintf ( "<input type=hidden name=c value=\"%s\">\n",coll);
-	// sometimes we do not want to be USER_MASTER for testing
-	//if ( user == USER_ADMIN ) {
-	//if ( g_users.hasPermission ( username, PAGE_ADMIN ) ){
-	//	sb->safePrintf("<input type=hidden name=master value=0>\n");
-	//}
-	// should any changes be broadcasted to all hosts?
-	//sb->safePrintf ("<input type=hidden name=cast value=\"%li\">\n",
-	//		(long)s_pages[page].m_cast);
 
 
 
@@ -1455,15 +1467,20 @@ bool Pages::printAdminBottom ( SafeBuf *sb ) {
 	bool status = true;
 	// update button
 	if ( !sb->safePrintf ( "<center>"
-		  "<input type=submit name=action value=submit /></center>"
-		  "</br>\n" ) )
+			       "<input type=submit name=action value=submit>"
+			       "</center>"
+			       "<br>\n" ) )
 		status = false;
-	if ( ! sb->safePrintf("</TABLE>\n"
+	if ( ! sb->safePrintf(
+			      "</TD>"
+			      "</TR>"
+			      "</TABLE>\n"
+			      "</form>"
 			      //"</DIV>\n"
 			      ) )
 		status = false;
 	// end form
-	if ( ! sb->safePrintf ( "</form>\n</body>\n</html>\n" ) )
+	if ( ! sb->safePrintf ( "</body>\n</html>\n" ) )
 		status = false;
 	return status;
 }
@@ -1584,7 +1601,13 @@ bool Pages::printColors ( SafeBuf *sb, char* bodyJavascript ) {
 		  BGCOLOR
 		  " link=#000000 vlink=#000000 alink=#000000 %s>\n" 
 		  "<style>"
-		  "body,td,p,.h{font-family:arial,sans-serif; "
+		  "body,td,p,.h{font-family:"
+		  //"arial,"
+		  "arial,"
+		  "helvetica-neue"
+		  //"helvetica-neue,helvetica,"
+		  //"sans-serif"
+		  "; "
 		  "font-size: 15px;} "
 		  //".h{font-size: 20px;} .h{color:} "
 		  //".q{text-decoration:none; color:#0000cc;}"
