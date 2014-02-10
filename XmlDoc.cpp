@@ -3033,8 +3033,8 @@ long *XmlDoc::getIndexCode2 ( ) {
 		return &m_indexCode;
 	}
 
-	// . i moved this up to perhaps fix problems of two dup pages being downloaded
-	//   at about the same time
+	// . i moved this up to perhaps fix problems of two dup pages being 
+	//   downloaded at about the same time
 	// . are we a dup of another doc from any other site already indexed?
 	char *isDup = getIsDup();
 	if ( ! isDup || isDup == (char *)-1 ) return (long *)isDup;
@@ -3055,6 +3055,21 @@ long *XmlDoc::getIndexCode2 ( ) {
 		m_indexCode = EDOCNONCANONICAL;
 		m_indexCodeValid = true;
 		return &m_indexCode;
+	}
+
+	// was page unchanged since last time we downloaded it?
+	XmlDoc **pod = getOldXmlDoc ( );
+	if ( ! pod || pod == (XmlDoc **)-1 ) return (long *)pod;
+	XmlDoc *od = NULL;
+	if ( *pod ) od = *pod;
+	if ( od ) {
+		long *ch32 = getContentHash32();
+		if ( ! ch32 || ch32 == (void *)-1 ) return (long *)ch32;
+		if ( *ch32 == od->m_contentHash32 ) {
+			m_indexCode = EDOCUNCHANGED;
+			m_indexCodeValid = true;
+			return &m_indexCode;
+		}
 	}
 
 	// words
@@ -13955,6 +13970,13 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	if ( headers.length() > 0 )
 		additionalHeaders = headers.getBufStart();
 
+	// if did not get the web page first and we are crawling, not
+	// doing a bulk, then core. we need the webpage to harvest links
+	// and sometimes to check the pageprocesspattern to see if we should
+	// process.
+	if ( cr->m_isCustomCrawl ==1 && ! m_downloadStatusValid ) { 
+		char *xx=NULL;*xx=0; }
+
 	log("diffbot: getting %s headers=%s",m_diffbotUrl.getBufStart(),
 	    additionalHeaders);
 
@@ -19695,10 +19717,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// . then just add the SpiderReply to avoid respidering
 		// . NO! still need to add outlinks
 		//|| diffbotEmptyReply
-	     // . treat this as a temporary error i guess
-	     // . getNewSpiderReply() below will clear the error in it and
-	     //   copy stuff over from m_sreq and m_oldDoc for this case
-		//|| *indexCode == EDOCUNCHANGED
+		// . treat this as a temporary error i guess
+		// . getNewSpiderReply() below will clear the error in it and
+		//   copy stuff over from m_sreq and m_oldDoc for this case
+		|| *indexCode == EDOCUNCHANGED
 		) {
 		// sanity - in repair mode?
 		if ( m_useSecondaryRdbs ) { char *xx=NULL;*xx=0; }
@@ -19729,6 +19751,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			m_metaList     = (char *)0x1;
 			return m_metaList;
 		}
+		// save this
+		long savedCode = *indexCode;
 		// before getting our spider reply, assign crap from the old
 		// doc to us since we are unchanged! this will allow us to
 		// call getNewSpiderReply() without doing any processing, like
@@ -19736,12 +19760,16 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		copyFromOldDoc ( od );
 		// need this though! i don't want to print out "Success"
 		// in the log in the logIt() function
-		m_indexCode = *indexCode;
+		m_indexCode = savedCode;
 		m_indexCodeValid = true;
 		// but set our m_contentHash32 from the spider request
 		// which got it from the spiderreply in the case of
 		// EDOCUNCHANGED. this way ch32=xxx will log correctly.
-		if ( *indexCode == EDOCUNCHANGED && m_sreqValid ) {
+		// I think this is only when EDOCUNCHANGED is set in the
+		// Msg13.cpp code, when we have a spider compression proxy.
+		if ( *indexCode == EDOCUNCHANGED && 
+		     m_sreqValid &&
+		     ! m_contentHash32Valid ) {
 			m_contentHash32      = m_sreq.m_contentHash32;
 			m_contentHash32Valid = true;
 		}
