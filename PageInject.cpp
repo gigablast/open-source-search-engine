@@ -226,7 +226,7 @@ bool sendReply ( void *state ) {
 		  "indexed in real time "
 		  "while you wait. The browser will return the "
 		  "final index status code. Alternatively, "
-		  "use the <a href=/addurl>add url</i> page "
+		  "use the <a href=/admin/addurl>add url</a> page "
 		  "to add urls individually or in bulk "
 		  "without having to wait for the pages to be "
 		  "actually indexed in realtime. "

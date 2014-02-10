@@ -18600,7 +18600,8 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "spider priority or a banned ruleset.</td></tr>"
 			  */
 
-			  "<tr class=poo><td>hopcount<4 && iswww</td>"
+			  "<tr class=poo><td><a name=hopcount></a>"
+			  "hopcount<4 && iswww</td>"
 			  "<td>Matches if document has a hop count of 4, and "
 			  "is a \"www\" url (or domain-only url).</td></tr>"
 			  

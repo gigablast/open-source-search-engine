@@ -1127,21 +1127,41 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 
 	// print Basic | Advanced links
 	if ( isBasic )
-		sb->safePrintf ( "<b><font color=red>basic</font></b>"
-				 " &nbsp; "
-				 "<b><a href=/admin/master?c=%s "
+		sb->safePrintf ( "<b>"
+				 "<a href=/admin/settings?c=%s "
 				 "style=text-decoration:none;>"
-				 "advanced</a></b>"
+				 "<font color=red>"
+				 "basic"
+				 "</font>"
+				 "</a>"
+				 "</b>"
+				 " &nbsp; "
+				 "<b>"
+				 "<a href=/admin/master?c=%s "
+				 "style=text-decoration:none;>"
+				 "advanced"
+				 "</a>"
+				 "</b>"
+				 , coll
 				 , coll
 				 );
 	else
-		sb->safePrintf ( "<b><a href=/admin/settings?c=%s "
+		sb->safePrintf ( "<b>"
+				 "<a href=/admin/settings?c=%s "
 				 "style=text-decoration:none;>"
-				 "basic</a></b>"
+				 "basic"
+				 "</a>"
+				 "</b>"
 				 " &nbsp; "
-				 "<b><font color=red>"
+				 "<b>"
+				 "<a href=/admin/settings?c=%s "
+				 "style=text-decoration:none;>"
+				 "<font color=red>"
 				 "advanced"
-				 "</font></b>"
+				 "</font>"
+				 "</a>"
+				 "</b>"
+				 , coll
 				 , coll
 				 );
 
@@ -1185,110 +1205,6 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 }
 
 
-
-/*
-
-char *Pages::printAdminTop ( char *p        , 
-			     char *pend     , 
-			     long  page     ,
-			     //long  user     ,
-			     char *username ,
-			     char *coll     ,
-			     char *pwd      ,
-			     long  fromIp   ,
-			     char *qs   ,
-			     char* bodyJavascript) {
-	p += sprintf(p, 
-		     "<html>\n"
-		     "<head>\n"
-		     "<title>%s | gigablast admin</title>\n"
-		     "<meta http-equiv=\"Content-Type\" "
-		     "content=\"text/html;charset=utf8\" />\n"
-		     "</head>\n",s_pages[page].m_name );
-	// print bg colors, also prints opening body tag
-	p = printColors ( p , pend );
-	// center all
-	//sprintf ( p , "<center>\n");
-	//p += gbstrlen ( p );
-	// table
-	sprintf ( p , "<table border=0><tr><td>");
-	p += gbstrlen ( p );
-	// print the logo in upper left corner
-	p = printLogo ( p , pend , coll );
-	// after logo text
-	//if ( g_users.hasPermission(username,PAGE_QUALITY) ) {
-	//	sprintf ( p , " &nbsp; <font size=+1><b>"
-	//		  "Quality Control</b></font>" );
-	//	p += gbstrlen ( p );
-	//}
-//#ifdef SPLIT_INDEXDB
-//	long split = INDEXDB_SPLIT;
-//#else
-//	long split = 1;
-//#endif
-	//long split = g_hostdb.m_indexSplits;
-	// the version info
-	//sprintf ( p , "<br/><b>%s</b>",
-	//	  //"&nbsp;&nbsp; split=%li tfndbext=%li" ,
-	//	  GBVersion);//, split,
-	//          //g_conf.m_tfndbExtBits );
-	//p += gbstrlen ( p );
-	// . the the hosts
-	// . don't print host buttons if only 1 host
-	//if ( user == USER_MASTER && g_hostdb.m_numHosts > 1 ) {
-	//if ( !g_users.hasPermission(username,PAGE_NOHOSTLINKS) ) {
-	sprintf ( p , "</td>\n<td> &nbsp; &nbsp; &nbsp; hosts: ");
-	p += gbstrlen ( p );
-	// print the hosts navigation bar
-	p = printHostLinks ( p , pend , page , coll, NULL,fromIp, qs );
-	//}
-	// end table
-	sprintf ( p , "</td></tr></table><br/><br/>\n");
-	p += gbstrlen ( p );
-
-	// print the links
-	p = printAdminLinks ( p , pend , page , username , coll , NULL, true );
-
-	// collection under that
-	p = printCollectionNavBar(p,pend , page , username , coll , NULL, qs );
-
-	// print the links
-	p = printAdminLinks (p , pend , page , username , coll , NULL, false );
-
-	// . the form
-	// . we cannot use the GET method if there is more than a few k of
-	//   parameters, like in the case of the Search Controls page. The
-	//   browser simply will not send the request if it is that big.
-	if ( s_pages[page].m_usePost )
-		sprintf ( p , "<form method=post action=/%s>\n",
-			  s_pages[page].m_filename);
-	else
-		sprintf ( p , "<form method=get action=/%s>\n",
-			  s_pages[page].m_filename);
-	p += gbstrlen ( p );
-
-	// pass on this stuff
-	//if ( ! pwd ) pwd = "";
-	//sprintf ( p, "<input type=hidden name=pwd value=\"%s\">\n",pwd);
-	p += gbstrlen ( p );
-	if ( ! coll ) coll = "";
-	sprintf ( p, "<input type=hidden name=c value=\"%s\">\n",coll);
-	p += gbstrlen ( p );	
-	// sometimes we do not want to be USER_MASTER for testing
-	//if ( user == USER_ADMIN ) {
-	if (g_users.hasPermission(username,PAGE_ADMIN ) ){
-		sprintf(p,"<input type=hidden name=master value=0>\n");
-		p += gbstrlen ( p );	
-	}
-
-	// should any changes be broadcasted to all hosts?
-	sprintf ( p, "<input type=hidden name=cast value=\"%li\">\n",
-		  (long)s_pages[page].m_cast);
-	p += gbstrlen ( p );	
-
-	return p;
-}
-*/
 /*
 bool Pages::printAdminTop2 (SafeBuf     *sb   ,
 			   TcpSocket   *s    ,
@@ -1828,61 +1744,6 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 	return status;
 }
 
-/*
-char *Pages::printHostLinks ( char *p      ,
-			      char *pend   ,
-			      long  page   ,
-			      char *coll   ,
-			      char *pwd    ,
-			      long  fromIp ,
-			      char *qs     ) {
-	// don't print host buttons if only 1 host
-	if ( g_hostdb.m_numHosts <= 1 ) return p;
-
-	if ( ! qs   ) qs   = "";
-	//if ( ! pwd  ) pwd  = "";
-	if ( ! coll ) coll = "";
-
-	// print the 64 hosts before and after us
-	long radius = 512;//64;
-	long hid = g_hostdb.m_hostId;
-	long a = hid - radius;
-	long b = hid + radius;
-	long diff ;
-	if ( a < 0 ) { 
-		diff = -1 * a; 
-		a += diff; 
-		b += diff; 
-	}
-	if ( b > g_hostdb.m_numHosts ) { 
-		diff = b - g_hostdb.m_numHosts;
-		a -= diff; if ( a < 0 ) a = 0;
-	}
-	for ( long i = a ; i < b ; i++ ) {
-		// skip if negative
-		if ( i < 0 ) continue;
-		if ( i >= g_hostdb.m_numHosts ) continue;
-		// get it
-		Host *h = g_hostdb.getHost ( i );
-		unsigned short port = h->m_httpPort;
-		// use the ip that is not dead, prefer eth0
-		unsigned long ip = g_hostdb.getBestIp ( h , fromIp );
-		// convert our current page number to a path
-		char *path = s_pages[page].m_filename;
-		// print the link to it
-		if ( i == hid )
-			sprintf(p,"<a href=\"http://%s:%hu/%s?c=%s%s\">"
-				"<font color=red><b>%li</b></font></a> ",
-				iptoa(ip),port,path,coll,qs,i);
-		else
-			sprintf(p,"<a href=\"http://%s:%hu/%s?c=%s%s\">"
-				"%li</a> ",
-				iptoa(ip),port,path,coll,qs,i);
-		p += gbstrlen ( p );
-	}		
-	return p;
-}
-*/
 
 // . print the master     admin links if "user" is USER_MASTER 
 // . print the collection admin links if "user" is USER_ADMIN
@@ -1994,24 +1855,33 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 			sb->safePrintf(
 				       //"<span style=\"white-space:nowrap\">"
 				       "<b>"
-				       "<font color=red>%s</font></b>"
+				       "<a style=text-decoration:none; "
+				       "href=\"/%s?c=%s%s\">"
+				       "<font color=red>%s</font>"
+				       "</a>"
+				       "</b>"
 				       //"</span>"
 				       " &nbsp; \n"
-				       //,s_pages[i].m_filename
-				       //,coll
-				       //,buf
-				       ,s_pages[i].m_name);
+				       ,s_pages[i].m_filename
+				       ,coll
+				       ,buf
+				       ,s_pages[i].m_name
+				       );
 		else
 			sb->safePrintf(
 				       //"<span style=\"white-space:nowrap\">"
 				       "<b>"
 				       "<a style=text-decoration:none; "
-				       "href=\"/%s?c=%s%s\">%s</a>"
+				       "href=\"/%s?c=%s%s\">"
+				       "%s"
+				       "</a>"
 				       "</b>"
 				       //"</span>"
-				       " &nbsp; \n",s_pages[i].m_filename,
-				       coll,
-				       buf,s_pages[i].m_name);
+				       " &nbsp; \n"
+				       ,s_pages[i].m_filename
+				       ,coll
+				       ,buf
+				       ,s_pages[i].m_name);
 		// print <br> after the last master admin control
 		/*
 		if ( i == PAGE_DELCOLL && user == USER_MASTER ) {
