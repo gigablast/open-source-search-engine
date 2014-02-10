@@ -882,12 +882,9 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 	//char *pwd  = r->getString ("pwd");
 
-	char *coll = r->getString ("c");
-	if ( ! coll || ! coll[0] )
-		//coll = g_conf.m_defaultColl;
-		coll = g_conf.getDefaultColl( r->getHost(), r->getHostLen() );
-
-	if ( collOveride ) coll = collOveride;
+	//char *coll = r->getString ("c");
+	//if ( ! coll || ! coll[0] ) coll = "main";
+	//if ( collOveride ) coll = collOveride;
 
 	//long nc = r->getLong("nc",1);
 	//long pd = r->getLong("pd",1);
@@ -934,11 +931,12 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	if ( page == PAGE_LOG        ) tt = "Log Controls";
 	if ( page == PAGE_MASTER     ) tt = "Master Controls";
 	if ( page == PAGE_SECURITY   ) tt = "Security Controls";
-	if ( page == PAGE_BASIC_PASSWORDS ) tt = "Security Controls";
 	if ( page == PAGE_SPIDER     ) tt = "Spider Controls";
 	if ( page == PAGE_SEARCH     ) tt = "Search Controls";
 	if ( page == PAGE_ACCESS     ) tt = "Access Controls";
 	if ( page == PAGE_FILTERS    ) tt = "Spider Scheduler";
+	if ( page == PAGE_BASIC_SETTINGS ) tt = "Settings";
+	if ( page == PAGE_BASIC_PASSWORDS ) tt = "Passwords";
 	//if ( page == PAGE_PRIORITIES ) tt = "Priority Controls";
 	//if ( page == PAGE_RULES      ) tt = "Site Rules";
 	//if ( page == PAGE_SYNC       ) tt = "Sync";
@@ -1355,7 +1353,7 @@ bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	//if ( ! THIS ) return true;
 	char *coll = r->getString ( "c"   );
 	//char *pwd  = r->getString ( "pwd" );
-	if ( ! coll ) coll = "";
+	if ( ! coll ) coll = "main";
 	//if ( ! pwd  ) pwd  = "";
 	long nc = r->getLong("nc",1);
 	long pd = r->getLong("pd",1);
@@ -7920,8 +7918,8 @@ void Parms::init ( ) {
 	m->m_func2 = CommandRestartColl;
 	m++;
 
-	m->m_title = "site list";
-	m->m_xml   = "siteList";
+	m->m_title = "site patterns";
+	m->m_xml   = "sitePatterns";
 	m->m_desc  = "List of sites to spider, one per line. "
 		"Gigablast uses the "
 		"<a href=/admin/scheduler#insitelist>insitelist</a> "
@@ -7930,7 +7928,7 @@ void Parms::init ( ) {
 		"page to make sure that the spider only indexes urls "
 		"that match the patterns you specify here. "
 		"See <a href=#examples>examples below</a>.";
-	m->m_cgi   = "sitelist";
+	m->m_cgi   = "sitepatterns";
 	m->m_off   = (char *)&cr.m_siteListBuf - x;
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
@@ -7939,13 +7937,28 @@ void Parms::init ( ) {
 	m->m_flags = PF_TEXTAREA;
 	m++;
 
-	// the new upload post submit button
-	m->m_title = "upload site list";
-	m->m_desc  = "Upload your file of url patterns.";
-	m->m_cgi   = "uploadsitelist";
+	m->m_title = "spider sites";
+	m->m_desc  = "Attempt to spider and index urls in the "
+		"\"site patterns\" above. Saves you from having to add "
+		"the same list of sites on the <a href=/admin/addurl>"
+		"add url</a> page.";
+	m->m_cgi   = "spiderToo";
+	m->m_off   = (char *)&cr.m_spiderToo - x;
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
-	m->m_off   = 0;//9999999;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "1";
+	m->m_flags = PF_NOSAVE;
+	m++;
+
+	// the new upload post submit button
+	m->m_title = "upload site patterns";
+	m->m_desc  = "Upload your file of site patterns. Completely replaces "
+		"the site patterns in the text box above.";
+	m->m_cgi   = "uploadsitepatterns";
+	m->m_page  = PAGE_BASIC_SETTINGS;
+	m->m_obj   = OBJ_COLL;
+	m->m_off   = 0;
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m++;
 

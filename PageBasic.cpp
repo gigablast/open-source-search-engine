@@ -392,31 +392,6 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		       );
 	*/	      
 
-	sb->safePrintf("<tr><td>"
-		       " Attempt to spider and index urls in the \"spider "
-		       "sites\" above. Saves you "
-		       "from having to add the same list of sites on "
-		       "the <a href=/addurl>add urls</a> page."
-
-		       "</td><td>"
-
-		       "<input type=checkbox name=spiderToo value=1 checked>"
-
-		       "</td></tr>"
-		       // end the table
-		       "</table>"
-		       );
-
-
-
-	sb->safePrintf("<br>"
-		       "<center>"
-		       "<input type=submit name=Submit value=submit>"
-		       "</center>"
-		       "<br>"
-		       "<br>"
-		       );
-
 	// example table
 	sb->safePrintf ( "<a name=examples></a>"
 			 "<table %s>"

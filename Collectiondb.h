@@ -680,6 +680,7 @@ class CollectionRec {
 	
 	// list of url patterns to be indexed.
 	SafeBuf m_siteListBuf;
+	char m_spiderToo;
 
 	// . now the url regular expressions
 	// . we chain down the regular expressions
