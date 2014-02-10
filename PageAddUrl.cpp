@@ -14,6 +14,8 @@ public:
 	Msg4       m_msg4;
 	TcpSocket *m_socket;
 
+	HttpRequest m_hr;
+
 	long       m_urlLen;
 	char       m_url[MAX_URL_LEN];
 
@@ -69,6 +71,8 @@ bool sendPageAddUrl2 ( TcpSocket *s , HttpRequest *r ) {
 
 
 	st1->m_socket  = s;
+
+	st1->m_hr.copy ( r );
 
 	// assume no url buf yet, set below
 	//st1->m_ubuf      = NULL;
@@ -188,14 +192,8 @@ bool sendReply ( void *state , bool addUrlEnabled ) {
 	char tt [ 128 ];
 	tt[0] = '\0';
 
-	// the bg colors and style
-	g_pages.printColors (&sb);
-	sb.safePrintf ( "<title>Gigablast Add a Url</title>"
-			"<table><tr><td valign=bottom><a href=/>"
-		      //"<img width=200 length=25 border=0 src=/logo2.gif></a>"
-			"<img width=210 height=25 border=0 src=/logo2.gif></a>"
-			"&nbsp;&nbsp;</font></td><td><font size=+1>"
-			"<b>Add Url%s</td></tr></table>" , tt );
+	g_pages.printAdminTop ( &sb , st1->m_socket , &st1->m_hr );
+
 	// watch out for NULLs
 	if ( ! url ) url = "http://";
 
@@ -209,46 +207,43 @@ bool sendReply ( void *state , bool addUrlEnabled ) {
 		//rb.safePrintf("Error adding url(s): %s[%i]", 
 		//	      mstrerror(g_errno) , g_errno);
 	}
-	else {
-		if ( url && printUrl && url[0] ) {
-				sprintf ( msg ,"<u>%s</u> added to spider "
-					  "queue "
-					  "successfully", url );
-				//rb.safePrintf("%s added to spider "
-				//	      "queue successfully", url );
-		}
-		else {
-			sprintf(msg,"Add the url you want:");
-			//rb.safePrintf("Add the url you want:");
-		}
-		
+	else if ( url && printUrl && url[0] ) {
+		sprintf ( msg ,"<b><u>%s</u></b> added to spider "
+			  "queue "
+			  "successfully<br><br>", url );
+		//rb.safePrintf("%s added to spider "
+		//	      "queue successfully", url );
 		pm = msg;
 		url = "http://";
 		//else
 		//	pm = "Don't forget to <a href=/gigaboost.html>"
 		//		"Gigaboost</a> your URL.";
 	}
-
+	
 
 
 	// print the add url table
 	sb.safePrintf (
-		       "<br><br><br><center>"
-		       "<b>%s</b>" // the url msg
-		       "<br><br>"
+		       //"<br><br><br>"
+		       "<center>"
+
+		       "%s" // the url added successfully msg
+
 		       "<FORM method=post action=/addurl>" 
 		       
-		       "<table %s>"
+		       "<table boder=1 %s>"
 		       "<tr class=hdrow><td colspan=2>"
 		       "<center>"
 		       //"<font size=+1>"
 		       "<b>"
-		       "Inject URL</b>"
+		       "Add URL</b>"
 		       //"</font>"
 		       "</td></tr>\n\n"
 		       
-		       "<tr class=poo><td><b>url</b>"
-		       "<br>"
+		       "<tr class=poo><td>"
+		       //"<b>url</b>"
+		       //"<br>"
+
 		       "<font size=-2>"
 		       
 		       "Submit requests for Gigablast to index certain urls. "
@@ -266,12 +261,20 @@ bool sendReply ( void *state , bool addUrlEnabled ) {
 
 		       "</font>"
 		       "</td></tr>"
+
 		       "<tr><td colspan=2>"
-		       
+
+		       "<center>"
+
 		       //"<input type=text name=url value=\"%s\" size=50> "
 		       "<textarea cols=80 rows=20 name=urls>"
 		       "%s"
 		       "</textarea>"
+
+		       "</center>"
+
+		       "</td>"
+		       "</tr>"
 		       
 		       , pm // msg
 		       , TABLE_STYLE
@@ -304,7 +307,8 @@ bool sendReply ( void *state , bool addUrlEnabled ) {
 	*/
 
 	// upload a file of urls to add
-	sb.safePrintf ( "<br>"
+	sb.safePrintf ( "<tr>"
+			"<td colspan=2>"
 			"<input "
 			"size=20 "
 			"type=file "

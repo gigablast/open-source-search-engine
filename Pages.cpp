@@ -1821,6 +1821,9 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		if ( i == PAGE_RULES ) continue;
 		if ( i == PAGE_SEARCHBOX ) continue;
 		if ( i == PAGE_TITLEDB ) continue;
+		// move these links to the coll nav bar on the left
+		if ( i == PAGE_ADDCOLL ) continue;
+		if ( i == PAGE_DELCOLL ) continue;
 
 		// print "url download" before "inject url"
 		// GET /mycollname_urls.csv
@@ -1829,7 +1832,9 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 					"<b>"
 					"<a style=text-decoration:none; "
 					"href=\"/download/%s_urls.txt\">"
+					"<nobr>"
 					"url download"
+					"</nobr>"
 					"</a>"
 					"</b>"
 					" &nbsp; \n",
@@ -1857,7 +1862,11 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 				       "<b>"
 				       "<a style=text-decoration:none; "
 				       "href=\"/%s?c=%s%s\">"
-				       "<font color=red>%s</font>"
+				       "<font color=red>"
+				       "<nobr>"
+				       "%s"
+				       "</nobr>"
+				       "</font>"
 				       "</a>"
 				       "</b>"
 				       //"</span>"
@@ -1873,7 +1882,9 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 				       "<b>"
 				       "<a style=text-decoration:none; "
 				       "href=\"/%s?c=%s%s\">"
+				       "<nobr>"
 				       "%s"
+				       "</nobr>"
 				       "</a>"
 				       "</b>"
 				       //"</span>"
@@ -1967,8 +1978,18 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 	char *s = "s";
 	if ( g_collectiondb.m_numRecsUsed == 1 ) s = "";
 	sb->safePrintf ( "<center><nobr><b>%li Collection%s</b></nobr>"
-			 "</center><br>\n",
+			 "</center>\n",
 			 g_collectiondb.m_numRecsUsed , s );
+
+	sb->safePrintf( "<center>"
+			"<font size=-1>"
+			"<a href=/admin/addcoll?c=%s>add</a> &nbsp; &nbsp; "
+			"<a href=/admin/delcoll?c=%s>delete</a>"
+			"</font>"
+			"</center>"
+			, coll
+			, coll
+			);
 
 	char *color = "red";
 	//if ( page >= PAGE_CGIPARMS ) color = "red";
