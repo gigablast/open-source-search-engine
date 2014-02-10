@@ -5,7 +5,7 @@
 #include "Parms.h"
 #include "Spider.h"
 
-bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) ;
+bool printExampleTable ( SafeBuf *sb , HttpRequest *hr ) ;
 
 ///////////
 //
@@ -18,13 +18,6 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 	char  buf [ 128000 ];
 	SafeBuf sb(buf,128000);
 
-	char *fs = hr->getString("format",NULL,NULL);
-	char fmt = FORMAT_HTML;
-	if ( fs && strcmp(fs,"html") == 0 ) fmt = FORMAT_HTML;
-	if ( fs && strcmp(fs,"json") == 0 ) fmt = FORMAT_JSON;
-	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
-
-
 	// true = usedefault coll?
 	CollectionRec *cr = g_collectiondb.getRec ( hr , true );
 	if ( ! cr ) {
@@ -32,48 +25,18 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 		return true;
 	}
 
-	// print standard header 
-	if ( fmt == FORMAT_HTML )
-		// this prints the <form tag as well
-		g_pages.printAdminTop ( &sb , socket , hr );
+	// . print standard header 
+	// . this prints the <form tag as well
+	g_pages.printAdminTop ( &sb , socket , hr );
+
+
+	g_parms.printParms ( &sb , socket , hr );
 
 	
-	// print pause or resume button
-	if ( cr->m_spideringEnabled )
-		sb.safePrintf("<input type=submit "
-			      //"style=\""
-			      //"font:Helvetica Neue,Helvetica Arial;"
-			      //"\" "
-			      "text=\"Pause Spidering\" "
-			      "name=pause value=\"Pause Spidering\">");
-	else
-		sb.safePrintf("<input type=submit "
-			      //"style=\""
-			      //"font:Helvetica Neue,Helvetica Arial;"
-			      //"\" "
-			      "text=\"Resume Spidering\" "
-			      "name=pause value=\"Resume Spidering\">");
+	printExampleTable ( &sb , hr );
 
-	sb.safePrintf(" &nbsp; &nbsp; ");
-
-	// the restart button
-	sb.safePrintf("<input type=submit text=\"Restart Collection\" "
-		      "name=restart value=Restart title=\"Reset "
-		      "the current collection's index and start spidering "
-		      "over, but keep all the settings and "
-		      "the site list below.\">");
-
-
-	sb.safePrintf("<br><br>");
-
-	// also used in the advanced controls under the "add url" tab i guess
-	printSiteListBox ( &sb , hr );
-
-	if ( fmt == FORMAT_HTML ) sb.safePrintf ( "<br><br>\n" );
-
-	if ( fmt != FORMAT_JSON )
-		// wrap up the form, print a submit button
-		g_pages.printAdminBottom ( &sb );
+	// wrap up the form, print a submit button
+	g_pages.printAdminBottom ( &sb );
 
 
 	return g_httpServer.sendDynamicPage ( socket,
@@ -368,47 +331,13 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 	return NULL;
 }
 
-/*
-bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
+bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 
 	// true = useDefault?
 	CollectionRec *cr = g_collectiondb.getRec ( hr , true );
 	if ( ! cr ) return true;
 
-	//char *submittedSiteList = hr->getString("sitelist" );
-	// we do not automatically set this parm so that we can verify it
-	// before setting cr->m_siteListBuf
-	//bool valid = true;
-	//SafeBuf validMsg;
-	//if ( submittedSiteList ) 
-	//	SiteListTable (submittedSiteList,&validMsg);
-
-
-	// if it is a valid list of sites... broadcast it to all hosts
-	// so they can update cr->m_siteList with it. when they get it
-	// they will have to update their siteListTable hashtable so which
-	// we use to quickly determine if we should spider a url or not
-	// in Spider.cpp
-	//if ( submittedSiteList && // valid
-	//     // . if it was too big this might say oom i guess
-	//     // . use CommandUpdateSiteList() to hand setting hashtable
-	//     ! g_parms.broadcastParm( submittedSiteList , "sitelist" ) ) {
-	//	// tell the browser why we failed
-	//	validMsg.safePrintf("Error distributing site list: %s",
-	//			    mstrerror(g_errno));
-	//	valid = false;
-	//}
-	
-
-	// print if submitted site list is valid or not
-	//if ( ! valid )
-	//	sb->safePrintf("<br><font color=red><b>"
-	//		       "%s"
-	//		       "</b></font>"
-	//		       "<br>"
-	//		       , validMsg.getBufStart() );
-	
-
+	/*
 	// it is a safebuf parm
 	char *siteList = cr->m_siteListBuf.getBufStart();
 	if ( ! siteList ) siteList = "";
@@ -426,51 +355,10 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 				   , max );
 		status = " disabled";
 	}
-
-	char *msg2 = msgBuf.getBufStart();
-	if ( ! msg2 ) msg2 = "";
+	*/
 
 
-	sb->safePrintf("%s",msg2);
-
-	sb->safePrintf ( "<table %s>"
-		       "<tr class=hdrow><td colspan=2>"
-		       "<center><b>Settings</b></tr></tr>"
-		       "<tr bgcolor=#%s>"
-		       "<td width=40%%>"
-		       ,TABLE_STYLE , DARK_BLUE);
-
-	// now list of sites to include, or exclude
-	sb->safePrintf ( "List of sites to spider, one per line. "
-			 "Gigablast uses the "
-			 "<a href=/admin/scheduler#insitelist>insitelist</a> "
-			 "directive on "
-			 "the <a href=/admin/scheduler>spider scheduler</a> "
-			 "page "
-			 "to make sure that the spider only indexes urls "
-			 "that match the patterns you specify here. "
-			 "See <a href=#examples>examples below</a>."
-
-			 "</td><td>"
-			 "<textarea cols=80 rows=20%s>"
-			 , status
-			 );
-
-	// print sites
-	sb->safeStrcpy ( siteList );
-
-	sb->safePrintf("</textarea>\n"
-		       "</td></tr>");
-
-
-	sb->safePrintf("<tr><td>"
-		       //"Alternatively you can edit the local "
-		       //"file %s/coll.%s.%li/sitelist.txt and "
-		       //"then click this link: <a>reload file</a>. "
-		       //"Or you can <a>upload a file</a> "
-		       "Alternatively, you can upload the sites."
-		       );
-
+	/*
 	sb->safePrintf(
 		       "On the command like you can issue a command like "
 
@@ -502,7 +390,7 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 		       "</td></tr>"
 
 		       );
-			      
+	*/	      
 
 	sb->safePrintf("<tr><td>"
 		       " Attempt to spider and index urls in the \"spider "
@@ -688,7 +576,7 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 
 	return true;
 }
-*/
+
 
 // from pagecrawlbot.cpp for printCrawlDetailsInJson()
 #include "PageCrawlBot.h"

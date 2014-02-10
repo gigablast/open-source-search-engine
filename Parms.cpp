@@ -51,7 +51,6 @@ Parms g_parms;
 // new functions to extricate info from parm recs
 //
 
-
 long getDataSizeFromParmRec ( char *rec ) {
 	return *(long *)(rec+sizeof(key96_t));
 }
@@ -101,6 +100,9 @@ key96_t makeParmKey ( collnum_t collnum , Parm *m , short occNum ) {
 	if ( getOccNumFromParmRec ((char *)&k)!=occNum){char*xx=NULL;*xx=0;}
 	return k;
 }
+
+bool printUrlExpressionExamples ( SafeBuf *sb ) ;
+
 
 //////////////////////////////////////////////
 //
@@ -854,6 +856,8 @@ unsigned long Parms::calcChecksum() {
 }
 */
 
+bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr );
+
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
 // . must ultimately send reply back on "s"
@@ -1077,587 +1081,19 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 
 	// url filter page has a test table
 	if ( page == PAGE_FILTERS && ! isJSON ) {
-
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( sb );
-
-		/*
-		CollectionRec *cr = (CollectionRec *)THIS;
-		// if testUrl is provided, find in the table
-		char testUrl [ 1025 ];
-		char *tt = r->getString ( "test" , NULL );
-		testUrl[0]='\0';
-		if ( tt ) strncpy ( testUrl , tt , 1024 );
-		char *tu = testUrl;
-		if ( ! tu ) tu = "";
-		char matchString[12];
-		matchString[0] = '\0';
-		if ( testUrl[0] ) {
-			Url u;
-			u.set ( testUrl , gbstrlen(testUrl) );
-			//since we don't know the doc's quality, sfn, or
-			//other stuff, just give default values
-			long n = cr->getRegExpNum ( &u    , 
-						    false ,  // links2gb?
-						    false ,  // searchboxToGB
-						    false ,  // onsite?
-						    -1    ,  // docQuality
-						    -1    ,  // hopCount
-						    false ,  // siteInDmoz?
-						    //-1  ,  // ruleset #
-						    -1    ,  // langId
-						    -1    ,  // parent priority
-						    0     ,  // niceness
-						    NULL  ,  // tagRec
-						    false ,  // isRSS?
-						    false ,  // isPermalink?
-						    false ,  // new outlink?
-						    -1    , // age
-						    NULL  , // LinkInfo
-						    NULL  , // parentUrl
-						    -1    , // priority
-						    false , // isAddUrl
-						    false , // parentRSS?
-						    false , // parentIsNew?
-						    false , // parentIsPermlnk
-						    false );// isIndexed?
-			if ( n == -1 ) sprintf ( matchString , "default" );
-			else           sprintf ( matchString, "%li", n+1 );
-		}
-		// test table
-		sb.safePrintf (
-			  //"</form><form method=get action=/cgi/14.cgi>"
-			  //"<input type=hidden name="
-			  "<table width=100%% cellpadding=4 border=1 "
-			  "bgcolor=#%s>"
-			  "<tr><td colspan=2 bgcolor=#%s><center>"
-			  //"<font size=+1>"
-			  "<b>"
-			  "URL Filters Test</b>"
-			  //"</font>"
-			  "</td></tr>"
-			  "<tr><td colspan=2>"
-			  "<font size=1>"
-			  "To test your URL filters simply enter a URL into "
-			  "this box and submit it. The URL filter line number "
-			  "that it matches will be displayed to the right."
-			  "</font>"
-			  "</td></tr>"
-			  "<tr>"
-			  "<td><b>Test URL</b></td>"
-			  "<td><b>Matching Expression #</b></td>"
-			  "</tr>"
-			  "<tr>"
-			  "<td><input type=text size=55 value=\"%s\" "
-			  "name=test> "
-			  "<input type=submit name=action value=test></td>"
-			  "<td>%s</td></tr></table><br><br>\n" ,
-			  LIGHT_BLUE , DARK_BLUE , testUrl , matchString );
-		*/
-
-		sb->safePrintf(
-			       "<style>"
-			       ".poo { background-color:#%s;}\n"
-			       "</style>\n" ,
-			       LIGHT_BLUE );
-
-		sb->safePrintf (
-			  "<table %s>"
-			  "<tr><td colspan=2><center>"
-			  "<b>"
-			  "Supported URL Expressions</b>"
-			  "</td></tr>"
-
-			  "<tr class=poo><td>default</td>"
-			  "<td>Matches every url."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>^http://whatever</td>"
-			  "<td>Matches if the url begins with "
-			  "<i>http://whatever</i>"
-			  "</td></tr>"
-
-			  "<tr class=poo><td>$.css</td>"
-			  "<td>Matches if the url ends with \".css\"."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>foobar</td>"
-			  "<td>Matches if the url CONTAINS <i>foobar</i>."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>tld==uk,jp</td>"
-			  "<td>Matches if url's TLD ends in \"uk\" or \"jp\"."
-			  "</td></tr>"
-
-			  /*
-			  "<tr class=poo><td>doc:quality&lt;40</td>"
-			  "<td>Matches if document quality is "
-			  "less than 40. Can be used for assigning to spider "
-			  "priority.</td></tr>"
-
-			  "<tr class=poo><td>doc:quality&lt;40 && tag:ruleset==22</td>"
-			  "<td>Matches if document quality less than 40 and "
-			  "belongs to ruleset 22. Only for assinging to "
-			  "spider priority.</td></tr>"
-
-			  "<tr class=poo><td><nobr>"
-			  "doc:quality&lt;40 && tag:manualban==1</nobr></td>"
-			  "<td>Matches if document quality less than 40 and "
-			  "is has a value of \"1\" for its \"manualban\" "
-			  "tag.</td></tr>"
-
-			  "<tr class=poo><td>tag:ruleset==33 && doc:quality&lt;40</td>"
-			  "<td>Matches if document quality less than 40 and "
-			  "belongs to ruleset 33. Only for assigning to "
-			  "spider priority or a banned ruleset.</td></tr>"
-			  */
-
-			  "<tr class=poo><td>hopcount<4 && iswww</td>"
-			  "<td>Matches if document has a hop count of 4, and "
-			  "is a \"www\" url (or domain-only url).</td></tr>"
-			  
-			  "<tr class=poo><td>hopcount</td>"
-			  "<td>All root urls, those that have only a single "
-			  "slash for their path, and no cgi parms, have a "
-			  "hop count of 0. Also, all RSS urls, ping "
-			  "server urls and site roots (as defined in the "
-			  "site rules table) have a hop count of 0. Their "
-			  "outlinks have a hop count of 1, and the outlinks "
-			  "of those outlinks a hop count of 2, etc."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>sitepages</td>"
-			  "<td>The number of pages that are currently indexed "
-			  "for the subdomain of the URL. "
-			  "Used for doing quotas."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>domainpages</td>"
-			  "<td>The number of pages that are currently indexed "
-			  "for the domain of the URL. "
-			  "Used for doing quotas."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>siteadds</td>"
-			  "<td>The number URLs manually added to the "
-			  "subdomain of the URL. Used to guage a subdomain's "
-			  "popularity."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>domainadds</td>"
-			  "<td>The number URLs manually added to the "
-			  "domain of the URL. Used to guage a domain's "
-			  "popularity."
-			  "</td></tr>"
-
-
-
-			  "<tr class=poo><td>isrss | !isrss</td>"
-			  "<td>Matches if document is an rss feed. "
-			  "When harvesting outlinks we <i>guess</i> if they "
-			  "are an rss feed by seeing if their file extension "
-			  "is xml, rss or rdf. Or if they are in an "
-			  "alternative link tag.</td></tr>"
-
-			  //"<tr class=poo><td>!isrss</td>"
-			  //"<td>Matches if document is NOT an rss feed."
-			  //"</td></tr>"
-
-			  "<tr class=poo><td>ispermalink | !ispermalink</td>"
-			  "<td>Matches if document is a permalink. "
-			  "When harvesting outlinks we <i>guess</i> if they "
-			  "are a permalink by looking at the structure "
-			  "of the url.</td></tr>"
-
-			  //"<tr class=poo><td>!ispermalink</td>"
-			  //"<td>Matches if document is NOT a permalink."
-			  //"</td></tr>"
-
-			  /*
-			  "<tr class=poo><td>outlink | !outlink</td>"
-			  "<td>"
-			  "<b>This is true if url being added to spiderdb "
-			  "is an outlink from the page being spidered. "
-			  "Otherwise, the url being added to spiderdb "
-			  "directly represents the page being spidered. It "
-			  "is often VERY useful to partition the Spiderdb "
-			  "records based on this criteria."
-			  "</td></tr>"
-			  */
-
-			  "<tr class=poo><td><nobr>isnewoutlink | !isnewoutlink"
-			  "</nobr></td>"
-			  "<td>"
-			  "This is true since the outlink was not there "
-			  "the last time we spidered the page we harvested "
-			  "it from."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>hasreply | !hasreply</td>"
-			  "<td>"
-			  "This is true if we have tried to spider "
-			  "this url, even if we got an error while trying."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>isnew | !isnew</td>"
-			  "<td>"
-			  "This is the opposite of hasreply above. A url "
-			  "is new if it has no spider reply, including "
-			  "error replies. So once a url has been attempted to "
-			  "be spidered then this will be false even if there "
-			  "was any kind of error."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>lastspidertime >= "
-			  "<b>{roundstart}</b></td>"
-			  "<td>"
-			  "This is true if the url's last spidered time "
-			  "indicates it was spidered already for this "
-			  "current round of spidering. When no more urls "
-			  "are available for spidering, then gigablast "
-			  "automatically sets {roundstart} to the current "
-			  "time so all the urls can be spidered again. This "
-			  "is how you do round-based spidering. "
-			  "You have to use the respider frequency as well "
-			  "to adjust how often you want things respidered."
-			  "</td></tr>"
-			  
-
-			  //"<tr class=poo><td>!newoutlink</td>"
-			  //"<td>Matches if document is NOT a new outlink."
-			  //"</td></tr>"
-
-			  "<tr class=poo><td>age</td>"
-			  "<td>"
-			  "How old is the doucment <b>in seconds</b>. "
-			  "The age is based on the publication date of "
-			  "the document, which could also be the "
-			  "time that the document was last significantly "
-			  "modified. If this date is unknown then the age "
-			  "will be -1 and only match the expression "
-			  "<i>age==-1</i>. "
-			  "When harvesting links, we guess the publication "
-			  "date of the oulink by detecting dates contained "
-			  "in the url itself, which is popular among some "
-			  "forms of permalinks. This allows us to put "
-			  "older permalinks into a slower spider queue."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>"
-			  "<a name=insitelist>"
-			  "insitelist | !insitelist"
-			  "</a>"
-			  "</td>"
-			  "<td>"
-			  "This is true if the url matches a pattern in "
-			  "the list of sites on the <a href=/admin/sites>"
-			  "site list</a> page. That site list is useful for "
-			  "adding a large number of sites that can not be "
-			  "accomodated by the spider scheduler table. Plus "
-			  "it is higher performance and easier to use, but "
-			  "lacks the spider scheduler's "
-			  "fine level of control."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>isaddurl | !isaddurl</td>"
-			  "<td>"
-			  "This is true if the url was added from the add "
-			  "url interface. This replaces the add url priority "
-			  "parm."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>isinjected | !isinjected</td>"
-			  "<td>"
-			  "This is true if the url was directly "
-			  "injected from the "
-			  "/inject page or API."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>isdocidbased | !isdocidbased</td>"
-			  "<td>"
-			  "This is true if the url was added from the "
-			  "reindex interface. The request does not contain "
-			  "a url, but only a docid, that way we can add "
-			  "millions of search results very quickly without "
-			  "having to lookup each of their urls. You should "
-			  "definitely have this if you use the reindexing "
-			  "feature. "
-			  "You can set max spiders to 0 "
-			  "for non "
-			  "docidbased requests while you reindex or delete "
-			  "the results of a query for extra speed."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>ismanualadd | !ismanualadd</td>"
-			  "<td>"
-			  "This is true if the url was added manually. "
-			  "Which means it matches isaddurl, isinjected, "
-			  " or isdocidbased. as opposed to only "
-			  "being discovered from the spider. "
-			  "</td></tr>"
-
-			  "<tr class=poo><td><nobr>inpingserver | !inpingserver"
-			  "</nobr></td>"
-			  "<td>"
-			  "This is true if the url has an inlink from "
-			  "a recognized ping server. Ping server urls are "
-			  "hard-coded in Url.cpp. <b><font color=red> "
-			  "pingserver urls are assigned a hop count of 0"
-			  "</font></b>"
-			  "</td></tr>"
-
-			  "<tr class=poo><td>isparentrss | !isparentrss</td>"
-			  "<td>"
-			  "If a parent of the URL was an RSS page "
-			  "then this will be matched."
-			  "</td></tr>"
-
-			  /*
-			  "<tr class=poo><td>parentisnew | !parentisnew</td>"
-			  "<td>"
-			  "<b>Parent providing this outlink is not currently "
-			  "in the index but is trying to be added right now. "
-			  "</b>This is a special expression in that "
-			  "it only applies to assigning spider priorities "
-			  "to outlinks we are harvesting on a page.</b>" 
-			  "</td></tr>"
-			  */
-
-			  "<tr class=poo><td>isindexed | !isindexed</td>"
-			  "<td>"
-			  "This url matches this if in the index already. "
-			  "</td></tr>"
-
-			  "<tr class=poo><td>errorcount==1</td>"
-			  "<td>"
-			  "The number of times the url has failed to "
-			  "be indexed. 1 means just the last time, two means "
-			  "the last two times. etc. Any kind of error parsing "
-			  "the document (bad utf8, bad charset, etc.) "
-			  "or any HTTP status error, like 404 or "
-			  "505 is included in this count, in addition to "
-			  "\"temporary\" errors like DNS timeouts."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>hastmperror</td>"
-			  "<td>"
-			  "This is true if the last spider attempt resulted "
-			  "in an error like EDNSTIMEDOUT or a similar error, "
-			  "usually indicative of a temporary internet "
-			  "failure, or local resource failure, like out of "
-			  "memory, and should be retried soon. "
-			  "Currently: "
-			  "dns timed out, "
-			  "tcp timed out, "
-			  "dns dead, "
-			  "network unreachable, "
-			  "host unreachable, "
-			  "diffbot internal error, "
-			  "out of memory."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>percentchangedperday&lt=5</td>"
-			  "<td>"
-			  "Looks at how much a url's page content has changed "
-			  "between the last two times it was spidered, and "
-			  "divides that percentage by the number of days. "
-			  "So if a URL's last two downloads were 10 days "
-			  "apart and its page content changed 30%% then "
-			  "the <i>percentchangedperday</i> will be 3. "
-			  "Can use <, >, <=, >=, ==, != comparison operators. "
-			  "</td></tr>"
-
-			  "<tr class=poo><td>sitenuminlinks&gt;20</td>"
-			  "<td>"
-			  "How many inlinks does the URL's site have? "
-			  "We only count non-spammy inlinks, and at most only "
-			  "one inlink per IP address C-Class is counted "
-			  "so that a webmaster who owns an entire C-Class "
-			  "of IP addresses will only have his inlinks counted "
-			  "once."
-			  "Can use <, >, <=, >=, ==, != comparison operators. "
-			  "</td></tr>"
-
-			  "<tr class=poo><td>httpstatus==404</td>"
-			  "<td>"
-			  "For matching the URL based on the http status "
-			  "of its last download. Does not apply to URLs "
-			  "that have not yet been successfully downloaded."
-			  "Can use <, >, <=, >=, ==, != comparison operators. "
-			  "</td></tr>"
-
-			  /*
-			  "<tr class=poo><td>priority==30</td>"
-			  "<td>"
-			  "<b>If the current priority of the url is 30, then "
-			  "it will match this expression. Does not apply "
-			  "to outlinks, of course."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>parentpriority==30</td>"
-			  "<td>"
-			  "<b>This is a special expression in that "
-			  "it only applies to assigning spider priorities "
-			  "to outlinks we are harvesting on a page.</b> "
-			  "Matches if the url being added to spider queue "
-			  "is from a parent url in priority queue 30. "
-			  "The parent's priority queue is the one it got "
-			  "moved into while being spidered. So if it was "
-			  "in priority 20, but ended up in 25, then 25 will "
-			  "be used when scanning the URL Filters table for "
-			  "each of its outlinks. Only applies "
-			  "to the FIRST time the url is added to spiderdb. "
-			  "Use <i>parentpriority==-3</i> to indicate the "
-			  "parent was FILTERED and <i>-2</i> to indicate "
-			  "the parent was BANNED. A parentpriority of "
-			  "<i>-1</i>"
-			  " means that the urls is not a link being added to "
-			  "spiderdb but rather a url being spidered."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>inlink==...</td>"
-			  "<td>"
-			  "If the url has an inlinker which contains the "
-			  "given substring, then this rule is matched. "
-			  "We use this like <i>inlink=www.weblogs.com/"
-			  "shortChanges.xml</i> to detect if a page is in "
-			  "the ping server or not, and if it is, then we "
-			  "assign it to a slower-spidering queue, because "
-			  "we can reply on the ping server for updates. Saves "
-			  "us from having to spider all the blogspot.com "
-			  "subdomains a couple times a day each."
-			  "</td></tr>"
-			  */
-
-			  //"NOTE: Until we get the link info to get the doc "
-			  //"quality before calling msg8 in Msg16.cpp, we "
-			  //"can not involve doc:quality for purposes of "
-			  //"assigning a ruleset, unless banning it.</td>"
-
-			  "<tr class=poo><td><nobr>tld!=com,org,edu"// && "
-			  //"doc:quality&lt;70"
-			  "</nobr></td>"
-			  "<td>Matches if the "
-			  "url's TLD does NOT end in \"com\", \"org\" or "
-			  "\"edu\". "
-			  "</td></tr>"
-
-			  "<tr class=poo><td><nobr>lang==zh_cn,de"
-			  "</nobr></td>"
-			  "<td>Matches if "
-			  "the url's content is in the language \"zh_cn\" or "
-			  "\"de\". See table below for supported language "
-			  "abbreviations. Used to only keep certain languages "
-			  "in the index. This is hacky because the language "
-			  "may not be known at spider time, so Gigablast "
-			  "will check after downloading the document to "
-			  "see if the language <i>spider priority</i> is "
-			  "DELETE thereby discarding it.</td></tr>"
-			  //"NOTE: Until we move the language "
-			  //"detection up before any call to XmlDoc::set1() "
-			  //"in Msg16.cpp, we can not use for purposes of "
-			  //"assigning a ruleset, unless banning it.</td>"
-			  //"</tr>"
-
-			  "<tr class=poo><td><nobr>lang!=xx,en,de"
-			  "</nobr></td>"
-			  "<td>Matches if "
-			  "the url's content is NOT in the language \"xx\" "
-			  "(unknown), \"en\" or \"de\". "
-			  "See table below for supported language "
-			  "abbreviations.</td></tr>"
-
-			  /*
-			  "<tr class=poo><td>link:gigablast</td>"
-			  "<td>Matches if the document links to gigablast."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>searchbox:gigablast</td>"
-			  "<td>Matches if the document has a submit form "
-			  "to gigablast."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>site:dmoz</td>"
-			  "<td>Matches if the document is directly or "
-			  "indirectly in the DMOZ directory."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>tag:spam>X</td>"
-			  "<td>Matches if the document's tagdb record "
-			  "has a score greater than X for the sitetype, "
-			  "'spam' in this case. "
-			  "Can use <, >, <=, >=, ==, != comparison operators. "
-			  "Other sitetypes include: "
-			  "..."
-			  "</td></tr>"
-			  */
-
-			  "<tr class=poo><td>iswww | !iswww</td>"
-			  "<td>Matches if the url's hostname is www or domain "
-			  "only. For example: <i>www.xyz.com</i> would match, "
-			  "and so would <i>abc.com</i>, but "
-			  "<i>foo.somesite.com</i> would NOT match."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>isonsamedomain | !isonsamedomain</td>"
-			  "<td>"
-			  "This is true if the url is from the same "
-			  "DOMAIN as the page from which it was "
-			  "harvested."
-			  //"Only effective for links being added from a page "
-			  //"being spidered, because this information is "
-			  //"not preserved in the titleRec."
-			  "</td></tr>"
-
-
-			  "<tr class=poo><td><nobr>"
-			  "isonsamesubdomain | !isonsamesubdomain"
-			  "</nobr></td>"
-			  "<td>"
-			  "This is true if the url is from the same "
-			  "SUBDOMAIN as the page from which it was "
-			  "harvested."
-			  //"Only effective for links being added from a page "
-			  //"being spidered, because this information is "
-			  //"not preserved in the titleRec."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>ismedia | !ismedia</td>"
-			  "<td>"
-			  "Does the url have a media or css related "
-			  "extension. Like gif, jpg, mpeg, css, etc.? "
-			  "</td></tr>"
-
-
-			  "</td></tr></table><br><br>\n",
-			  TABLE_STYLE );
-
-
-		// show the languages you can use
-		sb->safePrintf (
-			  "<table %s>"
-			  "<tr><td colspan=2><center>"
-			  "<b>"
-			  "Supported Language Abbreviations "
-			  "for lang== Filter</b>"
-			  "</td></tr>",
-			  TABLE_STYLE );
-		for ( long i = 0 ; i < 256 ; i++ ) {
-			char *lang1 = getLanguageAbbr   ( i );
-			char *lang2 = getLanguageString ( i );
-			if ( ! lang1 ) continue;
-			sb->safePrintf("<tr class=poo>"
-				       "<td>%s</td><td>%s</td></tr>\n",
-				      lang1,lang2);
-		}
-		// wrap it up
-		sb->safePrintf("</table><br><br>");
-
+		printUrlExpressionExamples ( sb );
 	}
-
-	else  if ( ! isJSON )
+	else if ( page == PAGE_BASIC_SETTINGS && ! isJSON ) {
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( sb );
+		printSitePatternExamples ( sb , r );
+	}
+	else if ( ! isJSON )
+		// wrap up the form, print a submit button
+		g_pages.printAdminBottom ( sb );
+
 
 	// extra sync table
 	/*
@@ -2690,10 +2126,14 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ( "<td width=%li%%>"//"<td width=78%%>
 					 "<b>%s</b><br><font size=1>",
 					 3*100/nc/2/4, m->m_title );
+
+			// the "site list" parm has html in description
 			if ( pd ) 
-				status &= sb->htmlEncode (m->m_desc,
-							  gbstrlen(m->m_desc),
-							  false);
+				status &= sb->safeStrcpy(m->m_desc);
+				//status &= sb->htmlEncode (m->m_desc,
+				//			  gbstrlen(m->m_desc),
+				//			  false);
+
 			// and cgi parm if it exists
 			if ( m->m_def && m->m_scgi )
 				sb->safePrintf(" CGI override: %s.",m->m_scgi);
@@ -2739,8 +2179,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ( "<td>" );
 	}
 
-	long cast = m->m_cast;
-	if ( g_proxy.isProxy() ) cast = 0;
+	//long cast = m->m_cast;
+	//if ( g_proxy.isProxy() ) cast = 0;
 
 	// print the input box
 	if ( t == TYPE_BOOL ) {
@@ -2752,18 +2192,20 @@ bool Parms::printParm ( SafeBuf* sb,
 		// if cast=1, command IS broadcast to all hosts
 		else 
 			sb->safePrintf ( "<b><a href=\"/%s?c=%s&"
-					 "%s=%s&cast=%li\">"
+					 "%s=%s\">" // &cast=%li\">"
 					 "<center>%s</center></a></b>", 
 					 g_pages.getPath(m->m_page),coll,
-					 cgi,v,cast,tt);
+					 cgi,v,//cast,
+					 tt);
 	}
 	else if ( t == TYPE_BOOL2 ) {
 		if ( g_conf.m_readOnlyMode && m->m_rdonly )
-			sb->safePrintf ( "<b><center>read-only mode</center></b>");
+			sb->safePrintf ( "<b><center>read-only mode"
+					 "</center></b>");
 		// always use m_def as the value for TYPE_BOOL2
 		else
-			sb->safePrintf ( "<b><a href=\"/%s?c=%s&%s=%s&"
-					 "cast=1\">"
+			sb->safePrintf ( "<b><a href=\"/%s?c=%s&%s=%s\">"
+					 //"cast=1\">"
 					 "<center>%s</center></a></b>", 
 					 g_pages.getPath(m->m_page),coll,
 					 cgi,m->m_def, m->m_title);
@@ -2865,10 +2307,10 @@ bool Parms::printParm ( SafeBuf* sb,
 		// if cast=0 it will be executed, otherwise it will be
 		// broadcasted with cast=1 to all hosts and they will all
 		// execute it
-		sb->safePrintf ( "<b><a href=\"/%s?c=%s&%s=1&cast=%li\">"
+		sb->safePrintf ( "<b><a href=\"/%s?c=%s&%s=1\">" // cast=%li
 			  "<center>%s</center></a></b>",
 			  g_pages.getPath(m->m_page),coll,
-			  cgi,cast,m->m_title);
+			  cgi,m->m_title);
 	else if ( t == TYPE_FLOAT ) {
 		// just show the parm name and value if printing in json
 		if ( isJSON )
@@ -2965,6 +2407,16 @@ bool Parms::printParm ( SafeBuf* sb,
 				sb->safeUtf8ToJSON (sx->getBufStart() );
 				sb->safePrintf("\",\n");
 			}
+		}
+		else if ( m->m_flags & PF_TEXTAREA ) {
+			sb->safePrintf ("<textarea name=%s rows=10 cols=80>",
+					cgi);
+			//sb->dequote ( s , gbstrlen(s) );
+			// note it
+			//log("hack: %s",sx->getBufStart());
+			//sb->dequote ( sx->getBufStart() , sx->length() );
+			sb->safeMemcpy( sx->getBufStart() , sx->length() );
+			sb->safePrintf ("</textarea>");
 		}
 		else {
 			sb->safePrintf ("<input type=text name=%s size=%li "
@@ -3114,7 +2566,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 	// "insert above" link? used for arrays only, where order matters
 	if ( m->m_addin && j < jend && ! isJSON ) {
-		sb->safePrintf ( "<td><a href=\"?c=%s&cast=1&"
+		sb->safePrintf ( "<td><a href=\"?c=%s&" // cast=1&"
 				 //"ins_%s=1\">insert</td>\n",coll,cgi );
 				 // insert=<rowNum>
 				 // "j" is the row #
@@ -3145,7 +2597,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		char *suffix = "";
 		if ( m->m_page == PAGE_SECURITY ) suffix = "ip";
 		if ( show )
-			sb->safePrintf ("<td><a href=\"?c=%s&cast=1&"
+			sb->safePrintf ("<td><a href=\"?c=%s&" // cast=1&"
 					//"rm_%s=1\">"
 					// remove=<rownum>
 					"remove%s=%li\">"
@@ -8465,7 +7917,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_CMD;
-	m->m_page  = PAGE_SPIDER;
 	m->m_func2 = CommandRestartColl;
 	m++;
 
@@ -8485,7 +7936,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_def   = "";
-	m->m_flags = 0;//PF_TEXTAREA;
+	m->m_flags = PF_TEXTAREA;
 	m++;
 
 	// the new upload post submit button
@@ -19001,4 +18452,580 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
 
 	char *xx=NULL;*xx=0;
 	return false;
+}
+
+bool printUrlExpressionExamples ( SafeBuf *sb ) {
+
+		/*
+		CollectionRec *cr = (CollectionRec *)THIS;
+		// if testUrl is provided, find in the table
+		char testUrl [ 1025 ];
+		char *tt = r->getString ( "test" , NULL );
+		testUrl[0]='\0';
+		if ( tt ) strncpy ( testUrl , tt , 1024 );
+		char *tu = testUrl;
+		if ( ! tu ) tu = "";
+		char matchString[12];
+		matchString[0] = '\0';
+		if ( testUrl[0] ) {
+			Url u;
+			u.set ( testUrl , gbstrlen(testUrl) );
+			//since we don't know the doc's quality, sfn, or
+			//other stuff, just give default values
+			long n = cr->getRegExpNum ( &u    , 
+						    false ,  // links2gb?
+						    false ,  // searchboxToGB
+						    false ,  // onsite?
+						    -1    ,  // docQuality
+						    -1    ,  // hopCount
+						    false ,  // siteInDmoz?
+						    //-1  ,  // ruleset #
+						    -1    ,  // langId
+						    -1    ,  // parent priority
+						    0     ,  // niceness
+						    NULL  ,  // tagRec
+						    false ,  // isRSS?
+						    false ,  // isPermalink?
+						    false ,  // new outlink?
+						    -1    , // age
+						    NULL  , // LinkInfo
+						    NULL  , // parentUrl
+						    -1    , // priority
+						    false , // isAddUrl
+						    false , // parentRSS?
+						    false , // parentIsNew?
+						    false , // parentIsPermlnk
+						    false );// isIndexed?
+			if ( n == -1 ) sprintf ( matchString , "default" );
+			else           sprintf ( matchString, "%li", n+1 );
+		}
+		// test table
+		sb.safePrintf (
+			  //"</form><form method=get action=/cgi/14.cgi>"
+			  //"<input type=hidden name="
+			  "<table width=100%% cellpadding=4 border=1 "
+			  "bgcolor=#%s>"
+			  "<tr><td colspan=2 bgcolor=#%s><center>"
+			  //"<font size=+1>"
+			  "<b>"
+			  "URL Filters Test</b>"
+			  //"</font>"
+			  "</td></tr>"
+			  "<tr><td colspan=2>"
+			  "<font size=1>"
+			  "To test your URL filters simply enter a URL into "
+			  "this box and submit it. The URL filter line number "
+			  "that it matches will be displayed to the right."
+			  "</font>"
+			  "</td></tr>"
+			  "<tr>"
+			  "<td><b>Test URL</b></td>"
+			  "<td><b>Matching Expression #</b></td>"
+			  "</tr>"
+			  "<tr>"
+			  "<td><input type=text size=55 value=\"%s\" "
+			  "name=test> "
+			  "<input type=submit name=action value=test></td>"
+			  "<td>%s</td></tr></table><br><br>\n" ,
+			  LIGHT_BLUE , DARK_BLUE , testUrl , matchString );
+		*/
+
+		sb->safePrintf(
+			       "<style>"
+			       ".poo { background-color:#%s;}\n"
+			       "</style>\n" ,
+			       LIGHT_BLUE );
+
+		sb->safePrintf (
+			  "<table %s>"
+			  "<tr><td colspan=2><center>"
+			  "<b>"
+			  "Supported URL Expressions</b>"
+			  "</td></tr>"
+
+			  "<tr class=poo><td>default</td>"
+			  "<td>Matches every url."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>^http://whatever</td>"
+			  "<td>Matches if the url begins with "
+			  "<i>http://whatever</i>"
+			  "</td></tr>"
+
+			  "<tr class=poo><td>$.css</td>"
+			  "<td>Matches if the url ends with \".css\"."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>foobar</td>"
+			  "<td>Matches if the url CONTAINS <i>foobar</i>."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>tld==uk,jp</td>"
+			  "<td>Matches if url's TLD ends in \"uk\" or \"jp\"."
+			  "</td></tr>"
+
+			  /*
+			  "<tr class=poo><td>doc:quality&lt;40</td>"
+			  "<td>Matches if document quality is "
+			  "less than 40. Can be used for assigning to spider "
+			  "priority.</td></tr>"
+
+			  "<tr class=poo><td>doc:quality&lt;40 && tag:ruleset==22</td>"
+			  "<td>Matches if document quality less than 40 and "
+			  "belongs to ruleset 22. Only for assinging to "
+			  "spider priority.</td></tr>"
+
+			  "<tr class=poo><td><nobr>"
+			  "doc:quality&lt;40 && tag:manualban==1</nobr></td>"
+			  "<td>Matches if document quality less than 40 and "
+			  "is has a value of \"1\" for its \"manualban\" "
+			  "tag.</td></tr>"
+
+			  "<tr class=poo><td>tag:ruleset==33 && doc:quality&lt;40</td>"
+			  "<td>Matches if document quality less than 40 and "
+			  "belongs to ruleset 33. Only for assigning to "
+			  "spider priority or a banned ruleset.</td></tr>"
+			  */
+
+			  "<tr class=poo><td>hopcount<4 && iswww</td>"
+			  "<td>Matches if document has a hop count of 4, and "
+			  "is a \"www\" url (or domain-only url).</td></tr>"
+			  
+			  "<tr class=poo><td>hopcount</td>"
+			  "<td>All root urls, those that have only a single "
+			  "slash for their path, and no cgi parms, have a "
+			  "hop count of 0. Also, all RSS urls, ping "
+			  "server urls and site roots (as defined in the "
+			  "site rules table) have a hop count of 0. Their "
+			  "outlinks have a hop count of 1, and the outlinks "
+			  "of those outlinks a hop count of 2, etc."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>sitepages</td>"
+			  "<td>The number of pages that are currently indexed "
+			  "for the subdomain of the URL. "
+			  "Used for doing quotas."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>domainpages</td>"
+			  "<td>The number of pages that are currently indexed "
+			  "for the domain of the URL. "
+			  "Used for doing quotas."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>siteadds</td>"
+			  "<td>The number URLs manually added to the "
+			  "subdomain of the URL. Used to guage a subdomain's "
+			  "popularity."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>domainadds</td>"
+			  "<td>The number URLs manually added to the "
+			  "domain of the URL. Used to guage a domain's "
+			  "popularity."
+			  "</td></tr>"
+
+
+
+			  "<tr class=poo><td>isrss | !isrss</td>"
+			  "<td>Matches if document is an rss feed. "
+			  "When harvesting outlinks we <i>guess</i> if they "
+			  "are an rss feed by seeing if their file extension "
+			  "is xml, rss or rdf. Or if they are in an "
+			  "alternative link tag.</td></tr>"
+
+			  //"<tr class=poo><td>!isrss</td>"
+			  //"<td>Matches if document is NOT an rss feed."
+			  //"</td></tr>"
+
+			  "<tr class=poo><td>ispermalink | !ispermalink</td>"
+			  "<td>Matches if document is a permalink. "
+			  "When harvesting outlinks we <i>guess</i> if they "
+			  "are a permalink by looking at the structure "
+			  "of the url.</td></tr>"
+
+			  //"<tr class=poo><td>!ispermalink</td>"
+			  //"<td>Matches if document is NOT a permalink."
+			  //"</td></tr>"
+
+			  /*
+			  "<tr class=poo><td>outlink | !outlink</td>"
+			  "<td>"
+			  "<b>This is true if url being added to spiderdb "
+			  "is an outlink from the page being spidered. "
+			  "Otherwise, the url being added to spiderdb "
+			  "directly represents the page being spidered. It "
+			  "is often VERY useful to partition the Spiderdb "
+			  "records based on this criteria."
+			  "</td></tr>"
+			  */
+
+			  "<tr class=poo><td><nobr>isnewoutlink | !isnewoutlink"
+			  "</nobr></td>"
+			  "<td>"
+			  "This is true since the outlink was not there "
+			  "the last time we spidered the page we harvested "
+			  "it from."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>hasreply | !hasreply</td>"
+			  "<td>"
+			  "This is true if we have tried to spider "
+			  "this url, even if we got an error while trying."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isnew | !isnew</td>"
+			  "<td>"
+			  "This is the opposite of hasreply above. A url "
+			  "is new if it has no spider reply, including "
+			  "error replies. So once a url has been attempted to "
+			  "be spidered then this will be false even if there "
+			  "was any kind of error."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>lastspidertime >= "
+			  "<b>{roundstart}</b></td>"
+			  "<td>"
+			  "This is true if the url's last spidered time "
+			  "indicates it was spidered already for this "
+			  "current round of spidering. When no more urls "
+			  "are available for spidering, then gigablast "
+			  "automatically sets {roundstart} to the current "
+			  "time so all the urls can be spidered again. This "
+			  "is how you do round-based spidering. "
+			  "You have to use the respider frequency as well "
+			  "to adjust how often you want things respidered."
+			  "</td></tr>"
+			  
+
+			  //"<tr class=poo><td>!newoutlink</td>"
+			  //"<td>Matches if document is NOT a new outlink."
+			  //"</td></tr>"
+
+			  "<tr class=poo><td>age</td>"
+			  "<td>"
+			  "How old is the doucment <b>in seconds</b>. "
+			  "The age is based on the publication date of "
+			  "the document, which could also be the "
+			  "time that the document was last significantly "
+			  "modified. If this date is unknown then the age "
+			  "will be -1 and only match the expression "
+			  "<i>age==-1</i>. "
+			  "When harvesting links, we guess the publication "
+			  "date of the oulink by detecting dates contained "
+			  "in the url itself, which is popular among some "
+			  "forms of permalinks. This allows us to put "
+			  "older permalinks into a slower spider queue."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>"
+			  "<a name=insitelist>"
+			  "insitelist | !insitelist"
+			  "</a>"
+			  "</td>"
+			  "<td>"
+			  "This is true if the url matches a pattern in "
+			  "the list of sites on the <a href=/admin/sites>"
+			  "site list</a> page. That site list is useful for "
+			  "adding a large number of sites that can not be "
+			  "accomodated by the spider scheduler table. Plus "
+			  "it is higher performance and easier to use, but "
+			  "lacks the spider scheduler's "
+			  "fine level of control."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isaddurl | !isaddurl</td>"
+			  "<td>"
+			  "This is true if the url was added from the add "
+			  "url interface. This replaces the add url priority "
+			  "parm."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isinjected | !isinjected</td>"
+			  "<td>"
+			  "This is true if the url was directly "
+			  "injected from the "
+			  "/inject page or API."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isdocidbased | !isdocidbased</td>"
+			  "<td>"
+			  "This is true if the url was added from the "
+			  "reindex interface. The request does not contain "
+			  "a url, but only a docid, that way we can add "
+			  "millions of search results very quickly without "
+			  "having to lookup each of their urls. You should "
+			  "definitely have this if you use the reindexing "
+			  "feature. "
+			  "You can set max spiders to 0 "
+			  "for non "
+			  "docidbased requests while you reindex or delete "
+			  "the results of a query for extra speed."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>ismanualadd | !ismanualadd</td>"
+			  "<td>"
+			  "This is true if the url was added manually. "
+			  "Which means it matches isaddurl, isinjected, "
+			  " or isdocidbased. as opposed to only "
+			  "being discovered from the spider. "
+			  "</td></tr>"
+
+			  "<tr class=poo><td><nobr>inpingserver | !inpingserver"
+			  "</nobr></td>"
+			  "<td>"
+			  "This is true if the url has an inlink from "
+			  "a recognized ping server. Ping server urls are "
+			  "hard-coded in Url.cpp. <b><font color=red> "
+			  "pingserver urls are assigned a hop count of 0"
+			  "</font></b>"
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isparentrss | !isparentrss</td>"
+			  "<td>"
+			  "If a parent of the URL was an RSS page "
+			  "then this will be matched."
+			  "</td></tr>"
+
+			  /*
+			  "<tr class=poo><td>parentisnew | !parentisnew</td>"
+			  "<td>"
+			  "<b>Parent providing this outlink is not currently "
+			  "in the index but is trying to be added right now. "
+			  "</b>This is a special expression in that "
+			  "it only applies to assigning spider priorities "
+			  "to outlinks we are harvesting on a page.</b>" 
+			  "</td></tr>"
+			  */
+
+			  "<tr class=poo><td>isindexed | !isindexed</td>"
+			  "<td>"
+			  "This url matches this if in the index already. "
+			  "</td></tr>"
+
+			  "<tr class=poo><td>errorcount==1</td>"
+			  "<td>"
+			  "The number of times the url has failed to "
+			  "be indexed. 1 means just the last time, two means "
+			  "the last two times. etc. Any kind of error parsing "
+			  "the document (bad utf8, bad charset, etc.) "
+			  "or any HTTP status error, like 404 or "
+			  "505 is included in this count, in addition to "
+			  "\"temporary\" errors like DNS timeouts."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>hastmperror</td>"
+			  "<td>"
+			  "This is true if the last spider attempt resulted "
+			  "in an error like EDNSTIMEDOUT or a similar error, "
+			  "usually indicative of a temporary internet "
+			  "failure, or local resource failure, like out of "
+			  "memory, and should be retried soon. "
+			  "Currently: "
+			  "dns timed out, "
+			  "tcp timed out, "
+			  "dns dead, "
+			  "network unreachable, "
+			  "host unreachable, "
+			  "diffbot internal error, "
+			  "out of memory."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>percentchangedperday&lt=5</td>"
+			  "<td>"
+			  "Looks at how much a url's page content has changed "
+			  "between the last two times it was spidered, and "
+			  "divides that percentage by the number of days. "
+			  "So if a URL's last two downloads were 10 days "
+			  "apart and its page content changed 30%% then "
+			  "the <i>percentchangedperday</i> will be 3. "
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "</td></tr>"
+
+			  "<tr class=poo><td>sitenuminlinks&gt;20</td>"
+			  "<td>"
+			  "How many inlinks does the URL's site have? "
+			  "We only count non-spammy inlinks, and at most only "
+			  "one inlink per IP address C-Class is counted "
+			  "so that a webmaster who owns an entire C-Class "
+			  "of IP addresses will only have his inlinks counted "
+			  "once."
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "</td></tr>"
+
+			  "<tr class=poo><td>httpstatus==404</td>"
+			  "<td>"
+			  "For matching the URL based on the http status "
+			  "of its last download. Does not apply to URLs "
+			  "that have not yet been successfully downloaded."
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "</td></tr>"
+
+			  /*
+			  "<tr class=poo><td>priority==30</td>"
+			  "<td>"
+			  "<b>If the current priority of the url is 30, then "
+			  "it will match this expression. Does not apply "
+			  "to outlinks, of course."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>parentpriority==30</td>"
+			  "<td>"
+			  "<b>This is a special expression in that "
+			  "it only applies to assigning spider priorities "
+			  "to outlinks we are harvesting on a page.</b> "
+			  "Matches if the url being added to spider queue "
+			  "is from a parent url in priority queue 30. "
+			  "The parent's priority queue is the one it got "
+			  "moved into while being spidered. So if it was "
+			  "in priority 20, but ended up in 25, then 25 will "
+			  "be used when scanning the URL Filters table for "
+			  "each of its outlinks. Only applies "
+			  "to the FIRST time the url is added to spiderdb. "
+			  "Use <i>parentpriority==-3</i> to indicate the "
+			  "parent was FILTERED and <i>-2</i> to indicate "
+			  "the parent was BANNED. A parentpriority of "
+			  "<i>-1</i>"
+			  " means that the urls is not a link being added to "
+			  "spiderdb but rather a url being spidered."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>inlink==...</td>"
+			  "<td>"
+			  "If the url has an inlinker which contains the "
+			  "given substring, then this rule is matched. "
+			  "We use this like <i>inlink=www.weblogs.com/"
+			  "shortChanges.xml</i> to detect if a page is in "
+			  "the ping server or not, and if it is, then we "
+			  "assign it to a slower-spidering queue, because "
+			  "we can reply on the ping server for updates. Saves "
+			  "us from having to spider all the blogspot.com "
+			  "subdomains a couple times a day each."
+			  "</td></tr>"
+			  */
+
+			  //"NOTE: Until we get the link info to get the doc "
+			  //"quality before calling msg8 in Msg16.cpp, we "
+			  //"can not involve doc:quality for purposes of "
+			  //"assigning a ruleset, unless banning it.</td>"
+
+			  "<tr class=poo><td><nobr>tld!=com,org,edu"// && "
+			  //"doc:quality&lt;70"
+			  "</nobr></td>"
+			  "<td>Matches if the "
+			  "url's TLD does NOT end in \"com\", \"org\" or "
+			  "\"edu\". "
+			  "</td></tr>"
+
+			  "<tr class=poo><td><nobr>lang==zh_cn,de"
+			  "</nobr></td>"
+			  "<td>Matches if "
+			  "the url's content is in the language \"zh_cn\" or "
+			  "\"de\". See table below for supported language "
+			  "abbreviations. Used to only keep certain languages "
+			  "in the index. This is hacky because the language "
+			  "may not be known at spider time, so Gigablast "
+			  "will check after downloading the document to "
+			  "see if the language <i>spider priority</i> is "
+			  "DELETE thereby discarding it.</td></tr>"
+			  //"NOTE: Until we move the language "
+			  //"detection up before any call to XmlDoc::set1() "
+			  //"in Msg16.cpp, we can not use for purposes of "
+			  //"assigning a ruleset, unless banning it.</td>"
+			  //"</tr>"
+
+			  "<tr class=poo><td><nobr>lang!=xx,en,de"
+			  "</nobr></td>"
+			  "<td>Matches if "
+			  "the url's content is NOT in the language \"xx\" "
+			  "(unknown), \"en\" or \"de\". "
+			  "See table below for supported language "
+			  "abbreviations.</td></tr>"
+
+			  /*
+			  "<tr class=poo><td>link:gigablast</td>"
+			  "<td>Matches if the document links to gigablast."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>searchbox:gigablast</td>"
+			  "<td>Matches if the document has a submit form "
+			  "to gigablast."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>site:dmoz</td>"
+			  "<td>Matches if the document is directly or "
+			  "indirectly in the DMOZ directory."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>tag:spam>X</td>"
+			  "<td>Matches if the document's tagdb record "
+			  "has a score greater than X for the sitetype, "
+			  "'spam' in this case. "
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "Other sitetypes include: "
+			  "..."
+			  "</td></tr>"
+			  */
+
+			  "<tr class=poo><td>iswww | !iswww</td>"
+			  "<td>Matches if the url's hostname is www or domain "
+			  "only. For example: <i>www.xyz.com</i> would match, "
+			  "and so would <i>abc.com</i>, but "
+			  "<i>foo.somesite.com</i> would NOT match."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isonsamedomain | !isonsamedomain</td>"
+			  "<td>"
+			  "This is true if the url is from the same "
+			  "DOMAIN as the page from which it was "
+			  "harvested."
+			  //"Only effective for links being added from a page "
+			  //"being spidered, because this information is "
+			  //"not preserved in the titleRec."
+			  "</td></tr>"
+
+
+			  "<tr class=poo><td><nobr>"
+			  "isonsamesubdomain | !isonsamesubdomain"
+			  "</nobr></td>"
+			  "<td>"
+			  "This is true if the url is from the same "
+			  "SUBDOMAIN as the page from which it was "
+			  "harvested."
+			  //"Only effective for links being added from a page "
+			  //"being spidered, because this information is "
+			  //"not preserved in the titleRec."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>ismedia | !ismedia</td>"
+			  "<td>"
+			  "Does the url have a media or css related "
+			  "extension. Like gif, jpg, mpeg, css, etc.? "
+			  "</td></tr>"
+
+
+			  "</td></tr></table><br><br>\n",
+			  TABLE_STYLE );
+
+
+		// show the languages you can use
+		sb->safePrintf (
+			  "<table %s>"
+			  "<tr><td colspan=2><center>"
+			  "<b>"
+			  "Supported Language Abbreviations "
+			  "for lang== Filter</b>"
+			  "</td></tr>",
+			  TABLE_STYLE );
+		for ( long i = 0 ; i < 256 ; i++ ) {
+			char *lang1 = getLanguageAbbr   ( i );
+			char *lang2 = getLanguageString ( i );
+			if ( ! lang1 ) continue;
+			sb->safePrintf("<tr class=poo>"
+				       "<td>%s</td><td>%s</td></tr>\n",
+				      lang1,lang2);
+		}
+		// wrap it up
+		sb->safePrintf("</table><br><br>");
+		return true;
 }

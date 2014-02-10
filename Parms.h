@@ -97,9 +97,10 @@ class Page {
 #define PF_NOSYNC            0x40
 #define PF_DIFFBOT           0x80
 
-#define PF_HIDDEN 0x0100
-#define PF_NOSAVE 0x0200
-#define PF_DUP    0x0400
+#define PF_HIDDEN   0x0100
+#define PF_NOSAVE   0x0200
+#define PF_DUP      0x0400
+#define PF_TEXTAREA 0x0800
 
 class Parm {
  public:
