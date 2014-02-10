@@ -18903,13 +18903,17 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	if ( strcmp ( val1.getBufStart() , val2.getBufStart() ) == 0 )
 		return true;
 
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+
 	// show it
 	log("parms: updating parm \"%s\" "
-	    "(%s[%li]) (collnum=%li) from \"%s\" -> \"%s\"",
+	    "(%s[%li]) (collnum=%li) (coll=%s) from \"%s\" -> \"%s\"",
 	    parm->m_title,
 	    parm->m_cgi,
 	    occNum,
 	    (long)collnum,
+	    coll,
 	    val1.getBufStart(),
 	    val2.getBufStart());
 
