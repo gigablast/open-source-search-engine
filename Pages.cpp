@@ -95,7 +95,7 @@ static WebPage s_pages[] = {
 	//  sendPageWordVec , 0 } ,
 
 	{ PAGE_BASIC_SETTINGS, "admin/settings", 0 , "settings",1, 0 , 
-	  "Basic settings page.", sendPageBasicSettings  , 0 } ,
+	  "Basic settings page.", sendPageGeneric , 0 } ,
 	{ PAGE_BASIC_STATUS, "admin/status", 0 , "status",1, 0 , 
 	  "Basic status page.", sendPageBasicStatus  , 0 } ,
 	//{ PAGE_BASIC_DIFFBOT, "admin/diffbot", 0 , "diffbot",1, 0 , 
@@ -232,7 +232,7 @@ static WebPage s_pages[] = {
 	{ PAGE_SITES   , "admin/sites", 0 , "site list" ,  1 , 1,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "what sites can be spidered",
-	  sendPageBasicSettings  , 0 } ,
+	  sendPageGeneric , 0 } , // sendPageBasicSettings
 
 	{ PAGE_FILTERS   , "admin/scheduler", 0 , "spider scheduler" ,  1 , 1,
 	  //USER_ADMIN | USER_MASTER   , 

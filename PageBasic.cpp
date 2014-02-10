@@ -12,6 +12,7 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) ;
 // main > Basic > Settings
 //
 ///////////
+/*
 bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 
 	char  buf [ 128000 ];
@@ -85,7 +86,7 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 					      NULL,//cookie           ,
 					      NULL             );// charset
 }
-
+*/
 
 class PatternData {
 public:
@@ -367,7 +368,7 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 	return NULL;
 }
 
-
+/*
 bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 
 	// true = useDefault?
@@ -623,20 +624,18 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 		      "</tr>"
 
 		      // connect to a device and index it as a stream
-		      /*
-		      "<tr>"
-		      "<td>stream:/dev/eth0"
-		      "<td>"
-		      "Connect to a device and index it as a stream. "
-		      "It will be treated like a single huge document for "
-		      "searching purposes with chunks being indexed in "
-		      "realtime. Or chunk it up into individual document "
-		      "chunks, but proximity term searching will have to "
-		      "be adjusted to compute query term distances "
-		      "inter-document."
-		      "</td>"
-		      "</tr>"
-		      */
+		      //"<tr>"
+		      //"<td>stream:/dev/eth0"
+		      //"<td>"
+		      //"Connect to a device and index it as a stream. "
+		      //"It will be treated like a single huge document for "
+		      //"searching purposes with chunks being indexed in "
+		      //"realtime. Or chunk it up into individual document "
+		      //"chunks, but proximity term searching will have to "
+		      //"be adjusted to compute query term distances "
+		      //"inter-document."
+		      //"</td>"
+		      //"</tr>"
 
 		      // negative subdomain match
 		      "<tr>"
@@ -646,7 +645,6 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 		      "the spider set.</td>"
 		      "</tr>"
 
-		      /*
 		      "<tr>"
 		      "<td>regexp:-pid=[0-9A-Z]+/</td>"
 		      "<td>Url must match this regular expression. "
@@ -654,7 +652,6 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 		      "things down and are confusing to use."
 		      "</td>"
 		      "</tr>"
-		      */
 		      
 
 		      // tag match
@@ -691,6 +688,7 @@ bool printSiteListBox ( SafeBuf *sb , HttpRequest *hr ) {
 
 	return true;
 }
+*/
 
 // from pagecrawlbot.cpp for printCrawlDetailsInJson()
 #include "PageCrawlBot.h"
