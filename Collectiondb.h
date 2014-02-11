@@ -640,7 +640,7 @@ class CollectionRec {
 	long    m_hasucr:1;
 	long    m_hasupr:1;
 
-	char    m_diffbotOnlyProcessIfNew;
+	char    m_diffbotOnlyProcessIfNewUrl;
 
 	//SafeBuf m_diffbotClassify;
 	//char m_diffbotClassify;

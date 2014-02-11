@@ -9299,7 +9299,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "onlyProcessIfNew";
 	m->m_xml   = "diffbotOnlyProcessIfNew";
 	m->m_title = "onlyProcessIfNew";
-	m->m_off   = (char *)&cr.m_diffbotOnlyProcessIfNew - x;
+	m->m_off   = (char *)&cr.m_diffbotOnlyProcessIfNewUrl - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "1";

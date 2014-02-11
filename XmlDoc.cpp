@@ -3062,7 +3062,16 @@ long *XmlDoc::getIndexCode2 ( ) {
 	if ( ! pod || pod == (XmlDoc **)-1 ) return (long *)pod;
 	XmlDoc *od = NULL;
 	if ( *pod ) od = *pod;
-	if ( od ) {
+	bool check = true;
+	if ( ! od ) check = false;
+	// do not do this logic for diffbot because it might want to get
+	// the diffbot reply even if page content is the same, because it
+	// might have an ajax call that updates the product price.
+	// onlyProcessIfNewUrl defaults to true, so typically even diffbot
+	// crawls will do this check.
+	if ( cr->m_isCustomCrawl && ! cr->m_diffbotOnlyProcessIfNewUrl )
+		check = false;
+	if ( check ) {
 		long *ch32 = getContentHash32();
 		if ( ! ch32 || ch32 == (void *)-1 ) return (long *)ch32;
 		if ( *ch32 == od->m_contentHash32 ) {
@@ -13390,7 +13399,8 @@ SafeBuf *XmlDoc::getDiffbotApiUrl ( ) {
 	return &m_diffbotApiUrl;
 }
 
-// if only processing NEW is enabled, then do not
+// if only processing NEW URLs is enabled, then do not get diffbot reply
+// if we already got one before
 bool *XmlDoc::getRecycleDiffbotReply ( ) {
 
 	if ( m_recycleDiffbotReplyValid )
@@ -13414,7 +13424,7 @@ bool *XmlDoc::getRecycleDiffbotReply ( ) {
 	// ***RECYCLE*** the diffbot reply!
 	m_recycleDiffbotReply = false;
 
-	if ( cr->m_diffbotOnlyProcessIfNew &&
+	if ( cr->m_diffbotOnlyProcessIfNewUrl &&
 	     od && od->m_gotDiffbotSuccessfulReply ) 
 		m_recycleDiffbotReply = true;
 
@@ -13696,7 +13706,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	
 
-	// if already processed and onlyprocessifnew is enabled then
+	// if already processed and onlyprocessifnewurl is enabled then
 	// we recycle and do not bother with this, we also do not nuke
 	// the diffbot json objects we have already indexed by calling
 	// nukeJSONObjects()
@@ -19932,7 +19942,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	}
 
 	// . should we recycle the diffbot reply for this url?
-	// . if m_diffbotOnlyProcessIfNew is true then we want to keep
+	// . if m_diffbotOnlyProcessIfNewUrl is true then we want to keep
 	//   our existing diffbot reply, i.e. recycle it, even though we
 	//   respidered this page.
 	bool *recycle = getRecycleDiffbotReply();

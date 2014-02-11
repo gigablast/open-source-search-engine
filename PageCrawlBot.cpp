@@ -2280,7 +2280,7 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 			      , cx->m_maxToCrawl
 			      , cx->m_maxToProcess
 			      , (long)cx->m_restrictDomain
-			      , (long)cx->m_diffbotOnlyProcessIfNew
+			      , (long)cx->m_diffbotOnlyProcessIfNewUrl
 			      );
 		sb.safePrintf("\"seeds\":\"");
 		sb.safeUtf8ToJSON ( cx->m_diffbotSeeds.getBufStart());
@@ -3264,7 +3264,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 		char *isNewYes = "";
 		char *isNewNo  = " checked";
-		if ( cr->m_diffbotOnlyProcessIfNew ) {
+		if ( cr->m_diffbotOnlyProcessIfNewUrl ) {
 			isNewYes = " checked";
 			isNewNo  = "";
 		}
