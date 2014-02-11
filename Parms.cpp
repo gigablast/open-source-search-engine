@@ -3633,6 +3633,8 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 		//   OBJ_COLL and OBJ_CONF.
 		// . make sure we got the right parms for what we want
 		if ( m->m_obj == OBJ_NONE ) continue;
+		// do not allow searchinput parms through
+		if ( m->m_obj == OBJ_SI ) continue;
 		if ( THIS == (char *)&g_conf && m->m_obj != OBJ_CONF) continue;
 		if ( THIS != (char *)&g_conf && m->m_obj == OBJ_CONF) continue;
 		if ( m->m_type == TYPE_MONOD2  ) continue;
@@ -3653,15 +3655,15 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 		if ( m->m_type == TYPE_COMMENT ) goto skip2;
 		// skip if this was compiled for a client and they should not
 		// see this control
-#ifdef _GLOBALSPEC_
-		if ( m->m_priv == 2 ) continue;
-		if ( m->m_priv == 3 ) continue;
-#elif _CLIENT_
-		if ( m->m_priv ) continue;
-#elif _METALINCS_
-		if ( m->m_priv == 2 ) continue;
-		if ( m->m_priv == 3 ) continue;
-#endif
+		//#ifdef _GLOBALSPEC_
+		//		if ( m->m_priv == 2 ) continue;
+		//		if ( m->m_priv == 3 ) continue;
+		//#elif _CLIENT_
+		//		if ( m->m_priv ) continue;
+		//#elif _METALINCS_
+		//		if ( m->m_priv == 2 ) continue;
+		//		if ( m->m_priv == 3 ) continue;
+		//#endif
 		// skip if offset is negative, that means none
 		s = (char *)THIS + m->m_off ;
 		// if array, count can be 0 or more than 1
