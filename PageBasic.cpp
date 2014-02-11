@@ -5,7 +5,7 @@
 #include "Parms.h"
 #include "Spider.h"
 
-bool printExampleTable ( SafeBuf *sb , HttpRequest *hr ) ;
+//bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) ;
 
 ///////////
 //
@@ -25,6 +25,9 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 		return true;
 	}
 
+	// process any incoming request
+	handleSettingsRequest ( socket , hr );
+
 	// . print standard header 
 	// . this prints the <form tag as well
 	g_pages.printAdminTop ( &sb , socket , hr );
@@ -32,8 +35,8 @@ bool sendPageBasicSettings ( TcpSocket *socket , HttpRequest *hr ) {
 
 	g_parms.printParms ( &sb , socket , hr );
 
-	
-	printExampleTable ( &sb , hr );
+
+	printSitePatternExamples ( &sb , hr );
 
 	// wrap up the form, print a submit button
 	g_pages.printAdminBottom ( &sb );
@@ -396,7 +399,7 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 	sb->safePrintf ( "<a name=examples></a>"
 			 "<table %s>"
 			 "<tr class=hdrow><td colspan=2>"
-			 "<center><b>Examples</b></tr></tr>"
+			 "<center><b>Example Site Patterns</b></tr></tr>"
 			 "<tr bgcolor=#%s>"
 			 "<td>"
 			 ,TABLE_STYLE , DARK_BLUE);
@@ -416,8 +419,7 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "<td>http://www.goodstuff.com/</td>"
 		      "<td>"
 		      "Matches urls beginning with "
-		      "http://www.goodstuff.com/. "
-		      "This is also used as a seed."
+		      "http://www.goodstuff.com/."
 		      "</td>"
 		      "</tr>"
 
@@ -427,7 +429,6 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "<td>"
 		      "Exact subdomain match. "
 		      "Spider urls on www.goodstuff.com."
-		      "This is also used as a seed."
 		      "</td>"
 		      "</tr>"
 
@@ -438,8 +439,6 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "Exact domain match. "
 		      "Spider urls on goodstuff.com and on "
 		      "any subdomain of goodstuff.com."
-		      "This is also used as a seed, but you might "
-		      "have to end up adding www.goodstuff.com separately."
 		      "</td>"
 		      "</tr>"
 
@@ -450,8 +449,6 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "Exact subdomain match and parital subdir match. "
 		      "Matches urls on www.goodstuff.com and in the "
 		      "/gooddir/anotherdir/ subdirectory. "
-		      "This is also used as a seed, but you might "
-		      "have to end up adding another seed if it is 404."
 		      "</td>"
 		      "</tr>"
 
@@ -460,10 +457,8 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "<tr>"
 		      "<td>exact:http://xyz.goodstuff.com/</td>"
 		      "<td>"
-		      "Seed url. "
 		      "Matches the single url "
 		      "http://xyz.goodstuff.com/."
-		      "This is also used as a seed."
 		      "</td>"
 		      "</tr>"
 
@@ -473,7 +468,6 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "<td>"
 		      "Matches the single url "
 		      "http://xyz.goodstuff.com/mypage.html."
-		      "This is also used as a seed."
 		      "</td>"
 		      "</tr>"
 
@@ -482,7 +476,6 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "<td>file://C/mydir/mysubdir/"
 		      "<td>"
 		      "Matches all local files in the specified directory. "
-		      "This is also used as a seed."
 		      "</td>"
 		      "</tr>"
 

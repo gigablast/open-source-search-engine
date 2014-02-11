@@ -4,6 +4,7 @@
 #include "Collectiondb.h"
 #include "Msg4.h"
 #include "Spider.h"
+#include "Parms.h"
 
 static bool sendReply        ( void *state  , bool addUrlEnabled );
 
@@ -221,138 +222,7 @@ bool sendReply ( void *state , bool addUrlEnabled ) {
 	}
 	
 
-
-	// print the add url table
-	sb.safePrintf (
-		       //"<br><br><br>"
-		       "<center>"
-
-		       "%s" // the url added successfully msg
-
-		       "<FORM method=post action=/addurl>" 
-		       
-		       "<table boder=1 %s>"
-		       "<tr class=hdrow><td colspan=2>"
-		       "<center>"
-		       //"<font size=+1>"
-		       "<b>"
-		       "Add URL</b>"
-		       //"</font>"
-		       "</td></tr>\n\n"
-		       
-		       "<tr class=poo><td>"
-		       //"<b>url</b>"
-		       //"<br>"
-
-		       "<font size=-2>"
-		       
-		       "Submit requests for Gigablast to index certain urls. "
-		       "They must match the patterns you have specified in "
-		       "the <a href=/admin/sites>spider sites</a> list. "
-		       "You can override that behavior on the "
-		       "<a href=/admin/scheduler>spider scheduler</a> by "
-		       "telling Gigablast to always index manually added "
-		       "urls. If your url does not index as you expect you "
-		       "can check it's history. " // (spiderdb lookup)
-		       "Added urls will have a "
-		       "<a href=/admin/scheduler#hopcount>hopcount</a> of 0. "
-		       "The add url api is described on the "
-		       "<a href=/admin/api>api</a> page. "
-
-		       "</font>"
-		       "</td></tr>"
-
-		       "<tr><td colspan=2>"
-
-		       "<center>"
-
-		       //"<input type=text name=url value=\"%s\" size=50> "
-		       "<textarea cols=80 rows=20 name=urls>"
-		       "%s"
-		       "</textarea>"
-
-		       "</center>"
-
-		       "</td>"
-		       "</tr>"
-		       
-		       , pm // msg
-		       , TABLE_STYLE
-		       , url // submitted urls
-		       );
-	
-
-	/*
-	sb.safePrintf (
-		       "\n"
-		       
-		       "<br><b>or specify the url of a "
-		       "file of urls to add:</b>"
-		       "<br>\n"
-		       "<input type=text name=ufu size=50> "
-		       "<input type=submit value=\"add file\" border=0><br>"
-		       "<br>"
-		       
-		       //"<br><b>or a query to scrape from major engines:</b>"
-		       //"<br>\n"
-		       // qts = query to scrape
-		       //"<input type=text name=qts size=49> "
-		       //"<input type=submit value=\"add query\" border=0><br>"
-		       //"<br>"
-		       
-		       "<br><b>collection to add to:</b> "
-		       "<input type=text name=c size=20 value=\"%s\">"
-		       "<br><br>\n",
-		       st1->m_coll );
-	*/
-
-	// upload a file of urls to add
-	sb.safePrintf ( "<tr>"
-			"<td colspan=2>"
-			"<input "
-			"size=20 "
-			"type=file "
-			"name=\"Upload file of urls\">"
-			"</td></tr>"
-			);
-
-
-	char *ss = "";
-	if ( st1->m_strip ) ss =" checked";
-	sb.safePrintf ("<tr><td>"
-		       "<input type=checkbox name=strip value=1%s>"
-		       "</td><td>"
-		       "strip sessionids"
-		       "</td></tr>"
-		       , ss );
-	
-
- 	// adding spider links box
- 	char *sl = "";
- 	if ( st1->m_spiderLinks ) sl =" checked";
- 	sb.safePrintf ("<tr><td>"
-		       "<input type=checkbox name=spiderLinks value=1%s>"
-		       "</td><td>"
- 		       "spider (harvest) links from page"
-		       "</td></tr>"
-		       , sl );
-
-
-	sb.safePrintf(
-		      "<tr><td colspan=2>"
-		      "<input type=submit value=\"add urls\" border=0>"
-		      "</td></tr>"
-		      "</table>"
-		      );
-
-
-	// . print the url box, etc...
-	// . assume user is always forcing their url
-	// sprintf ( p ,
-	//	  "<br><br>"
-	//	  "<input type=checkbox name=force value=1 checked> "
-	//        "force respider<br>" );
-	//p += gbstrlen ( p );
+	g_parms.printParmTable ( &sb , st1->m_socket , &st1->m_hr );
 
 	// print the final tail
 	g_pages.printTail ( &sb, true ); // admin?

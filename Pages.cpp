@@ -230,7 +230,6 @@ static WebPage s_pages[] = {
 	//  sendPageGeneric  , 0 } ,
 
 	{ PAGE_SITES   , "admin/sites", 0 , "site list" ,  1 , 1,
-	  //USER_ADMIN | USER_MASTER   , 
 	  "what sites can be spidered",
 	  sendPageGeneric , 0 } , // sendPageBasicSettings
 
@@ -883,8 +882,8 @@ void doneWrapper ( void *state ) {
 // because they are menus of configurable parameters for either g_conf
 // or for a particular CollectionRec record for a collection.
 bool sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
-	long page = g_pages.getDynamicPageNumber ( r );
-	return g_parms.sendPageGeneric ( s , r , page );
+	//long page = g_pages.getDynamicPageNumber ( r );
+	return g_parms.sendPageGeneric ( s , r );//, page );
 }
 
 bool Pages::getNiceness ( long page ) {

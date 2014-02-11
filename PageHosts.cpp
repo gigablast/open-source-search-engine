@@ -151,8 +151,8 @@ skipReplaceHost:
 
 		  "<b>hostId</b></td>"
 		  "<td><b>host ip</b></td>"
-		  "<td><b>shard</b></td>" // mirror group
-		  "<td><b>stripe</b></td>"
+		  "<td><b>shard</b></td>"
+		  "<td><b>mirror</b></td>" // mirror # within the shard
 
 		  // i don't remember the last time i used this, so let's
 		  // just comment it out to save space

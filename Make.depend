@@ -2201,7 +2201,7 @@ PageAddUrl.o: PageAddUrl.cpp gb-include.h types.h fctypes.h Unicode.h \
   Summary.h matches2.h Words.h StopWords.h Bits.h Pos.h Matches.h \
   HashTableT.h Domains.h CountryCode.h Tagdb.h Events.h Sections.h \
   IndexList.h Dates.h Msg22.h CatRec.h Categories.h HashTable.h Catdb.h \
-  Datedb.h
+  Datedb.h Parms.h
 PageBasic.o: PageBasic.cpp SafeBuf.h gb-include.h types.h fctypes.h \
   Unicode.h UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h \
   Log.h HttpRequest.h Mem.h Conf.h Xml.h XmlNode.h Lang.h Iso8859.h \

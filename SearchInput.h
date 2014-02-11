@@ -45,11 +45,6 @@ class TopicGroup {
         long m_topicMaxPunctLen;
 };
 
-#define FORMAT_HTML 0
-#define FORMAT_XML  1
-#define FORMAT_JSON 2
-#define FORMAT_CSV  3
-
 class SearchInput {
 
  public:

@@ -861,36 +861,45 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr );
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
 // . must ultimately send reply back on "s"
-bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
-			      char *cookie , SafeBuf *pageBuf ,
-			      char *collOveride ,
-			      bool isJSON ) {
+bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 	char  buf [ 128000 ];
 	SafeBuf stackBuf(buf,128000);
 
 	SafeBuf *sb = &stackBuf;
 
-	if ( pageBuf ) sb = pageBuf;
+	// print standard header
+	char fmt = r->getReplyFormat();
+	if ( fmt == FORMAT_HTML )
+		g_pages.printAdminTop ( sb , s , r );
 
-	//char *p    = buf;
-	//char *pend = buf + 128000;
 
-	//long  user     = g_pages.getUserType              ( s , r );
-	//char *username = g_users.getUsername(r);
+	printParmTable ( sb , s , r );
+
+	long page = g_pages.getDynamicPageNumber ( r );
+	bool POSTReply = g_pages.getPage ( page )->m_usePost;
+
+	return g_httpServer.sendDynamicPage ( s                , 
+					      sb->getBufStart() ,
+					      sb->length()      , 
+					      -1               ,
+					      POSTReply        ,
+					      NULL             , // contType
+					      -1               , // httpstatus
+					      NULL,//cookie           ,
+					      NULL             );// charset
+}
+
+
+bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
+
+	long page = g_pages.getDynamicPageNumber ( r );
+
 	long  fromIp   = s->m_ip;
 
-	//char *pwd  = r->getString ("pwd");
+	char fmt = r->getReplyFormat();
 
-	//char *coll = r->getString ("c");
-	//if ( ! coll || ! coll[0] ) coll = "main";
-	//if ( collOveride ) coll = collOveride;
-
-	//long nc = r->getLong("nc",1);
-	//long pd = r->getLong("pd",1);
-
-	//p += sprintf(p, "<script type=\"text/javascript\">"
-	if ( ! isJSON )
+	if ( fmt == FORMAT_HTML )
 		sb->safePrintf (  
 				"<script type=\"text/javascript\">"
 				"function filterRow(str) {"
@@ -920,29 +929,25 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 				"}\n"
 				"</script>");
 	
-	// print standard header 
-	if ( ! pageBuf && ! isJSON )
-		g_pages.printAdminTop ( sb , s , r );
-
-	
-
 	// print the start of the table
 	char *tt = "None";
 	if ( page == PAGE_LOG        ) tt = "Log Controls";
 	if ( page == PAGE_MASTER     ) tt = "Master Controls";
 	if ( page == PAGE_SECURITY   ) tt = "Security";
+	if ( page == PAGE_ADDURL2    ) tt = "Add Urls";
 	if ( page == PAGE_SPIDER     ) tt = "Spider Controls";
 	if ( page == PAGE_SEARCH     ) tt = "Search Controls";
 	if ( page == PAGE_ACCESS     ) tt = "Access Controls";
 	if ( page == PAGE_FILTERS    ) tt = "Spider Scheduler";
 	if ( page == PAGE_BASIC_SETTINGS ) tt = "Settings";
 	if ( page == PAGE_BASIC_PASSWORDS ) tt = "Passwords";
+	if ( page == PAGE_SITES ) tt = "Site List";
 	//if ( page == PAGE_PRIORITIES ) tt = "Priority Controls";
 	//if ( page == PAGE_RULES      ) tt = "Site Rules";
 	//if ( page == PAGE_SYNC       ) tt = "Sync";
 	if ( page == PAGE_REPAIR     ) tt = "Repair Controls";
 	//if ( page == PAGE_ADFEED     ) tt = "Ad Feed Controls";
-	
+
 	// special messages for spider controls
 	char *e1 = "";
 	char *e2 = "";
@@ -963,38 +968,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	if ( page == PAGE_REPAIR )
 		g_repair.printRepairStatus ( sb , fromIp );
 	
-	/*
-	char *THIS ;
-	// when being called from Diffbot.cpp crawlbot page it is kind of
-	// hacky and we want to print the url filters for the supplied 
-	// collection dictated by collOveride. if we don't have this
-	// fix here it ends up printing the url filters for the default
-	// "main" collection
-	if ( collOveride )
-		THIS = (char *)g_collectiondb.getRec(collOveride);
-	else
-		THIS = g_parms.getTHIS ( r , page );
-
-	if ( ! THIS ) {
-		log("admin: Could not get parameter object.");
-		return g_httpServer.sendErrorReply ( s , 505 , "Bad Request");
-	}
-	*/
-
-	//CollectionRec *cr = (CollectionRec *)THIS;
-
-	char bb [ 256];//MAX_COLL_LEN + 60 ];
-	bb[0]='\0';
-	//if ( user == USER_MASTER && page >= PAGE_OVERVIEW && c && c[0] ) 
-	//	sprintf ( bb , " (%s)", c);
-	//if ( page == PAGE_FILTERS )
-	//	sprintf(bb,"(roundtime=%li roundnum=%li)"
-	//		, cr->m_spiderRoundStartTime
-	//		, cr->m_spiderRoundNum
-	//		);
-
 	// start the table
-	if ( ! isJSON ) {
+	if ( fmt == FORMAT_HTML ) {
 		sb->safePrintf( 
 			       "\n"
 			       "<table %s "
@@ -1028,67 +1003,38 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		sb->safePrintf(//"<div style=\"margin-left:45%%;\">"
 			       //"<font size=+1>"
 			       "<center>"
-			       "<b>%s</b>%s"
+			       "<b>%s</b>"
 			       //"</font>"
 			       "</center>"
 			       //"</div>"
 			       "</td></tr>%s%s\n",
-			       tt,bb,e1,e2);
+			       tt,e1,e2);
 	}
 
-	bool isCrawlbot = false;
-	if ( collOveride ) isCrawlbot = true;
+	//bool isCrawlbot = false;
+	//if ( collOveride ) isCrawlbot = true;
 		
 	// print the table(s) of controls
 	//p= g_parms.printParms (p, pend, page, user, THIS, coll, pwd, nc, pd);
 	g_parms.printParms ( sb , s , r );
 
 	// end the table
-	if ( ! isJSON ) sb->safePrintf ( "</table>\n" );
+	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "</table>\n" );
 
-	/*
-	// if page is security
-	if ( page == PAGE_SECURITY ){
-		// a table of page names and description
-		sb->safePrintf (
-			  "<table align=center width=100%% border=1 "
-			  "bgcolor=#d0d0e0 "
-			  "cellpadding=2 border=0>" 
-			  //"<tr><td colspan=2 bgcolor=#d0c0d0>"
-			  "<tr><td colspan=2 bgcolor=#%s>"
-			  "<center>"
-			  "<b>Page Reference Table</b>"
-			  //"</font>"
-			  "</td></tr>\n"
-			  "<tr><th>Page</th><th>Brief Description</th></tr>"
-			  , DARK_BLUE);
-
-		for ( long p=0; p < PAGE_INFO; p++ ){
-			WebPage *page = g_pages.getPage(p);
-			sb->safePrintf (
-				  "<tr>"
-				  "<td> <font size=-1>%s</font></td>"
-				  "<td><font size=-1>%s</font></td></tr>\n",
-				  page->m_filename , page->m_desc );
-		}
-		sb->safePrintf (  "</table>\n");
-	}
-	*/
-
-	if ( ! isJSON ) sb->safePrintf ( "<br><br>\n" );
+	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "<br><br>\n" );
 
 	// url filter page has a test table
-	if ( page == PAGE_FILTERS && ! isJSON ) {
+	if ( page == PAGE_FILTERS && fmt == FORMAT_HTML ) {
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( sb );
 		printUrlExpressionExamples ( sb );
 	}
-	else if ( page == PAGE_BASIC_SETTINGS && ! isJSON ) {
+	else if ( page == PAGE_BASIC_SETTINGS && fmt == FORMAT_HTML ) {
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( sb );
 		printSitePatternExamples ( sb , r );
 	}
-	else if ( ! isJSON )
+	else if ( fmt == FORMAT_HTML )
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( sb );
 
@@ -1124,25 +1070,10 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	*/
 
 
-	//if ( page == PAGE_FILTERS || page == PAGE_FILTERS2)
-	//	g_pages.printRulesetDescriptions ( &sb , user );
-
-	//long plen = p - buf;
-
 	// if just printing into a buffer, return now
-	if ( pageBuf ) return true;
+	//if ( pageBuf ) return true;
 
-	bool POSTReply = g_pages.getPage ( page )->m_usePost;
-
-	return g_httpServer.sendDynamicPage ( s                , 
-					      sb->getBufStart() ,
-					      sb->length()      , 
-					      -1               ,
-					      POSTReply        ,
-					      NULL             , // contType
-					      -1               , // httpstatus
-					      cookie           ,
-					      NULL             );// charset
+	return true;
 }
 
 /*
@@ -1329,54 +1260,26 @@ bool printCheckBoxes ( long n , SafeBuf* sb, char *name, char *array){
 	return true;
 }
 
-/*
-char *Parms::printParms (char *p, char *pend, TcpSocket *s , HttpRequest *r) {
-	long  page = g_pages.getDynamicPageNumber ( r );
-	//long  user = g_pages.getUserType ( s , r );
-	char *username = g_users.getUsername(r);
-	char *THIS = getTHIS ( r , page );
-	char *coll = r->getString ( "c"   );
-	//char *pwd  = r->getString ( "pwd" );
-	if ( ! coll ) coll = "";
-	//if ( ! pwd  ) pwd  = "";
-	long nc = r->getLong("nc",1);
-	long pd = r->getLong("pd",1);
-	return printParms ( p, pend, page, username, THIS, coll, NULL, nc, pd );
-}
-*/
-
 bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	long  page = g_pages.getDynamicPageNumber ( r );
-	//long  user = g_pages.getUserType ( s , r );
-	//char *username = g_users.getUsername(r);
-	//char *THIS = getTHIS ( r , page );
-	//if ( ! THIS ) return true;
-	char *coll = r->getString ( "c"   );
-	//char *pwd  = r->getString ( "pwd" );
-	if ( ! coll ) coll = "main";
-	//if ( ! pwd  ) pwd  = "";
 	long nc = r->getLong("nc",1);
 	long pd = r->getLong("pd",1);
-
-	// print master parms in case this page has master parms
-	char *THIS = (char *)&g_conf;
-	printParms2 ( sb, page, NULL, THIS, coll, NULL, nc, pd,0,0, OBJ_CONF);
-
-	// print collrec parms if we had a coll and this page had coll parms
-	if ( ! coll || ! coll[0] ) return true;
+	char *coll = r->getString ( "c"   );
+	if ( ! coll || ! coll[0] ) coll = "main";
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
-	if ( ! cr ) return true;
-	THIS = (char *)cr;
-	printParms2 ( sb, page, NULL, THIS, coll, NULL, nc, pd,0,0,OBJ_COLL );
+	printParms2 ( sb, page, cr, nc, pd,0,0 );
 	return true;
 }
 
 static long s_count = 0;
 
-bool Parms::printParms2 ( SafeBuf* sb , long page , char *username,//long user,
-			  void *THIS , char *coll , char *pwd , long nc ,
-			  long pd , bool isCrawlbot , bool isJSON ,
-			  char parmObj ) {
+bool Parms::printParms2 ( SafeBuf* sb , 
+			  long page , 
+			  CollectionRec *cr , 
+			  long nc ,
+			  long pd , 
+			  bool isCrawlbot , 
+			  bool isJSON ) {
 	bool status = true;
 	s_count = 0;
 	// background color
@@ -1384,6 +1287,9 @@ bool Parms::printParms2 ( SafeBuf* sb , long page , char *username,//long user,
 	char *bg2 = DARK_BLUE;
 	// background color
 	char *bg = NULL;
+
+	char *coll = NULL;
+	if ( cr ) coll = cr->m_coll;
 
 	// page aliases
 	if ( page == PAGE_BASIC_PASSWORDS )
@@ -1395,15 +1301,25 @@ bool Parms::printParms2 ( SafeBuf* sb , long page , char *username,//long user,
 		Parm *m = &m_parms[i];
 		// make sure we got the right parms for what we want
 		if ( m->m_page != page ) continue;
-		// and same object tpye
-		if ( m->m_obj != parmObj ) continue;
+		// and same object tpye. but allow OBJ_NONE for
+		// PageAddUrl.cpp
+		//if ( m->m_obj != parmObj && m->m_obj != OBJ_NONE ) continue;
 		// skip if offset is negative, that means none
-		if ( m->m_off < 0 && 
-		     m->m_type != TYPE_MONOD2 &&
-		     m->m_type != TYPE_MONOM2 &&
-		     m->m_type != TYPE_CMD     ) continue;
+		// well then use OBJ_NONE now!!!
+		//if ( m->m_off < 0 && 
+		//     m->m_type != TYPE_MONOD2 &&
+		//     m->m_type != TYPE_MONOM2 &&
+		//     m->m_type != TYPE_CMD     ) continue;
 		// skip if hidden
 		if ( m->m_flags & PF_HIDDEN ) continue;
+		// get right ptr
+		char *THIS = NULL;
+		if ( m->m_obj == OBJ_CONF ) 
+			THIS = (char *)&g_conf;
+		if ( m->m_obj == OBJ_COLL ) {
+			THIS = (char *)cr;
+			if ( ! THIS ) continue;
+		}
 		// might have an array, do not exceed the array size
 		long  jend = m->m_max;
 		long  size = jend ;
@@ -1457,7 +1373,7 @@ bool Parms::printParms2 ( SafeBuf* sb , long page , char *username,//long user,
 		// if not part of a complex row, just print this array right up
 		if ( rowid == -1 ) {
 			for ( long j = 0 ; j < size ; j++ )
-				status &=printParm ( sb,username,&m_parms[i],i,
+				status &=printParm ( sb,NULL,&m_parms[i],i,
 						     j, jend, (char *)THIS,
 						     coll,NULL,
 						     bg,nc,pd,
@@ -1480,7 +1396,7 @@ bool Parms::printParms2 ( SafeBuf* sb , long page , char *username,//long user,
 				      m_parms[k].m_rowid == rowid;  
 			      k++ ) {
 
-				status &=printParm(sb,username,&m_parms[k],k,
+				status &=printParm(sb,NULL,&m_parms[k],k,
 					    newj,jend,(char *)THIS,coll,NULL,
 						   bg,nc,pd, j==size-1,
 						   isCrawlbot,isJSON);
@@ -1924,23 +1840,26 @@ bool Parms::printParm ( SafeBuf* sb,
 			bool isJSON ) {
 	bool status = true;
 	// do not print if no permissions
-	if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
-		return status;
+	//if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
+	//	return status;
 	//if ( m->m_perms != 0 && (m->m_perms & user) == 0 ) return status;
 	// do not print some if #define _CLIENT_ is true
-#ifdef _GLOBALSPEC_
-	if ( m->m_priv == 2 ) return status;
-	if ( m->m_priv == 3 ) return status;
-#elif _CLIENT_
-	if ( m->m_priv ) return status;
-#elif _METALINCS_
-	if ( m->m_priv == 2 ) return status;
-	if ( m->m_priv == 3 ) return status;
-#endif
+	//#ifdef _GLOBALSPEC_
+	//if ( m->m_priv == 2 ) return status;
+	//if ( m->m_priv == 3 ) return status;
+	//#elif _CLIENT_
+	//if ( m->m_priv ) return status;
+	//#elif _METALINCS_
+	//if ( m->m_priv == 2 ) return status;
+	//if ( m->m_priv == 3 ) return status;
+	//#endif
 	// priv of 4 means do not print at all
-	if ( m->m_priv == 4 ) return status;
+	if ( m->m_priv == 4 ) return true;
 
-	if ( m->m_flags & PF_HIDDEN ) return status;
+	// do not print comments, those are for the xml conf file
+	if ( m->m_type == TYPE_COMMENT ) return true;
+
+	if ( m->m_flags & PF_HIDDEN ) return true;
 
 	// . if printing on crawlbot page hide these
 	// . we repeat this logic below when printing parm titles
@@ -2100,7 +2019,9 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( m->m_type != TYPE_FILEUPLOADBUTTON )
 		m->printVal ( &val1 , collnum , j ); // occNum );
 	// test it
-	if ( m->m_def && strcmp ( val1.getBufStart() , m->m_def ) )
+	if ( m->m_def && 
+	     m->m_obj != OBJ_NONE &&
+	     strcmp ( val1.getBufStart() , m->m_def ) )
 		// put non-default valued parms in orange!
 		bg = "ffa500";
 
@@ -2232,7 +2153,11 @@ bool Parms::printParm ( SafeBuf* sb,
 			//char *val = "Y";
 			//if ( ! *s ) val = "N";
 			char *val = "";
-			if ( *s ) val = " checked";
+			// "s" is invalid of parm has no "object"
+			if ( m->m_obj == OBJ_NONE && m->m_def[0] != '0' )
+				val = " checked";
+			if ( m->m_obj != OBJ_NONE && *s ) 
+				val = " checked";
 			// in case it is not checked, submit that!
 			// if it gets checked this should be overridden then
 			sb->safePrintf("<input type=hidden name=%s value=0>"
@@ -2402,7 +2327,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			if ( sx->length() ) {
 				// convert diffbot # to string
 				sb->safePrintf("\"%s\":\"",cgi);
-				sb->safeUtf8ToJSON (sx->getBufStart() );
+				if ( m->m_obj != OBJ_NONE )
+					sb->safeUtf8ToJSON (sx->getBufStart());
 				sb->safePrintf("\",\n");
 			}
 		}
@@ -2413,7 +2339,9 @@ bool Parms::printParm ( SafeBuf* sb,
 			// note it
 			//log("hack: %s",sx->getBufStart());
 			//sb->dequote ( sx->getBufStart() , sx->length() );
-			sb->safeMemcpy( sx->getBufStart() , sx->length() );
+			if ( m->m_obj != OBJ_NONE )
+				sb->htmlEncode(sx->getBufStart(),
+					       sx->length(),false);
 			sb->safePrintf ("</textarea>");
 		}
 		else {
@@ -2423,7 +2351,9 @@ bool Parms::printParm ( SafeBuf* sb,
 			//sb->dequote ( s , gbstrlen(s) );
 			// note it
 			//log("hack: %s",sx->getBufStart());
-			sb->dequote ( sx->getBufStart() , sx->length() );
+			// if parm is OBJ_NONE there is no stored valued
+			if ( m->m_obj != OBJ_NONE )
+				sb->dequote ( sx->getBufStart(), sx->length());
 			sb->safePrintf ("\">");
 		}
 	}
@@ -3009,6 +2939,8 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	// . some parms are just for SearchInput (search parms)
 	if ( m->m_off < 0 ) return;
 
+	if ( m->m_obj == OBJ_NONE ) return ;
+
 	float oldVal = 0;
 	float newVal = 0;
 
@@ -3290,6 +3222,7 @@ void Parms::setToDefault ( char *THIS ) {
 
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		Parm *m = &m_parms[i];
+		if ( m->m_obj == OBJ_NONE ) continue;
 		if ( m->m_type == TYPE_COMMENT ) continue;
 		if ( m->m_type == TYPE_FILEUPLOADBUTTON ) 
 			continue;
@@ -3399,6 +3332,7 @@ bool Parms::setFromFile ( void *THIS        ,
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		// get it
 		Parm *m = &m_parms[i];
+		if ( m->m_obj == OBJ_NONE ) continue;
 		//log(LOG_DEBUG, "Parms: %s: parm: %s", filename, m->m_xml);
 		// . there are 2 object types, coll recs and g_conf, aka
 		//   OBJ_COLL and OBJ_CONF.
@@ -3427,6 +3361,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		long nb;
 		long newnn;
 	loop:
+		if ( m->m_obj == OBJ_NONE ) { char *xx=NULL;*xx=0; }
 		// get xml node number of m->m_xml in the "xml" file
 		newnn = xml.getNodeNum(nn,1000000,m->m_xml,gbstrlen(m->m_xml));
 #ifdef _GLOBALSPEC_
@@ -3697,6 +3632,7 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 		// . there are 2 object types, coll recs and g_conf, aka
 		//   OBJ_COLL and OBJ_CONF.
 		// . make sure we got the right parms for what we want
+		if ( m->m_obj == OBJ_NONE ) continue;
 		if ( THIS == (char *)&g_conf && m->m_obj != OBJ_CONF) continue;
 		if ( THIS != (char *)&g_conf && m->m_obj == OBJ_CONF) continue;
 		if ( m->m_type == TYPE_MONOD2  ) continue;
@@ -3727,7 +3663,6 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 		if ( m->m_priv == 3 ) continue;
 #endif
 		// skip if offset is negative, that means none
-		if ( m->m_off < 0 ) continue;
 		s = (char *)THIS + m->m_off ;
 		// if array, count can be 0 or more than 1
 		count = 1;
@@ -7893,6 +7828,72 @@ void Parms::init ( ) {
 	m->m_plen  = (char *)&g_conf.m_banRegexLen - g; // length of string
 	m++;
 
+	///////////
+	//
+	// ADD URL PARMS
+	//
+	///////////
+	m->m_title = "urls to add";
+	m->m_desc  = "Submit requests for Gigablast to index certain urls. "
+		"They must match the patterns you have specified in "
+		"the <a href=/admin/sites>spider sites</a> list. "
+		"You can override that behavior on the "
+		"<a href=/admin/scheduler>spider scheduler</a> by "
+		"telling Gigablast to always index manually added "
+		"urls. If your url does not index as you expect you "
+		"can check it's history. " // (spiderdb lookup)
+		"Added urls will have a "
+		"<a href=/admin/scheduler#hopcount>hopcount</a> of 0. "
+		"The add url api is described on the "
+		"<a href=/admin/api>api</a> page.";
+	m->m_cgi   = "urls";
+	m->m_page  = PAGE_ADDURL2;
+	m->m_obj   = OBJ_NONE; // do not store in g_conf or collectionrec
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = "";
+	m->m_flags = PF_NOSAVE;
+	m->m_flags = PF_TEXTAREA;
+	m++;
+
+	// the new upload post submit button
+	m->m_title = "upload urls";
+	m->m_desc  = "Upload your file of urls.";
+	m->m_cgi   = "urls";
+	m->m_page  = PAGE_ADDURL2;
+	m->m_obj   = OBJ_NONE;
+	m->m_type  = TYPE_FILEUPLOADBUTTON;
+	m++;
+
+	m->m_title = "strip sessionids";
+	m->m_desc  = "strip added urls of their session ids.";
+	m->m_cgi   = "strip";
+	m->m_page  = PAGE_ADDURL2;
+	m->m_obj   = OBJ_NONE;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "1";
+	m++;
+
+	m->m_title = "harvest links";
+	m->m_desc  = "harvest links of added urls so we can spider them?.";
+	m->m_cgi   = "spiderLinks";
+	m->m_page  = PAGE_ADDURL2;
+	m->m_obj   = OBJ_NONE;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "1";
+	m++;
+
+	m->m_title = "force respider";
+	m->m_desc  = "Force an immediate respider even if the url "
+		"is already indexed.";
+	m->m_cgi   = "force";
+	m->m_page  = PAGE_ADDURL2;
+	m->m_obj   = OBJ_NONE;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "0";
+	m++;
+
+
+
 	///////////////////////////////////////////
 	// BASIC SETTINGS
 	///////////////////////////////////////////
@@ -7906,16 +7907,6 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_flags = PF_DUP;
-	m++;
-
-	m->m_title = "restart collection";
-	m->m_desc  = "Remove all documents from this collection and starts "
-		"spidering over again.";
-	m->m_cgi   = "restart";
-	m->m_page  = PAGE_BASIC_SETTINGS;
-	m->m_obj   = OBJ_COLL;
-	m->m_type  = TYPE_CMD;
-	m->m_func2 = CommandRestartColl;
 	m++;
 
 	m->m_title = "site patterns";
@@ -7934,7 +7925,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_def   = "";
-	m->m_flags = PF_TEXTAREA;
+	m->m_flags = PF_TEXTAREA | PF_DUP;
 	m++;
 
 	m->m_title = "spider sites";
@@ -7948,7 +7939,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "1";
-	m->m_flags = PF_NOSAVE;
+	m->m_flags = PF_NOSAVE | PF_DUP;
 	m++;
 
 	// the new upload post submit button
@@ -7962,6 +7953,56 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m++;
 
+	m->m_title = "restart collection";
+	m->m_desc  = "Remove all documents from this collection and starts "
+		"spidering over again. If you do this accidentally there "
+		"is a <a href=/admin.html#recover>recovery procedure</a> to "
+		"get back the trashed data.";
+	m->m_cgi   = "restart";
+	m->m_page  = PAGE_BASIC_SETTINGS;
+	m->m_obj   = OBJ_COLL;
+	m->m_type  = TYPE_CMD;
+	m->m_func2 = CommandRestartColl;
+	m++;
+
+	///////////////////////////////////////////
+	// SITE LIST
+	///////////////////////////////////////////
+	m->m_title = "site patterns";
+	m->m_xml   = "sitePatterns";
+	m->m_desc  = "List of sites to spider, one per line. "
+		"Gigablast uses the "
+		"<a href=/admin/scheduler#insitelist>insitelist</a> "
+		"directive on "
+		"the <a href=/admin/scheduler>spider scheduler</a> "
+		"page to make sure that the spider only indexes urls "
+		"that match the patterns you specify here. "
+		"See <a href=#examples>examples below</a>.";
+	m->m_cgi   = "sitepatterns";
+	m->m_off   = (char *)&cr.m_siteListBuf - x;
+	m->m_page  = PAGE_SITES;
+	m->m_obj   = OBJ_COLL;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = "";
+	m->m_flags = PF_TEXTAREA | PF_DUP;
+	m++;
+
+	m->m_title = "spider sites";
+	m->m_desc  = "Attempt to spider and index urls in the "
+		"\"site patterns\" above. Saves you from having to add "
+		"the same list of sites on the <a href=/admin/addurl>"
+		"add url</a> page.";
+	m->m_cgi   = "spiderToo";
+	m->m_off   = (char *)&cr.m_spiderToo - x;
+	m->m_page  = PAGE_SITES;
+	m->m_obj   = OBJ_COLL;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "1";
+	m->m_flags = PF_NOSAVE | PF_DUP;
+	m++;
+
+
+	
 	
 	///////////////////////////////////////////
 	// SECURITY CONTROLS
@@ -16386,6 +16427,10 @@ void Parms::init ( ) {
 		if ( m_parms[j].m_type == TYPE_CMD   ) continue;
 		if ( m_parms[i].m_type == TYPE_FILEUPLOADBUTTON ) continue;
 		if ( m_parms[j].m_type == TYPE_FILEUPLOADBUTTON ) continue;
+		if ( m_parms[i].m_obj == OBJ_NONE ) continue;
+		if ( m_parms[j].m_obj == OBJ_NONE ) continue;
+		if ( m_parms[i].m_flags & PF_DUP ) continue;
+		if ( m_parms[j].m_flags & PF_DUP ) continue;
 		if ( ! m_parms[i].m_cgi ) continue;
 		if ( ! m_parms[j].m_cgi ) continue;
 		// a different m_scmd means a different cgi parm really...
@@ -16495,6 +16540,7 @@ void Parms::init ( ) {
 		m_parms[i].m_size = size;
 	skipSize:
 		// check offset
+		if ( m_parms[i].m_obj == OBJ_NONE ) continue;
 		if ( t == TYPE_COMMENT  ) continue;
 		if ( t == TYPE_FILEUPLOADBUTTON ) continue;
 		if ( t == TYPE_CMD      ) continue;
@@ -16728,6 +16774,7 @@ void Parms::overlapTest ( char step ) {
 		// skip if comment
 		if ( m_parms[i].m_type == TYPE_COMMENT ) continue;
 		if ( m_parms[i].m_type == TYPE_FILEUPLOADBUTTON ) continue;
+		if ( m_parms[i].m_flags & PF_DUP ) continue;
 		// skip if no match
 		//bool match = false;
 		//if ( m_parms[i].m_obj == obj ) match = true;
@@ -18400,6 +18447,9 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
 
 	CollectionRec *cr = NULL;
 	if ( collnum >= 0 ) cr = g_collectiondb.getRec ( collnum );
+
+	// no value if no storage record offset
+	//if ( m_off < 0 ) return true;
 
 	char *base;
 	if ( m_obj == OBJ_COLL ) base = (char *)cr;
