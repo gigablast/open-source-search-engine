@@ -1197,8 +1197,11 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		// either way, validate it
 		m_downloadEndTimeValid = true;
 		// and need a legit mime
-		m_mime.m_bufLen  = 1;
-		m_mimeValid      = true;
+		if ( ! m_mimeValid ) {
+			m_mime.m_bufLen  = 1;
+			m_mimeValid      = true;
+			m_mime.m_contentType = contentType;
+		}
 		m_isContentTruncated      = false;
 		m_isContentTruncatedValid = true;
 		// no redir
@@ -1211,6 +1214,12 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		m_redirError      = 0;
 		m_crawlDelay      = -1;
 		m_crawlDelayValid = true;
+	}
+
+	// override content type based on mime for application/json
+	if ( m_mimeValid ) {
+		m_contentType = m_mime.m_contentType;
+		m_contentTypeValid = true;
 	}
 
 
