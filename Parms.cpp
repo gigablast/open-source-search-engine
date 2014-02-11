@@ -3633,6 +3633,8 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 		//   OBJ_COLL and OBJ_CONF.
 		// . make sure we got the right parms for what we want
 		if ( m->m_obj == OBJ_NONE ) continue;
+		// skip dups
+		if ( m->m_flags & PF_DUP ) continue;
 		// do not allow searchinput parms through
 		if ( m->m_obj == OBJ_SI ) continue;
 		if ( THIS == (char *)&g_conf && m->m_obj != OBJ_CONF) continue;
@@ -7926,7 +7928,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
-	m->m_def   = "";
+	m->m_def   = "*";
 	m->m_flags = PF_TEXTAREA | PF_DUP;
 	m++;
 
@@ -7953,6 +7955,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_off   = 0;
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
+	m->m_flags = PF_NOSAVE | PF_DUP;
 	m++;
 
 	m->m_title = "restart collection";
@@ -7986,7 +7989,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_def   = "";
-	m->m_flags = PF_TEXTAREA | PF_DUP;
+	m->m_flags = PF_TEXTAREA ;
 	m++;
 
 	m->m_title = "spider sites";
@@ -8000,7 +8003,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "1";
-	m->m_flags = PF_NOSAVE | PF_DUP;
+	m->m_flags = PF_NOSAVE ;
 	m++;
 
 
@@ -8975,7 +8978,6 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_spideringEnabled - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_DUP;
 	m++;
 
 	m->m_title = "reset collection";
@@ -16661,6 +16663,9 @@ void Parms::overlapTest ( char step ) {
 		if ( m_parms[i].m_type == TYPE_BOOL2 ) continue;
 
 		if ( m_parms[i].m_type == TYPE_SAFEBUF ) continue;
+
+		// we use cr->m_spideringEnabled for PAGE_BASIC_SETTINGS too!
+		if ( m_parms[i].m_flags & PF_DUP ) continue;
 
 		p1 = NULL;
 		if ( m_parms[i].m_obj == OBJ_COLL ) p1 = (char *)&tmpcr;
