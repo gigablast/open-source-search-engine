@@ -604,7 +604,7 @@ bool Collectiondb::addRdbBasesForCollRec ( CollectionRec *cr ) {
 
 
 
-
+/*
 bool Collectiondb::isAdmin ( HttpRequest *r , TcpSocket *s ) {
 	if ( r->getLong("admin",1) == 0 ) return false;
 	if ( g_conf.isMasterAdmin ( s , r ) ) return true;
@@ -615,7 +615,6 @@ bool Collectiondb::isAdmin ( HttpRequest *r , TcpSocket *s ) {
 	//return cr->hasPermission ( r , s );
 }
 
-/*
 void savingCheckWrapper1 ( int fd , void *state ) {
 	WaitEntry *we = (WaitEntry *)state;
 	// no state?

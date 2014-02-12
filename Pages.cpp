@@ -1005,6 +1005,25 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//
 	sb->safePrintf("</TD>\n<TD>");
 
+
+	// logout link on far right
+	sb->safePrintf("<div align=right "
+		       "style=\""
+		       "max-width:100px;"
+		       "right:20px;"
+		       "position:absolute;"
+		       "\">"
+		       "<font color=blue>"
+		       // clear the cookie
+		       "<span onclick=\"document.cookie='pwd=;';"
+		       "window.location.href='/';"
+		       "\">"
+		       "logout"
+		       "</span>"
+		       "</font>"
+		       "</div>"
+		       );
+
 	// print the hosts navigation bar
 	status &= printHostLinks ( sb, page , 
 				   username , pwd ,
@@ -2503,7 +2522,7 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 		emsg.safePrintf("Collection \"%s\" does not exist.",coll);
 
 	// just make cookie same format as an http request for ez parsing
-	char cookieData[2024];
+	//char cookieData[2024];
 
 	SafeBuf sb;
 
@@ -2515,7 +2534,10 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 	g_pages.printLogo   ( &sb , coll );
 
 	// get password from cgi parms OR cookie
-	char *pwd = hr->getString("pwd",NULL);
+	char *pwd = hr->getString("pwd");
+	if ( ! pwd ) pwd = hr->getStringFromCookie("pwd");
+	// fix "pwd=" cookie (from logout) issue
+	if ( pwd && ! pwd[0] ) pwd = NULL;
 
 	bool hasPermission = false;
 
@@ -2523,8 +2545,9 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( cr && pwd && g_conf.isRootAdmin ( socket , hr ) ) 
 		hasPermission = true;
 
-	if ( emsg.length() == 0 && ! hasPermission )
-		emsg.safePrintf("Admin password incorrect");
+	if ( emsg.length() == 0 && ! hasPermission && pwd )
+		emsg.safePrintf("Root password incorrect");
+
 
 	// sanity
 	if ( hasPermission && emsg.length() ) { char *xx=NULL;*xx=0; }
@@ -2532,42 +2555,52 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 	// what page are they originally trying to get to?
 	long page = g_pages.getDynamicPageNumber(hr);
 
-	char *cookie = NULL;
+	// try to the get reference Page
+	long refPage = hr->getLong("ref",-1);
+	// if they cam to login page directly... to to basic page then
+	if ( refPage == PAGE_LOGIN ||
+	     refPage == PAGE_LOGIN2 ||
+	     refPage < 0 )
+		refPage = PAGE_BASIC_SETTINGS;
 
+	// if they had an original destination, redirect there NOW
+	WebPage *pagePtr = g_pages.getPage(refPage);
+
+	/*
+	char *cookie = NULL;
 	if ( hasPermission ) {
 		// "pwd" could be NULL... like when it is not required,
 		// perhaps only the right ip address is required, but if it
 		// is there then store it in a cookie with no expiration
-		if ( pwd ) sprintf ( cookieData, "pwd=%s;expires=0;",pwd);
-		// try to the get reference Page
-		long refPage = hr->getLong("ref",-1);
-		// if they cam to login page directly... to to basic page then
-		if ( refPage == PAGE_LOGIN ||
-		     refPage == PAGE_LOGIN2 ||
-		     refPage < 0 )
-			refPage = PAGE_BASIC_SETTINGS;
-		// if they had an original destination, redirect there NOW
-		WebPage *page = g_pages.getPage(refPage);
+		//if ( pwd ) sprintf ( cookieData, "pwd=%s;expires=0;",pwd);
 		// and redirect to it
 		sb.safePrintf("<meta http-equiv=\"refresh\" content=\"0;"
 			      "/%s?c=%s\">", page->m_filename,coll);
 		// return cookie in server reply if pwd was non-null
 		cookie = cookieData;
 	}
+	*/
 
 	char *ep = emsg.getBufStart();
 	if ( !ep ) ep = "";
+
+	char *ff = "admin/settings";
+	if ( pagePtr ) ff = pagePtr->m_filename;
 	
 	sb.safePrintf(
-		  "&nbsp; &nbsp; "
-		  "</td><td><font size=+1><b>Login</b></font></td></tr>"
-		  "</table>" 
-		  "<form method=post action=\"/login\" name=f>"
+		      "&nbsp; &nbsp; "
+		      "</td><td><font size=+1><b>Login</b></font></td></tr>"
+		      "</table>" 
+		      "<form method=post action=\"/%s\" name=f>"
+		      , ff );
+
+	sb.safePrintf(
 		  "<input type=hidden name=ref value=\"%li\">"
 		  "<center>"
 		  "<br><br>"
 		  "<font color=ff0000><b>%s</b></font>"
 		  "<br><br>"
+		  "<br>"
 
 		  "<table cellpadding=2><tr><td>"
 
@@ -2576,17 +2609,21 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 		  //"</td><td></td></tr>"
 		  //"<tr><td>"
 
-		  "<b>Admin Password</td>"
-		  "<td><input type=password name=pwd size=30>"
+		  "<b>Root Password : &nbsp; </td>"
+		  "<td><input id=ppp type=password name=pwd size=30>"
 		  "</td><td>"
-		  "<input type=submit value=ok border=0></td>"
+		  "<input type=submit value=ok border=0 onclick=\""
+		  "document.cookie='pwd='+document.getElementById('ppp')"
+		  ".value+"
+		  "';expires=0';"
+		  "\"></td>"
 		  "</tr></table>"
 		  "</center>"
 		  "<br><br>"
 		  , page, ep , coll );
 
 	// print the tail
-	g_pages.printTail ( &sb , hr->isLocal() ); // pwd
+	//g_pages.printTail ( &sb , hr->isLocal() ); // pwd
 	// send the page
 	return g_httpServer.sendDynamicPage ( socket , 
 					      sb.getBufStart(),
@@ -2595,5 +2632,5 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 					      false , // POSTReply?
 					      NULL  , // contentType
 					      -1   ,
-					      cookie);// Forbidden http status
+					      NULL);// cookie
 }

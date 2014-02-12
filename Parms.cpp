@@ -8015,13 +8015,13 @@ void Parms::init ( ) {
 
 
 	m->m_title = "Admin Passwords";
-	m->m_desc  = "Passwords allowed to change Gigablast's general "
-		"parameters and also the parameters for any collection. "
-		"If no Admin Password or Admin IP is specified then "
-		"Gigablast will only allow local IPs to connect to it "
-		"as the master admin.";
-	m->m_cgi   = "mpwd";
-	m->m_xml   = "masterPassword";
+	m->m_desc  = "Any matching password will have administrative access "
+		"to Gigablast and all collections.";
+		//"If no Admin Password or Admin IP is specified then "
+		//"Gigablast will only allow local IPs to connect to it "
+		//"as the master admin.";
+	m->m_cgi   = "adminpwd";
+	m->m_xml   = "adminPassword";
 	m->m_obj   = OBJ_CONF;
 	m->m_max   = MAX_MASTER_PASSWORDS;
 	m->m_off   = (char *)&g_conf.m_masterPwds - g;
@@ -8042,7 +8042,7 @@ void Parms::init ( ) {
 	//	"their Least Significant Byte are treated as wildcards for "
 	//	"IP blocks. That is, 1.2.3.0 means 1.2.3.*.";
 	m->m_desc  = "Any IPs in this list will have administrative access "
-		"to the Gigablast search engine.";
+		"to Gigablast and all collections.";
 	m->m_cgi   = "adminip";
 	m->m_xml   = "adminIp";
 	m->m_page  = PAGE_SECURITY;

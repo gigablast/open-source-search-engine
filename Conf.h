@@ -49,10 +49,13 @@ class Conf {
 	
 	Conf();
 
+	bool isCollAdmin ( TcpSocket *socket , HttpRequest *hr ) ;
+
 	bool isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) ;
-	bool isMasterAdmin  ( class TcpSocket *s , class HttpRequest *r );
-	bool isSpamAssassin ( class TcpSocket *s , class HttpRequest *r );
-	bool isAdminIp      ( unsigned long ip );
+	//bool isMasterAdmin  ( class TcpSocket *s , class HttpRequest *r );
+	//bool isSpamAssassin ( class TcpSocket *s , class HttpRequest *r );
+	bool hasRootPwd ( HttpRequest *hr ) ;
+	bool isRootIp      ( unsigned long ip );
 	bool isConnectIp    ( unsigned long ip );
 
 	// loads conf parms from this file "{dir}/gb.conf"
@@ -664,9 +667,10 @@ class Conf {
 
 	long m_numMasterPwds;
 	char m_masterPwds[MAX_MASTER_PASSWORDS][PASSWORD_MAX_LEN];
-	long m_numMasterIps;
-	long m_masterIps[MAX_MASTER_IPS];
+	//long m_numMasterIps;
+	//long m_masterIps[MAX_MASTER_IPS];
 
+	// these are the new master ips
 	long  m_numConnectIps;
 	long  m_connectIps [ MAX_CONNECT_IPS ];
 

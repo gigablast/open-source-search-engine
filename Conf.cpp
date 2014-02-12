@@ -18,6 +18,7 @@ Conf::Conf ( ) {
 // . master admin can administer ALL collections
 // . use CollectionRec::hasPermission() to see if has permission
 //   to adminster one particular collection
+/*
 bool Conf::isMasterAdmin ( TcpSocket *s , HttpRequest *r ) {
 	// sometimes they don't want to be admin intentionally for testing
 	if ( r->getLong ( "master" , 1 ) == 0 ) return false;
@@ -64,56 +65,84 @@ bool Conf::isMasterAdmin ( TcpSocket *s , HttpRequest *r ) {
 	// check admin ips
 	// scan the passwords
 	// MDW: no! too vulnerable to attacks!
-	/*
-	for ( long i = 0 ; i < m_numMasterPwds ; i++ ) {
-		if ( strcmp ( m_masterPwds[i], p ) != 0 ) continue;
-		// . matching one password is good enough now, default OR
-		// . because just matching an IP is good enough security,
-		//   there is really no need for both IP AND passwd match
-		return true;
-	}
-	*/
+	//for ( long i = 0 ; i < m_numMasterPwds ; i++ ) {
+	//	if ( strcmp ( m_masterPwds[i], p ) != 0 ) continue;
+	//	// . matching one password is good enough now, default OR
+	//	// . because just matching an IP is good enough security,
+	//	//   there is really no need for both IP AND passwd match
+	//	return true;
+	//}
 	// ok, make sure they came from an acceptable IP
-	if ( isAdminIp ( ip ) )
+	if ( isRootIp ( ip ) )
 		// they also have a matching IP, so they now have permission
 		return true;
 	// if no security, allow all
 	// MDW: nonononono!!!!
-	/*
-	if ( m_numMasterPwds == 0 && 
-	     m_numMasterIps  == 0   ) return true;
-	*/
+	//if ( m_numMasterPwds == 0 && 
+	//     m_numMasterIps  == 0   ) return true;
 	// if they did not match an ip or password, even if both lists
 	// are empty, do not allow access... this prevents security breeches
 	// by accident
 	return false;
 }
+*/
 
+bool Conf::isCollAdmin ( TcpSocket *socket , HttpRequest *hr ) {
+	// until we have coll tokens use this...
+	return isRootAdmin ( socket , hr );
+}
 
-// is user a root administrator?
+// . is user a root administrator?
+// . only need to be from root IP *OR* have password, not both
 bool Conf::isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) {
 
-	if ( m_numMasterIps == 0 &&
-	     m_numConnectIps == 0 ) {
-		// from "local" ip?
-		return hr->isLocal();
-	}
+	// totally open access?
+	if ( m_numConnectIps  <= 0 && m_numMasterPwds <= 0 )
+		return true;
 
-	if ( isAdminIp ( socket->m_ip ) ) return true;
+	// coming from root gets you in
+	if ( isRootIp ( socket->m_ip ) ) return true;
 
-	if ( isConnectIp ( socket->m_ip ) ) return true;
+	//if ( isConnectIp ( socket->m_ip ) ) return true;
+
+	if ( hasRootPwd ( hr ) ) return true;
 
 	return false;
 }
 
 
+bool Conf::hasRootPwd ( HttpRequest *hr ) {
+
+	if ( m_numMasterPwds == 0 ) return false;
+
+	char *p = hr->getString("pwd");
+
+	if ( ! p ) p = hr->getString("password");
+
+	if ( ! p ) p = hr->getStringFromCookie("pwd");
+
+	if ( ! p ) return false;
+
+	for ( long i = 0 ; i < m_numMasterPwds ; i++ ) {
+		if ( strcmp ( m_masterPwds[i], p ) != 0 ) continue;
+		// we got a match
+		return true;
+	}
+	return false;
+}
 
 // . check this ip in the list of admin ips
-bool Conf::isAdminIp ( unsigned long ip ) {
-	for ( long i = 0 ; i < m_numMasterIps ; i++ ) 
-		if ( m_masterIps[i] == (long)ip )
+bool Conf::isRootIp ( unsigned long ip ) {
+
+	//if ( m_numMasterIps == 0 ) return false;
+	if ( m_numConnectIps == 0 ) return false;
+
+	for ( long i = 0 ; i < m_numConnectIps ; i++ ) 
+		if ( m_connectIps[i] == (long)ip )
 			return true;
+
 	//if ( ip == atoip("10.5.0.2",8) ) return true;
+
 	// no match
 	return false;
 }

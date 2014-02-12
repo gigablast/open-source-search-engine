@@ -95,7 +95,7 @@ class Collectiondb  {
 
 	// . does this requester have root admin privledges???
 	// . uses the root collection record!
-	bool isAdmin ( class HttpRequest *r , class TcpSocket *s );
+	//bool isAdmin ( class HttpRequest *r , class TcpSocket *s );
 
 	//collnum_t getNextCollnum ( collnum_t collnum );
 
@@ -310,10 +310,10 @@ class CollectionRec {
 	// . set ourselves the cgi parms in an http request
 	// . unspecified cgi parms will be assigned default values
 	// . returns false and sets errno on error
-	bool set ( class HttpRequest *r , TcpSocket *s );
+	bool set ( class HttpRequest *r , class TcpSocket *s );
 
 	// calls hasPermission() below
-	bool hasPermission ( class HttpRequest *r , TcpSocket *s ) ;
+	bool hasPermission ( class HttpRequest *r , class TcpSocket *s ) ;
 
 	// . does this user have permission for editing this collection?
 	// . "p" is the password for this collection in question
@@ -326,7 +326,7 @@ class CollectionRec {
 	// . can this ip perform a search or add url on this collection?
 	// . mamma.com provides encapsulated ips of their queriers so we
 	//   can ban them by ip
-	bool hasSearchPermission ( TcpSocket *s , long encapIp = 0 );
+	bool hasSearchPermission ( class TcpSocket *s , long encapIp = 0 );
 
 	// how many bytes would this record occupy in raw binary format?
 	//long getStoredSize () { return m_recSize; };
