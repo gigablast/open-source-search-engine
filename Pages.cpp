@@ -2468,7 +2468,7 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 		hasPermission = true;
 
 	if ( emsg.length() == 0 && ! hasPermission && pwd )
-		emsg.safePrintf("Root password incorrect");
+		emsg.safePrintf("Master password incorrect");
 
 
 	// sanity
@@ -2531,7 +2531,7 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 		  //"</td><td></td></tr>"
 		  //"<tr><td>"
 
-		  "<b>Root Password : &nbsp; </td>"
+		  "<b>Master Password : &nbsp; </td>"
 		  "<td><input id=ppp type=password name=pwd size=30>"
 		  "</td><td>"
 		  "<input type=submit value=ok border=0 onclick=\""
