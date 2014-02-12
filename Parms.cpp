@@ -940,7 +940,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( page == PAGE_ACCESS     ) tt = "Access Controls";
 	if ( page == PAGE_FILTERS    ) tt = "Spider Scheduler";
 	if ( page == PAGE_BASIC_SETTINGS ) tt = "Settings";
-	if ( page == PAGE_BASIC_PASSWORDS ) tt = "Passwords";
+	if ( page == PAGE_BASIC_SECURITY ) tt = "Security";
 	if ( page == PAGE_SITES ) tt = "Site List";
 	//if ( page == PAGE_PRIORITIES ) tt = "Priority Controls";
 	//if ( page == PAGE_RULES      ) tt = "Site Rules";
@@ -1292,7 +1292,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 	if ( cr ) coll = cr->m_coll;
 
 	// page aliases
-	if ( page == PAGE_BASIC_PASSWORDS )
+	if ( page == PAGE_BASIC_SECURITY )
 		page = PAGE_SECURITY;
 
 	// find in parms list
@@ -8014,14 +8014,14 @@ void Parms::init ( ) {
 	///////////////////////////////////////////
 
 
-	m->m_title = "Admin Passwords";
+	m->m_title = "Master Passwords";
 	m->m_desc  = "Any matching password will have administrative access "
 		"to Gigablast and all collections.";
 		//"If no Admin Password or Admin IP is specified then "
 		//"Gigablast will only allow local IPs to connect to it "
 		//"as the master admin.";
-	m->m_cgi   = "adminpwd";
-	m->m_xml   = "adminPassword";
+	m->m_cgi   = "masterpwd";
+	m->m_xml   = "masterPassword";
 	m->m_obj   = OBJ_CONF;
 	m->m_max   = MAX_MASTER_PASSWORDS;
 	m->m_off   = (char *)&g_conf.m_masterPwds - g;
@@ -8031,7 +8031,7 @@ void Parms::init ( ) {
 	m++;
 
 
-	m->m_title = "Admin IPs";
+	m->m_title = "Master IPs";
 	//m->m_desc = "Allow UDP requests from this list of IPs. Any datagram "
 	//	"received not coming from one of these IPs, or an IP in "
 	//	"hosts.conf, is dropped. If another cluster is accessing this "
@@ -8043,8 +8043,8 @@ void Parms::init ( ) {
 	//	"IP blocks. That is, 1.2.3.0 means 1.2.3.*.";
 	m->m_desc  = "Any IPs in this list will have administrative access "
 		"to Gigablast and all collections.";
-	m->m_cgi   = "adminip";
-	m->m_xml   = "adminIp";
+	m->m_cgi   = "masterip";
+	m->m_xml   = "masterIp";
 	m->m_page  = PAGE_SECURITY;
 	m->m_max   = MAX_CONNECT_IPS;
 	m->m_off   = (char *)g_conf.m_connectIps - g;

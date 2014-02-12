@@ -100,8 +100,8 @@ static WebPage s_pages[] = {
 	  "Basic status page.", sendPageBasicStatus  , 0 } ,
 	//{ PAGE_BASIC_DIFFBOT, "admin/diffbot", 0 , "diffbot",1, 0 , 
 	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 } ,
-	{ PAGE_BASIC_PASSWORDS, "admin/passwords", 0 , "passwords",1, 0 , 
-	  "Basic passwords page.", sendPageGeneric  , 0 } ,
+	{ PAGE_BASIC_SECURITY, "admin/security", 0 , "security",1, 0 , 
+	  "Basic security page.", sendPageGeneric  , 0 } ,
 
 
 	{ PAGE_MASTER    , "admin/master"  , 0 , "master controls" ,  1 , 0 , 
@@ -147,9 +147,9 @@ static WebPage s_pages[] = {
 //	  "sync page",
 //	  sendPageGeneric  , 0 } ,
 
-	{ PAGE_SECURITY, "admin/security", 0 , "security"     ,  1 , 0 ,
+	{ PAGE_SECURITY, "admin/security2", 0 , "security"     ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
-	  "master security page",
+	  "advanced security page",
 	  sendPageGeneric , 0 } ,
 	{ PAGE_ADDCOLL   , "admin/addcoll" , 0 , "add collection"  ,  1 , 0 ,
 	  //USER_MASTER , 
@@ -892,6 +892,9 @@ bool Pages::getNiceness ( long page ) {
 		return 0;
 	return s_pages[page].m_niceness;
 }
+
+bool printRedBox ( SafeBuf *mb ) ;
+
 ///////////////////////////////////////////////////////////
 //
 // Convenient html printing routines
@@ -1036,99 +1039,18 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//sb->safePrintf ("</td></tr></table><br/>\n");//<br/>\n");
 
 	SafeBuf mb;
-	long adds = 0;
-
-	PingServer *ps = &g_pingServer;
-
-	mb.safePrintf(//"<center>"
-		      "<table cellpadding=5 "
-		      "style=\""
-		      "background-color:#ff6666;"
-		      "border:2px #8f0000 solid;"
-		      "border-radius:5px;"
-		      "max-width:600px;"
-		      "\" "
-		      "border=0"
-		      ">"
-		      "<tr><td>");
-
-	// emergency message box
-	if ( g_pingServer.m_hostsConfInDisagreement ) {
-		if ( adds ) mb.safePrintf("<br>");
-		adds++;
-		mb.safePrintf("The hosts.conf or localhosts.conf file "
-			      "is not the same over all hosts.");
-	}
-
-	if ( g_rebalance.m_isScanning ) {
-		if ( adds ) mb.safePrintf("<br><br>");
-		adds++;
-		mb.safePrintf("Rebalancer is currently running.");
-	}
-	// if any host had foreign recs, not that
-	char *needsRebalance = g_rebalance.getNeedsRebalance();
-	if ( ! g_rebalance.m_isScanning &&
-	     needsRebalance &&
-	     *needsRebalance ) {
-		if ( adds ) mb.safePrintf("<br><br>");
-		adds++;
-		mb.safePrintf("A host requires a shard rebalance. "
-			      "Click 'rebalance shards' in master controls to "
-			      "rebalance all hosts.");
-	}
-
-	if ( ps->m_numHostsDead ) {
-		if ( adds ) mb.safePrintf("<br><br>");
-		adds++;
-		char *s = "hosts are";
-		if ( ps->m_numHostsDead == 1 ) s = "host is";
-		mb.safePrintf("%li %s dead and not responding to "
-			      "pings.",ps->m_numHostsDead ,s );
-	}
-
-	if ( ! g_conf.m_useThreads || g_threads.m_disabled ) {
-		if ( adds ) mb.safePrintf("<br><br>");
-		adds++;
-		mb.safePrintf("Threads are disabled. Severely hurts "
-			      "performance.");
-	}
-
-	mb.safePrintf("</td></tr></table>"
-		      //"</center>"
-		      "<br>");
-
-
-
-
-
-
-	// a new table. on the left is collections, on right is other stuff
-	/*
-	sb->safePrintf(
-		       //"<DIV "
-		       //"style=max-width:100%%;overflow-x:hidden;"
-		       //">"
-		       "<TABLE "
-		       "cellpadding=5 border=0 "
-		       ">"
-		       "<TR>"
-		       "<td></td>"
-		       );
-	// then collection page links and parms
-	sb->safePrintf("<TD valign=top>");
-	*/
-
+	bool added = printRedBox ( &mb );
 
 	// print emergency msg box
-	if ( adds )
-		sb->safePrintf("<br>%s",mb.getBufStart());
+	if ( added )
+		sb->safePrintf("%s",mb.getBufStart());
 
         bool isBasic = false;
 	if ( page == PAGE_BASIC_SETTINGS ) isBasic = true;
 	if ( page == PAGE_BASIC_STATUS ) isBasic = true;
 	//if ( page == PAGE_BASIC_DIFFBOT ) isBasic = true;
 	//if ( page == PAGE_BASIC_SEARCH  ) isBasic = true;
-	if ( page == PAGE_BASIC_PASSWORDS ) isBasic = true;
+	if ( page == PAGE_BASIC_SECURITY ) isBasic = true;
 
 	//
 	// print breadcrumb. main > Basic > Settings
@@ -1825,7 +1747,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		// is this page basic?
 		bool pageBasic = false;
 		if ( i >= PAGE_BASIC_SETTINGS &&
-		     i <= PAGE_BASIC_PASSWORDS ) 
+		     i <= PAGE_BASIC_SECURITY )
 			pageBasic = true;
 
 		// print basic pages under the basic menu, advanced pages
@@ -2633,4 +2555,87 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 					      NULL  , // contentType
 					      -1   ,
 					      NULL);// cookie
+}
+
+
+// emergency message box
+bool printRedBox ( SafeBuf *mb ) {
+
+	PingServer *ps = &g_pingServer;
+
+	mb->safePrintf(//"<center>"
+		      "<table cellpadding=5 "
+		      "style=\""
+		      "background-color:#ff6666;"
+		      "border:2px #8f0000 solid;"
+		      "border-radius:5px;"
+		      "max-width:600px;"
+		      "\" "
+		      "border=0"
+		      ">"
+		      "<tr><td>");
+
+	bool adds = false;
+
+
+
+
+	if ( g_conf.m_numConnectIps == 0 && g_conf.m_numMasterPwds == 0 ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("URGENT. Please specify a password "
+			       "or IP address in the "
+			       "<a href=/admin/security>security</a> "
+			       "table. Right now anybody might be able "
+			       "to access the Gigablast admin controls.");
+	}
+
+
+	if ( g_pingServer.m_hostsConfInDisagreement ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("The hosts.conf or localhosts.conf file "
+			      "is not the same over all hosts.");
+	}
+
+	if ( g_rebalance.m_isScanning ) {
+		if ( adds ) mb->safePrintf("<br><br>");
+		adds++;
+		mb->safePrintf("Rebalancer is currently running.");
+	}
+	// if any host had foreign recs, not that
+	char *needsRebalance = g_rebalance.getNeedsRebalance();
+	if ( ! g_rebalance.m_isScanning &&
+	     needsRebalance &&
+	     *needsRebalance ) {
+		if ( adds ) mb->safePrintf("<br><br>");
+		adds++;
+		mb->safePrintf("A host requires a shard rebalance. "
+			      "Click 'rebalance shards' in master controls to "
+			      "rebalance all hosts.");
+	}
+
+	if ( ps->m_numHostsDead ) {
+		if ( adds ) mb->safePrintf("<br><br>");
+		adds++;
+		char *s = "hosts are";
+		if ( ps->m_numHostsDead == 1 ) s = "host is";
+		mb->safePrintf("%li %s dead and not responding to "
+			      "pings.",ps->m_numHostsDead ,s );
+	}
+
+	if ( ! g_conf.m_useThreads || g_threads.m_disabled ) {
+		if ( adds ) mb->safePrintf("<br><br>");
+		adds++;
+		mb->safePrintf("Threads are disabled. Severely hurts "
+			      "performance.");
+	}
+
+	mb->safePrintf("</td></tr></table>"
+		      //"</center>"
+		       //"<br>"
+		       );
+
+
+	return adds;
 }
