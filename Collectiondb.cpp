@@ -449,7 +449,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 		// show the ban links in the search results. the 
 		// collection name is cryptographic enough to show that
 		cr->m_isCustomCrawl = customCrawl;
-		cr->m_diffbotOnlyProcessIfNew = true;
+		cr->m_diffbotOnlyProcessIfNewUrl = true;
 		// default respider to off
 		cr->m_collectiveRespiderFrequency = 0.0;
 		cr->m_restrictDomain = true;
