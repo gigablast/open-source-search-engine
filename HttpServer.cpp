@@ -1401,6 +1401,7 @@ bool HttpServer::sendReply2 ( char *mime,
 
 	// . store the login/logout links after <body> tag
 	// . only proxy should provide a non-null hr right now
+	/*
 	if ( hr ) {
 		long newReplySize;
 		char *newReply = g_proxy.storeLoginBar ( sendBuf, 
@@ -1417,6 +1418,7 @@ bool HttpServer::sendReply2 ( char *mime,
 		sendBufSize  = newReplySize;
 		sendBufAlloc = newReplySize;
 	}
+	*/
 
 	// . send it away
 	// . this returns false if blocked, true otherwise

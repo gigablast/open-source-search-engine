@@ -1018,7 +1018,12 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 		       "\">"
 		       "<font color=blue>"
 		       // clear the cookie
-		       "<span onclick=\"document.cookie='pwd=;';"
+		       "<span "
+
+		       "style=\"cursor:hand;"
+		       "cursor:pointer;\" "
+
+		       "onclick=\"document.cookie='pwd=;';"
 		       "window.location.href='/';"
 		       "\">"
 		       "logout"
