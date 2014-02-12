@@ -18381,17 +18381,16 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 
 	// point to where to copy the data into collrect
 	char *dst = (char *)base + parm->m_off;
+	// point to count in case it is an array
+	long *countPtr = NULL;
 	// array?
 	if ( parm->isArray() ) {
 		if ( occNum < 0 ) {
 			log("parms: bad occnum for %s",parm->m_title);
 			return false;
 		}
-		// the long before the array is the # of elements
-		long currentCount = *((long *)(dst-4));
-		// update our # elements in our array if this is bigger
-		long newCount = occNum + 1;
-		if ( newCount > currentCount ) *((long *)(dst-4)) = newCount;
+		// point to count in case it is an array
+		countPtr = (long *)(dst - 4);
 		// now point "dst" to the occNum-th element
 		dst += parm->m_size * occNum;
 	}
@@ -18433,8 +18432,43 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	SafeBuf val2;
 	parm->printVal ( &val2 , collnum , occNum );
 
-	// all done if value was unchanged
+	// did this parm change value?
+	bool changed = true;
 	if ( strcmp ( val1.getBufStart() , val2.getBufStart() ) == 0 )
+		changed = false;
+
+	// . update array count if necessary
+	// . parm might not have changed value based on what was in there
+	//   by default, but for PAGE_FILTERS the default value in the row
+	//   for this parm might have been zero! so we gotta update its
+	//   "count" in that scenario even though the parm val was unchanged.
+	if ( parm->isArray() ) {
+		// the long before the array is the # of elements
+		long currentCount = *countPtr;
+		// update our # elements in our array if this is bigger
+		long newCount = occNum + 1;
+		bool updateCount = false;
+		if ( newCount > currentCount ) updateCount = true;
+		// do not update counts if we are url filters
+		// and we are currently >= the expression count. we have
+		// to have a non-empty expression at the end in order to
+		// add the expression. this prevents the empty line from
+		// being added!
+		if ( parm->m_page == PAGE_FILTERS &&
+		     cr->m_regExs[occNum].getLength() == 0 )
+			updateCount = false;
+		// and for other pages, like master ips, skip if empty!
+		// PAGE_PASSWORDS, PAGE_SECURITY, ...
+		if ( parm->m_page != PAGE_FILTERS && ! changed )
+			updateCount = false;
+
+		// ok, increment the array count of items in the array
+		if ( updateCount )
+			*countPtr = newCount;
+	}
+
+	// all done if value was unchanged
+	if ( ! changed )
 		return true;
 
 	// show it
