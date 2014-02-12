@@ -754,6 +754,12 @@ skipReplaceHost:
 		  "</td></tr>" 
 
 		  "<tr class=poo>"
+		  "<td>host ip</td>"
+		  "<td>The primary IP address of the host."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
 		  "<td>shard</td>"
 		  "<td>"
 		  "The index is split into shards. Which shard does this "
@@ -762,26 +768,20 @@ skipReplaceHost:
 		  "</tr>\n"
 
 		  "<tr class=poo>"
-		  "<td>stripe</td>"
+		  "<td>mirror</td>"
 		  "<td>"
-		  "Hosts with the same stripe serve the same shard "
-		  "of data."
+		  "A shard can be mirrored multiple times for "
+		  "data redundancy."
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr class=poo>"
-		  "<td>ip1</td>"
-		  "<td>The primary IP address of the host."
-		  "</td>"
-		  "</tr>\n"
-
+		  /*
 		  "<tr class=poo>"
 		  "<td>ip2</td>"
 		  "<td>The secondary IP address of the host."
 		  "</td>"
 		  "</tr>\n"
 
-		  /*
 		  "<tr class=poo>"
 		  "<td>udp port</td>"
 		  "<td>The UDP port the host uses to send and recieve "

@@ -78,7 +78,7 @@ ifeq ("titan","$(HOST)")
 # the way it works is not even possible on newer kernels because they no longer
 # allow you to override the _errno_location() function. -- matt
 # -DMATTWELLS
-CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DTITAN -DMATTWELLS
+CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DTITAN
 LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
 else
 # use -m32 to force 32-bit mode compilation.

@@ -1826,19 +1826,21 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 
 		// print "url download" before "inject url"
 		// GET /mycollname_urls.csv
+		/* nah, keep this in basic > status
 		if ( i == PAGE_INJECT ) {
 			sb->safePrintf (
 					"<b>"
 					"<a style=text-decoration:none; "
 					"href=\"/download/%s_urls.txt\">"
 					"<nobr>"
-					"url download"
+					"data downloads"
 					"</nobr>"
 					"</a>"
 					"</b>"
 					" &nbsp; \n",
 					coll );
 		}		
+		*/
 
 		if ( cr && ! cr->m_isCustomCrawl && i == PAGE_CRAWLBOT )
 			continue;

@@ -7838,7 +7838,7 @@ void Parms::init ( ) {
 	//
 	///////////
 	m->m_title = "urls to add";
-	m->m_desc  = "Submit requests for Gigablast to index certain urls. "
+	m->m_desc  = "Space separated list of urls to index. "
 		"They must match the patterns you have specified in "
 		"the <a href=/admin/sites>spider sites</a> list. "
 		"You can override that behavior on the "
@@ -7988,7 +7988,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SITES;
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
-	m->m_def   = "";
+	m->m_def   = "*";
 	m->m_flags = PF_TEXTAREA ;
 	m++;
 
@@ -17279,6 +17279,9 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 
 		if ( ! m ) continue;
 		if ( m->m_type == TYPE_CMD ) continue;
+
+		if ( m->m_obj == OBJ_NONE ) continue;
+		if ( m->m_obj == OBJ_SI ) continue;
 
 		// add it to a list now
 		if ( ! addNewParmToList2 ( parmList ,
