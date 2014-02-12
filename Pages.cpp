@@ -2586,7 +2586,7 @@ bool printRedBox ( SafeBuf *mb ) {
 
 
 	if ( g_conf.m_numConnectIps == 0 && g_conf.m_numMasterPwds == 0 ) {
-		if ( adds ) mb->safePrintf("<br>");
+		if ( adds ) mb->safePrintf("<br><br>");
 		adds++;
 		mb->safePrintf("URGENT. Please specify a password "
 			       "or IP address in the "
@@ -2595,9 +2595,26 @@ bool printRedBox ( SafeBuf *mb ) {
 			       "to access the Gigablast admin controls.");
 	}
 
+	// out of disk space?
+	long out = 0;
+	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
+		Host *h = &g_hostdb.m_hosts[i];
+		if ( h->m_diskUsage < 98.0 ) continue;
+		out++;
+	}
+	if ( out > 0 ) {
+		if ( adds ) mb->safePrintf("<br><br>");
+		adds++;
+		char *s = "s are";
+		if ( out == 1 ) s = " is";
+		mb->safePrintf("%li host%s over 98%% disk usage. "
+			       "See the <a href=/admin/hosts>"
+			       "hosts</a> table.",out,s);
+	}
+
 
 	if ( g_pingServer.m_hostsConfInDisagreement ) {
-		if ( adds ) mb->safePrintf("<br>");
+		if ( adds ) mb->safePrintf("<br><br>");
 		adds++;
 		mb->safePrintf("The hosts.conf or localhosts.conf file "
 			      "is not the same over all hosts.");

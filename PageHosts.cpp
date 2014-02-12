@@ -23,6 +23,7 @@ static int dgramsFromSort ( const void *i1, const void *i2 );
 //static int loadAvgSort    ( const void *i1, const void *i2 );
 static int memUsedSort    ( const void *i1, const void *i2 );
 static int cpuUsageSort   ( const void *i1, const void *i2 );
+static int diskUsageSort  ( const void *i1, const void *i2 );
 
 long generatePingMsg( Host *h, long long nowms, char *buffer );
 
@@ -222,6 +223,9 @@ skipReplaceHost:
 		  "<td><a href=\"/master/hosts?c=%s&sort=10\">"
 		  "<b>cpu</a></td>"
 
+		  "<td><a href=\"/master/hosts?c=%s&sort=17\">"
+		  "<b>disk</a></td>"
+
 		  "<td><a href=\"/master/hosts?c=%s&sort=14\">"
 		  "<b>max ping1</a></td>"
 
@@ -243,6 +247,7 @@ skipReplaceHost:
 		  coll, sort,
 		  DARK_BLUE  ,
 
+		  coll,
 		  coll,
 		  coll,
 		  coll,
@@ -295,6 +300,7 @@ skipReplaceHost:
 	case 14:gbsort ( hostSort, nh, sizeof(long), pingMaxSort    ); break;
 	case 15:gbsort ( hostSort, nh, sizeof(long), slowDiskSort    ); break;
 	case 16:gbsort ( hostSort, nh, sizeof(long), defaultSort    ); break;
+	case 17:gbsort ( hostSort, nh, sizeof(long), diskUsageSort   ); break;
 	}
 
 	// we are the only one that uses these flags, so set them now
@@ -378,6 +384,12 @@ skipReplaceHost:
 		float cpu = h->m_cpuUsage;
 		if ( cpu > 100.0 ) cpu = 100.0;
 		if ( cpu < 0.0   ) cpu = -1.0;
+
+		char diskUsageMsg[64];
+		sprintf(diskUsageMsg,"%.1f%%",h->m_diskUsage);
+		if ( h->m_diskUsage < 0.0 )
+			sprintf(diskUsageMsg,"???");
+
 
 		// split time, don't divide by zero!
 		long splitTime = 0;
@@ -494,6 +506,8 @@ skipReplaceHost:
 			  "<td>%s%.1f%%%s</td>"
 			  // cpu usage
 			  "<td>%.1f%%</td>"
+			  // disk usage
+			  "<td>%s</td>"
 
 			  // ping max
 			  "<td>%s</td>"
@@ -547,6 +561,7 @@ skipReplaceHost:
 			  h->m_percentMemUsed, // float
 			  fontTagBack,
 			  cpu, // float
+			  diskUsageMsg,
 
 			  // ping max
 			  pms,
@@ -1154,5 +1169,13 @@ int cpuUsageSort ( const void *i1, const void *i2 ) {
 	Host *h2 = g_hostdb.getHost ( *(long*)i2 );
 	if ( h1->m_cpuUsage > h2->m_cpuUsage ) return -1;
 	if ( h1->m_cpuUsage < h2->m_cpuUsage ) return  1;
+	return 0;
+}
+
+int diskUsageSort ( const void *i1, const void *i2 ) {
+	Host *h1 = g_hostdb.getHost ( *(long*)i1 );
+	Host *h2 = g_hostdb.getHost ( *(long*)i2 );
+	if ( h1->m_diskUsage > h2->m_diskUsage ) return -1;
+	if ( h1->m_diskUsage < h2->m_diskUsage ) return  1;
 	return 0;
 }
