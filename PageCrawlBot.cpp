@@ -596,9 +596,9 @@ bool StateCD::sendList ( ) {
 
 // TcpServer.cpp calls this when done sending TcpSocket's m_sendBuf
 void doneSendingWrapper ( void *state , TcpSocket *sock ) {
-
 	StateCD *st = (StateCD *)state;
-
+	// error on socket?
+	//if ( g_errno ) st->m_socketError = g_errno;
 	//TcpSocket *socket = st->m_socket;
 	st->m_accumulated += sock->m_totalSent;
 
