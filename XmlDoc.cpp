@@ -13460,6 +13460,8 @@ long *XmlDoc::getDiffbotTitleHashes ( long *numHashes ) {
 
 	*numHashes = size_linkInfo2 / 4;
 
+	if ( ! ptr_linkInfo2 ) *numHashes = 0;
+
 	// hack: use linkdbdata2 field
 	if ( m_diffbotTitleHashBufValid ) return (long *)ptr_linkInfo2;
 
