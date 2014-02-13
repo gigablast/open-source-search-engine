@@ -13474,9 +13474,11 @@ long *XmlDoc::getDiffbotTitleHashes ( long *numHashes ) {
 
 	// parse out the json items in the reply
 	char *p = tdbr->getBufStart();
+	char *pend = p + tdbr->length();
+
 	long plen;
 
-	for ( ; *p ; p += plen + 1 ) {
+	for ( ; p < pend ; p += plen + 1 ) {
 		// set this
 		plen = gbstrlen(p);
 		// get title from it
