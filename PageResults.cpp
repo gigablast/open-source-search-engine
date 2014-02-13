@@ -936,7 +936,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	SafeBuf *sb = &st->m_sb;
 	// reserve 1.5MB now!
 	if ( ! sb->reserve(1500000 ,"pgresbuf" ) ) // 128000) )
-		return true;
+		return false;
 	// just in case it is empty, make it null terminated
 	sb->nullTerm();
 
@@ -982,7 +982,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 		log("query: Query failed. Had error processing query: %s",
 		    mstrerror(st->m_errno));
 		g_errno = st->m_errno;
-		return sendReply(st,sb->getBufStart());
+		//return sendReply(st,sb->getBufStart());
+		return false;
 	}
 
 
@@ -1077,7 +1078,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	//	 si->m_boolFlag,
 	//         true ); // keepAllSingles?
 
-	if ( g_errno ) return sendReply (st,NULL);
+	if ( g_errno ) return false;//sendReply (st,NULL);
 
 	DocIdScore *dpx = NULL;
 	if ( numResults > 0 ) dpx = msg40->getScoreInfo(0);
