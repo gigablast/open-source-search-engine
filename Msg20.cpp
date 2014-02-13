@@ -277,6 +277,13 @@ void Msg20::gotReply ( UdpSlot *slot ) {
 	m_inProgress = false;
 	// sanity check
 	if ( m_r ) { char *xx = NULL; *xx = 0; }
+
+	// free our serialized request buffer to save mem
+	if ( m_request && m_request   != m_requestBuf ) {
+		mfree ( m_request , m_requestSize  , "Msg20rb" );
+		m_request = NULL;
+	}
+
 	// save error so Msg40 can look at it
 	if ( g_errno ) { 
 		m_errno = g_errno; 
