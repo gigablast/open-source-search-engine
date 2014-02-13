@@ -203,12 +203,12 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
 
 
-	// . if doing download of json, make it search results now!
+	// . if doing download of csv, make it search results now!
 	// . make an httprequest on stack and call it
 	if ( fmt == FMT_CSV && rdbId == RDB_TITLEDB ) {
 		char tmp2[5000];
 		SafeBuf sb2(tmp2,5000);
-		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&dr=0&"
+		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&dr=1&"
 			      "c=%s&n=1000000&"
 			       // no gigabits
 			       "dsrt=0&"
@@ -223,6 +223,32 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
 		return sendPageResults ( sock , &hr2 );
 	}
+
+	// . if doing download of json, make it search results now!
+	// . make an httprequest on stack and call it
+	if ( fmt == FMT_JSON && rdbId == RDB_TITLEDB ) {
+		char tmp2[5000];
+		SafeBuf sb2(tmp2,5000);
+		sb2.safePrintf("GET /search.csv?icc=1&format=json&sc=0&dr=1&"
+			      "c=%s&n=1000000&"
+			       // we can stream this because unlink csv it
+			       // has no header row that needs to be 
+			       // computed from all results.
+			       "stream=1&"
+			       // no gigabits
+			       "dsrt=0&"
+			       // do not compute summary. 0 lines.
+			       "ns=0&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      "\r\n\r\n"
+			       , cr->m_coll
+			       );
+		HttpRequest hr2;
+		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
+		return sendPageResults ( sock , &hr2 );
+	}
+
 
 
 	//if ( strncmp ( path ,"/crawlbot/downloadurls",22  ) == 0 )
