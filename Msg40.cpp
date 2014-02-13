@@ -1643,6 +1643,8 @@ bool Msg40::gotSummary ( ) {
 	long dedupPercent = 0;
 	if ( m_si->m_doDupContentRemoval && m_si->m_percentSimilarSummary )
 		dedupPercent = m_si->m_percentSimilarSummary;
+	// icc=1 turns this off too i think
+	if ( m_si->m_includeCachedCopy ) dedupPercent = 0;
 	// if the user only requested docids, we have no summaries
 	if ( m_si->m_docIdsOnly ) dedupPercent = 0;
 
