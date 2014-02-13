@@ -1459,6 +1459,9 @@ void CollectionRec::reset() {
 	if ( m_hasucr ) regfree ( &m_ucr );
 	if ( m_hasupr ) regfree ( &m_upr );
 
+	m_hasucr = false;
+	m_hasupr = false;
+
 	// make sure we do not leave spiders "hanging" waiting for their
 	// callback to be called... and it never gets called
 	//if ( m_callbackQueue.length() > 0 ) { char *xx=NULL;*xx=0; }
@@ -2264,6 +2267,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
 	if ( rx && ! rx[0] ) rx = NULL;
 	if ( rx ) {
+		tmp.reset();
 		tmp.safeStrcpy ( rx );
 		expandRegExShortcuts ( &tmp );
 		m_hasucr = true;
@@ -2284,6 +2288,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( rx && ! rx[0] ) rx = NULL;
 	if ( rx ) m_hasupr = true;
 	if ( rx ) {
+		tmp.reset();
 		tmp.safeStrcpy ( rx );
 		expandRegExShortcuts ( &tmp );
 		m_hasupr = true;
@@ -2298,6 +2303,10 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		regfree ( &m_upr );
 		m_hasupr = false;
 	}
+
+
+	//char *x = "http://staticpages.diffbot.com/testCrawl/article1.html";
+	//if(m_hasupr && regexec(&m_upr,x,0,NULL,0) ) { char *xx=NULL;*xx=0; }
 
 	return true;
 }

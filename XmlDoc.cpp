@@ -13761,9 +13761,9 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	if ( ucp && ! ucp[0] ) ucp = NULL;
 	// do we match the url process pattern or regex?
 	// get the compiled regular expressions
-	regex_t *ucr = &cr->m_ucr;
+	//regex_t *ucr = &cr->m_ucr;
 	regex_t *upr = &cr->m_upr;
-	if ( ! cr->m_hasucr ) ucr = NULL;
+	//if ( ! cr->m_hasucr ) ucr = NULL;
 	if ( ! cr->m_hasupr ) upr = NULL;
 	// get the url
 	Url *f = getFirstUrl();
