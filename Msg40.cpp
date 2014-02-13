@@ -162,6 +162,7 @@ bool Msg40::getResults ( SearchInput *si      ,
 	// we need this info for caching as well
 	//m_numGigabitInfos = 0;
 
+	m_lastHeartbeat = getTimeLocal();
 
 	//just getfrom searchinput
 	//....	m_catId = hr->getLong("catid",0);m_si->m_catId;
@@ -1274,6 +1275,21 @@ bool Msg40::gotSummary ( ) {
 		log("query: error initializing dedup table: %s",
 		    mstrerror(g_errno));
 
+	State0 *st = (State0 *)m_state;
+
+	// keep socket alive if not streaming. like downloading csv...
+	long now2 = getTimeLocal();
+	if ( now2 - m_lastHeartbeat >= 10 && ! m_si->m_streamResults &&
+	     // incase socket is closed and recycled for another connection
+	     st->m_socket->m_numDestroys == st->m_numDestroys ) {
+		m_lastHeartbeat = now2;
+		int n = ::send ( st->m_socket->m_sd , " " , 1 , 0 );
+		log("msg40: sent heartbeat of %li bytes on sd=%li",
+		    (long)n,(long)st->m_socket->m_sd);
+	}
+
+
+
 	/*
 	// sanity check
 	for ( long i = 0 ; i < m_msg3a.m_numDocIds ; i++ ) {
@@ -1294,8 +1310,6 @@ bool Msg40::gotSummary ( ) {
 
 
  doAgain:
-
-	State0 *st = (State0 *)m_state;
 
 	SafeBuf *sb = &st->m_sb;
 
@@ -1332,14 +1346,16 @@ bool Msg40::gotSummary ( ) {
 
 		// primitive deduping. for diffbot json exclude url's from the
 		// XmlDoc::m_contentHash32.. it will be zero if invalid i guess
-		if ( mr->m_contentHash32 &&
+		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
+		     mr->m_contentHash32 &&
 		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) ) {
 			log("msg40: dup sum #%li",m_printi);
 			continue;
 		}
 
 		// return true with g_errno set on error
-		if ( mr->m_contentHash32 &&
+		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
+		     mr->m_contentHash32 &&
 		     ! m_dedupTable.addKey ( &mr->m_contentHash32 ) ) {
 			m_hadPrintError = true;
 			log("msg40: error adding to dedup table: %s",
@@ -1627,6 +1643,8 @@ bool Msg40::gotSummary ( ) {
 	long dedupPercent = 0;
 	if ( m_si->m_doDupContentRemoval && m_si->m_percentSimilarSummary )
 		dedupPercent = m_si->m_percentSimilarSummary;
+	// icc=1 turns this off too i think
+	if ( m_si->m_includeCachedCopy ) dedupPercent = 0;
 	// if the user only requested docids, we have no summaries
 	if ( m_si->m_docIdsOnly ) dedupPercent = 0;
 

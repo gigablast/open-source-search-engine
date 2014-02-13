@@ -451,6 +451,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// set this in case SearchInput::set fails!
 	st->m_socket = s;
 
+	// save this count so we know if TcpServer.cpp calls destroySocket(s)
+	st->m_numDestroys = s->m_numDestroys;
+
 	// . parse it up
 	// . this returns false and sets g_errno and, maybe, g_msg on error
 	SearchInput *si = &st->m_si;
@@ -501,7 +504,6 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	log ( LOG_DEBUG , "query: Getting search results for q=%s",
 	      st->m_si.m_displayQuery);
 
-	st->m_socket  = s;
 	// assume we'll block
 	st->m_gotResults = false;
 	st->m_gotAds     = false;
@@ -936,7 +938,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	SafeBuf *sb = &st->m_sb;
 	// reserve 1.5MB now!
 	if ( ! sb->reserve(1500000 ,"pgresbuf" ) ) // 128000) )
-		return true;
+		return false;
 	// just in case it is empty, make it null terminated
 	sb->nullTerm();
 
@@ -982,7 +984,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 		log("query: Query failed. Had error processing query: %s",
 		    mstrerror(st->m_errno));
 		g_errno = st->m_errno;
-		return sendReply(st,sb->getBufStart());
+		//return sendReply(st,sb->getBufStart());
+		return false;
 	}
 
 
@@ -1077,7 +1080,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	//	 si->m_boolFlag,
 	//         true ); // keepAllSingles?
 
-	if ( g_errno ) return sendReply (st,NULL);
+	if ( g_errno ) return false;//sendReply (st,NULL);
 
 	DocIdScore *dpx = NULL;
 	if ( numResults > 0 ) dpx = msg40->getScoreInfo(0);
@@ -2089,6 +2092,23 @@ bool printResult ( State0 *st, long ix ) {
 	// just print cached web page?
 	if ( mr->ptr_content ) {
 		sb->safeStrcpy ( mr->ptr_content );
+		// . let's hack the spidertime onto the end
+		// . so when we sort by that using gbsortby:spiderdate
+		//   we can ensure it is ordered correctly
+		char *end = sb->getBuf() -1;
+		if ( si->m_format == FORMAT_JSON &&
+		     end > sb->getBufStart() &&
+		     *end == '}' ) {
+			// replace trailing } with spidertime}
+			sb->incrementLength(-1);
+			// crap, we lose resolution storing as a float
+			// so fix that shit here...
+			//float f = mr->m_lastSpidered;
+			//sb->safePrintf(",\"lastCrawlTimeUTC\":%.0f}",f);
+			sb->safePrintf(",\"lastCrawlTimeUTC\":%li}",
+				       mr->m_lastSpidered);
+		}
+
 		//mr->size_content );
 		if ( si->m_format == FORMAT_HTML )
 			sb->safePrintf("\n\n<br><br>\n\n");

@@ -1096,7 +1096,7 @@ void Msg39::estimateHits ( ) {
 
 	// convenience ptrs. we will store the docids/scores into these arrays
 	long long *topDocIds;
-	float     *topScores;
+	double    *topScores;
 	key_t     *topRecs;
 
 	// numDocIds counts docs in all tiers when using toptree.
@@ -1163,7 +1163,7 @@ void Msg39::estimateHits ( ) {
 		mr.ptr_clusterRecs  = NULL;
 		// this is how much space to reserve
 		mr.size_docIds      = 8 * numDocIds; // long long
-		mr.size_scores      = 4 * numDocIds; // float
+		mr.size_scores      = sizeof(double) * numDocIds; // float
 		// if not doing site clustering, we won't have these perhaps...
 		if ( m_gotClusterRecs ) 
 			mr.size_clusterRecs = sizeof(key_t) *numDocIds;
@@ -1191,7 +1191,7 @@ void Msg39::estimateHits ( ) {
 			return ; 
 		}
 		topDocIds    = (long long *) mr.ptr_docIds;
-		topScores    = (float     *) mr.ptr_scores;
+		topScores    = (double    *) mr.ptr_scores;
 		topRecs      = (key_t     *) mr.ptr_clusterRecs;
 	}
 
@@ -1225,6 +1225,8 @@ void Msg39::estimateHits ( ) {
 		//add it to the reply
 		topDocIds         [docCount] = t->m_docId;
 		topScores         [docCount] = t->m_score;
+		if ( m_tt.m_useIntScores ) 
+			topScores[docCount] = (double)t->m_intScore;
 		// supply clusterdb rec? only for full splits
 		if ( m_gotClusterRecs ) 
 			topRecs [docCount] = t->m_clusterRec;

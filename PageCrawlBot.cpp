@@ -142,6 +142,14 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		return true;
 	}
 
+	// when downloading csv socket closes because we can take minutes
+	// before we send over the first byte, so try to keep open
+	//int parm = 1;
+	//if(setsockopt(sock->m_sd,SOL_TCP,SO_KEEPALIVE,&parm,sizeof(int))<0){
+	//	log("crawlbot: setsockopt: %s",mstrerror(errno));
+	//	errno = 0;
+	//}
+
 	//long pathLen = hr->getPathLen();
 	char rdbId = RDB_NONE;
 	bool downloadJSON = false;
@@ -203,13 +211,20 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
 
 
-	// . if doing download of json, make it search results now!
+	// . if doing download of csv, make it search results now!
 	// . make an httprequest on stack and call it
 	if ( fmt == FMT_CSV && rdbId == RDB_TITLEDB ) {
 		char tmp2[5000];
 		SafeBuf sb2(tmp2,5000);
-		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&dr=0&"
-			      "c=%s&n=1000000&"
+		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&"
+			       // dedup. since stream=1 and pss=0 below
+			       // this will dedup on page content hash only
+			       // which is super fast.
+			       "dr=1&"
+			       "c=%s&n=1000000&"
+			       // no summary similarity dedup, only exact
+			       // doc content hash. otherwise too slow!!
+			       "pss=0&"
 			       // no gigabits
 			       "dsrt=0&"
 			       // do not compute summary. 0 lines.
@@ -223,6 +238,39 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
 		return sendPageResults ( sock , &hr2 );
 	}
+
+	// . if doing download of json, make it search results now!
+	// . make an httprequest on stack and call it
+	if ( fmt == FMT_JSON && rdbId == RDB_TITLEDB ) {
+		char tmp2[5000];
+		SafeBuf sb2(tmp2,5000);
+		sb2.safePrintf("GET /search.csv?icc=1&format=json&sc=0&"
+			       // dedup. since stream=1 and pss=0 below
+			       // this will dedup on page content hash only
+			       // which is super fast.
+			       "dr=1&"
+			      "c=%s&n=1000000&"
+			       // we can stream this because unlink csv it
+			       // has no header row that needs to be 
+			       // computed from all results.
+			       "stream=1&"
+			       // no summary similarity dedup, only exact
+			       // doc content hash. otherwise too slow!!
+			       "pss=0&"
+			       // no gigabits
+			       "dsrt=0&"
+			       // do not compute summary. 0 lines.
+			       "ns=0&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      "\r\n\r\n"
+			       , cr->m_coll
+			       );
+		HttpRequest hr2;
+		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
+		return sendPageResults ( sock , &hr2 );
+	}
+
 
 
 	//if ( strncmp ( path ,"/crawlbot/downloadurls",22  ) == 0 )
@@ -596,9 +644,9 @@ bool StateCD::sendList ( ) {
 
 // TcpServer.cpp calls this when done sending TcpSocket's m_sendBuf
 void doneSendingWrapper ( void *state , TcpSocket *sock ) {
-
 	StateCD *st = (StateCD *)state;
-
+	// error on socket?
+	//if ( g_errno ) st->m_socketError = g_errno;
 	//TcpSocket *socket = st->m_socket;
 	st->m_accumulated += sock->m_totalSent;
 
@@ -2280,7 +2328,7 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 			      , cx->m_maxToCrawl
 			      , cx->m_maxToProcess
 			      , (long)cx->m_restrictDomain
-			      , (long)cx->m_diffbotOnlyProcessIfNew
+			      , (long)cx->m_diffbotOnlyProcessIfNewUrl
 			      );
 		sb.safePrintf("\"seeds\":\"");
 		sb.safeUtf8ToJSON ( cx->m_diffbotSeeds.getBufStart());
@@ -3038,16 +3086,20 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      " &nbsp; "
 
 			      // newest json on top of results, last 10 mins
-			      "<a href=/search?icc=1&format=json&sc=0&dr=0&"
+			      "<a href=/search?icc=1&format=json&"
+			      // disable site clustering
+			      "sc=0&"
+			      // dodupcontentremoval:
+			      "dr=1&"
 			      "c=%s&n=10000000&rand=%llu&scores=0&id=1&"
 			      "stream=1&" // stream results back as we get them
 			      "q="
 			      // put NEWEST on top
-			      "gbsortby%%3Agbspiderdate+"
+			      "gbsortbyint%%3Agbspiderdate+"
 			      // min spider date = now - 10 mins
-			      "gbmin%%3Agbspiderdate%%3A%li&"
-			      "debug=1"
-			      //"prepend=type%%3Ajson"
+			      "gbminint%%3Agbspiderdate%%3A%li&"
+			      //"debug=1"
+			      "prepend=type%%3Ajson"
 			      ">"
 			      "json search (last 30 seconds)</a>"
 
@@ -3260,7 +3312,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 		char *isNewYes = "";
 		char *isNewNo  = " checked";
-		if ( cr->m_diffbotOnlyProcessIfNew ) {
+		if ( cr->m_diffbotOnlyProcessIfNewUrl ) {
 			isNewYes = " checked";
 			isNewNo  = "";
 		}

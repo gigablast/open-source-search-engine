@@ -901,8 +901,12 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 		//sleep(10000);
 		return NULL;
 	}
+	// save this i guess
+	long saved = s->m_numDestroys;
 	// clear it
 	memset ( s , 0 , sizeof(TcpSocket) );
+	// restore
+	s->m_numDestroys = saved;
 	// store sd in our TcpSocket
 	s->m_sd = sd;
 	// store the last action time as now (used for timeout'ing sockets)
@@ -1852,6 +1856,14 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	if ( s->m_isIncoming ) m_numIncomingUsed--;
 	// clear it, this means no longer in use
 	s->m_startTime = 0LL;
+
+	// count # of destroys in case a function is still referencing
+	// this socket and streaming back data on it or something. it won't
+	// know we've destroyed it? we do call makeCallback before
+	// calling destroySocket() it seems, but that might not help
+	// for Msg40.cpp sending back search results.
+	s->m_numDestroys++;
+
 	// free TcpSocket from the array
 	//mfree ( s , sizeof(TcpSocket) ,"TcpServer");
 	m_tcpSockets [ sd ] = NULL;

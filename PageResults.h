@@ -12,6 +12,11 @@ public:
 	// store results page in this safebuf
 	SafeBuf      m_sb;
 
+	// if socket closes before we get a chance to send back
+	// search results, we will know by comparing this to
+	// m_socket->m_numDestroys
+	long         m_numDestroys;
+
 	collnum_t    m_collnum;
         Query        m_q;
 	SearchInput  m_si;

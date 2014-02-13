@@ -863,6 +863,10 @@ class XmlDoc {
 			   class HashInfo *hi ,
 			   char *gbsortByStr ) ;
 
+	bool hashNumber3 ( long x,
+			   class HashInfo *hi ,
+			   char *gbsortByStr ) ;
+
 	// print out for PageTitledb.cpp and PageParser.cpp
 	bool printDoc ( class SafeBuf *pbuf );
 	bool printMenu ( class SafeBuf *pbuf );
@@ -1311,6 +1315,7 @@ class XmlDoc {
 	//bool m_useDiffbotValid;
 	//bool m_diffbotApiNumValid;
 	bool m_diffbotApiUrlValid;
+	bool m_diffbotTitleHashBufValid;
 	bool m_crawlInfoValid;
 	bool m_isPageParserValid;
 	bool m_imageUrlValid;
@@ -1603,9 +1608,13 @@ class XmlDoc {
 	//bool doesUrlMatchDiffbotCrawlPattern() ;
 	//bool doesUrlMatchDiffbotProcessPattern() ;
 	bool doesPageContentMatchDiffbotProcessPattern() ;
+	long *getDiffbotTitleHashes ( long *numHashes ) ;
 	char *hashJSON ( HashTableX *table );
-	long *nukeJSONObjects ( ) ;
+	long *nukeJSONObjects ( long *newTitleHashes , long numNewHashes ) ;
+
 	long m_joc;
+	SafeBuf m_diffbotTitleHashBuf;
+
 
 	//EmailInfo m_emailInfo;
 

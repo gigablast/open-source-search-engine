@@ -983,8 +983,11 @@ bool RdbCache::deleteRec ( ) {
 	// find the key even after going through all the records
 	// I think that the data here is corrupted or not pointed right
 	
-	// collnum can be 0 in case we have to go to next buffer
-	if ( collnum != 0 && ( collnum >= m_maxColls || collnum < 0
+	// . collnum can be 0 in case we have to go to next buffer
+	// . allow -1 collnum to exist, seems to happen in robots.txt cache
+	//   sometimes, maybe for delete collnum... not sure, but the timestamp
+	//   seems to be legit
+	if ( collnum >= m_maxColls || collnum < -1
 			       // we now call ::reset(oldcollnum)
 			       // when resetting a collection in
 			       // Collectiondb::resetColl() which calls
@@ -993,7 +996,7 @@ bool RdbCache::deleteRec ( ) {
 			       // and then we nuke the collrec so it was
 			       // triggering this. so check m_ptrs[i]==-1
 			       //|| !g_collectiondb.m_recs[collnum]
-			       ) ) {
+	     ) {
 		log (LOG_WARN,"db: cache: deleteRec: possible "
 		     "corruption, start=%lx collNum=%li "
 		     "maxCollNum=%li dbname=%s", (long)start,
@@ -1002,7 +1005,7 @@ bool RdbCache::deleteRec ( ) {
 		char *xx=NULL;*xx=0;
 		// exception for gourav's bug (dbname=Users)
 		// i am tired of it craping out every 2-3 wks
-		if ( m_dbname[0]=='U' ) return true;
+		//if ( m_dbname[0]=='U' ) return true;
 		// some records might have been deleted
 		m_needsSave = true;
 		// but its corrupt so don't save to disk

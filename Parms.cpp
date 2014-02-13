@@ -9299,7 +9299,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "onlyProcessIfNew";
 	m->m_xml   = "diffbotOnlyProcessIfNew";
 	m->m_title = "onlyProcessIfNew";
-	m->m_off   = (char *)&cr.m_diffbotOnlyProcessIfNew - x;
+	m->m_off   = (char *)&cr.m_diffbotOnlyProcessIfNewUrl - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "1";
@@ -11611,9 +11611,9 @@ void Parms::init ( ) {
 
 	m->m_title = "percent similar dedup summary";
 	m->m_desc  = "If document summary is this percent similar "
-		"to a document summary above it, then remove it from the search "
-		"results. 100 means only to remove if exactly the same. 0 means"
-		" no summary deduping.";
+		"to a document summary above it, then remove it from the "
+		"search results. 100 means only to remove if exactly the "
+		"same. 0 means no summary deduping.";
 	m->m_cgi   = "psds";
 	m->m_off   = (char *)&cr.m_percentSimilarSummary - x;
 	m->m_soff  = (char *)&si.m_percentSimilarSummary - y;
@@ -18903,13 +18903,17 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	if ( strcmp ( val1.getBufStart() , val2.getBufStart() ) == 0 )
 		return true;
 
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+
 	// show it
 	log("parms: updating parm \"%s\" "
-	    "(%s[%li]) (collnum=%li) from \"%s\" -> \"%s\"",
+	    "(%s[%li]) (collnum=%li) (coll=%s) from \"%s\" -> \"%s\"",
 	    parm->m_title,
 	    parm->m_cgi,
 	    occNum,
 	    (long)collnum,
+	    coll,
 	    val1.getBufStart(),
 	    val2.getBufStart());
 

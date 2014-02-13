@@ -1197,8 +1197,11 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		// either way, validate it
 		m_downloadEndTimeValid = true;
 		// and need a legit mime
-		m_mime.m_bufLen  = 1;
-		m_mimeValid      = true;
+		if ( ! m_mimeValid ) {
+			m_mime.m_bufLen  = 1;
+			m_mimeValid      = true;
+			m_mime.m_contentType = contentType;
+		}
 		m_isContentTruncated      = false;
 		m_isContentTruncatedValid = true;
 		// no redir
@@ -1211,6 +1214,12 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		m_redirError      = 0;
 		m_crawlDelay      = -1;
 		m_crawlDelayValid = true;
+	}
+
+	// override content type based on mime for application/json
+	if ( m_mimeValid ) {
+		m_contentType = m_mime.m_contentType;
+		m_contentTypeValid = true;
 	}
 
 
@@ -1660,6 +1669,9 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	m_clockCandidatesDataValid    = true;
 	//m_skipIndexingValid           = true;
 	m_isSiteRootValid             = true;
+
+	// ptr_linkInfo2 is valid. so getDiffbotTitleHashes() works.
+	m_diffbotTitleHashBufValid = true;
 
 	// set "m_oldTagRec" from ptr_tagRecData
 	//memcpy ( &m_oldTagRec     , ptr_tagRecData , size_tagRecData );
@@ -2897,7 +2909,7 @@ long *XmlDoc::getIndexCode2 ( ) {
 	}
 	*/
 
-	// . TCPTIMEDOUT, NOROUTETOHOST, etc.
+	// . TCPTIMEDOUT, NOROUTETOHOST, EDOCUNCHANGED, etc.
 	// . this will be the reply from diffbot.com if using diffbot
 	long *dstatus = getDownloadStatus();
 	if ( ! dstatus || dstatus == (void *)-1 ) return (long *)dstatus;
@@ -3033,8 +3045,8 @@ long *XmlDoc::getIndexCode2 ( ) {
 		return &m_indexCode;
 	}
 
-	// . i moved this up to perhaps fix problems of two dup pages being downloaded
-	//   at about the same time
+	// . i moved this up to perhaps fix problems of two dup pages being 
+	//   downloaded at about the same time
 	// . are we a dup of another doc from any other site already indexed?
 	char *isDup = getIsDup();
 	if ( ! isDup || isDup == (char *)-1 ) return (long *)isDup;
@@ -3055,6 +3067,33 @@ long *XmlDoc::getIndexCode2 ( ) {
 		m_indexCode = EDOCNONCANONICAL;
 		m_indexCodeValid = true;
 		return &m_indexCode;
+	}
+
+	// was page unchanged since last time we downloaded it?
+	XmlDoc **pod = getOldXmlDoc ( );
+	if ( ! pod || pod == (XmlDoc **)-1 ) return (long *)pod;
+	XmlDoc *od = NULL;
+	if ( *pod ) od = *pod;
+	bool check = true;
+	if ( ! od ) check = false;
+	// do not do this logic for diffbot because it might want to get
+	// the diffbot reply even if page content is the same, because it
+	// might have an ajax call that updates the product price.
+	// onlyProcessIfNewUrl defaults to true, so typically even diffbot
+	// crawls will do this check.
+	if ( cr->m_isCustomCrawl && ! cr->m_diffbotOnlyProcessIfNewUrl &&
+	     // but allow urls like *-diffbotxyz2445187448 to be deduped,
+	     // that is the whole point of this line
+	     ! m_isDiffbotJSONObject )
+		check = false;
+	if ( check ) {
+		long *ch32 = getContentHash32();
+		if ( ! ch32 || ch32 == (void *)-1 ) return (long *)ch32;
+		if ( *ch32 == od->m_contentHash32 ) {
+			m_indexCode = EDOCUNCHANGED;
+			m_indexCodeValid = true;
+			return &m_indexCode;
+		}
 	}
 
 	// words
@@ -12973,11 +13012,18 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 }
 
 
-
+static void *s_null = NULL;
 
 // . returns NULL and sets g_errno on error
 // . returns -1 if blocked, will re-call m_callback
 LinkInfo **XmlDoc::getLinkInfo2 ( ) {
+
+	// this can now be title hashes for XmlDoc::m_diffbotTitleHashes
+	// but otherwise, we don't use it for link info from another cluster
+	// any more.
+	m_linkInfo2Valid = true;	
+	return (LinkInfo **)&s_null;
+
 	// return if we got it
 	if ( m_linkInfo2Valid ) return &ptr_linkInfo2;
 
@@ -13375,7 +13421,8 @@ SafeBuf *XmlDoc::getDiffbotApiUrl ( ) {
 	return &m_diffbotApiUrl;
 }
 
-// if only processing NEW is enabled, then do not
+// if only processing NEW URLs is enabled, then do not get diffbot reply
+// if we already got one before
 bool *XmlDoc::getRecycleDiffbotReply ( ) {
 
 	if ( m_recycleDiffbotReplyValid )
@@ -13399,7 +13446,7 @@ bool *XmlDoc::getRecycleDiffbotReply ( ) {
 	// ***RECYCLE*** the diffbot reply!
 	m_recycleDiffbotReply = false;
 
-	if ( cr->m_diffbotOnlyProcessIfNew &&
+	if ( cr->m_diffbotOnlyProcessIfNewUrl &&
 	     od && od->m_gotDiffbotSuccessfulReply ) 
 		m_recycleDiffbotReply = true;
 
@@ -13408,6 +13455,63 @@ bool *XmlDoc::getRecycleDiffbotReply ( ) {
 	return &m_recycleDiffbotReply;
 }
 
+// get hashes of the json objects in the diffbotreply
+long *XmlDoc::getDiffbotTitleHashes ( long *numHashes ) {
+
+	*numHashes = size_linkInfo2 / 4;
+
+	if ( ! ptr_linkInfo2 ) *numHashes = 0;
+
+	// hack: use linkdbdata2 field
+	if ( m_diffbotTitleHashBufValid ) return (long *)ptr_linkInfo2;
+
+	SafeBuf *tdbr = getTokenizedDiffbotReply();
+	if ( ! tdbr || tdbr == (void *)-1 ) return (long *)tdbr;
+
+	HashTableX dedup;
+	if ( ! dedup.set ( 4,0,1024,NULL,0,false,m_niceness,"ddthbuf") )
+		return NULL;
+
+	// parse out the json items in the reply
+	char *p = tdbr->getBufStart();
+	char *pend = p + tdbr->length();
+
+	long plen;
+
+	for ( ; p < pend ; p += plen + 1 ) {
+		// set this
+		plen = gbstrlen(p);
+		// get title from it
+		long valLen;
+		char *val = getJSONFieldValue ( p , "title", &valLen );
+		long th32 = 0;
+		// hash the title
+		if ( val && valLen ) {
+			th32 = hash32 ( val , valLen );
+			// avoid 0
+			if ( th32 == 0 ) th32 = 1;
+		}
+		// if no title, use hash of body
+		if ( th32 == 0 ) {
+			th32 = hash32 ( p , plen );
+			// avoid 0
+			if ( th32 == 0 ) th32 = 2;
+		}
+		// if our hash is duplicated then increment until unique
+		while ( dedup.isInTable ( &th32 ) ) th32++;
+		// store it for deduping
+		dedup.addKey ( &th32 );
+		// store it
+		m_diffbotTitleHashBuf.pushLong(th32);
+	}
+
+	ptr_linkInfo2 = (LinkInfo *)m_diffbotTitleHashBuf.getBufStart();
+	size_linkInfo2 = m_diffbotTitleHashBuf.length();
+	*numHashes = size_linkInfo2 / 4;
+	m_diffbotTitleHashBufValid = true;
+
+	return (long *)ptr_linkInfo2;
+}
 
 // . we now get the TOKENIZED diffbot reply.
 // . that converts a single diffbot reply into multiple \0 separated
@@ -13619,7 +13723,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 
 	// we make a "fake" url for the diffbot reply when indexing it
-	// by appending -diffbotxyz%li. see "fakeUrl" below.
+	// by appending -diffbotxyz%lu. see "fakeUrl" below.
 	if ( m_firstUrl.getUrlLen() + 15 >= MAX_URL_LEN ) {
 		log("build: diffbot url would be too long for "
 		    "%s", m_firstUrl.getUrl() );
@@ -13657,9 +13761,9 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	if ( ucp && ! ucp[0] ) ucp = NULL;
 	// do we match the url process pattern or regex?
 	// get the compiled regular expressions
-	regex_t *ucr = &cr->m_ucr;
+	//regex_t *ucr = &cr->m_ucr;
 	regex_t *upr = &cr->m_upr;
-	if ( ! cr->m_hasucr ) ucr = NULL;
+	//if ( ! cr->m_hasucr ) ucr = NULL;
 	if ( ! cr->m_hasupr ) upr = NULL;
 	// get the url
 	Url *f = getFirstUrl();
@@ -13681,7 +13785,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	
 
-	// if already processed and onlyprocessifnew is enabled then
+	// if already processed and onlyprocessifnewurl is enabled then
 	// we recycle and do not bother with this, we also do not nuke
 	// the diffbot json objects we have already indexed by calling
 	// nukeJSONObjects()
@@ -13954,6 +14058,13 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	char *additionalHeaders = NULL;
 	if ( headers.length() > 0 )
 		additionalHeaders = headers.getBufStart();
+
+	// if did not get the web page first and we are crawling, not
+	// doing a bulk, then core. we need the webpage to harvest links
+	// and sometimes to check the pageprocesspattern to see if we should
+	// process.
+	if ( cr->m_isCustomCrawl ==1 && ! m_downloadStatusValid ) { 
+		char *xx=NULL;*xx=0; }
 
 	log("diffbot: getting %s headers=%s",m_diffbotUrl.getBufStart(),
 	    additionalHeaders);
@@ -14269,6 +14380,10 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// send back g_errno = EDOCUNCHANGED or something
 	if ( m_sreqValid )
 		r->m_contentHash32 = m_sreq.m_contentHash32;
+
+	// if we have the old doc already set use that
+	if ( od )
+		r->m_contentHash32 = od->m_contentHash32;
 
 	// eventgurubot is the max
 	//char *userAgent = g_conf.m_spiderUserAgent;
@@ -16949,10 +17064,12 @@ long *XmlDoc::getContentHash32 ( ) {
 
 	// if we are a diffbot json object, fake this for now, it will
 	// be set for real in hashJSON()
-	if ( m_isDiffbotJSONObject ) {
-		m_contentHash32 = 0;
-		return &m_contentHash32;
-	}
+	// no, because we call this before hashJSON() for to set
+	// EDOCUNCHANGED above... so just hash the json normally for now
+	//if ( m_isDiffbotJSONObject ) {
+	//	m_contentHash32 = 0;
+	//	return &m_contentHash32;
+	//}
 
 	// . get the content. get the pure untouched content!!!
 	// . gotta be pure since that is what Msg13.cpp computes right
@@ -16979,7 +17096,7 @@ long *XmlDoc::getContentHash32 ( ) {
 	// we set m_contentHash32 in ::hashJSON() below because it is special 
 	// for diffbot since it ignores certain json fields like url: and the 
 	// fields are independent, and numbers matter, like prices
-	if ( m_isDiffbotJSONObject ) { char *xx=NULL; *xx=0; }
+	//if ( m_isDiffbotJSONObject ) { char *xx=NULL; *xx=0; }
 
 	// *pend should be \0
 	m_contentHash32 = getContentHash32Fast ( p , plen , m_niceness );
@@ -18102,7 +18219,11 @@ bool XmlDoc::logIt ( ) {
 
 	// just use the oldurlfilternum for grepping i guess
 	//if ( m_oldDocValid && m_oldDoc ) 
-	if ( m_sreqValid && m_sreq.m_hadReply )
+
+	// when injecting a request we have no idea if it had a reply or not
+	if ( m_sreqValid && m_sreq.m_isInjecting )
+		sb.safePrintf("firsttime=? ");
+	else if ( m_sreqValid && m_sreq.m_hadReply )
 		sb.safePrintf("firsttime=0 ");
 	else if ( m_sreqValid )
 		sb.safePrintf("firsttime=1 ");
@@ -19388,10 +19509,10 @@ bool XmlDoc::doesPageContentMatchDiffbotProcessPattern() {
 // . returns ptr to status
 // . diffbot uses this to remove the indexed json pages associated with
 //   a url. each json object is basically its own url. a json object
-//   url is the parent page's url with a -diffbotxyz-%li appended to it
+//   url is the parent page's url with a -diffbotxyz-%lu appended to it
 //   where %li is the object # starting at 0 and incrementing from there.
 // . XmlDoc::m_diffbotJSONCount is how many json objects the parent url had.
-long *XmlDoc::nukeJSONObjects ( ) {
+long *XmlDoc::nukeJSONObjects ( long *newTitleHashes , long numNewHashes ) {
 	// use this
 	static long s_return = 1;
 	// if none, we are done
@@ -19414,15 +19535,39 @@ long *XmlDoc::nukeJSONObjects ( ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
+	//
+	// index the hashes of the latest diffbot json items for this parent
+	//
+	HashTableX dedup;
+	if ( ! dedup.set(4,0,numNewHashes*4,NULL,0,false,m_niceness,"njodt") )
+		return NULL;
+	for ( long i = 0 ; i < numNewHashes ; i++ )
+		dedup.addKey ( &newTitleHashes[i] );
+
+	// get this old doc's current title hashes
+	long  numOldHashes;
+	long *oldTitleHashes = getDiffbotTitleHashes ( &numOldHashes );
+	// sanity. should return right away without having to block
+	if ( oldTitleHashes == (void *)-1 ) { char *xx=NULL;*xx=0; }
+	// sanity again
+	if ( numOldHashes != m_diffbotJSONCount ) { char *xx=NULL;*xx=0; }
+
 	// scan down each
 	for ( ; m_joc < m_diffbotJSONCount ; ) {
+		// only NUKE the json items for which title hashes we lost
+		long th32 = oldTitleHashes[m_joc];
+		// . if still in the new diffbot reply, do not DELETE!!!
+		// . if there was no title, it uses hash of entire object
+		if ( dedup.isInTable(&th32) ) continue;
 		// if m_dx has no url set, call set4 i guess
 		if ( ! m_dx->m_firstUrlValid ) {
 			// make the fake url for this json object for indexing
 			SafeBuf fakeUrl;
 			fakeUrl.set ( m_firstUrl.getUrl() );
-			// append -diffbot0 etc. for fake url
-			fakeUrl.safePrintf("-diffbotxyz%li",m_joc);
+			// get his title hash32
+			//long jsonTitleHash32 = titleHashes[m_joc];
+			// append -diffbotxyz%lu for fake url
+			fakeUrl.safePrintf("-diffbotxyz%lu",th32);
 			// set url of new xmldoc
 			if ( ! m_dx->set1 ( fakeUrl.getBufStart(),
 					    cr->m_coll ,
@@ -19441,6 +19586,8 @@ long *XmlDoc::nukeJSONObjects ( ) {
 			// we need this because only m_dx->m_oldDoc will
 			// load from titledb and have it set
 			m_dx->m_isDiffbotJSONObject = true;
+			// for debug
+			log("xmldoc: nuking %s",fakeUrl.getBufStart());
 		}
 
 		// when the indexdoc completes, or if it blocks, call us!
@@ -19691,10 +19838,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// . then just add the SpiderReply to avoid respidering
 		// . NO! still need to add outlinks
 		//|| diffbotEmptyReply
-	     // . treat this as a temporary error i guess
-	     // . getNewSpiderReply() below will clear the error in it and
-	     //   copy stuff over from m_sreq and m_oldDoc for this case
-		//|| *indexCode == EDOCUNCHANGED
+		// . treat this as a temporary error i guess
+		// . getNewSpiderReply() below will clear the error in it and
+		//   copy stuff over from m_sreq and m_oldDoc for this case
+		|| *indexCode == EDOCUNCHANGED
 		) {
 		// sanity - in repair mode?
 		if ( m_useSecondaryRdbs ) { char *xx=NULL;*xx=0; }
@@ -19725,6 +19872,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			m_metaList     = (char *)0x1;
 			return m_metaList;
 		}
+		// save this
+		long savedCode = *indexCode;
 		// before getting our spider reply, assign crap from the old
 		// doc to us since we are unchanged! this will allow us to
 		// call getNewSpiderReply() without doing any processing, like
@@ -19732,12 +19881,16 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		copyFromOldDoc ( od );
 		// need this though! i don't want to print out "Success"
 		// in the log in the logIt() function
-		m_indexCode = *indexCode;
+		m_indexCode = savedCode;
 		m_indexCodeValid = true;
 		// but set our m_contentHash32 from the spider request
 		// which got it from the spiderreply in the case of
 		// EDOCUNCHANGED. this way ch32=xxx will log correctly.
-		if ( *indexCode == EDOCUNCHANGED && m_sreqValid ) {
+		// I think this is only when EDOCUNCHANGED is set in the
+		// Msg13.cpp code, when we have a spider compression proxy.
+		if ( *indexCode == EDOCUNCHANGED && 
+		     m_sreqValid &&
+		     ! m_contentHash32Valid ) {
 			m_contentHash32      = m_sreq.m_contentHash32;
 			m_contentHash32Valid = true;
 		}
@@ -19747,6 +19900,20 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		m_isInIndex       = m_wasInIndex;
 		m_wasInIndexValid = true;
 		m_isInIndexValid  = true;
+
+		// unset our ptr_linkInfo1 so we do not free it and core
+		// since we might have set it in copyFromOldDoc() above
+		ptr_linkInfo1  = NULL;
+		size_linkInfo1 = 0;
+
+		// . if not using spiderdb we are done at this point
+		// . this happens for diffbot json replies (m_dx)
+		if ( ! m_useSpiderdb ) {
+			m_metaList = NULL;
+			m_metaListSize = 0;
+			return (char *)0x01;
+		}
+
 		// get our spider reply
 		SpiderReply *newsr = getNewSpiderReply();
 		// return on error
@@ -19754,10 +19921,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// . panic on blocking! this is supposed to be fast!
 		// . it might still have to lookup the tagdb rec?????
 		if ( newsr == (void *)-1 ) { char *xx=NULL;*xx=0; }
-		// unset our ptr_linkInfo1 so we do not free it and core
-		// since we might have set it in copyFromOldDoc() above
-		ptr_linkInfo1  = NULL;
-		size_linkInfo1 = 0;
 		// how much we need
 		long needx = sizeof(SpiderReply) + 1;
 		// doledb key?
@@ -19900,7 +20063,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	}
 
 	// . should we recycle the diffbot reply for this url?
-	// . if m_diffbotOnlyProcessIfNew is true then we want to keep
+	// . if m_diffbotOnlyProcessIfNewUrl is true then we want to keep
 	//   our existing diffbot reply, i.e. recycle it, even though we
 	//   respidered this page.
 	bool *recycle = getRecycleDiffbotReply();
@@ -19910,20 +20073,46 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		m_diffbotJSONCount          = od->m_diffbotJSONCount;
 		m_sentToDiffbot             = od->m_sentToDiffbot;
 		m_gotDiffbotSuccessfulReply = od->m_gotDiffbotSuccessfulReply;
+		// copy title hashes info. it goes hand in hand with the
+		// NUMBER of diffbot items we have.
+		if(!m_diffbotTitleHashBuf.
+		   safeMemcpy(&od->m_diffbotTitleHashBuf) )
+			return NULL;
+		ptr_linkInfo2 =(LinkInfo *)m_diffbotTitleHashBuf.getBufStart();
+		size_linkInfo2=m_diffbotTitleHashBuf.length();
 	}
 
 
-	// we can't really get the meta list of each json object we may
-	// have indexed in od's diffbot reply buffer because they all
-	// were indexed with their own docids in the "m_dx" code below. so
-	// just delete them and we'll re-add from this doc's diffbot reply.
-	if ( od && od->m_diffbotJSONCount && ! *recycle && 
-	     cr->m_isCustomCrawl &&
-	     // do not remove old json objects if pageparser.cpp test
-	     // because that can not change the index, etc.
-	     ! getIsPageParser() ) {
+	// just delete the json items whose "title hashes" are present
+	// in the "old doc" but NOT i the "new doc". 
+	// we use the title hash to construct a unique url for each json item.
+	// if the title hash is present in both the old and new docs then
+	// do not delete it here, but we will reindex it later in 
+	// getMetaList() below when we call indexDoc() on each one after
+	// setting m_dx to each one.
+	bool nukeJson = true;
+	if ( ! od ) nukeJson = false;
+	if ( od && od->m_diffbotJSONCount <= 0 ) nukeJson = false;
+	// if recycling json objects, leave them there!
+	if ( *recycle ) nukeJson = false;
+	// you have to be a diffbot crawl to do this
+	if ( ! cr->m_isCustomCrawl ) nukeJson = false;
+	// do not remove old json objects if pageparser.cpp test
+	// because that can not change the index, etc.
+	if ( ! getIsPageParser() ) nukeJson = false;
+
+	if ( nukeJson ) {
+		// it should only nuke/delete the json items that we LOST,
+		// so if we still have the title hash in our latest 
+		// diffbot reply, then do not nuke that json item, which
+		// will have a url ending in -diffboyxyz%lu (where %lu 
+		// is the json item title hash). This will download the
+		// diffbot reply if not already there.
+		long numHashes;
+		long *th = getDiffbotTitleHashes(&numHashes);
+		if ( ! th || th == (void *)-1 ) return (char *)th;
 		// this returns false if it blocks
-		long *status = od->nukeJSONObjects();
+		long *status = od->nukeJSONObjects( th , numHashes );
 		if ( ! status || status == (void *)-1) return (char *)status;
 	}
 
@@ -20292,11 +20481,19 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//   we create from the original diffbot reply
 	SafeBuf *tdbr = getTokenizedDiffbotReply();
 	if ( ! tdbr || tdbr == (void *)-1 ) return (char *)tdbr;
-
 	long tdbrLen = tdbr->length();
 
 	// do not index json items as separate docs if we are page parser
 	if ( getIsPageParser() ) tdbrLen = 0;
+
+	// once we have tokenized diffbot reply we can get a unique 
+	// hash of the title of each json item. that way, if a page changes
+	// and it gains or loses a diffbot item, the old items will still
+	// have the same url and we can set their m_indexCode to EDOCUNCHANGED
+	// if the individual json item itself has not changed when we 
+	// call m_dx->indexDoc() below.
+	long numHashes = 0;
+	long *titleHashBuf = NULL;
 
 	//
 	// if we got a json object or two from diffbot, index them
@@ -20304,6 +20501,12 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// watch out for reply from diffbot of "-1" indicating error!
 	//
 	if ( tdbrLen > 3 ) {
+
+		// get title hashes of the json items
+		titleHashBuf = getDiffbotTitleHashes(&numHashes);
+		if (!titleHashBuf || titleHashBuf == (void *)-1){
+			char *xx=NULL;*xx=0;}
+
 		// make sure diffbot reply is valid for sure
 		if ( ! m_diffbotReplyValid ) { char *xx=NULL;*xx=0; }
 		// set status for this
@@ -20326,12 +20529,21 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	jsonloop:
 		// if m_dx has no url set, call set4 i guess
 		if ( ! m_dx->m_contentValid ) {
+			
+			// sanity. ensure the json item we are trying to
+			// index has a title hash in this buf
+			if(m_diffbotJSONCount>=numHashes){char *xx=NULL;*xx=0;}
+
+			// get the title of the json we are indexing
+			long jth = titleHashBuf [ m_diffbotJSONCount ];
+
 			// make the fake url for this json object for indexing
 			SafeBuf fakeUrl;
 			fakeUrl.set ( m_firstUrl.getUrl() );
 			// append -diffbot-0 etc. for fake url
-			fakeUrl.safePrintf("-diffbotxyz%li",
-					   (long)m_diffbotJSONCount);
+			fakeUrl.safePrintf("-diffbotxyz%lu",
+					   //(long)m_diffbotJSONCount);
+					   jth);
 			m_diffbotJSONCount++;
 			// this can go on the stack since set4() copies it
 			SpiderRequest sreq;
@@ -20350,7 +20562,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			sreq.m_hopCountValid = 1;
 			sreq.m_fakeFirstIp   = 1;
 			sreq.m_firstIp       = firstIp;
-
 			// set this
 			if (!m_dx->set4 ( &sreq       ,
 					  NULL        ,
@@ -20392,17 +20603,21 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		//xd->setCallback ( this , getMetaListWrapper );
 		m_dx->setCallback ( m_masterState , m_masterLoop );
 
+		///////////////
 		// . inject the content of the json using this fake url
 		// . return -1 if this blocks
 		// . if m_dx got its msg4 reply it ends up here, in which
 		//   case do NOT re-call indexDoc() so check for
 		//   m_listAdded.
+		///////////////
 		if ( ! m_dx->m_listAdded && ! m_dx->indexDoc ( ) )
 			return (char *)-1; 
+
 		// critical error on our part trying to index it?
 		// does not include timeouts or 404s, etc. mostly just
 		// OOM errors.
 		if ( g_errno ) return NULL;
+
 		CollectionRec *cr = getCollRec();
 		if ( ! cr ) return NULL;
 		// count as deleted
@@ -25019,7 +25234,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 	if ( m_isDiffbotJSONObject ) {
 		setStatus ( "hashing gbparenturl term");
 		char *p = fu->getUrl() + fu->getUrlLen() - 1;
-		// back up to - as in "http://xyz.com/foo-diffbotxyz13"
+		// back up to - as in "http://xyz.com/foo-diffbotxyz123456"
 		for ( ; *p && *p != '-' ; p-- );
 		// set up the hashing parms
 		hi.m_hashGroup = HASHGROUP_INTAG;
@@ -29871,6 +30086,23 @@ bool XmlDoc::hashNumber ( char *beginBuf ,
 	if ( ! hashNumber2 ( f , hi , "gbrevsortby" ) )
 		return false;
 
+	//
+	// also hash as an int, 4 byte-integer so our lastSpidered timestamps
+	// dont lose 128 seconds of resolution
+	//
+
+	long i = (long) atoll2 ( p , bufEnd - p );
+
+	if ( ! hashNumber3 ( i , hi , "gbsortbyint" ) )
+		return false;
+
+	// also hash in reverse order for sorting from low to high
+	i = -1 * i;
+
+	if ( ! hashNumber3 ( i , hi , "gbrevsortbyint" ) )
+		return false;
+
+
 	return true;
 }
 
@@ -29955,6 +30187,113 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 	// store in buffer
 	char buf[128];
 	long bufLen = sprintf(buf,"%f",f);
+
+	// add to wts for PageParser.cpp display
+	// store it
+	if ( ! storeTerm ( buf,
+			   bufLen,
+			   truePrefix64,
+			   hi,
+			   0, // word#, i,
+			   0, // wordPos
+			   0,// densityRank , // 0-15
+			   0, // MAXDIVERSITYRANK,//phrase
+			   0, // ws,
+			   0, // hashGroup,
+			   //true,
+			   &m_wbuf,
+			   m_wts,
+			   // a hack for display in wts:
+			   SOURCE_NUMBER, // SOURCE_BIGRAM, // synsrc
+			   langUnknown ) )
+		return false;
+
+	return true;
+}
+
+bool XmlDoc::hashNumber3 ( long n , HashInfo *hi , char *sortByStr ) {
+
+	// prefix is something like price. like the meta "name" or
+	// the json name with dots in it like "product.info.price" or something
+	long long nameHash = 0LL;
+	long nameLen = 0;
+	if ( hi->m_prefix ) nameLen = gbstrlen ( hi->m_prefix );
+	if ( hi->m_prefix && nameLen ) 
+		nameHash = hash64Lower_utf8 ( hi->m_prefix , nameLen );
+	// need a prefix for hashing numbers... for now
+	else { char *xx=NULL; *xx=0; }
+		
+	// combine prefix hash with a special hash to make it unique to avoid
+	// collisions. this is the "TRUE" prefix.
+	long long truePrefix64 = hash64n ( sortByStr ); // "gbsortby");
+	// hash with the "TRUE" prefix
+	long long ph2 = hash64 ( nameHash , truePrefix64 );
+
+	// . now store it
+	// . use field hash as the termid. normally this would just be
+	//   a prefix hash
+	// . use mostly fake value otherwise
+	key144_t k;
+	g_posdb.makeKey ( &k ,
+			  ph2 ,
+			  0,//docid
+			  0,// word pos #
+			  0,// densityRank , // 0-15
+			  0 , // MAXDIVERSITYRANK
+			  0 , // wordSpamRank ,
+			  0 , //siterank
+			  0 , // hashGroup,
+			  // we set to docLang final hash loop
+			  //langUnknown, // langid
+			  // unless already set. so set to english here
+			  // so it will not be set to something else
+			  // otherwise our floats would be ordered by langid!
+			  // somehow we have to indicate that this is a float
+			  // termlist so it will not be mangled any more.
+			  //langEnglish,
+			  langUnknown,
+			  0 , // multiplier
+			  false, // syn?
+			  false , // delkey?
+			  hi->m_shardByTermId );
+
+	//long long final = hash64n("products.offerprice",0);
+	//long long prefix = hash64n("gbsortby",0);
+	//long long h64 = hash64 ( final , prefix);
+	//if ( ph2 == h64 )
+	//	log("hey: got offer price");
+
+	// now set the float in that key
+	//g_posdb.setFloat ( &k , f );
+	g_posdb.setInt ( &k , n );
+
+	// HACK: this bit is ALWAYS set by Posdb::makeKey() to 1
+	// so that we can b-step into a posdb list and make sure
+	// we are aligned on a 6 byte or 12 byte key, since they come
+	// in both sizes. but for this, hack it off to tell
+	// addTable144() that we are a special posdb key, a "numeric"
+	// key that has a float stored in it. then it will NOT
+	// set the siterank and langid bits which throw our sorting
+	// off!!
+	g_posdb.setAlignmentBit ( &k , 0 );
+
+	// sanity
+	//float t = g_posdb.getFloat ( &k );
+	long x = g_posdb.getInt ( &k );
+	if ( x != n ) { char *xx=NULL;*xx=0; }
+
+	HashTableX *dt = hi->m_tt;
+
+	// the key may indeed collide, but that's ok for this application
+	if ( ! dt->addTerm144 ( &k ) ) 
+		return false;
+
+	if ( ! m_wts ) 
+		return true;
+
+	// store in buffer
+	char buf[128];
+	long bufLen = sprintf(buf,"%li",n);
 
 	// add to wts for PageParser.cpp display
 	// store it
@@ -45048,7 +45387,7 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 	char nb[1024];
 	SafeBuf nameBuf(nb,1024);
 
-	long totalHash32 = 0;
+	//long totalHash32 = 0;
 
 	for ( ; ji ; ji = ji->m_next ) {
 		QUICKPOLL(m_niceness);
@@ -45122,8 +45461,12 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 
 		//
 		// for deduping search results we set m_contentHash32 here for
-		// diffbot json objects
+		// diffbot json objects.
+		// we can't do this here anymore, we have to set the
+		// contenthash in ::getContentHash32() because we need it to
+		// set EDOCUNCHANGED in ::getIndexCode() above.
 		//
+		/*
 		if ( hi.m_hashGroup != HASHGROUP_INURL ) {
 			// make the content hash so we can set m_contentHash32
 			// for deduping
@@ -45134,6 +45477,7 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 			totalHash32 ^= nh32;
 			totalHash32 ^= vh32;
 		}
+		*/
 
 		// index like "title:whatever"
 		hi.m_prefix = name;
@@ -45157,8 +45501,8 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 		*/
 	}
 
-	m_contentHash32 = totalHash32;
-	m_contentHash32Valid = true;
+	//m_contentHash32 = totalHash32;
+	//m_contentHash32Valid = true;
 
 	return (char *)0x01;
 }
