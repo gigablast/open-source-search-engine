@@ -201,6 +201,8 @@ class Msg40 {
 	// Msg39 and all Msg20s must use the same clock timestamp
 	time_t m_nowUTC;
 
+	long m_lastHeartbeat;
+
 	bool printSearchResult9 ( long ix ) ;
 
 	HashTableX m_dedupTable;

@@ -162,6 +162,7 @@ bool Msg40::getResults ( SearchInput *si      ,
 	// we need this info for caching as well
 	//m_numGigabitInfos = 0;
 
+	m_lastHeartbeat = getTimeLocal();
 
 	//just getfrom searchinput
 	//....	m_catId = hr->getLong("catid",0);m_si->m_catId;
@@ -1274,6 +1275,21 @@ bool Msg40::gotSummary ( ) {
 		log("query: error initializing dedup table: %s",
 		    mstrerror(g_errno));
 
+	State0 *st = (State0 *)m_state;
+
+	// keep socket alive if not streaming. like downloading csv...
+	long now2 = getTimeLocal();
+	if ( now2 - m_lastHeartbeat >= 10 && ! m_si->m_streamResults &&
+	     // incase socket is closed and recycled for another connection
+	     st->m_socket->m_numDestroys == st->m_numDestroys ) {
+		m_lastHeartbeat = now2;
+		int n = ::send ( st->m_socket->m_sd , " " , 1 , 0 );
+		log("msg40: sent heartbeat of %li bytes on sd=%li",
+		    (long)n,(long)st->m_socket->m_sd);
+	}
+
+
+
 	/*
 	// sanity check
 	for ( long i = 0 ; i < m_msg3a.m_numDocIds ; i++ ) {
@@ -1294,8 +1310,6 @@ bool Msg40::gotSummary ( ) {
 
 
  doAgain:
-
-	State0 *st = (State0 *)m_state;
 
 	SafeBuf *sb = &st->m_sb;
 

@@ -142,6 +142,14 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		return true;
 	}
 
+	// when downloading csv socket closes because we can take minutes
+	// before we send over the first byte, so try to keep open
+	//int parm = 1;
+	//if(setsockopt(sock->m_sd,SOL_TCP,SO_KEEPALIVE,&parm,sizeof(int))<0){
+	//	log("crawlbot: setsockopt: %s",mstrerror(errno));
+	//	errno = 0;
+	//}
+
 	//long pathLen = hr->getPathLen();
 	char rdbId = RDB_NONE;
 	bool downloadJSON = false;
@@ -208,8 +216,15 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	if ( fmt == FMT_CSV && rdbId == RDB_TITLEDB ) {
 		char tmp2[5000];
 		SafeBuf sb2(tmp2,5000);
-		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&dr=1&"
-			      "c=%s&n=1000000&"
+		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&"
+			       // dedup. since stream=1 and pss=0 below
+			       // this will dedup on page content hash only
+			       // which is super fast.
+			       "dr=1&"
+			       "c=%s&n=1000000&"
+			       // no summary similarity dedup, only exact
+			       // doc content hash. otherwise too slow!!
+			       "pss=0&"
 			       // no gigabits
 			       "dsrt=0&"
 			       // do not compute summary. 0 lines.
@@ -229,12 +244,19 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	if ( fmt == FMT_JSON && rdbId == RDB_TITLEDB ) {
 		char tmp2[5000];
 		SafeBuf sb2(tmp2,5000);
-		sb2.safePrintf("GET /search.csv?icc=1&format=json&sc=0&dr=1&"
+		sb2.safePrintf("GET /search.csv?icc=1&format=json&sc=0&"
+			       // dedup. since stream=1 and pss=0 below
+			       // this will dedup on page content hash only
+			       // which is super fast.
+			       "dr=1&"
 			      "c=%s&n=1000000&"
 			       // we can stream this because unlink csv it
 			       // has no header row that needs to be 
 			       // computed from all results.
 			       "stream=1&"
+			       // no summary similarity dedup, only exact
+			       // doc content hash. otherwise too slow!!
+			       "pss=0&"
 			       // no gigabits
 			       "dsrt=0&"
 			       // do not compute summary. 0 lines.

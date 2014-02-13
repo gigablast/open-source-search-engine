@@ -11611,9 +11611,9 @@ void Parms::init ( ) {
 
 	m->m_title = "percent similar dedup summary";
 	m->m_desc  = "If document summary is this percent similar "
-		"to a document summary above it, then remove it from the search "
-		"results. 100 means only to remove if exactly the same. 0 means"
-		" no summary deduping.";
+		"to a document summary above it, then remove it from the "
+		"search results. 100 means only to remove if exactly the "
+		"same. 0 means no summary deduping.";
 	m->m_cgi   = "psds";
 	m->m_off   = (char *)&cr.m_percentSimilarSummary - x;
 	m->m_soff  = (char *)&si.m_percentSimilarSummary - y;

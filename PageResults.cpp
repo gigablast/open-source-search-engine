@@ -451,6 +451,9 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// set this in case SearchInput::set fails!
 	st->m_socket = s;
 
+	// save this count so we know if TcpServer.cpp calls destroySocket(s)
+	st->m_numDestroys = s->m_numDestroys;
+
 	// . parse it up
 	// . this returns false and sets g_errno and, maybe, g_msg on error
 	SearchInput *si = &st->m_si;
@@ -501,7 +504,6 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	log ( LOG_DEBUG , "query: Getting search results for q=%s",
 	      st->m_si.m_displayQuery);
 
-	st->m_socket  = s;
 	// assume we'll block
 	st->m_gotResults = false;
 	st->m_gotAds     = false;
