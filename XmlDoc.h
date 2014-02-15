@@ -65,7 +65,7 @@
 #include "HttpMime.h" // ET_DEFLAT
 #include "Msg1.h"
 #include "PingServer.h"
-//#include "PageCrawlBot.h" // DBA_NONE
+#include "Json.h"
 
 //#define XMLDOC_MAX_AD_IDS 4
 //#define XMLDOC_ADLEN      64
@@ -665,6 +665,7 @@ class XmlDoc {
 	char **getExpandedUtf8Content ( ) ;
 	char **getUtf8Content ( ) ;
 	long *getContentHash32 ( ) ;
+	long *getContentHashJson32 ( ) ;
 	long *getTagHash32 ( ) ;
 	long getHostHash32a ( ) ;
 	long getHostHash32b ( ) ;
@@ -1342,6 +1343,7 @@ class XmlDoc {
 	bool m_dupHashValid;
 	bool m_exactContentHash64Valid;
 	bool m_looseContentHash64Valid;
+	bool m_jpValid;
 
 	// shadows
 	char m_isRSS2;
@@ -1614,6 +1616,10 @@ class XmlDoc {
 
 	long m_joc;
 	SafeBuf m_diffbotTitleHashBuf;
+
+	Json *getParsedJson();
+	// object that parses the json
+	Json m_jp;
 
 
 	//EmailInfo m_emailInfo;
