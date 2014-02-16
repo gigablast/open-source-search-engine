@@ -704,7 +704,7 @@ void Collectiondb::deleteSpiderColl ( SpiderColl *sc ) {
 
 bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	// do not allow this if in repair mode
-	if ( g_repairMode > 0 ) {
+	if ( g_repair.isRepairActive() && g_repair.m_collnum == collnum ) {
 		log("admin: Can not delete collection while in repair mode.");
 		g_errno = EBADENGINEER;
 		return true;
@@ -968,7 +968,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	//}
 
 	// do not allow this if in repair mode
-	if ( g_repairMode > 0 ) {
+	if ( g_repair.isRepairActive() && g_repair.m_collnum == oldCollnum ) {
 		log("admin: Can not delete collection while in repair mode.");
 		g_errno = EBADENGINEER;
 		return true;
