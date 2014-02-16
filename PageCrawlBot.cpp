@@ -21,7 +21,7 @@
 #include "Pages.h" // g_msg
 #include "XmlDoc.h" // for checkRegex()
 #include "PageInject.h" // Msg7
-//#include "Json.h"
+#include "Repair.h"
 #include "Parms.h"
 
 // so user can specify the format of the reply/output
@@ -2071,6 +2071,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//
 	///////
 	if ( spots || seeds ) {
+		// error
+		if ( g_repair.isRepairActive() &&
+		     g_repair.m_collnum == st->m_collnum ) {
+			log("crawlbot: repair active. can't add seeds "
+			    "or spots while repairing collection.");
+			g_errno = EREPAIRING;
+			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
+		}
 		// . avoid spidering links for these urls? i would say
 		// . default is to NOT spider the links...
 		// . support camel case and all lower case
