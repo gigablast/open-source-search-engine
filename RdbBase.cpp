@@ -1327,12 +1327,14 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	// when adding to g_indexdb, it is in a different collection for a 
 	// full rebuild and we are not actively searching it so it doesn't
 	// need to be merged.
+	/*
 	if ( g_repair.isRepairActive() && 
 	     //! g_conf.m_fullRebuild &&
 	     //! g_conf.m_removeBadPages &&
 	     ! isSecondaryRdb ( (uint8_t)rdbId ) && 
 	     rdbId != RDB_TAGDB )
 		return;
+	*/
 
 	// if a dump is happening it will always be the last file, do not
 	// include it in the merge

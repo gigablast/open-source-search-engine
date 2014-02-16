@@ -17062,6 +17062,15 @@ long *XmlDoc::getContentHash32 ( ) {
 	if ( m_contentHash32Valid ) return &m_contentHash32;
 	setStatus ( "getting contenthash32" );
 
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (long *)ct;
+
+	// we do not hash the url/resolved_url/html fields in diffbot json
+	// because the url field is a mirror of the url and the html field
+	// is redundant and would slow us down
+	if ( *ct == CT_JSON )
+		return getContentHashJson32();
+
 	// if we are a diffbot json object, fake this for now, it will
 	// be set for real in hashJSON()
 	// no, because we call this before hashJSON() for to set
@@ -17105,6 +17114,102 @@ long *XmlDoc::getContentHash32 ( ) {
 	return &m_contentHash32;
 }
 
+// we do not hash the url/resolved_url/html fields in diffbot json
+// because the url field is a mirror of the url and the html field
+// is redundant and would slow us down
+long *XmlDoc::getContentHashJson32 ( ) {
+
+	if ( m_contentHash32Valid ) return &m_contentHash32;
+
+	// use new json parser
+	Json *jp = getParsedJson();
+	if ( ! jp || jp == (void *)-1 ) return (long *)jp;
+	
+	JsonItem *ji = jp->getFirstItem();
+	long totalHash32 = 0;
+
+	for ( ; ji ; ji = ji->m_next ) {
+		QUICKPOLL(m_niceness);
+		// skip if not number or string
+		if ( ji->m_type != JT_NUMBER && ji->m_type != JT_STRING )
+			continue;
+
+		// what name level are we?
+		long numNames = 1;
+		JsonItem *pi = ji->m_parent;
+		for ( ; pi ; pi = pi->m_parent ) {
+			// empty name?
+			if ( ! pi->m_name ) continue;
+			if ( ! pi->m_name[0] ) continue;
+			numNames++;
+		}
+
+		// if we are the diffbot reply "html" field do not hash this 
+		// because it is redundant and it hashes html tags etc.!
+		// plus it slows us down a lot and bloats the index.
+		if ( ji->m_name && numNames==1 &&
+		     strcmp(ji->m_name,"html") == 0 )
+			continue;
+
+		if ( ji->m_name && numNames==1 && 
+		     strcmp(ji->m_name,"url") == 0 )
+			continue;
+
+		if ( ji->m_name && numNames==1 &&
+		     strcmp(ji->m_name,"resolved_url") == 0 )
+			continue;
+
+		// hash the fully compound name
+		long nameHash32 = 0;
+		JsonItem *p = ji;
+		char *lastName = NULL;
+		for ( ; p ; p = p->m_parent ) {
+			// empty name?
+			if ( ! p->m_name ) continue;
+			if ( ! p->m_name[0] ) continue;
+			// dup? can happen with arrays. parent of string
+			// in object, has same name as his parent, the
+			// name of the array. "dupname":[{"a":"b"},{"c":"d"}]
+			if ( p->m_name == lastName ) continue;
+			// update
+			lastName = p->m_name;
+			// hash it up
+			nameHash32 = hash32(p->m_name,p->m_nameLen,nameHash32);
+		}
+
+		//
+		// now Json.cpp decodes and stores the value into
+		// a buffer, so ji->getValue() should be decoded completely
+		//
+
+		// . get the value of the json field
+		// . if it's a number or bool it converts into a string
+		long vlen;
+		char *val = ji->getValueAsString( &vlen );
+
+		//
+		// for deduping search results we set m_contentHash32 here for
+		// diffbot json objects.
+		//
+		// we use this hash for setting EDOCUNCHANGED when reindexing
+		// a diffbot reply. we also use to see if the diffbot reply
+		// is a dup with another page in the index. thirdly, we use
+		// to dedup search results, which could be redundant because
+		// of our spider-time deduping.
+		// 
+		// make the content hash so we can set m_contentHash32
+		// for deduping. do an exact hash for now...
+		long vh32 = hash32 ( val , vlen , m_niceness );
+		// combine
+		long combined32 = hash32h ( nameHash32 , vh32 );
+		// accumulate field/val pairs order independently
+		totalHash32 ^= combined32;
+	}
+
+	m_contentHash32 = totalHash32;
+	m_contentHash32Valid = true;
+	return &m_contentHash32;
+}
 
 // do not consider tags except frame and iframe... make all months
 // and days of weeks and digits basically the same
@@ -45349,6 +45454,35 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 }	
 
 
+Json *XmlDoc::getParsedJson ( ) {
+
+	if ( m_jpValid ) return &m_jp;
+
+	// core if not a json object
+	if ( m_contentTypeValid && m_contentType != CT_JSON ) {
+		char *xx=NULL;*xx=0; }
+
+	// \0 terminated
+	char **pp = getUtf8Content();
+	if ( ! pp || pp == (void *)-1 ) return (Json *)pp;
+
+	// point to the json
+	char *p = *pp;
+
+	// empty? all done then.
+	//if ( ! p ) return (char *)pp;
+
+	// . returns NULL and sets g_errno on error
+	// . if p is NULL i guess this should still be ok and be empty
+	if ( ! m_jp.parseJsonStringIntoJsonItems ( p , m_niceness ) ) {
+		g_errno = EBADJSONPARSER;
+		return NULL;
+	}
+
+	m_jpValid = true;
+	return &m_jp;
+}
+
 // . returns -1 if blocked, returns NULL and sets g_errno on error
 // . hash each json VALUE (not FIELD) ... AND ... hash each json
 //   VALUE with its FIELD like "title:cool" or "description:whatever"
@@ -45360,29 +45494,16 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 char *XmlDoc::hashJSON ( HashTableX *table ) {
 
 	setStatus ( "hashing json" );
-	// \0 terminated
-	char **pp = getUtf8Content();
-	if ( ! pp || pp == (void *)-1 ) return (char *)pp;
-
-	// point to the json
-	char *p = *pp;
-
-	// empty? all done then.
-	if ( ! p ) return (char *)pp;
 
 	HashInfo hi;
 	hi.m_tt        = table;
 	hi.m_desc      = "json object";
 
 	// use new json parser
-	Json jp;
-	// returns NULL and sets g_errno on error
-	if ( ! jp.parseJsonStringIntoJsonItems ( p , m_niceness ) ) {
-		g_errno = EBADJSONPARSER;
-		return NULL;
-	}
+	Json *jp = getParsedJson();
+	if ( ! jp || jp == (void *)-1 ) return (char *)jp;
 	
-	JsonItem *ji = jp.getFirstItem();
+	JsonItem *ji = jp->getFirstItem();
 
 	char nb[1024];
 	SafeBuf nameBuf(nb,1024);
@@ -45396,6 +45517,7 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 			continue;
 		// reset, but don't free mem etc. just set m_length to 0
 		nameBuf.reset();
+
 		// get its full compound name like "meta.twitter.title"
 		JsonItem *p = ji;
 		char *lastName = NULL;
@@ -45418,6 +45540,13 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 			log("build: too many names in json tag");
 			break;
 		}
+
+		// if we are the diffbot reply "html" field do not hash this 
+		// because it is redundant and it hashes html tags etc.!
+		// plus it slows us down a lot and bloats the index.
+		if ( ji->m_name && numNames==1 && strcmp(ji->m_name,"html")==0)
+			continue;
+
 		// assemble the names in reverse order which is correct order
 		for ( long i = 1 ; i <= numNames ; i++ ) {
 			// copy into our safebuf
@@ -45457,6 +45586,24 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 		// . if it's a number or bool it converts into a string
 		long vlen;
 		char *val = ji->getValueAsString( &vlen );
+		char tbuf[32];
+
+		// if the value is clearly a date, just hash it as
+		// a number, so use a temporary value that holds the
+		// time_t and hash with that... this will hash
+		// diffbot's article date field as a number so we can
+		// sortby and constrain by it in the search results
+		if ( name && strcasecmp(name,"date") == 0 ) {
+			// this is in HttpMime.cpp
+			time_t tt = atotime1 ( val );
+			if ( tt ) {
+				// print out the time_t in ascii
+				vlen = sprintf(tbuf,"%lu",tt);
+				// and point to it for hashing/indexing
+				val = tbuf;
+			}
+		}
+		
 
 
 		//

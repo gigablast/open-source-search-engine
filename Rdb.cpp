@@ -1163,6 +1163,10 @@ bool Rdb::dumpTree ( long niceness ) {
 
 	// or if in repair mode, (not full repair mode) do not mess with any 
 	// files in any coll unless they are secondary rdbs...
+	// this might affect us even though we have spidering paused to
+	// rebuild one specific collection. the other collection spiders
+	// are still going on...
+	/*
 	if ( g_repair.isRepairActive() && 
 	     //! g_repair.m_fullRebuild &&
 	     //! g_repair.m_rebuildNoSplits &&
@@ -1170,6 +1174,7 @@ bool Rdb::dumpTree ( long niceness ) {
 	     ! ::isSecondaryRdb ( m_rdbId ) && 
 	     m_rdbId != RDB_TAGDB )
 		return true;
+	*/
 
 	// do not dump if a tfndb merge is going on, because the tfndb will
 	// lose its page cache and all the "adding links" will hog up all our
@@ -1659,6 +1664,8 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	// but we often just repair titledb, indexdb and datedb because 
 	// they are bigger. it may add to indexdb/datedb
 	if ( g_repair.isRepairActive() &&
+	     // but only check for collection we are repairing/rebuilding
+	     collnum == g_repair.m_collnum &&
 	     //! g_repair.m_fullRebuild  && 
 	     //! g_conf.m_rebuildNoSplits &&
 	     //! g_conf.m_removeBadPages &&

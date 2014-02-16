@@ -15070,7 +15070,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_maxRepairSpiders - g;
 	m->m_type  = TYPE_LONG;
 	m->m_page  = PAGE_REPAIR;
-	m->m_def   = "12";
+	m->m_def   = "2";
 	m->m_group = 0;
 	m->m_sparm = 0;
 	m++;

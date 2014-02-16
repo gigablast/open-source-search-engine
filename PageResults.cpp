@@ -2336,7 +2336,7 @@ bool printResult ( State0 *st, long ix ) {
 	//
 	/////
 	unsigned char ctype = mr->m_contentType;
-	if ( ctype > 2 && ctype <= 13 ) {
+	if ( ctype >= CT_HTML && ctype <= CT_JSON ) {
 		char *cs = g_contentTypeStrings[ctype];
 		if ( si->m_format == FORMAT_XML )
 			sb->safePrintf("\t\t<contentType>"
@@ -2492,6 +2492,9 @@ bool printResult ( State0 *st, long ix ) {
 		sb->safePrintf ( "\t\t<firstIndexedDateUTC>%lu"
 				"</firstIndexedDateUTC>\n",
 				mr->m_firstIndexedDate);
+		sb->safePrintf( "\t\t<contentHash32>%lu"
+				"</contentHash32>\n",
+				mr->m_contentHash32);
 		// pub date
 		long datedbDate = mr->m_datedbDate;
 		// show the datedb date as "<pubDate>" for now

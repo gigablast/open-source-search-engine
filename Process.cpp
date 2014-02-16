@@ -1096,6 +1096,10 @@ void processSleepWrapper ( int fd , void *state ) {
 	// . returns right away in most cases
 	g_rebalance.rebalanceLoop();
 
+	// if doing the final part of a repair.cpp loop where we convert
+	// titledb2 files to titledb etc. then do not save!
+	if ( g_repairMode == 7 ) return;
+
 	// autosave? override this if power is off, we need to save the data!
 	//if (g_conf.m_autoSaveFrequency <= 0 && g_process.m_powerIsOn) return;
 	if ( g_conf.m_autoSaveFrequency <= 0 ) return;

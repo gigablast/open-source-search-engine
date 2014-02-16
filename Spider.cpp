@@ -5447,6 +5447,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		//   after they change the parms. perhaps we should set
 		//   the # of urls spidered to the "sentEmail" flag so we
 		//   know if that changes to send another...
+		// . bug in this...
 		//if ( cr->m_isCustomCrawl && ! ci->m_hasUrlsReadyToSpider ) 
 		//	continue;
 
