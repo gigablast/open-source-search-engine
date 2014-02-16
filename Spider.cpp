@@ -23,6 +23,8 @@
 #include "Parms.h"
 #include "Rebalance.h"
 
+void testWinnerTreeKey ( ) ;
+
 // . this was 10 but cpu is getting pegged, so i set to 45
 // . we consider the collection done spidering when no urls to spider
 //   for this many seconds
@@ -599,6 +601,8 @@ bool Spiderdb::init ( ) {
 	if ( ! g_spiderdb.isSpiderRequest (&sk) ) { char *xx=NULL;*xx=0; }
 	if ( g_spiderdb.getUrlHash48(&sk) != urlHash48){char *xx=NULL;*xx=0;}
 	if ( g_spiderdb.getFirstIp(&sk) != firstIp) {char *xx=NULL;*xx=0;}
+
+	testWinnerTreeKey();
 
 	// we now use a page cache
 	if ( ! m_pc.init ( "spiderdb", 
@@ -3139,14 +3143,15 @@ key128_t makeUfnTreeKey ( long      firstIp      ,
 // key bitmap (192 bits):
 //
 // ffffffff ffffffff ffffffff ffffffff  f=firstIp
-// pppppppp pppppppp tttttttt tttttttt  p=priority 
+// pppppppp pppppppp HHHHHHHH HHHHHHHH  p=priority  H=hopcount
 // tttttttt tttttttt tttttttt tttttttt  t=spiderTimeMS
-// tttttttt tttttttt hhhhhhhh hhhhhhhh  h=urlHash48
+// tttttttt tttttttt tttttttt tttttttt  h=urlHash48
 // hhhhhhhh hhhhhhhh hhhhhhhh hhhhhhhh 
-// 00000000 00000000 00000000 00000000
+// hhhhhhhh hhhhhhhh 00000000 00000000
 
 key192_t makeWinnerTreeKey ( long firstIp ,
 			     long priority ,
+			     long hopCount,
 			     long long spiderTimeMS ,
 			     long long uh48 ) {
 	key192_t k;
@@ -3154,27 +3159,31 @@ key192_t makeWinnerTreeKey ( long firstIp ,
 	k.n2 <<= 16;
 	k.n2 |= (255-priority);
 	k.n2 <<= 16;
-	k.n2 |= (spiderTimeMS >> 48);
-	k.n1 = spiderTimeMS << 16;
-	k.n1 |= uh48 >> 32;
-	k.n0 = uh48 & 0xffffffff;
-	k.n0 <<= 32;
+	if ( hopCount < 0 ) { char *xx=NULL;*xx=0; }
+	if ( hopCount > 0xffff ) hopCount = 0xffff;
+	k.n2 |= hopCount;
+
+	k.n1 = spiderTimeMS;
+
+	k.n0 = uh48;
+	k.n0 <<= 16;
+
 	return k;
 }
 
 void parseWinnerTreeKey ( key192_t  *k ,
 			  long      *firstIp ,
 			  long      *priority ,
+			  long *hopCount,
 			  long long  *spiderTimeMS ,
 			  long long *uh48 ) {
 	*firstIp = (k->n2) >> 32;
 	*priority = 255 - ((k->n2 >> 16) & 0xffff);
-	*spiderTimeMS = k->n2 & 0xffffff;
-	*spiderTimeMS <<= (32+16);
-	*spiderTimeMS |= k->n1 >> 16;
-	*uh48 = k->n1 & 0xffff;
-	*uh48 <<= 32;
-	*uh48 |= (k->n0 >>32);
+	*hopCount = (k->n2 & 0xffff);
+
+	*spiderTimeMS = k->n1;
+
+	*uh48 = (k->n0 >> 16);
 }
 
 void testWinnerTreeKey ( ) {
@@ -3182,16 +3191,19 @@ void testWinnerTreeKey ( ) {
 	long priority = 123;
 	long long spiderTimeMS = 456789123LL;
 	long long uh48 = 987654321888LL;
-	key192_t k = makeWinnerTreeKey ( firstIp,priority,spiderTimeMS,uh48);
+	long hc = 4321;
+	key192_t k = makeWinnerTreeKey (firstIp,priority,hc,spiderTimeMS,uh48);
 	long firstIp2;
 	long priority2;
 	long long spiderTimeMS2;
 	long long uh482;
-	parseWinnerTreeKey ( &k,&firstIp2,&priority2,&spiderTimeMS2,&uh482);
+	long hc2;
+	parseWinnerTreeKey(&k,&firstIp2,&priority2,&hc2,&spiderTimeMS2,&uh482);
 	if ( firstIp != firstIp2 ) { char *xx=NULL;*xx=0; }
 	if ( priority != priority2 ) { char *xx=NULL;*xx=0; }
 	if ( spiderTimeMS != spiderTimeMS2 ) { char *xx=NULL;*xx=0; }
 	if ( uh48 != uh482 ) { char *xx=NULL;*xx=0; }
+	if ( hc != hc2 ) { char *xx=NULL;*xx=0; }
 }
 
 void removeExpiredLocks ( long hostId );
@@ -3988,6 +4000,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		// make key
 		key192_t wk = makeWinnerTreeKey( firstIp ,
 						 priority ,
+						 sreq->m_hopCount,
 						 spiderTimeMS ,
 						 uh48 );
 
@@ -4040,15 +4053,27 @@ bool SpiderColl::scanListForWinners ( ) {
 			// skip spider request if its time is past winner's
 			if ( tm1 > tm2 )
 				continue;
+			if ( tm1 < tm2 )
+				goto gotNewWinner;
 			// if tied, use priority
-			if ( tm1 == tm2 && priority < m_tailPriority )
+			if ( priority < m_tailPriority )
 				continue;
-			// if tied, use actual times. assuming both 
-			// are < nowGlobalMS
-			if ( tm1 == tm2 &&
-			     priority == m_tailPriority &&
-			     spiderTimeMS > m_tailTimeMS )
+			if ( priority > m_tailPriority )
+				goto gotNewWinner;
+			// if tied use hop counts so we are breadth first
+			if ( sreq->m_hopCount > m_tailHopCount )
 				continue;
+			if ( sreq->m_hopCount < m_tailHopCount )
+				goto gotNewWinner;
+			// if tied, use actual times. assuming both<nowGlobalMS
+			if ( spiderTimeMS > m_tailTimeMS )
+				continue;
+			if ( spiderTimeMS < m_tailTimeMS )
+				goto gotNewWinner;
+			// all tied, keep it the same i guess
+			continue;
+			// otherwise, add the new winner in and remove the old
+		gotNewWinner:
 			// get lowest scoring node in tree
 			long tailNode = m_winnerTree.getLastNode();
 			// from table too
@@ -4131,6 +4156,7 @@ bool SpiderColl::scanListForWinners ( ) {
 			parseWinnerTreeKey ( tailKey ,
 					     &m_tailIp ,
 					     &m_tailPriority,
+					     &m_tailHopCount,
 					     &m_tailTimeMS ,
 					     &m_tailUh48 );
 			// sanity
@@ -4377,12 +4403,14 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		// parse it up
 		long winIp;
 		long winPriority;
+		long winHopCount;
 		long long winSpiderTimeMS;
 		long long winUh48;
 		key192_t *winKey = (key192_t *)m_winnerTree.getKey ( node );
 		parseWinnerTreeKey ( winKey ,
 				     &winIp ,
 				     &winPriority,
+				     &winHopCount,
 				     &winSpiderTimeMS ,
 				     &winUh48 );
 		// sanity
@@ -4390,7 +4418,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		if ( winUh48 != sreq2->getUrlHash48() ) { char *xx=NULL;*xx=0;}
 		// make the doledb key
 		key_t doleKey = g_doledb.makeKey ( winPriority,
-						   // convert to seconds from ms
+						   // convert to secs from ms
 						   winSpiderTimeMS / 1000     ,
 						   winUh48 ,
 						   false                    );
