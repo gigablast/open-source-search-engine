@@ -2802,9 +2802,13 @@ long *XmlDoc::getIndexCode2 ( ) {
 		return &m_indexCode;
 	}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	// "url is repeating path components" error?
 	if ( ! m_check1 ) {
 		m_check1         = true;
-		if ( m_firstUrl.isLinkLoop() ) {
+		if ( cr->m_isCustomCrawl == 0 && m_firstUrl.isLinkLoop() ) {
 			m_indexCode      = ELINKLOOP;
 			m_indexCodeValid = true;
 			return &m_indexCode;
@@ -2817,9 +2821,6 @@ long *XmlDoc::getIndexCode2 ( ) {
 		m_indexCodeValid = true;
 		return &m_indexCode;
 	}
-
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
 
 	if ( cr->m_doUrlSpamCheck && ! m_check2 ) {
 		m_check2         = true;
