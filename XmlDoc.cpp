@@ -17134,16 +17134,29 @@ long *XmlDoc::getContentHashJson32 ( ) {
 		if ( ji->m_type != JT_NUMBER && ji->m_type != JT_STRING )
 			continue;
 
+		// what name level are we?
+		long numNames = 1;
+		JsonItem *pi = ji->m_parent;
+		for ( ; pi ; pi = pi->m_parent ) {
+			// empty name?
+			if ( ! pi->m_name ) continue;
+			if ( ! pi->m_name[0] ) continue;
+			numNames++;
+		}
+
 		// if we are the diffbot reply "html" field do not hash this 
 		// because it is redundant and it hashes html tags etc.!
 		// plus it slows us down a lot and bloats the index.
-		if ( ji->m_name && strcmp(ji->m_name,"html") == 0 )
+		if ( ji->m_name && numNames==1 &&
+		     strcmp(ji->m_name,"html") == 0 )
 			continue;
 
-		if ( ji->m_name && strcmp(ji->m_name,"url") == 0 )
+		if ( ji->m_name && numNames==1 && 
+		     strcmp(ji->m_name,"url") == 0 )
 			continue;
 
-		if ( ji->m_name && strcmp(ji->m_name,"resolved_url") == 0 )
+		if ( ji->m_name && numNames==1 &&
+		     strcmp(ji->m_name,"resolved_url") == 0 )
 			continue;
 
 		// hash the fully compound name
@@ -45505,12 +45518,6 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 		// reset, but don't free mem etc. just set m_length to 0
 		nameBuf.reset();
 
-		// if we are the diffbot reply "html" field do not hash this 
-		// because it is redundant and it hashes html tags etc.!
-		// plus it slows us down a lot and bloats the index.
-		if ( ji->m_name && strcmp(ji->m_name,"html") == 0 )
-			continue;
-
 		// get its full compound name like "meta.twitter.title"
 		JsonItem *p = ji;
 		char *lastName = NULL;
@@ -45533,6 +45540,13 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 			log("build: too many names in json tag");
 			break;
 		}
+
+		// if we are the diffbot reply "html" field do not hash this 
+		// because it is redundant and it hashes html tags etc.!
+		// plus it slows us down a lot and bloats the index.
+		if ( ji->m_name && numNames==1 && strcmp(ji->m_name,"html")==0)
+			continue;
+
 		// assemble the names in reverse order which is correct order
 		for ( long i = 1 ; i <= numNames ; i++ ) {
 			// copy into our safebuf
