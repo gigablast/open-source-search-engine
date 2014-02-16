@@ -1086,6 +1086,7 @@ class SpiderColl {
 	long m_tailPriority;
 	long long m_tailTimeMS;
 	long long m_tailUh48;
+	long      m_tailHopCount;
 	long long m_minFutureTimeMS;
 
 	Msg4 m_msg4;
