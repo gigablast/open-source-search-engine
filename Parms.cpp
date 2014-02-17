@@ -198,6 +198,8 @@ bool CommandRemoveConnectIpRow ( char *rec ) {
 		if ( ! m->isArray() ) continue;
 		// sanity check
 		if ( m->m_obj != OBJ_CONF ) { char *xx=NULL;*xx=0; }
+		// must be masterip
+		if ( m->m_type != TYPE_IP ) continue;
 		// . nuke that parm's element
 		// . returns false and sets g_errno on error
 		if (!g_parms.removeParm(i,rowNum,(char *)&g_conf))return true;
@@ -2105,17 +2107,18 @@ bool Parms::printParm ( SafeBuf* sb,
 
 	// does next guy start a new row?
 	bool lastInRow = true; // assume yes
-	if ( mm+1<m_numParms&&m->m_rowid>=0&&m_parms[mm+1].m_rowid==m->m_rowid)
+	if (mm+1<m_numParms&&m->m_rowid>=0&&m_parms[mm+1].m_rowid==m->m_rowid)
 		lastInRow = false;
 	if ( ((s_count-1) % nc) != (nc-1) ) lastInRow = false;
 
 	// . display the remove link for arrays if we need to
 	// . but don't display if next guy does NOT start a new row
-	if ( m->m_max > 1 && lastInRow && ! isJSON ) {
+	//if ( m->m_max > 1 && lastInRow && ! isJSON ) {
+	if ( m->m_addin && j < jend && ! isJSON ) {
 	//     m->m_page != PAGE_PRIORITIES ) {
 		// show remove link?
 		bool show = true;
-		if ( j >= jend )  show = false;
+		//if ( j >= jend )  show = false;
 		// get # of rows
 		long *nr = (long *)((char *)THIS + m->m_off - 4);
 		// are we the last row?
@@ -2123,9 +2126,14 @@ bool Parms::printParm ( SafeBuf* sb,
 		// yes, if this is true
 		if ( j == *nr - 1 ) lastRow = true;
 		// do not allow removal of last default url filters rule
-		if ( lastRow && !strcmp(m->m_cgi,"fsp")) show = false;
+		//if ( lastRow && !strcmp(m->m_cgi,"fsp")) show = false;
 		char *suffix = "";
-		if ( m->m_page == PAGE_SECURITY ) suffix = "ip";
+		if ( m->m_page == PAGE_SECURITY &&
+		     m->m_type == TYPE_IP ) 
+			suffix = "ip";
+		if ( m->m_page == PAGE_SECURITY &&
+		     m->m_type == TYPE_STRING ) 
+			suffix = "pwd";
 		if ( show )
 			sb->safePrintf ("<td><a href=\"?c=%s&" // cast=1&"
 					//"rm_%s=1\">"
@@ -18015,7 +18023,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		//if ( ! data || dataSize <= 0 ) { char *xx=NULL;*xx=0; }
 		// check for \0
 		if ( data && dataSize > 0 ) {
-			if ( data[dataSize-1] != '\0') { char *xx=NULL;*xx=0; }
+			if ( data[dataSize-1] != '\0') { char *xx=NULL;*xx=0;}
 			// this means that we can not use string POINTERS as 
 			// parms!! don't include \0 as part of length
 			sb->safeStrcpy ( data ); // , dataSize );
@@ -18024,7 +18032,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		}
 		//return true;
 		// sanity
-		// we no longer include the \0 in the dataSize... so a dataSize
+		// we no longer include the \0 in the dataSize...so a dataSize
 		// of 0 means empty string...
 		//if ( data[dataSize-1] != '\0' ) { char *xx=NULL;*xx=0; }
 	}
