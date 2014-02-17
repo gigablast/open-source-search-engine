@@ -1937,6 +1937,17 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 		return true;
 	}
 
+	// update crawlinfo stats here and not in xmldoc so that we count
+	// seeds and bulk urls added from add url and can use that to
+	// determine if the collection is empty of urls or not for printing
+	// out the colored bullets in printCollectionNavBar() in Pages.cpp.
+	CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
+	if ( cr ) {
+		cr->m_localCrawlInfo .m_urlsHarvested++;
+		cr->m_globalCrawlInfo.m_urlsHarvested++;
+		cr->m_needsSave = true;
+	}
+
 	// . if already have a request in doledb for this firstIp, forget it!
 	// . TODO: make sure we remove from doledb first before adding this
 	//   spider request
@@ -2047,7 +2058,6 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 		// clear error for this if there was any
 		g_errno = 0;
 	}
-
 
 	if ( ! g_conf.m_logDebugSpider ) return true;//status;
 

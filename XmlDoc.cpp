@@ -23027,10 +23027,11 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		ksr->m_isContacty = 1;
 	}
 
-	// this is just how many urls we tried to index
-	cr->m_localCrawlInfo.m_urlsHarvested += numAdded;
-	cr->m_globalCrawlInfo.m_urlsHarvested += numAdded;
-	cr->m_needsSave = true;
+	// . this is just how many urls we tried to index
+	// . move into Spider::addSpiderRequest()
+	//cr->m_localCrawlInfo.m_urlsHarvested += numAdded;
+	//cr->m_globalCrawlInfo.m_urlsHarvested += numAdded;
+	//cr->m_needsSave = true;
 
 	// save it
 	m_numOutlinksAdded      = numAdded;

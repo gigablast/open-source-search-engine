@@ -7915,14 +7915,15 @@ void Parms::init ( ) {
 
 	m->m_title = "site patterns";
 	m->m_xml   = "sitePatterns";
-	m->m_desc  = "List of sites to spider, one per line. "
+	m->m_desc  = "Restrict spider to these sites, one per line. "
 		"Gigablast uses the "
 		"<a href=/admin/scheduler#insitelist>insitelist</a> "
 		"directive on "
 		"the <a href=/admin/scheduler>spider scheduler</a> "
 		"page to make sure that the spider only indexes urls "
-		"that match the patterns you specify here. "
-		"See <a href=#examples>examples below</a>.";
+		"that match the site patterns you specify here. "
+		"See <a href=#examples>example site patterns</a> below. ";
+		"Limit list to 300MB.";
 	m->m_cgi   = "sitepatterns";
 	m->m_off   = (char *)&cr.m_siteListBuf - x;
 	m->m_page  = PAGE_BASIC_SETTINGS;
@@ -7931,6 +7932,7 @@ void Parms::init ( ) {
 	m->m_def   = "*";
 	m->m_flags = PF_TEXTAREA | PF_DUP;
 	m++;
+
 
 	m->m_title = "spider sites";
 	m->m_desc  = "Attempt to spider and index urls in the "
@@ -7982,7 +7984,8 @@ void Parms::init ( ) {
 		"the <a href=/admin/scheduler>spider scheduler</a> "
 		"page to make sure that the spider only indexes urls "
 		"that match the patterns you specify here. "
-		"See <a href=#examples>examples below</a>.";
+		"See <a href=#examples>example site patterns</a> below. "
+		"Limit list to 300MB.";
 	m->m_cgi   = "sitepatterns";
 	m->m_off   = (char *)&cr.m_siteListBuf - x;
 	m->m_page  = PAGE_SITES;
@@ -8005,7 +8008,6 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_flags = PF_NOSAVE ;
 	m++;
-
 
 	
 	

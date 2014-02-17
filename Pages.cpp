@@ -1141,7 +1141,33 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	// collection under that
 	status &= printCollectionNavBar ( sb, page , username , coll,pwd, qs );
 
-	sb->safePrintf("</div></TD>");
+	sb->safePrintf("</div>");
+
+	sb->safePrintf("<br>"
+		       "<b>Key</b>"
+		       "<br>"
+		       "<br>"
+		       );
+	sb->safePrintf(
+		       "<font color=black>"
+		       "&#x25cf;</font> spider is done"
+		       "<br>"
+
+		       "<font color=orange>"
+		       "&#x25cf;</font> spider is paused"
+		       "<br>"
+
+		       "<font color=green>"
+		       "&#x25cf;</font> spider is active"
+		       "<br>"
+
+		       "<font color=gray>"
+		       "&#x25cf;</font> spider queue is empty"
+		       "<br>"
+		       );
+
+
+	sb->safePrintf("</TD>");
 
 	// the controls will go here
 	sb->safePrintf("<TD valign=top>");
@@ -1966,6 +1992,32 @@ bool Pages::printCollectionNavBar ( SafeBuf *sb     ,
 			sb->safePrintf("<div class=e>");
 
 		sb->safePrintf("<nobr>");
+
+		// print color bullet
+		// green = active
+		// yellow = paused
+		// black = done
+		// gray = empty
+		// red = going but has > 50% errors in last 100 sample.
+		//       like timeouts etc.
+
+		CrawlInfo *ci = &cc->m_globalCrawlInfo;
+		char *bcolor = "";
+		if ( ! cc->m_spideringEnabled && ci->m_hasUrlsReadyToSpider )
+			bcolor = "orange";// yellow is too hard to see
+		if (   cc->m_spideringEnabled && ci->m_hasUrlsReadyToSpider )
+			bcolor = "green";
+		if ( ! ci->m_hasUrlsReadyToSpider )
+			bcolor = "black";
+		// when we first add a url via addurl or inject it will
+		// set hasUrlsReadyToSpider on all hosts to true i think
+		// and Spider.cpp increments urlsharvested.
+		if (   cc->m_spideringEnabled && 
+		     ! ci->m_hasUrlsReadyToSpider &&
+		       ci->m_urlsHarvested )
+			bcolor = "gray";
+
+		sb->safePrintf("<font color=%s>&#x25cf;</font> ",bcolor);
 
 		if ( i != collnum || ! highlight )// || ! coll || ! coll[0])
 			sb->safePrintf ( "<a title=\"%s\" "

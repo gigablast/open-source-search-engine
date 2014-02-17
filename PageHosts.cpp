@@ -389,6 +389,9 @@ skipReplaceHost:
 		sprintf(diskUsageMsg,"%.1f%%",h->m_diskUsage);
 		if ( h->m_diskUsage < 0.0 )
 			sprintf(diskUsageMsg,"???");
+		if ( h->m_diskUsage >= 98.0 )
+			sprintf(diskUsageMsg,"<font color=red><b>%.1f%%"
+				"</b></font>",h->m_diskUsage);
 
 
 		// split time, don't divide by zero!
