@@ -207,6 +207,35 @@ bool CommandRemoveConnectIpRow ( char *rec ) {
 	return true;
 }
 
+bool CommandRemovePasswordRow ( char *rec ) {
+	// sanity
+	long dataSize = getDataSizeFromParmRec ( rec );
+	if ( dataSize <= 1 ) {
+		log("parms: insert row data size = %li bad!",dataSize);
+		g_errno = EBADENGINEER;
+		return true;
+	}
+	// get the row #
+	char *data = getDataFromParmRec ( rec );
+	long rowNum = atol(data);
+	// scan all parms for url filter parms
+	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
+		Parm *m = &g_parms.m_parms[i];
+		// parm must be a url filters parm
+		if ( m->m_page != PAGE_SECURITY ) continue;
+		// must be an array!
+		if ( ! m->isArray() ) continue;
+		// sanity check
+		if ( m->m_obj != OBJ_CONF ) { char *xx=NULL;*xx=0; }
+		// must be master password
+		if ( m->m_type != TYPE_STRINGNONEMPTY ) continue;
+		// . nuke that parm's element
+		// . returns false and sets g_errno on error
+		if (!g_parms.removeParm(i,rowNum,(char *)&g_conf))return true;
+	}
+	return true;
+}
+
 bool CommandRemoveUrlFiltersRow ( char *rec ) {
 	// caller must specify collnum
 	collnum_t collnum = getCollnumFromParmRec ( rec );
@@ -2132,7 +2161,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		     m->m_type == TYPE_IP ) 
 			suffix = "ip";
 		if ( m->m_page == PAGE_SECURITY &&
-		     m->m_type == TYPE_STRING ) 
+		     m->m_type == TYPE_STRINGNONEMPTY ) 
 			suffix = "pwd";
 		if ( show )
 			sb->safePrintf ("<td><a href=\"?c=%s&" // cast=1&"
@@ -7640,6 +7669,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_STRINGNONEMPTY;
 	m->m_size  = PASSWORD_MAX_LEN+1;
 	m->m_page  = PAGE_SECURITY;
+	m->m_addin = 1; // "insert" follows?
 	m++;
 
 
@@ -7663,6 +7693,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_IP;
 	m->m_priv  = 2;
 	m->m_def   = "";
+	m->m_addin = 1; // "insert" follows?
 	//m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
@@ -7672,6 +7703,15 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
 	m->m_func  = CommandRemoveConnectIpRow;
+	m->m_cast  = 1;
+	m++;
+
+	m->m_title = "remove a password";
+	m->m_desc  = "remove a password";
+	m->m_cgi   = "removepwd";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_func  = CommandRemovePasswordRow;
 	m->m_cast  = 1;
 	m++;
 
