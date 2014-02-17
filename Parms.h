@@ -213,7 +213,8 @@ class Parms {
 			  long nc , 
 			  long pd ,
 			  bool isCrawlbot ,
-			  bool isJSON
+			  bool isJSON,
+			  TcpSocket *sock
 			  );
 
 	/*

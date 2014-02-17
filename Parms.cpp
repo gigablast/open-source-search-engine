@@ -1267,7 +1267,7 @@ bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	char *coll = r->getString ( "c"   );
 	if ( ! coll || ! coll[0] ) coll = "main";
 	CollectionRec *cr = g_collectiondb.getRec ( coll );
-	printParms2 ( sb, page, cr, nc, pd,0,0 );
+	printParms2 ( sb, page, cr, nc, pd,0,0 , s);
 	return true;
 }
 
@@ -1279,7 +1279,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			  long nc ,
 			  long pd , 
 			  bool isCrawlbot , 
-			  bool isJSON ) {
+			  bool isJSON ,
+			  TcpSocket *sock ) {
 	bool status = true;
 	s_count = 0;
 	// background color
@@ -1358,8 +1359,19 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 				  //"</font>"
 				  "</td></tr>\n"
 				  "<tr><td colspan=20><font size=-1>"
-				  "%s</font></td></tr>\n",
-				  DARK_BLUE,m->m_title,m->m_desc );
+				  ,DARK_BLUE,m->m_title);
+			// print the description
+			sb->safePrintf ( "%s" , m->m_desc );
+			// print users current ip if showing the list
+			// of "Master IPs" for admin access
+			if ( m->m_page == PAGE_SECURITY &&
+			     m->m_title &&
+			     strstr(m->m_title,"IP") )
+				sb->safePrintf(" <b>Your current IP is "
+					       "%s.</b>",iptoa(sock->m_ip));
+			// end the description
+			sb->safePrintf("</font></td></tr>\n");
+
 		}
 		// arrays always have blank line for adding stuff
 		if ( m->m_max > 1 )
@@ -1411,416 +1423,6 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 	return status;
 }
 
-/*
-char *Parms::printParm ( char *p    , 
-			 char *pend ,
-			 //long  user ,
-			 char *username,
-			 Parm *m    , 
-			 long  mm   , // m = &m_parms[mm]
-			 long  j    ,
-			 long  jend ,
-			 char *THIS ,
-			 char *coll ,
-			 char *pwd  ,
-			 char *bg   ,
-			 long  nc   ,
-			 long  pd   ) {
-	// do not print if no permissions
-	if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
-		return p;
-	//if ( m->m_perms != 0 && (m->m_perms & user) == 0 ) return p;
-	// do not print some if #define _CLIENT_ is true
-#ifdef _GLOBALSPEC_
-	if ( m->m_priv == 2 ) return p;
-	if ( m->m_priv == 3 ) return p;
-#elif _CLIENT_
-	if ( m->m_priv ) return p;
-#elif _METALINCS_
-	if ( m->m_priv == 2 ) return p;
-	if ( m->m_priv == 3 ) return p;
-#endif
-	// priv of 4 means do not print at all
-	if ( m->m_priv == 4 ) return p;
-
-	// what type of parameter?
-	char t = m->m_type;
-	// point to the data in THIS
-	char *s = THIS + m->m_off + m->m_size * j ;
-	// . if an array, passed our end, this is the blank line at the end
-	// . USE THIS EMPTY/DEFAULT LINE TO ADD NEW DATA TO AN ARRAY
-	// . make at least as big as a long long
-	if ( j >= jend ) s = "\0\0\0\0\0\0\0\0";
-	// delimit each cgi var if we need to
-	if ( m->m_cgi && gbstrlen(m->m_cgi) > 45 ) {
-		log(LOG_LOGIC,"admin: Cgi variable is TOO big.");
-		char *xx = NULL; *xx = 0;
-	}
-	char cgi[64];
-	if ( m->m_cgi ) {
-		if ( j > 0 ) sprintf ( cgi , "%s%li" , m->m_cgi , j );
-		else         sprintf ( cgi , "%s"    , m->m_cgi     );
-	}
-	// . display title and description of the control/parameter
-	// . the input cell of some parameters are colored
-	char *color = "";
-	if ( t == TYPE_CMD  || t == TYPE_BOOL2 ) color = " bgcolor=#0000ff";
-	if ( t == TYPE_BOOL ) {
-		if ( *s ) color = " bgcolor=#00ff00";
-		else      color = " bgcolor=#ff0000";
-	}
-	if ( t == TYPE_BOOL || t == TYPE_BOOL2 ) {
-		// disable controls not allowed in read only mode
-		if ( g_conf.m_readOnlyMode && m->m_rdonly )
-			  color = " bgcolor=#ffff00";
-	}
-
-	bool firstInRow = false;
-	if ( (s_count % nc) == 0 ) firstInRow = true;
-	s_count++;
-
-	if ( mm > 0 && m->m_rowid >= 0 && m_parms[mm-1].m_rowid == m->m_rowid )
-		firstInRow = false;
-	long firstRow = 0;
-	if ( m->m_page == PAGE_PRIORITIES ) firstRow = MAX_PRIORITY_QUEUES - 1;
-	// . use a separate table for arrays
-	// . make title and description header of that table
-	// . do not print all headers if not m_hdrs, a special case for the 
-	//   default line in the url filters table
-	if ( j == firstRow && m->m_rowid >= 0 && firstInRow && m->m_hdrs ) {
-		// print description as big comment
-		if ( m->m_desc && pd == 1 ) {
-			sprintf ( p , "<td colspan=20><font size=1>\n" );
-			p += gbstrlen ( p );
-			//p = htmlEncode ( p , pend , m->m_desc ,
-			//		 m->m_desc + gbstrlen ( m->m_desc ) );
-			sprintf ( p , "%s" , m->m_desc );
-			p += gbstrlen ( p );
-			sprintf ( p , "</font></td></tr><tr>\n" );
-			p += gbstrlen ( p );
-		}
-		// # column
-		// do not show this for PAGE_PRIORITIES it is confusing
-		if ( m->m_max > 1 && 
-		     m->m_page != PAGE_PRIORITIES ) {
-			sprintf ( p , "<td><b>#</b></td>\n" );
-			p += gbstrlen(p);
-		}
-		// print all headers
-		for ( long k = mm ; 
-		      k<m_numParms && m_parms[k].m_rowid==m->m_rowid; k++ ) {
-			sprintf ( p , "<td><b>%s</b></td>\n" ,
-				  m_parms[k].m_title );
-			p += gbstrlen(p);
-		}
-		sprintf ( p , "</tr>\n" ); // mdw added
-		p += gbstrlen ( p ); 
-	}
-	// print row start for single parm
-	if ( m->m_max <= 1 && ! m->m_hdrs ) {
-		if ( firstInRow ) {
-			sprintf ( p , "<tr bgcolor=#%s><td>" , bg );
-			p += gbstrlen ( p );
-		}
-		p += sprintf ( p , "<td width=%li%%>" , 100/nc/2 );
-	}
-
-	// print the title/description in current table for non-arrays
-	if ( m->m_max <= 1 && m->m_hdrs ) { // j == 0 && m->m_rowid < 0 ) {
-		if ( firstInRow )
-			p += sprintf ( p , "<tr bgcolor=#%s>",bg);
-		if ( t == TYPE_STRINGBOX ) {
-			sprintf ( p , "<td colspan=2><center>"
-				  "<b>%s</b><br><font size=1>",m->m_title );
-			p += gbstrlen ( p );
-			if ( pd ) 
-				p = htmlEncode (p,pend,m->m_desc,
-						m->m_desc+gbstrlen(m->m_desc));
-			sprintf ( p , "</font><br>\n" );
-		}
-		else {
-			sprintf ( p , "<td width=%li%%>" //"<td width=78%%>"
-				  "<b>%s</b><br><font size=1>",
-				  3*100/nc/2/4,m->m_title );
-			p += gbstrlen ( p );
-			if ( pd ) 
-				p  = htmlEncode (p,pend,m->m_desc,
-						 m->m_desc+gbstrlen(m->m_desc));
-			// and default value if it exists
-			if ( m->m_def && m->m_def[0] && t != TYPE_CMD ) {
-				char *d = m->m_def;
-				if ( t == TYPE_BOOL ) {
-					if ( d[0]=='0' ) d = "NO";
-					else             d = "YES";
-					sprintf ( p , " Default: %s.",d);
-					p += gbstrlen ( p );
-				} 
-				else {
-					sprintf ( p , " Default: ");
-					p += gbstrlen ( p );
-					p = htmlEncode (p,pend,d,d+gbstrlen(d) );
-				}
-			}
-			sprintf ( p , "</font></td>\n<td%s width=%li%%>" , 
-				  color , 100/nc/2/4 );
-		}
-		p += gbstrlen ( p );
-	}
-
-	// . print number in row if array, start at 1 for clarity's sake
-	// . used for url filters table, etc.
-	if ( m->m_max > 1 ) {
-		// but if it is in same row as previous, do not repeat it
-		// for this same row, silly
-		if ( firstInRow && m->m_page != PAGE_PRIORITIES ) 
-			sprintf ( p, "<tr><td>%li</td>\n<td>", j);//j+1 );
-		else if ( firstInRow ) 
-			sprintf ( p , "<tr><td>" );
-		else    
-			sprintf ( p, "<td>" );
-		p += gbstrlen ( p );
-	}
-
-	long cast = m->m_cast;
-	if ( g_proxy.isProxy() ) cast = 0;
-
-	// print the input box
-	if ( t == TYPE_BOOL ) {
-		char *tt, *v;
-		if ( *s ) { tt = "YES"; v = "0"; }
-		else      { tt = "NO" ; v = "1"; }
-		if ( g_conf.m_readOnlyMode && m->m_rdonly )
-			sprintf ( p, "<b>read-only mode</b>" );
-		// if cast=1, command IS broadcast to all hosts
-		else 
-			sprintf ( p, "<b><a href=\"/%s?c=%s&"
-				  "%s=%s&cast=%li\">"
-				  "<center>%s</center></a></b>", 
-				  g_pages.getPath(m->m_page),coll,
-				  cgi,v,cast,tt);
-	}
-	else if ( t == TYPE_BOOL2 ) {
-		if ( g_conf.m_readOnlyMode && m->m_rdonly )
-			sprintf ( p, "<b><center>read-only mode</center></b>");
-		// always use m_def as the value for TYPE_BOOL2
-		else
-			sprintf ( p, "<b><a href=\"/%s?c=%s&%s=%s&"
-				  "cast=1\">"
-				  "<center>%s</center></a></b>", 
-				  g_pages.getPath(m->m_page),coll,
-				  cgi,m->m_def, m->m_title);
-	}
-	else if ( t == TYPE_CHECKBOX ) {
-		char *ddd = "";
-		if ( *s ) ddd = " checked";
-		sprintf (p, "<input type=checkbox value=1 name=%s"
-			 "%s>",
-			 cgi,ddd);
-	}
-	else if ( t == TYPE_CHAR )
-		sprintf (p,"<input type=text name=%s value=\"%li\" "
-			 "size=3>",cgi,(long)(*s));
-	else if ( t == TYPE_PRIORITY ) 
-		printDropDown ( MAX_SPIDER_PRIORITIES , p , pend , cgi , *s , 
-				false , false );
-	else if ( t == TYPE_PRIORITY2 )
-		printDropDown ( MAX_SPIDER_PRIORITIES , p , pend , cgi , *s , 
-				true , true );
-	else if ( t == TYPE_RETRIES    ) 
-		printDropDown ( 4 , p , pend , cgi , *s , false , false );
-	else if ( t == TYPE_PRIORITY_BOXES ) {
-		// print ALL the checkboxes when we get the first parm
-		if ( j != 0 ) return p;
-		printCheckBoxes ( MAX_SPIDER_PRIORITIES , p , pend , cgi , s );
-	}
-	else if ( t == TYPE_CMD )
-		// if cast=0 it will be executed, otherwise it will be
-		// broadcasted with cast=1 to all hosts and they will all
-		// execute it
-		sprintf ( p, "<b><a href=\"/%s?c=%s&%s=1&cast=%li\">"
-			  "<center>%s</center></a></b>",
-			  g_pages.getPath(m->m_page),coll,
-			  cgi,cast,m->m_title);
-	else if ( t == TYPE_FLOAT )
-		sprintf (p,"<input type=text name=%s value=\"%.03f\" "
-			 "size=12>",cgi,*(float *)s);
-	else if ( t == TYPE_IP ) {
-		if ( m->m_max > 0 && j == jend ) 
-			sprintf (p,"<input type=text name=%s value=\"\" "
-				 "size=12>",cgi);
-		else
-			sprintf (p,"<input type=text name=%s value=\"%s\" "
-				 "size=12>",cgi,iptoa(*(long *)s));
-	}
-	else if ( t == TYPE_LONG ) 
-		sprintf (p,"<input type=text name=%s value=\"%li\" "
-			 "size=12>",cgi,*(long *)s);
-	else if ( t == TYPE_LONG_CONST ) 
-		sprintf (p,"%li",*(long *)s);
-	else if ( t == TYPE_LONG_LONG )
-		sprintf (p,"<input type=text name=%s value=\"%lli\" "
-			 "size=32>",cgi,*(long long *)s);
-	else if ( t == TYPE_STRING || t == TYPE_STRINGNONEMPTY ) {
-		long size = m->m_size;
-		if ( size > 25 ) size = 25;
-		sprintf (p,"<input type=text name=%s size=%li value=\"",
-			 cgi,size);
-		p += gbstrlen(p);
-		p += dequote ( p , pend , s , gbstrlen(s) );
-		sprintf (p,"\">");
-	}
-	else if ( t == TYPE_STRINGBOX ) {
-		sprintf(p,"<textarea rows=10 cols=64 name=%s>",cgi);
-		p += gbstrlen(p);
-		//p += urlEncode ( p , pend - p , s , gbstrlen(s) );
-		//p += htmlDecode ( p , s , gbstrlen(s) );
-		p = htmlEncode ( p , pend , s , s + gbstrlen(s) );
-		//sprintf ( p , "%s" , s );
-		//p += gbstrlen(p);		
-		sprintf (p,"</textarea>\n");
-	}
-	else if ( t == TYPE_CONSTANT ) 
-		sprintf (p,"%s",m->m_title);
-	else if ( t == TYPE_MONOD2 )
-		sprintf ( p , "%li" , j / 2 );
-	else if ( t == TYPE_MONOM2 ) 
-		sprintf ( p , "%li" , j % 2 );
-	else if ( t == TYPE_RULESET ) ;
-		// subscript is already included in "cgi"
-		//p = g_pages.printRulesetDropDown ( p          ,
-		//				   pend       ,
-		//				   user       ,
-		//				   cgi        ,
-		//				   *(long *)s ,  // selected  
-		//				   -1         ); // subscript
-	else if ( t == TYPE_TIME ) {
-		//time is stored as a string
-		//if time is not stored properly, just write 00:00
-		if ( s[2] != ':' )
-			strncpy ( s, "00:00", 5 );
-		char hr[3];
-		char min[3];
-		memcpy ( hr, s, 2 );
-		memcpy ( min, s + 3, 2 );
-		hr[2] = '\0';
-		min[2] = '\0';
-		// print the time in the input forms
-		sprintf(p,
-			"<input type=text name=%shr size=2 "
-			"value=%s>h " 
-			"<input type=text name=%smin size=2 "
-			"value=%s>m " ,
-			cgi    , 
-			hr ,
-			cgi    , 
-			min  );
-	}
-
-	else if ( t == TYPE_DATE || t == TYPE_DATE2 ) {
-		// time is stored as long
-		long ct = *(long *)s;
-		// get the time struct
-		struct tm *tp = gmtime ( (time_t *)&ct ) ;
-		// set the "selected" month for the drop down
-		char *ss[12];
-		for ( long i = 0 ; i < 12 ; i++ ) ss[i]="";
-		long month = tp->tm_mon;
-		if ( month < 0 || month > 11 ) month = 0; // Jan
-		ss[month] = " selected";
-		// print the date in the input forms
-		sprintf(p,
-			"<input type=text name=%sday "
-			"size=2 value=%li> "
-			"<select name=%smon>"
-			"<option value=0%s>Jan"
-			"<option value=1%s>Feb"
-			"<option value=2%s>Mar"
-			"<option value=3%s>Apr"
-			"<option value=4%s>May"
-			"<option value=5%s>Jun"
-			"<option value=6%s>Jul"
-			"<option value=7%s>Aug"
-			"<option value=8%s>Sep"
-			"<option value=9%s>Oct"
-			"<option value=10%s>Nov"
-			"<option value=11%s>Dec"
-			"</select>\n"
-			"<input type=text name=%syr size=4 value=%li>"
-			"<br>"
-			"<input type=text name=%shr size=2 "
-			"value=%02li>h " 
-			"<input type=text name=%smin size=2 "
-			"value=%02li>m " 
-			"<input type=text name=%ssec size=2 "
-			"value=%02li>s" ,
-			cgi    ,
-			(long)tp->tm_mday ,
-			cgi    ,
-			ss[0],ss[1],ss[2],ss[3],ss[4],ss[5],ss[6],ss[7],ss[8],
-			ss[9],ss[10],ss[11],
-			cgi    ,
-			(long)tp->tm_year + 1900 ,
-			cgi    , 
-			(long)tp->tm_hour ,
-			cgi    , 
-			(long)tp->tm_min  ,
-			cgi    ,
-			(long)tp->tm_sec  );
-	}
-	else if ( t == TYPE_SITERULE ) {
-		// print the siterec rules as a drop down
-		char *ss[5];
-		for ( long i = 0; i < 5; i++ ) ss[i] = "";
-		long v = *(long*)s;
-		if ( v < 0 || v > 4 ) v = 0;
-		ss[v] = " selected";
-		sprintf ( p, "<select name=%s>"
-			     "<option value=0%s>Hostname"
-			     "<option value=1%s>Path Depth 1"
-			     "<option value=2%s>Path Depth 2"
-			     "<option value=3%s>Path Depth 3"
-			     "</select>\n",
-			     cgi, ss[0], ss[1], ss[2], ss[3] );
-	}
-
-	p += gbstrlen ( p );
-
-	// end the input cell
-	sprintf ( p , "</td>\n");
-	p += gbstrlen ( p );
-
-	// "insert above" link? used for arrays only, where order matters
-	if ( m->m_addin && j < jend ) {
-		sprintf ( p , "<td><a href=\"?c=%s&cast=1&"
-			  "ins_%s=1\">insert</td>\n",coll,cgi );
-		p += gbstrlen ( p );
-	}
-
-	// does next guy start a new row?
-	bool lastInRow = true; // assume yes
-	if ( mm+1<m_numParms&&m->m_rowid>=0&&m_parms[mm+1].m_rowid==m->m_rowid)
-		lastInRow = false;
-	if ( ((s_count-1) % nc) != (nc-1) ) lastInRow = false;
-
-	// . display the remove link for arrays if we need to
-	// . but don't display if next guy does NOT start a new row
-	if ( m->m_max > 1 && lastInRow &&
-	     m->m_page != PAGE_PRIORITIES ) {
-		if ( j < jend  )
-			sprintf ( p , "<td><a href=\"?c=%s&cast=1&"
-				  "rm_%s=1\">"
-				  "remove</td>\n",coll,cgi );
-		else
-			sprintf ( p , "<td></td>\n");
-		p += gbstrlen ( p );
-	}
-
-	if ( lastInRow ) sprintf ( p , "</tr>\n");
-	p += gbstrlen ( p );
-
-	return p;
-}
-*/
 
 bool Parms::printParm ( SafeBuf* sb,
 			//long  user ,
@@ -7922,7 +7524,7 @@ void Parms::init ( ) {
 		"the <a href=/admin/scheduler>spider scheduler</a> "
 		"page to make sure that the spider only indexes urls "
 		"that match the site patterns you specify here. "
-		"See <a href=#examples>example site patterns</a> below. ";
+		"See <a href=#examples>example site patterns</a> below. "
 		"Limit list to 300MB.";
 	m->m_cgi   = "sitepatterns";
 	m->m_off   = (char *)&cr.m_siteListBuf - x;
