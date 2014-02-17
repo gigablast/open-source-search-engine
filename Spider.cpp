@@ -5454,7 +5454,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 		// hit pages to process max?
 		if ( cr->m_maxToProcess > 0 &&
-		     cr->m_isCustomCrawl &&
+		     cr->m_isCustomCrawl == 1 && // bulk jobs exempt!
 		     cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound >=
 		     cr->m_maxToProcess ) {
 			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
