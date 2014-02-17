@@ -5437,7 +5437,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 		// hit pages to crawl max?
 		if ( cr->m_maxToCrawl > 0 &&
-		     cr->m_isCustomCrawl &&
+		     cr->m_isCustomCrawl == 1 && // bulk jobs exempt!
 		     cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound >=
 		     cr->m_maxToCrawl ) {
 			// now once all hosts have no urls ready to spider
