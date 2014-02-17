@@ -2096,6 +2096,9 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	// default to 250ms i guess. -1 means unset i think.
 	if ( m_collectiveCrawlDelay < 0.0 ) wait = 250;
 
+	bool isEthan = false;
+	if (m_coll)isEthan=strstr(m_coll,"2b44a0e0bb91bbec920f7efd29ce3d5b");
+
 	// make the gigablast regex table just "default" so it does not
 	// filtering, but accepts all urls. we will add code to pass the urls
 	// through m_diffbotUrlCrawlPattern alternatively. if that itself
@@ -2106,6 +2109,9 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_maxSpidersPerRule [i] = 100;
 		m_spiderIpWaits     [i] = wait;
 		m_spiderIpMaxSpiders[i] = 7; // keep it respectful
+		// ethan wants some speed
+		if ( isEthan )
+			m_spiderIpMaxSpiders[i] = 30;
 		//m_spidersEnabled    [i] = 1;
 		m_spiderFreqs       [i] =m_collectiveRespiderFrequency;
 		//m_spiderDiffbotApiUrl[i].purge();
