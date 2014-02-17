@@ -138,7 +138,7 @@ class Collectiondb  {
 	//bool updateRec ( CollectionRec *newrec );
 	bool deleteRecs ( class HttpRequest *r ) ;
 
-	void deleteSpiderColl ( class SpiderColl *sc );
+	//void deleteSpiderColl ( class SpiderColl *sc );
 
 	// returns false if blocked, true otherwise. 
 	//bool resetColl ( char *coll , WaitEntry *we , bool purgeSeeds );

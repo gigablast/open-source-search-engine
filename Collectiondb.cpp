@@ -688,6 +688,8 @@ bool Collectiondb::deleteRec ( char *coll , WaitEntry *we ) {
 
 // if there is an outstanding disk read thread or merge thread then
 // Spider.cpp will handle the delete in the callback.
+// this is now tryToDeleteSpiderColl in Spider.cpp
+/*
 void Collectiondb::deleteSpiderColl ( SpiderColl *sc ) {
 
 	sc->m_deleteMyself = true;
@@ -701,6 +703,7 @@ void Collectiondb::deleteSpiderColl ( SpiderColl *sc ) {
 		return;
 	}
 }
+*/
 
 bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	// do not allow this if in repair mode
@@ -794,7 +797,7 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		//sc->reset();
 		// this will put it on "death row" so it will be deleted
 		// once Msg5::m_waitingForList/Merge is NULL
-		deleteSpiderColl ( sc );
+		tryToDeleteSpiderColl ( sc );
 		//mdelete ( sc, sizeof(SpiderColl),"nukecr2");
 		//delete ( sc );
 		cr->m_spiderColl = NULL;
@@ -1004,7 +1007,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 		//sc->reset();
 		// this will put it on "death row" so it will be deleted
 		// once Msg5::m_waitingForList/Merge is NULL
-		deleteSpiderColl ( sc );
+		tryToDeleteSpiderColl ( sc );
 		//mdelete ( sc, sizeof(SpiderColl),"nukecr2");
 		//delete ( sc );
 		cr->m_spiderColl = NULL;

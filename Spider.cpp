@@ -1121,6 +1121,7 @@ long SpiderColl::getTotalOutstandingSpiders ( ) {
 
 // load the tables that we set when m_doInitialScan is true
 bool SpiderColl::load ( ) {
+
 	// error?
 	long err = 0;
 	// make the dir
@@ -1149,6 +1150,10 @@ bool SpiderColl::load ( ) {
 					  -1         ))// numPtrsMax
 		return log("spider: dcache init failed");
 
+	// this has a quickpoll in it, so that quickpoll processes
+	// a restart request from crawlbottesting for this collnum which
+	// calls Collectiondb::resetColl2() which calls deleteSpiderColl()
+	// on THIS spidercoll, but our m_loading flag is set
 	if (!m_sniTable.set   ( 4,8,5000,NULL,0,false,MAX_NICENESS,"snitbl") )
 		return false;
 	if (!m_cdTable.set    (4,4,3000,NULL,0,false,MAX_NICENESS,"cdtbl"))
