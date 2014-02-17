@@ -7555,6 +7555,7 @@ void Parms::init ( ) {
 	m->m_title = "site patterns";
 	m->m_xml   = "sitePatterns";
 	m->m_desc  = "Restrict spider to these sites, one per line. "
+		"Leave empty for no spidering restrictions. "
 		"Gigablast uses the "
 		"<a href=/admin/scheduler#insitelist>insitelist</a> "
 		"directive on "
@@ -7568,7 +7569,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
-	m->m_def   = "*";
+	m->m_def   = "";
 	m->m_flags = PF_TEXTAREA | PF_DUP;
 	m++;
 
@@ -7616,13 +7617,14 @@ void Parms::init ( ) {
 	///////////////////////////////////////////
 	m->m_title = "site patterns";
 	m->m_xml   = "sitePatterns";
-	m->m_desc  = "List of sites to spider, one per line. "
+	m->m_desc  = "Restrict spider to these sites, one per line. "
+		"Leave empty for no spidering restrictions. "
 		"Gigablast uses the "
 		"<a href=/admin/scheduler#insitelist>insitelist</a> "
 		"directive on "
 		"the <a href=/admin/scheduler>spider scheduler</a> "
 		"page to make sure that the spider only indexes urls "
-		"that match the patterns you specify here. "
+		"that match the site patterns you specify here. "
 		"See <a href=#examples>example site patterns</a> below. "
 		"Limit list to 300MB.";
 	m->m_cgi   = "sitepatterns";
@@ -7630,7 +7632,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SITES;
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
-	m->m_def   = "*";
+	m->m_def   = "";
 	m->m_flags = PF_TEXTAREA ;
 	m++;
 

@@ -2267,8 +2267,16 @@ static bool printResult ( SafeBuf &sb,
 				      "]]>"
 				      "</contentType>\n",
 				      cs);
-		else
-			sb.safePrintf(" (%s) &nbsp;" ,cs);
+		else {
+			sb.safePrintf(" <b><font style=color:white;"
+				      "background-color:maroon;>");
+			char *p = cs;
+			for ( ; *p ; p++ ) {
+				char c = to_upper_a(*p);
+				sb.pushChar(c);
+			}
+			sb.safePrintf("</font></b> &nbsp;");
+		}
 	}
 
 	////////////
