@@ -4047,9 +4047,8 @@ bool SpiderColl::scanListForWinners ( ) {
 			// get the spider time of lowest scoring req in tree
 			long long tm2 = m_tailTimeMS;
 			// if they are both overdue, make them the same
-			// no, because we should spider one we got first first
-			//if ( tm1 < nowGlobalMS ) tm1 = 1;
-			//if ( tm2 < nowGlobalMS ) tm2 = 1;
+			if ( tm1 < nowGlobalMS ) tm1 = 1;
+			if ( tm2 < nowGlobalMS ) tm2 = 1;
 			// skip spider request if its time is past winner's
 			if ( tm1 > tm2 )
 				continue;
