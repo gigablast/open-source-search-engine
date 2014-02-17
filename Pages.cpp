@@ -2620,31 +2620,37 @@ bool printRedBox ( SafeBuf *mb ) {
 
 	PingServer *ps = &g_pingServer;
 
-	mb->safePrintf(//"<center>"
-		      "<table cellpadding=5 "
-		      "style=\""
-		      "background-color:#ff6666;"
-		      "border:2px #8f0000 solid;"
-		      "border-radius:5px;"
-		      "max-width:600px;"
-		      "\" "
-		      "border=0"
-		      ">"
-		      "<tr><td>");
+	char *box = 
+		"<table cellpadding=5 "
+		// full width of enclosing div
+		"width=100%% "
+		"style=\""
+		"background-color:#ff6666;"
+		"border:2px #8f0000 solid;"
+		"border-radius:5px;"
+		//"max-width:500px;"
+		"\" "
+		"border=0"
+		">"
+		"<tr><td>";
+	char *boxEnd =
+		"</td></tr></table>";
 
 	bool adds = false;
 
 
-
+	mb->safePrintf("<div style=max-width:500px;>");
 
 	if ( g_conf.m_numConnectIps == 0 && g_conf.m_numMasterPwds == 0 ) {
-		if ( adds ) mb->safePrintf("<br><br>");
+		if ( adds ) mb->safePrintf("<br>");
 		adds++;
+		mb->safePrintf("%s",box);
 		mb->safePrintf("URGENT. Please specify a password "
 			       "or IP address in the "
 			       "<a href=/admin/security>security</a> "
 			       "table. Right now anybody might be able "
 			       "to access the Gigablast admin controls.");
+		mb->safePrintf("%s",boxEnd);
 	}
 
 	// out of disk space?
@@ -2655,61 +2661,69 @@ bool printRedBox ( SafeBuf *mb ) {
 		out++;
 	}
 	if ( out > 0 ) {
-		if ( adds ) mb->safePrintf("<br><br>");
+		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		char *s = "s are";
 		if ( out == 1 ) s = " is";
+		mb->safePrintf("%s",box);
 		mb->safePrintf("%li host%s over 98%% disk usage. "
 			       "See the <a href=/admin/hosts>"
 			       "hosts</a> table.",out,s);
+		mb->safePrintf("%s",boxEnd);
 	}
 
 
 	if ( g_pingServer.m_hostsConfInDisagreement ) {
-		if ( adds ) mb->safePrintf("<br><br>");
+		if ( adds ) mb->safePrintf("<br>");
 		adds++;
+		mb->safePrintf("%s",box);
 		mb->safePrintf("The hosts.conf or localhosts.conf file "
 			      "is not the same over all hosts.");
+		mb->safePrintf("%s",boxEnd);
 	}
 
 	if ( g_rebalance.m_isScanning ) {
-		if ( adds ) mb->safePrintf("<br><br>");
+		if ( adds ) mb->safePrintf("<br>");
 		adds++;
+		mb->safePrintf("%s",box);
 		mb->safePrintf("Rebalancer is currently running.");
+		mb->safePrintf("%s",boxEnd);
 	}
 	// if any host had foreign recs, not that
 	char *needsRebalance = g_rebalance.getNeedsRebalance();
 	if ( ! g_rebalance.m_isScanning &&
 	     needsRebalance &&
 	     *needsRebalance ) {
-		if ( adds ) mb->safePrintf("<br><br>");
+		if ( adds ) mb->safePrintf("<br>");
 		adds++;
+		mb->safePrintf("%s",box);
 		mb->safePrintf("A host requires a shard rebalance. "
-			      "Click 'rebalance shards' in master controls to "
-			      "rebalance all hosts.");
+			      "Click 'rebalance shards' in master controls "
+			       "to rebalance all hosts.");
+		mb->safePrintf("%s",boxEnd);
 	}
 
 	if ( ps->m_numHostsDead ) {
-		if ( adds ) mb->safePrintf("<br><br>");
+		if ( adds ) mb->safePrintf("<br>");
 		adds++;
 		char *s = "hosts are";
 		if ( ps->m_numHostsDead == 1 ) s = "host is";
+		mb->safePrintf("%s",box);
 		mb->safePrintf("%li %s dead and not responding to "
 			      "pings.",ps->m_numHostsDead ,s );
+		mb->safePrintf("%s",boxEnd);
 	}
 
 	if ( ! g_conf.m_useThreads || g_threads.m_disabled ) {
-		if ( adds ) mb->safePrintf("<br><br>");
+		if ( adds ) mb->safePrintf("<br>");
 		adds++;
+		mb->safePrintf("%s",box);
 		mb->safePrintf("Threads are disabled. Severely hurts "
 			      "performance.");
+		mb->safePrintf("%s",boxEnd);
 	}
 
-	mb->safePrintf("</td></tr></table>"
-		      //"</center>"
-		       //"<br>"
-		       );
-
+	mb->safePrintf("</div>");
 
 	return adds;
 }
