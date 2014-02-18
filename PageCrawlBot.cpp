@@ -363,6 +363,13 @@ bool readAndSendLoop ( StateCD *st , bool readFirst ) {
 	// over the network. return if that blocked
 	if ( readFirst && ! st->readDataFromRdb ( ) ) return false;
 
+	// did user delete their collection midstream on us?
+	if ( g_errno ) {
+		log("crawlbot: read shard data had error: %s",
+		    mstrerror(g_errno));
+		goto subloop;
+	}
+
 	// send it to the browser socket. returns false if blocks.
 	if ( ! st->sendList() ) return false;
 
@@ -416,6 +423,14 @@ bool StateCD::readDataFromRdb ( ) {
 	key128_t ek; KEYMAX((char *)&ek,sizeof(key128_t));
 
 	CollectionRec *cr = g_collectiondb.getRec(m_collnum);
+	// collection got nuked?
+	if ( ! cr ) {
+		log("crawlbot: readdatafromrdb: coll %li got nuked",
+		    (long)m_collnum);
+		g_errno = ENOCOLLREC;
+		return true;
+	}
+
 	// top:
 	// launch one request to each shard
 	for ( long i = 0 ; i < g_hostdb.m_numShards ; i++ ) {

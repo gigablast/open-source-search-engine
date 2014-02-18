@@ -1866,7 +1866,9 @@ bool CollectionRec::save ( ) {
 	snprintf ( tmp , 1023, "%scoll.%s.%li/localcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
 	//log("coll: saving %s",tmp);
-	SafeBuf sb;
+	// in case emergency save from malloc core, do not alloc
+	char stack[1024];
+	SafeBuf sb(stack,1024);
 	//m_localCrawlInfo.print ( &sb );
 	// binary now
 	sb.safeMemcpy ( &m_localCrawlInfo , sizeof(CrawlInfo) );

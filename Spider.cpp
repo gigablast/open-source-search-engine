@@ -1004,10 +1004,32 @@ SpiderColl *SpiderCache::getSpiderCollIffNonNull ( collnum_t collnum ) {
 }
 
 bool tryToDeleteSpiderColl ( SpiderColl *sc ) {
+	// if not being deleted return false
 	if ( ! sc->m_deleteMyself ) return false;
-	if ( sc->m_msg5b.m_waitingForList ) return false;
-	if ( sc->m_msg1.m_mcast.m_inUse ) return false;
-	if ( sc->m_isLoading ) return false;
+	// otherwise always return true
+	if ( sc->m_msg5b.m_waitingForList ) {
+		log("spider: deleting sc=0x%lx for collnum=%li waiting1",
+		    (long)sc,(long)sc->m_collnum);
+		return true;
+	}
+	if ( sc->m_msg1.m_mcast.m_inUse ) {
+		log("spider: deleting sc=0x%lx for collnum=%li waiting2",
+		    (long)sc,(long)sc->m_collnum);
+		return true;
+	}
+	if ( sc->m_isLoading ) {
+		log("spider: deleting sc=0x%lx for collnum=%li waiting3",
+		    (long)sc,(long)sc->m_collnum);
+		return true;
+	}
+	// there's still a core of someone trying to write to someting
+	// in "sc" so we have to try to fix that. somewhere in xmldoc.cpp
+	// or spider.cpp. everyone should get sc from cr everytime i'd think
+	log("spider: deleting sc=0x%lx for collnum=%li",
+	    (long)sc,(long)sc->m_collnum);
+	CollectionRec *cr = sc->m_cr;
+	// make sure nobody has it
+	cr->m_spiderColl = NULL;
 	mdelete ( sc , sizeof(SpiderColl),"postdel1");
 	delete ( sc );
 	return true;
@@ -3277,7 +3299,6 @@ bool SpiderColl::evalIpLoop ( ) {
 	if ( tryToDeleteSpiderColl ( this ) )
 		// pretend to block since we got deleted!!!
 		return false;
-
 
 	// . did reading the list from spiderdb have an error?
 	// . i guess we don't add to doledb then

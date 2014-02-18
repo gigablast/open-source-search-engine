@@ -18371,8 +18371,15 @@ void handleRequest3fLoop ( void *weArg ) {
 		// . no, because if they change the filters and there are
 		//   still no urls to spider i don't want to get another
 		//   email alert!!
-		//cr->m_localCrawlInfo .m_hasUrlsReadyToSpider = true;
-		//cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
+		// . no, we need to because it might have added one more
+		//   url to be spidered then it'll be done! otherwise
+		//   we can change our url filters to try to spider more urls
+		//   but nothing will happen if the job has already completed
+		//   unless we set these things to true
+		log("parms: reviving collection %s (%li) for parm change",
+		    cx->m_coll,(long)cx->m_collnum);
+		cx->m_localCrawlInfo .m_hasUrlsReadyToSpider = true;
+		cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
 		// . reconstruct the url filters if we were a custom crawl
 		// . this is used to abstract away the complexity of url
 		//   filters in favor of simple regular expressions and
