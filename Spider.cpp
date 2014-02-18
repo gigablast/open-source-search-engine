@@ -29,7 +29,9 @@ void testWinnerTreeKey ( ) ;
 // . we consider the collection done spidering when no urls to spider
 //   for this many seconds
 // . i'd like to set back to 10 for speed... maybe even 5 or less
-#define SPIDER_DONE_TIMER 20
+// . back to 30 from 20 to try to fix crawls thinking they are done
+//   maybe because of the empty doledb logic taking too long?
+#define SPIDER_DONE_TIMER 30
 
 // seems like timecity.com as gigabytes of spiderdb data so up from 40 to 400
 #define MAX_WINNER_NODES 400
