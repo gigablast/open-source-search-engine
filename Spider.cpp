@@ -4404,7 +4404,19 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	}
 
 
+	// i am seeing dup uh48's in the m_winnerTree
 	long firstIp = m_waitingTreeKey.n0 & 0xffffffff;
+	char dbuf[3*MAX_WINNER_NODES*(8+1)];
+	HashTableX dedup;
+	long ntn = m_winnerTree.getNumNodes();
+	dedup.set ( 8,
+		    0,
+		    (long)2*ntn, // # slots to initialize to
+		    dbuf,
+		    (long)(3*MAX_WINNER_NODES*(8+1)),
+		    false,
+		    MAX_NICENESS,
+		    "windt");
 
 	///////////
 	//
@@ -4449,6 +4461,20 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 						   winSpiderTimeMS / 1000     ,
 						   winUh48 ,
 						   false                    );
+		// dedup. if we add dups the problem is is that they
+		// overwrite the key in doledb yet the doleiptable count
+		// remains undecremented and doledb is empty and never
+		// replenished because the firstip can not be added to
+		// waitingTree because doleiptable count is > 0. this was
+		// causing spiders to hang for collections. i am not sure
+		// why we should be getting dups in winnertree because they
+		// have the same uh48 and that is the key in the tree.
+		if ( dedup.isInTable ( &winUh48 ) ) {
+			log("spider: got dup uh48=%llu dammit", winUh48);
+			continue;
+		}
+		// do not allow dups
+		dedup.addKey ( &winUh48 );
 		// store doledb key first
 		if ( ! m_doleBuf.safeMemcpy ( &doleKey, sizeof(key_t) ) ) 
 			hadError = true;
@@ -4851,11 +4877,13 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 	// update how many per ip we got doled
 	long *score = (long *)m_doleIpTable.getValue32 ( sreq->m_firstIp );
 	// debug point
-	if ( g_conf.m_logDebugSpider && 1 == 2 ) { // disable for now, spammy
+	if ( g_conf.m_logDebugSpider ){//&&1==2 ) { // disable for now, spammy
 		long long  uh48 = sreq->getUrlHash48();
 		long long pdocid = sreq->getParentDocId();
 		long ss = 1;
 		if ( score ) ss = *score + 1;
+		// if for some reason this collides with another key
+		// already in doledb then our counts are off
 		log("spider: added to doletbl uh48=%llu parentdocid=%llu "
 		    "ipdolecount=%li ufn=%li priority=%li firstip=%s",
 		    uh48,pdocid,ss,(long)sreq->m_ufn,(long)sreq->m_priority,
@@ -8530,15 +8558,20 @@ bool sendPage ( State11 *st ) {
 	//
 	/////
 
+	long ns = 0;
+	if ( sc ) ns = sc->m_doleIpTable.getNumSlotsUsed();
+
 	// begin the table
 	sb.safePrintf ( "<table %s>\n"
 			"<tr><td colspan=50>"
 			"<b>URLs Ready to Spider for collection "
 			"<font color=red><b>%s</b>"
 			"</font>"
+			" (%li ips in doleiptable)"
 			,
 			TABLE_STYLE,
-			st->m_coll );
+			st->m_coll ,
+			ns );
 
 	// print time format: 7/23/1971 10:45:32
 	time_t nowUTC = getTimeGlobal();
