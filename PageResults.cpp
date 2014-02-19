@@ -1572,10 +1572,10 @@ bool printSearchResultsTail ( State0 *st ) {
 
 
 	// if ended in ",\n" cuz it was json, remove that
-	if ( si->m_format == FORMAT_JSON && sb->length() >= 4 ) {
-		char *p = sb->getBuf() - 2;
-		if ( p[0] ==',' && p[1] == '\n' ) sb->incrementLength(-2);
-	}
+	//if ( si->m_format == FORMAT_JSON && sb->length() >= 4 ) {
+	//	char *p = sb->getBuf() - 2;
+	//	if ( p[0] ==',' && p[1] == '\n' ) sb->incrementLength(-2);
+	//}
 
 	if ( si->m_format == FORMAT_JSON ) {	
 		// print ending ] for json
@@ -2091,6 +2091,11 @@ bool printResult ( State0 *st, long ix ) {
 
 	// just print cached web page?
 	if ( mr->ptr_content ) {
+
+		// for json items separate with \n,\n
+		if ( si->m_format != FORMAT_HTML && ix>0 )
+			sb->safePrintf(",\n");
+
 		sb->safeStrcpy ( mr->ptr_content );
 		// . let's hack the spidertime onto the end
 		// . so when we sort by that using gbsortby:spiderdate
@@ -2105,16 +2110,13 @@ bool printResult ( State0 *st, long ix ) {
 			// so fix that shit here...
 			//float f = mr->m_lastSpidered;
 			//sb->safePrintf(",\"lastCrawlTimeUTC\":%.0f}",f);
-			sb->safePrintf(",\"lastCrawlTimeUTC\":%li}",
+			sb->safePrintf(",\"lastCrawlTimeUTC\":%li}\n",
 				       mr->m_lastSpidered);
 		}
 
 		//mr->size_content );
 		if ( si->m_format == FORMAT_HTML )
 			sb->safePrintf("\n\n<br><br>\n\n");
-		// for json items separate with \n
-		if ( si->m_format != FORMAT_HTML )
-			sb->safePrintf("\n,\n");
 		// just in case
 		sb->nullTerm();
 		return true;
