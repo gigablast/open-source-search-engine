@@ -35,6 +35,99 @@
 #include "DiskPageCache.h"
 #include "Titledb.h"
 
+// . get the inlinkers to this SITE (any page on this site)
+// . use that to compute a site quality
+// . also get the inlinkers sorted by date and see how many good inlinkers
+//   we had since X days ago. (each inlinker needs a pub/birth date)
+class Msg25Request {
+public:
+	// either MODE_PAGELINKINFO or MODE_SITELINKINFO
+	char       m_mode; // bool       m_isSiteLinkInfo    ;
+	long       m_ip                ;
+	long long  m_docId             ;
+	collnum_t  m_collnum           ;
+	bool       m_isInjecting       ;
+	bool       m_printInXml        ;
+
+	// when we get a reply we call this
+	void      *m_state               ;
+	void    (* m_callback)(void *state) ;
+
+	// server-side parms so it doesn't have to allocate a state
+	//SafeBuf    m_pbuf        ;
+	//SafeBuf    m_linkInfoBuf ;
+
+	//char    *coll              ;
+	//char    *qbuf              ;
+	//long     qbufSize          ;
+	//XmlDoc  *xd                ;
+
+	long       m_siteNumInlinks      ;
+	LinkInfo  *m_oldLinkInfo         ;
+	long       m_niceness            ;
+	bool       m_doLinkSpamCheck     ;
+	bool       m_oneVotePerIpDom     ;
+	bool       m_canBeCancelled      ;
+	long       m_lastUpdateTime      ;
+	bool       m_onlyNeedGoodInlinks  ;
+	bool       m_getLinkerTitles ;
+	long       m_ourHostHash32 ;
+	long       m_ourDomHash32 ;
+
+	char      *ptr_site                ;
+	char      *ptr_url                 ;
+	char      *ptr_pbuf;
+	char      *ptr_linkInfoBuf;
+
+	long       size_site;
+	long       size_url;
+	long       size_pbuf;
+	long       size_linkInfoBuf;
+};
+
+// . returns false if blocked, true otherwise
+// . sets errno on error
+// . your req->m_callback will be called with the Msg25Reply
+bool getLinkInfo ( char      *site ,
+		   char      *url  ,
+		   bool       isSiteLinkInfo ,
+		   long       ip                  ,
+		   long long  docId               ,
+		   char      *coll                ,
+		   char      *qbuf                ,
+		   long       qbufSize            ,
+		   void      *state               ,
+		   void (* callback)(void *state) ,
+		   bool       isInjecting         ,
+		   SafeBuf   *pbuf                ,
+		   class XmlDoc *xd ,
+		   long       siteNumInlinks      ,
+		   //long       sitePop             ,
+		   LinkInfo  *oldLinkInfo         ,
+		   long       niceness            ,
+		   bool       doLinkSpamCheck     ,
+		   bool       oneVotePerIpDom     ,
+		   bool       canBeCancelled      ,
+		   long       lastUpdateTime      ,
+		   bool       onlyNeedGoodInlinks  ,
+		   bool       getLinkerTitles , //= false ,
+		   // if an inlinking document has an outlink
+		   // of one of these hashes then we set
+		   // Msg20Reply::m_hadLinkToOurDomOrHost.
+		   // it is used to remove an inlinker to a related
+		   // docid, which also links to our main seo url
+		   // being processed. so we do not recommend
+		   // such links since they already link to a page
+		   // on your domain or hostname. set BOTH to zero
+		   // to not perform this algo in handleRequest20()'s
+		   // call to XmlDoc::getMsg20Reply().
+		   long       ourHostHash32 , // = 0 ,
+		   long       ourDomHash32 , // = 0 );
+		   SafeBuf *myLinkInfoBuf );
+
+
+void  handleRequest25 ( UdpSlot *slot , long netnice ) ;
+
 long getSiteRank ( long sni ) ;
 
 class Linkdb {
@@ -307,7 +400,7 @@ class Msg25 {
 	//   any link text and return true right away, really saves a bunch 
 	//   of disk seeks when spidering small collections that don't need 
 	//   link text/info indexing/analysis
-	bool getLinkInfo ( char      *site ,
+	bool getLinkInfo2 (char      *site ,
 			   char      *url  ,
 			   bool       isSiteLinkInfo ,
 			   long       ip                  ,
