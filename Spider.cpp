@@ -3188,6 +3188,8 @@ key192_t makeWinnerTreeKey ( long firstIp ,
 	k.n2 <<= 16;
 	k.n2 |= (255-priority);
 	k.n2 <<= 16;
+	// query reindex is still using hopcount -1...
+	if ( hopCount == -1 ) hopCount = 0;
 	if ( hopCount < 0 ) { char *xx=NULL;*xx=0; }
 	if ( hopCount > 0xffff ) hopCount = 0xffff;
 	k.n2 |= hopCount;
