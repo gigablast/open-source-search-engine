@@ -13726,8 +13726,12 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// we make a "fake" url for the diffbot reply when indexing it
 	// by appending -diffbotxyz%lu. see "fakeUrl" below.
 	if ( m_firstUrl.getUrlLen() + 15 >= MAX_URL_LEN ) {
-		log("build: diffbot url would be too long for "
-		    "%s", m_firstUrl.getUrl() );
+		if ( m_firstUrlValid )
+			log("build: diffbot url would be too long for "
+			    "%s", m_firstUrl.getUrl() );
+		else
+			log("build: diffbot url would be too long for "
+			    "%lli", m_docId );
 		m_diffbotReplyValid = true;
 		return &m_diffbotReply;
 	}
@@ -18626,7 +18630,10 @@ bool XmlDoc::logIt ( ) {
 			sb.safePrintf("numredirs=%li ",m_numRedirects);
 	}
 
-	sb.safePrintf("url=%s ",m_firstUrl.m_url);
+	if ( m_firstUrlValid )
+		sb.safePrintf("url=%s ",m_firstUrl.m_url);
+	else
+		sb.safePrintf("urldocid=%lli ",m_docId);
 
 	//
 	// print error/status
@@ -22312,7 +22319,10 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 
 	// sanity
 	if ( firstIp == 0 || firstIp == -1 ) { 
-		log("xmldoc: BAD FIRST IP for %s",m_firstUrl.getUrl());
+		if ( m_firstUrlValid )
+			log("xmldoc: BAD FIRST IP for %s",m_firstUrl.getUrl());
+		else
+			log("xmldoc: BAD FIRST IP for %lli",m_docId);
 		firstIp = 12345;
 		//char *xx=NULL;*xx=0; }
 	}
