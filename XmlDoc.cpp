@@ -652,7 +652,7 @@ void XmlDoc::reset ( ) {
 	//m_oldMetaList.reset();
 	m_msg8a.reset();
 	//m_siteLinkInfo.reset();
-	m_msg25.reset();
+	//m_msg25.reset();
 	//m_msgc.reset();
 	m_msg13.reset();
 	m_tmpsb1.reset();
@@ -12044,20 +12044,22 @@ LinkInfo *XmlDoc::getSiteLinkInfo() {
 	if ( sb ) onlyNeedGoodInlinks = false;
 
 	// shortcut
-	Msg25 *m = &m_msg25;
-	if ( ! m->getLinkInfo ( mysite , // site
+	//Msg25 *m = &m_msg25;
+	if ( ! getLinkInfo ( &m_tmpBuf11,
+			     &m_mcast11,
+			     mysite , // site
 				mysite , // url
 				true , // isSiteLinkInfo?
 				*fip                 ,
 				0 , // docId
-				cr->m_coll              , //linkInfoColl
+				cr->m_collnum           , //linkInfoColl
 				NULL                , // qbuf
 				0                   , // qbufSize
 				m_masterState       ,
 				m_masterLoop        ,
 				m_contentInjected ,// isInjecting?
 				sb                  ,
-				this,//m_printInXml        ,
+			     m_printInXml        ,
 				0 , // sitenuminlinks -- dunno!
 				//0 , // sitePop
 				NULL , // oldLinkInfo1        ,	     
@@ -12075,12 +12077,15 @@ LinkInfo *XmlDoc::getSiteLinkInfo() {
 		// return -1 if it blocked
 		return (LinkInfo *)-1;
 	// sanity check
-	if ( ! m_msg25.m_linkInfo ) {
-		log("build: error making link info: %s",mstrerror(g_errno));
-		return NULL;
-	}
+	//if ( ! m_msg25.m_linkInfo ) {
+	//	log("build: error making link info: %s",mstrerror(g_errno));
+	//	return NULL;
+	//}
 	// we got it
-	return m_msg25.m_linkInfo;
+	//return m_msg25.m_linkInfo;
+	// getLinkInfo() now calls multicast so it returns true on errors only
+	log("build: error making link info: %s",mstrerror(g_errno));
+	return NULL;
 }
 
 static void gotIpWrapper ( void *state , long ip ) ;
@@ -12880,7 +12885,7 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	//   was NULL
 	if ( g_errno && m_calledMsg25 ) return NULL;
 	// prevent core as well
-	if ( m_calledMsg25 && ! m_msg25.m_linkInfo ) {
+	if ( m_calledMsg25 && ! size_linkInfo1 ) { // m_msg25.m_linkInfo ) {
 		log("xmldoc: msg25 had null link info");
 		g_errno = EBADENGINEER;
 		return NULL;
@@ -12911,7 +12916,7 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 		// do not redo it
 		m_calledMsg25 = true;
 		// shortcut
-		Msg25 *m = &m_msg25;
+		//Msg25 *m = &m_msg25;
 		// can we be cancelled?
 		bool canBeCancelled = true;
 		// not if pageparser though
@@ -12954,19 +12959,21 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 
 		// call it
 		char *url = getFirstUrl()->getUrl();
-		if ( ! m->getLinkInfo ( mysite , 
+		if ( ! getLinkInfo ( &m_tmpBuf12,
+				     &m_mcast12,
+				        mysite , 
 					url ,
 					false , // isSiteLinkInfo?
 					*ip                 ,
 					*d                  ,
-					cr->m_coll          , //linkInfoColl
+					cr->m_collnum       , //linkInfoColl
 					NULL                , // qbuf
 					0                   , // qbufSize
 					m_masterState       ,
 					m_masterLoop        ,
 					m_contentInjected ,//m_injectedReply ,
 					sb                  ,
-					this,//m_printInXml        ,
+					m_printInXml        ,
 					*sni                ,
 					//m_sitePop           ,
 					oldLinkInfo1        ,	     
@@ -12987,22 +12994,28 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 		if ( g_errno ) return NULL;
 		// panic! what the fuck? why did it return true and then
 		// call our callback???
-		if ( g_conf.m_logDebugBuild )
+		if ( g_conf.m_logDebugBuild ) {
 			log("build: xmldoc call to msg25 did not block");
+			// must now block since it uses multicast now to
+			// send the request onto the network
+			char *xx=NULL;*xx=0; 
+		}
 	}
 
 	// at this point assume its valid
 	m_linkInfo1Valid = true;
 	// . get the link info we got set
 	// . this ptr references into m_myPageLinkInfoBuf safebuf
-	ptr_linkInfo1  = m_msg25.m_linkInfo;
-	size_linkInfo1 = m_msg25.m_linkInfo->getSize();
+	//ptr_linkInfo1  = m_msg25.m_linkInfo;
+	//size_linkInfo1 = m_msg25.m_linkInfo->getSize();
+	ptr_linkInfo1  = (LinkInfo *)m_myPageLinkInfoBuf.getBufStart();
+	size_linkInfo1 = m_myPageLinkInfoBuf.length();
 	// we should free it
 	m_freeLinkInfo1 = true;
 	// this can not be NULL!
 	if ( ! ptr_linkInfo1 || size_linkInfo1 <= 0 ) { char *xx=NULL;*xx=0; }
 	// take it from msg25 permanently
-	m_msg25.m_linkInfo = NULL;
+	//m_msg25.m_linkInfo = NULL;
 	// set flag
 	m_linkInfo1Valid = true;
 	// . validate the hop count thing too
@@ -43994,12 +44007,12 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 		// do not re-call!
 		*calledItPtr = true;
 		// call it now
-		if ( ! myMsg25->getLinkInfo ( site,
+		if ( ! myMsg25->getLinkInfo2( site,
 					      fu->getUrl() , // url
 					      false , // isSiteLinkInfo?
 					      *ipp,
 					      *d, // docid
-					      cr->m_coll,
+					      m_collnum,//cr->m_coll,
 					      NULL, // qbuf
 					      0, // qbufSize
 					      m_masterState, // state

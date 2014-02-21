@@ -63,7 +63,7 @@ public:
 	//XmlDoc  *xd                ;
 
 	long       m_siteNumInlinks      ;
-	LinkInfo  *m_oldLinkInfo         ;
+	class LinkInfo  *m_oldLinkInfo         ;
 	long       m_niceness            ;
 	bool       m_doLinkSpamCheck     ;
 	bool       m_oneVotePerIpDom     ;
@@ -74,33 +74,55 @@ public:
 	long       m_ourHostHash32 ;
 	long       m_ourDomHash32 ;
 
-	char      *ptr_site                ;
-	char      *ptr_url                 ;
-	char      *ptr_pbuf;
-	char      *ptr_linkInfoBuf;
+	// new stuff
+	long       m_siteHash32;
+	long long  m_siteHash64;
+	long long  m_linkHash64;
+	// for linked list of these guys in g_lineTable in Linkdb.cpp
+	// but only used on the server end, not client end
+	class Msg25Request *m_next;
+	// the mutlicast we use
+	class Multicast *m_mcast;
+	UdpSlot *m_udpSlot;
+	bool m_printDebugMsgs;
+	// store final LinkInfo reply in here
+	SafeBuf   *m_linkInfoBuf;
+
+
+	char      *ptr_site;
+	char      *ptr_url;
+	char      *ptr_oldLinkInfo;
 
 	long       size_site;
 	long       size_url;
-	long       size_pbuf;
-	long       size_linkInfoBuf;
+	long       size_oldLinkInfo;
+
+	char m_buf[0];
+
+	long getStoredSize();
+	void serialize();
+	void deserialize();
 };
 
 // . returns false if blocked, true otherwise
 // . sets errno on error
 // . your req->m_callback will be called with the Msg25Reply
-bool getLinkInfo ( char      *site ,
+bool getLinkInfo ( SafeBuf *reqBuf , // store msg25 request in here
+		   Multicast *mcast , // use this to send msg 0x25 request
+		   char      *site ,
 		   char      *url  ,
 		   bool       isSiteLinkInfo ,
 		   long       ip                  ,
 		   long long  docId               ,
-		   char      *coll                ,
+		   collnum_t collnum ,
 		   char      *qbuf                ,
 		   long       qbufSize            ,
 		   void      *state               ,
 		   void (* callback)(void *state) ,
 		   bool       isInjecting         ,
 		   SafeBuf   *pbuf                ,
-		   class XmlDoc *xd ,
+		   //class XmlDoc *xd ,
+		   bool printInXml ,
 		   long       siteNumInlinks      ,
 		   //long       sitePop             ,
 		   LinkInfo  *oldLinkInfo         ,
@@ -405,14 +427,17 @@ class Msg25 {
 			   bool       isSiteLinkInfo ,
 			   long       ip                  ,
 			   long long  docId               ,
-			   char      *coll                ,
+			   //char      *coll                ,
+			   collnum_t collnum,
 			   char      *qbuf                ,
 			   long       qbufSize            ,
 			   void      *state               ,
 			   void (* callback)(void *state) ,
 			   bool       isInjecting         ,
-			   SafeBuf   *pbuf                ,
-			   class XmlDoc *xd ,
+			   //SafeBuf   *pbuf                ,
+			   bool       printDebugMsgs , // into "Msg25::m_pbuf"
+			   //class XmlDoc *xd ,
+			   bool       printInXml ,
 			   long       siteNumInlinks      ,
 			   //long       sitePop             ,
 			   LinkInfo  *oldLinkInfo         ,
@@ -456,13 +481,15 @@ class Msg25 {
 
 	//char getMinInlinkerHopCount () { return m_minInlinkerHopCount; };
 
+	// a new parm referencing the request we got over the network
+	class Msg25Request * m_req25;
 
 	class Msg20Reply *getLoser (class Msg20Reply *r, class Msg20Reply *p);
 	char             *isDup    (class Msg20Reply *r, class Msg20Reply *p);
 
 	bool addNote ( char *note , long noteLen , long long docId );
 
-	class LinkInfo *getLinkInfo () { return m_linkInfo; };
+	//class LinkInfo *getLinkInfo () { return m_linkInfo; };
 
 	// m_linkInfo ptr references into here. provided by caller.
 	SafeBuf *m_linkInfoBuf;
@@ -502,9 +529,10 @@ class Msg25 {
 	bool       m_onlyNeedGoodInlinks;
 	bool       m_getLinkerTitles;
 	long long  m_docId;
-	char      *m_coll;
+	//char      *m_coll;
+	collnum_t m_collnum;
 	//long       m_collLen;
-	LinkInfo  *m_linkInfo;
+	//LinkInfo  *m_linkInfo;
 	void      *m_state;
 	void     (* m_callback) ( void *state );
 
@@ -512,7 +540,7 @@ class Msg25 {
 	//long m_sitePop;
 	long m_mode;
 	bool m_printInXml;
-	class XmlDoc  *m_xd;
+	//class XmlDoc  *m_xd;
 
 	// private:
 
@@ -530,7 +558,8 @@ class Msg25 {
 	// . the href: IndexList's docIds are docs that link to us
 	// . we now use Msg2 since it has "restrictIndexdb" support to limit
 	//   indexdb searches to just the root file to decrease disk seeks
-	Msg0  m_msg0;
+	//Msg0  m_msg0;
+	Msg5 m_msg5;
 	RdbList m_list;
 
 	class Inlink *m_k;
@@ -592,7 +621,12 @@ class Msg25 {
 	// this is used for link ban checks
 	//Msg18     m_msg18;
 
-	SafeBuf  *m_pbuf;
+	SafeBuf   m_tmp;
+	SafeBuf  *m_pbuf; // will point to m_tmp if m_printDebugMsgs
+
+	// for holding the final linkinfo output
+	//SafeBuf m_linkInfoBuf;
+
 	// copied from CollectionRec
 	bool  m_oneVotePerIpDom           ;
 	bool  m_doLinkSpamCheck           ;

@@ -1490,7 +1490,11 @@ class XmlDoc {
 	char m_useSiteLinkBuf;
 	char m_usePageLinkBuf;
 	char m_printInXml;
-	Msg25 m_msg25;
+	//Msg25 m_msg25;
+	SafeBuf m_tmpBuf11;
+	SafeBuf m_tmpBuf12;
+	Multicast m_mcast11;
+	Multicast m_mcast12;
 	Msg25 *m_tempMsg25Page;
 	Msg25 *m_tempMsg25Site;
 	// for page or for site?
