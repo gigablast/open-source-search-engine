@@ -625,34 +625,49 @@ static void sendReplyWrapper ( void *state ) {
 	// the original request
 	Msg25Request *mr = m25->m_req25;
 	// get udp slot for sending back reply
-	UdpSlot *slot = mr->m_udpSlot;
+	UdpSlot *slot2 = mr->m_udpSlot;
 	// shortcut
 	SafeBuf *info = m25->m_linkInfoBuf;
 	// steal this buffer
-	char *reply = info->getBufStart();
+	char *reply1 = info->getBufStart();
 	long  replySize = info->length();
-	long  replyAllocSize = info->getCapacity();
-	// do not let m25 free it, UdpServer.cpp will free it on destruction
-	info->detachBuf();
 	// sanity
 	if ( replySize <= 0 ) { char *xx=NULL;*xx=0; }
+	// get original request
+	Msg25Request *req = (Msg25Request *)slot2->m_readBuf;
+	// sanity
+	if ( req->m_udpSlot != slot2 ) { char *xx=NULL;*xx=0;}
+
+ nextLink:
+
+	UdpSlot *udpSlot = req->m_udpSlot;
+	
+	// just dup the reply for each one
+	char *reply2 = (char *)mdup(reply1,replySize,"m25repd");
+
+	// error?
+	if ( saved || ! reply2 ) {
+		long err = saved;
+		if ( ! err ) err = g_errno;
+		if ( ! err ) { char *xx=NULL;*xx=0; }
+		g_udpServer.sendErrorReply(udpSlot,err);
+	}
+	else {
+		// send it back to requester
+		g_udpServer.sendReply_ass ( reply2 ,
+					    replySize ,
+					    reply2 ,
+					    replySize,
+					    udpSlot );
+	}
+
+	// if we had a link
+	req = req->m_next;
+	if ( req ) goto nextLink;
 
 	// the destructor
 	mdelete ( m25 ,sizeof(Msg25),"msg25");
 	delete ( m25 );
-
-	// error?
-	if ( saved ) {
-		g_udpServer.sendErrorReply(slot,saved);
-		return;
-	}
-
-	// send it back to requester
-	g_udpServer.sendReply_ass ( reply ,
-				    replySize ,
-				    reply ,
-				    replyAllocSize ,
-				    slot );
 }
 
 
@@ -663,6 +678,9 @@ void  handleRequest25 ( UdpSlot *slot , long netnice ) {
 	Msg25Request *req = (Msg25Request *)slot->m_readBuf;
 
 	req->deserialize();
+
+	// make sure this always NULL for our linked list logic
+	req->m_next = NULL;
 
 	// set up the hashtable if our first time
 	if ( ! g_lineTable.isInitialized() )
@@ -686,9 +704,17 @@ void  handleRequest25 ( UdpSlot *slot , long netnice ) {
 		if ( head->m_next ) 
 			req->m_next = head->m_next;
 		head->m_next = req;
+		// note it for debugging
+		log("build: msg25 request waiting in line for %s slot=0x%lx",
+		    req->ptr_url,(long)slot);
 		// we will send a reply back for this guy when done
 		// getting the reply for the head msg25request
 		return;
+	}
+
+	if ( isSiteLinkInfo ) {
+		// add the initial entry
+		g_lineTable.addKey ( &req->m_siteHash64 , &req );
 	}
 
 	// make a new Msg25

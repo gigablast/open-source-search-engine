@@ -4011,7 +4011,11 @@ bool getSpiderRequestMetaList ( char *doc ,
 		// finally, we can set the key. isDel = false
 		sreq.setKey ( sreq.m_firstIp , probDocId , false );
 
-		if ( ! listBuf->reserve ( 100 + sreq.getRecSize() ) )
+		long oldBufSize = listBuf->getCapacity();
+		long need = listBuf->getLength() + 100 + sreq.getRecSize();
+		long newBufSize = 0;
+		if ( need > oldBufSize ) newBufSize = oldBufSize + 100000;
+		if ( newBufSize && ! listBuf->reserve ( newBufSize ) )
 			// return false with g_errno set
 			return false;
 
