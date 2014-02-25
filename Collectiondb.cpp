@@ -2138,20 +2138,26 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		i++;
 	}
 
+	m_regExs[i].set("errorcount>=1 && !hastmperror");
+	m_spiderPriorities   [i] = 15;
+	m_spiderFreqs        [i] = 0.00; // 86 seconds
+	m_maxSpidersPerRule  [i] = 0; // turn off spiders if not tmp error
+	i++;
+
 	// and for docs that have errors respider once every 5 hours
-	m_regExs[i].set("errorcount==1");
+	m_regExs[i].set("errorcount==1 && hastmperror");
 	m_spiderPriorities   [i] = 40;
 	m_spiderFreqs        [i] = 0.001; // 86 seconds
 	i++;
 
 	// and for docs that have errors respider once every 5 hours
-	m_regExs[i].set("errorcount==2");
+	m_regExs[i].set("errorcount==2 && hastmperror");
 	m_spiderPriorities   [i] = 40;
 	m_spiderFreqs        [i] = 0.1; // 2.4 hrs
 	i++;
 
 	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
-	m_regExs[i].set("errorcount>=3");
+	m_regExs[i].set("errorcount>=3 && hastmperror");
 	m_spiderPriorities   [i] = 30;
 	m_spiderFreqs        [i] = 30; // 30 days
 	i++;

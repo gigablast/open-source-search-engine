@@ -3065,6 +3065,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 				  false, // useprotection?
 				  false, // allowdups?
 				  -1 ) ) { // rdbid
+		m_isPopulating = false;
 		log("spider: winntree set: %s",mstrerror(g_errno));
 		return;
 	}
@@ -3078,6 +3079,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 				   false , // allow dups?
 				   MAX_NICENESS ,
 				   "wtdedup" ) ) {
+		m_isPopulating = false;
 		log("spider: wintable set: %s",mstrerror(g_errno));
 		return;
 	}
@@ -3113,6 +3115,11 @@ static void doledWrapper ( void *state ) {
 	SpiderColl *THIS = (SpiderColl *)state;
 	// msg4 is available again
 	THIS->m_msg4Avail = true;
+
+	if ( g_errno )
+		log("spider: msg1 addlist had error: %s. need to "
+		    "somehow reduce doleiptable score now...",
+		    mstrerror(g_errno));
 
 	// no longer populating doledb. we also set to false in 
 	// gotSpiderListWrapper
@@ -4728,13 +4735,17 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 
 	// . use msg4 to transmit our guys into the rdb, RDB_DOLEDB
 	// . no, use msg1 for speed, so we get it right away!!
+	// . we' already incremented doleiptable counts... so we need to
+	//   make sure this happens!!!
 	bool status = m_msg1.addList ( tmpList ,
 				       RDB_DOLEDB    ,
 				       m_coll    ,
 				       this          ,
 				       doledWrapper  ,
 				       false , // forcelocal?
-				       0 ); // niceness MAX_NICENESS  ,
+				       // Rdb.cpp can't call dumpTree()
+				       // if niceness is 0!
+				       MAX_NICENESS);
 	// if it blocked set this to true so we do not reuse it
 	if ( ! status ) m_msg4Avail = false;
 
@@ -8553,6 +8564,20 @@ bool sendPage ( State11 *st ) {
 		       LIGHT_BLUE ,
 		       DARK_BLUE  );
 	*/
+
+	// done if no sc
+	if ( ! sc ) {
+		// get the socket
+		TcpSocket *s = st->m_socket;
+		// then we can nuke the state
+		mdelete ( st , sizeof(State11) , "PageSpiderdb" );
+		delete (st);
+		// erase g_errno for sending
+		g_errno = 0;
+		// now encapsulate it in html head/tail and send it off
+		return g_httpServer.sendDynamicPage (s, sb.getBufStart(),
+						     sb.length() );
+	}
 
 	/////
 	//

@@ -451,6 +451,11 @@ bool Msg1::sendData ( unsigned long shardNum, char *listData , long listSize) {
 	*/
 	// if the data is being added to our group, don't send ourselves
 	// a msg1, if we can add it right now
+	// MDW: crap this is getting ETRYAGAIN and it isn't being tried again
+	// i guess and Spider.cpp fails to add to doledb but the doleiptable
+	// maintains a positive count, thereby hanging the spiders. let's
+	// just always go through multicast so it will auto-retry ETRYAGAIN
+	/*
 	bool sendToSelf = true;
 	if ( shardNum == getMyShardNum() &&
 	     ! g_conf.m_interfaceMachine ) {
@@ -485,7 +490,8 @@ bool Msg1::sendData ( unsigned long shardNum, char *listData , long listSize) {
 		// if no error, no need to use a Msg1 UdpSlot for ourselves
 		if ( ! g_errno ) sendToSelf = false;
 		else {
-			log("rdb: msg1 had error: %s",mstrerror(g_errno));
+			log("rdb: msg1 coll=%s rdb=%s had error: %s",
+			    m_coll,rdb->m_dbname,mstrerror(g_errno));
 			// this is messing up generate catdb's huge rdblist add
 			// why did we put it in there??? from msg9b.cpp
 			//return true;
@@ -497,6 +503,7 @@ bool Msg1::sendData ( unsigned long shardNum, char *listData , long listSize) {
 		     g_hostdb.getNumHostsPerShard() == 1 ) return true;
 	}
 skip:
+	*/
 	// . make an add record request to multicast to a bunch of machines
 	// . this will alloc new space, returns NULL on failure
 	//char *request = makeRequest ( listData, listSize, groupId , 
@@ -573,7 +580,7 @@ skip:
 			    k    , // cache key
 			    RDB_NONE , // bogus rdbId
 			    -1    , // unknown minRecSizes read size
-			    sendToSelf ))
+			    true )) // sendToSelf ))
 		return false;
 
  	QUICKPOLL(m_niceness);
