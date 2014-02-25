@@ -216,11 +216,14 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	if ( fmt == FMT_CSV && rdbId == RDB_TITLEDB ) {
 		char tmp2[5000];
 		SafeBuf sb2(tmp2,5000);
+		long dr = 1;
+		// do not dedup bulk jobs
+		if ( cr->m_isCustomCrawl == 2 ) dr = 0;
 		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&"
 			       // dedup. since stream=1 and pss=0 below
 			       // this will dedup on page content hash only
 			       // which is super fast.
-			       "dr=1&"
+			       "dr=%li&"
 			       "c=%s&n=1000000&"
 			       // no summary similarity dedup, only exact
 			       // doc content hash. otherwise too slow!!
@@ -232,6 +235,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			      "q=gbsortby%%3Agbspiderdate&"
 			      "prepend=type%%3Ajson"
 			      "\r\n\r\n"
+			       , dr
 			       , cr->m_coll
 			       );
 		HttpRequest hr2;
@@ -244,11 +248,14 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 	if ( fmt == FMT_JSON && rdbId == RDB_TITLEDB ) {
 		char tmp2[5000];
 		SafeBuf sb2(tmp2,5000);
+		long dr = 1;
+		// do not dedup bulk jobs
+		if ( cr->m_isCustomCrawl == 2 ) dr = 0;
 		sb2.safePrintf("GET /search.csv?icc=1&format=json&sc=0&"
 			       // dedup. since stream=1 and pss=0 below
 			       // this will dedup on page content hash only
 			       // which is super fast.
-			       "dr=1&"
+			       "dr=%li&"
 			      "c=%s&n=1000000&"
 			       // we can stream this because unlink csv it
 			       // has no header row that needs to be 
@@ -264,6 +271,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			      "q=gbsortby%%3Agbspiderdate&"
 			      "prepend=type%%3Ajson"
 			      "\r\n\r\n"
+			       , dr 
 			       , cr->m_coll
 			       );
 		HttpRequest hr2;
@@ -771,7 +779,12 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 
 		char *msg = "Successfully Downloaded";//Crawled";
 		if ( status == 0 ) msg = "Not downloaded";//Unexamined";
-		if ( status == -1 ) msg = mstrerror(m_prevReplyError);
+		if ( status == -1 ) {
+			msg = mstrerror(m_prevReplyError);
+			// do not print "Fake First Ip"...
+			if ( m_prevReplyError == EFAKEFIRSTIP )
+				msg = "Initial crawl request";
+		}
 
 		if ( srep && srep->m_hadDiffbotError )
 			msg = "Diffbot processing error";
@@ -2075,10 +2088,16 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( st->m_seedBank.length() && ! seeds )
 		seeds = st->m_seedBank.getBufStart();
 
+	char *coll = "NONE";
+	if ( cr ) coll = cr->m_coll;
+
 	if ( seeds )
-		log("crawlbot: adding seeds=\"%s\"",seeds);
+		log("crawlbot: adding seeds=\"%s\" coll=%s (%li)",
+		    seeds,coll,(long)st->m_collnum);
+
 	if ( spots )
-		log("crawlbot: got spots to add");
+		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
+		    (long)gbstrlen(spots),coll,(long)st->m_collnum);
 
 	///////
 	// 

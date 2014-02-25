@@ -410,7 +410,8 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	// our cpu usage
 	*(float *)p = me->m_cpuUsage ; p += sizeof(float); // 4 bytes
 	// our num recs, docsIndexed
-	*(long*)p = (long)g_clusterdb.getRdb()->getNumTotalRecs();
+	//*(long*)p = (long)g_clusterdb.getRdb()->getNumTotalRecs();
+	*(long*)p = (long)g_process.getTotalDocsIndexed();
 	p += sizeof(long);
 	// urls indexed since startup
 	//*(long*)p = (long)g_test.m_urlsIndexed;

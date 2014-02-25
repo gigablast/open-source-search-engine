@@ -1349,7 +1349,8 @@ bool Msg40::gotSummary ( ) {
 		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
 		     mr->m_contentHash32 &&
 		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) ) {
-			log("msg40: dup sum #%li",m_printi);
+			log("msg40: dup sum #%li (%lu)",m_printi,
+			    mr->m_contentHash32);
 			continue;
 		}
 
