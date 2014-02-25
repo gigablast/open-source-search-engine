@@ -5146,6 +5146,8 @@ bool registerMsgHandlers2(){
 	if(! g_udpServer.registerHandler(0x3e,handleRequest3e)) return false;
 	if(! g_udpServer.registerHandler(0x3f,handleRequest3f)) return false;
 
+	if ( ! g_udpServer.registerHandler(0x25,handleRequest25)) return false;
+
 	return true;
 
 	/*

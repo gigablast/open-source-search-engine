@@ -35,6 +35,8 @@
 #include "DiskPageCache.h"
 #include "Titledb.h"
 
+void  handleRequest25 ( UdpSlot *slot , long netnice ) ;
+
 // . get the inlinkers to this SITE (any page on this site)
 // . use that to compute a site quality
 // . also get the inlinkers sorted by date and see how many good inlinkers
@@ -493,6 +495,8 @@ class Msg25 {
 
 	// m_linkInfo ptr references into here. provided by caller.
 	SafeBuf *m_linkInfoBuf;
+
+	SafeBuf m_realBuf;
 
 	// private:
 	// these need to be public for wrappers to call:

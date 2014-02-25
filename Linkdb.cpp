@@ -14,6 +14,7 @@ void Linkdb::reset() {
 }
 
 bool Linkdb::init ( ) {
+
 	key224_t  k;
 	// sanity tests
 	uint32_t    linkeeSiteHash32 = (uint32_t)rand();
@@ -439,7 +440,7 @@ void Msg25::reset() {
 // . reply should just be a LinkInfo class
 // . set XmlDoc::m_linkInfoBuf safebuf to that reply
 // . we store tr to that safebuf in Msg25Request::m_linkInfoBuf
-void gotMulticastReplyWrapper13 ( void *state , void *state2 ) {
+void gotMulticastReplyWrapper25 ( void *state , void *state2 ) {
 
 	Msg25Request *req = (Msg25Request *)state;
 
@@ -524,7 +525,8 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 	req->size_url  = urlLen  + 1;
 
 	req->ptr_oldLinkInfo = (char *)oldLinkInfo;
-	req->size_oldLinkInfo = oldLinkInfo->getSize();
+	if ( oldLinkInfo ) req->size_oldLinkInfo = oldLinkInfo->getSize();
+	else               req->size_oldLinkInfo = 0;
 
 	if ( isSiteLinkInfo ) req->m_mode = MODE_SITELINKINFO;
 	else                  req->m_mode = MODE_PAGELINKINFO;
@@ -550,11 +552,9 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 	if ( g_conf.m_logDebugLinkInfo )
 		req->m_printDebugMsgs = true;
 
-	// turns the ptr_* members into offsets into req->m_buf[]
-	req->serialize();
-
 	Url u;
 	u.set ( req->ptr_url );
+
 	req->m_linkHash64 = (uint64_t)u.getUrlHash64();
 
 
@@ -564,7 +564,6 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 		req->m_siteHash64 = hash64n ( req->ptr_site );
 		req->m_siteHash32 = hash32n ( req->ptr_site );
 	}
-
 
 	// send to host for local linkdb lookup
 	key224_t startKey ;
@@ -590,6 +589,7 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 
 	// . serialize the string buffers
 	// . use Msg25Request::m_buf[MAX_NEEDED]
+	// . turns the ptr_* members into offsets into req->m_buf[]
 	req->serialize();
 
 	// this should always block
@@ -603,7 +603,7 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 			    0            , // key is passed on startKey
 			    req          , // state data
 			    NULL         , // state data
-			    gotMulticastReplyWrapper13 ,
+			    gotMulticastReplyWrapper25 ,
 			    1000      , // timeout in seconds (was 30)
 			    req->m_niceness ,
 			    false, // realtime     ,
@@ -618,6 +618,9 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 }
 
 static void sendReplyWrapper ( void *state ) {
+
+	long saved = g_errno;
+
 	Msg25 *m25 = (Msg25 *)state;
 	// the original request
 	Msg25Request *mr = m25->m_req25;
@@ -631,6 +634,19 @@ static void sendReplyWrapper ( void *state ) {
 	long  replyAllocSize = info->getCapacity();
 	// do not let m25 free it, UdpServer.cpp will free it on destruction
 	info->detachBuf();
+	// sanity
+	if ( replySize <= 0 ) { char *xx=NULL;*xx=0; }
+
+	// the destructor
+	mdelete ( m25 ,sizeof(Msg25),"msg25");
+	delete ( m25 );
+
+	// error?
+	if ( saved ) {
+		g_udpServer.sendErrorReply(slot,saved);
+		return;
+	}
+
 	// send it back to requester
 	g_udpServer.sendReply_ass ( reply ,
 				    replySize ,
@@ -675,13 +691,21 @@ void  handleRequest25 ( UdpSlot *slot , long netnice ) {
 		return;
 	}
 
-	// i guess make a msg25 class to hold hashtables etc.
-	Msg25 *m25 = (Msg25 *)mcalloc(sizeof(Msg25),"hrm25");
-	// since g_errno is set this should send back an error reply
-	if ( ! m25 ) {
+	// make a new Msg25
+	Msg25 *m25;
+	try { m25 = new ( Msg25 ); }
+	catch ( ... ) {
+		g_errno = ENOMEM;
+		log("build: msg25: new(%i): %s", 
+		    sizeof(Msg25),mstrerror(g_errno));
 		g_udpServer.sendErrorReply ( slot , g_errno );
 		return;
 	}
+	mnew ( m25 , sizeof(Msg25) , "Msg25" );
+
+	
+	// point to a real safebuf here for populating with data
+	m25->m_linkInfoBuf = &m25->m_realBuf;
 
 	// udp socket for sending back the final linkInfo in m_linkInfoBuf
 	// used by sendReply()
@@ -721,6 +745,13 @@ void  handleRequest25 ( UdpSlot *slot , long netnice ) {
 				   m25->m_linkInfoBuf ) ) // SafeBuf 4 output
 		return;
 
+	if(m25->m_linkInfoBuf->getLength()<=0&&!g_errno){char *xx=NULL;*xx=0;}
+
+	if ( g_errno == ETRYAGAIN ) { char *xx=NULL;*xx=0; }
+
+	if ( g_errno )
+		log("linkdb: error getting linkinfo: %s",mstrerror(g_errno));
+
 	// it did not block... g_errno will be set on error so sendReply()
 	// should in that case send an error reply.
 	sendReplyWrapper ( m25 );
@@ -756,11 +787,17 @@ void Msg25Request::deserialize ( ) {
 	ptr_url = p;
 	p += size_url;
 
+	if ( size_url == 0 ) ptr_url = NULL;
+
 	ptr_site = p;
 	p += size_site;
 
+	if ( size_site == 0 ) ptr_site = NULL;
+
 	ptr_oldLinkInfo = p;
 	p += size_oldLinkInfo;
+
+	if ( size_oldLinkInfo == 0 ) ptr_oldLinkInfo = NULL;
 }
 
 //////
@@ -3914,6 +3951,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 	// how many guys that we stored were internal?
 	info->m_numInlinksInternal = (char)icount3;
 
+	linkInfoBuf->setLength ( need );
 
 	// sanity parse it
 	//long ss = 0;

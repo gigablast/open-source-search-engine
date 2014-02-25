@@ -12885,11 +12885,11 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	//   was NULL
 	if ( g_errno && m_calledMsg25 ) return NULL;
 	// prevent core as well
-	if ( m_calledMsg25 && ! size_linkInfo1 ) { // m_msg25.m_linkInfo ) {
-		log("xmldoc: msg25 had null link info");
-		g_errno = EBADENGINEER;
-		return NULL;
-	}
+	//if ( m_calledMsg25 && ! size_linkInfo1 ) { // m_msg25.m_linkInfo ) {
+	//	log("xmldoc: msg25 had null link info");
+	//	g_errno = EBADENGINEER;
+	//	return NULL;
+	//}
 
 	// . now search for some link info for this url/doc
 	// . this queries the search engine to get linking docIds along
@@ -13013,7 +13013,11 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	// we should free it
 	m_freeLinkInfo1 = true;
 	// this can not be NULL!
-	if ( ! ptr_linkInfo1 || size_linkInfo1 <= 0 ) { char *xx=NULL;*xx=0; }
+	if ( ! ptr_linkInfo1 || size_linkInfo1 <= 0 ) { 
+		log("build: error getting linkinfo1: %s",mstrerror(g_errno));
+		char *xx=NULL;*xx=0; 
+		return NULL;
+	}
 	// take it from msg25 permanently
 	//m_msg25.m_linkInfo = NULL;
 	// set flag
