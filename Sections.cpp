@@ -139,6 +139,12 @@ bool Sections::set ( Words     *w                       ,
 
 	if ( ! w ) return true;
 
+	if ( w->m_numWords > 1000000 ) {
+		log("sections: over 1M words. skipping sections set for "
+		    "performance.");
+		return true;
+	}
+
 	// save it
 	m_words           = w;
 	m_bits            = bits;
@@ -17347,6 +17353,8 @@ bool Sections::setListFlags ( ) {
 bool Sections::growSections ( ) {
 	// make a log note b/c this should not happen a lot because it's slow
 	log("build: growing sections!");
+	g_errno = EDOCBADSECTIONS;
+	return true;
 	// record old buf start
 	char *oldBuf = m_sectionBuf.getBufStart();
 	// grow by 20MB at a time

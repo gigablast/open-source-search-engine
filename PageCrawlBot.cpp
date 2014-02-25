@@ -2088,10 +2088,16 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( st->m_seedBank.length() && ! seeds )
 		seeds = st->m_seedBank.getBufStart();
 
+	char *coll = "NONE";
+	if ( cr ) coll = cr->m_coll;
+
 	if ( seeds )
-		log("crawlbot: adding seeds=\"%s\"",seeds);
+		log("crawlbot: adding seeds=\"%s\" coll=%s (%li)",
+		    seeds,coll,(long)st->m_collnum);
+
 	if ( spots )
-		log("crawlbot: got spots to add");
+		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
+		    (long)gbstrlen(spots),coll,(long)st->m_collnum);
 
 	///////
 	// 
