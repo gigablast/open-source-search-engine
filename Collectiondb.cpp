@@ -2137,11 +2137,13 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	i++;
 
 	// 2nd default filter
-	if ( m_restrictDomain ) {
-		m_regExs[i].set("!isonsamedomain && !ismanualadd");
-		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
-		i++;
-	}
+	// always turn this on for now. they need to add domains they want
+	// to crawl as seeds so they do not spider the web.
+	//if ( m_restrictDomain ) {
+	m_regExs[i].set("!isonsamedomain && !ismanualadd");
+	m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+	i++;
+	//}
 
 	m_regExs[i].set("errorcount>=1 && !hastmperror");
 	m_spiderPriorities   [i] = 15;
