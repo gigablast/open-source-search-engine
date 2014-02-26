@@ -25,7 +25,7 @@
 #include "Tagdb.h"
 #include "Catdb.h"
 #include "Users.h"
-#include "Tfndb.h"
+//#include "Tfndb.h"
 #include "Spider.h"
 //#include "Doledb.h"
 //#include "Checksumdb.h"
@@ -150,8 +150,8 @@ static void dumpTitledb  ( char *coll,long sfn,long numFiles,bool includeTree,
 			   long long docId , char justPrintDups ,
 			   bool dumpSentences ,
 			   bool dumpWords );
-static void dumpTfndb    ( char *coll,long sfn,long numFiles,bool includeTree,
-			   bool verify);
+//static void dumpTfndb    (char *coll,long sfn,long numFiles,bool includeTree,
+//			   bool verify);
 static long dumpSpiderdb ( char *coll,long sfn,long numFiles,bool includeTree,
 			   char printStats , long firstIp );
 static void dumpSectiondb( char *coll,long sfn,long numFiles,bool includeTree);
@@ -773,8 +773,8 @@ int main ( int argc , char *argv[] ) {
 			"\tV is z to dump statsdb all keys.\n"
 			"\tV is Z to dump statsdb all keys and data samples.\n"
 			"\tV is L to dump linkdb.\n"
-			"\tV is u to dump tfndb.\n"
-			"\tV is vu to verify tfndb.\n"
+			//"\tV is u to dump tfndb.\n"
+			//"\tV is vu to verify tfndb.\n"
 			"\tC is the name of the collection.\n"
 			"\tX is start file num.    (default  0)\n"
 			"\tY is num files.         (default -1)\n"
@@ -2420,10 +2420,10 @@ int main ( int argc , char *argv[] ) {
 			dumpTitledb(coll,startFileNum,numFiles,includeTree,
 				     docId,1,false,false);
 		}
-		else if ( argv[cmdarg+1][0] == 'v' && argv[cmdarg+1][1] =='u' )
-			dumpTfndb   (coll,startFileNum,numFiles,includeTree,1);
-		else if ( argv[cmdarg+1][0] == 'u' )
-			dumpTfndb   (coll,startFileNum,numFiles,includeTree,0);
+		//else if(argv[cmdarg+1][0] == 'v' && argv[cmdarg+1][1] =='u' )
+		//	dumpTfndb   (coll,startFileNum,numFiles,includeTree,1);
+		//else if ( argv[cmdarg+1][0] == 'u' )
+		//	dumpTfndb   (coll,startFileNum,numFiles,includeTree,0);
 		else if ( argv[cmdarg+1][0] == 'w' )
 		       dumpWaitingTree(coll);
 		else if ( argv[cmdarg+1][0] == 'x' )
@@ -5650,7 +5650,7 @@ void zlibtest() {
 
 #include "Rdb.h"
 #include "Xml.h"
-#include "Tfndb.h"
+//#include "Tfndb.h"
 //#include "Checksumdb.h"
 #include "Threads.h"
 
@@ -5986,7 +5986,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	if ( startKey < *(key_t *)list.getLastKey() ) return;
 	goto loop;
 }
-
+/*
 void dumpTfndb (char *coll,long startFileNum,long numFiles,bool includeTree ,
 		bool verify) {
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
@@ -6058,7 +6058,7 @@ void dumpTfndb (char *coll,long startFileNum,long numFiles,bool includeTree ,
 	if ( startKey < *(key_t *)list.getLastKey() ) return;
 	goto loop;
 }
-
+*/
 void dumpWaitingTree (char *coll ) {
 	RdbTree wt;
 	if (!wt.set(0,-1,true,20000000,true,"waittree2",
@@ -7893,9 +7893,9 @@ void dumpMissing ( char *coll ) {
 	g_conf.m_indexdbMaxCacheMem = 0;
 	//g_conf.m_clusterdbMaxDiskPageCacheMem = 0;
 
-	g_tfndb.init ();
+	//g_tfndb.init ();
 	//g_collectiondb.init(true); // isDump?
-	g_tfndb.getRdb()->addRdbBase1 ( coll );
+	//g_tfndb.getRdb()->addRdbBase1 ( coll );
 	g_titledb.init();
 	g_titledb.getRdb()->addRdbBase1 ( coll );
 	// if titledb has stuff in memory, do not do this, it needs to
@@ -7909,7 +7909,8 @@ void dumpMissing ( char *coll ) {
 	}
 	// . just get the docids from tfndb...
 	// . this tfndb rec count is for ALL colls!! DOH!
-	long long numRecs = g_tfndb.getRdb()->getNumTotalRecs();
+	// MDW FIX THIS RIGHT!
+	long long numRecs = 12345;//g_tfndb.getRdb()->getNumTotalRecs();
 	long long oldNumSlots = (numRecs * 100) / 80;
 	// make a power of 2
 	// make it a power of 2
@@ -7978,10 +7979,10 @@ void dumpMissing ( char *coll ) {
 		if ( (k.n0 & 0x01LL) == 0x00 ) continue;
 		// titledb tree is empty, so this must indicate it is in
 		// spiderdb only
-		long  tfn = g_tfndb.getTfn(&k);
+		long  tfn = 0;//g_tfndb.getTfn(&k);
 		if ( tfn == 255 ) continue;
 		// get docid
-		unsigned long long d = g_tfndb.getDocId ( &k );
+		unsigned long long d = 0LL;//g_tfndb.getDocId ( &k );
 		// add to hash table
 		//long n = (unsigned long)d & mask;
 		long n = (unsigned long)d % numSlots;
@@ -8662,12 +8663,12 @@ void removeDocIds  ( char *coll , char *filename ) {
 	//g_conf.m_checksumdbMaxCacheMem = 0;
 	//g_conf.m_clusterdbMaxCacheMem = 0;
 
-	g_tfndb.init();
+	//g_tfndb.init();
 	g_indexdb.init ();
 	//g_checksumdb.init();
 	g_clusterdb.init();
 	//g_collectiondb.init(true);
-	g_tfndb.getRdb()->addRdbBase1 ( coll );
+	//g_tfndb.getRdb()->addRdbBase1 ( coll );
 	g_indexdb.getRdb()->addRdbBase1 ( coll );
 	//g_checksumdb.getRdb()->addRdbBase1 ( coll );
 	g_clusterdb.getRdb()->addRdbBase1 ( coll );
@@ -9042,7 +9043,7 @@ void removeDocIds  ( char *coll , char *filename ) {
 	//
 
 	logf(LOG_INFO,"db: Scanning tfndb and removing recs.");
-	r = g_tfndb.getRdb();
+	r = 0;//g_tfndb.getRdb();
 	count = 0;
 	scanned = 0;
 	recs = 0;
@@ -9087,7 +9088,7 @@ void removeDocIds  ( char *coll , char *filename ) {
 		key_t k    = list.getCurrentKey();
 		// skip deletes
 		if ( (k.n0 & 0x01) == 0x00 ) continue;
-		unsigned long long d = g_tfndb.getDocId(&k);
+		unsigned long long d = 0;//g_tfndb.getDocId(&k);
 		// see if docid is in delete list
 		long n = (unsigned long)d & mask;
 		while ( slots[n] && slots[n] != d )

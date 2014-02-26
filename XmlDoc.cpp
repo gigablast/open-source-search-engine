@@ -13725,7 +13725,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	// we make a "fake" url for the diffbot reply when indexing it
 	// by appending -diffbotxyz%lu. see "fakeUrl" below.
-	if ( m_firstUrl.getUrlLen() + 15 >= MAX_URL_LEN ) {
+	if ( m_firstUrl.getUrlLen() + 24 >= MAX_URL_LEN ) {
 		if ( m_firstUrlValid )
 			log("build: diffbot url would be too long for "
 			    "%s", m_firstUrl.getUrl() );
