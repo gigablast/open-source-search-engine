@@ -617,6 +617,8 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 	return false;
 }
 
+HashTableX g_lineTable;
+
 static void sendReplyWrapper ( void *state ) {
 
 	long saved = g_errno;
@@ -637,6 +639,8 @@ static void sendReplyWrapper ( void *state ) {
 	Msg25Request *req = (Msg25Request *)slot2->m_readBuf;
 	// sanity
 	if ( req->m_udpSlot != slot2 ) { char *xx=NULL;*xx=0;}
+	// if in table, nuke it
+	g_lineTable.removeKey ( &req->m_siteHash64 );
 
  nextLink:
 
@@ -670,8 +674,6 @@ static void sendReplyWrapper ( void *state ) {
 	delete ( m25 );
 }
 
-
-HashTableX g_lineTable;
 
 void  handleRequest25 ( UdpSlot *slot , long netnice ) {
 
