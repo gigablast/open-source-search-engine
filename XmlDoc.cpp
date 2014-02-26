@@ -2154,6 +2154,18 @@ bool XmlDoc::indexDoc ( ) {
 		    "error reply.",
 		    m_docId,mstrerror(g_errno));
 
+	// if docid not found when trying to do a query reindex...
+	// this really shouldn't happen but i think we were adding
+	// additional SpiderRequests since we were using a fake first ip.
+	// but i have since fixed that code. so if the titlerec was not
+	// found when trying to do a force delete... it's not a temporary
+	// error and should not be retried. if we set indexCode to 
+	// EINTERNALERROR it seems to be retried.
+	if ( g_errno == ENOTFOUND ) {
+		m_indexCode = g_errno;
+		m_indexCodeValid = true;
+	}
+
 	if ( ! m_indexCodeValid ) {
 		m_indexCode = EINTERNALERROR;//g_errno;
 		m_indexCodeValid = true;
@@ -2218,6 +2230,12 @@ bool XmlDoc::indexDoc ( ) {
 		m_spideredTimeValid = true;
 		m_spideredTime = getTimeGlobal();//0; use now!
 	}
+
+	// don't let it get the diffbot reply either! it should be empty.
+	if ( ! m_diffbotReplyValid ) {
+		m_diffbotReplyValid = true;
+	}
+
 
 	// if error is EFAKEFIRSTIP, do not core
 	//if ( ! m_isIndexedValid ) {
@@ -2313,6 +2331,10 @@ bool XmlDoc::indexDoc2 ( ) {
 	     // is really just adding the spider request and returning
 	     // to the browser without delay.
 	     ! m_sreq.m_isInjecting &&
+	     // not for page reindexes either!
+	     ! m_sreq.m_isPageReindex &&
+	     // just add url
+	     m_sreq.m_isAddUrl &&
 	     // diffbot requests are ok though!
 	     ! strstr(m_sreq.m_url,"-diffbotxyz") ) {
 		m_indexCodeValid = true;
@@ -18551,6 +18573,9 @@ bool XmlDoc::logIt ( ) {
 	else
 		sb.safePrintf("urlinjected=0 ");
 
+	if ( m_sreqValid && m_sreq.m_isPageReindex )
+		sb.safePrintf("pagereindex=1 ");
+
 	if ( m_spiderLinksValid && m_spiderLinks )
 		sb.safePrintf("spiderlinks=1 ");
 	if ( m_spiderLinksValid && ! m_spiderLinks )
@@ -22331,7 +22356,11 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// it came from!! if it has m_sreq.m_isAddUrl and 
 	// m_sreq.m_fakeFirstIp then we actually do add the reply with that
 	// fake ip so that they will exist in the same shard.
-	if ( m_sreqValid && ! m_sreq.m_isInjecting ) 
+	// BUT if it is docid pased from PageReindex.cpp (a query reindex)
+	// we set the injection bit and the pagereindex bit, we should let
+	// thise guys keep the firstip because the docid-based spider request
+	// is in spiderdb. it needs to match up.
+	if ( m_sreqValid && (!m_sreq.m_isInjecting||m_sreq.m_isPageReindex) )
 		firstIp = m_sreq.m_firstIp;
 
 	// sanity

@@ -2125,8 +2125,13 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 
 	long i = 0;
 
+	// 1st one! for query reindex/ query delete
+	m_regExs[i].set("isdocidbased");
+	m_spiderIpMaxSpiders [i] = 10;
+	m_spiderPriorities   [i] = 70;
+	i++;
 
-	// 1st default url filter
+	// 2nd default url filter
 	m_regExs[i].set("ismedia && !ismanualadd");
 	m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
 	i++;
