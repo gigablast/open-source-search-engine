@@ -2101,8 +2101,15 @@ bool XmlDoc::indexDoc ( ) {
 		//    cr->m_localCrawlInfo.m_pageDownloadAttempts);
 		// this is just how many urls we tried to index
 		//cr->m_localCrawlInfo.m_urlsConsidered++;
-		cr->m_localCrawlInfo.m_pageDownloadAttempts++;
-		cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
+		// avoid counting if it is a fake first ip
+		bool countIt = true;
+		// pagereindex.cpp sets this as does any add url (bulk job)
+		if ( m_sreqValid && m_sreq.m_fakeFirstIp ) 
+			countIt = false;
+		if ( countIt ) {
+			cr->m_localCrawlInfo.m_pageDownloadAttempts++;
+			cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
+		}
 		// need to save collection rec now during auto save
 		cr->m_needsSave = true;
 		// update this just in case we are the last url crawled
@@ -2336,7 +2343,8 @@ bool XmlDoc::indexDoc2 ( ) {
 	//	return false;
 
 
-
+	// MDW: we do this in indexDoc() above why do we need it here?
+	/*
 	// even if not using diffbot, keep track of these counts
 	if ( ! m_isDiffbotJSONObject && 
 	     ! m_incrementedAttemptsCount ) {
@@ -2352,7 +2360,7 @@ bool XmlDoc::indexDoc2 ( ) {
 		long long now = gettimeofdayInMillisecondsGlobal();
 		cr->m_diffbotCrawlEndTime = now;
 	}
-
+	*/
 	/*
 	// if we are being called from Spider.cpp and we met our max
 	// to crawl requirement, then bail out on this. this might

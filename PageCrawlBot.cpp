@@ -784,6 +784,12 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 			// do not print "Fake First Ip"...
 			if ( m_prevReplyError == EFAKEFIRSTIP )
 				msg = "Initial crawl request";
+			// if the initial crawl request got a reply then that
+			// means the spiderrequest was added under the correct
+			// firstip... so skip it. i am assuming that the
+			// correct spidrerequest got added ok here...
+			if ( m_prevReplyError == EFAKEFIRSTIP )
+				continue;
 		}
 
 		if ( srep && srep->m_hadDiffbotError )
