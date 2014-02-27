@@ -633,8 +633,8 @@ static void sendReplyWrapper ( void *state ) {
 	// steal this buffer
 	char *reply1 = info->getBufStart();
 	long  replySize = info->length();
-	// sanity
-	if ( replySize <= 0 ) { char *xx=NULL;*xx=0; }
+	// sanity. no if collrec not found its 0!
+	if ( ! saved && replySize <= 0 ) { char *xx=NULL;*xx=0; }
 	// get original request
 	Msg25Request *req = (Msg25Request *)slot2->m_readBuf;
 	// sanity
