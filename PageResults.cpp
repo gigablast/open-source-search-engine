@@ -2057,8 +2057,15 @@ bool printResult ( State0 *st, long ix ) {
 	}
 
 
-	Msg20      *m20 = msg40->m_msg20[ix];
-	Msg20Reply *mr  = m20->m_r;
+	Msg20      *m20 ;
+	if ( si->m_streamResults )
+		m20 = msg40->getCompletedSummary(ix);
+	else
+		m20 = msg40->m_msg20[ix];
+
+	// get the reply
+	Msg20Reply *mr = m20->m_r;
+		
 
 	// . sometimes the msg20reply is NULL so prevent it coring
 	// . i think this happens if all hosts in a shard are down or timeout
