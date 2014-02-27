@@ -2139,11 +2139,14 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	// 2nd default filter
 	// always turn this on for now. they need to add domains they want
 	// to crawl as seeds so they do not spider the web.
-	//if ( m_restrictDomain ) {
-	m_regExs[i].set("!isonsamedomain && !ismanualadd");
-	m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	//}
+	// no because FTB seeds with link pages that link to another
+	// domain. they just need to be sure to supply a crawl pattern
+	// to avoid spidering the whole web.
+	if ( m_restrictDomain ) {
+		m_regExs[i].set("!isonsamedomain && !ismanualadd");
+		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		i++;
+	}
 
 	m_regExs[i].set("errorcount>=1 && !hastmperror");
 	m_spiderPriorities   [i] = 15;
