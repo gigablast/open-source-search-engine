@@ -1400,8 +1400,7 @@ bool Msg40::gotSummary ( ) {
 		if ( m20->m_errno ) {
 			log("msg40: sum #%li error: %s",
 			    m_printi,mstrerror(m20->m_errno));
-			// return it so getAvailMsg20() can use it again
-			// this will set m_launched to false
+			// make it available to be reused
 			m20->reset();
 			continue;
 		}
@@ -1416,8 +1415,11 @@ bool Msg40::gotSummary ( ) {
 		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
 		     mr->m_contentHash32 &&
 		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) ) {
+			//if ( g_conf.m_logDebugQuery )
 			log("msg40: dup sum #%li (%lu)",m_printi,
 			    mr->m_contentHash32);
+			// make it available to be reused
+			m20->reset();
 			continue;
 		}
 
@@ -1501,6 +1503,9 @@ bool Msg40::gotSummary ( ) {
 		//   do a recursive stack explosion
 		// . this returns false if still waiting on more to come back
 		if ( ! launchMsg20s ( true ) ) return false; 
+		// it won't launch now if we are bottlnecked waiting for
+		// m_printi's summary to come in
+		if ( m_si->m_streamResults ) return false;
 		// maybe some were cached?
 		//goto refilter;
 		// it returned true, so m_numRequests == m_numReplies and
