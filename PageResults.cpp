@@ -5302,6 +5302,14 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 		ji = ptrs[i];
 		// skip if none
 		if ( ! ji ) continue;
+
+		// skip "html" field... too spammy for csv and > 32k causes
+		// libreoffice calc to truncate it and break its parsing
+		if ( ji->m_name && 
+		     //! ji->m_parent &&
+		     strcmp(ji->m_name,"html")==0)
+			continue;
+
 		//
 		// get value and print otherwise
 		//
