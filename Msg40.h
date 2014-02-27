@@ -132,6 +132,8 @@ class Msg40 {
 	// keep these public since called by wrapper functions
 	bool gotDocIds        ( ) ;
 	bool launchMsg20s     ( bool recalled ) ;
+	class Msg20 *getAvailMsg20();
+	class Msg20 *getCompletedSummary ( long ix );
 	bool getSummaries     ( ) ;
 	bool gotSummary       ( ) ;
 	bool reallocMsg20Buf ( ) ;
