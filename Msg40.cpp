@@ -881,18 +881,19 @@ bool Msg40::reallocMsg20Buf ( ) {
 		return true;
 	}
 
-	m_buf2        = NULL;
-	m_bufMaxSize2 = need;
 	m_numMsg20s = m_msg3a.m_numDocIds;
 
 	// when streaming because we can have hundreds of thousands of
 	// search results we recycle a few msg20s to save mem
 	if ( m_si->m_streamResults ) {
-		long max = MAX_OUTSTANDING_MSG20S;
+		long max = MAX_OUTSTANDING_MSG20S * 2;
 		if ( m_msg3a.m_numDocIds < max ) max = m_msg3a.m_numDocIds;
 		need = max * (4+sizeof(Msg20));
 		m_numMsg20s = max;
 	}
+
+	m_buf2        = NULL;
+	m_bufMaxSize2 = need;
 
 	// do the alloc
 	if ( need ) m_buf2 = (char *)mmalloc ( need ,"Msg40msg20");
@@ -1033,6 +1034,11 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		//if ( m_numRequests-m_numReplies >= need ) break;
 		// hard limit
 		if ( m_numRequests-m_numReplies >= maxOut ) break;
+		// do not launch another until m_printi comes back because
+		// all summaries are bottlenecked on printing him out now
+		if ( m_si->m_streamResults &&
+		     i >= m_printi + MAX_OUTSTANDING_MSG20S - 1 )
+			break;
 		// do not double count!
 		//if ( i <= m_lastProcessedi ) continue;
 		// do not repeat for this i
@@ -1238,7 +1244,8 @@ Msg20 *Msg40::getAvailMsg20 ( ) {
 		// m_inProgress is set to false right before it
 		// calls Msg20::m_callback which is gotSummaryWrapper()
 		// so we should be ok with this
-		if ( ! m_msg20[i]->m_inProgress ) return m_msg20[i];
+		if ( m_msg20[i]->m_launched ) continue;
+		return m_msg20[i];
 	}
 	// how can this happen???
 	char *xx=NULL;*xx=0; 
@@ -1377,27 +1384,42 @@ bool Msg40::gotSummary ( ) {
 		// otherwise, get the summary for result #m_printi
 		//Msg20 *m20 = m_msg20[m_printi];
 
-		if ( ! m20 ) {
-			log("msg40: m20 NULL #%li",m_printi);
-			continue;
-		}
+		//if ( ! m20 ) {
+		//	log("msg40: m20 NULL #%li",m_printi);
+		//	continue;
+		//}
+
+		// if result summary #i not yet in, wait...
+		if ( ! m20 ) 
+			break;
+
+		// wait if no reply for it yet
+		//if ( m20->m_inProgress )
+		//	break;
+
 		if ( m20->m_errno ) {
 			log("msg40: sum #%li error: %s",
 			    m_printi,mstrerror(m20->m_errno));
+			// make it available to be reused
+			m20->reset();
 			continue;
 		}
 
 		// get the next reply we are waiting on to print results order
 		Msg20Reply *mr = m20->m_r;
 		if ( ! mr ) break;
+		//if ( ! mr ) { char *xx=NULL;*xx=0; }
 
 		// primitive deduping. for diffbot json exclude url's from the
 		// XmlDoc::m_contentHash32.. it will be zero if invalid i guess
 		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
 		     mr->m_contentHash32 &&
 		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) ) {
+			//if ( g_conf.m_logDebugQuery )
 			log("msg40: dup sum #%li (%lu)",m_printi,
 			    mr->m_contentHash32);
+			// make it available to be reused
+			m20->reset();
 			continue;
 		}
 
@@ -1418,8 +1440,12 @@ bool Msg40::gotSummary ( ) {
 		printSearchResult9 ( m_printi );
 
 		// now free the reply to save memory since we could be 
-		// streaming back 1M+
-		m20->freeReply();
+		// streaming back 1M+. we call reset below, no need for this.
+		//m20->freeReply();
+
+		// return it so getAvailMsg20() can use it again
+		// this will set m_launched to false
+		m20->reset();
 	}
 
 	// set it to true on all but the last thing we send!
@@ -1477,6 +1503,9 @@ bool Msg40::gotSummary ( ) {
 		//   do a recursive stack explosion
 		// . this returns false if still waiting on more to come back
 		if ( ! launchMsg20s ( true ) ) return false; 
+		// it won't launch now if we are bottlnecked waiting for
+		// m_printi's summary to come in
+		if ( m_si->m_streamResults ) return false;
 		// maybe some were cached?
 		//goto refilter;
 		// it returned true, so m_numRequests == m_numReplies and

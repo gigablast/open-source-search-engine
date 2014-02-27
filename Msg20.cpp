@@ -14,6 +14,7 @@ void Msg20::constructor () {
 	m_r       = NULL;
 	m_inProgress = false;
 	m_launched = false;
+	m_i = -1;
 	reset();
 	m_mcast.constructor();
 }
