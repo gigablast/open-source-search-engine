@@ -12981,11 +12981,13 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 		// because we need the anchor text to pass in to diffbot
 		bool doLinkSpamCheck = cr->m_doLinkSpamCheck;
 		bool oneVotePerIpDom = cr->m_oneVotePerIpDom;
-		if ( cr->m_isCustomCrawl && cr->m_restrictDomain ) {
-			doLinkSpamCheck     = false;
-			oneVotePerIpDom     = false;
-			onlyNeedGoodInlinks = false;
-		}
+		// this seems to overdo it when we have a ton of linktext
+		// perhaps, so take this out...
+		//if ( cr->m_isCustomCrawl && cr->m_restrictDomain ) {
+		//	doLinkSpamCheck     = false;
+		//	oneVotePerIpDom     = false;
+		//	onlyNeedGoodInlinks = false;
+		//}
 
 		// call it
 		char *url = getFirstUrl()->getUrl();

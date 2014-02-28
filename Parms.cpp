@@ -9963,6 +9963,7 @@ void Parms::init ( ) {
 	m++;
 
 	// use url filters for this. this is a crawlbot parm really.
+	/*
 	m->m_title = "restrict domain";
 	m->m_desc  = "Keep crawler on same domain as seed urls?";
 	m->m_cgi   = "restrictDomain";
@@ -9972,6 +9973,7 @@ void Parms::init ( ) {
 	// we need to save this it is a diffbot parm
 	m->m_flags = PF_HIDDEN | PF_DIFFBOT;// | PF_NOSAVE;
 	m++;
+	*/
 
 	m->m_title = "do url sporn checking";
 	m->m_desc  = "If this is true and the spider finds "
