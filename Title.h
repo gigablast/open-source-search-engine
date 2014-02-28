@@ -48,7 +48,7 @@ class Title {
 
 
 	char *getTitle     ( ) { return m_title; };
-	long  getTitleSize ( ) { return m_titleBytes; };
+	long  getTitleSize ( ) { return m_titleBytes; }; // does NOT include \0
 
 
 	bool copyTitle ( class Words *words, class Pos *pos,
@@ -63,7 +63,7 @@ class Title {
 	//static int cmpInLinkerScore(const void *A, const void *B);
 
 	char *m_title;
-	long  m_titleBytes; // in bytes
+	long  m_titleBytes; // in bytes. does NOT include \0
 	long  m_titleAllocSize;
 	char  m_localBuf [ TITLE_LOCAL_SIZE ];
 	bool  m_htmlEncoded;
