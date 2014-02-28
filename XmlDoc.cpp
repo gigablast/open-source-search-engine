@@ -2101,8 +2101,15 @@ bool XmlDoc::indexDoc ( ) {
 		//    cr->m_localCrawlInfo.m_pageDownloadAttempts);
 		// this is just how many urls we tried to index
 		//cr->m_localCrawlInfo.m_urlsConsidered++;
-		cr->m_localCrawlInfo.m_pageDownloadAttempts++;
-		cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
+		// avoid counting if it is a fake first ip
+		bool countIt = true;
+		// pagereindex.cpp sets this as does any add url (bulk job)
+		if ( m_sreqValid && m_sreq.m_fakeFirstIp ) 
+			countIt = false;
+		if ( countIt ) {
+			cr->m_localCrawlInfo.m_pageDownloadAttempts++;
+			cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
+		}
 		// need to save collection rec now during auto save
 		cr->m_needsSave = true;
 		// update this just in case we are the last url crawled
@@ -2358,7 +2365,8 @@ bool XmlDoc::indexDoc2 ( ) {
 	//	return false;
 
 
-
+	// MDW: we do this in indexDoc() above why do we need it here?
+	/*
 	// even if not using diffbot, keep track of these counts
 	if ( ! m_isDiffbotJSONObject && 
 	     ! m_incrementedAttemptsCount ) {
@@ -2374,7 +2382,7 @@ bool XmlDoc::indexDoc2 ( ) {
 		long long now = gettimeofdayInMillisecondsGlobal();
 		cr->m_diffbotCrawlEndTime = now;
 	}
-
+	*/
 	/*
 	// if we are being called from Spider.cpp and we met our max
 	// to crawl requirement, then bail out on this. this might
@@ -12973,11 +12981,13 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 		// because we need the anchor text to pass in to diffbot
 		bool doLinkSpamCheck = cr->m_doLinkSpamCheck;
 		bool oneVotePerIpDom = cr->m_oneVotePerIpDom;
-		if ( cr->m_isCustomCrawl && cr->m_restrictDomain ) {
-			doLinkSpamCheck     = false;
-			oneVotePerIpDom     = false;
-			onlyNeedGoodInlinks = false;
-		}
+		// this seems to overdo it when we have a ton of linktext
+		// perhaps, so take this out...
+		//if ( cr->m_isCustomCrawl && cr->m_restrictDomain ) {
+		//	doLinkSpamCheck     = false;
+		//	oneVotePerIpDom     = false;
+		//	onlyNeedGoodInlinks = false;
+		//}
 
 		// call it
 		char *url = getFirstUrl()->getUrl();
@@ -13764,7 +13774,7 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	// we make a "fake" url for the diffbot reply when indexing it
 	// by appending -diffbotxyz%lu. see "fakeUrl" below.
-	if ( m_firstUrl.getUrlLen() + 15 >= MAX_URL_LEN ) {
+	if ( m_firstUrl.getUrlLen() + 24 >= MAX_URL_LEN ) {
 		if ( m_firstUrlValid )
 			log("build: diffbot url would be too long for "
 			    "%s", m_firstUrl.getUrl() );

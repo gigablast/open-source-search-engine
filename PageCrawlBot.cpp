@@ -784,6 +784,12 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 			// do not print "Fake First Ip"...
 			if ( m_prevReplyError == EFAKEFIRSTIP )
 				msg = "Initial crawl request";
+			// if the initial crawl request got a reply then that
+			// means the spiderrequest was added under the correct
+			// firstip... so skip it. i am assuming that the
+			// correct spidrerequest got added ok here...
+			if ( m_prevReplyError == EFAKEFIRSTIP )
+				continue;
 		}
 
 		if ( srep && srep->m_hadDiffbotError )
@@ -1533,7 +1539,7 @@ static class HelpItem s_his[] = {
 	 "the maxtocrawl or maxtoprocess limit, or when the crawl "
 	 "completes."},
 	{"obeyRobots","Obey robots.txt files?"},
-	{"restrictDomain","Restrict downloaded urls to domains of seeds?"},
+	//{"restrictDomain","Restrict downloaded urls to domains of seeds?"},
 
 	{"urlCrawlPattern","List of || separated strings. If the url "
 	 "contains any of these then we crawl the url, otherwise, we do not. "
@@ -2365,11 +2371,11 @@ bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) {
 			      // settable parms
 			      "\"maxToCrawl\":%lli,\n"
 			      "\"maxToProcess\":%lli,\n"
-			      "\"restrictDomain\":%li,\n"
+			      //"\"restrictDomain\":%li,\n"
 			      "\"onlyProcessIfNew\":%li,\n"
 			      , cx->m_maxToCrawl
 			      , cx->m_maxToProcess
-			      , (long)cx->m_restrictDomain
+			      //, (long)cx->m_restrictDomain
 			      , (long)cx->m_diffbotOnlyProcessIfNewUrl
 			      );
 		sb.safePrintf("\"seeds\":\"");
@@ -3344,13 +3350,15 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			urtYes = "";
 			urtNo  = " checked";
 		}
-		
+
+		/*
 		char *rdomYes = " checked";
 		char *rdomNo  = "";
 		if ( ! cr->m_restrictDomain ) {
 			rdomYes = "";
 			rdomNo  = " checked";
 		}
+		*/
 
 		char *isNewYes = "";
 		char *isNewNo  = " checked";
@@ -3541,15 +3549,15 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</td>"
 			      "</tr>"
 
-			      "<tr><td>"
-			      "<b>Restrict domain to seeds?</b> "
-			      "</td><td>"
-			      "<input type=radio name=restrictDomain "
-			      "value=1%s> yes &nbsp; "
-			      "<input type=radio name=restrictDomain "
-			      "value=0%s> no &nbsp; "
-			      "</td>"
-			      "</tr>"
+			      //"<tr><td>"
+			      //"<b>Restrict domain to seeds?</b> "
+			      //"</td><td>"
+			      //"<input type=radio name=restrictDomain "
+			      //"value=1%s> yes &nbsp; "
+			      //"<input type=radio name=restrictDomain "
+			      //"value=0%s> no &nbsp; "
+			      //"</td>"
+			      //"</tr>"
 
 			      //"<tr><td>"
 			      //"Use spider proxies on AWS? "
@@ -3592,8 +3600,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , urtYes
 			      , urtNo
 
-			      , rdomYes
-			      , rdomNo
+			      //, rdomYes
+			      //, rdomNo
 
 			      );
 	}

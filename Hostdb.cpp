@@ -2315,10 +2315,10 @@ uint32_t Hostdb::getShardNum ( char rdbId,void *k ) { // ,bool split ) {
 	else if ( rdbId == RDB_LINKDB || rdbId == RDB2_LINKDB2 ) {
 		return m_map [(*(uint16_t *)((char *)k + 26))>>3];	
 	}
-	else if ( rdbId == RDB_TFNDB || rdbId == RDB2_TFNDB2 ) {
-		unsigned long long d = g_tfndb.getDocId ( (key_t *)k );
-		return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
-	}
+	//else if ( rdbId == RDB_TFNDB || rdbId == RDB2_TFNDB2 ) {
+	//	unsigned long long d = g_tfndb.getDocId ( (key_t *)k );
+	//	return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];
+	//}
 	else if ( rdbId == RDB_TITLEDB || rdbId == RDB2_TITLEDB2 ) {
 		unsigned long long d = g_titledb.getDocId ( (key_t *)k );
 		return m_map [ ((d>>14)^(d>>7)) & (MAX_KSLOTS-1) ];

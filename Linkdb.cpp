@@ -633,8 +633,8 @@ static void sendReplyWrapper ( void *state ) {
 	// steal this buffer
 	char *reply1 = info->getBufStart();
 	long  replySize = info->length();
-	// sanity
-	if ( replySize <= 0 ) { char *xx=NULL;*xx=0; }
+	// sanity. no if collrec not found its 0!
+	if ( ! saved && replySize <= 0 ) { char *xx=NULL;*xx=0; }
 	// get original request
 	Msg25Request *req = (Msg25Request *)slot2->m_readBuf;
 	// sanity
@@ -645,7 +645,10 @@ static void sendReplyWrapper ( void *state ) {
  nextLink:
 
 	UdpSlot *udpSlot = req->m_udpSlot;
-	
+
+	// update for next udpSlot
+	req = req->m_next;
+
 	// just dup the reply for each one
 	char *reply2 = (char *)mdup(reply1,replySize,"m25repd");
 
@@ -666,7 +669,6 @@ static void sendReplyWrapper ( void *state ) {
 	}
 
 	// if we had a link
-	req = req->m_next;
 	if ( req ) goto nextLink;
 
 	// the destructor
@@ -683,6 +685,10 @@ void  handleRequest25 ( UdpSlot *slot , long netnice ) {
 
 	// make sure this always NULL for our linked list logic
 	req->m_next = NULL;
+
+	// udp socket for sending back the final linkInfo in m_linkInfoBuf
+	// used by sendReply()
+	req->m_udpSlot = slot;
 
 	// set up the hashtable if our first time
 	if ( ! g_lineTable.isInitialized() )
@@ -734,10 +740,6 @@ void  handleRequest25 ( UdpSlot *slot , long netnice ) {
 	
 	// point to a real safebuf here for populating with data
 	m25->m_linkInfoBuf = &m25->m_realBuf;
-
-	// udp socket for sending back the final linkInfo in m_linkInfoBuf
-	// used by sendReply()
-	req->m_udpSlot = slot;
 
 	// set some new stuff. should probably be set in getLinkInfo2()
 	// but we are trying to leave that as unaltered as possible to

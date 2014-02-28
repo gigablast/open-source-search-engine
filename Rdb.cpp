@@ -13,7 +13,7 @@
 #include "Datedb.h"
 #include "Titledb.h"
 #include "Spider.h"
-#include "Tfndb.h"
+//#include "Tfndb.h"
 //#include "Sync.h"
 #include "Spider.h"
 #include "Repair.h"
@@ -2648,7 +2648,7 @@ Rdb *getRdbFromId ( uint8_t rdbId ) {
 		s_table9 [ RDB_SYNCDB    ] = g_syncdb.getRdb();
 		s_table9 [ RDB_SPIDERDB  ] = g_spiderdb.getRdb();
 		s_table9 [ RDB_DOLEDB    ] = g_doledb.getRdb();
-		s_table9 [ RDB_TFNDB     ] = g_tfndb.getRdb();
+		//s_table9 [ RDB_TFNDB     ] = g_tfndb.getRdb();
 		s_table9 [ RDB_CLUSTERDB ] = g_clusterdb.getRdb();
 		s_table9 [ RDB_CATDB     ] = g_catdb.getRdb();
 		s_table9 [ RDB_DATEDB    ] = g_datedb.getRdb();
@@ -2667,7 +2667,7 @@ Rdb *getRdbFromId ( uint8_t rdbId ) {
 		s_table9 [ RDB2_SECTIONDB2 ] = g_sectiondb2.getRdb();
 		s_table9 [ RDB2_PLACEDB2   ] = g_placedb2.getRdb();
 		s_table9 [ RDB2_SPIDERDB2  ] = g_spiderdb2.getRdb();
-		s_table9 [ RDB2_TFNDB2     ] = g_tfndb2.getRdb();
+		//s_table9 [ RDB2_TFNDB2     ] = g_tfndb2.getRdb();
 		s_table9 [ RDB2_CLUSTERDB2 ] = g_clusterdb2.getRdb();
 		s_table9 [ RDB2_DATEDB2    ] = g_datedb2.getRdb();
 		s_table9 [ RDB2_LINKDB2    ] = g_linkdb2.getRdb();
@@ -2691,7 +2691,7 @@ char getIdFromRdb ( Rdb *rdb ) {
 	//if ( rdb == g_checksumdb.getRdb() ) return RDB_CHECKSUMDB;
 	if ( rdb == g_spiderdb.getRdb  () ) return RDB_SPIDERDB;
 	if ( rdb == g_doledb.getRdb    () ) return RDB_DOLEDB;
-	if ( rdb == g_tfndb.getRdb     () ) return RDB_TFNDB;
+	//if ( rdb == g_tfndb.getRdb     () ) return RDB_TFNDB;
 	if ( rdb == g_clusterdb.getRdb () ) return RDB_CLUSTERDB;
 	if ( rdb == g_statsdb.getRdb   () ) return RDB_STATSDB;
 	if ( rdb == g_linkdb.getRdb    () ) return RDB_LINKDB;
@@ -2712,7 +2712,7 @@ char getIdFromRdb ( Rdb *rdb ) {
 	if ( rdb == g_placedb2.getRdb   () ) return RDB2_PLACEDB2;
 	//if ( rdb == g_checksumdb2.getRdb() ) return RDB2_CHECKSUMDB2;
 	if ( rdb == g_spiderdb2.getRdb  () ) return RDB2_SPIDERDB2;
-	if ( rdb == g_tfndb2.getRdb     () ) return RDB2_TFNDB2;
+	//if ( rdb == g_tfndb2.getRdb     () ) return RDB2_TFNDB2;
 	if ( rdb == g_clusterdb2.getRdb () ) return RDB2_CLUSTERDB2;
 	//if ( rdb == g_statsdb2.getRdb   () ) return RDB2_STATSDB2;
 	if ( rdb == g_linkdb2.getRdb    () ) return RDB2_LINKDB2;

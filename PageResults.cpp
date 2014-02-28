@@ -2057,8 +2057,15 @@ bool printResult ( State0 *st, long ix ) {
 	}
 
 
-	Msg20      *m20 = msg40->m_msg20[ix];
-	Msg20Reply *mr  = m20->m_r;
+	Msg20      *m20 ;
+	if ( si->m_streamResults )
+		m20 = msg40->getCompletedSummary(ix);
+	else
+		m20 = msg40->m_msg20[ix];
+
+	// get the reply
+	Msg20Reply *mr = m20->m_r;
+		
 
 	// . sometimes the msg20reply is NULL so prevent it coring
 	// . i think this happens if all hosts in a shard are down or timeout
@@ -5302,6 +5309,14 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 		ji = ptrs[i];
 		// skip if none
 		if ( ! ji ) continue;
+
+		// skip "html" field... too spammy for csv and > 32k causes
+		// libreoffice calc to truncate it and break its parsing
+		if ( ji->m_name && 
+		     //! ji->m_parent &&
+		     strcmp(ji->m_name,"html")==0)
+			continue;
+
 		//
 		// get value and print otherwise
 		//

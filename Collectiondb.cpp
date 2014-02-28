@@ -452,7 +452,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 		cr->m_diffbotOnlyProcessIfNewUrl = true;
 		// default respider to off
 		cr->m_collectiveRespiderFrequency = 0.0;
-		cr->m_restrictDomain = true;
+		//cr->m_restrictDomain = true;
 		// reset the crawl stats
 		// . this will core if a host was dead and then when it came
 		//   back up host #0's parms.cpp told it to add a new coll
@@ -2091,6 +2091,66 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( ! upp ) upp = m_diffbotUrlProcessRegEx.getBufStart();
 	if ( upp && ! upp[0] ) upp = NULL;
 
+	///////
+	//
+	// recompile regular expressions
+	//
+	///////
+
+
+	if ( m_hasucr ) {
+		regfree ( &m_ucr );
+		m_hasucr = false;
+	}
+
+	if ( m_hasupr ) {
+		regfree ( &m_upr );
+		m_hasupr = false;
+	}
+
+	// copy into tmpbuf
+	SafeBuf tmp;
+
+	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
+	if ( rx && ! rx[0] ) rx = NULL;
+	if ( rx ) {
+		tmp.reset();
+		tmp.safeStrcpy ( rx );
+		expandRegExShortcuts ( &tmp );
+		m_hasucr = true;
+	}
+	if ( rx && regcomp ( &m_ucr , tmp.getBufStart() ,
+			     REG_EXTENDED| //REG_ICASE|
+			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
+		// error!
+		log("coll: regcomp %s failed: %s. "
+			   "Ignoring.",
+			   rx,mstrerror(errno));
+		regfree ( &m_ucr );
+		m_hasucr = false;
+	}
+
+
+	rx = m_diffbotUrlProcessRegEx.getBufStart();
+	if ( rx && ! rx[0] ) rx = NULL;
+	if ( rx ) m_hasupr = true;
+	if ( rx ) {
+		tmp.reset();
+		tmp.safeStrcpy ( rx );
+		expandRegExShortcuts ( &tmp );
+		m_hasupr = true;
+	}
+	if ( rx && regcomp ( &m_upr , tmp.getBufStart() ,
+			     REG_EXTENDED| // REG_ICASE|
+			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
+		// error!
+		log("coll: regcomp %s failed: %s. "
+		    "Ignoring.",
+		    rx,mstrerror(errno));
+		regfree ( &m_upr );
+		m_hasupr = false;
+	}
+
 
 	// what diffbot url to use for processing
 	char *api = m_diffbotApiUrl.getBufStart();
@@ -2139,11 +2199,18 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	// 2nd default filter
 	// always turn this on for now. they need to add domains they want
 	// to crawl as seeds so they do not spider the web.
-	//if ( m_restrictDomain ) {
-	m_regExs[i].set("!isonsamedomain && !ismanualadd");
-	m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
-	i++;
-	//}
+	// no because FTB seeds with link pages that link to another
+	// domain. they just need to be sure to supply a crawl pattern
+	// to avoid spidering the whole web.
+	//
+	// if they did not EXPLICITLY provide a url crawl pattern or
+	// url crawl regex then restrict to seeds to prevent from spidering
+	// the entire internet
+	if ( ! ucp && ! m_hasucr ) { // m_restrictDomain ) {
+		m_regExs[i].set("!isonsamedomain && !ismanualadd");
+		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		i++;
+	}
 
 	m_regExs[i].set("errorcount>=1 && !hastmperror");
 	m_spiderPriorities   [i] = 15;
@@ -2267,66 +2334,6 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	//m_numRegExs7  = i;
 	m_numRegExs8  = i;
 	//m_numRegExs11 = i;
-
-	///////
-	//
-	// recompile regular expressions
-	//
-	///////
-
-
-	if ( m_hasucr ) {
-		regfree ( &m_ucr );
-		m_hasucr = false;
-	}
-
-	if ( m_hasupr ) {
-		regfree ( &m_upr );
-		m_hasupr = false;
-	}
-
-	// copy into tmpbuf
-	SafeBuf tmp;
-
-	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
-	if ( rx && ! rx[0] ) rx = NULL;
-	if ( rx ) {
-		tmp.reset();
-		tmp.safeStrcpy ( rx );
-		expandRegExShortcuts ( &tmp );
-		m_hasucr = true;
-	}
-	if ( rx && regcomp ( &m_ucr , tmp.getBufStart() ,
-			     REG_EXTENDED| //REG_ICASE|
-			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
-		// error!
-		log("coll: regcomp %s failed: %s. "
-			   "Ignoring.",
-			   rx,mstrerror(errno));
-		regfree ( &m_ucr );
-		m_hasucr = false;
-	}
-
-
-	rx = m_diffbotUrlProcessRegEx.getBufStart();
-	if ( rx && ! rx[0] ) rx = NULL;
-	if ( rx ) m_hasupr = true;
-	if ( rx ) {
-		tmp.reset();
-		tmp.safeStrcpy ( rx );
-		expandRegExShortcuts ( &tmp );
-		m_hasupr = true;
-	}
-	if ( rx && regcomp ( &m_upr , tmp.getBufStart() ,
-			     REG_EXTENDED| // REG_ICASE|
-			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
-		// error!
-		log("coll: regcomp %s failed: %s. "
-		    "Ignoring.",
-		    rx,mstrerror(errno));
-		regfree ( &m_upr );
-		m_hasupr = false;
-	}
 
 
 	//char *x = "http://staticpages.diffbot.com/testCrawl/article1.html";
