@@ -12354,6 +12354,10 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 		*end = '\0';
 		// count it as an attempt
 		count++;
+
+		bool matchFront = false;
+		if ( start[0] == '^' ) { start++; matchFront = true; }
+
 		// if pattern is NOT/NEGATIVE...
 		bool negative = false;
 		if ( start[0] == '!' && start[1] && start[1]!='|' ) {
@@ -12362,9 +12366,19 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 		}
 		else
 			hadPositive = true;
+
 		// . is this substring anywhere in the document
 		// . check the rawest content before converting to utf8 i guess
-		char *foundPtr =  strstr ( content , start ) ;
+		// . suuport the ^ operator
+		char *foundPtr ;
+		if ( matchFront ) {
+			// if we match the front, set to bogus 0x01
+			if ( strcmp(content,start)==0 ) foundPtr =(char *)0x01;
+		}
+		else {
+			foundPtr = strstr ( content , start ) ;
+		}
+
 		// debug log statement
 		//if ( foundPtr )
 		//	log("build: page %s matches ppp of \"%s\"",
