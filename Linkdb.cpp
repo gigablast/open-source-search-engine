@@ -634,7 +634,12 @@ static void sendReplyWrapper ( void *state ) {
 	char *reply1 = info->getBufStart();
 	long  replySize = info->length();
 	// sanity. no if collrec not found its 0!
-	if ( ! saved && replySize <= 0 ) { char *xx=NULL;*xx=0; }
+	if ( ! saved && replySize <= 0 ) { 
+		saved = g_errno = EBADENGINEER;
+		log("linkdb: sending back empty link text reply. did "
+		    "coll get deleted?");
+		//char *xx=NULL;*xx=0; }
+	}
 	// get original request
 	Msg25Request *req = (Msg25Request *)slot2->m_readBuf;
 	// sanity
