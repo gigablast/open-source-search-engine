@@ -12370,10 +12370,11 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 		// . is this substring anywhere in the document
 		// . check the rawest content before converting to utf8 i guess
 		// . suuport the ^ operator
-		char *foundPtr ;
+		char *foundPtr = NULL;
 		if ( matchFront ) {
 			// if we match the front, set to bogus 0x01
-			if ( strcmp(content,start)==0 ) foundPtr =(char *)0x01;
+			if ( strncmp(content,start,end-start)==0 ) 
+				foundPtr =(char *)0x01;
 		}
 		else {
 			foundPtr = strstr ( content , start ) ;

@@ -22847,6 +22847,11 @@ void XmlDoc::setSpiderReqForMsg20 ( SpiderRequest *sreq   ,
 	//srep->m_retryNum           = 0;
 	srep->m_langId               = m_langId;
 	srep->m_percentChangedPerDay = 0;//m_percentChanged;
+
+	// we need this now for ucp ucr upp upr new url filters that do
+	// substring matching on the url
+	if ( m_firstUrlValid )
+		strcpy(sreq->m_url,m_firstUrl.m_url);
 }
 
 // . add the spiderdb recs to the meta list
