@@ -4690,16 +4690,19 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		sreq3 = (SpiderRequest *)p;
 		// point "p" to next spiderrequest
 		p += sreq3->getRecSize();
-		// process sreq3 my incrementing the firstip count in m_doleIpTable
+		// process sreq3 my incrementing the firstip count in 
+		// m_doleIpTable
 		if ( ! addToDoleTable ( sreq3 ) ) return true;	
+
+		// this logic is now in addToDoleTable()
 		// . if it was empty it is no longer
 		// . we have this flag here to avoid scanning empty doledb 
 		//   priorities because it saves us a msg5 call to doledb in 
 		//   the scanning loop
-		long bp = sreq3->m_priority;//m_bestRequest->m_priority;
-		if ( bp <  0                     ) { char *xx=NULL;*xx=0; }
-		if ( bp >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
-		m_isDoledbEmpty [ bp ] = 0;
+		//long bp = sreq3->m_priority;//m_bestRequest->m_priority;
+		//if ( bp <  0                     ) { char *xx=NULL;*xx=0; }
+		//if ( bp >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
+		//m_isDoledbEmpty [ bp ] = 0;
 	}
 
 	// and the whole thing is no longer empty
@@ -4938,6 +4941,16 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 		// sanity check
 		//if ( ! m_doleIpTable.m_isWritable ) { char *xx=NULL;*xx=0;}
 	}
+
+	// . these priority slots in doledb are not empty
+	// . unmark individual priority buckets
+	// . do not skip them when scanning for urls to spiderd
+	long pri = sreq->m_priority;
+	m_isDoledbEmpty[pri] = 0;		
+	// reset scan for this priority in doledb
+	m_nextKeys     [pri] =g_doledb.makeFirstKey2 ( pri );
+
+
 	return true;
 }
 
@@ -5754,12 +5767,12 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 	// . skip priority if we knows its empty in doledb
 	// . this will save us a call to msg5 below
-	//if ( m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] ) {
-	//	// decrease the priority
-	//	m_sc->devancePriority();
-	//	// and try the one below
-	//	goto loop;
-	//}
+	if ( m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] ) {
+		// decrease the priority
+		m_sc->devancePriority();
+		// and try the one below
+		goto loop;
+	}
 
 	// shortcut
 	//CollectionRec *cr = m_sc->m_cr;
@@ -5960,7 +5973,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// bail if list is empty
 	if ( m_list.getListSize() <= 0 ) {
 		// don't bother with this priority again until a key is
-		// added to it!
+		// added to it! addToDoleIpTable() will be called
+		// when that happens and it might unset this then.
 		m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] = 1;
 
 		/*
