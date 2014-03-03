@@ -728,11 +728,6 @@ void  handleRequest25 ( UdpSlot *slot , long netnice ) {
 		return;
 	}
 
-	if ( isSiteLinkInfo ) {
-		// add the initial entry
-		g_lineTable.addKey ( &req->m_siteHash64 , &req );
-	}
-
 	// make a new Msg25
 	Msg25 *m25;
 	try { m25 = new ( Msg25 ); }
@@ -745,7 +740,11 @@ void  handleRequest25 ( UdpSlot *slot , long netnice ) {
 	}
 	mnew ( m25 , sizeof(Msg25) , "Msg25" );
 
-	
+	if ( isSiteLinkInfo ) {
+		// add the initial entry
+		g_lineTable.addKey ( &req->m_siteHash64 , &req );
+	}
+
 	// point to a real safebuf here for populating with data
 	m25->m_linkInfoBuf = &m25->m_realBuf;
 
@@ -914,7 +913,7 @@ bool Msg25::getLinkInfo2( char      *site                ,
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );//, collLen );
 	// bail if NULL
 	if ( ! cr ) {
-		g_errno = ENOTFOUND;
+		g_errno = ENOCOLLREC;
 		log("build: No collection record found when getting "
 		    "link info.");
 		return true;
@@ -1015,6 +1014,7 @@ bool Msg25::getLinkInfo2( char      *site                ,
 	// must have a valid ip
 	if ( ! ip || ip == -1 ) { //char *xx = NULL; *xx = 0; }
 		log("linkdb: no inlinks because ip is invalid");
+		g_errno = EBADENGINEER;
 		return true;
 	}
 
@@ -1094,6 +1094,7 @@ bool Msg25::doReadLoop ( ) {
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 	if ( ! cr ) {
 		log("linkdb: no coll for collnum %li",(long)m_collnum);
+		g_errno = ENOCOLLREC;
 		return true;
 	}
 
@@ -1956,6 +1957,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		    mstrerror(g_errno),docId);
 		// this is a special case
 		if ( g_errno == ECANCELLED || 
+		     g_errno == ENOCOLLREC ||
 		     g_errno == ENOMEM     ||
 		     g_errno == ENOSLOTS    ) {
 			m_errors++;
@@ -2250,7 +2252,8 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 			log("linkdb: recalling round=%li for %s=%s",
 			    m_round,ms,m_site);
 		}
-		// and re-call
+		// and re-call. returns true if did not block.
+		// returns true with g_errno set on error.
 		if ( ! doReadLoop() ) return false;
 		// it did not block!! wtf? i guess it read no more or
 		// launched no more requests.
