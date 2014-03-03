@@ -561,7 +561,10 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 	req->m_siteHash32 = 0LL;
 	req->m_siteHash64 = 0LL;
 	if ( req->ptr_site ) {
-		req->m_siteHash64 = hash64n ( req->ptr_site );
+		// hash collection # in with it
+		long long h64 = hash64n ( req->ptr_site );
+		h64 = hash64 ((char *)&req->m_collnum,sizeof(collnum_t),h64);
+		req->m_siteHash64 = h64;
 		req->m_siteHash32 = hash32n ( req->ptr_site );
 	}
 
