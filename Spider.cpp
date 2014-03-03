@@ -1692,8 +1692,8 @@ void SpiderColl::reset ( ) {
 	}
 
 	// assume the whole thing is not empty
-	m_allDoledbPrioritiesEmpty = 0;//false;
-	m_lastEmptyCheck = 0;
+	//m_allDoledbPrioritiesEmpty = 0;//false;
+	//m_lastEmptyCheck = 0;
 
 }
 
@@ -4703,8 +4703,8 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	}
 
 	// and the whole thing is no longer empty
-	m_allDoledbPrioritiesEmpty = 0;//false;
-	m_lastEmptyCheck = 0;
+	//m_allDoledbPrioritiesEmpty = 0;//false;
+	//m_lastEmptyCheck = 0;
 
 	//
 	// delete the winner from ufntree as well
@@ -5621,6 +5621,10 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// shortcut
 		SpiderColl *sc = cr->m_spiderColl;
 
+		if ( sc && sc->m_doleIpTable.isEmpty() )
+			continue;
+
+		/*
 		// . HACK. 
 		// . TODO: we set spidercoll->m_gotDoledbRec to false above,
 		//   then make Rdb.cpp set spidercoll->m_gotDoledbRec to
@@ -5649,7 +5653,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// . this is broken!! why??
 		if ( sc && sc->m_allDoledbPrioritiesEmpty >= 3 )
 			continue;
-
+		*/
 		// ok, we are good to launch a spider for coll m_cri
 		break;
 	}
@@ -5750,12 +5754,12 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 	// . skip priority if we knows its empty in doledb
 	// . this will save us a call to msg5 below
-	if ( m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] ) {
-		// decrease the priority
-		m_sc->devancePriority();
-		// and try the one below
-		goto loop;
-	}
+	//if ( m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] ) {
+	//	// decrease the priority
+	//	m_sc->devancePriority();
+	//	// and try the one below
+	//	goto loop;
+	//}
 
 	// shortcut
 	//CollectionRec *cr = m_sc->m_cr;
@@ -5959,6 +5963,7 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 		// added to it!
 		m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] = 1;
 
+		/*
 		// if all priorities now empty set another flag
 		m_sc->m_allDoledbPrioritiesEmpty++;
 		for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ ) {
@@ -5969,7 +5974,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 			m_sc->m_allDoledbPrioritiesEmpty--;
 			break;
 		}
-			
+		*/
+	
 		// if no spiders...
 		//if ( g_conf.m_logDebugSpider ) {
 		//	log("spider: empty doledblist collnum=%li "
