@@ -225,6 +225,8 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			       // which is super fast.
 			       "dr=%li&"
 			       "c=%s&n=1000000&"
+			       // stream it now
+			       "stream=1&"
 			       // no summary similarity dedup, only exact
 			       // doc content hash. otherwise too slow!!
 			       "pss=0&"

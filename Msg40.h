@@ -206,6 +206,11 @@ class Msg40 {
 	long m_lastHeartbeat;
 
 	bool printSearchResult9 ( long ix ) ;
+	HashTableX m_columnTable;
+	bool printCSVHeaderRow ( class SafeBuf *sb );
+	bool printJsonItemInCSV ( char *json , SafeBuf *sb ) ;
+	long m_numCSVColumns;
+
 
 	HashTableX m_dedupTable;
 
@@ -218,7 +223,9 @@ class Msg40 {
 	// incoming parameters 
 	void       *m_state;
 	void      (* m_callback ) ( void *state );
-	
+
+	long m_needFirstReplies;
+
 	// max outstanding msg20s
 	//long       m_maxOutstanding;
 
