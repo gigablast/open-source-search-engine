@@ -208,7 +208,7 @@ class Msg40 {
 	bool printSearchResult9 ( long ix ) ;
 	HashTableX m_columnTable;
 	bool printCSVHeaderRow ( class SafeBuf *sb );
-	bool printJsonItemInCSV ( char *json , SafeBuf *sb ) ;
+	bool printJsonItemInCSV ( class State0 *st , long ix );
 	long m_numCSVColumns;
 
 

@@ -4978,8 +4978,12 @@ bool Msg40::printSearchResult9 ( long ix ) {
 	// prints in xml or html
 	if ( m_numPrinted < msg40->getDocsWanted() ) {
 
+		if ( m_si->m_format == FORMAT_CSV ) {
+			printJsonItemInCSV ( st , ix );
+		}
+
 		// print that out into st->m_sb safebuf
-		if ( ! printResult ( st , ix ) ) {
+		else if ( ! printResult ( st , ix ) ) {
 			// oom?
 			if ( ! g_errno ) g_errno = EBADENGINEER;
 			log("query: had error: %s",mstrerror(g_errno));
@@ -5067,9 +5071,6 @@ static int csvPtrCmp ( const void *a, const void *b ) {
 }
 	
 #include "Json.h"
-
-// returns false and sets g_errno on error
-bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) ;
 
 // 
 // print header row in csv
@@ -5202,9 +5203,23 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 }
 
 // returns false and sets g_errno on error
-bool Msg40::printJsonItemInCSV ( char *json , SafeBuf *sb ) { // , State0 *st 
+bool Msg40::printJsonItemInCSV ( State0 *st , long ix ) {
 
 	long niceness = 0;
+
+	//
+	// get the json from the search result
+	//
+	Msg20 *m20 = getCompletedSummary(ix);
+	if ( ! m20 ) return false;
+	if ( m20->m_errno ) return false;
+	if ( ! m20->m_r ) { char *xx=NULL;*xx=0; }
+	Msg20Reply *mr = m20->m_r;
+	// get content
+	char *json = mr->ptr_content;
+	// how can it be empty?
+	if ( ! json ) { char *xx=NULL;*xx=0; }
+
 
 	// parse the json
 	Json jp;
@@ -5212,6 +5227,9 @@ bool Msg40::printJsonItemInCSV ( char *json , SafeBuf *sb ) { // , State0 *st
 
 	HashTableX *columnTable = &m_columnTable;
 	long numCSVColumns = m_numCSVColumns;
+
+	//SearchInput *si = m_si;
+	SafeBuf *sb = &st->m_sb;
 
 	
 	// make buffer space that we need
