@@ -1692,8 +1692,8 @@ void SpiderColl::reset ( ) {
 	}
 
 	// assume the whole thing is not empty
-	m_allDoledbPrioritiesEmpty = 0;//false;
-	m_lastEmptyCheck = 0;
+	//m_allDoledbPrioritiesEmpty = 0;//false;
+	//m_lastEmptyCheck = 0;
 
 }
 
@@ -4690,21 +4690,24 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 		sreq3 = (SpiderRequest *)p;
 		// point "p" to next spiderrequest
 		p += sreq3->getRecSize();
-		// process sreq3 my incrementing the firstip count in m_doleIpTable
+		// process sreq3 my incrementing the firstip count in 
+		// m_doleIpTable
 		if ( ! addToDoleTable ( sreq3 ) ) return true;	
+
+		// this logic is now in addToDoleTable()
 		// . if it was empty it is no longer
 		// . we have this flag here to avoid scanning empty doledb 
 		//   priorities because it saves us a msg5 call to doledb in 
 		//   the scanning loop
-		long bp = sreq3->m_priority;//m_bestRequest->m_priority;
-		if ( bp <  0                     ) { char *xx=NULL;*xx=0; }
-		if ( bp >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
-		m_isDoledbEmpty [ bp ] = 0;
+		//long bp = sreq3->m_priority;//m_bestRequest->m_priority;
+		//if ( bp <  0                     ) { char *xx=NULL;*xx=0; }
+		//if ( bp >= MAX_SPIDER_PRIORITIES ) { char *xx=NULL;*xx=0; }
+		//m_isDoledbEmpty [ bp ] = 0;
 	}
 
 	// and the whole thing is no longer empty
-	m_allDoledbPrioritiesEmpty = 0;//false;
-	m_lastEmptyCheck = 0;
+	//m_allDoledbPrioritiesEmpty = 0;//false;
+	//m_lastEmptyCheck = 0;
 
 	//
 	// delete the winner from ufntree as well
@@ -4938,6 +4941,16 @@ bool SpiderColl::addToDoleTable ( SpiderRequest *sreq ) {
 		// sanity check
 		//if ( ! m_doleIpTable.m_isWritable ) { char *xx=NULL;*xx=0;}
 	}
+
+	// . these priority slots in doledb are not empty
+	// . unmark individual priority buckets
+	// . do not skip them when scanning for urls to spiderd
+	long pri = sreq->m_priority;
+	m_isDoledbEmpty[pri] = 0;		
+	// reset scan for this priority in doledb
+	m_nextKeys     [pri] =g_doledb.makeFirstKey2 ( pri );
+
+
 	return true;
 }
 
@@ -5621,6 +5634,10 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// shortcut
 		SpiderColl *sc = cr->m_spiderColl;
 
+		if ( sc && sc->m_doleIpTable.isEmpty() )
+			continue;
+
+		/*
 		// . HACK. 
 		// . TODO: we set spidercoll->m_gotDoledbRec to false above,
 		//   then make Rdb.cpp set spidercoll->m_gotDoledbRec to
@@ -5649,7 +5666,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		// . this is broken!! why??
 		if ( sc && sc->m_allDoledbPrioritiesEmpty >= 3 )
 			continue;
-
+		*/
 		// ok, we are good to launch a spider for coll m_cri
 		break;
 	}
@@ -5956,9 +5973,11 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// bail if list is empty
 	if ( m_list.getListSize() <= 0 ) {
 		// don't bother with this priority again until a key is
-		// added to it!
+		// added to it! addToDoleIpTable() will be called
+		// when that happens and it might unset this then.
 		m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] = 1;
 
+		/*
 		// if all priorities now empty set another flag
 		m_sc->m_allDoledbPrioritiesEmpty++;
 		for ( long i = 0 ; i < MAX_SPIDER_PRIORITIES ; i++ ) {
@@ -5969,7 +5988,8 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 			m_sc->m_allDoledbPrioritiesEmpty--;
 			break;
 		}
-			
+		*/
+	
 		// if no spiders...
 		//if ( g_conf.m_logDebugSpider ) {
 		//	log("spider: empty doledblist collnum=%li "
@@ -12354,6 +12374,10 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 		*end = '\0';
 		// count it as an attempt
 		count++;
+
+		bool matchFront = false;
+		if ( start[0] == '^' ) { start++; matchFront = true; }
+
 		// if pattern is NOT/NEGATIVE...
 		bool negative = false;
 		if ( start[0] == '!' && start[1] && start[1]!='|' ) {
@@ -12362,9 +12386,20 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 		}
 		else
 			hadPositive = true;
+
 		// . is this substring anywhere in the document
 		// . check the rawest content before converting to utf8 i guess
-		char *foundPtr =  strstr ( content , start ) ;
+		// . suuport the ^ operator
+		char *foundPtr = NULL;
+		if ( matchFront ) {
+			// if we match the front, set to bogus 0x01
+			if ( strncmp(content,start,end-start)==0 ) 
+				foundPtr =(char *)0x01;
+		}
+		else {
+			foundPtr = strstr ( content , start ) ;
+		}
+
 		// debug log statement
 		//if ( foundPtr )
 		//	log("build: page %s matches ppp of \"%s\"",

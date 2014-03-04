@@ -1119,8 +1119,8 @@ class SpiderColl {
 	char m_isDoledbEmpty [MAX_SPIDER_PRIORITIES];
 
 	// are all priority slots empt?
-	long m_allDoledbPrioritiesEmpty;
-	long m_lastEmptyCheck; 
+	//long m_allDoledbPrioritiesEmpty;
+	//long m_lastEmptyCheck; 
 
 	// maps priority to first ufn that uses that
 	// priority. map to -1 if no ufn uses it. that way when we scan
