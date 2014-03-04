@@ -399,81 +399,74 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 	sb->safePrintf ( "<a name=examples></a>"
 			 "<table %s>"
 			 "<tr class=hdrow><td colspan=2>"
-			 "<center><b>Example Site Patterns</b></tr></tr>"
-			 "<tr bgcolor=#%s>"
-			 "<td>"
-			 ,TABLE_STYLE , DARK_BLUE);
+			 "<center><b>Example Url Bucket</b></tr></tr>"
+			 //"<tr bgcolor=#%s>"
+			 //"<td>"
+			 ,TABLE_STYLE );//, DARK_BLUE);
+			 
 
 	sb->safePrintf(
-		      "*"
+		       //"*"
+		       //"</td>"
+		       //"<td>Spider all urls encountered. If you just submit "
+		       //"this by itself, then Gigablast will initiate spidering "
+		       //"automatically at dmoz.org, an internet "
+		      //"directory of good sites.</td>"
+		       //"</tr>"
+
+		      "<tr>"
+		      "<td>seed:www.goodstuff.com/myurl.html</td>"
+		      "<td>"
+		      "Try to spider this url and all its outlinks."
 		      "</td>"
-		      "<td>Spider all urls encountered. If you just submit "
-		      "this by itself, then Gigablast will initiate spidering "
-		      "automatically at dmoz.org, an internet "
-		      "directory of good sites.</td>"
 		      "</tr>"
 
 
 		      // protocol and subdomain match
 		      "<tr>"
-		      "<td>http://www.goodstuff.com/</td>"
+		      "<td>startswith:http://www.goodstuff.com/</td>"
 		      "<td>"
-		      "Matches urls beginning with "
-		      "http://www.goodstuff.com/."
+		      "Allow any url starting with this."
 		      "</td>"
 		      "</tr>"
 
 		      // subdomain match
 		      "<tr>"
-		      "<td>www.goodstuff.com</td>"
+		      "<td>hassubdomain:www.goodstuff.com</td>"
 		      "<td>"
-		      "Exact subdomain match. "
-		      "Spider urls on www.goodstuff.com."
+		      "Allow urls from this domain."
 		      "</td>"
 		      "</tr>"
 
 		      // domain match
 		      "<tr>"
-		      "<td>goodstuff.com</td>"
+		      "<td>hasdomain:goodstuff.com</td>"
 		      "<td>"
-		      "Exact domain match. "
-		      "Spider urls on goodstuff.com and on "
-		      "any subdomain of goodstuff.com."
+		      "Allow urls from this domain."
 		      "</td>"
 		      "</tr>"
 
-		      // subdomain AND subdir match
+		      // spider this subdir
 		      "<tr>"
-		      "<td>www.goodstuff.com/goodir/anotherdir/</td>"
+		      "<td><nobr>startswith:"
+		      "http://www.goodstuff.com/goodir/anotherdir/</nobr></td>"
 		      "<td>"
-		      "Exact subdomain match and parital subdir match. "
-		      "Matches urls on www.goodstuff.com and in the "
-		      "/gooddir/anotherdir/ subdirectory. "
+		      "Allow urls starting with this."
 		      "</td>"
 		      "</tr>"
 
 
 		      // exact match
 		      "<tr>"
-		      "<td>exact:http://xyz.goodstuff.com/</td>"
+		      "<td>exact:http://xyz.goodstuff.com/myurl.html</td>"
 		      "<td>"
-		      "Matches the single url "
-		      "http://xyz.goodstuff.com/."
-		      "</td>"
-		      "</tr>"
-
-		      // exact match
-		      "<tr>"
-		      "<td>exact:http://xyz.goodstuff.com/mypage.html</td>"
-		      "<td>"
-		      "Matches the single url "
-		      "http://xyz.goodstuff.com/mypage.html."
+		      "Allow this specific url."
 		      "</td>"
 		      "</tr>"
 
 		      // local subdir match
 		      "<tr>"
-		      "<td>file://C/mydir/mysubdir/"
+		      "<td>startswith:file://C/mydir/mysubdir/"
 		      "<td>"
 		      "Matches all local files in the specified directory. "
 		      "</td>"
@@ -495,10 +488,15 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 
 		      // negative subdomain match
 		      "<tr>"
-		      "<td>-badstuff.com</td>"
-		      "<td>Exclude all pages from the badstuff.com domain. "
-		      "Start the url pattern with a - to exclude it from "
-		      "the spider set.</td>"
+		      "<td>contains:badstuff</td>"
+		      "<td>Matches any url containing badstuff."
+		      "</td>"
+		      "</tr>"
+
+		      "<tr>"
+		      "<td>doesnotcontain:badstuff</td>"
+		      "<td>Matches if does not contain badstuff."
+		      "</td>"
 		      "</tr>"
 
 		      "<tr>"
@@ -513,10 +511,12 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      // tag match
 		      "<tr><td>"
 		      //"<td>tag:boots contains:boots<br>"
-		      "tag:boots www.westernfootwear.com<br>"
-		      "tag:boots www.cowboyshop.com<br>"
-		      "tag:boots www.moreboots.com<br>"
-		      "tag:boots www.lotsoffootwear.com<br>"
+		      "<nobr>tag:boots hassubdomain:www.westernfootwear."
+		      "</nobr>com<br>"
+		      "tag:boots hassubdomain:www.cowboyshop.com<br>"
+		      "tag:boots hassubdomain:www.moreboots.com<br>"
+		      "<nobr>tag:boots hassubdomain:www.lotsoffootwear.com"
+		      "</nobr><br>"
 		      //"<td>t:boots -contains:www.cowboyshop.com/shoes/</td>"
 		      "</td><td>"
 		      "Advance users only. "

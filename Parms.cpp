@@ -7573,7 +7573,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_TEXTAREA | PF_DUP;
 	m++;
 
-
+	/*
 	m->m_title = "spider sites";
 	m->m_desc  = "Attempt to spider and index urls in the "
 		"\"site patterns\" above. Saves you from having to add "
@@ -7587,6 +7587,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_flags = PF_NOSAVE | PF_DUP;
 	m++;
+	*/
 
 	// the new upload post submit button
 	m->m_title = "upload site patterns";
@@ -7636,6 +7637,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_TEXTAREA ;
 	m++;
 
+	/*
 	m->m_title = "spider sites";
 	m->m_desc  = "Attempt to spider and index urls in the "
 		"\"site patterns\" above. Saves you from having to add "
@@ -7649,7 +7651,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_flags = PF_NOSAVE ;
 	m++;
-
+	*/
 	
 	
 	///////////////////////////////////////////
