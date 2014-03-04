@@ -19723,7 +19723,7 @@ long *XmlDoc::nukeJSONObjects ( long *newTitleHashes , long numNewHashes ) {
 		long th32 = oldTitleHashes[m_joc];
 		// . if still in the new diffbot reply, do not DELETE!!!
 		// . if there was no title, it uses hash of entire object
-		if ( dedup.isInTable(&th32) ) continue;
+		if ( dedup.isInTable(&th32) ) { m_joc++; continue; }
 		// if m_dx has no url set, call set4 i guess
 		if ( ! m_dx->m_firstUrlValid ) {
 			// make the fake url for this json object for indexing
@@ -20264,7 +20264,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( ! cr->m_isCustomCrawl ) nukeJson = false;
 	// do not remove old json objects if pageparser.cpp test
 	// because that can not change the index, etc.
-	if ( ! getIsPageParser() ) nukeJson = false;
+	if ( getIsPageParser() ) nukeJson = false;
 
 	if ( nukeJson ) {
 		// it should only nuke/delete the json items that we LOST,
