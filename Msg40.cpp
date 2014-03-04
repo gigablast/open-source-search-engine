@@ -620,6 +620,18 @@ bool Msg40::gotDocIds ( ) {
 	m_numReplies   =  0;
 	//m_maxiLaunched = -1;
 
+	// when returning search results in csv let's get the first 100
+	// results and use those to determine the most common column headers
+	// for the csv. any results past those that have new json fields we
+	// will add a header for, but the column will not be labelled with
+	// the header name unfortunately.
+	m_needFirstReplies = 0;
+	if ( m_si->m_format == FORMAT_CSV ) {
+		m_needFirstReplies = m_msg3a.m_numDocIds;
+		if ( m_needFirstReplies > 100 ) m_needFirstReplies = 100;
+	}
+
+
 	// we have received m_numGood contiguous Msg20 replies!
 	//m_numContiguous     = 0;
 	//m_visibleContiguous = 0;
@@ -1051,7 +1063,7 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 			// when streaming, so recycle a few msg20s to save mem
 			m = getAvailMsg20();
 			// mark it so we know which docid it goes with
-			m->m_i = i;
+			m->m_ii = i;
 		}
 		else
 			m = m_msg20[i];
@@ -1253,8 +1265,11 @@ Msg20 *Msg40::getAvailMsg20 ( ) {
 }
 
 Msg20 *Msg40::getCompletedSummary ( long ix ) {
-	for ( long i = 0 ; i < m_numMsg20s ; i++ ) 
-		if ( m_msg20[i]->m_i == ix ) return m_msg20[i];
+	for ( long i = 0 ; i < m_numMsg20s ; i++ ) {
+		if ( m_msg20[i]->m_ii != ix ) continue;
+		if ( m_msg20[i]->m_inProgress ) return NULL;
+		return m_msg20[i];
+	}
 	return NULL;
 }
 
@@ -1371,17 +1386,6 @@ bool Msg40::gotSummary ( ) {
 		m_printedHeader = true;
 		printHttpMime ( st );
 		printSearchResultsHeader ( st );
-	}
-
-	// when returning search results in csv let's get the first 100
-	// results and use those to determine the most common column headers
-	// for the csv. any results past those that have new json fields we
-	// will add a header for, but the column will not be labelled with
-	// the header name unfortunately.
-	m_needFirstReplies = 0;
-	if ( m_si->m_format == FORMAT_CSV ) {
-		m_needFirstReplies = m_msg3a.m_numDocIds;
-		if ( m_needFirstReplies > 100 ) m_needFirstReplies = 100;
 	}
 
 	for ( ; m_si && m_si->m_streamResults&&m_printi<m_msg3a.m_numDocIds ;
@@ -4980,6 +4984,7 @@ bool Msg40::printSearchResult9 ( long ix ) {
 
 		if ( m_si->m_format == FORMAT_CSV ) {
 			printJsonItemInCSV ( st , ix );
+			log("print: printing #%li csv",(long)ix);
 		}
 
 		// print that out into st->m_sb safebuf
@@ -5122,7 +5127,7 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 			// skip if not number or string
 			if ( ji->m_type != JT_NUMBER && 
 			     ji->m_type != JT_STRING )
-				return true;
+				continue;
 
 			// if in an array, do not print! csv is not
 			// good for arrays... like "media":[....] . that
@@ -5131,7 +5136,7 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 			// unflat json objects then it is not well suited
 			// for csv.
 			if ( ji->isInArray() ) 
-				return true;
+				continue;
 
 			// reset length of buf to 0
 			tmpBuf.reset();
@@ -5275,13 +5280,13 @@ bool Msg40::printJsonItemInCSV ( State0 *st , long ix ) {
 
 		long slot = columnTable->getSlot ( &h64 ) ;
 		// MUST be in there
-		if ( slot < 0 ) { char *xx=NULL;*xx=0;}
-
 		// get col #
-		long column = *(long *)columnTable->getValueFromSlot ( slot );
+		long column = -1;
+		if ( slot >= 0 )
+			column =*(long *)columnTable->getValueFromSlot ( slot);
 
 		// sanity
-		if ( column >= numCSVColumns ) { 
+		if ( column == -1 ) {//>= numCSVColumns ) { 
 			// add a new column...
 			long newColnum = numCSVColumns + 1;
 			// silently drop it if we already have too many cols

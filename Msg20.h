@@ -784,7 +784,7 @@ class Msg20 {
 	void reset       ();
 
 	long m_hack;
-	long m_i;
+	long m_ii;
 
 	// is the reply in progress? if msg20 has not launched a request
 	// this is false. if msg20 received its reply, this is false. 
