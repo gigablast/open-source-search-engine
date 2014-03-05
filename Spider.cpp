@@ -5767,12 +5767,12 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 	// . skip priority if we knows its empty in doledb
 	// . this will save us a call to msg5 below
-	if ( m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] ) {
-		// decrease the priority
-		m_sc->devancePriority();
-		// and try the one below
-		goto loop;
-	}
+	//if ( m_sc->m_isDoledbEmpty [ m_sc->m_pri2 ] ) {
+	//	// decrease the priority
+	//	m_sc->devancePriority();
+	//	// and try the one below
+	//	goto loop;
+	//}
 
 	// shortcut
 	//CollectionRec *cr = m_sc->m_cr;
