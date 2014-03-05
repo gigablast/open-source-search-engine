@@ -512,6 +512,15 @@ void Mem::addMem ( void *mem , long size , const char *note , char isnew ) {
 
 	//validate();
 
+	if ( (long)m_numAllocated + 100 >= (long)m_memtablesize ) { 
+		bool s_printed = false;
+		if ( ! s_printed ) {
+			log("mem: using too many slots");
+			printMem();
+			s_printed = true;
+		}
+	}
+
 	// sanity check
 	if ( g_inSigHandler ) {
 		log(LOG_LOGIC,"mem: In sig handler.");

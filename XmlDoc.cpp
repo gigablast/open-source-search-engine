@@ -13771,6 +13771,15 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		return &m_diffbotReply;
 	}
 
+	// if we are json do not send that to diffbot, like an injected
+	// json diffbot object. should fix json injections into gobal index
+	uint8_t *ct = getContentType();
+	if ( ! ct || ct == (void *)-1 ) return (SafeBuf *)ct;
+	if ( *ct == CT_JSON ) {
+		m_diffbotReplyValid = true;
+		return &m_diffbotReply;
+	}
+
 
 	// we make a "fake" url for the diffbot reply when indexing it
 	// by appending -diffbotxyz%lu. see "fakeUrl" below.
