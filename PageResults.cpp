@@ -454,6 +454,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// save this count so we know if TcpServer.cpp calls destroySocket(s)
 	st->m_numDestroys = s->m_numDestroys;
 
+	// you have to say "&header=1" to get back the header for json now.
+	// later on maybe it will default to on.
+	st->m_header = hr->getLong("header",0);
+
 	// . parse it up
 	// . this returns false and sets g_errno and, maybe, g_msg on error
 	SearchInput *si = &st->m_si;
@@ -944,7 +948,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 	// print first [ for json
 	if ( si->m_format == FORMAT_JSON ) {
-		sb->safePrintf("{\n");
+		if ( st->m_header ) sb->safePrintf("{\n");
+		else                sb->safePrintf("[\n");
 	}
 
 	// . if not matt wells we do not do ajax
@@ -971,7 +976,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		long long globalNowMS = localToGlobalTimeMilliseconds(nowMS);
 		sb->safePrintf("\t<currentTimeUTC>%lu</currentTimeUTC>\n",
 			      (long)(globalNowMS/1000));
-	} else if ( si->m_format == FORMAT_JSON ) {
+	} else if ( st->m_header && si->m_format == FORMAT_JSON ) {
 	    long long globalNowMS = localToGlobalTimeMilliseconds(nowMS);
 	    sb->safePrintf("\"currentTimeUTC\":%lu,\n", (long)(globalNowMS/1000));
 	}
@@ -980,7 +985,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	if ( si->m_format == FORMAT_XML )
 		sb->safePrintf("\t<responseTimeMS>%lli</responseTimeMS>\n",
 			      st->m_took);
-	else if ( si->m_format == FORMAT_JSON )
+	else if ( st->m_header && si->m_format == FORMAT_JSON )
 	    sb->safePrintf("\"responseTimeMS\":%lli,\n", st->m_took);
 
 	// out of memory allocating msg20s?
@@ -1036,7 +1041,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	    if ( si->m_format == FORMAT_XML)
 	        sb->safePrintf ( "\t<docsInCollection>%lli"
 	                "</docsInCollection>\n", docsInColl );
-	    else if ( si->m_format == FORMAT_JSON)
+	    else if ( st->m_header && si->m_format == FORMAT_JSON)
             sb->safePrintf("\"docsInCollection\":%lli,\n", docsInColl);
 	}
 
@@ -1053,12 +1058,12 @@ bool printSearchResultsHeader ( State0 *st ) {
 			      ,(long long)totalHits
 			      ,(long)moreFollow
 			      );
-	else if ( si->m_format == FORMAT_JSON ) {
+	else if ( st->m_header && si->m_format == FORMAT_JSON ) {
 	    sb->safePrintf("\"hits\":%lli,\n", (long long)totalHits);
 	    sb->safePrintf("\"moreResultsFollow\":%li,\n", (long)moreFollow);
 	}
 
-    if ( si->m_format == FORMAT_JSON ) {
+    if ( st->m_header && si->m_format == FORMAT_JSON ) {
         sb->safePrintf("\"results\":[\n");
         return true;
     }
@@ -1597,7 +1602,7 @@ bool printSearchResultsTail ( State0 *st ) {
 	if ( si->m_format == FORMAT_JSON ) {	
 		// print ending ] for json
 		sb->safePrintf("]\n");
-		sb->safePrintf("}\n");
+		if ( st->m_header ) sb->safePrintf("}\n");
 		// all done for json
 		return true;
 	}
