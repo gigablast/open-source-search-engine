@@ -206,42 +206,72 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r , Query *q ) {
 	// store list of collection #'s to search here. usually just one.
 	m_collnumBuf.reset();
 
+	m_firstCollnum = -1;
+
 	CollectionRec *cr = NULL;
 
 	// now convert list of space-separated coll names into list of collnums
 	char *p = coll9;
 
- loop:
-
-	char *end = p;
-	for ( ; *end && ! is_wspace_a(*end) ; end++ );
-
-	// temp null
-	char c = *end;
-	*end = '\0';
-	CollectionRec *tmpcr = g_collectiondb.getRec ( p );
-	// set defaults from the FIRST one
-	if ( ! cr ) {
-		cr = tmpcr;
-		m_firstCollnum = tmpcr->m_collnum;
+	// if no collection list was specified look for "token=" and
+	// use those to make collections. hack for diffbot.
+	char *token = r->getString("token",NULL);
+	// find all collections under this token
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		// must not have a "&c="
+		if ( p ) break;
+		// must have a "&token="
+		if ( ! token ) break;
+		// skip if empty
+		CollectionRec *tmpcr = g_collectiondb.m_recs[i];
+		if ( ! tmpcr ) continue;
+		// skip if does not match token
+		if ( strcmp(token,tmpcr->m_diffbotToken.getBufStart()) ) 
+			continue;
+		// . we got a match
+		// . set initial junk
+		if ( ! cr ) {
+			cr = tmpcr;
+			m_firstCollnum = tmpcr->m_collnum;
+		}
+		// save the collection #
+		if ( ! m_collnumBuf.safeMemcpy ( &cr->m_collnum, 
+						 sizeof(collnum_t) ) )
+			return false;
 	}
-	if ( ! cr ) { 
-		g_errno = ENOCOLLREC;
-		log("query: missing collection %s",p);
-		g_msg = " (error: no such collection)";		
-		return false;
+
+	// if we had a "&c=..." in the GET request process that
+	if ( p ) {
+	loop:
+		char *end = p;
+		for ( ; *end && ! is_wspace_a(*end) ; end++ );
+		// temp null
+		char c = *end;
+		*end = '\0';
+		CollectionRec *tmpcr = g_collectiondb.getRec ( p );
+		// set defaults from the FIRST one
+		if ( tmpcr && ! cr ) {
+			cr = tmpcr;
+			m_firstCollnum = tmpcr->m_collnum;
+		}
+		if ( ! tmpcr ) { 
+			g_errno = ENOCOLLREC;
+			log("query: missing collection %s",p);
+			g_msg = " (error: no such collection)";		
+			return false;
+		}
+		// add to our list
+		if (!m_collnumBuf.safeMemcpy(&cr->m_collnum,sizeof(collnum_t)))
+			return false;
+		// restore the \0 character we wrote in there
+		*end = c;
+		// advance
+		p = end;
+		// skip to next collection name if there is one
+		while ( *p && is_wspace_a(*p) ) p++; 
+		// now add it's collection # to m_collnumBuf if there
+		if ( *p ) goto loop;
 	}
-	// add to our list
-	if ( ! m_collnumBuf.safeMemcpy ( &cr->m_collnum, sizeof(collnum_t) ) )
-		return false;
-	// restore the \0 character we wrote in there
-	*end = c;
-	// advance
-	p = end;
-	// skip to next collection name if there is one
-	while ( *p && is_wspace_a(*p) ) p++; 
-	// now add it's collection # to m_collnumBuf if there
-	if ( *p ) goto loop;
 
 
 	//if (! coll){coll = g_conf.m_defaultColl; collLen = gbstrlen(coll); }

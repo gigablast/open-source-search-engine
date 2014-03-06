@@ -754,7 +754,7 @@ bool gotResults ( void *state ) {
 	       return sendReply(st,NULL);
 	}
 
-	char *coll = cr->m_coll;
+	//char *coll = cr->m_coll;
 
 	/*
 	//
