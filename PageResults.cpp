@@ -454,6 +454,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// save this count so we know if TcpServer.cpp calls destroySocket(s)
 	st->m_numDestroys = s->m_numDestroys;
 
+	// you have to say "&header=1" to get back the header for json now.
+	// later on maybe it will default to on.
+	st->m_header = hr->getLong("header",0);
+
 	// . parse it up
 	// . this returns false and sets g_errno and, maybe, g_msg on error
 	SearchInput *si = &st->m_si;
@@ -948,8 +952,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 	// print first [ for json
 	if ( si->m_format == FORMAT_JSON ) {
-		sb->safePrintf("[\n");
-		return true;
+		if ( st->m_header ) sb->safePrintf("{\n");
+		else                sb->safePrintf("[\n");
 	}
 
 	// . if not matt wells we do not do ajax
@@ -976,12 +980,17 @@ bool printSearchResultsHeader ( State0 *st ) {
 		long long globalNowMS = localToGlobalTimeMilliseconds(nowMS);
 		sb->safePrintf("\t<currentTimeUTC>%lu</currentTimeUTC>\n",
 			      (long)(globalNowMS/1000));
+	} else if ( st->m_header && si->m_format == FORMAT_JSON ) {
+	    long long globalNowMS = localToGlobalTimeMilliseconds(nowMS);
+	    sb->safePrintf("\"currentTimeUTC\":%lu,\n", (long)(globalNowMS/1000));
 	}
 
 	// show response time
 	if ( si->m_format == FORMAT_XML )
 		sb->safePrintf("\t<responseTimeMS>%lli</responseTimeMS>\n",
 			      st->m_took);
+	else if ( st->m_header && si->m_format == FORMAT_JSON )
+	    sb->safePrintf("\"responseTimeMS\":%lli,\n", st->m_took);
 
 	// out of memory allocating msg20s?
 	if ( st->m_errno ) {
@@ -1032,9 +1041,13 @@ bool printSearchResultsHeader ( State0 *st ) {
 	//if ( base ) docsInColl = base->getNumGlobalRecs();
 	docsInColl = g_hostdb.getNumGlobalRecs ( );
 	// include number of docs in the collection corpus
-	if ( si->m_format == FORMAT_XML && docsInColl >= 0LL )
-		sb->safePrintf ( "\t<docsInCollection>%lli"
-				"</docsInCollection>\n", docsInColl );
+	if ( docsInColl >= 0LL ) {
+	    if ( si->m_format == FORMAT_XML)
+	        sb->safePrintf ( "\t<docsInCollection>%lli"
+	                "</docsInCollection>\n", docsInColl );
+	    else if ( st->m_header && si->m_format == FORMAT_JSON)
+            sb->safePrintf("\"docsInCollection\":%lli,\n", docsInColl);
+	}
 
  	long numResults = msg40->getNumResults();
 	bool moreFollow = msg40->moreResultsFollow();
@@ -1049,6 +1062,15 @@ bool printSearchResultsHeader ( State0 *st ) {
 			      ,(long long)totalHits
 			      ,(long)moreFollow
 			      );
+	else if ( st->m_header && si->m_format == FORMAT_JSON ) {
+	    sb->safePrintf("\"hits\":%lli,\n", (long long)totalHits);
+	    sb->safePrintf("\"moreResultsFollow\":%li,\n", (long)moreFollow);
+	}
+
+    if ( st->m_header && si->m_format == FORMAT_JSON ) {
+        sb->safePrintf("\"results\":[\n");
+        return true;
+    }
 
 	// . did he get a spelling recommendation?
 	// . do not use htmlEncode() on this anymore since receiver
@@ -1584,6 +1606,7 @@ bool printSearchResultsTail ( State0 *st ) {
 	if ( si->m_format == FORMAT_JSON ) {	
 		// print ending ] for json
 		sb->safePrintf("]\n");
+		if ( st->m_header ) sb->safePrintf("}\n");
 		// all done for json
 		return true;
 	}
@@ -2108,6 +2131,7 @@ bool printResult ( State0 *st, long ix ) {
 			sb->safePrintf(",\n");
 
 		sb->safeStrcpy ( mr->ptr_content );
+
 		// . let's hack the spidertime onto the end
 		// . so when we sort by that using gbsortby:spiderdate
 		//   we can ensure it is ordered correctly
@@ -2117,6 +2141,7 @@ bool printResult ( State0 *st, long ix ) {
 		     *end == '}' ) {
 			// replace trailing } with spidertime}
 			sb->incrementLength(-1);
+			sb->safePrintf(",\"docId\":%lli\n", mr->m_docId);
 			// crap, we lose resolution storing as a float
 			// so fix that shit here...
 			//float f = mr->m_lastSpidered;

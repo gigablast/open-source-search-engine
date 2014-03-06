@@ -16,6 +16,7 @@ public:
 	// search results, we will know by comparing this to
 	// m_socket->m_numDestroys
 	long         m_numDestroys;
+	bool         m_header;
 
 	collnum_t    m_collnum;
         Query        m_q;
