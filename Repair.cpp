@@ -1412,7 +1412,7 @@ bool Repair::scanRecs ( ) {
 	// get the list of recs
 	g_errno = 0;
 	if ( m_msg5.getList ( RDB_TITLEDB        ,
-			      m_coll           ,
+			      m_collnum           ,
 			      &m_titleRecList      ,
 			      m_nextTitledbKey   ,
 			      m_endKey         , // should be maxed!

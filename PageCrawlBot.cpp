@@ -472,7 +472,7 @@ bool StateCD::readDataFromRdb ( ) {
 					    0, // maxcacheage
 					    false, // addtocache?
 					    m_rdbId,
-					   cr->m_coll,
+					   cr->m_collnum,
 					   &m_lists[i],
 					   sk,
 					   (char *)&ek,

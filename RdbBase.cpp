@@ -2271,7 +2271,7 @@ bool RdbBase::verifyFileSharding ( ) {
 	if ( rdbId == RDB_TITLEDB ) minRecSizes = 640000;
 	
 	if ( ! msg5.getList ( m_rdb->m_rdbId, //RDB_POSDB   ,
-			      m_coll          ,
+			      m_collnum       ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,

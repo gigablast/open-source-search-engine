@@ -202,9 +202,10 @@ bool Indexdb::verify ( char *coll ) {
 	startKey.setMin();
 	endKey.setMax();
 	//long minRecSizes = 64000;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	
 	if ( ! msg5.getList ( RDB_INDEXDB   ,
-			      coll          ,
+			      cr->m_collnum ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -293,6 +294,7 @@ void Indexdb::deepVerify ( char *coll ) {
 	RdbBase *rdbBase = g_indexdb.m_rdb.getBase(collnum);
 	long numFiles = rdbBase->getNumFiles();
 	long currentFile = 0;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	
 deepLoop:
 	// done after scanning all files
@@ -304,7 +306,7 @@ deepLoop:
 	}
 	// scan this file
 	if ( ! msg5.getList ( RDB_INDEXDB   ,
-			      coll          ,
+			      cr->m_collnum ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -389,7 +391,7 @@ key_t Indexdb::makeKey ( long long          termId   ,
 
 // . accesses RdbMap to estimate size of the indexList for this termId
 // . returns an UPPER BOUND
-long long Indexdb::getTermFreq ( char *coll , long long termId ) {
+long long Indexdb::getTermFreq ( collnum_t collnum , long long termId ) {
 	// establish the list boundary keys
 	key_t startKey = makeStartKey ( termId );
 	key_t endKey   = makeEndKey   ( termId );
@@ -403,7 +405,7 @@ long long Indexdb::getTermFreq ( char *coll , long long termId ) {
 	long oldTrunc = 100000;
 	// get maxKey for only the top "oldTruncLimit" docids because when
 	// we increase the trunc limit we screw up our extrapolation! BIG TIME!
-	maxRecs = m_rdb.getListSize(coll,startKey,endKey,&maxKey,oldTrunc )/6;
+	maxRecs=m_rdb.getListSize(collnum,startKey,endKey,&maxKey,oldTrunc )/6;
 	// . TRUNCATION NOW OBSOLETE
 	return maxRecs;
 	
@@ -427,7 +429,7 @@ long long Indexdb::getTermFreq ( char *coll , long long termId ) {
 	// . modify maxKey
 	key_t midKey = g_indexdb.makeKey   ( termId , shy , 0LL , true );
 	// get # of recs that have this termId and score
-	long  lastChunk = m_rdb.getListSize(coll,
+	long  lastChunk = m_rdb.getListSize(collnum,
 					    midKey,endKey,&maxKey,oldTrunc)/ 6;
 	// now interpolate number of uncounted docids for the score "shy"
 	long remaining = (((long long)lastChunk) * lastDocId) / 

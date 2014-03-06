@@ -141,8 +141,9 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	m_state    = state;
 
 	// warning. coll size includes \0
-	if ( ! m_r->ptr_coll || m_r->size_coll-1 <= 0 ) 
-		log(LOG_LOGIC,"net: NULL or bad collection. msg3a.");
+	if ( ! m_r->m_collnum < 0 ) // ptr_coll || m_r->size_coll-1 <= 0 ) 
+		log(LOG_LOGIC,"net: bad collection. msg3a. %li",
+		    (long)m_r->m_collnum);
 
 	//m_indexdbSplit = g_hostdb.m_indexSplits;
 	// certain query term, like, gbdom:xyz.com, are NOT split
@@ -173,7 +174,7 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 		return true;
 	// . set g_errno if not found and return true
 	// . coll is null terminated
-	CollectionRec *cr = g_collectiondb.getRec(r->ptr_coll, r->size_coll-1);
+	CollectionRec *cr = g_collectiondb.getRec(r->m_collnum);
 	if ( ! cr ) { g_errno = ENOCOLLREC; return true; }
 
 	// query is truncated if had too many terms in it
@@ -203,7 +204,7 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	if ( m_r->m_useSeoResultsCache ) {
 		// the all important seo results cache key
 		m_ckey.n0 = hash64 ( m_r->ptr_query ,m_r->size_query - 1 ,0 );
-		m_ckey.n0 = hash64 ( m_r->ptr_coll,m_r->size_coll,  m_ckey.n0);
+		m_ckey.n0 = hash64h ( (long long)m_r->m_collnum,  m_ckey.n0);
 		m_ckey.n0 = hash64 ( (char *)&m_r->m_language,1 ,  m_ckey.n0 );
 		m_ckey.n0 = hash64 ( (char *)&m_r->m_docsToGet,4,  m_ckey.n0 );
 		// this should be non-zero so g_hostdb.getGroupId(RDB_SERPDB)
@@ -238,7 +239,7 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 					0 , // maxcacheage
 					false, // addtocache?
 					RDB_SERPDB,//RDB_CACHEDB,
-					m_r->ptr_coll,
+					m_r->m_collnum,//ptr_coll,
 					&m_seoCacheList,
 					(char *)&startKey ,
 					(char *)&endKey,
@@ -305,10 +306,10 @@ bool Msg3a::gotCacheReply ( ) {
 		return true;
 	}
 
-	CollectionRec *cr;
-	cr = g_collectiondb.getRec(m_r->ptr_coll,m_r->size_coll-1);
+	//CollectionRec *cr;
+	//cr = g_collectiondb.getRec(m_r->ptr_coll,m_r->size_coll-1);
 
-	setTermFreqWeights ( cr->m_coll,m_q,m_termFreqs , m_termFreqWeights );
+	setTermFreqWeights ( m_r->m_collnum,m_q,m_termFreqs,m_termFreqWeights);
 
 	if ( m_debug ) {
 		//long long *termIds = m_q->getTermIds();
@@ -404,7 +405,7 @@ bool Msg3a::gotCacheReply ( ) {
 	//   end up copying over ourselves.
 	m_rbufPtr = serializeMsg ( sizeof(Msg39Request),
 				   &m_r->size_readSizes,
-				   &m_r->size_coll,
+				   &m_r->size_whiteList,
 				   &m_r->ptr_readSizes,
 				   m_r,
 				   &m_rbufSize , 
@@ -809,7 +810,7 @@ bool Msg3a::gotAllSplitReplies ( ) {
 	// this will often block, but who cares!? it just sends a request off
 	if ( ! m_msg1.addList ( &m_seoCacheList ,
 				RDB_SERPDB,//RDB_CACHEDB,
-				m_r->ptr_coll,
+				m_r->m_collnum,//ptr_coll,
 				this, // state
 				gotSerpdbReplyWrapper, // callback
 				false, // forcelocal?
@@ -1217,13 +1218,13 @@ void Msg3a::printTerms ( ) {
 	}
 }
 
-void setTermFreqWeights ( char *coll,
+void setTermFreqWeights ( collnum_t collnum , // char *coll,
 			  Query *q , 
 			  long long *termFreqs, 
 			  float *termFreqWeights ) {
 
 	long long numDocsInColl = 0;
-	RdbBase *base = getRdbBase ( RDB_CLUSTERDB  , coll );	
+	RdbBase *base = getRdbBase ( RDB_CLUSTERDB  , collnum );	
 	if ( base ) numDocsInColl = base->getNumGlobalRecs();
 	// issue? set it to 1000 if so
 	if ( numDocsInColl < 0 ) {
@@ -1235,7 +1236,7 @@ void setTermFreqWeights ( char *coll,
 	long long *termIds = q->getTermIds();
 	// just use rdbmap to estimate!
 	for ( long i = 0 ; i < q->getNumTerms(); i++ ) {
-		long long tf = g_posdb.getTermFreq ( coll ,termIds[i]);
+		long long tf = g_posdb.getTermFreq ( collnum ,termIds[i]);
 		if ( termFreqs ) termFreqs[i] = tf;
 		float tfw = getTermFreqWeight(tf,numDocsInColl);
 		termFreqWeights[i] = tfw;

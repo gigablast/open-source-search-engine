@@ -371,8 +371,8 @@ bool RdbMerge::getAnotherList ( ) {
 	char newEndKey[MAX_KEY_BYTES];
 	KEYSET(newEndKey,m_endKey,m_ks);
 
-	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
-	char *coll = cr->m_coll;
+	//CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	//char *coll = cr->m_coll;
 
 	/*
 	if ( m_rdbId == RDB_TITLEDB ) { // && m_rdbId == RDB_TFNDB ) {
@@ -440,7 +440,7 @@ bool RdbMerge::getAnotherList ( ) {
 	long bufSize = 100000; // g_conf.m_mergeBufSize , // minRecSizes
 	// get it
 	return m_msg5.getList ( m_rdbId        ,
-				coll           ,
+				m_collnum           ,
 				&m_list        ,
 				m_startKey     ,
 				newEndKey      , // usually is maxed!

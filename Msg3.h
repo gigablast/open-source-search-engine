@@ -50,7 +50,8 @@ class Msg3 {
 	//   by Msg5.cpp to constrain the endKey so it can read the recs
 	//   from the tree using that endKey, and not waste time.
 	bool readList  ( char           rdbId         ,
-			 char          *coll          ,
+			 //char          *coll          ,
+			 collnum_t collnum ,
 			 //key_t          startKey      , 
 			 //key_t          endKey        , 
 			 char          *startKey      , 
@@ -110,7 +111,8 @@ class Msg3 {
 
 	// the rdb we're scanning for
 	char  m_rdbId;
-	char *m_coll;
+	//char *m_coll;
+	collnum_t m_collnum;
 
 	// the scan classes, 1 per file, used to read from that file
 	RdbScan *m_scans ; // [ MAX_RDB_FILES ];

@@ -313,14 +313,14 @@ static void gotListWrapper ( void *state , RdbList *list, Msg5 *msg5 ) {
 bool Rebalance::scanRdb ( ) {
 
 	// get collrec i guess
-	CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
+	//CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
 
 	Rdb *rdb = g_process.m_rdbs[m_rdbNum];
 
 	// skip empty collrecs, unless like statsdb or something
 	//if ( ! cr && ! rdb->m_isCollectionLess ) return true;
 
-	char *coll = cr->m_coll;
+	//char *coll = cr->m_coll;
 
  readAnother:
 
@@ -329,7 +329,7 @@ bool Rebalance::scanRdb ( ) {
 	//log("rebal: loading list start = %s",KEYSTR(m_nextKey,rdb->m_ks));
 
 	if ( ! m_msg5.getList ( rdb->m_rdbId     ,
-				coll             ,
+				m_collnum, // coll             ,
 				&m_list          ,
 				m_nextKey        ,
 				m_endKey         , // should be maxed!

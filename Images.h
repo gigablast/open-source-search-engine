@@ -41,7 +41,7 @@ class Images {
 			    long  siteLen  ,
 			    long long docId ,
 			    class XmlDoc *xd ,
-			    char *coll ,
+			    collnum_t collnum,
 			    char **statusPtr ,
 			    long hopCount,
 			    void   *state ,
@@ -71,7 +71,7 @@ class Images {
 	bool      m_stopDownloading;
 	char    **m_statusPtr;
 	char      m_statusBuf[128];
-	char     *m_coll;
+	collnum_t m_collnum;
 
 	long long   m_docId;
 	IndexList   m_list;

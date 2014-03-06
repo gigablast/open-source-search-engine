@@ -164,7 +164,7 @@ class Indexdb {
 	// . accesses RdbMap to estimate size of the indexList for this termId
 	// . returns a pretty tight upper bound if indexList not truncated
 	// . if truncated, it's does linear interpolation (use exponential!)
-	long long getTermFreq ( char *coll , long long termId ) ;
+	long long getTermFreq ( collnum_t collnum , long long termId ) ;
 
 	//long getTruncationLimit ( ){return g_conf.m_indexdbTruncationLimit;};
 

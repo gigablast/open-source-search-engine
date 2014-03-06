@@ -131,13 +131,13 @@ class Msg39Request {
 	char   *ptr_termFreqWeights;
 	char   *ptr_query; // in utf8?
 	char   *ptr_whiteList;
-	char   *ptr_coll;
+	//char   *ptr_coll;
 	
 	long    size_readSizes;
 	long    size_termFreqWeights;
 	long    size_query;
 	long    size_whiteList;
-	long    size_coll;
+	//long    size_coll;
 
 	char    m_buf[0];
 };

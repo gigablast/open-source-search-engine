@@ -19,7 +19,7 @@ public:
 	bool getSite ( char         *url      ,
 		       class TagRec *gr       ,
 		       long          timestamp,
-		       char         *coll     ,
+		       collnum_t collnum,
 		       long          niceness ,
 		       //bool          addTags  = false,
 		       void         *state    = NULL ,
@@ -40,7 +40,7 @@ public:
 	class TagRec *m_gr;
 	//class Url    *m_url;
 	char         *m_url;
-	char         *m_coll;
+	collnum_t m_collnum;
 	//bool          m_addTags;
 	void         *m_state;
 	void        (*m_callback) (void *state );

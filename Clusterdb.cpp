@@ -362,9 +362,10 @@ bool Clusterdb::verify ( char *coll ) {
 	startKey.setMin();
 	endKey.setMax();
 	//long minRecSizes = 64000;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	
 	if ( ! msg5.getList ( RDB_CLUSTERDB ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,

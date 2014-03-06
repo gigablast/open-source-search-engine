@@ -301,7 +301,7 @@ class TagRec {
 	
 
 	// some specified input
-	char  *m_coll;
+	//char  *m_coll;
 	Url   *m_url;
 
 	collnum_t m_collnum;
@@ -425,7 +425,8 @@ class Msg8a {
 	// . stores the tagRec in your "tagRec"
 	bool getTagRec ( Url      *url              , 
 			 char     *site , // set to NULL to auto set
-			 char     *coll             , 
+			 //char     *coll             , 
+			 collnum_t collnum,
 			 //bool      useCanonicalName ,
 			 bool skipDomainLookup ,
 			 long      niceness         ,
@@ -439,7 +440,7 @@ class Msg8a {
 	void gotAllReplies ( ) ;
 
 	// some specified input
-	char  *m_coll;
+	//char  *m_coll;
 	//long   m_collLen;
 	Url   *m_url;
 	//bool   m_doFullUrl;

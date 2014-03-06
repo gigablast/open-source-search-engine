@@ -75,7 +75,8 @@ bool Msg51::getClusterRecs ( long long     *docIds                   ,
 			     char          *clusterLevels            ,
 			     key_t         *clusterRecs              ,
 			     long           numDocIds                ,
-			     char          *coll                     ,
+			     //char          *coll                     ,
+			     collnum_t collnum ,
 			     long           maxCacheAge              ,
 			     bool           addToCache               ,
 			     void          *state                    ,
@@ -87,12 +88,13 @@ bool Msg51::getClusterRecs ( long long     *docIds                   ,
 	// reset this msg
 	reset();
 	// warning
-	if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg51.");
+	if ( collnum < 0 ) log(LOG_LOGIC,"net: NULL collection. msg51.");
 	// get the collection rec
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	// return true on error, g_errno should already be set
 	if ( ! cr ) {
-		log("db: msg51. Collection rec null for coll %s.", coll);
+		log("db: msg51. Collection rec null for collnum %li.", 
+		    (long)collnum);
 		g_errno = EBADENGINEER;
 		char *xx=NULL; *xx=0;
 		return true;
@@ -102,8 +104,9 @@ bool Msg51::getClusterRecs ( long long     *docIds                   ,
 	m_addToCache    = addToCache;
 	m_state         = state;
 	m_callback      = callback;
-	m_coll          = coll;
-	m_collLen       = gbstrlen(coll);
+	//m_coll          = coll;
+	//m_collLen       = gbstrlen(coll);
+	m_collnum = collnum;
 	// these are storage for the requester
 	m_docIds        = docIds;
 	m_clusterLevels = clusterLevels;
@@ -186,7 +189,7 @@ bool Msg51::sendRequests ( long k ) {
 	key_t     ckey = (key_t)m_docIds[m_nexti];
 	bool found = false;
 	if ( c )
-		found = c->getRecord ( m_coll    ,
+		found = c->getRecord ( m_collnum    ,
 				       ckey      , // cache key
 				       &crecPtr  , // pointer to it
 				       &crecSize ,
@@ -292,7 +295,7 @@ bool Msg51::sendRequest ( long    i ) {
 				     m_maxCacheAge ,
 				     m_addToCache  ,
 				     RDB_CLUSTERDB ,
-				     m_coll        ,
+				     m_collnum        ,
 				     &m_lists[i]   ,
 				     (char *)&startKey      ,
 				     (char *)&endKey        ,
@@ -437,7 +440,7 @@ void Msg51::gotClusterRec ( Msg0 *msg0 ) { //, RdbList *list ) {
 	// . add the record to our quick cache as a long long
 	// . ignore any error
 	if ( s_cacheInit )
-		c->addRecord ( m_coll        ,
+		c->addRecord ( m_collnum        ,
 			       (key_t)docId  , // docid is key
 			       (char *)rec   ,
 			       sizeof(key_t) , // recSize

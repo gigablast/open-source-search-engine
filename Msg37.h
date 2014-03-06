@@ -22,7 +22,7 @@ class Msg37 {
 	// . returns false if blocked, true otherwise
 	// . sets errno on error
 	// . "termIds/termFreqs" should NOT be on the stack in case we block
-	bool getTermFreqs ( char       *coll       ,
+	bool getTermFreqs ( collnum_t collnum ,
 			    long        maxAge     ,
 			    long long  *termIds    ,
 			    long        numTermIds ,
@@ -58,7 +58,7 @@ class Msg37 {
 
 	bool  m_exactCount;
 
-	char *m_coll;
+	collnum_t m_collnum;
 
 	long        m_maxAge;
 	long long  *m_termIds ;

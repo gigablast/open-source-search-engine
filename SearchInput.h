@@ -64,7 +64,8 @@ class SearchInput {
 			       class CollectionRec *cr ) ;
 	bool setQueryBuffers ( class HttpRequest *hr ) ;
 
-	void setToDefaults ( class CollectionRec *cr , long niceness ) ;
+	//void setToDefaults ( class CollectionRec *cr , long niceness ) ;
+	void clear ( long niceness ) ;
 
 	// Msg40 likes to use this to pass the parms to a remote host
 	SearchInput      ( );

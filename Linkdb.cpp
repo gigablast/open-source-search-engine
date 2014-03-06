@@ -199,9 +199,10 @@ bool Linkdb::verify ( char *coll ) {
 	startKey.setMin();
 	endKey.setMax();
 	long minRecSizes = 64000;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	
 	if ( ! msg5.getList ( RDB_LINKDB   ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      (char*)&startKey      ,
 			      (char*)&endKey        ,
@@ -1098,7 +1099,7 @@ bool Msg25::doReadLoop ( ) {
 		return true;
 	}
 
-	char *coll = cr->m_coll;
+	//char *coll = cr->m_coll;
 
 	// . get the linkdb list
 	// . we now get the WHOLE list so we can see how many linkers there are
@@ -1110,7 +1111,7 @@ bool Msg25::doReadLoop ( ) {
 	//   the receiving host went down and is now back up.
 	if ( ! m_msg5.getList ( 
 				RDB_LINKDB      ,
-				coll          ,
+				cr->m_collnum          ,
 				&m_list         ,
 				(char*)&startKey,
 				(char*)&endKey  ,

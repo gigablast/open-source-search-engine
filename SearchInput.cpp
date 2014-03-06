@@ -38,7 +38,8 @@ void SearchInput::reset ( ) {
 	*/
 }
 
-void SearchInput::setToDefaults ( CollectionRec *cr , long niceness ) {
+//void SearchInput::setToDefaults ( CollectionRec *cr , long niceness ) {
+void SearchInput::clear ( long niceness ) {
 	// reset it first
 	reset();
 	// set all to 0 just to avoid any inconsistencies
@@ -196,15 +197,18 @@ class SearchInput *g_si = NULL;
 
 bool SearchInput::set ( TcpSocket *sock , HttpRequest *r , Query *q ) {
 
+	// store list of collection #'s to search here. usually just one.
+	m_collnumBuf.reset();
+
+	// zero out everything, set niceness to 0
+	clear ( 0 ) ;
+
 	// save it now
 	m_socket = sock;
 
 	// get coll rec
 	long  collLen9;
 	char *coll9 = r->getString ( "c" , &collLen9 );
-
-	// store list of collection #'s to search here. usually just one.
-	m_collnumBuf.reset();
 
 	m_firstCollnum = -1;
 
@@ -291,7 +295,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r , Query *q ) {
 	// set all to 0 just to avoid any inconsistencies
 	//long size = (char *)&m_END_TEST - (char *)&m_START;
 	//memset ( this , 0x00 , size );
-	setToDefaults( cr , 0 ); // niceness
+	//setToDefaults( cr , 0 ); // niceness
 
 	m_cr = cr;
 

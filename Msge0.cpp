@@ -51,7 +51,7 @@ bool Msge0::getTagRecs ( char        **urlPtrs           ,
 			// if skipOldLinks && urlFlags[i]&LF_OLDLINK, skip it
 			 bool          skipOldLinks      ,
 			 TagRec       *baseTagRec        ,
-			 char         *coll              ,
+			 collnum_t     collnum,
 			 long          niceness          ,
 			 void         *state             ,
 			 void        (*callback)(void *state) ) {
@@ -65,7 +65,7 @@ bool Msge0::getTagRecs ( char        **urlPtrs           ,
 	m_numUrls          = numUrls;
 	m_skipOldLinks     = skipOldLinks;
 	m_baseTagRec       = baseTagRec;
-	m_coll             = coll;
+	m_collnum          = collnum;
 	m_niceness         = niceness;
 	m_state            = state;
 	m_callback         = callback;
@@ -240,7 +240,7 @@ bool Msge0::sendMsg8a ( long i ) {
 	//   subsite.
 	if ( ! m->getTagRec ( &m_urls[i]    ,
 			      NULL, // sites[i] ,
-			      m_coll        ,
+			      m_collnum        ,
 			      // if domain is banned, we will miss that here!
 			      true          , // skip domain lookup?
 			      m_niceness    ,

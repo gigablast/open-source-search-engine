@@ -2543,12 +2543,12 @@ bool Rdb::addRecord ( collnum_t collnum,
 
 // . use the maps and tree to estimate the size of this list w/o hitting disk
 // . used by Indexdb.cpp to get the size of a list for IDF weighting purposes
-long long Rdb::getListSize ( char *coll ,
+long long Rdb::getListSize ( collnum_t collnum,
 			//key_t startKey , key_t endKey , key_t *max ,
 			char *startKey , char *endKey , char *max ,
 			long long oldTruncationLimit ) {
 	// pick it
-	collnum_t collnum = g_collectiondb.getCollnum ( coll );
+	//collnum_t collnum = g_collectiondb.getCollnum ( coll );
 	if ( collnum < 0 || collnum > getNumBases() || ! getBase(collnum) )
 		return log("db: %s bad collnum of %i",m_dbname,collnum);
 	return getBase(collnum)->getListSize(startKey,endKey,max,

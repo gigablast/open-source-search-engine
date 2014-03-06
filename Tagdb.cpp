@@ -1885,9 +1885,10 @@ bool Tagdb::verify ( char *coll ) {
 	key128_t endKey;
 	startKey.setMin();
 	endKey.setMax();
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	
 	if ( ! msg5.getList ( RDB_TAGDB    ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -2508,7 +2509,8 @@ void Msg8a::reset() {
 bool Msg8a::getTagRec ( Url   *url , 
 			// site of the url
 			char  *site ,
-			char  *coll             , 
+			//char  *coll             , 
+			collnum_t collnum,
 			bool   skipDomainLookup , // useCanonicalName ,
 			long   niceness         ,
 			void  *state            ,
@@ -2518,7 +2520,7 @@ bool Msg8a::getTagRec ( Url   *url ,
 			char   rdbId ) {
 
 
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	if ( ! cr ) { 
 		g_errno = ENOCOLLREC;
 		return true;
@@ -2538,7 +2540,8 @@ bool Msg8a::getTagRec ( Url   *url ,
 	reset();
 
 	m_niceness = niceness;
-	m_coll     = coll;
+	//m_coll     = coll;
+	m_collnum = collnum;
 	m_tagRec   = tagRec;
 	m_callback = callback;
 	m_state    = state;
@@ -2782,7 +2785,7 @@ bool Msg8a::launchGetRequests ( ) {
 				   0          , // maxCacheAge
 				   false      , // addToCache
 				   m_rdbId, //RDB_TAGDB  ,
-				   m_coll     ,
+				   m_collnum     ,
 				   listPtr    ,
 				   (char *) &startKey  ,
 				   (char *) &endKey    ,
@@ -3999,7 +4002,8 @@ public:
 	//Msg9a        m_msg9a;
 	TcpSocket   *m_socket;
 	bool         m_adding;
-	char        *m_coll;
+	//char        *m_coll;
+	collnum_t m_collnum;
 	//long         m_collLen;
 	//char        *m_buf;
 	//long         m_bufLen;
@@ -4157,7 +4161,8 @@ bool sendPageTagdb ( TcpSocket *s , HttpRequest *req ) {
 	}		
 	*/
 	// it references into the request, should be ok
-	st->m_coll    = coll;
+	//st->m_coll    = coll;
+	st->m_collnum = cr->m_collnum;
 	//st->m_collLen = collLen;
 	//strcpy ( st->m_coll , coll );
 	// do not print "(null)" in the textarea
@@ -4237,7 +4242,7 @@ bool getTagRec ( State12 *st ) {
 	if ( ! st->m_msg8a.getTagRec ( &st->m_url,//&site , 
 				       // tell msg8a to try to guess the site
 				       NULL,
-				       st->m_coll ,
+				       st->m_collnum ,
 				       false, // skip dom lookup?
 				       st->m_niceness ,
 				       st ,
@@ -4371,7 +4376,7 @@ bool sendReply ( void *state ) {
 	//   which first pushes the rdbid, so we gotta use msg4
 	if ( ! st->m_msg1.addList ( list ,
 				    RDB_TAGDB ,
-				    st->m_coll ,
+				    st->m_collnum ,
 				    st ,
 				    sendReplyWrapper2 ,
 				    false ,

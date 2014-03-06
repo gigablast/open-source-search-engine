@@ -6536,8 +6536,9 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
-	r-> ptr_coll             = cr->m_coll;
-	r->size_coll             = gbstrlen(cr->m_coll)+1;
+	//r-> ptr_coll             = cr->m_coll;
+	//r->size_coll             = gbstrlen(cr->m_coll)+1;
+	r->m_collnum = cr->m_collnum;
 	r->m_maxAge              = 60; // cache timeout?
 	r->m_addToCache          = true;
 	r->m_docsToGet           = 0; // just calc stats
@@ -6709,7 +6710,7 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 				    0                       , // maxCacheAge
 				    false                   , // addToCache
 				    RDB_SECTIONDB           , // was RDB_DATEDB
-				    cr->m_coll                  ,
+				    cr->m_collnum                  ,
 				    &m_secdbList            ,
 				    (char *)&m_sectiondbStartKey ,
 				    (char *)&end            ,
@@ -8168,7 +8169,7 @@ RdbList *XmlDoc::getDupList ( ) {
 				0     , // maxCacheAge
 				false , // add to cache?
 				RDB_POSDB, // INDEXDB ,
-				cr->m_coll      ,
+				cr->m_collnum,
 				&m_dupList  ,
 				(char *)&sk          ,
 				(char *)&ek          ,
@@ -10561,7 +10562,7 @@ TagRec *XmlDoc::getTagRec ( ) {
 				   // we can't hit tagdb to get it at this
 				   // point!!!
 				   NULL, // guess it! // mysite ,
-				   cr->m_coll ,
+				   cr->m_collnum ,
 				   false, // skip domain lookup? // true
 				   m_niceness ,
 				   this , 
@@ -11680,7 +11681,7 @@ Addresses *XmlDoc::getAddresses ( ) {
 				 &m_tagRec     , // &m_savedTagRec1 , // gr
 				 &m_firstUrl   ,
 				 *d            ,
-				 cr->m_coll        ,
+				 cr->m_collnum    ,
 				 dh            , // *sh32
 				 *ip           ,
 				 //(long)*tph    ,
@@ -13201,7 +13202,7 @@ char *XmlDoc::getSite ( ) {
 	if ( ! m_siteGetter.getSite ( f->getUrl()    ,
 				      gr             ,
 				      timestamp      ,
-				      cr->m_coll         ,
+				      cr->m_collnum         ,
 				      m_niceness     ,
 				      //addTags        ,
 				      this           , // state
@@ -17388,7 +17389,7 @@ Images *XmlDoc::getImages ( ) {
 				       gbstrlen(site) ,
 				       *d           ,
 				       this         ,
-				       cr->m_coll       ,
+				       cr->m_collnum       ,
 				       NULL         , // statusPtr ptr
 				       *hc          ,
 				       m_masterState,
@@ -17462,7 +17463,7 @@ TagRec ***XmlDoc::getOutlinkTagRecVector () {
 				    // make it point to this basetagrec if 
 				    // the LF_SAMEHOST flag is set for the link
 				    gr ,
-				    cr->m_coll             , 
+				    cr->m_collnum             , 
 				    m_niceness         ,
 				    m_masterState      ,
 				    m_masterLoop       )) {
@@ -33981,7 +33982,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 		// get the normalized url
 		char *url = links->getLinkPtr(i);
 		// get the site. this will not block or have an error.
-		siteGetter.getSite(url,gr,timestamp,cr->m_coll,m_niceness);
+		siteGetter.getSite(url,gr,timestamp,cr->m_collnum,m_niceness);
 		// these are now valid and should reference into 
 		// Links::m_buf[]
 		char *site    = siteGetter.m_site;
@@ -37129,7 +37130,7 @@ bool XmlDoc::checkCachedb ( ) {
 					0 , // maxcacheage
 					false, // addtocache?
 					RDB_CACHEDB,
-					cr->m_coll ,
+					cr->m_collnum ,
 					&m_cacheList,
 					(char *)&sk ,
 					(char *)&ek ,
@@ -37655,7 +37656,7 @@ bool XmlDoc::storeMatchingQueriesIntoCachedb ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -37790,7 +37791,7 @@ bool XmlDoc::storeRelatedDocIdsIntoCachedb ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -37895,7 +37896,7 @@ bool XmlDoc::storeRecommendedLinksBuf ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -38023,7 +38024,7 @@ bool XmlDoc::storeRelatedQueriesIntoCachedb ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -38147,7 +38148,7 @@ bool XmlDoc::storeWordPosInfoBufIntoCachedb ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -38255,7 +38256,7 @@ bool XmlDoc::storeMissingTermBufIntoCachedb ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -38454,7 +38455,7 @@ bool XmlDoc::storeScoredInsertableTermsIntoCachedb ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -39129,13 +39130,14 @@ SafeBuf *XmlDoc::getMatchingQueriesScoredForFullQuery ( ) {
 	// shortcut
 	long qlen = gbstrlen(qstr);
 
-	long collLen = gbstrlen(cr->m_coll);
+	//long collLen = gbstrlen(cr->m_coll);
 	// set the request
 	m_mr2.reset();
 	m_mr2.ptr_query  = qstr;
 	m_mr2.size_query = qlen+1;
-	m_mr2.ptr_coll   = cr->m_coll;
-	m_mr2.size_coll  = collLen+1;
+	//m_mr2.ptr_coll   = cr->m_coll;
+	//m_mr2.size_coll  = collLen+1;
+	m_mr2.m_collnum = cr->m_collnum;
 	m_mr2.m_queryExpansion = 1;
 	m_mr2.m_language = langId;
 	m_mr2.m_niceness = m_niceness;
@@ -43410,7 +43412,7 @@ SafeBuf *XmlDoc::getRecommendedLinksBuf ( ) {
 				       0               , // max cache age -secs
 				       false           , // addToCache?
 				       RDB_LINKDB      ,
-				       cr->m_coll          ,
+				       cr->m_collnum      ,
 				       list            , // linkdb list to fill
 				       (char*)&startKey,
 				       (char*)&endKey  ,
@@ -44003,7 +44005,7 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 					0 , // maxcacheage
 					false, // addtocache?
 					RDB_CACHEDB,
-					cr->m_coll ,
+					cr->m_collnum ,
 					myList, // &m_cacheList,
 					(char *)&sk ,
 					(char *)&ek ,
@@ -44195,7 +44197,7 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?

@@ -11,7 +11,7 @@
 // 90MB for 32 nodes we got now with about 1.3B docs
 #define DEFAULT_POSDB_READSIZE 90000000
 
-void setTermFreqWeights ( char *coll,
+void setTermFreqWeights ( collnum_t collnum, // char *coll,
 			  class Query *q , 
 			  long long *termFreqs, 
 			  float *termFreqWeights ) ;

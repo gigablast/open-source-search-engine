@@ -489,12 +489,15 @@ bool Msg1c::reindexQuery ( char *query ,
 	// langunknown?
 	m_qq.set2 ( query , langId , true ); // /*bool flag*/ );
 
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
+
 	//CollectionRec *cr = g_collectiondb.getRec ( coll );
 	// reset again just in case
 	m_req.reset();
 	// set our Msg39Request
-	m_req.ptr_coll                    = coll;
-	m_req.size_coll                   = gbstrlen(coll)+1;
+	//m_req.ptr_coll                    = coll;
+	//m_req.size_coll                   = gbstrlen(coll)+1;
+	m_req.m_collnum = cr->m_collnum;
 	m_req.m_docsToGet                 = endNum;
 	m_req.m_niceness                  = 0,
 	m_req.m_getDocIdScoringInfo       = false;

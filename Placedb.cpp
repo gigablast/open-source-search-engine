@@ -113,9 +113,10 @@ bool Placedb::verify ( char *coll ) {
 	startKey.setMin();
 	key_t endKey;
 	endKey.setMax();
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	
 	if ( ! msg5.getList ( RDB_PLACEDB     ,
-			      coll          ,
+			      cr->m_collnum ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,

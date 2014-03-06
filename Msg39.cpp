@@ -151,7 +151,7 @@ void Msg39::getDocIds ( UdpSlot *slot ) {
 	// deserialize it before we do anything else
 	long finalSize = deserializeMsg ( sizeof(Msg39Request) ,
 					  &m_r->size_readSizes ,
-					  &m_r->size_coll ,
+					  &m_r->size_whiteList,//coll ,
 					  &m_r->ptr_readSizes,
 					  m_r->m_buf );
 
@@ -176,7 +176,7 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 	if ( g_conf.m_logTimingQuery ) m_debug = true;
 
         // ensure it's size is ok
-        if ( m_r->size_coll <= 0 ) {
+        if ( m_r->size_whiteList <= 0 ) {
 		g_errno = ENOCOLLREC;
 		log(LOG_LOGIC,"query: msg39: getDocIds: %s." , 
 		    mstrerror(g_errno) );
@@ -184,7 +184,7 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 		return ; 
 	}
 
-        CollectionRec *cr = g_collectiondb.getRec ( m_r->ptr_coll );
+        CollectionRec *cr = g_collectiondb.getRec ( m_r->m_collnum );
         if ( ! cr ) {
 		g_errno = ENOCOLLREC;
 		log(LOG_LOGIC,"query: msg39: getDocIds: %s." , 
@@ -614,7 +614,7 @@ bool Msg39::getLists () {
 	long split = g_hostdb.m_myHost->m_shardNum;
 	// call msg2
 	if ( ! m_msg2.getLists ( rdbId                      ,
-				 m_r->ptr_coll              ,
+				 m_r->m_collnum,//m_r->ptr_coll              ,
 				 m_r->m_maxAge              ,
 				 m_r->m_addToCache          ,
 				 //m_tmpq.m_qterms ,
@@ -707,7 +707,7 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 			    m_debug              ,
 			    this                   ,
 			    &m_tt                  ,
-			    m_r->ptr_coll          , 
+			    m_r->m_collnum,//ptr_coll          , 
 			    &m_msg2 , // m_lists                ,
 			    //m_tmpq.m_numTerms      , // m_numLists
 			    m_r                              );
@@ -983,7 +983,7 @@ bool Msg39::setClusterRecs ( ) {
 					m_clusterLevels       ,
 					m_clusterRecs         ,
 					m_numClusterDocIds    ,
-					m_r->ptr_coll         ,
+					m_r->m_collnum ,
 					0                     , // maxAge
 					false                 , // addToCache
 					this                  ,

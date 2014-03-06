@@ -145,10 +145,11 @@ bool Datedb::verify ( char *coll ) {
 	key_t endKey;
 	startKey.setMin();
 	endKey.setMax();
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	//long minRecSizes = 64000;
 	
 	if ( ! msg5.getList ( RDB_DATEDB    ,
-			      coll          ,
+			      cr->m_collnum ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
