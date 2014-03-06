@@ -20,6 +20,7 @@ void Msg3a::constructor ( ) {
 	m_finalBuf     = NULL;
 	m_docsToGet    = 0;
 	m_numDocIds    = 0;
+	m_collnums     = NULL;
 
 	// need to call all safebuf constructors now to set m_label
 	m_rbuf2.constructor();
@@ -68,6 +69,7 @@ void Msg3a::reset ( ) {
 	m_docsToGet    = 0;
 	m_errno        = 0;
 	m_numDocIds    = 0;
+	m_collnums     = NULL;
 }
 
 Msg39Request *g_r = NULL;

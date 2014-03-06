@@ -67,7 +67,8 @@ bool Msg17::getFromCache ( char   cacheId,
 			   key_t  key,
 			   char **recPtr,
 			   long  *recSize,
-			   char  *coll ,
+			   //char  *coll ,
+			   collnum_t collnum ,
 			   void  *state ,
 			   void (*callback) (void *state) ,
 			   long   niceness ,
@@ -107,7 +108,7 @@ bool Msg17::getFromCache ( char   cacheId,
 	if ( c ) {
 		time_t cachedTime;
 		// return true if not found in our local cache
-		if ( ! c->getRecord ( coll      ,
+		if ( ! c->getRecord ( collnum   ,
 				      m_key     ,
 				      recPtr    ,
 				      recSize   ,
@@ -148,7 +149,8 @@ bool Msg17::getFromCache ( char   cacheId,
 	*p++ = m_cacheId;
 	// the flag (0 means read request, 1 means store request)
 	*p++ = 0;
-	strcpy ( p , coll ); p += gbstrlen ( coll ) + 1;
+	memcpy ( p , &collnum, sizeof(collnum_t)); p += sizeof(collnum_t);
+	//strcpy ( p , coll ); p += gbstrlen ( coll ) + 1;
         // . send the request to the key host
 	// . this returns false and sets g_errno on error
 	// . now wait for 1 sec before timing out
@@ -317,13 +319,14 @@ void handleRequest17 ( UdpSlot *slot , long niceness  ) {
 	// then 1-byte flag (0 means read request, 1 means store request)
 	char flag = *p++;
 	// NULL terminated collection name follows
-	char *coll = p; p += gbstrlen ( coll ) + 1 ;
+	//char *coll = p; p += gbstrlen ( coll ) + 1 ;
+	collnum_t collnum = *(collnum_t *)p; p += sizeof(collnum_t);
 
 	RdbCache *c = &g_genericCache[(int)cacheId];
 
 	// if flag is 1 then it is a request to store a compressed Msg40
 	if ( flag == 1 ) {
-		if ( ! c->addRecord ( coll ,
+		if ( ! c->addRecord ( collnum ,
 				      k, 
 				      p, 
 				      pend - p ) )
@@ -338,7 +341,7 @@ void handleRequest17 ( UdpSlot *slot , long niceness  ) {
 	long   recSize;
 	time_t cachedTime;
 	// send back nothing if not in cache
-	if ( ! c->getRecord ( coll     ,
+	if ( ! c->getRecord ( collnum  ,
 			      k        ,
 			      &rec     ,
 			      &recSize ,
@@ -386,7 +389,7 @@ bool Msg17::storeInCache ( char   cacheId ,
 			   key_t  key ,
 			   char  *recPtr ,
 			   long   recSize ,
-			   char  *coll ,
+			   collnum_t collnum, // char  *coll ,
 			   long   niceness ,
 			   long   timeout  ) {
 
@@ -446,7 +449,8 @@ bool Msg17::storeInCache ( char   cacheId ,
 	// use "1" for a store request
 	*p++ = 1;
 	//char *coll = si->m_coll;
-	strcpy ( p , coll ); p += gbstrlen(coll) + 1; // includes '\0'
+	//strcpy ( p , coll ); p += gbstrlen(coll) + 1; // includes '\0'
+	memcpy ( p ,&collnum ,sizeof(collnum_t)); p += sizeof(collnum_t);
 
 	QUICKPOLL(niceness);
 
@@ -466,7 +470,7 @@ bool Msg17::storeInCache ( char   cacheId ,
 		long avail = pend - p;
 		// save it
 		long saved = avail;
-		long clen = gbstrlen(coll);
+		//long clen = gbstrlen(coll);
 		// compress "tmp" into m_buf, but leave leading bytes
 		// for the key
 		int err = gbcompress ( (unsigned char *)p ,
@@ -479,10 +483,10 @@ bool Msg17::storeInCache ( char   cacheId ,
 		if ( err != Z_OK ) { 
 			g_errno = ECOMPRESSFAILED; 
 			log("query: Compression of cache cacheId=%i "
-			    "failed err=%li avail=%li collLen=%li "
+			    "failed err=%li avail=%li collnum=%li "
 			    "recSize=%li.", 
 			    cacheId , (long)err ,
-			    saved , clen , recSize );
+			    saved , (long)collnum , recSize );
 			return true;
 		}
 	}
@@ -506,7 +510,7 @@ bool Msg17::storeInCache ( char   cacheId ,
 	// if we are that host, store it ourselves right now
 	if ( host->m_hostId == g_hostdb.m_hostId ) {
 		RdbCache *c = &g_genericCache[(int)m_cacheId];
-		if ( ! c->addRecord ( coll ,
+		if ( ! c->addRecord ( collnum ,
 				      key  ,
 				      cacheRec     ,
 				      cacheRecSize ) )

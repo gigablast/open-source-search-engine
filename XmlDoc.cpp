@@ -26989,7 +26989,9 @@ void XmlDoc::set20 ( Msg20Request *req ) {
 	m_req = req;
 	// and this!
 	//m_coll = req->ptr_coll;
-	setCollNum ( req->ptr_coll );
+	//setCollNum ( req->ptr_coll );
+	m_collnum = req->m_collnum;
+	m_collnumValid = true;
 	// make this stuff valid
 	if ( m_req->m_docId > 0 ) {
 		m_docId      = m_req->m_docId;
@@ -27047,12 +27049,13 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 
 	m_niceness = m_req->m_niceness;
 
-	char *coll = m_req->ptr_coll;
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	m_collnum = m_req->m_collnum;//cr->m_collnum;
+	m_collnumValid = true;
+
+	//char *coll = m_req->ptr_coll;
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 	if ( ! cr ) { g_errno = ENOCOLLREC; return NULL; }
 
-	m_collnum = cr->m_collnum;
-	m_collnumValid = true;
 
 	//CollectionRec *cr = getCollRec();
 	//if ( ! cr ) return NULL;
@@ -27081,7 +27084,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	if ( ! m_setTr ) {
 		// . this completely resets us
 		// . this returns false with g_errno set on error
-		bool status = set2( *otr, maxSize, m_req->ptr_coll, NULL, 
+		bool status = set2( *otr, maxSize, cr->m_coll, NULL, 
 				    m_niceness);
 		// sanity check
 		if ( ! status && ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -39815,8 +39818,9 @@ SafeBuf *XmlDoc::getRelatedDocIdsWithTitles ( ) {
 		RelatedDocId *rd = &rds[m_rdCursor];
 		// make the request
 		Msg20Request req;
-		req.ptr_coll    = cr->m_coll;
-		req.size_coll   = gbstrlen(cr->m_coll)+1;
+		//req.ptr_coll    = cr->m_coll;
+		//req.size_coll   = gbstrlen(cr->m_coll)+1;
+		req.m_collnum = cr->m_collnum;
 		req.m_docId     = rd->m_docId;
 		req.m_expected  = true;
 		req.m_niceness  = m_niceness;
@@ -43742,8 +43746,9 @@ SafeBuf *XmlDoc::lookupTitles ( ) {
 		//req.m_state     = msg20;
 		req.m_state     = m_masterState;//this;
 		req.m_callback2 = m_masterLoop;//gotLinkerTitleWrapper;
-		req.ptr_coll    = cr->m_coll;
-		req.size_coll   = gbstrlen(cr->m_coll)+1;
+		//req.ptr_coll    = cr->m_coll;
+		//req.size_coll   = gbstrlen(cr->m_coll)+1;
+		req.m_collnum = cr->m_collnum;
 		req.m_expected  = true;
 		req.m_niceness  = m_niceness;
 		// do not get summary stuff. too slow.

@@ -1387,7 +1387,7 @@ bool Msg25::sendRequests ( ) {
 		log("linkdb: collnum %li is gone",(long)m_collnum);
 		return true;
 	}
-	char *coll = cr->m_coll;
+	//char *coll = cr->m_coll;
 
 	// if more than 300 sockets in use max this 1. prevent udp socket clog.
 	if ( g_udpServer.m_numUsedSlots >= 300 ) ourMax = 1;
@@ -1629,8 +1629,9 @@ bool Msg25::sendRequests ( ) {
 			r-> ptr_linkee = m_site;
 			r->size_linkee = gbstrlen(m_site)+1; // include \0
 		}
-		r-> ptr_coll         = coll;
-		r->size_coll         = gbstrlen(coll) + 1; // include \0
+		//r-> ptr_coll         = coll;
+		//r->size_coll         = gbstrlen(coll) + 1; // include \0
+		r->m_collnum = cr->m_collnum;
 		r->m_docId           = docId;
 		r->m_expected        = true; // false;
 		r->m_niceness        = m_niceness;

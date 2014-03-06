@@ -121,6 +121,8 @@ class Msg20Request {
 	//   serialized using Address::serialize(), and all the start dates
 	//   from now onward
 	long       m_eventId                   ;
+	// we now use the numeric collection # and not the ptr_coll
+	collnum_t  m_collnum;
 	// set this to true when you pass in m_eventIdBits...
 	char       m_getEventSummary           ;
 	char       m_summaryMode               ;
@@ -189,7 +191,7 @@ class Msg20Request {
 	char      *ptr_termFreqs     ;
 	char      *ptr_affWeights    ;
 	char      *ptr_linkee        ; // used by Msg25 for getting link text
-	char      *ptr_coll          ;
+	//char      *ptr_coll          ;
 	char      *ptr_imgUrl        ;
 	char      *ptr_displayMetas  ;
 
@@ -206,7 +208,7 @@ class Msg20Request {
 	long       size_termFreqs    ;
 	long       size_affWeights   ;
 	long       size_linkee       ; // size includes terminating \0
-	long       size_coll         ; // size includes terminating \0
+	//long       size_coll         ; // size includes terminating \0
 	long       size_imgUrl       ;
 	long       size_displayMetas ; // size includes terminating \0
 

@@ -366,7 +366,7 @@ void handleRequest20 ( UdpSlot *slot , long netnice ) {
 	if ( nb != slot->m_readBufSize ) { char *xx = NULL; *xx = 0; }
 
 	// sanity check, the size include the \0
-	if ( req->size_coll <= 1 || *req->ptr_coll == '\0' ) {
+	if ( req->m_collnum < 0 ) {
 		log("query: Got empty collection in msg20 handler. FIX!");
 		char *xx =NULL; *xx = 0; 
 	}

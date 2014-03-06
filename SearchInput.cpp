@@ -202,6 +202,48 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r , Query *q ) {
 	// get coll rec
 	long  collLen9;
 	char *coll9 = r->getString ( "c" , &collLen9 );
+
+	// store list of collection #'s to search here. usually just one.
+	m_collnumBuf.reset();
+
+	CollectionRec *cr = NULL;
+
+	// now convert list of space-separated coll names into list of collnums
+	char *p = coll9;
+
+ loop:
+
+	char *end = p;
+	for ( ; *end && ! is_wspace_a(*end) ; end++ );
+
+	// temp null
+	char c = *end;
+	*end = '\0';
+	CollectionRec *tmpcr = g_collectiondb.getRec ( p );
+	// set defaults from the FIRST one
+	if ( ! cr ) {
+		cr = tmpcr;
+		m_firstCollnum = tmpcr->m_collnum;
+	}
+	if ( ! cr ) { 
+		g_errno = ENOCOLLREC;
+		log("query: missing collection %s",p);
+		g_msg = " (error: no such collection)";		
+		return false;
+	}
+	// add to our list
+	if ( ! m_collnumBuf.safeMemcpy ( &cr->m_collnum, sizeof(collnum_t) ) )
+		return false;
+	// restore the \0 character we wrote in there
+	*end = c;
+	// advance
+	p = end;
+	// skip to next collection name if there is one
+	while ( *p && is_wspace_a(*p) ) p++; 
+	// now add it's collection # to m_collnumBuf if there
+	if ( *p ) goto loop;
+
+
 	//if (! coll){coll = g_conf.m_defaultColl; collLen = gbstrlen(coll); }
 	//if ( ! coll )
 	//	coll = g_conf.getDefaultColl(r->getHost(), r->getHostLen());
@@ -209,12 +251,12 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r , Query *q ) {
 	//	coll = "main";
 	//if ( ! coll ) { g_errno = ENOCOLLREC; return false; }
 	//collLen = gbstrlen(coll);
-	CollectionRec *cr = g_collectiondb.getRec ( coll9 );
-	if ( ! cr ) { 
-		g_errno = ENOCOLLREC;
-		g_msg = " (error: no such collection)";		
-		return false;
-	}
+	//CollectionRec *cr = g_collectiondb.getRec ( coll9 );
+	//if ( ! cr ) { 
+	//	g_errno = ENOCOLLREC;
+	//	g_msg = " (error: no such collection)";		
+	//	return false;
+	//}
 
 	// set all to 0 just to avoid any inconsistencies
 	//long size = (char *)&m_END_TEST - (char *)&m_START;
@@ -223,8 +265,10 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r , Query *q ) {
 
 	m_cr = cr;
 
-	m_coll2    = m_cr->m_coll;
-	m_collLen2 = gbstrlen(m_coll2);
+	//m_coll2    = m_cr->m_coll;
+	//m_collLen2 = gbstrlen(m_coll2);
+
+	
 
 	// from ::reset()
 	m_languageWeightFactor = 0.33;
@@ -683,11 +727,11 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	// USER_ADMIN, ...
 	m_username = g_users.getUsername(r);
 	// if collection is NULL default to one in g_conf
-	if ( ! m_coll2 || ! m_coll2[0] ) { 
-		//m_coll = g_conf.m_defaultColl; 
-		m_coll2 = g_conf.getDefaultColl(r->getHost(), r->getHostLen());
-		m_collLen2 = gbstrlen(m_coll2); 
-	}
+	//if ( ! m_coll2 || ! m_coll2[0] ) { 
+	//	//m_coll = g_conf.m_defaultColl; 
+	//	m_coll2 = g_conf.getDefaultColl(r->getHost(), r->getHostLen());
+	//	m_collLen2 = gbstrlen(m_coll2); 
+	//}
 
 	// reset this
 	m_gblang = 0;

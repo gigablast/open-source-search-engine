@@ -125,6 +125,10 @@ public:
 	// this is set if IndexTable::addLists() had an error
 	long       m_errno;
 
+	// this is now in here so Msg40 can send out one Msg3a per
+	// collection if it wants to search an entire token
+	Msg39Request m_rrr;
+
 	// use msg37 to get TermFreqs
 	//Msg37      m_msg37;
 	long long  m_termFreqs      [MAX_QUERY_TERMS];
@@ -165,10 +169,19 @@ public:
 	//key_t          *m_recs          ; // clusterdb recs
 	key_t          *m_clusterRecs   ;
 	char           *m_clusterLevels ;
+	// this is new
+	collnum_t      *m_collnums;
 	long            m_numDocIds     ;
 	// the above ptrs point into this buffer
 	char           *m_finalBuf;
 	long            m_finalBufSize;
+
+	// when merging this list of docids into a final list keep
+	// track of the cursor into m_docIds[]
+	long m_cursor;
+
+	// what collection # are these docids from if m_collnums[] is NULL
+	collnum_t m_collnum;
 
 	//
 	// new things for seoresults cache

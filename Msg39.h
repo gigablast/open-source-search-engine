@@ -49,6 +49,7 @@ class Msg39Request {
 		m_useMinAlgo              = false;
 		m_fastIntersection        = -1;
 		m_stripe                  = 0;
+		m_collnum                 = -1;
 		m_useQueryStopWords       = true;
 		m_useNewAlgo              = true;
 		m_doMaxScoreAlgo          = true;
@@ -58,12 +59,12 @@ class Msg39Request {
 		ptr_readSizes             = NULL;
 		ptr_query                 = NULL; // in utf8?
 		ptr_whiteList             = NULL;
-		ptr_coll                  = NULL;
+		//ptr_coll                  = NULL;
 
 		size_readSizes            = 0;
 		size_query                = 0;
 		size_whiteList            = 0;
-		size_coll                 = 0;
+		//size_coll                 = 0;
 
 		m_getDocIdScoringInfo = 1;
 
@@ -114,6 +115,8 @@ class Msg39Request {
 
 	char    m_useMinAlgo;
 	char    m_fastIntersection;
+
+	collnum_t m_collnum;
 
 	long long m_minDocId;
 	long long m_maxDocId;
