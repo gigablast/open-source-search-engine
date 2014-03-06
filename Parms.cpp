@@ -18211,7 +18211,13 @@ bool Parms::doParmSendingLoop ( ) {
 						 -1 , // maxwait
 						 NULL , // replybuf
 						 0 , // replybufmaxsize
-						 0 ) ) { // niceness
+						 // CRAP! we can't use 0 any
+						 // more because we quickpolled
+						 // in Spider.cpp::
+						 // getUrlFilterNum2() and
+						 // changed the # of numRegExs
+						 // and then cored!
+						 MAX_NICENESS ) ) { // niceness
 			log("parms: faild to send: %s",mstrerror(g_errno));
 			continue;
 		}
