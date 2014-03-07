@@ -5621,16 +5621,20 @@ void SpiderLoop::spiderDoledUrls ( ) {
 			// can't get spidered until the one that is doled does.
 			if ( g_conf.m_testSpiderEnabled ) maxSpiders = 6;
 		}
+
+		// if some spiders are currently outstanding
+		if ( m_sc->m_spidersOut )
+			// do not end the crawl until empty of urls because
+			// that url might end up adding more links to spider
+			// when it finally completes
+			ci->m_lastSpiderCouldLaunch = nowGlobal;
+
 		// debug log
 		//if ( g_conf.m_logDebugSpider )
 		//	log("spider: has %li spiders out",m_sc->m_spidersOut);
 		// obey max spiders per collection too
-		if ( m_sc->m_spidersOut >= maxSpiders ) {
-			// assume we would have launched a spider
-			ci->m_lastSpiderCouldLaunch = nowGlobal;
-			// try next collection
+		if ( m_sc->m_spidersOut >= maxSpiders )
 			continue;
-		}
 
 		// shortcut
 		SpiderColl *sc = cr->m_spiderColl;
