@@ -94,6 +94,8 @@ class Conf {
 	// a core dump saving them
 	char m_save;
 
+	bool m_isLocal;
+
 	//director info (optional) (used iff m_isTrustedNet is false)
 	//public_key  m_dirPubKey;  // everyone should know director's pub key
 	//private_key m_dirPrivKey;   // this is 0 if we don't know it

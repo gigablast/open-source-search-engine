@@ -852,6 +852,47 @@ bool Collectiondb::resetColl ( char *coll ,  bool purgeSeeds) {
 }
 */
 
+// ensure m_recs[] is big enough for m_recs[collnum] to be a ptr
+bool Collectiondb::growRecPtrBuf ( collnum_t collnum ) {
+
+	// an add, make sure big enough
+	long need = ((long)collnum+1)*sizeof(CollectionRec *);
+	long have = m_recPtrBuf.getLength();
+	long need2 = need - have;
+
+	// if already big enough
+	if ( need2 <= 0 ) {
+		m_recs [ collnum ] = NULL;
+		return true;
+	}
+
+	// . true here means to clear the new space to zeroes
+	// . this shit works based on m_length not m_capacity
+	if ( ! m_recPtrBuf.reserve ( need2 ,NULL, true ) ) {
+		log("admin: error growing rec ptr buf2.");
+		return false;
+	}
+
+	// sanity
+	if ( m_recPtrBuf.getCapacity() < need ) { char *xx=NULL;*xx=0; }
+
+	// set it
+	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
+
+	// update length of used bytes in case we re-alloc
+	m_recPtrBuf.setLength ( need );
+
+	// re-max
+	long max = m_recPtrBuf.getCapacity() / sizeof(CollectionRec *);
+	// sanity
+	if ( collnum >= max ) { char *xx=NULL;*xx=0; }
+
+	// initialize slot
+	m_recs [ collnum ] = NULL;
+
+	return true;
+}
+
 
 bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 
@@ -894,29 +935,12 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 		return true;
 	}
 
-	// an add, make sure big enough
-	long need = ((long)collnum+1)*sizeof(CollectionRec *);
-	long have = m_recPtrBuf.getLength();
-	long need2 = need - have;
-	// . true here means to clear the new space to zeroes
-	// . this shit works based on m_length not m_capacity
-	if ( need2 > 0 && ! m_recPtrBuf.reserve ( need2 ,NULL, true ) ) {
-		log("admin: error growing rec ptr buf2.");
+	// ensure m_recs[] is big enough for m_recs[collnum] to be a ptr
+	if ( ! growRecPtrBuf ( collnum ) )
 		return false;
-	}
 
 	// sanity
 	if ( cr->m_collnum != collnum ) { char *xx=NULL;*xx=0; }
-	// update length of used bytes in case we re-alloc
-	m_recPtrBuf.setLength ( need );
-	// sanity
-	if ( m_recPtrBuf.getCapacity() < need ) { char *xx=NULL;*xx=0; }
-	// re-ref it in case it is different
-	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
-	// re-max
-	max = m_recPtrBuf.getCapacity() / sizeof(CollectionRec *);
-	// sanity
-	if ( collnum >= max ) { char *xx=NULL;*xx=0; }
 
 	// add to hash table to map name to collnum_t
 	long long h64 = hash64n(cr->m_coll);
@@ -1333,6 +1357,9 @@ collnum_t Collectiondb::reserveCollNum ( ) {
 
 	if ( m_numRecs < 0x7fff ) {
 		collnum_t next = m_numRecs;
+		// make the ptr NULL at least to accomodate the
+		// loop that scan up to m_numRecs lest we core
+		growRecPtrBuf ( next );
 		m_numRecs++;
 		return next;
 	}

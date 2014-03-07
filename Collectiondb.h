@@ -129,6 +129,7 @@ class Collectiondb  {
 	bool addRdbBaseToAllRdbsForEachCollRec ( ) ;
 	bool addRdbBasesForCollRec ( CollectionRec *cr ) ;
 
+	bool growRecPtrBuf ( collnum_t collnum ) ;
 	bool setRecPtr ( collnum_t collnum , CollectionRec *cr ) ;
 
 	// returns false if blocked, true otherwise. 
