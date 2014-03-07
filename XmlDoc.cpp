@@ -18045,6 +18045,10 @@ char *XmlDoc::getSpiderLinks ( ) {
 	     strstr ( buf2 , "none"     ) )
 		m_spiderLinks = false;
 
+	// spider links if doing custom crawl or not using robots.txt
+	if ( ! m_useRobotsTxt || cr->m_isCustomCrawl )
+		m_spiderLinks = true;
+
 	// spider request forbade it? diffbot.cpp crawlbot api when
 	// specifying urldata (list of urls to add to spiderdb) usually
 	// they do not want the links crawled i'd imagine.
