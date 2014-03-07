@@ -611,7 +611,7 @@ bool Syncdb::loop4 ( ) {
 					0               , // maxCacheAge
 					false           , // addToCache
 					RDB_SYNCDB      ,
-					NULL            , // coll
+					0            , // collnum
 					&m_list         ,
 					(char *)&sk2    ,
 					(char *)&ek2    ,
