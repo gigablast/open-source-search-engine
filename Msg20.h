@@ -311,6 +311,7 @@ public:
 	//long       m_numLikers           ;
         bool       m_datedbDateIsEstimated;
 	long       m_errno               ; // LinkInfo uses it for LinkTextRepl
+	collnum_t  m_collnum             ; // collection # we came from
 	char       m_sumFromDmoz         ; // unused
 	long       m_hostHash            ;
 	char       m_noArchive           ;

@@ -27100,6 +27100,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	// init
 	reply->m_nextMerged = NULL;
 
+	reply->m_collnum = m_collnum;
+
 	// MsgE uses this one
 	if ( m_req->m_getTitleRec ) {
 		// this is the original compressed titleRec, preceeded

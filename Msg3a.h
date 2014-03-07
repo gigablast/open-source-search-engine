@@ -181,7 +181,7 @@ public:
 	long m_cursor;
 
 	// what collection # are these docids from if m_collnums[] is NULL
-	collnum_t m_collnum;
+	//collnum_t m_collnum;
 
 	//
 	// new things for seoresults cache

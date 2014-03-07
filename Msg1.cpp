@@ -684,8 +684,10 @@ void handleRequest1 ( UdpSlot *slot , long netnice ) {
 	else             injecting = false;
 	p++;
 	// then collection
-	char *coll = p;
-	p += gbstrlen (p) + 1;
+	//char *coll = p;
+	//p += gbstrlen (p) + 1;
+	collnum_t collnum = *(collnum_t *)p;
+	p += sizeof(collnum_t);
 	// . make a list from this data
 	// . skip over the first 4 bytes which is the rdbId
 	// . TODO: embed the rdbId in the msgtype or something...
@@ -703,7 +705,7 @@ void handleRequest1 ( UdpSlot *slot , long netnice ) {
 	//log("msg1: handlerequest1 calling addlist niceness=%li",niceness);
 	//log("msg1: handleRequest1 niceness=%li",niceness);
 	// this returns false and sets g_errno on error
-	rdb->addList ( coll , &list , niceness);
+	rdb->addList ( collnum , &list , niceness);
 	// if titledb, add tfndb recs to map the title recs
 	//if ( ! g_errno && rdb == g_titledb.getRdb() && injecting ) 
 	//	updateTfndb ( coll , &list , true, 0);

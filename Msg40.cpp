@@ -148,7 +148,7 @@ bool Msg40::getResults ( SearchInput *si      ,
 			 void   (* callback) ( void *state ) ) {
 	// warning
 	//if ( ! si->m_coll2 ) log(LOG_LOGIC,"net: NULL collection. msg40.");
-	if ( si->m_collnumBuf.length() <= (long)sizeof(collnum_t) )
+	if ( si->m_collnumBuf.length() < (long)sizeof(collnum_t) )
 		log(LOG_LOGIC,"net: NULL collection. msg40.");
 
 
@@ -584,7 +584,8 @@ bool Msg40::getDocIds ( bool recall ) {
 		m_msg3aPtrs[i] = NULL;
 
 	// use first guy in case only one coll we are searching, the std case
-	m_msg3aPtrs[0] = &m_msg3a;
+	if ( m_numCollsToSearch <= 1 )
+		m_msg3aPtrs[0] = &m_msg3a;
 
 	// create new ones if searching more than 1 coll
 	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
@@ -822,6 +823,9 @@ bool Msg40::mergeDocIdsIntoBaseMsg3a() {
 	// all the docids are already in m_msg3a
 	if ( m_numCollsToSearch <= 1 ) return true;
 	
+	// free any mem in use
+	m_msg3a.reset();
+
 	// count total docids into "td"
 	long td = 0LL;
 	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
@@ -829,10 +833,9 @@ bool Msg40::mergeDocIdsIntoBaseMsg3a() {
 		td += mp->m_numDocIds;
 		// reset cursor for list of docids from this collection
 		mp->m_cursor = 0;
+		// add up here too
+		m_msg3a.m_numTotalEstimatedHits += mp->m_numTotalEstimatedHits;
 	}
-
-	// free any mem in use
-	m_msg3a.reset();
 
 	// setup to to merge all msg3as into our one m_msg3a
 	long need = 0;
@@ -855,6 +858,8 @@ bool Msg40::mergeDocIdsIntoBaseMsg3a() {
 	m_msg3a.m_scoreInfos    = NULL;
 	m_msg3a.m_collnums      = (collnum_t *)p; p += td * sizeof(collnum_t);
 	if ( p - m_msg3a.m_finalBuf != need ) { char *xx=NULL;*xx=0; }
+
+	m_msg3a.m_numDocIds = td;
 
 	//
 	// begin the collection merge
@@ -887,7 +892,8 @@ bool Msg40::mergeDocIdsIntoBaseMsg3a() {
 	if ( maxmp ) {
 		m_msg3a.m_docIds  [next] = maxmp->m_docIds[maxmp->m_cursor];
 		m_msg3a.m_scores  [next] = maxmp->m_scores[maxmp->m_cursor];
-		m_msg3a.m_collnums[next] = maxmp->m_collnum;
+		m_msg3a.m_collnums[next] = maxmp->m_rrr.m_collnum;
+		m_msg3a.m_clusterLevels[next] = CR_OK;
 		maxmp->m_cursor++;
 		next++;
 		goto loop;
@@ -895,6 +901,7 @@ bool Msg40::mergeDocIdsIntoBaseMsg3a() {
 
 	// free tmp msg3as now
 	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		if ( m_msg3aPtrs[i] == &m_msg3a ) continue;
 		mdelete ( m_msg3aPtrs[i] , sizeof(Msg3a), "tmsg3a");
 		delete  ( m_msg3aPtrs[i] );
 		m_msg3aPtrs[i] = NULL;
@@ -1331,7 +1338,14 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		}
 
 		req.m_docId              = m_msg3a.m_docIds[i];
-		req.m_collnum            = m_msg3a.m_collnums[i];
+		
+		// if the msg3a was merged from other msg3as because we
+		// were searching multiple collections...
+		if ( m_msg3a.m_collnums )
+			req.m_collnum = m_msg3a.m_collnums[i];
+		// otherwise, just one collection
+		else
+			req.m_collnum = m_msg3a.m_rrr.m_collnum;
 
 		req.m_numSummaryLines    = m_si->m_numLinesInSummary;
 		req.m_maxCacheAge        = maxAge;
@@ -1847,7 +1861,8 @@ bool Msg40::gotSummary ( ) {
 	long long took;
 
 	// shortcut
-	Query *q = m_msg3a.m_q;
+	//Query *q = m_msg3a.m_q;
+	Query *q = m_si->m_q;
         
 	//log(LOG_DEBUG, "query: msg40: deduping from %ld to %ld", 
 	//oldNumContiguous, m_numContiguous);
@@ -2500,7 +2515,8 @@ bool Msg40::gotSummary ( ) {
 		m_msg3a.m_scores        [c] = m_msg3a.m_scores        [i];
 		m_msg3a.m_clusterLevels [c] = m_msg3a.m_clusterLevels [i];
 		m_msg20                 [c] = m_msg20                 [i];
-		m_msg3a.m_scoreInfos    [c] = m_msg3a.m_scoreInfos    [i];
+		if ( m_msg3a.m_scoreInfos )
+			m_msg3a.m_scoreInfos [c] = m_msg3a.m_scoreInfos [i];
 		long need = m_si->m_docsWanted;
 		// if done, bail
 		if ( ++c >= need ) break;

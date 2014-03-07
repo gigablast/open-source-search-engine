@@ -2567,7 +2567,7 @@ bool Msg8a::getTagRec ( Url   *url ,
 		sg.getSite ( url->getUrl() ,
 			     NULL , // tagrec
 			     0 , // timestamp
-			     NULL, // coll
+			     collnum, // coll
 			     m_niceness,
 			     NULL, // state
 			     NULL); // callback

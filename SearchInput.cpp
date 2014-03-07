@@ -239,7 +239,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r , Query *q ) {
 			m_firstCollnum = tmpcr->m_collnum;
 		}
 		// save the collection #
-		if ( ! m_collnumBuf.safeMemcpy ( &cr->m_collnum, 
+		if ( ! m_collnumBuf.safeMemcpy ( &tmpcr->m_collnum, 
 						 sizeof(collnum_t) ) )
 			return false;
 	}

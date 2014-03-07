@@ -70,6 +70,7 @@ void Msg3a::reset ( ) {
 	m_errno        = 0;
 	m_numDocIds    = 0;
 	m_collnums     = NULL;
+	m_numTotalEstimatedHits = 0LL;
 }
 
 Msg39Request *g_r = NULL;
