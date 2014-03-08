@@ -4118,6 +4118,15 @@ bool PosdbTable::setQueryTermInfo ( ) {
 
 	// assume not sorting by a numeric termlist
 	m_sortByTermNum = -1;
+	m_sortByTermNumInt = -1;
+
+	// now we have score ranges for gbmin:price:1.99 etc.
+	m_minScoreTermNum = -1;
+	m_maxScoreTermNum = -1;
+
+	// for gbminint:count:99 etc.
+	m_minScoreTermNumInt = -1;
+	m_maxScoreTermNumInt = -1;
 
 	//for ( long i = 0 ; i < m_msg2->getNumLists() ; i++ ) {
 	for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
@@ -4137,6 +4146,31 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		if ( qt->m_fieldCode == FIELD_GBSORTBY ||
 		     qt->m_fieldCode == FIELD_GBREVSORTBY )
 			m_sortByTermNum = i;
+
+		if ( qt->m_fieldCode == FIELD_GBSORTBYINT ||
+		     qt->m_fieldCode == FIELD_GBREVSORTBYINT ) {
+			m_sortByTermNumInt = i;
+			// tell topTree to use int scores
+			m_topTree->m_useIntScores = true;
+		}
+
+		// is it gbmin:price:1.99?
+		if ( qt->m_fieldCode == FIELD_GBNUMBERMIN ) {
+			m_minScoreTermNum = i;
+			m_minScoreVal = qt->m_qword->m_float;
+		}
+		if ( qt->m_fieldCode == FIELD_GBNUMBERMAX ) {
+			m_maxScoreTermNum = i;
+			m_maxScoreVal = qt->m_qword->m_float;
+		}
+		if ( qt->m_fieldCode == FIELD_GBNUMBERMININT ) {
+			m_minScoreTermNumInt = i;
+			m_minScoreValInt = qt->m_qword->m_int;
+		}
+		if ( qt->m_fieldCode == FIELD_GBNUMBERMAXINT ) {
+			m_maxScoreTermNumInt = i;
+			m_maxScoreValInt = qt->m_qword->m_int;
+		}
 		// count
 		long nn = 0;
 		// also add in bigram lists
@@ -4262,6 +4296,15 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		if (qt->m_fieldCode == FIELD_GBNUMBERMIN )
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
 		if (qt->m_fieldCode == FIELD_GBNUMBERMAX )
+			qti->m_bigramFlags[nn]|=BF_NUMBER;
+
+		if (qt->m_fieldCode == FIELD_GBSORTBYINT )
+			qti->m_bigramFlags[nn]|=BF_NUMBER;
+		if (qt->m_fieldCode == FIELD_GBREVSORTBYINT )
+			qti->m_bigramFlags[nn]|=BF_NUMBER;
+		if (qt->m_fieldCode == FIELD_GBNUMBERMININT )
+			qti->m_bigramFlags[nn]|=BF_NUMBER;
+		if (qt->m_fieldCode == FIELD_GBNUMBERMAXINT )
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
 
 		// only really add if useful
@@ -5099,7 +5142,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		QueryTermInfo *qti = &qip[i];
 		// skip if negative query term
 		if ( qti->m_bigramFlags[0] & BF_NEGATIVE ) continue;
-		// skip if numeric field like gbsortby:price gbmin.price:1.23
+		// skip if numeric field like gbsortby:price gbmin:price:1.23
 		if ( qti->m_bigramFlags[0] & BF_NUMBER ) continue;
 		// set it
 		if ( qti->m_wikiPhraseId == 1 ) continue;
@@ -5282,6 +5325,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	char siteRank =0;
 	char docLang =0;
 	float score;
+	long intScore;
 	float minScore;
 	float minPairScore;
 	float minSingleScore;
@@ -5352,6 +5396,7 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	// do not do it if we got a gbsortby: field
 	if ( m_sortByTermNum >= 0 ) nnn = 0;
+	if ( m_sortByTermNumInt >= 0 ) nnn = 0;
 
 	/*
 	// skip all this if getting score of just one docid on special
@@ -5640,6 +5685,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	pass0++;
 
 	if ( m_sortByTermNum >= 0 ) goto skipScoringFilter;
+	if ( m_sortByTermNumInt >= 0 ) goto skipScoringFilter;
 
 	// test why we are slow
 	//if ( (s_sss++ % 8) != 0 ) { docIdPtr += 6; fail0++; goto docIdLoop;}
@@ -6474,8 +6520,54 @@ void PosdbTable::intersectLists10_r ( ) {
 	//
 	// if we have a gbsortby:price term then score exclusively on that
 	//
-	if ( m_sortByTermNum >= 0 )
+	if ( m_sortByTermNum >= 0 ) {
+		// no term?
+		if ( ! miniMergedList[m_sortByTermNum] ) goto advance;
 		score = g_posdb.getFloat ( miniMergedList[m_sortByTermNum] );
+	}
+
+	if ( m_sortByTermNumInt >= 0 ) {
+		// no term?
+		if ( ! miniMergedList[m_sortByTermNumInt] ) goto advance;
+		intScore = g_posdb.getInt( miniMergedList[m_sortByTermNumInt]);
+	}
+
+	// skip docid if outside of range
+	if ( m_minScoreTermNum >= 0 ) {
+		// no term?
+		if ( ! miniMergedList[m_minScoreTermNum] ) goto advance;
+		float score2 ;
+		score2= g_posdb.getFloat ( miniMergedList[m_minScoreTermNum] );
+		if ( score2 < m_minScoreVal ) goto advance;
+	}
+
+	// skip docid if outside of range
+	if ( m_maxScoreTermNum >= 0 ) {
+		// no term?
+		if ( ! miniMergedList[m_maxScoreTermNum] ) goto advance;
+		float score2 ;
+		score2= g_posdb.getFloat ( miniMergedList[m_maxScoreTermNum] );
+		if ( score2 > m_maxScoreVal ) goto advance;
+	}
+
+	// skip docid if outside of range
+	if ( m_minScoreTermNumInt >= 0 ) {
+		// no term?
+		if ( ! miniMergedList[m_minScoreTermNumInt] ) goto advance;
+		long score3;
+		score3=g_posdb.getInt(miniMergedList[m_minScoreTermNumInt]);
+		if ( score3 < m_minScoreValInt ) goto advance;
+	}
+
+	// skip docid if outside of range
+	if ( m_maxScoreTermNumInt >= 0 ) {
+		// no term?
+		if ( ! miniMergedList[m_maxScoreTermNumInt] ) goto advance;
+		long score3 ;
+		score3= g_posdb.getInt ( miniMergedList[m_maxScoreTermNumInt]);
+		if ( score3 > m_maxScoreValInt ) goto advance;
+	}
+
 
 	// . seoDebug hack so we can set "dcs"
 	// . we only come here if we actually made it into m_topTree
@@ -6573,6 +6665,12 @@ void PosdbTable::intersectLists10_r ( ) {
 		// set the score and docid ptr
 		t->m_score = score;
 		t->m_docId = m_docId;
+		// use an integer score like lastSpidered timestamp?
+		if ( m_sortByTermNumInt >= 0 ) {
+			t->m_intScore = intScore;
+			t->m_score = 0.0;
+			if ( ! m_topTree->m_useIntScores){char *xx=NULL;*xx=0;}
+		}
 		// . this will not add if tree is full and it is less than the 
 		//   m_lowNode in score
 		// . if it does get added to a full tree, lowNode will be 

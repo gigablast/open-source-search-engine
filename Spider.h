@@ -18,6 +18,7 @@
 #include "Msg4.h"
 #include "Msg1.h"
 #include "hash.h"
+#include "RdbCache.h"
 
 // for diffbot, this is for xmldoc.cpp to update CollectionRec::m_crawlInfo
 // which has m_pagesCrawled and m_pagesProcessed.
@@ -39,6 +40,7 @@
 #define SP_ADMIN_PAUSED 8 // g_conf.m_spideringEnabled = false
 #define SP_COMPLETED    9 // crawl is done, and no repeatCrawl is scheduled
 
+bool tryToDeleteSpiderColl ( SpiderColl *sc ) ;
 void spiderRoundIncremented ( class CollectionRec *cr ) ;
 bool testPatterns ( ) ;
 bool doesStringContainPattern ( char *content , char *pattern ) ;
@@ -1073,17 +1075,20 @@ class SpiderColl {
 	//bool m_encounteredDoledbRecs;
 	//long long m_numRoundsDone;
 
-	bool           m_bestRequestValid;
-	char           m_bestRequestBuf[MAX_BEST_REQUEST_SIZE];
-	SpiderRequest *m_bestRequest;
-	uint64_t       m_bestSpiderTimeMS;
-	long           m_bestMaxSpidersPerIp;
+	//bool           m_bestRequestValid;
+	//char           m_bestRequestBuf[MAX_BEST_REQUEST_SIZE];
+	//SpiderRequest *m_bestRequest;
+	//uint64_t       m_bestSpiderTimeMS;
+	//long           m_bestMaxSpidersPerIp;
 
 	bool           m_lastReplyValid;
 	char           m_lastReplyBuf[MAX_SP_REPLY_SIZE];
 
 	// doledbkey + dataSize + bestRequestRec
-	char m_doleBuf[MAX_DOLEREC_SIZE];
+	//char m_doleBuf[MAX_DOLEREC_SIZE];
+	SafeBuf m_doleBuf;
+
+	bool m_isLoading;
 
 	// for scanning the wait tree...
 	bool m_isPopulating;
@@ -1098,10 +1103,23 @@ class SpiderColl {
 	// data buckets in this table are of type 
 	HashTableX m_siteListDomTable;
 
+	RdbCache m_dupCache;
+	RdbTree m_winnerTree;
+	HashTableX m_winnerTable;
+	long m_tailIp;
+	long m_tailPriority;
+	long long m_tailTimeMS;
+	long long m_tailUh48;
+	long      m_tailHopCount;
+	long long m_minFutureTimeMS;
+
 
 	Msg4 m_msg4x;
+	Msg4 m_msg4;
 	Msg1 m_msg1;
 	bool m_msg1Avail;
+
+	bool isInDupCache ( SpiderRequest *sreq , bool addToCache ) ;
 
 	// Rdb.cpp calls this
 	bool  addSpiderReply   ( SpiderReply   *srep );
@@ -1126,8 +1144,8 @@ class SpiderColl {
 	char m_isDoledbEmpty [MAX_SPIDER_PRIORITIES];
 
 	// are all priority slots empt?
-	long m_allDoledbPrioritiesEmpty;
-	long m_lastEmptyCheck; 
+	//long m_allDoledbPrioritiesEmpty;
+	//long m_lastEmptyCheck; 
 
 	// maps priority to first ufn that uses that
 	// priority. map to -1 if no ufn uses it. that way when we scan
@@ -1206,7 +1224,7 @@ class SpiderColl {
 	bool evalIpLoop ( ) ;
 	bool readListFromSpiderdb ( ) ;
 	bool scanListForWinners ( ) ;
-	bool addWinnerToDoledb ( ) ;
+	bool addWinnersIntoDoledb ( ) ;
 
 
 	void populateWaitingTreeFromSpiderdb ( bool reentry ) ;
@@ -1220,6 +1238,7 @@ class SpiderColl {
 	long       m_gotNewDataForScanningIp;
 	long       m_lastListSize;
 	long       m_lastScanningIp;
+	long long  m_totalBytesScanned;
 
 	char m_deleteMyself;
 
@@ -1344,6 +1363,7 @@ class Msg12 {
 	unsigned long long  m_lockKeyUh48;
 	long                m_lockSequence;
 
+	long long  m_origUh48;
 	long       m_numReplies;
 	long       m_numRequests;
 	long       m_grants;

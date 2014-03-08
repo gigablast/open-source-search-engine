@@ -220,6 +220,15 @@ bool SafeBuf::pushFloat ( float i) {
 	return true;
 }
 
+bool SafeBuf::pushDouble ( double i) {
+	if ( m_length + (long)sizeof(double) > m_capacity ) 
+		if(!reserve(sizeof(double)))
+			return false;
+	*(double *)(m_buf+m_length) = i;
+	m_length += sizeof(double);
+	return true;
+}
+
 long SafeBuf::popLong ( ) {
 	if ( m_length < 4 ) { char *xx=NULL;*xx=0; }
 	long ret = *(long *)(m_buf+m_length-4);

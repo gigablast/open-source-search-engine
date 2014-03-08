@@ -14,6 +14,7 @@ void Msg20::constructor () {
 	m_r       = NULL;
 	m_inProgress = false;
 	m_launched = false;
+	m_ii = -1;
 	reset();
 	m_mcast.constructor();
 }
@@ -21,6 +22,18 @@ void Msg20::constructor () {
 void Msg20::destructor  () { reset(); m_mcast.destructor(); }
 
 #include "Process.h"
+
+void Msg20::freeReply() {
+	if ( ! m_r ) return;
+	// sometimes the msg20 reply carries an merged bffer from
+	// msg40 that is a constructed ptr_eventSummaryLines from a
+	// merge operation in msg40. this fixes the "merge20buf1" memory
+	// leak from Msg40.cpp
+	m_r->destructor();
+	if ( m_ownReply ) mfree ( m_r, m_replyMaxSize , "Msg20b"  );
+	m_r = NULL;
+
+}
 
 void Msg20::reset() { 
 	// not allowed to reset one in progress
@@ -33,15 +46,12 @@ void Msg20::reset() {
 	m_launched = false;
 	if ( m_request && m_request   != m_requestBuf )
 		mfree ( m_request , m_requestSize  , "Msg20rb" );
-	// sometimes the msg20 reply carries an merged bffer from
-	// msg40 that is a constructed ptr_eventSummaryLines from a
-	// merge operation in msg40. this fixes the "merge20buf1" memory
-	// leak from Msg40.cpp
-	if ( m_r ) m_r->destructor();
-	if ( m_r && m_ownReply ) //&& (char *)m_r != m_replyBuf )
-		mfree ( m_r       , m_replyMaxSize , "Msg20b"  );
+	freeReply();
+	//if ( m_r ) m_r->destructor();
+	//if ( m_r && m_ownReply ) //&& (char *)m_r != m_replyBuf )
+	//	mfree ( m_r       , m_replyMaxSize , "Msg20b"  );
+	//m_r            = NULL; // the reply ptr
 	m_request      = NULL; // the request buf ptr
-	m_r            = NULL; // the reply ptr
 	m_gotReply     = false;
 	m_errno        = 0;
 	m_requestDocId = -1LL;
@@ -268,6 +278,13 @@ void Msg20::gotReply ( UdpSlot *slot ) {
 	m_inProgress = false;
 	// sanity check
 	if ( m_r ) { char *xx = NULL; *xx = 0; }
+
+	// free our serialized request buffer to save mem
+	if ( m_request && m_request   != m_requestBuf ) {
+		mfree ( m_request , m_requestSize  , "Msg20rb" );
+		m_request = NULL;
+	}
+
 	// save error so Msg40 can look at it
 	if ( g_errno ) { 
 		m_errno = g_errno; 

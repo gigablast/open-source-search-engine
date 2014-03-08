@@ -8478,7 +8478,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "onlyProcessIfNew";
 	m->m_xml   = "diffbotOnlyProcessIfNew";
 	m->m_title = "onlyProcessIfNew";
-	m->m_off   = (char *)&cr.m_diffbotOnlyProcessIfNew - x;
+	m->m_off   = (char *)&cr.m_diffbotOnlyProcessIfNewUrl - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_NONE;
 	m->m_def   = "1";
@@ -9142,6 +9142,7 @@ void Parms::init ( ) {
 	m++;
 
 	// use url filters for this. this is a crawlbot parm really.
+	/*
 	m->m_title = "restrict domain";
 	m->m_desc  = "Keep crawler on same domain as seed urls?";
 	m->m_cgi   = "restrictDomain";
@@ -9151,6 +9152,7 @@ void Parms::init ( ) {
 	// we need to save this it is a diffbot parm
 	m->m_flags = PF_HIDDEN | PF_DIFFBOT;// | PF_NOSAVE;
 	m++;
+	*/
 
 	m->m_title = "do url sporn checking";
 	m->m_desc  = "If this is true and the spider finds "
@@ -10751,7 +10753,6 @@ void Parms::init ( ) {
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
-
 	// buzz
 	m->m_title = "hide all clustered results";
 	m->m_desc  = "Hide all clustered results instead of displaying two "
@@ -10791,9 +10792,9 @@ void Parms::init ( ) {
 
 	m->m_title = "percent similar dedup summary";
 	m->m_desc  = "If document summary is this percent similar "
-		"to a document summary above it, then remove it from the search "
-		"results. 100 means only to remove if exactly the same. 0 means"
-		" no summary deduping.";
+		"to a document summary above it, then remove it from the "
+		"search results. 100 means only to remove if exactly the "
+		"same. 0 means no summary deduping.";
 	m->m_cgi   = "psds";
 	m->m_off   = (char *)&cr.m_percentSimilarSummary - x;
 	m->m_soff  = (char *)&si.m_percentSimilarSummary - y;
@@ -14252,7 +14253,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_maxRepairSpiders - g;
 	m->m_type  = TYPE_LONG;
 	m->m_page  = PAGE_REPAIR;
-	m->m_def   = "12";
+	m->m_def   = "2";
 	m->m_group = 0;
 	m->m_sparm = 0;
 	m++;
@@ -15303,6 +15304,19 @@ void Parms::init ( ) {
 	m->m_sprpp = 0;
 	m->m_flags = PF_REDBOX;
 	m++;
+
+	m->m_title = "stream search results";
+	m->m_desc  = "Stream search results back on socket as they arrive. Useful "
+		"when thousands of search results are requested.";
+	m->m_soff  = (char *)&si.m_streamResults - y;
+	m->m_type  = TYPE_CHAR;
+	m->m_obj   = OBJ_SI;
+	m->m_def   = "0";
+	m->m_sparm = 1;
+	m->m_scgi  = "stream";
+	m->m_flags = PF_API;
+	m++;
+
 
 	m->m_title = "restrict search to this url";
 	m->m_desc  = "X is the url.";

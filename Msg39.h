@@ -158,7 +158,7 @@ public:
 	long   m_errno;
 
 	char  *ptr_docIds         ; // the results, long long
-	char  *ptr_scores;        ; // floats
+	char  *ptr_scores;        ; // now doubles! so we can have intScores
 	char  *ptr_scoreInfo      ; // transparency info
 	char  *ptr_pairScoreBuf   ; // transparency info
 	char  *ptr_singleScoreBuf ; // transparency info

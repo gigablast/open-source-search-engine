@@ -49,6 +49,9 @@ class Process {
 	double getLoadAvg	( );
 	void resetLoadAvg	( );
 
+	long long getTotalDocsIndexed();
+	long long m_totalDocsIndexed;
+
 	class Rdb *m_rdbs[32];
 	long       m_numRdbs;
 	bool       m_urgent;

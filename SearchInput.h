@@ -108,6 +108,10 @@ class SearchInput {
 	// intersection speed up shortcut? "&fi=1", defaults to on
 	char   m_fastIntersection;
 
+	// stream results back on socket in streaming mode, usefule when thousands
+	// of results are requested
+	char   m_streamResults;
+
 	// . related topic (gigabits) parameters
 	// . TODO: prepend m_top_ to these var names
 	long   m_docsToScanForTopics;     // msg40

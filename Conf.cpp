@@ -172,8 +172,17 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 	g_parms.setToDefault ( (char *)this );
 	m_save = true;
 	char fname[1024];
-	if ( dir ) sprintf ( fname , "%sgb.conf", dir );
-	else       sprintf ( fname , "./gb.conf" );
+	if ( dir ) sprintf ( fname , "%slocalgb.conf", dir );
+	else       sprintf ( fname , "./localgb.conf" );
+	File f;
+	f.set ( fname );
+	m_isLocal = true;
+	if ( ! f.doesExist() ) {
+		m_isLocal = false;
+		if ( dir ) sprintf ( fname , "%sgb.conf", dir );
+		else       sprintf ( fname , "./gb.conf" );
+	}
+
 	// make sure g_mem.maxMem is big enough temporarily
 	if ( g_mem.m_maxMem < 10000000 ) g_mem.m_maxMem = 10000000;
 	bool status = g_parms.setFromFile ( this , fname , NULL );
@@ -399,7 +408,9 @@ bool Conf::save ( ) {
 	bool status = g_parms.saveToXml ( (char *)this , fname );
 	if ( status ) {
 		char fname2[1024];
-		sprintf( fname2 , "%sgb.conf" , g_hostdb.m_dir );
+		char *local = "";
+		if ( m_isLocal ) local = "local";
+		sprintf( fname2 , "%s%sgb.conf" , g_hostdb.m_dir , local );
 		if(access(fname2, F_OK) == 0) unlink(fname2);
 		if(link(fname, fname2) == 0) {
 			unlink(fname);

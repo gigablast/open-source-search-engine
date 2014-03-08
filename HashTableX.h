@@ -21,6 +21,9 @@ class HashTableX {
 		   char *allocName       ,
 		   bool  useKeyMagic = false );
 
+	// key size is 0 if UNinitialized
+	bool isInitialized ( ) { return (m_ks != 0); };
+
 	 HashTableX       ( );
 	~HashTableX       ( );
 	void constructor ();
@@ -388,6 +391,10 @@ class HashTableX {
 	// how many are occupied?
 	long getNumSlotsUsed ( ) { return m_numSlotsUsed; };
 	long getNumUsedSlots ( ) { return m_numSlotsUsed; };
+
+	bool isEmpty() { 
+		if ( m_numSlotsUsed == 0 ) return true;
+		return false; };
 
 	// how many are there total? used and unused.
 	long getNumSlots ( ) { return m_numSlots; };

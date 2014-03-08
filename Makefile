@@ -2,7 +2,7 @@ SHELL = /bin/bash
 
 CC=g++
 
-OBJS =  Tfndb.o UdpSlot.o Rebalance.o \
+OBJS =  UdpSlot.o Rebalance.o \
 	Msg13.o Mime.o IndexReadInfo.o \
 	PageGet.o PageHosts.o PageIndexdb.o \
 	PageParser.o PageInject.o PagePerf.o PageReindex.o PageResults.o \
@@ -328,8 +328,9 @@ Rdb.o:
 RdbBase.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
-RdbCache.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+# RdbCache.cpp gets "corrupted" with -O2... like RdbTree.cpp
+#RdbCache.o:
+#	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
 # fast dictionary generation and spelling recommendations
 #Speller.o:

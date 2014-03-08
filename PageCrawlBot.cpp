@@ -21,7 +21,7 @@
 #include "Pages.h" // g_msg
 #include "XmlDoc.h" // for checkRegex()
 #include "PageInject.h" // Msg7
-//#include "Json.h"
+#include "Repair.h"
 #include "Parms.h"
 
 // so user can specify the format of the reply/output
@@ -142,6 +142,14 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		return true;
 	}
 
+	// when downloading csv socket closes because we can take minutes
+	// before we send over the first byte, so try to keep open
+	//int parm = 1;
+	//if(setsockopt(sock->m_sd,SOL_TCP,SO_KEEPALIVE,&parm,sizeof(int))<0){
+	//	log("crawlbot: setsockopt: %s",mstrerror(errno));
+	//	errno = 0;
+	//}
+
 	//long pathLen = hr->getPathLen();
 	char rdbId = RDB_NONE;
 	bool downloadJSON = false;
@@ -203,13 +211,25 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
 
 
-	// . if doing download of json, make it search results now!
+	// . if doing download of csv, make it search results now!
 	// . make an httprequest on stack and call it
 	if ( fmt == FMT_CSV && rdbId == RDB_TITLEDB ) {
 		char tmp2[5000];
 		SafeBuf sb2(tmp2,5000);
-		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&dr=0&"
-			      "c=%s&n=1000000&"
+		long dr = 1;
+		// do not dedup bulk jobs
+		if ( cr->m_isCustomCrawl == 2 ) dr = 0;
+		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&"
+			       // dedup. since stream=1 and pss=0 below
+			       // this will dedup on page content hash only
+			       // which is super fast.
+			       "dr=%li&"
+			       "c=%s&n=1000000&"
+			       // stream it now
+			       "stream=1&"
+			       // no summary similarity dedup, only exact
+			       // doc content hash. otherwise too slow!!
+			       "pss=0&"
 			       // no gigabits
 			       "dsrt=0&"
 			       // do not compute summary. 0 lines.
@@ -217,12 +237,50 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 			      "q=gbsortby%%3Agbspiderdate&"
 			      "prepend=type%%3Ajson"
 			      "\r\n\r\n"
+			       , dr
 			       , cr->m_coll
 			       );
 		HttpRequest hr2;
 		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
 		return sendPageResults ( sock , &hr2 );
 	}
+
+	// . if doing download of json, make it search results now!
+	// . make an httprequest on stack and call it
+	if ( fmt == FMT_JSON && rdbId == RDB_TITLEDB ) {
+		char tmp2[5000];
+		SafeBuf sb2(tmp2,5000);
+		long dr = 1;
+		// do not dedup bulk jobs
+		if ( cr->m_isCustomCrawl == 2 ) dr = 0;
+		sb2.safePrintf("GET /search.csv?icc=1&format=json&sc=0&"
+			       // dedup. since stream=1 and pss=0 below
+			       // this will dedup on page content hash only
+			       // which is super fast.
+			       "dr=%li&"
+			      "c=%s&n=1000000&"
+			       // we can stream this because unlink csv it
+			       // has no header row that needs to be 
+			       // computed from all results.
+			       "stream=1&"
+			       // no summary similarity dedup, only exact
+			       // doc content hash. otherwise too slow!!
+			       "pss=0&"
+			       // no gigabits
+			       "dsrt=0&"
+			       // do not compute summary. 0 lines.
+			       "ns=0&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      "\r\n\r\n"
+			       , dr 
+			       , cr->m_coll
+			       );
+		HttpRequest hr2;
+		hr2.set ( sb2.getBufStart() , sb2.length() , sock );
+		return sendPageResults ( sock , &hr2 );
+	}
+
 
 
 	//if ( strncmp ( path ,"/crawlbot/downloadurls",22  ) == 0 )
@@ -302,7 +360,8 @@ bool readAndSendLoop ( StateCD *st , bool readFirst ) {
 		return false;
 	}
 
-	// are we all done?
+	// are we all done? we still have to call sendList() to 
+	// set socket's streamingMode to false to close things up
 	if ( readFirst && ! st->m_someoneNeedsMore ) {
 		log("crawlbot: done sending for download request");
 		mdelete ( st , sizeof(StateCD) , "stcd" );
@@ -313,6 +372,13 @@ bool readAndSendLoop ( StateCD *st , bool readFirst ) {
 	// begin reading from each shard and sending the spiderdb records
 	// over the network. return if that blocked
 	if ( readFirst && ! st->readDataFromRdb ( ) ) return false;
+
+	// did user delete their collection midstream on us?
+	if ( g_errno ) {
+		log("crawlbot: read shard data had error: %s",
+		    mstrerror(g_errno));
+		goto subloop;
+	}
 
 	// send it to the browser socket. returns false if blocks.
 	if ( ! st->sendList() ) return false;
@@ -367,6 +433,14 @@ bool StateCD::readDataFromRdb ( ) {
 	key128_t ek; KEYMAX((char *)&ek,sizeof(key128_t));
 
 	CollectionRec *cr = g_collectiondb.getRec(m_collnum);
+	// collection got nuked?
+	if ( ! cr ) {
+		log("crawlbot: readdatafromrdb: coll %li got nuked",
+		    (long)m_collnum);
+		g_errno = ENOCOLLREC;
+		return true;
+	}
+
 	// top:
 	// launch one request to each shard
 	for ( long i = 0 ; i < g_hostdb.m_numShards ; i++ ) {
@@ -557,19 +631,20 @@ bool StateCD::sendList ( ) {
 	//    (long)m_rdbId,(long)m_fmt,(long)m_someoneNeedsMore,
 	//    (long)m_printedEndingBracket);
 
-	bool lastChunk = false;
-	if ( ! m_someoneNeedsMore )
-		lastChunk = true;
+	m_socket->m_streamingMode = true;
 
 	// if nobody needs to read more...
-	if ( m_rdbId == RDB_TITLEDB && 
-	     m_fmt == FMT_JSON && 
-	     ! m_someoneNeedsMore &&
-	     ! m_printedEndingBracket ) {
+	if ( ! m_someoneNeedsMore && ! m_printedEndingBracket ) {
+		// use this for printing out urls.csv as well...
 		m_printedEndingBracket = true;
 		// end array of json objects. might be empty!
-		sb.safePrintf("\n]\n");
+		if ( m_rdbId == RDB_TITLEDB && m_fmt == FMT_JSON )
+			sb.safePrintf("\n]\n");
 		//log("adding ]. len=%li",sb.length());
+		// i'd like to exit streaming mode here. i fixed tcpserver.cpp
+		// so if we are called from makecallback() there it won't
+		// call destroysocket if we WERE in streamingMode just yet
+		m_socket->m_streamingMode = false;		
 	}
 
 	TcpServer *tcp = &g_httpServer.m_tcp;
@@ -581,13 +656,10 @@ bool StateCD::sendList ( ) {
 	// . when TcpServer is done transmitting, it does not close the
 	//   socket but rather calls doneSendingWrapper() which can call
 	//   this function again to send another chunk
-	// . when we are truly done sending all the data, then we set lastChunk
-	//   to true and TcpServer.cpp will destroy m_socket when done
 	if ( ! tcp->sendChunk ( m_socket , 
 				&sb  ,
 				this ,
-				doneSendingWrapper ,
-				lastChunk ) )
+				doneSendingWrapper ) )
 		return false;
 
 	// we are done sending this chunk, i guess tcp write was cached
@@ -597,9 +669,9 @@ bool StateCD::sendList ( ) {
 
 // TcpServer.cpp calls this when done sending TcpSocket's m_sendBuf
 void doneSendingWrapper ( void *state , TcpSocket *sock ) {
-
 	StateCD *st = (StateCD *)state;
-
+	// error on socket?
+	//if ( g_errno ) st->m_socketError = g_errno;
 	//TcpSocket *socket = st->m_socket;
 	st->m_accumulated += sock->m_totalSent;
 
@@ -709,7 +781,18 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 
 		char *msg = "Successfully Downloaded";//Crawled";
 		if ( status == 0 ) msg = "Not downloaded";//Unexamined";
-		if ( status == -1 ) msg = mstrerror(m_prevReplyError);
+		if ( status == -1 ) {
+			msg = mstrerror(m_prevReplyError);
+			// do not print "Fake First Ip"...
+			if ( m_prevReplyError == EFAKEFIRSTIP )
+				msg = "Initial crawl request";
+			// if the initial crawl request got a reply then that
+			// means the spiderrequest was added under the correct
+			// firstip... so skip it. i am assuming that the
+			// correct spidrerequest got added ok here...
+			if ( m_prevReplyError == EFAKEFIRSTIP )
+				continue;
+		}
 
 		if ( srep && srep->m_hadDiffbotError )
 			msg = "Diffbot processing error";
@@ -1458,7 +1541,7 @@ static class HelpItem s_his[] = {
 	 "the maxtocrawl or maxtoprocess limit, or when the crawl "
 	 "completes."},
 	{"obeyRobots","Obey robots.txt files?"},
-	{"restrictDomain","Restrict downloaded urls to domains of seeds?"},
+	//{"restrictDomain","Restrict downloaded urls to domains of seeds?"},
 
 	{"urlCrawlPattern","List of || separated strings. If the url "
 	 "contains any of these then we crawl the url, otherwise, we do not. "
@@ -2013,10 +2096,16 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( st->m_seedBank.length() && ! seeds )
 		seeds = st->m_seedBank.getBufStart();
 
+	char *coll = "NONE";
+	if ( cr ) coll = cr->m_coll;
+
 	if ( seeds )
-		log("crawlbot: adding seeds=\"%s\"",seeds);
+		log("crawlbot: adding seeds=\"%s\" coll=%s (%li)",
+		    seeds,coll,(long)st->m_collnum);
+
 	if ( spots )
-		log("crawlbot: got spots to add");
+		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
+		    (long)gbstrlen(spots),coll,(long)st->m_collnum);
 
 	///////
 	// 
@@ -2024,6 +2113,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//
 	///////
 	if ( spots || seeds ) {
+		// error
+		if ( g_repair.isRepairActive() &&
+		     g_repair.m_collnum == st->m_collnum ) {
+			log("crawlbot: repair active. can't add seeds "
+			    "or spots while repairing collection.");
+			g_errno = EREPAIRING;
+			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
+		}
 		// . avoid spidering links for these urls? i would say
 		// . default is to NOT spider the links...
 		// . support camel case and all lower case
@@ -2266,6 +2363,9 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx ) {
 		      , cx->m_collectiveCrawlDelay
 		      );
 
+	sb->safePrintf("\"obeyRobots\":%li,\n"
+		      , (long)cx->m_useRobotsTxt );
+
 	// if not a "bulk" injection, show crawl stats
 	if ( cx->m_isCustomCrawl != 2 ) {
 
@@ -2273,14 +2373,12 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx ) {
 			      // settable parms
 			      "\"maxToCrawl\":%lli,\n"
 			      "\"maxToProcess\":%lli,\n"
-			      "\"obeyRobots\":%li,\n"
-			      "\"restrictDomain\":%li,\n"
+			      //"\"restrictDomain\":%li,\n"
 			      "\"onlyProcessIfNew\":%li,\n"
 			      , cx->m_maxToCrawl
 			      , cx->m_maxToProcess
-			      , (long)cx->m_useRobotsTxt
-			      , (long)cx->m_restrictDomain
-			      , (long)cx->m_diffbotOnlyProcessIfNew
+			      //, (long)cx->m_restrictDomain
+			      , (long)cx->m_diffbotOnlyProcessIfNewUrl
 			      );
 		sb->safePrintf("\"seeds\":\"");
 		sb->safeUtf8ToJSON ( cx->m_diffbotSeeds.getBufStart());
@@ -2294,6 +2392,8 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx ) {
 		      cx->m_spiderRoundStartTime);
 
 	sb->safePrintf("\"currentTime\":%lu,\n",
+		      getTimeGlobal() );
+	sb->safePrintf("\"currentTimeUTC\":%lu,\n",
 		      getTimeGlobal() );
 
 
@@ -3003,18 +3103,75 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      );
 
 
+		long now = getTimeGlobalNoCore();
+
 		sb.safePrintf("<tr>"
 			      "<td><b>Download Objects:</b> "
 			      "</td><td>"
 			      "<a href=/crawlbot/download/%s_data.csv>"
 			      "csv</a>"
+
 			      " &nbsp; "
+
 			      "<a href=/crawlbot/download/%s_data.json>"
-			      "json</a>"
+			      "json full dump</a>"
+
+			      " &nbsp; "
+
+			      , cr->m_coll
+			      , cr->m_coll
+
+			      );
+
+		sb.safePrintf(
+			      // newest json on top of results
+			      "<a href=/search?icc=1&format=json&sc=0&dr=0&"
+			      "c=%s&n=10000000&rand=%llu&scores=0&id=1&"
+			      "q=gbsortby%%3Agbspiderdate&"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "json full search (newest on top)</a>"
+
+
+			      " &nbsp; "
+
+			      // newest json on top of results, last 10 mins
+			      "<a href=/search?icc=1&format=json&"
+			      // disable site clustering
+			      "sc=0&"
+			      // dodupcontentremoval:
+			      "dr=1&"
+			      "c=%s&n=10000000&rand=%llu&scores=0&id=1&"
+			      "stream=1&" // stream results back as we get them
+			      "q="
+			      // put NEWEST on top
+			      "gbsortbyint%%3Agbspiderdate+"
+			      // min spider date = now - 10 mins
+			      "gbminint%%3Agbspiderdate%%3A%li&"
+			      //"debug=1"
+			      "prepend=type%%3Ajson"
+			      ">"
+			      "json search (last 30 seconds)</a>"
+
+
+
 			      "</td>"
 			      "</tr>"
+			      
+			      // json search with gbsortby:gbspiderdate
+			      , cr->m_coll
+			      , rand64
 
 
+			      // json search with gbmin:gbspiderdate
+			      , cr->m_coll
+			      , rand64
+			      , now - 30 // 60 // last 1 minute
+
+			      );
+
+
+		sb.safePrintf (
 			      "<tr>"
 			      "<td><b>Download Products:</b> "
 			      "</td><td>"
@@ -3099,13 +3256,10 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      "</TD>"
 			      
-			      , cr->m_coll
-			      , cr->m_coll
-
+			      // download products html
 			      , cr->m_coll
 			      , rand64
 
-			      // download products html
 			      , cr->m_coll
 			      , rand64
 
@@ -3198,17 +3352,19 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			urtYes = "";
 			urtNo  = " checked";
 		}
-		
+
+		/*
 		char *rdomYes = " checked";
 		char *rdomNo  = "";
 		if ( ! cr->m_restrictDomain ) {
 			rdomYes = "";
 			rdomNo  = " checked";
 		}
+		*/
 
 		char *isNewYes = "";
 		char *isNewNo  = " checked";
-		if ( cr->m_diffbotOnlyProcessIfNew ) {
+		if ( cr->m_diffbotOnlyProcessIfNewUrl ) {
 			isNewYes = " checked";
 			isNewNo  = "";
 		}
@@ -3395,15 +3551,15 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</td>"
 			      "</tr>"
 
-			      "<tr><td>"
-			      "<b>Restrict domain to seeds?</b> "
-			      "</td><td>"
-			      "<input type=radio name=restrictDomain "
-			      "value=1%s> yes &nbsp; "
-			      "<input type=radio name=restrictDomain "
-			      "value=0%s> no &nbsp; "
-			      "</td>"
-			      "</tr>"
+			      //"<tr><td>"
+			      //"<b>Restrict domain to seeds?</b> "
+			      //"</td><td>"
+			      //"<input type=radio name=restrictDomain "
+			      //"value=1%s> yes &nbsp; "
+			      //"<input type=radio name=restrictDomain "
+			      //"value=0%s> no &nbsp; "
+			      //"</td>"
+			      //"</tr>"
 
 			      //"<tr><td>"
 			      //"Use spider proxies on AWS? "
@@ -3446,8 +3602,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , urtYes
 			      , urtNo
 
-			      , rdomYes
-			      , rdomNo
+			      //, rdomYes
+			      //, rdomNo
 
 			      );
 	}
@@ -3865,7 +4021,11 @@ bool getSpiderRequestMetaList ( char *doc ,
 		// finally, we can set the key. isDel = false
 		sreq.setKey ( sreq.m_firstIp , probDocId , false );
 
-		if ( ! listBuf->reserve ( 100 + sreq.getRecSize() ) )
+		long oldBufSize = listBuf->getCapacity();
+		long need = listBuf->getLength() + 100 + sreq.getRecSize();
+		long newBufSize = 0;
+		if ( need > oldBufSize ) newBufSize = oldBufSize + 100000;
+		if ( newBufSize && ! listBuf->reserve ( newBufSize ) )
 			// return false with g_errno set
 			return false;
 

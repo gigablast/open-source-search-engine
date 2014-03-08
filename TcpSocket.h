@@ -75,6 +75,8 @@ class TcpSocket {
 	// userid that is logged in
 	//long m_userId32;
 
+	long        m_numDestroys;
+
 	// . getMsgPiece() is called when we need more to send
 	char       *m_sendBuf;
 	long        m_sendBufSize;

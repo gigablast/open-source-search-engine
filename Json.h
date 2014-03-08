@@ -51,6 +51,9 @@ class JsonItem {
 		return (char *)this + sizeof(JsonItem);
 	};
 
+	// convert nubers and bools to strings for this one
+	char *getValueAsString ( long *valueLen ) ;
+
 	// like acme.product.offerPrice if "acme:{product:{offerprice:1.23}}"
 	bool getCompoundName ( SafeBuf &nameBuf ) ;
 

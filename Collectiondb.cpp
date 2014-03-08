@@ -449,10 +449,10 @@ bool Collectiondb::addNewColl ( char *coll ,
 		// show the ban links in the search results. the 
 		// collection name is cryptographic enough to show that
 		cr->m_isCustomCrawl = customCrawl;
-		cr->m_diffbotOnlyProcessIfNew = true;
+		cr->m_diffbotOnlyProcessIfNewUrl = true;
 		// default respider to off
 		cr->m_collectiveRespiderFrequency = 0.0;
-		cr->m_restrictDomain = true;
+		//cr->m_restrictDomain = true;
 		// reset the crawl stats
 		// . this will core if a host was dead and then when it came
 		//   back up host #0's parms.cpp told it to add a new coll
@@ -687,6 +687,8 @@ bool Collectiondb::deleteRec ( char *coll , WaitEntry *we ) {
 
 // if there is an outstanding disk read thread or merge thread then
 // Spider.cpp will handle the delete in the callback.
+// this is now tryToDeleteSpiderColl in Spider.cpp
+/*
 void Collectiondb::deleteSpiderColl ( SpiderColl *sc ) {
 
 	sc->m_deleteMyself = true;
@@ -700,10 +702,11 @@ void Collectiondb::deleteSpiderColl ( SpiderColl *sc ) {
 		return;
 	}
 }
+*/
 
 bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	// do not allow this if in repair mode
-	if ( g_repairMode > 0 ) {
+	if ( g_repair.isRepairActive() && g_repair.m_collnum == collnum ) {
 		log("admin: Can not delete collection while in repair mode.");
 		g_errno = EBADENGINEER;
 		return true;
@@ -793,7 +796,7 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		//sc->reset();
 		// this will put it on "death row" so it will be deleted
 		// once Msg5::m_waitingForList/Merge is NULL
-		deleteSpiderColl ( sc );
+		tryToDeleteSpiderColl ( sc );
 		//mdelete ( sc, sizeof(SpiderColl),"nukecr2");
 		//delete ( sc );
 		cr->m_spiderColl = NULL;
@@ -848,6 +851,47 @@ bool Collectiondb::resetColl ( char *coll ,  bool purgeSeeds) {
 }
 */
 
+// ensure m_recs[] is big enough for m_recs[collnum] to be a ptr
+bool Collectiondb::growRecPtrBuf ( collnum_t collnum ) {
+
+	// an add, make sure big enough
+	long need = ((long)collnum+1)*sizeof(CollectionRec *);
+	long have = m_recPtrBuf.getLength();
+	long need2 = need - have;
+
+	// if already big enough
+	if ( need2 <= 0 ) {
+		m_recs [ collnum ] = NULL;
+		return true;
+	}
+
+	// . true here means to clear the new space to zeroes
+	// . this shit works based on m_length not m_capacity
+	if ( ! m_recPtrBuf.reserve ( need2 ,NULL, true ) ) {
+		log("admin: error growing rec ptr buf2.");
+		return false;
+	}
+
+	// sanity
+	if ( m_recPtrBuf.getCapacity() < need ) { char *xx=NULL;*xx=0; }
+
+	// set it
+	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
+
+	// update length of used bytes in case we re-alloc
+	m_recPtrBuf.setLength ( need );
+
+	// re-max
+	long max = m_recPtrBuf.getCapacity() / sizeof(CollectionRec *);
+	// sanity
+	if ( collnum >= max ) { char *xx=NULL;*xx=0; }
+
+	// initialize slot
+	m_recs [ collnum ] = NULL;
+
+	return true;
+}
+
 
 bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 
@@ -890,29 +934,12 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 		return true;
 	}
 
-	// an add, make sure big enough
-	long need = ((long)collnum+1)*sizeof(CollectionRec *);
-	long have = m_recPtrBuf.getLength();
-	long need2 = need - have;
-	// . true here means to clear the new space to zeroes
-	// . this shit works based on m_length not m_capacity
-	if ( need2 > 0 && ! m_recPtrBuf.reserve ( need2 ,NULL, true ) ) {
-		log("admin: error growing rec ptr buf2.");
+	// ensure m_recs[] is big enough for m_recs[collnum] to be a ptr
+	if ( ! growRecPtrBuf ( collnum ) )
 		return false;
-	}
 
 	// sanity
 	if ( cr->m_collnum != collnum ) { char *xx=NULL;*xx=0; }
-	// update length of used bytes in case we re-alloc
-	m_recPtrBuf.setLength ( need );
-	// sanity
-	if ( m_recPtrBuf.getCapacity() < need ) { char *xx=NULL;*xx=0; }
-	// re-ref it in case it is different
-	m_recs = (CollectionRec **)m_recPtrBuf.getBufStart();
-	// re-max
-	max = m_recPtrBuf.getCapacity() / sizeof(CollectionRec *);
-	// sanity
-	if ( collnum >= max ) { char *xx=NULL;*xx=0; }
 
 	// add to hash table to map name to collnum_t
 	long long h64 = hash64n(cr->m_coll);
@@ -967,7 +994,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	//}
 
 	// do not allow this if in repair mode
-	if ( g_repairMode > 0 ) {
+	if ( g_repair.isRepairActive() && g_repair.m_collnum == oldCollnum ) {
 		log("admin: Can not delete collection while in repair mode.");
 		g_errno = EBADENGINEER;
 		return true;
@@ -1003,7 +1030,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 		//sc->reset();
 		// this will put it on "death row" so it will be deleted
 		// once Msg5::m_waitingForList/Merge is NULL
-		deleteSpiderColl ( sc );
+		tryToDeleteSpiderColl ( sc );
 		//mdelete ( sc, sizeof(SpiderColl),"nukecr2");
 		//delete ( sc );
 		cr->m_spiderColl = NULL;
@@ -1104,10 +1131,11 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// and clear the robots.txt cache in case we recently spidered a
 	// robots.txt, we don't want to use it, we want to use the one we
 	// have in the test-parser subdir so we are consistent
-	RdbCache *robots = Msg13::getHttpCacheRobots();
-	RdbCache *others = Msg13::getHttpCacheOthers();
-	robots->clear ( oldCollnum );
-	others->clear ( oldCollnum );
+	//RdbCache *robots = Msg13::getHttpCacheRobots();
+	//RdbCache *others = Msg13::getHttpCacheOthers();
+	// clear() was removed do to possible corruption
+	//robots->clear ( oldCollnum );
+	//others->clear ( oldCollnum );
 
 	//g_templateTable.reset();
 	//g_templateTable.save( g_hostdb.m_dir , "turkedtemplates.dat" );
@@ -1328,6 +1356,9 @@ collnum_t Collectiondb::reserveCollNum ( ) {
 
 	if ( m_numRecs < 0x7fff ) {
 		collnum_t next = m_numRecs;
+		// make the ptr NULL at least to accomodate the
+		// loop that scan up to m_numRecs lest we core
+		growRecPtrBuf ( next );
 		m_numRecs++;
 		return next;
 	}
@@ -1456,6 +1487,9 @@ void CollectionRec::reset() {
 	// regex_t types
 	if ( m_hasucr ) regfree ( &m_ucr );
 	if ( m_hasupr ) regfree ( &m_upr );
+
+	m_hasucr = false;
+	m_hasupr = false;
 
 	// make sure we do not leave spiders "hanging" waiting for their
 	// callback to be called... and it never gets called
@@ -1858,7 +1892,9 @@ bool CollectionRec::save ( ) {
 	snprintf ( tmp , 1023, "%scoll.%s.%li/localcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
 	//log("coll: saving %s",tmp);
-	SafeBuf sb;
+	// in case emergency save from malloc core, do not alloc
+	char stack[1024];
+	SafeBuf sb(stack,1024);
 	//m_localCrawlInfo.print ( &sb );
 	// binary now
 	sb.safeMemcpy ( &m_localCrawlInfo , sizeof(CrawlInfo) );
@@ -2095,6 +2131,66 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	if ( ! upp ) upp = m_diffbotUrlProcessRegEx.getBufStart();
 	if ( upp && ! upp[0] ) upp = NULL;
 
+	///////
+	//
+	// recompile regular expressions
+	//
+	///////
+
+
+	if ( m_hasucr ) {
+		regfree ( &m_ucr );
+		m_hasucr = false;
+	}
+
+	if ( m_hasupr ) {
+		regfree ( &m_upr );
+		m_hasupr = false;
+	}
+
+	// copy into tmpbuf
+	SafeBuf tmp;
+
+	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
+	if ( rx && ! rx[0] ) rx = NULL;
+	if ( rx ) {
+		tmp.reset();
+		tmp.safeStrcpy ( rx );
+		expandRegExShortcuts ( &tmp );
+		m_hasucr = true;
+	}
+	if ( rx && regcomp ( &m_ucr , tmp.getBufStart() ,
+			     REG_EXTENDED| //REG_ICASE|
+			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
+		// error!
+		log("coll: regcomp %s failed: %s. "
+			   "Ignoring.",
+			   rx,mstrerror(errno));
+		regfree ( &m_ucr );
+		m_hasucr = false;
+	}
+
+
+	rx = m_diffbotUrlProcessRegEx.getBufStart();
+	if ( rx && ! rx[0] ) rx = NULL;
+	if ( rx ) m_hasupr = true;
+	if ( rx ) {
+		tmp.reset();
+		tmp.safeStrcpy ( rx );
+		expandRegExShortcuts ( &tmp );
+		m_hasupr = true;
+	}
+	if ( rx && regcomp ( &m_upr , tmp.getBufStart() ,
+			     REG_EXTENDED| // REG_ICASE|
+			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
+		// error!
+		log("coll: regcomp %s failed: %s. "
+		    "Ignoring.",
+		    rx,mstrerror(errno));
+		regfree ( &m_upr );
+		m_hasupr = false;
+	}
+
 
 	// what diffbot url to use for processing
 	char *api = m_diffbotApiUrl.getBufStart();
@@ -2104,6 +2200,9 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	long wait = (long)(m_collectiveCrawlDelay * 1000.0);
 	// default to 250ms i guess. -1 means unset i think.
 	if ( m_collectiveCrawlDelay < 0.0 ) wait = 250;
+
+	bool isEthan = false;
+	if (m_coll)isEthan=strstr(m_coll,"2b44a0e0bb91bbec920f7efd29ce3d5b");
 
 	// make the gigablast regex table just "default" so it does not
 	// filtering, but accepts all urls. we will add code to pass the urls
@@ -2115,6 +2214,9 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_maxSpidersPerRule [i] = 100;
 		m_spiderIpWaits     [i] = wait;
 		m_spiderIpMaxSpiders[i] = 7; // keep it respectful
+		// ethan wants some speed
+		if ( isEthan )
+			m_spiderIpMaxSpiders[i] = 30;
 		//m_spidersEnabled    [i] = 1;
 		m_spiderFreqs       [i] =m_collectiveRespiderFrequency;
 		//m_spiderDiffbotApiUrl[i].purge();
@@ -2123,33 +2225,53 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 
 	long i = 0;
 
+	// 1st one! for query reindex/ query delete
+	m_regExs[i].set("isdocidbased");
+	m_spiderIpMaxSpiders [i] = 10;
+	m_spiderPriorities   [i] = 70;
+	i++;
 
-	// 1st default url filter
+	// 2nd default url filter
 	m_regExs[i].set("ismedia && !ismanualadd");
 	m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
 	i++;
 
 	// 2nd default filter
-	if ( m_restrictDomain ) {
+	// always turn this on for now. they need to add domains they want
+	// to crawl as seeds so they do not spider the web.
+	// no because FTB seeds with link pages that link to another
+	// domain. they just need to be sure to supply a crawl pattern
+	// to avoid spidering the whole web.
+	//
+	// if they did not EXPLICITLY provide a url crawl pattern or
+	// url crawl regex then restrict to seeds to prevent from spidering
+	// the entire internet
+	if ( ! ucp && ! m_hasucr ) { // m_restrictDomain ) {
 		m_regExs[i].set("!isonsamedomain && !ismanualadd");
 		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
 		i++;
 	}
 
+	m_regExs[i].set("errorcount>=1 && !hastmperror");
+	m_spiderPriorities   [i] = 15;
+	m_spiderFreqs        [i] = 0.00; // 86 seconds
+	m_maxSpidersPerRule  [i] = 0; // turn off spiders if not tmp error
+	i++;
+
 	// and for docs that have errors respider once every 5 hours
-	m_regExs[i].set("errorcount==1");
+	m_regExs[i].set("errorcount==1 && hastmperror");
 	m_spiderPriorities   [i] = 40;
 	m_spiderFreqs        [i] = 0.001; // 86 seconds
 	i++;
 
 	// and for docs that have errors respider once every 5 hours
-	m_regExs[i].set("errorcount==2");
+	m_regExs[i].set("errorcount==2 && hastmperror");
 	m_spiderPriorities   [i] = 40;
 	m_spiderFreqs        [i] = 0.1; // 2.4 hrs
 	i++;
 
 	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
-	m_regExs[i].set("errorcount>=3");
+	m_regExs[i].set("errorcount>=3 && hastmperror");
 	m_spiderPriorities   [i] = 30;
 	m_spiderFreqs        [i] = 30; // 30 days
 	i++;
@@ -2253,63 +2375,9 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	m_numRegExs8  = i;
 	//m_numRegExs11 = i;
 
-	///////
-	//
-	// recompile regular expressions
-	//
-	///////
 
-
-	if ( m_hasucr ) {
-		regfree ( &m_ucr );
-		m_hasucr = false;
-	}
-
-	if ( m_hasupr ) {
-		regfree ( &m_upr );
-		m_hasupr = false;
-	}
-
-	// copy into tmpbuf
-	SafeBuf tmp;
-
-	char *rx = m_diffbotUrlCrawlRegEx.getBufStart();
-	if ( rx && ! rx[0] ) rx = NULL;
-	if ( rx ) {
-		tmp.safeStrcpy ( rx );
-		expandRegExShortcuts ( &tmp );
-		m_hasucr = true;
-	}
-	if ( rx && regcomp ( &m_ucr , tmp.getBufStart() ,
-			     REG_EXTENDED| //REG_ICASE|
-			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
-		// error!
-		log("coll: regcomp %s failed: %s. "
-			   "Ignoring.",
-			   rx,mstrerror(errno));
-		regfree ( &m_ucr );
-		m_hasucr = false;
-	}
-
-
-	rx = m_diffbotUrlProcessRegEx.getBufStart();
-	if ( rx && ! rx[0] ) rx = NULL;
-	if ( rx ) m_hasupr = true;
-	if ( rx ) {
-		tmp.safeStrcpy ( rx );
-		expandRegExShortcuts ( &tmp );
-		m_hasupr = true;
-	}
-	if ( rx && regcomp ( &m_upr , tmp.getBufStart() ,
-			     REG_EXTENDED| // REG_ICASE|
-			     REG_NEWLINE ) ) { // |REG_NOSUB) ) {
-		// error!
-		log("coll: regcomp %s failed: %s. "
-		    "Ignoring.",
-		    rx,mstrerror(errno));
-		regfree ( &m_upr );
-		m_hasupr = false;
-	}
+	//char *x = "http://staticpages.diffbot.com/testCrawl/article1.html";
+	//if(m_hasupr && regexec(&m_upr,x,0,NULL,0) ) { char *xx=NULL;*xx=0; }
 
 	return true;
 }

@@ -129,6 +129,7 @@ class Collectiondb  {
 	bool addRdbBaseToAllRdbsForEachCollRec ( ) ;
 	bool addRdbBasesForCollRec ( CollectionRec *cr ) ;
 
+	bool growRecPtrBuf ( collnum_t collnum ) ;
 	bool setRecPtr ( collnum_t collnum , CollectionRec *cr ) ;
 
 	// returns false if blocked, true otherwise. 
@@ -138,7 +139,7 @@ class Collectiondb  {
 	//bool updateRec ( CollectionRec *newrec );
 	bool deleteRecs ( class HttpRequest *r ) ;
 
-	void deleteSpiderColl ( class SpiderColl *sc );
+	//void deleteSpiderColl ( class SpiderColl *sc );
 
 	// returns false if blocked, true otherwise. 
 	//bool resetColl ( char *coll , WaitEntry *we , bool purgeSeeds );
@@ -458,7 +459,7 @@ class CollectionRec {
 	char  m_enforceNewQuotas        ;
 	char  m_doIpLookups             ; // considered iff using proxy
 	char  m_useRobotsTxt            ;
-	char  m_restrictDomain          ; // say on same domain as seeds?
+	//char  m_restrictDomain          ; // say on same domain as seeds?
 	char  m_doTuringTest            ; // for addurl
 	char  m_applyFilterToText       ; // speeds us up
 	char  m_allowHttps              ; // read HTTPS using SSL
@@ -640,7 +641,7 @@ class CollectionRec {
 	long    m_hasucr:1;
 	long    m_hasupr:1;
 
-	char    m_diffbotOnlyProcessIfNew;
+	char    m_diffbotOnlyProcessIfNewUrl;
 
 	//SafeBuf m_diffbotClassify;
 	//char m_diffbotClassify;

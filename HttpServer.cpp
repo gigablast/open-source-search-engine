@@ -986,6 +986,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	if ( strncmp(path,"/crawlbot",9) == 0 ) n = PAGE_CRAWLBOT;
 	if ( strncmp(path,"/v2/crawl",9) == 0 ) n = PAGE_CRAWLBOT;
 	if ( strncmp(path,"/v2/bulk" ,8) == 0 ) n = PAGE_CRAWLBOT;
+	if ( strncmp(path,"/v2/search" ,8) == 0 ) n = PAGE_RESULTS;
 	
 	bool isProxy = g_proxy.isProxy();
 	// . prevent coring

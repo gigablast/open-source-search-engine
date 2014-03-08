@@ -65,7 +65,7 @@
 #include "HttpMime.h" // ET_DEFLAT
 #include "Msg1.h"
 #include "PingServer.h"
-//#include "PageCrawlBot.h" // DBA_NONE
+#include "Json.h"
 
 //#define XMLDOC_MAX_AD_IDS 4
 //#define XMLDOC_ADLEN      64
@@ -665,6 +665,7 @@ class XmlDoc {
 	char **getExpandedUtf8Content ( ) ;
 	char **getUtf8Content ( ) ;
 	long *getContentHash32 ( ) ;
+	long *getContentHashJson32 ( ) ;
 	long *getTagHash32 ( ) ;
 	long getHostHash32a ( ) ;
 	long getHostHash32b ( ) ;
@@ -860,6 +861,10 @@ class XmlDoc {
 			  class HashInfo *hi ) ;
 
 	bool hashNumber2 ( float f , 
+			   class HashInfo *hi ,
+			   char *gbsortByStr ) ;
+
+	bool hashNumber3 ( long x,
 			   class HashInfo *hi ,
 			   char *gbsortByStr ) ;
 
@@ -1311,6 +1316,7 @@ class XmlDoc {
 	//bool m_useDiffbotValid;
 	//bool m_diffbotApiNumValid;
 	bool m_diffbotApiUrlValid;
+	bool m_diffbotTitleHashBufValid;
 	bool m_crawlInfoValid;
 	bool m_isPageParserValid;
 	bool m_imageUrlValid;
@@ -1337,6 +1343,7 @@ class XmlDoc {
 	bool m_dupHashValid;
 	bool m_exactContentHash64Valid;
 	bool m_looseContentHash64Valid;
+	bool m_jpValid;
 
 	// shadows
 	char m_isRSS2;
@@ -1483,7 +1490,11 @@ class XmlDoc {
 	char m_useSiteLinkBuf;
 	char m_usePageLinkBuf;
 	char m_printInXml;
-	Msg25 m_msg25;
+	//Msg25 m_msg25;
+	SafeBuf m_tmpBuf11;
+	SafeBuf m_tmpBuf12;
+	Multicast m_mcast11;
+	Multicast m_mcast12;
 	Msg25 *m_tempMsg25Page;
 	Msg25 *m_tempMsg25Site;
 	// for page or for site?
@@ -1603,9 +1614,17 @@ class XmlDoc {
 	//bool doesUrlMatchDiffbotCrawlPattern() ;
 	//bool doesUrlMatchDiffbotProcessPattern() ;
 	bool doesPageContentMatchDiffbotProcessPattern() ;
+	long *getDiffbotTitleHashes ( long *numHashes ) ;
 	char *hashJSON ( HashTableX *table );
-	long *nukeJSONObjects ( ) ;
+	long *nukeJSONObjects ( long *newTitleHashes , long numNewHashes ) ;
+
 	long m_joc;
+	SafeBuf m_diffbotTitleHashBuf;
+
+	Json *getParsedJson();
+	// object that parses the json
+	Json m_jp;
+
 
 	//EmailInfo m_emailInfo;
 

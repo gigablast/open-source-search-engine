@@ -2,7 +2,7 @@
 
 #include "Rdb.h"
 #include "Msg35.h"
-#include "Tfndb.h"
+//#include "Tfndb.h"
 //#include "Checksumdb.h"
 #include "Clusterdb.h"
 #include "Hostdb.h"
@@ -966,7 +966,7 @@ bool RdbBase::incorporateMerge ( ) {
 
 	// tfndb has his own merge class since titledb merges write tfndb recs
 	RdbMerge *m = &g_merge;
-	if ( m_rdb == g_tfndb.getRdb() ) m = &g_merge2;
+	//if ( m_rdb == g_tfndb.getRdb() ) m = &g_merge2;
 
 	// print out info of newly merged file
 	long long tp = m_maps[x]->getNumPositiveRecs();
@@ -974,7 +974,7 @@ bool RdbBase::incorporateMerge ( ) {
 	log(LOG_INFO,
 	    "merge: Merge succeeded. %s (#%li) has %lli positive "
 	     "and %lli negative recs.", m_files[x]->getFilename(), x, tp, tn);
-	if ( m_rdb == g_posdb.getRdb() || m_rdb == g_tfndb.getRdb() )
+	if ( m_rdb == g_posdb.getRdb() ) // || m_rdb == g_tfndb.getRdb() )
 		log(LOG_INFO,"merge: Removed %lli dup keys.",
 		     m->getDupsRemoved() );
 	// . bitch if bad news
@@ -1327,12 +1327,14 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	// when adding to g_indexdb, it is in a different collection for a 
 	// full rebuild and we are not actively searching it so it doesn't
 	// need to be merged.
+	/*
 	if ( g_repair.isRepairActive() && 
 	     //! g_conf.m_fullRebuild &&
 	     //! g_conf.m_removeBadPages &&
 	     ! isSecondaryRdb ( (uint8_t)rdbId ) && 
 	     rdbId != RDB_TAGDB )
 		return;
+	*/
 
 	// if a dump is happening it will always be the last file, do not
 	// include it in the merge
@@ -1468,8 +1470,8 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	// if we are tfndb and someone else is merging, do not merge unless
 	// we have 3 or more files
 	long minToMerge = m_minToMerge;
-	if (g_tfndb.getRdb()==m_rdb&& g_merge.isMerging() && minToMerge <=2 )
-		minToMerge = 3;
+	//if (g_tfndb.getRdb()==m_rdb&& g_merge.isMerging() && minToMerge <=2 )
+	//	minToMerge = 3;
 	// do not start a tfndb merge while someone is dumping because the
 	// dump starves the tfndb merge and we clog up adding links. i think
 	// this is mainly just indexdb dumps, but we'll see.
@@ -1563,7 +1565,7 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	//if ( m_mergeUrgent ) priority = 2;
 	//else                 priority = 0;
 	// tfndb doesn't need token, since titledb merge writes tfndb recs
-	if ( m_rdb != g_tfndb.getRdb() &&
+	if ( //m_rdb != g_tfndb.getRdb() &&
 	     ! g_msg35.getToken ( this , gotTokenForMergeWrapper, priority ) )
 		return ;
 	// bitch if we got token because there was an error somewhere
@@ -1614,7 +1616,7 @@ void RdbBase::gotTokenForMerge ( ) {
 	}
 	// tfndb has his own merge class since titledb merges write tfndb recs
 	RdbMerge *m = &g_merge;
-	if ( m_rdb == g_tfndb.getRdb() ) m = &g_merge2;
+	//if ( m_rdb == g_tfndb.getRdb() ) m = &g_merge2;
 	// sanity check
 	if ( m_isMerging || m->isMerging() ) {
 		//if ( m_doLog )
@@ -1722,8 +1724,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	}
 
 	minToMerge = m_minToMerge;
-	if (m_rdb==g_tfndb.getRdb()&& g_merge.isMerging() && minToMerge <=2 )
-		minToMerge = 3;
+	//if (m_rdb==g_tfndb.getRdb()&& g_merge.isMerging() && minToMerge <=2 )
+	//	minToMerge = 3;
 
 	// look at this merge:
 	// indexdb0003.dat.part1
@@ -2144,6 +2146,8 @@ long long RdbBase::getNumTotalRecs ( ) {
 		numNegativeRecs += m_tree->getNumNegativeKeys(m_collnum);
 	}
 	else {
+		// i've seen this happen when adding a new coll i guess
+		if ( ! m_buckets ) return 0;
 		//these routines are slow because they count every time.
 		numPositiveRecs += m_buckets->getNumKeys(m_collnum);
 		//numPositiveRecs += m_buckets->getNumPositiveKeys(m_collnum);

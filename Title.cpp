@@ -111,9 +111,9 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 	// if we are a json object
 	if ( ! xd->m_contentTypeValid ) { char *xx=NULL;*xx=0; }
 	char *val = NULL;
-	long vlen;
 	// look for the "title:" field in json then use that
 	SafeBuf jsonTitle;
+	long vlen;
 	if ( xd->m_contentType == CT_JSON ) {
 		char *jt;
 		jt = getJSONFieldValue(xd->ptr_utf8Content,"title",&vlen);
@@ -122,10 +122,12 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 							//true ); // decodeAll?
 			jsonTitle.nullTerm();
 			val = jsonTitle.getBufStart();
+			vlen = jsonTitle.length();
 		}
+		
 	}
 	// if we had a title: field in the json...
-	if ( val ) {
+	if ( val && vlen > 0 ) {
 		char *dst = NULL;
 		m_titleBytes = vlen;
 		if ( m_titleBytes+1 <  TITLE_LOCAL_SIZE )

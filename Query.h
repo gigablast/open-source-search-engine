@@ -110,6 +110,12 @@ typedef unsigned long long qvec_t;
 #define FIELD_GBNUMBERMAX      57
 #define FIELD_GBPARENTURL      58
 
+#define FIELD_GBSORTBYINT      59
+#define FIELD_GBREVSORTBYINT   60
+#define FIELD_GBNUMBERMININT   61
+#define FIELD_GBNUMBERMAXINT   62
+
+
 #define FIELD_GBOTHER 92
 
 // returns a FIELD_* code above, or FIELD_GENERIC if not in the list
@@ -362,6 +368,11 @@ class QueryWord {
 	bool m_piped;
 	// used by Matches.cpp for highlighting under different colors
 	long m_colorNum;
+
+	// for min/max score ranges like gbmin:price:1.99
+	float m_float;
+	// for gbminint:99 etc. uses integers instead of floats for better res
+	long  m_int;
 };
 
 // . we filter the QueryWords and turn them into QueryTerms
@@ -487,6 +498,7 @@ class QueryTerm {
 	// used by Msg40.cpp for gigabits generation
 	long long m_hash64d;
 	long      m_popWeight;
+
 };
 
 // . this is the main class for representing a query

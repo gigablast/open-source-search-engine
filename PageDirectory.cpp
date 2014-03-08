@@ -58,15 +58,15 @@ bool sendPageDirectory ( TcpSocket *s , HttpRequest *r ) {
 	//
 	else {
 		// search box
-		printLogoAndSearchBox(sb,r,catId);
+		printLogoAndSearchBox(&sb,r,catId);
 		// radio buttons for search dmoz. no, this is printed
 		// from call to printLogoAndSearchBox()
 		//printDmozRadioButtons(sb,catId);
 		// the dmoz breadcrumb
-		printDMOZCrumb ( sb,catId,xml);
+		printDMOZCrumb ( &sb,catId,xml);
 		// print the subtopcis in this topic. show as links above
 		// the search results
-		printDMOZSubTopics ( sb, catId , xml );
+		printDMOZSubTopics ( &sb, catId , xml );
 		// ok, for now just print the dmoz topics since our search
 		// results will be empty... until populated!
 		g_categories->printUrlsInTopic ( &sb , catId );

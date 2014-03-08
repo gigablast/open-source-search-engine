@@ -508,6 +508,7 @@ bool Msg1c::reindexQuery ( char *query ,
 	m_req.m_queryExpansion            = true; // so it's like regular rslts
 	// add language dropdown or take from [query reindex] link
 	m_req.m_language                  = langId;
+	//m_req.m_debug = 1;
 
 	// log for now
 	logf(LOG_DEBUG,"reindex: qlangid=%li q=%s",langId,query);

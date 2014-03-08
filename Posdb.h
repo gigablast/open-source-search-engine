@@ -208,9 +208,15 @@ class Posdb {
 	void setFloat ( void *vkp , float f ) {
 		*(float *)(((char *)vkp) + 2) = f; };
 
+	void setInt ( void *vkp , long x ) {
+		*(long *)(((char *)vkp) + 2) = x; };
+
 	// and read the float as well
 	float getFloat ( void *vkp ) {
 		return *(float *)(((char *)vkp) + 2); };
+
+	long getInt ( void *vkp ) {
+		return *(long *)(((char *)vkp) + 2); };
 
 	void setAlignmentBit ( void *vkp , char val ) {
 		char *p = (char *)vkp;
@@ -608,7 +614,26 @@ class PosdbTable {
 
 	class Msg39Request *m_r;
 
+	// for gbsortby:item.price ...
 	long m_sortByTermNum;
+	long m_sortByTermNumInt;
+
+	// for gbmin:price:1.99
+	long m_minScoreTermNum;
+	long m_maxScoreTermNum;
+
+	// for gbmin:price:1.99
+	float m_minScoreVal;
+	float m_maxScoreVal;
+
+	// for gbmin:count:99
+	long m_minScoreTermNumInt;
+	long m_maxScoreTermNumInt;
+
+	// for gbmin:count:99
+	long m_minScoreValInt;
+	long m_maxScoreValInt;
+
 
 	// the new intersection/scoring algo
 	void intersectLists10_r ( );	

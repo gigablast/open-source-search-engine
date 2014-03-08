@@ -397,6 +397,7 @@ Process::Process ( ) {
 	m_mode = NO_MODE;
 	m_exiting = false;
 	m_powerIsOn = true;
+	m_totalDocsIndexed = -1LL;
 }
 
 bool Process::init ( ) {
@@ -1136,12 +1137,30 @@ void diskHeartbeatWrapper ( int fd , void *state ) {
 }
 */
 
+long long Process::getTotalDocsIndexed() {
+	if ( m_totalDocsIndexed == -1LL ) {
+		Rdb *rdb = g_clusterdb.getRdb();
+		m_totalDocsIndexed = rdb->getNumTotalRecs();
+	}
+	return m_totalDocsIndexed;
+}
+
 void processSleepWrapper ( int fd , void *state ) {
 
         if ( g_process.m_mode == EXIT_MODE ) {g_process.shutdown2(); return; }
         if ( g_process.m_mode == SAVE_MODE ) {g_process.save2    (); return; }
         if ( g_process.m_mode == LOCK_MODE ) {g_process.save2    (); return; }
 	if ( g_process.m_mode != NO_MODE   )                         return;
+
+	// update global rec count
+        static long s_rcount = 0;
+	// every 2 seconds
+	if ( ++s_rcount >= 4 ) {
+		s_rcount = 0;
+		// PingServer.cpp uses this
+		Rdb *rdb = g_clusterdb.getRdb();
+		g_process.m_totalDocsIndexed = rdb->getNumTotalRecs();
+	}
 
 	// do not do autosave if no power
 	if ( ! g_process.m_powerIsOn ) return;
@@ -1153,6 +1172,10 @@ void processSleepWrapper ( int fd , void *state ) {
 	//   where they should go
 	// . returns right away in most cases
 	g_rebalance.rebalanceLoop();
+
+	// if doing the final part of a repair.cpp loop where we convert
+	// titledb2 files to titledb etc. then do not save!
+	if ( g_repairMode == 7 ) return;
 
 	// autosave? override this if power is off, we need to save the data!
 	//if (g_conf.m_autoSaveFrequency <= 0 && g_process.m_powerIsOn) return;

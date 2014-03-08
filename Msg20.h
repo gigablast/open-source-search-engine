@@ -334,7 +334,7 @@ public:
 	//long     m_numCatIds           ; // use size_catIds
 	//long     m_numIndCatIds        ; // use size_indCatIds
 	long       m_contentLen          ; // was m_docLen
-	//long       m_contentHash         ;
+	long       m_contentHash32       ;  // for deduping diffbot json objects streaming
 	//long     m_docSummaryScore     ;
 	//long     m_inSectionScore      ;
 	//float      m_proximityScore      ;
@@ -780,9 +780,11 @@ class Msg20 {
 	// so we can alloc arrays of these using mmalloc()
 	void constructor ();
 	void destructor  ();
+	void freeReply   ();
 	void reset       ();
 
 	long m_hack;
+	long m_ii;
 
 	// is the reply in progress? if msg20 has not launched a request
 	// this is false. if msg20 received its reply, this is false. 

@@ -91,6 +91,8 @@ class RdbList {
 		  bool  useHalfKeys   ,
 		  char  keySize       = sizeof(key_t) );
 
+	void setFromSafeBuf ( class SafeBuf *sb , char rdbId );
+
 	// just set the start and end keys
 	//void set ( key_t startKey , key_t endKey );
 	void set ( char *startKey , char *endKey );

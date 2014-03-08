@@ -30,6 +30,10 @@ class TopNode {
 	//unsigned char  m_tier     ;
 	float          m_score    ;
 	long long      m_docId;
+
+	// option for using int scores
+	long m_intScore;
+	
 	// clustering info
 	//long           m_kid      ; // result from our same site below us
 	//unsigned long  m_siteHash ;
@@ -124,6 +128,7 @@ class TopTree {
 	long  m_cap     ;
 	float m_partial ;
 	bool  m_doSiteClustering;
+	bool  m_useIntScores;
 	long  m_docsWanted;
 	long  m_ridiculousMax;
 	char  m_kickedOutDocIds;

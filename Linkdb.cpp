@@ -14,6 +14,7 @@ void Linkdb::reset() {
 }
 
 bool Linkdb::init ( ) {
+
 	key224_t  k;
 	// sanity tests
 	uint32_t    linkeeSiteHash32 = (uint32_t)rand();
@@ -393,7 +394,7 @@ key224_t Linkdb::makeKey_uk ( uint32_t  linkeeSiteHash32       ,
 
 //static void gotRootTitleRecWrapper25 ( void *state ) ;
 //static void gotTermFreqWrapper       ( void *state ) ;
-static void gotListWrapper           ( void *state );//, RdbList *list );
+static void gotListWrapper           ( void *state ,RdbList *list,Msg5 *msg5);
 static bool gotLinkTextWrapper       ( void *state );
 //static void sendLinkInfoReplyWrapper ( void *state );//, LinkInfo *info ) ;
 //static void gotReplyWrapper25        ( void *state , void *state2 ) ;
@@ -404,7 +405,7 @@ Msg25::Msg25() {
 	// set minhopcount to unknown
 	//m_minInlinkerHopCount = -1;
 	m_numReplyPtrs = 0;
-	m_linkInfo = NULL;
+	//m_linkInfo = NULL;
 	m_ownReplies = true;
 }
 
@@ -423,7 +424,7 @@ void Msg25::reset() {
 	//if ( m_linkInfo ) 
 	//	mfree ( m_linkInfo , m_linkInfo->getStoredSize(),"msg25s");
 	// this now points into m_linkInfoBuf safebuf, just NULL it
-	m_linkInfo = NULL;
+	//m_linkInfo = NULL;
 
 	m_table.reset();
 	m_ipTable.reset();
@@ -435,12 +436,417 @@ void Msg25::reset() {
 #define MODE_PAGELINKINFO 1
 #define MODE_SITELINKINFO 2
 
-// . get the inlinkers to this SITE (any page on this site)
-// . use that to compute a site quality
-// . also get the inlinkers sorted by date and see how many good inlinkers
-//   we had since X days ago. (each inlinker needs a pub/birth date)
+// . we got a reply back from the msg25 request
+// . reply should just be a LinkInfo class
+// . set XmlDoc::m_linkInfoBuf safebuf to that reply
+// . we store tr to that safebuf in Msg25Request::m_linkInfoBuf
+void gotMulticastReplyWrapper25 ( void *state , void *state2 ) {
+
+	Msg25Request *req = (Msg25Request *)state;
+
+	// call callback now if error is set
+	if ( g_errno ) {
+		req->m_callback ( req->m_state );
+		return;
+	}
+
+	Multicast *mcast = req->m_mcast;
+
+	long  replySize;
+	long  replyMaxSize;
+	bool  freeit;
+	char *reply = mcast->getBestReply (&replySize,&replyMaxSize,&freeit);
+
+	// . store reply in caller's linkInfoBuf i guess
+	// . mcast should free the reply
+	req->m_linkInfoBuf->safeMemcpy ( reply , replySize );
+
+	// i guess we gotta free this
+	mfree ( reply , replySize , "rep25" );
+
+	req->m_callback ( req->m_state );
+}
 
 
+// . returns false if would block, true otherwise
+// . sets g_errno and returns true on launch error
+// . calls req->m_callback when ready if it would block
+bool getLinkInfo ( SafeBuf   *reqBuf              ,
+		   Multicast *mcast               ,
+		   char      *site                ,
+		   char      *url                 ,
+		   bool       isSiteLinkInfo      ,
+		   long       ip                  ,
+		   long long  docId               ,
+		   collnum_t  collnum             ,
+		   char      *qbuf,
+		   long       qbufSize,
+		   void      *state               ,
+		   void (* callback)(void *state) ,
+		   bool       isInjecting         ,
+		   SafeBuf   *pbuf                ,
+		   bool       printInXml          ,
+		   long       siteNumInlinks      ,
+		   LinkInfo  *oldLinkInfo         ,
+		   long       niceness            ,
+		   bool       doLinkSpamCheck     ,
+		   bool       oneVotePerIpDom     ,
+		   bool       canBeCancelled      ,
+		   long       lastUpdateTime      ,
+		   bool       onlyNeedGoodInlinks ,
+		   bool       getLinkerTitles     ,
+		   long       ourHostHash32       ,
+		   long       ourDomHash32        ,
+		   SafeBuf   *linkInfoBuf         ) {
+
+	long siteLen = gbstrlen(site);
+	long urlLen  = gbstrlen(url);
+
+	long oldLinkSize = 0;
+	if ( oldLinkInfo )
+		oldLinkSize = oldLinkInfo->getSize();
+
+	long need = sizeof(Msg25Request) + siteLen+1 + urlLen+1 + oldLinkSize;
+
+	// keep it in a safebuf so caller can just add "SafeBuf m_msg25Req;"
+	// to his .h file and not have to worry about freeing it.
+	reqBuf->purge();
+
+	// clear = true. put 0 bytes in there
+	if ( ! reqBuf->reserve ( need ,"m25req", true ) ) return true;
+
+	Msg25Request *req = (Msg25Request *)reqBuf->getBufStart();
+
+	req->m_linkInfoBuf = linkInfoBuf;
+
+	req->m_mcast = mcast;
+
+	req->ptr_site = site;
+	req->size_site = siteLen + 1;
+
+	req->ptr_url  = url;
+	req->size_url  = urlLen  + 1;
+
+	req->ptr_oldLinkInfo = (char *)oldLinkInfo;
+	if ( oldLinkInfo ) req->size_oldLinkInfo = oldLinkInfo->getSize();
+	else               req->size_oldLinkInfo = 0;
+
+	if ( isSiteLinkInfo ) req->m_mode = MODE_SITELINKINFO;
+	else                  req->m_mode = MODE_PAGELINKINFO;
+	
+	req->m_ip = ip;
+	req->m_docId = docId;
+	req->m_collnum = collnum;
+	req->m_state = state;
+	req->m_callback = callback;
+	req->m_isInjecting = isInjecting;
+	req->m_printInXml = printInXml;
+	req->m_siteNumInlinks = siteNumInlinks;
+	req->m_niceness = niceness;
+	req->m_doLinkSpamCheck = doLinkSpamCheck;
+	req->m_oneVotePerIpDom = oneVotePerIpDom;
+	req->m_canBeCancelled = canBeCancelled;
+	req->m_lastUpdateTime = lastUpdateTime;
+	req->m_onlyNeedGoodInlinks = onlyNeedGoodInlinks;
+	req->m_getLinkerTitles = getLinkerTitles;
+	req->m_ourHostHash32 = ourHostHash32;
+	req->m_ourDomHash32 = ourDomHash32;
+
+	if ( g_conf.m_logDebugLinkInfo )
+		req->m_printDebugMsgs = true;
+
+	Url u;
+	u.set ( req->ptr_url );
+
+	req->m_linkHash64 = (uint64_t)u.getUrlHash64();
+
+
+	req->m_siteHash32 = 0LL;
+	req->m_siteHash64 = 0LL;
+	if ( req->ptr_site ) {
+		// hash collection # in with it
+		long long h64 = hash64n ( req->ptr_site );
+		h64 = hash64 ((char *)&req->m_collnum,sizeof(collnum_t),h64);
+		req->m_siteHash64 = h64;
+		req->m_siteHash32 = hash32n ( req->ptr_site );
+	}
+
+	// send to host for local linkdb lookup
+	key224_t startKey ;
+	//long siteHash32 = hash32n ( req->ptr_site );
+	// access different parts of linkdb depending on the "mode"
+	if ( req->m_mode == MODE_SITELINKINFO )
+		startKey = g_linkdb.makeStartKey_uk ( req->m_siteHash32 );
+	else
+		startKey = g_linkdb.makeStartKey_uk (req->m_siteHash32,
+						     req->m_linkHash64 );
+	// what group has this linkdb list?
+	unsigned long shardNum = getShardNum ( RDB_LINKDB, &startKey );
+	// use a biased lookup
+	long numTwins = g_hostdb.getNumHostsPerShard();
+	long long sectionWidth = (0xffffffff/(long long)numTwins) + 1;
+	// these are 192 bit keys, top 32 bits are a hash of the url
+	unsigned long x = req->m_siteHash32;//(startKey.n1 >> 32);
+	long hostNum = x / sectionWidth;
+	long numHosts = g_hostdb.getNumHostsPerShard();
+	Host *hosts = g_hostdb.getShard ( shardNum); // Group ( groupId );
+	if ( hostNum >= numHosts ) { char *xx = NULL; *xx = 0; }
+	long hostId = hosts [ hostNum ].m_hostId ;
+
+	// . serialize the string buffers
+	// . use Msg25Request::m_buf[MAX_NEEDED]
+	// . turns the ptr_* members into offsets into req->m_buf[]
+	req->serialize();
+
+	// this should always block
+	if ( ! mcast->send ( 
+			    (char *)req ,
+			    req->getStoredSize() ,
+			    0x25 ,
+			    false        , // does multicast own request?
+			    shardNum ,
+			    false        , // send to whole group?
+			    0            , // key is passed on startKey
+			    req          , // state data
+			    NULL         , // state data
+			    gotMulticastReplyWrapper25 ,
+			    1000      , // timeout in seconds (was 30)
+			    req->m_niceness ,
+			    false, // realtime     ,
+			    hostId )) {// firstHostId  ,
+		log("linkdb: Failed to send multicast for %s err=%s",
+		    u.getUrl(),mstrerror(g_errno));
+		return true;
+	}
+
+	// wait for req->m_callback(req->m_state) to be called
+	return false;
+}
+
+HashTableX g_lineTable;
+
+static void sendReplyWrapper ( void *state ) {
+
+	long saved = g_errno;
+
+	Msg25 *m25 = (Msg25 *)state;
+	// the original request
+	Msg25Request *mr = m25->m_req25;
+	// get udp slot for sending back reply
+	UdpSlot *slot2 = mr->m_udpSlot;
+	// shortcut
+	SafeBuf *info = m25->m_linkInfoBuf;
+	// steal this buffer
+	char *reply1 = info->getBufStart();
+	long  replySize = info->length();
+	// sanity. no if collrec not found its 0!
+	if ( ! saved && replySize <= 0 ) { 
+		saved = g_errno = EBADENGINEER;
+		log("linkdb: sending back empty link text reply. did "
+		    "coll get deleted?");
+		//char *xx=NULL;*xx=0; }
+	}
+	// get original request
+	Msg25Request *req = (Msg25Request *)slot2->m_readBuf;
+	// sanity
+	if ( req->m_udpSlot != slot2 ) { char *xx=NULL;*xx=0;}
+	// if in table, nuke it
+	g_lineTable.removeKey ( &req->m_siteHash64 );
+
+ nextLink:
+
+	UdpSlot *udpSlot = req->m_udpSlot;
+
+	// update for next udpSlot
+	req = req->m_next;
+
+	// just dup the reply for each one
+	char *reply2 = (char *)mdup(reply1,replySize,"m25repd");
+
+	// error?
+	if ( saved || ! reply2 ) {
+		long err = saved;
+		if ( ! err ) err = g_errno;
+		if ( ! err ) { char *xx=NULL;*xx=0; }
+		g_udpServer.sendErrorReply(udpSlot,err);
+	}
+	else {
+		// send it back to requester
+		g_udpServer.sendReply_ass ( reply2 ,
+					    replySize ,
+					    reply2 ,
+					    replySize,
+					    udpSlot );
+	}
+
+	// if we had a link
+	if ( req ) goto nextLink;
+
+	// the destructor
+	mdelete ( m25 ,sizeof(Msg25),"msg25");
+	delete ( m25 );
+}
+
+
+void  handleRequest25 ( UdpSlot *slot , long netnice ) {
+
+	Msg25Request *req = (Msg25Request *)slot->m_readBuf;
+
+	req->deserialize();
+
+	// make sure this always NULL for our linked list logic
+	req->m_next = NULL;
+
+	// udp socket for sending back the final linkInfo in m_linkInfoBuf
+	// used by sendReply()
+	req->m_udpSlot = slot;
+
+	// set up the hashtable if our first time
+	if ( ! g_lineTable.isInitialized() )
+		g_lineTable.set ( 8,4,256,NULL,0,false,MAX_NICENESS,"lht25");
+
+	// . if already working on this same request, wait for it, don't
+	//   overload server with duplicate requests
+	// . hashkey is combo of collection, url, and m_mode
+	// . TODO: ensure does not send duplicate "page" link info requests
+	//   just "site" link info requests
+	long slotNum = -1;
+	bool isSiteLinkInfo = false;
+	if ( req->m_mode == MODE_SITELINKINFO ) {
+		slotNum = g_lineTable.getSlot ( &req->m_siteHash64 );
+		isSiteLinkInfo = true;
+	}
+
+	if ( slotNum >= 0 ) {
+		Msg25Request *head ;
+		head = *(Msg25Request **)g_lineTable.getValueFromSlot(slotNum);
+		if ( head->m_next ) 
+			req->m_next = head->m_next;
+		head->m_next = req;
+		// note it for debugging
+		log("build: msg25 request waiting in line for %s slot=0x%lx",
+		    req->ptr_url,(long)slot);
+		// we will send a reply back for this guy when done
+		// getting the reply for the head msg25request
+		return;
+	}
+
+	// make a new Msg25
+	Msg25 *m25;
+	try { m25 = new ( Msg25 ); }
+	catch ( ... ) {
+		g_errno = ENOMEM;
+		log("build: msg25: new(%i): %s", 
+		    sizeof(Msg25),mstrerror(g_errno));
+		g_udpServer.sendErrorReply ( slot , g_errno );
+		return;
+	}
+	mnew ( m25 , sizeof(Msg25) , "Msg25" );
+
+	if ( isSiteLinkInfo ) {
+		// add the initial entry
+		g_lineTable.addKey ( &req->m_siteHash64 , &req );
+	}
+
+	// point to a real safebuf here for populating with data
+	m25->m_linkInfoBuf = &m25->m_realBuf;
+
+	// set some new stuff. should probably be set in getLinkInfo2()
+	// but we are trying to leave that as unaltered as possible to
+	// try to reduce debugging.
+	m25->m_req25 = req;
+
+	// this should call our callback when done
+	if ( ! m25->getLinkInfo2 ( req->ptr_site ,
+				   req->ptr_url ,
+				   isSiteLinkInfo      ,
+				   req->m_ip ,
+				   req->m_docId ,
+				   req->m_collnum , // coll
+				   NULL, // qbuf
+				   0 , // qbufSize
+				   m25 , // state
+				   sendReplyWrapper , // CALLBACK!
+				   req->m_isInjecting         ,
+				   req->m_printDebugMsgs ,
+				   //XmlDoc *xd ,
+				   req->m_printInXml ,
+				   req->m_siteNumInlinks      ,
+				   (LinkInfo *)req->ptr_oldLinkInfo ,
+				   req->m_niceness            ,
+				   req->m_doLinkSpamCheck     ,
+				   req->m_oneVotePerIpDom     ,
+				   req->m_canBeCancelled      ,
+				   req->m_lastUpdateTime      ,
+				   req->m_onlyNeedGoodInlinks  ,
+				   req->m_getLinkerTitles ,
+				   req->m_ourHostHash32 ,
+				   req->m_ourDomHash32 ,
+				   m25->m_linkInfoBuf ) ) // SafeBuf 4 output
+		return;
+
+	if(m25->m_linkInfoBuf->getLength()<=0&&!g_errno){char *xx=NULL;*xx=0;}
+
+	if ( g_errno == ETRYAGAIN ) { char *xx=NULL;*xx=0; }
+
+	if ( g_errno )
+		log("linkdb: error getting linkinfo: %s",mstrerror(g_errno));
+
+	// it did not block... g_errno will be set on error so sendReply()
+	// should in that case send an error reply.
+	sendReplyWrapper ( m25 );
+}
+
+long Msg25Request::getStoredSize() {
+	return sizeof(Msg25Request) + size_url + size_site + size_oldLinkInfo;
+}
+
+// . fix the char ptrs for sending over the network
+// . use a for loop like we do in Msg20.cpp if we get too many strings
+void Msg25Request::serialize ( ) {
+
+	char *p = m_buf;
+
+	memcpy ( p , ptr_url , size_url );
+	ptr_url = (char *)(p - m_buf);
+	p += size_url;
+
+	memcpy ( p , ptr_site , size_site );
+	ptr_site = (char *)(p - m_buf);
+	p += size_site;
+
+	memcpy ( p , ptr_oldLinkInfo , size_oldLinkInfo );
+	ptr_oldLinkInfo = (char *)(p - m_buf);
+	p += size_oldLinkInfo;
+}
+
+void Msg25Request::deserialize ( ) {
+
+	char *p = m_buf;
+
+	ptr_url = p;
+	p += size_url;
+
+	if ( size_url == 0 ) ptr_url = NULL;
+
+	ptr_site = p;
+	p += size_site;
+
+	if ( size_site == 0 ) ptr_site = NULL;
+
+	ptr_oldLinkInfo = p;
+	p += size_oldLinkInfo;
+
+	if ( size_oldLinkInfo == 0 ) ptr_oldLinkInfo = NULL;
+}
+
+//////
+//
+// OLD interface below here. use the stuff above now so we can send
+// the request to a single host and multiple incoming requests can
+// wait in line, and we can set network bandwidth too.
+//
+/////
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
@@ -448,21 +854,23 @@ void Msg25::reset() {
 // . NOTE: make sure no input vars are on the stack in case we block
 // . reallyGetLinkInfo is set to false if caller does not want it but calls
 //   us anyway for some reason forgotten...
-bool Msg25::getLinkInfo ( char      *site                ,
+bool Msg25::getLinkInfo2( char      *site                ,
 			  char      *url                 ,
 			  // either MODE_PAGELINKINFO or MODE_SITELINKINFO
 			  bool       isSiteLinkInfo      ,
 			  long       ip                  ,
 			  long long  docId               ,
-			  char      *coll                ,
+			  //char      *coll                ,
+			  collnum_t collnum,
 			  char      *qbuf                ,
 			  long       qbufSize            ,
 			  void      *state               ,
 			  void (* callback)(void *state) ,
 			  bool       isInjecting         ,
-			  SafeBuf   *pbuf                ,
-			  XmlDoc *xd ,
-			  //bool     printInXml ,
+			  //SafeBuf   *pbuf                ,
+			  bool     printDebugMsgs ,
+			  //XmlDoc *xd ,
+			  bool     printInXml ,
 			  long       siteNumInlinks      ,
 			  //long       sitePop             ,
 			  LinkInfo  *oldLinkInfo         ,
@@ -475,19 +883,26 @@ bool Msg25::getLinkInfo ( char      *site                ,
 			  bool       getLinkerTitles ,
 			  long       ourHostHash32 ,
 			  long       ourDomHash32 ,
+			  // put LinkInfo output class in here
 			  SafeBuf   *linkInfoBuf ) {
 
 	// reset the ip table
 	reset();
+
 	//long mode = MODE_PAGELINKINFO;
 	//m_printInXml = printInXml;
 	if ( isSiteLinkInfo ) m_mode = MODE_SITELINKINFO;
 	else                  m_mode = MODE_PAGELINKINFO;
-	m_xd = xd;
-	m_printInXml = false;
-	if ( m_xd ) m_printInXml = m_xd->m_printInXml;
+	//m_xd = xd;
+	//m_printInXml = false;
+	//if ( m_xd ) m_printInXml = m_xd->m_printInXml;
+	m_printInXml = printInXml;
+
+	if ( printDebugMsgs ) m_pbuf = &m_tmp;
+	else                  m_pbuf = NULL;
+
 	// sanity check
-	if ( ! coll ) { char *xx=NULL; *xx=0; }
+	//if ( ! coll ) { char *xx=NULL; *xx=0; }
 	m_onlyNeedGoodInlinks = onlyNeedGoodInlinks;
 	m_getLinkerTitles     = getLinkerTitles;
 	// save safebuf ptr, where we store the link info
@@ -498,10 +913,10 @@ bool Msg25::getLinkInfo ( char      *site                ,
 	// must have a valid ip
 	//if ( ! ip || ip == -1 ) { char *xx = NULL; *xx = 0; }
 	// get collection rec for our collection
-	CollectionRec *cr = g_collectiondb.getRec ( coll );//, collLen );
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );//, collLen );
 	// bail if NULL
 	if ( ! cr ) {
-		g_errno = ENOTFOUND;
+		g_errno = ENOCOLLREC;
 		log("build: No collection record found when getting "
 		    "link info.");
 		return true;
@@ -532,7 +947,8 @@ bool Msg25::getLinkInfo ( char      *site                ,
 	m_linkSpamLinkdb      = 0;
 	//m_url                 = url;
 	m_docId               = docId;
-	m_coll                = coll;
+	//m_coll                = coll;
+	m_collnum = collnum;
 	//m_collLen             = collLen;
 	m_callback            = callback;
 	m_state               = state;
@@ -545,7 +961,7 @@ bool Msg25::getLinkInfo ( char      *site                ,
 	m_qbufSize            = qbufSize;
 	m_isInjecting         = isInjecting;
 	m_oldLinkInfo         = oldLinkInfo;
-	m_pbuf                = pbuf;
+	//m_pbuf                = pbuf;
 	m_ip                  = ip;
 	m_top                 = iptop(m_ip);
 	m_lastUpdateTime      = lastUpdateTime;
@@ -601,6 +1017,7 @@ bool Msg25::getLinkInfo ( char      *site                ,
 	// must have a valid ip
 	if ( ! ip || ip == -1 ) { //char *xx = NULL; *xx = 0; }
 		log("linkdb: no inlinks because ip is invalid");
+		g_errno = EBADENGINEER;
 		return true;
 	}
 
@@ -651,7 +1068,7 @@ bool Msg25::doReadLoop ( ) {
 	long numFiles = -1;
 	// NO, DON't restrict because it will mess up the hopcount.
 	bool includeTree = true;
-
+	/*
 	// what group has this linkdb list?
 	//unsigned long groupId = getGroupId ( RDB_LINKDB , &startKey );
 	unsigned long shardNum = getShardNum ( RDB_LINKDB, &startKey );
@@ -665,7 +1082,7 @@ bool Msg25::doReadLoop ( ) {
 	Host *hosts = g_hostdb.getShard ( shardNum); // Group ( groupId );
 	if ( hostNum >= numHosts ) { char *xx = NULL; *xx = 0; }
 	long hostId = hosts [ hostNum ].m_hostId ;
-
+	*/
 	// debug log
 	if ( g_conf.m_logDebugLinkInfo ) {
 		char *ms = "page";
@@ -677,6 +1094,15 @@ bool Msg25::doReadLoop ( ) {
 
 	m_gettingList = true;
 
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	if ( ! cr ) {
+		log("linkdb: no coll for collnum %li",(long)m_collnum);
+		g_errno = ENOCOLLREC;
+		return true;
+	}
+
+	char *coll = cr->m_coll;
+
 	// . get the linkdb list
 	// . we now get the WHOLE list so we can see how many linkers there are
 	// . we need a high timeout because udp server was getting suspended
@@ -685,27 +1111,22 @@ bool Msg25::doReadLoop ( ) {
 	//   Now we hang indefinitely. We also fixed UdpServer to resend
 	//   requests after 30 seconds even though it was fully acked in case
 	//   the receiving host went down and is now back up.
-	if ( ! m_msg0.getList ( -1              , // hostId, -1 if none
-				0               , // hostId ip
-				0               , // hostId port
-				0               , // max cache age in seconds
-				false           , // addToCache?
+	if ( ! m_msg5.getList ( 
 				RDB_LINKDB      ,
-				m_coll          ,
+				coll          ,
 				&m_list         ,
 				(char*)&startKey,
 				(char*)&endKey  ,
 				m_minRecSizes   ,
+				includeTree     ,
+				false , // add to cache?
+				0 , // maxcacheage
+				0               , // startFileNum
+				numFiles        ,
 				this            ,
 				gotListWrapper  ,
 				m_niceness      ,
-				true            , // error correct?
-				includeTree     ,
-				true            , // do merge
-				hostId          , // firstHostId
-				0               , // startFileNum
-				numFiles        ,
-				60*60*24*365    )){// timeout of one year
+				true            )){ // error correct?
 		//log("debug: msg0 blocked this=%lx",(long)this);
 		return false;
 	}
@@ -725,7 +1146,7 @@ bool Msg25::doReadLoop ( ) {
 	return gotList();
 }
 
-void gotListWrapper ( void *state ) { // , RdbList *list ) {
+void gotListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 	Msg25 *THIS = (Msg25 *) state;
 
 	//log("debug: entering gotlistwrapper this=%lx",(long)THIS);
@@ -963,6 +1384,13 @@ bool Msg25::sendRequests ( ) {
 	long ourMax = (long)(ratio * (float)MAX_MSG20_OUTSTANDING);
 	if ( ourMax > MAX_MSG20_OUTSTANDING )
 		ourMax = MAX_MSG20_OUTSTANDING;
+
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	if ( ! cr ) {
+		log("linkdb: collnum %li is gone",(long)m_collnum);
+		return true;
+	}
+	char *coll = cr->m_coll;
 
 	// if more than 300 sockets in use max this 1. prevent udp socket clog.
 	if ( g_udpServer.m_numUsedSlots >= 300 ) ourMax = 1;
@@ -1204,8 +1632,8 @@ bool Msg25::sendRequests ( ) {
 			r-> ptr_linkee = m_site;
 			r->size_linkee = gbstrlen(m_site)+1; // include \0
 		}
-		r-> ptr_coll         = m_coll;
-		r->size_coll         = gbstrlen(m_coll) + 1; // include \0
+		r-> ptr_coll         = coll;
+		r->size_coll         = gbstrlen(coll) + 1; // include \0
 		r->m_docId           = docId;
 		r->m_expected        = true; // false;
 		r->m_niceness        = m_niceness;
@@ -1532,6 +1960,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		    mstrerror(g_errno),docId);
 		// this is a special case
 		if ( g_errno == ECANCELLED || 
+		     g_errno == ENOCOLLREC ||
 		     g_errno == ENOMEM     ||
 		     g_errno == ENOSLOTS    ) {
 			m_errors++;
@@ -1826,7 +2255,8 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 			log("linkdb: recalling round=%li for %s=%s",
 			    m_round,ms,m_site);
 		}
-		// and re-call
+		// and re-call. returns true if did not block.
+		// returns true with g_errno set on error.
 		if ( ! doReadLoop() ) return false;
 		// it did not block!! wtf? i guess it read no more or
 		// launched no more requests.
@@ -1898,11 +2328,18 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		    ms,m_site,m_url,m_docId);
 	}
 
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	if ( ! cr ) {
+		log("linkdb: collnum %li is gone",(long)m_collnum);
+		return true;
+	}
+	char *coll = cr->m_coll;
+
 	// . this returns NULL and sets g_errno on error
 	// . returns an allocated ptr to a LinkInfo class
 	// . we are responsible for freeing
 	// . LinkInfo::getSize() returns the allocated size
-	m_linkInfo = makeLinkInfo ( m_coll            ,
+	makeLinkInfo ( coll            ,
 				    m_ip              ,
 				    m_siteNumInlinks  ,
 				    //m_sitePop         ,
@@ -1919,7 +2356,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 				    this ,
 				    m_linkInfoBuf );
 	// return true with g_errno set on error
-	if ( ! m_linkInfo ) {
+	if ( ! m_linkInfoBuf->length() ) {
 		log("build: msg25 linkinfo set: %s",mstrerror(g_errno));
 		return true;
 	}
@@ -1973,7 +2410,9 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 	char *ss = "site";
 	if ( m_mode == MODE_PAGELINKINFO ) ss = "page";
 
-	long siteRank = ::getSiteRank ( m_linkInfo->m_numGoodInlinks );
+	LinkInfo *info = (LinkInfo *)m_linkInfoBuf->getBufStart();
+
+	long siteRank = ::getSiteRank ( info->m_numGoodInlinks );
 
 	if ( m_printInXml ) { // && m_xd ) {
 
@@ -1983,19 +2422,24 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 				   "</sampleCreatedUTC>\n"
 				   , m_lastUpdateTime
 				   );
-		char *u = NULL;
-		if ( m_xd ) u = m_xd->ptr_firstUrl;
+		//char *u = NULL;
+		//if ( m_xd ) u = m_xd->ptr_firstUrl;
+		// m_url should point into the Msg25Request buffer
+		char *u = m_url;
 		if ( u )
 			m_pbuf->safePrintf("\t<url><![CDATA[%s]]></url>\n",u);
 
-		char *site = NULL;
-		if ( m_xd ) site = m_xd->ptr_site;
+		//char *site = NULL;
+		//if ( m_xd ) site = m_xd->ptr_site;
+		// m_site should point into the Msg25Request buffer
+		char *site = m_site;
 		if ( site )
 			m_pbuf->safePrintf("\t<site><![CDATA[%s]]></site>\n",
 					   site);
 
-		long long d = 0LL;
-		if ( m_xd ) d = m_xd->m_docId;
+		//long long d = 0LL;
+		//if ( m_xd ) d = m_xd->m_docId;
+		long long d = m_docId;
 		if ( d && d != -1LL )
 			m_pbuf->safePrintf("\t<docId>%lli</docId>\n",d);
 			
@@ -2018,7 +2462,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 				   // the total # of inlinkers. we may not have
 				   // read all of them from disk though.
 				   , m_numDocIds
-				   , m_linkInfo->m_numGoodInlinks
+				   , info->m_numGoodInlinks
 				   , m_cblocks
 				   , m_uniqueIps
 				   );
@@ -2145,7 +2589,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 				m_pbuf->safePrintf ("<a href=\"/master/titledb"
 						    "?c=%s&d=%lli\">"
 						    "%li</a> ",
-						    m_coll,e->m_docIds[j],j);
+						    coll,e->m_docIds[j],j);
 		}
 		if ( ! m_printInXml )
 			m_pbuf->safePrintf ( "&nbsp; </td></tr>\n" );
@@ -2225,7 +2669,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 				   (long)m_ipDupsLinkdb   ,
 				   (long)m_docIdDupsLinkdb   ,
 				   (long)m_linkSpamLinkdb ,
-				   m_linkInfo->m_numGoodInlinks
+				   info->m_numGoodInlinks
 				   // good and max
 				   //(long)m_linkInfo->getNumInlinks() ,
 				   );
@@ -2490,7 +2934,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		m_pbuf->safePrintf("<td><a href=\"/search?q=ip%%3A"
 				   "%s&c=%s&n=200\">%s</a></td>"  // ip
 				   , iptoa(r->m_ip)
-				   , m_coll
+				   , coll
 				   , iptoa(r->m_ip)
 				   );
 		m_pbuf->safePrintf("<td>%s</td>"
@@ -3551,6 +3995,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 	// how many guys that we stored were internal?
 	info->m_numInlinksInternal = (char)icount3;
 
+	linkInfoBuf->setLength ( need );
 
 	// sanity parse it
 	//long ss = 0;
