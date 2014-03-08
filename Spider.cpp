@@ -12548,6 +12548,7 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 	long hlen = 0;
 	char *host = getHostFast ( url , &hlen );
 	m_siteHash32 = hash32 ( host , hlen );
+	m_hostHash32 = m_siteHash32;
 
 	return true;
 }

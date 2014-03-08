@@ -73,7 +73,7 @@ public:
 // . uses msg4 to add seeds to spiderdb if necessary
 // . only adds seeds for the shard we are on iff we are responsible for
 //   the fake firstip!!!
-bool updateSiteList ( collnum_t collnum ) { // , char *siteList ) {
+bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	if ( ! cr ) return true;
@@ -148,6 +148,8 @@ bool updateSiteList ( collnum_t collnum ) { // , char *siteList ) {
 
 	long lineNum = 1;
 
+	long added = 0;
+
 	Url u;
 
 	for ( ; *pn ; pn++ , lineNum++ ) {
@@ -161,7 +163,7 @@ bool updateSiteList ( collnum_t collnum ) { // , char *siteList ) {
 
 		// back p up over spaces in case ended in spaces
 	        char *pe = pn;
-		for ( ; pe > s && pe[-1] == ' ' ; pe-- );
+		for ( ; pe > s && is_wspace_a(pe[-1]) ; pe-- );
 
 		// make hash of the line
 		long h32 = hash32 ( s , pe - s );
@@ -205,14 +207,20 @@ bool updateSiteList ( collnum_t collnum ) { // , char *siteList ) {
 		}
 
 		// see if in existing table for existing site list
-		if ( ! dedup.isInTable ( &h32 ) ) {
+		if ( addSeeds &&
+		     ! dedup.isInTable ( &h32 ) ) {
 			// make spider request
 			SpiderRequest sreq;
 			sreq.setFromAddUrl ( u.getUrl() );
-			// . add this url to spiderdb as a spiderrequest
-			// . calling msg4 will be the last thing we do
-			if(!spiderReqBuf->safeMemcpy(&sreq,sreq.getRecSize()))
+			// is fake ip assigned to us?
+			if ( isAssignedToUs( sreq.m_firstIp ) &&
+			     // . add this url to spiderdb as a spiderrequest
+			     // . calling msg4 will be the last thing we do
+			    !spiderReqBuf->safeMemcpy(&sreq,sreq.getRecSize()))
 				return true;
+			// count it
+			added++;
+
 		}
 
 		// make the data node
@@ -262,6 +270,9 @@ bool updateSiteList ( collnum_t collnum ) { // , char *siteList ) {
 	//long siteListLen = gbstrlen(siteList);
 	//cr->m_siteListBuf.safeMemcpy ( siteList , siteListLen + 1 );
 
+	if ( ! addSeeds ) return true;
+
+	log("spider: adding %li seed urls",added);
 
 	// use spidercoll to contain this msg4 but if in use it
 	// won't be able to be deleted until it comes back..
@@ -272,7 +283,8 @@ bool updateSiteList ( collnum_t collnum ) { // , char *siteList ) {
 					 // when it comes back
 					 NULL , // state
 					 NULL , // callback 
-					 MAX_NICENESS 
+					 MAX_NICENESS ,
+					 RDB_SPIDERDB
 					 ) )
 		return false;
 
@@ -300,7 +312,12 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 	// check domain specific tables
 	HashTableX *dt = &sc->m_siteListDomTable;
 
-	// sanity check
+	// need to build dom table for pattern matching?
+	if ( dt->getNumSlotsUsed() == 0 ) {
+		// do not add seeds, just make siteListDomTable, etc.
+		updateSiteList ( sc->m_collnum , false );
+	}
+
 	if ( dt->getNumSlotsUsed() == 0 ) { char *xx=NULL;*xx=0; }
 
 	// this table maps a 32-bit domain hash of a domain to a
