@@ -2028,6 +2028,7 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 }
 
 bool expandRegExShortcuts ( SafeBuf *sb ) ;
+bool updateSiteList ( collnum_t collnum );
 
 // . anytime the url filters are updated, this function is called
 // . it is also called on load of the collection at startup
@@ -2056,6 +2057,19 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 			break;
 		}
 	}
+
+	// rebuild sitetable? in PageBasic.cpp.
+	updateSiteList ( m_collnum );
+
+	// . reset doledb so it gets rebuilt
+	// . what if there is a read outstanding?
+	// . make sure to nuke m_doleIpTable as well
+	// . MDW left off here
+	//nukeDoledb();
+
+	// just start this over...
+	// . MDW left off here
+	//tryToDelete ( sc );
 
 
 	// only for diffbot custom crawls

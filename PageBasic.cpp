@@ -66,13 +66,14 @@ public:
 };
 
 
-// . CommandUpdateSiteList() should call this
+// . Collectiondb.cpp calls this when any parm flagged with 
+//   PF_REBUILDURLFILTERS is updated
 // . this returns false if it blocks
 // . returns true and sets g_errno on error
 // . uses msg4 to add seeds to spiderdb if necessary
 // . only adds seeds for the shard we are on iff we are responsible for
 //   the fake firstip!!!
-bool updateSiteList ( collnum_t collnum , char *siteList ) {
+bool updateSiteList ( collnum_t collnum ) { // , char *siteList ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	if ( ! cr ) return true;
@@ -127,7 +128,7 @@ bool updateSiteList ( collnum_t collnum , char *siteList ) {
 
 
 	// we can now free the old site list methinks
-	cr->m_siteListBuf.purge();
+	//cr->m_siteListBuf.purge();
 
 	// reset flags
 	sc->m_siteListAsteriskLine = NULL;
@@ -136,6 +137,8 @@ bool updateSiteList ( collnum_t collnum , char *siteList ) {
 
 	// use this so it will be free automatically when msg4 completes!
 	SafeBuf *spiderReqBuf = &sc->m_msg4x.m_tmpBuf;
+
+	char *siteList = cr->m_siteListBuf.getBufStart();
 
 	// scan the list
 	char *pn = siteList;
@@ -256,8 +259,8 @@ bool updateSiteList ( collnum_t collnum , char *siteList ) {
 	// go back to a high niceness
 	dt->m_niceness = MAX_NICENESS;
 
-	long siteListLen = gbstrlen(siteList);
-	cr->m_siteListBuf.safeMemcpy ( siteList , siteListLen + 1 );
+	//long siteListLen = gbstrlen(siteList);
+	//cr->m_siteListBuf.safeMemcpy ( siteList , siteListLen + 1 );
 
 
 	// use spidercoll to contain this msg4 but if in use it
@@ -300,6 +303,9 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 	// sanity check
 	if ( dt->getNumSlotsUsed() == 0 ) { char *xx=NULL;*xx=0; }
 
+	// this table maps a 32-bit domain hash of a domain to a
+	// patternData class. only for those urls that have firstIps that
+	// we handle.
 	long slot = dt->getSlot ( &sreq->m_domHash32 );
 
 	// loop over all the patterns that contain this domain and see
@@ -318,11 +324,11 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 				      pd->m_pathLen ) )
 				continue;
 		}
-		// is it just a plain domain?
+		// was the line just a domain and not a subdomain?
 		if ( pd->m_thingHash32 == sreq->m_domHash32 )
 			// this will be false if negative pattern i guess
 			return pd->m_patternStr;
-		// is it just a subdomain?
+		// was it just a subdomain?
 		if ( pd->m_thingHash32 == sreq->m_hostHash32 )
 			// this will be false if negative pattern i guess
 			return pd->m_patternStr;
@@ -414,6 +420,22 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      //"directory of good sites.</td>"
 		       //"</tr>"
 
+		      // protocol and subdomain match
+		      "<tr>"
+		      "<td>http://www.goodstuff.com/</td>"
+		      "<td>"
+		      "Allow any url starting with this AND seed with "
+		      "this url."
+		      "</td>"
+		      "</tr>"
+
+		      "<tr>"
+		      "<td>goodstuff.com<td>"
+		      "<td>"
+		      "Allow any url from this domain AND seed with it too."
+		      "</td>"
+		      "</tr>"
+
 		      "<tr>"
 		      "<td>seed:www.goodstuff.com/myurl.html</td>"
 		      "<td>"
@@ -424,7 +446,7 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 
 		      // protocol and subdomain match
 		      "<tr>"
-		      "<td>startswith:http://www.goodstuff.com/</td>"
+		      "<td>site:http://www.goodstuff.com/</td>"
 		      "<td>"
 		      "Allow any url starting with this."
 		      "</td>"
@@ -432,23 +454,23 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 
 		      // subdomain match
 		      "<tr>"
-		      "<td>hassubdomain:www.goodstuff.com</td>"
+		      "<td>site:www.goodstuff.com</td>"
 		      "<td>"
-		      "Allow urls from this domain."
+		      "Allow urls from the www subdomain."
 		      "</td>"
 		      "</tr>"
 
 		      // domain match
 		      "<tr>"
-		      "<td>hasdomain:goodstuff.com</td>"
+		      "<td>site:goodstuff.com</td>"
 		      "<td>"
-		      "Allow urls from this domain."
+		      "Allow urls from the foodstuff.com domain."
 		      "</td>"
 		      "</tr>"
 
 		      // spider this subdir
 		      "<tr>"
-		      "<td><nobr>startswith:"
+		      "<td><nobr>site:"
 		      "http://www.goodstuff.com/goodir/anotherdir/</nobr></td>"
 		      "<td>"
 		      "Allow urls starting with this."
@@ -466,7 +488,7 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 
 		      // local subdir match
 		      "<tr>"
-		      "<td>startswith:file://C/mydir/mysubdir/"
+		      "<td>site:file://C/mydir/mysubdir/"
 		      "<td>"
 		      "Matches all local files in the specified directory. "
 		      "</td>"
@@ -488,14 +510,14 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 
 		      // negative subdomain match
 		      "<tr>"
-		      "<td>contains:badstuff</td>"
-		      "<td>Matches any url containing badstuff."
+		      "<td>contains:goodtuff</td>"
+		      "<td>Matches any url containing goodstuff."
 		      "</td>"
 		      "</tr>"
 
 		      "<tr>"
-		      "<td>doesnotcontain:badstuff</td>"
-		      "<td>Matches if does not contain badstuff."
+		      "<td>-contain:badstuff</td>"
+		      "<td>Matches if does NOT contain badstuff."
 		      "</td>"
 		      "</tr>"
 
@@ -511,11 +533,11 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      // tag match
 		      "<tr><td>"
 		      //"<td>tag:boots contains:boots<br>"
-		      "<nobr>tag:boots hassubdomain:www.westernfootwear."
+		      "<nobr>tag:boots site:www.westernfootwear."
 		      "</nobr>com<br>"
-		      "tag:boots hassubdomain:www.cowboyshop.com<br>"
-		      "tag:boots hassubdomain:www.moreboots.com<br>"
-		      "<nobr>tag:boots hassubdomain:www.lotsoffootwear.com"
+		      "tag:boots site:www.cowboyshop.com<br>"
+		      "tag:boots site:www.moreboots.com<br>"
+		      "<nobr>tag:boots site:www.lotsoffootwear.com"
 		      "</nobr><br>"
 		      //"<td>t:boots -contains:www.cowboyshop.com/shoes/</td>"
 		      "</td><td>"

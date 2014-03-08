@@ -7479,7 +7479,7 @@ void Parms::init ( ) {
 	m->m_title = "urls to add";
 	m->m_desc  = "Space separated list of urls to index. "
 		"They must match the patterns you have specified in "
-		"the <a href=/admin/sites>spider sites</a> list. "
+		"the <a href=/admin/sites>site list</a>. "
 		"You can override that behavior on the "
 		"<a href=/admin/scheduler>spider scheduler</a> by "
 		"telling Gigablast to always index manually added "
@@ -7552,8 +7552,8 @@ void Parms::init ( ) {
 	m->m_flags = PF_DUP;
 	m++;
 
-	m->m_title = "site patterns";
-	m->m_xml   = "sitePatterns";
+	m->m_title = "site list";
+	m->m_xml   = "siteList";
 	m->m_desc  = "Restrict spider to these sites, one per line. "
 		"Leave empty for no spidering restrictions. "
 		"Gigablast uses the "
@@ -7562,15 +7562,16 @@ void Parms::init ( ) {
 		"the <a href=/admin/scheduler>spider scheduler</a> "
 		"page to make sure that the spider only indexes urls "
 		"that match the site patterns you specify here. "
-		"See <a href=#examples>example site patterns</a> below. "
+		"See <a href=#examples>example site list</a> below. "
 		"Limit list to 300MB.";
-	m->m_cgi   = "sitepatterns";
+	m->m_cgi   = "sitelist";
 	m->m_off   = (char *)&cr.m_siteListBuf - x;
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_def   = "";
-	m->m_flags = PF_TEXTAREA | PF_DUP;
+	// rebuild urlfilters now will nuke doledb and call updateSiteList()
+	m->m_flags = PF_TEXTAREA | PF_DUP | PF_REBUILDURLFILTERS;
 	m++;
 
 	/*
@@ -7590,10 +7591,10 @@ void Parms::init ( ) {
 	*/
 
 	// the new upload post submit button
-	m->m_title = "upload site patterns";
+	m->m_title = "upload site list";
 	m->m_desc  = "Upload your file of site patterns. Completely replaces "
-		"the site patterns in the text box above.";
-	m->m_cgi   = "uploadsitepatterns";
+		"the site list in the text box above.";
+	m->m_cgi   = "uploadsitelist";
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
 	m->m_off   = 0;
@@ -7616,8 +7617,8 @@ void Parms::init ( ) {
 	///////////////////////////////////////////
 	// SITE LIST
 	///////////////////////////////////////////
-	m->m_title = "site patterns";
-	m->m_xml   = "sitePatterns";
+	m->m_title = "site list";
+	m->m_xml   = "siteList";
 	m->m_desc  = "Restrict spider to these sites, one per line. "
 		"Leave empty for no spidering restrictions. "
 		"Gigablast uses the "
@@ -7628,13 +7629,14 @@ void Parms::init ( ) {
 		"that match the site patterns you specify here. "
 		"See <a href=#examples>example site patterns</a> below. "
 		"Limit list to 300MB.";
-	m->m_cgi   = "sitepatterns";
+	m->m_cgi   = "sitelist";
 	m->m_off   = (char *)&cr.m_siteListBuf - x;
 	m->m_page  = PAGE_SITES;
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_def   = "";
-	m->m_flags = PF_TEXTAREA ;
+	// rebuild urlfilters now will nuke doledb and call updateSiteList()
+	m->m_flags = PF_TEXTAREA | PF_REBUILDURLFILTERS;
 	m++;
 
 	/*
