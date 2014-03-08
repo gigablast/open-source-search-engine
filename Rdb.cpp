@@ -606,6 +606,11 @@ bool Rdb::deleteAllRecs ( collnum_t collnum ) {
 
 	// nuke all the files
 	base->reset();
+
+	// reset rec counts
+	cr->m_numNegKeysInTree[RDB_DOLEDB] = 0;
+	cr->m_numPosKeysInTree[RDB_DOLEDB] = 0;
+
 	return true;
 }
 

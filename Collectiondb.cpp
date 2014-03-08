@@ -2065,6 +2065,7 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 
 bool expandRegExShortcuts ( SafeBuf *sb ) ;
 bool updateSiteList ( collnum_t collnum );
+void nukeDoledb ( collnum_t collnum );
 
 // . anytime the url filters are updated, this function is called
 // . it is also called on load of the collection at startup
@@ -2101,28 +2102,22 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		SpiderColl *sc;
 		sc = g_spiderCache.getSpiderCollIffNonNull(m_collnum);
 
-		// . reset doledb so it gets rebuilt
-		// . what if there is a read outstanding?
-		// . MDW left off here
-		// . make sure to nuke m_doleIpTable as well
-		if ( sc ) sc->m_doleIpTable.clear();
+		log("coll: resetting doledb for %s (%li)",m_coll,
+		    (long)m_collnum);
 		
 		// clear doledb recs from tree
-		g_doledb.getRdb()->deleteColl ( m_collnum , m_collnum );
+		//g_doledb.getRdb()->deleteAllRecs ( m_collnum );
+		nukeDoledb ( m_collnum );
 		
 		// add it back
-		if ( ! g_doledb.getRdb()->addRdbBase2 ( m_collnum ) ) 
-			log("coll: error re-adding doledb for %s",m_coll);
-		
-		// reset rec counts i guess it was not done in delColl()
-		m_numNegKeysInTree[RDB_DOLEDB] = 0;
-		m_numPosKeysInTree[RDB_DOLEDB] = 0;
+		//if ( ! g_doledb.getRdb()->addRdbBase2 ( m_collnum ) ) 
+		//	log("coll: error re-adding doledb for %s",m_coll);
 		
 		// just start this over...
 		// . MDW left off here
 		//tryToDelete ( sc );
 		// maybe this is good enough
-		if ( sc ) sc->m_waitingTreeNeedsRebuild = true;
+		//if ( sc ) sc->m_waitingTreeNeedsRebuild = true;
 		
 		// . rebuild sitetable? in PageBasic.cpp.
 		// . re-adds seed spdierrequests using msg4

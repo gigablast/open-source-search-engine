@@ -1359,62 +1359,72 @@ char *SpiderColl::getCollName() {
 	return cr->m_coll;
 }
 
+void nukeDoledb ( collnum_t collnum ) ;
+
 //
 // remove all recs from doledb for the given collection
 //
-void doDoledbNuke ( int fd , void *state ) {
+static void nukeDoledbWrapper ( int fd , void *state ) {
+	g_loop.unregisterSleepCallback ( state , nukeDoledbWrapper );
+	collnum_t collnum = *(collnum_t *)state;
+	nukeDoledb ( collnum );
+}
 
-	WaitEntry *we = (WaitEntry *)state;
+void nukeDoledb ( collnum_t collnum ) {
 
-	if ( we->m_registered )
-		g_loop.unregisterSleepCallback ( we , doDoledbNuke );
+	//WaitEntry *we = (WaitEntry *)state;
+
+	//if ( we->m_registered )
+	//	g_loop.unregisterSleepCallback ( we , doDoledbNuke );
 
 	// . nuke doledb for this collnum
 	// . it will unlink the files and maps for doledb for this collnum
 	// . it will remove all recs of this collnum from its tree too
 	if ( g_doledb.getRdb()->isSavingTree () ) {
-		g_loop.registerSleepCallback ( 100 , we , doDoledbNuke );
-		we->m_registered = true;
+		g_loop.registerSleepCallback(100,&collnum,nukeDoledbWrapper);
+		//we->m_registered = true;
 		return;
 	}
 
 	// . ok, tree is not saving, it should complete entirely from this call
-	// . crap this is moving the whole directory!!!
-	// . say "false" to not move whole coll dira
-	g_doledb.getRdb()->deleteAllRecs ( we->m_cr->m_collnum );
+	g_doledb.getRdb()->deleteAllRecs ( collnum );
 
 	// re-add it back so the RdbBase is new'd
 	//g_doledb.getRdb()->addColl2 ( we->m_collnum );
 
-	// shortcut
-	SpiderColl *sc = we->m_cr->m_spiderColl;
+	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( collnum );
 
-	sc->m_lastUrlFiltersUpdate = getTimeGlobal();
-	// need to recompute this!
-	sc->m_ufnMapValid = false;
-	// reset this cache
-	//clearUfnTable();
-	// activate a scan if not already activated
-	sc->m_waitingTreeNeedsRebuild = true;
-	// if a scan is ongoing, this will re-set it
-	sc->m_nextKey2.setMin();
-	// clear it?
-	sc->m_waitingTree.clear();
-	sc->m_waitingTable.clear();
-
-	// kick off the spiderdb scan to repopulate waiting tree and doledb
-	sc->populateWaitingTreeFromSpiderdb(false);
+	if ( sc ) {
+		sc->m_lastUrlFiltersUpdate = getTimeGlobal();
+		// . make sure to nuke m_doleIpTable as well
+		sc->m_doleIpTable.clear();
+		// need to recompute this!
+		//sc->m_ufnMapValid = false;
+		// reset this cache
+		//clearUfnTable();
+		// activate a scan if not already activated
+		sc->m_waitingTreeNeedsRebuild = true;
+		// if a scan is ongoing, this will re-set it
+		sc->m_nextKey2.setMin();
+		// clear it?
+		sc->m_waitingTree.clear();
+		sc->m_waitingTable.clear();
+		// kick off the spiderdb scan to rep waiting tree and doledb
+		sc->populateWaitingTreeFromSpiderdb(false);
+	}
 
 	// nuke this state
-	mfree ( we , sizeof(WaitEntry) , "waitet" );
+	//mfree ( we , sizeof(WaitEntry) , "waitet" );
 
 	// note it
-	log("spider: finished clearing out doledb/waitingtree for %s",sc->m_coll);
+	log("spider: finished nuking doledb for coll (%li)",
+	    (long)collnum);
 }
 
 // . call this when changing the url filters
 // . will make all entries in waiting tree have zero time basically
 // . and makes us repopulate doledb from these waiting tree entries
+/*
 void SpiderColl::urlFiltersChanged ( ) {
 
 	// log it
@@ -1437,6 +1447,7 @@ void SpiderColl::urlFiltersChanged ( ) {
 	// remove all recs from doledb for the given collection
 	doDoledbNuke ( 0 , we );
 }
+*/
 
 // this one has to scan all of spiderdb
 bool SpiderColl::makeWaitingTree ( ) {
