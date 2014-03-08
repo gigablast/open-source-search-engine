@@ -2094,18 +2094,40 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		}
 	}
 
-	// rebuild sitetable? in PageBasic.cpp.
-	updateSiteList ( m_collnum );
+	// . do not do this at startup
+	// . this essentially resets doledb
+	if ( g_doledb.m_rdb.m_initialized ) {
 
-	// . reset doledb so it gets rebuilt
-	// . what if there is a read outstanding?
-	// . make sure to nuke m_doleIpTable as well
-	// . MDW left off here
-	//nukeDoledb();
+		SpiderColl *sc;
+		sc = g_spiderCache.getSpiderCollIffNonNull(m_collnum);
 
-	// just start this over...
-	// . MDW left off here
-	//tryToDelete ( sc );
+		// . reset doledb so it gets rebuilt
+		// . what if there is a read outstanding?
+		// . MDW left off here
+		// . make sure to nuke m_doleIpTable as well
+		if ( sc ) sc->m_doleIpTable.clear();
+		
+		// clear doledb recs from tree
+		g_doledb.getRdb()->deleteColl ( m_collnum , m_collnum );
+		
+		// add it back
+		if ( ! g_doledb.getRdb()->addRdbBase2 ( m_collnum ) ) 
+			log("coll: error re-adding doledb for %s",m_coll);
+		
+		// reset rec counts i guess it was not done in delColl()
+		m_numNegKeysInTree[RDB_DOLEDB] = 0;
+		m_numPosKeysInTree[RDB_DOLEDB] = 0;
+		
+		// just start this over...
+		// . MDW left off here
+		//tryToDelete ( sc );
+		// maybe this is good enough
+		if ( sc ) sc->m_waitingTreeNeedsRebuild = true;
+		
+		// . rebuild sitetable? in PageBasic.cpp.
+		// . re-adds seed spdierrequests using msg4
+		updateSiteList ( m_collnum );
+	}
 
 
 	// only for diffbot custom crawls
