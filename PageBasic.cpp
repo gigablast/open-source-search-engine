@@ -200,6 +200,10 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 
 		u.set ( s , pe - s );
 
+		// empty line?
+		if ( pe - s <= 0 ) 
+			continue;
+
 		// error? skip it then...
 		if ( u.getHostLen() <= 0 ) {
 			log("basic: error on line #%li in sitelist",lineNum);
@@ -249,9 +253,9 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 			// ok, we got something here i think
 			if ( u.getPathLen() <= 1 ) { char *xx=NULL;*xx=0; }
 			// calc length from "start" of line so we can
-			// jump to the path quickly for compares
-			pd.m_pathOff = x - start;
-			pd.m_pathLen = pe - x;
+			// jump to the path quickly for compares. inc "/"
+			pd.m_pathOff = (x-1) - start;
+			pd.m_pathLen = pe - (x-1);
 			break;
 		}
 
@@ -318,7 +322,11 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 		updateSiteList ( sc->m_collnum , false );
 	}
 
-	if ( dt->getNumSlotsUsed() == 0 ) { char *xx=NULL;*xx=0; }
+	if ( dt->getNumSlotsUsed() == 0 ) { 
+		// empty site list -- no matches
+		return NULL;
+		//char *xx=NULL;*xx=0; }
+	}
 
 	// this table maps a 32-bit domain hash of a domain to a
 	// patternData class. only for those urls that have firstIps that

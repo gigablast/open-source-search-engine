@@ -735,8 +735,11 @@ class SpiderRequest {
 		char *p = m_url;
 		for ( ; *p ; p++ ) {
 			if ( *p != ':' ) continue;
-			p++; if ( *p != '/' ) continue;
-			p++; if ( *p != '/' ) continue;
+			p++; 
+			if ( *p != '/' ) continue;
+			p++; 
+			if ( *p != '/' ) continue;
+			p++;
 			break;
 		}
 		if ( ! *p ) return NULL;
