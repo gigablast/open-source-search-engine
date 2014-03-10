@@ -175,6 +175,7 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 		bool seedMe = true;
 		bool isUrl = true;
 		bool isNeg = false;
+		bool isFilter = true;
 
 	innerLoop:
 		// skip spaces at start of line
@@ -199,13 +200,16 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 		}
 
 		// exact:?
-		if ( strncmp(s,"exact:",6) == 0 ) {
-			s += 6;
-			goto innerLoop;
-		}
+		//if ( strncmp(s,"exact:",6) == 0 ) {
+		//	s += 6;
+		//	goto innerLoop;
+		//}
 
+		// these will be manual adds and should pass url filters
+		// because they have the "ismanual" directive override
 		if ( strncmp(s,"seed:",5) == 0 ) {
 			s += 5;
+			isFilter = false;
 			goto innerLoop;
 		}
 
@@ -277,6 +281,11 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 			added++;
 
 		}
+
+		// if it is a "seed: xyz.com" thing it is seed only
+		// do not use it for a filter rule
+		if ( ! isFilter ) continue;
+		
 		
 		// make the data node
 		PatternData pd;
@@ -540,7 +549,9 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "<tr>"
 		      "<td>seed:www.goodstuff.com/myurl.html</td>"
 		      "<td>"
-		      "Try to spider this url and all its outlinks."
+		      "Try to spider this url. Add any outlinks into the "
+		      "spider queue, but they will only be spidered if they "
+		      "match a site filter in this list."
 		      "</td>"
 		      "</tr>"
 
@@ -580,12 +591,13 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 
 
 		      // exact match
-		      "<tr>"
-		      "<td>exact:http://xyz.goodstuff.com/myurl.html</td>"
-		      "<td>"
-		      "Allow this specific url."
-		      "</td>"
-		      "</tr>"
+		      
+		      //"<tr>"
+		      //"<td>exact:http://xyz.goodstuff.com/myurl.html</td>"
+		      //"<td>"
+		      //"Allow this specific url."
+		      //"</td>"
+		      //"</tr>"
 
 		      // local subdir match
 		      "<tr>"
