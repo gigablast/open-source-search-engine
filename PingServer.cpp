@@ -417,7 +417,7 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	//*(long*)p = (long)g_test.m_urlsIndexed;
 	//p += sizeof(long);
 	// our num recs, eventsIndexed
-	//*(long*)p = g_timedb.getNumTotalEvents();//g_coldb.m_numEventsAllColls;
+	//*(long*)p = g_timedb.getNumTotalEvents();//g_coldb.m_numEventsAllColl
 	//*(long *)p = 0;
 	//p += sizeof(long);
 	// slow disk reads
@@ -429,6 +429,8 @@ void PingServer::pingHost ( Host *h , uint32_t ip , uint16_t port ) {
 	// ensure crc is legit
 	if ( g_hostdb.getCRC() == 0 ) { char *xx=NULL;*xx=0; }
 
+	// disk usage (df -ka)
+	*(float *)p = g_process.m_diskUsage; p += 4;
 
 	// flags indicating our state
 	long flags = 0;
@@ -895,6 +897,10 @@ void handleRequest11 ( UdpSlot *slot , long niceness ) {
 		p += sizeof(long);
 		// sanity
 		if ( h->m_hostsConfCRC == 0 ) { char *xx=NULL;*xx=0; }
+
+		// disk usage
+		h->m_diskUsage = *(float *)p;
+		p += sizeof(float);
 
 		// put the state flags
 		h->m_flags = *(long *)(p);
@@ -3116,7 +3122,8 @@ void doneGettingNotifyUrlWrapper ( void *state , TcpSocket *sock ) {
 	ei->m_finalCallback ( ei->m_finalState );
 }
 
-bool printCrawlDetailsInJson ( SafeBuf &sb , CollectionRec *cx ) ;
+// for printCrawlDetailsInJson()
+#include "PageCrawlBot.h"
 
 // . return false if would block, true otherwise
 // . used to send email and get a url when a crawl hits a maxToCrawl
@@ -3199,7 +3206,7 @@ bool sendNotification ( EmailInfo *ei ) {
 		// also in post body
 		SafeBuf postContent;
 		// the collection details
-		printCrawlDetailsInJson ( postContent , cr );
+		printCrawlDetailsInJson ( &postContent , cr );
 		// content-length of it
 		fullReq.safePrintf("Content-Length: %li\r\n",
 				   postContent.length());

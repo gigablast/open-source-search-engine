@@ -604,7 +604,7 @@ bool Collectiondb::addRdbBasesForCollRec ( CollectionRec *cr ) {
 
 
 
-
+/*
 bool Collectiondb::isAdmin ( HttpRequest *r , TcpSocket *s ) {
 	if ( r->getLong("admin",1) == 0 ) return false;
 	if ( g_conf.isMasterAdmin ( s , r ) ) return true;
@@ -615,7 +615,6 @@ bool Collectiondb::isAdmin ( HttpRequest *r , TcpSocket *s ) {
 	//return cr->hasPermission ( r , s );
 }
 
-/*
 void savingCheckWrapper1 ( int fd , void *state ) {
 	WaitEntry *we = (WaitEntry *)state;
 	// no state?
@@ -2065,6 +2064,8 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 }
 
 bool expandRegExShortcuts ( SafeBuf *sb ) ;
+bool updateSiteList ( collnum_t collnum , bool addSeeds );
+void nukeDoledb ( collnum_t collnum );
 
 // . anytime the url filters are updated, this function is called
 // . it is also called on load of the collection at startup
@@ -2092,6 +2093,36 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 			m_urlFiltersHavePageCounts = true;
 			break;
 		}
+	}
+
+	// . do not do this at startup
+	// . this essentially resets doledb
+	if ( g_doledb.m_rdb.m_initialized ) {
+
+		SpiderColl *sc;
+		sc = g_spiderCache.getSpiderCollIffNonNull(m_collnum);
+
+		log("coll: resetting doledb for %s (%li)",m_coll,
+		    (long)m_collnum);
+		
+		// clear doledb recs from tree
+		//g_doledb.getRdb()->deleteAllRecs ( m_collnum );
+		nukeDoledb ( m_collnum );
+		
+		// add it back
+		//if ( ! g_doledb.getRdb()->addRdbBase2 ( m_collnum ) ) 
+		//	log("coll: error re-adding doledb for %s",m_coll);
+		
+		// just start this over...
+		// . MDW left off here
+		//tryToDelete ( sc );
+		// maybe this is good enough
+		//if ( sc ) sc->m_waitingTreeNeedsRebuild = true;
+		
+		// . rebuild sitetable? in PageBasic.cpp.
+		// . re-adds seed spdierrequests using msg4
+		// . true = addSeeds
+		updateSiteList ( m_collnum , true );
 	}
 
 

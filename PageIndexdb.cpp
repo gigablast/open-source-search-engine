@@ -130,7 +130,7 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 	// save the TcpSocket
 	st->m_socket = s;
 	// and if the request is local/internal or not
-	st->m_isAdmin = g_collectiondb.isAdmin ( r , s );
+	st->m_isAdmin = g_conf.isCollAdmin ( s , r );
 	st->m_isLocal = r->isLocal();
 	st->m_r.copy ( r );
 	// . check for add/delete request

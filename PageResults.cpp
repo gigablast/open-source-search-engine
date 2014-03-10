@@ -1324,7 +1324,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	if ( isAdmin ) {
 		sb->safePrintf(" &nbsp; "
 			      "<font color=red><b>"
-			      "<a href=\"/master?c=%s\">"
+			      "<a href=\"/admin/basic?c=%s\">"
 			      "[admin]"
 			      "</a></b></font>",coll);
 		// print reindex link
@@ -1388,7 +1388,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		// get the filename directly
 		sb->safePrintf (" &nbsp; "
 			       "<font color=red><b>"
-			       "<a href=\"/master/tagdb?"
+			       "<a href=\"/admin/tagdb?"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
 			       "c=%s\">"
@@ -1405,7 +1405,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		*sp = '\0';
 		sb->safePrintf (" &nbsp; "
 			       "<font color=red><b>"
-			       "<a href=\"/master/tagdb?"
+			       "<a href=\"/admin/tagdb?"
 			       //"tagid0=%li&"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
@@ -1724,7 +1724,7 @@ bool printSearchResultsTail ( State0 *st ) {
 
 	if ( isAdmin && banSites.length() > 0 )
 		sb->safePrintf ("<br><br><div align=right><b>"
-			       "<a href=\"/master/tagdb?"
+			       "<a href=\"/admin/tagdb?"
 			       //"tagid0=%li&"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
@@ -2383,8 +2383,16 @@ bool printResult ( State0 *st, long ix ) {
 				      "]]>"
 				      "</contentType>\n",
 				      cs);
-		else
-			sb->safePrintf(" (%s) &nbsp;" ,cs);
+		else {
+			sb->safePrintf(" <b><font style=color:white;"
+				      "background-color:maroon;>");
+			char *p = cs;
+			for ( ; *p ; p++ ) {
+				char c = to_upper_a(*p);
+				sb->pushChar(c);
+			}
+			sb->safePrintf("</font></b> &nbsp;");
+		}
 	}
 
 	////////////
@@ -2753,13 +2761,13 @@ bool printResult ( State0 *st, long ix ) {
 		// . if it's local, don't put the hostname/port in
 		//   there cuz it will mess up Global Spec's machine
 		//if ( h->m_groupId == g_hostdb.m_groupId ) 
-		sb->safePrintf(" - <a href=\"/master/titledb?c=%s&"
+		sb.safePrintf(" - <a href=\"/admin/titledb?c=%s&"
 			      "d=%lli",coll,mr->m_docId);
 		// then the [info] link to show the TitleRec
 		sb->safePrintf ( "\">[info]</a>" );
 		
 		// now the analyze link
-		sb->safePrintf (" - <a href=\"/master/parser?c=%s&"
+		sb.safePrintf (" - <a href=\"/admin/parser?c=%s&"
 			       "old=1&hc=%li&u=", 
 			       coll,
 			       (long)mr->m_hopcount);
@@ -2802,7 +2810,7 @@ bool printResult ( State0 *st, long ix ) {
 			banVal = 0;
 		}
 		sb->safePrintf(" - "
-			      " <a href=\"/master/tagdb?"
+			      " <a href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
 			      "tagdata0=%li&"
@@ -2819,7 +2827,7 @@ bool printResult ( State0 *st, long ix ) {
 		memcpy ( dbuf , uu.getHost() , dlen );
 		dbuf [ dlen ] = '\0';
 		sb->safePrintf(" - "
-			      " <a href=\"/master/tagdb?"
+			      " <a href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
 			      "tagdata0=%li&"

@@ -6,8 +6,21 @@
 HttpRequest::HttpRequest () { m_cgiBuf = NULL; m_cgiBuf2 = NULL; reset(); }
 HttpRequest::~HttpRequest() { reset();      }
 
+char HttpRequest::getReplyFormat() {
+	if ( m_replyFormatValid ) return m_replyFormat;
+	char *fs = getString("format",NULL,NULL);
+	char fmt = FORMAT_HTML;
+	if ( fs && strcmp(fs,"html") == 0 ) fmt = FORMAT_HTML;
+	if ( fs && strcmp(fs,"json") == 0 ) fmt = FORMAT_JSON;
+	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
+	m_replyFormat = fmt;
+	m_replyFormatValid = true;
+	return m_replyFormat;
+}
+
 void HttpRequest::reset() {
 	m_numFields = 0;
+	m_replyFormatValid = false;
 	//if ( m_cgiBuf ) mfree ( m_cgiBuf , m_cgiBufMaxLen , "HttpRequest");
 	m_cgiBufLen    = 0;
 	m_cgiBuf       = NULL;

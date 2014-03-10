@@ -79,7 +79,8 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 			      );
 
 	if ( r->isLocal() )
-	     sb.safePrintf("&nbsp; &nbsp;[<a href=\"/master?\">Admin</a>]");
+	    sb.safePrintf("&nbsp; &nbsp; [<a href=\"/admin/settings\">"
+			  "<font color=red>Admin</font></a>]");
 	sb.safePrintf("</p></b></center></body></html>");
 	return true;
 }
@@ -1285,7 +1286,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 
 	// see if they provided a url of a file of urls if they did not
 	// provide a url to add directly
-	bool isAdmin = g_collectiondb.isAdmin ( r , s );
+	bool isAdmin = g_conf.isCollAdmin ( s , r );
 	long  ufuLen = 0;
 	char *ufu = NULL;
 	if ( isAdmin )

@@ -1891,7 +1891,7 @@ bool Msg5::doneMerging ( ) {
 
 	// . for every round we get call increase by 10 percent
 	// . try to fix all those negative recs in the rebalance re-run
-	m_newMinRecSizes *= (1.0 + (m_round * .10));
+	m_newMinRecSizes *= (long)(1.0 + (m_round * .10));
 
 	// wrap around?
 	if ( m_newMinRecSizes < 0 || m_newMinRecSizes > 1000000000 )

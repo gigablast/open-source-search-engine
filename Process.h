@@ -92,6 +92,7 @@ class Process {
 	float m_roofTemp;
 	long  m_currentFanState;
 	long  m_desiredFanState;
+	float m_diskUsage;
 };
 
 extern Process g_process;

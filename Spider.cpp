@@ -1160,7 +1160,7 @@ bool SpiderColl::load ( ) {
 	}
 
 	// reset this once
-	m_msg4Avail    = true;
+	m_msg1Avail    = true;
 	m_isPopulating = false;
 
 	if ( ! m_lastDownloadCache.init ( 35000      , // maxcachemem,
@@ -1360,62 +1360,72 @@ char *SpiderColl::getCollName() {
 	return cr->m_coll;
 }
 
+void nukeDoledb ( collnum_t collnum ) ;
+
 //
 // remove all recs from doledb for the given collection
 //
-void doDoledbNuke ( int fd , void *state ) {
+static void nukeDoledbWrapper ( int fd , void *state ) {
+	g_loop.unregisterSleepCallback ( state , nukeDoledbWrapper );
+	collnum_t collnum = *(collnum_t *)state;
+	nukeDoledb ( collnum );
+}
 
-	WaitEntry *we = (WaitEntry *)state;
+void nukeDoledb ( collnum_t collnum ) {
 
-	if ( we->m_registered )
-		g_loop.unregisterSleepCallback ( we , doDoledbNuke );
+	//WaitEntry *we = (WaitEntry *)state;
+
+	//if ( we->m_registered )
+	//	g_loop.unregisterSleepCallback ( we , doDoledbNuke );
 
 	// . nuke doledb for this collnum
 	// . it will unlink the files and maps for doledb for this collnum
 	// . it will remove all recs of this collnum from its tree too
 	if ( g_doledb.getRdb()->isSavingTree () ) {
-		g_loop.registerSleepCallback ( 100 , we , doDoledbNuke );
-		we->m_registered = true;
+		g_loop.registerSleepCallback(100,&collnum,nukeDoledbWrapper);
+		//we->m_registered = true;
 		return;
 	}
 
 	// . ok, tree is not saving, it should complete entirely from this call
-	// . crap this is moving the whole directory!!!
-	// . say "false" to not move whole coll dira
-	g_doledb.getRdb()->deleteAllRecs ( we->m_cr->m_collnum );
+	g_doledb.getRdb()->deleteAllRecs ( collnum );
 
 	// re-add it back so the RdbBase is new'd
 	//g_doledb.getRdb()->addColl2 ( we->m_collnum );
 
-	// shortcut
-	SpiderColl *sc = we->m_cr->m_spiderColl;
+	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( collnum );
 
-	sc->m_lastUrlFiltersUpdate = getTimeGlobal();
-	// need to recompute this!
-	sc->m_ufnMapValid = false;
-	// reset this cache
-	//clearUfnTable();
-	// activate a scan if not already activated
-	sc->m_waitingTreeNeedsRebuild = true;
-	// if a scan is ongoing, this will re-set it
-	sc->m_nextKey2.setMin();
-	// clear it?
-	sc->m_waitingTree.clear();
-	sc->m_waitingTable.clear();
-
-	// kick off the spiderdb scan to repopulate waiting tree and doledb
-	sc->populateWaitingTreeFromSpiderdb(false);
+	if ( sc ) {
+		sc->m_lastUrlFiltersUpdate = getTimeGlobal();
+		// . make sure to nuke m_doleIpTable as well
+		sc->m_doleIpTable.clear();
+		// need to recompute this!
+		//sc->m_ufnMapValid = false;
+		// reset this cache
+		//clearUfnTable();
+		// activate a scan if not already activated
+		sc->m_waitingTreeNeedsRebuild = true;
+		// if a scan is ongoing, this will re-set it
+		sc->m_nextKey2.setMin();
+		// clear it?
+		sc->m_waitingTree.clear();
+		sc->m_waitingTable.clear();
+		// kick off the spiderdb scan to rep waiting tree and doledb
+		sc->populateWaitingTreeFromSpiderdb(false);
+	}
 
 	// nuke this state
-	mfree ( we , sizeof(WaitEntry) , "waitet" );
+	//mfree ( we , sizeof(WaitEntry) , "waitet" );
 
 	// note it
-	log("spider: finished clearing out doledb/waitingtree for %s",sc->m_coll);
+	log("spider: finished nuking doledb for coll (%li)",
+	    (long)collnum);
 }
 
 // . call this when changing the url filters
 // . will make all entries in waiting tree have zero time basically
 // . and makes us repopulate doledb from these waiting tree entries
+/*
 void SpiderColl::urlFiltersChanged ( ) {
 
 	// log it
@@ -1438,6 +1448,7 @@ void SpiderColl::urlFiltersChanged ( ) {
 	// remove all recs from doledb for the given collection
 	doDoledbNuke ( 0 , we );
 }
+*/
 
 // this one has to scan all of spiderdb
 bool SpiderColl::makeWaitingTree ( ) {
@@ -2092,6 +2103,17 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 		return true;
 	}
 
+	// update crawlinfo stats here and not in xmldoc so that we count
+	// seeds and bulk urls added from add url and can use that to
+	// determine if the collection is empty of urls or not for printing
+	// out the colored bullets in printCollectionNavBar() in Pages.cpp.
+	CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
+	if ( cr ) {
+		cr->m_localCrawlInfo .m_urlsHarvested++;
+		cr->m_globalCrawlInfo.m_urlsHarvested++;
+		cr->m_needsSave = true;
+	}
+
 	// . if already have a request in doledb for this firstIp, forget it!
 	// . TODO: make sure we remove from doledb first before adding this
 	//   spider request
@@ -2210,7 +2232,6 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 		// clear error for this if there was any
 		g_errno = 0;
 	}
-
 
 	if ( ! g_conf.m_logDebugSpider ) return true;//status;
 
@@ -3115,7 +3136,7 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 static void doledWrapper ( void *state ) {
 	SpiderColl *THIS = (SpiderColl *)state;
 	// msg4 is available again
-	THIS->m_msg4Avail = true;
+	THIS->m_msg1Avail = true;
 
 	if ( g_errno )
 		log("spider: msg1 addlist had error: %s. need to "
@@ -4669,7 +4690,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	*/
 
 	// how did this happen?
-	if ( ! m_msg4Avail ) { char *xx=NULL;*xx=0; }
+	if ( ! m_msg1Avail ) { char *xx=NULL;*xx=0; }
 
 	// add it to doledb ip table now so that waiting tree does not
 	// immediately get another spider request from this same ip added
@@ -4751,7 +4772,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 				       // if niceness is 0!
 				       MAX_NICENESS);
 	// if it blocked set this to true so we do not reuse it
-	if ( ! status ) m_msg4Avail = false;
+	if ( ! status ) m_msg1Avail = false;
 
 	long storedFirstIp = (m_waitingTreeKey.n0) & 0xffffffff;
 
@@ -9852,6 +9873,9 @@ bool isAggregator ( long siteHash32,long domHash32,char *url,long urlLen ) {
 #define SIGN_GE 5
 #define SIGN_LE 6
 
+// from PageBasic.cpp
+char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) ;
+
 // . this is called by SpiderCache.cpp for every url it scans in spiderdb
 // . we must skip certain rules in getUrlFilterNum() when doing to for Msg20
 //   because things like "parentIsRSS" can be both true or false since a url
@@ -9879,6 +9903,10 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 
 	long  urlLen = sreq->getUrlLen();
 	char *url    = sreq->m_url;
+
+	char *row;
+	bool checkedRow = false;
+	SpiderColl *sc = cr->m_spiderColl;
 
 	//if ( strstr(url,"http://www.vault.com/rankings-reviews/company-rankings/law/vault-law-100/.aspx?pg=2" ))
 	//	log("hey");
@@ -10211,6 +10239,29 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			p += 2;
 			goto checkNextRule;
 		}
+
+		// is it in the big list of sites?
+		if ( strncmp(p,"insitelist",10) == 0 ) {
+			// skip for msg20
+			//if ( isForMsg20 ) continue;
+			if ( ! checkedRow ) {
+				// only do once for speed
+				checkedRow = true;
+				// this function is in PageBasic.cpp
+				row = getMatchingUrlPattern ( sc, sreq );
+			}
+			// if we are not submitted from the add url api, skip
+			if ( (bool)row == val ) continue;
+			// skip
+			p += 10;
+			// skip to next constraint
+			p = strstr(p, "&&");
+			// all done?
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+		
 
 		// . was it submitted from PageAddUrl.cpp?
 		// . replaces the "add url priority" parm
@@ -12441,6 +12492,22 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 	return false;
 }
 
+long getFakeIpForUrl1 ( char *url1 ) {
+	// make the probable docid
+	long long probDocId = g_titledb.getProbableDocId ( url1 );
+	// make one up, like we do in PageReindex.cpp
+	long firstIp = (probDocId & 0xffffffff);
+	return firstIp;
+}
+
+long getFakeIpForUrl2 ( Url *url2 ) {
+	// make the probable docid
+	long long probDocId = g_titledb.getProbableDocId ( url2 );
+	// make one up, like we do in PageReindex.cpp
+	long firstIp = (probDocId & 0xffffffff);
+	return firstIp;
+}
+
 // returns false and sets g_errno on error
 bool SpiderRequest::setFromAddUrl ( char *url ) {
 	// reset it
@@ -12450,6 +12517,7 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 
 	// make one up, like we do in PageReindex.cpp
 	long firstIp = (probDocId & 0xffffffff);
+	//long firstIp = getFakeIpForUrl1 ( url );
 
 	// ensure not crazy
 	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
@@ -12502,6 +12570,7 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 	long hlen = 0;
 	char *host = getHostFast ( url , &hlen );
 	m_siteHash32 = hash32 ( host , hlen );
+	m_hostHash32 = m_siteHash32;
 
 	return true;
 }

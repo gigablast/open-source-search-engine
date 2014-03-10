@@ -18597,6 +18597,11 @@ bool XmlDoc::logIt ( ) {
 	else
 		sb.safePrintf("urlinjected=0 ");
 
+	if ( m_sreqValid && m_sreq.m_isAddUrl )
+		sb.safePrintf("isaddurl=1 ");
+	else
+		sb.safePrintf("isaddurl=0 ");
+
 	if ( m_sreqValid && m_sreq.m_isPageReindex )
 		sb.safePrintf("pagereindex=1 ");
 
@@ -23453,10 +23458,11 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		ksr->m_isContacty = 1;
 	}
 
-	// this is just how many urls we tried to index
-	cr->m_localCrawlInfo.m_urlsHarvested += numAdded;
-	cr->m_globalCrawlInfo.m_urlsHarvested += numAdded;
-	cr->m_needsSave = true;
+	// . this is just how many urls we tried to index
+	// . move into Spider::addSpiderRequest()
+	//cr->m_localCrawlInfo.m_urlsHarvested += numAdded;
+	//cr->m_globalCrawlInfo.m_urlsHarvested += numAdded;
+	//cr->m_needsSave = true;
 
 	// save it
 	m_numOutlinksAdded      = numAdded;
@@ -44088,7 +44094,7 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 					      m_masterState, // state
 				      m_masterLoop, // callback
 					      false, // isInjecting?
-					      NULL, // pbuf (for printing)
+					      false, // pbuf (for printing)
 					      this, // xd holder (Msg25::m_xd)
 					      // this is irrelevant since we
 					      // are getting all inlinks:

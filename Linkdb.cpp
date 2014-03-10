@@ -514,7 +514,7 @@ bool getLinkInfo ( SafeBuf   *reqBuf              ,
 	reqBuf->purge();
 
 	// clear = true. put 0 bytes in there
-	if ( ! reqBuf->reserve ( need ,"m25req", true ) ) return NULL;
+	if ( ! reqBuf->reserve ( need ,"m25req", true ) ) return true;
 
 	Msg25Request *req = (Msg25Request *)reqBuf->getBufStart();
 

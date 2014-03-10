@@ -17,6 +17,8 @@ bool addMetaList ( char *p , class UdpSlot *slot = NULL ) ;
 
 bool isInMsg4LinkedList ( class Msg4 *msg4 ) ;
 
+#include "SafeBuf.h"
+
 class Msg4 {
 
  public:
@@ -89,6 +91,8 @@ class Msg4 {
 
 	void         (*m_callback ) ( void *state );
 	void          *m_state;
+
+	SafeBuf m_tmpBuf;
 
 	char      m_rdbId;
 	char      m_inUse;

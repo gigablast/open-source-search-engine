@@ -386,7 +386,7 @@ static void powerMonitorWrapper ( int fd , void *state ) ;
 static void fanSwitchCheckWrapper ( int fd , void *state ) ;
 static void gotPowerWrapper ( void *state , TcpSocket *s ) ;
 static void doneCmdWrapper        ( void *state ) ;
-//static void  hdtempWrapper        ( int fd , void *state ) ;
+static void  hdtempWrapper        ( int fd , void *state ) ;
 static void  hdtempDoneWrapper    ( void *state , ThreadEntry *t ) ;
 static void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) ;
 static void heartbeatWrapper    ( int fd , void *state ) ;
@@ -401,6 +401,8 @@ Process::Process ( ) {
 }
 
 bool Process::init ( ) {
+	// -1 means unknown
+	m_diskUsage = -1.0;
 	// we do not know if the fans are turned off or on
 	m_currentFanState = -1;
 	m_threadOut = false;
@@ -493,8 +495,9 @@ bool Process::init ( ) {
 
 	// . hard drive temperature
 	// . now that we use intel ssds that do not support smart, ignore this
-	//if ( ! g_loop.registerSleepCallback(10000,NULL,hdtempWrapper,0))
-	//	return false;
+	// . well use it for disk usage i guess
+	if ( ! g_loop.registerSleepCallback(10000,NULL,hdtempWrapper,0))
+		return false;
 
 	// power monitor, every 30 seconds
 	if ( ! g_loop.registerSleepCallback(30000,NULL,powerMonitorWrapper,0))
@@ -872,9 +875,64 @@ void hdtempDoneWrapper ( void *state , ThreadEntry *t ) {
 	s_lasttime = now;
 }
 
+
+// set Process::m_diskUsage
+float getDiskUsage ( ) {
+
+	// first get disk usage now
+	char cmd[10048];
+	char *out = "/tmp/diskusage";
+	snprintf(cmd,10000,"df -ka %s | tail -1 | awk '{print $5}' > %s",
+		 g_hostdb.m_dir,
+		 out);
+	int err = system ( cmd );
+	if ( err == 127 ) {
+		log("build: /bin/sh does not exist. can not get disk usage.");
+		return -1.0; // unknown
+	}
+	// this will happen if you don't upgrade glibc to 2.2.4-32 or above
+	if ( err != 0 ) {
+		log("build: Call to system(\"%s\") had error.",cmd);
+		return -1.0; // unknown
+	}
+
+	// read in temperatures from file
+	int fd = open ( "/tmp/diskusage" , O_RDONLY );
+	if ( fd < 0 ) {
+		//m_errno = errno;
+		log("build: Could not open %s for reading: %s.",
+		    out,mstrerror(errno));
+		return -1.0; // unknown
+	}
+	char buf[2000];
+	long r = read ( fd , buf , 2000 );
+	// did we get an error
+	if ( r <= 0 ) {
+		//m_errno = errno;
+		log("build: Error reading %s: %s.",out,mstrerror(errno));
+		close ( fd );
+		return -1.0; // unknown
+	}
+	// clean up shop
+	close ( fd );
+
+	float usage;
+	sscanf(buf,"%f",&usage);
+	return usage;
+}
+
+
 // . sets m_errno on error
 // . taken from Msg16.cpp
 void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) {
+
+	// run the df -ka cmd
+	g_process.m_diskUsage = getDiskUsage();
+
+
+	// ignore temps now. ssds don't have it
+	return NULL;
+	
 
 	static char *s_parm = "ata";
 	// make a system call to /usr/sbin/hddtemp /dev/sda,b,c,d
@@ -885,9 +943,9 @@ void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) {
 	//	"/usr/sbin/hddtemp /dev/sdd >> /tmp/hdtemp  ";
  retry:
 	// linux 2.4 does not seem to like hddtemp
-	char cmd[10048];
 	char *path = g_hostdb.m_dir;
 	//char *path = "/usr/sbin/";
+	char cmd[10048];
 	sprintf ( cmd ,
 		  "%ssmartctl -Ad %s /dev/sda | grep Temp | awk '{print $10}' >  /tmp/hdtemp2;"
 		  "%ssmartctl -Ad %s /dev/sdb | grep Temp | awk '{print $10}' >> /tmp/hdtemp2;"
@@ -913,8 +971,8 @@ void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) {
 		//m_errno = EBADENGINEER;
 		log("build: Call to system(\"%s\") had error.",cmd);
 		//s_flag = 1;
-		// wait an hour
-		s_nextTime = getTime() + 3600;
+		// wait 5 minutes
+		s_nextTime = getTime() + 300; // 3600;
 		return NULL;
 	}
 	// read in temperatures from file
