@@ -127,11 +127,15 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 		return true;
 
 
+	// clear old shit
+	sc->m_posSubstringBuf.purge();
+	sc->m_negSubstringBuf.purge();
+
 	// we can now free the old site list methinks
 	//cr->m_siteListBuf.purge();
 
 	// reset flags
-	sc->m_siteListAsteriskLine = NULL;
+	//sc->m_siteListAsteriskLine = NULL;
 	sc->m_siteListHasNegatives = false;
 	sc->m_siteListIsEmpty = true;
 
