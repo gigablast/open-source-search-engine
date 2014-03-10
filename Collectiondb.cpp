@@ -2095,12 +2095,13 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		}
 	}
 
+	// if collection is brand new being called from addNewColl()
+	// then sc will be NULL
+	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(m_collnum);
+
 	// . do not do this at startup
 	// . this essentially resets doledb
-	if ( g_doledb.m_rdb.m_initialized ) {
-
-		SpiderColl *sc;
-		sc = g_spiderCache.getSpiderCollIffNonNull(m_collnum);
+	if ( g_doledb.m_rdb.m_initialized && sc ) {
 
 		log("coll: resetting doledb for %s (%li)",m_coll,
 		    (long)m_collnum);

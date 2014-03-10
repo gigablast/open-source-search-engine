@@ -1676,7 +1676,7 @@ bool Msg40::gotSummary ( ) {
 		}
 
 
-		//log("msg40: printing #%li",m_printi);
+		log("msg40: printing #%li (%lu)",m_printi,mr->m_contentHash32);
 
 		// . ok, we got it, so print it and stream it
 		// . this might set m_hadPrintError to true
@@ -5186,7 +5186,7 @@ bool Msg40::printSearchResult9 ( long ix ) {
 
 		if ( m_si->m_format == FORMAT_CSV ) {
 			printJsonItemInCSV ( st , ix );
-			log("print: printing #%li csv",(long)ix);
+			//log("print: printing #%li csv",(long)ix);
 		}
 
 		// print that out into st->m_sb safebuf
