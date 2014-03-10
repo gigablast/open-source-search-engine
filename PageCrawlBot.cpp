@@ -2103,28 +2103,30 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		log("crawlbot: adding seeds=\"%s\" coll=%s (%li)",
 		    seeds,coll,(long)st->m_collnum);
 
+	char bulkurlsfile[1024];
+	snprintf(bulkurlsfile, 1024, "%scoll.%s.%li/bulkurls.txt", g_hostdb.m_dir , coll , (long)st->m_collnum );
 	if ( spots ) {
 		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
 		    (long)gbstrlen(spots),coll,(long)st->m_collnum);
-		char filename[1024];
-		snprintf(filename, 1024, "%scoll.%s.%li/bulkurls.txt", g_hostdb.m_dir , coll , (long)st->m_collnum );
-		FILE *f = fopen(filename, "w");
+		FILE *f = fopen(bulkurlsfile, "w");
 		if (f != NULL) {
-		    // urls are space separated. save to file with newline separated urls.
-		    char *p = spots;
-		    while ( true ) {
-		        // skip white space (\0 is not a whitespace)
-		        for ( ; is_wspace_a(*p) ; p++ );
-		        // all done?
-		        if ( ! *p ) break;
-		        char *saved = p;
-		        // advance to next white space
-		        for ( ; ! is_wspace_a(*p) && *p ; p++ );
-		        char *end = p;
-		        fprintf(f, "%.*s\n", end - saved, saved);
-		    }
+		    // urls are space separated.
+		    fprintf(f, "%s", spots);
 		    fclose(f);
 		}
+	}
+
+	// if restart flag is on and the file with bulk urls exists, get spots from there
+	if ( !spots && restartColl ) {
+	    FILE *f = fopen(bulkurlsfile, "r");
+	    if (f != NULL) {
+	        fseek(f, 0, SEEK_END);
+	        long size = ftell(f);
+	        fseek(f, 0, SEEK_SET);
+	        char *bulkurls = (char*) mmalloc(size, "reading in bulk urls");
+	        fgets(bulkurls, size, f);
+	        spots = bulkurls;
+	    }
 	}
 
 	///////
