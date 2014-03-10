@@ -1049,25 +1049,26 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	//p= g_parms.printParms (p, pend, page, user, THIS, coll, pwd, nc, pd);
 	g_parms.printParms ( sb , s , r );
 
+	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "<br><br>\n" );
+
 	// end the table
 	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "</table>\n" );
-
-	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "<br><br>\n" );
 
 	// url filter page has a test table
 	if ( page == PAGE_FILTERS && fmt == FORMAT_HTML ) {
 		// wrap up the form, print a submit button
-		g_pages.printAdminBottom ( sb );
+		g_pages.printSubmit ( sb );
 		printUrlExpressionExamples ( sb );
 	}
 	else if ( page == PAGE_BASIC_SETTINGS && fmt == FORMAT_HTML ) {
 		// wrap up the form, print a submit button
-		g_pages.printAdminBottom ( sb );
+		g_pages.printSubmit ( sb );
 		printSitePatternExamples ( sb , r );
 	}
-	else if ( fmt == FORMAT_HTML )
+	else if ( fmt == FORMAT_HTML ) {
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( sb );
+	}
 
 
 	// extra sync table
@@ -7477,13 +7478,8 @@ void Parms::init ( ) {
 	//
 	///////////
 	m->m_title = "urls to add";
-	m->m_desc  = "Space separated list of urls to index. "
-		"They must match the patterns you have specified in "
-		"the <a href=/admin/sites>site list</a>. "
-		"You can override that behavior on the "
-		"<a href=/admin/scheduler>spider scheduler</a> by "
-		"telling Gigablast to always index manually added "
-		"urls. If your url does not index as you expect you "
+	m->m_desc  = "List of urls to index. One per line or space separated. "
+		"If your url does not index as you expect you "
 		"can check it's history. " // (spiderdb lookup)
 		"Added urls will have a "
 		"<a href=/admin/scheduler#hopcount>hopcount</a> of 0. "
@@ -7554,16 +7550,20 @@ void Parms::init ( ) {
 
 	m->m_title = "site list";
 	m->m_xml   = "siteList";
-	m->m_desc  = "Restrict spider to these sites, one per line. "
-		"Leave empty for no spidering restrictions. "
+	m->m_desc  = "List of sites to spider, one per line. "
+		//"Leave empty for no spidering restrictions. "
 		"Gigablast uses the "
 		"<a href=/admin/scheduler#insitelist>insitelist</a> "
 		"directive on "
 		"the <a href=/admin/scheduler>spider scheduler</a> "
 		"page to make sure that the spider only indexes urls "
-		"that match the site patterns you specify here. "
+		"that match the site patterns you specify here, other than "
+		"urls you add individually via the add urls or inject url "
+		"tools. "
 		"See <a href=#examples>example site list</a> below. "
-		"Limit list to 300MB.";
+		"Limit list to 300MB. If you have a lot of INDIVIDUAL URLS "
+		"to add then consider using the <a href=/admin/addurl>addurl"
+		"</a> interface.";
 	m->m_cgi   = "sitelist";
 	m->m_off   = (char *)&cr.m_siteListBuf - x;
 	m->m_page  = PAGE_BASIC_SETTINGS;
@@ -18319,7 +18319,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "<table %s>"
 			  "<tr><td colspan=2><center>"
 			  "<b>"
-			  "Supported URL Expressions</b>"
+			  "Supported Site List Expressions</b>"
 			  "</td></tr>"
 
 			  "<tr class=poo><td>default</td>"

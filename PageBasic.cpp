@@ -515,7 +515,7 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 	sb->safePrintf ( "<a name=examples></a>"
 			 "<table %s>"
 			 "<tr class=hdrow><td colspan=2>"
-			 "<center><b>Example Url Bucket</b></tr></tr>"
+			 "<center><b>Site List Examples</b></tr></tr>"
 			 //"<tr bgcolor=#%s>"
 			 //"<td>"
 			 ,TABLE_STYLE );//, DARK_BLUE);
@@ -530,28 +530,34 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      //"directory of good sites.</td>"
 		       //"</tr>"
 
+		      "<tr>"
+		      "<td>goodstuff.com</td>"
+		      "<td>"
+		      "Spider the url <i>goodstuff.com/</i> and spider "
+		      "any links we harvest that have the domain "
+		      "<i>goodstuff.com</i>"
+		      "</td>"
+		      "</tr>"
+
 		      // protocol and subdomain match
 		      "<tr>"
 		      "<td>http://www.goodstuff.com/</td>"
 		      "<td>"
-		      "Allow any url starting with this AND seed with "
-		      "this url."
-		      "</td>"
-		      "</tr>"
-
-		      "<tr>"
-		      "<td>goodstuff.com<td>"
-		      "<td>"
-		      "Allow any url from this domain AND seed with it too."
+		      "Spider the url "
+		      "<i>http://www.goodstuff.com/</i> and spider "
+		      "any links we harvest that start with "
+		      "<i>http://www.goodstuff.com/</i>"
 		      "</td>"
 		      "</tr>"
 
 		      "<tr>"
 		      "<td>seed:www.goodstuff.com/myurl.html</td>"
 		      "<td>"
-		      "Try to spider this url. Add any outlinks into the "
-		      "spider queue, but they will only be spidered if they "
-		      "match a site filter in this list."
+		      "Spider the url <i>www.goodstuff.com/myurl.html</i>. "
+		      "Add any outlinks we find into the "
+		      "spider queue, but those outlinks will only be "
+		      "spidered if they "
+		      "match ANOTHER line in this site list."
 		      "</td>"
 		      "</tr>"
 
@@ -560,7 +566,9 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "<tr>"
 		      "<td>site:http://www.goodstuff.com/</td>"
 		      "<td>"
-		      "Allow any url starting with this."
+		      "Allow any urls starting with "
+		      "<i>http://www.goodstuff.com/</i> to be spidered "
+		      "if encountered."
 		      "</td>"
 		      "</tr>"
 
@@ -568,7 +576,18 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "<tr>"
 		      "<td>site:www.goodstuff.com</td>"
 		      "<td>"
-		      "Allow urls from the www subdomain."
+		      "Allow any urls starting with "
+		      "<i>www.goodstuff.com/</i> to be spidered "
+		      "if encountered."
+		      "</td>"
+		      "</tr>"
+
+		      "<tr>"
+		      "<td>-site:bad.goodstuff.com</td>"
+		      "<td>"
+		      "Do not spider any urls starting with "
+		      "<i>bad.goodstuff.com/</i> to be spidered "
+		      "if encountered."
 		      "</td>"
 		      "</tr>"
 
@@ -576,7 +595,9 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "<tr>"
 		      "<td>site:goodstuff.com</td>"
 		      "<td>"
-		      "Allow urls from the foodstuff.com domain."
+		      "Allow any urls starting with "
+		      "<i>goodstuff.com/</i> to be spidered "
+		      "if encountered."
 		      "</td>"
 		      "</tr>"
 
@@ -585,7 +606,10 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "<td><nobr>site:"
 		      "http://www.goodstuff.com/goodir/anotherdir/</nobr></td>"
 		      "<td>"
-		      "Allow urls starting with this."
+		      "Allow any urls starting with "
+		      "<i>http://www.goodstuff.com/goodir/anotherdir/</i> "
+		      "to be spidered "
+		      "if encountered."
 		      "</td>"
 		      "</tr>"
 
@@ -601,9 +625,16 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 
 		      // local subdir match
 		      "<tr>"
-		      "<td>site:file://C/mydir/mysubdir/"
+		      "<td>file://C/mydir/mysubdir/"
 		      "<td>"
-		      "Matches all local files in the specified directory. "
+		      "Spider all files in the given subdirectory or lower. "
+		      "</td>"
+		      "</tr>"
+
+		      "<tr>"
+		      "<td>-file://C/mydir/mysubdir/baddir/"
+		      "<td>"
+		      "Do not spider files in this subdirectory."
 		      "</td>"
 		      "</tr>"
 
@@ -624,16 +655,17 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      // negative subdomain match
 		      "<tr>"
 		      "<td>contains:goodtuff</td>"
-		      "<td>Matches any url containing goodstuff."
+		      "<td>Spider any url containing <i>goodstuff</i>."
 		      "</td>"
 		      "</tr>"
 
 		      "<tr>"
 		      "<td>-contains:badstuff</td>"
-		      "<td>Matches if does NOT contain badstuff."
+		      "<td>Do not spider any url containing <i>badstuff</i>."
 		      "</td>"
 		      "</tr>"
 
+		      /*
 		      "<tr>"
 		      "<td>regexp:-pid=[0-9A-Z]+/</td>"
 		      "<td>Url must match this regular expression. "
@@ -666,6 +698,7 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "space to tag it."
 		      "</td>"
 		      "</tr>"
+		      */
 
 		      "<tr>"
 		      "<td># This line is a comment.</td>"

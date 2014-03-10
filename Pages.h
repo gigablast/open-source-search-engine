@@ -190,6 +190,7 @@ class Pages {
 	bool  printAdminBottom2        ( SafeBuf *sb);
 	bool  printTail                ( SafeBuf* sb, 
 					 bool isLocal );
+	bool printSubmit ( SafeBuf *sb ) ;
 					 //long user , 
 					 //char *username,
 					 //char *pwd );

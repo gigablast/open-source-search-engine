@@ -1350,6 +1350,17 @@ bool Pages::printAdminBottom ( SafeBuf *sb, HttpRequest *r ) {
 	return printAdminBottom ( sb );
 }
 
+bool Pages::printSubmit ( SafeBuf *sb ) {
+	// update button
+	return sb->safePrintf ( 
+				"<br>"
+				"<center>"
+				"<input type=submit name=action value=submit>"
+				"</center>"
+				"<br>"
+				"\n" ) ;
+}
+
 bool Pages::printAdminBottom ( SafeBuf *sb ) {
 	bool status = true;
 	// update button

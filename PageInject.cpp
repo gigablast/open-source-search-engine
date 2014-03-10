@@ -250,7 +250,15 @@ bool sendReply ( void *state ) {
 		  "<input type=text name=u value=\"\" size=50>"
 		  "</td></tr>\n\n"
 
-		  "<tr class=poo><td><b>query to scrape</b></td>"
+		  "<tr class=poo><td><b>query to scrape</b>"
+
+		  "<br>"
+		  "<font size=-2>"
+		  "Scrape other search engines and inject their links "
+		  "for this query. "
+		  "</font>"
+
+		  "</td>"
 		  "<td>\n"
 		  "<input type=text name=qts value=\"\" size=50>"
 		  "</td></tr>\n\n"
