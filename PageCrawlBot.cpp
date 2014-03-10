@@ -2103,9 +2103,29 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		log("crawlbot: adding seeds=\"%s\" coll=%s (%li)",
 		    seeds,coll,(long)st->m_collnum);
 
-	if ( spots )
+	if ( spots ) {
 		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
 		    (long)gbstrlen(spots),coll,(long)st->m_collnum);
+		char filename[1024];
+		sprintf(filename, "%scoll.%s.%li/bulkurls.conf", g_hostdb.m_dir , coll , (long)st->m_collnum );
+		FILE *f = fopen(filename, "w");
+		if (f != NULL) {
+		    // urls are space separated. save to file with newline separated urls.
+		    char *p = spots;
+		    while ( true ) {
+		        // skip white space (\0 is not a whitespace)
+		        for ( ; is_wspace_a(*p) ; p++ );
+		        // all done?
+		        if ( ! *p ) break;
+		        char *saved = p;
+		        // advance to next white space
+		        for ( ; ! is_wspace_a(*p) && *p ; p++ );
+		        char *end = p;
+		        fprintf(f, "%.*s\n", end - saved, saved);
+		    }
+		    fclose(f);
+		}
+	}
 
 	///////
 	// 
