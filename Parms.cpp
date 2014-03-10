@@ -1065,6 +1065,11 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 		g_pages.printSubmit ( sb );
 		printSitePatternExamples ( sb , r );
 	}
+	else if ( page == PAGE_SITES && fmt == FORMAT_HTML ) {
+		// wrap up the form, print a submit button
+		g_pages.printSubmit ( sb );
+		printSitePatternExamples ( sb , r );
+	}
 	else if ( fmt == FORMAT_HTML ) {
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( sb );
@@ -7551,7 +7556,6 @@ void Parms::init ( ) {
 	m->m_title = "site list";
 	m->m_xml   = "siteList";
 	m->m_desc  = "List of sites to spider, one per line. "
-		//"Leave empty for no spidering restrictions. "
 		"Gigablast uses the "
 		"<a href=/admin/scheduler#insitelist>insitelist</a> "
 		"directive on "
@@ -7619,16 +7623,19 @@ void Parms::init ( ) {
 	///////////////////////////////////////////
 	m->m_title = "site list";
 	m->m_xml   = "siteList";
-	m->m_desc  = "Restrict spider to these sites, one per line. "
-		"Leave empty for no spidering restrictions. "
+	m->m_desc  = "List of sites to spider, one per line. "
 		"Gigablast uses the "
 		"<a href=/admin/scheduler#insitelist>insitelist</a> "
 		"directive on "
 		"the <a href=/admin/scheduler>spider scheduler</a> "
 		"page to make sure that the spider only indexes urls "
-		"that match the site patterns you specify here. "
-		"See <a href=#examples>example site patterns</a> below. "
-		"Limit list to 300MB.";
+		"that match the site patterns you specify here, other than "
+		"urls you add individually via the add urls or inject url "
+		"tools. "
+		"See <a href=#examples>example site list</a> below. "
+		"Limit list to 300MB. If you have a lot of INDIVIDUAL URLS "
+		"to add then consider using the <a href=/admin/addurl>addurl"
+		"</a> interface.";
 	m->m_cgi   = "sitelist";
 	m->m_off   = (char *)&cr.m_siteListBuf - x;
 	m->m_page  = PAGE_SITES;
@@ -18319,7 +18326,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "<table %s>"
 			  "<tr><td colspan=2><center>"
 			  "<b>"
-			  "Supported Site List Expressions</b>"
+			  "Supported Expressions</b>"
 			  "</td></tr>"
 
 			  "<tr class=poo><td>default</td>"
