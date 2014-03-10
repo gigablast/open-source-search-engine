@@ -168,7 +168,9 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 		// make hash of the line
 		long h32 = hash32 ( s , pe - s );
 
-		bool exact = false;
+		bool seedMe = true;
+		bool isUrl = true;
+		bool isNeg = false;
 
 	innerLoop:
 		// skip spaces at start of line
@@ -181,28 +183,66 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 		if ( *s == '\n' ) continue;
 
 		// all?
-		if ( *s == '*' ) {
-			sc->m_siteListAsteriskLine = start;
-			continue;
-		}
+		//if ( *s == '*' ) {
+		//	sc->m_siteListAsteriskLine = start;
+		//	continue;
+		//}
 
 		if ( *s == '-' ) {
 			sc->m_siteListHasNegatives = true;
+			isNeg = true;
 			s++;
 		}
 
 		// exact:?
 		if ( strncmp(s,"exact:",6) == 0 ) {
-			exact = true;
 			s += 6;
 			goto innerLoop;
 		}
 
-		u.set ( s , pe - s );
+		if ( strncmp(s,"seed:",5) == 0 ) {
+			s += 5;
+			goto innerLoop;
+		}
+
+		if ( strncmp(s,"site:",5) == 0 ) {
+			s += 5;
+			seedMe = false;
+			goto innerLoop;
+		}
+
+		if ( strncmp(s,"contains:",9) == 0 ) {
+			s += 9;
+			seedMe = false;
+			isUrl = false;
+			goto innerLoop;
+		}
+
+		long slen = pe - s;
 
 		// empty line?
-		if ( pe - s <= 0 ) 
+		if ( slen <= 0 ) 
 			continue;
+
+		if ( ! isUrl ) {
+			// add to string buffers
+			if (   isNeg ) {
+				if ( !sc->m_negSubstringBuf.safeMemcpy(s,slen))
+					return true;
+				if ( !sc->m_negSubstringBuf.pushChar('\0') )
+					return true;
+				continue;
+			}
+			// add to string buffers
+			if ( ! sc->m_posSubstringBuf.safeMemcpy(s,slen) )
+				return true;
+			if ( ! sc->m_posSubstringBuf.pushChar('\0') )
+				return true;
+			continue;
+		}
+
+
+		u.set ( s , slen );
 
 		// error? skip it then...
 		if ( u.getHostLen() <= 0 ) {
@@ -210,15 +250,22 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 			continue;
 		}
 
+		// is fake ip assigned to us?
+		long firstIp = getFakeIpForUrl2 ( &u );
+
+		if ( ! isAssignedToUs( firstIp ) ) continue;
+
 		// see if in existing table for existing site list
 		if ( addSeeds &&
+		     // a "site:" directive mean no seeding
+		     // a "contains:" directive mean no seeding
+		     seedMe &&
 		     ! dedup.isInTable ( &h32 ) ) {
 			// make spider request
 			SpiderRequest sreq;
 			sreq.setFromAddUrl ( u.getUrl() );
-			// is fake ip assigned to us?
-			if ( isAssignedToUs( sreq.m_firstIp ) &&
-			     // . add this url to spiderdb as a spiderrequest
+			if ( 
+			    // . add this url to spiderdb as a spiderrequest
 			     // . calling msg4 will be the last thing we do
 			    !spiderReqBuf->safeMemcpy(&sreq,sreq.getRecSize()))
 				return true;
@@ -226,7 +273,7 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 			added++;
 
 		}
-
+		
 		// make the data node
 		PatternData pd;
 		// hash of the subdomain or domain for this line in sitelist
@@ -304,12 +351,24 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 
 	// if it has * and no negatives, we are in!
-	if ( sc->m_siteListAsteriskLine && ! sc->m_siteListHasNegatives )
-		return sc->m_siteListAsteriskLine;
+	//if ( sc->m_siteListAsteriskLine && ! sc->m_siteListHasNegatives )
+	//	return sc->m_siteListAsteriskLine;
 
 	// if it is just a bunch of comments or blank lines, it is empty
 	if ( sc->m_siteListIsEmpty )
 		return NULL;
+
+	// if we had a list of contains: or regex: directives in the sitelist
+	// we have to linear scan those
+	char *nb = sc->m_negSubstringBuf.getBufStart();
+	char *nbend = nb + sc->m_negSubstringBuf.getLength();
+	for ( ; nb && nb < nbend ; ) {
+		// return NULL if matches a negative substring
+		if ( strstr ( sreq->m_url , nb ) ) return NULL;
+		// skip it
+		nb += strlen(nb) + 1;
+	}
+
 
 	char *myPath = NULL;
 
@@ -359,8 +418,21 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 			return pd->m_patternStr;
 	}
 
+
+	// if we had a list of contains: or regex: directives in the sitelist
+	// we have to linear scan those
+	char *pb = sc->m_posSubstringBuf.getBufStart();
+	char *pend = pb + sc->m_posSubstringBuf.length();
+	for ( ; pb && pb < pend ; ) {
+		// return NULL if matches a negative substring
+		if ( strstr ( sreq->m_url , pb ) ) return pb;
+		// skip it
+		pb += strlen(pb) + 1;
+	}
+
+
 	// is there an '*' in the patterns?
-	if ( sc->m_siteListAsteriskLine ) return sc->m_siteListAsteriskLine;
+	//if ( sc->m_siteListAsteriskLine ) return sc->m_siteListAsteriskLine;
 
 	return NULL;
 }
@@ -541,7 +613,7 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "</tr>"
 
 		      "<tr>"
-		      "<td>-contain:badstuff</td>"
+		      "<td>-contains:badstuff</td>"
 		      "<td>Matches if does NOT contain badstuff."
 		      "</td>"
 		      "</tr>"

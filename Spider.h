@@ -49,6 +49,9 @@ bool getSpiderStatusMsg ( class CollectionRec *cx ,
 			  class SafeBuf *msg , 
 			  long *status ) ;
 
+long getFakeIpForUrl1 ( char *url1 ) ;
+long getFakeIpForUrl2 ( Url  *url2 ) ;
+
 // Overview of Spider
 //
 // this new spider algorithm ensures that urls get spidered even if a host
@@ -1105,6 +1108,10 @@ class SpiderColl {
 	bool  m_siteListIsEmpty;
 	// data buckets in this table are of type 
 	HashTableX m_siteListDomTable;
+	// substring matches like "contains:goodstuff" or
+	// later "regex:.*"
+	SafeBuf m_negSubstringBuf;
+	SafeBuf m_posSubstringBuf;
 
 	RdbCache m_dupCache;
 	RdbTree m_winnerTree;

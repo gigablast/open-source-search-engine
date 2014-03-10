@@ -12487,6 +12487,22 @@ bool doesStringContainPattern ( char *content , char *pattern ) {
 	return false;
 }
 
+long getFakeIpForUrl1 ( char *url1 ) {
+	// make the probable docid
+	long long probDocId = g_titledb.getProbableDocId ( url1 );
+	// make one up, like we do in PageReindex.cpp
+	long firstIp = (probDocId & 0xffffffff);
+	return firstIp;
+}
+
+long getFakeIpForUrl2 ( Url *url2 ) {
+	// make the probable docid
+	long long probDocId = g_titledb.getProbableDocId ( url2 );
+	// make one up, like we do in PageReindex.cpp
+	long firstIp = (probDocId & 0xffffffff);
+	return firstIp;
+}
+
 // returns false and sets g_errno on error
 bool SpiderRequest::setFromAddUrl ( char *url ) {
 	// reset it
@@ -12496,6 +12512,7 @@ bool SpiderRequest::setFromAddUrl ( char *url ) {
 
 	// make one up, like we do in PageReindex.cpp
 	long firstIp = (probDocId & 0xffffffff);
+	//long firstIp = getFakeIpForUrl1 ( url );
 
 	// ensure not crazy
 	if ( firstIp == -1 || firstIp == 0 ) firstIp = 1;
