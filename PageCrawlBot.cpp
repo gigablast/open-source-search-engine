@@ -2107,7 +2107,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
 		    (long)gbstrlen(spots),coll,(long)st->m_collnum);
 		char filename[1024];
-		sprintf(filename, "%scoll.%s.%li/bulkurls.txt", g_hostdb.m_dir , coll , (long)st->m_collnum );
+		snprintf(filename, 1024, "%scoll.%s.%li/bulkurls.txt", g_hostdb.m_dir , coll , (long)st->m_collnum );
 		FILE *f = fopen(filename, "w");
 		if (f != NULL) {
 		    // urls are space separated. save to file with newline separated urls.
