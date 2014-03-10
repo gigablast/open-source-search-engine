@@ -18596,6 +18596,11 @@ bool XmlDoc::logIt ( ) {
 	else
 		sb.safePrintf("urlinjected=0 ");
 
+	if ( m_sreqValid && m_sreq.m_isAddUrl )
+		sb.safePrintf("isaddurl=1 ");
+	else
+		sb.safePrintf("isaddurl=0 ");
+
 	if ( m_sreqValid && m_sreq.m_isPageReindex )
 		sb.safePrintf("pagereindex=1 ");
 
