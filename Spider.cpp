@@ -998,6 +998,7 @@ void SpiderCache::reset ( ) {
 SpiderColl *SpiderCache::getSpiderCollIffNonNull ( collnum_t collnum ) {
 	// "coll" must be invalid
 	if ( collnum < 0 ) return NULL;
+	if ( collnum >= g_collectiondb.m_numRecs ) return NULL;
 	// shortcut
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	// empty?
