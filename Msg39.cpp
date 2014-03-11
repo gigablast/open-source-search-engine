@@ -677,6 +677,7 @@ void gotListsWrapper ( void *state ) {
 bool Msg39::gotLists ( bool updateReadInfo ) {
 	// bail on error
 	if ( g_errno ) { 
+	hadError:
 		log("msg39: Had error getting termlists: %s.",
 		    mstrerror(g_errno));
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -693,6 +694,13 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 
 	// breathe
 	QUICKPOLL ( m_r->m_niceness );
+
+	// ensure collection not deleted from under us
+	CollectionRec *cr = g_collectiondb.getRec ( m_r->m_collnum );
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
+		goto hadError;
+	}
 
 	// . set the IndexTable so it can set it's score weights from the
 	//   termFreqs of each termId in the query
