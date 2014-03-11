@@ -176,6 +176,7 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 	if ( g_conf.m_logTimingQuery ) m_debug = true;
 
         // ensure it's size is ok
+	/*
         if ( m_r->size_whiteList <= 0 ) {
 		g_errno = ENOCOLLREC;
 		log(LOG_LOGIC,"query: msg39: getDocIds: %s." , 
@@ -183,6 +184,7 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 		sendReply ( m_slot , this , NULL , 0 , 0 , true );
 		return ; 
 	}
+	*/
 
         CollectionRec *cr = g_collectiondb.getRec ( m_r->m_collnum );
         if ( ! cr ) {
