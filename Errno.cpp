@@ -167,7 +167,7 @@ case	EFAKEFIRSTIP: return "Fake firstIp";
 case	EBADHOSTSCONF: return "A hosts.conf is out of sync";
 case    EWAITINGTOSYNCHOSTSCONF: return "Wait to ensure hosts.conf in sync";
 case	EDOCNONCANONICAL: return "Url was dup of canonical page";
-case    ECUSTOMCRAWLMISMATCH: return "Type mismatch. Collection name already used.";
+case    ECUSTOMCRAWLMISMATCH: return "Collection name/type mismatch. Collection name already used.";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );
