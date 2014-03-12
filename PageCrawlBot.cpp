@@ -875,6 +875,17 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 				       );
 		// but default to csv
 		else {
+		    // If a crawl and there are no urlCrawlPattern or urlCrawlRegEx values, only return URLs from seed domain
+		    if (cr
+		            && cr->m_isCustomCrawl == 1
+		            && cr->m_diffbotUrlCrawlPattern.m_length == 0
+		            && cr->m_diffbotUrlProcessPattern.m_length == 0
+		            && expression
+		            && strstr(expression,"!isonsamedomain")) {
+		        continue;
+		    }
+		    fprintf(stderr, "%s", expression);
+
 			sb->safePrintf("\"%s\",\"%s\","
 				       , sreq->m_url
 				       , as
