@@ -2108,7 +2108,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	char bulkurlsfile[1024];
 	snprintf(bulkurlsfile, 1024, "%scoll.%s.%li/bulkurls.txt", g_hostdb.m_dir , coll , (long)st->m_collnum );
-	if ( spots ) {
+	if ( spots && cr && cr->m_isCustomCrawl == 2 ) {
 		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
 		    (long)gbstrlen(spots),coll,(long)st->m_collnum);
 		FILE *f = fopen(bulkurlsfile, "w");
@@ -2120,7 +2120,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	// if restart flag is on and the file with bulk urls exists, get spots from there
-	if ( !spots && restartColl ) {
+	if ( !spots && restartColl && cr && cr->m_isCustomCrawl ) {
 	    FILE *f = fopen(bulkurlsfile, "r");
 	    if (f != NULL) {
 	        fseek(f, 0, SEEK_END);
