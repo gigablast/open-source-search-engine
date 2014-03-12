@@ -1901,8 +1901,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( cr && restartColl ) { // && cast ) {
 		// bail on OOM saving seeds
 		if ( ! st->m_seedBank.safeMemcpy ( &cr->m_diffbotSeeds ) ||
-		     ! st->m_seedBank.pushChar('\0') )
+		     ! st->m_seedBank.pushChar('\0') ) {
+			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
+		}
 	}
 
 	//
@@ -2124,8 +2127,14 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	        long size = ftell(f);
 	        fseek(f, 0, SEEK_SET);
 	        char *bulkurls = (char*) mmalloc(size, "reading in bulk urls");
+		if ( ! bulkurls ) {
+			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
+			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
+		}
 	        fgets(bulkurls, size, f);
 	        spots = bulkurls;
+		fclose(f);
 	    }
 	}
 
