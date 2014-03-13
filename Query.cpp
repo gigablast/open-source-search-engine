@@ -3308,12 +3308,12 @@ void Query::printQueryTerms(){
 //////////   ONLY BOOLEAN STUFF BELOW HERE  /////////////
 ////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////
-bool  Query::testBoolean( unsigned char *bits ) { //qvec_t bitmask){
+bool  Query::testBoolean( unsigned char *bits ,long vecSize){//qvec_t bitmask){
 	if (!m_isBoolean) return false;
 	Expression *e = &m_expressions [ 0 ];
 	// find top-level expression
 	while (e->m_parent && e != e->m_parent) e = e->m_parent;
-	return e->isTruth(bits);//, bitmask);
+	return e->isTruth(bits,vecSize);//, bitmask);
 	
 }
 void  Query::printBooleanTree(){
@@ -3727,13 +3727,13 @@ long Expression::set (long start,
 }
 
 // each bit is 1-1 with the explicit terms in the boolean query
-bool Query::matchesBoolQuery ( unsigned char *bitVec ) {
-	return m_expressions[0].isTruth ( bitVec );
+bool Query::matchesBoolQuery ( unsigned char *bitVec , long vecSize ) {
+	return m_expressions[0].isTruth ( bitVec , vecSize );
 }
 
 // . "bits" are 1-1 with the query terms in Query::m_qterms[] array
 //bool Expression::isTruth ( qvec_t bits, qvec_t mask ) {
-bool Expression::isTruth ( unsigned char *bitVec ) { // , qvec_t mask ) {
+bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 	//bool op1 = false ; // set to false so compiler shuts up
 	//bool op2 ;
 	//bool accumulator = false;
@@ -3742,24 +3742,24 @@ bool Expression::isTruth ( unsigned char *bitVec ) { // , qvec_t mask ) {
 
 	// leaf node
 	if (m_operand){
-		result = m_operand->isTruth(bitVec);//, mask);
+		result = m_operand->isTruth(bitVec,vecSize);//, mask);
 		// handle masked terms better.. don't apply NOT operator
 		// mdw - not sure what this is doing
 		//if (!(m_operand->m_termBits & mask)) return true;
 	}
 	else if (m_numChildren == 1){
-		result = m_children[0]->isTruth(bitVec);//, mask);
+		result = m_children[0]->isTruth(bitVec,vecSize);//, mask);
 	}
 	else if (m_opcode == OP_OR || m_opcode == OP_UOR) {
 		for ( long i=0 ; i<m_numChildren ; i++ ) {
-			result = result||m_children[i]->isTruth(bitVec);//mask
+			result =result||m_children[i]->isTruth(bitVec,vecSize);
 			if (result) goto done;
 		}
 	}
 	else if (m_opcode == OP_AND || m_opcode == OP_PIPE){
 		result = true;
 		for (long i = 0 ; i < m_numChildren ; i++ ) {
-			result = result &&m_children[i]->isTruth(bitVec);//mask
+			result =result&&m_children[i]->isTruth(bitVec,vecSize);
 			if (!result) goto done;
 		}
 	}

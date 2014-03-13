@@ -4501,6 +4501,10 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	if ( m_q->m_isBoolean && 
 	     ! m_bt.set (8,m_vecSize,maxSlots,NULL,0,false,0,"booltbl"))
 		return false;
+	if ( m_q->m_isBoolean && 
+	     ! m_ct.set (8,2 * (1<<numOperands),maxSlots,NULL,0,false,0,
+			 "booltbl"))
+		return false;
 
 	return true;
 }
@@ -7005,8 +7009,6 @@ bool PosdbTable::makeDocIdVoteBufFromBooleanQuery_r ( ) {
 	//   on if it passes the boolean query.
 	char bitVec[MAX_OVEC_SIZE];
 	if ( m_vecSize > MAX_OVEC_SIZE ) m_vecSize = MAX_OVEC_SIZE;
-	// set all to zeroes
-	memset ( bitVec , 0 , m_vecSize );
 
 	QueryTermInfo *qip = (QueryTermInfo *)m_qiBuf.getBufStart();
 
@@ -7022,42 +7024,65 @@ bool PosdbTable::makeDocIdVoteBufFromBooleanQuery_r ( ) {
 		// get it
 		QueryTermInfo *qti = &qip[i];
 
+		QueryTerm *qt = &m_q->m_qterms[qti->m_qtermNum];
+		// get the query word
+		QueryWord *qw = qt->m_qword;
+
+		// and the operand # from that
+		long opNum = qw->m_opNum;
+
 		// do not consider for adding if negative ('my house -home')
 		//if ( qti->m_bigramFlags[0] & BF_NEGATIVE ) continue;
 
+		// set all to zeroes
+		memset ( bitVec , 0 , m_vecSize );
 		// set bitvec for him
-		long byte = i / 8;
-		unsigned char mask = 1<<(i % 8);
+		long byte = opNum / 8;
+		unsigned char mask = 1<<(opNum % 8);
 		bitVec[byte] |= mask;
-		// scan all docids in this list
-		char *p = qti->m_subLists[i]->getList();
-		char *pend = qti->m_subLists[i]->getListEnd();
 
-		//long long *d = (long long *)(p + 6);
+		// each query term can have synonym lists etc. scan those
+		for ( long j = 0 ; j < qti->m_numSubLists ; j++ ) {
 
-		for ( ; p < pend ; ) {
-			// place holder
-			long long *d = (long long *)(p + 6);
-			// advance that guy over that docid
-			p += 12;
-			// 6 byte keys follow?
-			for ( ; p < pend ; p += 6 ) {
-				// if we hit a new 12 byte key for a new docid,
-				// stop
-				if ( ! ( p[0] & 0x04 ) ) break;
+			// scan all docids in this list
+			char *p = qti->m_subLists[j]->getList();
+			char *pend = qti->m_subLists[j]->getListEnd();
+
+			long long lastDocId = 0LL;
+
+			for ( ; p < pend ; ) {
+				// place holder
+				long long d = g_posdb.getDocId(p);
+
+				// sanity
+				if ( d < lastDocId ) { char *xx=NULL;*xx=0; }
+				lastDocId = d;
+
+				// this was the first key for this docid for 
+				// this termid and possible the first key for 
+				// this termid, so skip it, either 12 or 18 
+				// bytes
+				if ( (((char *)p)[0])&0x02 ) p += 12;
+				// the first key for this termid?
+				else p += 18;
+
+				// then only 6 byte keys would follow from the
+				// same docid, so skip those as well
+			subloop:
+				if((((char *)p)[0])&0x04){p += 6;goto subloop;}
+
+				// store this docid though
+				long slot = m_bt.getSlot ( &d );
+				if ( slot < 0 ) {
+					// we can't alloc in a thread, careful
+					if ( ! m_bt.addKey(&d,bitVec) ) {
+						char *xx=NULL;*xx=0; }
+					continue;
+				}
+				// or the bit in otherwise
+				char *bv = (char *)m_bt.getValueFromSlot(slot);
+				bv[byte] |= mask;
 			}
-
-			// store this docid though
-			long slot = m_bt.getSlot ( &d );
-			if ( slot < 0 ) {
-				// we can't alloc in a thread! be careful!
-				if ( ! m_bt.addKey(d,bitVec) ) {
-					char *xx=NULL;*xx=0; }
-				continue;
-			}
-			// or the bit in otherwise
-			char *bv = (char *)m_bt.getValueFromSlot(slot);
-			bv[byte] |= mask;
 		}
 	}
 
@@ -7073,16 +7098,26 @@ bool PosdbTable::makeDocIdVoteBufFromBooleanQuery_r ( ) {
 		for ( long k = 0 ; k < m_vecSize ; k++ )
 			h64 = g_hashtab[vec[k]][k];
 		// check in hash table
-		char *val = (char *)m_bt.getValue ( &h64 );
+		char *val = (char *)m_ct.getValue ( &h64 );
 		if ( val && *val ) {
 			// it passes, add the ocid
 			long long *d = (long long *)m_bt.getKeyFromSlot(i);
-			m_docIdVoteBuf.pushLongLong(*d);
+			if ( m_debug ) log("query: addind d=%llu vec[0]=%lx",
+					   *d,(long)vec[0]);
+			m_docIdVoteBuf.safeMemcpy ( d , 6 );
 		}
 		// evaluate the vector
-		char include = m_q->matchesBoolQuery ( (unsigned char *)vec );
+		char include = m_q->matchesBoolQuery ( (unsigned char *)vec ,
+						        m_vecSize );
+		if ( include ) {
+			// it passes, add the ocid
+			long long *d = (long long *)m_bt.getKeyFromSlot(i);
+			if ( m_debug ) log("query: addind d=%llu vec[0]=%lx",
+					   *d,(long)vec[0]);
+			m_docIdVoteBuf.safeMemcpy ( d , 6 );
+		}
 		// store in hash table
-		m_bt.addKey ( &h64  , &include );
+		m_ct.addKey ( &h64  , &include );
 	}
 
 	return true;

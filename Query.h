@@ -186,18 +186,18 @@ public:
 	// . Operand::m_opBits is the required bits for operand to be true
 	// . does not include signless phrases
 	//bool isTruth ( qvec_t bits, qvec_t mask=(qvec_t)-1 ) {
-	bool isTruth ( unsigned char *bitVec ) {
+	bool isTruth ( unsigned char *bitVec , long vecSize ) {
 		// must always satisfy hard required terms (+ sign)
 		//if ( (bits & m_forcedBits) != m_forcedBits )
 		//	return false;
 		//if (m_hasNOT) return (bits & m_opBits & mask) == 0;
 		//return ( (bits & m_opBits & mask) == (m_opBits & mask)); 
 		if ( m_hasNOT ) {
-			for ( long i = 0 ; i < m_vecSize ; i++ )
+			for ( long i = 0 ; i < vecSize ; i++ )
 				if ( m_opBits[i] & bitVec[i] ) return false;
 			return true;
 		}
-		for ( long i = 0 ; i < m_vecSize ; i++ )
+		for ( long i = 0 ; i < vecSize ; i++ )
 			if ( m_opBits[i] & bitVec[i] ) return true;
 		return false;
 		// . we are now back to good ol' default OR
@@ -213,7 +213,7 @@ public:
 	// . terms under the same QueryTermInfo class should have the same
 	//   termbit here
 	unsigned char m_opBits[MAX_OVEC_SIZE];
-	long m_vecSize;
+	//long m_vecSize;
 	// does the word NOT preceed the operand?
 	bool   m_hasNOT;
 	class Expression *m_parent;
@@ -237,7 +237,7 @@ public:
 		  bool underNOT );
 
 	//bool isTruth ( qvec_t bits, qvec_t mask=(qvec_t)-1  ) ;
-	bool isTruth ( unsigned char *bitVec );
+	bool isTruth ( unsigned char *bitVec , long vecSize );
 	// . what QueryTerms are UNDER the influence of the NOT opcode?
 	// . we read in the WHOLE termlist of those that are (like '-' sign)
 	// . returned bit vector is 1-1 with m_qterms in Query class
@@ -613,7 +613,7 @@ class Query {
 
 	// sets m_bmap[][] so getImplicits() works
 	void setBitMap ( );
-	bool testBoolean(unsigned char *bits);//, qvec_t bitmask=(qvec_t)-1);
+	bool testBoolean(unsigned char *bits,long vecSize);
 	// print to log
 	void printBooleanTree();
 	void printQueryTerms();
@@ -623,7 +623,7 @@ class Query {
 	// if possible.
 	// bitVec is all the QueryWord::m_opBits some docid contains, so
 	// does it match our boolean query or not?
-	bool matchesBoolQuery ( unsigned char *bitVec ) ;
+	bool matchesBoolQuery ( unsigned char *bitVec , long vecSize ) ;
 
 
 	// . call this before calling getBitScore() to set m_bitScores[] table

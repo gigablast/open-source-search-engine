@@ -675,6 +675,7 @@ class PosdbTable {
 
 	// boolean truth table for boolean queries
 	HashTableX m_bt;
+	HashTableX m_ct;
 	// size of the data slot in m_bt
 	long m_vecSize;
 
