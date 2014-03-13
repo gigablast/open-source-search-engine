@@ -3721,6 +3721,10 @@ long Expression::set (long start,
 	return end;
 }
 
+// each bit is 1-1 with the explicit terms in the boolean query
+bool Query::matchesBoolQuery ( qvec_t bits ) {
+	return m_expressions[0].isTruth ( bits );
+}
 
 // . "bits" are 1-1 with the query terms in Query::m_qterms[] array
 bool Expression::isTruth ( qvec_t bits, qvec_t mask ) {

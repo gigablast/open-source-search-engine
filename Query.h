@@ -605,10 +605,7 @@ class Query {
 	// the new way as of 3/12/2014. just determine if matches the bool
 	// query or not. let's try to offload the scoring logic to other places
 	// if possible.
-	char matchesBoolQuery ( unsigned char *vec ) {
-		// placeholder
-		return false;
-	};
+	bool matchesBoolQuery ( unsigned char *bitVec ) ;
 
 	// . call this before calling getBitScore() to set m_bitScores[] table
 	// . returns false and sets g_errno on error (ENOMEM usually)
