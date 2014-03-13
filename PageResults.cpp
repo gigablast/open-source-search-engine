@@ -1324,7 +1324,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	if ( isAdmin ) {
 		sb->safePrintf(" &nbsp; "
 			      "<font color=red><b>"
-			      "<a href=\"/admin/basic?c=%s\">"
+			      "<a href=\"/admin/settings?c=%s\">"
 			      "[admin]"
 			      "</a></b></font>",coll);
 		// print reindex link

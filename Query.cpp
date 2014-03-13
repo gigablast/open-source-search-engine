@@ -41,7 +41,6 @@ Query::~Query ( ) {
 }
 
 void Query::reset ( ) {
-	m_operatorCount = 0;
 	m_docIdRestriction = 0LL;
 	m_groupThatHasDocId = NULL;
 	m_bufLen      = 0;
@@ -150,7 +149,7 @@ bool Query::set2 ( char *query        ,
 
 	char *q = query;
 	// see if it should be boolean...
-	for ( long i = 0 ; boolFlag && i < queryLen ; i++ ) {
+	for ( long i = 0 ; i < queryLen ; i++ ) {
 		if ( q[i]=='A' && q[i+1]=='N' && q[i+2]=='D' &&
 		     (q[i+3]==' ' || q[i+3]=='(') )
 			boolFlag = 1;
@@ -3322,7 +3321,7 @@ void  Query::printBooleanTree(){
 	Expression *e = &m_expressions [ 0 ];
 	// find top-level expression
 	while (e->m_parent && e != e->m_parent) e = e->m_parent;
-	SafeBuf sbuf(1024);
+	SafeBuf sbuf(1024,"botree");
 	e->print(&sbuf);
 	logf(LOG_DEBUG, "query: Boolean Query: %s", sbuf.getBufStart());	
 }
@@ -3483,7 +3482,7 @@ long Operand::set ( long a , long b , QueryWord *qwords , long level ,
 			//if (qw->m_phraseSign == '+') m_hardRequiredBits |= e;
 			//m_termBits |= e;
 			long byte = qw->m_opNum / 8;
-			long mask = qw->m_opNum % 8;
+			long mask = 1<<(qw->m_opNum % 8);
 			if ( byte < MAX_OVEC_SIZE ) m_opBits[byte] |= mask;
 		}
 		// why would it be ignored? oh... if like cd-rom or in quotes
@@ -3496,7 +3495,7 @@ long Operand::set ( long a , long b , QueryWord *qwords , long level ,
 			//if (qw->m_phraseSign == '+') m_hardRequiredBits |= e;
 			//m_termBits |= e;
 			long byte = qw->m_opNum / 8;
-			long mask = qw->m_opNum % 8;
+			long mask = 1<<(qw->m_opNum % 8);
 			if ( byte < MAX_OVEC_SIZE ) m_opBits[byte] |= mask;
 		}
 	}
@@ -3575,10 +3574,6 @@ long Expression::set (long start,
 		// set this
 		qw->m_underNOT = underNOT;
 
-		// count TOTAL operators so we can separate operands
-		// when assigning Operand::m_opNum
-		q->m_operatorCount++;
-
 		// set leaf node if not an opcode like "AND" and not punct.
 		if (!qw->m_opcode && qw->isAlphaWord()){
 			// if this is NOT the very first word of the expression
@@ -3587,20 +3582,6 @@ long Expression::set (long start,
 			if ( *o_numOperands >= MAX_OPERANDS ) return -1;
 			Operand *op = &o_operands [ *o_numOperands ];
 			*o_numOperands = *o_numOperands + 1;
-
-			// undo the above count since we are a true operand
-			// and not an operator or ( or )
-			q->m_operatorCount--;
-
-			// this tells us what bit # to set when making
-			// the operand bit vector for a docid and calling
-			// Expression::isTruth()
-			if ( qw->m_queryPhraseTerm )
-				qw->m_queryPhraseTerm->m_opNum = 
-					q->m_operatorCount;
-			if ( qw->m_queryWordTerm )
-				qw->m_queryWordTerm->m_opNum = 
-					q->m_operatorCount;
 
 			// . return ptr to next word for us to parse
 			// . subtract once since for loop will inc it

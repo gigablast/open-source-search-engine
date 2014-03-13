@@ -9907,7 +9907,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 
 	char *row;
 	bool checkedRow = false;
-	SpiderColl *sc = cr->m_spiderColl;
+	//SpiderColl *sc = cr->m_spiderColl;
+	SpiderColl *sc = g_spiderCache.getSpiderColl(cr->m_collnum);
 
 	//if ( strstr(url,"http://www.vault.com/rankings-reviews/company-rankings/law/vault-law-100/.aspx?pg=2" ))
 	//	log("hey");

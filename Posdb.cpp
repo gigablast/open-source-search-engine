@@ -4492,7 +4492,7 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// the bit vector in a truth table
 	long maxSlots = maxDocIds * 2;
 	// get total operands we used
-	long numOperands = m_q->m_operatorCount + 1;
+	long numOperands = m_q->m_numOperands;
 	// a quoted phrase counts as a single operand
 	m_vecSize = numOperands / 8 ;
 	// allow an extra byte for remainders

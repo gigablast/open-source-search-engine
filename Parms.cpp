@@ -10699,7 +10699,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_siteClusterByDefault - x;
 	m->m_soff  = (char *)&si.m_doSiteClustering - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_sparm = 1;
 	m->m_scgi  = "sc";
 	m++;

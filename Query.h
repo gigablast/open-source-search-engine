@@ -881,7 +881,6 @@ class Query {
 	long m_synTerm;		// first term that's a synonym
 	class SynonymInfo *m_synInfo;
 	long m_synInfoAllocSize;
-	long m_operatorCount;
 
 	// if they got a gbdocid: in the query and it's not boolean, set these
 	long long m_docIdRestriction;
