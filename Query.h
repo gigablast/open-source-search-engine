@@ -485,6 +485,14 @@ class QueryTerm {
 	// we can be in? uses -1 to indicate none.
 	long  m_leftPhraseTermNum;
 	long  m_rightPhraseTermNum;
+	// . what operand # are we a part of in a boolean query?
+	// . like for (x AND y) x would have an opNum of 0 and y an
+	//   opNum of 1 for instance.
+	// . for things like (x1 OR x2 OR x3 ... ) we try to give all
+	//   those query terms the same m_opNum for efficiency since
+	//   they all have the same effecct
+	long  m_opNum;
+	
 	// same as above basically
 	class QueryTerm *m_leftPhraseTerm;
 	class QueryTerm *m_rightPhraseTerm;
@@ -594,7 +602,13 @@ class Query {
 	void printBooleanTree();
 	void printQueryTerms();
 
-
+	// the new way as of 3/12/2014. just determine if matches the bool
+	// query or not. let's try to offload the scoring logic to other places
+	// if possible.
+	char matchesBoolQuery ( unsigned char *vec ) {
+		// placeholder
+		return false;
+	};
 
 	// . call this before calling getBitScore() to set m_bitScores[] table
 	// . returns false and sets g_errno on error (ENOMEM usually)
@@ -849,6 +863,7 @@ class Query {
 	long m_synTerm;		// first term that's a synonym
 	class SynonymInfo *m_synInfo;
 	long m_synInfoAllocSize;
+	long m_operatorCount;
 
 	// if they got a gbdocid: in the query and it's not boolean, set these
 	long long m_docIdRestriction;

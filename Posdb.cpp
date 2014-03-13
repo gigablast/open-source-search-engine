@@ -4484,6 +4484,21 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// get max # of docids we got in an intersection from all the lists
 	if ( ! m_docIdVoteBuf.reserve ( need,"divbuf" ) ) return false;
 
+	// i'm feeling if a boolean query put this in there too, the
+	// hashtable that maps each docid to its boolean bit vector
+	// where each bit stands for an operand so we can quickly evaluate
+	// the bit vector in a truth table
+	long maxSlots = maxDocIds * 2;
+	// get total operands we used
+	long numOperands = m_q->m_operatorCount + 1;
+	// a quoted phrase counts as a single operand
+	m_vecSize = numOperands / 8 ;
+	// allow an extra byte for remainders
+	if ( numOperands % 8 ) m_vecSize++;
+	// now preallocate the hashtable. 0 niceness.
+	if ( m_q->m_isBoolean && 
+	     ! m_bt.set (8,m_vecSize,maxSlots,NULL,0,false,0,"booltbl"))
+		return false;
 
 	return true;
 }
@@ -5161,6 +5176,21 @@ void PosdbTable::intersectLists10_r ( ) {
 	//if ( ! m_msg2 ) goto seoHackSkip;
 
 
+	// for boolean queries we scan every docid in all termlists,
+	// then we see what query terms it has, and make a bit vector for it.
+	// then use a hashtable to map that bit vector to a true or false
+	// as to whether we should include it in the results or not.
+	// we use Query::getBitScore(qvec_t ebits) to evaluate a docid's
+	// query term explicit term bit vector.
+	if ( m_q->m_isBoolean ) {
+		// just score the docids that pass the boolean query
+		// and put those docids into m_docIdVoteBuf for scoring
+		makeDocIdVoteBufFromBooleanQuery_r();
+		goto skip3;
+	}
+
+
+
 	// . create "m_docIdVoteBuf" filled with just the docids from the
 	//   smallest group of sublists 
 	// . m_minListi is the queryterminfo that had the smallest total
@@ -5219,6 +5249,8 @@ void PosdbTable::intersectLists10_r ( ) {
 		// add it
 		rmDocIdVotes ( qti );
 	}
+
+ skip3:
 
 	/*
 	// test docid buf
@@ -6958,3 +6990,97 @@ void printTermList ( long i, char *list, long listSize ) {
 }
 
 
+// TODO: do this in docid range phases to save memory and be much faster
+// since we could contain to the L1 cache for hashing
+bool PosdbTable::makeDocIdVoteBufFromBooleanQuery_r ( ) {
+
+	// . make a hashtable of all the docids from all the termlists
+	// . the value slot will be the operand bit vector i guess
+	// . the size of the vector needs one bit per query operand
+	// . if the vector is only 1-2 bytes we can just evaluate each
+	//   combination we encounter and store it into an array, otherwise,
+	//   we can use a another hashtable in order to avoid re-evaluation
+	//   on if it passes the boolean query.
+	char bitVec[m_vecSize];
+	// set all to zeroes
+	memset ( bitVec , 0 , m_vecSize );
+
+	QueryTermInfo *qip = (QueryTermInfo *)m_qiBuf.getBufStart();
+
+	// . scan each list of docids to a get a new docid, keep a dedup
+	//   table to avoid re-processing the same docid.
+	// . each posdb list we read corresponds to a query term,
+	//   or a synonym of a query term, or bigram of a query term, etc.
+	//   but we really want to know what operand, so we associate an
+	//   operand bit with each query term, and each list can map to 
+	//   the base query term so we can get the operand # from that.
+	for ( long i = 0 ; i < m_numQueryTermInfos ; i++ ) {
+
+		// get it
+		QueryTermInfo *qti = &qip[i];
+
+		// do not consider for adding if negative ('my house -home')
+		//if ( qti->m_bigramFlags[0] & BF_NEGATIVE ) continue;
+
+		// set bitvec for him
+		long byte = i / 8;
+		unsigned char mask = 1<<(i % 8);
+		bitVec[byte] |= mask;
+		// scan all docids in this list
+		char *p = qti->m_subLists[i]->getList();
+		char *pend = qti->m_subLists[i]->getListEnd();
+
+		//long long *d = (long long *)(p + 6);
+
+		for ( ; p < pend ; ) {
+			// place holder
+			long long *d = (long long *)(p + 6);
+			// advance that guy over that docid
+			p += 12;
+			// 6 byte keys follow?
+			for ( ; p < pend ; p += 6 ) {
+				// if we hit a new 12 byte key for a new docid,
+				// stop
+				if ( ! ( p[0] & 0x04 ) ) break;
+			}
+
+			// store this docid though
+			long slot = m_bt.getSlot ( &d );
+			if ( slot < 0 ) {
+				// we can't alloc in a thread! be careful!
+				if ( ! m_bt.addKey(d,bitVec) ) {
+					char *xx=NULL;*xx=0; }
+				continue;
+			}
+			// or the bit in otherwise
+			char *bv = (char *)m_bt.getValueFromSlot(slot);
+			bv[byte] |= mask;
+		}
+	}
+
+	// . now our hash table is filled with all the docids
+	// . evaluate each bit vector
+	for ( long i = 0 ; i < m_bt.m_numSlots ; i++ ) {
+		// skip if empty
+		if ( ! m_bt.m_flags[i] ) continue;
+		// get the bit vector
+		unsigned char *vec = (unsigned char *)m_bt.getValueFromSlot(i);
+		// hash the vector
+		long long h64 = 0LL;
+		for ( long k = 0 ; k < m_vecSize ; k++ )
+			h64 = g_hashtab[vec[k]][k];
+		// check in hash table
+		char *val = (char *)m_bt.getValue ( &h64 );
+		if ( val && *val ) {
+			// it passes, add the ocid
+			long long *d = (long long *)m_bt.getKeyFromSlot(i);
+			m_docIdVoteBuf.pushLongLong(*d);
+		}
+		// evaluate the vector
+		char include = m_q->matchesBoolQuery ( (unsigned char *)vec );
+		// store in hash table
+		m_bt.addKey ( &h64  , &include );
+	}
+
+	return true;
+}

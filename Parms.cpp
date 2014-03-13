@@ -5778,11 +5778,19 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "email server 1";
-	m->m_desc  = "Connects to this server directly when sending email 1 ";
+	m->m_desc  = "Connects to this IP or hostname "
+		"directly when sending email 1. "
+		"Use <i>apt-get install sendmail</i> to install sendmail "
+		"on that IP or hostname. Add <i>From:10.5 RELAY</i> to "
+		"/etc/mail/access to allow sendmail to forward email it "
+		"receives from gigablast if gigablast hosts are on the "
+		"10.5.*.* IPs. Then run <i>/etc/init.d/sendmail restart</i> "
+		"as root to pick up those changes so sendmail will forward "
+		"Gigablast's mail to the address you give below.";
 	m->m_cgi   = "esrvone";
 	m->m_off   = (char *)&g_conf.m_email1MX - g;
 	m->m_type  = TYPE_STRING;
-	m->m_def   = "10.5.54.47";
+	m->m_def   = "127.0.0.1";
 	m->m_size  = MAX_MX_LEN;
 	m->m_priv  = 2;
 	m->m_group = 0;

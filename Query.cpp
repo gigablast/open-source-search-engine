@@ -41,6 +41,7 @@ Query::~Query ( ) {
 }
 
 void Query::reset ( ) {
+	m_operatorCount = 0;
 	m_docIdRestriction = 0LL;
 	m_groupThatHasDocId = NULL;
 	m_bufLen      = 0;
@@ -3406,6 +3407,7 @@ bool Query::setBooleanOperands ( ) {
 		else
 			m_qterms[i].m_underNOT = false;
 	}
+
 	return true;
 }
 
@@ -3505,7 +3507,10 @@ long Expression::set (long start,
 		       class Expression *leftChild,
 		       bool hasNOT ,
 		       bool underNOT ) {
+
+	// the # of the first alnumpunct word in the expression
 	m_start = start;
+	// and the last one
 	m_end = end;
 	m_opcode = 0;
 	m_operand = NULL;
@@ -3529,24 +3534,50 @@ long Expression::set (long start,
 		char *xx = NULL; *xx = 0;
 	}
 
-	//set initial args
+	//set initial args. if we are the right side of an expression
+	// and the left side was an expression, leftChild will point to it,
+	// but it counts as the leftChild of this expression.
 	if (leftChild) {
 		leftChild->m_parent = this;
 		m_children[0] = leftChild;
 		m_numChildren = 1;
 	}
 	hasNOT = false;
+
+	// "pos" is the current alnumpunct word we are parsing out
 	for ( long i=pos ; i<end ; i++ ){
+
 		QueryWord * qw = &qwords[i];
 		// set this
 		qw->m_underNOT = underNOT;
-		// set leaf node
+
+		// count TOTAL operators so we can separate operands
+		// when assigning Operand::m_opNum
+		q->m_operatorCount++;
+
+		// set leaf node if not an opcode like "AND" and not punct.
 		if (!qw->m_opcode && qw->isAlphaWord()){
+			// if this is NOT the very first word of the expression
 			if (i > m_start) goto setChildExpr;
 			// if we maxxed out, error out
 			if ( *o_numOperands >= MAX_OPERANDS ) return -1;
 			Operand *op = &o_operands [ *o_numOperands ];
 			*o_numOperands = *o_numOperands + 1;
+
+			// undo the above count since we are a true operand
+			// and not an operator or ( or )
+			q->m_operatorCount--;
+
+			// this tells us what bit # to set when making
+			// the operand bit vector for a docid and calling
+			// Expression::isTruth()
+			if ( qw->m_queryPhraseTerm )
+				qw->m_queryPhraseTerm->m_opNum = 
+					q->m_operatorCount;
+			if ( qw->m_queryWordTerm )
+				qw->m_queryWordTerm->m_opNum = 
+					q->m_operatorCount;
+
 			// . return ptr to next word for us to parse
 			// . subtract once since for loop will inc it
 			i = op->set ( i , end , qwords , level , underNOT );

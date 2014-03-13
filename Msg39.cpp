@@ -751,9 +751,7 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	// . now we must call this separately here, not in allocTopTree()
 	// . we have to re-set the QueryTermInfos with each docid range split
 	//   since it will set the list ptrs from the msg2 lists
-	if ( m_r->m_useNewAlgo && ! m_posdbTable.setQueryTermInfo () ) {
-		return true;
-	}
+	if ( ! m_posdbTable.setQueryTermInfo () ) return true;
 
 	// timestamp log
 	if ( m_debug ) {

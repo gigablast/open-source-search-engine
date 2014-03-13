@@ -523,6 +523,8 @@ class PosdbTable {
 					 char *endi, char *endj,
 					 class DocIdScore *pdcs );
 
+	bool makeDocIdVoteBufFromBooleanQuery_r ( ) ;
+
 	// some generic stuff
 	PosdbTable();
 	~PosdbTable();
@@ -670,6 +672,12 @@ class PosdbTable {
 	long                 m_minListi;
 	// intersect docids from each QueryTermInfo into here
 	SafeBuf              m_docIdVoteBuf;
+
+	// boolean truth table for boolean queries
+	HashTableX m_bt;
+	// size of the data slot in m_bt
+	long m_vecSize;
+
 	// are all positive query terms in same wikipedia phrase like
 	// 'time enough for love'?
 	bool m_allInSameWikiPhrase;
