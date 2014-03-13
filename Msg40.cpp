@@ -2156,7 +2156,9 @@ bool Msg40::gotSummary ( ) {
 		      m_docsToGet , m_msg3aRecallCnt);
 
 	// if we do not have enough visible, try to get more
-	if ( visible < m_docsToGetVisible && m_msg3a.m_moreDocIdsAvail ) {
+	if ( visible < m_docsToGetVisible && m_msg3a.m_moreDocIdsAvail &&
+	     // doesn't work on multi-coll just yet, it cores
+	     m_numCollsToSearch == 1 ) {
 		// can it cover us?
 		long need = m_msg3a.m_docsToGet + 20;
 		// note it
