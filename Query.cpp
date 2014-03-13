@@ -3309,12 +3309,12 @@ void Query::printQueryTerms(){
 //////////   ONLY BOOLEAN STUFF BELOW HERE  /////////////
 ////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////
-bool  Query::testBoolean(qvec_t bits, qvec_t bitmask){
+bool  Query::testBoolean( unsigned char *bits ) { //qvec_t bitmask){
 	if (!m_isBoolean) return false;
 	Expression *e = &m_expressions [ 0 ];
 	// find top-level expression
 	while (e->m_parent && e != e->m_parent) e = e->m_parent;
-	return e->isTruth(bits, bitmask);
+	return e->isTruth(bits);//, bitmask);
 	
 }
 void  Query::printBooleanTree(){
@@ -3338,6 +3338,20 @@ bool Query::setBooleanOperands ( ) {
 		return log("query: Maximum number of bool operands "
 			   "exceeded (%ld).",m_numTerms);
 	}
+
+	// set the QueryWord::m_opBit member of each query word.
+	// so if  you have a query like 'A B OR C' then you need
+	// to have both A and B if you don't have C. so every word
+	// unless its an operator needs its own bit. quoted phrases
+	// may present a problem down the road we'll have to deal with.
+	long opNum = 0;
+	for ( long i = 0 ; i < m_numWords ; i++ ) {
+		// skip if field, opcode, punct. etc.
+		if ( m_qwords[i].m_ignoreWord ) continue;
+		// assign it a # i guess
+		m_qwords[i].m_opNum = opNum++;
+	}
+	
 
 	// alloc the mem if we need to (mdw left off here) 
 	//long need = (m_numWords/3) * sizeof(Expression);
@@ -3400,6 +3414,7 @@ bool Query::setBooleanOperands ( ) {
 
 	// . get all the terms that are UNDER a NOT operator in some fashion
 	// . these bits are 1-1 with m_qterms[]
+	/*
 	qvec_t notBits = e->getNOTBits( false );
 	for ( long i = 0 ; i < m_numTerms ; i++ ) {
 		if ( m_qterms[i].m_explicitBit & notBits )
@@ -3407,6 +3422,7 @@ bool Query::setBooleanOperands ( ) {
 		else
 			m_qterms[i].m_underNOT = false;
 	}
+	*/
 
 	return true;
 }
@@ -3416,7 +3432,9 @@ bool Query::setBooleanOperands ( ) {
 long Operand::set ( long a , long b , QueryWord *qwords , long level ,
 		    bool underNOT ) {
 	// clear these
-	m_termBits         = 0;
+	//m_termBits         = 0;
+	memset(m_opBits,0,MAX_OVEC_SIZE);
+
 	m_hasNOT           = false;
 
 	//m_hardRequiredBits = 0;
@@ -3461,9 +3479,12 @@ long Operand::set ( long a , long b , QueryWord *qwords , long level ,
 		//   query is too long
 		if ( qw->m_phraseId && qw->m_queryPhraseTerm &&
 		     qw->m_phraseSign ) {
-			qvec_t e =qw->m_queryPhraseTerm->m_explicitBit;
+			//qvec_t e =qw->m_queryPhraseTerm->m_explicitBit;
 			//if (qw->m_phraseSign == '+') m_hardRequiredBits |= e;
-			m_termBits |= e;
+			//m_termBits |= e;
+			long byte = qw->m_opNum / 8;
+			long mask = qw->m_opNum % 8;
+			if ( byte < MAX_OVEC_SIZE ) m_opBits[byte] |= mask;
 		}
 		// why would it be ignored? oh... if like cd-rom or in quotes
 		if ( qw->m_ignoreWord ) continue;
@@ -3471,9 +3492,12 @@ long Operand::set ( long a , long b , QueryWord *qwords , long level ,
 		// . might be a word that's not a QueryTerm because
 		//   query is too long
 		if ( qw->m_queryWordTerm ) {
-			qvec_t e = qw->m_queryWordTerm->m_explicitBit;
+			//qvec_t e = qw->m_queryWordTerm->m_explicitBit;
 			//if (qw->m_phraseSign == '+') m_hardRequiredBits |= e;
-			m_termBits |= e;
+			//m_termBits |= e;
+			long byte = qw->m_opNum / 8;
+			long mask = qw->m_opNum % 8;
+			if ( byte < MAX_OVEC_SIZE ) m_opBits[byte] |= mask;
 		}
 	}
 	return b;
@@ -3722,12 +3746,13 @@ long Expression::set (long start,
 }
 
 // each bit is 1-1 with the explicit terms in the boolean query
-bool Query::matchesBoolQuery ( qvec_t bits ) {
-	return m_expressions[0].isTruth ( bits );
+bool Query::matchesBoolQuery ( unsigned char *bitVec ) {
+	return m_expressions[0].isTruth ( bitVec );
 }
 
 // . "bits" are 1-1 with the query terms in Query::m_qterms[] array
-bool Expression::isTruth ( qvec_t bits, qvec_t mask ) {
+//bool Expression::isTruth ( qvec_t bits, qvec_t mask ) {
+bool Expression::isTruth ( unsigned char *bitVec ) { // , qvec_t mask ) {
 	//bool op1 = false ; // set to false so compiler shuts up
 	//bool op2 ;
 	//bool accumulator = false;
@@ -3736,23 +3761,24 @@ bool Expression::isTruth ( qvec_t bits, qvec_t mask ) {
 
 	// leaf node
 	if (m_operand){
-		result = m_operand->isTruth(bits, mask);
+		result = m_operand->isTruth(bitVec);//, mask);
 		// handle masked terms better.. don't apply NOT operator
-		if (!(m_operand->m_termBits & mask)) return true;
+		// mdw - not sure what this is doing
+		//if (!(m_operand->m_termBits & mask)) return true;
 	}
 	else if (m_numChildren == 1){
-		result = m_children[0]->isTruth(bits, mask);
+		result = m_children[0]->isTruth(bitVec);//, mask);
 	}
 	else if (m_opcode == OP_OR || m_opcode == OP_UOR) {
 		for ( long i=0 ; i<m_numChildren ; i++ ) {
-			result = result || m_children[i]->isTruth(bits, mask);
+			result = result||m_children[i]->isTruth(bitVec);//mask
 			if (result) goto done;
 		}
 	}
 	else if (m_opcode == OP_AND || m_opcode == OP_PIPE){
 		result = true;
 		for (long i = 0 ; i < m_numChildren ; i++ ) {
-			result = result && m_children[i]->isTruth(bits, mask);
+			result = result &&m_children[i]->isTruth(bitVec);//mask
 			if (!result) goto done;
 		}
 	}
@@ -3762,6 +3788,7 @@ done :
 	else return result;
 }
 
+/*
 // . "bits" are 1-1 with the query terms in Query::m_qterms[] array
 // . hasNOT is true if there's a NOT just to the left of this WHOLE expressions
 //   ourside the parens
@@ -3779,6 +3806,7 @@ qvec_t Expression::getNOTBits ( bool hasNOT ) {
 	// success, all operand pairs were true
 	return notBits;
 }
+*/
 
 // print boolean expression for debug purposes
 void Expression::print(SafeBuf *sbuf) {
@@ -3807,8 +3835,8 @@ void Operand::print(SafeBuf *sbuf) {
 // 	long shift = 0;
 // 	while (m_termBits >> shift) shift++;
 // 	sbuf->safePrintf("%i", 1<<(shift-1));
-	if (m_hasNOT) sbuf->safePrintf("NOT 0x%lx", (long)m_termBits);
-	else sbuf->safePrintf("0x%lx", (long)m_termBits);
+	if (m_hasNOT) sbuf->safePrintf("NOT 0x%llx",*(long long *)m_opBits);
+	else sbuf->safePrintf("0x%llx", *(long long *)m_opBits);
 }
 
 // if any one query term is split, msg3a has to split the query

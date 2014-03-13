@@ -49,6 +49,8 @@ typedef unsigned long long qvec_t;
 
 #define MAX_EXPLICIT_BITS (sizeof(qvec_t)*8)
 
+#define MAX_OVEC_SIZE 256
+
 // only can use 16-bit since have to make a 64k truth table!
 #define MAX_EXPLICIT_BITS_BOOLEAN (16*8)
 
@@ -181,27 +183,38 @@ public:
 	long set ( long a , long b , class QueryWord *qwords , long level ,
 		   bool underNOT ) ;
 	// . "bits" are 1-1 with the query terms in Query::m_qterms[] array
-	// . Operand::m_termBits is the required bits for operand to be true
+	// . Operand::m_opBits is the required bits for operand to be true
 	// . does not include signless phrases
-	bool isTruth ( qvec_t bits, qvec_t mask=(qvec_t)-1 ) {
+	//bool isTruth ( qvec_t bits, qvec_t mask=(qvec_t)-1 ) {
+	bool isTruth ( unsigned char *bitVec ) {
 		// must always satisfy hard required terms (+ sign)
 		//if ( (bits & m_forcedBits) != m_forcedBits )
 		//	return false;
-		if (m_hasNOT) return (bits & m_termBits & mask) == 0;
-		return ( (bits & m_termBits & mask) == (m_termBits & mask)); 
+		//if (m_hasNOT) return (bits & m_opBits & mask) == 0;
+		//return ( (bits & m_opBits & mask) == (m_opBits & mask)); 
+		if ( m_hasNOT ) {
+			for ( long i = 0 ; i < m_vecSize ; i++ )
+				if ( m_opBits[i] & bitVec[i] ) return false;
+			return true;
+		}
+		for ( long i = 0 ; i < m_vecSize ; i++ )
+			if ( m_opBits[i] & bitVec[i] ) return true;
+		return false;
 		// . we are now back to good ol' default OR
-		// . m_termBits should have been masked with
+		// . m_opBits should have been masked with
 		//   m_requiredBits so as not to include signless phrases
-		//return ( (bits & m_termBits) != 0 ); 
+		//return ( (bits & m_opBits) != 0 ); 
 	};
 	void print (SafeBuf *sbuf);
 	// we are a sequence of QueryWords
 	//long m_startWordNum;
 	//long m_lastWordNum;
-	// . we treat the required term bits of those words as one unit (ANDed)
-	// . unsigned phrases are not included in these term bits
 	// . doc just needs one of these bits for this op to be considered true
-	qvec_t m_termBits;
+	// . terms under the same QueryTermInfo class should have the same
+	//   termbit here
+	unsigned char m_opBits[MAX_OVEC_SIZE];
+	long m_vecSize;
+	// does the word NOT preceed the operand?
 	bool   m_hasNOT;
 	class Expression *m_parent;
 
@@ -223,11 +236,12 @@ public:
 		   bool hasNOT ,
 		  bool underNOT );
 
-	bool isTruth ( qvec_t bits, qvec_t mask=(qvec_t)-1  ) ;
+	//bool isTruth ( qvec_t bits, qvec_t mask=(qvec_t)-1  ) ;
+	bool isTruth ( unsigned char *bitVec );
 	// . what QueryTerms are UNDER the influence of the NOT opcode?
 	// . we read in the WHOLE termlist of those that are (like '-' sign)
 	// . returned bit vector is 1-1 with m_qterms in Query class
-	qvec_t getNOTBits ( bool hasNOT );
+	//qvec_t getNOTBits ( bool hasNOT );
 	void print (SafeBuf *sbuf);
 	// . a list of operands separated by op codes (a AND b OR c ...)
 	// . sometimes and operand is another expression: a AND (b OR c)
@@ -373,6 +387,8 @@ class QueryWord {
 	float m_float;
 	// for gbminint:99 etc. uses integers instead of floats for better res
 	long  m_int;
+	// what operand # is it for doing boolen queries?
+	long  m_opNum;
 };
 
 // . we filter the QueryWords and turn them into QueryTerms
@@ -597,7 +613,7 @@ class Query {
 
 	// sets m_bmap[][] so getImplicits() works
 	void setBitMap ( );
-	bool testBoolean(qvec_t bits, qvec_t bitmask=(qvec_t)-1);
+	bool testBoolean(unsigned char *bits);//, qvec_t bitmask=(qvec_t)-1);
 	// print to log
 	void printBooleanTree();
 	void printQueryTerms();
@@ -605,7 +621,10 @@ class Query {
 	// the new way as of 3/12/2014. just determine if matches the bool
 	// query or not. let's try to offload the scoring logic to other places
 	// if possible.
+	// bitVec is all the QueryWord::m_opBits some docid contains, so
+	// does it match our boolean query or not?
 	bool matchesBoolQuery ( unsigned char *bitVec ) ;
+
 
 	// . call this before calling getBitScore() to set m_bitScores[] table
 	// . returns false and sets g_errno on error (ENOMEM usually)
@@ -624,6 +643,7 @@ class Query {
 	//   through the phrase
 	// . the greater the number of IMplicit SINGLE words a doc has the 
 	//   bigger its bit score
+	/*
 	uint8_t getBitScore ( qvec_t ebits ) {
 		// get implicit bits from explicit bits
 		qvec_t ibits = getImplicits ( ebits );
@@ -672,6 +692,7 @@ class Query {
 		if (ibits                     == m_requiredBits ) bscore|=0x20;
 		return bscore;
 	};
+	*/
 
 	// return an implicit vector from an explicit which contains the explic
 	qvec_t getImplicits ( qvec_t ebits ) {

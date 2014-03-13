@@ -7003,7 +7003,8 @@ bool PosdbTable::makeDocIdVoteBufFromBooleanQuery_r ( ) {
 	//   combination we encounter and store it into an array, otherwise,
 	//   we can use a another hashtable in order to avoid re-evaluation
 	//   on if it passes the boolean query.
-	char bitVec[m_vecSize];
+	char bitVec[MAX_OVEC_SIZE];
+	if ( m_vecSize > MAX_OVEC_SIZE ) m_vecSize = MAX_OVEC_SIZE;
 	// set all to zeroes
 	memset ( bitVec , 0 , m_vecSize );
 

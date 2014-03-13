@@ -9,7 +9,7 @@
 #define _TOPTREE_H_
 
 #include "Clusterdb.h"   // SAMPLE_VECTOR_SIZE, 48 bytes for now
-#include "IndexTable2.h" // score_t definition
+//#include "IndexTable2.h" // score_t definition
 #include "RdbTree.h"
 
 class TopNode {
