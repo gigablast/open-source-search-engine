@@ -618,6 +618,8 @@ void PosdbTable::init ( Query     *q               ,
 	m_msg2 = msg2;
 	// sanity
 	if ( m_msg2 && ! m_msg2->m_query ) { char *xx=NULL;*xx=0; }
+	// save this
+	m_collnum = r->m_collnum;
 	// save the request
 	m_r = r;
 
@@ -627,7 +629,7 @@ void PosdbTable::init ( Query     *q               ,
         CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
         if ( ! cr ) { char *xx=NULL;*xx=0; }
 	// set this now
-	m_collnum = cr->m_collnum;
+	//m_collnum = cr->m_collnum;
 
 
 	// save it

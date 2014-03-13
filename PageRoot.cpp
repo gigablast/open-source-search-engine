@@ -1244,7 +1244,7 @@ public:
 };
 */
 
-class State1 {
+class State1i {
 public:
 	//Msg4       m_msg4;
 	Msg7       m_msg7;
@@ -1417,14 +1417,14 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 
 
 	// make a new state
-	State1 *st1 ;
-	try { st1 = new (State1); }
+	State1i *st1 ;
+	try { st1 = new (State1i); }
 	catch ( ... ) { 
 		g_errno = ENOMEM;
 		log("PageAddUrl: new(%i): %s", 
-		    sizeof(State1),mstrerror(g_errno));
+		    sizeof(State1i),mstrerror(g_errno));
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno)); }
-	mnew ( st1 , sizeof(State1) , "PageAddUrl" );
+	mnew ( st1 , sizeof(State1i) , "PageAddUrl" );
 	// save socket and isAdmin
 	st1->m_socket  = s;
 	st1->m_isAdmin = isAdmin;
@@ -1454,7 +1454,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	st1->m_spiderLinks = true;
 	st1->m_strip   = true;
 
-	// save the collection name in the State1 class
+	// save the collection name in the State1i class
 	//if ( collLen > MAX_COLL_LEN ) collLen = MAX_COLL_LEN;
 	//strncpy ( st1->m_coll , coll , collLen );
 	//st1->m_coll [ collLen ] = '\0';
@@ -1506,7 +1506,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 		//g_errno = ETOOEARLY;
 		SafeBuf sb;
 		sb.safePrintf("You breached your add url quota.");
-		mdelete ( st1 , sizeof(State1) , "PageAddUrl" );
+		mdelete ( st1 , sizeof(State1i) , "PageAddUrl" );
 		delete (st1);
 		// use cachetime of 3600 so it does not re-inject if you hit 
 		// the back button!
@@ -1558,11 +1558,11 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 
 
 void doneInjectingWrapper3 ( void *st ) {
-	State1 *st1 = (State1 *)st;
+	State1i *st1 = (State1i *)st;
 	// allow others to add now
 	s_inprogress = false;
 	// get the state properly
-	//State1 *st1 = (State1 *) state;
+	//State1i *st1 = (State1i *) state;
 	// in order to see what sites are being added log it, then we can
 	// more easily remove sites from sitesearch.gigablast.com that are
 	// being added but not being searched
@@ -1726,7 +1726,7 @@ void doneInjectingWrapper3 ( void *st ) {
 
 
 	// nuke state
-	mdelete ( st1 , sizeof(State1) , "PageAddUrl" );
+	mdelete ( st1 , sizeof(State1i) , "PageAddUrl" );
 	delete (st1);
 
 	// this reply should be loaded from the ajax loader so use a cache
