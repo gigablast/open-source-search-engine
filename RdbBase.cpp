@@ -1413,6 +1413,13 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		m_minToMerge = 4;
 	if ( cr && m_rdb == g_tagdb.getRdb() )
 		m_minToMerge = 2;//cr->m_tagdbMinFilesToMerge;
+
+	// if we are reblancing this coll then keep merges tight so all
+	// the negative recs annihilate with the positive recs to free
+	// up disk space since we could be short on disk space.
+	if ( g_rebalance.m_inRebalanceLoop && 
+	     g_rebalance.m_collnum == m_collnum )
+		m_minToMerge = 2;
 	
 
 	// secondary rdbs are used for rebuilding, so keep their limits high

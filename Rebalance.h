@@ -43,6 +43,7 @@ class Rebalance {
 	long m_blocked;
 	bool m_allowSave;
 
+	bool m_registered;
 	RdbList m_list;
 	SafeBuf m_posMetaList;
 	SafeBuf m_negMetaList;
