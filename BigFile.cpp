@@ -468,6 +468,9 @@ bool BigFile::readwrite ( void         *buf      ,
 	fstate->m_callback    = callback;
 	fstate->m_niceness    = niceness;
 	fstate->m_flags       = m_flags;
+	// sanity
+	if ( fstate->m_bytesToGo > 150000000 )
+		log("file: huge read of %lli bytes",(long long)size);
 	// . set our fd's before entering the thread in case RdbMerge
 	//   calls our unlinkPart() 
 	// . it's thread-UNsafe to call getfd() from within the thread

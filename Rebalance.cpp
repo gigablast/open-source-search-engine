@@ -328,7 +328,7 @@ static void gotListWrapper ( void *state , RdbList *list, Msg5 *msg5 ) {
 
 void sleepWrapper ( int fd , void *state ) {
 	// try a re-call since we were merging last time
-	g_rebalance.scanRdb();
+	g_rebalance.scanLoop();
 }
 
 bool Rebalance::scanRdb ( ) {

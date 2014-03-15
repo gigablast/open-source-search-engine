@@ -722,6 +722,11 @@ bool Msg5::readList ( ) {
 		}
 	}
 
+	// limit to 20MB so we don't go OOM!
+	if ( m_newMinRecSizes > 2 * m_minRecSizes &&
+	     m_newMinRecSizes > 20000000 )
+		m_newMinRecSizes = 20000000;
+	     
 
 	QUICKPOLL((m_niceness));
 	// debug msg
@@ -849,6 +854,9 @@ bool Msg5::needsRecall ( ) {
 	// seems to be very common for doledb, so don't log unless extreme
 	//if ( m_rdbId == RDB_DOLEDB && m_round < 15 ) logIt = false;
 	if ( m_round > 100 && (m_round % 1000) != 0 ) logIt = false;
+	// seems very common when doing rebalancing then merging to have
+	// to do at least one round of re-reading, so note that
+	if ( m_round == 0 ) logIt = false;
 	if ( logIt )
 		logf(LOG_DEBUG,"db: Reading %li again from %s (need %li total "
 		     "got %li) this=0x%lx round=%li.", 

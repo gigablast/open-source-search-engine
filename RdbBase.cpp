@@ -1423,11 +1423,11 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	// if we are reblancing this coll then keep merges tight so all
 	// the negative recs annihilate with the positive recs to free
 	// up disk space since we could be short on disk space.
-	if ( g_rebalance.m_isScanning )
-		// if might have moved on if not able to merge because
-		// another was merging... so do this anyway...
-		//g_rebalance.m_collnum == m_collnum )
-		m_minToMerge = 2;
+	//if ( g_rebalance.m_isScanning &&
+	//     // if might have moved on if not able to merge because
+	//     // another was merging... so do this anyway...
+	//     g_rebalance.m_collnum == m_collnum )
+	//	m_minToMerge = 2;
 	
 
 	// secondary rdbs are used for rebuilding, so keep their limits high
@@ -1482,6 +1482,13 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		    m_dbname);
 		g_numUrgentMerges++;
 	}
+
+
+	// tfndb has his own merge class since titledb merges write tfndb recs
+	RdbMerge *m = &g_merge;
+	if ( m->isMerging() )
+		return;
+
 	// if we are tfndb and someone else is merging, do not merge unless
 	// we have 3 or more files
 	long minToMerge = m_minToMerge;
@@ -1501,6 +1508,31 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		resuming = true;
 		break;
 	}
+
+	// what percent of recs in the collections' rdb are negative?
+	// the rdbmaps hold this info
+	float percentNegativeRecs = getPercentNegativeRecsOnDisk ( );
+	// 1. if disk space is tight and >20% negative recs, force it
+	if ( g_process.m_diskAvail >= 0 && 
+	     g_process.m_diskAvail < 10000000000LL && // 10GB
+	     percentNegativeRecs > .20 ) {
+		m_nextMergeForced = true;
+		forceMergeAll = true;
+		log("rdb: hit negative rec concentration of %.01f for "
+		    "collnum %li on db %s when diskAvail=%lli bytes",
+		    percentNegativeRecs,(long)m_collnum,m_rdb->m_dbname,
+		    g_process.m_diskAvail);
+	}
+	// 2. if >40% negative recs force it
+	if ( percentNegativeRecs > .40 ) {
+		m_nextMergeForced = true;
+		forceMergeAll = true;
+		log("rdb: hit negative rec concentration of %.01f for "
+		    "collnum %li on db %s",
+		    percentNegativeRecs,(long)m_collnum,m_rdb->m_dbname);
+	}
+
+
 	// . don't merge if we don't have the min # of files
 	// . but skip this check if there is a merge to be resumed from b4
 	if ( ! resuming && ! forceMergeAll && numFiles < minToMerge ) return;
@@ -1770,11 +1802,11 @@ void RdbBase::gotTokenForMerge ( ) {
 	// if we are reblancing this coll then keep merges tight so all
 	// the negative recs annihilate with the positive recs to free
 	// up disk space since we could be short on disk space.
-	if ( g_rebalance.m_isScanning )
-		// if might have moved on if not able to merge because
-		// another was merging... so do this anyway...
-		//g_rebalance.m_collnum == m_collnum )
-		minToMerge = 2;
+	//if ( g_rebalance.m_isScanning &&
+	//     // if might have moved on if not able to merge because
+	//     // another was merging... so do this anyway...
+	//     g_rebalance.m_collnum == m_collnum )
+	//	minToMerge = 2;
 
 
 	//if (m_rdb==g_tfndb.getRdb()&& g_merge.isMerging() && minToMerge <=2 )
@@ -1826,7 +1858,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	// but if we are forcing then merge ALL, except one being dumped
 	if ( m_nextMergeForced ) n = numFiles;
 	// or if doing relabalncing, merge them all. tight merge
-	if ( g_rebalance.m_isScanning ) n = numFiles;
+	//if ( g_rebalance.m_isScanning && g_rebalance.m_collnum == m_collnum) 
+	//	n = numFiles;
 	//else if ( m_isTitledb ) {
 	//	RdbBase *base = g_tfndb.getRdb()->m_bases[m_collnum];
 	//	tfndbSize = base->getDiskSpaceUsed();
@@ -2404,4 +2437,15 @@ bool RdbBase::verifyFileSharding ( ) {
 	//return true;
 }
 
-
+float RdbBase::getPercentNegativeRecsOnDisk ( ) {
+	// scan the maps
+	long long numPos = 0LL;
+	long long numNeg = 0LL;
+	for ( long i = 0 ; i < m_numFiles ; i++ ) {
+		numPos += m_maps[i]->getNumPositiveRecs();
+		numNeg += m_maps[i]->getNumNegativeRecs();
+	}
+	long long total = numPos + numNeg;
+	float percent = (float)numNeg / (float)total;
+	return percent;
+}
