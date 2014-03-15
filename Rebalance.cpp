@@ -352,7 +352,8 @@ bool Rebalance::scanRdb ( ) {
 	//   all our data so that they annihilate quickly with the positive
 	//   keys in there to free up more disk
 	RdbBase *base = rdb->getBase ( m_collnum );
-	if ( base->isMerging() ) {
+	// base is NULL for like monitordb...
+	if ( base && base->isMerging() ) {
 		log("rebal: waiting for merge on %s for coll #%li to complete",
 		    rdb->m_dbname,(long)m_collnum);
 		g_loop.registerSleepCallback ( 1000,NULL,sleepWrapper,1);
@@ -360,6 +361,16 @@ bool Rebalance::scanRdb ( ) {
 		// we blocked, return false
 		return false;
 	}
+	// or really if any merging is going on way for it to save disk space
+	if ( rdb->isMerging() ) {
+		log("rebal: waiting for merge on %s for coll ??? to complete",
+		    rdb->m_dbname);
+		g_loop.registerSleepCallback ( 1000,NULL,sleepWrapper,1);
+		m_registered = true;
+		// we blocked, return false
+		return false;
+	}
+
 
 	// skip empty collrecs, unless like statsdb or something
 	//if ( ! cr && ! rdb->m_isCollectionLess ) return true;
