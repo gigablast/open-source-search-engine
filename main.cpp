@@ -4298,6 +4298,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"%slocalhosts.conf "
 				//"%shosts2.conf "
 				"%sgb.conf "
+				"%slocalgb.conf "
 				"%stmpgb "
 				//"%scollections.dat "
 				"%sgb.pem "
@@ -4338,6 +4339,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 				"%s:%s"
 				,
+				dir,
 				dir,
 				dir,
 				dir,
