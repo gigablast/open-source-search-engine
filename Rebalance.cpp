@@ -23,7 +23,7 @@ Rebalance g_rebalance;
 Rebalance::Rebalance ( ) {
 	m_registered = false;
 	m_allowSave = false;
-	m_inRebalanceLoop = false;
+	//m_inRebalanceLoop = false;
 	m_numForeignRecs = 0;
 	m_rebalanceCount = 0LL;
 	m_scannedCount = 0LL;

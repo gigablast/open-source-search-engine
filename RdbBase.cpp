@@ -1423,7 +1423,7 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	// if we are reblancing this coll then keep merges tight so all
 	// the negative recs annihilate with the positive recs to free
 	// up disk space since we could be short on disk space.
-	if ( g_rebalance.m_inRebalanceLoop )
+	if ( g_rebalance.m_isScanning )
 		// if might have moved on if not able to merge because
 		// another was merging... so do this anyway...
 		//g_rebalance.m_collnum == m_collnum )
@@ -1770,7 +1770,7 @@ void RdbBase::gotTokenForMerge ( ) {
 	// if we are reblancing this coll then keep merges tight so all
 	// the negative recs annihilate with the positive recs to free
 	// up disk space since we could be short on disk space.
-	if ( g_rebalance.m_inRebalanceLoop )
+	if ( g_rebalance.m_isScanning )
 		// if might have moved on if not able to merge because
 		// another was merging... so do this anyway...
 		//g_rebalance.m_collnum == m_collnum )
@@ -1826,7 +1826,7 @@ void RdbBase::gotTokenForMerge ( ) {
 	// but if we are forcing then merge ALL, except one being dumped
 	if ( m_nextMergeForced ) n = numFiles;
 	// or if doing relabalncing, merge them all. tight merge
-	if ( g_rebalance.m_inRebalanceLoop ) n = numFiles;
+	if ( g_rebalance.m_isScanning ) n = numFiles;
 	//else if ( m_isTitledb ) {
 	//	RdbBase *base = g_tfndb.getRdb()->m_bases[m_collnum];
 	//	tfndbSize = base->getDiskSpaceUsed();

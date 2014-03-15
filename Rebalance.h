@@ -23,7 +23,7 @@ class Rebalance {
 	bool gotList ( ) ;
 	bool saveRebalanceFile ( ) ;
 
-	bool m_inRebalanceLoop;
+	//bool m_inRebalanceLoop;
 	long m_numForeignRecs;
 	long long m_rebalanceCount;
 	long long m_scannedCount;
