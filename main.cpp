@@ -5758,11 +5758,12 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			    lastKey.n1,lastKey.n0,
 			    k.n1,k.n0);
 		lastKey = k;
+		long shard = g_hostdb.getShardNum ( RDB_TITLEDB , &k );
 		// print deletes
 		if ( (k.n0 & 0x01) == 0) {
 			fprintf(stdout,"n1=%08lx n0=%016llx docId=%012lli "
-			       "(del)\n", 
-			       k.n1 , k.n0 , docId );
+			       "shard=%li (del)\n", 
+				k.n1 , k.n0 , docId , shard );
 			continue;
 		}
 		// free the mem
@@ -5832,6 +5833,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 					"redir=%s "
 					"url=%s "
 					"firstdup=1 "
+					"shard=%li "
 					"\n", 
 					k.n1 , k.n0 , 
 					//rec[0] , 
@@ -5854,7 +5856,8 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 					//ms,
 					(long)xd->m_hopCount,
 					ru,
-					u->getUrl() );
+					u->getUrl() ,
+					shard );
 				prevId = docId;
 				count = 0;
 				continue;
@@ -5954,6 +5957,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			"version=%02li "
 			//"maxLinkTextWeight=%06lu%% "
 			"hc=%li "
+			"shard=%li "
 			//"diffbot=%li "
 			"redir=%s "
 			"url=%s\n", 
@@ -5977,6 +5981,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			(long)xd->m_version,
 			//ms,
 			(long)xd->m_hopCount,
+			shard,
 			//(long)xd->m_isDiffbotJSONObject,
 			ru,
 			u->getUrl() );
@@ -14440,6 +14445,8 @@ bool checkDataParity ( ) {
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
 		uint32_t shardNum = getShardNum ( RDB_INDEXDB, &k );
@@ -14487,6 +14494,8 @@ bool checkDataParity ( ) {
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		uint32_t shardNum = getShardNum ( RDB_TITLEDB , &k );
 		//long groupId = k.n1 & g_hostdb.m_groupMask;
@@ -14529,6 +14538,8 @@ bool checkDataParity ( ) {
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		// verify the group
 		uint32_t shardNum = getShardNum ( RDB_TFNDB , &k );

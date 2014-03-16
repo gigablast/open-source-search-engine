@@ -1921,6 +1921,8 @@ bool Tagdb::verify ( char *coll ) {
 		//key128_t k = list.getCurrentKey();
 		key128_t k;
 		list.getCurrentKey ( &k );
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		// see if it is the "old" school tagdb rec
 		//char *data       = list.getCurrentData();

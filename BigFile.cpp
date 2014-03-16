@@ -566,10 +566,12 @@ bool BigFile::readwrite ( void         *buf      ,
 	// request originated through Multicast, then multicast will sleep
 	// and retry. Msg3 could retry, the multicast thing should be more
 	// for running out of udp slots though...
-	if ( g_errno && ! doWrite && g_errno != ENOTHREADSLOTS ) {
-		log (LOG_INFO,"disk: May retry later.");
-		return true;
-	}
+	// crap, call to clone() now fails a lot since we use pthreads
+	// library ... so assume that is it i guess (MDW 3/15/2014)
+	//if ( g_errno && ! doWrite && g_errno != ENOTHREADSLOTS ) {
+	//	log (LOG_INFO,"disk: May retry later.");
+	//	return true;
+	//}
 	// otherwise, thread spawn failed, do it blocking then
 	g_errno = 0;
 	// if threads are manually disabled don't print these msgs because
@@ -580,7 +582,8 @@ bool BigFile::readwrite ( void         *buf      ,
 		if ( now - s_lastTime >= 1 ) {
 			s_lastTime = now;
 			log (LOG_INFO,
-			     "disk: Doing blocking disk access. This will hurt "
+			     "disk: Doing blocking disk access. "
+			     "This will hurt "
 			     "performance. isWrite=%li.",(long)doWrite);
 		}
 	}

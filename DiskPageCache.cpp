@@ -108,7 +108,10 @@ bool DiskPageCache::init ( const char *dbname ,
 			//   void (*rmVfd2)(DiskPageCache*, long) ) {
 	reset();
 
-	// fix cores while rebalancing
+	// seems like we lose data when it prints "Caught add breach"
+	// so let's stop using until we fix that... happens while we are
+	// dumping i think and somehow the data seems to get lost that
+	// we were dumping.
 	//maxMem = 0;
 
 	m_rdbId = rdbId;

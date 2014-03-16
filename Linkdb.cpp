@@ -233,6 +233,8 @@ bool Linkdb::verify ( char *coll ) {
 	      list.skipCurrentRecord() ) {
 		key224_t k;
 		list.getCurrentKey((char*)&k);
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		//uint32_t shardNum = getShardNum ( RDB_LINKDB , &k );
 		//if ( groupId == g_hostdb.m_groupId ) got++;

@@ -289,6 +289,8 @@ bool Posdb::verify ( char *coll ) {
 	      list.skipCurrentRecord() ) {
 		key144_t k;
 		list.getCurrentKey(&k);
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
 		//unsigned long groupId = getGroupId ( RDB_POSDB , &k );
