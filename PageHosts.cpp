@@ -131,7 +131,7 @@ skipReplaceHost:
 	if ( g_conf.m_useShotgun ) {
 		colspan = "31";
 		//shotcol = "<td><b>ip2</b></td>";
-		sprintf ( shotcol, "<td><a href=\"/master/hosts?c=%s"
+		sprintf ( shotcol, "<td><a href=\"/admin/hosts?c=%s"
 			 	   "&sort=2\">"
 			  "<b>ping2</b></td></a>",
 			  coll);
@@ -143,12 +143,12 @@ skipReplaceHost:
 		  "<tr><td colspan=%s><center>"
 		  //"<font size=+1>"
 		  "<b>Hosts "
-		  "(<a href=\"/master/hosts?c=%s&sort=%li&reset=1\">"
+		  "(<a href=\"/admin/hosts?c=%s&sort=%li&reset=1\">"
 		  "reset)</b>"
 		  //"</font>"
 		  "</td></tr>" 
 		  "<tr bgcolor=#%s>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=0\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=0\">"
 
 		  "<b>hostId</b></td>"
 		  "<td><b>host ip</b></td>"
@@ -188,52 +188,52 @@ skipReplaceHost:
 		  //"<td><b>resends sent</td>"
 		  //"<td><b>errors recvd</td>"
 		  //"<td><b>ETRYAGAINS recvd</td>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=3\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=3\">"
 		  "<b>dgrams resent</a></td>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=4\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=4\">"
 		  "<b>errors recvd</a></td>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=5\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=5\">"
 		  "<b>ETRY AGAINS recvd</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=6\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=6\">"
 		  "<b>dgrams to</a></td>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=7\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=7\">"
 		  "<b>dgrams from</a></td>"
 
-		  //"<td><a href=\"/master/hosts?c=%s&sort=8\">"
+		  //"<td><a href=\"/admin/hosts?c=%s&sort=8\">"
 		  //"<b>loadavg</a></td>"
 
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=13\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=13\">"
 		  "<b>avg split time</a></td>"
 
 		  "<td><b>splits done</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=12\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=12\">"
 		  "<b>status</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=15\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=15\">"
 		  "<b>slow reads</a></td>"
 
 		  "<td><b>docs indexed</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=9\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=9\">"
 		  "<b>mem used</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=10\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=10\">"
 		  "<b>cpu</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=17\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=17\">"
 		  "<b>disk</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=14\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=14\">"
 		  "<b>max ping1</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=11\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=11\">"
 		  "<b>ping1 age</a></td>"
 
 		  //"<td><b>ip1</td>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=1\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=1\">"
 		  "<b>ping1</a></td>"
 
 		  "%s"// "<td><b>ip2</td>"
@@ -452,7 +452,7 @@ skipReplaceHost:
 		// print it
 		sb.safePrintf (
 			  "<tr bgcolor=#%s>"
-			  "<td><a href=\"http://%s:%hi/master/hosts?"
+			  "<td><a href=\"http://%s:%hi/admin/hosts?"
 			  ""
 			  "c=%s"
 			  "&sort=%li\">%li</a></td>"
@@ -711,7 +711,7 @@ skipReplaceHost:
 		sb.safePrintf (
 			  "<tr bgcolor=#%s>"
 
-			  "<td><a href=\"http://%s:%hi/master/hosts?"
+			  "<td><a href=\"http://%s:%hi/admin/hosts?"
 			  ""
 			  "c=%s\">"
 			  "%li</a></td>"

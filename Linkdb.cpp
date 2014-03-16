@@ -2590,7 +2590,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		for ( long j = 0 ; j < MAX_ENTRY_DOCIDS ; j++ ) {
 			if ( e->m_docIds[j] == -1LL ) break;
 			if ( ! m_printInXml )
-				m_pbuf->safePrintf ("<a href=\"/master/titledb"
+				m_pbuf->safePrintf ("<a href=\"/admin/titledb"
 						    "?c=%s&d=%lli\">"
 						    "%li</a> ",
 						    coll,e->m_docIds[j],j);
@@ -4610,7 +4610,7 @@ bool LinkInfo::print ( SafeBuf *sb , char *coll ) {
 			       "<tr><td colspan=2>link #%04li "
 			       "("
 			       //"baseScore=%010li, "
-			       "d=<a href=\"/master/titledb?c=%s&"
+			       "d=<a href=\"/admin/titledb?c=%s&"
 			       "d=%lli\">%016lli</a>, "
 			       "siterank=%li, "
 			       "hopcount=%03li "
