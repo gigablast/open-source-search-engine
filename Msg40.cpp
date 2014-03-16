@@ -147,7 +147,10 @@ bool Msg40::getResults ( SearchInput *si      ,
 			 void        *state   ,
 			 void   (* callback) ( void *state ) ) {
 	// warning
-	if ( ! si->m_coll2 ) log(LOG_LOGIC,"net: NULL collection. msg40.");
+	//if ( ! si->m_coll2 ) log(LOG_LOGIC,"net: NULL collection. msg40.");
+	if ( si->m_collnumBuf.length() < (long)sizeof(collnum_t) )
+		log(LOG_LOGIC,"net: NULL collection. msg40.");
+
 
 	m_lastProcessedi = -1;
 
@@ -169,11 +172,18 @@ bool Msg40::getResults ( SearchInput *si      ,
 
  	m_postQueryRerank.set1( this, si );
 
+	// take search parms i guess from first collnum
+	collnum_t *cp = (collnum_t *)m_si->m_collnumBuf.getBufStart();
+
 	// get the collection rec
-	CollectionRec *cr =g_collectiondb.getRec(m_si->m_coll2,
-						 m_si->m_collLen2);
+	CollectionRec *cr =g_collectiondb.getRec( cp[0] );
+
 	// g_errno should be set if not found
 	if ( ! cr ) { g_errno = ENOCOLLREC; return true; }
+
+	// save that
+	m_firstCollnum = cr->m_collnum;
+
 	// what is our max docids ceiling?
 	//m_maxDocIdsToCompute = cr->m_maxDocIdsToCompute;
 	// topic similarity cutoff
@@ -360,6 +370,9 @@ bool Msg40::getResults ( SearchInput *si      ,
 	// turn it off for now until we cache the scoring tables
 	log("db: cache is disabled until we cache scoring tables");
 	useCache = false;
+	// if searching multiple collections do not cache for now
+	if ( m_si->m_collnumBuf.length() > (long)sizeof(collnum_t) ) 
+		useCache=false;
 
 	// . try setting from cache first
 	// . cacher --> "do we READ from cache?"
@@ -374,7 +387,8 @@ bool Msg40::getResults ( SearchInput *si      ,
 					      key ,
 					      &m_cachePtr,
 					      &m_cacheSize,
-					      m_si->m_coll2,
+					      // use first collection #
+					      m_si->m_firstCollnum,
 					      this , 
 					      gotCacheReplyWrapper ,
 					      m_si->m_niceness ,
@@ -506,43 +520,105 @@ bool Msg40::getDocIds ( bool recall ) {
 	if ( m_si->m_rcache ) maxAge = g_conf.m_indexdbMaxIndexListAge;
 
 	// reset it
-	m_r.reset();
+	Msg39Request mr;
+	mr.reset();
 
-	m_r.ptr_coll                    = m_si->m_coll2;
-	m_r.size_coll                   = m_si->m_collLen2+1;
-	m_r.m_maxAge                    = maxAge;
-	m_r.m_addToCache                = m_si->m_wcache;
-	m_r.m_docsToGet                 = m_docsToGet;
-	m_r.m_niceness                  = m_si->m_niceness;
-	m_r.m_debug                     = m_si->m_debug          ;
-	m_r.m_getDocIdScoringInfo       = m_si->m_getDocIdScoringInfo;
-	m_r.m_doSiteClustering          = m_si->m_doSiteClustering    ;
-	m_r.m_familyFilter              = m_si->m_familyFilter;
-	m_r.m_useMinAlgo                = m_si->m_useMinAlgo;
-	m_r.m_useNewAlgo                = m_si->m_useNewAlgo;
-	m_r.m_doMaxScoreAlgo            = m_si->m_doMaxScoreAlgo;
-	m_r.m_fastIntersection          = m_si->m_fastIntersection;
-	m_r.m_doIpClustering            = m_si->m_doIpClustering      ;
-	m_r.m_doDupContentRemoval       = m_si->m_doDupContentRemoval ;
-	//m_r.m_restrictIndexdbForQuery   = m_si->m_restrictIndexdbForQuery ;
-	m_r.m_queryExpansion            = m_si->m_queryExpansion; 
-	m_r.m_compoundListMaxSize       = m_si->m_compoundListMaxSize ;
-	m_r.m_boolFlag                  = m_si->m_boolFlag            ;
-	m_r.m_familyFilter              = m_si->m_familyFilter        ;
-	m_r.m_language                  = (unsigned char)m_si->m_queryLang;
-	m_r.ptr_query                   = m_si->m_q->m_orig;
-	m_r.size_query                  = m_si->m_q->m_origLen+1;
-	m_r.ptr_whiteList               = m_si->m_whiteListBuf.getBufStart();
-	m_r.size_whiteList              = m_si->m_whiteListBuf.length()+1;
-	m_r.m_timeout                   = -1; // auto-determine based on #terms
+	//m_r.ptr_coll                    = m_si->m_coll2;
+	//m_r.size_coll                   = m_si->m_collLen2+1;
+	mr.m_maxAge                    = maxAge;
+	mr.m_addToCache                = m_si->m_wcache;
+	mr.m_docsToGet                 = m_docsToGet;
+	mr.m_niceness                  = m_si->m_niceness;
+	mr.m_debug                     = m_si->m_debug          ;
+	mr.m_getDocIdScoringInfo       = m_si->m_getDocIdScoringInfo;
+	mr.m_doSiteClustering          = m_si->m_doSiteClustering    ;
+	mr.m_familyFilter              = m_si->m_familyFilter;
+	mr.m_useMinAlgo                = m_si->m_useMinAlgo;
+	mr.m_useNewAlgo                = m_si->m_useNewAlgo;
+	mr.m_doMaxScoreAlgo            = m_si->m_doMaxScoreAlgo;
+	mr.m_fastIntersection          = m_si->m_fastIntersection;
+	mr.m_doIpClustering            = m_si->m_doIpClustering      ;
+	mr.m_doDupContentRemoval       = m_si->m_doDupContentRemoval ;
+	//mr.m_restrictIndexdbForQuery   = m_si->m_restrictIndexdbForQuery ;
+	mr.m_queryExpansion            = m_si->m_queryExpansion; 
+	mr.m_compoundListMaxSize       = m_si->m_compoundListMaxSize ;
+	mr.m_boolFlag                  = m_si->m_boolFlag            ;
+	mr.m_familyFilter              = m_si->m_familyFilter        ;
+	mr.m_language                  = (unsigned char)m_si->m_queryLang;
+	mr.ptr_query                   = m_si->m_q->m_orig;
+	mr.size_query                  = m_si->m_q->m_origLen+1;
+	mr.ptr_whiteList               = m_si->m_whiteListBuf.getBufStart();
+	mr.size_whiteList              = m_si->m_whiteListBuf.length()+1;
+	mr.m_timeout                   = -1; // auto-determine based on #terms
 	// make sure query term counts match in msg39
-	m_r.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
-	m_r.m_realMaxTop                = m_si->m_realMaxTop;
+	mr.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
+	mr.m_realMaxTop                = m_si->m_realMaxTop;
 
 	// . get the docIds
 	// . this sets m_msg3a.m_clusterLevels[] for us
-	if ( ! m_msg3a.getDocIds ( &m_r,  m_si->m_q, this , gotDocIdsWrapper))
-		return false;
+	//if(! m_msg3a.getDocIds ( &m_r,  m_si->m_q, this , gotDocIdsWrapper))
+	//	return false;
+
+	////
+	//
+	// NEW CODE FOR LAUNCHING one MSG3a per collnum to search a token
+	//
+	////
+	m_num3aReplies = 0;
+	m_num3aRequests = 0;
+
+	// search the provided collnums (collections)
+	collnum_t *cp = (collnum_t *)m_si->m_collnumBuf.getBufStart();
+
+	// how many are we searching? usually just one.
+	m_numCollsToSearch = m_si->m_collnumBuf.length() /sizeof(collnum_t);
+
+	// make enough for ptrs
+	long need = sizeof(Msg3a *) * m_numCollsToSearch;
+	if ( ! m_msg3aPtrBuf.reserve ( need ) ) return NULL;
+	// cast the mem buffer
+	m_msg3aPtrs = (Msg3a **)m_msg3aPtrBuf.getBufStart();
+
+	// clear these out so we do not free them when destructing
+	for ( long i = 0 ; i < m_numCollsToSearch ;i++ )
+		m_msg3aPtrs[i] = NULL;
+
+	// use first guy in case only one coll we are searching, the std case
+	if ( m_numCollsToSearch <= 1 )
+		m_msg3aPtrs[0] = &m_msg3a;
+
+	// create new ones if searching more than 1 coll
+	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		// get it
+		Msg3a *mp = m_msg3aPtrs[i];
+		// stop if only searching one collection
+		if ( ! mp ) {
+			try { mp = new ( Msg3a); }
+			catch ( ... ) {
+				g_errno = ENOMEM;
+				return true;
+			}
+			mnew(mp,sizeof(Msg3a),"tm3ap");
+		}
+		// error?
+		if ( ! mp ) return true;
+		// assign it
+		m_msg3aPtrs[i] = mp;
+		// assign the request for it
+		memcpy ( &mp->m_rrr , &mr , sizeof(Msg39Request) );
+		// then customize it to just search this collnum
+		mp->m_rrr.m_collnum = cp[i];
+
+		// launch a search request
+		m_num3aRequests++;
+		// this returns false if it would block and will call callback
+		if(!mp->getDocIds(&mp->m_rrr,m_si->m_q,this,gotDocIdsWrapper))
+			continue;
+		if ( g_errno && ! m_errno ) 
+			m_errno = g_errno;
+		m_num3aReplies++;
+	}
+
 	// call again w/o parameters now
 	return gotDocIds ( );
 }	
@@ -554,6 +630,7 @@ void gotDocIdsWrapper ( void *state ) {
 	Msg40 *THIS = (Msg40 *) state;
 	// if this blocked, it returns false
 	//if ( ! checkTurnOffRAT ( state ) ) return;
+	THIS->m_num3aReplies++;
 	// return if this blocked
 	if ( ! THIS->gotDocIds() ) return;
 	// now call callback, we're done
@@ -563,6 +640,18 @@ void gotDocIdsWrapper ( void *state ) {
 // . return false if blocked, true otherwise
 // . sets g_errno on error
 bool Msg40::gotDocIds ( ) {
+
+	// return now if still waiting for a msg3a reply to get in
+	if ( m_num3aReplies < m_num3aRequests ) return false;
+
+
+	// if searching over multiple collections let's merge their docids
+	// into m_msg3a now before we go forward
+	// this will set g_errno on error, like oom
+	if ( ! mergeDocIdsIntoBaseMsg3a() )
+		log("msg40: error: %s",mstrerror(g_errno));
+
+
 	// log the time it took for cache lookup
 	long long now  = gettimeofdayInMilliseconds();
 
@@ -726,6 +815,99 @@ bool Msg40::gotDocIds ( ) {
 
 
 	return launchMsg20s ( false );
+}
+
+bool Msg40::mergeDocIdsIntoBaseMsg3a() {
+
+	// only do this if we were searching multiple collections, otherwise
+	// all the docids are already in m_msg3a
+	if ( m_numCollsToSearch <= 1 ) return true;
+	
+	// free any mem in use
+	m_msg3a.reset();
+
+	// count total docids into "td"
+	long td = 0LL;
+	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		Msg3a *mp = m_msg3aPtrs[i];
+		td += mp->m_numDocIds;
+		// reset cursor for list of docids from this collection
+		mp->m_cursor = 0;
+		// add up here too
+		m_msg3a.m_numTotalEstimatedHits += mp->m_numTotalEstimatedHits;
+	}
+
+	// setup to to merge all msg3as into our one m_msg3a
+	long need = 0;
+	need += td * 8;
+	need += td * sizeof(double);
+	need += td * sizeof(key_t);
+	need += td * 1;
+	need += td * sizeof(collnum_t);
+	// make room for the merged docids
+	m_msg3a.m_finalBuf =  (char *)mmalloc ( need , "finalBuf" );
+	m_msg3a.m_finalBufSize = need;
+	// return true with g_errno set
+	if ( ! m_msg3a.m_finalBuf ) return true;
+	// parse the memory up into arrays
+	char *p = m_msg3a.m_finalBuf;
+	m_msg3a.m_docIds        = (long long *)p; p += td * 8;
+	m_msg3a.m_scores        = (double    *)p; p += td * sizeof(double);
+	m_msg3a.m_clusterRecs   = (key_t     *)p; p += td * sizeof(key_t);
+	m_msg3a.m_clusterLevels = (char      *)p; p += td * 1;
+	m_msg3a.m_scoreInfos    = NULL;
+	m_msg3a.m_collnums      = (collnum_t *)p; p += td * sizeof(collnum_t);
+	if ( p - m_msg3a.m_finalBuf != need ) { char *xx=NULL;*xx=0; }
+
+	m_msg3a.m_numDocIds = td;
+
+	//
+	// begin the collection merge
+	//
+
+	long next = 0;
+
+ loop:
+
+	// get next biggest score
+	double max  = -1000000000.0;
+	Msg3a *maxmp = NULL;
+
+	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		// shortcut
+		Msg3a *mp = m_msg3aPtrs[i];
+		// get cursor
+		long cursor = mp->m_cursor;
+		// skip if exhausted
+		if ( cursor >= mp->m_numDocIds ) continue;
+		// get his next score 
+		double score = mp->m_scores[ cursor ];
+		if ( score <= max ) continue;
+		// got a new winner
+		max = score;
+		maxmp = mp;
+	}
+
+	// store him
+	if ( maxmp ) {
+		m_msg3a.m_docIds  [next] = maxmp->m_docIds[maxmp->m_cursor];
+		m_msg3a.m_scores  [next] = maxmp->m_scores[maxmp->m_cursor];
+		m_msg3a.m_collnums[next] = maxmp->m_rrr.m_collnum;
+		m_msg3a.m_clusterLevels[next] = CR_OK;
+		maxmp->m_cursor++;
+		next++;
+		goto loop;
+	}
+
+	// free tmp msg3as now
+	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		if ( m_msg3aPtrs[i] == &m_msg3a ) continue;
+		mdelete ( m_msg3aPtrs[i] , sizeof(Msg3a), "tmsg3a");
+		delete  ( m_msg3aPtrs[i] );
+		m_msg3aPtrs[i] = NULL;
+	}
+
+	return true;
 }
 
 // . returns false and sets g_errno/m_errno on error
@@ -1105,8 +1287,15 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		//if ( i > m_maxiLaunched ) m_maxiLaunched = i;
 		
 		// get the collection rec
-		CollectionRec *cr =g_collectiondb.
-			getRec(m_si->m_coll2,m_si->m_collLen2);
+		CollectionRec *cr =g_collectiondb.getRec(m_firstCollnum);
+		//getRec(m_si->m_coll2,m_si->m_collLen2);
+		if ( ! cr ) {
+			log("msg40: missing coll");
+			g_errno = ENOCOLLREC;
+			if ( m_numReplies < m_numRequests ) return false;
+			return true;
+		}
+
 
 		// set the summary request then get it!
 		Msg20Request req;
@@ -1139,14 +1328,25 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		req.m_highlightQueryTerms = m_si->m_doQueryHighlighting;
 		req.m_highlightDates      = m_si->m_doDateHighlighting;
 
-		req.ptr_coll             = m_si->m_coll2;
-		req.size_coll            = m_si->m_collLen2+1;
+		//req.ptr_coll             = m_si->m_coll2;
+		//req.size_coll            = m_si->m_collLen2+1;
+
 		req.m_isDebug            = (bool)m_si->m_debug;
 		if ( m_si->m_displayMetasLen > 0 ) {
 			req.ptr_displayMetas     = m_si->m_displayMetas;
 			req.size_displayMetas    = m_si->m_displayMetasLen+1;
 		}
+
 		req.m_docId              = m_msg3a.m_docIds[i];
+		
+		// if the msg3a was merged from other msg3as because we
+		// were searching multiple collections...
+		if ( m_msg3a.m_collnums )
+			req.m_collnum = m_msg3a.m_collnums[i];
+		// otherwise, just one collection
+		else
+			req.m_collnum = m_msg3a.m_rrr.m_collnum;
+
 		req.m_numSummaryLines    = m_si->m_numLinesInSummary;
 		req.m_maxCacheAge        = maxAge;
 		req.m_wcache             = m_si->m_wcache; // addToCache
@@ -1476,7 +1676,7 @@ bool Msg40::gotSummary ( ) {
 		}
 
 
-		//log("msg40: printing #%li",m_printi);
+		log("msg40: printing #%li (%lu)",m_printi,mr->m_contentHash32);
 
 		// . ok, we got it, so print it and stream it
 		// . this might set m_hadPrintError to true
@@ -1661,7 +1861,8 @@ bool Msg40::gotSummary ( ) {
 	long long took;
 
 	// shortcut
-	Query *q = m_msg3a.m_q;
+	//Query *q = m_msg3a.m_q;
+	Query *q = m_si->m_q;
         
 	//log(LOG_DEBUG, "query: msg40: deduping from %ld to %ld", 
 	//oldNumContiguous, m_numContiguous);
@@ -1955,7 +2156,9 @@ bool Msg40::gotSummary ( ) {
 		      m_docsToGet , m_msg3aRecallCnt);
 
 	// if we do not have enough visible, try to get more
-	if ( visible < m_docsToGetVisible && m_msg3a.m_moreDocIdsAvail ) {
+	if ( visible < m_docsToGetVisible && m_msg3a.m_moreDocIdsAvail &&
+	     // doesn't work on multi-coll just yet, it cores
+	     m_numCollsToSearch == 1 ) {
 		// can it cover us?
 		long need = m_msg3a.m_docsToGet + 20;
 		// note it
@@ -2314,7 +2517,8 @@ bool Msg40::gotSummary ( ) {
 		m_msg3a.m_scores        [c] = m_msg3a.m_scores        [i];
 		m_msg3a.m_clusterLevels [c] = m_msg3a.m_clusterLevels [i];
 		m_msg20                 [c] = m_msg20                 [i];
-		m_msg3a.m_scoreInfos    [c] = m_msg3a.m_scoreInfos    [i];
+		if ( m_msg3a.m_scoreInfos )
+			m_msg3a.m_scoreInfos [c] = m_msg3a.m_scoreInfos [i];
 		long need = m_si->m_docsWanted;
 		// if done, bail
 		if ( ++c >= need ) break;
@@ -2388,7 +2592,7 @@ bool Msg40::gotSummary ( ) {
 		return true;
 	}
 
-	if ( ! m_r.m_getDocIdScoringInfo ) {
+	if ( ! m_msg3a.m_rrr.m_getDocIdScoringInfo ) {
 		// make key based on the hash of certain vars in SearchInput
 		key_t k = m_si->makeKey();
 		// cache it
@@ -2396,7 +2600,7 @@ bool Msg40::gotSummary ( ) {
 				       k                     ,
 				       p                     , // rec
 				       tmpSize               , // recSize
-				       m_si->m_coll2         ,
+				       m_firstCollnum ,//m_si->m_coll2
 				       m_si->m_niceness      ,
 				       3                     ); //timeout=3secs
 	}
@@ -2543,7 +2747,7 @@ long Msg40::serialize ( char *buf , long bufLen ) {
 		// return -1 on error, g_errno should be set
 		long nb = m_msg20[i]->serialize ( p , pend - p ) ;
 		// count it
-		if ( m_r.m_debug )
+		if ( m_msg3a.m_rrr.m_debug )
 			log("query: msg40 serialize msg20size=%li",nb);
 		//if ( m_r.m_debug ) {
 		//	long mcount = 0;
@@ -2573,7 +2777,7 @@ long Msg40::serialize ( char *buf , long bufLen ) {
 	//if ( z == -1 ) return -1;
 	//p += z;
 
-	if ( m_r.m_debug )
+	if ( m_msg3a.m_rrr.m_debug )
 		log("query: msg40 serialize nd=%li "
 		    "msg3asize=%li ",m_msg3a.m_numDocIds,nb);
 
@@ -4984,7 +5188,7 @@ bool Msg40::printSearchResult9 ( long ix ) {
 
 		if ( m_si->m_format == FORMAT_CSV ) {
 			printJsonItemInCSV ( st , ix );
-			log("print: printing #%li csv",(long)ix);
+			//log("print: printing #%li csv",(long)ix);
 		}
 
 		// print that out into st->m_sb safebuf
@@ -5342,4 +5546,3 @@ bool Msg40::printJsonItemInCSV ( State0 *st , long ix ) {
 
 	return true;
 }
-

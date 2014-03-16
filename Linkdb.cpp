@@ -199,9 +199,10 @@ bool Linkdb::verify ( char *coll ) {
 	startKey.setMin();
 	endKey.setMax();
 	long minRecSizes = 64000;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	
 	if ( ! msg5.getList ( RDB_LINKDB   ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      (char*)&startKey      ,
 			      (char*)&endKey        ,
@@ -232,6 +233,8 @@ bool Linkdb::verify ( char *coll ) {
 	      list.skipCurrentRecord() ) {
 		key224_t k;
 		list.getCurrentKey((char*)&k);
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		//uint32_t shardNum = getShardNum ( RDB_LINKDB , &k );
 		//if ( groupId == g_hostdb.m_groupId ) got++;
@@ -1101,7 +1104,7 @@ bool Msg25::doReadLoop ( ) {
 		return true;
 	}
 
-	char *coll = cr->m_coll;
+	//char *coll = cr->m_coll;
 
 	// . get the linkdb list
 	// . we now get the WHOLE list so we can see how many linkers there are
@@ -1113,7 +1116,7 @@ bool Msg25::doReadLoop ( ) {
 	//   the receiving host went down and is now back up.
 	if ( ! m_msg5.getList ( 
 				RDB_LINKDB      ,
-				coll          ,
+				cr->m_collnum          ,
 				&m_list         ,
 				(char*)&startKey,
 				(char*)&endKey  ,
@@ -1390,7 +1393,7 @@ bool Msg25::sendRequests ( ) {
 		log("linkdb: collnum %li is gone",(long)m_collnum);
 		return true;
 	}
-	char *coll = cr->m_coll;
+	//char *coll = cr->m_coll;
 
 	// if more than 300 sockets in use max this 1. prevent udp socket clog.
 	if ( g_udpServer.m_numUsedSlots >= 300 ) ourMax = 1;
@@ -1632,8 +1635,9 @@ bool Msg25::sendRequests ( ) {
 			r-> ptr_linkee = m_site;
 			r->size_linkee = gbstrlen(m_site)+1; // include \0
 		}
-		r-> ptr_coll         = coll;
-		r->size_coll         = gbstrlen(coll) + 1; // include \0
+		//r-> ptr_coll         = coll;
+		//r->size_coll         = gbstrlen(coll) + 1; // include \0
+		r->m_collnum = cr->m_collnum;
 		r->m_docId           = docId;
 		r->m_expected        = true; // false;
 		r->m_niceness        = m_niceness;
@@ -2586,7 +2590,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 		for ( long j = 0 ; j < MAX_ENTRY_DOCIDS ; j++ ) {
 			if ( e->m_docIds[j] == -1LL ) break;
 			if ( ! m_printInXml )
-				m_pbuf->safePrintf ("<a href=\"/master/titledb"
+				m_pbuf->safePrintf ("<a href=\"/admin/titledb"
 						    "?c=%s&d=%lli\">"
 						    "%li</a> ",
 						    coll,e->m_docIds[j],j);
@@ -4606,7 +4610,7 @@ bool LinkInfo::print ( SafeBuf *sb , char *coll ) {
 			       "<tr><td colspan=2>link #%04li "
 			       "("
 			       //"baseScore=%010li, "
-			       "d=<a href=\"/master/titledb?c=%s&"
+			       "d=<a href=\"/admin/titledb?c=%s&"
 			       "d=%lli\">%016lli</a>, "
 			       "siterank=%li, "
 			       "hopcount=%03li "

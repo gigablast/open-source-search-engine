@@ -472,7 +472,7 @@ bool StateCD::readDataFromRdb ( ) {
 					    0, // maxcacheage
 					    false, // addtocache?
 					    m_rdbId,
-					   cr->m_coll,
+					   cr->m_collnum,
 					   &m_lists[i],
 					   sk,
 					   (char *)&ek,
@@ -1901,8 +1901,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	if ( cr && restartColl ) { // && cast ) {
 		// bail on OOM saving seeds
 		if ( ! st->m_seedBank.safeMemcpy ( &cr->m_diffbotSeeds ) ||
-		     ! st->m_seedBank.pushChar('\0') )
+		     ! st->m_seedBank.pushChar('\0') ) {
+			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
 			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
+		}
 	}
 
 	//
@@ -2103,9 +2106,37 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		log("crawlbot: adding seeds=\"%s\" coll=%s (%li)",
 		    seeds,coll,(long)st->m_collnum);
 
-	if ( spots )
+	char bulkurlsfile[1024];
+	snprintf(bulkurlsfile, 1024, "%scoll.%s.%li/bulkurls.txt", g_hostdb.m_dir , coll , (long)st->m_collnum );
+	if ( spots ) {
 		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
 		    (long)gbstrlen(spots),coll,(long)st->m_collnum);
+		FILE *f = fopen(bulkurlsfile, "w");
+		if (f != NULL) {
+		    // urls are space separated.
+		    fprintf(f, "%s", spots);
+		    fclose(f);
+		}
+	}
+
+	// if restart flag is on and the file with bulk urls exists, get spots from there
+	if ( !spots && restartColl ) {
+	    FILE *f = fopen(bulkurlsfile, "r");
+	    if (f != NULL) {
+	        fseek(f, 0, SEEK_END);
+	        long size = ftell(f);
+	        fseek(f, 0, SEEK_SET);
+	        char *bulkurls = (char*) mmalloc(size, "reading in bulk urls");
+		if ( ! bulkurls ) {
+			mdelete ( st , sizeof(StateCD) , "stcd" );
+			delete st;
+			return sendErrorReply2(socket,fmt,mstrerror(g_errno));
+		}
+	        fgets(bulkurls, size, f);
+	        spots = bulkurls;
+		fclose(f);
+	    }
+	}
 
 	///////
 	// 

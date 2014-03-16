@@ -66,7 +66,8 @@ class Msg5 {
 	// . if maxCacheAge is > 0, we lookup in cache first
 	bool getList ( //class RdbBase *base      ,
 		       char       rdbId         ,
-		       char      *coll          ,
+		       //char      *coll          ,
+		       collnum_t collnum ,
 		       RdbList   *list          ,
 		       //key_t      startKey      , 
 		       //key_t      endKey        , 
@@ -99,7 +100,8 @@ class Msg5 {
 
 	bool getList ( //class RdbBase *base      ,
 		       char       rdbId         ,
-		       char      *coll          ,
+		       //char      *coll          ,
+		       collnum_t collnum ,
 		       RdbList   *list          ,
 		       key_t      startKey      , 
 		       key_t      endKey        , 
@@ -125,7 +127,7 @@ class Msg5 {
 		       bool        allowPageCache = true ,
 		       bool        hitDisk        = true ) {
 		return getList ( rdbId         ,
-				 coll          ,
+				 collnum       ,
 				 list          ,
 				 (char *)&startKey      , 
 				 (char *)&endKey        , 
@@ -216,7 +218,7 @@ class Msg5 {
 	long      m_startFileNum;
 	long      m_minRecSizes;
 	//RdbBase  *m_base;
-	char     *m_coll;
+	//char     *m_coll;
 	char      m_rdbId;
 
 	// . cache may modify these

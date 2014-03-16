@@ -103,7 +103,8 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 		     long      maxCacheAge , // max cached age in seconds
 		     bool      addToCache  , // add net recv'd list to cache?
 		     char      rdbId       , // specifies the rdb
-		     char     *coll        ,
+		     //char     *coll        ,
+		     collnum_t collnum ,
 		     RdbList  *list        ,
 		     //key_t     startKey    , 
 		     //key_t     endKey      , 
@@ -143,7 +144,7 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 	//if ( doIndexdbSplit ) 
 	//	logf(LOG_DEBUG,"net: doing msg0 with indexdb split true");
 	// warning
-	if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg0.");
+	if ( collnum < 0 ) log(LOG_LOGIC,"net: NULL collection. msg0.");
 
 	//if ( doIndexdbSplit ) { char *xx=NULL;*xx=0; }
 
@@ -189,7 +190,7 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 	KEYSET(m_endKey,endKey,m_ks);
 	m_minRecSizes   = minRecSizes;
 	m_rdbId         = rdbId;
-	m_coll          = coll;
+	m_collnum = collnum;//          = coll;
 	m_isRealMerge   = isRealMerge;
 	m_allowPageCache = allowPageCache;
 
@@ -349,7 +350,7 @@ bool Msg0::getList ( long long hostId      , // host to ask (-1 if none)
 		*/
 		QUICKPOLL(m_niceness);
 		if ( ! m_msg5->getList ( rdbId,
-					 coll ,
+					 m_collnum ,
 					 m_list ,
 					 m_startKey ,
 					 m_endKey   ,
@@ -462,7 +463,8 @@ skip:
 	KEYSET(p,m_startKey,m_ks);          ; p+=m_ks;
 	KEYSET(p,m_endKey,m_ks);            ; p+=m_ks;
 	// NULL terminated collection name
-	strcpy ( p , coll ); p += gbstrlen ( coll ); *p++ = '\0';
+	//strcpy ( p , coll ); p += gbstrlen ( coll ); *p++ = '\0';
+	*(collnum_t *)p = m_collnum; p += sizeof(collnum_t);
 	m_requestSize    = p - m_request;
 	// ask an individual host for this list if hostId is NOT -1
 	if ( m_hostId != -1 ) {
@@ -957,7 +959,8 @@ void handleRequest0 ( UdpSlot *slot , long netnice ) {
 	char     *startKey           = p; p+=ks;
 	char     *endKey             = p; p+=ks;
 	// then null terminated collection
-	char     *coll               = p;
+	//char     *coll               = p;
+	collnum_t collnum = *(collnum_t *)p; p += sizeof(collnum_t);
 
 
 	// error set from XmlDoc::cacheTermLists()?
@@ -1175,7 +1178,7 @@ void handleRequest0 ( UdpSlot *slot , long netnice ) {
 	// . return if this blocks
 	// . we'll call sendReply later
 	if ( ! st0->m_msg5.getList ( rdbId             ,
-				     coll              ,
+				     collnum           ,
 				     &st0->m_list      ,
 				     startKey          ,
 				     endKey            ,

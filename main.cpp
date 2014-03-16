@@ -4298,6 +4298,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"%slocalhosts.conf "
 				//"%shosts2.conf "
 				"%sgb.conf "
+				"%slocalgb.conf "
 				"%stmpgb "
 				//"%scollections.dat "
 				"%sgb.pem "
@@ -4338,6 +4339,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 				"%s:%s"
 				,
+				dir,
 				dir,
 				dir,
 				dir,
@@ -5709,11 +5711,12 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 		fprintf(stdout,"could not alloc for xmldoc\n");
 		exit(-1);
 	}
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_TITLEDB   ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -5755,11 +5758,12 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			    lastKey.n1,lastKey.n0,
 			    k.n1,k.n0);
 		lastKey = k;
+		long shard = g_hostdb.getShardNum ( RDB_TITLEDB , &k );
 		// print deletes
 		if ( (k.n0 & 0x01) == 0) {
 			fprintf(stdout,"n1=%08lx n0=%016llx docId=%012lli "
-			       "(del)\n", 
-			       k.n1 , k.n0 , docId );
+			       "shard=%li (del)\n", 
+				k.n1 , k.n0 , docId , shard );
 			continue;
 		}
 		// free the mem
@@ -5829,6 +5833,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 					"redir=%s "
 					"url=%s "
 					"firstdup=1 "
+					"shard=%li "
 					"\n", 
 					k.n1 , k.n0 , 
 					//rec[0] , 
@@ -5851,7 +5856,8 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 					//ms,
 					(long)xd->m_hopCount,
 					ru,
-					u->getUrl() );
+					u->getUrl() ,
+					shard );
 				prevId = docId;
 				count = 0;
 				continue;
@@ -5951,6 +5957,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			"version=%02li "
 			//"maxLinkTextWeight=%06lu%% "
 			"hc=%li "
+			"shard=%li "
 			//"diffbot=%li "
 			"redir=%s "
 			"url=%s\n", 
@@ -5974,6 +5981,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			(long)xd->m_version,
 			//ms,
 			(long)xd->m_hopCount,
+			shard,
 			//(long)xd->m_isDiffbotJSONObject,
 			ru,
 			u->getUrl() );
@@ -6118,10 +6126,11 @@ void dumpDoledb (char *coll,long startFileNum,long numFiles,bool includeTree){
 	Msg5 msg5;
 	RdbList list;
 	key_t oldk; oldk.setMin();
+	CollectionRec *cr = g_collectiondb.getRec(coll);
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_DOLEDB    ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -6346,10 +6355,12 @@ long dumpSpiderdb ( char *coll,
 	long long offset = 0LL;
 	long now;
 	static long long s_lastRepUh48 = 0LL;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
+
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_SPIDERDB  ,
-			      coll          ,
+			      cr->m_collnum       ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -7949,10 +7960,11 @@ void dumpMissing ( char *coll ) {
 	long long count = 0;
 	long next = 0;
 	long used = 0;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_TFNDB     ,
-			      coll          ,
+			      cr->m_collnum    ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -8038,7 +8050,7 @@ void dumpMissing ( char *coll ) {
  loop2:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_INDEXDB   ,
-			      coll          ,
+			      cr->m_collnum       ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -8239,11 +8251,13 @@ void dumpDups ( char *coll ) {
 		return;
 	}
 	*/
+	CollectionRec *cr = g_collectiondb.getRec(coll);
+
  loop:
 	//long long startTime = gettimeofdayInMilliseconds();
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_INDEXDB   ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -8752,11 +8766,12 @@ void removeDocIds  ( char *coll , char *filename ) {
 	long long recs = 0;
 	long long removed = 0;
 	RdbTree *tree = &r->m_tree;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop3:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_INDEXDB   ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -8957,11 +8972,12 @@ void removeDocIds  ( char *coll , char *filename ) {
 	recs = 0;
 	removed = 0;
 	tree = &r->m_tree;
+	//CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop5:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_CLUSTERDB ,
-			      coll          ,
+			      cr->m_collnum    ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -9051,11 +9067,12 @@ void removeDocIds  ( char *coll , char *filename ) {
 	recs = 0;
 	removed = 0;
 	tree = &r->m_tree;
+	//CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop6:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_TFNDB     ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -11091,10 +11108,11 @@ void dumpSectiondb(char *coll,long startFileNum,long numFiles,
 	char tmpBuf[1024];
 	SafeBuf sb(tmpBuf, 1024);
 	bool firstKey = true;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_SECTIONDB ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -11214,10 +11232,11 @@ void dumpRevdb(char *coll,long startFileNum,long numFiles, bool includeTree) {
 	char tmpBuf[1024];
 	SafeBuf sb(tmpBuf, 1024);
 	bool firstKey = true;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_REVDB     ,
-			      coll          ,
+			      cr->m_collnum ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -11313,12 +11332,13 @@ void dumpTagdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	long port = g_hostdb.getMyPort() - 1000;
 	char action[50]="";
 	sprintf(httpAddr,"127.0.0.1:%li", port );
-	if ( req == 'D') strcpy(action,"&deleterec=1&useNew=1");		
+	if ( req == 'D') strcpy(action,"&deleterec=1&useNew=1");	
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( rdbId, //RDB_TAGDB     ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -11418,8 +11438,9 @@ bool parseTest ( char *coll , long long docId , char *query ) {
 	// a niceness of 0 tells it to block until it gets results!!
 	Msg5 msg5;
 	Msg5 msg5b;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	if ( ! msg5.getList ( RDB_TITLEDB    ,
-			      coll           ,
+			      cr->m_collnum        ,
 			      &tlist         ,
 			      startKey       ,
 			      endKey         , // should be maxed!
@@ -12329,11 +12350,12 @@ void dumpIndexdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	Msg5 msg5;
 	Msg5 msg5b;
 	RdbList list;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_INDEXDB   ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -12428,11 +12450,12 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	// set this flag so Msg5.cpp if it does error correction does not
 	// try to get the list from a twin...
 	g_isDumpingRdbFromMain = 1;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_POSDB   ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      &startKey      ,
 			      &endKey        ,
@@ -12666,11 +12689,11 @@ void dumpDatedb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	Msg5 msg5;
 	Msg5 msg5b;
 	IndexList list;
-
+	CollectionRec *cr = g_collectiondb.getRec(coll);
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_DATEDB ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -12868,11 +12891,11 @@ void dumpClusterdb ( char *coll,
 	Msg5 msg5;
 	Msg5 msg5b;
 	RdbList list;
-
+	CollectionRec *cr = g_collectiondb.getRec(coll);
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_CLUSTERDB ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -13307,11 +13330,12 @@ void dumpLinkdb ( char *coll,
 	Msg5 msg5;
 	Msg5 msg5b;
 	RdbList list;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_LINKDB ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -13842,8 +13866,9 @@ void doInject ( int fd , void *state ) {
 		Msg5 msg5;
 		Msg5 msg5b;
 		char *coll = "main";
+		CollectionRec *cr = g_collectiondb.getRec(coll);
 		msg5.getList ( RDB_TITLEDB ,
-			       coll,
+			       cr->m_collnum,
 			       &list         ,
 			       (char *)&s_titledbKey ,
 			       (char *)&endKey        ,
@@ -14420,6 +14445,8 @@ bool checkDataParity ( ) {
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
 		uint32_t shardNum = getShardNum ( RDB_INDEXDB, &k );
@@ -14467,6 +14494,8 @@ bool checkDataParity ( ) {
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		uint32_t shardNum = getShardNum ( RDB_TITLEDB , &k );
 		//long groupId = k.n1 & g_hostdb.m_groupMask;
@@ -14509,6 +14538,8 @@ bool checkDataParity ( ) {
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		// verify the group
 		uint32_t shardNum = getShardNum ( RDB_TFNDB , &k );
@@ -15284,6 +15315,8 @@ void countdomains( char* coll, long numRecs, long verbosity, long output ) {
 	//ipHT.set ( numRecs+1 );
 	//domHT.set( numRecs+1 );
 
+	CollectionRec *cr = g_collectiondb.getRec(coll);
+
 	key_t startKey;
 	key_t endKey  ;
 	key_t lastKey ;
@@ -15322,7 +15355,7 @@ void countdomains( char* coll, long numRecs, long verbosity, long output ) {
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_TITLEDB   ,
-			      coll          ,
+			      cr->m_collnum       ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,

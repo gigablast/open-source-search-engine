@@ -741,16 +741,20 @@ bool gotResults ( void *state ) {
 	}
 
 	// shortcuts
-	char        *coll    = si->m_coll2;
-	long         collLen = si->m_collLen2;
-	
+	//char        *coll    = si->m_coll2;
+	//long         collLen = si->m_collLen2;
+
+	collnum_t collnum = si->m_firstCollnum;
+
 	// collection rec must still be there since SearchInput references 
 	// into it, and it must be the SAME ptr too!
-	CollectionRec *cr = g_collectiondb.getRec ( coll , collLen );
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	if ( ! cr || cr != si->m_cr ) {
 	       g_errno = ENOCOLLREC;
 	       return sendReply(st,NULL);
 	}
+
+	//char *coll = cr->m_coll;
 
 	/*
 	//
@@ -2599,7 +2603,7 @@ bool printResult ( State0 *st, long ix ) {
 
 	if ( si->m_format == FORMAT_HTML ) sb->safePrintf("<br>\n");
 
-	char *coll = si->m_cr->m_coll;
+	//char *coll = si->m_cr->m_coll;
 
 	// print the [cached] link?
 	bool printCached = true;
@@ -2607,6 +2611,14 @@ bool printResult ( State0 *st, long ix ) {
 	if ( isAdmin               ) printCached = true;
 	if ( mr->m_contentLen <= 0 ) printCached = false;
 	if ( si->m_format == FORMAT_XML ) printCached = false;
+
+	// get collnum result is from
+	//collnum_t collnum = si->m_cr->m_collnum;
+	// if searching multiple collections  - federated search
+	CollectionRec *scr = g_collectiondb.getRec ( mr->m_collnum );
+	char *coll = "UNKNOWN";
+	if ( scr ) coll = scr->m_coll;
+
 	if ( printCached && cr->m_clickNScrollEnabled ) 
 		sb->safePrintf ( " - <a href=/scroll.html?page="
 				"get?"

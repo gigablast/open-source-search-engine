@@ -36,7 +36,7 @@ bool Msg36::registerHandler ( ) {
 // . sets g_errno on error
 // . "termIds/termFreqs" should NOT be on the stack in case we block
 // . i based this on ../titledb/Msg23.cpp 
-bool Msg36::getTermFreq ( char      *coll       ,
+bool Msg36::getTermFreq ( collnum_t collnum , // char      *coll       ,
 			  long       maxAge     ,
 			  long long  termId     ,
 			  void      *state      ,
@@ -53,7 +53,7 @@ bool Msg36::getTermFreq ( char      *coll       ,
 		return true;
 	}
 	// warning
-	if ( ! coll ) log(LOG_LOGIC,"quota: msg36: NULL collection.");
+	if ( collnum < 0 ) log(LOG_LOGIC,"quota: msg36: bad collection.");
 	// no more quotas here!
 	if ( incCount || decCount ) { char *xx = NULL; *xx = 0; }
 	// sanity check
@@ -117,7 +117,7 @@ bool Msg36::getTermFreq ( char      *coll       ,
 		//unsigned long i = ((unsigned long)groupId/*key*/) % numHosts;
 		// if it's us then no need to multicast to ourselves
 		//if(hosts[i].m_hostId==g_hostdb.m_hostId||g_conf.m_fullSplit) {
-		m_termFreq = g_posdb.getTermFreq ( coll , termId );
+		m_termFreq = g_posdb.getTermFreq ( collnum , termId );
 		// clear g_errno
 		g_errno = 0;
 		return true;
@@ -134,7 +134,8 @@ bool Msg36::getTermFreq ( char      *coll       ,
 	if ( m_niceness ) *p |= 0x08;
 	p++;
 	*(long long *)p = termId ; p += sizeof(long long);
-	strcpy ( p , coll ); p += gbstrlen(coll) + 1; // copy includes \0
+	//strcpy ( p , coll ); p += gbstrlen(coll) + 1; // copy includes \0
+	*(collnum_t *)p = collnum; p += sizeof(collnum_t);
 
 	long timeout = 5;
 	//if ( incCount || decCount ) timeout = 9999999;
@@ -339,12 +340,13 @@ void handleRequest36 ( UdpSlot *slot , long netnice ) {
 	//if ( *request & 0x04 ) decCount   = true;
 	if ( *request & 0x08 ) niceness   = MAX_NICENESS;
 	long long  termId = *(long long *) (request+1) ; 
-	char      *coll   = request + 8 + 1;
+	//char      *coll   = request + 8 + 1;
+	collnum_t collnum = *(collnum_t *)(request + 8 + 1);
 
 	// if there is no way this termlist size exceeds exactMax, then just
 	// return the approximation we got, saves on disk seeks
 	if ( ! exactCount ) {//&& ! incCount && ! decCount ) { //max<exactMax){
-		long long termFreq = g_posdb.getTermFreq(coll,termId);
+		long long termFreq = g_posdb.getTermFreq(collnum,termId);
 		// no need to malloc since we have the tmp buf
 		char *reply = slot->m_tmpBuf;
 		*(long long *)reply = termFreq ;
@@ -355,7 +357,7 @@ void handleRequest36 ( UdpSlot *slot , long netnice ) {
 	}
 
 	// check our cache for this termid and collection, 
-	collnum_t collnum = g_collectiondb.getCollnum(coll);
+	//collnum_t collnum = g_collectiondb.getCollnum(coll);
 	if ( collnum < 0 ) {
 		g_errno = ENOCOLLREC;
 		log("quota: msg36: collection does not exist.");
@@ -508,10 +510,10 @@ void callMsg5 ( State36 *st , key144_t startKey , key144_t endKey  ) {
 	// . TODO: if quota is over about 30 million docs for a particular site
 	//   then we will need to fix this code, cuz it only reads up to 
 	//   200MB (MRS) if the site: termlist
-	char *coll = g_collectiondb.getCollName ( st->m_collnum );
+	//char *coll = g_collectiondb.getCollName ( st->m_collnum );
 	//log (LOG_WARN,"build: getting frequency from disk");
 	if ( ! st->m_msg5.getList ( RDB_POSDB    ,
-				    coll           ,
+				    st->m_collnum           ,
 				    &st->m_list    ,
 				    &startKey       ,
 				    &endKey         ,

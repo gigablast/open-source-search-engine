@@ -168,6 +168,8 @@ class RdbBase {
 
 	//RdbMem    *getRdbMem () { return &m_mem; };
 
+	float getPercentNegativeRecsOnDisk ( ) ;
+
 	// how much mem is alloced for our maps?
 	long long getMapMemAlloced ();
 

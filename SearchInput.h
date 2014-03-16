@@ -59,7 +59,8 @@ class SearchInput {
 			       class CollectionRec *cr ) ;
 	bool setQueryBuffers ( class HttpRequest *hr ) ;
 
-	void setToDefaults ( class CollectionRec *cr , long niceness ) ;
+	//void setToDefaults ( class CollectionRec *cr , long niceness ) ;
+	void clear ( long niceness ) ;
 
 	// Msg40 likes to use this to pass the parms to a remote host
 	SearchInput      ( );
@@ -300,8 +301,13 @@ class SearchInput {
 	char  *m_query;                      
 	long   m_query2Len;                   
 	char  *m_query2;                      
-	long   m_collLen2;                    // msg40
-	char  *m_coll2;                       // msg40
+	//long   m_collLen2;                    // msg40
+	//char  *m_coll2;                       // msg40
+
+	// array of collnum_t's to search... usually just one
+	SafeBuf m_collnumBuf;
+	// first collection # listed in m_collnumBuf
+	collnum_t m_firstCollnum;
 
 	// . "special query"
 	// . list of docids to restrict results to, i.e. "124+4564+6752+..."

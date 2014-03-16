@@ -218,15 +218,15 @@ class Rdb {
 		return m_ks + m_fixedDataSize; };
 
 	// use the maps and tree to estimate the size of this list
-	long long getListSize ( char *coll ,
+	long long getListSize ( collnum_t collnum,
 			   //key_t startKey ,key_t endKey , key_t *maxKey ,
 			   char *startKey ,char *endKey , char *maxKey ,
 			   long long oldTruncationLimit ) ;
 
-	long long getListSize ( char *coll ,
+	long long getListSize ( collnum_t collnum,
 			   key_t startKey ,key_t endKey , key_t *maxKey ,
 			   long long oldTruncationLimit ) {
-		return getListSize(coll,(char *)&startKey,(char *)&endKey,
+		return getListSize(collnum,(char *)&startKey,(char *)&endKey,
 				   (char *)maxKey,oldTruncationLimit);};
 
 	// positive minus negative

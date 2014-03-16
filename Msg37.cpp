@@ -9,7 +9,7 @@ static void gotTermFreqWrapper ( void *state ) ;
 // . "termIds/termFreqs" should NOT be on the stack in case we block
 // . i based this on ../titled/Msg25.cpp since it sends out multiple msgs at 
 //   the same time, too
-bool Msg37::getTermFreqs ( char       *coll       ,
+bool Msg37::getTermFreqs ( collnum_t collnum,//char       *coll       ,
 			   long        maxAge     ,
 			   long long  *termIds    ,
 			   long        numTerms   ,
@@ -20,7 +20,7 @@ bool Msg37::getTermFreqs ( char       *coll       ,
 			   bool        exactCount ) {
 
 	// warning
-	if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg37.");
+	if ( collnum < 0 ) log(LOG_LOGIC,"net: bad collection. msg37.");
 	// we haven't got any responses as of yet or sent any requests
 	m_callback    = callback;
 	m_state       = state;
@@ -31,7 +31,8 @@ bool Msg37::getTermFreqs ( char       *coll       ,
 	m_errno       = 0;
 	m_numTerms    = numTerms;
 	m_termFreqs   = termFreqs;
-	m_coll        = coll;
+	m_collnum     = collnum;
+	//m_coll        = coll;
 	m_maxAge      = maxAge;
 	m_termIds     = termIds;
 	// set all to 1 in case there's an error
@@ -84,7 +85,7 @@ bool Msg37::launchRequests ( ) {
 		m_msg36[j].m_i    = m_i;
 		// . start up a Msg36 to get it
 		// . this will return false if blocks
-		if ( ! m_msg36[j].getTermFreq ( m_coll ,
+		if ( ! m_msg36[j].getTermFreq ( m_collnum ,
 						m_maxAge ,
 						m_termIds[m_i] ,
 						&m_msg36[j],

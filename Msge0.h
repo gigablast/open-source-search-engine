@@ -21,7 +21,7 @@ public:
 			  long          numUrls      ,
 			  bool          skipOldLinks ,
 			  class TagRec *baseTagRec ,
-			  char         *coll         ,
+			  collnum_t  collnum,
 			  long          niceness     ,
 			  void         *state        ,
 			  void (*callback)(void *state) ) ;
@@ -32,7 +32,7 @@ public:
 	bool sendMsg8a      ( long i );
 	bool doneSending    ( long i );
 
-	char *m_coll      ;
+	collnum_t m_collnum;
 	long  m_niceness  ;
 
 	char **m_urlPtrs;

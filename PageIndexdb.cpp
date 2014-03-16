@@ -29,6 +29,7 @@ public:
 	Msg1      m_msg1;
 	IndexList m_list;
 	//IndexList m_list2;
+	collnum_t m_collnum;
 	char      m_query[MAX_QUERY_LEN+1];
 	long      m_queryLen;
 	//char      m_coll[MAX_COLL_LEN+1];
@@ -84,6 +85,10 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 		g_errno = ECOLLTOOBIG; 
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno)); 
 	}
+	CollectionRec *cr = g_collectiondb.getRec(coll);
+	if ( ! cr ) {
+		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno)); 
+	}
 	// make a state
 	State10 *st ;
 	try { st = new (State10); }
@@ -121,6 +126,7 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 	//st->m_collLen  = collLen;
 	//st->m_coll [ collLen ] ='\0';
 	st->m_coll = coll;
+	st->m_collnum = cr->m_collnum;
 	// save the TcpSocket
 	st->m_socket = s;
 	// and if the request is local/internal or not
@@ -151,7 +157,7 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 		// call msg1 to add/delete key
 		if ( ! st->m_msg1.addList ( &st->m_keyList,
 					     RDB_INDEXDB,
-					     st->m_coll,
+					     st->m_collnum,
 					     st,
 					     addedKeyWrapper,
 					     false,
@@ -174,7 +180,7 @@ bool sendPageIndexdb ( TcpSocket *s , HttpRequest *r ) {
 	// skip if nothing
 	else return gotTermFreq ( st );
 	// get the termfreq of this term!
-	if ( ! st->m_msg36.getTermFreq ( coll ,
+	if ( ! st->m_msg36.getTermFreq ( st->m_collnum ,
 					 0 , 
 					 st->m_termId,
 					 st ,
@@ -258,7 +264,7 @@ loop:
 			    0  ,    // max cache age
 			    false , // add to cache?
 			    rdbId , // RDB_INDEXDB  , // rdbId of 2 = indexdb
-			    st->m_coll ,
+			    st->m_collnum ,
 			    &st->m_list  ,
 			    startKey  ,
 			    endKey    ,
@@ -405,7 +411,7 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
 	RdbBase *base; 
-	if (!(base=getRdbBase((uint8_t)RDB_INDEXDB,st->m_coll))) return true;
+	if (!(base=getRdbBase((uint8_t)RDB_INDEXDB,st->m_collnum)))return true;
 
 	// print the standard header for admin pages
 	pbuf->safePrintf ( 
@@ -529,8 +535,8 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 			  "<tr><td>%li.</td>"
 			  "<td>%s%i</td>"
 			  "<td>"
-			  //"<a href=http://%s:%hu/master/titledb?d=%llu>"
-			  "<a href=/master/titledb?c=%s&d=%llu>"
+			  //"<a href=http://%s:%hu/admin/titledb?d=%llu>"
+			  "<a href=/admin/titledb?c=%s&d=%llu>"
 			  "%llu"
 			  //"<td><a href=/cgi/4.cgi?d=%llu>%llu"
 			  "</td>"
@@ -596,8 +602,8 @@ bool gotIndexList2 ( void *state , RdbList *list ) {
 			  "<td>%llu</td>"
 			  "<td>%lu</td><td>%i</td>"
 			  "<td>"
-			  //"<a href=http://%s:%hu/master/titledb?d=%llu>"
-			  "<a href=/master/titledb?c=%s&d=%llu>"
+			  //"<a href=http://%s:%hu/admin/titledb?d=%llu>"
+			  "<a href=/admin/titledb?c=%s&d=%llu>"
 			  "%llu"
 			  //"<td><a href=/cgi/4.cgi?d=%llu>%llu"
 			  "</td></tr>\n" ,

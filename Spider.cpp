@@ -687,9 +687,10 @@ bool Spiderdb::verify ( char *coll ) {
 	startKey.setMin();
 	endKey.setMax();
 	//long minRecSizes = 64000;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	
 	if ( ! msg5.getList ( RDB_SPIDERDB  ,
-			      coll          ,
+			      cr->m_collnum  ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -997,6 +998,7 @@ void SpiderCache::reset ( ) {
 SpiderColl *SpiderCache::getSpiderCollIffNonNull ( collnum_t collnum ) {
 	// "coll" must be invalid
 	if ( collnum < 0 ) return NULL;
+	if ( collnum >= g_collectiondb.m_numRecs ) return NULL;
 	// shortcut
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	// empty?
@@ -1270,7 +1272,7 @@ bool SpiderColl::makeDoleIPTable ( ) {
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_DOLEDB    ,
-			      m_coll        ,
+			      m_collnum     ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -1469,7 +1471,7 @@ bool SpiderColl::makeWaitingTree ( ) {
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_SPIDERDB  ,
-			      m_coll        ,
+			      m_collnum     ,
 			      &list         ,
 			      &startKey     ,
 			      &endKey       ,
@@ -2724,7 +2726,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		//long state2 = (long)m_cr->m_collnum;
 		// read the list from local disk
 		if ( ! m_msg5b.getList ( RDB_SPIDERDB   ,
-					 m_cr->m_coll   ,
+					 m_cr->m_collnum,
 					 &m_list2       ,
 					 &m_nextKey2    ,
 					 &m_endKey2     ,
@@ -3519,7 +3521,7 @@ bool SpiderColl::readListFromSpiderdb ( ) {
 	//   m_gettingList in spiderDoledUrls() and setting
 	//   m_lastSpiderCouldLaunch
 	if ( ! m_msg5.getList ( RDB_SPIDERDB   ,
-				m_cr->m_coll   ,
+				m_cr->m_collnum   ,
 				&m_list        ,
 				&m_nextKey      ,
 				&m_endKey       ,
@@ -4763,7 +4765,7 @@ bool SpiderColl::addWinnersIntoDoledb ( ) {
 	//   make sure this happens!!!
 	bool status = m_msg1.addList ( tmpList ,
 				       RDB_DOLEDB    ,
-				       m_coll    ,
+				       m_collnum    ,
 				       this          ,
 				       doledWrapper  ,
 				       false , // forcelocal?
@@ -5714,7 +5716,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 	//if ( ! updateCrawlInfo(cr,NULL,NULL,true) ) { char *xx=NULL;*xx=0; }
 
 	// get this
-	char *coll = cr->m_coll;
+	//char *coll = cr->m_coll;
 
 	// need this for msg5 call
 	key_t endKey; endKey.setMax();
@@ -5863,7 +5865,7 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 	// get a spider rec for us to spider from doledb (mdw)
 	if ( ! m_msg5.getList ( RDB_DOLEDB      ,
-				coll            ,
+				cr->m_collnum, // coll            ,
 				&m_list         ,
 				m_sc->m_msg5StartKey,//m_sc->m_nextDoledbKey,
 				endKey          ,
@@ -7976,6 +7978,7 @@ public:
 	RdbList       m_list;
 	TcpSocket    *m_socket;
 	HttpRequest   m_r;
+	collnum_t     m_collnum;
 	char         *m_coll;
 	long          m_count;
 	key_t         m_startKey;
@@ -8016,6 +8019,9 @@ bool sendPageSpiderdb ( TcpSocket *s , HttpRequest *r ) {
 	// the socket read buffer will remain until the socket is destroyed
 	// and "coll" points into that
 	st->m_coll = coll;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
+	if ( cr ) st->m_collnum = cr->m_collnum;
+	else      st->m_collnum = -1;
 	// set socket for replying in case we block
 	st->m_socket = s;
 	st->m_count = 0;
@@ -8037,7 +8043,7 @@ bool loadLoop ( State11 *st ) {
  loop:
 	// let's get the local list for THIS machine (use msg5)
 	if ( ! st->m_msg5.getList  ( RDB_DOLEDB          ,
-				     st->m_coll          ,
+				     st->m_collnum       ,
 				     &st->m_list         ,
 				     st->m_startKey      ,
 				     st->m_endKey        ,

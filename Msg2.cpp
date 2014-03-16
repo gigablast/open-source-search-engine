@@ -28,7 +28,7 @@ Msg2 *g_msg2;
 //   other termlists have a componentCode of -2. These are typically taken
 //   from the Query.cpp class.
 bool Msg2::getLists ( long     rdbId       ,
-		      char    *coll        ,
+		      collnum_t collnum , // char    *coll        ,
 		      long     maxAge      ,
 		      bool     addToCache  ,
 		      //QueryTerm *qterms ,
@@ -53,7 +53,7 @@ bool Msg2::getLists ( long     rdbId       ,
 		      char     forceParitySplit    ,
 		      bool     checkCache          ) {
 	// warning
-	if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg2.");
+	if ( collnum < 0 ) log(LOG_LOGIC,"net: bad collection. msg2.");
 	if ( ! minRecSizes ) { 
 		g_errno = EBADENGINEER;
 		log(LOG_LOGIC,"net: MinRecSizes is NULL.");
@@ -82,7 +82,7 @@ bool Msg2::getLists ( long     rdbId       ,
 	m_getComponents       = false;
 	m_rdbId               = rdbId;
 	m_addToCache          = addToCache;
-	m_coll                = coll;
+	m_collnum             = collnum;
 	m_restrictPosdb       = restrictPosdb;
 	m_forceParitySplit    = forceParitySplit;
 	m_checkCache          = checkCache;
@@ -278,7 +278,7 @@ bool Msg2::getLists ( ) {
 		// . we now always compress the list for 2x faster transmits
 		if ( ! msg5->getList ( 
 					   m_rdbId         , // rdbid
-					   m_coll        ,
+					   m_collnum      ,
 					   &m_lists[m_i], // listPtr
 					   sk2,//&m_startKeys  [i*ks],
 					   ek2,//&m_endKeys    [i*ks],
@@ -410,7 +410,7 @@ bool Msg2::getLists ( ) {
 		// start up the read. thread will wait in thread queue to 
 		// launch if too many threads are out.
 		if ( ! msg5->getList ( 	   m_rdbId         , // rdbid
-					   m_coll        ,
+					   m_collnum        ,
 					   &m_whiteLists[m_w], // listPtr
 					   &sk3,//&m_startKeys  [i*ks],
 					   &ek3,//&m_endKeys    [i*ks],

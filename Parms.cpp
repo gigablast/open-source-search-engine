@@ -16786,6 +16786,14 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	if ( strncmp(path,"/crawlbot",9) == 0 ) customCrawl = 1;
 	if ( strncmp(path,"/v2/crawl",9) == 0 ) customCrawl = 1;
 	if ( strncmp(path,"/v2/bulk" ,8) == 0 ) customCrawl = 2;
+
+        // throw error if collection record custom crawl type doesn't equal 
+	// the crawl type of current request
+	if (cr && customCrawl && customCrawl != cr->m_isCustomCrawl ) {
+		g_errno = ECUSTOMCRAWLMISMATCH;
+		return false;
+        }
+
 	bool hasAddCrawl = hr->hasField("addCrawl");
 	bool hasAddBulk  = hr->hasField("addBulk");
 	bool hasAddColl  = hr->hasField("addColl");

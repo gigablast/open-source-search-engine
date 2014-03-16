@@ -99,9 +99,10 @@ bool Cachedb::verify ( char *coll ) {
 	startKey.setMin();
 	endKey.setMax();
 	long minRecSizes = 64000;
-	
+	CollectionRec *cr = g_collectiondb.getRec(coll);
+
 	if ( ! msg5.getList ( m_rdbId,//RDB_CACHEDB   ,
-			      coll          ,
+			      cr->m_collnum ,
 			      &list         ,
 			      (char*)&startKey      ,
 			      (char*)&endKey        ,

@@ -108,7 +108,8 @@ class Msg51 {
 			      char          *clusterLevels            ,
 			      key_t         *clusterRecs              ,
 			      long           numDocIds                ,
-			      char          *coll                     ,
+			      //char          *coll                     ,
+			      collnum_t collnum ,
 			      long           maxCacheAge              ,
 			      bool           addToCache               ,
 			      void          *state                    ,
@@ -169,8 +170,9 @@ class Msg51 {
 	long       m_firstNode;
 	long       m_nextNode;
 
-	char      *m_coll;
-	long       m_collLen;
+	//char      *m_coll;
+	//long       m_collLen;
+	collnum_t m_collnum;
 	
 	// cache info
 	long       m_maxCacheAge;

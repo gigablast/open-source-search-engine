@@ -28,7 +28,7 @@ class Msg36 {
 	// . sets errno on error
 	// . "termFreq" should NOT be on the stack in case we block
 	// . sets *termFreq to UPPER BOUND on # of records with that "termId"
-	bool getTermFreq ( char       *coll       ,
+	bool getTermFreq ( collnum_t collnum,//char       *coll       ,
 			   long        maxAge     ,
 			   long long   termId     ,
 			   void       *state      ,

@@ -53,7 +53,7 @@ class Msg17 {
 			    key_t  key ,
 			    char **recPtr ,
 			    long  *recSize ,
-			    char  *coll,
+			    collnum_t collnum,
 			    void  *state ,
 			    void (* callback) (void *state) ,
 			    long   niceness,
@@ -83,7 +83,7 @@ class Msg17 {
 			    key_t key ,
 			    char *recPtr ,
 			    long  recSize ,
-			    char *coll ,
+			    collnum_t collnum,
 			    long  niceness ,
 			    long  timeout );
 
@@ -116,7 +116,7 @@ class Msg17 {
 	// ptr to "it"
 	class Msg40 *m_msg40;
 
-	char m_request [ 12 + 1 + MAX_COLL_LEN + 1 ]; // key + flag + coll name
+	char m_request [ 12 + 1 + 8 ]; // key + flag + collnum_t
 };
 
 // allow our cache to be used by PageStats.cpp to display its stats

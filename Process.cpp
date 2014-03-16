@@ -403,6 +403,7 @@ Process::Process ( ) {
 bool Process::init ( ) {
 	// -1 means unknown
 	m_diskUsage = -1.0;
+	m_diskAvail = -1LL;
 	// we do not know if the fans are turned off or on
 	m_currentFanState = -1;
 	m_threadOut = false;
@@ -877,12 +878,14 @@ void hdtempDoneWrapper ( void *state , ThreadEntry *t ) {
 
 
 // set Process::m_diskUsage
-float getDiskUsage ( ) {
+float getDiskUsage ( long long *diskAvail ) {
 
 	// first get disk usage now
 	char cmd[10048];
-	char *out = "/tmp/diskusage";
-	snprintf(cmd,10000,"df -ka %s | tail -1 | awk '{print $5}' > %s",
+	char out[1024];
+	sprintf(out,"%sdiskusage",g_hostdb.m_dir);
+	snprintf(cmd,10000,"df -ka %s | tail -1 | "
+		 "awk '{print $4\" \"$5}' > %s",
 		 g_hostdb.m_dir,
 		 out);
 	int err = system ( cmd );
@@ -897,7 +900,7 @@ float getDiskUsage ( ) {
 	}
 
 	// read in temperatures from file
-	int fd = open ( "/tmp/diskusage" , O_RDONLY );
+	int fd = open ( out , O_RDONLY );
 	if ( fd < 0 ) {
 		//m_errno = errno;
 		log("build: Could not open %s for reading: %s.",
@@ -917,17 +920,19 @@ float getDiskUsage ( ) {
 	close ( fd );
 
 	float usage;
-	sscanf(buf,"%f",&usage);
+	long long avail;
+	sscanf(buf,"%lli %f",&avail,&usage);
+	// it is in KB so make it into bytes
+	if ( diskAvail ) *diskAvail = avail * 1000LL;
 	return usage;
 }
-
 
 // . sets m_errno on error
 // . taken from Msg16.cpp
 void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) {
 
 	// run the df -ka cmd
-	g_process.m_diskUsage = getDiskUsage();
+	g_process.m_diskUsage = getDiskUsage( &g_process.m_diskAvail );
 
 
 	// ignore temps now. ssds don't have it

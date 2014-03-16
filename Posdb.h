@@ -383,7 +383,7 @@ class Posdb {
 	void setSectionSiteHash32 ( void *key , long siteHash32 ) {
 		*(unsigned long *)(((char *)key)+2) = siteHash32; };
 
-	long long getTermFreq ( char *coll , long long termId ) ;
+	long long getTermFreq ( collnum_t collnum, long long termId ) ;
 
 	//RdbCache *getCache ( ) { return &m_rdb.m_cache; };
 	Rdb      *getRdb   ( ) { return &m_rdb; };
@@ -479,7 +479,8 @@ class PosdbTable {
 		   char           debug           ,
 		   void          *logstate        ,
 		   class TopTree *topTree         ,
-		   char          *coll            ,
+		   //char          *coll            ,
+		   collnum_t collnum ,
 		   //IndexList     *lists           ,
 		   //long           numLists        ,
 		   class Msg2 *msg2, 
@@ -554,7 +555,7 @@ class PosdbTable {
 
 	long            m_maxScores;
 
-	char           *m_coll;
+	//char           *m_coll;
 	collnum_t       m_collnum;
 
 	long *m_qpos;
