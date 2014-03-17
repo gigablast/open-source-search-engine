@@ -1053,7 +1053,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "</table>\n" );
 
 	// this must be outside of table, submit button follows
-	//if ( fmt == FORMAT_HTML ) sb->safePrintf ( "<br>\n" );
+	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "<br>\n" );
 
 	// url filter page has a test table
 	if ( page == PAGE_FILTERS && fmt == FORMAT_HTML ) {
@@ -1699,10 +1699,12 @@ bool Parms::printParm ( SafeBuf* sb,
 			// and default value if it exists
 			if ( m->m_def && m->m_def[0] && t != TYPE_CMD ) {
 				char *d = m->m_def;
-				if ( t == TYPE_BOOL ) {
+				if ( t == TYPE_BOOL || t == TYPE_CHECKBOX ) {
 					if ( d[0]=='0' ) d = "NO";
 					else             d = "YES";
-					sb->safePrintf ( " Default: %s.",d);
+					sb->safePrintf ( " <nobr>"
+							 "Default: %s."
+							 "</nobr>",d);
 				} 
 				else {
 					sb->safePrintf (" Default: ");
@@ -1783,7 +1785,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			}
 		}
 		else {
-			sb->safePrintf("<center><nobr>");
+			//sb->safePrintf("<center><nobr>");
+			sb->safePrintf("<nobr>");
 			// this is part of the "HACK" fix below. you have to
 			// specify the cgi parm in the POST request, and 
 			// unchecked checkboxes are not included in the POST 
@@ -1830,7 +1833,9 @@ bool Parms::printParm ( SafeBuf* sb,
 			//	sb->safePrintf("value=0 name=%s%s>",
 			//		       cgi,ddd2);
 			//}
-			sb->safePrintf("</nobr></center>");
+			sb->safePrintf("</nobr>"
+				       //"</center>"
+				       );
 		}
 	}
 	else if ( t == TYPE_CHAR )
@@ -7510,7 +7515,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "strip sessionids";
-	m->m_desc  = "strip added urls of their session ids.";
+	m->m_desc  = "Strip added urls of their session ids.";
 	m->m_cgi   = "strip";
 	m->m_page  = PAGE_ADDURL2;
 	m->m_obj   = OBJ_NONE;
@@ -7519,7 +7524,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "harvest links";
-	m->m_desc  = "harvest links of added urls so we can spider them?.";
+	m->m_desc  = "Harvest links of added urls so we can spider them?.";
 	m->m_cgi   = "spiderLinks";
 	m->m_page  = PAGE_ADDURL2;
 	m->m_obj   = OBJ_NONE;
@@ -7567,8 +7572,8 @@ void Parms::init ( ) {
 		"tools. "
 		"See <a href=#examples>example site list</a> below. "
 		"Limit list to 300MB. If you have a lot of INDIVIDUAL URLS "
-		"to add then consider using the <a href=/admin/addurl>addurl"
-		"</a> interface.";
+		"to add then consider using the <a href=/admin/addurl>add "
+		"urls</a> interface.";
 	m->m_cgi   = "sitelist";
 	m->m_off   = (char *)&cr.m_siteListBuf - x;
 	m->m_page  = PAGE_BASIC_SETTINGS;
