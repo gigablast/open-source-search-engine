@@ -582,6 +582,7 @@ skipReplaceHost:
 	sb.safePrintf ( "</table><br>\n" );
 
 	
+	/*
 	// print spare hosts table
 	sb.safePrintf ( 
 		  "<table %s>"
@@ -646,7 +647,9 @@ skipReplaceHost:
 			  h->m_note );
 	}
 	sb.safePrintf ( "</table><br>" );
+	*/
 
+	/*
 	// print proxy hosts table
 	sb.safePrintf ( 
 		  "<table %s>"
@@ -754,6 +757,7 @@ skipReplaceHost:
 			  h->m_note );
 	}
 	sb.safePrintf ( "</table><br><br>" );
+	*/
 
 	sb.safePrintf(
 		      "<style>"
