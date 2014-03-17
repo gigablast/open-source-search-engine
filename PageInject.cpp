@@ -233,13 +233,13 @@ bool sendReply ( void *state ) {
 
 		  "By default, injected urls "
 		  "take precedence over the \"insitelist\" directive in the "
-		  "<a href=/admin/scheduler>spider scheduler</a> "
+		  "<a href=/admin/filters>url filters</a> "
 		  "so injected urls need not match the "
 		  "<a href=/admin/sites>spider sites</a> patterns. You can "
-		  "change that behavior in the <a href=/scheduler>spider "
-		  "scheduler</a> if you want. "
+		  "change that behavior in the <a href=/admin/filters>url "
+		  "filters</a> if you want. "
 		  "Injected urls will have a "
-		  "<a href=/admin/scheduler#hopcount>hopcount</a> of 0. "
+		  "<a href=/admin/filters#hopcount>hopcount</a> of 0. "
 		  "The injection api is described on the "
 		  "<a href=/admin/api>api</a> page."
 

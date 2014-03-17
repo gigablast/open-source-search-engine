@@ -812,7 +812,6 @@ skipReplaceHost:
 		  "<td>The UDP port used to send and receive dns traffic with."
 		  "</td>"
 		  "</tr>\n"
-		  */
 
 		  "<tr class=poo>"
 		  "<td>http port</td>"
@@ -820,7 +819,6 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
-		  /*
 		  "<tr class=poo>"
 		  "<td>best switch id</td>"
 		  "<td>The host prefers to be on this switch because it "
@@ -886,6 +884,43 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
+		  "<tr class=poo>"
+		  "<td>avg split time</td>"
+		  "<td>Average time this host took to compute the docids "
+		  "for a query. Useful for guaging the slowness of a host "
+		  "compare to other hosts."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td>splits done</td>"
+		  "<td>Number of queries this host completed. Used in "
+		  "computation of the <i>avg split time</i>."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td>status</td>"
+		  "<td>Status flags for the host. See key below."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td>slow reads</td>"
+		  "<td>Number of slow disk reads the host has had. "
+		  "When this is big compared to other hosts it is a good "
+		  "indicator its drives are relatively slow."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td>docs indexed</td>"
+		  "<td>Number of documents this host has indexed over all "
+		  "collections. All hosts should have close to the same "
+		  "number in a well-sharded situation."
+		  "</td>"
+		  "</tr>\n"
+
 		  //"<tr class=poo>"
 		  //"<td>loadavg</td>"
 		  //"<td>1-minute sliding-window load average from "
@@ -895,13 +930,26 @@ skipReplaceHost:
 
 		  "<tr class=poo>"
 		  "<td>mem used</td>"
-		  "<td>percentage of memory currently used."
+		  "<td>Percentage of memory currently used."
 		  "</td>"
 		  "</tr>\n"
 
 		  "<tr class=poo>"
 		  "<td>cpu usage</td>"
-		  "<td>percentage of cpu resources in use by the gb process."
+		  "<td>Percentage of cpu resources in use by the gb process."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td>disk usage</td>"
+		  "<td>Percentage of disk in use. When this gets close to "
+		  "100%% you need to do something."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td>max ping1</td>"
+		  "<td>The worst ping latency from host to host."
 		  "</td>"
 		  "</tr>\n"
 
@@ -918,6 +966,7 @@ skipReplaceHost:
 		  "</td>"
 		  "</tr>\n"
 
+		  /*
 		  "<tr class=poo>"
 		  "<td>ping2</td>"
 		  "<td>Ping time to this host on the seconday/shotgun "
@@ -925,6 +974,7 @@ skipReplaceHost:
 		  "network is not enabled in the master controls."
 		  "</td>"
 		  "</tr>\n"
+		  */
 
 		  "<tr class=poo>"
 		  "<td>M (status flag)</td>"
@@ -947,6 +997,27 @@ skipReplaceHost:
 		  "<tr class=poo>"
 		  "<td>y (status flag)</td>"
 		  "<td>Indicates host is performing the daily merge."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td>R (status flag)</td>"
+		  "<td>Indicates host is performing a rebalance operation."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td>F (status flag)</td>"
+		  "<td>Indicates host has foreign records and requires "
+		  "a rebalance operation."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
+		  "<td>x (status flag)</td>"
+		  "<td>Indicates host has abruptly exited due to a fatal "
+		  "error (cored) and "
+		  "restarted itself."
 		  "</td>"
 		  "</tr>\n"
 

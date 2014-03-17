@@ -929,7 +929,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	long  fromIp   = s->m_ip;
 
 	char fmt = r->getReplyFormat();
-
+	/*
 	if ( fmt == FORMAT_HTML )
 		sb->safePrintf (  
 				"<script type=\"text/javascript\">"
@@ -959,7 +959,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 				"    }\n"
 				"}\n"
 				"</script>");
-	
+	*/
 	// print the start of the table
 	char *tt = "None";
 	if ( page == PAGE_LOG        ) tt = "Log Controls";
@@ -969,7 +969,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	if ( page == PAGE_SPIDER     ) tt = "Spider Controls";
 	if ( page == PAGE_SEARCH     ) tt = "Search Controls";
 	if ( page == PAGE_ACCESS     ) tt = "Access Controls";
-	if ( page == PAGE_FILTERS    ) tt = "Spider Scheduler";
+	if ( page == PAGE_FILTERS    ) tt = "Url Filters";
 	if ( page == PAGE_BASIC_SETTINGS ) tt = "Settings";
 	if ( page == PAGE_BASIC_SECURITY ) tt = "Security";
 	if ( page == PAGE_SITES ) tt = "Site List";
@@ -1049,10 +1049,11 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	//p= g_parms.printParms (p, pend, page, user, THIS, coll, pwd, nc, pd);
 	g_parms.printParms ( sb , s , r );
 
-	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "<br><br>\n" );
-
 	// end the table
 	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "</table>\n" );
+
+	// this must be outside of table, submit button follows
+	//if ( fmt == FORMAT_HTML ) sb->safePrintf ( "<br>\n" );
 
 	// url filter page has a test table
 	if ( page == PAGE_FILTERS && fmt == FORMAT_HTML ) {
@@ -7487,7 +7488,7 @@ void Parms::init ( ) {
 		"If your url does not index as you expect you "
 		"can check it's history. " // (spiderdb lookup)
 		"Added urls will have a "
-		"<a href=/admin/scheduler#hopcount>hopcount</a> of 0. "
+		"<a href=/admin/filters#hopcount>hopcount</a> of 0. "
 		"The add url api is described on the "
 		"<a href=/admin/api>api</a> page.";
 	m->m_cgi   = "urls";
@@ -7557,9 +7558,9 @@ void Parms::init ( ) {
 	m->m_xml   = "siteList";
 	m->m_desc  = "List of sites to spider, one per line. "
 		"Gigablast uses the "
-		"<a href=/admin/scheduler#insitelist>insitelist</a> "
+		"<a href=/admin/filters#insitelist>insitelist</a> "
 		"directive on "
-		"the <a href=/admin/scheduler>spider scheduler</a> "
+		"the <a href=/admin/filters>url filters</a> "
 		"page to make sure that the spider only indexes urls "
 		"that match the site patterns you specify here, other than "
 		"urls you add individually via the add urls or inject url "
@@ -7625,9 +7626,9 @@ void Parms::init ( ) {
 	m->m_xml   = "siteList";
 	m->m_desc  = "List of sites to spider, one per line. "
 		"Gigablast uses the "
-		"<a href=/admin/scheduler#insitelist>insitelist</a> "
+		"<a href=/admin/filters#insitelist>insitelist</a> "
 		"directive on "
-		"the <a href=/admin/scheduler>spider scheduler</a> "
+		"the <a href=/admin/filters>url filters</a> "
 		"page to make sure that the spider only indexes urls "
 		"that match the site patterns you specify here, other than "
 		"urls you add individually via the add urls or inject url "
@@ -18523,9 +18524,9 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "the list of sites on the <a href=/admin/sites>"
 			  "site list</a> page. That site list is useful for "
 			  "adding a large number of sites that can not be "
-			  "accomodated by the spider scheduler table. Plus "
+			  "accomodated by the url fitlers table. Plus "
 			  "it is higher performance and easier to use, but "
-			  "lacks the spider scheduler's "
+			  "lacks the url filter table's "
 			  "fine level of control."
 			  "</td></tr>"
 

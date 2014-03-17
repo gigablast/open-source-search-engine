@@ -623,6 +623,7 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      //"</td>"
 		      //"</tr>"
 
+		      /*
 		      // local subdir match
 		      "<tr>"
 		      "<td>file://C/mydir/mysubdir/"
@@ -637,6 +638,7 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "Do not spider files in this subdirectory."
 		      "</td>"
 		      "</tr>"
+		      */
 
 		      // connect to a device and index it as a stream
 		      //"<tr>"
