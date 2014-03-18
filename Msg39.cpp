@@ -661,6 +661,7 @@ void gotListsWrapper ( void *state ) {
 	Msg39 *THIS = (Msg39 *) state;
 	// . hash the lists into our index table
 	// . this will send back a reply or recycle and read more list data
+
 	if ( ! THIS->gotLists ( true ) ) return;
 
 	// . if he did not block and there was an errno we send reply
@@ -671,6 +672,12 @@ void gotListsWrapper ( void *state ) {
 		log("msg39: sending back error reply = %s",mstrerror(g_errno));
 		sendReply ( THIS->m_slot , THIS , NULL , 0 , 0 ,true);
 	}
+
+	// no, block? call the docid split loop
+	//if ( numDocIdSplits <= 1 ) return;
+
+	// if we get the lists and processed them without blocking, repeat!
+	THIS->doDocIdSplitLoop();
 }
 
 // . now come here when we got the necessary index lists
@@ -815,6 +822,7 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	// time it
 	diff = gettimeofdayInMilliseconds() - start;
 	if ( diff > 10 ) log("query: Took %lli ms for intersection",diff);
+
 	// returns false if blocked, true otherwise
 	return addedLists ();
 }

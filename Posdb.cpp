@@ -4453,6 +4453,7 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	//
 	m_minListSize = 0;
 	m_minListi    = -1;
+	long long grand = 0LL;
 	// hopefully no more than 100 sublists per term
 	//char *listEnds  [ MAX_QUERY_TERMS ][ MAX_SUBLISTS ];
 	// set ptrs now i guess
@@ -4465,6 +4466,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		if ( qti->m_bigramFlags[0] & BF_NEGATIVE ) continue;
 		// add to it
 		total = qti->m_totalSubListsSize;
+		// add up this now
+		grand += total;
 		// get min
 		if ( total < m_minListSize || m_minListi == -1 ) {
 			m_minListSize = total;
@@ -4485,6 +4488,10 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	long maxDocIds = m_minListSize / 12;
 	// store all interesected docids in here for new algo plus 1 byte vote
 	long need = maxDocIds * 6;
+
+	// they could all be OR'd together!
+	if ( m_q->m_isBoolean ) need = grand;
+
 	// get max # of docids we got in an intersection from all the lists
 	if ( ! m_docIdVoteBuf.reserve ( need,"divbuf" ) ) return false;
 
@@ -4494,7 +4501,7 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// the bit vector in a truth table
 	long maxSlots = maxDocIds * 2;
 	// get total operands we used
-	long numOperands = m_q->m_numOperands;
+	long numOperands = m_q->m_numWords;//Operands;
 	// a quoted phrase counts as a single operand
 	m_vecSize = numOperands / 8 ;
 	// allow an extra byte for remainders
@@ -4504,7 +4511,7 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	     ! m_bt.set (8,m_vecSize,maxSlots,NULL,0,false,0,"booltbl"))
 		return false;
 	if ( m_q->m_isBoolean && 
-	     ! m_ct.set (8,2 * (1<<numOperands),maxSlots,NULL,0,false,0,
+	     ! m_ct.set (8,1,maxSlots,NULL,0,false,0,
 			 "booltbl"))
 		return false;
 
@@ -5527,6 +5534,11 @@ void PosdbTable::intersectLists10_r ( ) {
 	// is this right?
 	if ( docIdPtr >= docIdEnd ) goto done;
 
+	if ( m_q->m_isBoolean ) {
+		minScore = 1.0;
+		goto boolJump;
+	}
+
 	// assume all sublists exhausted for this query term
 	//docId = *(long long *)docIdPtr;
 
@@ -6547,6 +6559,8 @@ void PosdbTable::intersectLists10_r ( ) {
 		goto advance;
 
 
+ boolJump:
+
 	// try dividing it by 3! (or multiply by .33333 faster)
 	score = minScore * (((float)siteRank)*SITERANKMULTIPLIER+1.0);
 
@@ -7043,8 +7057,8 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		// get the query word
 		QueryWord *qw = qt->m_qword;
 
-		// and the operand # from that
-		long opNum = qw->m_opNum;
+		// just use the word # now
+		long opNum = qw->m_wordNum;//opNum;
 
 		// do not consider for adding if negative ('my house -home')
 		//if ( qti->m_bigramFlags[0] & BF_NEGATIVE ) continue;
@@ -7102,6 +7116,8 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 	}
 
 
+	char *dst = m_docIdVoteBuf.getBufStart();
+
 	// . now our hash table is filled with all the docids
 	// . evaluate each bit vector
 	for ( long i = 0 ; i < m_bt.m_numSlots ; i++ ) {
@@ -7121,8 +7137,10 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			long long *d = (long long *)m_bt.getKeyFromSlot(i);
 			if ( m_debug ) log("query: addind d=%llu vec[0]=%lx",
 					   *d,(long)vec[0]);
-			// an 8 byte key means you pass
-			m_docIdVoteBuf.safeMemcpy ( &d , 6 );
+			// a 6 byte key means you pass
+			*(long  *) dst    = *(long *)  d;
+			*(short *)(dst+4) = *(short *)((char *)d+4);
+			dst += 6;
 		}
 		// evaluate the vector
 		char include = m_q->matchesBoolQuery ( (unsigned char *)vec ,
@@ -7132,12 +7150,17 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			long long *d = (long long *)m_bt.getKeyFromSlot(i);
 			if ( m_debug ) log("query: addind d=%llu vec[0]=%lx",
 					   *d,(long)vec[0]);
-			// an 8 byte key means you pass
-			m_docIdVoteBuf.safeMemcpy ( &d , 6 );
+			// a 6 byte key means you pass
+			*(long  *) dst    = *(long *)  d;
+			*(short *)(dst+4) = *(short *)((char *)d+4);
+			dst += 6;
 		}
 		// store in hash table
 		m_ct.addKey ( &h64  , &include );
 	}
+
+	// update SafeBuf::m_length
+	m_docIdVoteBuf.setLength ( dst - m_docIdVoteBuf.getBufStart() );
 
 	// now sort the docids. TODO: break makeDocIdVoteBufForBoolQuery_r()
 	// up into docid ranges so we have like 1/100th the # of docids to 
