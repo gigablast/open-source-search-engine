@@ -592,6 +592,13 @@ bool Rdb::deleteAllRecs ( collnum_t collnum ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 
+	// deleted from under us?
+	if ( ! cr ) {
+		log("rdb: deleteallrecs: cr is NULL");
+		return true;
+	}
+
+
 	RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
 	if ( ! base ) return true;
 
