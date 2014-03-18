@@ -3596,16 +3596,16 @@ bool Expression::add (long start,
 				 q ,
 				 level + 1,
 				 hasNOT );
-			// skip over it
-			i += e->m_numWordsInExpression - 1;
-			qw->m_opcode = OP_EXPRESSION;
+			// skip over it. pt to ')'
+			i += e->m_numWordsInExpression;
 			qw->m_expressionPtr = e;
 			//m_opSlots[m_cc] = (long)e;
 			//m_opTypes[m_cc] = TYPE_EXPRESSION;
 			//qw->m_opBitNum = m_cc;
 		}
 		else if (qw->m_opcode == OP_RIGHTPAREN){
-			// return size i guess, edn point
+			// return size i guess, include )
+			m_numWordsInExpression = i - m_expressionStartWord+1;
 			return i;
 		}
 		else if (qw->m_opcode) {
@@ -3662,6 +3662,14 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 
 		QueryWord *qw = &m_q->m_qwords[i];
 
+		// so operands are expressions as well
+		Expression *e = (Expression *)qw->m_expressionPtr;
+		if ( e ) {
+			opResult = e->isTruth ( bitVec , vecSize );
+			// skip over that expression. point to ')'
+			i += e->m_numWordsInExpression;
+		}
+
 		if ( qw->m_opcode ) {
 			prevOpCode = qw->m_opcode;//m_opSlots[i];
 			continue;
@@ -3675,22 +3683,10 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 		prevResult = opResult;
 
 		// for regular word operands
-		if ( ! qw->m_opcode ) {
-			// ignore it like a space?
-			if ( qw->m_ignoreWord ) continue;
-			// this is the op bit # for a word in the bool query
-			//long opBitNum = m_opSlots[i];
-			// see iff that bit is set in this docid's vector 
-			opResult = isBitNumSet ( i,bitVec,vecSize );
-		}
-		// expression operands
-		else {
-			// pass in &i so it skips this expression
-			Expression *e = (Expression *)qw->m_expressionPtr;
-			opResult = e->isTruth ( bitVec , vecSize );
-			// skip over that expression
-			i += e->m_numWordsInExpression - 1;
-		}
+		// ignore it like a space?
+		if ( qw->m_ignoreWord ) continue;
+		// see iff that bit is set in this docid's vec
+		opResult = isBitNumSet ( i,bitVec,vecSize );
 
 		// need two to tango. i.e. (true OR false)
 		if ( prevResult == -1 ) continue;
