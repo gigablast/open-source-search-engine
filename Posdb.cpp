@@ -5538,20 +5538,6 @@ void PosdbTable::intersectLists10_r ( ) {
 	// is this right?
 	if ( docIdPtr >= docIdEnd ) goto done;
 
-	if ( m_q->m_isBoolean ) {
-		minScore = 1.0;
-		// since we are jumping, we need to set m_docId
-		//m_docId = *(unsigned long *)(docIdPtr+1);
-		//m_docId <<= 8;
-		//m_docId |= (unsigned char)docIdPtr[0];
-		//m_docId >>= 2;
-		// CAUTION: m_docidVoteBuf is slightly different
-		// storage of docids when doing BOOLEAN queries!!!
-		m_docId = *(long long *)docIdPtr;
-		m_docId &= 0x0000003fffffffffLL; // 38 bit docid
-		goto boolJump;
-	}
-
 	// assume all sublists exhausted for this query term
 	//docId = *(long long *)docIdPtr;
 
@@ -5720,6 +5706,16 @@ void PosdbTable::intersectLists10_r ( ) {
 			// assign to next docid word position list
 			qti->m_cursor[j] = xc;
 		}
+	}
+
+	if ( m_q->m_isBoolean ) {
+		minScore = 1.0;
+		// since we are jumping, we need to set m_docId here
+		m_docId = *(unsigned long *)(docIdPtr+1);
+		m_docId <<= 8;
+		m_docId |= (unsigned char)docIdPtr[0];
+		m_docId >>= 2;
+		goto boolJump;
 	}
 
 	// TODO: consider skipping this pre-filter if it sucks, as it does
@@ -7092,15 +7088,18 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			char *p = qti->m_subLists[j]->getList();
 			char *pend = qti->m_subLists[j]->getListEnd();
 
-			long long lastDocId = 0LL;
+			//long long lastDocId = 0LL;
 
 			for ( ; p < pend ; ) {
 				// place holder
-				long long d = g_posdb.getDocId(p);
+				long long docId = g_posdb.getDocId(p);
 
 				// sanity
-				if ( d < lastDocId ) { char *xx=NULL;*xx=0; }
-				lastDocId = d;
+				//if ( d < lastDocId ) { char *xx=NULL;*xx=0; }
+				//lastDocId = d;
+
+				// point to it
+				//char *dp = p + 8;
 
 				// this was the first key for this docid for 
 				// this termid and possible the first key for 
@@ -7115,11 +7114,21 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			subloop:
 				if((((char *)p)[0])&0x04){p += 6;goto subloop;}
 
-				// store this docid though
-				long slot = m_bt.getSlot ( &d );
+				// convert docid into hash key
+				//long long docId = *(long long *)dp;
+				// shift down 2 bits
+				//docId >>= 2;
+				// and mask
+				//docId &= DOCID_MASK;
+				// test it
+				//long long docId = g_posdb.getDocId(dp-8);
+				//if ( d2 != docId ) { char *xx=NULL;*xx=0; }
+				// store this docid though. treat as long long
+				// but we mask with keymask
+				long slot = m_bt.getSlot ( &docId );
 				if ( slot < 0 ) {
 					// we can't alloc in a thread, careful
-					if ( ! m_bt.addKey(&d,bitVec) ) {
+					if ( ! m_bt.addKey(&docId,bitVec) ) {
 						char *xx=NULL;*xx=0; }
 					continue;
 				}
@@ -7149,14 +7158,16 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		// add him to the good table
 		if ( val && *val ) {
 			// it passes, add the ocid
-			long long *d = (long long *)m_bt.getKeyFromSlot(i);
-			if ( !m_debug ) log("query: adding d=%llu vec[0]=%lx",
-					   *d,(long)vec[0]);
+			long long docId =*(long long *)m_bt.getKeyFromSlot(i);
+			// fix it up
+			if ( m_debug ) {
+				log("query: adding d=%llu vec[0]=%lx",
+				    docId,(long)vec[0]);
+			}
+			// shift up
+			docId <<= 2;
 			// a 6 byte key means you pass
-			// CAUTION: m_docidVoteBuf is slightly different
-			// storage of docids when doing BOOLEAN queries!!!
-			*(long  *) dst    = *(long *)  d;
-			*(short *)(dst+4) = *(short *)((char *)d+4);
+			memcpy ( dst , &docId , 6 );
 			dst += 6;
 			continue;
 		}
@@ -7165,14 +7176,25 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 						        m_vecSize );
 		if ( include ) {
 			// it passes, add the ocid
-			long long *d = (long long *)m_bt.getKeyFromSlot(i);
-			if ( !m_debug ) log("query: adding d=%llu vec[0]=%lx",
-					   *d,(long)vec[0]);
+			long long docId =*(long long *)m_bt.getKeyFromSlot(i);
+			// fix it up
+			if ( m_debug ) {
+				log("query: adding d=%llu vec[0]=%lx",
+				    docId,(long)vec[0]);
+			}
+			// shift up
+			docId <<= 2;
 			// a 6 byte key means you pass
-			// CAUTION: m_docidVoteBuf is slightly different
-			// storage of docids when doing BOOLEAN queries!!!
-			*(long  *) dst    = *(long *)  d;
-			*(short *)(dst+4) = *(short *)((char *)d+4);
+			memcpy ( dst , &docId , 6 );
+			// test it
+			long long d2;
+			d2 = *(unsigned long *)(dst+1);
+			d2 <<= 8;
+			d2 |= (unsigned char)dst[0];
+			d2 >>= 2;
+			docId >>= 2;
+			if ( d2 != docId ) { char *xx=NULL;*xx=0; }
+			// end test
 			dst += 6;
 		}
 		// store in hash table
