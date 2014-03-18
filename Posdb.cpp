@@ -4492,6 +4492,10 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// they could all be OR'd together!
 	if ( m_q->m_isBoolean ) need = grand;
 
+	// so we can always cast a long long from a ptr in there
+	// for setting m_docId when m_booleanQuery is true below
+	need += 8;
+
 	// get max # of docids we got in an intersection from all the lists
 	if ( ! m_docIdVoteBuf.reserve ( need,"divbuf" ) ) return false;
 
@@ -5536,6 +5540,15 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	if ( m_q->m_isBoolean ) {
 		minScore = 1.0;
+		// since we are jumping, we need to set m_docId
+		//m_docId = *(unsigned long *)(docIdPtr+1);
+		//m_docId <<= 8;
+		//m_docId |= (unsigned char)docIdPtr[0];
+		//m_docId >>= 2;
+		// CAUTION: m_docidVoteBuf is slightly different
+		// storage of docids when doing BOOLEAN queries!!!
+		m_docId = *(long long *)docIdPtr;
+		m_docId &= 0x0000003fffffffffLL; // 38 bit docid
 		goto boolJump;
 	}
 
@@ -6719,6 +6732,8 @@ void PosdbTable::intersectLists10_r ( ) {
 		// set the score and docid ptr
 		t->m_score = score;
 		t->m_docId = m_docId;
+		// sanity
+		if ( m_docId == 0 ) { char *xx=NULL;*xx=0; }
 		// use an integer score like lastSpidered timestamp?
 		if ( m_sortByTermNumInt >= 0 ) {
 			t->m_intScore = intScore;
@@ -7135,12 +7150,15 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		if ( val && *val ) {
 			// it passes, add the ocid
 			long long *d = (long long *)m_bt.getKeyFromSlot(i);
-			if ( m_debug ) log("query: addind d=%llu vec[0]=%lx",
+			if ( !m_debug ) log("query: adding d=%llu vec[0]=%lx",
 					   *d,(long)vec[0]);
 			// a 6 byte key means you pass
+			// CAUTION: m_docidVoteBuf is slightly different
+			// storage of docids when doing BOOLEAN queries!!!
 			*(long  *) dst    = *(long *)  d;
 			*(short *)(dst+4) = *(short *)((char *)d+4);
 			dst += 6;
+			continue;
 		}
 		// evaluate the vector
 		char include = m_q->matchesBoolQuery ( (unsigned char *)vec ,
@@ -7148,9 +7166,11 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		if ( include ) {
 			// it passes, add the ocid
 			long long *d = (long long *)m_bt.getKeyFromSlot(i);
-			if ( m_debug ) log("query: addind d=%llu vec[0]=%lx",
+			if ( !m_debug ) log("query: adding d=%llu vec[0]=%lx",
 					   *d,(long)vec[0]);
 			// a 6 byte key means you pass
+			// CAUTION: m_docidVoteBuf is slightly different
+			// storage of docids when doing BOOLEAN queries!!!
 			*(long  *) dst    = *(long *)  d;
 			*(short *)(dst+4) = *(short *)((char *)d+4);
 			dst += 6;
