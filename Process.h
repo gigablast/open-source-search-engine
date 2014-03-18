@@ -93,6 +93,7 @@ class Process {
 	long  m_currentFanState;
 	long  m_desiredFanState;
 	float m_diskUsage;
+	long long m_diskAvail;
 };
 
 extern Process g_process;

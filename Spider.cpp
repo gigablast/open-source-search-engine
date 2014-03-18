@@ -4124,6 +4124,14 @@ bool SpiderColl::scanListForWinners ( ) {
 				continue;
 			if ( sreq->m_hopCount < m_tailHopCount )
 				goto gotNewWinner;
+			// if hopcounts tied prefer the unindexed doc
+			// i don't think we need this b/c spidertimems
+			// for new docs should be less than old docs...
+			// TODO: verify that
+			//if ( sreq->m_isIndexed && ! m_tailIsIndexed )
+			//	continue;
+			//if ( ! sreq->m_isIndexed && m_tailIsIndexed )
+			//	goto gotNewWinner;
 			// if tied, use actual times. assuming both<nowGlobalMS
 			if ( spiderTimeMS > m_tailTimeMS )
 				continue;

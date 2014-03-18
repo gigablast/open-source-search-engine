@@ -139,7 +139,7 @@ class ThreadQueue {
 
 	// . launch a thread from our queue
 	// . returns false and sets errno on error
-	bool         launchThread ( ThreadEntry *te = NULL );
+	bool         launchThread2 ( ThreadEntry *te );
 
 	void print ( ) ;
 

@@ -586,7 +586,7 @@ void Test::stopIt ( ) {
 		// link to page parser
 		char ubuf[2000];
 		urlEncode(ubuf,2000,u,gbstrlen(u),true);
-		tmp.safePrintf(" <a href=\"/master/parser?c=test&"
+		tmp.safePrintf(" <a href=\"/admin/parser?c=test&"
 			       "u=%s\">parser</a> ",ubuf);
 		//tmp.safePrintf(" (%llu)",h);
 		tmp.safePrintf("<br>\n");

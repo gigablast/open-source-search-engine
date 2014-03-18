@@ -933,13 +933,16 @@ bool RdbBase::incorporateMerge ( ) {
 	long b = m_mergeStartFileNum + m_numFilesToMerge;
 	// shouldn't be called if no files merged
 	if ( a == b ) {
+		// unless resuming after a merge completed and we exited
+		// but forgot to finish renaming the final file!!!!
+		log("merge: renaming final file");
 		// decrement this count
 		if ( m_isMerging ) m_rdb->m_numMergesOut--;
 		// exit merge mode
 		m_isMerging = false;
 		// return the merge token, no need for a callback
 		g_msg35.releaseToken ( );
-		return true; 
+		//return true; 
 	}
 	// file #x is the merge file
 	long x = a - 1; 
@@ -1033,6 +1036,9 @@ bool RdbBase::incorporateMerge ( ) {
 
 	// on success unlink the files we merged and free them
 	for ( long i = a ; i < b ; i++ ) {
+		// incase we are starting with just the
+		// linkdb0001.003.dat file and not the stuff we merged
+		if ( ! m_files[i] ) continue;
 		// debug msg
 		log(LOG_INFO,"merge: Unlinking merged file %s (#%li).",
 		     m_files[i]->getFilename(),i);
@@ -1413,6 +1419,15 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		m_minToMerge = 4;
 	if ( cr && m_rdb == g_tagdb.getRdb() )
 		m_minToMerge = 2;//cr->m_tagdbMinFilesToMerge;
+
+	// if we are reblancing this coll then keep merges tight so all
+	// the negative recs annihilate with the positive recs to free
+	// up disk space since we could be short on disk space.
+	//if ( g_rebalance.m_isScanning &&
+	//     // if might have moved on if not able to merge because
+	//     // another was merging... so do this anyway...
+	//     g_rebalance.m_collnum == m_collnum )
+	//	m_minToMerge = 2;
 	
 
 	// secondary rdbs are used for rebuilding, so keep their limits high
@@ -1467,6 +1482,13 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		    m_dbname);
 		g_numUrgentMerges++;
 	}
+
+
+	// tfndb has his own merge class since titledb merges write tfndb recs
+	RdbMerge *m = &g_merge;
+	if ( m->isMerging() )
+		return;
+
 	// if we are tfndb and someone else is merging, do not merge unless
 	// we have 3 or more files
 	long minToMerge = m_minToMerge;
@@ -1486,6 +1508,31 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		resuming = true;
 		break;
 	}
+
+	// what percent of recs in the collections' rdb are negative?
+	// the rdbmaps hold this info
+	float percentNegativeRecs = getPercentNegativeRecsOnDisk ( );
+	// 1. if disk space is tight and >20% negative recs, force it
+	if ( g_process.m_diskAvail >= 0 && 
+	     g_process.m_diskAvail < 10000000000LL && // 10GB
+	     percentNegativeRecs > .20 ) {
+		m_nextMergeForced = true;
+		forceMergeAll = true;
+		log("rdb: hit negative rec concentration of %.01f for "
+		    "collnum %li on db %s when diskAvail=%lli bytes",
+		    percentNegativeRecs,(long)m_collnum,m_rdb->m_dbname,
+		    g_process.m_diskAvail);
+	}
+	// 2. if >40% negative recs force it
+	if ( percentNegativeRecs > .40 ) {
+		m_nextMergeForced = true;
+		forceMergeAll = true;
+		log("rdb: hit negative rec concentration of %.01f for "
+		    "collnum %li on db %s",
+		    percentNegativeRecs,(long)m_collnum,m_rdb->m_dbname);
+	}
+
+
 	// . don't merge if we don't have the min # of files
 	// . but skip this check if there is a merge to be resumed from b4
 	if ( ! resuming && ! forceMergeAll && numFiles < minToMerge ) return;
@@ -1719,11 +1766,49 @@ void RdbBase::gotTokenForMerge ( ) {
 				   "original %li files.",mm,n);
 		// how many files to merge?
 		n = mm;
+		// allow a single file to continue merging if the other
+		// file got merged out already
+		if ( mm > 0 ) overide = true;
+
+		// if we've already merged and already unlinked, then the
+		// process exited, now we restart with just the final 
+		// merge final and we need to do the rename
+		if ( mm == 0 ) {
+			m_isMerging = false;
+			// make a fake file before us that we were merging
+			// since it got nuked on disk
+			//incorporateMerge();
+			char fbuf[256];
+			sprintf(fbuf,"%s%04li.dat",m_dbname,mergeFileId-1);
+			if ( m_isTitledb )
+				sprintf(fbuf,"%s%04li-%03li.dat",
+					m_dbname,mergeFileId-1,id2);
+			log("merge: renaming final merged file %s",fbuf);
+			m_files[j]->rename(fbuf);
+			sprintf(fbuf,"%s%04li.map",m_dbname,mergeFileId-1);
+			//File *mf = m_maps[j]->getFile();
+			m_maps[j]->rename(fbuf);
+			log("merge: renaming final merged file %s",fbuf);
+			return;
+		}
+
 		// resume the merging
 		goto startMerge;
 	}
 
 	minToMerge = m_minToMerge;
+
+
+	// if we are reblancing this coll then keep merges tight so all
+	// the negative recs annihilate with the positive recs to free
+	// up disk space since we could be short on disk space.
+	//if ( g_rebalance.m_isScanning &&
+	//     // if might have moved on if not able to merge because
+	//     // another was merging... so do this anyway...
+	//     g_rebalance.m_collnum == m_collnum )
+	//	minToMerge = 2;
+
+
 	//if (m_rdb==g_tfndb.getRdb()&& g_merge.isMerging() && minToMerge <=2 )
 	//	minToMerge = 3;
 
@@ -1772,6 +1857,9 @@ void RdbBase::gotTokenForMerge ( ) {
 	//smini = -1;
 	// but if we are forcing then merge ALL, except one being dumped
 	if ( m_nextMergeForced ) n = numFiles;
+	// or if doing relabalncing, merge them all. tight merge
+	//if ( g_rebalance.m_isScanning && g_rebalance.m_collnum == m_collnum) 
+	//	n = numFiles;
 	//else if ( m_isTitledb ) {
 	//	RdbBase *base = g_tfndb.getRdb()->m_bases[m_collnum];
 	//	tfndbSize = base->getDiskSpaceUsed();
@@ -2305,6 +2393,10 @@ bool RdbBase::verifyFileSharding ( ) {
 	      list.skipCurrentRecord() ) {
 		//key144_t k;
 		list.getCurrentKey(k);
+
+		// skip negative keys
+		if ( (k[0] & 0x01) == 0x00 ) continue;
+
 		count++;
 		//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
 		//unsigned long groupId = getGroupId ( RDB_POSDB , &k );
@@ -2349,4 +2441,15 @@ bool RdbBase::verifyFileSharding ( ) {
 	//return true;
 }
 
-
+float RdbBase::getPercentNegativeRecsOnDisk ( ) {
+	// scan the maps
+	long long numPos = 0LL;
+	long long numNeg = 0LL;
+	for ( long i = 0 ; i < m_numFiles ; i++ ) {
+		numPos += m_maps[i]->getNumPositiveRecs();
+		numNeg += m_maps[i]->getNumNegativeRecs();
+	}
+	long long total = numPos + numNeg;
+	float percent = (float)numNeg / (float)total;
+	return percent;
+}

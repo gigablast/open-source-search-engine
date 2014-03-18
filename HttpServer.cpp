@@ -1903,7 +1903,7 @@ long getMsgSize ( char *buf, long bufSize, TcpSocket *s ) {
 			max = 0x7fffffff; // maxOtherDocLen not available
 		// if post is a /cgi/12.cgi (tagdb) allow 10 megs
 		//if ( pp + 11 < ppend && strncmp ( pp ,"/cgi/12.cgi",11)==0)
-		if ( pp + 11 < ppend && strncmp ( pp ,"/master/tagdb",13)==0)
+		if ( pp + 12 < ppend && strncmp ( pp ,"/admin/tagdb",12)==0)
 			max = 10*1024*1024;
 		if ( pp + 4 < ppend && strncmp ( pp ,"/vec",4)==0)
 			max = 0x7fffffff;

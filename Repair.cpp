@@ -2289,7 +2289,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 "<tr bgcolor=#%s>"
 			 "<td width=50%%><b>host ID with min repair mode"
 			 "</b></td>"
-			 "<td><a href=\"http://%s:%hu/master/repair\">"
+			 "<td><a href=\"http://%s:%hu/admin/repair\">"
 			 "%li</a></td></tr>\n"
 
 			 "<tr bgcolor=#%s><td><b>old collection</b></td>"

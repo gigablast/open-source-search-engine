@@ -395,6 +395,8 @@ bool Clusterdb::verify ( char *coll ) {
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		//unsigned long groupId = getGroupId ( RDB_CLUSTERDB , &k );
 		//if ( groupId == g_hostdb.m_groupId ) got++;

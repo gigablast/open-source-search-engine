@@ -181,14 +181,14 @@ bool sendReply ( void *state ) {
 	// print the generate Catdb link
 	sb.safePrintf ( "<tr class=poo><td>Update Catdb from DMOZ data.</td>"
 			"<td><center>"
-			"<a href=\"/master/catdb?c=%s&gencatdb=2\">"
+			"<a href=\"/admin/catdb?c=%s&gencatdb=2\">"
 			"Update Catdb</a> "
 			"</center></td></tr>",
 			st->m_coll );
 	sb.safePrintf ( "<tr class=poo>"
 			"<td>Generate New Catdb from DMOZ data.</td>"
 			"<td><center>"
-			"<a href=\"/master/catdb?c=%s&gencatdb=1\">"
+			"<a href=\"/admin/catdb?c=%s&gencatdb=1\">"
 			"Generate Catdb</a> "
 			"</center></td></tr>",
 			st->m_coll );
