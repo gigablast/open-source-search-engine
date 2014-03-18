@@ -495,7 +495,7 @@ class QueryTerm {
 // operand1 OR  operand2 AND ...
 class Expression {
 public:
-	long add (long start, 
+	bool add (long start, 
 		  long end, 
 		  class Query      *q,
 		  long    level, 
@@ -511,8 +511,10 @@ public:
 	// . m_opcodes[i] is the opcode after operand #i
 	//class Expression *m_parent;
 	bool              m_hasNOT;
-	long              m_start;
-	long              m_end;
+	//long              m_start;
+	//long              m_end;
+	long m_expressionStartWord;
+	long m_numWordsInExpression;
 	Query *m_q;
 	// . opSlots can be operands operators or expressions
 	// . m_opTypes tells which of the 3 they are

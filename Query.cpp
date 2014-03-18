@@ -388,12 +388,14 @@ bool Query::set2 ( char *query        ,
 
 	// . keep it simple for now
 	// . we limit to MAX_EXRESSIONS to like 10 now i guess
-	if ( m_isBoolean )
+	if ( m_isBoolean ) {
+		m_numExpressions = 1;
 		m_expressions[0].add ( 0 , 
 				       m_numWords ,
 				       this , // Query
 				       0 , // level
 				       false ); // hasNOT
+	}
 
 
 	// . if it is not truncated, no need to use hard counts
@@ -3540,7 +3542,7 @@ unsigned char precedence[] = {
 
 // return -1 and set g_errno on error
 // returns how many words expression was
-long Expression::add (long start, 
+bool Expression::add (long start, 
 		      long end, 
 		      class Query      *q,
 		      long              level, 
@@ -3550,16 +3552,18 @@ long Expression::add (long start,
 	if ( level >= MAX_EXPRESSIONS ) { g_errno = EBADENGINEER; return -1;}
 
 	// the # of the first alnumpunct word in the expression
-	m_start = start;
+	m_expressionStartWord = start;
 	// and the last one
-	m_end = end;
+	//m_end = end;
 	m_hasNOT = hasNOT;
 	m_q = q;
 
 	//m_cc = 0;
 
+	long i = m_expressionStartWord;
+
 	// "start" is the current alnumpunct word we are parsing out
-	for ( long i=m_start ; i<end ; i++ ){
+	for ( ; i<end ; i++ ) {
 
 		QueryWord *qwords = q->m_qwords;
 
@@ -3582,16 +3586,18 @@ long Expression::add (long start,
 		else if (qw->m_opcode == OP_LEFTPAREN){
 			// this is expression
 			// . it should advance "i" to end of expression
-			// make a new one:
-			Expression *e = &q->m_expressions[q->m_numExpressions];
 			// point to next...
 			q->m_numExpressions++;
+			// make a new one:
+			Expression *e=&q->m_expressions[q->m_numExpressions-1];
 			// now set it
 			e->add ( i+1, // skip over (
 				 end ,
 				 q ,
 				 level + 1,
 				 hasNOT );
+			// skip over it
+			i += e->m_numWordsInExpression - 1;
 			qw->m_opcode = OP_EXPRESSION;
 			qw->m_expressionPtr = e;
 			//m_opSlots[m_cc] = (long)e;
@@ -3614,7 +3620,10 @@ long Expression::add (long start,
 		continue;
 	}
 
-	return end;
+
+	m_numWordsInExpression = i - m_expressionStartWord;
+
+	return true;
 }
 
 // each bit is 1-1 with the explicit terms in the boolean query
@@ -3646,8 +3655,10 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 	// result of current operand
 	long opResult = -1;
 
+	long i    =     m_expressionStartWord;
+	long iend = i + m_numWordsInExpression;
 
-	for ( long i = 0 ; i < m_q->m_numWords ; i++ ) {
+	for ( ; i < iend ; i++ ) {
 
 		QueryWord *qw = &m_q->m_qwords[i];
 
@@ -3674,8 +3685,11 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 		}
 		// expression operands
 		else {
+			// pass in &i so it skips this expression
 			Expression *e = (Expression *)qw->m_expressionPtr;
 			opResult = e->isTruth ( bitVec , vecSize );
+			// skip over that expression
+			i += e->m_numWordsInExpression - 1;
 		}
 
 		// need two to tango. i.e. (true OR false)
