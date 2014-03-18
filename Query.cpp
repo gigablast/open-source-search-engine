@@ -3665,28 +3665,29 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 		// so operands are expressions as well
 		Expression *e = (Expression *)qw->m_expressionPtr;
 		if ( e ) {
+			// save prev one. -1 means no prev.
+			prevResult = opResult;
+			// set new onw
 			opResult = e->isTruth ( bitVec , vecSize );
 			// skip over that expression. point to ')'
 			i += e->m_numWordsInExpression;
 		}
 
-		if ( qw->m_opcode ) {
+		if ( qw->m_opcode && ! e ) {
 			prevOpCode = qw->m_opcode;//m_opSlots[i];
 			continue;
 		}
 
-		// this docids must have all these words
-		// then two remaining opTypes are TYPE_OEPRAND and
-		// TYPE_EXPRESSION
-
-		// save prev one. -1 means no prev.
-		prevResult = opResult;
-
-		// for regular word operands
-		// ignore it like a space?
-		if ( qw->m_ignoreWord ) continue;
-		// see iff that bit is set in this docid's vec
-		opResult = isBitNumSet ( i,bitVec,vecSize );
+		// simple operand
+		if ( ! qw->m_opcode && ! e ) {
+			// for regular word operands
+			// ignore it like a space?
+			if ( qw->m_ignoreWord ) continue;
+			// save old one
+			prevResult = opResult;
+			// see iff that bit is set in this docid's vec
+			opResult = isBitNumSet ( i,bitVec,vecSize );
+		}
 
 		// need two to tango. i.e. (true OR false)
 		if ( prevResult == -1 ) continue;
