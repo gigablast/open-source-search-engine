@@ -523,7 +523,7 @@ class PosdbTable {
 					 char *endi, char *endj,
 					 class DocIdScore *pdcs );
 
-	bool makeDocIdVoteBufFromBooleanQuery_r ( ) ;
+	bool makeDocIdVoteBufForBoolQuery_r ( ) ;
 
 	// some generic stuff
 	PosdbTable();

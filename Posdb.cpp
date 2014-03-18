@@ -5189,9 +5189,8 @@ void PosdbTable::intersectLists10_r ( ) {
 	// we use Query::getBitScore(qvec_t ebits) to evaluate a docid's
 	// query term explicit term bit vector.
 	if ( m_q->m_isBoolean ) {
-		// just score the docids that pass the boolean query
-		// and put those docids into m_docIdVoteBuf for scoring
-		makeDocIdVoteBufFromBooleanQuery_r();
+		// keeping the docids sorted is the challenge here...
+		makeDocIdVoteBufForBoolQuery_r();
 		goto skip3;
 	}
 
@@ -5256,8 +5255,6 @@ void PosdbTable::intersectLists10_r ( ) {
 		rmDocIdVotes ( qti );
 	}
 
- skip3:
-
 	/*
 	// test docid buf
 	xdp = m_docIdVoteBuf.getBufStart();
@@ -5271,6 +5268,8 @@ void PosdbTable::intersectLists10_r ( ) {
 		log("posdb: intact docid %lli",actualDocId);
 	}
 	*/
+
+ skip3:
 
 	if ( m_debug ) {
 		now = gettimeofdayInMilliseconds();
@@ -6995,10 +6994,24 @@ void printTermList ( long i, char *list, long listSize ) {
 	}
 }
 
+// sort in descending order
+int dcmp6 ( const void *h1 , const void *h2 ) {
+	if ( *(unsigned long *)((char *)h1+2) < 
+	     *(unsigned long *)((char *)h2+2) )
+		return -1;
+	if ( *(unsigned long *)((char *)h1+2) > 
+	     *(unsigned long *)((char *)h2+2) )
+		return  1;
+	if ( *(unsigned short *)((char *)h1) < 
+	     *(unsigned short *)((char *)h2) )
+		return -1;
+	// they shouldn't be any dups in there...
+	return 1;
+}
 
 // TODO: do this in docid range phases to save memory and be much faster
 // since we could contain to the L1 cache for hashing
-bool PosdbTable::makeDocIdVoteBufFromBooleanQuery_r ( ) {
+bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 
 	// . make a hashtable of all the docids from all the termlists
 	// . the value slot will be the operand bit vector i guess
@@ -7086,6 +7099,7 @@ bool PosdbTable::makeDocIdVoteBufFromBooleanQuery_r ( ) {
 		}
 	}
 
+
 	// . now our hash table is filled with all the docids
 	// . evaluate each bit vector
 	for ( long i = 0 ; i < m_bt.m_numSlots ; i++ ) {
@@ -7099,12 +7113,14 @@ bool PosdbTable::makeDocIdVoteBufFromBooleanQuery_r ( ) {
 			h64 = g_hashtab[vec[k]][k];
 		// check in hash table
 		char *val = (char *)m_ct.getValue ( &h64 );
+		// add him to the good table
 		if ( val && *val ) {
 			// it passes, add the ocid
 			long long *d = (long long *)m_bt.getKeyFromSlot(i);
 			if ( m_debug ) log("query: addind d=%llu vec[0]=%lx",
 					   *d,(long)vec[0]);
-			m_docIdVoteBuf.safeMemcpy ( d , 6 );
+			// an 8 byte key means you pass
+			m_docIdVoteBuf.safeMemcpy ( &d , 6 );
 		}
 		// evaluate the vector
 		char include = m_q->matchesBoolQuery ( (unsigned char *)vec ,
@@ -7114,11 +7130,23 @@ bool PosdbTable::makeDocIdVoteBufFromBooleanQuery_r ( ) {
 			long long *d = (long long *)m_bt.getKeyFromSlot(i);
 			if ( m_debug ) log("query: addind d=%llu vec[0]=%lx",
 					   *d,(long)vec[0]);
-			m_docIdVoteBuf.safeMemcpy ( d , 6 );
+			// an 8 byte key means you pass
+			m_docIdVoteBuf.safeMemcpy ( &d , 6 );
 		}
 		// store in hash table
 		m_ct.addKey ( &h64  , &include );
 	}
+
+	// now sort the docids. TODO: break makeDocIdVoteBufForBoolQuery_r()
+	// up into docid ranges so we have like 1/100th the # of docids to 
+	// sort. that should make this part a lot faster.
+	// i.e. 1000*log(1000) > 1000*(10*log(10))) --> 3000 > 1000
+	// i.e. it's faster to break it down into 1000 pieces
+	// i.e. for log base 2 maybe it's like 10x faster...
+	qsort ( m_docIdVoteBuf.getBufStart() ,
+		m_docIdVoteBuf.length() / 6 ,
+		6 ,
+		dcmp6 );
 
 	return true;
 }
