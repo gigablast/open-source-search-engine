@@ -395,6 +395,42 @@ class Posdb {
 	DiskPageCache m_pc;
 };
 
+#define MAX_SUBLISTS 50
+
+// . each QueryTerm has this attached additional info now:
+// . these should be 1-1 with query terms, Query::m_qterms[]
+class QueryTermInfo {
+public:
+	// the required lists for this query term, synonym lists, etc.
+	RdbList  *m_subLists        [MAX_SUBLISTS];
+	// flags to indicate if bigram list should be scored higher
+	char      m_bigramFlags     [MAX_SUBLISTS];
+	// shrinkSubLists() set this:
+	long      m_newSubListSize  [MAX_SUBLISTS];
+	char     *m_newSubListStart [MAX_SUBLISTS];
+	char     *m_newSubListEnd   [MAX_SUBLISTS];
+	char     *m_cursor          [MAX_SUBLISTS];
+	char     *m_savedCursor     [MAX_SUBLISTS];
+	// the corresponding QueryTerm for this sublist
+	class QueryTerm *m_qtermList [MAX_SUBLISTS];
+	long      m_numNewSubLists;
+	// how many are valid?
+	long      m_numSubLists;
+	// size of all m_subLists in bytes
+	long long m_totalSubListsSize;
+	// the term freq weight for this term
+	float     m_termFreqWeight;
+	// what query term # do we correspond to in Query.h
+	long      m_qtermNum;
+	// the word position of this query term in the Words.h class
+	long      m_qpos;
+	// the wikipedia phrase id if we start one
+	long      m_wikiPhraseId;
+	// phrase id term or bigram is in
+	long      m_quotedStartId;
+};
+
+
 /*
 #include "RdbList.h"
 

@@ -1263,7 +1263,6 @@ char *getHashGroupString ( unsigned char hg ) {
 //
 ////////////////
 
-#define MAX_SUBLISTS 50
 /*
 // . these lists[] are 1-1 with q->m_qterms
 void PosdbTable::intersectLists9_r ( ) {
@@ -4075,38 +4074,6 @@ float PosdbTable::getTermPairScoreForAny ( long i, long j,
 //
 
 
-// . each QueryTerm has this attached additional info now:
-// . these should be 1-1 with query terms, Query::m_qterms[]
-class QueryTermInfo {
-public:
-	// the required lists for this query term, synonym lists, etc.
-	RdbList  *m_subLists        [MAX_SUBLISTS];
-	// flags to indicate if bigram list should be scored higher
-	char      m_bigramFlags     [MAX_SUBLISTS];
-	// shrinkSubLists() set this:
-	long      m_newSubListSize  [MAX_SUBLISTS];
-	char     *m_newSubListStart [MAX_SUBLISTS];
-	char     *m_newSubListEnd   [MAX_SUBLISTS];
-	char     *m_cursor          [MAX_SUBLISTS];
-	char     *m_savedCursor     [MAX_SUBLISTS];
-	long      m_numNewSubLists;
-	// how many are valid?
-	long      m_numSubLists;
-	// size of all m_subLists in bytes
-	long long m_totalSubListsSize;
-	// the term freq weight for this term
-	float     m_termFreqWeight;
-	// what query term # do we correspond to in Query.h
-	long      m_qtermNum;
-	// the word position of this query term in the Words.h class
-	long      m_qpos;
-	// the wikipedia phrase id if we start one
-	long      m_wikiPhraseId;
-	// phrase id term or bigram is in
-	long      m_quotedStartId;
-};
-
-
 // returns false and sets g_errno on error
 bool PosdbTable::setQueryTermInfo ( ) {
 
@@ -4215,6 +4182,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			qti->m_bigramFlags[nn] = BF_HALFSTOPWIKIBIGRAM;
 			// before a pipe operator?
 			if ( qt->m_piped ) qti->m_bigramFlags[nn] |= BF_PIPED;
+			// add list of member terms as well
+			qti->m_qtermList[nn] = &m_q->m_qterms[left];
 			// only really add if useful
 			if ( list && list->m_listSize ) nn++;
 
@@ -4231,6 +4200,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 				qti->m_bigramFlags[nn] |= BF_SYNONYM;
 				if (qt->m_piped)
 					qti->m_bigramFlags[nn]|=BF_PIPED;
+				// add list of member terms as well
+				qti->m_qtermList[nn] = bt;
 				if ( list && list->m_listSize ) nn++;
 			}
 
@@ -4252,6 +4223,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			qti->m_bigramFlags[nn] = BF_HALFSTOPWIKIBIGRAM;
 			// before a pipe operator?
 			if ( qt->m_piped ) qti->m_bigramFlags[nn] |= BF_PIPED;
+			// add list of member terms as well
+			qti->m_qtermList[nn] = &m_q->m_qterms[right];
 			// only really add if useful
 			if ( list && list->m_listSize ) nn++;
 
@@ -4268,6 +4241,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 				qti->m_bigramFlags[nn] |= BF_SYNONYM;
 				if (qt->m_piped)
 					qti->m_bigramFlags[nn]|=BF_PIPED;
+				// add list of member terms as well
+				qti->m_qtermList[nn] = bt;
 				if ( list && list->m_listSize ) nn++;
 			}
 
@@ -4312,6 +4287,9 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		if (qt->m_fieldCode == FIELD_GBNUMBERMAXINT )
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
 
+		// add list of member terms
+		qti->m_qtermList[nn] = qt;
+
 		// only really add if useful
 		// no, because when inserting NEW (related) terms that are
 		// not currently in the document, this list may initially
@@ -4334,6 +4312,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			if ( qt->m_piped ) qti->m_bigramFlags[nn] |= BF_PIPED;
 			// call it a synonym i guess
 			qti->m_bigramFlags[nn] |= BF_BIGRAM;
+			// add list of member terms
+			qti->m_qtermList[nn] = &m_q->m_qterms[left];
 			// only really add if useful
 			if ( list && list->m_listSize ) nn++;
 
@@ -4349,6 +4329,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 				qti->m_bigramFlags[nn] = BF_SYNONYM;
 				if (qt->m_piped)
 					qti->m_bigramFlags[nn]|=BF_PIPED;
+				// add list of member terms
+				qti->m_qtermList[nn] = bt;
 				if ( list && list->m_listSize ) nn++;
 			}
 
@@ -4370,6 +4352,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			qti->m_bigramFlags[nn] |= BF_BIGRAM;
 			// before a pipe operator?
 			if ( qt->m_piped ) qti->m_bigramFlags[nn] |= BF_PIPED;
+			// add list of query terms too that are in this group
+			qti->m_qtermList[nn] = &m_q->m_qterms[right];
 			// only really add if useful
 			if ( list && list->m_listSize ) nn++;
 
@@ -4385,6 +4369,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 				qti->m_bigramFlags[nn] = BF_SYNONYM;
 				if (qt->m_piped)
 					qti->m_bigramFlags[nn]|=BF_PIPED;
+				// add list of member terms
+				qti->m_qtermList[nn] = bt;
 				if ( list && list->m_listSize ) nn++;
 			}
 
@@ -4408,6 +4394,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			qti->m_bigramFlags[nn] = BF_SYNONYM;
 			// before a pipe operator?
 			if ( qt->m_piped ) qti->m_bigramFlags[nn] |= BF_PIPED;
+			// add list of member terms as well
+			qti->m_qtermList[nn] = qt2;
 			// only really add if useful
 			if ( list && list->m_listSize ) nn++;
 		}
@@ -4447,6 +4435,26 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		// count # required groups
 		nrg++;
 	}
+
+	//
+	// now set QueryTerm::m_bitNum for use by Expression::isTruth()
+	// in Query.cpp for boolean queries, so we can get the bit vector
+	// of a docid that is 1-1 with the queryterminfos and see which
+	// query words in the boolean expression it contains.
+	// used by matchesBoolQuery() which we call below.
+	//
+	for ( long i = 0 ; i < nrg ; i++ ) {
+		// get one
+		QueryTermInfo *qti = &qip[i];
+		// how many query terms are in this group?
+		for ( long j = 0 ; j < qti->m_numSubLists ; j++ ) {
+			// get the query term
+			QueryTerm *qt = qti->m_qtermList[j];
+			// set the bit num member
+			qt->m_bitNum = i;
+		}
+	}
+
 
 	//
 	// get the query term with the least data in posdb including syns
@@ -4505,11 +4513,15 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// the bit vector in a truth table
 	long maxSlots = maxDocIds * 2;
 	// get total operands we used
-	long numOperands = m_q->m_numWords;//Operands;
+	//long numOperands = m_q->m_numWords;//Operands;
 	// a quoted phrase counts as a single operand
-	m_vecSize = numOperands / 8 ;
+	// . QueryTerm::m_bitNum <== m_numQueryTermInfos
+	// . each queryTermInfo class corresponds to one bit in our bit vec
+	// . essentially each queryTermInfo is a query term, but it has
+	//   all the synonym and word forms for that query, etc.
+	m_vecSize = m_numQueryTermInfos;//numOperands / 8 ;
 	// allow an extra byte for remainders
-	if ( numOperands % 8 ) m_vecSize++;
+	if ( m_numQueryTermInfos % 8 ) m_vecSize++;
 	// now preallocate the hashtable. 0 niceness.
 	if ( m_q->m_isBoolean && 
 	     ! m_bt.set (8,m_vecSize,maxSlots,NULL,0,false,0,"booltbl"))
@@ -7066,10 +7078,14 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 
 		QueryTerm *qt = &m_q->m_qterms[qti->m_qtermNum];
 		// get the query word
-		QueryWord *qw = qt->m_qword;
+		//QueryWord *qw = qt->m_qword;
 
 		// just use the word # now
-		long opNum = qw->m_wordNum;//opNum;
+		//long opNum = qw->m_wordNum;//opNum;
+
+		// . make it consistent with Query::isTruth()
+		// . m_bitNum is set above to the QueryTermInfo #
+		long bitNum = qt->m_bitNum;
 
 		// do not consider for adding if negative ('my house -home')
 		//if ( qti->m_bigramFlags[0] & BF_NEGATIVE ) continue;
@@ -7077,8 +7093,8 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		// set all to zeroes
 		memset ( bitVec , 0 , m_vecSize );
 		// set bitvec for him
-		long byte = opNum / 8;
-		unsigned char mask = 1<<(opNum % 8);
+		long byte = bitNum / 8;
+		unsigned char mask = 1<<(bitNum % 8);
 		bitVec[byte] |= mask;
 
 		// each query term can have synonym lists etc. scan those
@@ -7152,9 +7168,19 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		// hash the vector
 		long long h64 = 0LL;
 		for ( long k = 0 ; k < m_vecSize ; k++ )
-			h64 = g_hashtab[vec[k]][k];
+		       h64^=g_hashtab[(unsigned char)vec[k]][(unsigned char)k];
 		// check in hash table
 		char *val = (char *)m_ct.getValue ( &h64 );
+
+		// it passes, add the ocid
+		if ( m_debug ) {
+			long long docId =*(long long *)m_bt.getKeyFromSlot(i);
+			log("query: eval d=%llu vec[0]=%lx h64=%lli",
+			    docId,(long)vec[0],h64);
+			//if ( docId == 123293944371LL )
+			//	log("hy");
+		}
+
 		// add him to the good table
 		if ( val && *val ) {
 			// it passes, add the ocid
@@ -7179,7 +7205,7 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			long long docId =*(long long *)m_bt.getKeyFromSlot(i);
 			// fix it up
 			if ( m_debug ) {
-				log("query: adding d=%llu vec[0]=%lx",
+				log("query: adding d=%llu vec[0]=0x%lx",
 				    docId,(long)vec[0]);
 			}
 			// shift up

@@ -392,6 +392,11 @@ class QueryTerm {
 	// expressions) and just use a hardCount to see how many hard required
 	// terms are contained by a document. see IndexTable.cpp "hardCount"
 	char       m_hardCount;
+
+	// the "number" of the query term used for evaluation boolean
+	// expressions in Expression::isTruth()
+	long       m_bitNum;
+
 	// point to term, either m_word or m_phrase
 	char      *m_term;
 	long       m_termLen;

@@ -509,7 +509,6 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	long max = (long)MAX_EXPLICIT_BITS;
 	if ( max > m_maxQueryTerms ) max = m_maxQueryTerms;
 	//char u8Buf[256]; 
-
 	for ( long i = 0 ; i < m_numWords && n < MAX_QUERY_TERMS ; i++ ) {
 		// break out if no more explicit bits!
 		/*
@@ -3644,8 +3643,9 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 	//
 	// operand1 operand2 operator1 operand3 operator2 ....
 	//
-	// assume result is off
-	bool result = true;
+
+	// result: -1 means unknown at this point
+	long result = -1;
 
 	char prevOpCode = 0;
 	long prevResult ;
@@ -3696,8 +3696,14 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 			if ( qw->m_ignoreWord ) continue;
 			// save old one
 			prevResult = opResult;
-			// see iff that bit is set in this docid's vec
-			opResult = isBitNumSet ( i,bitVec,vecSize );
+			// convert word to term #
+			QueryTerm *qt = qw->m_queryWordTerm;
+			if ( ! qt ) continue;
+			// . m_bitNum is set in Posdb.cpp when it sets its
+			//   QueryTermInfo array
+			// . it is basically the query term #
+			// . see iff that bit is set in this docid's vec
+			opResult = isBitNumSet ( qt->m_bitNum,bitVec,vecSize );
 			// flip?
 			if ( hasNot ) {
 				if ( opResult == 1 ) opResult = 0;
@@ -3711,16 +3717,25 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 
 		// if this is not the first time... we got two
 		if ( prevOpCode == OP_AND ) {
+			// if first operation we encount is A AND B then
+			// default result to on. only allow an AND operation
+			// to turn if off.
+			if ( result == -1 ) result = true;
 			if ( ! prevResult ) result = false;
 			if ( !    opResult ) result = false;
 		}
 		else if ( prevOpCode == OP_OR ) {
+			// if first operation we encount is A OR B then
+			// default result to off
+			if ( result == -1 ) result = false;
 			if ( prevResult ) result = true;
 			if (   opResult ) result = true;
 		}
 	}
 
-	return result;
+	if ( result == -1 ) return true;
+	if ( result ==  0 ) return false;
+	return true;
 }
 
 /*
