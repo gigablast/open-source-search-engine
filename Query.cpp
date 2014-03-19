@@ -393,8 +393,7 @@ bool Query::set2 ( char *query        ,
 		m_expressions[0].add ( 0 , 
 				       m_numWords ,
 				       this , // Query
-				       0 , // level
-				       false ); // hasNOT
+				       0 ); // level
 	}
 
 
@@ -3545,8 +3544,7 @@ unsigned char precedence[] = {
 bool Expression::add (long start, 
 		      long end, 
 		      class Query      *q,
-		      long              level, 
-		      bool hasNOT
+		      long              level
 		      ) {
 
 	if ( level >= MAX_EXPRESSIONS ) { g_errno = EBADENGINEER; return -1;}
@@ -3555,7 +3553,7 @@ bool Expression::add (long start,
 	m_expressionStartWord = start;
 	// and the last one
 	//m_end = end;
-	m_hasNOT = hasNOT;
+	//m_hasNOT = hasNOT;
 	m_q = q;
 
 	//m_cc = 0;
@@ -3579,7 +3577,7 @@ bool Expression::add (long start,
 			continue;//goto endExpr; mdw
 		}
 		if (qw->m_opcode == OP_NOT){
-			hasNOT = !hasNOT;
+			//hasNOT = !hasNOT;
 			//underNOT = hasNOT;
 			continue;
 		}
@@ -3594,8 +3592,7 @@ bool Expression::add (long start,
 			e->add ( i+1, // skip over (
 				 end ,
 				 q ,
-				 level + 1,
-				 hasNOT );
+				 level + 1);
 			// skip over it. pt to ')'
 			i += e->m_numWordsInExpression;
 			qw->m_expressionPtr = e;
@@ -3658,9 +3655,17 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 	long i    =     m_expressionStartWord;
 	long iend = i + m_numWordsInExpression;
 
+	bool hasNot = false;
+
 	for ( ; i < iend ; i++ ) {
 
 		QueryWord *qw = &m_q->m_qwords[i];
+
+		if ( qw->m_opcode == OP_NOT ) {
+			hasNot = true;
+			continue;
+		}
+
 
 		// so operands are expressions as well
 		Expression *e = (Expression *)qw->m_expressionPtr;
@@ -3671,6 +3676,12 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 			opResult = e->isTruth ( bitVec , vecSize );
 			// skip over that expression. point to ')'
 			i += e->m_numWordsInExpression;
+			// flip?
+			if ( hasNot ) {
+				if ( opResult == 1 ) opResult = 0;
+				else                 opResult = 1;
+				hasNot = false;
+			}
 		}
 
 		if ( qw->m_opcode && ! e ) {
@@ -3687,6 +3698,12 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 			prevResult = opResult;
 			// see iff that bit is set in this docid's vec
 			opResult = isBitNumSet ( i,bitVec,vecSize );
+			// flip?
+			if ( hasNot ) {
+				if ( opResult == 1 ) opResult = 0;
+				else                 opResult = 1;
+				hasNot = false;
+			}
 		}
 
 		// need two to tango. i.e. (true OR false)
@@ -3695,16 +3712,15 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 		// if this is not the first time... we got two
 		if ( prevOpCode == OP_AND ) {
 			if ( ! prevResult ) result = false;
-			if ( !     result ) result = false;
+			if ( !    opResult ) result = false;
 		}
 		else if ( prevOpCode == OP_OR ) {
 			if ( prevResult ) result = true;
-			if (     result ) result = true;
+			if (   opResult ) result = true;
 		}
 	}
 
-	if (m_hasNOT) return !result;
-	else return result;
+	return result;
 }
 
 /*

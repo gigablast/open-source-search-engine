@@ -497,8 +497,7 @@ public:
 	bool add (long start, 
 		  long end, 
 		  class Query      *q,
-		  long    level, 
-		  bool hasNOT );
+		  long    level );
 	bool isTruth ( unsigned char *bitVec , long vecSize );
 	// . what QueryTerms are UNDER the influence of the NOT opcode?
 	// . we read in the WHOLE termlist of those that are (like '-' sign)
@@ -509,7 +508,7 @@ public:
 	// . use NULL in m_operands slot if we got an expression and vice versa
 	// . m_opcodes[i] is the opcode after operand #i
 	//class Expression *m_parent;
-	bool              m_hasNOT;
+	//bool              m_hasNOT;
 	//long              m_start;
 	//long              m_end;
 	long m_expressionStartWord;
@@ -745,7 +744,7 @@ class Query {
 	bool        isConnection ( char *s , long len ) ;
 
 	// set the QueryTerm::m_hasNOT members
-	void setHasNOTs();
+	//void setHasNOTs();
 
 	// . used by IndexTable.cpp to make a ptr map of the query terms
 	//   to make intersecting the termlists one at a time efficient

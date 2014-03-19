@@ -5140,7 +5140,7 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	// . if smallest required list is empty, 0 results
 	// . also set in setQueryTermInfo
-	if ( m_minListSize == 0 ) return;
+	if ( m_minListSize == 0 && ! m_q->m_isBoolean ) return;
 
 	/*
 	for ( long k = 0 ; seoHack && k < m_q->m_numTerms ; k++ ) {
