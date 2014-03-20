@@ -543,7 +543,7 @@ bool Msg39::getLists () {
 			     "component=%li "
 			     "otermLen=%li "
 			     "isSynonym=%li "
-			     "querylangid=%li ",
+			     "querylangid=%li " ,
 			     (long)this ,
 			     i          ,
 			     qt->m_term,//bb ,
@@ -569,7 +569,7 @@ bool Msg39::getLists () {
 			     (long)m_tmpq.m_componentCodes[i],
 			     (long)m_tmpq.getTermLen(i) ,
 			     isSynonym,
-			     (long)m_tmpq.m_langId); // ,tt
+			     (long)m_tmpq.m_langId ); // ,tt
 			// put it back
 			*tpc = tmp;
 			if ( st ) {
@@ -761,6 +761,23 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	// . we have to re-set the QueryTermInfos with each docid range split
 	//   since it will set the list ptrs from the msg2 lists
 	if ( ! m_posdbTable.setQueryTermInfo () ) return true;
+
+	// print query term bit numbers here
+	for ( long i = 0 ; 
+	      m_debug && i < m_tmpq.getNumTerms() ; i++ ) {
+		QueryTerm *qt = &m_tmpq.m_qterms[i];
+		//utf16ToUtf8(bb, 256, qt->m_term, qt->m_termLen);
+		char *tpc = qt->m_term + qt->m_termLen;
+		char  tmp = *tpc;
+		*tpc = '\0';
+		SafeBuf sb;
+		sb.safePrintf("query: msg39: BITNUM query term #%li \"%s\" "
+			      "bitnum=%li ", i , qt->m_term, qt->m_bitNum );
+		// put it back
+		*tpc = tmp;
+		logf(LOG_DEBUG,"%s",sb.getBufStart());
+	}
+
 
 	// timestamp log
 	if ( m_debug ) {

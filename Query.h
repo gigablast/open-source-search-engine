@@ -394,7 +394,9 @@ class QueryTerm {
 	char       m_hardCount;
 
 	// the "number" of the query term used for evaluation boolean
-	// expressions in Expression::isTruth()
+	// expressions in Expression::isTruth(). Basically just the
+	// QueryTermInfo for which this query term belongs. each QueryTermInfo
+	// is like a single query term and all its synonyms, etc.
 	long       m_bitNum;
 
 	// point to term, either m_word or m_phrase

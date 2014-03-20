@@ -412,7 +412,7 @@ public:
 	char     *m_cursor          [MAX_SUBLISTS];
 	char     *m_savedCursor     [MAX_SUBLISTS];
 	// the corresponding QueryTerm for this sublist
-	class QueryTerm *m_qtermList [MAX_SUBLISTS];
+	//class QueryTerm *m_qtermList [MAX_SUBLISTS];
 	long      m_numNewSubLists;
 	// how many are valid?
 	long      m_numSubLists;

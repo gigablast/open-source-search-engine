@@ -1172,7 +1172,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		if ( qw->m_wordSign == '+' ) continue;
 		// no url: stuff, maybe only title
 		if ( qw->m_fieldCode &&
-		     qw->m_fieldCode != FIELD_TITLE )
+		     qw->m_fieldCode != FIELD_TITLE &&
+		     qw->m_fieldCode != FIELD_GENERIC )
 			continue;
 		// skip if ignored like a stopword (stop to->too)
 		//if ( qw->m_ignoreWord ) continue;
@@ -1242,8 +1243,14 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			// stop word? no, we're a phrase term
 			qt->m_isQueryStopWord = qw->m_isQueryStopWord;
 			// change in both places
-			qt->m_termId    = syn.m_aids[j] & TERMID_MASK;
-			m_termIds[n]    = syn.m_aids[j] & TERMID_MASK;
+			long long wid = syn.m_aids[j];
+			// might be in a title: field or something
+			if ( qw->m_prefixHash ) {
+				long long ph = qw->m_prefixHash;
+				wid= hash64h(wid,ph);
+			}
+			qt->m_termId    = wid & TERMID_MASK;
+			m_termIds[n]    = wid & TERMID_MASK;
 			qt->m_rawTermId = syn.m_aids[j];
 			// assume explicit bit is 0
 			qt->m_explicitBit = 0;

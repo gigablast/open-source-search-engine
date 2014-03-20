@@ -4183,7 +4183,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			// before a pipe operator?
 			if ( qt->m_piped ) qti->m_bigramFlags[nn] |= BF_PIPED;
 			// add list of member terms as well
-			qti->m_qtermList[nn] = &m_q->m_qterms[left];
+			//qti->m_qtermList[nn] = &m_q->m_qterms[left];
+			m_q->m_qterms[left].m_bitNum = nrg;
 			// only really add if useful
 			if ( list && list->m_listSize ) nn++;
 
@@ -4201,7 +4202,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 				if (qt->m_piped)
 					qti->m_bigramFlags[nn]|=BF_PIPED;
 				// add list of member terms as well
-				qti->m_qtermList[nn] = bt;
+				//qti->m_qtermList[nn] = bt;
+				bt->m_bitNum = nrg;
 				if ( list && list->m_listSize ) nn++;
 			}
 
@@ -4224,7 +4226,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			// before a pipe operator?
 			if ( qt->m_piped ) qti->m_bigramFlags[nn] |= BF_PIPED;
 			// add list of member terms as well
-			qti->m_qtermList[nn] = &m_q->m_qterms[right];
+			//qti->m_qtermList[nn] = &m_q->m_qterms[right];
+			m_q->m_qterms[right].m_bitNum = nrg;
 			// only really add if useful
 			if ( list && list->m_listSize ) nn++;
 
@@ -4242,7 +4245,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 				if (qt->m_piped)
 					qti->m_bigramFlags[nn]|=BF_PIPED;
 				// add list of member terms as well
-				qti->m_qtermList[nn] = bt;
+				//qti->m_qtermList[nn] = bt;
+				bt->m_bitNum = nrg;
 				if ( list && list->m_listSize ) nn++;
 			}
 
@@ -4288,7 +4292,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
 
 		// add list of member terms
-		qti->m_qtermList[nn] = qt;
+		//qti->m_qtermList[nn] = qt;
+		qt->m_bitNum = nrg;
 
 		// only really add if useful
 		// no, because when inserting NEW (related) terms that are
@@ -4313,7 +4318,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			// call it a synonym i guess
 			qti->m_bigramFlags[nn] |= BF_BIGRAM;
 			// add list of member terms
-			qti->m_qtermList[nn] = &m_q->m_qterms[left];
+			//qti->m_qtermList[nn] = &m_q->m_qterms[left];
+			m_q->m_qterms[left].m_bitNum = nrg;
 			// only really add if useful
 			if ( list && list->m_listSize ) nn++;
 
@@ -4330,7 +4336,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 				if (qt->m_piped)
 					qti->m_bigramFlags[nn]|=BF_PIPED;
 				// add list of member terms
-				qti->m_qtermList[nn] = bt;
+				//qti->m_qtermList[nn] = bt;
+				bt->m_bitNum = nrg;
 				if ( list && list->m_listSize ) nn++;
 			}
 
@@ -4353,7 +4360,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			// before a pipe operator?
 			if ( qt->m_piped ) qti->m_bigramFlags[nn] |= BF_PIPED;
 			// add list of query terms too that are in this group
-			qti->m_qtermList[nn] = &m_q->m_qterms[right];
+			//qti->m_qtermList[nn] = &m_q->m_qterms[right];
+			m_q->m_qterms[right].m_bitNum = nrg;
 			// only really add if useful
 			if ( list && list->m_listSize ) nn++;
 
@@ -4370,7 +4378,8 @@ bool PosdbTable::setQueryTermInfo ( ) {
 				if (qt->m_piped)
 					qti->m_bigramFlags[nn]|=BF_PIPED;
 				// add list of member terms
-				qti->m_qtermList[nn] = bt;
+				//qti->m_qtermList[nn] = bt;
+				bt->m_bitNum = nrg;
 				if ( list && list->m_listSize ) nn++;
 			}
 
@@ -4395,7 +4404,9 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			// before a pipe operator?
 			if ( qt->m_piped ) qti->m_bigramFlags[nn] |= BF_PIPED;
 			// add list of member terms as well
-			qti->m_qtermList[nn] = qt2;
+			//qti->m_qtermList[nn] = qt2;
+			// set bitnum here i guess
+			qt2->m_bitNum = nrg;
 			// only really add if useful
 			if ( list && list->m_listSize ) nn++;
 		}
@@ -4443,6 +4454,7 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// query words in the boolean expression it contains.
 	// used by matchesBoolQuery() which we call below.
 	//
+	/*
 	for ( long i = 0 ; i < nrg ; i++ ) {
 		// get one
 		QueryTermInfo *qti = &qip[i];
@@ -4454,6 +4466,7 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			qt->m_bitNum = i;
 		}
 	}
+	*/
 
 
 	//
@@ -7177,7 +7190,7 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			long long docId =*(long long *)m_bt.getKeyFromSlot(i);
 			log("query: eval d=%llu vec[0]=%lx h64=%lli",
 			    docId,(long)vec[0],h64);
-			//if ( docId == 123293944371LL )
+			//if ( docId == 47801316261LL )
 			//	log("hy");
 		}
 
