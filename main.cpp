@@ -411,8 +411,8 @@ int main ( int argc , char *argv[] ) {
 
 			"-h\tprint this help.\n\n"
 			"-v\tprint version and exit.\n\n"
-			"-o\tprint the overview documentation in HTML. "
-			"Contains the format of hosts.conf.\n\n"
+			//"-o\tprint the overview documentation in HTML. "
+			//"Contains the format of hosts.conf.\n\n"
 			"-r\tindicates recovery mode, "
 			"sends email to addresses "
 			"specified in Conf.h upon startup.\n\n"
@@ -440,6 +440,7 @@ int main ( int argc , char *argv[] ) {
 			"\ttwo hostids with a hyphen in between indicates a "
 			"range.\n\n"
 
+			/*
 			"tmpstart [hostId]\n"
 			"\tstart the gb process on all hosts or just on "
 			"[hostId] if specified, but "
@@ -456,6 +457,7 @@ int main ( int argc , char *argv[] ) {
 			"\tsaves and exits for all gb hosts or "
 			"just on [hostId] if specified, for the "
 			"tmpstart command.\n\n"
+			*/
 
 			"spidersoff [hostId]\n"
 			"\tdisables spidering for all gb hosts or "
@@ -465,6 +467,7 @@ int main ( int argc , char *argv[] ) {
 			"\tensables spidering for all gb hosts or "
 			"just on [hostId] if specified.\n\n"
 
+			/*
 			"cacheoff [hostId]\n"
 			"\tdisables all disk PAGE caches on all hosts or "
 			"just on [hostId] if specified.\n\n"
@@ -472,11 +475,17 @@ int main ( int argc , char *argv[] ) {
 			"freecache [maxShmid]\n"
 			"\tfinds and frees all shared memory up to shmid "
 			"maxShmid, default is 3000000.\n\n"
+			*/
 
+			/*
 			"ddump [hostId]\n"
-			"\tdisk dump in memory trees to binary files "
-			"just on [hostId] if specified.\n\n"
+			"\tdump all b-trees in memory to sorted files on "
+			"disk. "
+			"Will likely trigger merges on files on disk. "
+			"Restrict to just host [hostId] if given.\n\n"
+			*/
 
+			/*
 			"pmerge [hostId|hostId1-hostId2]\n"
 			"\tforce merge of posdb files "
 			"just on [hostId] if specified.\n\n"
@@ -492,16 +501,19 @@ int main ( int argc , char *argv[] ) {
 			"merge [hostId|hostId1-hostId2]\n"
 			"\tforce merge of all rdb files "
 			"just on [hostId] if specified.\n\n"
+			*/
 
 			"dsh <CMD>\n"
 			"\trun this command on the primary IPs of "
 			"all active hosts in hosts.conf. Example: "
 			"gb dsh 'ps auxw; uptime'\n\n"
 
+			/*
 			"dsh2 <CMD>\n"
 			"\trun this command on the secondary IPs of "
 			"all active hosts in hosts.conf. Example: "
 			"gb dsh2 'ps auxw; uptime'\n\n"
+			*/
 
 			"install [hostId]\n"
 			"\tinstall all required files for gb from "
@@ -509,13 +521,16 @@ int main ( int argc , char *argv[] ) {
 			"to [hostId]. If no [hostId] is specified install "
 			"to ALL hosts.\n\n"
 
+			/*
 			"install2 [hostId]\n"
 			"\tlike above, but use the secondary IPs in the "
 			"hosts.conf.\n\n"
+			*/
 
 			"installgb [hostId]\n"
 			"\tlike above, but install just the gb executable.\n\n"
 
+			/*
 			"installgb2 [hostId]\n"
 			"\tlike above, but use the secondary IPs in the "
 			"hosts.conf.\n\n"
@@ -592,7 +607,9 @@ int main ( int argc , char *argv[] ) {
 			"search for them on server2. If you do not want to"
 			" use the proxy server "
 			"on gk10, use -p\n\n"
+			*/
 
+			/*
 			"blaster [-l|-u|-i] <file> <maxNumThreads> <wait>\n"
 			"\tget documents from the urls given in file. The "
 			"-l argument is to "
@@ -606,7 +623,9 @@ int main ( int argc , char *argv[] ) {
 			"\tmaxNumThreads is the"
 			" number of concurrent threads at one time and wait "
 			" is the time to wait between threads.\n\n"
+			*/
 
+			/*
 			"scale <newHosts.conf>\n"
 			"\tGenerate a script to be called to migrate the "
 			"data to the new places. Remaining hosts will "
@@ -647,7 +666,9 @@ int main ( int argc , char *argv[] ) {
 			"ping <hostId> [clientport]\n"
 			"\tperforms pings to <hostId>. [clientport] defaults "
 			"to 2050.\n\n"
+			*/
 
+			/*
 			"spellcheck <file>\n"
 			"\tspellchecks the the queries in <file>.\n\n"
 
@@ -701,7 +722,9 @@ int main ( int argc , char *argv[] ) {
 
 			"parsetest <docIdToTest> [coll] [query]\n\t"
 			"parser speed tests\n\n"
+			*/
 
+			/*
 			"thrutest [dir] [fileSize]\n\tdisk write/read speed "
 			"test\n\n"
 
@@ -711,6 +734,9 @@ int main ( int argc , char *argv[] ) {
 			
 			"memtest\n"
 			"\t Test how much memory we can use\n\n"
+			*/
+
+			/*
 			// Quality Tests
 			"countdomains <coll> <X>\n"
 			"\tCounts the domains and IPs in collection coll and "
@@ -738,33 +764,38 @@ int main ( int argc , char *argv[] ) {
 
 			"dump es <coll> <UTCtimestamp>\n\tdump stats for "
 			"all events as if the time is UTCtimestamp.\n\n"
+			*/
 
+			/*
 #ifdef _CLIENT_
 			//there was <hostId> in this command but it 
 			// wasn't used in the program, so deleting it from 
 			// here
 			"dump <V> [C [X [Y [Z]]]]\n\tdump a db in "
 #else
+			*/
+
+			/*
 			"dump <V> [C [X [Y [Z [T]]]]]\n\tdump a db in "
-#endif
+			//#endif
 			"working directory.\n"
-#ifndef _CLIENT_
-#ifndef _METALINCS_
+			//#ifndef _CLIENT_
+			//#ifndef _METALINCS_
 			//"\tV is u to dump tfndb.\n"
 			"\tV is d to dump datedb.\n"
-#endif
-#endif
+			//#endif
+			//#endif
 			"\tV is s to dump spiderdb. set [T] to 1 to print "
 			"new stats. 2 to print old stats. T is ip of firstip."
 			"\n"
 			"\tV is t to dump titledb.\n"
-			"\tV is ts to dump sentences from events.\n"
-			"\tV is tw to dump words from events.\n"
+			//"\tV is ts to dump sentences from events.\n"
+			//"\tV is tw to dump words from events.\n"
 			"\tV is D to dump duplicate docids in titledb.\n"
 			"\tV is c to dump checksumdb.\n"
 			"\tV is S to dump tagdb.\n"
 			"\tV is W to dump tagdb for wget.\n"
-			"\tV is V to dump revdb.\n"
+			//"\tV is V to dump revdb.\n"
 			"\tV is x to dump doledb.\n"
 			"\tV is w to dump waiting tree.\n"
 			"\tV is B to dump sectiondb.\n"
@@ -779,13 +810,13 @@ int main ( int argc , char *argv[] ) {
 			"\tX is start file num.    (default  0)\n"
 			"\tY is num files.         (default -1)\n"
 			"\tZ is 1 to include tree. (default  1)\n"
-#ifndef _CLIENT_
-#ifndef _METALINCS_
-#ifndef _GLOBALSPEC_
+			//#ifndef _CLIENT_
+			//#ifndef _METALINCS_
+			//#ifndef _GLOBALSPEC_
 			"\tT is the termid to dump. Applies only to indexdb.\n"
-#endif
-#endif
-#endif
+			//#endif
+			//#endif
+			//#endif
 			"\tT is the first docId to dump. Applies only to "
 			"titledb. "
 			//"(default none)\n\n"
@@ -806,22 +837,27 @@ int main ( int argc , char *argv[] ) {
 			//"\tB is -1 to dump all priorities\n"
 			"\tC is 1 to just show the stats.  (default  0)\n"
 			"\n"
+			*/
+
+
 			//"dump i X Y Z t\n\tdump indexdb termId t in working "
 			//"directory.\n"
 			//"\tX is start file num.     (default  0)\n"
 			//"\tY is num files.          (default -1)\n"
 			//"\tZ is 1 to include tree.  (default  1)\n"
 			//"\tt is the termid to dump. (default none)\n\n"
-#ifndef _CLIENT_
-#ifndef _METALINCS_
+			//#ifndef _CLIENT_
+			//#ifndef _METALINCS_
+			/*
 			"dump I [X [V]]\n\tdump indexdb in working "
 			"directory at "
 			"an offset.\n"
-#endif
-#endif
+			//#endif
+			//#endif
 			"\tX is the file NAME.      (default  NULL)\n"
 			"\tV is the start offset.   (default  0)\n"
-
+			*/
+			/*
 			"\n"
 			"dumpmissing <coll> [hostId]\n\t"
 			"dump the docIds in indexdb but not "
@@ -867,6 +903,7 @@ int main ( int argc , char *argv[] ) {
 			"in the current gb. Use synchost2 to use secondary "
 			"IPs.\n"
 			"\n"
+			*/
 			//#endif
 			);
 		SafeBuf sb2;
@@ -894,6 +931,7 @@ int main ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "-h" ) == 0 ) goto printHelp;
 	// version
 	if ( strcmp ( cmd , "-v" ) == 0 ) {
+		fprintf(stdout,"Gigablast March-2014\n");
 	//	fprintf(stderr,"Gigablast %s\nMD5KEY: %s\n"
 	//		"TAG: %s\nPATH:   %s\n",
 	//		GBVersion, GBCommitID, GBTag, GBBuildPath); 
@@ -901,10 +939,10 @@ int main ( int argc , char *argv[] ) {
 	}
 
 	// print overview
-	if ( strcmp ( cmd , "-o" ) == 0 ) {
-		//printOverview ( );
-		return 0;
-	}
+	//if ( strcmp ( cmd , "-o" ) == 0 ) {
+	//	//printOverview ( );
+	//	return 0;
+	//}
 
 	bool hadHostId = false;
 
