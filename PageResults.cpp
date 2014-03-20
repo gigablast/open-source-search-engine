@@ -2141,7 +2141,9 @@ bool printResult ( State0 *st, long ix ) {
 		     *end == '}' ) {
 			// replace trailing } with spidertime}
 			sb->incrementLength(-1);
-			sb->safePrintf(",\"docId\":%lli\n", mr->m_docId);
+			sb->safePrintf(",\"docId\":%lli", mr->m_docId);
+			// for deduping
+			//sb->safePrintf(",\"crc\":%lu",mr->m_contentHash32);
 			// crap, we lose resolution storing as a float
 			// so fix that shit here...
 			//float f = mr->m_lastSpidered;

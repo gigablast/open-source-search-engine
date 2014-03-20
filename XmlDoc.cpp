@@ -17199,6 +17199,8 @@ long *XmlDoc::getContentHashJson32 ( ) {
 	JsonItem *ji = jp->getFirstItem();
 	long totalHash32 = 0;
 
+	//logf(LOG_DEBUG,"ch32: url=%s",m_firstUrl.m_url);
+
 	for ( ; ji ; ji = ji->m_next ) {
 		QUICKPOLL(m_niceness);
 		// skip if not number or string
@@ -17275,6 +17277,11 @@ long *XmlDoc::getContentHashJson32 ( ) {
 		long combined32 = hash32h ( nameHash32 , vh32 );
 		// accumulate field/val pairs order independently
 		totalHash32 ^= combined32;
+		// debug note
+		//logf(LOG_DEBUG,"ch32: field=%s nh32=%lu vallen=%li",
+		//     ji->m_name,
+		//     nameHash32,
+		//     vlen);
 	}
 
 	m_contentHash32 = totalHash32;
