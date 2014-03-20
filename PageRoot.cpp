@@ -78,7 +78,7 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 			      //" &nbsp; &nbsp; <a href=/logout>Logout</a>"
 			      );
 
-	if ( r->isLocal() )
+	//if ( r->isLocal() )
 	    sb.safePrintf("&nbsp; &nbsp; [<a href=\"/admin/settings\">"
 			  "<font color=red>Admin</font></a>]");
 	sb.safePrintf("</p></b></center></body></html>");
