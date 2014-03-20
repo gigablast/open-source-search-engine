@@ -5134,7 +5134,12 @@ void SpiderLoop::startLoop ( ) {
 		    "is permanently disabled. Restart to fix.");
 
 	// crawlinfo updating
-	if ( !g_loop.registerSleepCallback(1000,
+	// save bandwidth for now make this every 4 seconds not 1 second
+	// then try not to send crawlinfo the host should already have.
+	// each collrec can have a checksum for each host of the last
+	// info we sent it. but we should resend all every 100 secs anyway
+	// in case host when dead
+	if ( !g_loop.registerSleepCallback(4000,
 					   this,
 					   updateAllCrawlInfosSleepWrapper))
 		log("build: failed to register updatecrawlinfowrapper");
