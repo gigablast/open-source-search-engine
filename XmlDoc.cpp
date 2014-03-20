@@ -29760,7 +29760,10 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 	long plen = 0;
 	if ( hi->m_prefix ) plen = gbstrlen ( hi->m_prefix );
 	if ( hi->m_prefix && plen ) {
-		prefixHash = hash64 ( hi->m_prefix , plen );
+		// we gotta make this case insensitive, and skip spaces
+		// because if it is 'focal length' we can't search
+		// 'focal length:10' because that comes across as TWO terms.
+		prefixHash = hash64Lower_utf8_nospaces ( hi->m_prefix , plen );
 		// . sanity test, make sure it is in supported list
 		// . hashing diffbot json output of course fails this so
 		//   skip in that case if diffbot
@@ -30331,7 +30334,7 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 	long nameLen = 0;
 	if ( hi->m_prefix ) nameLen = gbstrlen ( hi->m_prefix );
 	if ( hi->m_prefix && nameLen ) 
-		nameHash = hash64Lower_utf8 ( hi->m_prefix , nameLen );
+		nameHash = hash64Lower_utf8_nospaces( hi->m_prefix , nameLen );
 	// need a prefix for hashing numbers... for now
 	else { char *xx=NULL; *xx=0; }
 		
@@ -30436,7 +30439,7 @@ bool XmlDoc::hashNumber3 ( long n , HashInfo *hi , char *sortByStr ) {
 	long nameLen = 0;
 	if ( hi->m_prefix ) nameLen = gbstrlen ( hi->m_prefix );
 	if ( hi->m_prefix && nameLen ) 
-		nameHash = hash64Lower_utf8 ( hi->m_prefix , nameLen );
+		nameHash = hash64Lower_utf8_nospaces( hi->m_prefix , nameLen );
 	// need a prefix for hashing numbers... for now
 	else { char *xx=NULL; *xx=0; }
 		
