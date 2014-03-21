@@ -14474,6 +14474,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// turn off
 	r->m_useCompressionProxy = false;
 	r->m_compressReply       = false;
+	r->m_isCustomCrawl       = cr->m_isCustomCrawl;
 
 	// set it for this too
 	if ( g_conf.m_useCompressionProxy &&

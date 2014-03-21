@@ -721,6 +721,25 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 			"(compatible; MSIE 6.0; Windows 98; "
 			"Win 9x 4.90)" ;
 
+	// for bulk jobs avoid actual downloads of the page for efficiency
+	if ( r->m_isCustomCrawl == 2 ) {
+		char *s = 
+			"HTTP/1.0 200 (OK)\r\n"
+			"Content-Length: 0\r\n"
+			"Connection: Close\r\n"
+			"Content-Type: text/html\r\n\r\n";
+		long slen = gbstrlen(s);
+		long fakeBufSize = slen + 1;
+		char *fakeBuf = mdup ( s , fakeBufSize , "fkblk");
+		gotHttpReply2 ( r , 
+				fakeBuf,
+				fakeBufSize, // include \0
+				fakeBufSize, // allocsize
+				NULL ); // tcpsock
+		return;
+	}
+
+
 	// download it
 	if ( ! g_httpServer.getDoc ( r->m_url             ,
 				     r->m_urlIp           ,
