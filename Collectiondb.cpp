@@ -1018,6 +1018,18 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	//collnum_t oldCollnum = cr->m_collnum;
 	//collnum_t newCollnum = m_numRecs;
 
+	// in case of bulk job, be sure to save list of spots
+	// copy existing list to a /tmp, where they will later be transferred back to the new folder
+	char oldbulkurlsname[1036];
+	snprintf(oldbulkurlsname, 1036, "%scoll.%s.%li/bulkurls.txt",g_hostdb.m_dir,cr->m_coll,(long)oldCollnum);
+	char newbulkurlsname[1036];
+	snprintf(newbulkurlsname, 1036, "%scoll.%s.%li/bulkurls.txt",g_hostdb.m_dir,cr->m_coll,(long)newCollnum);
+	char tmpbulkurlsname[1024];
+	snprintf(tmpbulkurlsname, 1036, "/tmp/coll.%s.%li.bulkurls.txt",cr->m_coll,(long)oldCollnum);
+
+	if (cr->m_isCustomCrawl == 2)
+	    rename( oldbulkurlsname , tmpbulkurlsname );
+
 	// reset spider info
 	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(oldCollnum);
 	if ( sc ) {
@@ -1127,6 +1139,9 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// save coll.conf to new directory
 	cr->save();
 
+	// be sure to copy back the bulk urls for bulk jobs
+	if (cr->m_isCustomCrawl == 2)
+	    rename( tmpbulkurlsname, newbulkurlsname );
 
 	// and clear the robots.txt cache in case we recently spidered a
 	// robots.txt, we don't want to use it, we want to use the one we
