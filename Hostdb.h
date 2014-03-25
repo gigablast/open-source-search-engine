@@ -53,7 +53,7 @@ enum {
 #define PFLAG_RECOVERYMODE   0x80
 
 // added slow disk reads to it, 4 bytes (was 52)
-#define MAX_PING_SIZE (44+4)
+#define MAX_PING_SIZE (44+4+4)
 
 #define HT_GRUNT   0x01
 #define HT_SPARE   0x02
@@ -143,6 +143,8 @@ class Host {
 	long long      m_firstOOMTime;
 	// cpu usage
 	float          m_cpuUsage;
+
+	float          m_diskUsage;
 
 	long          m_slowDiskReads;
 

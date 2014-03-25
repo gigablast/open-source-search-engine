@@ -461,6 +461,7 @@ bool Mem::init  ( long long maxMem ) {
 	log(LOG_INIT,"mem: using electric fence!!!!!!!");
 #endif
 
+#ifndef TITAN
 	// if we can't alloc 3gb exit and retry
 	long long start = gettimeofdayInMilliseconds();
 	char *pools[30];
@@ -483,6 +484,7 @@ bool Mem::init  ( long long maxMem ) {
 	if ( took > 20 ) log("mem: took %lli ms to check memory ceiling",took);
 	// return if could not alloc the full 3GB
 	if ( i < 30 ) return false;
+#endif
 
 	// reset this, our max mem used over time ever because we don't
 	// want the mem test we did above to count towards it

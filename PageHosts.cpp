@@ -23,6 +23,7 @@ static int dgramsFromSort ( const void *i1, const void *i2 );
 //static int loadAvgSort    ( const void *i1, const void *i2 );
 static int memUsedSort    ( const void *i1, const void *i2 );
 static int cpuUsageSort   ( const void *i1, const void *i2 );
+static int diskUsageSort  ( const void *i1, const void *i2 );
 
 long generatePingMsg( Host *h, long long nowms, char *buffer );
 
@@ -130,7 +131,7 @@ skipReplaceHost:
 	if ( g_conf.m_useShotgun ) {
 		colspan = "31";
 		//shotcol = "<td><b>ip2</b></td>";
-		sprintf ( shotcol, "<td><a href=\"/master/hosts?c=%s"
+		sprintf ( shotcol, "<td><a href=\"/admin/hosts?c=%s"
 			 	   "&sort=2\">"
 			  "<b>ping2</b></td></a>",
 			  coll);
@@ -142,17 +143,17 @@ skipReplaceHost:
 		  "<tr><td colspan=%s><center>"
 		  //"<font size=+1>"
 		  "<b>Hosts "
-		  "(<a href=\"/master/hosts?c=%s&sort=%li&reset=1\">"
+		  "(<a href=\"/admin/hosts?c=%s&sort=%li&reset=1\">"
 		  "reset)</b>"
 		  //"</font>"
 		  "</td></tr>" 
 		  "<tr bgcolor=#%s>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=0\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=0\">"
 
 		  "<b>hostId</b></td>"
 		  "<td><b>host ip</b></td>"
-		  "<td><b>shard</b></td>" // mirror group
-		  "<td><b>stripe</b></td>"
+		  "<td><b>shard</b></td>"
+		  "<td><b>mirror</b></td>" // mirror # within the shard
 
 		  // i don't remember the last time i used this, so let's
 		  // just comment it out to save space
@@ -187,49 +188,52 @@ skipReplaceHost:
 		  //"<td><b>resends sent</td>"
 		  //"<td><b>errors recvd</td>"
 		  //"<td><b>ETRYAGAINS recvd</td>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=3\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=3\">"
 		  "<b>dgrams resent</a></td>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=4\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=4\">"
 		  "<b>errors recvd</a></td>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=5\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=5\">"
 		  "<b>ETRY AGAINS recvd</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=6\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=6\">"
 		  "<b>dgrams to</a></td>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=7\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=7\">"
 		  "<b>dgrams from</a></td>"
 
-		  //"<td><a href=\"/master/hosts?c=%s&sort=8\">"
+		  //"<td><a href=\"/admin/hosts?c=%s&sort=8\">"
 		  //"<b>loadavg</a></td>"
 
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=13\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=13\">"
 		  "<b>avg split time</a></td>"
 
 		  "<td><b>splits done</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=12\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=12\">"
 		  "<b>status</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=15\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=15\">"
 		  "<b>slow reads</a></td>"
 
 		  "<td><b>docs indexed</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=9\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=9\">"
 		  "<b>mem used</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=10\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=10\">"
 		  "<b>cpu</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=14\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=17\">"
+		  "<b>disk</a></td>"
+
+		  "<td><a href=\"/admin/hosts?c=%s&sort=14\">"
 		  "<b>max ping1</a></td>"
 
-		  "<td><a href=\"/master/hosts?c=%s&sort=11\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=11\">"
 		  "<b>ping1 age</a></td>"
 
 		  //"<td><b>ip1</td>"
-		  "<td><a href=\"/master/hosts?c=%s&sort=1\">"
+		  "<td><a href=\"/admin/hosts?c=%s&sort=1\">"
 		  "<b>ping1</a></td>"
 
 		  "%s"// "<td><b>ip2</td>"
@@ -243,6 +247,7 @@ skipReplaceHost:
 		  coll, sort,
 		  DARK_BLUE  ,
 
+		  coll,
 		  coll,
 		  coll,
 		  coll,
@@ -295,6 +300,7 @@ skipReplaceHost:
 	case 14:gbsort ( hostSort, nh, sizeof(long), pingMaxSort    ); break;
 	case 15:gbsort ( hostSort, nh, sizeof(long), slowDiskSort    ); break;
 	case 16:gbsort ( hostSort, nh, sizeof(long), defaultSort    ); break;
+	case 17:gbsort ( hostSort, nh, sizeof(long), diskUsageSort   ); break;
 	}
 
 	// we are the only one that uses these flags, so set them now
@@ -379,6 +385,15 @@ skipReplaceHost:
 		if ( cpu > 100.0 ) cpu = 100.0;
 		if ( cpu < 0.0   ) cpu = -1.0;
 
+		char diskUsageMsg[64];
+		sprintf(diskUsageMsg,"%.1f%%",h->m_diskUsage);
+		if ( h->m_diskUsage < 0.0 )
+			sprintf(diskUsageMsg,"???");
+		if ( h->m_diskUsage >= 98.0 )
+			sprintf(diskUsageMsg,"<font color=red><b>%.1f%%"
+				"</b></font>",h->m_diskUsage);
+
+
 		// split time, don't divide by zero!
 		long splitTime = 0;
 		if ( h->m_splitsDone ) 
@@ -437,7 +452,7 @@ skipReplaceHost:
 		// print it
 		sb.safePrintf (
 			  "<tr bgcolor=#%s>"
-			  "<td><a href=\"http://%s:%hi/master/hosts?"
+			  "<td><a href=\"http://%s:%hi/admin/hosts?"
 			  ""
 			  "c=%s"
 			  "&sort=%li\">%li</a></td>"
@@ -494,6 +509,8 @@ skipReplaceHost:
 			  "<td>%s%.1f%%%s</td>"
 			  // cpu usage
 			  "<td>%.1f%%</td>"
+			  // disk usage
+			  "<td>%s</td>"
 
 			  // ping max
 			  "<td>%s</td>"
@@ -547,6 +564,7 @@ skipReplaceHost:
 			  h->m_percentMemUsed, // float
 			  fontTagBack,
 			  cpu, // float
+			  diskUsageMsg,
 
 			  // ping max
 			  pms,
@@ -693,7 +711,7 @@ skipReplaceHost:
 		sb.safePrintf (
 			  "<tr bgcolor=#%s>"
 
-			  "<td><a href=\"http://%s:%hi/master/hosts?"
+			  "<td><a href=\"http://%s:%hi/admin/hosts?"
 			  ""
 			  "c=%s\">"
 			  "%li</a></td>"
@@ -754,6 +772,12 @@ skipReplaceHost:
 		  "</td></tr>" 
 
 		  "<tr class=poo>"
+		  "<td>host ip</td>"
+		  "<td>The primary IP address of the host."
+		  "</td>"
+		  "</tr>\n"
+
+		  "<tr class=poo>"
 		  "<td>shard</td>"
 		  "<td>"
 		  "The index is split into shards. Which shard does this "
@@ -762,26 +786,20 @@ skipReplaceHost:
 		  "</tr>\n"
 
 		  "<tr class=poo>"
-		  "<td>stripe</td>"
+		  "<td>mirror</td>"
 		  "<td>"
-		  "Hosts with the same stripe serve the same shard "
-		  "of data."
+		  "A shard can be mirrored multiple times for "
+		  "data redundancy."
 		  "</td>"
 		  "</tr>\n"
 
-		  "<tr class=poo>"
-		  "<td>ip1</td>"
-		  "<td>The primary IP address of the host."
-		  "</td>"
-		  "</tr>\n"
-
+		  /*
 		  "<tr class=poo>"
 		  "<td>ip2</td>"
 		  "<td>The secondary IP address of the host."
 		  "</td>"
 		  "</tr>\n"
 
-		  /*
 		  "<tr class=poo>"
 		  "<td>udp port</td>"
 		  "<td>The UDP port the host uses to send and recieve "
@@ -1154,5 +1172,13 @@ int cpuUsageSort ( const void *i1, const void *i2 ) {
 	Host *h2 = g_hostdb.getHost ( *(long*)i2 );
 	if ( h1->m_cpuUsage > h2->m_cpuUsage ) return -1;
 	if ( h1->m_cpuUsage < h2->m_cpuUsage ) return  1;
+	return 0;
+}
+
+int diskUsageSort ( const void *i1, const void *i2 ) {
+	Host *h1 = g_hostdb.getHost ( *(long*)i1 );
+	Host *h2 = g_hostdb.getHost ( *(long*)i2 );
+	if ( h1->m_diskUsage > h2->m_diskUsage ) return -1;
+	if ( h1->m_diskUsage < h2->m_diskUsage ) return  1;
 	return 0;
 }

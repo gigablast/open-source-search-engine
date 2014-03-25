@@ -221,7 +221,7 @@ bool Images::getThumbnail ( char *pageSite ,
 			    long  siteLen  ,
 			    long long docId ,
 			    XmlDoc *xd ,
-			    char *coll ,
+			    collnum_t collnum,//char *coll ,
 			    char **statusPtr ,
 			    long hopCount,
 			    void *state ,
@@ -246,7 +246,7 @@ bool Images::getThumbnail ( char *pageSite ,
 	// save these
 	m_statusPtr = statusPtr;
 	// save this
-	m_coll  = coll;
+	m_collnum = collnum;
 	m_docId = docId;
 
 	// if no candidates, we are done, no error
@@ -280,7 +280,7 @@ bool Images::getThumbnail ( char *pageSite ,
 	// store the termid
 	long long termId = q.getTermId(0);
 
-	if ( ! m_msg36.getTermFreq ( coll               ,
+	if ( ! m_msg36.getTermFreq ( m_collnum               ,
 				     0                  , // maxAge
 				     termId             ,
 				     this               ,
@@ -340,7 +340,7 @@ bool Images::launchRequests ( ) {
 					0     , // maxAge
 					false , // addToCache?
 					RDB_INDEXDB ,
-					m_coll      ,
+					m_collnum      ,
 					&m_list     , // RdbList ptr
 					startKey    ,
 					endKey      ,
@@ -414,6 +414,9 @@ bool Images::downloadImages () {
 		mfree ( m_imgBuf , m_imgBufMaxLen , "Image" );
 		m_imgBuf = NULL;
 	}
+
+	CollectionRec *cr = g_collectiondb.getRec(m_collnum);
+
 	// . download each leftover image
 	// . stop as soon as we get one with good dimensions
 	// . make a thumbnail of that one
@@ -442,7 +445,7 @@ bool Images::downloadImages () {
 		r->reset();
 		r->m_maxTextDocLen  = 200000;
 		r->m_maxOtherDocLen = 500000;
-		if ( ! strcmp(m_coll,"test")) {
+		if ( ! strcmp(cr->m_coll,"test")) {
 			r->m_useTestCache   = 1;
 			r->m_addToTestCache = 1;
 		}

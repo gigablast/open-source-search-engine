@@ -723,6 +723,9 @@ bool Msg4::addMetaList2 ( ) {
 	// flush them buffers
 	//flushLocal();
 			       
+	// in case this was being used to hold the data, free it
+	m_tmpBuf.purge();
+
 	return true;
 }
 

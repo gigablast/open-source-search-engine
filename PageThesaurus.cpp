@@ -284,8 +284,8 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		  "</font>"
 		  "</td>"
 		  "<td width=12%% bgcolor=#0000ff>"
-		  "<center><b><a href=\"/master/thesaurus?rebuild=1&%s\">"
-		  "rebuild all data</a> <a href=\"/master/thesaurus?"
+		  "<center><b><a href=\"/admin/thesaurus?rebuild=1&%s\">"
+		  "rebuild all data</a> <a href=\"/admin/thesaurus?"
 		  "rebuild=1&full=1&%s\">(full)</a></b></center>"
 		  "</td>"
 		  "</tr>\n", getBuf, getBuf);
@@ -300,7 +300,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		  "</font>"
 		  "</td>"
 		  "<td width=12%% bgcolor=#0000ff>"
-		  "<center><b><a href=\"/master/thesaurus?distribute=1&%s\">"
+		  "<center><b><a href=\"/admin/thesaurus?distribute=1&%s\">"
 		  "distribute data</a></b></center>"
 		  "</td>"
 		  "</tr>\n", getBuf);
@@ -314,7 +314,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		  "</td>"
 		  "<td width=12%% bgcolor=#0000ff>"
 		  "<center><b>"
-		  "<a href=\"/master/thesaurus?reload=1&cast=0&%s\">"
+		  "<a href=\"/admin/thesaurus?reload=1&cast=0&%s\">"
 		  "reload data</a></b></center>"
 		  "</td>"
 		  "</tr>\n", getBuf);
@@ -328,7 +328,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		  "</td>"
 		  "<td width=12%% bgcolor=#0000ff>"
 		  "<center><b>"
-		  "<a href=\"/master/thesaurus?reload=1&cast=1&%s\">"
+		  "<a href=\"/admin/thesaurus?reload=1&cast=1&%s\">"
 		  "reload data (all hosts)</a></b></center>"
 		  "</td>"
 		  "</tr>\n", getBuf);
@@ -342,7 +342,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		  "</font>"
 		  "</td>"
 		  "<td width=12%%>"
-		  "<form action=\"/master/thesaurus>\">"
+		  "<form action=\"/admin/thesaurus>\">"
 		  "<input type=text name=synonym size=20>"
 		  "<input type=submit value=Submit>"
 		  "%s"
@@ -365,7 +365,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		  "</font>"
 		  "</td>"
 		  "<td width=12%% bgcolor=#0000ff>"
-		  "<center><b><a href=\"/master/thesaurus?cancel=1&%s\">"
+		  "<center><b><a href=\"/admin/thesaurus?cancel=1&%s\">"
 		  "cancel running rebuild</a></b></center>"
 		  "</td>"
 		  "</tr>\n", getBuf);
@@ -380,8 +380,8 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		  "</font>"
 		  "</td>"
 		  "<td width=12%% bgcolor=#0000ff>"
-		  "<center><b><a href=\"/master/thesaurus?rebuildaff=1&%s\">"
-		  "rebuild affinity</a> <a href=\"/master/thesaurus?"
+		  "<center><b><a href=\"/admin/thesaurus?rebuildaff=1&%s\">"
+		  "rebuild affinity</a> <a href=\"/admin/thesaurus?"
 		  "rebuildaff=1&full=1&%s\">(full)</a></b></center>"
 		  "</td>"
 		  "</tr>\n", getBuf, getBuf);
@@ -405,7 +405,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		  "character, optionally followed by another pipe and a type "
 		  "designation; any badly formatted lines will be silently "
 		  "ignored</font><br>\n"
-		  "<form action=\"/master/thesaurus\" method=post>"
+		  "<form action=\"/admin/thesaurus\" method=post>"
 		  "<textarea name=\"manualadd\" rows=20 cols=80>");
 
 	if (manualAdd && manualAddLen) {
@@ -434,7 +434,7 @@ bool sendPageThesaurus( TcpSocket *s, HttpRequest *r ) {
 		  "that these pairs will only work if the thesaurus otherwise "
 		  "has an entry for them, so add them to the manual add file "
 		  "above if need be</font><br>\n"
-		  "<form action=\"/master/thesaurus\" method=post>"
+		  "<form action=\"/admin/thesaurus\" method=post>"
 		  "<textarea name=\"affinityadd\" rows=20 cols=80>");
 
 	if (affinityAdd && affinityAddLen) {

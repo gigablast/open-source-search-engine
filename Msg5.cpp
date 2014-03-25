@@ -114,7 +114,7 @@ void  makeCacheKey ( char *startKey     ,
 //   another special meaning. it tells msg5 to tell RdbTree's getList() to 
 //   pre-allocate the list size by counting the recs ahead of time.
 bool Msg5::getList ( char     rdbId         ,
-		     char    *coll          ,
+		     collnum_t collnum ,
 		     RdbList *list          ,
 		     //key_t    startKey      , 
 		     //key_t    endKey        , 
@@ -157,7 +157,7 @@ bool Msg5::getList ( char     rdbId         ,
 	// sanity
 	if ( ! list && mergeLists ) { char *xx=NULL;*xx=0; }
 	// warning
-	if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg5.");
+	if ( collnum < 0 ) log(LOG_LOGIC,"net: bad collection. msg5.");
 	// MUST have this
 	//if ( rdbId == RDB_TITLEDB && ! msg5b ) {
 	//	log(LOG_LOGIC,"net: No msg5b supplied. 1.");
@@ -202,10 +202,10 @@ bool Msg5::getList ( char     rdbId         ,
 	//m_startTime = gettimeofdayInMilliseconds();
 	// remember stuff
 	m_rdbId         = rdbId;
-	m_coll          = coll;
+	m_collnum          = collnum;
 
-	m_collnum = g_collectiondb.getCollnum ( coll );
-	if ( m_collnum < 0 ) {
+	CollectionRec *ttt = g_collectiondb.getRec ( m_collnum );
+	if ( ! ttt ) {
 		g_errno = ENOCOLLREC;
 		return true;
 	}
@@ -237,7 +237,7 @@ bool Msg5::getList ( char     rdbId         ,
 	m_mergeLists         = mergeLists;
 
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return true;
+	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
 	// point to cache
 	//RdbCache *cache = base->m_rdb->getCache();
 	// . these 2 vars are used for error correction
@@ -487,7 +487,7 @@ bool Msg5::getList ( char     rdbId         ,
 // . loops until m_minRecSizes is satisfied OR m_endKey is reached
 bool Msg5::readList ( ) {
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return true;
+	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
  readMore:
 	// . reset our tree list
 	// . sets fixedDataSize here in case m_includeTree is false because
@@ -525,7 +525,7 @@ bool Msg5::readList ( ) {
 	if ( m_isRealMerge ) niceness = 1;
 	if ( compute ) {
 		m_msg3.readList  ( m_rdbId          ,
-				   m_coll           , 
+				   m_collnum        , 
 				   m_fileStartKey   , // modified by gotList()
 				   m_endKey         ,
 				   m_newMinRecSizes , // modified by gotList()
@@ -722,6 +722,11 @@ bool Msg5::readList ( ) {
 		}
 	}
 
+	// limit to 20MB so we don't go OOM!
+	if ( m_newMinRecSizes > 2 * m_minRecSizes &&
+	     m_newMinRecSizes > 20000000 )
+		m_newMinRecSizes = 20000000;
+	     
 
 	QUICKPOLL((m_niceness));
 	// debug msg
@@ -747,7 +752,7 @@ bool Msg5::readList ( ) {
 	// . if compensateForMerge is true then m_startFileNum/m_numFiles
 	//   will be appropriately mapped around the merge
 	if ( ! m_msg3.readList  ( m_rdbId          ,
-				  m_coll           , 
+				  m_collnum        , 
 				  m_fileStartKey   , // modified by gotList()
 				  diskEndKey       ,
 				  m_newMinRecSizes , // modified by gotList()
@@ -794,10 +799,10 @@ void Msg5::copyAndSendBackList ( RdbList *listSrc ) {
 bool Msg5::needsRecall ( ) {
 	bool logIt;
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base = getRdbBase ( m_rdbId , m_coll );
+	RdbBase *base = getRdbBase ( m_rdbId , m_collnum );
 	// if collection was deleted from under us, base will be NULL
 	if ( ! base && ! g_errno ) {
-		log("msg5: base lost for coll %s",m_coll);
+		log("msg5: base lost for collnum %li",(long)m_collnum);
 		return false;
 	}
 	// sanity check
@@ -849,6 +854,9 @@ bool Msg5::needsRecall ( ) {
 	// seems to be very common for doledb, so don't log unless extreme
 	//if ( m_rdbId == RDB_DOLEDB && m_round < 15 ) logIt = false;
 	if ( m_round > 100 && (m_round % 1000) != 0 ) logIt = false;
+	// seems very common when doing rebalancing then merging to have
+	// to do at least one round of re-reading, so note that
+	if ( m_round == 0 ) logIt = false;
 	if ( logIt )
 		logf(LOG_DEBUG,"db: Reading %li again from %s (need %li total "
 		     "got %li) this=0x%lx round=%li.", 
@@ -1167,7 +1175,7 @@ bool Msg5::gotList2 ( ) {
 	}
 	
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return true;
+	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
 
 	// if not enough lists, use a dummy list to trigger merge so tfndb
 	// filter happens and we have a chance to weed out old titleRecs
@@ -1523,7 +1531,7 @@ void Msg5::repairLists_r ( ) {
 		// . logging the key ranges gives us an idea of how long
 		//   it will take to patch the bad data
 		long nn = m_msg3.m_numFileNums;
-		RdbBase *base = getRdbBase ( m_rdbId , m_coll );
+		RdbBase *base = getRdbBase ( m_rdbId , m_collnum );
 		if ( i < nn && base ) {
 			long fn = m_msg3.m_fileNums[i];
 			BigFile *bf = base->getFile ( fn );
@@ -1574,7 +1582,7 @@ void Msg5::mergeLists_r ( ) {
 	if ( KEYCMP(m_prevKey,m_fileStartKey,m_ks)>=0 ) m_prevCount = 0;
 
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) {
+	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) {
 		log("No collection found."); return; }
 
 	/*
@@ -1747,7 +1755,7 @@ bool Msg5::doneMerging ( ) {
 	//m_waitingForMerge = false;
 
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return true;
+	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
 
 	// . if there was a merge error, bitch about it
 	// . Thread class should propagate g_errno when it was set in a thread
@@ -1764,8 +1772,8 @@ bool Msg5::doneMerging ( ) {
 	//   our first merge
 	if ( m_hadCorruption ) {
 		// log it here, cuz logging in thread doesn't work too well
-		log("net: Encountered a corrupt list in rdb=%s coll=%s",
-		    base->m_dbname,m_coll);
+		log("net: Encountered a corrupt list in rdb=%s collnum=%li",
+		    base->m_dbname,(long)m_collnum);
 		// remove error condition, we removed the bad data in thread
 		
 		m_hadCorruption = false;
@@ -1891,7 +1899,7 @@ bool Msg5::doneMerging ( ) {
 
 	// . for every round we get call increase by 10 percent
 	// . try to fix all those negative recs in the rebalance re-run
-	m_newMinRecSizes *= (1.0 + (m_round * .10));
+	m_newMinRecSizes *= (long)(1.0 + (m_round * .10));
 
 	// wrap around?
 	if ( m_newMinRecSizes < 0 || m_newMinRecSizes > 1000000000 )
@@ -2003,7 +2011,7 @@ bool Msg5::getRemoteList ( ) {
 				 0                    , // max cached age
 				 false                , // add to cache?
 				 m_rdbId              , // rdbId
-				 m_coll               ,
+				 m_collnum            ,
 				 m_list               ,
 				 m_startKey           ,
 				 m_endKey             ,

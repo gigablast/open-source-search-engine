@@ -6536,8 +6536,9 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
-	r-> ptr_coll             = cr->m_coll;
-	r->size_coll             = gbstrlen(cr->m_coll)+1;
+	//r-> ptr_coll             = cr->m_coll;
+	//r->size_coll             = gbstrlen(cr->m_coll)+1;
+	r->m_collnum = cr->m_collnum;
 	r->m_maxAge              = 60; // cache timeout?
 	r->m_addToCache          = true;
 	r->m_docsToGet           = 0; // just calc stats
@@ -6709,7 +6710,7 @@ SectionVotingTable *XmlDoc::getOldSectionVotingTable ( ) {
 				    0                       , // maxCacheAge
 				    false                   , // addToCache
 				    RDB_SECTIONDB           , // was RDB_DATEDB
-				    cr->m_coll                  ,
+				    cr->m_collnum                  ,
 				    &m_secdbList            ,
 				    (char *)&m_sectiondbStartKey ,
 				    (char *)&end            ,
@@ -8168,7 +8169,7 @@ RdbList *XmlDoc::getDupList ( ) {
 				0     , // maxCacheAge
 				false , // add to cache?
 				RDB_POSDB, // INDEXDB ,
-				cr->m_coll      ,
+				cr->m_collnum,
 				&m_dupList  ,
 				(char *)&sk          ,
 				(char *)&ek          ,
@@ -10561,7 +10562,7 @@ TagRec *XmlDoc::getTagRec ( ) {
 				   // we can't hit tagdb to get it at this
 				   // point!!!
 				   NULL, // guess it! // mysite ,
-				   cr->m_coll ,
+				   cr->m_collnum ,
 				   false, // skip domain lookup? // true
 				   m_niceness ,
 				   this , 
@@ -11680,7 +11681,7 @@ Addresses *XmlDoc::getAddresses ( ) {
 				 &m_tagRec     , // &m_savedTagRec1 , // gr
 				 &m_firstUrl   ,
 				 *d            ,
-				 cr->m_coll        ,
+				 cr->m_collnum    ,
 				 dh            , // *sh32
 				 *ip           ,
 				 //(long)*tph    ,
@@ -13201,7 +13202,7 @@ char *XmlDoc::getSite ( ) {
 	if ( ! m_siteGetter.getSite ( f->getUrl()    ,
 				      gr             ,
 				      timestamp      ,
-				      cr->m_coll         ,
+				      cr->m_collnum         ,
 				      m_niceness     ,
 				      //addTags        ,
 				      this           , // state
@@ -13513,7 +13514,11 @@ long *XmlDoc::getDiffbotTitleHashes ( long *numHashes ) {
 	if ( ! ptr_linkInfo2 ) *numHashes = 0;
 
 	// hack: use linkdbdata2 field
-	if ( m_diffbotTitleHashBufValid ) return (long *)ptr_linkInfo2;
+	if ( m_diffbotTitleHashBufValid ) {
+		// do not return NULL without g_errno set
+		if ( ptr_linkInfo2 == NULL ) return (long *)0x01;
+		return (long *)ptr_linkInfo2;
+	}
 
 	SafeBuf *tdbr = getTokenizedDiffbotReply();
 	if ( ! tdbr || tdbr == (void *)-1 ) return (long *)tdbr;
@@ -13559,6 +13564,9 @@ long *XmlDoc::getDiffbotTitleHashes ( long *numHashes ) {
 	size_linkInfo2 = m_diffbotTitleHashBuf.length();
 	*numHashes = size_linkInfo2 / 4;
 	m_diffbotTitleHashBufValid = true;
+
+	// if no hashes return 0x01 because NULL means g_errno
+	if ( ptr_linkInfo2 == NULL ) return (long *)0x01;
 
 	return (long *)ptr_linkInfo2;
 }
@@ -17388,7 +17396,7 @@ Images *XmlDoc::getImages ( ) {
 				       gbstrlen(site) ,
 				       *d           ,
 				       this         ,
-				       cr->m_coll       ,
+				       cr->m_collnum       ,
 				       NULL         , // statusPtr ptr
 				       *hc          ,
 				       m_masterState,
@@ -17462,7 +17470,7 @@ TagRec ***XmlDoc::getOutlinkTagRecVector () {
 				    // make it point to this basetagrec if 
 				    // the LF_SAMEHOST flag is set for the link
 				    gr ,
-				    cr->m_coll             , 
+				    cr->m_collnum             , 
 				    m_niceness         ,
 				    m_masterState      ,
 				    m_masterLoop       )) {
@@ -18044,6 +18052,10 @@ char *XmlDoc::getSpiderLinks ( ) {
 	     strstr ( buf2 , "none"     ) )
 		m_spiderLinks = false;
 
+	// spider links if doing custom crawl or not using robots.txt
+	if ( ! m_useRobotsTxt || cr->m_isCustomCrawl )
+		m_spiderLinks = true;
+
 	// spider request forbade it? diffbot.cpp crawlbot api when
 	// specifying urldata (list of urls to add to spiderdb) usually
 	// they do not want the links crawled i'd imagine.
@@ -18591,6 +18603,11 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("urlinjected=1 ");
 	else
 		sb.safePrintf("urlinjected=0 ");
+
+	if ( m_sreqValid && m_sreq.m_isAddUrl )
+		sb.safePrintf("isaddurl=1 ");
+	else
+		sb.safePrintf("isaddurl=0 ");
 
 	if ( m_sreqValid && m_sreq.m_isPageReindex )
 		sb.safePrintf("pagereindex=1 ");
@@ -20284,6 +20301,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// diffbot reply if not already there.
 		long numHashes;
 		long *th = getDiffbotTitleHashes(&numHashes);
+		if ( ! th && ! g_errno ) { char *xx=NULL;*xx=0; }
 		if ( ! th || th == (void *)-1 ) return (char *)th;
 		// this returns false if it blocks
 		long *status = od->nukeJSONObjects( th , numHashes );
@@ -23448,10 +23466,11 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		ksr->m_isContacty = 1;
 	}
 
-	// this is just how many urls we tried to index
-	cr->m_localCrawlInfo.m_urlsHarvested += numAdded;
-	cr->m_globalCrawlInfo.m_urlsHarvested += numAdded;
-	cr->m_needsSave = true;
+	// . this is just how many urls we tried to index
+	// . move into Spider::addSpiderRequest()
+	//cr->m_localCrawlInfo.m_urlsHarvested += numAdded;
+	//cr->m_globalCrawlInfo.m_urlsHarvested += numAdded;
+	//cr->m_needsSave = true;
 
 	// save it
 	m_numOutlinksAdded      = numAdded;
@@ -26989,7 +27008,9 @@ void XmlDoc::set20 ( Msg20Request *req ) {
 	m_req = req;
 	// and this!
 	//m_coll = req->ptr_coll;
-	setCollNum ( req->ptr_coll );
+	//setCollNum ( req->ptr_coll );
+	m_collnum = req->m_collnum;
+	m_collnumValid = true;
 	// make this stuff valid
 	if ( m_req->m_docId > 0 ) {
 		m_docId      = m_req->m_docId;
@@ -27047,12 +27068,13 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 
 	m_niceness = m_req->m_niceness;
 
-	char *coll = m_req->ptr_coll;
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	m_collnum = m_req->m_collnum;//cr->m_collnum;
+	m_collnumValid = true;
+
+	//char *coll = m_req->ptr_coll;
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 	if ( ! cr ) { g_errno = ENOCOLLREC; return NULL; }
 
-	m_collnum = cr->m_collnum;
-	m_collnumValid = true;
 
 	//CollectionRec *cr = getCollRec();
 	//if ( ! cr ) return NULL;
@@ -27081,7 +27103,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	if ( ! m_setTr ) {
 		// . this completely resets us
 		// . this returns false with g_errno set on error
-		bool status = set2( *otr, maxSize, m_req->ptr_coll, NULL, 
+		bool status = set2( *otr, maxSize, cr->m_coll, NULL, 
 				    m_niceness);
 		// sanity check
 		if ( ! status && ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -27095,6 +27117,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 
 	// init
 	reply->m_nextMerged = NULL;
+
+	reply->m_collnum = m_collnum;
 
 	// MsgE uses this one
 	if ( m_req->m_getTitleRec ) {
@@ -33978,7 +34002,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 		// get the normalized url
 		char *url = links->getLinkPtr(i);
 		// get the site. this will not block or have an error.
-		siteGetter.getSite(url,gr,timestamp,cr->m_coll,m_niceness);
+		siteGetter.getSite(url,gr,timestamp,cr->m_collnum,m_niceness);
 		// these are now valid and should reference into 
 		// Links::m_buf[]
 		char *site    = siteGetter.m_site;
@@ -37126,7 +37150,7 @@ bool XmlDoc::checkCachedb ( ) {
 					0 , // maxcacheage
 					false, // addtocache?
 					RDB_CACHEDB,
-					cr->m_coll ,
+					cr->m_collnum ,
 					&m_cacheList,
 					(char *)&sk ,
 					(char *)&ek ,
@@ -37652,7 +37676,7 @@ bool XmlDoc::storeMatchingQueriesIntoCachedb ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -37787,7 +37811,7 @@ bool XmlDoc::storeRelatedDocIdsIntoCachedb ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -37892,7 +37916,7 @@ bool XmlDoc::storeRecommendedLinksBuf ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -38020,7 +38044,7 @@ bool XmlDoc::storeRelatedQueriesIntoCachedb ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -38144,7 +38168,7 @@ bool XmlDoc::storeWordPosInfoBufIntoCachedb ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -38252,7 +38276,7 @@ bool XmlDoc::storeMissingTermBufIntoCachedb ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -38451,7 +38475,7 @@ bool XmlDoc::storeScoredInsertableTermsIntoCachedb ( ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?
@@ -39126,13 +39150,14 @@ SafeBuf *XmlDoc::getMatchingQueriesScoredForFullQuery ( ) {
 	// shortcut
 	long qlen = gbstrlen(qstr);
 
-	long collLen = gbstrlen(cr->m_coll);
+	//long collLen = gbstrlen(cr->m_coll);
 	// set the request
 	m_mr2.reset();
 	m_mr2.ptr_query  = qstr;
 	m_mr2.size_query = qlen+1;
-	m_mr2.ptr_coll   = cr->m_coll;
-	m_mr2.size_coll  = collLen+1;
+	//m_mr2.ptr_coll   = cr->m_coll;
+	//m_mr2.size_coll  = collLen+1;
+	m_mr2.m_collnum = cr->m_collnum;
 	m_mr2.m_queryExpansion = 1;
 	m_mr2.m_language = langId;
 	m_mr2.m_niceness = m_niceness;
@@ -39815,8 +39840,9 @@ SafeBuf *XmlDoc::getRelatedDocIdsWithTitles ( ) {
 		RelatedDocId *rd = &rds[m_rdCursor];
 		// make the request
 		Msg20Request req;
-		req.ptr_coll    = cr->m_coll;
-		req.size_coll   = gbstrlen(cr->m_coll)+1;
+		//req.ptr_coll    = cr->m_coll;
+		//req.size_coll   = gbstrlen(cr->m_coll)+1;
+		req.m_collnum = cr->m_collnum;
 		req.m_docId     = rd->m_docId;
 		req.m_expected  = true;
 		req.m_niceness  = m_niceness;
@@ -43406,7 +43432,7 @@ SafeBuf *XmlDoc::getRecommendedLinksBuf ( ) {
 				       0               , // max cache age -secs
 				       false           , // addToCache?
 				       RDB_LINKDB      ,
-				       cr->m_coll          ,
+				       cr->m_collnum      ,
 				       list            , // linkdb list to fill
 				       (char*)&startKey,
 				       (char*)&endKey  ,
@@ -43742,8 +43768,9 @@ SafeBuf *XmlDoc::lookupTitles ( ) {
 		//req.m_state     = msg20;
 		req.m_state     = m_masterState;//this;
 		req.m_callback2 = m_masterLoop;//gotLinkerTitleWrapper;
-		req.ptr_coll    = cr->m_coll;
-		req.size_coll   = gbstrlen(cr->m_coll)+1;
+		//req.ptr_coll    = cr->m_coll;
+		//req.size_coll   = gbstrlen(cr->m_coll)+1;
+		req.m_collnum = cr->m_collnum;
 		req.m_expected  = true;
 		req.m_niceness  = m_niceness;
 		// do not get summary stuff. too slow.
@@ -43998,7 +44025,7 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 					0 , // maxcacheage
 					false, // addtocache?
 					RDB_CACHEDB,
-					cr->m_coll ,
+					cr->m_collnum ,
 					myList, // &m_cacheList,
 					(char *)&sk ,
 					(char *)&ek ,
@@ -44075,7 +44102,7 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 					      m_masterState, // state
 				      m_masterLoop, // callback
 					      false, // isInjecting?
-					      NULL, // pbuf (for printing)
+					      false, // pbuf (for printing)
 					      this, // xd holder (Msg25::m_xd)
 					      // this is irrelevant since we
 					      // are getting all inlinks:
@@ -44190,7 +44217,7 @@ Msg25 *XmlDoc::getAllInlinks ( bool forSite ) {
 	// returns false if it blocks, true otherwise
 	if ( ! m_msg1.addList ( &m_storeList,
 				RDB_CACHEDB ,
-				cr->m_coll,
+				cr->m_collnum,
 				m_masterState,
 				m_masterLoop,
 				false, // forcelocal?

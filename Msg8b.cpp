@@ -187,7 +187,7 @@ bool Msg8b::getCatRec  ( Url     *url              ,
 				0        , // max cached age in seconds (60)
 			        false    , // add net recv'd list to cache?
 				RDB_CATDB, // specifies the rdb, 1 = tagdb
-				"",//NULL,//m_coll   ,
+				0,//collnum"",//NULL,//m_coll   ,
 				//&m_list  ,
 				m_list   ,
 				startKey ,

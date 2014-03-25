@@ -464,7 +464,12 @@ bool Threads::call ( char   type                         ,
 	// . try to launch as many threads as we can
 	// . this sets g_errno on error
 	// . if it has an error, just ignore it, our thread is queued
-	m_threadQueues[i].launchThread ( t ) ;
+	m_threadQueues[i].launchThread2 ( NULL );
+	//if ( ! m_threadQueues[i].launchThread2 ( t ) && g_errno ) {
+	//	log("thread: failed thread launch: %s",mstrerror(g_errno));
+	//	return false;
+	//}
+
 	// return false if there was an error launching the thread
 	//if ( g_errno ) return false;
 	// clear g_errno
@@ -512,7 +517,7 @@ long Threads::launchThreads ( ) {
 		// clear g_errno
 		g_errno = 0;
 		// launch as many threads as we can from queue #i
-		while ( m_threadQueues[i].launchThread ( ) ) numLaunched++;
+		while ( m_threadQueues[i].launchThread2(NULL) ) numLaunched++;
 		// continue if no g_errno set
 	        if ( ! g_errno ) continue;
 		// otherwise bitch about it
@@ -1596,7 +1601,7 @@ long Threads::getNumActiveHighPriorityThreads() {
 // . sets g_errno on error
 // . don't launch a low priority thread if a high priority thread is running
 // . i.e. don't launch a high niceness thread if a low niceness is running
-bool ThreadQueue::launchThread ( ThreadEntry *te ) {
+bool ThreadQueue::launchThread2 ( ThreadEntry *te ) {
 	// debug msg
 	//log("trying to launch for type=%li",(long)m_threadType);
 	// clean up any threads that have exited
@@ -2151,13 +2156,23 @@ bool ThreadQueue::launchThread ( ThreadEntry *te ) {
 		mfree ( fs->m_allocBuf , fs->m_allocSize , "ThreadReadBuf" );
 		fs->m_buf = NULL;
 	}
+
+	// i'm not sure return value matters at this point? the thread
+	// is queued and hopefully will launch at some point
+	return false;
+
 	// if this is the direct thread request do not call callback, just
-	// return false
+	// return false, otherwise we get into an unexpected loop thingy
 	if ( t == te )
 		return log("thread: Returning false.");
 	// do it blocking
 	log("thread: Calling without thread. This will crash many times. "
 	    "Please fix it.");
+	// return false so caller will re-do without thread!
+	// so BigFile::readwrite() will retry without thread and we won't
+	// get into a wierd loop thingy
+	if ( te ) return false;
+
 // 	unsigned long long profilerStart,profilerEnd;
 // 	unsigned long long statStart,statEnd;
 

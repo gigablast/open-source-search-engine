@@ -49,6 +49,9 @@ bool getSpiderStatusMsg ( class CollectionRec *cx ,
 			  class SafeBuf *msg , 
 			  long *status ) ;
 
+long getFakeIpForUrl1 ( char *url1 ) ;
+long getFakeIpForUrl2 ( Url  *url2 ) ;
+
 // Overview of Spider
 //
 // this new spider algorithm ensures that urls get spidered even if a host
@@ -731,6 +734,25 @@ class SpiderRequest {
 				   // subtract the \0
 				   ((char *)m_url-(char *)&m_firstIp) - 1;};
 
+	char *getUrlPath() {
+		char *p = m_url;
+		for ( ; *p ; p++ ) {
+			if ( *p != ':' ) continue;
+			p++; 
+			if ( *p != '/' ) continue;
+			p++; 
+			if ( *p != '/' ) continue;
+			p++;
+			break;
+		}
+		if ( ! *p ) return NULL;
+		// skip until / then
+		for ( ; *p && *p !='/' ; p++ ) ;
+		if ( *p != '/' ) return NULL;
+		// return root path of / if there.
+		return p;
+	};		
+
 	//long getUrlLen() { return gbstrlen(m_url); };
 
 	void setKey ( long firstIp ,
@@ -1080,6 +1102,17 @@ class SpiderColl {
 	//bool m_isReadDone;
 	bool m_didRead;
 
+	// corresponding to CollectionRec::m_siteListBuf
+	//char *m_siteListAsteriskLine;
+	bool  m_siteListHasNegatives;
+	bool  m_siteListIsEmpty;
+	// data buckets in this table are of type 
+	HashTableX m_siteListDomTable;
+	// substring matches like "contains:goodstuff" or
+	// later "regex:.*"
+	SafeBuf m_negSubstringBuf;
+	SafeBuf m_posSubstringBuf;
+
 	RdbCache m_dupCache;
 	RdbTree m_winnerTree;
 	HashTableX m_winnerTable;
@@ -1090,9 +1123,11 @@ class SpiderColl {
 	long      m_tailHopCount;
 	long long m_minFutureTimeMS;
 
+
+	Msg4 m_msg4x;
 	Msg4 m_msg4;
 	Msg1 m_msg1;
-	bool m_msg4Avail;
+	bool m_msg1Avail;
 
 	bool isInDupCache ( SpiderRequest *sreq , bool addToCache ) ;
 

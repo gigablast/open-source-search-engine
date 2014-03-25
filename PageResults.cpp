@@ -741,16 +741,20 @@ bool gotResults ( void *state ) {
 	}
 
 	// shortcuts
-	char        *coll    = si->m_coll2;
-	long         collLen = si->m_collLen2;
-	
+	//char        *coll    = si->m_coll2;
+	//long         collLen = si->m_collLen2;
+
+	collnum_t collnum = si->m_firstCollnum;
+
 	// collection rec must still be there since SearchInput references 
 	// into it, and it must be the SAME ptr too!
-	CollectionRec *cr = g_collectiondb.getRec ( coll , collLen );
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	if ( ! cr || cr != si->m_cr ) {
 	       g_errno = ENOCOLLREC;
 	       return sendReply(st,NULL);
 	}
+
+	//char *coll = cr->m_coll;
 
 	/*
 	//
@@ -1320,7 +1324,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	if ( isAdmin ) {
 		sb->safePrintf(" &nbsp; "
 			      "<font color=red><b>"
-			      "<a href=\"/master?c=%s\">"
+			      "<a href=\"/admin/basic?c=%s\">"
 			      "[admin]"
 			      "</a></b></font>",coll);
 		// print reindex link
@@ -1384,7 +1388,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		// get the filename directly
 		sb->safePrintf (" &nbsp; "
 			       "<font color=red><b>"
-			       "<a href=\"/master/tagdb?"
+			       "<a href=\"/admin/tagdb?"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
 			       "c=%s\">"
@@ -1401,7 +1405,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		*sp = '\0';
 		sb->safePrintf (" &nbsp; "
 			       "<font color=red><b>"
-			       "<a href=\"/master/tagdb?"
+			       "<a href=\"/admin/tagdb?"
 			       //"tagid0=%li&"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
@@ -1720,7 +1724,7 @@ bool printSearchResultsTail ( State0 *st ) {
 
 	if ( isAdmin && banSites.length() > 0 )
 		sb->safePrintf ("<br><br><div align=right><b>"
-			       "<a href=\"/master/tagdb?"
+			       "<a href=\"/admin/tagdb?"
 			       //"tagid0=%li&"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
@@ -2379,8 +2383,16 @@ bool printResult ( State0 *st, long ix ) {
 				      "]]>"
 				      "</contentType>\n",
 				      cs);
-		else
-			sb->safePrintf(" (%s) &nbsp;" ,cs);
+		else {
+			sb->safePrintf(" <b><font style=color:white;"
+				      "background-color:maroon;>");
+			char *p = cs;
+			for ( ; *p ; p++ ) {
+				char c = to_upper_a(*p);
+				sb->pushChar(c);
+			}
+			sb->safePrintf("</font></b> &nbsp;");
+		}
 	}
 
 	////////////
@@ -2591,7 +2603,7 @@ bool printResult ( State0 *st, long ix ) {
 
 	if ( si->m_format == FORMAT_HTML ) sb->safePrintf("<br>\n");
 
-	char *coll = si->m_cr->m_coll;
+	//char *coll = si->m_cr->m_coll;
 
 	// print the [cached] link?
 	bool printCached = true;
@@ -2599,6 +2611,14 @@ bool printResult ( State0 *st, long ix ) {
 	if ( isAdmin               ) printCached = true;
 	if ( mr->m_contentLen <= 0 ) printCached = false;
 	if ( si->m_format == FORMAT_XML ) printCached = false;
+
+	// get collnum result is from
+	//collnum_t collnum = si->m_cr->m_collnum;
+	// if searching multiple collections  - federated search
+	CollectionRec *scr = g_collectiondb.getRec ( mr->m_collnum );
+	char *coll = "UNKNOWN";
+	if ( scr ) coll = scr->m_coll;
+
 	if ( printCached && cr->m_clickNScrollEnabled ) 
 		sb->safePrintf ( " - <a href=/scroll.html?page="
 				"get?"
@@ -2741,13 +2761,13 @@ bool printResult ( State0 *st, long ix ) {
 		// . if it's local, don't put the hostname/port in
 		//   there cuz it will mess up Global Spec's machine
 		//if ( h->m_groupId == g_hostdb.m_groupId ) 
-		sb->safePrintf(" - <a href=\"/master/titledb?c=%s&"
+		sb.safePrintf(" - <a href=\"/admin/titledb?c=%s&"
 			      "d=%lli",coll,mr->m_docId);
 		// then the [info] link to show the TitleRec
 		sb->safePrintf ( "\">[info]</a>" );
 		
 		// now the analyze link
-		sb->safePrintf (" - <a href=\"/master/parser?c=%s&"
+		sb.safePrintf (" - <a href=\"/admin/parser?c=%s&"
 			       "old=1&hc=%li&u=", 
 			       coll,
 			       (long)mr->m_hopcount);
@@ -2790,7 +2810,7 @@ bool printResult ( State0 *st, long ix ) {
 			banVal = 0;
 		}
 		sb->safePrintf(" - "
-			      " <a href=\"/master/tagdb?"
+			      " <a href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
 			      "tagdata0=%li&"
@@ -2807,7 +2827,7 @@ bool printResult ( State0 *st, long ix ) {
 		memcpy ( dbuf , uu.getHost() , dlen );
 		dbuf [ dlen ] = '\0';
 		sb->safePrintf(" - "
-			      " <a href=\"/master/tagdb?"
+			      " <a href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
 			      "tagdata0=%li&"

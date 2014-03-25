@@ -28,7 +28,7 @@ public:
 // . sets g_errno on error
 bool sendPageCatdb ( TcpSocket *s , HttpRequest *r ) {
 	// are we the admin?
-	bool isAdmin    = g_collectiondb.isAdmin    ( r , s );
+	//bool isAdmin    = g_collectiondb.hasPermission ( r , s );
 	// get the collection record
 	CollectionRec *cr = g_collectiondb.getRec ( r );
 	if ( ! cr ) {
@@ -38,16 +38,18 @@ bool sendPageCatdb ( TcpSocket *s , HttpRequest *r ) {
 		return g_httpServer.sendErrorReply ( s , 500 ,
 						  "collection does not exist");
 	}
+	/*
 	bool isAssassin = cr->isAssassin ( s->m_ip );
 	if ( isAdmin ) isAssassin = true;
 	// bail if permission denied
 	if ( ! isAssassin && ! cr->hasPermission ( r , s ) ) {
 		log("admin: Bad collection name or password. Could not add "
 		    "sites to tagdb. Permission denied.");
-		return sendPageLogin ( s , r , 
+		return sendPagexxxx ( s , r , 
 						    "Collection name or "
 						    "password is incorrect");
 	}
+	*/
 	// get the collection
 	long collLen = 0;
 	char *coll   = r->getString("c", &collLen, NULL);
@@ -179,14 +181,14 @@ bool sendReply ( void *state ) {
 	// print the generate Catdb link
 	sb.safePrintf ( "<tr class=poo><td>Update Catdb from DMOZ data.</td>"
 			"<td><center>"
-			"<a href=\"/master/catdb?c=%s&gencatdb=2\">"
+			"<a href=\"/admin/catdb?c=%s&gencatdb=2\">"
 			"Update Catdb</a> "
 			"</center></td></tr>",
 			st->m_coll );
 	sb.safePrintf ( "<tr class=poo>"
 			"<td>Generate New Catdb from DMOZ data.</td>"
 			"<td><center>"
-			"<a href=\"/master/catdb?c=%s&gencatdb=1\">"
+			"<a href=\"/admin/catdb?c=%s&gencatdb=1\">"
 			"Generate Catdb</a> "
 			"</center></td></tr>",
 			st->m_coll );

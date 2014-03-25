@@ -51,7 +51,6 @@ Parms g_parms;
 // new functions to extricate info from parm recs
 //
 
-
 long getDataSizeFromParmRec ( char *rec ) {
 	return *(long *)(rec+sizeof(key96_t));
 }
@@ -101,6 +100,9 @@ key96_t makeParmKey ( collnum_t collnum , Parm *m , short occNum ) {
 	if ( getOccNumFromParmRec ((char *)&k)!=occNum){char*xx=NULL;*xx=0;}
 	return k;
 }
+
+bool printUrlExpressionExamples ( SafeBuf *sb ) ;
+
 
 //////////////////////////////////////////////
 //
@@ -196,6 +198,37 @@ bool CommandRemoveConnectIpRow ( char *rec ) {
 		if ( ! m->isArray() ) continue;
 		// sanity check
 		if ( m->m_obj != OBJ_CONF ) { char *xx=NULL;*xx=0; }
+		// must be masterip
+		if ( m->m_type != TYPE_IP ) continue;
+		// . nuke that parm's element
+		// . returns false and sets g_errno on error
+		if (!g_parms.removeParm(i,rowNum,(char *)&g_conf))return true;
+	}
+	return true;
+}
+
+bool CommandRemovePasswordRow ( char *rec ) {
+	// sanity
+	long dataSize = getDataSizeFromParmRec ( rec );
+	if ( dataSize <= 1 ) {
+		log("parms: insert row data size = %li bad!",dataSize);
+		g_errno = EBADENGINEER;
+		return true;
+	}
+	// get the row #
+	char *data = getDataFromParmRec ( rec );
+	long rowNum = atol(data);
+	// scan all parms for url filter parms
+	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
+		Parm *m = &g_parms.m_parms[i];
+		// parm must be a url filters parm
+		if ( m->m_page != PAGE_SECURITY ) continue;
+		// must be an array!
+		if ( ! m->isArray() ) continue;
+		// sanity check
+		if ( m->m_obj != OBJ_CONF ) { char *xx=NULL;*xx=0; }
+		// must be master password
+		if ( m->m_type != TYPE_STRINGNONEMPTY ) continue;
 		// . nuke that parm's element
 		// . returns false and sets g_errno on error
 		if (!g_parms.removeParm(i,rowNum,(char *)&g_conf))return true;
@@ -854,42 +887,50 @@ unsigned long Parms::calcChecksum() {
 }
 */
 
+bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr );
+
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
 // . must ultimately send reply back on "s"
-bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
-			      char *cookie , SafeBuf *pageBuf ,
-			      char *collOveride ,
-			      bool isJSON ) {
+bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 	char  buf [ 128000 ];
 	SafeBuf stackBuf(buf,128000);
 
 	SafeBuf *sb = &stackBuf;
 
-	if ( pageBuf ) sb = pageBuf;
+	// print standard header
+	char fmt = r->getReplyFormat();
+	if ( fmt == FORMAT_HTML )
+		g_pages.printAdminTop ( sb , s , r );
 
-	//char *p    = buf;
-	//char *pend = buf + 128000;
 
-	//long  user     = g_pages.getUserType              ( s , r );
-	char *username = g_users.getUsername(r);
+	printParmTable ( sb , s , r );
+
+	long page = g_pages.getDynamicPageNumber ( r );
+	bool POSTReply = g_pages.getPage ( page )->m_usePost;
+
+	return g_httpServer.sendDynamicPage ( s                , 
+					      sb->getBufStart() ,
+					      sb->length()      , 
+					      -1               ,
+					      POSTReply        ,
+					      NULL             , // contType
+					      -1               , // httpstatus
+					      NULL,//cookie           ,
+					      NULL             );// charset
+}
+
+
+bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
+
+	long page = g_pages.getDynamicPageNumber ( r );
+
 	long  fromIp   = s->m_ip;
 
-	char *pwd  = r->getString ("pwd");
+	char fmt = r->getReplyFormat();
 
-	char *coll = r->getString ("c");
-	if ( ! coll || ! coll[0] )
-		//coll = g_conf.m_defaultColl;
-		coll = g_conf.getDefaultColl( r->getHost(), r->getHostLen() );
-
-	if ( collOveride ) coll = collOveride;
-
-	long nc = r->getLong("nc",1);
-	long pd = r->getLong("pd",1);
-
-	//p += sprintf(p, "<script type=\"text/javascript\">"
-	if ( ! isJSON )
+	if ( fmt == FORMAT_HTML )
 		sb->safePrintf (  
 				"<script type=\"text/javascript\">"
 				"function filterRow(str) {"
@@ -919,32 +960,25 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 				"}\n"
 				"</script>");
 	
-	// print standard header 
-	if ( ! pageBuf && ! isJSON )
-		g_pages.printAdminTop ( sb      ,
-					page     ,
-					username ,
-					coll     ,
-					pwd      , // NULL     , // pwd
-					fromIp   );
-
-	
-
 	// print the start of the table
 	char *tt = "None";
 	if ( page == PAGE_LOG        ) tt = "Log Controls";
 	if ( page == PAGE_MASTER     ) tt = "Master Controls";
-	if ( page == PAGE_SECURITY   ) tt = "Security Controls";
+	if ( page == PAGE_SECURITY   ) tt = "Security";
+	if ( page == PAGE_ADDURL2    ) tt = "Add Urls";
 	if ( page == PAGE_SPIDER     ) tt = "Spider Controls";
 	if ( page == PAGE_SEARCH     ) tt = "Search Controls";
 	if ( page == PAGE_ACCESS     ) tt = "Access Controls";
 	if ( page == PAGE_FILTERS    ) tt = "Spider Scheduler";
+	if ( page == PAGE_BASIC_SETTINGS ) tt = "Settings";
+	if ( page == PAGE_BASIC_SECURITY ) tt = "Security";
+	if ( page == PAGE_SITES ) tt = "Site List";
 	//if ( page == PAGE_PRIORITIES ) tt = "Priority Controls";
 	//if ( page == PAGE_RULES      ) tt = "Site Rules";
 	//if ( page == PAGE_SYNC       ) tt = "Sync";
 	if ( page == PAGE_REPAIR     ) tt = "Repair Controls";
 	//if ( page == PAGE_ADFEED     ) tt = "Ad Feed Controls";
-	
+
 	// special messages for spider controls
 	char *e1 = "";
 	char *e2 = "";
@@ -957,19 +991,6 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 			"Add url is temporarily disabled in Master Controls."
 			"</font></td></tr>\n";
 
-	if ( page >= PAGE_CGIPARMS && (! coll || !coll[0]) ) {
-		// WATCH OUT FOR RECURSION! sendPageLogin calls us!!!
-		if ( !g_users.hasPermission(username,PAGE_ADMIN) && 
-				!g_users.hasPermission(username,PAGE_MASTER) )
-		//if ( user != USER_ADMIN && user != USER_MASTER )
-			// print login page
-			return sendPageLogin ( s , r );
-		//log("admin: No collection specified for a page that "
-		//"needs it.");
-		//return g_httpServer.sendErrorReply ( s , 505, "Bad Request");
-	}	      
-
-
 	// . page repair (PageRepair.cpp) has a status table BEFORE the parms
 	//   iff we are doing a repair
 	// . only one page for all collections, we have a parm that is
@@ -978,36 +999,8 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	if ( page == PAGE_REPAIR )
 		g_repair.printRepairStatus ( sb , fromIp );
 	
-	char *THIS ;
-	// when being called from Diffbot.cpp crawlbot page it is kind of
-	// hacky and we want to print the url filters for the supplied 
-	// collection dictated by collOveride. if we don't have this
-	// fix here it ends up printing the url filters for the default
-	// "main" collection
-	if ( collOveride )
-		THIS = (char *)g_collectiondb.getRec(collOveride);
-	else
-		THIS = g_parms.getTHIS ( r , page );
-
-	if ( ! THIS ) {
-		log("admin: Could not get parameter object.");
-		return g_httpServer.sendErrorReply ( s , 505 , "Bad Request");
-	}
-
-	//CollectionRec *cr = (CollectionRec *)THIS;
-
-	char bb [ 256];//MAX_COLL_LEN + 60 ];
-	bb[0]='\0';
-	//if ( user == USER_MASTER && page >= PAGE_OVERVIEW && c && c[0] ) 
-	//	sprintf ( bb , " (%s)", c);
-	//if ( page == PAGE_FILTERS )
-	//	sprintf(bb,"(roundtime=%li roundnum=%li)"
-	//		, cr->m_spiderRoundStartTime
-	//		, cr->m_spiderRoundNum
-	//		);
-
 	// start the table
-	if ( ! isJSON ) {
+	if ( fmt == FORMAT_HTML ) {
 		sb->safePrintf( 
 			       "\n"
 			       "<table %s "
@@ -1041,624 +1034,47 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 		sb->safePrintf(//"<div style=\"margin-left:45%%;\">"
 			       //"<font size=+1>"
 			       "<center>"
-			       "<b>%s</b>%s"
+			       "<b>%s</b>"
 			       //"</font>"
 			       "</center>"
 			       //"</div>"
 			       "</td></tr>%s%s\n",
-			       tt,bb,e1,e2);
+			       tt,e1,e2);
 	}
 
-	bool isCrawlbot = false;
-	if ( collOveride ) isCrawlbot = true;
+	//bool isCrawlbot = false;
+	//if ( collOveride ) isCrawlbot = true;
 		
 	// print the table(s) of controls
 	//p= g_parms.printParms (p, pend, page, user, THIS, coll, pwd, nc, pd);
-	g_parms.printParms ( sb, page, username, THIS, coll, NULL, nc, pd,
-			     isCrawlbot , isJSON );
+	g_parms.printParms ( sb , s , r );
+
+	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "<br><br>\n" );
 
 	// end the table
-	if ( ! isJSON ) sb->safePrintf ( "</table>\n" );
-
-	/*
-	// if page is security
-	if ( page == PAGE_SECURITY ){
-		// a table of page names and description
-		sb->safePrintf (
-			  "<table align=center width=100%% border=1 "
-			  "bgcolor=#d0d0e0 "
-			  "cellpadding=2 border=0>" 
-			  //"<tr><td colspan=2 bgcolor=#d0c0d0>"
-			  "<tr><td colspan=2 bgcolor=#%s>"
-			  "<center>"
-			  "<b>Page Reference Table</b>"
-			  //"</font>"
-			  "</td></tr>\n"
-			  "<tr><th>Page</th><th>Brief Description</th></tr>"
-			  , DARK_BLUE);
-
-		for ( long p=0; p < PAGE_INFO; p++ ){
-			WebPage *page = g_pages.getPage(p);
-			sb->safePrintf (
-				  "<tr>"
-				  "<td> <font size=-1>%s</font></td>"
-				  "<td><font size=-1>%s</font></td></tr>\n",
-				  page->m_filename , page->m_desc );
-		}
-		sb->safePrintf (  "</table>\n");
-	}
-	*/
-
-	if ( ! isJSON ) sb->safePrintf ( "<br><br>\n" );
+	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "</table>\n" );
 
 	// url filter page has a test table
-	if ( page == PAGE_FILTERS && ! isJSON ) {
-
+	if ( page == PAGE_FILTERS && fmt == FORMAT_HTML ) {
+		// wrap up the form, print a submit button
+		g_pages.printSubmit ( sb );
+		printUrlExpressionExamples ( sb );
+	}
+	else if ( page == PAGE_BASIC_SETTINGS && fmt == FORMAT_HTML ) {
+		// wrap up the form, print a submit button
+		g_pages.printSubmit ( sb );
+		printSitePatternExamples ( sb , r );
+	}
+	else if ( page == PAGE_SITES && fmt == FORMAT_HTML ) {
+		// wrap up the form, print a submit button
+		g_pages.printSubmit ( sb );
+		printSitePatternExamples ( sb , r );
+	}
+	else if ( fmt == FORMAT_HTML ) {
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( sb );
-
-		/*
-		CollectionRec *cr = (CollectionRec *)THIS;
-		// if testUrl is provided, find in the table
-		char testUrl [ 1025 ];
-		char *tt = r->getString ( "test" , NULL );
-		testUrl[0]='\0';
-		if ( tt ) strncpy ( testUrl , tt , 1024 );
-		char *tu = testUrl;
-		if ( ! tu ) tu = "";
-		char matchString[12];
-		matchString[0] = '\0';
-		if ( testUrl[0] ) {
-			Url u;
-			u.set ( testUrl , gbstrlen(testUrl) );
-			//since we don't know the doc's quality, sfn, or
-			//other stuff, just give default values
-			long n = cr->getRegExpNum ( &u    , 
-						    false ,  // links2gb?
-						    false ,  // searchboxToGB
-						    false ,  // onsite?
-						    -1    ,  // docQuality
-						    -1    ,  // hopCount
-						    false ,  // siteInDmoz?
-						    //-1  ,  // ruleset #
-						    -1    ,  // langId
-						    -1    ,  // parent priority
-						    0     ,  // niceness
-						    NULL  ,  // tagRec
-						    false ,  // isRSS?
-						    false ,  // isPermalink?
-						    false ,  // new outlink?
-						    -1    , // age
-						    NULL  , // LinkInfo
-						    NULL  , // parentUrl
-						    -1    , // priority
-						    false , // isAddUrl
-						    false , // parentRSS?
-						    false , // parentIsNew?
-						    false , // parentIsPermlnk
-						    false );// isIndexed?
-			if ( n == -1 ) sprintf ( matchString , "default" );
-			else           sprintf ( matchString, "%li", n+1 );
-		}
-		// test table
-		sb.safePrintf (
-			  //"</form><form method=get action=/cgi/14.cgi>"
-			  //"<input type=hidden name="
-			  "<table width=100%% cellpadding=4 border=1 "
-			  "bgcolor=#%s>"
-			  "<tr><td colspan=2 bgcolor=#%s><center>"
-			  //"<font size=+1>"
-			  "<b>"
-			  "URL Filters Test</b>"
-			  //"</font>"
-			  "</td></tr>"
-			  "<tr><td colspan=2>"
-			  "<font size=1>"
-			  "To test your URL filters simply enter a URL into "
-			  "this box and submit it. The URL filter line number "
-			  "that it matches will be displayed to the right."
-			  "</font>"
-			  "</td></tr>"
-			  "<tr>"
-			  "<td><b>Test URL</b></td>"
-			  "<td><b>Matching Expression #</b></td>"
-			  "</tr>"
-			  "<tr>"
-			  "<td><input type=text size=55 value=\"%s\" "
-			  "name=test> "
-			  "<input type=submit name=action value=test></td>"
-			  "<td>%s</td></tr></table><br><br>\n" ,
-			  LIGHT_BLUE , DARK_BLUE , testUrl , matchString );
-		*/
-
-		sb->safePrintf(
-			       "<style>"
-			       ".poo { background-color:#%s;}\n"
-			       "</style>\n" ,
-			       LIGHT_BLUE );
-
-		sb->safePrintf (
-			  "<table %s>"
-			  "<tr><td colspan=2><center>"
-			  "<b>"
-			  "Supported URL Expressions</b>"
-			  "</td></tr>"
-
-			  "<tr class=poo><td>default</td>"
-			  "<td>Matches every url."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>^http://whatever</td>"
-			  "<td>Matches if the url begins with "
-			  "<i>http://whatever</i>"
-			  "</td></tr>"
-
-			  "<tr class=poo><td>$.css</td>"
-			  "<td>Matches if the url ends with \".css\"."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>foobar</td>"
-			  "<td>Matches if the url CONTAINS <i>foobar</i>."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>tld==uk,jp</td>"
-			  "<td>Matches if url's TLD ends in \"uk\" or \"jp\"."
-			  "</td></tr>"
-
-			  /*
-			  "<tr class=poo><td>doc:quality&lt;40</td>"
-			  "<td>Matches if document quality is "
-			  "less than 40. Can be used for assigning to spider "
-			  "priority.</td></tr>"
-
-			  "<tr class=poo><td>doc:quality&lt;40 && tag:ruleset==22</td>"
-			  "<td>Matches if document quality less than 40 and "
-			  "belongs to ruleset 22. Only for assinging to "
-			  "spider priority.</td></tr>"
-
-			  "<tr class=poo><td><nobr>"
-			  "doc:quality&lt;40 && tag:manualban==1</nobr></td>"
-			  "<td>Matches if document quality less than 40 and "
-			  "is has a value of \"1\" for its \"manualban\" "
-			  "tag.</td></tr>"
-
-			  "<tr class=poo><td>tag:ruleset==33 && doc:quality&lt;40</td>"
-			  "<td>Matches if document quality less than 40 and "
-			  "belongs to ruleset 33. Only for assigning to "
-			  "spider priority or a banned ruleset.</td></tr>"
-			  */
-
-			  "<tr class=poo><td>hopcount<4 && iswww</td>"
-			  "<td>Matches if document has a hop count of 4, and "
-			  "is a \"www\" url (or domain-only url).</td></tr>"
-			  
-			  "<tr class=poo><td>hopcount</td>"
-			  "<td>All root urls, those that have only a single "
-			  "slash for their path, and no cgi parms, have a "
-			  "hop count of 0. Also, all RSS urls, ping "
-			  "server urls and site roots (as defined in the "
-			  "site rules table) have a hop count of 0. Their "
-			  "outlinks have a hop count of 1, and the outlinks "
-			  "of those outlinks a hop count of 2, etc."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>sitepages</td>"
-			  "<td>The number of pages that are currently indexed "
-			  "for the subdomain of the URL. "
-			  "Used for doing quotas."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>domainpages</td>"
-			  "<td>The number of pages that are currently indexed "
-			  "for the domain of the URL. "
-			  "Used for doing quotas."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>siteadds</td>"
-			  "<td>The number URLs manually added to the "
-			  "subdomain of the URL. Used to guage a subdomain's "
-			  "popularity."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>domainadds</td>"
-			  "<td>The number URLs manually added to the "
-			  "domain of the URL. Used to guage a domain's "
-			  "popularity."
-			  "</td></tr>"
-
-
-
-			  "<tr class=poo><td>isrss | !isrss</td>"
-			  "<td>Matches if document is an rss feed. "
-			  "When harvesting outlinks we <i>guess</i> if they "
-			  "are an rss feed by seeing if their file extension "
-			  "is xml, rss or rdf. Or if they are in an "
-			  "alternative link tag.</td></tr>"
-
-			  //"<tr class=poo><td>!isrss</td>"
-			  //"<td>Matches if document is NOT an rss feed."
-			  //"</td></tr>"
-
-			  "<tr class=poo><td>ispermalink | !ispermalink</td>"
-			  "<td>Matches if document is a permalink. "
-			  "When harvesting outlinks we <i>guess</i> if they "
-			  "are a permalink by looking at the structure "
-			  "of the url.</td></tr>"
-
-			  //"<tr class=poo><td>!ispermalink</td>"
-			  //"<td>Matches if document is NOT a permalink."
-			  //"</td></tr>"
-
-			  /*
-			  "<tr class=poo><td>outlink | !outlink</td>"
-			  "<td>"
-			  "<b>This is true if url being added to spiderdb "
-			  "is an outlink from the page being spidered. "
-			  "Otherwise, the url being added to spiderdb "
-			  "directly represents the page being spidered. It "
-			  "is often VERY useful to partition the Spiderdb "
-			  "records based on this criteria."
-			  "</td></tr>"
-			  */
-
-			  "<tr class=poo><td><nobr>isnewoutlink | !isnewoutlink"
-			  "</nobr></td>"
-			  "<td>"
-			  "This is true since the outlink was not there "
-			  "the last time we spidered the page we harvested "
-			  "it from."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>hasreply | !hasreply</td>"
-			  "<td>"
-			  "This is true if we have tried to spider "
-			  "this url, even if we got an error while trying."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>isnew | !isnew</td>"
-			  "<td>"
-			  "This is the opposite of hasreply above. A url "
-			  "is new if it has no spider reply, including "
-			  "error replies. So once a url has been attempted to "
-			  "be spidered then this will be false even if there "
-			  "was any kind of error."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>lastspidertime >= "
-			  "<b>{roundstart}</b></td>"
-			  "<td>"
-			  "This is true if the url's last spidered time "
-			  "indicates it was spidered already for this "
-			  "current round of spidering. When no more urls "
-			  "are available for spidering, then gigablast "
-			  "automatically sets {roundstart} to the current "
-			  "time so all the urls can be spidered again. This "
-			  "is how you do round-based spidering. "
-			  "You have to use the respider frequency as well "
-			  "to adjust how often you want things respidered."
-			  "</td></tr>"
-			  
-
-			  //"<tr class=poo><td>!newoutlink</td>"
-			  //"<td>Matches if document is NOT a new outlink."
-			  //"</td></tr>"
-
-			  "<tr class=poo><td>age</td>"
-			  "<td>"
-			  "How old is the doucment <b>in seconds</b>. "
-			  "The age is based on the publication date of "
-			  "the document, which could also be the "
-			  "time that the document was last significantly "
-			  "modified. If this date is unknown then the age "
-			  "will be -1 and only match the expression "
-			  "<i>age==-1</i>. "
-			  "When harvesting links, we guess the publication "
-			  "date of the oulink by detecting dates contained "
-			  "in the url itself, which is popular among some "
-			  "forms of permalinks. This allows us to put "
-			  "older permalinks into a slower spider queue."
-			  "</td></tr>"
-
-
-			  "<tr class=poo><td>isaddurl | !isaddurl</td>"
-			  "<td>"
-			  "This is true if the url was added from the add "
-			  "url interface. This replaces the add url priority "
-			  "parm."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>isinjected | !isinjected</td>"
-			  "<td>"
-			  "This is true if the url was directly "
-			  "injected from the "
-			  "/inject page or API."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>isdocidbased | !isdocidbased</td>"
-			  "<td>"
-			  "This is true if the url was added from the "
-			  "reindex interface. The request does not contain "
-			  "a url, but only a docid, that way we can add "
-			  "millions of search results very quickly without "
-			  "having to lookup each of their urls. You should "
-			  "definitely have this if you use the reindexing "
-			  "feature. "
-			  "You can set max spiders to 0 "
-			  "for non "
-			  "docidbased requests while you reindex or delete "
-			  "the results of a query for extra speed."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>ismanualadd | !ismanualadd</td>"
-			  "<td>"
-			  "This is true if the url was added manually. "
-			  "Which means it matches isaddurl, isinjected, "
-			  " or isdocidbased. as opposed to only "
-			  "being discovered from the spider. "
-			  "</td></tr>"
-
-			  "<tr class=poo><td><nobr>inpingserver | !inpingserver"
-			  "</nobr></td>"
-			  "<td>"
-			  "This is true if the url has an inlink from "
-			  "a recognized ping server. Ping server urls are "
-			  "hard-coded in Url.cpp. <b><font color=red> "
-			  "pingserver urls are assigned a hop count of 0"
-			  "</font></b>"
-			  "</td></tr>"
-
-			  "<tr class=poo><td>isparentrss | !isparentrss</td>"
-			  "<td>"
-			  "If a parent of the URL was an RSS page "
-			  "then this will be matched."
-			  "</td></tr>"
-
-			  /*
-			  "<tr class=poo><td>parentisnew | !parentisnew</td>"
-			  "<td>"
-			  "<b>Parent providing this outlink is not currently "
-			  "in the index but is trying to be added right now. "
-			  "</b>This is a special expression in that "
-			  "it only applies to assigning spider priorities "
-			  "to outlinks we are harvesting on a page.</b>" 
-			  "</td></tr>"
-			  */
-
-			  "<tr class=poo><td>isindexed | !isindexed</td>"
-			  "<td>"
-			  "This url matches this if in the index already. "
-			  "</td></tr>"
-
-			  "<tr class=poo><td>errorcount==1</td>"
-			  "<td>"
-			  "The number of times the url has failed to "
-			  "be indexed. 1 means just the last time, two means "
-			  "the last two times. etc. Any kind of error parsing "
-			  "the document (bad utf8, bad charset, etc.) "
-			  "or any HTTP status error, like 404 or "
-			  "505 is included in this count, in addition to "
-			  "\"temporary\" errors like DNS timeouts."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>hastmperror</td>"
-			  "<td>"
-			  "This is true if the last spider attempt resulted "
-			  "in an error like EDNSTIMEDOUT or a similar error, "
-			  "usually indicative of a temporary internet "
-			  "failure, or local resource failure, like out of "
-			  "memory, and should be retried soon. "
-			  "Currently: "
-			  "dns timed out, "
-			  "tcp timed out, "
-			  "dns dead, "
-			  "network unreachable, "
-			  "host unreachable, "
-			  "diffbot internal error, "
-			  "out of memory."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>percentchangedperday&lt=5</td>"
-			  "<td>"
-			  "Looks at how much a url's page content has changed "
-			  "between the last two times it was spidered, and "
-			  "divides that percentage by the number of days. "
-			  "So if a URL's last two downloads were 10 days "
-			  "apart and its page content changed 30%% then "
-			  "the <i>percentchangedperday</i> will be 3. "
-			  "Can use <, >, <=, >=, ==, != comparison operators. "
-			  "</td></tr>"
-
-			  "<tr class=poo><td>sitenuminlinks&gt;20</td>"
-			  "<td>"
-			  "How many inlinks does the URL's site have? "
-			  "We only count non-spammy inlinks, and at most only "
-			  "one inlink per IP address C-Class is counted "
-			  "so that a webmaster who owns an entire C-Class "
-			  "of IP addresses will only have his inlinks counted "
-			  "once."
-			  "Can use <, >, <=, >=, ==, != comparison operators. "
-			  "</td></tr>"
-
-			  "<tr class=poo><td>httpstatus==404</td>"
-			  "<td>"
-			  "For matching the URL based on the http status "
-			  "of its last download. Does not apply to URLs "
-			  "that have not yet been successfully downloaded."
-			  "Can use <, >, <=, >=, ==, != comparison operators. "
-			  "</td></tr>"
-
-			  /*
-			  "<tr class=poo><td>priority==30</td>"
-			  "<td>"
-			  "<b>If the current priority of the url is 30, then "
-			  "it will match this expression. Does not apply "
-			  "to outlinks, of course."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>parentpriority==30</td>"
-			  "<td>"
-			  "<b>This is a special expression in that "
-			  "it only applies to assigning spider priorities "
-			  "to outlinks we are harvesting on a page.</b> "
-			  "Matches if the url being added to spider queue "
-			  "is from a parent url in priority queue 30. "
-			  "The parent's priority queue is the one it got "
-			  "moved into while being spidered. So if it was "
-			  "in priority 20, but ended up in 25, then 25 will "
-			  "be used when scanning the URL Filters table for "
-			  "each of its outlinks. Only applies "
-			  "to the FIRST time the url is added to spiderdb. "
-			  "Use <i>parentpriority==-3</i> to indicate the "
-			  "parent was FILTERED and <i>-2</i> to indicate "
-			  "the parent was BANNED. A parentpriority of "
-			  "<i>-1</i>"
-			  " means that the urls is not a link being added to "
-			  "spiderdb but rather a url being spidered."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>inlink==...</td>"
-			  "<td>"
-			  "If the url has an inlinker which contains the "
-			  "given substring, then this rule is matched. "
-			  "We use this like <i>inlink=www.weblogs.com/"
-			  "shortChanges.xml</i> to detect if a page is in "
-			  "the ping server or not, and if it is, then we "
-			  "assign it to a slower-spidering queue, because "
-			  "we can reply on the ping server for updates. Saves "
-			  "us from having to spider all the blogspot.com "
-			  "subdomains a couple times a day each."
-			  "</td></tr>"
-			  */
-
-			  //"NOTE: Until we get the link info to get the doc "
-			  //"quality before calling msg8 in Msg16.cpp, we "
-			  //"can not involve doc:quality for purposes of "
-			  //"assigning a ruleset, unless banning it.</td>"
-
-			  "<tr class=poo><td><nobr>tld!=com,org,edu"// && "
-			  //"doc:quality&lt;70"
-			  "</nobr></td>"
-			  "<td>Matches if the "
-			  "url's TLD does NOT end in \"com\", \"org\" or "
-			  "\"edu\". "
-			  "</td></tr>"
-
-			  "<tr class=poo><td><nobr>lang==zh_cn,de"
-			  "</nobr></td>"
-			  "<td>Matches if "
-			  "the url's content is in the language \"zh_cn\" or "
-			  "\"de\". See table below for supported language "
-			  "abbreviations. Used to only keep certain languages "
-			  "in the index. This is hacky because the language "
-			  "may not be known at spider time, so Gigablast "
-			  "will check after downloading the document to "
-			  "see if the language <i>spider priority</i> is "
-			  "FILTERED or BANNED thereby discarding it.</td></tr>"
-			  //"NOTE: Until we move the language "
-			  //"detection up before any call to XmlDoc::set1() "
-			  //"in Msg16.cpp, we can not use for purposes of "
-			  //"assigning a ruleset, unless banning it.</td>"
-			  //"</tr>"
-
-			  "<tr class=poo><td><nobr>lang!=xx,en,de"
-			  "</nobr></td>"
-			  "<td>Matches if "
-			  "the url's content is NOT in the language \"xx\" "
-			  "(unknown), \"en\" or \"de\". "
-			  "See table below for supported language "
-			  "abbreviations.</td></tr>"
-
-			  /*
-			  "<tr class=poo><td>link:gigablast</td>"
-			  "<td>Matches if the document links to gigablast."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>searchbox:gigablast</td>"
-			  "<td>Matches if the document has a submit form "
-			  "to gigablast."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>site:dmoz</td>"
-			  "<td>Matches if the document is directly or "
-			  "indirectly in the DMOZ directory."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>tag:spam>X</td>"
-			  "<td>Matches if the document's tagdb record "
-			  "has a score greater than X for the sitetype, "
-			  "'spam' in this case. "
-			  "Can use <, >, <=, >=, ==, != comparison operators. "
-			  "Other sitetypes include: "
-			  "..."
-			  "</td></tr>"
-			  */
-
-			  "<tr class=poo><td>iswww | !iswww</td>"
-			  "<td>Matches if the url's hostname is www or domain "
-			  "only. For example: <i>www.xyz.com</i> would match, "
-			  "and so would <i>abc.com</i>, but "
-			  "<i>foo.somesite.com</i> would NOT match."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>isonsamedomain | !isonsamedomain</td>"
-			  "<td>"
-			  "This is true if the url is from the same "
-			  "DOMAIN as the page from which it was "
-			  "harvested."
-			  //"Only effective for links being added from a page "
-			  //"being spidered, because this information is "
-			  //"not preserved in the titleRec."
-			  "</td></tr>"
-
-
-			  "<tr class=poo><td><nobr>"
-			  "isonsamesubdomain | !isonsamesubdomain"
-			  "</nobr></td>"
-			  "<td>"
-			  "This is true if the url is from the same "
-			  "SUBDOMAIN as the page from which it was "
-			  "harvested."
-			  //"Only effective for links being added from a page "
-			  //"being spidered, because this information is "
-			  //"not preserved in the titleRec."
-			  "</td></tr>"
-
-			  "<tr class=poo><td>ismedia | !ismedia</td>"
-			  "<td>"
-			  "Does the url have a media or css related "
-			  "extension. Like gif, jpg, mpeg, css, etc.? "
-			  "</td></tr>"
-
-
-			  "</td></tr></table><br><br>\n",
-			  TABLE_STYLE );
-
-
-		// show the languages you can use
-		sb->safePrintf (
-			  "<table %s>"
-			  "<tr><td colspan=2><center>"
-			  "<b>"
-			  "Supported Language Abbreviations "
-			  "for lang== Filter</b>"
-			  "</td></tr>",
-			  TABLE_STYLE );
-		for ( long i = 0 ; i < 256 ; i++ ) {
-			char *lang1 = getLanguageAbbr   ( i );
-			char *lang2 = getLanguageString ( i );
-			if ( ! lang1 ) continue;
-			sb->safePrintf("<tr class=poo>"
-				       "<td>%s</td><td>%s</td></tr>\n",
-				      lang1,lang2);
-		}
-		// wrap it up
-		sb->safePrintf("</table><br><br>");
-
 	}
 
-	else  if ( ! isJSON )
-		// wrap up the form, print a submit button
-		g_pages.printAdminBottom ( sb );
 
 	// extra sync table
 	/*
@@ -1691,25 +1107,10 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r , long page ,
 	*/
 
 
-	//if ( page == PAGE_FILTERS || page == PAGE_FILTERS2)
-	//	g_pages.printRulesetDescriptions ( &sb , user );
-
-	//long plen = p - buf;
-
 	// if just printing into a buffer, return now
-	if ( pageBuf ) return true;
+	//if ( pageBuf ) return true;
 
-	bool POSTReply = g_pages.getPage ( page )->m_usePost;
-
-	return g_httpServer.sendDynamicPage ( s                , 
-					      sb->getBufStart() ,
-					      sb->length()      , 
-					      -1               ,
-					      POSTReply        ,
-					      NULL             , // contType
-					      -1               , // httpstatus
-					      cookie           ,
-					      NULL             );// charset
+	return true;
 }
 
 /*
@@ -1829,11 +1230,13 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 		if ( i == select ) s = " selected";
 		else               s = "";
 		if      ( i == -3 ) 
-			sb->safePrintf ("<option value=%li%s>FILTERED",i,s);
+			sb->safePrintf ("<option value=%li%s>DELETE",i,s);
 		else if ( i == -2 ) 
-			sb->safePrintf ("<option value=%li%s>BANNED",i,s);
+			//sb->safePrintf ("<option value=%li%s>BANNED",i,s);
+			continue;
 		else if ( i == -1 ) 
-			sb->safePrintf ("<option value=%li%s>undefined",i,s);
+			//sb->safePrintf ("<option value=%li%s>undefined",i,s);
+			continue;
 		else    
 			sb->safePrintf ("<option value=%li%s>%li",i,s,i);
 	}
@@ -1894,134 +1297,27 @@ bool printCheckBoxes ( long n , SafeBuf* sb, char *name, char *array){
 	return true;
 }
 
-/*
-char *Parms::printParms (char *p, char *pend, TcpSocket *s , HttpRequest *r) {
-	long  page = g_pages.getDynamicPageNumber ( r );
-	//long  user = g_pages.getUserType ( s , r );
-	char *username = g_users.getUsername(r);
-	char *THIS = getTHIS ( r , page );
-	char *coll = r->getString ( "c"   );
-	//char *pwd  = r->getString ( "pwd" );
-	if ( ! coll ) coll = "";
-	//if ( ! pwd  ) pwd  = "";
-	long nc = r->getLong("nc",1);
-	long pd = r->getLong("pd",1);
-	return printParms ( p, pend, page, username, THIS, coll, NULL, nc, pd );
-}
-*/
-
 bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	long  page = g_pages.getDynamicPageNumber ( r );
-	//long  user = g_pages.getUserType ( s , r );
-	char *username = g_users.getUsername(r);
-	char *THIS = getTHIS ( r , page );
-	char *coll = r->getString ( "c"   );
-	//char *pwd  = r->getString ( "pwd" );
-	if ( ! coll ) coll = "";
-	//if ( ! pwd  ) pwd  = "";
 	long nc = r->getLong("nc",1);
 	long pd = r->getLong("pd",1);
-	return printParms ( sb, page, username, THIS, coll, NULL, nc, pd );
+	char *coll = r->getString ( "c"   );
+	if ( ! coll || ! coll[0] ) coll = "main";
+	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	printParms2 ( sb, page, cr, nc, pd,0,0 , s);
+	return true;
 }
 
 static long s_count = 0;
 
-/*
-// . we just start printing with <tr><td>... assuming caller has already 
-//   printed a <table> into "p"
-// . return "p" after printing into it
-char *Parms::printParms ( char *p , char *pend , long page , char *username,
-                          //long user ,
-			  void *THIS , char *coll , char *pwd , long nc ,
-			  long pd ) {
-	s_count = 0;
-	// background color
-	char *bg1 = LIGHT_BLUE;
-	char *bg2 = DARK_BLUE;
-	// find in parms list
-	for ( long i = 0 ; i < m_numParms ; i++ ) {
-		// get it
-		Parm *m = &m_parms[i];
-		// make sure we got the right parms for what we want
-		if ( m->m_page != page ) continue;
-		// skip if offset is negative, that means none
-		if ( m->m_off < 0 &&
-		     m->m_type != TYPE_CMD      &&
-		     m->m_type != TYPE_CONSTANT   ) continue;
-		// might have an array, do not exceed the array size
-		long  jend = m->m_max;
-		long  size = jend ;
-		char *ss   = ((char *)THIS + m->m_off - 4);
-		if ( m->m_max > 1 ) size = *(long *)ss;
-		if ( size < jend  ) jend = size;
-		// background color
-		char *bg ;
-		// toggle background color on group boundaries...
-		if ( m->m_group == 1 ) {
-			if ( bg == bg1 ) bg = bg2;
-			else             bg = bg1;
-		}
-		// . do we have an array? if so print title on next row
-		//   UNLESS these are priority checkboxes, those can all 
-		//   cluster together onto one row
-		// . only add if not in a row of controls
-		if ( m->m_max > 1 && m->m_type != TYPE_PRIORITY_BOXES &&
-		     m->m_rowid == -1 ) {
-			// make a separate table for array of parms
-			sprintf ( p , 
-				  //"<table width=100%% bgcolor=#d0d0e0 "
-				  //"cellpadding=4 border=1>\n"
-				  "<tr><td colspan=20 bgcolor=#%s>"
-				  "<center>"
-				  //"<font size=+1>"
-				  "<b>%s"
-				  "</b>"
-				  //"</font>"
-				  "</td></tr>\n"
-				  "<tr><td colspan=20><font size=1>"
-				  "%s</font></td></tr>\n",
-				  DARK_BLUE,m->m_title,m->m_desc );
-			p += gbstrlen ( p );
-		}
-		// arrays always have blank line for adding stuff
-		if ( m->m_max > 1 ) size++;
-		// if m_rowid of consecutive parms are the same then they
-		// are all printed in the same row, otherwise the inner loop
-		// has no effect
-		long rowid = m_parms[i].m_rowid;
-		// if not part of a complex row, just print this array right up
-		if ( rowid == -1 ) {
-			for ( long j = 0 ; j < size ; j++ )
-				p=printParm ( p, pend, username, &m_parms[i],i,
-					      j, jend, (char *)THIS,coll,NULL,
-					      bg,nc,pd);
-			continue;
-		}
-		// if not first in a row, skip it, we printed it already
-		if ( i > 0 && m_parms[i-1].m_rowid == rowid ) continue;
-
-		// otherwise print everything in the row
-		for ( long j = 0 ; j < size ; j++ ) {
-			for ( long k = i ; 
-			      k < m_numParms && 
-				      m_parms[k].m_rowid == rowid;  
-			      k++ )
-				p=printParm(p,pend,username,&m_parms[k],k,j,
-					    jend,(char *)THIS,coll,NULL,bg,nc,
-					    pd);
-		}
-		// end array table
-		//if ( m->m_max > 1 ) {
-		//	sprintf ( p , "</table><br>\n");
-		//	p += gbstrlen ( p );
-		//}
-	}
-	return p;
-}
-*/
-bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
-			 void *THIS , char *coll , char *pwd , long nc ,
-			 long pd , bool isCrawlbot , bool isJSON ) {
+bool Parms::printParms2 ( SafeBuf* sb , 
+			  long page , 
+			  CollectionRec *cr , 
+			  long nc ,
+			  long pd , 
+			  bool isCrawlbot , 
+			  bool isJSON ,
+			  TcpSocket *sock ) {
 	bool status = true;
 	s_count = 0;
 	// background color
@@ -2029,19 +1325,39 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 	char *bg2 = DARK_BLUE;
 	// background color
 	char *bg = NULL;
+
+	char *coll = NULL;
+	if ( cr ) coll = cr->m_coll;
+
+	// page aliases
+	if ( page == PAGE_BASIC_SECURITY )
+		page = PAGE_SECURITY;
+
 	// find in parms list
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		// get it
 		Parm *m = &m_parms[i];
 		// make sure we got the right parms for what we want
 		if ( m->m_page != page ) continue;
+		// and same object tpye. but allow OBJ_NONE for
+		// PageAddUrl.cpp
+		//if ( m->m_obj != parmObj && m->m_obj != OBJ_NONE ) continue;
 		// skip if offset is negative, that means none
-		if ( m->m_off < 0 && 
-		     m->m_type != TYPE_MONOD2 &&
-		     m->m_type != TYPE_MONOM2 &&
-		     m->m_type != TYPE_CMD     ) continue;
+		// well then use OBJ_NONE now!!!
+		//if ( m->m_off < 0 && 
+		//     m->m_type != TYPE_MONOD2 &&
+		//     m->m_type != TYPE_MONOM2 &&
+		//     m->m_type != TYPE_CMD     ) continue;
 		// skip if hidden
 		if ( m->m_flags & PF_HIDDEN ) continue;
+		// get right ptr
+		char *THIS = NULL;
+		if ( m->m_obj == OBJ_CONF ) 
+			THIS = (char *)&g_conf;
+		if ( m->m_obj == OBJ_COLL ) {
+			THIS = (char *)cr;
+			if ( ! THIS ) continue;
+		}
 		// might have an array, do not exceed the array size
 		long  jend = m->m_max;
 		long  size = jend ;
@@ -2080,8 +1396,19 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 				  //"</font>"
 				  "</td></tr>\n"
 				  "<tr><td colspan=20><font size=-1>"
-				  "%s</font></td></tr>\n",
-				  DARK_BLUE,m->m_title,m->m_desc );
+				  ,DARK_BLUE,m->m_title);
+			// print the description
+			sb->safePrintf ( "%s" , m->m_desc );
+			// print users current ip if showing the list
+			// of "Master IPs" for admin access
+			if ( m->m_page == PAGE_SECURITY &&
+			     m->m_title &&
+			     strstr(m->m_title,"IP") )
+				sb->safePrintf(" <b>Your current IP is "
+					       "%s.</b>",iptoa(sock->m_ip));
+			// end the description
+			sb->safePrintf("</font></td></tr>\n");
+
 		}
 		// arrays always have blank line for adding stuff
 		if ( m->m_max > 1 )
@@ -2095,7 +1422,7 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 		// if not part of a complex row, just print this array right up
 		if ( rowid == -1 ) {
 			for ( long j = 0 ; j < size ; j++ )
-				status &=printParm ( sb,username,&m_parms[i],i,
+				status &=printParm ( sb,NULL,&m_parms[i],i,
 						     j, jend, (char *)THIS,
 						     coll,NULL,
 						     bg,nc,pd,
@@ -2118,7 +1445,7 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 				      m_parms[k].m_rowid == rowid;  
 			      k++ ) {
 
-				status &=printParm(sb,username,&m_parms[k],k,
+				status &=printParm(sb,NULL,&m_parms[k],k,
 					    newj,jend,(char *)THIS,coll,NULL,
 						   bg,nc,pd, j==size-1,
 						   isCrawlbot,isJSON);
@@ -2133,416 +1460,6 @@ bool Parms::printParms ( SafeBuf* sb , long page , char *username,//long user,
 	return status;
 }
 
-/*
-char *Parms::printParm ( char *p    , 
-			 char *pend ,
-			 //long  user ,
-			 char *username,
-			 Parm *m    , 
-			 long  mm   , // m = &m_parms[mm]
-			 long  j    ,
-			 long  jend ,
-			 char *THIS ,
-			 char *coll ,
-			 char *pwd  ,
-			 char *bg   ,
-			 long  nc   ,
-			 long  pd   ) {
-	// do not print if no permissions
-	if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
-		return p;
-	//if ( m->m_perms != 0 && (m->m_perms & user) == 0 ) return p;
-	// do not print some if #define _CLIENT_ is true
-#ifdef _GLOBALSPEC_
-	if ( m->m_priv == 2 ) return p;
-	if ( m->m_priv == 3 ) return p;
-#elif _CLIENT_
-	if ( m->m_priv ) return p;
-#elif _METALINCS_
-	if ( m->m_priv == 2 ) return p;
-	if ( m->m_priv == 3 ) return p;
-#endif
-	// priv of 4 means do not print at all
-	if ( m->m_priv == 4 ) return p;
-
-	// what type of parameter?
-	char t = m->m_type;
-	// point to the data in THIS
-	char *s = THIS + m->m_off + m->m_size * j ;
-	// . if an array, passed our end, this is the blank line at the end
-	// . USE THIS EMPTY/DEFAULT LINE TO ADD NEW DATA TO AN ARRAY
-	// . make at least as big as a long long
-	if ( j >= jend ) s = "\0\0\0\0\0\0\0\0";
-	// delimit each cgi var if we need to
-	if ( m->m_cgi && gbstrlen(m->m_cgi) > 45 ) {
-		log(LOG_LOGIC,"admin: Cgi variable is TOO big.");
-		char *xx = NULL; *xx = 0;
-	}
-	char cgi[64];
-	if ( m->m_cgi ) {
-		if ( j > 0 ) sprintf ( cgi , "%s%li" , m->m_cgi , j );
-		else         sprintf ( cgi , "%s"    , m->m_cgi     );
-	}
-	// . display title and description of the control/parameter
-	// . the input cell of some parameters are colored
-	char *color = "";
-	if ( t == TYPE_CMD  || t == TYPE_BOOL2 ) color = " bgcolor=#0000ff";
-	if ( t == TYPE_BOOL ) {
-		if ( *s ) color = " bgcolor=#00ff00";
-		else      color = " bgcolor=#ff0000";
-	}
-	if ( t == TYPE_BOOL || t == TYPE_BOOL2 ) {
-		// disable controls not allowed in read only mode
-		if ( g_conf.m_readOnlyMode && m->m_rdonly )
-			  color = " bgcolor=#ffff00";
-	}
-
-	bool firstInRow = false;
-	if ( (s_count % nc) == 0 ) firstInRow = true;
-	s_count++;
-
-	if ( mm > 0 && m->m_rowid >= 0 && m_parms[mm-1].m_rowid == m->m_rowid )
-		firstInRow = false;
-	long firstRow = 0;
-	if ( m->m_page == PAGE_PRIORITIES ) firstRow = MAX_PRIORITY_QUEUES - 1;
-	// . use a separate table for arrays
-	// . make title and description header of that table
-	// . do not print all headers if not m_hdrs, a special case for the 
-	//   default line in the url filters table
-	if ( j == firstRow && m->m_rowid >= 0 && firstInRow && m->m_hdrs ) {
-		// print description as big comment
-		if ( m->m_desc && pd == 1 ) {
-			sprintf ( p , "<td colspan=20><font size=1>\n" );
-			p += gbstrlen ( p );
-			//p = htmlEncode ( p , pend , m->m_desc ,
-			//		 m->m_desc + gbstrlen ( m->m_desc ) );
-			sprintf ( p , "%s" , m->m_desc );
-			p += gbstrlen ( p );
-			sprintf ( p , "</font></td></tr><tr>\n" );
-			p += gbstrlen ( p );
-		}
-		// # column
-		// do not show this for PAGE_PRIORITIES it is confusing
-		if ( m->m_max > 1 && 
-		     m->m_page != PAGE_PRIORITIES ) {
-			sprintf ( p , "<td><b>#</b></td>\n" );
-			p += gbstrlen(p);
-		}
-		// print all headers
-		for ( long k = mm ; 
-		      k<m_numParms && m_parms[k].m_rowid==m->m_rowid; k++ ) {
-			sprintf ( p , "<td><b>%s</b></td>\n" ,
-				  m_parms[k].m_title );
-			p += gbstrlen(p);
-		}
-		sprintf ( p , "</tr>\n" ); // mdw added
-		p += gbstrlen ( p ); 
-	}
-	// print row start for single parm
-	if ( m->m_max <= 1 && ! m->m_hdrs ) {
-		if ( firstInRow ) {
-			sprintf ( p , "<tr bgcolor=#%s><td>" , bg );
-			p += gbstrlen ( p );
-		}
-		p += sprintf ( p , "<td width=%li%%>" , 100/nc/2 );
-	}
-
-	// print the title/description in current table for non-arrays
-	if ( m->m_max <= 1 && m->m_hdrs ) { // j == 0 && m->m_rowid < 0 ) {
-		if ( firstInRow )
-			p += sprintf ( p , "<tr bgcolor=#%s>",bg);
-		if ( t == TYPE_STRINGBOX ) {
-			sprintf ( p , "<td colspan=2><center>"
-				  "<b>%s</b><br><font size=1>",m->m_title );
-			p += gbstrlen ( p );
-			if ( pd ) 
-				p = htmlEncode (p,pend,m->m_desc,
-						m->m_desc+gbstrlen(m->m_desc));
-			sprintf ( p , "</font><br>\n" );
-		}
-		else {
-			sprintf ( p , "<td width=%li%%>" //"<td width=78%%>"
-				  "<b>%s</b><br><font size=1>",
-				  3*100/nc/2/4,m->m_title );
-			p += gbstrlen ( p );
-			if ( pd ) 
-				p  = htmlEncode (p,pend,m->m_desc,
-						 m->m_desc+gbstrlen(m->m_desc));
-			// and default value if it exists
-			if ( m->m_def && m->m_def[0] && t != TYPE_CMD ) {
-				char *d = m->m_def;
-				if ( t == TYPE_BOOL ) {
-					if ( d[0]=='0' ) d = "NO";
-					else             d = "YES";
-					sprintf ( p , " Default: %s.",d);
-					p += gbstrlen ( p );
-				} 
-				else {
-					sprintf ( p , " Default: ");
-					p += gbstrlen ( p );
-					p = htmlEncode (p,pend,d,d+gbstrlen(d) );
-				}
-			}
-			sprintf ( p , "</font></td>\n<td%s width=%li%%>" , 
-				  color , 100/nc/2/4 );
-		}
-		p += gbstrlen ( p );
-	}
-
-	// . print number in row if array, start at 1 for clarity's sake
-	// . used for url filters table, etc.
-	if ( m->m_max > 1 ) {
-		// but if it is in same row as previous, do not repeat it
-		// for this same row, silly
-		if ( firstInRow && m->m_page != PAGE_PRIORITIES ) 
-			sprintf ( p, "<tr><td>%li</td>\n<td>", j);//j+1 );
-		else if ( firstInRow ) 
-			sprintf ( p , "<tr><td>" );
-		else    
-			sprintf ( p, "<td>" );
-		p += gbstrlen ( p );
-	}
-
-	long cast = m->m_cast;
-	if ( g_proxy.isProxy() ) cast = 0;
-
-	// print the input box
-	if ( t == TYPE_BOOL ) {
-		char *tt, *v;
-		if ( *s ) { tt = "YES"; v = "0"; }
-		else      { tt = "NO" ; v = "1"; }
-		if ( g_conf.m_readOnlyMode && m->m_rdonly )
-			sprintf ( p, "<b>read-only mode</b>" );
-		// if cast=1, command IS broadcast to all hosts
-		else 
-			sprintf ( p, "<b><a href=\"/%s?c=%s&"
-				  "%s=%s&cast=%li\">"
-				  "<center>%s</center></a></b>", 
-				  g_pages.getPath(m->m_page),coll,
-				  cgi,v,cast,tt);
-	}
-	else if ( t == TYPE_BOOL2 ) {
-		if ( g_conf.m_readOnlyMode && m->m_rdonly )
-			sprintf ( p, "<b><center>read-only mode</center></b>");
-		// always use m_def as the value for TYPE_BOOL2
-		else
-			sprintf ( p, "<b><a href=\"/%s?c=%s&%s=%s&"
-				  "cast=1\">"
-				  "<center>%s</center></a></b>", 
-				  g_pages.getPath(m->m_page),coll,
-				  cgi,m->m_def, m->m_title);
-	}
-	else if ( t == TYPE_CHECKBOX ) {
-		char *ddd = "";
-		if ( *s ) ddd = " checked";
-		sprintf (p, "<input type=checkbox value=1 name=%s"
-			 "%s>",
-			 cgi,ddd);
-	}
-	else if ( t == TYPE_CHAR )
-		sprintf (p,"<input type=text name=%s value=\"%li\" "
-			 "size=3>",cgi,(long)(*s));
-	else if ( t == TYPE_PRIORITY ) 
-		printDropDown ( MAX_SPIDER_PRIORITIES , p , pend , cgi , *s , 
-				false , false );
-	else if ( t == TYPE_PRIORITY2 )
-		printDropDown ( MAX_SPIDER_PRIORITIES , p , pend , cgi , *s , 
-				true , true );
-	else if ( t == TYPE_RETRIES    ) 
-		printDropDown ( 4 , p , pend , cgi , *s , false , false );
-	else if ( t == TYPE_PRIORITY_BOXES ) {
-		// print ALL the checkboxes when we get the first parm
-		if ( j != 0 ) return p;
-		printCheckBoxes ( MAX_SPIDER_PRIORITIES , p , pend , cgi , s );
-	}
-	else if ( t == TYPE_CMD )
-		// if cast=0 it will be executed, otherwise it will be
-		// broadcasted with cast=1 to all hosts and they will all
-		// execute it
-		sprintf ( p, "<b><a href=\"/%s?c=%s&%s=1&cast=%li\">"
-			  "<center>%s</center></a></b>",
-			  g_pages.getPath(m->m_page),coll,
-			  cgi,cast,m->m_title);
-	else if ( t == TYPE_FLOAT )
-		sprintf (p,"<input type=text name=%s value=\"%.03f\" "
-			 "size=12>",cgi,*(float *)s);
-	else if ( t == TYPE_IP ) {
-		if ( m->m_max > 0 && j == jend ) 
-			sprintf (p,"<input type=text name=%s value=\"\" "
-				 "size=12>",cgi);
-		else
-			sprintf (p,"<input type=text name=%s value=\"%s\" "
-				 "size=12>",cgi,iptoa(*(long *)s));
-	}
-	else if ( t == TYPE_LONG ) 
-		sprintf (p,"<input type=text name=%s value=\"%li\" "
-			 "size=12>",cgi,*(long *)s);
-	else if ( t == TYPE_LONG_CONST ) 
-		sprintf (p,"%li",*(long *)s);
-	else if ( t == TYPE_LONG_LONG )
-		sprintf (p,"<input type=text name=%s value=\"%lli\" "
-			 "size=32>",cgi,*(long long *)s);
-	else if ( t == TYPE_STRING || t == TYPE_STRINGNONEMPTY ) {
-		long size = m->m_size;
-		if ( size > 25 ) size = 25;
-		sprintf (p,"<input type=text name=%s size=%li value=\"",
-			 cgi,size);
-		p += gbstrlen(p);
-		p += dequote ( p , pend , s , gbstrlen(s) );
-		sprintf (p,"\">");
-	}
-	else if ( t == TYPE_STRINGBOX ) {
-		sprintf(p,"<textarea rows=10 cols=64 name=%s>",cgi);
-		p += gbstrlen(p);
-		//p += urlEncode ( p , pend - p , s , gbstrlen(s) );
-		//p += htmlDecode ( p , s , gbstrlen(s) );
-		p = htmlEncode ( p , pend , s , s + gbstrlen(s) );
-		//sprintf ( p , "%s" , s );
-		//p += gbstrlen(p);		
-		sprintf (p,"</textarea>\n");
-	}
-	else if ( t == TYPE_CONSTANT ) 
-		sprintf (p,"%s",m->m_title);
-	else if ( t == TYPE_MONOD2 )
-		sprintf ( p , "%li" , j / 2 );
-	else if ( t == TYPE_MONOM2 ) 
-		sprintf ( p , "%li" , j % 2 );
-	else if ( t == TYPE_RULESET ) ;
-		// subscript is already included in "cgi"
-		//p = g_pages.printRulesetDropDown ( p          ,
-		//				   pend       ,
-		//				   user       ,
-		//				   cgi        ,
-		//				   *(long *)s ,  // selected  
-		//				   -1         ); // subscript
-	else if ( t == TYPE_TIME ) {
-		//time is stored as a string
-		//if time is not stored properly, just write 00:00
-		if ( s[2] != ':' )
-			strncpy ( s, "00:00", 5 );
-		char hr[3];
-		char min[3];
-		memcpy ( hr, s, 2 );
-		memcpy ( min, s + 3, 2 );
-		hr[2] = '\0';
-		min[2] = '\0';
-		// print the time in the input forms
-		sprintf(p,
-			"<input type=text name=%shr size=2 "
-			"value=%s>h " 
-			"<input type=text name=%smin size=2 "
-			"value=%s>m " ,
-			cgi    , 
-			hr ,
-			cgi    , 
-			min  );
-	}
-
-	else if ( t == TYPE_DATE || t == TYPE_DATE2 ) {
-		// time is stored as long
-		long ct = *(long *)s;
-		// get the time struct
-		struct tm *tp = gmtime ( (time_t *)&ct ) ;
-		// set the "selected" month for the drop down
-		char *ss[12];
-		for ( long i = 0 ; i < 12 ; i++ ) ss[i]="";
-		long month = tp->tm_mon;
-		if ( month < 0 || month > 11 ) month = 0; // Jan
-		ss[month] = " selected";
-		// print the date in the input forms
-		sprintf(p,
-			"<input type=text name=%sday "
-			"size=2 value=%li> "
-			"<select name=%smon>"
-			"<option value=0%s>Jan"
-			"<option value=1%s>Feb"
-			"<option value=2%s>Mar"
-			"<option value=3%s>Apr"
-			"<option value=4%s>May"
-			"<option value=5%s>Jun"
-			"<option value=6%s>Jul"
-			"<option value=7%s>Aug"
-			"<option value=8%s>Sep"
-			"<option value=9%s>Oct"
-			"<option value=10%s>Nov"
-			"<option value=11%s>Dec"
-			"</select>\n"
-			"<input type=text name=%syr size=4 value=%li>"
-			"<br>"
-			"<input type=text name=%shr size=2 "
-			"value=%02li>h " 
-			"<input type=text name=%smin size=2 "
-			"value=%02li>m " 
-			"<input type=text name=%ssec size=2 "
-			"value=%02li>s" ,
-			cgi    ,
-			(long)tp->tm_mday ,
-			cgi    ,
-			ss[0],ss[1],ss[2],ss[3],ss[4],ss[5],ss[6],ss[7],ss[8],
-			ss[9],ss[10],ss[11],
-			cgi    ,
-			(long)tp->tm_year + 1900 ,
-			cgi    , 
-			(long)tp->tm_hour ,
-			cgi    , 
-			(long)tp->tm_min  ,
-			cgi    ,
-			(long)tp->tm_sec  );
-	}
-	else if ( t == TYPE_SITERULE ) {
-		// print the siterec rules as a drop down
-		char *ss[5];
-		for ( long i = 0; i < 5; i++ ) ss[i] = "";
-		long v = *(long*)s;
-		if ( v < 0 || v > 4 ) v = 0;
-		ss[v] = " selected";
-		sprintf ( p, "<select name=%s>"
-			     "<option value=0%s>Hostname"
-			     "<option value=1%s>Path Depth 1"
-			     "<option value=2%s>Path Depth 2"
-			     "<option value=3%s>Path Depth 3"
-			     "</select>\n",
-			     cgi, ss[0], ss[1], ss[2], ss[3] );
-	}
-
-	p += gbstrlen ( p );
-
-	// end the input cell
-	sprintf ( p , "</td>\n");
-	p += gbstrlen ( p );
-
-	// "insert above" link? used for arrays only, where order matters
-	if ( m->m_addin && j < jend ) {
-		sprintf ( p , "<td><a href=\"?c=%s&cast=1&"
-			  "ins_%s=1\">insert</td>\n",coll,cgi );
-		p += gbstrlen ( p );
-	}
-
-	// does next guy start a new row?
-	bool lastInRow = true; // assume yes
-	if ( mm+1<m_numParms&&m->m_rowid>=0&&m_parms[mm+1].m_rowid==m->m_rowid)
-		lastInRow = false;
-	if ( ((s_count-1) % nc) != (nc-1) ) lastInRow = false;
-
-	// . display the remove link for arrays if we need to
-	// . but don't display if next guy does NOT start a new row
-	if ( m->m_max > 1 && lastInRow &&
-	     m->m_page != PAGE_PRIORITIES ) {
-		if ( j < jend  )
-			sprintf ( p , "<td><a href=\"?c=%s&cast=1&"
-				  "rm_%s=1\">"
-				  "remove</td>\n",coll,cgi );
-		else
-			sprintf ( p , "<td></td>\n");
-		p += gbstrlen ( p );
-	}
-
-	if ( lastInRow ) sprintf ( p , "</tr>\n");
-	p += gbstrlen ( p );
-
-	return p;
-}
-*/
 
 bool Parms::printParm ( SafeBuf* sb,
 			//long  user ,
@@ -2562,23 +1479,26 @@ bool Parms::printParm ( SafeBuf* sb,
 			bool isJSON ) {
 	bool status = true;
 	// do not print if no permissions
-	if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
-		return status;
+	//if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
+	//	return status;
 	//if ( m->m_perms != 0 && (m->m_perms & user) == 0 ) return status;
 	// do not print some if #define _CLIENT_ is true
-#ifdef _GLOBALSPEC_
-	if ( m->m_priv == 2 ) return status;
-	if ( m->m_priv == 3 ) return status;
-#elif _CLIENT_
-	if ( m->m_priv ) return status;
-#elif _METALINCS_
-	if ( m->m_priv == 2 ) return status;
-	if ( m->m_priv == 3 ) return status;
-#endif
+	//#ifdef _GLOBALSPEC_
+	//if ( m->m_priv == 2 ) return status;
+	//if ( m->m_priv == 3 ) return status;
+	//#elif _CLIENT_
+	//if ( m->m_priv ) return status;
+	//#elif _METALINCS_
+	//if ( m->m_priv == 2 ) return status;
+	//if ( m->m_priv == 3 ) return status;
+	//#endif
 	// priv of 4 means do not print at all
-	if ( m->m_priv == 4 ) return status;
+	if ( m->m_priv == 4 ) return true;
 
-	if ( m->m_flags & PF_HIDDEN ) return status;
+	// do not print comments, those are for the xml conf file
+	if ( m->m_type == TYPE_COMMENT ) return true;
+
+	if ( m->m_flags & PF_HIDDEN ) return true;
 
 	// . if printing on crawlbot page hide these
 	// . we repeat this logic below when printing parm titles
@@ -2735,9 +1655,12 @@ bool Parms::printParm ( SafeBuf* sb,
 	// if parm value is not defaut, use orange!
 	char rr[1024];
 	SafeBuf val1(rr,1024);
-	m->printVal ( &val1 , collnum , j ); // occNum );
+	if ( m->m_type != TYPE_FILEUPLOADBUTTON )
+		m->printVal ( &val1 , collnum , j ); // occNum );
 	// test it
-	if ( m->m_def && strcmp ( val1.getBufStart() , m->m_def ) )
+	if ( m->m_def && 
+	     m->m_obj != OBJ_NONE &&
+	     strcmp ( val1.getBufStart() , m->m_def ) )
 		// put non-default valued parms in orange!
 		bg = "ffa500";
 
@@ -2761,10 +1684,14 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ( "<td width=%li%%>"//"<td width=78%%>
 					 "<b>%s</b><br><font size=1>",
 					 3*100/nc/2/4, m->m_title );
+
+			// the "site list" parm has html in description
 			if ( pd ) 
-				status &= sb->htmlEncode (m->m_desc,
-							  gbstrlen(m->m_desc),
-							  false);
+				status &= sb->safeStrcpy(m->m_desc);
+				//status &= sb->htmlEncode (m->m_desc,
+				//			  gbstrlen(m->m_desc),
+				//			  false);
+
 			// and cgi parm if it exists
 			if ( m->m_def && m->m_scgi )
 				sb->safePrintf(" CGI override: %s.",m->m_scgi);
@@ -2810,8 +1737,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ( "<td>" );
 	}
 
-	long cast = m->m_cast;
-	if ( g_proxy.isProxy() ) cast = 0;
+	//long cast = m->m_cast;
+	//if ( g_proxy.isProxy() ) cast = 0;
 
 	// print the input box
 	if ( t == TYPE_BOOL ) {
@@ -2823,18 +1750,20 @@ bool Parms::printParm ( SafeBuf* sb,
 		// if cast=1, command IS broadcast to all hosts
 		else 
 			sb->safePrintf ( "<b><a href=\"/%s?c=%s&"
-					 "%s=%s&cast=%li\">"
+					 "%s=%s\">" // &cast=%li\">"
 					 "<center>%s</center></a></b>", 
 					 g_pages.getPath(m->m_page),coll,
-					 cgi,v,cast,tt);
+					 cgi,v,//cast,
+					 tt);
 	}
 	else if ( t == TYPE_BOOL2 ) {
 		if ( g_conf.m_readOnlyMode && m->m_rdonly )
-			sb->safePrintf ( "<b><center>read-only mode</center></b>");
+			sb->safePrintf ( "<b><center>read-only mode"
+					 "</center></b>");
 		// always use m_def as the value for TYPE_BOOL2
 		else
-			sb->safePrintf ( "<b><a href=\"/%s?c=%s&%s=%s&"
-					 "cast=1\">"
+			sb->safePrintf ( "<b><a href=\"/%s?c=%s&%s=%s\">"
+					 //"cast=1\">"
 					 "<center>%s</center></a></b>", 
 					 g_pages.getPath(m->m_page),coll,
 					 cgi,m->m_def, m->m_title);
@@ -2863,7 +1792,11 @@ bool Parms::printParm ( SafeBuf* sb,
 			//char *val = "Y";
 			//if ( ! *s ) val = "N";
 			char *val = "";
-			if ( *s ) val = " checked";
+			// "s" is invalid of parm has no "object"
+			if ( m->m_obj == OBJ_NONE && m->m_def[0] != '0' )
+				val = " checked";
+			if ( m->m_obj != OBJ_NONE && *s ) 
+				val = " checked";
 			// in case it is not checked, submit that!
 			// if it gets checked this should be overridden then
 			sb->safePrintf("<input type=hidden name=%s value=0>"
@@ -2924,6 +1857,9 @@ bool Parms::printParm ( SafeBuf* sb,
 	//}
 	else if ( t == TYPE_RETRIES    ) 
 		printDropDown ( 4 , sb , cgi , *s , false , false );
+	else if ( t == TYPE_FILEUPLOADBUTTON    ) {
+		sb->safePrintf("<input type=file name=urls>");
+	}
 	else if ( t == TYPE_PRIORITY_BOXES ) {
 		// print ALL the checkboxes when we get the first parm
 		if ( j != 0 ) return status;
@@ -2933,10 +1869,10 @@ bool Parms::printParm ( SafeBuf* sb,
 		// if cast=0 it will be executed, otherwise it will be
 		// broadcasted with cast=1 to all hosts and they will all
 		// execute it
-		sb->safePrintf ( "<b><a href=\"/%s?c=%s&%s=1&cast=%li\">"
+		sb->safePrintf ( "<b><a href=\"/%s?c=%s&%s=1\">" // cast=%li
 			  "<center>%s</center></a></b>",
 			  g_pages.getPath(m->m_page),coll,
-			  cgi,cast,m->m_title);
+			  cgi,m->m_title);
 	else if ( t == TYPE_FLOAT ) {
 		// just show the parm name and value if printing in json
 		if ( isJSON )
@@ -3030,9 +1966,22 @@ bool Parms::printParm ( SafeBuf* sb,
 			if ( sx->length() ) {
 				// convert diffbot # to string
 				sb->safePrintf("\"%s\":\"",cgi);
-				sb->safeUtf8ToJSON (sx->getBufStart() );
+				if ( m->m_obj != OBJ_NONE )
+					sb->safeUtf8ToJSON (sx->getBufStart());
 				sb->safePrintf("\",\n");
 			}
+		}
+		else if ( m->m_flags & PF_TEXTAREA ) {
+			sb->safePrintf ("<textarea name=%s rows=10 cols=80>",
+					cgi);
+			//sb->dequote ( s , gbstrlen(s) );
+			// note it
+			//log("hack: %s",sx->getBufStart());
+			//sb->dequote ( sx->getBufStart() , sx->length() );
+			if ( m->m_obj != OBJ_NONE )
+				sb->htmlEncode(sx->getBufStart(),
+					       sx->length(),false);
+			sb->safePrintf ("</textarea>");
 		}
 		else {
 			sb->safePrintf ("<input type=text name=%s size=%li "
@@ -3041,7 +1990,9 @@ bool Parms::printParm ( SafeBuf* sb,
 			//sb->dequote ( s , gbstrlen(s) );
 			// note it
 			//log("hack: %s",sx->getBufStart());
-			sb->dequote ( sx->getBufStart() , sx->length() );
+			// if parm is OBJ_NONE there is no stored valued
+			if ( m->m_obj != OBJ_NONE )
+				sb->dequote ( sx->getBufStart(), sx->length());
 			sb->safePrintf ("\">");
 		}
 	}
@@ -3182,7 +2133,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 	// "insert above" link? used for arrays only, where order matters
 	if ( m->m_addin && j < jend && ! isJSON ) {
-		sb->safePrintf ( "<td><a href=\"?c=%s&cast=1&"
+		sb->safePrintf ( "<td><a href=\"?c=%s&" // cast=1&"
 				 //"ins_%s=1\">insert</td>\n",coll,cgi );
 				 // insert=<rowNum>
 				 // "j" is the row #
@@ -3191,17 +2142,18 @@ bool Parms::printParm ( SafeBuf* sb,
 
 	// does next guy start a new row?
 	bool lastInRow = true; // assume yes
-	if ( mm+1<m_numParms&&m->m_rowid>=0&&m_parms[mm+1].m_rowid==m->m_rowid)
+	if (mm+1<m_numParms&&m->m_rowid>=0&&m_parms[mm+1].m_rowid==m->m_rowid)
 		lastInRow = false;
 	if ( ((s_count-1) % nc) != (nc-1) ) lastInRow = false;
 
 	// . display the remove link for arrays if we need to
 	// . but don't display if next guy does NOT start a new row
-	if ( m->m_max > 1 && lastInRow && ! isJSON ) {
+	//if ( m->m_max > 1 && lastInRow && ! isJSON ) {
+	if ( m->m_addin && j < jend && ! isJSON ) {
 	//     m->m_page != PAGE_PRIORITIES ) {
 		// show remove link?
 		bool show = true;
-		if ( j >= jend )  show = false;
+		//if ( j >= jend )  show = false;
 		// get # of rows
 		long *nr = (long *)((char *)THIS + m->m_off - 4);
 		// are we the last row?
@@ -3209,11 +2161,16 @@ bool Parms::printParm ( SafeBuf* sb,
 		// yes, if this is true
 		if ( j == *nr - 1 ) lastRow = true;
 		// do not allow removal of last default url filters rule
-		if ( lastRow && !strcmp(m->m_cgi,"fsp")) show = false;
+		//if ( lastRow && !strcmp(m->m_cgi,"fsp")) show = false;
 		char *suffix = "";
-		if ( m->m_page == PAGE_SECURITY ) suffix = "ip";
+		if ( m->m_page == PAGE_SECURITY &&
+		     m->m_type == TYPE_IP ) 
+			suffix = "ip";
+		if ( m->m_page == PAGE_SECURITY &&
+		     m->m_type == TYPE_STRINGNONEMPTY ) 
+			suffix = "pwd";
 		if ( show )
-			sb->safePrintf ("<td><a href=\"?c=%s&cast=1&"
+			sb->safePrintf ("<td><a href=\"?c=%s&" // cast=1&"
 					//"rm_%s=1\">"
 					// remove=<rownum>
 					"remove%s=%li\">"
@@ -3229,10 +2186,11 @@ bool Parms::printParm ( SafeBuf* sb,
 	return status;
 }
 
+/*
 // get the object of our desire
 char *Parms::getTHIS ( HttpRequest *r , long page ) {
 	// if not master controls, must be a collection rec
-	if ( page < PAGE_CGIPARMS ) return (char *)&g_conf;
+	//if ( page < PAGE_CGIPARMS ) return (char *)&g_conf;
 	char *coll = r->getString ( "c" );
 	// support john wanting to use "id" for the crawl id which is really
 	// the collection id, hopefully won't conflict with other things.
@@ -3245,6 +2203,7 @@ char *Parms::getTHIS ( HttpRequest *r , long page ) {
 			r->getString("c") );
 	return (char *)cr;
 }
+*/
 
 /*
 
@@ -3625,6 +2584,8 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	// . some parms are just for SearchInput (search parms)
 	if ( m->m_off < 0 ) return;
 
+	if ( m->m_obj == OBJ_NONE ) return ;
+
 	float oldVal = 0;
 	float newVal = 0;
 
@@ -3684,6 +2645,9 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	}
 
 	char  t   = m->m_type;
+
+	if ( t == TYPE_FILEUPLOADBUTTON ) { char *xx=NULL;*xx=0; }
+
 	if      ( t == TYPE_CHAR           || 
 		  t == TYPE_CHAR2          || 
 		  t == TYPE_CHECKBOX       ||
@@ -3903,12 +2867,19 @@ void Parms::setToDefault ( char *THIS ) {
 
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		Parm *m = &m_parms[i];
+		if ( m->m_obj == OBJ_NONE ) continue;
 		if ( m->m_type == TYPE_COMMENT ) continue;
+		if ( m->m_type == TYPE_FILEUPLOADBUTTON ) 
+			continue;
 		if ( m->m_type == TYPE_MONOD2  ) continue;
 		if ( m->m_type == TYPE_MONOM2  ) continue;
 		if ( m->m_type == TYPE_CMD     ) continue;
 		if (THIS == (char *)&g_conf && m->m_obj != OBJ_CONF ) continue;
 		if (THIS != (char *)&g_conf && m->m_obj == OBJ_CONF ) continue;
+		if ( THIS != (char *)&g_conf ) {
+			CollectionRec *cr = (CollectionRec *)THIS;
+			if ( cr->m_bases[1] ) { char *xx=NULL;*xx=0; }
+		}
 		// sanity check, make sure it does not overflow
 		if ( m->m_obj != OBJ_CONF && 
 		     m->m_off > (long)sizeof(CollectionRec)){
@@ -4006,6 +2977,7 @@ bool Parms::setFromFile ( void *THIS        ,
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		// get it
 		Parm *m = &m_parms[i];
+		if ( m->m_obj == OBJ_NONE ) continue;
 		//log(LOG_DEBUG, "Parms: %s: parm: %s", filename, m->m_xml);
 		// . there are 2 object types, coll recs and g_conf, aka
 		//   OBJ_COLL and OBJ_CONF.
@@ -4014,6 +2986,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		if ( THIS != &g_conf && m->m_obj == OBJ_CONF ) continue;
 		// skip comments and command
 		if ( m->m_type == TYPE_COMMENT  ) continue;
+		if ( m->m_type == TYPE_FILEUPLOADBUTTON ) continue;
 		if ( m->m_type == TYPE_MONOD2   ) continue;
 		if ( m->m_type == TYPE_MONOM2   ) continue;
 		if ( m->m_type == TYPE_CMD      ) continue;
@@ -4033,6 +3006,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		long nb;
 		long newnn;
 	loop:
+		if ( m->m_obj == OBJ_NONE ) { char *xx=NULL;*xx=0; }
 		// get xml node number of m->m_xml in the "xml" file
 		newnn = xml.getNodeNum(nn,1000000,m->m_xml,gbstrlen(m->m_xml));
 #ifdef _GLOBALSPEC_
@@ -4204,6 +3178,10 @@ bool Parms::setFromFile ( void *THIS        ,
 		continue;
 	}
 
+	/*
+
+	  // no! now we warn with a redbox alert
+
 	// always make sure we got some admin security
 	if ( g_conf.m_numMasterIps <= 0 && g_conf.m_numMasterPwds <= 0 ) {
 		//log(LOG_INFO,
@@ -4214,6 +3192,7 @@ bool Parms::setFromFile ( void *THIS        ,
 		strcpy ( g_conf.m_masterPwds[0] , "footbar23" );
 		g_conf.m_numMasterPwds = 1;
 	}
+	*/
 
 	return true;
 }
@@ -4298,12 +3277,18 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 		// . there are 2 object types, coll recs and g_conf, aka
 		//   OBJ_COLL and OBJ_CONF.
 		// . make sure we got the right parms for what we want
+		if ( m->m_obj == OBJ_NONE ) continue;
+		// skip dups
+		if ( m->m_flags & PF_DUP ) continue;
+		// do not allow searchinput parms through
+		if ( m->m_obj == OBJ_SI ) continue;
 		if ( THIS == (char *)&g_conf && m->m_obj != OBJ_CONF) continue;
 		if ( THIS != (char *)&g_conf && m->m_obj == OBJ_CONF) continue;
 		if ( m->m_type == TYPE_MONOD2  ) continue;
 		if ( m->m_type == TYPE_MONOM2  ) continue;
 		if ( m->m_type == TYPE_CMD ) continue;
 		if ( m->m_type == TYPE_BOOL2 ) continue;
+		if ( m->m_type == TYPE_FILEUPLOADBUTTON ) continue;
 		// ignore if hidden as well! no, have to keep those separate
 		// since spiderroundnum/starttime is hidden but should be saved
 		if ( m->m_flags & PF_NOSAVE ) continue;
@@ -4317,17 +3302,16 @@ bool Parms::saveToXml ( char *THIS , char *f ) {
 		if ( m->m_type == TYPE_COMMENT ) goto skip2;
 		// skip if this was compiled for a client and they should not
 		// see this control
-#ifdef _GLOBALSPEC_
-		if ( m->m_priv == 2 ) continue;
-		if ( m->m_priv == 3 ) continue;
-#elif _CLIENT_
-		if ( m->m_priv ) continue;
-#elif _METALINCS_
-		if ( m->m_priv == 2 ) continue;
-		if ( m->m_priv == 3 ) continue;
-#endif
+		//#ifdef _GLOBALSPEC_
+		//		if ( m->m_priv == 2 ) continue;
+		//		if ( m->m_priv == 3 ) continue;
+		//#elif _CLIENT_
+		//		if ( m->m_priv ) continue;
+		//#elif _METALINCS_
+		//		if ( m->m_priv == 2 ) continue;
+		//		if ( m->m_priv == 3 ) continue;
+		//#endif
 		// skip if offset is negative, that means none
-		if ( m->m_off < 0 ) continue;
 		s = (char *)THIS + m->m_off ;
 		// if array, count can be 0 or more than 1
 		count = 1;
@@ -8493,12 +7477,216 @@ void Parms::init ( ) {
 	m->m_plen  = (char *)&g_conf.m_banRegexLen - g; // length of string
 	m++;
 
+	///////////
+	//
+	// ADD URL PARMS
+	//
+	///////////
+	m->m_title = "urls to add";
+	m->m_desc  = "List of urls to index. One per line or space separated. "
+		"If your url does not index as you expect you "
+		"can check it's history. " // (spiderdb lookup)
+		"Added urls will have a "
+		"<a href=/admin/scheduler#hopcount>hopcount</a> of 0. "
+		"The add url api is described on the "
+		"<a href=/admin/api>api</a> page.";
+	m->m_cgi   = "urls";
+	m->m_page  = PAGE_ADDURL2;
+	m->m_obj   = OBJ_NONE; // do not store in g_conf or collectionrec
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = "";
+	m->m_flags = PF_NOSAVE;
+	m->m_flags = PF_TEXTAREA;
+	m++;
+
+	// the new upload post submit button
+	m->m_title = "upload urls";
+	m->m_desc  = "Upload your file of urls.";
+	m->m_cgi   = "urls";
+	m->m_page  = PAGE_ADDURL2;
+	m->m_obj   = OBJ_NONE;
+	m->m_type  = TYPE_FILEUPLOADBUTTON;
+	m++;
+
+	m->m_title = "strip sessionids";
+	m->m_desc  = "strip added urls of their session ids.";
+	m->m_cgi   = "strip";
+	m->m_page  = PAGE_ADDURL2;
+	m->m_obj   = OBJ_NONE;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "1";
+	m++;
+
+	m->m_title = "harvest links";
+	m->m_desc  = "harvest links of added urls so we can spider them?.";
+	m->m_cgi   = "spiderLinks";
+	m->m_page  = PAGE_ADDURL2;
+	m->m_obj   = OBJ_NONE;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "1";
+	m++;
+
+	m->m_title = "force respider";
+	m->m_desc  = "Force an immediate respider even if the url "
+		"is already indexed.";
+	m->m_cgi   = "force";
+	m->m_page  = PAGE_ADDURL2;
+	m->m_obj   = OBJ_NONE;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "0";
+	m++;
+
+
+
+	///////////////////////////////////////////
+	// BASIC SETTINGS
+	///////////////////////////////////////////
+
+	m->m_title = "spidering enabled";
+	m->m_desc  = "Pause and resumes spidering for this collection.";
+	m->m_cgi   = "bcse";
+	m->m_off   = (char *)&cr.m_spideringEnabled - x;
+	m->m_page  = PAGE_BASIC_SETTINGS;
+	m->m_obj   = OBJ_COLL;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_flags = PF_DUP;
+	m++;
+
+	m->m_title = "site list";
+	m->m_xml   = "siteList";
+	m->m_desc  = "List of sites to spider, one per line. "
+		"Gigablast uses the "
+		"<a href=/admin/scheduler#insitelist>insitelist</a> "
+		"directive on "
+		"the <a href=/admin/scheduler>spider scheduler</a> "
+		"page to make sure that the spider only indexes urls "
+		"that match the site patterns you specify here, other than "
+		"urls you add individually via the add urls or inject url "
+		"tools. "
+		"See <a href=#examples>example site list</a> below. "
+		"Limit list to 300MB. If you have a lot of INDIVIDUAL URLS "
+		"to add then consider using the <a href=/admin/addurl>addurl"
+		"</a> interface.";
+	m->m_cgi   = "sitelist";
+	m->m_off   = (char *)&cr.m_siteListBuf - x;
+	m->m_page  = PAGE_BASIC_SETTINGS;
+	m->m_obj   = OBJ_COLL;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = "";
+	// rebuild urlfilters now will nuke doledb and call updateSiteList()
+	m->m_flags = PF_TEXTAREA | PF_DUP | PF_REBUILDURLFILTERS;
+	m++;
+
+	/*
+	m->m_title = "spider sites";
+	m->m_desc  = "Attempt to spider and index urls in the "
+		"\"site patterns\" above. Saves you from having to add "
+		"the same list of sites on the <a href=/admin/addurl>"
+		"add url</a> page.";
+	m->m_cgi   = "spiderToo";
+	m->m_off   = (char *)&cr.m_spiderToo - x;
+	m->m_page  = PAGE_BASIC_SETTINGS;
+	m->m_obj   = OBJ_COLL;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "1";
+	m->m_flags = PF_NOSAVE | PF_DUP;
+	m++;
+	*/
+
+	// the new upload post submit button
+	m->m_title = "upload site list";
+	m->m_desc  = "Upload your file of site patterns. Completely replaces "
+		"the site list in the text box above.";
+	m->m_cgi   = "uploadsitelist";
+	m->m_page  = PAGE_BASIC_SETTINGS;
+	m->m_obj   = OBJ_COLL;
+	m->m_off   = 0;
+	m->m_type  = TYPE_FILEUPLOADBUTTON;
+	m->m_flags = PF_NOSAVE | PF_DUP;
+	m++;
+
+	m->m_title = "restart collection";
+	m->m_desc  = "Remove all documents from this collection and starts "
+		"spidering over again. If you do this accidentally there "
+		"is a <a href=/admin.html#recover>recovery procedure</a> to "
+		"get back the trashed data.";
+	m->m_cgi   = "restart";
+	m->m_page  = PAGE_BASIC_SETTINGS;
+	m->m_obj   = OBJ_COLL;
+	m->m_type  = TYPE_CMD;
+	m->m_func2 = CommandRestartColl;
+	m++;
+
+	///////////////////////////////////////////
+	// SITE LIST
+	///////////////////////////////////////////
+	m->m_title = "site list";
+	m->m_xml   = "siteList";
+	m->m_desc  = "List of sites to spider, one per line. "
+		"Gigablast uses the "
+		"<a href=/admin/scheduler#insitelist>insitelist</a> "
+		"directive on "
+		"the <a href=/admin/scheduler>spider scheduler</a> "
+		"page to make sure that the spider only indexes urls "
+		"that match the site patterns you specify here, other than "
+		"urls you add individually via the add urls or inject url "
+		"tools. "
+		"See <a href=#examples>example site list</a> below. "
+		"Limit list to 300MB. If you have a lot of INDIVIDUAL URLS "
+		"to add then consider using the <a href=/admin/addurl>addurl"
+		"</a> interface.";
+	m->m_cgi   = "sitelist";
+	m->m_off   = (char *)&cr.m_siteListBuf - x;
+	m->m_page  = PAGE_SITES;
+	m->m_obj   = OBJ_COLL;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = "";
+	// rebuild urlfilters now will nuke doledb and call updateSiteList()
+	m->m_flags = PF_TEXTAREA | PF_REBUILDURLFILTERS;
+	m++;
+
+	/*
+	m->m_title = "spider sites";
+	m->m_desc  = "Attempt to spider and index urls in the "
+		"\"site patterns\" above. Saves you from having to add "
+		"the same list of sites on the <a href=/admin/addurl>"
+		"add url</a> page.";
+	m->m_cgi   = "spiderToo";
+	m->m_off   = (char *)&cr.m_spiderToo - x;
+	m->m_page  = PAGE_SITES;
+	m->m_obj   = OBJ_COLL;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "1";
+	m->m_flags = PF_NOSAVE ;
+	m++;
+	*/
+	
 	
 	///////////////////////////////////////////
 	// SECURITY CONTROLS
 	///////////////////////////////////////////
 
-	m->m_title = "Admin IPs";
+
+	m->m_title = "Master Passwords";
+	m->m_desc  = "Any matching password will have administrative access "
+		"to Gigablast and all collections.";
+		//"If no Admin Password or Admin IP is specified then "
+		//"Gigablast will only allow local IPs to connect to it "
+		//"as the master admin.";
+	m->m_cgi   = "masterpwd";
+	m->m_xml   = "masterPassword";
+	m->m_obj   = OBJ_CONF;
+	m->m_max   = MAX_MASTER_PASSWORDS;
+	m->m_off   = (char *)&g_conf.m_masterPwds - g;
+	m->m_type  = TYPE_STRINGNONEMPTY;
+	m->m_size  = PASSWORD_MAX_LEN+1;
+	m->m_page  = PAGE_SECURITY;
+	m->m_addin = 1; // "insert" follows?
+	m++;
+
+
+	m->m_title = "Master IPs";
 	//m->m_desc = "Allow UDP requests from this list of IPs. Any datagram "
 	//	"received not coming from one of these IPs, or an IP in "
 	//	"hosts.conf, is dropped. If another cluster is accessing this "
@@ -8509,15 +7697,16 @@ void Parms::init ( ) {
 	//	"their Least Significant Byte are treated as wildcards for "
 	//	"IP blocks. That is, 1.2.3.0 means 1.2.3.*.";
 	m->m_desc  = "Any IPs in this list will have administrative access "
-		"to the Gigablast search engine.";
-	m->m_cgi   = "adminip";
-	m->m_xml   = "adminIp";
+		"to Gigablast and all collections.";
+	m->m_cgi   = "masterip";
+	m->m_xml   = "masterIp";
 	m->m_page  = PAGE_SECURITY;
 	m->m_max   = MAX_CONNECT_IPS;
 	m->m_off   = (char *)g_conf.m_connectIps - g;
 	m->m_type  = TYPE_IP;
 	m->m_priv  = 2;
 	m->m_def   = "";
+	m->m_addin = 1; // "insert" follows?
 	//m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
@@ -8527,6 +7716,15 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
 	m->m_func  = CommandRemoveConnectIpRow;
+	m->m_cast  = 1;
+	m++;
+
+	m->m_title = "remove a password";
+	m->m_desc  = "remove a password";
+	m->m_cgi   = "removepwd";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_func  = CommandRemovePasswordRow;
 	m->m_cast  = 1;
 	m++;
 
@@ -8581,20 +7779,7 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	/*m->m_title = "Master Passwords";
-	m->m_desc  = "Passwords allowed to change Gigablast's general "
-		"parameters and also the parameters for any collection. "
-		"If no Master Password or Master IP is specified then "
-		"Gigablast will assign a default password of footbar23.";
-	m->m_cgi   = "mpwd";
-	m->m_xml   = "masterPassword";
-	m->m_max   = MAX_MASTER_PASSWORDS;
-	m->m_off   = (char *)&g_conf.m_masterPwds - g;
-	m->m_type  = TYPE_STRINGNONEMPTY;
-	m->m_size  = PASSWORD_MAX_LEN+1;
-	m->m_page  = PAGE_SECURITY;
-	m++;
-
+	/*
 	m->m_title = "Master IPs";
 	m->m_desc  = "If someone connects from one of these IPs "
 		"then they will have full "
@@ -8624,6 +7809,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_page  = PAGE_LOG;
+	m->m_obj   = OBJ_CONF;
 	m++;
 
 	m->m_title = "log autobanned queries";
@@ -14035,7 +13221,9 @@ void Parms::init ( ) {
 		"expressions. "
 		"Use the <i>&&</i> operator to string multiple expressions "
 		"together in the same expression text box. "
-		"A <i>spider priority</i> of <i>FILTERED</i> or <i>BANNED</i> "
+		"A <i>spider priority</i> of "
+		//"<i>FILTERED</i> or <i>BANNED</i> "
+		"<i>DELETE</i> "
 		"will cause the URL to not be spidered, or if it has already "
 		"been indexed, it will be deleted when it is respidered."
 		"<br><br>";
@@ -16920,6 +16108,12 @@ void Parms::init ( ) {
 		if ( m_parms[j].m_type == TYPE_BOOL2 ) continue;
 		if ( m_parms[i].m_type == TYPE_CMD   ) continue;
 		if ( m_parms[j].m_type == TYPE_CMD   ) continue;
+		if ( m_parms[i].m_type == TYPE_FILEUPLOADBUTTON ) continue;
+		if ( m_parms[j].m_type == TYPE_FILEUPLOADBUTTON ) continue;
+		if ( m_parms[i].m_obj == OBJ_NONE ) continue;
+		if ( m_parms[j].m_obj == OBJ_NONE ) continue;
+		if ( m_parms[i].m_flags & PF_DUP ) continue;
+		if ( m_parms[j].m_flags & PF_DUP ) continue;
 		if ( ! m_parms[i].m_cgi ) continue;
 		if ( ! m_parms[j].m_cgi ) continue;
 		// a different m_scmd means a different cgi parm really...
@@ -16929,6 +16123,9 @@ void Parms::init ( ) {
 		if ( strcmp ( m_parms[i].m_cgi , m_parms[j].m_cgi ) != 0 &&
 		     // ensure cgi hashes are different as well!
 		     m_parms[i].m_cgiHash != m_parms[j].m_cgiHash )
+			continue;
+		// upload file buttons are always dup of another parm
+		if ( m_parms[j].m_type == TYPE_FILEUPLOADBUTTON )
 			continue;
 		log(LOG_LOGIC,"conf: Cgi parm for #%li \"%s\" "
 		    "matches #%li \"%s\". Exiting.",
@@ -17015,6 +16212,7 @@ void Parms::init ( ) {
 		// comments and commands do not control underlying variables
 		if ( size == 0 && t != TYPE_COMMENT && t != TYPE_CMD &&
 		     t != TYPE_SAFEBUF  &&
+		     t != TYPE_FILEUPLOADBUTTON &&
 		     t != TYPE_CONSTANT &&
 		     t != TYPE_MONOD2   &&
 		     t != TYPE_MONOM2     ) {
@@ -17025,7 +16223,9 @@ void Parms::init ( ) {
 		m_parms[i].m_size = size;
 	skipSize:
 		// check offset
+		if ( m_parms[i].m_obj == OBJ_NONE ) continue;
 		if ( t == TYPE_COMMENT  ) continue;
+		if ( t == TYPE_FILEUPLOADBUTTON ) continue;
 		if ( t == TYPE_CMD      ) continue;
 		if ( t == TYPE_CONSTANT ) continue;
 		if ( t == TYPE_MONOD2   ) continue;
@@ -17136,11 +16336,15 @@ void Parms::overlapTest ( char step ) {
 
 		// skip comments
 		if ( m_parms[i].m_type == TYPE_COMMENT ) continue;
+		if ( m_parms[i].m_type == TYPE_FILEUPLOADBUTTON ) continue;
 		// skip if it is a broadcast switch, like "all spiders on"
 		// because that modifies another parm, "spidering enabled"
 		if ( m_parms[i].m_type == TYPE_BOOL2 ) continue;
 
 		if ( m_parms[i].m_type == TYPE_SAFEBUF ) continue;
+
+		// we use cr->m_spideringEnabled for PAGE_BASIC_SETTINGS too!
+		if ( m_parms[i].m_flags & PF_DUP ) continue;
 
 		p1 = NULL;
 		if ( m_parms[i].m_obj == OBJ_COLL ) p1 = (char *)&tmpcr;
@@ -17178,11 +16382,15 @@ void Parms::overlapTest ( char step ) {
 
 		// skip comments
 		if ( m_parms[i].m_type == TYPE_COMMENT ) continue;
+		if ( m_parms[i].m_type == TYPE_FILEUPLOADBUTTON ) continue;
 		// skip if it is a broadcast switch, like "all spiders on"
 		// because that modifies another parm, "spidering enabled"
 		if ( m_parms[i].m_type == TYPE_BOOL2 ) continue;
 
 		if ( m_parms[i].m_type == TYPE_SAFEBUF ) continue;
+
+		// we use cr->m_spideringEnabled for PAGE_BASIC_SETTINGS too!
+		if ( m_parms[i].m_flags & PF_DUP ) continue;
 
 		p1 = NULL;
 		if ( m_parms[i].m_obj == OBJ_COLL ) p1 = (char *)&tmpcr;
@@ -17251,6 +16459,8 @@ void Parms::overlapTest ( char step ) {
 		if ( m_parms[i].m_obj == OBJ_CONF ) p1 = (char *)&tmpconf;
 		// skip if comment
 		if ( m_parms[i].m_type == TYPE_COMMENT ) continue;
+		if ( m_parms[i].m_type == TYPE_FILEUPLOADBUTTON ) continue;
+		if ( m_parms[i].m_flags & PF_DUP ) continue;
 		// skip if no match
 		//bool match = false;
 		//if ( m_parms[i].m_obj == obj ) match = true;
@@ -17534,24 +16744,24 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	//}
 	
 	// might be g_conf specific, not coll specific
-	bool hasPerm = false;
+	//bool hasPerm = false;
 	// just knowing the collection name of a custom crawl means you
 	// know the token, so you have permission
-	if ( cr && cr->m_isCustomCrawl ) hasPerm = true;
-	if ( hr->isLocal() ) hasPerm = true;
+	//if ( cr && cr->m_isCustomCrawl ) hasPerm = true;
+	//if ( hr->isLocal() ) hasPerm = true;
 
 	// fix jenkins "GET /v2/crawl?token=crawlbottesting" request
 	char *name  = hr->getString("name");
 	char *token = hr->getString("token");
-	if ( ! cr && token ) hasPerm = true;
+	//if ( ! cr && token ) hasPerm = true;
 
-	if ( ! hasPerm ) {
-		//log("parms: no permission to set parms");
-		//g_errno = ENOPERM;
-		//return false;
-		// just leave the parm list empty and fail silently
-		return true;
-	}
+	//if ( ! hasPerm ) {
+	//	//log("parms: no permission to set parms");
+	//	//g_errno = ENOPERM;
+	//	//return false;
+	//	// just leave the parm list empty and fail silently
+	//	return true;
+	//}
 
 	// we set the parms in this collnum
 	collnum_t parmCollnum = -1;
@@ -17576,14 +16786,15 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	if ( strncmp(path,"/crawlbot",9) == 0 ) customCrawl = 1;
 	if ( strncmp(path,"/v2/crawl",9) == 0 ) customCrawl = 1;
 	if ( strncmp(path,"/v2/bulk" ,8) == 0 ) customCrawl = 2;
-    if (cr) {
-        // throw error if collection record custom crawl type doesn't equal the crawl type of current request
-        if (customCrawl != cr->m_isCustomCrawl) {
-            g_errno = ECUSTOMCRAWLMISMATCH;
-            return false;
+
+        // throw error if collection record custom crawl type doesn't equal 
+	// the crawl type of current request
+	if (cr && customCrawl && customCrawl != cr->m_isCustomCrawl ) {
+		g_errno = ECUSTOMCRAWLMISMATCH;
+		return false;
         }
-    }
-    bool hasAddCrawl = hr->hasField("addCrawl");
+
+	bool hasAddCrawl = hr->hasField("addCrawl");
 	bool hasAddBulk  = hr->hasField("addBulk");
 	bool hasAddColl  = hr->hasField("addColl");
 	// sometimes they try to delete a collection that is not there so do
@@ -17756,6 +16967,9 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		if ( ! m ) continue;
 		if ( m->m_type == TYPE_CMD ) continue;
 
+		if ( m->m_obj == OBJ_NONE ) continue;
+		if ( m->m_obj == OBJ_SI ) continue;
+
 		// add it to a list now
 		if ( ! addNewParmToList2 ( parmList ,
 					   // HACK! operate on the to-be-added
@@ -17791,6 +17005,7 @@ Parm *Parms::getParmFast2 ( long cgiHash32 ) {
 			Parm *parm = &m_parms[i];
 			// skip comments
 			if ( parm->m_type == TYPE_COMMENT ) continue;
+			if ( parm->m_type == TYPE_FILEUPLOADBUTTON ) continue;
 			// skip if no cgi
 			if ( ! parm->m_cgi ) continue;
 			// get its hash of its cgi
@@ -18218,13 +17433,7 @@ bool Parms::doParmSendingLoop ( ) {
 						 -1 , // maxwait
 						 NULL , // replybuf
 						 0 , // replybufmaxsize
-						 // CRAP! we can't use 0 any
-						 // more because we quickpolled
-						 // in Spider.cpp::
-						 // getUrlFilterNum2() and
-						 // changed the # of numRegExs
-						 // and then cored!
-						 MAX_NICENESS ) ) { // niceness
+						 0 ) ) { // niceness
 			log("parms: faild to send: %s",mstrerror(g_errno));
 			continue;
 		}
@@ -18376,25 +17585,14 @@ void handleRequest3fLoop ( void *weArg ) {
 		// . this tells Spider.cpp to rebuild the spider queues
 		// . this is NULL if spider stuff never initialized yet,
 		//   like if you just added the collection
-		if ( cx->m_spiderColl ) {
-			log("parms: forcing waiting tree rebuild");
+		if ( cx->m_spiderColl )
 			cx->m_spiderColl->m_waitingTreeNeedsRebuild = true;
-			// reset dup cache because rebuilding the waiting tree
-			cx->m_spiderColl->m_dupCache.reset();//clear(0);
-		}
 		// . assume we have urls ready to spider too
 		// . no, because if they change the filters and there are
 		//   still no urls to spider i don't want to get another
 		//   email alert!!
-		// . no, we need to because it might have added one more
-		//   url to be spidered then it'll be done! otherwise
-		//   we can change our url filters to try to spider more urls
-		//   but nothing will happen if the job has already completed
-		//   unless we set these things to true
-		log("parms: reviving collection %s (%li) for parm change",
-		    cx->m_coll,(long)cx->m_collnum);
-		cx->m_localCrawlInfo .m_hasUrlsReadyToSpider = true;
-		cx->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
+		//cr->m_localCrawlInfo .m_hasUrlsReadyToSpider = true;
+		//cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider = true;
 		// . reconstruct the url filters if we were a custom crawl
 		// . this is used to abstract away the complexity of url
 		//   filters in favor of simple regular expressions and
@@ -18730,6 +17928,7 @@ bool Parms::addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) {
 		Parm *parm = &m_parms[i];
 		// skip comments
 		if ( parm->m_type == TYPE_COMMENT ) continue;
+		if ( parm->m_type == TYPE_FILEUPLOADBUTTON ) continue;
 		// cmds
 		if ( parm->m_type == TYPE_CMD ) continue;
 		if ( parm->m_type == TYPE_BOOL2 ) continue;
@@ -18869,17 +18068,16 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 
 	// point to where to copy the data into collrect
 	char *dst = (char *)base + parm->m_off;
+	// point to count in case it is an array
+	long *countPtr = NULL;
 	// array?
 	if ( parm->isArray() ) {
 		if ( occNum < 0 ) {
 			log("parms: bad occnum for %s",parm->m_title);
 			return false;
 		}
-		// the long before the array is the # of elements
-		long currentCount = *((long *)(dst-4));
-		// update our # elements in our array if this is bigger
-		long newCount = occNum + 1;
-		if ( newCount > currentCount ) *((long *)(dst-4)) = newCount;
+		// point to count in case it is an array
+		countPtr = (long *)(dst - 4);
 		// now point "dst" to the occNum-th element
 		dst += parm->m_size * occNum;
 	}
@@ -18900,7 +18098,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		//if ( ! data || dataSize <= 0 ) { char *xx=NULL;*xx=0; }
 		// check for \0
 		if ( data && dataSize > 0 ) {
-			if ( data[dataSize-1] != '\0') { char *xx=NULL;*xx=0; }
+			if ( data[dataSize-1] != '\0') { char *xx=NULL;*xx=0;}
 			// this means that we can not use string POINTERS as 
 			// parms!! don't include \0 as part of length
 			sb->safeStrcpy ( data ); // , dataSize );
@@ -18909,7 +18107,7 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 		}
 		//return true;
 		// sanity
-		// we no longer include the \0 in the dataSize... so a dataSize
+		// we no longer include the \0 in the dataSize...so a dataSize
 		// of 0 means empty string...
 		//if ( data[dataSize-1] != '\0' ) { char *xx=NULL;*xx=0; }
 	}
@@ -18921,21 +18119,52 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	SafeBuf val2;
 	parm->printVal ( &val2 , collnum , occNum );
 
-	// all done if value was unchanged
+	// did this parm change value?
+	bool changed = true;
 	if ( strcmp ( val1.getBufStart() , val2.getBufStart() ) == 0 )
-		return true;
+		changed = false;
 
-	char *coll = "";
-	if ( cr ) coll = cr->m_coll;
+	// . update array count if necessary
+	// . parm might not have changed value based on what was in there
+	//   by default, but for PAGE_FILTERS the default value in the row
+	//   for this parm might have been zero! so we gotta update its
+	//   "count" in that scenario even though the parm val was unchanged.
+	if ( parm->isArray() ) {
+		// the long before the array is the # of elements
+		long currentCount = *countPtr;
+		// update our # elements in our array if this is bigger
+		long newCount = occNum + 1;
+		bool updateCount = false;
+		if ( newCount > currentCount ) updateCount = true;
+		// do not update counts if we are url filters
+		// and we are currently >= the expression count. we have
+		// to have a non-empty expression at the end in order to
+		// add the expression. this prevents the empty line from
+		// being added!
+		if ( parm->m_page == PAGE_FILTERS &&
+		     cr->m_regExs[occNum].getLength() == 0 )
+			updateCount = false;
+		// and for other pages, like master ips, skip if empty!
+		// PAGE_PASSWORDS, PAGE_SECURITY, ...
+		if ( parm->m_page != PAGE_FILTERS && ! changed )
+			updateCount = false;
+
+		// ok, increment the array count of items in the array
+		if ( updateCount )
+			*countPtr = newCount;
+	}
+
+	// all done if value was unchanged
+	if ( ! changed )
+		return true;
 
 	// show it
 	log("parms: updating parm \"%s\" "
-	    "(%s[%li]) (collnum=%li) (coll=%s) from \"%s\" -> \"%s\"",
+	    "(%s[%li]) (collnum=%li) from \"%s\" -> \"%s\"",
 	    parm->m_title,
 	    parm->m_cgi,
 	    occNum,
 	    (long)collnum,
-	    coll,
 	    val1.getBufStart(),
 	    val2.getBufStart());
 
@@ -18949,6 +18178,9 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
 
 	CollectionRec *cr = NULL;
 	if ( collnum >= 0 ) cr = g_collectiondb.getRec ( collnum );
+
+	// no value if no storage record offset
+	//if ( m_off < 0 ) return true;
 
 	char *base;
 	if ( m_obj == OBJ_COLL ) base = (char *)cr;
@@ -19014,4 +18246,581 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
 
 	char *xx=NULL;*xx=0;
 	return false;
+}
+
+bool printUrlExpressionExamples ( SafeBuf *sb ) {
+
+		/*
+		CollectionRec *cr = (CollectionRec *)THIS;
+		// if testUrl is provided, find in the table
+		char testUrl [ 1025 ];
+		char *tt = r->getString ( "test" , NULL );
+		testUrl[0]='\0';
+		if ( tt ) strncpy ( testUrl , tt , 1024 );
+		char *tu = testUrl;
+		if ( ! tu ) tu = "";
+		char matchString[12];
+		matchString[0] = '\0';
+		if ( testUrl[0] ) {
+			Url u;
+			u.set ( testUrl , gbstrlen(testUrl) );
+			//since we don't know the doc's quality, sfn, or
+			//other stuff, just give default values
+			long n = cr->getRegExpNum ( &u    , 
+						    false ,  // links2gb?
+						    false ,  // searchboxToGB
+						    false ,  // onsite?
+						    -1    ,  // docQuality
+						    -1    ,  // hopCount
+						    false ,  // siteInDmoz?
+						    //-1  ,  // ruleset #
+						    -1    ,  // langId
+						    -1    ,  // parent priority
+						    0     ,  // niceness
+						    NULL  ,  // tagRec
+						    false ,  // isRSS?
+						    false ,  // isPermalink?
+						    false ,  // new outlink?
+						    -1    , // age
+						    NULL  , // LinkInfo
+						    NULL  , // parentUrl
+						    -1    , // priority
+						    false , // isAddUrl
+						    false , // parentRSS?
+						    false , // parentIsNew?
+						    false , // parentIsPermlnk
+						    false );// isIndexed?
+			if ( n == -1 ) sprintf ( matchString , "default" );
+			else           sprintf ( matchString, "%li", n+1 );
+		}
+		// test table
+		sb.safePrintf (
+			  //"</form><form method=get action=/cgi/14.cgi>"
+			  //"<input type=hidden name="
+			  "<table width=100%% cellpadding=4 border=1 "
+			  "bgcolor=#%s>"
+			  "<tr><td colspan=2 bgcolor=#%s><center>"
+			  //"<font size=+1>"
+			  "<b>"
+			  "URL Filters Test</b>"
+			  //"</font>"
+			  "</td></tr>"
+			  "<tr><td colspan=2>"
+			  "<font size=1>"
+			  "To test your URL filters simply enter a URL into "
+			  "this box and submit it. The URL filter line number "
+			  "that it matches will be displayed to the right."
+			  "</font>"
+			  "</td></tr>"
+			  "<tr>"
+			  "<td><b>Test URL</b></td>"
+			  "<td><b>Matching Expression #</b></td>"
+			  "</tr>"
+			  "<tr>"
+			  "<td><input type=text size=55 value=\"%s\" "
+			  "name=test> "
+			  "<input type=submit name=action value=test></td>"
+			  "<td>%s</td></tr></table><br><br>\n" ,
+			  LIGHT_BLUE , DARK_BLUE , testUrl , matchString );
+		*/
+
+		sb->safePrintf(
+			       "<style>"
+			       ".poo { background-color:#%s;}\n"
+			       "</style>\n" ,
+			       LIGHT_BLUE );
+
+		sb->safePrintf (
+			  "<table %s>"
+			  "<tr><td colspan=2><center>"
+			  "<b>"
+			  "Supported Expressions</b>"
+			  "</td></tr>"
+
+			  "<tr class=poo><td>default</td>"
+			  "<td>Matches every url."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>^http://whatever</td>"
+			  "<td>Matches if the url begins with "
+			  "<i>http://whatever</i>"
+			  "</td></tr>"
+
+			  "<tr class=poo><td>$.css</td>"
+			  "<td>Matches if the url ends with \".css\"."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>foobar</td>"
+			  "<td>Matches if the url CONTAINS <i>foobar</i>."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>tld==uk,jp</td>"
+			  "<td>Matches if url's TLD ends in \"uk\" or \"jp\"."
+			  "</td></tr>"
+
+			  /*
+			  "<tr class=poo><td>doc:quality&lt;40</td>"
+			  "<td>Matches if document quality is "
+			  "less than 40. Can be used for assigning to spider "
+			  "priority.</td></tr>"
+
+			  "<tr class=poo><td>doc:quality&lt;40 && tag:ruleset==22</td>"
+			  "<td>Matches if document quality less than 40 and "
+			  "belongs to ruleset 22. Only for assinging to "
+			  "spider priority.</td></tr>"
+
+			  "<tr class=poo><td><nobr>"
+			  "doc:quality&lt;40 && tag:manualban==1</nobr></td>"
+			  "<td>Matches if document quality less than 40 and "
+			  "is has a value of \"1\" for its \"manualban\" "
+			  "tag.</td></tr>"
+
+			  "<tr class=poo><td>tag:ruleset==33 && doc:quality&lt;40</td>"
+			  "<td>Matches if document quality less than 40 and "
+			  "belongs to ruleset 33. Only for assigning to "
+			  "spider priority or a banned ruleset.</td></tr>"
+			  */
+
+			  "<tr class=poo><td><a name=hopcount></a>"
+			  "hopcount<4 && iswww</td>"
+			  "<td>Matches if document has a hop count of 4, and "
+			  "is a \"www\" url (or domain-only url).</td></tr>"
+			  
+			  "<tr class=poo><td>hopcount</td>"
+			  "<td>All root urls, those that have only a single "
+			  "slash for their path, and no cgi parms, have a "
+			  "hop count of 0. Also, all RSS urls, ping "
+			  "server urls and site roots (as defined in the "
+			  "site rules table) have a hop count of 0. Their "
+			  "outlinks have a hop count of 1, and the outlinks "
+			  "of those outlinks a hop count of 2, etc."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>sitepages</td>"
+			  "<td>The number of pages that are currently indexed "
+			  "for the subdomain of the URL. "
+			  "Used for doing quotas."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>domainpages</td>"
+			  "<td>The number of pages that are currently indexed "
+			  "for the domain of the URL. "
+			  "Used for doing quotas."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>siteadds</td>"
+			  "<td>The number URLs manually added to the "
+			  "subdomain of the URL. Used to guage a subdomain's "
+			  "popularity."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>domainadds</td>"
+			  "<td>The number URLs manually added to the "
+			  "domain of the URL. Used to guage a domain's "
+			  "popularity."
+			  "</td></tr>"
+
+
+
+			  "<tr class=poo><td>isrss | !isrss</td>"
+			  "<td>Matches if document is an rss feed. "
+			  "When harvesting outlinks we <i>guess</i> if they "
+			  "are an rss feed by seeing if their file extension "
+			  "is xml, rss or rdf. Or if they are in an "
+			  "alternative link tag.</td></tr>"
+
+			  //"<tr class=poo><td>!isrss</td>"
+			  //"<td>Matches if document is NOT an rss feed."
+			  //"</td></tr>"
+
+			  "<tr class=poo><td>ispermalink | !ispermalink</td>"
+			  "<td>Matches if document is a permalink. "
+			  "When harvesting outlinks we <i>guess</i> if they "
+			  "are a permalink by looking at the structure "
+			  "of the url.</td></tr>"
+
+			  //"<tr class=poo><td>!ispermalink</td>"
+			  //"<td>Matches if document is NOT a permalink."
+			  //"</td></tr>"
+
+			  /*
+			  "<tr class=poo><td>outlink | !outlink</td>"
+			  "<td>"
+			  "<b>This is true if url being added to spiderdb "
+			  "is an outlink from the page being spidered. "
+			  "Otherwise, the url being added to spiderdb "
+			  "directly represents the page being spidered. It "
+			  "is often VERY useful to partition the Spiderdb "
+			  "records based on this criteria."
+			  "</td></tr>"
+			  */
+
+			  "<tr class=poo><td><nobr>isnewoutlink | !isnewoutlink"
+			  "</nobr></td>"
+			  "<td>"
+			  "This is true since the outlink was not there "
+			  "the last time we spidered the page we harvested "
+			  "it from."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>hasreply | !hasreply</td>"
+			  "<td>"
+			  "This is true if we have tried to spider "
+			  "this url, even if we got an error while trying."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isnew | !isnew</td>"
+			  "<td>"
+			  "This is the opposite of hasreply above. A url "
+			  "is new if it has no spider reply, including "
+			  "error replies. So once a url has been attempted to "
+			  "be spidered then this will be false even if there "
+			  "was any kind of error."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>lastspidertime >= "
+			  "<b>{roundstart}</b></td>"
+			  "<td>"
+			  "This is true if the url's last spidered time "
+			  "indicates it was spidered already for this "
+			  "current round of spidering. When no more urls "
+			  "are available for spidering, then gigablast "
+			  "automatically sets {roundstart} to the current "
+			  "time so all the urls can be spidered again. This "
+			  "is how you do round-based spidering. "
+			  "You have to use the respider frequency as well "
+			  "to adjust how often you want things respidered."
+			  "</td></tr>"
+			  
+
+			  //"<tr class=poo><td>!newoutlink</td>"
+			  //"<td>Matches if document is NOT a new outlink."
+			  //"</td></tr>"
+
+			  "<tr class=poo><td>age</td>"
+			  "<td>"
+			  "How old is the doucment <b>in seconds</b>. "
+			  "The age is based on the publication date of "
+			  "the document, which could also be the "
+			  "time that the document was last significantly "
+			  "modified. If this date is unknown then the age "
+			  "will be -1 and only match the expression "
+			  "<i>age==-1</i>. "
+			  "When harvesting links, we guess the publication "
+			  "date of the oulink by detecting dates contained "
+			  "in the url itself, which is popular among some "
+			  "forms of permalinks. This allows us to put "
+			  "older permalinks into a slower spider queue."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>"
+			  "<a name=insitelist>"
+			  "insitelist | !insitelist"
+			  "</a>"
+			  "</td>"
+			  "<td>"
+			  "This is true if the url matches a pattern in "
+			  "the list of sites on the <a href=/admin/sites>"
+			  "site list</a> page. That site list is useful for "
+			  "adding a large number of sites that can not be "
+			  "accomodated by the spider scheduler table. Plus "
+			  "it is higher performance and easier to use, but "
+			  "lacks the spider scheduler's "
+			  "fine level of control."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isaddurl | !isaddurl</td>"
+			  "<td>"
+			  "This is true if the url was added from the add "
+			  "url interface. This replaces the add url priority "
+			  "parm."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isinjected | !isinjected</td>"
+			  "<td>"
+			  "This is true if the url was directly "
+			  "injected from the "
+			  "/inject page or API."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isdocidbased | !isdocidbased</td>"
+			  "<td>"
+			  "This is true if the url was added from the "
+			  "reindex interface. The request does not contain "
+			  "a url, but only a docid, that way we can add "
+			  "millions of search results very quickly without "
+			  "having to lookup each of their urls. You should "
+			  "definitely have this if you use the reindexing "
+			  "feature. "
+			  "You can set max spiders to 0 "
+			  "for non "
+			  "docidbased requests while you reindex or delete "
+			  "the results of a query for extra speed."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>ismanualadd | !ismanualadd</td>"
+			  "<td>"
+			  "This is true if the url was added manually. "
+			  "Which means it matches isaddurl, isinjected, "
+			  " or isdocidbased. as opposed to only "
+			  "being discovered from the spider. "
+			  "</td></tr>"
+
+			  "<tr class=poo><td><nobr>inpingserver | !inpingserver"
+			  "</nobr></td>"
+			  "<td>"
+			  "This is true if the url has an inlink from "
+			  "a recognized ping server. Ping server urls are "
+			  "hard-coded in Url.cpp. <b><font color=red> "
+			  "pingserver urls are assigned a hop count of 0"
+			  "</font></b>"
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isparentrss | !isparentrss</td>"
+			  "<td>"
+			  "If a parent of the URL was an RSS page "
+			  "then this will be matched."
+			  "</td></tr>"
+
+			  /*
+			  "<tr class=poo><td>parentisnew | !parentisnew</td>"
+			  "<td>"
+			  "<b>Parent providing this outlink is not currently "
+			  "in the index but is trying to be added right now. "
+			  "</b>This is a special expression in that "
+			  "it only applies to assigning spider priorities "
+			  "to outlinks we are harvesting on a page.</b>" 
+			  "</td></tr>"
+			  */
+
+			  "<tr class=poo><td>isindexed | !isindexed</td>"
+			  "<td>"
+			  "This url matches this if in the index already. "
+			  "</td></tr>"
+
+			  "<tr class=poo><td>errorcount==1</td>"
+			  "<td>"
+			  "The number of times the url has failed to "
+			  "be indexed. 1 means just the last time, two means "
+			  "the last two times. etc. Any kind of error parsing "
+			  "the document (bad utf8, bad charset, etc.) "
+			  "or any HTTP status error, like 404 or "
+			  "505 is included in this count, in addition to "
+			  "\"temporary\" errors like DNS timeouts."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>hastmperror</td>"
+			  "<td>"
+			  "This is true if the last spider attempt resulted "
+			  "in an error like EDNSTIMEDOUT or a similar error, "
+			  "usually indicative of a temporary internet "
+			  "failure, or local resource failure, like out of "
+			  "memory, and should be retried soon. "
+			  "Currently: "
+			  "dns timed out, "
+			  "tcp timed out, "
+			  "dns dead, "
+			  "network unreachable, "
+			  "host unreachable, "
+			  "diffbot internal error, "
+			  "out of memory."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>percentchangedperday&lt=5</td>"
+			  "<td>"
+			  "Looks at how much a url's page content has changed "
+			  "between the last two times it was spidered, and "
+			  "divides that percentage by the number of days. "
+			  "So if a URL's last two downloads were 10 days "
+			  "apart and its page content changed 30%% then "
+			  "the <i>percentchangedperday</i> will be 3. "
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "</td></tr>"
+
+			  "<tr class=poo><td>sitenuminlinks&gt;20</td>"
+			  "<td>"
+			  "How many inlinks does the URL's site have? "
+			  "We only count non-spammy inlinks, and at most only "
+			  "one inlink per IP address C-Class is counted "
+			  "so that a webmaster who owns an entire C-Class "
+			  "of IP addresses will only have his inlinks counted "
+			  "once."
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "</td></tr>"
+
+			  "<tr class=poo><td>httpstatus==404</td>"
+			  "<td>"
+			  "For matching the URL based on the http status "
+			  "of its last download. Does not apply to URLs "
+			  "that have not yet been successfully downloaded."
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "</td></tr>"
+
+			  /*
+			  "<tr class=poo><td>priority==30</td>"
+			  "<td>"
+			  "<b>If the current priority of the url is 30, then "
+			  "it will match this expression. Does not apply "
+			  "to outlinks, of course."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>parentpriority==30</td>"
+			  "<td>"
+			  "<b>This is a special expression in that "
+			  "it only applies to assigning spider priorities "
+			  "to outlinks we are harvesting on a page.</b> "
+			  "Matches if the url being added to spider queue "
+			  "is from a parent url in priority queue 30. "
+			  "The parent's priority queue is the one it got "
+			  "moved into while being spidered. So if it was "
+			  "in priority 20, but ended up in 25, then 25 will "
+			  "be used when scanning the URL Filters table for "
+			  "each of its outlinks. Only applies "
+			  "to the FIRST time the url is added to spiderdb. "
+			  "Use <i>parentpriority==-3</i> to indicate the "
+			  "parent was FILTERED and <i>-2</i> to indicate "
+			  "the parent was BANNED. A parentpriority of "
+			  "<i>-1</i>"
+			  " means that the urls is not a link being added to "
+			  "spiderdb but rather a url being spidered."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>inlink==...</td>"
+			  "<td>"
+			  "If the url has an inlinker which contains the "
+			  "given substring, then this rule is matched. "
+			  "We use this like <i>inlink=www.weblogs.com/"
+			  "shortChanges.xml</i> to detect if a page is in "
+			  "the ping server or not, and if it is, then we "
+			  "assign it to a slower-spidering queue, because "
+			  "we can reply on the ping server for updates. Saves "
+			  "us from having to spider all the blogspot.com "
+			  "subdomains a couple times a day each."
+			  "</td></tr>"
+			  */
+
+			  //"NOTE: Until we get the link info to get the doc "
+			  //"quality before calling msg8 in Msg16.cpp, we "
+			  //"can not involve doc:quality for purposes of "
+			  //"assigning a ruleset, unless banning it.</td>"
+
+			  "<tr class=poo><td><nobr>tld!=com,org,edu"// && "
+			  //"doc:quality&lt;70"
+			  "</nobr></td>"
+			  "<td>Matches if the "
+			  "url's TLD does NOT end in \"com\", \"org\" or "
+			  "\"edu\". "
+			  "</td></tr>"
+
+			  "<tr class=poo><td><nobr>lang==zh_cn,de"
+			  "</nobr></td>"
+			  "<td>Matches if "
+			  "the url's content is in the language \"zh_cn\" or "
+			  "\"de\". See table below for supported language "
+			  "abbreviations. Used to only keep certain languages "
+			  "in the index. This is hacky because the language "
+			  "may not be known at spider time, so Gigablast "
+			  "will check after downloading the document to "
+			  "see if the language <i>spider priority</i> is "
+			  "DELETE thereby discarding it.</td></tr>"
+			  //"NOTE: Until we move the language "
+			  //"detection up before any call to XmlDoc::set1() "
+			  //"in Msg16.cpp, we can not use for purposes of "
+			  //"assigning a ruleset, unless banning it.</td>"
+			  //"</tr>"
+
+			  "<tr class=poo><td><nobr>lang!=xx,en,de"
+			  "</nobr></td>"
+			  "<td>Matches if "
+			  "the url's content is NOT in the language \"xx\" "
+			  "(unknown), \"en\" or \"de\". "
+			  "See table below for supported language "
+			  "abbreviations.</td></tr>"
+
+			  /*
+			  "<tr class=poo><td>link:gigablast</td>"
+			  "<td>Matches if the document links to gigablast."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>searchbox:gigablast</td>"
+			  "<td>Matches if the document has a submit form "
+			  "to gigablast."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>site:dmoz</td>"
+			  "<td>Matches if the document is directly or "
+			  "indirectly in the DMOZ directory."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>tag:spam>X</td>"
+			  "<td>Matches if the document's tagdb record "
+			  "has a score greater than X for the sitetype, "
+			  "'spam' in this case. "
+			  "Can use <, >, <=, >=, ==, != comparison operators. "
+			  "Other sitetypes include: "
+			  "..."
+			  "</td></tr>"
+			  */
+
+			  "<tr class=poo><td>iswww | !iswww</td>"
+			  "<td>Matches if the url's hostname is www or domain "
+			  "only. For example: <i>www.xyz.com</i> would match, "
+			  "and so would <i>abc.com</i>, but "
+			  "<i>foo.somesite.com</i> would NOT match."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>isonsamedomain | !isonsamedomain</td>"
+			  "<td>"
+			  "This is true if the url is from the same "
+			  "DOMAIN as the page from which it was "
+			  "harvested."
+			  //"Only effective for links being added from a page "
+			  //"being spidered, because this information is "
+			  //"not preserved in the titleRec."
+			  "</td></tr>"
+
+
+			  "<tr class=poo><td><nobr>"
+			  "isonsamesubdomain | !isonsamesubdomain"
+			  "</nobr></td>"
+			  "<td>"
+			  "This is true if the url is from the same "
+			  "SUBDOMAIN as the page from which it was "
+			  "harvested."
+			  //"Only effective for links being added from a page "
+			  //"being spidered, because this information is "
+			  //"not preserved in the titleRec."
+			  "</td></tr>"
+
+			  "<tr class=poo><td>ismedia | !ismedia</td>"
+			  "<td>"
+			  "Does the url have a media or css related "
+			  "extension. Like gif, jpg, mpeg, css, etc.? "
+			  "</td></tr>"
+
+
+			  "</td></tr></table><br><br>\n",
+			  TABLE_STYLE );
+
+
+		// show the languages you can use
+		sb->safePrintf (
+			  "<table %s>"
+			  "<tr><td colspan=2><center>"
+			  "<b>"
+			  "Supported Language Abbreviations "
+			  "for lang== Filter</b>"
+			  "</td></tr>",
+			  TABLE_STYLE );
+		for ( long i = 0 ; i < 256 ; i++ ) {
+			char *lang1 = getLanguageAbbr   ( i );
+			char *lang2 = getLanguageString ( i );
+			if ( ! lang1 ) continue;
+			sb->safePrintf("<tr class=poo>"
+				       "<td>%s</td><td>%s</td></tr>\n",
+				      lang1,lang2);
+		}
+		// wrap it up
+		sb->safePrintf("</table><br><br>");
+		return true;
 }

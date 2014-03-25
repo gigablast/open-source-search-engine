@@ -1796,7 +1796,7 @@ long hasGoodDates ( char *content ,
 			NULL     , // tag rec
 			NULL     , // url
 			0        , // docid
-			NULL     , // coll
+			0     , // collnum
 			0        , // domhash32
 			0        , // ip
 			niceness ,

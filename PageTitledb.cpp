@@ -58,7 +58,7 @@ bool sendPageTitledb ( TcpSocket *s , HttpRequest *r ) {
 	// copy it
 	st->m_r.copy ( r );
 	// remember if http request is internal/local or not
-	st->m_isAdmin = g_collectiondb.isAdmin ( r , s );
+	st->m_isAdmin = g_conf.isCollAdmin ( s , r );
 	st->m_isLocal = r->isLocal();
 	st->m_docId   = docId;
 	// password, too

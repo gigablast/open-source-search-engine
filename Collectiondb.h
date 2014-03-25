@@ -95,7 +95,7 @@ class Collectiondb  {
 
 	// . does this requester have root admin privledges???
 	// . uses the root collection record!
-	bool isAdmin ( class HttpRequest *r , class TcpSocket *s );
+	//bool isAdmin ( class HttpRequest *r , class TcpSocket *s );
 
 	//collnum_t getNextCollnum ( collnum_t collnum );
 
@@ -129,6 +129,7 @@ class Collectiondb  {
 	bool addRdbBaseToAllRdbsForEachCollRec ( ) ;
 	bool addRdbBasesForCollRec ( CollectionRec *cr ) ;
 
+	bool growRecPtrBuf ( collnum_t collnum ) ;
 	bool setRecPtr ( collnum_t collnum , CollectionRec *cr ) ;
 
 	// returns false if blocked, true otherwise. 
@@ -310,10 +311,10 @@ class CollectionRec {
 	// . set ourselves the cgi parms in an http request
 	// . unspecified cgi parms will be assigned default values
 	// . returns false and sets errno on error
-	bool set ( class HttpRequest *r , TcpSocket *s );
+	bool set ( class HttpRequest *r , class TcpSocket *s );
 
 	// calls hasPermission() below
-	bool hasPermission ( class HttpRequest *r , TcpSocket *s ) ;
+	bool hasPermission ( class HttpRequest *r , class TcpSocket *s ) ;
 
 	// . does this user have permission for editing this collection?
 	// . "p" is the password for this collection in question
@@ -326,7 +327,7 @@ class CollectionRec {
 	// . can this ip perform a search or add url on this collection?
 	// . mamma.com provides encapsulated ips of their queriers so we
 	//   can ban them by ip
-	bool hasSearchPermission ( TcpSocket *s , long encapIp = 0 );
+	bool hasSearchPermission ( class TcpSocket *s , long encapIp = 0 );
 
 	// how many bytes would this record occupy in raw binary format?
 	//long getStoredSize () { return m_recSize; };
@@ -678,6 +679,9 @@ class CollectionRec {
 	// for storing callbacks waiting in line for freshest crawl info
 	//SafeBuf m_callbackQueue;
 	
+	// list of url patterns to be indexed.
+	SafeBuf m_siteListBuf;
+	char m_spiderToo;
 
 	// . now the url regular expressions
 	// . we chain down the regular expressions

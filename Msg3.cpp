@@ -63,7 +63,7 @@ void Msg3::reset() {
 //   in Sync class can just read from titledb*.dat files that were formed
 //   since the last sync point.
 bool Msg3::readList  ( char           rdbId         ,
-		       char          *coll          ,
+		       collnum_t collnum ,
 		       //key_t          startKey      , 
 		       //key_t          endKey        , 
 		       char          *startKeyArg      , 
@@ -94,10 +94,10 @@ bool Msg3::readList  ( char           rdbId         ,
 	// reset m_alloc and data in all lists in case we are a re-call
 	reset();
 	// warning
-	if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg3.");
+	if ( collnum < 0 ) log(LOG_LOGIC,"net: NULL collection. msg3.");
 	// remember the callback
 	m_rdbId              = rdbId;
-	m_coll               = coll;
+	m_collnum = collnum;
 	m_callback           = callback;
 	m_state              = state;
 	m_niceness           = niceness;
@@ -136,7 +136,7 @@ bool Msg3::readList  ( char           rdbId         ,
 	long max ;
 
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return true;
+	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
 
 	// if caller specified exactly
 	/*
@@ -673,7 +673,7 @@ void doneScanningWrapper ( void *state ) {
 	// if we had an error, remember it
 	if ( g_errno ) { 
 		// get base, returns NULL and sets g_errno to ENOCOLLREC on err
-		RdbBase *base; base=getRdbBase(THIS->m_rdbId,THIS->m_coll);
+		RdbBase *base; base=getRdbBase(THIS->m_rdbId,THIS->m_collnum);
 		char *dbname = "NOT FOUND";
 		if ( base ) dbname = base->m_dbname;
 		long tt = LOG_WARN;
@@ -783,7 +783,7 @@ bool Msg3::doneScanning ( ) {
 	}
 
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
-	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_coll))) return true;
+	RdbBase *base; if (!(base=getRdbBase(m_rdbId,m_collnum))) return true;
 
 	// this really slows things down because it blocks the cpu so
 	// leave it out for now
@@ -964,7 +964,7 @@ bool Msg3::doneSleeping ( ) {
 	g_loop.unregisterSleepCallback(this,doneSleepingWrapper3);
 	// read again
 	if ( ! readList ( m_rdbId            ,
-			  m_coll             ,
+			  m_collnum          ,
 			  m_startKey         ,
 			  m_endKeyOrig       ,
 			  m_minRecSizesOrig  ,

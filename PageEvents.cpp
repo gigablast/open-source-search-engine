@@ -7610,8 +7610,8 @@ bool printAdminLinks ( SafeBuf &sb , State7 *st ) {
 		// get the filename directly
 		sb.safePrintf (" &nbsp; "
 			       "<font color=red><b>"
-			       //"<a href=\"/master/tagdb?f=%li&c=%s&u=%s\">"
-			       "<a href=\"/master/tagdb?"
+			       //"<a href=\"/admin/tagdb?f=%li&c=%s&u=%s\">"
+			       "<a href=\"/admin/tagdb?"
 			       //"tagid0=%li&"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
@@ -7631,7 +7631,7 @@ bool printAdminLinks ( SafeBuf &sb , State7 *st ) {
 		//long bannedTagId = getTagTypeFromStr("manualban",9);
 		sb.safePrintf (" &nbsp; "
 			       "<font color=red><b>"
-			       "<a href=\"/master/tagdb?"
+			       "<a href=\"/admin/tagdb?"
 			       //"tagid0=%li&"
 			       "tagtype0=manualban&"
 			       "tagdata0=1&"
@@ -7876,7 +7876,7 @@ void printAdminEventOptions ( SafeBuf* sb,
 	sb->safePrintf("Ban By Domain: ");
 	
 	//long bannedTagId = getTagTypeFromStr("manualban",9);
-	sb->safePrintf("<a href=\"/master/tagdb?"
+	sb->safePrintf("<a href=\"/admin/tagdb?"
 		       "tagtype0=manualban&"
 		       "tagdata0=1&"
 		       "u=%s&c=%s\">"
@@ -8561,13 +8561,13 @@ static bool printResult ( CollectionRec *cr,
 		// . if it's local, don't put the hostname/port in
 		//   there cuz it will mess up Global Spec's machine
 		//if ( h->m_groupId == g_hostdb.m_groupId ) 
-		sb.safePrintf(" - <a href=\"/master/titledb?c=%s&"
+		sb.safePrintf(" - <a href=\"/admin/titledb?c=%s&"
 			      "d=%lli",coll,mr->m_docId);
 		// then the [info] link to show the TitleRec
 		sb.safePrintf ( "\">[info]</a>" );
 		
 		// now the analyze link
-		sb.safePrintf (" - <a href=\"/master/parser?c=%s&"
+		sb.safePrintf (" - <a href=\"/admin/parser?c=%s&"
 			       "old=1&hc=%li&u=", 
 			       coll,
 			       (long)mr->m_hopcount);
@@ -8629,7 +8629,7 @@ static bool printResult ( CollectionRec *cr,
 			       dbuf ,
 			       coll , dbuf );
 		sb.safePrintf(" - "
-				  " <a href=\"/master/tagdb?"
+				  " <a href=\"/admin/tagdb?"
 				  "tagtype0=manualban&"
 				  "tagdata0=1&"
 				  "u=%s&c=%s\">"
@@ -8641,7 +8641,7 @@ static bool printResult ( CollectionRec *cr,
 		memcpy ( dbuf , uu.getHost() , dlen );
 		dbuf [ dlen ] = '\0';
 		sb.safePrintf(" - "
-				  " <a href=\"/master/tagdb?"
+				  " <a href=\"/admin/tagdb?"
 				  "tagtype0=manualban&"
 				  "tagdata0=1&"
 				  "u=%s&c=%s\">"
@@ -17616,7 +17616,7 @@ bool gotCaptchaReply ( State9 *st9 , TcpSocket *s ) {
 	if ( st9->m_isAdmin && 1 == 2) {
 		SafeBuf ttt;
 		ttt.safePrintf("<br>"
-			       "<a href=/master/parser?"
+			       "<a href=/admin/parser?"
 			       //"user=mwells&pwd=mwell62&"
 			       "c=%s&u=%s&content=",
 			       st9->m_coll,

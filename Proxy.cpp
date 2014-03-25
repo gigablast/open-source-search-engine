@@ -339,7 +339,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 		return false;
 	}
 
-	bool isAdmin = g_conf.isMasterAdmin(s,&hr);
+	bool isAdmin = g_conf.isRootAdmin(s,&hr);
 
 	long redirLen = hr.getRedirLen() ;
 	char *redir = NULL;

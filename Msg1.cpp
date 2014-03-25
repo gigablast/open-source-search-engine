@@ -95,7 +95,7 @@ bool Msg1::addRecord ( char *rec ,
 		   sizeof(key_t));
 	return addList ( &m_tmpList ,
 			 rdbId ,
-			 g_collectiondb.m_recs[collnum]->m_coll ,
+			 collnum,//g_collectiondb.m_recs[collnum]->m_coll ,
 			 state ,
 			 callback ,
 			 false , // force local?
@@ -111,7 +111,7 @@ bool Msg1::addRecord ( char *rec ,
 //   when the reply does come back we do NOT call the callback
 bool Msg1::addList ( RdbList      *list              ,
 		     char          rdbId             ,
-		     char         *coll              ,
+		     collnum_t collnum, // char         *coll              ,
 		     void         *state             ,
 		     void (* callback)(void *state)  ,
 		     bool          forceLocal        ,
@@ -120,7 +120,7 @@ bool Msg1::addList ( RdbList      *list              ,
 		     bool          waitForReply      ,
 		     bool         *inTransit         ) {
 	// warning
-	if ( ! coll ) log(LOG_LOGIC,"net: NULL collection. msg1.cpp.");
+	if ( collnum<0 ) log(LOG_LOGIC,"net: bad collection. msg1.cpp.");
 	// if list has no records in it return true
 	if ( ! list || list->isEmpty() ) return true;
 	// sanity check
@@ -175,7 +175,7 @@ bool Msg1::addList ( RdbList      *list              ,
 		bool inTransit;
 		bool status = Y->addList ( &Y->m_ourList ,
 					   rdbId         ,
-					   coll          ,
+					   collnum       ,
 					   Y             , // state
 					   returnMsg1    , // callback
 					   forceLocal    ,
@@ -205,7 +205,7 @@ bool Msg1::addList ( RdbList      *list              ,
 	// remember these vars
 	m_list          = list;
 	m_rdbId         = rdbId;
-	m_coll          = coll;
+	m_collnum       = collnum;
 	m_state         = state;
 	m_callback      = callback;
 	m_forceLocal    = forceLocal;
@@ -508,12 +508,12 @@ skip:
 	// . this will alloc new space, returns NULL on failure
 	//char *request = makeRequest ( listData, listSize, groupId , 
 	//m_rdbId , &requestLen );
-	long collLen = gbstrlen ( m_coll );
+	//long collLen = gbstrlen ( m_coll );
 	// . returns NULL and sets g_errno on error
 	// . calculate total size of the record
 	// . 1 byte for rdbId, 1 byte for flags,
 	//   then collection NULL terminated, then list
-	long requestLen = 1 + 1 + collLen + 1 + listSize ;
+	long requestLen = 1 + 1 + sizeof(collnum_t) + listSize ;
 	// make the request
 	char *request = (char *) mmalloc ( requestLen ,"Msg1" );
 	if ( ! request ) return true;
@@ -525,16 +525,18 @@ skip:
 	if ( m_injecting ) *p |= 0x80;
 	p++;
 	// then collection name
-	memcpy ( p , m_coll , collLen );
-	p += collLen;
-	*p++ = '\0';
+	//memcpy ( p , m_coll , collLen );
+	//p += collLen;
+	//*p++ = '\0';
+	*(collnum_t *)p = m_collnum;
+	p += sizeof(collnum_t);
 	// sanity check
-	if ( collLen <= 0 ) {
-		log(LOG_LOGIC,"net: No collection specified for list add.");
-		//char *xx = NULL; *xx = 0;
-		g_errno = ENOCOLLREC;
-		return true;
-	}
+	//if ( collLen <= 0 ) {
+	//	log(LOG_LOGIC,"net: No collection specified for list add.");
+	//	//char *xx = NULL; *xx = 0;
+	//	g_errno = ENOCOLLREC;
+	//	return true;
+	//}
 	//if ( m_deleteRecs    ) request[1] |= 0x80;
 	//if ( m_overwriteRecs ) request[1] |= 0x40;
 	// store the list after coll
@@ -682,8 +684,10 @@ void handleRequest1 ( UdpSlot *slot , long netnice ) {
 	else             injecting = false;
 	p++;
 	// then collection
-	char *coll = p;
-	p += gbstrlen (p) + 1;
+	//char *coll = p;
+	//p += gbstrlen (p) + 1;
+	collnum_t collnum = *(collnum_t *)p;
+	p += sizeof(collnum_t);
 	// . make a list from this data
 	// . skip over the first 4 bytes which is the rdbId
 	// . TODO: embed the rdbId in the msgtype or something...
@@ -701,7 +705,7 @@ void handleRequest1 ( UdpSlot *slot , long netnice ) {
 	//log("msg1: handlerequest1 calling addlist niceness=%li",niceness);
 	//log("msg1: handleRequest1 niceness=%li",niceness);
 	// this returns false and sets g_errno on error
-	rdb->addList ( coll , &list , niceness);
+	rdb->addList ( collnum , &list , niceness);
 	// if titledb, add tfndb recs to map the title recs
 	//if ( ! g_errno && rdb == g_titledb.getRdb() && injecting ) 
 	//	updateTfndb ( coll , &list , true, 0);

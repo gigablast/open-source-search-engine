@@ -172,7 +172,8 @@ bool Msg9b::addCatRecs ( char *urls        ,
 	// . use high priority (niceness of 0)
 	// . i raised niceness from 0 to 1 so multicast does not use the
 	//   small UdpSlot::m_tmpBuf... might have a big file...
-	return m_msg1.addList ( &m_list, RDB_CATDB, coll ,
+	return m_msg1.addList ( &m_list, RDB_CATDB, 
+				(collnum_t)0 ,
 				state , callback ,
 				false , // force local?
 				niceness     ); // niceness 

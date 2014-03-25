@@ -21,8 +21,9 @@
 Rebalance g_rebalance;
 
 Rebalance::Rebalance ( ) {
+	m_registered = false;
 	m_allowSave = false;
-	m_inRebalanceLoop = false;
+	//m_inRebalanceLoop = false;
 	m_numForeignRecs = 0;
 	m_rebalanceCount = 0LL;
 	m_scannedCount = 0LL;
@@ -225,6 +226,15 @@ void Rebalance::scanLoop ( ) {
 				m_lastRdb = rdb;
 				// reset key cursor as well!!!
 				KEYMIN ( m_nextKey , MAX_KEY_BYTES );
+
+				// This logic now in RdbBase.cpp.
+				// let's keep posdb and titledb tight-merged so
+				// we do not run out of disk space because we 
+				// will be dumping tons of negative recs
+				//RdbBase *base = rdb->getBase(m_collnum);
+				//base->m_savedMin = base->m_minFilesToMerge;
+				//base->m_minFilesToMerge = 2;
+
 			}
 			// percent update?
 			long percent = (unsigned char)m_nextKey[rdb->m_ks-1];
@@ -245,6 +255,12 @@ void Rebalance::scanLoop ( ) {
 			m_rebalanceCount = 0;
 			m_scannedCount = 0;
 			m_lastPercent = -1;
+
+			// This logic now in RdbBase.cpp.
+			// go back to normal merge threshold
+			//RdbBase *base = rdb->getBase(m_collnum);
+			//base->m_minFilesToMerge = base->m_savedMin;
+
 		}
 		// reset it for next colls
 		m_rdbNum = 0;
@@ -310,17 +326,56 @@ static void gotListWrapper ( void *state , RdbList *list, Msg5 *msg5 ) {
 	g_rebalance.scanLoop();
 }
 
+void sleepWrapper ( int fd , void *state ) {
+	// try a re-call since we were merging last time
+	g_rebalance.scanLoop();
+}
+
 bool Rebalance::scanRdb ( ) {
 
 	// get collrec i guess
-	CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
+	//CollectionRec *cr = g_collectiondb.m_recs[m_collnum];
 
 	Rdb *rdb = g_process.m_rdbs[m_rdbNum];
+
+	// unregister it if it was registered
+	if ( m_registered ) {
+		g_loop.unregisterSleepCallback ( NULL,sleepWrapper );
+		m_registered = false;
+	}
+
+	if ( g_process.m_mode == EXIT_MODE ) return false;
+
+	// . if this rdb is merging wait until merge is done
+	// . we will be dumping out a lot of negative recs and if we are
+	//   short on disk space we need to merge them in immediately with
+	//   all our data so that they annihilate quickly with the positive
+	//   keys in there to free up more disk
+	RdbBase *base = rdb->getBase ( m_collnum );
+	// base is NULL for like monitordb...
+	if ( base && base->isMerging() ) {
+		log("rebal: waiting for merge on %s for coll #%li to complete",
+		    rdb->m_dbname,(long)m_collnum);
+		g_loop.registerSleepCallback ( 1000,NULL,sleepWrapper,1);
+		m_registered = true;
+		// we blocked, return false
+		return false;
+	}
+	// or really if any merging is going on way for it to save disk space
+	if ( rdb->isMerging() ) {
+		log("rebal: waiting for merge on %s for coll ??? to complete",
+		    rdb->m_dbname);
+		g_loop.registerSleepCallback ( 1000,NULL,sleepWrapper,1);
+		m_registered = true;
+		// we blocked, return false
+		return false;
+	}
+
 
 	// skip empty collrecs, unless like statsdb or something
 	//if ( ! cr && ! rdb->m_isCollectionLess ) return true;
 
-	char *coll = cr->m_coll;
+	//char *coll = cr->m_coll;
 
  readAnother:
 
@@ -329,7 +384,7 @@ bool Rebalance::scanRdb ( ) {
 	//log("rebal: loading list start = %s",KEYSTR(m_nextKey,rdb->m_ks));
 
 	if ( ! m_msg5.getList ( rdb->m_rdbId     ,
-				coll             ,
+				m_collnum, // coll             ,
 				&m_list          ,
 				m_nextKey        ,
 				m_endKey         , // should be maxed!

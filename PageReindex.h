@@ -13,7 +13,7 @@ public:
 	Msg1c();
 
 	bool reindexQuery ( char *query ,
-			    char *coll  ,
+			    collnum_t collnum, // char *coll  ,
 			    long startNum ,
 			    long endNum ,
 			    bool forceDel ,
@@ -23,7 +23,8 @@ public:
 	
 	bool gotList ( );
 	
-	char *m_coll;
+	//char *m_coll;
+	collnum_t m_collnum;
 	long m_startNum;
 	long m_endNum;
 	bool m_forceDel;

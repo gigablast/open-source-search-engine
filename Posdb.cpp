@@ -253,9 +253,10 @@ bool Posdb::verify ( char *coll ) {
 	startKey.setMin();
 	endKey.setMax();
 	//long minRecSizes = 64000;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	
 	if ( ! msg5.getList ( RDB_POSDB   ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      &startKey      ,
 			      &endKey        ,
@@ -288,6 +289,8 @@ bool Posdb::verify ( char *coll ) {
 	      list.skipCurrentRecord() ) {
 		key144_t k;
 		list.getCurrentKey(&k);
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
 		//unsigned long groupId = getGroupId ( RDB_POSDB , &k );
@@ -458,9 +461,9 @@ static bool s_cacheInit = false;
 
 // . accesses RdbMap to estimate size of the indexList for this termId
 // . returns an UPPER BOUND
-long long Posdb::getTermFreq ( char *coll, long long termId ) {
+long long Posdb::getTermFreq ( collnum_t collnum, long long termId ) {
 
-	collnum_t collnum = g_collectiondb.getCollnum ( coll );
+	//collnum_t collnum = g_collectiondb.getCollnum ( coll );
 
 	if ( ! s_cacheInit ) {
 		long maxMem = 20000000; // 20MB
@@ -512,7 +515,7 @@ long long Posdb::getTermFreq ( char *coll, long long termId ) {
 	long long oldTrunc = -1;
 	// get maxKey for only the top "oldTruncLimit" docids because when
 	// we increase the trunc limit we screw up our extrapolation! BIG TIME!
-	maxRecs = m_rdb.getListSize(coll,
+	maxRecs = m_rdb.getListSize(collnum,
 				    (char *)&startKey,
 				    (char *)&endKey,
 				    (char *)&maxKey,
@@ -596,7 +599,7 @@ void PosdbTable::init ( Query     *q               ,
 			char       debug         , 
 			void      *logstate        ,
 			TopTree   *topTree         ,
-			char      *coll            , 
+			collnum_t collnum , // char      *coll            , 
 			Msg2 *msg2 ,
 			//IndexList *lists           ,
 			//long       numLists        ,
@@ -617,16 +620,18 @@ void PosdbTable::init ( Query     *q               ,
 	m_msg2 = msg2;
 	// sanity
 	if ( m_msg2 && ! m_msg2->m_query ) { char *xx=NULL;*xx=0; }
+	// save this
+	m_collnum = r->m_collnum;
 	// save the request
 	m_r = r;
 
 	// save this
-	m_coll = coll;
+	//m_coll = coll;
 	// get the rec for it
-        CollectionRec *cr = g_collectiondb.getRec ( m_coll );
+        CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
         if ( ! cr ) { char *xx=NULL;*xx=0; }
 	// set this now
-	m_collnum = cr->m_collnum;
+	//m_collnum = cr->m_collnum;
 
 
 	// save it
@@ -707,8 +712,8 @@ bool PosdbTable::allocTopTree ( ) {
 	long nn = m_r->m_docsToGet;
 	if ( m_r->m_doSiteClustering ) nn *= 2;
         // limit to this regardless!
-        CollectionRec *cr = g_collectiondb.getRec ( m_coll );
-        if ( ! cr ) return false;
+        //CollectionRec *cr = g_collectiondb.getRec ( m_coll );
+        //if ( ! cr ) return false;
 	// this actually sets the # of nodes to MORE than nn!!!
 	if ( ! m_topTree->setNumNodes(nn,m_r->m_doSiteClustering)) 
 		return false;

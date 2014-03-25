@@ -17268,9 +17268,10 @@ bool Sectiondb::verify ( char *coll ) {
 	key128_t endKey;
 	startKey.setMin();
 	endKey.setMax();
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
 	if ( ! msg5.getList ( RDB_SECTIONDB   ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      &startKey      ,
 			      &endKey        ,

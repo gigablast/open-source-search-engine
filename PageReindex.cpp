@@ -29,11 +29,12 @@ static bool printInterface ( SafeBuf *sb , char *q ,//long user ,
 class State13 {
 public:
 	char       m_query [ MAX_QUERY_LEN + 1];
-	char       m_isAdmin;
+	//char       m_isAdmin;
 	Msg1c      m_msg1c;
 	//Msg1d      m_msg1d;
-	char       m_coll [ MAX_COLL_LEN + 1];
-	long       m_collLen;
+	//char       m_coll [ MAX_COLL_LEN + 1];
+	//long       m_collLen;
+	collnum_t m_collnum;
 	TcpSocket *m_socket;
 	//char       m_replyBuf[64*1024];
 	//long       m_replyBufSize;
@@ -61,7 +62,7 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	pwd [ len ] = '\0';
 
 	// are we the admin?
-	bool isAdmin = g_collectiondb.isAdmin ( r , s );
+	//bool isAdmin = g_collectiondb.isAdmin ( r , s );
 	//long user    = g_pages.getUserType ( s , r );
 	char *username = g_users.getUsername ( r );
 	char *errmsg = NULL;
@@ -75,6 +76,7 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 		return g_httpServer.sendErrorReply ( s , 500 ,
 						"Collection does not exist.");
 	}
+	/*
 	bool isAssassin = cr->isAssassin ( s->m_ip );
 	if ( isAdmin ) isAssassin = true;
 
@@ -82,15 +84,14 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	if ( ! isAssassin && ! cr->hasPermission ( r , s ) ) {
 		log("admin: Bad collection name "
 		    "or password. Query reindex failed. Permission denied.");
-		return sendPageLogin ( s , r , 
+		return sendPagexxxx ( s , r , 
 				       "Collection name or "
 				       "password is incorrect.");
 	}
-
+	*/
 	// get collection name and its length
 	char *coll    = cr->m_coll;
-	long  collLen = gbstrlen ( coll );
-
+	//long  collLen = gbstrlen ( coll );
 
 	//char buf[64*1024];
 	//char *p    = buf;
@@ -131,7 +132,7 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	mnew ( st , sizeof(State13) , "PageReindex" );
 
 	// set stuff now
-	st->m_isAdmin    = isAdmin;
+	//st->m_isAdmin    = isAdmin;
 	
 
 	// save the query to static buffer
@@ -139,6 +140,8 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	if ( len > MAX_QUERY_LEN ) len = MAX_QUERY_LEN;
 	memcpy ( st->m_query , t , len );
 	st->m_query[len] = '\0';
+
+	st->m_collnum = cr->m_collnum;
 
 	// save start and end numbers
 	long startNum = r->getLong   ( "srn" , 0 );
@@ -152,9 +155,9 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	bool updateTags = r->getLong ( "updatetags", 0 );
 
 	// copy collection
-	memcpy ( st->m_coll , coll , collLen );
-	st->m_coll [ collLen ] = '\0';
-	st->m_collLen=collLen;
+	//memcpy ( st->m_coll , coll , collLen );
+	//st->m_coll [ collLen ] = '\0';
+	//st->m_collLen=collLen;
 
 	// fix parms
 	if ( startNum <  0 ) startNum = 0 ;
@@ -202,7 +205,7 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	// place holder, for holding response when we're done adding
 	// all these docids to the spider queue
 	st->m_placeOff = rp->length() ;
-	for ( long i = 0 ; i < 100 ; i++ )
+	for ( long i = 0 ; i < 200 ; i++ )
 		rp->pushChar(' ');
 	//memset ( rp , ' ' , 100 );
 	//rp += 100;
@@ -239,7 +242,7 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	*/
 		// let msg1d do all the work now
 		if ( ! st->m_msg1c.reindexQuery ( st->m_query ,
-						  st->m_coll,
+						  st->m_collnum,
 						  startNum ,
 						  endNum   ,
 						  (bool)forceDel ,
@@ -266,6 +269,7 @@ void doneReindexing ( void *state ) {
 		g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno));
 		mdelete ( st , sizeof(State13) , "PageTagdb" );
 		delete (st);
+		return;
 	}	
 	// if no error, send the pre-generated page
 	// this must be under 100 chars or it messes our reply buf up
@@ -462,12 +466,12 @@ static void addedListWrapper ( void *state ) ;
 Msg1c::Msg1c() {
 	m_numDocIds = 0;
 	m_numDocIdsAdded = 0;
-	m_coll = NULL;
+	m_collnum = -1;
 	m_callback = NULL;
 }
 
 bool Msg1c::reindexQuery ( char *query ,
-			   char *coll  ,
+			   collnum_t collnum ,//char *coll  ,
 			   long startNum ,
 			   long endNum ,
 			   bool forceDel ,
@@ -475,7 +479,7 @@ bool Msg1c::reindexQuery ( char *query ,
 			   void *state ,
 			   void (* callback) (void *state ) ) {
 
-	m_coll           = coll;
+	m_collnum = collnum;//           = coll;
 	m_startNum       = startNum;
 	m_endNum         = endNum;
 	m_forceDel       = forceDel;
@@ -489,12 +493,15 @@ bool Msg1c::reindexQuery ( char *query ,
 	// langunknown?
 	m_qq.set2 ( query , langId , true ); // /*bool flag*/ );
 
+	//CollectionRec *cr = g_collectiondb.getRec ( collnum );
+
 	//CollectionRec *cr = g_collectiondb.getRec ( coll );
 	// reset again just in case
 	m_req.reset();
 	// set our Msg39Request
-	m_req.ptr_coll                    = coll;
-	m_req.size_coll                   = gbstrlen(coll)+1;
+	//m_req.ptr_coll                    = coll;
+	//m_req.size_coll                   = gbstrlen(coll)+1;
+	m_req.m_collnum = m_collnum;
 	m_req.m_docsToGet                 = endNum;
 	m_req.m_niceness                  = 0,
 	m_req.m_getDocIdScoringInfo       = false;
@@ -662,7 +669,7 @@ bool Msg1c::gotList ( ) {
 
 	if ( ! m_msg4.addMetaList ( m_sb.getBufStart() ,
 				    m_sb.length() ,
-				    m_coll ,
+				    m_collnum ,
 				    this ,
 				    addedListWrapper ,
 				    0 , // niceness

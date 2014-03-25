@@ -24,7 +24,7 @@
 #include "Collectiondb.h"
 
 #define MAX_MASTER_IPS        15
-#define MAX_MASTER_PASSWORDS  10
+#define MAX_MASTER_PASSWORDS  5
 
 #define USERAGENTMAXSIZE      128
 
@@ -49,9 +49,13 @@ class Conf {
 	
 	Conf();
 
-	bool isMasterAdmin  ( class TcpSocket *s , class HttpRequest *r );
-	bool isSpamAssassin ( class TcpSocket *s , class HttpRequest *r );
-	bool isAdminIp      ( unsigned long ip );
+	bool isCollAdmin ( TcpSocket *socket , HttpRequest *hr ) ;
+
+	bool isRootAdmin ( TcpSocket *socket , HttpRequest *hr ) ;
+	//bool isMasterAdmin  ( class TcpSocket *s , class HttpRequest *r );
+	//bool isSpamAssassin ( class TcpSocket *s , class HttpRequest *r );
+	bool hasRootPwd ( HttpRequest *hr ) ;
+	bool isRootIp      ( unsigned long ip );
 	bool isConnectIp    ( unsigned long ip );
 
 	// loads conf parms from this file "{dir}/gb.conf"
@@ -93,6 +97,8 @@ class Conf {
 	// in main.cpp so they can change parms here and not worry about
 	// a core dump saving them
 	char m_save;
+
+	bool m_isLocal;
 
 	//director info (optional) (used iff m_isTrustedNet is false)
 	//public_key  m_dirPubKey;  // everyone should know director's pub key
@@ -663,9 +669,10 @@ class Conf {
 
 	long m_numMasterPwds;
 	char m_masterPwds[MAX_MASTER_PASSWORDS][PASSWORD_MAX_LEN];
-	long m_numMasterIps;
-	long m_masterIps[MAX_MASTER_IPS];
+	//long m_numMasterIps;
+	//long m_masterIps[MAX_MASTER_IPS];
 
+	// these are the new master ips
 	long  m_numConnectIps;
 	long  m_connectIps [ MAX_CONNECT_IPS ];
 

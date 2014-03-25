@@ -24,7 +24,9 @@ enum {
 enum {
 	OBJ_CONF    = 1 ,
 	OBJ_COLL        ,
-	OBJ_SI          }; // SearchInput class
+	OBJ_SI          , // SearchInput class
+	OBJ_NONE
+};
 
 enum {
 	TYPE_BOOL       = 1 ,
@@ -56,8 +58,8 @@ enum {
 	TYPE_MONOM2         ,
 	TYPE_LONG_CONST     ,
 	TYPE_SITERULE       , // 29
-	TYPE_SAFEBUF        
-	//TYPE_DIFFBOT_DROPDOWN
+	TYPE_SAFEBUF        ,
+	TYPE_FILEUPLOADBUTTON
 };
 
 //forward decls to make compiler happy:
@@ -95,9 +97,10 @@ class Page {
 #define PF_NOSYNC            0x40
 #define PF_DIFFBOT           0x80
 
-#define PF_HIDDEN 0x0100
-#define PF_NOSAVE 0x0200
-
+#define PF_HIDDEN   0x0100
+#define PF_NOSAVE   0x0200
+#define PF_DUP      0x0400
+#define PF_TEXTAREA 0x0800
 
 class Parm {
  public:
@@ -197,29 +200,22 @@ class Parms {
 
 	void init();
 	
-	bool sendPageGeneric ( class TcpSocket *s, class HttpRequest *r, 
-			       long page , char *cookie = NULL ,
-			       // Diffbot.cpp uses this to print the
-			       // url filters into
-			       SafeBuf *pageBuf = NULL ,
-			       // used by diffbot.cpp
-			       char *collOverride = NULL ,
-			       bool isJSON = false ) ;
+	bool sendPageGeneric ( class TcpSocket *s, class HttpRequest *r );
 
-	bool sendPageGeneric2 ( class TcpSocket *s , class HttpRequest *r , 
-				long page , char *coll , char *pwd ) ;
-
+	bool printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r );
 
 	//char *printParms (char *p, char *pend, TcpSocket *s, HttpRequest *r);
 	bool printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r );
 
-	//char *printParms (char *p,char *pend,long page,char *username,
-	//                  void *THIS, char *coll , char *pwd , 
-	//		  long nc , long pd ) ;
-	bool printParms (SafeBuf* sb, long page,char *username,void *THIS,
-			 char *coll , char *pwd , long nc , long pd ,
-			 bool isCrawlbot = false ,
-			 bool isJSON = false );
+	bool printParms2 (SafeBuf* sb, 
+			  long page,
+			  CollectionRec *cr,
+			  long nc , 
+			  long pd ,
+			  bool isCrawlbot ,
+			  bool isJSON,
+			  TcpSocket *sock
+			  );
 
 	/*
 	char *printParm ( char *p    , 

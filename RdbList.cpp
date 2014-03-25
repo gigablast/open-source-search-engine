@@ -3039,7 +3039,7 @@ bool RdbList::posdbMerge_r ( RdbList **lists         ,
 	if ( maxPtr > m_alloc + m_allocSize ) maxPtr = m_alloc + m_allocSize;
 
 	// debug note
-	if ( m_listSize )
+ 	if ( m_listSize && g_conf.m_logDebugBuild )
 		log(LOG_LOGIC,"db: storing recs in a non-empty list for merge"
 		    " probably from recall from negative key loss");
 

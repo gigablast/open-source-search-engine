@@ -537,7 +537,7 @@ void printUdpTable ( SafeBuf *p, char *title, UdpServer *server ,
 			long dlen;
 			char *dbuf = ::getDomFast ( hostname,&dlen,false);
 			p->safePrintf(
-			      " <a href=\"/master/tagdb?"
+			      " <a href=\"/admin/tagdb?"
 			      "user=admin&"
 			      "tagtype0=manualban&"
 			      "tagdata0=1&"
