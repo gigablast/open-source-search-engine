@@ -875,17 +875,17 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 				       );
 		// but default to csv
 		else {
-		    // If a crawl and there are no urlCrawlPattern or urlCrawlRegEx values, only return URLs from seed domain
-		    if (cr
-		            && cr->m_isCustomCrawl == 1
-		            && cr->m_diffbotUrlCrawlPattern.m_length == 0
-		            && cr->m_diffbotUrlProcessPattern.m_length == 0
-		            && expression
-		            && sreq
-		            && !sreq->m_sameDom
-		            && !sreq->m_isAddUrl
-		            && !sreq->m_isInjecting) {
-		        continue;
+		    if (cr && cr->m_isCustomCrawl == 1 && sreq && !sreq->m_isAddUrl && !sreq->m_isInjecting) {
+		        if (cr->m_diffbotUrlCrawlPattern.m_length == 0
+                    && cr->m_diffbotUrlProcessPattern.m_length == 0) {
+		            // If a crawl and there are no urlCrawlPattern or urlCrawlRegEx values, only return URLs from seed domain
+		            if (sreq && !sreq->m_sameDom)
+		                continue;
+		        } else {
+		            // TODO: if we get here, we have a crawl with a custom urlCrawlPattern and/or custom
+		            //       urlProcessPattern. We have to check if the current url matches the pattern
+
+		        }
 		    }
 
 			sb->safePrintf("\"%s\",\"%s\","
