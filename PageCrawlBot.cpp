@@ -881,10 +881,12 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		            && cr->m_diffbotUrlCrawlPattern.m_length == 0
 		            && cr->m_diffbotUrlProcessPattern.m_length == 0
 		            && expression
-		            && strstr(expression,"!isonsamedomain")) {
+		            && sreq
+		            && !sreq->m_sameDom
+		            && !sreq->m_isAddUrl
+		            && !sreq->m_isInjecting) {
 		        continue;
 		    }
-		    fprintf(stderr, "%s", expression);
 
 			sb->safePrintf("\"%s\",\"%s\","
 				       , sreq->m_url
