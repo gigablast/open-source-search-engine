@@ -1024,7 +1024,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	snprintf(oldbulkurlsname, 1036, "%scoll.%s.%li/bulkurls.txt",g_hostdb.m_dir,cr->m_coll,(long)oldCollnum);
 	char newbulkurlsname[1036];
 	snprintf(newbulkurlsname, 1036, "%scoll.%s.%li/bulkurls.txt",g_hostdb.m_dir,cr->m_coll,(long)newCollnum);
-	char tmpbulkurlsname[1024];
+	char tmpbulkurlsname[1036];
 	snprintf(tmpbulkurlsname, 1036, "/tmp/coll.%s.%li.bulkurls.txt",cr->m_coll,(long)oldCollnum);
 
 	if (cr->m_isCustomCrawl == 2)
