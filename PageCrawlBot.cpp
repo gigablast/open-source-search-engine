@@ -3959,7 +3959,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 // . do not add dups into m_diffbotSeeds safebuf
 // . return 0 if not in table, 1 if in table. -1 on error adding to table.
-long isInSeedBuf ( CollectionRec *cr , Url *url ) {
+long isInSeedBuf ( CollectionRec *cr , char *url, int len ) {
 
 	HashTableX *ht = &cr->m_seedHashTable;
 
@@ -3986,7 +3986,7 @@ long isInSeedBuf ( CollectionRec *cr , Url *url ) {
 	}
 
 	// is this url in the hash table?
-	long long u64 = hash64 ( url->getUrl() , url->getUrlLen() );
+	long long u64 = hash64 ( url, len );
 	
 	if ( ht->isInTable ( &u64 ) ) return 1;
 
@@ -4085,7 +4085,7 @@ bool getSpiderRequestMetaList ( char *doc ,
 		if ( ! cr ) continue;
 
 		// do not add dups into m_diffbotSeeds safebuf
-		long status = isInSeedBuf ( cr , &url );
+		long status = isInSeedBuf ( cr , saved , end - saved );
 
 		// error?
 		if ( status == -1 ) {
