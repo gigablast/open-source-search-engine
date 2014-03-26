@@ -30298,6 +30298,9 @@ bool XmlDoc::hashNumber ( char *beginBuf ,
 	// . this now allows for commas in numbers like "1,500.62"
 	float f = atof2 ( p , bufEnd - p );
 
+	// debug
+	//log("build: hashing %s %f",hi->m_prefix,f);
+
 	if ( ! hashNumber2 ( f , hi , "gbsortby" ) )
 		return false;
 
