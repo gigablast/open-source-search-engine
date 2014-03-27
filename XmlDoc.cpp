@@ -17208,6 +17208,8 @@ long *XmlDoc::getContentHashJson32 ( ) {
 		if ( ji->m_type != JT_NUMBER && ji->m_type != JT_STRING )
 			continue;
 
+		char *topName = NULL;
+
 		// what name level are we?
 		long numNames = 1;
 		JsonItem *pi = ji->m_parent;
@@ -17215,6 +17217,7 @@ long *XmlDoc::getContentHashJson32 ( ) {
 			// empty name?
 			if ( ! pi->m_name ) continue;
 			if ( ! pi->m_name[0] ) continue;
+			topName = pi->m_name;
 			numNames++;
 		}
 
@@ -17232,6 +17235,22 @@ long *XmlDoc::getContentHashJson32 ( ) {
 		if ( ji->m_name && numNames==1 &&
 		     strcmp(ji->m_name,"resolved_url") == 0 )
 			continue;
+
+		if ( topName && strcmp(topName,"stats") == 0 )
+			continue;
+
+		if ( topName && strcmp(topName,"queryString") == 0 )
+			continue;
+
+		if ( topName && strcmp(topName,"nextPages") == 0 )
+			continue;
+
+		if ( topName && strcmp(topName,"textAnalysis") == 0 )
+			continue;
+
+		if ( topName && strcmp(topName,"links") == 0 )
+			continue;
+
 
 		// hash the fully compound name
 		long nameHash32 = 0;
