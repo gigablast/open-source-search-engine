@@ -445,7 +445,7 @@ bool Images::downloadImages () {
 		r->reset();
 		r->m_maxTextDocLen  = 200000;
 		r->m_maxOtherDocLen = 500000;
-		if ( ! strcmp(cr->m_coll,"test")) {
+		if ( ! strcmp(cr->m_coll,"qatest123")) {
 			r->m_useTestCache   = 1;
 			r->m_addToTestCache = 1;
 		}

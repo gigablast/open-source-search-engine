@@ -116,7 +116,7 @@ bool Msge1::getFirstIps ( TagRec **grv ,
 	if ( ! launchRequests ( 0 ) ) return false;
 
 	// save it? might be a page parser
-	//if ( ! strcmp(m_coll,"test") ) saveTestBuf();
+	//if ( ! strcmp(m_coll,"qatest123") ) saveTestBuf();
 
 	// none blocked, we are done
 	return true;
@@ -219,7 +219,7 @@ bool Msge1::launchRequests ( long starti ) {
 
 	/*
 	// look up in our m_testBuf.
-	if ( m_coll && ! strcmp(m_coll,"test") ) {
+	if ( m_coll && ! strcmp(m_coll,"qatest123") ) {
 		bool found = false;
 		// do we got it?
 		long quickIp ; bool status = getTestIp ( p , &quickIp, &found);
@@ -300,7 +300,7 @@ bool Msge1::sendMsgC ( long i , char *host , long hlen ) {
 
 
 	// look up in our m_testBuf.
-	if ( m_coll && ! strcmp(m_coll,"test") ) {
+	if ( m_coll && ! strcmp(m_coll,"qatest123") ) {
 		bool found = false;
 		// shortcut
 		//char *p = m_urlPtrs[n];
@@ -340,7 +340,7 @@ void gotMsgCWrapper ( void *state , long ip ) {
 	if ( ! THIS->launchRequests(i) ) return;
 	// . save it if we should. might be a page parser
 	// . mdw i uncommented this when we cored all the time
-	//if ( ! strcmp(THIS->m_coll,"test")) saveTestBuf();
+	//if ( ! strcmp(THIS->m_coll,"qatest123")) saveTestBuf();
 	// must be all done, call the callback
 	THIS->m_callback ( THIS->m_state );
 }
@@ -364,7 +364,7 @@ bool Msge1::doneSending ( long i ) {
 	//      n, i,  m_urls[i].getUrl() ,iptoa(ip));
 
 	// store it?
-	if ( ! strcmp(m_coll,"test") ) {
+	if ( ! strcmp(m_coll,"qatest123") ) {
 		// get host
 		long  hlen = 0;
 		char *host = getHostFast ( m_urlPtrs[n] , &hlen );
@@ -511,9 +511,9 @@ static char *s_last         = NULL ;
 static long  s_lastLen      = 0    ;
 static HashTableX s_ht;
 
-// . only call this if the collection is "test"
+// . only call this if the collection is "qatest123"
 // . we try to get the ip by accessing the "./test/ips.txt" file
-// . we also ad ips we lookup to that file in the collection is "test"
+// . we also ad ips we lookup to that file in the collection is "qatest123"
 // . returns false and sets g_errno on error, true on success
 bool getTestIp ( char *url , long *retIp , bool *found , long niceness ,
 		 char *testDir ) {
@@ -533,8 +533,8 @@ bool getTestIp ( char *url , long *retIp , bool *found , long niceness ,
 	// assume not found
 	*found = false;
 
-	// . if we are the "test" collection, check for "./test/ips.txt" file
-	//   that gives us the ips of the given urls. 
+	// . if we are the "qatestq123" collection, check for "./test/ips.txt"
+	//   file that gives us the ips of the given urls. 
 	// . if we end up doing some lookups we should append to that file
 	if ( ! s_testBuf || s_needsReload ) {
 		// assume needs reload now

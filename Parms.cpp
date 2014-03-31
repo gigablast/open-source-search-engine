@@ -450,7 +450,7 @@ bool CommandParserTestInit ( char *rec ) {
 	g_conf.m_spideringEnabled = 1;
 	//g_conf.m_webSpideringEnabled = 1;
 	// turn on for test coll too
-	CollectionRec *cr = g_collectiondb.getRec("test");
+	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	// turn on spiders
 	if ( cr ) cr->m_spideringEnabled = 1;
 	// if we are not host 0, turn on spiders for testing
@@ -470,7 +470,7 @@ bool CommandSpiderTestInit ( char *rec ) {
 	g_conf.m_spideringEnabled = 1;
 	//g_conf.m_webSpideringEnabled = 1;
 	// turn on for test coll too
-	CollectionRec *cr = g_collectiondb.getRec("test");
+	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	// turn on spiders
 	if ( cr ) cr->m_spideringEnabled = 1;
 	// if we are not host 0, turn on spiders for testing
@@ -488,7 +488,7 @@ bool CommandSpiderTestCont ( char *rec ) {
 	g_conf.m_spideringEnabled = 1;
 	//g_conf.m_webSpideringEnabled = 1;
 	// turn on for test coll too
-	CollectionRec *cr = g_collectiondb.getRec("test");
+	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	// turn on spiders
 	if ( cr ) cr->m_spideringEnabled = 1;
 	// done 
@@ -18268,7 +18268,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 		CollectionRec *cr = (CollectionRec *)THIS;
 		// if testUrl is provided, find in the table
 		char testUrl [ 1025 ];
-		char *tt = r->getString ( "test" , NULL );
+		char *tt = r->getString ( "qatest123" , NULL );
 		testUrl[0]='\0';
 		if ( tt ) strncpy ( testUrl , tt , 1024 );
 		char *tu = testUrl;

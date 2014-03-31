@@ -879,8 +879,8 @@ bool XmlDoc::set1 ( char    *url         ,
 char *XmlDoc::getTestDir ( ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
-	// return NULL if we are not the "test" collection
-	if ( strcmp(cr->m_coll,"test") ) return NULL;
+	// return NULL if we are not the "qatest123" collection
+	if ( strcmp(cr->m_coll,"qatest123") ) return NULL;
 	// if Test.cpp explicitly set SpiderRequest::m_useTestSpiderDir bit
 	// then return "test-spider" otherwise...
 	if ( m_sreqValid && m_sreq.m_useTestSpiderDir ) 
@@ -914,7 +914,7 @@ long XmlDoc::getSpideredTime ( ) {
 	if ( ! cr ) return 0;
 
 	// if not test collection keep it simple
-	if ( strcmp(cr->m_coll,"test") ) {
+	if ( strcmp(cr->m_coll,"qatest123") ) {
 		// . set spider time to current time
 		// . this might already be valid if we set it in 
 		//   getTestSpideredDate()
@@ -3295,13 +3295,13 @@ char *XmlDoc::prepareToMakeTitleRec ( ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
-	// if we are injecting into the "test" coll, then we need to have
+	// if we are injecting into the "qatest123" coll, then we need to have
 	// m_spideredTimeValid be true before calling getIsSpam() which calls
 	// getSiteNumInlinks() which adds tags to tagdb using that date, but
-	// only for the "test" coll! that keeps our parser output consistent
-	// across runs!
+	// only for the "qatest123" coll!
+	// that keeps our parser output consistent across runs!
 	char **content = NULL;
-	if ( ! strcmp ( cr->m_coll,"test") ) {
+	if ( ! strcmp ( cr->m_coll,"qatest123") ) {
 		content = getContent ( );
 		if ( ! content || content == (void *)-1 ) 
 			return (char *)content;
@@ -11842,7 +11842,7 @@ long *XmlDoc::getSiteNumInlinks ( ) {
 	// current time
 	long now = getTimeGlobal();
 	// use the spidered time for the test collection for consistency
-	if ( !strcmp(cr->m_coll,"test") ) {
+	if ( !strcmp(cr->m_coll,"qatest123") ) {
 		//if ( ! m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
 		now = getSpideredTime();//m_spideredTime;
 	}
@@ -12061,8 +12061,8 @@ LinkInfo *XmlDoc::getSiteLinkInfo() {
 	// get from spider request if there
 	//bool injected = false;
 	//if ( m_sreqValid && m_sreq.m_isInjecting ) injected = true;
-	// but be consistent if doing the "test" collection
-	if ( ! strcmp(cr->m_coll,"test") ) {
+	// but be consistent if doing the "qatest123" collection
+	if ( ! strcmp(cr->m_coll,"qatest123") ) {
 		//if ( ! m_spideredTimeValid ) {char *xx=NULL;*xx=0;}
 		lastUpdateTime = getSpideredTime();//m_spideredTime;
 	}
@@ -12164,14 +12164,14 @@ long *XmlDoc::getIp ( ) {
 	if ( ! cr ) return NULL;
 
 	bool useTestCache = false;
-	if ( ! strcmp(cr->m_coll,"test") ) useTestCache = true;
+	if ( ! strcmp(cr->m_coll,"qatest123") ) useTestCache = true;
 	// unless its the pagesubmit.cpp event submission tool
 	//if ( m_sreqValid && m_sreq.m_isPageSubmit ) useTestCache = false;
 
 
-	// when building the "test" collection try to get the ip from
+	// when building the "qatest123" collection try to get the ip from
 	// "./test/ips.txt" so our injections are consistent every time 
-	// Test.cpp runs its injection loop into the "test" collection
+	// Test.cpp runs its injection loop into the "qatest123" collection
 	if ( useTestCache ) { // && m_useIpsTxtFile ) {
 		// stolen from msgc.cpp:
 		// if url is already in a.b.c.d format return that
@@ -12204,7 +12204,7 @@ long *XmlDoc::getIp ( ) {
 	// this basically slows the spider down.
 	long delay = cr->m_spiderDelayInMilliseconds;
 	// ignore for testing
-	if ( ! strcmp(cr->m_coll,"test") ) delay = 0;
+	if ( ! strcmp(cr->m_coll,"qatest123") ) delay = 0;
 	// injected?
 	if ( m_sreqValid && m_sreq.m_isInjecting  ) delay = 0;
 	if ( m_sreqValid && m_sreq.m_isPageParser ) delay = 0;
@@ -12281,14 +12281,14 @@ long *XmlDoc::gotIp ( bool save ) {
 	if ( ! cr ) return NULL;
 
 	bool useTestCache = false;
-	if ( ! strcmp(cr->m_coll,"test") ) useTestCache = true;
+	if ( ! strcmp(cr->m_coll,"qatest123") ) useTestCache = true;
 	// unless its the pagesubmit.cpp event submission tool
 	//if ( m_sreqValid && m_sreq.m_isPageSubmit ) useTestCache = false;
 	
 
-	// when building the "test" collection try to get the ip from
+	// when building the "qatest123" collection try to get the ip from
 	// "./test/ips.txt" so our injections are consistent every time 
-	// Test.cpp runs its injection loop into the "test" collection
+	// Test.cpp runs its injection loop into the "qatest123" collection
 	if ( save && useTestCache ) {
 		// ip of 0 means NXDOMAIN i think (-1 means error)
 		//if ( m_ip == 0 ) {
@@ -12592,8 +12592,8 @@ bool *XmlDoc::getIsAllowed ( ) {
 		return &m_isAllowed;
 	}
 
-	// or if using the "test" collection, assume yes!
-	//if ( ! strcmp ( m_coll , "test" ) ) {
+	// or if using the "qatest123" collection, assume yes!
+	//if ( ! strcmp ( m_coll , "qatest123" ) ) {
 	//	m_isAllowed      = true;
 	//	m_isAllowedValid = true;
 	//	return &m_isAllowed;
@@ -12939,8 +12939,8 @@ LinkInfo *XmlDoc::getLinkInfo1 ( ) {
 	if ( ! m_calledMsg25 ) {
 		// get this
 		long lastUpdateTime = getTimeGlobal();
-		// but be consistent if doing the "test" collection
-		if ( ! strcmp(cr->m_coll,"test") ) {
+		// but be consistent if doing the "qatest123" collection
+		if ( ! strcmp(cr->m_coll,"qatest123") ) {
 			//if ( ! m_spideredTimeValid ) {char *xx=NULL;*xx=0;}
 			lastUpdateTime = getSpideredTime();//m_spideredTime;
 		}
@@ -14184,7 +14184,7 @@ char **XmlDoc::getHttpReply ( ) {
 	// come back up here if a redirect invalidates it
  loop:
 	// sanity test -- only if not the test collection (NO, might be EBADIP)
-	//if ( m_indexCode && strcmp(m_coll,"test") ) { char *xx=NULL;*xx=0; }
+	//if ( m_indexCode && strcmp(m_coll,"qatest123")){char*xx=NULL;*xx=0;}
 	// get the http reply
 	char **replyPtr = getHttpReply2();
 	if ( ! replyPtr || replyPtr == (void *)-1 ) return (char **)replyPtr;
@@ -14382,7 +14382,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 	//	return gotHttpReply ( );
 
 	bool useTestCache = false;
-	if ( ! strcmp(cr->m_coll,"test") ) useTestCache = true;
+	if ( ! strcmp(cr->m_coll,"qatest123") ) useTestCache = true;
 	// unless its the pagesubmit.cpp event submission tool
 	//if ( m_sreqValid && m_sreq.m_isPageSubmit ) useTestCache = false;
 
@@ -14479,7 +14479,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// set it for this too
 	if ( g_conf.m_useCompressionProxy &&
 	     // do not use for the test collection ever, that is qa'ing
-	     strcmp(cr->m_coll,"test") ) {
+	     strcmp(cr->m_coll,"qatest123") ) {
 		r->m_useCompressionProxy = true;
 		r->m_compressReply       = true;
 	}
@@ -14540,7 +14540,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// . msg13 uses XmlDoc::getHttpReply() function to handle
 	//   redirects, etc.? no...
 	bool isTestColl = false;
-	if ( ! strcmp(cr->m_coll,"test") ) isTestColl = true;
+	if ( ! strcmp(cr->m_coll,"qatest123") ) isTestColl = true;
 
 	// sanity check. keep injections fast. no downloading!
 	if ( m_wasInjected ) { 
@@ -14614,7 +14614,7 @@ char **XmlDoc::gotHttpReply ( ) {
 	// . i.e. what are you doing downloading the page if there was
 	//   a problem with the page we already know about
 	if ( m_indexCode && m_indexCodeValid &&
-	     strcmp(cr->m_coll,"test") ) { char *xx=NULL;*xx=0; }
+	     strcmp(cr->m_coll,"qatest123") ) { char *xx=NULL;*xx=0; }
 
 	// fix this
 	if ( saved == EDOCUNCHANGED ) {
@@ -17627,7 +17627,7 @@ long **XmlDoc::getOutlinkFirstIpVector () {
 	if ( ! cr ) return NULL;
 
 	// . go get it
-	// . if coll is "test" then try to use the file ./test/ips.txt to
+	// . if coll is "qatest123" then try to use the file ./test/ips.txt to
 	//   see if the ip is in there for the given url hostname
 	// . this will now update Tagdb with the "firstip" tags if it should!!
 	// . this just dns looks up the DOMAINS of each outlink because these
@@ -17767,7 +17767,7 @@ long *XmlDoc::getUrlFilterNum ( ) {
 
 	// . look it up
 	// . use the old spidered date for "nowGlobal" so we can be consistent
-	//   for injecting into the "test" coll
+	//   for injecting into the "qatest123" coll
 	long ufn = ::getUrlFilterNum ( oldsr,&fakeReply,spideredTime,false,
 				       m_niceness,cr,
 				       false, // isOutlink?
@@ -18774,7 +18774,7 @@ bool XmlDoc::doConsistencyTest ( bool forceTest ) {
 		return true;
 
 	// if not test coll skip this
-	//if ( strcmp(cr->m_coll,"test") ) return true;
+	//if ( strcmp(cr->m_coll,"qatest123") ) return true;
 
 	// title rec is null if we are reindexing an old doc
 	// and "unchanged" was true.
@@ -19220,7 +19220,7 @@ void XmlDoc::printMetaList ( char *p , char *pend , SafeBuf *sb ) {
 		else if ( rdbId == RDB_TITLEDB ) {
 			//XmlDoc tr;
 			//SafeBuf tmp;
-			//tr.set2 ( rec,recSize ,"test",&tmp,m_niceness);
+			//tr.set2 ( rec,recSize ,"qatest123",&tmp,m_niceness);
 			// print each offset and size for the variable crap
 			sb->safePrintf("<td><nobr>titlerec datasize=%li "
 				       //"sizeofxmldoc=%li "
@@ -19293,7 +19293,7 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 	if ( ! cr ) return true;
 
 	// do not do this if not test collection for now
-	if ( strcmp(cr->m_coll,"test") ) return true;
+	if ( strcmp(cr->m_coll,"qatest123") ) return true;
 
 	// store each record in the list into the send buffers
 	for ( ; p < pend ; ) {
@@ -22457,7 +22457,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	//if ( ! m_spideredTimeValid         ) { char *xx=NULL;*xx=0; }
 
 	// . set other fields besides key
-	// . crap! if we are the "test" collection then m_spideredTime
+	// . crap! if we are the "qatest123" collection then m_spideredTime
 	//   was read from disk usually and is way in the past! watch out!!
 	m_srep.m_spideredTime = getSpideredTime();//m_spideredTime;
 
@@ -22467,7 +22467,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	// crap, for the test coll this is often a very old time and it
 	// causes the spider request to be repeatedly executed, so let's
 	// fix that
-	if ( ! strcmp(cr->m_coll,"test") ) 
+	if ( ! strcmp(cr->m_coll,"qatest123") ) 
 		m_srep.m_spideredTime = getTimeGlobal();
 
 
@@ -23051,7 +23051,7 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	if ( ! cr ) return NULL;
 
 	// do not do this if not test collection for now
-	bool isTestColl = (! strcmp(cr->m_coll,"test") );
+	bool isTestColl = (! strcmp(cr->m_coll,"qatest123") );
 	// turn off for now
 	isTestColl = false;
 
@@ -33710,7 +33710,7 @@ SafeBuf *XmlDoc::getNewTagBuf ( ) {
 	long now = getTimeGlobal();
 	// actually, use spider download time if we can. that way
 	// Test.cpp's injection runs will be more consistent!
-	if ( ! strcmp(cr->m_coll,"test") ) {
+	if ( ! strcmp(cr->m_coll,"qatest123") ) {
 		//if ( ! m_spideredTimeValid ) { char *xx=NULL;*xx=0; }
 		now = getSpideredTime();//m_spideredTime;
 	}

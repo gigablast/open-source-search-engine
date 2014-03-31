@@ -838,8 +838,8 @@ bool Collectiondb::resetColl ( char *coll ,  bool purgeSeeds) {
 		return true;
 	}
 
-	// get the CollectionRec for "test"
-	CollectionRec *cr = getRec ( coll ); // "test" );
+	// get the CollectionRec for "qatest123"
+	CollectionRec *cr = getRec ( coll ); // "qatest123" );
 
 	// must be there. if not, we create test i guess
 	if ( ! cr ) { 
@@ -982,8 +982,8 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// save parms in case we block
 	//we->m_purgeSeeds = purgeSeeds;
 
-	// now must be "test" only for now
-	//if ( strcmp(coll,"test") ) { char *xx=NULL;*xx=0; }
+	// now must be "qatest123" only for now
+	//if ( strcmp(coll,"qatest123") ) { char *xx=NULL;*xx=0; }
 	// no spiders can be out. they may be referencing the CollectionRec
 	// in XmlDoc.cpp... quite likely.
 	//if ( g_conf.m_spideringEnabled ||

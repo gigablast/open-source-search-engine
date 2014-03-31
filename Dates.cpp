@@ -1318,7 +1318,7 @@ sections. -- todo -- might be an alignment issue... check out later
 
 // . make a whole new set of urls for pub date detection
 // . grab that sample set from buzz wiki page
-// . record the correct pub date for urls in the "test" coll and make sure
+// . record the correct pub date for urls in the "qatest123" coll and make sure
 //   we get them each time, otherwise core dump!!
 // . check the date we extract with the rss feed. that is a good test too!
 //   report on that accuracy in the logs and on the stats page.
@@ -2428,7 +2428,7 @@ bool Dates::setPart1 ( //char       *u        ,
 	//if ( m_nw != words->m_numWords ) { char *xx=NULL; *xx=0; }
 
 	// . get the current time in utc
-	// . NO! to ensure the "test" collection re-injects docs exactly
+	// . NO! to ensure the "qatest123" collection re-injects docs exactly
 	//   the same, use the spideredTime from the doc
 	// . we make sure to save this in the test subdir somehow..
 	//m_now      = nd->m_spideredTime; // getTimeSynced();
@@ -3283,7 +3283,7 @@ bool Dates::setPart1 ( //char       *u        ,
 	//    DF_NOTCLOCK flags from this.
 
 	// . current time. sync'd with host #0 who uses ntp supposedly...! :(
-	// . to ensure that the "test" subdir re-injects docs exactly the
+	// . to ensure that the "qatest123" subdir re-injects docs exactly the
 	//   same, we need to use this date now
 	long now = nd->m_spideredTime; 
 	// how long has elapsed since we downloaded it last approx.?
@@ -3294,7 +3294,8 @@ bool Dates::setPart1 ( //char       *u        ,
 	// might have been different than ours... actually i think our
 	// spiderdate.txt file had an older date in it from a previous round!
 	// so disable this when test spidering.
-	if ( elapsed<0 && g_conf.m_testSpiderEnabled && !strcmp(m_coll,"test"))
+	if ( elapsed<0 && g_conf.m_testSpiderEnabled && !strcmp(m_coll,
+								"qatest123"))
 		elapsed = 0;
 	// is true.
 	if ( elapsed < 0 ) { 
