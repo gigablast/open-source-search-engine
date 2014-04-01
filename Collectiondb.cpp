@@ -998,7 +998,7 @@ int mv(char* src, char* dest) {
 
     fclose(fsrc);
     fclose(fdest);
-    if (ferror(fdest) && ferror(fsrc))
+    if (ferror(fdest) || ferror(fsrc))
         return -1;
 
     remove(src);
