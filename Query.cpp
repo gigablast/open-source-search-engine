@@ -24,11 +24,11 @@ void Query::constructor ( ) {
 	//m_bmap      = NULL;
 	m_bitScores = NULL;
 	m_qwords      = NULL;
-	m_expressions = NULL;
+	//m_expressions = NULL;
 	m_qwordsAllocSize      = 0;
-	m_expressionsAllocSize = 0;
+	//m_expressionsAllocSize = 0;
 	m_qwords               = NULL;
-	m_expressions          = NULL;
+	//m_expressions          = NULL;
 	reset ( );
 }
 
@@ -46,7 +46,7 @@ void Query::reset ( ) {
 	m_bufLen      = 0;
 	m_origLen     = 0;
 	m_numWords    = 0;
-	m_numOperands = 0;
+	//m_numOperands = 0;
 	m_numTerms    = 0;
 	m_synTerm     = 0;
 	//m_numIgnored  = 0;
@@ -60,14 +60,14 @@ void Query::reset ( ) {
 	m_bitScores = NULL;
 	//m_bmapSize      = 0;
 	m_bitScoresSize = 0;
-	if ( m_expressionsAllocSize )
-		mfree ( m_expressions , m_expressionsAllocSize , "Query3" );
+	//if ( m_expressionsAllocSize )
+	//	mfree ( m_expressions , m_expressionsAllocSize , "Query3" );
 	if ( m_qwordsAllocSize )
 		mfree ( m_qwords      , m_qwordsAllocSize      , "Query4" );
-	m_expressionsAllocSize = 0;
+	//m_expressionsAllocSize = 0;
 	m_qwordsAllocSize      = 0;
 	m_qwords               = NULL;
-	m_expressions          = NULL;
+	//m_expressions          = NULL;
 	m_numExpressions       = 0;
 	m_gnext                = m_gbuf;
 	m_hasUOR               = false;
@@ -149,7 +149,7 @@ bool Query::set2 ( char *query        ,
 
 	char *q = query;
 	// see if it should be boolean...
-	for ( long i = 0 ; boolFlag && i < queryLen ; i++ ) {
+	for ( long i = 0 ; i < queryLen ; i++ ) {
 		if ( q[i]=='A' && q[i+1]=='N' && q[i+2]=='D' &&
 		     (q[i+3]==' ' || q[i+3]=='(') )
 			boolFlag = 1;
@@ -343,8 +343,8 @@ bool Query::set2 ( char *query        ,
 
 	// set m_expressions[] and m_operands[] arrays and m_numOperands 
 	// for boolean queries
-	if ( m_isBoolean )
-		if ( ! setBooleanOperands() ) return false;
+	//if ( m_isBoolean )
+	//	if ( ! setBooleanOperands() ) return false;
 
 	// disable stuff for site:, ip: and url: queries
 	for ( long i = 0 ; i < m_numWords ; i++ ) {
@@ -385,6 +385,17 @@ bool Query::set2 ( char *query        ,
 		m_groupThatHasDocId = g_hostdb.getShard ( shard );
 		break;
 	}
+
+	// . keep it simple for now
+	// . we limit to MAX_EXRESSIONS to like 10 now i guess
+	if ( m_isBoolean ) {
+		m_numExpressions = 1;
+		m_expressions[0].add ( 0 , 
+				       m_numWords ,
+				       this , // Query
+				       0 ); // level
+	}
+
 
 	// . if it is not truncated, no need to use hard counts
 	// . comment this line and the next one out for testing hard counts
@@ -450,16 +461,16 @@ bool Query::set2 ( char *query        ,
 	//    "(nt=%li)",
 	//     m_numExplicitBits,m_numTerms-m_numExplicitBits,m_numTerms);
 
-	if ( ! m_isBoolean ) return true;
+	//if ( ! m_isBoolean ) return true;
 
 	// free cuz it was already set
-	if ( m_expressionsAllocSize ) 
-		mfree(m_expressions,m_expressionsAllocSize , "Query" );
-	m_expressionsAllocSize = 0;
-	m_expressions = NULL;
+	//if ( m_expressionsAllocSize ) 
+	//	mfree(m_expressions,m_expressionsAllocSize , "Query" );
+	//m_expressionsAllocSize = 0;
+	//m_expressions = NULL;
 
 	// also set the boolean stuff again too!
-	if ( ! setBooleanOperands() ) return false;
+	//if ( ! setBooleanOperands() ) return false;
 
 	return true;
 }
@@ -498,7 +509,6 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 	long max = (long)MAX_EXPLICIT_BITS;
 	if ( max > m_maxQueryTerms ) max = m_maxQueryTerms;
 	//char u8Buf[256]; 
-
 	for ( long i = 0 ; i < m_numWords && n < MAX_QUERY_TERMS ; i++ ) {
 		// break out if no more explicit bits!
 		/*
@@ -617,7 +627,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		// doh! gotta reset to 0
 		qt->m_implicitBits = 0;
 		// assume not under a NOT bool op
-		qt->m_underNOT = false;
+		//qt->m_underNOT = false;
 		// assign score weight, we're a phrase here
 		qt->m_userWeight = qw->m_userWeightPhrase ;
 		qt->m_userType   = qw->m_userTypePhrase   ;
@@ -819,7 +829,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 // 			break;
 // 		}
 		// assume not under a NOT bool op
-		qt->m_underNOT = false;
+		//qt->m_underNOT = false;
 		// assign score weight, we're a phrase here
 		qt->m_userWeight = qw->m_userWeight ;
 		qt->m_userType   = qw->m_userType   ;
@@ -1162,7 +1172,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 		if ( qw->m_wordSign == '+' ) continue;
 		// no url: stuff, maybe only title
 		if ( qw->m_fieldCode &&
-		     qw->m_fieldCode != FIELD_TITLE )
+		     qw->m_fieldCode != FIELD_TITLE &&
+		     qw->m_fieldCode != FIELD_GENERIC )
 			continue;
 		// skip if ignored like a stopword (stop to->too)
 		//if ( qw->m_ignoreWord ) continue;
@@ -1232,8 +1243,14 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			// stop word? no, we're a phrase term
 			qt->m_isQueryStopWord = qw->m_isQueryStopWord;
 			// change in both places
-			qt->m_termId    = syn.m_aids[j] & TERMID_MASK;
-			m_termIds[n]    = syn.m_aids[j] & TERMID_MASK;
+			long long wid = syn.m_aids[j];
+			// might be in a title: field or something
+			if ( qw->m_prefixHash ) {
+				long long ph = qw->m_prefixHash;
+				wid= hash64h(wid,ph);
+			}
+			qt->m_termId    = wid & TERMID_MASK;
+			m_termIds[n]    = wid & TERMID_MASK;
 			qt->m_rawTermId = syn.m_aids[j];
 			// assume explicit bit is 0
 			qt->m_explicitBit = 0;
@@ -1265,7 +1282,7 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			// reset our implicit bits to 0
 			qt->m_implicitBits = 0;
 			// assume not under a NOT bool op
-			qt->m_underNOT = false;
+			//qt->m_underNOT = false;
 			// assign score weight, we're a phrase here
 			qt->m_userWeight = qw->m_userWeight ;
 			qt->m_userType   = qw->m_userType   ;
@@ -1902,7 +1919,7 @@ bool Query::setQWords ( char boolFlag ,
 		// assume QueryWord is ignored by default
 		qw->m_ignoreWord   = IGNORE_DEFAULT;
 		qw->m_ignorePhrase = IGNORE_DEFAULT;
-
+		qw->m_wordNum = i;
 		// get word as a string
 		//char *w    = words.getWord(i);
 		//long  wlen = words.getWordLen(i);
@@ -3308,24 +3325,24 @@ void Query::printQueryTerms(){
 //////////   ONLY BOOLEAN STUFF BELOW HERE  /////////////
 ////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////
-bool  Query::testBoolean(qvec_t bits, qvec_t bitmask){
+bool  Query::testBoolean( unsigned char *bits ,long vecSize){//qvec_t bitmask){
 	if (!m_isBoolean) return false;
 	Expression *e = &m_expressions [ 0 ];
 	// find top-level expression
-	while (e->m_parent && e != e->m_parent) e = e->m_parent;
-	return e->isTruth(bits, bitmask);
+	//while (e->m_parent && e != e->m_parent) e = e->m_parent;
+	return e->isTruth(bits,vecSize);//, bitmask);
 	
 }
 void  Query::printBooleanTree(){
 	if (!m_isBoolean) return;
-	Expression *e = &m_expressions [ 0 ];
+	//Expression *e = &m_expressions [ 0 ];
 	// find top-level expression
-	while (e->m_parent && e != e->m_parent) e = e->m_parent;
-	SafeBuf sbuf(1024);
-	e->print(&sbuf);
-	logf(LOG_DEBUG, "query: Boolean Query: %s", sbuf.getBufStart());	
+	//while (e->m_parent && e != e->m_parent) e = e->m_parent;
+	//SafeBuf sbuf(1024,"botree");
+	//e->print(&sbuf);
+	//logf(LOG_DEBUG, "query: Boolean Query: %s", sbuf.getBufStart());
 }
-
+/*
 // . also sets the m_underNOT member of each QueryTerm, too!!
 // . returns false and sets g_errno on error, true otherwise
 bool Query::setBooleanOperands ( ) {
@@ -3337,6 +3354,20 @@ bool Query::setBooleanOperands ( ) {
 		return log("query: Maximum number of bool operands "
 			   "exceeded (%ld).",m_numTerms);
 	}
+
+	// set the QueryWord::m_opBit member of each query word.
+	// so if  you have a query like 'A B OR C' then you need
+	// to have both A and B if you don't have C. so every word
+	// unless its an operator needs its own bit. quoted phrases
+	// may present a problem down the road we'll have to deal with.
+	long opNum = 0;
+	for ( long i = 0 ; i < m_numWords ; i++ ) {
+		// skip if field, opcode, punct. etc.
+		if ( m_qwords[i].m_ignoreWord ) continue;
+		// assign it a # i guess
+		m_qwords[i].m_opNum = opNum++;
+	}
+	
 
 	// alloc the mem if we need to (mdw left off here) 
 	//long need = (m_numWords/3) * sizeof(Expression);
@@ -3367,14 +3398,11 @@ bool Query::setBooleanOperands ( ) {
 	// . set the expression recursively
 	// . just setting this will not set the m_hasNOT members of each 
 	//   QueryTerm
-	long status = e->set ( 0           , // first word #
-				m_numWords  , // last  word #
-				0           , // parser position
-				this        , // array of QueryWords
-				0              ,// level
-				NULL, NULL,  // parent, leftchild
-			       false ,  // has NOT?
-			       false ); // under NOT?
+	long status = e->add ( 0           , // first word #
+			       m_numWords  , // last  word #
+			       this        , // array of QueryWords
+			       0              ,// level
+			       false );  // has NOT?
 	if ( status < 0 ) {
 		g_errno = ETOOMANYOPERANDS;
 		return log("query: Maximum number of bool operands "
@@ -3399,6 +3427,8 @@ bool Query::setBooleanOperands ( ) {
 
 	// . get all the terms that are UNDER a NOT operator in some fashion
 	// . these bits are 1-1 with m_qterms[]
+	*/
+	/*
 	qvec_t notBits = e->getNOTBits( false );
 	for ( long i = 0 ; i < m_numTerms ; i++ ) {
 		if ( m_qterms[i].m_explicitBit & notBits )
@@ -3406,15 +3436,20 @@ bool Query::setBooleanOperands ( ) {
 		else
 			m_qterms[i].m_underNOT = false;
 	}
+	*/
+/*
 	return true;
 }
-
+*/
+/*
 // . returns -1 on bad query error
 // . returns word AFTER the last word in our operand
 long Operand::set ( long a , long b , QueryWord *qwords , long level ,
 		    bool underNOT ) {
 	// clear these
-	m_termBits         = 0;
+	//m_termBits         = 0;
+	memset(m_opBits,0,MAX_OVEC_SIZE);
+
 	m_hasNOT           = false;
 
 	//m_hardRequiredBits = 0;
@@ -3429,7 +3464,7 @@ long Operand::set ( long a , long b , QueryWord *qwords , long level ,
 		// set the parenthetical level of the word
 		qw->m_level = level;
 		// set this
-		qw->m_underNOT = underNOT;
+		//qw->m_underNOT = underNOT;
 		// skip punct
 		if ( ! qw->isAlphaWord() ) {
 			// if it is a parens, bail!
@@ -3459,9 +3494,12 @@ long Operand::set ( long a , long b , QueryWord *qwords , long level ,
 		//   query is too long
 		if ( qw->m_phraseId && qw->m_queryPhraseTerm &&
 		     qw->m_phraseSign ) {
-			qvec_t e =qw->m_queryPhraseTerm->m_explicitBit;
+			//qvec_t e =qw->m_queryPhraseTerm->m_explicitBit;
 			//if (qw->m_phraseSign == '+') m_hardRequiredBits |= e;
-			m_termBits |= e;
+			//m_termBits |= e;
+			long byte = qw->m_opNum / 8;
+			long mask = 1<<(qw->m_opNum % 8);
+			if ( byte < MAX_OVEC_SIZE ) m_opBits[byte] |= mask;
 		}
 		// why would it be ignored? oh... if like cd-rom or in quotes
 		if ( qw->m_ignoreWord ) continue;
@@ -3469,13 +3507,17 @@ long Operand::set ( long a , long b , QueryWord *qwords , long level ,
 		// . might be a word that's not a QueryTerm because
 		//   query is too long
 		if ( qw->m_queryWordTerm ) {
-			qvec_t e = qw->m_queryWordTerm->m_explicitBit;
+			//qvec_t e = qw->m_queryWordTerm->m_explicitBit;
 			//if (qw->m_phraseSign == '+') m_hardRequiredBits |= e;
-			m_termBits |= e;
+			//m_termBits |= e;
+			long byte = qw->m_opNum / 8;
+			long mask = 1<<(qw->m_opNum % 8);
+			if ( byte < MAX_OVEC_SIZE ) m_opBits[byte] |= mask;
 		}
 	}
 	return b;
 }
+*/
 
 // . returns -1 on bad query error
 // . returns next word to parse (after expression) on success
@@ -3485,6 +3527,7 @@ long Operand::set ( long a , long b , QueryWord *qwords , long level ,
 // . new: organize query into sum of products normal form, ie:
 // . (a) OR (b AND c AND d) OR (e AND f)
 
+/*
 unsigned char precedence[] = {
 	0, // term
 	4, // OR
@@ -3495,238 +3538,214 @@ unsigned char precedence[] = {
 	3, // UOR
 	5, // PIPE
 }; 
+*/
 
-long Expression::set (long start, 
-		       long end, 
-		       long pos, // current parsing position
-		       class Query      *q,
-		       long              level, 
-		       class Expression *parent, 
-		       class Expression *leftChild,
-		       bool hasNOT ,
-		       bool underNOT ) {
-	m_start = start;
-	m_end = end;
-	m_opcode = 0;
-	m_operand = NULL;
-	m_numChildren = 0;
-	m_hasNOT = hasNOT;
-	m_parent = parent;
-	uint8_t curOp = 0;
+//#define TYPE_OPERAND 1
+//#define TYPE_OPCODE 2
+//#define TYPE_EXPRESSION 3
 
-	QueryWord  *qwords        =  q->m_qwords;
-	Expression *o_expressions =  q->m_expressions;
-	Operand    *o_operands    =  q->m_operands;
-	long       *o_numOperands = &q->m_numOperands;
-	long       *o_numExpressions = &q->m_numExpressions;
-	long maxExpressions       =  q->m_numWords;
-		
 
-	// Lets really try to catch this
-	if (m_parent == this) {
-		//log(LOG_WARN, "query: Warning, setting expression "
-		//    "parent to self");
-		char *xx = NULL; *xx = 0;
-	}
+// return -1 and set g_errno on error
+// returns how many words expression was
+bool Expression::add (long start, 
+		      long end, 
+		      class Query      *q,
+		      long              level
+		      ) {
 
-	//set initial args
-	if (leftChild) {
-		leftChild->m_parent = this;
-		m_children[0] = leftChild;
-		m_numChildren = 1;
-	}
-	hasNOT = false;
-	for ( long i=pos ; i<end ; i++ ){
+	if ( level >= MAX_EXPRESSIONS ) { g_errno = EBADENGINEER; return -1;}
+
+	// the # of the first alnumpunct word in the expression
+	m_expressionStartWord = start;
+	// and the last one
+	//m_end = end;
+	//m_hasNOT = hasNOT;
+	m_q = q;
+
+	//m_cc = 0;
+
+	long i = m_expressionStartWord;
+
+	// "start" is the current alnumpunct word we are parsing out
+	for ( ; i<end ; i++ ) {
+
+		QueryWord *qwords = q->m_qwords;
+
 		QueryWord * qw = &qwords[i];
 		// set this
-		qw->m_underNOT = underNOT;
-		// set leaf node
-		if (!qw->m_opcode && qw->isAlphaWord()){
-			if (i > m_start) goto setChildExpr;
-			// if we maxxed out, error out
-			if ( *o_numOperands >= MAX_OPERANDS ) return -1;
-			Operand *op = &o_operands [ *o_numOperands ];
-			*o_numOperands = *o_numOperands + 1;
-			// . return ptr to next word for us to parse
-			// . subtract once since for loop will inc it
-			i = op->set ( i , end , qwords , level , underNOT );
-			if ( i < 0 ) return -1;
-			m_operand = op;
-			goto endExpr;
+		//qw->m_underNOT = underNOT;
+
+		// set leaf node if not an opcode like "AND" and not punct.
+		if ( ! qw->m_opcode && qw->isAlphaWord()){
+			//m_opSlots[m_cc] = i;
+			//m_opTypes[m_cc] = TYPE_OPERAND;
+			//qw->m_opBitNum = m_cc;
+			continue;//goto endExpr; mdw
 		}
 		if (qw->m_opcode == OP_NOT){
-			hasNOT = !hasNOT;
-			underNOT = hasNOT;
+			//hasNOT = !hasNOT;
+			//underNOT = hasNOT;
 			continue;
 		}
 		else if (qw->m_opcode == OP_LEFTPAREN){
-			if (i == m_start) i++;
-			goto setChildExpr;			
+			// this is expression
+			// . it should advance "i" to end of expression
+			// point to next...
+			q->m_numExpressions++;
+			// make a new one:
+			Expression *e=&q->m_expressions[q->m_numExpressions-1];
+			// now set it
+			e->add ( i+1, // skip over (
+				 end ,
+				 q ,
+				 level + 1);
+			// skip over it. pt to ')'
+			i += e->m_numWordsInExpression;
+			qw->m_expressionPtr = e;
+			//m_opSlots[m_cc] = (long)e;
+			//m_opTypes[m_cc] = TYPE_EXPRESSION;
+			//qw->m_opBitNum = m_cc;
 		}
 		else if (qw->m_opcode == OP_RIGHTPAREN){
-			goto endExpr;
-		}
-		else if (qw->m_opcode) {
-			int delta = 0;
-			curOp = qw->m_opcode;
-			if (m_numChildren == 1)
-				m_opcode = curOp;
-
-			if (m_numChildren > 1 && curOp != m_opcode) {
-
-			  delta = (int)precedence[curOp] -
-					(int)precedence[m_opcode];
-			}
-			
-			if (delta > 0){
-				goto endExpr;
-			}
-		        if (delta < 0){
-				// set a subexpression conataining the 
-				// last operand we found as the first 
-				goto setChildExpr2;
-			}
-		}
-		continue;
-	endExpr:
-		//log(LOG_DEBUG, "query: set Expr [%ld, %ld), opcode: %d",
-		//    a, i, curOp);
-		// if we've matched parens, go to next word
-		// but if we have an extra right paren, don't crash
-		if (qw->m_opcode == OP_RIGHTPAREN &&
-		    (qwords[m_start].m_opcode == OP_LEFTPAREN ||
-		     m_start == 0)) 
-			i++;
-
-		m_end = i;
-		// We have an extra open paren
-		if (qwords[m_start].m_opcode == OP_LEFTPAREN &&
-		    qw->m_opcode != OP_RIGHTPAREN) 
-			goto setParentExpr;
-		// we are top-level expr, but there is more to parse
-		if (!m_parent && i < end-1) 
-			goto setParentExpr;
-		// just return
-		return i;
-		// add a parent expression with this one as the left child 
-	setParentExpr:
-		{
-			if ( *o_numExpressions >= maxExpressions ) return -1;
-			//if (qw->m_opcode == OP_RIGHTPAREN) i++;
-			Expression *e = &o_expressions[*o_numExpressions];
-			*o_numExpressions = *o_numExpressions + 1;
-			i = e->set ( m_start , end ,i, q , 
-				     level+1, 
-				     m_parent,
-				     this, 
-				     false ,
-				     underNOT ) ;
+			// return size i guess, include )
+			m_numWordsInExpression = i - m_expressionStartWord+1;
 			return i;
 		}
+		else if (qw->m_opcode) {
+			// add that mdw
+			//m_opSlots[m_cc] = qw->m_opcode;
+			//m_opTypes[m_cc] = TYPE_OPCODE;
+			//qw->m_opBitNum = m_cc;
+			//m_cc++;
+			continue;
+		}
+		// white space?
+		continue;
+	}
 
-		// add a child expression
-	setChildExpr:
-		{
-			if ( *o_numExpressions >= maxExpressions ) return -1;
 
-			Expression *e = &o_expressions[*o_numExpressions];
-			*o_numExpressions = *o_numExpressions + 1;
-			i = e->set ( i , end , i, q , 
-				     level+1, 
-				     this, NULL, hasNOT , 
-				     underNOT ) -1;
-			if ( i < 0 ) return -1;
-			
-			// trim needless parens 
-			while (e->m_numChildren == 1) {
-				hasNOT = e->m_hasNOT;
-				e = e->m_children[0];
-				if (hasNOT) e->m_hasNOT = ! e->m_hasNOT;
+	m_numWordsInExpression = i - m_expressionStartWord;
+
+	return true;
+}
+
+// each bit is 1-1 with the explicit terms in the boolean query
+bool Query::matchesBoolQuery ( unsigned char *bitVec , long vecSize ) {
+	return m_expressions[0].isTruth ( bitVec , vecSize );
+}
+
+
+bool isBitNumSet ( long opBitNum, unsigned char *bitVec, long vecSize ) {
+	long byte = opBitNum / 8;
+	long mask = 1<<(opBitNum % 8);
+	if ( byte >= vecSize ) { char *xx=NULL;*xx=0; }
+	return bitVec[byte] & mask;
+}
+
+// . "bits" are 1-1 with the query words in Query::m_qwords[] array
+//   including ignored words and spaces i guess since Expression::add()
+//   seems to do that.
+bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
+
+	//
+	// operand1 operand2 operator1 operand3 operator2 ....
+	//
+
+	// result: -1 means unknown at this point
+	long result = -1;
+
+	char prevOpCode = 0;
+	long prevResult ;
+	// result of current operand
+	long opResult = -1;
+
+	long i    =     m_expressionStartWord;
+	long iend = i + m_numWordsInExpression;
+
+	bool hasNot = false;
+
+	for ( ; i < iend ; i++ ) {
+
+		QueryWord *qw = &m_q->m_qwords[i];
+
+		if ( qw->m_opcode == OP_NOT ) {
+			hasNot = true;
+			continue;
+		}
+
+
+		// so operands are expressions as well
+		Expression *e = (Expression *)qw->m_expressionPtr;
+		if ( e ) {
+			// save prev one. -1 means no prev.
+			prevResult = opResult;
+			// set new onw
+			opResult = e->isTruth ( bitVec , vecSize );
+			// skip over that expression. point to ')'
+			i += e->m_numWordsInExpression;
+			// flip?
+			if ( hasNot ) {
+				if ( opResult == 1 ) opResult = 0;
+				else                 opResult = 1;
+				hasNot = false;
 			}
-			hasNOT = false;
-			//cull empty expressions
-			if (e->m_numChildren < 1 &&
-			    e->m_operand == NULL) continue;
+		}
 
-			if (m_numChildren >= MAX_OPERANDS) return -1;
-			// add good expressions
-			m_children [ m_numChildren] = e;
-			m_numChildren++;
-			if (m_numChildren > 1 && m_opcode == 0)
-				m_opcode = OP_AND; // default AND
+		if ( qw->m_opcode && ! e ) {
+			prevOpCode = qw->m_opcode;//m_opSlots[i];
 			continue;
 		}
 
-		// we need to make the last operand we passed 
-		// be the first operand of a subexpression
-	setChildExpr2:
-		{
-			// remove the last expression from our list
-			Expression *ce = m_children[m_numChildren-1];
+		// simple operand
+		if ( ! qw->m_opcode && ! e ) {
+			// for regular word operands
+			// ignore it like a space?
+			if ( qw->m_ignoreWord ) continue;
+			// save old one
+			prevResult = opResult;
+			// convert word to term #
+			QueryTerm *qt = qw->m_queryWordTerm;
+			if ( ! qt ) continue;
+			// . m_bitNum is set in Posdb.cpp when it sets its
+			//   QueryTermInfo array
+			// . it is basically the query term #
+			// . see iff that bit is set in this docid's vec
+			opResult = isBitNumSet ( qt->m_bitNum,bitVec,vecSize );
+			// flip?
+			if ( hasNot ) {
+				if ( opResult == 1 ) opResult = 0;
+				else                 opResult = 1;
+				hasNot = false;
+			}
+		}
 
-			m_numChildren--;
+		// need two to tango. i.e. (true OR false)
+		if ( prevResult == -1 ) continue;
 
-
-			if ( *o_numExpressions >= maxExpressions ) return -1;
-
-			Expression *e = &o_expressions[*o_numExpressions];
-			*o_numExpressions = *o_numExpressions + 1;
-			i = e->set ( ce->m_start , end , i, q , 
-				     level+1, 
-				     this, ce, 
-				     false , 
-				     underNOT ) -1;
-			ce->m_parent = e;
-			if ( i < 0 ) return -1;
-
-			if (m_numChildren >= MAX_OPERANDS) return -1;
-			m_children [ m_numChildren ] = e;
-
-			hasNOT = false;
-			m_numChildren++;
-			continue;
+		// if this is not the first time... we got two
+		if ( prevOpCode == OP_AND ) {
+			// if first operation we encount is A AND B then
+			// default result to on. only allow an AND operation
+			// to turn if off.
+			if ( result == -1 ) result = true;
+			if ( ! prevResult ) result = false;
+			if ( !    opResult ) result = false;
+		}
+		else if ( prevOpCode == OP_OR ) {
+			// if first operation we encount is A OR B then
+			// default result to off
+			if ( result == -1 ) result = false;
+			if ( prevResult ) result = true;
+			if (   opResult ) result = true;
 		}
 	}
-	return end;
+
+	if ( result == -1 ) return true;
+	if ( result ==  0 ) return false;
+	return true;
 }
 
-
-// . "bits" are 1-1 with the query terms in Query::m_qterms[] array
-bool Expression::isTruth ( qvec_t bits, qvec_t mask ) {
-	//bool op1 = false ; // set to false so compiler shuts up
-	//bool op2 ;
-	//bool accumulator = false;
-	//bool hadOR       = false;
-	bool result = false;
-
-	// leaf node
-	if (m_operand){
-		result = m_operand->isTruth(bits, mask);
-		// handle masked terms better.. don't apply NOT operator
-		if (!(m_operand->m_termBits & mask)) return true;
-	}
-	else if (m_numChildren == 1){
-		result = m_children[0]->isTruth(bits, mask);
-	}
-	else if (m_opcode == OP_OR || m_opcode == OP_UOR) {
-		for ( long i=0 ; i<m_numChildren ; i++ ) {
-			result = result || m_children[i]->isTruth(bits, mask);
-			if (result) goto done;
-		}
-	}
-	else if (m_opcode == OP_AND || m_opcode == OP_PIPE){
-		result = true;
-		for (long i = 0 ; i < m_numChildren ; i++ ) {
-			result = result && m_children[i]->isTruth(bits, mask);
-			if (!result) goto done;
-		}
-	}
-
-done :
-	if (m_hasNOT) return !result;
-	else return result;
-}
-
+/*
 // . "bits" are 1-1 with the query terms in Query::m_qterms[] array
 // . hasNOT is true if there's a NOT just to the left of this WHOLE expressions
 //   ourside the parens
@@ -3744,9 +3763,11 @@ qvec_t Expression::getNOTBits ( bool hasNOT ) {
 	// success, all operand pairs were true
 	return notBits;
 }
+*/
 
 // print boolean expression for debug purposes
 void Expression::print(SafeBuf *sbuf) {
+	/*
 	if (m_hasNOT) sbuf->safePrintf("NOT ");
 	if (m_operand){
 		m_operand->print(sbuf);
@@ -3765,16 +3786,18 @@ void Expression::print(SafeBuf *sbuf) {
 		}
 	}
 	sbuf->safePrintf(")");
-
+	*/
 }
 
+/*
 void Operand::print(SafeBuf *sbuf) {
 // 	long shift = 0;
 // 	while (m_termBits >> shift) shift++;
 // 	sbuf->safePrintf("%i", 1<<(shift-1));
-	if (m_hasNOT) sbuf->safePrintf("NOT 0x%lx", (long)m_termBits);
-	else sbuf->safePrintf("0x%lx", (long)m_termBits);
+	if (m_hasNOT) sbuf->safePrintf("NOT 0x%llx",*(long long *)m_opBits);
+	else sbuf->safePrintf("0x%llx", *(long long *)m_opBits);
 }
+*/
 
 // if any one query term is split, msg3a has to split the query
 bool Query::isSplit() {

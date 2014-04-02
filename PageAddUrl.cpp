@@ -85,7 +85,9 @@ bool sendPageAddUrl2 ( TcpSocket *s , HttpRequest *r ) {
 	if ( url ) {
 		// normalize and add www. if it needs it
 		Url uu;
-		uu.set ( url , gbstrlen(url) , true );
+		// do not convert xyz.com to www.xyz.com because sometimes
+		// people want xyz.com exactly
+		uu.set ( url , gbstrlen(url) , false ); // true );
 		// remove >'s i guess and store in st1->m_url[] buffer
 		st1->m_urlLen=cleanInput ( st1->m_url,
 					   MAX_URL_LEN, 

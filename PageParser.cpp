@@ -1,8 +1,8 @@
 #include "gb-include.h"
 
 #include "PageParser.h"
-#include "IndexTable.h"
-#include "IndexTable2.h"
+//#include "IndexTable.h"
+//#include "IndexTable2.h"
 //#include "XmlDoc.h" // addCheckboxSpan()
 
 bool g_inPageParser = false;
@@ -101,7 +101,7 @@ bool sendPageParser2 ( TcpSocket   *s ,
 	st->m_termFreqs       = termFreqs;
 	st->m_termFreqWeights = termFreqWeights;
 	st->m_affWeights      = affWeights;
-	st->m_total           = (score_t)-1;
+	//st->m_total           = (score_t)-1;
 	st->m_indexCode       = 0;
 	st->m_blocked         = false;
 	st->m_didRootDom      = false;
@@ -654,7 +654,7 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 	//st->m_termFreqs       = termFreqs;
 	//st->m_termFreqWeights = termFreqWeights;
 	//st->m_affWeights      = affWeights;
-	st->m_total           = (score_t)-1;
+	//st->m_total           = (score_t)-1;
 	st->m_indexCode       = 0;
 	st->m_blocked         = false;
 	st->m_didRootDom      = false;

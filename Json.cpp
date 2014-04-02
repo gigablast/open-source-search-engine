@@ -433,7 +433,7 @@ char *JsonItem::getValueAsString ( long *valueLen ) {
 
 	// numbers...
 	static char s_numBuf[64];
-	if ( m_valueLong == (long)m_valueDouble ) {
+	if ( (float)m_valueLong == m_valueDouble ) {
 		*valueLen = sprintf ( s_numBuf,"%li", m_valueLong );
 		return s_numBuf;
 	}

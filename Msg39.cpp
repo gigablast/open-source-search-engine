@@ -543,7 +543,7 @@ bool Msg39::getLists () {
 			     "component=%li "
 			     "otermLen=%li "
 			     "isSynonym=%li "
-			     "querylangid=%li ",
+			     "querylangid=%li " ,
 			     (long)this ,
 			     i          ,
 			     qt->m_term,//bb ,
@@ -569,7 +569,7 @@ bool Msg39::getLists () {
 			     (long)m_tmpq.m_componentCodes[i],
 			     (long)m_tmpq.getTermLen(i) ,
 			     isSynonym,
-			     (long)m_tmpq.m_langId); // ,tt
+			     (long)m_tmpq.m_langId ); // ,tt
 			// put it back
 			*tpc = tmp;
 			if ( st ) {
@@ -661,6 +661,7 @@ void gotListsWrapper ( void *state ) {
 	Msg39 *THIS = (Msg39 *) state;
 	// . hash the lists into our index table
 	// . this will send back a reply or recycle and read more list data
+
 	if ( ! THIS->gotLists ( true ) ) return;
 
 	// . if he did not block and there was an errno we send reply
@@ -671,6 +672,12 @@ void gotListsWrapper ( void *state ) {
 		log("msg39: sending back error reply = %s",mstrerror(g_errno));
 		sendReply ( THIS->m_slot , THIS , NULL , 0 , 0 ,true);
 	}
+
+	// no, block? call the docid split loop
+	//if ( numDocIdSplits <= 1 ) return;
+
+	// if we get the lists and processed them without blocking, repeat!
+	THIS->doDocIdSplitLoop();
 }
 
 // . now come here when we got the necessary index lists
@@ -753,9 +760,24 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	// . now we must call this separately here, not in allocTopTree()
 	// . we have to re-set the QueryTermInfos with each docid range split
 	//   since it will set the list ptrs from the msg2 lists
-	if ( m_r->m_useNewAlgo && ! m_posdbTable.setQueryTermInfo () ) {
-		return true;
+	if ( ! m_posdbTable.setQueryTermInfo () ) return true;
+
+	// print query term bit numbers here
+	for ( long i = 0 ; 
+	      m_debug && i < m_tmpq.getNumTerms() ; i++ ) {
+		QueryTerm *qt = &m_tmpq.m_qterms[i];
+		//utf16ToUtf8(bb, 256, qt->m_term, qt->m_termLen);
+		char *tpc = qt->m_term + qt->m_termLen;
+		char  tmp = *tpc;
+		*tpc = '\0';
+		SafeBuf sb;
+		sb.safePrintf("query: msg39: BITNUM query term #%li \"%s\" "
+			      "bitnum=%li ", i , qt->m_term, qt->m_bitNum );
+		// put it back
+		*tpc = tmp;
+		logf(LOG_DEBUG,"%s",sb.getBufStart());
 	}
+
 
 	// timestamp log
 	if ( m_debug ) {
@@ -817,6 +839,7 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	// time it
 	diff = gettimeofdayInMilliseconds() - start;
 	if ( diff > 10 ) log("query: Took %lli ms for intersection",diff);
+
 	// returns false if blocked, true otherwise
 	return addedLists ();
 }

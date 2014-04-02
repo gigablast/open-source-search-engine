@@ -14474,6 +14474,7 @@ char **XmlDoc::getHttpReply2 ( ) {
 	// turn off
 	r->m_useCompressionProxy = false;
 	r->m_compressReply       = false;
+	r->m_isCustomCrawl       = cr->m_isCustomCrawl;
 
 	// set it for this too
 	if ( g_conf.m_useCompressionProxy &&
@@ -17199,11 +17200,15 @@ long *XmlDoc::getContentHashJson32 ( ) {
 	JsonItem *ji = jp->getFirstItem();
 	long totalHash32 = 0;
 
+	//logf(LOG_DEBUG,"ch32: url=%s",m_firstUrl.m_url);
+
 	for ( ; ji ; ji = ji->m_next ) {
 		QUICKPOLL(m_niceness);
 		// skip if not number or string
 		if ( ji->m_type != JT_NUMBER && ji->m_type != JT_STRING )
 			continue;
+
+		char *topName = NULL;
 
 		// what name level are we?
 		long numNames = 1;
@@ -17212,6 +17217,7 @@ long *XmlDoc::getContentHashJson32 ( ) {
 			// empty name?
 			if ( ! pi->m_name ) continue;
 			if ( ! pi->m_name[0] ) continue;
+			topName = pi->m_name;
 			numNames++;
 		}
 
@@ -17229,6 +17235,22 @@ long *XmlDoc::getContentHashJson32 ( ) {
 		if ( ji->m_name && numNames==1 &&
 		     strcmp(ji->m_name,"resolved_url") == 0 )
 			continue;
+
+		if ( topName && strcmp(topName,"stats") == 0 )
+			continue;
+
+		if ( topName && strcmp(topName,"queryString") == 0 )
+			continue;
+
+		if ( topName && strcmp(topName,"nextPages") == 0 )
+			continue;
+
+		if ( topName && strcmp(topName,"textAnalysis") == 0 )
+			continue;
+
+		if ( topName && strcmp(topName,"links") == 0 )
+			continue;
+
 
 		// hash the fully compound name
 		long nameHash32 = 0;
@@ -17275,6 +17297,11 @@ long *XmlDoc::getContentHashJson32 ( ) {
 		long combined32 = hash32h ( nameHash32 , vh32 );
 		// accumulate field/val pairs order independently
 		totalHash32 ^= combined32;
+		// debug note
+		//logf(LOG_DEBUG,"ch32: field=%s nh32=%lu vallen=%li",
+		//     ji->m_name,
+		//     nameHash32,
+		//     vlen);
 	}
 
 	m_contentHash32 = totalHash32;
@@ -29753,7 +29780,10 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 	long plen = 0;
 	if ( hi->m_prefix ) plen = gbstrlen ( hi->m_prefix );
 	if ( hi->m_prefix && plen ) {
-		prefixHash = hash64 ( hi->m_prefix , plen );
+		// we gotta make this case insensitive, and skip spaces
+		// because if it is 'focal length' we can't search
+		// 'focal length:10' because that comes across as TWO terms.
+		prefixHash = hash64Lower_utf8_nospaces ( hi->m_prefix , plen );
 		// . sanity test, make sure it is in supported list
 		// . hashing diffbot json output of course fails this so
 		//   skip in that case if diffbot
@@ -30287,6 +30317,9 @@ bool XmlDoc::hashNumber ( char *beginBuf ,
 	// . this now allows for commas in numbers like "1,500.62"
 	float f = atof2 ( p , bufEnd - p );
 
+	// debug
+	//log("build: hashing %s %f",hi->m_prefix,f);
+
 	if ( ! hashNumber2 ( f , hi , "gbsortby" ) )
 		return false;
 
@@ -30324,7 +30357,7 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 	long nameLen = 0;
 	if ( hi->m_prefix ) nameLen = gbstrlen ( hi->m_prefix );
 	if ( hi->m_prefix && nameLen ) 
-		nameHash = hash64Lower_utf8 ( hi->m_prefix , nameLen );
+		nameHash = hash64Lower_utf8_nospaces( hi->m_prefix , nameLen );
 	// need a prefix for hashing numbers... for now
 	else { char *xx=NULL; *xx=0; }
 		
@@ -30429,7 +30462,7 @@ bool XmlDoc::hashNumber3 ( long n , HashInfo *hi , char *sortByStr ) {
 	long nameLen = 0;
 	if ( hi->m_prefix ) nameLen = gbstrlen ( hi->m_prefix );
 	if ( hi->m_prefix && nameLen ) 
-		nameHash = hash64Lower_utf8 ( hi->m_prefix , nameLen );
+		nameHash = hash64Lower_utf8_nospaces( hi->m_prefix , nameLen );
 	// need a prefix for hashing numbers... for now
 	else { char *xx=NULL; *xx=0; }
 		

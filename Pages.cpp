@@ -233,9 +233,9 @@ static WebPage s_pages[] = {
 	  "what sites can be spidered",
 	  sendPageGeneric , 0 } , // sendPageBasicSettings
 
-	{ PAGE_FILTERS   , "admin/scheduler", 0 , "spider scheduler" ,  1 , 1,
+	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 , 1,
 	  //USER_ADMIN | USER_MASTER   , 
-	  "schedule urls to be spidered",
+	  "prioritize urls for spidering",
 	  sendPageGeneric  , 0 } ,
 
 	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" ,  0 , 1 ,
@@ -1353,7 +1353,7 @@ bool Pages::printAdminBottom ( SafeBuf *sb, HttpRequest *r ) {
 bool Pages::printSubmit ( SafeBuf *sb ) {
 	// update button
 	return sb->safePrintf ( 
-				"<br>"
+			       //"<br>"
 				"<center>"
 				"<input type=submit name=action value=submit>"
 				"</center>"
@@ -1764,7 +1764,9 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 	//if ( g_users.hasPermission(username,PAGE_ADMIN ) ) 
 	//	sprintf(buf,"&master=0");
 
-	//sb->safePrintf("<div style=max-width:1000px;>");
+	// unfortunately width:100% is percent of the virtual window, not the
+	// visible window... so just try 1000px max
+	sb->safePrintf("<div style=max-width:800px;>");
 
 	//long matt1 = atoip ( MATTIP1 , gbstrlen(MATTIP1) );
 	//long matt2 = atoip ( MATTIP2 , gbstrlen(MATTIP2) );
@@ -1904,7 +1906,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 			       "href=/developer.html>"
 			       "<b>dev guide</b></a>" );
 	
-	//sb->safePrintf("</div>");
+	sb->safePrintf("</div>");
 
 	//sb->safePrintf("</center>" );
 	//sb->safePrintf("<br/>" );
