@@ -1409,7 +1409,7 @@ void passOnReply ( void *state , UdpSlot *slot ) {
 
 //
 //
-// . UTILITY FUNCTIONS for injecting into the "test" collection
+// . UTILITY FUNCTIONS for injecting into the "qatest123" collection
 // . we need to ensure that the web pages remain constant so we store them
 //
 //
@@ -1419,7 +1419,7 @@ void passOnReply ( void *state , UdpSlot *slot ) {
 // . now that we are lower level in Msg13.cpp, set "ts" not "slot"
 bool getTestDoc ( char *u , TcpSocket *ts , Msg13Request *r ) {
 	// sanity check
-	//if ( strcmp(m_coll,"test") ) { char *xx=NULL;*xx=0; }
+	//if ( strcmp(m_coll,"qatest123") ) { char *xx=NULL;*xx=0; }
 	// hash the url into 64 bits
 	long long h = hash64 ( u , gbstrlen(u) );
 	// read the spider date file first
@@ -1566,7 +1566,7 @@ bool addTestSpideredDate ( Url *u , long spideredTime , char *testDir ) {
 	return true;
 }
 
-// add it to our "test" subdir
+// add it to our "qatest123" subdir
 bool addTestDoc ( long long urlHash64 , char *httpReply , long httpReplySize ,
 		  long err , Msg13Request *r ) {
 

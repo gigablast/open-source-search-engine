@@ -450,7 +450,7 @@ bool CommandParserTestInit ( char *rec ) {
 	g_conf.m_spideringEnabled = 1;
 	//g_conf.m_webSpideringEnabled = 1;
 	// turn on for test coll too
-	CollectionRec *cr = g_collectiondb.getRec("test");
+	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	// turn on spiders
 	if ( cr ) cr->m_spideringEnabled = 1;
 	// if we are not host 0, turn on spiders for testing
@@ -470,7 +470,7 @@ bool CommandSpiderTestInit ( char *rec ) {
 	g_conf.m_spideringEnabled = 1;
 	//g_conf.m_webSpideringEnabled = 1;
 	// turn on for test coll too
-	CollectionRec *cr = g_collectiondb.getRec("test");
+	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	// turn on spiders
 	if ( cr ) cr->m_spideringEnabled = 1;
 	// if we are not host 0, turn on spiders for testing
@@ -488,7 +488,7 @@ bool CommandSpiderTestCont ( char *rec ) {
 	g_conf.m_spideringEnabled = 1;
 	//g_conf.m_webSpideringEnabled = 1;
 	// turn on for test coll too
-	CollectionRec *cr = g_collectiondb.getRec("test");
+	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	// turn on spiders
 	if ( cr ) cr->m_spideringEnabled = 1;
 	// done 
@@ -5079,6 +5079,27 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m++;
 	*/
+
+	m->m_title = "init QA tests";
+	m->m_desc  = "If initiated gb performs some integrity tests "
+		"to ensure injecting, spidering and searching works "
+		"properly. Uses ./test/ subdirectory. Injects "
+		"urls in ./test/inject.txt. Spiders urls "
+		"in ./test/spider.txt. "
+		"Each of those two files is essentially a simple format of "
+		"a url followed by the http reply received from the server "
+		"for that url. "
+		// TODO: generate these files
+		;
+	m->m_cgi   = "qasptei";
+	m->m_type  = TYPE_CMD;
+	m->m_func  = CommandSpiderTestInit;
+	m->m_def   = "1";
+	m->m_cast  = 1;
+	m->m_group = 0;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m++;
+
 
 	m->m_title = "init parser test run";
 	m->m_desc  = "If enabled gb injects the urls in the "
@@ -15299,6 +15320,18 @@ void Parms::init ( ) {
 	m->m_smin  = 0;
 	m++;
 
+	// when we do &qa=1 we do not show things like responseTime in
+	// search results so we can verify serp checksum consistency for QA
+	// in qa.cpp
+	m->m_title = "quality assurance";
+	m->m_desc  = "This is 1 if doing a QA test in qa.cpp";
+	m->m_def   = "0";
+	m->m_soff  = (char *)&si.m_qa - y;
+	m->m_type  = TYPE_CHAR;
+	m->m_sparm = 1;
+	m->m_scgi  = "qa";
+	m++;
+
 	//m->m_title = "show turk forms";
 	//m->m_desc  = "If enabled summaries in search results will be "
 	//	"turkable input forms.";
@@ -16743,7 +16776,6 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 
 	return true;
 }
-
 
 // returns false and sets g_errno on error
 bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
@@ -18268,7 +18300,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 		CollectionRec *cr = (CollectionRec *)THIS;
 		// if testUrl is provided, find in the table
 		char testUrl [ 1025 ];
-		char *tt = r->getString ( "test" , NULL );
+		char *tt = r->getString ( "qatest123" , NULL );
 		testUrl[0]='\0';
 		if ( tt ) strncpy ( testUrl , tt , 1024 );
 		char *tu = testUrl;

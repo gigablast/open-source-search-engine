@@ -233,7 +233,6 @@ long g_qn = 0;
 
 char *g_queries[] = {
 	//"buzzlogic",
-	//"test",
 	"broncos",
 	"ibm",
 	"yahoo",

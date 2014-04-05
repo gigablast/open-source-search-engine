@@ -561,7 +561,7 @@ bool processLoop ( void *state ) {
 		// . save the ips.txt file if we are the test coll
 		// . saveTestBuf() is a function in Msge1.cpp
 		CollectionRec *cr = xd->getCollRec();
-		if ( xd && cr && cr->m_coll && ! strcmp ( cr->m_coll,"test") )
+		if ( xd && cr && cr->m_coll && !strcmp(cr->m_coll,"qatest123"))
 			// use same dir that XmlDoc::getTestDir() would use
 			saveTestBuf ( "test-page-parser" );
 		// now get the meta list, in the process it will print out a 
@@ -855,7 +855,7 @@ bool gotXmlDoc ( void *state ) {
 
 	// . save the ips.txt file if we are the test coll
 	// . saveTestBuf() is a function in Msge1.cpp
-	//if ( xd && xd->m_coll && ! strcmp ( xd->m_coll , "test")) 
+	//if ( xd && xd->m_coll && ! strcmp ( xd->m_coll , "qatest123")) 
 	//	// use same dir that XmlDoc::getTestDir() would use
 	//	saveTestBuf ( "test-page-parser" );
 

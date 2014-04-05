@@ -5158,7 +5158,7 @@ char *Proxy::storeLoginBar ( char *reply ,
 	}
 	// point to first digit in there
 	mp += 16;
-	// store our new content length as ascii into "test" buf
+	// store our new content length as ascii into test buf
 	char test[64];
 	long len = sprintf(test,"%li",(long)(newReplySize-mimeLen));
 	// find end

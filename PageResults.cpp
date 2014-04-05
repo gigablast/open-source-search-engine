@@ -985,7 +985,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	    sb->safePrintf("\"currentTimeUTC\":%lu,\n", (long)(globalNowMS/1000));
 	}
 
-	// show response time
+	// show response time if not doing Quality Assurance
 	if ( si->m_format == FORMAT_XML )
 		sb->safePrintf("\t<responseTimeMS>%lli</responseTimeMS>\n",
 			      st->m_took);

@@ -3935,7 +3935,7 @@ LinkInfo *makeLinkInfo ( char        *coll                    ,
 	// . how many unique ips link to us?
 	// . this count includes internal IPs as well
 	info->m_numUniqueIps           = msg25->m_uniqueIps;
-	// keep things consistent for the "test" coll
+	// keep things consistent for the "qatest123" coll
 	info->m_reserved1              = 0;
 	info->m_reserved2              = 0;
 	// how many total GOOD inlinks we got. does not include internal cblock
