@@ -875,6 +875,19 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 				       );
 		// but default to csv
 		else {
+		    if (cr && cr->m_isCustomCrawl == 1 && sreq && !sreq->m_isAddUrl && !sreq->m_isInjecting) {
+		        if (cr->m_diffbotUrlCrawlPattern.m_length == 0
+                    && cr->m_diffbotUrlProcessPattern.m_length == 0) {
+		            // If a crawl and there are no urlCrawlPattern or urlCrawlRegEx values, only return URLs from seed domain
+		            if (sreq && !sreq->m_sameDom)
+		                continue;
+		        } else {
+		            // TODO: if we get here, we have a crawl with a custom urlCrawlPattern and/or custom
+		            //       urlProcessPattern. We have to check if the current url matches the pattern
+
+		        }
+		    }
+
 			sb->safePrintf("\"%s\",\"%s\","
 				       , sreq->m_url
 				       , as
@@ -2108,7 +2121,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	char bulkurlsfile[1024];
 	snprintf(bulkurlsfile, 1024, "%scoll.%s.%li/bulkurls.txt", g_hostdb.m_dir , coll , (long)st->m_collnum );
-	if ( spots ) {
+	if ( spots && cr && cr->m_isCustomCrawl == 2 ) {
 		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
 		    (long)gbstrlen(spots),coll,(long)st->m_collnum);
 		FILE *f = fopen(bulkurlsfile, "w");
@@ -2120,7 +2133,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	// if restart flag is on and the file with bulk urls exists, get spots from there
-	if ( !spots && restartColl ) {
+	if ( !spots && restartColl && cr && cr->m_isCustomCrawl ) {
 	    FILE *f = fopen(bulkurlsfile, "r");
 	    if (f != NULL) {
 	        fseek(f, 0, SEEK_END);
@@ -3946,7 +3959,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 // . do not add dups into m_diffbotSeeds safebuf
 // . return 0 if not in table, 1 if in table. -1 on error adding to table.
-long isInSeedBuf ( CollectionRec *cr , Url *url ) {
+long isInSeedBuf ( CollectionRec *cr , char *url, int len ) {
 
 	HashTableX *ht = &cr->m_seedHashTable;
 
@@ -3973,7 +3986,7 @@ long isInSeedBuf ( CollectionRec *cr , Url *url ) {
 	}
 
 	// is this url in the hash table?
-	long long u64 = hash64 ( url->getUrl() , url->getUrlLen() );
+	long long u64 = hash64 ( url, len );
 	
 	if ( ht->isInTable ( &u64 ) ) return 1;
 
@@ -4072,7 +4085,7 @@ bool getSpiderRequestMetaList ( char *doc ,
 		if ( ! cr ) continue;
 
 		// do not add dups into m_diffbotSeeds safebuf
-		long status = isInSeedBuf ( cr , &url );
+		long status = isInSeedBuf ( cr , saved , end - saved );
 
 		// error?
 		if ( status == -1 ) {

@@ -985,7 +985,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	    sb->safePrintf("\"currentTimeUTC\":%lu,\n", (long)(globalNowMS/1000));
 	}
 
-	// show response time
+	// show response time if not doing Quality Assurance
 	if ( si->m_format == FORMAT_XML )
 		sb->safePrintf("\t<responseTimeMS>%lli</responseTimeMS>\n",
 			      st->m_took);
@@ -2148,8 +2148,13 @@ bool printResult ( State0 *st, long ix ) {
 			// so fix that shit here...
 			//float f = mr->m_lastSpidered;
 			//sb->safePrintf(",\"lastCrawlTimeUTC\":%.0f}",f);
-			sb->safePrintf(",\"lastCrawlTimeUTC\":%li}\n",
+			sb->safePrintf(",\"lastCrawlTimeUTC\":%li\n",
 				       mr->m_lastSpidered);
+			// also include a timestamp field with an RFC 1123 formatted date
+			char timestamp[50];
+			struct tm *ptm = gmtime ( &mr->m_lastSpidered );
+			strftime(timestamp, 50, "%a, %d %b %Y %X %Z", ptm);
+			sb->safePrintf(",\"timestamp\":\"%s\"}\n", timestamp);
 		}
 
 		//mr->size_content );

@@ -55,7 +55,7 @@ bool Test::init ( ) {
 }
 
 void Test::reset ( ) {
-	if ( m_urlBuf ) mfree ( m_urlBuf , m_urlEnd - m_urlBuf , "test");
+	if ( m_urlBuf ) mfree ( m_urlBuf , m_urlEnd - m_urlBuf , "test999");
 	//m_spiderLinks = true;//false;
 	m_bypassMenuElimination = false;
 }
@@ -122,7 +122,7 @@ void Test::removeFiles ( ) {
 	long saved = g_conf.m_useQuickpoll;
 	g_conf.m_useQuickpoll = false;
 
-	CollectionRec *cr = g_collectiondb.getRec("test");
+	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 
 	// . reset the qatest collection to zero docs
 	// . TODO: implement this. only allow it for qatest coll.
@@ -172,8 +172,8 @@ void Test::initTestRun ( ) {
 	//if ( m_testSpiderEnabledSaved ) return;
 	//if ( m_testParserEnabledSaved ) return;
 
-	// you must have the "test" coll already setup!
-	CollectionRec *cr = g_collectiondb.getRec("test");
+	// you must have the "qatest123" coll already setup!
+	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	if ( ! cr ) {
 		// note it
 		log("test: please add a collection named \"test\" first.");
@@ -233,7 +233,7 @@ void Test::initTestRun ( ) {
 	// save it
 	m_runId = i;
 
-	cr = g_collectiondb.getRec ( "test" );
+	cr = g_collectiondb.getRec ( "qatest123" );
 	if ( ! cr ) {
 		// and no more of this
 		g_conf.m_testParserEnabled = false;

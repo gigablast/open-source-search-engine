@@ -1288,7 +1288,7 @@ bool Sections::set ( Words     *w                       ,
 	}
 
 
-	m_isTestColl = ! strcmp(m_coll,"test") ;
+	m_isTestColl = ! strcmp(m_coll,"qatest123") ;
 
 	//
 	//

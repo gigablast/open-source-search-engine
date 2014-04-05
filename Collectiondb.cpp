@@ -838,8 +838,8 @@ bool Collectiondb::resetColl ( char *coll ,  bool purgeSeeds) {
 		return true;
 	}
 
-	// get the CollectionRec for "test"
-	CollectionRec *cr = getRec ( coll ); // "test" );
+	// get the CollectionRec for "qatest123"
+	CollectionRec *cr = getRec ( coll ); // "qatest123" );
 
 	// must be there. if not, we create test i guess
 	if ( ! cr ) { 
@@ -972,6 +972,39 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 	return true;
 }
 
+// moves a file by first trying rename, then copying since cross device renaming doesn't work
+// returns 0 on success
+int mv(char* src, char* dest) {
+    int status = rename( src , dest );
+
+    if (status == 0)
+        return 0;
+    FILE *fsrc, *fdest;
+    fsrc = fopen(src, "r");
+    if (fsrc == NULL)
+        return -1;
+    fdest = fopen(dest, "w");
+    if (fdest == NULL) {
+        fclose(fsrc);
+        return -1;
+    }
+
+    const int BUF_SIZE = 1024;
+    char buf[BUF_SIZE];
+    while (!ferror(fdest) && !ferror(fsrc) && !feof(fsrc)) {
+        int read = fread(buf, 1, BUF_SIZE, fsrc);
+        fwrite(buf, 1, read, fdest);
+    }
+
+    fclose(fsrc);
+    fclose(fdest);
+    if (ferror(fdest) || ferror(fsrc))
+        return -1;
+
+    remove(src);
+    return 0;
+}
+
 // . returns false if we need a re-call, true if we completed
 // . returns true with g_errno set on error
 bool Collectiondb::resetColl2( collnum_t oldCollnum,
@@ -982,8 +1015,8 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// save parms in case we block
 	//we->m_purgeSeeds = purgeSeeds;
 
-	// now must be "test" only for now
-	//if ( strcmp(coll,"test") ) { char *xx=NULL;*xx=0; }
+	// now must be "qatest123" only for now
+	//if ( strcmp(coll,"qatest123") ) { char *xx=NULL;*xx=0; }
 	// no spiders can be out. they may be referencing the CollectionRec
 	// in XmlDoc.cpp... quite likely.
 	//if ( g_conf.m_spideringEnabled ||
@@ -1017,6 +1050,18 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 
 	//collnum_t oldCollnum = cr->m_collnum;
 	//collnum_t newCollnum = m_numRecs;
+
+	// in case of bulk job, be sure to save list of spots
+	// copy existing list to a /tmp, where they will later be transferred back to the new folder
+	char oldbulkurlsname[1036];
+	snprintf(oldbulkurlsname, 1036, "%scoll.%s.%li/bulkurls.txt",g_hostdb.m_dir,cr->m_coll,(long)oldCollnum);
+	char newbulkurlsname[1036];
+	snprintf(newbulkurlsname, 1036, "%scoll.%s.%li/bulkurls.txt",g_hostdb.m_dir,cr->m_coll,(long)newCollnum);
+	char tmpbulkurlsname[1036];
+	snprintf(tmpbulkurlsname, 1036, "/tmp/coll.%s.%li.bulkurls.txt",cr->m_coll,(long)oldCollnum);
+
+	if (cr->m_isCustomCrawl == 2)
+	    mv( oldbulkurlsname , tmpbulkurlsname );
 
 	// reset spider info
 	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(oldCollnum);
@@ -1127,6 +1172,9 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// save coll.conf to new directory
 	cr->save();
 
+	// be sure to copy back the bulk urls for bulk jobs
+	if (cr->m_isCustomCrawl == 2)
+	    mv( tmpbulkurlsname, newbulkurlsname );
 
 	// and clear the robots.txt cache in case we recently spidered a
 	// robots.txt, we don't want to use it, we want to use the one we

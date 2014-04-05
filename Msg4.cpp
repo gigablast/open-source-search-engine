@@ -159,7 +159,7 @@ public:
 };
 
 
-// . injecting into the "test" coll flushes after each inject
+// . injecting into the "qatest123" coll flushes after each inject
 // . returns false if blocked and callback will be called
 bool flushMsg4Buffers ( void *state , void (* callback) (void *) ) {
 	// if all empty, return true now

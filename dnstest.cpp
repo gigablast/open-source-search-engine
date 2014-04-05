@@ -104,7 +104,7 @@ void timeWrapper ( int fd , void *state ) {
 	// bail if too many launched
 	if ( s_count >= s_max ) return;
 	// new state
-	StateT *st = (StateT *)mmalloc ( sizeof(StateT) , "test" );
+	StateT *st = (StateT *)mmalloc ( sizeof(StateT) , "dnstest" );
 	// get url from stdin into buf
 	char *p = st->m_buf;
 	if ( ! fgets ( p , 1023 , stdin ) ) exit ( 0 );
@@ -147,6 +147,6 @@ void dnsWrapper ( void *state , long ip ) {
 			st->m_buf , iptoa(ip) , mstrerror(g_errno));
 	//if ( g_errno == ETRYAGAIN )
 	//	log("hey");
-	mfree ( st , sizeof(StateT), "test" );
+	mfree ( st , sizeof(StateT), "dnstest" );
 	s_count--;
 }

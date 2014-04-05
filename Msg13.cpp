@@ -721,6 +721,25 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 			"(compatible; MSIE 6.0; Windows 98; "
 			"Win 9x 4.90)" ;
 
+	// for bulk jobs avoid actual downloads of the page for efficiency
+	if ( r->m_isCustomCrawl == 2 ) {
+		char *s = 
+			"HTTP/1.0 200 (OK)\r\n"
+			"Content-Length: 0\r\n"
+			"Connection: Close\r\n"
+			"Content-Type: text/html\r\n\r\n";
+		long slen = gbstrlen(s);
+		long fakeBufSize = slen + 1;
+		char *fakeBuf = mdup ( s , fakeBufSize , "fkblk");
+		gotHttpReply2 ( r , 
+				fakeBuf,
+				fakeBufSize, // include \0
+				fakeBufSize, // allocsize
+				NULL ); // tcpsock
+		return;
+	}
+
+
 	// download it
 	if ( ! g_httpServer.getDoc ( r->m_url             ,
 				     r->m_urlIp           ,
@@ -1390,7 +1409,7 @@ void passOnReply ( void *state , UdpSlot *slot ) {
 
 //
 //
-// . UTILITY FUNCTIONS for injecting into the "test" collection
+// . UTILITY FUNCTIONS for injecting into the "qatest123" collection
 // . we need to ensure that the web pages remain constant so we store them
 //
 //
@@ -1400,7 +1419,7 @@ void passOnReply ( void *state , UdpSlot *slot ) {
 // . now that we are lower level in Msg13.cpp, set "ts" not "slot"
 bool getTestDoc ( char *u , TcpSocket *ts , Msg13Request *r ) {
 	// sanity check
-	//if ( strcmp(m_coll,"test") ) { char *xx=NULL;*xx=0; }
+	//if ( strcmp(m_coll,"qatest123") ) { char *xx=NULL;*xx=0; }
 	// hash the url into 64 bits
 	long long h = hash64 ( u , gbstrlen(u) );
 	// read the spider date file first
@@ -1547,7 +1566,7 @@ bool addTestSpideredDate ( Url *u , long spideredTime , char *testDir ) {
 	return true;
 }
 
-// add it to our "test" subdir
+// add it to our "qatest123" subdir
 bool addTestDoc ( long long urlHash64 , char *httpReply , long httpReplySize ,
 		  long err , Msg13Request *r ) {
 
