@@ -5,6 +5,9 @@
 #ifndef _PAGES_H_
 #define _PAGES_H_
 
+bool printRedBox2 ( SafeBuf *sb , bool isRootWebPage = false ) ;
+bool printRedBox ( SafeBuf *mb , bool isRootWebPage = false ) ;
+
 // for PageEvents.cpp and Accessdb.cpp
 //#define RESULTSWIDTHSTR "550px"
 
@@ -304,25 +307,36 @@ enum {
 	//PAGE_BASIC_SEARCH , // TODO
 	//PAGE_BASIC_DIFFBOT , // TODO
 	PAGE_BASIC_SECURITY ,
+	PAGE_BASIC_SEARCH ,
 
 	// master admin pages
 	PAGE_MASTER      , 
+	PAGE_SEARCH      ,  
+	PAGE_SPIDER      ,
+	PAGE_LOG         ,
+	PAGE_SECURITY    ,
+	PAGE_ADDCOLL     ,	
+	PAGE_DELCOLL     , 
+	PAGE_REPAIR      ,
+	PAGE_SITES , // site filters
+	PAGE_FILTERS     ,
+	PAGE_INJECT      , 
+	PAGE_ADDURL2     ,
+	PAGE_REINDEX     ,	
+
 	PAGE_HOSTS       ,
 	PAGE_STATS       , // 10
 	PAGE_STATSDB	 ,
 	PAGE_PERF        ,
 	PAGE_SOCKETS     ,
-	PAGE_LOG         ,
+
 	PAGE_LOGVIEW     ,
 //	PAGE_SYNC        , 
-	PAGE_SECURITY    ,
-	PAGE_ADDCOLL     ,	
-	PAGE_DELCOLL     , 
 	PAGE_AUTOBAN     , // 20
 	//PAGE_SPIDERLOCKS ,
 	PAGE_PROFILER    ,
 	PAGE_THREADS     ,
-	PAGE_REPAIR      ,
+
 //	PAGE_THESAURUS   , 
 
 	// . non master-admin pages (collection controls)
@@ -335,16 +349,9 @@ enum {
 	PAGE_TITLEDB     ,  
 	//PAGE_STATSDB	 ,
 
-	PAGE_SEARCH      ,  
-	PAGE_SPIDER      ,
 	PAGE_CRAWLBOT    , // 35
 	PAGE_SPIDERDB    , 
 	//PAGE_PRIORITIES  ,  // priority queue controls
-	PAGE_SITES , // site filters
-	PAGE_FILTERS     ,
-	PAGE_INJECT      , 
-	PAGE_ADDURL2     ,
-	PAGE_REINDEX     ,	
 	//PAGE_KEYWORDS    ,
 	PAGE_SEO         ,
 	PAGE_ACCESS      ,  //40	
