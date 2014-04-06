@@ -73,7 +73,9 @@ public:
 // . uses msg4 to add seeds to spiderdb if necessary
 // . only adds seeds for the shard we are on iff we are responsible for
 //   the fake firstip!!!
-bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
+bool updateSiteListTables ( collnum_t collnum , 
+			    bool addSeeds ,
+			    char *siteListArg ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	if ( ! cr ) return true;
@@ -142,10 +144,10 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 	// use this so it will be free automatically when msg4 completes!
 	SafeBuf *spiderReqBuf = &sc->m_msg4x.m_tmpBuf;
 
-	char *siteList = cr->m_siteListBuf.getBufStart();
+	//char *siteList = cr->m_siteListBuf.getBufStart();
 
 	// scan the list
-	char *pn = siteList;
+	char *pn = siteListArg;
 
 	// completely empty?
 	if ( ! pn ) return true;
@@ -391,10 +393,15 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 	// check domain specific tables
 	HashTableX *dt = &sc->m_siteListDomTable;
 
+	// get this
+	CollectionRec *cr = sc->m_cr;
+
 	// need to build dom table for pattern matching?
-	if ( dt->getNumSlotsUsed() == 0 ) {
+	if ( dt->getNumSlotsUsed() == 0 && cr ) {
 		// do not add seeds, just make siteListDomTable, etc.
-		updateSiteList ( sc->m_collnum , false );
+		updateSiteListTables ( sc->m_collnum , 
+				       false , // add seeds?
+				       cr->m_siteListBuf.getBufStart() );
 	}
 
 	if ( dt->getNumSlotsUsed() == 0 ) { 

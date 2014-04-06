@@ -2277,7 +2277,7 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 }
 
 bool expandRegExShortcuts ( SafeBuf *sb ) ;
-bool updateSiteList ( collnum_t collnum , bool addSeeds );
+bool updateSiteListTables ( collnum_t collnum,bool addSeeds,char *siteListArg);
 void nukeDoledb ( collnum_t collnum );
 
 // . anytime the url filters are updated, this function is called
@@ -2340,10 +2340,14 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// maybe this is good enough
 		//if ( sc ) sc->m_waitingTreeNeedsRebuild = true;
 		
+		CollectionRec *cr = sc->m_cr;
+
 		// . rebuild sitetable? in PageBasic.cpp.
 		// . re-adds seed spdierrequests using msg4
 		// . true = addSeeds
-		updateSiteList ( m_collnum , true );
+		updateSiteListTables ( m_collnum , 
+				       true , 
+				       cr->m_siteListBuf.getBufStart() );
 	}
 
 

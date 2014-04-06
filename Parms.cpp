@@ -122,6 +122,40 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) ;
 //
 ////////
 
+
+// from PageBasic.cpp:
+bool updateSiteListTables(collnum_t collnum,bool addSeeds,char *siteListArg);
+
+bool CommandUpdateSiteList ( char *rec ) {
+	// caller must specify collnum
+	collnum_t collnum = getCollnumFromParmRec ( rec );
+	if ( collnum < 0 ) {
+		log("parms: bad collnum for update site list");
+		g_errno = ENOCOLLREC;
+		return true;
+	}
+	// sanity
+	long dataSize = getDataSizeFromParmRec ( rec );
+	if ( dataSize < 0 ) {
+		log("parms: bad site list size = %li bad!",dataSize);
+		g_errno = EBADENGINEER;
+		return true;
+	}
+	// need this
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+	// get the sitelist
+	char *data = getDataFromParmRec ( rec );
+	// update it
+	updateSiteListTables ( collnum ,
+			       true , // add NEW seeds?
+			       data // entire sitelist
+			       );
+	// now that we deduped the old site list with the new one for
+	// purposes of adding NEW seeds, we can do the final copy
+	cr->m_siteListBuf.set ( data );
+	return true;
+}
+
 // . require user manually execute this to prevent us fucking up the data
 //   at first initially because of a bad hosts.conf file!!!
 // . maybe put a red 'A' in the hosts table on the web page to indicate
@@ -7610,6 +7644,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
+	m->m_func  = CommandUpdateSiteList;
 	m->m_def   = "";
 	// rebuild urlfilters now will nuke doledb and call updateSiteList()
 	m->m_flags = PF_TEXTAREA | PF_DUP | PF_REBUILDURLFILTERS;
@@ -7680,6 +7715,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SITES;
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
+	m->m_func  = CommandUpdateSiteList;
 	m->m_def   = "";
 	// rebuild urlfilters now will nuke doledb and call updateSiteList()
 	m->m_flags = PF_TEXTAREA | PF_REBUILDURLFILTERS;
@@ -18056,7 +18092,11 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	}
 
 	// cmd to execute?
-	if ( parm->m_type == TYPE_CMD ) {
+	if ( parm->m_type == TYPE_CMD ||
+	     // sitelist is a safebuf but it requires special deduping
+	     // logic to update it so it uses CommandUpdateSiteList() to
+	     // do the updating
+	     parm->m_func ) {
 		// all parm rec data for TYPE_CMD should be ascii/utf8 chars
 		// and should be \0 terminated
 		char *data = getDataFromParmRec ( rec );
