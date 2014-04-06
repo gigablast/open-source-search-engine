@@ -156,7 +156,7 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 
 	Url u;
 
-	for ( ; *pn ; pn++ , lineNum++ ) {
+	for ( ; *pn ; lineNum++ ) {
 
 		// get end
 		char *s = pn;
@@ -168,6 +168,9 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 		// back p up over spaces in case ended in spaces
 	        char *pe = pn;
 		for ( ; pe > s && is_wspace_a(pe[-1]) ; pe-- );
+
+		// advance over '\n' for next line
+		if ( *pn && *pn == '\n' ) pn++;
 
 		// make hash of the line
 		long h32 = hash32 ( s , pe - s );
@@ -728,6 +731,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 
 	char  buf [ 128000 ];
 	SafeBuf sb(buf,128000);
+	sb.reset();
 
 	char *fs = hr->getString("format",NULL,NULL);
 	char fmt = FORMAT_HTML;
@@ -761,7 +765,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	//
 	// show stats
 	//
-	if ( fmt == FMT_HTML ) {
+	if ( fmt == FORMAT_HTML ) {
 
 		char *seedStr = cr->m_diffbotSeeds.getBufStart();
 		if ( ! seedStr ) seedStr = "";
@@ -773,42 +777,16 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		long sentAlert = (long)ci->m_sentCrawlDoneAlert;
 		if ( sentAlert ) sentAlert = 1;
 
-		sb.safePrintf(
+		//sb.safePrintf(
+		//	      "<form method=get action=/crawlbot>"
+		//	      "%s"
+		//	      , sb.getBufStart() // hidden input token/name/..
+		//	      );
 
-			      "<form method=get action=/crawlbot>"
-			      "%s"
-			      , sb.getBufStart() // hidden input token/name/..
-			      );
 		sb.safePrintf("<TABLE border=0>"
 			      "<TR><TD valign=top>"
 
 			      "<table border=0 cellpadding=5>"
-
-			      //
-			      "<tr>"
-			      "<td><b>Crawl Name:</td>"
-			      "<td>%s</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Crawl Type:</td>"
-			      "<td>%li</td>"
-			      "</tr>"
-
-			      //"<tr>"
-			      //"<td><b>Collection Alias:</td>"
-			      //"<td>%s%s</td>"
-			      //"</tr>"
-
-			      "<tr>"
-			      "<td><b>Token:</td>"
-			      "<td>%s</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Seeds:</td>"
-			      "<td>%s</td>"
-			      "</tr>"
 
 			      "<tr>"
 			      "<td><b>Crawl Status:</td>"
@@ -820,10 +798,10 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "<td>%s</td>"
 			      "</tr>"
 
-			      "<tr>"
-			      "<td><b>Rounds Completed:</td>"
-			      "<td>%li</td>"
-			      "</tr>"
+			      //"<tr>"
+			      //"<td><b>Rounds Completed:</td>"
+			      //"<td>%li</td>"
+			      //"</tr>"
 
 			      "<tr>"
 			      "<td><b>Has Urls Ready to Spider:</td>"
@@ -836,11 +814,6 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      //"<td><b>pages indexed</b>"
 			      //"<td>%lli</td>"
 			      //"</tr>"
-
-			      "<tr>"
-			      "<td><b>Objects Found</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
 
 			      "<tr>"
 			      "<td><b>URLs Harvested</b> (inc. dups)</td>"
@@ -868,37 +841,11 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "<td>%lli</td>"
 			      "</tr>"
 
-			      "<tr>"
-			      "<td><b>Page Process Attempts</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Page Process Successes</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Page Process Successes This Round</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
-
-			      
-			      , cr->m_diffbotCrawlName.getBufStart()
-			      
-			      , (long)cr->m_isCustomCrawl
-
-			      , cr->m_diffbotToken.getBufStart()
-
-			      , seedStr
-
 			      , crawlStatus
 			      , tmp.getBufStart()
-			      , cr->m_spiderRoundNum
+			      //, cr->m_spiderRoundNum
 			      , cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
 
-			      , cr->m_globalCrawlInfo.m_objectsAdded -
-			        cr->m_globalCrawlInfo.m_objectsDeleted
 			      , cr->m_globalCrawlInfo.m_urlsHarvested
 			      //, cr->m_globalCrawlInfo.m_urlsConsidered
 
@@ -906,16 +853,13 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound
 
-			      , cr->m_globalCrawlInfo.m_pageProcessAttempts
-			      , cr->m_globalCrawlInfo.m_pageProcessSuccesses
-			      , cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound
 			      );
 
 	}
 
-	if ( fmt != FORMAT_JSON )
-		// wrap up the form, print a submit button
-		g_pages.printAdminBottom ( &sb );
+	//if ( fmt != FORMAT_JSON )
+	//	// wrap up the form, print a submit button
+	//	g_pages.printAdminBottom ( &sb );
 
 	return g_httpServer.sendDynamicPage (socket, 
 					     sb.getBufStart(), 

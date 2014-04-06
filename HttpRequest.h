@@ -28,10 +28,14 @@
 #include "TcpSocket.h"
 
 // values for HttpRequest::m_replyFormat
-#define FORMAT_HTML 0
-#define FORMAT_XML  1
-#define FORMAT_JSON 2
-#define FORMAT_CSV  3
+#define FORMAT_HTML 1
+#define FORMAT_XML  2
+#define FORMAT_JSON 3
+#define FORMAT_CSV  4
+#define FORMAT_TXT  5
+#define FORMAT_PROCOG 6
+
+
 
 class HttpRequest {
 

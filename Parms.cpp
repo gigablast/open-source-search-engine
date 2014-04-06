@@ -1888,7 +1888,7 @@ bool Parms::printParm ( SafeBuf* sb,
 					"value=\"%f\" "
 					// 3 was ok on firefox but need 6
 					// on chrome
-					"size=6>",cgi,*(float *)s);
+					"size=7>",cgi,*(float *)s);
 	}
 	else if ( t == TYPE_IP ) {
 		if ( m->m_max > 0 && j == jend ) 
@@ -1896,7 +1896,7 @@ bool Parms::printParm ( SafeBuf* sb,
 					"size=12>",cgi);
 		else
 			sb->safePrintf ("<input type=text name=%s value=\"%s\" "
-					"size=6>",cgi,iptoa(*(long *)s));
+					"size=12>",cgi,iptoa(*(long *)s));
 	}
 	else if ( t == TYPE_LONG ) {
 		// just show the parm name and value if printing in json
@@ -7534,6 +7534,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_TEXTAREA;
 	m++;
 
+	/*
 	// the new upload post submit button
 	m->m_title = "upload urls";
 	m->m_desc  = "Upload your file of urls.";
@@ -7542,6 +7543,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_NONE;
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m++;
+	*/
 
 	m->m_title = "strip sessionids";
 	m->m_desc  = "Strip added urls of their session ids.";
@@ -7591,6 +7593,7 @@ void Parms::init ( ) {
 	m->m_title = "site list";
 	m->m_xml   = "siteList";
 	m->m_desc  = "List of sites to spider, one per line. "
+		"See <a href=#examples>example site list</a> below. "
 		"Gigablast uses the "
 		"<a href=/admin/filters#insitelist>insitelist</a> "
 		"directive on "
@@ -7599,8 +7602,7 @@ void Parms::init ( ) {
 		"that match the site patterns you specify here, other than "
 		"urls you add individually via the add urls or inject url "
 		"tools. "
-		"See <a href=#examples>example site list</a> below. "
-		"Limit list to 300MB. If you have a lot of INDIVIDUAL URLS "
+		"Limit list to 300MB. If you have a lot of INDIVIDUAL urls "
 		"to add then consider using the <a href=/admin/addurl>add "
 		"urls</a> interface.";
 	m->m_cgi   = "sitelist";
@@ -7629,6 +7631,7 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	/*
 	// the new upload post submit button
 	m->m_title = "upload site list";
 	m->m_desc  = "Upload your file of site patterns. Completely replaces "
@@ -7640,12 +7643,13 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m->m_flags = PF_NOSAVE | PF_DUP;
 	m++;
+	*/
 
 	m->m_title = "restart collection";
-	m->m_desc  = "Remove all documents from this collection and starts "
-		"spidering over again. If you do this accidentally there "
-		"is a <a href=/admin.html#recover>recovery procedure</a> to "
-		"get back the trashed data.";
+	m->m_desc  = "Remove all documents from this collection and restart "
+		"spidering.";// If you do this accidentally there "
+	//"is a <a href=/admin.html#recover>recovery procedure</a> to "
+	//	"get back the trashed data.";
 	m->m_cgi   = "restart";
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
@@ -7659,6 +7663,7 @@ void Parms::init ( ) {
 	m->m_title = "site list";
 	m->m_xml   = "siteList";
 	m->m_desc  = "List of sites to spider, one per line. "
+		"See <a href=#examples>example site list</a> below. "
 		"Gigablast uses the "
 		"<a href=/admin/filters#insitelist>insitelist</a> "
 		"directive on "
@@ -7667,8 +7672,7 @@ void Parms::init ( ) {
 		"that match the site patterns you specify here, other than "
 		"urls you add individually via the add urls or inject url "
 		"tools. "
-		"See <a href=#examples>example site list</a> below. "
-		"Limit list to 300MB. If you have a lot of INDIVIDUAL URLS "
+		"Limit list to 300MB. If you have a lot of INDIVIDUAL urls "
 		"to add then consider using the <a href=/admin/addurl>addurl"
 		"</a> interface.";
 	m->m_cgi   = "sitelist";
@@ -8762,11 +8766,11 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "max robots.txt cache age";
-	m->m_desc  = "How many second to cache a robots.txt file for. "
+	m->m_desc  = "How many seconds to cache a robots.txt file for. "
 		"86400 is 1 day. 0 means Gigablast will not read from the "
 		"cache at all and will download the robots.txt before every "
 		"page if robots.txt use is enabled above. However, if this is "
-		"0 then Gigablast will still store robots.txt files into the "
+		"0 then Gigablast will still store robots.txt files in the "
 		"cache.";
 	m->m_cgi   = "mrca";
 	m->m_off   = (char *)&cr.m_maxRobotsCacheAge - x;
@@ -10639,8 +10643,9 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "do query expansion";
-	m->m_desc  = "Query expansion will include word stems and synonyms in "
-		"its search results.";
+	m->m_desc  = "If enabled, query expansion will expand your query "
+		"to include word stems and "
+		"synonyms of the query terms.";
 	m->m_def   = "1";
 	m->m_off   = (char *)&cr.m_queryExpansion - x;
 	m->m_soff  = (char *)&si.m_queryExpansion - y;
@@ -10653,7 +10658,7 @@ void Parms::init ( ) {
 
 	// more general parameters
 	m->m_title = "max search results";
-	m->m_desc  = "What is the limit to the total number "
+	m->m_desc  = "What is the maximum total number "
 		"of returned search results.";
 	m->m_cgi   = "msr";
 	m->m_off   = (char *)&cr.m_maxSearchResults - x;
@@ -12457,7 +12462,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "max summary line width";
-	m->m_desc  = "<br> tags are inserted to keep the number "
+	m->m_desc  = "&lt;br&gt; tags are inserted to keep the number "
 		"of chars in the summary per line at or below this width. "
 		"Strings without spaces that exceed this "
 		"width are not split.";
