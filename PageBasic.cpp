@@ -115,6 +115,8 @@ bool updateSiteListTables ( collnum_t collnum ,
 	}
 
 	// get the old sitelist Domain Hash to PatternData mapping table
+	// which tells us what domains, subdomains or paths we can or
+	// can not spider...
 	HashTableX *dt = &sc->m_siteListDomTable;
 
 	// reset it
@@ -292,7 +294,7 @@ bool updateSiteListTables ( collnum_t collnum ,
 		if ( ! isFilter ) continue;
 		
 		
-		// make the data node
+		// make the data node used for filtering urls during spidering
 		PatternData pd;
 		// hash of the subdomain or domain for this line in sitelist
 		pd.m_thingHash32 = u.getHostHash32();

@@ -1882,6 +1882,16 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_spiderPriorities   [n] = -3; // delete!
 	n++;
 
+	// if not in the site list then nuke it
+	m_regExs[n].set("!insitelist");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 0; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = -3; // delete!
+	n++;
+
 	m_regExs[n].set("errorcount>=3 && hastmperror");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 1; // 30 days default
