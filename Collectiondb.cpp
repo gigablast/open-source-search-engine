@@ -247,10 +247,10 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 	// load if not new
 	if ( ! cr->load ( coll , i ) ) {
 		mdelete ( cr, sizeof(CollectionRec), "CollectionRec" ); 
+		log("admin: Failed to load coll.%s.%li/coll.conf",coll,i);
 		delete ( cr );
-		m_recs[i] = NULL;
-		return log("admin: Failed to load conf for collection "
-			   "\"%s\".",coll);
+		if ( m_recs ) m_recs[i] = NULL;
+		return false;
 	}
 
 	if ( ! registerCollRec ( cr , false ) ) return false;

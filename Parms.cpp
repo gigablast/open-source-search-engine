@@ -2976,7 +2976,7 @@ bool Parms::setFromFile ( void *THIS        ,
 	// make sure we're init'd
 	init();
 	// let em know
-	if ( THIS == &g_conf ) log (LOG_INIT,"conf: Reading %s." , filename );
+	//if ( THIS == &g_conf) log (LOG_INIT,"conf: Reading %s." , filename );
 	// . let the log know what we are doing
 	// . filename is NULL if a call from CollectionRec::setToDefaults()
 	Xml xml;
@@ -3155,10 +3155,12 @@ bool Parms::setFromFile ( void *THIS        ,
 			//	log("conf: %s does not have <%s> tag. "
 			//	    "Ommitting.",filename,m->m_xml);
 			//else 
+			/*
 			if ( ! m->m_def ) //m->m_def[0] )
 				log("conf: %s does not have <%s> tag. Using "
 				    "default value of \"%s\".", filename,
 				    m->m_xml,m->m_def);
+			*/
 			continue;
 		}
 		// . next node is the value of this tag

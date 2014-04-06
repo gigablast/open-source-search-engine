@@ -361,7 +361,18 @@ void stack_test(){
 }
 #endif
 
+int main2 ( int argc , char *argv[] ) ;
+
 int main ( int argc , char *argv[] ) {
+
+	//fprintf(stderr,"Starting gb.\n");
+
+	int ret = main2 ( argc , argv );
+
+	if ( ret ) fprintf(stderr,"Failed to start gb. Exiting.\n");
+}
+
+int main2 ( int argc , char *argv[] ) {
 
 	// appears that linux 2.4.17 kernel would crash with this?
 	// let's try again on gk127 to make sure
@@ -2230,10 +2241,6 @@ int main ( int argc , char *argv[] ) {
 	}
 	*/
 
-	// start up log file
-	if ( ! g_log.init( g_hostdb.m_logFilename )        ) {
-		fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
-
 	// gb [-h hostsConf] <hid>
 	// mainStart:
 
@@ -2274,7 +2281,8 @@ int main ( int argc , char *argv[] ) {
 		g_conf.m_sendEmailAlerts = false;
 
 	// log how much mem we can use
-	log(LOG_INIT,"conf: Max mem allowed to use is %lli\n",g_conf.m_maxMem);
+	//log(LOG_INIT,"conf: Max mem allowed to use is %lli\n",
+	//g_conf.m_maxMem);
 
 	// load the language specific pages
 	g_languagePages.reloadPages();
@@ -2295,8 +2303,11 @@ int main ( int argc , char *argv[] ) {
 
 	// set up the threads, might need g_conf
 
-	if ( ! g_threads.init()     ) {
-		log("db: Threads init failed." ); return 1; }
+	// avoid logging threads msgs to stderr if not actually starting up
+	// a gb daemon...
+	//if(cmd && cmd[0] && ! is_digit(cmd[0]) && ! g_threads.init()     ) {
+	//if ( ! g_threads.init()     ) {
+	//	log("db: Threads init failed." ); return 1; }
 
 	// gb gendict
 	if ( strcmp ( cmd , "gendict" ) == 0 ) {	
@@ -2667,12 +2678,20 @@ int main ( int argc , char *argv[] ) {
 	//	fixTfndb ( coll ); // coll
 	//}
 
+	// make sure port is available, no use loading everything up then
+	// failing because another process is already running using this port
+	//if ( ! g_udpServer.testBind ( g_hostdb.getMyPort() ) )
+	if ( ! g_httpServer.m_tcp.testBind(g_hostdb.getMyHost()->m_httpPort))
+		return 1;
+
 	//if ( strcmp ( cmd , "gendbs"       ) == 0 ) goto jump;
 	//if ( strcmp ( cmd , "gentfndb"     ) == 0 ) goto jump;
 	if ( strcmp ( cmd , "gencatdb"     ) == 0 ) goto jump;
 	//if ( strcmp ( cmd , "genclusterdb" ) == 0 ) goto jump;
 	//	if ( cmd && ! is_digit(cmd[0]) ) goto printHelp;
 
+
+	fprintf(stderr,"Logging to file %s.\n",g_hostdb.m_logFilename );
 
 	/*
 	// tmp stuff to generate new query log
@@ -2686,14 +2705,32 @@ int main ( int argc , char *argv[] ) {
 	return 0;
 	*/
 
-	// make sure port is available, no use loading everything up then
-	// failing because another process is already running using this port
-	//if ( ! g_udpServer.testBind ( g_hostdb.getMyPort() ) )
-	if ( ! g_httpServer.m_tcp.testBind(g_hostdb.getMyHost()->m_httpPort))
-		return 1;
+	// start up log file
+	if ( ! g_log.init( g_hostdb.m_logFilename )        ) {
+		fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
 
 	g_errno = 0;
 
+	// 
+	// run as daemon now
+	//
+	//fprintf(stderr,"running as daemon\n");
+	pid_t pid, sid;
+	pid = fork();
+	if ( pid < 0 ) exit(EXIT_FAILURE);
+	if ( pid > 0 ) exit(EXIT_SUCCESS);
+	// change file mode mask
+	umask(0);
+	sid = setsid();
+	if ( sid < 0 ) exit(EXIT_FAILURE);
+	//fprintf(stderr,"done\n");
+	// set our new pid
+	g_mem.setPid();
+
+	// initialize threads down here now so it logs to the logfile and
+	// not stderr
+	//if ( ( ! cmd || !cmd[0]) && ! g_threads.init()     ) {
+	//	log("db: Threads init failed." ); return 1; }
 
 	if (!ucInit(g_hostdb.m_dir, true)) {
 		log("Unicode initialization failed!");
