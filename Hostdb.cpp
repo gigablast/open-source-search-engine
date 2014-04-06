@@ -139,7 +139,7 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	// set clock in sync in fctypes.cpp
 	//if ( m_hostId == 0 ) g_clockInSync = true;
 	// log it
-	if (this == &g_hostdb) logf(LOG_INIT,"conf: HostId is %li.",m_hostId);
+	//if(this == &g_hostdb) logf(LOG_INIT,"conf: HostId is %li.",m_hostId);
 	// . File::open() open old if it exists, otherwise,
 	File f;
 	f.set ( filename );
@@ -168,13 +168,12 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		// hosts2.conf is not necessary
 		if ( this == &g_hostdb2 ) return true;
 		g_errno = ENOHOSTSFILE; 
-		log(
-		    "conf: Filename %s does not exist." ,filename);
 		// if doing localhosts.conf now try hosts.conf
 		if ( strcmp(filename,"./localhosts.conf") == 0 ) {
 			filename = "./hosts.conf";
 			goto retry;
 		}
+		log("conf: Filename %s does not exist." ,filename);
 		return false; 
 	}
 	// get file size

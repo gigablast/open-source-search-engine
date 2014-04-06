@@ -1315,9 +1315,6 @@ int main ( int argc , char *argv[] ) {
 	g_conf.m_save = false;
 	
 
-	// start up log file
-	if ( ! g_log.init( g_hostdb.m_logFilename )        ) {
-		fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
 	// log the version
 	//log(LOG_INIT,"conf: Gigablast Server %s",GBVersion);
 
@@ -2232,6 +2229,10 @@ int main ( int argc , char *argv[] ) {
 			     false );//sendtoproxies
 	}
 	*/
+
+	// start up log file
+	if ( ! g_log.init( g_hostdb.m_logFilename )        ) {
+		fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
 
 	// gb [-h hostsConf] <hid>
 	// mainStart:
@@ -4148,13 +4149,13 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			if ( hostId >= 0 && h2->m_hostId != hostId ) continue;
 
 			// . save old log now, too
-			char tmp2[1024];
-			tmp2[0]='\0';
+			//char tmp2[1024];
+			//tmp2[0]='\0';
 			// let's do this for everyone now
 			//if ( h2->m_hostId == 0 )
-			sprintf(tmp2,
-				"mv ./proxylog ./proxylog-`date '+"
-				"%%Y_%%m_%%d-%%H:%%M:%%S'` ; " );
+			//sprintf(tmp2,
+			//	"mv ./proxylog ./proxylog-`date '+"
+			//	"%%Y_%%m_%%d-%%H:%%M:%%S'` ; " );
 			// . assume conf file name gbHID.conf
 			// . assume working dir ends in a '/'
 			//to test add: ulimit -t 10; to the ssh cmd
@@ -4167,8 +4168,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"EXITSTATUS=1 ; "
 				"while [ \\$EXITSTATUS != 0 ]; do "
  				"{ "
-				"mv ./proxylog ./proxylog-\\`date '+"
-				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
+				//"mv ./proxylog ./proxylog-\\`date '+"
+				//"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
 				"./gb proxy load %li " // mdw
 				"\\$ADDARGS "
 				" >& ./proxylog ;"
@@ -4550,31 +4551,33 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		}
 		else if ( installFlag == ifk_start ) {
 			// . save old log now, too
-			char tmp2[1024];
-			tmp2[0]='\0';
+			//char tmp2[1024];
+			//tmp2[0]='\0';
 			// let's do this for everyone now
 			//if ( h2->m_hostId == 0 )
-			sprintf(tmp2,
-				"mv ./log%03li ./log%03li-`date '+"
-				"%%Y_%%m_%%d-%%H:%%M:%%S'` ; " ,
-				h2->m_hostId   ,
-				h2->m_hostId   );
+			//sprintf(tmp2,
+			//	"mv ./log%03li ./log%03li-`date '+"
+			//	"%%Y_%%m_%%d-%%H:%%M:%%S'` ; " ,
+			//	h2->m_hostId   ,
+			//	h2->m_hostId   );
 			// . assume conf file name gbHID.conf
 			// . assume working dir ends in a '/'
 			sprintf(tmp,
 				"ssh %s \"cd %s ; ulimit -c unlimited; "
 				"cp -f gb gb.oldsave ; "
-				"mv -f gb.installed gb ; %s"
-				"./gb %li >& ./log%03li &\" %s",
+				"mv -f gb.installed gb ; " // %s"
+				//"./gb %li >& ./log%03li &\" %s",
+				"./gb %li &\" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
-				tmp2           ,
+				//tmp2           ,
 				//h2->m_dir      ,
 				h2->m_hostId   ,
-				h2->m_hostId   ,
+				//h2->m_hostId   ,
 				amp);
 			// log it
-			log(LOG_INIT,"admin: %s", tmp);
+			//log(LOG_INIT,"admin: %s", tmp);
+			fprintf(stdout,"admin: %s\n", tmp);
 			// execute it
 			system ( tmp );
 		}
@@ -4636,15 +4639,15 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		else if ( installFlag == ifk_kstart ) {
 			//keepalive
 			// . save old log now, too
-			char tmp2[1024];
-			tmp2[0]='\0';
+			//char tmp2[1024];
+			//tmp2[0]='\0';
 			// let's do this for everyone now
 			//if ( h2->m_hostId == 0 )
-			sprintf(tmp2,
-				"mv ./log%03li ./log%03li-`date '+"
-				"%%Y_%%m_%%d-%%H:%%M:%%S'` ; " ,
-				h2->m_hostId   ,
-				h2->m_hostId   );
+			//sprintf(tmp2,
+			//	"mv ./log%03li ./log%03li-`date '+"
+			//	"%%Y_%%m_%%d-%%H:%%M:%%S'` ; " ,
+			//	h2->m_hostId   ,
+			//	h2->m_hostId   );
 			// . assume conf file name gbHID.conf
 			// . assume working dir ends in a '/'
 			//to test add: ulimit -t 10; to the ssh cmd
@@ -4657,26 +4660,28 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"EXITSTATUS=1 ; "
 				"while [ \\$EXITSTATUS != 0 ]; do "
  				"{ "
-				"mv ./log%03li ./log%03li-\\`date '+"
-				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
+				//"mv ./log%03li ./log%03li-\\`date '+"
+				//"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
 				"./gb %li "
 				"\\$ADDARGS "
-				" >& ./log%03li ;"
+				" ;"
+				//" >& ./log%03li ;"
 				"EXITSTATUS=\\$? ; "
 				"ADDARGS='-r' ; "
 				"} " 
  				"done >& /dev/null & \" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
-				h2->m_hostId   ,
-				h2->m_hostId   ,
+				//h2->m_hostId   ,
+				//h2->m_hostId   ,
 				//h2->m_dir      ,
-				h2->m_hostId   ,
+				//h2->m_hostId   ,
 				h2->m_hostId   ,
 				amp );
 
 			// log it
-			log(LOG_INIT,"admin: %s", tmp);
+			//log(LOG_INIT,"admin: %s", tmp);
+			fprintf(stdout,"admin: %s\n", tmp);
 			// execute it
 			system ( tmp );
 		}

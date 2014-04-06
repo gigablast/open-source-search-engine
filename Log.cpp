@@ -73,7 +73,34 @@ bool Log::init ( char *filename ) {
 	if ( ! m_filename ) return true;
 
 	// skip this for now
-	return true;
+	//return true;
+
+	//
+	// RENAME log000 to log000-2013_11_04-18:19:32
+	//
+	File f;
+	char tmp[16];
+	sprintf(tmp,"log%03li",g_hostdb.m_hostId);
+	f.set ( g_hostdb.m_dir , tmp );
+	// make new filename like log000-2013_11_04-18:19:32
+	time_t now = getTimeLocal();
+	tm *tm1 = gmtime((const time_t *)&now);
+	char tmp2[64];
+	strftime(tmp2,64,"%Y_%m_%d-%T",tm1);
+	SafeBuf newName;
+	if ( ! newName.safePrintf ( "%slog%03li-%s",
+				    g_hostdb.m_dir,
+				    g_hostdb.m_hostId,
+				    tmp2 ) ) {
+		fprintf(stderr,"log rename failed\n");
+		return false;
+	}
+	// rename log000 to log000-2013_11_04-18:19:32
+	if ( f.doesExist() ) {
+		//fprintf(stdout,"renaming file\n");
+		f.rename ( newName.getBufStart() );
+	}
+
 
 	// open it for appending.
 	// create with -rw-rw-r-- permissions if it's not there.
@@ -82,7 +109,8 @@ bool Log::init ( char *filename ) {
 		      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
 	if ( m_fd >= 0 ) return true;
 	// bitch to stderr and return false on error
-       fprintf(stderr,"could not open log file %s for appending\n",m_filename);
+	fprintf(stderr,"could not open log file %s for appending\n",
+		m_filename);
 	return false;
 }
 
@@ -276,8 +304,14 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 		if ( *ttp == '\t' ) *ttp = ' ';
 	}
 
-	// print it out for now
-	fprintf ( stderr, "%s\n", tt );
+	if ( m_fd >= 0 ) {
+		write ( m_fd , tt , tlen );
+		write ( m_fd , "\n", 1 );
+	}
+	else {
+		// print it out for now
+		fprintf ( stderr, "%s\n", tt );
+	}
 
 	// set the stuff in the array
 	m_errorMsg      [m_numErrors] = msg;
