@@ -25,11 +25,11 @@
 #include "Parms.h"
 
 // so user can specify the format of the reply/output
-#define FMT_HTML 1
-#define FMT_XML  2
-#define FMT_JSON 3
-#define FMT_CSV  4
-#define FMT_TXT  5
+//#define FMT_HTML 1
+//#define FMT_XML  2
+//#define FMT_JSON 3
+//#define FMT_CSV  4
+//#define FMT_TXT  5
 
 void doneSendingWrapper ( void *state , TcpSocket *sock ) ;
 bool sendBackDump ( TcpSocket *s,HttpRequest *hr );
@@ -158,25 +158,25 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
 	if ( ( xx = strstr ( path , "_data.json" ) ) ) {
 		rdbId = RDB_TITLEDB;
-		fmt = FMT_JSON;
+		fmt = FORMAT_JSON;
 		downloadJSON = true;
 	}
 	else if ( ( xx = strstr ( path , "_data.csv" ) ) ) {
 		rdbId = RDB_TITLEDB;
 		downloadJSON = true;
-		fmt = FMT_CSV;
+		fmt = FORMAT_CSV;
 	}
 	else if ( ( xx = strstr ( path , "_urls.csv" ) ) ) {
 		rdbId = RDB_SPIDERDB;
-		fmt = FMT_CSV;
+		fmt = FORMAT_CSV;
 	}
 	else if ( ( xx = strstr ( path , "_urls.txt" ) ) ) {
 		rdbId = RDB_SPIDERDB;
-		fmt = FMT_TXT;
+		fmt = FORMAT_TXT;
 	}
 	else if ( ( xx = strstr ( path , "_pages.txt" ) ) ) {
 		rdbId = RDB_TITLEDB;
-		fmt = FMT_TXT;
+		fmt = FORMAT_TXT;
 	}
 
 	// sanity, must be one of 3 download calls
@@ -213,7 +213,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
 	// . if doing download of csv, make it search results now!
 	// . make an httprequest on stack and call it
-	if ( fmt == FMT_CSV && rdbId == RDB_TITLEDB ) {
+	if ( fmt == FORMAT_CSV && rdbId == RDB_TITLEDB ) {
 		char tmp2[5000];
 		SafeBuf sb2(tmp2,5000);
 		long dr = 1;
@@ -247,7 +247,7 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 
 	// . if doing download of json, make it search results now!
 	// . make an httprequest on stack and call it
-	if ( fmt == FMT_JSON && rdbId == RDB_TITLEDB ) {
+	if ( fmt == FORMAT_JSON && rdbId == RDB_TITLEDB ) {
 		char tmp2[5000];
 		SafeBuf sb2(tmp2,5000);
 		long dr = 1;
@@ -514,13 +514,13 @@ bool StateCD::sendList ( ) {
 	//sb.setLabel("dbotdmp");
 
 	char *ct = "text/csv";
-	if ( m_fmt == FMT_JSON )
+	if ( m_fmt == FORMAT_JSON )
 		ct = "application/json";
-	if ( m_fmt == FMT_XML )
+	if ( m_fmt == FORMAT_XML )
 		ct = "text/xml";
-	if ( m_fmt == FMT_TXT )
+	if ( m_fmt == FORMAT_TXT )
 		ct = "text/plain";
-	if ( m_fmt == FMT_CSV )
+	if ( m_fmt == FORMAT_CSV )
 		ct = "text/csv";
 
 	// . if we haven't yet sent an http mime back to the user
@@ -545,13 +545,13 @@ bool StateCD::sendList ( ) {
 
 	//CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 
-	if ( ! m_printedFirstBracket && m_fmt == FMT_JSON ) {
+	if ( ! m_printedFirstBracket && m_fmt == FORMAT_JSON ) {
 		sb.safePrintf("[\n");
 		m_printedFirstBracket = true;
 	}
 
 	// these are csv files not xls
-	//if ( ! m_printedFirstBracket && m_fmt == FMT_CSV ) {
+	//if ( ! m_printedFirstBracket && m_fmt == FORMAT_CSV ) {
 	//	sb.safePrintf("sep=,\n");
 	//	m_printedFirstBracket = true;
 	//}
@@ -638,7 +638,7 @@ bool StateCD::sendList ( ) {
 		// use this for printing out urls.csv as well...
 		m_printedEndingBracket = true;
 		// end array of json objects. might be empty!
-		if ( m_rdbId == RDB_TITLEDB && m_fmt == FMT_JSON )
+		if ( m_rdbId == RDB_TITLEDB && m_fmt == FORMAT_JSON )
 			sb.safePrintf("\n]\n");
 		//log("adding ]. len=%li",sb.length());
 		// i'd like to exit streaming mode here. i fixed tcpserver.cpp
@@ -853,7 +853,7 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		}
 
 		// "csv" is default if json not specified
-		if ( m_fmt == FMT_JSON ) 
+		if ( m_fmt == FORMAT_JSON ) 
 			sb->safePrintf("[{"
 				       "{\"url\":"
 				       "\"%s\"},"
@@ -875,6 +875,19 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 				       );
 		// but default to csv
 		else {
+		    if (cr && cr->m_isCustomCrawl == 1 && sreq && !sreq->m_isAddUrl && !sreq->m_isInjecting) {
+		        if (cr->m_diffbotUrlCrawlPattern.m_length == 0
+                    && cr->m_diffbotUrlProcessPattern.m_length == 0) {
+		            // If a crawl and there are no urlCrawlPattern or urlCrawlRegEx values, only return URLs from seed domain
+		            if (sreq && !sreq->m_sameDom)
+		                continue;
+		        } else {
+		            // TODO: if we get here, we have a crawl with a custom urlCrawlPattern and/or custom
+		            //       urlProcessPattern. We have to check if the current url matches the pattern
+
+		        }
+		    }
+
 			sb->safePrintf("\"%s\",\"%s\","
 				       , sreq->m_url
 				       , as
@@ -984,7 +997,7 @@ void StateCD::printTitledbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 
 		// if not json, just print the json item out in csv
 		// moved into PageResults.cpp...
-		//if ( m_fmt == FMT_CSV ) {
+		//if ( m_fmt == FORMAT_CSV ) {
 		//	printJsonItemInCsv ( json , sb );
 		//	continue;
 		//}
@@ -1324,7 +1337,7 @@ bool sendReply2 (TcpSocket *socket , long fmt , char *msg ) {
 
 	// send this back to browser
 	SafeBuf sb;
-	if ( fmt == FMT_JSON ) {
+	if ( fmt == FORMAT_JSON ) {
 		sb.safePrintf("{\n\"response\":\"success\",\n"
 			      "\"message\":\"%s\"\n}\n"
 			      , msg );
@@ -1355,7 +1368,7 @@ bool sendErrorReply2 ( TcpSocket *socket , long fmt , char *msg ) {
 
 	// send this back to browser
 	SafeBuf sb;
-	if ( fmt == FMT_JSON ) {
+	if ( fmt == FORMAT_JSON ) {
 		sb.safePrintf("{\"error\":\"%s\"}\n"
 			      , msg );
 		ct = "application/json";
@@ -1463,7 +1476,7 @@ void injectedUrlWrapper ( void *state ) {
 
 	// send back the html or json response?
 	SafeBuf *response = &sb;
-	if ( st->m_fmt == FMT_JSON ) response = &js;
+	if ( st->m_fmt == FORMAT_JSON ) response = &js;
 
 	// . this will call g_httpServer.sendReply()
 	// . pass it in the injection response, "sb"
@@ -1660,7 +1673,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	// . now show stats for the current crawl
 	// . put in xml or json if format=xml or format=json or
 	//   xml=1 or json=1 ...
-	char fmt = FMT_JSON;
+	char fmt = FORMAT_JSON;
 
 	// token is always required. get from json or html form input
 	//char *token = getInputString ( "token" );
@@ -1680,21 +1693,21 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 			name++;
 		}
 		// change default formatting to html
-		fmt = FMT_HTML;
+		fmt = FORMAT_HTML;
 	}
 
 
 	char *fs = hr->getString("format",NULL,NULL);
 	// give john a json api
-	if ( fs && strcmp(fs,"html") == 0 ) fmt = FMT_HTML;
-	if ( fs && strcmp(fs,"json") == 0 ) fmt = FMT_JSON;
-	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FMT_XML;
+	if ( fs && strcmp(fs,"html") == 0 ) fmt = FORMAT_HTML;
+	if ( fs && strcmp(fs,"json") == 0 ) fmt = FORMAT_JSON;
+	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
 	// if we got json as input, give it as output
-	//if ( JS.getFirstItem() ) fmt = FMT_JSON;
+	//if ( JS.getFirstItem() ) fmt = FORMAT_JSON;
 
 
 
-	if ( ! token && fmt == FMT_JSON ) { // (cast==0|| fmt == FMT_JSON ) ) {
+	if ( ! token && fmt == FORMAT_JSON ) { // (cast==0|| fmt == FORMAT_JSON ) ) {
 		char *msg = "invalid token";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
@@ -1759,7 +1772,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	//}
 
 	// just send back a list of all the collections after the delete
-	//if ( delColl && cast && fmt == FMT_JSON ) {
+	//if ( delColl && cast && fmt == FORMAT_JSON ) {
 	//	char *msg = "Collection deleted.";
 	//	return sendReply2 (socket,fmt,msg);
 	//}
@@ -2108,7 +2121,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	char bulkurlsfile[1024];
 	snprintf(bulkurlsfile, 1024, "%scoll.%s.%li/bulkurls.txt", g_hostdb.m_dir , coll , (long)st->m_collnum );
-	if ( spots ) {
+	if ( spots && cr && cr->m_isCustomCrawl == 2 ) {
 		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
 		    (long)gbstrlen(spots),coll,(long)st->m_collnum);
 		FILE *f = fopen(bulkurlsfile, "w");
@@ -2120,7 +2133,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	// if restart flag is on and the file with bulk urls exists, get spots from there
-	if ( !spots && restartColl ) {
+	if ( !spots && restartColl && cr && cr->m_isCustomCrawl ) {
 	    FILE *f = fopen(bulkurlsfile, "r");
 	    if (f != NULL) {
 	        fseek(f, 0, SEEK_END);
@@ -2250,7 +2263,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 /*
 bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 
-	if ( fmt == FMT_JSON )
+	if ( fmt == FORMAT_JSON )
 		sb.safePrintf("\"urlFilters\":[");
 
 	// skip first filters that are:
@@ -2290,7 +2303,7 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 		// urls higher spider priority, so skip it
 		if ( strncmp(expression,"ismanualadd && ",15) == 0 )
 			continue;
-		if ( fmt == FMT_HTML ) {
+		if ( fmt == FORMAT_HTML ) {
 			sb.safePrintf("<tr>"
 				      "<td>Expression "
 				      "<input type=text "
@@ -2315,7 +2328,7 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 		sb.pushChar('\n');
 	}
 
-	if ( fmt == FMT_JSON ) {
+	if ( fmt == FORMAT_JSON ) {
 		// remove trailing comma
 		sb.removeLastChar('\n');
 		sb.removeLastChar(',');
@@ -2506,7 +2519,7 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx ) {
 	  true // isJSON?
 	  );
 	*/
-	//printUrlFilters ( sb , cx , FMT_JSON );
+	//printUrlFilters ( sb , cx , FORMAT_JSON );
 	// end that collection rec
 	sb->safePrintf("}\n");
 
@@ -2524,7 +2537,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	// store output into here
 	SafeBuf sb;
 
-	if ( fmt == FMT_HTML )
+	if ( fmt == FORMAT_HTML )
 		sb.safePrintf(
 			      "<html>"
 			      "<title>Crawlbot - "
@@ -2560,7 +2573,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	lb.urlEncode(name);
 	lb.safePrintf ("&token=");
 	lb.urlEncode(token);
-	if ( fmt == FMT_HTML ) lb.safePrintf("&format=html");
+	if ( fmt == FORMAT_HTML ) lb.safePrintf("&format=html");
 	lb.nullTerm();
 	
 
@@ -2577,7 +2590,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//}
 			
 
-	if ( fmt == FMT_HTML ) {
+	if ( fmt == FORMAT_HTML ) {
 		sb.safePrintf("<table border=0>"
 			      "<tr><td>"
 			      "<b><font size=+2>"
@@ -2632,7 +2645,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	// print list of collections controlled by this token
 	//
-	for ( long i = 0 ; fmt == FMT_HTML && i<g_collectiondb.m_numRecs;i++ ){
+	for ( long i = 0 ; fmt == FORMAT_HTML && i<g_collectiondb.m_numRecs;i++ ){
 		CollectionRec *cx = g_collectiondb.m_recs[i];
 		if ( ! cx ) continue;
 		// get its token if any
@@ -2664,19 +2677,19 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			sb.safePrintf("</font></b>");
 	}
 
-	if ( fmt == FMT_HTML )
+	if ( fmt == FORMAT_HTML )
 		sb.safePrintf ( "</center><br/>" );
 
 	// the ROOT JSON [
-	if ( fmt == FMT_JSON )
+	if ( fmt == FORMAT_JSON )
 		sb.safePrintf("{\n");
 
 	// injection is currently not in use, so this is an artifact:
-	if ( fmt == FMT_JSON && injectionResponse )
+	if ( fmt == FORMAT_JSON && injectionResponse )
 		sb.safePrintf("\"response\":\"%s\",\n\n"
 			      , injectionResponse->getBufStart() );
 
-	if ( fmt == FMT_JSON && urlUploadResponse )
+	if ( fmt == FORMAT_JSON && urlUploadResponse )
 		sb.safePrintf("\"response\":\"%s\",\n\n"
 			      , urlUploadResponse->getBufStart() );
 
@@ -2689,14 +2702,14 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 	// the items in the array now have type:bulk or type:crawl
 	// so call them 'jobs'
-	if ( fmt == FMT_JSON )
+	if ( fmt == FORMAT_JSON )
 		sb.safePrintf("\"jobs\":[");//\"collections\":");
 
 	long summary = hr->getLong("summary",0);
 	// enter summary mode for json
-	if ( fmt != FMT_HTML ) summary = 1;
+	if ( fmt != FORMAT_HTML ) summary = 1;
 	// start the table
-	if ( summary && fmt == FMT_HTML ) {
+	if ( summary && fmt == FORMAT_HTML ) {
 		sb.safePrintf("<table border=1 cellpadding=5>"
 			      "<tr>"
 			      "<td><b>Collection</b></td>"
@@ -2727,11 +2740,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 
 		// just print out single crawl info for json
-		if ( fmt != FMT_HTML && cx != cr && name3 ) 
+		if ( fmt != FORMAT_HTML && cx != cr && name3 ) 
 			continue;
 
 		// if json, print each collectionrec
-		if ( fmt == FMT_JSON ) {
+		if ( fmt == FORMAT_JSON ) {
 			if ( ! firstOne ) 
 				sb.safePrintf(",\n\t");
 			firstOne = false;
@@ -2773,7 +2786,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      , cx->m_globalCrawlInfo.m_pageProcessSuccessesThisRound
 			      );
 	}
-	if ( summary && fmt == FMT_HTML ) {
+	if ( summary && fmt == FORMAT_HTML ) {
 		sb.safePrintf("</table></html>" );
 		return g_httpServer.sendDynamicPage (socket, 
 						     sb.getBufStart(), 
@@ -2781,7 +2794,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 						     0); // cachetime
 	}
 
-	if ( fmt == FMT_JSON ) 
+	if ( fmt == FORMAT_JSON ) 
 		// end the array of collection objects
 		sb.safePrintf("\n]\n");
 
@@ -2795,7 +2808,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	// show urls being crawled (ajax) (from Spider.cpp)
 	//
-	if ( fmt == FMT_HTML ) {
+	if ( fmt == FORMAT_HTML ) {
 		sb.safePrintf ( "<table width=100%% cellpadding=5 "
 				"style=border-width:1px;border-style:solid;"
 				"border-color:black;>"
@@ -2866,7 +2879,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	rand64 |=  r2;
 
 
-	if ( fmt == FMT_HTML ) {
+	if ( fmt == FORMAT_HTML ) {
 		sb.safePrintf("<br>"
 			      "<table border=0 cellpadding=5>"
 			      
@@ -2939,12 +2952,12 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      );
 	}
 
-	if ( injectionResponse && fmt == FMT_HTML )
+	if ( injectionResponse && fmt == FORMAT_HTML )
 		sb.safePrintf("<br><font size=-1>%s</font>\n"
 			      ,injectionResponse->getBufStart() 
 			      );
 
-	if ( fmt == FMT_HTML )
+	if ( fmt == FORMAT_HTML )
 		sb.safePrintf(//"<input type=hidden name=c value=\"%s\">"
 			      //"<input type=hidden name=crawlbotapi value=1>"
 			      "</td>"
@@ -2983,7 +2996,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	// show stats
 	//
-	if ( fmt == FMT_HTML ) {
+	if ( fmt == FORMAT_HTML ) {
 
 		char *seedStr = cr->m_diffbotSeeds.getBufStart();
 		if ( ! seedStr ) seedStr = "";
@@ -3641,7 +3654,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 
 	// xml or json does not show the input boxes
-	//if ( format != FMT_HTML ) 
+	//if ( format != FORMAT_HTML ) 
 	//	return g_httpServer.sendDynamicPage ( s, 
 	//					      sb.getBufStart(), 
 	//					      sb.length(),
@@ -3664,7 +3677,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 		s2 = "";
 	}
 
-	if ( fmt == FMT_HTML )
+	if ( fmt == FORMAT_HTML )
 		sb.safePrintf(
 			      
 			      "<a onclick="
@@ -3708,7 +3721,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	// print url filters. HACKy...
 	//
-	if ( fmt == FMT_HTML )
+	if ( fmt == FORMAT_HTML )
 		g_parms.sendPageGeneric ( socket ,
 					  hr ,
 					  PAGE_FILTERS ,
@@ -3719,7 +3732,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	// end HACKy hack
 	//
-	if ( fmt == FMT_HTML )
+	if ( fmt == FORMAT_HTML )
 		sb.safePrintf(
 			      "</form>"
 			      "</div>"
@@ -3747,7 +3760,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	// show simpler url filters table
 	//
-	if ( fmt == FMT_HTML ) {
+	if ( fmt == FORMAT_HTML ) {
 		/*
 		sb.safePrintf ( "<table>"
 				"<tr><td colspan=2>"
@@ -3783,7 +3796,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 	//
 	// show reset and delete crawl buttons
 	//
-	if ( fmt == FMT_HTML ) {
+	if ( fmt == FORMAT_HTML ) {
 		sb.safePrintf(
 			      "<table cellpadding=5>"
 			      "<tr>"
@@ -3846,13 +3859,13 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 
 	// the ROOT JSON }
-	if ( fmt == FMT_JSON )
+	if ( fmt == FORMAT_JSON )
 		sb.safePrintf("}\n");
 
 	char *ct = "text/html";
-	if ( fmt == FMT_JSON ) ct = "application/json";
-	if ( fmt == FMT_XML ) ct = "text/xml";
-	if ( fmt == FMT_CSV ) ct = "text/csv";
+	if ( fmt == FORMAT_JSON ) ct = "application/json";
+	if ( fmt == FORMAT_XML ) ct = "text/xml";
+	if ( fmt == FORMAT_CSV ) ct = "text/csv";
 
 	// this could be in html json or xml
 	return g_httpServer.sendDynamicPage ( socket, 
@@ -3946,7 +3959,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 // . do not add dups into m_diffbotSeeds safebuf
 // . return 0 if not in table, 1 if in table. -1 on error adding to table.
-long isInSeedBuf ( CollectionRec *cr , Url *url ) {
+long isInSeedBuf ( CollectionRec *cr , char *url, int len ) {
 
 	HashTableX *ht = &cr->m_seedHashTable;
 
@@ -3973,7 +3986,7 @@ long isInSeedBuf ( CollectionRec *cr , Url *url ) {
 	}
 
 	// is this url in the hash table?
-	long long u64 = hash64 ( url->getUrl() , url->getUrlLen() );
+	long long u64 = hash64 ( url, len );
 	
 	if ( ht->isInTable ( &u64 ) ) return 1;
 
@@ -4072,7 +4085,7 @@ bool getSpiderRequestMetaList ( char *doc ,
 		if ( ! cr ) continue;
 
 		// do not add dups into m_diffbotSeeds safebuf
-		long status = isInSeedBuf ( cr , &url );
+		long status = isInSeedBuf ( cr , saved , end - saved );
 
 		// error?
 		if ( status == -1 ) {
@@ -4129,7 +4142,7 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket ,
 	char *json = hr->getString("json");
 	if ( ! json ) 
 		return sendReply2 ( socket, 
-				    FMT_JSON,
+				    FORMAT_JSON,
 				    "No &json= provided in request.");
 
 
@@ -4138,12 +4151,12 @@ bool setSpiderParmsFromJSONPost ( TcpSocket *socket ,
 
 	// wtf?
 	if ( ! status ) 
-		return sendReply2 ( socket, FMT_JSON,
+		return sendReply2 ( socket, FORMAT_JSON,
 				    "Error with JSON parser.");
 
 	// error adding it?
 	if ( ! cr )
-		return sendReply2 ( socket,FMT_JSON,
+		return sendReply2 ( socket,FORMAT_JSON,
 				    "Failed to create new collection.");
 
 	ji = JP.getFirstItem();

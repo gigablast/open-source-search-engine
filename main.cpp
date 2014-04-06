@@ -5680,7 +5680,7 @@ void zlibtest() {
 		// malloc 1,000 bufs of size about 100-64k each
 		for ( long i = 0 ; i < 100 ; i++ ) {
 			long  bufSize = 1000 + (rand() % 65000);
-			ptrs[i] = (char *)mmalloc ( bufSize , "test" );
+			ptrs[i] = (char *)mmalloc ( bufSize , "ztest" );
 			if ( ! ptrs[i] ) {
 				log("no mem!"); exit(-1); }
 			lens[i] = bufSize;
@@ -5690,7 +5690,7 @@ void zlibtest() {
 		}
 		// now free them
 		for ( long i = 0 ; i < 100 ; i++ ) 
-			mfree (ptrs[i] , lens[i] , "test" );
+			mfree (ptrs[i] , lens[i] , "ztest" );
 	}
 }
 */
@@ -11555,8 +11555,8 @@ bool parseTest ( char *coll , long long docId , char *query ) {
 	// speed test
 	t = gettimeofdayInMilliseconds();
 	for ( long k = 0 ; k < 100 ; k++ ) {
-		char *mm = (char *)mmalloc ( 300*1024 , "test");
-		mfree ( mm , 300*1024 ,"test");
+		char *mm = (char *)mmalloc ( 300*1024 , "ztest");
+		mfree ( mm , 300*1024 ,"ztest");
 	}
 	e = gettimeofdayInMilliseconds();
 	logf(LOG_DEBUG,"build: Took %.3f ms to do mallocs.",
@@ -14833,7 +14833,7 @@ bool cacheTest() {
 			false         ,  // support lists of recs?
 			maxCacheNodes ,
 			false         ,  // use half keys?
-			"test"        ,  // dbname
+			"cachetest"        ,  // dbname
 			false         )) // save cache to disk?
 		return log("test: Cache init failed.");
 
@@ -14906,7 +14906,7 @@ bool cacheTest() {
 			false         ,  // support lists of recs?
 			maxCacheNodes ,
 			false         ,  // use half keys?
-			"test"        ,  // dbname
+			"cachetest"        ,  // dbname
 			false         )) // save cache to disk?
 		return log("test: Cache init failed.");
 

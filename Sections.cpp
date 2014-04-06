@@ -1288,7 +1288,7 @@ bool Sections::set ( Words     *w                       ,
 	}
 
 
-	m_isTestColl = ! strcmp(m_coll,"test") ;
+	m_isTestColl = ! strcmp(m_coll,"qatest123") ;
 
 	//
 	//
@@ -15163,7 +15163,7 @@ bool Sections::printVotingInfoInJSON ( SafeBuf *sb ) {
 		// breathe
 		QUICKPOLL ( m_niceness );
 		// print this section
-		printSectionDiv ( sk , FMT_JSON ); // forProCog );
+		printSectionDiv ( sk , FORMAT_JSON ); // forProCog );
 		// advance
 		long b = sk->m_b;
 		// stop if last
@@ -15190,7 +15190,8 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 			HashTableX *st2 ,
 			HashTableX *tt  ,
 			Addresses *aa ,
-			char format ) { // bool forProCog ){//FMT_PROCOG FMT_JSON HTML
+			char format ) { // bool forProCog ){
+	//FORMAT_PROCOG FORMAT_JSON HTML
 
 	//sbuf->safePrintf("<b>Sections in Document</b>\n");
 
@@ -15244,7 +15245,7 @@ bool Sections::print2 ( SafeBuf *sbuf ,
 		sk = m_sectionPtrs[b];
 	}
 
-	if ( format != FMT_HTML ) return true; // forProCog
+	if ( format != FORMAT_HTML ) return true; // forProCog
 
 	// print header
 	char *hdr =
@@ -15553,7 +15554,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 	//	m_sbuf->safePrintf("A=%li ",sk->m_a);
 
 
-	if ( format == FMT_PROCOG && sk->m_stats.m_numUniqueSites >= 2 ) {
+	if ( format == FORMAT_PROCOG && sk->m_stats.m_numUniqueSites >= 2 ) {
 		// do not count our own site!
 		m_sbuf->safePrintf("<i>"
 				   "<font size=-1>"
@@ -15573,7 +15574,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 
 	m_sbuf->safePrintf("<i>");
 
-	if ( format == FMT_PROCOG && (sk->m_flags & SEC_SENTENCE) ) {
+	if ( format == FORMAT_PROCOG && (sk->m_flags & SEC_SENTENCE) ) {
 		sec_t f = sk->m_flags;
 		//if ( f & SEC_SENTENCE )
 		//	m_sbuf->safePrintf("sentence " );
@@ -15598,7 +15599,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 	//	m_sbuf->safePrintf("notdupvotes=%li ",
 	//			   sk->m_votesForNotDup);
 	
-	if ( format != FMT_PROCOG ) {
+	if ( format != FORMAT_PROCOG ) {
 		// print the flags
 		m_sbuf->safePrintf("A=%li ",sk->m_a);
 		

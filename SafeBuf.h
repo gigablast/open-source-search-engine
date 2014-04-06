@@ -60,6 +60,7 @@ struct SafeBuf {
 	long  fillFromFile(char *filename);
 	long  fillFromFile(char *dir,char *filename);
 	long  load(char *dir,char *fname) { return fillFromFile(dir,fname);};
+	long  load(char *fname) { return fillFromFile(fname);};
 
 	void filterTags();
 	void filterQuotes();

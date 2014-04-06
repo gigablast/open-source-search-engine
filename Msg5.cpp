@@ -859,9 +859,9 @@ bool Msg5::needsRecall ( ) {
 	if ( m_round == 0 ) logIt = false;
 	if ( logIt )
 		logf(LOG_DEBUG,"db: Reading %li again from %s (need %li total "
-		     "got %li) this=0x%lx round=%li.", 
+		     "got %li) cn=%li this=0x%lx round=%li.", 
 		     m_newMinRecSizes , base->m_dbname , m_minRecSizes, 
-		     m_list->m_listSize, (long)this , m_round );
+		     m_list->m_listSize, (long)m_collnum,(long)this, m_round );
 	m_round++;
 	// record how many screw ups we had so we know if it hurts performance
 	base->m_rdb->didReSeek ( );

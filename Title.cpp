@@ -71,6 +71,7 @@ void Title::reset() {
 		mfree ( m_title , m_titleAllocSize , "Title" );
 	m_title = NULL;
 	m_titleBytes = 0;
+	m_titleAllocSize = 0;
 	m_query = NULL;
 	m_titleTagStart = -1;
 	m_titleTagEnd   = -1;
@@ -113,7 +114,7 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 	char *val = NULL;
 	// look for the "title:" field in json then use that
 	SafeBuf jsonTitle;
-	long vlen;
+	long vlen = 0;
 	if ( xd->m_contentType == CT_JSON ) {
 		char *jt;
 		jt = getJSONFieldValue(xd->ptr_utf8Content,"title",&vlen);
@@ -124,7 +125,6 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 			val = jsonTitle.getBufStart();
 			vlen = jsonTitle.length();
 		}
-		
 	}
 	// if we had a title: field in the json...
 	if ( val && vlen > 0 ) {
@@ -135,6 +135,7 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 		else {
 			dst = (char *)mmalloc ( m_titleBytes+1,"titdst" );
 			if ( ! dst ) return false;
+			m_titleAllocSize = m_titleBytes+1;
 		}
 		m_title = dst;
 		memcpy ( dst , val , m_titleBytes );
@@ -142,6 +143,13 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 		return true;
 	}
 
+	// json content, if has no explicit title field, has no title then
+	if ( xd->m_contentType == CT_JSON ) {
+		m_localBuf[0] = '\0';
+		m_title = m_localBuf;
+		m_titleBytes = 0;
+		return true;
+	}
 
 	bool status = setTitle4 ( xd ,
 				  xml ,

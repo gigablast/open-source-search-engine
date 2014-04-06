@@ -57,7 +57,7 @@ OBJS =  UdpSlot.o Rebalance.o \
 	PostQueryRerank.o Msge0.o Msge1.o \
 	CountryCode.o DailyMerge.o CatRec.o Tagdb.o \
 	Users.o Images.o Wiki.o Wiktionary.o Scraper.o \
-	Dates.o Sections.o SiteGetter.o Syncdb.o \
+	Dates.o Sections.o SiteGetter.o Syncdb.o qa.o \
 	Placedb.o Address.o Test.o GeoIP.o GeoIPCity.o Synonyms.o \
 	Cachedb.o Monitordb.o dlstubs.o PageCrawlBot.o Json.o PageBasic.o
 

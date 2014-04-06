@@ -3103,7 +3103,7 @@ void TagRec::gotAllReplies ( ) {
 
 	// site getter sometimes adds recs to tagdb to add in a new subsite
 	// it finds... i'd imagine this will create a parsing inconsistency
-	// when injecting docs into the "test" coll... but oh well!
+	// when injecting docs into the "qatest123" coll... but oh well!
 	long timestamp = getTimeGlobal();
 
 	// . begin the "inheritance loop"
@@ -3288,7 +3288,7 @@ bool Msg9a::addTags ( char    *sites                  ,
 	// when we add the "site" tag to it use the timestamp from one
 	// of the tags we are adding... therefore we must require there be
 	// some tags! we do this to insure injection consistency into the
-	// "test" collection.
+	// "qatest123" collection.
 	if ( ! tagRec || tagRec->getNumTags() <= 0 ) { char *xx=NULL;*xx=0; }
 
 	// use the first timestamp

@@ -122,6 +122,40 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) ;
 //
 ////////
 
+
+// from PageBasic.cpp:
+bool updateSiteListTables(collnum_t collnum,bool addSeeds,char *siteListArg);
+
+bool CommandUpdateSiteList ( char *rec ) {
+	// caller must specify collnum
+	collnum_t collnum = getCollnumFromParmRec ( rec );
+	if ( collnum < 0 ) {
+		log("parms: bad collnum for update site list");
+		g_errno = ENOCOLLREC;
+		return true;
+	}
+	// sanity
+	long dataSize = getDataSizeFromParmRec ( rec );
+	if ( dataSize < 0 ) {
+		log("parms: bad site list size = %li bad!",dataSize);
+		g_errno = EBADENGINEER;
+		return true;
+	}
+	// need this
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+	// get the sitelist
+	char *data = getDataFromParmRec ( rec );
+	// update it
+	updateSiteListTables ( collnum ,
+			       true , // add NEW seeds?
+			       data // entire sitelist
+			       );
+	// now that we deduped the old site list with the new one for
+	// purposes of adding NEW seeds, we can do the final copy
+	cr->m_siteListBuf.set ( data );
+	return true;
+}
+
 // . require user manually execute this to prevent us fucking up the data
 //   at first initially because of a bad hosts.conf file!!!
 // . maybe put a red 'A' in the hosts table on the web page to indicate
@@ -450,7 +484,7 @@ bool CommandParserTestInit ( char *rec ) {
 	g_conf.m_spideringEnabled = 1;
 	//g_conf.m_webSpideringEnabled = 1;
 	// turn on for test coll too
-	CollectionRec *cr = g_collectiondb.getRec("test");
+	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	// turn on spiders
 	if ( cr ) cr->m_spideringEnabled = 1;
 	// if we are not host 0, turn on spiders for testing
@@ -470,7 +504,7 @@ bool CommandSpiderTestInit ( char *rec ) {
 	g_conf.m_spideringEnabled = 1;
 	//g_conf.m_webSpideringEnabled = 1;
 	// turn on for test coll too
-	CollectionRec *cr = g_collectiondb.getRec("test");
+	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	// turn on spiders
 	if ( cr ) cr->m_spideringEnabled = 1;
 	// if we are not host 0, turn on spiders for testing
@@ -488,7 +522,7 @@ bool CommandSpiderTestCont ( char *rec ) {
 	g_conf.m_spideringEnabled = 1;
 	//g_conf.m_webSpideringEnabled = 1;
 	// turn on for test coll too
-	CollectionRec *cr = g_collectiondb.getRec("test");
+	CollectionRec *cr = g_collectiondb.getRec("qatest123");
 	// turn on spiders
 	if ( cr ) cr->m_spideringEnabled = 1;
 	// done 
@@ -1888,7 +1922,7 @@ bool Parms::printParm ( SafeBuf* sb,
 					"value=\"%f\" "
 					// 3 was ok on firefox but need 6
 					// on chrome
-					"size=6>",cgi,*(float *)s);
+					"size=7>",cgi,*(float *)s);
 	}
 	else if ( t == TYPE_IP ) {
 		if ( m->m_max > 0 && j == jend ) 
@@ -1896,7 +1930,7 @@ bool Parms::printParm ( SafeBuf* sb,
 					"size=12>",cgi);
 		else
 			sb->safePrintf ("<input type=text name=%s value=\"%s\" "
-					"size=6>",cgi,iptoa(*(long *)s));
+					"size=12>",cgi,iptoa(*(long *)s));
 	}
 	else if ( t == TYPE_LONG ) {
 		// just show the parm name and value if printing in json
@@ -5080,6 +5114,27 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	m->m_title = "init QA tests";
+	m->m_desc  = "If initiated gb performs some integrity tests "
+		"to ensure injecting, spidering and searching works "
+		"properly. Uses ./test/ subdirectory. Injects "
+		"urls in ./test/inject.txt. Spiders urls "
+		"in ./test/spider.txt. "
+		"Each of those two files is essentially a simple format of "
+		"a url followed by the http reply received from the server "
+		"for that url. "
+		// TODO: generate these files
+		;
+	m->m_cgi   = "qasptei";
+	m->m_type  = TYPE_CMD;
+	m->m_func  = CommandSpiderTestInit;
+	m->m_def   = "1";
+	m->m_cast  = 1;
+	m->m_group = 0;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m++;
+
+
 	m->m_title = "init parser test run";
 	m->m_desc  = "If enabled gb injects the urls in the "
 		"./test-parser/urls.txt "
@@ -7513,6 +7568,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_TEXTAREA;
 	m++;
 
+	/*
 	// the new upload post submit button
 	m->m_title = "upload urls";
 	m->m_desc  = "Upload your file of urls.";
@@ -7521,6 +7577,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_NONE;
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m++;
+	*/
 
 	m->m_title = "strip sessionids";
 	m->m_desc  = "Strip added urls of their session ids.";
@@ -7570,6 +7627,7 @@ void Parms::init ( ) {
 	m->m_title = "site list";
 	m->m_xml   = "siteList";
 	m->m_desc  = "List of sites to spider, one per line. "
+		"See <a href=#examples>example site list</a> below. "
 		"Gigablast uses the "
 		"<a href=/admin/filters#insitelist>insitelist</a> "
 		"directive on "
@@ -7578,8 +7636,7 @@ void Parms::init ( ) {
 		"that match the site patterns you specify here, other than "
 		"urls you add individually via the add urls or inject url "
 		"tools. "
-		"See <a href=#examples>example site list</a> below. "
-		"Limit list to 300MB. If you have a lot of INDIVIDUAL URLS "
+		"Limit list to 300MB. If you have a lot of INDIVIDUAL urls "
 		"to add then consider using the <a href=/admin/addurl>add "
 		"urls</a> interface.";
 	m->m_cgi   = "sitelist";
@@ -7587,6 +7644,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
+	m->m_func  = CommandUpdateSiteList;
 	m->m_def   = "";
 	// rebuild urlfilters now will nuke doledb and call updateSiteList()
 	m->m_flags = PF_TEXTAREA | PF_DUP | PF_REBUILDURLFILTERS;
@@ -7608,6 +7666,7 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	/*
 	// the new upload post submit button
 	m->m_title = "upload site list";
 	m->m_desc  = "Upload your file of site patterns. Completely replaces "
@@ -7619,12 +7678,13 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m->m_flags = PF_NOSAVE | PF_DUP;
 	m++;
+	*/
 
 	m->m_title = "restart collection";
-	m->m_desc  = "Remove all documents from this collection and starts "
-		"spidering over again. If you do this accidentally there "
-		"is a <a href=/admin.html#recover>recovery procedure</a> to "
-		"get back the trashed data.";
+	m->m_desc  = "Remove all documents from this collection and restart "
+		"spidering.";// If you do this accidentally there "
+	//"is a <a href=/admin.html#recover>recovery procedure</a> to "
+	//	"get back the trashed data.";
 	m->m_cgi   = "restart";
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
@@ -7638,6 +7698,7 @@ void Parms::init ( ) {
 	m->m_title = "site list";
 	m->m_xml   = "siteList";
 	m->m_desc  = "List of sites to spider, one per line. "
+		"See <a href=#examples>example site list</a> below. "
 		"Gigablast uses the "
 		"<a href=/admin/filters#insitelist>insitelist</a> "
 		"directive on "
@@ -7646,8 +7707,7 @@ void Parms::init ( ) {
 		"that match the site patterns you specify here, other than "
 		"urls you add individually via the add urls or inject url "
 		"tools. "
-		"See <a href=#examples>example site list</a> below. "
-		"Limit list to 300MB. If you have a lot of INDIVIDUAL URLS "
+		"Limit list to 300MB. If you have a lot of INDIVIDUAL urls "
 		"to add then consider using the <a href=/admin/addurl>addurl"
 		"</a> interface.";
 	m->m_cgi   = "sitelist";
@@ -7655,6 +7715,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SITES;
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_SAFEBUF;
+	m->m_func  = CommandUpdateSiteList;
 	m->m_def   = "";
 	// rebuild urlfilters now will nuke doledb and call updateSiteList()
 	m->m_flags = PF_TEXTAREA | PF_REBUILDURLFILTERS;
@@ -8741,11 +8802,11 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "max robots.txt cache age";
-	m->m_desc  = "How many second to cache a robots.txt file for. "
+	m->m_desc  = "How many seconds to cache a robots.txt file for. "
 		"86400 is 1 day. 0 means Gigablast will not read from the "
 		"cache at all and will download the robots.txt before every "
 		"page if robots.txt use is enabled above. However, if this is "
-		"0 then Gigablast will still store robots.txt files into the "
+		"0 then Gigablast will still store robots.txt files in the "
 		"cache.";
 	m->m_cgi   = "mrca";
 	m->m_off   = (char *)&cr.m_maxRobotsCacheAge - x;
@@ -10618,8 +10679,9 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "do query expansion";
-	m->m_desc  = "Query expansion will include word stems and synonyms in "
-		"its search results.";
+	m->m_desc  = "If enabled, query expansion will expand your query "
+		"to include word stems and "
+		"synonyms of the query terms.";
 	m->m_def   = "1";
 	m->m_off   = (char *)&cr.m_queryExpansion - x;
 	m->m_soff  = (char *)&si.m_queryExpansion - y;
@@ -10632,7 +10694,7 @@ void Parms::init ( ) {
 
 	// more general parameters
 	m->m_title = "max search results";
-	m->m_desc  = "What is the limit to the total number "
+	m->m_desc  = "What is the maximum total number "
 		"of returned search results.";
 	m->m_cgi   = "msr";
 	m->m_off   = (char *)&cr.m_maxSearchResults - x;
@@ -12436,7 +12498,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "max summary line width";
-	m->m_desc  = "<br> tags are inserted to keep the number "
+	m->m_desc  = "&lt;br&gt; tags are inserted to keep the number "
 		"of chars in the summary per line at or below this width. "
 		"Strings without spaces that exceed this "
 		"width are not split.";
@@ -15299,6 +15361,18 @@ void Parms::init ( ) {
 	m->m_smin  = 0;
 	m++;
 
+	// when we do &qa=1 we do not show things like responseTime in
+	// search results so we can verify serp checksum consistency for QA
+	// in qa.cpp
+	m->m_title = "quality assurance";
+	m->m_desc  = "This is 1 if doing a QA test in qa.cpp";
+	m->m_def   = "0";
+	m->m_soff  = (char *)&si.m_qa - y;
+	m->m_type  = TYPE_CHAR;
+	m->m_sparm = 1;
+	m->m_scgi  = "qa";
+	m++;
+
 	//m->m_title = "show turk forms";
 	//m->m_desc  = "If enabled summaries in search results will be "
 	//	"turkable input forms.";
@@ -16744,7 +16818,6 @@ bool Parms::addCurrentParmToList2 ( SafeBuf *parmList ,
 	return true;
 }
 
-
 // returns false and sets g_errno on error
 bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 					  long page ){
@@ -18019,7 +18092,11 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 	}
 
 	// cmd to execute?
-	if ( parm->m_type == TYPE_CMD ) {
+	if ( parm->m_type == TYPE_CMD ||
+	     // sitelist is a safebuf but it requires special deduping
+	     // logic to update it so it uses CommandUpdateSiteList() to
+	     // do the updating
+	     parm->m_func ) {
 		// all parm rec data for TYPE_CMD should be ascii/utf8 chars
 		// and should be \0 terminated
 		char *data = getDataFromParmRec ( rec );
@@ -18268,7 +18345,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 		CollectionRec *cr = (CollectionRec *)THIS;
 		// if testUrl is provided, find in the table
 		char testUrl [ 1025 ];
-		char *tt = r->getString ( "test" , NULL );
+		char *tt = r->getString ( "qatest123" , NULL );
 		testUrl[0]='\0';
 		if ( tt ) strncpy ( testUrl , tt , 1024 );
 		char *tu = testUrl;

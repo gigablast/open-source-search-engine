@@ -1082,7 +1082,7 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	// save this
 	strcpy ( sc->m_coll , cr->m_coll );
 	// set this
-	if ( ! strcmp ( cr->m_coll,"test" ) ) sc->m_isTestColl = true;
+	if ( ! strcmp ( cr->m_coll,"qatest123" ) ) sc->m_isTestColl = true;
 	else                                  sc->m_isTestColl = false;
 	
 	// set first doledb scan key
@@ -6761,12 +6761,12 @@ bool SpiderLoop::spiderUrl2 ( ) {
 	char *coll = "collnumwasinvalid";
 	if ( cr ) coll = cr->m_coll;
 
-	// . pass in a pbuf if this is the "test" collection
+	// . pass in a pbuf if this is the "qatest123" collection
 	// . we will dump the SafeBuf output into a file in the
 	//   test subdir for comparison with previous versions of gb
 	//   in order to see what changed
 	SafeBuf *pbuf = NULL;
-	if ( !strcmp( coll,"test") && g_conf.m_testParserEnabled ) 
+	if ( !strcmp( coll,"qatest123") && g_conf.m_testParserEnabled ) 
 		pbuf = &xd->m_sbuf;
 
 	//
@@ -6969,10 +6969,10 @@ bool SpiderLoop::indexedDoc ( XmlDoc *xd ) {
 	bool respider = false;
 	if ( xd->m_oldDocValid && xd->m_oldDoc ) respider = true;
 
-	// . dump it out to a file in the "test" subdir
+	// . dump it out to a file in the "qatest123" subdir
 	// . but only the first time we spider it...
 	/*
-	if ( ! strcmp(xd->m_coll,"test") && ! respider &&
+	if ( ! strcmp(xd->m_coll,"qatest123") && ! respider &&
 	     // no longer need this when qa testing spider, not parser
 	     g_conf.m_testParserEnabled ) {
 		// save the buffers
@@ -12414,7 +12414,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 	if ( cx->m_isCustomCrawl )
 		return msg->safePrintf("Job is in progress.");
 	else
-		return true;
+		return msg->safePrintf("Spider is in progress.");
 }
 
 // pattern is a ||-separted list of substrings

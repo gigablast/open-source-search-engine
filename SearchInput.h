@@ -179,6 +179,9 @@ class SearchInput {
 	long   m_queryMatchOffsets;
 	long   m_summaryMode;
 
+	// are we doing a QA query for quality assurance consistency
+	char   m_qa;
+
 	float  m_pqr_demFactSubPhrase;
 	float  m_pqr_demFactCommonInlinks;
 	float  m_pqr_demFactLocTitle;

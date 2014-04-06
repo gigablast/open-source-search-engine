@@ -146,8 +146,8 @@ bool SiteGetter::getSite ( char   *url      ,
 	long age = -1;
 	//long now = getTimeGlobal();
 	//if ( tag ) age = now - tag->m_timestamp;
-	// to parse conssitently for the qa test "test" coll use "timestamp"
-	// as the "current time"
+	// to parse conssitently for the qa test "qatest123" coll use 
+	// "timestamp" as the "current time"
 	if ( tag ) age = timestamp - tag->m_timestamp;
 	// if there, at least get it (might be -1)
 	if ( tag ) m_oldSitePathDepth = atol ( tag->getTagData() );
@@ -534,7 +534,7 @@ bool SiteGetter::setSite ( ) {
 	//TagRec gr;
 	m_addedTag.addTag ( "sitepathdepth" , 
 			    // now XmlDoc must provide it to ensure that are 
-			    // injects into the "test" coll are consistent
+			    // injects into the "qatest123" coll are consistent
 			    m_timestamp     ,//getTime()// use now as timestamp
 			    "sitegit"       , // username
 			    0               , // ip
