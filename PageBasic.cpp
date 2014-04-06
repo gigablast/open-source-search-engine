@@ -792,13 +792,17 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		//	      , sb.getBufStart() // hidden input token/name/..
 		//	      );
 
+		char *hurts = "No";
+		if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider )
+			hurts = "Yes";
+
 		sb.safePrintf("<TABLE border=0>"
 			      "<TR><TD valign=top>"
 
 			      "<table border=0 cellpadding=5>"
 
 			      "<tr>"
-			      "<td><b>Crawl Status:</td>"
+			      "<td><b>Crawl Status Code:</td>"
 			      "<td>%li</td>"
 			      "</tr>"
 
@@ -814,7 +818,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 
 			      "<tr>"
 			      "<td><b>Has Urls Ready to Spider:</td>"
-			      "<td>%li</td>"
+			      "<td>%s</td>"
 			      "</tr>"
 
 
@@ -825,7 +829,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      //"</tr>"
 
 			      "<tr>"
-			      "<td><b>URLs Harvested</b> (inc. dups)</td>"
+			      "<td><b>URLs Harvested</b> "
+			      "(may include dups)</td>"
 			      "<td>%lli</td>"
      
 			      "</tr>"
@@ -844,24 +849,17 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "<td><b>Page Crawl Successes</b></td>"
 			      "<td>%lli</td>"
 			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Page Crawl Successes This Round</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
-
 			      , crawlStatus
 			      , tmp.getBufStart()
 			      //, cr->m_spiderRoundNum
-			      , cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
+			      //, cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
+			      , hurts
 
 			      , cr->m_globalCrawlInfo.m_urlsHarvested
 			      //, cr->m_globalCrawlInfo.m_urlsConsidered
 
 			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
-			      , cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound
-
 			      );
 
 	}
