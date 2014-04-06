@@ -38,7 +38,8 @@ void SearchInput::reset ( ) {
 	*/
 }
 
-void SearchInput::setToDefaults ( CollectionRec *cr , long niceness ) {
+//void SearchInput::setToDefaults ( CollectionRec *cr , long niceness ) {
+void SearchInput::clear ( long niceness ) {
 	// reset it first
 	reset();
 	// set all to 0 just to avoid any inconsistencies
@@ -196,12 +197,87 @@ class SearchInput *g_si = NULL;
 
 bool SearchInput::set ( TcpSocket *sock , HttpRequest *r , Query *q ) {
 
+	// store list of collection #'s to search here. usually just one.
+	m_collnumBuf.reset();
+
+	// zero out everything, set niceness to 0
+	clear ( 0 ) ;
+
 	// save it now
 	m_socket = sock;
 
 	// get coll rec
 	long  collLen9;
 	char *coll9 = r->getString ( "c" , &collLen9 );
+
+	m_firstCollnum = -1;
+
+	CollectionRec *cr = NULL;
+
+	// now convert list of space-separated coll names into list of collnums
+	char *p = coll9;
+
+	// if no collection list was specified look for "token=" and
+	// use those to make collections. hack for diffbot.
+	char *token = r->getString("token",NULL);
+	// find all collections under this token
+	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+		// must not have a "&c="
+		if ( p ) break;
+		// must have a "&token="
+		if ( ! token ) break;
+		// skip if empty
+		CollectionRec *tmpcr = g_collectiondb.m_recs[i];
+		if ( ! tmpcr ) continue;
+		// skip if does not match token
+		if ( strcmp(token,tmpcr->m_diffbotToken.getBufStart()) ) 
+			continue;
+		// . we got a match
+		// . set initial junk
+		if ( ! cr ) {
+			cr = tmpcr;
+			m_firstCollnum = tmpcr->m_collnum;
+		}
+		// save the collection #
+		if ( ! m_collnumBuf.safeMemcpy ( &tmpcr->m_collnum, 
+						 sizeof(collnum_t) ) )
+			return false;
+	}
+
+	// if we had a "&c=..." in the GET request process that
+	if ( p ) {
+	loop:
+		char *end = p;
+		for ( ; *end && ! is_wspace_a(*end) ; end++ );
+		// temp null
+		char c = *end;
+		*end = '\0';
+		CollectionRec *tmpcr = g_collectiondb.getRec ( p );
+		// set defaults from the FIRST one
+		if ( tmpcr && ! cr ) {
+			cr = tmpcr;
+			m_firstCollnum = tmpcr->m_collnum;
+		}
+		if ( ! tmpcr ) { 
+			g_errno = ENOCOLLREC;
+			log("query: missing collection %s",p);
+			g_msg = " (error: no such collection)";		
+			return false;
+		}
+		// add to our list
+		if (!m_collnumBuf.safeMemcpy(&cr->m_collnum,sizeof(collnum_t)))
+			return false;
+		// restore the \0 character we wrote in there
+		*end = c;
+		// advance
+		p = end;
+		// skip to next collection name if there is one
+		while ( *p && is_wspace_a(*p) ) p++; 
+		// now add it's collection # to m_collnumBuf if there
+		if ( *p ) goto loop;
+	}
+
+
 	//if (! coll){coll = g_conf.m_defaultColl; collLen = gbstrlen(coll); }
 	//if ( ! coll )
 	//	coll = g_conf.getDefaultColl(r->getHost(), r->getHostLen());
@@ -209,22 +285,24 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r , Query *q ) {
 	//	coll = "main";
 	//if ( ! coll ) { g_errno = ENOCOLLREC; return false; }
 	//collLen = gbstrlen(coll);
-	CollectionRec *cr = g_collectiondb.getRec ( coll9 );
-	if ( ! cr ) { 
-		g_errno = ENOCOLLREC;
-		g_msg = " (error: no such collection)";		
-		return false;
-	}
+	//CollectionRec *cr = g_collectiondb.getRec ( coll9 );
+	//if ( ! cr ) { 
+	//	g_errno = ENOCOLLREC;
+	//	g_msg = " (error: no such collection)";		
+	//	return false;
+	//}
 
 	// set all to 0 just to avoid any inconsistencies
 	//long size = (char *)&m_END_TEST - (char *)&m_START;
 	//memset ( this , 0x00 , size );
-	setToDefaults( cr , 0 ); // niceness
+	//setToDefaults( cr , 0 ); // niceness
 
 	m_cr = cr;
 
-	m_coll2    = m_cr->m_coll;
-	m_collLen2 = gbstrlen(m_coll2);
+	//m_coll2    = m_cr->m_coll;
+	//m_collLen2 = gbstrlen(m_coll2);
+
+	
 
 	// from ::reset()
 	m_languageWeightFactor = 0.33;
@@ -683,11 +761,11 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	// USER_ADMIN, ...
 	m_username = g_users.getUsername(r);
 	// if collection is NULL default to one in g_conf
-	if ( ! m_coll2 || ! m_coll2[0] ) { 
-		//m_coll = g_conf.m_defaultColl; 
-		m_coll2 = g_conf.getDefaultColl(r->getHost(), r->getHostLen());
-		m_collLen2 = gbstrlen(m_coll2); 
-	}
+	//if ( ! m_coll2 || ! m_coll2[0] ) { 
+	//	//m_coll = g_conf.m_defaultColl; 
+	//	m_coll2 = g_conf.getDefaultColl(r->getHost(), r->getHostLen());
+	//	m_collLen2 = gbstrlen(m_coll2); 
+	//}
 
 	// reset this
 	m_gblang = 0;

@@ -14,7 +14,7 @@
 
 // put me back
 //#define EFENCE
-#define EFENCE_SIZE 100000
+//#define EFENCE_SIZE 50000
 
 // uncomment this for EFENCE to do underflow checks instead of the
 // default overflow checks
@@ -52,7 +52,7 @@
 // there because it will hit a different PAGE, to be more sure we could
 // make UNDERPAD and OVERPAD PAGE bytes, although the overrun could still write
 // to another allocated area of memory and we can never catch it.
-#ifdef EFENCE
+#if defined(EFENCE) || defined(EFENCE_SIZE)
 #define UNDERPAD 0
 #define OVERPAD  0
 #else
@@ -68,7 +68,7 @@ extern bool g_isYippy;
 
 bool freeCacheMem();
 
-#ifdef EFENCE
+#if defined(EFENCE) || defined(EFENCE_SIZE)
 static void *getElecMem ( long size ) ;
 static void  freeElecMem ( void *p  ) ;
 #endif
@@ -254,6 +254,12 @@ void * operator new (size_t size) throw (std::bad_alloc) {
 	}
 #ifdef EFENCE
 	void *mem = getElecMem(size);
+#elif EFENCE_SIZE
+	void *mem;
+	if ( size > EFENCE_SIZE )
+		mem = getElecMem(size);
+	else
+		mem = sysmalloc ( size );
 #else
 	//void *mem = dlmalloc ( size );
 	void *mem = sysmalloc ( size );
@@ -332,6 +338,12 @@ void * operator new [] (size_t size) throw (std::bad_alloc) {
 	}
 #ifdef EFENCE
 	void *mem = getElecMem(size);
+#elif EFENCE_SIZE
+	void *mem;
+	if ( size > EFENCE_SIZE )
+		mem = getElecMem(size);
+	else
+		mem = sysmalloc ( size );
 #else
 	//void *mem = dlmalloc ( size );
 	void *mem = sysmalloc ( size );
@@ -445,10 +457,11 @@ bool Mem::init  ( long long maxMem ) {
 	if ( g_conf.m_detectMemLeaks )
 		log(LOG_INIT,"mem: Memory leak checking is enabled.");
 
-#ifdef EFENCE
+#if defined(EFENCE) || defined(EFENCE_SIZE)
 	log(LOG_INIT,"mem: using electric fence!!!!!!!");
 #endif
 
+#ifndef TITAN
 	// if we can't alloc 3gb exit and retry
 	long long start = gettimeofdayInMilliseconds();
 	char *pools[30];
@@ -471,6 +484,7 @@ bool Mem::init  ( long long maxMem ) {
 	if ( took > 20 ) log("mem: took %lli ms to check memory ceiling",took);
 	// return if could not alloc the full 3GB
 	if ( i < 30 ) return false;
+#endif
 
 	// reset this, our max mem used over time ever because we don't
 	// want the mem test we did above to count towards it
@@ -499,6 +513,15 @@ void Mem::addMem ( void *mem , long size , const char *note , char isnew ) {
 	//	char *xx=NULL;*xx=0; }
 
 	//validate();
+
+	if ( (long)m_numAllocated + 100 >= (long)m_memtablesize ) { 
+		bool s_printed = false;
+		if ( ! s_printed ) {
+			log("mem: using too many slots");
+			printMem();
+			s_printed = true;
+		}
+	}
 
 	// sanity check
 	if ( g_inSigHandler ) {
@@ -1284,7 +1307,7 @@ void *Mem::gbmalloc ( int size , const char *note ) {
 	mem = getElecMem(size+UNDERPAD+OVERPAD);
 
 	// conditional electric fence?
-#elif EFENCE_BIG
+#elif EFENCE_SIZE
 	if ( size >= EFENCE_SIZE )
 		mem = getElecMem(size+0+0);
 	else
@@ -1435,9 +1458,9 @@ void *Mem::gbrealloc ( void *ptr , int oldSize , int newSize ,
 
 	char *mem;
 
-	// even though size may be < 100k for EFENCE_BIG, do it this way
+	// even though size may be < 100k for EFENCE_SIZE, do it this way
 	// for simplicity...
-#if defined(EFENCE) || defined(EFENCE_BIG)
+#if defined(EFENCE) || defined(EFENCE_SIZE)
 	mem = (char *)mmalloc ( newSize , note );
 	if ( ! mem ) return NULL;
 	// copy over to it
@@ -1516,20 +1539,21 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 		char *xx = NULL; *xx = 0;
 	}
 
+	bool isnew = s_isnew[slot];
+
 #ifdef EFENCE
 	// this does a delayed free so do not call rmMem() just yet
 	freeElecMem ((char *)ptr - UNDERPAD );
 	return;
 #endif
 
-#ifdef EFENCE_BIG
+#ifdef EFENCE_SIZE
+	if ( size == -1 ) size = s_sizes[slot];
 	if ( size >= EFENCE_SIZE ) {
 		freeElecMem ((char *)ptr - 0 );
 		return;
 	}
 #endif	
-
-	bool isnew = s_isnew[slot];
 
 	// if this returns false it was an unbalanced free
 	if ( ! rmMem ( ptr , size , note ) ) return;

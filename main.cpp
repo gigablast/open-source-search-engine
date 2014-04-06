@@ -25,7 +25,7 @@
 #include "Tagdb.h"
 #include "Catdb.h"
 #include "Users.h"
-#include "Tfndb.h"
+//#include "Tfndb.h"
 #include "Spider.h"
 //#include "Doledb.h"
 //#include "Checksumdb.h"
@@ -150,8 +150,8 @@ static void dumpTitledb  ( char *coll,long sfn,long numFiles,bool includeTree,
 			   long long docId , char justPrintDups ,
 			   bool dumpSentences ,
 			   bool dumpWords );
-static void dumpTfndb    ( char *coll,long sfn,long numFiles,bool includeTree,
-			   bool verify);
+//static void dumpTfndb    (char *coll,long sfn,long numFiles,bool includeTree,
+//			   bool verify);
 static long dumpSpiderdb ( char *coll,long sfn,long numFiles,bool includeTree,
 			   char printStats , long firstIp );
 static void dumpSectiondb( char *coll,long sfn,long numFiles,bool includeTree);
@@ -411,8 +411,8 @@ int main ( int argc , char *argv[] ) {
 
 			"-h\tprint this help.\n\n"
 			"-v\tprint version and exit.\n\n"
-			"-o\tprint the overview documentation in HTML. "
-			"Contains the format of hosts.conf.\n\n"
+			//"-o\tprint the overview documentation in HTML. "
+			//"Contains the format of hosts.conf.\n\n"
 			"-r\tindicates recovery mode, "
 			"sends email to addresses "
 			"specified in Conf.h upon startup.\n\n"
@@ -440,6 +440,7 @@ int main ( int argc , char *argv[] ) {
 			"\ttwo hostids with a hyphen in between indicates a "
 			"range.\n\n"
 
+			/*
 			"tmpstart [hostId]\n"
 			"\tstart the gb process on all hosts or just on "
 			"[hostId] if specified, but "
@@ -456,6 +457,7 @@ int main ( int argc , char *argv[] ) {
 			"\tsaves and exits for all gb hosts or "
 			"just on [hostId] if specified, for the "
 			"tmpstart command.\n\n"
+			*/
 
 			"spidersoff [hostId]\n"
 			"\tdisables spidering for all gb hosts or "
@@ -465,6 +467,7 @@ int main ( int argc , char *argv[] ) {
 			"\tensables spidering for all gb hosts or "
 			"just on [hostId] if specified.\n\n"
 
+			/*
 			"cacheoff [hostId]\n"
 			"\tdisables all disk PAGE caches on all hosts or "
 			"just on [hostId] if specified.\n\n"
@@ -472,11 +475,17 @@ int main ( int argc , char *argv[] ) {
 			"freecache [maxShmid]\n"
 			"\tfinds and frees all shared memory up to shmid "
 			"maxShmid, default is 3000000.\n\n"
+			*/
 
+			/*
 			"ddump [hostId]\n"
-			"\tdisk dump in memory trees to binary files "
-			"just on [hostId] if specified.\n\n"
+			"\tdump all b-trees in memory to sorted files on "
+			"disk. "
+			"Will likely trigger merges on files on disk. "
+			"Restrict to just host [hostId] if given.\n\n"
+			*/
 
+			/*
 			"pmerge [hostId|hostId1-hostId2]\n"
 			"\tforce merge of posdb files "
 			"just on [hostId] if specified.\n\n"
@@ -492,16 +501,19 @@ int main ( int argc , char *argv[] ) {
 			"merge [hostId|hostId1-hostId2]\n"
 			"\tforce merge of all rdb files "
 			"just on [hostId] if specified.\n\n"
+			*/
 
 			"dsh <CMD>\n"
 			"\trun this command on the primary IPs of "
 			"all active hosts in hosts.conf. Example: "
 			"gb dsh 'ps auxw; uptime'\n\n"
 
+			/*
 			"dsh2 <CMD>\n"
 			"\trun this command on the secondary IPs of "
 			"all active hosts in hosts.conf. Example: "
 			"gb dsh2 'ps auxw; uptime'\n\n"
+			*/
 
 			"install [hostId]\n"
 			"\tinstall all required files for gb from "
@@ -509,13 +521,16 @@ int main ( int argc , char *argv[] ) {
 			"to [hostId]. If no [hostId] is specified install "
 			"to ALL hosts.\n\n"
 
+			/*
 			"install2 [hostId]\n"
 			"\tlike above, but use the secondary IPs in the "
 			"hosts.conf.\n\n"
+			*/
 
 			"installgb [hostId]\n"
 			"\tlike above, but install just the gb executable.\n\n"
 
+			/*
 			"installgb2 [hostId]\n"
 			"\tlike above, but use the secondary IPs in the "
 			"hosts.conf.\n\n"
@@ -592,7 +607,9 @@ int main ( int argc , char *argv[] ) {
 			"search for them on server2. If you do not want to"
 			" use the proxy server "
 			"on gk10, use -p\n\n"
+			*/
 
+			/*
 			"blaster [-l|-u|-i] <file> <maxNumThreads> <wait>\n"
 			"\tget documents from the urls given in file. The "
 			"-l argument is to "
@@ -606,7 +623,9 @@ int main ( int argc , char *argv[] ) {
 			"\tmaxNumThreads is the"
 			" number of concurrent threads at one time and wait "
 			" is the time to wait between threads.\n\n"
+			*/
 
+			/*
 			"scale <newHosts.conf>\n"
 			"\tGenerate a script to be called to migrate the "
 			"data to the new places. Remaining hosts will "
@@ -647,7 +666,9 @@ int main ( int argc , char *argv[] ) {
 			"ping <hostId> [clientport]\n"
 			"\tperforms pings to <hostId>. [clientport] defaults "
 			"to 2050.\n\n"
+			*/
 
+			/*
 			"spellcheck <file>\n"
 			"\tspellchecks the the queries in <file>.\n\n"
 
@@ -701,7 +722,9 @@ int main ( int argc , char *argv[] ) {
 
 			"parsetest <docIdToTest> [coll] [query]\n\t"
 			"parser speed tests\n\n"
+			*/
 
+			/*
 			"thrutest [dir] [fileSize]\n\tdisk write/read speed "
 			"test\n\n"
 
@@ -711,6 +734,9 @@ int main ( int argc , char *argv[] ) {
 			
 			"memtest\n"
 			"\t Test how much memory we can use\n\n"
+			*/
+
+			/*
 			// Quality Tests
 			"countdomains <coll> <X>\n"
 			"\tCounts the domains and IPs in collection coll and "
@@ -738,33 +764,38 @@ int main ( int argc , char *argv[] ) {
 
 			"dump es <coll> <UTCtimestamp>\n\tdump stats for "
 			"all events as if the time is UTCtimestamp.\n\n"
+			*/
 
+			/*
 #ifdef _CLIENT_
 			//there was <hostId> in this command but it 
 			// wasn't used in the program, so deleting it from 
 			// here
 			"dump <V> [C [X [Y [Z]]]]\n\tdump a db in "
 #else
+			*/
+
+			/*
 			"dump <V> [C [X [Y [Z [T]]]]]\n\tdump a db in "
-#endif
+			//#endif
 			"working directory.\n"
-#ifndef _CLIENT_
-#ifndef _METALINCS_
+			//#ifndef _CLIENT_
+			//#ifndef _METALINCS_
 			//"\tV is u to dump tfndb.\n"
 			"\tV is d to dump datedb.\n"
-#endif
-#endif
+			//#endif
+			//#endif
 			"\tV is s to dump spiderdb. set [T] to 1 to print "
 			"new stats. 2 to print old stats. T is ip of firstip."
 			"\n"
 			"\tV is t to dump titledb.\n"
-			"\tV is ts to dump sentences from events.\n"
-			"\tV is tw to dump words from events.\n"
+			//"\tV is ts to dump sentences from events.\n"
+			//"\tV is tw to dump words from events.\n"
 			"\tV is D to dump duplicate docids in titledb.\n"
 			"\tV is c to dump checksumdb.\n"
 			"\tV is S to dump tagdb.\n"
 			"\tV is W to dump tagdb for wget.\n"
-			"\tV is V to dump revdb.\n"
+			//"\tV is V to dump revdb.\n"
 			"\tV is x to dump doledb.\n"
 			"\tV is w to dump waiting tree.\n"
 			"\tV is B to dump sectiondb.\n"
@@ -773,19 +804,19 @@ int main ( int argc , char *argv[] ) {
 			"\tV is z to dump statsdb all keys.\n"
 			"\tV is Z to dump statsdb all keys and data samples.\n"
 			"\tV is L to dump linkdb.\n"
-			"\tV is u to dump tfndb.\n"
-			"\tV is vu to verify tfndb.\n"
+			//"\tV is u to dump tfndb.\n"
+			//"\tV is vu to verify tfndb.\n"
 			"\tC is the name of the collection.\n"
 			"\tX is start file num.    (default  0)\n"
 			"\tY is num files.         (default -1)\n"
 			"\tZ is 1 to include tree. (default  1)\n"
-#ifndef _CLIENT_
-#ifndef _METALINCS_
-#ifndef _GLOBALSPEC_
+			//#ifndef _CLIENT_
+			//#ifndef _METALINCS_
+			//#ifndef _GLOBALSPEC_
 			"\tT is the termid to dump. Applies only to indexdb.\n"
-#endif
-#endif
-#endif
+			//#endif
+			//#endif
+			//#endif
 			"\tT is the first docId to dump. Applies only to "
 			"titledb. "
 			//"(default none)\n\n"
@@ -806,22 +837,27 @@ int main ( int argc , char *argv[] ) {
 			//"\tB is -1 to dump all priorities\n"
 			"\tC is 1 to just show the stats.  (default  0)\n"
 			"\n"
+			*/
+
+
 			//"dump i X Y Z t\n\tdump indexdb termId t in working "
 			//"directory.\n"
 			//"\tX is start file num.     (default  0)\n"
 			//"\tY is num files.          (default -1)\n"
 			//"\tZ is 1 to include tree.  (default  1)\n"
 			//"\tt is the termid to dump. (default none)\n\n"
-#ifndef _CLIENT_
-#ifndef _METALINCS_
+			//#ifndef _CLIENT_
+			//#ifndef _METALINCS_
+			/*
 			"dump I [X [V]]\n\tdump indexdb in working "
 			"directory at "
 			"an offset.\n"
-#endif
-#endif
+			//#endif
+			//#endif
 			"\tX is the file NAME.      (default  NULL)\n"
 			"\tV is the start offset.   (default  0)\n"
-
+			*/
+			/*
 			"\n"
 			"dumpmissing <coll> [hostId]\n\t"
 			"dump the docIds in indexdb but not "
@@ -867,6 +903,7 @@ int main ( int argc , char *argv[] ) {
 			"in the current gb. Use synchost2 to use secondary "
 			"IPs.\n"
 			"\n"
+			*/
 			//#endif
 			);
 		SafeBuf sb2;
@@ -894,6 +931,7 @@ int main ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "-h" ) == 0 ) goto printHelp;
 	// version
 	if ( strcmp ( cmd , "-v" ) == 0 ) {
+		fprintf(stdout,"Gigablast March-2014\n");
 	//	fprintf(stderr,"Gigablast %s\nMD5KEY: %s\n"
 	//		"TAG: %s\nPATH:   %s\n",
 	//		GBVersion, GBCommitID, GBTag, GBBuildPath); 
@@ -901,10 +939,10 @@ int main ( int argc , char *argv[] ) {
 	}
 
 	// print overview
-	if ( strcmp ( cmd , "-o" ) == 0 ) {
-		//printOverview ( );
-		return 0;
-	}
+	//if ( strcmp ( cmd , "-o" ) == 0 ) {
+	//	//printOverview ( );
+	//	return 0;
+	//}
 
 	bool hadHostId = false;
 
@@ -1796,12 +1834,12 @@ int main ( int argc , char *argv[] ) {
 				//
 				// default to keepalive start for now!!
 				//
-				return install ( ifk_kstart , h1, 
+				return install ( ifk_start , h1, 
 						 NULL,NULL,h2 );
 		}
 		// if it is us, do it
 		//if ( hostId != -1 ) goto mainStart;
-		return install ( ifk_kstart , hostId );
+		return install ( ifk_start , hostId );
 	}
 	// gb tmpstart [hostId]
 	if ( strcmp ( cmd , "tmpstart" ) == 0 ) {	
@@ -2420,10 +2458,10 @@ int main ( int argc , char *argv[] ) {
 			dumpTitledb(coll,startFileNum,numFiles,includeTree,
 				     docId,1,false,false);
 		}
-		else if ( argv[cmdarg+1][0] == 'v' && argv[cmdarg+1][1] =='u' )
-			dumpTfndb   (coll,startFileNum,numFiles,includeTree,1);
-		else if ( argv[cmdarg+1][0] == 'u' )
-			dumpTfndb   (coll,startFileNum,numFiles,includeTree,0);
+		//else if(argv[cmdarg+1][0] == 'v' && argv[cmdarg+1][1] =='u' )
+		//	dumpTfndb   (coll,startFileNum,numFiles,includeTree,1);
+		//else if ( argv[cmdarg+1][0] == 'u' )
+		//	dumpTfndb   (coll,startFileNum,numFiles,includeTree,0);
 		else if ( argv[cmdarg+1][0] == 'w' )
 		       dumpWaitingTree(coll);
 		else if ( argv[cmdarg+1][0] == 'x' )
@@ -4298,6 +4336,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"%slocalhosts.conf "
 				//"%shosts2.conf "
 				"%sgb.conf "
+				"%slocalgb.conf "
 				"%stmpgb "
 				//"%scollections.dat "
 				"%sgb.pem "
@@ -4338,6 +4377,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 				"%s:%s"
 				,
+				dir,
 				dir,
 				dir,
 				dir,
@@ -5146,6 +5186,8 @@ bool registerMsgHandlers2(){
 	if(! g_udpServer.registerHandler(0x3e,handleRequest3e)) return false;
 	if(! g_udpServer.registerHandler(0x3f,handleRequest3f)) return false;
 
+	if ( ! g_udpServer.registerHandler(0x25,handleRequest25)) return false;
+
 	return true;
 
 	/*
@@ -5633,7 +5675,7 @@ void zlibtest() {
 		// malloc 1,000 bufs of size about 100-64k each
 		for ( long i = 0 ; i < 100 ; i++ ) {
 			long  bufSize = 1000 + (rand() % 65000);
-			ptrs[i] = (char *)mmalloc ( bufSize , "test" );
+			ptrs[i] = (char *)mmalloc ( bufSize , "ztest" );
 			if ( ! ptrs[i] ) {
 				log("no mem!"); exit(-1); }
 			lens[i] = bufSize;
@@ -5643,14 +5685,14 @@ void zlibtest() {
 		}
 		// now free them
 		for ( long i = 0 ; i < 100 ; i++ ) 
-			mfree (ptrs[i] , lens[i] , "test" );
+			mfree (ptrs[i] , lens[i] , "ztest" );
 	}
 }
 */
 
 #include "Rdb.h"
 #include "Xml.h"
-#include "Tfndb.h"
+//#include "Tfndb.h"
 //#include "Checksumdb.h"
 #include "Threads.h"
 
@@ -5707,11 +5749,12 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 		fprintf(stdout,"could not alloc for xmldoc\n");
 		exit(-1);
 	}
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_TITLEDB   ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -5753,11 +5796,12 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			    lastKey.n1,lastKey.n0,
 			    k.n1,k.n0);
 		lastKey = k;
+		long shard = g_hostdb.getShardNum ( RDB_TITLEDB , &k );
 		// print deletes
 		if ( (k.n0 & 0x01) == 0) {
 			fprintf(stdout,"n1=%08lx n0=%016llx docId=%012lli "
-			       "(del)\n", 
-			       k.n1 , k.n0 , docId );
+			       "shard=%li (del)\n", 
+				k.n1 , k.n0 , docId , shard );
 			continue;
 		}
 		// free the mem
@@ -5827,6 +5871,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 					"redir=%s "
 					"url=%s "
 					"firstdup=1 "
+					"shard=%li "
 					"\n", 
 					k.n1 , k.n0 , 
 					//rec[0] , 
@@ -5849,7 +5894,8 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 					//ms,
 					(long)xd->m_hopCount,
 					ru,
-					u->getUrl() );
+					u->getUrl() ,
+					shard );
 				prevId = docId;
 				count = 0;
 				continue;
@@ -5949,6 +5995,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			"version=%02li "
 			//"maxLinkTextWeight=%06lu%% "
 			"hc=%li "
+			"shard=%li "
 			//"diffbot=%li "
 			"redir=%s "
 			"url=%s\n", 
@@ -5972,6 +6019,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			(long)xd->m_version,
 			//ms,
 			(long)xd->m_hopCount,
+			shard,
 			//(long)xd->m_isDiffbotJSONObject,
 			ru,
 			u->getUrl() );
@@ -5986,7 +6034,7 @@ void dumpTitledb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	if ( startKey < *(key_t *)list.getLastKey() ) return;
 	goto loop;
 }
-
+/*
 void dumpTfndb (char *coll,long startFileNum,long numFiles,bool includeTree ,
 		bool verify) {
 	//g_conf.m_spiderdbMaxTreeMem = 1024*1024*30;
@@ -6058,7 +6106,7 @@ void dumpTfndb (char *coll,long startFileNum,long numFiles,bool includeTree ,
 	if ( startKey < *(key_t *)list.getLastKey() ) return;
 	goto loop;
 }
-
+*/
 void dumpWaitingTree (char *coll ) {
 	RdbTree wt;
 	if (!wt.set(0,-1,true,20000000,true,"waittree2",
@@ -6116,10 +6164,11 @@ void dumpDoledb (char *coll,long startFileNum,long numFiles,bool includeTree){
 	Msg5 msg5;
 	RdbList list;
 	key_t oldk; oldk.setMin();
+	CollectionRec *cr = g_collectiondb.getRec(coll);
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_DOLEDB    ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -6344,10 +6393,12 @@ long dumpSpiderdb ( char *coll,
 	long long offset = 0LL;
 	long now;
 	static long long s_lastRepUh48 = 0LL;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
+
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_SPIDERDB  ,
-			      coll          ,
+			      cr->m_collnum       ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -7893,9 +7944,9 @@ void dumpMissing ( char *coll ) {
 	g_conf.m_indexdbMaxCacheMem = 0;
 	//g_conf.m_clusterdbMaxDiskPageCacheMem = 0;
 
-	g_tfndb.init ();
+	//g_tfndb.init ();
 	//g_collectiondb.init(true); // isDump?
-	g_tfndb.getRdb()->addRdbBase1 ( coll );
+	//g_tfndb.getRdb()->addRdbBase1 ( coll );
 	g_titledb.init();
 	g_titledb.getRdb()->addRdbBase1 ( coll );
 	// if titledb has stuff in memory, do not do this, it needs to
@@ -7909,7 +7960,8 @@ void dumpMissing ( char *coll ) {
 	}
 	// . just get the docids from tfndb...
 	// . this tfndb rec count is for ALL colls!! DOH!
-	long long numRecs = g_tfndb.getRdb()->getNumTotalRecs();
+	// MDW FIX THIS RIGHT!
+	long long numRecs = 12345;//g_tfndb.getRdb()->getNumTotalRecs();
 	long long oldNumSlots = (numRecs * 100) / 80;
 	// make a power of 2
 	// make it a power of 2
@@ -7946,10 +7998,11 @@ void dumpMissing ( char *coll ) {
 	long long count = 0;
 	long next = 0;
 	long used = 0;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_TFNDB     ,
-			      coll          ,
+			      cr->m_collnum    ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -7978,10 +8031,10 @@ void dumpMissing ( char *coll ) {
 		if ( (k.n0 & 0x01LL) == 0x00 ) continue;
 		// titledb tree is empty, so this must indicate it is in
 		// spiderdb only
-		long  tfn = g_tfndb.getTfn(&k);
+		long  tfn = 0;//g_tfndb.getTfn(&k);
 		if ( tfn == 255 ) continue;
 		// get docid
-		unsigned long long d = g_tfndb.getDocId ( &k );
+		unsigned long long d = 0LL;//g_tfndb.getDocId ( &k );
 		// add to hash table
 		//long n = (unsigned long)d & mask;
 		long n = (unsigned long)d % numSlots;
@@ -8035,7 +8088,7 @@ void dumpMissing ( char *coll ) {
  loop2:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_INDEXDB   ,
-			      coll          ,
+			      cr->m_collnum       ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -8236,11 +8289,13 @@ void dumpDups ( char *coll ) {
 		return;
 	}
 	*/
+	CollectionRec *cr = g_collectiondb.getRec(coll);
+
  loop:
 	//long long startTime = gettimeofdayInMilliseconds();
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_INDEXDB   ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -8662,12 +8717,12 @@ void removeDocIds  ( char *coll , char *filename ) {
 	//g_conf.m_checksumdbMaxCacheMem = 0;
 	//g_conf.m_clusterdbMaxCacheMem = 0;
 
-	g_tfndb.init();
+	//g_tfndb.init();
 	g_indexdb.init ();
 	//g_checksumdb.init();
 	g_clusterdb.init();
 	//g_collectiondb.init(true);
-	g_tfndb.getRdb()->addRdbBase1 ( coll );
+	//g_tfndb.getRdb()->addRdbBase1 ( coll );
 	g_indexdb.getRdb()->addRdbBase1 ( coll );
 	//g_checksumdb.getRdb()->addRdbBase1 ( coll );
 	g_clusterdb.getRdb()->addRdbBase1 ( coll );
@@ -8749,11 +8804,12 @@ void removeDocIds  ( char *coll , char *filename ) {
 	long long recs = 0;
 	long long removed = 0;
 	RdbTree *tree = &r->m_tree;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop3:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_INDEXDB   ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -8954,11 +9010,12 @@ void removeDocIds  ( char *coll , char *filename ) {
 	recs = 0;
 	removed = 0;
 	tree = &r->m_tree;
+	//CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop5:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_CLUSTERDB ,
-			      coll          ,
+			      cr->m_collnum    ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -9042,17 +9099,18 @@ void removeDocIds  ( char *coll , char *filename ) {
 	//
 
 	logf(LOG_INFO,"db: Scanning tfndb and removing recs.");
-	r = g_tfndb.getRdb();
+	r = 0;//g_tfndb.getRdb();
 	count = 0;
 	scanned = 0;
 	recs = 0;
 	removed = 0;
 	tree = &r->m_tree;
+	//CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop6:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_TFNDB     ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -9087,7 +9145,7 @@ void removeDocIds  ( char *coll , char *filename ) {
 		key_t k    = list.getCurrentKey();
 		// skip deletes
 		if ( (k.n0 & 0x01) == 0x00 ) continue;
-		unsigned long long d = g_tfndb.getDocId(&k);
+		unsigned long long d = 0;//g_tfndb.getDocId(&k);
 		// see if docid is in delete list
 		long n = (unsigned long)d & mask;
 		while ( slots[n] && slots[n] != d )
@@ -11088,10 +11146,11 @@ void dumpSectiondb(char *coll,long startFileNum,long numFiles,
 	char tmpBuf[1024];
 	SafeBuf sb(tmpBuf, 1024);
 	bool firstKey = true;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_SECTIONDB ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -11211,10 +11270,11 @@ void dumpRevdb(char *coll,long startFileNum,long numFiles, bool includeTree) {
 	char tmpBuf[1024];
 	SafeBuf sb(tmpBuf, 1024);
 	bool firstKey = true;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_REVDB     ,
-			      coll          ,
+			      cr->m_collnum ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -11310,12 +11370,13 @@ void dumpTagdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	long port = g_hostdb.getMyPort() - 1000;
 	char action[50]="";
 	sprintf(httpAddr,"127.0.0.1:%li", port );
-	if ( req == 'D') strcpy(action,"&deleterec=1&useNew=1");		
+	if ( req == 'D') strcpy(action,"&deleterec=1&useNew=1");	
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( rdbId, //RDB_TAGDB     ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -11415,8 +11476,9 @@ bool parseTest ( char *coll , long long docId , char *query ) {
 	// a niceness of 0 tells it to block until it gets results!!
 	Msg5 msg5;
 	Msg5 msg5b;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	if ( ! msg5.getList ( RDB_TITLEDB    ,
-			      coll           ,
+			      cr->m_collnum        ,
 			      &tlist         ,
 			      startKey       ,
 			      endKey         , // should be maxed!
@@ -11488,8 +11550,8 @@ bool parseTest ( char *coll , long long docId , char *query ) {
 	// speed test
 	t = gettimeofdayInMilliseconds();
 	for ( long k = 0 ; k < 100 ; k++ ) {
-		char *mm = (char *)mmalloc ( 300*1024 , "test");
-		mfree ( mm , 300*1024 ,"test");
+		char *mm = (char *)mmalloc ( 300*1024 , "ztest");
+		mfree ( mm , 300*1024 ,"ztest");
 	}
 	e = gettimeofdayInMilliseconds();
 	logf(LOG_DEBUG,"build: Took %.3f ms to do mallocs.",
@@ -12326,11 +12388,12 @@ void dumpIndexdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	Msg5 msg5;
 	Msg5 msg5b;
 	RdbList list;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_INDEXDB   ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -12425,11 +12488,12 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	// set this flag so Msg5.cpp if it does error correction does not
 	// try to get the list from a twin...
 	g_isDumpingRdbFromMain = 1;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_POSDB   ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      &startKey      ,
 			      &endKey        ,
@@ -12663,11 +12727,11 @@ void dumpDatedb (char *coll,long startFileNum,long numFiles,bool includeTree,
 	Msg5 msg5;
 	Msg5 msg5b;
 	IndexList list;
-
+	CollectionRec *cr = g_collectiondb.getRec(coll);
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_DATEDB ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -12865,11 +12929,11 @@ void dumpClusterdb ( char *coll,
 	Msg5 msg5;
 	Msg5 msg5b;
 	RdbList list;
-
+	CollectionRec *cr = g_collectiondb.getRec(coll);
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_CLUSTERDB ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -13304,11 +13368,12 @@ void dumpLinkdb ( char *coll,
 	Msg5 msg5;
 	Msg5 msg5b;
 	RdbList list;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_LINKDB ,
-			      coll          ,
+			      cr->m_collnum      ,
 			      &list         ,
 			      (char *)&startKey      ,
 			      (char *)&endKey        ,
@@ -13839,8 +13904,9 @@ void doInject ( int fd , void *state ) {
 		Msg5 msg5;
 		Msg5 msg5b;
 		char *coll = "main";
+		CollectionRec *cr = g_collectiondb.getRec(coll);
 		msg5.getList ( RDB_TITLEDB ,
-			       coll,
+			       cr->m_collnum,
 			       &list         ,
 			       (char *)&s_titledbKey ,
 			       (char *)&endKey        ,
@@ -14417,6 +14483,8 @@ bool checkDataParity ( ) {
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		//unsigned long groupId = k.n1 & g_hostdb.m_groupMask;
 		uint32_t shardNum = getShardNum ( RDB_INDEXDB, &k );
@@ -14464,6 +14532,8 @@ bool checkDataParity ( ) {
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		uint32_t shardNum = getShardNum ( RDB_TITLEDB , &k );
 		//long groupId = k.n1 & g_hostdb.m_groupMask;
@@ -14506,6 +14576,8 @@ bool checkDataParity ( ) {
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		// verify the group
 		uint32_t shardNum = getShardNum ( RDB_TFNDB , &k );
@@ -14756,7 +14828,7 @@ bool cacheTest() {
 			false         ,  // support lists of recs?
 			maxCacheNodes ,
 			false         ,  // use half keys?
-			"test"        ,  // dbname
+			"cachetest"        ,  // dbname
 			false         )) // save cache to disk?
 		return log("test: Cache init failed.");
 
@@ -14829,7 +14901,7 @@ bool cacheTest() {
 			false         ,  // support lists of recs?
 			maxCacheNodes ,
 			false         ,  // use half keys?
-			"test"        ,  // dbname
+			"cachetest"        ,  // dbname
 			false         )) // save cache to disk?
 		return log("test: Cache init failed.");
 
@@ -15281,6 +15353,8 @@ void countdomains( char* coll, long numRecs, long verbosity, long output ) {
 	//ipHT.set ( numRecs+1 );
 	//domHT.set( numRecs+1 );
 
+	CollectionRec *cr = g_collectiondb.getRec(coll);
+
 	key_t startKey;
 	key_t endKey  ;
 	key_t lastKey ;
@@ -15319,7 +15393,7 @@ void countdomains( char* coll, long numRecs, long verbosity, long output ) {
  loop:
 	// use msg5 to get the list, should ALWAYS block since no threads
 	if ( ! msg5.getList ( RDB_TITLEDB   ,
-			      coll          ,
+			      cr->m_collnum       ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,

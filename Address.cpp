@@ -646,7 +646,8 @@ bool Addresses::set ( Sections  *sections    ,
 		      TagRec    *gr          ,
 		      Url       *url         ,
 		      long long  docId       ,
-		      char      *coll        ,
+		      //char      *coll        ,
+		      collnum_t collnum ,
 		      long       domHash32   ,
 		      long       ip          ,
 		      //long       tagPairHash ,
@@ -678,7 +679,7 @@ bool Addresses::set ( Sections  *sections    ,
 	m_gr          = gr;
 	m_url         = url;
 	m_docId       = docId;
-	m_coll        = coll;
+	m_collnum        = collnum;
 	m_domHash32   = domHash32;
 	m_ip          = ip;
 	//m_tagPairHash = tagPairHash;
@@ -1090,7 +1091,7 @@ bool Addresses::set ( Sections  *sections    ,
 	// parsing consistency
 	if ( //! m_addressReplyValid && 
 	    ! m_msg2c->verifyAddresses ( this         ,
-					 m_coll       ,
+					 m_collnum       ,
 					 m_domHash32 ,
 					 m_ip         ,
 					 m_niceness   ,
@@ -10257,7 +10258,7 @@ void Addresses::print ( SafeBuf *pbuf , long long uh64 ) {
 			 "be a KEY in placedb. So you generally need two "
 			 "places inlining the same name before that will "
 			 "happen.</i>");
-	pbuf->safePrintf("</br>\n");
+	pbuf->safePrintf("<br>\n");
 
 }
 
@@ -16102,7 +16103,8 @@ void Msg2c::reset() {
 //   into the TitleRec for re-parsing purposes later on, so we consistently
 //   re-parse
 bool Msg2c::verifyAddresses ( Addresses  *aa         ,
-			      char       *coll       ,
+			      //char       *coll       ,
+			      collnum_t collnum ,
 			      long        domHash32  ,
 			      long        ip         ,
 			      long        niceness   ,
@@ -16111,7 +16113,7 @@ bool Msg2c::verifyAddresses ( Addresses  *aa         ,
 	
 	m_niceness   = niceness;
 	m_addresses  = aa;
-	m_coll       = coll;
+	m_collnum = collnum;
 	m_domHash32  = domHash32;
 	m_ip         = ip;
 	m_callback   = callback;
@@ -16255,9 +16257,11 @@ bool Msg2c::launchRequests ( ) {
 	char isName = ( a->m_street->m_flags2 & PLF2_IS_NAME ) ;
 	*(char *)p = isName  ; p += 1;
 	// collection
-	long collSize = gbstrlen(m_coll) + 1;
-	memcpy ( p , m_coll , collSize );
-	p += collSize;
+	//long collSize = gbstrlen(m_coll) + 1;
+	//memcpy ( p , m_coll , collSize );
+	//p += collSize;
+	*(collnum_t *)p = m_collnum;
+	p += sizeof(collnum_t);
 	// end of it
 	char *pend = requestBuf + REQBUFSIZE; // s_requestBuf + max;
 	// . then the address string, semicolon separated, null terminated
@@ -16495,14 +16499,16 @@ void handleRequest2c ( UdpSlot *slot , long nicenessWTF ) {
 	// save it
 	st->m_niceness = niceness;
 	// get coll
-	char *coll = p; p += gbstrlen(p) + 1;
+	//char *coll = p; p += gbstrlen(p) + 1;
+	collnum_t collnum = *(collnum_t *)p;
+	p += sizeof(collnum_t);
 	// the address string, semicolon separated, NULL terminated
 	st->m_addrStr = p; p += gbstrlen(p) + 1;
 
 	// . get from msg5, return if it blocked
 	// . will probably not block since in the disk page cache a lot
 	if ( ! st->m_msg5.getList ( RDB_PLACEDB ,
-				    coll        ,
+				    collnum        ,
 				    &st->m_list ,
 				    (char *)&startKey    ,
 				    (char *)&endKey      ,

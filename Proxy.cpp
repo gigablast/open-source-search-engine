@@ -339,7 +339,7 @@ bool Proxy::handleRequest (TcpSocket *s){
 		return false;
 	}
 
-	bool isAdmin = g_conf.isMasterAdmin(s,&hr);
+	bool isAdmin = g_conf.isRootAdmin(s,&hr);
 
 	long redirLen = hr.getRedirLen() ;
 	char *redir = NULL;
@@ -5158,7 +5158,7 @@ char *Proxy::storeLoginBar ( char *reply ,
 	}
 	// point to first digit in there
 	mp += 16;
-	// store our new content length as ascii into "test" buf
+	// store our new content length as ascii into test buf
 	char test[64];
 	long len = sprintf(test,"%li",(long)(newReplySize-mimeLen));
 	// find end

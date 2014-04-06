@@ -45,11 +45,6 @@ class TopicGroup {
         long m_topicMaxPunctLen;
 };
 
-#define FORMAT_HTML 0
-#define FORMAT_XML  1
-#define FORMAT_JSON 2
-#define FORMAT_CSV  3
-
 class SearchInput {
 
  public:
@@ -64,7 +59,8 @@ class SearchInput {
 			       class CollectionRec *cr ) ;
 	bool setQueryBuffers ( class HttpRequest *hr ) ;
 
-	void setToDefaults ( class CollectionRec *cr , long niceness ) ;
+	//void setToDefaults ( class CollectionRec *cr , long niceness ) ;
+	void clear ( long niceness ) ;
 
 	// Msg40 likes to use this to pass the parms to a remote host
 	SearchInput      ( );
@@ -112,6 +108,10 @@ class SearchInput {
 
 	// intersection speed up shortcut? "&fi=1", defaults to on
 	char   m_fastIntersection;
+
+	// stream results back on socket in streaming mode, usefule when thousands
+	// of results are requested
+	char   m_streamResults;
 
 	// . related topic (gigabits) parameters
 	// . TODO: prepend m_top_ to these var names
@@ -178,6 +178,9 @@ class SearchInput {
 	Query  m_hqq;
 	long   m_queryMatchOffsets;
 	long   m_summaryMode;
+
+	// are we doing a QA query for quality assurance consistency
+	char   m_qa;
 
 	float  m_pqr_demFactSubPhrase;
 	float  m_pqr_demFactCommonInlinks;
@@ -301,8 +304,13 @@ class SearchInput {
 	char  *m_query;                      
 	long   m_query2Len;                   
 	char  *m_query2;                      
-	long   m_collLen2;                    // msg40
-	char  *m_coll2;                       // msg40
+	//long   m_collLen2;                    // msg40
+	//char  *m_coll2;                       // msg40
+
+	// array of collnum_t's to search... usually just one
+	SafeBuf m_collnumBuf;
+	// first collection # listed in m_collnumBuf
+	collnum_t m_firstCollnum;
 
 	// . "special query"
 	// . list of docids to restrict results to, i.e. "124+4564+6752+..."

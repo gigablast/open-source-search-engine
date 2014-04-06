@@ -49,6 +49,8 @@ typedef unsigned long long qvec_t;
 
 #define MAX_EXPLICIT_BITS (sizeof(qvec_t)*8)
 
+#define MAX_OVEC_SIZE 256
+
 // only can use 16-bit since have to make a 64k truth table!
 #define MAX_EXPLICIT_BITS_BOOLEAN (16*8)
 
@@ -110,6 +112,12 @@ typedef unsigned long long qvec_t;
 #define FIELD_GBNUMBERMAX      57
 #define FIELD_GBPARENTURL      58
 
+#define FIELD_GBSORTBYINT      59
+#define FIELD_GBREVSORTBYINT   60
+#define FIELD_GBNUMBERMININT   61
+#define FIELD_GBNUMBERMAXINT   62
+
+
 #define FIELD_GBOTHER 92
 
 // returns a FIELD_* code above, or FIELD_GENERIC if not in the list
@@ -160,6 +168,7 @@ extern struct QueryField g_fields[];
 ////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////
 
+/*
 // . creating a QueryBoolean class was unnecessary since it was only functional
 //   and had nothing new it would store that the Query class doesn't store
 // . the entry point is the Query::setBitScoresBoolean() function below
@@ -175,76 +184,46 @@ public:
 	long set ( long a , long b , class QueryWord *qwords , long level ,
 		   bool underNOT ) ;
 	// . "bits" are 1-1 with the query terms in Query::m_qterms[] array
-	// . Operand::m_termBits is the required bits for operand to be true
+	// . Operand::m_opBits is the required bits for operand to be true
 	// . does not include signless phrases
-	bool isTruth ( qvec_t bits, qvec_t mask=(qvec_t)-1 ) {
+	//bool isTruth ( qvec_t bits, qvec_t mask=(qvec_t)-1 ) {
+	bool isTruth ( unsigned char *bitVec , long vecSize ) {
 		// must always satisfy hard required terms (+ sign)
 		//if ( (bits & m_forcedBits) != m_forcedBits )
 		//	return false;
-		if (m_hasNOT) return (bits & m_termBits & mask) == 0;
-		return ( (bits & m_termBits & mask) == (m_termBits & mask)); 
+		//if (m_hasNOT) return (bits & m_opBits & mask) == 0;
+		//return ( (bits & m_opBits & mask) == (m_opBits & mask)); 
+		if ( m_hasNOT ) {
+			for ( long i = 0 ; i < vecSize ; i++ )
+				if ( m_opBits[i] & bitVec[i] ) return false;
+			return true;
+		}
+		for ( long i = 0 ; i < vecSize ; i++ )
+			if ( m_opBits[i] & bitVec[i] ) return true;
+		return false;
 		// . we are now back to good ol' default OR
-		// . m_termBits should have been masked with
+		// . m_opBits should have been masked with
 		//   m_requiredBits so as not to include signless phrases
-		//return ( (bits & m_termBits) != 0 ); 
+		//return ( (bits & m_opBits) != 0 ); 
 	};
 	void print (SafeBuf *sbuf);
 	// we are a sequence of QueryWords
 	//long m_startWordNum;
 	//long m_lastWordNum;
-	// . we treat the required term bits of those words as one unit (ANDed)
-	// . unsigned phrases are not included in these term bits
 	// . doc just needs one of these bits for this op to be considered true
-	qvec_t m_termBits;
+	// . terms under the same QueryTermInfo class should have the same
+	//   termbit here
+	unsigned char m_opBits[MAX_OVEC_SIZE];
+	//long m_vecSize;
+	// does the word NOT preceed the operand?
 	bool   m_hasNOT;
-	class Expression *m_parent;
+	//class Expression *m_parent;
 
 	// we MUST have these for this OPERAND to be true
 	//unsigned short m_forcedBits;
 };
+*/
 
-// operand1 AND operand2 OR  ...
-// operand1 OR  operand2 AND ...
-class Expression {
-public:
-	long set (long start, 
-		   long end, 
-		   long pos, // current parsing position
-		   class Query      *q,
-		   long              level, 
-		   class Expression *parent, 
-		   class Expression *leftChild,
-		   bool hasNOT ,
-		  bool underNOT );
-
-	bool isTruth ( qvec_t bits, qvec_t mask=(qvec_t)-1  ) ;
-	// . what QueryTerms are UNDER the influence of the NOT opcode?
-	// . we read in the WHOLE termlist of those that are (like '-' sign)
-	// . returned bit vector is 1-1 with m_qterms in Query class
-	qvec_t getNOTBits ( bool hasNOT );
-	void print (SafeBuf *sbuf);
-	// . a list of operands separated by op codes (a AND b OR c ...)
-	// . sometimes and operand is another expression: a AND (b OR c)
-	// . use NULL in m_operands slot if we got an expression and vice versa
-	// . m_opcodes[i] is the opcode after operand #i
-	class Expression *m_parent;
-	//class Operand    *m_operands    [ MAX_OPERANDS ];
-	class Expression *m_children [ MAX_OPERANDS ];
-	//char              m_opcodes     [ MAX_OPERANDS ];
-	//long              m_numOperands;
-	// now expressions can have either child expressions or 1 operand
-	long              m_numChildren;
-	// do we have a NOT operator before operand #i?
-	//bool              m_hasNOT      [ MAX_OPERANDS ];
-	// only one opcode, operand, hasNOT per expression now
-	uint8_t           m_opcode;
-	class Operand    *m_operand;
-	bool              m_hasNOT;
-	// needed for nesting
-	long              m_start;
-	long              m_end;
-
-};
 
 ////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////
@@ -286,7 +265,7 @@ class QueryWord {
 	long long   m_phraseId;
 	// hash of field name then collection, used to hash termId
 	long long   m_prefixHash;
-
+	long        m_wordNum;
 	// are we in a phrase in a wikipedia title?
 	long        m_wikiPhraseId;
 	long        m_wikiPhraseStart;
@@ -362,6 +341,15 @@ class QueryWord {
 	bool m_piped;
 	// used by Matches.cpp for highlighting under different colors
 	long m_colorNum;
+
+	// for min/max score ranges like gbmin:price:1.99
+	float m_float;
+	// for gbminint:99 etc. uses integers instead of floats for better res
+	long  m_int;
+	// what operand bit # is it for doing boolen queries?
+	//long  m_opBitNum;
+	// when an operand is an expression...
+	class Expression *m_expressionPtr;
 };
 
 // . we filter the QueryWords and turn them into QueryTerms
@@ -404,6 +392,13 @@ class QueryTerm {
 	// expressions) and just use a hardCount to see how many hard required
 	// terms are contained by a document. see IndexTable.cpp "hardCount"
 	char       m_hardCount;
+
+	// the "number" of the query term used for evaluation boolean
+	// expressions in Expression::isTruth(). Basically just the
+	// QueryTermInfo for which this query term belongs. each QueryTermInfo
+	// is like a single query term and all its synonyms, etc.
+	long       m_bitNum;
+
 	// point to term, either m_word or m_phrase
 	char      *m_term;
 	long       m_termLen;
@@ -474,6 +469,14 @@ class QueryTerm {
 	// we can be in? uses -1 to indicate none.
 	long  m_leftPhraseTermNum;
 	long  m_rightPhraseTermNum;
+	// . what operand # are we a part of in a boolean query?
+	// . like for (x AND y) x would have an opNum of 0 and y an
+	//   opNum of 1 for instance.
+	// . for things like (x1 OR x2 OR x3 ... ) we try to give all
+	//   those query terms the same m_opNum for efficiency since
+	//   they all have the same effecct
+	//long  m_opNum;
+	
 	// same as above basically
 	class QueryTerm *m_leftPhraseTerm;
 	class QueryTerm *m_rightPhraseTerm;
@@ -487,6 +490,42 @@ class QueryTerm {
 	// used by Msg40.cpp for gigabits generation
 	long long m_hash64d;
 	long      m_popWeight;
+
+};
+
+//#define MAX_OPSLOTS 256
+
+#define MAX_EXPRESSIONS 10
+
+// operand1 AND operand2 OR  ...
+// operand1 OR  operand2 AND ...
+class Expression {
+public:
+	bool add (long start, 
+		  long end, 
+		  class Query      *q,
+		  long    level );
+	bool isTruth ( unsigned char *bitVec , long vecSize );
+	// . what QueryTerms are UNDER the influence of the NOT opcode?
+	// . we read in the WHOLE termlist of those that are (like '-' sign)
+	// . returned bit vector is 1-1 with m_qterms in Query class
+	void print (SafeBuf *sbuf);
+	// . a list of operands separated by op codes (a AND b OR c ...)
+	// . sometimes and operand is another expression: a AND (b OR c)
+	// . use NULL in m_operands slot if we got an expression and vice versa
+	// . m_opcodes[i] is the opcode after operand #i
+	//class Expression *m_parent;
+	//bool              m_hasNOT;
+	//long              m_start;
+	//long              m_end;
+	long m_expressionStartWord;
+	long m_numWordsInExpression;
+	Query *m_q;
+	// . opSlots can be operands operators or expressions
+	// . m_opTypes tells which of the 3 they are
+	//long m_opSlots[MAX_OPSLOTS];
+	//char m_opTypes[MAX_OPSLOTS];
+	//long m_cc;
 };
 
 // . this is the main class for representing a query
@@ -577,11 +616,17 @@ class Query {
 
 	// sets m_bmap[][] so getImplicits() works
 	void setBitMap ( );
-	bool testBoolean(qvec_t bits, qvec_t bitmask=(qvec_t)-1);
+	bool testBoolean(unsigned char *bits,long vecSize);
 	// print to log
 	void printBooleanTree();
 	void printQueryTerms();
 
+	// the new way as of 3/12/2014. just determine if matches the bool
+	// query or not. let's try to offload the scoring logic to other places
+	// if possible.
+	// bitVec is all the QueryWord::m_opBits some docid contains, so
+	// does it match our boolean query or not?
+	bool matchesBoolQuery ( unsigned char *bitVec , long vecSize ) ;
 
 
 	// . call this before calling getBitScore() to set m_bitScores[] table
@@ -601,6 +646,7 @@ class Query {
 	//   through the phrase
 	// . the greater the number of IMplicit SINGLE words a doc has the 
 	//   bigger its bit score
+	/*
 	uint8_t getBitScore ( qvec_t ebits ) {
 		// get implicit bits from explicit bits
 		qvec_t ibits = getImplicits ( ebits );
@@ -649,6 +695,7 @@ class Query {
 		if (ibits                     == m_requiredBits ) bscore|=0x20;
 		return bscore;
 	};
+	*/
 
 	// return an implicit vector from an explicit which contains the explic
 	qvec_t getImplicits ( qvec_t ebits ) {
@@ -704,7 +751,7 @@ class Query {
 	bool        isConnection ( char *s , long len ) ;
 
 	// set the QueryTerm::m_hasNOT members
-	void setHasNOTs();
+	//void setHasNOTs();
 
 	// . used by IndexTable.cpp to make a ptr map of the query terms
 	//   to make intersecting the termlists one at a time efficient
@@ -862,11 +909,12 @@ class Query {
 	
 	// . we now contain the parsing components for boolean queries
 	// . m_expressions points into m_gbuf or is allocated
-	class Expression *m_expressions; // [ MAX_OPERANDS ];
-	long              m_expressionsAllocSize;
+	//class Expression *m_expressions; // [ MAX_OPERANDS ];
+	//long              m_expressionsAllocSize;
+	Expression        m_expressions[MAX_EXPRESSIONS];
 	long              m_numExpressions;
-	class Operand     m_operands    [ MAX_OPERANDS ];
-	long              m_numOperands ;
+	//class Operand     m_operands    [ MAX_OPERANDS ];
+	//long              m_numOperands ;
 
 	// does query contain the pipe operator
 	bool m_piped;

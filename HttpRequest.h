@@ -27,6 +27,16 @@
 #include "Url.h"       // Url class
 #include "TcpSocket.h"
 
+// values for HttpRequest::m_replyFormat
+#define FORMAT_HTML 1
+#define FORMAT_XML  2
+#define FORMAT_JSON 3
+#define FORMAT_CSV  4
+#define FORMAT_TXT  5
+#define FORMAT_PROCOG 6
+
+
+
 class HttpRequest {
 
  public:
@@ -58,6 +68,11 @@ class HttpRequest {
 		else return NULL;
 		//return m_buf;
 	};
+
+	// FORMAT_HTML FORMAT_JSON FORMAT_XML
+	char getReplyFormat();
+	bool m_replyFormatValid;
+	char m_replyFormat;
 
 	// get the referer field of the MIME header
 	char *getReferer () { return m_ref; };

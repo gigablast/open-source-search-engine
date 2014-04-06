@@ -986,6 +986,7 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	if ( strncmp(path,"/crawlbot",9) == 0 ) n = PAGE_CRAWLBOT;
 	if ( strncmp(path,"/v2/crawl",9) == 0 ) n = PAGE_CRAWLBOT;
 	if ( strncmp(path,"/v2/bulk" ,8) == 0 ) n = PAGE_CRAWLBOT;
+	if ( strncmp(path,"/v2/search" ,8) == 0 ) n = PAGE_RESULTS;
 	
 	bool isProxy = g_proxy.isProxy();
 	// . prevent coring
@@ -1401,6 +1402,7 @@ bool HttpServer::sendReply2 ( char *mime,
 
 	// . store the login/logout links after <body> tag
 	// . only proxy should provide a non-null hr right now
+	/*
 	if ( hr ) {
 		long newReplySize;
 		char *newReply = g_proxy.storeLoginBar ( sendBuf, 
@@ -1417,6 +1419,7 @@ bool HttpServer::sendReply2 ( char *mime,
 		sendBufSize  = newReplySize;
 		sendBufAlloc = newReplySize;
 	}
+	*/
 
 	// . send it away
 	// . this returns false if blocked, true otherwise
@@ -1900,7 +1903,7 @@ long getMsgSize ( char *buf, long bufSize, TcpSocket *s ) {
 			max = 0x7fffffff; // maxOtherDocLen not available
 		// if post is a /cgi/12.cgi (tagdb) allow 10 megs
 		//if ( pp + 11 < ppend && strncmp ( pp ,"/cgi/12.cgi",11)==0)
-		if ( pp + 11 < ppend && strncmp ( pp ,"/master/tagdb",13)==0)
+		if ( pp + 12 < ppend && strncmp ( pp ,"/admin/tagdb",12)==0)
 			max = 10*1024*1024;
 		if ( pp + 4 < ppend && strncmp ( pp ,"/vec",4)==0)
 			max = 0x7fffffff;

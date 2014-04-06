@@ -120,7 +120,7 @@ bool sendPageGet ( TcpSocket *s , HttpRequest *r ) {
 	mnew ( st , sizeof(State2) , "PageGet1" );
 	// save the socket and if Host: is local in the Http request Mime
 	st->m_socket   = s;
-	st->m_isAdmin  = g_collectiondb.isAdmin ( r , s );
+	st->m_isAdmin  = g_conf.isCollAdmin ( s , r );
 	st->m_isLocal  = r->isLocal();
 	st->m_docId    = docId;
 	// include header ... "this page cached by Gigablast on..."

@@ -20,6 +20,7 @@ void Msg3a::constructor ( ) {
 	m_finalBuf     = NULL;
 	m_docsToGet    = 0;
 	m_numDocIds    = 0;
+	m_collnums     = NULL;
 
 	// need to call all safebuf constructors now to set m_label
 	m_rbuf2.constructor();
@@ -68,6 +69,8 @@ void Msg3a::reset ( ) {
 	m_docsToGet    = 0;
 	m_errno        = 0;
 	m_numDocIds    = 0;
+	m_collnums     = NULL;
+	m_numTotalEstimatedHits = 0LL;
 }
 
 Msg39Request *g_r = NULL;
@@ -139,8 +142,9 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	m_state    = state;
 
 	// warning. coll size includes \0
-	if ( ! m_r->ptr_coll || m_r->size_coll-1 <= 0 ) 
-		log(LOG_LOGIC,"net: NULL or bad collection. msg3a.");
+	if ( ! m_r->m_collnum < 0 ) // ptr_coll || m_r->size_coll-1 <= 0 ) 
+		log(LOG_LOGIC,"net: bad collection. msg3a. %li",
+		    (long)m_r->m_collnum);
 
 	//m_indexdbSplit = g_hostdb.m_indexSplits;
 	// certain query term, like, gbdom:xyz.com, are NOT split
@@ -171,7 +175,7 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 		return true;
 	// . set g_errno if not found and return true
 	// . coll is null terminated
-	CollectionRec *cr = g_collectiondb.getRec(r->ptr_coll, r->size_coll-1);
+	CollectionRec *cr = g_collectiondb.getRec(r->m_collnum);
 	if ( ! cr ) { g_errno = ENOCOLLREC; return true; }
 
 	// query is truncated if had too many terms in it
@@ -201,7 +205,7 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	if ( m_r->m_useSeoResultsCache ) {
 		// the all important seo results cache key
 		m_ckey.n0 = hash64 ( m_r->ptr_query ,m_r->size_query - 1 ,0 );
-		m_ckey.n0 = hash64 ( m_r->ptr_coll,m_r->size_coll,  m_ckey.n0);
+		m_ckey.n0 = hash64h ( (long long)m_r->m_collnum,  m_ckey.n0);
 		m_ckey.n0 = hash64 ( (char *)&m_r->m_language,1 ,  m_ckey.n0 );
 		m_ckey.n0 = hash64 ( (char *)&m_r->m_docsToGet,4,  m_ckey.n0 );
 		// this should be non-zero so g_hostdb.getGroupId(RDB_SERPDB)
@@ -236,7 +240,7 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 					0 , // maxcacheage
 					false, // addtocache?
 					RDB_SERPDB,//RDB_CACHEDB,
-					m_r->ptr_coll,
+					m_r->m_collnum,//ptr_coll,
 					&m_seoCacheList,
 					(char *)&startKey ,
 					(char *)&endKey,
@@ -277,8 +281,8 @@ bool Msg3a::gotCacheReply ( ) {
 		m_docIds = (long long *)p;
 		p += 8 * m_numDocIds;
 		// scores
-		m_scores = (float *)p;
-		p += sizeof(float) * m_numDocIds;
+		m_scores = (double *)p;
+		p += sizeof(double) * m_numDocIds;
 		// site hashes
 		m_siteHashes26 = (long *)p;
 		p += 4 * m_numDocIds;
@@ -303,10 +307,10 @@ bool Msg3a::gotCacheReply ( ) {
 		return true;
 	}
 
-	CollectionRec *cr;
-	cr = g_collectiondb.getRec(m_r->ptr_coll,m_r->size_coll-1);
+	//CollectionRec *cr;
+	//cr = g_collectiondb.getRec(m_r->ptr_coll,m_r->size_coll-1);
 
-	setTermFreqWeights ( cr->m_coll,m_q,m_termFreqs , m_termFreqWeights );
+	setTermFreqWeights ( m_r->m_collnum,m_q,m_termFreqs,m_termFreqWeights);
 
 	if ( m_debug ) {
 		//long long *termIds = m_q->getTermIds();
@@ -402,7 +406,7 @@ bool Msg3a::gotCacheReply ( ) {
 	//   end up copying over ourselves.
 	m_rbufPtr = serializeMsg ( sizeof(Msg39Request),
 				   &m_r->size_readSizes,
-				   &m_r->size_coll,
+				   &m_r->size_whiteList,
 				   &m_r->ptr_readSizes,
 				   m_r,
 				   &m_rbufSize , 
@@ -727,20 +731,20 @@ bool Msg3a::gotAllSplitReplies ( ) {
 		if ( ! m_debug ) continue;
 		// cast these for printing out
 		long long *docIds    = (long long *)mr->ptr_docIds;
-		score_t   *scores    = (score_t   *)mr->ptr_scores;
+		double    *scores    = (double    *)mr->ptr_scores;
 		// print out every docid in this split reply
 		for ( long j = 0; j < mr->m_numDocIds ; j++ ) {
 			// print out score_t
 			logf( LOG_DEBUG,
 			     "query: msg3a: [%lu] %03li) "
 			     "split=%li docId=%012llu domHash=0x%02lx "
-			     "score=%lu"                     ,
+			     "score=%f"                     ,
 			     (unsigned long)this                      ,
 			     j                                        , 
 			     i                                        ,
 			     docIds [j] ,
 			     (long)g_titledb.getDomHash8FromDocId(docIds[j]),
-			      (long)scores[j] );
+			      (float)scores[j] );
 		}
 	}
 
@@ -772,7 +776,7 @@ bool Msg3a::gotAllSplitReplies ( ) {
 	for ( long i = 0 ; i < max ; i++ ) 
 		cr.pushLongLong(m_docIds[i] );
 	for ( long i = 0 ; i < max ; i++ ) 
-		cr.pushFloat(m_scores[i]);
+		cr.pushDouble(m_scores[i]);
 	for ( long i = 0 ; i < max ; i++ ) 
 		cr.pushLong(getSiteHash26(i));
 	// sanity
@@ -807,7 +811,7 @@ bool Msg3a::gotAllSplitReplies ( ) {
 	// this will often block, but who cares!? it just sends a request off
 	if ( ! m_msg1.addList ( &m_seoCacheList ,
 				RDB_SERPDB,//RDB_CACHEDB,
-				m_r->ptr_coll,
+				m_r->m_collnum,//ptr_coll,
 				this, // state
 				gotSerpdbReplyWrapper, // callback
 				false, // forcelocal?
@@ -849,7 +853,7 @@ bool Msg3a::mergeLists ( ) {
 	// . tcPtr = term count. how many required query terms does the doc 
 	//   have? formerly called topExplicits in IndexTable2.cpp
 	long long     *diPtr [MAX_INDEXDB_SPLIT];
-	float         *rsPtr [MAX_INDEXDB_SPLIT];
+	double        *rsPtr [MAX_INDEXDB_SPLIT];
 	key_t         *ksPtr [MAX_INDEXDB_SPLIT];
 	long long     *diEnd [MAX_INDEXDB_SPLIT];
 	for ( long j = 0; j < m_numHosts ; j++ ) {
@@ -863,7 +867,7 @@ bool Msg3a::mergeLists ( ) {
 			continue;
 		}
 		diPtr [j] = (long long *)mr->ptr_docIds;
-		rsPtr [j] = (float     *)mr->ptr_scores;
+		rsPtr [j] = (double    *)mr->ptr_scores;
 		ksPtr [j] = (key_t     *)mr->ptr_clusterRecs;
 		diEnd [j] = (long long *)(mr->ptr_docIds +
 					  mr->m_numDocIds * 8);
@@ -919,7 +923,8 @@ bool Msg3a::mergeLists ( ) {
 
 	// . how much do we need to store final merged docids, etc.?
 	// . docid=8 score=4 bitScore=1 clusterRecs=key_t clusterLevls=1
-	long need = m_docsToGet * (8+4+sizeof(key_t)+sizeof(DocIdScore *)+1);
+	long need = m_docsToGet * (8+sizeof(double)+
+				   sizeof(key_t)+sizeof(DocIdScore *)+1);
 	// allocate it
 	m_finalBuf     = (char *)mmalloc ( need , "finalBuf" );
 	m_finalBufSize = need;
@@ -928,7 +933,7 @@ bool Msg3a::mergeLists ( ) {
 	// hook into it
 	char *p = m_finalBuf;
 	m_docIds        = (long long *)p; p += m_docsToGet * 8;
-	m_scores        = (float     *)p; p += m_docsToGet * sizeof(float);
+	m_scores        = (double    *)p; p += m_docsToGet * sizeof(double);
 	m_clusterRecs   = (key_t     *)p; p += m_docsToGet * sizeof(key_t);
 	m_clusterLevels = (char      *)p; p += m_docsToGet * 1;
 	m_scoreInfos    = (DocIdScore **)p;p+=m_docsToGet*sizeof(DocIdScore *);
@@ -1078,7 +1083,7 @@ bool Msg3a::mergeLists ( ) {
 
 			// turn it into a float, that is what rscore_t is.
 			// we do this to make it easier for PostQueryRerank.cpp
-			m_scores    [m_numDocIds]=(float)*rsPtr[maxj];
+			m_scores    [m_numDocIds]=(double)*rsPtr[maxj];
 			if ( m_r->m_doSiteClustering ) 
 				m_clusterRecs[m_numDocIds]= *ksPtr[maxj];
 			// clear this out
@@ -1142,7 +1147,7 @@ bool Msg3a::mergeLists ( ) {
 long Msg3a::getStoredSize ( ) {
 	// docId=8, scores=sizeof(rscore_t), clusterLevel=1 bitScores=1
 	// eventIds=1
-	long need = m_numDocIds * ( 8 + sizeof(rscore_t) + 1 ) + 
+	long need = m_numDocIds * ( 8 + sizeof(double) + 1 ) + 
 		4 + // m_numDocIds
 		8 ; // m_numTotalEstimatedHits (estimated # of results)
 	return need;
@@ -1158,8 +1163,8 @@ long Msg3a::serialize   ( char *buf , char *bufEnd ) {
 	// store each docid, 8 bytes each
 	memcpy ( p , m_docIds , m_numDocIds * 8 ); p += m_numDocIds * 8;
 	// store scores
-	memcpy ( p , m_scores , m_numDocIds * sizeof(rscore_t) );
-	p +=  m_numDocIds * sizeof(rscore_t) ;
+	memcpy ( p , m_scores , m_numDocIds * sizeof(double) );
+	p +=  m_numDocIds * sizeof(double) ;
 	// store cluster levels
 	memcpy ( p , m_clusterLevels , m_numDocIds ); p += m_numDocIds;
 	// sanity check
@@ -1178,7 +1183,7 @@ long Msg3a::deserialize ( char *buf , char *bufEnd ) {
 	// get each docid, 8 bytes each
 	m_docIds = (long long *)p; p += m_numDocIds * 8;
 	// get scores
-	m_scores = (rscore_t *)p; p += m_numDocIds * sizeof(rscore_t) ;
+	m_scores = (double *)p; p += m_numDocIds * sizeof(double) ;
 	// get cluster levels
 	m_clusterLevels = (char *)p; p += m_numDocIds;
 	// sanity check
@@ -1214,13 +1219,13 @@ void Msg3a::printTerms ( ) {
 	}
 }
 
-void setTermFreqWeights ( char *coll,
+void setTermFreqWeights ( collnum_t collnum , // char *coll,
 			  Query *q , 
 			  long long *termFreqs, 
 			  float *termFreqWeights ) {
 
 	long long numDocsInColl = 0;
-	RdbBase *base = getRdbBase ( RDB_CLUSTERDB  , coll );	
+	RdbBase *base = getRdbBase ( RDB_CLUSTERDB  , collnum );	
 	if ( base ) numDocsInColl = base->getNumGlobalRecs();
 	// issue? set it to 1000 if so
 	if ( numDocsInColl < 0 ) {
@@ -1232,7 +1237,7 @@ void setTermFreqWeights ( char *coll,
 	long long *termIds = q->getTermIds();
 	// just use rdbmap to estimate!
 	for ( long i = 0 ; i < q->getNumTerms(); i++ ) {
-		long long tf = g_posdb.getTermFreq ( coll ,termIds[i]);
+		long long tf = g_posdb.getTermFreq ( collnum ,termIds[i]);
 		if ( termFreqs ) termFreqs[i] = tf;
 		float tfw = getTermFreqWeight(tf,numDocsInColl);
 		termFreqWeights[i] = tfw;

@@ -325,7 +325,7 @@ long RdbCache::getLong ( collnum_t collnum ,
 			   (char *)&k,
 			   &rec     ,
 			   &recSize ,
-			   false    ,
+			   false    , // do copy?
 			   maxAge   , // in seconds, -1 means none
 			   true     , // incCounts?
 			   NULL     , // cacheTime ptr
@@ -745,6 +745,9 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 	//long long startTime = gettimeofdayInMillisecondsLocal();
 	if ( collnum < (collnum_t)0) {char *xx=NULL;*xx=0; }
 	if ( collnum >= m_maxColls ) {char *xx=NULL;*xx=0; }
+	// full key not allowed because we use that in markDeletedRecord()
+	if ( KEYCMP(cacheKey,KEYMAX(),m_cks) == 0 ) { char  *xx=NULL;*xx=0; }
+
 	// bail if cache empty
 	if ( m_totalBufSize <= 0 ) return true;
 	// debug msg
@@ -953,7 +956,7 @@ bool RdbCache::addRecord ( collnum_t collnum ,
 // delete the rec at m_tail from the hashtable
 bool RdbCache::deleteRec ( ) {
 	// sanity. 
-	if ( m_tail < 0 || m_tail > m_totalBufSize ) {
+	if ( m_tail < 0 || m_tail >= m_totalBufSize ) {
 		char *xx = NULL; *xx = 0;}
 
 	// don't do anything if we're empty
@@ -980,8 +983,11 @@ bool RdbCache::deleteRec ( ) {
 	// find the key even after going through all the records
 	// I think that the data here is corrupted or not pointed right
 	
-	// collnum can be 0 in case we have to go to next buffer
-	if ( collnum != 0 && ( collnum >= m_maxColls || collnum < 0
+	// . collnum can be 0 in case we have to go to next buffer
+	// . allow -1 collnum to exist, seems to happen in robots.txt cache
+	//   sometimes, maybe for delete collnum... not sure, but the timestamp
+	//   seems to be legit
+	if ( collnum >= m_maxColls || collnum < -1
 			       // we now call ::reset(oldcollnum)
 			       // when resetting a collection in
 			       // Collectiondb::resetColl() which calls
@@ -990,15 +996,16 @@ bool RdbCache::deleteRec ( ) {
 			       // and then we nuke the collrec so it was
 			       // triggering this. so check m_ptrs[i]==-1
 			       //|| !g_collectiondb.m_recs[collnum]
-			       ) ) {
+	     ) {
 		log (LOG_WARN,"db: cache: deleteRec: possible "
 		     "corruption, start=%lx collNum=%li "
 		     "maxCollNum=%li dbname=%s", (long)start,
 		     (long)collnum, g_collectiondb.m_numRecsUsed,  
 		     m_dbname);
+		char *xx=NULL;*xx=0;
 		// exception for gourav's bug (dbname=Users)
 		// i am tired of it craping out every 2-3 wks
-		if ( m_dbname[0]=='U' ) return true;
+		//if ( m_dbname[0]=='U' ) return true;
 		// some records might have been deleted
 		m_needsSave = true;
 		// but its corrupt so don't save to disk
@@ -1064,11 +1071,12 @@ bool RdbCache::deleteRec ( ) {
 	m_tail += (p - start);
 	
 	// sanity. this must be failing due to a corrupt dataSize...
-	if ( m_tail < 0 || m_tail > m_totalBufSize ) {
+	if ( m_tail < 0 || m_tail +sizeof(collnum_t)+m_cks+4>m_totalBufSize){
 		char *xx = NULL; *xx = 0;}
 	
 	// delete key from hash table, iff is for THIS record
-	// but if it has not already been voided
+	// but if it has not already been voided.
+	// we set key to KEYMAX() in markDeletedRecord()
 	if ( KEYCMP(k,KEYMAX(),m_cks) != 0 ){
 		removeKey ( collnum , k , start );
 		markDeletedRecord(start);
@@ -1291,9 +1299,14 @@ void RdbCache::clearAll ( ) {
 }
 */
 
+//
+// . MDW: took out clear() for corruption suspicision... i think ninad's
+//   corruption detection would panic on collnum_t's of -1 anyway...
+//
 // . this just clears the contents of the cache
 // . used when deleting a collection in Rdb::delColl() and used in
 //   Rdb::updateToRebuild() when updating/setting the rdb to a rebuilt rdb
+/*
 void RdbCache::clear ( collnum_t collnum ) {
 	// bail if no writing ops allowed now
 	if ( ! g_cacheWritesEnabled ) { char *xx=NULL;*xx=0; }
@@ -1309,6 +1322,7 @@ void RdbCache::clear ( collnum_t collnum ) {
 		*(collnum_t *)m_ptrs[i] = -1;
 	}
 }
+*/
 
 bool RdbCache::load ( ) {
 	return load ( m_dbname );

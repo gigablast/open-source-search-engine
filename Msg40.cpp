@@ -14,10 +14,14 @@
 //#include "Facebook.h" // msgfb
 #include "Speller.h"
 #include "Wiki.h"
+#include "HttpServer.h"
+#include "PageResults.h"
 
 // increasing this doesn't seem to improve performance any on a single
 // node cluster....
 #define MAX_OUTSTANDING_MSG20S 200
+
+bool printHttpMime ( class State0 *st ) ;
 
 //static void handleRequest40              ( UdpSlot *slot , long netnice );
 //static void gotExternalReplyWrapper      ( void *state , void *state2 ) ;
@@ -79,6 +83,7 @@ static bool gotSummaryWrapper            ( void *state );
 bool isSubDom(char *s , long len);
 
 Msg40::Msg40() {
+	m_socketHadError = 0;
 	m_buf           = NULL;
 	m_buf2          = NULL;
 	m_cachedResults = false;
@@ -86,6 +91,15 @@ Msg40::Msg40() {
 	m_numMsg20s     = 0;
 	m_msg20StartBuf = NULL;
 	m_numToFree     = 0;
+	// new stuff for streaming results:
+	m_hadPrintError = false;
+	m_numPrinted    = 0;
+	m_printedHeader = false;
+	m_printedTail   = false;
+	m_sendsOut      = 0;
+	m_sendsIn       = 0;
+	m_printi        = 0;
+	m_lastChunk     = false;
 	//m_numGigabitInfos = 0;
 }
 
@@ -133,7 +147,10 @@ bool Msg40::getResults ( SearchInput *si      ,
 			 void        *state   ,
 			 void   (* callback) ( void *state ) ) {
 	// warning
-	if ( ! si->m_coll2 ) log(LOG_LOGIC,"net: NULL collection. msg40.");
+	//if ( ! si->m_coll2 ) log(LOG_LOGIC,"net: NULL collection. msg40.");
+	if ( si->m_collnumBuf.length() < (long)sizeof(collnum_t) )
+		log(LOG_LOGIC,"net: NULL collection. msg40.");
+
 
 	m_lastProcessedi = -1;
 
@@ -148,17 +165,25 @@ bool Msg40::getResults ( SearchInput *si      ,
 	// we need this info for caching as well
 	//m_numGigabitInfos = 0;
 
+	m_lastHeartbeat = getTimeLocal();
 
 	//just getfrom searchinput
 	//....	m_catId = hr->getLong("catid",0);m_si->m_catId;
 
  	m_postQueryRerank.set1( this, si );
 
+	// take search parms i guess from first collnum
+	collnum_t *cp = (collnum_t *)m_si->m_collnumBuf.getBufStart();
+
 	// get the collection rec
-	CollectionRec *cr =g_collectiondb.getRec(m_si->m_coll2,
-						 m_si->m_collLen2);
+	CollectionRec *cr =g_collectiondb.getRec( cp[0] );
+
 	// g_errno should be set if not found
 	if ( ! cr ) { g_errno = ENOCOLLREC; return true; }
+
+	// save that
+	m_firstCollnum = cr->m_collnum;
+
 	// what is our max docids ceiling?
 	//m_maxDocIdsToCompute = cr->m_maxDocIdsToCompute;
 	// topic similarity cutoff
@@ -345,6 +370,9 @@ bool Msg40::getResults ( SearchInput *si      ,
 	// turn it off for now until we cache the scoring tables
 	log("db: cache is disabled until we cache scoring tables");
 	useCache = false;
+	// if searching multiple collections do not cache for now
+	if ( m_si->m_collnumBuf.length() > (long)sizeof(collnum_t) ) 
+		useCache=false;
 
 	// . try setting from cache first
 	// . cacher --> "do we READ from cache?"
@@ -359,7 +387,8 @@ bool Msg40::getResults ( SearchInput *si      ,
 					      key ,
 					      &m_cachePtr,
 					      &m_cacheSize,
-					      m_si->m_coll2,
+					      // use first collection #
+					      m_si->m_firstCollnum,
 					      this , 
 					      gotCacheReplyWrapper ,
 					      m_si->m_niceness ,
@@ -491,43 +520,105 @@ bool Msg40::getDocIds ( bool recall ) {
 	if ( m_si->m_rcache ) maxAge = g_conf.m_indexdbMaxIndexListAge;
 
 	// reset it
-	m_r.reset();
+	Msg39Request mr;
+	mr.reset();
 
-	m_r.ptr_coll                    = m_si->m_coll2;
-	m_r.size_coll                   = m_si->m_collLen2+1;
-	m_r.m_maxAge                    = maxAge;
-	m_r.m_addToCache                = m_si->m_wcache;
-	m_r.m_docsToGet                 = m_docsToGet;
-	m_r.m_niceness                  = m_si->m_niceness;
-	m_r.m_debug                     = m_si->m_debug          ;
-	m_r.m_getDocIdScoringInfo       = m_si->m_getDocIdScoringInfo;
-	m_r.m_doSiteClustering          = m_si->m_doSiteClustering    ;
-	m_r.m_familyFilter              = m_si->m_familyFilter;
-	m_r.m_useMinAlgo                = m_si->m_useMinAlgo;
-	m_r.m_useNewAlgo                = m_si->m_useNewAlgo;
-	m_r.m_doMaxScoreAlgo            = m_si->m_doMaxScoreAlgo;
-	m_r.m_fastIntersection          = m_si->m_fastIntersection;
-	m_r.m_doIpClustering            = m_si->m_doIpClustering      ;
-	m_r.m_doDupContentRemoval       = m_si->m_doDupContentRemoval ;
-	//m_r.m_restrictIndexdbForQuery   = m_si->m_restrictIndexdbForQuery ;
-	m_r.m_queryExpansion            = m_si->m_queryExpansion; 
-	m_r.m_compoundListMaxSize       = m_si->m_compoundListMaxSize ;
-	m_r.m_boolFlag                  = m_si->m_boolFlag            ;
-	m_r.m_familyFilter              = m_si->m_familyFilter        ;
-	m_r.m_language                  = (unsigned char)m_si->m_queryLang;
-	m_r.ptr_query                   = m_si->m_q->m_orig;
-	m_r.size_query                  = m_si->m_q->m_origLen+1;
-	m_r.ptr_whiteList               = m_si->m_whiteListBuf.getBufStart();
-	m_r.size_whiteList              = m_si->m_whiteListBuf.length()+1;
-	m_r.m_timeout                   = -1; // auto-determine based on #terms
+	//m_r.ptr_coll                    = m_si->m_coll2;
+	//m_r.size_coll                   = m_si->m_collLen2+1;
+	mr.m_maxAge                    = maxAge;
+	mr.m_addToCache                = m_si->m_wcache;
+	mr.m_docsToGet                 = m_docsToGet;
+	mr.m_niceness                  = m_si->m_niceness;
+	mr.m_debug                     = m_si->m_debug          ;
+	mr.m_getDocIdScoringInfo       = m_si->m_getDocIdScoringInfo;
+	mr.m_doSiteClustering          = m_si->m_doSiteClustering    ;
+	mr.m_familyFilter              = m_si->m_familyFilter;
+	mr.m_useMinAlgo                = m_si->m_useMinAlgo;
+	mr.m_useNewAlgo                = m_si->m_useNewAlgo;
+	mr.m_doMaxScoreAlgo            = m_si->m_doMaxScoreAlgo;
+	mr.m_fastIntersection          = m_si->m_fastIntersection;
+	mr.m_doIpClustering            = m_si->m_doIpClustering      ;
+	mr.m_doDupContentRemoval       = m_si->m_doDupContentRemoval ;
+	//mr.m_restrictIndexdbForQuery   = m_si->m_restrictIndexdbForQuery ;
+	mr.m_queryExpansion            = m_si->m_queryExpansion; 
+	mr.m_compoundListMaxSize       = m_si->m_compoundListMaxSize ;
+	mr.m_boolFlag                  = m_si->m_boolFlag            ;
+	mr.m_familyFilter              = m_si->m_familyFilter        ;
+	mr.m_language                  = (unsigned char)m_si->m_queryLang;
+	mr.ptr_query                   = m_si->m_q->m_orig;
+	mr.size_query                  = m_si->m_q->m_origLen+1;
+	mr.ptr_whiteList               = m_si->m_whiteListBuf.getBufStart();
+	mr.size_whiteList              = m_si->m_whiteListBuf.length()+1;
+	mr.m_timeout                   = -1; // auto-determine based on #terms
 	// make sure query term counts match in msg39
-	m_r.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
-	m_r.m_realMaxTop                = m_si->m_realMaxTop;
+	mr.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
+	mr.m_realMaxTop                = m_si->m_realMaxTop;
 
 	// . get the docIds
 	// . this sets m_msg3a.m_clusterLevels[] for us
-	if ( ! m_msg3a.getDocIds ( &m_r,  m_si->m_q, this , gotDocIdsWrapper))
-		return false;
+	//if(! m_msg3a.getDocIds ( &m_r,  m_si->m_q, this , gotDocIdsWrapper))
+	//	return false;
+
+	////
+	//
+	// NEW CODE FOR LAUNCHING one MSG3a per collnum to search a token
+	//
+	////
+	m_num3aReplies = 0;
+	m_num3aRequests = 0;
+
+	// search the provided collnums (collections)
+	collnum_t *cp = (collnum_t *)m_si->m_collnumBuf.getBufStart();
+
+	// how many are we searching? usually just one.
+	m_numCollsToSearch = m_si->m_collnumBuf.length() /sizeof(collnum_t);
+
+	// make enough for ptrs
+	long need = sizeof(Msg3a *) * m_numCollsToSearch;
+	if ( ! m_msg3aPtrBuf.reserve ( need ) ) return NULL;
+	// cast the mem buffer
+	m_msg3aPtrs = (Msg3a **)m_msg3aPtrBuf.getBufStart();
+
+	// clear these out so we do not free them when destructing
+	for ( long i = 0 ; i < m_numCollsToSearch ;i++ )
+		m_msg3aPtrs[i] = NULL;
+
+	// use first guy in case only one coll we are searching, the std case
+	if ( m_numCollsToSearch <= 1 )
+		m_msg3aPtrs[0] = &m_msg3a;
+
+	// create new ones if searching more than 1 coll
+	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		// get it
+		Msg3a *mp = m_msg3aPtrs[i];
+		// stop if only searching one collection
+		if ( ! mp ) {
+			try { mp = new ( Msg3a); }
+			catch ( ... ) {
+				g_errno = ENOMEM;
+				return true;
+			}
+			mnew(mp,sizeof(Msg3a),"tm3ap");
+		}
+		// error?
+		if ( ! mp ) return true;
+		// assign it
+		m_msg3aPtrs[i] = mp;
+		// assign the request for it
+		memcpy ( &mp->m_rrr , &mr , sizeof(Msg39Request) );
+		// then customize it to just search this collnum
+		mp->m_rrr.m_collnum = cp[i];
+
+		// launch a search request
+		m_num3aRequests++;
+		// this returns false if it would block and will call callback
+		if(!mp->getDocIds(&mp->m_rrr,m_si->m_q,this,gotDocIdsWrapper))
+			continue;
+		if ( g_errno && ! m_errno ) 
+			m_errno = g_errno;
+		m_num3aReplies++;
+	}
+
 	// call again w/o parameters now
 	return gotDocIds ( );
 }	
@@ -539,6 +630,7 @@ void gotDocIdsWrapper ( void *state ) {
 	Msg40 *THIS = (Msg40 *) state;
 	// if this blocked, it returns false
 	//if ( ! checkTurnOffRAT ( state ) ) return;
+	THIS->m_num3aReplies++;
 	// return if this blocked
 	if ( ! THIS->gotDocIds() ) return;
 	// now call callback, we're done
@@ -548,6 +640,18 @@ void gotDocIdsWrapper ( void *state ) {
 // . return false if blocked, true otherwise
 // . sets g_errno on error
 bool Msg40::gotDocIds ( ) {
+
+	// return now if still waiting for a msg3a reply to get in
+	if ( m_num3aReplies < m_num3aRequests ) return false;
+
+
+	// if searching over multiple collections let's merge their docids
+	// into m_msg3a now before we go forward
+	// this will set g_errno on error, like oom
+	if ( ! mergeDocIdsIntoBaseMsg3a() )
+		log("msg40: error: %s",mstrerror(g_errno));
+
+
 	// log the time it took for cache lookup
 	long long now  = gettimeofdayInMilliseconds();
 
@@ -604,6 +708,18 @@ bool Msg40::gotDocIds ( ) {
 	m_numRequests  =  0;
 	m_numReplies   =  0;
 	//m_maxiLaunched = -1;
+
+	// when returning search results in csv let's get the first 100
+	// results and use those to determine the most common column headers
+	// for the csv. any results past those that have new json fields we
+	// will add a header for, but the column will not be labelled with
+	// the header name unfortunately.
+	m_needFirstReplies = 0;
+	if ( m_si->m_format == FORMAT_CSV ) {
+		m_needFirstReplies = m_msg3a.m_numDocIds;
+		if ( m_needFirstReplies > 100 ) m_needFirstReplies = 100;
+	}
+
 
 	// we have received m_numGood contiguous Msg20 replies!
 	//m_numContiguous     = 0;
@@ -701,6 +817,99 @@ bool Msg40::gotDocIds ( ) {
 	return launchMsg20s ( false );
 }
 
+bool Msg40::mergeDocIdsIntoBaseMsg3a() {
+
+	// only do this if we were searching multiple collections, otherwise
+	// all the docids are already in m_msg3a
+	if ( m_numCollsToSearch <= 1 ) return true;
+	
+	// free any mem in use
+	m_msg3a.reset();
+
+	// count total docids into "td"
+	long td = 0LL;
+	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		Msg3a *mp = m_msg3aPtrs[i];
+		td += mp->m_numDocIds;
+		// reset cursor for list of docids from this collection
+		mp->m_cursor = 0;
+		// add up here too
+		m_msg3a.m_numTotalEstimatedHits += mp->m_numTotalEstimatedHits;
+	}
+
+	// setup to to merge all msg3as into our one m_msg3a
+	long need = 0;
+	need += td * 8;
+	need += td * sizeof(double);
+	need += td * sizeof(key_t);
+	need += td * 1;
+	need += td * sizeof(collnum_t);
+	// make room for the merged docids
+	m_msg3a.m_finalBuf =  (char *)mmalloc ( need , "finalBuf" );
+	m_msg3a.m_finalBufSize = need;
+	// return true with g_errno set
+	if ( ! m_msg3a.m_finalBuf ) return true;
+	// parse the memory up into arrays
+	char *p = m_msg3a.m_finalBuf;
+	m_msg3a.m_docIds        = (long long *)p; p += td * 8;
+	m_msg3a.m_scores        = (double    *)p; p += td * sizeof(double);
+	m_msg3a.m_clusterRecs   = (key_t     *)p; p += td * sizeof(key_t);
+	m_msg3a.m_clusterLevels = (char      *)p; p += td * 1;
+	m_msg3a.m_scoreInfos    = NULL;
+	m_msg3a.m_collnums      = (collnum_t *)p; p += td * sizeof(collnum_t);
+	if ( p - m_msg3a.m_finalBuf != need ) { char *xx=NULL;*xx=0; }
+
+	m_msg3a.m_numDocIds = td;
+
+	//
+	// begin the collection merge
+	//
+
+	long next = 0;
+
+ loop:
+
+	// get next biggest score
+	double max  = -1000000000.0;
+	Msg3a *maxmp = NULL;
+
+	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		// shortcut
+		Msg3a *mp = m_msg3aPtrs[i];
+		// get cursor
+		long cursor = mp->m_cursor;
+		// skip if exhausted
+		if ( cursor >= mp->m_numDocIds ) continue;
+		// get his next score 
+		double score = mp->m_scores[ cursor ];
+		if ( score <= max ) continue;
+		// got a new winner
+		max = score;
+		maxmp = mp;
+	}
+
+	// store him
+	if ( maxmp ) {
+		m_msg3a.m_docIds  [next] = maxmp->m_docIds[maxmp->m_cursor];
+		m_msg3a.m_scores  [next] = maxmp->m_scores[maxmp->m_cursor];
+		m_msg3a.m_collnums[next] = maxmp->m_rrr.m_collnum;
+		m_msg3a.m_clusterLevels[next] = CR_OK;
+		maxmp->m_cursor++;
+		next++;
+		goto loop;
+	}
+
+	// free tmp msg3as now
+	for ( long i = 0 ; i < m_numCollsToSearch ; i++ ) {
+		if ( m_msg3aPtrs[i] == &m_msg3a ) continue;
+		mdelete ( m_msg3aPtrs[i] , sizeof(Msg3a), "tmsg3a");
+		delete  ( m_msg3aPtrs[i] );
+		m_msg3aPtrs[i] = NULL;
+	}
+
+	return true;
+}
+
 // . returns false and sets g_errno/m_errno on error
 // . makes m_msg3a.m_numDocIds ptrs to Msg20s. 
 // . does not allocate a Msg20 in the buffer if the m_msg3a.m_clusterLevels[i]
@@ -721,6 +930,8 @@ bool Msg40::reallocMsg20Buf ( ) {
 
 	// MDW: try to preserve the old Msg20s if we are being re-called
 	if ( m_buf2 ) {
+		// we do not do recalls when streaming yet
+		if ( m_si->m_streamResults ) { char *xx=NULL;*xx=0; }
 		// use these 3 vars for mismatch stat reporting
 		//long      mismatches = 0;
 		//long long mismatch1  = 0LL;
@@ -864,19 +1075,31 @@ bool Msg40::reallocMsg20Buf ( ) {
 		return true;
 	}
 
-	// do the alloc
+	m_numMsg20s = m_msg3a.m_numDocIds;
+
+	// when streaming because we can have hundreds of thousands of
+	// search results we recycle a few msg20s to save mem
+	if ( m_si->m_streamResults ) {
+		long max = MAX_OUTSTANDING_MSG20S * 2;
+		if ( m_msg3a.m_numDocIds < max ) max = m_msg3a.m_numDocIds;
+		need = max * (4+sizeof(Msg20));
+		m_numMsg20s = max;
+	}
+
 	m_buf2        = NULL;
 	m_bufMaxSize2 = need;
+
+	// do the alloc
 	if ( need ) m_buf2 = (char *)mmalloc ( need ,"Msg40msg20");
 	if ( need && ! m_buf2 ) { m_errno = g_errno; return false; }
 	// point to the mem
 	char *p = m_buf2;
 	// point to the array, then make p point to the Msg20 buffer space
-	m_msg20 = (Msg20 **)p; p += m_msg3a.m_numDocIds * sizeof(Msg20 *);
+	m_msg20 = (Msg20 **)p; p += m_numMsg20s * sizeof(Msg20 *);
 	// start free here
 	m_msg20StartBuf = p;
 	// set the m_msg20[] array to use this memory, m_buf20
-	for ( long i = 0 ; i < m_msg3a.m_numDocIds ; i++ ) {
+	for ( long i = 0 ; i < m_numMsg20s ; i++ ) {
 		// assume empty
 		m_msg20[i] = NULL;
 		// if clustered, do a NULL ptr
@@ -891,7 +1114,7 @@ bool Msg40::reallocMsg20Buf ( ) {
 		m_numToFree++;
 	}
 	// remember how many we got in here in case we have to realloc above
-	m_numMsg20s = m_msg3a.m_numDocIds;
+	//m_numMsg20s = m_msg3a.m_numDocIds;
 
 	return true;
 }
@@ -907,6 +1130,9 @@ void didTaskWrapper ( void* state ) {
 }
 
 bool Msg40::launchMsg20s ( bool recalled ) {
+
+	// don't launch any more if client browser closed socket
+	if ( m_socketHadError ) { char *xx=NULL; *xx=0; }
 
 	// these are just like for passing to Msg39 above
 	long maxAge = 0 ;
@@ -1002,12 +1228,28 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		//if ( m_numRequests-m_numReplies >= need ) break;
 		// hard limit
 		if ( m_numRequests-m_numReplies >= maxOut ) break;
+		// do not launch another until m_printi comes back because
+		// all summaries are bottlenecked on printing him out now
+		if ( m_si->m_streamResults &&
+		     i >= m_printi + MAX_OUTSTANDING_MSG20S - 1 )
+			break;
 		// do not double count!
 		//if ( i <= m_lastProcessedi ) continue;
 		// do not repeat for this i
 		m_lastProcessedi = i;
+
 		// start up a Msg20 to get the summary
-		Msg20 *m = m_msg20[i];
+		Msg20 *m = NULL;
+		if ( m_si->m_streamResults ) {
+			// there can be hundreds of thousands of results
+			// when streaming, so recycle a few msg20s to save mem
+			m = getAvailMsg20();
+			// mark it so we know which docid it goes with
+			m->m_ii = i;
+		}
+		else
+			m = m_msg20[i];
+
 		// if msg20 ptr null that means the cluster level is not CR_OK
 		if ( ! m ) {
 			m_numRequests++;
@@ -1045,8 +1287,15 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		//if ( i > m_maxiLaunched ) m_maxiLaunched = i;
 		
 		// get the collection rec
-		CollectionRec *cr =g_collectiondb.
-			getRec(m_si->m_coll2,m_si->m_collLen2);
+		CollectionRec *cr =g_collectiondb.getRec(m_firstCollnum);
+		//getRec(m_si->m_coll2,m_si->m_collLen2);
+		if ( ! cr ) {
+			log("msg40: missing coll");
+			g_errno = ENOCOLLREC;
+			if ( m_numReplies < m_numRequests ) return false;
+			return true;
+		}
+
 
 		// set the summary request then get it!
 		Msg20Request req;
@@ -1079,14 +1328,25 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		req.m_highlightQueryTerms = m_si->m_doQueryHighlighting;
 		req.m_highlightDates      = m_si->m_doDateHighlighting;
 
-		req.ptr_coll             = m_si->m_coll2;
-		req.size_coll            = m_si->m_collLen2+1;
+		//req.ptr_coll             = m_si->m_coll2;
+		//req.size_coll            = m_si->m_collLen2+1;
+
 		req.m_isDebug            = (bool)m_si->m_debug;
 		if ( m_si->m_displayMetasLen > 0 ) {
 			req.ptr_displayMetas     = m_si->m_displayMetas;
 			req.size_displayMetas    = m_si->m_displayMetasLen+1;
 		}
+
 		req.m_docId              = m_msg3a.m_docIds[i];
+		
+		// if the msg3a was merged from other msg3as because we
+		// were searching multiple collections...
+		if ( m_msg3a.m_collnums )
+			req.m_collnum = m_msg3a.m_collnums[i];
+		// otherwise, just one collection
+		else
+			req.m_collnum = m_msg3a.m_rrr.m_collnum;
+
 		req.m_numSummaryLines    = m_si->m_numLinesInSummary;
 		req.m_maxCacheAge        = maxAge;
 		req.m_wcache             = m_si->m_wcache; // addToCache
@@ -1173,7 +1433,13 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 	// gotSummary() already, so do not call it again!!
 	if ( recalled ) return true;
 	// if we got nothing, that's it
-	if ( m_msg3a.m_numDocIds <= 0 ) return true;
+	if ( m_msg3a.m_numDocIds <= 0 ) {
+		// but if in streaming mode we still have to stream the
+		// empty results back
+		if ( m_si->m_streamResults ) return gotSummary ( );
+		// otherwise, we're done
+		return true;
+	}
 	// . i guess crash here for now
 	// . seems like we can call reallocMsg20Buf() and the first 50
 	//   can already be set, so we drop down to here... so don't core
@@ -1184,6 +1450,29 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 	// . sets g_errno on error
 	return gotSummary ( );
 }
+
+Msg20 *Msg40::getAvailMsg20 ( ) {
+	for ( long i = 0 ; i < m_numMsg20s ; i++ ) {
+		// m_inProgress is set to false right before it
+		// calls Msg20::m_callback which is gotSummaryWrapper()
+		// so we should be ok with this
+		if ( m_msg20[i]->m_launched ) continue;
+		return m_msg20[i];
+	}
+	// how can this happen???
+	char *xx=NULL;*xx=0; 
+	return NULL;
+}
+
+Msg20 *Msg40::getCompletedSummary ( long ix ) {
+	for ( long i = 0 ; i < m_numMsg20s ; i++ ) {
+		if ( m_msg20[i]->m_ii != ix ) continue;
+		if ( m_msg20[i]->m_inProgress ) return NULL;
+		return m_msg20[i];
+	}
+	return NULL;
+}
+
 
 bool gotSummaryWrapper ( void *state ) {
 	Msg40 *THIS  = (Msg40 *)state;
@@ -1198,6 +1487,24 @@ bool gotSummaryWrapper ( void *state ) {
 	// now call callback, we're done
 	THIS->m_callback ( THIS->m_state );
 	return true;
+}
+
+void doneSendingWrapper9 ( void *state , TcpSocket *sock ) {
+	Msg40 *THIS = (Msg40 *)state;
+	// the send completed, count it
+	THIS->m_sendsIn++;
+	// socket error? if client closes the socket midstream we get one.
+	if ( g_errno ) {
+		THIS->m_socketHadError = g_errno;
+		log("msg40: streaming socket had error: %s",
+		    mstrerror(g_errno));
+	}
+	// clear it so we don't think it was a msg20 error below
+	g_errno = 0;
+	// try to send more... returns false if blocked on something
+	if ( ! THIS->gotSummary() ) return;
+	// all done!!!???
+	THIS->m_callback ( THIS->m_state );
 }
 
 // . returns false if not all replies have been received (or timed/erroredout)
@@ -1226,6 +1533,28 @@ bool Msg40::gotSummary ( ) {
 		// reset g_errno
 		g_errno = 0;
 	}
+
+	// initialize dedup table if we haven't already
+	if ( ! m_dedupTable.isInitialized() &&
+	     ! m_dedupTable.set (4,0,64,NULL,0,false,m_si->m_niceness,"srdt") )
+		log("query: error initializing dedup table: %s",
+		    mstrerror(g_errno));
+
+	State0 *st = (State0 *)m_state;
+
+	// keep socket alive if not streaming. like downloading csv...
+	long now2 = getTimeLocal();
+	if ( now2 - m_lastHeartbeat >= 10 && ! m_si->m_streamResults &&
+	     // incase socket is closed and recycled for another connection
+	     st->m_socket->m_numDestroys == st->m_numDestroys ) {
+		m_lastHeartbeat = now2;
+		int n = ::send ( st->m_socket->m_sd , " " , 1 , 0 );
+		log("msg40: sent heartbeat of %li bytes on sd=%li",
+		    (long)n,(long)st->m_socket->m_sd);
+	}
+
+
+
 	/*
 	// sanity check
 	for ( long i = 0 ; i < m_msg3a.m_numDocIds ; i++ ) {
@@ -1247,13 +1576,179 @@ bool Msg40::gotSummary ( ) {
 
  doAgain:
 
+	SafeBuf *sb = &st->m_sb;
+
+	sb->reset();
+
+	// this is in PageResults.cpp
+	if ( m_si && m_si->m_streamResults && ! m_printedHeader ) {
+		// only print header once
+		m_printedHeader = true;
+		printHttpMime ( st );
+		printSearchResultsHeader ( st );
+	}
+
+	for ( ; m_si && m_si->m_streamResults&&m_printi<m_msg3a.m_numDocIds ;
+	      m_printi++){
+		// if we are waiting on our previous send to complete... wait..
+		if ( m_sendsOut > m_sendsIn ) break;
+
+		// get summary for result #m_printi
+		Msg20 *m20 = getCompletedSummary ( m_printi );
+
+		// if printing csv we need the first 100 results back
+		// to get the most popular csv headers for to print that
+		// as the first row in the csv output. if we print a
+		// results with a column not in the header row then we
+		// augment the headers then and there, although the header
+		// row will be blank for the new column, we can put
+		// the new header row at the end of the file i guess. this way
+		// we can immediately start streaming back the csv.
+		if ( m_needFirstReplies ) {
+			// need at least this many replies to process
+			if ( m_numReplies < m_needFirstReplies )
+				break;
+			// ensure we got the TOP needFirstReplies in order
+			// of their display to ensure consistency
+			long k;
+			for ( k = 0 ; k < m_needFirstReplies ; k++ ) {
+				Msg20 *xx = getCompletedSummary(k);
+				if ( ! xx ) break;
+				if ( ! xx->m_r ) break;
+			}
+			// if not all have come back yet, wait longer...
+			if ( k < m_needFirstReplies ) break;
+			// now make the csv header and print it
+			printCSVHeaderRow ( sb );
+			// and no longer need to do this logic
+			m_needFirstReplies = 0;
+		}
+
+		// otherwise, get the summary for result #m_printi
+		//Msg20 *m20 = m_msg20[m_printi];
+
+		//if ( ! m20 ) {
+		//	log("msg40: m20 NULL #%li",m_printi);
+		//	continue;
+		//}
+
+		// if result summary #i not yet in, wait...
+		if ( ! m20 ) 
+			break;
+
+		// wait if no reply for it yet
+		//if ( m20->m_inProgress )
+		//	break;
+
+		if ( m20->m_errno ) {
+			log("msg40: sum #%li error: %s",
+			    m_printi,mstrerror(m20->m_errno));
+			// make it available to be reused
+			m20->reset();
+			continue;
+		}
+
+		// get the next reply we are waiting on to print results order
+		Msg20Reply *mr = m20->m_r;
+		if ( ! mr ) break;
+		//if ( ! mr ) { char *xx=NULL;*xx=0; }
+
+		// primitive deduping. for diffbot json exclude url's from the
+		// XmlDoc::m_contentHash32.. it will be zero if invalid i guess
+		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
+		     mr->m_contentHash32 &&
+		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) ) {
+			//if ( g_conf.m_logDebugQuery )
+			log("msg40: dup sum #%li (%lu)",m_printi,
+			    mr->m_contentHash32);
+			// make it available to be reused
+			m20->reset();
+			continue;
+		}
+
+		// return true with g_errno set on error
+		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
+		     mr->m_contentHash32 &&
+		     ! m_dedupTable.addKey ( &mr->m_contentHash32 ) ) {
+			m_hadPrintError = true;
+			log("msg40: error adding to dedup table: %s",
+			    mstrerror(g_errno));
+		}
+
+
+		log("msg40: printing #%li (%lu)",m_printi,mr->m_contentHash32);
+
+		// . ok, we got it, so print it and stream it
+		// . this might set m_hadPrintError to true
+		printSearchResult9 ( m_printi );
+
+		// now free the reply to save memory since we could be 
+		// streaming back 1M+. we call reset below, no need for this.
+		//m20->freeReply();
+
+		// return it so getAvailMsg20() can use it again
+		// this will set m_launched to false
+		m20->reset();
+	}
+
+	// set it to true on all but the last thing we send!
+	if ( m_si->m_streamResults )
+		st->m_socket->m_streamingMode = true;
+
+	// . wrap it up with Next 10 etc.
+	// . this is in PageResults.cpp
+	if ( m_si && m_si->m_streamResults && ! m_printedTail &&
+	     m_printi >= m_msg3a.m_numDocIds ) {
+		m_printedTail = true;
+		printSearchResultsTail ( st );
+		if ( m_sendsIn < m_sendsOut ) { char *xx=NULL;*xx=0; }
+		// this will be our final send
+		st->m_socket->m_streamingMode = false;
+	}
+
+
+	TcpServer *tcp = &g_httpServer.m_tcp;
+
+	//g_conf.m_logDebugTcp = 1;
+
+	// . transmit the chunk in sb if non-zero length
+	// . steals the allocated buffer from sb and stores in the 
+	//   TcpSocket::m_sendBuf, which it frees when socket is
+	//   ultimately destroyed or we call sendChunk() again.
+	// . when TcpServer is done transmitting, it does not close the
+	//   socket but rather calls doneSendingWrapper() which can call
+	//   this function again to send another chunk
+	// . when we are truly done sending all the data, then we set lastChunk
+	//   to true and TcpServer.cpp will destroy m_socket when done
+	if ( sb->length() &&
+	     // did client browser close the socket on us midstream?
+	     ! m_socketHadError &&
+	     ! tcp->sendChunk ( st->m_socket , 
+				sb  ,
+				this ,
+				doneSendingWrapper9 ) )
+		// if it blocked, inc this count. we'll only call m_callback 
+		// above when m_sendsIn equals m_sendsOut... and 
+		// m_numReplies == m_numRequests
+		m_sendsOut++;
+
+
+	// writing on closed socket?
+	if ( g_errno ) {
+		m_socketHadError = g_errno;
+		log("msg40: got tcp error : %s",mstrerror(g_errno));
+	}
+
 	// do we need to launch another batch of summary requests?
-	if ( m_numRequests < m_msg3a.m_numDocIds ) {
+	if ( m_numRequests < m_msg3a.m_numDocIds && ! m_socketHadError ) {
 		// . if we can launch another, do it
 		// . say "true" here so it does not call us, gotSummary() and 
 		//   do a recursive stack explosion
 		// . this returns false if still waiting on more to come back
 		if ( ! launchMsg20s ( true ) ) return false; 
+		// it won't launch now if we are bottlnecked waiting for
+		// m_printi's summary to come in
+		if ( m_si->m_streamResults ) return false;
 		// maybe some were cached?
 		//goto refilter;
 		// it returned true, so m_numRequests == m_numReplies and
@@ -1271,6 +1766,18 @@ bool Msg40::gotSummary ( ) {
 	// . TODO: evaluate if this hurts us
 	if ( m_numReplies < m_numRequests )
 		return false;
+
+
+	// if streaming results, we are done
+	if ( m_si && m_si->m_streamResults ) {
+		// unless waiting for last transmit to complete
+		if ( m_sendsOut > m_sendsIn ) return false;
+		// delete everything! no, doneSendingWrapper9 does...
+		//mdelete(st, sizeof(State0), "msg40st0");
+		//delete st;
+		// otherwise, all done!
+		return true;
+	}
 
 
 	// save this before we increment m_numContiguous
@@ -1354,7 +1861,8 @@ bool Msg40::gotSummary ( ) {
 	long long took;
 
 	// shortcut
-	Query *q = m_msg3a.m_q;
+	//Query *q = m_msg3a.m_q;
+	Query *q = m_si->m_q;
         
 	//log(LOG_DEBUG, "query: msg40: deduping from %ld to %ld", 
 	//oldNumContiguous, m_numContiguous);
@@ -1456,6 +1964,8 @@ bool Msg40::gotSummary ( ) {
 	long dedupPercent = 0;
 	if ( m_si->m_doDupContentRemoval && m_si->m_percentSimilarSummary )
 		dedupPercent = m_si->m_percentSimilarSummary;
+	// icc=1 turns this off too i think
+	if ( m_si->m_includeCachedCopy ) dedupPercent = 0;
 	// if the user only requested docids, we have no summaries
 	if ( m_si->m_docIdsOnly ) dedupPercent = 0;
 
@@ -1646,7 +2156,9 @@ bool Msg40::gotSummary ( ) {
 		      m_docsToGet , m_msg3aRecallCnt);
 
 	// if we do not have enough visible, try to get more
-	if ( visible < m_docsToGetVisible && m_msg3a.m_moreDocIdsAvail ) {
+	if ( visible < m_docsToGetVisible && m_msg3a.m_moreDocIdsAvail &&
+	     // doesn't work on multi-coll just yet, it cores
+	     m_numCollsToSearch == 1 ) {
 		// can it cover us?
 		long need = m_msg3a.m_docsToGet + 20;
 		// note it
@@ -1892,7 +2404,7 @@ bool Msg40::gotSummary ( ) {
 			return true;
 		}
 
-#ifdef NEEDLICENSE
+
 		// now make the fast facts from the gigabits and the
 		// samples. these are sentences containing the query and
 		// a gigabit.
@@ -1902,7 +2414,7 @@ bool Msg40::gotSummary ( ) {
 			// g_errno should be set on error here!
 			return true;
 		}
-#endif
+
 
 		/*
 		long ng;
@@ -2005,7 +2517,8 @@ bool Msg40::gotSummary ( ) {
 		m_msg3a.m_scores        [c] = m_msg3a.m_scores        [i];
 		m_msg3a.m_clusterLevels [c] = m_msg3a.m_clusterLevels [i];
 		m_msg20                 [c] = m_msg20                 [i];
-		m_msg3a.m_scoreInfos    [c] = m_msg3a.m_scoreInfos    [i];
+		if ( m_msg3a.m_scoreInfos )
+			m_msg3a.m_scoreInfos [c] = m_msg3a.m_scoreInfos [i];
 		long need = m_si->m_docsWanted;
 		// if done, bail
 		if ( ++c >= need ) break;
@@ -2079,7 +2592,7 @@ bool Msg40::gotSummary ( ) {
 		return true;
 	}
 
-	if ( ! m_r.m_getDocIdScoringInfo ) {
+	if ( ! m_msg3a.m_rrr.m_getDocIdScoringInfo ) {
 		// make key based on the hash of certain vars in SearchInput
 		key_t k = m_si->makeKey();
 		// cache it
@@ -2087,7 +2600,7 @@ bool Msg40::gotSummary ( ) {
 				       k                     ,
 				       p                     , // rec
 				       tmpSize               , // recSize
-				       m_si->m_coll2         ,
+				       m_firstCollnum ,//m_si->m_coll2
 				       m_si->m_niceness      ,
 				       3                     ); //timeout=3secs
 	}
@@ -2234,7 +2747,7 @@ long Msg40::serialize ( char *buf , long bufLen ) {
 		// return -1 on error, g_errno should be set
 		long nb = m_msg20[i]->serialize ( p , pend - p ) ;
 		// count it
-		if ( m_r.m_debug )
+		if ( m_msg3a.m_rrr.m_debug )
 			log("query: msg40 serialize msg20size=%li",nb);
 		//if ( m_r.m_debug ) {
 		//	long mcount = 0;
@@ -2264,7 +2777,7 @@ long Msg40::serialize ( char *buf , long bufLen ) {
 	//if ( z == -1 ) return -1;
 	//p += z;
 
-	if ( m_r.m_debug )
+	if ( m_msg3a.m_rrr.m_debug )
 		log("query: msg40 serialize nd=%li "
 		    "msg3asize=%li ",m_msg3a.m_numDocIds,nb);
 
@@ -4324,9 +4837,6 @@ void setRepeatScores ( Words *words ,
 
 }
 
-// a separate license must be acq'd to use this code for commercial reasons
-#ifdef NEEDLICENSE
-
 ///////////////////
 //
 // FAST FACTS
@@ -4653,4 +5163,386 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 	return true;
 }
 
-#endif
+
+// . printSearchResult into "sb"
+bool Msg40::printSearchResult9 ( long ix ) {
+
+	// . we stream results right onto the socket
+	// . useful for thousands of results... and saving mem
+	if ( ! m_si || ! m_si->m_streamResults ) { char *xx=NULL;*xx=0; }
+
+	// get state0
+	State0 *st = (State0 *)m_state;
+
+	//SafeBuf *sb = &st->m_sb;
+	// clear it since we are streaming
+	//sb->reset();
+
+	Msg40 *msg40 = &st->m_msg40;
+
+	// then print each result
+	// don't display more than docsWanted results
+	
+	// prints in xml or html
+	if ( m_numPrinted < msg40->getDocsWanted() ) {
+
+		if ( m_si->m_format == FORMAT_CSV ) {
+			printJsonItemInCSV ( st , ix );
+			//log("print: printing #%li csv",(long)ix);
+		}
+
+		// print that out into st->m_sb safebuf
+		else if ( ! printResult ( st , ix ) ) {
+			// oom?
+			if ( ! g_errno ) g_errno = EBADENGINEER;
+			log("query: had error: %s",mstrerror(g_errno));
+			m_hadPrintError = true;
+		}
+
+		// count it
+		m_numPrinted++;
+
+	}
+
+	return true;
+}
+	
+
+bool printHttpMime ( State0 *st ) {
+
+	SearchInput *si = &st->m_si;
+
+	// grab the query
+	//Msg40 *msg40 = &(st->m_msg40);
+	//char  *q    = msg40->getQuery();
+	//long   qlen = msg40->getQueryLen();
+
+  	//char  local[ 128000 ];
+	//SafeBuf sb(local, 128000);
+	SafeBuf *sb = &st->m_sb;
+	// reserve 1.5MB now!
+	if ( ! sb->reserve(1500000 ,"pgresbuf" ) ) // 128000) )
+		return true;
+	// just in case it is empty, make it null terminated
+	sb->nullTerm();
+
+	char *ct = "text/csv";
+	if ( si->m_format == FORMAT_JSON )
+		ct = "application/json";
+	if ( si->m_format == FORMAT_XML )
+		ct = "text/xml";
+	//if ( si->m_format == FORMAT_TEXT )
+	//	ct = "text/plain";
+	if ( si->m_format == FORMAT_CSV )
+		ct = "text/csv";
+
+	// . if we haven't yet sent an http mime back to the user
+	//   then do so here, the content-length will not be in there
+	//   because we might have to call for more spiderdb data
+	HttpMime mime;
+	mime.makeMime ( -1, // totel content-lenght is unknown!
+			0 , // do not cache (cacheTime)
+			0 , // lastModified
+			0 , // offset
+			-1 , // bytesToSend
+			NULL , // ext
+			false, // POSTReply
+			ct, // "text/csv", // contenttype
+			"utf-8" , // charset
+			-1 , // httpstatus
+			NULL ); //cookie
+	sb->safeMemcpy(mime.getMime(),mime.getMimeLen() );
+	return true;
+}
+
+/////////////////
+//
+// CSV LOGIC from PageResults.cpp
+//
+/////////////////
+
+// return 1 if a should be before b
+static int csvPtrCmp ( const void *a, const void *b ) {
+	//JsonItem *ja = (JsonItem **)a;
+	//JsonItem *jb = (JsonItem **)b;
+	char *pa = *(char **)a;
+	char *pb = *(char **)b;
+	if ( strcmp(pa,"type") == 0 ) return -1;
+	if ( strcmp(pb,"type") == 0 ) return  1;
+	// force title on top
+	if ( strcmp(pa,"product.title") == 0 ) return -1;
+	if ( strcmp(pb,"product.title") == 0 ) return  1;
+	if ( strcmp(pa,"title") == 0 ) return -1;
+	if ( strcmp(pb,"title") == 0 ) return  1;
+	// otherwise string compare
+	int val = strcmp(pa,pb);
+	return val;
+}
+	
+#include "Json.h"
+
+// 
+// print header row in csv
+//
+bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
+
+	//Msg40 *msg40 = &st->m_msg40;
+	//long numResults = msg40->getNumResults();
+
+	char tmp1[1024];
+	SafeBuf tmpBuf (tmp1 , 1024);
+
+	char tmp2[1024];
+	SafeBuf nameBuf (tmp2, 1024);
+
+	char nbuf[27000];
+	HashTableX nameTable;
+	if ( ! nameTable.set ( 8,4,2048,nbuf,27000,false,0,"ntbuf") )
+		return false;
+
+	long niceness = 0;
+
+	// . scan every fucking json item in the search results.
+	// . we still need to deal with the case when there are so many
+	//   search results we have to dump each msg20 reply to disk in
+	//   order. then we'll have to update this code to scan that file.
+
+	for ( long i = 0 ; i < m_needFirstReplies ; i++ ) {
+
+		Msg20 *m20 = getCompletedSummary(i);
+		if ( ! m20 ) break;
+		if ( m20->m_errno ) continue;
+		if ( ! m20->m_r ) { char *xx=NULL;*xx=0; }
+
+		Msg20Reply *mr = m20->m_r;
+
+		// get content
+		char *json = mr->ptr_content;
+		// how can it be empty?
+		if ( ! json ) continue;
+
+		// parse it up
+		Json jp;
+		jp.parseJsonStringIntoJsonItems ( json , niceness );
+
+		// scan each json item
+		for ( JsonItem *ji = jp.getFirstItem(); ji ; ji = ji->m_next ){
+
+			// skip if not number or string
+			if ( ji->m_type != JT_NUMBER && 
+			     ji->m_type != JT_STRING )
+				continue;
+
+			// if in an array, do not print! csv is not
+			// good for arrays... like "media":[....] . that
+			// one might be ok, but if the elements in the
+			// array are not simple types, like, if they are
+			// unflat json objects then it is not well suited
+			// for csv.
+			if ( ji->isInArray() ) 
+				continue;
+
+			// reset length of buf to 0
+			tmpBuf.reset();
+
+			// . get the name of the item into "nameBuf"
+			// . returns false with g_errno set on error
+			if ( ! ji->getCompoundName ( tmpBuf ) )
+				return false;
+
+			// is it new?
+			long long h64 = hash64n ( tmpBuf.getBufStart() );
+			if ( nameTable.isInTable ( &h64 ) ) continue;
+
+			// record offset of the name for our hash table
+			long nameBufOffset = nameBuf.length();
+			
+			// store the name in our name buffer
+			if ( ! nameBuf.safeStrcpy ( tmpBuf.getBufStart() ) )
+				return false;
+			if ( ! nameBuf.pushChar ( '\0' ) )
+				return false;
+
+			// it's new. add it
+			if ( ! nameTable.addKey ( &h64 , &nameBufOffset ) )
+				return false;
+
+		}
+	}
+
+	// . make array of ptrs to the names so we can sort them
+	// . try to always put title first regardless
+	char *ptrs [ 1024 ];
+	long numPtrs = 0;
+	for ( long i = 0 ; i < nameTable.m_numSlots ; i++ ) {
+		if ( ! nameTable.m_flags[i] ) continue;
+		long off = *(long *)nameTable.getValueFromSlot(i);
+		char *p = nameBuf.getBufStart() + off;
+		ptrs[numPtrs++] = p;
+		if ( numPtrs >= 1024 ) break;
+	}
+
+	// sort them
+	qsort ( ptrs , numPtrs , 4 , csvPtrCmp );
+
+	// set up table to map field name to column for printing the json items
+	HashTableX *columnTable = &m_columnTable;
+	if ( ! columnTable->set ( 8,4, numPtrs * 4,NULL,0,false,0,"coltbl" ) )
+		return false;
+
+	// now print them out as the header row
+	for ( long i = 0 ; i < numPtrs ; i++ ) {
+		if ( i > 0 && ! sb->pushChar(',') ) return false;
+		if ( ! sb->safeStrcpy ( ptrs[i] ) ) return false;
+		// record the hash of each one for printing out further json
+		// objects in the same order so columns are aligned!
+		long long h64 = hash64n ( ptrs[i] );
+		if ( ! columnTable->addKey ( &h64 , &i ) ) 
+			return false;
+	}
+
+	m_numCSVColumns = numPtrs;
+
+	if ( ! sb->pushChar('\n') )
+		return false;
+	if ( ! sb->nullTerm() )
+		return false;
+
+	return true;
+}
+
+// returns false and sets g_errno on error
+bool Msg40::printJsonItemInCSV ( State0 *st , long ix ) {
+
+	long niceness = 0;
+
+	//
+	// get the json from the search result
+	//
+	Msg20 *m20 = getCompletedSummary(ix);
+	if ( ! m20 ) return false;
+	if ( m20->m_errno ) return false;
+	if ( ! m20->m_r ) { char *xx=NULL;*xx=0; }
+	Msg20Reply *mr = m20->m_r;
+	// get content
+	char *json = mr->ptr_content;
+	// how can it be empty?
+	if ( ! json ) { char *xx=NULL;*xx=0; }
+
+
+	// parse the json
+	Json jp;
+	jp.parseJsonStringIntoJsonItems ( json , niceness );
+
+	HashTableX *columnTable = &m_columnTable;
+	long numCSVColumns = m_numCSVColumns;
+
+	//SearchInput *si = m_si;
+	SafeBuf *sb = &st->m_sb;
+
+	
+	// make buffer space that we need
+	char ttt[1024];
+	SafeBuf ptrBuf(ttt,1024);
+	long maxCols = numCSVColumns;
+	// allow for additionals colls
+	maxCols += 100;
+	long need = maxCols * sizeof(JsonItem *);
+	if ( ! ptrBuf.reserve ( need ) ) return false;
+	JsonItem **ptrs = (JsonItem **)ptrBuf.getBufStart();
+
+	// reset json item ptrs for csv columns. all to NULL
+	memset ( ptrs , 0 , need );
+
+	char tmp1[1024];
+	SafeBuf tmpBuf (tmp1 , 1024);
+
+	JsonItem *ji;
+
+	///////
+	//
+	// print json item in csv
+	//
+	///////
+	for ( ji = jp.getFirstItem(); ji ; ji = ji->m_next ) {
+
+		// skip if not number or string
+		if ( ji->m_type != JT_NUMBER && 
+		     ji->m_type != JT_STRING )
+			continue;
+
+		// skip if not well suited for csv (see above comment)
+		if ( ji->isInArray() ) continue;
+
+		// . get the name of the item into "nameBuf"
+		// . returns false with g_errno set on error
+		if ( ! ji->getCompoundName ( tmpBuf ) )
+			return false;
+
+		// is it new?
+		long long h64 = hash64n ( tmpBuf.getBufStart() );
+
+		long slot = columnTable->getSlot ( &h64 ) ;
+		// MUST be in there
+		// get col #
+		long column = -1;
+		if ( slot >= 0 )
+			column =*(long *)columnTable->getValueFromSlot ( slot);
+
+		// sanity
+		if ( column == -1 ) {//>= numCSVColumns ) { 
+			// add a new column...
+			long newColnum = numCSVColumns + 1;
+			// silently drop it if we already have too many cols
+			if ( newColnum >= maxCols ) continue;
+			columnTable->addKey ( &h64 , &newColnum );
+			column = newColnum;
+			numCSVColumns++;
+			//char *xx=NULL;*xx=0; }
+		}
+
+		// set ptr to it for printing when done parsing every field
+		// for this json item
+		ptrs[column] = ji;
+	}
+
+	// now print out what we got
+	for ( long i = 0 ; i < numCSVColumns ; i++ ) {
+		// , delimeted
+		if ( i > 0 ) sb->pushChar(',');
+		// get it
+		ji = ptrs[i];
+		// skip if none
+		if ( ! ji ) continue;
+
+		// skip "html" field... too spammy for csv and > 32k causes
+		// libreoffice calc to truncate it and break its parsing
+		if ( ji->m_name && 
+		     //! ji->m_parent &&
+		     strcmp(ji->m_name,"html")==0)
+			continue;
+
+		//
+		// get value and print otherwise
+		//
+		if ( ji->m_type == JT_NUMBER ) {
+			// print numbers without double quotes
+			if ( ji->m_valueDouble *10000000.0 == 
+			     (double)ji->m_valueLong * 10000000.0 )
+				sb->safePrintf("%li",ji->m_valueLong);
+			else
+				sb->safePrintf("%f",ji->m_valueDouble);
+			continue;
+		}
+
+		// print the value
+		sb->pushChar('\"');
+		sb->csvEncode ( ji->getValue() , ji->getValueLen() );
+		sb->pushChar('\"');
+	}
+
+	sb->pushChar('\n');
+	sb->nullTerm();
+
+	return true;
+}

@@ -620,7 +620,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		       "<td colspan=50>"
 		       "<center><b>Spider Compression Proxy Stats</b> "
 
-		       " &nbsp; [<a href=\"/master/stats?reset=2\">"
+		       " &nbsp; [<a href=\"/admin/stats?reset=2\">"
 		       "reset</a>]</td></tr>\n"
 
 		       "<tr class=poo>"
@@ -828,7 +828,7 @@ bool sendPageStats ( TcpSocket *s , HttpRequest *r ) {
 		       "<td colspan=50>"
 		       "<center><b>Message Stats</b> "
 
-		       " &nbsp; [<a href=\"/master/stats?reset=1\">"
+		       " &nbsp; [<a href=\"/admin/stats?reset=1\">"
 		       "reset</a>]</td></tr>\n"
 
 		       "<tr class=poo>"

@@ -321,6 +321,8 @@ void repairWrapper ( int fd , void *state ) {
 	// rdbs with the rebuilt/repaired data. we move the old rdb data files
 	// into the trash and replace it with the new data.
 	if ( g_repairMode == 7 ) {
+		// wait for autosave...
+		if ( g_process.m_mode ) return; // = SAVE_MODE;		
 		// save to disk so it zeroes out indexdbRebuild-saved.dat
 		// which should have 0 records in it cuz we dumped it above
 		// in g_repair.dumpLoop()
@@ -1410,7 +1412,7 @@ bool Repair::scanRecs ( ) {
 	// get the list of recs
 	g_errno = 0;
 	if ( m_msg5.getList ( RDB_TITLEDB        ,
-			      m_coll           ,
+			      m_collnum           ,
 			      &m_titleRecList      ,
 			      m_nextTitledbKey   ,
 			      m_endKey         , // should be maxed!
@@ -2034,6 +2036,9 @@ bool Repair::injectTitleRec ( ) {
 	// use the ptr_utf8Content that we have
 	xd->m_recycleContent = true;
 
+	// rebuild the content hash since we change that function sometimes
+	xd->m_contentHash32Valid = false;
+
 	// hmmm... take these out to see if fixes the core
 	//xd->m_linkInfo1Valid = false;
 	//xd->m_linkInfo2Valid = false;
@@ -2284,7 +2289,7 @@ bool Repair::printRepairStatus ( SafeBuf *sb , long fromIp ) {
 			 "<tr bgcolor=#%s>"
 			 "<td width=50%%><b>host ID with min repair mode"
 			 "</b></td>"
-			 "<td><a href=\"http://%s:%hu/master/repair\">"
+			 "<td><a href=\"http://%s:%hu/admin/repair\">"
 			 "%li</a></td></tr>\n"
 
 			 "<tr bgcolor=#%s><td><b>old collection</b></td>"
@@ -2660,6 +2665,8 @@ bool saveAllRdbs ( void *state , void (* callback)(void *state) ) {
 	Rdb **rdbs = getAllRdbs ( &nsr );
 	for ( long i = 0 ; i < nsr ; i++ ) {
 		Rdb *rdb = rdbs[i];
+		// skip if not initialized
+		if ( ! rdb->isInitialized() ) continue;
 		// save/close it
 		rdb->close(NULL,doneSavingRdb,false,false);
 	}

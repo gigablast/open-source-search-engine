@@ -344,7 +344,7 @@ bool Syncdb::loop2 ( ) {
 	m_outstanding = true;
 	// get the meta list from on disk i guess, if not in tree
 	if ( ! m_msg5.getList ( RDB_SYNCDB     ,
-				NULL           , // coll
+				(collnum_t)0           , // coll
 				&m_list        ,
 				(char *)&sk    , // startKey
 				(char *)&ek    , // endKey
@@ -611,7 +611,7 @@ bool Syncdb::loop4 ( ) {
 					0               , // maxCacheAge
 					false           , // addToCache
 					RDB_SYNCDB      ,
-					NULL            , // coll
+					0            , // collnum
 					&m_list         ,
 					(char *)&sk2    ,
 					(char *)&ek2    ,
@@ -1036,9 +1036,10 @@ bool Syncdb::verify ( char *coll ) {
 	key_t endKey;
 	startKey.setMin();
 	endKey.setMax();
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 	
 	if ( ! msg5.getList ( RDB_SYNCDB    ,
-			      coll          ,
+			      cr->m_collnum          ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,

@@ -141,7 +141,7 @@ bool Catdb::verify ( char *coll ) {
 	//long minRecSizes = 64000;
 	
 	if ( ! msg5.getList ( RDB_CATDB     ,
-			      "",//coll          ,
+			      0,//collnum          ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,

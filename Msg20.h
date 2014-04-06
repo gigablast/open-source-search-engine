@@ -121,6 +121,8 @@ class Msg20Request {
 	//   serialized using Address::serialize(), and all the start dates
 	//   from now onward
 	long       m_eventId                   ;
+	// we now use the numeric collection # and not the ptr_coll
+	collnum_t  m_collnum;
 	// set this to true when you pass in m_eventIdBits...
 	char       m_getEventSummary           ;
 	char       m_summaryMode               ;
@@ -189,7 +191,7 @@ class Msg20Request {
 	char      *ptr_termFreqs     ;
 	char      *ptr_affWeights    ;
 	char      *ptr_linkee        ; // used by Msg25 for getting link text
-	char      *ptr_coll          ;
+	//char      *ptr_coll          ;
 	char      *ptr_imgUrl        ;
 	char      *ptr_displayMetas  ;
 
@@ -206,7 +208,7 @@ class Msg20Request {
 	long       size_termFreqs    ;
 	long       size_affWeights   ;
 	long       size_linkee       ; // size includes terminating \0
-	long       size_coll         ; // size includes terminating \0
+	//long       size_coll         ; // size includes terminating \0
 	long       size_imgUrl       ;
 	long       size_displayMetas ; // size includes terminating \0
 
@@ -309,6 +311,7 @@ public:
 	//long       m_numLikers           ;
         bool       m_datedbDateIsEstimated;
 	long       m_errno               ; // LinkInfo uses it for LinkTextRepl
+	collnum_t  m_collnum             ; // collection # we came from
 	char       m_sumFromDmoz         ; // unused
 	long       m_hostHash            ;
 	char       m_noArchive           ;
@@ -334,7 +337,7 @@ public:
 	//long     m_numCatIds           ; // use size_catIds
 	//long     m_numIndCatIds        ; // use size_indCatIds
 	long       m_contentLen          ; // was m_docLen
-	//long       m_contentHash         ;
+	long       m_contentHash32       ;  // for deduping diffbot json objects streaming
 	//long     m_docSummaryScore     ;
 	//long     m_inSectionScore      ;
 	//float      m_proximityScore      ;
@@ -780,9 +783,11 @@ class Msg20 {
 	// so we can alloc arrays of these using mmalloc()
 	void constructor ();
 	void destructor  ();
+	void freeReply   ();
 	void reset       ();
 
 	long m_hack;
+	long m_ii;
 
 	// is the reply in progress? if msg20 has not launched a request
 	// this is false. if msg20 received its reply, this is false. 

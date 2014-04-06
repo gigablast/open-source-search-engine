@@ -901,8 +901,12 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 		//sleep(10000);
 		return NULL;
 	}
+	// save this i guess
+	long saved = s->m_numDestroys;
 	// clear it
 	memset ( s , 0 , sizeof(TcpSocket) );
+	// restore
+	s->m_numDestroys = saved;
 	// store sd in our TcpSocket
 	s->m_sd = sd;
 	// store the last action time as now (used for timeout'ing sockets)
@@ -1104,7 +1108,7 @@ bool TcpServer::closeLeastUsed ( long maxIdleTime ) {
 // . g_errno will be set by Loop if there was a kinda socket reset error
 void readSocketWrapper ( int sd , void *state ) {
 	// debug msg
-	//log("........... TcpServer::readSocketWrapper\n");
+	//log("........... TcpServer::readSocketWrapper %li\n",sd);
 	// extract our this ptr
 	TcpServer *THIS = (TcpServer *)state;
 	// get a TcpSocket from sd
@@ -1391,7 +1395,7 @@ bool TcpServer::setTotalToRead ( TcpSocket *s ) {
 // . we call this when socket is connected, too
 void writeSocketWrapper ( int sd , void *state ) {
 	// debug msg
-	// log("........... TcpServer::writeSocketWrapper\n");
+	//log("........... TcpServer::writeSocketWrapper sd=%li\n",sd);
 	TcpServer *THIS = (TcpServer *)state;
 	// get the TcpSocket for this socket descriptor
 	TcpSocket *s = THIS->getSocket ( sd );
@@ -1416,7 +1420,7 @@ void writeSocketWrapper ( int sd , void *state ) {
 			 iptoa(s->m_ip),nowms-s->m_lastActionTime);
 		// . some http servers close socket as end of transmission
 		// . so it's not really an g_errno
-		g_errno = 0;
+		if ( ! s->m_streamingMode ) g_errno = 0;
 		THIS->makeCallback ( s );
 		THIS->destroySocket ( s ); 
 		return; 
@@ -1455,6 +1459,14 @@ void writeSocketWrapper ( int sd , void *state ) {
 	if ( status == 1  &&  ! s->m_readBuf ) return;
 	// good?
 	g_errno = 0;
+
+	// in m_streamingMode this may call another sendChunk()!!!
+	// OR it may set streamingMode to false.. it can only do one or
+	// the other and not both!!! because if it sets streamingMode to
+	// false then we destroy the socket below!!!! so it can't be
+	// sending anything new!!!
+	bool wasStreaming = s->m_streamingMode;
+
 	// otherwise, call callback on done writing or error
 	THIS->makeCallback ( s );
 
@@ -1468,8 +1480,9 @@ void writeSocketWrapper ( int sd , void *state ) {
 	//	goto sendAgain;
 	//}
 
-	// wait for it to exit streaming mode before destroying
-	if ( s->m_streamingMode ) return;
+	// we have to do a final call to writeSocket with m_streamingMode
+	// set to false, so don't destroy socket just yet...
+	if ( wasStreaming ) return;
 
 	// . destroy the socket on error, recycle on transaction completion
 	// . this will also unregister all our callbacks for the socket
@@ -1494,6 +1507,8 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
  loop:
 	// send some stuff
 	long toSend = s->m_sendBufUsed - s->m_sendOffset;
+	// if nothing to send we are done!
+	//if ( ! toSend ) return 1;
 	// get a ptr to the msg piece to send
 	char *msg = s->m_sendBuf;
 	if ( ! msg ) return 1;
@@ -1545,7 +1560,11 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 	s->m_sendOffset += n;
 	// . if we sent less than we tried to send then block
 	// . we should be notified via sig/callback when we can send the rest
-	if ( n < toSend ) return 0;
+	if ( n < toSend ) {
+		//if ( g_conf.m_logDebugTcp )
+		//	log(".... Tcpserver: %li<%li",n,toSend);
+		return 0;
+	}
 	// . we sent all we were asked to, but our sendBuf may need a refill
 	// . call this routine to refill it
 	if ( s->m_totalSent  < s->m_totalToSend ) {
@@ -1690,6 +1709,8 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	if ( s->m_streamingMode ) { 
 		log("tcp: destroying socket in streaming mode. err=%s",
 		    mstrerror(g_errno));
+		// why is it being destroyed without g_errno set?
+		//if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		//char *xx=NULL;*xx=0; }
 	}
 
@@ -1835,6 +1856,14 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	if ( s->m_isIncoming ) m_numIncomingUsed--;
 	// clear it, this means no longer in use
 	s->m_startTime = 0LL;
+
+	// count # of destroys in case a function is still referencing
+	// this socket and streaming back data on it or something. it won't
+	// know we've destroyed it? we do call makeCallback before
+	// calling destroySocket() it seems, but that might not help
+	// for Msg40.cpp sending back search results.
+	s->m_numDestroys++;
+
 	// free TcpSocket from the array
 	//mfree ( s , sizeof(TcpSocket) ,"TcpServer");
 	m_tcpSockets [ sd ] = NULL;
@@ -2246,8 +2275,7 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 			    // call this function when done sending this chunk
 			    // so that it can read another chunk and call 
 			    // sendChunk() again.
-			    void (* doneSendingWrapper)( void *,TcpSocket *) ,
-			    bool lastChunk ) {
+			    void (* doneSendingWrapper)( void *,TcpSocket *)){
 
 	log("tcp: sending chunk of %li bytes", sb->length() );
 
@@ -2262,10 +2290,34 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 	s->m_sendOffset        = 0;
 	s->m_totalSent         = 0;
 	s->m_totalToSend       = 0;
+	s->m_totalSent         = 0;
 
+	//
+	// caller must set it to true on all but the last thing they send!!
+	//
 	// let it know not to close the socket while this is set
-	if ( ! lastChunk ) s->m_streamingMode = true;
-	else               s->m_streamingMode = false;
+	//if ( ! lastChunk ) s->m_streamingMode = true;
+	//else               s->m_streamingMode = false;
+	//s->m_streamingMode = true;
+
+
+	/*
+
+	g_conf.m_logDebugTcp = true;
+
+	long term = 20;
+	if ( sb->length() < term ) term = sb->length();
+	char *cp = sb->getBufStart() + term;
+	char c = *cp;
+	*cp = '\0';
+	log("tcp: chunkstart=%s",sb->getBufStart());
+	*cp = c;
+
+	long minus = 20;
+	if ( sb->length() < minus ) minus = sb->length() ;
+	log("tcp: chunkend=%s",sb->getBuf() - minus);
+	*/
+
 
 	// . start the send process
 	// . returns false if send did not complete

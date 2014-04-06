@@ -5,6 +5,9 @@
 #ifndef _PAGES_H_
 #define _PAGES_H_
 
+bool printRedBox2 ( SafeBuf *sb , bool isRootWebPage = false ) ;
+bool printRedBox ( SafeBuf *mb , bool isRootWebPage = false ) ;
+
 // for PageEvents.cpp and Accessdb.cpp
 //#define RESULTSWIDTHSTR "550px"
 
@@ -26,13 +29,18 @@ extern char *g_msg;
 // . declare all dynamic functions here
 // . these are all defined in Page*.cpp files
 // . these are called to send a dynamic page
+bool sendPageBasicSettings   ( TcpSocket *s , HttpRequest *r );
+bool sendPageBasicStatus     ( TcpSocket *s , HttpRequest *r );
+//bool sendPageBasicDiffbot    ( TcpSocket *s , HttpRequest *r );
+
+
+
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r );
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r, char *cookie );
 bool sendPageResults  ( TcpSocket *s , HttpRequest *r );
 //bool sendPageEvents   ( TcpSocket *s , HttpRequest *r );
 bool sendPageAddUrl   ( TcpSocket *s , HttpRequest *r );
 bool sendPageGet      ( TcpSocket *s , HttpRequest *r );
-bool sendPageLogin    ( TcpSocket *s , HttpRequest *r , char  *emsg );
 bool sendPageLogin    ( TcpSocket *s , HttpRequest *r );
 bool sendPageStats    ( TcpSocket *s , HttpRequest *r );
 bool sendPageHosts    ( TcpSocket *s , HttpRequest *r );
@@ -156,35 +164,6 @@ class Pages {
 				  char* bodyJavascript = "" );
 
 
-	char *printAdminTop            ( char        *p    , 
-					 char        *pend , 
-					 TcpSocket   *s    ,
-					 HttpRequest *r    ,
-					 char        *qs = NULL,
-					 char* bodyJavascript = "" ) ;
-
-	bool printAdminTop             ( SafeBuf *sb    ,
-					 long    page   ,
-					 //long    user   ,
-					 char   *username,
-					 char   *coll   ,
-					 char   *pwd    ,
-					 long    fromIp ,
-					 char   *qs = NULL, 
-					 char* bodyJavascript = "" );
-
-	char *printAdminTop            ( char *p      , 
-					 char *pend   , 
-					 long  page   ,
-					 //long  user   ,
-					 char *username,
-					 char *coll   ,
-					 char *pwd    ,
-					 long  fromIp ,
-					 char *qs     = "",
-					 char* bodyJavascript = "" ) ;
-
-
 	bool printAdminTop2 	       ( SafeBuf     *sb   ,
 					 TcpSocket   *s    ,
 					 HttpRequest *r    ,
@@ -206,32 +185,33 @@ class Pages {
 	void printFormTop(  SafeBuf *sb, HttpRequest *r );
 	void printFormData( SafeBuf *sb, TcpSocket *s, HttpRequest *r );
 
-	char *printAdminBottom         ( char *p, char *pend, HttpRequest *r );
-	char *printAdminBottom         ( char *p, char *pend);
+	//char *printAdminBottom       ( char *p, char *pend, HttpRequest *r );
+	//char *printAdminBottom       ( char *p, char *pend);
 	bool  printAdminBottom         ( SafeBuf *sb, HttpRequest *r );
 	bool  printAdminBottom         ( SafeBuf *sb);
 	bool  printAdminBottom2        ( SafeBuf *sb, HttpRequest *r );
 	bool  printAdminBottom2        ( SafeBuf *sb);
 	bool  printTail                ( SafeBuf* sb, 
 					 bool isLocal );
+	bool printSubmit ( SafeBuf *sb ) ;
 					 //long user , 
 					 //char *username,
 					 //char *pwd );
-	char *printTail                ( char *p    ,
-					 char *pend ,
-					 bool isLocal );
+	//char *printTail                ( char *p    ,
+	//				 char *pend ,
+	//				 bool isLocal );
 	//long  user ,
 	//char *username,
 	//char *pwd  ) ;
 	bool  printColors              ( SafeBuf *sb , char* bodyJavascript = "" ) ;
-	char *printColors              ( char *p , char *pend , 
-					 char* bodyJavascript = "");
+	//char *printColors              ( char *p , char *pend , 
+	//				 char* bodyJavascript = "");
 
-	char *printColors2             ( char *p , char *pend ) ;
+	//char *printColors2           ( char *p , char *pend ) ;
 	bool  printColors3	       ( SafeBuf *sb ) ;
-	char *printFocus               ( char *p , char *pend ) ;
+	//char *printFocus             ( char *p , char *pend ) ;
 	bool  printLogo                ( SafeBuf *sb, char *coll ) ;
-	char *printLogo                ( char *p , char *pend , char *coll ) ;
+	//char *printLogo              ( char *p , char *pend , char *coll ) ;
 	bool  printHostLinks           ( SafeBuf *sb  ,
 					 long  page   ,
 					 char *username ,
@@ -240,7 +220,7 @@ class Pages {
 					 char *pwd    ,
 					 long  fromIp ,
 					 char *qs = NULL ) ;
-
+	/*
 	char *printHostLinks           ( char *p      ,
 					 char *pend   ,
 					 long  page   ,
@@ -248,14 +228,12 @@ class Pages {
 					 char *pwd    ,
 					 long  fromIp ,
 					 char *qs = NULL ) ;
+	*/
 	bool  printAdminLinks          ( SafeBuf *sb, 
 					 long  page ,
-					 //long  user ,
-					 char *username,
 					 char *coll ,
-					 char *pwd  ,
-					 bool  top  ) ;
-
+					 bool isBasic );
+	/*
 	char *printAdminLinks          ( char *p    , 
 					 char *pend , 
 					 long  page ,
@@ -264,6 +242,7 @@ class Pages {
 					 char *coll ,
 					 char *pwd  ,
 					 bool  top  ) ;
+	*/
 	bool  printCollectionNavBar ( SafeBuf *sb     ,
 				      long  page     ,
 				      //long  user     ,
@@ -271,7 +250,7 @@ class Pages {
 				      char *coll     ,
 				      char *pwd      ,
 				      char *qs       );
-
+	/*
 	char *printCollectionNavBar    ( char *p    ,
 					 char *pend , 
 					 long  page ,
@@ -280,7 +259,7 @@ class Pages {
 					 char *coll ,
 					 char *pwd  ,
 					 char *qs = NULL );
-
+	*/
 	/*
 	bool printRulesetDropDown ( SafeBuf *sb        ,
 				    long  user         ,
@@ -321,25 +300,43 @@ enum {
 	PAGE_DIRECTORY   ,
 	PAGE_REPORTSPAM  ,
 	//PAGE_WORDVECTOR  ,
-	
+
+	// basic controls page /admin/basic
+	PAGE_BASIC_SETTINGS ,
+	PAGE_BASIC_STATUS ,
+	//PAGE_BASIC_SEARCH , // TODO
+	//PAGE_BASIC_DIFFBOT , // TODO
+	PAGE_BASIC_SECURITY ,
+	PAGE_BASIC_SEARCH ,
+
 	// master admin pages
 	PAGE_MASTER      , 
+	PAGE_SEARCH      ,  
+	PAGE_SPIDER      ,
+	PAGE_LOG         ,
+	PAGE_SECURITY    ,
+	PAGE_ADDCOLL     ,	
+	PAGE_DELCOLL     , 
+	PAGE_REPAIR      ,
+	PAGE_SITES , // site filters
+	PAGE_FILTERS     ,
+	PAGE_INJECT      , 
+	PAGE_ADDURL2     ,
+	PAGE_REINDEX     ,	
+
 	PAGE_HOSTS       ,
 	PAGE_STATS       , // 10
 	PAGE_STATSDB	 ,
 	PAGE_PERF        ,
 	PAGE_SOCKETS     ,
-	PAGE_LOG         ,
+
 	PAGE_LOGVIEW     ,
 //	PAGE_SYNC        , 
-	PAGE_SECURITY    ,
-	PAGE_ADDCOLL     ,	
-	PAGE_DELCOLL     , 
 	PAGE_AUTOBAN     , // 20
 	//PAGE_SPIDERLOCKS ,
 	PAGE_PROFILER    ,
 	PAGE_THREADS     ,
-	PAGE_REPAIR      ,
+
 //	PAGE_THESAURUS   , 
 
 	// . non master-admin pages (collection controls)
@@ -352,15 +349,9 @@ enum {
 	PAGE_TITLEDB     ,  
 	//PAGE_STATSDB	 ,
 
-	PAGE_SEARCH      ,  
-	PAGE_SPIDER      ,
 	PAGE_CRAWLBOT    , // 35
 	PAGE_SPIDERDB    , 
 	//PAGE_PRIORITIES  ,  // priority queue controls
-	PAGE_FILTERS     ,
-	PAGE_INJECT      , 
-	PAGE_ADDURL2     ,
-	PAGE_REINDEX     ,	
 	//PAGE_KEYWORDS    ,
 	PAGE_SEO         ,
 	PAGE_ACCESS      ,  //40	

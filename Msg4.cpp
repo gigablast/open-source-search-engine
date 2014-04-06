@@ -159,7 +159,7 @@ public:
 };
 
 
-// . injecting into the "test" coll flushes after each inject
+// . injecting into the "qatest123" coll flushes after each inject
 // . returns false if blocked and callback will be called
 bool flushMsg4Buffers ( void *state , void (* callback) (void *) ) {
 	// if all empty, return true now
@@ -535,6 +535,8 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 	m_next         = NULL;
 	m_shardOverride = shardOverride;
 
+ retry:
+
 	// get in line if there's a line
 	if ( s_msg4Head ) {
 		// add ourselves to the line
@@ -554,8 +556,21 @@ bool Msg4::addMetaList ( char      *metaList                 ,
 	// then do it
 	if ( addMetaList2 ( ) ) return true;
 
-	// sanity check
-	if ( s_msg4Head || s_msg4Tail ) { char *xx=NULL; *xx=0; }
+	// . sanity check
+	// . we sometimes get called with niceness 0 from possibly
+	//   an injection or something and from a quickpoll
+	//   inside addMetList2() in which case our addMetaList2() will
+	//   fail, assuming s_msg4Head got set, BUT it SHOULD be OK because
+	//   being interrupted at the one QUICKPOLL() in addMetaList2()
+	//   doesn't seem like it would hurt.
+	// . FURTHEMORE the multicast seems to always be called with
+	//   MAX_NICENESS so i'm not sure how niceness 0 will really help
+	//   with any of this stuff.
+	//if ( s_msg4Head || s_msg4Tail ) { char *xx=NULL; *xx=0; }
+	if ( s_msg4Head || s_msg4Tail ) {
+		log("msg4: got unexpected head"); // :)
+		goto retry;
+	}
 
 	// . spider hang bug
 	// . debug log. seems to happen a lot if not using threads..
@@ -708,6 +723,9 @@ bool Msg4::addMetaList2 ( ) {
 	// flush them buffers
 	//flushLocal();
 			       
+	// in case this was being used to hold the data, free it
+	m_tmpBuf.purge();
+
 	return true;
 }
 

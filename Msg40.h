@@ -117,7 +117,7 @@ class Msg40 {
 	bool computeGigabits( class TopicGroup *tg );
 	SafeBuf m_gigabitBuf;
 
-#ifdef NEEDLICENSE
+	// nuggabits...
 	bool computeFastFacts ( );
 	bool addFacts ( HashTableX *queryTable,
 			HashTableX *gbitTable ,
@@ -126,13 +126,14 @@ class Msg40 {
 			bool debugGigabits ,
 			class Msg20Reply *reply,
 			SafeBuf *factBuf ) ;
-#endif
 
 	SafeBuf m_factBuf;
 
 	// keep these public since called by wrapper functions
 	bool gotDocIds        ( ) ;
 	bool launchMsg20s     ( bool recalled ) ;
+	class Msg20 *getAvailMsg20();
+	class Msg20 *getCompletedSummary ( long ix );
 	bool getSummaries     ( ) ;
 	bool gotSummary       ( ) ;
 	bool reallocMsg20Buf ( ) ;
@@ -158,8 +159,8 @@ class Msg40 {
 	// . these routines give us back our inputted parameters we saved
 	char *getQuery              ( ) { return m_si->m_q->getQuery(); };
 	long  getQueryLen           ( ) { return m_si->m_q->getQueryLen(); };
-	char *getColl               ( ) { return m_si->m_coll2; };
-	long  getCollLen            ( ) { return m_si->m_collLen2; };
+	//char *getColl               ( ) { return m_si->m_coll2; };
+	//long  getCollLen            ( ) { return m_si->m_collLen2; };
 	long  getDocsWanted         ( ) { return m_si->m_docsWanted; };
 	long  getFirstResultNum     ( ) { return m_si->m_firstResultNum; };
 
@@ -171,7 +172,10 @@ class Msg40 {
 	long long getDocId  ( long i ){return m_msg3a.m_docIds[i]; };
 	long long *getDocIds(        ){return m_msg3a.m_docIds; };
 	float  getScore  ( long i ){return m_msg3a.m_scores[i]; };
-	class DocIdScore *getScoreInfo(long i){return m_msg3a.m_scoreInfos[i];}
+	class DocIdScore *getScoreInfo(long i){
+		if ( ! m_msg3a.m_scoreInfos ) return NULL;
+		return m_msg3a.m_scoreInfos[i];
+	}
 	//LinkInfo *getLinkInfo( long i){return m_msg20[i]->m_linkInfo; }
 	bool  moreResultsFollow ( )   {return m_moreToCome; };
 	time_t getCachedTime ( )      {return m_cachedTime; };
@@ -202,8 +206,21 @@ class Msg40 {
 	// Msg39 and all Msg20s must use the same clock timestamp
 	time_t m_nowUTC;
 
+	long m_lastHeartbeat;
+
+	bool printSearchResult9 ( long ix ) ;
+	HashTableX m_columnTable;
+	bool printCSVHeaderRow ( class SafeBuf *sb );
+	bool printJsonItemInCSV ( class State0 *st , long ix );
+	long m_numCSVColumns;
+
+
+	HashTableX m_dedupTable;
+
 	long m_msg3aRecallCnt;
-	Msg39Request m_r;
+	// this goes into msg3a now so we can send multiple msg3as out,
+	// 1 per collection
+	//Msg39Request m_r;
 
 	long       m_docsToGet;
 	long       m_docsToGetVisible;
@@ -211,7 +228,9 @@ class Msg40 {
 	// incoming parameters 
 	void       *m_state;
 	void      (* m_callback ) ( void *state );
-	
+
+	long m_needFirstReplies;
+
 	// max outstanding msg20s
 	//long       m_maxOutstanding;
 
@@ -236,6 +255,17 @@ class Msg40 {
 
 	char      *m_msg20StartBuf;
 	long       m_numToFree;
+
+	bool m_hadPrintError ;
+	long m_numPrinted    ;
+	bool m_printedHeader ;
+	bool m_printedTail   ;
+	bool m_lastChunk     ;
+	long m_sendsOut      ;
+	long m_sendsIn       ;
+	long m_printi        ;
+	long m_socketHadError;
+
 
 	// use msg3a to get docIds
 	Msg3a      m_msg3a;
@@ -306,6 +336,14 @@ class Msg40 {
 
 	// Msg2b for generating a directory
 	//Msg2b  m_msg2b;
+
+	bool mergeDocIdsIntoBaseMsg3a();
+	long m_numCollsToSearch;
+	class Msg3a **m_msg3aPtrs;
+	SafeBuf m_msg3aPtrBuf;
+	long m_num3aRequests;
+	long m_num3aReplies;
+	collnum_t m_firstCollnum;
 
 	PostQueryRerank m_postQueryRerank;
 

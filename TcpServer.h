@@ -105,8 +105,7 @@ class TcpServer {
 			 // call this function when done sending this chunk
 			 // so that it can read another chunk and call 
 			 // sendChunk() again.
-			 void (* doneSendingWrapper)( void *state,TcpSocket *),
-			 bool lastChunk );
+			 void (* doneSendingWrapper)(void *state,TcpSocket *));
 
 	// . returns false if blocked, true otherwise
 	// . sets errno on error

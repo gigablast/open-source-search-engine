@@ -59,7 +59,7 @@ class Msg1 {
 	// . when deleteRecs is true, the recs in the list are really just keys
 	bool addList ( RdbList  *list  ,
 		       char      rdbId ,
-		       char     *coll  ,
+		       collnum_t collnum, // char     *coll  ,
 		       void     *state ,
 		       void    (*callback)(void *state) ,
 		       bool      forceLocal    ,
@@ -95,7 +95,8 @@ class Msg1 {
 
 	// rdb id to add to ( see Msg0::getRdb(char rdbId) )
 	char        m_rdbId;
-	char       *m_coll;
+	//char       *m_coll;
+	collnum_t m_collnum;
 
 	// groupId to send to (may be -1 if it's up to us to decide)
 	unsigned long m_groupId;

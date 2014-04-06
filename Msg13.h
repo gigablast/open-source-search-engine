@@ -32,6 +32,8 @@ public:
 	// if doing spider compression, compute contentHash32 of document
 	// downloaded, and if it matches this then send back EDOCUNCHANGED
 	long  m_contentHash32;
+	// copy of CollectionRec::m_customCrawl, 0 1 for crawls or 2 for bulks
+	char m_isCustomCrawl;
 	// send back error ENOGOODDATE if it does not have one. but if
 	// harvestLinks is true, just send back a filtered list of links
 	long  m_requireGoodDate:1;

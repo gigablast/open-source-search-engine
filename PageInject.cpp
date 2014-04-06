@@ -55,8 +55,8 @@ bool sendPageInject ( TcpSocket *s , HttpRequest *r ) {
 	strncpy(msg7->m_coll,coll,MAX_COLL_LEN);
 
 	// for diffbot
-	if ( crawlbotAPI ) 
-		msg7->m_hr.copy ( r );
+	//if ( crawlbotAPI ) 
+	msg7->m_hr.copy ( r );
 
 	// a scrape request?
 	char *qts = r->getString("qts",NULL);
@@ -169,12 +169,7 @@ bool sendReply ( void *state ) {
 	SafeBuf sb;
 
 	// print admin bar
-	g_pages.printAdminTop ( &sb, // p , pend , 
-				PAGE_INJECT, 
-				NULL, // msg7->m_username ,
-				msg7->m_coll , 
-				NULL ,  // pwd
-				s->m_ip );
+	g_pages.printAdminTop ( &sb, s , &msg7->m_hr );
 
 	// if there was an error let them know
 	char msg[1024];
@@ -231,10 +226,23 @@ bool sendReply ( void *state ) {
 		  "indexed in real time "
 		  "while you wait. The browser will return the "
 		  "final index status code. Alternatively, "
-		  "use the <i>add urls</i> page "
-		  "to add URLs in bulk or to just add to the spider queue "
-		  "without having to wait for the page or pages to be "
-		  "actually indexed in realtime."
+		  "use the <a href=/admin/addurl>add url</a> page "
+		  "to add urls individually or in bulk "
+		  "without having to wait for the pages to be "
+		  "actually indexed in realtime. "
+
+		  "By default, injected urls "
+		  "take precedence over the \"insitelist\" directive in the "
+		  "<a href=/admin/filters>url filters</a> "
+		  "so injected urls need not match the "
+		  "<a href=/admin/sites>spider sites</a> patterns. You can "
+		  "change that behavior in the <a href=/admin/filters>url "
+		  "filters</a> if you want. "
+		  "Injected urls will have a "
+		  "<a href=/admin/filters#hopcount>hopcount</a> of 0. "
+		  "The injection api is described on the "
+		  "<a href=/admin/api>api</a> page."
+
 		  "</font>"
 		  "</td>"
 
@@ -242,7 +250,15 @@ bool sendReply ( void *state ) {
 		  "<input type=text name=u value=\"\" size=50>"
 		  "</td></tr>\n\n"
 
-		  "<tr class=poo><td><b>query to scrape</b></td>"
+		  "<tr class=poo><td><b>query to scrape</b>"
+
+		  "<br>"
+		  "<font size=-2>"
+		  "Scrape other search engines and inject their links "
+		  "for this query. "
+		  "</font>"
+
+		  "</td>"
 		  "<td>\n"
 		  "<input type=text name=qts value=\"\" size=50>"
 		  "</td></tr>\n\n"

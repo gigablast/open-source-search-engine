@@ -13,7 +13,7 @@
 #include "Datedb.h"
 #include "Titledb.h"
 #include "Spider.h"
-#include "Tfndb.h"
+//#include "Tfndb.h"
 //#include "Sync.h"
 #include "Spider.h"
 #include "Repair.h"
@@ -592,6 +592,13 @@ bool Rdb::deleteAllRecs ( collnum_t collnum ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 
+	// deleted from under us?
+	if ( ! cr ) {
+		log("rdb: deleteallrecs: cr is NULL");
+		return true;
+	}
+
+
 	RdbBase *base = cr->m_bases[(unsigned char)m_rdbId];
 	if ( ! base ) return true;
 
@@ -606,6 +613,11 @@ bool Rdb::deleteAllRecs ( collnum_t collnum ) {
 
 	// nuke all the files
 	base->reset();
+
+	// reset rec counts
+	cr->m_numNegKeysInTree[RDB_DOLEDB] = 0;
+	cr->m_numPosKeysInTree[RDB_DOLEDB] = 0;
+
 	return true;
 }
 
@@ -1163,6 +1175,10 @@ bool Rdb::dumpTree ( long niceness ) {
 
 	// or if in repair mode, (not full repair mode) do not mess with any 
 	// files in any coll unless they are secondary rdbs...
+	// this might affect us even though we have spidering paused to
+	// rebuild one specific collection. the other collection spiders
+	// are still going on...
+	/*
 	if ( g_repair.isRepairActive() && 
 	     //! g_repair.m_fullRebuild &&
 	     //! g_repair.m_rebuildNoSplits &&
@@ -1170,6 +1186,7 @@ bool Rdb::dumpTree ( long niceness ) {
 	     ! ::isSecondaryRdb ( m_rdbId ) && 
 	     m_rdbId != RDB_TAGDB )
 		return true;
+	*/
 
 	// do not dump if a tfndb merge is going on, because the tfndb will
 	// lose its page cache and all the "adding links" will hog up all our
@@ -1659,6 +1676,8 @@ bool Rdb::addList ( collnum_t collnum , RdbList *list,
 	// but we often just repair titledb, indexdb and datedb because 
 	// they are bigger. it may add to indexdb/datedb
 	if ( g_repair.isRepairActive() &&
+	     // but only check for collection we are repairing/rebuilding
+	     collnum == g_repair.m_collnum &&
 	     //! g_repair.m_fullRebuild  && 
 	     //! g_conf.m_rebuildNoSplits &&
 	     //! g_conf.m_removeBadPages &&
@@ -2369,7 +2388,26 @@ bool Rdb::addRecord ( collnum_t collnum,
 			return true;
 		}
 	}
-	else if ( (tn=m_tree.addNode ( collnum, key , data , dataSize ))>=0) {
+
+	// . cancel any spider request that is a dup in the dupcache to save disk space
+	// . twins might have different dupcaches so they might have different dups, but
+	//   it shouldn't be a big deal because they are dups!
+	if ( m_rdbId == RDB_SPIDERDB && ! KEYNEG(key) ) {
+		// . this will create it if spiders are on and its NULL
+		// . even if spiders are off we need to create it so 
+		//   that the request can adds its ip to the waitingTree
+		SpiderColl *sc = g_spiderCache.getSpiderColl(collnum);
+		// skip if not there
+		if ( ! sc ) return true;
+		SpiderRequest *sreq=(SpiderRequest *)(orig-4-sizeof(key128_t));
+		// is it really a request and not a SpiderReply?
+		char isReq = g_spiderdb.isSpiderRequest ( &sreq->m_key );
+		// skip if in dup cache. do NOT add to cache since addToWaitingTree()
+		// in Spider.cpp will do that when called from addSpiderRequest() below
+		if ( isReq && sc->isInDupCache ( sreq , false ) ) return true;
+	}
+
+	if ( m_useTree && (tn=m_tree.addNode ( collnum, key , data , dataSize ))>=0) {
 		// if adding to spiderdb, add to cache, too
 		if ( m_rdbId != RDB_SPIDERDB && m_rdbId != RDB_DOLEDB ) 
 			return true;
@@ -2517,12 +2555,12 @@ bool Rdb::addRecord ( collnum_t collnum,
 
 // . use the maps and tree to estimate the size of this list w/o hitting disk
 // . used by Indexdb.cpp to get the size of a list for IDF weighting purposes
-long long Rdb::getListSize ( char *coll ,
+long long Rdb::getListSize ( collnum_t collnum,
 			//key_t startKey , key_t endKey , key_t *max ,
 			char *startKey , char *endKey , char *max ,
 			long long oldTruncationLimit ) {
 	// pick it
-	collnum_t collnum = g_collectiondb.getCollnum ( coll );
+	//collnum_t collnum = g_collectiondb.getCollnum ( coll );
 	if ( collnum < 0 || collnum > getNumBases() || ! getBase(collnum) )
 		return log("db: %s bad collnum of %i",m_dbname,collnum);
 	return getBase(collnum)->getListSize(startKey,endKey,max,
@@ -2622,7 +2660,7 @@ Rdb *getRdbFromId ( uint8_t rdbId ) {
 		s_table9 [ RDB_SYNCDB    ] = g_syncdb.getRdb();
 		s_table9 [ RDB_SPIDERDB  ] = g_spiderdb.getRdb();
 		s_table9 [ RDB_DOLEDB    ] = g_doledb.getRdb();
-		s_table9 [ RDB_TFNDB     ] = g_tfndb.getRdb();
+		//s_table9 [ RDB_TFNDB     ] = g_tfndb.getRdb();
 		s_table9 [ RDB_CLUSTERDB ] = g_clusterdb.getRdb();
 		s_table9 [ RDB_CATDB     ] = g_catdb.getRdb();
 		s_table9 [ RDB_DATEDB    ] = g_datedb.getRdb();
@@ -2641,7 +2679,7 @@ Rdb *getRdbFromId ( uint8_t rdbId ) {
 		s_table9 [ RDB2_SECTIONDB2 ] = g_sectiondb2.getRdb();
 		s_table9 [ RDB2_PLACEDB2   ] = g_placedb2.getRdb();
 		s_table9 [ RDB2_SPIDERDB2  ] = g_spiderdb2.getRdb();
-		s_table9 [ RDB2_TFNDB2     ] = g_tfndb2.getRdb();
+		//s_table9 [ RDB2_TFNDB2     ] = g_tfndb2.getRdb();
 		s_table9 [ RDB2_CLUSTERDB2 ] = g_clusterdb2.getRdb();
 		s_table9 [ RDB2_DATEDB2    ] = g_datedb2.getRdb();
 		s_table9 [ RDB2_LINKDB2    ] = g_linkdb2.getRdb();
@@ -2665,7 +2703,7 @@ char getIdFromRdb ( Rdb *rdb ) {
 	//if ( rdb == g_checksumdb.getRdb() ) return RDB_CHECKSUMDB;
 	if ( rdb == g_spiderdb.getRdb  () ) return RDB_SPIDERDB;
 	if ( rdb == g_doledb.getRdb    () ) return RDB_DOLEDB;
-	if ( rdb == g_tfndb.getRdb     () ) return RDB_TFNDB;
+	//if ( rdb == g_tfndb.getRdb     () ) return RDB_TFNDB;
 	if ( rdb == g_clusterdb.getRdb () ) return RDB_CLUSTERDB;
 	if ( rdb == g_statsdb.getRdb   () ) return RDB_STATSDB;
 	if ( rdb == g_linkdb.getRdb    () ) return RDB_LINKDB;
@@ -2686,7 +2724,7 @@ char getIdFromRdb ( Rdb *rdb ) {
 	if ( rdb == g_placedb2.getRdb   () ) return RDB2_PLACEDB2;
 	//if ( rdb == g_checksumdb2.getRdb() ) return RDB2_CHECKSUMDB2;
 	if ( rdb == g_spiderdb2.getRdb  () ) return RDB2_SPIDERDB2;
-	if ( rdb == g_tfndb2.getRdb     () ) return RDB2_TFNDB2;
+	//if ( rdb == g_tfndb2.getRdb     () ) return RDB2_TFNDB2;
 	if ( rdb == g_clusterdb2.getRdb () ) return RDB2_CLUSTERDB2;
 	//if ( rdb == g_statsdb2.getRdb   () ) return RDB2_STATSDB2;
 	if ( rdb == g_linkdb2.getRdb    () ) return RDB2_LINKDB2;

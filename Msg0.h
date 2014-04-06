@@ -36,7 +36,7 @@ bool getRecFromTermListCache ( char *coll,
 */
 
 //#define MSG0_REQ_SIZE (8 + 2 * sizeof(key_t) + 16 + 5 + MAX_COLL_LEN + 1 )
-#define MSG0_REQ_SIZE (8 + 2 * MAX_KEY_BYTES + 16 + 5 + MAX_COLL_LEN + 1 + 1 )
+#define MSG0_REQ_SIZE (8 + 2 * MAX_KEY_BYTES + 16 + 5 + 4 + 1 + 1 )
 
 class Msg0 {
 
@@ -68,7 +68,8 @@ class Msg0 {
 		       long      maxCacheAge , // max cached age in seconds
 		       bool      addToCache  , // add net recv'd list to cache?
 		       char      rdbId       , // specifies the rdb
-		       char     *coll        ,
+		       //char     *coll        ,
+		       collnum_t collnum ,
 		       class RdbList  *list  ,
 		       //key_t     startKey    , 
 		       //key_t     endKey      , 
@@ -106,7 +107,8 @@ class Msg0 {
 		       long      maxCacheAge , // max cached age in seconds
 		       bool      addToCache  , // add net recv'd list to cache?
 		       char      rdbId       , // specifies the rdb
-		       char     *coll        ,
+		       //char     *coll        ,
+		       collnum_t collnum ,
 		       class RdbList  *list  ,
 		       key_t     startKey    , 
 		       key_t     endKey      , 
@@ -144,7 +146,7 @@ class Msg0 {
 				 maxCacheAge ,
 				 addToCache  ,
 				 rdbId       ,
-				 coll        ,
+				 collnum     ,
 				 list  ,
 				 (char *)&startKey    , 
 				 (char *)&endKey      , 
@@ -256,7 +258,8 @@ class Msg0 {
 	char  m_endKey[MAX_KEY_BYTES];
 	long  m_minRecSizes ;
 	char  m_rdbId       ;
-	char *m_coll        ;
+	//char *m_coll        ;
+	collnum_t m_collnum;
 
 	class Msg5  *m_msg5 ;
 	class Msg5  *m_msg5b;

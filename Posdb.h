@@ -208,9 +208,15 @@ class Posdb {
 	void setFloat ( void *vkp , float f ) {
 		*(float *)(((char *)vkp) + 2) = f; };
 
+	void setInt ( void *vkp , long x ) {
+		*(long *)(((char *)vkp) + 2) = x; };
+
 	// and read the float as well
 	float getFloat ( void *vkp ) {
 		return *(float *)(((char *)vkp) + 2); };
+
+	long getInt ( void *vkp ) {
+		return *(long *)(((char *)vkp) + 2); };
 
 	void setAlignmentBit ( void *vkp , char val ) {
 		char *p = (char *)vkp;
@@ -377,7 +383,7 @@ class Posdb {
 	void setSectionSiteHash32 ( void *key , long siteHash32 ) {
 		*(unsigned long *)(((char *)key)+2) = siteHash32; };
 
-	long long getTermFreq ( char *coll , long long termId ) ;
+	long long getTermFreq ( collnum_t collnum, long long termId ) ;
 
 	//RdbCache *getCache ( ) { return &m_rdb.m_cache; };
 	Rdb      *getRdb   ( ) { return &m_rdb; };
@@ -388,6 +394,42 @@ class Posdb {
 
 	DiskPageCache m_pc;
 };
+
+#define MAX_SUBLISTS 50
+
+// . each QueryTerm has this attached additional info now:
+// . these should be 1-1 with query terms, Query::m_qterms[]
+class QueryTermInfo {
+public:
+	// the required lists for this query term, synonym lists, etc.
+	RdbList  *m_subLists        [MAX_SUBLISTS];
+	// flags to indicate if bigram list should be scored higher
+	char      m_bigramFlags     [MAX_SUBLISTS];
+	// shrinkSubLists() set this:
+	long      m_newSubListSize  [MAX_SUBLISTS];
+	char     *m_newSubListStart [MAX_SUBLISTS];
+	char     *m_newSubListEnd   [MAX_SUBLISTS];
+	char     *m_cursor          [MAX_SUBLISTS];
+	char     *m_savedCursor     [MAX_SUBLISTS];
+	// the corresponding QueryTerm for this sublist
+	//class QueryTerm *m_qtermList [MAX_SUBLISTS];
+	long      m_numNewSubLists;
+	// how many are valid?
+	long      m_numSubLists;
+	// size of all m_subLists in bytes
+	long long m_totalSubListsSize;
+	// the term freq weight for this term
+	float     m_termFreqWeight;
+	// what query term # do we correspond to in Query.h
+	long      m_qtermNum;
+	// the word position of this query term in the Words.h class
+	long      m_qpos;
+	// the wikipedia phrase id if we start one
+	long      m_wikiPhraseId;
+	// phrase id term or bigram is in
+	long      m_quotedStartId;
+};
+
 
 /*
 #include "RdbList.h"
@@ -473,7 +515,8 @@ class PosdbTable {
 		   char           debug           ,
 		   void          *logstate        ,
 		   class TopTree *topTree         ,
-		   char          *coll            ,
+		   //char          *coll            ,
+		   collnum_t collnum ,
 		   //IndexList     *lists           ,
 		   //long           numLists        ,
 		   class Msg2 *msg2, 
@@ -516,6 +559,8 @@ class PosdbTable {
 					 char *endi, char *endj,
 					 class DocIdScore *pdcs );
 
+	bool makeDocIdVoteBufForBoolQuery_r ( ) ;
+
 	// some generic stuff
 	PosdbTable();
 	~PosdbTable();
@@ -548,7 +593,7 @@ class PosdbTable {
 
 	long            m_maxScores;
 
-	char           *m_coll;
+	//char           *m_coll;
 	collnum_t       m_collnum;
 
 	long *m_qpos;
@@ -608,7 +653,26 @@ class PosdbTable {
 
 	class Msg39Request *m_r;
 
+	// for gbsortby:item.price ...
 	long m_sortByTermNum;
+	long m_sortByTermNumInt;
+
+	// for gbmin:price:1.99
+	long m_minScoreTermNum;
+	long m_maxScoreTermNum;
+
+	// for gbmin:price:1.99
+	float m_minScoreVal;
+	float m_maxScoreVal;
+
+	// for gbmin:count:99
+	long m_minScoreTermNumInt;
+	long m_maxScoreTermNumInt;
+
+	// for gbmin:count:99
+	long m_minScoreValInt;
+	long m_maxScoreValInt;
+
 
 	// the new intersection/scoring algo
 	void intersectLists10_r ( );	
@@ -644,6 +708,13 @@ class PosdbTable {
 	long                 m_minListi;
 	// intersect docids from each QueryTermInfo into here
 	SafeBuf              m_docIdVoteBuf;
+
+	// boolean truth table for boolean queries
+	HashTableX m_bt;
+	HashTableX m_ct;
+	// size of the data slot in m_bt
+	long m_vecSize;
+
 	// are all positive query terms in same wikipedia phrase like
 	// 'time enough for love'?
 	bool m_allInSameWikiPhrase;

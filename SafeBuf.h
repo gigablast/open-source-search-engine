@@ -60,6 +60,7 @@ struct SafeBuf {
 	long  fillFromFile(char *filename);
 	long  fillFromFile(char *dir,char *filename);
 	long  load(char *dir,char *fname) { return fillFromFile(dir,fname);};
+	long  load(char *fname) { return fillFromFile(fname);};
 
 	void filterTags();
 	void filterQuotes();
@@ -306,6 +307,7 @@ struct SafeBuf {
 	bool  pushLong (long i);
 	bool  pushLongLong (long long i);
 	bool  pushFloat (float i);
+	bool  pushDouble (double i);
 	long  popLong();
 	float popFloat();
 

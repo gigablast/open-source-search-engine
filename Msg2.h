@@ -33,7 +33,7 @@ class Msg2 {
 	// . sets errno on error
 	// . "termIds/termFreqs" should NOT be on the stack in case we block
 	bool getLists ( long     rdbId       ,
-			char    *coll        ,
+			collnum_t collnum ,//char    *coll        ,
 			long     maxAge      ,
 			bool     addToCache  ,
 			//key_t   *startKeys   ,
@@ -123,7 +123,8 @@ class Msg2 {
 	bool     m_getComponents;
 	char     m_rdbId;
 	bool     m_addToCache;
-	char    *m_coll;
+	//char    *m_coll;
+	collnum_t m_collnum;
 	bool     m_restrictPosdb;
 	long     m_compoundListMaxSize;
 	char     m_forceParitySplit;

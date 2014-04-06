@@ -421,3 +421,23 @@ bool JsonItem::isInArray ( ) {
 	}
 	return false;
 }
+
+// convert nubers and bools to strings for this one
+char *JsonItem::getValueAsString ( long *valueLen ) {
+
+	// strings are the same
+	if ( m_type == JT_STRING ) {
+		*valueLen = getValueLen();
+		return getValue();
+	}
+
+	// numbers...
+	static char s_numBuf[64];
+	if ( (float)m_valueLong == m_valueDouble ) {
+		*valueLen = sprintf ( s_numBuf,"%li", m_valueLong );
+		return s_numBuf;
+	}
+
+	*valueLen = sprintf ( s_numBuf,"%f", m_valueDouble );
+	return s_numBuf;
+}

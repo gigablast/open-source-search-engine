@@ -151,7 +151,7 @@ void Msg39::getDocIds ( UdpSlot *slot ) {
 	// deserialize it before we do anything else
 	long finalSize = deserializeMsg ( sizeof(Msg39Request) ,
 					  &m_r->size_readSizes ,
-					  &m_r->size_coll ,
+					  &m_r->size_whiteList,//coll ,
 					  &m_r->ptr_readSizes,
 					  m_r->m_buf );
 
@@ -176,15 +176,17 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 	if ( g_conf.m_logTimingQuery ) m_debug = true;
 
         // ensure it's size is ok
-        if ( m_r->size_coll <= 0 ) {
+	/*
+        if ( m_r->size_whiteList <= 0 ) {
 		g_errno = ENOCOLLREC;
 		log(LOG_LOGIC,"query: msg39: getDocIds: %s." , 
 		    mstrerror(g_errno) );
 		sendReply ( m_slot , this , NULL , 0 , 0 , true );
 		return ; 
 	}
+	*/
 
-        CollectionRec *cr = g_collectiondb.getRec ( m_r->ptr_coll );
+        CollectionRec *cr = g_collectiondb.getRec ( m_r->m_collnum );
         if ( ! cr ) {
 		g_errno = ENOCOLLREC;
 		log(LOG_LOGIC,"query: msg39: getDocIds: %s." , 
@@ -541,7 +543,7 @@ bool Msg39::getLists () {
 			     "component=%li "
 			     "otermLen=%li "
 			     "isSynonym=%li "
-			     "querylangid=%li ",
+			     "querylangid=%li " ,
 			     (long)this ,
 			     i          ,
 			     qt->m_term,//bb ,
@@ -567,7 +569,7 @@ bool Msg39::getLists () {
 			     (long)m_tmpq.m_componentCodes[i],
 			     (long)m_tmpq.getTermLen(i) ,
 			     isSynonym,
-			     (long)m_tmpq.m_langId); // ,tt
+			     (long)m_tmpq.m_langId ); // ,tt
 			// put it back
 			*tpc = tmp;
 			if ( st ) {
@@ -614,7 +616,7 @@ bool Msg39::getLists () {
 	long split = g_hostdb.m_myHost->m_shardNum;
 	// call msg2
 	if ( ! m_msg2.getLists ( rdbId                      ,
-				 m_r->ptr_coll              ,
+				 m_r->m_collnum,//m_r->ptr_coll              ,
 				 m_r->m_maxAge              ,
 				 m_r->m_addToCache          ,
 				 //m_tmpq.m_qterms ,
@@ -659,6 +661,7 @@ void gotListsWrapper ( void *state ) {
 	Msg39 *THIS = (Msg39 *) state;
 	// . hash the lists into our index table
 	// . this will send back a reply or recycle and read more list data
+
 	if ( ! THIS->gotLists ( true ) ) return;
 
 	// . if he did not block and there was an errno we send reply
@@ -669,6 +672,12 @@ void gotListsWrapper ( void *state ) {
 		log("msg39: sending back error reply = %s",mstrerror(g_errno));
 		sendReply ( THIS->m_slot , THIS , NULL , 0 , 0 ,true);
 	}
+
+	// no, block? call the docid split loop
+	//if ( numDocIdSplits <= 1 ) return;
+
+	// if we get the lists and processed them without blocking, repeat!
+	THIS->doDocIdSplitLoop();
 }
 
 // . now come here when we got the necessary index lists
@@ -677,6 +686,7 @@ void gotListsWrapper ( void *state ) {
 bool Msg39::gotLists ( bool updateReadInfo ) {
 	// bail on error
 	if ( g_errno ) { 
+	hadError:
 		log("msg39: Had error getting termlists: %s.",
 		    mstrerror(g_errno));
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
@@ -694,6 +704,13 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	// breathe
 	QUICKPOLL ( m_r->m_niceness );
 
+	// ensure collection not deleted from under us
+	CollectionRec *cr = g_collectiondb.getRec ( m_r->m_collnum );
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
+		goto hadError;
+	}
+
 	// . set the IndexTable so it can set it's score weights from the
 	//   termFreqs of each termId in the query
 	// . this now takes into account the special termIds used for sorting
@@ -707,7 +724,7 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 			    m_debug              ,
 			    this                   ,
 			    &m_tt                  ,
-			    m_r->ptr_coll          , 
+			    m_r->m_collnum,//ptr_coll          , 
 			    &m_msg2 , // m_lists                ,
 			    //m_tmpq.m_numTerms      , // m_numLists
 			    m_r                              );
@@ -743,9 +760,24 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	// . now we must call this separately here, not in allocTopTree()
 	// . we have to re-set the QueryTermInfos with each docid range split
 	//   since it will set the list ptrs from the msg2 lists
-	if ( m_r->m_useNewAlgo && ! m_posdbTable.setQueryTermInfo () ) {
-		return true;
+	if ( ! m_posdbTable.setQueryTermInfo () ) return true;
+
+	// print query term bit numbers here
+	for ( long i = 0 ; 
+	      m_debug && i < m_tmpq.getNumTerms() ; i++ ) {
+		QueryTerm *qt = &m_tmpq.m_qterms[i];
+		//utf16ToUtf8(bb, 256, qt->m_term, qt->m_termLen);
+		char *tpc = qt->m_term + qt->m_termLen;
+		char  tmp = *tpc;
+		*tpc = '\0';
+		SafeBuf sb;
+		sb.safePrintf("query: msg39: BITNUM query term #%li \"%s\" "
+			      "bitnum=%li ", i , qt->m_term, qt->m_bitNum );
+		// put it back
+		*tpc = tmp;
+		logf(LOG_DEBUG,"%s",sb.getBufStart());
 	}
+
 
 	// timestamp log
 	if ( m_debug ) {
@@ -777,7 +809,8 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 
 	// . create the thread
 	// . only one of these type of threads should be launched at a time
-	if ( g_threads.call ( INTERSECT_THREAD  , // threadType
+	if ( ! m_debug &&
+	     g_threads.call ( INTERSECT_THREAD  , // threadType
 			      m_r->m_niceness   ,
 			      this              , // top 4 bytes must be cback
 			      threadDoneWrapper ,
@@ -806,6 +839,7 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	// time it
 	diff = gettimeofdayInMilliseconds() - start;
 	if ( diff > 10 ) log("query: Took %lli ms for intersection",diff);
+
 	// returns false if blocked, true otherwise
 	return addedLists ();
 }
@@ -982,7 +1016,7 @@ bool Msg39::setClusterRecs ( ) {
 					m_clusterLevels       ,
 					m_clusterRecs         ,
 					m_numClusterDocIds    ,
-					m_r->ptr_coll         ,
+					m_r->m_collnum ,
 					0                     , // maxAge
 					false                 , // addToCache
 					this                  ,
@@ -1095,7 +1129,7 @@ void Msg39::estimateHits ( ) {
 
 	// convenience ptrs. we will store the docids/scores into these arrays
 	long long *topDocIds;
-	float     *topScores;
+	double    *topScores;
 	key_t     *topRecs;
 
 	// numDocIds counts docs in all tiers when using toptree.
@@ -1162,7 +1196,7 @@ void Msg39::estimateHits ( ) {
 		mr.ptr_clusterRecs  = NULL;
 		// this is how much space to reserve
 		mr.size_docIds      = 8 * numDocIds; // long long
-		mr.size_scores      = 4 * numDocIds; // float
+		mr.size_scores      = sizeof(double) * numDocIds; // float
 		// if not doing site clustering, we won't have these perhaps...
 		if ( m_gotClusterRecs ) 
 			mr.size_clusterRecs = sizeof(key_t) *numDocIds;
@@ -1190,7 +1224,7 @@ void Msg39::estimateHits ( ) {
 			return ; 
 		}
 		topDocIds    = (long long *) mr.ptr_docIds;
-		topScores    = (float     *) mr.ptr_scores;
+		topScores    = (double    *) mr.ptr_scores;
 		topRecs      = (key_t     *) mr.ptr_clusterRecs;
 	}
 
@@ -1224,6 +1258,8 @@ void Msg39::estimateHits ( ) {
 		//add it to the reply
 		topDocIds         [docCount] = t->m_docId;
 		topScores         [docCount] = t->m_score;
+		if ( m_tt.m_useIntScores ) 
+			topScores[docCount] = (double)t->m_intScore;
 		// supply clusterdb rec? only for full splits
 		if ( m_gotClusterRecs ) 
 			topRecs [docCount] = t->m_clusterRec;

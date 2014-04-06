@@ -80,7 +80,7 @@ public:
 	long long *m_termFreqs;
 	float     *m_termFreqWeights;
 	float     *m_affWeights;
-	score_t    m_total;
+	//score_t    m_total;
 	bool       m_freeIt;
 	bool       m_blocked;
 

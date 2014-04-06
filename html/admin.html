@@ -137,20 +137,24 @@ rather your current working directory, where the 'gb' binary resides.
 <li> Plug-ins. For indexing any file format by calling Plug-ins to convert that format to HTML. Provided binary plug-ins: pdftohtml (PDF), ppthtml (PowerPoint), antiword (MS Word), pstotext (PostScript).
 <li> Indexes JSON and XML natively. Provides ability to search individual structured fields.
 <li> Sorting. Sort the search results by meta tags or JSON fields that contain numbers, simply by adding something like gbsortby:price or gbrevsortby:price as a query term, assuming you have meta price tags.
-<li>Easy Scaling. Add new servers to the hosts.conf file then click 'rebalance shards' to automatically rebalance the sharded data.
+<li> Easy Scaling. Add new servers to the hosts.conf file then click 'rebalance shards' to automatically rebalance the sharded data.
+<li> Using &stream=1 can stream back millions of search results for a query without running out of memory.
+<li> Nested boolean queries using AND, OR, NOT operators
 </ul>
 
 <br>
 <h2>Features available but currently disabled because of code overhaul. Will be re-enabled soon.</h2>
 <ul>
-<li> Boolean query support
 <li> Spellchecker
 </ul>
 
 <br>
 <h2>New features coming soon</h2>
 <ul>
+<li> file:// support
+<li> smb:// support
 <li> Query completion
+<li> Improved plug-in support
 
 </ul>
 

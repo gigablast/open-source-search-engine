@@ -386,7 +386,7 @@ static void powerMonitorWrapper ( int fd , void *state ) ;
 static void fanSwitchCheckWrapper ( int fd , void *state ) ;
 static void gotPowerWrapper ( void *state , TcpSocket *s ) ;
 static void doneCmdWrapper        ( void *state ) ;
-//static void  hdtempWrapper        ( int fd , void *state ) ;
+static void  hdtempWrapper        ( int fd , void *state ) ;
 static void  hdtempDoneWrapper    ( void *state , ThreadEntry *t ) ;
 static void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) ;
 static void heartbeatWrapper    ( int fd , void *state ) ;
@@ -397,9 +397,13 @@ Process::Process ( ) {
 	m_mode = NO_MODE;
 	m_exiting = false;
 	m_powerIsOn = true;
+	m_totalDocsIndexed = -1LL;
 }
 
 bool Process::init ( ) {
+	// -1 means unknown
+	m_diskUsage = -1.0;
+	m_diskAvail = -1LL;
 	// we do not know if the fans are turned off or on
 	m_currentFanState = -1;
 	m_threadOut = false;
@@ -492,8 +496,9 @@ bool Process::init ( ) {
 
 	// . hard drive temperature
 	// . now that we use intel ssds that do not support smart, ignore this
-	//if ( ! g_loop.registerSleepCallback(10000,NULL,hdtempWrapper,0))
-	//	return false;
+	// . well use it for disk usage i guess
+	if ( ! g_loop.registerSleepCallback(10000,NULL,hdtempWrapper,0))
+		return false;
 
 	// power monitor, every 30 seconds
 	if ( ! g_loop.registerSleepCallback(30000,NULL,powerMonitorWrapper,0))
@@ -871,9 +876,68 @@ void hdtempDoneWrapper ( void *state , ThreadEntry *t ) {
 	s_lasttime = now;
 }
 
+
+// set Process::m_diskUsage
+float getDiskUsage ( long long *diskAvail ) {
+
+	// first get disk usage now
+	char cmd[10048];
+	char out[1024];
+	sprintf(out,"%sdiskusage",g_hostdb.m_dir);
+	snprintf(cmd,10000,"df -ka %s | tail -1 | "
+		 "awk '{print $4\" \"$5}' > %s",
+		 g_hostdb.m_dir,
+		 out);
+	int err = system ( cmd );
+	if ( err == 127 ) {
+		log("build: /bin/sh does not exist. can not get disk usage.");
+		return -1.0; // unknown
+	}
+	// this will happen if you don't upgrade glibc to 2.2.4-32 or above
+	if ( err != 0 ) {
+		log("build: Call to system(\"%s\") had error.",cmd);
+		return -1.0; // unknown
+	}
+
+	// read in temperatures from file
+	int fd = open ( out , O_RDONLY );
+	if ( fd < 0 ) {
+		//m_errno = errno;
+		log("build: Could not open %s for reading: %s.",
+		    out,mstrerror(errno));
+		return -1.0; // unknown
+	}
+	char buf[2000];
+	long r = read ( fd , buf , 2000 );
+	// did we get an error
+	if ( r <= 0 ) {
+		//m_errno = errno;
+		log("build: Error reading %s: %s.",out,mstrerror(errno));
+		close ( fd );
+		return -1.0; // unknown
+	}
+	// clean up shop
+	close ( fd );
+
+	float usage;
+	long long avail;
+	sscanf(buf,"%lli %f",&avail,&usage);
+	// it is in KB so make it into bytes
+	if ( diskAvail ) *diskAvail = avail * 1000LL;
+	return usage;
+}
+
 // . sets m_errno on error
 // . taken from Msg16.cpp
 void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) {
+
+	// run the df -ka cmd
+	g_process.m_diskUsage = getDiskUsage( &g_process.m_diskAvail );
+
+
+	// ignore temps now. ssds don't have it
+	return NULL;
+	
 
 	static char *s_parm = "ata";
 	// make a system call to /usr/sbin/hddtemp /dev/sda,b,c,d
@@ -884,9 +948,9 @@ void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) {
 	//	"/usr/sbin/hddtemp /dev/sdd >> /tmp/hdtemp  ";
  retry:
 	// linux 2.4 does not seem to like hddtemp
-	char cmd[10048];
 	char *path = g_hostdb.m_dir;
 	//char *path = "/usr/sbin/";
+	char cmd[10048];
 	sprintf ( cmd ,
 		  "%ssmartctl -Ad %s /dev/sda | grep Temp | awk '{print $10}' >  /tmp/hdtemp2;"
 		  "%ssmartctl -Ad %s /dev/sdb | grep Temp | awk '{print $10}' >> /tmp/hdtemp2;"
@@ -912,8 +976,8 @@ void *hdtempStartWrapper_r ( void *state , ThreadEntry *t ) {
 		//m_errno = EBADENGINEER;
 		log("build: Call to system(\"%s\") had error.",cmd);
 		//s_flag = 1;
-		// wait an hour
-		s_nextTime = getTime() + 3600;
+		// wait 5 minutes
+		s_nextTime = getTime() + 300; // 3600;
 		return NULL;
 	}
 	// read in temperatures from file
@@ -1078,12 +1142,30 @@ void diskHeartbeatWrapper ( int fd , void *state ) {
 }
 */
 
+long long Process::getTotalDocsIndexed() {
+	if ( m_totalDocsIndexed == -1LL ) {
+		Rdb *rdb = g_clusterdb.getRdb();
+		m_totalDocsIndexed = rdb->getNumTotalRecs();
+	}
+	return m_totalDocsIndexed;
+}
+
 void processSleepWrapper ( int fd , void *state ) {
 
         if ( g_process.m_mode == EXIT_MODE ) {g_process.shutdown2(); return; }
         if ( g_process.m_mode == SAVE_MODE ) {g_process.save2    (); return; }
         if ( g_process.m_mode == LOCK_MODE ) {g_process.save2    (); return; }
 	if ( g_process.m_mode != NO_MODE   )                         return;
+
+	// update global rec count
+        static long s_rcount = 0;
+	// every 2 seconds
+	if ( ++s_rcount >= 4 ) {
+		s_rcount = 0;
+		// PingServer.cpp uses this
+		Rdb *rdb = g_clusterdb.getRdb();
+		g_process.m_totalDocsIndexed = rdb->getNumTotalRecs();
+	}
 
 	// do not do autosave if no power
 	if ( ! g_process.m_powerIsOn ) return;
@@ -1095,6 +1177,10 @@ void processSleepWrapper ( int fd , void *state ) {
 	//   where they should go
 	// . returns right away in most cases
 	g_rebalance.rebalanceLoop();
+
+	// if doing the final part of a repair.cpp loop where we convert
+	// titledb2 files to titledb etc. then do not save!
+	if ( g_repairMode == 7 ) return;
 
 	// autosave? override this if power is off, we need to save the data!
 	//if (g_conf.m_autoSaveFrequency <= 0 && g_process.m_powerIsOn) return;

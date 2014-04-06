@@ -149,9 +149,10 @@ bool Titledb::verify ( char *coll ) {
 	startKey.setMin();
 	endKey.setMax();
 	//long minRecSizes = 64000;
+	CollectionRec *cr = g_collectiondb.getRec(coll);
 
 	if ( ! msg5.getList ( RDB_TITLEDB   ,
-			      coll          ,
+			      cr->m_collnum       ,
 			      &list         ,
 			      startKey      ,
 			      endKey        ,
@@ -181,6 +182,8 @@ bool Titledb::verify ( char *coll ) {
 	for ( list.resetListPtr() ; ! list.isExhausted() ;
 	      list.skipCurrentRecord() ) {
 		key_t k = list.getCurrentKey();
+		// skip negative keys
+		if ( (k.n0 & 0x01) == 0x00 ) continue;
 		count++;
 		//unsigned long groupId = getGroupId ( RDB_TITLEDB , &k );
 		//if ( groupId == g_hostdb.m_groupId ) got++;

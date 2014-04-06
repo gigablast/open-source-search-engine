@@ -802,7 +802,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 	SafeBuf sb(512 * 512,"autobbuf");
 	//read in all of the possible cgi parms off the bat:
 	//long  user     = g_pages.getUserType( s , r );
-	char *username = g_users.getUsername(r);
+	//char *username = g_users.getUsername(r);
 	//char *pwd  = r->getString ("pwd");
 
 	char *coll = r->getString ("c");
@@ -831,8 +831,8 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 
 // 	char *ss = sb.getBuf();
 // 	char *ssend = sb.getBufEnd();
-	g_pages.printAdminTop ( &sb, PAGE_AUTOBAN, username,
-				coll , NULL , s->m_ip );
+	g_pages.printAdminTop ( &sb, s , r );
+
 	//sb.incrementLength(sss - ss);
 
 	// MDW: moved to here
@@ -859,7 +859,7 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 			  &msecs);
 	sb.safePrintf("<tr><td colspan=18 bgcolor=#%s>"
 		      "<center><b>Code Usage "
-		      "(<a href=\"/master/"
+		      "(<a href=\"/admin/"
 		      "autoban?c=%s&resetcodes=1\">reset</a> "
 		      "%li days %li hours %li "
 		      "minutes %li sec ago)"
@@ -1271,15 +1271,15 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 // 			      "%li days %li hrs %li min ago"
 // 			      "</center></td>"
 
-			      "<td><center><a href=\"/master/"
+			      "<td><center><a href=\"/admin/"
 			      "autoban?c=%s&allow=%s&showAllIps=%li\">" 
 			      "allow/</a>"
 
-			      "<a href=\"/master/"
+			      "<a href=\"/admin/"
 			      "autoban?c=%s&deny=%s&showAllIps=%li\">" 
 			      "deny/</a>"
 
-			      "<a href=\"/master/"
+			      "<a href=\"/admin/"
 			      "autoban?c=%s&clear=%s&showAllIps=%li\">"
 			      "clear</a></center>"
 			      "</td>",color, 
@@ -1320,22 +1320,22 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 		      "<td bgcolor=#%s><center><b>Show Ips by Number of Queries"
 		      "</b></center></td>",
 		      LIGHT_BLUE);
-	sb.safePrintf("<td><center><font color=red><b><a href=\"/master/"
+	sb.safePrintf("<td><center><font color=red><b><a href=\"/admin/"
 		      "autoban?c=%s&showAllIps=0\">"
 		      "0 Queries</a></b>"
 		      "</font></center></td>",
 		      coll);
-	sb.safePrintf("<td><center><font color=red><b><a href=\"/master/"
+	sb.safePrintf("<td><center><font color=red><b><a href=\"/admin/"
 		      "autoban?c=%s&showAllIps=1\">"
 		      "1 Query</a></b>"
 		      "</font></center></td>",
 		      coll);
-	sb.safePrintf("<td><center><font color=red><b><a href=\"/master/"
+	sb.safePrintf("<td><center><font color=red><b><a href=\"/admin/"
 		      "autoban?c=%s&showAllIps=10\">"
 		      "10 Queries</a></b>"
 		      "</font></center></td>",
 		      coll);
-	sb.safePrintf("<td><center><font color=red><b><a href=\"/master/"
+	sb.safePrintf("<td><center><font color=red><b><a href=\"/admin/"
 		      "autoban?c=%s&showAllIps=100\">"
 		      "100 Queries</a></b>"
 		      "</font></center></td></tr>",
@@ -1469,10 +1469,10 @@ bool AutoBan::printTable( TcpSocket *s , HttpRequest *r ) {
 				      m_detectVals[i].m_timesBanned);
 		}
 		sb.safePrintf("<td><center>"
-			      "<a href=\"/master/"
+			      "<a href=\"/admin/"
 			      "autoban?c=%s&allow=%s&showAllIps=%li\">" 
 			      "allow/</a>"
-			      "<a href=\"/master/"
+			      "<a href=\"/admin/"
 			      "autoban?c=%s&deny=%s&showAllIps=%li\">" 
 			      "deny</a></center>"
 			      "</td>",

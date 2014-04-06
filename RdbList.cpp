@@ -3039,7 +3039,7 @@ bool RdbList::posdbMerge_r ( RdbList **lists         ,
 	if ( maxPtr > m_alloc + m_allocSize ) maxPtr = m_alloc + m_allocSize;
 
 	// debug note
-	if ( m_listSize )
+ 	if ( m_listSize && g_conf.m_logDebugBuild )
 		log(LOG_LOGIC,"db: storing recs in a non-empty list for merge"
 		    " probably from recall from negative key loss");
 
@@ -3468,3 +3468,33 @@ bool RdbList::posdbMerge_r ( RdbList **lists         ,
 
 	return true;
 }
+
+void RdbList::setFromSafeBuf ( SafeBuf *sb , char rdbId ) {
+
+	// free and NULLify any old m_list we had to make room for our new list
+	freeList();
+
+	// set this first since others depend on it
+	m_ks = getKeySizeFromRdbId ( rdbId );
+
+	// set our list parms
+	m_list          = sb->getBufStart();
+	m_listSize      = sb->length();
+	m_alloc         = sb->getBufStart();
+	m_allocSize     = sb->getCapacity();
+	m_listEnd       = m_list + m_listSize;
+
+	KEYMIN(m_startKey,m_ks);
+	KEYMAX(m_endKey  ,m_ks);
+
+	m_fixedDataSize = getDataSizeFromRdbId ( rdbId );
+
+	m_ownData       = false;//ownData;
+	m_useHalfKeys   = false;//useHalfKeys;
+
+	// use this call now to set m_listPtr and m_listPtrHi based on m_list
+	resetListPtr();
+
+}
+
+

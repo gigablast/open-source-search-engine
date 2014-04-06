@@ -483,7 +483,8 @@ class Msg2c {
 	// . closest matching "site" is used as the "site" (the site url)
 	// . stores the tagRec in your "tagRec"
 	bool verifyAddresses ( class Addresses *aa         ,
-			       char            *coll       , 
+			       //char            *coll       , 
+			       collnum_t collnum,
 			       long             domHash32  ,
 			       long             ip         ,
 			       //HashTableX      *avt        ,
@@ -494,8 +495,8 @@ class Msg2c {
 	bool launchRequests ( );
 
 	// some specified input
-	char  *m_coll;
-	long   m_collLen;
+	//char  *m_coll;
+	//long   m_collLen;
 	collnum_t m_collnum;
 	void    (*m_callback ) ( void *state );
 	void     *m_state;
@@ -597,7 +598,8 @@ class Addresses {
 		   class TagRec   *gr          ,
 		   class Url      *url         ,
 		   long long       docId       ,
-		   char           *coll        ,
+		   //char           *coll        ,
+		   collnum_t collnum,
 		   long            domHash32   ,
 		   long            ip          ,
 		   //long            tagPairHash ,
@@ -716,7 +718,8 @@ class Addresses {
 	RdbList         m_list;
 	class Url      *m_url;
 	long long       m_docId;
-	char           *m_coll;
+	//char           *m_coll;
+	collnum_t m_collnum;
 	long long       m_termId;
 	long            m_domHash32;
 	long            m_ip;

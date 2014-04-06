@@ -2,11 +2,11 @@ SHELL = /bin/bash
 
 CC=g++
 
-OBJS =  Tfndb.o UdpSlot.o Rebalance.o \
+OBJS =  UdpSlot.o Rebalance.o \
 	Msg13.o Mime.o IndexReadInfo.o \
-	PageGet.o PageHosts.o PageIndexdb.o PageLogin.o \
+	PageGet.o PageHosts.o PageIndexdb.o \
 	PageParser.o PageInject.o PagePerf.o PageReindex.o PageResults.o \
-	PageRoot.o PageSockets.o PageStats.o \
+	PageAddUrl.o PageRoot.o PageSockets.o PageStats.o \
 	PageTitledb.o \
 	PageAddColl.o \
 	hash.o Domains.o \
@@ -57,9 +57,10 @@ OBJS =  Tfndb.o UdpSlot.o Rebalance.o \
 	PostQueryRerank.o Msge0.o Msge1.o \
 	CountryCode.o DailyMerge.o CatRec.o Tagdb.o \
 	Users.o Images.o Wiki.o Wiktionary.o Scraper.o \
-	Dates.o Sections.o SiteGetter.o Syncdb.o \
+	Dates.o Sections.o SiteGetter.o Syncdb.o qa.o \
 	Placedb.o Address.o Test.o GeoIP.o GeoIPCity.o Synonyms.o \
-	Cachedb.o Monitordb.o dlstubs.o PageCrawlBot.o Json.o
+	Cachedb.o Monitordb.o dlstubs.o PageCrawlBot.o Json.o PageBasic.o
+
 
 CHECKFORMATSTRING = -D_CHECK_FORMAT_STRING_
 
@@ -76,7 +77,8 @@ ifeq ("titan","$(HOST)")
 # in 2013. So it just uses clone() and does its own "threading". Unfortunately,
 # the way it works is not even possible on newer kernels because they no longer
 # allow you to override the _errno_location() function. -- matt
-CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DMATTWELLS -DNEEDLICENSE
+# -DMATTWELLS
+CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DTITAN
 LIBS = ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a
 else
 # use -m32 to force 32-bit mode compilation.
@@ -326,8 +328,9 @@ Rdb.o:
 RdbBase.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
-RdbCache.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+# RdbCache.cpp gets "corrupted" with -O2... like RdbTree.cpp
+#RdbCache.o:
+#	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
 # fast dictionary generation and spelling recommendations
 #Speller.o:

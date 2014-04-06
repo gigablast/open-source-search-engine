@@ -87,7 +87,8 @@ SiteGetter::~SiteGetter ( ) {
 bool SiteGetter::getSite ( char   *url      ,
 			   TagRec *gr       ,
 			   long    timestamp,
-			   char   *coll     ,
+			   //char   *coll     ,
+			   collnum_t collnum,
 			   long    niceness ,
 			   //bool    addTags  ,
 			   void   *state    ,
@@ -96,7 +97,8 @@ bool SiteGetter::getSite ( char   *url      ,
 	// save it
 	m_gr       = gr;
 	m_url      = url;
-	m_coll     = coll;
+	//m_coll     = coll;
+	m_collnum = collnum;
 	//m_addTags  = addTags;
 	m_state    = state;
 	m_callback = callback;
@@ -133,7 +135,7 @@ bool SiteGetter::getSite ( char   *url      ,
 	// bail if nothing else we can do
 	if ( ! gr ) return setSite ( ) ;
 
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	// g_errno should be set if this is NULL
 	if ( ! cr ) return true;
 	//if ( ! cr->m_subsiteDetectionEnabled ) return true;
@@ -144,8 +146,8 @@ bool SiteGetter::getSite ( char   *url      ,
 	long age = -1;
 	//long now = getTimeGlobal();
 	//if ( tag ) age = now - tag->m_timestamp;
-	// to parse conssitently for the qa test "test" coll use "timestamp"
-	// as the "current time"
+	// to parse conssitently for the qa test "qatest123" coll use 
+	// "timestamp" as the "current time"
 	if ( tag ) age = timestamp - tag->m_timestamp;
 	// if there, at least get it (might be -1)
 	if ( tag ) m_oldSitePathDepth = atol ( tag->getTagData() );
@@ -295,7 +297,7 @@ top:
 			    0                  , // maxCacheAge
 			    false              , // addToCache
 			    RDB_POSDB        ,
-			    m_coll             ,
+			    m_collnum             ,
 			    &m_list            ,
 			    (char *)&start     ,
 			    (char *)&end       ,
@@ -532,7 +534,7 @@ bool SiteGetter::setSite ( ) {
 	//TagRec gr;
 	m_addedTag.addTag ( "sitepathdepth" , 
 			    // now XmlDoc must provide it to ensure that are 
-			    // injects into the "test" coll are consistent
+			    // injects into the "qatest123" coll are consistent
 			    m_timestamp     ,//getTime()// use now as timestamp
 			    "sitegit"       , // username
 			    0               , // ip

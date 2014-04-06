@@ -320,7 +320,7 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 	// get the request
 	Msg22Request *r = (Msg22Request *)slot->m_readBuf;
        // get this
-       char *coll = g_collectiondb.getCollName ( r->m_collnum );
+	//char *coll = g_collectiondb.getCollName ( r->m_collnum );
 
 	// sanity check
 	long  requestSize = slot->m_readBufSize;
@@ -333,10 +333,10 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 
 	// get base, returns NULL and sets g_errno to ENOCOLLREC on error
 	RdbBase *tbase; 
-	if ( ! (tbase=getRdbBase(RDB_TITLEDB,coll) ) ) {
-		log("db: Could not get title rec in collection \"%s\" "
+	if ( ! (tbase=getRdbBase(RDB_TITLEDB,r->m_collnum) ) ) {
+		log("db: Could not get title rec in collection # %li "
 		    "because rdbbase is null.",
-		    coll);
+		    (long)r->m_collnum);
 		g_errno = EBADENGINEER;
 		us->sendErrorReply ( slot , g_errno ); 
 		return; 
@@ -763,7 +763,7 @@ void gotUrlListWrapper ( void *state , RdbList *list , Msg5 *msg5 ) {
 	// . our file range should be solid
 	// . use 500 million for min recsizes to get all in range
 	if ( ! st->m_msg5.getList ( RDB_TITLEDB       ,
-				    coll              ,
+				    r->m_collnum ,
 				    &st->m_tlist      ,
 				    startKey          , // startKey
 				    endKey            , // endKey

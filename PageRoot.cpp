@@ -78,8 +78,9 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 			      //" &nbsp; &nbsp; <a href=/logout>Logout</a>"
 			      );
 
-	if ( r->isLocal() )
-	     sb.safePrintf("&nbsp; &nbsp;[<a href=\"/master?\">Admin</a>]");
+	//if ( r->isLocal() )
+	    sb.safePrintf("&nbsp; &nbsp; [<a href=\"/admin/settings\">"
+			  "<font color=red>Admin</font></a>]");
 	sb.safePrintf("</p></b></center></body></html>");
 	return true;
 }
@@ -168,6 +169,11 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("</form>\n");
 	sb.safePrintf("<br>\n");
 	sb.safePrintf("\n");
+
+	// print any red boxes we might need to
+	if ( printRedBox2 ( &sb , true ) )
+		sb.safePrintf("<br>\n");
+
 	sb.safePrintf("<table cellpadding=3>\n");
 	sb.safePrintf("\n");
 
@@ -1285,7 +1291,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 
 	// see if they provided a url of a file of urls if they did not
 	// provide a url to add directly
-	bool isAdmin = g_collectiondb.isAdmin ( r , s );
+	bool isAdmin = g_conf.isCollAdmin ( s , r );
 	long  ufuLen = 0;
 	char *ufu = NULL;
 	if ( isAdmin )
@@ -1561,7 +1567,7 @@ void doneInjectingWrapper3 ( void *st ) {
 	// allow others to add now
 	s_inprogress = false;
 	// get the state properly
-	//State1 *st1 = (State1 *) state;
+	//State1i *st1 = (State1i *) state;
 	// in order to see what sites are being added log it, then we can
 	// more easily remove sites from sitesearch.gigablast.com that are
 	// being added but not being searched
