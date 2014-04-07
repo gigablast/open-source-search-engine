@@ -38,6 +38,7 @@ Log::Log () {
 	m_port = 777; 
 	m_needsPrinting = false; 
 	m_disabled = false;
+	m_logTimestamps = false;
 }
 
 Log::~Log () { reset(); }
@@ -113,7 +114,7 @@ bool Log::init ( char *filename ) {
 		m_filename);
 	return false;
 }
-
+/*
 static const char *getTypeString ( long type ) ;
 
 const char *getTypeString ( long type ) {
@@ -129,7 +130,7 @@ const char *getTypeString ( long type ) {
 	default: return "     ";
 	}
 }
-
+*/
 #define MAX_LINE_LEN 20048
 
 bool Log::shouldLog ( long type , char *msg ) {
@@ -238,6 +239,7 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	char tt [ MAX_LINE_LEN ];
 	char *p    = tt;
 	char *pend = tt + MAX_LINE_LEN;
+	/*
 	// print timestamp, hostid, type
 	if ( g_hostdb.m_numHosts <= 999 ) 
 		sprintf ( p , "%llu %03li %s ",
@@ -248,14 +250,33 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	else if ( g_hostdb.m_numHosts <= 99999 ) 
 		sprintf ( p , "%llu %05li %s ",
 			  now , g_hostdb.m_hostId , getTypeString(type) );
-	p += gbstrlen ( p );
+	*/
+
+
+	// print timestamp, hostid, type
+
+	if ( m_logTimestamps ) {
+		if ( g_hostdb.m_numHosts <= 999 ) 
+			sprintf ( p , "%llu %03li ",
+				  now , g_hostdb.m_hostId );
+		else if ( g_hostdb.m_numHosts <= 9999 ) 
+			sprintf ( p , "%llu %04li ",
+				  now , g_hostdb.m_hostId );
+		else if ( g_hostdb.m_numHosts <= 99999 ) 
+			sprintf ( p , "%llu %05li ",
+				  now , g_hostdb.m_hostId );
+		p += gbstrlen ( p );
+	}
+
 	// msg resource
 	char *x = msg;
 	long cc = 7;
 	// the first 7 bytes or up to the : must be ascii
-	while ( p < pend && *x && is_alnum_a(*x) ) { *p++ = *x++; cc--; }
+	//while ( p < pend && *x && is_alnum_a(*x) ) { *p++ = *x++; cc--; }
 	// space pad
-	while ( cc-- > 0 ) *p++ = ' ';
+	//while ( cc-- > 0 ) *p++ = ' ';
+	// ignore the label for now...
+	while ( p < pend && *x && is_alnum_a(*x) ) { x++; cc--; }
 	// thread id if in "thread"
 	if ( pid != s_pid && s_pid != -1 ) {
 		//sprintf ( p , "[%li] " , (long)getpid() );
@@ -266,8 +287,16 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	long avail = (MAX_LINE_LEN) - (p - tt) - 1;
 	if ( msgLen > avail ) msgLen = avail;
 	if ( *x == ':' ) x++;
+	if ( *x == ' ' ) x++;
 	strncpy ( p , x , avail );
+	// capitalize for consistency
+	if ( is_alpha_a(*p) ) *p = to_upper_a(*p);
 	p += gbstrlen(p);
+	// back up over spaces
+	while ( p[-1] == ' ' ) p--;
+	// end in period or ? or !
+	if ( p[-1] != '?' && p[-1] != '.' && p[-1] != '!' )
+		*p++ = '.';
 	*p ='\0';
 	// the total length, not including the \0
 	long tlen = p - tt;

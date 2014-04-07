@@ -429,7 +429,7 @@ pid_t s_pid = (pid_t) -1;
 
 void Mem::setPid() {
 	s_pid = getpid();
-	log("mem: pid is %li",(long)s_pid);
+	//log("mem: pid is %li",(long)s_pid);
 	if(s_pid == -1 ) { log("monitor: bad s_pid"); char *xx=NULL;*xx=0; } 
 }
 

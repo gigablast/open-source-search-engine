@@ -139,6 +139,8 @@ class Log {
 
 	bool          m_disabled;
 
+	bool m_logTimestamps;
+
  private:
 
 	bool dumpLog ( ); // make room for the new ones

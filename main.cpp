@@ -202,6 +202,7 @@ void handleRequest8e(UdpSlot *, long netnice ) {return; }
 void handleRequest4f(UdpSlot *, long netnice ) {return; }
 void handleRequest95(UdpSlot *, long netnice ) {return; }
 
+char *getcwd2 ( char *arg ) ;
 
 // for cleaning up indexdb
 void dumpMissing ( char *coll );
@@ -403,7 +404,7 @@ int main2 ( int argc , char *argv[] ) {
 	printHelp:
 		SafeBuf sb;
 		sb.safePrintf(
-			"Usage: gb [-c hostsConf] <CMD>\n");
+			"Usage: gb [-d workingDir] <CMD>\n");
 		sb.safePrintf(
 			      "\tItems in []'s are optional, and items "
 			      "in <>'s are "
@@ -433,7 +434,13 @@ int main2 ( int argc , char *argv[] ) {
 
 			"start [hostId]\n"
 			"\tstart the gb process on all hosts or just on "
-			"[hostId] if specified.\n\n"
+			"[hostId] if specified using an ssh command.\n\n"
+
+			"kstart [hostId]\n"
+			"\tstart the gb process on all hosts or just on "
+			"[hostId] if specified using an ssh command and "
+			"if the gb process cores then restart it. k stands "
+			"for keepalive.\n\n"
 
 			"stop [hostId]\n"
 			"\tsaves and exits for all gb hosts or "
@@ -926,11 +933,13 @@ int main2 ( int argc , char *argv[] ) {
 	}
 
 	// get hosts.conf file
-	char *hostsConf = "./hosts.conf";
+	//char *hostsConf = "./hosts.conf";
 	long hostId = 0;
 	long  cmdarg = 1;
-	if ( argc >= 3 && argv[1][0]=='-'&&argv[1][1]=='c'&&argv[1][2]=='\0') {
-		hostsConf = argv[2];
+	char *workingDir = NULL;
+	if ( argc >= 3 && argv[1][0]=='-'&&argv[1][1]=='d'&&argv[1][2]=='\0') {
+		//hostsConf = argv[2];
+		workingDir = argv[2];
 		cmdarg    = 3;
 	}
 		
@@ -1083,7 +1092,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "parsetest"  ) == 0 ) {
 		if ( cmdarg+1 >= argc ) goto printHelp;
 		// load up hosts.conf
-		if ( ! g_hostdb.init(hostsConf, hostId) ) {
+		if ( ! g_hostdb.init(hostId) ) {
 			log("db: hostdb init failed." ); return 1; }
 		// init our table for doing zobrist hashing
 		if ( ! hashinit() ) {
@@ -1129,7 +1138,7 @@ int main2 ( int argc , char *argv[] ) {
 	*/
 
 	if ( strcmp ( cmd , "booltest" ) == 0 ){
-		if ( ! g_hostdb.init(hostsConf, hostId) ) {
+		if ( ! g_hostdb.init(hostId) ) {
 			log("db: hostdb init failed." ); return 1; }
 		// init our table for doing zobrist hashing
 		if ( ! hashinit() ) {
@@ -1259,14 +1268,14 @@ int main2 ( int argc , char *argv[] ) {
 
 	// this is just like starting up a gb process, but we add one to
 	// each port, we are a dummy machine in the dummy cluster.
-	// gb -c hosts.conf tmpstart [hostId]
+	// gb -d <workingdir> tmpstart [hostId]
 	char useTmpCluster = 0;
 	if ( strcmp ( cmd , "tmpstart" ) == 0 )
 		useTmpCluster = 1;
-	// gb -c hosts.conf tmpstop [hostId]
+	// gb -d <workingdir> tmpstop [hostId]
 	if ( strcmp ( cmd , "tmpstop" ) == 0 )
 		useTmpCluster = 1;
-	// gb -c hosts.conf tmpstarthost <hostId>
+	// gb -d <workingdir> tmpstarthost <hostId>
 	if ( strcmp ( cmd , "tmpstarthost" ) == 0 ) {
 		useTmpCluster = 1;
 		// we need to parse out the hostid too!
@@ -1293,8 +1302,18 @@ int main2 ( int argc , char *argv[] ) {
 		return 0;
 	}
 
+	//
+	// get current working dir that the gb binary is in. all the data
+	// files should in there too!!
+	//
+	if ( ! workingDir ) workingDir = getcwd2 ( argv[0] );
+
 	// load up hosts.conf
-	if ( ! g_hostdb.init(hostsConf, hostId, NULL, isProxy,useTmpCluster)){
+	if ( ! g_hostdb.init(hostId, 
+			     NULL, 
+			     isProxy,
+			     useTmpCluster,
+			     workingDir)){
 		log("db: hostdb init failed." ); return 1; }
 
 	// set clock file name so gettimeofdayInMmiilisecondsGlobal()
@@ -1396,8 +1415,8 @@ int main2 ( int argc , char *argv[] ) {
 		if ( ! g_loop.init() ) {
 			log("db: Loop init failed." ); return 1; }
 
-		if ( ! g_threads.init()     ) {
-			log("db: Threads init failed." ); return 1; }
+		//if ( ! g_threads.init()     ) {
+		//	log("db: Threads init failed." ); return 1; }
 
 		g_process.init();
 
@@ -2691,7 +2710,7 @@ int main2 ( int argc , char *argv[] ) {
 	//	if ( cmd && ! is_digit(cmd[0]) ) goto printHelp;
 
 
-	fprintf(stderr,"Logging to file %s.\n",g_hostdb.m_logFilename );
+	log("db: Logging to file %s.",g_hostdb.m_logFilename );
 
 	/*
 	// tmp stuff to generate new query log
@@ -2731,6 +2750,8 @@ int main2 ( int argc , char *argv[] ) {
 	// not stderr
 	//if ( ( ! cmd || !cmd[0]) && ! g_threads.init()     ) {
 	//	log("db: Threads init failed." ); return 1; }
+
+	g_log.m_logTimestamps = true;
 
 	if (!ucInit(g_hostdb.m_dir, true)) {
 		log("Unicode initialization failed!");
@@ -3713,7 +3734,8 @@ void doCmdAll ( int fd, void *state ) {
 // copy a collection from one network to another (defined by 2 hosts.conf's)
 int collcopy ( char *newHostsConf , char *coll , long collnum ) {
 	Hostdb hdb;
-	if ( ! hdb.init(newHostsConf, 0/*assume we're zero*/) ) {
+	//if ( ! hdb.init(newHostsConf, 0/*assume we're zero*/) ) {
+	if ( ! hdb.init( 0/*assume we're zero*/) ) {
 		log("clusterCopy failed. Could not init hostdb with %s",
 		    newHostsConf);
 		return -1;
@@ -3761,7 +3783,8 @@ int scale ( char *newHostsConf , bool useShotgunIp) {
 	g_hostdb.resetPortTables();
 
 	Hostdb hdb;
-	if ( ! hdb.init(newHostsConf, 0/*assume we're zero*/) ) {
+	//if ( ! hdb.init(newHostsConf, 0/*assume we're zero*/) ) {
+	if ( ! hdb.init( 0/*assume we're zero*/) ) {
 		log("Scale failed. Could not init hostdb with %s",
 		    newHostsConf);
 		return -1;
@@ -4661,7 +4684,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f tmpgb tmpgb.oldsave ; "
 				"mv -f tmpgb.installed tmpgb ; "
-				"./tmpgb -c %shosts.conf tmpstarthost "
+				"./tmpgb -d %s tmpstarthost "
 				"%li >& ./tmplog%03li &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
@@ -13763,7 +13786,7 @@ int injectFile ( char *filename , char *ips ,
 	long ip = 0;
 	// is ip field a hosts.conf instead?
 	if ( strstr(ips,".conf") ) {
-		if ( ! s_hosts2.init ( ips , 0 ) ) {
+		if ( ! s_hosts2.init ( 0 ) ) { // ips , 0 ) ) {
 			fprintf(stderr,"failed to load %s",ips);
 			exit(0);
 		}
@@ -16702,7 +16725,8 @@ int collinject ( char *newHostsConf ) {
 	g_hostdb.resetPortTables();
 
 	Hostdb hdb;
-	if ( ! hdb.init(newHostsConf, 0/*assume we're zero*/) ) {
+	//if ( ! hdb.init(newHostsConf, 0/*assume we're zero*/) ) {
+	if ( ! hdb.init( 0/*assume we're zero*/) ) {
 		log("collinject failed. Could not init hostdb with %s",
 		    newHostsConf);
 		return -1;
@@ -16730,7 +16754,7 @@ int collinject ( char *newHostsConf ) {
 		Host *h1 = hdb1->getShard ( shardNum );
 		Host *h2 = hdb2->getShard ( shardNum );
 		
-		printf("ssh %s 'nohup /w/gbi -c /w/hosts.conf inject titledb "
+		printf("ssh %s 'nohup /w/gbi -d /w/ inject titledb "
 		       "%s:%li >& /w/ilog' &\n"
 		       , h1->m_hostname
 		       , iptoa(h2->m_ip)
@@ -16814,4 +16838,46 @@ bool isRecoveryFutile ( ) {
 
 	// otherwise, give up!
 	return true;
+}
+
+char *getcwd2 ( char *arg ) {
+
+	// skip initial . and /
+	if ( arg[0] == '.' && arg[1] == '/' ) arg += 1;
+
+	char *a = arg;
+
+	// store path part before "/gb" or "/gigablast"
+	long alen = 0;
+	for ( ; *a ; a++ ) {
+		if ( *a != '/' ) continue;
+		alen = a - arg + 1;
+	}
+
+	if ( alen > 512 ) {
+		log("db: path is too long");
+		g_errno = EBADENGINEER;
+		return NULL;
+	}
+
+	// store the relative path of gb in there now
+	static char s_cwdBuf[1025];
+	getcwd ( s_cwdBuf , 1024 );
+	char *end = s_cwdBuf + gbstrlen(s_cwdBuf);
+
+	memcpy ( end , arg , alen );
+	end += alen;
+	*end = '\0';
+
+	// size of the whole thing
+	//long clen = gbstrlen(s_cwdBuf);
+	// store terminating /
+	//if ( clen < 1024 ) {
+	//	s_cwdBuf[clen] = '/';
+	//	s_cwdBuf[clen+1] = '\0';
+	//}
+
+	//log("hey: hey %s",s_cwdBuf);
+
+	return s_cwdBuf;
 }
