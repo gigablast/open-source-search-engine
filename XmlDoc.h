@@ -1942,8 +1942,9 @@ class XmlDoc {
 	//long  m_gsbufAllocSize;
 	char *m_note;
 	char *m_imageUrl;
-	char  m_imageUrlBuf[100];
-	long  m_imageUrlSize;
+	//char  m_imageUrlBuf[100];
+	SafeBuf m_imageUrlBuf;
+	//long  m_imageUrlSize;
 	MatchOffsets m_matchOffsets;
 	Query m_query;
 	Matches m_matches;

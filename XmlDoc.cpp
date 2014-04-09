@@ -27535,12 +27535,12 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	}
 
 	// get thumbnail image url
-	if ( ! reply->ptr_imgUrl && m_req->m_getImageUrl ) {
+	if ( ! reply->ptr_imgUrl ) { // && m_req->m_getImageUrl ) {
 		char **iu = getImageUrl();
 		if ( ! iu || iu == (char **)-1 ) return (Msg20Reply *)iu;
 		reply-> ptr_imgUrl = *iu;
 		reply->size_imgUrl = 0;
-		if ( *iu ) reply->size_imgUrl = gbstrlen(*iu);
+		if ( *iu ) reply->size_imgUrl = gbstrlen(*iu)+1;
 	}
 
 	// . adids contained in the doc
@@ -28142,6 +28142,43 @@ char **XmlDoc::getImageUrl() {
 	// assume none
 	m_imageUrl      = NULL;
 	m_imageUrlValid = true;
+	// diffbot often extracts an image in the json. but even if pure
+	// json it might be diffbot json that was injected an we don't know
+	// it so check contentType...
+	if ( m_isDiffbotJSONObject || m_contentType == CT_JSON ) {
+		char *iu = strstr(ptr_utf8Content,"\"images\":[{");
+		if ( ! iu ) return &m_imageUrl;
+		// temp null
+		char *end = strstr(iu+11,"]");
+		if ( ! end ) return &m_imageUrl;
+		char c = *end;
+		*end = '\0';
+		// now use strstr to find the first image url
+		char *needle = "\"url\":\"";
+		char *find = strstr(iu,needle);
+		// return NULL if not found
+		if ( ! find ) {
+			// revert temp null
+			*end = c;
+			return &m_imageUrl;
+		}
+		// find end of it
+		char *start = find + 7;
+		char *urlEnd = strstr(start,"\"");
+		// revert temp null
+		*end = c;
+		// did not find quote ending the url! wtf?
+		if ( ! urlEnd ) return &m_imageUrl;
+		// too big?
+		long iulen = urlEnd - start;
+		if ( iulen >= MAX_URL_LEN-1 ) return &m_imageUrl;
+		// ok, we got it, just copy that
+		m_imageUrlBuf.safeMemcpy ( start , iulen );
+		m_imageUrlBuf.nullTerm();
+		m_imageUrl = m_imageUrlBuf.getBufStart();
+		return &m_imageUrl;
+	}
+
 	// all done if not youtube or meta cafe
 	char *host = f->getHost();
 	char  found = 0;
@@ -28159,21 +28196,22 @@ char **XmlDoc::getImageUrl() {
 		if ( ! s ) return &m_imageUrl;
 		// point to the id
 		s += 2;
-		m_imageUrl = m_imageUrlBuf;
-		char    *p = m_imageUrlBuf;
-		memcpy ( p , "http://img.youtube.com/vi/" , 26 );
-		p += 26;
+		//m_imageUrl = m_imageUrlBuf;
+		//char    *p = m_imageUrlBuf;
+		m_imageUrlBuf.safeStrcpy("http://img.youtube.com/vi/");
 		// do not break
-		char *pend = m_imageUrlBuf + 80;
+		//char *pend = m_imageUrlBuf + 80;
 		// copy the id/number
-		for ( ; is_digit(*s) && p < pend ; ) *p++ = *s++;
+		//for ( ; is_digit(*s) && p < pend ; ) *p++ = *s++;
+		for ( ; is_digit(*s) ; s++ ) 
+			m_imageUrlBuf.pushChar(*s);
 		// wrap it up
-		memcpy ( p , "/2.jpg\0" , 7 );
-		p += 7;
+		m_imageUrlBuf.safeStrcpy ( "/2.jpg" );
 		// size includes \0;
-		m_imageUrlSize = p - m_imageUrl ;
+		//m_imageUrlSize = p - m_imageUrl ;
 		// sanity check
-		if ( m_imageUrlSize > 100 ) { char *xx=NULL;*xx=0; }
+		//if ( m_imageUrlSize > 100 ) { char *xx=NULL;*xx=0; }
+		m_imageUrl = m_imageUrlBuf.getBufStart();
 		return &m_imageUrl;
 	}
 	// must be meta cafe now
@@ -28188,17 +28226,20 @@ char **XmlDoc::getImageUrl() {
 		// skip ifnot good
 		if ( id <= 0 ) continue;
 		// make the url
-		m_imageUrl = m_imageUrlBuf;
-		char    *p = m_imageUrlBuf;
-		memcpy ( p , "http://s2.mcstatic.com/thumb/" , 29 );
-		p += 29;
-		p += sprintf ( p , "%li" , id );
-		memcpy ( p , ".jpg\0" , 5 );
-		p += 5;
+		//m_imageUrl = m_imageUrlBuf;
+		//char    *p = m_imageUrlBuf;
+		//memcpy ( p , "http://s2.mcstatic.com/thumb/" , 29 );
+		//p += 29;
+		//p += sprintf ( p , "%li" , id );
+		//memcpy ( p , ".jpg\0" , 5 );
+		//p += 5;
+		m_imageUrlBuf.safePrintf("http://s2.mcstatic."
+					 "com/thumb/%li.jpg", id);
+		m_imageUrl = m_imageUrlBuf.getBufStart();
 		// size includes \0;
-		m_imageUrlSize = p - m_imageUrl ;
+		//m_imageUrlSize = p - m_imageUrl ;
 		// sanity check
-		if ( m_imageUrlSize > 100 ) { char *xx=NULL;*xx=0; }
+		//if ( m_imageUrlSize > 100 ) { char *xx=NULL;*xx=0; }
 		break;
 	}
 	return &m_imageUrl;

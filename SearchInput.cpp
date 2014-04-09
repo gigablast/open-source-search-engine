@@ -299,6 +299,12 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r , Query *q ) {
 
 	m_cr = cr;
 
+	if ( ! cr ) {
+		log("si: collection does not exist");
+		g_errno = ENOCOLLREC;
+		return false;
+	}
+
 	//m_coll2    = m_cr->m_coll;
 	//m_collLen2 = gbstrlen(m_coll2);
 
@@ -1403,6 +1409,7 @@ char getFormatFromRequest ( HttpRequest *r ) {
 	if ( formatStr && strcmp(formatStr,"json") == 0 ) format = FORMAT_JSON;
 	if ( formatStr && strcmp(formatStr,"xml") == 0 ) format = FORMAT_XML;
 	if ( formatStr && strcmp(formatStr,"csv") == 0 ) format = FORMAT_CSV;
+	if ( formatStr && strcmp(formatStr,"widget")==0)format=FORMAT_WIDGET;
 
 
 	// support old api &xml=1 to mean &format=1
@@ -1417,6 +1424,10 @@ char getFormatFromRequest ( HttpRequest *r ) {
 
 	if ( r->getLong("csv",0) ) {
 		format = FORMAT_CSV;
+	}
+
+	if ( r->getLong("widget",0) ) {
+		format = FORMAT_WIDGET;
 	}
 
 	return format;
