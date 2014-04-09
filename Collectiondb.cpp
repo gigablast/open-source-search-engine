@@ -2389,14 +2389,17 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// maybe this is good enough
 		//if ( sc ) sc->m_waitingTreeNeedsRebuild = true;
 		
-		CollectionRec *cr = sc->m_cr;
+		//CollectionRec *cr = sc->m_cr;
 
 		// . rebuild sitetable? in PageBasic.cpp.
 		// . re-adds seed spdierrequests using msg4
 		// . true = addSeeds
-		updateSiteListTables ( m_collnum , 
-				       true , 
-				       cr->m_siteListBuf.getBufStart() );
+		// . no, don't do this now because we call updateSiteList()
+		//   when we have &sitelist=xxxx in the request which will
+		//   handle updating those tables
+		//updateSiteListTables ( m_collnum , 
+		//		       true , 
+		//		       cr->m_siteListBuf.getBufStart() );
 	}
 
 

@@ -18303,6 +18303,11 @@ bool XmlDoc::isSpam ( char   *u         ,
 // should we index the doc? if already indexed, and is filtered, we delete it
 char *XmlDoc::getIsFiltered ( ) {
 	if ( m_isFilteredValid ) return &m_isFiltered;
+	if ( m_isDiffbotJSONObject ) {
+		m_isFiltered = false;
+		m_isFilteredValid = true;
+		return &m_isFiltered;
+	}
 	long *priority = getSpiderPriority();
 	if ( ! priority || priority == (void *)-1 ) return (char *)priority;
 	m_isFiltered = false;
@@ -18512,6 +18517,12 @@ bool XmlDoc::logIt ( ) {
 
 	if ( m_contentHash32Valid )
 		sb.safePrintf("ch32=%010lu ",m_contentHash32);
+
+	if ( m_domHash32Valid )
+		sb.safePrintf("dh32=%010lu ",m_domHash32);
+
+	if ( m_siteHash32Valid )
+		sb.safePrintf("sh32=%010lu ",m_siteHash32);
 
 	if ( m_isPermalinkValid )
 		sb.safePrintf("ispermalink=%li ",(long)m_isPermalink);
@@ -20787,6 +20798,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			sreq.m_hopCountValid = 1;
 			sreq.m_fakeFirstIp   = 1;
 			sreq.m_firstIp       = firstIp;
+			// so we can match url filters' "insitelist" directive
+			// in Spider.cpp::getUrlFilterNum()
+			sreq.m_domHash32  = m_domHash32;
+			sreq.m_siteHash32 = m_siteHash32;
+			sreq.m_hostHash32 = m_siteHash32;
 			// set this
 			if (!m_dx->set4 ( &sreq       ,
 					  NULL        ,

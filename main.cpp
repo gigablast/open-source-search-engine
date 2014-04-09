@@ -16875,8 +16875,12 @@ char *getcwd2 ( char *arg ) {
 	getcwd ( s_cwdBuf , 1024 );
 	char *end = s_cwdBuf + gbstrlen(s_cwdBuf);
 
-	memcpy ( end , arg , alen );
-	end += alen;
+	// if "arg" is a RELATIVE path then append it
+	if ( arg && arg[0]!='/' ) {
+		memcpy ( end , arg , alen );
+		end += alen;
+	}
+
 	*end = '\0';
 
 	// size of the whole thing

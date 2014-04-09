@@ -289,8 +289,8 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	if ( *x == ':' ) x++;
 	if ( *x == ' ' ) x++;
 	strncpy ( p , x , avail );
-	// capitalize for consistency
-	if ( is_alpha_a(*p) ) *p = to_upper_a(*p);
+	// capitalize for consistency. no, makes grepping log msgs harder.
+	//if ( is_alpha_a(*p) ) *p = to_upper_a(*p);
 	p += gbstrlen(p);
 	// back up over spaces
 	while ( p[-1] == ' ' ) p--;

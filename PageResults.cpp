@@ -5647,7 +5647,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 	long width  = hr->getLong("width",100);
 	long height = hr->getLong("height",300);
 	long refresh = hr->getLong("refresh",300);
-	char *def = "<style>html {font-size:12px;font-family:arial;background-color:transparent;color:black;}span.dayheader { font-size:14px;font-weight:bold;}span.title { font-size:16px;font-weight:bold;}span.countdown { font-size:12px;color:red;}span.summary { font-size:12px;}span.address { font-size:12px;color:purple;}span.times { font-size:12px;color:green;}span.dates { font-size:12px;}span.prevnext { font-size:12px;font-weight:bold;}</style>";//<h2>News</h2>";
+	char *def = "<style>html {font-size:12px;font-family:arial;background-color:transparent;color:black;}span.title { font-size:16px;font-weight:bold;}span.summary { font-size:12px;} span.date { font-size:12px;}span.prevnext { font-size:12px;font-weight:bold;}</style>";//<h2>News</h2>";
 	long len1,len2,len3,len4;
 	char *header = hr->getString("header",&len1,def);
 	char *sites = hr->getString("sites",&len2,"");
@@ -5952,7 +5952,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 			 "<br>"
 			//"<br><br><br>"
 			"<font style=\"font-size:16px;\">"
-			"Insert the following code into your website to "
+			"Insert the following code into your webpage to "
 			"generate the widget %s. "
 			//"<br>"
 			//"<b><u>"
@@ -6016,6 +6016,9 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 
 	SafeBuf parmList;
 
+	collnum_t cn = -1;
+	if ( cr ) cn = cr->m_collnum;
+
 	// . first update their collection with the sites to crawl
 	// . this is NOT a custom diffbot crawl, just a regular one using
 	//   the new crawl filters logic, "siteList"
@@ -6024,35 +6027,38 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 	if ( sites && ! cr && token ) {
 		// we need to add the new collnum, so reserve it
 		collnum_t newCollnum = g_collectiondb.reserveCollNum();
+		// use that
+		cn = newCollnum;
 		// add the new colection named <token>-widget123
-		g_parms.addNewParmToList1 ( &parmList,newCollnum,
-					    coll,0,"addColl");
+		g_parms.addNewParmToList1 ( &parmList,cn,coll,0,"addColl");
+		// note it
+		log("widget: adding new widget coll %s",coll);
+	}
+
+
+	if ( cn >= 0 && token ) {
 		// use special url filters profile that spiders sites
 		// shallowly and frequently to pick up new news stories
 		// "1" = (long)UFP_NEWS
 		char ttt[12];
 		sprintf(ttt,"%li",(long)UFP_NEWS);
-		g_parms.addNewParmToList1 ( &parmList,newCollnum,ttt,0,
+		g_parms.addNewParmToList1 ( &parmList,cn,ttt,0,
 					    "urlfiltersprofile");
 		// use diffbot analyze
 		char durl[1024];
 		sprintf(durl,
-			"http://www.diffbot.com/api?mode=analyze&token=%s",
+			"http://api.diffbot.com/v2/analyze?mode=auto&token=%s",
 			token);
 		// TODO: ensure we call diffbot ok
-		g_parms.addNewParmToList1 ( &parmList,newCollnum,
-					    durl,0,"apiUrl");
-		// the list of sites to spider
-		g_parms.addNewParmToList1 ( &parmList,newCollnum,
-					    sites,0,"sitelist");
-		// note it
-		log("widget: adding new widget coll %s",coll);
+		g_parms.addNewParmToList1 ( &parmList,cn,durl,0,"apiUrl");
 	}
 
-	// update the list of sites to crawl and search and show in widget
-	if ( sites && token && cr )
-		g_parms.addNewParmToList1 ( &parmList,cr->m_collnum,
-					    sites,0,"sitelist");
+	if ( ! sites ) sites = "";
+
+	// . update the list of sites to crawl and search and show in widget
+	// . if they give an empty list then allow that, it will stop crawling
+	if ( cn >= 0 && token )
+		g_parms.addNewParmToList1 ( &parmList,cn,sites,0,"sitelist");
 
 
 	if ( parmList.length() ) {
