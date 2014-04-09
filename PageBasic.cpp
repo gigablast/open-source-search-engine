@@ -156,7 +156,7 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 
 	Url u;
 
-	for ( ; *pn ; pn++ , lineNum++ ) {
+	for ( ; *pn ; lineNum++ ) {
 
 		// get end
 		char *s = pn;
@@ -168,6 +168,9 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 		// back p up over spaces in case ended in spaces
 	        char *pe = pn;
 		for ( ; pe > s && is_wspace_a(pe[-1]) ; pe-- );
+
+		// skip over the \n so pn points to next line for next time
+		if ( *pn == '\n' ) pn++;
 
 		// make hash of the line
 		long h32 = hash32 ( s , pe - s );

@@ -683,6 +683,9 @@ class CollectionRec {
 	SafeBuf m_siteListBuf;
 	char m_spiderToo;
 
+	// see UFP_* values in Parms.h. i.e. UFP_NEWS for crawling for NEWS
+	long m_urlFiltersProfile;
+
 	// . now the url regular expressions
 	// . we chain down the regular expressions
 	// . if a url matches we use that tagdb rec #

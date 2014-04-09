@@ -13310,6 +13310,16 @@ void Parms::init ( ) {
 		"expressions\": "
 		"link:gigablast and doc:quality<X and doc:quality>X.";
 		*/
+
+	m->m_cgi   = "ufp";
+	m->m_xml   = "urlFiltersProfile";
+	m->m_off   = (char *)&cr.m_urlFiltersProfile - x;
+	m->m_type  = TYPE_LONG;
+	m->m_page  = PAGE_FILTERS;
+	m->m_def   = "0"; // UFP_NONE
+	m->m_flags = PF_HIDDEN | PF_REBUILDURLFILTERS;
+	m++;
+
 	m->m_cgi   = "fe";
 	m->m_xml   = "filterExpression";
 	m->m_max   = MAX_FILTERS;
@@ -16192,8 +16202,15 @@ void Parms::init ( ) {
 		if ( m_parms[i].m_off   > mm ||
 		     m_parms[i].m_soff  > mm ||
 		     m_parms[i].m_smaxc > mm   ) {
-			log(LOG_LOGIC,"conf: Bad offset in parm #%li %s.",
-			    i,m_parms[i].m_title);
+			log(LOG_LOGIC,"conf: Bad offset in parm #%li %s."
+			    " (%li,%li,%li,%li). Did you FORGET to include "
+			    "an & before the cr.myVariable when setting "
+			    "m_off for this parm?",
+			    i,m_parms[i].m_title,
+			    mm,
+			    m_parms[i].m_off,
+			    m_parms[i].m_soff,
+			    m_parms[i].m_smaxc);
 			exit(-1);
 		}
 		// do not allow numbers in cgi parms, they are used for

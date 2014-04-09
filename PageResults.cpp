@@ -203,9 +203,8 @@ bool printCSSHead ( SafeBuf *sb , char format ) {
 			      "font-family:Arial, Helvetica, sans-serif;"
 			      );
 
-
-	if ( format == FORMAT_WIDGET )
-		sb->safePrintf("background-color:000000;");
+	//if ( format == FORMAT_WIDGET )
+	//	sb->safePrintf("background-color:000000;");
 
 	sb->safePrintf(	      "color: #000000;"
 			      "font-size: 12px;"
@@ -975,6 +974,15 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf("<body>");
 	}
 
+	HttpRequest *hr = &st->m_hr;
+
+	// lead with user's widget header which usually has custom style tags
+	if ( si->m_format == FORMAT_WIDGET ) {
+		char *header = hr->getString("header",NULL);
+		if ( header ) sb->safeStrcpy ( header );
+	}
+
+
 	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
 		printLogoAndSearchBox ( sb , &st->m_hr , -1 ); // catId = -1
 	}
@@ -1048,7 +1056,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	*/
 
 
-	// save how many docs are in it
+	// save how many docs are in this collection
 	long long docsInColl = -1;
 	//RdbBase *base = getRdbBase ( RDB_CHECKSUMDB , si->m_coll );
 	//RdbBase *base = getRdbBase ( (uint8_t)RDB_CLUSTERDB , si->m_coll2 );
@@ -1081,10 +1089,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 	    sb->safePrintf("\"moreResultsFollow\":%li,\n", (long)moreFollow);
 	}
 
-    if ( st->m_header && si->m_format == FORMAT_JSON ) {
-        sb->safePrintf("\"results\":[\n");
-        return true;
-    }
+	if ( st->m_header && si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("\"results\":[\n");
+		return true;
+	}
 
 	// . did he get a spelling recommendation?
 	// . do not use htmlEncode() on this anymore since receiver
@@ -1142,7 +1150,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			float tfwi = getTermFreqWeight(ssi->m_listSize);
 			for ( long j = i+1; j< nr ; j++ ) {
 				SingleScore *ssj = &dpx->m_singleScores[j];
-				float tfwj = getTermFreqWeight(ssj->m_listSize);
+				float tfwj =getTermFreqWeight(ssj->m_listSize);
 				max += (lw * tfwi * tfwj)/3.0;
 			}
 		}
@@ -1237,10 +1245,13 @@ bool printSearchResultsHeader ( State0 *st ) {
 	long collLen = gbstrlen(coll);
 
 	// otherwise, we had no error
-	if ( numResults == 0 && 
-	     (si->m_format == FORMAT_HTML || si->m_format==FORMAT_WIDGET) ) {
+	if ( numResults == 0 && si->m_format == FORMAT_HTML ) {
 		sb->safePrintf ( "No results found in <b>%s</b> collection.",
 				cr->m_coll);
+	}
+	// the token is currently in the collection name so do not show that
+	else if ( numResults == 0 && si->m_format == FORMAT_WIDGET ) {
+		sb->safePrintf ( "No results found.");
 	}
 	else if ( moreFollow && si->m_format == FORMAT_HTML ) {
 		if ( isAdmin && si->m_docsToScanForReranking > 1 )
@@ -1924,6 +1935,10 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 			frontTag = "<b>";
 			backTag  = "</b>";
 		}
+		if ( si->m_format == FORMAT_WIDGET ) {
+			frontTag = "<font style=\"background-color:yellow\">" ;
+		}
+
 		Highlight hi;
 		SafeBuf hb;
 		long hlen = hi.set ( &hb,//tt , 
@@ -2336,7 +2351,7 @@ bool printResult ( State0 *st, long ix ) {
 		
 		sb->safePrintf("<b style=\""
 			       "text-decoration:none;"
-			       "font-size: 20px;"
+			       "font-size: 15px;"
 			       "font-weight:bold;"
 			       "background-color:rgba(0,0,0,.5);"
 			       "color:white;"
@@ -2456,6 +2471,9 @@ bool printResult ( State0 *st, long ix ) {
 		frontTag = "<b>";
 		backTag  = "</b>";
 	}
+	if ( si->m_format == FORMAT_WIDGET ) {
+		frontTag = "<font style=\"background-color:yellow\">" ;
+	}
 	long cols = 80;
 	if ( si->m_format == FORMAT_XML ) 
 		sb->safePrintf("\t\t<title><![CDATA[");
@@ -2556,7 +2574,15 @@ bool printResult ( State0 *st, long ix ) {
 
 	if ( si->m_format == FORMAT_XML ) sb->safePrintf("\t\t<sum><![CDATA[");
 
-	sb->brify ( str , strLen, 0 , cols ); // niceness = 0
+	bool printSummary = true;
+	// do not print summaries for widgets by default unless overridden
+	// with &summary=1
+	if ( si->m_format == FORMAT_WIDGET && hr->getLong("summaries",0) == 0 )
+		printSummary = false;
+
+	if ( printSummary )
+		sb->brify ( str , strLen, 0 , cols ); // niceness = 0
+
 	// close xml tag
 	if ( si->m_format == FORMAT_XML ) sb->safePrintf("]]></sum>\n");
 	// new line if not xml
@@ -5525,24 +5551,20 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 }
 
 
-bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr ) {
+bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 	//
 	// begin print controls
 	//
 
 	sb->safePrintf("<html>"
 		       "<body bgcolor=#e8e8e8>"
-		      "<title>Widget Creator</title>"
+		       "<title>Widget Creator</title>"
 		      );
 
 
-	char *coll = "GLOBAL-INDEX";
-	CollectionRec *cr = g_collectiondb.getRec(coll);
-	if ( ! cr ) {
-		sb->safePrintf("Error. collection %s does not exist",
-			       coll);
-		return true;
-	}
+	//char *coll = "GLOBAL-INDEX";
+	CollectionRec *cr = NULL;
+	if ( coll ) cr = g_collectiondb.getRec(coll);
 
 	// if admin clicks "edit" in the live widget itself put up
 	// some simpler content editing boxes. token required!
@@ -5616,8 +5638,8 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr ) {
 	char *c1 = "";
 	char *c2 = "";
 	char *c3 = "";
-	long x1 = hr->getLong("dates"    ,1);
-	long x2 = hr->getLong("summaries",1);
+	long x1 = hr->getLong("dates"    ,0);
+	long x2 = hr->getLong("summaries",0);
 	long x3 = hr->getLong("border"   ,1);
 	if ( x1 ) c1 = " checked";
 	if ( x2 ) c2 = " checked";
@@ -5635,7 +5657,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr ) {
 	sb->safePrintf("<form method=GET action=/widget>"
 		       "<input type=hidden name=c value=\"%s\">"
 		       "<input type=hidden name=format value=\"widget\">"
-		       , cr->m_coll
+		       , coll
 		       );
 
 
@@ -5665,6 +5687,10 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr ) {
 		      "<b style=font-size:22px;><font style=font-size:27px;>"
 		      "W</font>"
 		      "idget <font style=font-size:27px;>C</font>reator</b>"
+
+		      "<img align=right height=50 width=52 "
+		      "src=http://www.diffbot.com/img/diffy-b.png>"
+
 		      "</td>"
 		      "</tr>"
 
@@ -5694,20 +5720,20 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr ) {
 
 
 		      "Show Dates "
-		      "<input type=checkbox "
-		      "onclick=\"toggleBool(this,'dates');reload();\" "
+		      "<input type=checkbox value=1 "
+		      //"onclick=\"toggleBool(this,'dates');reload();\" "
 		      "name=dates%s>"
 		      "<br>"
 
 		      "Show Summaries "
-		      "<input type=checkbox "
-		      "onclick=\"toggleBool(this,'summaries');reload();\" "
+		      "<input type=checkbox value=1 "
+		      //"onclick=\"toggleBool(this,'summaries');reload();\" "
 		      "name=summaries%s>"
 		      "<br>"
 
 		      "Frame border "
-		      "<input type=checkbox "
-		      "onclick=\"toggleBool(this,'border');reload();\" "
+		      "<input type=checkbox value=1 "
+		      //"onclick=\"toggleBool(this,'border');reload();\" "
 		      "name=border%s>"
 		      "<br>"
 
@@ -5819,12 +5845,16 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr ) {
 		      //">"
 		       "</td>"
 		      "<td valign=top>"
+		       "<br>"
 		      "<img src=/gears32.png width=64 height=64>"
 		      "<br><br>"
 		      );
 
 
 	long start = sb->length();
+
+	char *border = "frameborder=no ";
+	if ( x3 ) border = "";
 
 	// this iframe contains the WIDGET
 	sb->safePrintf (
@@ -5858,21 +5888,39 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr ) {
 			//"src=\"http://neo.diffbot.com:8000/search?"
 			*/
 
+			// frameborder=no
+			"%s"
+
 			"src=\""
 			"http://127.0.0.1:8000/search?"
 			"format=widget&"
 			"widgetwidth=%li&widgetheight=%li&"
-			"c=GLOBAL-INDEX&"
+			"c=%s&"
+			"refresh=%li"
 			// show articles sorted by newest pubdate first
-			"q=type%%3Aarticle+gbsortbyint%%3Adate"
 
-			"\">"
 			, width
 			, height
+			, border
 			, width
 			, height
+			, coll
+			, refresh
 			);
 
+	sb->safePrintf("&dates=%li",x1);
+	sb->safePrintf("&summaries=%li",x2);
+
+	sb->safePrintf("&q=");
+	sb->urlEncode ( query );
+
+	// widget content header, usually a style tag
+	sb->safePrintf("&header=");
+	sb->urlEncode ( header );
+
+
+
+	sb->safePrintf("\">");
 
 	sb->safePrintf ( // do not reset the user's "where" cookie
 			// to NYC from looking at this widget!
@@ -5901,6 +5949,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr ) {
 		//	}
 
 	sb->safePrintf ( "\n\n"
+			 "<br>"
 			//"<br><br><br>"
 			"<font style=\"font-size:16px;\">"
 			"Insert the following code into your website to "
@@ -5941,7 +5990,82 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr ) {
 bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 	SafeBuf sb;
 
-	printWidgetPage ( &sb , hr );
+	char *token = hr->getString("token",NULL);
+	if ( token && ! token[0] ) token = NULL;
+
+	if ( ! token ) {
+		g_errno = ENOTOKEN;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(s,g_errno,msg);
+	}
+
+	long tlen = 0;
+	if ( token ) tlen = gbstrlen(token);
+	if ( tlen > 64 ) { 
+		g_errno = ENOCOLLREC;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(s,g_errno,msg);
+	}
+
+	char coll[MAX_COLL_LEN];
+	CollectionRec *cr = NULL;
+	if ( token ) {
+		sprintf(coll,"%s-widget123",token);
+		cr = g_collectiondb.getRec(coll);
+	}
+
+	SafeBuf parmList;
+
+	// . first update their collection with the sites to crawl
+	// . this is NOT a custom diffbot crawl, just a regular one using
+	//   the new crawl filters logic, "siteList"
+	char *sites = hr->getString("sites",NULL);
+	// add the collection if does not exist
+	if ( sites && ! cr && token ) {
+		// we need to add the new collnum, so reserve it
+		collnum_t newCollnum = g_collectiondb.reserveCollNum();
+		// add the new colection named <token>-widget123
+		g_parms.addNewParmToList1 ( &parmList,newCollnum,
+					    coll,0,"addColl");
+		// use special url filters profile that spiders sites
+		// shallowly and frequently to pick up new news stories
+		// "1" = (long)UFP_NEWS
+		char ttt[12];
+		sprintf(ttt,"%li",(long)UFP_NEWS);
+		g_parms.addNewParmToList1 ( &parmList,newCollnum,ttt,0,
+					    "urlfiltersprofile");
+		// use diffbot analyze
+		char durl[1024];
+		sprintf(durl,
+			"http://www.diffbot.com/api?mode=analyze&token=%s",
+			token);
+		// TODO: ensure we call diffbot ok
+		g_parms.addNewParmToList1 ( &parmList,newCollnum,
+					    durl,0,"apiUrl");
+		// the list of sites to spider
+		g_parms.addNewParmToList1 ( &parmList,newCollnum,
+					    sites,0,"sitelist");
+		// note it
+		log("widget: adding new widget coll %s",coll);
+	}
+
+	// update the list of sites to crawl and search and show in widget
+	if ( sites && token && cr )
+		g_parms.addNewParmToList1 ( &parmList,cr->m_collnum,
+					    sites,0,"sitelist");
+
+
+	if ( parmList.length() ) {
+		// send the parms to all hosts in the network
+		g_parms.broadcastParmList ( &parmList , 
+					    NULL,//s,// state is socket i guess
+					    NULL);//doneBroadcastingParms2 );
+	}
+
+
+
+	// now display the widget controls and the widget and the iframe code
+	printWidgetPage ( &sb , hr , coll );
 
 	return g_httpServer.sendDynamicPage(s,
 					    sb.getBufStart(),

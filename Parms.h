@@ -14,6 +14,15 @@
 void handleRequest3e ( UdpSlot *slot , long niceness ) ;
 void handleRequest3f ( UdpSlot *slot , long niceness ) ;
 
+// "url filters profile" values. used to set default crawl rules
+// in Collectiondb.cpp's CollectionRec::setUrlFiltersToDefaults(). 
+// for instance, UFP_NEWS spiders sites more frequently but less deep in
+// order to get "news" pages and articles
+enum {
+	UFP_CUSTOM = 0 ,
+	UFP_NONE   = 0 ,
+	UFP_NEWS = 1 };
+
 // special priorities for the priority drop down 
 // in the url filters table
 enum {
