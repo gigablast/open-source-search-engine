@@ -12414,7 +12414,7 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 	if ( cx->m_isCustomCrawl )
 		return msg->safePrintf("Job is in progress.");
 	else
-		return true;
+		return msg->safePrintf("Spider is in progress.");
 }
 
 // pattern is a ||-separted list of substrings

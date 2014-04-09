@@ -173,7 +173,16 @@ void Threads::reset ( ) {
 		m_threadQueues[i].reset();
 }
 
+Threads::Threads ( ) {
+	m_numQueues = 0;
+	m_initialized = false;
+}
+
 bool Threads::init ( ) {
+
+	if ( m_initialized ) return true;
+	m_initialized = true;
+
 	m_needsCleanup = false;
 	//m_needBottom = false;
 
@@ -183,18 +192,18 @@ bool Threads::init ( ) {
 	// set s_pid to the main process id
 #ifdef PTHREADS
 	s_pid = pthread_self();
-	log(LOG_INFO,
-	    "threads: main process THREAD id = %lu",(long unsigned)s_pid);
+	//log(LOG_INFO,
+	//    "threads: main process THREAD id = %lu",(long unsigned)s_pid);
 	pthread_t tid = pthread_self();
 	sched_param param;
 	int policy;
 	// scheduling parameters of target thread
 	pthread_getschedparam ( tid, &policy, &param);
-	log(LOG_INFO,
-	    "threads: min/max thread priority settings = %li/%li (policy=%li)",
-	    (long)sched_get_priority_min(policy),
-	    (long)sched_get_priority_max(policy),
-	    (long)policy);
+	//log(LOG_INFO,
+	//  "threads: min/max thread priority settings = %li/%li (policy=%li)",
+	//    (long)sched_get_priority_min(policy),
+	//    (long)sched_get_priority_max(policy),
+	//    (long)policy);
 #else
 	s_pid = getpid();
 #endif
@@ -422,6 +431,10 @@ bool Threads::call ( char   type                         ,
 	// don't spawn any if disabled
 	if ( m_disabled ) return false;
 	if ( ! g_conf.m_useThreads ) return false;
+
+	if ( ! m_initialized && ! init() )
+		return log("db: Threads init failed." );
+
 	// . sanity check
 	// . a thread can NOT call this
 	//if ( getpid() != s_pid ) {
@@ -447,7 +460,7 @@ bool Threads::call ( char   type                         ,
 	if ( i == m_numQueues ) {
 		g_errno = EBADENGINEER;
 		return log(LOG_LOGIC,"thread: addtoqueue: Unregistered "
-			   "thread type");
+			   "thread type %li",(long)type);
 	}
 	// debug msg
 	//log("thread: call: adding entry for thread");

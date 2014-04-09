@@ -73,7 +73,9 @@ public:
 // . uses msg4 to add seeds to spiderdb if necessary
 // . only adds seeds for the shard we are on iff we are responsible for
 //   the fake firstip!!!
-bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
+bool updateSiteListTables ( collnum_t collnum , 
+			    bool addSeeds ,
+			    char *siteListArg ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	if ( ! cr ) return true;
@@ -113,6 +115,8 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 	}
 
 	// get the old sitelist Domain Hash to PatternData mapping table
+	// which tells us what domains, subdomains or paths we can or
+	// can not spider...
 	HashTableX *dt = &sc->m_siteListDomTable;
 
 	// reset it
@@ -142,10 +146,10 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 	// use this so it will be free automatically when msg4 completes!
 	SafeBuf *spiderReqBuf = &sc->m_msg4x.m_tmpBuf;
 
-	char *siteList = cr->m_siteListBuf.getBufStart();
+	//char *siteList = cr->m_siteListBuf.getBufStart();
 
 	// scan the list
-	char *pn = siteList;
+	char *pn = siteListArg;
 
 	// completely empty?
 	if ( ! pn ) return true;
@@ -290,7 +294,7 @@ bool updateSiteList ( collnum_t collnum , bool addSeeds ) {
 		if ( ! isFilter ) continue;
 		
 		
-		// make the data node
+		// make the data node used for filtering urls during spidering
 		PatternData pd;
 		// hash of the subdomain or domain for this line in sitelist
 		pd.m_thingHash32 = u.getHostHash32();
@@ -391,10 +395,15 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 	// check domain specific tables
 	HashTableX *dt = &sc->m_siteListDomTable;
 
+	// get this
+	CollectionRec *cr = sc->m_cr;
+
 	// need to build dom table for pattern matching?
-	if ( dt->getNumSlotsUsed() == 0 ) {
+	if ( dt->getNumSlotsUsed() == 0 && cr ) {
 		// do not add seeds, just make siteListDomTable, etc.
-		updateSiteList ( sc->m_collnum , false );
+		updateSiteListTables ( sc->m_collnum , 
+				       false , // add seeds?
+				       cr->m_siteListBuf.getBufStart() );
 	}
 
 	if ( dt->getNumSlotsUsed() == 0 ) { 
@@ -731,6 +740,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 
 	char  buf [ 128000 ];
 	SafeBuf sb(buf,128000);
+	sb.reset();
 
 	char *fs = hr->getString("format",NULL,NULL);
 	char fmt = FORMAT_HTML;
@@ -764,7 +774,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	//
 	// show stats
 	//
-	if ( fmt == FMT_HTML ) {
+	if ( fmt == FORMAT_HTML ) {
 
 		char *seedStr = cr->m_diffbotSeeds.getBufStart();
 		if ( ! seedStr ) seedStr = "";
@@ -776,45 +786,23 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		long sentAlert = (long)ci->m_sentCrawlDoneAlert;
 		if ( sentAlert ) sentAlert = 1;
 
-		sb.safePrintf(
+		//sb.safePrintf(
+		//	      "<form method=get action=/crawlbot>"
+		//	      "%s"
+		//	      , sb.getBufStart() // hidden input token/name/..
+		//	      );
 
-			      "<form method=get action=/crawlbot>"
-			      "%s"
-			      , sb.getBufStart() // hidden input token/name/..
-			      );
+		char *hurts = "No";
+		if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider )
+			hurts = "Yes";
+
 		sb.safePrintf("<TABLE border=0>"
 			      "<TR><TD valign=top>"
 
 			      "<table border=0 cellpadding=5>"
 
-			      //
 			      "<tr>"
-			      "<td><b>Crawl Name:</td>"
-			      "<td>%s</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Crawl Type:</td>"
-			      "<td>%li</td>"
-			      "</tr>"
-
-			      //"<tr>"
-			      //"<td><b>Collection Alias:</td>"
-			      //"<td>%s%s</td>"
-			      //"</tr>"
-
-			      "<tr>"
-			      "<td><b>Token:</td>"
-			      "<td>%s</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Seeds:</td>"
-			      "<td>%s</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Crawl Status:</td>"
+			      "<td><b>Crawl Status Code:</td>"
 			      "<td>%li</td>"
 			      "</tr>"
 
@@ -823,14 +811,14 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "<td>%s</td>"
 			      "</tr>"
 
-			      "<tr>"
-			      "<td><b>Rounds Completed:</td>"
-			      "<td>%li</td>"
-			      "</tr>"
+			      //"<tr>"
+			      //"<td><b>Rounds Completed:</td>"
+			      //"<td>%li</td>"
+			      //"</tr>"
 
 			      "<tr>"
 			      "<td><b>Has Urls Ready to Spider:</td>"
-			      "<td>%li</td>"
+			      "<td>%s</td>"
 			      "</tr>"
 
 
@@ -841,12 +829,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      //"</tr>"
 
 			      "<tr>"
-			      "<td><b>Objects Found</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>URLs Harvested</b> (inc. dups)</td>"
+			      "<td><b>URLs Harvested</b> "
+			      "(may include dups)</td>"
 			      "<td>%lli</td>"
      
 			      "</tr>"
@@ -865,60 +849,24 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "<td><b>Page Crawl Successes</b></td>"
 			      "<td>%lli</td>"
 			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Page Crawl Successes This Round</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Page Process Attempts</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Page Process Successes</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
-
-			      "<tr>"
-			      "<td><b>Page Process Successes This Round</b></td>"
-			      "<td>%lli</td>"
-			      "</tr>"
-
-			      
-			      , cr->m_diffbotCrawlName.getBufStart()
-			      
-			      , (long)cr->m_isCustomCrawl
-
-			      , cr->m_diffbotToken.getBufStart()
-
-			      , seedStr
-
 			      , crawlStatus
 			      , tmp.getBufStart()
-			      , cr->m_spiderRoundNum
-			      , cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
+			      //, cr->m_spiderRoundNum
+			      //, cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
+			      , hurts
 
-			      , cr->m_globalCrawlInfo.m_objectsAdded -
-			        cr->m_globalCrawlInfo.m_objectsDeleted
 			      , cr->m_globalCrawlInfo.m_urlsHarvested
 			      //, cr->m_globalCrawlInfo.m_urlsConsidered
 
 			      , cr->m_globalCrawlInfo.m_pageDownloadAttempts
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
-			      , cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound
-
-			      , cr->m_globalCrawlInfo.m_pageProcessAttempts
-			      , cr->m_globalCrawlInfo.m_pageProcessSuccesses
-			      , cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound
 			      );
 
 	}
 
-	if ( fmt != FORMAT_JSON )
-		// wrap up the form, print a submit button
-		g_pages.printAdminBottom ( &sb );
+	//if ( fmt != FORMAT_JSON )
+	//	// wrap up the form, print a submit button
+	//	g_pages.printAdminBottom ( &sb );
 
 	return g_httpServer.sendDynamicPage (socket, 
 					     sb.getBufStart(), 

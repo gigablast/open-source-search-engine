@@ -169,6 +169,11 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("</form>\n");
 	sb.safePrintf("<br>\n");
 	sb.safePrintf("\n");
+
+	// print any red boxes we might need to
+	if ( printRedBox2 ( &sb , true ) )
+		sb.safePrintf("<br>\n");
+
 	sb.safePrintf("<table cellpadding=3>\n");
 	sb.safePrintf("\n");
 

@@ -138,6 +138,19 @@ bool Collectiondb::loadAllCollRecs ( ) {
 		if ( ! addExistingColl ( coll , collnum ) )
 			return false;
 	}
+	// if no existing recs added... add coll.main.0 always at startup
+	if ( m_numRecs == 0 ) {
+		log("admin: adding main collection.");
+		addNewColl ( "main",
+			     0 , // customCrawl ,
+			     NULL, 
+			     0 ,
+			     true , // bool saveIt ,
+			     // Parms.cpp reserves this so it can be sure
+			     // to add the same collnum to every shard
+			     0 );
+	}
+		
 	// note it
 	//log(LOG_INFO,"db: Loaded data for %li collections. Ranging from "
 	//    "collection #0 to #%li.",m_numRecsUsed,m_numRecs-1);
@@ -234,10 +247,10 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 	// load if not new
 	if ( ! cr->load ( coll , i ) ) {
 		mdelete ( cr, sizeof(CollectionRec), "CollectionRec" ); 
+		log("admin: Failed to load coll.%s.%li/coll.conf",coll,i);
 		delete ( cr );
-		m_recs[i] = NULL;
-		return log("admin: Failed to load conf for collection "
-			   "\"%s\".",coll);
+		if ( m_recs ) m_recs[i] = NULL;
+		return false;
 	}
 
 	if ( ! registerCollRec ( cr , false ) ) return false;
@@ -972,6 +985,39 @@ bool Collectiondb::setRecPtr ( collnum_t collnum , CollectionRec *cr ) {
 	return true;
 }
 
+// moves a file by first trying rename, then copying since cross device renaming doesn't work
+// returns 0 on success
+int mv(char* src, char* dest) {
+    int status = rename( src , dest );
+
+    if (status == 0)
+        return 0;
+    FILE *fsrc, *fdest;
+    fsrc = fopen(src, "r");
+    if (fsrc == NULL)
+        return -1;
+    fdest = fopen(dest, "w");
+    if (fdest == NULL) {
+        fclose(fsrc);
+        return -1;
+    }
+
+    const int BUF_SIZE = 1024;
+    char buf[BUF_SIZE];
+    while (!ferror(fdest) && !ferror(fsrc) && !feof(fsrc)) {
+        int read = fread(buf, 1, BUF_SIZE, fsrc);
+        fwrite(buf, 1, read, fdest);
+    }
+
+    fclose(fsrc);
+    fclose(fdest);
+    if (ferror(fdest) || ferror(fsrc))
+        return -1;
+
+    remove(src);
+    return 0;
+}
+
 // . returns false if we need a re-call, true if we completed
 // . returns true with g_errno set on error
 bool Collectiondb::resetColl2( collnum_t oldCollnum,
@@ -1028,7 +1074,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	snprintf(tmpbulkurlsname, 1036, "/tmp/coll.%s.%li.bulkurls.txt",cr->m_coll,(long)oldCollnum);
 
 	if (cr->m_isCustomCrawl == 2)
-	    rename( oldbulkurlsname , tmpbulkurlsname );
+	    mv( oldbulkurlsname , tmpbulkurlsname );
 
 	// reset spider info
 	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(oldCollnum);
@@ -1141,7 +1187,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 
 	// be sure to copy back the bulk urls for bulk jobs
 	if (cr->m_isCustomCrawl == 2)
-	    rename( tmpbulkurlsname, newbulkurlsname );
+	    mv( tmpbulkurlsname, newbulkurlsname );
 
 	// and clear the robots.txt cache in case we recently spidered a
 	// robots.txt, we don't want to use it, we want to use the one we
@@ -2280,7 +2326,7 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 }
 
 bool expandRegExShortcuts ( SafeBuf *sb ) ;
-bool updateSiteList ( collnum_t collnum , bool addSeeds );
+bool updateSiteListTables ( collnum_t collnum,bool addSeeds,char *siteListArg);
 void nukeDoledb ( collnum_t collnum );
 
 // . anytime the url filters are updated, this function is called
@@ -2343,11 +2389,14 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// maybe this is good enough
 		//if ( sc ) sc->m_waitingTreeNeedsRebuild = true;
 		
+		CollectionRec *cr = sc->m_cr;
+
 		// . rebuild sitetable? in PageBasic.cpp.
 		// . re-adds seed spdierrequests using msg4
 		// . true = addSeeds
-		// . rebuilds url filters there too i think
-		updateSiteList ( m_collnum , true );
+		updateSiteListTables ( m_collnum , 
+				       true , 
+				       cr->m_siteListBuf.getBufStart() );
 	}
 
 

@@ -50,6 +50,9 @@ static WebPage s_pages[] = {
 	  "dummy page - if set in the users row then user will have master=0 and "
 	  " collection links will be highlighted in red",
 	  NULL, 0 },  
+
+
+
 	//{ PAGE_QUALITY         , "quality",     0, "quality",  0, 0,
 	//  "dummy page - if set in the users row then  \"Quality Control\""
 	//  " will be printed besides the logo for certain pages",
@@ -102,12 +105,66 @@ static WebPage s_pages[] = {
 	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 } ,
 	{ PAGE_BASIC_SECURITY, "admin/security", 0 , "security",1, 0 , 
 	  "Basic security page.", sendPageGeneric  , 0 } ,
+	{ PAGE_BASIC_SEARCH, "", 0 , "search",1, 0 , 
+	  "Basic search page.", sendPageRoot  , 0 } ,
+
 
 
 	{ PAGE_MASTER    , "admin/master"  , 0 , "master controls" ,  1 , 0 , 
 	  //USER_MASTER | USER_PROXY ,
 	  "master controls page",
 	  sendPageGeneric  , 0 } ,
+	{ PAGE_SEARCH    , "admin"   , 0 , "search controls" ,  1 , 1,
+	  //USER_ADMIN | USER_MASTER   , 
+	  "search controls page",
+	  sendPageGeneric  , 0 } ,
+	{ PAGE_SPIDER    , "admin/spider"   , 0 , "spider controls" ,  1 , 0,
+	  //USER_ADMIN | USER_MASTER | USER_PROXY   ,
+	  "spider controls page",
+	  sendPageGeneric  , 0 } ,
+	{ PAGE_LOG       , "admin/log"     , 0 , "log controls"     ,  1 , 0 ,
+	  //USER_MASTER | USER_PROXY,
+	  "log page",
+	  sendPageGeneric  , 0 } ,
+	{ PAGE_SECURITY, "admin/security2", 0 , "security"     ,  1 , 0 ,
+	  //USER_MASTER | USER_PROXY ,
+	  "advanced security page",
+	  sendPageGeneric , 0 } ,
+	{ PAGE_ADDCOLL   , "admin/addcoll" , 0 , "add collection"  ,  1 , 0 ,
+	  //USER_MASTER , 
+	  "add a new collection using this page",
+	  sendPageAddColl  , 0 } ,
+	{ PAGE_DELCOLL   , "admin/delcoll" , 0 , "delete collections" ,  1 ,0,
+	  //USER_MASTER , 
+	  "delete a collection using this page",
+	  sendPageDelColl  , 0 } ,
+	{ PAGE_REPAIR    , "admin/repair"   , 0 , "repair" ,  1 , 0 ,
+	  //USER_MASTER ,
+	  "repair page",
+	  sendPageGeneric   , 0 },
+	{ PAGE_SITES   , "admin/sites", 0 , "site list" ,  1 , 1,
+	  "what sites can be spidered",
+	  sendPageGeneric , 0 } , // sendPageBasicSettings
+	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 , 1,
+	  //USER_ADMIN | USER_MASTER   , 
+	  "prioritize urls for spidering",
+	  sendPageGeneric  , 0 } ,
+	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" ,  0 , 1 ,
+	  //USER_ADMIN | USER_MASTER   ,
+	  "inject url in the index here",
+	  sendPageInject   , 2 } ,
+	// this is the addurl page the the admin!
+	{ PAGE_ADDURL2   , "admin/addurl"   , 0 , "add urls" ,  0 , 0 ,
+	  "add url page for admin",
+	  sendPageAddUrl2   , 0 } ,
+	{ PAGE_REINDEX   , "admin/reindex"  , 0 , "query reindex" ,  0 , 0 ,
+	  //USER_ADMIN | USER_MASTER, 
+	  "reindex url page",
+	  sendPageReindex  , 0 } ,
+
+
+
+
 
 	{ PAGE_HOSTS     , "admin/hosts"   , 0 , "hosts" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY,
@@ -134,10 +191,7 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_PROXY,
 	  "sockets page",
 	  sendPageSockets  , 0 } ,
-	{ PAGE_LOG       , "admin/log"     , 0 , "log controls"     ,  1 , 0 ,
-	  //USER_MASTER | USER_PROXY,
-	  "log page",
-	  sendPageGeneric  , 0 } ,
+
 	{ PAGE_LOGVIEW    , "admin/logview"   , 0 , "log view" ,  0 , 0 ,
 	  //USER_MASTER ,  
 	  "logview page",
@@ -147,18 +201,6 @@ static WebPage s_pages[] = {
 //	  "sync page",
 //	  sendPageGeneric  , 0 } ,
 
-	{ PAGE_SECURITY, "admin/security2", 0 , "security"     ,  1 , 0 ,
-	  //USER_MASTER | USER_PROXY ,
-	  "advanced security page",
-	  sendPageGeneric , 0 } ,
-	{ PAGE_ADDCOLL   , "admin/addcoll" , 0 , "add collection"  ,  1 , 0 ,
-	  //USER_MASTER , 
-	  "add a new collection using this page",
-	  sendPageAddColl  , 0 } ,
-	{ PAGE_DELCOLL   , "admin/delcoll" , 0 , "delete collections" ,  1 ,0,
-	  //USER_MASTER , 
-	  "delete a collection using this page",
-	  sendPageDelColl  , 0 } ,
 	{ PAGE_AUTOBAN    ,"admin/autoban" , 0 , "autoban" ,  1 , 1 ,
 	  //USER_MASTER | USER_PROXY , 
 	  "autobanned ips",
@@ -175,10 +217,6 @@ static WebPage s_pages[] = {
 	  //USER_MASTER ,
 	  "threads page",
 	  sendPageThreads  , 0 },
-	{ PAGE_REPAIR    , "admin/repair"   , 0 , "repair" ,  1 , 0 ,
-	  //USER_MASTER ,
-	  "repair page",
-	  sendPageGeneric   , 0 },
 	//{ PAGE_THESAURUS, "admin/thesaurus",    0 , "thesaurus", 0 , 0 ,
         //  //USER_MASTER ,
 	//  "thesaurus page",
@@ -207,14 +245,6 @@ static WebPage s_pages[] = {
 	  "titledb page",
 	  sendPageTitledb  , 2 } ,
 	// 1 = usePost
-	{ PAGE_SEARCH    , "admin"   , 0 , "search controls" ,  1 , 1,
-	  //USER_ADMIN | USER_MASTER   , 
-	  "search controls page",
-	  sendPageGeneric  , 0 } ,
-	{ PAGE_SPIDER    , "admin/spider"   , 0 , "spider controls" ,  1 , 0,
-	  //USER_ADMIN | USER_MASTER | USER_PROXY   ,
-	  "spider controls page",
-	  sendPageGeneric  , 0 } ,
 
 	{ PAGE_CRAWLBOT    , "crawlbot"   , 0 , "crawlbot" ,  1 , 0,
 	  "simplified spider controls page",
@@ -228,30 +258,6 @@ static WebPage s_pages[] = {
 	//  //USER_ADMIN | USER_MASTER   , 
 	//  "spider priorities page",
 	//  sendPageGeneric  , 0 } ,
-
-	{ PAGE_SITES   , "admin/sites", 0 , "site list" ,  1 , 1,
-	  "what sites can be spidered",
-	  sendPageGeneric , 0 } , // sendPageBasicSettings
-
-	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 , 1,
-	  //USER_ADMIN | USER_MASTER   , 
-	  "prioritize urls for spidering",
-	  sendPageGeneric  , 0 } ,
-
-	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" ,  0 , 1 ,
-	  //USER_ADMIN | USER_MASTER   ,
-	  "inject url in the index here",
-	  sendPageInject   , 2 } ,
-
-	// this is the addurl page the the admin!
-	{ PAGE_ADDURL2   , "admin/addurl"   , 0 , "add urls" ,  0 , 0 ,
-	  "add url page for admin",
-	  sendPageAddUrl2   , 0 } ,
-
-	{ PAGE_REINDEX   , "admin/reindex"  , 0 , "query reindex" ,  0 , 0 ,
-	  //USER_ADMIN | USER_MASTER, 
-	  "reindex url page",
-	  sendPageReindex  , 0 } ,
 
 	//{ PAGE_KEYWORDS, "admin/queries",0,"queries" ,  0 , 1 ,
 	//  "get queries a url matches",
@@ -893,8 +899,6 @@ bool Pages::getNiceness ( long page ) {
 	return s_pages[page].m_niceness;
 }
 
-bool printRedBox ( SafeBuf *mb ) ;
-
 ///////////////////////////////////////////////////////////
 //
 // Convenient html printing routines
@@ -1056,6 +1060,7 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//if ( page == PAGE_BASIC_DIFFBOT ) isBasic = true;
 	//if ( page == PAGE_BASIC_SEARCH  ) isBasic = true;
 	if ( page == PAGE_BASIC_SECURITY ) isBasic = true;
+	if ( page == PAGE_BASIC_SEARCH ) isBasic = true;
 
 	//
 	// print breadcrumb. main > Basic > Settings
@@ -1791,7 +1796,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		// is this page basic?
 		bool pageBasic = false;
 		if ( i >= PAGE_BASIC_SETTINGS &&
-		     i <= PAGE_BASIC_SECURITY )
+		     i <= PAGE_BASIC_SEARCH )
 			pageBasic = true;
 
 		// print basic pages under the basic menu, advanced pages
@@ -2627,9 +2632,18 @@ bool sendPageLogin ( TcpSocket *socket , HttpRequest *hr ) {
 					      NULL);// cookie
 }
 
+bool printRedBox2 ( SafeBuf *sb , bool isRootWebPage ) {
+	SafeBuf mb;
+	// return false if no red box
+	if ( ! printRedBox ( &mb , isRootWebPage ) ) return false;
+	// otherwise, print it
+	sb->safeStrcpy ( mb.getBufStart() );
+	// return true since we printed one
+	return true;
+}
 
 // emergency message box
-bool printRedBox ( SafeBuf *mb ) {
+bool printRedBox ( SafeBuf *mb , bool isRootWebPage ) {
 
 	PingServer *ps = &g_pingServer;
 
@@ -2649,10 +2663,32 @@ bool printRedBox ( SafeBuf *mb ) {
 	char *boxEnd =
 		"</td></tr></table>";
 
-	bool adds = false;
+	long adds = 0;
 
 
 	mb->safePrintf("<div style=max-width:500px;>");
+
+	// are we just starting off? give them a little help.
+	CollectionRec *cr = g_collectiondb.getRec("main");
+	if ( g_collectiondb.m_numRecs == 1 && 
+	     cr &&
+	     isRootWebPage &&
+	     cr->m_globalCrawlInfo.m_pageDownloadAttempts == 0 ) {
+		if ( adds ) mb->safePrintf("<br>");
+		adds++;
+		mb->safePrintf("%s",box);
+		mb->safePrintf("Welcome to Gigablast. The most powerful "
+			       "search engine you can legally download. "
+			       "Please add the websites you want to spider "
+			       "<a href=/admin/settings?c=main>here</a>."
+			       );
+		mb->safePrintf("%s",boxEnd);
+	}
+
+	if ( isRootWebPage ) {
+		mb->safePrintf("</div>");
+		return (bool)adds;
+	}
 
 	if ( g_conf.m_numConnectIps == 0 && g_conf.m_numMasterPwds == 0 ) {
 		if ( adds ) mb->safePrintf("<br>");
@@ -2738,5 +2774,5 @@ bool printRedBox ( SafeBuf *mb ) {
 
 	mb->safePrintf("</div>");
 
-	return adds;
+	return (bool)adds;
 }
