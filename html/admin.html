@@ -29,7 +29,7 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 
 <!--<a href=#weighting>Weighting Query Terms</a> - how to pass in your own query term weights<br><br>-->
 
-<a href=#requirements>Hardware Requirements</a> - what is required to run gigablast<br><br><a href=#perf>Performance Specifications</a> - various statistics.<br><br><a href=#install>Installation & Configuration</a> - the necessary files to run Gigablast<br><br><a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br><a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems<br><br><a href=#disaster>Disaster Recovery</a> - dealing with a crashed host<br><br><a href=#security>The Security System</a> - how to control access<br><br>
+<a href=#requirements>Hardware Requirements</a> - what is required to run gigablast<br><br><a href=#perf>Performance Specifications</a> - various statistics.<br><br><a href=#files>List of Files</a> - the necessary files to run Gigablast<br><br><a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br><a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems<br><br><a href=#disaster>Disaster Recovery</a> - dealing with a crashed host<br><br><a href=#security>The Security System</a> - how to control access<br><br>
 
 <a href=#build>Building an Index</a> - how to start building your index<br><br>
 <a href=#spider>The Spider</a> - all about Gigabot, Gigablast's crawling agent<br><br>
@@ -90,16 +90,13 @@ You will need the following packages installed<br>
 
 1. Run 'make' to compile. (e.g. use 'make -j 4' to compile on four cores)
 <br><br>
-2. Edit hosts.conf so the working directory is not /home/mwells/github/ but 
-rather your current working directory, where the 'gb' binary resides.
+2. Run './gb 0'  to start a single gigablast node which listens on port 8000.
 <br><br>
-3. Run './gb 0'  to start a single gigablast node which listens on port 8000.
+3. The first time you run it you will have to wait for it to build some binary data files from the txt files it uses that are based on wiktionary and wikipedia that it uses to do synonyms and phrasing.  Check the log file to see when it completes.
 <br><br>
-4. The first time you run it you will have to wait for it to build some binary data files from the txt files it uses that are based on wiktionary and wikipedia that it uses to do synonyms and phrasing. 
+4. Re-run it after it builds those binaries.
 <br><br>
-5. Re-run it after it builds those binaries.
-<br><br>
-6. Go to the <a href=http://127.0.0.1:8000/>root page</a> to begin.
+5. Go to the <a href=http://127.0.0.1:8000/>root page</a> to begin.
 
 <br>
 
@@ -113,7 +110,7 @@ rather your current working directory, where the 'gb' binary resides.
 <li> A dual quad core, with 32GB ram, and two 160GB Intel SSDs, running 8 Gigablast instances, can do about 8 qps (queries per second) on an index of 10 million pages. Drives will be close to maximum storage capacity. Doubling index size will more or less halve qps rate.
 <li> 1 million web pages requires 28.6GB of drive space. That includes the index, meta information and the compressed HTML of all the web pages.
 <li> 4GB of RAM required per Gigablast instance. (instance = process)
-<li> Live demo at <a href=http://www.gigablast.com/>http://www.gigablast.com/</a> (running on old hardware so it is a bit slow)
+<li> Live demo at <a href=http://www.gigablast.com/>http://www.gigablast.com/</a>
 <li> Written in C/C++ for optimal performance.
 <li> Over 500,000 lines of C/C++.
 
@@ -149,20 +146,14 @@ rather your current working directory, where the 'gb' binary resides.
 <li> Easy Scaling. Add new servers to the hosts.conf file then click 'rebalance shards' to automatically rebalance the sharded data.
 <li> Using &stream=1 can stream back millions of search results for a query without running out of memory.
 <li> Nested boolean queries using AND, OR, NOT operators.
-<li> Built-in support for <a href=http://www.diffbot.com/>diffbot.com's api</a>, which extracts various entities from web sites, like products, articles, etc.
+<li> Built-in support for <a href=http://www.diffbot.com/products/automatic/>diffbot.com's api</a>, which extracts various entities from web sites, like products, articles, etc. But you will need to get a free token from them for access to their API.
+<li> Spellchecker will be renabled shortly.
 </ul>
 
-<br>
-<h2>Features available but currently disabled because of code overhaul. Will be re-enabled soon.</h2>
+<h2>Coming Soon</h2>
 <ul>
-<li> Spellchecker
-</ul>
-
-<br>
-<h2>New features coming soon</h2>
-<ul>
-<li> file:// support
-<li> smb:// support
+<li> file:// "spidering" support
+<li> smb:// "spidering" support
 <li> Query completion
 <li> Improved plug-in support
 
@@ -203,17 +194,25 @@ Plus, Gigablast, reads and writes a lot of data at the same time under heavy spi
 <br>
 Gigablast can store 100,000 web pages (each around 25k in size) per gigabyte of disk storage. A typical single-cpu pentium 4 machine can index one to two million web pages per day even when Gigablast is near its maximum document capacity for the hardware. A cluster of N such machines can index at N times that rate.<br><br>
 <br>
-<a name=install></a>
+<a name=files></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
-<tr><td><center><b><font color=#ffffff size=+1>Installation & Configuration</td></tr></table>
+<tr><td><center><b><font color=#ffffff size=+1>List of Files</td></tr></table>
 <br>
 <b>1.</b> Create one directory for every Gigablast process you would like to run. Each Gigablast process is also called a <i>host</i> or a <i>node</i>. Multiple processes can exist on one physical server and is usually done to take advantage of mutiple cores, one process per core.<br><br>
 <b>2.</b>
-Populate each directory with the following files and subdirectories:<br><br>
-<dd>
+Each directory should have the following files and subdirectories:<br><br>
+
 <table cellpadding=3>
-<tr><td><b>gb</b></td><td>The Gigablast executable. Contains the web server, the database and the spider. This file is required to run gb.</td></tr>
-<tr><td><b><a href=#hosts>hosts.conf</a></b></td><td>This file describes each host (gb process) in the Gigablast network. Every gb process uses the same hosts.conf file. This file is required to run gb.<tr><td><b><a href=#config>gb.conf</a></b></td><td>Each gb process is called a <i>host</i> and each gb process has its own gb.conf file. This file is required to run gb.<tr><td><b>coll.XXX.YYY/</b></td><td>For every collection there is a subdirectory of this form, where XXX is the name of the collection and YYY is the collection's unique id. Contained in each of these subdirectories is the data associated with that collection.</td></tr><tr><td><b>coll.XXX.YYY/coll.conf</b></td><td>Each collection contains a configuration file called coll.conf. This file allows you to configure collection specific parameters. Every parameter in this file is also controllable via your the administrative web pages as well.</td></tr><tr><td><b>trash/</b></td><td>Deleted collections are moved into this subdirectory. A timestamp in milliseconds since the epoch is appended to the name of the deleted collection's subdirectory after it is moved into the trash sub directory. Gigablast doesn't physically delete collections in case it was a mistake.</td></tr>
+<tr><td><b>gb</b></td><td>The Gigablast executable. Contains the web server, the database and the spider. This file is required to run gb. It will be created when gb first runs.</td></tr>
+<tr><td><b>hosts.conf</b></td><td><a href=/hosts.conf>example</a>. This file describes each host (gb process) in the Gigablast network. Every gb process uses the same hosts.conf file. This file is required to run gb.
+</td></tr>
+
+<tr><td><b>gb.conf</b></td><td><a href=/gb.conf.txt>example</a>. Each gb process is called a <i>host</i> and each gb process has its own gb.conf file. This file is required to run gb.<tr><td><b>coll.XXX.YYY/</b></td><td>For every collection there is a subdirectory of this form, where XXX is the name of the collection and YYY is the collection's unique id. Contained in each of these subdirectories is the data associated with that collection.</td></tr>
+
+<!--<tr><td><b>coll.XXX.YYY/coll.conf</b></td><td>Each collection contains a configuration file called coll.conf. This file allows you to configure collection specific parameters. Every parameter in this file is also controllable via your the administrative web pages as well.</td></tr>
+-->
+
+<tr><td><b>trash/</b></td><td>Deleted collections are moved into this subdirectory. A timestamp in milliseconds since the epoch is appended to the name of the deleted collection's subdirectory after it is moved into the trash sub directory. Gigablast doesn't physically delete collections in case it was a mistake.</td></tr>
 
 <tr><td><b>html/</b></td><td>A subdirectory that holds all the html files and images used by Gigablast. Includes Logos and help files.</tr>
 <tr><td><b>antiword</b></td><td>Executable called by gbfilter to convert Microsoft Word files to html for indexing.</tr>
@@ -222,13 +221,11 @@ Populate each directory with the following files and subdirectories:<br><br>
 <tr><td><b>pstotext</b></td><td>Executable called by gbfilter to convert PostScript files to text for indexing.</tr>
 <tr><td><b>ppthtml</b></td><td>Executable called by gbfilter to convert PowerPoint files to html for indexing.</tr>
 <tr><td><b>xlhtml</b></td><td>Executable called by gbfilter to convert Microsoft Excel files to html for indexing.</tr>
-<tr><td><b>gbfilter</b></td><td>Simple executable called by Gigablast with document HTTP MIME header and document content as input. Output is an HTTP MIME and html or text that can be indexed by Gigablast.</tr>
+</table>
+<!--<tr><td><b>gbfilter</b></td><td>Simple executable called by Gigablast with document HTTP MIME header and document content as input. Output is an HTTP MIME and html or text that can be indexed by Gigablast.</tr>-->
 <!--<tr><td><b><a href=#gbstart>gbstart</a></b></td><td>An optional simple script used to start up the gb process(es) on each computer in the network. Otherwise, iff you have passwordless ssh capability then you can just use './gb start' and it will spawn an ssh command to start up a gb process for each host listed in hosts.conf.</tr>-->
 </table>
 <br><br>
-<b>2.</b> Edit or create the <a href=#hosts>hosts.conf</a> file.<br><br>
-<b>3.</b> Edit or create the <a href=#config>gb.conf</a> file.<br><br>
-<b>4.</b> Direct your browser to any host and its HTTP port listed in the <a href=#hosts>hosts.conf</a> file to begin administration.<br><br>
 <br>
 <a name=clustermaint></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
@@ -285,8 +282,52 @@ For the purposes of this section, we assume the name of the cluster is gf and al
 <a name=disaster></a>
 <b>A host in the network crashed. How do I temporarily decrease query latency on the network until I get it up again?</b><br>You can go to the <i>Search Controls</i> page and cut all nine tier sizes in half. This will reduce search result recall, but should cut query latency times in half for slower queries until the crashed host is recovered.<br>-->
 
-<br><b>A host in the network crashed. What is the recovery procedure?</b><br>First determine if the host's crash was clean or unclean. It was clean if the host was able to save all data in memory before it crashed. If the log ended with <i>allExit: dumping core after saving</i> then the crash was clean, otherwise it was not.<br><br>If the crash was clean then you can simply restart the crashed host by typing <b>gb start <i>i</i></b> where <i>i</i> is the hostId of the crashed host. However, if the crash was not clean, like in the case of a sudden power outtage, then in order to ensure no data gets lost, you must copy the data of the crashed host's twin. If it does not have a twin then there may be some data loss and/or corruption. In that case try reading the section below, <i>How do I minimize the damage after an unclean crash with no twin?</i>, but you may be better off starting the index build from scratch. To recover from an unclean crash using the twin, follow the steps below: <br><br>a. Click on 'all spiders off' in the 'master controls' of host #0, or host #1 if host #0 was the host that crashed.<br>b. If you were injecting content directly into Gigablast, stop.<br>c. Click on 'all just save' in the 'master controls' of host #0 or host #1 if host #0 was the one that crashed.<br>d. Determine the twin of the crashed host by looking in the <a href="#hosts">hosts.conf</a> file. The twin will have the same group (shard) number as the crashed host.<br>e. Recursively copy the working directory of the twin to a spare host  using rcp since it is much faster than scp.<br>f. Restart the crashed host by typing <b>gb start <i>i</i></b> where <i>i</i> is the hostId of the crashed host. If it is not restartable, then skip this step.<br>g. If the crashed host was restarted, wait for it to come back up. Monitor another host's <i>hosts</i> table to see when it is up, or watch the log of the crashed host.<br>h. If the crashed host was restarted, wait a minute for it to absorb all of the data add requests that may still be lingering. Wait for all hosts' <i>spider queues</i> of urls currently being spidered to be empty of urls.<br>i. Perform another <i>all just save</i> command to relegate any new data to disk.<br>j. After the copy completes edit the hosts.conf on host #0 and replace the ip address of the crashed host with that of the spare host.<br>k. Do a <b>gb stop</b> to safely shut down all hosts in the network.<br>l. Do a <b>gb installconf</b> to propagate the hosts.conf file from host #0 to all other hosts in the network (including the spare host, but not the crashed host)<br>m. Do a <b>gb start</b> to bring up all hosts under the new hosts.conf file.<br>n. Monitor all logs for a little bit by doing <i>dsh -c -f all 'tail -f /a/log? /a/log??'</i><br>o. Check the <i>hosts</i> table to ensure all hosts are up and running.<br><br><br><b>How do I minimize the damage after an unclean crash with no twin?</b><br>You may never be able to get the index 100% back into shape right now, but in the near future there may be some technology that allows gigablast to easily recover from these situations. For now though, 2. Try to determine the last url that was indexed and *fully* saved to disk. Every time you index a url some data is added to all of these databases: checksumdb, indexdb, spiderdb, titledb and tfndb. These databases all have in-memory data that is periodically dumped to disk. So you must determine the last time each of these databases dumped to disk by looking at the timestamp on the corresponding files in the appropriate collection subdirectories contained in the working directory. If tfndb was dumped to disk the longest time ago, then use its timestamp to indicate when the last url was successfully added or injected. You might want to subtract thirty minutes from that timestamp to make sure because it is really the time that that file <b>started</b> being dumped to disk that you are after, and that timestamp represents the time of the last write to that file. Now you can re-add the potentially missing urls from that time forward and get a semi-decent recovery.<br><br><b>Gigablast is slow to respond to queries. How do I speed it up?</b><br>a. If you see long purple lines in the Performance graph when Gigablast is slow then that means Gigablast is operating on a slow network OR your tier sizes, adjustable on the Search Controls page, are way too high so that too much data is clogging the network. If your tier sizes are at the default values or lower, then the problem may be that the bandwidth between one gigablast host and another is below the required 1000Mbps. Try doing a 'dmesg | grep Mbps' to see what speed your card is operating at. Also try testing the bandwidth between hosts using the thunder program or try copying a large file using rcp and timing it. Do not use scp since it is often bottlenecked on the CPU due to the encryption that it does. If your gigabit card is operating at 100Mbps that can sometimes be fixed by rebooting. I've found that there is about a 20% chance that the reboot will make the card come back to 1000Mbps.<br><br>b. If you see lots of long black lines on the Performance graph then that means your disk is slowing everything down. Make sure that if you are doing realtime queries that you do not have too many big indexdb files. If you tight merge everything it should fix that problem. Otherwise, consider getting a raid level 0 and faster disks. Perhaps the filesystem is severly fragmented.Or maybe your query traffic is repetetive. If the queries are sorted alphabetically, or you have many duplicate queries, then most of the workload might be falling on one particular host in the network, thus bottle-necking everything.<br><br><b>I get different results for the XML feed (raw=X) as compared to the HTML feed. What is going on?</b><br>           Try adding the &rt=1 cgi parameter to the search string to tell Gigablast to return real time results.rt is set to 0 by default for the XML feed, but not for the HTML feed.  That means Gigablast will only look at the root indexdb file when looking up queries.  Any newly added pages will be indexed outside of the root file until a merge is done.  This is done for performance reasons.  You can enable real time look ups by adding &rt=1 to the search string.  Also, in your search controls there are options to enable or disable real time lookups for regular queries and XML feeds, labeled as "restrict indexdb for queries" and "restrict indexdb for xml feed".  Make sure both regular queries and xml queries are doing the same thing when comparing results.<br><br>Also, you need to look at the tier sizes at the top of the Search Controls page. The tier sizes  (tierStage0, tierStage1, ...) listed for the raw (XML feed) queries needs to match non-raw in order to get exactly the same results. Smaller tier sizes yield better performance but yield less search results.<br><br><b>The spider is on but no urls are showing up in the Spider Queue table as being spidered. What is wrong?</b><br><table width=100%><tr><td>1. Set <i>log spidered urls</i> to YES on the <i>log</i> page. Then check the log to see if something is being logged.</td></tr><tr><td>2. Check the <i>master controls</i> page for the following:<br> &nbsp; a. the <i>spider enabled</i> switch is set to YES.<br> &nbsp; b. the <i>spider max pages per second</i> control is set high enough.<br> &nbsp; c. the <i>spider max kbps</i> control is set high enough.</td></tr></td></tr><tr><td>3. Check the <i>spider controls</i> page for the following:<br> &nbsp; a. the collection you wish to spider for is selected (in red).<br> &nbsp; a. the <i>spidering enabled</i> is set to YES.<br> &nbsp; b. the appropriate <i>spidering enabled</i> checkboxes in the URL Filters page are checked.<br> &nbsp; c. the <i>spider start</i> and <i>end times</i> are set appropriately.<br> &nbsp; d. the <i>use current time</i> control is set correctly.
-</td></tr><tr><td>4. Make sure you have urls to spider by running 'gb dump s <collname>' on the command line to dump out spiderdb. See 'gb -h' for the help menu and more options.</td></tr></table><br><br><b>The spider is slow.</b><br><table width=100%><tr><td>In the current spider queue, what are the statuses of each url? If they are mostly "getting cached web page" and the IP address column is mostly empty, then Gigablast may be bogged down looking up the cached web pages of each url in the spider queue only to discover it is from a domain that was just spidered. This is a wasted lookup, and it can bog things down pretty quickly when you are spidering a lot of old urls from the same domain. Try setting <i>same domain wait</i> and <i>same ip wait</i> both to 0. This will pound those domain's server, though, so be careful. Maybe set it to 1000ms or so instead. We plan to fix this in the future.</td></tr></table><br><br><b>The spider is always bottlenecking on <i>adding links</i>.</b><br>
+<br><b>A host in the network crashed. What is the recovery procedure?</b><br>First determine if the host's crash was clean or unclean. It was clean if the host was able to save all data in memory before it crashed. If the log ended with <i>allExit: dumping core after saving</i> then the crash was clean, otherwise it was not.<br><br>If the crash was clean then you can simply restart the crashed host by typing <b>gb start <i>i</i></b> where <i>i</i> is the hostId of the crashed host. However, if the crash was not clean, like in the case of a sudden power outtage, then in order to ensure no data gets lost, you must copy the data of the crashed host's twin. If it does not have a twin then there may be some data loss and/or corruption. In that case try reading the section below, <i>How do I minimize the damage after an unclean crash with no twin?</i>, but you may be better off starting the index build from scratch. To recover from an unclean crash using the twin, follow the steps below: <br><br>a. Click on 'all spiders off' in the 'master controls' of host #0, or host #1 if host #0 was the host that crashed.<br>b. If you were injecting content directly into Gigablast, stop.<br>c. Click on 'all just save' in the 'master controls' of host #0 or host #1 if host #0 was the one that crashed.<br>d. Determine the twin of the crashed host by looking in the <a href="#hosts">hosts.conf</a> file. The twin will have the same group (shard) number as the crashed host.<br>e. Recursively copy the working directory of the twin to a spare host  using rcp since it is much faster than scp.<br>f. Restart the crashed host by typing <b>gb start <i>i</i></b> where <i>i</i> is the hostId of the crashed host. If it is not restartable, then skip this step.<br>g. If the crashed host was restarted, wait for it to come back up. Monitor another host's <i>hosts</i> table to see when it is up, or watch the log of the crashed host.<br>h. If the crashed host was restarted, wait a minute for it to absorb all of the data add requests that may still be lingering. Wait for all hosts' <i>spider queues</i> of urls currently being spidered to be empty of urls.<br>i. Perform another <i>all just save</i> command to relegate any new data to disk.<br>j. After the copy completes edit the hosts.conf on host #0 and replace the ip address of the crashed host with that of the spare host.<br>k. Do a <b>gb stop</b> to safely shut down all hosts in the network.<br>l. Do a <b>gb installconf</b> to propagate the hosts.conf file from host #0 to all other hosts in the network (including the spare host, but not the crashed host)<br>m. Do a <b>gb start</b> to bring up all hosts under the new hosts.conf file.<br>n. Monitor all logs for a little bit by doing <i>dsh -c -f all 'tail -f /a/log? /a/log??'</i><br>o. Check the <i>hosts</i> table to ensure all hosts are up and running.<br><br><br><b>How do I minimize the damage after an unclean crash with no twin?</b><br>You may never be able to get the index 100% back into shape right now, but in the near future there may be some technology that allows gigablast to easily recover from these situations. For now though, 2. Try to determine the last url that was indexed and *fully* saved to disk. Every time you index a url some data is added to all of these databases: checksumdb, indexdb, spiderdb, titledb and tfndb. These databases all have in-memory data that is periodically dumped to disk. So you must determine the last time each of these databases dumped to disk by looking at the timestamp on the corresponding files in the appropriate collection subdirectories contained in the working directory. If tfndb was dumped to disk the longest time ago, then use its timestamp to indicate when the last url was successfully added or injected. You might want to subtract thirty minutes from that timestamp to make sure because it is really the time that that file <b>started</b> being dumped to disk that you are after, and that timestamp represents the time of the last write to that file. Now you can re-add the potentially missing urls from that time forward and get a semi-decent recovery.<br><br><b>Gigablast is slow to respond to queries. How do I speed it up?</b><br>a. If you see long purple lines in the Performance graph when Gigablast is slow then that means Gigablast is operating on a slow network OR your tier sizes, adjustable on the Search Controls page, are way too high so that too much data is clogging the network. If your tier sizes are at the default values or lower, then the problem may be that the bandwidth between one gigablast host and another is below the required 1000Mbps. Try doing a 'dmesg | grep Mbps' to see what speed your card is operating at. Also try testing the bandwidth between hosts using the thunder program or try copying a large file using rcp and timing it. Do not use scp since it is often bottlenecked on the CPU due to the encryption that it does. If your gigabit card is operating at 100Mbps that can sometimes be fixed by rebooting. I've found that there is about a 20% chance that the reboot will make the card come back to 1000Mbps.<br><br>b. If you see lots of long black lines on the Performance graph then that means your disk is slowing everything down. Make sure that if you are doing realtime queries that you do not have too many big indexdb files. If you tight merge everything it should fix that problem. Otherwise, consider getting a raid level 0 and faster disks. Perhaps the filesystem is severly fragmented.Or maybe your query traffic is repetetive. If the queries are sorted alphabetically, or you have many duplicate queries, then most of the workload might be falling on one particular host in the network, thus bottle-necking everything.
+
+<!--
+<br><br><b>I get different results for the XML feed (raw=X) as compared to the HTML feed. What is going on?</b><br>           Try adding the &rt=1 cgi parameter to the search string to tell Gigablast to return real time results.rt is set to 0 by default for the XML feed, but not for the HTML feed.  That means Gigablast will only look at the root indexdb file when looking up queries.  Any newly added pages will be indexed outside of the root file until a merge is done.  This is done for performance reasons.  You can enable real time look ups by adding &rt=1 to the search string.  Also, in your search controls there are options to enable or disable real time lookups for regular queries and XML feeds, labeled as "restrict indexdb for queries" and "restrict indexdb for xml feed".  Make sure both regular queries and xml queries are doing the same thing when comparing results.<br><br>Also, you need to look at the tier sizes at the top of the Search Controls page. The tier sizes  (tierStage0, tierStage1, ...) listed for the raw (XML feed) queries needs to match non-raw in order to get exactly the same results. Smaller tier sizes yield better performance but yield less search results.
+-->
+
+<br><br><b>The spider is on but no urls are showing up in the Spider Queue table as being spidered. What is wrong?</b><br><table width=100%><tr><td>1. Set <i>log spidered urls</i> to YES on the <i>log</i> page. Then check the log to see if something is being logged.</td></tr><tr><td>2. Check the <a href=/admin/master>master controls</a> page for the following:<br> &nbsp; a. the <i>spider enabled</i> switch is set to YES.
+
+<br> &nbsp; b. the <i>max total spiders</i> is not too LOW.
+
+<!--<br> &nbsp; c. the <i>spider max kbps</i> control is set high enough.</td></tr></td></tr><tr><td>3. Check the <i>spider controls</i> page for the following:-->
+
+<!--<br> &nbsp; c. the <i>spider delay</i> control is not TOO HIGH.-->
+
+</td></tr></td></tr><tr><td>
+
+3. Check the <a href=/admin/spider>spider controls</a> page for the following:
+
+
+<br> &nbsp; a. the collection you wish to spider for is selected (in red).
+
+<br> &nbsp; a. the <i>spidering enabled</i> is set to YES.
+
+<br> &nbsp; a. the <i>max spiders</i> is not to LOW.
+
+<br> &nbsp; c. the <i>spider delay in milliseconds</i> control is not TOO HIGH.
+
+<br> &nbsp; b. the appropriate <i>spidering enabled</i> checkboxes in the URL Filters page are checked.
+
+<!--<br> &nbsp; c. the <i>spider start</i> and <i>end times</i> are set appropriately.-->
+
+<!--<br> &nbsp; d. the <i>use current time</i> control is set correctly.-->
+
+<!--</td></tr><tr><td>4. Make sure you have urls to spider by running 'gb dump s <collname>' on the command line to dump out spiderdb. See 'gb -h' for the help menu and more options.-->
+
+</td></tr>
+</table>
+
+<br><b>The spider is slow.</b><br><table width=100%><tr><td>In the current <a href=/admin/spiderdb>spider queue</a>, what are the statuses of each url?
+
+<!-- If they are mostly "getting cached web page" and the IP address column is mostly empty, then Gigablast may be bogged down looking up the cached web pages of each url in the spider queue only to discover it is from a domain that was just spidered. This is a wasted lookup, and it can bog things down pretty quickly when you are spidering a lot of old urls from the same domain. Try setting <i>same domain wait</i> and <i>same ip wait</i> both to 0. This will pound those domain's server, though, so be careful. Maybe set it to 1000ms or so instead. We plan to fix this in the future.
+-->
+
+<br>
+<br><b>The spider is always bottlenecking on <i>adding links</i>.</b>
+
 <table width=100%>
 <tr><td>It often does a dns lookup on each link if it has not encountered that subdomain before. Otherwise, the subdomain IP when first encountered is stored in tagdb in the <i>firstIp</i> field. You might try using more DNSesor disabling link spidering.
 </td></tr>
@@ -306,21 +347,25 @@ Every request sent to the Gigablast server is assumed to come from one of four t
 </td></tr></table>
 <br>
 
+
 <b>1.</b> Determine a collection name for your index. You may just want to use the default, unnamed collection. Gigablast is capable of handling many sub-indexes, known as collections. Each collection is independent of the other collections. You can add a new collection by clicking on the <b>add new collection</b> link on the <a href="/admin/spider">Spider Controls</a> page.<br><br>
 
+<b>2.</b> Goto the <a href=/admin/settings>settings</a> page and add the sites you want. Only add seeds if you want to spider the whole web.
+
+<!--
 <b>2.</b> Add rules to the <a href="/admin/filters">URL Filters page</a>. This is like a routing table but for URLs. The first rule that a URL matches will determine what priority queue it is assigned to. You can also use <a href="http://www.phpbuilder.com/columns/dario19990616.php3">regular expressions</a>. The special keywords you can used are described at the bottom of the rule table.
 <br><br>
 On that page you can tell Gigablast how often to 
 re-index a URL in order to pick up any changes to that URL's content.
 You can assign a spider priority, the maximum number of outstanding spiders for that rule, the re-spider frequency and how long to wait before spidering another url in that same priority. It would be nifty to have an infile:myfile.txt rule that would match if the URL's subdomain were in that file, myfile.txt, however, until that is added you can added your file of subdomains to tagdb and set a tag field, such as <i>ruleset</i> to 3. Then you can say 'tag:ruleset==3' as one of your rules to capture them. This works because tagdb is hiearchical like that.
 <br><br>
-
-<b>3.</b> Test your Regular Expressions.  Once you've submitted your 
+-->
+<!--<b>3.</b> Test your Regular Expressions.  Once you've submitted your 
 regular expressions try entering some URLs in the second pink box, entitled,
 <i>URL Filters Test</i> on the <a href="/admin/filters">URL Filters page</a>. This will help you make sure that you've entered your regular expressions correctly. (NOTE: something happened to this box. It is missing and needs to be put back.)
-<br><br>
-
-<b>4.</b> Enable "add url". By enabling the add url interface you will be able to tell Gigablast to index some URLs. You must make sure add url is enabled on the <a href="/master">Master Controls</a> page and also on the <a href="/admin/spider">Spider Controls</a> page for your collection. If it is disabled on the Master Controls page then you will not be able to add URLs for *any* collection.
+<br><br>-->
+<!--
+<b>4.</b> Enable "add url". By enabling the add url interface you will be able to tell Gigablast to index some URLs. You must make sure add url is enabled on the <a href="/admin/master">Master Controls</a> page and also on the <a href="/admin/spider">Spider Controls</a> page for your collection. If it is disabled on the Master Controls page then you will not be able to add URLs for *any* collection.
 <br><br>
 
 <b>5.</b> Submit some seed URLs. Go to the <a href="/addurl">add url 
@@ -349,7 +394,7 @@ You must then click on the
 <a href="/admin/spider">Spider Controls</a> page for your collection and 
 turn on <b>spidering enabled</b>. It should be at the top of the 
 controls table. You may also have to turn on spidering from the 
-<a href="/master">Master Controls</a> page which is a master switch for all
+<a href="/admin/master">Master Controls</a> page which is a master switch for all
 collections.
 <br><br>
 
@@ -357,6 +402,7 @@ collections.
 <a href="/admin/spiderdb">Spider Queue</a> page for your collection you can see what
 URLs are currently being indexed in real-time. Gigablast.com currently has 32hosts and each host spiders different URLs. You can easily switch between 
 these hosts by clicking on the host numbers at the top of the page.
+-->
 <br><br><br>
 
 
@@ -378,8 +424,8 @@ Gigabot respects the <a href=/spider.html>robots.txt convention</a> (robot exclu
 You can specify different indexing and spider parameters on a per URL basis by one or more of the following methods:
 <br><br>
 <ul>
-<li>Using the <a href="/master/tagdb">tagdb interface</a>, you can assign a <a href=#ruleset>ruleset</a> to a set of sites. All you do is provide Gigablast with a list of sites and the ruleset to use for those sites.
-You can enter the sites via the <a href="/master/tagdb">HTML form</a> or you can provide Gigablast with a file of the sites. Each file must be limited to 1 Megabyte, but you can add hundreds of millions of sites. 
+<li>Using the <a href="/admin/tagdb">tagdb interface</a>, you can assign a <a href=#ruleset>ruleset</a> to a set of sites. All you do is provide Gigablast with a list of sites and the ruleset to use for those sites.
+You can enter the sites via the <a href="/admin/tagdb">HTML form</a> or you can provide Gigablast with a file of the sites. Each file must be limited to 1 Megabyte, but you can add hundreds of millions of sites. 
 Sites can be full URLs, hostnames, domain names or IP addresses.
 If you add a site which is just a canonical domain name with no explicit host name, like gigablast.com, then any URL with the same domain name, regardless of its host name will match that site. That is, "hostname.gigablast.com" will match the site "gigablast.com" and therefore be assigned the associated ruleset.
 Sites may also use IP addresses instead of domain names. If the least significant byte of an IP address that you submit to tagdb is 0 then any URL with the same top 3 IP bytes as that IP will be considered a match.
@@ -429,7 +475,7 @@ You can limit the number of documents on a per site basis. By default the site i
 Gigablast allows you to inject documents directly into the index by using the command <b>gb [-c &lt;<a href=#hosts>hosts.conf</a>&gt;] &lt;hostId&gt; --inject &lt;file&gt;</b> where &lt;file&gt; must be a sequence of HTTP requests as described below. They will be sent to the host with id &lt;hostId&gt;.<br><br>
 You can also inject your own content a second way, by using the <a href="/admin/inject">Inject URL</a> page. <br><br>
 Thirdly you can use your own program to feed the content directly to Gigablast using the same form parameters as the form on the Inject URL page.<br><br>
-In any of the three cases, be sure that url injection is enabled on the <a href=/master>Master Controls</a> page.<br><br><br>
+<br><br><br>
 <b>Input Parameters</b>
 <br><br>
 When sending an injection HTTP request to a Gigablast server, you may optionally supply an HTTP MIME in addition to the content. This MIME is treated as if Gigablast's spider downloaded the page you are injecting and received that MIME. If you do supply this MIME you must make sure it is HTTP compliant, preceeds the actual content and ends with a "
@@ -538,12 +584,10 @@ errors are most likely:<br>
 <br>
 You can delete documents from the index two ways:<ul>
 <li>Perhaps the most popular is to use the <a href="/admin/reindex">Reindex URLs</a> tool which allows you to delete all documents that match a simple query. Furthermore, that tool allows you to assign rulesets to all the domains of all the matching documents. All documents that match the query will have their docids stored in a spider queue of a user-specified priority. The spider will have to be enabled for that priority queue for the deletion to take place. Deleting documents is very similar to adding documents.<br><br>
-<li>To delete a single document you can use the <a href="/admin/inject">Inject URL</a> page. Make sure that url injection is enabled on the <a href=/master>Master Controls</a> page.</ul>
-<br><br>
+<li>To delete a single document you can use the <a href="/admin/inject">Inject URL</a> page.
+</ul>
 
 
-
-<br>
 <br>
 <a name=metas></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
@@ -658,19 +702,20 @@ So execute <i>dmozparse</i> with the <i>urldump -s</i> option to create the html
 <tr>
 <td>Gigablast uses its own format for logging messages, for example,<br>
 <pre>
-1091228736104 0 INIT         Gigablast Version 1.234
-1091228736104 0 INIT  thread Allocated 435333 bytes for thread stacks.
-1091228736104 0 WARN  mem    Failed to alloc 360000 bytes.
-1091228736104 0 WARN  query  Failed to intersect lists. Out of memory.
-1091228736104 0 WARN  query  Too many words. Query truncated.
-1091228736104 0 INFO  build  GET http://hohum.com/foobar.html
-1091228736104 0 INFO  build  http://hohum.com/foobar.html ip=4.5.6.7 : Success
-1091228736104 0 DEBUG build  Skipping xxx.com, would hammer IP.
+1091228736104 0 Gigablast Version 1.234
+1091228736104 0 Allocated 435333 bytes for thread stacks.
+1091228736104 0 Failed to alloc 360000 bytes.
+1091228736104 0 Failed to intersect lists. Out of memory.
+1091228736104 0 Too many words. Query truncated.
+1091228736104 0 GET http://hohum.com/foobar.html
+1091228736104 0 http://hohum.com/foobar.html ip=4.5.6.7 : Success
+1091228736104 0 Skipping xxx.com, would hammer IP.
 </pre>
-<br>
 The first field, a large number, is the time in milliseconds since the epoch. This timestamp is useful for evaluating performance.<br>
 <br>
-The second field, a 0 in the above example, is the hostId (from <a href="#hosts">hosts.conf</a>) of the host that logged the message.<br>
+The second field, a 0 in the above example, is the hostId (from hosts.conf) of the host that logged the message.<br>
+
+<!--
 <br>
 The third field, INIT in the first line of the above example, is the type of log message. It can be any of the following:<br>
 <br>
@@ -778,10 +823,11 @@ The fourth field is the resource that is logging the message. The resource can b
 <td>Messages related to the udp server.</td>
 </tr>
 </table>
+-->
 <br>
-Finally, the last field, is the message itself.<br><br>
-You can turn many messages on and off by using the <a href="/master?submenu=1">Log Controls</a>.<br><br>
-The same parameters on the Log Controls page can be adjusted in the <a href="#configlog">gb.conf</a> file.<br><br>
+The last field, is the message itself.<br><br>
+You can turn many messages on and off by using the <a href="/admin/log">Log Controls</a>.<br><br>
+The same parameters on the Log Controls page can be adjusted in the gb.conf file.<br><br>
 
 
 
@@ -805,7 +851,7 @@ This will decrease freshness of results but typically use
 -->
 <li> If you want to spider at the same time, then you should ensure
 that the <b>max spider disk threads</b> parameter on the
-<a href="/master">Master Controls</a> page is set to around 1 
+<a href="/admin/master">Master Controls</a> page is set to around 1 
 so the indexing/spidering processes do not hog the disk.
 
 <li> Set Gigablast to read-only mode to true to prevent Gigablast from using 
@@ -886,31 +932,6 @@ the swap space, so swapping is effectively minimized.-->
 <br>
 
 
-
-
-<a name=config></>
-<table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
-<tr><td><center><b><font color=#ffffff size=+1>gb.conf</font></a>
-</td></tr></table>
-<br>
-<!-- TODO: make this a text file output-->
-See <a href=/gb.conf.txt>sample.gb.conf</a>
-<br>
-<br>
-
-
-
-<a name=hosts></>
-<table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
-<tr><td><center><b><font color=#ffffff size=+1>hosts.conf</font></a>
-</td></tr></table>
-<br>
-
-<!-- TODO: make this a text file output-->
-See <a href=/hosts.conf.txt>sample.hosts.conf</a>
-<br>
-<br>
-
 <!--
 <a name=stopwords></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
@@ -964,17 +985,6 @@ All 3 character sequences of punctuation break phrases with the following except
 All sequences of punctuation greater than 3 characters break phrases with the sole exception being a sequence of strictly whitespaces.
 -->
 
-<br><br>
-<br>
-<center>
-<font size=-1>
-<b>
-<a href=/products.html>products</a> &nbsp; &nbsp;
-<a href=/help.html>help</a> &nbsp; &nbsp;
-<a href=/addurl>add a url</a> &nbsp; &nbsp;
-<a href=/about.html>about</a> &nbsp; &nbsp;
-<a href=/contact.html>contact</a>
-</b>
-</font>
+
 </html>
 

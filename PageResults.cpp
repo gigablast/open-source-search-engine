@@ -1320,13 +1320,12 @@ bool printSearchResultsHeader ( State0 *st ) {
 	}
 
 
-
 	// is it the main collection?
 	bool isMain = false;
 	if ( collLen == 4 && strncmp ( coll, "main", 4) == 0 ) isMain = true;
 
 	// print "in collection ***" if we had a collection
-	if ( collLen > 0 && ! isMain && si->m_format == FORMAT_HTML )
+	if (collLen>0 && numResults>0 && !isMain && si->m_format==FORMAT_HTML )
 		sb->safePrintf (" in collection <b>%s</b>",coll);
 
 
@@ -1364,12 +1363,14 @@ bool printSearchResultsHeader ( State0 *st ) {
 		// print reindex link
 		// get the filename directly
 		char *langStr = getLangAbbr ( si->m_queryLang );
-		sb->safePrintf (" &nbsp; "
-			       "<font color=red><b>"
-			       "<a href=\"/admin/reindex?c=%s&"
-			       "qlang=%s&q=%s\">"
-			       "[reindex or delete these results]</a></b>"
-			       "</font> ", coll , langStr , st->m_qe );
+		if ( numResults>0 )
+			sb->safePrintf (" &nbsp; "
+					"<font color=red><b>"
+					"<a href=\"/admin/reindex?c=%s&"
+					"qlang=%s&q=%s\">"
+					"[reindex or delete these results]"
+					"</a></b>"
+					"</font> ",coll, langStr , st->m_qe );
 		sb->safePrintf (" &nbsp; "
 			       "<font color=red><b>"
 			       "<a href=\"/inject?c=%s&qts=%s\">"

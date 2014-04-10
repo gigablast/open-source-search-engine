@@ -52,7 +52,7 @@ bool sendPageInject ( TcpSocket *s , HttpRequest *r ) {
 
 	msg7->m_crawlbotAPI = crawlbotAPI;
 
-	strncpy(msg7->m_coll,coll,MAX_COLL_LEN);
+	strncpy(msg7->m_coll,cr->m_coll,MAX_COLL_LEN);
 
 	// for diffbot
 	//if ( crawlbotAPI ) 
