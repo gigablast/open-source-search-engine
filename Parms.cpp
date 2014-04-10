@@ -1279,6 +1279,20 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 	return true;
 }
 
+bool printDropDownProfile ( SafeBuf* sb, char *name, long select ) {
+	sb->safePrintf ( "<select name=%s>", name );
+	// the type of url filters profiles
+	char *items[] = {"custom","web","news"};
+	char *s;
+	for ( long i = 0 ; i < 3 ; i++ ) {
+		if ( i == select ) s = " selected";
+		else               s = "";
+		sb->safePrintf ("<option value=%li%s>%s",i,s,items[i]);
+	}
+	sb->safePrintf ( "</select>" );
+	return true;
+}
+
 /*
 char *printCheckBoxes ( long n , char *p, char *pend, char *name, char *array){
 	for ( long i = 0 ; i < n ; i++ ) {
@@ -1716,7 +1730,11 @@ bool Parms::printParm ( SafeBuf* sb,
 		else {
 			// this td will be invisible if isCrawlbot and the
 			// parm is too advanced to display
-			sb->safePrintf ( "<td width=%li%%>"//"<td width=78%%>
+			sb->safePrintf ( "<td " );
+			if ( m->m_colspan > 0 )
+				sb->safePrintf ( "colspan=%li ",
+						 (long)m->m_colspan);
+			sb->safePrintf ( "width=%li%%>"//"<td width=78%%>
 					 "<b>%s</b><br><font size=1>",
 					 3*100/nc/2/4, m->m_title );
 
@@ -1895,6 +1913,9 @@ bool Parms::printParm ( SafeBuf* sb,
 	//else if ( t == TYPE_DIFFBOT_DROPDOWN ) {
 	//	char *xx=NULL;*xx=0;
 	//}
+	else if ( t == TYPE_UFP )
+		// url filters profile drop down "ufp"
+		printDropDownProfile ( sb , "ufp" , *s );
 	else if ( t == TYPE_RETRIES    ) 
 		printDropDown ( 4 , sb , cgi , *s , false , false );
 	else if ( t == TYPE_FILEUPLOADBUTTON    ) {
@@ -2696,6 +2717,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		  t == TYPE_PRIORITY       || 
 		  t == TYPE_PRIORITY2      || 
 		  //t == TYPE_DIFFBOT_DROPDOWN ||
+		  t == TYPE_UFP            ||
 		  t == TYPE_PRIORITY_BOXES || 
 		  t == TYPE_RETRIES        ||
 		  t == TYPE_FILTER           ) {
@@ -3570,6 +3592,7 @@ char *Parms::getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s ) {
 	     t == TYPE_CHECKBOX       ||
 	     t == TYPE_PRIORITY       || t == TYPE_PRIORITY2      || 
 	     //t == TYPE_DIFFBOT_DROPDOWN ||
+	     t == TYPE_UFP            ||
 	     t == TYPE_PRIORITY_BOXES || t == TYPE_RETRIES        ||
 	     t == TYPE_RETRIES        || t == TYPE_FILTER         ||
 	     t == TYPE_BOOL2          || t == TYPE_CHAR2           ) 
@@ -4252,6 +4275,9 @@ void Parms::init ( ) {
 		m_parms[i].m_desc   = ""         ; // for detecting if not set
 		m_parms[i].m_cgi    = NULL       ; // for detecting if not set
 		m_parms[i].m_off    = -1         ; // for detecting if not set
+		// for PAGE_FILTERS url filters for printing the url
+		// filter profile parm above the url filters table rows.
+		m_parms[i].m_colspan= -1; 
 		m_parms[i].m_def    = NULL       ; // for detecting if not set
 		m_parms[i].m_type   = TYPE_NONE  ; // for detecting if not set
 		m_parms[i].m_page   = -1         ; // for detecting if not set
@@ -9979,11 +10005,15 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_cgi   = "apiUrl";
-	m->m_desc  = "Send every spidered url to this diffbot.com "
-		"by appending a "
-		"&url=<url> to it before trinyg to downloading it. We "
-		"expect get get back a JSON reply which we index. You will "
-		"need to supply your token to this as well.";
+	m->m_desc  = "Send every spidered url to this url and index "
+		"the reply in addition to the normal indexing process. "
+		"Example: by specifying http://api.diffbot.com/v2/"
+		"analyze?mode=auto&token=<yourDiffbotToken> here "
+		"you can index the structured JSON replies from diffbot for "
+		"every url that is spidered. "
+		"Gigablast will automatically "
+		"append a &url=<urlBeingSpidered> to this url "
+		"before sending it to diffbot.";
 	m->m_xml   = "diffbotApiUrl";
 	m->m_title = "diffbot api url";
 	m->m_off   = (char *)&cr.m_diffbotApiUrl - x;
@@ -13270,6 +13300,27 @@ void Parms::init ( ) {
 	//m->m_type  = TYPE_COMMENT;
 	//m++;
 
+	m->m_cgi   = "ufp";
+	m->m_title = "url filters profile";
+	m->m_xml   = "urlFiltersProfile";
+	m->m_desc  = "Rather than editing the table below, you can select "
+		"a predefined set of url instructions in this drop down menu "
+		"that will update the table for you. Selecting <i>None</i> "
+		"allows you to make custom changes to the table. "
+		"Selecting <i>Web</i> configures the table for spidering "
+		"the web in general. "
+		"Selcting <i>News</i> configures the table for spidering "
+		"new sites."
+		"If you select a profile other than None then your changes "
+		"to the table will be lost.";
+	m->m_off   = (char *)&cr.m_urlFiltersProfile - x;
+	m->m_colspan = 3;
+	m->m_type  = TYPE_UFP;// 1 byte dropdown menu
+	m->m_page  = PAGE_FILTERS;
+	m->m_def   = "1"; // UFP_WEB
+	m->m_flags = PF_REBUILDURLFILTERS;
+	m++;
+
 	m->m_title = "expression";
 	m->m_desc  = "Before downloading the contents of a URL, Gigablast "
 		"first chains down this "
@@ -13353,15 +13404,6 @@ void Parms::init ( ) {
 		"expressions\": "
 		"link:gigablast and doc:quality<X and doc:quality>X.";
 		*/
-
-	m->m_cgi   = "ufp";
-	m->m_xml   = "urlFiltersProfile";
-	m->m_off   = (char *)&cr.m_urlFiltersProfile - x;
-	m->m_type  = TYPE_LONG;
-	m->m_page  = PAGE_FILTERS;
-	m->m_def   = "0"; // UFP_NONE
-	m->m_flags = PF_HIDDEN | PF_REBUILDURLFILTERS;
-	m++;
 
 	m->m_cgi   = "fe";
 	m->m_xml   = "filterExpression";
@@ -16300,6 +16342,7 @@ void Parms::init ( ) {
 		if ( t == TYPE_PRIORITY       ) size = 1;
 		if ( t == TYPE_PRIORITY2      ) size = 1;
 		//if ( t ==TYPE_DIFFBOT_DROPDOWN) size = 1;
+		if ( t == TYPE_UFP            ) size = 1;
 		if ( t == TYPE_PRIORITY_BOXES ) size = 1;
 		if ( t == TYPE_RETRIES        ) size = 1;
 		if ( t == TYPE_TIME           ) size = 6;
@@ -16701,6 +16744,7 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 		  m->m_type == TYPE_BOOL2 ||
 		  m->m_type == TYPE_CHECKBOX ||
 		  m->m_type == TYPE_PRIORITY2 ||
+		  m->m_type == TYPE_UFP ||
 		  m->m_type == TYPE_CHAR ) {
 		val8 = atol(parmValString);
 		//if ( parmValString && to_lower_a(parmValString[0]) == 'y' )
@@ -18345,6 +18389,7 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
 	     m_type == TYPE_BOOL2 ||
 	     m_type == TYPE_CHECKBOX ||
 	     m_type == TYPE_PRIORITY2 ||
+	     m_type == TYPE_UFP ||
 	     m_type == TYPE_CHAR )
 		return sb->safePrintf("%hhx",*val);
 
@@ -18353,6 +18398,8 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
 
 	if ( m_type == TYPE_IP )
 		return sb->safePrintf("%s",iptoa(*(long *)val) );
+
+	log("parms: missing parm type!!");
 
 	char *xx=NULL;*xx=0;
 	return false;

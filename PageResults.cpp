@@ -203,9 +203,6 @@ bool printCSSHead ( SafeBuf *sb , char format ) {
 			      "font-family:Arial, Helvetica, sans-serif;"
 			      );
 
-	//if ( format == FORMAT_WIDGET )
-	//	sb->safePrintf("background-color:000000;");
-
 	sb->safePrintf(	      "color: #000000;"
 			      "font-size: 12px;"
 			      //"margin: 20px 5px;"
@@ -968,13 +965,24 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// . if not matt wells we do not do ajax
 	// . the ajax is just there to prevent bots from slamming me 
 	//   with queries.
-	if ( ! g_conf.m_isMattWells && 
-	     (si->m_format == FORMAT_HTML ||si->m_format==FORMAT_WIDGET)) {
+	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
 		printCSSHead ( sb ,si->m_format );
 		sb->safePrintf("<body>");
 	}
 
+	if ( ! g_conf.m_isMattWells && si->m_format==FORMAT_WIDGET ) {
+		printCSSHead ( sb ,si->m_format );
+		sb->safePrintf("<body style=padding:0px;margin:0px;>");
+	}
+
 	HttpRequest *hr = &st->m_hr;
+
+	if ( si->m_format == FORMAT_WIDGET ) {
+		long refresh = hr->getLong("refresh",0);
+		if ( refresh )
+			sb->safePrintf("<meta http-equiv=\"refresh\" "
+				       "content=%li>",refresh);
+	}
 
 	// lead with user's widget header which usually has custom style tags
 	if ( si->m_format == FORMAT_WIDGET ) {
@@ -1674,8 +1682,13 @@ bool printSearchResultsTail ( State0 *st ) {
 	// collection
 	args.safePrintf("&c=%s",coll);
 	// formatting info
-	if ( si->m_format == FORMAT_WIDGET )
+	if ( si->m_format == FORMAT_WIDGET ) {
 		args.safePrintf("&format=widget");
+		HttpRequest *hr = &st->m_hr;
+		long widgetwidth = hr->getLong("widgetwidth",250);
+		args.safePrintf("&widgetwidth=%li",widgetwidth);
+	}
+
 	// carry over the sites we are restricting the search results to
 	if ( si->m_whiteListBuf.length() )
 		args.safePrintf("&sites=%s",si->m_whiteListBuf.getBufStart());
@@ -2114,7 +2127,8 @@ bool printResult ( State0 *st, long ix ) {
 	CollectionRec *cr = NULL;
 	cr = g_collectiondb.getRec ( st->m_collnum );
 	if ( ! cr ) {
-		log("query: printResult: collnum %li gone",(long)st->m_collnum);
+		log("query: printResult: collnum %li gone",
+		    (long)st->m_collnum);
 		return true;
 	}
 
@@ -2335,8 +2349,8 @@ bool printResult ( State0 *st, long ix ) {
 			       "background-image:url('%s');"
 			       "\""
 			       ">"
-			       , widgetwidth - 2*15 // padding is 15px
-			       , widgetwidth - 2*15 // padding is 15px
+			       , widgetwidth - 2*8 // padding is 8px
+			       , widgetwidth - 2*8 // padding is 8px
 			       , mr->ptr_imgUrl);
 		sb->safePrintf ( "<a "
 				 "target=_blank "
@@ -3110,8 +3124,12 @@ bool printResult ( State0 *st, long ix ) {
 	*/
 		
 
-	if ( si->m_format == FORMAT_HTML || si->m_format == FORMAT_WIDGET )
+	if ( si->m_format == FORMAT_HTML )
 		sb->safePrintf ( "<br><br>\n");
+
+
+	if ( si->m_format == FORMAT_WIDGET )
+		sb->safePrintf("<div style=line-height:1px;><br></div>");
 
 
 	// done?
@@ -5640,19 +5658,22 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 	char *c3 = "";
 	long x1 = hr->getLong("dates"    ,0);
 	long x2 = hr->getLong("summaries",0);
-	long x3 = hr->getLong("border"   ,1);
+	long x3 = hr->getLong("border"   ,0);
 	if ( x1 ) c1 = " checked";
 	if ( x2 ) c2 = " checked";
 	if ( x3 ) c3 = " checked";
-	long width  = hr->getLong("width",100);
-	long height = hr->getLong("height",300);
-	long refresh = hr->getLong("refresh",300);
+	long width  = hr->getLong("width",250);
+	long height = hr->getLong("height",400);
+	long refresh = hr->getLong("refresh",15);
 	char *def = "<style>html {font-size:12px;font-family:arial;background-color:transparent;color:black;}span.title { font-size:16px;font-weight:bold;}span.summary { font-size:12px;} span.date { font-size:12px;}span.prevnext { font-size:12px;font-weight:bold;}</style>";//<h2>News</h2>";
 	long len1,len2,len3,len4;
 	char *header = hr->getString("header",&len1,def);
 	char *sites = hr->getString("sites",&len2,"");
 	char *token = hr->getString("token",&len3,"");
-	char *query =hr->getString("query",&len4,"type:article gbsortby:date");
+	//char*query=hr->getString("query",&len4,
+	//"type:article gbsortbyint:date");
+	char *query =hr->getString("query",&len4,
+				   "type:article gbsortbyint:gbspiderdate");
 
 	sb->safePrintf("<form method=GET action=/widget>"
 		       "<input type=hidden name=c value=\"%s\">"
@@ -5684,12 +5705,19 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 		      //"text-align:right;"
 		      "bottom-margin:5px; "
 		      "colspan=10>"
-		      "<b style=font-size:22px;><font style=font-size:27px;>"
-		      "W</font>"
-		      "idget <font style=font-size:27px;>C</font>reator</b>"
 
 		      "<img align=right height=50 width=52 "
 		      "src=http://www.diffbot.com/img/diffy-b.png>"
+
+		      "<b style=font-size:22px;><font style=font-size:27px;>"
+		      "W</font>"
+		      "idget <font style=font-size:27px;>C</font>reator</b>"
+		      "<br>"
+		      "<font style=font-size:12px;>"
+		      "<i>"
+		      "Harness the power of Diffbot."
+		      "</i>"
+		      "</font>"
 
 		      "</td>"
 		      "</tr>"
@@ -6042,8 +6070,8 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 		// "1" = (long)UFP_NEWS
 		char ttt[12];
 		sprintf(ttt,"%li",(long)UFP_NEWS);
-		g_parms.addNewParmToList1 ( &parmList,cn,ttt,0,
-					    "urlfiltersprofile");
+		// urlfiltersprofile
+		g_parms.addNewParmToList1 ( &parmList,cn,ttt,0,"ufp");
 		// use diffbot analyze
 		char durl[1024];
 		sprintf(durl,

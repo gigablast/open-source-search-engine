@@ -1524,7 +1524,8 @@ CollectionRec::CollectionRec() {
 	reset();
 
 	// add default reg ex if we do not have one
-	setUrlFiltersToDefaults();
+	//setUrlFiltersToDefaults();
+	//rebuildUrlFilters();
 }
 
 CollectionRec::~CollectionRec() {
@@ -1536,7 +1537,8 @@ CollectionRec::~CollectionRec() {
 void CollectionRec::setToDefaults ( ) {
 	g_parms.setFromFile ( this , NULL , NULL  );
 	// add default reg ex
-	setUrlFiltersToDefaults();
+	//setUrlFiltersToDefaults();
+	rebuildUrlFilters();
 }
 
 void CollectionRec::reset() {
@@ -1632,7 +1634,10 @@ bool CollectionRec::load ( char *coll , long i ) {
 	g_parms.setFromFile ( this , tmp2 , tmp1 );
 
 	// add default reg ex IFF there are no url filters there now
-	if ( m_numRegExs == 0 ) setUrlFiltersToDefaults();
+	//if(m_numRegExs == 0) rebuildUrlFilters();//setUrlFiltersToDefaults();
+
+	// this only rebuild them if necessary
+	rebuildUrlFilters();//setUrlFiltersToDefaults();
 
 	// temp check
 	//testRegex();
@@ -1843,13 +1848,19 @@ bool CollectionRec::countEvents ( ) {
 }
 */
 
-void CollectionRec::setUrlFiltersToDefaults ( ) {
-	bool addDefault = false;
+bool CollectionRec::rebuildUrlFilters2 ( ) {
+	bool rebuild = false;
 	if ( m_numRegExs == 0 ) 
-		addDefault = true;
+		rebuild = true;
+	// don't touch it if not supposed to as long as we have some already
+	if ( m_urlFiltersProfile != UFP_NONE )
+		rebuild = true;
+	// never for custom crawls however
+	if ( m_isCustomCrawl ) 
+		rebuild = false;
 	//if ( m_numRegExs > 0 && strcmp(m_regExs[m_numRegExs-1],"default") )
 	//	addDefault = true;
-	if ( ! addDefault ) return;
+	if ( ! rebuild ) return true;
 
 	long n = 0;
 
@@ -1916,7 +1927,7 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 99; // max spiders
-	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 85;
 	if ( m_urlFiltersProfile == UFP_NEWS )
@@ -1927,7 +1938,7 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7; // 30 days default
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 50;
 	if ( m_urlFiltersProfile == UFP_NEWS )
@@ -1939,7 +1950,7 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0; // days b4 respider
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 48;
 	if ( m_urlFiltersProfile == UFP_NEWS )
@@ -1950,7 +1961,7 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 7.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 49;
 	if ( m_urlFiltersProfile == UFP_NEWS )
@@ -1961,7 +1972,7 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 10.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 47;
 	if ( m_urlFiltersProfile == UFP_NEWS )
@@ -1972,7 +1983,7 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 40;
 	if ( m_urlFiltersProfile == UFP_NEWS )
@@ -1983,7 +1994,7 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 20.0;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 39;
 	if ( m_urlFiltersProfile == UFP_NEWS )
@@ -1994,7 +2005,7 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 30;
 	// do not harvest links if we are spiderings NEWS
@@ -2008,7 +2019,7 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 40;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 29;
 	// do not harvest links if we are spiderings NEWS
@@ -2022,7 +2033,7 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 20;
 	// turn off spidering if hopcount is too big and we are spiderings NEWS
@@ -2030,13 +2041,15 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 		m_maxSpidersPerRule [n] = 0;
 		m_harvestLinks      [n] = 0;
 	}
-	n++;
+	else {
+		n++;
+	}
 
 	m_regExs[n].set("hopcount>=3");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 19;
 	// turn off spidering if hopcount is too big and we are spiderings NEWS
@@ -2044,7 +2057,9 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 		m_maxSpidersPerRule [n] = 0;
 		m_harvestLinks      [n] = 0;
 	}
-	n++;
+	else {
+		n++;
+	}
 
 	/*
 	m_regExs[n].set("isnew");
@@ -2061,9 +2076,13 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 60;
 	m_maxSpidersPerRule  [n] = 9; // max spiders
-	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
 	m_spiderIpWaits      [n] = 1000; // same ip wait
 	m_spiderPriorities   [n] = 1;
+	if ( m_urlFiltersProfile == UFP_NEWS ) {
+		m_maxSpidersPerRule [n] = 0;
+		m_harvestLinks      [n] = 0;
+	}
 	n++;
 
 
@@ -2085,6 +2104,8 @@ void CollectionRec::setUrlFiltersToDefaults ( ) {
 	//m_spiderDiffbotApiUrl[n].set("");
 	//m_spiderDiffbotApiUrl[n].nullTerm();
 	//m_numRegExs11++;
+
+	return true;
 }
 
 /*
@@ -2326,18 +2347,25 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 }
 
 bool expandRegExShortcuts ( SafeBuf *sb ) ;
-bool updateSiteListTables ( collnum_t collnum,bool addSeeds,char *siteListArg);
+//bool updateSiteListTables(collnum_t collnum,bool addSeeds,char *siteListArg);
 void nukeDoledb ( collnum_t collnum );
 
 // . anytime the url filters are updated, this function is called
 // . it is also called on load of the collection at startup
 bool CollectionRec::rebuildUrlFilters ( ) {
 
-	// if not a custom crawl, and no expressions, add a default one
-	if ( m_numRegExs == 0 && ! m_isCustomCrawl ) {
-		setUrlFiltersToDefaults();
-	}
+	log("coll: rebuilding url filters for %s ufp=%li",m_coll,
+	    (long)m_urlFiltersProfile);
 
+	// if not a custom crawl, and no expressions, add a default one
+	//if ( m_numRegExs == 0 && ! m_isCustomCrawl ) {
+	//	setUrlFiltersToDefaults();
+	//}
+
+	// if not a custom crawl then set the url filters based on 
+	// the url filter profile, if any
+	if ( ! m_isCustomCrawl )
+		rebuildUrlFilters2();
 
 	// set this so we know whether we have to keep track of page counts
 	// per subdomain/site and per domain. if the url filters have
@@ -2403,10 +2431,8 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	}
 
 
-	// only for diffbot custom crawls
-	if ( m_isCustomCrawl != 1 && // crawl api
-	     m_isCustomCrawl != 2 )  // bulk api
-		return true;
+	// the code beow is only for diffbot custom crawls
+	if ( ! m_isCustomCrawl ) return true;//!= 1 && // crawl api
 
 	//logf(LOG_DEBUG,"db: rebuilding url filters");
 

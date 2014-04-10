@@ -335,6 +335,8 @@ bool SafeBuf::reserve(long i , char *label, bool clearIt ) {
 			m_buf = (char*)mrealloc(m_buf, 0, m_capacity,m_label);
 			if(!m_buf) {
 				m_buf = tmpBuf;
+				log("safebuf: failed to reserve %li bytes",
+				    m_capacity);
 				m_capacity = tmpCap;
 				return false;
 			}
@@ -354,6 +356,7 @@ bool SafeBuf::reserve(long i , char *label, bool clearIt ) {
 		m_buf = (char*)mrealloc(m_buf, tmpCap, m_capacity,m_label);
 		if(!m_buf) {
 			m_buf = tmpBuf;
+			log("safebuf: failed to realloc %li bytes",m_capacity);
 			m_capacity = tmpCap;
 			return false;
 		}
