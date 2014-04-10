@@ -429,6 +429,7 @@ pid_t s_pid = (pid_t) -1;
 
 void Mem::setPid() {
 	s_pid = getpid();
+	//log("mem: pid is %li",(long)s_pid);
 	if(s_pid == -1 ) { log("monitor: bad s_pid"); char *xx=NULL;*xx=0; } 
 }
 
@@ -452,7 +453,7 @@ bool Mem::init  ( long long maxMem ) {
 	//lim.rlim_max = maxMem;
 	//setrlimit ( RLIMIT_AS , &lim ); // ulimit -v
 	// note
-	log(LOG_INIT,"mem: Max memory usage set to %lli bytes.", maxMem);
+	//log(LOG_INIT,"mem: Max memory usage set to %lli bytes.", maxMem);
 	// warning msg
 	if ( g_conf.m_detectMemLeaks )
 		log(LOG_INIT,"mem: Memory leak checking is enabled.");

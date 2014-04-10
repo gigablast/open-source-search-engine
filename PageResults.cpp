@@ -189,8 +189,8 @@ bool sendReply ( State0 *st , char *reply ) {
 	return true;
 }
 
-bool printCSSHead ( SafeBuf *sb ) {
-	return sb->safePrintf(
+bool printCSSHead ( SafeBuf *sb , char format ) {
+	sb->safePrintf(
 			      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML "
 			      "4.01 Transitional//EN\">\n"
 			      //"<meta http-equiv=\"Content-Type\" "
@@ -201,7 +201,9 @@ bool printCSSHead ( SafeBuf *sb ) {
 			      "<style><!--"
 			      "body {"
 			      "font-family:Arial, Helvetica, sans-serif;"
-			      "color: #000000;"
+			      );
+
+	sb->safePrintf(	      "color: #000000;"
 			      "font-size: 12px;"
 			      //"margin: 20px 5px;"
 			      "}"
@@ -225,6 +227,7 @@ bool printCSSHead ( SafeBuf *sb ) {
 			      "</style>\n"
 			      "</head>\n"
 			      );
+	return true;
 }
 
 // . returns false if blocked, true otherwise
@@ -257,7 +260,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	     g_conf.m_isMattWells ) {
 
 		SafeBuf sb;
-		printCSSHead ( &sb );
+		printCSSHead ( &sb ,format );
 		sb.safePrintf(
 			      "<body "
 			      "onLoad=\""
@@ -396,8 +399,11 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			      "<br/>"
 			      "<center>"
 			      "<font color=gray>"
-			      "Copyright &copy; 2013. All Rights Reserved.<br/>"
-				  "Powered by the <a href='https://www.gigablast.com/'>GigaBlast</a> open source search engine."
+			      "Copyright &copy; 2014. "
+			      "All Rights Reserved.<br/>"
+			      "Powered by the "
+			      "<a href='http://www.gigablast.com/'>"
+			      "GigaBlast</a> open source search engine."
 			      "</font>"
 			      "</center>\n"
 
@@ -470,7 +476,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			 &st->m_hr, 
 			 &st->m_q ) ) {
 		log("query: set search input: %s",mstrerror(g_errno));
-		g_errno = EBADENGINEER;
+		if ( ! g_errno ) g_errno = EBADENGINEER;
 		return sendReply ( st, NULL );
 	}
 
@@ -960,12 +966,34 @@ bool printSearchResultsHeader ( State0 *st ) {
 	// . the ajax is just there to prevent bots from slamming me 
 	//   with queries.
 	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
-		printCSSHead ( sb );
+		printCSSHead ( sb ,si->m_format );
 		sb->safePrintf("<body>");
-		printLogoAndSearchBox ( sb , &st->m_hr , -1 ); // catId = -1
+	}
+
+	if ( ! g_conf.m_isMattWells && si->m_format==FORMAT_WIDGET ) {
+		printCSSHead ( sb ,si->m_format );
+		sb->safePrintf("<body style=padding:0px;margin:0px;>");
+	}
+
+	HttpRequest *hr = &st->m_hr;
+
+	if ( si->m_format == FORMAT_WIDGET ) {
+		long refresh = hr->getLong("refresh",0);
+		if ( refresh )
+			sb->safePrintf("<meta http-equiv=\"refresh\" "
+				       "content=%li>",refresh);
+	}
+
+	// lead with user's widget header which usually has custom style tags
+	if ( si->m_format == FORMAT_WIDGET ) {
+		char *header = hr->getString("header",NULL);
+		if ( header ) sb->safeStrcpy ( header );
 	}
 
 
+	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
+		printLogoAndSearchBox ( sb , &st->m_hr , -1 ); // catId = -1
+	}
 
 	// xml
 	if ( si->m_format == FORMAT_XML )
@@ -980,9 +1008,11 @@ bool printSearchResultsHeader ( State0 *st ) {
 		long long globalNowMS = localToGlobalTimeMilliseconds(nowMS);
 		sb->safePrintf("\t<currentTimeUTC>%lu</currentTimeUTC>\n",
 			      (long)(globalNowMS/1000));
-	} else if ( st->m_header && si->m_format == FORMAT_JSON ) {
+	} 
+	else if ( st->m_header && si->m_format == FORMAT_JSON ) {
 	    long long globalNowMS = localToGlobalTimeMilliseconds(nowMS);
-	    sb->safePrintf("\"currentTimeUTC\":%lu,\n", (long)(globalNowMS/1000));
+	    sb->safePrintf("\"currentTimeUTC\":%lu,\n", 
+			   (long)(globalNowMS/1000));
 	}
 
 	// show response time if not doing Quality Assurance
@@ -1034,7 +1064,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	*/
 
 
-	// save how many docs are in it
+	// save how many docs are in this collection
 	long long docsInColl = -1;
 	//RdbBase *base = getRdbBase ( RDB_CHECKSUMDB , si->m_coll );
 	//RdbBase *base = getRdbBase ( (uint8_t)RDB_CLUSTERDB , si->m_coll2 );
@@ -1067,10 +1097,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 	    sb->safePrintf("\"moreResultsFollow\":%li,\n", (long)moreFollow);
 	}
 
-    if ( st->m_header && si->m_format == FORMAT_JSON ) {
-        sb->safePrintf("\"results\":[\n");
-        return true;
-    }
+	if ( st->m_header && si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("\"results\":[\n");
+		return true;
+	}
 
 	// . did he get a spelling recommendation?
 	// . do not use htmlEncode() on this anymore since receiver
@@ -1128,7 +1158,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			float tfwi = getTermFreqWeight(ssi->m_listSize);
 			for ( long j = i+1; j< nr ; j++ ) {
 				SingleScore *ssj = &dpx->m_singleScores[j];
-				float tfwj = getTermFreqWeight(ssj->m_listSize);
+				float tfwj =getTermFreqWeight(ssj->m_listSize);
 				max += (lw * tfwi * tfwj)/3.0;
 			}
 		}
@@ -1226,6 +1256,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 	if ( numResults == 0 && si->m_format == FORMAT_HTML ) {
 		sb->safePrintf ( "No results found in <b>%s</b> collection.",
 				cr->m_coll);
+	}
+	// the token is currently in the collection name so do not show that
+	else if ( numResults == 0 && si->m_format == FORMAT_WIDGET ) {
+		sb->safePrintf ( "No results found.");
 	}
 	else if ( moreFollow && si->m_format == FORMAT_HTML ) {
 		if ( isAdmin && si->m_docsToScanForReranking > 1 )
@@ -1444,7 +1478,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		if ( firstIgnored ) {
 			if ( si->m_format == FORMAT_XML )
 				sb->safePrintf ("\t<ignoredWords><![CDATA[");
-			else
+			else if ( si->m_format == FORMAT_HTML )
 				sb->safePrintf (" &nbsp; <font "
 					       "color=\"#707070\">The "
 					       "following query words "
@@ -1463,7 +1497,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->incrementLength(-1);
 		if ( si->m_format == FORMAT_XML )
 			sb->safePrintf("]]></ignoredWords>\n");
-		else
+		else if ( si->m_format == FORMAT_HTML )
 			sb->safePrintf ("</b>. Preceed each with a '+' or "
 				       "wrap in "
 				       "quotes to not ignore.</font>");
@@ -1478,7 +1512,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	SafeBuf *gbuf = &msg40->m_gigabitBuf;
 	long numGigabits = gbuf->length()/sizeof(Gigabit);
 
-	if ( si->m_format == FORMAT_XML ) numGigabits = 0;
+	if ( si->m_format != FORMAT_HTML ) numGigabits = 0;
 
 	// print gigabits
 	Gigabit *gigabits = (Gigabit *)gbuf->getBufStart();
@@ -1615,7 +1649,7 @@ bool printSearchResultsTail ( State0 *st ) {
 	long firstNum   = msg40->getFirstResultNum() ;
 
 	// end the two-pane table
-	if ( si->m_format == FORMAT_HTML ) sb->safePrintf("</td></tr></table>");
+	if ( si->m_format == FORMAT_HTML) sb->safePrintf("</td></tr></table>");
 
 	// for storing a list of all of the sites we displayed, now we print a 
 	// link at the bottom of the page to ban all of the sites displayed 
@@ -1647,12 +1681,21 @@ bool printSearchResultsTail ( State0 *st ) {
 		args.safePrintf("&sb=0");
 	// collection
 	args.safePrintf("&c=%s",coll);
+	// formatting info
+	if ( si->m_format == FORMAT_WIDGET ) {
+		args.safePrintf("&format=widget");
+		HttpRequest *hr = &st->m_hr;
+		long widgetwidth = hr->getLong("widgetwidth",250);
+		args.safePrintf("&widgetwidth=%li",widgetwidth);
+	}
+
 	// carry over the sites we are restricting the search results to
 	if ( si->m_whiteListBuf.length() )
 		args.safePrintf("&sites=%s",si->m_whiteListBuf.getBufStart());
 	
 
-	if ( firstNum > 0 && si->m_format == FORMAT_HTML ) {
+	if ( firstNum > 0 && 
+	     (si->m_format == FORMAT_HTML || si->m_format==FORMAT_WIDGET)) {
 		long ss = firstNum - msg40->getDocsWanted();
 		sb->safePrintf("<a href=\"/search?s=%li&q=",ss);
 		// our current query parameters
@@ -1667,7 +1710,8 @@ bool printSearchResultsTail ( State0 *st ) {
 	}
 
 	// now print "Next X Results"
-	if ( msg40->moreResultsFollow() && si->m_format == FORMAT_HTML ) {
+	if ( msg40->moreResultsFollow() && 
+	     (si->m_format == FORMAT_HTML || si->m_format==FORMAT_WIDGET)) {
 		long ss = firstNum + msg40->getDocsWanted();
 		// print a separator first if we had a prev results before us
 		if ( sb->length() > remember ) sb->safePrintf ( " &nbsp; " );
@@ -1759,7 +1803,7 @@ bool printSearchResultsTail ( State0 *st ) {
 		sb->safePrintf ( "<br>"
 				"<center>"
 				"<font color=gray>"
-				"Copyright &copy; 2013. All Rights "
+				"Copyright &copy; 2014. All Rights "
 				"Reserved.<br/>"
 				"Powered by the <a href='https://www."
 				"gigablast.com/'>GigaBlast</a> open source "
@@ -1772,6 +1816,27 @@ bool printSearchResultsTail ( State0 *st ) {
 			      );
 	}
 
+	if ( si->m_format == FORMAT_WIDGET ) {
+		sb->safePrintf ( "<br>"
+				"<center>"
+				"<font color=gray>"
+				 // link to edit the list of widget sites
+				 // or various other widget content properties
+				 // because we can't edit the width/height
+				 // of the widget like this.
+				 "<a href=/widget?inlineedit=1>edit</a> "
+				 "&bull; "
+				 //"Copyright &copy; 2014. All Rights "
+				 //"Reserved.<br/>"
+				"Powered by <a href=http://www.diffbot.com/>"
+				 "Diffbot</a>."
+				"</font>"
+				"</center>\n"
+				
+				"</body>\n"
+				"</html>\n"
+				 );
+	}
 
 	if ( sb->length() == 0 && si && si->m_format == FORMAT_JSON )
 		sb->safePrintf("[]\n");
@@ -1883,6 +1948,10 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 			frontTag = "<b>";
 			backTag  = "</b>";
 		}
+		if ( si->m_format == FORMAT_WIDGET ) {
+			frontTag = "<font style=\"background-color:yellow\">" ;
+		}
+
 		Highlight hi;
 		SafeBuf hb;
 		long hlen = hi.set ( &hb,//tt , 
@@ -2053,10 +2122,13 @@ bool printResult ( State0 *st, long ix ) {
 
 	SafeBuf *sb = &st->m_sb;
 
+	HttpRequest *hr = &st->m_hr;
+
 	CollectionRec *cr = NULL;
 	cr = g_collectiondb.getRec ( st->m_collnum );
 	if ( ! cr ) {
-		log("query: printResult: collnum %li gone",(long)st->m_collnum);
+		log("query: printResult: collnum %li gone",
+		    (long)st->m_collnum);
 		return true;
 	}
 
@@ -2247,6 +2319,8 @@ bool printResult ( State0 *st, long ix ) {
 	}
 	*/
 
+	char *diffbotSuffix = strstr(url,"-diffbotxyz");
+
 	// print youtube and metacafe thumbnails here
 	// http://www.youtube.com/watch?v=auQbi_fkdGE
 	// http://img.youtube.com/vi/auQbi_fkdGE/2.jpg
@@ -2254,12 +2328,76 @@ bool printResult ( State0 *st, long ix ) {
 	if ( mr->ptr_imgUrl && si->m_format == FORMAT_HTML )
 		sb->safePrintf ("<a href=%s><image src=%s></a>",
 				   url,mr->ptr_imgUrl);
+
+	// print image for widget
+	if ( mr->ptr_imgUrl && si->m_format == FORMAT_WIDGET ) {
+
+		long widgetwidth = hr->getLong("widgetwidth",200);
+
+		// make a div around this for widget so we can print text
+		// on top
+		sb->safePrintf("<div "
+			       "style=\""
+			       "width:%lipx;"
+			       "min-height:140px;"
+			       "padding:8px;"
+			       "height:140px;"
+			       "display:table-cell;"
+			       "vertical-align:bottom;"
+			       "background-repeat:no-repeat;"
+			       "background-size:%lipx 140px;"
+			       "background-image:url('%s');"
+			       "\""
+			       ">"
+			       , widgetwidth - 2*8 // padding is 8px
+			       , widgetwidth - 2*8 // padding is 8px
+			       , mr->ptr_imgUrl);
+		sb->safePrintf ( "<a "
+				 "target=_blank "
+				 "style=text-decoration:none; href=" );
+		// truncate off -diffbotxyz%li
+		long newLen = urlLen;
+		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
+		// print the url in the href tag
+		sb->safeMemcpy ( url , newLen ); 
+		// then finish the a href tag and start a bold for title
+		sb->safePrintf ( ">");//<font size=+0>" );
+		
+		sb->safePrintf("<b style=\""
+			       "text-decoration:none;"
+			       "font-size: 15px;"
+			       "font-weight:bold;"
+			       "background-color:rgba(0,0,0,.5);"
+			       "color:white;"
+			       "font-family:arial;"
+			       //"text-shadow:2px 4px 3px rgba(0,0,1,3);"
+			       "text-shadow: 2px 2px 0 #000 "
+			       ",-2px -2px 0 #000 "
+			       ",-2px  2px 0 #000 "
+			       ", 2px -2px 0 #000 "
+			       ", 2px -2px 0 #000 "
+			       ", 0px -2px 0 #000 "
+			       ",  0px 2px 0 #000 "
+			       ", -2px 0px 0 #000 "
+			       ",  2px 0px 0 #000 "
+			       ";"
+			       //"-2px 2px 0 #000 "
+			       //"2px -2px 0 #000 "
+			       //"-2px -2px 0 #000;"
+			       "\">");
+		//sb->safePrintf ("<image width=50 height=50 src=%s></a>",
+		//		   mr->ptr_imgUrl);
+		// then title over image
+	}
+
+
 	// the a href tag
 	if ( si->m_format == FORMAT_HTML ) sb->safePrintf ( "\n\n" );
 
 	// then if it is banned 
 	if ( mr->m_isBanned && si->m_format == FORMAT_HTML )
 		sb->safePrintf("<font color=red><b>BANNED</b></font> ");
+
 
 	///////
 	//
@@ -2271,12 +2409,27 @@ bool printResult ( State0 *st, long ix ) {
 	// the a href tag
 	if ( si->m_format == FORMAT_HTML ) {
 		sb->safePrintf ( "<a href=" );
+		// truncate off -diffbotxyz%li
+		long newLen = urlLen;
+		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
 		// print the url in the href tag
-		sb->safeMemcpy ( url , urlLen ); 
+		sb->safeMemcpy ( url , newLen ); 
 		// then finish the a href tag and start a bold for title
 		sb->safePrintf ( ">");//<font size=+0>" );
 	}
 
+
+	// only do link here
+	if (si->m_format == FORMAT_WIDGET && ! mr->ptr_imgUrl ) {
+		sb->safePrintf ( "<a href=" );
+		// truncate off -diffbotxyz%li
+		long newLen = urlLen;
+		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
+		// print the url in the href tag
+		sb->safeMemcpy ( url , newLen ); 
+		// then finish the a href tag and start a bold for title
+		sb->safePrintf ( ">");//<font size=+0>" );
+	}
 
 	// . then the title  (should be NULL terminated)
 	// . the title can be NULL
@@ -2332,6 +2485,9 @@ bool printResult ( State0 *st, long ix ) {
 		frontTag = "<b>";
 		backTag  = "</b>";
 	}
+	if ( si->m_format == FORMAT_WIDGET ) {
+		frontTag = "<font style=\"background-color:yellow\">" ;
+	}
 	long cols = 80;
 	if ( si->m_format == FORMAT_XML ) 
 		sb->safePrintf("\t\t<title><![CDATA[");
@@ -2375,6 +2531,12 @@ bool printResult ( State0 *st, long ix ) {
 
 	if ( si->m_format == FORMAT_HTML ) sb->safePrintf ("</a><br>\n" ) ;
 
+
+	// close the image div
+	if ( si->m_format == FORMAT_WIDGET ) 
+		sb->safePrintf("</b></a></div>\n");
+
+
 	/////
 	//
 	// print content type after title
@@ -2390,7 +2552,7 @@ bool printResult ( State0 *st, long ix ) {
 				      "]]>"
 				      "</contentType>\n",
 				      cs);
-		else {
+		else if ( si->m_format == FORMAT_HTML ) {
 			sb->safePrintf(" <b><font style=color:white;"
 				      "background-color:maroon;>");
 			char *p = cs;
@@ -2426,7 +2588,15 @@ bool printResult ( State0 *st, long ix ) {
 
 	if ( si->m_format == FORMAT_XML ) sb->safePrintf("\t\t<sum><![CDATA[");
 
-	sb->brify ( str , strLen, 0 , cols ); // niceness = 0
+	bool printSummary = true;
+	// do not print summaries for widgets by default unless overridden
+	// with &summary=1
+	if ( si->m_format == FORMAT_WIDGET && hr->getLong("summaries",0) == 0 )
+		printSummary = false;
+
+	if ( printSummary )
+		sb->brify ( str , strLen, 0 , cols ); // niceness = 0
+
 	// close xml tag
 	if ( si->m_format == FORMAT_XML ) sb->safePrintf("]]></sum>\n");
 	// new line if not xml
@@ -2599,7 +2769,7 @@ bool printResult ( State0 *st, long ix ) {
 
 
 	
-	if ( isAdmin ) {
+	if ( isAdmin && si->m_format == FORMAT_HTML ) {
 		long lang = mr->m_language;
 		if ( lang ) sb->safePrintf(" - %s",getLanguageString(lang));
 		uint16_t cc = mr->m_computedCountry;
@@ -2617,7 +2787,7 @@ bool printResult ( State0 *st, long ix ) {
 	if ( mr->m_noArchive       ) printCached = false;
 	if ( isAdmin               ) printCached = true;
 	if ( mr->m_contentLen <= 0 ) printCached = false;
-	if ( si->m_format == FORMAT_XML ) printCached = false;
+	if ( si->m_format != FORMAT_HTML ) printCached = false;
 
 	// get collnum result is from
 	//collnum_t collnum = si->m_cr->m_collnum;
@@ -2956,6 +3126,10 @@ bool printResult ( State0 *st, long ix ) {
 
 	if ( si->m_format == FORMAT_HTML )
 		sb->safePrintf ( "<br><br>\n");
+
+
+	if ( si->m_format == FORMAT_WIDGET )
+		sb->safePrintf("<div style=line-height:1px;><br></div>");
 
 
 	// done?
@@ -5394,3 +5568,546 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 	return true;
 }
 
+
+bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
+	//
+	// begin print controls
+	//
+
+	sb->safePrintf("<html>"
+		       "<body bgcolor=#e8e8e8>"
+		       "<title>Widget Creator</title>"
+		      );
+
+
+	//char *coll = "GLOBAL-INDEX";
+	CollectionRec *cr = NULL;
+	if ( coll ) cr = g_collectiondb.getRec(coll);
+
+	// if admin clicks "edit" in the live widget itself put up
+	// some simpler content editing boxes. token required!
+	long edit = hr->getLong("inlineedit",0);
+	if ( edit ) {
+		// get widget sites
+		char *sites = cr->m_siteListBuf.getBufStart();
+		sb->safePrintf("<textarea>"
+			       "%s"
+			       "</textarea>"
+			       , sites);
+		sb->safePrintf("<br>"
+			       "<input type=text name=token>"
+			       "<br>"
+			       "<input type=submit name=submit value=ok>"
+			       );
+		return true;
+	}
+
+
+	sb->safePrintf("<script>\n");
+
+	// onclick of a checkbox toggle it here since we reload after
+	sb->safePrintf("function toggleBool ( control , id ) {\n"
+		      "if(document.forms[0].elements[id].value == 1 ) {\n"
+		      "document.forms[0].elements[id].value = 0;\n"
+		      "} else {\n"
+		      "document.forms[0].elements[id].value = 1;\n"
+		      "}\n"
+		      "}\n"
+		      );
+
+	// construct url based on input parms
+	sb->safePrintf("function getFormParms ( ) {\n"
+		      "var i;\n"
+		      "var url = '';\n"
+		      "for(i=0; i<document.myform.elements.length; i++){\n"
+		      "var elm = document.myform.elements[i];\n"
+		      // skip submit button and nameless checkboxes
+		      "if ( elm.name == '' ) {\n"
+		      //"alert(document.myform.elements[i].value)\n"
+		      "continue;\n"
+		      "}\n"
+		      // until we had def=%li to each input parm assume
+		      // default is 0. i guess if it has no def= attribute
+		      // assume default is 0
+		      //"if ( elm.value == '0' ) {\n"
+		      //"continue;\n"
+		      //"}\n"
+		      "if ( elm.value == '' ) {\n"
+		      "continue;\n"
+		      "}\n"
+		      "url = "
+		      "url + "
+		      "elm.name + \"=\" + "
+		      "elm.value + \"&\" ;\n"
+		      "}\n"
+		      "return url;\n"
+		      "}\n"
+		      );
+
+	sb->safePrintf("function reload() {\n"
+		      "var url='/widget?' + getFormParms();\n"
+		      "window.location.href=url;\n"
+		      "}\n"
+		      );
+
+
+	sb->safePrintf("</script>\n");
+
+	char *c1 = "";
+	char *c2 = "";
+	char *c3 = "";
+	long x1 = hr->getLong("dates"    ,0);
+	long x2 = hr->getLong("summaries",0);
+	long x3 = hr->getLong("border"   ,0);
+	if ( x1 ) c1 = " checked";
+	if ( x2 ) c2 = " checked";
+	if ( x3 ) c3 = " checked";
+	long width  = hr->getLong("width",250);
+	long height = hr->getLong("height",400);
+	long refresh = hr->getLong("refresh",15);
+	char *def = "<style>html {font-size:12px;font-family:arial;background-color:transparent;color:black;}span.title { font-size:16px;font-weight:bold;}span.summary { font-size:12px;} span.date { font-size:12px;}span.prevnext { font-size:12px;font-weight:bold;}</style>";//<h2>News</h2>";
+	long len1,len2,len3,len4;
+	char *header = hr->getString("header",&len1,def);
+	char *sites = hr->getString("sites",&len2,"");
+	char *token = hr->getString("token",&len3,"");
+	//char*query=hr->getString("query",&len4,
+	//"type:article gbsortbyint:date");
+	char *query =hr->getString("query",&len4,
+				   "type:article gbsortbyint:gbspiderdate");
+
+	sb->safePrintf("<form method=GET action=/widget>"
+		       "<input type=hidden name=c value=\"%s\">"
+		       "<input type=hidden name=format value=\"widget\">"
+		       , coll
+		       );
+
+
+	sb->safePrintf(
+
+		      "<div style=\""
+		      "margin-left:5px;"
+		      "padding:15px;"
+		      "width:600px;"
+		      "height:600px;"
+		      "font-family:Arial;"
+		      "border-radius:10px;"
+		      "line-height:30px;"
+		      "background-color:lightgray;"
+		      "text-align:right;"
+		      "\""
+		      ">"
+		      
+
+		      "<table cellpadding=0>"
+		      "<tr>"
+		      "<td "
+		      "style=padding:15px;background-color:lightblue;"
+		      //"text-align:right;"
+		      "bottom-margin:5px; "
+		      "colspan=10>"
+
+		      "<img align=right height=50 width=52 "
+		      "src=http://www.diffbot.com/img/diffy-b.png>"
+
+		      "<b style=font-size:22px;><font style=font-size:27px;>"
+		      "W</font>"
+		      "idget <font style=font-size:27px;>C</font>reator</b>"
+		      "<br>"
+		      "<font style=font-size:12px;>"
+		      "<i>"
+		      "Harness the power of Diffbot."
+		      "</i>"
+		      "</font>"
+
+		      "</td>"
+		      "</tr>"
+
+		      "<tr>"
+		      "<td style=text-align:right;line-height:30px;>"
+
+		      "Websites to crawl:"
+		      "<br>"
+		      "<textarea rows=10 name=sites style=width:100%%;>"
+		      "%s"
+		      "</textarea>"
+		      "<br>"
+
+		      "Token:"
+		      "<br>"
+		      "<textarea name=token style=width:100%%;>"
+		      "%s"
+		      "</textarea>"
+		      "<br>"
+
+		      "Query:"
+		      "<br>"
+		      "<textarea name=query style=width:100%%;>"
+		      "%s"
+		      "</textarea>"
+		      "<br>"
+
+
+		      "Show Dates "
+		      "<input type=checkbox value=1 "
+		      //"onclick=\"toggleBool(this,'dates');reload();\" "
+		      "name=dates%s>"
+		      "<br>"
+
+		      "Show Summaries "
+		      "<input type=checkbox value=1 "
+		      //"onclick=\"toggleBool(this,'summaries');reload();\" "
+		      "name=summaries%s>"
+		      "<br>"
+
+		      "Frame border "
+		      "<input type=checkbox value=1 "
+		      //"onclick=\"toggleBool(this,'border');reload();\" "
+		      "name=border%s>"
+		      "<br>"
+
+		      "Width "
+		      "<input size=4 type=text value=%li "
+		      "name=width>"
+		      "<br>"
+
+		      "Height "
+		      "<input size=4 type=text value=%li "
+		      "name=height>"
+		      "<br>"
+
+		      "<nobr>Refresh in seconds "
+		      "<input size=4 type=text value=%li "
+		      "name=refresh></nobr>"
+		      "<br>"
+
+		      "<nobr>Custom widget header:</nobr>"
+		      "<br>"
+		      "<textarea rows=5 name=header style=width:100%%;>"
+		      "%s"
+		      "</textarea>"
+		      "<br>"
+
+		      "<input type=submit name=submit value=ok>"
+		      
+		      "</div>"
+
+		      "</td>"
+
+		      , sites
+		      , token
+		      , query
+		      , c1
+		      , c2
+		      , c3
+		      , width
+		      , height
+		      , refresh
+		      , header
+		      );
+
+
+	//
+	// end print controls
+	//
+
+
+	//
+	// begin print widget
+	//
+
+	sb->safePrintf ( "<td>"
+			 "<div style=\""
+			 "width:30px;"//%lipx;"
+			 //"position:absolute;"
+			 //"top:300px;"
+			 //"right:0;"
+			 //"left:0;"
+			 //"bottom:0;"
+			 "\">"
+			 "<div style=line-height:13px;><br></div>"
+			 //"<br>"
+			 //, RESULTSWIDTHSTR 
+			 //,width
+			 );
+
+	//printTabs ( sb , st );
+	//printRedBoxes ( sb , st );
+
+#define SHADOWCOLOR "#000000"
+
+	sb->safePrintf ( 
+			// end widget div
+			"</div>"
+			// end widget column in table
+			"</td>"
+			"<td>"
+			// begin div with source in it
+			/*
+			 "<div "
+			//"class=grad3 "
+			"style=\""
+			"border-radius:10px;"
+			"box-shadow: 6px 6px 3px %s;"
+			"border:2px solid black;"
+			"padding:15px;"
+			 "width:600px;"
+			//"background-image:url('/ss.jpg');"
+			//"background-repeat:repeat;"
+			//"background-attachment:fixed;"
+			 "background-color:lightgray;"
+			"\">"
+			, SHADOWCOLOR
+			//"<br>"
+			*/
+			);
+
+	// space widget to the right using this table
+	sb->safePrintf(
+		      //class=grad3 "
+		      //"style=\""
+		      //"border:2px solid black;"
+		      //"padding-bottom:10px;"
+		      //"padding-top:10px;"
+		      //"padding-left:10px;"
+		      //"\""
+		      //">"
+		       "</td>"
+		      "<td valign=top>"
+		       "<br>"
+		      "<img src=/gears32.png width=64 height=64>"
+		      "<br><br>"
+		      );
+
+
+	long start = sb->length();
+
+	char *border = "frameborder=no ";
+	if ( x3 ) border = "";
+
+	// this iframe contains the WIDGET
+	sb->safePrintf (
+		       /*
+		       "<div "
+		       "id=scrollerxyz "
+		       "style=\""
+		       //"width:%lipx;" // 200;"
+		       //"height:%lipx;" // 400;"
+		       //"overflow:hidden;"
+		       "padding:0px;"
+		       "margin:0px;"
+		       "background-color:white;"
+		       //"padding-left:7px;"
+		       "%s"
+		       //"background-color:%s;"//lightblue;"
+		       //"foreground-color:%s;"
+		       //"overflow:scroll;"
+		       //"overflow-scrolling:touch;"
+		       "\">"
+		       */
+
+			"<iframe width=\"%lipx\" height=\"%lipx\" "
+			//"scrolling=yes "
+			/*
+			"style=\"background-color:white;"
+			"padding-right:0px;"
+			//"%s\" "
+			"scrolling=no "
+			"frameborder=no "
+			//"src=\"http://neo.diffbot.com:8000/search?"
+			*/
+
+			// frameborder=no
+			"%s"
+
+			"src=\""
+			"http://127.0.0.1:8000/search?"
+			"format=widget&"
+			"widgetwidth=%li&widgetheight=%li&"
+			"c=%s&"
+			"refresh=%li"
+			// show articles sorted by newest pubdate first
+
+			, width
+			, height
+			, border
+			, width
+			, height
+			, coll
+			, refresh
+			);
+
+	sb->safePrintf("&dates=%li",x1);
+	sb->safePrintf("&summaries=%li",x2);
+
+	sb->safePrintf("&q=");
+	sb->urlEncode ( query );
+
+	// widget content header, usually a style tag
+	sb->safePrintf("&header=");
+	sb->urlEncode ( header );
+
+
+
+	sb->safePrintf("\">");
+
+	sb->safePrintf ( // do not reset the user's "where" cookie
+			// to NYC from looking at this widget!
+			//"cookie=0&"
+			//"%s"
+			"Your browser does not support iframes"
+			"</iframe>\n"
+			//"</div>" 
+			//, si->m_urlParms);
+			//, wp 
+			);
+
+	long end = sb->length();
+
+	sb->reserve ( end - start + 1000 );
+
+	char *wdir = "on the left";
+	long cols = 32;
+
+	//if ( width <= 240 ) 
+		sb->safePrintf("</td><td>&nbsp;&nbsp;</td><td valign=top>");
+		//else {
+		//	sb->safePrintf("</td></tr><tr><td><br><br>");
+		//	wdir = "above";
+		//		cols = 60;
+		//	}
+
+	sb->safePrintf ( "\n\n"
+			 "<br>"
+			//"<br><br><br>"
+			"<font style=\"font-size:16px;\">"
+			"Insert the following code into your webpage to "
+			"generate the widget %s. "
+			//"<br>"
+			//"<b><u>"
+			//"<a style=color:white href=/widget.html>"
+			//"Make $1 per click!</a></u></b>"
+			//"</font>"
+			"<br><br><b>" , wdir );
+	
+	char *p = sb->getBufStart() + start;
+
+	sb->safePrintf("<textarea rows=30 cols=%li "
+		      "style=\"border:2px solid black;\">", cols);
+	sb->htmlEncode ( p           ,
+			end - start ,
+			false       ,  // bool encodePoundSign
+			0           ); // niceness
+	sb->safePrintf("</textarea>");
+
+	sb->safePrintf("</b>");
+
+	// space widget to the right using this table
+	sb->safePrintf("</td></tr></table>");
+
+	sb->safePrintf("</div>");
+
+	sb->safePrintf("</form>");
+
+	sb->safePrintf("</body>");
+
+	sb->safePrintf("</html>");
+
+	return true;
+}
+
+bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
+	SafeBuf sb;
+
+	char *token = hr->getString("token",NULL);
+	if ( token && ! token[0] ) token = NULL;
+
+	if ( ! token ) {
+		g_errno = ENOTOKEN;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(s,g_errno,msg);
+	}
+
+	long tlen = 0;
+	if ( token ) tlen = gbstrlen(token);
+	if ( tlen > 64 ) { 
+		g_errno = ENOCOLLREC;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(s,g_errno,msg);
+	}
+
+	char coll[MAX_COLL_LEN];
+	CollectionRec *cr = NULL;
+	if ( token ) {
+		sprintf(coll,"%s-widget123",token);
+		cr = g_collectiondb.getRec(coll);
+	}
+
+	SafeBuf parmList;
+
+	collnum_t cn = -1;
+	if ( cr ) cn = cr->m_collnum;
+
+	// . first update their collection with the sites to crawl
+	// . this is NOT a custom diffbot crawl, just a regular one using
+	//   the new crawl filters logic, "siteList"
+	char *sites = hr->getString("sites",NULL);
+	// add the collection if does not exist
+	if ( sites && ! cr && token ) {
+		// we need to add the new collnum, so reserve it
+		collnum_t newCollnum = g_collectiondb.reserveCollNum();
+		// use that
+		cn = newCollnum;
+		// add the new colection named <token>-widget123
+		g_parms.addNewParmToList1 ( &parmList,cn,coll,0,"addColl");
+		// note it
+		log("widget: adding new widget coll %s",coll);
+	}
+
+
+	if ( cn >= 0 && token ) {
+		// use special url filters profile that spiders sites
+		// shallowly and frequently to pick up new news stories
+		// "1" = (long)UFP_NEWS
+		char ttt[12];
+		sprintf(ttt,"%li",(long)UFP_NEWS);
+		// urlfiltersprofile
+		g_parms.addNewParmToList1 ( &parmList,cn,ttt,0,"ufp");
+		// use diffbot analyze
+		char durl[1024];
+		sprintf(durl,
+			"http://api.diffbot.com/v2/analyze?mode=auto&token=%s",
+			token);
+		// TODO: ensure we call diffbot ok
+		g_parms.addNewParmToList1 ( &parmList,cn,durl,0,"apiUrl");
+	}
+
+	if ( ! sites ) sites = "";
+
+	// . update the list of sites to crawl and search and show in widget
+	// . if they give an empty list then allow that, it will stop crawling
+	if ( cn >= 0 && token )
+		g_parms.addNewParmToList1 ( &parmList,cn,sites,0,"sitelist");
+
+
+	if ( parmList.length() ) {
+		// send the parms to all hosts in the network
+		g_parms.broadcastParmList ( &parmList , 
+					    NULL,//s,// state is socket i guess
+					    NULL);//doneBroadcastingParms2 );
+	}
+
+
+
+	// now display the widget controls and the widget and the iframe code
+	printWidgetPage ( &sb , hr , coll );
+
+	return g_httpServer.sendDynamicPage(s,
+					    sb.getBufStart(),
+					    sb.length(),
+					    -1,//cacheTime -1 means not tocache
+					    false, // POST?
+					    "text/html", 
+					    200,  // httpstatus
+					    NULL, // cookie
+					    "UTF-8"); // charset
+}

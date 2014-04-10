@@ -61,6 +61,7 @@ Hostdb::Hostdb ( ) {
 	m_initialized = false;
 	m_crcValid = false;
 	m_crc = 0;
+	m_created = false;
 }
 
 Hostdb::~Hostdb () {
@@ -97,8 +98,8 @@ char *Hostdb::getNetName ( ) {
 // . gets filename that contains the hosts from the Conf file
 // . return false on errro
 // . g_errno may NOT be set
-bool Hostdb::init ( char *filename , long hostId , char *netName ,
-		    bool proxyHost , char useTmpCluster ) {
+bool Hostdb::init ( long hostId , char *netName ,
+		    bool proxyHost , char useTmpCluster , char *cwd ) {
 	// reset my ip and port
 	m_myIp             = 0;
 	m_myIpShotgun      = 0;
@@ -110,9 +111,13 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	m_useTmpCluster    = useTmpCluster;
 	m_initialized = true;
 
+	char *dir = "./";
+	if ( cwd ) dir = cwd;
+
 	// try localhosts.conf first
-	if ( strcmp ( filename , "./hosts.conf" ) == 0 )
-		filename = "./localhosts.conf";
+	char *filename = "hosts.conf";
+	//if ( strcmp ( filename , "hosts.conf" ) == 0 )
+	//	filename = "localhosts.conf";
 
  retry:
 
@@ -139,10 +144,10 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	// set clock in sync in fctypes.cpp
 	//if ( m_hostId == 0 ) g_clockInSync = true;
 	// log it
-	if (this == &g_hostdb) logf(LOG_INIT,"conf: HostId is %li.",m_hostId);
+	//if(this == &g_hostdb) logf(LOG_INIT,"conf: HostId is %li.",m_hostId);
 	// . File::open() open old if it exists, otherwise,
 	File f;
-	f.set ( filename );
+	f.set ( dir , filename );
 	// . returns -1 on error and sets g_errno
 	// . returns false if does not exist, true otherwise
 	long status = f.doesExist();
@@ -168,13 +173,20 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 		// hosts2.conf is not necessary
 		if ( this == &g_hostdb2 ) return true;
 		g_errno = ENOHOSTSFILE; 
-		log(
-		    "conf: Filename %s does not exist." ,filename);
 		// if doing localhosts.conf now try hosts.conf
-		if ( strcmp(filename,"./localhosts.conf") == 0 ) {
-			filename = "./hosts.conf";
+		if ( strcmp(filename,"localhosts.conf") == 0 ) {
+			filename = "hosts.conf";
+			g_errno = 0;
 			goto retry;
 		}
+		// now we generate one if that is not there
+		if ( ! m_created ) {
+			m_created = true;
+			g_errno = 0;
+			createHostsConf( cwd );
+			goto retry;
+		}
+		log("conf: Filename %s does not exist." ,filename);
 		return false; 
 	}
 	// get file size
@@ -1130,6 +1142,10 @@ bool Hostdb::init ( char *filename , long hostId , char *netName ,
 	// likewise, set m_htmlDir to this host's html dir
 	sprintf ( m_httpRootDir , "%shtml/" , m_dir );
 	sprintf ( m_logFilename , "%slog%03li", m_dir , hostId );
+
+	if ( ! g_conf.m_runAsDaemon )
+		sprintf(m_logFilename,"/dev/stderr");
+
 
 	long gcount = 0;
 	for ( long i = 0 ; i < MAX_KSLOTS && m_numHosts ; i++ ) {
@@ -2472,4 +2488,131 @@ long Hostdb::getCRC ( ) {
 }
 
 
-	
+bool Hostdb::createHostsConf( char *cwd ) {
+	SafeBuf sb;
+	sb.safePrintf("# The Gigablast host configuration file.\n");
+	sb.safePrintf("# Tells us what hosts are participating in the distributed search engine.\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("# How many mirrors do you want? If this is 0 then your data\n");
+	sb.safePrintf("# will NOT be replicated. If it is 1 then each host listed\n");
+	sb.safePrintf("# below will have one host that mirrors it, thereby decreasing\n");
+	sb.safePrintf("# total index capacity, but increasing redundancy. If this is\n");
+	sb.safePrintf("# 1 then the first half of hosts will be replicated by the\n");
+	sb.safePrintf("# second half of the hosts listed below.\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("num-mirrors: 0\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("# List of hosts. Limited to 512 from MAX_HOSTS in Hostdb.h. Increase that\n");
+	sb.safePrintf("# if you want more.\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# Format:\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# first   column: hostID (starts at 0 and increments from there)\n");
+	sb.safePrintf("# second  column: the port used by the client DNS algorithms\n");
+	sb.safePrintf("# third   column: port that HTTPS listens on\n");
+	sb.safePrintf("# fourth  column: port that HTTP  listens on\n");
+	sb.safePrintf("# fifth   column: port that udp server listens on\n");
+	sb.safePrintf("# sixth   column: IP address or hostname that has an IP address in /etc/hosts\n");
+	sb.safePrintf("# seventh column: like sixth column but for secondary ethernet port. (optional)\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("# This file consists of a list of lines like this:\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# <ClientDnsPort> <HttpsPort> <HttpPort> <UdpPort> <IP1> <IP2> <Path>\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# By default just use the local host as the single host as listed below.\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# The client DNS uses port 5998, https listens on 7000, http listens on port\n");
+	sb.safePrintf("# 8000 and the udp server listens on port 9000. We used to use port 6000 for\n");
+	sb.safePrintf("# DNS listening but it seemed to have some issues. If your DNS keeps timing\n");
+	sb.safePrintf("# out try a different port from 5998.\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# If your server only has one IP then just repeat it as IP1 and IP2. You\n");
+	sb.safePrintf("# can also use an alphanumeric name from /etc/hosts in place of a direct\n");
+	sb.safePrintf("# IP address. (see example below)\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# Use './gb N' to run the gb process as host #N where N is 0 to run as\n");
+	sb.safePrintf("# the first host in the list below. \n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# Use './gb start N' to use passwordless ssh to ssh to that Nth machine\n");
+	sb.safePrintf("# listed below and start the process. Use must have private/public keys\n");
+	sb.safePrintf("# for the required passwordless ssh.\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# Use './gb kstart N' to run the Nth host in a bash keep-alive loop. So if it\n");
+	sb.safePrintf("# cores it will restart. It will send out an email alert if it restarts.\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# The working directory is the last string on each line. That is where the\n");
+	sb.safePrintf("# 'gb' binary resides.\n");
+	sb.safePrintf("#\n");
+
+	// put our cwd here
+	sb.safePrintf("0 5998 7000 8000 9000 127.0.0.1 127.0.0.1 %s\n",cwd);
+	sb.safePrintf("\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# Example of a four-node distributed search index running on a single\n");
+	sb.safePrintf("# server with four cores. The working directories are /home/mwells/hostN/.\n");
+	sb.safePrintf("# The 'gb' binary resides in the working directories. We have to use\n");
+	sb.safePrintf("# different ports for each gb instance since they are all on the same\n");
+	sb.safePrintf("# server.\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# Use './gb 2' to run as the host on IP 1.2.3.8 for example.\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("#0 5998 7000 8000 9000 1.2.3.4 1.2.3.5 /home/mwells/host0/\n");
+	sb.safePrintf("#1 5997 7001 8001 9001 1.2.3.4 1.2.3.5 /home/mwells/host1/\n");
+	sb.safePrintf("#2 5996 7002 8002 9002 1.2.3.4 1.2.3.5 /home/mwells/host2/\n");
+	sb.safePrintf("#3 5995 7003 8003 9003 1.2.3.4 1.2.3.5 /home/mwells/host3/\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("# A four-node cluster on four different servers:\n");
+	sb.safePrintf("#0 5998 7000 8000 9000 1.2.3.4 1.2.3.5 /home/mwells/gigablast/\n");
+	sb.safePrintf("#1 5998 7000 8000 9000 1.2.3.6 1.2.3.7 /home/mwells/gigablast/\n");
+	sb.safePrintf("#2 5998 7000 8000 9000 1.2.3.8 1.2.3.9 /home/mwells/gigablast/\n");
+	sb.safePrintf("#3 5998 7000 8000 9000 1.2.3.10 1.2.3.11 /home/mwells/gigablast/\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# Example of an eight-node cluster.\n");
+	sb.safePrintf("# Each line represents a single gb process with dual ethernet ports\n");
+	sb.safePrintf("# whose IP addresses are in /etc/hosts under se0, se0b, se1, se1b, ...\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("#0 5998 7000 8000 9000 se0 se0b /home/mwells/gigablast/\n");
+	sb.safePrintf("#1 5998 7000 8000 9000 se1 se1b /home/mwells/gigablast/\n");
+	sb.safePrintf("#2 5998 7000 8000 9000 se2 se2b /home/mwells/gigablast/\n");
+	sb.safePrintf("#3 5998 7000 8000 9000 se3 se3b /home/mwells/gigablast/\n");
+	sb.safePrintf("#4 5998 7000 8000 9000 se4 se4b /home/mwells/gigablast/\n");
+	sb.safePrintf("#5 5998 7000 8000 9000 se5 se5b /home/mwells/gigablast/\n");
+	sb.safePrintf("#6 5998 7000 8000 9000 se6 se6b /home/mwells/gigablast/\n");
+	sb.safePrintf("#7 5998 7000 8000 9000 se7 se7b /home/mwells/gigablast/\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("\n");
+	sb.safePrintf("# Proxies\n");
+	sb.safePrintf("# Proxies handle the incoming search request and load balance it to \n");
+	sb.safePrintf("# one of the hosts listed above. If you only have one host in your search\n");
+	sb.safePrintf("# engine then you probably do not really need the proxy. You need to make\n");
+	sb.safePrintf("# sure all shard hosts and all proxies have the same hosts.conf because\n");
+	sb.safePrintf("# they ping each other to ensure they are up.\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# To start a proxy you can run './gb proxy load 0' to start the first\n");
+	sb.safePrintf("# proxy in your list. Use './gb proxy load 1' to start the second proxy, etc.\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# Use './gb proxy start N' to start the Nth proxy, where N starts at 0,\n");
+	sb.safePrintf("# mentioned in the proxy list below. You need to enable passwordless ssh\n");
+	sb.safePrintf("# using private/public keys for that to work. \n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# Use './gb proxy kstart N' to start the Nth proxy in a keep-alive loop using\n");
+	sb.safePrintf("# the bash shell. So if it cores it will restart and send you an email alert.\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# Format:\n");
+	sb.safePrintf("# First  column is \"proxy\" and followed by the standard columns described above\n");
+	sb.safePrintf("#\n");
+	sb.safePrintf("# Example:\n");
+	sb.safePrintf("# A proxy will be running on 10.5.66.18:\n");
+	sb.safePrintf("#proxy 6001 7001 8001 9001 10.5.66.18\n");
+
+	log("%shosts.conf does not exist, creating.",cwd);
+	sb.save ( cwd , "hosts.conf" );
+	return true;
+}

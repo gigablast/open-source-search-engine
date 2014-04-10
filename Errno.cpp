@@ -168,6 +168,7 @@ case	EBADHOSTSCONF: return "A hosts.conf is out of sync";
 case    EWAITINGTOSYNCHOSTSCONF: return "Wait to ensure hosts.conf in sync";
 case	EDOCNONCANONICAL: return "Url was dup of canonical page";
 case    ECUSTOMCRAWLMISMATCH: return "Job name/type mismatch. Job name has already been used for a crawl or bulk job.";
+case    ENOTOKEN: return "Missing token";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );

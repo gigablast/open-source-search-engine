@@ -360,10 +360,13 @@ class CollectionRec {
 	bool      load ( char *coll , long collNum ) ;
 	void reset();
 
-	void setUrlFiltersToDefaults();
+	//void setUrlFiltersToDefaults();
 
 	// for customcrawls
 	bool rebuildUrlFilters();
+
+	// for regular crawls
+	bool rebuildUrlFilters2();
 
 	bool m_urlFiltersHavePageCounts;
 
@@ -682,6 +685,9 @@ class CollectionRec {
 	// list of url patterns to be indexed.
 	SafeBuf m_siteListBuf;
 	char m_spiderToo;
+
+	// see UFP_* values in Parms.h. i.e. UFP_NEWS for crawling for NEWS
+	char m_urlFiltersProfile;
 
 	// . now the url regular expressions
 	// . we chain down the regular expressions

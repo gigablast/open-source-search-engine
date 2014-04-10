@@ -173,8 +173,8 @@ bool updateSiteListTables ( collnum_t collnum ,
 	        char *pe = pn;
 		for ( ; pe > s && is_wspace_a(pe[-1]) ; pe-- );
 
-		// advance over '\n' for next line
-		if ( *pn && *pn == '\n' ) pn++;
+		// skip over the \n so pn points to next line for next time
+		if ( *pn == '\n' ) pn++;
 
 		// make hash of the line
 		long h32 = hash32 ( s , pe - s );

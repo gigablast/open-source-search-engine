@@ -1392,7 +1392,7 @@ Profiler::getStackFrame(int sig) {
 
 void
 Profiler::startRealTimeProfiler() {
-	log(LOG_INIT, "admin:  MLT starting real time profiler");
+	log(LOG_INIT, "admin: starting real time profiler");
 	if(!m_frameTraces) {
 		m_frameTraces = (FrameTrace *)mmalloc(
 			sizeof(FrameTrace) * MAX_FRAME_TRACES, "FrameTraces");
@@ -1414,7 +1414,7 @@ Profiler::startRealTimeProfiler() {
 
 void
 Profiler::stopRealTimeProfiler(const bool keepData) {
-	log(LOG_INIT, "admin:  MLT stopping real time profiler");
+	log(LOG_INIT, "admin: stopping real time profiler");
 	struct itimerval value;
 	int which = ITIMER_REAL;
 	getitimer( which, &value );

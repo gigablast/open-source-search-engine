@@ -14103,7 +14103,13 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 		m_diffbotUrl.pushChar('&');
 
 	//diffbotUrl.safePrintf("http://54.212.86.74/api/%s?token=%s&u="
-	m_diffbotUrl.safePrintf("token=%s",cr->m_diffbotToken.getBufStart());
+	// only print token if we have one, because if user provides their
+	// own diffbot url (apiUrl in Parms.cpp) then they  might include
+	// the token in that for their non-custom crawl. m_customCrawl=0.
+	if ( cr->m_diffbotToken.length())
+		m_diffbotUrl.safePrintf("token=%s",
+					cr->m_diffbotToken.getBufStart());
+
 	m_diffbotUrl.safePrintf("&url=");
 	// give diffbot the url to process
 	m_diffbotUrl.urlEncode ( m_firstUrl.getUrl() );
@@ -18297,6 +18303,11 @@ bool XmlDoc::isSpam ( char   *u         ,
 // should we index the doc? if already indexed, and is filtered, we delete it
 char *XmlDoc::getIsFiltered ( ) {
 	if ( m_isFilteredValid ) return &m_isFiltered;
+	if ( m_isDiffbotJSONObject ) {
+		m_isFiltered = false;
+		m_isFilteredValid = true;
+		return &m_isFiltered;
+	}
 	long *priority = getSpiderPriority();
 	if ( ! priority || priority == (void *)-1 ) return (char *)priority;
 	m_isFiltered = false;
@@ -18506,6 +18517,12 @@ bool XmlDoc::logIt ( ) {
 
 	if ( m_contentHash32Valid )
 		sb.safePrintf("ch32=%010lu ",m_contentHash32);
+
+	if ( m_domHash32Valid )
+		sb.safePrintf("dh32=%010lu ",m_domHash32);
+
+	if ( m_siteHash32Valid )
+		sb.safePrintf("sh32=%010lu ",m_siteHash32);
 
 	if ( m_isPermalinkValid )
 		sb.safePrintf("ispermalink=%li ",(long)m_isPermalink);
@@ -20781,6 +20798,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			sreq.m_hopCountValid = 1;
 			sreq.m_fakeFirstIp   = 1;
 			sreq.m_firstIp       = firstIp;
+			// so we can match url filters' "insitelist" directive
+			// in Spider.cpp::getUrlFilterNum()
+			sreq.m_domHash32  = m_domHash32;
+			sreq.m_siteHash32 = m_siteHash32;
+			sreq.m_hostHash32 = m_siteHash32;
 			// set this
 			if (!m_dx->set4 ( &sreq       ,
 					  NULL        ,
@@ -27535,12 +27557,12 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	}
 
 	// get thumbnail image url
-	if ( ! reply->ptr_imgUrl && m_req->m_getImageUrl ) {
+	if ( ! reply->ptr_imgUrl ) { // && m_req->m_getImageUrl ) {
 		char **iu = getImageUrl();
 		if ( ! iu || iu == (char **)-1 ) return (Msg20Reply *)iu;
 		reply-> ptr_imgUrl = *iu;
 		reply->size_imgUrl = 0;
-		if ( *iu ) reply->size_imgUrl = gbstrlen(*iu);
+		if ( *iu ) reply->size_imgUrl = gbstrlen(*iu)+1;
 	}
 
 	// . adids contained in the doc
@@ -28142,6 +28164,43 @@ char **XmlDoc::getImageUrl() {
 	// assume none
 	m_imageUrl      = NULL;
 	m_imageUrlValid = true;
+	// diffbot often extracts an image in the json. but even if pure
+	// json it might be diffbot json that was injected an we don't know
+	// it so check contentType...
+	if ( m_isDiffbotJSONObject || m_contentType == CT_JSON ) {
+		char *iu = strstr(ptr_utf8Content,"\"images\":[{");
+		if ( ! iu ) return &m_imageUrl;
+		// temp null
+		char *end = strstr(iu+11,"]");
+		if ( ! end ) return &m_imageUrl;
+		char c = *end;
+		*end = '\0';
+		// now use strstr to find the first image url
+		char *needle = "\"url\":\"";
+		char *find = strstr(iu,needle);
+		// return NULL if not found
+		if ( ! find ) {
+			// revert temp null
+			*end = c;
+			return &m_imageUrl;
+		}
+		// find end of it
+		char *start = find + 7;
+		char *urlEnd = strstr(start,"\"");
+		// revert temp null
+		*end = c;
+		// did not find quote ending the url! wtf?
+		if ( ! urlEnd ) return &m_imageUrl;
+		// too big?
+		long iulen = urlEnd - start;
+		if ( iulen >= MAX_URL_LEN-1 ) return &m_imageUrl;
+		// ok, we got it, just copy that
+		m_imageUrlBuf.safeMemcpy ( start , iulen );
+		m_imageUrlBuf.nullTerm();
+		m_imageUrl = m_imageUrlBuf.getBufStart();
+		return &m_imageUrl;
+	}
+
 	// all done if not youtube or meta cafe
 	char *host = f->getHost();
 	char  found = 0;
@@ -28159,21 +28218,22 @@ char **XmlDoc::getImageUrl() {
 		if ( ! s ) return &m_imageUrl;
 		// point to the id
 		s += 2;
-		m_imageUrl = m_imageUrlBuf;
-		char    *p = m_imageUrlBuf;
-		memcpy ( p , "http://img.youtube.com/vi/" , 26 );
-		p += 26;
+		//m_imageUrl = m_imageUrlBuf;
+		//char    *p = m_imageUrlBuf;
+		m_imageUrlBuf.safeStrcpy("http://img.youtube.com/vi/");
 		// do not break
-		char *pend = m_imageUrlBuf + 80;
+		//char *pend = m_imageUrlBuf + 80;
 		// copy the id/number
-		for ( ; is_digit(*s) && p < pend ; ) *p++ = *s++;
+		//for ( ; is_digit(*s) && p < pend ; ) *p++ = *s++;
+		for ( ; is_digit(*s) ; s++ ) 
+			m_imageUrlBuf.pushChar(*s);
 		// wrap it up
-		memcpy ( p , "/2.jpg\0" , 7 );
-		p += 7;
+		m_imageUrlBuf.safeStrcpy ( "/2.jpg" );
 		// size includes \0;
-		m_imageUrlSize = p - m_imageUrl ;
+		//m_imageUrlSize = p - m_imageUrl ;
 		// sanity check
-		if ( m_imageUrlSize > 100 ) { char *xx=NULL;*xx=0; }
+		//if ( m_imageUrlSize > 100 ) { char *xx=NULL;*xx=0; }
+		m_imageUrl = m_imageUrlBuf.getBufStart();
 		return &m_imageUrl;
 	}
 	// must be meta cafe now
@@ -28188,17 +28248,20 @@ char **XmlDoc::getImageUrl() {
 		// skip ifnot good
 		if ( id <= 0 ) continue;
 		// make the url
-		m_imageUrl = m_imageUrlBuf;
-		char    *p = m_imageUrlBuf;
-		memcpy ( p , "http://s2.mcstatic.com/thumb/" , 29 );
-		p += 29;
-		p += sprintf ( p , "%li" , id );
-		memcpy ( p , ".jpg\0" , 5 );
-		p += 5;
+		//m_imageUrl = m_imageUrlBuf;
+		//char    *p = m_imageUrlBuf;
+		//memcpy ( p , "http://s2.mcstatic.com/thumb/" , 29 );
+		//p += 29;
+		//p += sprintf ( p , "%li" , id );
+		//memcpy ( p , ".jpg\0" , 5 );
+		//p += 5;
+		m_imageUrlBuf.safePrintf("http://s2.mcstatic."
+					 "com/thumb/%li.jpg", id);
+		m_imageUrl = m_imageUrlBuf.getBufStart();
 		// size includes \0;
-		m_imageUrlSize = p - m_imageUrl ;
+		//m_imageUrlSize = p - m_imageUrl ;
 		// sanity check
-		if ( m_imageUrlSize > 100 ) { char *xx=NULL;*xx=0; }
+		//if ( m_imageUrlSize > 100 ) { char *xx=NULL;*xx=0; }
 		break;
 	}
 	return &m_imageUrl;

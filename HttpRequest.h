@@ -34,8 +34,7 @@
 #define FORMAT_CSV  4
 #define FORMAT_TXT  5
 #define FORMAT_PROCOG 6
-
-
+#define FORMAT_WIDGET 7
 
 class HttpRequest {
 

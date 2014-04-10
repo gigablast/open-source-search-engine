@@ -38,6 +38,7 @@ Log::Log () {
 	m_port = 777; 
 	m_needsPrinting = false; 
 	m_disabled = false;
+	m_logTimestamps = false;
 }
 
 Log::~Log () { reset(); }
@@ -73,7 +74,34 @@ bool Log::init ( char *filename ) {
 	if ( ! m_filename ) return true;
 
 	// skip this for now
-	return true;
+	//return true;
+
+	//
+	// RENAME log000 to log000-2013_11_04-18:19:32
+	//
+	File f;
+	char tmp[16];
+	sprintf(tmp,"log%03li",g_hostdb.m_hostId);
+	f.set ( g_hostdb.m_dir , tmp );
+	// make new filename like log000-2013_11_04-18:19:32
+	time_t now = getTimeLocal();
+	tm *tm1 = gmtime((const time_t *)&now);
+	char tmp2[64];
+	strftime(tmp2,64,"%Y_%m_%d-%T",tm1);
+	SafeBuf newName;
+	if ( ! newName.safePrintf ( "%slog%03li-%s",
+				    g_hostdb.m_dir,
+				    g_hostdb.m_hostId,
+				    tmp2 ) ) {
+		fprintf(stderr,"log rename failed\n");
+		return false;
+	}
+	// rename log000 to log000-2013_11_04-18:19:32
+	if ( f.doesExist() ) {
+		//fprintf(stdout,"renaming file\n");
+		f.rename ( newName.getBufStart() );
+	}
+
 
 	// open it for appending.
 	// create with -rw-rw-r-- permissions if it's not there.
@@ -82,10 +110,11 @@ bool Log::init ( char *filename ) {
 		      S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH );
 	if ( m_fd >= 0 ) return true;
 	// bitch to stderr and return false on error
-       fprintf(stderr,"could not open log file %s for appending\n",m_filename);
+	fprintf(stderr,"could not open log file %s for appending\n",
+		m_filename);
 	return false;
 }
-
+/*
 static const char *getTypeString ( long type ) ;
 
 const char *getTypeString ( long type ) {
@@ -101,7 +130,7 @@ const char *getTypeString ( long type ) {
 	default: return "     ";
 	}
 }
-
+*/
 #define MAX_LINE_LEN 20048
 
 bool Log::shouldLog ( long type , char *msg ) {
@@ -210,6 +239,7 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	char tt [ MAX_LINE_LEN ];
 	char *p    = tt;
 	char *pend = tt + MAX_LINE_LEN;
+	/*
 	// print timestamp, hostid, type
 	if ( g_hostdb.m_numHosts <= 999 ) 
 		sprintf ( p , "%llu %03li %s ",
@@ -220,14 +250,33 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	else if ( g_hostdb.m_numHosts <= 99999 ) 
 		sprintf ( p , "%llu %05li %s ",
 			  now , g_hostdb.m_hostId , getTypeString(type) );
-	p += gbstrlen ( p );
+	*/
+
+
+	// print timestamp, hostid, type
+
+	if ( m_logTimestamps ) {
+		if ( g_hostdb.m_numHosts <= 999 ) 
+			sprintf ( p , "%llu %03li ",
+				  now , g_hostdb.m_hostId );
+		else if ( g_hostdb.m_numHosts <= 9999 ) 
+			sprintf ( p , "%llu %04li ",
+				  now , g_hostdb.m_hostId );
+		else if ( g_hostdb.m_numHosts <= 99999 ) 
+			sprintf ( p , "%llu %05li ",
+				  now , g_hostdb.m_hostId );
+		p += gbstrlen ( p );
+	}
+
 	// msg resource
 	char *x = msg;
 	long cc = 7;
 	// the first 7 bytes or up to the : must be ascii
-	while ( p < pend && *x && is_alnum_a(*x) ) { *p++ = *x++; cc--; }
+	//while ( p < pend && *x && is_alnum_a(*x) ) { *p++ = *x++; cc--; }
 	// space pad
-	while ( cc-- > 0 ) *p++ = ' ';
+	//while ( cc-- > 0 ) *p++ = ' ';
+	// ignore the label for now...
+	while ( p < pend && *x && is_alnum_a(*x) ) { x++; cc--; }
 	// thread id if in "thread"
 	if ( pid != s_pid && s_pid != -1 ) {
 		//sprintf ( p , "[%li] " , (long)getpid() );
@@ -238,8 +287,16 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	long avail = (MAX_LINE_LEN) - (p - tt) - 1;
 	if ( msgLen > avail ) msgLen = avail;
 	if ( *x == ':' ) x++;
+	if ( *x == ' ' ) x++;
 	strncpy ( p , x , avail );
+	// capitalize for consistency. no, makes grepping log msgs harder.
+	//if ( is_alpha_a(*p) ) *p = to_upper_a(*p);
 	p += gbstrlen(p);
+	// back up over spaces
+	while ( p[-1] == ' ' ) p--;
+	// end in period or ? or !
+	if ( p[-1] != '?' && p[-1] != '.' && p[-1] != '!' )
+		*p++ = '.';
 	*p ='\0';
 	// the total length, not including the \0
 	long tlen = p - tt;
@@ -276,8 +333,14 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 		if ( *ttp == '\t' ) *ttp = ' ';
 	}
 
-	// print it out for now
-	fprintf ( stderr, "%s\n", tt );
+	if ( m_fd >= 0 ) {
+		write ( m_fd , tt , tlen );
+		write ( m_fd , "\n", 1 );
+	}
+	else {
+		// print it out for now
+		fprintf ( stderr, "%s\n", tt );
+	}
 
 	// set the stuff in the array
 	m_errorMsg      [m_numErrors] = msg;

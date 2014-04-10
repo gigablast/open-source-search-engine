@@ -64,15 +64,15 @@ static WebPage s_pages[] = {
  	
 	// publicly accessible pages
 	{ PAGE_ROOT      , "index.html"    , 0 , "root" , 0 , 0 ,
-	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_CLIENT,
 	  "search page to query",
 	  sendPageRoot   , 0 } ,
 	{ PAGE_RESULTS   , "search"        , 0 , "search" , 0 , 0 ,
-	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_CLIENT,
 	  "results page",
 	  sendPageResults, 0 },
+	{ PAGE_WIDGET   , "widget"        , 0 , "widget" , 0 , 0 ,
+	  "widget page",
+	  sendPageWidget, 0 },
 	{ PAGE_ADDURL    , "addurl"       , 0 , "add url" , 0 , 0 ,
-	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_PROXY, 
 	  "Page where you can add url for spidering",
 	  sendPageAddUrl, 0 },
 

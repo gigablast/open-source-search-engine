@@ -165,7 +165,7 @@ class Threads {
 
  public:
 
-	Threads() { m_numQueues = 0; };
+	Threads();
 
 	// returns false and sets errno on error, true otherwise
 	bool init();
@@ -257,6 +257,7 @@ class Threads {
 	bool m_needsCleanup;
 	//bool m_needBottom;
 
+	bool m_initialized;
 
 	// private:
 

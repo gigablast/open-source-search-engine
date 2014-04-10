@@ -313,8 +313,9 @@ class Hostdb {
 	// . sets itself from g_conf (our configuration class)
 	// . returns false on fatal error
 	// . gets filename from Conf.h class
-	bool init ( char *filename , long hostId , char *netname = NULL,
-		    bool proxyHost = false , char useTempCluster = 0 );
+	bool init ( long hostId , char *netname = NULL,
+		    bool proxyHost = false , char useTempCluster = 0 ,
+		    char *cwd = NULL );
 
 	// for dealing with pings
 	bool registerHandler ( );
@@ -626,6 +627,9 @@ class Hostdb {
 	long  m_numTotalHosts;
 
 	bool m_initialized;
+
+	bool createHostsConf( char *cwd );
+	bool m_created;
 
 	long m_crc;
 	long m_crcValid;

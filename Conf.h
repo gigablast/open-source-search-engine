@@ -46,7 +46,7 @@
 class Conf {
 
   public:
-	
+
 	Conf();
 
 	bool isCollAdmin ( TcpSocket *socket , HttpRequest *hr ) ;
@@ -98,6 +98,8 @@ class Conf {
 	// a core dump saving them
 	char m_save;
 
+	bool m_runAsDaemon;
+	
 	bool m_isLocal;
 
 	//director info (optional) (used iff m_isTrustedNet is false)

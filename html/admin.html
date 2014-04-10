@@ -56,7 +56,22 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <br><br><a name=quickstart></a>
 <h1>Quick Start</h1>
 
-Requirements: You will need an Intel or AMD system running Linux.<br><br>
+Requirements: You will need an Intel or AMD system running Linux and at least 4GB of RAM.<br><br>
+
+Install the <a href=http://www.gigablast.com/gigablast-1.0-1.deb>Gigablast package for Ubuntu or Debian</a> or install the <a href=http://www.gigablast.com/gigaablast-1.0-1.rpm>Gigablast package for RedHat</a>.
+
+<br><br>
+If you run into an bugs let me know so i can fix them right away: mattdwells@hotmail.com.
+
+<br>
+<br>
+
+<h1>Build From Source</h1>
+
+Requirements: You will need an Intel or AMD system running Linux and at least 4GB of RAM.<br><br>
+
+If you run into an bugs let me know so i can fix them right away: mattdwells@hotmail.com.
+<br><br>
 
 You will need the following packages installed<br>
 <ul>
@@ -133,7 +148,8 @@ rather your current working directory, where the 'gb' binary resides.
 <li> Sorting. Sort the search results by meta tags or JSON fields that contain numbers, simply by adding something like gbsortby:price or gbrevsortby:price as a query term, assuming you have meta price tags.
 <li> Easy Scaling. Add new servers to the hosts.conf file then click 'rebalance shards' to automatically rebalance the sharded data.
 <li> Using &stream=1 can stream back millions of search results for a query without running out of memory.
-<li> Nested boolean queries using AND, OR, NOT operators
+<li> Nested boolean queries using AND, OR, NOT operators.
+<li> Built-in support for <a href=http://www.diffbot.com/>diffbot.com's api</a>, which extracts various entities from web sites, like products, articles, etc.
 </ul>
 
 <br>

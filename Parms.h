@@ -14,6 +14,17 @@
 void handleRequest3e ( UdpSlot *slot , long niceness ) ;
 void handleRequest3f ( UdpSlot *slot , long niceness ) ;
 
+// "url filters profile" values. used to set default crawl rules
+// in Collectiondb.cpp's CollectionRec::setUrlFiltersToDefaults(). 
+// for instance, UFP_NEWS spiders sites more frequently but less deep in
+// order to get "news" pages and articles
+enum {
+	UFP_CUSTOM = 0 ,
+	UFP_NONE   = 0 ,
+	UFP_WEB    = 1 ,
+	UFP_NEWS   = 2 
+};
+
 // special priorities for the priority drop down 
 // in the url filters table
 enum {
@@ -59,6 +70,7 @@ enum {
 	TYPE_LONG_CONST     ,
 	TYPE_SITERULE       , // 29
 	TYPE_SAFEBUF        ,
+	TYPE_UFP            ,
 	TYPE_FILEUPLOADBUTTON
 };
 
@@ -109,6 +121,7 @@ class Parm {
 	char *m_cgi;   // cgi name, contains %i if an array
 	char *m_xml;   // default to rendition of m_title if NULL
 	long  m_off;   // this variable's offset into the CollectionRec class
+	char  m_colspan;
 	char  m_type;  // TYPE_BOOL, TYPE_LONG, ...
 	long  m_page;  // PAGE_MASTER, PAGE_SPIDER, ... see Pages.h
 	char  m_obj;   // OBJ_CONF or OBJ_COLL

@@ -324,8 +324,11 @@ retry19:
 		g_errno = errno;
 		//if ( g_errno == EINVAL ) { port++; goto again; }
 		close ( m_sock );
-		return log("tcp: Failed to bind socket: %s.",
-		   	mstrerror(g_errno));
+		fprintf(stderr,"Failed to bind socket on port %li: %s."
+			"\n"
+			"Are you already running gb?\n",
+		   	(long)port,mstrerror(g_errno));
+		return false;
 	}
 	close ( m_sock );
 	return true;
