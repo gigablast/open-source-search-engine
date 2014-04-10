@@ -995,6 +995,62 @@ bool printSearchResultsHeader ( State0 *st ) {
 		printLogoAndSearchBox ( sb , &st->m_hr , -1 ); // catId = -1
 	}
 
+	// the calling function checked this so it should be non-null
+	CollectionRec *cr = si->m_cr;
+	char *coll = cr->m_coll;
+	long collLen = gbstrlen(coll);
+
+	if ( si->m_format == FORMAT_WIDGET ) {
+		sb->safePrintf("<img onclick=\""
+			       "var e=document.getElementById('sbox');"
+			       "if(e.style.display == 'none') {"
+			       "e.style.display = '';"
+			       "} else {"
+			       "e.style.display = 'none';"
+			       "}"
+			       "\" " // end function
+			       " "
+			       "width=25 "
+			       "height=25 "
+
+			       "style=\""
+			       "position:absolute;"
+			       "z-index:10;"
+			       "right:10px;"
+			       "\" "
+
+			       "src=\"http://etc-mysitemyway.s3.amazonaws.com/icons/legacy-previews/icons/simple-black-square-icons-business/126715-simple-black-square-icon-business-magnifying-glass-ps.png\">"
+			       );
+		long widgetwidth = hr->getLong("widgetwidth",250);
+		long refresh = hr->getLong("refresh",15);
+		char *oq = hr->getString("q",NULL);
+		if ( ! oq ) oq = "";
+		char *prepend = hr->getString("prepend");
+		if ( ! prepend ) prepend = "";
+		char *displayStr = "none";
+		if ( prepend && prepend[0] ) displayStr = "";
+		sb->safePrintf("<form method=get action=/search>"
+			       "<div align=left id=sbox style=display:%s;>"
+			       "<input type=text name=prepend size=%li "
+			       "value=\"%s\"  style=z-index:10;>"
+			       // hidden parms like collection
+			       "<input name=c type=hidden value=\"%s\">"
+			       "<input name=format type=hidden value=widget>"
+			       "<input name=widgetwidth type=hidden value=%li>"
+			       "<input name=refresh type=hidden value=%li>"
+			       "<input name=q type=hidden value=\"%s\">"
+			       "</form>"
+			       "</div>\n"
+			       , displayStr
+			       , widgetwidth / 12 
+			       , prepend
+			       , coll
+			       , widgetwidth
+			       , refresh
+			       , oq
+			       );
+	}
+
 	// xml
 	if ( si->m_format == FORMAT_XML )
 		sb->safePrintf("<?xml version=\"1.0\" "
@@ -1246,11 +1302,6 @@ bool printSearchResultsHeader ( State0 *st ) {
 	bool firstIgnored;
 	bool isAdmin = si->m_isAdmin;
 	if ( si->m_format != FORMAT_HTML ) isAdmin = false;
-
-	// the calling function checked this so it should be non-null
-	CollectionRec *cr = si->m_cr;
-	char *coll = cr->m_coll;
-	long collLen = gbstrlen(coll);
 
 	// otherwise, we had no error
 	if ( numResults == 0 && si->m_format == FORMAT_HTML ) {
