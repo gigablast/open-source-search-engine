@@ -837,11 +837,13 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 
 
 
-
+	char *prepend = r->getString("prepend",NULL,NULL);
 
 	// . the query to use for highlighting... can be overriden with "hq"
 	// . we need the language id for doing synonyms
-	if ( m_highlightQuery && m_highlightQuery[0] )
+	if ( prepend && prepend[0] )
+		m_hqq.set2 ( prepend , m_queryLang , true );
+	else if ( m_highlightQuery && m_highlightQuery[0] )
 		m_hqq.set2 ( m_highlightQuery , m_queryLang , true );
 	else if ( m_query && m_query[0] )
 		m_hqq.set2 ( m_query , m_queryLang , true );

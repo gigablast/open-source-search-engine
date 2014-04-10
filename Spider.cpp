@@ -12399,8 +12399,9 @@ bool getSpiderStatusMsg ( CollectionRec *cx , SafeBuf *msg , long *status ) {
 		*status = SP_ROUNDDONE;
 		return msg->safePrintf ( "Nothing currently "
 					 "available to spider. "
-					 "Change your url filters or try "
-					 "adding new urls.");
+					 "Change your url filters, try "
+					 "adding new urls, or wait for "
+					 "existing urls to be respidered.");
 	}
 		
 

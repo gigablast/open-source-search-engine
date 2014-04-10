@@ -406,11 +406,14 @@ int main2 ( int argc , char *argv[] ) {
 	printHelp:
 		SafeBuf sb;
 		sb.safePrintf(
-			"Usage: gb [-d workingDir] <CMD>\n");
+			      "\n"
+			      "Usage: gb [-d workingDir] <CMD>\n");
 		sb.safePrintf(
+			      "\n"
 			      "\tItems in []'s are optional, and items "
 			      "in <>'s are "
 			      "required.");
+		/*
 		sb.safePrintf(
 			      "\n\t"
 			 "[hostsConf] is the hosts.conf config file as "
@@ -420,21 +423,27 @@ int main2 ( int argc , char *argv[] ) {
 			      "used instead of ./hosts.conf. That is "
 			      "convenient to use since it will not be "
 			      "overwritten from git pulls.\n\n" );
+		*/
 		sb.safePrintf(
 			"<CMD> can have the following values:\n\n"
 
 			"-h\tprint this help.\n\n"
 			"-v\tprint version and exit.\n\n"
-			"-d\tdebug mode. do not run as daemon. "
+
+			"<hostId>\n"
+			"\tstart the gb process for this <hostId> locally."
+			" <hostId> is 0 to run as host #0, for instance."
+			"\n\n"
+
+
+			"<hostId> -g\n\tdebug mode. do not run as daemon. "
 			"log to stderr.\n\n"
 			//"-o\tprint the overview documentation in HTML. "
 			//"Contains the format of hosts.conf.\n\n"
-			"-r\tindicates recovery mode, "
+			"<hostId> -r\n\tindicates recovery mode, "
 			"sends email to addresses "
 			"specified in Conf.h upon startup.\n\n"
 
-			"<hostId>\n"
-			"\tstart the gb process for this <hostId> locally.\n\n"
 
 			"start [hostId]\n"
 			"\tstart the gb process on all hosts or just on "
@@ -1006,7 +1015,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "-r" ) == 0 ) g_recoveryMode = true;
 
 	// debug on gdb? then do not fork
-	if ( strcmp ( cmd , "-d" ) == 0 ) g_conf.m_runAsDaemon = false;
+	if ( strcmp ( cmd , "-g" ) == 0 ) g_conf.m_runAsDaemon = false;
 
 	bool testMandrill = false;
 	if ( strcmp ( cmd , "emailmandrill" ) == 0 ) {

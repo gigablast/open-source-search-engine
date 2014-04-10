@@ -170,6 +170,16 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("<br>\n");
 	sb.safePrintf("\n");
 
+
+	if ( cr && cr->m_coll && strcmp(cr->m_coll,"main") ) {
+		sb.safePrintf("<center>"
+			      "Searching the <b>%s</b> collection."
+			      "</center>",
+			      cr->m_coll);
+		sb.safePrintf("<br>\n");
+		sb.safePrintf("\n");
+	}
+
 	// print any red boxes we might need to
 	if ( printRedBox2 ( &sb , true ) )
 		sb.safePrintf("<br>\n");
@@ -190,7 +200,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	sb.safePrintf("<td><font size=+1><b>Open Source!</b>"
 	"</font><br>\n");
-	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=/admin.html#features>Features.</a> Limited support available for free."
+	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=/admin.html#features>Features</a>. Limited support available for free."
 		  ,80);
 	sb.safePrintf("<br><br>");
 	sb.safePrintf("</td></tr>\n");
