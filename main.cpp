@@ -425,7 +425,7 @@ int main2 ( int argc , char *argv[] ) {
 
 			"-h\tprint this help.\n\n"
 			"-v\tprint version and exit.\n\n"
-			"-d\tdebug mode. do not run as daemon. "
+			"-g\tdebug mode. do not run as daemon. "
 			"log to stderr.\n\n"
 			//"-o\tprint the overview documentation in HTML. "
 			//"Contains the format of hosts.conf.\n\n"
@@ -1006,7 +1006,7 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "-r" ) == 0 ) g_recoveryMode = true;
 
 	// debug on gdb? then do not fork
-	if ( strcmp ( cmd , "-d" ) == 0 ) g_conf.m_runAsDaemon = false;
+	if ( strcmp ( cmd , "-g" ) == 0 ) g_conf.m_runAsDaemon = false;
 
 	bool testMandrill = false;
 	if ( strcmp ( cmd , "emailmandrill" ) == 0 ) {
