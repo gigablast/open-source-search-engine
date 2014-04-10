@@ -5920,7 +5920,8 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 			"%s"
 
 			"src=\""
-			"http://127.0.0.1:8000/search?"
+			//"http://127.0.0.1:8000/search?"
+			"http://%s:%li/search?"
 			"format=widget&"
 			"widgetwidth=%li&widgetheight=%li&"
 			"c=%s&"
@@ -5930,6 +5931,10 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 			, width
 			, height
 			, border
+
+			, iptoa(g_hostdb.m_myHost->m_ip)
+			, (long)g_hostdb.m_myHost->m_httpPort
+
 			, width
 			, height
 			, coll
