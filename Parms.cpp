@@ -429,7 +429,7 @@ bool CommandRestartColl ( char *rec , WaitEntry *we ) {
 	CollectionRec *cr = g_collectiondb.getRec ( newCollnum );
 	// if reset from crawlbot api page then enable spiders
 	// to avoid user confusion
-	if ( cr ) cr->m_spideringEnabled = 1;
+	//if ( cr ) cr->m_spideringEnabled = 1;
 
 	if ( ! cr ) return true;
 
@@ -506,7 +506,7 @@ bool CommandResetColl ( char *rec , WaitEntry *we ) {
 	if ( oldSiteList ) cr->m_siteListBuf.safeStrcpy ( oldSiteList );
 
 	// turn spiders off
-	if ( cr ) cr->m_spideringEnabled = 0;
+	//if ( cr ) cr->m_spideringEnabled = 0;
 
 	return true;
 }
