@@ -23,13 +23,17 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <h1>Table of Contents</h1>
 <br>
 <a href=#quickstart>Quick Start</a><br><br>
+<a href=#src>Build from Source</a><br><br>
 <a href=#features>Features</a><br><br>
 <a href=/searchfeed.html>XML/REST Search Feed API</a><br><br>
 
 
 <!--<a href=#weighting>Weighting Query Terms</a> - how to pass in your own query term weights<br><br>-->
 
-<a href=#requirements>Hardware Requirements</a> - what is required to run gigablast<br><br><a href=#perf>Performance Specifications</a> - various statistics.<br><br><a href=#files>List of Files</a> - the necessary files to run Gigablast<br><br><a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br><a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems<br><br><a href=#disaster>Disaster Recovery</a> - dealing with a crashed host<br><br><a href=#security>The Security System</a> - how to control access<br><br>
+<a href=#requirements>Hardware Requirements</a> - what is required to run gigablast<br><br><a href=#perf>Performance Specifications</a> - various statistics.<br><br><a href=#files>List of Files</a> - the necessary files to run Gigablast<br><br><a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br><a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems<br><br><a href=#disaster>Disaster Recovery</a> - dealing with a crashed host
+<!--<br><br>
+<a href=#security>The Security System</a> - how to control access-->
+<br><br>
 
 <a href=#build>Building an Index</a> - how to start building your index<br><br>
 <a href=#spider>The Spider</a> - all about Gigabot, Gigablast's crawling agent<br><br>
@@ -44,8 +48,14 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <br><br><a href=#dmoz>Building a DMOZ Based Directory</a> - build a web directory based on open DMOZ data<br><br>
 
 <a href=#optimizing>Optimizing</a> - optimizing Gigablast's spider and query performance<br><br>
-<a href=#logs>The Log System</a> - how Gigablast logs information<br><br><a href=#config>gb.conf</a> - describes the gb configuration file<br><br><a href=#hosts>hosts.conf</a> - the file that describes all participating hosts in the network<br><br>
+<a href=#logs>The Log System</a> - how Gigablast logs information
 <!--
+<br><br>
+<a href=#config>gb.conf</a> - describes the gb configuration file
+<br><br>
+<a href=#hosts>hosts.conf</a> - the file that describes all participating hosts in the network
+<br><br>
+
 <a href=#stopwords>Stopwords</a> - list of common words generally ignored at query time<br><br>
 <a href=#phrasebreaks>Phrase Breaks</a> - list of punctuation that breaks a phrase<br><br>
 -->
@@ -53,45 +63,52 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <br><br><a name=quickstart></a>
 <h1>Quick Start</h1>
 
+Until I get the binary packages ready, <a href=#src>build from the source code</a>, it's easy.
+<!--
 Requirements: You will need an Intel or AMD system running Linux and at least 4GB of RAM.<br><br>
 
-Install the <a href=http://www.gigablast.com/gigablast-1.0-1.deb>Gigablast package for Ubuntu or Debian</a> or install the <a href=http://www.gigablast.com/gigaablast-1.0-1.rpm>Gigablast package for RedHat</a>.
+Install the <a href=http://www.gigablast.com/gigablast-1.0-1.deb>Gigablast package for Ubuntu or Debian</a> or install the <a href=http://www.gigablast.com/gigablast-1.0-1.rpm>Gigablast package for RedHat</a>.
 
 <br><br>
 If you run into an bugs let me know so i can fix them right away: mattdwells@hotmail.com.
+-->
 
 <br>
 <br>
-
+<a name=src></a>
 <h1>Build From Source</h1>
 
 Requirements: You will need an Intel or AMD system running Linux and at least 4GB of RAM.<br><br>
 
 If you run into an bugs let me know so i can fix them right away: mattdwells@hotmail.com.
 <br><br>
-
+<!--
 You will need the following packages installed<br>
 <ul>
-<li>apt-get install make
-<li>apt-get install g++
+<li>do a <b>apt-get install make g++ gcc-multilib</b>
+-->
+<!--<li>apt-get install g++
 <li>apt-get install gcc-multilib <i>(for 32-bit compilation support)</i>
+-->
 <!--<li>apt-get install libssl-dev <i>(for the includes, 32-bit libs are here)</i>-->
 <!--<li>apt-get install libplot-dev <i>(for the includes, 32-bit libs are here)</i>-->
 <!--<li>apt-get install lib32stdc++6-->
 <!--<li>apt-get install ia32-libs-->
-<li>I supply libstdc++.a but you might need the include headers and have to do <i>apt-get install lib32stdc++6</i> or something.
+<!--<li>I supply libstdc++.a but you might need the include headers and have to do <b>apt-get install lib32stdc++6</b> or something.
 </ul>
+-->
 
-
-
-
-1. Run 'make' to compile. (e.g. use 'make -j 4' to compile on four cores)
-<br><br>
-2. Run './gb 0'  to start a single gigablast node which listens on port 8000.
-<br><br>
-3. The first time you run gb, wait about 30 seconds for it to build some files. Check the logs to see when it completes.
-<br><br>
-4. Go to the <a href=http://127.0.0.1:8000/>root page</a> to begin.
+<b>1.</b> Do <b>apt-get install make g++ gcc-multilib lib32stdc++6</b>
+<br>
+<b>2.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine/archive/master.zip>Gigablast source code</a>, unzip it and cd into it. Alternatively, clone it from <a href=https://github.com/gigablast/open-source-search-engine>Gigablast on Github</a>.
+<br>
+<b>3.</b> Run <b>make</b> to compile. (e.g. use 'make -j 4' to compile on four cores)
+<br>
+<b>4.</b> Run <b>./gb 0</b>  to start a single gigablast node which listens on port 8000. (If it fails to bind to that port, edit the hosts.conf it generates and change the port from 8000 to something else greater than 8000)
+<br>
+<b>5.</b> The first time you run gb, wait about 30 seconds for it to build some files. Check the logs to see when it completes.
+<br>
+<b>6.</b> Go to the <a href=http://127.0.0.1:8000/>root page</a> to begin.
 
 <br>
 
@@ -327,13 +344,14 @@ For the purposes of this section, we assume the name of the cluster is gf and al
 <tr><td>It often does a dns lookup on each link if it has not encountered that subdomain before. Otherwise, the subdomain IP when first encountered is stored in tagdb in the <i>firstIp</i> field. You might try using more DNSesor disabling link spidering.
 </td></tr>
 </table>
+<!--
 <br><br><a name=security></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>The Security System
 </td></tr></table>
 <br>
 Right now any local IP can adminster Gigablast, so any IP on the same network with a netmask of 255.255.255.0 can get in. There was an accounting system but it was disabled for simplicity. So we need to at least partially re-enable it, but still keep things simple for single administrators on small networks.
-<!--
+
 Every request sent to the Gigablast server is assumed to come from one of four types of users. A public user, a spam assassin, a collection admin, or a master admin. A collection admin has control over the controls corresponding to a particular collection. A spam assassin has control over even fewer controls over a particular collection in order to remove pages from it. A master admin has control over all aspects and all collections. <br><br>To verify a request is from an admin or spam assassin Gigablast requires that the request contain a password or come from a listed IP. To maintain these lists of passwords and IPs for the master admin, click on the "security" tab. To maintain them for a collection admin or for a spam assassin, click on the "access" tab for that collection. Alternatively, the master passwords and IPs can be edited in the gb.conf file in the working dir and collection admin passwords and IPs can be edited in the coll.conf file in the collections subdirectory in the working dir. <br><br>To add a further layer of security, Gigablast can server all of its pages through the https interface. By changing http:// to https:// and using the SSL port you specified in hosts.conf, all requests and responses will be made secure.-->
  <br><br>
 <a name=build></a>
