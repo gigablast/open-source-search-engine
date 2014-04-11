@@ -326,8 +326,10 @@ retry19:
 		close ( m_sock );
 		fprintf(stderr,"Failed to bind socket on port %li: %s."
 			"\n"
-			"Are you already running gb?\n",
-		   	(long)port,mstrerror(g_errno));
+			"Are you already running gb?\n"
+			"If not, try editing ./hosts.conf to\n"
+			"change the port from %li to something bigger.\n",
+		   	(long)port,mstrerror(g_errno),(long)port);
 		return false;
 	}
 	close ( m_sock );

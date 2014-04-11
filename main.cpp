@@ -1480,7 +1480,10 @@ int main2 ( int argc , char *argv[] ) {
 	tryagain:
 		if ( ! g_proxy.initHttpServer( httpPort, httpsPort ) ) {
 			log("db: HttpServer init failed. Another gb "
-			    "already running?" ); 
+			    "already running? If not, try editing "
+			    "./hosts.conf to "
+			    "change the port from %li to something bigger"
+			    , (long)httpPort ); 
 			// this is dangerous!!! do not do the shutdown thing
 			return 1;
 			// just open a socket to port X and send
