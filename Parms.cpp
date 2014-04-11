@@ -7745,8 +7745,9 @@ void Parms::init ( ) {
 	*/
 
 	m->m_title = "restart collection";
-	m->m_desc  = "Remove all documents from this collection and restart "
-		"spidering.";// If you do this accidentally there "
+	m->m_desc  = "Remove all documents from the collection and re-add "
+		"seed urls from site list.";
+	// If you do this accidentally there "
 	//"is a <a href=/admin.html#recover>recovery procedure</a> to "
 	//	"get back the trashed data.";
 	m->m_cgi   = "restart";
@@ -8792,11 +8793,12 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SPIDER;
 	m->m_func2 = CommandResetColl;
 	m->m_cast  = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "restart collection";
-	m->m_desc  = "Remove all documents from the collection and start "
-		"spidering over again.";
+	m->m_desc  = "Remove all documents from the collection and re-add "
+		"seed urls from site list.";
 	m->m_cgi   = "restart";
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_SPIDER;
