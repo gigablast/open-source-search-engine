@@ -124,11 +124,11 @@ gb: $(OBJS) main.o $(LIBFILES)
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
 
 
-iana_charset.cpp: parse_iana_charsets.pl character-sets supported_charsets.txt
-	./parse_iana_charsets.pl < character-sets
+#iana_charset.cpp: parse_iana_charsets.pl character-sets supported_charsets.txt
+#	./parse_iana_charsets.pl < character-sets
 
-iana_charset.h: parse_iana_charsets.pl character-sets supported_charsets.txt
-	./parse_iana_charsets.pl < character-sets
+#iana_charset.h: parse_iana_charsets.pl character-sets supported_charsets.txt
+#	./parse_iana_charsets.pl < character-sets
 
 run_parser: test_parser
 	./test_parser ~/turkish.html
