@@ -102,6 +102,7 @@ bool updateSiteListTables ( collnum_t collnum ,
 	// because we set it here from a call to CommandUpdateSiteList()
 	// because it requires all this computational crap.
 	char *op = cr->m_siteListBuf.getBufStart();
+
 	// scan and hash each line in it
 	for ( ; *op ; op++ ) {
 		// get end

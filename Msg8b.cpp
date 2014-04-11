@@ -508,6 +508,9 @@ void gotCatRecWrapper ( void *state ) { // , CatRec *catrec ) {
 // . each normal tagdb record has the following format:
 //      templateKey (12 bytes) then non-NULL-terminated site string
 bool Msg8b::gotList ( ) {
+	// ignore this...
+	if ( g_errno == ENOCOLLREC )
+		g_errno = 0;
 	// return on error
 	if (g_errno){
 		log("build: Had error getting ruleset record: %s.",
