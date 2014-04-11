@@ -5793,7 +5793,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 
 		      "Query:"
 		      "<br>"
-		      "<textarea name=query style=width:100%%;>"
+		      "<textarea rows=4 name=query style=width:100%%;>"
 		      "%s"
 		      "</textarea>"
 		      "<br>"
@@ -5834,7 +5834,7 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 
 		      "<nobr>Custom widget header:</nobr>"
 		      "<br>"
-		      "<textarea rows=5 name=header style=width:100%%;>"
+		      "<textarea rows=10 name=header style=width:100%%;>"
 		      "%s"
 		      "</textarea>"
 		      "<br>"
@@ -6078,7 +6078,9 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 	char *token = hr->getString("token",NULL);
 	if ( token && ! token[0] ) token = NULL;
 
-	if ( ! token ) {
+	long edit = hr->getLong("inlineedit",0);
+
+	if ( ! token && ! edit ) {
 		g_errno = ENOTOKEN;
 		char *msg = mstrerror(g_errno);
 		return g_httpServer.sendErrorReply(s,g_errno,msg);
