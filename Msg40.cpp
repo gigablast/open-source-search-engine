@@ -575,7 +575,7 @@ bool Msg40::getDocIds ( bool recall ) {
 
 	// make enough for ptrs
 	long need = sizeof(Msg3a *) * m_numCollsToSearch;
-	if ( ! m_msg3aPtrBuf.reserve ( need ) ) return NULL;
+	if ( ! m_msg3aPtrBuf.reserve ( need ) ) return true;
 	// cast the mem buffer
 	m_msg3aPtrs = (Msg3a **)m_msg3aPtrBuf.getBufStart();
 

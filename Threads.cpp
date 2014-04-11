@@ -178,17 +178,7 @@ Threads::Threads ( ) {
 	m_initialized = false;
 }
 
-bool Threads::init ( ) {
-
-	if ( m_initialized ) return true;
-	m_initialized = true;
-
-	m_needsCleanup = false;
-	//m_needBottom = false;
-
-	// sanity check
-	if ( sizeof(pthread_t) > sizeof(pid_t) ) { char *xx=NULL;*xx=0; }
-
+void Threads::setPid ( ) {
 	// set s_pid to the main process id
 #ifdef PTHREADS
 	s_pid = pthread_self();
@@ -207,7 +197,20 @@ bool Threads::init ( ) {
 #else
 	s_pid = getpid();
 #endif
+}
 
+bool Threads::init ( ) {
+
+	if ( m_initialized ) return true;
+	m_initialized = true;
+
+	m_needsCleanup = false;
+	//m_needBottom = false;
+
+	// sanity check
+	if ( sizeof(pthread_t) > sizeof(pid_t) ) { char *xx=NULL;*xx=0; }
+
+	setPid();
 
 #ifdef _STACK_GROWS_UP
 	return log("thread: Stack growing up not supported.");

@@ -116,6 +116,8 @@ bool sendReply ( State0 *st , char *reply ) {
 		// . one hour cache time... no 1000 hours, basically infinite
 		// . no because if we redo the query the results are cached
 		long cacheTime = 3600;//*1000;
+		// no... do not use cache
+		cacheTime = -1;
 		// the "Check it" link on add url uses &usecache=0 to tell
 		// the browser not to use its cache...
 		//if ( hr->getLong("usecache",-1) == 0 ) cacheTime = 0;

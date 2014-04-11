@@ -1480,7 +1480,10 @@ int main2 ( int argc , char *argv[] ) {
 	tryagain:
 		if ( ! g_proxy.initHttpServer( httpPort, httpsPort ) ) {
 			log("db: HttpServer init failed. Another gb "
-			    "already running?" ); 
+			    "already running? If not, try editing "
+			    "./hosts.conf to "
+			    "change the port from %li to something bigger"
+			    , (long)httpPort ); 
 			// this is dangerous!!! do not do the shutdown thing
 			return 1;
 			// just open a socket to port X and send
@@ -2763,6 +2766,8 @@ int main2 ( int argc , char *argv[] ) {
 		//fprintf(stderr,"done\n");
 		// set our new pid
 		g_mem.setPid();
+		g_threads.setPid();
+		g_log.setPid();
 	}
 
 	// initialize threads down here now so it logs to the logfile and
@@ -3513,6 +3518,8 @@ int main2 ( int argc , char *argv[] ) {
 
 	// ok, now activate statsdb
 	g_statsdb.m_disabled = false;
+
+	log("db: gb is now ready");
 
 	// sync loop
 	//if ( ! g_sync.init() ) {

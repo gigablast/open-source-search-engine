@@ -431,6 +431,24 @@ bool CommandRestartColl ( char *rec , WaitEntry *we ) {
 	// to avoid user confusion
 	if ( cr ) cr->m_spideringEnabled = 1;
 
+	if ( ! cr ) return true;
+
+	//
+	// repopulate spiderdb with the same sites
+	//
+
+	char *oldSiteList = cr->m_siteListBuf.getBufStart();
+	// do not let it have the buf any more
+	cr->m_siteListBuf.detachBuf();
+	// can't leave it NULL, safebuf parms do not like to be null
+	cr->m_siteListBuf.nullTerm();
+	// re-add the buf so it re-seeds spiderdb. it will not dedup these
+	// urls in "oldSiteList" with "m_siteListBuf" which is now empty.
+	// "true" = addSeeds.
+	updateSiteListTables ( newCollnum , true , oldSiteList );
+	// now put it back
+	if ( oldSiteList ) cr->m_siteListBuf.safeStrcpy ( oldSiteList );
+
 	// all done
 	return true;
 }
@@ -468,9 +486,27 @@ bool CommandResetColl ( char *rec , WaitEntry *we ) {
 	// turn on spiders on new collrec. collname is same but collnum
 	// will be different.
 	CollectionRec *cr = g_collectiondb.getRec ( newCollnum );
-	// if reset from crawlbot api page then enable spiders
-	// to avoid user confusion
-	if ( cr ) cr->m_spideringEnabled = 1;
+
+	if ( ! cr ) return true;
+
+	//
+	// repopulate spiderdb with the same sites
+	//
+
+	char *oldSiteList = cr->m_siteListBuf.getBufStart();
+	// do not let it have the buf any more
+	cr->m_siteListBuf.detachBuf();
+	// can't leave it NULL, safebuf parms do not like to be null
+	cr->m_siteListBuf.nullTerm();
+	// re-add the buf so it re-seeds spiderdb. it will not dedup these
+	// urls in "oldSiteList" with "m_siteListBuf" which is now empty.
+	// "true" = addSeeds.
+	updateSiteListTables ( newCollnum , true , oldSiteList );
+	// now put it back
+	if ( oldSiteList ) cr->m_siteListBuf.safeStrcpy ( oldSiteList );
+
+	// turn spiders off
+	if ( cr ) cr->m_spideringEnabled = 0;
 
 	return true;
 }
@@ -7709,8 +7745,9 @@ void Parms::init ( ) {
 	*/
 
 	m->m_title = "restart collection";
-	m->m_desc  = "Remove all documents from this collection and restart "
-		"spidering.";// If you do this accidentally there "
+	m->m_desc  = "Remove all documents from the collection and re-add "
+		"seed urls from site list.";
+	// If you do this accidentally there "
 	//"is a <a href=/admin.html#recover>recovery procedure</a> to "
 	//	"get back the trashed data.";
 	m->m_cgi   = "restart";
@@ -8756,11 +8793,12 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SPIDER;
 	m->m_func2 = CommandResetColl;
 	m->m_cast  = 1;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "restart collection";
-	m->m_desc  = "Remove all documents from the collection and start "
-		"spidering over again.";
+	m->m_desc  = "Remove all documents from the collection and re-add "
+		"seed urls from site list.";
 	m->m_cgi   = "restart";
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_SPIDER;
