@@ -2766,6 +2766,8 @@ int main2 ( int argc , char *argv[] ) {
 		//fprintf(stderr,"done\n");
 		// set our new pid
 		g_mem.setPid();
+		g_threads.setPid();
+		g_log.setPid();
 	}
 
 	// initialize threads down here now so it logs to the logfile and

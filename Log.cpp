@@ -31,6 +31,10 @@ long       g_dbufSize       = 0;
 // main process id
 static pid_t s_pid = -1;
 
+void Log::setPid ( ) {
+	s_pid = getpidtid();
+}
+
 Log::Log () { 
 	m_fd = -1; 
 	m_filename = NULL; 
@@ -55,7 +59,8 @@ void Log::reset ( ) {
 
 bool Log::init ( char *filename ) {
 	// set the main process id
-	s_pid = getpidtid();
+	//s_pid = getpidtid();
+	setPid();
 	// init these
 	m_numErrors =  0;
 	m_bufPtr    =  0;

@@ -172,6 +172,7 @@ class Threads {
 
 	long getStack ( ) ;
 	void returnStack ( long si );
+	void setPid();
 	void reset ( ) ;
 
 	// . we restrict the # of threads based on their type

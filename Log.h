@@ -124,6 +124,8 @@ class Log {
 
 	void reset ( );
 
+	void setPid();
+
 	// save before exiting
 	void close () { dumpLog();  };
 
