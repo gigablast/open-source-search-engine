@@ -3514,6 +3514,8 @@ int main2 ( int argc , char *argv[] ) {
 	// ok, now activate statsdb
 	g_statsdb.m_disabled = false;
 
+	log("db: gb is now ready");
+
 	// sync loop
 	//if ( ! g_sync.init() ) {
 	//	log("db: Sync init failed." ); return 1; } 
