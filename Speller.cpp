@@ -998,8 +998,13 @@ char *Speller::getRandomWord() {
 // dict into memory using Language.loadWordList(), loadTitleRecDict(), etc
 bool Speller::loadUnifiedDict() {
 
+	bool building = false;
+
+ reload:
+
 	bool needRebuild = false;
 
+	m_unifiedBuf.purge();
 	m_unifiedBuf.setLabel("unibuf");
 
 	// this MUST be there
@@ -1045,6 +1050,13 @@ bool Speller::loadUnifiedDict() {
 
 		return true;
 	}
+
+	if ( building ) {
+		log("gb: rebuild failed. exiting.");
+		exit(0);
+	}
+
+	building = true;
 
 	log("gb: REBUILDING unifiedDict-buf.txt and unifiedDict-map.dat");
 
@@ -1384,6 +1396,9 @@ bool Speller::loadUnifiedDict() {
 	// save it
 	if ( m_unifiedDict.save(g_hostdb.m_dir,"unifiedDict-map.dat")<=0 )
 		return false;
+
+	// start over and load what we created
+	goto reload;
 
 	// hmmm... seems like we need to re-run for some reason
 	log("spell: PLEASE RERUN gb");
