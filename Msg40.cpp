@@ -5537,7 +5537,21 @@ bool Msg40::printJsonItemInCSV ( State0 *st , long ix ) {
 
 		// print the value
 		sb->pushChar('\"');
-		sb->csvEncode ( ji->getValue() , ji->getValueLen() );
+		// get the json item to print out
+		long  vlen = ji->getValueLen();
+		// truncate
+		char *truncStr = NULL;
+		if ( vlen > 32000 ) {
+			vlen = 32000;
+			truncStr = " ... value truncated because "
+				"Excel can not handle it. Download the "
+				"JSON to get untruncated data.";
+		}
+		// print it out
+		sb->csvEncode ( ji->getValue() , vlen );
+		// print truncate msg?
+		if ( truncStr ) sb->safeStrcpy ( truncStr );
+		// end the CSV
 		sb->pushChar('\"');
 	}
 
