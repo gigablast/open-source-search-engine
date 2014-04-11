@@ -449,11 +449,13 @@ int main2 ( int argc , char *argv[] ) {
 			"\tstart the gb process on all hosts or just on "
 			"[hostId] if specified using an ssh command.\n\n"
 
+			/*
 			"kstart [hostId]\n"
 			"\tstart the gb process on all hosts or just on "
 			"[hostId] if specified using an ssh command and "
 			"if the gb process cores then restart it. k stands "
 			"for keepalive.\n\n"
+			*/
 
 			"stop [hostId]\n"
 			"\tsaves and exits for all gb hosts or "
@@ -1881,6 +1883,27 @@ int main2 ( int argc , char *argv[] ) {
 				//
 				// default to keepalive start for now!!
 				//
+				return install ( ifk_kstart , h1, 
+						 NULL,NULL,h2 );
+		}
+		// if it is us, do it
+		//if ( hostId != -1 ) goto mainStart;
+		//
+		// default to keepalive start for now!! (was ifk_start)
+		//
+		return install ( ifk_kstart , hostId );
+	}
+	// gb astart [hostId] (non-keepalive start)
+	if ( strcmp ( cmd , "nstart" ) == 0 ) {	
+		// get hostId to install TO (-1 means all)
+		long hostId = -1;
+		if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
+		// might have a range
+		if ( cmdarg + 1 < argc ) {
+			long h1 = -1;
+			long h2 = -1;
+			sscanf ( argv[cmdarg+1],"%li-%li",&h1,&h2);
+			if ( h1 != -1 && h2 != -1 && h1 <= h2 )
 				return install ( ifk_start , h1, 
 						 NULL,NULL,h2 );
 		}
@@ -4653,7 +4676,10 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; " // %s"
 				//"./gb %li >& ./log%03li &\" %s",
-				"./gb %li &\" %s",
+				// without "sleep 1" ssh seems to exit
+				// bash before it can start gb and gb does
+				// not start up
+				"./gb %li & sleep 1\" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 				//tmp2           ,
