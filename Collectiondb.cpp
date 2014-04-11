@@ -1894,7 +1894,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	n++;
 
 	// if not in the site list then nuke it
-	m_regExs[n].set("!insitelist");
+	m_regExs[n].set("!ismanualadd && !insitelist");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 0; // 30 days default
 	m_maxSpidersPerRule  [n] = 99; // max spiders
