@@ -1397,7 +1397,7 @@ void nukeDoledb ( collnum_t collnum ) {
 	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull ( collnum );
 
 	if ( sc ) {
-		sc->m_lastUrlFiltersUpdate = getTimeGlobal();
+		sc->m_lastUrlFiltersUpdate = getTimeLocal();//GlobalNoCore();
 		// . make sure to nuke m_doleIpTable as well
 		sc->m_doleIpTable.clear();
 		// need to recompute this!
