@@ -1657,7 +1657,8 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 	// don't print host buttons if only 1 host
 	if ( total <= 1 ) return status;
 
-	sb->safePrintf (  "&nbsp; &nbsp; &nbsp; hosts: ");
+	sb->safePrintf (  //"&nbsp; &nbsp; &nbsp; "
+			  "<a href=/admin/hosts>hosts</a>: ");
 
 	if ( ! qs   ) qs   = "";
 	//if ( ! pwd  ) pwd  = "";
@@ -1813,6 +1814,7 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 		// move these links to the coll nav bar on the left
 		if ( i == PAGE_ADDCOLL ) continue;
 		if ( i == PAGE_DELCOLL ) continue;
+		if ( i == PAGE_HOSTS ) continue;
 
 		// print "url download" before "inject url"
 		// GET /mycollname_urls.csv
