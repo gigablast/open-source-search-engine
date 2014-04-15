@@ -5795,7 +5795,7 @@ void Parms::init ( ) {
 	m->m_def   = "5";
 	m->m_priv  = 2;
 	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_NOSAVE;
 	m++;
 
 	m->m_title = "max hard drive temperature";

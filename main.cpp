@@ -375,7 +375,7 @@ int main ( int argc , char *argv[] ) {
 
 int main2 ( int argc , char *argv[] ) {
 
-	g_conf.m_runAsDaemon = true;
+	g_conf.m_runAsDaemon = false;
 
 	// appears that linux 2.4.17 kernel would crash with this?
 	// let's try again on gk127 to make sure
@@ -407,7 +407,7 @@ int main2 ( int argc , char *argv[] ) {
 		SafeBuf sb;
 		sb.safePrintf(
 			      "\n"
-			      "Usage: gb [-d workingDir] <CMD>\n");
+			      "Usage: gb [-w workingDir] <CMD>\n");
 		sb.safePrintf(
 			      "\n"
 			      "\tItems in []'s are optional, and items "
@@ -436,8 +436,8 @@ int main2 ( int argc , char *argv[] ) {
 			"\n\n"
 
 
-			"<hostId> -g\n\tdebug mode. do not run as daemon. "
-			"log to stderr.\n\n"
+			"<hostId> -d\n\trun as daemon.\n\n"
+
 			//"-o\tprint the overview documentation in HTML. "
 			//"Contains the format of hosts.conf.\n\n"
 			"<hostId> -r\n\tindicates recovery mode, "
@@ -789,7 +789,7 @@ int main2 ( int argc , char *argv[] ) {
 			"xmldiff [-td] <file1> <file2>\n"
 			"\tTest xml diff routine on file1 and file2.\n"
 			"\t-t: only show diffs in tag structure.\n"
-			"\t-d: print debug output.\n"
+			"\t-d: run as daemon.\n"
 			"\n"
 
 			"dump e <coll> <UTCtimestamp>\n\tdump all events "
@@ -952,7 +952,7 @@ int main2 ( int argc , char *argv[] ) {
 	long hostId = 0;
 	long  cmdarg = 1;
 	char *workingDir = NULL;
-	if ( argc >= 3 && argv[1][0]=='-'&&argv[1][1]=='d'&&argv[1][2]=='\0') {
+	if ( argc >= 3 && argv[1][0]=='-'&&argv[1][1]=='w'&&argv[1][2]=='\0') {
 		//hostsConf = argv[2];
 		workingDir = argv[2];
 		cmdarg    = 3;
@@ -1016,8 +1016,8 @@ int main2 ( int argc , char *argv[] ) {
 	g_recoveryMode = false;
 	if ( strcmp ( cmd , "-r" ) == 0 ) g_recoveryMode = true;
 
-	// debug on gdb? then do not fork
-	if ( strcmp ( cmd , "-g" ) == 0 ) g_conf.m_runAsDaemon = false;
+	// run as daemon? then we have to fork
+	if ( strcmp ( cmd , "-d" ) == 0 ) g_conf.m_runAsDaemon = true;
 
 	bool testMandrill = false;
 	if ( strcmp ( cmd , "emailmandrill" ) == 0 ) {
@@ -1287,14 +1287,14 @@ int main2 ( int argc , char *argv[] ) {
 
 	// this is just like starting up a gb process, but we add one to
 	// each port, we are a dummy machine in the dummy cluster.
-	// gb -d <workingdir> tmpstart [hostId]
+	// gb -w <workingdir> tmpstart [hostId]
 	char useTmpCluster = 0;
 	if ( strcmp ( cmd , "tmpstart" ) == 0 )
 		useTmpCluster = 1;
-	// gb -d <workingdir> tmpstop [hostId]
+	// gb -w <workingdir> tmpstop [hostId]
 	if ( strcmp ( cmd , "tmpstop" ) == 0 )
 		useTmpCluster = 1;
-	// gb -d <workingdir> tmpstarthost <hostId>
+	// gb -w <workingdir> tmpstarthost <hostId>
 	if ( strcmp ( cmd , "tmpstarthost" ) == 0 ) {
 		useTmpCluster = 1;
 		// we need to parse out the hostid too!
@@ -2753,7 +2753,11 @@ int main2 ( int argc , char *argv[] ) {
 	//	if ( cmd && ! is_digit(cmd[0]) ) goto printHelp;
 
 
-	log("db: Logging to file %s.",g_hostdb.m_logFilename );
+	log("db: Logging to file %s.",
+	    g_hostdb.m_logFilename );
+
+	if ( ! g_conf.m_runAsDaemon )
+		log("db: Use ./gb <hostid> -d to run as daemon.");
 
 	/*
 	// tmp stuff to generate new query log
@@ -4736,7 +4740,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f tmpgb tmpgb.oldsave ; "
 				"mv -f tmpgb.installed tmpgb ; "
-				"./tmpgb -d %s tmpstarthost "
+				"./tmpgb -w %s tmpstarthost "
 				"%li >& ./tmplog%03li &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
@@ -4755,6 +4759,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			//tmp2[0]='\0';
 			// let's do this for everyone now
 			//if ( h2->m_hostId == 0 )
+			// we do not run as daemon so keepalive loop will
+			// work properly...
 			//sprintf(tmp2,
 			//	"mv ./log%03li ./log%03li-`date '+"
 			//	"%%Y_%%m_%%d-%%H:%%M:%%S'` ; " ,
@@ -4772,22 +4778,29 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"EXITSTATUS=1 ; "
 				"while [ \\$EXITSTATUS != 0 ]; do "
  				"{ "
-				//"mv ./log%03li ./log%03li-\\`date '+"
-				//"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
+
+				// move the log file
+				"mv ./log%03li ./log%03li-\\`date '+"
+				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
+
 				"./gb %li "
 				"\\$ADDARGS "
 				" ;"
-				//" >& ./log%03li ;"
+				" >& ./log%03li ;"
 				"EXITSTATUS=\\$? ; "
 				"ADDARGS='-r' ; "
 				"} " 
  				"done >& /dev/null & \" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
-				//h2->m_hostId   ,
-				//h2->m_hostId   ,
+
+				// for moving log file
+				h2->m_hostId   ,
+				h2->m_hostId   ,
+
 				//h2->m_dir      ,
-				//h2->m_hostId   ,
+
+				h2->m_hostId   ,
 				h2->m_hostId   ,
 				amp );
 
@@ -16806,7 +16819,7 @@ int collinject ( char *newHostsConf ) {
 		Host *h1 = hdb1->getShard ( shardNum );
 		Host *h2 = hdb2->getShard ( shardNum );
 		
-		printf("ssh %s 'nohup /w/gbi -d /w/ inject titledb "
+		printf("ssh %s 'nohup /w/gbi -w /w/ inject titledb "
 		       "%s:%li >& /w/ilog' &\n"
 		       , h1->m_hostname
 		       , iptoa(h2->m_ip)
