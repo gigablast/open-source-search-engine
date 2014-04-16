@@ -972,14 +972,16 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf("<body>");
 	}
 
-	if ( ! g_conf.m_isMattWells && si->m_format==FORMAT_WIDGET ) {
+	if ( ! g_conf.m_isMattWells && 
+	     (si->m_format==FORMAT_WIDGET_IFRAME || 
+	      si->m_format==FORMAT_WIDGET_AJAX) ) {
 		printCSSHead ( sb ,si->m_format );
 		sb->safePrintf("<body style=padding:0px;margin:0px;>");
 	}
 
 	HttpRequest *hr = &st->m_hr;
 
-	if ( si->m_format == FORMAT_WIDGET ) {
+	if ( si->m_format == FORMAT_WIDGET_IFRAME ) {
 		long refresh = hr->getLong("refresh",0);
 		if ( refresh )
 			sb->safePrintf("<meta http-equiv=\"refresh\" "
@@ -987,7 +989,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 	}
 
 	// lead with user's widget header which usually has custom style tags
-	if ( si->m_format == FORMAT_WIDGET ) {
+	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
+	     si->m_format == FORMAT_WIDGET_AJAX ) {
 		char *header = hr->getString("header",NULL);
 		if ( header ) sb->safeStrcpy ( header );
 	}
@@ -1002,7 +1005,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 	char *coll = cr->m_coll;
 	long collLen = gbstrlen(coll);
 
-	if ( si->m_format == FORMAT_WIDGET ) {
+	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
+	     si->m_format == FORMAT_WIDGET_AJAX ) {
 		sb->safePrintf("<img onclick=\""
 			       "var e=document.getElementById('sbox');"
 			       "if(e.style.display == 'none') {"
@@ -1311,7 +1315,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 				cr->m_coll);
 	}
 	// the token is currently in the collection name so do not show that
-	else if ( numResults == 0 && si->m_format == FORMAT_WIDGET ) {
+	else if ( numResults == 0 && 
+		  ( si->m_format == FORMAT_WIDGET_IFRAME ||
+		    si->m_format == FORMAT_WIDGET_AJAX ) ) {
 		sb->safePrintf ( "No results found.");
 	}
 	else if ( moreFollow && si->m_format == FORMAT_HTML ) {
@@ -1736,7 +1742,8 @@ bool printSearchResultsTail ( State0 *st ) {
 	// collection
 	args.safePrintf("&c=%s",coll);
 	// formatting info
-	if ( si->m_format == FORMAT_WIDGET ) {
+	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
+	     si->m_format == FORMAT_WIDGET_AJAX ) {
 		args.safePrintf("&format=widget");
 		HttpRequest *hr = &st->m_hr;
 		long widgetwidth = hr->getLong("widgetwidth",250);
@@ -1749,7 +1756,9 @@ bool printSearchResultsTail ( State0 *st ) {
 	
 
 	if ( firstNum > 0 && 
-	     (si->m_format == FORMAT_HTML || si->m_format==FORMAT_WIDGET)) {
+	     (si->m_format == FORMAT_HTML || 
+	      si->m_format == FORMAT_WIDGET_AJAX ||
+	      si->m_format == FORMAT_WIDGET_IFRAME ) ) {
 		long ss = firstNum - msg40->getDocsWanted();
 		sb->safePrintf("<a href=\"/search?s=%li&q=",ss);
 		// our current query parameters
@@ -1765,7 +1774,9 @@ bool printSearchResultsTail ( State0 *st ) {
 
 	// now print "Next X Results"
 	if ( msg40->moreResultsFollow() && 
-	     (si->m_format == FORMAT_HTML || si->m_format==FORMAT_WIDGET)) {
+	     (si->m_format == FORMAT_HTML || 
+	      si->m_format == FORMAT_WIDGET_IFRAME ||
+	      si->m_format == FORMAT_WIDGET_AJAX )) {
 		long ss = firstNum + msg40->getDocsWanted();
 		// print a separator first if we had a prev results before us
 		if ( sb->length() > remember ) sb->safePrintf ( " &nbsp; " );
@@ -1870,7 +1881,8 @@ bool printSearchResultsTail ( State0 *st ) {
 			      );
 	}
 
-	if ( si->m_format == FORMAT_WIDGET ) {
+	// ajax widgets will have this outside the downloaded content
+	if ( si->m_format == FORMAT_WIDGET_IFRAME ) {
 		sb->safePrintf ( "<br>"
 				"<center>"
 				"<font color=gray>"
@@ -2002,7 +2014,8 @@ bool printInlinkText ( SafeBuf *sb , Msg20Reply *mr , SearchInput *si ,
 			frontTag = "<b>";
 			backTag  = "</b>";
 		}
-		if ( si->m_format == FORMAT_WIDGET ) {
+		if ( si->m_format == FORMAT_WIDGET_IFRAME ||
+		     si->m_format == FORMAT_WIDGET_AJAX ) {
 			frontTag = "<font style=\"background-color:yellow\">" ;
 		}
 
@@ -2384,7 +2397,9 @@ bool printResult ( State0 *st, long ix ) {
 				   url,mr->ptr_imgUrl);
 
 	// print image for widget
-	if ( mr->ptr_imgUrl && si->m_format == FORMAT_WIDGET ) {
+	if ( mr->ptr_imgUrl && 
+	     ( si->m_format == FORMAT_WIDGET_IFRAME ||
+	       si->m_format == FORMAT_WIDGET_AJAX) ) {
 
 		long widgetwidth = hr->getLong("widgetwidth",200);
 
@@ -2474,7 +2489,9 @@ bool printResult ( State0 *st, long ix ) {
 
 
 	// only do link here
-	if (si->m_format == FORMAT_WIDGET && ! mr->ptr_imgUrl ) {
+	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
+	      si->m_format == FORMAT_WIDGET_AJAX   ) &&
+	     ! mr->ptr_imgUrl ) {
 		sb->safePrintf ( "<a href=" );
 		// truncate off -diffbotxyz%li
 		long newLen = urlLen;
@@ -2539,7 +2556,8 @@ bool printResult ( State0 *st, long ix ) {
 		frontTag = "<b>";
 		backTag  = "</b>";
 	}
-	if ( si->m_format == FORMAT_WIDGET ) {
+	if ( si->m_format == FORMAT_WIDGET_IFRAME || 
+	     si->m_format == FORMAT_WIDGET_AJAX ) {
 		frontTag = "<font style=\"background-color:yellow\">" ;
 	}
 	long cols = 80;
@@ -2587,7 +2605,8 @@ bool printResult ( State0 *st, long ix ) {
 
 
 	// close the image div
-	if ( si->m_format == FORMAT_WIDGET ) 
+	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
+	     si->m_format == FORMAT_WIDGET_AJAX ) 
 		sb->safePrintf("</b></a></div>\n");
 
 
@@ -2645,7 +2664,9 @@ bool printResult ( State0 *st, long ix ) {
 	bool printSummary = true;
 	// do not print summaries for widgets by default unless overridden
 	// with &summary=1
-	if ( si->m_format == FORMAT_WIDGET && hr->getLong("summaries",0) == 0 )
+	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
+	      si->m_format == FORMAT_WIDGET_AJAX ) && 
+	     hr->getLong("summaries",0) == 0 )
 		printSummary = false;
 
 	if ( printSummary )
@@ -3182,7 +3203,8 @@ bool printResult ( State0 *st, long ix ) {
 		sb->safePrintf ( "<br><br>\n");
 
 
-	if ( si->m_format == FORMAT_WIDGET )
+	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
+	     si->m_format == FORMAT_WIDGET_AJAX )
 		sb->safePrintf("<div style=line-height:1px;><br></div>");
 
 
