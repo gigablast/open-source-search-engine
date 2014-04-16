@@ -4785,8 +4785,9 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 				"./gb %li "
 				"\\$ADDARGS "
-				" ;"
+				//" ;"
 				" >& ./log%03li ;"
+
 				"EXITSTATUS=\\$? ; "
 				"ADDARGS='-r' ; "
 				"} " 

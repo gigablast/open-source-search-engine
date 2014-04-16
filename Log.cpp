@@ -84,27 +84,29 @@ bool Log::init ( char *filename ) {
 	//
 	// RENAME log000 to log000-2013_11_04-18:19:32
 	//
-	File f;
-	char tmp[16];
-	sprintf(tmp,"log%03li",g_hostdb.m_hostId);
-	f.set ( g_hostdb.m_dir , tmp );
-	// make new filename like log000-2013_11_04-18:19:32
-	time_t now = getTimeLocal();
-	tm *tm1 = gmtime((const time_t *)&now);
-	char tmp2[64];
-	strftime(tmp2,64,"%Y_%m_%d-%T",tm1);
-	SafeBuf newName;
-	if ( ! newName.safePrintf ( "%slog%03li-%s",
-				    g_hostdb.m_dir,
-				    g_hostdb.m_hostId,
-				    tmp2 ) ) {
-		fprintf(stderr,"log rename failed\n");
-		return false;
-	}
-	// rename log000 to log000-2013_11_04-18:19:32
-	if ( f.doesExist() ) {
-		//fprintf(stdout,"renaming file\n");
-		f.rename ( newName.getBufStart() );
+	if ( g_conf.m_runAsDaemon ) {
+		File f;
+		char tmp[16];
+		sprintf(tmp,"log%03li",g_hostdb.m_hostId);
+		f.set ( g_hostdb.m_dir , tmp );
+		// make new filename like log000-2013_11_04-18:19:32
+		time_t now = getTimeLocal();
+		tm *tm1 = gmtime((const time_t *)&now);
+		char tmp2[64];
+		strftime(tmp2,64,"%Y_%m_%d-%T",tm1);
+		SafeBuf newName;
+		if ( ! newName.safePrintf ( "%slog%03li-%s",
+					    g_hostdb.m_dir,
+					    g_hostdb.m_hostId,
+					    tmp2 ) ) {
+			fprintf(stderr,"log rename failed\n");
+			return false;
+		}
+		// rename log000 to log000-2013_11_04-18:19:32
+		if ( f.doesExist() ) {
+			//fprintf(stdout,"renaming file\n");
+			f.rename ( newName.getBufStart() );
+		}
 	}
 
 
