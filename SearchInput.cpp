@@ -926,6 +926,13 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 		m_firstResultNum = m_maxResults - m_docsWanted;
 	if(m_firstResultNum < 0) m_firstResultNum = 0;
 
+	// DEBUG: temp hack
+	static bool first = true;
+	if ( first ) { 
+		first = false;
+		m_firstResultNum = 1;
+	}
+
 	// if useCache is -1 then pick a default value
 	if ( m_useCache == -1 ) {
 		// assume yes as default

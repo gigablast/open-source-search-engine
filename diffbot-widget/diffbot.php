@@ -47,6 +47,7 @@ class Diffbot_Widget extends WP_Widget {
 				  'show_searchbox' => 'yes',
 				  'widget_style_tag' => '<style>div.diffbot_widget {font-size:12px;font-family:arial;background-color:transparent;color:black;}span.diffbot_title { font-size:16px;font-weight:bold;}span.diffbot_summary { font-size:12px;} span.diffbot_date { font-size:12px;}span.diffbot_prevnext { font-size:12px;font-weight:bold;}</style>',
 				  'query' => 'type:article gbsortbyint:gbspiderdate',
+				  'widget_width' => '200',
 				  'widget_height' => '300' );
 		$instance = wp_parse_args( (array)$instance, $defaults );
 		
@@ -83,6 +84,16 @@ class Diffbot_Widget extends WP_Widget {
 			echo $this->get_field_name( 'widget_height' );
 			echo '" value="';
 			echo esc_attr($instance['widget_height']);
+			echo '"> pixels';
+			echo '<br>';
+			echo '<br>';
+
+			// widget width
+			echo 'Widget Width: ';
+			echo '<input type=text size=5 name="';
+			echo $this->get_field_name( 'widget_width' );
+			echo '" value="';
+			echo esc_attr($instance['widget_width']);
 			echo '"> pixels';
 			echo '<br>';
 			echo '<br>';
@@ -146,7 +157,10 @@ class Diffbot_Widget extends WP_Widget {
 		echo '<b>'.$before_title . $title . $after_title.'</b></br>';
 		
 
-		echo '<script type="text/javascript">function diffbot_handler() {if(this.readyState != 4 ) return;document.getElementById("diffbot_widget").innerHTML=this.responseText;}</script>';
+		echo '<script type="text/javascript">function diffbot_handler() {if(this.readyState != 4 ) return;if(!this.responseText)return;document.getElementById("diffbot_widget").innerHTML=this.responseText;}</script>';
+
+echo '<script type=text/javascript>function diffbot_scroll() {var hd = document.getElementById(\'diffbot_invisible\');if ( ! hd ) {setTimeout(\'diffbot_scroll()\',3);return;} var b=parseInt(hd.style.top);b=b+1;hd.style.top=b+"px";var vd=document.getElementById(\'diffbot_visible\');var c=parseInt(vd.style.top);c=c+1;vd.style.top=c+"px";if ( b >= 0 ) return;setTimeout(\'diffbot_scroll()\',3);}diffbot_scroll();</script>';
+
 
 		// display the style tag	
 		$style = $instance['widget_style_tag'];
@@ -163,6 +177,10 @@ class Diffbot_Widget extends WP_Widget {
 		$url .= urlencode($instance['query']);
 		$url .= '&sites=';
 		$url .= urlencode($instance['sitelist']);
+		$url .= '&widgetheight=';
+		$url .= $instance['widget_height'];
+		$url .= '&widgetwidth=';
+		$url .= $instance['widget_width'];
 		$url .= '&topdocid=';
 		
 		// then the containing div. set the "id" so that the
@@ -170,7 +188,7 @@ class Diffbot_Widget extends WP_Widget {
 		// when the browser loads this the ajax sets the contents
 		// to the reply from neo.
 
-		echo '<div id=diffbot_widget style="border:2px solid black;position:relative;border-radius:10px;height:'.$instance['widget_height'].'px;">';
+		echo '<div id=diffbot_widget style="border:2px solid black;position:relative;border-radius:10px;width:'.$instance['widget_width'].'px;height:'.$instance['widget_height'].'px;">';
 
 		// get the search results from neo as soon as this div is
 		// being rendered, and set its contents to them

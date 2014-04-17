@@ -719,7 +719,7 @@ void freeMsg4Wrapper( void *st ) {
 }
 
 // height of each result div in the widget
-#define RESULT_HEIGHT 140
+#define RESULT_HEIGHT 120
 
 // . make a web page from results stored in msg40
 // . send it on TcpSocket "s" when done
@@ -919,6 +919,10 @@ bool gotResults ( void *state ) {
 	if ( si->m_format == FORMAT_WIDGET_AJAX ) {
 		// get current top docid
 		long long topDocId = hr->getLongLong("topdocid",0LL);
+
+		// DEBUG: force it on for now
+		//topDocId = 4961990748LL;
+
 		// scan results
 		for ( long i = 0 ; i < numResults ; i++ ) {
 			// get it
@@ -943,11 +947,13 @@ bool gotResults ( void *state ) {
 		}
 	}				
 
-
 	SafeBuf *sb = &st->m_sb;
 
 	// print javascript for scrolling down invisible div for
 	// ajax based widgets
+	// MDW: this does not execute because it is loaded via ajax...
+	// so i moved logic into diffbot.php for now.
+	/*
 	if ( si->m_format == FORMAT_WIDGET_AJAX && numInvisible ) {
 		sb->safePrintf("<script type=text/javascript>"
 			       // call this function like 5 times a second
@@ -967,14 +973,16 @@ bool gotResults ( void *state ) {
 			       "}"
 
 			       // on load start scrolling
-			       "setTimeout('diffbot_scroll()',300);\n"
+			       "diffbot_scroll();\n"
+
+			       "alert(\'poo\');\n"
 
 			       "</script>"
 			       , numInvisible * (long)RESULT_HEIGHT
 
 			       );
 	}
-
+	*/
 
 	// print logo, search box, results x-y, ... into st->m_sb
 	printSearchResultsHeader ( st );
@@ -987,12 +995,12 @@ bool gotResults ( void *state ) {
 			       "id=topdocid name=topdocid value=%lli>\n",
 			       oldTop);
 
-
 	// then print each result
 	// don't display more than docsWanted results
 	long count = msg40->getDocsWanted();
 	bool hadPrintError = false;
-	long widgetHeight = hr->getLong("widgetheight",400);
+	//long widgetHeight = hr->getLong("widgetheight",400);
+	//long widgetwidth = hr->getLong("widgetwidth",250);
 
 	for ( long i = 0 ; count > 0 && i < numResults ; i++ ) {
 
@@ -1004,14 +1012,23 @@ bool gotResults ( void *state ) {
 			// and scroll them down in time so it looks cool.
 			if ( i == 0 )
 				sb->safePrintf("<div id=diffbot_invisible "
-					       "style=bottom:%lipx;>",
-					       widgetHeight);
+					       "style=top:%lipx;"
+					       // relative to containing div
+					       // which is position:relative!
+					       "position:absolute;"
+					       "overflow-y:hidden;>"
+					       ,-1*RESULT_HEIGHT*numInvisible);
 			//
 			// END INSIVISBILITY
 			//
+			// to test scrolling, hide the first result and
+			// scroll it out
 			if ( i == topDocIdPos )
 				sb->safePrintf("</div>"
-					       "<div id=diffbot_visible>");
+					       "<div id=diffbot_visible"
+					       " style=top:30px;"
+					       "position:absolute;>"
+					       );
 		}
 
 
@@ -1124,7 +1141,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	     si->m_format == FORMAT_WIDGET_AJAX ) {
 		char *pos = "relative";
 		if ( si->m_format == FORMAT_WIDGET_IFRAME ) pos = "absolute";
-		long widgetwidth = hr->getLong("widgetwidth",250);
+		long widgetwidth = hr->getLong("widgetwidth",150);
 		long widgetHeight = hr->getLong("widgetheight",400);
 		//long iconWidth = 25;
 
@@ -1173,7 +1190,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 		sb->safePrintf("<div id=sbox style=float:left;display:%s;>"
 			       "<input type=text name=prepend size=%li "
-			       "value=\"%s\"  style=z-index:10;>"
+			       "value=\"%s\"  style=\"z-index:10;"
+			       "margin:3px;"
+			       "\">"
 			       // hidden parms like collection
 			       "<input name=c type=hidden value=\"%s\">"
 			       "<input name=format type=hidden value=widget>"
@@ -1183,7 +1202,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "</div>"
 			       "</form>\n"
 			       , displayStr
-			       , widgetwidth / 12 
+			       , widgetwidth / 15 
 			       , prepend
 			       , coll
 			       , widgetwidth
@@ -1197,7 +1216,11 @@ bool printSearchResultsHeader ( State0 *st ) {
 		//   and not the magnifying glass
 		sb->safePrintf("</div>"
 			       "<div style=\"position:absolute;"
-			       "top:0px;overflow-y:auto;height:%lipx\">;"
+			       "top:0px;"
+			       "overflow-y:auto;"
+			       "width:%lipx;"
+			       "height:%lipx;\">;"
+			       , widgetwidth
 			       , widgetHeight);
 	}
 
