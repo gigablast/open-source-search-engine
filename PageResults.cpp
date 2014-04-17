@@ -720,6 +720,8 @@ void freeMsg4Wrapper( void *st ) {
 
 // height of each result div in the widget
 #define RESULT_HEIGHT 120
+#define SERP_SPACER 1
+#define PADDING 8
 
 // . make a web page from results stored in msg40
 // . send it on TcpSocket "s" when done
@@ -991,7 +993,7 @@ bool gotResults ( void *state ) {
 	// propagate "topdocid" so when he does another query every 30 secs
 	// or so we know what docid was on top for scrolling purposes
 	if ( si->m_format == FORMAT_WIDGET_AJAX )
-		sb->safePrintf("\n<input type=hidden "
+		sb->safePrintf("<input type=hidden "
 			       "id=topdocid name=topdocid value=%lli>\n",
 			       oldTop);
 
@@ -1017,7 +1019,12 @@ bool gotResults ( void *state ) {
 					       // which is position:relative!
 					       "position:absolute;"
 					       "overflow-y:hidden;>"
-					       ,-1*RESULT_HEIGHT*numInvisible);
+					       ,
+					       (-1*
+						(RESULT_HEIGHT+
+						 SERP_SPACER+
+						 PADDING*2)*
+						numInvisible));
 			//
 			// END INSIVISBILITY
 			//
@@ -1026,7 +1033,7 @@ bool gotResults ( void *state ) {
 			if ( i == topDocIdPos )
 				sb->safePrintf("</div>"
 					       "<div id=diffbot_visible"
-					       " style=top:30px;"
+					       " style=top:0px;"
 					       "position:absolute;>"
 					       );
 		}
@@ -1219,7 +1226,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "top:0px;"
 			       "overflow-y:auto;"
 			       "width:%lipx;"
-			       "height:%lipx;\">;"
+			       "height:%lipx;\">"
 			       , widgetwidth
 			       , widgetHeight);
 	}
@@ -2577,8 +2584,8 @@ bool printResult ( State0 *st, long ix ) {
 			       "style=\""
 			       "width:%lipx;"
 			       "min-height:%lipx;"//140px;"
-			       "padding:8px;"
 			       "height:%lipx;"//140px;"
+			       "padding:%lipx;"
 			       "display:table-cell;"
 			       "vertical-align:bottom;"
 			       "background-repeat:no-repeat;"
@@ -2587,6 +2594,7 @@ bool printResult ( State0 *st, long ix ) {
 			       , widgetwidth - 2*8 // padding is 8px
 			       , (long)RESULT_HEIGHT
 			       , (long)RESULT_HEIGHT
+			       , (long)PADDING
 			       , widgetwidth - 2*8 // padding is 8px
 			       , mr->ptr_imgUrl);
 		// end the div style attribute and div tag
@@ -3372,10 +3380,11 @@ bool printResult ( State0 *st, long ix ) {
 	if ( si->m_format == FORMAT_HTML )
 		sb->safePrintf ( "<br><br>\n");
 
-
+	// search result spacer
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
 	     si->m_format == FORMAT_WIDGET_AJAX )
-		sb->safePrintf("<div style=line-height:1px;><br></div>");
+		sb->safePrintf("<div style=line-height:%lipx;><br></div>",
+			       (long)SERP_SPACER);
 
 
 	// done?

@@ -159,7 +159,7 @@ class Diffbot_Widget extends WP_Widget {
 
 		echo '<script type="text/javascript">function diffbot_handler() {if(this.readyState != 4 ) return;if(!this.responseText)return;document.getElementById("diffbot_widget").innerHTML=this.responseText;}</script>';
 
-echo '<script type=text/javascript>function diffbot_scroll() {var hd = document.getElementById(\'diffbot_invisible\');if ( ! hd ) {setTimeout(\'diffbot_scroll()\',3);return;} var b=parseInt(hd.style.top);b=b+1;hd.style.top=b+"px";var vd=document.getElementById(\'diffbot_visible\');var c=parseInt(vd.style.top);c=c+1;vd.style.top=c+"px";if ( b >= 0 ) return;setTimeout(\'diffbot_scroll()\',3);}diffbot_scroll();</script>';
+echo '<script type=text/javascript>function diffbot_scroll() {var hd = document.getElementById(\'diffbot_invisible\');if ( ! hd ) {setTimeout(\'diffbot_scroll()\',3);return;} var b=parseInt(hd.style.top);b=b+4;hd.style.top=b+"px";var vd=document.getElementById(\'diffbot_visible\');var c=parseInt(vd.style.top);c=c+4;vd.style.top=c+"px";if ( b >= 0 ) return;setTimeout(\'diffbot_scroll()\',3);}diffbot_scroll();</script>';
 
 
 		// display the style tag	
