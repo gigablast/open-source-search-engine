@@ -119,7 +119,7 @@ class Diffbot_Widget extends WP_Widget {
 			// submit the sites for spidering now
 			//$url  = 'http://neo.diffbot.com:8100/admin/settings';
 			$url  = 'http://127.0.0.1:8000/admin/settings';
-			$url .= '?format=widget';
+			$url .= '?format=ajax';
 			$url .= '&c=widget';
 			$url .= '&appendtositelist=';
 			$url .= urlencode($instance['sitelist']);
@@ -156,25 +156,26 @@ class Diffbot_Widget extends WP_Widget {
 		// the results here in this div
 		//$url  = 'http://neo.diffbot.com:8100/search';
 		$url  = 'http://127.0.0.1:8000/search';
-		$url .= '?format=widget';
+		$url .= '?format=ajax';
 		// use a special index for widget crawling
 		$url .= '&c=widget';
 		$url .= '&q=';
 		$url .= urlencode($instance['query']);
 		$url .= '&sites=';
 		$url .= urlencode($instance['sitelist']);
+		$url .= '&topdocid=';
 		
 		// then the containing div. set the "id" so that the
 		// style tag the user sets can control its appearance.
 		// when the browser loads this the ajax sets the contents
 		// to the reply from neo.
-		//echo '<div id=diffbot_widget onclick="var client=new XMLHttpRequest();client.onreadystatechange=diffbot_handler;client.open(\'GET\',\''.$url.'\');client.send();">';
+		//echo '<div id=diffbot_widget onclick="var client=new XMLHttpRequest();client.onreadystatechange=diffbot_handler;var u=\''.$url.'\';var td=document.getElementById(\'topdocid\');u=u+'td';client.open(\'GET\',u);client.send();">';
 
-		echo '<div id=diffbot_widget>';
+		echo '<div id=diffbot_widget style="overflow-y:auto;border:2px solid black;position:relative;border-radius:10px;height:'.$instance['widget_height'].'px";>';
 
 		// get the search results from neo as soon as this div is
 		// being rendered, and set its contents to them
-		echo '<script type=text/javascript>var client=new XMLHttpRequest();client.onreadystatechange=diffbot_handler;client.open(\'GET\',\''.$url.'\');client.send();</script>';
+		echo '<script type=text/javascript>var client=new XMLHttpRequest();client.onreadystatechange=diffbot_handler;var u=\''.$url.'\';var td=document.getElementById(\'topdocid\');u=u+td;client.open(\'GET\',u);client.send();</script>';
 
 
 		echo 'Waiting for Diffbot...';

@@ -904,25 +904,134 @@ bool gotResults ( void *state ) {
 	//
 
 
+	SafeBuf *sb = &st->m_sb;
+
+	// print javascript for scrolling down invisible div for
+	// ajax based widgets
+	if ( si->m_format == FORMAT_WIDGET_AJAX ) {
+		sb->safePrintf("<script type=text/javascript>"
+			       // call this function like 5 times a second
+			       "function diffbot_scroll() {\n"
+			       // get hidden div
+			       "var hd = document.getElementById('diffbot_"
+			       "invisible');\n"
+			       // get current bottom
+			       "var b=hd.style.bottom;\n"
+			       // decrement by 1 pixel and reassign
+			       "hd.style.bottom = b - 1;\n"
+			       // decrement bottom:%lipx style attribute
+			       // of the hidden div
+			       "}"
+			     
+			       // every second call scroll_diffbot
+			       // but stop when unregistered (timer)
+			       "function diffbot_timer () {\n"
+			       // we need to put another div on top of
+			       // the invisible one, so that as soon as 
+			       // that gets a relative Y of 0 we are done?
+			       "diffbot_scroll();\n"
+			       // call us again in 300ms
+			       "setTimeout('diffbot_timer()',300);\n"
+			       "}\n"
+
+			       // set the timer onload basically
+			       "setTimeout('diffbot_timer()',300);\n"
+
+			       "</script>"
+			       );
+	}
+	
+
 	// print logo, search box, results x-y, ... into st->m_sb
 	printSearchResultsHeader ( st );
+
+
+	// if user is doing ajax widget we need to know the current docid
+	// that is listed at the top of their widget display so we can
+	// hide the new docids above that and scroll them down slowly.
+ 	long numResults = msg40->getNumResults();
+	long topDocIdPos = -1;
+	bool hasInvisibleResults = false;
+	HttpRequest *hr = &st->m_hr;
+	long long oldTop = 0LL;
+	if ( si->m_format == FORMAT_WIDGET_AJAX ) {
+		// get current top docid
+		long long topDocId = hr->getLongLong("topdocid",0LL);
+		// scan results
+		for ( long i = 0 ; i < numResults ; i++ ) {
+			// no point if no top docid
+			if ( topDocId == 0 ) break;
+			// get it
+			Msg20      *m20 ;
+			if ( si->m_streamResults )
+				m20 = msg40->getCompletedSummary(i);
+			else
+				m20 = msg40->m_msg20[i];
+			// checkdocid
+			Msg20Reply *mr = m20->m_r;
+			if ( ! mr ) continue;
+			if ( ! oldTop ) oldTop = mr->m_docId;
+			if ( mr->m_docId != topDocId ) {
+				hasInvisibleResults = true;
+				continue;
+			}
+			topDocIdPos = i;
+			break;
+		}
+	}				
+
+
+	// propagate "topdocid" so when he does another query every 30 secs
+	// or so we know what docid was on top for scrolling purposes
+	if ( si->m_format == FORMAT_WIDGET_AJAX )
+		sb->safePrintf("\n<input type=hidden "
+			       "id=topdocid name=topdocid value=%lli>\n",
+			       oldTop);
+
 
 	// then print each result
 	// don't display more than docsWanted results
 	long count = msg40->getDocsWanted();
 	bool hadPrintError = false;
- 	long numResults = msg40->getNumResults();
+	long widgetHeight = hr->getLong("widgetheight",400);
 
 	for ( long i = 0 ; count > 0 && i < numResults ; i++ ) {
+
+		if ( hasInvisibleResults ) {
+			//
+			// MAKE THESE RESULTS INVISIBLE!
+			//
+			// if doing a widget, we initially hide the new results
+			// and scroll them down in time so it looks cool.
+			if ( i == 0 )
+				sb->safePrintf("<div id=diffbot_invisible "
+					       "style=bottom:%lipx;>",
+					       widgetHeight);
+			//
+			// END INSIVISBILITY
+			//
+			if ( i == topDocIdPos )
+				sb->safePrintf("</div>"
+					       "<div id=diffbot_visible>");
+		}
+
+
+		//////////
+		//
 		// prints in xml or html
+		//
+		//////////
 		if ( ! printResult ( st , i ) ) {
 			hadPrintError = true;
 			break;
 		}
+
 		// limit it
 		count--;
 	}
 
+	
+	if ( hasInvisibleResults ) sb->safePrintf("</div>");
 
 	if ( hadPrintError ) {
 		if ( ! g_errno ) g_errno = EBADENGINEER;
@@ -1007,7 +1116,23 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
 	     si->m_format == FORMAT_WIDGET_AJAX ) {
-		sb->safePrintf("<img onclick=\""
+		char *pos = "relative";
+		if ( si->m_format == FORMAT_WIDGET_IFRAME ) pos = "absolute";
+		long widgetwidth = hr->getLong("widgetwidth",250);
+		long iconWidth = 25;
+		sb->safePrintf("<img "
+			       "style=\""
+			       "position:absolute;" // absolute or relative?
+			       "z-index:10;"
+			       //"right:10px;"
+			       "right:2px;"
+			       "width:%lipx;"
+			       "\" "
+			       //, pos 
+			       , iconWidth
+			       );
+
+		sb->safePrintf("onclick=\""
 			       "var e=document.getElementById('sbox');"
 			       "if(e.style.display == 'none') {"
 			       "e.style.display = '';"
@@ -1016,18 +1141,13 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "}"
 			       "\" " // end function
 			       " "
-			       "width=25 "
+			       "width=%li "
 			       "height=25 "
 
-			       "style=\""
-			       "position:absolute;"
-			       "z-index:10;"
-			       "right:10px;"
-			       "\" "
-
 			       "src=\"http://etc-mysitemyway.s3.amazonaws.com/icons/legacy-previews/icons/simple-black-square-icons-business/126715-simple-black-square-icon-business-magnifying-glass-ps.png\">"
+			       "</div>"
+			       , iconWidth
 			       );
-		long widgetwidth = hr->getLong("widgetwidth",250);
 		long refresh = hr->getLong("refresh",15);
 		char *oq = hr->getString("q",NULL);
 		if ( ! oq ) oq = "";
@@ -2396,13 +2516,14 @@ bool printResult ( State0 *st, long ix ) {
 		sb->safePrintf ("<a href=%s><image src=%s></a>",
 				   url,mr->ptr_imgUrl);
 
+
 	// print image for widget
 	if ( mr->ptr_imgUrl && 
 	     ( si->m_format == FORMAT_WIDGET_IFRAME ||
 	       si->m_format == FORMAT_WIDGET_AJAX) ) {
 
 		long widgetwidth = hr->getLong("widgetwidth",200);
-
+		
 		// make a div around this for widget so we can print text
 		// on top
 		sb->safePrintf("<div "
@@ -2416,11 +2537,11 @@ bool printResult ( State0 *st, long ix ) {
 			       "background-repeat:no-repeat;"
 			       "background-size:%lipx 140px;"
 			       "background-image:url('%s');"
-			       "\""
-			       ">"
 			       , widgetwidth - 2*8 // padding is 8px
 			       , widgetwidth - 2*8 // padding is 8px
 			       , mr->ptr_imgUrl);
+		// end the div style attribute and div tag
+		sb->safePrintf("\">");
 		sb->safePrintf ( "<a "
 				 "target=_blank "
 				 "style=text-decoration:none; href=" );
