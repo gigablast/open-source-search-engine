@@ -718,6 +718,9 @@ void freeMsg4Wrapper( void *st ) {
 	delete stau;
 }
 
+// height of each result div in the widget
+#define RESULT_HEIGHT 140
+
 // . make a web page from results stored in msg40
 // . send it on TcpSocket "s" when done
 // . returns false if blocked, true otherwise
@@ -904,54 +907,13 @@ bool gotResults ( void *state ) {
 	//
 
 
-	SafeBuf *sb = &st->m_sb;
-
-	// print javascript for scrolling down invisible div for
-	// ajax based widgets
-	if ( si->m_format == FORMAT_WIDGET_AJAX ) {
-		sb->safePrintf("<script type=text/javascript>"
-			       // call this function like 5 times a second
-			       "function diffbot_scroll() {\n"
-			       // get hidden div
-			       "var hd = document.getElementById('diffbot_"
-			       "invisible');\n"
-			       // get current bottom
-			       "var b=hd.style.bottom;\n"
-			       // decrement by 1 pixel and reassign
-			       "hd.style.bottom = b - 1;\n"
-			       // decrement bottom:%lipx style attribute
-			       // of the hidden div
-			       "}"
-			     
-			       // every second call scroll_diffbot
-			       // but stop when unregistered (timer)
-			       "function diffbot_timer () {\n"
-			       // we need to put another div on top of
-			       // the invisible one, so that as soon as 
-			       // that gets a relative Y of 0 we are done?
-			       "diffbot_scroll();\n"
-			       // call us again in 300ms
-			       "setTimeout('diffbot_timer()',300);\n"
-			       "}\n"
-
-			       // set the timer onload basically
-			       "setTimeout('diffbot_timer()',300);\n"
-
-			       "</script>"
-			       );
-	}
-	
-
-	// print logo, search box, results x-y, ... into st->m_sb
-	printSearchResultsHeader ( st );
-
-
 	// if user is doing ajax widget we need to know the current docid
 	// that is listed at the top of their widget display so we can
 	// hide the new docids above that and scroll them down slowly.
  	long numResults = msg40->getNumResults();
 	long topDocIdPos = -1;
 	bool hasInvisibleResults = false;
+	long numInvisible = 0;
 	HttpRequest *hr = &st->m_hr;
 	long long oldTop = 0LL;
 	if ( si->m_format == FORMAT_WIDGET_AJAX ) {
@@ -959,8 +921,6 @@ bool gotResults ( void *state ) {
 		long long topDocId = hr->getLongLong("topdocid",0LL);
 		// scan results
 		for ( long i = 0 ; i < numResults ; i++ ) {
-			// no point if no top docid
-			if ( topDocId == 0 ) break;
 			// get it
 			Msg20      *m20 ;
 			if ( si->m_streamResults )
@@ -971,14 +931,53 @@ bool gotResults ( void *state ) {
 			Msg20Reply *mr = m20->m_r;
 			if ( ! mr ) continue;
 			if ( ! oldTop ) oldTop = mr->m_docId;
+			// stop if no topdocid otherwise. oldTop is now set
+			if ( topDocId == 0 ) break;
 			if ( mr->m_docId != topDocId ) {
 				hasInvisibleResults = true;
+				numInvisible++;
 				continue;
 			}
 			topDocIdPos = i;
 			break;
 		}
 	}				
+
+
+	SafeBuf *sb = &st->m_sb;
+
+	// print javascript for scrolling down invisible div for
+	// ajax based widgets
+	if ( si->m_format == FORMAT_WIDGET_AJAX && numInvisible ) {
+		sb->safePrintf("<script type=text/javascript>"
+			       // call this function like 5 times a second
+			       "function diffbot_scroll() {\n"
+			       // get hidden div
+			       "var hd = document.getElementById('diffbot_"
+			       "invisible');\n"
+			       // get current bottom
+			       "var b=hd.style.height;\n"
+			       // decrement by 1 pixel and reassign
+			       "hd.style.height = hd +1;\n"
+			       // we are done if height is equal to 
+			       // X * resultdivheight which is 140px i think
+			       "if ( hd >= %li ) return;\n"
+			       // call us again in 300ms
+			       "setTimeout('diffbot_scroll()',300);\n"
+			       "}"
+
+			       // on load start scrolling
+			       "setTimeout('diffbot_scroll()',300);\n"
+
+			       "</script>"
+			       , numInvisible * (long)RESULT_HEIGHT
+
+			       );
+	}
+
+
+	// print logo, search box, results x-y, ... into st->m_sb
+	printSearchResultsHeader ( st );
 
 
 	// propagate "topdocid" so when he does another query every 30 secs
@@ -1030,7 +1029,9 @@ bool gotResults ( void *state ) {
 		count--;
 	}
 
-	
+
+	// if we split the serps into 2 divs for scrolling purposes
+	// then close up the 2nd one
 	if ( hasInvisibleResults ) sb->safePrintf("</div>");
 
 	if ( hadPrintError ) {
@@ -1042,6 +1043,11 @@ bool gotResults ( void *state ) {
 
 	// wrap it up with Next 10 etc.
 	printSearchResultsTail ( st );
+
+	// END SERP DIV
+	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
+	     si->m_format == FORMAT_WIDGET_AJAX )
+		sb->safePrintf("</div>");
 
 	// send it off
 	sendReply ( st , st->m_sb.getBufStart() );
@@ -1119,20 +1125,39 @@ bool printSearchResultsHeader ( State0 *st ) {
 		char *pos = "relative";
 		if ( si->m_format == FORMAT_WIDGET_IFRAME ) pos = "absolute";
 		long widgetwidth = hr->getLong("widgetwidth",250);
-		long iconWidth = 25;
+		long widgetHeight = hr->getLong("widgetheight",400);
+		//long iconWidth = 25;
+
+		// put image in this div which will have top:0px JUST like
+		// the div holding the search results we print out below
+		// so that the image does not scroll when you use the
+		// scrollbar.
+		sb->safePrintf("<div style=\"position:absolute;"
+			       "right:15px;"
+			       "z-index:10;"
+			       "top:0px;\">");
+
+		long refresh = hr->getLong("refresh",15);
+		char *oq = hr->getString("q",NULL);
+		if ( ! oq ) oq = "";
+		char *prepend = hr->getString("prepend");
+		if ( ! prepend ) prepend = "";
+		char *displayStr = "none";
+		if ( prepend && prepend[0] ) displayStr = "";
+		sb->safePrintf("<form method=get action=/search>");
+
 		sb->safePrintf("<img "
 			       "style=\""
-			       "position:absolute;" // absolute or relative?
+			       //"position:absolute;" // absolute or relative?
+			       // put it on TOP of the other stuff
 			       "z-index:10;"
 			       //"right:10px;"
-			       "right:2px;"
-			       "width:%lipx;"
+			       //"right:2px;"
+			       //"width:%lipx;"
+			       // so we are to the right of the searchbox
+			       "float:right;"
 			       "\" "
-			       //, pos 
-			       , iconWidth
-			       );
-
-		sb->safePrintf("onclick=\""
+			       "onclick=\""
 			       "var e=document.getElementById('sbox');"
 			       "if(e.style.display == 'none') {"
 			       "e.style.display = '';"
@@ -1141,22 +1166,12 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "}"
 			       "\" " // end function
 			       " "
-			       "width=%li "
+			       "width=25 "
 			       "height=25 "
-
 			       "src=\"http://etc-mysitemyway.s3.amazonaws.com/icons/legacy-previews/icons/simple-black-square-icons-business/126715-simple-black-square-icon-business-magnifying-glass-ps.png\">"
-			       "</div>"
-			       , iconWidth
 			       );
-		long refresh = hr->getLong("refresh",15);
-		char *oq = hr->getString("q",NULL);
-		if ( ! oq ) oq = "";
-		char *prepend = hr->getString("prepend");
-		if ( ! prepend ) prepend = "";
-		char *displayStr = "none";
-		if ( prepend && prepend[0] ) displayStr = "";
-		sb->safePrintf("<form method=get action=/search>"
-			       "<div align=left id=sbox style=display:%s;>"
+
+		sb->safePrintf("<div id=sbox style=float:left;display:%s;>"
 			       "<input type=text name=prepend size=%li "
 			       "value=\"%s\"  style=z-index:10;>"
 			       // hidden parms like collection
@@ -1165,8 +1180,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "<input name=widgetwidth type=hidden value=%li>"
 			       "<input name=refresh type=hidden value=%li>"
 			       "<input name=q type=hidden value=\"%s\">"
-			       "</form>"
-			       "</div>\n"
+			       "</div>"
+			       "</form>\n"
 			       , displayStr
 			       , widgetwidth / 12 
 			       , prepend
@@ -1175,6 +1190,15 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       , refresh
 			       , oq
 			       );
+
+		// . BEGIN SERP DIV
+		// . div to hold the search results
+		// . this will have the scrollbar to just scroll the serps
+		//   and not the magnifying glass
+		sb->safePrintf("</div>"
+			       "<div style=\"position:absolute;"
+			       "top:0px;overflow-y:auto;height:%lipx\">;"
+			       , widgetHeight);
 	}
 
 	// xml
@@ -2529,15 +2553,17 @@ bool printResult ( State0 *st, long ix ) {
 		sb->safePrintf("<div "
 			       "style=\""
 			       "width:%lipx;"
-			       "min-height:140px;"
+			       "min-height:%lipx;"//140px;"
 			       "padding:8px;"
-			       "height:140px;"
+			       "height:%lipx;"//140px;"
 			       "display:table-cell;"
 			       "vertical-align:bottom;"
 			       "background-repeat:no-repeat;"
 			       "background-size:%lipx 140px;"
 			       "background-image:url('%s');"
 			       , widgetwidth - 2*8 // padding is 8px
+			       , (long)RESULT_HEIGHT
+			       , (long)RESULT_HEIGHT
 			       , widgetwidth - 2*8 // padding is 8px
 			       , mr->ptr_imgUrl);
 		// end the div style attribute and div tag

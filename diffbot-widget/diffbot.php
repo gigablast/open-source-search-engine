@@ -169,13 +169,12 @@ class Diffbot_Widget extends WP_Widget {
 		// style tag the user sets can control its appearance.
 		// when the browser loads this the ajax sets the contents
 		// to the reply from neo.
-		//echo '<div id=diffbot_widget onclick="var client=new XMLHttpRequest();client.onreadystatechange=diffbot_handler;var u=\''.$url.'\';var td=document.getElementById(\'topdocid\');u=u+'td';client.open(\'GET\',u);client.send();">';
 
-		echo '<div id=diffbot_widget style="overflow-y:auto;border:2px solid black;position:relative;border-radius:10px;height:'.$instance['widget_height'].'px";>';
+		echo '<div id=diffbot_widget style="border:2px solid black;position:relative;border-radius:10px;height:'.$instance['widget_height'].'px;">';
 
 		// get the search results from neo as soon as this div is
 		// being rendered, and set its contents to them
-		echo '<script type=text/javascript>var client=new XMLHttpRequest();client.onreadystatechange=diffbot_handler;var u=\''.$url.'\';var td=document.getElementById(\'topdocid\');u=u+td;client.open(\'GET\',u);client.send();</script>';
+		echo '<script type=text/javascript>function diffbot_reload() {var client=new XMLHttpRequest();client.onreadystatechange=diffbot_handler;var u=\''.$url.'\';var td=document.getElementById(\'topdocid\');if ( td ) u=u+td.value;client.open(\'GET\',u);client.send();setTimeout(\'diffbot_reload()\',15000);}diffbot_reload();</script>';
 
 
 		echo 'Waiting for Diffbot...';
