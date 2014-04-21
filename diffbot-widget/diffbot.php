@@ -27,6 +27,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 add_action( 'widgets_init', create_function( '', 'register_widget( "Diffbot_Widget" );' ) );
 
+
+
 class Diffbot_Widget extends WP_Widget {
 	
 	//processes the widget
@@ -157,9 +159,11 @@ class Diffbot_Widget extends WP_Widget {
 		echo '<b>'.$before_title . $title . $after_title.'</b></br>';
 		
 
-		echo '<script type="text/javascript">function diffbot_handler() {if(this.readyState != 4 ) return;if(!this.responseText)return;document.getElementById("diffbot_widget").innerHTML=this.responseText;}</script>';
+		echo '<script type="text/javascript">function diffbot_handler() {if(this.readyState != 4 ) return;if(!this.responseText)return;document.getElementById("diffbot_widget").innerHTML=this.responseText;diffbot_scroll();}</script>';
 
-echo '<script type=text/javascript>function diffbot_scroll() {var hd = document.getElementById(\'diffbot_invisible\');if ( ! hd ) {setTimeout(\'diffbot_scroll()\',3);return;} var b=parseInt(hd.style.top);b=b+4;hd.style.top=b+"px";var vd=document.getElementById(\'diffbot_visible\');var c=parseInt(vd.style.top);c=c+4;vd.style.top=c+"px";if ( b >= 0 ) return;setTimeout(\'diffbot_scroll()\',3);}diffbot_scroll();</script>';
+//echo '<script type=text/javascript>function diffbot_scroll() {var hd = document.getElementById(\'diffbot_invisible\');if ( ! hd ) {setTimeout(\'diffbot_scroll()\',3);return;} var b=parseInt(hd.style.top);if(b>=0)return;var step=4;if(b<0&&b<-4)step=-b;b=b+step;hd.style.top=b+"px";var vd=document.getElementById(\'diffbot_visible\');var c=parseInt(vd.style.top);c=c+step;vd.style.top=c+"px";if ( b >= 0 ) return;setTimeout(\'diffbot_scroll()\',3);}</script>';
+
+echo '<script type=text/javascript>function diffbot_scroll() {var hd = document.getElementById(\'diffbot_invisible\');if ( ! hd ) {setTimeout(\'diffbot_scroll()\',3);return;} var b=parseInt(hd.style.top);var step=4;b=b+step;hd.style.top=b+"px";var vd=document.getElementById(\'diffbot_visible\');var c=parseInt(vd.style.top);c=c+step;vd.style.top=c+"px";if ( b >= 0 ) return;setTimeout(\'diffbot_scroll()\',3);}</script>';
 
 
 		// display the style tag	
@@ -177,6 +181,8 @@ echo '<script type=text/javascript>function diffbot_scroll() {var hd = document.
 		$url .= urlencode($instance['query']);
 		$url .= '&sites=';
 		$url .= urlencode($instance['sitelist']);
+		// tell gb to spider these sites too
+		$url .= '&spidersites=1';
 		$url .= '&widgetheight=';
 		$url .= $instance['widget_height'];
 		$url .= '&widgetwidth=';

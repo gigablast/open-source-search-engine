@@ -1054,10 +1054,6 @@ bool gotResults ( void *state ) {
 	}
 
 
-	// if we split the serps into 2 divs for scrolling purposes
-	// then close up the 2nd one
-	if ( hasInvisibleResults ) sb->safePrintf("</div>");
-
 	if ( hadPrintError ) {
 		if ( ! g_errno ) g_errno = EBADENGINEER;
 		log("query: had error: %s",mstrerror(g_errno));
@@ -1067,6 +1063,10 @@ bool gotResults ( void *state ) {
 
 	// wrap it up with Next 10 etc.
 	printSearchResultsTail ( st );
+
+	// if we split the serps into 2 divs for scrolling purposes
+	// then close up the 2nd one
+	if ( hasInvisibleResults ) sb->safePrintf("</div>");
 
 	// END SERP DIV
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
@@ -2572,7 +2572,7 @@ bool printResult ( State0 *st, long ix ) {
 
 
 	// print image for widget
-	if ( mr->ptr_imgUrl && 
+	if ( //mr->ptr_imgUrl && 
 	     ( si->m_format == FORMAT_WIDGET_IFRAME ||
 	       si->m_format == FORMAT_WIDGET_AJAX) ) {
 
@@ -2588,15 +2588,17 @@ bool printResult ( State0 *st, long ix ) {
 			       "padding:%lipx;"
 			       "display:table-cell;"
 			       "vertical-align:bottom;"
-			       "background-repeat:no-repeat;"
-			       "background-size:%lipx 140px;"
-			       "background-image:url('%s');"
 			       , widgetwidth - 2*8 // padding is 8px
 			       , (long)RESULT_HEIGHT
 			       , (long)RESULT_HEIGHT
 			       , (long)PADDING
-			       , widgetwidth - 2*8 // padding is 8px
-			       , mr->ptr_imgUrl);
+			       );
+		if ( mr->ptr_imgUrl )
+			sb->safePrintf("background-repeat:no-repeat;"
+				       "background-size:%lipx 140px;"
+				       "background-image:url('%s');"
+				       , widgetwidth - 2*8 // padding is 8px
+				       , mr->ptr_imgUrl);
 		// end the div style attribute and div tag
 		sb->safePrintf("\">");
 		sb->safePrintf ( "<a "
