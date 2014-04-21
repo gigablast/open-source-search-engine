@@ -926,6 +926,13 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 		m_firstResultNum = m_maxResults - m_docsWanted;
 	if(m_firstResultNum < 0) m_firstResultNum = 0;
 
+	// DEBUG: temp hack
+	static bool first = true;
+	if ( first ) { 
+		first = false;
+		m_firstResultNum = 1;
+	}
+
 	// if useCache is -1 then pick a default value
 	if ( m_useCache == -1 ) {
 		// assume yes as default
@@ -1411,7 +1418,10 @@ char getFormatFromRequest ( HttpRequest *r ) {
 	if ( formatStr && strcmp(formatStr,"json") == 0 ) format = FORMAT_JSON;
 	if ( formatStr && strcmp(formatStr,"xml") == 0 ) format = FORMAT_XML;
 	if ( formatStr && strcmp(formatStr,"csv") == 0 ) format = FORMAT_CSV;
-	if ( formatStr && strcmp(formatStr,"widget")==0)format=FORMAT_WIDGET;
+	if ( formatStr && strcmp(formatStr,"iframe")==0)
+		format=FORMAT_WIDGET_IFRAME;
+	if ( formatStr && strcmp(formatStr,"ajax")==0)
+		format=FORMAT_WIDGET_AJAX;
 
 
 	// support old api &xml=1 to mean &format=1
@@ -1428,8 +1438,12 @@ char getFormatFromRequest ( HttpRequest *r ) {
 		format = FORMAT_CSV;
 	}
 
-	if ( r->getLong("widget",0) ) {
-		format = FORMAT_WIDGET;
+	if ( r->getLong("iframe",0) ) {
+		format = FORMAT_WIDGET_IFRAME;
+	}
+
+	if ( r->getLong("ajax",0) ) {
+		format = FORMAT_WIDGET_AJAX;
 	}
 
 	return format;
