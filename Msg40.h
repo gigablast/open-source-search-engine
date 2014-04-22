@@ -264,6 +264,7 @@ class Msg40 {
 	long m_sendsOut      ;
 	long m_sendsIn       ;
 	long m_printi        ;
+	long m_numDisplayed  ;
 	long m_socketHadError;
 
 

@@ -11,6 +11,7 @@ Conf g_conf;
 
 Conf::Conf ( ) {
 	m_save = true;
+	m_doingCommandLine = false;
 }
 
 // . does this requester have ROOT admin privledges???

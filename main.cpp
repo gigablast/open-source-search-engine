@@ -2479,6 +2479,9 @@ int main2 ( int argc , char *argv[] ) {
 		long long termId  = -1;
 		char *coll = "";
 
+		// so we do not log every collection coll.conf we load
+		g_conf.m_doingCommandLine = true;
+
 		// we have to init collection db because we need to know if 
 		// the collnum is legit or not in the tree
 		if ( ! g_collectiondb.loadAllCollRecs()   ) {

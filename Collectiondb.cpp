@@ -1616,8 +1616,9 @@ bool CollectionRec::load ( char *coll , long i ) {
 	m_collLen = gbstrlen ( coll );
 	strcpy ( m_coll , coll );
 
-	log(LOG_INFO,"db: loading conf for collection %s (%li)",coll,
-	    (long)m_collnum);
+	if ( ! g_conf.m_doingCommandLine )
+		log(LOG_INFO,"db: loading conf for collection %s (%li)",coll,
+		    (long)m_collnum);
 
 	// collection name HACK for backwards compatibility
 	//if ( strcmp ( coll , "main" ) == 0 ) {
@@ -1657,11 +1658,12 @@ bool CollectionRec::load ( char *coll , long i ) {
 		// it is binary now
 		memcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
 
-	
-	log("coll: loaded %s (%li) local hasurlsready=%li",
-	    m_coll,
-	    (long)m_collnum,
-	    (long)m_localCrawlInfo.m_hasUrlsReadyToSpider);
+
+	if ( ! g_conf.m_doingCommandLine )
+		log("coll: loaded %s (%li) local hasurlsready=%li",
+		    m_coll,
+		    (long)m_collnum,
+		    (long)m_localCrawlInfo.m_hasUrlsReadyToSpider);
 
 
 	// we introduced the this round counts, so don't start them at 0!!
@@ -1704,10 +1706,11 @@ bool CollectionRec::load ( char *coll , long i ) {
 		// it is binary now
 		memcpy ( &m_globalCrawlInfo , sb.getBufStart(),sb.length() );
 
-	log("coll: loaded %s (%li) global hasurlsready=%li",
-	    m_coll,
-	    (long)m_collnum,
-	    (long)m_globalCrawlInfo.m_hasUrlsReadyToSpider);
+	if ( ! g_conf.m_doingCommandLine )
+		log("coll: loaded %s (%li) global hasurlsready=%li",
+		    m_coll,
+		    (long)m_collnum,
+		    (long)m_globalCrawlInfo.m_hasUrlsReadyToSpider);
 	
 
 	////////////
@@ -2354,8 +2357,9 @@ void nukeDoledb ( collnum_t collnum );
 // . it is also called on load of the collection at startup
 bool CollectionRec::rebuildUrlFilters ( ) {
 
-	log("coll: rebuilding url filters for %s ufp=%li",m_coll,
-	    (long)m_urlFiltersProfile);
+	if ( ! g_conf.m_doingCommandLine )
+		log("coll: rebuilding url filters for %s ufp=%li",m_coll,
+		    (long)m_urlFiltersProfile);
 
 	// if not a custom crawl, and no expressions, add a default one
 	//if ( m_numRegExs == 0 && ! m_isCustomCrawl ) {

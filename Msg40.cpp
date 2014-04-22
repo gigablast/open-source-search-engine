@@ -99,6 +99,7 @@ Msg40::Msg40() {
 	m_sendsOut      = 0;
 	m_sendsIn       = 0;
 	m_printi        = 0;
+	m_numDisplayed  = 0;
 	m_lastChunk     = false;
 	//m_numGigabitInfos = 0;
 }
@@ -1675,6 +1676,15 @@ bool Msg40::gotSummary ( ) {
 			    mstrerror(g_errno));
 		}
 
+		// assume we show this to the user
+		m_numDisplayed++;
+
+		// do not print it if before the &s=X start position though
+		if ( m_si && m_numDisplayed <= m_si->m_firstResultNum ){
+			log("msg40: hiding #%li (%lu)",
+			    m_printi,mr->m_contentHash32);
+			continue;
+		}
 
 		log("msg40: printing #%li (%lu)",m_printi,mr->m_contentHash32);
 
