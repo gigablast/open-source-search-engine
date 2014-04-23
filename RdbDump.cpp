@@ -873,11 +873,16 @@ bool RdbDump::doneReadingForVerify ( ) {
 		log("db: Corruption in tree detected when dumping to %s. "
 		    "Fixing. Your memory had an error. Consider replacing it.",
 		    m_file->getFilename());
-		if ( m_rdb && m_rdb->m_rdbId != RDB_DOLEDB ) {
-			// core now to debug this for sectiondb
-			char *xx=NULL;*xx=0;
-			((RdbTree *)m_tree)->fixTree ( );
-		}
+		log("db: was collection restarted/reset/deleted before we "
+		    "could delete list from tree? collnum=%li",
+		    (long)m_collnum);
+		// reset error in that case
+		g_errno = 0;
+		// if ( m_rdb && m_rdb->m_rdbId != RDB_DOLEDB ) {
+		// 	// core now to debug this for sectiondb
+		// 	char *xx=NULL;*xx=0;
+		// 	((RdbTree *)m_tree)->fixTree ( );
+		// }
 	}
 	// tell rdb he needs saving now
 	//if ( m_rdb ) m_rdb->m_needsSave = true;
