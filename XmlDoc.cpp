@@ -17383,12 +17383,16 @@ long XmlDoc::getDomHash32( ) {
 	return m_domHash32;
 }
 
+// . this will be the actual pnm data of the image thumbnail
+// . you can inline it in an image tag like
+//   <img src="data:image/png;base64,iVBORw0...."/>
+//   background-image:url(data:image/png;base64,iVBORw0...);
 char **XmlDoc::getImageData ( ) {
 	if ( m_imageDataValid ) return &ptr_imageData;
 	Images *images = getImages();
 	if ( ! images || images == (Images *)-1 ) return (char **)images;
-	ptr_imageData  = images->m_imgBuf;
-	size_imageData = images->m_imgBufLen;
+	ptr_imageData  = images->m_imgData;
+	size_imageData = images->m_thumbnailSize; // size of image in bytes
 	m_imageDataValid = true;
 	return &ptr_imageData;
 }
@@ -17416,8 +17420,10 @@ Images *XmlDoc::getImages ( ) {
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
 
-	// this does not block or anything
-	m_images.setCandidates ( cu , words , xml , sections );
+	// . this does not block or anything
+	// . if we are a diffbot json reply it should just use the primary
+	//   image, if any, as the only candidate
+	m_images.setCandidates ( cu , words , xml , sections , this );
 
 	setStatus ("getting thumbnail");
 
@@ -17430,7 +17436,7 @@ Images *XmlDoc::getImages ( ) {
 				       *d           ,
 				       this         ,
 				       cr->m_collnum       ,
-				       NULL         , // statusPtr ptr
+				       //NULL         , // statusPtr ptr
 				       *hc          ,
 				       m_masterState,
 				       m_masterLoop ) )
@@ -24177,6 +24183,7 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 	HashInfo hi;
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_tt        = tt;
+	// usually we shard by docid, but these are terms we shard by termid!
 	hi.m_shardByTermId   = true;
 
 
@@ -24193,7 +24200,8 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 	//
 	////
 
-	return true;
+	// let's bring back image thumbnail support for the widget project
+	//return true;
 
 
 
@@ -24267,7 +24275,8 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 	// . hash special site/hopcount thing for permalinks
 	// . used by Images.cpp for doing thumbnails
 	// . this returns false and sets g_errno on error
-	if ( ! *getIsPermalink() ) return true;
+	// . let's try thumbnails for all...
+	//if ( ! *getIsPermalink() ) return true;
 
 	setStatus ( "hashing no-split gbsitetemplate keys" );
 
@@ -28155,6 +28164,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 //}
 
 
+// get the image url SPECIFIED by the page, so there is no guesswork here
+// unlike with the Images.cpp class
 char **XmlDoc::getImageUrl() {
 	// return if valid
 	if ( m_imageUrlValid ) return &m_imageUrl;

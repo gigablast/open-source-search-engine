@@ -192,7 +192,7 @@ class Msg20Request {
 	char      *ptr_affWeights    ;
 	char      *ptr_linkee        ; // used by Msg25 for getting link text
 	//char      *ptr_coll          ;
-	char      *ptr_imgUrl        ;
+	//char      *ptr_imgUrl        ;
 	char      *ptr_displayMetas  ;
 
 	// . from here down: automatically set in Msg20Request::serialize() 
@@ -209,7 +209,7 @@ class Msg20Request {
 	long       size_affWeights   ;
 	long       size_linkee       ; // size includes terminating \0
 	//long       size_coll         ; // size includes terminating \0
-	long       size_imgUrl       ;
+	//long       size_imgUrl       ;
 	long       size_displayMetas ; // size includes terminating \0
 
 	char       m_buf[0] ;
@@ -428,6 +428,7 @@ public:
 	char       *ptr_tvbuf                ; // title vector
 	char       *ptr_gbvecbuf             ; // gigabit vector
 	char       *ptr_imgUrl               ; // youtube/metacafe vid thumb
+	char       *ptr_imgData              ; // for encoded images
 	//char       *ptr_eventEnglishTime     ; // "every saturday [[]] jan"
 	//char       *ptr_eventDateIntervals   ;
 	char       *ptr_likedbList           ;
@@ -523,6 +524,7 @@ public:
 	long       size_tvbuf                ;
 	long       size_gbvecbuf             ;
 	long       size_imgUrl               ; // youtube/metacafe vid thumb
+	long       size_imgData;
 	//long       size_eventEnglishTime     ;
 	//long       size_eventDateIntervals   ;
 	long       size_likedbList           ;

@@ -7,6 +7,7 @@
 #include "Msg36.h"
 #include "Msg13.h"
 #include "IndexList.h"
+#include "MsgC.h"
 
 #define MAX_IMAGES 500
 
@@ -31,7 +32,8 @@ class Images {
 	void setCandidates ( class Url      *pageUrl , 
 			     class Words    *words , 
 			     class Xml      *xml ,
-			     class Sections *sections );
+			     class Sections *sections ,
+			     class XmlDoc *xd );
 	
 	// . returns false if blocked, true otherwise
 	// . sets errno on error
@@ -42,7 +44,7 @@ class Images {
 			    long long docId ,
 			    class XmlDoc *xd ,
 			    collnum_t collnum,
-			    char **statusPtr ,
+			    //char **statusPtr ,
 			    long hopCount,
 			    void   *state ,
 			    void   (*callback)(void *state) );
@@ -55,11 +57,17 @@ class Images {
 	bool launchRequests();
 	void gotTermList();
 	bool downloadImages();
+
+	bool downloadImage ( ) ;
+	bool downloadImage2 ( ) ;
+
 	bool gotImage ( );
 	void thumbStart_r ( bool amThread );
 
 	long  m_i;
 	long  m_j;
+
+	class XmlDoc *m_xd;
 
 	// callback information
 	void  *m_state  ;
@@ -69,12 +77,16 @@ class Images {
 	long      m_errno;
 	long      m_hadError;
 	bool      m_stopDownloading;
-	char    **m_statusPtr;
+	//char    **m_statusPtr;
 	char      m_statusBuf[128];
 	collnum_t m_collnum;
 
 	long long   m_docId;
 	IndexList   m_list;
+
+	long m_latestIp;
+	MsgC m_msgc;
+	Url m_imageUrl;
 
 	long      m_numImages;
 	long      m_imageNodes[MAX_IMAGES];
@@ -106,9 +118,9 @@ class Images {
 	long  m_imgType;
 
 	// udp slot buffer
-	char *m_imgBuf;
-	long  m_imgBufLen;      // how many bytes the image is
-	long  m_imgBufMaxLen;   // allocated for the image
+	char *m_imgReply;
+	long  m_imgReplyLen;      // how many bytes the image is
+	long  m_imgReplyMaxLen;   // allocated for the image
 	long  m_dx;             // width of image in pixels
 	long  m_dy;             // height of image in pixels
 	bool  m_thumbnailValid; // is it a valid thumbnail image
