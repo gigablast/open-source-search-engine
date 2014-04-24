@@ -2567,8 +2567,33 @@ bool printResult ( State0 *st, long ix ) {
 	// http://img.youtube.com/vi/auQbi_fkdGE/2.jpg
 	// get the thumbnail url
 	if ( mr->ptr_imgUrl && si->m_format == FORMAT_HTML )
-		sb->safePrintf ("<a href=%s><image src=%s></a>",
+		sb->safePrintf ("<a href=%s><img src=%s></a>",
 				   url,mr->ptr_imgUrl);
+
+	// if we have a thumbnail show it next to the search result
+	if ( si->m_format == FORMAT_HTML &&
+	     ! mr->ptr_imgUrl &&
+	     mr->ptr_imgData ) {
+		char *p = mr->ptr_imgData; // orig img url
+		p += gbstrlen(p) + 1; // dx of thumb
+		long tdx = *(long *)p; 
+		p += 4;
+		long tdy = *(long *)p; 
+		p += 4;
+		char *imgData = p;
+		char *pend = mr->ptr_imgData + mr->size_imgData;
+		long thumbBytes = pend - p;
+		sb->safePrintf("<a href=%s>"
+			       "<img width=%li height=%li "
+			       "src=\""
+			       "data:image/jpg;base64,"
+			       ,url
+			       ,tdx
+			       ,tdy);
+		// encode image in base 64
+		sb->base64Encode ( imgData , thumbBytes , 0 ); // 0 niceness
+		sb->safePrintf("\"></a>");
+	}
 
 
 	// print image for widget
@@ -2593,12 +2618,33 @@ bool printResult ( State0 *st, long ix ) {
 			       , (long)RESULT_HEIGHT
 			       , (long)PADDING
 			       );
-		if ( mr->ptr_imgUrl )
-			sb->safePrintf("background-repeat:no-repeat;"
-				       "background-size:%lipx 140px;"
-				       "background-image:url('%s');"
-				       , widgetwidth - 2*8 // padding is 8px
-				       , mr->ptr_imgUrl);
+		// if ( mr->ptr_imgUrl )
+		// 	sb->safePrintf("background-repeat:no-repeat;"
+		// 		       "background-size:%lipx 140px;"
+		// 		       "background-image:url('%s');"
+		// 		       , widgetwidth - 2*8 // padding is 8px
+		// 		       , mr->ptr_imgUrl);
+		if ( mr->ptr_imgData ) {
+			char *p = mr->ptr_imgData; // orig img url
+			p += gbstrlen(p) + 1; // dx of thumb
+			//long tdx = *(long *)p; 
+			p += 4;
+			//long tdy = *(long *)p; 
+			p += 4;
+			char *imgData = p;
+			char *pend = mr->ptr_imgData + mr->size_imgData;
+			long thumbBytes = pend - p;
+		 	sb->safePrintf("background-repeat:no-repeat;"
+		 		       "background-size:%lipx 140px;"
+		 		       "background-image:url('data:image/"
+				       "jpg;base64,"
+		 		       , widgetwidth - 2*8); // padding is 8px
+			// encode image in base 64
+			sb->base64Encode (imgData,thumbBytes,0); // 0 niceness
+			sb->safePrintf("');");
+		}
+
+			
 		// end the div style attribute and div tag
 		sb->safePrintf("\">");
 		sb->safePrintf ( "<a "

@@ -3340,7 +3340,7 @@ char *XmlDoc::prepareToMakeTitleRec ( ) {
 	//Images *images = getImages();
 	//if ( ! images || images == (Images *)-1 ) return (char *)images;
 
-	char **id = getImageData();
+	char **id = getThumbnailData();
 	if ( ! id || id == (void *)-1 ) return (char *)id;
 
 	int8_t *hopCount = getHopCount();
@@ -17387,13 +17387,19 @@ long XmlDoc::getDomHash32( ) {
 // . you can inline it in an image tag like
 //   <img src="data:image/png;base64,iVBORw0...."/>
 //   background-image:url(data:image/png;base64,iVBORw0...);
-char **XmlDoc::getImageData ( ) {
+// . FORMAT of ptr_imageData:
+//   <origimageUrl>\0<4bytethumbwidth><4bytethumbheight><thumbnaildatajpg>
+char **XmlDoc::getThumbnailData ( ) {
 	if ( m_imageDataValid ) return &ptr_imageData;
 	Images *images = getImages();
 	if ( ! images || images == (Images *)-1 ) return (char **)images;
-	ptr_imageData  = images->m_imgData;
-	size_imageData = images->m_thumbnailSize; // size of image in bytes
+	ptr_imageData  = NULL;
+	size_imageData = 0;
 	m_imageDataValid = true;
+	if ( ! images || ! images->m_imageBufValid ) return &ptr_imageData;
+	if ( images->m_imageBuf.length() <= 0 ) return &ptr_imageData;
+	ptr_imageData  = images->m_imageBuf.getBufStart();
+	size_imageData = images->m_imageBuf.length();
 	return &ptr_imageData;
 }
 
@@ -18547,6 +18553,24 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("addlistsize=%05li ",(long)m_metaListSize);
 	else
 		sb.safePrintf("addlistsize=%05li ",(long)0);
+
+
+	if ( size_imageData && m_imageDataValid ) {
+		// url is in data now
+		char *imgUrl = ptr_imageData;
+		long imgUrlLen = gbstrlen(imgUrl);
+		char *p = imgUrl + imgUrlLen + 1;
+		long tdx = *(long *)p; p += 4; // thumb width
+		long tdy = *(long *)p; p += 4; // thumb height
+		long used = p - ptr_imageData;
+		long remain = size_imageData - used;
+		//char *imgData = imgUrl + imgUrlLen + 1;
+		sb.safePrintf("thumbnail=%s,%libytes,%lix%li ",
+			      imgUrl,remain,tdx,tdy);
+	}
+	else
+		sb.safePrintf("thumbnail=none ");
+
 
 	/*
 	if ( m_hasAddressValid && m_addressesValid )
@@ -27574,6 +27598,12 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		if ( *iu ) reply->size_imgUrl = gbstrlen(*iu)+1;
 	}
 
+	// get thumbnail image DATA
+	if ( ! reply->ptr_imgData ) { // && m_req->m_getImageUrl ) {
+		reply-> ptr_imgData = ptr_imageData;
+		reply->size_imgData = size_imageData;
+	}
+
 	// . adids contained in the doc
 	// . get from title rec rather than generating
 	// . but we need to generate to store in titleRec at index time
@@ -28178,6 +28208,7 @@ char **XmlDoc::getImageUrl() {
 	// diffbot often extracts an image in the json. but even if pure
 	// json it might be diffbot json that was injected an we don't know
 	// it so check contentType...
+	/*
 	if ( m_isDiffbotJSONObject || m_contentType == CT_JSON ) {
 		char *iu = strstr(ptr_utf8Content,"\"images\":[{");
 		if ( ! iu ) return &m_imageUrl;
@@ -28211,6 +28242,7 @@ char **XmlDoc::getImageUrl() {
 		m_imageUrl = m_imageUrlBuf.getBufStart();
 		return &m_imageUrl;
 	}
+	*/
 
 	// all done if not youtube or meta cafe
 	char *host = f->getHost();

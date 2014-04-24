@@ -49,19 +49,26 @@ class Images {
 			    void   *state ,
 			    void   (*callback)(void *state) );
 
-	char *getImageData    () { return m_imgData; };
-	long  getImageDataSize() { return m_imgDataSize; };
+	//char *getImageData    () { return m_imgData; };
+	//long  getImageDataSize() { return m_imgDataSize; };
 	//long  getImageType    () { return m_imageType; };
+
+	SafeBuf m_imageBuf;
+	bool m_imageBufValid;
+	long m_phase;
 
 	bool gotTermFreq();
 	bool launchRequests();
 	void gotTermList();
 	bool downloadImages();
 
-	bool downloadImage ( ) ;
-	bool downloadImage2 ( ) ;
 
-	bool gotImage ( );
+
+	bool getImageIp();
+	bool downloadImage();
+	bool makeThumb();
+
+	//bool gotImage ( );
 	void thumbStart_r ( bool amThread );
 
 	long  m_i;

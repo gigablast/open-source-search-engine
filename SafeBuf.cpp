@@ -3285,3 +3285,92 @@ bool SafeBuf::csvEncode ( char *s , long len , long niceness ) {
 
 	return true;
 }
+
+bool SafeBuf::base64Encode ( char *sx , long len , long niceness ) {
+
+	unsigned char *s = (unsigned char *)sx;
+
+	if ( ! s ) return true;
+
+	// assume all chars are double quotes and will have to be encoded
+	long need = len * 2 + 1 +3; // +3 for = padding
+
+	if ( ! reserve ( need ) ) return false;
+
+	// tmp vars
+	char *dst  = m_buf + m_length;
+
+	long round = 0;
+
+	// the table of 64 entities
+	static char tab[] = {
+		'A','B','C','D','E','F','G','H','I','J','K','L','M',
+		'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+		'a','b','c','d','e','f','g','h','i','j','k','l','m',
+		'n','o','p','q','r','s','t','u','v','w','x','y','z',
+		'0','1','2','3','4','5','6','7','8','9','+','/'
+	};
+
+	unsigned char val;
+	// scan through all 
+	unsigned char *send = s + len;
+	for ( ; s < send ; ) {
+		// breathe
+		QUICKPOLL ( niceness );
+
+		unsigned char c1 = s[0];
+		unsigned char c2 = 0;
+		//unsigned char c3 = 0;
+		
+		if ( s+1 < send ) c2 = s[1];
+		else              c2 = 0;
+
+		if ( round == 0 ) {
+			val  = c1 >>2;
+		}
+		else if ( round == 1 ) {
+			val  = (c1 & 0x03) << 4;
+			val |=  c2 >> 4;
+			// time for this
+			s++;
+		}
+		else if ( round == 2 ) {
+			val  = ((c1 & 0x0f) << 2);
+			val |= ((c2 & 0xc0) >> 6);
+			s++;
+		}
+		else if ( round == 3 ) {
+			val  = (c1 & 0x3f);
+			s++;
+		}
+		// add '0'
+		*dst = tab[val];
+		// point to next char
+		dst++;
+		// keep going if more left
+		if ( s < send ) {
+			// repeat every 4 cycles since it is aligned then
+			if ( ++round == 4 ) round = 0;
+			continue;
+		}
+		// if we are done do padding
+		if ( round == 0 ) {
+			*dst++ = '=';
+		}
+		if ( round == 1 ) {
+			*dst++ = '=';
+			*dst++ = '=';
+		}
+		if ( round == 2 ) {
+			*dst++ = '=';
+		}
+
+
+	}
+
+	m_length += dst - (m_buf + m_length);
+
+	nullTerm();
+
+	return true;
+}

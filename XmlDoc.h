@@ -670,7 +670,7 @@ class XmlDoc {
 	long getHostHash32a ( ) ;
 	long getHostHash32b ( ) ;
 	long getDomHash32 ( );
-	char **getImageData();
+	char **getThumbnailData();
 	class Images *getImages ( ) ;
 	int8_t *getNextSpiderPriority ( ) ;
 	long *getPriorityQueueNum ( ) ;

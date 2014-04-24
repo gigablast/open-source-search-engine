@@ -947,6 +947,11 @@ int main2 ( int argc , char *argv[] ) {
 		return 0;
 	}
 
+	//SafeBuf tt;
+	//tt.base64Encode("any carnal pleas",16);
+	//fprintf(stderr,"%s\n",tt.getBufStart());
+	//exit(0);
+
 	// get hosts.conf file
 	//char *hostsConf = "./hosts.conf";
 	long hostId = 0;
@@ -1060,7 +1065,6 @@ int main2 ( int argc , char *argv[] ) {
 	//	else goto printHelp;
 	//	return 0;
 	//}
-
 
 	// these tests do not need a hosts.conf
 	/*

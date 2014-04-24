@@ -172,6 +172,7 @@ enum {
 	EWAITINGTOSYNCHOSTSCONF,
 	EDOCNONCANONICAL,
 	ECUSTOMCRAWLMISMATCH, // a crawl request was made with a name that already existed for bulk request (or the other way around)
-	ENOTOKEN
+	ENOTOKEN,
+	EBADIMG
 };
 #endif

@@ -12,10 +12,7 @@
 
 //static void gotTermFreqWrapper ( void *state ) ;
 static void gotTermListWrapper ( void *state ) ;
-static void gotImgIpWrapper ( void *state , long ip ) ;
-static void gotImageWrapper ( void *state ) ;
 static void *thumbStartWrapper_r ( void *state , ThreadEntry *te );
-static void  thumbDoneWrapper    ( void *state , ThreadEntry *te );
 static void getImageInfo ( char *buf, long size, long *dx, long *dy, long *it);
 
 Images::Images ( ) {
@@ -31,6 +28,8 @@ void Images::reset() {
 	m_imgReplyLen    = 0;
 	m_imgReplyMaxLen = 0;
 	m_numImages      = 0;
+	m_imageBufValid  = false;
+	m_phase = 0;
 }
 
 /*
@@ -242,6 +241,7 @@ bool Images::getThumbnail ( char *pageSite ,
 	// reset here now
 	m_i = 0;
 	m_j = 0;
+	m_phase = 0;
 
 	// sanity check
 	if ( ! m_pageUrl ) { char *xx=NULL;*xx=0; }
@@ -481,16 +481,11 @@ void Images::gotTermList ( ) {
 
 bool Images::downloadImages () {
 	// all done if we got a valid thumbnail
-	if ( m_thumbnailValid ) return true;
-	// if not valid free old image
-	if ( m_imgReply ) {
-		mfree ( m_imgReply , m_imgReplyMaxLen , "Image" );
-		m_imgReply = NULL;
-	}
+	//if ( m_thumbnailValid ) return true;
 
 	long  srcLen;
 	char *src = NULL;
-	long i = 0;
+	long node;
 
 	// downloading an image from diffbot json reply?
 	if ( m_xd->m_isDiffbotJSONObject ) {
@@ -506,45 +501,98 @@ bool Images::downloadImages () {
 		goto insertionPoint;
 	}
 
-
-
 	// . download each leftover image
 	// . stop as soon as we get one with good dimensions
 	// . make a thumbnail of that one
-	for ( i = m_j ; i < m_numImages ; i++ ) {
-		// advance now
-		m_j++;
-		// if we should stop, stop
-		if ( m_stopDownloading ) break;
-		// skip if bad or not unique
-		if ( m_errors[i] ) continue;
-		// set status msg
-		sprintf ( m_statusBuf ,"downloading image %li",i);
-		// point to it
-		if ( m_xd ) m_xd->setStatus ( m_statusBuf );
-		// get the url of the image
-		src = m_xml->getString(i,i+1,"src",&srcLen);
-		// construct the url to download
-	insertionPoint:
-		// set it to the full url
-		//Url iu;
-		// use "pageUrl" as the baseUrl
-		m_imageUrl.set ( m_pageUrl , src , srcLen ); 
+	for (  ; m_j < m_numImages ; m_j++ , m_phase = 0 ) {
 
-		// get the image ip. will also download the image.
-		if ( ! downloadImage () )
-			return false;
+		if ( m_phase == 0 ) {
+			// advance
+			m_phase++;
+			// get img tag node
+			node = m_imageNodes[m_j];
+			// get the url of the image
+			src = m_xml->getString(node,"src",&srcLen);
+			// construct the url to download
+		insertionPoint:
+			// if we should stop, stop
+			if ( m_stopDownloading ) break;
+			// skip if bad or not unique
+			if ( m_errors[m_j] ) continue;
+			// set status msg
+			sprintf ( m_statusBuf ,"downloading image %li",m_j);
+			// point to it
+			if ( m_xd ) m_xd->setStatus ( m_statusBuf );
+			// use "pageUrl" as the baseUrl
+			m_imageUrl.set ( m_pageUrl , src , srcLen ); 
+		}
 
-		// process the image we downloaded in case did not block,
-		// maybe it was in the html cache
-		gotImage();
+		// get image ip
+		if ( m_phase == 1 ) {
+			// advance
+			m_phase++;
+			// this increments phase if it should
+			if ( ! getImageIp() ) return false;
+			// error?
+			if ( g_errno ) continue;
+		}
+
+		// download the actual image
+		if ( m_phase == 2 ) {
+			// advance
+			m_phase++;
+			// download image data
+			if ( ! downloadImage() ) return false;
+			// error downloading?
+			if ( g_errno ) continue;
+		}
+
+		// get thumbnail using threaded call to netpbm stuff
+		if ( m_phase == 3 ) {
+			// advance
+			m_phase++;
+			// download image data
+			if ( ! makeThumb() ) return false;
+			// error downloading?
+			if ( g_errno ) continue;
+		}
+
+		// error making thumb or just not a good thumb size?
+		if ( ! m_thumbnailValid ) {
+			// free old image we downloaded, if any
+			m_msg13.reset();
+			// i guess do this too, it was pointing at it in msg13
+			m_imgReply = NULL;
+		}
+
+		// it's a keeper
+		m_imageBuf.safeStrcpy ( m_imageUrl.getUrl() );
+		m_imageBuf.pushChar('\0');
+		m_imageBuf.pushLong(m_tdx);
+		m_imageBuf.pushLong(m_tdy);
+		m_imageBuf.safeMemcpy ( m_imgData , m_thumbnailSize );
+		m_imageBufValid = true;
+
+		// save mem. do this after because m_imgData uses m_msg13's
+		// reply buf to store the thumbnail for now...
+		m_msg13.reset();
+		m_imgReply = NULL;
+
+		return true;
 	}
 
-	return gotImage();
+	return true;
 }
 
-bool Images::downloadImage ( ) {
+static void gotImgIpWrapper ( void *state , long ip ) {
+	Images *THIS = (Images *)state;
+	// control loop
+	if ( ! THIS->downloadImages() ) return;
+	// call callback at this point, we are done with the download loop
+	THIS->m_callback ( THIS->m_state );
+}
 
+bool Images::getImageIp ( ) {
 	if ( ! m_msgc.getIp ( m_imageUrl.getHost   () , 
 			      m_imageUrl.getHostLen() ,
 			      &m_latestIp     ,
@@ -552,21 +600,18 @@ bool Images::downloadImage ( ) {
 			      gotImgIpWrapper    ))
 		// we blocked
 		return false;
-
-	return downloadImage2 ( );
+	return true;
 }
 
-void gotImgIpWrapper ( void *state , long ip ) {
+static void downloadImageWrapper ( void *state ) {
 	Images *THIS = (Images *)state;
-	if ( ! THIS->downloadImage2 ( ) ) return;
-	// if did not block return control to loop
+	// control loop
 	if ( ! THIS->downloadImages() ) return;
-	// call callback at this point, we are done with the download loop
+	// all done
 	THIS->m_callback ( THIS->m_state );
 }
 
-bool Images::downloadImage2 ( ) {
-
+bool Images::downloadImage ( ) {
 	// error?
 	if ( m_latestIp == 0 || m_latestIp == -1 ) {
 		log(LOG_DEBUG,"images: ip of %s is %li (%s)",
@@ -575,9 +620,7 @@ bool Images::downloadImage2 ( ) {
 		g_errno = 0;
 		return true;
 	}
-
 	CollectionRec *cr = g_collectiondb.getRec(m_collnum);
-
 	// assume success
 	m_httpStatus = 200;
 	// set the request
@@ -594,24 +637,21 @@ bool Images::downloadImage2 ( ) {
 	strcpy(r->m_url,m_imageUrl.getUrl());
 	// . try to download it
 	// . i guess we are ignoring hammers at this point
-	if ( ! m_msg13.getDoc(r,false,this,gotImageWrapper)) 
+	if ( ! m_msg13.getDoc(r,false,this,downloadImageWrapper)) 
 		return false;
-	// make thumbnail. this can return false if blocks, true otherwise
-	// because it uses a thread
-	return gotImage ( );
+
+	return true;
 }
 
-void gotImageWrapper ( void *state ) {
+static void makeThumbWrapper ( void *state , ThreadEntry *t ) {
 	Images *THIS = (Images *)state;
-	// process/store the reply
-	if ( ! THIS->gotImage ( ) ) return;
-	// download the images. will set m_stopDownloading when we get one
+	// control loop
 	if ( ! THIS->downloadImages() ) return;
 	// all done
 	THIS->m_callback ( THIS->m_state );
 }
 
-bool Images::gotImage ( ) {
+bool Images::makeThumb ( ) {
 	// did it have an error?
 	if ( g_errno ) {
 		// just give up on all of them if one has an error
@@ -633,7 +673,7 @@ bool Images::gotImage ( ) {
 	//   the real page.
 	if ( g_errno ) {
 		log( "ERROR? g_errno puked: %s", mstrerror(g_errno) );
-		g_errno = 0;
+		//g_errno = 0;
 		return true;
 	}
 	//if ( ! slot ) return true;
@@ -642,12 +682,17 @@ bool Images::gotImage ( ) {
 	bufLen    = m_msg13.m_replyBufSize;
 	bufMaxLen = m_msg13.m_replyBufAllocSize;
 	// no image?
-	if ( ! buf || bufLen <= 0 ) return true;
+	if ( ! buf || bufLen <= 0 ) {
+		g_errno = EBADIMG;
+		return true;
+	}
 	// we are image candidate #i
-	long i = m_j - 1;
+	//long i = m_j - 1;
+	// get img tag node
+	long node = m_imageNodes[m_j];
 	// get the url of the image
 	long  srcLen;
-	char *src = m_xml->getString(i,i+1,"src",&srcLen);
+	char *src = m_xml->getString(node,"src",&srcLen);
 	// set it to the full url
 	Url iu;
 	// use "pageUrl" as the baseUrl
@@ -657,6 +702,7 @@ bool Images::gotImage ( ) {
 		log ( "image: MIME.set() failed in gotImage()" );
 		// give up on the remaining images then
 		m_stopDownloading = true;
+		g_errno = EBADIMG;
 		return true;
 	}
 	// set the status so caller can see
@@ -667,6 +713,7 @@ bool Images::gotImage ( ) {
 		     m_httpStatus);
 		// give up on the remaining images then
 		m_stopDownloading = true;
+		g_errno = EBADIMG;
 		return true;
 	}
 	// make sure this is an image
@@ -675,6 +722,7 @@ bool Images::gotImage ( ) {
 		log( LOG_DEBUG, "image: gotImage() states that this image is "
 		     "not in a format we currently handle." );
 		// try the next image if any
+		g_errno = EBADIMG;
 		return true;
 	}
 	// get the content
@@ -690,11 +738,12 @@ bool Images::gotImage ( ) {
 
 	if ( ! m_imgReply || m_imgReplyLen == 0 ) {
 		log( LOG_DEBUG, "image: Returned empty image reply!" );
+		g_errno = EBADIMG;
 		return true;
 	}
 
 	// get next if too small
-	if ( m_imgDataSize < 20 ) return true;
+	if ( m_imgDataSize < 20 ) { g_errno = EBADIMG; return true; }
 
 	long imageType;
 	getImageInfo ( m_imgData, m_imgDataSize, &m_dx, &m_dy, &imageType );
@@ -710,6 +759,7 @@ bool Images::gotImage ( ) {
 	// skip if bad dimensions
 	if( ((m_dx < 50) || (m_dy < 50)) && ((m_dx > 0) && (m_dy > 0)) ) {
 	    log( "image: Image is too small to represent a news article." );
+	    g_errno = EBADIMG;
 	    return true;
 	}
 
@@ -726,21 +776,12 @@ bool Images::gotImage ( ) {
 	if ( g_threads.call ( FILTER_THREAD        ,
 			      MAX_NICENESS         ,
 			      this                 ,
-			      thumbDoneWrapper    ,
+			      makeThumbWrapper    ,
 			      thumbStartWrapper_r ) ) return false;
 	// threads might be off
 	logf ( LOG_DEBUG, "image: Calling thumbnail gen without thread.");
-	thumbStartWrapper_r ( NULL , NULL );
+	thumbStartWrapper_r ( this , NULL );
 	return true;
-}
-
-void thumbDoneWrapper ( void *state , ThreadEntry *t ) {
-	Images *THIS = (Images *)state;
-	// . download another image if we ! m_thumbnailValid
-	// . should also free m_imgReply if ! m_thumbnailValid
-	if ( ! THIS->downloadImages() ) return;
-	// all done
-	THIS->m_callback ( THIS->m_state );
 }
 
 void *thumbStartWrapper_r ( void *state , ThreadEntry *t ) {
@@ -855,7 +896,8 @@ void Images::thumbStart_r ( bool amThread ) {
         
         // Call clone function for the shell to execute command
         // This call WILL BLOCK	. timeout is 30 seconds.
-        int err = my_system_r( cmd, 30 ); // m_thmbconvTimeout );
+	//int err = my_system_r( cmd, 30 ); // m_thmbconvTimeout );
+	int err = system( cmd ); // m_thmbconvTimeout );
 
 	//if( (m_dx != 0) && (m_dy != 0) )
 	//	unlink( in );
@@ -935,6 +977,11 @@ void Images::thumbStart_r ( bool amThread ) {
 
 	// MDW: this was m_imgReply
 	getImageInfo ( m_imgData , m_thumbnailSize , &m_tdx , &m_tdy , NULL );
+
+	// now make the meta data struct
+	// <imageUrl>\0<width><height><thumbnailData>
+	
+
 
 	log( LOG_DEBUG, "image: Thumbnail size: %li bytes.", m_imgDataSize );
 	log( LOG_DEBUG, "image: Thumbnail dx=%li dy=%li.", m_tdx,m_tdy );
