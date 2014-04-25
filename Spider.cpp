@@ -12252,6 +12252,8 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 			ci->m_hasUrlsReadyToSpider = 0;
 			// save that!
 			cr->m_needsSave = true;
+			// set the time that this happens
+			cr->m_diffbotCrawlEndTime = getTimeGlobalNoCore();
 		}
 		
 		// save it

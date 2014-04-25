@@ -2113,8 +2113,8 @@ bool XmlDoc::indexDoc ( ) {
 		// need to save collection rec now during auto save
 		cr->m_needsSave = true;
 		// update this just in case we are the last url crawled
-		long long now = gettimeofdayInMillisecondsGlobal();
-		cr->m_diffbotCrawlEndTime = now;
+		//long long now = gettimeofdayInMillisecondsGlobal();
+		//cr->m_diffbotCrawlEndTime = now;
 	}
 
 
