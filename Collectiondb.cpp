@@ -807,6 +807,11 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		sc->clearLocks();
 		//sc->m_collnum = newCollnum;
 		//sc->reset();
+		// you have to set this for tryToDeleteSpiderColl to
+		// actually have a shot at deleting it
+		sc->m_deleteMyself = true;
+		// cr will be invalid shortly after this
+		sc->m_cr = NULL;
 		// this will put it on "death row" so it will be deleted
 		// once Msg5::m_waitingForList/Merge is NULL
 		tryToDeleteSpiderColl ( sc );
@@ -1584,12 +1589,14 @@ void CollectionRec::reset() {
 	sc->m_deleteMyself = true;
 
 	// if not currently being accessed nuke it now
-	if ( ! sc->m_msg5.m_waitingForList &&
-	     ! sc->m_msg5b.m_waitingForList &&
-	     ! sc->m_msg1.m_mcast.m_inUse ) {
-		mdelete ( sc, sizeof(SpiderColl),"nukecr2");
-		delete ( sc );
-	}
+	tryToDeleteSpiderColl ( sc );
+
+	// if ( ! sc->m_msg5.m_waitingForList &&
+	//      ! sc->m_msg5b.m_waitingForList &&
+	//      ! sc->m_msg1.m_mcast.m_inUse ) {
+	// 	mdelete ( sc, sizeof(SpiderColl),"nukecr2");
+	// 	delete ( sc );
+	// }
 }
 
 CollectionRec *g_cr = NULL;
