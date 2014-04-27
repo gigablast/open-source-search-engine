@@ -2574,25 +2574,9 @@ bool printResult ( State0 *st, long ix ) {
 	if ( si->m_format == FORMAT_HTML &&
 	     ! mr->ptr_imgUrl &&
 	     mr->ptr_imgData ) {
-		char *p = mr->ptr_imgData; // orig img url
-		p += gbstrlen(p) + 1; // dx of thumb
-		long tdx = *(long *)p; 
-		p += 4;
-		long tdy = *(long *)p; 
-		p += 4;
-		char *imgData = p;
-		char *pend = mr->ptr_imgData + mr->size_imgData;
-		long thumbBytes = pend - p;
-		sb->safePrintf("<a href=%s>"
-			       "<img width=%li height=%li "
-			       "src=\""
-			       "data:image/jpg;base64,"
-			       ,url
-			       ,tdx
-			       ,tdy);
-		// encode image in base 64
-		sb->base64Encode ( imgData , thumbBytes , 0 ); // 0 niceness
-		sb->safePrintf("\"></a>");
+		ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
+		ThumbnailInfo *ti = ta->getThumbnailInfo(0);
+		ti->printThumbnailInHtml ( sb );
 	}
 
 
@@ -2851,7 +2835,7 @@ bool printResult ( State0 *st, long ix ) {
 				      "]]>"
 				      "</contentType>\n",
 				      cs);
-		else if ( si->m_format == FORMAT_HTML ) {
+		else if ( si->m_format == FORMAT_HTML && ctype != CT_HTML ) {
 			sb->safePrintf(" <b><font style=color:white;"
 				      "background-color:maroon;>");
 			char *p = cs;

@@ -783,10 +783,12 @@ class XmlDoc {
 	bool hashAds(class HashTableX *table ) ;
 	class Url *getBaseUrl ( ) ;
 	bool hashSubmitUrls ( class HashTableX *table ) ;
+	bool hashImageStuff ( class HashTableX *table ) ;
 	bool hashIsAdult    ( class HashTableX *table ) ;
 
 	void set20 ( Msg20Request *req ) ;
 	class Msg20Reply *getMsg20Reply ( ) ;
+	char **getDiffbotPrimaryImageUrl ( ) ;
 	char **getImageUrl() ;
 	class MatchOffsets *getMatchOffsets () ;
 	Query *getQuery() ;
@@ -1320,6 +1322,7 @@ class XmlDoc {
 	bool m_crawlInfoValid;
 	bool m_isPageParserValid;
 	bool m_imageUrlValid;
+	bool m_imageUrl2Valid;
 	bool m_matchOffsetsValid;
 	bool m_queryValid;
 	bool m_matchesValid;
@@ -1942,8 +1945,10 @@ class XmlDoc {
 	//long  m_gsbufAllocSize;
 	char *m_note;
 	char *m_imageUrl;
+	char *m_imageUrl2;
 	//char  m_imageUrlBuf[100];
 	SafeBuf m_imageUrlBuf;
+	SafeBuf m_imageUrlBuf2;
 	//long  m_imageUrlSize;
 	MatchOffsets m_matchOffsets;
 	Query m_query;

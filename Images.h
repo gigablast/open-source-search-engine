@@ -8,8 +8,64 @@
 #include "Msg13.h"
 #include "IndexList.h"
 #include "MsgC.h"
+#include "SafeBuf.h"
 
 #define MAX_IMAGES 500
+
+// a single serialized thumbnail:
+class ThumbnailInfo {
+ public:
+	long  m_origDX;
+	long  m_origDY;
+	long  m_dx;
+	long  m_dy;
+	long  m_urlSize;
+	long  m_dataSize;
+	char  m_buf[];
+	char *getUrl() { return m_buf; };
+	char *getData() { return m_buf + m_urlSize; };
+	long  getSize () { return sizeof(ThumbnailInfo)+m_urlSize+m_dataSize;};
+
+	bool printThumbnailInHtml ( SafeBuf *sb ) {
+		sb->safePrintf("<a href=%s>"
+			       "<img width=%li height=%li "
+			       "align=left "
+			       "style=padding-right:8px;padding-bottom:8px; "
+			       "src=\""
+			       "data:image/jpg;base64,"
+			       ,getUrl()
+			       ,m_dx
+			       ,m_dy);
+		// encode image in base 64
+		sb->base64Encode ( getData(), m_dataSize , 0 ); // 0 niceness
+		sb->safePrintf("\"></a>");
+		return true;
+	};
+};
+
+// XmlDoc::ptr_imgData is a ThumbnailArray
+class ThumbnailArray {
+ public:
+	// 1st byte if format version
+	char m_version;
+	// # of thumbs
+	long m_numThumbnails;
+	// list of ThumbnailInfos
+	char m_buf[];
+
+	long getNumThumbnails() { return m_numThumbnails;};
+
+	ThumbnailInfo *getThumbnailInfo ( long x ) {
+		if ( x >= m_numThumbnails ) return NULL;
+		char *p = m_buf;
+		for ( long i = 0 ; i < m_numThumbnails ; i++ ) {
+			if ( i == x ) return (ThumbnailInfo *)p;
+			ThumbnailInfo *ti = (ThumbnailInfo *)p;
+			p += ti->getSize();
+		}
+		return NULL;
+	};
+};
 
 class Images {
 

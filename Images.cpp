@@ -489,16 +489,25 @@ bool Images::downloadImages () {
 
 	// downloading an image from diffbot json reply?
 	if ( m_xd->m_isDiffbotJSONObject ) {
-		char **iup = m_xd->getImageUrl();
+		// i guess this better not block cuz we'll core!
+		char **iup = m_xd->getDiffbotPrimaryImageUrl();
 		// if no image, nothing to download
-		if ( ! *iup ) return true;
+		if ( ! *iup ) {
+			//log("no diffbot image url for %s",
+			//    m_xd->m_firstUrl.m_url);
+			return true;
+		}
 		// force image count to one
 		m_numImages = 1;
+		// do not error out
+		m_errors[0] = 0;
 		// set it to the full url
 		src = *iup;
 		srcLen = gbstrlen(src);
+		// need this
+		m_imageUrl.set ( src , srcLen );
 		// jump into the for loop below
-		goto insertionPoint;
+		//if ( m_phase == 0 ) goto insertionPoint;
 	}
 
 	// . download each leftover image
@@ -509,12 +518,15 @@ bool Images::downloadImages () {
 		if ( m_phase == 0 ) {
 			// advance
 			m_phase++;
-			// get img tag node
-			node = m_imageNodes[m_j];
-			// get the url of the image
-			src = m_xml->getString(node,"src",&srcLen);
-			// construct the url to download
-		insertionPoint:
+			// only if not diffbot, we set "src" above for it
+			if ( ! m_xd->m_isDiffbotJSONObject ) {
+				// get img tag node
+				node = m_imageNodes[m_j];
+				// get the url of the image
+				src = m_xml->getString(node,"src",&srcLen);
+				// use "pageUrl" as the baseUrl
+				m_imageUrl.set ( m_pageUrl , src , srcLen ); 
+			}
 			// if we should stop, stop
 			if ( m_stopDownloading ) break;
 			// skip if bad or not unique
@@ -523,8 +535,6 @@ bool Images::downloadImages () {
 			sprintf ( m_statusBuf ,"downloading image %li",m_j);
 			// point to it
 			if ( m_xd ) m_xd->setStatus ( m_statusBuf );
-			// use "pageUrl" as the baseUrl
-			m_imageUrl.set ( m_pageUrl , src , srcLen ); 
 		}
 
 		// get image ip
@@ -563,14 +573,49 @@ bool Images::downloadImages () {
 			m_msg13.reset();
 			// i guess do this too, it was pointing at it in msg13
 			m_imgReply = NULL;
+			// try the next image candidate
+			continue;
 		}
 
 		// it's a keeper
-		m_imageBuf.safeStrcpy ( m_imageUrl.getUrl() );
-		m_imageBuf.pushChar('\0');
-		m_imageBuf.pushLong(m_tdx);
-		m_imageBuf.pushLong(m_tdy);
-		m_imageBuf.safeMemcpy ( m_imgData , m_thumbnailSize );
+		long urlSize = m_imageUrl.getUrlLen() + 1; // include \0
+		// . make our ThumbnailArray out of it
+		long need = 0;
+		// the array itself
+		need += sizeof(ThumbnailArray);
+		// and each thumbnail it contains
+		need += urlSize;
+		need += m_thumbnailSize;
+		need += sizeof(ThumbnailInfo);
+		// reserve it
+		m_imageBuf.reserve ( need );
+		// point to array
+		ThumbnailArray *ta =(ThumbnailArray *)m_imageBuf.getBufStart();
+		// set that as much as possible, version...
+		ta->m_version = 0;
+		// and thumb count
+		ta->m_numThumbnails = 1;
+		// now store the thumbnail info
+		ThumbnailInfo *ti = ta->getThumbnailInfo (0);
+		// and set our one thumbnail
+		ti->m_origDX = m_dx;
+		ti->m_origDY = m_dy;
+		ti->m_dx = m_tdx;
+		ti->m_dy = m_tdy;
+		ti->m_urlSize = urlSize;
+		ti->m_dataSize = m_thumbnailSize;
+		// now copy the data over sequentially
+		char *p = ti->m_buf;
+		// the image url
+		memcpy(p,m_imageUrl.getUrl(),urlSize);
+		p += urlSize;
+		// the image thumbnail data
+		memcpy(p,m_imgData,m_thumbnailSize);
+		p += m_thumbnailSize;
+		// update buf length of course
+		m_imageBuf.setLength ( p - m_imageBuf.getBufStart() );
+
+		// validate the buffer
 		m_imageBufValid = true;
 
 		// save mem. do this after because m_imgData uses m_msg13's
@@ -689,10 +734,17 @@ bool Images::makeThumb ( ) {
 	// we are image candidate #i
 	//long i = m_j - 1;
 	// get img tag node
-	long node = m_imageNodes[m_j];
 	// get the url of the image
 	long  srcLen;
-	char *src = m_xml->getString(node,"src",&srcLen);
+	char *src = NULL;
+	if ( m_xd->m_isDiffbotJSONObject ) {
+		src = *m_xd->getDiffbotPrimaryImageUrl();
+		srcLen = gbstrlen(src);
+	}
+	else {
+		long node = m_imageNodes[m_j];
+		src = m_xml->getString(node,"src",&srcLen);
+	}
 	// set it to the full url
 	Url iu;
 	// use "pageUrl" as the baseUrl

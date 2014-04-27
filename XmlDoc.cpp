@@ -17398,6 +17398,7 @@ char **XmlDoc::getThumbnailData ( ) {
 	m_imageDataValid = true;
 	if ( ! images || ! images->m_imageBufValid ) return &ptr_imageData;
 	if ( images->m_imageBuf.length() <= 0 ) return &ptr_imageData;
+	// this buffer is a ThumbnailArray
 	ptr_imageData  = images->m_imageBuf.getBufStart();
 	size_imageData = images->m_imageBuf.length();
 	return &ptr_imageData;
@@ -18557,16 +18558,15 @@ bool XmlDoc::logIt ( ) {
 
 	if ( size_imageData && m_imageDataValid ) {
 		// url is in data now
-		char *imgUrl = ptr_imageData;
-		long imgUrlLen = gbstrlen(imgUrl);
-		char *p = imgUrl + imgUrlLen + 1;
-		long tdx = *(long *)p; p += 4; // thumb width
-		long tdy = *(long *)p; p += 4; // thumb height
-		long used = p - ptr_imageData;
-		long remain = size_imageData - used;
-		//char *imgData = imgUrl + imgUrlLen + 1;
-		sb.safePrintf("thumbnail=%s,%libytes,%lix%li ",
-			      imgUrl,remain,tdx,tdy);
+		ThumbnailArray *ta = (ThumbnailArray *)ptr_imageData;
+		long nt = ta->getNumThumbnails();
+		ThumbnailInfo *ti = ta->getThumbnailInfo(0);
+		sb.safePrintf("thumbnail=%s,%libytes,%lix%li,(%li) ",
+			      ti->getUrl(),
+			      ti->m_dataSize,
+			      ti->m_dx,
+			      ti->m_dy,
+			      nt);
 	}
 	else
 		sb.safePrintf("thumbnail=none ");
@@ -24555,6 +24555,8 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 		if ( ! hashTagRec        ( table ) ) return NULL;
 		// hash for gbsortby:gbspiderdate
 		if ( ! hashDateNumbers   ( table ) ) return NULL;
+		// has gbhasthumbnail:1 or 0
+		if ( ! hashImageStuff    ( table ) ) return NULL;
 		// and the json itself
 		return hashJSON ( table ); 
 	}
@@ -24568,6 +24570,9 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 	if ( ! hashAds           ( table ) ) return NULL;
 	if ( ! hashSubmitUrls    ( table ) ) return NULL;
 	if ( ! hashIsAdult       ( table ) ) return NULL;
+
+	// has gbhasthumbnail:1 or 0
+	if ( ! hashImageStuff    ( table ) ) return NULL;
 
 	// . hash sectionhash:xxxx terms
 	// . diffbot still needs to hash this for voting info
@@ -26640,6 +26645,29 @@ Url *XmlDoc::getBaseUrl ( ) {
 	return &m_baseUrl;
 }
 
+// hash gbhasthumbnail:0|1
+bool XmlDoc::hashImageStuff ( HashTableX *tt ) {
+
+	setStatus ("hashing image stuff");
+
+	char *val = "0";
+	char **td = getThumbnailData();
+	if ( *td ) val = "1";
+
+	// update hash parms
+	HashInfo hi;
+	hi.m_tt        = tt;
+	hi.m_hashGroup = HASHGROUP_INTAG;
+	hi.m_prefix    = "gbhasthumbnail";
+	hi.m_desc      = "has a thumbnail";
+
+	// this returns false on failure
+	if ( ! hashString ( val,1,&hi ) ) return false;
+
+	return true;
+}
+
+
 // returns false and sets g_errno on error
 bool XmlDoc::hashIsAdult ( HashTableX *tt ) {
 
@@ -26667,7 +26695,6 @@ bool XmlDoc::hashIsAdult ( HashTableX *tt ) {
 
 	return true;
 }
-
 
 // hash destination urls for embedded gb search boxes
 bool XmlDoc::hashSubmitUrls ( HashTableX *tt ) {
@@ -27589,8 +27616,9 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		*/
 	}
 
-	// get thumbnail image url
-	if ( ! reply->ptr_imgUrl ) { // && m_req->m_getImageUrl ) {
+	// get full image url. but not if we already have a thumbnail...
+	if ( ! reply->ptr_imgUrl && ! reply->ptr_imgData ) { 
+		// && m_req->m_getImageUrl ) {
 		char **iu = getImageUrl();
 		if ( ! iu || iu == (char **)-1 ) return (Msg20Reply *)iu;
 		reply-> ptr_imgUrl = *iu;
@@ -28194,6 +28222,74 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 //}
 
 
+char **XmlDoc::getDiffbotPrimaryImageUrl ( ) {
+
+	// use new json parser
+	Json *jp = getParsedJson();
+	if ( ! jp || jp == (void *)-1 ) return (char **)jp;
+	
+	JsonItem *ji = jp->getFirstItem();
+
+	// assume none
+	m_imageUrl2      = NULL;
+	m_imageUrl2Valid = true;
+
+	//logf(LOG_DEBUG,"ch32: url=%s",m_firstUrl.m_url);
+
+	for ( ; ji ; ji = ji->m_next ) {
+		QUICKPOLL(m_niceness);
+		// skip if not number or string
+		if ( ji->m_type != JT_NUMBER && ji->m_type != JT_STRING )
+			continue;
+
+		//char *topName = NULL;
+		// what name level are we?
+		// long numNames = 1;
+		// JsonItem *pi = ji->m_parent;
+		// for ( ; pi ; pi = pi->m_parent ) {
+		// 	// empty name?
+		// 	if ( ! pi->m_name ) continue;
+		// 	if ( ! pi->m_name[0] ) continue;
+		// 	topName = pi->m_name;
+		// 	numNames++;
+		// }
+
+		char *name0 = ji->m_name;
+		char *name1 = NULL;
+		char *name2 = NULL;
+		if ( ji->m_parent ) 
+			name1 = ji->m_parent->m_name;
+		if ( ji->m_parent->m_parent ) 
+			name2 = ji->m_parent->m_parent->m_name;
+
+		// stop at first image for "images":[{ indicator
+		if ( strcmp(name0,"url") == 0 &&
+		     name1 &&
+		     strcmp(name1,"images") == 0 )
+			break;
+
+
+		// for products
+		if ( strcmp(name0,"link") == 0 &&
+		     name1 &&
+		     strcmp(name1,"media") == 0 )
+			break;
+	}
+
+	
+	if ( ! ji ) 
+		return &m_imageUrl2;
+
+	long vlen;
+	char *val = ji->getValueAsString( &vlen );
+
+	// ok, we got it, just copy that
+	m_imageUrlBuf2.safeMemcpy ( val , vlen );
+	m_imageUrlBuf2.nullTerm();
+	m_imageUrl2 = m_imageUrlBuf2.getBufStart();
+	return &m_imageUrl2;
+}
+
 // get the image url SPECIFIED by the page, so there is no guesswork here
 // unlike with the Images.cpp class
 char **XmlDoc::getImageUrl() {
@@ -28202,47 +28298,14 @@ char **XmlDoc::getImageUrl() {
 	// get first url
 	Url *f = getFirstUrl();
 	if ( ! f || f == (Url *)-1 ) return (char **)f;
+
 	// assume none
 	m_imageUrl      = NULL;
 	m_imageUrlValid = true;
-	// diffbot often extracts an image in the json. but even if pure
-	// json it might be diffbot json that was injected an we don't know
-	// it so check contentType...
-	/*
-	if ( m_isDiffbotJSONObject || m_contentType == CT_JSON ) {
-		char *iu = strstr(ptr_utf8Content,"\"images\":[{");
-		if ( ! iu ) return &m_imageUrl;
-		// temp null
-		char *end = strstr(iu+11,"]");
-		if ( ! end ) return &m_imageUrl;
-		char c = *end;
-		*end = '\0';
-		// now use strstr to find the first image url
-		char *needle = "\"url\":\"";
-		char *find = strstr(iu,needle);
-		// return NULL if not found
-		if ( ! find ) {
-			// revert temp null
-			*end = c;
-			return &m_imageUrl;
-		}
-		// find end of it
-		char *start = find + 7;
-		char *urlEnd = strstr(start,"\"");
-		// revert temp null
-		*end = c;
-		// did not find quote ending the url! wtf?
-		if ( ! urlEnd ) return &m_imageUrl;
-		// too big?
-		long iulen = urlEnd - start;
-		if ( iulen >= MAX_URL_LEN-1 ) return &m_imageUrl;
-		// ok, we got it, just copy that
-		m_imageUrlBuf.safeMemcpy ( start , iulen );
-		m_imageUrlBuf.nullTerm();
-		m_imageUrl = m_imageUrlBuf.getBufStart();
+
+	// we use getDiffbotPrimaryImageUrl() above for doing thumbs
+	if ( m_isDiffbotJSONObject || m_contentType == CT_JSON )
 		return &m_imageUrl;
-	}
-	*/
 
 	// all done if not youtube or meta cafe
 	char *host = f->getHost();
@@ -31212,6 +31275,31 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 	// hop count
 	sb->safePrintf("<tr><td>hop count</td><td>%li</td></tr>\n",
 		      (long)m_hopCount);
+
+	// thumbnails
+	ThumbnailArray *ta = (ThumbnailArray *) ptr_imageData;
+	if ( ta ) {
+		long nt = ta->getNumThumbnails();
+		sb->safePrintf("<tr><td># thumbnails</td>"
+			       "<td>%li</td></tr>\n",nt);
+		for ( long i = 0 ; i < nt ; i++ ) {
+			ThumbnailInfo *ti = ta->getThumbnailInfo(i);
+			sb->safePrintf("<tr><td>thumb #%li</td>"
+				       "<td>%s (%lix%li,%lix%li) "
+				       , i
+				       , ti->getUrl()
+				       , ti->m_origDX
+				       , ti->m_origDY
+				       , ti->m_dx
+				       , ti->m_dy
+				       );
+			ti->printThumbnailInHtml ( sb ) ;
+			// end the row for this thumbnail
+			sb->safePrintf("</td></tr>\n");
+		}
+	}
+
+
 
 	char *ddd;
 	time_t datedbDate  = m_pubDate;

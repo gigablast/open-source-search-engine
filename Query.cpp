@@ -3087,6 +3087,7 @@ struct QueryField g_fields[] = {
 	{"type", FIELD_TYPE, false,"Matches all pages of the specified file type. Example: type:pdf will match pdf documents, regardless of their file extension."},
 	{"filetype", FIELD_TYPE, false,"Same as type:"},
 	{"gbisadult",FIELD_TYPE,false,"use gbisadult:0 and gbisadult:1 to restrict results to non-adult and adult documents respectively."},
+	{"gbhasthumbnail",FIELD_TYPE,false,"use gbhasthumbnail:0 and gbhasthumbnail:1 to restrict results to those that do not have or have thumbnails respectively."},
 	{"gbtag*", FIELD_TAG, false,"Matches all pages whose tag named * have the specified value. Example: gbtagingoogle:1 matches all pages that have a value of 1 for their ingoogle tag in tagdb."},
 	{"zip", FIELD_ZIP, false,"Matches all pages that have the specified zip code in their meta zip code tag. Not to be used with events."},
 	{"zipcode", FIELD_ZIP, false,"Same as zip:"},
