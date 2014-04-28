@@ -1001,6 +1001,7 @@ bool gotResults ( void *state ) {
 	// don't display more than docsWanted results
 	long count = msg40->getDocsWanted();
 	bool hadPrintError = false;
+	long numPrintedSoFar = 0;
 	//long widgetHeight = hr->getLong("widgetheight",400);
 	//long widgetwidth = hr->getLong("widgetwidth",250);
 
@@ -1044,7 +1045,7 @@ bool gotResults ( void *state ) {
 		// prints in xml or html
 		//
 		//////////
-		if ( ! printResult ( st , i ) ) {
+		if ( ! printResult ( st , i , numPrintedSoFar++ ) ) {
 			hadPrintError = true;
 			break;
 		}
@@ -2359,7 +2360,7 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 
 
 // use this for xml as well as html
-bool printResult ( State0 *st, long ix ) {
+bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 
 	SafeBuf *sb = &st->m_sb;
 
@@ -2440,7 +2441,7 @@ bool printResult ( State0 *st, long ix ) {
 	if ( mr->ptr_content ) {
 
 		// for json items separate with \n,\n
-		if ( si->m_format != FORMAT_HTML && ix>0 )
+		if ( si->m_format != FORMAT_HTML && numPrintedSoFar > 0 )
 			sb->safePrintf(",\n");
 
 		sb->safeStrcpy ( mr->ptr_content );

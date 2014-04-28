@@ -802,7 +802,9 @@ bool Msg5::needsRecall ( ) {
 	RdbBase *base = getRdbBase ( m_rdbId , m_collnum );
 	// if collection was deleted from under us, base will be NULL
 	if ( ! base && ! g_errno ) {
-		log("msg5: base lost for collnum %li",(long)m_collnum);
+		log("msg5: base lost for rdbid=%li collnum %li",
+		    (long)m_rdbId,(long)m_collnum);
+		g_errno = ENOCOLLREC;
 		return false;
 	}
 	// sanity check

@@ -2355,10 +2355,13 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx ) {
 		//nomen = "job";
 	}
 
-
 	sb->safePrintf("\n\n{"
 		      "\"name\":\"%s\",\n"
 		      "\"type\":\"%s\",\n"
+
+		       "\"jobCreationTimeUTC\":%li,\n"
+		       "\"jobCompletionTimeUTC\":%li,\n"
+
 		      //"\"alias\":\"%s\",\n"
 		      //"\"crawlingEnabled\":%li,\n"
 		      "\"jobStatus\":{" // nomen = jobStatus / crawlStatus
@@ -2384,6 +2387,11 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx ) {
 		      //,cx->m_coll
 		      , cx->m_diffbotCrawlName.getBufStart()
 		      , crawlTypeStr
+
+		       , cx->m_diffbotCrawlStartTime
+		       // this is 0 if not over yet
+		       , cx->m_diffbotCrawlEndTime
+
 		      //, alias
 		      //, (long)cx->m_spideringEnabled
 		      , crawlStatus

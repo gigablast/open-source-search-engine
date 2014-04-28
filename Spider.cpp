@@ -1026,14 +1026,22 @@ bool tryToDeleteSpiderColl ( SpiderColl *sc ) {
 		    (long)sc,(long)sc->m_collnum);
 		return true;
 	}
+	// this means msg5 is out
+	if ( sc->m_msg5.m_waitingForList ) {
+		log("spider: deleting sc=0x%lx for collnum=%li waiting4",
+		    (long)sc,(long)sc->m_collnum);
+		return true;
+	}
 	// there's still a core of someone trying to write to someting
 	// in "sc" so we have to try to fix that. somewhere in xmldoc.cpp
 	// or spider.cpp. everyone should get sc from cr everytime i'd think
 	log("spider: deleting sc=0x%lx for collnum=%li",
 	    (long)sc,(long)sc->m_collnum);
+	// . make sure nobody has it
+	// . cr might be NULL because Collectiondb.cpp::deleteRec2() might
+	//   have nuked it
 	CollectionRec *cr = sc->m_cr;
-	// make sure nobody has it
-	cr->m_spiderColl = NULL;
+	if ( cr ) cr->m_spiderColl = NULL;
 	mdelete ( sc , sizeof(SpiderColl),"postdel1");
 	delete ( sc );
 	return true;
@@ -12244,6 +12252,8 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 			ci->m_hasUrlsReadyToSpider = 0;
 			// save that!
 			cr->m_needsSave = true;
+			// set the time that this happens
+			cr->m_diffbotCrawlEndTime = getTimeGlobalNoCore();
 		}
 		
 		// save it

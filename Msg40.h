@@ -208,7 +208,7 @@ class Msg40 {
 
 	long m_lastHeartbeat;
 
-	bool printSearchResult9 ( long ix ) ;
+	bool printSearchResult9 ( long ix , long numPrintedSoFar ) ;
 	HashTableX m_columnTable;
 	bool printCSVHeaderRow ( class SafeBuf *sb );
 	bool printJsonItemInCSV ( class State0 *st , long ix );
@@ -265,6 +265,7 @@ class Msg40 {
 	long m_sendsIn       ;
 	long m_printi        ;
 	long m_numDisplayed  ;
+	long m_numPrintedSoFar;
 	long m_socketHadError;
 
 

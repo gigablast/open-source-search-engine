@@ -100,6 +100,7 @@ Msg40::Msg40() {
 	m_sendsIn       = 0;
 	m_printi        = 0;
 	m_numDisplayed  = 0;
+	m_numPrintedSoFar = 0;
 	m_lastChunk     = false;
 	//m_numGigabitInfos = 0;
 }
@@ -1683,6 +1684,7 @@ bool Msg40::gotSummary ( ) {
 		if ( m_si && m_numDisplayed <= m_si->m_firstResultNum ){
 			log("msg40: hiding #%li (%lu)",
 			    m_printi,mr->m_contentHash32);
+			m20->reset();
 			continue;
 		}
 
@@ -1690,7 +1692,9 @@ bool Msg40::gotSummary ( ) {
 
 		// . ok, we got it, so print it and stream it
 		// . this might set m_hadPrintError to true
-		printSearchResult9 ( m_printi );
+		printSearchResult9 ( m_printi , m_numPrintedSoFar );
+
+		m_numPrintedSoFar++;
 
 		// now free the reply to save memory since we could be 
 		// streaming back 1M+. we call reset below, no need for this.
@@ -5175,7 +5179,7 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 
 
 // . printSearchResult into "sb"
-bool Msg40::printSearchResult9 ( long ix ) {
+bool Msg40::printSearchResult9 ( long ix , long numPrintedSoFar ) {
 
 	// . we stream results right onto the socket
 	// . useful for thousands of results... and saving mem
@@ -5202,7 +5206,7 @@ bool Msg40::printSearchResult9 ( long ix ) {
 		}
 
 		// print that out into st->m_sb safebuf
-		else if ( ! printResult ( st , ix ) ) {
+		else if ( ! printResult ( st , ix , numPrintedSoFar ) ) {
 			// oom?
 			if ( ! g_errno ) g_errno = EBADENGINEER;
 			log("query: had error: %s",mstrerror(g_errno));

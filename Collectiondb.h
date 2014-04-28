@@ -665,8 +665,9 @@ class CollectionRec {
 	long long m_maxToProcess;
 	long      m_maxCrawlRounds;
 
-	long long m_diffbotCrawlStartTime;
-	long long m_diffbotCrawlEndTime;
+	// in seconds now
+	long m_diffbotCrawlStartTime;
+	long m_diffbotCrawlEndTime;
 
 	// for testing their regexes etc...
 	//char m_isDiffbotTestCrawl;
