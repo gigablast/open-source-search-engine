@@ -818,7 +818,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		ub.safePrintf("/search"
 			      "?format=ajax"
 			      "&c=%s"
-			      "&q=gbrevsortbyint%%3Agbspiderdate"
+			      "&q=gbsortbyint%%3Agbspiderdate"
 			      "&widgetheight=%li"
 			      "&widgetwidth=%li"
 			      "&topdocid="

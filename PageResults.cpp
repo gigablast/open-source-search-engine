@@ -2617,17 +2617,20 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 			ThumbnailInfo *ti = ta->getThumbnailInfo(0);
 			// avoid distortion.
 			// if image is wide, use that to scale
-			long newdx = 0;
-			long newdy = 0;
-			if ( ti->m_dx >= ti->m_dy && ti->m_dx > 0 ) {
-				newdx=widgetWidth;
-				newdy=(ti->m_dy * widgetWidth) / ti->m_dx;
+			long newdx = ti->m_dx;
+			long newdy = ti->m_dy;
+			if ( ti->m_dx > 0 && ti->m_dy > 0 ) {
+				float xscale = 
+					(float)widgetWidth/
+					(float)ti->m_dx;
+				float yscale = 
+					(float)RESULT_HEIGHT/
+					(float)ti->m_dy;
+				float min = xscale;
+				if ( yscale < min ) min = yscale;
+				newdx = (long)((float)newdx * min);
+				newdy = (long)((float)newdy * min);
 			}
-			else if ( ti->m_dy > 0 ) {
-				newdy=(long)RESULT_HEIGHT;
-				newdx=(ti->m_dx*(long)RESULT_HEIGHT)/ti->m_dy;
-			}
-
 					
 		 	sb->safePrintf("background-repeat:no-repeat;"
 		 		       "background-size:%lipx %lipx;"
