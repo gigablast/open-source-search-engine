@@ -2585,8 +2585,11 @@ bool printResult ( State0 *st, long ix ) {
 	     ( si->m_format == FORMAT_WIDGET_IFRAME ||
 	       si->m_format == FORMAT_WIDGET_AJAX) ) {
 
-		long widgetwidth = hr->getLong("widgetwidth",200);
-		
+		long widgetWidth = hr->getLong("widgetwidth",200);
+
+		// prevent coring
+		if ( widgetWidth < 1 ) widgetWidth = 1;
+
 		// make a div around this for widget so we can print text
 		// on top
 		sb->safePrintf("<div "
@@ -2597,7 +2600,7 @@ bool printResult ( State0 *st, long ix ) {
 			       "padding:%lipx;"
 			       "display:table-cell;"
 			       "vertical-align:bottom;"
-			       , widgetwidth - 2*8 // padding is 8px
+			       , widgetWidth - 2*8 // padding is 8px
 			       , (long)RESULT_HEIGHT
 			       , (long)RESULT_HEIGHT
 			       , (long)PADDING
@@ -2611,11 +2614,28 @@ bool printResult ( State0 *st, long ix ) {
 		if ( mr->ptr_imgData ) {
 			ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 			ThumbnailInfo *ti = ta->getThumbnailInfo(0);
+			// avoid distortion.
+			// if image is wide, use that to scale
+			long newdx = 0;
+			long newdy = 0;
+			if ( ti->m_dx >= ti->m_dy && ti->m_dx > 0 ) {
+				newdx=widgetWidth;
+				newdy=(ti->m_dy * widgetWidth) / ti->m_dx;
+			}
+			else if ( ti->m_dy > 0 ) {
+				newdy=(long)RESULT_HEIGHT;
+				newdx=(ti->m_dx*(long)RESULT_HEIGHT)/ti->m_dy;
+			}
+
+					
 		 	sb->safePrintf("background-repeat:no-repeat;"
-		 		       "background-size:%lipx 140px;"
+		 		       "background-size:%lipx %lipx;"
 		 		       "background-image:url('data:image/"
 				       "jpg;base64,"
-		 		       , widgetwidth - 2*8); // padding is 8px
+		 		       //, widgetWidth - 2*8);// padding is 8px
+				       , newdx
+				       , newdy
+				       );
 			// encode image in base 64
 			if ( ti ) 
 				sb->base64Encode (ti->getData(),
