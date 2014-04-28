@@ -3144,7 +3144,7 @@ struct QueryField g_fields[] = {
 	},
 
 	{"gbminint", FIELD_GBNUMBERMININT, false,
-	 "Example: 'gbminint:spiderdate:1391749680' "
+	 "Example: 'gbminint:gbspiderdate:1391749680' "
 	 "'gbminint:count:99'. Numeric "
 	 "fields can be in JSON or in meta tag. "
 	 "Use 'gbspiderdate' field for the last time the page was "
@@ -3152,7 +3152,7 @@ struct QueryField g_fields[] = {
 	},
 
 	{"gbmaxint", FIELD_GBNUMBERMAXINT, false,
-	 "Example: 'gbmaxint:spiderdate:1391749680' "
+	 "Example: 'gbmaxint:gbspiderdate:1391749680' "
 	 "'gbmaxint:count:99'. Numeric "
 	 "fields can be in JSON or in meta tag. "
 	 "Use 'gbspiderdate' field for the last time the page was "

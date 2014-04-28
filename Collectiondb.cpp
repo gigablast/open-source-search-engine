@@ -1252,6 +1252,33 @@ CollectionRec *Collectiondb::getRec ( HttpRequest *r , bool useDefaultRec ) {
 	return g_collectiondb.getRec ( coll );
 }
 
+char *Collectiondb::getDefaultColl ( HttpRequest *r ) {
+	char *coll = r->getString ( "c" );
+	if ( coll && ! coll[0] ) coll = NULL;
+	if ( coll ) return coll;
+	CollectionRec *cr = NULL;
+	// default to main first
+	if ( ! coll ) {
+		cr = g_collectiondb.getRec("main");
+		// CAUTION: cr could be deleted so don't trust this ptr
+		// if you give up control of the cpu
+		if ( cr ) return cr->m_coll;
+	}
+	// try next in line
+	if ( ! coll ) {
+		cr = getFirstRec ();
+		if ( cr ) return cr->m_coll;
+	}
+	// give up?
+	return NULL;
+}
+
+
+//CollectionRec *Collectiondb::getRec2 ( HttpRequest *r , bool useDefaultRec) {
+//	char *coll = getDefaultColl();
+//	return g_collectiondb.getRec(coll);
+//}
+
 // . get collectionRec from name
 // . returns NULL if not available
 CollectionRec *Collectiondb::getRec ( char *coll ) {

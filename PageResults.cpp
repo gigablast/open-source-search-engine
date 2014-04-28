@@ -2609,22 +2609,18 @@ bool printResult ( State0 *st, long ix ) {
 		// 		       , widgetwidth - 2*8 // padding is 8px
 		// 		       , mr->ptr_imgUrl);
 		if ( mr->ptr_imgData ) {
-			char *p = mr->ptr_imgData; // orig img url
-			p += gbstrlen(p) + 1; // dx of thumb
-			//long tdx = *(long *)p; 
-			p += 4;
-			//long tdy = *(long *)p; 
-			p += 4;
-			char *imgData = p;
-			char *pend = mr->ptr_imgData + mr->size_imgData;
-			long thumbBytes = pend - p;
+			ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
+			ThumbnailInfo *ti = ta->getThumbnailInfo(0);
 		 	sb->safePrintf("background-repeat:no-repeat;"
 		 		       "background-size:%lipx 140px;"
 		 		       "background-image:url('data:image/"
 				       "jpg;base64,"
 		 		       , widgetwidth - 2*8); // padding is 8px
 			// encode image in base 64
-			sb->base64Encode (imgData,thumbBytes,0); // 0 niceness
+			if ( ti ) 
+				sb->base64Encode (ti->getData(),
+						  ti->getDataSize(),
+						  0); // niceness
 			sb->safePrintf("');");
 		}
 
@@ -2633,14 +2629,14 @@ bool printResult ( State0 *st, long ix ) {
 		sb->safePrintf("\">");
 		sb->safePrintf ( "<a "
 				 "target=_blank "
-				 "style=text-decoration:none; href=" );
+				 "style=text-decoration:none; href=\"" );
 		// truncate off -diffbotxyz%li
 		long newLen = urlLen;
 		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
 		// print the url in the href tag
 		sb->safeMemcpy ( url , newLen ); 
 		// then finish the a href tag and start a bold for title
-		sb->safePrintf ( ">");//<font size=+0>" );
+		sb->safePrintf ( "\">");//<font size=+0>" );
 		
 		sb->safePrintf("<b style=\""
 			       "text-decoration:none;"
@@ -2667,6 +2663,22 @@ bool printResult ( State0 *st, long ix ) {
 		//sb->safePrintf ("<image width=50 height=50 src=%s></a>",
 		//		   mr->ptr_imgUrl);
 		// then title over image
+	}
+
+	// only do link here if we have no thumbnail so no bg image
+	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
+	      si->m_format == FORMAT_WIDGET_AJAX   ) &&
+	     ! mr->ptr_imgData ) {
+		sb->safePrintf ( "<a style=text-decoration:none;"
+				 "color:white; "
+				 "href=" );
+		// truncate off -diffbotxyz%li
+		long newLen = urlLen;
+		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
+		// print the url in the href tag
+		sb->safeMemcpy ( url , newLen ); 
+		// then finish the a href tag and start a bold for title
+		sb->safePrintf ( ">");//<font size=+0>" );
 	}
 
 
@@ -2697,20 +2709,6 @@ bool printResult ( State0 *st, long ix ) {
 		sb->safePrintf ( ">");//<font size=+0>" );
 	}
 
-
-	// only do link here
-	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
-	      si->m_format == FORMAT_WIDGET_AJAX   ) &&
-	     ! mr->ptr_imgUrl ) {
-		sb->safePrintf ( "<a href=" );
-		// truncate off -diffbotxyz%li
-		long newLen = urlLen;
-		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
-		// print the url in the href tag
-		sb->safeMemcpy ( url , newLen ); 
-		// then finish the a href tag and start a bold for title
-		sb->safePrintf ( ">");//<font size=+0>" );
-	}
 
 	// . then the title  (should be NULL terminated)
 	// . the title can be NULL

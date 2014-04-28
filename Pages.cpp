@@ -914,8 +914,9 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//long  user   = getUserType          ( s , r );
 	//char *username   = g_users.getUsername ( r );
 	char *username = NULL;
-	char *coll   = r->getString ( "c"   );
-	if ( ! coll ) coll = "main";
+	//char *coll   = r->getString ( "c"   );
+	//if ( ! coll ) coll = "main";
+	char *coll = g_collectiondb.getDefaultColl(r);
 
 	//char *pwd    = r->getString ( "pwd" );
 	// get username

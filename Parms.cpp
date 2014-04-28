@@ -1386,9 +1386,13 @@ bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	long  page = g_pages.getDynamicPageNumber ( r );
 	long nc = r->getLong("nc",1);
 	long pd = r->getLong("pd",1);
-	char *coll = r->getString ( "c"   );
-	if ( ! coll || ! coll[0] ) coll = "main";
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	char *coll = g_collectiondb.getDefaultColl(r);
+	CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
+	//char *coll = r->getString ( "c"   );
+	//if ( ! coll || ! coll[0] ) coll = "main";
+	//CollectionRec *cr = g_collectiondb.getRec ( coll );
+	// if "main" collection does not exist, try another
+	//if ( ! cr ) cr = getCollRecFromHttpRequest ( r );
 	printParms2 ( sb, page, cr, nc, pd,0,0 , s);
 	return true;
 }

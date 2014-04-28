@@ -24,6 +24,7 @@ class ThumbnailInfo {
 	char  m_buf[];
 	char *getUrl() { return m_buf; };
 	char *getData() { return m_buf + m_urlSize; };
+	long  getDataSize() { return m_dataSize; };
 	long  getSize () { return sizeof(ThumbnailInfo)+m_urlSize+m_dataSize;};
 
 	bool printThumbnailInHtml ( SafeBuf *sb ) {

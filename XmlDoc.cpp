@@ -45764,7 +45764,8 @@ char *getJSONFieldValue ( char *json , char *field , long *valueLen ) {
 				  ! gotOne &&
 				  p[1] == ':' &&
 				  // {"title":"whatever",...}
-				  depth == 1 &&
+				  // could be product:{title:... depth=2
+				  (depth == 1 ||depth==2) &&
 				  stringStart &&
 				  (p - stringStart) == fieldLen &&
 				  strncmp(field,stringStart,fieldLen)==0 ) {

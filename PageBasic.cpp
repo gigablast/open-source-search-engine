@@ -771,7 +771,6 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		// this prints the <form tag as well
 		g_pages.printAdminTop ( &sb , socket , hr );
 
-
 	//
 	// show stats
 	//
@@ -863,7 +862,99 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      , cr->m_globalCrawlInfo.m_pageDownloadSuccesses
 			      );
 
+		sb.safePrintf("</table>\n\n");
+
 	}
+
+
+	// put the widget in here, just sort results by spidered date
+	if ( fmt == FORMAT_HTML ) {
+		
+		sb.safePrintf("<br>"
+			      "<script type=\"text/javascript\">"
+			      "function diffbot_handler() {"
+			      "if(this.readyState != 4 )return;"
+			      "if(!this.responseText)return;"
+			      "document.getElementById(\"diffbot_widget\")."
+			      "innerHTML=this.responseText;"
+			      "diffbot_scroll();}"
+			      "</script>"
+
+			      "<script type=text/javascript>function "
+			      "diffbot_scroll() {var hd = document."
+			      "getElementById('diffbot_invisible');"
+			      "if ( ! hd ) {setTimeout('diffbot_scroll()',"
+			      "3);return;} var b=parseInt(hd.style.top);"
+			      "var step=4;b=b+step;hd.style.top=b+\"px\";"
+			      "var vd=document.getElementById"
+			      "('diffbot_visible');"
+			      "var c=parseInt(vd.style.top);"
+			      "c=c+step;"
+			      "vd.style.top=c+\"px\";"
+			      "if(b>=0)return;"
+			      "setTimeout('diffbot_scroll()',3);}"
+			      "</script>"
+			      );
+
+		long widgetWidth = 300;
+		long widgetHeight = 500;
+
+		// make the ajax url that gets the search results
+		SafeBuf ub;
+		ub.safePrintf("/search"
+			      "?format=ajax"
+			      "&c=%s"
+			      "&q=gbrevsortbyint%%3Agbspiderdate"
+			      "&widgetheight=%li"
+			      "&widgetwidth=%li"
+			      "&topdocid="
+			      , cr->m_coll
+			      , widgetHeight
+			      , widgetWidth
+			      );
+
+
+		// then the containing div. set the "id" so that the
+		// style tag the user sets can control its appearance.
+		// when the browser loads this the ajax sets the contents
+		// to the reply from neo.
+		
+		sb.safePrintf("<div id=diffbot_widget "
+			      "style=\"border:2px solid black;"
+			      "position:relative;border-radius:10px;"
+			      "width:%lipx;height:%lipx;\">"
+			      , widgetWidth
+			      , widgetHeight
+			      );
+
+		//sb.safePrintf("<style>"
+		//	      "a{color:white;}"
+		//	      "</style>");
+
+		// get the search results from neo as soon as this div is
+		// being rendered, and set its contents to them
+		sb.safePrintf("<script type=text/javascript>function "
+			      "diffbot_reload() {var client="
+			      "new XMLHttpRequest();"
+			      "client.onreadystatechange=diffbot_handler;"
+			      "var u='%s';"
+			      "var td=document.getElementById('topdocid');"
+			      "if ( td ) u=u+td.value;"
+			      "client.open('GET',u);"
+			      "client.send();"
+			      "setTimeout('diffbot_reload()',15000);}"
+			      "diffbot_reload();</script>"
+			      , ub.getBufStart()
+			      );
+
+
+		sb.safePrintf("Waiting for Server...");
+
+
+		// end the containing div
+		sb.safePrintf("</div>");
+	}
+
 
 	//if ( fmt != FORMAT_JSON )
 	//	// wrap up the form, print a submit button
