@@ -621,6 +621,15 @@ bool Rdb::deleteAllRecs ( collnum_t collnum ) {
 	return true;
 }
 
+bool makeTrashDir() {
+	char trash[1024];
+	sprintf(trash, "%strash/",g_hostdb.m_dir);
+	::mkdir ( trash, 
+		  S_IRUSR | S_IWUSR | S_IXUSR | 
+		  S_IRGRP | S_IWGRP | S_IXGRP | 
+		  S_IROTH | S_IXOTH ) ;
+}
+
 
 bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 
@@ -685,12 +694,7 @@ bool Rdb::deleteColl ( collnum_t collnum , collnum_t newCollnum ) {
 		(long)collnum,gettimeofdayInMilliseconds());
 	//Dir d; d.set ( dname );
 	// ensure ./trash dir is there
-	char trash[1024];
-	sprintf(trash, "%strash/",g_hostdb.m_dir);
-	::mkdir ( trash, 
-		  S_IRUSR | S_IWUSR | S_IXUSR | 
-		  S_IRGRP | S_IWGRP | S_IXGRP | 
-		  S_IROTH | S_IXOTH ) ;
+	makeTrashDir();
 	// move into that dir
 	::rename ( oldname , newname );
 

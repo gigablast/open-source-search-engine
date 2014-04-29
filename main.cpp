@@ -2782,6 +2782,9 @@ int main2 ( int argc , char *argv[] ) {
 	if ( ! g_log.init( g_hostdb.m_logFilename )        ) {
 		fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
 
+	// in case we do not have one, we need it for Images.cpp
+	makeTrashDir();
+
 	g_errno = 0;
 
 	// 

@@ -857,6 +857,8 @@ void Images::thumbStart_r ( bool amThread ) {
 	//char  cmd[2500];
 	//sprintf( cmd, "%strash", g_hostdb.m_dir );
 
+	makeTrashDir();
+
 	// get thread id
 	long id = getpid();
 
