@@ -2764,7 +2764,8 @@ int main2 ( int argc , char *argv[] ) {
 	    g_hostdb.m_logFilename );
 
 	if ( ! g_conf.m_runAsDaemon )
-		log("db: Use ./gb <hostid> -d to run as daemon.");
+		log("db: Use ./gb <hostid> -d to run as daemon. Example: "
+		    "./gb 0 -d");
 
 	/*
 	// tmp stuff to generate new query log

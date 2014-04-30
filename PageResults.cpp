@@ -722,6 +722,7 @@ void freeMsg4Wrapper( void *st ) {
 #define RESULT_HEIGHT 120
 #define SERP_SPACER 1
 #define PADDING 8
+#define SCROLLBAR_WIDTH 20
 
 // . make a web page from results stored in msg40
 // . send it on TcpSocket "s" when done
@@ -1226,6 +1227,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "<div style=\"position:absolute;"
 			       "top:0px;"
 			       "overflow-y:auto;"
+			       "overflow-x:hidden;"
 			       "width:%lipx;"
 			       "height:%lipx;\">"
 			       , widgetwidth
@@ -1932,8 +1934,9 @@ bool printSearchResultsTail ( State0 *st ) {
 
 	if ( firstNum > 0 && 
 	     (si->m_format == FORMAT_HTML || 
-	      si->m_format == FORMAT_WIDGET_AJAX ||
-	      si->m_format == FORMAT_WIDGET_IFRAME ) ) {
+	      si->m_format == FORMAT_WIDGET_IFRAME //||
+	      //si->m_format == FORMAT_WIDGET_AJAX
+	      ) ) {
 		long ss = firstNum - msg40->getDocsWanted();
 		sb->safePrintf("<a href=\"/search?s=%li&q=",ss);
 		// our current query parameters
@@ -1950,8 +1953,9 @@ bool printSearchResultsTail ( State0 *st ) {
 	// now print "Next X Results"
 	if ( msg40->moreResultsFollow() && 
 	     (si->m_format == FORMAT_HTML || 
-	      si->m_format == FORMAT_WIDGET_IFRAME ||
-	      si->m_format == FORMAT_WIDGET_AJAX )) {
+	      si->m_format == FORMAT_WIDGET_IFRAME 
+	      //si->m_format == FORMAT_WIDGET_AJAX 
+	      )) {
 		long ss = firstNum + msg40->getDocsWanted();
 		// print a separator first if we had a prev results before us
 		if ( sb->length() > remember ) sb->safePrintf ( " &nbsp; " );
@@ -2580,7 +2584,6 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		ti->printThumbnailInHtml ( sb );
 	}
 
-
 	// print image for widget
 	if ( //mr->ptr_imgUrl && 
 	     ( si->m_format == FORMAT_WIDGET_IFRAME ||
@@ -2591,16 +2594,19 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		// prevent coring
 		if ( widgetWidth < 1 ) widgetWidth = 1;
 
-		// make a div around this for widget so we can print text
-		// on top
+		// each search result in widget has a div around it
 		sb->safePrintf("<div "
+			       "class=result "
 			       "style=\""
 			       "width:%lipx;"
 			       "min-height:%lipx;"//140px;"
 			       "height:%lipx;"//140px;"
 			       "padding:%lipx;"
-			       "display:table-cell;"
-			       "vertical-align:bottom;"
+			       "position:relative;"
+			       //"display:table-cell;"
+			       //"vertical-align:bottom;"
+			       "\""
+			       ">"
 			       , widgetWidth - 2*8 // padding is 8px
 			       , (long)RESULT_HEIGHT
 			       , (long)RESULT_HEIGHT
@@ -2612,16 +2618,20 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		// 		       "background-image:url('%s');"
 		// 		       , widgetwidth - 2*8 // padding is 8px
 		// 		       , mr->ptr_imgUrl);
+		long newdx = 0;
+		long newdy = 0;
 		if ( mr->ptr_imgData ) {
 			ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 			ThumbnailInfo *ti = ta->getThumbnailInfo(0);
+			// account for scrollbar on the right
+			long ww = widgetWidth - (long)SCROLLBAR_WIDTH;
 			// avoid distortion.
 			// if image is wide, use that to scale
-			long newdx = ti->m_dx;
-			long newdy = ti->m_dy;
+			newdx = ti->m_dx;
+			newdy = ti->m_dy;
 			if ( ti->m_dx > 0 && ti->m_dy > 0 ) {
 				float xscale = 
-					(float)widgetWidth/
+					(float)ww/
 					(float)ti->m_dx;
 				float yscale = 
 					(float)RESULT_HEIGHT/
@@ -2631,29 +2641,69 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 				newdx = (long)((float)newdx * min);
 				newdy = (long)((float)newdy * min);
 			}
-					
-		 	sb->safePrintf("background-repeat:no-repeat;"
-		 		       "background-size:%lipx %lipx;"
-		 		       "background-image:url('data:image/"
+				
+			// img tag
+		 	// sb->safePrintf("background-repeat:no-repeat;"
+		 	// 	       "background-size:%lipx %lipx;"
+		 	// 	       "background-image:url('data:image/"
+			// 	       "jpg;base64,"
+		 	// 	       //, widgetWidth - 2*8);// padding is 8px
+			// 	       , newdx
+			// 	       , newdy
+			// 	       );
+		 	sb->safePrintf("<img width=%li height=%li align=left "
+		 		       "src=\"data:image/"
 				       "jpg;base64,"
 		 		       //, widgetWidth - 2*8);// padding is 8px
 				       , newdx
 				       , newdy
 				       );
+
 			// encode image in base 64
 			if ( ti ) 
 				sb->base64Encode (ti->getData(),
 						  ti->getDataSize(),
 						  0); // niceness
-			sb->safePrintf("');");
+			//sb->safePrintf("');");
+			sb->safePrintf("\">");
 		}
-
-			
 		// end the div style attribute and div tag
-		sb->safePrintf("\">");
+		//sb->safePrintf("\">");
+
+
 		sb->safePrintf ( "<a "
 				 "target=_blank "
-				 "style=text-decoration:none; href=\"" );
+				 "style=\"text-decoration:none;"
+				 // don't let scroll bar obscure text
+				 "margin-right:%lipx;"
+				 ,(long)SCROLLBAR_WIDTH
+				 );
+
+		// if thumbnail is wide enough put text on top of it, otherwise
+		// image is to the left and text is to the right of image
+		if ( newdx > .5 * widgetWidth )
+			sb->safePrintf("position:absolute;"
+				       "bottom:%li;"
+				       "left:%li;"
+				       , (long) PADDING 
+				       , (long) PADDING 
+				       );
+		// to align the text verticall we gotta make a textbox div
+		// otherwise it wraps below image! mdw
+		//else
+		//	sb->safePrintf("vertical-align:middle;");
+		else
+			sb->safePrintf("position:absolute;"
+				       "bottom:%li;"
+				       "left:%li;"
+				       , (long) PADDING 
+				       , (long) PADDING + newdx + 10 );
+
+		// close the style and begin the url
+		sb->safePrintf( "\" "
+				"href=\"" 
+				 );
+
 		// truncate off -diffbotxyz%li
 		long newLen = urlLen;
 		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
@@ -2836,10 +2886,10 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	if ( si->m_format == FORMAT_HTML ) sb->safePrintf ("</a><br>\n" ) ;
 
 
-	// close the image div
+	// close the title tag stuf
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
 	     si->m_format == FORMAT_WIDGET_AJAX ) 
-		sb->safePrintf("</b></a></div>\n");
+		sb->safePrintf("</b></a>\n");
 
 
 	/////
@@ -3430,6 +3480,12 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	help.safePrintf("<br><br>"
 	*/
 		
+
+	// end serp div
+	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
+	     si->m_format == FORMAT_WIDGET_AJAX )
+		sb->safePrintf("</div>");
+	
 
 	if ( si->m_format == FORMAT_HTML )
 		sb->safePrintf ( "<br><br>\n");

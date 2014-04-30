@@ -1130,6 +1130,11 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// to any rdb...
 	cr->m_collnum = newCollnum;
 
+	// update the timestamps since we are restarting/resetting
+	cr->m_diffbotCrawlStartTime = getTimeGlobalNoCore();
+	cr->m_diffbotCrawlEndTime   = 0;
+
+
 	////////
 	//
 	// ALTER m_recs[] array
