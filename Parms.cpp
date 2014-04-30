@@ -8522,24 +8522,27 @@ void Parms::init ( ) {
 	m->m_flags = PF_DIFFBOT;
 	m++;
 
-	m->m_cgi   = "dbcrawlstarttime";
-	m->m_xml   = "diffbotCrawlStartTime";
+	m->m_cgi   = "createdtime";
+	m->m_xml   = "collectionCreatedTime";
+	m->m_desc  = "Time when this collection was created, or time of "
+		"the last reset or restart.";
 	m->m_off   = (char *)&cr.m_diffbotCrawlStartTime - x;
 	m->m_type  = TYPE_LONG;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "0";
-	m->m_flags = PF_DIFFBOT;
+	m->m_flags = 0;//PF_DIFFBOT;
 	m++;
 
-	m->m_cgi   = "dbcrawlendtime";
-	m->m_xml   = "diffbotCrawlEndTime";
+	m->m_cgi   = "spiderendtime";
+	m->m_xml   = "crawlEndTime";
+	m->m_desc  = "If spider is done, when did it finish.";
 	m->m_off   = (char *)&cr.m_diffbotCrawlEndTime - x;
 	m->m_type  = TYPE_LONG;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "0";
-	m->m_flags = PF_DIFFBOT;
+	m->m_flags = 0;//PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "dbcrawlname";

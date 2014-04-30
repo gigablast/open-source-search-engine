@@ -2716,6 +2716,9 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 			       "text-decoration:none;"
 			       "font-size: 15px;"
 			       "font-weight:bold;"
+			       // add padding so shadow does not stick out
+			       //"padding-left:4px;"
+			       //"padding-right:4px;"
 			       "background-color:rgba(0,0,0,.5);"
 			       "color:white;"
 			       "font-family:arial;"

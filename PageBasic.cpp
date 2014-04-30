@@ -973,7 +973,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		// Jan 01 1970 at 10:30:00
 		strftime ( tmp3,64 , "%b %d %Y at %H:%M:%S",timeStruct);
 		sb.safePrintf("<tr><td><b>Collection Created</b></td>"
-			      "<td>%s</td></tr>",tmp3);
+			      "<td>%s (local time)</td></tr>",tmp3);
 
 
 		sb.safePrintf("</table>\n\n");
