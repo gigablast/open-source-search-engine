@@ -16878,8 +16878,8 @@ bool isRecoveryFutile ( ) {
 		// get time stamp
 		long timestamp = ff.getLastModifiedTime ( );
 
-		// skip if not iwthin last minute
-		if ( timestamp < now - 60 ) continue;
+		// skip if not iwthin 2 minutes
+		if ( timestamp < now - 2*60 ) continue;
 
 		// open it up to see if ends with sighandle
 		long toRead = 3000;
