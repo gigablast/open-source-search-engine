@@ -1789,6 +1789,54 @@ bool Msg40::gotSummary ( ) {
 		// delete everything! no, doneSendingWrapper9 does...
 		//mdelete(st, sizeof(State0), "msg40st0");
 		//delete st;
+
+		// if we did not ask for enough docids and they were mostly
+		// dups so they got deduped, then ask for more.
+		// m_numDisplayed includes results before the &s=X parm.
+		// and so does m_docsToGetVisiable, so we can compare them.
+		if ( m_numDisplayed < m_docsToGetVisible && 
+		     // this is true if we can get more docids from merging
+		     // more of the termlists from the shards together.
+		     // otherwise, we will have to ask each shard for a
+		     // higher number of docids.
+		     m_msg3a.m_moreDocIdsAvail ) { //&&
+		     // doesn't work on multi-coll just yet, it cores.
+		     // MAKE it.
+		     //m_numCollsToSearch == 1 ) {
+			// can it cover us?
+			long need = m_msg3a.m_docsToGet + 20;
+			// note it
+			log("msg40: too many summaries deduped. "
+			    "getting more "
+			    "docids from msg3a merge and getting summaries. "
+			    "%li are visible, need %li. "
+			    "changing docsToGet from %li to %li. "
+			    "numReplies=%li numRequests=%li",
+			    m_numDisplayed,
+			    m_docsToGetVisible,
+			    m_msg3a.m_docsToGet, 
+			    need,
+			    m_numReplies, 
+			    m_numRequests);
+			// merge more docids from the shards' termlists
+			m_msg3a.m_docsToGet = need;
+			m_msg3a.mergeLists();
+			// . rellaoc the msg20 array
+			// . i don't think we need to do this when streaming...
+			//if ( ! reallocMsg20Buf() ) return true;
+			// . reset this before launch
+			// . not for streaming!
+			//m_numReplies  = 0;
+			//m_numRequests = 0;
+			// reprocess all!
+			//m_lastProcessedi = -1;
+			// now launch!
+			if ( ! launchMsg20s ( true ) ) return false; 
+			// all done, call callback
+			return true;
+		}
+
+
 		// otherwise, all done!
 		return true;
 	}
