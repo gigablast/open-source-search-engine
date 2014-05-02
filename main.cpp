@@ -4642,28 +4642,31 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"rcp %sgb.conf %s:%sgb.conf &",
+				"scp %sgb.conf %shosts.conf %s:%s %s",
+				dir ,
 				dir ,
 				//h->m_hostId ,
 				iptoa(h2->m_ip),
-				h2->m_dir);
+				h2->m_dir,
 				//h2->m_hostId);
+				amp);
+
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
-			sprintf(tmp,
-				"rcp %shosts.conf %s:%shosts.conf &",
-				dir ,
-				iptoa(h2->m_ip),
-				h2->m_dir);
-			log(LOG_INIT,"admin: %s", tmp);
-			system ( tmp );
-			sprintf(tmp,
-				"rcp %shosts2.conf %s:%shosts2.conf &",
-				dir ,
-				iptoa(h2->m_ip),
-				h2->m_dir);
-			log(LOG_INIT,"admin: %s", tmp);
-			system ( tmp );
+			// sprintf(tmp,
+			// 	"scp %shosts.conf %s:%shosts.conf &",
+			// 	dir ,
+			// 	iptoa(h2->m_ip),
+			// 	h2->m_dir);
+			// log(LOG_INIT,"admin: %s", tmp);
+			// system ( tmp );
+			// sprintf(tmp,
+			// 	"scp %shosts2.conf %s:%shosts2.conf &",
+			// 	dir ,
+			// 	iptoa(h2->m_ip),
+			// 	h2->m_dir);
+			// log(LOG_INIT,"admin: %s", tmp);
+			// system ( tmp );
 		}
 		else if ( installFlag == ifk_start ) {
 			// . save old log now, too
