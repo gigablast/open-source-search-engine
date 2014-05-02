@@ -80,7 +80,7 @@ public:
 		return m_numTotalEstimatedHits; };
 
 	// called when we got a reply of docIds
-	bool gotAllSplitReplies ( );
+	bool gotAllShardReplies ( );
 
 	bool gotCacheReply ( );
 
@@ -135,13 +135,13 @@ public:
 	float      m_termFreqWeights[MAX_QUERY_TERMS];
 
 	// a multicast class to send the request, one for each split
-	Multicast  m_mcast[MAX_INDEXDB_SPLIT];
+	Multicast  m_mcast[MAX_SHARDS];
 
 	// for timing how long things take
 	long long  m_startTime;
 
 	// this buffer should be big enough to hold all requests
-	//char       m_request [MAX_MSG39_REQUEST_SIZE * MAX_INDEXDB_SPLIT];
+	//char       m_request [MAX_MSG39_REQUEST_SIZE * MAX_SHARDS];
 	long       m_numReplies;
 
 	// . # estimated total hits
@@ -157,8 +157,8 @@ public:
 	SafeBuf m_rbuf2;
 
 	// each split gives us a reply
-	class Msg39Reply   *m_reply       [MAX_INDEXDB_SPLIT];
-	long                m_replyMaxSize[MAX_INDEXDB_SPLIT];
+	class Msg39Reply   *m_reply       [MAX_SHARDS];
+	long                m_replyMaxSize[MAX_SHARDS];
 
 	char m_debug;
 
