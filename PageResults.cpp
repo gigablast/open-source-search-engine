@@ -718,8 +718,6 @@ void freeMsg4Wrapper( void *st ) {
 	delete stau;
 }
 
-// height of each result div in the widget
-#define RESULT_HEIGHT 120
 #define SERP_SPACER 1
 #define PADDING 8
 #define SCROLLBAR_WIDTH 20

@@ -6,6 +6,9 @@
 #include "Msg40.h"
 #include "Msg0.h"
 
+// height of each search result div in the widget
+#define RESULT_HEIGHT 120
+
 class State0 {
 public:
 

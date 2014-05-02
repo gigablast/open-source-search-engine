@@ -4,6 +4,7 @@
 #include "Pages.h"
 #include "Parms.h"
 #include "Spider.h"
+#include "PageResults.h" // for RESULT_HEIGHT
 
 //bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) ;
 
@@ -782,32 +783,79 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	//
 	// put the widget in here, just sort results by spidered date
 	//
+	// the scripts do "infinite" scrolling both up and down.
+	// but if you are at the top then new results will load above
+	// you and we try to maintain your current visual state even though
+	// the scrollbar position will change.
+	//
 	if ( fmt == FORMAT_HTML ) {
 		
 		sb.safePrintf(
-			      "<script type=\"text/javascript\">"
-			      "function diffbot_handler() {"
-			      "if(this.readyState != 4 )return;"
-			      "if(!this.responseText)return;"
-			      "document.getElementById(\"diffbot_widget\")."
-			      "innerHTML=this.responseText;"
-			      "diffbot_scroll();}"
-			      "</script>"
+			      // if user has the scrollbar at the top
+			      // in the widget we do a search every 15 secs
+			      // to try to load more recent results. we should
+			      // return up to 10 results above your last 
+			      // top docid and 10 results below it. that way
+			      // no matter which of the 10 results you were
+			      // viewing your view should remaing unchanged.
+			      "<script type=\"text/javascript\">\n\n"
 
-			      "<script type=text/javascript>function "
-			      "diffbot_scroll() {var hd = document."
-			      "getElementById('diffbot_invisible');"
-			      "if ( ! hd ) {setTimeout('diffbot_scroll()',"
-			      "3);return;} var b=parseInt(hd.style.top);"
-			      "var step=4;b=b+step;hd.style.top=b+\"px\";"
-			      "var vd=document.getElementById"
-			      "('diffbot_visible');"
-			      "var c=parseInt(vd.style.top);"
-			      "c=c+step;"
-			      "vd.style.top=c+\"px\";"
-			      "if(b>=0)return;"
-			      "setTimeout('diffbot_scroll()',3);}"
-			      "</script>"
+			      "function widget123_handler() {"
+			      // return if reply is not fully ready
+			      "if(this.readyState != 4 )return;"
+			      // if error or empty reply then do nothing
+			      "if(!this.responseText)return;"
+			      // get the widget container
+			      "var w=document.getElementById(\"widget123\");"
+			      // just set the widget content to the reply
+			      "w.innerHTML=this.responseText;"
+			      // how many results did we ADD above the
+			      // reported "topdocid" of the widget?
+			      // it should be in the ajax reply from the
+			      // search engine. how many result were above
+			      // the given "topdocid".
+			      "var ta=document.getElementById(\"topadd\");"
+			      "var added=ta.value;"
+			      // save current scroll pos
+			      "var oldpos=parseInt(w.scrollTop);"
+			      // preserve the relative scroll position so we
+			      // do not jerk around since we might have added 
+			      // "added" new results to the top.
+			      "w.scrollTop += added*%li;"
+
+			      // try to scroll out new results if we are
+			      // still at the top of the scrollbar and
+			      // there are new results to scroll.
+			      "if(oldpos==0)widget123_scroll();}\n\n"
+
+			      "function widget123_scroll() {"
+			      // only scroll if at the top of the widget
+			      // and not scrolled down so we do not
+			      // interrupt
+			      "var w=document.getElementById(\"widget123\");"
+			      // TODO: need parseInt here?
+			      "var pos=parseInt(w.scrollTop);"
+			      // if already at the top of widget, return
+			      "if(pos==0)return;"
+			      // decrement by 3 pixels
+			      "pos=pos-3;"
+			      // do not go negative
+			      "if(pos<0)pos=0;"
+			      // assign to scroll up. TODO: need +\"px\"; ?
+			      "w.scrollTop=pos;"
+			      // all done, then return
+			      "if(pos==0) return;"
+			      // otherwise, scroll more in 3ms
+			      // TODO: make this 1000ms on result boundaries
+			      // so it delays on each new result. perhaps make
+			      // it less than 1000ms if we have a lot of 
+			      // results above us!
+			      "setTimeout('widget123_scroll()',3);}\n\n"
+
+			      "</script>\n\n"
+
+			      // for preserving scrollbar position
+			      ,(long)RESULT_HEIGHT
 			      );
 
 		long widgetWidth = 300;
@@ -829,12 +877,12 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      );
 
 
-		// then the containing div. set the "id" so that the
+		// then the WIDGET MASTER div. set the "id" so that the
 		// style tag the user sets can control its appearance.
 		// when the browser loads this the ajax sets the contents
 		// to the reply from neo.
 		
-		sb.safePrintf("<div id=diffbot_widget "
+		sb.safePrintf("<div id=widget123 "
 			      "style=\"border:2px solid black;"
 			      "position:relative;border-radius:10px;"
 			      "width:%lipx;height:%lipx;\">"
@@ -848,17 +896,24 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 
 		// get the search results from neo as soon as this div is
 		// being rendered, and set its contents to them
-		sb.safePrintf("<script type=text/javascript>function "
-			      "diffbot_reload() {var client="
-			      "new XMLHttpRequest();"
-			      "client.onreadystatechange=diffbot_handler;"
+		sb.safePrintf("<script type=text/javascript>"
+			      "function widget123_reload() {"
+			      "var client=new XMLHttpRequest();"
+			      "client.onreadystatechange=widget123_handler;"
+			      // this url gets the search results
 			      "var u='%s';"
+			      // get the docid at the top of the widget
+			      // so we can get SURROUNDING search results,
+			      // like 10 before it and 10 after it for
+			      // our infinite scrolling
 			      "var td=document.getElementById('topdocid');"
 			      "if ( td ) u=u+td.value;"
 			      "client.open('GET',u);"
 			      "client.send();"
-			      "setTimeout('diffbot_reload()',15000);}"
-			      "diffbot_reload();</script>"
+			      "setTimeout('widget123_reload()',15000);}\n\n"
+			      // when page loads, populate the widget immed.
+			      "widget123_reload();\n\n"
+			      "</script>\n\n"
 			      , ub.getBufStart()
 			      );
 
