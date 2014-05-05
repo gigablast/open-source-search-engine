@@ -1334,7 +1334,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 	}
 
 	if ( st->m_header && si->m_format == FORMAT_JSON ) {
-		sb->safePrintf("\"results\":[\n");
+		sb->safePrintf("\"objects\":[\n");
 		return true;
 	}
 
