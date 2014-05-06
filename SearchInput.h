@@ -362,6 +362,9 @@ class SearchInput {
 	long   m_urlLen2;
 	char  *m_url2;
 
+	double    m_maxSerpScore;
+	long long m_minSerpDocId;
+
 	// for /get?d=xxxxx&strip=0&ih=1&qh=1
 	long long m_docId;
 	long      m_strip;

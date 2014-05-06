@@ -15520,8 +15520,9 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "stream search results";
-	m->m_desc  = "Stream search results back on socket as they arrive. Useful "
-		"when thousands of search results are requested.";
+	m->m_desc  = "Stream search results back on socket as they arrive. "
+		"Useful when thousands/millions of search results are "
+		"requested.";
 	m->m_soff  = (char *)&si.m_streamResults - y;
 	m->m_type  = TYPE_CHAR;
 	m->m_obj   = OBJ_SI;
@@ -15531,6 +15532,36 @@ void Parms::init ( ) {
 	m->m_flags = PF_API;
 	m++;
 
+
+	m->m_title = "max serp docid";
+	m->m_desc  = "Start displaying results after this score/docid pair. "
+		"Used by widget to append results to end when index is "
+		"volatile.";
+	m->m_def   = "0";
+	m->m_soff  = (char *)&si.m_minSerpDocId - y;
+	m->m_type  = TYPE_LONG_LONG;
+	m->m_sparm = 1;
+	m->m_scgi  = "minserpdocid";
+	m->m_flags = PF_API;
+	m->m_smin  = 0;
+	m->m_sprpg = 0;
+	m->m_sprpp = 0;
+	m++;
+
+	m->m_title = "max serp score";
+	m->m_desc  = "Start displaying results after this score/docid pair. "
+		"Used by widget to append results to end when index is "
+		"volatile.";
+	m->m_def   = "0";
+	m->m_soff  = (char *)&si.m_maxSerpScore - y;
+	m->m_type  = TYPE_DOUBLE;
+	m->m_sparm = 1;
+	m->m_scgi  = "maxserpscore";
+	m->m_flags = PF_API;
+	m->m_smin  = 0;
+	m->m_sprpg = 0;
+	m->m_sprpp = 0;
+	m++;
 
 	m->m_title = "restrict search to this url";
 	m->m_desc  = "X is the url.";
@@ -16414,6 +16445,7 @@ void Parms::init ( ) {
 		if ( t == TYPE_DATE2          ) size = 4;
 		if ( t == TYPE_DATE           ) size = 4;
 		if ( t == TYPE_FLOAT          ) size = 4;
+		if ( t == TYPE_DOUBLE         ) size = 8;
 		if ( t == TYPE_IP             ) size = 4;
 		if ( t == TYPE_RULESET        ) size = 4;
 		if ( t == TYPE_LONG           ) size = 4;

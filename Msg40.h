@@ -171,7 +171,7 @@ class Msg40 {
 
 	long long getDocId  ( long i ){return m_msg3a.m_docIds[i]; };
 	long long *getDocIds(        ){return m_msg3a.m_docIds; };
-	float  getScore  ( long i ){return m_msg3a.m_scores[i]; };
+	double  getScore  ( long i ){return m_msg3a.m_scores[i]; };
 	class DocIdScore *getScoreInfo(long i){
 		if ( ! m_msg3a.m_scoreInfos ) return NULL;
 		return m_msg3a.m_scoreInfos[i];

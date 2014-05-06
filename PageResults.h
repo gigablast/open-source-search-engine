@@ -8,6 +8,11 @@
 
 // height of each search result div in the widget
 #define RESULT_HEIGHT 120
+// other widget parms
+#define SERP_SPACER 1
+#define PADDING 8
+#define SCROLLBAR_WIDTH 20
+
 
 class State0 {
 public:

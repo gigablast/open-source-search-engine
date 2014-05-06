@@ -556,6 +556,9 @@ bool Msg40::getDocIds ( bool recall ) {
 	mr.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
 	mr.m_realMaxTop                = m_si->m_realMaxTop;
 
+	mr.m_minSerpDocId              = m_si->m_minSerpDocId;
+	mr.m_maxSerpScore              = m_si->m_maxSerpScore;
+
 	// . get the docIds
 	// . this sets m_msg3a.m_clusterLevels[] for us
 	//if(! m_msg3a.getDocIds ( &m_r,  m_si->m_q, this , gotDocIdsWrapper))
@@ -721,7 +724,6 @@ bool Msg40::gotDocIds ( ) {
 		m_needFirstReplies = m_msg3a.m_numDocIds;
 		if ( m_needFirstReplies > 100 ) m_needFirstReplies = 100;
 	}
-
 
 	// we have received m_numGood contiguous Msg20 replies!
 	//m_numContiguous     = 0;

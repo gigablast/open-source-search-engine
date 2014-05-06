@@ -718,10 +718,6 @@ void freeMsg4Wrapper( void *st ) {
 	delete stau;
 }
 
-#define SERP_SPACER 1
-#define PADDING 8
-#define SCROLLBAR_WIDTH 20
-
 // . make a web page from results stored in msg40
 // . send it on TcpSocket "s" when done
 // . returns false if blocked, true otherwise
@@ -914,37 +910,50 @@ bool gotResults ( void *state ) {
  	long numResults = msg40->getNumResults();
 	long topDocIdPos = -1;
 	bool hasInvisibleResults = false;
-	long numInvisible = 0;
+	//long numInvisible = 0;
+	long numAbove = 0;
 	HttpRequest *hr = &st->m_hr;
 	long long oldTop = 0LL;
+	long long lastDocId = 0LL;
+	double lastSerpScore = 0.0;
 	if ( si->m_format == FORMAT_WIDGET_AJAX ) {
+		// sanity, no stream mode here, it won't work
+		if ( si->m_streamResults )
+			log("results: do not use stream=1 for widget");
 		// get current top docid
 		long long topDocId = hr->getLongLong("topdocid",0LL);
 
 		// DEBUG: force it on for now
 		//topDocId = 4961990748LL;
 
-		// scan results
+		// scan results. this does not support &stream=1 streaming
+		// mode. it doesn't make sense that it needs to.
 		for ( long i = 0 ; i < numResults ; i++ ) {
+			// skip if already invisible
+			if ( msg40->m_msg3a.m_clusterLevels[i] != CR_OK ) 
+				continue;
 			// get it
-			Msg20      *m20 ;
-			if ( si->m_streamResults )
-				m20 = msg40->getCompletedSummary(i);
-			else
-				m20 = msg40->m_msg20[i];
+			Msg20 *m20 = msg40->m_msg20[i];
+			if ( ! m20 ) continue;
 			// checkdocid
 			Msg20Reply *mr = m20->m_r;
 			if ( ! mr ) continue;
+			// save this
+			lastDocId = mr->m_docId;
+			lastSerpScore = msg40->m_msg3a.m_scores[i];
+			// set "oldTop" to first docid we encounter
 			if ( ! oldTop ) oldTop = mr->m_docId;
 			// stop if no topdocid otherwise. oldTop is now set
-			if ( topDocId == 0 ) break;
+			if ( ! topDocId ) continue; // == 0 ) break;
 			if ( mr->m_docId != topDocId ) {
 				hasInvisibleResults = true;
-				numInvisible++;
+				// count # of docids above top docid
+				numAbove++;
 				continue;
 			}
-			topDocIdPos = i;
-			break;
+			// we match it, so set this if not already set
+			if ( topDocIdPos != -1 ) topDocIdPos = i;
+			//break;
 		}
 	}				
 
@@ -996,6 +1005,32 @@ bool gotResults ( void *state ) {
 			       "id=topdocid name=topdocid value=%lli>\n",
 			       oldTop);
 
+	// report how many results we added above the topdocid provided, if any
+	// so widget can scroll down automatically
+	if ( si->m_format == FORMAT_WIDGET_AJAX && numAbove )
+		sb->safePrintf("<input type=hidden "
+			       "id=topadd name=topadd value=%li>\n",numAbove);
+	
+
+	// we often can add 100s of things to the widget's result set per 
+	// second especially when sorting by last spidered time and spidering
+	// a lot. setting the maxserpscore of the serp score of the last result
+	// allows us to append new search results to what we have in a 
+	// consistent manner.
+	// if ( si->m_format == FORMAT_WIDGET_AJAX ) {
+	// 	// let's make this ascii encoded crap
+	// 	sb->safePrintf("<input type=hidden "
+	// 		       "id=maxserpscore "
+	// 		       "value=%f>\n",
+	// 		       lastSerpScore);
+	// 	// let's make this ascii encoded crap
+	// 	sb->safePrintf("<input type=hidden "
+	// 		       "id=maxserpdocid "
+	// 		       "value=%lli>\n",
+	// 		       lastDocId);
+	// }
+
+
 	// then print each result
 	// don't display more than docsWanted results
 	long count = msg40->getDocsWanted();
@@ -1006,6 +1041,7 @@ bool gotResults ( void *state ) {
 
 	for ( long i = 0 ; count > 0 && i < numResults ; i++ ) {
 
+		/*
 		if ( hasInvisibleResults ) {
 			//
 			// MAKE THESE RESULTS INVISIBLE!
@@ -1037,7 +1073,7 @@ bool gotResults ( void *state ) {
 					       "position:absolute;>"
 					       );
 		}
-
+		*/
 
 		//////////
 		//
@@ -1111,9 +1147,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf("<body>");
 	}
 
-	if ( ! g_conf.m_isMattWells && 
-	     (si->m_format==FORMAT_WIDGET_IFRAME || 
-	      si->m_format==FORMAT_WIDGET_AJAX) ) {
+	if ( ! g_conf.m_isMattWells && si->m_format==FORMAT_WIDGET_IFRAME ) {
 		printCSSHead ( sb ,si->m_format );
 		sb->safePrintf("<body style=padding:0px;margin:0px;>");
 	}
@@ -1155,8 +1189,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 		// put image in this div which will have top:0px JUST like
 		// the div holding the search results we print out below
 		// so that the image does not scroll when you use the
-		// scrollbar.
-		sb->safePrintf("<div style=\"position:absolute;"
+		// scrollbar. holds the magifying glass img and searchbox.
+		sb->safePrintf("<div class=magglassdiv "
+			       "style=\"position:absolute;"
 			       "right:15px;"
 			       "z-index:10;"
 			       "top:0px;\">");
@@ -1222,7 +1257,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 		// . this will have the scrollbar to just scroll the serps
 		//   and not the magnifying glass
 		sb->safePrintf("</div>"
-			       "<div style=\"position:absolute;"
+			       "<div id=widget123_scrolldiv "
+			       "onscroll=widget123_append(); "
+			       "style=\"position:absolute;"
 			       "top:0px;"
 			       "overflow-y:auto;"
 			       "overflow-x:hidden;"
@@ -2585,7 +2622,8 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	// print image for widget
 	if ( //mr->ptr_imgUrl && 
 	     ( si->m_format == FORMAT_WIDGET_IFRAME ||
-	       si->m_format == FORMAT_WIDGET_AJAX) ) {
+	       si->m_format == FORMAT_WIDGET_AJAX ||
+	       si->m_format == FORMAT_WIDGET_APPEND ) ) {
 
 		long widgetWidth = hr->getLong("widgetwidth",200);
 
@@ -2595,6 +2633,13 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		// each search result in widget has a div around it
 		sb->safePrintf("<div "
 			       "class=result "
+			       // we need the docid and score of last result
+			       // when we append new results to the end
+			       // of the widget for infinite scrolling
+			       // using the scripts in PageBasic.cpp
+			       "docid=%lli "
+			       "score=%f " // double
+			       
 			       "style=\""
 			       "width:%lipx;"
 			       "min-height:%lipx;"//140px;"
@@ -2605,6 +2650,10 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 			       //"vertical-align:bottom;"
 			       "\""
 			       ">"
+			       , mr->m_docId
+			       // this is a double now. this won't work
+			       // for streaming...
+			       , msg40->m_msg3a.m_scores[ix]
 			       , widgetWidth - 2*8 // padding is 8px
 			       , (long)RESULT_HEIGHT
 			       , (long)RESULT_HEIGHT
@@ -2742,6 +2791,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 
 	// only do link here if we have no thumbnail so no bg image
 	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
+	      si->m_format == FORMAT_WIDGET_APPEND ||
 	      si->m_format == FORMAT_WIDGET_AJAX   ) &&
 	     ! mr->ptr_imgData ) {
 		sb->safePrintf ( "<a style=text-decoration:none;"
@@ -2840,6 +2890,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		backTag  = "</b>";
 	}
 	if ( si->m_format == FORMAT_WIDGET_IFRAME || 
+	     si->m_format == FORMAT_WIDGET_APPEND ||
 	     si->m_format == FORMAT_WIDGET_AJAX ) {
 		frontTag = "<font style=\"background-color:yellow\">" ;
 	}
@@ -2889,6 +2940,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 
 	// close the title tag stuf
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
+	     si->m_format == FORMAT_WIDGET_APPEND ||
 	     si->m_format == FORMAT_WIDGET_AJAX ) 
 		sb->safePrintf("</b></a>\n");
 
@@ -2948,6 +3000,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	// do not print summaries for widgets by default unless overridden
 	// with &summary=1
 	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
+	      si->m_format == FORMAT_WIDGET_APPEND ||
 	      si->m_format == FORMAT_WIDGET_AJAX ) && 
 	     hr->getLong("summaries",0) == 0 )
 		printSummary = false;
@@ -3484,6 +3537,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 
 	// end serp div
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
+	     si->m_format == FORMAT_WIDGET_APPEND ||
 	     si->m_format == FORMAT_WIDGET_AJAX )
 		sb->safePrintf("</div>");
 	
@@ -3493,7 +3547,8 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 
 	// search result spacer
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
-	     si->m_format == FORMAT_WIDGET_AJAX )
+	     si->m_format == FORMAT_WIDGET_APPEND ||
+	     si->m_format == FORMAT_WIDGET_AJAX   )
 		sb->safePrintf("<div style=line-height:%lipx;><br></div>",
 			       (long)SERP_SPACER);
 

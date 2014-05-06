@@ -576,6 +576,8 @@ class PosdbTable {
 
 	unsigned long long m_docIdHack;
 
+	bool m_hasMaxSerpScore;
+
 	// hack for seo.cpp:
 	float m_finalScore;
 	float m_preFinalScore;
@@ -795,7 +797,10 @@ class DocIdScore {
 	bool serialize   ( class SafeBuf *sb );
 
 	long long   m_docId;
-	float       m_finalScore;
+	// made this a double because of intScores which can't be captured
+	// fully with a float. intScores are used to sort by spidered time
+	// for example. see Posdb.cpp "intScore".
+	double      m_finalScore;
 	char        m_siteRank;
 	long        m_docLang; // langId
 	long        m_numRequiredTerms;
