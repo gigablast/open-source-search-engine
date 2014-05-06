@@ -803,6 +803,10 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		// no matter which of the 10 results you were
 		// viewing your view should remaing unchanged.
 		sb.safePrintf(
+
+			      // global var
+			      "var forcing;"
+
 			      "function widget123_handler_reload() {"
 			      // return if reply is not fully ready
 			      "if(this.readyState != 4 )return;"
@@ -826,6 +830,10 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "var qb=document.getElementById(\"qbox\");"
 			      "if(qb&&qb==document.activeElement)"
 			      "return;"
+
+			      // or if not forced and they scrolled down
+			      // don't jerk them back up again
+			      "if(!forcing&&sd&&sd.scrollTop!=0)return;"
 
 
 			      // just set the widget content to the reply
@@ -1072,6 +1080,10 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "u+='&prepend=';"
 			      "u+=encodeURI(qv);"
 			      "}"
+
+			      // set global var so handler knows if we were
+			      // forced or not
+			      "forcing=force;"
 
 			      // get the docid at the top of the widget
 			      // so we can get SURROUNDING search results,
