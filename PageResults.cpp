@@ -904,11 +904,13 @@ bool gotResults ( void *state ) {
 	//
 
 
+ 	long numResults = msg40->getNumResults();
+
 	// if user is doing ajax widget we need to know the current docid
 	// that is listed at the top of their widget display so we can
 	// hide the new docids above that and scroll them down slowly.
- 	long numResults = msg40->getNumResults();
-	long topDocIdPos = -1;
+	/*
+	//long topDocIdPos = -1;
 	bool hasInvisibleResults = false;
 	//long numInvisible = 0;
 	long numAbove = 0;
@@ -952,10 +954,11 @@ bool gotResults ( void *state ) {
 				continue;
 			}
 			// we match it, so set this if not already set
-			if ( topDocIdPos != -1 ) topDocIdPos = i;
+			//if ( topDocIdPos != -1 ) topDocIdPos = i;
 			//break;
 		}
 	}				
+	*/
 
 	SafeBuf *sb = &st->m_sb;
 
@@ -1000,16 +1003,16 @@ bool gotResults ( void *state ) {
 
 	// propagate "topdocid" so when he does another query every 30 secs
 	// or so we know what docid was on top for scrolling purposes
-	if ( si->m_format == FORMAT_WIDGET_AJAX )
-		sb->safePrintf("<input type=hidden "
-			       "id=topdocid name=topdocid value=%lli>\n",
-			       oldTop);
+	//if ( si->m_format == FORMAT_WIDGET_AJAX )
+	//	sb->safePrintf("<input type=hidden "
+	//		       "id=topdocid name=topdocid value=%lli>\n",
+	//		       oldTop);
 
 	// report how many results we added above the topdocid provided, if any
 	// so widget can scroll down automatically
-	if ( si->m_format == FORMAT_WIDGET_AJAX && numAbove )
-		sb->safePrintf("<input type=hidden "
-			       "id=topadd name=topadd value=%li>\n",numAbove);
+	//if ( si->m_format == FORMAT_WIDGET_AJAX && numAbove )
+	//	sb->safePrintf("<input type=hidden "
+	//		       "id=topadd name=topadd value=%li>\n",numAbove);
 	
 
 	// we often can add 100s of things to the widget's result set per 
@@ -1102,7 +1105,7 @@ bool gotResults ( void *state ) {
 
 	// if we split the serps into 2 divs for scrolling purposes
 	// then close up the 2nd one
-	if ( hasInvisibleResults ) sb->safePrintf("</div>");
+	//if ( hasInvisibleResults ) sb->safePrintf("</div>");
 
 	// END SERP DIV
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||

@@ -808,20 +808,71 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "if(!this.responseText)return;"
 			      // get the widget container
 			      "var w=document.getElementById(\"widget123\");"
+
+			      // GET DOCID of first div/searchresult
+			      "var sd=document.getElementById("
+			      "\"widget123_scrolldiv\");"
+			      "var cd;"
+			      "if ( sd ) cd=sd.firstChild;"
+			      "var fd=0;"
+			      "if(cd) fd=cd.getAttribute('docid');"
+
 			      // just set the widget content to the reply
 			      "w.innerHTML=this.responseText;"
+
+			      //
+			      // find that SAME docid in response and see
+			      // how many new results were added above it
+			      //
+			      "var added=0;"
+			      // did we find the docid?
+			      "var found=0;"
+			      // get div again since we updated innerHTML
+			      "sd=document.getElementById("
+			      "\"widget123_scrolldiv\");"
+			      // scan the kids
+			      "var kid=sd.firstChild;"
+			      // begin the while loop to scan the kids
+			      "while (kid) {"
+			      // if div had no docid it might have been a line
+			      // break div, so ignore
+			      "if (!kid.hasAttribute('docid') ) {"
+			      "kid=kid.nextSibling;"
+			      "continue;"
+			      "}"
+			      // set kd to docid of kid
+			      "var kd=kid.getAttribute('docid');"
+			      // stop if we hit our original top docid
+			      "if(kd==fd) {found=1;break;}"
+			      // otherwise count it as a NEW result we got
+			      "added++;"
+			      // advance kid
+			      "kid=kid.nextSibling;"
+			      // end while loop
+			      "}"
+
+			      //"alert(\"added=\"+added);"
+
 			      // how many results did we ADD above the
 			      // reported "topdocid" of the widget?
 			      // it should be in the ajax reply from the
 			      // search engine. how many result were above
 			      // the given "topdocid".
-			      "var ta=document.getElementById(\"topadd\");"
-			      "var added=0;"
-			      "if(ta)added=ta.value;"
+			      //"var ta=document.getElementById(\"topadd\");"
+			      //"var added=0;"
+			      //"if(ta)added=ta.value;"
+
+			      // if nothing added do nothing
+			      "if (added==0)return;"
+
+			      // if original top docid not found, i guess we
+			      // added too many new guys to the top of the
+			      // search results, so don't bother scrolling
+			      // just reset to top
+			      "if (!found) return;"
 
 			      // show that
 			      //"alert(this.responseText);"
-			      "alert(\"added=\"+added);"
 
 			      // get the div that has the scrollbar
 			      "var sd=document.getElementById("
@@ -873,7 +924,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      // so it delays on each new result. perhaps make
 			      // it less than 1000ms if we have a lot of 
 			      // results above us!
-			      "setTimeout('widget123_scroll()',30000);}\n\n"
+			      "setTimeout('widget123_scroll()',3);}\n\n"
 
 			      );
 
@@ -887,6 +938,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "outstanding=0;"
 			      // if error or empty reply then do nothing
 			      "if(!this.responseText)return;"
+			      // if too small
+			      "if(this.responseText.length<=3)return;"
 			      // get the widget container
 			      "var w=document.getElementById("
 			      "\"widget123_scrolldiv\");"
@@ -910,8 +963,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "&q=gbsortbyint%%3Agbspiderdate"
 			      "&sc=0" // no site clustering
 			      "&dr=0" // no deduping
-			      // test dbug for now:
-			      "&n=4"
+			      // 10 results at a time
+			      "&n=10"
 			      "&widgetheight=%li"
 			      "&widgetwidth=%li"
 			      , cr->m_coll
@@ -976,7 +1029,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "var td=document.getElementById('topdocid');"
 			      "if ( td ) u=u+\"&topdocid=\"+td.value;"
 
-			      "alert('reloading');"
+			      //"alert('reloading');"
+
 			      "client.open('GET',u);"
 			      "client.send();"
 			      "}\n\n"
@@ -1047,7 +1101,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      // turn on the lock to prevent excessive calls
 			      "outstanding=1;"
 
-			      "alert(\"scrolling2 u=\"+u);"
+			      //"alert(\"scrolling2 u=\"+u);"
 
 			      "var client=new XMLHttpRequest();"
 			      "client.onreadystatechange="

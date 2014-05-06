@@ -992,11 +992,11 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	if(m_firstResultNum < 0) m_firstResultNum = 0;
 
 	// DEBUG: temp hack
-	//static bool first = true;
-	// if ( first ) { 
-	// 	first = false;
-	// 	m_firstResultNum = 5;
-	// }
+	// static bool first = true;
+	//  if ( first ) { 
+	//  	first = false;
+	//  	m_firstResultNum = 10;
+	//  }
 
 
 	// if useCache is -1 then pick a default value
