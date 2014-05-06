@@ -959,8 +959,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		ub.safePrintf("/search"
 			      //"format=ajax"
 			      "?c=%s"
-			      //"&n=50"
-			      "&prepend=gbsortbyint%%3Agbspiderdate"
+			      //"&prepend=gbsortbyint%%3Agbspiderdate"
+			      "&q=gbsortbyint%%3Agbspiderdate"
 			      "&sc=0" // no site clustering
 			      "&dr=0" // no deduping
 			      // 10 results at a time
@@ -1042,7 +1042,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "var qv;"
 			      "if (qb) qv=qb.value;"
 			      "if (qv){"
-			      "u+='&q=';"
+			      //"u+='&q=';"
+			      "u+='&prepend=';"
 			      "u+=encodeURI(qv);"
 			      "}"
 
@@ -1133,7 +1134,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "var qv;"
 			      "if (qb) qv=qb.value;"
 			      "if (qv){"
-			      "u+='&q=';"
+			      //"u+='&q=';"
+			      "u+='&prepend=';"
 			      "u+=encodeURI(qv);"
 			      "}"
 

@@ -515,6 +515,9 @@ bool Images::downloadImages () {
 	// . make a thumbnail of that one
 	for (  ; m_j < m_numImages ; m_j++ , m_phase = 0 ) {
 
+		// clear error
+		g_errno = 0;
+
 		if ( m_phase == 0 ) {
 			// advance
 			m_phase++;
@@ -561,7 +564,7 @@ bool Images::downloadImages () {
 		if ( m_phase == 3 ) {
 			// advance
 			m_phase++;
-			// download image data
+			// call pnmscale etc. to make thumbnail
 			if ( ! makeThumb() ) return false;
 			// error downloading?
 			if ( g_errno ) continue;
@@ -930,9 +933,9 @@ void Images::thumbStart_r ( bool amThread ) {
 		       break;
         } 
 
-	long xysize = 100;
+	long xysize = 250;//100;
 	// make thumbnail a little bigger for diffbot for widget
-	if ( m_xd->m_isDiffbotJSONObject ) xysize = 200;
+	if ( m_xd->m_isDiffbotJSONObject ) xysize = 250;
 
 	// i hope 2500 is big enough!
 	char  cmd[2501];

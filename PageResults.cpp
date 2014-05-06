@@ -1239,7 +1239,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "src=\"http://etc-mysitemyway.s3.amazonaws.com/icons/legacy-previews/icons/simple-black-square-icons-business/126715-simple-black-square-icon-business-magnifying-glass-ps.png\">"
 			       );
 
-		char *origq = hr->getString("q");
+		//char *origq = hr->getString("q");
+		// we sort all results by spider date now so PREPEND
+		// the actual user query 
+		char *origq = hr->getString("prepend");
 		if ( ! origq ) origq = "";
 		sb->safePrintf("<div id=sbox style=float:left;display:%s;>"
 			       // the box that holds the query
