@@ -6,6 +6,9 @@
 #include "Spider.h"
 #include "PageResults.h" // for RESULT_HEIGHT
 
+// 5 seconds
+#define DEFAULT_WIDGET_RELOAD 1000
+
 //bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) ;
 
 ///////////
@@ -817,6 +820,14 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "var fd=0;"
 			      "if(cd) fd=cd.getAttribute('docid');"
 
+
+			      // if the searchbox has the focus then do not
+			      // update the content just yet...
+			      "var qb=document.getElementById(\"qbox\");"
+			      "if(qb&&qb==document.activeElement)"
+			      "return;"
+
+
 			      // just set the widget content to the reply
 			      "w.innerHTML=this.responseText;"
 
@@ -1006,7 +1017,23 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      // we call this (see PageResults.cpp) so that
 			      // we do not register multiple timeouts
 			      "if ( ! force ) "
-			      "setTimeout('widget123_reload(0)',15000);"
+			      "setTimeout('widget123_reload(0)',%li);"
+
+			      // get the query box
+			      "var qb=document.getElementById(\"qbox\");"
+
+			      // if forced then turn off focus for searchbox
+			      // since it was either 1) the initial call
+			      // or 2) someone submitted a query and
+			      // we got called from PageResults.cpp
+			      // onsubmit event.
+			      "if (force&&qb) qb.blur();"
+
+
+			      // if the searchbox has the focus then do not
+			      // reload!! unless force is true..
+			      "if(qb&&qb==document.activeElement&&!force)"
+			      "return;"
 
 			      //"var ee=document.getElementById(\"sbox\");"
 			      //"if (ee)alert('reloading '+ee.style.display);"
@@ -1038,7 +1065,6 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "var u='%s&format=ajax';"
 
 			      // append our query from query box if there
-			      "var qb=document.getElementById(\"qbox\");"
 			      "var qv;"
 			      "if (qb) qv=qb.value;"
 			      "if (qv){"
@@ -1067,10 +1093,12 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      // not initiated on that call since we had to
 			      // set force=1 to load in case the query box
 			      // was currently visible.
-			      "setTimeout('widget123_reload(0)',15000);"
+			      "setTimeout('widget123_reload(0)',%li);"
 
 			      //, widgetHeight
+			      , (long)DEFAULT_WIDGET_RELOAD
 			      , ub.getBufStart()
+			      , (long)DEFAULT_WIDGET_RELOAD
 			      );
 
 		//

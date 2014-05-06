@@ -1229,6 +1229,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "var e=document.getElementById('sbox');"
 			       "if(e.style.display == 'none') {"
 			       "e.style.display = '';"
+			       // give it focus
+			       "var qb=document.getElementById('qbox');"
+			       "qb.focus();"
 			       "} else {"
 			       "e.style.display = 'none';"
 			       "}"
