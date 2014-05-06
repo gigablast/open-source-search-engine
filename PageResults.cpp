@@ -1211,6 +1211,15 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf("<form "//method=get action=/search "
 			       // use "1" as arg to force reload
 			       "onsubmit=\"widget123_reload(1);"
+
+			       // let user know we are loading
+			       "var w=document.getElementById("
+			       "'widget123_scrolldiv');"
+			       // just set the widget content to the reply
+			       "if (w) "
+			       "w.innerHTML='<br><br><b>Loading Results..."
+			       "</b>';"
+
 			       // prevent it from actually submitting
 			       "return false;\">");
 
@@ -1247,12 +1256,18 @@ bool printSearchResultsHeader ( State0 *st ) {
 		// the actual user query 
 		char *origq = hr->getString("prepend");
 		if ( ! origq ) origq = "";
-		sb->safePrintf("<div id=sbox style=float:left;display:%s;>"
+		sb->safePrintf("<div id=sbox style=\"float:left;"
+			       "display:%s;"
+			       "opacity:0.9;"
+			       //"background-color:gray;"
+			       //"padding:5px;"
+			       "\">"
 			       // the box that holds the query
 			       "<input type=text id=qbox name=qbox "
 			       "size=%li " //name=prepend "
 			       "value=\"%s\"  "
 			       "style=\"z-index:10;"
+			       "border-width:4px;"
 			       "margin:3px;"
 			       "\">"
 			       , displayStr
