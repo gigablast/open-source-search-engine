@@ -960,7 +960,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      //"format=ajax"
 			      "?c=%s"
 			      //"&n=50"
-			      "&q=gbsortbyint%%3Agbspiderdate"
+			      "&prepend=gbsortbyint%%3Agbspiderdate"
 			      "&sc=0" // no site clustering
 			      "&dr=0" // no deduping
 			      // 10 results at a time
@@ -999,16 +999,30 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		// get the search results from neo as soon as this div is
 		// being rendered, and set its contents to them
 		sb.safePrintf("<script type=text/javascript>"
-			      "function widget123_reload() {"
-			      
-			      "setTimeout('widget123_reload()',15000);"
+			      "function widget123_reload(force) {"
+			 
+			      // when the user submits a new query in the
+			      // query box we set force to false when
+			      // we call this (see PageResults.cpp) so that
+			      // we do not register multiple timeouts
+			      "if ( ! force ) "
+			      "setTimeout('widget123_reload(0)',15000);"
+
+			      //"var ee=document.getElementById(\"sbox\");"
+			      //"if (ee)alert('reloading '+ee.style.display);"
+
+			      // do not do timer reload if searchbox is
+			      // visible because we do not want to interrupt
+			      // a possible search
+			      //"if(!force&&ee && ee.style.display=='')return;"
+
 
 			      // do not bother timed reloading if scrollbar pos
 			      // not at top or near bottom
 			      "var sd=document.getElementById("
 			      "\"widget123_scrolldiv\");"
 
-			      "if ( sd ) {"
+			      "if ( sd && !force ) {"
 			      "var pos=parseInt(sd.scrollTop);"
 			      "if (pos!=0) return;"
 			      "}"
@@ -1022,12 +1036,22 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      // . get them in "ajax" format so we can embed
 			      //   them into the base html as a widget
 			      "var u='%s&format=ajax';"
+
+			      // append our query from query box if there
+			      "var qb=document.getElementById(\"qbox\");"
+			      "var qv;"
+			      "if (qb) qv=qb.value;"
+			      "if (qv){"
+			      "u+='&q=';"
+			      "u+=encodeURI(qv);"
+			      "}"
+
 			      // get the docid at the top of the widget
 			      // so we can get SURROUNDING search results,
 			      // like 10 before it and 10 after it for
 			      // our infinite scrolling
-			      "var td=document.getElementById('topdocid');"
-			      "if ( td ) u=u+\"&topdocid=\"+td.value;"
+			      //"var td=document.getElementById('topdocid');"
+			      //"if ( td ) u=u+\"&topdocid=\"+td.value;"
 
 			      //"alert('reloading');"
 
@@ -1036,7 +1060,13 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "}\n\n"
 
 			      // when page loads, populate the widget immed.
-			      "widget123_reload();\n\n"
+			      "widget123_reload(1);\n\n"
+
+			      // initiate the timer loop since it was
+			      // not initiated on that call since we had to
+			      // set force=1 to load in case the query box
+			      // was currently visible.
+			      "setTimeout('widget123_reload(0)',15000);"
 
 			      //, widgetHeight
 			      , ub.getBufStart()
@@ -1097,6 +1127,16 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      // get docid/score
 			      "u=u+\"&maxserpscore=\"+d.getAttribute('score');"
 			      "u=u+\"&minserpdocid=\"+d.getAttribute('docid');"
+
+			      // append our query from query box if there
+			      "var qb=document.getElementById(\"qbox\");"
+			      "var qv;"
+			      "if (qb) qv=qb.value;"
+			      "if (qv){"
+			      "u+='&q=';"
+			      "u+=encodeURI(qv);"
+			      "}"
+
 
 			      // turn on the lock to prevent excessive calls
 			      "outstanding=1;"

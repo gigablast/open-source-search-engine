@@ -1199,14 +1199,20 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "z-index:10;"
 			       "top:0px;\">");
 
-		long refresh = hr->getLong("refresh",15);
+		//long refresh = hr->getLong("refresh",15);
 		char *oq = hr->getString("q",NULL);
 		if ( ! oq ) oq = "";
 		char *prepend = hr->getString("prepend");
 		if ( ! prepend ) prepend = "";
 		char *displayStr = "none";
 		if ( prepend && prepend[0] ) displayStr = "";
-		sb->safePrintf("<form method=get action=/search>");
+		// to do a search we need to re-call the ajax,
+		// just call reload like the one that is called every 15s or so
+		sb->safePrintf("<form "//method=get action=/search "
+			       // use "1" as arg to force reload
+			       "onsubmit=\"widget123_reload(1);"
+			       // prevent it from actually submitting
+			       "return false;\">");
 
 		sb->safePrintf("<img "
 			       "style=\""
@@ -1233,26 +1239,22 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "src=\"http://etc-mysitemyway.s3.amazonaws.com/icons/legacy-previews/icons/simple-black-square-icons-business/126715-simple-black-square-icon-business-magnifying-glass-ps.png\">"
 			       );
 
+		char *origq = hr->getString("q");
+		if ( ! origq ) origq = "";
 		sb->safePrintf("<div id=sbox style=float:left;display:%s;>"
-			       "<input type=text name=prepend size=%li "
-			       "value=\"%s\"  style=\"z-index:10;"
+			       // the box that holds the query
+			       "<input type=text id=qbox name=qbox "
+			       "size=%li " //name=prepend "
+			       "value=\"%s\"  "
+			       "style=\"z-index:10;"
 			       "margin:3px;"
 			       "\">"
-			       // hidden parms like collection
-			       "<input name=c type=hidden value=\"%s\">"
-			       "<input name=format type=hidden value=widget>"
-			       "<input name=widgetwidth type=hidden value=%li>"
-			       "<input name=refresh type=hidden value=%li>"
-			       "<input name=q type=hidden value=\"%s\">"
-			       "</div>"
-			       "</form>\n"
 			       , displayStr
 			       , widgetwidth / 15 
-			       , prepend
-			       , coll
-			       , widgetwidth
-			       , refresh
-			       , oq
+			       , origq
+			       );
+		sb->safePrintf("</div>"
+			       "</form>\n"
 			       );
 
 		// . BEGIN SERP DIV
