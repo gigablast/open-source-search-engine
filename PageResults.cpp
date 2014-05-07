@@ -1267,7 +1267,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "size=%li " //name=prepend "
 			       "value=\"%s\"  "
 			       "style=\"z-index:10;"
-			       "border-width:4px;"
+			       "font-weight:bold;"
+			       "border:4px solid black;"
 			       "margin:3px;"
 			       "\">"
 			       , displayStr

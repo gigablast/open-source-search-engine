@@ -777,9 +777,11 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// table to split between widget and stats in left and right panes
 	if ( fmt == FORMAT_HTML ) {
-		sb.safePrintf("<TABLE>"
+		sb.safePrintf("<TABLE id=pane>"
 			      "<TR><TD valign=top>");
 	}
+
+	long savedLen1, savedLen2;
 
 	//
 	// widget
@@ -792,6 +794,10 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	// the scrollbar position will change.
 	//
 	if ( fmt == FORMAT_HTML ) {
+
+		// save position so we can output the widget code
+		// so user can embed it into their own web page
+		savedLen1 = sb.length();
 		
 		sb.safePrintf("<script type=\"text/javascript\">\n\n");
 
@@ -968,7 +974,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      );
 
 
-		sb.safePrintf ( "</script>\n\n" );
+		//sb.safePrintf ( "</script>\n\n" );
 
 		long widgetWidth = 300;
 		long widgetHeight = 500;
@@ -993,31 +999,10 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		//ub.safePrintf("&topdocid="
 		//	      );
 
-
-		// then the WIDGET MASTER div. set the "id" so that the
-		// style tag the user sets can control its appearance.
-		// when the browser loads this the ajax sets the contents
-		// to the reply from neo.
-
-		// on scroll call widget123_append() which will append
-		// more search results if we are near the bottom of the
-		// widget.
-		
-		sb.safePrintf("<div id=widget123 "
-			      "style=\"border:2px solid black;"
-			      "position:relative;border-radius:10px;"
-			      "width:%lipx;height:%lipx;\">"
-			      , widgetWidth
-			      , widgetHeight
-			      );
-
-		//sb.safePrintf("<style>"
-		//	      "a{color:white;}"
-		//	      "</style>");
-
 		// get the search results from neo as soon as this div is
 		// being rendered, and set its contents to them
-		sb.safePrintf("<script type=text/javascript>"
+		sb.safePrintf(//"<script type=text/javascript>"
+
 			      "function widget123_reload(force) {"
 			 
 			      // when the user submits a new query in the
@@ -1204,8 +1189,30 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 
 			      , ub.getBufStart()
 
-			      //, widgetHeight +5*((long)RESULT_HEIGHT+2*PADDING)
+			      //,widgetHeight +5*((long)RESULT_HEIGHT+2*PADDING
 			      );
+
+
+		// then the WIDGET MASTER div. set the "id" so that the
+		// style tag the user sets can control its appearance.
+		// when the browser loads this the ajax sets the contents
+		// to the reply from neo.
+
+		// on scroll call widget123_append() which will append
+		// more search results if we are near the bottom of the
+		// widget.
+
+		sb.safePrintf("<div id=widget123 "
+			      "style=\"border:2px solid black;"
+			      "position:relative;border-radius:10px;"
+			      "width:%lipx;height:%lipx;\">"
+			      , widgetWidth
+			      , widgetHeight
+			      );
+
+		//sb.safePrintf("<style>"
+		//	      "a{color:white;}"
+		//	      "</style>");
 
 
 		sb.safePrintf("Waiting for Server...");
@@ -1213,6 +1220,9 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 
 		// end the containing div
 		sb.safePrintf("</div>");
+
+		savedLen2 = sb.length();
+
 	}
 
 	// the right table pane is the crawl stats
@@ -1246,10 +1256,10 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider )
 			hurts = "Yes";
 
-		sb.safePrintf("<TABLE border=0>"
-			      "<TR><TD valign=top>"
+		sb.safePrintf(//"<TABLE border=0>"
+			      //"<TR><TD valign=top>"
 
-			      "<table border=0 cellpadding=5>"
+			      "<table id=stats border=0 cellpadding=5>"
 
 			      "<tr>"
 			      "<td><b>Crawl Status Code:</td>"
@@ -1327,8 +1337,64 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// end the right table pane
 	if ( fmt == FORMAT_HTML ) {
-		sb.safePrintf("</TD></TR</TABLE>");
+		sb.safePrintf("</TD></TR>");
 	}
+
+	if ( fmt == FORMAT_HTML ) {
+
+		sb.safePrintf("<TR><TD colspan=2>");
+
+		// print link to embed the code in their own site
+		SafeBuf embed;
+		embed.htmlEncode(sb.getBufStart()+savedLen1,
+				 savedLen2-savedLen1,
+				 false); // encodePoundSign #?
+		// convert all ''s to "'s for php's echo ''; cmd
+		embed.replaceChar('\'','\"');
+
+		sb.safePrintf("<br><br>"
+			      "<a onclick=\""
+			      "var dd=document.getElementById('hcode');"
+			      "if ( dd.style.display=='none' ) "
+			      "dd.style.display=''; "
+			      "else "
+			      "dd.style.display='none';"
+			      "\" style=color:blue;>"
+			      "<u>"
+			      "show Widget HTML code"
+			      "</u>"
+			      "</a>"
+			      "<div id=hcode style=display:none;"
+			      "max-width:800px;>"
+			      "%s"
+			      "</div>"
+			      "<br>\n\n"
+			      , embed.getBufStart() );
+
+		sb.safePrintf("<br>"
+			      "<a onclick=\""
+			      "var dd=document.getElementById('pcode');"
+			      "if ( dd.style.display=='none' ) "
+			      "dd.style.display=''; "
+			      "else "
+			      "dd.style.display='none';"
+			      "\" style=color:blue;>"
+			      "<u>"
+			      "show Widget PHP code"
+			      "</u>"
+			      "</a>"
+			      "<div id=pcode style=display:none;"
+			      "max-width:800px;>"
+			      "<i>"
+			      "echo '"
+			      "%s"
+			      "';"
+			      "</i>"
+			      "</div>"
+			      "<br>\n\n"
+			      , embed.getBufStart() );
+	}
+
 
 	//if ( fmt != FORMAT_JSON )
 	//	// wrap up the form, print a submit button
