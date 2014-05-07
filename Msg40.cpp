@@ -5426,6 +5426,10 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 			if ( ! ji->getCompoundName ( tmpBuf ) )
 				return false;
 
+			// skip the "html" column, strip that out now
+			if ( strcmp(tmpBuf.getBufStart(),"html") == 0 )
+				continue;
+
 			// is it new?
 			long long h64 = hash64n ( tmpBuf.getBufStart() );
 			if ( nameTable.isInTable ( &h64 ) ) continue;
@@ -5557,6 +5561,9 @@ bool Msg40::printJsonItemInCSV ( State0 *st , long ix ) {
 
 		// is it new?
 		long long h64 = hash64n ( tmpBuf.getBufStart() );
+
+		// ignore the "html" column
+		if ( strcmp(tmpBuf.getBufStart(),"html") == 0 ) continue;
 
 		long slot = columnTable->getSlot ( &h64 ) ;
 		// MUST be in there

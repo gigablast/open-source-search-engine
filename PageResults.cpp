@@ -1258,7 +1258,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		if ( ! origq ) origq = "";
 		sb->safePrintf("<div id=sbox style=\"float:left;"
 			       "display:%s;"
-			       "opacity:0.9;"
+			       "opacity:0.83;"
 			       //"background-color:gray;"
 			       //"padding:5px;"
 			       "\">"
@@ -1268,11 +1268,12 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "value=\"%s\"  "
 			       "style=\"z-index:10;"
 			       "font-weight:bold;"
+			       "font-size:18px;"
 			       "border:4px solid black;"
 			       "margin:3px;"
 			       "\">"
 			       , displayStr
-			       , widgetwidth / 15 
+			       , widgetwidth / 23 
 			       , origq
 			       );
 		sb->safePrintf("</div>"
@@ -1557,7 +1558,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 	else if ( numResults == 0 && 
 		  ( si->m_format == FORMAT_WIDGET_IFRAME ||
 		    si->m_format == FORMAT_WIDGET_AJAX ) ) {
-		sb->safePrintf ( "No results found.");
+		sb->safePrintf ( "No results found. Wait for spider to "
+				 "kick in.");
 	}
 	else if ( moreFollow && si->m_format == FORMAT_HTML ) {
 		if ( isAdmin && si->m_docsToScanForReranking > 1 )
@@ -6030,6 +6032,9 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 	return true;
 }
 
+/*
+
+  RIP: OLD IFRAME WIDGET CODE HACK
 
 bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 	//
@@ -6304,23 +6309,21 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 			"</td>"
 			"<td>"
 			// begin div with source in it
-			/*
-			 "<div "
-			//"class=grad3 "
-			"style=\""
-			"border-radius:10px;"
-			"box-shadow: 6px 6px 3px %s;"
-			"border:2px solid black;"
-			"padding:15px;"
-			 "width:600px;"
-			//"background-image:url('/ss.jpg');"
-			//"background-repeat:repeat;"
-			//"background-attachment:fixed;"
-			 "background-color:lightgray;"
-			"\">"
-			, SHADOWCOLOR
-			//"<br>"
-			*/
+			//  "<div "
+			// //"class=grad3 "
+			// "style=\""
+			// "border-radius:10px;"
+			// "box-shadow: 6px 6px 3px %s;"
+			// "border:2px solid black;"
+			// "padding:15px;"
+			//  "width:600px;"
+			// //"background-image:url('/ss.jpg');"
+			// //"background-repeat:repeat;"
+			// //"background-attachment:fixed;"
+			//  "background-color:lightgray;"
+			// "\">"
+			// , SHADOWCOLOR
+			// //"<br>"
 			);
 
 	// space widget to the right using this table
@@ -6348,35 +6351,32 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 
 	// this iframe contains the WIDGET
 	sb->safePrintf (
-		       /*
-		       "<div "
-		       "id=scrollerxyz "
-		       "style=\""
+		       // "<div "
+		       // "id=scrollerxyz "
+		       // "style=\""
 		       //"width:%lipx;" // 200;"
 		       //"height:%lipx;" // 400;"
 		       //"overflow:hidden;"
-		       "padding:0px;"
-		       "margin:0px;"
-		       "background-color:white;"
+		       // "padding:0px;"
+		       // "margin:0px;"
+		       // "background-color:white;"
 		       //"padding-left:7px;"
-		       "%s"
+		       //"%s"
 		       //"background-color:%s;"//lightblue;"
 		       //"foreground-color:%s;"
 		       //"overflow:scroll;"
 		       //"overflow-scrolling:touch;"
 		       "\">"
-		       */
 
 			"<iframe width=\"%lipx\" height=\"%lipx\" "
 			//"scrolling=yes "
-			/*
-			"style=\"background-color:white;"
-			"padding-right:0px;"
+
+			//"style=\"background-color:white;"
+			//"padding-right:0px;"
 			//"%s\" "
-			"scrolling=no "
-			"frameborder=no "
+			//"scrolling=no "
+			//"frameborder=no "
 			//"src=\"http://neo.diffbot.com:8000/search?"
-			*/
 
 			// frameborder=no
 			"%s"
@@ -6580,3 +6580,4 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 					    NULL, // cookie
 					    "UTF-8"); // charset
 }
+*/
