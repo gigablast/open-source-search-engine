@@ -1994,6 +1994,42 @@ bool printSearchResultsTail ( State0 *st ) {
 	// carry over the sites we are restricting the search results to
 	if ( si->m_whiteListBuf.length() )
 		args.safePrintf("&sites=%s",si->m_whiteListBuf.getBufStart());
+
+	// get wordpressid supplied with all widget requests
+	char *wpid = hr->getString("wpid");
+
+	//
+	// DO WE NEED TO ALTER cr->m_siteListBuf for a widget?
+	//
+	// when a wordpress user changes the "Websites to Include" for
+	// her widget, it should send a /search?sites=xyz.com&wpid=xxx
+	// request here... 
+	// so we need to remove her old sites and add in her new ones.
+	// 
+	// we have to add set &spidersites=1 which all widgets should do
+	if ( wpid ) {
+		// this returns NULL if cr->m_siteListBuf would be unchanged
+		// because we already have the whiteListBuf sites in there
+		// for this wordPressId (wpid)
+		SafeBuf newSiteListBuf;
+		makeNewSiteList( &si->m_whiteListBuf,
+				 cr->m_siteListBuf ,
+				 wpid ,
+				 &newSiteListBuf);
+		// . update the list of sites to crawl/search & show in widget
+		// . if they give an empty list then allow that, stops crawling
+		SafeBuf parmList;
+		g_parms.addNewParmToList1 ( &parmList,
+					    cr->m_collnum,
+					    newSiteListBuf,
+					    0,
+					    "sitelist");
+		// send the parms to all hosts in the network
+		g_parms.broadcastParmList ( &parmList , 
+					    NULL,//s,// state is socket i guess
+					    NULL);//doneBroadcastingParms2 );
+	}
+
 	
 
 	if ( firstNum > 0 && 

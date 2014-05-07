@@ -72,12 +72,18 @@ public:
 
 // . Collectiondb.cpp calls this when any parm flagged with 
 //   PF_REBUILDURLFILTERS is updated
+// . it only adds sites via msg4 that are in "siteListArg" but NOT in the
+//   current CollectionRec::m_siteListBuf
+// . updates SpiderColl::m_siteListDomTable to see what doms we can spider
+// . updates SpiderColl::m_negSubstringBuf and m_posSubStringBuf to
+//   see what substrings in urls are disallowed/allowable for spidering
 // . this returns false if it blocks
 // . returns true and sets g_errno on error
-// . uses msg4 to add seeds to spiderdb if necessary
+// . uses msg4 to add seeds to spiderdb if necessary if "siteListArg"
+//   has new urls that are not currently in cr->m_siteListBuf
 // . only adds seeds for the shard we are on iff we are responsible for
-//   the fake firstip!!!
-bool updateSiteListTables ( collnum_t collnum , 
+//   the fake firstip!!! that way only one shard does the add.
+bool updateSiteListBuf ( collnum_t collnum , 
 			    bool addSeeds ,
 			    char *siteListArg ) {
 
@@ -406,7 +412,7 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 	// need to build dom table for pattern matching?
 	if ( dt->getNumSlotsUsed() == 0 && cr ) {
 		// do not add seeds, just make siteListDomTable, etc.
-		updateSiteListTables ( sc->m_collnum , 
+		updateSiteListBuf ( sc->m_collnum , 
 				       false , // add seeds?
 				       cr->m_siteListBuf.getBufStart() );
 	}

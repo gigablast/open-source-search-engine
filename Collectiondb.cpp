@@ -2389,7 +2389,6 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 }
 
 bool expandRegExShortcuts ( SafeBuf *sb ) ;
-//bool updateSiteListTables(collnum_t collnum,bool addSeeds,char *siteListArg);
 void nukeDoledb ( collnum_t collnum );
 
 // . anytime the url filters are updated, this function is called

@@ -124,7 +124,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) ;
 
 
 // from PageBasic.cpp:
-bool updateSiteListTables(collnum_t collnum,bool addSeeds,char *siteListArg);
+bool updateSiteListBuf(collnum_t collnum,bool addSeeds,char *siteListArg);
 
 bool CommandUpdateSiteList ( char *rec ) {
 	// caller must specify collnum
@@ -145,11 +145,12 @@ bool CommandUpdateSiteList ( char *rec ) {
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	// get the sitelist
 	char *data = getDataFromParmRec ( rec );
-	// update it
-	updateSiteListTables ( collnum ,
-			       true , // add NEW seeds?
-			       data // entire sitelist
-			       );
+	// update the table that maps site to whether we should spider it
+	// and also add newly introduced sites in "data" into spiderdb.
+	updateSiteListBuf ( collnum ,
+			    true , // add NEW seeds?
+			    data // entire sitelist
+			    );
 	// now that we deduped the old site list with the new one for
 	// purposes of adding NEW seeds, we can do the final copy
 	cr->m_siteListBuf.set ( data );
@@ -445,7 +446,7 @@ bool CommandRestartColl ( char *rec , WaitEntry *we ) {
 	// re-add the buf so it re-seeds spiderdb. it will not dedup these
 	// urls in "oldSiteList" with "m_siteListBuf" which is now empty.
 	// "true" = addSeeds.
-	updateSiteListTables ( newCollnum , true , oldSiteList );
+	updateSiteListBuf ( newCollnum , true , oldSiteList );
 	// now put it back
 	if ( oldSiteList ) cr->m_siteListBuf.safeStrcpy ( oldSiteList );
 
@@ -501,7 +502,7 @@ bool CommandResetColl ( char *rec , WaitEntry *we ) {
 	// re-add the buf so it re-seeds spiderdb. it will not dedup these
 	// urls in "oldSiteList" with "m_siteListBuf" which is now empty.
 	// "true" = addSeeds.
-	updateSiteListTables ( newCollnum , true , oldSiteList );
+	updateSiteListBuf ( newCollnum , true , oldSiteList );
 	// now put it back
 	if ( oldSiteList ) cr->m_siteListBuf.safeStrcpy ( oldSiteList );
 
