@@ -1280,6 +1280,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       //"position:absolute;" // absolute or relative?
 			       // put it on TOP of the other stuff
 			       "z-index:10;"
+			       "margin-top:3px;"
 			       //"right:10px;"
 			       //"right:2px;"
 			       //"width:%lipx;"
@@ -1298,8 +1299,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "}"
 			       "\" " // end function
 			       " "
-			       "width=39 "
-			       "height=35 "
+			       "width=35 "
+			       "height=31 "
 			       "src=\"/magglass.png\">"
 			       );
 
