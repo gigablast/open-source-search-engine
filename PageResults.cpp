@@ -1246,9 +1246,9 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "}"
 			       "\" " // end function
 			       " "
-			       "width=25 "
-			       "height=25 "
-			       "src=\"http://etc-mysitemyway.s3.amazonaws.com/icons/legacy-previews/icons/simple-black-square-icons-business/126715-simple-black-square-icon-business-magnifying-glass-ps.png\">"
+			       "width=39 "
+			       "height=35 "
+			       "src=\"/magglass.png\">"
 			       );
 
 		//char *origq = hr->getString("q");

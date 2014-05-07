@@ -1289,8 +1289,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      //"</tr>"
 
 			      "<tr>"
-			      "<td><b>URLs Harvested</b> "
-			      "(may include dups)</td>"
+			      "<td><b><nobr>URLs Harvested</b> "
+			      "(may include dups)</nobr></td>"
 			      "<td>%lli</td>"
      
 			      "</tr>"
@@ -1331,19 +1331,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "<td>%s (local time)</td></tr>",tmp3);
 
 
-		sb.safePrintf("</table>\n\n");
 
-	}
-
-	// end the right table pane
-	if ( fmt == FORMAT_HTML ) {
-		sb.safePrintf("</TD></TR>");
-	}
-
-	if ( fmt == FORMAT_HTML ) {
-
-		sb.safePrintf("<TR><TD colspan=2>");
-
+		
 		// print link to embed the code in their own site
 		SafeBuf embed;
 		embed.htmlEncode(sb.getBufStart()+savedLen1,
@@ -1352,7 +1341,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 		// convert all ''s to "'s for php's echo ''; cmd
 		embed.replaceChar('\'','\"');
 
-		sb.safePrintf("<br><br>"
+		sb.safePrintf("<tr>"
+			      "<td valign=top>"
 			      "<a onclick=\""
 			      "var dd=document.getElementById('hcode');"
 			      "if ( dd.style.display=='none' ) "
@@ -1364,14 +1354,16 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "show Widget HTML code"
 			      "</u>"
 			      "</a>"
+			      "</td><td>"
 			      "<div id=hcode style=display:none;"
 			      "max-width:800px;>"
 			      "%s"
 			      "</div>"
-			      "<br>\n\n"
+			      "</td></tr>"
 			      , embed.getBufStart() );
 
-		sb.safePrintf("<br>"
+		sb.safePrintf("<tr>"
+			      "<td valign=top>"
 			      "<a onclick=\""
 			      "var dd=document.getElementById('pcode');"
 			      "if ( dd.style.display=='none' ) "
@@ -1383,6 +1375,8 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "show Widget PHP code"
 			      "</u>"
 			      "</a>"
+			      "</td>"
+			      "<td>"
 			      "<div id=pcode style=display:none;"
 			      "max-width:800px;>"
 			      "<i>"
@@ -1391,8 +1385,17 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      "';"
 			      "</i>"
 			      "</div>"
-			      "<br>\n\n"
+			      "</td></tr>"
 			      , embed.getBufStart() );
+
+
+		sb.safePrintf("</table>\n\n");
+
+	}
+
+	// end the right table pane
+	if ( fmt == FORMAT_HTML ) {
+		sb.safePrintf("</TD></TR></TABLE>");
 	}
 
 
