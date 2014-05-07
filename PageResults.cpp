@@ -250,6 +250,58 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	//long searchingDmoz = hr->getLong("dmoz",0);
 
 	//
+	// DO WE NEED TO ALTER cr->m_siteListBuf for a widget?
+	//
+	// when a wordpress user changes the "Websites to Include" for
+	// her widget, it should send a /search?sites=xyz.com&wpid=xxx
+	// request here... 
+	// so we need to remove her old sites and add in her new ones.
+	// 
+	/*
+	  
+	  MDW TURN BACK ON IN A DAY. do indexing or err pages first.
+
+	// get wordpressid supplied with all widget requests
+	char *wpid = hr->getString("wpid");
+	// we have to add set &spidersites=1 which all widgets should do
+	if ( wpid ) {
+		// this returns NULL if cr->m_siteListBuf would be unchanged
+		// because we already have the whiteListBuf sites in there
+		// for this wordPressId (wpid)
+		SafeBuf newSiteListBuf;
+		makeNewSiteList( &si->m_whiteListBuf,
+				 cr->m_siteListBuf ,
+				 wpid ,
+				 &newSiteListBuf);
+		// . update the list of sites to crawl/search & show in widget
+		// . if they give an empty list then allow that, stops crawling
+		SafeBuf parmList;
+		g_parms.addNewParmToList1 ( &parmList,
+					    cr->m_collnum,
+					    newSiteListBuf,
+					    0,
+					    "sitelist");
+		// send the parms to all hosts in the network
+		g_parms.broadcastParmList ( &parmList , 
+					    NULL,//s,// state is socket i guess
+					    NULL);//doneBroadcastingParms2 );
+		// nothing left to do now
+		return g_httpServer.sendDynamicPage(s,
+						    "OK",//sb.getBufStart(),
+						    2,//sb.length(),
+						    cacheTime,//0,
+						    false, // POST?
+						    "text/html", 
+						    200,  // httpstatus
+						    NULL, // cookie
+						    "UTF-8"); // charset
+	}
+	*/
+	
+
+
+
+	//
 	// . send back page frame with the ajax call to get the real
 	//   search results. do not do this if a "&dir=" (dmoz category)
 	//   is given.
@@ -1995,42 +2047,6 @@ bool printSearchResultsTail ( State0 *st ) {
 	if ( si->m_whiteListBuf.length() )
 		args.safePrintf("&sites=%s",si->m_whiteListBuf.getBufStart());
 
-	// get wordpressid supplied with all widget requests
-	char *wpid = hr->getString("wpid");
-
-	//
-	// DO WE NEED TO ALTER cr->m_siteListBuf for a widget?
-	//
-	// when a wordpress user changes the "Websites to Include" for
-	// her widget, it should send a /search?sites=xyz.com&wpid=xxx
-	// request here... 
-	// so we need to remove her old sites and add in her new ones.
-	// 
-	// we have to add set &spidersites=1 which all widgets should do
-	if ( wpid ) {
-		// this returns NULL if cr->m_siteListBuf would be unchanged
-		// because we already have the whiteListBuf sites in there
-		// for this wordPressId (wpid)
-		SafeBuf newSiteListBuf;
-		makeNewSiteList( &si->m_whiteListBuf,
-				 cr->m_siteListBuf ,
-				 wpid ,
-				 &newSiteListBuf);
-		// . update the list of sites to crawl/search & show in widget
-		// . if they give an empty list then allow that, stops crawling
-		SafeBuf parmList;
-		g_parms.addNewParmToList1 ( &parmList,
-					    cr->m_collnum,
-					    newSiteListBuf,
-					    0,
-					    "sitelist");
-		// send the parms to all hosts in the network
-		g_parms.broadcastParmList ( &parmList , 
-					    NULL,//s,// state is socket i guess
-					    NULL);//doneBroadcastingParms2 );
-	}
-
-	
 
 	if ( firstNum > 0 && 
 	     (si->m_format == FORMAT_HTML || 
