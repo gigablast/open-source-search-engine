@@ -10058,6 +10058,27 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
+	m->m_title = "make image thumbnails";
+	m->m_desc  = "Try to find the best image on each page and "
+		"store it as a thumbnail for presenting in the search "
+		"results.";
+	m->m_cgi   = "mit";
+	m->m_off   = (char *)&cr.m_makeImageThumbnails - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m++;
+
+	m->m_title = "index spider replies";
+	m->m_desc  = "Index the spider replies of every url the spider "
+		"attempts to spider. Search for them using special "
+		"query operators like gbhasreply:1 or gberrmsg:success or "
+		"stats:gberrornum to get a histogram.";
+	m->m_cgi   = "isr";
+	m->m_off   = (char *)&cr.m_indexSpiderReplies - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m++;
+
 	// i put this in here so i can save disk space for my global
 	// diffbot json index
 	m->m_title = "index body";

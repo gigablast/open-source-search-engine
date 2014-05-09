@@ -135,8 +135,8 @@ XmlDoc::XmlDoc() {
 	m_metaList = NULL;
 	m_metaListSize = 0;
 	m_metaListAllocSize = 0;
-	m_titleRec = NULL;
-	m_freeTitleRec = true;
+	//m_titleRec = NULL;
+	//m_freeTitleRec = true;
 	m_rootTitleRec = NULL;
 	m_outlinkHopCountVector = NULL;
 	//m_gsbuf = NULL;
@@ -568,10 +568,11 @@ void XmlDoc::reset ( ) {
 		m_ubuf = NULL;
 	}
 
-	if ( m_freeTitleRec && m_titleRec ) { // && m_titleRecValid ) {
-		mfree ( m_titleRec , m_titleRecAllocSize , "trec" );
-	}
-	m_titleRec = NULL;
+	//if ( m_freeTitleRec && m_titleRec ) { // && m_titleRecValid ) {
+	//	mfree ( m_titleRec , m_titleRecAllocSize , "trec" );
+	//}
+	//m_titleRec = NULL;
+	m_titleRecBuf.purge();
 
 	if ( m_dupTrPtr ) {
 		mfree ( m_dupTrPtr , m_dupTrSize , "trecd" );
@@ -673,8 +674,8 @@ void XmlDoc::reset ( ) {
 	m_xbuf.reset();
 	m_tagRecBuf.reset();
 
-	m_titleRec           = NULL;
-	m_titleRecSize       = 0;
+	//m_titleRec           = NULL;
+	//m_titleRecSize       = 0;
 
 	// origin of this XmlDoc
 	m_setFromTitleRec    = false;
@@ -1049,7 +1050,7 @@ bool XmlDoc::loadFromOldTitleRec ( ) {
 	// we are now loaded, do not re-call
 	m_loaded = true;
 	// sanity check
-	if ( ! m_titleRecValid ) { char *xx=NULL;*xx=0; }
+	if ( ! m_titleRecBufValid ) { char *xx=NULL;*xx=0; }
 	// good to go
 	return true;
 }
@@ -1353,13 +1354,25 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	m_setFromTitleRec = true;
 
 	// this is valid i guess. includes key, etc.
-	m_titleRec      = titleRec;
-	m_titleRecSize  = *(long *)(titleRec+12) + sizeof(key_t) + 4;
-	m_titleRecValid = true;
+	//m_titleRec      = titleRec;
+	//m_titleRecSize  = *(long *)(titleRec+12) + sizeof(key_t) + 4;
+	//m_titleRecValid = true;
 	// . should we free m_cbuf on our reset/destruction?
 	// . no because doCOnsistencyCheck calls XmlDoc::set2 with a titleRec
 	//   that should not be freed, besides the alloc size is not known!
-	m_freeTitleRec  = false;
+	//m_freeTitleRec  = false;
+
+	long titleRecSize = *(long *)(titleRec+12) + sizeof(key_t) + 4;
+	// . should we free m_cbuf on our reset/destruction?
+	// . no because doCOnsistencyCheck calls XmlDoc::set2 with a titleRec
+	//   that should not be freed, besides the alloc size is not known!
+	m_titleRecBuf.setBuf ( titleRec , 
+			       titleRecSize , // bufmax
+			       titleRecSize ,  // bytes in use
+			       false, // ownData?
+			       csUTF8); // encoding
+	m_titleRecBufValid = true;
+
 
 	//m_coll               = coll;
 	m_pbuf               = pbuf;
@@ -1370,7 +1383,7 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	//if ( m_niceness == 0 ) { char *xx=NULL; *xx=0; }
 
 	// it must be there!
-	if ( !titleRec||m_titleRecSize==0 ) {g_errno=ENOTFOUND; return false;}
+	if ( !titleRec||titleRecSize==0 ) {g_errno=ENOTFOUND; return false;}
 
 	// set our collection number
 	if ( ! setCollNum ( coll ) ) return false;
@@ -2488,7 +2501,7 @@ bool XmlDoc::indexDoc2 ( ) {
 	//if ( ret == (char *)-1 ) return false;
 
 	// . let's update tagdb's venue address default too
-	// . no. that is in getTitleRec()
+	// . no. that is in getTitleRecBuf()
 
 	// must be valid
 	long *indexCode = getIndexCode();
@@ -2697,22 +2710,22 @@ bool XmlDoc::indexDoc2 ( ) {
 	*/
 }
 
-void getTitleRecWrapper ( void *state ) {
+void getTitleRecBufWrapper ( void *state ) {
 	XmlDoc *THIS = (XmlDoc *)state;
 	// make sure has not been freed from under us!
 	if ( THIS->m_freed ) { char *xx=NULL;*xx=0;}
 	// note it
 	THIS->setStatus ( "in get title rec wrapper" );
 	// return if it blocked
-	if ( THIS->getTitleRec() == (void *)-1 ) return;
+	if ( THIS->getTitleRecBuf() == (void *)-1 ) return;
 	// otherwise, all done, call the caller callback
 	if ( THIS->m_callback1 ) THIS->m_callback1 ( THIS->m_state );
 	else                     THIS->m_callback2 ( THIS->m_state );
 }
 
 key_t *XmlDoc::getTitleRecKey() {
-	if ( m_titleRecValid ) return &m_titleRecKey;
-	char **tr = getTitleRec();
+	if ( m_titleRecBufValid ) return &m_titleRecKey;
+	SafeBuf *tr = getTitleRecBuf();
 	if ( ! tr || tr == (void *)-1 ) return (key_t *)tr;
 	return &m_titleRecKey;
 }
@@ -3532,157 +3545,20 @@ bool XmlDoc::setDmozInfo () {
 	return true;
 }
 
-
-// . return NULL and sets g_errno on error
-// . returns -1 if blocked
-char **XmlDoc::getTitleRec ( ) {
-	// return it now if we got it already
-	if ( m_titleRecValid ) return &m_titleRec;
+// . create and store the titlerec into "buf". 
+// . it is basically the header part of all the member vars in this XmlDoc.
+// . it has a key,dataSize,compressedData so it can be a record in an Rdb
+// . return true on success, false on failure
+bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, long long docId, long long uh48 ){
 
 	setStatus ( "making title rec");
 
 	// assume could not make one because we were banned or something
-	m_titleRec = NULL;
+	tbuf->purge(); // m_titleRec = NULL;
 
-	// did one of our many blocking function calls have an error?
-	if ( g_errno ) return NULL;
-
-	// . HACK so that TitleRec::isEmpty() return true
-	// . faster than calling m_titleRec.reset()
-	//m_titleRec.m_url.m_ulen = 0;
-
-	long *indexCode = getIndexCode();
-	// not allowed to block here
-	if ( indexCode == (void *)-1) { char *xx=NULL;*xx=0; }
-	// return on errors with g_errno set
-	if ( ! indexCode ) return (char **)indexCode;
-	// force delete? EDOCFORCEDELETE
-	if ( *indexCode ) { m_titleRecValid = true; return &m_titleRec; }
-
-	// . internal callback
-	// . so if any of the functions we end up calling directly or 
-	//   indirectly block and return -1, we will be re-called from the top
-	if ( ! m_masterLoop ) {
-		m_masterLoop  = getTitleRecWrapper;
-		m_masterState = this;
-	}
-
-	/*
-	// parsing knobs
-	if ( ! m_titleWeightValid ) {
-		// TODO: watchout for overruns!! these are 16-bits only!
-		//m_eliminateMenus       = cr->m_eliminateMenus;
-		m_titleWeight            = cr->m_titleWeight;
-		m_headerWeight           = cr->m_headerWeight;
-		m_urlPathWeight          = cr->m_urlPathWeight;
-		m_externalLinkTextWeight = cr->m_externalLinkTextWeight;
-		m_internalLinkTextWeight = cr->m_internalLinkTextWeight;
-		m_conceptWeight          = cr->m_conceptWeight;
-		//long  siteNumInlinksBoost    = cr->m_siteNumInlinksBoost;
-		// validate these
-		//m_eliminateMenusValid       = true;
-		m_titleWeightValid            = true;
-		m_headerWeightValid           = true;
-		m_urlPathWeightValid          = true;
-		m_externalLinkTextWeightValid = true;
-		m_internalLinkTextWeightValid = true;
-		m_conceptWeightValid          = true;
-	}
-	*/
-
+	// start seting members in THIS's header before compression
 	m_version           = TITLEREC_CURRENT_VERSION;
 	m_versionValid      = true;
-
-	setStatus ( "compressing into final title rec");
-
-	/////////
-	//
-	// IF ANY of these validation sanity checks fail then update
-	// prepareToMakeTitleRec() so it makes them valid!!!
-	//
-	/////////
-
-	// verify key parts
-	if ( ! m_docIdValid                  ) { char *xx=NULL;*xx=0; }
-
-	// verify record parts
-	if ( ! m_versionValid                ) { char *xx=NULL;*xx=0; }
-	if ( ! m_ipValid                     ) { char *xx=NULL;*xx=0; }
-	if ( ! m_spideredTimeValid           ) { char *xx=NULL;*xx=0; }
-	if ( ! m_pubDateValid                ) { char *xx=NULL;*xx=0; }
-	if ( ! m_firstIndexedDateValid       ) { char *xx=NULL;*xx=0; }
-	if ( ! m_outlinksAddedDateValid      ) { char *xx=NULL;*xx=0; }
-	if ( ! m_charsetValid                ) { char *xx=NULL;*xx=0; }
-	if ( ! m_countryIdValid              ) { char *xx=NULL;*xx=0; }
-	if ( ! m_httpStatusValid             ) { char *xx=NULL;*xx=0; }
-
-	/*
-	if ( ! m_titleWeightValid            ) { char *xx=NULL;*xx=0; }
-	if ( ! m_headerWeightValid           ) { char *xx=NULL;*xx=0; }
-	if ( ! m_urlPathWeightValid          ) { char *xx=NULL;*xx=0; }
-	if ( ! m_externalLinkTextWeightValid ) { char *xx=NULL;*xx=0; }
-	if ( ! m_internalLinkTextWeightValid ) { char *xx=NULL;*xx=0; }
-	if ( ! m_conceptWeightValid          ) { char *xx=NULL;*xx=0; }
-	*/
-
-	if ( ! m_siteNumInlinksValid         ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteNumInlinksUniqueIpValid     ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteNumInlinksUniqueCBlockValid ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteNumInlinksTotalValid )        { char *xx=NULL;*xx=0; }
-	//if ( ! m_sitePopValid                ) { char *xx=NULL;*xx=0; }
-	if ( ! m_rootLangIdValid             ) { char *xx=NULL;*xx=0; }
-
-	if ( ! m_hopCountValid               ) { char *xx=NULL;*xx=0; }
-	if ( ! m_metaListCheckSum8Valid      ) { char *xx=NULL;*xx=0; }
-	//if ( ! m_numBannedOutlinksValid    ) { char *xx=NULL;*xx=0; }
-	if ( ! m_langIdValid                 ) { char *xx=NULL;*xx=0; }
-	if ( ! m_contentTypeValid            ) { char *xx=NULL;*xx=0; }
-
-	if ( ! m_isRSSValid                  ) { char *xx=NULL;*xx=0; }
-	if ( ! m_isPermalinkValid            ) { char *xx=NULL;*xx=0; }
-	if ( ! m_isAdultValid                ) { char *xx=NULL;*xx=0; }
-	//if ( ! m_eliminateMenusValid         ) { char *xx=NULL;*xx=0; }
-	if ( ! m_spiderLinksValid            ) { char *xx=NULL;*xx=0; }
-	if ( ! m_isContentTruncatedValid     ) { char *xx=NULL;*xx=0; }
-	if ( ! m_isLinkSpamValid             ) { char *xx=NULL;*xx=0; }
-
-	// buffers
-	if ( ! m_firstUrlValid               ) { char *xx=NULL;*xx=0; }
-	if ( ! m_redirUrlValid               ) { char *xx=NULL;*xx=0; }
-	//if ( ! m_metaRedirUrlValid           ) { char *xx=NULL;*xx=0; }
-	if ( ! m_tagRecValid                 ) { char *xx=NULL;*xx=0; }
-	if ( ! m_gigabitHashesValid          ) { char *xx=NULL;*xx=0; }
-	if ( ! m_adVectorValid               ) { char *xx=NULL;*xx=0; }
-	if ( ! m_wikiDocIdsValid             ) { char *xx=NULL;*xx=0; }
-	if ( ! m_imageDataValid              ) { char *xx=NULL;*xx=0; }
-	if ( ! m_catIdsValid                 ) { char *xx=NULL;*xx=0; }
-	if ( ! m_indCatIdsValid              ) { char *xx=NULL;*xx=0; }
-	if ( ! m_dmozInfoValid               ) { char *xx=NULL;*xx=0; }
-	// if m_recycleContent is true, these are not valid
-	if ( ! m_recycleContent ) {
-		if ( ! m_rawUtf8ContentValid         ) { char *xx=NULL;*xx=0; }
-		if ( ! m_expandedUtf8ContentValid    ) { char *xx=NULL;*xx=0; }
-	}
-	if ( ! m_utf8ContentValid            ) { char *xx=NULL;*xx=0; }
-	if ( ! m_datesValid                  ) { char *xx=NULL;*xx=0; }
-	// why do we need valid sections for a titlerec? we no longer user
-	// ptr_sectiondbData...
-	//if ( ! m_sectionsValid               ) { char *xx=NULL;*xx=0; }
-	//if ( ! m_sectionsReplyValid          ) { char *xx=NULL;*xx=0; }
-	//if ( ! m_addressReplyValid          ) { char *xx=NULL;*xx=0; }
-	if ( ! m_siteValid                   ) { char *xx=NULL;*xx=0; }
-	if ( ! m_linkInfo1Valid              ) { char *xx=NULL;*xx=0; }
-	if ( ! m_linkInfo2Valid              ) { char *xx=NULL;*xx=0; }
-	//if ( ! m_sectiondbDataValid          ) { char *xx=NULL;*xx=0; }
-	//if ( ! m_placedbDataValid            ) { char *xx=NULL;*xx=0; }
-	if ( ! m_clockCandidatesDataValid    ) { char *xx=NULL;*xx=0; }
-
-	// do we need these?
-	if ( ! m_hostHash32aValid            ) { char *xx=NULL;*xx=0; }
-	if ( ! m_contentHash32Valid          ) { char *xx=NULL;*xx=0; }
-	if ( ! m_tagHash32Valid              ) { char *xx=NULL;*xx=0; }
-	// sanity checks
-	if ( ! m_addressesValid              ) { char *xx=NULL;*xx=0; }
 
 	// tag rec must have "sitenuminlinks" in it
 	//if (! m_newTagRec.getTag("sitenuminlinks") ) { char *xx=NULL;*xx=0; }
@@ -3868,20 +3744,21 @@ char **XmlDoc::getTitleRec ( ) {
 	// . we now store the negative rec before the positive rec in Msg14.cpp
 	//hdrSize += sizeof(key_t) + 4;
 	need2 += hdrSize;
-	// time it
-	long long startTime = gettimeofdayInMilliseconds();
 	// alloc what we need
-	char *cbuf = (char *) mmalloc ( need2 ,"TitleRecc");
-	if ( ! cbuf ) return false;
+	//char *cbuf = (char *) mmalloc ( need2 ,"TitleRecc");
+	//if ( ! cbuf ) return false;
+	// return false on error
+	if ( ! tbuf->reserve ( need2 ,"titbuf" ) ) return false;
+	// shortcut
+	char *cbuf = tbuf->getBufStart();
 	// set cbuf sizes, we set cbufSize below to fit exactly used buf
 	//long cbufMaxSize = need2;
-	// breathe
-	QUICKPOLL( m_niceness );
 	// . how big is the buf we're passing to ::compress()?
 	// . don't include the last 12 byte, save for del key in Msg14.cpp
 	long size = need2 - hdrSize ;
 	// . uncompress the data into ubuf
 	// . this will reset cbufSize to a smaller value probably
+	// . "size" is set to how many bytes we wrote into "cbuf + hdrSize"
 	int err = gbcompress ( (unsigned char *)cbuf + hdrSize, 
 			       (unsigned long *)&size,
 			       (unsigned char *)ubuf , 
@@ -3893,7 +3770,8 @@ char **XmlDoc::getTitleRec ( ) {
 	mfree ( ubuf , need1 , "trub" );
 	// we should check ourselves
 	if ( err == Z_OK && size > (need2 - hdrSize ) ) { 
-		mfree ( cbuf , need2 ,"TitleRecc" ); 
+		//mfree ( cbuf , need2 ,"TitleRecc" ); 
+		tbuf->purge();
 		g_errno = ECOMPRESSFAILED; 
 		log("db: Failed to compress document of %li bytes. "
 		    "Provided buffer of %li bytes.",
@@ -3902,28 +3780,22 @@ char **XmlDoc::getTitleRec ( ) {
 	}
 	// check for error
 	if ( err != Z_OK ) {
-		mfree ( cbuf , need2 ,"TitleRecc" ); 
+		//mfree ( cbuf , need2 ,"TitleRecc" ); 
+		tbuf->purge();
 		g_errno = ECOMPRESSFAILED; 
 		log("db: Failed to compress document.");
 		return NULL;
 	}
-	// . add the stat
-	// . use white for the stat
-	g_stats.addStat_r ( 0               ,
-			    startTime , 
-			    gettimeofdayInMilliseconds(),
-			    0x00ffffff );
 	// calc cbufSize, the uncompressed header + compressed stuff
 	//cbufSize = hdrSize + size ;
 
-	long long uh48 = getFirstUrlHash48();
+	//long long uh48 = getFirstUrlHash48();
 	// . make the key from docId
 	// . false = delkey?
-	m_titleRecKey = g_titledb.makeKey (*getDocId(),uh48,false);//delkey?
+	//m_titleRecKey = g_titledb.makeKey (*getDocId(),uh48,false);//delkey?
+	key_t tkey = g_titledb.makeKey (docId,uh48,false);//delkey?
 	// validate it
-	m_titleRecKeyValid = true;
-
-	QUICKPOLL( m_niceness );
+	//m_titleRecKeyValid = true;
 
 	// get a ptr to the Rdb record at start of the header
 	p = cbuf;
@@ -3931,7 +3803,7 @@ char **XmlDoc::getTitleRec ( ) {
 	//p += 12 + 4;
 	// . store key in header of cbuf
 	// . store in our host byte ordering so we can be a rec in an RdbList
-	*(key_t *) p = m_titleRecKey;
+	*(key_t *) p = tkey;
 	p += sizeof(key_t);
 	// store total dataSize in header (excluding itself and key only)
 	long dataSize = size + 4;
@@ -3943,17 +3815,208 @@ char **XmlDoc::getTitleRec ( ) {
 	if ( p != cbuf + hdrSize ) { char *xx = NULL; *xx = 0; }
 	// sanity check 
 	if ( need1 <= 0 ) { char *xx = NULL; *xx = 0; }
+	// advance over data
+	p += size;
+
+	// update safebuf::m_length so it is correct
+	tbuf->setLength ( p - cbuf );
+
+	return true;
+}
+
+// . return NULL and sets g_errno on error
+// . returns -1 if blocked
+SafeBuf *XmlDoc::getTitleRecBuf ( ) {
+
+	// return it now if we got it already
+	if ( m_titleRecBufValid ) return &m_titleRecBuf;
+	
+	setStatus ( "making title rec");
+
+	// did one of our many blocking function calls have an error?
+	if ( g_errno ) return NULL;
+
+	// . HACK so that TitleRec::isEmpty() return true
+	// . faster than calling m_titleRec.reset()
+	//m_titleRec.m_url.m_ulen = 0;
+
+	long *indexCode = getIndexCode();
+	// not allowed to block here
+	if ( indexCode == (void *)-1) { char *xx=NULL;*xx=0; }
+	// return on errors with g_errno set
+	if ( ! indexCode ) return NULL;
+	// force delete? EDOCFORCEDELETE
+	if ( *indexCode ) { m_titleRecBufValid = true; return &m_titleRecBuf; }
+
+	// . internal callback
+	// . so if any of the functions we end up calling directly or 
+	//   indirectly block and return -1, we will be re-called from the top
+	if ( ! m_masterLoop ) {
+		m_masterLoop  = getTitleRecBufWrapper;
+		m_masterState = this;
+	}
+
+	/*
+	// parsing knobs
+	if ( ! m_titleWeightValid ) {
+		// TODO: watchout for overruns!! these are 16-bits only!
+		//m_eliminateMenus       = cr->m_eliminateMenus;
+		m_titleWeight            = cr->m_titleWeight;
+		m_headerWeight           = cr->m_headerWeight;
+		m_urlPathWeight          = cr->m_urlPathWeight;
+		m_externalLinkTextWeight = cr->m_externalLinkTextWeight;
+		m_internalLinkTextWeight = cr->m_internalLinkTextWeight;
+		m_conceptWeight          = cr->m_conceptWeight;
+		//long  siteNumInlinksBoost    = cr->m_siteNumInlinksBoost;
+		// validate these
+		//m_eliminateMenusValid       = true;
+		m_titleWeightValid            = true;
+		m_headerWeightValid           = true;
+		m_urlPathWeightValid          = true;
+		m_externalLinkTextWeightValid = true;
+		m_internalLinkTextWeightValid = true;
+		m_conceptWeightValid          = true;
+	}
+	*/
+
+	/////////
+	//
+	// IF ANY of these validation sanity checks fail then update
+	// prepareToMakeTitleRec() so it makes them valid!!!
+	//
+	/////////
+
+	// verify key parts
+	if ( ! m_docIdValid                  ) { char *xx=NULL;*xx=0; }
+
+	// verify record parts
+	if ( ! m_versionValid                ) { char *xx=NULL;*xx=0; }
+	if ( ! m_ipValid                     ) { char *xx=NULL;*xx=0; }
+	if ( ! m_spideredTimeValid           ) { char *xx=NULL;*xx=0; }
+	if ( ! m_pubDateValid                ) { char *xx=NULL;*xx=0; }
+	if ( ! m_firstIndexedDateValid       ) { char *xx=NULL;*xx=0; }
+	if ( ! m_outlinksAddedDateValid      ) { char *xx=NULL;*xx=0; }
+	if ( ! m_charsetValid                ) { char *xx=NULL;*xx=0; }
+	if ( ! m_countryIdValid              ) { char *xx=NULL;*xx=0; }
+	if ( ! m_httpStatusValid             ) { char *xx=NULL;*xx=0; }
+
+	/*
+	if ( ! m_titleWeightValid            ) { char *xx=NULL;*xx=0; }
+	if ( ! m_headerWeightValid           ) { char *xx=NULL;*xx=0; }
+	if ( ! m_urlPathWeightValid          ) { char *xx=NULL;*xx=0; }
+	if ( ! m_externalLinkTextWeightValid ) { char *xx=NULL;*xx=0; }
+	if ( ! m_internalLinkTextWeightValid ) { char *xx=NULL;*xx=0; }
+	if ( ! m_conceptWeightValid          ) { char *xx=NULL;*xx=0; }
+	*/
+
+	if ( ! m_siteNumInlinksValid         ) { char *xx=NULL;*xx=0; }
+	if ( ! m_siteNumInlinksUniqueIpValid     ) { char *xx=NULL;*xx=0; }
+	if ( ! m_siteNumInlinksUniqueCBlockValid ) { char *xx=NULL;*xx=0; }
+	if ( ! m_siteNumInlinksTotalValid )        { char *xx=NULL;*xx=0; }
+	//if ( ! m_sitePopValid                ) { char *xx=NULL;*xx=0; }
+	if ( ! m_rootLangIdValid             ) { char *xx=NULL;*xx=0; }
+
+	if ( ! m_hopCountValid               ) { char *xx=NULL;*xx=0; }
+	if ( ! m_metaListCheckSum8Valid      ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_numBannedOutlinksValid    ) { char *xx=NULL;*xx=0; }
+	if ( ! m_langIdValid                 ) { char *xx=NULL;*xx=0; }
+	if ( ! m_contentTypeValid            ) { char *xx=NULL;*xx=0; }
+
+	if ( ! m_isRSSValid                  ) { char *xx=NULL;*xx=0; }
+	if ( ! m_isPermalinkValid            ) { char *xx=NULL;*xx=0; }
+	if ( ! m_isAdultValid                ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_eliminateMenusValid         ) { char *xx=NULL;*xx=0; }
+	if ( ! m_spiderLinksValid            ) { char *xx=NULL;*xx=0; }
+	if ( ! m_isContentTruncatedValid     ) { char *xx=NULL;*xx=0; }
+	if ( ! m_isLinkSpamValid             ) { char *xx=NULL;*xx=0; }
+
+	// buffers
+	if ( ! m_firstUrlValid               ) { char *xx=NULL;*xx=0; }
+	if ( ! m_redirUrlValid               ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_metaRedirUrlValid           ) { char *xx=NULL;*xx=0; }
+	if ( ! m_tagRecValid                 ) { char *xx=NULL;*xx=0; }
+	if ( ! m_gigabitHashesValid          ) { char *xx=NULL;*xx=0; }
+	if ( ! m_adVectorValid               ) { char *xx=NULL;*xx=0; }
+	if ( ! m_wikiDocIdsValid             ) { char *xx=NULL;*xx=0; }
+	if ( ! m_imageDataValid              ) { char *xx=NULL;*xx=0; }
+	if ( ! m_catIdsValid                 ) { char *xx=NULL;*xx=0; }
+	if ( ! m_indCatIdsValid              ) { char *xx=NULL;*xx=0; }
+	if ( ! m_dmozInfoValid               ) { char *xx=NULL;*xx=0; }
+	// if m_recycleContent is true, these are not valid
+	if ( ! m_recycleContent ) {
+		if ( ! m_rawUtf8ContentValid         ) { char *xx=NULL;*xx=0; }
+		if ( ! m_expandedUtf8ContentValid    ) { char *xx=NULL;*xx=0; }
+	}
+	if ( ! m_utf8ContentValid            ) { char *xx=NULL;*xx=0; }
+	if ( ! m_datesValid                  ) { char *xx=NULL;*xx=0; }
+	// why do we need valid sections for a titlerec? we no longer user
+	// ptr_sectiondbData...
+	//if ( ! m_sectionsValid               ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_sectionsReplyValid          ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_addressReplyValid          ) { char *xx=NULL;*xx=0; }
+	if ( ! m_siteValid                   ) { char *xx=NULL;*xx=0; }
+	if ( ! m_linkInfo1Valid              ) { char *xx=NULL;*xx=0; }
+	if ( ! m_linkInfo2Valid              ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_sectiondbDataValid          ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_placedbDataValid            ) { char *xx=NULL;*xx=0; }
+	if ( ! m_clockCandidatesDataValid    ) { char *xx=NULL;*xx=0; }
+
+	// do we need these?
+	if ( ! m_hostHash32aValid            ) { char *xx=NULL;*xx=0; }
+	if ( ! m_contentHash32Valid          ) { char *xx=NULL;*xx=0; }
+	if ( ! m_tagHash32Valid              ) { char *xx=NULL;*xx=0; }
+	// sanity checks
+	if ( ! m_addressesValid              ) { char *xx=NULL;*xx=0; }
+
+	// breathe
+	QUICKPOLL( m_niceness );
+
+	setStatus ( "compressing into final title rec");
+
+	long long uh48 = getFirstUrlHash48();
+
+	long long *docId = getDocId();
+
+	// time it
+	long long startTime = gettimeofdayInMilliseconds();
+
+
+	//////
+	//
+	// fill in m_titleRecBuf
+	//
+	//////
+
+	// we need docid and uh48 for making the key of the titleRec
+	if ( ! setTitleRecBuf ( &m_titleRecBuf , *docId , uh48 ) ) 
+		return NULL;
+
+	// breathe
+	QUICKPOLL( m_niceness );
+
+	// . add the stat
+	// . use white for the stat
+	g_stats.addStat_r ( 0               ,
+			    startTime , 
+			    gettimeofdayInMilliseconds(),
+			    0x00ffffff );
+
+	QUICKPOLL( m_niceness );
+
+	char *cbuf = m_titleRecBuf.getBufStart();
+	m_titleRecKey = *(key_t *)cbuf;
+	m_titleRecKeyValid = true;
 
 	// we are legit
-	m_freeTitleRec    = true;
-	m_titleRec        = cbuf;
+	//m_freeTitleRec    = true;
+	//m_titleRec        = cbuf;
 	// key + dataSize + ubufSize + compressedData
-	m_titleRecSize    = sizeof(key_t)+ 4 + 4 + size;
-	m_titleRecAllocSize = need2;
+	//m_titleRecSize    = sizeof(key_t)+ 4 + 4 + size;
+	//m_titleRecAllocSize = need2;
 
 	// now valid. congratulations!
-	m_titleRecValid   = true;
-	return &m_titleRec;
+	m_titleRecBufValid   = true;
+	return &m_titleRecBuf;
 }
 
 
@@ -8348,7 +8411,7 @@ char *XmlDoc::isDupOfUs ( long long d ) {
 	// sanity check
 	if ( d <= 0 ) { char *xx=NULL;*xx=0; }
 	// get our current title rec
-	char **tr = getTitleRec();
+	SafeBuf *tr = getTitleRecBuf();
 	if ( ! tr || tr == (void *)-1 ) return (char *)tr;
 	// we should not be here if we know we are a dup of another doc
 	if ( m_isDup ) { char *xx=NULL;*xx=0; }
@@ -8369,6 +8432,7 @@ char *XmlDoc::isDupOfUs ( long long d ) {
 					   &m_dupTrPtr  ,
 					   &m_dupTrSize ,
 					   false        , // just check tfndb?
+					   false , // getAvailDocIdOnly
 					   m_masterState, // state
 					   m_masterLoop , // callback
 					   m_niceness   ,
@@ -10193,7 +10257,7 @@ RdbList *XmlDoc::getOldMetaList ( ) {
 
 // . look up TitleRec using Msg22 if we need to
 // . set our m_titleRec member from titledb
-// . the twin brother of XmlDoc::getTitleRec() which makes the title rec
+// . the twin brother of XmlDoc::getTitleRecBuf() which makes the title rec
 //   from scratch. this loads it from titledb.
 // . NULL is a valid value (EDOCNOTFOUND) so return a char **
 char **XmlDoc::getOldTitleRec ( ) {
@@ -10258,6 +10322,7 @@ char **XmlDoc::getOldTitleRec ( ) {
 				      &m_oldTitleRec       ,
 				      &m_oldTitleRecSize   ,
 				      false                , // just chk tfndb?
+				      false , // getAvailDocIdOnly
 				      m_masterState        , 
 				      m_masterLoop         ,
 				      m_niceness           , // niceness
@@ -10277,7 +10342,7 @@ char **XmlDoc::getOldTitleRec ( ) {
 
 // . look up TitleRec using Msg22 if we need to
 // . set our m_titleRec member from titledb
-// . the twin brother of XmlDoc::getTitleRec() which makes the title rec
+// . the twin brother of XmlDoc::getTitleRecBuf() which makes the title rec
 //   from scratch. this loads it from titledb.
 // . NULL is a valid value (EDOCNOTFOUND) so return a char **
 char **XmlDoc::getRootTitleRec ( ) {
@@ -10319,6 +10384,7 @@ char **XmlDoc::getRootTitleRec ( ) {
 				      &m_rootTitleRec      ,
 				      &m_rootTitleRecSize  ,
 				      false                , // just chk tfndb?
+				      false , // getAvailDocIdOnly
 				      m_masterState        , 
 				      m_masterLoop         ,
 				      m_niceness           , // niceness
@@ -10339,7 +10405,7 @@ char **XmlDoc::getRootTitleRec ( ) {
 /*
 // . look up TitleRec using Msg22 if we need to
 // . set our m_titleRec member from titledb
-// . the twin brother of XmlDoc::getTitleRec() which makes the title rec
+// . the twin brother of XmlDoc::getTitleRecBuf() which makes the title rec
 //   from scratch. this loads it from titledb.
 // . NULL is a valid value (EDOCNOTFOUND) so return a char **
 char **XmlDoc::getContactTitleRec ( char *u ) {
@@ -10385,6 +10451,36 @@ char **XmlDoc::getContactTitleRec ( char *u ) {
 	return &m_contactTitleRec;
 }
 */
+
+
+// used for indexing spider replies. we need a unique docid because it
+// is treated as a different document even though its url will be the same.
+// and there is never an "older" version of it because each reply is treated
+// as a brand new document.
+long long *XmlDoc::getAvailDocIdOnly ( long long preferredDocId ) {
+	if ( m_availDocIdValid && g_errno ) {
+		log("xmldoc: error getting availdocid: %s",
+		    mstrerror(g_errno));
+		return NULL;
+	}
+	if ( m_availDocIdValid ) 
+		return &m_msg22c.m_availDocId;
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+	// pre-validate it
+	m_availDocIdValid = true;
+	if ( ! m_msg22c.getAvailDocIdOnly ( &m_msg22Request ,
+					    preferredDocId ,
+					    cr->m_coll ,
+					    m_masterState ,
+					    m_masterLoop ,
+					    m_niceness ) )
+		return (long long *)-1;
+	// error?
+	log("xmldoc: error getting availdocid2: %s",mstrerror(g_errno));
+	return NULL;
+}
+
 
 long long *XmlDoc::getDocId ( ) {
 	if ( m_docIdValid ) return &m_docId;
@@ -10446,6 +10542,7 @@ char *XmlDoc::getIsIndexed ( ) {
 				      NULL                 , // tr ptr
 				      NULL                 , // tr size ptr
 				      true                 , // just chk tfndb?
+				      false, // getavaildocidonly
 				      m_masterState        , 
 				      m_masterLoop         ,
 				      m_niceness           , // niceness
@@ -12829,6 +12926,7 @@ char *XmlDoc::getIsWWWDup ( ) {
 				      NULL                 , // tr ptr
 				      NULL                 , // tr size ptr
 				      true                 , // just chk tfndb?
+				      false, // getavaildocidonly
 				      m_masterState        , 
 				      m_masterLoop         ,
 				      m_niceness           , // niceness
@@ -17422,6 +17520,15 @@ char **XmlDoc::getThumbnailData ( ) {
 Images *XmlDoc::getImages ( ) {
 	if ( m_imagesValid ) return &m_images;
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	if ( ! cr->m_makeImageThumbnails ) {
+		m_images.reset();
+		m_imagesValid = true;
+		return &m_images;
+	}
+
 	setStatus ( "getting thumbnail" );
 
 	Words *words = getWords();
@@ -17439,9 +17546,6 @@ Images *XmlDoc::getImages ( ) {
 	Url *cu = getCurrentUrl();
 	if ( ! cu || cu == (void *)-1 ) return (Images *)cu;
 	
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
-
 	// . this does not block or anything
 	// . if we are a diffbot json reply it should just use the primary
 	//   image, if any, as the only candidate
@@ -18841,8 +18945,8 @@ bool XmlDoc::doConsistencyTest ( bool forceTest ) {
 	// title rec is null if we are reindexing an old doc
 	// and "unchanged" was true.
 	if ( m_unchangedValid && m_unchanged ) {
-		if ( ! m_titleRecValid ) return true;
-		if ( ! m_titleRec      ) return true;
+		if ( ! m_titleRecBufValid ) return true;
+		if ( ! m_titleRecBuf.length()==0 ) return true;
 	}
 
 	CollectionRec *cr = getCollRec();
@@ -18865,7 +18969,8 @@ bool XmlDoc::doConsistencyTest ( bool forceTest ) {
 	mnew ( doc , sizeof(XmlDoc),"xmldcs");
 
 
-	if ( ! doc->set2 ( m_titleRec , -1 , cr->m_coll , NULL , m_niceness ,
+	if ( ! doc->set2 ( m_titleRecBuf.getBufStart() , 
+			   -1 , cr->m_coll , NULL , m_niceness ,
 			  // no we provide the same SpiderRequest so that
 			  // it can add the same SpiderReply to the metaList
 			   &m_sreq ) ) {
@@ -20203,6 +20308,25 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( newsr == (void *)-1 ) { char *xx=NULL;*xx=0; }
 		// how much we need
 		long needx = sizeof(SpiderReply) + 1;
+
+
+		// . INDEX SPIDER REPLY (1a)
+		// . index ALL spider replies as separate doc. error or not.
+		// . then print out error histograms.
+		// . we should also hash this stuff when indexing the
+		//   doc as a whole
+
+		// i guess it is safe to do this after getting the spiderreply
+		SafeBuf *spiderReplyMetaList = NULL;
+		if ( cr->m_indexSpiderReplies && m_useSpiderdb ) {
+			// get the spiderreply ready to be added
+			spiderReplyMetaList = getSpiderReplyMetaList ( newsr );
+			// error?
+			if ( ! spiderReplyMetaList ) return NULL;
+			// need to alloc space for it too
+			needx += spiderReplyMetaList->length();
+		}
+
 		// doledb key?
 		//if ( m_doledbKey.n0 || m_doledbKey.n1 )
 		//	needx += 1 + sizeof(key_t); // + 4;
@@ -20216,6 +20340,15 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// ptr and boundary
 		m_p    = m_metaList;
 		m_pend = m_metaList + needx;
+
+		// first store spider reply "document"
+		if ( spiderReplyMetaList ) {
+			memcpy ( m_p,
+				 spiderReplyMetaList->getBufStart(),
+				 spiderReplyMetaList->length() );
+			m_p += spiderReplyMetaList->length();
+		}
+
 		// save it
 		char *saved = m_p;
 		/*
@@ -20398,7 +20531,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	}
 
 	// . need this if useTitledb is true
-	// . otherwise XmlDoc::getTitleRec() cores because its invalid
+	// . otherwise XmlDoc::getTitleRecBuf() cores because its invalid
 	if ( m_useTitledb ) {
 		LinkInfo *info1 = getLinkInfo1();
 		if ( ! info1 || info1 == (LinkInfo *)-1 ) 
@@ -20717,6 +20850,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( ! newsr || newsr == (void *)-1 ) return (char *)newsr;
 	}
 
+	// i guess it is safe to do this after getting the spiderreply
+	SafeBuf *spiderReplyMetaList = NULL;
+	if ( cr->m_indexSpiderReplies && m_useSpiderdb )
+		// get the spiderreply ready to be added to the rdbs w/ msg4
+		spiderReplyMetaList = getSpiderReplyMetaList ( newsr );
+
+
 	// the site hash for hashing
 	long *sh32 = getSiteHash32();
 	if ( ! sh32 || sh32 == (long *)-1 ) return (char *)sh32;
@@ -20997,6 +21137,12 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			log("xmldoc: reallocated big table! bad. old=%li "
 			    "new=%li nw=%li",did,done,nw);
 	}
+
+	// if indexing the spider reply as well under a different docid
+	// there is no reason we can't toss it into our meta list here
+	if ( spiderReplyMetaList )
+		need += spiderReplyMetaList->length();
+
 	// now we use revdb
 	// before hashing the old doc into it
 	//if ( od && index2 ) {
@@ -21027,9 +21173,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// now we also add the title rec. true = ownsCbuf? ret NULL on error
 	// with g_errno set.
 	//if ( nd && ! nd->compress( true , m_niceness ) ) return NULL;
-
-
-
 
 
 	/*
@@ -21245,7 +21388,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	need += needTagdb;
 
 	// . add in title rec size
-	// . should be valid because we called getTitleRec() above
+	// . should be valid because we called getTitleRecBuf() above
 	// . this should include the key
 	// . add in possible negative key for deleting old title rec
 	//long needTitledb = sizeof(key96_t);
@@ -21270,7 +21413,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		//ck32 ^= ns1.getKeyChecksum32();
 		//ck32 ^= kt1.getKeyChecksum32();
 		//ck32 ^= pt1.getKeyChecksum32();
-		// set this before calling getTitleRec() below
+		// set this before calling getTitleRecBuf() below
 		uint8_t currentMetaListCheckSum8 = (uint8_t)ck32;
 		// see if matches what was in old titlerec
 		if ( m_metaListCheckSum8Valid &&
@@ -21281,7 +21424,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		     m_metaListCheckSum8 != currentMetaListCheckSum8 )
 			log("xmldoc: checksum parsing inconsistency for %s",
 			    m_firstUrl.getUrl());
-		// assign the new one, getTitleRec() call below needs this
+		// assign the new one, getTitleRecBuf() call below needs this
 		m_metaListCheckSum8 = currentMetaListCheckSum8;
 		m_metaListCheckSum8Valid = true;
 	}
@@ -21298,7 +21441,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// . if repairing and not rebuilding titledb, we do not need the
 	//   titlerec
 	if ( m_useTitledb ) {
-		char **tr = getTitleRec ();
+		SafeBuf *tr = getTitleRecBuf ();
 		// panic if this blocks! it should not at this point because 
 		// we'd have to re-hash the crap above
 		if ( tr == (void *) -1 ) { char *xx=NULL;*xx=0; }
@@ -21306,17 +21449,17 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		if ( ! tr ) return (char *)tr;
 		// sanity check - if the valid title rec is null, 
 		// m_indexCode is set!
-		if ( ! *tr && ! m_indexCode ) { char *xx=NULL;*xx=0; }
+		if ( tr->length()==0 && ! m_indexCode ) { char *xx=NULL;*xx=0;}
 	}
 
 	// . add in title rec size
-	// . should be valid because we called getTitleRec() above
+	// . should be valid because we called getTitleRecBuf() above
 	// . this should include the key
 	// . add in possible negative key for deleting old title rec
 	long needTitledb = sizeof(key96_t) + 1;
 	// +1 for rdbId
 	if ( nd && m_useTitledb && ! forDelete )
-		needTitledb += m_titleRecSize;
+		needTitledb += m_titleRecBuf.length();
 	// set new and old keys for titledb
 	//key_t ok;
 	key_t nk;
@@ -21349,7 +21492,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	m_p    = m_metaList;
 	m_pend = m_metaList + need;
 
-
 	// 
 	// TITLEDB
 	//
@@ -21377,12 +21519,14 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// rdbId
 		if ( m_useSecondaryRdbs ) *m_p++ = RDB2_TITLEDB2;
 		else                      *m_p++ = RDB_TITLEDB;
+		// sanity
+		if ( ! nd->m_titleRecBufValid ) { char *xx=NULL;*xx=0; }
 		// key, dataSize, data is the whole rec
-		long tsize = nd->m_titleRecSize;
+		long tsize = nd->m_titleRecBuf.length();
 		// if getting an "oldList" to do incremental posdb updates
 		// then do not include the data portion of the title rec
 		if ( forDelete ) tsize = sizeof(key_t);
-		memcpy ( m_p , nd->m_titleRec , tsize );//nd->m_titleRecSize );
+		memcpy ( m_p , nd->m_titleRecBuf.getBufStart() , tsize );
 		// make it a negative key
 		//if ( forDelete ) *m_p = *m_p & 0xfe;
 		m_p += tsize;//nd->m_titleRecSize;
@@ -21395,7 +21539,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// sanity check
 	verifyMetaList( m_metaList , m_p , forDelete );
 
-
 	//
 	// ADD BASIC INDEXDB/DATEDB TERMS
 	//
@@ -21403,7 +21546,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// checkpoint
 	saved = m_p;
 	// store indexdb terms into m_metaList[]
-	if ( m_usePosdb && ! addTable144 ( &tt1 )) return NULL;
+	if ( m_usePosdb && ! addTable144 ( &tt1 , m_docId )) return NULL;
 	//if(!addTable96 ( &tt2, &tt1, date2, date1, true ,false)) return NULL;
 	//if ( od ) tt2.clear();
 	// sanity check
@@ -21573,6 +21716,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	//pt2.reset();
 	// sanity check
 	verifyMetaList( m_metaList , m_p , forDelete );
+
 
 	/*
 	//
@@ -21801,6 +21945,20 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	verifyMetaList( m_metaList , m_p , forDelete );
 
 
+
+	//
+	// ADD INDEXED SPIDER REPLY with different docid so we can
+	// search index of spider replies! (NEW!)
+	//
+	// . index spider reply with separate docid so they are all searchable.
+	// . see getSpiderReplyMetaList() function to see what we index
+	//   and the titlerec we create for it
+	if ( spiderReplyMetaList ) {
+		memcpy ( m_p , 
+			 spiderReplyMetaList->getBufStart() ,
+			 spiderReplyMetaList->length() );
+		m_p += spiderReplyMetaList->length();
+	}
 
 	/*
 	//
@@ -23734,13 +23892,26 @@ long XmlDoc::getSiteRank ( ) {
 	return ::getSiteRank ( m_siteNumInlinks );
 }
 
-// add keys/recs from the table into the metalist
-bool XmlDoc::addTable144 ( HashTableX *tt1 ) {
+// . add keys/recs from the table into the metalist
+// . we store the keys into "m_p" unless "buf" is given
+bool XmlDoc::addTable144 ( HashTableX *tt1 , long long docId , SafeBuf *buf ) {
 
 	// sanity check
 	if ( tt1->m_numSlots ) {
 		if ( tt1->m_ks != sizeof(key144_t) ) {char *xx=NULL;*xx=0;}
 		if ( tt1->m_ds != 4                ) {char *xx=NULL;*xx=0;}
+	}
+
+	// assume we are storing into m_p
+	char *p = m_p;
+
+	// reserve space if we had a safebuf and point into it if there
+	if ( buf ) {
+		long slotSize = (sizeof(key144_t)+2+sizeof(key128_t));
+		long need = tt1->getNumSlotsUsed() * slotSize;
+		if ( ! buf->reserve ( need ) ) return false;
+		// get cursor into buf, NOT START of buf
+		p = buf->getBuf();
 	}
 
 	long siteRank = getSiteRank ();
@@ -23759,9 +23930,9 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 ) {
 		// get its key
 		char *kp = (char *)tt1->getKey ( i );
 		// store rdbid
-		*m_p++ = rdbId; // (rdbId | f);
+		*p++ = rdbId; // (rdbId | f);
 		// store it as is
-		memcpy ( m_p , kp , sizeof(key144_t) );
+		memcpy ( p , kp , sizeof(key144_t) );
 		// sanity check
 		//long long final = hash64n("products.offerprice",0);
 		//long long prefix = hash64n("gbsortby",0);
@@ -23792,29 +23963,38 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 ) {
 		}
 		*/
 		// this was zero when we added these keys to zero, so fix it
-		g_posdb.setDocIdBits ( m_p , m_docId );
+		g_posdb.setDocIdBits ( p , docId );
 		// if this is a numeric field we do not want to set
 		// the siterank or langid bits because it will mess up
 		// sorting by the float which is basically in the position
 		// of the word position bits.
-		if ( g_posdb.isAlignmentBitClear ( m_p ) ) {
+		if ( g_posdb.isAlignmentBitClear ( p ) ) {
 			// make sure it is set again. it was just cleared
 			// to indicate that this key contains a float
 			// like a price or something, and we should not
 			// set siterank or langid so that its termlist
 			// remains sorted just by that float
-			g_posdb.setAlignmentBit ( m_p , 1 );
+			g_posdb.setAlignmentBit ( p , 1 );
 		}
 		// otherwise, set the siterank and langid
 		else {
 			// this too
-			g_posdb.setSiteRankBits ( m_p , siteRank );
+			g_posdb.setSiteRankBits ( p , siteRank );
 			// set language here too
-			g_posdb.setLangIdBits ( m_p , m_langId );
+			g_posdb.setLangIdBits ( p , m_langId );
 		}
 		// advance over it
-		m_p += sizeof(key144_t);
+		p += sizeof(key144_t);
 	}
+
+	// all done
+	if ( ! buf ) { m_p = p; return true; }
+
+	// update safebuf otherwise
+	char *start = buf->getBuf();
+	// fix SafeBuf::m_length
+	buf->setLength ( p - start );
+
 	return true;
 }
 
@@ -24693,6 +24873,149 @@ long XmlDoc::getBoostFromSiteNumInlinks ( long inlinks ) {
 	return boost1;
 }
 
+// . this is kinda hacky because it uses a short XmlDoc on the stack
+// . no need to hash this stuff for regular documents since all the terms
+//   are fielded by gberrorstr, gberrornum or gbisreply.
+// . normally we might use a separate xmldoc class for this but i wanted
+//   something more lightweight
+SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
+
+	// set status for this
+	setStatus ( "getting spider reply meta list");
+
+	if ( m_spiderReplyMetaListValid )
+		return &m_spiderReplyMetaList;
+
+	// if docid based do not hash a spider reply. docid-based spider
+	// requests are added to spiderdb from the query reindex tool.
+	// do not do for diffbot subdocuments either, usespiderdb should be
+	// false for those.
+	if ( m_setFromDocId || ! m_useSpiderdb ) {
+		m_spiderReplyMetaListValid = true;
+		return &m_spiderReplyMetaList;
+	}
+
+	setStatus ( "making spider reply meta list");
+
+	// . we also need a unique docid for indexing the spider *reply*
+	//   as a separate document
+	// . use the same url, but use a different docid.
+	// . use now to mix it up
+	long now = getTimeGlobal();
+	long long h = hash64(m_docId, now );
+	// mask it out
+	long long d = h & DOCID_MASK;
+	// try to get an available docid, preferring "d" if available
+	long long *uqd = getAvailDocIdOnly ( d );
+	if ( ! uqd || uqd == (void *)-1 ) return  (SafeBuf *)uqd;
+
+	// the posdb table
+	HashTableX tt4;
+	if ( !tt4.set(18,4,32,NULL,0,false,m_niceness,"posdb-spindx"))
+		return NULL;
+
+	// sanity
+	if ( ! m_indexCodeValid ) { char *xx=NULL;*xx=0; }
+	// shortcut
+	long indexCode = m_indexCode;
+
+	// hash like gberrorstr:"Tcp Timed out" or gberrorstr:"Doc unchanged"
+	HashInfo hi;
+	hi.m_hashGroup = 0;
+	hi.m_tt = &tt4;
+	hi.m_prefix = "gberrorstr";
+	hi.m_desc   = "spider error msg";
+	if ( ! hashString( mstrerror(indexCode) , &hi ) ) return false;
+
+	char buf[64];
+	long bufLen;
+
+	// . then a numeric term with the error to make the histogram with
+	// . you can't use gbsortby: with this one
+	hi.m_prefix = "gberrornum";
+	hi.m_desc   = "spider error number";
+	bufLen = sprintf ( buf , "%lu", indexCode );
+	if ( ! hashNumber ( buf , buf , bufLen , &hi ) ) return NULL;
+
+
+
+	// we are a spider reply, hash gbisreply:1
+	hi.m_prefix = "gbisreply";
+	if ( ! hashString("1" , &hi ) ) return NULL;
+
+
+	// make ip legit to hash the url
+	long ip = m_ip;
+	// if not a valid ip just use 0.0.0.0
+	if ( ! m_ipValid ) ip = atoip("0.0.0.0");
+	// then the url. url: site: ip: etc. terms
+	if ( ! hashUrl ( &tt4 ) ) return NULL;
+
+	// hash the last spidered date, very useful!
+	hi.m_hashGroup = 0;// this doesn't matter, it's a numeric field
+	hi.m_desc      = "last spidered date";
+	hi.m_prefix    = "gbspiderdate";
+	bufLen = sprintf ( buf , "%lu", reply->m_spideredTime );
+	if ( ! hashNumber ( buf , buf , bufLen , &hi ) ) return NULL;
+
+	// store keys in safebuf then to make our own meta list
+	addTable144 ( &tt4 , *uqd , &m_spiderReplyMetaList );
+
+	// now make the titlerec 
+	char xdhead[2048];
+	// just the head of it. this is the hacky part.
+	XmlDoc *xd = (XmlDoc *)xdhead;
+	// clear it out
+	memset ( xdhead, 0 , 2048);
+
+	// copy stuff from THIS so the spider reply "document" has the same
+	// header info stuff
+	long hsize = (char *)&ptr_firstUrl - (char *)this;
+	if ( hsize > 2048 ) { char *xx=NULL;*xx=0; }
+	memcpy ( xdhead , (char *)this , hsize );
+
+	// override spider time in case we had error to be consistent
+	// with the actual SpiderReply record
+	xd->m_spideredTime = reply->m_spideredTime;
+
+
+	long fullsize = &m_dummyEnd - (char *)this;
+	if ( fullsize > 2048 ) { char *xx=NULL;*xx=0; }
+
+	// sanity
+	if ( ! m_indexCodeValid ) { char *xx=NULL;*xx=0; }
+
+	// the ptr_* were all zero'd out, put the ones we want to keep back in
+	SafeBuf tmp;
+	tmp.safePrintf("<title>Spider Status: %s</title>",
+		       mstrerror(m_indexCode));
+	xd->ptr_utf8Content = tmp.getBufStart();
+	xd->size_utf8Content = tmp.length()+1;
+
+	// keep the same url
+	xd->ptr_firstUrl = ptr_firstUrl;
+	xd->size_firstUrl = size_firstUrl;
+
+
+	// use the same uh48 of our parent
+	long long uh48 = m_firstUrl.getUrlHash48();
+	// then make into a titlerec but store in metalistbuf, not m_titleRec
+	SafeBuf titleRecBuf;
+	// this should not include ptrs that are NULL when compressing
+	// using its m_internalFlags1
+	if ( ! xd->setTitleRecBuf( &titleRecBuf,*uqd,uh48 ) ) 
+		return NULL;
+
+	// concat titleRec to our posdb key records
+	if ( ! m_spiderReplyMetaList.pushChar((char)RDB_TITLEDB) )
+		return NULL;
+	if ( ! m_spiderReplyMetaList.cat(titleRecBuf) ) 
+		return NULL;
+
+	// ok, good to go, ready to add to posdb and titledb
+	m_spiderReplyMetaListValid = true;
+	return &m_spiderReplyMetaList;
+}
 
 // returns false and sets g_errno on error
 bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
@@ -29755,6 +30078,9 @@ bool XmlDoc::hashSingleTerm ( char       *s         ,
 
 	return true;
 }
+
+bool XmlDoc::hashString ( char *s, HashInfo *hi ) {
+	return hashString ( s , gbstrlen(s), hi ); }
 
 bool XmlDoc::hashString ( char       *s          ,
 			  long        slen       ,

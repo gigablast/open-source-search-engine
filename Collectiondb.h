@@ -414,6 +414,8 @@ class CollectionRec {
 	// spidered and begin the next round
 	long   m_spiderRoundNum;
 
+	char  m_makeImageThumbnails;
+	char  m_indexSpiderReplies;
 	char  m_indexBody;
 
 	//char  m_useDatedb               ;

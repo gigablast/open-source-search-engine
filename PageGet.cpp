@@ -245,19 +245,24 @@ bool processLoop ( void *state ) {
 		//xd->set3 ( st->m_docId , st->m_coll , 0 );
 		// callback
 		xd->setCallback ( state , processLoop );
-		// and tell it to load from the old title rec
+		// . and tell it to load from the old title rec
+		// . this sets xd->m_oldTitleRec/m_oldTitleRecSize
+		// . this sets xd->ptr_* and all other member vars from
+		//   the old title rec if found in titledb.
 		if ( ! xd->loadFromOldTitleRec ( ) ) return false;
 	}
 
 	if ( g_errno ) return sendErrorReply ( st , g_errno );
 	// now force it to load old title rec
-	char **tr = xd->getTitleRec();
+	//char **tr = xd->getTitleRec();
+	SafeBuf *tr = xd->getTitleRecBuf();
 	// blocked? return false if so. it will call processLoop() when it rets
 	if ( tr == (void *)-1 ) return false;
 	// we did not block. check for error? this will free "st" too.
 	if ( ! tr ) return sendErrorReply ( st , g_errno );
 	// if title rec was empty, that is a problem
-	if ( xd->m_titleRecSize == 0 ) return sendErrorReply ( st , ENOTFOUND);
+	if ( xd->m_titleRecBuf.length() == 0 ) 
+		return sendErrorReply ( st , ENOTFOUND);
 
 	// set callback
 	char *na = xd->getIsNoArchive();

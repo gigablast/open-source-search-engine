@@ -490,7 +490,12 @@ class XmlDoc {
 	key_t *getTitleRecKey() ;
 	//char *getSkipIndexing ( );
 	char *prepareToMakeTitleRec ( ) ;
-	char **getTitleRec ( ) ;
+	// store TitleRec into "buf" so it can be added to metalist
+	bool setTitleRecBuf ( SafeBuf *buf , long long docId, long long uh48 );
+	// sets m_titleRecBuf/m_titleRecBufValid/m_titleRecKey[Valid]
+	SafeBuf *getTitleRecBuf ( );
+	SafeBuf *getSpiderReplyMetaList ( class SpiderReply *reply ) ;
+	SafeBuf m_spiderReplyMetaList;
 	char *getIsAdult ( ) ;
 	long **getIndCatIds ( ) ;
 	long **getCatIds ( ) ;
@@ -601,6 +606,7 @@ class XmlDoc {
 	//bool *updateRootLangId ( );
 	char **getRootTitleRec ( ) ;
 	//char **getContactTitleRec ( char *url ) ;
+	long long *getAvailDocIdOnly ( long long preferredDocId ) ;
 	long long *getDocId ( ) ;
 	char *getIsIndexed ( ) ;
 	class TagRec *getTagRec ( ) ;
@@ -733,7 +739,9 @@ class XmlDoc {
 	//		  bool       nosplit ) ;
 
 	long getSiteRank ();
-	bool addTable144 ( class HashTableX *tt1 );
+	bool addTable144 ( class HashTableX *tt1 , 
+			   long long docId ,
+			   class SafeBuf *buf = NULL );
 
 	bool addTable224 ( HashTableX *tt1 ) ;
 
@@ -749,6 +757,7 @@ class XmlDoc {
 	bool hashNoSplit ( class HashTableX *tt ) ;
 	char *hashAll ( class HashTableX *table ) ;
 	long getBoostFromSiteNumInlinks ( long inlinks ) ;
+	bool hashSpiderReply (class SpiderReply *reply ,class HashTableX *tt) ;
 	bool hashMetaTags ( class HashTableX *table ) ;
 	bool hashIsClean ( class HashTableX *table ) ;
 	bool hashZipCodes ( class HashTableX *table ) ;
@@ -824,6 +833,8 @@ class XmlDoc {
 			  long              slen ) ;
 	bool hashString ( char             *s    ,
 			  long              slen ,
+			  class HashInfo   *hi   ) ;
+	bool hashString ( char             *s    ,
 			  class HashInfo   *hi   ) ;
 
 
@@ -1079,6 +1090,7 @@ class XmlDoc {
 	char     m_firstUrlHash64Valid;
 	char     m_lastUrlValid;
 	char     m_docIdValid;
+	char     m_availDocIdValid;
 	//char     m_collValid;
 	char     m_tagRecValid;
 	char     m_robotsTxtLenValid;
@@ -1168,7 +1180,6 @@ class XmlDoc {
 	//char     m_oldsrValid;
 	char     m_sreqValid;
 	char     m_srepValid;
-	char     m_titleRecValid;
 
 	bool m_ipValid;
 	bool m_firstIpValid;
@@ -1335,6 +1346,7 @@ class XmlDoc {
 	bool m_newTermInfoBufValid;
 	bool m_summaryValid;
 	bool m_gsbufValid;
+	bool m_spiderReplyMetaListValid;
 	bool m_isCompromisedValid;
 	bool m_isNoArchiveValid;
 	//bool m_isVisibleValid;
@@ -1977,11 +1989,13 @@ class XmlDoc {
 	bool  m_deleteFromIndex;
 
 	// ptrs to stuff
-	char *m_titleRec;
-	long  m_titleRecSize;
-	bool  m_freeTitleRec;
-	long  m_titleRecAllocSize;
-	key_t m_titleRecKey;
+	//char *m_titleRec;
+	SafeBuf m_titleRecBuf;
+	char    m_titleRecBufValid;
+	//long  m_titleRecSize;
+	//bool  m_freeTitleRec;
+	//long  m_titleRecAllocSize;
+	key_t   m_titleRecKey;
 
 	// for isDupOfUs()
 	char *m_dupTrPtr;

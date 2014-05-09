@@ -2027,11 +2027,11 @@ bool Repair::injectTitleRec ( ) {
 	xd->m_tagRecValid    = false;
 
 	// rebuild the title rec! otherwise we re-add the old one!!!!!!!
-	xd->m_titleRecValid = false;
+	xd->m_titleRecBufValid = false;
 	// free it since set2() should have uncompressed it!
 	//mfree ( titleRec , titleRecSize, "repair" );
 	// and so xd doesn't free it
-	xd->m_titleRec = NULL;
+	xd->m_titleRecBuf.purge();// = NULL;
 
 	// use the ptr_utf8Content that we have
 	xd->m_recycleContent = true;

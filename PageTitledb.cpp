@@ -83,7 +83,9 @@ bool sendPageTitledb ( TcpSocket *s , HttpRequest *r ) {
 	xd->set3 ( docId , coll , 0 );
 	// callback
 	xd->setCallback ( st , gotTitleRec );
-	// and tell it to load from old title rec
+	// . and tell it to load from old title rec
+	// . this sets all the member vars from it and also sets
+	//   m_titleRecBuf to contain the actual compressed title rec
 	if ( ! xd->loadFromOldTitleRec ( ) ) return false;
 	// we got it without blocking. cached?
 	return gotTitleRec ( st );
@@ -118,7 +120,7 @@ bool gotTitleRec ( void *state ) {
 
 	// . deal with errors
 	// . print none if non title rec at or after the provided docId
-	if ( g_errno || docId == 0LL || xd->m_titleRecSize <= 0 ) {
+	if ( g_errno || docId == 0LL || xd->m_titleRecBuf.length() <= 0 ) {
 		// print docId in box
 		sb.safePrintf (  "<center>\nEnter docId: "
 				 "<input type=text name=d value=%lli size=15>",
