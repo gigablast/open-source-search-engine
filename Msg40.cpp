@@ -1662,6 +1662,11 @@ bool Msg40::gotSummary ( ) {
 		// XmlDoc::m_contentHash32.. it will be zero if invalid i guess
 		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
 		     mr->m_contentHash32 &&
+		     // do not dedup CT_STATUS results, those are
+		     // spider reply "documents" that indicate the last
+		     // time a doc was spidered and the error code or success
+		     // code
+		     mr->m_contentType != CT_STATUS &&
 		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) ) {
 			//if ( g_conf.m_logDebugQuery )
 			log("msg40: dup sum #%li (%lu)(d=%lli)",m_printi,
@@ -1684,6 +1689,11 @@ bool Msg40::gotSummary ( ) {
 		// return true with g_errno set on error
 		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
 		     mr->m_contentHash32 &&
+		     // do not dedup CT_STATUS results, those are
+		     // spider reply "documents" that indicate the last
+		     // time a doc was spidered and the error code or success
+		     // code
+		     mr->m_contentType != CT_STATUS &&
 		     ! m_dedupTable.addKey ( &mr->m_contentHash32 ) ) {
 			m_hadPrintError = true;
 			log("msg40: error adding to dedup table: %s",
@@ -2057,6 +2067,11 @@ bool Msg40::gotSummary ( ) {
 		//long m = oldNumContiguous;
 		// get it
 		Msg20Reply *mri = m_msg20[i]->m_r;
+		// do not dedup CT_STATUS results, those are
+		// spider reply "documents" that indicate the last
+		// time a doc was spidered and the error code or 
+		// success code
+		if ( mri->m_contentType == CT_STATUS ) continue;
 		// never let it be i
 		//if ( m <= i ) m = i + 1;
 		// see if any result lower-scoring than #i is a dup of #i
@@ -2067,6 +2082,11 @@ bool Msg40::gotSummary ( ) {
 			if ( *level != CR_OK ) continue;
 			// get it
 			Msg20Reply *mrm = m_msg20[m]->m_r;
+			// do not dedup CT_STATUS results, those are
+			// spider reply "documents" that indicate the last
+			// time a doc was spidered and the error code or 
+			// success code
+			if ( mrm->m_contentType == CT_STATUS ) continue;
 			// use gigabit vector to do topic clustering, etc.
 			long *vi = (long *)mri->ptr_vbuf;
 			long *vm = (long *)mrm->ptr_vbuf;
@@ -5307,6 +5327,8 @@ bool printHttpMime ( State0 *st ) {
 		ct = "application/json";
 	if ( si->m_format == FORMAT_XML )
 		ct = "text/xml";
+	if ( si->m_format == FORMAT_HTML )
+		ct = "text/html";
 	//if ( si->m_format == FORMAT_TEXT )
 	//	ct = "text/plain";
 	if ( si->m_format == FORMAT_CSV )

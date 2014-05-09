@@ -702,7 +702,7 @@ class XmlDoc {
 	SafeBuf *getNewTagBuf ( ) ;
 
 	char *updateTagdb ( ) ;
-	bool logIt ( ) ;
+	bool logIt ( class SafeBuf *bb = NULL ) ;
 	bool m_doConsistencyTesting;
 	bool doConsistencyTest ( bool forceTest ) ;
 	long printMetaList ( ) ;
@@ -765,7 +765,7 @@ class XmlDoc {
 	bool hashContentType ( class HashTableX *table ) ;
 	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
-	bool hashUrl ( class HashTableX *table ) ;
+	bool hashUrl ( class HashTableX *table , bool hashNonFieldTerms=true) ;
 	bool hashDateNumbers ( class HashTableX *tt ) ;
 	bool hashSections ( class HashTableX *table ) ;
 	bool hashIncomingLinkText ( class HashTableX *table            ,
@@ -1352,6 +1352,7 @@ class XmlDoc {
 	//bool m_isVisibleValid;
 	bool m_clockCandidatesTableValid;
 	bool m_clockCandidatesDataValid;
+	bool m_titleRecBufValid;
 	bool m_isLinkSpamValid;
 	bool m_isErrorPageValid;
 	bool m_isHijackedValid;
@@ -1417,6 +1418,7 @@ class XmlDoc {
 	Msg0 m_msg0;
 	Msg5 m_msg5;
 	char m_isDup;
+	long long m_docIdWeAreADupOf;
 	long m_ei;
 	long m_lastLaunch;
 	Msg22Request m_msg22Request;
@@ -1991,7 +1993,6 @@ class XmlDoc {
 	// ptrs to stuff
 	//char *m_titleRec;
 	SafeBuf m_titleRecBuf;
-	char    m_titleRecBufValid;
 	//long  m_titleRecSize;
 	//bool  m_freeTitleRec;
 	//long  m_titleRecAllocSize;
@@ -2353,6 +2354,7 @@ public:
 		//m_useWeights              = false;
 		m_useSynonyms             = false;
 		m_hashGroup = -1;
+		m_useCountTable = true;
 		m_startDist = 0;
 		m_siteHash32 = 0;
 	};
@@ -2368,6 +2370,7 @@ public:
 	char              m_hashGroup;
 	long              m_startDist;
 	long              m_siteHash32;
+	bool              m_useCountTable;
 };
 
 

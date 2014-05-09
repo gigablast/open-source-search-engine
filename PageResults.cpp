@@ -3033,7 +3033,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	//
 	/////
 	unsigned char ctype = mr->m_contentType;
-	if ( ctype >= CT_HTML && ctype <= CT_JSON ) {
+	if ( ctype != CT_HTML && ctype != CT_UNKNOWN ){//&&ctype <= CT_JSON ) {
 		char *cs = g_contentTypeStrings[ctype];
 		if ( si->m_format == FORMAT_XML )
 			sb->safePrintf("\t\t<contentType>"

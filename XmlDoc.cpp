@@ -3551,14 +3551,13 @@ bool XmlDoc::setDmozInfo () {
 // . return true on success, false on failure
 bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, long long docId, long long uh48 ){
 
-	setStatus ( "making title rec");
+	//setStatus ( "making title rec");
 
 	// assume could not make one because we were banned or something
 	tbuf->purge(); // m_titleRec = NULL;
 
 	// start seting members in THIS's header before compression
 	m_version           = TITLEREC_CURRENT_VERSION;
-	m_versionValid      = true;
 
 	// tag rec must have "sitenuminlinks" in it
 	//if (! m_newTagRec.getTag("sitenuminlinks") ) { char *xx=NULL;*xx=0; }
@@ -3890,7 +3889,7 @@ SafeBuf *XmlDoc::getTitleRecBuf ( ) {
 	if ( ! m_docIdValid                  ) { char *xx=NULL;*xx=0; }
 
 	// verify record parts
-	if ( ! m_versionValid                ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_versionValid                ) { char *xx=NULL;*xx=0; }
 	if ( ! m_ipValid                     ) { char *xx=NULL;*xx=0; }
 	if ( ! m_spideredTimeValid           ) { char *xx=NULL;*xx=0; }
 	if ( ! m_pubDateValid                ) { char *xx=NULL;*xx=0; }
@@ -3990,6 +3989,10 @@ SafeBuf *XmlDoc::getTitleRecBuf ( ) {
 	// we need docid and uh48 for making the key of the titleRec
 	if ( ! setTitleRecBuf ( &m_titleRecBuf , *docId , uh48 ) ) 
 		return NULL;
+
+	// set this member down here because we can't set it in "xd"
+	// because it is too short of an xmldoc stub
+	m_versionValid = true;
 
 	// breathe
 	QUICKPOLL( m_niceness );
@@ -8346,6 +8349,7 @@ char *XmlDoc::getIsDup ( ) {
 			    m_firstUrl.m_url,d);
 			m_isDup = true;
 			m_isDupValid = true; 
+			m_docIdWeAreADupOf = d;
 			return &m_isDup; 
 		}
 
@@ -18472,7 +18476,7 @@ long *XmlDoc::getSpiderPriority ( ) {
 	return &m_priority;
 }
 
-bool XmlDoc::logIt ( ) {
+bool XmlDoc::logIt ( SafeBuf *bb ) {
 
 	// set errCode
 	long errCode = m_indexCode;
@@ -18500,24 +18504,27 @@ bool XmlDoc::logIt ( ) {
 	CollectionRec *cr = getCollRec();
 	if ( cr ) coll = cr->m_coll;
 
+	SafeBuf tmpsb;
 
 	// print into this now
-	SafeBuf sb;
+	SafeBuf *sb = &tmpsb;
+	// log into provided safebuf if not null
+	if ( bb ) sb = bb;
 
 	// 
 	// coll
 	//
-	sb.safePrintf("coll=%s ",coll);
-	sb.safePrintf("collnum=%li ",(long)m_collnum);
+	sb->safePrintf("coll=%s ",coll);
+	sb->safePrintf("collnum=%li ",(long)m_collnum);
 
 	//
 	// print ip
 	//
 	if ( m_ipValid ) 
-		sb.safePrintf("ip=%s ",iptoa(m_ip) );
+		sb->safePrintf("ip=%s ",iptoa(m_ip) );
 
 	if ( m_firstIpValid ) 
-		sb.safePrintf("firstip=%s ",iptoa(m_firstIp) );
+		sb->safePrintf("firstip=%s ",iptoa(m_firstIp) );
 
 	// . first ip from spider req if it is fake
 	// . we end up spidering the same url twice because it will have
@@ -18526,7 +18533,7 @@ bool XmlDoc::logIt ( ) {
 	//   make queues in the case of hammering an ip, which i think
 	//   it already does...
 	if ( m_sreqValid && m_sreq.m_firstIp != m_firstIp )
-		sb.safePrintf("fakesreqfirstip=%s ",iptoa(m_sreq.m_firstIp) );
+		sb->safePrintf("fakesreqfirstip=%s ",iptoa(m_sreq.m_firstIp) );
 
 	//
 	// print when this spider request was added
@@ -18535,7 +18542,7 @@ bool XmlDoc::logIt ( ) {
 	//	struct tm *timeStruct = gmtime ( &m_sreq.m_addedTime );
 	//	char tmp[64];
 	//	strftime(tmp,64,"requestadded=%b-%d-%Y(%H:%M:%S)", timeStruct);
-	//	sb.safePrintf("%s(%lu) ",tmp,m_sreq.m_addedTime);
+	//	sb->safePrintf("%s(%lu) ",tmp,m_sreq.m_addedTime);
 	//}
 
 	//
@@ -18546,14 +18553,14 @@ bool XmlDoc::logIt ( ) {
 	struct tm *timeStruct = gmtime ( &spideredTime );
 	char tmp[64];
 	strftime(tmp,64,"spidered=%b-%d-%Y(%H:%M:%S)", timeStruct );
-	sb.safePrintf("%s(%lu) ",tmp,spideredTime);
+	sb->safePrintf("%s(%lu) ",tmp,spideredTime);
 
 	// when it was scheduled to be spidered
 	if ( m_sreqValid && m_sreq.m_addedTime ) {
 		struct tm *timeStruct = gmtime ( &m_sreq.m_addedTime );
 		char tmp[64];
 		strftime ( tmp , 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct );
-		sb.safePrintf("scheduledtime=%s(%lu) ",
+		sb->safePrintf("scheduledtime=%s(%lu) ",
 			      tmp,m_sreq.m_addedTime);
 	}
 
@@ -18561,7 +18568,7 @@ bool XmlDoc::logIt ( ) {
 	if ( m_firstIndexedDateValid ) {
 		timeStruct = gmtime ( &m_firstIndexedDate );
 		strftime(tmp,64,"firstindexed=%b-%d-%Y(%H:%M:%S)", timeStruct);
-		sb.safePrintf("%s(%lu) ",tmp,m_firstIndexedDate);
+		sb->safePrintf("%s(%lu) ",tmp,m_firstIndexedDate);
 	}
 
 
@@ -18572,13 +18579,13 @@ bool XmlDoc::logIt ( ) {
 
 	// when injecting a request we have no idea if it had a reply or not
 	if ( m_sreqValid && m_sreq.m_isInjecting )
-		sb.safePrintf("firsttime=? ");
+		sb->safePrintf("firsttime=? ");
 	else if ( m_sreqValid && m_sreq.m_hadReply )
-		sb.safePrintf("firsttime=0 ");
+		sb->safePrintf("firsttime=0 ");
 	else if ( m_sreqValid )
-		sb.safePrintf("firsttime=1 ");
+		sb->safePrintf("firsttime=1 ");
 	else
-		sb.safePrintf("firsttime=? ");
+		sb->safePrintf("firsttime=? ");
 
 	//
 	// print # of link texts
@@ -18586,10 +18593,10 @@ bool XmlDoc::logIt ( ) {
 	if ( m_linkInfo1Valid && ptr_linkInfo1 ) {
 		LinkInfo *info = ptr_linkInfo1; 
 		long nt = info->getNumLinkTexts();
-		sb.safePrintf("goodinlinks=%li ",nt );
+		sb->safePrintf("goodinlinks=%li ",nt );
 		// new stuff. includes ourselves i think.
-		sb.safePrintf("ipinlinks=%li ",info->m_numUniqueIps);
-		sb.safePrintf("cblockinlinks=%li ",info->m_numUniqueCBlocks);
+		sb->safePrintf("ipinlinks=%li ",info->m_numUniqueIps);
+		sb->safePrintf("cblockinlinks=%li ",info->m_numUniqueCBlocks);
 	}
 
 	//
@@ -18599,80 +18606,80 @@ bool XmlDoc::logIt ( ) {
 		LinkInfo *info = ptr_linkInfo2; 
 		long nt = 0;
 		if ( info ) nt = info->getNumLinkTexts();
-		if ( nt ) sb.safePrintf("goodinlinks2=%li ",nt );
+		if ( nt ) sb->safePrintf("goodinlinks2=%li ",nt );
 	}
 
 	if (  m_docIdValid ) 
-		sb.safePrintf("docid=%llu ",m_docId);
+		sb->safePrintf("docid=%llu ",m_docId);
 
 	if ( m_siteNumInlinksValid ) {
-		sb.safePrintf("siteinlinks=%04li ",m_siteNumInlinks );
-		sb.safePrintf("siteipinlinks=%li ",
+		sb->safePrintf("siteinlinks=%04li ",m_siteNumInlinks );
+		sb->safePrintf("siteipinlinks=%li ",
 			      m_siteNumInlinksUniqueIp);
-		sb.safePrintf("sitecblockinlinks=%li ",
+		sb->safePrintf("sitecblockinlinks=%li ",
 			      m_siteNumInlinksUniqueCBlock);
 		long sr = ::getSiteRank ( m_siteNumInlinks );
-		sb.safePrintf("siterank=%li ", sr );
+		sb->safePrintf("siterank=%li ", sr );
 	}
 
 	// shortcut
 	long long uh48 = hash64b ( m_firstUrl.m_url );
 	// mask it
 	uh48 &= 0x0000ffffffffffffLL;
-	sb.safePrintf ("uh48=%llu ",uh48 );
+	sb->safePrintf ("uh48=%llu ",uh48 );
 	
 
 	if ( m_charsetValid )
-		sb.safePrintf("charset=%s ",get_charset_str(m_charset));
+		sb->safePrintf("charset=%s ",get_charset_str(m_charset));
 
 	if ( m_contentTypeValid )
-		sb.safePrintf("ctype=%s ",
+		sb->safePrintf("ctype=%s ",
 			      g_contentTypeStrings [m_contentType]);
 
 	if ( m_langIdValid )
-		sb.safePrintf("lang=%02li(%s) ",(long)m_langId,
+		sb->safePrintf("lang=%02li(%s) ",(long)m_langId,
 			      getLanguageAbbr(m_langId));
 
 	if ( m_countryIdValid )
-		sb.safePrintf("country=%02li(%s) ",(long)m_countryId,
+		sb->safePrintf("country=%02li(%s) ",(long)m_countryId,
 			      g_countryCode.getAbbr(m_countryId));
 
 	if ( m_hopCountValid )
-		sb.safePrintf("hopcount=%02li ",(long)m_hopCount);
+		sb->safePrintf("hopcount=%02li ",(long)m_hopCount);
 
 	
 	if ( m_contentValid )
-		sb.safePrintf("contentlen=%06li ",m_contentLen);
+		sb->safePrintf("contentlen=%06li ",m_contentLen);
 
 	if ( m_robotsTxtLenValid )
-		sb.safePrintf("robotstxtlen=%04li ",m_robotsTxtLen );
+		sb->safePrintf("robotstxtlen=%04li ",m_robotsTxtLen );
 
 	if ( m_contentHash32Valid )
-		sb.safePrintf("ch32=%010lu ",m_contentHash32);
+		sb->safePrintf("ch32=%010lu ",m_contentHash32);
 
 	if ( m_domHash32Valid )
-		sb.safePrintf("dh32=%010lu ",m_domHash32);
+		sb->safePrintf("dh32=%010lu ",m_domHash32);
 
 	if ( m_siteHash32Valid )
-		sb.safePrintf("sh32=%010lu ",m_siteHash32);
+		sb->safePrintf("sh32=%010lu ",m_siteHash32);
 
 	if ( m_isPermalinkValid )
-		sb.safePrintf("ispermalink=%li ",(long)m_isPermalink);
+		sb->safePrintf("ispermalink=%li ",(long)m_isPermalink);
 
 	if ( m_isRSSValid )
-		sb.safePrintf("isrss=%li ",(long)m_isRSS);
+		sb->safePrintf("isrss=%li ",(long)m_isRSS);
 
 	if ( m_linksValid ) 
-		sb.safePrintf("hasrssoutlink=%li ",
+		sb->safePrintf("hasrssoutlink=%li ",
 			      (long)m_links.hasRSSOutlink() );
 
 	if ( m_numOutlinksAddedValid ) 
-		sb.safePrintf("outlinksadded=%04li ",(long)m_numOutlinksAdded);
+		sb->safePrintf("outlinksadded=%04li ",(long)m_numOutlinksAdded);
 
 	if ( m_metaListValid ) 
-		sb.safePrintf("addlistsize=%05li ",(long)m_metaListSize);
+		sb->safePrintf("addlistsize=%05li ",(long)m_metaListSize);
 	else
-		sb.safePrintf("addlistsize=%05li ",(long)0);
+		sb->safePrintf("addlistsize=%05li ",(long)0);
 
 
 	if ( size_imageData && m_imageDataValid ) {
@@ -18680,7 +18687,7 @@ bool XmlDoc::logIt ( ) {
 		ThumbnailArray *ta = (ThumbnailArray *)ptr_imageData;
 		long nt = ta->getNumThumbnails();
 		ThumbnailInfo *ti = ta->getThumbnailInfo(0);
-		sb.safePrintf("thumbnail=%s,%libytes,%lix%li,(%li) ",
+		sb->safePrintf("thumbnail=%s,%libytes,%lix%li,(%li) ",
 			      ti->getUrl(),
 			      ti->m_dataSize,
 			      ti->m_dx,
@@ -18688,18 +18695,18 @@ bool XmlDoc::logIt ( ) {
 			      nt);
 	}
 	else
-		sb.safePrintf("thumbnail=none ");
+		sb->safePrintf("thumbnail=none ");
 
 
 	/*
 	if ( m_hasAddressValid && m_addressesValid )
-		sb.safePrintf("numaddr=%li ",(long)m_addresses.m_numValid);
+		sb->safePrintf("numaddr=%li ",(long)m_addresses.m_numValid);
 
 	//if ( m_skipIndexingValid )
-	//	sb.safePrintf("skipindexing=%li ",(long)m_skipIndexing);
+	//	sb->safePrintf("skipindexing=%li ",(long)m_skipIndexing);
 
 	if ( m_hasTODValid )
-		sb.safePrintf("hastod=%li ",(long)m_hasTOD);
+		sb->safePrintf("hastod=%li ",(long)m_hasTOD);
 	*/
 
 	// get the content type
@@ -18722,10 +18729,10 @@ bool XmlDoc::logIt ( ) {
 	/*
 	// just use this now
 	if ( m_hasContactInfoValid ) 
-		sb.safePrintf("iscontacty=%li ",(long)m_hasContactInfo);
+		sb->safePrintf("iscontacty=%li ",(long)m_hasContactInfo);
 
 	if ( m_hasSiteVenueValid )
-		sb.safePrintf("hassitevenue=%li ",(long)m_hasSiteVenue);
+		sb->safePrintf("hassitevenue=%li ",(long)m_hasSiteVenue);
 	*/
 
 	// hack this kinda
@@ -18741,23 +18748,23 @@ bool XmlDoc::logIt ( ) {
 		//long *priority = getSpiderPriority();
 		//if ( ! priority ||priority==(void *)-1){char *xx=NULL;*xx=0;}
 		if ( m_priorityValid )
-			sb.safePrintf("priority=%li ",
+			sb->safePrintf("priority=%li ",
 				      (long)m_priority);
 	}
 
 	// should be valid since we call getSpiderPriority()
 	if ( m_urlFilterNumValid )
-		sb.safePrintf("urlfilternum=%li ",(long)m_urlFilterNum);
+		sb->safePrintf("urlfilternum=%li ",(long)m_urlFilterNum);
 
 
 	if ( m_diffbotApiUrlValid && 
 	     m_diffbotApiUrl.getBufStart() &&
 	     m_diffbotApiUrl.getBufStart()[0] )
-		sb.safePrintf("diffbotjsonobjects=%li ",
+		sb->safePrintf("diffbotjsonobjects=%li ",
 			      (long)m_diffbotJSONCount);
 
 	if ( m_siteValid )
-		sb.safePrintf("site=%s ",ptr_site);
+		sb->safePrintf("site=%s ",ptr_site);
 
 
 	//
@@ -18771,7 +18778,7 @@ bool XmlDoc::logIt ( ) {
 		struct tm *timeStruct = gmtime ( &spideredTime );
 		char tmp[64];
 		strftime(tmp,64,"lastspidered=%b-%d-%Y(%H:%M:%S)",timeStruct);
-		sb.safePrintf("%s(%lu) ", tmp,spideredTime);
+		sb->safePrintf("%s(%lu) ", tmp,spideredTime);
 	}
 
 	// print new pubdate
@@ -18779,91 +18786,91 @@ bool XmlDoc::logIt ( ) {
 		char tmp[64];
 		struct tm *timeStruct = gmtime ( &m_pubDate );
 		strftime ( tmp, 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct );
-		sb.safePrintf("pubdate=%s ", tmp );
+		sb->safePrintf("pubdate=%s ", tmp );
 	}
 
 	if ( m_linkInfo1Valid && ptr_linkInfo1 && ptr_linkInfo1->hasRSSItem())
-		sb.safePrintf("hasrssitem=1 ");
+		sb->safePrintf("hasrssitem=1 ");
 
 	// was the content itself injected?
 	if ( m_wasInjected ) // m_sreqValid && m_sreq.m_isInjecting )
-		sb.safePrintf("contentinjected=1 ");
+		sb->safePrintf("contentinjected=1 ");
 	else
-		sb.safePrintf("contentinjected=0 ");
+		sb->safePrintf("contentinjected=0 ");
 
 	// might have just injected the url and downloaded the content?
 	if ( m_sreqValid && m_sreq.m_isInjecting )
-		sb.safePrintf("urlinjected=1 ");
+		sb->safePrintf("urlinjected=1 ");
 	else
-		sb.safePrintf("urlinjected=0 ");
+		sb->safePrintf("urlinjected=0 ");
 
 	if ( m_sreqValid && m_sreq.m_isAddUrl )
-		sb.safePrintf("isaddurl=1 ");
+		sb->safePrintf("isaddurl=1 ");
 	else
-		sb.safePrintf("isaddurl=0 ");
+		sb->safePrintf("isaddurl=0 ");
 
 	if ( m_sreqValid && m_sreq.m_isPageReindex )
-		sb.safePrintf("pagereindex=1 ");
+		sb->safePrintf("pagereindex=1 ");
 
 	if ( m_spiderLinksValid && m_spiderLinks )
-		sb.safePrintf("spiderlinks=1 ");
+		sb->safePrintf("spiderlinks=1 ");
 	if ( m_spiderLinksValid && ! m_spiderLinks )
-		sb.safePrintf("spiderlinks=0 ");
+		sb->safePrintf("spiderlinks=0 ");
 
 
 	if ( m_crawlDelayValid && m_crawlDelay != -1 )
-		sb.safePrintf("crawldelayms=%li ",(long)m_crawlDelay);
+		sb->safePrintf("crawldelayms=%li ",(long)m_crawlDelay);
 
 	if ( m_recycleContent )
-		sb.safePrintf("recycleContent=1 ");
+		sb->safePrintf("recycleContent=1 ");
 
 	if ( m_exactContentHash64Valid )
-		sb.safePrintf("exactcontenthash=%llu ",
+		sb->safePrintf("exactcontenthash=%llu ",
 			      m_exactContentHash64 );
 
 	// . print percent changed
 	// . only print if non-zero!
 	if ( m_percentChangedValid && m_oldDocValid && m_oldDoc &&
 	     m_percentChanged ) 
-		sb.safePrintf("changed=%.00f%% ",m_percentChanged);
+		sb->safePrintf("changed=%.00f%% ",m_percentChanged);
 
 	// only print if different now! good for grepping changes
 	if ( m_oldDocValid && m_oldDoc && m_oldDoc->m_docId != m_docId )
-		sb.safePrintf("olddocid=%llu ",m_oldDoc->m_docId);
+		sb->safePrintf("olddocid=%llu ",m_oldDoc->m_docId);
 
 	// only print if different now! good for grepping changes
 	if ( m_sreqValid && m_sreq.m_ufn >= 0 && 
 	     m_sreq.m_ufn != m_urlFilterNum )
-		sb.safePrintf("oldurlfilternum=%li ",
+		sb->safePrintf("oldurlfilternum=%li ",
 			      (long)m_sreq.m_ufn);
 
 	if ( m_sreqValid && m_sreq.m_priority >= 0 &&
 	     m_sreq.m_priority != m_priority )
-		sb.safePrintf("oldpriority=%li ",
+		sb->safePrintf("oldpriority=%li ",
 			      (long)m_sreq.m_priority);
 
 	if ( m_oldDoc && m_oldDoc->m_langIdValid &&
 	     m_oldDoc->m_langId != m_langId )
-		sb.safePrintf("oldlang=%02li(%s) ",(long)m_oldDoc->m_langId,
+		sb->safePrintf("oldlang=%02li(%s) ",(long)m_oldDoc->m_langId,
 			      getLanguageAbbr(m_oldDoc->m_langId));
 
 	if ( m_useSecondaryRdbs &&
 	     m_useTitledb &&
 	     m_logLangId != m_langId )
-		sb.safePrintf("oldlang=%02li(%s) ",(long)m_logLangId,
+		sb->safePrintf("oldlang=%02li(%s) ",(long)m_logLangId,
 			      getLanguageAbbr(m_logLangId));
 
 	if ( m_useSecondaryRdbs &&
 	     m_useTitledb &&
 	     m_logSiteNumInlinks != m_siteNumInlinks )
-		sb.safePrintf("oldsiteinlinks=%04li ",m_logSiteNumInlinks);
+		sb->safePrintf("oldsiteinlinks=%04li ",m_logSiteNumInlinks);
 
 	if ( m_useSecondaryRdbs &&
 	     m_useTitledb &&
 	     m_oldDocValid &&
 	     m_oldDoc &&
 	     strcmp(ptr_site,m_oldDoc->ptr_site) )
-		sb.safePrintf("oldsite=%s ",m_oldDoc->ptr_site);
+		sb->safePrintf("oldsite=%s ",m_oldDoc->ptr_site);
 
 	// . print old pubdate
 	// . -1 means unsupported, 0 means could not find one
@@ -18875,11 +18882,11 @@ bool XmlDoc::logIt ( ) {
 		char tmp[64];
 		struct tm *timeStruct = gmtime ( &m_oldDoc->m_pubDate );
 		strftime ( tmp, 64 , "%b-%d-%Y(%H:%M:%S)" , timeStruct );
-		sb.safePrintf("oldpubdate=%s ",tmp );
+		sb->safePrintf("oldpubdate=%s ",tmp );
 	}
 
 	if ( m_isAdultValid )
-		sb.safePrintf("isadult=%li ",(long)m_isAdult);
+		sb->safePrintf("isadult=%li ",(long)m_isAdult);
 
 	// only print if different now! good for grepping changes
 	if ( m_oldDocValid && m_oldDoc && 
@@ -18887,38 +18894,44 @@ bool XmlDoc::logIt ( ) {
 	     m_oldDoc->m_siteNumInlinks != m_siteNumInlinks ) {
 		long sni = -1;
 		if  ( m_oldDoc ) sni = m_oldDoc->m_siteNumInlinks;
-		sb.safePrintf("oldsiteinlinks=%04li ",sni);
+		sb->safePrintf("oldsiteinlinks=%04li ",sni);
 	}
 
 
 
 	if ( m_sreqValid && m_sreq.m_errCount )
-		sb.safePrintf("olderrcount=%li ",(long)m_sreq.m_errCount );
+		sb->safePrintf("olderrcount=%li ",(long)m_sreq.m_errCount );
 
 	if ( ptr_redirUrl ) { // m_redirUrlValid && m_redirUrlPtr ) {
-		sb.safePrintf("redir=%s ",ptr_redirUrl);//m_redirUrl.getUrl());
+		sb->safePrintf("redir=%s ",ptr_redirUrl);//m_redirUrl.getUrl());
 		if ( m_numRedirects > 2 )
-			sb.safePrintf("numredirs=%li ",m_numRedirects);
+			sb->safePrintf("numredirs=%li ",m_numRedirects);
 	}
 
+	if ( m_isDupValid && m_isDup )
+		sb->safePrintf("dupofdocid=%lli ",m_docIdWeAreADupOf);
+
 	if ( m_firstUrlValid )
-		sb.safePrintf("url=%s ",m_firstUrl.m_url);
+		sb->safePrintf("url=%s ",m_firstUrl.m_url);
 	else
-		sb.safePrintf("urldocid=%lli ",m_docId);
+		sb->safePrintf("urldocid=%lli ",m_docId);
 
 	//
 	// print error/status
 	//
-	sb.safePrintf(": %s",mstrerror(m_indexCode));
+	sb->safePrintf(": %s",mstrerror(m_indexCode));
 
 	// breathe
 	QUICKPOLL ( m_niceness );
+
+	// if safebuf provided, do not log to log
+	if ( bb ) return true;
 
 	// log it out
 	logf ( LOG_INFO , 
 	       "build: %s",
 	       //getFirstUrl()->getUrl(),
-	       sb.getBufStart() );
+	       sb->getBufStart() );
 
 	return true;
 }
@@ -20323,6 +20336,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			spiderReplyMetaList = getSpiderReplyMetaList ( newsr );
 			// error?
 			if ( ! spiderReplyMetaList ) return NULL;
+			// blocked?
+			if (spiderReplyMetaList==(void *)-1) return (char *)-1;
 			// need to alloc space for it too
 			needx += spiderReplyMetaList->length();
 		}
@@ -20852,9 +20867,13 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	// i guess it is safe to do this after getting the spiderreply
 	SafeBuf *spiderReplyMetaList = NULL;
-	if ( cr->m_indexSpiderReplies && m_useSpiderdb )
+	if ( cr->m_indexSpiderReplies && m_useSpiderdb ) {
 		// get the spiderreply ready to be added to the rdbs w/ msg4
 		spiderReplyMetaList = getSpiderReplyMetaList ( newsr );
+		// block?
+		if ( ! spiderReplyMetaList||spiderReplyMetaList == (void *)-1)
+			return (char *)spiderReplyMetaList;
+	}
 
 
 	// the site hash for hashing
@@ -24925,6 +24944,7 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	hi.m_tt = &tt4;
 	hi.m_prefix = "gberrorstr";
 	hi.m_desc   = "spider error msg";
+	hi.m_useCountTable = false;
 	if ( ! hashString( mstrerror(indexCode) , &hi ) ) return false;
 
 	char buf[64];
@@ -24940,16 +24960,21 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 
 
 	// we are a spider reply, hash gbisreply:1
-	hi.m_prefix = "gbisreply";
-	if ( ! hashString("1" , &hi ) ) return NULL;
+	//hi.m_prefix = "gbisreply";
+	//if ( ! hashString("1" , &hi ) ) return NULL;
+
+	hi.m_prefix = "type";
+	if ( ! hashString("status" , &hi ) ) return NULL;
 
 
 	// make ip legit to hash the url
 	long ip = m_ip;
 	// if not a valid ip just use 0.0.0.0
 	if ( ! m_ipValid ) ip = atoip("0.0.0.0");
-	// then the url. url: site: ip: etc. terms
-	if ( ! hashUrl ( &tt4 ) ) return NULL;
+	// . then the url. url: site: ip: etc. terms
+	// . do NOT hash non-fielded terms so we do not get "status" 
+	//   results poluting the serps => false
+	if ( ! hashUrl ( &tt4 , false ) ) return NULL;
 
 	// hash the last spidered date, very useful!
 	hi.m_hashGroup = 0;// this doesn't matter, it's a numeric field
@@ -24977,7 +25002,7 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// override spider time in case we had error to be consistent
 	// with the actual SpiderReply record
 	xd->m_spideredTime = reply->m_spideredTime;
-
+	xd->m_contentType  = CT_STATUS;
 
 	long fullsize = &m_dummyEnd - (char *)this;
 	if ( fullsize > 2048 ) { char *xx=NULL;*xx=0; }
@@ -24989,6 +25014,12 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	SafeBuf tmp;
 	tmp.safePrintf("<title>Spider Status: %s</title>",
 		       mstrerror(m_indexCode));
+	// put stats like we log out from logIt
+	tmp.safePrintf("<div style=max-width:800px;>\n");
+	// store log output into doc
+	//logIt(&tmp);
+	tmp.safePrintf("\n</div>");
+		       
 	xd->ptr_utf8Content = tmp.getBufStart();
 	xd->size_utf8Content = tmp.length()+1;
 
@@ -24996,6 +25027,9 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	xd->ptr_firstUrl = ptr_firstUrl;
 	xd->size_firstUrl = size_firstUrl;
 
+	// serps need site
+	xd->ptr_site = ptr_site;
+	xd->size_site = size_site;
 
 	// use the same uh48 of our parent
 	long long uh48 = m_firstUrl.getUrlHash48();
@@ -25548,7 +25582,7 @@ bool XmlDoc::hashLinksForLinkdb ( HashTableX *dt ) {
 
 // . returns false and sets g_errno on error
 // . copied Url2.cpp into here basically, so we can now dump Url2.cpp
-bool XmlDoc::hashUrl ( HashTableX *tt ) {
+bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 
 	setStatus ( "hashing url colon" );
 
@@ -25560,6 +25594,8 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_tt        = tt;
 
+	// we do not need diversity bits for this
+	hi.m_useCountTable = false;
 	//
 	// HASH url: term
 	//
@@ -25653,7 +25689,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 	setStatus ( "hashing url path");
 
 	// hash the path plain
-	if ( ! hashString (path,plen,&hi) ) return false;
+	if ( hashNonFieldTerms && ! hashString (path,plen,&hi) ) return false;
 
 
 	setStatus ( "hashing gbpathdepth");
@@ -25730,7 +25766,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt ) {
 	//hi.m_desc = "url host";
 	char *host = fu->getHost        ();
 	long  hlen = fu->getHostLen     ();
-	if ( ! hashString ( host,hlen,&hi ) ) return false;
+	if ( hashNonFieldTerms && ! hashString ( host,hlen,&hi)) return false;
 
 	setStatus ( "hashing SiteGetter terms");
 
@@ -30004,7 +30040,7 @@ bool XmlDoc::hashSingleTerm ( char       *s         ,
 	// empty?
 	if ( slen <= 0 ) return true;
 	if ( ! m_versionValid    ) { char *xx=NULL;*xx=0; }
-	if ( ! m_countTableValid ) { char *xx=NULL;*xx=0; }
+	if ( hi->m_useCountTable && ! m_countTableValid){char *xx=NULL;*xx=0; }
 
 	//
 	// POSDB HACK: temporarily turn off posdb until we hit 1B pages!
@@ -30086,7 +30122,7 @@ bool XmlDoc::hashString ( char       *s          ,
 			  long        slen       ,
 			  HashInfo   *hi         ) {
 	if ( ! m_versionValid        ) { char *xx=NULL;*xx=0; }
-	if ( ! m_countTableValid     ) { char *xx=NULL;*xx=0; }
+	if ( hi->m_useCountTable && ! m_countTableValid){char *xx=NULL;*xx=0; }
 	if ( ! m_siteNumInlinksValid ) { char *xx=NULL;*xx=0; }
 	long *sni = getSiteNumInlinks();
 	return   hashString3( s                ,
@@ -30200,7 +30236,7 @@ bool XmlDoc::hashWords ( //long        wordStart ,
 	// sanity checks
 	if ( ! m_wordsValid   ) { char *xx=NULL; *xx=0; }
 	if ( ! m_phrasesValid ) { char *xx=NULL; *xx=0; }
-	if ( ! m_countTableValid ) { char *xx=NULL; *xx=0; }
+	if ( hi->m_useCountTable &&!m_countTableValid){char *xx=NULL; *xx=0; }
 	if ( ! m_bitsValid ) { char *xx=NULL; *xx=0; }
 	if ( ! m_sectionsValid) { char *xx=NULL; *xx=0; }
 	//if ( ! m_synonymsValid) { char *xx=NULL; *xx=0; }

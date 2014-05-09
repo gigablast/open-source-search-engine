@@ -10071,8 +10071,9 @@ void Parms::init ( ) {
 	m->m_title = "index spider replies";
 	m->m_desc  = "Index the spider replies of every url the spider "
 		"attempts to spider. Search for them using special "
-		"query operators like gbhasreply:1 or gberrmsg:success or "
-		"stats:gberrornum to get a histogram.";
+		"query operators like type:status or gberrorstr:success or "
+		"stats:gberrornum to get a histogram. They will not otherwise "
+		"show up in the search results.";
 	m->m_cgi   = "isr";
 	m->m_off   = (char *)&cr.m_indexSpiderReplies - x;
 	m->m_type  = TYPE_BOOL;
