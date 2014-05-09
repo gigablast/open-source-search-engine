@@ -528,29 +528,37 @@ class SpiderRequest {
 	// . this is zero if none or invalid
 	long    m_contentHash32;
 
-	/*
-	char    m_reserved1;
+	// . each request can have a different hop count
+	// . this is only valid if m_hopCountValid is true!
+	// . i made this a short from long to support m_parentLangId etc above
+	short   m_hopCount;
+	
+	// when creating a chinese search engine for instance it is nice
+	// to know the language of the page we are spidering's parent.
+	// typically a chinese page will link to another chinese page,
+	// though not always of course. this is the primary language of
+	// the parent.
+	uint8_t m_parentLangId;//reserved1;
 
 	// the new add url control will allow user to control link spidering
 	// on each url they add. they can also specify file:// instead of
 	// http:// to index local files. so we have to allow file://
-	char    m_onlyAddSameDomainLinks        :1;
-	char    m_onlyAddSameSubdomainLinks     :1;
-	char    m_onlyDoNotAddLinksLinks        :1; // max hopcount 1
-	char    m_onlyDoNotAddLinksLinksLinks   :1; // max hopcount 2
+	/* char    m_onlyAddSameDomainLinks        :1; */
+	/* char    m_onlyAddSameSubdomainLinks     :1; */
+	/* char    m_onlyDoNotAddLinksLinks        :1; // max hopcount 1 */
+	/* char    m_onlyDoNotAddLinksLinksLinks   :1; // max hopcount 2 */
+	char    m_reserved2a:1;
+	char    m_reserved2b:1;
+	char    m_reserved2c:1;
 	char    m_reserved2d:1;
+
 	char    m_reserved2e:1;
 	char    m_reserved2f:1;
 	char    m_reserved2g:1;
 	char    m_reserved2h:1;
 
 
-	// . each request can have a different hop count
-	// . this is only valid if m_hopCountValid is true!
-	short   m_hopCount;
-	*/
-	
-	long    m_hopCount;
+	//long    m_hopCount;
 
 	// . this is now computed dynamically often based on the latest
 	//   m_addedTime and m_percentChanged of all the SpideRec *replies*.
@@ -715,6 +723,8 @@ class SpiderRequest {
 		m_ufn = -1;
 		// this too
 		m_priority = -1;
+		// this happens to be zero already, but just in case it changes
+		m_parentLangId = langUnknown;
 	};
 
 	static long getNeededSize ( long urlLen ) {

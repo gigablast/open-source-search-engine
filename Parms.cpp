@@ -1318,9 +1318,9 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 bool printDropDownProfile ( SafeBuf* sb, char *name, long select ) {
 	sb->safePrintf ( "<select name=%s>", name );
 	// the type of url filters profiles
-	char *items[] = {"custom","web","news"};
+	char *items[] = {"custom","web","news","chinese"};
 	char *s;
-	for ( long i = 0 ; i < 3 ; i++ ) {
+	for ( long i = 0 ; i < 4 ; i++ ) {
 		if ( i == select ) s = " selected";
 		else               s = "";
 		sb->safePrintf ("<option value=%li%s>%s",i,s,items[i]);
@@ -7702,7 +7702,9 @@ void Parms::init ( ) {
 		"tools. "
 		"Limit list to 300MB. If you have a lot of INDIVIDUAL urls "
 		"to add then consider using the <a href=/admin/addurl>add "
-		"urls</a> interface.";
+		"urls</a> interface. <b>IF YOU WANT TO SPIDER THE WHOLE "
+		"WEB</b> then only use the <i>seed:</i> directives here "
+		"lest you limit yourself to a set of domains.";
 	m->m_cgi   = "sitelist";
 	m->m_off   = (char *)&cr.m_siteListBuf - x;
 	m->m_page  = PAGE_BASIC_SETTINGS;
@@ -18735,13 +18737,14 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "<td>"
 			  "This is true if the url was directly "
 			  "injected from the "
-			  "/inject page or API."
+			  "<a href=/admin/inject>inject page</a> or API."
 			  "</td></tr>"
 
 			  "<tr class=poo><td>isdocidbased | !isdocidbased</td>"
 			  "<td>"
 			  "This is true if the url was added from the "
-			  "reindex interface. The request does not contain "
+			  "<a href=/admin/reindex>query reindex</a> "
+			  "interface. The request does not contain "
 			  "a url, but only a docid, that way we can add "
 			  "millions of search results very quickly without "
 			  "having to lookup each of their urls. You should "
@@ -18931,6 +18934,16 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "(unknown), \"en\" or \"de\". "
 			  "See table below for supported language "
 			  "abbreviations.</td></tr>"
+
+			  "<tr class=poo><td><nobr>parentlang==zh_cn,zh_tw,xx"
+			  "</nobr></td>"
+			  "<td>Matches if "
+			  "the url's referring parent url is primarily in "
+			  "this language. Useful for prioritizing spidering "
+			  "pages of a certain language."
+			  "See table below for supported language "
+			  "abbreviations."
+			  "</td></tr>"
 
 			  /*
 			  "<tr class=poo><td>link:gigablast</td>"

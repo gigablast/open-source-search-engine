@@ -1024,6 +1024,25 @@ int main2 ( int argc , char *argv[] ) {
 		testMandrill = true;
 	}
 
+	/*
+	class foo {
+	public:
+		long poo;
+	};
+	class fart {
+	public:
+		short fart3;
+		char fart1;
+		char fart2;
+	};
+	foo xxx;
+	xxx.poo = 38123;
+	fart *yyy = (fart *)&xxx;
+	fprintf(stderr,"fart1=%li fart2=%li fart3=%li\n",
+		(long)yyy->fart1,(long)yyy->fart2,(long)yyy->fart3);
+	exit(0);
+	*/
+
 	// gb gendbs, preset the hostid at least
 	if ( //strcmp ( cmd , "gendbs"   ) == 0 ||
 	     //strcmp ( cmd , "gentfndb" ) == 0 ||

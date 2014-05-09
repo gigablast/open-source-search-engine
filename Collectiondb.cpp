@@ -1862,6 +1862,9 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	//	addDefault = true;
 	if ( ! rebuild ) return true;
 
+	if ( m_urlFiltersProfile == UFP_CHINESE )
+		return rebuildChineseRules();
+
 	long n = 0;
 
 	/*
@@ -1944,7 +1947,6 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	if ( m_urlFiltersProfile == UFP_NEWS )
 		m_spiderFreqs [n] = .00347; // 5 mins
 	n++;
-
 
 	m_regExs[n].set("hopcount==0 && iswww");
 	m_harvestLinks       [n] = 1;
@@ -2105,6 +2107,383 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	//m_spiderDiffbotApiUrl[n].nullTerm();
 	//m_numRegExs11++;
 
+	return true;
+}
+
+bool CollectionRec::rebuildChineseRules ( ) {
+
+	long n = 0;
+
+	m_regExs[n].set("isdocidbased");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 0; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 80;
+	n++;
+
+	m_regExs[n].set("ismedia");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 0; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = -3; // delete!
+	n++;
+
+	// if not in the site list then nuke it
+	m_regExs[n].set("!ismanualadd && !insitelist");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 0; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = -3; // delete!
+	n++;
+
+	m_regExs[n].set("errorcount>=3 && hastmperror");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 1; // 30 days default
+	m_maxSpidersPerRule  [n] = 1; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 3;
+	n++;
+
+	m_regExs[n].set("errorcount>=1 && hastmperror");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 1; // 30 days default
+	m_maxSpidersPerRule  [n] = 1; // max spiders
+	m_spiderIpMaxSpiders [n] = 1; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 45;
+	n++;
+
+	m_regExs[n].set("isaddurl");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7; // 30 days default
+	m_maxSpidersPerRule  [n] = 99; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 85;
+	n++;
+
+	m_regExs[n].set("hopcount==0 && iswww && isnew && tld==cn");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7; // 30 days default
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 50;
+	n++;
+
+	m_regExs[n].set("hopcount==0 && iswww && isnew && parentlang==zh_cn,zh_tw,xx");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7; // 30 days default
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 50;
+	n++;
+
+	m_regExs[n].set("hopcount==0 && iswww && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7; // 30 days default
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 20;
+
+
+
+
+	m_regExs[n].set("hopcount==0 && iswww && tld==cn");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7.0; // days b4 respider
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 48;
+	n++;
+
+	m_regExs[n].set("hopcount==0 && iswww && parentlang==zh_cn,zh_tw,xx");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7.0; // days b4 respider
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 48;
+	n++;
+
+	m_regExs[n].set("hopcount==0 && iswww");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7.0; // days b4 respider
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 19;
+	n++;
+
+
+
+
+
+	m_regExs[n].set("hopcount==0 && isnew && tld==cn");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 49;
+	n++;
+
+	m_regExs[n].set("hopcount==0 && isnew && parentlang==zh_cn,zh_tw,xx");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 49;
+	n++;
+
+	m_regExs[n].set("hopcount==0 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 7.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 18;
+	n++;
+
+
+
+	m_regExs[n].set("hopcount==0 && tld==cn");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 10.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 47;
+	n++;
+
+	m_regExs[n].set("hopcount==0 && parentlang==zh_cn,zh_tw,xx");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 10.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 47;
+	n++;
+
+	m_regExs[n].set("hopcount==0");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 10.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 17;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount==1 && isnew && tld==cn");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 20.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 40;
+	n++;
+
+	m_regExs[n].set("hopcount==1 && isnew && parentlang==zh_cn,zh_tw,xx");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 20.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 40;
+	n++;
+
+	m_regExs[n].set("hopcount==1 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 20.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 16;
+	n++;
+
+
+
+	m_regExs[n].set("hopcount==1 && tld==cn");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 20.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 39;
+	n++;
+
+	m_regExs[n].set("hopcount==1 && parentlang==zh_cn,zh_tw,xx");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 20.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 39;
+	n++;
+
+	m_regExs[n].set("hopcount==1");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 20.0;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 15;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount==2 && isnew && tld==cn");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 30;
+	n++;
+
+	m_regExs[n].set("hopcount==2 && isnew && parentlang==zh_cn,zh_tw,xx");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 30;
+	n++;
+
+	m_regExs[n].set("hopcount==2 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 14;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount==2 && tld==cn");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 29;
+	n++;
+
+	m_regExs[n].set("hopcount==2 && parentlang==zh_cn,zh_tw,xx");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 29;
+	n++;
+
+	m_regExs[n].set("hopcount==2");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 40;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 13;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount>=3 && isnew && tld==cn");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 22;
+	n++;
+
+	m_regExs[n].set("hopcount>=3 && isnew && parentlang==zh_cn,zh_tw,xx");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 22;
+	n++;
+
+	m_regExs[n].set("hopcount>=3 && isnew");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 12;
+	n++;
+
+
+
+
+	m_regExs[n].set("hopcount>=3 && tld==cn");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 21;
+	n++;
+
+	m_regExs[n].set("hopcount>=3 && parentlang==zh_cn,zh_tw,xx");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 21;
+	n++;
+
+	m_regExs[n].set("hopcount>=3");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 11;
+	n++;
+
+
+
+	m_regExs[n].set("default");
+	m_harvestLinks       [n] = 1;
+	m_spiderFreqs        [n] = 60;
+	m_maxSpidersPerRule  [n] = 9; // max spiders
+	m_spiderIpMaxSpiders [n] = 7; // max spiders per ip
+	m_spiderIpWaits      [n] = 1000; // same ip wait
+	m_spiderPriorities   [n] = 1;
+	n++;
+
+	m_numRegExs   = n;
+	m_numRegExs2  = n;
+	m_numRegExs3  = n;
+	m_numRegExs10 = n;
+	m_numRegExs5  = n;
+	m_numRegExs6  = n;
+	m_numRegExs8  = n;
+
+	// done rebuilding CHINESE rules
 	return true;
 }
 
@@ -2758,3 +3137,4 @@ void testRegex ( ) {
 		     url,rx);
 	exit(0);
 }
+

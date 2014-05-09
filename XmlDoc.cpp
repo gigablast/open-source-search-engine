@@ -22996,6 +22996,9 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 	Url *cu = getCurrentUrl();
 	if ( ! cu || cu == (void *)-1 ) return (char *)cu;
 
+	uint8_t *langId = getLangId();
+	if ( ! langId || langId == (uint8_t *)-1 ) return (char *)langId;
+
 	// validate this to prevent core for simplified redirect links
 	long hostHash32a = getHostHash32a();
 
@@ -23387,6 +23390,11 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 			if ( m_sreq.m_isAddUrl )
 				ksr.m_isAddUrl = 1;
 		}
+
+		// it is useful to know the primary langid of the parent
+		// when prioritizing links for spidering in the case of
+		// focussing the search engine on a particular set of langs
+		ksr.m_parentLangId = *langId;
 
 		// don't forget this one!
 		//ksr.m_spiderTime = nowGlobal;

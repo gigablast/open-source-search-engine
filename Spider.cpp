@@ -110,7 +110,7 @@ long SpiderRequest::print ( SafeBuf *sbarg ) {
 	sb->safePrintf("parentDomHash32=0x%lx ",m_parentDomHash32 );
 	sb->safePrintf("parentSiteHash32=0x%lx ",m_parentSiteHash32 );
 
-	sb->safePrintf("hopCount=%li ",m_hopCount );
+	sb->safePrintf("hopCount=%li ",(long)m_hopCount );
 
 	//timeStruct = gmtime ( &m_spiderTime );
 	//time[0] = 0;
@@ -301,7 +301,7 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 
 	sb->safePrintf(" <td>%li</td>\n",m_siteNumInlinks );
 	//sb->safePrintf(" <td>%li</td>\n",m_pageNumInlinks );
-	sb->safePrintf(" <td>%li</td>\n",m_hopCount );
+	sb->safePrintf(" <td>%li</td>\n",(long)m_hopCount );
 
 	// print time format: 7/23/1971 10:45:32
 	struct tm *timeStruct ;
@@ -436,7 +436,7 @@ long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
 
 	sb->safePrintf(" <td>%li</td>\n",(long)m_errCount );
 
-	sb->safePrintf(" <td>%li</td>\n",m_hopCount );
+	sb->safePrintf(" <td>%li</td>\n",(long)m_hopCount );
 
 	// print time format: 7/23/1971 10:45:32
 	struct tm *timeStruct ;
@@ -9912,6 +9912,13 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		langLen = gbstrlen(lang);
 	}
 
+	// . get parent language in the request
+	// . primarpy language of the parent page that linked to this url
+	char *plang = NULL;
+	long  plangLen = 0;
+	plang = getLanguageAbbr(sreq->m_parentLangId);
+	if ( plang ) plangLen = gbstrlen(plang);
+
 	char *tld = (char *)-1;
 	long  tldLen;
 
@@ -11025,6 +11032,67 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 			// come here if we did not match the tld
 		}
+
+
+		// parentlang=en,zh_cn
+		if ( *p=='p' && strncmp(p,"parentlang",10)==0){
+			// if we do not have enough info for outlink, all done
+			if ( isOutlink ) return -1;
+			// must have a reply
+			//if ( ! srep ) continue;
+			// skip if unknown? no, we support "xx" as unknown now
+			//if ( srep->m_langId == 0 ) continue;
+			// set these up
+			char *b = s;
+			// loop for the comma-separated list of langids
+			// like parentlang==en,es,...
+		subloop2b:
+			// get length of it in the expression box
+			char *start = b;
+			while ( *b && !is_wspace_a(*b) && *b!=',' ) b++;
+			long  blen = b - start;
+			//char sm;
+			// if we had parentlang==en,es,...
+			if ( sign == SIGN_EQ &&
+			     blen == plangLen && 
+			     strncasecmp(start,plang,plangLen)==0 ) 
+				// if we matched any, that's great
+				goto matched2b;
+			// if its parentlang!=en,es,...
+			// and we equal the string, then we do not matcht his
+			// particular rule!!!
+			if ( sign == SIGN_NE &&
+			     blen == plangLen && 
+			     strncasecmp(start,plang,plangLen)==0 ) 
+				// we do not match this rule if we matched
+				// and of the langs in the != list
+				continue;
+			// might have another in the comma-separated list
+			if ( *b != ',' ) {
+				// if that was the end of the list and the
+				// sign was == then skip this rule
+				if ( sign == SIGN_EQ ) continue;
+				// otherwise, if the sign was != then we win!
+				if ( sign == SIGN_NE ) goto matched2b;
+				// otherwise, bad sign?
+				continue;
+			}
+			// advance to next list item if was a comma after us
+			b++;
+			// and try again
+			goto subloop2b;
+			// come here on a match
+		matched2b:
+			// we matched, now look for &&
+			p = strstr ( b , "&&" );
+			// if nothing, else then it is a match
+			if ( ! p ) return i;
+			// skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+			// come here if we did not match the tld
+		}
+
 
 		// hopcount == 20 [&&]
 		if ( *p=='h' && strncmp(p, "hopcount", 8) == 0){

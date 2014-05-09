@@ -368,6 +368,8 @@ class CollectionRec {
 	// for regular crawls
 	bool rebuildUrlFilters2();
 
+	bool rebuildChineseRules();
+
 	bool m_urlFiltersHavePageCounts;
 
 	// moved from SpiderColl so we can load up at startup
