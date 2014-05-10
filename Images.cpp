@@ -1005,11 +1005,11 @@ void Images::thumbStart_r ( bool amThread ) {
 	}
 
 	if( m_thumbnailSize > m_imgReplyMaxLen ) {
-		log( "image: Image thumbnail larger than buffer!" );
-		log(LOG_DEBUG,"\t\t\tFile Read Bytes: %ld", m_thumbnailSize);
-		log(LOG_DEBUG,"\t\t\tBuf Max Bytes  : %ld", m_imgReplyMaxLen );
-		log(LOG_DEBUG, "\t\t\t-----------------------" );
-		log(LOG_DEBUG, "\t\t\tDiff           : %ld", 
+		log(LOG_DEBUG,"image: Image thumbnail larger than buffer!" );
+		log(LOG_DEBUG,"image: File Read Bytes: %ld", m_thumbnailSize);
+		log(LOG_DEBUG,"image: Buf Max Bytes  : %ld",m_imgReplyMaxLen );
+		log(LOG_DEBUG,"image: -----------------------" );
+		log(LOG_DEBUG,"image: Diff           : %ld", 
 		     m_imgReplyMaxLen-m_thumbnailSize );
 		return;
 

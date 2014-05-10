@@ -24944,10 +24944,22 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 		m_langId = langUnknown;
 	}
 
+	// prevent more cores
+	bool forcedSiteNumInlinks = false;
+	if ( ! m_siteNumInlinksValid ) {
+		forcedSiteNumInlinks = true;
+		m_siteNumInlinks = 0;
+		m_siteNumInlinksValid = true;
+	}
+
 	SafeBuf *mbuf = getSpiderReplyMetaList2 ( reply );
 
 	if ( forcedLangId )
 		m_langIdValid = false;
+
+	if ( forcedSiteNumInlinks ) {
+		m_siteNumInlinksValid = false;
+	}
 
 	return mbuf;
 }
