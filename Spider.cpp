@@ -3358,7 +3358,8 @@ bool SpiderColl::evalIpLoop ( ) {
 
 	// if we started reading, then assume we got a fresh list here
 	if ( g_conf.m_logDebugSpider )
-		log("spider: back from msg5 spiderdb read2");
+		log("spider: back from msg5 spiderdb read2 of %li bytes",
+		    m_list.m_listSize);
 
 
 	// . set the winning request for all lists we read so far
@@ -3549,7 +3550,8 @@ bool SpiderColl::readListFromSpiderdb ( ) {
 		return false ;
 	// note its return
 	if ( g_conf.m_logDebugSpider )
-		log("spider: back from msg5 spiderdb read");
+		log("spider: back from msg5 spiderdb read of %li bytes",
+		    m_list.m_listSize);
 	// no longer getting list
 	m_gettingList1 = false;
 

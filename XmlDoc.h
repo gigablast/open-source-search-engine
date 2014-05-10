@@ -495,6 +495,7 @@ class XmlDoc {
 	// sets m_titleRecBuf/m_titleRecBufValid/m_titleRecKey[Valid]
 	SafeBuf *getTitleRecBuf ( );
 	SafeBuf *getSpiderReplyMetaList ( class SpiderReply *reply ) ;
+	SafeBuf *getSpiderReplyMetaList2 ( class SpiderReply *reply ) ;
 	SafeBuf m_spiderReplyMetaList;
 	char *getIsAdult ( ) ;
 	long **getIndCatIds ( ) ;

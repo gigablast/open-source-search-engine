@@ -256,7 +256,7 @@ bool Rdb::init ( char          *dir                  ,
 			    // make useProtection true for debugging
 				    false          , // use protection?
 				    false , // alowdups?
-				    m_rdbId ) )
+				    rdbId ) )
 			return false;
 	}
 	else {
@@ -1498,6 +1498,8 @@ bool Rdb::dumpCollLoop ( ) {
 	//         just modify DiskPageCache.cpp to ignore breaches. 
 	if(m_useTree) maxFileSize = m_tree.getMemOccupiedForList ();
 	else          maxFileSize = m_buckets.getMemOccupied();
+	// sanity
+	if ( maxFileSize < 0 ) { char *xx=NULL;*xx=0; }
 	// because we are actively spidering the list we dump ends up
 	// being more, by like 20% or so, otherwise we do not make a
 	// big enough diskpagecache and it logs breach msgs... does not
@@ -2405,9 +2407,10 @@ bool Rdb::addRecord ( collnum_t collnum,
 		}
 	}
 
-	// . cancel any spider request that is a dup in the dupcache to save disk space
-	// . twins might have different dupcaches so they might have different dups, but
-	//   it shouldn't be a big deal because they are dups!
+	// . cancel any spider request that is a dup in the dupcache to save 
+	//   disk space
+	// . twins might have different dupcaches so they might have different
+	//   dups, but it shouldn't be a big deal because they are dups!
 	if ( m_rdbId == RDB_SPIDERDB && ! KEYNEG(key) ) {
 		// . this will create it if spiders are on and its NULL
 		// . even if spiders are off we need to create it so 
@@ -2418,12 +2421,18 @@ bool Rdb::addRecord ( collnum_t collnum,
 		SpiderRequest *sreq=(SpiderRequest *)(orig-4-sizeof(key128_t));
 		// is it really a request and not a SpiderReply?
 		char isReq = g_spiderdb.isSpiderRequest ( &sreq->m_key );
-		// skip if in dup cache. do NOT add to cache since addToWaitingTree()
-		// in Spider.cpp will do that when called from addSpiderRequest() below
-		if ( isReq && sc->isInDupCache ( sreq , false ) ) return true;
+		// skip if in dup cache. do NOT add to cache since 
+		// addToWaitingTree() in Spider.cpp will do that when called 
+		// from addSpiderRequest() below
+		if ( isReq && sc->isInDupCache ( sreq , false ) ) {
+			if ( g_conf.m_logDebugSpider )
+				log("spider: adding spider req %s is dup. "
+				    "skipping.",sreq->m_url);
+			return true;
+		}
 	}
 
-	if ( m_useTree && (tn=m_tree.addNode ( collnum, key , data , dataSize ))>=0) {
+	if ( m_useTree && (tn=m_tree.addNode (collnum,key,data,dataSize))>=0) {
 		// if adding to spiderdb, add to cache, too
 		if ( m_rdbId != RDB_SPIDERDB && m_rdbId != RDB_DOLEDB ) 
 			return true;
@@ -2469,15 +2478,18 @@ bool Rdb::addRecord ( collnum_t collnum,
 		// add the request
 		if ( isReq ) {
 			// log that. why isn't this undoling always
-			/*
 			if ( g_conf.m_logDebugSpider )
-				logf(LOG_DEBUG,"spider: rdb: got spider "
+				logf(LOG_DEBUG,"spider: rdb: added spider "
+				     "request to spiderdb rdb tree "
+				     "addnode=%li "
 				     "request for uh48=%llu prntdocid=%llu "
-				     "firstIp=%s",
+				     "firstIp=%s spiderdbkey=%s",
+				     tn,
 				     sreq->getUrlHash48(), 
 				     sreq->getParentDocId(),
-				     iptoa(sreq->m_firstIp));
-			*/
+				     iptoa(sreq->m_firstIp),
+				     KEYSTR((char *)&sreq->m_key,
+					    sizeof(key128_t)));
 			// false means to NOT call evaluateAllRequests()
 			// because we call it below. the reason we do this
 			// is because it does not always get called

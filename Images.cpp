@@ -819,6 +819,18 @@ bool Images::makeThumb ( ) {
 		return true;
 	}
 
+	// skip if bad aspect ratio. 5x1 or 1x5 is bad i guess
+	if ( m_dx > 0 && m_dy > 0 ) {
+		float aspect = (float)m_dx / (float)m_dy;
+		if ( aspect < .2 || aspect > 5.0 ) {
+			log(LOG_DEBUG,
+			    "image: Image aspect ratio is worse that 5 to 1");
+			g_errno = EBADIMG;
+			return true;
+		}
+	}
+
+
 	// update status
 	if ( m_xd ) m_xd->setStatus ( "making thumbnail" );
 	// log it

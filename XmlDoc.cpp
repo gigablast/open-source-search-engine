@@ -20361,6 +20361,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		m_p    = m_metaList;
 		m_pend = m_metaList + needx;
 
+		// save it
+		char *saved = m_p;
+
 		// first store spider reply "document"
 		if ( spiderReplyMetaList ) {
 			memcpy ( m_p,
@@ -20369,8 +20372,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			m_p += spiderReplyMetaList->length();
 		}
 
-		// save it
-		char *saved = m_p;
 		/*
 
 		  Not any more, now we remove from doledb as soon
@@ -24933,6 +24934,25 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 		m_spiderReplyMetaListValid = true;
 		return &m_spiderReplyMetaList;
 	}
+
+	// . fake this out so we do not core
+	// . hashWords3() uses it i guess
+	bool forcedLangId = false;
+	if ( ! m_langIdValid ) {
+		forcedLangId = true;
+		m_langIdValid = true;
+		m_langId = langUnknown;
+	}
+
+	SafeBuf *mbuf = getSpiderReplyMetaList2 ( reply );
+
+	if ( forcedLangId )
+		m_langIdValid = false;
+
+	return mbuf;
+}
+
+SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {	
 
 	setStatus ( "making spider reply meta list");
 
