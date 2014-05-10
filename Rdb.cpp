@@ -627,10 +627,15 @@ bool Rdb::deleteAllRecs ( collnum_t collnum ) {
 bool makeTrashDir() {
 	char trash[1024];
 	sprintf(trash, "%strash/",g_hostdb.m_dir);
-	::mkdir ( trash, 
-		  S_IRUSR | S_IWUSR | S_IXUSR | 
-		  S_IRGRP | S_IWGRP | S_IXGRP | 
-		  S_IROTH | S_IXOTH ) ;
+	if ( ::mkdir ( trash, 
+		       S_IRUSR | S_IWUSR | S_IXUSR | 
+		       S_IRGRP | S_IWGRP | S_IXGRP | 
+		       S_IROTH | S_IXOTH ) == -1 ) {
+		log("dir: mkdir %s had error: %s",
+		    trash,mstrerror(errno));
+		return false;
+	}
+	return true;
 }
 
 

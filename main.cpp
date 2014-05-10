@@ -2800,10 +2800,16 @@ int main2 ( int argc , char *argv[] ) {
 
 	// start up log file
 	if ( ! g_log.init( g_hostdb.m_logFilename )        ) {
-		fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
+		fprintf (stderr,"db: Log file init failed. Exiting.\n" ); 
+		return 1; 
+	}
 
 	// in case we do not have one, we need it for Images.cpp
-	makeTrashDir();
+	if ( ! makeTrashDir() ) {
+		fprintf (stderr,"db: failed to make trash dir. Exiting.\n" ); 
+		return 1; 
+	}
+		
 
 	g_errno = 0;
 
