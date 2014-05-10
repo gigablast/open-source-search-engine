@@ -467,13 +467,13 @@ bool Collectiondb::addNewColl ( char *coll ,
 		cr->m_collectiveRespiderFrequency = 0.0;
 		//cr->m_restrictDomain = true;
 		// reset the crawl stats
-		// . this will core if a host was dead and then when it came
-		//   back up host #0's parms.cpp told it to add a new coll
-		cr->m_diffbotCrawlStartTime=
-			gettimeofdayInMillisecondsGlobalNoCore();
-		cr->m_diffbotCrawlEndTime   = 0LL;
 	}
 
+	// . this will core if a host was dead and then when it came
+	//   back up host #0's parms.cpp told it to add a new coll
+	cr->m_diffbotCrawlStartTime = getTimeGlobalNoCore();
+	cr->m_diffbotCrawlEndTime   = 0;
+	
 	// . just the basics on these for now
 	// . if certain parms are changed then the url filters
 	//   must be rebuilt, as well as possibly the waiting tree!!!
@@ -807,6 +807,11 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		sc->clearLocks();
 		//sc->m_collnum = newCollnum;
 		//sc->reset();
+		// you have to set this for tryToDeleteSpiderColl to
+		// actually have a shot at deleting it
+		sc->m_deleteMyself = true;
+		// cr will be invalid shortly after this
+		sc->m_cr = NULL;
 		// this will put it on "death row" so it will be deleted
 		// once Msg5::m_waitingForList/Merge is NULL
 		tryToDeleteSpiderColl ( sc );
@@ -1584,12 +1589,14 @@ void CollectionRec::reset() {
 	sc->m_deleteMyself = true;
 
 	// if not currently being accessed nuke it now
-	if ( ! sc->m_msg5.m_waitingForList &&
-	     ! sc->m_msg5b.m_waitingForList &&
-	     ! sc->m_msg1.m_mcast.m_inUse ) {
-		mdelete ( sc, sizeof(SpiderColl),"nukecr2");
-		delete ( sc );
-	}
+	tryToDeleteSpiderColl ( sc );
+
+	// if ( ! sc->m_msg5.m_waitingForList &&
+	//      ! sc->m_msg5b.m_waitingForList &&
+	//      ! sc->m_msg1.m_mcast.m_inUse ) {
+	// 	mdelete ( sc, sizeof(SpiderColl),"nukecr2");
+	// 	delete ( sc );
+	// }
 }
 
 CollectionRec *g_cr = NULL;
@@ -1616,8 +1623,9 @@ bool CollectionRec::load ( char *coll , long i ) {
 	m_collLen = gbstrlen ( coll );
 	strcpy ( m_coll , coll );
 
-	log(LOG_INFO,"db: loading conf for collection %s (%li)",coll,
-	    (long)m_collnum);
+	if ( ! g_conf.m_doingCommandLine )
+		log(LOG_INFO,"db: loading conf for collection %s (%li)",coll,
+		    (long)m_collnum);
 
 	// collection name HACK for backwards compatibility
 	//if ( strcmp ( coll , "main" ) == 0 ) {
@@ -1657,11 +1665,12 @@ bool CollectionRec::load ( char *coll , long i ) {
 		// it is binary now
 		memcpy ( &m_localCrawlInfo , sb.getBufStart(),sb.length() );
 
-	
-	log("coll: loaded %s (%li) local hasurlsready=%li",
-	    m_coll,
-	    (long)m_collnum,
-	    (long)m_localCrawlInfo.m_hasUrlsReadyToSpider);
+
+	if ( ! g_conf.m_doingCommandLine )
+		log("coll: loaded %s (%li) local hasurlsready=%li",
+		    m_coll,
+		    (long)m_collnum,
+		    (long)m_localCrawlInfo.m_hasUrlsReadyToSpider);
 
 
 	// we introduced the this round counts, so don't start them at 0!!
@@ -1704,10 +1713,11 @@ bool CollectionRec::load ( char *coll , long i ) {
 		// it is binary now
 		memcpy ( &m_globalCrawlInfo , sb.getBufStart(),sb.length() );
 
-	log("coll: loaded %s (%li) global hasurlsready=%li",
-	    m_coll,
-	    (long)m_collnum,
-	    (long)m_globalCrawlInfo.m_hasUrlsReadyToSpider);
+	if ( ! g_conf.m_doingCommandLine )
+		log("coll: loaded %s (%li) global hasurlsready=%li",
+		    m_coll,
+		    (long)m_collnum,
+		    (long)m_globalCrawlInfo.m_hasUrlsReadyToSpider);
 	
 
 	////////////
@@ -2733,8 +2743,9 @@ void nukeDoledb ( collnum_t collnum );
 // . it is also called on load of the collection at startup
 bool CollectionRec::rebuildUrlFilters ( ) {
 
-	log("coll: rebuilding url filters for %s ufp=%li",m_coll,
-	    (long)m_urlFiltersProfile);
+	if ( ! g_conf.m_doingCommandLine )
+		log("coll: rebuilding url filters for %s ufp=%li",m_coll,
+		    (long)m_urlFiltersProfile);
 
 	// if not a custom crawl, and no expressions, add a default one
 	//if ( m_numRegExs == 0 && ! m_isCustomCrawl ) {

@@ -2113,8 +2113,8 @@ bool XmlDoc::indexDoc ( ) {
 		// need to save collection rec now during auto save
 		cr->m_needsSave = true;
 		// update this just in case we are the last url crawled
-		long long now = gettimeofdayInMillisecondsGlobal();
-		cr->m_diffbotCrawlEndTime = now;
+		//long long now = gettimeofdayInMillisecondsGlobal();
+		//cr->m_diffbotCrawlEndTime = now;
 	}
 
 
@@ -14666,7 +14666,22 @@ char **XmlDoc::gotHttpReply ( ) {
 	// sanity check -- check after bailing on corruption because
 	// corrupted replies do not end in NULLs
 	if ( m_httpReplySize > 0 && m_httpReply[m_httpReplySize-1] ) {
-		char *xx=NULL;*xx=0; }
+		log("http: httpReplySize=%li http reply does not end in \\0 "
+		    "for %s in collnum=%li. blanking out reply."
+		    ,m_httpReplySize
+		    ,m_firstUrl.m_url
+		    ,(long)m_collnum
+		    );
+		// free it i guess
+		mfree ( m_httpReply, m_httpReplyAllocSize, "XmlDocHR" );
+		// and reset it
+		m_httpReplySize      = 0;
+		m_httpReply          = NULL;
+		m_httpReplyAllocSize = 0;
+		// call it data corruption i guess for now
+		g_errno = ECORRUPTDATA;
+		//char *xx=NULL;*xx=0; 
+	}
 
 	// if its a bad gzip reply, a compressed http reply, then
 	// make the whole thing empty? some websites return compressed replies

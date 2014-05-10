@@ -65,12 +65,12 @@ class Msg36 {
 //#else
 //	char m_reply[8];
 //#endif
-	char m_reply[8*MAX_INDEXDB_SPLIT];
+	char m_reply[8*MAX_SHARDS];
 
 	// for sending the request
 //#ifdef SPLIT_INDEXDB
 	//Multicast m_mcast[INDEXDB_SPLIT];
-	Multicast m_mcast[1];//MAX_INDEXDB_SPLIT];
+	Multicast m_mcast[1];//MAX_SHARDS];
 	long      m_numRequests;
 	long      m_numReplies;
 	long      m_errno;

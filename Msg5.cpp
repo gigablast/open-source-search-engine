@@ -802,7 +802,9 @@ bool Msg5::needsRecall ( ) {
 	RdbBase *base = getRdbBase ( m_rdbId , m_collnum );
 	// if collection was deleted from under us, base will be NULL
 	if ( ! base && ! g_errno ) {
-		log("msg5: base lost for collnum %li",(long)m_collnum);
+		log("msg5: base lost for rdbid=%li collnum %li",
+		    (long)m_rdbId,(long)m_collnum);
+		g_errno = ENOCOLLREC;
 		return false;
 	}
 	// sanity check
@@ -1535,7 +1537,9 @@ void Msg5::repairLists_r ( ) {
 		if ( i < nn && base ) {
 			long fn = m_msg3.m_fileNums[i];
 			BigFile *bf = base->getFile ( fn );
-			log("db: Corrupt filename is %s.",bf->getFilename());
+			log("db: Corrupt filename is %s in collnum %li."
+			    ,bf->getFilename()
+			    ,(long)m_collnum);
 			//key_t sk = m_listPtrs[i]->getStartKey();
 			//key_t ek = m_listPtrs[i]->getEndKey  ();
 			//log("db: "
@@ -1551,10 +1555,10 @@ void Msg5::repairLists_r ( ) {
 		}
 		// . remove the bad eggs from the list
 		// . TODO: support non-fixed data sizes
-		if ( m_listPtrs[i]->getFixedDataSize() >= 0 )
-			m_listPtrs[i]->removeBadData_r();
-		else
-			m_listPtrs[i]->reset();
+		//if ( m_listPtrs[i]->getFixedDataSize() >= 0 )
+		m_listPtrs[i]->removeBadData_r();
+		//else
+		//m_listPtrs[i]->reset();
 		// otherwise we have a patchable error
 		m_hadCorruption = true;
 		// don't add a list with errors to cache, please

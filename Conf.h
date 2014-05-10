@@ -196,6 +196,9 @@ class Conf {
 	//bool m_useDiffbot;
 
 	//bool  m_indexEventsOnly;
+	// are we doing a command line thing like 'gb 0 dump s ....' in
+	// which case we do not want to log certain things
+	bool m_doingCommandLine;
 
 	// linkdb for storing linking relations
 	long  m_linkdbMaxTreeMem;

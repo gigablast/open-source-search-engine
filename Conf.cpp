@@ -11,6 +11,7 @@ Conf g_conf;
 
 Conf::Conf ( ) {
 	m_save = true;
+	m_doingCommandLine = false;
 }
 
 // . does this requester have ROOT admin privledges???
@@ -296,8 +297,8 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 		log(LOG_INFO,"db: Split is FULL");
 	*/
 	// sanity check
-	if ( g_hostdb.m_indexSplits > MAX_INDEXDB_SPLIT ) {
-		log("db: Increase MAX_INDEXDB_SPLIT");
+	if ( g_hostdb.m_indexSplits > MAX_SHARDS ) {
+		log("db: Increase MAX_SHARDS");
 		char *xx = NULL; *xx = 0; 
 	}
 	// and always keep a decent site quality cache of at least 3M

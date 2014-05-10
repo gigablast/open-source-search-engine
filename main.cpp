@@ -2498,6 +2498,9 @@ int main2 ( int argc , char *argv[] ) {
 		long long termId  = -1;
 		char *coll = "";
 
+		// so we do not log every collection coll.conf we load
+		g_conf.m_doingCommandLine = true;
+
 		// we have to init collection db because we need to know if 
 		// the collnum is legit or not in the tree
 		if ( ! g_collectiondb.loadAllCollRecs()   ) {
@@ -4658,28 +4661,31 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"rcp %sgb.conf %s:%sgb.conf &",
+				"scp %sgb.conf %shosts.conf %s:%s %s",
+				dir ,
 				dir ,
 				//h->m_hostId ,
 				iptoa(h2->m_ip),
-				h2->m_dir);
+				h2->m_dir,
 				//h2->m_hostId);
+				amp);
+
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
-			sprintf(tmp,
-				"rcp %shosts.conf %s:%shosts.conf &",
-				dir ,
-				iptoa(h2->m_ip),
-				h2->m_dir);
-			log(LOG_INIT,"admin: %s", tmp);
-			system ( tmp );
-			sprintf(tmp,
-				"rcp %shosts2.conf %s:%shosts2.conf &",
-				dir ,
-				iptoa(h2->m_ip),
-				h2->m_dir);
-			log(LOG_INIT,"admin: %s", tmp);
-			system ( tmp );
+			// sprintf(tmp,
+			// 	"scp %shosts.conf %s:%shosts.conf &",
+			// 	dir ,
+			// 	iptoa(h2->m_ip),
+			// 	h2->m_dir);
+			// log(LOG_INIT,"admin: %s", tmp);
+			// system ( tmp );
+			// sprintf(tmp,
+			// 	"scp %shosts2.conf %s:%shosts2.conf &",
+			// 	dir ,
+			// 	iptoa(h2->m_ip),
+			// 	h2->m_dir);
+			// log(LOG_INIT,"admin: %s", tmp);
+			// system ( tmp );
 		}
 		else if ( installFlag == ifk_start ) {
 			// . save old log now, too
@@ -16894,8 +16900,8 @@ bool isRecoveryFutile ( ) {
 		// get time stamp
 		long timestamp = ff.getLastModifiedTime ( );
 
-		// skip if not iwthin last minute
-		if ( timestamp < now - 60 ) continue;
+		// skip if not iwthin 2 minutes
+		if ( timestamp < now - 2*60 ) continue;
 
 		// open it up to see if ends with sighandle
 		long toRead = 3000;
