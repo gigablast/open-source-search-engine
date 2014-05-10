@@ -72,7 +72,8 @@ enum {
 	TYPE_SITERULE       , // 29
 	TYPE_SAFEBUF        ,
 	TYPE_UFP            ,
-	TYPE_FILEUPLOADBUTTON
+	TYPE_FILEUPLOADBUTTON,
+	TYPE_DOUBLE
 };
 
 //forward decls to make compiler happy:

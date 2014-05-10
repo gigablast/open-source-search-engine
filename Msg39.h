@@ -55,7 +55,7 @@ class Msg39Request {
 		m_doMaxScoreAlgo          = true;
 		m_seoDebug                = false;
 		m_useSeoResultsCache      = false;
-
+		
 		ptr_readSizes             = NULL;
 		ptr_query                 = NULL; // in utf8?
 		ptr_whiteList             = NULL;
@@ -71,6 +71,10 @@ class Msg39Request {
 		// -1 means to not to docid range restriction
 		m_minDocId = -1;
 		m_maxDocId = -1;
+
+		// for widget, to only get results to append to last docid
+		m_maxSerpScore = 0.0;
+		m_minSerpDocId = 0LL;
 
 		m_makeReply = true;
 
@@ -121,6 +125,10 @@ class Msg39Request {
 	long long m_minDocId;
 	long long m_maxDocId;
 	bool      m_makeReply;
+
+	// for widget, to only get results to append to last docid
+	double    m_maxSerpScore;
+	long long m_minSerpDocId;
 
 	// msg3a stuff
 	long    m_timeout; // in seconds

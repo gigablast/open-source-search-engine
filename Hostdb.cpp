@@ -2297,6 +2297,14 @@ uint32_t Hostdb::getShardNumByTermId ( void *k ) {
 	return m_map [(*(uint16_t *)((char *)k + 16))>>3];
 }
 
+// uint32_t Hostdb::getShardNumFromTermId ( long long termId ) {
+// 	key144_t sk;
+// 	// make fake posdb key
+// 	makeStartKey ( &sk, termId );
+// 	// and use this
+// 	return getShardNumByTermId ( &sk );
+// }
+
 // . if false, we don't split index and date lists, other dbs are unaffected
 // . this obsolets the g_*.getGroupId() functions
 // . this allows us to have any # of groups in a stripe, not just power of 2

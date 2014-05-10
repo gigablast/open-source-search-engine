@@ -23,6 +23,34 @@ Msg22::~Msg22(){
 
 static void gotReplyWrapper22     ( void *state1 , void *state2 ) ;
 
+
+// . sets m_availDocId or sets g_errno to ENOTFOUND on error
+// . calls callback(state) when done
+// . returns false if blocked true otherwise
+bool Msg22::getAvailDocIdOnly ( Msg22Request  *r              ,
+				long long preferredDocId ,
+				char *coll ,
+				void *state ,
+				void (* callback)(void *state) ,
+				long niceness ) {
+	return getTitleRec ( r ,
+			     NULL     , //   url
+			     preferredDocId    ,
+			     coll     ,
+			     NULL     , // **titleRecPtrPtr
+			     NULL     , //  *titleRecSizePtr
+			     false    , //   justCheckTfndb
+			     true     , //   getAvailDocIdOnly
+			     state    ,
+			     callback ,
+			     niceness ,
+			     false    , // addToCache
+			     0        , // maxCacheAge
+			     9999999  , // timeout
+			     false   ); // doLoadBalancing 
+}
+
+
 // . if url is NULL use the docId to get the titleRec
 // . if titleRec is NULL use our own internal m_myTitleRec
 // . sets g_errno to ENOTFOUND if TitleRec does not exist for this url/docId
@@ -37,6 +65,10 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 			  char         **titleRecPtrPtr ,
 			  long          *titleRecSizePtr,
 			  bool           justCheckTfndb ,
+			  // when indexing spider replies we just want
+			  // a unique docid... "docId" should be the desired
+			  // one, but we might have to change it.
+			  bool           getAvailDocIdOnly  ,
 			  void          *state          ,
 			  void         (* callback) (void *state) ,
 			  long           niceness       ,
@@ -45,6 +77,9 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 			  long           timeout        ,
 			  bool           doLoadBalancing ) {
 
+	// sanity
+	if ( getAvailDocIdOnly && justCheckTfndb ) { char *xx=NULL;*xx=0; }
+	if ( getAvailDocIdOnly && url            ) { char *xx=NULL;*xx=0; }
 
 	//if ( m_url ) log(LOG_DEBUG,"build: getting TitleRec for %s",m_url);
 	// sanity checks
@@ -56,7 +91,7 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 	if ( r->m_inUse           ) { char *xx=NULL;*xx=0; }
 	if ( m_outstanding        ) { char *xx = NULL;*xx=0; }
 	// sanity check
-	if ( ! justCheckTfndb ) {
+	if ( ! justCheckTfndb && ! getAvailDocIdOnly ) {
 		if ( ! titleRecPtrPtr  ) { char *xx=NULL;*xx=0; }
 		if ( ! titleRecSizePtr ) { char *xx=NULL;*xx=0; }
 	}
@@ -79,6 +114,7 @@ bool Msg22::getTitleRec ( Msg22Request  *r              ,
 	r->m_docId           = docId;
 	r->m_niceness        = niceness;
 	r->m_justCheckTfndb  = (bool)justCheckTfndb;
+	r->m_getAvailDocIdOnly   = (bool)getAvailDocIdOnly;
 	r->m_doLoadBalancing = (bool)doLoadBalancing;
 	r->m_collnum         = g_collectiondb.getCollnum ( coll );
 	r->m_addToCache      = false;
@@ -391,6 +427,21 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
 	       st->m_docId1 = r->m_docId;
 	       st->m_docId2 = r->m_docId;
        }
+
+       // but if we are requesting an available docid, it might be taken
+       // so try the range
+       if ( r->m_getAvailDocIdOnly ) {
+	       long long pd = r->m_docId;
+	       long long d1 = g_titledb.getFirstProbableDocId ( pd );
+	       long long d2 = g_titledb.getLastProbableDocId  ( pd );
+	       // sanity - bad url with bad subdomain?
+	       if ( pd < d1 || pd > d2 ) { char *xx=NULL;*xx=0; }
+	       // make sure we get a decent sample in titledb then in 
+	       // case the docid we wanted is not available
+	       st->m_docId1 = d1;
+	       st->m_docId2 = d2;
+       }
+
        // . otherwise, url was given, like from Msg15
        // . we may get multiple tfndb recs
        if ( r->m_url[0] ) {
@@ -827,10 +878,17 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 		//if ( pd != st->m_pd ) { char *xx=NULL;*xx=0; }
 	}
 
+	// the probable docid is the PREFERRED docid in this case
+	if ( r->m_getAvailDocIdOnly ) pd = st->m_r->m_docId;
+			
+
 	// . these are both meant to be available docids
 	// . if ad2 gets exhausted we use ad1
 	long long ad1 = st->m_docId1;
 	long long ad2 = pd;
+
+
+	bool docIdWasFound = false;
 
 	// scan the titleRecs in the list
 	for ( ; ! tlist->isExhausted() ; tlist->skipCurrentRecord ( ) ) {
@@ -844,11 +902,16 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 		// skip negative recs, first one should not be negative however
 		if ( ( k->n0 & 0x01 ) == 0x00 ) continue;
 
-		// get docid of that guy
+		// get docid of that titlerec
 		long long dd = g_titledb.getDocId(k);
 
+		if ( r->m_getAvailDocIdOnly ) {
+			// make sure our available docids are availble!
+			if ( dd == ad1 ) ad1++;
+			if ( dd == ad2 ) ad2++;
+		}
 		// if we had a url make sure uh48 matches
-		if ( r->m_url[0] ) {
+		else if ( r->m_url[0] ) {
 			// get it
 			long long uh48 = g_titledb.getUrlHash48(k);
 			// sanity check
@@ -864,6 +927,9 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 			// compare that
 			if ( r->m_docId != dd ) continue;
 		}
+
+		// flag that we matched m_docId
+		docIdWasFound = true;
 
 		// ok, if just "checking tfndb" no need to go further
 		if ( r->m_justCheckTfndb ) {
@@ -907,12 +973,16 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	long long ad = ad2;
 	// but wrap around if we need to
 	if ( ad == 0LL ) ad = ad1;
+	// if "docId" was unmatched that should be the preferred available
+	// docid then...
+	if ( ! docIdWasFound && r->m_getAvailDocIdOnly && ad != r->m_docId ) { 
+		char *xx=NULL;*xx=0; }
 	// remember it
 	st->m_availDocId = ad;
 
 
 	// . ok, return an available docid
-	if ( r->m_url[0] || r->m_justCheckTfndb ) {
+	if ( r->m_url[0] || r->m_justCheckTfndb || r->m_getAvailDocIdOnly ) {
 		// store docid in reply
 		char *p = st->m_slot->m_tmpBuf;
 		// send back the available docid

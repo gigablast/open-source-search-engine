@@ -1305,8 +1305,12 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 		if ( ! doChainTest ) continue;
 		// ensure i goes back to head node
 		long j = i;
+		long loopCount = 0;
 		while ( j >= 0 ) { 
 			if ( j == m_headNode ) break;
+			// sanity -- loop check
+			if ( ++loopCount > 10000 ) 
+				return log("db: tree had loop");
 			j = m_parents[j];
 		}
 		if ( j != m_headNode ) 

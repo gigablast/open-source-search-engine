@@ -947,6 +947,11 @@ int main2 ( int argc , char *argv[] ) {
 		return 0;
 	}
 
+	//SafeBuf tt;
+	//tt.base64Encode("any carnal pleas",16);
+	//fprintf(stderr,"%s\n",tt.getBufStart());
+	//exit(0);
+
 	// get hosts.conf file
 	//char *hostsConf = "./hosts.conf";
 	long hostId = 0;
@@ -1079,7 +1084,6 @@ int main2 ( int argc , char *argv[] ) {
 	//	else goto printHelp;
 	//	return 0;
 	//}
-
 
 	// these tests do not need a hosts.conf
 	/*
@@ -2779,7 +2783,8 @@ int main2 ( int argc , char *argv[] ) {
 	    g_hostdb.m_logFilename );
 
 	if ( ! g_conf.m_runAsDaemon )
-		log("db: Use ./gb <hostid> -d to run as daemon.");
+		log("db: Use ./gb <hostid> -d to run as daemon. Example: "
+		    "./gb 0 -d");
 
 	/*
 	// tmp stuff to generate new query log
@@ -2796,6 +2801,9 @@ int main2 ( int argc , char *argv[] ) {
 	// start up log file
 	if ( ! g_log.init( g_hostdb.m_logFilename )        ) {
 		fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
+
+	// in case we do not have one, we need it for Images.cpp
+	makeTrashDir();
 
 	g_errno = 0;
 

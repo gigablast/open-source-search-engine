@@ -490,7 +490,12 @@ class XmlDoc {
 	key_t *getTitleRecKey() ;
 	//char *getSkipIndexing ( );
 	char *prepareToMakeTitleRec ( ) ;
-	char **getTitleRec ( ) ;
+	// store TitleRec into "buf" so it can be added to metalist
+	bool setTitleRecBuf ( SafeBuf *buf , long long docId, long long uh48 );
+	// sets m_titleRecBuf/m_titleRecBufValid/m_titleRecKey[Valid]
+	SafeBuf *getTitleRecBuf ( );
+	SafeBuf *getSpiderReplyMetaList ( class SpiderReply *reply ) ;
+	SafeBuf m_spiderReplyMetaList;
 	char *getIsAdult ( ) ;
 	long **getIndCatIds ( ) ;
 	long **getCatIds ( ) ;
@@ -601,6 +606,7 @@ class XmlDoc {
 	//bool *updateRootLangId ( );
 	char **getRootTitleRec ( ) ;
 	//char **getContactTitleRec ( char *url ) ;
+	long long *getAvailDocIdOnly ( long long preferredDocId ) ;
 	long long *getDocId ( ) ;
 	char *getIsIndexed ( ) ;
 	class TagRec *getTagRec ( ) ;
@@ -670,7 +676,7 @@ class XmlDoc {
 	long getHostHash32a ( ) ;
 	long getHostHash32b ( ) ;
 	long getDomHash32 ( );
-	char **getImageData();
+	char **getThumbnailData();
 	class Images *getImages ( ) ;
 	int8_t *getNextSpiderPriority ( ) ;
 	long *getPriorityQueueNum ( ) ;
@@ -696,7 +702,7 @@ class XmlDoc {
 	SafeBuf *getNewTagBuf ( ) ;
 
 	char *updateTagdb ( ) ;
-	bool logIt ( ) ;
+	bool logIt ( class SafeBuf *bb = NULL ) ;
 	bool m_doConsistencyTesting;
 	bool doConsistencyTest ( bool forceTest ) ;
 	long printMetaList ( ) ;
@@ -733,7 +739,9 @@ class XmlDoc {
 	//		  bool       nosplit ) ;
 
 	long getSiteRank ();
-	bool addTable144 ( class HashTableX *tt1 );
+	bool addTable144 ( class HashTableX *tt1 , 
+			   long long docId ,
+			   class SafeBuf *buf = NULL );
 
 	bool addTable224 ( HashTableX *tt1 ) ;
 
@@ -749,6 +757,7 @@ class XmlDoc {
 	bool hashNoSplit ( class HashTableX *tt ) ;
 	char *hashAll ( class HashTableX *table ) ;
 	long getBoostFromSiteNumInlinks ( long inlinks ) ;
+	bool hashSpiderReply (class SpiderReply *reply ,class HashTableX *tt) ;
 	bool hashMetaTags ( class HashTableX *table ) ;
 	bool hashIsClean ( class HashTableX *table ) ;
 	bool hashZipCodes ( class HashTableX *table ) ;
@@ -756,7 +765,7 @@ class XmlDoc {
 	bool hashContentType ( class HashTableX *table ) ;
 	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
-	bool hashUrl ( class HashTableX *table ) ;
+	bool hashUrl ( class HashTableX *table , bool hashNonFieldTerms=true) ;
 	bool hashDateNumbers ( class HashTableX *tt ) ;
 	bool hashSections ( class HashTableX *table ) ;
 	bool hashIncomingLinkText ( class HashTableX *table            ,
@@ -783,10 +792,12 @@ class XmlDoc {
 	bool hashAds(class HashTableX *table ) ;
 	class Url *getBaseUrl ( ) ;
 	bool hashSubmitUrls ( class HashTableX *table ) ;
+	bool hashImageStuff ( class HashTableX *table ) ;
 	bool hashIsAdult    ( class HashTableX *table ) ;
 
 	void set20 ( Msg20Request *req ) ;
 	class Msg20Reply *getMsg20Reply ( ) ;
+	char **getDiffbotPrimaryImageUrl ( ) ;
 	char **getImageUrl() ;
 	class MatchOffsets *getMatchOffsets () ;
 	Query *getQuery() ;
@@ -822,6 +833,8 @@ class XmlDoc {
 			  long              slen ) ;
 	bool hashString ( char             *s    ,
 			  long              slen ,
+			  class HashInfo   *hi   ) ;
+	bool hashString ( char             *s    ,
 			  class HashInfo   *hi   ) ;
 
 
@@ -1077,6 +1090,7 @@ class XmlDoc {
 	char     m_firstUrlHash64Valid;
 	char     m_lastUrlValid;
 	char     m_docIdValid;
+	char     m_availDocIdValid;
 	//char     m_collValid;
 	char     m_tagRecValid;
 	char     m_robotsTxtLenValid;
@@ -1166,7 +1180,6 @@ class XmlDoc {
 	//char     m_oldsrValid;
 	char     m_sreqValid;
 	char     m_srepValid;
-	char     m_titleRecValid;
 
 	bool m_ipValid;
 	bool m_firstIpValid;
@@ -1320,6 +1333,7 @@ class XmlDoc {
 	bool m_crawlInfoValid;
 	bool m_isPageParserValid;
 	bool m_imageUrlValid;
+	bool m_imageUrl2Valid;
 	bool m_matchOffsetsValid;
 	bool m_queryValid;
 	bool m_matchesValid;
@@ -1332,11 +1346,13 @@ class XmlDoc {
 	bool m_newTermInfoBufValid;
 	bool m_summaryValid;
 	bool m_gsbufValid;
+	bool m_spiderReplyMetaListValid;
 	bool m_isCompromisedValid;
 	bool m_isNoArchiveValid;
 	//bool m_isVisibleValid;
 	bool m_clockCandidatesTableValid;
 	bool m_clockCandidatesDataValid;
+	bool m_titleRecBufValid;
 	bool m_isLinkSpamValid;
 	bool m_isErrorPageValid;
 	bool m_isHijackedValid;
@@ -1402,6 +1418,7 @@ class XmlDoc {
 	Msg0 m_msg0;
 	Msg5 m_msg5;
 	char m_isDup;
+	long long m_docIdWeAreADupOf;
 	long m_ei;
 	long m_lastLaunch;
 	Msg22Request m_msg22Request;
@@ -1942,8 +1959,10 @@ class XmlDoc {
 	//long  m_gsbufAllocSize;
 	char *m_note;
 	char *m_imageUrl;
+	char *m_imageUrl2;
 	//char  m_imageUrlBuf[100];
 	SafeBuf m_imageUrlBuf;
+	SafeBuf m_imageUrlBuf2;
 	//long  m_imageUrlSize;
 	MatchOffsets m_matchOffsets;
 	Query m_query;
@@ -1972,11 +1991,12 @@ class XmlDoc {
 	bool  m_deleteFromIndex;
 
 	// ptrs to stuff
-	char *m_titleRec;
-	long  m_titleRecSize;
-	bool  m_freeTitleRec;
-	long  m_titleRecAllocSize;
-	key_t m_titleRecKey;
+	//char *m_titleRec;
+	SafeBuf m_titleRecBuf;
+	//long  m_titleRecSize;
+	//bool  m_freeTitleRec;
+	//long  m_titleRecAllocSize;
+	key_t   m_titleRecKey;
 
 	// for isDupOfUs()
 	char *m_dupTrPtr;
@@ -2334,6 +2354,8 @@ public:
 		//m_useWeights              = false;
 		m_useSynonyms             = false;
 		m_hashGroup = -1;
+		m_useCountTable = true;
+		m_useSections = true;
 		m_startDist = 0;
 		m_siteHash32 = 0;
 	};
@@ -2349,6 +2371,8 @@ public:
 	char              m_hashGroup;
 	long              m_startDist;
 	long              m_siteHash32;
+	bool              m_useCountTable;
+	bool              m_useSections;
 };
 
 

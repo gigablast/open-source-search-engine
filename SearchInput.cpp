@@ -394,6 +394,22 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 				v = atof(m->m_def);
 			*(float *)x = (float)v;
 		}
+		else if ( m->m_type == TYPE_DOUBLE ) {
+			double v = 0;
+			if ( def )
+				v = *(double *)def;
+			else if ( m->m_def ) 
+				v = atof(m->m_def);
+			*(double *)x = (double)v;
+		}
+		else if ( m->m_type == TYPE_LONG_LONG ) {
+			long long v = 0;
+			if ( def )
+				v = *(long long *)def;
+			else if ( m->m_def ) 
+				v = atoll(m->m_def);
+			*(long long *)x = (long long)v;
+		}
 		else if ( m->m_type == TYPE_STRING ||
 			  m->m_type == TYPE_STRINGBOX ) {
 			//if ( m->m_cgi && strcmp ( m->m_cgi, "erpc" ) == 0 )
@@ -549,6 +565,27 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 			//			"name=%s value=\"%li\">\n", 
 			//			cgi , v );
 		}
+		else if ( m->m_type == TYPE_LONG_LONG ) {
+			// default was set above
+			long def = *(long long *)x;
+			// assume default
+			long long v = def;
+			// but cgi parms override cookie
+			v = r->getLongLong ( cgi , v );
+			// but if its a privledged parm and we're not an admin
+			// then do not allow overrides, but m_priv of 3 means
+			// to not display for clients, but to allow overrides
+			if ( ! m_isAdmin && m->m_priv && m->m_priv!=3) v = def;
+			// set it
+			*(long long *)x = v;
+			// if it is the same as its default, and the default is
+			// always from m_def and never from the CollectionRec, 
+			// then do not both storing it in here! what's the 
+			// point?
+			if ( v == def && m->m_off < 0 ) continue;
+			// if not default do not propagate
+			if ( v == def ) continue;
+		}
 		else if ( m->m_type == TYPE_FLOAT ) {
 			// default was set above
 			float def = *(float *)x;
@@ -586,6 +623,34 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 			//	pp += sprintf ( pp , "<input type=hidden "
 			//			"name=%s value=\"%f\">\n", 
 			//			cgi , v );
+		}
+		else if ( m->m_type == TYPE_DOUBLE ) {
+			// default was set above
+			double def = *(double *)x;
+			// get overriding from http request, if any
+			double v;
+			// but if its a privledged parm and we're not an admin
+			// then do not allow overrides
+			if ( ! m_isAdmin && m->m_priv && m->m_priv!=3) v = def;
+			else v = r->getDouble( cgi , def );
+			// bounds checks
+			if ( v < m->m_smin ) v = m->m_smin;
+			if ( v > m->m_smax ) v = m->m_smax;
+			if ( m->m_sminc >= 0 ) {
+				double vmin=*(double *)((char *)cr+m->m_sminc);
+				if ( v < vmin ) v = vmin;
+			}
+			if ( m->m_smaxc >= 0 ) {
+				double vmax=*(double *)((char *)cr+m->m_smaxc);
+				if ( v > vmax ) v = vmax;
+			}
+			// set it
+			*(double *)x = v;
+			// include for sure if explicitly provided
+			char *vp = r->getValue(cgi, NULL, NULL);
+			if ( ! vp ) continue;
+			// unchanged from default?
+			if ( v == def ) continue;
 		}
 
 		else if ( m->m_type == TYPE_BOOL ) {
@@ -927,11 +992,12 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	if(m_firstResultNum < 0) m_firstResultNum = 0;
 
 	// DEBUG: temp hack
-	//static bool first = true;
-	//if ( first ) { 
-	//	first = false;
-	//	m_firstResultNum = 1;
-	//}
+	// static bool first = true;
+	//  if ( first ) { 
+	//  	first = false;
+	//  	m_firstResultNum = 10;
+	//  }
+
 
 	// if useCache is -1 then pick a default value
 	if ( m_useCache == -1 ) {
@@ -1422,6 +1488,8 @@ char getFormatFromRequest ( HttpRequest *r ) {
 		format=FORMAT_WIDGET_IFRAME;
 	if ( formatStr && strcmp(formatStr,"ajax")==0)
 		format=FORMAT_WIDGET_AJAX;
+	if ( formatStr && strcmp(formatStr,"append")==0)
+		format=FORMAT_WIDGET_APPEND;
 
 
 	// support old api &xml=1 to mean &format=1
@@ -1444,6 +1512,10 @@ char getFormatFromRequest ( HttpRequest *r ) {
 
 	if ( r->getLong("ajax",0) ) {
 		format = FORMAT_WIDGET_AJAX;
+	}
+
+	if ( r->getLong("append",0) ) {
+		format = FORMAT_WIDGET_APPEND;
 	}
 
 	return format;

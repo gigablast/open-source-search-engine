@@ -16,6 +16,7 @@ public:
 	long      m_maxCacheAge;
 	collnum_t m_collnum;
 	char      m_justCheckTfndb  :1;
+	char      m_getAvailDocIdOnly:1;
 	char      m_doLoadBalancing :1;
 	char      m_addToCache      :1;
 	char      m_inUse           :1;
@@ -35,6 +36,13 @@ class Msg22 {
 
 	static bool registerHandler ( ) ;
 
+	bool getAvailDocIdOnly ( class Msg22Request  *r              ,
+				 long long preferredDocId ,
+				 char *coll ,
+				 void *state ,
+				 void (* callback)(void *state) ,
+				 long niceness ) ;
+
 	// . make sure you keep url/coll on your stack cuz we just point to it
 	// . see the other getTitleRec() description below for more details
 	// . use a maxCacheAge of 0 to avoid the cache
@@ -45,6 +53,7 @@ class Msg22 {
 			   char     **titleRecPtrPtr  ,
 			   long      *titleRecSizePtr ,
 			   bool       justCheckTfndb ,
+			   bool       getAvailDocIdOnly  ,
 			   void      *state          , 
 			   void     (* callback) (void *state ),
 			   long       niceness       ,

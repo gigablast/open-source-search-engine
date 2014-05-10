@@ -13,6 +13,8 @@
 //#include "Dir.h"
 #include "RdbBuckets.h"
 
+bool makeTrashDir() ;
+
 // . each Rdb instance has an ID
 // . these ids are also return values for getIdFromRdb()
 #define	RDB_START 1

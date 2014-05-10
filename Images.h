@@ -7,8 +7,66 @@
 #include "Msg36.h"
 #include "Msg13.h"
 #include "IndexList.h"
+#include "MsgC.h"
+#include "SafeBuf.h"
 
 #define MAX_IMAGES 500
+
+// a single serialized thumbnail:
+class ThumbnailInfo {
+ public:
+	long  m_origDX;
+	long  m_origDY;
+	long  m_dx;
+	long  m_dy;
+	long  m_urlSize;
+	long  m_dataSize;
+	char  m_buf[];
+	char *getUrl() { return m_buf; };
+	char *getData() { return m_buf + m_urlSize; };
+	long  getDataSize() { return m_dataSize; };
+	long  getSize () { return sizeof(ThumbnailInfo)+m_urlSize+m_dataSize;};
+
+	bool printThumbnailInHtml ( SafeBuf *sb ) {
+		sb->safePrintf("<a href=%s>"
+			       "<img width=%li height=%li "
+			       "align=left "
+			       "style=padding-right:8px;padding-bottom:8px; "
+			       "src=\""
+			       "data:image/jpg;base64,"
+			       ,getUrl()
+			       ,m_dx
+			       ,m_dy);
+		// encode image in base 64
+		sb->base64Encode ( getData(), m_dataSize , 0 ); // 0 niceness
+		sb->safePrintf("\"></a>");
+		return true;
+	};
+};
+
+// XmlDoc::ptr_imgData is a ThumbnailArray
+class ThumbnailArray {
+ public:
+	// 1st byte if format version
+	char m_version;
+	// # of thumbs
+	long m_numThumbnails;
+	// list of ThumbnailInfos
+	char m_buf[];
+
+	long getNumThumbnails() { return m_numThumbnails;};
+
+	ThumbnailInfo *getThumbnailInfo ( long x ) {
+		if ( x >= m_numThumbnails ) return NULL;
+		char *p = m_buf;
+		for ( long i = 0 ; i < m_numThumbnails ; i++ ) {
+			if ( i == x ) return (ThumbnailInfo *)p;
+			ThumbnailInfo *ti = (ThumbnailInfo *)p;
+			p += ti->getSize();
+		}
+		return NULL;
+	};
+};
 
 class Images {
 
@@ -31,7 +89,8 @@ class Images {
 	void setCandidates ( class Url      *pageUrl , 
 			     class Words    *words , 
 			     class Xml      *xml ,
-			     class Sections *sections );
+			     class Sections *sections ,
+			     class XmlDoc *xd );
 	
 	// . returns false if blocked, true otherwise
 	// . sets errno on error
@@ -42,24 +101,37 @@ class Images {
 			    long long docId ,
 			    class XmlDoc *xd ,
 			    collnum_t collnum,
-			    char **statusPtr ,
+			    //char **statusPtr ,
 			    long hopCount,
 			    void   *state ,
 			    void   (*callback)(void *state) );
 
-	char *getImageData    () { return m_imgData; };
-	long  getImageDataSize() { return m_imgDataSize; };
+	//char *getImageData    () { return m_imgData; };
+	//long  getImageDataSize() { return m_imgDataSize; };
 	//long  getImageType    () { return m_imageType; };
+
+	SafeBuf m_imageBuf;
+	bool m_imageBufValid;
+	long m_phase;
 
 	bool gotTermFreq();
 	bool launchRequests();
 	void gotTermList();
 	bool downloadImages();
-	bool gotImage ( );
+
+
+
+	bool getImageIp();
+	bool downloadImage();
+	bool makeThumb();
+
+	//bool gotImage ( );
 	void thumbStart_r ( bool amThread );
 
 	long  m_i;
 	long  m_j;
+
+	class XmlDoc *m_xd;
 
 	// callback information
 	void  *m_state  ;
@@ -69,12 +141,16 @@ class Images {
 	long      m_errno;
 	long      m_hadError;
 	bool      m_stopDownloading;
-	char    **m_statusPtr;
+	//char    **m_statusPtr;
 	char      m_statusBuf[128];
 	collnum_t m_collnum;
 
 	long long   m_docId;
 	IndexList   m_list;
+
+	long m_latestIp;
+	MsgC m_msgc;
+	Url m_imageUrl;
 
 	long      m_numImages;
 	long      m_imageNodes[MAX_IMAGES];
@@ -106,9 +182,9 @@ class Images {
 	long  m_imgType;
 
 	// udp slot buffer
-	char *m_imgBuf;
-	long  m_imgBufLen;      // how many bytes the image is
-	long  m_imgBufMaxLen;   // allocated for the image
+	char *m_imgReply;
+	long  m_imgReplyLen;      // how many bytes the image is
+	long  m_imgReplyMaxLen;   // allocated for the image
 	long  m_dx;             // width of image in pixels
 	long  m_dy;             // height of image in pixels
 	bool  m_thumbnailValid; // is it a valid thumbnail image

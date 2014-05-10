@@ -302,8 +302,8 @@ bool Log::logR ( long long now , long type , char *msg , bool asterisk ,
 	// back up over spaces
 	while ( p[-1] == ' ' ) p--;
 	// end in period or ? or !
-	if ( p[-1] != '?' && p[-1] != '.' && p[-1] != '!' )
-		*p++ = '.';
+	//if ( p[-1] != '?' && p[-1] != '.' && p[-1] != '!' )
+	//	*p++ = '.';
 	*p ='\0';
 	// the total length, not including the \0
 	long tlen = p - tt;

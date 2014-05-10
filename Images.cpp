@@ -5,16 +5,14 @@
 #include "Sections.h"
 #include "XmlDoc.h"
 #include "Threads.h"
-//#include "Msg16.h" // my_system_r()
+#include "Hostdb.h"
 #include "XmlDoc.h" // my_system_r()
 
 // TODO: image is bad if repeated on same page, check for that
 
-static void gotTermFreqWrapper ( void *state ) ;
+//static void gotTermFreqWrapper ( void *state ) ;
 static void gotTermListWrapper ( void *state ) ;
-static void gotImageWrapper ( void *state ) ;
 static void *thumbStartWrapper_r ( void *state , ThreadEntry *te );
-static void  thumbDoneWrapper    ( void *state , ThreadEntry *te );
 static void getImageInfo ( char *buf, long size, long *dx, long *dy, long *it);
 
 Images::Images ( ) {
@@ -26,10 +24,12 @@ void Images::reset() {
 	m_imgDataSize    = 0;
 	m_setCalled      = false;
 	m_thumbnailValid = false;
-	m_imgBuf         = NULL;
-	m_imgBufLen      = 0;
-	m_imgBufMaxLen   = 0;
+	m_imgReply       = NULL;
+	m_imgReplyLen    = 0;
+	m_imgReplyMaxLen = 0;
 	m_numImages      = 0;
+	m_imageBufValid  = false;
+	m_phase = 0;
 }
 
 /*
@@ -74,7 +74,7 @@ bool Images::hash ( long       titleRecVersion ,
 */
 
 void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
-			     Sections *sections ) {
+			     Sections *sections , XmlDoc *xd ) {
 	// not valid for now
 	m_thumbnailValid = false;
 	// reset our array of image node candidates
@@ -82,10 +82,15 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 	// flag it
 	m_setCalled = true;
 	// strange...
-	if ( m_imgBuf ) { char *xx=NULL;*xx=0; }
+	if ( m_imgReply ) { char *xx=NULL;*xx=0; }
 	// save this
 	m_xml       = xml;
 	m_pageUrl   = pageUrl;
+
+	// if we are a diffbot json reply, trust that diffbot got the
+	// best candidate, and just use that
+	if ( xd->m_isDiffbotJSONObject ) return;
+
 	//m_pageSite  = pageSite;
 	// scan the words
 	long       nw     = words->getNumWords();
@@ -156,7 +161,7 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 		if ( height != -1 && height < 50 ) continue;
 		// get the url of the image
 		long  srcLen;
-		char *src = xml->getString(nn,nn+1,"src",&srcLen);
+		char *src = xml->getString(nn,"src",&srcLen);
 		// skip if none
 		if ( srcLen <= 2 ) continue;
 		// set it to the full url
@@ -180,6 +185,7 @@ void Images::setCandidates ( Url *pageUrl , Words *words , Xml *xml ,
 		if ( strncasestr(u,ulen,"header"         ) ) continue;
 		if ( strncasestr(u,ulen,"footer"         ) ) continue;
 		if ( strncasestr(u,ulen,"menu"           ) ) continue;
+		if ( strncasestr(u,ulen,"button"         ) ) continue;
 		if ( strncasestr(u,ulen,"banner"         ) ) continue;
 		if ( strncasestr(u,ulen,"ad.doubleclick.") ) continue;
 		if ( strncasestr(u,ulen,"ads.webfeat."   ) ) continue;
@@ -222,7 +228,7 @@ bool Images::getThumbnail ( char *pageSite ,
 			    long long docId ,
 			    XmlDoc *xd ,
 			    collnum_t collnum,//char *coll ,
-			    char **statusPtr ,
+			    //char **statusPtr ,
 			    long hopCount,
 			    void *state ,
 			    void   (*callback)(void *state) ) {
@@ -235,6 +241,7 @@ bool Images::getThumbnail ( char *pageSite ,
 	// reset here now
 	m_i = 0;
 	m_j = 0;
+	m_phase = 0;
 
 	// sanity check
 	if ( ! m_pageUrl ) { char *xx=NULL;*xx=0; }
@@ -244,10 +251,18 @@ bool Images::getThumbnail ( char *pageSite ,
 	//if ( ! isPermalink ) return true;
 
 	// save these
-	m_statusPtr = statusPtr;
+	//m_statusPtr = statusPtr;
 	// save this
 	m_collnum = collnum;
 	m_docId = docId;
+	m_callback = callback;
+	m_state = state;
+
+	// if this doc is a json diffbot reply it already has the primary
+	// image selected so just use that
+	m_xd = xd;
+	if ( m_xd->m_isDiffbotJSONObject ) 
+		return downloadImages();
 
 	// if no candidates, we are done, no error
 	if ( m_numImages == 0 ) return true;
@@ -280,43 +295,97 @@ bool Images::getThumbnail ( char *pageSite ,
 	// store the termid
 	long long termId = q.getTermId(0);
 
-	if ( ! m_msg36.getTermFreq ( m_collnum               ,
-				     0                  , // maxAge
-				     termId             ,
-				     this               ,
-				     gotTermFreqWrapper ,
-				     MAX_NICENESS       ,
-				     true               ,  // exact count?
-				     false              ,  // inc count?
-				     false              ,  // dec count?
-				     false              )) // is split?
+	key144_t startKey ;
+	key144_t endKey   ;
+	g_posdb.makeStartKey(&startKey,termId);
+	g_posdb.makeEndKey  (&endKey  ,termId);
+
+	// get shard of that (this termlist is sharded by termid -
+	// see XmlDoc.cpp::hashNoSplit() where it hashes gbsitetemplate: term)
+	long shardNum = g_hostdb.getShardNumByTermId ( &startKey );
+
+	// if ( ! m_msg36.getTermFreq ( m_collnum               ,
+	// 			     0                  , // maxAge
+	// 			     termId             ,
+	// 			     this               ,
+	// 			     gotTermFreqWrapper ,
+	// 			     MAX_NICENESS       ,
+	// 			     true               ,  // exact count?
+	// 			     false              ,  // inc count?
+	// 			     false              ,  // dec count?
+	// 			     false              )) // is split?
+	// 	return false;
+
+
+	// just use msg0 and limit to like 1k or something
+	if ( ! m_msg0.getList ( -1    , // hostid
+				-1    , // ip
+				-1    , // port
+				0     , // maxAge
+				false , // addToCache?
+				RDB_POSDB ,
+				m_collnum      ,
+				&m_list     , // RdbList ptr
+				(char *)&startKey    ,
+				(char *)&endKey      ,
+				1024        , // minRecSize
+				this        ,
+				gotTermListWrapper ,
+				MAX_NICENESS       ,
+				false , // err correction?
+				true  , // inc tree?
+				true  , // domergeobsolete
+				-1    , // firstHostId
+				0     , // start filenum
+				-1    , // numFiles
+				30    , // timeout
+				-1    , // syncpoint
+				-1    , // preferlocalreads
+				NULL  , // msg5
+				NULL  , // msg5b
+				false , // isRealMerge?
+				true  , // allow pg cache
+				false , // focelocalindexdb
+				false , // doIndexdbSplit?
+				shardNum ))// force paritysplit
 		return false;
+
 
 	// did not block
 	return gotTermFreq();
 }
 
-void gotTermFreqWrapper ( void *state ) {
-	Images *THIS = (Images *)state;
-	// process/store the reply
-	if ( ! THIS->gotTermFreq() ) return;
-	// all done
-	THIS->m_callback ( THIS->m_state );
-}
+// void gotTermFreqWrapper ( void *state ) {
+// 	Images *THIS = (Images *)state;
+// 	// process/store the reply
+// 	if ( ! THIS->gotTermFreq() ) return;
+// 	// all done
+// 	THIS->m_callback ( THIS->m_state );
+// }
 
+// returns false if blocked, true otherwise
 bool Images::gotTermFreq ( ) {
 	// error?
 	if ( g_errno ) return true;
 	// bail if less than 10
-	long long nt = m_msg36.getTermFreq();
-	// return true, without g_errno set, we are done
-	if ( nt < 10 ) return true;
+	//long long nt = m_msg36.getTermFreq();
+	// each key but the first is 12 bytes (compressed)
+	long long nt = (m_list.getListSize() - 6)/ 12;
+	// . return true, without g_errno set, we are done
+	// . if we do not have 10 or more webpages that share this same 
+	//   template then do not do image extraction at all, it is too risky
+	//   that we get a bad image
+	// . MDW: for debugging, do not require 10 pages of same template
+	//if ( nt < 10 ) return true;
+	if ( nt < -2 ) return true;
 	// now see which of the image urls are unique
 	if ( ! launchRequests () ) return false;
 	// i guess we did not block
 	return true;
 }
 
+// . returns false if blocked, true otherwise
+// . see if other pages we've indexed have this same image url
 bool Images::launchRequests ( ) {
 	// loop over all images
 	for ( long i = m_i ; i < m_numImages ; i++ ) {
@@ -324,26 +393,30 @@ bool Images::launchRequests ( ) {
 		m_i++;
 		// assume no error
 		m_errors[i] = 0;
-		// make the keys
-		key_t startKey = g_indexdb.makeStartKey(m_termIds[i]);
-		key_t endKey   = g_indexdb.makeEndKey  (m_termIds[i]);
+		// make the keys. each term is a gbimage:<imageUrl> term
+		// so we are searching for the image url to see how often
+		// it is repeated on other pages.
+		key144_t startKey ; 
+		key144_t endKey   ;
+		g_posdb.makeStartKey(&startKey,m_termIds[i]);
+		g_posdb.makeEndKey  (&endKey  ,m_termIds[i]);
 		// get our residing groupid
 		//unsigned long gid = g_indexdb.getNoSplitGroupId(&startKey);
 		// no split is true for this one, so we do not split by docid
 		//uint32_t gid = getGroupId(RDB_INDEXDB,&startKey,false);
 		unsigned long shardNum;
-		shardNum = getShardNum(RDB_INDEXDB,&startKey);
+		shardNum = getShardNum(RDB_POSDB,&startKey);
 		// get the termlist
 		if ( ! m_msg0.getList ( -1    , // hostid
 					-1    , // ip
 					-1    , // port
 					0     , // maxAge
 					false , // addToCache?
-					RDB_INDEXDB ,
+					RDB_POSDB,
 					m_collnum      ,
 					&m_list     , // RdbList ptr
-					startKey    ,
-					endKey      ,
+					(char *)&startKey    ,
+					(char *)&endKey      ,
 					1024        , // minRecSize
 					this        ,
 					gotTermListWrapper ,
@@ -408,71 +481,225 @@ void Images::gotTermList ( ) {
 
 bool Images::downloadImages () {
 	// all done if we got a valid thumbnail
-	if ( m_thumbnailValid ) return true;
-	// if not valid free old image
-	if ( m_imgBuf ) {
-		mfree ( m_imgBuf , m_imgBufMaxLen , "Image" );
-		m_imgBuf = NULL;
-	}
+	//if ( m_thumbnailValid ) return true;
 
-	CollectionRec *cr = g_collectiondb.getRec(m_collnum);
+	long  srcLen;
+	char *src = NULL;
+	long node;
+
+	// downloading an image from diffbot json reply?
+	if ( m_xd->m_isDiffbotJSONObject ) {
+		// i guess this better not block cuz we'll core!
+		char **iup = m_xd->getDiffbotPrimaryImageUrl();
+		// if no image, nothing to download
+		if ( ! *iup ) {
+			//log("no diffbot image url for %s",
+			//    m_xd->m_firstUrl.m_url);
+			return true;
+		}
+		// force image count to one
+		m_numImages = 1;
+		// do not error out
+		m_errors[0] = 0;
+		// set it to the full url
+		src = *iup;
+		srcLen = gbstrlen(src);
+		// need this
+		m_imageUrl.set ( src , srcLen );
+		// jump into the for loop below
+		//if ( m_phase == 0 ) goto insertionPoint;
+	}
 
 	// . download each leftover image
 	// . stop as soon as we get one with good dimensions
 	// . make a thumbnail of that one
-	for ( long i = m_j ; i < m_numImages ; i++ ) {
-		// advance now
-		m_j++;
-		// if we should stop, stop
-		if ( m_stopDownloading ) break;
-		// skip if bad or not unique
-		if ( m_errors[i] ) continue;
-		// set status msg
-		sprintf ( m_statusBuf ,"downloading image %li",i);
-		// point to it
-		*m_statusPtr = m_statusBuf;
-		// get the url of the image
-		long  srcLen;
-		char *src = m_xml->getString(i,i+1,"src",&srcLen);
-		// set it to the full url
-		Url iu;
-		// use "pageUrl" as the baseUrl
-		iu.set ( m_pageUrl , src , srcLen ); 
-		// assume success
-		m_httpStatus = 200;
-		// set the request
-		Msg13Request *r = &m_msg13Request;
-		r->reset();
-		r->m_maxTextDocLen  = 200000;
-		r->m_maxOtherDocLen = 500000;
-		if ( ! strcmp(cr->m_coll,"qatest123")) {
-			r->m_useTestCache   = 1;
-			r->m_addToTestCache = 1;
+	for (  ; m_j < m_numImages ; m_j++ , m_phase = 0 ) {
+
+		// clear error
+		g_errno = 0;
+
+		if ( m_phase == 0 ) {
+			// advance
+			m_phase++;
+			// only if not diffbot, we set "src" above for it
+			if ( ! m_xd->m_isDiffbotJSONObject ) {
+				// get img tag node
+				node = m_imageNodes[m_j];
+				// get the url of the image
+				src = m_xml->getString(node,"src",&srcLen);
+				// use "pageUrl" as the baseUrl
+				m_imageUrl.set ( m_pageUrl , src , srcLen ); 
+			}
+			// if we should stop, stop
+			if ( m_stopDownloading ) break;
+			// skip if bad or not unique
+			if ( m_errors[m_j] ) continue;
+			// set status msg
+			sprintf ( m_statusBuf ,"downloading image %li",m_j);
+			// point to it
+			if ( m_xd ) m_xd->setStatus ( m_statusBuf );
 		}
-		// url is the most important
-		strcpy(r->m_url,iu.getUrl());
-		// . try to download it
-		// . i guess we are ignoring hammers at this point
-		if ( ! m_msg13.getDoc(r,false,this,gotImageWrapper)) 
-			return false;
-		// handle it
-		gotImage ( );
+
+		// get image ip
+		if ( m_phase == 1 ) {
+			// advance
+			m_phase++;
+			// this increments phase if it should
+			if ( ! getImageIp() ) return false;
+			// error?
+			if ( g_errno ) continue;
+		}
+
+		// download the actual image
+		if ( m_phase == 2 ) {
+			// advance
+			m_phase++;
+			// download image data
+			if ( ! downloadImage() ) return false;
+			// error downloading?
+			if ( g_errno ) continue;
+		}
+
+		// get thumbnail using threaded call to netpbm stuff
+		if ( m_phase == 3 ) {
+			// advance
+			m_phase++;
+			// call pnmscale etc. to make thumbnail
+			if ( ! makeThumb() ) return false;
+			// error downloading?
+			if ( g_errno ) continue;
+		}
+
+		// error making thumb or just not a good thumb size?
+		if ( ! m_thumbnailValid ) {
+			// free old image we downloaded, if any
+			m_msg13.reset();
+			// i guess do this too, it was pointing at it in msg13
+			m_imgReply = NULL;
+			// try the next image candidate
+			continue;
+		}
+
+		// it's a keeper
+		long urlSize = m_imageUrl.getUrlLen() + 1; // include \0
+		// . make our ThumbnailArray out of it
+		long need = 0;
+		// the array itself
+		need += sizeof(ThumbnailArray);
+		// and each thumbnail it contains
+		need += urlSize;
+		need += m_thumbnailSize;
+		need += sizeof(ThumbnailInfo);
+		// reserve it
+		m_imageBuf.reserve ( need );
+		// point to array
+		ThumbnailArray *ta =(ThumbnailArray *)m_imageBuf.getBufStart();
+		// set that as much as possible, version...
+		ta->m_version = 0;
+		// and thumb count
+		ta->m_numThumbnails = 1;
+		// now store the thumbnail info
+		ThumbnailInfo *ti = ta->getThumbnailInfo (0);
+		// and set our one thumbnail
+		ti->m_origDX = m_dx;
+		ti->m_origDY = m_dy;
+		ti->m_dx = m_tdx;
+		ti->m_dy = m_tdy;
+		ti->m_urlSize = urlSize;
+		ti->m_dataSize = m_thumbnailSize;
+		// now copy the data over sequentially
+		char *p = ti->m_buf;
+		// the image url
+		memcpy(p,m_imageUrl.getUrl(),urlSize);
+		p += urlSize;
+		// the image thumbnail data
+		memcpy(p,m_imgData,m_thumbnailSize);
+		p += m_thumbnailSize;
+		// update buf length of course
+		m_imageBuf.setLength ( p - m_imageBuf.getBufStart() );
+
+		// validate the buffer
+		m_imageBufValid = true;
+
+		// save mem. do this after because m_imgData uses m_msg13's
+		// reply buf to store the thumbnail for now...
+		m_msg13.reset();
+		m_imgReply = NULL;
+
+		return true;
 	}
-	// now get the thumbnail from it
-	return gotImage ( );
+
+	return true;
 }
 
-void gotImageWrapper ( void *state ) {
+static void gotImgIpWrapper ( void *state , long ip ) {
 	Images *THIS = (Images *)state;
-	// process/store the reply
-	if ( ! THIS->gotImage ( ) ) return;
-	// download the images. will set m_stopDownloading when we get one
+	// control loop
+	if ( ! THIS->downloadImages() ) return;
+	// call callback at this point, we are done with the download loop
+	THIS->m_callback ( THIS->m_state );
+}
+
+bool Images::getImageIp ( ) {
+	if ( ! m_msgc.getIp ( m_imageUrl.getHost   () , 
+			      m_imageUrl.getHostLen() ,
+			      &m_latestIp     ,
+			      this            , 
+			      gotImgIpWrapper    ))
+		// we blocked
+		return false;
+	return true;
+}
+
+static void downloadImageWrapper ( void *state ) {
+	Images *THIS = (Images *)state;
+	// control loop
 	if ( ! THIS->downloadImages() ) return;
 	// all done
 	THIS->m_callback ( THIS->m_state );
 }
 
-bool Images::gotImage ( ) {
+bool Images::downloadImage ( ) {
+	// error?
+	if ( m_latestIp == 0 || m_latestIp == -1 ) {
+		log(LOG_DEBUG,"images: ip of %s is %li (%s)",
+		    m_imageUrl.getUrl(),m_latestIp,mstrerror(g_errno));
+		// ignore errors
+		g_errno = 0;
+		return true;
+	}
+	CollectionRec *cr = g_collectiondb.getRec(m_collnum);
+	// assume success
+	m_httpStatus = 200;
+	// set the request
+	Msg13Request *r = &m_msg13Request;
+	r->reset();
+	r->m_maxTextDocLen  = 200000;
+	r->m_maxOtherDocLen = 500000;
+	r->m_urlIp = m_latestIp;
+	if ( ! strcmp(cr->m_coll,"qatest123")) {
+		r->m_useTestCache   = 1;
+		r->m_addToTestCache = 1;
+	}
+	// url is the most important
+	strcpy(r->m_url,m_imageUrl.getUrl());
+	// . try to download it
+	// . i guess we are ignoring hammers at this point
+	if ( ! m_msg13.getDoc(r,false,this,downloadImageWrapper)) 
+		return false;
+
+	return true;
+}
+
+static void makeThumbWrapper ( void *state , ThreadEntry *t ) {
+	Images *THIS = (Images *)state;
+	// control loop
+	if ( ! THIS->downloadImages() ) return;
+	// all done
+	THIS->m_callback ( THIS->m_state );
+}
+
+bool Images::makeThumb ( ) {
 	// did it have an error?
 	if ( g_errno ) {
 		// just give up on all of them if one has an error
@@ -489,12 +716,12 @@ bool Images::gotImage ( ) {
 	m_imgData     = NULL;
 	m_imgDataSize = 0;
 
-	log( LOG_DEBUG, "image: Msg16::gotImage() entered." );
+	log( LOG_DEBUG, "image: gotImage() entered." );
 	// . if there was a problem, just ignore, don't let it stop getting
 	//   the real page.
 	if ( g_errno ) {
 		log( "ERROR? g_errno puked: %s", mstrerror(g_errno) );
-		g_errno = 0;
+		//g_errno = 0;
 		return true;
 	}
 	//if ( ! slot ) return true;
@@ -503,12 +730,24 @@ bool Images::gotImage ( ) {
 	bufLen    = m_msg13.m_replyBufSize;
 	bufMaxLen = m_msg13.m_replyBufAllocSize;
 	// no image?
-	if ( ! buf || bufLen <= 0 ) return true;
+	if ( ! buf || bufLen <= 0 ) {
+		g_errno = EBADIMG;
+		return true;
+	}
 	// we are image candidate #i
-	long i = m_j - 1;
+	//long i = m_j - 1;
+	// get img tag node
 	// get the url of the image
 	long  srcLen;
-	char *src = m_xml->getString(i,i+1,"src",&srcLen);
+	char *src = NULL;
+	if ( m_xd->m_isDiffbotJSONObject ) {
+		src = *m_xd->getDiffbotPrimaryImageUrl();
+		srcLen = gbstrlen(src);
+	}
+	else {
+		long node = m_imageNodes[m_j];
+		src = m_xml->getString(node,"src",&srcLen);
+	}
 	// set it to the full url
 	Url iu;
 	// use "pageUrl" as the baseUrl
@@ -518,6 +757,7 @@ bool Images::gotImage ( ) {
 		log ( "image: MIME.set() failed in gotImage()" );
 		// give up on the remaining images then
 		m_stopDownloading = true;
+		g_errno = EBADIMG;
 		return true;
 	}
 	// set the status so caller can see
@@ -528,6 +768,7 @@ bool Images::gotImage ( ) {
 		     m_httpStatus);
 		// give up on the remaining images then
 		m_stopDownloading = true;
+		g_errno = EBADIMG;
 		return true;
 	}
 	// make sure this is an image
@@ -536,6 +777,7 @@ bool Images::gotImage ( ) {
 		log( LOG_DEBUG, "image: gotImage() states that this image is "
 		     "not in a format we currently handle." );
 		// try the next image if any
+		g_errno = EBADIMG;
 		return true;
 	}
 	// get the content
@@ -543,41 +785,43 @@ bool Images::gotImage ( ) {
 	m_imgDataSize = bufLen - mime.getMimeLen();
 	// Reset socket, so socket doesn't free the data, now we own
 	// We must free the buf after thumbnail is inserted in TitleRec
-	m_imgBuf       = buf;//slot->m_readBuf;
-	m_imgBufLen    = bufLen;//slot->m_readBufSize;
-	m_imgBufMaxLen = bufMaxLen;//slot->m_readBufMaxSize;
+	m_imgReply       = buf;//slot->m_readBuf;
+	m_imgReplyLen    = bufLen;//slot->m_readBufSize;
+	m_imgReplyMaxLen = bufMaxLen;//slot->m_readBufMaxSize;
 	// do not let UdpServer free the reply, we own it now
 	//slot->m_readBuf = NULL;
 
-	if ( ! m_imgBuf || m_imgBufLen == 0 ) {
-		log( LOG_DEBUG, "image: Returned empty image data!" );
+	if ( ! m_imgReply || m_imgReplyLen == 0 ) {
+		log( LOG_DEBUG, "image: Returned empty image reply!" );
+		g_errno = EBADIMG;
 		return true;
 	}
 
 	// get next if too small
-	if ( m_imgDataSize < 20 ) return true;
+	if ( m_imgDataSize < 20 ) { g_errno = EBADIMG; return true; }
 
 	long imageType;
 	getImageInfo ( m_imgData, m_imgDataSize, &m_dx, &m_dy, &imageType );
 
 	// log the image dimensions
-	log( LOG_DEBUG, "image: Image Link: %s", iu.getUrl() );
-	log( LOG_DEBUG, "image: Max Buffer Size: %lu bytes.",m_imgBufMaxLen );
-	log( LOG_DEBUG, "image: Image Original Size: %lu bytes.",m_imgBufLen);
-	log( LOG_DEBUG, "image: Image Buffer @ 0x%lx - 0x%lx.",(long)m_imgBuf, 
-	     (long)m_imgBuf+m_imgBufMaxLen );
+	log( LOG_DEBUG,"image: Image Link: %s", iu.getUrl() );
+	log( LOG_DEBUG,"image: Max Buffer Size: %lu bytes.",m_imgReplyMaxLen);
+	log( LOG_DEBUG,"image: Image Original Size: %lu bytes.",m_imgReplyLen);
+	log( LOG_DEBUG,"image: Image Buffer @ 0x%lx - 0x%lx",(long)m_imgReply, 
+	     (long)m_imgReply+m_imgReplyMaxLen );
 	log( LOG_DEBUG, "image: Size: %lupx x %lupx", m_dx, m_dy );
 
 	// skip if bad dimensions
 	if( ((m_dx < 50) || (m_dy < 50)) && ((m_dx > 0) && (m_dy > 0)) ) {
 	    log( "image: Image is too small to represent a news article." );
+	    g_errno = EBADIMG;
 	    return true;
 	}
 
 	// update status
-	*m_statusPtr = "making thumbnail";
+	if ( m_xd ) m_xd->setStatus ( "making thumbnail" );
 	// log it
-	log ( LOG_DEBUG, "image: Msg16::gotImage() thumbnailing image." );
+	log ( LOG_DEBUG, "image: gotImage() thumbnailing image." );
 	// create the thumbnail...
 	// reset this... why?
 	g_errno = 0;
@@ -587,21 +831,12 @@ bool Images::gotImage ( ) {
 	if ( g_threads.call ( FILTER_THREAD        ,
 			      MAX_NICENESS         ,
 			      this                 ,
-			      thumbDoneWrapper    ,
+			      makeThumbWrapper    ,
 			      thumbStartWrapper_r ) ) return false;
 	// threads might be off
 	logf ( LOG_DEBUG, "image: Calling thumbnail gen without thread.");
-	thumbStartWrapper_r ( NULL , NULL );
+	thumbStartWrapper_r ( this , NULL );
 	return true;
-}
-
-void thumbDoneWrapper ( void *state , ThreadEntry *t ) {
-	Images *THIS = (Images *)state;
-	// . download another image if we ! m_thumbnailValid
-	// . should also free m_imgBuf if ! m_thumbnailValid
-	if ( ! THIS->downloadImages() ) return;
-	// all done
-	THIS->m_callback ( THIS->m_state );
 }
 
 void *thumbStartWrapper_r ( void *state , ThreadEntry *t ) {
@@ -614,30 +849,33 @@ void Images::thumbStart_r ( bool amThread ) {
 
 	long long start = gettimeofdayInMilliseconds();
 
-        static char  scmd[200] = "%stopnm %s | "
-	                         "pnmscale -xysize 100 100 - | "
-	                         "ppmtojpeg - > %s";
+	//static char  scmd[200] = "%stopnm %s | "
+	//                         "pnmscale -xysize 100 100 - | "
+	//                         "ppmtojpeg - > %s";
+
 	
 	log( LOG_DEBUG, "image: thumbStart_r entered." );
 
 	//DIR  *d;
-        char  cmd[250];
-	sprintf( cmd, "%strash", g_hostdb.m_dir );
+	//char  cmd[2500];
+	//sprintf( cmd, "%strash", g_hostdb.m_dir );
+
+	makeTrashDir();
 
 	// get thread id
 	long id = getpid();
 
 	// pass the input to the program through this file
 	// rather than a pipe, since popen() seems broken
-	char in[64];
-	sprintf ( in , "%strash/in.%li", g_hostdb.m_dir, id );
+	char in[364];
+	snprintf ( in , 363,"%strash/in.%li", g_hostdb.m_dir, id );
 	unlink ( in );
 
 	log( LOG_DEBUG, "image: thumbStart_r create in file." );
 
 	// collect the output from the filter from this file
-	char out[64];
-	sprintf ( out , "%strash/out.%li", g_hostdb.m_dir, id );
+	char out[364];
+	snprintf ( out , 363,"%strash/out.%li", g_hostdb.m_dir, id );
         unlink ( out );
 
 	log( LOG_DEBUG, "image: thumbStart_r create out file." );
@@ -695,11 +933,28 @@ void Images::thumbStart_r ( bool amThread ) {
 		       break;
         } 
 
-        sprintf( cmd, scmd, ext, in, out);
+	long xysize = 250;//100;
+	// make thumbnail a little bigger for diffbot for widget
+	if ( m_xd->m_isDiffbotJSONObject ) xysize = 250;
+
+	// i hope 2500 is big enough!
+	char  cmd[2501];
+
+	//sprintf( cmd, scmd, ext, in, out);
+	char *wdir = g_hostdb.m_dir;
+	snprintf( cmd, 2500 ,
+		 "LD_LIBRARY_PATH=%s %s/%stopnm %s | "
+		 "LD_LIBRARY_PATH=%s %s/pnmscale -xysize %li %li - | "
+		 "LD_LIBRARY_PATH=%s %s/ppmtojpeg - > %s"
+		 , wdir , wdir , ext , in
+		 , wdir , wdir , xysize , xysize
+		 , wdir , wdir , out
+		 );
         
         // Call clone function for the shell to execute command
         // This call WILL BLOCK	. timeout is 30 seconds.
-        int err = my_system_r( cmd, 30 ); // m_thmbconvTimeout );
+	//int err = my_system_r( cmd, 30 ); // m_thmbconvTimeout );
+	int err = system( cmd ); // m_thmbconvTimeout );
 
 	//if( (m_dx != 0) && (m_dy != 0) )
 	//	unlink( in );
@@ -736,13 +991,13 @@ void Images::thumbStart_r ( bool amThread ) {
 		return;
 	}
 
-	if( m_thumbnailSize > m_imgBufMaxLen ) {
+	if( m_thumbnailSize > m_imgReplyMaxLen ) {
 		log( "image: Image thumbnail larger than buffer!" );
-		log( LOG_DEBUG, "\t\t\tFile Read Bytes: %ld", m_thumbnailSize);
-		log( LOG_DEBUG, "\t\t\tBuf Max Bytes  : %ld", m_imgBufMaxLen );
-		log( LOG_DEBUG, "\t\t\t-----------------------" );
-		log( LOG_DEBUG, "\t\t\tDiff           : %ld", 
-		     m_imgBufMaxLen-m_thumbnailSize );
+		log(LOG_DEBUG,"\t\t\tFile Read Bytes: %ld", m_thumbnailSize);
+		log(LOG_DEBUG,"\t\t\tBuf Max Bytes  : %ld", m_imgReplyMaxLen );
+		log(LOG_DEBUG, "\t\t\t-----------------------" );
+		log(LOG_DEBUG, "\t\t\tDiff           : %ld", 
+		     m_imgReplyMaxLen-m_thumbnailSize );
 		return;
 
 	}
@@ -777,10 +1032,16 @@ void Images::thumbStart_r ( bool amThread ) {
 	// tell the loop above not to download anymore, we got one
 	m_thumbnailValid = true;
 
-	getImageInfo ( m_imgBuf , m_thumbnailSize , &m_tdx , &m_tdy , NULL );
+	// MDW: this was m_imgReply
+	getImageInfo ( m_imgData , m_thumbnailSize , &m_tdx , &m_tdy , NULL );
 
-	log( LOG_DEBUG, "image: Thumbnailed size: %li bytes.", m_imgDataSize );
-	log( LOG_DEBUG, "image: Thumbnaile dx=%li dy=%li.", m_tdx,m_tdy );
+	// now make the meta data struct
+	// <imageUrl>\0<width><height><thumbnailData>
+	
+
+
+	log( LOG_DEBUG, "image: Thumbnail size: %li bytes.", m_imgDataSize );
+	log( LOG_DEBUG, "image: Thumbnail dx=%li dy=%li.", m_tdx,m_tdy );
 	log( LOG_DEBUG, "image: Thumbnail generated in %lldms.", stop-start );
 }
 

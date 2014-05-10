@@ -1130,6 +1130,11 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 	// to any rdb...
 	cr->m_collnum = newCollnum;
 
+	// update the timestamps since we are restarting/resetting
+	cr->m_diffbotCrawlStartTime = getTimeGlobalNoCore();
+	cr->m_diffbotCrawlEndTime   = 0;
+
+
 	////////
 	//
 	// ALTER m_recs[] array
@@ -1256,6 +1261,33 @@ CollectionRec *Collectiondb::getRec ( HttpRequest *r , bool useDefaultRec ) {
 	//if ( ! coll || ! coll[0] ) coll = g_conf.m_defaultColl;
 	return g_collectiondb.getRec ( coll );
 }
+
+char *Collectiondb::getDefaultColl ( HttpRequest *r ) {
+	char *coll = r->getString ( "c" );
+	if ( coll && ! coll[0] ) coll = NULL;
+	if ( coll ) return coll;
+	CollectionRec *cr = NULL;
+	// default to main first
+	if ( ! coll ) {
+		cr = g_collectiondb.getRec("main");
+		// CAUTION: cr could be deleted so don't trust this ptr
+		// if you give up control of the cpu
+		if ( cr ) return cr->m_coll;
+	}
+	// try next in line
+	if ( ! coll ) {
+		cr = getFirstRec ();
+		if ( cr ) return cr->m_coll;
+	}
+	// give up?
+	return NULL;
+}
+
+
+//CollectionRec *Collectiondb::getRec2 ( HttpRequest *r , bool useDefaultRec) {
+//	char *coll = getDefaultColl();
+//	return g_collectiondb.getRec(coll);
+//}
 
 // . get collectionRec from name
 // . returns NULL if not available
@@ -2736,7 +2768,6 @@ bool CollectionRec::hasSearchPermission ( TcpSocket *s , long encapIp ) {
 }
 
 bool expandRegExShortcuts ( SafeBuf *sb ) ;
-//bool updateSiteListTables(collnum_t collnum,bool addSeeds,char *siteListArg);
 void nukeDoledb ( collnum_t collnum );
 
 // . anytime the url filters are updated, this function is called
