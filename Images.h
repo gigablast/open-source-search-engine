@@ -27,21 +27,11 @@ class ThumbnailInfo {
 	long  getDataSize() { return m_dataSize; };
 	long  getSize () { return sizeof(ThumbnailInfo)+m_urlSize+m_dataSize;};
 
-	bool printThumbnailInHtml ( SafeBuf *sb ) {
-		sb->safePrintf("<a href=%s>"
-			       "<img width=%li height=%li "
-			       "align=left "
-			       "style=padding-right:8px;padding-bottom:8px; "
-			       "src=\""
-			       "data:image/jpg;base64,"
-			       ,getUrl()
-			       ,m_dx
-			       ,m_dy);
-		// encode image in base 64
-		sb->base64Encode ( getData(), m_dataSize , 0 ); // 0 niceness
-		sb->safePrintf("\"></a>");
-		return true;
-	};
+	// make sure neither the x or y side is > maxSize
+	bool printThumbnailInHtml ( SafeBuf *sb , 
+				    long maxSide , 
+				    bool printLink ,
+				    long *newdx ) ;
 };
 
 // XmlDoc::ptr_imgData is a ThumbnailArray

@@ -2688,17 +2688,20 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	// http://www.youtube.com/watch?v=auQbi_fkdGE
 	// http://img.youtube.com/vi/auQbi_fkdGE/2.jpg
 	// get the thumbnail url
-	if ( mr->ptr_imgUrl && si->m_format == FORMAT_HTML )
+	if ( mr->ptr_imgUrl && 
+	     si->m_format == FORMAT_HTML &&
+	     // if we got thumbnail use that not this
+	     ! mr->ptr_imgData )
 		sb->safePrintf ("<a href=%s><img src=%s></a>",
 				   url,mr->ptr_imgUrl);
 
 	// if we have a thumbnail show it next to the search result
 	if ( si->m_format == FORMAT_HTML &&
-	     ! mr->ptr_imgUrl &&
+	     //! mr->ptr_imgUrl &&
 	     mr->ptr_imgData ) {
 		ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 		ThumbnailInfo *ti = ta->getThumbnailInfo(0);
-		ti->printThumbnailInHtml ( sb );
+		ti->printThumbnailInHtml ( sb , 100 , true , NULL );
 	}
 
 	// print image for widget
@@ -2748,53 +2751,13 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		// 		       , widgetwidth - 2*8 // padding is 8px
 		// 		       , mr->ptr_imgUrl);
 		long newdx = 0;
-		long newdy = 0;
 		if ( mr->ptr_imgData ) {
 			ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 			ThumbnailInfo *ti = ta->getThumbnailInfo(0);
 			// account for scrollbar on the right
 			long ww = widgetWidth - (long)SCROLLBAR_WIDTH;
-			// avoid distortion.
-			// if image is wide, use that to scale
-			newdx = ti->m_dx;
-			newdy = ti->m_dy;
-			if ( ti->m_dx > 0 && ti->m_dy > 0 ) {
-				float xscale = 
-					(float)ww/
-					(float)ti->m_dx;
-				float yscale = 
-					(float)RESULT_HEIGHT/
-					(float)ti->m_dy;
-				float min = xscale;
-				if ( yscale < min ) min = yscale;
-				newdx = (long)((float)newdx * min);
-				newdy = (long)((float)newdy * min);
-			}
-				
-			// img tag
-		 	// sb->safePrintf("background-repeat:no-repeat;"
-		 	// 	       "background-size:%lipx %lipx;"
-		 	// 	       "background-image:url('data:image/"
-			// 	       "jpg;base64,"
-		 	// 	       //, widgetWidth - 2*8);// padding is 8px
-			// 	       , newdx
-			// 	       , newdy
-			// 	       );
-		 	sb->safePrintf("<img width=%li height=%li align=left "
-		 		       "src=\"data:image/"
-				       "jpg;base64,"
-		 		       //, widgetWidth - 2*8);// padding is 8px
-				       , newdx
-				       , newdy
-				       );
-
-			// encode image in base 64
-			if ( ti ) 
-				sb->base64Encode (ti->getData(),
-						  ti->getDataSize(),
-						  0); // niceness
-			//sb->safePrintf("');");
-			sb->safePrintf("\">");
+			// false = do not print <a href> link on image
+			ti->printThumbnailInHtml ( sb , ww , false , &newdx );
 		}
 		// end the div style attribute and div tag
 		//sb->safePrintf("\">");
@@ -2866,7 +2829,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 			       //"2px -2px 0 #000 "
 			       //"-2px -2px 0 #000;"
 			       "\">");
-		//sb->safePrintf ("<image width=50 height=50 src=%s></a>",
+		//sb->safePrintf ("<img width=50 height=50 src=%s></a>",
 		//		   mr->ptr_imgUrl);
 		// then title over image
 	}

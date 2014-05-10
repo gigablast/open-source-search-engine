@@ -1165,3 +1165,40 @@ void getImageInfo ( char *buf , long bufSize ,
 		log( LOG_DEBUG, "image: Image Corrupted? No type found in "
 		     "data." );
 }
+
+bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb , 
+					   long maxSide ,
+					   bool printLink ,
+					   long *retNewdx )  {
+	// account for scrollbar on the right
+	//maxSide -= (long)SCROLLBAR_WIDTH;
+	// avoid distortion.
+	// if image is wide, use that to scale
+	if ( m_dx <= 0 ) return true;
+	if ( m_dy <= 0 ) return true;
+	float xscale = 
+		(float)maxSide/
+		(float)m_dx;
+	float yscale = 
+		(float)maxSide/
+		(float)m_dy;
+	float min = xscale;
+	if ( yscale < min ) min = yscale;
+	long newdx = (long)((float)m_dx * min);
+	long newdy = (long)((float)m_dy * min);
+	if ( printLink ) sb->safePrintf("<a href=%s>", getUrl() );
+	sb->safePrintf("<img width=%li height=%li align=left "
+		       "src=\"data:image/"
+		       "jpg;base64,"
+		       , newdx
+		       , newdy
+		       );
+	// encode image in base 64
+	sb->base64Encode ( getData(), m_dataSize , 0 ); // 0 niceness
+	sb->safePrintf("\">");
+	if ( printLink ) sb->safePrintf ("</a>");
+	// widget needs to know the width of the thumb for formatting
+	// the text either on top of the thumb or to the right of it
+	if ( retNewdx ) *retNewdx = newdx;
+	return true;
+}

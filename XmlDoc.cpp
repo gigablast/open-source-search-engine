@@ -31808,7 +31808,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 				       , ti->m_dx
 				       , ti->m_dy
 				       );
-			ti->printThumbnailInHtml ( sb ) ;
+			ti->printThumbnailInHtml ( sb , 50 ,true,NULL) ;
 			// end the row for this thumbnail
 			sb->safePrintf("</td></tr>\n");
 		}
