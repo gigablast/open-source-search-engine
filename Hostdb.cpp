@@ -2612,7 +2612,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# A proxy will be running on 10.5.66.18:\n");
 	sb.safePrintf("#proxy 6001 7001 8001 9001 10.5.66.18\n");
 
-	log("%shosts.conf does not exist, creating.",cwd);
+	log("%s/hosts.conf does not exist, creating.",cwd);
 	sb.save ( cwd , "hosts.conf" );
 	return true;
 }
