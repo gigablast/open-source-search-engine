@@ -2799,8 +2799,10 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 			m_corrupt++;
 			continue;
 		}
-		// must have rec as well
-		if ( ! recs[c] ) {
+		// must have rec as well. unless it its statsdb tree
+		// or m_waitingTree which are collection-less and always use
+		// 0 for their collnum. if collection-less m_rdbId==-1.
+		if ( ! recs[c] && m_rdbId >= 0 ) {
 			m_corrupt++;
 			continue;
 		}

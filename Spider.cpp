@@ -3075,6 +3075,8 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 
 	// reset this
 	long maxWinners = (long)MAX_WINNER_NODES;
+	if ( ! m_cr->m_isCustomCrawl ) maxWinners = 1;
+
 	if ( m_winnerTree.m_numNodes == 0 &&
 	     ! m_winnerTree.set ( -1 , // fixeddatasize
 				  maxWinners , // maxnumnodes
@@ -4091,6 +4093,7 @@ bool SpiderColl::scanListForWinners ( ) {
 
 		// get the top 100 spider requests by priority/time/etc.
 		long maxWinners = (long)MAX_WINNER_NODES; // 40
+		if ( ! m_cr->m_isCustomCrawl ) maxWinners = 1;
 
 		// only put 40 urls from the same firstIp into doledb if
 		// we have a lot of urls in our spiderdb already.
@@ -10266,7 +10269,16 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		if ( strncmp(p,"insitelist",10) == 0 ) {
 			// skip for msg20
 			//if ( isForMsg20 ) continue;
-			if ( ! checkedRow ) {
+			// if only seeds in the sitelist and no
+
+			// if there is no domain or url explicitly listed
+			// then assume user is spidering the whole internet
+			// and we basically ignore "insitelist"
+			if ( sc->m_siteListIsEmpty ) {
+				// use a dummy row match
+				row = (char *)1;
+			}
+			else if ( ! checkedRow ) {
 				// only do once for speed
 				checkedRow = true;
 				// this function is in PageBasic.cpp

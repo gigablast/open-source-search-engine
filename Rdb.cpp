@@ -241,6 +241,9 @@ bool Rdb::init ( char          *dir                  ,
 	// . set tree to use our fixed data size
 	// . returns false and sets g_errno on error
 	if(m_useTree) { 
+		long rdbId = m_rdbId;
+		// statsdb is collectionless really so pass on to tree
+		if ( rdbId == RDB_STATSDB ) rdbId = -1;
 		if ( ! m_tree.set ( fixedDataSize  , 
 			    maxTreeNodes   , // max # nodes in tree
 			    isTreeBalanced , 

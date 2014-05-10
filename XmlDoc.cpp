@@ -18497,6 +18497,11 @@ bool XmlDoc::logIt ( ) {
 		sb.safePrintf("ctype=%s ",
 			      g_contentTypeStrings [m_contentType]);
 
+	if ( m_sreqValid )
+		sb.safePrintf("parentlang=%02li(%s) ",
+			      (long)m_sreq.m_parentLangId,
+			      getLanguageAbbr(m_sreq.m_parentLangId));
+
 	if ( m_langIdValid )
 		sb.safePrintf("lang=%02li(%s) ",(long)m_langId,
 			      getLanguageAbbr(m_langId));
@@ -23425,8 +23430,13 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//   so if your first X filters all map to a "FILTERED" 
 		//   priority and this url matches one of them we can 
 		//   confidently toss this guy out.
-		//long ufn = ::getUrlFilterNum ( &ksr , NULL, m_spideredTime ,
-		//			       false, m_niceness, cr);
+		// . show this for debugging!
+		// long ufn = ::getUrlFilterNum ( &ksr , NULL, m_spideredTime ,
+		// 			       false, m_niceness, cr,
+		// 			       false,//true , // outlink?
+		// 			       NULL ); // quotatable
+		// logf(LOG_DEBUG,"build: ufn=%li for %s",
+		//      ufn,ksr.m_url);
 
 		// bad?
 		//if ( ufn < 0 ) {
