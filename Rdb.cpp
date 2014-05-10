@@ -631,9 +631,13 @@ bool makeTrashDir() {
 		       S_IRUSR | S_IWUSR | S_IXUSR | 
 		       S_IRGRP | S_IWGRP | S_IXGRP | 
 		       S_IROTH | S_IXOTH ) == -1 ) {
-		log("dir: mkdir %s had error: %s",
-		    trash,mstrerror(errno));
-		return false;
+		if ( errno != EEXIST ) {
+			log("dir: mkdir %s had error: %s",
+			    trash,mstrerror(errno));
+			return false;
+		}
+		// clear it
+		errno = 0;
 	}
 	return true;
 }

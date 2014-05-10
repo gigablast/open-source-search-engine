@@ -25779,12 +25779,6 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	// if parm "index article content only" is true, do not index this!
 	//if ( m_eliminateMenus ) skipIndex=true;
 
-	setStatus ( "hashing url path");
-
-	// hash the path plain
-	if ( hashNonFieldTerms && ! hashString (path,plen,&hi) ) return false;
-
-
 	setStatus ( "hashing gbpathdepth");
 
 	//
@@ -25841,64 +25835,6 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	//
 	// HASH the url's mid domain and host as they were in the body
 	//
-	// the final score
-	//long plainScore = (long)(256.0 * boost1 * boost2 * fw);
-	// update parms
-	hi.m_prefix    = NULL;
-	hi.m_desc      = "middle domain";//tmp3;
-	hi.m_hashGroup = HASHGROUP_INURL;
-
-	setStatus ( "hashing url mid domain");
-
-	// if parm "index article content only" is true, do not index this!
-	//if ( m_eliminateMenus ) plainScore = 0;
-	//char *mid  = fu->getMidDomain   ();
-	//long  mlen = fu->getMidDomainLen();
-	//hi.m_desc = "url mid dom";
-	//if ( ! hashString ( mid,mlen ,&hi ) ) return false;
-	//hi.m_desc = "url host";
-	char *host = fu->getHost        ();
-	long  hlen = fu->getHostLen     ();
-	if ( hashNonFieldTerms && ! hashString ( host,hlen,&hi)) return false;
-
-	setStatus ( "hashing SiteGetter terms");
-
-	//
-	// HASH terms for SiteGetter.cpp
-	//
-	// . this termId is used by SiteGetter.cpp for determining subsites
-	// . matches what is in SiteGet::getSiteList()
-	// for www.xyz.com/a/     HASH www.xyz.com      
-	// for www.xyz.com/a/b/   HASH www.xyz.com/a/   
-	// for www.xyz.com/a/b/c/ HASH www.xyz.com/a/b/ 
-	bool  add  = true;
-	// we only hash this for urls that end in '/'
-	if ( s[slen-1] != '/' ) add = false;
-	// and no cgi
-	if ( fu->isCgi()     ) add = false;
-	// skip if root
-	if ( fu->m_plen <= 1 ) add = false;
-	// sanity check
-	if ( ! m_linksValid ) { char *xx=NULL; *xx=0; }
-	// . skip if we have no subdirectory outlinks
-	// . that way we do not confuse all the pages in dictionary.com or
-	//   wikipedia.org as subsites!!
-	if ( ! m_links.hasSubdirOutlink() ) add = false;
-	// tags from here out
-	hi.m_hashGroup = HASHGROUP_INTAG;
-	hi.m_shardByTermId = true;
-	// hash it
-	if ( add ) {
-		// remove the last path component
-		char *end2 = s + slen - 2;
-		// back up over last component
-		for ( ; end2 > fu->m_path && *end2 != '/' ; end2-- ) ;
-		// hash that part of the url
-		hi.m_prefix    = "siteterm";
-		if ( ! hashSingleTerm ( host,end2-host,&hi) ) return false;
-	}
-	hi.m_shardByTermId  = false;
-
 	setStatus ( "hashing site colon terms");
 
 	//
@@ -25938,6 +25874,7 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 		*p = '\0';
 		// update hash parms
 		hi.m_prefix    = "site";
+		hi.m_hashGroup = HASHGROUP_INURL;
 		// this returns false on failure
 		if ( ! hashSingleTerm (buf,p-buf,&hi ) ) return false;
 		// break when we hash the root path
@@ -25961,6 +25898,74 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	// update hash parms
 	hi.m_prefix    = "ext";
 	if ( ! hashSingleTerm(ext,elen,&hi ) ) return false;
+
+
+	if ( ! hashNonFieldTerms ) return true;
+
+
+	setStatus ( "hashing url mid domain");
+	// the final score
+	//long plainScore = (long)(256.0 * boost1 * boost2 * fw);
+	// update parms
+	hi.m_prefix    = NULL;
+	hi.m_desc      = "middle domain";//tmp3;
+	hi.m_hashGroup = HASHGROUP_INURL;
+	// if parm "index article content only" is true, do not index this!
+	//if ( m_eliminateMenus ) plainScore = 0;
+	//char *mid  = fu->getMidDomain   ();
+	//long  mlen = fu->getMidDomainLen();
+	//hi.m_desc = "url mid dom";
+	//if ( ! hashString ( mid,mlen ,&hi ) ) return false;
+	//hi.m_desc = "url host";
+	char *host = fu->getHost        ();
+	long  hlen = fu->getHostLen     ();
+	if ( ! hashString ( host,hlen,&hi)) return false;
+
+
+	setStatus ( "hashing url path");
+
+	// hash the path plain
+	if ( ! hashString (path,plen,&hi) ) return false;
+
+
+
+	setStatus ( "hashing SiteGetter terms");
+
+	//
+	// HASH terms for SiteGetter.cpp
+	//
+	// . this termId is used by SiteGetter.cpp for determining subsites
+	// . matches what is in SiteGet::getSiteList()
+	// for www.xyz.com/a/     HASH www.xyz.com      
+	// for www.xyz.com/a/b/   HASH www.xyz.com/a/   
+	// for www.xyz.com/a/b/c/ HASH www.xyz.com/a/b/ 
+	bool  add  = true;
+	// we only hash this for urls that end in '/'
+	if ( s[slen-1] != '/' ) add = false;
+	// and no cgi
+	if ( fu->isCgi()     ) add = false;
+	// skip if root
+	if ( fu->m_plen <= 1 ) add = false;
+	// sanity check
+	if ( ! m_linksValid ) { char *xx=NULL; *xx=0; }
+	// . skip if we have no subdirectory outlinks
+	// . that way we do not confuse all the pages in dictionary.com or
+	//   wikipedia.org as subsites!!
+	if ( ! m_links.hasSubdirOutlink() ) add = false;
+	// tags from here out
+	hi.m_hashGroup = HASHGROUP_INTAG;
+	hi.m_shardByTermId = true;
+	// hash it
+	if ( add ) {
+		// remove the last path component
+		char *end2 = s + slen - 2;
+		// back up over last component
+		for ( ; end2 > fu->m_path && *end2 != '/' ; end2-- ) ;
+		// hash that part of the url
+		hi.m_prefix    = "siteterm";
+		if ( ! hashSingleTerm ( host,end2-host,&hi) ) return false;
+	}
+	hi.m_shardByTermId  = false;
 
 	setStatus ( "hashing urlhashdiv10 etc");
 
