@@ -25025,7 +25025,7 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	*/
 
 	// gbstatus:"tcp timed out"
-	hi.m_prefix = "gbstatus";
+	hi.m_prefix = "gbstatusmsg";
 	hi.m_desc   = "spider error msg";
 	if ( ! hashString( mstrerror(m_indexCode) , &hi ) ) return NULL;
 
