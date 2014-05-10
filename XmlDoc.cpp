@@ -18637,9 +18637,9 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 			      g_contentTypeStrings [m_contentType]);
 
 	if ( m_sreqValid )
-		sb.safePrintf("parentlang=%02li(%s) ",
-			      (long)m_sreq.m_parentLangId,
-			      getLanguageAbbr(m_sreq.m_parentLangId));
+		sb->safePrintf("parentlang=%02li(%s) ",
+			       (long)m_sreq.m_parentLangId,
+			       getLanguageAbbr(m_sreq.m_parentLangId));
 
 	if ( m_langIdValid )
 		sb->safePrintf("lang=%02li(%s) ",(long)m_langId,
