@@ -3084,7 +3084,7 @@ struct QueryField g_fields[] = {
 	{"isclean", FIELD_ISCLEAN, true,"Matches all pages that are deemed non-offensive and safe for children."},
 	{"gbrss", FIELD_GBRSS, true,"Matches all pages that are rss feeds."},
 	//{"gbruleset",FIELD_GBRULESET, true,"Obsolete."},
-	{"type", FIELD_TYPE, false,"Matches all pages of the specified file type. Example: type:pdf will match pdf documents, regardless of their file extension."},
+	{"type", FIELD_TYPE, false,"Matches all pages of the specified file type. Example: type:pdf will match pdf documents, regardless of their file extension. Examples: type:doc type:status type:json type:xls"},
 	{"filetype", FIELD_TYPE, false,"Same as type:"},
 	{"gbisadult",FIELD_TYPE,false,"use gbisadult:0 and gbisadult:1 to restrict results to non-adult and adult documents respectively."},
 

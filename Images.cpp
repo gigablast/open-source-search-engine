@@ -515,6 +515,10 @@ bool Images::downloadImages () {
 	// . make a thumbnail of that one
 	for (  ; m_j < m_numImages ; m_j++ , m_phase = 0 ) {
 
+		// did collection get nuked?
+		CollectionRec *cr = g_collectiondb.getRec(m_collnum);
+		if ( ! cr ) { g_errno = ENOCOLLREC; return true; }
+
 		// clear error
 		g_errno = 0;
 
@@ -669,6 +673,7 @@ bool Images::downloadImage ( ) {
 		return true;
 	}
 	CollectionRec *cr = g_collectiondb.getRec(m_collnum);
+	if ( ! cr ) { g_errno = ENOCOLLREC; return true; }
 	// assume success
 	m_httpStatus = 200;
 	// set the request
