@@ -23930,7 +23930,7 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , long long docId , SafeBuf *buf ) {
 		long need = tt1->getNumSlotsUsed() * slotSize;
 		if ( ! buf->reserve ( need ) ) return false;
 		// get cursor into buf, NOT START of buf
-		p = buf->getBuf();
+		p = buf->getBufStart();
 	}
 
 	long siteRank = getSiteRank ();
@@ -24010,9 +24010,11 @@ bool XmlDoc::addTable144 ( HashTableX *tt1 , long long docId , SafeBuf *buf ) {
 	if ( ! buf ) { m_p = p; return true; }
 
 	// update safebuf otherwise
-	char *start = buf->getBuf();
+	char *start = buf->getBufStart();
 	// fix SafeBuf::m_length
 	buf->setLength ( p - start );
+	// sanity
+	if ( buf->length() > buf->getCapacity() ) { char *xx=NULL;*xx=0; }
 
 	return true;
 }
@@ -24927,50 +24929,111 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// try to get an available docid, preferring "d" if available
 	long long *uqd = getAvailDocIdOnly ( d );
 	if ( ! uqd || uqd == (void *)-1 ) return  (SafeBuf *)uqd;
+	// sanity
+	if ( *uqd <= 0 || *uqd > MAX_DOCID ) { char *xx=NULL;*xx=0; }
+
+	// reset just in case
+	m_spiderReplyMetaList.reset();
 
 	// the posdb table
 	HashTableX tt4;
-	if ( !tt4.set(18,4,32,NULL,0,false,m_niceness,"posdb-spindx"))
+	if ( !tt4.set(18,4,256,NULL,0,false,m_niceness,"posdb-spindx"))
 		return NULL;
+
+	// BEFORE ANY HASHING
+	long savedDist = m_dist;
+	// re-set to 0
+	m_dist = 0;
 
 	// sanity
 	if ( ! m_indexCodeValid ) { char *xx=NULL;*xx=0; }
-	// shortcut
-	long indexCode = m_indexCode;
 
-	// hash like gberrorstr:"Tcp Timed out" or gberrorstr:"Doc unchanged"
+	// hash like gbstatus:"Tcp Timed out" or gbstatus:"Doc unchanged"
 	HashInfo hi;
-	hi.m_hashGroup = 0;
+	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_tt = &tt4;
-	hi.m_prefix = "gberrorstr";
-	hi.m_desc   = "spider error msg";
 	hi.m_useCountTable = false;
-	if ( ! hashString( mstrerror(indexCode) , &hi ) ) return false;
+	hi.m_useSections = false;
+
 
 	char buf[64];
 	long bufLen;
 
-	// . then a numeric term with the error to make the histogram with
-	// . you can't use gbsortby: with this one
-	hi.m_prefix = "gberrornum";
-	hi.m_desc   = "spider error number";
-	bufLen = sprintf ( buf , "%lu", indexCode );
-	if ( ! hashNumber ( buf , buf , bufLen , &hi ) ) return NULL;
-
-
-
-	// we are a spider reply, hash gbisreply:1
-	//hi.m_prefix = "gbisreply";
-	//if ( ! hashString("1" , &hi ) ) return NULL;
-
+	// hash 'type:status' similar to 'type:json' etc.
 	hi.m_prefix = "type";
 	if ( ! hashString("status" , &hi ) ) return NULL;
 
+	// . hash gbstatus:0 for no error, otherwise the error code
+	// . this also hashes it as a number so we don't have to
+	// . so we can do histograms on this #
+	hi.m_prefix = "gbstatus";
+	hi.m_desc   = "spider error number as string";
+	bufLen = sprintf ( buf , "%lu", m_indexCode );
+	if ( ! hashString( buf , &hi ) ) return NULL;
 
-	// make ip legit to hash the url
-	long ip = m_ip;
-	// if not a valid ip just use 0.0.0.0
-	if ( ! m_ipValid ) ip = atoip("0.0.0.0");
+	/*
+	logf(LOG_DEBUG,"url: %s",m_firstUrl.m_url);
+	logf(LOG_DEBUG,"hashing indexcode=%li",m_indexCode);
+	bool ok = false;
+	if ( m_indexCode ) ok = true;
+	// scan the keys in tt and make sure the termid fo
+	addTable144 ( &tt4 , *uqd , &m_spiderReplyMetaList );
+	long recSize = 0;
+	long rcount = 0;
+	char *p = m_spiderReplyMetaList.getBufStart();
+	char *pend =m_spiderReplyMetaList.getBuf();
+	for ( ; p < pend ; p += recSize ) {
+		// get rdbid, RDB_POSDB
+		uint8_t rdbId = *p & 0x7f;
+		// skip
+		p++;
+		// get key size
+		long ks = getKeySizeFromRdbId ( rdbId );
+		// init this
+		long recSize = ks;
+		// convert into a key128_t, the biggest possible key
+		//key224_t k ; 
+		char k[MAX_KEY_BYTES];
+		if ( ks > MAX_KEY_BYTES ) { char *xx=NULL;*xx=0; }
+		//k.setMin();
+		memcpy ( &k , p , ks );
+		// is it a negative key?
+		char neg = false;
+		if ( ! ( p[0] & 0x01 ) ) neg = true;
+		// this is now a bit in the posdb key so we can rebalance
+		char shardByTermId = false;
+		if ( rdbId==RDB_POSDB && g_posdb.isShardedByTermId(k)) 
+			shardByTermId = true;
+		// skip it
+		p += ks;
+		// . always zero if key is negative
+		// . this is not the case unfortunately...
+		if ( neg ) {char *xx=NULL;*xx=0; }
+		// print dbname
+		if ( rdbId != RDB_POSDB ) { char *xx=NULL;*xx=0; }
+		// get termid et al
+		key144_t *k2 = (key144_t *)k;
+		long long tid = g_posdb.getTermId(k2);
+		log("db: tid=%lli",tid);
+		if ( tid == 199947062354729LL ) ok = true;
+		//if ( m_indexCode == 0 && tid != 199947062354729LL ) {
+		//	char *xx=NULL;*xx=0; }
+	}
+	if ( ! ok ) { char *xx=NULL;*xx=0; }
+	goto SKIP;
+	// was here....
+	*/
+
+	// gbstatus:"tcp timed out"
+	hi.m_prefix = "gbstatus";
+	hi.m_desc   = "spider error msg";
+	if ( ! hashString( mstrerror(m_indexCode) , &hi ) ) return NULL;
+
+	hi.m_prefix = "gbdocid";
+	hi.m_desc   = "docid";
+	bufLen = sprintf ( buf , "%llu", *uqd ) ;
+	if ( ! hashString( buf , &hi ) ) return NULL;
+
 	// . then the url. url: site: ip: etc. terms
 	// . do NOT hash non-fielded terms so we do not get "status" 
 	//   results poluting the serps => false
@@ -24980,11 +25043,20 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	hi.m_hashGroup = 0;// this doesn't matter, it's a numeric field
 	hi.m_desc      = "last spidered date";
 	hi.m_prefix    = "gbspiderdate";
+	if ( reply->m_spideredTime <= 0 ) { char *xx=NULL;*xx=0; }
 	bufLen = sprintf ( buf , "%lu", reply->m_spideredTime );
 	if ( ! hashNumber ( buf , buf , bufLen , &hi ) ) return NULL;
 
 	// store keys in safebuf then to make our own meta list
 	addTable144 ( &tt4 , *uqd , &m_spiderReplyMetaList );
+
+	// debug this shit
+	//SafeBuf tmpsb;
+	//printMetaList ( m_spiderReplyMetaList.getBufStart() ,
+	//		m_spiderReplyMetaList.getBuf(),
+	//		&tmpsb );
+	//logf(LOG_DEBUG,"%s\n",tmpsb.getBufStart());
+
 
 	// now make the titlerec 
 	char xdhead[2048];
@@ -25002,32 +25074,32 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// override spider time in case we had error to be consistent
 	// with the actual SpiderReply record
 	xd->m_spideredTime = reply->m_spideredTime;
+	// this will cause the maroon box next to the search result to
+	// say "STATUS" similar to "PDF" "DOC" etc.
 	xd->m_contentType  = CT_STATUS;
 
 	long fullsize = &m_dummyEnd - (char *)this;
 	if ( fullsize > 2048 ) { char *xx=NULL;*xx=0; }
-
-	// sanity
-	if ( ! m_indexCodeValid ) { char *xx=NULL;*xx=0; }
 
 	// the ptr_* were all zero'd out, put the ones we want to keep back in
 	SafeBuf tmp;
 	tmp.safePrintf("<title>Spider Status: %s</title>",
 		       mstrerror(m_indexCode));
 	// put stats like we log out from logIt
-	tmp.safePrintf("<div style=max-width:800px;>\n");
+	//tmp.safePrintf("<div style=max-width:800px;>\n");
 	// store log output into doc
 	//logIt(&tmp);
-	tmp.safePrintf("\n</div>");
-		       
+	//tmp.safePrintf("\n</div>");
+
+	// the content is just the title tag above
 	xd->ptr_utf8Content = tmp.getBufStart();
 	xd->size_utf8Content = tmp.length()+1;
 
-	// keep the same url
+	// keep the same url as the doc we are the spider reply for
 	xd->ptr_firstUrl = ptr_firstUrl;
 	xd->size_firstUrl = size_firstUrl;
 
-	// serps need site
+	// serps need site, otherwise search results core
 	xd->ptr_site = ptr_site;
 	xd->size_site = size_site;
 
@@ -25045,6 +25117,9 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 		return NULL;
 	if ( ! m_spiderReplyMetaList.cat(titleRecBuf) ) 
 		return NULL;
+
+	// return the right val
+	m_dist = savedDist;
 
 	// ok, good to go, ready to add to posdb and titledb
 	m_spiderReplyMetaListValid = true;
@@ -30276,7 +30351,7 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 		 Words      *words     , 
 		 Phrases    *phrases   , 
 		 Synonyms   *synonyms  ,
-		 Sections   *sections  ,
+		 Sections   *sectionsArg  ,
 		 HashTableX *countTable ,
 		 char *fragVec ,
 		 char *wordSpamVec ,
@@ -30293,6 +30368,10 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 	//
 	//if ( ! m_storeTermListInfo )
 	//	return true;
+
+	Sections *sections = sectionsArg;
+	// for getSpiderReplyMetaList() we don't use sections it'll mess us up
+	if ( ! hi->m_useSections ) sections = NULL;
 
 	// shortcuts
 	uint64_t *wids    = (uint64_t *)words->getWordIds();
@@ -30504,6 +30583,10 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 		// how we made our calculation of the document's primary lang
 		//if ( langId == langUnknown ) langId = docLangId;
 
+		char wd;
+		if ( hi->m_useCountTable ) wd = wdv[i];
+		else                       wd = MAXDIVERSITYRANK;
+
 		// if using posdb
 		key144_t k;
 		g_posdb.makeKey ( &k ,
@@ -30511,7 +30594,7 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 				  0LL,//docid
 				  wposvec[i], // dist,
 				  densvec[i],// densityRank , // 0-15
-				  wdv[i], // diversityRank 0-15
+				  wd, // diversityRank 0-15
 				  ws, // wordSpamRank  0-15
 				  0, // siterank
 				  hashGroup ,
@@ -30545,7 +30628,7 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 			wi.m_wordPos       = wposvec[i];
 			wi.m_densityRank   = densvec[i];
 			wi.m_wordSpamRank  = ws;
-			wi.m_diversityRank = wdv[i];
+			wi.m_diversityRank = wd;//v[i];
 			wi.m_hashGroup     = hashGroup;
 			wi.m_trafficGain   = 0;
 			long cs = sizeof(WordPosInfo);
@@ -30557,7 +30640,7 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 			if ( ! storeTerm ( wptrs[i],wlens[i],h,hi,i,
 					   wposvec[i], // wordPos
 					   densvec[i],// densityRank , // 0-15
-					   wdv[i],
+					   wd,//v[i],
 					   ws,
 					   hashGroup,
 					   //false, // is phrase?
@@ -30585,7 +30668,7 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 					  0LL,//docid
 					  wposvec[i], // dist,
 					  densvec[i],// densityRank , // 0-15
-					  wdv[i], // diversityRank ,
+					  wd,//v[i], // diversityRank ,
 					  ws, // wordSpamRank ,
 					  0, //siterank
 					  hashGroup,
@@ -30608,7 +30691,7 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 					 i, // wordnum
 					 wposvec[i], // wordPos
 					 densvec[i],// densityRank , // 0-15
-					 wdv[i],
+					 wd,//v[i],
 					 ws,
 					 hashGroup,
 					 //false, // is phrase?

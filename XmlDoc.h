@@ -2355,6 +2355,7 @@ public:
 		m_useSynonyms             = false;
 		m_hashGroup = -1;
 		m_useCountTable = true;
+		m_useSections = true;
 		m_startDist = 0;
 		m_siteHash32 = 0;
 	};
@@ -2371,6 +2372,7 @@ public:
 	long              m_startDist;
 	long              m_siteHash32;
 	bool              m_useCountTable;
+	bool              m_useSections;
 };
 
 

@@ -3088,9 +3088,7 @@ struct QueryField g_fields[] = {
 	{"filetype", FIELD_TYPE, false,"Same as type:"},
 	{"gbisadult",FIELD_TYPE,false,"use gbisadult:0 and gbisadult:1 to restrict results to non-adult and adult documents respectively."},
 
-	{"gbisreply",FIELD_TYPE,false,"use gbisreply:0 and gbisreply:1 to restrict results to documents and spider replies respectively."},
-	{"gberrorstr",FIELD_TYPE,false,"If document is a spider reply, then search the error description, which might be something like 'TCP Timed out' or 'Robots.txt disallows'."},
-	{"gberrornum",FIELD_TYPE,false,"A numeric field of the spider reply's error. Useful for doing histograms to see the popularity of each error type for a site or url or IP."},
+	{"gbstatus",FIELD_TYPE,false,"If document is a spider reply, then search the spider status description, which might be something like 'TCP Timed out' or 'Robots.txt disallows' or 'Success', if no error. It is also used to hold the numeric error as well, 0 meaning Success."},
 
 	{"gbhasthumbnail",FIELD_TYPE,false,"use gbhasthumbnail:0 and gbhasthumbnail:1 to restrict results to those that do not have or have thumbnails respectively."},
 	{"gbtag*", FIELD_TAG, false,"Matches all pages whose tag named * have the specified value. Example: gbtagingoogle:1 matches all pages that have a value of 1 for their ingoogle tag in tagdb."},
