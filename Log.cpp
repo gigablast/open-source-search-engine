@@ -170,6 +170,7 @@ bool Log::shouldLog ( long type , char *msg ) {
 	if (msg[0]=='d'&&msg[1]=='n' ) return g_conf.m_logDebugDns    ;
 	if (msg[0]=='d'&&msg[1]=='o' ) return g_conf.m_logDebugDownloads;
 	if (msg[0]=='h'&&msg[1]=='t' ) return g_conf.m_logDebugHttp   ;
+	if (msg[0]=='i'&&msg[1]=='m' ) return g_conf.m_logDebugImage  ;
 	if (msg[0]=='l'&&msg[1]=='o' ) return g_conf.m_logDebugLoop   ;
 	if (msg[0]=='l'&&msg[1]=='a' ) return g_conf.m_logDebugLang   ;
 	if (msg[0]=='m'&&msg[2]=='m' ) return g_conf.m_logDebugMem    ;

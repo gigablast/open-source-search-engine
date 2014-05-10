@@ -8091,6 +8091,14 @@ void Parms::init ( ) {
 	m->m_priv  = 1;
 	m++;
 
+	m->m_title = "log debug image messages";
+	m->m_cgi   = "ldi";
+	m->m_off   = (char *)&g_conf.m_logDebugImage - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m++;
+
 	m->m_title = "log debug loop messages";
 	m->m_cgi   = "ldl";
 	m->m_off   = (char *)&g_conf.m_logDebugLoop - g;

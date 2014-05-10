@@ -813,9 +813,10 @@ bool Images::makeThumb ( ) {
 
 	// skip if bad dimensions
 	if( ((m_dx < 50) || (m_dy < 50)) && ((m_dx > 0) && (m_dy > 0)) ) {
-	    log( "image: Image is too small to represent a news article." );
-	    g_errno = EBADIMG;
-	    return true;
+		log(LOG_DEBUG,
+		    "image: Image is too small to represent a news article." );
+		g_errno = EBADIMG;
+		return true;
 	}
 
 	// update status

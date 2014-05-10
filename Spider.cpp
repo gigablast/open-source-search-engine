@@ -6150,9 +6150,23 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// get priority from doledb key
 	long pri = g_doledb.getPriority ( doledbKey );
 
-	if ( g_conf.m_logDebugSpider )
-		log("spider: setting pri2=%li nextkey to %s",
-		    m_sc->m_pri2,KEYSTR(&m_sc->m_nextDoledbKey,12));
+	// if the key went out of its priority because its priority had no
+	// spider requests then it will bleed over into another priority so
+	// in that case reset it to the top of its priority for next time
+	long pri3 = g_doledb.getPriority ( &m_sc->m_nextDoledbKey );
+	if ( pri3 != m_sc->m_pri2 ) {
+		m_sc->m_nextDoledbKey = g_doledb.makeFirstKey2 ( m_sc->m_pri2);
+		// the key must match the priority queue its in as nextKey
+		//if ( pri3 != m_sc->m_pri2 ) { char *xx=NULL;*xx=0; }
+	}
+
+	if ( g_conf.m_logDebugSpider ) {
+		long pri4 = g_doledb.getPriority ( &m_sc->m_nextDoledbKey );
+		log("spider: setting pri2=%li queue doledb nextkey to "
+		    "%s (pri=%li)",
+		    m_sc->m_pri2,KEYSTR(&m_sc->m_nextDoledbKey,12),pri4);
+		if ( pri4 != m_sc->m_pri2 ) { char *xx=NULL;*xx=0; }
+	}
 
 	// update next doledbkey for this priority to avoid having to
 	// process excessive positive/negative key annihilations (mdw)
