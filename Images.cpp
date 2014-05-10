@@ -1166,8 +1166,10 @@ void getImageInfo ( char *buf , long bufSize ,
 		     "data." );
 }
 
+// container is maxWidth X maxHeight, so try to fix widget in there
 bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb , 
-					   long maxSide ,
+					   long maxWidth ,
+					   long maxHeight,
 					   bool printLink ,
 					   long *retNewdx )  {
 	// account for scrollbar on the right
@@ -1177,10 +1179,10 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 	if ( m_dx <= 0 ) return true;
 	if ( m_dy <= 0 ) return true;
 	float xscale = 
-		(float)maxSide/
+		(float)maxWidth/
 		(float)m_dx;
 	float yscale = 
-		(float)maxSide/
+		(float)maxHeight/
 		(float)m_dy;
 	float min = xscale;
 	if ( yscale < min ) min = yscale;

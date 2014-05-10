@@ -29,7 +29,8 @@ class ThumbnailInfo {
 
 	// make sure neither the x or y side is > maxSize
 	bool printThumbnailInHtml ( SafeBuf *sb , 
-				    long maxSide , 
+				    long maxWidth,
+				    long maxHeight,
 				    bool printLink ,
 				    long *newdx ) ;
 };

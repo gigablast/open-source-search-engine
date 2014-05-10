@@ -2701,7 +2701,11 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	     mr->ptr_imgData ) {
 		ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 		ThumbnailInfo *ti = ta->getThumbnailInfo(0);
-		ti->printThumbnailInHtml ( sb , 100 , true , NULL );
+		ti->printThumbnailInHtml ( sb , 
+					   100 ,  // max width
+					   100 ,  // max height
+					   true ,  // add <a href>
+					   NULL );
 	}
 
 	// print image for widget
@@ -2755,9 +2759,14 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 			ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 			ThumbnailInfo *ti = ta->getThumbnailInfo(0);
 			// account for scrollbar on the right
-			long ww = widgetWidth - (long)SCROLLBAR_WIDTH;
+			long maxWidth = widgetWidth - (long)SCROLLBAR_WIDTH;
+			long maxHeight = (long)RESULT_HEIGHT;
 			// false = do not print <a href> link on image
-			ti->printThumbnailInHtml ( sb , ww , false , &newdx );
+			ti->printThumbnailInHtml ( sb , 
+						   maxWidth ,
+						   maxHeight , 
+						   false , // add <a href>
+						   &newdx );
 		}
 		// end the div style attribute and div tag
 		//sb->safePrintf("\">");
