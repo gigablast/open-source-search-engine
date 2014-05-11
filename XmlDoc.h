@@ -273,7 +273,9 @@ class XmlDoc {
 	// . we can avoid setting Xml and Words classes etc...
 	long      m_contentHash32;
 	// like the above but hash of all tags in TagRec for this url
-	long      m_tagHash32;
+	//long      m_tagHash32;
+	// this is a hash of all adjacent tag pairs for templated identificatn
+	uint32_t  m_tagPairHash32;
 	long      m_siteNumInlinks;
 	long      m_siteNumInlinksUniqueIp; // m_siteNumInlinksFresh
 	long      m_siteNumInlinksUniqueCBlock; // m_sitePop;
@@ -546,8 +548,6 @@ class XmlDoc {
 	class HashTableX *getCountTable ( ) ;
 	bool hashString_ct ( class HashTableX *ht, char *s , long slen ) ;
 	uint8_t *getSummaryLangId ( ) ;
-	long     *getTagPairHashVector ( ) ;
-	uint32_t *getTagPairHash32 ( ) ;
 	long *getSummaryVector ( ) ;
 	long *getPageSampleVector ( ) ;
 	long *getPostLinkTextVector ( long linkNode ) ;
@@ -673,7 +673,9 @@ class XmlDoc {
 	char **getUtf8Content ( ) ;
 	long *getContentHash32 ( ) ;
 	long *getContentHashJson32 ( ) ;
-	long *getTagHash32 ( ) ;
+	//long *getTagHash32 ( ) ;
+	long     *getTagPairHashVector ( ) ;
+	uint32_t *getTagPairHash32 ( ) ;
 	long getHostHash32a ( ) ;
 	long getHostHash32b ( ) ;
 	long getDomHash32 ( );
@@ -1071,7 +1073,7 @@ class XmlDoc {
 	// fear of getting the buffer overwritten by crap
 	//TagRec     m_savedTagRec1;
 	//char    *m_sampleVector  ;
-	uint32_t   m_tagPairHash;
+	//uint32_t   m_tagPairHash32;
 	long       m_firstIp;
 
 	class SafeBuf     *m_savedSb;
@@ -1177,7 +1179,6 @@ class XmlDoc {
 	//char     m_msge2Valid;
 	//char   m_sampleVectorValid;
 	char     m_gigabitHashesValid;
-	char     m_tagPairHashValid;
 	//char     m_oldsrValid;
 	char     m_sreqValid;
 	char     m_srepValid;
@@ -1233,7 +1234,9 @@ class XmlDoc {
 	bool m_redirErrorValid;
 	bool m_domHash32Valid;
 	bool m_contentHash32Valid;
-	bool m_tagHash32Valid;
+	//bool m_tagHash32Valid;
+	bool m_tagPairHash32Valid;
+
 	bool m_linkInfo2Valid;
 	bool m_spiderLinksValid;
 	//bool m_nextSpiderPriorityValid;

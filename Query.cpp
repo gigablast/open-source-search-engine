@@ -3087,6 +3087,7 @@ struct QueryField g_fields[] = {
 	{"type", FIELD_TYPE, false,"Matches all pages of the specified file type. Example: type:pdf will match pdf documents, regardless of their file extension. Examples: type:doc type:status type:json type:xls"},
 	{"filetype", FIELD_TYPE, false,"Same as type:"},
 	{"gbisadult",FIELD_TYPE,false,"use gbisadult:0 and gbisadult:1 to restrict results to non-adult and adult documents respectively."},
+	{"gbimage",FIELD_URL,false,"use gbimage:<url> to return all documents containing that image url."},
 
 	{"gbstatus",FIELD_TYPE,false,"If document is a spider reply, then search the spider status as a number using this. 0 means success, so gbstatus:0 would return all successful statuses."},
 	{"gbstatusmsg",FIELD_TYPE,false,"If document is a spider reply, then search the spider status description, which might be something like 'TCP Timed out' or 'Robots.txt disallows' or 'Success', if no error."},

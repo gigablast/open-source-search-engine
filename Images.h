@@ -147,7 +147,7 @@ class Images {
 	long      m_numImages;
 	long      m_imageNodes[MAX_IMAGES];
 	// termids for doing gbimage:<url> lookups for uniqueness
-	long      m_termIds   [MAX_IMAGES];
+	long long m_termIds   [MAX_IMAGES];
 	// for the msg0 lookup, did we have an error?
 	long      m_errors    [MAX_IMAGES];
 

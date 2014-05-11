@@ -1659,7 +1659,8 @@ bool XmlDoc::set2 ( char    *titleRec ,
 	m_tagRecDataValid             = true;
 	m_gigabitHashesValid          = true;
 	m_contentHash32Valid          = true;
-	m_tagHash32Valid              = true;
+	//m_tagHash32Valid              = true;
+	m_tagPairHash32Valid          = true;
 	m_adVectorValid               = true;
 	m_wikiDocIdsValid             = true;
 	m_imageDataValid              = true;
@@ -3414,6 +3415,9 @@ char *XmlDoc::prepareToMakeTitleRec ( ) {
 	if ( ! at || at == (void *)-1 ) return (char *)at;
 	char *ls = getIsLinkSpam();
 	if ( ! ls || ls == (void *)-1 ) return (char *)ls;
+	uint32_t *tph = getTagPairHash32();
+	if ( ! tph || tph == (uint32_t *)-1 ) return (char *)tph;
+	
 	// sets the ptr_sectionsReply, that is all we need it to do
 	//char **sd = getSectionsReply ( ) ;
 	//if ( ! sd || sd == (void *)-1 ) return (char *)sd;
@@ -3963,7 +3967,8 @@ SafeBuf *XmlDoc::getTitleRecBuf ( ) {
 	// do we need these?
 	if ( ! m_hostHash32aValid            ) { char *xx=NULL;*xx=0; }
 	if ( ! m_contentHash32Valid          ) { char *xx=NULL;*xx=0; }
-	if ( ! m_tagHash32Valid              ) { char *xx=NULL;*xx=0; }
+	//if ( ! m_tagHash32Valid              ) { char *xx=NULL;*xx=0; }
+	if ( ! m_tagPairHash32Valid          ) { char *xx=NULL;*xx=0; }
 	// sanity checks
 	if ( ! m_addressesValid              ) { char *xx=NULL;*xx=0; }
 
@@ -7416,7 +7421,7 @@ int cmp ( const void *h1 , const void *h2 ) {
 uint32_t *XmlDoc::getTagPairHash32 ( ) {
 
 	// only compute once
-	if ( m_tagPairHashValid ) return &m_tagPairHash;
+	if ( m_tagPairHash32Valid ) return &m_tagPairHash32;
 
 	Words *words = getWords();
 	if ( ! words || words == (Words *)-1 ) return (uint32_t *)words;
@@ -7469,10 +7474,10 @@ uint32_t *XmlDoc::getTagPairHash32 ( ) {
 	// never return 0, make it 1. 0 means an error
 	if ( hx == 0 ) hx = 1;
 	// set the hash
-	m_tagPairHash = hx ;
+	m_tagPairHash32 = hx ;
 	// it is now valid
-	m_tagPairHashValid = true;
-	return &m_tagPairHash;
+	m_tagPairHash32Valid = true;
+	return &m_tagPairHash32;
 }
 
 // . used for deduping search results
@@ -10591,6 +10596,7 @@ void gotTagRecWrapper ( void *state ) {
 
 // if tagrec changed enough so that it would affect what we would index
 // since last time we indexed this doc, we need to know that!
+/*
 long *XmlDoc::getTagHash32 ( ) {
 	// make it valid
 	if ( m_tagHash32Valid ) return &m_tagHash32;
@@ -10614,6 +10620,7 @@ long *XmlDoc::getTagHash32 ( ) {
 	m_tagHash32Valid = true;
 	return &m_tagHash32;
 }
+*/
 
 // . returns NULL and sets g_errno on error
 // . returns -1 if blocked, will re-call m_callback
@@ -20135,8 +20142,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		size_site = gbstrlen(ptr_site)+1;
 		m_isSiteRootValid = true;
 		m_isSiteRoot2 = 1;
-		m_tagHash32Valid = true;
-		m_tagHash32 = 0;
+		//m_tagHash32Valid = true;
+		//m_tagHash32 = 0;
+		m_tagPairHash32Valid = true;
+		m_tagPairHash32 = 0;
 		m_siteHash64Valid = true;
 		m_siteHash64 = 0LL;
 		m_spiderLinksValid = true;
@@ -20168,8 +20177,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( ! isr || isr == (void *)-1 ) return (char *)isr;
 
 	// get hash of all tags from tagdb that affect what we index
-	long *tagHash = getTagHash32 ( );
-	if ( ! tagHash || tagHash == (void *)-1 ) return (char *)tagHash;
+	//long *tagHash = getTagHash32 ( );
+	//if ( ! tagHash || tagHash == (void *)-1 ) return (char *)tagHash;
 	
 	long long *sh64 = getSiteHash64();
 	if ( ! sh64 || sh64 == (void *)-1 ) return (char *)sh64;
@@ -22490,7 +22499,8 @@ void XmlDoc::copyFromOldDoc ( XmlDoc *od ) {
 
 	// copy over bit members
 	m_contentHash32 = od->m_contentHash32;
-	m_tagHash32     = od->m_tagHash32;
+	//m_tagHash32     = od->m_tagHash32;
+	m_tagPairHash32 = od->m_tagPairHash32;
 	//m_sitePop       = od->m_sitePop;
 	m_httpStatus    = od->m_httpStatus;
 	m_hasAddress    = od->m_hasAddress;
@@ -22511,7 +22521,8 @@ void XmlDoc::copyFromOldDoc ( XmlDoc *od ) {
 
 	// validate them
 	m_contentHash32Valid = true;
-	m_tagHash32Valid     = true;
+	//m_tagHash32Valid     = true;
+	m_tagPairHash32Valid = true;
 	//m_sitePopValid       = true;
 	m_httpStatusValid    = true;
 	m_hasAddressValid    = true;
@@ -24566,8 +24577,9 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 		// get the node number
 		long nn = m_images.m_imageNodes[i];
 		// get the url of the image
+		XmlNode *xn = m_xml.getNodePtr(nn);
 		long  srcLen;
-		char *src = m_xml.getString(nn,nn+1,"src",&srcLen);
+		char *src = xn->getFieldValue("src",&srcLen);
 		// set it to the full url
 		Url iu;
 		// use "pageUrl" as the baseUrl
@@ -24576,7 +24588,10 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 		char *u    = iu.getUrl   ();
 		long  ulen = iu.getUrlLen();
 		// hash each one
-		if ( ! hashString ( u,ulen,&hi ) ) return false;
+		//if ( ! hashString ( u,ulen,&hi ) ) return false;
+		// hash a single entity
+		if ( ! hashSingleTerm ( u,ulen,&hi) ) return false;
+		//log("test: %s",u);
 	}
 
 	return true;
@@ -31733,6 +31748,14 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 			"<td>max pub date</td>"
 			"<td>%s UTC</td>"
 			"</tr>\n" , ms );
+
+
+	// our html template fingerprint
+	sb->safePrintf ("<tr><td>tag pair hash 32</td><td>");
+	if ( m_tagPairHash32Valid )sb->safePrintf("%lu",(long)m_tagPairHash32);
+	else                       sb->safePrintf("invalid");
+	sb->safePrintf("</td></tr>\n" );
+
 
 	// print list we added to delete stuff
 	if ( m_indexCode && m_oldDocValid && m_oldDoc ) {

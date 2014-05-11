@@ -630,8 +630,13 @@ bool Images::downloadImages () {
 		m_msg13.reset();
 		m_imgReply = NULL;
 
+		g_errno = 0;
+
 		return true;
 	}
+
+	// don't tell caller EBADIMG it will make him fail to index doc
+	g_errno = 0;
 
 	return true;
 }
@@ -815,6 +820,14 @@ bool Images::makeThumb ( ) {
 	log( LOG_DEBUG,"image: Image Buffer @ 0x%lx - 0x%lx",(long)m_imgReply, 
 	     (long)m_imgReply+m_imgReplyMaxLen );
 	log( LOG_DEBUG, "image: Size: %lupx x %lupx", m_dx, m_dy );
+
+	// what is this?
+	if ( m_dx <= 0 || m_dy <= 0 ) {
+		log(LOG_DEBUG, "image: Image has bad dimensions.");
+		g_errno = EBADIMG;
+		return true;
+	}
+
 
 	// skip if bad dimensions
 	if( ((m_dx < 50) || (m_dy < 50)) && ((m_dx > 0) && (m_dy > 0)) ) {
@@ -1120,6 +1133,9 @@ void getImageInfo ( char *buf , long bufSize ,
 		if( bufSize > 25 ) {
 			*dx=(unsigned long)(*(unsigned long *)&buf[16]);
 			*dy=(unsigned long)(*(unsigned long *)&buf[20]);
+			// these are in network order
+			*dx = ntohl(*dx);
+			*dy = ntohl(*dy);
 		}
 	}
 	else if( (strPtr = strncasestr( buf, 20, "MM" )) ) {
