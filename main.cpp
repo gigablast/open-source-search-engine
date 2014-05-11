@@ -16982,9 +16982,13 @@ char *getcwd2 ( char *arg ) {
 	if ( arg && arg[0]!='/' ) {
 		memcpy ( end , arg , alen );
 		end += alen;
+		*end = '\0';
+	}
+	// if our path started with / then it was absolute...
+	else {
+		strncpy(s_cwdBuf,arg,alen);
 	}
 
-	*end = '\0';
 
 	// size of the whole thing
 	//long clen = gbstrlen(s_cwdBuf);
