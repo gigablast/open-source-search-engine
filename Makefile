@@ -476,11 +476,11 @@ install:
 	rm -f /usr/bin/gb
 	ln -s /var/gigablast/shard0/gb /usr/bin/gb
 # if machine restarts
+# the new way that does not use run-levels anymore
 	rm -f /etc/init.d/gb
-	ln -s /var/gigablast/shard0/gb /etc/init.d/gb
-# it will start up gb
-	rm -f /etc/rc3.d/S99gb
-	ln -s /etc/init.d/gb /etc/rc3.d/S99gb
+	ln -s /lib/init/upstart-job /etc/init.d/gb
+# initctl upstart-job conf file (gb stop|start|reload)
+	cp init.gb.conf /etc/init/gb.conf
 
 .cpp.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -c $*.cpp 
