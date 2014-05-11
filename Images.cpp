@@ -1171,7 +1171,9 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 					   long maxWidth ,
 					   long maxHeight,
 					   bool printLink ,
-					   long *retNewdx )  {
+					   long *retNewdx ,
+					   char *style )  {
+	if ( ! style ) style = "";
 	// account for scrollbar on the right
 	//maxSide -= (long)SCROLLBAR_WIDTH;
 	// avoid distortion.
@@ -1190,10 +1192,12 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 	long newdy = (long)((float)m_dy * min);
 	if ( printLink ) sb->safePrintf("<a href=%s>", getUrl() );
 	sb->safePrintf("<img width=%li height=%li align=left "
+		       "%s"
 		       "src=\"data:image/"
 		       "jpg;base64,"
 		       , newdx
 		       , newdy
+		       , style
 		       );
 	// encode image in base 64
 	sb->base64Encode ( getData(), m_dataSize , 0 ); // 0 niceness

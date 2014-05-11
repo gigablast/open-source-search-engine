@@ -32,7 +32,8 @@ class ThumbnailInfo {
 				    long maxWidth,
 				    long maxHeight,
 				    bool printLink ,
-				    long *newdx ) ;
+				    long *newdx ,
+				    char *style = NULL ) ;
 };
 
 // XmlDoc::ptr_imgData is a ThumbnailArray

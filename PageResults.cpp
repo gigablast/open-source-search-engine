@@ -2705,7 +2705,8 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 					   100 ,  // max width
 					   100 ,  // max height
 					   true ,  // add <a href>
-					   NULL );
+					   NULL ,
+					   " style=\"margin:10px;\" ");
 	}
 
 	// print image for widget
