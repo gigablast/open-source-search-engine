@@ -470,14 +470,16 @@ install:
 # gigablast will copy over the necessary files. it has a list of the
 # necessary files and that list changes over time so it is better to let gb
 # deal with it.
-	mkdir /var/gigablast/
-	mkdir /var/gigablast/shard0/
+	mkdir -p /var/gigablast/shard0/
 	./gb copyfiles /var/gigablast/shard0/
 # if user types 'gb' it will use the binary in /var/gigablast/shard0/
+	rm -f /usr/bin/gb
 	ln -s /var/gigablast/shard0/gb /usr/bin/gb
 # if machine restarts
+	rm -f /etc/init.d/gb
 	ln -s /var/gigablast/shard0/gb /etc/init.d/gb
 # it will start up gb
+	rm -f /etc/rc3.d/S99gb
 	ln -s /etc/init.d/gb /etc/rc3.d/S99gb
 
 .cpp.o:

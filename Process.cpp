@@ -112,6 +112,9 @@ char *g_files[] = {
 	// required for SSL server support for both getting web pages
 	// on https:// sites and for serving https:// pages
 	"gb.pem",
+
+	// the main binary!
+	"gb",
 	
 	//"dict/unifiedDict",
 	//"dict/thesaurus.txt",
@@ -171,6 +174,14 @@ char *g_files[] = {
 
 	"wikititles.txt.part1",
 	"wikititles.txt.part2",
+
+	"wiktionary-buf.txt",
+	"wiktionary-lang.txt",
+	"wiktionary-syns.dat",
+
+	"unifiedDict.txt",
+	//"unifiedDict-buf.txt",
+	//"unifiedDict-map.dat",
 	
 	//
 	// this junk can be generated
@@ -194,6 +205,8 @@ bool Process::getFilesToCopy ( char *srcDir , SafeBuf *buf ) {
 	for ( long i = 0 ; i < (long)sizeof(g_files)/4 ; i++ ) {
 		// terminate?
 		if ( ! g_files[i] ) break;
+		// skip subdir shit it won't work
+		if ( strstr(g_files[i],"/") ) continue;
 		// if not first
 		if ( i > 0 ) buf->pushChar(' ');
 		// append it
@@ -201,6 +214,10 @@ bool Process::getFilesToCopy ( char *srcDir , SafeBuf *buf ) {
 				, srcDir
 				, g_files[i] );
 	}
+	// and the required runtime subdirs
+	buf->safePrintf(" %santiword-dir",srcDir);
+	buf->safePrintf(" %sucdata",srcDir);
+	buf->safePrintf(" %shtml",srcDir);
 	return true;
 }
 

@@ -50,8 +50,15 @@ bool Wiki::load() {
 	close ( fd2 );
 	// save text size for getRandomPhrase() function below
 	m_txtSize = stats1.st_size;
+	// just use the .dat if we got it
+	if ( ! errno2 ) {
+		log(LOG_INFO,"wiki: loading %s",ff2);
+		// "dir" is NULL since already included in ff2
+		return m_ht.load ( NULL , ff2 );
+	}
 	// if we got a newer binary version, use that
-	if ( ! errno2 && ! errno1 && stats2.st_mtime > stats1.st_mtime ) {
+	// add in 10 seconds i guess
+	if ( ! errno2 && ! errno1 && stats2.st_mtime +10> stats1.st_mtime ) {
 		log(LOG_INFO,"wiki: loading %s",ff2);
 		// "dir" is NULL since already included in ff2
 		return m_ht.load ( NULL , ff2 );
@@ -69,6 +76,8 @@ bool Wiki::load() {
 }
 
 bool Wiki::loadText ( long fileSize ) {
+
+	log(LOG_INFO,"wiki: generating wikititles2.dat file");
 
 	SafeBuf sb;
 	char ff1[256];
@@ -312,6 +321,9 @@ bool Wiki::loadText ( long fileSize ) {
 	//char ff2[256];
 	//sprintf(ff2, "%s/wikititles2.dat", g_hostdb.m_dir);
 	if ( ! m_ht.save ( g_hostdb.m_dir , "wikititles2.dat" ) ) return false;
+
+	log(LOG_INFO,"wiki: done generating wikititles2.dat file");
+
 	// success
 	return true;
 }

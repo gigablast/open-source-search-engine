@@ -181,7 +181,7 @@ bool g_recoveryMode = false;
 	
 bool isRecoveryFutile ( ) ;
 
-bool copyFiles ( char *dstDir ) ;
+int copyFiles ( char *dstDir ) ;
 
 //////
 //
@@ -16999,7 +16999,7 @@ char *getcwd2 ( char *arg ) {
 	return s_cwdBuf;
 }
 
-bool copyFiles ( char *dstDir ) {
+int copyFiles ( char *dstDir ) {
 
 	char *srcDir = "./";
 	SafeBuf fileListBuf;
@@ -17007,7 +17007,7 @@ bool copyFiles ( char *dstDir ) {
 
 	SafeBuf tmp;
 	tmp.safePrintf(
-		       "rcp -pr %s %s"
+		       "cp -r %s %s"
 		       , fileListBuf.getBufStart()
 		       , dstDir 
 		       );
@@ -17015,5 +17015,5 @@ bool copyFiles ( char *dstDir ) {
 	//log(LOG_INIT,"admin: %s", tmp.getBufStart());
 	fprintf(stderr,"\nRunning cmd: %s\n",tmp.getBufStart());
 	system ( tmp.getBufStart() );
-	return true;
+	return 0;
 }
