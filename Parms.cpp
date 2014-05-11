@@ -10075,7 +10075,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "mit";
 	m->m_off   = (char *)&cr.m_makeImageThumbnails - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m++;
 
 	m->m_title = "index spider replies";
