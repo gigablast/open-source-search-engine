@@ -466,6 +466,20 @@ Msg6a.o:
 geo_ip_table.o: geo_ip_table.cpp geo_ip_table.h
 	$(CC) $(DEFS) -m32 -Wall -pipe -c $*.cpp 
 
+install:
+# gigablast will copy over the necessary files. it has a list of the
+# necessary files and that list changes over time so it is better to let gb
+# deal with it.
+	mkdir /var/gigablast/
+	mkdir /var/gigablast/shard0/
+	./gb copyfiles /var/gigablast/shard0/
+# if user types 'gb' it will use the binary in /var/gigablast/shard0/
+	ln -s /var/gigablast/shard0/gb /usr/bin/gb
+# if machine restarts
+	ln -s /var/gigablast/shard0/gb /etc/init.d/gb
+# it will start up gb
+	ln -s /etc/init.d/gb /etc/rc3.d/S99gb
+
 .cpp.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -c $*.cpp 
 

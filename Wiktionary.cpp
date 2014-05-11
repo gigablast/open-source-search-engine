@@ -288,7 +288,7 @@ bool Wiktionary::load() {
 			log("gb: %s or %s checksum is not approved for "
 			    "live service (%lli != %lli)", ff3, ff4,
 			    h,nn);
-			return false;
+			//return false;
 		}
 
 		return true;

@@ -5458,7 +5458,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "live";
 	m->m_off   = (char *)&g_conf.m_isLive - g;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
+	m->m_def   = "1";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 

@@ -150,25 +150,22 @@ char *g_files[] = {
 	"antiword-dir/koi8-r.txt",
 	"antiword-dir/koi8-u.txt",
 	"antiword-dir/roman.txt",
-	
-	// . thumbnail generation
-	// . use 'apt-get install netpbm' to install
-	//"/usr/bin/giftopnm",
-	//"/usr/bin/tifftopnm",
-	//"/usr/bin/pngtopnm",
-	//"/usr/bin/jpegtopnm",
-	//"/usr/bin/bmptopnm",
-	//"/usr/bin/pnmscale",
-	//"/usr/bin/ppmtojpeg",
-	//"/usr/sbin/smartctl",
 
-	//"giftopnm",
-	//"tifftopnm",
-	//"pngtopnm",
-	//"jpegtopnm",
-	//"bmptopnm",
-	//"pnmscale",
-	//"ppmtojpeg",
+	// . thumbnail generation
+	// . i used 'apt-get install netpbm' to install
+	"bmptopnm",
+	"giftopnm",
+	"jpegtopnm",
+	"libjpeg.so.62",
+	"libnetpbm.so.10",
+	"libpng12.so.0",
+	"libtiff.so.4",
+	"libz.so.1",
+	"LICENSE",
+	"pngtopnm",
+	"pnmscale",
+	"ppmtojpeg",
+	"tifftopnm",
 
 	//"smartctl",
 
@@ -187,6 +184,25 @@ char *g_files[] = {
 	NULL
 };
 
+
+bool Process::getFilesToCopy ( char *srcDir , SafeBuf *buf ) {
+
+	// sanirty
+	long slen = gbstrlen(srcDir);
+	if ( srcDir[slen-1] != '/' ) { char *xx=NULL;*xx=0; }
+
+	for ( long i = 0 ; i < (long)sizeof(g_files)/4 ; i++ ) {
+		// terminate?
+		if ( ! g_files[i] ) break;
+		// if not first
+		if ( i > 0 ) buf->pushChar(' ');
+		// append it
+		buf->safePrintf("%s%s"
+				, srcDir
+				, g_files[i] );
+	}
+	return true;
+}
 
 
 bool Process::checkFiles ( char *dir ) {
@@ -265,6 +281,11 @@ bool Process::checkFiles ( char *dir ) {
 			
 	}
 
+	if ( needsFiles ) {
+		log("db: Missing files. See above. Exiting.");
+		return false;
+	}
+
 	//if ( needsFiles ) {
 	//  log("db: use 'apt-get install -y netpbm' to install "
 	//      "pnmfiles");
@@ -286,12 +307,16 @@ bool Process::checkFiles ( char *dir ) {
 
 	if ( ! g_conf.m_isLive ) return true;
 
+	m_swapEnabled = 0;
+
 	// first check to make sure swap is off
 	SafeBuf psb;
 	if ( psb.fillFromFile("/proc/swaps") < 0 ) {
 		log("gb: failed to read /proc/swaps");
-		if ( ! g_errno ) g_errno = EBADENGINEER;
-		return true;
+		//if ( ! g_errno ) g_errno = EBADENGINEER;
+		//return true;
+		// if we don't know if swap is enabled or not, use -1
+		m_swapEnabled = -1;
 	}
 
 	/*
@@ -307,9 +332,15 @@ bool Process::checkFiles ( char *dir ) {
 			   mstrerror(g_errno));
 	buf[size] = '\0';
 	*/
-	char *buf = psb.getBufStart();
-	if ( strstr ( buf,"dev" ) )
-		return log("gb: can not start live gb with swap enabled.");
+
+	// we should redbox this! or at least be on the optimizations page
+	if ( m_swapEnabled == 0 ) {
+		char *buf = psb.getBufStart();
+		if ( strstr ( buf,"dev" ) )
+			//return log("gb: can not start live gb with swap "
+			//"enabled.");
+			m_swapEnabled = 1;
+	}
 
 	// . make sure elvtune is being set right
 	// . must be in /etc/rcS.d/S99local
@@ -335,6 +366,9 @@ bool Process::checkFiles ( char *dir ) {
 			   f.getFilename());
 	mfree ( buf , size+1, "S99" );
 	*/
+
+	// now that we are open source skip the checks below
+	return true;
 
 	// check kernel version
 	FILE *fd;
@@ -377,7 +411,7 @@ bool Process::checkFiles ( char *dir ) {
 		      "MST 2008\n")== 0)
 		return true;
 	log("gb: kernel version is not an approved version.");
-	return false;
+	//return false;
 
 	return true;
 }

@@ -181,6 +181,8 @@ bool g_recoveryMode = false;
 	
 bool isRecoveryFutile ( ) ;
 
+bool copyFiles ( char *dstDir ) ;
+
 //////
 //
 // if seo.o is being linked to it needs to override these weak stubs:
@@ -1810,6 +1812,12 @@ int main2 ( int argc , char *argv[] ) {
 		if ( cmdarg+1 >= argc ) goto printHelp;
 		char *cmd = argv[cmdarg+1];
 		return install ( ifk_dsh2 , -1,NULL,NULL,-1, cmd );
+	}
+	// gb copyfiles, like gb install but takes a dir not a host #
+	if ( strcmp ( cmd , "copyfiles" ) == 0 ) {	
+		if ( cmdarg + 1 >= argc ) goto printHelp;
+		char *dir = argv[cmdarg+1];
+		return copyFiles ( dir );
 	}
 	// gb install
 	if ( strcmp ( cmd , "install" ) == 0 ) {	
@@ -16989,4 +16997,23 @@ char *getcwd2 ( char *arg ) {
 	//log("hey: hey %s",s_cwdBuf);
 
 	return s_cwdBuf;
+}
+
+bool copyFiles ( char *dstDir ) {
+
+	char *srcDir = "./";
+	SafeBuf fileListBuf;
+	g_process.getFilesToCopy ( srcDir , &fileListBuf );
+
+	SafeBuf tmp;
+	tmp.safePrintf(
+		       "rcp -pr %s %s"
+		       , fileListBuf.getBufStart()
+		       , dstDir 
+		       );
+
+	//log(LOG_INIT,"admin: %s", tmp.getBufStart());
+	fprintf(stderr,"\nRunning cmd: %s\n",tmp.getBufStart());
+	system ( tmp.getBufStart() );
+	return true;
 }
