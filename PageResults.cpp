@@ -456,7 +456,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			      "Copyright &copy; 2014. "
 			      "All Rights Reserved.<br/>"
 			      "Powered by the "
-			      "<a href='http://www.gigablast.com/'>"
+			      "<a href=\"http://www.gigablast.com/\">"
 			      "GigaBlast</a> open source search engine."
 			      "</font>"
 			      "</center>\n"
@@ -2166,8 +2166,8 @@ bool printSearchResultsTail ( State0 *st ) {
 				"<font color=gray>"
 				"Copyright &copy; 2014. All Rights "
 				"Reserved.<br/>"
-				"Powered by the <a href='https://www."
-				"gigablast.com/'>GigaBlast</a> open source "
+				"Powered by the <a href=\"http://www."
+				"gigablast.com/\">GigaBlast</a> open source "
 				"search engine."
 				"</font>"
 				"</center>\n"
@@ -3375,7 +3375,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		sb->safePrintf(" - <a style=color:red; href=\"/addurl?u=");
 		sb->urlEncode ( url , gbstrlen(url) , false );
 		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		sb->safePrintf("&rand64=%llu\">respider</a>",rand64);
+		sb->safePrintf("&rand64=%llu&force=1\">respider</a>",rand64);
 	}
 
 

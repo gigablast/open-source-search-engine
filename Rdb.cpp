@@ -1105,8 +1105,8 @@ bool Rdb::loadTree ( ) {
 			return log("db: Could not load saved buckets.");
 		long numKeys = m_buckets.getNumKeys();
 		
-		log("db: Loaded %li recs from %s's buckets on disk.",
-		    numKeys, m_dbname);
+		// log("db: Loaded %li recs from %s's buckets on disk.",
+		//     numKeys, m_dbname);
 		
 		if(!m_buckets.testAndRepair()) {
 			log("db: unrepairable buckets, "

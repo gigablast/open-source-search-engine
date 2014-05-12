@@ -43,6 +43,7 @@ void Hostdb::resetPortTables () {
 }
 
 static int cmp  ( const void *h1 , const void *h2 ) ;
+
 //static int cmp2 ( const void *h1 , const void *h2 ) ;
 
 //static void *syncStartWrapper_r ( void *state );
@@ -98,7 +99,7 @@ char *Hostdb::getNetName ( ) {
 // . gets filename that contains the hosts from the Conf file
 // . return false on errro
 // . g_errno may NOT be set
-bool Hostdb::init ( long hostId , char *netName ,
+bool Hostdb::init ( long hostIdArg , char *netName ,
 		    bool proxyHost , char useTmpCluster , char *cwd ) {
 	// reset my ip and port
 	m_myIp             = 0;
@@ -118,6 +119,12 @@ bool Hostdb::init ( long hostId , char *netName ,
 	char *filename = "hosts.conf";
 	//if ( strcmp ( filename , "hosts.conf" ) == 0 )
 	//	filename = "localhosts.conf";
+	//bool triedEtc = false;
+
+	// for now we autodetermine
+	if ( hostIdArg != -1 ) { char *xx=NULL;*xx=0; }
+	// init to -1
+	m_hostId = -1;
 
  retry:
 
@@ -136,11 +143,11 @@ bool Hostdb::init ( long hostId , char *netName ,
 	m_netName[0] = '\0';
 	if ( netName ) strncpy ( m_netName , netName , 31 );
 	// make sure our hostId is in our conf file
-	if ( hostId < 0 ) 
-		return log(
-			   "conf: Negative hostId %li supplied",hostId);
+	//if ( hostId < 0 ) 
+	//	return log(
+	//		   "conf: Negative hostId %li supplied",hostId);
 	// set early for calling log()
-	m_hostId = hostId;
+	//m_hostId = hostId;
 	// set clock in sync in fctypes.cpp
 	//if ( m_hostId == 0 ) g_clockInSync = true;
 	// log it
@@ -174,15 +181,18 @@ bool Hostdb::init ( long hostId , char *netName ,
 		if ( this == &g_hostdb2 ) return true;
 		g_errno = ENOHOSTSFILE; 
 		// if doing localhosts.conf now try hosts.conf
-		if ( strcmp(filename,"localhosts.conf") == 0 ) {
-			filename = "hosts.conf";
-			g_errno = 0;
-			goto retry;
-		}
+		// if ( ! triedEtc ) { //strcmp(filename,"hosts.conf") == 0 ) {
+		// 	triedEtc = true;
+		// 	dir = "/etc/gigablast/";
+		// 	//filename = "hosts.conf";
+		// 	g_errno = 0;
+		// 	goto retry;
+		// }
 		// now we generate one if that is not there
 		if ( ! m_created ) {
 			m_created = true;
 			g_errno = 0;
+			dir = cwd;
 			createHostsConf( cwd );
 			goto retry;
 		}
@@ -200,6 +210,10 @@ bool Hostdb::init ( long hostId , char *netName ,
 			   filename,m_bufSize,
 			   (long)(MAX_HOSTS+MAX_SPARES)*128);
 	}
+	// note it
+	//log("host: reading %s",f.getFilename());
+	// save it
+	//m_hostsConfFilename.safePrintf("%s",f.getFilename());
 	// open the file
 	if ( ! f.open ( O_RDONLY ) ) return false;
 	// read in the file
@@ -1016,14 +1030,19 @@ bool Hostdb::init ( long hostId , char *netName ,
 	// set # of machines
 	m_numMachines = next;
 
+	// get IPs of this server. last entry is 0.
+	long *localIps = getLocalIps();
+
+	// now get host based on cwd and ip
+	Host *host = getHost2 ( cwd , localIps );
+
 	// now set m_myIp, m_myPort, m_myPort2 and m_myMachineNum
-	Host *host = getHost ( hostId );
+	//Host *host = getHost ( hostId );
 	if ( proxyHost )
-		host = getProxy ( hostId );
+		host = getProxy2 ( cwd , localIps ); //hostId );
 	if ( ! host ) 
-		return log(
-			   "conf: Could not find host with hostId %li in "
-			   "%s.",hostId,filename);
+		return log("conf: Could not find host with path %s and "
+			   "local ip in %s",cwd,filename);
 	m_myIp         = host->m_ip;    // internal IP
 	m_myIpShotgun  = host->m_ipShotgun;
 	m_myPort       = host->m_port;  // low priority udp port
@@ -1098,7 +1117,7 @@ bool Hostdb::init ( long hostId , char *netName ,
 	*/
 
 	// THIS hostId
-	m_hostId = hostId;
+	m_hostId = m_myHost->m_hostId;
 	// set hosts per shard (mirror group)
 	m_numHostsPerShard = m_numHosts / m_numShards;
 
@@ -1131,17 +1150,17 @@ bool Hostdb::init ( long hostId , char *netName ,
 	}
 
 	// get THIS host
-	Host *h = getHost ( hostId );
+	Host *h = getHost ( m_hostId );
 	if ( proxyHost )
-		h = getProxy ( hostId );
+		h = getProxy ( m_hostId );
 	if ( ! h ) return log(
 			      "conf: HostId %li not found in %s.",
-			      hostId,filename);
+			      m_hostId,filename);
 	// set m_dir to THIS host's working dir
 	strcpy ( m_dir , h->m_dir );
 	// likewise, set m_htmlDir to this host's html dir
 	sprintf ( m_httpRootDir , "%shtml/" , m_dir );
-	sprintf ( m_logFilename , "%slog%03li", m_dir , hostId );
+	sprintf ( m_logFilename , "%slog%03li", m_dir , m_hostId );
 
 	if ( ! g_conf.m_runAsDaemon )
 		sprintf(m_logFilename,"/dev/stderr");
@@ -2502,6 +2521,12 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# Tells us what hosts are participating in the distributed search engine.\n");
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
+
+	// put our cwd here
+	sb.safePrintf("0 5998 7000 8000 9000 127.0.0.1 127.0.0.1 %s\n",cwd);
+	sb.safePrintf("\n");
+	sb.safePrintf("\n");
+
 	sb.safePrintf("# How many mirrors do you want? If this is 0 then your data\n");
 	sb.safePrintf("# will NOT be replicated. If it is 1 then each host listed\n");
 	sb.safePrintf("# below will have one host that mirrors it, thereby decreasing\n");
@@ -2556,10 +2581,6 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# 'gb' binary resides.\n");
 	sb.safePrintf("#\n");
 
-	// put our cwd here
-	sb.safePrintf("0 5998 7000 8000 9000 127.0.0.1 127.0.0.1 %s\n",cwd);
-	sb.safePrintf("\n");
-	sb.safePrintf("\n");
 	sb.safePrintf("#\n");
 	sb.safePrintf("# Example of a four-node distributed search index running on a single\n");
 	sb.safePrintf("# server with four cores. The working directories are /home/mwells/hostN/.\n");
@@ -2620,7 +2641,78 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# A proxy will be running on 10.5.66.18:\n");
 	sb.safePrintf("#proxy 6001 7001 8001 9001 10.5.66.18\n");
 
-	log("%s/hosts.conf does not exist, creating.",cwd);
+	log("%shosts.conf does not exist, creating.",cwd);
 	sb.save ( cwd , "hosts.conf" );
 	return true;
+}
+
+static long s_localIps[20];
+#include <sys/types.h>
+#include <ifaddrs.h>
+long *getLocalIps ( ) {
+	static bool s_valid = false;
+	if ( s_valid ) return s_localIps;
+	s_valid = true;
+	struct ifaddrs *ifap = NULL;
+	getifaddrs( &ifap );
+	ifaddrs *p = ifap;
+	long ni = 0;
+	// store loopback just in case
+	long loopback = atoip("127.0.0.1");
+	s_localIps[ni++] = loopback;
+	for ( ; p && ni < 18 ; p = p->ifa_next ) {
+		
+		long ip = ((struct sockaddr_in*)p->ifa_addr)->sin_addr.s_addr;
+		// skip if loopback we stored above
+		if ( ip == loopback ) continue;
+		// skip bogus ones
+		if ( ip == 0 || ip == 1 || ip == 2 ) continue;
+		// show it
+		//log("host: detected local ip %s",iptoa(ip));
+		// otherwise store it
+		s_localIps[ni++] = ip;
+	}
+	// mark the end of it
+	s_localIps[ni] = 0;
+	// free that memore
+	freeifaddrs ( ifap );
+	// return the static buffer
+	return s_localIps;
+}
+
+Host *Hostdb::getHost2 ( char *cwd , long *localIps ) {
+	for ( long i = 0 ; i < m_numHosts ; i++ ) {
+		Host *h = &m_hosts[i];
+		// . get the path. guaranteed to end in '/'
+		//   as well as cwd!
+		// . if the gb binary does not reside in the working dir
+		//   for this host, skip it, it's not our host
+		if ( strcmp(h->m_dir,cwd) ) continue;
+		// now it must be our ip as well!
+		long *ipPtr = localIps;
+		for ( ; *ipPtr ; ipPtr++ ) 
+			// return the host if it also matches the ip!
+			if ( (long)h->m_ip == *ipPtr ) return h;
+	}
+	// what, no host?
+	return NULL;
+}
+
+Host *Hostdb::getProxy2 ( char *cwd , long *localIps ) {
+	for ( long i = 0 ; i < m_numProxyHosts ; i++ ) {
+		Host *h = getProxy(i);
+		if ( ! (h->m_type & HT_PROXY ) ) continue;
+		// . get the path. guaranteed to end in '/'
+		//   as well as cwd!
+		// . if the gb binary does not reside in the working dir
+		//   for this host, skip it, it's not our host
+		if ( strcmp(h->m_dir,cwd) ) continue;
+		// now it must be our ip as well!
+		long *ipPtr = localIps;
+		for ( ; *ipPtr ; ipPtr++ ) 
+			// return the host if it also matches the ip!
+			if ( (long)h->m_ip == *ipPtr ) return h;
+	}
+	// what, no host?
+	return NULL;
 }

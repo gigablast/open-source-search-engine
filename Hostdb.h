@@ -62,6 +62,8 @@ enum {
 #define HT_SCPROXY 0x10
 #define HT_ALL_PROXIES (HT_PROXY|HT_QCPROXY|HT_SCPROXY)
 
+long *getLocalIps ( ) ;
+
 class EventStats {
 public:
 	long m_expired;
@@ -455,9 +457,17 @@ class Hostdb {
 	// get the host in this group with the smallest avg roundtrip time
 	//Host *getFastestHostInGroup ( unsigned long groupId );
 
+	// get the host that has this path/ip
+	Host *getHost2 ( char *cwd , long *localIps ) ;
+	Host *getProxy2 ( char *cwd , long *localIps ) ;
+
 	// . like above but just gets one host
 	// Host *getHost ( long hostId ) { return m_groups[hostId]; };
-	Host *getHost ( long hostId ) { return m_hostPtrs[hostId]; };
+	Host *getHost ( long hostId ) { 
+		if ( hostId < 0 ) { char *xx=NULL;*xx=0; }
+		return m_hostPtrs[hostId]; 
+	};
+
 	Host *getSpare ( long spareId ) {
 		return m_spareHosts[spareId]; };
 

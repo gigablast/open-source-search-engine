@@ -1042,8 +1042,8 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 				   username , pwd ,
 				   coll, NULL, s->m_ip, qs );
 
-	if ( g_hostdb.getNumHosts() > 1 )
-		sb->safePrintf("<br><br>");
+	//if ( g_hostdb.getNumHosts() > 1 )
+	sb->safePrintf("<br><br>");
 
 	// end table
 	//sb->safePrintf ("</td></tr></table><br/>\n");//<br/>\n");
@@ -1656,10 +1656,11 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 	// and proxies
 	total += g_hostdb.m_numProxyHosts;	
 	// don't print host buttons if only 1 host
-	if ( total <= 1 ) return status;
+	//if ( total <= 1 ) return status;
 
 	sb->safePrintf (  //"&nbsp; &nbsp; &nbsp; "
-			  "<a href=/admin/hosts>hosts</a>: ");
+			  "<a style=text-decoration:none; href=/admin/hosts>"
+			  "<b>hosts in cluster</b></a>: ");
 
 	if ( ! qs   ) qs   = "";
 	//if ( ! pwd  ) pwd  = "";
