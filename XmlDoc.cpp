@@ -20345,7 +20345,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 		// i guess it is safe to do this after getting the spiderreply
 		SafeBuf *spiderReplyMetaList = NULL;
-		if ( cr->m_indexSpiderReplies && m_useSpiderdb ) {
+		if ( cr->m_indexSpiderReplies && 
+		     m_useSpiderdb &&
+		     // doing it for diffbot throws off smoketests
+		     ! cr->m_isCustomCrawl ) {
 			// get the spiderreply ready to be added
 			spiderReplyMetaList = getSpiderReplyMetaList ( newsr );
 			// error?
@@ -20882,7 +20885,10 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 
 	// i guess it is safe to do this after getting the spiderreply
 	SafeBuf *spiderReplyMetaList = NULL;
-	if ( cr->m_indexSpiderReplies && m_useSpiderdb ) {
+	if ( cr->m_indexSpiderReplies && 
+	     m_useSpiderdb &&
+	     // doing it for diffbot throws off smoketests
+	     ! cr->m_isCustomCrawl ) {
 		// get the spiderreply ready to be added to the rdbs w/ msg4
 		spiderReplyMetaList = getSpiderReplyMetaList ( newsr );
 		// block?
