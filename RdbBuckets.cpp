@@ -594,9 +594,9 @@ bool RdbBuckets::set ( long fixedDataSize , long maxMem,
 		return false;
 	}
 	
-	log("init: Successfully initialized buckets for %s, "
-	    "keysize is %li, max mem is %li, datasize is %li",
-	    m_dbname, (long)m_ks, m_maxMem, m_fixedDataSize);
+	// log("init: Successfully initialized buckets for %s, "
+	//     "keysize is %li, max mem is %li, datasize is %li",
+	//     m_dbname, (long)m_ks, m_maxMem, m_fixedDataSize);
 
 
 	/*
@@ -719,12 +719,12 @@ bool RdbBuckets::resizeTable(long numNeeded) {
 			g_errno = ENOMEM;
 			return false;
 		}
-		log(LOG_INFO,
-		    "db: scaling down request for buckets.  "
-		    "Currently have %li "
-		    "buckets, asked for %li, max number of buckets"
-		    " for %li bytes is %li.",
-		    m_maxBuckets, numNeeded, m_maxMem, m_maxBucketsCapacity);
+		// log(LOG_INFO,
+		//     "db: scaling down request for buckets.  "
+		//     "Currently have %li "
+		//     "buckets, asked for %li, max number of buckets"
+		//     " for %li bytes is %li.",
+		//     m_maxBuckets, numNeeded, m_maxMem, m_maxBucketsCapacity);
 
 		numNeeded = m_maxBucketsCapacity;
 	}
@@ -1114,6 +1114,7 @@ bool RdbBuckets::selfTest(bool thorough, bool core) {
 		last = kk;
 		lastcoll = b->getCollnum();
 	}
+	if ( totalNumKeys != m_numKeysApprox )
 	log(LOG_WARN, "db have %li keys,  should have %li. "
 	    "%li buckets in %li colls for db %s", 
 	    totalNumKeys, m_numKeysApprox, m_numBuckets, 

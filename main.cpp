@@ -2872,17 +2872,17 @@ int main2 ( int argc , char *argv[] ) {
 	g_log.m_logTimestamps = true;
 
 	// show current working dir
-	log("host: working directory is %s",workingDir);
+	log("host: Working directory is %s",workingDir);
 
-	log("host: using %shosts.conf",g_hostdb.m_dir);
+	log("host: Using %shosts.conf",g_hostdb.m_dir);
 
 	// from Hostdb.cpp
 	ips = getLocalIps();
 	for ( ; ips && *ips ; ips++ )
-		log("host: detected local ip %s",iptoa(*ips));
+		log("host: Detected local ip %s",iptoa(*ips));
 
 	// show it
-	log("host: running as host id #%li",g_hostdb.m_hostId );
+	log("host: Running as host id #%li",g_hostdb.m_hostId );
 
 
 	if (!ucInit(g_hostdb.m_dir, true)) {

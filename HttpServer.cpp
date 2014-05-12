@@ -95,11 +95,11 @@ bool HttpServer::init ( short port,
 		m_ssltcp.reset();
 	}
 	// log an innocent msg
-	log(LOG_INIT,"http: listening on TCP port %i with sd=%i", 
+	log(LOG_INIT,"http: Listening on TCP port %i with sd=%i", 
 	    port, m_tcp.m_sock );
 	// log for https
 	if (m_ssltcp.m_ready)
-		log(LOG_INIT,"https: listening on TCP port %i with sd=%i", 
+		log(LOG_INIT,"https: Listening on TCP port %i with sd=%i", 
 	    	    sslPort, m_ssltcp.m_sock );
 
 	return true;

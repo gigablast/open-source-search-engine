@@ -1656,7 +1656,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	strcpy ( m_coll , coll );
 
 	if ( ! g_conf.m_doingCommandLine )
-		log(LOG_INFO,"db: loading conf for collection %s (%li)",coll,
+		log(LOG_INFO,"db: Loading conf for collection %s (%li)",coll,
 		    (long)m_collnum);
 
 	// collection name HACK for backwards compatibility
@@ -1688,7 +1688,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// LOAD LOCAL
 	snprintf ( tmp1 , 1023, "%scoll.%s.%li/localcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	log(LOG_DEBUG,"db: loading %s",tmp1);
+	log(LOG_DEBUG,"db: Loading %s",tmp1);
 	m_localCrawlInfo.reset();
 	SafeBuf sb;
 	// fillfromfile returns 0 if does not exist, -1 on read error
@@ -1699,7 +1699,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 
 
 	if ( ! g_conf.m_doingCommandLine )
-		log("coll: loaded %s (%li) local hasurlsready=%li",
+		log("coll: Loaded %s (%li) local hasurlsready=%li",
 		    m_coll,
 		    (long)m_collnum,
 		    (long)m_localCrawlInfo.m_hasUrlsReadyToSpider);
@@ -1737,7 +1737,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// LOAD GLOBAL
 	snprintf ( tmp1 , 1023, "%scoll.%s.%li/globalcrawlinfo.dat",
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	log(LOG_DEBUG,"db: loading %s",tmp1);
+	log(LOG_DEBUG,"db: Loading %s",tmp1);
 	m_globalCrawlInfo.reset();
 	sb.reset();
 	if ( sb.fillFromFile ( tmp1 ) > 0 )
@@ -1746,7 +1746,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 		memcpy ( &m_globalCrawlInfo , sb.getBufStart(),sb.length() );
 
 	if ( ! g_conf.m_doingCommandLine )
-		log("coll: loaded %s (%li) global hasurlsready=%li",
+		log("coll: Loaded %s (%li) global hasurlsready=%li",
 		    m_coll,
 		    (long)m_collnum,
 		    (long)m_globalCrawlInfo.m_hasUrlsReadyToSpider);
@@ -2775,7 +2775,7 @@ void nukeDoledb ( collnum_t collnum );
 bool CollectionRec::rebuildUrlFilters ( ) {
 
 	if ( ! g_conf.m_doingCommandLine )
-		log("coll: rebuilding url filters for %s ufp=%li",m_coll,
+		log("coll: Rebuilding url filters for %s ufp=%li",m_coll,
 		    (long)m_urlFiltersProfile);
 
 	// if not a custom crawl, and no expressions, add a default one

@@ -52,14 +52,14 @@ bool Wiki::load() {
 	m_txtSize = stats1.st_size;
 	// just use the .dat if we got it
 	if ( ! errno2 ) {
-		log(LOG_INFO,"wiki: loading %s",ff2);
+		log(LOG_INFO,"wiki: Loading %s",ff2);
 		// "dir" is NULL since already included in ff2
 		return m_ht.load ( NULL , ff2 );
 	}
 	// if we got a newer binary version, use that
 	// add in 10 seconds i guess
 	if ( ! errno2 && ! errno1 && stats2.st_mtime +10> stats1.st_mtime ) {
-		log(LOG_INFO,"wiki: loading %s",ff2);
+		log(LOG_INFO,"wiki: Loading %s",ff2);
 		// "dir" is NULL since already included in ff2
 		return m_ht.load ( NULL , ff2 );
 	}
@@ -82,12 +82,12 @@ bool Wiki::loadText ( long fileSize ) {
 	SafeBuf sb;
 	char ff1[256];
 	sprintf(ff1, "%swikititles.txt.part1", g_hostdb.m_dir);
-	log(LOG_INFO,"wiki: loading %s",ff1);
+	log(LOG_INFO,"wiki: Loading %s",ff1);
 	if ( ! sb.fillFromFile(ff1) ) return false;
 
 	char ff2[256];
 	sprintf(ff2, "%swikititles.txt.part2", g_hostdb.m_dir);
-	log(LOG_INFO,"wiki: loading %s",ff2);
+	log(LOG_INFO,"wiki: Loading %s",ff2);
 	if ( ! sb.catFile(ff2) ) return false;
 	
 

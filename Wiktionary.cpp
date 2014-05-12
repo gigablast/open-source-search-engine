@@ -261,10 +261,10 @@ bool Wiktionary::load() {
 	     ( errno1 || stats3.st_mtime > stats1.st_mtime ) 
 	     //&& ( errno2 || stats3.st_mtime > stats2.st_mtime ) 
 	     ) {
-		log(LOG_INFO,"wikt: loading %s",ff3);
+		log(LOG_INFO,"wikt: Loading %s",ff3);
 		if ( ! m_synTable .load ( NULL , ff3 ) )
 			return false;
-		log(LOG_INFO,"wikt: loading %s",ff4);
+		log(LOG_INFO,"wikt: Loading %s",ff4);
 		if ( m_synBuf.fillFromFile ( NULL , ff4 ) <= 0 )
 			return false;
 
@@ -517,7 +517,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 	//
 	char ff1[256];
 	sprintf(ff1, "%swiktionary.txt.aa", g_hostdb.m_dir);
-	log(LOG_INFO,"wikt: loading %s",ff1);
+	log(LOG_INFO,"wikt: Loading %s",ff1);
         int fd1 = open ( ff1 , O_RDONLY );
 	if ( fd1 < 0 ) {
 		log("wikt: open %s : %s",ff1,mstrerror(errno));
@@ -558,7 +558,7 @@ bool Wiktionary::generateHashTableFromWiktionaryTxt ( long sizen ) {
 			round++;
 			offset = 0;
 			sprintf(ff1,"%swiktionary.txt.ab",g_hostdb.m_dir);
-			log(LOG_INFO,"wikt: loading %s",ff1);
+			log(LOG_INFO,"wikt: Loading %s",ff1);
 			int fd1 = open ( ff1 , O_RDONLY );
 			if ( fd1 < 0 ) {
 				log("wikt: open %s : %s",ff1,mstrerror(errno));
