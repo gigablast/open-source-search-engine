@@ -2666,7 +2666,7 @@ long *getLocalIps ( ) {
 		// skip if loopback we stored above
 		if ( ip == loopback ) continue;
 		// skip bogus ones
-		if ( ip == 0 || ip == 1 || ip == 2 ) continue;
+		if ( (unsigned long)ip <= 10 ) continue;
 		// show it
 		//log("host: detected local ip %s",iptoa(ip));
 		// otherwise store it
