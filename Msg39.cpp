@@ -219,7 +219,8 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 		log("query: Query parsing inconsistency for q=%s. "
 		    "langid=%li. Check langids and m_queryExpansion parms "
 		    "which are the only parms that could be different in "
-		    "Query::set2()."
+		    "Query::set2(). You probably have different mysynoyms.txt "
+		    "files on two different hosts! check that!!"
 		    ,m_tmpq.m_orig
 		    ,(long)m_r->m_language
 		    );
