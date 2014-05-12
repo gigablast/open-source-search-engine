@@ -1730,6 +1730,10 @@ bool Msg40::gotSummary ( ) {
 	// enough docids then we will need to issue a new msg39 request to
 	// each shard to get even more docids from each shard.
 	if ( m_si && m_si->m_streamResults &&
+	     // this is coring as well on multi collection federated searches
+	     // so disable that for now too. it is because Msg3a::m_r is
+	     // NULL.
+	     m_numCollsToSearch == 1 &&	     
 	     // must have no streamed chunk sends out
 	     m_sendsOut == m_sendsIn &&
 	     // if we did not ask for enough docids and they were mostly
@@ -1768,6 +1772,8 @@ bool Msg40::gotSummary ( ) {
 		    m_numRequests);
 		// merge more docids from the shards' termlists
 		m_msg3a.m_docsToGet = need;
+		// sanity. the original msg39request must be there
+		if ( ! m_msg3a.m_r ) { char *xx=NULL;*xx=0; }
 		// this should increase m_msg3a.m_numDocIds
 		m_msg3a.mergeLists();
 	}
