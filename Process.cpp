@@ -170,6 +170,8 @@ char *g_files[] = {
 	"ppmtojpeg",
 	"tifftopnm",
 
+	"mysynonyms.txt",
+
 	//"smartctl",
 
 	"wikititles.txt.part1",
