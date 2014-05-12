@@ -400,26 +400,40 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "<td>"
 		  "<input type=text name=\"q\" size=\"20\" value=\"\"> "
 		  "</td>"
-		  "</tr>"
+		       "</tr>",
 
+			  TABLE_STYLE,
+			  us ,
+			   dd,
+			   rr, 
+			   render
+			  );
 
-
+	xbuf->safePrintf(
 		  "<tr class=poo>"
 			  "<td>"
-			  "<b>content below is xml</b>"
+			  "<b>content type below is</b>"
 			  "<br><font size=-2>"
-			  "Is the content below XML?"
+			  "Is the content below HTML? XML? JSON?"
 			  "</font>"
 			  "</td>"
 
 		  "<td>"
-		  "<input type=checkbox name=xml value=1> "
+		       //"<input type=checkbox name=xml value=1> "
+		       "<select name=ctype>\n"
+		       "<option value=%li selected>HTML</option>\n"
+		       "<option value=%li selected>XML</option>\n"
+		       "<option value=%li selected>JSON</option>\n"
+		       "</select>\n"
 
 		  "</td>"
-		  "</tr>"
+		       "</tr>",
+		       (long)CT_HTML,
+		       (long)CT_XML,
+		       (long)CT_JSON
+			  );
 
-
-
+	xbuf->safePrintf(
 
 			  "<tr class=poo>"
 			  "<td><b>content</b>"
@@ -440,15 +454,6 @@ bool sendPageParser2 ( TcpSocket   *s ,
 		  "</form>"
 		  "<br>",
 
-			  TABLE_STYLE,
-			  us ,
-			  //(long)st->m_hopCount,
-			   //rtu,
-			   dd,
-			  //artr , 
-			   rr, 
-			  //rr2, 
-			   render , 
 			  //oips ,
 			  contentParm );
 
@@ -807,8 +812,9 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 	// ensure null
 	if ( contentLen == 0 ) content = NULL;
 
-	uint8_t contentType = CT_HTML;
+	//uint8_t contentType = CT_HTML;
 	//if ( isXml ) contentType = CT_XML;
+	long ctype = r->getLong("ctype",CT_HTML);
 
 	// . use the enormous power of our new XmlDoc class
 	// . this returns false if blocked
@@ -821,7 +827,7 @@ bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) {
 			  content ,
 			  false, // deletefromindex
 			  0, // forced ip
-			  contentType ))
+			  ctype ))
 		// return error reply if g_errno is set
 		return sendErrorReply ( st , g_errno );
 	// make this our callback in case something blocks
@@ -900,16 +906,15 @@ bool gotXmlDoc ( void *state ) {
 	}
 
 	long isXml = st->m_r.getLong("xml",0);
-	char ctype = CT_HTML;
-	if ( isXml ) ctype = CT_XML;
-
+	char ctype2 = CT_HTML;
+	if ( isXml ) ctype2 = CT_XML;
 	// now encapsulate it in html head/tail and send it off
 	bool status = g_httpServer.sendDynamicPage( st->m_s , 
 						    xbuf->getBufStart(), 
 						    xbuf->length() ,
 						    -1, //cachtime
 						    false ,//postreply?
-						    &ctype,
+						    &ctype2,
 						    -1 , //httpstatus
 						    NULL,//cookie
 						    "utf-8");
