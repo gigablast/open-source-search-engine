@@ -1140,7 +1140,7 @@ void RdbTree::deleteOrderedList ( collnum_t collnum ,
 bool RdbTree::fixTree ( ) {
 	// on error, fix the linked list
 	//log("RdbTree::fixTree: tree was corrupted on disk?");
-	log("db: Trying to fix tree.");
+	log("db: Trying to fix tree for %s.",m_dbname);
 	log("db: %li occupied nodes and %li empty "
 	    "of top %li nodes.",
 	    m_numUsedNodes , m_minUnusedNode - m_numUsedNodes ,
@@ -1171,6 +1171,9 @@ bool RdbTree::fixTree ( ) {
 		// verify collnum
 		if ( cn <  0   ) continue;
 		if ( cn >= max ) continue;
+		// collnum of non-existent coll
+		if ( m_rdbId>=0 && ! g_collectiondb.m_recs[cn] )
+			continue;
 		// now add just to set m_right/m_left/m_parent
 		if ( m_fixedDataSize == 0 )
 			addNode(cn,&m_keys[i*m_ks], NULL, 0 );
@@ -1183,11 +1186,11 @@ bool RdbTree::fixTree ( ) {
 		count++;
 	}
 
-	log("db: Fix tree removed %li nodes.",n - count);
+	log("db: Fix tree removed %li nodes for %s.",n - count,m_dbname);
 	// esure it is still good
 	if ( ! checkTree ( false , true ) )
 		return log("db: Fix tree failed.");
-	log("db: Fix tree succeeded.");
+	log("db: Fix tree succeeded for %s.",m_dbname);
 	return true;
 }
 
@@ -1229,6 +1232,12 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 		// for posdb
 		if ( m_ks == 18 &&(m_keys[i*m_ks] & 0x06) ) {
 			char *xx=NULL;*xx=0; }
+		// bad collnum?
+		collnum_t cn = m_collnums[i];
+		if ( m_rdbId>=0 && (cn >= g_collectiondb.m_numRecs || cn < 0) )
+			return log("db: bad collnum in tree");
+		if ( m_rdbId>=0 && ! g_collectiondb.m_recs[cn] )
+			return log("db: collnum is obsolete in tree");
 		// if no left/right kid it MUST be -1
 		if ( m_left[i] < -1 )
 			return log(
@@ -1305,8 +1314,12 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 		if ( ! doChainTest ) continue;
 		// ensure i goes back to head node
 		long j = i;
+		long loopCount = 0;
 		while ( j >= 0 ) { 
 			if ( j == m_headNode ) break;
+			// sanity -- loop check
+			if ( ++loopCount > 10000 ) 
+				return log("db: tree had loop");
 			j = m_parents[j];
 		}
 		if ( j != m_headNode ) 
@@ -2799,8 +2812,10 @@ long RdbTree::fastLoadBlock ( BigFile   *f          ,
 			m_corrupt++;
 			continue;
 		}
-		// must have rec as well
-		if ( ! recs[c] ) {
+		// must have rec as well. unless it its statsdb tree
+		// or m_waitingTree which are collection-less and always use
+		// 0 for their collnum. if collection-less m_rdbId==-1.
+		if ( ! recs[c] && m_rdbId >= 0 ) {
 			m_corrupt++;
 			continue;
 		}
@@ -3063,10 +3078,15 @@ long RdbTree::oldLoadBlock ( BigFile *f, long remainingNodes , RdbMem *stack,
 
 void RdbTree::cleanTree ( ) { // char **bases ) {
 
+	// some trees always use 0 for all node collnum_t's like
+	// statsdb, waiting tree etc.
+	if ( m_rdbId < 0 ) return;
+
 	// the liberation count
 	long count = 0;
 	collnum_t collnum;
 	long max = g_collectiondb.m_numRecs;
+
 	for ( long i = 0 ; i < m_minUnusedNode ; i++ ) {
 		// skip node if parents is -2 (unoccupied)
 		if ( m_parents[i] == -2 ) continue;
@@ -3103,7 +3123,8 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 }
 
 long  RdbTree::getNumNegativeKeys ( collnum_t collnum ) { 
-	if ( m_rdbId < 0 ) { char *xx=NULL;*xx=0; }
+	// fix for statsdb or other collectionless rdbs
+	if ( m_rdbId < 0 ) return m_numNegativeKeys;
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return 0;
 	//if ( ! m_countsInitialized ) { char *xx=NULL;*xx=0; }
@@ -3111,7 +3132,8 @@ long  RdbTree::getNumNegativeKeys ( collnum_t collnum ) {
 }
 
 long  RdbTree::getNumPositiveKeys ( collnum_t collnum ) { 
-	if ( m_rdbId < 0 ) { char *xx=NULL;*xx=0; }
+	// fix for statsdb or other collectionless rdbs
+	if ( m_rdbId < 0 ) return m_numPositiveKeys;
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return 0;
 	//if ( ! m_countsInitialized ) { char *xx=NULL;*xx=0; }

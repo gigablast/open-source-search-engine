@@ -16,6 +16,7 @@ class Process {
 
  public:
 
+	bool getFilesToCopy ( char *srcDir , class SafeBuf *buf ) ;
 	bool checkFiles ( char *dir );
 
 	// . the big save command
@@ -94,6 +95,7 @@ class Process {
 	long  m_desiredFanState;
 	float m_diskUsage;
 	long long m_diskAvail;
+	char m_swapEnabled;
 };
 
 extern Process g_process;

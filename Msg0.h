@@ -216,7 +216,7 @@ class Msg0 {
 	// used for multicasting the request
 //#ifdef SPLIT_INDEXDB
 	//Multicast m_mcast[INDEXDB_SPLIT];
-	//Multicast m_mcast[MAX_INDEXDB_SPLIT];
+	//Multicast m_mcast[MAX_SHARDS];
 	// casting to multiple splits is obsolete, but for PageIndexdb.cpp
 	// we still need to do it, but we alloc for it
 	Multicast  m_mcast;

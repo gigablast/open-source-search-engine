@@ -69,9 +69,9 @@ static WebPage s_pages[] = {
 	{ PAGE_RESULTS   , "search"        , 0 , "search" , 0 , 0 ,
 	  "results page",
 	  sendPageResults, 0 },
-	{ PAGE_WIDGET   , "widget"        , 0 , "widget" , 0 , 0 ,
-	  "widget page",
-	  sendPageWidget, 0 },
+	//{ PAGE_WIDGET   , "widget"        , 0 , "widget" , 0 , 0 ,
+	//  "widget page",
+	//  sendPageWidget, 0 },
 	{ PAGE_ADDURL    , "addurl"       , 0 , "add url" , 0 , 0 ,
 	  "Page where you can add url for spidering",
 	  sendPageAddUrl, 0 },
@@ -914,8 +914,9 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	//long  user   = getUserType          ( s , r );
 	//char *username   = g_users.getUsername ( r );
 	char *username = NULL;
-	char *coll   = r->getString ( "c"   );
-	if ( ! coll ) coll = "main";
+	//char *coll   = r->getString ( "c"   );
+	//if ( ! coll ) coll = "main";
+	char *coll = g_collectiondb.getDefaultColl(r);
 
 	//char *pwd    = r->getString ( "pwd" );
 	// get username
@@ -1041,8 +1042,8 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 				   username , pwd ,
 				   coll, NULL, s->m_ip, qs );
 
-	if ( g_hostdb.getNumHosts() > 1 )
-		sb->safePrintf("<br><br>");
+	//if ( g_hostdb.getNumHosts() > 1 )
+	sb->safePrintf("<br><br>");
 
 	// end table
 	//sb->safePrintf ("</td></tr></table><br/>\n");//<br/>\n");
@@ -1655,10 +1656,11 @@ bool Pages::printHostLinks ( SafeBuf* sb     ,
 	// and proxies
 	total += g_hostdb.m_numProxyHosts;	
 	// don't print host buttons if only 1 host
-	if ( total <= 1 ) return status;
+	//if ( total <= 1 ) return status;
 
 	sb->safePrintf (  //"&nbsp; &nbsp; &nbsp; "
-			  "<a href=/admin/hosts>hosts</a>: ");
+			  "<a style=text-decoration:none; href=/admin/hosts>"
+			  "<b>hosts in cluster</b></a>: ");
 
 	if ( ! qs   ) qs   = "";
 	//if ( ! pwd  ) pwd  = "";

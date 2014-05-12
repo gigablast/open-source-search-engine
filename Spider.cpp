@@ -110,7 +110,7 @@ long SpiderRequest::print ( SafeBuf *sbarg ) {
 	sb->safePrintf("parentDomHash32=0x%lx ",m_parentDomHash32 );
 	sb->safePrintf("parentSiteHash32=0x%lx ",m_parentSiteHash32 );
 
-	sb->safePrintf("hopCount=%li ",m_hopCount );
+	sb->safePrintf("hopCount=%li ",(long)m_hopCount );
 
 	//timeStruct = gmtime ( &m_spiderTime );
 	//time[0] = 0;
@@ -301,7 +301,7 @@ long SpiderRequest::printToTable ( SafeBuf *sb , char *status ,
 
 	sb->safePrintf(" <td>%li</td>\n",m_siteNumInlinks );
 	//sb->safePrintf(" <td>%li</td>\n",m_pageNumInlinks );
-	sb->safePrintf(" <td>%li</td>\n",m_hopCount );
+	sb->safePrintf(" <td>%li</td>\n",(long)m_hopCount );
 
 	// print time format: 7/23/1971 10:45:32
 	struct tm *timeStruct ;
@@ -436,7 +436,7 @@ long SpiderRequest::printToTableSimple ( SafeBuf *sb , char *status ,
 
 	sb->safePrintf(" <td>%li</td>\n",(long)m_errCount );
 
-	sb->safePrintf(" <td>%li</td>\n",m_hopCount );
+	sb->safePrintf(" <td>%li</td>\n",(long)m_hopCount );
 
 	// print time format: 7/23/1971 10:45:32
 	struct tm *timeStruct ;
@@ -1026,14 +1026,22 @@ bool tryToDeleteSpiderColl ( SpiderColl *sc ) {
 		    (long)sc,(long)sc->m_collnum);
 		return true;
 	}
+	// this means msg5 is out
+	if ( sc->m_msg5.m_waitingForList ) {
+		log("spider: deleting sc=0x%lx for collnum=%li waiting4",
+		    (long)sc,(long)sc->m_collnum);
+		return true;
+	}
 	// there's still a core of someone trying to write to someting
 	// in "sc" so we have to try to fix that. somewhere in xmldoc.cpp
 	// or spider.cpp. everyone should get sc from cr everytime i'd think
 	log("spider: deleting sc=0x%lx for collnum=%li",
 	    (long)sc,(long)sc->m_collnum);
+	// . make sure nobody has it
+	// . cr might be NULL because Collectiondb.cpp::deleteRec2() might
+	//   have nuked it
 	CollectionRec *cr = sc->m_cr;
-	// make sure nobody has it
-	cr->m_spiderColl = NULL;
+	if ( cr ) cr->m_spiderColl = NULL;
 	mdelete ( sc , sizeof(SpiderColl),"postdel1");
 	delete ( sc );
 	return true;
@@ -3075,6 +3083,8 @@ void SpiderColl::populateDoledbFromWaitingTree ( ) { // bool reentry ) {
 
 	// reset this
 	long maxWinners = (long)MAX_WINNER_NODES;
+	if ( ! m_cr->m_isCustomCrawl ) maxWinners = 1;
+
 	if ( m_winnerTree.m_numNodes == 0 &&
 	     ! m_winnerTree.set ( -1 , // fixeddatasize
 				  maxWinners , // maxnumnodes
@@ -3348,7 +3358,8 @@ bool SpiderColl::evalIpLoop ( ) {
 
 	// if we started reading, then assume we got a fresh list here
 	if ( g_conf.m_logDebugSpider )
-		log("spider: back from msg5 spiderdb read2");
+		log("spider: back from msg5 spiderdb read2 of %li bytes",
+		    m_list.m_listSize);
 
 
 	// . set the winning request for all lists we read so far
@@ -3539,7 +3550,8 @@ bool SpiderColl::readListFromSpiderdb ( ) {
 		return false ;
 	// note its return
 	if ( g_conf.m_logDebugSpider )
-		log("spider: back from msg5 spiderdb read");
+		log("spider: back from msg5 spiderdb read of %li bytes",
+		    m_list.m_listSize);
 	// no longer getting list
 	m_gettingList1 = false;
 
@@ -4091,6 +4103,7 @@ bool SpiderColl::scanListForWinners ( ) {
 
 		// get the top 100 spider requests by priority/time/etc.
 		long maxWinners = (long)MAX_WINNER_NODES; // 40
+		if ( ! m_cr->m_isCustomCrawl ) maxWinners = 1;
 
 		// only put 40 urls from the same firstIp into doledb if
 		// we have a lot of urls in our spiderdb already.
@@ -6139,9 +6152,23 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	// get priority from doledb key
 	long pri = g_doledb.getPriority ( doledbKey );
 
-	if ( g_conf.m_logDebugSpider )
-		log("spider: setting pri2=%li nextkey to %s",
-		    m_sc->m_pri2,KEYSTR(&m_sc->m_nextDoledbKey,12));
+	// if the key went out of its priority because its priority had no
+	// spider requests then it will bleed over into another priority so
+	// in that case reset it to the top of its priority for next time
+	long pri3 = g_doledb.getPriority ( &m_sc->m_nextDoledbKey );
+	if ( pri3 != m_sc->m_pri2 ) {
+		m_sc->m_nextDoledbKey = g_doledb.makeFirstKey2 ( m_sc->m_pri2);
+		// the key must match the priority queue its in as nextKey
+		//if ( pri3 != m_sc->m_pri2 ) { char *xx=NULL;*xx=0; }
+	}
+
+	if ( g_conf.m_logDebugSpider ) {
+		long pri4 = g_doledb.getPriority ( &m_sc->m_nextDoledbKey );
+		log("spider: setting pri2=%li queue doledb nextkey to "
+		    "%s (pri=%li)",
+		    m_sc->m_pri2,KEYSTR(&m_sc->m_nextDoledbKey,12),pri4);
+		if ( pri4 != m_sc->m_pri2 ) { char *xx=NULL;*xx=0; }
+	}
 
 	// update next doledbkey for this priority to avoid having to
 	// process excessive positive/negative key annihilations (mdw)
@@ -9912,6 +9939,13 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		langLen = gbstrlen(lang);
 	}
 
+	// . get parent language in the request
+	// . primarpy language of the parent page that linked to this url
+	char *plang = NULL;
+	long  plangLen = 0;
+	plang = getLanguageAbbr(sreq->m_parentLangId);
+	if ( plang ) plangLen = gbstrlen(plang);
+
 	char *tld = (char *)-1;
 	long  tldLen;
 
@@ -10259,7 +10293,16 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		if ( strncmp(p,"insitelist",10) == 0 ) {
 			// skip for msg20
 			//if ( isForMsg20 ) continue;
-			if ( ! checkedRow ) {
+			// if only seeds in the sitelist and no
+
+			// if there is no domain or url explicitly listed
+			// then assume user is spidering the whole internet
+			// and we basically ignore "insitelist"
+			if ( sc->m_siteListIsEmpty ) {
+				// use a dummy row match
+				row = (char *)1;
+			}
+			else if ( ! checkedRow ) {
 				// only do once for speed
 				checkedRow = true;
 				// this function is in PageBasic.cpp
@@ -11025,6 +11068,67 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 			// come here if we did not match the tld
 		}
+
+
+		// parentlang=en,zh_cn
+		if ( *p=='p' && strncmp(p,"parentlang",10)==0){
+			// if we do not have enough info for outlink, all done
+			if ( isOutlink ) return -1;
+			// must have a reply
+			//if ( ! srep ) continue;
+			// skip if unknown? no, we support "xx" as unknown now
+			//if ( srep->m_langId == 0 ) continue;
+			// set these up
+			char *b = s;
+			// loop for the comma-separated list of langids
+			// like parentlang==en,es,...
+		subloop2b:
+			// get length of it in the expression box
+			char *start = b;
+			while ( *b && !is_wspace_a(*b) && *b!=',' ) b++;
+			long  blen = b - start;
+			//char sm;
+			// if we had parentlang==en,es,...
+			if ( sign == SIGN_EQ &&
+			     blen == plangLen && 
+			     strncasecmp(start,plang,plangLen)==0 ) 
+				// if we matched any, that's great
+				goto matched2b;
+			// if its parentlang!=en,es,...
+			// and we equal the string, then we do not matcht his
+			// particular rule!!!
+			if ( sign == SIGN_NE &&
+			     blen == plangLen && 
+			     strncasecmp(start,plang,plangLen)==0 ) 
+				// we do not match this rule if we matched
+				// and of the langs in the != list
+				continue;
+			// might have another in the comma-separated list
+			if ( *b != ',' ) {
+				// if that was the end of the list and the
+				// sign was == then skip this rule
+				if ( sign == SIGN_EQ ) continue;
+				// otherwise, if the sign was != then we win!
+				if ( sign == SIGN_NE ) goto matched2b;
+				// otherwise, bad sign?
+				continue;
+			}
+			// advance to next list item if was a comma after us
+			b++;
+			// and try again
+			goto subloop2b;
+			// come here on a match
+		matched2b:
+			// we matched, now look for &&
+			p = strstr ( b , "&&" );
+			// if nothing, else then it is a match
+			if ( ! p ) return i;
+			// skip the '&&' and go to next rule
+			p += 2;
+			goto checkNextRule;
+			// come here if we did not match the tld
+		}
+
 
 		// hopcount == 20 [&&]
 		if ( *p=='h' && strncmp(p, "hopcount", 8) == 0){
@@ -12244,6 +12348,8 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 			ci->m_hasUrlsReadyToSpider = 0;
 			// save that!
 			cr->m_needsSave = true;
+			// set the time that this happens
+			cr->m_diffbotCrawlEndTime = getTimeGlobalNoCore();
 		}
 		
 		// save it

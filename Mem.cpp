@@ -462,6 +462,10 @@ bool Mem::init  ( long long maxMem ) {
 	log(LOG_INIT,"mem: using electric fence!!!!!!!");
 #endif
 
+	/*
+	  take this out for now it seems to hang the OS when running
+	  as root
+
 #ifndef TITAN
 	// if we can't alloc 3gb exit and retry
 	long long start = gettimeofdayInMilliseconds();
@@ -486,6 +490,7 @@ bool Mem::init  ( long long maxMem ) {
 	// return if could not alloc the full 3GB
 	if ( i < 30 ) return false;
 #endif
+	*/
 
 	// reset this, our max mem used over time ever because we don't
 	// want the mem test we did above to count towards it

@@ -31,7 +31,7 @@ void Msg0::constructor ( ) {
 	m_msg5b = NULL;
 //#ifdef SPLIT_INDEXDB
 	//for ( long i = 0; i < INDEXDB_SPLIT; i++ )
-	//for ( long i = 0; i < MAX_INDEXDB_SPLIT; i++ )
+	//for ( long i = 0; i < MAX_SHARDS; i++ )
 	//	m_mcast[i].constructor();
 	m_mcast.constructor();
 	m_mcasts      = NULL;
@@ -726,8 +726,8 @@ void Msg0::gotSplitReply ( ) {
 	char *xx=NULL;*xx=0;
 	// get all the split lists
 	long totalSize = 0;
-	RdbList lists[MAX_INDEXDB_SPLIT];
-	RdbList *listPtrs[MAX_INDEXDB_SPLIT];
+	RdbList lists[MAX_SHARDS];
+	RdbList *listPtrs[MAX_SHARDS];
 	for ( long i = 0; i < m_numSplit; i++ ) {
 		listPtrs[i] = &lists[i];
 		long replySize;

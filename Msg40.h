@@ -171,7 +171,7 @@ class Msg40 {
 
 	long long getDocId  ( long i ){return m_msg3a.m_docIds[i]; };
 	long long *getDocIds(        ){return m_msg3a.m_docIds; };
-	float  getScore  ( long i ){return m_msg3a.m_scores[i]; };
+	double  getScore  ( long i ){return m_msg3a.m_scores[i]; };
 	class DocIdScore *getScoreInfo(long i){
 		if ( ! m_msg3a.m_scoreInfos ) return NULL;
 		return m_msg3a.m_scoreInfos[i];
@@ -208,7 +208,7 @@ class Msg40 {
 
 	long m_lastHeartbeat;
 
-	bool printSearchResult9 ( long ix ) ;
+	bool printSearchResult9 ( long ix , long numPrintedSoFar ) ;
 	HashTableX m_columnTable;
 	bool printCSVHeaderRow ( class SafeBuf *sb );
 	bool printJsonItemInCSV ( class State0 *st , long ix );
@@ -265,6 +265,7 @@ class Msg40 {
 	long m_sendsIn       ;
 	long m_printi        ;
 	long m_numDisplayed  ;
+	long m_numPrintedSoFar;
 	long m_socketHadError;
 
 

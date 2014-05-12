@@ -116,12 +116,28 @@ bool Title::setTitle ( XmlDoc   *xd            ,
 	SafeBuf jsonTitle;
 	long vlen = 0;
 	if ( xd->m_contentType == CT_JSON ) {
+		// shortcut
+		char *s = xd->ptr_utf8Content;
 		char *jt;
-		jt = getJSONFieldValue(xd->ptr_utf8Content,"title",&vlen);
+		jt = getJSONFieldValue(s,"title",&vlen);
 		if ( jt && vlen > 0 ) {
 			jsonTitle.safeDecodeJSONToUtf8 (jt, vlen, m_niceness);
-							//true ); // decodeAll?
 			jsonTitle.nullTerm();
+		}
+		// if we got a product, try getting price
+		long oplen;
+		char *op = getJSONFieldValue(s,"offerPrice",&oplen);
+		if ( op && oplen ) {
+			if ( ! is_digit(op[0]) ) { op++; oplen--; }
+			float price = atof2(op,oplen);
+			// print without decimal point if ends in .00
+			if ( (float)(long)price == price )
+				jsonTitle.safePrintf(", &nbsp; $%li",
+						     (long)price);
+			else
+				jsonTitle.safePrintf(", &nbsp; $%.02f",price);
+		}
+		if ( jsonTitle.length() ) {
 			val = jsonTitle.getBufStart();
 			vlen = jsonTitle.length();
 		}

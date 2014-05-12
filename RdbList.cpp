@@ -1091,7 +1091,14 @@ bool RdbList::removeBadData_r ( ) {
 	// . if not fixed size, remove all the data for now
 	// . TODO: make this better, man
 	if ( m_fixedDataSize == -1 ) {
-		reset();
+		// don't call reset because it sets m_ks back to 12
+		//reset();
+		m_listSize = 0;
+		m_list = NULL;
+		m_listPtr = NULL;
+		m_listEnd = NULL;
+		m_mergeMinListSize = -1;
+		m_lastKeyIsValid = false;
 		return true;
 	}
 	//key_t oldk;

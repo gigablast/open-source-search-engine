@@ -4100,6 +4100,10 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	m_minScoreTermNumInt = -1;
 	m_maxScoreTermNumInt = -1;
 
+	m_hasMaxSerpScore = false;
+	if ( m_r->m_minSerpDocId )
+		m_hasMaxSerpScore = true;
+
 	//for ( long i = 0 ; i < m_msg2->getNumLists() ; i++ ) {
 	for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
 		QueryTerm *qt = &m_q->m_qterms[i];
@@ -6618,6 +6622,10 @@ void PosdbTable::intersectLists10_r ( ) {
 		// no term?
 		if ( ! miniMergedList[m_sortByTermNumInt] ) goto advance;
 		intScore = g_posdb.getInt( miniMergedList[m_sortByTermNumInt]);
+		// do this so hasMaxSerpScore below works, although
+		// because of roundoff errors we might lose a docid
+		// through the cracks in the widget.
+		//score = (float)intScore;
 	}
 
 	// skip docid if outside of range
@@ -6656,12 +6664,36 @@ void PosdbTable::intersectLists10_r ( ) {
 		if ( score3 > m_maxScoreValInt ) goto advance;
 	}
 
+	// now we have a maxscore/maxdocid upper range so the widget
+	// can append only new results to an older result set.
+	if ( m_hasMaxSerpScore ) {
+		// if dealing with an "int" score use the extra precision
+		// of the double that m_maxSerpScore is!
+		if ( m_sortByTermNumInt >= 0 ) {
+			if ( intScore > (long)m_r->m_maxSerpScore )
+				goto advance;
+			if ( intScore == (long)m_r->m_maxSerpScore &&
+			     (long long)m_docId <= m_r->m_minSerpDocId ) 
+				goto advance;
+		}
+		else {
+			if ( score > (float)m_r->m_maxSerpScore ) 
+				goto advance;
+			if ( score == m_r->m_maxSerpScore &&
+			     (long long)m_docId <= m_r->m_minSerpDocId ) 
+				goto advance;
+		}
+	}
 
 	// . seoDebug hack so we can set "dcs"
 	// . we only come here if we actually made it into m_topTree
 	if ( secondPass || m_r->m_seoDebug ) {
 		dcs.m_siteRank   = siteRank;
 		dcs.m_finalScore = score;
+		// a double can capture an int without dropping any bits,
+		// inlike a mere float
+		if ( m_sortByTermNumInt >= 0 )
+			dcs.m_finalScore = (double)intScore;
 		dcs.m_docId      = m_docId;
 		dcs.m_numRequiredTerms = m_numQueryTermInfos;
 		dcs.m_docLang = docLang;

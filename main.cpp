@@ -181,6 +181,8 @@ bool g_recoveryMode = false;
 	
 bool isRecoveryFutile ( ) ;
 
+int copyFiles ( char *dstDir ) ;
+
 //////
 //
 // if seo.o is being linked to it needs to override these weak stubs:
@@ -402,17 +404,22 @@ int main2 ( int argc , char *argv[] ) {
 	//vpointerObject.isValidPointer(&vpointerObject); // whiny compiler
 	// End Pointer Check setup
 
-	if (argc < 1) {
+	if (argc < 0) {
 	printHelp:
 		SafeBuf sb;
 		sb.safePrintf(
 			      "\n"
-			      "Usage: gb [-w workingDir] <CMD>\n");
+			      "Usage: gb [CMD]\n");
 		sb.safePrintf(
 			      "\n"
-			      "\tItems in []'s are optional, and items "
-			      "in <>'s are "
-			      "required.");
+			      "\tgb will first try to load "
+			      "the hosts.conf in the same directory as the "
+			      "gb binary, if not found, then it will try "
+			      "/etc/gigablast/hosts.conf. "
+			      "Then it will determine its hostId based on "
+			      "the directory and IP address listed in the "
+			      "hosts.conf file it loaded. Things in []'s "
+			      "are optional.");
 		/*
 		sb.safePrintf(
 			      "\n\t"
@@ -425,25 +432,29 @@ int main2 ( int argc , char *argv[] ) {
 			      "overwritten from git pulls.\n\n" );
 		*/
 		sb.safePrintf(
-			"<CMD> can have the following values:\n\n"
+			"[CMD] can have the following values:\n\n"
 
 			"-h\tprint this help.\n\n"
 			"-v\tprint version and exit.\n\n"
 
-			"<hostId>\n"
-			"\tstart the gb process for this <hostId> locally."
-			" <hostId> is 0 to run as host #0, for instance."
-			"\n\n"
+			//"<hostId>\n"
+			//"\tstart the gb process for this <hostId> locally."
+			//" <hostId> is 0 to run as host #0, for instance."
+			//"\n\n"
 
 
-			"<hostId> -d\n\trun as daemon.\n\n"
+			//"<hostId> -d\n\trun as daemon.\n\n"
+			"-d\trun as daemon.\n\n"
 
 			//"-o\tprint the overview documentation in HTML. "
 			//"Contains the format of hosts.conf.\n\n"
-			"<hostId> -r\n\tindicates recovery mode, "
+
+			// "<hostId> -r\n\tindicates recovery mode, "
+			// "sends email to addresses "
+			// "specified in Conf.h upon startup.\n\n"
+			"-r\tindicates recovery mode, "
 			"sends email to addresses "
 			"specified in Conf.h upon startup.\n\n"
-
 
 			"start [hostId]\n"
 			"\tstart the gb process on all hosts or just on "
@@ -947,20 +958,30 @@ int main2 ( int argc , char *argv[] ) {
 		return 0;
 	}
 
+	//SafeBuf tt;
+	//tt.base64Encode("any carnal pleas",16);
+	//fprintf(stderr,"%s\n",tt.getBufStart());
+	//exit(0);
+
 	// get hosts.conf file
 	//char *hostsConf = "./hosts.conf";
-	long hostId = 0;
-	long  cmdarg = 1;
-	char *workingDir = NULL;
-	if ( argc >= 3 && argv[1][0]=='-'&&argv[1][1]=='w'&&argv[1][2]=='\0') {
-		//hostsConf = argv[2];
-		workingDir = argv[2];
-		cmdarg    = 3;
-	}
+	//long hostId = -1;
+	long  cmdarg = 0;
+	//char *workingDir = NULL;
+	//if(argc >= 3 && argv[1][0]=='-'&&argv[1][1]=='w'&&argv[1][2]=='\0') {
+	// 	//hostsConf = argv[2];
+	// 	workingDir = argv[2];
+	// 	cmdarg    = 3;
+	// }
 		
 	// get command
-	if ( argc <= cmdarg ) goto printHelp;
-	char *cmd = argv[cmdarg];
+	//if ( argc <= cmdarg ) goto printHelp;
+	// it might not be there, might be a simple "./gb" 
+	char *cmd = "";
+	if ( argc >= 2 ) {
+		cmdarg = 1;
+		cmd = argv[1];
+	}
 
 	// help
 	if ( strcmp ( cmd , "-h" ) == 0 ) goto printHelp;
@@ -979,18 +1000,18 @@ int main2 ( int argc , char *argv[] ) {
 	//	return 0;
 	//}
 
-	bool hadHostId = false;
-
+	//bool hadHostId = false;
  	// assume our hostId is the command!
 	// now we advance 'cmd' past the hostId if we detect
-	// the presence of more args
-	if ( is_digit(argv[cmdarg][0]) ) {
-		hostId = atoi(argv[cmdarg]);
-		if(argc > cmdarg+1) {
-			cmd = argv[++cmdarg];
-		}
-		hadHostId = true;
-	}
+	// the presence of more args.
+	// WE NO LONGER do it this way...
+	// if ( is_digit(argv[cmdarg][0]) ) {
+	// 	hostId = atoi(argv[cmdarg]);
+	// 	if(argc > cmdarg+1) {
+	// 		cmd = argv[++cmdarg];
+	// 	}
+	// 	hadHostId = true;
+	// }
 
 	if ( strcmp ( cmd , "dosopen" ) == 0 ) {	
 		long ip;
@@ -1024,6 +1045,25 @@ int main2 ( int argc , char *argv[] ) {
 		testMandrill = true;
 	}
 
+	/*
+	class foo {
+	public:
+		long poo;
+	};
+	class fart {
+	public:
+		short fart3;
+		char fart1;
+		char fart2;
+	};
+	foo xxx;
+	xxx.poo = 38123;
+	fart *yyy = (fart *)&xxx;
+	fprintf(stderr,"fart1=%li fart2=%li fart3=%li\n",
+		(long)yyy->fart1,(long)yyy->fart2,(long)yyy->fart3);
+	exit(0);
+	*/
+
 	// gb gendbs, preset the hostid at least
 	if ( //strcmp ( cmd , "gendbs"   ) == 0 ||
 	     //strcmp ( cmd , "gentfndb" ) == 0 ||
@@ -1037,7 +1077,7 @@ int main2 ( int argc , char *argv[] ) {
 		// ensure we got a collection name after the cmd
 		if ( cmdarg + 2 >  argc ) goto printHelp;
 		// may also have an optional hostid
-		if ( cmdarg + 3 == argc ) hostId = atoi ( argv[cmdarg+2] );
+		//if ( cmdarg + 3 == argc ) hostId = atoi ( argv[cmdarg+2] );
 	}
 
 	if( (strcmp( cmd, "countdomains" ) == 0) &&  (argc >= (cmdarg + 2)) ) {
@@ -1047,7 +1087,7 @@ int main2 ( int argc , char *argv[] ) {
 	}
 
 	// set it for g_hostdb and for logging
-	g_hostdb.m_hostId = hostId;
+	//g_hostdb.m_hostId = hostId;
 
 	//if ( strcmp ( cmd , "gzip" ) == 0 ) {
 	//	if ( argc > cmdarg+1 ) gbgzip(argv[cmdarg+1]);
@@ -1060,7 +1100,6 @@ int main2 ( int argc , char *argv[] ) {
 	//	else goto printHelp;
 	//	return 0;
 	//}
-
 
 	// these tests do not need a hosts.conf
 	/*
@@ -1111,8 +1150,8 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "parsetest"  ) == 0 ) {
 		if ( cmdarg+1 >= argc ) goto printHelp;
 		// load up hosts.conf
-		if ( ! g_hostdb.init(hostId) ) {
-			log("db: hostdb init failed." ); return 1; }
+		//if ( ! g_hostdb.init(hostId) ) {
+		//	log("db: hostdb init failed." ); return 1; }
 		// init our table for doing zobrist hashing
 		if ( ! hashinit() ) {
 			log("db: Failed to init hashtable." ); return 1; }
@@ -1157,8 +1196,8 @@ int main2 ( int argc , char *argv[] ) {
 	*/
 
 	if ( strcmp ( cmd , "booltest" ) == 0 ){
-		if ( ! g_hostdb.init(hostId) ) {
-			log("db: hostdb init failed." ); return 1; }
+		//if ( ! g_hostdb.init(hostId) ) {
+		//	log("db: hostdb init failed." ); return 1; }
 		// init our table for doing zobrist hashing
 		if ( ! hashinit() ) {
 			log("db: Failed to init hashtable." ); return 1; }
@@ -1282,7 +1321,7 @@ int main2 ( int argc , char *argv[] ) {
 	     strcmp( argv[cmdarg+1] , "load" ) == 0 ) {
 		isProxy = true;
 		// we need to parse out the hostid too!
-		if ( cmdarg + 2 < argc ) hostId = atoi ( argv[cmdarg+2] );
+		//if ( cmdarg + 2 < argc ) hostId = atoi ( argv[cmdarg+2] );
 	}		
 
 	// this is just like starting up a gb process, but we add one to
@@ -1298,8 +1337,8 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "tmpstarthost" ) == 0 ) {
 		useTmpCluster = 1;
 		// we need to parse out the hostid too!
-		if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
-		else goto printHelp;
+		//if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
+		//else goto printHelp;
 	}
 
 	// gb inject <file> <ip:port> [startdocid]
@@ -1325,15 +1364,22 @@ int main2 ( int argc , char *argv[] ) {
 	// get current working dir that the gb binary is in. all the data
 	// files should in there too!!
 	//
-	if ( ! workingDir ) workingDir = getcwd2 ( argv[0] );
+	//if ( ! workingDir ) workingDir = getcwd2 ( argv[0] );
+	char *workingDir = getcwd2 ( argv[0] );
+
+	//log("host: working directory is %s",workingDir);
 
 	// load up hosts.conf
-	if ( ! g_hostdb.init(hostId, 
+	// . it will determine our hostid based on the directory path of this
+	//   gb binary and the ip address of this server
+	if ( ! g_hostdb.init(-1, // we don't know it!!!hostId, 
 			     NULL, 
 			     isProxy,
 			     useTmpCluster,
 			     workingDir)){
 		log("db: hostdb init failed." ); return 1; }
+
+	Host *h9 = g_hostdb.m_myHost;
 
 	// set clock file name so gettimeofdayInMmiilisecondsGlobal()
 	// see g_clockInSync to be true... unles clockadjust.dat is more
@@ -1787,6 +1833,12 @@ int main2 ( int argc , char *argv[] ) {
 		if ( cmdarg+1 >= argc ) goto printHelp;
 		char *cmd = argv[cmdarg+1];
 		return install ( ifk_dsh2 , -1,NULL,NULL,-1, cmd );
+	}
+	// gb copyfiles, like gb install but takes a dir not a host #
+	if ( strcmp ( cmd , "copyfiles" ) == 0 ) {	
+		if ( cmdarg + 1 >= argc ) goto printHelp;
+		char *dir = argv[cmdarg+1];
+		return copyFiles ( dir );
 	}
 	// gb install
 	if ( strcmp ( cmd , "install" ) == 0 ) {	
@@ -2307,8 +2359,8 @@ int main2 ( int argc , char *argv[] ) {
 	// mainStart:
 
 	// get host info for this host
-	Host *h = g_hostdb.getHost ( hostId );
-	if ( ! h ) { log("db: No host has id %li.",hostId); return 1;}
+	//Host *h = g_hostdb.getHost ( hostId );
+	//if ( ! h ) { log("db: No host has id %li.",hostId); return 1;}
 
 	// once we are in recoverymode, that means we are being restarted
 	// from having cored, so to prevent immediate core and restart
@@ -2329,7 +2381,7 @@ int main2 ( int argc , char *argv[] ) {
 	//   name gbHID.conf
 	// . now that hosts.conf has more of the burden, all gbHID.conf files
 	//   can be identical
- 	if ( ! g_conf.init ( h->m_dir ) ) { // , h->m_hostId ) ) {
+ 	if ( ! g_conf.init ( h9->m_dir ) ) { // , h->m_hostId ) ) {
 		log("db: Conf init failed." ); return 1; }
 	//if ( ! g_hostdb.validateIps ( &g_conf ) ) {
 	//	log("db: Failed to validate ips." ); return 1;}
@@ -2421,10 +2473,10 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "dump" ) == 0 && argc > cmdarg + 1 &&
 	     argv[cmdarg+1][0]=='I')  {		
 
-		if ( ! hadHostId ) {
-			log("you must supply hostid in the dump cmd");
-			return 0;
-		}
+		//if ( ! hadHostId ) {
+		//	log("you must supply hostid in the dump cmd");
+		//	return 0;
+		//}
 
 		long      fileNum = 0;
 		long long off     = 0LL;
@@ -2440,10 +2492,10 @@ int main2 ( int argc , char *argv[] ) {
 	if ( strcmp ( cmd , "dump" ) == 0 && argc > cmdarg + 1 &&
 	     argv[cmdarg+1][0]=='T')  {		
 
-		if ( ! hadHostId ) {
-			log("you must supply hostid in the dump cmd");
-			return 0;
-		}
+		//if ( ! hadHostId ) {
+		//	log("you must supply hostid in the dump cmd");
+		//	return 0;
+		//}
 
 		long      fileNum = 0;
 		long long off     = 0LL;
@@ -2462,10 +2514,10 @@ int main2 ( int argc , char *argv[] ) {
 	//           [priority] [printStats?]
 	if ( strcmp ( cmd , "dump" ) == 0 ) {
 
-		if ( ! hadHostId ) {
-			log("you must supply hostid in the dump cmd");
-			return 0;
-		}
+		// if ( ! hadHostId ) {
+		// 	log("you must supply hostid in the dump cmd");
+		// 	return 0;
+		// }
 
 		//
 		// tell Collectiondb, not to verify each rdb's data
@@ -2749,6 +2801,8 @@ int main2 ( int argc , char *argv[] ) {
 	if ( ! g_httpServer.m_tcp.testBind(g_hostdb.getMyHost()->m_httpPort))
 		return 1;
 
+	long *ips;
+
 	//if ( strcmp ( cmd , "gendbs"       ) == 0 ) goto jump;
 	//if ( strcmp ( cmd , "gentfndb"     ) == 0 ) goto jump;
 	if ( strcmp ( cmd , "gencatdb"     ) == 0 ) goto jump;
@@ -2760,7 +2814,8 @@ int main2 ( int argc , char *argv[] ) {
 	    g_hostdb.m_logFilename );
 
 	if ( ! g_conf.m_runAsDaemon )
-		log("db: Use ./gb <hostid> -d to run as daemon.");
+		log("db: Use ./gb -d to run as daemon. Example: "
+		    "./gb 0 -d");
 
 	/*
 	// tmp stuff to generate new query log
@@ -2776,7 +2831,16 @@ int main2 ( int argc , char *argv[] ) {
 
 	// start up log file
 	if ( ! g_log.init( g_hostdb.m_logFilename )        ) {
-		fprintf (stderr,"db: Log file init failed.\n" ); return 1; }
+		fprintf (stderr,"db: Log file init failed. Exiting.\n" ); 
+		return 1; 
+	}
+
+	// in case we do not have one, we need it for Images.cpp
+	if ( ! makeTrashDir() ) {
+		fprintf (stderr,"db: failed to make trash dir. Exiting.\n" ); 
+		return 1; 
+	}
+		
 
 	g_errno = 0;
 
@@ -2806,6 +2870,20 @@ int main2 ( int argc , char *argv[] ) {
 	//	log("db: Threads init failed." ); return 1; }
 
 	g_log.m_logTimestamps = true;
+
+	// show current working dir
+	log("host: Working directory is %s",workingDir);
+
+	log("host: Using %shosts.conf",g_hostdb.m_dir);
+
+	// from Hostdb.cpp
+	ips = getLocalIps();
+	for ( ; ips && *ips ; ips++ )
+		log("host: Detected local ip %s",iptoa(*ips));
+
+	// show it
+	log("host: Running as host id #%li",g_hostdb.m_hostId );
+
 
 	if (!ucInit(g_hostdb.m_dir, true)) {
 		log("Unicode initialization failed!");
@@ -3275,7 +3353,7 @@ int main2 ( int argc , char *argv[] ) {
 	// . then dns Distributed client
 	// . server should listen to a socket and register with g_loop
 	// . Only the distributed cache shall call the dns server.
-	if ( ! g_dns.init( h->m_dnsClientPort ) ) {
+	if ( ! g_dns.init( h9->m_dnsClientPort ) ) {
 		log("db: Dns distributed client init failed." ); return 1; }
 	// . then dns Local client
 	//if ( ! g_dnsLocal.init( 0 , false ) ) {
@@ -3283,7 +3361,7 @@ int main2 ( int argc , char *argv[] ) {
 	// . then webserver
 	// . server should listen to a socket and register with g_loop
 	// again:
-	if ( ! g_httpServer.init( h->m_httpPort, h->m_httpsPort ) ) {
+	if ( ! g_httpServer.init( h9->m_httpPort, h9->m_httpsPort ) ) {
 		log("db: HttpServer init failed. Another gb already "
 		    "running?" ); 
 		// this is dangerous!!! do not do the shutdown thing
@@ -3453,7 +3531,7 @@ int main2 ( int argc , char *argv[] ) {
 		char buf[256];
 		log("admin: Sending emails.");
 		sprintf(buf, "Host %li respawning after crash.(%s)",
-			hostId, iptoa(g_hostdb.getMyIp()));
+			h9->m_hostId, iptoa(g_hostdb.getMyIp()));
 		g_pingServer.sendEmail(NULL, buf);
 	}
 
@@ -4642,28 +4720,31 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"rcp %sgb.conf %s:%sgb.conf &",
+				"scp %sgb.conf %shosts.conf %s:%s %s",
+				dir ,
 				dir ,
 				//h->m_hostId ,
 				iptoa(h2->m_ip),
-				h2->m_dir);
+				h2->m_dir,
 				//h2->m_hostId);
+				amp);
+
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
-			sprintf(tmp,
-				"rcp %shosts.conf %s:%shosts.conf &",
-				dir ,
-				iptoa(h2->m_ip),
-				h2->m_dir);
-			log(LOG_INIT,"admin: %s", tmp);
-			system ( tmp );
-			sprintf(tmp,
-				"rcp %shosts2.conf %s:%shosts2.conf &",
-				dir ,
-				iptoa(h2->m_ip),
-				h2->m_dir);
-			log(LOG_INIT,"admin: %s", tmp);
-			system ( tmp );
+			// sprintf(tmp,
+			// 	"scp %shosts.conf %s:%shosts.conf &",
+			// 	dir ,
+			// 	iptoa(h2->m_ip),
+			// 	h2->m_dir);
+			// log(LOG_INIT,"admin: %s", tmp);
+			// system ( tmp );
+			// sprintf(tmp,
+			// 	"scp %shosts2.conf %s:%shosts2.conf &",
+			// 	dir ,
+			// 	iptoa(h2->m_ip),
+			// 	h2->m_dir);
+			// log(LOG_INIT,"admin: %s", tmp);
+			// system ( tmp );
 		}
 		else if ( installFlag == ifk_start ) {
 			// . save old log now, too
@@ -4743,7 +4824,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f tmpgb tmpgb.oldsave ; "
 				"mv -f tmpgb.installed tmpgb ; "
-				"./tmpgb -w %s tmpstarthost "
+				"%s/tmpgb tmpstarthost "
 				"%li >& ./tmplog%03li &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
@@ -16878,8 +16959,8 @@ bool isRecoveryFutile ( ) {
 		// get time stamp
 		long timestamp = ff.getLastModifiedTime ( );
 
-		// skip if not iwthin last minute
-		if ( timestamp < now - 60 ) continue;
+		// skip if not iwthin 2 minutes
+		if ( timestamp < now - 2*60 ) continue;
 
 		// open it up to see if ends with sighandle
 		long toRead = 3000;
@@ -16931,16 +17012,27 @@ char *getcwd2 ( char *arg ) {
 
 	// store the relative path of gb in there now
 	static char s_cwdBuf[1025];
-	getcwd ( s_cwdBuf , 1024 );
+	getcwd ( s_cwdBuf , 1020 );
 	char *end = s_cwdBuf + gbstrlen(s_cwdBuf);
 
 	// if "arg" is a RELATIVE path then append it
 	if ( arg && arg[0]!='/' ) {
 		memcpy ( end , arg , alen );
 		end += alen;
+		*end = '\0';
+	}
+	// if our path started with / then it was absolute...
+	else {
+		strncpy(s_cwdBuf,arg,alen);
 	}
 
-	*end = '\0';
+	// make sure it ends in / for consistency
+	long clen = gbstrlen(s_cwdBuf);
+	if ( s_cwdBuf[clen-1] != '/' ) {
+		s_cwdBuf[clen++] = '/';
+		s_cwdBuf[clen++] = '\0';
+	}
+
 
 	// size of the whole thing
 	//long clen = gbstrlen(s_cwdBuf);
@@ -16953,4 +17045,23 @@ char *getcwd2 ( char *arg ) {
 	//log("hey: hey %s",s_cwdBuf);
 
 	return s_cwdBuf;
+}
+
+int copyFiles ( char *dstDir ) {
+
+	char *srcDir = "./";
+	SafeBuf fileListBuf;
+	g_process.getFilesToCopy ( srcDir , &fileListBuf );
+
+	SafeBuf tmp;
+	tmp.safePrintf(
+		       "cp -r %s %s"
+		       , fileListBuf.getBufStart()
+		       , dstDir 
+		       );
+
+	//log(LOG_INIT,"admin: %s", tmp.getBufStart());
+	fprintf(stderr,"\nRunning cmd: %s\n",tmp.getBufStart());
+	system ( tmp.getBufStart() );
+	return 0;
 }

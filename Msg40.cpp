@@ -100,6 +100,7 @@ Msg40::Msg40() {
 	m_sendsIn       = 0;
 	m_printi        = 0;
 	m_numDisplayed  = 0;
+	m_numPrintedSoFar = 0;
 	m_lastChunk     = false;
 	//m_numGigabitInfos = 0;
 }
@@ -555,6 +556,9 @@ bool Msg40::getDocIds ( bool recall ) {
 	mr.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
 	mr.m_realMaxTop                = m_si->m_realMaxTop;
 
+	mr.m_minSerpDocId              = m_si->m_minSerpDocId;
+	mr.m_maxSerpScore              = m_si->m_maxSerpScore;
+
 	// . get the docIds
 	// . this sets m_msg3a.m_clusterLevels[] for us
 	//if(! m_msg3a.getDocIds ( &m_r,  m_si->m_q, this , gotDocIdsWrapper))
@@ -720,7 +724,6 @@ bool Msg40::gotDocIds ( ) {
 		m_needFirstReplies = m_msg3a.m_numDocIds;
 		if ( m_needFirstReplies > 100 ) m_needFirstReplies = 100;
 	}
-
 
 	// we have received m_numGood contiguous Msg20 replies!
 	//m_numContiguous     = 0;
@@ -1591,6 +1594,7 @@ bool Msg40::gotSummary ( ) {
 
 	for ( ; m_si && m_si->m_streamResults&&m_printi<m_msg3a.m_numDocIds ;
 	      m_printi++){
+
 		// if we are waiting on our previous send to complete... wait..
 		if ( m_sendsOut > m_sendsIn ) break;
 
@@ -1658,18 +1662,38 @@ bool Msg40::gotSummary ( ) {
 		// XmlDoc::m_contentHash32.. it will be zero if invalid i guess
 		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
 		     mr->m_contentHash32 &&
+		     // do not dedup CT_STATUS results, those are
+		     // spider reply "documents" that indicate the last
+		     // time a doc was spidered and the error code or success
+		     // code
+		     mr->m_contentType != CT_STATUS &&
 		     m_dedupTable.isInTable ( &mr->m_contentHash32 ) ) {
 			//if ( g_conf.m_logDebugQuery )
-			log("msg40: dup sum #%li (%lu)",m_printi,
-			    mr->m_contentHash32);
+			log("msg40: dup sum #%li (%lu)(d=%lli)",m_printi,
+			    mr->m_contentHash32,mr->m_docId);
 			// make it available to be reused
 			m20->reset();
 			continue;
 		}
 
+		// static long s_bs = 0;
+		// if ( (s_bs++ % 5) != 0 ) {
+		// 	log("msg40: FAKE dup sum #%li (%lu)(d=%lli)",m_printi,
+		// 	    mr->m_contentHash32,mr->m_docId);
+		// 	// make it available to be reused
+		// 	m20->reset();
+		// 	continue;
+		// }
+
+
 		// return true with g_errno set on error
 		if ( m_si && m_si->m_doDupContentRemoval && // &dr=1
 		     mr->m_contentHash32 &&
+		     // do not dedup CT_STATUS results, those are
+		     // spider reply "documents" that indicate the last
+		     // time a doc was spidered and the error code or success
+		     // code
+		     mr->m_contentType != CT_STATUS &&
 		     ! m_dedupTable.addKey ( &mr->m_contentHash32 ) ) {
 			m_hadPrintError = true;
 			log("msg40: error adding to dedup table: %s",
@@ -1678,19 +1702,25 @@ bool Msg40::gotSummary ( ) {
 
 		// assume we show this to the user
 		m_numDisplayed++;
+		//log("msg40: numdisplayed=%li",m_numDisplayed);
 
 		// do not print it if before the &s=X start position though
 		if ( m_si && m_numDisplayed <= m_si->m_firstResultNum ){
-			log("msg40: hiding #%li (%lu)",
-			    m_printi,mr->m_contentHash32);
+			log("msg40: hiding #%li (%lu)(d=%lli)",
+			    m_printi,mr->m_contentHash32,mr->m_docId);
+			m20->reset();
 			continue;
 		}
 
-		log("msg40: printing #%li (%lu)",m_printi,mr->m_contentHash32);
+		log("msg40: printing #%li (%lu)(d=%lli)",
+		    m_printi,mr->m_contentHash32,mr->m_docId);
 
 		// . ok, we got it, so print it and stream it
 		// . this might set m_hadPrintError to true
-		printSearchResult9 ( m_printi );
+		printSearchResult9 ( m_printi , m_numPrintedSoFar );
+
+		m_numPrintedSoFar++;
+		//log("msg40: printedsofar=%li",m_numPrintedSoFar);
 
 		// now free the reply to save memory since we could be 
 		// streaming back 1M+. we call reset below, no need for this.
@@ -1704,6 +1734,62 @@ bool Msg40::gotSummary ( ) {
 	// set it to true on all but the last thing we send!
 	if ( m_si->m_streamResults )
 		st->m_socket->m_streamingMode = true;
+
+
+	// if streaming results, and too many results were clustered or
+	// deduped then try to get more by merging the docid lists that
+	// we already have from the shards. if this still does not provide
+	// enough docids then we will need to issue a new msg39 request to
+	// each shard to get even more docids from each shard.
+	if ( m_si && m_si->m_streamResults &&
+	     // this is coring as well on multi collection federated searches
+	     // so disable that for now too. it is because Msg3a::m_r is
+	     // NULL.
+	     m_numCollsToSearch == 1 &&	     
+	     // must have no streamed chunk sends out
+	     m_sendsOut == m_sendsIn &&
+	     // if we did not ask for enough docids and they were mostly
+	     // dups so they got deduped, then ask for more.
+	     // m_numDisplayed includes results before the &s=X parm.
+	     // and so does m_docsToGetVisiable, so we can compare them.
+	     m_numDisplayed < m_docsToGetVisible && 
+	     // wait for us to have exhausted the docids we have merged
+	     m_printi >= m_msg3a.m_numDocIds &&
+	     // wait for us to have available msg20s to get summaries
+	     m_numReplies == m_numRequests &&
+	     // this is true if we can get more docids from merging
+	     // more of the termlists from the shards together.
+	     // otherwise, we will have to ask each shard for a
+	     // higher number of docids.
+	     m_msg3a.m_moreDocIdsAvail &&
+	     // do not do this if client closed connection
+	     ! m_socketHadError ) { //&&
+		// doesn't work on multi-coll just yet, it cores.
+		// MAKE it.
+		//m_numCollsToSearch == 1 ) {
+		// can it cover us?
+		long need = m_msg3a.m_docsToGet + 20;
+		// note it
+		log("msg40: too many summaries deduped. "
+		    "getting more "
+		    "docids from msg3a merge and getting summaries. "
+		    "%li are visible, need %li. "
+		    "changing docsToGet from %li to %li. "
+		    "numReplies=%li numRequests=%li",
+		    m_numDisplayed,
+		    m_docsToGetVisible,
+		    m_msg3a.m_docsToGet, 
+		    need,
+		    m_numReplies, 
+		    m_numRequests);
+		// merge more docids from the shards' termlists
+		m_msg3a.m_docsToGet = need;
+		// sanity. the original msg39request must be there
+		if ( ! m_msg3a.m_r ) { char *xx=NULL;*xx=0; }
+		// this should increase m_msg3a.m_numDocIds
+		m_msg3a.mergeLists();
+	}
+
 
 	// . wrap it up with Next 10 etc.
 	// . this is in PageResults.cpp
@@ -1987,6 +2073,11 @@ bool Msg40::gotSummary ( ) {
 		//long m = oldNumContiguous;
 		// get it
 		Msg20Reply *mri = m_msg20[i]->m_r;
+		// do not dedup CT_STATUS results, those are
+		// spider reply "documents" that indicate the last
+		// time a doc was spidered and the error code or 
+		// success code
+		if ( mri->m_contentType == CT_STATUS ) continue;
 		// never let it be i
 		//if ( m <= i ) m = i + 1;
 		// see if any result lower-scoring than #i is a dup of #i
@@ -1997,6 +2088,11 @@ bool Msg40::gotSummary ( ) {
 			if ( *level != CR_OK ) continue;
 			// get it
 			Msg20Reply *mrm = m_msg20[m]->m_r;
+			// do not dedup CT_STATUS results, those are
+			// spider reply "documents" that indicate the last
+			// time a doc was spidered and the error code or 
+			// success code
+			if ( mrm->m_contentType == CT_STATUS ) continue;
 			// use gigabit vector to do topic clustering, etc.
 			long *vi = (long *)mri->ptr_vbuf;
 			long *vm = (long *)mrm->ptr_vbuf;
@@ -5175,7 +5271,7 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 
 
 // . printSearchResult into "sb"
-bool Msg40::printSearchResult9 ( long ix ) {
+bool Msg40::printSearchResult9 ( long ix , long numPrintedSoFar ) {
 
 	// . we stream results right onto the socket
 	// . useful for thousands of results... and saving mem
@@ -5192,27 +5288,23 @@ bool Msg40::printSearchResult9 ( long ix ) {
 
 	// then print each result
 	// don't display more than docsWanted results
-	
+	if ( m_numPrinted >= msg40->getDocsWanted() ) return true;
+
 	// prints in xml or html
-	if ( m_numPrinted < msg40->getDocsWanted() ) {
-
-		if ( m_si->m_format == FORMAT_CSV ) {
-			printJsonItemInCSV ( st , ix );
-			//log("print: printing #%li csv",(long)ix);
-		}
-
-		// print that out into st->m_sb safebuf
-		else if ( ! printResult ( st , ix ) ) {
-			// oom?
-			if ( ! g_errno ) g_errno = EBADENGINEER;
-			log("query: had error: %s",mstrerror(g_errno));
-			m_hadPrintError = true;
-		}
-
-		// count it
-		m_numPrinted++;
-
+	if ( m_si->m_format == FORMAT_CSV ) {
+		printJsonItemInCSV ( st , ix );
+		//log("print: printing #%li csv",(long)ix);
 	}
+	// print that out into st->m_sb safebuf
+	else if ( ! printResult ( st , ix , numPrintedSoFar ) ) {
+		// oom?
+		if ( ! g_errno ) g_errno = EBADENGINEER;
+		log("query: had error: %s",mstrerror(g_errno));
+		m_hadPrintError = true;
+	}
+
+	// count it
+	m_numPrinted++;
 
 	return true;
 }
@@ -5241,6 +5333,8 @@ bool printHttpMime ( State0 *st ) {
 		ct = "application/json";
 	if ( si->m_format == FORMAT_XML )
 		ct = "text/xml";
+	if ( si->m_format == FORMAT_HTML )
+		ct = "text/html";
 	//if ( si->m_format == FORMAT_TEXT )
 	//	ct = "text/plain";
 	if ( si->m_format == FORMAT_CSV )
@@ -5359,6 +5453,10 @@ bool Msg40::printCSVHeaderRow ( SafeBuf *sb ) {
 			// . returns false with g_errno set on error
 			if ( ! ji->getCompoundName ( tmpBuf ) )
 				return false;
+
+			// skip the "html" column, strip that out now
+			if ( strcmp(tmpBuf.getBufStart(),"html") == 0 )
+				continue;
 
 			// is it new?
 			long long h64 = hash64n ( tmpBuf.getBufStart() );
@@ -5491,6 +5589,9 @@ bool Msg40::printJsonItemInCSV ( State0 *st , long ix ) {
 
 		// is it new?
 		long long h64 = hash64n ( tmpBuf.getBufStart() );
+
+		// ignore the "html" column
+		if ( strcmp(tmpBuf.getBufStart(),"html") == 0 ) continue;
 
 		long slot = columnTable->getSlot ( &h64 ) ;
 		// MUST be in there

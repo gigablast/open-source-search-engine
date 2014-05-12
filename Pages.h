@@ -38,7 +38,7 @@ bool sendPageBasicStatus     ( TcpSocket *s , HttpRequest *r );
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r );
 bool sendPageRoot     ( TcpSocket *s , HttpRequest *r, char *cookie );
 bool sendPageResults  ( TcpSocket *s , HttpRequest *r );
-bool sendPageWidget   ( TcpSocket *s , HttpRequest *r );
+//bool sendPageWidget   ( TcpSocket *s , HttpRequest *r );
 //bool sendPageEvents   ( TcpSocket *s , HttpRequest *r );
 bool sendPageAddUrl   ( TcpSocket *s , HttpRequest *r );
 bool sendPageGet      ( TcpSocket *s , HttpRequest *r );
@@ -295,7 +295,7 @@ enum {
 	// public pages
 	PAGE_ROOT        ,
 	PAGE_RESULTS     ,
-	PAGE_WIDGET,
+	//PAGE_WIDGET,
 	PAGE_ADDURL      , // 5
 	PAGE_GET         ,
 	PAGE_LOGIN       ,
