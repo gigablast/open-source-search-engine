@@ -50,7 +50,9 @@ JsonItem *Json::getItem ( char *name ) {
 	// traverse the json
 	for ( ; ji ; ji = ji->m_next ) {
 		// just get STRINGS or NUMS
-		if ( ji->m_type != JT_STRING && ji->m_type != JT_NUMBER ) 
+		if ( ji->m_type != JT_STRING && 
+		     ji->m_type != JT_NUMBER &&
+		     ji->m_type != JT_ARRAY ) 
 			continue;
 		// check name
 		char *name2   = ji->m_name;
@@ -169,6 +171,8 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 			if ( ! ji ) return NULL;
 			// current ji is an object type then
 			ji->m_type = JT_ARRAY;
+			// start of array hack. HACK!
+			ji->m_valueLong = (long)p;
 			// set the name
 			ji->m_name    = NAME;
 			ji->m_nameLen = NAMELEN;
@@ -185,6 +189,10 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 				JsonItem *px = m_stack[m_stackPtr-1];
 				NAME    = px->m_name;
 				NAMELEN = px->m_nameLen;
+				// start of array hack. HACK!
+				char *start = (char *)px->m_valueLong;
+				// include ending ']' in length of array
+				px->m_valueLen = p - start + 1;
 				m_stackPtr--;
 			}
 			continue;

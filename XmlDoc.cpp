@@ -13444,6 +13444,7 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 	//   json replies must
 	if ( ! THIS->m_diffbotReplyError ) {
 		char *ttt = strstr ( page , "\"url\":\"");
+		if ( ! ttt ) ttt = strstr ( page , "\"pageUrl\":\"");
 		if ( ! ttt ) {
 			log("xmldoc: diffbot reply for %s using %s is missing "
 			    "the url: field in the json reply. reply=%s",
@@ -13705,56 +13706,61 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 	char *text = dbr->getBufStart();
 
 	Json jp;
-    if ( ! jp.parseJsonStringIntoJsonItems ( text , m_niceness ) ) {
-        g_errno = EBADJSONPARSER;
-        return NULL;
-    }
+	if ( ! jp.parseJsonStringIntoJsonItems ( text , m_niceness ) ) {
+		g_errno = EBADJSONPARSER;
+		return NULL;
+	}
 
 	JsonItem *jsonItem = jp.getItem("objects");
-
+	char *array = NULL;
+	long arrayLen = 0;
 	if ( jsonItem ) {
-	    m_v3buf.safeMemcpy(jsonItem->getValue(), jsonItem->getValueLen());
-	    m_v3buf.nullTerm();
-	    // trim off the enclosing []'s
-	    char *p = m_v3buf.getBufStart();
-	    for ( ; *p && is_wspace_a(*p) ; p++ );
-	    if ( *p == '[') *p = ' ';
-	    char *e = m_v3buf.getBuf()-1;
-	    for ( ; e>p && is_wspace_a(*e) ;e--);
-	    if ( *e ==']') *e=' ';
-	    // replace top level commas with \0's
-	    long curlies = 0;
-	    char *x = p;
-	    bool  inQuotes = false;
-	    // scan now
-	    for (  ; *x ; x++ ) {
-	        // escaping a quote? ignore quote then.
-	        if ( *x == '\\' && x[1] == '\"' ) {
-	            // skip two bytes then..
-	            x++;
-	            continue;
-	        }
-	        if ( *x == '\"' ) {
-	            inQuotes = ! inQuotes;
-	            continue;
-	        }
-	        // if in a quote, ignore {} in there
-	        if ( inQuotes ) continue;
-	        if ( *x== '{' ) {
-	            curlies++;
-	            continue;
-	        }
-	        if ( *x == '}' ) {
-	            curlies--;
-	            continue;
-	        }
-	        if ( curlies != 0 ) continue;
-	        if ( *x == ',' ) *x = '\0';
-        }
-	    m_tokenizedDiffbotReplyPtr = &m_v3buf;
-	    m_tokenizedDiffbotReplyValid = true;
-	    return m_tokenizedDiffbotReplyPtr;
-    }
+		array = jsonItem->getArrayStart();
+		arrayLen = jsonItem->getArrayLen();
+	}
+	if ( array && arrayLen > 0 ) {
+		m_v3buf.safeMemcpy( array , arrayLen );
+		m_v3buf.nullTerm();
+		// trim off the enclosing []'s
+		char *p = m_v3buf.getBufStart();
+		for ( ; *p && is_wspace_a(*p) ; p++ );
+		if ( *p == '[') *p = ' ';
+		char *e = m_v3buf.getBuf()-1;
+		for ( ; e>p && is_wspace_a(*e) ;e--);
+		if ( *e ==']') *e=' ';
+		// replace top level commas with \0's
+		long curlies = 0;
+		char *x = p;
+		bool  inQuotes = false;
+		// scan now
+		for (  ; *x ; x++ ) {
+			// escaping a quote? ignore quote then.
+			if ( *x == '\\' && x[1] == '\"' ) {
+				// skip two bytes then..
+				x++;
+				continue;
+			}
+			if ( *x == '\"' ) {
+				inQuotes = ! inQuotes;
+				continue;
+			}
+			// if in a quote, ignore {} in there
+			if ( inQuotes ) continue;
+			if ( *x== '{' ) {
+				curlies++;
+				continue;
+			}
+			if ( *x == '}' ) {
+				curlies--;
+				continue;
+			}
+			if ( curlies != 0 ) continue;
+			if ( *x == ',' ) *x = '\0';
+		}
+		m_tokenizedDiffbotReplyPtr = &m_v3buf;
+		m_tokenizedDiffbotReplyValid = true;
+		return m_tokenizedDiffbotReplyPtr;
+	}
 
 
 	// it must have \"type\":\"product or \"type\":\"image

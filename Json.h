@@ -41,6 +41,10 @@ class JsonItem {
 	// for JT_String
 	long  getValueLen() { return m_valueLen; };
 
+	// for arrays (JT_ARRAY), hack the char ptr into m_valueLong
+	char *getArrayStart() { return (char *)m_valueLong; }
+	long  getArrayLen  () { return m_valueLen; };
+
 	// for JT_String
 	char *getValue () { 
 		// if value is another json object, then return NULL
