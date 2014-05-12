@@ -63,15 +63,29 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <br><br><a name=quickstart></a>
 <h1>Quick Start</h1>
 
-Until I get the binary packages ready, <a href=#src>build from the source code</a>, it should only take about 30 seconds to type the three commands.
-<!--
-Requirements: You will need an Intel or AMD system running Linux and at least 4GB of RAM.<br><br>
+<!--Until I get the binary packages ready, <a href=#src>build from the source code</a>, it should only take about 30 seconds to type the three commands.-->
 
-Install the <a href=http://www.gigablast.com/gigablast-1.0-1.deb>Gigablast package for Ubuntu or Debian</a> or install the <a href=http://www.gigablast.com/gigablast-1.0-1.rpm>Gigablast package for RedHat</a>.
+Requirements: You will need an Intel or AMD system running Linux and at least 4GB of RAM to run one instance/host of gb.<br><br>
+
+Install the <a href=http://www.gigablast.com/gigablast-1.0-1.deb>Gigablast package for Ubuntu or Debian</a> or install the <a href=http://www.gigablast.com/gigablast-1.0-1.rpm>Gigablast package for RedHat</a>. 
+
+<br><br>
+Once installed visit your <a href=http://127.0.0.1:8000/>local port 8000</a> to access the search engine controls and begin configuration. It could take up to 20 seconds to start the search engine for the first time.
+
+<br><br>
+
+<table><tr><td colspan=2><b>Installed Files</b></td></tr></table>
+<tr><td>/var/gigablast/data0/</td><td>Directory of Gigablast binary and data files</td></tr>
+<tr><td>/etc/gigablast/hosts.conf</td><td>Describes the hosts in the distributed cluster. Multiple hosts may exist one one physical server. Initially hosts.conf is just configured to use /var/gigablast/data0/ as the only host. See the section on <a href=#scaling>scaling</a> to add more hosts.</td></tr>
+<tr><td>/etc/init.d/gb</td><td>start up script link</td></tr>
+<tr><td>/etc/init/gb.conf</td><td>upstart conf file so you can type 'start gb' or 'stop gb', but that will only work on local instances of gb.</td></tr>
+<tr><td>/usr/bin/gb</td><td>Link to /var/gigablast/data0/gb</td></tr>
+</table>
+
 
 <br><br>
 If you run into an bugs let me know so i can fix them right away: mattdwells@hotmail.com.
--->
+
 
 <br>
 <br>

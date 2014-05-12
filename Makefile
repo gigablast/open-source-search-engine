@@ -470,11 +470,11 @@ install:
 # gigablast will copy over the necessary files. it has a list of the
 # necessary files and that list changes over time so it is better to let gb
 # deal with it.
-	mkdir -p /var/gigablast/shard0/
-	./gb copyfiles /var/gigablast/shard0/
-# if user types 'gb' it will use the binary in /var/gigablast/shard0/
+	mkdir -p /var/gigablast/data0/
+	./gb copyfiles /var/gigablast/data0/
+# if user types 'gb' it will use the binary in /var/gigablast/data0/
 	rm -f /usr/bin/gb
-	ln -s /var/gigablast/shard0/gb /usr/bin/gb
+	ln -s /var/gigablast/data0/gb /usr/bin/gb
 # if machine restarts
 # the new way that does not use run-levels anymore
 	rm -f /etc/init.d/gb

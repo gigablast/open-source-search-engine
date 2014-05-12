@@ -118,6 +118,7 @@ bool Hostdb::init ( long hostId , char *netName ,
 	char *filename = "hosts.conf";
 	//if ( strcmp ( filename , "hosts.conf" ) == 0 )
 	//	filename = "localhosts.conf";
+	bool triedEtc = false;
 
  retry:
 
@@ -174,8 +175,10 @@ bool Hostdb::init ( long hostId , char *netName ,
 		if ( this == &g_hostdb2 ) return true;
 		g_errno = ENOHOSTSFILE; 
 		// if doing localhosts.conf now try hosts.conf
-		if ( strcmp(filename,"localhosts.conf") == 0 ) {
-			filename = "hosts.conf";
+		if ( ! triedEtc ) { //strcmp(filename,"hosts.conf") == 0 ) {
+			triedEtc = true;
+			dir = "/etc/gigablast/";
+			//filename = "hosts.conf";
 			g_errno = 0;
 			goto retry;
 		}
@@ -2502,6 +2505,12 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# Tells us what hosts are participating in the distributed search engine.\n");
 	sb.safePrintf("\n");
 	sb.safePrintf("\n");
+
+	// put our cwd here
+	sb.safePrintf("0 5998 7000 8000 9000 127.0.0.1 127.0.0.1 %s\n",cwd);
+	sb.safePrintf("\n");
+	sb.safePrintf("\n");
+
 	sb.safePrintf("# How many mirrors do you want? If this is 0 then your data\n");
 	sb.safePrintf("# will NOT be replicated. If it is 1 then each host listed\n");
 	sb.safePrintf("# below will have one host that mirrors it, thereby decreasing\n");
@@ -2556,10 +2565,6 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# 'gb' binary resides.\n");
 	sb.safePrintf("#\n");
 
-	// put our cwd here
-	sb.safePrintf("0 5998 7000 8000 9000 127.0.0.1 127.0.0.1 %s\n",cwd);
-	sb.safePrintf("\n");
-	sb.safePrintf("\n");
 	sb.safePrintf("#\n");
 	sb.safePrintf("# Example of a four-node distributed search index running on a single\n");
 	sb.safePrintf("# server with four cores. The working directories are /home/mwells/hostN/.\n");
