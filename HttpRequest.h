@@ -36,6 +36,8 @@
 #define FORMAT_PROCOG 6
 #define FORMAT_WIDGET_IFRAME 7
 #define FORMAT_WIDGET_AJAX 8
+// used by ajax widget to create search results to APPEND to the end of widget
+#define FORMAT_WIDGET_APPEND 9
 
 class HttpRequest {
 

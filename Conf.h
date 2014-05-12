@@ -628,6 +628,7 @@ class Conf {
 	bool  m_logDebugDownloads;
 	bool  m_logDebugFacebook;
 	bool  m_logDebugHttp    ;
+	bool  m_logDebugImage   ;
 	bool  m_logDebugLoop    ;
 	bool  m_logDebugLang    ;
 	bool  m_logDebugLinkInfo ;

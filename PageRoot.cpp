@@ -171,7 +171,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("\n");
 
 
-	if ( cr && cr->m_coll && strcmp(cr->m_coll,"main") ) {
+	if ( cr && cr->m_coll ) { // && strcmp(cr->m_coll,"main") ) {
 		sb.safePrintf("<center>"
 			      "Searching the <b>%s</b> collection."
 			      "</center>",

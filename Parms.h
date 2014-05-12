@@ -22,7 +22,8 @@ enum {
 	UFP_CUSTOM = 0 ,
 	UFP_NONE   = 0 ,
 	UFP_WEB    = 1 ,
-	UFP_NEWS   = 2 
+	UFP_NEWS   = 2 ,
+	UFP_CHINESE = 3
 };
 
 // special priorities for the priority drop down 
@@ -71,7 +72,8 @@ enum {
 	TYPE_SITERULE       , // 29
 	TYPE_SAFEBUF        ,
 	TYPE_UFP            ,
-	TYPE_FILEUPLOADBUTTON
+	TYPE_FILEUPLOADBUTTON,
+	TYPE_DOUBLE
 };
 
 //forward decls to make compiler happy:

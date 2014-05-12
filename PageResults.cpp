@@ -250,6 +250,58 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	//long searchingDmoz = hr->getLong("dmoz",0);
 
 	//
+	// DO WE NEED TO ALTER cr->m_siteListBuf for a widget?
+	//
+	// when a wordpress user changes the "Websites to Include" for
+	// her widget, it should send a /search?sites=xyz.com&wpid=xxx
+	// request here... 
+	// so we need to remove her old sites and add in her new ones.
+	// 
+	/*
+	  
+	  MDW TURN BACK ON IN A DAY. do indexing or err pages first.
+
+	// get wordpressid supplied with all widget requests
+	char *wpid = hr->getString("wpid");
+	// we have to add set &spidersites=1 which all widgets should do
+	if ( wpid ) {
+		// this returns NULL if cr->m_siteListBuf would be unchanged
+		// because we already have the whiteListBuf sites in there
+		// for this wordPressId (wpid)
+		SafeBuf newSiteListBuf;
+		makeNewSiteList( &si->m_whiteListBuf,
+				 cr->m_siteListBuf ,
+				 wpid ,
+				 &newSiteListBuf);
+		// . update the list of sites to crawl/search & show in widget
+		// . if they give an empty list then allow that, stops crawling
+		SafeBuf parmList;
+		g_parms.addNewParmToList1 ( &parmList,
+					    cr->m_collnum,
+					    newSiteListBuf,
+					    0,
+					    "sitelist");
+		// send the parms to all hosts in the network
+		g_parms.broadcastParmList ( &parmList , 
+					    NULL,//s,// state is socket i guess
+					    NULL);//doneBroadcastingParms2 );
+		// nothing left to do now
+		return g_httpServer.sendDynamicPage(s,
+						    "OK",//sb.getBufStart(),
+						    2,//sb.length(),
+						    cacheTime,//0,
+						    false, // POST?
+						    "text/html", 
+						    200,  // httpstatus
+						    NULL, // cookie
+						    "UTF-8"); // charset
+	}
+	*/
+	
+
+
+
+	//
 	// . send back page frame with the ajax call to get the real
 	//   search results. do not do this if a "&dir=" (dmoz category)
 	//   is given.
@@ -718,11 +770,6 @@ void freeMsg4Wrapper( void *st ) {
 	delete stau;
 }
 
-// height of each result div in the widget
-#define RESULT_HEIGHT 120
-#define SERP_SPACER 1
-#define PADDING 8
-
 // . make a web page from results stored in msg40
 // . send it on TcpSocket "s" when done
 // . returns false if blocked, true otherwise
@@ -909,45 +956,61 @@ bool gotResults ( void *state ) {
 	//
 
 
+ 	long numResults = msg40->getNumResults();
+
 	// if user is doing ajax widget we need to know the current docid
 	// that is listed at the top of their widget display so we can
 	// hide the new docids above that and scroll them down slowly.
- 	long numResults = msg40->getNumResults();
-	long topDocIdPos = -1;
+	/*
+	//long topDocIdPos = -1;
 	bool hasInvisibleResults = false;
-	long numInvisible = 0;
+	//long numInvisible = 0;
+	long numAbove = 0;
 	HttpRequest *hr = &st->m_hr;
 	long long oldTop = 0LL;
+	long long lastDocId = 0LL;
+	double lastSerpScore = 0.0;
 	if ( si->m_format == FORMAT_WIDGET_AJAX ) {
+		// sanity, no stream mode here, it won't work
+		if ( si->m_streamResults )
+			log("results: do not use stream=1 for widget");
 		// get current top docid
 		long long topDocId = hr->getLongLong("topdocid",0LL);
 
 		// DEBUG: force it on for now
 		//topDocId = 4961990748LL;
 
-		// scan results
+		// scan results. this does not support &stream=1 streaming
+		// mode. it doesn't make sense that it needs to.
 		for ( long i = 0 ; i < numResults ; i++ ) {
+			// skip if already invisible
+			if ( msg40->m_msg3a.m_clusterLevels[i] != CR_OK ) 
+				continue;
 			// get it
-			Msg20      *m20 ;
-			if ( si->m_streamResults )
-				m20 = msg40->getCompletedSummary(i);
-			else
-				m20 = msg40->m_msg20[i];
+			Msg20 *m20 = msg40->m_msg20[i];
+			if ( ! m20 ) continue;
 			// checkdocid
 			Msg20Reply *mr = m20->m_r;
 			if ( ! mr ) continue;
+			// save this
+			lastDocId = mr->m_docId;
+			lastSerpScore = msg40->m_msg3a.m_scores[i];
+			// set "oldTop" to first docid we encounter
 			if ( ! oldTop ) oldTop = mr->m_docId;
 			// stop if no topdocid otherwise. oldTop is now set
-			if ( topDocId == 0 ) break;
+			if ( ! topDocId ) continue; // == 0 ) break;
 			if ( mr->m_docId != topDocId ) {
 				hasInvisibleResults = true;
-				numInvisible++;
+				// count # of docids above top docid
+				numAbove++;
 				continue;
 			}
-			topDocIdPos = i;
-			break;
+			// we match it, so set this if not already set
+			//if ( topDocIdPos != -1 ) topDocIdPos = i;
+			//break;
 		}
 	}				
+	*/
 
 	SafeBuf *sb = &st->m_sb;
 
@@ -992,10 +1055,36 @@ bool gotResults ( void *state ) {
 
 	// propagate "topdocid" so when he does another query every 30 secs
 	// or so we know what docid was on top for scrolling purposes
-	if ( si->m_format == FORMAT_WIDGET_AJAX )
-		sb->safePrintf("<input type=hidden "
-			       "id=topdocid name=topdocid value=%lli>\n",
-			       oldTop);
+	//if ( si->m_format == FORMAT_WIDGET_AJAX )
+	//	sb->safePrintf("<input type=hidden "
+	//		       "id=topdocid name=topdocid value=%lli>\n",
+	//		       oldTop);
+
+	// report how many results we added above the topdocid provided, if any
+	// so widget can scroll down automatically
+	//if ( si->m_format == FORMAT_WIDGET_AJAX && numAbove )
+	//	sb->safePrintf("<input type=hidden "
+	//		       "id=topadd name=topadd value=%li>\n",numAbove);
+	
+
+	// we often can add 100s of things to the widget's result set per 
+	// second especially when sorting by last spidered time and spidering
+	// a lot. setting the maxserpscore of the serp score of the last result
+	// allows us to append new search results to what we have in a 
+	// consistent manner.
+	// if ( si->m_format == FORMAT_WIDGET_AJAX ) {
+	// 	// let's make this ascii encoded crap
+	// 	sb->safePrintf("<input type=hidden "
+	// 		       "id=maxserpscore "
+	// 		       "value=%f>\n",
+	// 		       lastSerpScore);
+	// 	// let's make this ascii encoded crap
+	// 	sb->safePrintf("<input type=hidden "
+	// 		       "id=maxserpdocid "
+	// 		       "value=%lli>\n",
+	// 		       lastDocId);
+	// }
+
 
 	// then print each result
 	// don't display more than docsWanted results
@@ -1007,6 +1096,7 @@ bool gotResults ( void *state ) {
 
 	for ( long i = 0 ; count > 0 && i < numResults ; i++ ) {
 
+		/*
 		if ( hasInvisibleResults ) {
 			//
 			// MAKE THESE RESULTS INVISIBLE!
@@ -1038,7 +1128,7 @@ bool gotResults ( void *state ) {
 					       "position:absolute;>"
 					       );
 		}
-
+		*/
 
 		//////////
 		//
@@ -1067,7 +1157,7 @@ bool gotResults ( void *state ) {
 
 	// if we split the serps into 2 divs for scrolling purposes
 	// then close up the 2nd one
-	if ( hasInvisibleResults ) sb->safePrintf("</div>");
+	//if ( hasInvisibleResults ) sb->safePrintf("</div>");
 
 	// END SERP DIV
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
@@ -1112,9 +1202,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf("<body>");
 	}
 
-	if ( ! g_conf.m_isMattWells && 
-	     (si->m_format==FORMAT_WIDGET_IFRAME || 
-	      si->m_format==FORMAT_WIDGET_AJAX) ) {
+	if ( ! g_conf.m_isMattWells && si->m_format==FORMAT_WIDGET_IFRAME ) {
 		printCSSHead ( sb ,si->m_format );
 		sb->safePrintf("<body style=padding:0px;margin:0px;>");
 	}
@@ -1156,26 +1244,43 @@ bool printSearchResultsHeader ( State0 *st ) {
 		// put image in this div which will have top:0px JUST like
 		// the div holding the search results we print out below
 		// so that the image does not scroll when you use the
-		// scrollbar.
-		sb->safePrintf("<div style=\"position:absolute;"
+		// scrollbar. holds the magifying glass img and searchbox.
+		sb->safePrintf("<div class=magglassdiv "
+			       "style=\"position:absolute;"
 			       "right:15px;"
 			       "z-index:10;"
 			       "top:0px;\">");
 
-		long refresh = hr->getLong("refresh",15);
+		//long refresh = hr->getLong("refresh",15);
 		char *oq = hr->getString("q",NULL);
 		if ( ! oq ) oq = "";
 		char *prepend = hr->getString("prepend");
 		if ( ! prepend ) prepend = "";
 		char *displayStr = "none";
 		if ( prepend && prepend[0] ) displayStr = "";
-		sb->safePrintf("<form method=get action=/search>");
+		// to do a search we need to re-call the ajax,
+		// just call reload like the one that is called every 15s or so
+		sb->safePrintf("<form "//method=get action=/search "
+			       // use "1" as arg to force reload
+			       "onsubmit=\"widget123_reload(1);"
+
+			       // let user know we are loading
+			       "var w=document.getElementById("
+			       "'widget123_scrolldiv');"
+			       // just set the widget content to the reply
+			       "if (w) "
+			       "w.innerHTML='<br><br><b>Loading Results..."
+			       "</b>';"
+
+			       // prevent it from actually submitting
+			       "return false;\">");
 
 		sb->safePrintf("<img "
 			       "style=\""
 			       //"position:absolute;" // absolute or relative?
 			       // put it on TOP of the other stuff
 			       "z-index:10;"
+			       "margin-top:3px;"
 			       //"right:10px;"
 			       //"right:2px;"
 			       //"width:%lipx;"
@@ -1186,36 +1291,46 @@ bool printSearchResultsHeader ( State0 *st ) {
 			       "var e=document.getElementById('sbox');"
 			       "if(e.style.display == 'none') {"
 			       "e.style.display = '';"
+			       // give it focus
+			       "var qb=document.getElementById('qbox');"
+			       "qb.focus();"
 			       "} else {"
 			       "e.style.display = 'none';"
 			       "}"
 			       "\" " // end function
 			       " "
-			       "width=25 "
-			       "height=25 "
-			       "src=\"http://etc-mysitemyway.s3.amazonaws.com/icons/legacy-previews/icons/simple-black-square-icons-business/126715-simple-black-square-icon-business-magnifying-glass-ps.png\">"
+			       "width=35 "
+			       "height=31 "
+			       "src=\"/magglass.png\">"
 			       );
 
-		sb->safePrintf("<div id=sbox style=float:left;display:%s;>"
-			       "<input type=text name=prepend size=%li "
-			       "value=\"%s\"  style=\"z-index:10;"
+		//char *origq = hr->getString("q");
+		// we sort all results by spider date now so PREPEND
+		// the actual user query 
+		char *origq = hr->getString("prepend");
+		if ( ! origq ) origq = "";
+		sb->safePrintf("<div id=sbox style=\"float:left;"
+			       "display:%s;"
+			       "opacity:0.83;"
+			       //"background-color:gray;"
+			       //"padding:5px;"
+			       "\">"
+			       // the box that holds the query
+			       "<input type=text id=qbox name=qbox "
+			       "size=%li " //name=prepend "
+			       "value=\"%s\"  "
+			       "style=\"z-index:10;"
+			       "font-weight:bold;"
+			       "font-size:18px;"
+			       "border:4px solid black;"
 			       "margin:3px;"
 			       "\">"
-			       // hidden parms like collection
-			       "<input name=c type=hidden value=\"%s\">"
-			       "<input name=format type=hidden value=widget>"
-			       "<input name=widgetwidth type=hidden value=%li>"
-			       "<input name=refresh type=hidden value=%li>"
-			       "<input name=q type=hidden value=\"%s\">"
-			       "</div>"
-			       "</form>\n"
 			       , displayStr
-			       , widgetwidth / 15 
-			       , prepend
-			       , coll
-			       , widgetwidth
-			       , refresh
-			       , oq
+			       , widgetwidth / 23 
+			       , origq
+			       );
+		sb->safePrintf("</div>"
+			       "</form>\n"
 			       );
 
 		// . BEGIN SERP DIV
@@ -1223,9 +1338,12 @@ bool printSearchResultsHeader ( State0 *st ) {
 		// . this will have the scrollbar to just scroll the serps
 		//   and not the magnifying glass
 		sb->safePrintf("</div>"
-			       "<div style=\"position:absolute;"
+			       "<div id=widget123_scrolldiv "
+			       "onscroll=widget123_append(); "
+			       "style=\"position:absolute;"
 			       "top:0px;"
 			       "overflow-y:auto;"
+			       "overflow-x:hidden;"
 			       "width:%lipx;"
 			       "height:%lipx;\">"
 			       , widgetwidth
@@ -1493,7 +1611,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 	else if ( numResults == 0 && 
 		  ( si->m_format == FORMAT_WIDGET_IFRAME ||
 		    si->m_format == FORMAT_WIDGET_AJAX ) ) {
-		sb->safePrintf ( "No results found.");
+		sb->safePrintf ( "No results found. Wait for spider to "
+				 "kick in.");
 	}
 	else if ( moreFollow && si->m_format == FORMAT_HTML ) {
 		if ( isAdmin && si->m_docsToScanForReranking > 1 )
@@ -1928,12 +2047,13 @@ bool printSearchResultsTail ( State0 *st ) {
 	// carry over the sites we are restricting the search results to
 	if ( si->m_whiteListBuf.length() )
 		args.safePrintf("&sites=%s",si->m_whiteListBuf.getBufStart());
-	
+
 
 	if ( firstNum > 0 && 
 	     (si->m_format == FORMAT_HTML || 
-	      si->m_format == FORMAT_WIDGET_AJAX ||
-	      si->m_format == FORMAT_WIDGET_IFRAME ) ) {
+	      si->m_format == FORMAT_WIDGET_IFRAME //||
+	      //si->m_format == FORMAT_WIDGET_AJAX
+	      ) ) {
 		long ss = firstNum - msg40->getDocsWanted();
 		sb->safePrintf("<a href=\"/search?s=%li&q=",ss);
 		// our current query parameters
@@ -1950,8 +2070,9 @@ bool printSearchResultsTail ( State0 *st ) {
 	// now print "Next X Results"
 	if ( msg40->moreResultsFollow() && 
 	     (si->m_format == FORMAT_HTML || 
-	      si->m_format == FORMAT_WIDGET_IFRAME ||
-	      si->m_format == FORMAT_WIDGET_AJAX )) {
+	      si->m_format == FORMAT_WIDGET_IFRAME 
+	      //si->m_format == FORMAT_WIDGET_AJAX 
+	      )) {
 		long ss = firstNum + msg40->getDocsWanted();
 		// print a separator first if we had a prev results before us
 		if ( sb->length() > remember ) sb->safePrintf ( " &nbsp; " );
@@ -2567,56 +2688,139 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	// http://www.youtube.com/watch?v=auQbi_fkdGE
 	// http://img.youtube.com/vi/auQbi_fkdGE/2.jpg
 	// get the thumbnail url
-	if ( mr->ptr_imgUrl && si->m_format == FORMAT_HTML )
-		sb->safePrintf ("<a href=%s><image src=%s></a>",
+	if ( mr->ptr_imgUrl && 
+	     si->m_format == FORMAT_HTML &&
+	     // if we got thumbnail use that not this
+	     ! mr->ptr_imgData )
+		sb->safePrintf ("<a href=%s><img src=%s></a>",
 				   url,mr->ptr_imgUrl);
 
+	// if we have a thumbnail show it next to the search result
+	if ( si->m_format == FORMAT_HTML &&
+	     //! mr->ptr_imgUrl &&
+	     mr->ptr_imgData ) {
+		ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
+		ThumbnailInfo *ti = ta->getThumbnailInfo(0);
+		ti->printThumbnailInHtml ( sb , 
+					   100 ,  // max width
+					   100 ,  // max height
+					   true ,  // add <a href>
+					   NULL ,
+					   " style=\"margin:10px;\" ");
+	}
 
 	// print image for widget
 	if ( //mr->ptr_imgUrl && 
 	     ( si->m_format == FORMAT_WIDGET_IFRAME ||
-	       si->m_format == FORMAT_WIDGET_AJAX) ) {
+	       si->m_format == FORMAT_WIDGET_AJAX ||
+	       si->m_format == FORMAT_WIDGET_APPEND ) ) {
 
-		long widgetwidth = hr->getLong("widgetwidth",200);
-		
-		// make a div around this for widget so we can print text
-		// on top
+		long widgetWidth = hr->getLong("widgetwidth",200);
+
+		// prevent coring
+		if ( widgetWidth < 1 ) widgetWidth = 1;
+
+		// each search result in widget has a div around it
 		sb->safePrintf("<div "
+			       "class=result "
+			       // we need the docid and score of last result
+			       // when we append new results to the end
+			       // of the widget for infinite scrolling
+			       // using the scripts in PageBasic.cpp
+			       "docid=%lli "
+			       "score=%f " // double
+			       
 			       "style=\""
 			       "width:%lipx;"
 			       "min-height:%lipx;"//140px;"
 			       "height:%lipx;"//140px;"
 			       "padding:%lipx;"
-			       "display:table-cell;"
-			       "vertical-align:bottom;"
-			       , widgetwidth - 2*8 // padding is 8px
+			       "position:relative;"
+			       //"display:table-cell;"
+			       //"vertical-align:bottom;"
+			       "\""
+			       ">"
+			       , mr->m_docId
+			       // this is a double now. this won't work
+			       // for streaming...
+			       , msg40->m_msg3a.m_scores[ix]
+			       , widgetWidth - 2*8 // padding is 8px
 			       , (long)RESULT_HEIGHT
 			       , (long)RESULT_HEIGHT
 			       , (long)PADDING
 			       );
-		if ( mr->ptr_imgUrl )
-			sb->safePrintf("background-repeat:no-repeat;"
-				       "background-size:%lipx 140px;"
-				       "background-image:url('%s');"
-				       , widgetwidth - 2*8 // padding is 8px
-				       , mr->ptr_imgUrl);
+		// if ( mr->ptr_imgUrl )
+		// 	sb->safePrintf("background-repeat:no-repeat;"
+		// 		       "background-size:%lipx 140px;"
+		// 		       "background-image:url('%s');"
+		// 		       , widgetwidth - 2*8 // padding is 8px
+		// 		       , mr->ptr_imgUrl);
+		long newdx = 0;
+		if ( mr->ptr_imgData ) {
+			ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
+			ThumbnailInfo *ti = ta->getThumbnailInfo(0);
+			// account for scrollbar on the right
+			long maxWidth = widgetWidth - (long)SCROLLBAR_WIDTH;
+			long maxHeight = (long)RESULT_HEIGHT;
+			// false = do not print <a href> link on image
+			ti->printThumbnailInHtml ( sb , 
+						   maxWidth ,
+						   maxHeight , 
+						   false , // add <a href>
+						   &newdx );
+		}
 		// end the div style attribute and div tag
-		sb->safePrintf("\">");
+		//sb->safePrintf("\">");
+
+
 		sb->safePrintf ( "<a "
 				 "target=_blank "
-				 "style=text-decoration:none; href=" );
+				 "style=\"text-decoration:none;"
+				 // don't let scroll bar obscure text
+				 "margin-right:%lipx;"
+				 ,(long)SCROLLBAR_WIDTH
+				 );
+
+		// if thumbnail is wide enough put text on top of it, otherwise
+		// image is to the left and text is to the right of image
+		if ( newdx > .5 * widgetWidth )
+			sb->safePrintf("position:absolute;"
+				       "bottom:%li;"
+				       "left:%li;"
+				       , (long) PADDING 
+				       , (long) PADDING 
+				       );
+		// to align the text verticall we gotta make a textbox div
+		// otherwise it wraps below image! mdw
+		//else
+		//	sb->safePrintf("vertical-align:middle;");
+		else
+			sb->safePrintf("position:absolute;"
+				       "bottom:%li;"
+				       "left:%li;"
+				       , (long) PADDING 
+				       , (long) PADDING + newdx + 10 );
+
+		// close the style and begin the url
+		sb->safePrintf( "\" "
+				"href=\"" 
+				 );
+
 		// truncate off -diffbotxyz%li
 		long newLen = urlLen;
 		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
 		// print the url in the href tag
 		sb->safeMemcpy ( url , newLen ); 
 		// then finish the a href tag and start a bold for title
-		sb->safePrintf ( ">");//<font size=+0>" );
+		sb->safePrintf ( "\">");//<font size=+0>" );
 		
 		sb->safePrintf("<b style=\""
 			       "text-decoration:none;"
 			       "font-size: 15px;"
 			       "font-weight:bold;"
+			       // add padding so shadow does not stick out
+			       //"padding-left:4px;"
+			       //"padding-right:4px;"
 			       "background-color:rgba(0,0,0,.5);"
 			       "color:white;"
 			       "font-family:arial;"
@@ -2635,9 +2839,26 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 			       //"2px -2px 0 #000 "
 			       //"-2px -2px 0 #000;"
 			       "\">");
-		//sb->safePrintf ("<image width=50 height=50 src=%s></a>",
+		//sb->safePrintf ("<img width=50 height=50 src=%s></a>",
 		//		   mr->ptr_imgUrl);
 		// then title over image
+	}
+
+	// only do link here if we have no thumbnail so no bg image
+	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
+	      si->m_format == FORMAT_WIDGET_APPEND ||
+	      si->m_format == FORMAT_WIDGET_AJAX   ) &&
+	     ! mr->ptr_imgData ) {
+		sb->safePrintf ( "<a style=text-decoration:none;"
+				 "color:white; "
+				 "href=" );
+		// truncate off -diffbotxyz%li
+		long newLen = urlLen;
+		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
+		// print the url in the href tag
+		sb->safeMemcpy ( url , newLen ); 
+		// then finish the a href tag and start a bold for title
+		sb->safePrintf ( ">");//<font size=+0>" );
 	}
 
 
@@ -2668,20 +2889,6 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		sb->safePrintf ( ">");//<font size=+0>" );
 	}
 
-
-	// only do link here
-	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
-	      si->m_format == FORMAT_WIDGET_AJAX   ) &&
-	     ! mr->ptr_imgUrl ) {
-		sb->safePrintf ( "<a href=" );
-		// truncate off -diffbotxyz%li
-		long newLen = urlLen;
-		if ( diffbotSuffix ) newLen = diffbotSuffix - url;
-		// print the url in the href tag
-		sb->safeMemcpy ( url , newLen ); 
-		// then finish the a href tag and start a bold for title
-		sb->safePrintf ( ">");//<font size=+0>" );
-	}
 
 	// . then the title  (should be NULL terminated)
 	// . the title can be NULL
@@ -2738,6 +2945,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		backTag  = "</b>";
 	}
 	if ( si->m_format == FORMAT_WIDGET_IFRAME || 
+	     si->m_format == FORMAT_WIDGET_APPEND ||
 	     si->m_format == FORMAT_WIDGET_AJAX ) {
 		frontTag = "<font style=\"background-color:yellow\">" ;
 	}
@@ -2785,10 +2993,11 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	if ( si->m_format == FORMAT_HTML ) sb->safePrintf ("</a><br>\n" ) ;
 
 
-	// close the image div
+	// close the title tag stuf
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
+	     si->m_format == FORMAT_WIDGET_APPEND ||
 	     si->m_format == FORMAT_WIDGET_AJAX ) 
-		sb->safePrintf("</b></a></div>\n");
+		sb->safePrintf("</b></a>\n");
 
 
 	/////
@@ -2797,7 +3006,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	//
 	/////
 	unsigned char ctype = mr->m_contentType;
-	if ( ctype >= CT_HTML && ctype <= CT_JSON ) {
+	if ( ctype != CT_HTML && ctype != CT_UNKNOWN ){//&&ctype <= CT_JSON ) {
 		char *cs = g_contentTypeStrings[ctype];
 		if ( si->m_format == FORMAT_XML )
 			sb->safePrintf("\t\t<contentType>"
@@ -2806,7 +3015,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 				      "]]>"
 				      "</contentType>\n",
 				      cs);
-		else if ( si->m_format == FORMAT_HTML ) {
+		else if ( si->m_format == FORMAT_HTML && ctype != CT_HTML ) {
 			sb->safePrintf(" <b><font style=color:white;"
 				      "background-color:maroon;>");
 			char *p = cs;
@@ -2846,6 +3055,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	// do not print summaries for widgets by default unless overridden
 	// with &summary=1
 	if ( (si->m_format == FORMAT_WIDGET_IFRAME ||
+	      si->m_format == FORMAT_WIDGET_APPEND ||
 	      si->m_format == FORMAT_WIDGET_AJAX ) && 
 	     hr->getLong("summaries",0) == 0 )
 		printSummary = false;
@@ -3380,12 +3590,20 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	*/
 		
 
+	// end serp div
+	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
+	     si->m_format == FORMAT_WIDGET_APPEND ||
+	     si->m_format == FORMAT_WIDGET_AJAX )
+		sb->safePrintf("</div>");
+	
+
 	if ( si->m_format == FORMAT_HTML )
 		sb->safePrintf ( "<br><br>\n");
 
 	// search result spacer
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ||
-	     si->m_format == FORMAT_WIDGET_AJAX )
+	     si->m_format == FORMAT_WIDGET_APPEND ||
+	     si->m_format == FORMAT_WIDGET_AJAX   )
 		sb->safePrintf("<div style=line-height:%lipx;><br></div>",
 			       (long)SERP_SPACER);
 
@@ -5840,6 +6058,9 @@ bool printJsonItemInCSV ( char *json , SafeBuf *sb , State0 *st ) {
 	return true;
 }
 
+/*
+
+  RIP: OLD IFRAME WIDGET CODE HACK
 
 bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 	//
@@ -6114,23 +6335,21 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 			"</td>"
 			"<td>"
 			// begin div with source in it
-			/*
-			 "<div "
-			//"class=grad3 "
-			"style=\""
-			"border-radius:10px;"
-			"box-shadow: 6px 6px 3px %s;"
-			"border:2px solid black;"
-			"padding:15px;"
-			 "width:600px;"
-			//"background-image:url('/ss.jpg');"
-			//"background-repeat:repeat;"
-			//"background-attachment:fixed;"
-			 "background-color:lightgray;"
-			"\">"
-			, SHADOWCOLOR
-			//"<br>"
-			*/
+			//  "<div "
+			// //"class=grad3 "
+			// "style=\""
+			// "border-radius:10px;"
+			// "box-shadow: 6px 6px 3px %s;"
+			// "border:2px solid black;"
+			// "padding:15px;"
+			//  "width:600px;"
+			// //"background-image:url('/ss.jpg');"
+			// //"background-repeat:repeat;"
+			// //"background-attachment:fixed;"
+			//  "background-color:lightgray;"
+			// "\">"
+			// , SHADOWCOLOR
+			// //"<br>"
 			);
 
 	// space widget to the right using this table
@@ -6158,35 +6377,32 @@ bool printWidgetPage ( SafeBuf *sb , HttpRequest *hr , char *coll ) {
 
 	// this iframe contains the WIDGET
 	sb->safePrintf (
-		       /*
-		       "<div "
-		       "id=scrollerxyz "
-		       "style=\""
+		       // "<div "
+		       // "id=scrollerxyz "
+		       // "style=\""
 		       //"width:%lipx;" // 200;"
 		       //"height:%lipx;" // 400;"
 		       //"overflow:hidden;"
-		       "padding:0px;"
-		       "margin:0px;"
-		       "background-color:white;"
+		       // "padding:0px;"
+		       // "margin:0px;"
+		       // "background-color:white;"
 		       //"padding-left:7px;"
-		       "%s"
+		       //"%s"
 		       //"background-color:%s;"//lightblue;"
 		       //"foreground-color:%s;"
 		       //"overflow:scroll;"
 		       //"overflow-scrolling:touch;"
 		       "\">"
-		       */
 
 			"<iframe width=\"%lipx\" height=\"%lipx\" "
 			//"scrolling=yes "
-			/*
-			"style=\"background-color:white;"
-			"padding-right:0px;"
+
+			//"style=\"background-color:white;"
+			//"padding-right:0px;"
 			//"%s\" "
-			"scrolling=no "
-			"frameborder=no "
+			//"scrolling=no "
+			//"frameborder=no "
 			//"src=\"http://neo.diffbot.com:8000/search?"
-			*/
 
 			// frameborder=no
 			"%s"
@@ -6390,3 +6606,4 @@ bool sendPageWidget ( TcpSocket *s , HttpRequest *hr ) {
 					    NULL, // cookie
 					    "UTF-8"); // charset
 }
+*/

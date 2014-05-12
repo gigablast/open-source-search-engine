@@ -744,7 +744,7 @@ bool Msg3a::gotAllShardReplies ( ) {
 			     i                                        ,
 			     docIds [j] ,
 			     (long)g_titledb.getDomHash8FromDocId(docIds[j]),
-			      (float)scores[j] );
+			      scores[j] );
 		}
 	}
 
@@ -1130,11 +1130,11 @@ bool Msg3a::mergeLists ( ) {
 			// print out score_t
 			logf(LOG_DEBUG,"query: msg3a: [%lu] "
 			    "%03li) merged docId=%012llu "
-			    "score=%.01f hosthash=0x%lx",
+			    "score=%f hosthash=0x%lx",
 			    (unsigned long)this, 
 			     i,
 			     m_docIds    [i] ,
-			     (float)m_scores    [i] ,
+			     (double)m_scores    [i] ,
 			     sh );
 		}
 	}

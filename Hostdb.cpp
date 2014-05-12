@@ -2297,6 +2297,14 @@ uint32_t Hostdb::getShardNumByTermId ( void *k ) {
 	return m_map [(*(uint16_t *)((char *)k + 16))>>3];
 }
 
+// uint32_t Hostdb::getShardNumFromTermId ( long long termId ) {
+// 	key144_t sk;
+// 	// make fake posdb key
+// 	makeStartKey ( &sk, termId );
+// 	// and use this
+// 	return getShardNumByTermId ( &sk );
+// }
+
 // . if false, we don't split index and date lists, other dbs are unaffected
 // . this obsolets the g_*.getGroupId() functions
 // . this allows us to have any # of groups in a stripe, not just power of 2
@@ -2612,7 +2620,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# A proxy will be running on 10.5.66.18:\n");
 	sb.safePrintf("#proxy 6001 7001 8001 9001 10.5.66.18\n");
 
-	log("%shosts.conf does not exist, creating.",cwd);
+	log("%s/hosts.conf does not exist, creating.",cwd);
 	sb.save ( cwd , "hosts.conf" );
 	return true;
 }

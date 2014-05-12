@@ -75,6 +75,12 @@ class Collectiondb  {
 	class CollectionRec *getRec ( class HttpRequest *r ,
 				      bool useDefaultRec = true );
 
+	// do not support diffbot style token/name style for this one:
+	char *getDefaultColl ( HttpRequest *r ) ;
+
+	//class CollectionRec *getRec2 ( class HttpRequest *r ,
+	//			       bool useDefaultRec = true );
+	
 	// . get collectionRec from name
 	// returns NULL if not available
 	class CollectionRec *getRec ( char *coll );
@@ -368,6 +374,8 @@ class CollectionRec {
 	// for regular crawls
 	bool rebuildUrlFilters2();
 
+	bool rebuildChineseRules();
+
 	bool m_urlFiltersHavePageCounts;
 
 	// moved from SpiderColl so we can load up at startup
@@ -408,6 +416,8 @@ class CollectionRec {
 	// spidered and begin the next round
 	long   m_spiderRoundNum;
 
+	char  m_makeImageThumbnails;
+	char  m_indexSpiderReplies;
 	char  m_indexBody;
 
 	//char  m_useDatedb               ;

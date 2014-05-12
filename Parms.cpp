@@ -124,7 +124,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) ;
 
 
 // from PageBasic.cpp:
-bool updateSiteListTables(collnum_t collnum,bool addSeeds,char *siteListArg);
+bool updateSiteListBuf(collnum_t collnum,bool addSeeds,char *siteListArg);
 
 bool CommandUpdateSiteList ( char *rec ) {
 	// caller must specify collnum
@@ -145,11 +145,12 @@ bool CommandUpdateSiteList ( char *rec ) {
 	CollectionRec *cr = g_collectiondb.getRec ( collnum );
 	// get the sitelist
 	char *data = getDataFromParmRec ( rec );
-	// update it
-	updateSiteListTables ( collnum ,
-			       true , // add NEW seeds?
-			       data // entire sitelist
-			       );
+	// update the table that maps site to whether we should spider it
+	// and also add newly introduced sites in "data" into spiderdb.
+	updateSiteListBuf ( collnum ,
+			    true , // add NEW seeds?
+			    data // entire sitelist
+			    );
 	// now that we deduped the old site list with the new one for
 	// purposes of adding NEW seeds, we can do the final copy
 	cr->m_siteListBuf.set ( data );
@@ -445,7 +446,7 @@ bool CommandRestartColl ( char *rec , WaitEntry *we ) {
 	// re-add the buf so it re-seeds spiderdb. it will not dedup these
 	// urls in "oldSiteList" with "m_siteListBuf" which is now empty.
 	// "true" = addSeeds.
-	updateSiteListTables ( newCollnum , true , oldSiteList );
+	updateSiteListBuf ( newCollnum , true , oldSiteList );
 	// now put it back
 	if ( oldSiteList ) cr->m_siteListBuf.safeStrcpy ( oldSiteList );
 
@@ -501,7 +502,7 @@ bool CommandResetColl ( char *rec , WaitEntry *we ) {
 	// re-add the buf so it re-seeds spiderdb. it will not dedup these
 	// urls in "oldSiteList" with "m_siteListBuf" which is now empty.
 	// "true" = addSeeds.
-	updateSiteListTables ( newCollnum , true , oldSiteList );
+	updateSiteListBuf ( newCollnum , true , oldSiteList );
 	// now put it back
 	if ( oldSiteList ) cr->m_siteListBuf.safeStrcpy ( oldSiteList );
 
@@ -1318,9 +1319,9 @@ bool printDropDown ( long n , SafeBuf* sb, char *name, long select,
 bool printDropDownProfile ( SafeBuf* sb, char *name, long select ) {
 	sb->safePrintf ( "<select name=%s>", name );
 	// the type of url filters profiles
-	char *items[] = {"custom","web","news"};
+	char *items[] = {"custom","web","news","chinese"};
 	char *s;
-	for ( long i = 0 ; i < 3 ; i++ ) {
+	for ( long i = 0 ; i < 4 ; i++ ) {
 		if ( i == select ) s = " selected";
 		else               s = "";
 		sb->safePrintf ("<option value=%li%s>%s",i,s,items[i]);
@@ -1386,9 +1387,13 @@ bool Parms::printParms (SafeBuf* sb, TcpSocket *s , HttpRequest *r) {
 	long  page = g_pages.getDynamicPageNumber ( r );
 	long nc = r->getLong("nc",1);
 	long pd = r->getLong("pd",1);
-	char *coll = r->getString ( "c"   );
-	if ( ! coll || ! coll[0] ) coll = "main";
-	CollectionRec *cr = g_collectiondb.getRec ( coll );
+	char *coll = g_collectiondb.getDefaultColl(r);
+	CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
+	//char *coll = r->getString ( "c"   );
+	//if ( ! coll || ! coll[0] ) coll = "main";
+	//CollectionRec *cr = g_collectiondb.getRec ( coll );
+	// if "main" collection does not exist, try another
+	//if ( ! cr ) cr = getCollRecFromHttpRequest ( r );
 	printParms2 ( sb, page, cr, nc, pd,0,0 , s);
 	return true;
 }
@@ -7702,7 +7707,9 @@ void Parms::init ( ) {
 		"tools. "
 		"Limit list to 300MB. If you have a lot of INDIVIDUAL urls "
 		"to add then consider using the <a href=/admin/addurl>add "
-		"urls</a> interface.";
+		"urls</a> interface. <b>IF YOU WANT TO SPIDER THE WHOLE "
+		"WEB</b> then only use the <i>seed:</i> directives here "
+		"lest you limit yourself to a set of domains.";
 	m->m_cgi   = "sitelist";
 	m->m_off   = (char *)&cr.m_siteListBuf - x;
 	m->m_page  = PAGE_BASIC_SETTINGS;
@@ -8079,6 +8086,14 @@ void Parms::init ( ) {
 	m->m_title = "log debug http messages";
 	m->m_cgi   = "ldh";
 	m->m_off   = (char *)&g_conf.m_logDebugHttp - g;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_priv  = 1;
+	m++;
+
+	m->m_title = "log debug image messages";
+	m->m_cgi   = "ldi";
+	m->m_off   = (char *)&g_conf.m_logDebugImage - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_priv  = 1;
@@ -8518,24 +8533,27 @@ void Parms::init ( ) {
 	m->m_flags = PF_DIFFBOT;
 	m++;
 
-	m->m_cgi   = "dbcrawlstarttime";
-	m->m_xml   = "diffbotCrawlStartTime";
+	m->m_cgi   = "createdtime";
+	m->m_xml   = "collectionCreatedTime";
+	m->m_desc  = "Time when this collection was created, or time of "
+		"the last reset or restart.";
 	m->m_off   = (char *)&cr.m_diffbotCrawlStartTime - x;
 	m->m_type  = TYPE_LONG;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "0";
-	m->m_flags = PF_DIFFBOT;
+	m->m_flags = 0;//PF_DIFFBOT;
 	m++;
 
-	m->m_cgi   = "dbcrawlendtime";
-	m->m_xml   = "diffbotCrawlEndTime";
+	m->m_cgi   = "spiderendtime";
+	m->m_xml   = "crawlEndTime";
+	m->m_desc  = "If spider is done, when did it finish.";
 	m->m_off   = (char *)&cr.m_diffbotCrawlEndTime - x;
 	m->m_type  = TYPE_LONG;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "0";
-	m->m_flags = PF_DIFFBOT;
+	m->m_flags = 0;//PF_DIFFBOT;
 	m++;
 
 	m->m_cgi   = "dbcrawlname";
@@ -10048,6 +10066,28 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 0;
+	m++;
+
+	m->m_title = "make image thumbnails";
+	m->m_desc  = "Try to find the best image on each page and "
+		"store it as a thumbnail for presenting in the search "
+		"results.";
+	m->m_cgi   = "mit";
+	m->m_off   = (char *)&cr.m_makeImageThumbnails - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m++;
+
+	m->m_title = "index spider replies";
+	m->m_desc  = "Index the spider replies of every url the spider "
+		"attempts to spider. Search for them using special "
+		"query operators like type:status or gberrorstr:success or "
+		"stats:gberrornum to get a histogram. They will not otherwise "
+		"show up in the search results.";
+	m->m_cgi   = "isr";
+	m->m_off   = (char *)&cr.m_indexSpiderReplies - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
 	m++;
 
 	// i put this in here so i can save disk space for my global
@@ -15513,8 +15553,9 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "stream search results";
-	m->m_desc  = "Stream search results back on socket as they arrive. Useful "
-		"when thousands of search results are requested.";
+	m->m_desc  = "Stream search results back on socket as they arrive. "
+		"Useful when thousands/millions of search results are "
+		"requested.";
 	m->m_soff  = (char *)&si.m_streamResults - y;
 	m->m_type  = TYPE_CHAR;
 	m->m_obj   = OBJ_SI;
@@ -15524,6 +15565,36 @@ void Parms::init ( ) {
 	m->m_flags = PF_API;
 	m++;
 
+
+	m->m_title = "max serp docid";
+	m->m_desc  = "Start displaying results after this score/docid pair. "
+		"Used by widget to append results to end when index is "
+		"volatile.";
+	m->m_def   = "0";
+	m->m_soff  = (char *)&si.m_minSerpDocId - y;
+	m->m_type  = TYPE_LONG_LONG;
+	m->m_sparm = 1;
+	m->m_scgi  = "minserpdocid";
+	m->m_flags = PF_API;
+	m->m_smin  = 0;
+	m->m_sprpg = 0;
+	m->m_sprpp = 0;
+	m++;
+
+	m->m_title = "max serp score";
+	m->m_desc  = "Start displaying results after this score/docid pair. "
+		"Used by widget to append results to end when index is "
+		"volatile.";
+	m->m_def   = "0";
+	m->m_soff  = (char *)&si.m_maxSerpScore - y;
+	m->m_type  = TYPE_DOUBLE;
+	m->m_sparm = 1;
+	m->m_scgi  = "maxserpscore";
+	m->m_flags = PF_API;
+	m->m_smin  = 0;
+	m->m_sprpg = 0;
+	m->m_sprpp = 0;
+	m++;
 
 	m->m_title = "restrict search to this url";
 	m->m_desc  = "X is the url.";
@@ -16407,6 +16478,7 @@ void Parms::init ( ) {
 		if ( t == TYPE_DATE2          ) size = 4;
 		if ( t == TYPE_DATE           ) size = 4;
 		if ( t == TYPE_FLOAT          ) size = 4;
+		if ( t == TYPE_DOUBLE         ) size = 8;
 		if ( t == TYPE_IP             ) size = 4;
 		if ( t == TYPE_RULESET        ) size = 4;
 		if ( t == TYPE_LONG           ) size = 4;
@@ -18755,13 +18827,14 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "<td>"
 			  "This is true if the url was directly "
 			  "injected from the "
-			  "/inject page or API."
+			  "<a href=/admin/inject>inject page</a> or API."
 			  "</td></tr>"
 
 			  "<tr class=poo><td>isdocidbased | !isdocidbased</td>"
 			  "<td>"
 			  "This is true if the url was added from the "
-			  "reindex interface. The request does not contain "
+			  "<a href=/admin/reindex>query reindex</a> "
+			  "interface. The request does not contain "
 			  "a url, but only a docid, that way we can add "
 			  "millions of search results very quickly without "
 			  "having to lookup each of their urls. You should "
@@ -18951,6 +19024,16 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "(unknown), \"en\" or \"de\". "
 			  "See table below for supported language "
 			  "abbreviations.</td></tr>"
+
+			  "<tr class=poo><td><nobr>parentlang==zh_cn,zh_tw,xx"
+			  "</nobr></td>"
+			  "<td>Matches if "
+			  "the url's referring parent url is primarily in "
+			  "this language. Useful for prioritizing spidering "
+			  "pages of a certain language."
+			  "See table below for supported language "
+			  "abbreviations."
+			  "</td></tr>"
 
 			  /*
 			  "<tr class=poo><td>link:gigablast</td>"
