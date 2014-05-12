@@ -3123,7 +3123,8 @@ void RdbTree::cleanTree ( ) { // char **bases ) {
 }
 
 long  RdbTree::getNumNegativeKeys ( collnum_t collnum ) { 
-	if ( m_rdbId < 0 ) { char *xx=NULL;*xx=0; }
+	// fix for statsdb or other collectionless rdbs
+	if ( m_rdbId < 0 ) return m_numNegativeKeys;
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return 0;
 	//if ( ! m_countsInitialized ) { char *xx=NULL;*xx=0; }
@@ -3131,7 +3132,8 @@ long  RdbTree::getNumNegativeKeys ( collnum_t collnum ) {
 }
 
 long  RdbTree::getNumPositiveKeys ( collnum_t collnum ) { 
-	if ( m_rdbId < 0 ) { char *xx=NULL;*xx=0; }
+	// fix for statsdb or other collectionless rdbs
+	if ( m_rdbId < 0 ) return m_numPositiveKeys;
 	CollectionRec *cr = g_collectiondb.m_recs[collnum];
 	if ( ! cr ) return 0;
 	//if ( ! m_countsInitialized ) { char *xx=NULL;*xx=0; }
