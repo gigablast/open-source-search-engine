@@ -119,7 +119,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 	char *filename = "hosts.conf";
 	//if ( strcmp ( filename , "hosts.conf" ) == 0 )
 	//	filename = "localhosts.conf";
-	bool triedEtc = false;
+	//bool triedEtc = false;
 
 	// for now we autodetermine
 	if ( hostIdArg != -1 ) { char *xx=NULL;*xx=0; }
@@ -181,17 +181,18 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		if ( this == &g_hostdb2 ) return true;
 		g_errno = ENOHOSTSFILE; 
 		// if doing localhosts.conf now try hosts.conf
-		if ( ! triedEtc ) { //strcmp(filename,"hosts.conf") == 0 ) {
-			triedEtc = true;
-			dir = "/etc/gigablast/";
-			//filename = "hosts.conf";
-			g_errno = 0;
-			goto retry;
-		}
+		// if ( ! triedEtc ) { //strcmp(filename,"hosts.conf") == 0 ) {
+		// 	triedEtc = true;
+		// 	dir = "/etc/gigablast/";
+		// 	//filename = "hosts.conf";
+		// 	g_errno = 0;
+		// 	goto retry;
+		// }
 		// now we generate one if that is not there
 		if ( ! m_created ) {
 			m_created = true;
 			g_errno = 0;
+			dir = cwd;
 			createHostsConf( cwd );
 			goto retry;
 		}
@@ -2640,7 +2641,7 @@ bool Hostdb::createHostsConf( char *cwd ) {
 	sb.safePrintf("# A proxy will be running on 10.5.66.18:\n");
 	sb.safePrintf("#proxy 6001 7001 8001 9001 10.5.66.18\n");
 
-	log("%s/hosts.conf does not exist, creating.",cwd);
+	log("%shosts.conf does not exist, creating.",cwd);
 	sb.save ( cwd , "hosts.conf" );
 	return true;
 }

@@ -979,7 +979,7 @@ int main2 ( int argc , char *argv[] ) {
 	// it might not be there, might be a simple "./gb" 
 	char *cmd = "";
 	if ( argc >= 2 ) {
-		//cmdarg = 1;
+		cmdarg = 1;
 		cmd = argv[1];
 	}
 
