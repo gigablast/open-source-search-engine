@@ -74,7 +74,7 @@ Once installed visit your <a href=http://127.0.0.1:8000/>local port 8000</a> to 
 
 <br><br>
 
-<table><tr><td colspan=2><b>Installed Files</b></td></tr></table>
+<table><tr><td colspan=2><b>Installed Files</b></td></tr>
 <tr><td>/var/gigablast/data0/</td><td>Directory of Gigablast binary and data files</td></tr>
 <tr><td>/etc/gigablast/hosts.conf</td><td>Describes the hosts in the distributed cluster. Multiple hosts may exist one one physical server. Initially hosts.conf is just configured to use /var/gigablast/data0/ as the only host. See the section on <a href=#scaling>scaling</a> to add more hosts.</td></tr>
 <tr><td>/etc/init.d/gb</td><td>start up script link</td></tr>
@@ -114,11 +114,11 @@ You will need the following packages installed<br>
 
 <b>1.</b> Do <b>apt-get install make g++ gcc-multilib lib32stdc++6</b>
 <br>
-<b>2.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine>Gigablast source code</a> using <b>wget --no-check-certificate "https://github.com/gigablast/open-source-search-engine/archive/master.zip"</b>, unzip it and cd into it.
+<b>2.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine>Gigablast source code</a> using <b>wget --no-check-certificate "https://github.com/gigablast/open-source-search-engine/archive/master.zip"</b>, unzip it and cd into it. (optionally use <b>git clone https://github.com/gigablast/open-source-search-engine.git ./github</b> if you have <i>git</i> installed.)
 <br>
 <b>3.</b> Run <b>make</b> to compile. (e.g. use 'make -j 4' to compile on four cores)
 <br>
-<b>4.</b> Run <b>./gb 0 -d</b>  to start a single gigablast node which listens on port 8000 running in daemon mode.
+<b>4.</b> Run <b>./gb -d</b>  to start a single gigablast node which listens on port 8000 running in daemon mode (-d).
 <br>
 <b>5.</b> The first time you run gb, wait about 30 seconds for it to build some files. Check the log file to see when it completes.
 <br>
@@ -171,6 +171,7 @@ You will need the following packages installed<br>
 <li> Sorting. Sort the search results by meta tags or JSON fields that contain numbers, simply by adding something like gbsortby:price or gbrevsortby:price as a query term, assuming you have meta price tags.
 <li> Easy Scaling. Add new servers to the hosts.conf file then click 'rebalance shards' to automatically rebalance the sharded data.
 <li> Using &stream=1 can stream back millions of search results for a query without running out of memory.
+<li> Makes and displays thumbnail images in the search results.
 <li> Nested boolean queries using AND, OR, NOT operators.
 <li> Federated search over multiple Gigablast collections using syntax like &c=mycoll1+mycoll2+mycoll3+...
 <li> Built-in support for <a href=http://www.diffbot.com/products/automatic/>diffbot.com's api</a>, which extracts various entities from web sites, like products, articles, etc. But you will need to get a free token from them for access to their API.
