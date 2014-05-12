@@ -1595,6 +1595,7 @@ class XmlDoc {
 	XmlDoc *m_dx;
 	char *m_diffbotObj;
 	SafeBuf m_diffbotReply;
+	SafeBuf m_v3buf;
 	SafeBuf *m_tokenizedDiffbotReplyPtr;
 	SafeBuf  m_tokenizedDiffbotReply;
 	long m_diffbotReplyError;
