@@ -309,7 +309,7 @@ typedef enum {
 	ifk_dumpmissing = 30,
 	ifk_removedocids = 31,
 	ifk_dumpdups = 32,
-	ifk_install2 = 33,
+	//ifk_install2 = 33,
 	ifk_tmpstart = 41,
 	ifk_installtmpgb = 42,
 	ifk_proxy_kstart = 43,
@@ -1852,12 +1852,12 @@ int main2 ( int argc , char *argv[] ) {
 		return install ( ifk_install , h1 , NULL , NULL , h2 );
 	}
 	// gb install
-	if ( strcmp ( cmd , "install2" ) == 0 ) {	
-		// get hostId to install TO (-1 means all)
-		long hostId = -1;
-		if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
-		return install ( ifk_install2 , hostId );
-	}
+	// if ( strcmp ( cmd , "install2" ) == 0 ) {	
+	// 	// get hostId to install TO (-1 means all)
+	// 	long hostId = -1;
+	// 	if ( cmdarg + 1 < argc ) hostId = atoi ( argv[cmdarg+1] );
+	// 	return install ( ifk_install2 , hostId );
+	// }
 	// gb installgb
 	if ( strcmp ( cmd , "installgb" ) == 0 ) {	
 		// get hostId to install TO (-1 means all)
@@ -4393,6 +4393,11 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 	char tmpBuf[2048];
 	iptab.set(4,4,64,tmpBuf,2048,true,0,"iptsu");
 
+	long maxOut = 6;
+
+	// this is a big rcp so only do one at a time...
+	if  ( installFlag == ifk_install ) maxOut = 1;
+
 	// go through each host
 	for ( long i = 0 ; i < g_hostdb.getNumHosts() ; i++ ) {
 		Host *h2 = g_hostdb.getHost(i);
@@ -4402,7 +4407,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		iptab.addScore((long *)&h2->m_ip);
 		long score = iptab.getScore32(&h2->m_ip);
 		char *amp = " &";
-		if ( (score % 6) == 0 ) amp = "";
+		if ( (score % maxOut) == 0 ) amp = "";
 			
 		// limit install to this hostId if it is >= 0
 		//if ( hostId >= 0 && h2->m_hostId != hostId ) continue;
@@ -4523,103 +4528,28 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		if      ( installFlag == ifk_install ) {
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
-			sprintf(tmp,
-				"rcp -pr "
-				"%sgb "
-				//"%sgbfilter "
-				"%shosts.conf "
-				"%slocalhosts.conf "
-				//"%shosts2.conf "
-				"%sgb.conf "
-				"%slocalgb.conf "
-				"%stmpgb "
-				//"%scollections.dat "
-				"%sgb.pem "
-				//"%sdict "
-				"%sucdata "
-				//"%stop100000Alexa.txt "
-				//"%slanglist "
-				"%santiword "
-				//"%s.antiword "
-				"badcattable.dat "
-				"catcountry.dat "
-				"%spdftohtml "
-				"%spstotext "
-				//"%sxlhtml "
-				"%sppthtml "
-				//"%stagdb*.xml "
-				"%shtml "
-				"%scat "
 
-				"%santiword-dir "
-				"%sgiftopnm "
-				"%spostalCodes.txt "
-				"%stifftopnm "
-				"%sppmtojpeg "
-				"%spnmscale "
-				"%spngtopnm "
-				"%sjpegtopnm "
-				"%sbmptopnm "
-				"%swiktionary-buf.txt "
-				"%swiktionary-lang.txt "
-				"%swiktionary-syns.dat "
-				"%swikititles.txt.part1 "
-				"%swikititles.txt.part2 "
-				"%swikititles2.dat "
-				"%sunifiedDict.txt "
-				"%sunifiedDict-buf.txt "
-				"%sunifiedDict-map.dat "
+			char *srcDir = "./";
+			SafeBuf fileListBuf;
+			g_process.getFilesToCopy ( srcDir , &fileListBuf );
 
-				"%s:%s"
-				,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
+			// include this one as well for install
+			fileListBuf.safePrintf(" %shosts.conf",srcDir);
+			// the dmoz data dir if there
+			fileListBuf.safePrintf(" %scat",srcDir);
 
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-				dir,
-
-				iptoa(h2->m_ip),
-				h2->m_dir);
-			log(LOG_INIT,"admin: %s", tmp);
-			system ( tmp );
-			sprintf(tmp,
-				"rcp %sgb.conf %s:%sgb.conf",
-				dir ,
-				//h->m_hostId ,
-				iptoa(h2->m_ip),
-				h2->m_dir);
-			        //h2->m_hostId);
+			SafeBuf tmpBuf;
+			tmpBuf.safePrintf(
+					  "rcp -pr %s %s:%s"
+					  , fileListBuf.getBufStart()
+					  , iptoa(h2->m_ip)
+					  , h2->m_dir
+					  );
+			char *tmp = tmpBuf.getBufStart();
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 		}
+		/*
 		if      ( installFlag == ifk_install2 ) {
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
@@ -4682,6 +4612,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			log(LOG_INIT,"admin: %s", tmp);
 			system ( tmp );
 		}
+		*/
 		else if ( installFlag == ifk_installgb ) {
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
