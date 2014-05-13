@@ -4506,13 +4506,14 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"ssh %s \"cd %s ; "
 				"cp -f gb gb.oldsave ; "
 				"mv -f gb.installed gb ; "
-				"./gb %li "
+				// hostid is now inferred from path
+				"./gb "//%li "
 				"removedocids %s %s %li "
 				">& ./removelog%03li &\" &",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 				//h2->m_dir      ,
-				h2->m_hostId   ,
+				//h2->m_hostId   ,
 				coll           ,
 				dir            , // really docidsFile
 				h2->m_hostId   ,
@@ -4697,13 +4698,14 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				//"./gb %li >& ./log%03li &\" %s",
 				// without "sleep 1" ssh seems to exit
 				// bash before it can start gb and gb does
-				// not start up
-				"./gb %li & sleep 1\" %s",
+				// not start up.
+				// hostid is now inferred from path.
+				"./gb & sleep 1\" %s",
 				iptoa(h2->m_ip),
 				h2->m_dir      ,
 				//tmp2           ,
 				//h2->m_dir      ,
-				h2->m_hostId   ,
+				//h2->m_hostId   ,
 				//h2->m_hostId   ,
 				amp);
 			// log it
@@ -4798,7 +4800,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 				"mv ./log%03li ./log%03li-\\`date '+"
 				"%%Y_%%m_%%d-%%H:%%M:%%S'\\` ; " 
 
-				"./gb %li "
+				"./gb "//%li "
 				"\\$ADDARGS "
 				//" ;"
 				" >& ./log%03li ;"
@@ -4816,7 +4818,8 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 				//h2->m_dir      ,
 
-				h2->m_hostId   ,
+				// hostid is now inferred from path
+				//h2->m_hostId   ,
 				h2->m_hostId   ,
 				amp );
 
