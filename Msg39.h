@@ -207,7 +207,7 @@ class Msg39 {
 	// retrieves the lists needed as specified by termIds and PosdbTable
 	bool getLists () ;
 	// called when lists have been retrieved, uses PosdbTable to hash lists
-	bool gotLists ( bool updateReadInfo ) ;
+	bool intersectLists ( );//bool updateReadInfo ) ;
 	// this is called after thread exits, or if thread creation failed
 	bool addedLists();
 
@@ -278,9 +278,11 @@ class Msg39 {
 	long        m_numDocIds;
 	Msg51       m_msg51;
 	bool        m_gotClusterRecs;
-	void        estimateHits   ();
+	bool        controlLoop();
+	long m_phase;
+	void        estimateHitsAndSendReply   ();
 	bool        setClusterRecs ();
-	void        gotClusterRecs ();
+	bool        gotClusterRecs ();
 
 	// hack stuff
 	void *m_tmp;
