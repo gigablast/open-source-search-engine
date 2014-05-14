@@ -2573,8 +2573,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		// As of the update on 5/13/2014, the end of sb may have whitespace, so first move away from that
 		int distance; // distance from end to first non-whitespace char
 		char *end;
-		for (int i = 1; i < sb->getLength(); i++) {
-		    distance = i;
+		for (distance = 1; distance < sb->getLength(); distance++) {
 		    end = sb->getBuf() - distance;
 		    if (!is_wspace_a(*end))
 		        break;
