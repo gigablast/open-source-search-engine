@@ -1426,6 +1426,7 @@ class XmlDoc {
 	long m_ei;
 	long m_lastLaunch;
 	Msg22Request m_msg22Request;
+	Msg22Request m_msg22Requestc;
 	Msg22 m_msg22a;
 	Msg22 m_msg22b;
 	Msg22 m_msg22c;

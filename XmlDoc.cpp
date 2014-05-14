@@ -10479,7 +10479,7 @@ long long *XmlDoc::getAvailDocIdOnly ( long long preferredDocId ) {
 	if ( ! cr ) return NULL;
 	// pre-validate it
 	m_availDocIdValid = true;
-	if ( ! m_msg22c.getAvailDocIdOnly ( &m_msg22Request ,
+	if ( ! m_msg22c.getAvailDocIdOnly ( &m_msg22Requestc ,
 					    preferredDocId ,
 					    cr->m_coll ,
 					    m_masterState ,
