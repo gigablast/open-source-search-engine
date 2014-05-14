@@ -296,7 +296,7 @@ void Msg22::gotReply ( ) {
 		m_found = false;
 		// get docid provided
 		long long d = *(long long *)reply;
-		// this is -1 if none available
+		// this is -1 or 0 if none available
 		m_availDocId = d;
 		// nuke the reply
 		mfree ( reply , maxSize , "Msg22");
@@ -311,6 +311,11 @@ void Msg22::gotReply ( ) {
 		m_callback ( m_state );
 		return;
 	}
+
+	// sanity check. must either be an empty reply indicating nothing
+	// available or an 8 byte reply above!
+	if ( m_r->m_getAvailDocIdOnly ) { char *xx=NULL;*xx=0; }
+
 	// otherwise, it was found
 	m_found = true;
 
@@ -909,6 +914,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 			// make sure our available docids are availble!
 			if ( dd == ad1 ) ad1++;
 			if ( dd == ad2 ) ad2++;
+			continue;
 		}
 		// if we had a url make sure uh48 matches
 		else if ( r->m_url[0] ) {
@@ -932,7 +938,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 		docIdWasFound = true;
 
 		// do not set back titlerec if just want avail docid
-		if ( r->m_getAvailDocIdOnly ) continue;
+		//if ( r->m_getAvailDocIdOnly ) continue;
 
 		// ok, if just "checking tfndb" no need to go further
 		if ( r->m_justCheckTfndb ) {
@@ -978,10 +984,12 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	if ( ad == 0LL ) ad = ad1;
 	// if "docId" was unmatched that should be the preferred available
 	// docid then...
-	if ( ! docIdWasFound && r->m_getAvailDocIdOnly && ad != r->m_docId ) { 
-		char *xx=NULL;*xx=0; }
-	// remember it
+	//if(! docIdWasFound && r->m_getAvailDocIdOnly && ad != r->m_docId ) { 
+	//	char *xx=NULL;*xx=0; }
+	// remember it. this might be zero if none exist!
 	st->m_availDocId = ad;
+	// note it
+	if ( ad == 0LL ) log("msg22: avail docid is 0 for pd=%lli!",pd);
 
 
 	// . ok, return an available docid
