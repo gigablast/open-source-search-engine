@@ -416,7 +416,7 @@ bool Msg39::controlLoop ( ) {
 	}
 
 	// ok, we are done, get cluster recs of the winning docids
-	if ( m_phase == 4 ) {
+	if ( m_phase == 3 ) {
 		m_phase++;
 		// this loads them using msg51 from clusterdb
 		if ( ! setClusterRecs ( ) ) return false;
