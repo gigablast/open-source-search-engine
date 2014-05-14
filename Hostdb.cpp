@@ -771,11 +771,23 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 				 "conf: working dir must start "
 				 "with / in %s line %li",filename,line);
 		}
-		// add slash if none there
-		if ( wdir[wdirlen-1] !='/' )
-			wdir[wdirlen++] = '/';
 		//wdir [ wdirlen ] = '\0';
 
+		// take off slash if there
+		if ( wdir[wdirlen-1]=='/' ) wdir[--wdirlen]='\0';
+
+		// get real path
+		char tmp[256];
+		long tlen = readlink ( wdir , tmp , 250 );
+		// if we got the actual path, copy that over
+		if ( tlen != -1 ) {
+			strncpy(wdir,tmp,tlen);
+			wdirlen = tlen;
+		}
+
+		// add slash if none there
+		if ( wdir[wdirlen-1] !='/' ) wdir[wdirlen++] = '/';
+			
 		// copy it over
 		//strcpy ( m_hosts[i].m_dir , wdir );
 		memcpy(m_hosts[i].m_dir, wdir, wdirlen);

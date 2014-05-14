@@ -10473,6 +10473,7 @@ long long *XmlDoc::getAvailDocIdOnly ( long long preferredDocId ) {
 		return NULL;
 	}
 	if ( m_availDocIdValid ) 
+		// this is 0 or -1 if no avail docid was found
 		return &m_msg22c.m_availDocId;
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -25059,11 +25060,18 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 	// try to get an available docid, preferring "d" if available
 	long long *uqd = getAvailDocIdOnly ( d );
 	if ( ! uqd || uqd == (void *)-1 ) return  (SafeBuf *)uqd;
-	// sanity
-	if ( *uqd <= 0 || *uqd > MAX_DOCID ) { char *xx=NULL;*xx=0; }
 
 	// reset just in case
 	m_spiderReplyMetaList.reset();
+
+	// sanity
+	if ( *uqd <= 0 || *uqd > MAX_DOCID ) { 
+		log("xmldoc: avail docid = %lli. could not index spider "
+		    "reply or %s",*uqd,m_firstUrl.m_url);
+		//char *xx=NULL;*xx=0; }
+		m_spiderReplyMetaListValid = true;
+		return &m_spiderReplyMetaList;
+	}
 
 	// the posdb table
 	HashTableX tt4;

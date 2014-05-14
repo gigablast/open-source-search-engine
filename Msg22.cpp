@@ -902,9 +902,6 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	// the probable docid is the PREFERRED docid in this case
 	if ( r->m_getAvailDocIdOnly ) pd = st->m_r->m_docId;
 
-	// turned off for now
-	//if ( r->m_getAvailDocIdOnly ) {char *xx=NULL;*xx=0;}
-
 	// . these are both meant to be available docids
 	// . if ad2 gets exhausted we use ad1
 	long long ad1 = st->m_docId1;
@@ -954,6 +951,9 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 
 		// flag that we matched m_docId
 		docIdWasFound = true;
+
+		// do not set back titlerec if just want avail docid
+		//if ( r->m_getAvailDocIdOnly ) continue;
 
 		// ok, if just "checking tfndb" no need to go further
 		if ( r->m_justCheckTfndb ) {
@@ -1006,10 +1006,6 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	// note it
 	if ( ad == 0LL && (r->m_getAvailDocIdOnly || r->m_url[0]) ) 
 		log("msg22: avail docid is 0 for pd=%lli!",pd);
-
-
-	// turned off for now
-	//if ( r->m_getAvailDocIdOnly ) {char *xx=NULL;*xx=0;}
 
 	// . ok, return an available docid
 	if ( r->m_url[0] || r->m_justCheckTfndb || r->m_getAvailDocIdOnly ) {
