@@ -315,7 +315,7 @@ void Msg22::gotReply ( ) {
 	m_found = true;
 
 	// if just checking tfndb, do not set this, reply will be empty!
-	if ( ! r->m_justCheckTfndb ) {
+	if ( ! r->m_justCheckTfndb ) { // && ! r->m_getAvailDocIdOnly ) {
 		*m_titleRecPtrPtr  = reply;
 		*m_titleRecSizePtr = replySize;
 	}
@@ -927,6 +927,9 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 			// compare that
 			if ( r->m_docId != dd ) continue;
 		}
+
+		// do not set back titlerec if just want avail docid
+		if ( r->m_getAvailDocIdOnly ) continue;
 
 		// flag that we matched m_docId
 		docIdWasFound = true;
