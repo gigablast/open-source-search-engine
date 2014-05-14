@@ -914,8 +914,7 @@ bool Msg39::intersectLists ( ) { // bool updateReadInfo ) {
 	if ( ! m_posdbTable.setQueryTermInfo () ) return true;
 
 	// print query term bit numbers here
-	for ( long i = 0 ; 
-	      m_debug && i < m_tmpq.getNumTerms() ; i++ ) {
+	for ( long i = 0 ; m_debug && i < m_tmpq.getNumTerms() ; i++ ) {
 		QueryTerm *qt = &m_tmpq.m_qterms[i];
 		//utf16ToUtf8(bb, 256, qt->m_term, qt->m_termLen);
 		char *tpc = qt->m_term + qt->m_termLen;

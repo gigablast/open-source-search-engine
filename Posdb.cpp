@@ -4536,13 +4536,16 @@ bool PosdbTable::setQueryTermInfo ( ) {
 	// . each queryTermInfo class corresponds to one bit in our bit vec
 	// . essentially each queryTermInfo is a query term, but it has
 	//   all the synonym and word forms for that query, etc.
-	m_vecSize = m_numQueryTermInfos;//numOperands / 8 ;
+	m_vecSize = m_numQueryTermInfos / 8;//numOperands / 8 ;
 	// allow an extra byte for remainders
 	if ( m_numQueryTermInfos % 8 ) m_vecSize++;
 	// now preallocate the hashtable. 0 niceness.
 	if ( m_q->m_isBoolean && 
 	     ! m_bt.set (8,m_vecSize,maxSlots,NULL,0,false,0,"booltbl"))
 		return false;
+	// . m_ct maps a boolean "bit vector" to a true/false value
+	// . each "bit" in the "bit vector" indicates if docid has that 
+	//   particular query term
 	if ( m_q->m_isBoolean && 
 	     ! m_ct.set (8,1,maxSlots,NULL,0,false,0,
 			 "booltbl"))
@@ -7232,8 +7235,9 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 			long long docId =*(long long *)m_bt.getKeyFromSlot(i);
 			// fix it up
 			if ( m_debug ) {
-				log("query: adding d=%llu vec[0]=%lx",
-				    docId,(long)vec[0]);
+				log("query: adding d=%llu bitVecSize=%li "
+				    "bitvec[0]=0x%lx (TRUE)",
+				    docId,m_vecSize,(long)vec[0]);
 			}
 			// shift up
 			docId <<= 2;
