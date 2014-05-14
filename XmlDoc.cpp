@@ -25180,6 +25180,9 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 	// hash the last spidered date, very useful!
 	hi.m_hashGroup = 0;// this doesn't matter, it's a numeric field
 	hi.m_desc      = "last spidered date";
+	// make this different so it doesn't coexist with regular results
+	// when someone does a gbsortby:gbspiderdate query
+	//hi.m_prefix    = "gbreplyspiderdate";
 	hi.m_prefix    = "gbspiderdate";
 	if ( reply->m_spideredTime <= 0 ) { char *xx=NULL;*xx=0; }
 	bufLen = sprintf ( buf , "%lu", reply->m_spideredTime );

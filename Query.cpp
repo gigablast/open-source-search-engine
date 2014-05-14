@@ -3134,6 +3134,15 @@ struct QueryField g_fields[] = {
 	{"gbmax", FIELD_GBNUMBERMAX, false,"Usage: gbmax:price:1.99"},
 
 
+	{"gbspiderdate",FIELD_GENERIC,false,
+	 "Example: gbspiderdate:1400081479 will return results that have "
+	 "that spider date timestamp (UTC)"},
+
+	// {"gbreplyspiderdate",FIELD_GENERIC,false,
+	//  "Example: gbspiderdate:1400081479 will return spider log "
+	//  "results that have "
+	//  "that spider date timestamp (UTC)"},
+
 	{"gbsortbyint", FIELD_GBSORTBYINT, false,
 	 "Example: gbsortbyint:intfield . Fields can be "
 	 "in JSON or in meta tag. "
