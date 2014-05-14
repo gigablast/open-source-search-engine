@@ -2570,12 +2570,20 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		// . let's hack the spidertime onto the end
 		// . so when we sort by that using gbsortby:spiderdate
 		//   we can ensure it is ordered correctly
-		char *end = sb->getBuf() -1;
+		// As of the update on 5/13/2014, the end of sb may have whitespace, so first move away from that
+		int distance; // distance from end to first non-whitespace char
+		char *end;
+		for (int i = 1; i < sb->getLength(); i++) {
+		    distance = i;
+		    end = sb->getBuf() - distance;
+		    if (!is_wspace_a(*end))
+		        break;
+		}
 		if ( si->m_format == FORMAT_JSON &&
 		     end > sb->getBufStart() &&
 		     *end == '}' ) {
 			// replace trailing } with spidertime}
-			sb->incrementLength(-1);
+			sb->incrementLength(-distance);
 			sb->safePrintf(",\"docId\":%lli", mr->m_docId);
 			// for deduping
 			//sb->safePrintf(",\"crc\":%lu",mr->m_contentHash32);
@@ -2583,8 +2591,6 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 			// so fix that shit here...
 			//float f = mr->m_lastSpidered;
 			//sb->safePrintf(",\"lastCrawlTimeUTC\":%.0f}",f);
-			sb->safePrintf(",\"lastCrawlTimeUTC\":%li\n",
-				       mr->m_lastSpidered);
 			// also include a timestamp field with an RFC 1123 formatted date
 			char timestamp[50];
 			struct tm *ptm = gmtime ( &mr->m_lastSpidered );
