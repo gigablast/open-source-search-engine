@@ -45,11 +45,15 @@ Log::Log () {
 	m_logTimestamps = false;
 }
 
-Log::~Log () { reset(); }
+Log::~Log () { 
+	//reset(); }
+	if ( m_fd >= 0 ) ::close ( m_fd );
+}	
 
 // close file if it's open
 void Log::reset ( ) {
-	if ( m_fd >= 0 ) ::close ( m_fd );
+	// comment this out otherwise we dont log the memleaks in Mem.cpp!!
+	//if ( m_fd >= 0 ) ::close ( m_fd );
 #ifdef DEBUG
 	if (g_dbuf)
 		mfree(g_dbuf,g_dbufSize,"Log: DebugBuffer");
