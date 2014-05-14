@@ -928,11 +928,11 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 			if ( r->m_docId != dd ) continue;
 		}
 
-		// do not set back titlerec if just want avail docid
-		if ( r->m_getAvailDocIdOnly ) continue;
-
 		// flag that we matched m_docId
 		docIdWasFound = true;
+
+		// do not set back titlerec if just want avail docid
+		if ( r->m_getAvailDocIdOnly ) continue;
 
 		// ok, if just "checking tfndb" no need to go further
 		if ( r->m_justCheckTfndb ) {
