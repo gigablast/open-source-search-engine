@@ -26,6 +26,8 @@ public:
 		return (m_url - (char *)&m_docId) + 1+gbstrlen(m_url); };
 	long getMinSize() {
 		return (m_url - (char *)&m_docId) + 1; };
+
+	Msg22Request() { m_inUse = 0; }
 };
 
 class Msg22 {

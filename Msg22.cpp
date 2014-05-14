@@ -296,7 +296,7 @@ void Msg22::gotReply ( ) {
 		m_found = false;
 		// get docid provided
 		long long d = *(long long *)reply;
-		// this is -1 if none available
+		// this is -1 or 0 if none available
 		m_availDocId = d;
 		// nuke the reply
 		mfree ( reply , maxSize , "Msg22");
@@ -311,6 +311,11 @@ void Msg22::gotReply ( ) {
 		m_callback ( m_state );
 		return;
 	}
+
+	// sanity check. must either be an empty reply indicating nothing
+	// available or an 8 byte reply above!
+	if ( m_r->m_getAvailDocIdOnly ) { char *xx=NULL;*xx=0; }
+
 	// otherwise, it was found
 	m_found = true;
 
@@ -345,6 +350,16 @@ public:
 	long long  m_availDocId;
 	long long  m_uh48;
 	class Msg22Request *m_r;
+	// free slot request here too
+	char *m_slotReadBuf;
+	long  m_slotAllocSize;
+	State22() {m_slotReadBuf = NULL;};
+	~State22() {
+		if ( m_slotReadBuf )
+			mfree(m_slotReadBuf,m_slotAllocSize,"st22");
+		m_slotReadBuf = NULL;
+	};
+		
 };
 
 static void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) ;
@@ -409,10 +424,16 @@ void handleRequest22 ( UdpSlot *slot , long netnice ) {
        }
        mnew ( st , sizeof(State22) , "Msg22" );
        
-       // store ptr
+       // store ptr to the msg22request
        st->m_r = r;
        // save for sending back reply
        st->m_slot = slot;
+
+       // then tell slot not to free it since m_r references it!
+       // so we'll have to free it when we destroy State22
+       st->m_slotAllocSize = slot->m_readBufMaxSize;
+       st->m_slotReadBuf   = slot->m_readBuf;
+       slot->m_readBuf = NULL;
 
        // . make the keys for getting recs from tfndb
        // . url recs map docid to the title file # that contains the titleRec
@@ -880,7 +901,6 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 
 	// the probable docid is the PREFERRED docid in this case
 	if ( r->m_getAvailDocIdOnly ) pd = st->m_r->m_docId;
-			
 
 	// . these are both meant to be available docids
 	// . if ad2 gets exhausted we use ad1
@@ -909,6 +929,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 			// make sure our available docids are availble!
 			if ( dd == ad1 ) ad1++;
 			if ( dd == ad2 ) ad2++;
+			continue;
 		}
 		// if we had a url make sure uh48 matches
 		else if ( r->m_url[0] ) {
@@ -932,7 +953,7 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 		docIdWasFound = true;
 
 		// do not set back titlerec if just want avail docid
-		if ( r->m_getAvailDocIdOnly ) continue;
+		//if ( r->m_getAvailDocIdOnly ) continue;
 
 		// ok, if just "checking tfndb" no need to go further
 		if ( r->m_justCheckTfndb ) {
@@ -978,11 +999,13 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	if ( ad == 0LL ) ad = ad1;
 	// if "docId" was unmatched that should be the preferred available
 	// docid then...
-	if ( ! docIdWasFound && r->m_getAvailDocIdOnly && ad != r->m_docId ) { 
-		char *xx=NULL;*xx=0; }
-	// remember it
+	//if(! docIdWasFound && r->m_getAvailDocIdOnly && ad != r->m_docId ) { 
+	//	char *xx=NULL;*xx=0; }
+	// remember it. this might be zero if none exist!
 	st->m_availDocId = ad;
-
+	// note it
+	if ( ad == 0LL && (r->m_getAvailDocIdOnly || r->m_url[0]) ) 
+		log("msg22: avail docid is 0 for pd=%lli!",pd);
 
 	// . ok, return an available docid
 	if ( r->m_url[0] || r->m_justCheckTfndb || r->m_getAvailDocIdOnly ) {
