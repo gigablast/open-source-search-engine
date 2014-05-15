@@ -252,6 +252,9 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 		if ( m_numDocIdSplits == 0 ) m_numDocIdSplits = 1;
 	}
 
+	// for testing
+	//m_numDocIdSplits = 3;
+
 	//if ( ! g_conf.m_doDocIdRangeSplitting )
 	//	m_numDocIdSplits = 1;
 
