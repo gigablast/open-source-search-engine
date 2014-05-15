@@ -1319,6 +1319,27 @@ class SpiderCache {
 
 extern class SpiderCache g_spiderCache;
 
+/////////
+//
+// we now include the firstip in the case where the same url
+// has 2 spiderrequests where one is a fake firstip. in that scenario
+// we will miss the spider request to spider, the waiting tree
+// node will be removed, and the spider round will complete, 
+// which triggers a waiting tree recompute and we end up spidering
+// the dup spider request right away and double increment the round.
+//
+/////////
+inline long long makeLockTableKey ( long long uh48 , long firstIp ) {
+	return uh48 ^ (unsigned long)firstIp;
+}
+
+inline long long makeLockTableKey ( SpiderRequest *sreq ) {
+	return makeLockTableKey(sreq->getUrlHash48(),sreq->m_firstIp);
+}
+
+inline long long makeLockTableKey ( SpiderReply *srep ) {
+	return makeLockTableKey(srep->getUrlHash48(),srep->m_firstIp);
+}
 
 
 class LockRequest {

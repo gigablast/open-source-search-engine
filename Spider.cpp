@@ -1745,27 +1745,6 @@ bool SpiderColl::updateSiteNumInlinksTable ( long siteHash32,
 	// success
 	return true;
 }
-/////////
-//
-// we now include the firstip in the case where the same url
-// has 2 spiderrequests where one is a fake firstip. in that scenario
-// we will miss the spider request to spider, the waiting tree
-// node will be removed, and the spider round will complete, 
-// which triggers a waiting tree recompute and we end up spidering
-// the dup spider request right away and double increment the round.
-//
-/////////
-inline long long makeLockTableKey ( long long uh48 , long firstIp ) {
-	return uh48 ^ (unsigned long)firstIp;
-}
-
-inline long long makeLockTableKey ( SpiderRequest *sreq ) {
-	return makeLockTableKey(sreq->getUrlHash48(),sreq->m_firstIp);
-}
-
-inline long long makeLockTableKey ( SpiderReply *srep ) {
-	return makeLockTableKey(srep->getUrlHash48(),srep->m_firstIp);
-}
 
 // . we call this when we receive a spider reply in Rdb.cpp
 // . returns false and sets g_errno on error
@@ -2023,6 +2002,7 @@ bool SpiderColl::isInDupCache ( SpiderRequest *sreq , bool addToCache ) {
 	if ( sreq->m_fakeFirstIp ) dupKey64 ^= 12345;
 	if ( sreq->m_isAddUrl    ) dupKey64 ^= 49387333;
 	if ( sreq->m_isInjecting ) dupKey64 ^= 3276404;
+	if ( sreq->m_isPageReindex) dupKey64 ^= 32999604;
 	if ( sreq->m_forceDelete ) dupKey64 ^= 29386239;
 	if ( sreq->m_hadReply    ) dupKey64 ^= 293294099;
 	if ( sreq->m_sameDom     ) dupKey64 ^= 963493311;
@@ -3689,6 +3669,7 @@ bool SpiderColl::scanListForWinners ( ) {
 	//long tailNode = -1;
 
 	key128_t finalKey;
+	long recCount = 0;
 
 	// how many spiders currently out for this ip?
 	//longoutNow=g_spiderLoop.getNumSpidersOutPerIp(m_scanningIp,m_collnum)
@@ -3701,6 +3682,8 @@ bool SpiderColl::scanListForWinners ( ) {
 		if ( list->isEmpty() ) break;
 		// get spiderdb rec in its serialized form
 		char *rec = list->getCurrentRec();
+		// count it
+		recCount++;
 		// sanity
 		memcpy ( (char *)&finalKey , rec , sizeof(key128_t) );
 		// skip to next guy
@@ -3750,7 +3733,7 @@ bool SpiderColl::scanListForWinners ( ) {
 		// . ignore docid-based requests if spidered the url afterwards
 		// . these are one-hit wonders
 		// . once done they can be deleted
-		if ( sreq->m_urlIsDocId &&
+		if ( sreq->m_isPageReindex && // urlIsDocId &&
 		     srep && 
 		     srep->m_spideredTime > sreq->m_addedTime ) {
 			if ( g_conf.m_logDebugSpider )
@@ -4063,7 +4046,8 @@ bool SpiderColl::scanListForWinners ( ) {
 			// debug note
 			if ( g_conf.m_logDebugSpider )
 				log("spider: skipping url lockkey=%lli in "
-				    "lock table",key);
+				    "lock table sreq.url=%s",key,
+				    sreq->m_url);
 			continue;
 		}
 
@@ -4368,9 +4352,10 @@ bool SpiderColl::scanListForWinners ( ) {
 
 	// debug info
 	if ( g_conf.m_logDebugSpider )
-		log("spider: Checked list of %li spiderdb bytes for winners "
+		log("spider: Checked list of %li spiderdb bytes (%li recs) "
+		    "for winners "
 		    "for firstip=%s. winnerTreeUsedNodes=%li",
-		    list->getListSize(),iptoa(m_scanningIp),
+		    list->getListSize(),recCount,iptoa(m_scanningIp),
 		    m_winnerTree.getNumUsedNodes());
 	// reset any errno cuz we're just a cache
 	g_errno = 0;
@@ -4847,6 +4832,7 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	long long spiderTimeMS = ((uint64_t)sreq->m_addedTime) * 1000LL;
 	// if injecting for first time, use that!
 	if ( ! srep && sreq->m_isInjecting ) return spiderTimeMS;
+	if ( ! srep && sreq->m_isPageReindex ) return spiderTimeMS;
 
 	// to avoid hammering an ip, get last time we spidered it...
 	long long lastMS ;
@@ -4901,7 +4887,7 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 	long long waitInSecs = (uint64_t)(m_cr->m_spiderFreqs[ufn]*3600*24.0);
 	// do not spider more than once per 15 seconds ever!
 	// no! might be a query reindex!!
-	if ( waitInSecs < 15 && ! sreq->m_urlIsDocId ) { 
+	if ( waitInSecs < 15 && ! sreq->m_isPageReindex ) { //urlIsDocId ) { 
 		static bool s_printed = false;
 		if ( ! s_printed ) {
 			s_printed = true;
@@ -4911,7 +4897,8 @@ uint64_t SpiderColl::getSpiderTimeMS ( SpiderRequest *sreq,
 		waitInSecs = 15;//900; this was 15 minutes
 	}
 	// in fact, force docid based guys to be zero!
-	if ( sreq->m_urlIsDocId ) waitInSecs = 0;
+	//if ( sreq->m_urlIsDocId ) waitInSecs = 0;
+	if ( sreq->m_isPageReindex ) waitInSecs = 0;
 	// when it was spidered
 	long long lastSpideredMS = ((uint64_t)srep->m_spideredTime) * 1000;
 	// . when we last attempted to spider it... (base time)
@@ -7244,6 +7231,7 @@ bool Msg12::getLocks ( long long uh48, // probDocId ,
 	// if docid based assume it was a query reindex and keep it short!
 	// otherwise we end up waiting 120 seconds for a query reindex to
 	// go through on a docid we just spidered. TODO: use m_urlIsDocId
+	// MDW: check this out
 	if ( url && is_digit(url[0]) ) ct = 2;
 
 	// . this seems to be messing us up and preventing us from adding new
@@ -10040,6 +10028,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			if ( ucr && regexec(ucr,url,0,NULL,0) &&
 			     // seed or other manual addition always matches
 			     ! sreq->m_isAddUrl &&
+			     ! sreq->m_isPageReindex &&
 			     ! sreq->m_isInjecting )
 				continue;
 			// do not require a match on ucp if ucr is given
@@ -10047,6 +10036,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			     ! doesStringContainPattern(url,ucp) &&
 			     // seed or other manual addition always matches
 			     ! sreq->m_isAddUrl &&
+			     ! sreq->m_isPageReindex &&
 			     ! sreq->m_isInjecting )
 				continue;
 			p += 10;
@@ -10261,7 +10251,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// if no match continue
-			if ( (bool)sreq->m_urlIsDocId==val ) continue;
+			//if ( (bool)sreq->m_urlIsDocId==val ) continue;
+			if ( (bool)sreq->m_isPageReindex==val ) continue;
 			// skip
 			p += 10;
 			// skip to next constraint
@@ -10345,6 +10336,7 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// . if we have '!' then val is 1
 			if ( sreq->m_isAddUrl    || 
 			     sreq->m_isInjecting ||
+			     sreq->m_isPageReindex ||
 			     sreq->m_isPageParser ) {
 				if ( val ) continue;
 			}
@@ -11748,7 +11740,8 @@ void dedupSpiderdbList ( RdbList *list , long niceness , bool removeNegRecs ) {
 
 			// if request was a page reindex docid based request 
 			// and url has since been spidered, nuke it!
-			if ( sreq->m_urlIsDocId ) continue;
+			//if ( sreq->m_urlIsDocId ) continue;
+			if ( sreq->m_isPageReindex ) continue;
 
 			// same if indexcode was EFAKEFIRSTIP which XmlDoc.cpp
 			// re-adds to spiderdb with the right firstip. once

@@ -329,6 +329,9 @@ bool printInterface (SafeBuf *sb, char *q , //long user ,
 	bb[0]='\0';
 	//if ( user == USER_MASTER && c && c[0] ) sprintf ( bb , " (%s)", c);
 
+	SafeBuf qe;
+	qe.htmlEncode(q);
+
 	// print the reindex interface
 	sb->safePrintf (
 		  "<table %s>"
@@ -369,7 +372,7 @@ bool printInterface (SafeBuf *sb, char *q , //long user ,
 		  "name=updatetags>"
 		  "</td></tr>"
 		  */
-		  , TABLE_STYLE , bb , DARK_BLUE , q );
+		  , TABLE_STYLE , bb , DARK_BLUE , qe.getBufStart() );
 
 	if ( ! qlangStr ) qlangStr = "";
 
@@ -604,7 +607,8 @@ bool Msg1c::gotList ( ) {
 		long firstIp = (docId & 0xffffffff);
 		// use a fake ip
 		sr.m_firstIp        =  firstIp;//nowGlobal;
-		sr.m_isInjecting    =  true;
+		// we are not really injecting...
+		sr.m_isInjecting    =  false;//true;
 		sr.m_hopCount       = -1;
 		sr.m_isPageReindex  =  1;
 		sr.m_urlIsDocId     =  1;
@@ -623,6 +627,7 @@ bool Msg1c::gotList ( ) {
 		// . complete its m_key member
 		// . parentDocId is used to make the key, but only allow one
 		//   page reindex spider request per url... so use "0"
+		// . this will set "uh48" to hash64b(m_url) which is the docid
 		sr.setKey( firstIp, 0LL , false );
 		// how big to serialize
 		long recSize = sr.getRecSize();

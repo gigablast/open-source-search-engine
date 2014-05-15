@@ -569,6 +569,9 @@ bool Msg7::inject ( TcpSocket *s ,
 		//contentIsEncoded = false;
 	}
 
+	// a secret thing from dan
+	long dbrLen = 0;
+	char *diffbotReply = r->getString("diffbotreply",&dbrLen,NULL);
 
 	// we do not want the parser every holding up a query really
 	long niceness = 1;
@@ -591,6 +594,7 @@ bool Msg7::inject ( TcpSocket *s ,
 			forcedIp,
 			m_content,
 			contentLen,
+			diffbotReply,
 			recycleContent,
 			CT_HTML, // contentType,
 			coll,
@@ -618,6 +622,7 @@ bool Msg7::inject ( char *url ,
 		    long  forcedIp ,
 		    char *content ,
 		    long  contentLen ,
+		    char *diffbotReply,
 		    bool  recycleContent,
 		    uint8_t contentType,
 		    char *coll ,
@@ -687,6 +692,7 @@ bool Msg7::inject ( char *url ,
 	if ( ! xd->injectDoc ( url ,
 			       cr ,
 			       content ,
+			       diffbotReply,
 			       hasMime , // content starts with http mime?
 			       hopCount,
 			       charset,

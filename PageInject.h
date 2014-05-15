@@ -44,6 +44,7 @@ public:
 		      long  forcedIp ,
 		      char *content ,
 		      long  contentLen ,
+		      char *diffbotReply,
 		      bool  recycleContent,
 		      uint8_t contentType,
 		      char *coll ,
