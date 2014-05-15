@@ -23310,7 +23310,10 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 
 	// a quick validation. reply must unlock the url from the lock table.
 	// so the locks must be equal.
-	if ( m_sreqValid ) {
+	if ( m_sreqValid && 
+	     // we create a new spiderrequest if injecting with a fake firstip
+	     // so it will fail this test...
+	     ! m_isInjecting ) {
 		long long lock1 = makeLockTableKey(&m_sreq);
 		long long lock2 = makeLockTableKey(&m_srep);
 		if ( lock1 != lock2 ) { 
