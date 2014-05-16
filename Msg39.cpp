@@ -40,7 +40,7 @@ void Msg39::reset() {
 	m_numDocIdSplits = 1;
 	m_tmpq.reset();
 	m_numTotalHits = 0;
-
+	m_gotClusterRecs = 0;
 	reset2();
 }
 

@@ -10083,7 +10083,9 @@ void Parms::init ( ) {
 		"attempts to spider. Search for them using special "
 		"query operators like type:status or gberrorstr:success or "
 		"stats:gberrornum to get a histogram. They will not otherwise "
-		"show up in the search results.";
+		"show up in the search results. This will not work for "
+		"diffbot crawlbot collections yet until it has proven "
+		"more stable.";
 	m->m_cgi   = "isr";
 	m->m_off   = (char *)&cr.m_indexSpiderReplies - x;
 	m->m_type  = TYPE_BOOL;
