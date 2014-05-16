@@ -379,7 +379,12 @@ void handleRequest20 ( UdpSlot *slot , long netnice ) {
 	}
 
 	// sanity
-	if ( req->m_docId == 0 && ! req->ptr_ubuf ) { char *xx=NULL;*xx=0; }
+	if ( req->m_docId == 0 && ! req->ptr_ubuf ) { //char *xx=NULL;*xx=0; }
+		log("query: Got msg20 request for docid of 0 and no url for "
+		    "collnum=%li query %s",(long)req->m_collnum,req->ptr_qbuf);
+	        g_udpServer.sendErrorReply ( slot , ENOTFOUND );
+		return; 
+	}
 
 	long long startTime = gettimeofdayInMilliseconds();
 
