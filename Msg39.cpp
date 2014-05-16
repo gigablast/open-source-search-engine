@@ -20,7 +20,6 @@ static void  sendReply         ( UdpSlot *slot         ,
 // thread wrappers
 static void *addListsWrapper   ( void *state , ThreadEntry *t ) ;
 //static void  threadDoneWrapper ( void *state , ThreadEntry *t ) ;
-//static void  gotClusterRecsWrapper ( void *state ) ;
 
 bool Msg39::registerHandler ( ) {
 	// . register ourselves with the udp server
@@ -421,17 +420,20 @@ bool Msg39::controlLoop ( ) {
 	// ok, we are done, get cluster recs of the winning docids
 	if ( m_phase == 3 ) {
 		m_phase++;
-		// this loads them using msg51 from clusterdb
+		// . this loads them using msg51 from clusterdb
+		// . if m_r->m_doSiteClustering is false it just returns true
+		// . this sets m_gotClusterRecs to true if we get them
 		if ( ! setClusterRecs ( ) ) return false;
 		// error setting clusterrecs?
 		if ( g_errno ) goto hadError;
 	}
 
-	// process the cluster recs
-	if ( ! gotClusterRecs() )
+	// process the cluster recs if we got them
+	if ( m_gotClusterRecs && ! gotClusterRecs() )
 		goto hadError;
 
-	// all done! set stats and send back reply
+	// . all done! set stats and send back reply
+	// . only sends back the cluster recs if m_gotClusterRecs is true
 	estimateHitsAndSendReply();
 	return true;
 }
@@ -1145,6 +1147,9 @@ bool Msg39::addedLists ( ) {
 // . returns false if blocked, true otherwise
 // . returns true and sets g_errno on error
 bool Msg39::setClusterRecs ( ) {
+
+	if ( ! m_r->m_doSiteClustering ) return true;
+
 	// make buf for arrays of the docids, cluster levels and cluster recs
 	long nodeSize  = 8 + 1 + 12;
 	long numDocIds = m_tt.m_numUsedNodes;
@@ -1156,6 +1161,9 @@ bool Msg39::setClusterRecs ( ) {
 		sendReply(m_slot,this,NULL,0,0,true);
 		return true; 
 	}
+
+	// assume we got them
+	m_gotClusterRecs = true;
 
 	// parse out the buf
 	char *p = m_buf;
@@ -1222,6 +1230,8 @@ bool Msg39::setClusterRecs ( ) {
 
 // return false and set g_errno on error
 bool Msg39::gotClusterRecs ( ) {
+
+	if ( ! m_gotClusterRecs ) return true;
 
 	// now tell msg5 to set the cluster levels
 	if ( ! setClusterLevels ( m_clusterRecs      ,
@@ -1327,6 +1337,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 	// make the reply?
 	Msg39Reply mr;
 
+	// this is what you want to look at if there is no seo.cpp module...
 	if ( ! m_callback ) {
 		// if we got clusterdb recs in here, use 'em
 		if ( m_gotClusterRecs ) numDocIds = m_numVisible;
