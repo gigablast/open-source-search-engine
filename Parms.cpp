@@ -10095,7 +10095,8 @@ void Parms::init ( ) {
 	m->m_title = "index body";
 	m->m_desc  = "Index the body of the documents so you can search it. "
 		"Required for searching that. You wil pretty much always "
-		"want to keep this enabled.";
+		"want to keep this enabled. Does not apply to JSON "
+		"documents.";
 	m->m_cgi   = "ib";
 	m->m_off   = (char *)&cr.m_indexBody - x;
 	m->m_type  = TYPE_BOOL;
