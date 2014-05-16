@@ -719,7 +719,11 @@ class XmlDoc {
 
 	char *getMetaList ( bool forDelete = false );
 
+	char *getDiffbotParentUrl( char *myUrl );
+
 	void copyFromOldDoc ( class XmlDoc *od ) ;
+
+	class SpiderReply *getFakeSpiderReply ( );
 
 	// we add a SpiderReply to spiderdb when done spidering, even if
 	// m_indexCode or g_errno was set!
@@ -977,6 +981,8 @@ class XmlDoc {
 	long  m_metaListSize;
 
 	SafeBuf  m_metaList2;
+	SafeBuf  m_zbuf;
+	SafeBuf  m_kbuf;
 
 	// . same thing, a little more complicated
 	// . these classes are only set on demand
@@ -2148,7 +2154,7 @@ class XmlDoc {
 	//   from that IP quickly if the sameipwait is like 500ms.
 	long long m_downloadEndTime;
 
-	char *m_metaListEnd;
+	//char *m_metaListEnd;
 	long  m_metaListAllocSize;
 	char *m_p;
 	char *m_pend;
@@ -2277,6 +2283,7 @@ class XmlDoc {
 	bool injectDoc ( char *url ,
 			 class CollectionRec *cr ,
 			 char *content ,
+			 char *diffbotReply, // usually null
 			 bool contentHasMime ,
 			 long hopCount,
 			 long charset,

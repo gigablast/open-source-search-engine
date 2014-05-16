@@ -1239,7 +1239,9 @@ bool  SafeBuf::javascriptEncode(char *s, long len ) {
 }
 
 
-
+bool SafeBuf::htmlEncode(char *s) {
+	return htmlEncode(s,gbstrlen(s),true,0);
+}
 
 // scan the last "len" characters for entities to encode
 bool SafeBuf::htmlEncode(long len, long niceness ){

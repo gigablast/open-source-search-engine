@@ -233,6 +233,8 @@ struct SafeBuf {
 			 long niceness=0);
 	bool  javascriptEncode(char *s, long len );
 
+	bool  htmlEncode(char *s) ;
+
 	//bool convertUtf8CharsToEntity = false ) ;
 	// html-encode any of the last "len" bytes that need it
 	bool htmlEncode(long len,long niceness=0);

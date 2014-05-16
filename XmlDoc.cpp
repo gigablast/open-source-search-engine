@@ -189,6 +189,8 @@ void XmlDoc::reset ( ) {
 	m_didDelete = false;
 
 	m_metaList2.purge();
+	m_zbuf.purge();
+	m_kbuf.purge();
 
 	m_mySiteLinkInfoBuf.purge();
 	m_myPageLinkInfoBuf.purge();
@@ -1294,7 +1296,11 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	*/
 
 	// if url is a docid... we are from pagereindex.cpp
-	if ( sreq->m_isPageReindex ) {
+	//if ( sreq->m_isPageReindex ) {
+	// now we can have url-based page reindex requests because
+	// if we have a diffbot json object fake url reindex request
+	// we add a spider request of the PARENT url for it as page reindex
+	if ( is_digit ( sreq->m_url[0] ) ) {
 		m_docId          = atoll(sreq->m_url);
 		// assume its good
 		m_docIdValid     = true;
@@ -1911,6 +1917,7 @@ void indexDocWrapper2 ( int fd , void *state ) {
 bool XmlDoc::injectDoc ( char *url ,
 			 CollectionRec *cr ,
 			 char *content ,
+			 char *diffbotReply, // usually null
 			 bool contentHasMime ,
 			 long hopCount,
 			 long charset,
@@ -1970,6 +1977,13 @@ bool XmlDoc::injectDoc ( char *url ,
 		// g_errno should be set if that returned false
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		return true;
+	}
+
+	// a diffbot reply? should be in json
+	if ( diffbotReply ) {
+		if ( ! m_diffbotReply.safeStrcpy(diffbotReply) )
+			return true;
+		m_diffbotReplyValid = true;
 	}
 
 	//m_doConsistencyTesting = doConsistencyTesting;
@@ -2226,62 +2240,7 @@ bool XmlDoc::indexDoc ( ) {
 	// make these fake so getNewSpiderReply() below does not block
 	//
 	////
-
-	if ( ! m_tagRecValid ) {
-		m_tagRec.reset();
-		m_tagRecValid = true;
-	}
-
-	if ( ! m_siteHash32Valid ) {
-		m_siteHash32 = 1;
-		m_siteHash32Valid = true;
-	}
-
-	if ( ! m_downloadEndTimeValid ) {
-		m_downloadEndTime = 0;
-		m_downloadEndTimeValid = true;
-	}
-
-	if ( ! m_ipValid ) {
-		m_ipValid = true;
-		m_ip = atoip("1.2.3.4");
-	}
-
-	if ( ! m_spideredTimeValid ) {
-		m_spideredTimeValid = true;
-		m_spideredTime = getTimeGlobal();//0; use now!
-	}
-
-	// don't let it get the diffbot reply either! it should be empty.
-	if ( ! m_diffbotReplyValid ) {
-		m_diffbotReplyValid = true;
-	}
-
-
-	// if error is EFAKEFIRSTIP, do not core
-	//if ( ! m_isIndexedValid ) {
-	//	m_isIndexed = false;
-	//	m_isIndexedValid = true;
-	//}
-
-	// if this is EABANDONED or EHITCRAWLLIMIT or EHITPROCESSLIMIT
-	// or ECORRUPTDATA (corrupt gzip reply)
-	// then this should not block. we need a spiderReply to release the 
-	// url spider lock in SpiderLoop::m_lockTable.
-	// if m_isChildDoc is true, like for diffbot url, this should be
-	// a bogus one.
-	SpiderReply *nsr = getNewSpiderReply ();
-	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
-	if ( ! nsr ) {
-		log("doc: crap, could not even add spider reply "
-		    "to indicate internal error: %s",mstrerror(g_errno));
-		if ( ! g_errno ) g_errno = EBADENGINEER;
-		return true;
-	}
-	//if ( nsr->getRecSize() <= 1) { char *xx=NULL;*xx=0; }
-
-	//CollectionRec *cr = getCollRec();
-	//if ( ! cr ) return true;
+	SpiderReply *nsr = getFakeSpiderReply (  );
 
 	//SafeBuf metaList;
 	if ( ! m_metaList2.pushChar(RDB_SPIDERDB) )
@@ -13609,8 +13568,13 @@ bool *XmlDoc::getRecycleDiffbotReply ( ) {
 	m_recycleDiffbotReply = false;
 
 	if ( cr->m_diffbotOnlyProcessIfNewUrl &&
-	     od && od->m_gotDiffbotSuccessfulReply ) 
+	     od && od->m_gotDiffbotSuccessfulReply )
 		m_recycleDiffbotReply = true;
+
+	// don't recycle if specfically asked to reindex though
+	if ( m_sreqValid && m_sreq.m_isPageReindex )
+		m_recycleDiffbotReply = false;
+
 
 	m_recycleDiffbotReplyValid = true;
 
@@ -13931,7 +13895,11 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 }
 
 
-// the diffbot reply will be a list of json objects we want to index
+// . convert document into json representing multiple documents
+//   if it makes sense. sometimes a single url contains multiple
+//   subdocuments that each should have their own url, but do not,
+//   so we fix that here.
+// . the diffbot reply will be a list of json objects we want to index
 SafeBuf *XmlDoc::getDiffbotReply ( ) {
 
 	if ( m_diffbotReplyValid )
@@ -20220,6 +20188,123 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		m_ip = 123456;
 	}
 
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
+	//
+	// BEGIN MULTI DOC QUERY REINDEX HACK
+	//
+	// this fixes it so we can do a query reindex on fake child urls
+	// of their original parent multidoc url. the child urls are 
+	// subsections of the original parent url that were indexed as
+	// separate documents with their own docid. if we try to do a
+	// query reindex on such things, detect it, and add the request
+	// for the original parent multidoc url.
+	//
+	if ( m_sreqValid && m_sreq.m_isPageReindex ) {
+		// see if its diffbot json object
+		XmlDoc **pod = getOldXmlDoc ( );
+		if ( ! pod || pod == (XmlDoc **)-1 ) return (char *)pod;
+		XmlDoc *od = *pod;
+		// if no old doc then we might have just been a diffbot
+		// json url that was directly injected into GLOBAL-INDEX
+		// like xyz.com/-diffbotxyz12345 (my format) or
+		if ( ! od ) goto skip9;
+		// if we are indexing a subdoc piece of a multidoc url 
+		// then parentUrl should return non-NULL
+		char *parentUrl = getDiffbotParentUrl(od->m_firstUrl.m_url);
+		if ( ! parentUrl ) goto skip9;
+		// in that case we need to reindex the parent url not the
+		// subdoc url, so make the spider reply gen quick
+		//SpiderReply *newsr = od->getFakeSpiderReply();
+		//if ( ! newsr || newsr == (void *)-1 ) return (char *)newsr;
+		// use our ip though
+		//newsr->m_firstIp = od->m_firstIp;
+		// however we have to use our docid-based spider request
+		SpiderReply srep;
+		srep.reset();
+		// it MUST match up with original spider request so the
+		// lock key in Spider.cpp can unlock it. that lock key
+		// uses the "uh48" (48bit hash of the url) and "srep.m_firstIp"
+		// in this case the SpiderRequest, sreq, is docid-based because
+		// it was added through PageReindex.cpp (query reindex) so
+		// it will be the 48 bit hash64b() of the docid 
+		// (see PageReindex.cpp)'s call to SpiderRequest::setKey()
+		srep.m_firstIp = m_sreq.m_firstIp;
+		// assume no error
+		srep.m_errCount = 0;
+		// do not inherit this one, it MIGHT HAVE CHANGE!
+		srep.m_siteHash32 = m_sreq.m_siteHash32;
+		srep.m_domHash32  = m_sreq.m_domHash32;
+		srep.m_spideredTime = getTimeGlobal();
+		long long uh48 = m_sreq.getUrlHash48();
+		long long parentDocId = 0LL;
+		srep.m_contentHash32 = 0;
+		// were we already in titledb before we started spidering?
+		// yes otherwise we would have called "goto skip9" above
+		srep.m_wasIndexed = 1;
+		srep.m_wasIndexedValid = 1;
+		srep.m_isIndexed = 1;
+		srep.m_isIndexedINValid = false;
+		srep.m_errCode      = EREINDEXREDIR; // indexCode
+		srep.m_downloadEndTime = 0;
+		srep.setKey (  srep.m_firstIp, parentDocId , uh48 , false );
+		// lock of request needs to match that of reply so the
+		// reply, when recevied by Rdb.cpp which calls addSpiderReply()
+		// can unlock this url so it can be spidered again.
+		long long lock1 = makeLockTableKey(&m_sreq);
+		long long lock2 = makeLockTableKey(&srep);
+		if ( lock1 != lock2 ) { char *xx=NULL;*xx=0; }
+		// make a fake spider reply so this docid-based spider
+		// request is not used again
+		//SpiderReply srep;
+		// store the rdbid
+		if ( ! m_zbuf.pushChar(RDB_SPIDERDB) ) 
+			return NULL;
+		// store that reply to indicate this spider request has
+		// been fulfilled!
+		if( ! m_zbuf.safeMemcpy (&srep, srep.getRecSize()))
+			return NULL;
+		// complain
+		if ( ! cr->m_diffbotApiUrl.length()<1 && !cr->m_isCustomCrawl )
+			log("build: doing query reindex but diffbot api "
+			    "url is not set in spider controls");
+		// but also store a new spider request for the parent url
+		SpiderRequest ksr;
+		// just copy original request
+		memcpy ( &ksr , &m_sreq , m_sreq.getRecSize() );
+		// do not spider links, it's a page reindex of a multidoc url
+		ksr.m_avoidSpiderLinks = 1;
+		// but it is not docid based, so overwrite the docid
+		// in ksr.m_url with the parent multidoc url. it \0 terms it.
+		strcpy(ksr.m_url , parentUrl );//, MAX_URL_LEN-1);
+		// this must be valid
+		//if ( ! od->m_firstIpValid ) { char *xx=NULL;*xx=0; }
+		// set the key, ksr.m_key. isDel = false
+		// fake docid
+		long long pd = g_titledb.getProbableDocId(parentUrl);
+		ksr.setKey ( m_sreq.m_firstIp, pd , false );
+		// store this
+		if ( ! m_zbuf.pushChar(RDB_SPIDERDB) ) 
+			return NULL;
+		// then the request
+		if ( ! m_zbuf.safeMemcpy(&ksr,ksr.getRecSize() ) )
+			return NULL;
+		// prevent cores in indexDoc()
+		m_indexCode = EREINDEXREDIR;
+		m_indexCodeValid = true;
+		// for now we set this crap
+		m_metaList = m_zbuf.getBufStart();
+		m_metaListSize = m_zbuf.length();
+		m_metaListValid = true;
+		return m_metaList;
+	}
+	//
+	// END DIFFBOT OBJECT QUERY REINDEX HACK
+	//
+
+
+ skip9:
 	// get our checksum
 	long *plainch32 = getContentHash32();
 	if ( ! plainch32 || plainch32 == (void *)-1 ) return (char *)plainch32;
@@ -20281,9 +20366,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		m_metaListValid = true;
 		return m_metaList;
 	}
-
-	CollectionRec *cr = getCollRec();
-	if ( ! cr ) return NULL;
 
 	// if diffbot reply is empty, don't bother adding anything except
 	// for the spider reply... reply might be "-1" too!
@@ -21456,8 +21538,11 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	if ( forDelete ) needSpiderdb1 = 0;
 	need += needSpiderdb1;
 
+	// if injecting we add a spiderrequest to be able to update it
+	// but don't do this if it is pagereindex. why is pagereindex
+	// setting the injecting flag anyway?
 	long needSpiderdb3 = 0;
-	if ( m_sreqValid && m_sreq.m_isInjecting ) 
+	if ( m_sreqValid && m_sreq.m_isInjecting )//&&!m_sreq.m_isPageReindex) 
 		needSpiderdb3 = m_sreq.getRecSize() + 1;
 	need += needSpiderdb3;
 
@@ -22640,6 +22725,84 @@ void XmlDoc::copyFromOldDoc ( XmlDoc *od ) {
 	size_sectiondbData = 0;
 }
 
+// for adding a quick reply for EFAKEIP and for diffbot query reindex requests
+SpiderReply *XmlDoc::getFakeSpiderReply ( ) {
+
+	if ( ! m_tagRecValid ) {
+		m_tagRec.reset();
+		m_tagRecValid = true;
+	}
+
+	if ( ! m_siteHash32Valid ) {
+		m_siteHash32 = 1;
+		m_siteHash32Valid = true;
+	}
+
+	if ( ! m_downloadEndTimeValid ) {
+		m_downloadEndTime = 0;
+		m_downloadEndTimeValid = true;
+	}
+
+	if ( ! m_ipValid ) {
+		m_ipValid = true;
+		m_ip = atoip("1.2.3.4");
+	}
+
+	if ( ! m_spideredTimeValid ) {
+		m_spideredTimeValid = true;
+		m_spideredTime = getTimeGlobal();//0; use now!
+	}
+
+	// don't let it get the diffbot reply either! it should be empty.
+	if ( ! m_diffbotReplyValid ) {
+		m_diffbotReplyValid = true;
+	}
+
+	// if doing diffbot query reindex
+	// TODO: does this shard the request somewhere else???
+	if ( ! m_firstIpValid ) {
+		m_firstIp = m_ip;//atoip("1.2.3.4");
+		m_firstIpValid = true;
+	}
+
+
+	//if ( ! m_sreqValid ) { 
+	// 	m_sreqValid = true;
+	// 	m_sreq.m_parentDocId = 0LL;
+	// }
+	     
+
+	// if error is EFAKEFIRSTIP, do not core
+	//if ( ! m_isIndexedValid ) {
+	//	m_isIndexed = false;
+	//	m_isIndexedValid = true;
+	//}
+
+	// if this is EABANDONED or EHITCRAWLLIMIT or EHITPROCESSLIMIT
+	// or ECORRUPTDATA (corrupt gzip reply)
+	// then this should not block. we need a spiderReply to release the 
+	// url spider lock in SpiderLoop::m_lockTable.
+	// if m_isChildDoc is true, like for diffbot url, this should be
+	// a bogus one.
+	SpiderReply *nsr = getNewSpiderReply ();
+	if ( nsr == (void *)-1) { char *xx=NULL;*xx=0; }
+	if ( ! nsr ) {
+		log("doc: crap, could not even add spider reply "
+		    "to indicate internal error: %s",mstrerror(g_errno));
+		if ( ! g_errno ) g_errno = EBADENGINEER;
+		//return true;
+		return NULL;
+	}
+
+	return nsr;
+
+	//if ( nsr->getRecSize() <= 1) { char *xx=NULL;*xx=0; }
+
+	//CollectionRec *cr = getCollRec();
+	//if ( ! cr ) return true;
+}
+
+
 SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 
 	if ( m_srepValid ) return &m_srep;
@@ -22818,7 +22981,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	long long parentDocId = 0LL;
 	if ( m_sreqValid )
 		parentDocId = m_sreq.getParentDocId();
-	else { char *xx=NULL;*xx=0; }
+	//else { char *xx=NULL;*xx=0; }
 
 	// for docid based urls from PageReindex.cpp we have to make
 	// sure to set the urlhash48 correctly from that. 
@@ -23144,6 +23307,21 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	m_srep.m_hasAddressValid         = 1;
 	m_srep.m_hasTODValid             = 1;
 	//m_srep.m_hasSiteVenueValid       = 1;
+
+	// a quick validation. reply must unlock the url from the lock table.
+	// so the locks must be equal.
+	if ( m_sreqValid && 
+	     // we create a new spiderrequest if injecting with a fake firstip
+	     // so it will fail this test...
+	     ! m_isInjecting ) {
+		long long lock1 = makeLockTableKey(&m_sreq);
+		long long lock2 = makeLockTableKey(&m_srep);
+		if ( lock1 != lock2 ) { 
+			log("build: lock1 != lock2 lock mismatch for %s",
+			    m_firstUrl.m_url);
+			char *xx=NULL;*xx=0;
+		}
+	}
 
 	// validate
 	m_srepValid = true;
@@ -32189,7 +32367,10 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 	sb->safePrintf ( "</table></center><br>\n" );
 
 	//
-	// JSON from diffbot
+	// convert document into json representing multiple documents
+	// if it makes sense. sometimes a single url contains multiple
+	// subdocuments that each should have their own url, but do not,
+	// so we fix that here.
 	//
 	SafeBuf *dbr = getDiffbotReply();
 	if ( dbr->length() ) {
@@ -46603,3 +46784,32 @@ char *XmlDoc::hashJSON ( HashTableX *table ) {
 
 	return (char *)0x01;
 }
+
+// if our url is that of a subdoc, then get the url of the parent doc
+// from which we were a subsection
+char *XmlDoc::getDiffbotParentUrl( char *myUrl ) {
+	// remove -diffbotxyz
+	if ( ! m_kbuf.safeStrcpy( myUrl ) ) return NULL;
+	char *p =  m_kbuf.getBufStart();
+	char *s = strstr(p,"-diffbotxyz");
+	if ( s ) { *s = '\0'; return p; }
+	// temporarily until we inject "diffbotreply" uncomment this
+	/*
+	// otherwise i guess we got dan's format of -article|%li|%li
+	char *e = m_kbuf.getBuf() - 1;
+	for ( ; *e && is_digit(*e) ; e-- );
+	if ( *e != '|' ) return NULL;
+	e--;
+	for ( ; *e && is_digit(*e) ; e-- );
+	if ( *e != '|' ) return NULL;
+	e--;
+	// now to hyphen 
+	char *estart = m_kbuf.getBufStart();
+	for ( ; e>estart && *e !='-' ; e-- );
+	if ( *e != '-' ) return NULL;
+	*e = '\0';
+	return p;
+	*/
+	return NULL;
+}
+

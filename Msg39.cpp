@@ -16,11 +16,11 @@ static void  sendReply         ( UdpSlot *slot         ,
 				 long     replyMaxSize ,
 				 bool     hadError     );
 // called when Msg2 has got all the termlists
-static void  gotListsWrapper   ( void *state ) ;
+//static void  gotListsWrapper   ( void *state ) ;
 // thread wrappers
 static void *addListsWrapper   ( void *state , ThreadEntry *t ) ;
-static void  threadDoneWrapper ( void *state , ThreadEntry *t ) ;
-static void  gotClusterRecsWrapper ( void *state ) ;
+//static void  threadDoneWrapper ( void *state , ThreadEntry *t ) ;
+//static void  gotClusterRecsWrapper ( void *state ) ;
 
 bool Msg39::registerHandler ( ) {
 	// . register ourselves with the udp server
@@ -161,6 +161,8 @@ void Msg39::getDocIds ( UdpSlot *slot ) {
 	getDocIds2 ( m_r );
 }
 
+// . the main function to get the docids for the provided query in "req"
+// . it always blocks i guess
 void Msg39::getDocIds2 ( Msg39Request *req ) {
 
 	// flag it as in use
@@ -250,6 +252,9 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 		if ( m_numDocIdSplits == 0 ) m_numDocIdSplits = 1;
 	}
 
+	// for testing
+	//m_numDocIdSplits = 3;
+
 	//if ( ! g_conf.m_doDocIdRangeSplitting )
 	//	m_numDocIdSplits = 1;
 
@@ -259,10 +264,10 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 
 	// . if caller already specified a docid range, then be loyal to that!
 	// . or if we do not have enough query terms to warrant splitting
-	if ( m_numDocIdSplits == 1 ) {
-		getLists();
-		return;
-	}
+	//if ( m_numDocIdSplits == 1 ) {
+	//	getLists();
+	//	return;
+	//}
 
 	// . set up docid range cursor
 	// . do twin splitting
@@ -287,24 +292,153 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 	m_dddEnd = MAX_DOCID;
 	//}
 
+	m_phase = 0;
 
 	// . otherwise, to prevent oom, split up docids into ranges
 	//   and get winners of each range.
-	if ( ! doDocIdSplitLoop() ) return;
+	//if ( ! doDocIdSplitLoop() ) return;
+
+	// . return false if it blocks true otherwise
+	// . it will send a reply when done
+	if ( ! controlLoop() ) return;
 
 	// error?
-	if ( g_errno ) {
-		log(LOG_LOGIC,"query: msg39: doDocIdSplitLoop: %s." , 
-		    mstrerror(g_errno) );
-		sendReply ( m_slot , this , NULL , 0 , 0 , true );
-		return ; 
-	}
+	// if ( g_errno ) {
+	// 	log(LOG_LOGIC,"query: msg39: doDocIdSplitLoop: %s." , 
+	// 	    mstrerror(g_errno) );
+	// 	sendReply ( m_slot , this , NULL , 0 , 0 , true );
+	// 	return ; 
+	// }
 	// it might not have blocked! if all lists in tree and used no thread
 	// it will come here after sending the reply and destroying "this"
 	return;
 }
 
+void controlLoopWrapper2 ( void *state , ThreadEntry *t ) {
+	Msg39 *THIS = (Msg39 *)state;
+	THIS->controlLoop();
+}
+
+
+void controlLoopWrapper ( void *state ) {
+	Msg39 *THIS = (Msg39 *)state;
+	THIS->controlLoop();
+}
+
+// . returns false if blocks true otherwise
+// 1. read all termlists for docid range
+// 2. intersect termlists to get the intersecting docids
+// 3. increment docid ranges and keep going
+// 4. when done return the top docids
+bool Msg39::controlLoop ( ) {
+
+ loop:
+	
+	// error?
+	if ( g_errno ) {
+	hadError:
+		log(LOG_LOGIC,"query: msg39: controlLoop: %s." , 
+		    mstrerror(g_errno) );
+		sendReply ( m_slot , this , NULL , 0 , 0 , true );
+		return true; 
+	}
+
+	if ( m_phase == 0 ) {
+		// next phase
+		m_phase++;
+		// the starting docid...
+		long long d0 = m_ddd;
+		// shortcut
+		long long delta = MAX_DOCID / (long long)m_numDocIdSplits;
+		// advance to point to the exclusive endpoint
+		m_ddd += delta;
+		// ensure this is exclusive of ddd since it will be
+		// inclusive in the following iteration.
+		long long d1 = m_ddd;
+		// fix rounding errors
+		if ( d1 + 20LL > MAX_DOCID ) {
+			d1    = MAX_DOCID;
+			m_ddd = MAX_DOCID;
+		}
+		// fix it
+		m_r->m_minDocId = d0;
+		m_r->m_maxDocId = d1; // -1; // exclude d1
+		// allow posdbtable re-initialization each time to set
+		// the msg2 termlist ptrs anew, otherwise we core in
+		// call to PosdbTable::init() below
+		//m_posdbTable.m_initialized = false;
+		// reset ourselves, partially, anyway, not tmpq etc.
+		reset2();
+		// debug log
+		log("msg39: docid split phase %lli-%lli",d0,d1);
+		// wtf?
+		//if ( d0 >= d1 ) break;
+		// load termlists for these docid ranges using msg2 from posdb
+		if ( ! getLists() ) return false;
+	}
+
+	if ( m_phase == 1 ) {
+		m_phase++;
+		// intersect the lists we loaded using a thread
+		if ( ! intersectLists() ) return false;
+		// error?
+		if ( g_errno ) goto hadError;
+	}
+
+	// sum up some stats
+	if ( m_phase == 2 ) {
+		m_phase++;
+		if ( m_posdbTable.m_t1 ) {
+			// . measure time to add the lists in bright green
+			// . use darker green if rat is false (default OR)
+			long color;
+			//char *label;
+			color = 0x0000ff00 ;
+			//label = "termlist_intersect";
+			g_stats.addStat_r ( 0 , 
+					    m_posdbTable.m_t1 , 
+					    m_posdbTable.m_t2 , color );
+		}
+		// accumulate total hits count over each docid split
+		m_numTotalHits += m_posdbTable.m_docIdVoteBuf.length() / 6;
+		// error?
+		if ( m_posdbTable.m_errno ) {
+			// we do not need to store the intersection i guess..??
+			m_posdbTable.freeMem();
+			g_errno = m_posdbTable.m_errno;
+			log("query: posdbtable had error = %s",
+			    mstrerror(g_errno));
+			sendReply ( m_slot , this , NULL , 0 , 0 ,true);
+			return true;
+		}
+		// if we have more docid ranges remaining do more
+		if ( m_ddd < m_dddEnd ) {
+			m_phase = 0;
+			goto loop;
+		}
+	}
+
+	// ok, we are done, get cluster recs of the winning docids
+	if ( m_phase == 3 ) {
+		m_phase++;
+		// this loads them using msg51 from clusterdb
+		if ( ! setClusterRecs ( ) ) return false;
+		// error setting clusterrecs?
+		if ( g_errno ) goto hadError;
+	}
+
+	// process the cluster recs
+	if ( ! gotClusterRecs() )
+		goto hadError;
+
+	// all done! set stats and send back reply
+	estimateHitsAndSendReply();
+	return true;
+}
+
+/*
 // . returns false if blocked, true if done
+// . only come here if m_numDocIdSplits > 1
 // . to avoid running out of memory, generate the search results for
 //   multiple smaller docid-ranges, one range at a time.
 bool Msg39::doDocIdSplitLoop ( ) {
@@ -359,7 +493,7 @@ bool Msg39::doDocIdSplitLoop ( ) {
 		log("msg39: done with all docid range splits");
 
 	// all done. this will send reply back
-	//estimateHits();
+	//estimateHitsAndSendReply();
 	//addedLists();
 
 	// should we put cluster recs in the tree?
@@ -385,21 +519,25 @@ bool Msg39::doDocIdSplitLoop ( ) {
 	}
 
 	// if we did not call setClusterRecs, go on to estimate the hits
-	estimateHits();
+	estimateHitsAndSendReply();
 
 	// no block, we are done
 	return true;
 }
+*/
 
-void tryAgainWrapper ( int fd , void *state ) {
-	Msg39 *THIS = (Msg39 *)state;
-	g_loop.unregisterSleepCallback ( state , tryAgainWrapper );
-	THIS->getLists();
-}
+// void tryAgainWrapper ( int fd , void *state ) {
+// 	Msg39 *THIS = (Msg39 *)state;
+// 	g_loop.unregisterSleepCallback ( state , tryAgainWrapper );
+// 	THIS->getLists();
+// }
 
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
+// . called either from 
+//   1) doDocIdSplitLoop
+//   2) or getDocIds2() if only 1 docidsplit
 bool Msg39::getLists () {
 
 	if ( m_debug ) m_startTime = gettimeofdayInMilliseconds();
@@ -633,7 +771,7 @@ bool Msg39::getLists () {
 				 //m_tmpq.getNumTerms()       , // numLists
 				 m_lists                    ,
 				 this                       ,
-				 gotListsWrapper            ,
+				 controlLoopWrapper,//gotListsWrapper      ,
 				 m_r                        ,
 				 m_r->m_niceness            ,
 				 true                       , // do merge?
@@ -647,23 +785,33 @@ bool Msg39::getLists () {
 	}
 
 	// error?
-	if ( g_errno ) { 
-		log("msg39: Had error getting termlists2: %s.",
-		    mstrerror(g_errno));
-		// don't bail out here because we are in docIdSplitLoop()
-		//sendReply (m_slot,this,NULL,0,0,true);
-		return true; 
-	}
+	//if ( g_errno ) { 
+	//	log("msg39: Had error getting termlists2: %s.",
+	//	    mstrerror(g_errno));
+	//	// don't bail out here because we are in docIdSplitLoop()
+	//	//sendReply (m_slot,this,NULL,0,0,true);
+	//	return true; 
+	//}
 	
-	return gotLists ( true );
+	//return gotLists ( true );
+	return true;
 }
 
+/*
 void gotListsWrapper ( void *state ) {
 	Msg39 *THIS = (Msg39 *) state;
+
+	// save this
+	long numDocIdSplits = THIS->m_numDocIdSplits;
+
 	// . hash the lists into our index table
 	// . this will send back a reply or recycle and read more list data
-
+	// . this may call addedLists() which may call 
+	//   estimateHitsAndSendReply() which nukes "THIS" msg39 but
+	//   it only does that if  m_numDocIdSplits is 1
+	// . this make nuke msg39
 	if ( ! THIS->gotLists ( true ) ) return;
+
 
 	// . if he did not block and there was an errno we send reply
 	//   otherwise if there was NO error he will have sent the reply
@@ -675,16 +823,21 @@ void gotListsWrapper ( void *state ) {
 	}
 
 	// no, block? call the docid split loop
+	// . but if we only had one split msg39 will have been nuked
 	//if ( numDocIdSplits <= 1 ) return;
 
 	// if we get the lists and processed them without blocking, repeat!
-	THIS->doDocIdSplitLoop();
+	if ( ! THIS->doDocIdSplitLoop() ) return;
+
+	// send back reply
+	estimateHitsAndSendReply();
 }
+*/
 
 // . now come here when we got the necessary index lists
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
-bool Msg39::gotLists ( bool updateReadInfo ) {
+bool Msg39::intersectLists ( ) { // bool updateReadInfo ) {
 	// bail on error
 	if ( g_errno ) { 
 	hadError:
@@ -764,8 +917,7 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	if ( ! m_posdbTable.setQueryTermInfo () ) return true;
 
 	// print query term bit numbers here
-	for ( long i = 0 ; 
-	      m_debug && i < m_tmpq.getNumTerms() ; i++ ) {
+	for ( long i = 0 ; m_debug && i < m_tmpq.getNumTerms() ; i++ ) {
 		QueryTerm *qt = &m_tmpq.m_qterms[i];
 		//utf16ToUtf8(bb, 256, qt->m_term, qt->m_termLen);
 		char *tpc = qt->m_term + qt->m_termLen;
@@ -814,7 +966,7 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	     g_threads.call ( INTERSECT_THREAD  , // threadType
 			      m_r->m_niceness   ,
 			      this              , // top 4 bytes must be cback
-			      threadDoneWrapper ,
+			      controlLoopWrapper2,//threadDoneWrapper ,
 			      addListsWrapper   ) ) {
 		m_blocked = true;
 		return false;
@@ -842,7 +994,8 @@ bool Msg39::gotLists ( bool updateReadInfo ) {
 	if ( diff > 10 ) log("query: Took %lli ms for intersection",diff);
 
 	// returns false if blocked, true otherwise
-	return addedLists ();
+	//return addedLists ();
+	return true;
 }
 
 void *addListsWrapper ( void *state , ThreadEntry *t ) {
@@ -867,6 +1020,7 @@ void *addListsWrapper ( void *state , ThreadEntry *t ) {
 	return NULL;
 }
 
+/*
 // we come here after thread exits
 void threadDoneWrapper ( void *state , ThreadEntry *t ) {
 	// get this class
@@ -879,6 +1033,7 @@ void threadDoneWrapper ( void *state , ThreadEntry *t ) {
 	// is only called if numDocIdSplits <= 1...
 	long numDocIdSplits = THIS->m_numDocIdSplits;
 	char debug = THIS->m_debug;
+
 	// just return if it blocked
 	if ( ! THIS->addedLists () ) {
 		// this can't block
@@ -887,13 +1042,35 @@ void threadDoneWrapper ( void *state , ThreadEntry *t ) {
 		return;
 	}
 	if ( debug ) log("msg39: addedLists no block. i guess reply sent");
+
+
+	// . if he did not block and there was an errno we send reply
+	//   otherwise if there was NO error he will have sent the reply
+	// . if gotLists() was called in the ABOVE function and it returns
+	//   true then the docIdLoop() function will send back the reply.
+	if ( g_errno ) {
+		log("msg39: sending back error reply = %s",mstrerror(g_errno));
+		sendReply ( THIS->m_slot , THIS , NULL , 0 , 0 ,true);
+	}
+
 	// no, block? call the docid split loop
-	if ( numDocIdSplits <= 1 ) return;
+	// . but if we only had one split msg39 will have been nuked
+	//if ( numDocIdSplits <= 1 ) return;
+
+	// if we get the lists and processed them without blocking, repeat!
+	if ( ! THIS->doDocIdSplitLoop() ) return;
+
+	// send back reply
+	estimateHitsAndSendReply();
+
+	// no, block? call the docid split loop
+	//if ( numDocIdSplits <= 1 ) return;
 	// . just re-do the whole she-bang but do not reset m_tt top tree!!!
 	// . it returns false if it blocks
-	THIS->doDocIdSplitLoop();
+	//THIS->doDocIdSplitLoop();
 }
-
+*/
+/*
 // return false if blocked, true otherwise
 bool Msg39::addedLists ( ) {
 
@@ -916,7 +1093,7 @@ bool Msg39::addedLists ( ) {
 	// before wrapping up, complete our docid split loops!
 	// so do not send the reply back yet... send reply back from
 	// the docid loop function... doDocIdSplitLoop()
-	if ( m_numDocIdSplits >= 2 ) return true;
+	//if ( m_numDocIdSplits >= 2 ) return true;
 
 
 	// . save some memory,free m_topDocIdPtrs2,m_topScores2,m_topExplicits2
@@ -938,7 +1115,7 @@ bool Msg39::addedLists ( ) {
 
 	// should we put cluster recs in the tree?
 	//m_gotClusterRecs = ( g_conf.m_fullSplit && m_r->m_doSiteClustering );
-	m_gotClusterRecs = ( m_r->m_doSiteClustering );
+	//m_gotClusterRecs = ( m_r->m_doSiteClustering );
 	
 	// . before we send the top docids back, lookup their site hashes
 	//   in clusterdb so we can do filtering at this point.
@@ -952,15 +1129,17 @@ bool Msg39::addedLists ( ) {
 	//   large due to having a ton of results with the same "domain hash" 
 	//   (see the "vcount" in IndexTable2.cpp)
 	// . do NOT do if we are just "getting weights", phr and aff weights
-	if ( m_gotClusterRecs ) {
-		// . set the clusterdb recs in the top tree
-		return setClusterRecs ( ) ;
-	}
-
+	// if ( m_gotClusterRecs ) {
+	// 	// . set the clusterdb recs in the top tree
+	// 	return setClusterRecs ( ) ;
+	// }
 	// if we did not call setClusterRecs, go on to estimate the hits
-	estimateHits();
+	// estimateHitsAndSendReply();
+	// return true;
+
 	return true;
 }
+*/
 
 // . set the clusterdb recs in the top tree
 // . returns false if blocked, true otherwise
@@ -1021,26 +1200,28 @@ bool Msg39::setClusterRecs ( ) {
 					0                     , // maxAge
 					false                 , // addToCache
 					this                  ,
-					gotClusterRecsWrapper ,
+					//gotClusterRecsWrapper ,
+					controlLoopWrapper,
 					m_r->m_niceness       ,
 					m_debug             ) )
 		// did we block? if so, return
 		return false;
 
 	// ok, process the replies
-	gotClusterRecs();
+	//gotClusterRecs();
 	// the above never blocks
 	return true;
 }
 
-void gotClusterRecsWrapper ( void *state ) {
-	// get this class
-	Msg39 *THIS = (Msg39 *)state;
-	// be on our way
-	THIS->gotClusterRecs ();
-}
+// void gotClusterRecsWrapper ( void *state ) {
+// 	// get this class
+// 	Msg39 *THIS = (Msg39 *)state;
+// 	// be on our way
+// 	THIS->gotClusterRecs ();
+// }
 
-void Msg39::gotClusterRecs ( ) {
+// return false and set g_errno on error
+bool Msg39::gotClusterRecs ( ) {
 
 	// now tell msg5 to set the cluster levels
 	if ( ! setClusterLevels ( m_clusterRecs      ,
@@ -1056,8 +1237,8 @@ void Msg39::gotClusterRecs ( ) {
 				  m_clusterLevels    )) {
 		m_errno = g_errno;
 		// send back an error reply
-		sendReply ( m_slot , this , NULL , 0 , 0 ,true);
-		return;
+		//sendReply ( m_slot , this , NULL , 0 , 0 ,true);
+		return false;
 	}
 
 	// count this
@@ -1096,10 +1277,11 @@ void Msg39::gotClusterRecs ( ) {
 	//if ( m_numDocIdSplits >= 2 ) return;
 
 	// finish up and send back the reply
-	estimateHits ();
+	//estimateHitsAndSendReply ();
+	return true;
 }	
 
-void Msg39::estimateHits ( ) {
+void Msg39::estimateHitsAndSendReply ( ) {
 
 	// no longer in use
 	m_inUse = false;

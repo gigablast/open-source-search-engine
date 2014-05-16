@@ -3720,6 +3720,8 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 			prevResult = opResult;
 			// convert word to term #
 			QueryTerm *qt = qw->m_queryWordTerm;
+			// fix title:"notre dame" AND NOT irish
+			if ( ! qt ) qt = qw->m_queryPhraseTerm;
 			if ( ! qt ) continue;
 			// . m_bitNum is set in Posdb.cpp when it sets its
 			//   QueryTermInfo array
