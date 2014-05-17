@@ -133,7 +133,7 @@ You will need the following packages installed<br>
 <li> <b>The ONLY open source WEB search engine.</b> 
 <li> Scalable to thousands of servers. 
 <li> Has scaled to over 12 billion web pages on over 200 servers.
-<li> A dual quad core, with 32GB ram, and two 160GB Intel SSDs, running 8 Gigablast instances, can do about 8 qps (queries per second) on an index of 10 million pages. Drives will be close to maximum storage capacity. Doubling index size will more or less halve qps rate.
+<li> A dual quad core, with 32GB ram, and two 160GB Intel SSDs, running 8 Gigablast instances, can do about 8 qps (queries per second) on an index of 10 million pages. Drives will be close to maximum storage capacity. Doubling index size will more or less halve qps rate. (Performance metrics can be made about ten times faster but I have not got around to it yet. Drive space usage will probably remain about the same because it is already pretty efficient.)
 <li> 1 million web pages requires 28.6GB of drive space. That includes the index, meta information and the compressed HTML of all the web pages.
 <li> 4GB of RAM required per Gigablast instance. (instance = process)
 <li> Live demo at <a href=http://www.gigablast.com/>http://www.gigablast.com/</a>
@@ -143,8 +143,8 @@ You will need the following packages installed<br>
 <li> 100% custom. A single binary. The web server, database and everything else 
   is all contained in this source code in a highly efficient manner. Makes administration and troubleshooting easier.
 <li> Reliable. Has been tested in live production since 2002 on billions of 
-  queries on indexes of over 12 billion web pages.
-<li> Super fast and efficient. One of a small handful of search engines that have hit such big numbers.
+  queries on an index of over 12 billion unique web pages, 24 billion mirrored.
+<li> Super fast and efficient. One of a small handful of search engines that have hit such big numbers. The only open source search engine that has.
 <li> Supports all languages. Can give results in specified languages a boost over others at query time. Uses UTF-8 representation internally.
 <li> Track record. Has been used by many clients. Has been successfully used
   in distributed enterprise software.
@@ -153,7 +153,7 @@ You will need the following packages installed<br>
 <li> Email alert monitoring. Let's you know when the system is down in all or part, or if a server is overheating, or a drive has failed or a server is consistently going out of memory, etc.
 <li> "Synonyms" based on wiktionary data. Using query expansion method.
 <li> Customizable "synonym" file: my-synonyms.txt
-<li> No TF/IDF or Cosine. Stores position and format information (fancy bits) of each word in an indexed document. It uses this to return results that contain the query terms in close proximity rather than relying on the probabilistic tf/idf approach of other search engines. The older version of Gigablast used tf/idf on Indexdb, whereas it now uses Posdb to hold the index data.
+<li> No silly TF/IDF or Cosine. Stores position and format information (fancy bits) of each word in an indexed document. It uses this to return results that contain the query terms in close proximity rather than relying on the probabilistic tf/idf approach of other search engines. The older version of Gigablast used tf/idf on Indexdb, whereas it now uses Posdb to hold the index data.
 <li> Complete scoring details are displayed in the search results.
 <li> Indexes anchor text of inlinks to a web page and uses many techniques to flag pages as link spam thereby discounting their link weights.
 <li> Demotes web pages if they are spammy.
@@ -161,11 +161,13 @@ You will need the following packages installed<br>
 <li> Duplicate removal from search results.
 <li> Distributed web crawler/spider. Supports crawl delay and robots.txt.
 <li> Crawler/Spider is highly programmable and URLs are binned into priority queues. Each priority queue has several throttles and knobs.
+<li> Spider status monitor to see the urls being spidered over the whole cluster in a real-tiem widget.
 <li> Complete REST/XML API for doing queries as well as adding and deleting documents in real-time.
-<li> Automated data corruption detection and repair based on hardware failures.
+<li> Automated data corruption detection, fail-over and repair based on hardware failures.
 <li> Custom Search. (aka Custom Topic Search). Using a cgi parm like &sites=abc.com+xyz.com you can restrict the search results to a list of up to 500 subdomains.
 <li> DMOZ integration. Run DMOZ directory. Index and search over the pages in DMOZ. Tag all pages from all sites in DMOZ for searching and displaying of DMOZ topics under each search result.
 <li> Collections. Build tens of thousands of different collections, each treated as a separate search engine. Each can spider and be searched independently.
+<li> Federated search over multiple Gigablast collections using syntax like &c=mycoll1+mycoll2+mycoll3+...
 <li> Plug-ins. For indexing any file format by calling Plug-ins to convert that format to HTML. Provided binary plug-ins: pdftohtml (PDF), ppthtml (PowerPoint), antiword (MS Word), pstotext (PostScript).
 <li> Indexes JSON and XML natively. Provides ability to search individual structured fields.
 <li> Sorting. Sort the search results by meta tags or JSON fields that contain numbers, simply by adding something like gbsortby:price or gbrevsortby:price as a query term, assuming you have meta price tags.
@@ -173,7 +175,6 @@ You will need the following packages installed<br>
 <li> Using &stream=1 can stream back millions of search results for a query without running out of memory.
 <li> Makes and displays thumbnail images in the search results.
 <li> Nested boolean queries using AND, OR, NOT operators.
-<li> Federated search over multiple Gigablast collections using syntax like &c=mycoll1+mycoll2+mycoll3+...
 <li> Built-in support for <a href=http://www.diffbot.com/products/automatic/>diffbot.com's api</a>, which extracts various entities from web sites, like products, articles, etc. But you will need to get a free token from them for access to their API.
 <li> Spellchecker will be renabled shortly.
 </ul>
