@@ -56,7 +56,7 @@ JsonItem *Json::getItem ( char *name ) {
 			continue;
 		// check name
 		char *name2   = ji->m_name;
-		if ( ! names2 ) return NULL; // array with empty name...
+		if ( ! name2 ) return NULL; // array with empty name...
 		if ( strcmp(name2,name) == 0 ) return ji;
 	}
 	return NULL;
