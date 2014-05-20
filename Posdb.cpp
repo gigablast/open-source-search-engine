@@ -576,6 +576,7 @@ void PosdbTable::reset() {
 	freeMem();
 	// does not free the mem of this safebuf, only resets length
 	m_docIdVoteBuf.reset();
+	m_filtered = 0;
 	m_qiBuf.reset();
 	// assume no-op
 	m_t1 = 0LL;
@@ -6612,6 +6613,9 @@ void PosdbTable::intersectLists10_r ( ) {
 	     m_r->m_language == docLang)
 		score *= SAMELANGMULT;
 
+	// assume filtered out
+	if ( ! secondPass ) m_filtered++;
+
 	//
 	// if we have a gbsortby:price term then score exclusively on that
 	//
@@ -6687,6 +6691,9 @@ void PosdbTable::intersectLists10_r ( ) {
 				goto advance;
 		}
 	}
+
+	// we did not get filtered out
+	if ( ! secondPass ) m_filtered--;
 
 	// . seoDebug hack so we can set "dcs"
 	// . we only come here if we actually made it into m_topTree

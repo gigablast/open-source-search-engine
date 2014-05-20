@@ -711,6 +711,8 @@ class PosdbTable {
 	// intersect docids from each QueryTermInfo into here
 	SafeBuf              m_docIdVoteBuf;
 
+	long m_filtered;
+
 	// boolean truth table for boolean queries
 	HashTableX m_bt;
 	HashTableX m_ct;

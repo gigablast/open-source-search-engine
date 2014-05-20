@@ -400,6 +400,9 @@ bool Msg39::controlLoop ( ) {
 		}
 		// accumulate total hits count over each docid split
 		m_numTotalHits += m_posdbTable.m_docIdVoteBuf.length() / 6;
+		// minus the shit we filtered out because of gbminint/gbmaxint/
+		// gbmin/gbmax/gbsortby/gbrevsortby/gbsortbyint/gbrevsortbyint
+		m_numTotalHits -= m_posdbTable.m_filtered;
 		// error?
 		if ( m_posdbTable.m_errno ) {
 			// we do not need to store the intersection i guess..??
