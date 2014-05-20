@@ -1135,7 +1135,7 @@ bool gotResults ( void *state ) {
 		// prints in xml or html
 		//
 		//////////
-		if ( ! printResult ( st , i , numPrintedSoFar++ ) ) {
+		if ( ! printResult ( st , i , &numPrintedSoFar ) ) {
 			hadPrintError = true;
 			break;
 		}
@@ -2481,7 +2481,7 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 
 
 // use this for xml as well as html
-bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
+bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	SafeBuf *sb = &st->m_sb;
 
@@ -2515,6 +2515,8 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		else
 			sb->safePrintf("%lli<br/>\n", 
 				      d );
+		// inc it
+		*numPrintedSoFar = *numPrintedSoFar + 1;
 		return true;
 	}
 
@@ -2555,6 +2557,8 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 			st->m_printedHeaderRow = true;
 		}
 		printJsonItemInCSV ( json , sb , st );
+		// inc it
+		*numPrintedSoFar = *numPrintedSoFar + 1;
 		return true;
 	}
 
@@ -2562,7 +2566,7 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 	if ( mr->ptr_content ) {
 
 		// for json items separate with \n,\n
-		if ( si->m_format != FORMAT_HTML && numPrintedSoFar > 0 )
+		if ( si->m_format != FORMAT_HTML && *numPrintedSoFar > 0 )
 			sb->safePrintf(",\n");
 
 		sb->safeStrcpy ( mr->ptr_content );
@@ -2600,6 +2604,8 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		//mr->size_content );
 		if ( si->m_format == FORMAT_HTML )
 			sb->safePrintf("\n\n<br><br>\n\n");
+		// inc it
+		*numPrintedSoFar = *numPrintedSoFar + 1;
 		// just in case
 		sb->nullTerm();
 		return true;
@@ -2661,6 +2667,8 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		    mr->m_docId,mstrerror(err));
 		// wrap it up if clustered
 		if ( indent ) sb->safeMemcpy("</blockquote>",13);
+		// inc it
+		*numPrintedSoFar = *numPrintedSoFar + 1;
 		return true;
 	}
 	
@@ -3612,6 +3620,9 @@ bool printResult ( State0 *st, long ix , long numPrintedSoFar ) {
 		sb->safePrintf("<div style=line-height:%lipx;><br></div>",
 			       (long)SERP_SPACER);
 
+
+	// inc it
+	*numPrintedSoFar = *numPrintedSoFar + 1;
 
 	// done?
 	DocIdScore *dp = msg40->getScoreInfo(ix);

@@ -1717,9 +1717,9 @@ bool Msg40::gotSummary ( ) {
 
 		// . ok, we got it, so print it and stream it
 		// . this might set m_hadPrintError to true
-		printSearchResult9 ( m_printi , m_numPrintedSoFar );
+		printSearchResult9 ( m_printi , &m_numPrintedSoFar );
 
-		m_numPrintedSoFar++;
+		//m_numPrintedSoFar++;
 		//log("msg40: printedsofar=%li",m_numPrintedSoFar);
 
 		// now free the reply to save memory since we could be 
@@ -5271,7 +5271,7 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 
 
 // . printSearchResult into "sb"
-bool Msg40::printSearchResult9 ( long ix , long numPrintedSoFar ) {
+bool Msg40::printSearchResult9 ( long ix , long *numPrintedSoFar ) {
 
 	// . we stream results right onto the socket
 	// . useful for thousands of results... and saving mem

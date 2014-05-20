@@ -58,7 +58,7 @@ public:
 
 
 bool printSearchResultsHeader ( class State0 *st ) ;
-bool printResult ( class State0 *st,  long ix , long numPrintedSoFar );
+bool printResult ( class State0 *st,  long ix , long *numPrintedSoFar );
 bool printSearchResultsTail ( class State0 *st ) ;
 
 
