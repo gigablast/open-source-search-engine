@@ -2122,13 +2122,29 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 	char bulkurlsfile[1024];
 	snprintf(bulkurlsfile, 1024, "%scoll.%s.%li/bulkurls.txt", g_hostdb.m_dir , coll , (long)st->m_collnum );
 	if ( spots && cr && cr->m_isCustomCrawl == 2 ) {
+	    long spotsLen = (long)gbstrlen(spots);
 		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
-		    (long)gbstrlen(spots),coll,(long)st->m_collnum);
+		    spotsLen,coll,(long)st->m_collnum);
 		FILE *f = fopen(bulkurlsfile, "w");
 		if (f != NULL) {
 		    // urls are space separated.
-		    fprintf(f, "%s", spots);
+		    // as of 5/14/2014, it appears that spots is space-separated for some URLs (the first two)
+		    // and newline-separated for the remainder. Make a copy that's space separated so that restarting bulk jobs works.
+		    // Alternatives:
+		    //  1) just write one character to disk at a time, replacing newlines with spaces
+		    //  2) just output what you have, and then when you read in, replace newlines with spaces
+		    //  3) probably the best option: change newlines to spaces earlier in the pipeline
+		    char *spotsCopy = (char*) mmalloc(spotsLen+1, "create a temporary copy of spots that we're about to delete");
+		    for (int i = 0; i < spotsLen; i++) {
+		        char c = spots[i];
+		        if (c == '\n')
+		            c = ' ';
+		        spotsCopy[i] = c;
+		    }
+		    spotsCopy[spotsLen] = '\0';
+		    fprintf(f, "%s", spotsCopy);
 		    fclose(f);
+		    mfree(spotsCopy, spotsLen+1, "no longer need copy");
 		}
 	}
 

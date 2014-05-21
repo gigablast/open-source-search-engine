@@ -14239,12 +14239,15 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	else
 		m_diffbotUrl.pushChar('&');
 
+	// make sure that diffbot expands all objects
+	m_diffbotUrl.safePrintf("expand");
+
 	//diffbotUrl.safePrintf("http://54.212.86.74/api/%s?token=%s&u="
 	// only print token if we have one, because if user provides their
 	// own diffbot url (apiUrl in Parms.cpp) then they  might include
 	// the token in that for their non-custom crawl. m_customCrawl=0.
 	if ( cr->m_diffbotToken.length())
-		m_diffbotUrl.safePrintf("token=%s",
+		m_diffbotUrl.safePrintf("&token=%s",
 					cr->m_diffbotToken.getBufStart());
 
 	m_diffbotUrl.safePrintf("&url=");

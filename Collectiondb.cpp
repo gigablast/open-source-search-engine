@@ -1170,6 +1170,9 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 		    "%s.", dname,mstrerror(g_errno));
 	}
 
+    // be sure to copy back the bulk urls for bulk jobs
+    if (cr->m_isCustomCrawl == 2)
+        mv( tmpbulkurlsname, newbulkurlsname );
 
 	// . unlink all the *.dat and *.map files for this coll in its subdir
 	// . remove all recs from this collnum from m_tree/m_buckets
@@ -1194,10 +1197,6 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 
 	// save coll.conf to new directory
 	cr->save();
-
-	// be sure to copy back the bulk urls for bulk jobs
-	if (cr->m_isCustomCrawl == 2)
-	    mv( tmpbulkurlsname, newbulkurlsname );
 
 	// and clear the robots.txt cache in case we recently spidered a
 	// robots.txt, we don't want to use it, we want to use the one we
