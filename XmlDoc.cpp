@@ -1983,6 +1983,8 @@ bool XmlDoc::injectDoc ( char *url ,
 	if ( diffbotReply ) {
 		if ( ! m_diffbotReply.safeStrcpy(diffbotReply) )
 			return true;
+		// it was injected so assume no error
+		m_diffbotReplyError = 0;
 		m_diffbotReplyValid = true;
 	}
 
