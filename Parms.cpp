@@ -17066,9 +17066,13 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 	////////
 	char customCrawl = 0;
 	char *path = hr->getPath();
-	if ( strncmp(path,"/crawlbot",9) == 0 ) customCrawl = 1;
+	// i think /crawlbot is only used by me to see PageCrawlBot.cpp
+	// so don't bother...
+	if ( strncmp(path,"/crawlbot",9) == 0 ) customCrawl = 0;
 	if ( strncmp(path,"/v2/crawl",9) == 0 ) customCrawl = 1;
 	if ( strncmp(path,"/v2/bulk" ,8) == 0 ) customCrawl = 2;
+	if ( strncmp(path,"/v3/crawl",9) == 0 ) customCrawl = 1;
+	if ( strncmp(path,"/v3/bulk" ,8) == 0 ) customCrawl = 2;
 
         // throw error if collection record custom crawl type doesn't equal 
 	// the crawl type of current request

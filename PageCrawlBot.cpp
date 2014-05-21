@@ -3080,6 +3080,17 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "</tr>"
 
 			      "<tr>"
+			      "<td><b>Crawl Start Time:</td>"
+			      "<td>%lu</td>"
+			      "</tr>"
+
+			      "<tr>"
+			      "<td><b>Crawl Completion Time:</td>"
+			      "<td>%lu</td>"
+			      "</tr>"
+
+
+			      "<tr>"
 			      "<td><b>Rounds Completed:</td>"
 			      "<td>%li</td>"
 			      "</tr>"
@@ -3153,6 +3164,11 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 
 			      , crawlStatus
 			      , tmp.getBufStart()
+
+			      , cr->m_diffbotCrawlStartTime
+			      // this is 0 if not over yet
+			      , cr->m_diffbotCrawlEndTime
+
 			      , cr->m_spiderRoundNum
 			      , cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider
 
