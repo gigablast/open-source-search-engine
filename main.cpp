@@ -2876,6 +2876,11 @@ int main2 ( int argc , char *argv[] ) {
 
 	log("host: Using %shosts.conf",g_hostdb.m_dir);
 
+	{
+		pid_t pid = getpid();
+		log("host: Process ID is %llu",(long long)pid);
+	}
+
 	// from Hostdb.cpp
 	ips = getLocalIps();
 	for ( ; ips && *ips ; ips++ )
