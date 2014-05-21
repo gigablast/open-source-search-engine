@@ -1413,7 +1413,8 @@ void nukeDoledb ( collnum_t collnum ) {
 		// reset this cache
 		//clearUfnTable();
 		// log it
-		log("spider: rebuilding %s from doledb nuke",getCollName());
+		log("spider: rebuilding %s from doledb nuke",
+		    sc->getCollName());
 		// activate a scan if not already activated
 		sc->m_waitingTreeNeedsRebuild = true;
 		// if a scan is ongoing, this will re-set it
