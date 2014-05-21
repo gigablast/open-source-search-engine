@@ -3090,6 +3090,8 @@ long *XmlDoc::getIndexCode2 ( ) {
 	     // that is the whole point of this line
 	     ! m_isDiffbotJSONObject )
 		check = false;
+	if ( m_sreqValid && m_sreq.m_ignoreDocUnchangedError )
+		check = false;
 	if ( check ) {
 		long *ch32 = getContentHash32();
 		if ( ! ch32 || ch32 == (void *)-1 ) return (long *)ch32;
@@ -20278,6 +20280,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		memcpy ( &ksr , &m_sreq , m_sreq.getRecSize() );
 		// do not spider links, it's a page reindex of a multidoc url
 		ksr.m_avoidSpiderLinks = 1;
+		// avoid EDOCUNCHANGED
+		ksr.m_ignoreDocUnchangedError = 1;
 		// but it is not docid based, so overwrite the docid
 		// in ksr.m_url with the parent multidoc url. it \0 terms it.
 		strcpy(ksr.m_url , parentUrl );//, MAX_URL_LEN-1);
