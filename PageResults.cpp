@@ -2569,7 +2569,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		if ( si->m_format != FORMAT_HTML && *numPrintedSoFar > 0 )
 			sb->safePrintf(",\n");
 
-		sb->safeStrcpy ( mr->ptr_content );
+		// a dud? just print empty {}'s
+		if ( mr->size_content == 1 ) 
+			sb->safePrintf("{}");
+		else
+			sb->safeStrcpy ( mr->ptr_content );
 
 		// . let's hack the spidertime onto the end
 		// . so when we sort by that using gbsortby:spiderdate
@@ -2587,7 +2591,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		     *end == '}' ) {
 			// replace trailing } with spidertime}
 			sb->incrementLength(-distance);
-			sb->safePrintf(",\"docId\":%lli", mr->m_docId);
+			// comma?
+			if ( mr->size_content>1 ) sb->pushChar(',');
+			sb->safePrintf("\"docId\":%lli", mr->m_docId);
 			// for deduping
 			//sb->safePrintf(",\"crc\":%lu",mr->m_contentHash32);
 			// crap, we lose resolution storing as a float
