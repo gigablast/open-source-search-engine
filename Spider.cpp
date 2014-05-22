@@ -2842,10 +2842,11 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 	if ( m_lastPrintCount > m_numBytesScanned )
 		m_lastPrintCount = 0;
 
-	// announce every 100MB maybe
-	if ( m_numBytesScanned - m_lastPrintCount > 100000000 ) {
+	// announce every 10MB
+	if ( m_numBytesScanned - m_lastPrintCount > 10000000 ) {
 		log("spider: %llu spiderdb bytes scanned for waiting tree "
-		    "re-population",m_numBytesScanned);
+		    "re-population for cn=%li",m_numBytesScanned,
+		    (long)m_collnum);
 		m_lastPrintCount = m_numBytesScanned;
 	}
 
@@ -2863,6 +2864,10 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		m_nextKey2      += (unsigned long) 1;
 		// watch out for wrap around
 		if ( m_nextKey2 < endKey ) shortRead = true;
+		// nah, advance the firstip, should be a lot faster when
+		// we are only a few firstips...
+		if ( lastOne )
+			m_nextKey2 = g_spiderdb.makeFirstKey(lastOne+1);
 	}
 
 	if ( shortRead ) {
@@ -2870,11 +2875,15 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		// like 24 hrs from that...
 		m_lastScanTime = getTimeLocal();
 		// log it
-		if ( m_numAdded )
-			log("spider: added %li recs to waiting tree from "
-			    "scan of %lli bytes coll=%s",
-			    m_numAdded,m_numBytesScanned,
-			    m_cr->m_coll);
+		// if ( m_numAdded )
+		// 	log("spider: added %li recs to waiting tree from "
+		// 	    "scan of %lli bytes coll=%s",
+		// 	    m_numAdded,m_numBytesScanned,
+		// 	    m_cr->m_coll);
+		// note it
+		log("spider: rebuild complete for %s. Added %li "
+		    "recs to waiting tree, scanned %lli bytes of spiderdb.",
+		    m_coll,m_numAdded,m_numBytesScanned);
 		// reset the count for next scan
 		m_numAdded = 0 ;
 		m_numBytesScanned = 0;
@@ -2882,8 +2891,6 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		m_nextKey2.setMin();
 		// no longer need rebuild
 		m_waitingTreeNeedsRebuild = false;
-		// note it
-		log("spider: rebuild complete for %s",m_coll);
 	}
 
 	// free list to save memory
@@ -3910,6 +3917,9 @@ bool SpiderColl::scanListForWinners ( ) {
 		// skip if banned
 		if ( priority == SPIDER_PRIORITY_FILTERED ) continue;
 		if ( priority == SPIDER_PRIORITY_BANNED   ) continue;
+
+		// temp debug
+		//char *xx=NULL;*xx=0;
 
 		long long spiderTimeMS;
 		spiderTimeMS = getSpiderTimeMS ( sreq,ufn,srep,nowGlobalMS );

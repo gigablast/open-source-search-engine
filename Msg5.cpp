@@ -880,6 +880,8 @@ bool Msg5::needsRecall ( ) {
 	// seems very common when doing rebalancing then merging to have
 	// to do at least one round of re-reading, so note that
 	if ( m_round == 0 ) logIt = false;
+	// so common for doledb because of key annihilations
+	if ( m_rdbId == RDB_DOLEDB && m_round < 10 ) logIt = false;
 	if ( logIt )
 		logf(LOG_DEBUG,"db: Reading %li again from %s (need %li total "
 		     "got %li totalListSizes=%li sk=%s) "
