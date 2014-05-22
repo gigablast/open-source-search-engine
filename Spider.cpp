@@ -2482,8 +2482,11 @@ bool SpiderColl::addToWaitingTree ( uint64_t spiderTimeMS , long firstIp ,
 	key_t wk = makeWaitingTreeKey ( spiderTimeMS, firstIp );
 	// what is this?
 	if ( firstIp == 0 || firstIp == -1 ) {
-		log("spider: got ip of %s. wtf? failed to add to "
-		    "waiting tree, but return true anyway.",iptoa(firstIp) );
+		log("spider: got ip of %s. cn=%li "
+		    "wtf? failed to add to "
+		    "waiting tree, but return true anyway.",
+		    iptoa(firstIp) ,
+		    (long)m_collnum);
 		// don't return true lest m_nextKey2 never gets updated
 		// and we end up in an infinite loop doing 
 		// populateWaitingTreeFromSpiderdb()
@@ -2866,7 +2869,7 @@ void SpiderColl::populateWaitingTreeFromSpiderdb ( bool reentry ) {
 		if ( m_nextKey2 < endKey ) shortRead = true;
 		// nah, advance the firstip, should be a lot faster when
 		// we are only a few firstips...
-		if ( lastOne )
+		if ( lastOne && lastOne != -1 )
 			m_nextKey2 = g_spiderdb.makeFirstKey(lastOne+1);
 	}
 
