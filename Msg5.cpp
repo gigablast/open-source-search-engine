@@ -827,7 +827,17 @@ bool Msg5::needsRecall ( ) {
 	// if this is NOT the first round and the sum of all our list sizes
 	// did not increase, then we hit the end...
 	if ( m_round >= 1 && m_totalSize == m_lastTotalSize ) {
-		log("msg5: increasing minrecsizes did nothing. assuming done");
+		log("msg5: increasing minrecsizes did nothing. assuming done. "
+		    "db=%s (newsize=%li origsize=%li total "
+		    "got %li totalListSizes=%li sk=%s) "
+		    "cn=%li this=0x%lx round=%li.", 
+		    base->m_dbname , 
+		    m_newMinRecSizes,
+		    m_minRecSizes, 
+		    m_list->m_listSize,
+		    m_totalSize,
+		    KEYSTR(m_startKey,m_ks),
+		    (long)m_collnum,(long)this, m_round );
 		goto done;
 	}
 	// ok, make sure if we go another round at least one list gains!
@@ -861,9 +871,13 @@ bool Msg5::needsRecall ( ) {
 	if ( m_round == 0 ) logIt = false;
 	if ( logIt )
 		logf(LOG_DEBUG,"db: Reading %li again from %s (need %li total "
-		     "got %li) cn=%li this=0x%lx round=%li.", 
+		     "got %li totalListSizes=%li sk=%s) "
+		     "cn=%li this=0x%lx round=%li.", 
 		     m_newMinRecSizes , base->m_dbname , m_minRecSizes, 
-		     m_list->m_listSize, (long)m_collnum,(long)this, m_round );
+		     m_list->m_listSize,
+		     m_totalSize,
+		     KEYSTR(m_startKey,m_ks),
+		     (long)m_collnum,(long)this, m_round );
 	m_round++;
 	// record how many screw ups we had so we know if it hurts performance
 	base->m_rdb->didReSeek ( );
@@ -1887,11 +1901,17 @@ bool Msg5::doneMerging ( ) {
 	// set old list size in case we get called again
 	m_oldListSize = newListSize;
 
+	//long delta = m_minRecSizes - (long)newListSize;
+
 	// how many recs do we have left to read?
 	m_newMinRecSizes = m_minRecSizes - (long)newListSize;
 	
 	// return now if we met our minRecSizes quota
 	if ( m_newMinRecSizes <= 0 ) return true;
+
+	// if we gained something this round then try to read the remainder
+	//if ( net > 0 ) m_newMinRecSizes = delta;
+
 
 	// otherwise, scale proportionately
 	long nn = ((long long)m_newMinRecSizes * percent ) / 100LL;
