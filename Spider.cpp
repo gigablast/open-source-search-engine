@@ -31,7 +31,9 @@ void testWinnerTreeKey ( ) ;
 // . i'd like to set back to 10 for speed... maybe even 5 or less
 // . back to 30 from 20 to try to fix crawls thinking they are done
 //   maybe because of the empty doledb logic taking too long?
-#define SPIDER_DONE_TIMER 30
+//#define SPIDER_DONE_TIMER 30
+// try 45 to prevent false revivals
+#define SPIDER_DONE_TIMER 45
 
 // seems like timecity.com as gigabytes of spiderdb data so up from 40 to 400
 #define MAX_WINNER_NODES 400
