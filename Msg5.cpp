@@ -826,6 +826,16 @@ bool Msg5::needsRecall ( ) {
 
 	// if this is NOT the first round and the sum of all our list sizes
 	// did not increase, then we hit the end...
+	//
+	// i think this is sometimes stopping us short. we need to verify
+	// that each list (from tree and files) is exhausted... which
+	// the statement above does... !!! it was causing us to miss urls
+	// in doledb and think a collection was done spidering. i think
+	// maybe because the startkey of each list would change since we
+	// merge them and accumulate into m_list. a better way would be
+	// to make sure doledb or any rdb dumps and tight merges when
+	// we start having a lot of key annihilations.
+	/*
 	if ( m_round >= 1 && m_totalSize == m_lastTotalSize ) {
 		log("msg5: increasing minrecsizes did nothing. assuming done. "
 		    "db=%s (newsize=%li origsize=%li total "
@@ -840,6 +850,7 @@ bool Msg5::needsRecall ( ) {
 		    (long)m_collnum,(long)this, m_round );
 		goto done;
 	}
+	*/
 	// ok, make sure if we go another round at least one list gains!
 	m_lastTotalSize = m_totalSize;
 
