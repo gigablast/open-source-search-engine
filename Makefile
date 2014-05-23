@@ -472,10 +472,10 @@ install:
 # deal with it.
 	mkdir -p /var/gigablast/data0/
 	./gb copyfiles /var/gigablast/data0/
-# if user types 'gb' it will use the binary in /var/gigablast/data0/
+# if user types 'gb' it will use the binary in /var/gigablast/data0/gb
 	rm -f /usr/bin/gb
 	ln -s /var/gigablast/data0/gb /usr/bin/gb
-# if machine restarts
+# if machine restarts...
 # the new way that does not use run-levels anymore
 	rm -f /etc/init.d/gb
 	ln -s /lib/init/upstart-job /etc/init.d/gb
