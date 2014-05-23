@@ -466,6 +466,14 @@ Msg6a.o:
 geo_ip_table.o: geo_ip_table.cpp geo_ip_table.h
 	$(CC) $(DEFS) -m32 -Wall -pipe -c $*.cpp 
 
+tarball-testing:
+#	git archive --format=tar master | gzip > gb.tar
+	git archive --format=tar --prefix=gb-1.0/ testing > gb-1.0.tar
+
+tarball-master:
+#	git archive --format=tar master | gzip > gb.tar
+	git archive --format=tar --prefix=gb-1.0/ master > gb-1.0.tar
+
 install:
 # gigablast will copy over the necessary files. it has a list of the
 # necessary files and that list changes over time so it is better to let gb
