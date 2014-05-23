@@ -25,8 +25,8 @@ mkdir -p $RPM_BUILD_ROOT/lib/init/
 mkdir -p $RPM_BUILD_ROOT/etc/init.d/
 mkdir -p $RPM_BUILD_ROOT/etc/init/
 $RPM_BUILD_ROOT/../../BUILD/gb-1.0/gb copyfiles $RPM_BUILD_ROOT/var/gigablast/data0/
-ln -s $RPM_BUILD_ROOT/var/gigablast/data0/gb $RPM_BUILD_ROOT/usr/bin/
-ln -s $RPM_BUILD_ROOT/lib/init/upstart-job $RPM_BUILD_ROOT/etc/init.d/gb
+ln -s ../../var/gigablast/data0/gb $RPM_BUILD_ROOT/usr/bin/
+ln -s ../../lib/init/upstart-job $RPM_BUILD_ROOT/etc/init.d/gb
 install -m 644 init.gb.conf $RPM_BUILD_ROOT/etc/init/gb.conf
 
 %clean
@@ -34,7 +34,6 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%doc README TODO COPYING ChangeLog
 
 /usr/bin/gb
 
