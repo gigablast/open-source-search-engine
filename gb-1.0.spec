@@ -34,7 +34,9 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-
+/var/gigablast/
+/etc/init.d/gb
+/etc/init/gb.conf
 /usr/bin/gb
 
 %changelog

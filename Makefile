@@ -466,6 +466,8 @@ Msg6a.o:
 geo_ip_table.o: geo_ip_table.cpp geo_ip_table.h
 	$(CC) $(DEFS) -m32 -Wall -pipe -c $*.cpp 
 
+# move this tarball into ~/rpmbuild/?????
+# then run rpmbuild -ba gb-1.0.spec to build the rpms
 tarball-testing:
 #	git archive --format=tar master | gzip > gb.tar
 	git archive --format=tar --prefix=gb-1.0/ testing > gb-1.0.tar
