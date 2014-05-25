@@ -1367,7 +1367,7 @@ int main2 ( int argc , char *argv[] ) {
 	//if ( ! workingDir ) workingDir = getcwd2 ( argv[0] );
 	char *workingDir = getcwd2 ( argv[0] );
 
-	//log("host: working directory is %s",workingDir);
+	log("host: working directory is %s",workingDir);
 
 	// load up hosts.conf
 	// . it will determine our hostid based on the directory path of this
@@ -16931,6 +16931,8 @@ bool isRecoveryFutile ( ) {
 
 char *getcwd2 ( char *arg ) {
 
+  //fprintf(stderr,"arg=%s\n",arg);
+
 	// skip initial . and /
 	if ( arg[0] == '.' && arg[1] == '/' ) arg += 1;
 
@@ -16963,16 +16965,18 @@ char *getcwd2 ( char *arg ) {
 	// if our path started with / then it was absolute...
 	else {
 		strncpy(s_cwdBuf,arg,alen);
+		s_cwdBuf[alen]='\0';
 	}
 
 	// make sure it ends in / for consistency
 	long clen = gbstrlen(s_cwdBuf);
 	if ( s_cwdBuf[clen-1] != '/' ) {
-		s_cwdBuf[clen++] = '/';
-		s_cwdBuf[clen++] = '\0';
+		s_cwdBuf[clen-1] = '/';
+		s_cwdBuf[clen] = '\0';
+		clen--;
 	}
 
-
+	//fprintf(stderr,"cwdBuf is %s\n",s_cwdBuf);
 	// size of the whole thing
 	//long clen = gbstrlen(s_cwdBuf);
 	// store terminating /
