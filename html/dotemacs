@@ -1,0 +1,247 @@
+;;  David's wonderful .emacs file!
+;;
+
+;;
+;;  Keep track of which version of emacs we are running
+;;
+(defvar running-xemacs (string-match "XEmacs\\|Lucid" emacs-version))
+
+;;
+;;  Auto-loaded files
+;;
+
+; mdw figure out why swapping these two lines below is strange
+(set-background-color "Black") 
+;(set-background-color "DarkBlack") 
+
+(set-foreground-color "tan") 
+;;(set-default-font "-adobe-courier-bold-r-normal--14-140-75-75-m-90-iso8859-1")
+(set-default-font "-bitstream-terminal-bold-r-normal--18-140-100-100-c-110-iso8859-1")
+;;(set-face-foreground 'modeline "black") 
+
+(set-cursor-color "yellow") 
+
+(autoload `kumac-mode "kumac-mode")
+(autoload `xrdb-mode "xrdb-mode")
+
+(setq auto-mode-alist
+      (append '(("\\.car$"   . fortran-mode) ; cards files
+                ("\\.inc$"   . fortran-mode)
+                ("\\.kumac$" . kumac-mode)   ; KUIP macros
+                ("\\.Xdefaults$"    . xrdb-mode)
+                ("\\.Xenvironment$" . xrdb-mode)
+                ("\\.Xresources$"   . xrdb-mode)
+                ("*.\\.ad$"         . xrdb-mode)
+               )
+               auto-mode-alist))
+
+;
+; Turn on line numbers in whatever buffer we are in
+;
+(line-number-mode 1)
+
+;
+;  Make the default mode for an empty file be text mode rather than fundamental
+;
+(setq default-major-mode 'text-mode)
+
+;
+; This stuff controls version numbers: the previous 5 versions of the
+; file are kept as file.~n~; the earlier versions are silently deleted.
+;
+;(setq version-control t)
+;(setq kept-new-versions 4)
+;(setq kept-old-versions 0)
+;(setq delete-old-versions t)
+
+;
+; Always highlight the current selection
+;
+(setq-default transient-mark-mode t)
+
+;
+;  Modifications to fortran mode
+;
+(setq fortran-comment-indent-style nil)
+(setq fortran-do-indent 2)
+(setq fortran-if-indent 2)
+(setq fortran-continuation-char "+")
+
+;
+;  Modifications to TeX mode
+;
+(setq-default tex-default-mode 'latex-mode)
+(setq tex-dvi-command "xdvi")
+(add-hook 'latex-mode-hook
+  '(lambda ()
+    (auto-fill-mode 1)
+    (set-fill-column 76)
+    (modify-syntax-entry ?\$ ".")
+))
+(add-hook 'tex-mode-hook
+  '(lambda ()
+    (auto-fill-mode 1)
+    (set-fill-column 76)))
+;
+; Allow the downcase-region command
+;
+(put 'downcase-region 'disabled nil)
+(put 'upcase-region 'disabled nil)
+
+;
+; Highlight matching parentheses (doesn't work in xemacs)
+;
+(cond ((not running-xemacs)
+      (show-paren-mode 1)
+))
+;
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;  Font-lock mode (colorization of text) customization
+;;
+;
+; Invoked differently in emacs and xemacs
+;
+(cond ((not running-xemacs)
+      (global-font-lock-mode t)
+))
+
+(cond (running-xemacs
+       (require 'font-lock)
+))
+
+;
+;  Set the colors
+;
+(set-face-foreground 'highlight "Gold")
+;(set-face-background 'highlight "DarkSlateGray")
+(set-face-background 'highlight "Black")
+(set-face-foreground 'region    "Red")
+(set-face-background 'region    "Yellow")
+
+;(set-face-background 'default   "Black")         ; default bg
+;(set-face-foreground 'default   "White")    ; default fg
+;(set-face-background 'modeline "White")      ; Line at bottom of buffer
+;(set-face-foreground 'modeline "blue")
+;(set-face-font  'modeline "*bold-r-normal*140-100-100*")
+
+(make-face 'info-node)
+(make-face 'info-menu-5)
+(make-face 'info-xref)
+(make-face-bold 'info-node)
+(make-face-bold 'info-menu-5)
+(make-face-bold 'info-xref)
+(set-face-foreground 'info-node   "Orange")
+(set-face-foreground 'info-menu-5 "Orange")
+(set-face-foreground 'info-xref   "Orange")
+
+(make-face 'font-lock-comment-face)
+(make-face 'font-lock-string-face)
+(make-face 'font-lock-keyword-face)
+(make-face 'font-lock-type-face)
+(make-face 'font-lock-function-name-face)
+(make-face 'font-lock-variable-name-face)
+(make-face 'font-lock-reference-face)
+
+(setq font-lock-comment-face       'font-lock-comment-face)
+(setq font-lock-string-face        'font-lock-string-face)
+(setq font-lock-keyword-face       'font-lock-keyword-face)
+(setq font-lock-type-face          'font-lock-type-face)
+(setq font-lock-function-name-face 'font-lock-function-name-face)
+(setq font-lock-variable-name-face 'font-lock-variable-name-face)
+(setq font-lock-reference-face     'font-lock-reference-face)
+
+(set-face-foreground font-lock-comment-face       "DarkGreen")
+(set-face-foreground font-lock-string-face        "Blue")
+(set-face-foreground font-lock-keyword-face       "Red")
+(set-face-foreground font-lock-type-face          "Goldenrod")
+(set-face-foreground font-lock-function-name-face "LightBlue")
+(set-face-foreground font-lock-variable-name-face "Magenta")
+(set-face-foreground font-lock-reference-face     "Coral")
+
+;
+;  Modifications to C++ mode
+;
+(defun my-c-mode-common-hook ()
+;  (c-toggle-auto-hungry-state 1) 
+  (setq c-font-lock-keywords c-font-lock-keywords-2)
+  (setq c++-font-lock-keywords c++-font-lock-keywords-2)
+  (setq c-basic-offset 8)
+  (c-set-offset 'substatement-open 0)
+)
+
+(add-hook 'c-mode-common-hook 'my-c-mode-common-hook)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Match brackets by pressing %.
+; (define-key global-map "%" 'vi-type-paren-match)
+;
+;; VI-ish paren matching
+;; --
+;; originally attributed to: michael@uni-paderborn.de
+;; embellished by: jxh@cs.wustl.edu
+;;                 Fixed it so that it doesn't move off of a closing brace
+;;                 if no match is found.
+;; --
+;(defun vi-type-paren-match (arg)
+;  "Go to the matching parenthesis if on parenthesis otherwise insert %."
+;  (interactive "p")
+;  (let ((oldpos (point)))
+;    (cond
+;     ((looking-at "[{([]")
+;      (forward-sexp 1) (backward-char))
+;     ((looking-at "[])}]")
+;      (forward-char)
+;      (condition-case nil
+;          (progn
+;            (backward-sexp 1)
+;            (while (not (looking-at "[{([]")) (forward-char)))
+;        (error (progn
+;                 (backward-char)
+;                 (error (message "Unbalanced parentheses"))))))
+;     (t (self-insert-command (or arg 1))))))
+;(global-set-key "%" 'vi-type-paren-match)
+
+;;
+;;  Modify the title of the frame to show the name of the machine and file
+;;
+(defconst se::system-short-name
+  (let* ((sys-name (system-name))
+         (per-match (string-match "\\." sys-name)))
+    (if (not per-match)
+        sys-name
+      (substring sys-name 0 per-match))))
+
+(setq frame-title-format
+      '(multiple-frames
+        ("" invocation-name "@" se::system-short-name " - " "%b")
+        ("" invocation-name "@" se::system-short-name " - " "%b")))
+
+;;
+;;  Turn on EDT emulation
+;;
+;(cond ((not running-xemacs)
+;       (edt-emulation-on)
+;))
+
+;; enable display of european character set (mdw)
+;;(standard-display-european 1)
+
+;; Enable wheelmouse support by default
+(require 'mwheel)
+
+
+(defun no-more-control-m ()
+  "Strip those annoying Control M chars from files that have been
+imported from MS-DOS."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (end-of-line)
+    (delete-char -1)
+    (while (= 0 (forward-line 1))
+      (end-of-line)
+      (delete-char -1))))
