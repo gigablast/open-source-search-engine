@@ -626,7 +626,7 @@ User *Users::getUser (char *username ) { //,bool cacheLoad){
 // . returns the User record on success
 User *Users::isUserLogged ( char *username, long ip  ){
 	// bail out if init has failed
-	if ( !m_init ) return false;
+        if ( !m_init ) return (User *)NULL;
 
 	// get the user to the login cache
 	// get user record from cache

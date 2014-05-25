@@ -1,3 +1,5 @@
+%global debug_package %{nil}
+
 Summary: A distributed web and enterprise search engine.
 Name: gb
 Version: 1.0
