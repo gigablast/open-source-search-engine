@@ -36,7 +36,8 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <!--<a href=#files>List of Files</a> - the necessary files to run Gigablast
 <br>
 <br>-->
-<a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br><a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems<br><br><a href=#disaster>Disaster Recovery</a> - dealing with a crashed host
+<a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br><a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems
+<!--<br><br><a href=#disaster>Disaster Recovery</a> - dealing with a crashed host-->
 <!--<br><br>
 <a href=#security>The Security System</a> - how to control access-->
 <br><br>
@@ -49,13 +50,17 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 
 <br><br><a href=#metas>Indexing User-Defined Meta Tags</a> - how Gigablast indexes user-defined meta tags
 
-<br><br><a href=#bigdocs>Indexing Big Documents</a> - what controls the maximum size of a document that can be indexed?
+<!--<br><br><a href=#bigdocs>Indexing Big Documents</a> - what controls the maximum size of a document that can be indexed?-->
 
 <!--<br><br><a href=#rolling>Rolling the New Index</a> - merging the realtime files into the base file-->
-<br><br><a href=#dmoz>Building a DMOZ Based Directory</a> - build a web directory based on open DMOZ data<br><br>
+<br><br>
+<a href=#dmoz>Building a DMOZ Based Directory</a> - build a web directory based on open DMOZ data
 
-<a href=#optimizing>Optimizing</a> - optimizing Gigablast's spider and query performance<br><br>
+<br><br>
 <a href=#logs>The Log System</a> - how Gigablast logs information
+
+<br><br>
+<a href=#optimizing>Optimizing</a> - optimizing Gigablast's spider and query performance
 <!--
 <br><br>
 <a href=#config>gb.conf</a> - describes the gb configuration file
@@ -241,7 +246,7 @@ Also, keep in mind not to use these weighting operators between another query op
 <br>
 <br>
 At least one computer with 4GB RAM, 10GB of hard drive space and any distribution of Linux with the 2.4.25 kernel or higher. For decent performance invest in Intel Solid State Drives. I tested other brands around 2010 and found that they would freeze for up for 500ms every hour or so to do "garbage collection". That is unacceptable in general for a search engine. 
-Plus, Gigablast, reads and writes a lot of data at the same time under heavy spider and query loads, and disk will probably be your MAJOR bottleneck.<br><br>
+Plus, Gigablast, reads and writes a lot of data at the same time under heavy spider and query loads, therefore disk will probably be your MAJOR bottleneck.<br><br>
 <br>
 <a name=perf></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
@@ -691,6 +696,7 @@ Why use user-defined metas? Because it is very powerful. It allows you to embed 
 You can also explicitly specify how to index certain meta tags by making an &lt;index&gt; tag in the <a href="#ruleset">ruleset</a> as shown <a href="#rsmetas">here</a>. The specified meta tags will be indexed in the user-defined meta tag fashion as described above, in addition to any method described in the ruleset.<br>
 <br>
 <br>
+<!--
 <a name=bigdocs></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Indexing Big Documents</td></tr></table>
@@ -709,6 +715,7 @@ After ensuring you have enough extra memory to handle the document size, you wil
 Finally, you need to ensure that the <b>max text doc len</b> and <b>max other doc len</b> controls on the <b>Spider Controls</b> page are set to accomodating sizes. Use -1 to indicate no maximum. <i>Other</i> documents are non-text and non-html documents, like PDF, for example. These controls will physically prohibit the spider from downloading more than this many bytes. This causes excessively long documents to be truncated. If the spider is downloading a PDF that gets truncated then it abandons it, because truncated PDFs are useless.<br>
 <br>
 <br>
+-->
 <!--
 <a name=rolling></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
