@@ -378,6 +378,8 @@ Right now any local IP can adminster Gigablast, so any IP on the same network wi
 
 Every request sent to the Gigablast server is assumed to come from one of four types of users. A public user, a spam assassin, a collection admin, or a master admin. A collection admin has control over the controls corresponding to a particular collection. A spam assassin has control over even fewer controls over a particular collection in order to remove pages from it. A master admin has control over all aspects and all collections. <br><br>To verify a request is from an admin or spam assassin Gigablast requires that the request contain a password or come from a listed IP. To maintain these lists of passwords and IPs for the master admin, click on the "security" tab. To maintain them for a collection admin or for a spam assassin, click on the "access" tab for that collection. Alternatively, the master passwords and IPs can be edited in the gb.conf file in the working dir and collection admin passwords and IPs can be edited in the coll.conf file in the collections subdirectory in the working dir. <br><br>To add a further layer of security, Gigablast can server all of its pages through the https interface. By changing http:// to https:// and using the SSL port you specified in hosts.conf, all requests and responses will be made secure.-->
  <br><br>
+
+<!--
 <a name=build></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Building an Index
@@ -440,7 +442,7 @@ collections.
 URLs are currently being indexed in real-time. Gigablast.com currently has 32hosts and each host spiders different URLs. You can easily switch between 
 these hosts by clicking on the host numbers at the top of the page.
 -->
-<br><br><br>
+<!--<br><br><br>-->
 
 
 
@@ -735,6 +737,10 @@ So execute <i>dmozparse</i> with the <i>urldump -s</i> option to create the html
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>The Log System</td></tr></table>
 <br>
+&lt;<i>Last Updated March 2014</i>&gt;
+<br>
+<br>
+
 <table>
 <tr>
 <td>Gigablast uses its own format for logging messages, for example,<br>
@@ -873,6 +879,9 @@ The same parameters on the Log Controls page can be adjusted in the gb.conf file
 <tr><td><center><b><font color=#ffffff size=+1>Optimizing
 </td></tr></table>
 <br>
+&lt;<i>Last Updated May 2014</i>&gt;
+<br>
+<br>
 Gigablast is a fairly sophisticated database that has a few things you can tweak to increase query performance or indexing performance.
 <br><br>
 
@@ -886,11 +895,12 @@ This parameter can also be controlled on a per query basis using the
 This will decrease freshness of results but typically use
 3 or 4 times less disk seeks.
 -->
-<li> If you want to spider at the same time, then you should ensure
+<!--<li> If you want to spider at the same time, then you should ensure
 that the <b>max spider disk threads</b> parameter on the
 <a href="/admin/master">Master Controls</a> page is set to around 1 
 so the indexing/spidering processes do not hog the disk.
-
+-->
+<!--
 <li> Set Gigablast to read-only mode to true to prevent Gigablast from using 
 memory to hold newly indexed data, so that this memory can 
 be used for caches. Just set the <b>&lt;readOnlyMode&gt;</b> parameter in your config file to 1.
@@ -910,15 +920,16 @@ URL in the index has a corresponding cluster record. When a url appears as a
 search result its cluster record must be loaded from disk. Each cluster 
 record is about 12 to 16 bytes so by keeping these all in memory you can
 save around 10 disk seeks every query.
+-->
 
 <li> Disable site clustering and dup removal. By specifying <i>&sc=0&dr=0</i>
 in your query's URL you ensure that these two services are avoided and no
-cluster records are loaded. You can also turn them off by default on the
-<a href="/admin/spiderdb">Spider Controls</a> page. But if someone explicitly
+cluster records are loaded. You can also turn them off by default (site cluster by default and dedup results by default) on the
+<a href="/admin">Search Controls</a> page. But if someone explicitly
 specifies <i>&sc=1</i> or <i>&dr=1</i> in their query URL then they will
 override that switch.
 
-<li>If you are experiencing a high average query latency under a high query throughput then consider adding more twins to your architecture. If you do not have any twins, and are serving a large query volume, then data requests tend to clump up onto one particular server at random, slowing everybody else down. If that server has one or more twins available, then its load will be evened out through Gigablast's dynamic load balancing and the average query latency will decrease.
+<li>If you are experiencing a high average query latency under a high query throughput then consider adding more mirror servers to your architecture. If you do not have any mirrors, and are serving a large query volume, then data requests tend to clump up onto one particular server at random, slowing everybody else down. If that server has one or more mirrors available, then its load will be evened out through Gigablast's dynamic load balancing and the average query latency will decrease.
 </ul>
 
 <br>
@@ -930,14 +941,15 @@ override that switch.
 from the same domain into the index when this is enabled. This means that
 Gigablast must do about one disk seek for every URL indexed to verify it is
 not a duplicate. If you keep checksumdb all in memory this will not be a
-problem.
-<li> Disable <b>link voting</b>. Gigablast performs at least one disk seek
+problem. This is in the <a href=/admin/spider>Spider Controls</a> page.
+<!--<li> Disable <b>link voting</b>. Gigablast performs at least one disk seek
 to determine who link to the URL being indexed. If it does have some linkers
 then the Cached Copy of each linker (up to 200) is loaded and the corresponding
 link text is extracted. Most pages do not have many linkers so the disk
 load is not too bad. Furthermore, if you do enable link voting, you can
 restrict it to the first file of indexdb, <b>restrict indexdb for 
 spidering</b>, to ensure that about one seek is used to determine the linkers.
+-->
 <li> Enable <b>use IfModifiedSince</b>. This tells the spider not to do 
 anything if it finds that a page being reindexed is unchanged since the last
 time it was indexed. Some web servers do not support the IfModifiedSince tag,
