@@ -30,13 +30,20 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 
 <!--<a href=#weighting>Weighting Query Terms</a> - how to pass in your own query term weights<br><br>-->
 
-<a href=#requirements>Hardware Requirements</a> - what is required to run gigablast<br><br><a href=#perf>Performance Specifications</a> - various statistics.<br><br><a href=#files>List of Files</a> - the necessary files to run Gigablast<br><br><a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br><a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems<br><br><a href=#disaster>Disaster Recovery</a> - dealing with a crashed host
+<a href=#requirements>Hardware Requirements</a> - what is required to run gigablast<br><br><a href=#perf>Performance Specifications</a> - various statistics.
+<br>
+<br>
+<!--<a href=#files>List of Files</a> - the necessary files to run Gigablast
+<br>
+<br>-->
+<a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br><a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems<br><br><a href=#disaster>Disaster Recovery</a> - dealing with a crashed host
 <!--<br><br>
 <a href=#security>The Security System</a> - how to control access-->
 <br><br>
 
-<a href=#build>Building an Index</a> - how to start building your index<br><br>
-<a href=#spider>The Spider</a> - all about Gigabot, Gigablast's crawling agent<br><br>
+<!--<a href=#build>Building an Index</a> - how to start building your index<br><br>
+<a href=#spider>The Spider</a> - all about Gigabot, Gigablast's crawling agent<br><br>-->
+
 <!--<a href=#quotas>Document Quotas</a> - how to limit documents into the index<br><br>-->
 <a href=#injecting>Injecting Documents</a> - inserting documents directly into Gigablast<br><br><a href=#deleting>Deleting Documents</a> - removing documents from the index
 
@@ -230,6 +237,7 @@ Plus, Gigablast, reads and writes a lot of data at the same time under heavy spi
 <br>
 Gigablast can store 100,000 web pages (each around 25k in size) per gigabyte of disk storage. A typical single-cpu pentium 4 machine can index one to two million web pages per day even when Gigablast is near its maximum document capacity for the hardware. A cluster of N such machines can index at N times that rate.<br><br>
 <br>
+<!--
 <a name=files></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>List of Files</td></tr></table>
@@ -244,10 +252,10 @@ Each directory should have the following files and subdirectories:<br><br>
 </td></tr>
 
 <tr><td><b>gb.conf</b></td><td><a href=/gb.conf.txt>example</a>. Each gb process is called a <i>host</i> and each gb process has its own gb.conf file. This file is required to run gb.<tr><td><b>coll.XXX.YYY/</b></td><td>For every collection there is a subdirectory of this form, where XXX is the name of the collection and YYY is the collection's unique id. Contained in each of these subdirectories is the data associated with that collection.</td></tr>
-
+-->
 <!--<tr><td><b>coll.XXX.YYY/coll.conf</b></td><td>Each collection contains a configuration file called coll.conf. This file allows you to configure collection specific parameters. Every parameter in this file is also controllable via your the administrative web pages as well.</td></tr>
 -->
-
+<!--
 <tr><td><b>trash/</b></td><td>Deleted collections are moved into this subdirectory. A timestamp in milliseconds since the epoch is appended to the name of the deleted collection's subdirectory after it is moved into the trash sub directory. Gigablast doesn't physically delete collections in case it was a mistake.</td></tr>
 
 <tr><td><b>html/</b></td><td>A subdirectory that holds all the html files and images used by Gigablast. Includes Logos and help files.</tr>
@@ -258,11 +266,15 @@ Each directory should have the following files and subdirectories:<br><br>
 <tr><td><b>ppthtml</b></td><td>Executable called by gbfilter to convert PowerPoint files to html for indexing.</tr>
 <tr><td><b>xlhtml</b></td><td>Executable called by gbfilter to convert Microsoft Excel files to html for indexing.</tr>
 </table>
+-->
 <!--<tr><td><b>gbfilter</b></td><td>Simple executable called by Gigablast with document HTTP MIME header and document content as input. Output is an HTTP MIME and html or text that can be indexed by Gigablast.</tr>-->
 <!--<tr><td><b><a href=#gbstart>gbstart</a></b></td><td>An optional simple script used to start up the gb process(es) on each computer in the network. Otherwise, iff you have passwordless ssh capability then you can just use './gb start' and it will spawn an ssh command to start up a gb process for each host listed in hosts.conf.</tr>-->
+<!--
 </table>
 <br><br>
 <br>
+-->
+
 <a name=clustermaint></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Cluster Maintenance</td></tr></table>
@@ -378,7 +390,6 @@ Right now any local IP can adminster Gigablast, so any IP on the same network wi
 
 Every request sent to the Gigablast server is assumed to come from one of four types of users. A public user, a spam assassin, a collection admin, or a master admin. A collection admin has control over the controls corresponding to a particular collection. A spam assassin has control over even fewer controls over a particular collection in order to remove pages from it. A master admin has control over all aspects and all collections. <br><br>To verify a request is from an admin or spam assassin Gigablast requires that the request contain a password or come from a listed IP. To maintain these lists of passwords and IPs for the master admin, click on the "security" tab. To maintain them for a collection admin or for a spam assassin, click on the "access" tab for that collection. Alternatively, the master passwords and IPs can be edited in the gb.conf file in the working dir and collection admin passwords and IPs can be edited in the coll.conf file in the collections subdirectory in the working dir. <br><br>To add a further layer of security, Gigablast can server all of its pages through the https interface. By changing http:// to https:// and using the SSL port you specified in hosts.conf, all requests and responses will be made secure.-->
  <br><br>
-
 <!--
 <a name=build></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
@@ -390,7 +401,7 @@ Every request sent to the Gigablast server is assumed to come from one of four t
 <b>1.</b> Determine a collection name for your index. You may just want to use the default, unnamed collection. Gigablast is capable of handling many sub-indexes, known as collections. Each collection is independent of the other collections. You can add a new collection by clicking on the <b>add new collection</b> link on the <a href="/admin/spider">Spider Controls</a> page.<br><br>
 
 <b>2.</b> Goto the <a href=/admin/settings>settings</a> page and add the sites you want. Only add seeds if you want to spider the whole web.
-
+-->
 <!--
 <b>2.</b> Add rules to the <a href="/admin/filters">URL Filters page</a>. This is like a routing table but for URLs. The first rule that a URL matches will determine what priority queue it is assigned to. You can also use <a href="http://www.phpbuilder.com/columns/dario19990616.php3">regular expressions</a>. The special keywords you can used are described at the bottom of the rule table.
 <br><br>
