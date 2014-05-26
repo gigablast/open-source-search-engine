@@ -69,6 +69,9 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 
 <br><br><a name=quickstart></a>
 <h1>Quick Start</h1>
+&lt;<i>Last Updated May 2014</i>&gt;
+<br>
+<br>
 
 <!--Until I get the binary packages ready, <a href=#src>build from the source code</a>, it should only take about 30 seconds to type the three commands.-->
 
@@ -100,6 +103,9 @@ If you run into an bugs let me know so i can fix them right away: mattdwells@hot
 <br>
 <a name=src></a>
 <h1>Build From Source</h1>
+&lt;<i>Last Updated May 2014</i>&gt;
+<br>
+<br>
 
 Requirements: You will need an Intel or AMD system running Linux and at least 4GB of RAM.<br><br>
 
@@ -141,6 +147,9 @@ For RedHat do a <b>yum install gcc-c++</b>
 
 <br><br><a name=features></a>
 <h1>Features</h1>
+
+&lt;<i>Last Updated May 2014</i>&gt;
+<br>
 
 <ul>
 <li> <b>The ONLY open source WEB search engine.</b> 
@@ -228,6 +237,9 @@ Also, keep in mind not to use these weighting operators between another query op
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Hardware Requirements</td></tr></table>
 <br>
+&lt;<i>Last Updated January 2014</i>&gt;
+<br>
+<br>
 At least one computer with 4GB RAM, 10GB of hard drive space and any distribution of Linux with the 2.4.25 kernel or higher. For decent performance invest in Intel Solid State Drives. I tested other brands around 2010 and found that they would freeze for up for 500ms every hour or so to do "garbage collection". That is unacceptable in general for a search engine. 
 Plus, Gigablast, reads and writes a lot of data at the same time under heavy spider and query loads, and disk will probably be your MAJOR bottleneck.<br><br>
 <br>
@@ -235,6 +247,11 @@ Plus, Gigablast, reads and writes a lot of data at the same time under heavy spi
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Performance Specifications</td></tr></table>
 <br>
+&lt;<i>Last Updated January 2014</i>&gt;
+<br>
+<br>
+
+
 Gigablast can store 100,000 web pages (each around 25k in size) per gigabyte of disk storage. A typical single-cpu pentium 4 machine can index one to two million web pages per day even when Gigablast is near its maximum document capacity for the hardware. A cluster of N such machines can index at N times that rate.<br><br>
 <br>
 <!--
@@ -278,6 +295,12 @@ Each directory should have the following files and subdirectories:<br><br>
 <a name=clustermaint></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Cluster Maintenance</td></tr></table>
+
+<br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
+
+
 <br>
 For the purposes of this section, we assume the name of the cluster is gf and all hosts in the cluster are named gf*.  The Master host of the cluster is gf0.  The gigablast working directory is assumed to be /a/ . We all assume you can do passwordless ssh from one machine to another, otherwise administration of hundreds of servers is not fun!
 <br>
@@ -325,6 +348,9 @@ For the purposes of this section, we assume the name of the cluster is gf and al
 <a name=trouble></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Troubleshooting</td></tr></table>
+<br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
 <!--
 <br>
 <a name=disaster></a>
@@ -463,6 +489,9 @@ these hosts by clicking on the host numbers at the top of the page.
 <tr><td><center><b><font color=#ffffff size=+1>The Spider
 </td></tr></table>
 <br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
+<br>
 <b>Robots.txt</b>
 <br><br>
 The name of Gigablast's spider is Gigabot. 
@@ -519,6 +548,9 @@ You can limit the number of documents on a per site basis. By default the site i
 <a name=injecting></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Injecting Documents</td></tr></table>
+<br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
 <br>
 <b>Injection Methods</b>
 <br><br>
@@ -632,6 +664,9 @@ errors are most likely:<br>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Deleting Documents</td></tr></table>
 <br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
+<br>
 You can delete documents from the index two ways:<ul>
 <li>Perhaps the most popular is to use the <a href="/admin/reindex">Reindex URLs</a> tool which allows you to delete all documents that match a simple query. Furthermore, that tool allows you to assign rulesets to all the domains of all the matching documents. All documents that match the query will have their docids stored in a spider queue of a user-specified priority. The spider will have to be enabled for that priority queue for the deletion to take place. Deleting documents is very similar to adding documents.<br><br>
 <li>To delete a single document you can use the <a href="/admin/inject">Inject URL</a> page.
@@ -642,6 +677,9 @@ You can delete documents from the index two ways:<ul>
 <a name=metas></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Indexing User-Defined Meta Tags</td></tr></table>
+<br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
 <br>
 Gigablast supports the indexing, searching and displaying of user-defined meta tags. For instance, if you have a tag like <i>&lt;meta name="foo" content="bar baz"&gt;</i> in your document, then you will be able to do a search like <i><a href="/search?q=foo%3Abar&dt=foo">foo:bar</a></i> or <i><a href="/search?q=foo%3A%22bar+baz%22&dt=foo">foo:"bar baz"</a></i> and Gigablast will find your document. <br><br>
 You can tell Gigablast to display the contents of arbitrary meta tags in the search results, like <a href="/search?q=gigablast&s=10&dt=author+keywords%3A32">this</a>. Note that you must assign the <i>dt</i> cgi parameter to a space-separated list of the names of the meta tags you want to display. You can limit the number of returned characters of each tag to X characters by appending a <i>:X</i> to the name of the meta tag supplied to the <i>dt</i> parameter. In the link above, I limited the displayed keywords to 32 characters. The content of the meta tags is also provided in the &lt;display&gt; tags in the <a href="#output">XML feed</a>
@@ -656,6 +694,9 @@ You can also explicitly specify how to index certain meta tags by making an &lt;
 <a name=bigdocs></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Indexing Big Documents</td></tr></table>
+<br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
 <br>
 When indexing a document you will be bound by the available memory of the machine that is doing the indexing. A document that is dense in words can takes as much as ten times the memory as the size of the document in order to process it for indexing. Therefore you need to make sure that the amount of available memory is adequate to process the document you want to index. You can turn off Spam detection to reduce the processing overhead by a little bit.<br>
 <br>
