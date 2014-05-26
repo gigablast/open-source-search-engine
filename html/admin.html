@@ -67,15 +67,18 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 
 Requirements: You will need an Intel or AMD system running Linux and at least 4GB of RAM to run one instance/host of gb.<br><br>
 
-Install the <a href=http://www.gigablast.com/gigablast-1.0-1.deb>Gigablast package for Ubuntu or Debian</a> or install the <a href=http://www.gigablast.com/gigablast-1.0-1.rpm>Gigablast package for RedHat</a>. 
+Install the <a href=http://www.gigablast.com/gb-1.0-0.i686.rpm>Gigablast package for RedHat</a>. This package is beta. Ubuntu package is coming soon, <a href=#src>build from source code</a> for that for now.
 
 <br><br>
-Once installed visit your <a href=http://127.0.0.1:8000/>local port 8000</a> to access the search engine controls and begin configuration. It could take up to 20 seconds to start the search engine for the first time.
+If it does not start by itself type 'gb -d' to run it in the background as a daemon.
+
+<br><br>
+Once installed visit your <a href=http://127.0.0.1:8000/>local port 8000</a> to access the search engine controls and begin configuration. It could take up to 20 seconds to start the search engine for the first time. 
 
 <br><br>
 
 <table><tr><td colspan=2><b>Installed Files</b></td></tr>
-<tr><td>/var/gigablast/data0/</td><td>Directory of Gigablast binary and data files</td></tr>
+<tr><td><nobr>/var/gigablast/data0/</nobr></td><td>Directory of Gigablast binary and data files</td></tr>
 <tr><td>/etc/gigablast/hosts.conf</td><td>Describes the hosts in the distributed cluster. Multiple hosts may exist one one physical server. Initially hosts.conf is just configured to use /var/gigablast/data0/ as the only host. See the section on <a href=#scaling>scaling</a> to add more hosts.</td></tr>
 <tr><td>/etc/init.d/gb</td><td>start up script link</td></tr>
 <tr><td>/etc/init/gb.conf</td><td>upstart conf file so you can type 'start gb' or 'stop gb', but that will only work on local instances of gb.</td></tr>
@@ -114,17 +117,19 @@ For RedHat do a <b>yum install gcc-c++</b>
 </ul>
 -->
 
-<b>1.</b> Do <b>apt-get install make g++ gcc-multilib lib32stdc++6</b>
+<b>1.</b> For <u>Ubuntu</u> do <b>apt-get install make g++ gcc-multilib lib32stdc++6</b>
 <br>
-<b>2.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine>Gigablast source code</a> using <b>wget --no-check-certificate "https://github.com/gigablast/open-source-search-engine/archive/master.zip"</b>, unzip it and cd into it. (optionally use <b>git clone https://github.com/gigablast/open-source-search-engine.git ./github</b> if you have <i>git</i> installed.)
+<b>2.</b> For <u>RedHat</u> do <b>yum install gcc-c++</b>
 <br>
-<b>3.</b> Run <b>make</b> to compile. (e.g. use 'make -j 4' to compile on four cores)
+<b>3.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine>Gigablast source code</a> using <b>wget --no-check-certificate "https://github.com/gigablast/open-source-search-engine/archive/master.zip"</b>, unzip it and cd into it. (optionally use <b>git clone https://github.com/gigablast/open-source-search-engine.git ./github</b> if you have <i>git</i> installed.)
 <br>
-<b>4.</b> Run <b>./gb -d</b>  to start a single gigablast node which listens on port 8000 running in daemon mode (-d).
+<b>4.</b> Run <b>make</b> to compile. (e.g. use 'make -j 4' to compile on four cores)
 <br>
-<b>5.</b> The first time you run gb, wait about 30 seconds for it to build some files. Check the log file to see when it completes.
+<b>5.</b> Run <b>./gb -d</b>  to start a single gigablast node which listens on port 8000 running in daemon mode (-d).
 <br>
-<b>6.</b> Go to the <a href=http://127.0.0.1:8000/>root page</a> to begin.
+<b>6.</b> The first time you run gb, wait about 30 seconds for it to build some files. Check the log file to see when it completes.
+<br>
+<b>7.</b> Go to the <a href=http://127.0.0.1:8000/>root page</a> to begin.
 
 <br>
 
