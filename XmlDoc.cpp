@@ -14243,15 +14243,12 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	else
 		m_diffbotUrl.pushChar('&');
 
-	// make sure that diffbot expands all objects
-	m_diffbotUrl.safePrintf("expand");
-
 	//diffbotUrl.safePrintf("http://54.212.86.74/api/%s?token=%s&u="
 	// only print token if we have one, because if user provides their
 	// own diffbot url (apiUrl in Parms.cpp) then they  might include
 	// the token in that for their non-custom crawl. m_customCrawl=0.
 	if ( cr->m_diffbotToken.length())
-		m_diffbotUrl.safePrintf("&token=%s",
+		m_diffbotUrl.safePrintf("token=%s",
 					cr->m_diffbotToken.getBufStart());
 
 	m_diffbotUrl.safePrintf("&url=");
@@ -14264,6 +14261,17 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// then user provided parms that are dependent on if it is an
 	// article, product, etc. like "&dontstripads=1" or whatever
 	//diffbotUrl.safeStrcpy ( cr->m_diffbotApiQueryString.getBufStart());
+
+    // for analyze requests without mode=, make sure that diffbot expands all objects
+	// "expand" is not used for all crawls as of Defect #2292: User crawls should only index embedded objects if crawling with analyze
+	// null term it so that we can use strstr (shouldn't be necessary since safePrintf appears to do this already and is called above)
+	if (m_diffbotUrl.nullTerm()) {
+	    char *u = m_diffbotUrl.getBufStart();
+	    if (strstr(u, "/analyze") && !strstr(u, "mode=")) {
+	        m_diffbotUrl.safePrintf("&expand");
+	    }
+	}
+
 	// null term it
 	m_diffbotUrl.nullTerm();
 
