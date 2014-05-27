@@ -586,6 +586,10 @@ bool Process::isAnyTreeSaving ( ) {
 void powerMonitorWrapper ( int fd , void *state ) {
 	if ( g_isYippy ) return;
 
+	// also download test urls from spider proxies to ensure they
+	// are up and running properly
+	downloadTestUrlFromProxies();
+
 	// only if in matt wells datacenter
 	if ( ! g_conf.m_isMattWells ) 
 		return;

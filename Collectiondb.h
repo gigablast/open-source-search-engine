@@ -977,9 +977,9 @@ class CollectionRec {
 	//long  m_maxOtherDocLen;
 
 	// the proxy ip, 0 if none
-	long  m_proxyIp;
+	//long  m_proxyIp;
 	// and proxy port
-	long m_proxyPort;
+	//long m_proxyPort;
 
 	// . puts <br>s in the summary to keep its width below this
 	// . but we exceed this width before we would split a word

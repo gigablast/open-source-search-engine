@@ -147,6 +147,9 @@ class Conf {
 	long m_wikiProxyIp;
 	long m_wikiProxyPort;
 
+	SafeBuf m_proxyIps;
+	SafeBuf m_proxyTestUrl;
+
 	// built-in dns parameters using name servers
 	char  m_askRootNameservers;
 	long  m_numRns;

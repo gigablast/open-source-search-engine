@@ -315,6 +315,7 @@ enum {
 	PAGE_MASTER      , 
 	PAGE_SEARCH      ,  
 	PAGE_SPIDER      ,
+	PAGE_SPIDERPROXIES ,
 	PAGE_LOG         ,
 	PAGE_SECURITY    ,
 	PAGE_ADDCOLL     ,	

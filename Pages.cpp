@@ -122,6 +122,10 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER | USER_PROXY   ,
 	  "spider controls page",
 	  sendPageGeneric  , 0 } ,
+
+	{ PAGE_SPIDERPROXIES,"admin/proxies"   , 0 , "spider proxies" ,  1 , 0,
+	  "spider proxies", sendPageGeneric  , 0 } ,
+
 	{ PAGE_LOG       , "admin/log"     , 0 , "log controls"     ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY,
 	  "log page",

@@ -5567,6 +5567,7 @@ void Parms::init ( ) {
 	m++;
 
 
+
 	m->m_title = "sendmail IP";
 	m->m_desc  = "We send crawlbot notification emails to this sendmail "
 		"server which forwards them to the specified email address.";
@@ -7528,6 +7529,44 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 	*/
+
+	///////////////////////////////////////////
+	//  SPIDER PROXY CONTROLS
+	//  
+	///////////////////////////////////////////
+
+	m->m_title = "use spider proxies";
+	m->m_desc  = "Use the spider proxies listed below.";
+	m->m_cgi   = "useproxyips";
+	m->m_off   = (char *)&g_conf.m_useProxyIps - x;
+	m->m_type  = TYPE_BOOl;
+	m->m_def   = "0";
+	m->m_flags = 0;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m++;
+
+	m->m_title = "spider proxy ips";
+	m->m_desc  = "List of white space-separated spider proxy IPs. Put "
+		"in IP:port format. Example <i>1.2.3.4:80 4.5.6.7:99</i>";
+	m->m_cgi   = "proxyips";
+	m->m_off   = (char *)&g_conf.m_proxyIps - x;
+	m->m_type  = TYPE_SAFEBUF; // TYPE_IP;
+	m->m_def   = "";
+	m->m_flags = PF_TEXTAREA;
+	m++;
+
+	m->m_title = "spider proxy test url";
+	m->m_desc  = "Download this url every minute through each proxy "
+		"listed above to ensure they are up. Typically you should "
+		"make this a URL you own so you do not aggravate another "
+		"webmaster.";
+	m->m_cgi   = "proxytesturl";
+	m->m_off   = (char *)&g_conf.m_proxyTestUrl - x;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = "http://www.gigablast.com/";
+	m->m_flags = 0;
+	m++;
+
 
 
 	///////////////////////////////////////////
@@ -10050,14 +10089,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;
 
-	m->m_title = "proxy ip";
-	m->m_desc  = "Retrieve pages from the proxy at this IP address.";
-	m->m_cgi   = "proxyip";
-	m->m_off   = (char *)&cr.m_proxyIp - x;
-	m->m_type  = TYPE_IP;
-	m->m_def   = "0.0.0.0";
-	m++;
-
+	/*
 	m->m_title = "proxy port";
 	m->m_desc  = "Retrieve pages from the proxy on "
 		"this port.";
@@ -10067,6 +10099,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_group = 0;
 	m++;
+	*/
 
 	m->m_title = "make image thumbnails";
 	m->m_desc  = "Try to find the best image on each page and "
