@@ -283,8 +283,8 @@ inline long getBitPosLL ( uint8_t *bit ) {
 	if ( *(long *)bit ) {
 		if ( bit[0] ) return getHighestLitBit ( bit[0] );
 		if ( bit[1] ) return getHighestLitBit ( bit[1] ) + 8;
-		if ( bit[2] ) return getHighestLitBit ( bit[1] ) + 16;
-		if ( bit[3] ) return getHighestLitBit ( bit[1] ) + 24;
+		if ( bit[2] ) return getHighestLitBit ( bit[2] ) + 16;
+		if ( bit[3] ) return getHighestLitBit ( bit[3] ) + 24;
 		char *xx=NULL;*xx=0; 
 	}
 	if ( bit[4] ) return getHighestLitBit ( bit[4] ) + 32;
