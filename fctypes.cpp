@@ -40,7 +40,7 @@ bool print128 ( key128_t *kp ) {
 
 // . put all the maps here now
 // . convert "c" to lower case
-	const char g_map_to_lower[] = {
+	const unsigned char g_map_to_lower[] = {
 		0  , 1  , 2  ,  3 ,  4 ,  5 ,  6 ,  7 ,           
 		8  , 9  , 10 , 11 , 12 , 13 , 14 , 15 ,       
 		16 , 17 , 18 , 19 , 20 , 21 , 22 , 23 ,       
@@ -77,7 +77,7 @@ bool print128 ( key128_t *kp ) {
 
 
 // converts ascii chars and IS_O chars to their lower case versions
-	const char g_map_to_upper[] = {
+	const unsigned char g_map_to_upper[] = {
 		0  , 1  , 2  ,  3 ,  4 ,  5 ,  6 ,  7 ,           
 		8  , 9  , 10 , 11 , 12 , 13 , 14 , 15 ,       
 		16 , 17 , 18 , 19 , 20 , 21 , 22 , 23 ,       
@@ -112,7 +112,7 @@ bool print128 ( key128_t *kp ) {
 		216,217,218,219,220,221,222,255
 	};
 
-	const char g_map_to_ascii[] = {
+	const unsigned char g_map_to_ascii[] = {
 		0  , 1  , 2  ,  3 ,  4 ,  5 ,  6 ,  7 ,           
 		8  , 9  , 10 , 11 , 12 , 13 , 14 , 15 ,       
 		16 , 17 , 18 , 19 , 20 , 21 , 22 , 23 ,       

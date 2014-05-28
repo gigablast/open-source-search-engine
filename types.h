@@ -944,14 +944,14 @@ inline char *KEYMIN() { return  "\0\0\0\0"
 			 "\0\0\0\0"
 			 "\0\0\0\0"
 			 "\0\0\0\0"; };
-static int s_foo[] = { 0xffffffff ,
-		       0xffffffff ,
-		       0xffffffff ,
-		       0xffffffff ,
-		       0xffffffff ,
-		       0xffffffff ,
-		       0xffffffff ,
-		       0xffffffff };
+static int s_foo[] = { (int)0xffffffff ,
+		       (int)0xffffffff ,
+		       (int)0xffffffff ,
+		       (int)0xffffffff ,
+		       (int)0xffffffff ,
+		       (int)0xffffffff ,
+		       (int)0xffffffff ,
+		       (int)0xffffffff };
 inline char *KEYMAX() { return (char *)s_foo; };
 
 
