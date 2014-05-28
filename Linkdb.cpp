@@ -1390,7 +1390,7 @@ bool Msg25::sendRequests ( ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 	if ( ! cr ) {
-		log("linkdb: collnum %li is gone",(long)m_collnum);
+		log("linkdb: collnum %li is gone 1",(long)m_collnum);
 		return true;
 	}
 	//char *coll = cr->m_coll;
@@ -2334,7 +2334,7 @@ bool Msg25::gotLinkText ( Msg20Request *req ) { // LinkTextReply *linkText ) {
 
 	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
 	if ( ! cr ) {
-		log("linkdb: collnum %li is gone",(long)m_collnum);
+		log("linkdb: collnum %li is gone 2",(long)m_collnum);
 		return true;
 	}
 	char *coll = cr->m_coll;

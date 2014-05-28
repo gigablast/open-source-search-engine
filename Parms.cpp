@@ -18462,6 +18462,25 @@ bool Parms::updateParm ( char *rec , WaitEntry *we ) {
 
 	if ( cr ) cr->m_needsSave = true;
 
+	//
+	// HACK
+	//
+	// special hack. if spidering re-enabled then reset last spider
+	// attempt time to 0 to avoid the "has no more urls to spider"
+	// msg followed by the reviving url msg.
+	if ( base == cr && dst == (char *)&cr->m_spideringEnabled )
+		cr->m_localCrawlInfo.m_lastSpiderAttempt = 0;
+	if ( base == &g_conf && dst == (char *)&g_conf.m_spideringEnabled ){
+		for(long i = 0;i<g_collectiondb.m_numRecs;i++){
+			CollectionRec *cr = g_collectiondb.m_recs[i];
+			if ( ! cr ) continue;
+			cr->m_localCrawlInfo.m_lastSpiderAttempt = 0;
+		}
+	}
+	//
+	// END HACK
+	//
+
 	// all done
 	return true;
 }

@@ -2600,6 +2600,12 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			// so fix that shit here...
 			//float f = mr->m_lastSpidered;
 			//sb->safePrintf(",\"lastCrawlTimeUTC\":%.0f}",f);
+			// MDW: this is VERY convenient for debugging pls
+			// leave in. we can easily see if a result 
+			// should be there for a query like 
+			// gbmin:gbspiderdate:12345678
+			sb->safePrintf(",\"lastCrawlTimeUTC\":%li",
+				       mr->m_lastSpidered);
 			// also include a timestamp field with an RFC 1123 formatted date
 			char timestamp[50];
 			struct tm *ptm = gmtime ( &mr->m_lastSpidered );
