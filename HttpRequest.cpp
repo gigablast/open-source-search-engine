@@ -1410,7 +1410,7 @@ int getVersionFromRequest ( HttpRequest *r ) {
     strncpy(version, rest, digits);
     version[digits] = '\0';
     int v = atoi(version);
-    if (v == 0)
+    if (v <= 0 || v > 99)
         return HTTP_REQUEST_DEFAULT_REQUEST_VERSION;
     return v;
 }
