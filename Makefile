@@ -468,14 +468,17 @@ geo_ip_table.o: geo_ip_table.cpp geo_ip_table.h
 
 # move this tarball into ~/rpmbuild/?????
 # then run rpmbuild -ba gb-1.0.spec to build the rpms
-# rpm --nodeps --ignorearch -ivh gb-1.0-...  to install the pkg
+# rpm -ivh gb-1.0-...  to install the pkg
 tarball-testing:
 #	git archive --format=tar master | gzip > gb.tar
 	git archive --format=tar --prefix=gb-1.0/ testing > gb-1.0.tar
 
-tarball-master:
+master-rpm:
 #	git archive --format=tar master | gzip > gb.tar
 	git archive --format=tar --prefix=gb-1.0/ master > gb-1.0.tar
+	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
+	rpmbuild -ba gb-1.0.spec
+	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
 
 install:
 # gigablast will copy over the necessary files. it has a list of the
