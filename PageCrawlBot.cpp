@@ -2355,6 +2355,10 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 }
 */
 
+bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx ) {
+    return printCrawlDetailsInJson( sb , cx , HTTP_REQUEST_DEFAULT_REQUEST_VERSION);
+}
+
 bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx, int version ) {
 
 	SafeBuf tmp;

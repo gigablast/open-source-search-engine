@@ -3206,7 +3206,7 @@ bool sendNotification ( EmailInfo *ei ) {
 		// also in post body
 		SafeBuf postContent;
 		// the collection details
-		printCrawlDetailsInJson ( &postContent , cr , HTTP_REQUEST_DEFAULT_REQUEST_VERSION );
+		printCrawlDetailsInJson ( &postContent , cr );
 		// content-length of it
 		fullReq.safePrintf("Content-Length: %li\r\n",
 				   postContent.length());
