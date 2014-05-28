@@ -1300,7 +1300,9 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	// now we can have url-based page reindex requests because
 	// if we have a diffbot json object fake url reindex request
 	// we add a spider request of the PARENT url for it as page reindex
-	if ( is_digit ( sreq->m_url[0] ) ) {
+	//if ( is_digit ( sreq->m_url[0] ) ) {
+	// watch out for 0.r.msn.com!!
+	if ( sreq->m_urlIsDocId ) {
 		m_docId          = atoll(sreq->m_url);
 		// assume its good
 		m_docIdValid     = true;
