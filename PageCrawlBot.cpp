@@ -2355,7 +2355,7 @@ bool printUrlFilters ( SafeBuf &sb , CollectionRec *cr , long fmt ) {
 }
 */
 
-bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx ) {
+bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx, int version ) {
 
 	SafeBuf tmp;
 	long crawlStatus = -1;
@@ -2496,24 +2496,22 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx ) {
 	char *token = cx->m_diffbotToken.getBufStart();
 	char *name = cx->m_diffbotCrawlName.getBufStart();
 
-
-
-
-
 	char *mt = "crawl";
 	if ( cx->m_isCustomCrawl == 2 ) mt = "bulk";
 
 	sb->safePrintf("\"downloadJson\":"
-		      "\"http://api.diffbot.com/v2/%s/download/"
+		      "\"http://api.diffbot.com/v%d/%s/download/"
 		      "%s-%s_data.json\",\n"
+	          , version
 		      , mt
 		      , token
 		      , name
 		      );
 
 	sb->safePrintf("\"downloadUrls\":"
-		      "\"http://api.diffbot.com/v2/%s/download/"
+		      "\"http://api.diffbot.com/v%d/%s/download/"
 		      "%s-%s_urls.csv\",\n"
+	          , version
 		      , mt
 		      , token
 		      , name
@@ -2778,7 +2776,7 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			//long paused = 1;
 
 			//if ( cx->m_spideringEnabled ) paused = 0;
-			printCrawlDetailsInJson ( &sb , cx );
+			printCrawlDetailsInJson ( &sb , cx , getVersionFromRequest(hr) );
 			// print the next one out
 			continue;
 		}
