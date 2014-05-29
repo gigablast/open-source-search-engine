@@ -768,7 +768,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 	}
 
 	if ( fmt == FMT_JSON ) {
-		printCrawlDetailsInJson ( &sb , cr );
+		printCrawlDetailsInJson ( &sb , cr , getVersionFromRequest(hr) );
 		return g_httpServer.sendDynamicPage (socket, 
 						     sb.getBufStart(), 
 						     sb.length(),
