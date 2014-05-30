@@ -543,12 +543,13 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	if ( cr ) st->m_collnum = cr->m_collnum;
 	else      st->m_collnum = -1;
 
+	// take this out here as well!
 	// limit here
-	long maxpp = cr->m_maxSearchResultsPerQuery ;
-	if ( si->m_docsWanted > maxpp &&
-	     // disable serp max per page for custom crawls
-	     ! cr->m_isCustomCrawl )
-		si->m_docsWanted = maxpp;
+	// long maxpp = cr->m_maxSearchResultsPerQuery ;
+	// if ( si->m_docsWanted > maxpp &&
+	//      // disable serp max per page for custom crawls
+	//      ! cr->m_isCustomCrawl )
+	// 	si->m_docsWanted = maxpp;
 
         st->m_numDocIds = si->m_docsWanted;
 

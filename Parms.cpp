@@ -10825,7 +10825,6 @@ void Parms::init ( ) {
 	m->m_scgi  = "qe";
 	m++;
 
-
 	// more general parameters
 	m->m_title = "max search results";
 	m->m_desc  = "What is the maximum total number "
@@ -10834,6 +10833,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxSearchResults - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1000";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max search results per query";
@@ -10843,6 +10843,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_maxSearchResultsPerQuery - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100";
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "max search results for paying clients";
