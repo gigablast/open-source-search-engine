@@ -3410,3 +3410,10 @@ bool SafeBuf::printTimeAgo ( long ts , long now ) {
 	}
 	return true;
 }
+
+bool SafeBuf::hasDigits() {
+	if ( m_length <= 0 ) return false;
+	for ( long i = 0 ; i < m_length ; i++ )
+		if ( is_digit(m_buf[i]) ) return true;
+	return false;
+}

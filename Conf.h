@@ -149,6 +149,8 @@ class Conf {
 
 	SafeBuf m_proxyIps;
 	SafeBuf m_proxyTestUrl;
+	bool    m_useRandAgents;
+	bool    m_useProxyIps;
 
 	// built-in dns parameters using name servers
 	char  m_askRootNameservers;

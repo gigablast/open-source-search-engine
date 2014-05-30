@@ -1582,6 +1582,15 @@ Host *Hostdb::getLiveHostInShard ( long shardNum ) {
 	return &shard[0];
 }
 
+// if all are dead just return host #0
+Host *Hostdb::getFirstAliveHost ( ) {
+	for ( long i = 0 ; i < m_numHosts ; i++ )
+		// if host #i is alive, return her
+		if ( ! isDead ( i ) ) return getHost(i);
+	// if all are dead just return host #0
+	return getHost(0);
+}
+
 /*
 // . get the Hosts in group with "groupId"
 Host *Hostdb::getGroup ( unsigned long groupId , long *numHosts ) {

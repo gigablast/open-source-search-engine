@@ -398,6 +398,10 @@ class Hostdb {
 	//Host *getLiveHostInGroup ( long groupId );
 	Host *getLiveHostInShard ( long shardNum );
 
+	// in the entire cluster. return host #0 if its alive, otherwise
+	// host #1, etc.
+	Host *getFirstAliveHost ();
+
 	// . returns false if blocks and will call your callback later
 	// . returns true if doesn't block
 	// . sets errno on error

@@ -44,6 +44,7 @@
 #include "Users.h"
 #include "Proxy.h"
 #include "Rebalance.h"
+#include "SpiderProxy.h"
 
 // the query log hashtable defined in XmlDoc.cpp
 //extern HashTableX g_qt;

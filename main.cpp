@@ -125,6 +125,7 @@
 #include "Test.h"
 #include "seo.h"
 #include "Json.h"
+#include "SpiderProxy.h"
 //#include "Facebook.h"
 //#include "Accessdb.h"
 
@@ -5285,6 +5286,8 @@ bool registerMsgHandlers ( ) {
 	//if ( ! Msg9a::registerHandler() ) return false;
 	if ( ! g_pingServer.registerHandler() ) return false;
 	//if ( ! g_accessdb.registerHandler () ) return false;
+	// in SpiderProxy.cpp...
+	initSpiderProxyStuff();
 	return true;
 }
 

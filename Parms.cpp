@@ -7536,11 +7536,12 @@ void Parms::init ( ) {
 	///////////////////////////////////////////
 
 	m->m_title = "use spider proxies";
-	m->m_desc  = "Use the spider proxies listed below.";
+	m->m_desc  = "Use the spider proxies listed below. If none are "
+		"listed then gb will not use any.";
 	m->m_cgi   = "useproxyips";
 	m->m_off   = (char *)&g_conf.m_useProxyIps - x;
-	m->m_type  = TYPE_BOOl;
-	m->m_def   = "0";
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
 	m->m_flags = 0;
 	m->m_page  = PAGE_SPIDERPROXIES;
 	m++;
@@ -7567,6 +7568,16 @@ void Parms::init ( ) {
 	m->m_flags = 0;
 	m++;
 
+	m->m_title = "mix up user agents";
+	m->m_desc  = "Use random user-agents when downloading to "
+		"protecting gb's anonymity.";
+	m->m_cgi   = "userandagents";
+	m->m_off   = (char *)&g_conf.m_useRandAgents - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_flags = 0;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m++;
 
 
 	///////////////////////////////////////////

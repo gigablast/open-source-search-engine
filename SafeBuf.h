@@ -178,6 +178,8 @@ struct SafeBuf {
 
 	bool fixIsolatedPeriods ( ) ;
 
+	bool hasDigits();
+
 	// treat safebuf as an array of signed longs and sort them
 	void sortLongs ( long niceness );
 

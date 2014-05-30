@@ -1,8 +1,9 @@
 #include "gb-include.h"
 
+#include "Pages.h"
 #include "TcpSocket.h"
 #include "HttpServer.h"
-#include "Pages.h"
+
 
 //
 // BASIC DETAILS
@@ -59,7 +60,7 @@ public:
 };
 
 // hashtable that maps an ip:port key (64-bits) to a SpiderProxy
-static HashTable s_iptab;
+static HashTableX s_iptab;
 
 // . handle a udp request for msg 0x54 to get the best proxy to download
 //   the url they are requesting to download. this should be ultra fast
@@ -84,7 +85,10 @@ public:
 	long m_hostId;
 	// key is this for m_prTable
 	long m_proxyIp;
-	long m_port;
+	long m_proxyPort;
+	// id of this loadbucket in case same host is using the same
+	// proxy to download the same urlip
+	long m_id;
 };
 
 // . similar to s_ipTable but maps a URL's ip to a LoadBucket
@@ -94,41 +98,14 @@ public:
 //   that we splay them out evenly over all the proxies
 static HashTableX s_loadTable;
 
-static bool s_built = false;
-
-// g_process.cpp should call this
-bool initProxyTables () {
-
-	if ( g_hostdb.m_myHostId != 0 ) return true;
-
-	// build the s_iptab hashtable for the first time
-	if ( ! s_built ) buildProxyTable ();
-
-	// make the loadtable hashtable
-	static bool s_flag = 0;
-	if ( s_flag ) return true;
-	s_flag = true;
-	return s_loadTable.set(4,
-			       sizeof(LoadBucket),
-			       128,
-			       NULL,
-			       0,
-			       MAX_NICENESS,
-			       "lbtab");
-
-}
-
-
 // . when the Conf::m_proxyIps parm is updated we call this to rebuild
 //   s_iptab, our table of SpiderProxy instances, which has the proxies and 
 //   their performance statistics.
 // . we try to maintain stats of ip/ports that did NOT change when rebuilding.
 bool buildProxyTable ( ) {
 
-	s_built = true;
-
 	// scan the NEW list of proxy ip/port pairs in g_conf
-	SafeBuf *p = g_conf.m_proxyIps.getBufStart();
+	char *p = g_conf.m_proxyIps.getBufStart();
 
 	HashTableX tmptab;
 	tmptab.set(8,0,16,NULL,0,false,0,"tmptab");
@@ -136,12 +113,12 @@ bool buildProxyTable ( ) {
 	// scan the user inputted space-separated list of ip:ports
 	for ( ; *p ; ) {
 		// skip white space
-		if ( is_wspace(*p) ) continue;
+		if ( is_wspace_a(*p) ) continue;
 		// scan in an ip:port
 		char *s = p; char *portStr = NULL;
-		long dc = 0, pc = 0;
+		long dc = 0, pc = 0, gc = 0, bc = 0;
 		// scan all characters until we hit \0 or another whitespace
-		for ( ; *s && !is_wspace(*s); s++) {
+		for ( ; *s && !is_wspace_a(*s); s++) {
 			if ( *s == '.' ) { dc++; continue; }
 			if ( *s == ':' ) { portStr=s; pc++; continue; }
 			if ( is_digit(*s) ) { gc++; continue; }
@@ -168,7 +145,7 @@ bool buildProxyTable ( ) {
 
 		// convert it
 		long iplen = s - p;
-		if ( portStr ) iplen = port - s;
+		if ( portStr ) iplen = portStr - p;
 		long ip = atoip(p,iplen);
 		// another sanity check
 		if ( ip == 0 || ip == -1 ) {
@@ -178,7 +155,7 @@ bool buildProxyTable ( ) {
 
 		// and the port default is 80
 		long port = 80;
-		if ( portStr ) port = atoi(port,s-port);
+		if ( portStr ) port = atol2(portStr,s-portStr);
 		if ( port < 0 || port > 65535 ) {
 			log("spider: got bad proxy port for %s",p);
 			return false;
@@ -187,12 +164,12 @@ bool buildProxyTable ( ) {
 
 		// . we got a legit ip:port
 		// . see if already in our table
-		long long ipkey = ip;
+		unsigned long long ipKey = ip;
 		ipKey <<= 16;
-		ipKey |= (port & 0xffff);
+		ipKey |= (unsigned short)(port & 0xffff);
 
 		// also store into tmptable to see what we need to remove
-		tmptab.addSlot(&ipKey);
+		tmptab.addKey(&ipKey);
 
 		// see if in table
 		long islot = s_iptab.getSlot( &ipKey);
@@ -202,12 +179,12 @@ bool buildProxyTable ( ) {
 
 		// otherwise add new entry
 		SpiderProxy newThing;
-		memset ( newThing , 0 , sizeof(SpiderProxy));
+		memset ( &newThing , 0 , sizeof(SpiderProxy));
 		newThing.m_ip = ip;
 		newThing.m_port = port;
-		m_lastDownloadTookMS = -1;
-		m_lastSuccessfulTestMS = -1;
-		if ( ! s_iptab.addSlot ( &ipKey, &newThing ) )
+		newThing.m_lastDownloadTookMS = -1;
+		newThing.m_lastSuccessfulTestMS = -1;
+		if ( ! s_iptab.addKey ( &ipKey, &newThing ) )
 			return false;
 	}		
 
@@ -219,7 +196,7 @@ bool buildProxyTable ( ) {
 		// get the key
 		long long key = *(long long *)s_iptab.getKey(i);
 		// must also exist in tmptab, otherwise it got removed by user
-		if ( tmptab.isInTab ( &key ) ) continue;
+		if ( tmptab.isInTable ( &key ) ) continue;
 		// shoot, it got removed. not in the new list of ip:ports
 		s_iptab.removeKey ( &key );
 		// hashtable is messed up now, start over
@@ -234,10 +211,8 @@ bool buildProxyTable ( ) {
 // . allows user to see the stats of each spider proxy
 bool printSpiderProxyTable ( SafeBuf *sb ) {
 
-	initProxyTables();
-
 	// only host #0 will have the stats ... so print that link
-	if ( g_hostdb.m_myHostId != 0 ) {
+	if ( g_hostdb.m_myHost->m_hostId != 0 ) {
 		Host *h = g_hostdb.getHost(0);
 		sb->safePrintf("<br>"
 			       "<b>See table on <a href=http://%s:%li/"
@@ -247,7 +222,7 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 			       , iptoa(h->m_ip)
 			       , (long)(h->m_httpPort)
 			       );
-		return true;
+		//return true;
 	}
 
 	// print host table
@@ -303,8 +278,8 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 			       , (long)sp->m_port
 			       );
 
-		// last SUCCESSFUL download time ago
-		long ago = now - sp->m_lastSuccessfulDownloadTestAttemptMS;
+		// last SUCCESSFUL download time ago. when it completed.
+		long ago = now - sp->m_lastSuccessfulTestMS;
 		sb->safePrintf("<td>");
 		// like 1 minute ago etc.
 		sb->printTimeAgo ( ago , now );
@@ -345,9 +320,11 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 	// free that thing
 	//mfree ( ss , sizeof(spip) ,"spip" );
 
-	long long key = s->m_ip;
-	key <<= 32;
-	key |= s->m_port;
+	// we can get the spider proxy ip/port from the socket because
+	// we sent this url download request to that spider proxy
+	unsigned long long key = (unsigned long)s->m_ip;
+	key <<= 16;
+	key |= (unsigned long)s->m_port;
 
 	SpiderProxy *sp = (SpiderProxy *)s_iptab.getValue ( &key );
 
@@ -357,7 +334,7 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 	sp->m_isWaiting = false;
 
 	// ok, update how long it took to do the download
-	long long nowms = getTimeLocalInMilliseconds();
+	long long nowms = gettimeofdayInMillisecondsLocal();
 	long long took = nowms - sp->m_lastDownloadTestAttemptMS;
 	sp->m_lastDownloadTookMS = (long)took;
 
@@ -376,7 +353,12 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 bool downloadTestUrlFromProxies ( ) {
 
 	// only host #0 should do the testing i guess
-	if ( g_hostdb.m_myHostId != 0 ) return true;
+	//if ( g_hostdb.m_myHost->m_hostId != 0 ) return true;
+
+	// if host #0 dies then host #1 must take its place managing the
+	// spider proxies
+	Host *h0 = g_hostdb.getFirstAliveHost();
+	if ( g_hostdb.m_myHost != h0 ) return true;
 
 	long nowms = gettimeofdayInMillisecondsLocal();
 
@@ -414,7 +396,7 @@ bool downloadTestUrlFromProxies ( ) {
 					    0 , // offset
 					    -1 , // size
 					    false , // useifmodsince
-					    NULL // state
+					    NULL ,// state
 					    gotTestUrlReplyWrapper ,
 					    30*1000, // 30 sec timeout
 					    sp->m_ip, // proxyip
@@ -422,7 +404,7 @@ bool downloadTestUrlFromProxies ( ) {
 					    -1, // maxtextdoclen
 					    -1 // maxtextotherlen
 					    ) ) {
-			blocked++;
+			//blocked++;
 			continue;
 		}
 		// did not block somehow
@@ -432,15 +414,15 @@ bool downloadTestUrlFromProxies ( ) {
 		// free that thing
 		//mfree ( ss , sizeof(spip) ,"spip" );
 		// log it
-		log("sproxy: error %s downloading test url for %s:%li"
-		    ,iptoa(sp->m_ip),(long)sp->m_port);
+		log("sproxy: error downloading test url %s through %s:%li"
+		    ,tu,iptoa(sp->m_ip),(long)sp->m_port);
 		    
 	}
 	return true;
 }
 
 // a host is asking us (host #0) what proxy to use?
-void handleRequest54 ( UdpSlot *udpSlot ) {
+void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 
 	char *request     = udpSlot->m_readBuf;
 	long  requestSize = udpSlot->m_readBufSize;
@@ -448,13 +430,10 @@ void handleRequest54 ( UdpSlot *udpSlot ) {
 	if ( requestSize != 4 ) {
 		log("db: Got bad request 0x54 size of %li bytes. bad",
 		    requestSize );
-		us->sendErrorReply ( udpSlot , EBADREQUESTSIZE );
+		g_udpServer.sendErrorReply ( udpSlot , EBADREQUESTSIZE );
 		return;
 	}
 
-	// make s_loadTable is initialized
-	initProxyTables();
-		
 	long urlIp = *request;
 
 	// send to a proxy that is up and has the least amount
@@ -475,20 +454,27 @@ void handleRequest54 ( UdpSlot *udpSlot ) {
 	// this IP currently, or hasn't been for the longest time...
 	long hslot = s_loadTable.getSlot ( &urlIp );
 	// scan all proxies that have this urlip outstanding
-	for ( long i = hslot ; i >= 0 ; i = s_loadTable.getNextSlot(i) ) {
+	for ( long i = hslot ; i >= 0 ; i = s_loadTable.getNextSlot(i,&urlIp)){
 		// get the bucket
 		LoadBucket **pp;
-		pp = (LoadBucket **)s_loadTable.getValueFromSlot(&i);
+		pp = (LoadBucket **)s_loadTable.getValueFromSlot(i);
 		// get proxy # that has this out
 		LoadBucket *lb = *pp;
+		// get the spider proxy this load point was for
+		unsigned long long key = lb->m_proxyIp;
+		key <<= 16;
+		key |= (unsigned short)lb->m_proxyPort;
+		SpiderProxy *sp = (SpiderProxy *)s_iptab.getValue(&key);
+		// must be there unless user remove it from the list
+		if ( ! sp ) continue;
 		// count it up
-		if (  lb->m_downloadEndTime == 0LL ) 
+		if (  lb->m_downloadEndTimeMS == 0LL ) 
 			sp->m_countForThisIp++;
 		// set the last time used to the most recently downloaded time
 		// that this proxy has downloaded from this ip
-		if ( lb->m_downloadEndTime &&
-		     lb->m_downloadEndTime > sp->m_lastTimeUsedForThisIp )
-			sp->m_lastTimeUsedForThisIp = lb->m_downloadEndTime;
+		if ( lb->m_downloadEndTimeMS &&
+		     lb->m_downloadEndTimeMS > sp->m_lastTimeUsedForThisIp )
+			sp->m_lastTimeUsedForThisIp = lb->m_downloadEndTimeMS;
 	}
 
 	// first try to get a spider proxy that is not "dead"
@@ -523,7 +509,7 @@ void handleRequest54 ( UdpSlot *udpSlot ) {
 		// get the spider proxy
 		SpiderProxy *sp = (SpiderProxy *)s_iptab.getValueFromSlot(i);
 		// if it failed the last test, skip it... not here...
-		if ( skipDead && sp->lastDownloadError ) continue;
+		if ( skipDead && sp->m_lastDownloadError ) continue;
 		// if all hosts were "dead" because they all had 
 		// m_lastDownloadError set then minCount will be 999999
 		// and nobody should continue from this statement:
@@ -539,6 +525,8 @@ void handleRequest54 ( UdpSlot *udpSlot ) {
 	// we must have a winner
 	if ( ! winnersp ) { char *xx=NULL;*xx=0; }
 
+	long long nowms = gettimeofdayInMillisecondsLocal();
+
 	// add a new load bucket then!
 	LoadBucket bb;
 	bb.m_urlIp = urlIp;
@@ -549,15 +537,21 @@ void handleRequest54 ( UdpSlot *udpSlot ) {
 	// the host using the proxy
 	bb.m_hostId = udpSlot->m_hostId;
 	// key is this for m_prTable
-	bb.m_proxyIp = winnersp->m_ip;
-	bb.m_port    = winnersp->m_port;
-	
+	bb.m_proxyIp   = winnersp->m_ip;
+	bb.m_proxyPort = winnersp->m_port;
+	// a new id. we use this to update the downloadEndTime when done
+	static long s_lbid = 0;
+	bb.m_id = s_lbid++;
+	// add it now
+	s_loadTable.addKey ( &urlIp , &bb );
 
 	// and give proxy ip/port back to the requester so they can
 	// use that to download their url
-	char *p = slot->m_tmpBuf;
+	char *p = udpSlot->m_tmpBuf;
 	*(long  *)p = winnersp->m_ip  ; p += 4;
 	*(short *)p = winnersp->m_port; p += 2;
+	// and the loadbucket id
+	*(long *)p = bb.m_id; p += 4;
 
 	// now remove old entries from the load table. entries that
 	// have completed and have a download end time more than 10 mins ago
@@ -565,11 +559,11 @@ void handleRequest54 ( UdpSlot *udpSlot ) {
 		// skip if empty
 		if ( ! s_loadTable.m_flags[i] ) continue;
 		// get the bucket
-		LoadBucket *pp =(LoadBucket *)s_loadTable.getValueFromSlot(&i);
+		LoadBucket *pp =(LoadBucket *)s_loadTable.getValueFromSlot(i);
 		// skip if still active
-		if ( pp->m_downloadEndTime == 0LL ) continue;
+		if ( pp->m_downloadEndTimeMS == 0LL ) continue;
 		// delta t
-		long long took = nowms - pp->m_downloadEndTime;
+		long long took = nowms - pp->m_downloadEndTimeMS;
 		// < 10 mins?
 		if ( took < 10*60*1000 ) continue;
 		// ok, its too old, nuke it
@@ -581,36 +575,87 @@ void handleRequest54 ( UdpSlot *udpSlot ) {
 		i--;
 	}
 
-	// send the proxy ip/port back to use
-	g_udpServer.sendReply ( udpSlot , slot->m_tmpBuf , 6 );
+	// send the proxy ip/port/LBid back to user
+	g_udpServer.sendReply_ass ( udpSlot->m_tmpBuf , // msg
+				    10 , // msgSize
+				    udpSlot->m_tmpBuf , // alloc
+				    10 , 
+				    udpSlot , 
+				    60 ) ; // 60s timeout
 }
 	
 // use msg 0x55 to say you are done using the proxy
-void handleRequest55 ( UdpSlot *udpSlot ) {
+void handleRequest55 ( UdpSlot *udpSlot , long niceness ) {
 
 	char *request     = udpSlot->m_readBuf;
 	long  requestSize = udpSlot->m_readBufSize;
 	// sanity check
-	if ( requestSize != 10 ) {
+	if ( requestSize != 14 ) {
 		log("db: Got bad request 0x55 size of %li bytes. bad",
 		    requestSize );
-		us->sendErrorReply ( udpSlot , EBADREQUESTSIZE );
+		g_udpServer.sendErrorReply ( udpSlot , EBADREQUESTSIZE );
 		return;
 	}
-
-	// make s_loadTable is initialized
-	initProxyTables();
 
 	char *p = request;
 	long  urlIp     = *(long  *)p; p += 4;
 	long  proxyIp   = *(long  *)p; p += 4;
 	short proxyPort = *(short *)p; p += 2;
+	long  lbId      = *(long  *)p; p += 4;
 
+	//
 	// update the load bucket
-	long key = urlIp;
-	LoadBucket *pp =(LoadBucket *)s_loadTable.getValueFromSlot(&key);
+	//
 
-	long long nowms = gettimeofdayInMillisecondsLocal();
-	pp->m_downloadEndTimeMS = nowms;
+	// scan over all that match to find lbid
+	long hslot = s_loadTable.getSlot ( &urlIp );
+	// scan all proxies that have this urlip outstanding
+	for ( long i = hslot ; i >= 0 ; i = s_loadTable.getNextSlot(i,&urlIp)){
+		// get the bucket
+		LoadBucket **pp;
+		pp = (LoadBucket **)s_loadTable.getValueFromSlot(i);
+		// get proxy # that has this out
+		LoadBucket *lb = *pp;
+		// is it the right id?
+		if ( lbId != lb->m_id ) continue;
+		if ( lb->m_proxyIp != proxyIp ) continue;
+		if ( lb->m_proxyPort != proxyPort ) continue;
+		// that's it. set the download end time
+		long long nowms = gettimeofdayInMillisecondsLocal();
+		lb->m_downloadEndTimeMS = nowms;
+	}
+
+}
+
+// call this at startup to register the handlers
+bool initSpiderProxyStuff() {
+	
+	// do this for all hosts in case host #0 goes dead, then everyone
+	// will, according to Msg13.cpp, send to host #1, the next in line
+	// if she is alive
+	//if ( g_hostdb.m_myHostId != 0 ) return true;
+
+	// only host #0 has handlers
+	if ( ! g_udpServer.registerHandler ( 0x54, handleRequest54 )) 
+		return false;
+	if ( ! g_udpServer.registerHandler ( 0x55, handleRequest55 )) 
+		return false;
+
+	// build the s_iptab hashtable for the first time
+	buildProxyTable ();
+
+	// make the loadtable hashtable
+	static bool s_flag = 0;
+	if ( s_flag ) return true;
+	s_flag = true;
+	return s_loadTable.set(4,
+			       sizeof(LoadBucket),
+			       128,
+			       NULL,
+			       0,
+			       true, // allow dups?
+			       MAX_NICENESS,
+			       "lbtab");
+
 }
 
