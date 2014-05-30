@@ -7539,18 +7539,21 @@ void Parms::init ( ) {
 	m->m_desc  = "Use the spider proxies listed below. If none are "
 		"listed then gb will not use any.";
 	m->m_cgi   = "useproxyips";
-	m->m_off   = (char *)&g_conf.m_useProxyIps - x;
+	m->m_xml   = "useSpiderProxies";
+	m->m_off   = (char *)&g_conf.m_useProxyIps - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_flags = 0;
 	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
 	m++;
 
 	m->m_title = "spider proxy ips";
 	m->m_desc  = "List of white space-separated spider proxy IPs. Put "
 		"in IP:port format. Example <i>1.2.3.4:80 4.5.6.7:99</i>";
 	m->m_cgi   = "proxyips";
-	m->m_off   = (char *)&g_conf.m_proxyIps - x;
+	m->m_xml   = "proxyIps";
+	m->m_off   = (char *)&g_conf.m_proxyIps - g;
 	m->m_type  = TYPE_SAFEBUF; // TYPE_IP;
 	m->m_def   = "";
 	m->m_flags = PF_TEXTAREA;
@@ -7561,8 +7564,9 @@ void Parms::init ( ) {
 		"listed above to ensure they are up. Typically you should "
 		"make this a URL you own so you do not aggravate another "
 		"webmaster.";
+	m->m_xml   = "proxyTestUrl";
 	m->m_cgi   = "proxytesturl";
-	m->m_off   = (char *)&g_conf.m_proxyTestUrl - x;
+	m->m_off   = (char *)&g_conf.m_proxyTestUrl - g;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_def   = "http://www.gigablast.com/";
 	m->m_flags = 0;
@@ -7572,7 +7576,8 @@ void Parms::init ( ) {
 	m->m_desc  = "Use random user-agents when downloading to "
 		"protecting gb's anonymity.";
 	m->m_cgi   = "userandagents";
-	m->m_off   = (char *)&g_conf.m_useRandAgents - x;
+	m->m_xml   = "useRandAgents";
+	m->m_off   = (char *)&g_conf.m_useRandAgents - g;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_flags = 0;
@@ -16466,7 +16471,8 @@ void Parms::init ( ) {
 			log(LOG_LOGIC,"conf: Bad offset in parm #%li %s."
 			    " (%li,%li,%li,%li). Did you FORGET to include "
 			    "an & before the cr.myVariable when setting "
-			    "m_off for this parm?",
+			    "m_off for this parm? Or subtract  'x' instead "
+			    "of 'g' or vice versa.",
 			    i,m_parms[i].m_title,
 			    mm,
 			    m_parms[i].m_off,
