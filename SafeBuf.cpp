@@ -3376,3 +3376,37 @@ bool SafeBuf::base64Encode ( char *sx , long len , long niceness ) {
 
 	return true;
 }
+
+// "ts" is a delta-t in seconds
+bool SafeBuf::printTimeAgo ( long ts , long now ) {
+	// Jul 23, 1971
+	if ( ! reserve2x(200) ) return false;
+	// for printing
+	long mins = 1000;
+	long hrs  = 1000;
+	long days ;
+	if ( ts > 0 ) {
+		mins = (long)((now - ts)/60);
+		hrs  = (long)((now - ts)/3600);
+		days = (long)((now - ts)/(3600*24));
+		if ( mins < 0 ) mins = 0;
+		if ( hrs  < 0 ) hrs  = 0;
+		if ( days < 0 ) days = 0;
+	}
+	// print the time ago
+	if      ( mins ==1)safePrintf("%li minute ago",mins);
+	else if (mins<60)safePrintf ( "%li minutes ago",mins);
+	else if ( hrs == 1 )safePrintf ( "%li hour ago",hrs);
+	else if ( hrs < 24 )safePrintf ( "%li hours ago",hrs);
+	else if ( days == 1 )safePrintf ( "%li day ago",days);
+	else if (days< 7 )safePrintf ( "%li days ago",days);
+	// do not show if more than 1 wk old! we want to seem as
+	// fresh as possible
+	else if ( ts > 0 ) { // && si->m_isAdmin ) {
+		struct tm *timeStruct = localtime ( &ts );
+		char tmp[100];
+		strftime(tmp,100,"%b %d %Y",timeStruct);
+		safeStrcpy(tmp);
+	}
+	return true;
+}

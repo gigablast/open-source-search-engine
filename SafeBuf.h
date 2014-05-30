@@ -181,6 +181,10 @@ struct SafeBuf {
 	// treat safebuf as an array of signed longs and sort them
 	void sortLongs ( long niceness );
 
+	// . like "1 minute ago" "5 hours ago" "3 days ago" etc.
+	// . "ts" is the delta-t in seconds
+	bool printTimeAgo ( long ts , long now ) ;
+
 	// . a function for adding Tags to buffer, like from Tagdb.cpp
 	// . if safebuf is a buffer of Tags from Tagdb.cpp
 	class Tag *addTag2 ( char *mysite , 
