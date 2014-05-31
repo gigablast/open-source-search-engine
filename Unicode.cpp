@@ -660,7 +660,7 @@ UChar32 utf8Decode2(const char *p, const char **next){
 	};
 }
 */
-
+/*
 // starting at 0xc3 0x80  ending at 0xc3 0xbf
 static char ascii_c3[] = {
 	'A', // 80
@@ -1075,9 +1075,9 @@ static bichar utf_cf[] = {
 	{0xcf,0xb9}, // be Ͼ
 	{0xcf,0xbd}  // bf Ͽ
 };
-	
+*/	
 
-
+/*
 //long utf8ToAscii(char *outbuf, long outbufsize,
 long stripAccentMarks (char *outbuf, long outbufsize,
 		       unsigned char *p, long inbuflen) { // inbuf
@@ -1127,6 +1127,41 @@ long stripAccentMarks (char *outbuf, long outbufsize,
 	}
 	// null term just in case
 	*dst = '\0';
+	return dst - outbuf;
+}
+*/
+
+
+long stripAccentMarks (char *outbuf, long outbufsize,
+		       unsigned char *p, long inbuflen) {
+	char *s = (char *)p;
+	char *send = (char *)p + inbuflen;
+	long cs;
+	char *dst = outbuf;
+	for ( ; s < send ; s += cs ) {
+		// how big is this character?
+		cs = getUtf8CharSize(s);
+		// convert the utf8 character to UChar32
+		UChar32 uc = utf8Decode ( s );
+		// break "uc" into decomposition of UChar32s
+		UChar32 ttt[8];
+		long klen = recursiveKDExpand(uc,ttt,8);
+		// if the same, leave it! it had no accent marks or other
+		// modifiers...
+		if ( klen <= 1 ) {
+			memcpy ( dst , s , cs );
+			dst += cs;
+			continue;
+		}
+		// take the first one as the stripped
+		// convert back to utf8
+		long stored = utf8Encode ( ttt[0] , dst );
+		// skip over the stored utf8 char
+		dst += stored;
+	}
+	// sanity. breach check
+	if ( dst > outbuf+outbufsize ) { char *xx=NULL;*xx=0; }
+	// return # of bytes stored into outbuf
 	return dst - outbuf;
 }
 

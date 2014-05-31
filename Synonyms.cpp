@@ -419,6 +419,10 @@ bool Synonyms::addStripped ( char *w , long wlen , HashTableX *dt ) {
 	long alen = stripAccentMarks(abuf,256,(unsigned char *)w,wlen);
 	// skip if can't convert to ascii... (unsupported letter)
 	if ( alen < 0 ) return true;
+
+	// if same as original word, skip
+	if ( wlen==alen && strncmp(abuf,w,wlen) == 0 ) return true;
+
 	// hash it
 	uint64_t h2 = hash64Lower_utf8(abuf,alen);
 	// do not add dups
