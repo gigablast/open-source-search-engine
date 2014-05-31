@@ -1190,6 +1190,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 					       0 ); // m_niceness );
 		// if no synonyms, all done
 		if ( naids <= 0 ) continue;
+		// now make the buffer to hold them for us
+		qw->m_synWordBuf.safeMemcpy ( &syn.m_synWordBuf );
 		// get the term for this word
 		QueryTerm *origTerm = qw->m_queryWordTerm;
 		// loop over synonyms for word #i now
@@ -1276,9 +1278,27 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 			//qw->m_queryWordTerm   = qt;
 			// IndexTable.cpp uses this one
 			qt->m_inQuotes  = qw->m_inQuotes;
+			// usually this is right
+			char *ptr = syn.m_termPtrs[j];
+			// buf if it is NULL that means we transformed the
+			// word by like removing accent marks and stored
+			// it in m_synWordBuf, as opposed to just pointing
+			// to a line in memory of wiktionary-buf.txt.
+			if ( ! ptr ) {
+				long off = syn.m_termOffs[j];
+				if ( off < 0 ) { 
+					char *xx=NULL;*xx=0; }
+				if ( off > qw->m_synWordBuf.length() ) {
+					char *xx=NULL;*xx=0; }
+				// use QueryWord::m_synWordBuf which should
+				// be persistent and not disappear like
+				// syn.m_synWordBuf.
+				ptr = qw->m_synWordBuf.getBufStart() + off;
+			}
 			// point to the string itself that is the word
-			qt->m_term     = syn.m_termPtrs[j];
+			qt->m_term     = ptr;
 			qt->m_termLen  = syn.m_termLens[j];
+			// qt->m_term     = syn.m_termPtrs[j];
 			// reset our implicit bits to 0
 			qt->m_implicitBits = 0;
 			// assume not under a NOT bool op

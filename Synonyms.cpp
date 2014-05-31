@@ -19,6 +19,7 @@ Synonyms::~Synonyms() {
 }
 
 void Synonyms::reset() {
+	m_synWordBuf.purge();
 }
 
 // . so now this adds a list of Synonyms to the m_pools[] and returns a ptr
@@ -69,6 +70,13 @@ long Synonyms::getSynonyms ( Words *words ,
 	m_termPtrs = (char **)bufPtr;
 	bufPtr += maxSyns * 4;
 
+	// we can't use m_termPtrs when we store a transformed word as the
+	// synonym into m_synWordBuf, because it can grow dynamically
+	// so we have to use offsets into that. so when m_termPtrs is
+	// NULL for a syn, use m_termOffs to get it
+	m_termOffs = (long *)bufPtr;
+	bufPtr += maxSyns * 4;
+
 	m_termLens = (long *)bufPtr;
 	bufPtr += maxSyns * 4;
 
@@ -77,7 +85,6 @@ long Synonyms::getSynonyms ( Words *words ,
 
 	m_numAlnumWordsInBase = (long *)bufPtr;
 	bufPtr += maxSyns * 4;
-
 
 	// source
 	m_src = bufPtr;
@@ -89,6 +96,7 @@ long Synonyms::getSynonyms ( Words *words ,
 	m_wids1Ptr = m_wids1;
 	m_srcPtr   = m_src;
 	m_termPtrsPtr = m_termPtrs;
+	m_termOffsPtr = m_termOffs;
 	m_termLensPtr = m_termLens;
 	m_numAlnumWordsPtr = m_numAlnumWords;
 	m_numAlnumWordsInBasePtr = m_numAlnumWordsInBase;
@@ -322,7 +330,12 @@ bool Synonyms::addWithoutApostrophe ( long wordNum , HashTableX *dt ) {
 	*m_wids0Ptr++ = 0LL;
 	*m_wids1Ptr++ = 0LL;
 	*m_termPtrsPtr++ = NULL;
-	*m_termLensPtr++ = 0;
+
+	*m_termOffsPtr++ = m_synWordBuf.length();
+	*m_termLensPtr++ = wlen;
+	m_synWordBuf.safeMemcpy(w,wlen);
+	m_synWordBuf.pushChar('\0');
+
 	*m_numAlnumWordsPtr++ = 1;
 	*m_numAlnumWordsInBasePtr++ = 1;
 	*m_srcPtr++ = SOURCE_GENERATED;
@@ -370,8 +383,13 @@ bool Synonyms::addAmpPhrase ( long wordNum , HashTableX *dt ) {
 	*m_aidsPtr++ = h;
 	*m_wids0Ptr++ = 0LL;
 	*m_wids1Ptr++ = 0LL;
+	*m_termOffsPtr++ = m_synWordBuf.length();
+	m_synWordBuf.safeMemcpy ( w , wlen );
+	m_synWordBuf.safeStrcpy (" and");
+	m_synWordBuf.pushChar('\0');
+	*m_termLensPtr++ = wlen+4;
 	*m_termPtrsPtr++ = NULL;
-	*m_termLensPtr++ = 0;
+
 	*m_numAlnumWordsPtr++ = 1;
 	*m_numAlnumWordsInBasePtr++ = 1;
 	*m_srcPtr++ = SOURCE_GENERATED;
@@ -397,7 +415,8 @@ bool Synonyms::addStripped ( char *w , long wlen , HashTableX *dt ) {
 
 	// filter out accent marks
 	char abuf[256];
-	long alen = utf8ToAscii(abuf,256,(unsigned char *)w,wlen);
+	//long alen = utf8ToAscii(abuf,256,(unsigned char *)w,wlen);
+	long alen = stripAccentMarks(abuf,256,(unsigned char *)w,wlen);
 	// skip if can't convert to ascii... (unsupported letter)
 	if ( alen < 0 ) return true;
 	// hash it
@@ -408,15 +427,20 @@ bool Synonyms::addStripped ( char *w , long wlen , HashTableX *dt ) {
 	if ( ! dt->addKey ( &h2 ) ) return false;
 
 
+
 	// store that
 	*m_aidsPtr++ = h2;
 	*m_wids0Ptr++ = 0LL;
 	*m_wids1Ptr++ = 0LL;
 	*m_termPtrsPtr++ = NULL;
-	*m_termLensPtr++ = 0;
+	*m_termOffsPtr++ = m_synWordBuf.length();
+	*m_termLensPtr++ = alen;
 	*m_numAlnumWordsPtr++ = 1;
 	*m_numAlnumWordsInBasePtr++ = 1;
 	*m_srcPtr++ = SOURCE_GENERATED;
+
+	m_synWordBuf.safeStrcpy(abuf);
+	m_synWordBuf.pushChar('\0');
 
 	return true;
 }

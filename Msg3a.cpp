@@ -1209,15 +1209,23 @@ void Msg3a::printTerms ( ) {
 		//buf[0]='\0';
 		long long tid  = m_q->m_qterms[i].m_termId;
 		char *s    = m_q->m_qterms[i].m_term;
-		long slen = m_q->m_qterms[i].m_termLen;
-		char c = s[slen];
-		s[slen] = '\0';
-		//utf16ToUtf8(bb, 256, s , slen );
-		//sprintf(buf," termId#%li=%lli",i,tid);
-		// this term freq is estimated from the rdbmap and
-		// does not hit disk...
-		logf(LOG_DEBUG,"query: term #%li \"%s\" (%llu)",i,s,tid);
-		s[slen] = c;
+		if ( ! s ) {
+			logf(LOG_DEBUG,"query: term #%li "
+			     "\"<notstored>\" (%llu)",
+			     i,tid);
+		}
+		else {
+			long slen = m_q->m_qterms[i].m_termLen;
+			char c = s[slen];
+			s[slen] = '\0';
+			//utf16ToUtf8(bb, 256, s , slen );
+			//sprintf(buf," termId#%li=%lli",i,tid);
+			// this term freq is estimated from the rdbmap and
+			// does not hit disk...
+			logf(LOG_DEBUG,"query: term #%li \"%s\" (%llu)",
+			     i,s,tid);
+			s[slen] = c;
+		}
 	}
 }
 
