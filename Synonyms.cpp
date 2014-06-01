@@ -332,11 +332,12 @@ long Synonyms::getSynonyms ( Words *words ,
 		// add in the next syn set, deduped
 		if ( next ) { ss = next; goto addSynSet; }
 		// wrap it up
-	done:
+		//done:
 		// all done
-		return m_aidsPtr - m_aids;
+		//return m_aidsPtr - m_aids;
 	}
 
+	done:
 
 	// strip marks from THIS word, return -1 w/ g_errno set on error
 	if ( ! addStripped ( w , wlen,&dt ) ) return m_aidsPtr - m_aids;
