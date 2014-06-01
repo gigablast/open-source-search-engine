@@ -1190,6 +1190,8 @@ bool Query::setQTerms ( Words &words , Phrases &phrases ) {
 					       0 ); // m_niceness );
 		// if no synonyms, all done
 		if ( naids <= 0 ) continue;
+		// sanity
+		if ( naids > MAX_SYNS ) { char *xx=NULL;*xx=0; }
 		// now make the buffer to hold them for us
 		qw->m_synWordBuf.safeMemcpy ( &syn.m_synWordBuf );
 		// get the term for this word

@@ -90,6 +90,8 @@ long Synonyms::getSynonyms ( Words *words ,
 	m_src = bufPtr;
 	bufPtr += maxSyns;
 
+	if ( bufPtr > tmpBuf + TMPSYNBUFSIZE ) { char *xx=NULL;*xx=0; }
+
 	// cursors
 	m_aidsPtr  = m_aids;
 	m_wids0Ptr = m_wids0;
@@ -325,7 +327,7 @@ long Synonyms::getSynonyms ( Words *words ,
 		*m_numAlnumWordsInBasePtr++ = baseNumAlnumWords;
 
 		// do not breach
-		if ( ++count >= maxSyns ) goto done;
+		if ( ++count >= maxSyns ) return m_aidsPtr - m_aids;
 	getNextSyn:
 		// loop for more
 		if ( *e == ',' ) { e++; p = e; goto hashLoop; }
@@ -337,13 +339,17 @@ long Synonyms::getSynonyms ( Words *words ,
 		//return m_aidsPtr - m_aids;
 	}
 
-	done:
-
 	// strip marks from THIS word, return -1 w/ g_errno set on error
 	if ( ! addStripped ( w , wlen,&dt ) ) return m_aidsPtr - m_aids;
 
+	// do not breach
+	if ( m_aidsPtr - m_aids > maxSyns ) return m_aidsPtr - m_aids;
+
 	// returns false with g_errno set
 	if ( ! addAmpPhrase ( wordNum, &dt ) ) return m_aidsPtr - m_aids;
+
+	// do not breach
+	if ( m_aidsPtr - m_aids > maxSyns ) return m_aidsPtr - m_aids;
 
 	// if we end in apostrophe, strip and add
 	if ( wlen>= 3 &&
