@@ -1932,6 +1932,18 @@ bool Wiktionary::compile ( ) {
 			//lastWid = *(long long *)data;
 			// it matches!
 			formCount++;
+
+			// if it has accent marks then we count the stripped
+			// version as a form, but we do not have to
+			// store the stripped version in wiktionary-buf.txt
+			// because it is just a waste of space.
+			char a[1024];
+			long stripLen = stripAccentMarks(a,
+							 1023,
+							 (unsigned char *)word,
+							 gbstrlen(word));
+			if ( stripLen > 0 ) 
+				formCount++;
 		}
 		// need 2+ forms!
 		if ( formCount <= 1 ) continue;
@@ -2014,6 +2026,26 @@ bool Wiktionary::compile ( ) {
 			// and we seem to map to the first one only...
 			// so maybe allow dup keys in syntable?
 			//
+
+			// . also strip accent marks and add that key as well
+			// . so we can map a stripped word to the original
+			//   word with accent marks, although it might
+			//   actually map to multiple words! so who knows
+			//   what to pick, maybe all of them!
+			char a[1024];
+			long stripLen = stripAccentMarks(a,
+							 1023,
+							 (unsigned char *)word,
+							 gbstrlen(word));
+			if ( stripLen > 0 ) {
+				long long swid = hash64Lower_utf8(word);
+				// xor in the langid
+				swid ^= g_hashtab[0][langId];
+				// only add this word form once per langId
+				if ( dd.isInTable ( &swid ) ) continue;
+				dd.addKey ( &swid );
+			}
+
 
 			// count em up
 			count++;
