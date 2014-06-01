@@ -1144,8 +1144,11 @@ long stripAccentMarks (char *outbuf, long outbufsize,
 		// convert the utf8 character to UChar32
 		UChar32 uc = utf8Decode ( s );
 		// break "uc" into decomposition of UChar32s
-		UChar32 ttt[8];
-		long klen = recursiveKDExpand(uc,ttt,8);
+		UChar32 ttt[32];
+		long klen = recursiveKDExpand(uc,ttt,32);
+		if(klen>32){char *xx=NULL;*xx=0;}
+		// sanity
+		if ( dst + 5 > outbuf+outbufsize ) return -1;
 		// if the same, leave it! it had no accent marks or other
 		// modifiers...
 		if ( klen <= 1 ) {

@@ -1900,10 +1900,11 @@ bool Wiktionary::compile ( ) {
 		//long long lastWid = 0LL;
 		// remove dups
 		HashTableX dd2;
-		char dbuf2[256];
-		dd2.set(8,0,8,dbuf2,256,false,0,"ddttt2");
+		char dbuf2[512];
+		dd2.set(8,0,8,dbuf2,512,false,0,"ddttt2");
 		// how many forms? must be 2+ to get added to syntable
 		long formCount = 0;
+		long stripCount = 0;
 		for ( long j = i ; ; j++ ) {
 			// wrap around
 			if ( j >= m_tmp.m_numSlots ) j = 0;
@@ -1942,19 +1943,24 @@ bool Wiktionary::compile ( ) {
 							 1023,
 							 (unsigned char *)word,
 							 gbstrlen(word));
-			if ( stripLen > 0 ) 
-				formCount++;
+			if ( stripLen <= 0 ) continue;
+			// if same as original word, skip
+			long wlen = gbstrlen(word);
+			if ( wlen==stripLen && strncmp(a,word,wlen)==0) 
+				continue;
+			// count as additional form
+			stripCount++;
 		}
 		// need 2+ forms!
-		if ( formCount <= 1 ) continue;
+		if ( formCount +stripCount <= 1 ) continue;
 		// base form
 		//long long wid = *(long long *)m_tmp.getDataFromSlot(i);
 		// remember buf start
 		long bufLen = m_synBuf.length();
 		// remove dups
 		HashTableX dd;
-		char dbuf[256];
-		dd.set(8,0,8,dbuf,256,false,0,"ddttt");
+		char dbuf[512];
+		dd.set(8,0,8,dbuf,512,false,0,"ddttt");
 		// a byte for storing the # of synonym forms
 		//m_synBuf.pushChar(0);
 		// push the langid!
@@ -2037,13 +2043,30 @@ bool Wiktionary::compile ( ) {
 							 1023,
 							 (unsigned char *)word,
 							 gbstrlen(word));
+			// debug time
+			if ( stripLen > 0 ) a[stripLen] = 0;
+			//if ( stripLen > 0 ) 
+			//	log("wikt: %li) %s->%s",i,word,a);
+			//if ( i==5133265 )
+			//	log("hey");
+			// if same as original word, ignore it
 			if ( stripLen > 0 ) {
-				long long swid = hash64Lower_utf8(word);
+				long wlen = gbstrlen(word);
+				if ( wlen==stripLen && 
+				     strncmp(a,word,wlen) == 0 ) 
+					stripLen = 0;
+			}
+			// if different, add it
+			if ( stripLen > 0 ) {
+				long long swid = hash64Lower_utf8(a);
 				// xor in the langid
 				swid ^= g_hashtab[0][langId];
 				// only add this word form once per langId
 				if ( dd.isInTable ( &swid ) ) continue;
 				dd.addKey ( &swid );
+				// . a ptr to that sequence of alt forms in buf
+				// . this uses 6 byte keys
+				m_synTable.addKey(&swid,&bufLen);
 			}
 
 

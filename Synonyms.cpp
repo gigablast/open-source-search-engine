@@ -113,11 +113,15 @@ long Synonyms::getSynonyms ( Words *words ,
 
 	char sourceId = SOURCE_WIKTIONARY;
 	char *ss = NULL;
+	char *savedss = NULL;
 	long long bwid;
 	char wikiLangId = m_docLangId;
 	bool hadSpace ;
 	long klen ;
 	long baseNumAlnumWords;
+	char origLangId = wikiLangId;
+	long synSetCount = 0;
+	bool doLangLoop = false;
 
  tryOtherLang:
 
@@ -178,9 +182,47 @@ long Synonyms::getSynonyms ( Words *words ,
 		}
 	}
 
+	// loop over all the other langids if no synset found in this langid
+	if ( ! ss && ! doLangLoop ) {
+		wikiLangId = langUnknown; // start at 0
+		doLangLoop = true;
+	}
+
+	// loop through all languages if no luck
+	if ( doLangLoop ) {
+
+		// save it
+		if ( ss ) savedss = ss;
+
+		// can only have one match to avoid ambiguity when doing
+		// a loop over all the langids
+		if ( ss && ++synSetCount >= 2 ) {
+			ss = NULL;
+			goto skip;
+		}
+
+		// advance langid of synset attempt
+		wikiLangId++;
+
+		// advance over original we tried first
+		if ( wikiLangId == origLangId )
+			wikiLangId++;
+		// all done?
+		if ( wikiLangId < langLast ) { // the last langid
+			ss = NULL;
+			goto tryOtherLang;
+		}
+	}
+
+	// use the one single synset we found for some language
+	if ( ! ss ) ss = savedss;
+
+ skip:
+
 	// even though a document may be in german it often has some
 	// english words "pdf download" "copyright" etc. so if the word
 	// has no synset in german, try it in english
+	/*
 	if ( //numPresets == 0 &&
 	     ! ss &&
 	     m_docLangId != langEnglish &&
@@ -192,6 +234,8 @@ long Synonyms::getSynonyms ( Words *words ,
 		sourceId   = SOURCE_WIKTIONARY_EN;
 		goto tryOtherLang;
 	}
+	*/
+
 
 	// if it was in wiktionary, just use that synset
 	if ( ss ) {
