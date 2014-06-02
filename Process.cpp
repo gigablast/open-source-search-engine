@@ -587,10 +587,6 @@ bool Process::isAnyTreeSaving ( ) {
 void powerMonitorWrapper ( int fd , void *state ) {
 	if ( g_isYippy ) return;
 
-	// also download test urls from spider proxies to ensure they
-	// are up and running properly
-	downloadTestUrlFromProxies();
-
 	// only if in matt wells datacenter
 	if ( ! g_conf.m_isMattWells ) 
 		return;
@@ -849,6 +845,11 @@ void doneCmdWrapper ( void *state ) {
 }
 
 void hdtempWrapper ( int fd , void *state ) {
+
+	// also download test urls from spider proxies to ensure they
+	// are up and running properly
+	downloadTestUrlFromProxies();
+
 	// reset this... why?
 	g_errno = 0;
 	// do not get if already getting
@@ -1788,6 +1789,9 @@ bool Process::saveBlockingFiles1 ( ) {
 
 	// save the login table
 	g_users.save();
+
+	// save stats on spider proxies if any
+	saveSpiderProxyStats();
 
 	// save the query log buffer if it was modified by the 
 	// runSeoQueryLoop() in seo.cpp which updates its

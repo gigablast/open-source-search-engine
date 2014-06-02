@@ -131,8 +131,8 @@ bool buildProxyTable ( ) {
 			msg = "not enough digits for an ip";
 		if ( pc > 1 )
 			msg = "too many colons";
-		if ( dc != 4 )
-			msg = "need 4 dots for an ip address";
+		if ( dc != 3 )
+			msg = "need 3 dots for an ip address";
 		if ( bc )
 			msg = "got illegal char in ip:port listing";
 		if ( msg ) {
@@ -155,7 +155,7 @@ bool buildProxyTable ( ) {
 
 		// and the port default is 80
 		long port = 80;
-		if ( portStr ) port = atol2(portStr,s-portStr);
+		if ( portStr ) port = atol2(portStr+1,s-portStr-1);
 		if ( port < 0 || port > 65535 ) {
 			log("spider: got bad proxy port for %s",p);
 			return false;
@@ -173,6 +173,9 @@ bool buildProxyTable ( ) {
 
 		// see if in table
 		long islot = s_iptab.getSlot( &ipKey);
+
+		// advance p
+		p = s;
 
 		// if in there, keep it as is
 		if ( islot >= 0 ) continue;
@@ -204,6 +207,17 @@ bool buildProxyTable ( ) {
 	}
 
 	return true;
+}
+
+// save the stats
+bool saveSpiderProxyStats ( ) {
+	// save hash table
+	return s_iptab.save(g_hostdb.m_dir,"spiderproxystats.dat");
+}
+
+bool loadSpiderProxyStats ( ) {
+	// save hash table
+	return s_iptab.load(g_hostdb.m_dir,"spiderproxystats.dat");
 }
 
 // . we call this from Parms.cpp which prints out the proxy related controls
@@ -265,7 +279,8 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 
 		char *bg = LIGHT_BLUE;
 		// mark with light red bg if last test url attempt failed
-		if ( sp->m_lastDownloadTookMS == -1 )
+		if ( sp->m_lastDownloadTookMS == -1 &&
+		     sp->m_lastDownloadTestAttemptMS>0 )
 			bg = "ffa6a6";
 
 		// print it
@@ -279,23 +294,31 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 			       );
 
 		// last SUCCESSFUL download time ago. when it completed.
-		long ago = now - sp->m_lastSuccessfulTestMS;
+		long ago = now - sp->m_lastSuccessfulTestMS/1000;
 		sb->safePrintf("<td>");
 		// like 1 minute ago etc.
-		sb->printTimeAgo ( ago , now );
+		if ( sp->m_lastSuccessfulTestMS <= 0 )
+			sb->safePrintf("none");
+		else
+			sb->printTimeAgo ( ago , now );
 		sb->safePrintf("</td>");
 
 		// last download time ago
-		ago = now - sp->m_lastDownloadTestAttemptMS;
+		ago = now - sp->m_lastDownloadTestAttemptMS/1000;
 		sb->safePrintf("<td>");
 		// like 1 minute ago etc.
-		sb->printTimeAgo ( ago , now );
+		if ( sp->m_lastDownloadTestAttemptMS<= 0 )
+			sb->safePrintf("none");
+		else
+			sb->printTimeAgo ( ago , now );
 		sb->safePrintf("</td>");
 
 		// how long to download the test url?
 		if ( sp->m_lastDownloadTookMS != -1 )
 			sb->safePrintf("<td>%lims</td>",
 				       (long)sp->m_lastDownloadTookMS);
+		else if ( sp->m_lastDownloadTestAttemptMS<= 0 )
+			sb->safePrintf("<td>unknown</td>");
 		else
 			sb->safePrintf("<td>"
 				       "<font color=red>FAILED</font>"
@@ -304,7 +327,7 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 		sb->safePrintf("</tr>\n");
 	}
 
-	sb->safePrintf("</table>");
+	sb->safePrintf("</table><br>");
 	return true;
 }
 
@@ -319,6 +342,10 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 	//spip *ss = (spip *)state;
 	// free that thing
 	//mfree ( ss , sizeof(spip) ,"spip" );
+
+	// note it
+	log("sproxy: got test url reply: %s",
+	    s->m_readBuf);
 
 	// we can get the spider proxy ip/port from the socket because
 	// we sent this url download request to that spider proxy
@@ -360,7 +387,7 @@ bool downloadTestUrlFromProxies ( ) {
 	Host *h0 = g_hostdb.getFirstAliveHost();
 	if ( g_hostdb.m_myHost != h0 ) return true;
 
-	long nowms = gettimeofdayInMillisecondsLocal();
+	long long nowms = gettimeofdayInMillisecondsLocal();
 
 	for ( long i = 0 ; i < s_iptab.getNumSlots() ; i++ ) {
 
@@ -371,8 +398,8 @@ bool downloadTestUrlFromProxies ( ) {
 
 		long long elapsed  = nowms - sp->m_lastDownloadTestAttemptMS;
 
-		// hit test url once per minute
-		if ( elapsed < 60 ) continue;
+		// hit test url once per 31 seconds
+		if ( elapsed < 31000 ) continue;
 
 		// or if never came back yet!
 		if ( sp->m_isWaiting ) continue;
@@ -640,6 +667,11 @@ bool initSpiderProxyStuff() {
 		return false;
 	if ( ! g_udpServer.registerHandler ( 0x55, handleRequest55 )) 
 		return false;
+
+	// key is ip/port
+	s_iptab.set(8,sizeof(SpiderProxy),0,NULL,0,false,0,"siptab");
+
+	loadSpiderProxyStats();
 
 	// build the s_iptab hashtable for the first time
 	buildProxyTable ();

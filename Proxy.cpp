@@ -5156,6 +5156,11 @@ char *Proxy::storeLoginBar ( char *reply ,
 		newReply[len] = c;
 		return newReply;
 	}
+
+	// temp fix take it out because it is not working right
+	mp[0] = 'x';
+	return newReply;
+
 	// point to first digit in there
 	mp += 16;
 	// store our new content length as ascii into test buf

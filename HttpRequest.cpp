@@ -87,7 +87,10 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 		       char *userAgent , char *proto , bool doPost ,
 		       char *cookie , char *additionalHeader ,
 		       // if posting something, how many bytes is it?
-		       long postContentLen ) {
+		       long postContentLen ,
+		       // are we sending the request through an http proxy?
+		       // if so this will be non-zero
+		       long proxyIp ) {
 
 	m_reqBufValid = false;
 
@@ -95,6 +98,9 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	long port = 80;
 	char *hptr = getHostFast ( url , &hlen , &port );
 	char *path = getPathFast ( url );
+
+	// use the full url if sending to an http proxy
+	if ( proxyIp ) path = url;
 
 	char *pathEnd  = NULL;
 	char *postData = NULL;

@@ -11,4 +11,10 @@ bool downloadTestUrlFromProxies();
 // called by Parms.cpp when user changes the list of proxyips
 bool buildProxyTable ( );
 
+// show spider proxy stats, called by Parms.cpp
+bool printSpiderProxyTable ( SafeBuf *sb ) ;
+
+// save stats on the spider proxies if any
+bool saveSpiderProxyStats();
+
 #endif

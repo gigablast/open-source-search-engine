@@ -136,6 +136,10 @@ bool HttpServer::getDoc ( char   *url      ,
 	if ( ip == -1 ) 
 		log("http: you probably didn't mean to set ip=-1 did you? "
 		    "try setting to 0.");
+
+	// ignore if -1 as well
+	if ( proxyIp == -1 ) proxyIp = 0;
+
 	//log(LOG_WARN, "http: get doc %s", url->getUrl());
 	// use the HttpRequest class
 	HttpRequest r;
@@ -165,7 +169,12 @@ bool HttpServer::getDoc ( char   *url      ,
 	if ( ! fullRequest ) {
 		if ( ! r.set ( url , offset , size , ifModifiedSince ,
 			       userAgent , proto , doPost , cookie ,
-			       additionalHeader , pcLen ) ) return true;
+			       // pass in proxyIp because if it is a
+			       // request being sent to a proxy we have to
+			       // say "GET http://www.xyz.com/" the full
+			       // url, not just a relative path.
+			       additionalHeader , pcLen , proxyIp ) ) 
+			return true;
 		reqSize = r.getRequestLen();
 		req = (char *) mmalloc( reqSize + pcLen ,"HttpServer");
 		if ( req ) 
