@@ -27,6 +27,7 @@ public:
 	char *m_parmEnd;
 	class UdpSlot *m_slot;
 	bool m_doRebuilds;
+	bool m_doProxyRebuild;
 	bool m_updatedRound;
 	collnum_t m_collnum;
 	bool m_registered;

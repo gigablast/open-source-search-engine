@@ -31,6 +31,7 @@
 #include "hash.h"
 #include "Test.h"
 #include "Rebalance.h"
+#include "SpiderProxy.h" // buildProxyTable()
 
 // width of input box in characters for url filter expression
 #define REGEX_TXT_MAX 80
@@ -7556,7 +7557,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_proxyIps - g;
 	m->m_type  = TYPE_SAFEBUF; // TYPE_IP;
 	m->m_def   = "";
-	m->m_flags = PF_TEXTAREA;
+	m->m_flags = PF_TEXTAREA | PF_REBUILDPROXYTABLE;
 	m++;
 
 	m->m_title = "spider proxy test url";
@@ -17860,6 +17861,9 @@ void handleRequest3fLoop ( void *weArg ) {
 		if ( parm->m_flags & PF_REBUILDURLFILTERS )
 			we->m_doRebuilds = true;
 
+		if ( parm->m_flags & PF_REBUILDPROXYTABLE )
+			we->m_doProxyRebuild = true;
+
 		// get collnum i guess
 		if ( parm->m_type != TYPE_CMD )
 			we->m_collnum = getCollnumFromParmRec ( rec );
@@ -17937,6 +17941,11 @@ void handleRequest3fLoop ( void *weArg ) {
 		cx->rebuildUrlFilters();
 	}
 
+	// if user changed the list of proxy ips rebuild the binary
+	// array representation of the proxy ips we have
+	if ( we->m_doProxyRebuild )
+		buildProxyTable();
+		
 	// note it
 	if ( ! we->m_sentReply )
 		log("parms: sending parm update reply");
@@ -17978,6 +17987,7 @@ void handleRequest3f ( UdpSlot *slot , long niceness ) {
 	we->m_errno = 0;
 	we->m_doRebuilds = false;
 	we->m_updatedRound = false;
+	we->m_doProxyRebuild = false;
 	we->m_collnum = -1;
 	we->m_sentReply = 0;
 

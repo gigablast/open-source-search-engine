@@ -8,4 +8,7 @@ bool initSpiderProxyStuff();
 // to evaluate the spider proxies
 bool downloadTestUrlFromProxies();
 
+// called by Parms.cpp when user changes the list of proxyips
+bool buildProxyTable ( );
+
 #endif

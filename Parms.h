@@ -115,6 +115,7 @@ class Page {
 #define PF_NOSAVE   0x0200
 #define PF_DUP      0x0400
 #define PF_TEXTAREA 0x0800
+#define PF_REBUILDPROXYTABLE 0x1000
 
 class Parm {
  public:
