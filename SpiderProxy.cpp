@@ -115,7 +115,7 @@ bool buildProxyTable ( ) {
 	// scan the user inputted space-separated list of ip:ports
 	for ( ; *p ; ) {
 		// skip white space
-		if ( is_wspace_a(*p) ) continue;
+		if ( is_wspace_a(*p) ) { p++; continue; }
 		// scan in an ip:port
 		char *s = p; char *portStr = NULL;
 		long dc = 0, pc = 0, gc = 0, bc = 0;
@@ -166,7 +166,7 @@ bool buildProxyTable ( ) {
 
 		// . we got a legit ip:port
 		// . see if already in our table
-		unsigned long long ipKey = ip;
+		unsigned long long ipKey = (unsigned long)ip;
 		ipKey <<= 16;
 		ipKey |= (unsigned short)(port & 0xffff);
 
@@ -219,7 +219,16 @@ bool saveSpiderProxyStats ( ) {
 
 bool loadSpiderProxyStats ( ) {
 	// save hash table
-	return s_iptab.load(g_hostdb.m_dir,"spiderproxystats.dat");
+	if ( ! s_iptab.load(g_hostdb.m_dir,"spiderproxystats.dat") ) 
+		return false;
+	// unset some flags
+	for ( long i = 0 ; i < s_iptab.getNumSlots() ; i++ ) {
+		// skip empty slots
+		if ( ! s_iptab.m_flags[i] ) continue;
+		SpiderProxy *sp = (SpiderProxy *)s_iptab.getValueFromSlot(i);
+		sp->m_isWaiting = false;
+	}
+	return true;
 }
 
 long getNumLoadPoints ( SpiderProxy *sp ) {
@@ -373,14 +382,14 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 	//mfree ( ss , sizeof(spip) ,"spip" );
 
 	// note it
-	log("sproxy: got test url reply: %s",
-	    s->m_readBuf);
+	log("sproxy: got test url reply (%s): %s",
+	    mstrerror(g_errno),s->m_readBuf);
 
 	// we can get the spider proxy ip/port from the socket because
 	// we sent this url download request to that spider proxy
 	unsigned long long key = (unsigned long)s->m_ip;
 	key <<= 16;
-	key |= (unsigned long)s->m_port;
+	key |= (unsigned short)(s->m_port & 0xffff);
 
 	SpiderProxy *sp = (SpiderProxy *)s_iptab.getValue ( &key );
 
@@ -515,7 +524,7 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		LoadBucket *lb;
 		lb = (LoadBucket *)s_loadTable.getValueFromSlot(i);
 		// get the spider proxy this load point was for
-		unsigned long long key = lb->m_proxyIp;
+		unsigned long long key = (unsigned long)lb->m_proxyIp;
 		key <<= 16;
 		key |= (unsigned short)lb->m_proxyPort;
 		SpiderProxy *sp = (SpiderProxy *)s_iptab.getValue(&key);
