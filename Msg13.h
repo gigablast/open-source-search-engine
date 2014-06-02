@@ -18,9 +18,11 @@ public:
 	long long m_urlHash48;
 	long  m_urlIp;
 	long  m_firstIp;
+
+	long  m_lbId; // loadbucket id
 	long  m_httpProxyIp;
 	short m_httpProxyPort;
-	long  m_lbId; // loadbucket id
+
 	char  m_niceness;
 	long  m_ifModifiedSince;
 	long  m_maxCacheAge;
@@ -71,6 +73,8 @@ public:
 	// on the other hand, if we are called indirectly by handleRequest13()
 	// then we set m_udpSlot.
 	class UdpSlot *m_udpSlot;
+
+	class TcpSocket *m_tcpSocket;
 
 	// used for addTestDoc() and caching. msg13 sets this
 	long long m_urlHash64;	
@@ -131,8 +135,7 @@ class Msg13 {
 	// point to it
 	Msg13Request *m_request;
 
-	class TcpSocket *m_tcpSocket;
-	char m_tmpBuf32[32];
+	//char m_tmpBuf32[32];
 };
 
 bool getTestSpideredDate ( Url *u , long *origSpideredDate , char *testDir ) ;

@@ -461,7 +461,7 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		return;
 	}
 
-	long urlIp = *request;
+	long urlIp = *(long *)request;
 
 	// send to a proxy that is up and has the least amount
 	// of LoadBuckets with this urlIp, if tied, go to least loaded.
@@ -483,10 +483,8 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 	// scan all proxies that have this urlip outstanding
 	for ( long i = hslot ; i >= 0 ; i = s_loadTable.getNextSlot(i,&urlIp)){
 		// get the bucket
-		LoadBucket **pp;
-		pp = (LoadBucket **)s_loadTable.getValueFromSlot(i);
-		// get proxy # that has this out
-		LoadBucket *lb = *pp;
+		LoadBucket *lb;
+		lb = (LoadBucket *)s_loadTable.getValueFromSlot(i);
 		// get the spider proxy this load point was for
 		unsigned long long key = lb->m_proxyIp;
 		key <<= 16;
@@ -637,12 +635,9 @@ void handleRequest55 ( UdpSlot *udpSlot , long niceness ) {
 	// scan over all that match to find lbid
 	long hslot = s_loadTable.getSlot ( &urlIp );
 	// scan all proxies that have this urlip outstanding
-	for ( long i = hslot ; i >= 0 ; i = s_loadTable.getNextSlot(i,&urlIp)){
+	long i;for (i=hslot ; i >= 0 ; i = s_loadTable.getNextSlot(i,&urlIp)){
 		// get the bucket
-		LoadBucket **pp;
-		pp = (LoadBucket **)s_loadTable.getValueFromSlot(i);
-		// get proxy # that has this out
-		LoadBucket *lb = *pp;
+		LoadBucket *lb= (LoadBucket *)s_loadTable.getValueFromSlot(i);
 		// is it the right id?
 		if ( lbId != lb->m_id ) continue;
 		if ( lb->m_proxyIp != proxyIp ) continue;
@@ -650,7 +645,19 @@ void handleRequest55 ( UdpSlot *udpSlot , long niceness ) {
 		// that's it. set the download end time
 		long long nowms = gettimeofdayInMillisecondsLocal();
 		lb->m_downloadEndTimeMS = nowms;
+		break;
 	}
+
+	if ( i < 0 ) 
+		log("sproxy: could not find load bucket id #%li", lbId);
+
+	// gotta send reply back
+	g_udpServer.sendReply_ass ( 0,
+				    0 , // msgSize
+				    0 , // alloc
+				    0 , 
+				    udpSlot , 
+				    60 ) ; // 60s timeout
 
 }
 

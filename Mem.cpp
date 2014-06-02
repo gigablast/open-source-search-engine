@@ -1534,6 +1534,10 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 	if ( size == 0 ) return;
 	// huh?
 	if ( ! ptr ) return;
+
+	//if ( size==65536 && strcmp(note,"UdpServer")==0)
+	//	log("hey");
+
 	// . get how much it was from the mem table
 	// . this is used for alloc/free wrappers for zlib because it does
 	//   not give us a size to free when it calls our mfree(), so we use -1
