@@ -222,6 +222,22 @@ bool loadSpiderProxyStats ( ) {
 	return s_iptab.load(g_hostdb.m_dir,"spiderproxystats.dat");
 }
 
+long getNumLoadPoints ( SpiderProxy *sp ) {
+	long count = 0;
+	// scan all proxies that have this urlip outstanding
+	for ( long i = 0 ; i < s_loadTable.m_numSlots ; i++ ) {
+		// skip if empty
+		if ( ! s_loadTable.m_flags[i] ) continue;
+		// get the bucket
+		LoadBucket *lb= (LoadBucket *)s_loadTable.getValueFromSlot(i);
+		// get the spider proxy this load point was for
+		if ( lb->m_proxyIp != sp->m_ip ) continue;
+		if ( lb->m_proxyPort != sp->m_port ) continue;
+		count++;
+	}
+	return count;
+}
+
 // . we call this from Parms.cpp which prints out the proxy related controls
 //   and this table below them...
 // . allows user to see the stats of each spider proxy
@@ -256,6 +272,8 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 		       "<td><b>proxy port</b></td>"
 
 		       "<td><b>times used</b></td>"
+
+		       "<td><b>load points</b></td>"
 
 		       // time of last successful download. print "none"
 		       // if never successfully used
@@ -299,6 +317,10 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 			       );
 
 		sb->safePrintf("<td>%lli</td>",sp->m_timesUsed);
+
+		// get # times it appears in loadtable
+		long np = getNumLoadPoints ( sp );
+		sb->safePrintf("<td>%li</td>",np);
 
 		// last SUCCESSFUL download time ago. when it completed.
 		long ago = now - sp->m_lastSuccessfulTestMS/1000;
