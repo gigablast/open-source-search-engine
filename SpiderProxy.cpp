@@ -52,6 +52,8 @@ public:
 	// waiting on test url to be downloaded
 	bool m_isWaiting;
 
+	long long m_timesUsed;
+
 	// special things used by LoadBucket algo to determine which
 	// SpiderProxy to use to download from a particular IP
 	long m_countForThisIp;
@@ -252,6 +254,9 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 		       "<td>"
 		       "<b>proxy IP</b></td>"
 		       "<td><b>proxy port</b></td>"
+
+		       "<td><b>times used</b></td>"
+
 		       // time of last successful download. print "none"
 		       // if never successfully used
 		       "<td><b>test url last successful download</b></td>"
@@ -292,6 +297,8 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 			       , iptoa(sp->m_ip)
 			       , (long)sp->m_port
 			       );
+
+		sb->safePrintf("<td>%lli</td>",sp->m_timesUsed);
 
 		// last SUCCESSFUL download time ago. when it completed.
 		long ago = now - sp->m_lastSuccessfulTestMS/1000;
@@ -551,6 +558,9 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 	if ( ! winnersp ) { char *xx=NULL;*xx=0; }
 
 	long long nowms = gettimeofdayInMillisecondsLocal();
+
+	// winner count update
+	winnersp->m_timesUsed++;
 
 	// add a new load bucket then!
 	LoadBucket bb;
