@@ -20,6 +20,7 @@ public:
 	long  m_firstIp;
 	long  m_httpProxyIp;
 	short m_httpProxyPort;
+	long  m_lbId; // loadbucket id
 	char  m_niceness;
 	long  m_ifModifiedSince;
 	long  m_maxCacheAge;
@@ -129,6 +130,9 @@ class Msg13 {
 
 	// point to it
 	Msg13Request *m_request;
+
+	class TcpSocket *m_tcpSocket;
+	char m_tmpBuf32[32];
 };
 
 bool getTestSpideredDate ( Url *u , long *origSpideredDate , char *testDir ) ;

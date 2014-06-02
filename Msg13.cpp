@@ -144,9 +144,9 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	char *reply          = slot->m_readBuf;
 	long  replySize      = slot->m_readBufSize;
 	//long  replyAllocSize = slot->m_readBufMaxSize;
-	// bad reply?
-	if ( replySize != 6 ) {
-		log("sproxy: bad 54 reply size of %li != 6",replySize);
+	// bad reply? ip/port/LBid
+	if ( replySize != 10 ) {
+		log("sproxy: bad 54 reply size of %li != 10",replySize);
 		return;
 	}
 
@@ -154,6 +154,16 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	char *p = reply;
 	THIS->m_request->m_httpProxyIp = *(long *)p; p += 4;
 	THIS->m_request->m_httpProxyPort = *(short *)p; p += 2;
+	// the id of this transaction for the LoadBucket
+	// need to save this so we can use it when we send a msg55 request
+	// out to tell host #0 how long it took use to use this proxy, etc.
+	THIS->m_request->m_lbId = *(long *)p; p += 4;
+
+	// debug note
+	log("sproxy: got proxy %s:%li to spider %s",
+	    iptoa(THIS->m_request->m_httpProxyIp),
+	    (long)THIS->m_request->m_httpProxyPort,
+	    THIS->m_request->m_url);
 
 	// now forward the request
 
@@ -751,6 +761,8 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	downloadTheDocForReals ( r );
 }
 
+static void gotHttpReply9 ( void *state , TcpSocket *ts ) ;
+
 void downloadTheDocForReals ( Msg13Request *r ) {
 
 	// are we the first?
@@ -829,6 +841,18 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 	}
 
 
+	// after downloading the doc call this callback
+	void (* callback) ( void *,TcpSocket *);
+
+	// if using a proxy tell host #0 we are done with that proxy so
+	// it can do its proxy load balancing
+	if ( r->m_httpProxyIp && r->m_httpProxyIp != -1 ) 
+		callback = gotHttpReply9;
+	// otherwise not using a proxy
+	else
+		callback = gotHttpReply;
+
+
 	// download it
 	if ( ! g_httpServer.getDoc ( r->m_url             ,
 				     r->m_urlIp           ,
@@ -836,7 +860,7 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 				     -1                   ,
 				     r->m_ifModifiedSince ,
 				     r                    , // state
-				     gotHttpReply         , // callback
+				     callback       , // callback
 				     30*1000              , // 30 sec timeout
 				     r->m_httpProxyIp     ,
 				     r->m_httpProxyPort   ,
@@ -858,6 +882,54 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 	gotHttpReply ( r , NULL );
 	return ;
 }
+
+void doneReportingStatsWrapper ( void *state, UdpSlot *slot ) {
+	Msg13Request *r = (Msg13Request *)state;
+	// resume on our way down the normal pipeline
+	gotHttpReply ( state , r->m_parent->m_tcpSocket );
+}
+
+// come here after telling host #0 we are done using this proxy.
+// host #0 will update the loadbucket for it, using m_lbId.
+void gotHttpReply9 ( void *state , TcpSocket *ts ) {
+
+ 	// cast it
+	Msg13Request *r = (Msg13Request *)state;
+
+	// make the 0x55 request
+	char *req = r->m_parent->m_tmpBuf32;
+	char *p = req;
+	*(long *)p = r->m_httpProxyIp; p += 4;
+	*(short *)p = r->m_httpProxyPort; p += 2;
+	*(long *)p = r->m_lbId; p += 4; // loadbucket id
+	long reqSize = p - req;
+
+	// save this
+	r->m_parent->m_tcpSocket = ts;
+
+	Host *h = g_hostdb.getFirstAliveHost();
+	// now ask that host for the best spider proxy to send to
+	if ( g_udpServer.sendRequest ( req,
+				       reqSize  , 
+				       0x55 ,
+				       h->m_ip      ,
+				       h->m_port    ,
+				       -1 , // h->m_hostId  ,
+				       NULL         ,
+				       r->m_parent        , // state data
+				       doneReportingStatsWrapper  ,
+				       10    )){// 10 sec timeout
+		// it blocked!
+		return;
+	}
+	// sanity check
+	if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+	// report it
+	log("spider: msg55 request: %s",mstrerror(g_errno));
+	// it failed i guess proceed
+	gotHttpReply( state , ts );
+}
+
 
 void gotHttpReply ( void *state , TcpSocket *ts ) {
 	// if we had no error, TcpSocket should be legit
