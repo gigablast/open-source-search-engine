@@ -885,17 +885,20 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 	return ;
 }
 
+static long s_55Out = 0;
+
 void doneReportingStatsWrapper ( void *state, UdpSlot *slot ) {
-	Msg13Request *r = (Msg13Request *)state;
+	//Msg13Request *r = (Msg13Request *)state;
 	// note it
 	if ( g_errno )
 		log("sproxy: 55 reply: %s",mstrerror(g_errno));
 	// do not free request, it was part of original Msg13Request
-	slot->m_sendBuf = NULL;
+	//slot->m_sendBuf = NULL;
 	// clear g_errno i guess
 	g_errno = 0;
 	// resume on our way down the normal pipeline
-	gotHttpReply ( state , r->m_tcpSocket );
+	//gotHttpReply ( state , r->m_tcpSocket );
+	s_55Out--;
 }
 
 // come here after telling host #0 we are done using this proxy.
@@ -905,7 +908,7 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
  	// cast it
 	Msg13Request *r = (Msg13Request *)state;
 
-	r->m_tcpSocket = ts;
+	//r->m_tcpSocket = ts;
 
 	char *req = (char *)mmalloc ( 14,"stupid");
 	char *p = req;
@@ -916,6 +919,8 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 	if ( p-req != 14 ) { char *xx=NULL;*xx=0; }
 
 	long reqSize = 14;
+
+	//r->m_blocked = false;
 
 	Host *h = g_hostdb.getFirstAliveHost();
 	// now ask that host for the best spider proxy to send to
@@ -930,12 +935,16 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 				       doneReportingStatsWrapper  ,
 				       10    )){// 10 sec timeout
 		// it blocked!
-		return;
+		//r->m_blocked = true;
+		s_55Out++;
+		// sanity
+		if ( s_55Out > 500 )
+			log("sproxy: s55out > 500 = %li",s_55Out);
 	}
 	// sanity check
-	if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+	//if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 	// report it
-	log("spider: msg55 request: %s",mstrerror(g_errno));
+	if ( g_errno ) log("spider: msg55 request: %s",mstrerror(g_errno));
 	// it failed i guess proceed
 	gotHttpReply( state , ts );
 }
