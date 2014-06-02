@@ -123,59 +123,6 @@ bool Msg13::registerHandler ( ) {
 	return true;
 }
 
-
-void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
-	// shortcut
-	Msg13 *THIS = (Msg13 *)state;
-	// don't let udpserver free the request, it's our m_urlIp
-	slot->m_sendBufAlloc = NULL;
-	// error getting spider proxy to use?
-	if ( g_errno ) {
-		// note it
-		log("sproxy: got proxy request error: %s",mstrerror(g_errno));
-		// callback
-		THIS->m_callback ( THIS->m_state );
-		return;
-	}
-	//
-	// the reply is the ip and port of the spider proxy to use
-	//
-	// what did he give us?
-	char *reply          = slot->m_readBuf;
-	long  replySize      = slot->m_readBufSize;
-	//long  replyAllocSize = slot->m_readBufMaxSize;
-	// bad reply? ip/port/LBid
-	if ( replySize != 10 ) {
-		log("sproxy: bad 54 reply size of %li != 10",replySize);
-		return;
-	}
-
-	// set that
-	char *p = reply;
-	THIS->m_request->m_httpProxyIp = *(long *)p; p += 4;
-	THIS->m_request->m_httpProxyPort = *(short *)p; p += 2;
-	// the id of this transaction for the LoadBucket
-	// need to save this so we can use it when we send a msg55 request
-	// out to tell host #0 how long it took use to use this proxy, etc.
-	THIS->m_request->m_lbId = *(long *)p; p += 4;
-
-	// debug note
-	log("sproxy: got proxy %s:%li to spider %s",
-	    iptoa(THIS->m_request->m_httpProxyIp),
-	    (long)THIS->m_request->m_httpProxyPort,
-	    THIS->m_request->m_url);
-
-	// now forward the request
-
-	// now the reply should have the proxy host to use
-	// return if this blocked
-	if ( ! THIS->forwardRequest() ) return;
-	// it did not block...
-	THIS->m_callback ( THIS->m_state );
-}
-
-
-
 // . returns false if blocked, returns true otherwise
 // . returns true and sets g_errno on error
 bool Msg13::getDoc ( Msg13Request *r,
@@ -265,51 +212,7 @@ bool Msg13::getDoc ( Msg13Request *r,
 	// download it ourselves rather than forward it off to another host?
 	//if ( r->m_forwardDownloadRequest ) return forwardRequest ( ); 
 
-	bool useProxies = true;
-
-	// user can turn off proxy use with this switch
-	if ( ! g_conf.m_useProxyIps ) useProxies = false;
-
-	// we gotta have some proxy ips that we can use
-	if ( ! g_conf.m_proxyIps.hasDigits() ) useProxies = false;
-
-	// we did not need a spider proxy ip so send this reuest to a host
-	// to download the url
-	if ( ! useProxies )
-		return forwardRequest ( ); 
-
-
-	// before we send out the msg13 request try to get the spider proxy
-	// that is the best one to use. only do this if we had spider proxies
-	// specified in m_spiderProxyBuf
-
-	// request is just the urlip
-	char *request = (char *)&r->m_urlIp;
-	long  requestSize = 4;
-	// get first alive host, usually host #0 but if he is dead then
-	// host #1 must take over! if all are dead, it returns host #0.
-	// so we are guaranteed "h will be non-null
-	Host *h = g_hostdb.getFirstAliveHost();
-	// now ask that host for the best spider proxy to send to
-	if ( ! g_udpServer.sendRequest ( (char *)request,
-					 requestSize  , 
-					 0x54         , // msgType 0x54
-					 h->m_ip      ,
-					 h->m_port    ,
-					 -1 , // h->m_hostId  ,
-					 NULL         ,
-					 this         , // state data
-					 gotProxyHostReplyWrapper  ,
-					 10    )){// 10 sec timeout
-		// sanity check
-		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
-		// report it
-		log("spider: msg54 request: %s",mstrerror(g_errno));
-		// g_errno must be set!
-		return true;
-	}
-	// otherwise we block
-	return false;
+	return forwardRequest ( ); 
 
 	// gotHttpReply() and passOnReply() call our Msg13::gotDocReply*() 
 	// functions if Msg13Request::m_parent is non-NULL
@@ -763,7 +666,61 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	downloadTheDocForReals ( r );
 }
 
+static void downloadTheDocForReals2 ( Msg13Request *r ) ;
+
 static void gotHttpReply9 ( void *state , TcpSocket *ts ) ;
+
+void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
+	// shortcut
+	Msg13Request *r = (Msg13Request *)state;
+	//Msg13 *THIS = r->m_parent;
+	// don't let udpserver free the request, it's our m_urlIp
+	slot->m_sendBufAlloc = NULL;
+	// error getting spider proxy to use?
+	if ( g_errno ) {
+		// note it
+		log("sproxy: got proxy request error: %s",mstrerror(g_errno));
+		g_udpServer.sendErrorReply(slot,g_errno);
+		return;
+	}
+	//
+	// the reply is the ip and port of the spider proxy to use
+	//
+	// what did he give us?
+	char *reply          = slot->m_readBuf;
+	long  replySize      = slot->m_readBufSize;
+	//long  replyAllocSize = slot->m_readBufMaxSize;
+	// bad reply? ip/port/LBid
+	if ( replySize != 10 ) {
+		log("sproxy: bad 54 reply size of %li != 10",replySize);
+		g_udpServer.sendErrorReply(slot,g_errno);
+		return;
+	}
+
+	// set that
+	char *p = reply;
+	r->m_httpProxyIp = *(long *)p; p += 4;
+	r->m_httpProxyPort = *(short *)p; p += 2;
+	// the id of this transaction for the LoadBucket
+	// need to save this so we can use it when we send a msg55 request
+	// out to tell host #0 how long it took use to use this proxy, etc.
+	r->m_lbId = *(long *)p; p += 4;
+
+	// debug note
+	log("sproxy: got proxy %s:%li to spider %s",
+	    iptoa(r->m_httpProxyIp),
+	    (long)r->m_httpProxyPort,
+	    r->m_url);
+
+	// now forward the request
+
+	// now the reply should have the proxy host to use
+	// return if this blocked
+	//if ( ! THIS->forwardRequest() ) return;
+	// it did not block...
+	//THIS->m_callback ( THIS->m_state );
+	downloadTheDocForReals2 ( r );
+}
 
 void downloadTheDocForReals ( Msg13Request *r ) {
 
@@ -780,6 +737,57 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 		//log("spider: inlining %s",r->m_url);
 		return;
 	}
+
+	bool useProxies = true;
+
+	// user can turn off proxy use with this switch
+	if ( ! g_conf.m_useProxyIps ) useProxies = false;
+
+	// we gotta have some proxy ips that we can use
+	if ( ! g_conf.m_proxyIps.hasDigits() ) useProxies = false;
+
+	// we did not need a spider proxy ip so send this reuest to a host
+	// to download the url
+	if ( ! useProxies ) {
+		downloadTheDocForReals2 ( r );
+		return;
+	}
+		
+
+	// before we send out the msg13 request try to get the spider proxy
+	// that is the best one to use. only do this if we had spider proxies
+	// specified in m_spiderProxyBuf
+
+	// request is just the urlip
+	char *request = (char *)&r->m_urlIp;
+	long  requestSize = 4;
+	// get first alive host, usually host #0 but if he is dead then
+	// host #1 must take over! if all are dead, it returns host #0.
+	// so we are guaranteed "h will be non-null
+	Host *h = g_hostdb.getFirstAliveHost();
+	// now ask that host for the best spider proxy to send to
+	if ( ! g_udpServer.sendRequest ( (char *)request,
+					 requestSize  , 
+					 0x54         , // msgType 0x54
+					 h->m_ip      ,
+					 h->m_port    ,
+					 -1 , // h->m_hostId  ,
+					 NULL         ,
+					 r         , // state data
+					 gotProxyHostReplyWrapper  ,
+					 10    )){// 10 sec timeout
+		// sanity check
+		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+		// report it
+		log("spider: msg54 request: %s",mstrerror(g_errno));
+		// g_errno must be set!
+		return;
+	}
+	// otherwise we block
+	return;
+}
+
+void downloadTheDocForReals2 ( Msg13Request *r ) {
 
 	// . store time now
 	// . no, now we store 0 to indicate in progress, then we
