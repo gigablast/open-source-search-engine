@@ -993,6 +993,9 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	// don't let admin bewilder himself
 	if ( m_maxResults < 1 ) m_maxResults = 500;
 
+	// let's disable this here for now it seems to cause confusion
+	m_maxResults = 0x7fffffff;
+
 	// we can't get this kind of constraint from generic Parms routines
 	if ( m_firstResultNum + m_docsWanted > m_maxResults ) 
 		m_firstResultNum = m_maxResults - m_docsWanted;

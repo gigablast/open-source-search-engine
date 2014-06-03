@@ -274,4 +274,8 @@ class HttpRequest {
 	long  m_cgiBuf2Size;
 };
 
+const int HTTP_REQUEST_DEFAULT_REQUEST_VERSION = 2;
+
+int getVersionFromRequest ( HttpRequest *r );
+
 #endif

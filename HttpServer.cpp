@@ -843,7 +843,9 @@ bool sendPageRobotsTxt ( TcpSocket *s , HttpRequest *r ) {
 }
 */
 
-
+bool endsWith(char *haystack, int haystackLen, char *needle, int needleLen) {
+    return haystackLen >= needleLen && !strncmp(haystack + haystackLen - needleLen, needle, needleLen);
+}
 
 // . reply to a GET (including partial get) or HEAD request
 // . HEAD just returns the MIME header for the file requested
@@ -930,8 +932,9 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// "GET /crawlbot/downloadobjects"
 	// "GET /crawlbot/downloadpages"
 	if ( strncmp ( path , "/crawlbot/download/" ,19 ) == 0 ||
-	     strncmp ( path , "/v2/crawl/download/" ,19 ) == 0 ||
-	     strncmp ( path , "/v2/bulk/download/"  ,18 ) == 0 )
+	     // add 4 to length of needle to account for /vXX.
+	     (pathLen >= 20 && strnstr(path, "/crawl/download/", 20)) ||
+	     (pathLen >= 19 && strnstr(path, "/bulk/download/", 19)) )
 		return sendBackDump ( s , r );
 
 	// "GET /download/mycoll_urls.csv"
@@ -993,10 +996,10 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// the new cached page format. for twitter.
 	if ( ! strncmp ( path , "/?id=" , 5 ) ) n = PAGE_RESULTS;
 	if ( strncmp(path,"/crawlbot",9) == 0 ) n = PAGE_CRAWLBOT;
-	if ( strncmp(path,"/v2/crawl",9) == 0 ) n = PAGE_CRAWLBOT;
-	if ( strncmp(path,"/v2/bulk" ,8) == 0 ) n = PAGE_CRAWLBOT;
-	if ( strncmp(path,"/v2/search" ,8) == 0 ) n = PAGE_RESULTS;
-	
+	if (endsWith(path, pathLen, "/crawl", 6)) n = PAGE_CRAWLBOT;
+	if (endsWith(path, pathLen, "/bulk", 5)) n = PAGE_CRAWLBOT;
+	if (endsWith(path, pathLen, "/search", 6)) n = PAGE_RESULTS;
+
 	bool isProxy = g_proxy.isProxy();
 	// . prevent coring
 	// . we got a request for

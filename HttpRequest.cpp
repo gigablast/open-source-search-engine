@@ -1398,3 +1398,26 @@ bool HttpRequest::getCurrentUrlPath ( SafeBuf &cup ) {
 	*dst = '\0';
 	return true;
 }
+
+int getVersionFromRequest ( HttpRequest *r ) {
+    char *path    = r->getFilename();
+    long  pathLen = r->getFilenameLen();
+    bool requestHasVersion = pathLen > 2 && strncmp( path, "/v", 2 ) == 0;
+    if (!requestHasVersion)
+        return HTTP_REQUEST_DEFAULT_REQUEST_VERSION;
+    char *rest = path + 2;
+    char *end = strstr(rest, "/");
+    if (!end)
+        return HTTP_REQUEST_DEFAULT_REQUEST_VERSION;
+    char version[3];
+    int digits = end - rest;
+    if (digits <= 0 || digits > 2)
+        return HTTP_REQUEST_DEFAULT_REQUEST_VERSION;
+    strncpy(version, rest, digits);
+    version[digits] = '\0';
+    int v = atoi(version);
+    if (v <= 0 || v > 99)
+        return HTTP_REQUEST_DEFAULT_REQUEST_VERSION;
+    return v;
+}
+

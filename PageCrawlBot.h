@@ -4,6 +4,8 @@
 
 bool printCrawlDetailsInJson ( class SafeBuf *sb , class CollectionRec *cx ) ;
 
+bool printCrawlDetailsInJson ( class SafeBuf *sb , class CollectionRec *cx, int version ) ;
+
 // values for the diffbot dropdown
 /*
 #define DBA_NONE 0

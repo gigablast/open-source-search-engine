@@ -173,11 +173,23 @@ bool Query::set2 ( char *query        ,
 	// convenience ptr
 	char *p    = m_buf;
 	char *pend = m_buf + MAX_QUERY_LEN;
+	bool inQuotesFlag = false;
 	// . copy query into m_buf
 	// . translate ( and ) to special query operators so Words class
 	//   can parse them as their own word to make parsing bool queries ez
 	//   for parsing out the boolean operators in setBitScoresBoolean()
 	for ( long i = 0 ; i < queryLen ; i++ ) {
+
+		// gotta count quotes! we ignore operators in quotes
+		// so you can search for diffbotUri:"article|0|123456"
+		if ( query[i] == '\"' ) inQuotesFlag = !inQuotesFlag;
+
+		if ( inQuotesFlag ) {
+			*p = query [i];
+			p++;
+			continue;
+		}
+
 		// dst buf must be big enough
 		if ( p + 8 >= pend ) {
 			g_errno = EBUFTOOSMALL;
@@ -2165,6 +2177,7 @@ bool Query::setQWords ( char boolFlag ,
 		if ( inQuotes ) qw->m_quoteStart = quoteStart ;
 		else            qw->m_quoteStart = -1;
 		qw->m_inQuotes = inQuotes;
+
 		// ptr to field, if any
 		qw->m_fieldCode = fieldCode;
 		// if we are a punct word, see if we end in a sign that can
@@ -3603,6 +3616,11 @@ bool Expression::add (long start,
 
 	long i = m_expressionStartWord;
 
+	// try to fix 
+	// type:html AND ((site:xyz.com OR site:abc.com))
+	// query where there are double parens
+	m_hadOpCode = false;
+
 	// "start" is the current alnumpunct word we are parsing out
 	for ( ; i<end ; i++ ) {
 
@@ -3654,12 +3672,12 @@ bool Expression::add (long start,
 			//m_opTypes[m_cc] = TYPE_OPCODE;
 			//qw->m_opBitNum = m_cc;
 			//m_cc++;
+			m_hadOpCode = true;
 			continue;
 		}
 		// white space?
 		continue;
 	}
-
 
 	m_numWordsInExpression = i - m_expressionStartWord;
 
@@ -3705,7 +3723,15 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 
 		QueryWord *qw = &m_q->m_qwords[i];
 
-		if ( qw->m_opcode == OP_NOT ) {
+		// ignore parentheses, aren't real opcodes.
+		// we just want OP_AND/OP_OR/OP_NOT
+		long opcode = qw->m_opcode;
+		if ( opcode != OP_AND && 
+		     opcode != OP_OR  && 
+		     opcode != OP_NOT )
+			opcode = 0;
+
+		if ( opcode == OP_NOT ) {
 			hasNot = true;
 			continue;
 		}
@@ -3728,13 +3754,13 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 			}
 		}
 
-		if ( qw->m_opcode && ! e ) {
-			prevOpCode = qw->m_opcode;//m_opSlots[i];
+		if ( opcode && ! e ) {
+			prevOpCode = opcode;//m_opSlots[i];
 			continue;
 		}
 
 		// simple operand
-		if ( ! qw->m_opcode && ! e ) {
+		if ( ! opcode && ! e ) {
 			// for regular word operands
 			// ignore it like a space?
 			if ( qw->m_ignoreWord ) continue;
@@ -3778,6 +3804,12 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 			if (   opResult ) result = true;
 		}
 	}
+
+	// if we never set result, then it was probably a single
+	// argument expression like something in double parens like
+	// ((site:xyz.com OR site:abc.com)). so set it to value of
+	// first operand, opResult.
+	if ( prevOpCode == 0 && result == -1 ) result = opResult;
 
 	if ( result == -1 ) return true;
 	if ( result ==  0 ) return false;

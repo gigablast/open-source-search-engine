@@ -62,6 +62,12 @@ void Url::set (Url *baseUrl,char *s,long len,bool addWWW,bool stripSessionId,
 	if ( blen > 0 && base[blen-1] != '/' ) 
 		while (blen > 0 && base[blen-1] != '/')   blen--;
 
+	// . fix baseurl = "http://xyz.com/poo/all" and s = "?page=3"
+	// . if "s" starts with ? then keep the filename in the base url
+	if ( s[0] == '?' ) {
+		for ( ; base[blen] && base[blen]!='?'; blen++ );
+	}
+
 	if ( blen==0 && len==0 ) return;
 
 	// skip s over spaces
@@ -113,8 +119,10 @@ void Url::set (Url *baseUrl,char *s,long len,bool addWWW,bool stripSessionId,
 	strncpy(temp,base,blen);
 	if (len>MAX_URL_LEN) len = MAX_URL_LEN-2;
 	// if s does NOT start with a '/' then add one here in case baseUrl
-	// does NOT end in one
-	if ( len > 0 && s[0] != '/' && temp[blen-1] != '/' ) temp[blen++] ='/';
+	// does NOT end in one.
+	// fix baseurl = "http://xyz.com/poo/all" and s = "?page=3"
+	if ( len > 0 && s[0] != '/' && s[0] !='?' && temp[blen-1] != '/' ) 
+		temp[blen++] ='/';
 	strncpy(temp+blen,s,len);
 	set ( temp, blen+len , addWWW , stripSessionId , stripPound ,
 	      stripCommonFile ,
