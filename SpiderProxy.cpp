@@ -54,6 +54,8 @@ public:
 
 	long long m_timesUsed;
 
+	long m_lastBytesDownloaded;
+
 	// special things used by LoadBucket algo to determine which
 	// SpiderProxy to use to download from a particular IP
 	long m_countForThisIp;
@@ -294,6 +296,10 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 		       // print "FAILED" in red if it failed to download
 		       "<td><b>test url download time</b></td>"
 
+		       "<td><b>last bytes downloaded</b></td>"
+
+		       "<td><b>last test url error</b></td>"
+
 		       "</tr>"
 		       
 		       , TABLE_STYLE
@@ -313,6 +319,10 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 		// mark with light red bg if last test url attempt failed
 		if ( sp->m_lastDownloadTookMS == -1 &&
 		     sp->m_lastDownloadTestAttemptMS>0 )
+			bg = "ffa6a6";
+
+		// or a perm denied error (as opposed to a timeout above)
+		if ( sp->m_lastDownloadError )
 			bg = "ffa6a6";
 
 		// print it
@@ -362,6 +372,14 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 				       "<font color=red>FAILED</font>"
 				       "</td>");
 
+		sb->safePrintf("<td>%li</td>",sp->m_lastBytesDownloaded);
+
+		if ( sp->m_lastDownloadError )
+			sb->safePrintf("<td><font color=red>%s</font></td>",
+				       mstrerror(sp->m_lastDownloadError));
+		else
+			sb->safePrintf("<td>none</td>");
+
 		sb->safePrintf("</tr>\n");
 	}
 
@@ -402,6 +420,18 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 	long long nowms = gettimeofdayInMillisecondsLocal();
 	long long took = nowms - sp->m_lastDownloadTestAttemptMS;
 	sp->m_lastDownloadTookMS = (long)took;
+
+	HttpMime mime;
+	mime.set ( s->m_readBuf , s->m_readOffset , NULL );
+
+	// tiny proxy permission denied is 403
+	long status = mime.getHttpStatus();
+	if ( status == 403 ) {
+		log("sproxy: got bad http status from proxy: %li",status);
+		g_errno = EPERMDENIED;
+	}
+
+	sp->m_lastBytesDownloaded = s->m_readOffset;
 
 	// ETCPTIMEDOUT?
 	sp->m_lastDownloadError = g_errno;
