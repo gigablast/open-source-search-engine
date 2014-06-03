@@ -3656,7 +3656,7 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, long long docId, long long uh48 ){
 	// alloc the buffer
 	char *ubuf = (char *) mmalloc ( need1 , "xdtrb" );
 	// return NULL with g_errno set on error
-	if ( ! ubuf ) return NULL;
+	if ( ! ubuf ) return false;
 	// serialize into it
 	char *p = ubuf;
 	// copy our crap into there
@@ -3744,7 +3744,7 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, long long docId, long long uh48 ){
 		log("db: Failed to compress document of %li bytes. "
 		    "Provided buffer of %li bytes.",
 		    size, (need2 - hdrSize ) );
-		return NULL;
+		return false;
 	}
 	// check for error
 	if ( err != Z_OK ) {
@@ -3752,7 +3752,7 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, long long docId, long long uh48 ){
 		tbuf->purge();
 		g_errno = ECOMPRESSFAILED; 
 		log("db: Failed to compress document.");
-		return NULL;
+		return false;
 	}
 	// calc cbufSize, the uncompressed header + compressed stuff
 	//cbufSize = hdrSize + size ;

@@ -888,14 +888,21 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 	}
 	/* --- End Virtual host language detection --- */
 
-	char *qs1 = m_defaultSortLanguage;
+
+	//char *qs1 = m_defaultSortLanguage;
 
 	// this overrides though
 	//long qlen2;
 	//char *qs2 = r->getString ("qlang",&qlen2,NULL);
 	//if ( qs2 ) qs1 = qs2;
 	
-	m_queryLang = getLanguageFromAbbr ( qs1 );
+	//m_queryLang = getLanguageFromAbbr ( qs1 );
+
+	m_queryLang = detectQueryLanguage();
+
+	char *qs1 = getLangAbbr(m_queryLang);
+
+	log("query: using default lang of %s",getLangAbbr(m_queryLang));
 
 	if ( qs1 && qs1[0] && ! m_queryLang )
 		log("query: qlang of \"%s\" is NOT SUPPORTED",qs1);

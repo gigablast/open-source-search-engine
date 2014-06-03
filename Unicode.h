@@ -159,8 +159,10 @@ char *	ucDetectBOM(char *buf, long bufsize);
 long latin1ToUtf8(char *outbuf, long outbufsize,
 		  char *inbuf, long inbuflen);
 
-long utf8ToAscii(char *outbuf, long outbufsize,
-		  unsigned char *inbuf, long inbuflen);
+//long utf8ToAscii(char *outbuf, long outbufsize,
+//		  unsigned char *inbuf, long inbuflen);
+long stripAccentMarks(char *outbuf, long outbufsize,
+		      unsigned char *inbuf, long inbuflen);
 
 //long utf16ToUtf8(char* outbuf, long outbufSize, 
 //		 UChar *s, long slen);

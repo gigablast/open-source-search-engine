@@ -19,6 +19,7 @@ Synonyms::~Synonyms() {
 }
 
 void Synonyms::reset() {
+	m_synWordBuf.purge();
 }
 
 // . so now this adds a list of Synonyms to the m_pools[] and returns a ptr
@@ -69,6 +70,13 @@ long Synonyms::getSynonyms ( Words *words ,
 	m_termPtrs = (char **)bufPtr;
 	bufPtr += maxSyns * 4;
 
+	// we can't use m_termPtrs when we store a transformed word as the
+	// synonym into m_synWordBuf, because it can grow dynamically
+	// so we have to use offsets into that. so when m_termPtrs is
+	// NULL for a syn, use m_termOffs to get it
+	m_termOffs = (long *)bufPtr;
+	bufPtr += maxSyns * 4;
+
 	m_termLens = (long *)bufPtr;
 	bufPtr += maxSyns * 4;
 
@@ -78,10 +86,11 @@ long Synonyms::getSynonyms ( Words *words ,
 	m_numAlnumWordsInBase = (long *)bufPtr;
 	bufPtr += maxSyns * 4;
 
-
 	// source
 	m_src = bufPtr;
 	bufPtr += maxSyns;
+
+	if ( bufPtr > tmpBuf + TMPSYNBUFSIZE ) { char *xx=NULL;*xx=0; }
 
 	// cursors
 	m_aidsPtr  = m_aids;
@@ -89,6 +98,7 @@ long Synonyms::getSynonyms ( Words *words ,
 	m_wids1Ptr = m_wids1;
 	m_srcPtr   = m_src;
 	m_termPtrsPtr = m_termPtrs;
+	m_termOffsPtr = m_termOffs;
 	m_termLensPtr = m_termLens;
 	m_numAlnumWordsPtr = m_numAlnumWords;
 	m_numAlnumWordsInBasePtr = m_numAlnumWordsInBase;
@@ -105,11 +115,15 @@ long Synonyms::getSynonyms ( Words *words ,
 
 	char sourceId = SOURCE_WIKTIONARY;
 	char *ss = NULL;
+	char *savedss = NULL;
 	long long bwid;
 	char wikiLangId = m_docLangId;
 	bool hadSpace ;
 	long klen ;
 	long baseNumAlnumWords;
+	char origLangId = wikiLangId;
+	long synSetCount = 0;
+	bool doLangLoop = false;
 
  tryOtherLang:
 
@@ -170,9 +184,47 @@ long Synonyms::getSynonyms ( Words *words ,
 		}
 	}
 
+	// loop over all the other langids if no synset found in this langid
+	if ( ! ss && ! doLangLoop ) {
+		wikiLangId = langUnknown; // start at 0
+		doLangLoop = true;
+	}
+
+	// loop through all languages if no luck
+	if ( doLangLoop ) {
+
+		// save it
+		if ( ss ) savedss = ss;
+
+		// can only have one match to avoid ambiguity when doing
+		// a loop over all the langids
+		if ( ss && ++synSetCount >= 2 ) {
+			ss = NULL;
+			goto skip;
+		}
+
+		// advance langid of synset attempt
+		wikiLangId++;
+
+		// advance over original we tried first
+		if ( wikiLangId == origLangId )
+			wikiLangId++;
+		// all done?
+		if ( wikiLangId < langLast ) { // the last langid
+			ss = NULL;
+			goto tryOtherLang;
+		}
+	}
+
+	// use the one single synset we found for some language
+	if ( ! ss ) ss = savedss;
+
+ skip:
+
 	// even though a document may be in german it often has some
 	// english words "pdf download" "copyright" etc. so if the word
 	// has no synset in german, try it in english
+	/*
 	if ( //numPresets == 0 &&
 	     ! ss &&
 	     m_docLangId != langEnglish &&
@@ -184,6 +236,8 @@ long Synonyms::getSynonyms ( Words *words ,
 		sourceId   = SOURCE_WIKTIONARY_EN;
 		goto tryOtherLang;
 	}
+	*/
+
 
 	// if it was in wiktionary, just use that synset
 	if ( ss ) {
@@ -273,24 +327,29 @@ long Synonyms::getSynonyms ( Words *words ,
 		*m_numAlnumWordsInBasePtr++ = baseNumAlnumWords;
 
 		// do not breach
-		if ( ++count >= maxSyns ) goto done;
+		if ( ++count >= maxSyns ) return m_aidsPtr - m_aids;
 	getNextSyn:
 		// loop for more
 		if ( *e == ',' ) { e++; p = e; goto hashLoop; }
 		// add in the next syn set, deduped
 		if ( next ) { ss = next; goto addSynSet; }
 		// wrap it up
-	done:
+		//done:
 		// all done
-		return m_aidsPtr - m_aids;
+		//return m_aidsPtr - m_aids;
 	}
-
 
 	// strip marks from THIS word, return -1 w/ g_errno set on error
 	if ( ! addStripped ( w , wlen,&dt ) ) return m_aidsPtr - m_aids;
 
+	// do not breach
+	if ( m_aidsPtr - m_aids > maxSyns ) return m_aidsPtr - m_aids;
+
 	// returns false with g_errno set
 	if ( ! addAmpPhrase ( wordNum, &dt ) ) return m_aidsPtr - m_aids;
+
+	// do not breach
+	if ( m_aidsPtr - m_aids > maxSyns ) return m_aidsPtr - m_aids;
 
 	// if we end in apostrophe, strip and add
 	if ( wlen>= 3 &&
@@ -322,7 +381,12 @@ bool Synonyms::addWithoutApostrophe ( long wordNum , HashTableX *dt ) {
 	*m_wids0Ptr++ = 0LL;
 	*m_wids1Ptr++ = 0LL;
 	*m_termPtrsPtr++ = NULL;
-	*m_termLensPtr++ = 0;
+
+	*m_termOffsPtr++ = m_synWordBuf.length();
+	*m_termLensPtr++ = wlen;
+	m_synWordBuf.safeMemcpy(w,wlen);
+	m_synWordBuf.pushChar('\0');
+
 	*m_numAlnumWordsPtr++ = 1;
 	*m_numAlnumWordsInBasePtr++ = 1;
 	*m_srcPtr++ = SOURCE_GENERATED;
@@ -370,8 +434,13 @@ bool Synonyms::addAmpPhrase ( long wordNum , HashTableX *dt ) {
 	*m_aidsPtr++ = h;
 	*m_wids0Ptr++ = 0LL;
 	*m_wids1Ptr++ = 0LL;
+	*m_termOffsPtr++ = m_synWordBuf.length();
+	m_synWordBuf.safeMemcpy ( w , wlen );
+	m_synWordBuf.safeStrcpy (" and");
+	m_synWordBuf.pushChar('\0');
+	*m_termLensPtr++ = wlen+4;
 	*m_termPtrsPtr++ = NULL;
-	*m_termLensPtr++ = 0;
+
 	*m_numAlnumWordsPtr++ = 1;
 	*m_numAlnumWordsInBasePtr++ = 1;
 	*m_srcPtr++ = SOURCE_GENERATED;
@@ -397,9 +466,14 @@ bool Synonyms::addStripped ( char *w , long wlen , HashTableX *dt ) {
 
 	// filter out accent marks
 	char abuf[256];
-	long alen = utf8ToAscii(abuf,256,(unsigned char *)w,wlen);
+	//long alen = utf8ToAscii(abuf,256,(unsigned char *)w,wlen);
+	long alen = stripAccentMarks(abuf,256,(unsigned char *)w,wlen);
 	// skip if can't convert to ascii... (unsupported letter)
 	if ( alen < 0 ) return true;
+
+	// if same as original word, skip
+	if ( wlen==alen && strncmp(abuf,w,wlen) == 0 ) return true;
+
 	// hash it
 	uint64_t h2 = hash64Lower_utf8(abuf,alen);
 	// do not add dups
@@ -408,15 +482,20 @@ bool Synonyms::addStripped ( char *w , long wlen , HashTableX *dt ) {
 	if ( ! dt->addKey ( &h2 ) ) return false;
 
 
+
 	// store that
 	*m_aidsPtr++ = h2;
 	*m_wids0Ptr++ = 0LL;
 	*m_wids1Ptr++ = 0LL;
 	*m_termPtrsPtr++ = NULL;
-	*m_termLensPtr++ = 0;
+	*m_termOffsPtr++ = m_synWordBuf.length();
+	*m_termLensPtr++ = alen;
 	*m_numAlnumWordsPtr++ = 1;
 	*m_numAlnumWordsInBasePtr++ = 1;
 	*m_srcPtr++ = SOURCE_GENERATED;
+
+	m_synWordBuf.safeStrcpy(abuf);
+	m_synWordBuf.pushChar('\0');
 
 	return true;
 }

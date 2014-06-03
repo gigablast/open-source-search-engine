@@ -2900,6 +2900,73 @@ int main2 ( int argc , char *argv[] ) {
 		return 1;
 	}
 
+	// some tests. the greek letter alpha with an accent mark (decompose)
+	/*
+	{
+		char us[] = {0xe1,0xbe,0x80};
+		UChar32 uc = utf8Decode(us);//,&next);
+		UChar32 ttt[32];
+		long klen = recursiveKDExpand(uc,ttt,256);
+		char obuf[64];
+		for ( long i = 0 ; i < klen ; i++ ) {
+			UChar32 ui = ttt[i];
+			long blen = utf8Encode(ui,obuf);
+			obuf[blen]=0;
+			long an = ucIsAlpha(ui);
+			
+			fprintf(stderr,"#%li=%s (alnum=%li)\n",i,obuf,an);
+		}
+		fprintf(stderr,"hey\n");
+		exit(0);
+	}
+	*/
+
+	/*
+
+	  PRINT OUT all Unicode characters and their decompositions
+
+	{
+		for ( long uc = 0 ; uc < 0xe01ef ; uc++ ) {
+			//if ( ! ucIsAlnum(uc) ) continue;
+			UChar32 ttt[32];
+			long klen = recursiveKDExpand(uc,ttt,256);
+			char obuf[64];
+			long clen = utf8Encode(uc,obuf);
+			obuf[clen]=0;
+			// print utf8 char we are decomposing
+			fprintf(stderr,"%lx) %s --> ",uc,obuf);
+			// sanity
+			if ( klen > 1 && ttt[0] == (UChar32)uc ) {
+				fprintf(stderr,"SAME\n");
+				continue;
+			}
+			// print decomposition
+			for ( long i = 0 ; i < klen ; i++ ) {
+				UChar32 ui = ttt[i];
+				char qbuf[64];
+				long blen = utf8Encode(ui,qbuf);
+				qbuf[blen]=0;
+				fprintf(stderr,"%s",qbuf);
+				// show the #
+				fprintf(stderr,"{%lx}",(long)ui);
+				if ( i+1<klen ) fprintf(stderr,", ");
+			}
+			// show utf8 rep
+			fprintf(stderr," [");
+			for ( long i = 0 ; i < clen ; i++ ) {
+				fprintf(stderr,"0x%hhx",(int)obuf[i]);
+				if ( i+1<clen) fprintf(stderr," ");
+			}
+			fprintf(stderr,"]");
+			fprintf(stderr,"\n");
+		}
+		exit(0);
+	}
+	*/			
+
+
+	
+
 	// the wiktionary for lang identification and alternate word forms/
 	// synonyms
 	if ( ! g_wiktionary.load() ) return 1;

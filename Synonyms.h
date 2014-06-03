@@ -20,7 +20,7 @@
 // per word!
 #define MAX_SYNS 64
 
-#define TMPSYNBUFSIZE (MAX_SYNS*(8+8+8+1+4+4+4+4))
+#define TMPSYNBUFSIZE (MAX_SYNS*(8+8+8+1+4+4+4+4+4))
 
 long long getSynBaseHash64 ( char *qstr , uint8_t langId ) ;
 
@@ -53,11 +53,17 @@ class Synonyms {
 	char     m_docLangId;
 	class Words *m_words;
 
+	// temporarily store all synonyms here of the word for synonyms
+	// like the accent-stripped version of the word. otherwise we
+	// can just point to the wiktionary-buf.txt representation in memory.
+	SafeBuf m_synWordBuf;
+
 	// for each synonym of this word we fill out these:
 	long long  *m_aids;
 	long long  *m_wids0;
 	long long  *m_wids1;
 	char      **m_termPtrs;
+	long       *m_termOffs;
 	long       *m_termLens;
 	long       *m_numAlnumWords;
 	long       *m_numAlnumWordsInBase;
@@ -67,6 +73,7 @@ class Synonyms {
 	long long *m_wids0Ptr;
 	long long *m_wids1Ptr;
 	char     **m_termPtrsPtr;
+	long      *m_termOffsPtr;
 	long      *m_termLensPtr;
 	long      *m_numAlnumWordsPtr;
 	long      *m_numAlnumWordsInBasePtr;

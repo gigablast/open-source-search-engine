@@ -346,6 +346,10 @@ class QueryWord {
 	float m_float;
 	// for gbminint:99 etc. uses integers instead of floats for better res
 	long  m_int;
+
+	// for holding some synonyms
+	SafeBuf m_synWordBuf;
+
 	// what operand bit # is it for doing boolen queries?
 	//long  m_opBitNum;
 	// when an operand is an expression...
