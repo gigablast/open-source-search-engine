@@ -1116,6 +1116,7 @@ class SpiderColl {
 	//char *m_siteListAsteriskLine;
 	bool  m_siteListHasNegatives;
 	bool  m_siteListIsEmpty;
+	bool  m_siteListIsEmptyValid;
 	// data buckets in this table are of type 
 	HashTableX m_siteListDomTable;
 	// substring matches like "contains:goodstuff" or

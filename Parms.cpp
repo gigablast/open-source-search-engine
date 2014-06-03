@@ -7559,7 +7559,16 @@ void Parms::init ( ) {
 
 	m->m_title = "spider proxy ips";
 	m->m_desc  = "List of white space-separated spider proxy IPs. Put "
-		"in IP:port format. Example <i>1.2.3.4:80 4.5.6.7:99</i>";
+		"in IP:port format. Example <i>1.2.3.4:80 4.5.6.7:99</i>. "
+		"If a proxy itself times out when downloading through it "
+		"it will be perceived as a normal download timeout and the "
+		"page will be retried according to the url filters table, so "
+		"you  might want to modify the url filters to retry network "
+		"errors more aggressively. Search for 'private proxies' on "
+		"google to find proxy providers. Try to ensure all your "
+		"proxies are on different class C IPs if possible. "
+		"That is, the first 3 numbers in the IP addresses are all "
+		"different.";
 	m->m_cgi   = "proxyips";
 	m->m_xml   = "proxyIps";
 	m->m_off   = (char *)&g_conf.m_proxyIps - g;
@@ -7583,7 +7592,10 @@ void Parms::init ( ) {
 
 	m->m_title = "mix up user agents";
 	m->m_desc  = "Use random user-agents when downloading to "
-		"protecting gb's anonymity.";
+		"protecting gb's anonymity. The User-Agent used is a function "
+		"of the proxy IP/port and IP of the url being downloaded. "
+		"That way it is consistent when downloading the same website "
+		"through the same proxy.";
 	m->m_cgi   = "userandagents";
 	m->m_xml   = "useRandAgents";
 	m->m_off   = (char *)&g_conf.m_useRandAgents - g;
