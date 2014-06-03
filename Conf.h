@@ -642,6 +642,7 @@ class Conf {
 	bool  m_logDebugMerge   ;
 	bool  m_logDebugNet     ;
 	bool  m_logDebugPQR     ; // post query rerank
+	bool  m_logDebugProxies ;
 	bool  m_logDebugQuery   ;
 	bool  m_logDebugQuota   ;
 	bool  m_logDebugRobots	;

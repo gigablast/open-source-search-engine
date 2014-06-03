@@ -400,8 +400,9 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 	//mfree ( ss , sizeof(spip) ,"spip" );
 
 	// note it
-	log("sproxy: got test url reply (%s): %s",
-	    mstrerror(g_errno),s->m_readBuf);
+	if ( g_conf.m_logDebugProxies )
+		log("sproxy: got test url reply (%s): %s",
+		    mstrerror(g_errno),s->m_readBuf);
 
 	// we can get the spider proxy ip/port from the socket because
 	// we sent this url download request to that spider proxy
@@ -426,7 +427,7 @@ void gotTestUrlReplyWrapper ( void *state , TcpSocket *s ) {
 
 	// tiny proxy permission denied is 403
 	long status = mime.getHttpStatus();
-	if ( status == 403 ) {
+	if ( status == 403 && g_conf.m_logDebugProxies ) {
 		log("sproxy: got bad http status from proxy: %li",status);
 		g_errno = EPERMDENIED;
 	}
