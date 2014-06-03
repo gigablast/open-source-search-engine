@@ -522,6 +522,7 @@ public:
 	//bool              m_hasNOT;
 	//long              m_start;
 	//long              m_end;
+	bool m_hadOpCode;
 	long m_expressionStartWord;
 	long m_numWordsInExpression;
 	Query *m_q;
