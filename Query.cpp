@@ -173,11 +173,23 @@ bool Query::set2 ( char *query        ,
 	// convenience ptr
 	char *p    = m_buf;
 	char *pend = m_buf + MAX_QUERY_LEN;
+	bool inQuotesFlag = false;
 	// . copy query into m_buf
 	// . translate ( and ) to special query operators so Words class
 	//   can parse them as their own word to make parsing bool queries ez
 	//   for parsing out the boolean operators in setBitScoresBoolean()
 	for ( long i = 0 ; i < queryLen ; i++ ) {
+
+		// gotta count quotes! we ignore operators in quotes
+		// so you can search for diffbotUri:"article|0|123456"
+		if ( query[i] == '\"' ) inQuotesFlag = !inQuotesFlag;
+
+		if ( inQuotesFlag ) {
+			*p = query [i];
+			p++;
+			continue;
+		}
+
 		// dst buf must be big enough
 		if ( p + 8 >= pend ) {
 			g_errno = EBUFTOOSMALL;
@@ -2165,6 +2177,7 @@ bool Query::setQWords ( char boolFlag ,
 		if ( inQuotes ) qw->m_quoteStart = quoteStart ;
 		else            qw->m_quoteStart = -1;
 		qw->m_inQuotes = inQuotes;
+
 		// ptr to field, if any
 		qw->m_fieldCode = fieldCode;
 		// if we are a punct word, see if we end in a sign that can

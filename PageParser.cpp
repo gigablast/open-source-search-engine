@@ -129,6 +129,8 @@ bool sendPageParser2 ( TcpSocket   *s ,
 	char *coll    = r->getString ( "c" , &st->m_collLen ,NULL /*default*/);
 	if ( st->m_collLen > MAX_COLL_LEN )
 		return sendErrorReply ( st , ENOBUFS );
+	if ( ! coll )
+		return sendErrorReply ( st , ENOCOLLREC );
 	strcpy ( st->m_coll , coll );
 
 	// version to use, if -1 use latest
@@ -507,6 +509,9 @@ bool sendPageParser2 ( TcpSocket   *s ,
 
 	uint8_t contentType = CT_HTML;
 	if ( r->getBool("xml",0) ) contentType = CT_XML;
+
+	contentType = r->getLong("ctype",contentType);//CT_HTML);
+
 
 	// if facebook, load xml content from title rec...
 	bool isFacebook = (bool)strstr(st->m_u,"http://www.facebook.com/");
