@@ -10920,5 +10920,9 @@ char *getUserAgent ( long urlIp , long proxyIp , long proxyPort ) {
 	long numAgents = sizeof(s_agentList)/sizeof(char *);
 	// select from the list then
 	long n = x % numAgents;
+
+	//log("urlip=%lu proxyip=%lu proxyport=%lu n=%li",
+	//    urlIp,proxyIp,proxyPort,n);
+
 	return s_agentList[n];
 }
