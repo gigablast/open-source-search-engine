@@ -1443,15 +1443,23 @@ bool printSearchResultsHeader ( State0 *st ) {
 	if ( totalHits < numResults ) totalHits = numResults;
 
 	if ( si->m_format == FORMAT_XML )
-		sb->safePrintf("\t<hits>%lli</hits>\n"
-			      "\t<moreResultsFollow>%li</moreResultsFollow>\n"
-			      ,(long long)totalHits
-			      ,(long)moreFollow
-			      );
-	else if ( st->m_header && si->m_format == FORMAT_JSON ) {
-	    sb->safePrintf("\"hits\":%lli,\n", (long long)totalHits);
-	    sb->safePrintf("\"moreResultsFollow\":%li,\n", (long)moreFollow);
+		sb->safePrintf("\t<hits>%lli</hits>\n",(long long)totalHits);
+	else if ( st->m_header && si->m_format == FORMAT_JSON )
+		sb->safePrintf("\"hits\":%lli,\n", (long long)totalHits);
+
+	// if streaming results we just don't know if we will require
+	// a "Next 10" link or not! we can print that after we print out
+	// the results i guess...
+	if ( ! si->m_streamResults ) {
+		if ( si->m_format == FORMAT_XML )
+			sb->safePrintf("\t<moreResultsFollow>%li"
+				       "</moreResultsFollow>\n"
+				       ,(long)moreFollow);
+		else if ( st->m_header && si->m_format == FORMAT_JSON )
+			sb->safePrintf("\"moreResultsFollow\":%li,\n", 
+				       (long)moreFollow);
 	}
+
 
 	if ( st->m_header && si->m_format == FORMAT_JSON ) {
 		sb->safePrintf("\"objects\":[\n");

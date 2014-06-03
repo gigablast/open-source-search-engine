@@ -5288,7 +5288,12 @@ bool Msg40::printSearchResult9 ( long ix , long *numPrintedSoFar ) {
 
 	// then print each result
 	// don't display more than docsWanted results
-	if ( m_numPrinted >= msg40->getDocsWanted() ) return true;
+	if ( m_numPrinted >= msg40->getDocsWanted() ) {
+		// i guess we can print "Next 10" link
+		m_moreToCome = true;
+		// do not exceed what the user asked for
+		return true;
+	}
 
 	// prints in xml or html
 	if ( m_si->m_format == FORMAT_CSV ) {
