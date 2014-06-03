@@ -200,7 +200,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	sb.safePrintf("<td><font size=+1><b>Open Source!</b>"
 	"</font><br>\n");
-	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=/admin.html#features>Features</a>. Limited support available for free."
+	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/admin.html#features>Features</a>. Limited support available for free."
 		  ,80);
 	sb.safePrintf("<br><br>");
 	sb.safePrintf("</td></tr>\n");

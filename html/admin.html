@@ -30,25 +30,37 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 
 <!--<a href=#weighting>Weighting Query Terms</a> - how to pass in your own query term weights<br><br>-->
 
-<a href=#requirements>Hardware Requirements</a> - what is required to run gigablast<br><br><a href=#perf>Performance Specifications</a> - various statistics.<br><br><a href=#files>List of Files</a> - the necessary files to run Gigablast<br><br><a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br><a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems<br><br><a href=#disaster>Disaster Recovery</a> - dealing with a crashed host
+<a href=#requirements>Hardware Requirements</a> - what is required to run gigablast<br><br><a href=#perf>Performance Specifications</a> - various statistics.
+<br>
+<br>
+<!--<a href=#files>List of Files</a> - the necessary files to run Gigablast
+<br>
+<br>-->
+<a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br><a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems
+<!--<br><br><a href=#disaster>Disaster Recovery</a> - dealing with a crashed host-->
 <!--<br><br>
 <a href=#security>The Security System</a> - how to control access-->
 <br><br>
 
-<a href=#build>Building an Index</a> - how to start building your index<br><br>
-<a href=#spider>The Spider</a> - all about Gigabot, Gigablast's crawling agent<br><br>
+<!--<a href=#build>Building an Index</a> - how to start building your index<br><br>
+<a href=#spider>The Spider</a> - all about Gigabot, Gigablast's crawling agent<br><br>-->
+
 <!--<a href=#quotas>Document Quotas</a> - how to limit documents into the index<br><br>-->
 <a href=#injecting>Injecting Documents</a> - inserting documents directly into Gigablast<br><br><a href=#deleting>Deleting Documents</a> - removing documents from the index
 
 <br><br><a href=#metas>Indexing User-Defined Meta Tags</a> - how Gigablast indexes user-defined meta tags
 
-<br><br><a href=#bigdocs>Indexing Big Documents</a> - what controls the maximum size of a document that can be indexed?
+<!--<br><br><a href=#bigdocs>Indexing Big Documents</a> - what controls the maximum size of a document that can be indexed?-->
 
 <!--<br><br><a href=#rolling>Rolling the New Index</a> - merging the realtime files into the base file-->
-<br><br><a href=#dmoz>Building a DMOZ Based Directory</a> - build a web directory based on open DMOZ data<br><br>
+<br><br>
+<a href=#dmoz>Building a DMOZ Based Directory</a> - build a web directory based on open DMOZ data
 
-<a href=#optimizing>Optimizing</a> - optimizing Gigablast's spider and query performance<br><br>
+<br><br>
 <a href=#logs>The Log System</a> - how Gigablast logs information
+
+<br><br>
+<a href=#optimizing>Optimizing</a> - optimizing Gigablast's spider and query performance
 <!--
 <br><br>
 <a href=#config>gb.conf</a> - describes the gb configuration file
@@ -62,23 +74,28 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 
 <br><br><a name=quickstart></a>
 <h1>Quick Start</h1>
+&lt;<i>Last Updated May 2014</i>&gt;
+<br>
+<br>
 
 <!--Until I get the binary packages ready, <a href=#src>build from the source code</a>, it should only take about 30 seconds to type the three commands.-->
 
 Requirements: You will need an Intel or AMD system running Linux and at least 4GB of RAM to run one instance/host of gb.<br><br>
 
-Install the <a href=http://www.gigablast.com/gigablast-1.0-1.deb>Gigablast package for Ubuntu or Debian</a> or install the <a href=http://www.gigablast.com/gigablast-1.0-1.rpm>Gigablast package for RedHat</a>. 
+Install the <a href=http://www.gigablast.com/gb-1.0-0.i686.rpm>Gigablast package for RedHat</a>. This package is beta. Ubuntu package is coming soon, <a href=#src>build from source code</a> for that for now.
 
 <br><br>
-Once installed visit your <a href=http://127.0.0.1:8000/>local port 8000</a> to access the search engine controls and begin configuration. It could take up to 20 seconds to start the search engine for the first time.
+If it does not start by itself type 'gb -d' (as root) to run it in the background as a daemon.
+
+<br><br>
+Once installed visit your <a href=http://127.0.0.1:8000/>local port 8000</a> to access the search engine controls and begin configuration. It could take up to 20 seconds to start the search engine for the first time. 
 
 <br><br>
 
 <table><tr><td colspan=2><b>Installed Files</b></td></tr>
-<tr><td>/var/gigablast/data0/</td><td>Directory of Gigablast binary and data files</td></tr>
-<tr><td>/etc/gigablast/hosts.conf</td><td>Describes the hosts in the distributed cluster. Multiple hosts may exist one one physical server. Initially hosts.conf is just configured to use /var/gigablast/data0/ as the only host. See the section on <a href=#scaling>scaling</a> to add more hosts.</td></tr>
+<tr><td><nobr>/var/gigablast/data0/</nobr></td><td>Directory of Gigablast binary and data files</td></tr>
 <tr><td>/etc/init.d/gb</td><td>start up script link</td></tr>
-<tr><td>/etc/init/gb.conf</td><td>upstart conf file so you can type 'start gb' or 'stop gb', but that will only work on local instances of gb.</td></tr>
+<tr><td>/etc/init/gb.conf</td><td>Ubuntu upstart conf file so you can type 'start gb' or 'stop gb', but that will only work on local instances of gb.</td></tr>
 <tr><td>/usr/bin/gb</td><td>Link to /var/gigablast/data0/gb</td></tr>
 </table>
 
@@ -91,6 +108,9 @@ If you run into an bugs let me know so i can fix them right away: mattdwells@hot
 <br>
 <a name=src></a>
 <h1>Build From Source</h1>
+&lt;<i>Last Updated May 2014</i>&gt;
+<br>
+<br>
 
 Requirements: You will need an Intel or AMD system running Linux and at least 4GB of RAM.<br><br>
 
@@ -99,7 +119,9 @@ If you run into an bugs let me know so i can fix them right away: mattdwells@hot
 <!--
 You will need the following packages installed<br>
 <ul>
-<li>do a <b>apt-get install make g++ gcc-multilib</b>
+<li>For Ubuntu do a <b>apt-get install make g++ gcc-multilib</b>
+<br>
+For RedHat do a <b>yum install gcc-c++</b>
 -->
 <!--<li>apt-get install g++
 <li>apt-get install gcc-multilib <i>(for 32-bit compilation support)</i>
@@ -112,22 +134,27 @@ You will need the following packages installed<br>
 </ul>
 -->
 
-<b>1.</b> Do <b>apt-get install make g++ gcc-multilib lib32stdc++6</b>
+<b>1.</b> For <u>Ubuntu</u> do <b>apt-get install make g++ gcc-multilib lib32stdc++6</b>
 <br>
-<b>2.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine>Gigablast source code</a> using <b>wget --no-check-certificate "https://github.com/gigablast/open-source-search-engine/archive/master.zip"</b>, unzip it and cd into it. (optionally use <b>git clone https://github.com/gigablast/open-source-search-engine.git ./github</b> if you have <i>git</i> installed.)
+<b>2.</b> For <u>RedHat</u> do <b>yum install gcc-c++</b>
 <br>
-<b>3.</b> Run <b>make</b> to compile. (e.g. use 'make -j 4' to compile on four cores)
+<b>3.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine>Gigablast source code</a> using <b>wget --no-check-certificate "https://github.com/gigablast/open-source-search-engine/archive/master.zip"</b>, unzip it and cd into it. (optionally use <b>git clone https://github.com/gigablast/open-source-search-engine.git ./github</b> if you have <i>git</i> installed.)
 <br>
-<b>4.</b> Run <b>./gb -d</b>  to start a single gigablast node which listens on port 8000 running in daemon mode (-d).
+<b>4.</b> Run <b>make</b> to compile. (e.g. use 'make -j 4' to compile on four cores)
 <br>
-<b>5.</b> The first time you run gb, wait about 30 seconds for it to build some files. Check the log file to see when it completes.
+<b>5.</b> Run <b>./gb -d</b>  to start a single gigablast node which listens on port 8000 running in daemon mode (-d).
 <br>
-<b>6.</b> Go to the <a href=http://127.0.0.1:8000/>root page</a> to begin.
+<b>6.</b> The first time you run gb, wait about 30 seconds for it to build some files. Check the log file to see when it completes.
+<br>
+<b>7.</b> Go to the <a href=http://127.0.0.1:8000/>root page</a> to begin.
 
 <br>
 
 <br><br><a name=features></a>
 <h1>Features</h1>
+
+&lt;<i>Last Updated May 2014</i>&gt;
+<br>
 
 <ul>
 <li> <b>The ONLY open source WEB search engine.</b> 
@@ -135,6 +162,7 @@ You will need the following packages installed<br>
 <li> Has scaled to over 12 billion web pages on over 200 servers.
 <li> A dual quad core, with 32GB ram, and two 160GB Intel SSDs, running 8 Gigablast instances, can do about 8 qps (queries per second) on an index of 10 million pages. Drives will be close to maximum storage capacity. Doubling index size will more or less halve qps rate. (Performance metrics can be made about ten times faster but I have not got around to it yet. Drive space usage will probably remain about the same because it is already pretty efficient.)
 <li> 1 million web pages requires 28.6GB of drive space. That includes the index, meta information and the compressed HTML of all the web pages.
+<li>Spider rate is around 1 page per second per core. So a dual quad core can spider and index 8 pages per second which is 691,200 pages per day.
 <li> 4GB of RAM required per Gigablast instance. (instance = process)
 <li> Live demo at <a href=http://www.gigablast.com/>http://www.gigablast.com/</a>
 <li> Written in C/C++ for optimal performance.
@@ -214,15 +242,24 @@ Also, keep in mind not to use these weighting operators between another query op
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Hardware Requirements</td></tr></table>
 <br>
+&lt;<i>Last Updated January 2014</i>&gt;
+<br>
+<br>
 At least one computer with 4GB RAM, 10GB of hard drive space and any distribution of Linux with the 2.4.25 kernel or higher. For decent performance invest in Intel Solid State Drives. I tested other brands around 2010 and found that they would freeze for up for 500ms every hour or so to do "garbage collection". That is unacceptable in general for a search engine. 
-Plus, Gigablast, reads and writes a lot of data at the same time under heavy spider and query loads, and disk will probably be your MAJOR bottleneck.<br><br>
+Plus, Gigablast, reads and writes a lot of data at the same time under heavy spider and query loads, therefore disk will probably be your MAJOR bottleneck.<br><br>
 <br>
 <a name=perf></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Performance Specifications</td></tr></table>
 <br>
+&lt;<i>Last Updated January 2014</i>&gt;
+<br>
+<br>
+
+
 Gigablast can store 100,000 web pages (each around 25k in size) per gigabyte of disk storage. A typical single-cpu pentium 4 machine can index one to two million web pages per day even when Gigablast is near its maximum document capacity for the hardware. A cluster of N such machines can index at N times that rate.<br><br>
 <br>
+<!--
 <a name=files></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>List of Files</td></tr></table>
@@ -237,10 +274,10 @@ Each directory should have the following files and subdirectories:<br><br>
 </td></tr>
 
 <tr><td><b>gb.conf</b></td><td><a href=/gb.conf.txt>example</a>. Each gb process is called a <i>host</i> and each gb process has its own gb.conf file. This file is required to run gb.<tr><td><b>coll.XXX.YYY/</b></td><td>For every collection there is a subdirectory of this form, where XXX is the name of the collection and YYY is the collection's unique id. Contained in each of these subdirectories is the data associated with that collection.</td></tr>
-
+-->
 <!--<tr><td><b>coll.XXX.YYY/coll.conf</b></td><td>Each collection contains a configuration file called coll.conf. This file allows you to configure collection specific parameters. Every parameter in this file is also controllable via your the administrative web pages as well.</td></tr>
 -->
-
+<!--
 <tr><td><b>trash/</b></td><td>Deleted collections are moved into this subdirectory. A timestamp in milliseconds since the epoch is appended to the name of the deleted collection's subdirectory after it is moved into the trash sub directory. Gigablast doesn't physically delete collections in case it was a mistake.</td></tr>
 
 <tr><td><b>html/</b></td><td>A subdirectory that holds all the html files and images used by Gigablast. Includes Logos and help files.</tr>
@@ -251,14 +288,24 @@ Each directory should have the following files and subdirectories:<br><br>
 <tr><td><b>ppthtml</b></td><td>Executable called by gbfilter to convert PowerPoint files to html for indexing.</tr>
 <tr><td><b>xlhtml</b></td><td>Executable called by gbfilter to convert Microsoft Excel files to html for indexing.</tr>
 </table>
+-->
 <!--<tr><td><b>gbfilter</b></td><td>Simple executable called by Gigablast with document HTTP MIME header and document content as input. Output is an HTTP MIME and html or text that can be indexed by Gigablast.</tr>-->
 <!--<tr><td><b><a href=#gbstart>gbstart</a></b></td><td>An optional simple script used to start up the gb process(es) on each computer in the network. Otherwise, iff you have passwordless ssh capability then you can just use './gb start' and it will spawn an ssh command to start up a gb process for each host listed in hosts.conf.</tr>-->
+<!--
 </table>
 <br><br>
 <br>
+-->
+
 <a name=clustermaint></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Cluster Maintenance</td></tr></table>
+
+<br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
+
+
 <br>
 For the purposes of this section, we assume the name of the cluster is gf and all hosts in the cluster are named gf*.  The Master host of the cluster is gf0.  The gigablast working directory is assumed to be /a/ . We all assume you can do passwordless ssh from one machine to another, otherwise administration of hundreds of servers is not fun!
 <br>
@@ -306,6 +353,9 @@ For the purposes of this section, we assume the name of the cluster is gf and al
 <a name=trouble></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Troubleshooting</td></tr></table>
+<br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
 <!--
 <br>
 <a name=disaster></a>
@@ -371,6 +421,7 @@ Right now any local IP can adminster Gigablast, so any IP on the same network wi
 
 Every request sent to the Gigablast server is assumed to come from one of four types of users. A public user, a spam assassin, a collection admin, or a master admin. A collection admin has control over the controls corresponding to a particular collection. A spam assassin has control over even fewer controls over a particular collection in order to remove pages from it. A master admin has control over all aspects and all collections. <br><br>To verify a request is from an admin or spam assassin Gigablast requires that the request contain a password or come from a listed IP. To maintain these lists of passwords and IPs for the master admin, click on the "security" tab. To maintain them for a collection admin or for a spam assassin, click on the "access" tab for that collection. Alternatively, the master passwords and IPs can be edited in the gb.conf file in the working dir and collection admin passwords and IPs can be edited in the coll.conf file in the collections subdirectory in the working dir. <br><br>To add a further layer of security, Gigablast can server all of its pages through the https interface. By changing http:// to https:// and using the SSL port you specified in hosts.conf, all requests and responses will be made secure.-->
  <br><br>
+<!--
 <a name=build></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Building an Index
@@ -381,7 +432,7 @@ Every request sent to the Gigablast server is assumed to come from one of four t
 <b>1.</b> Determine a collection name for your index. You may just want to use the default, unnamed collection. Gigablast is capable of handling many sub-indexes, known as collections. Each collection is independent of the other collections. You can add a new collection by clicking on the <b>add new collection</b> link on the <a href="/admin/spider">Spider Controls</a> page.<br><br>
 
 <b>2.</b> Goto the <a href=/admin/settings>settings</a> page and add the sites you want. Only add seeds if you want to spider the whole web.
-
+-->
 <!--
 <b>2.</b> Add rules to the <a href="/admin/filters">URL Filters page</a>. This is like a routing table but for URLs. The first rule that a URL matches will determine what priority queue it is assigned to. You can also use <a href="http://www.phpbuilder.com/columns/dario19990616.php3">regular expressions</a>. The special keywords you can used are described at the bottom of the rule table.
 <br><br>
@@ -433,7 +484,7 @@ collections.
 URLs are currently being indexed in real-time. Gigablast.com currently has 32hosts and each host spiders different URLs. You can easily switch between 
 these hosts by clicking on the host numbers at the top of the page.
 -->
-<br><br><br>
+<!--<br><br><br>-->
 
 
 
@@ -442,6 +493,9 @@ these hosts by clicking on the host numbers at the top of the page.
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>The Spider
 </td></tr></table>
+<br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
 <br>
 <b>Robots.txt</b>
 <br><br>
@@ -499,6 +553,9 @@ You can limit the number of documents on a per site basis. By default the site i
 <a name=injecting></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Injecting Documents</td></tr></table>
+<br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
 <br>
 <b>Injection Methods</b>
 <br><br>
@@ -612,6 +669,9 @@ errors are most likely:<br>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Deleting Documents</td></tr></table>
 <br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
+<br>
 You can delete documents from the index two ways:<ul>
 <li>Perhaps the most popular is to use the <a href="/admin/reindex">Reindex URLs</a> tool which allows you to delete all documents that match a simple query. Furthermore, that tool allows you to assign rulesets to all the domains of all the matching documents. All documents that match the query will have their docids stored in a spider queue of a user-specified priority. The spider will have to be enabled for that priority queue for the deletion to take place. Deleting documents is very similar to adding documents.<br><br>
 <li>To delete a single document you can use the <a href="/admin/inject">Inject URL</a> page.
@@ -623,6 +683,9 @@ You can delete documents from the index two ways:<ul>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Indexing User-Defined Meta Tags</td></tr></table>
 <br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
+<br>
 Gigablast supports the indexing, searching and displaying of user-defined meta tags. For instance, if you have a tag like <i>&lt;meta name="foo" content="bar baz"&gt;</i> in your document, then you will be able to do a search like <i><a href="/search?q=foo%3Abar&dt=foo">foo:bar</a></i> or <i><a href="/search?q=foo%3A%22bar+baz%22&dt=foo">foo:"bar baz"</a></i> and Gigablast will find your document. <br><br>
 You can tell Gigablast to display the contents of arbitrary meta tags in the search results, like <a href="/search?q=gigablast&s=10&dt=author+keywords%3A32">this</a>. Note that you must assign the <i>dt</i> cgi parameter to a space-separated list of the names of the meta tags you want to display. You can limit the number of returned characters of each tag to X characters by appending a <i>:X</i> to the name of the meta tag supplied to the <i>dt</i> parameter. In the link above, I limited the displayed keywords to 32 characters. The content of the meta tags is also provided in the &lt;display&gt; tags in the <a href="#output">XML feed</a>
 <br><br>
@@ -633,9 +696,13 @@ Why use user-defined metas? Because it is very powerful. It allows you to embed 
 You can also explicitly specify how to index certain meta tags by making an &lt;index&gt; tag in the <a href="#ruleset">ruleset</a> as shown <a href="#rsmetas">here</a>. The specified meta tags will be indexed in the user-defined meta tag fashion as described above, in addition to any method described in the ruleset.<br>
 <br>
 <br>
+<!--
 <a name=bigdocs></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Indexing Big Documents</td></tr></table>
+<br>
+&lt;<i>Caution: Old Documentation</i>&gt;
+<br>
 <br>
 When indexing a document you will be bound by the available memory of the machine that is doing the indexing. A document that is dense in words can takes as much as ten times the memory as the size of the document in order to process it for indexing. Therefore you need to make sure that the amount of available memory is adequate to process the document you want to index. You can turn off Spam detection to reduce the processing overhead by a little bit.<br>
 <br>
@@ -648,6 +715,7 @@ After ensuring you have enough extra memory to handle the document size, you wil
 Finally, you need to ensure that the <b>max text doc len</b> and <b>max other doc len</b> controls on the <b>Spider Controls</b> page are set to accomodating sizes. Use -1 to indicate no maximum. <i>Other</i> documents are non-text and non-html documents, like PDF, for example. These controls will physically prohibit the spider from downloading more than this many bytes. This causes excessively long documents to be truncated. If the spider is downloading a PDF that gets truncated then it abandons it, because truncated PDFs are useless.<br>
 <br>
 <br>
+-->
 <!--
 <a name=rolling></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
@@ -728,6 +796,10 @@ So execute <i>dmozparse</i> with the <i>urldump -s</i> option to create the html
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>The Log System</td></tr></table>
 <br>
+&lt;<i>Last Updated March 2014</i>&gt;
+<br>
+<br>
+
 <table>
 <tr>
 <td>Gigablast uses its own format for logging messages, for example,<br>
@@ -866,6 +938,9 @@ The same parameters on the Log Controls page can be adjusted in the gb.conf file
 <tr><td><center><b><font color=#ffffff size=+1>Optimizing
 </td></tr></table>
 <br>
+&lt;<i>Last Updated May 2014</i>&gt;
+<br>
+<br>
 Gigablast is a fairly sophisticated database that has a few things you can tweak to increase query performance or indexing performance.
 <br><br>
 
@@ -879,11 +954,12 @@ This parameter can also be controlled on a per query basis using the
 This will decrease freshness of results but typically use
 3 or 4 times less disk seeks.
 -->
-<li> If you want to spider at the same time, then you should ensure
+<!--<li> If you want to spider at the same time, then you should ensure
 that the <b>max spider disk threads</b> parameter on the
 <a href="/admin/master">Master Controls</a> page is set to around 1 
 so the indexing/spidering processes do not hog the disk.
-
+-->
+<!--
 <li> Set Gigablast to read-only mode to true to prevent Gigablast from using 
 memory to hold newly indexed data, so that this memory can 
 be used for caches. Just set the <b>&lt;readOnlyMode&gt;</b> parameter in your config file to 1.
@@ -903,15 +979,16 @@ URL in the index has a corresponding cluster record. When a url appears as a
 search result its cluster record must be loaded from disk. Each cluster 
 record is about 12 to 16 bytes so by keeping these all in memory you can
 save around 10 disk seeks every query.
+-->
 
 <li> Disable site clustering and dup removal. By specifying <i>&sc=0&dr=0</i>
 in your query's URL you ensure that these two services are avoided and no
-cluster records are loaded. You can also turn them off by default on the
-<a href="/admin/spiderdb">Spider Controls</a> page. But if someone explicitly
+cluster records are loaded. You can also turn them off by default (site cluster by default and dedup results by default) on the
+<a href="/admin">Search Controls</a> page. But if someone explicitly
 specifies <i>&sc=1</i> or <i>&dr=1</i> in their query URL then they will
 override that switch.
 
-<li>If you are experiencing a high average query latency under a high query throughput then consider adding more twins to your architecture. If you do not have any twins, and are serving a large query volume, then data requests tend to clump up onto one particular server at random, slowing everybody else down. If that server has one or more twins available, then its load will be evened out through Gigablast's dynamic load balancing and the average query latency will decrease.
+<li>If you are experiencing a high average query latency under a high query throughput then consider adding more mirror servers to your architecture. If you do not have any mirrors, and are serving a large query volume, then data requests tend to clump up onto one particular server at random, slowing everybody else down. If that server has one or more mirrors available, then its load will be evened out through Gigablast's dynamic load balancing and the average query latency will decrease.
 </ul>
 
 <br>
@@ -923,14 +1000,15 @@ override that switch.
 from the same domain into the index when this is enabled. This means that
 Gigablast must do about one disk seek for every URL indexed to verify it is
 not a duplicate. If you keep checksumdb all in memory this will not be a
-problem.
-<li> Disable <b>link voting</b>. Gigablast performs at least one disk seek
+problem. This is in the <a href=/admin/spider>Spider Controls</a> page.
+<!--<li> Disable <b>link voting</b>. Gigablast performs at least one disk seek
 to determine who link to the URL being indexed. If it does have some linkers
 then the Cached Copy of each linker (up to 200) is loaded and the corresponding
 link text is extracted. Most pages do not have many linkers so the disk
 load is not too bad. Furthermore, if you do enable link voting, you can
 restrict it to the first file of indexdb, <b>restrict indexdb for 
 spidering</b>, to ensure that about one seek is used to determine the linkers.
+-->
 <li> Enable <b>use IfModifiedSince</b>. This tells the spider not to do 
 anything if it finds that a page being reindexed is unchanged since the last
 time it was indexed. Some web servers do not support the IfModifiedSince tag,

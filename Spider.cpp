@@ -2093,8 +2093,9 @@ bool SpiderColl::addSpiderRequest ( SpiderRequest *sreq ,
 	// watch out for corruption
 	if ( sreq->m_firstIp ==  0 || sreq->m_firstIp == -1 || ulen <= 0 ) {
 		log("spider: Corrupt spider req with url length of "
-		    "%li <= 0. dataSize=%li uh48=%llu. Skipping.",
-		    ulen,sreq->m_dataSize,sreq->getUrlHash48());
+		    "%li <= 0 u=%s. dataSize=%li firstip=%li uh48=%llu. Skipping.",
+		    ulen,sreq->m_url,
+		    sreq->m_dataSize,sreq->m_firstIp,sreq->getUrlHash48());
 		return true;
 	}
 

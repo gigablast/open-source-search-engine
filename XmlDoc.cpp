@@ -1300,7 +1300,9 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	// now we can have url-based page reindex requests because
 	// if we have a diffbot json object fake url reindex request
 	// we add a spider request of the PARENT url for it as page reindex
-	if ( is_digit ( sreq->m_url[0] ) ) {
+	//if ( is_digit ( sreq->m_url[0] ) ) {
+	// watch out for 0.r.msn.com!!
+	if ( sreq->m_urlIsDocId ) {
 		m_docId          = atoll(sreq->m_url);
 		// assume its good
 		m_docIdValid     = true;
@@ -3654,7 +3656,7 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, long long docId, long long uh48 ){
 	// alloc the buffer
 	char *ubuf = (char *) mmalloc ( need1 , "xdtrb" );
 	// return NULL with g_errno set on error
-	if ( ! ubuf ) return NULL;
+	if ( ! ubuf ) return false;
 	// serialize into it
 	char *p = ubuf;
 	// copy our crap into there
@@ -3742,7 +3744,7 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, long long docId, long long uh48 ){
 		log("db: Failed to compress document of %li bytes. "
 		    "Provided buffer of %li bytes.",
 		    size, (need2 - hdrSize ) );
-		return NULL;
+		return false;
 	}
 	// check for error
 	if ( err != Z_OK ) {
@@ -3750,7 +3752,7 @@ bool XmlDoc::setTitleRecBuf ( SafeBuf *tbuf, long long docId, long long uh48 ){
 		tbuf->purge();
 		g_errno = ECOMPRESSFAILED; 
 		log("db: Failed to compress document.");
-		return NULL;
+		return false;
 	}
 	// calc cbufSize, the uncompressed header + compressed stuff
 	//cbufSize = hdrSize + size ;
@@ -7138,7 +7140,7 @@ HashTableX *XmlDoc::getCountTable ( ) {
 	long numSlots = nw * 3 + 5000;
 	// only alloc for this one if not provided
 	if (!ct->set(8,4,numSlots,NULL,0,false,m_niceness,"xmlct"))
-	     return false;
+	  return (HashTableX *)NULL;
 
 	//char *ff = getFragVec ( ) ;
 	//if ( ! ff ) return false;
@@ -7159,7 +7161,7 @@ HashTableX *XmlDoc::getCountTable ( ) {
 		//   the first 80,000 words for performance reasons
 		if ( i < MAXFRAGWORDS && fv[i] == 0 ) continue;
 		// accumulate the wid with a score of 1 each time it occurs
-		if ( ! ct->addTerm ( &wids[i] ) ) return false;
+		if ( ! ct->addTerm ( &wids[i] ) ) return (HashTableX *)NULL;
 		// skip if word #i does not start a phrase
 		if ( ! pids [i] ) continue;
 		// if phrase score is less than 100% do not consider as a 
@@ -7169,7 +7171,7 @@ HashTableX *XmlDoc::getCountTable ( ) {
 		if ( wptrs[i+1][1] == ',' ) continue;
 		if ( wptrs[i+1][2] == ',' ) continue;
 		// put it in, accumulate, max score is 0x7fffffff
-		if ( ! ct->addTerm ( &pids[i] ) ) return false;
+		if ( ! ct->addTerm ( &pids[i] ) ) return (HashTableX *)NULL;
 	}
 
 	// now add each meta tag to the pot
@@ -7191,7 +7193,8 @@ HashTableX *XmlDoc::getCountTable ( ) {
 		// skip if empty meta content
 		if ( wend - p <= 0 ) continue;
 		// our ouw hash
-		if ( ! hashString_ct ( ct , p , wend - p ) ) return false;
+		if ( ! hashString_ct ( ct , p , wend - p ) ) 
+		  return (HashTableX *)NULL;
 	}
 	// add each incoming link text
 	for ( Inlink *k=NULL ; info1 && (k=info1->getNextInlink(k)) ; ) {
@@ -7208,11 +7211,13 @@ HashTableX *XmlDoc::getCountTable ( ) {
 			    k->ptr_urlBuf,m_firstUrl.m_url);
 			continue;
 		}
-		if ( ! hashString_ct ( ct , p , plen ) ) return false;
+		if ( ! hashString_ct ( ct , p , plen ) ) 
+		  return (HashTableX *)NULL;
 		// hash this stuff (was hashPwids())
 		p    = k-> ptr_surroundingText;
 		plen = k->size_surroundingText - 1;
-		if ( ! hashString_ct ( ct , p , plen ) ) return false;
+		if ( ! hashString_ct ( ct , p , plen ) ) 
+		  return (HashTableX *)NULL;
 	}
 
 	// we got it

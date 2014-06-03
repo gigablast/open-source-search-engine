@@ -153,6 +153,8 @@ bool updateSiteListBuf ( collnum_t collnum ,
 	//sc->m_siteListAsteriskLine = NULL;
 	sc->m_siteListHasNegatives = false;
 	sc->m_siteListIsEmpty = true;
+	
+	sc->m_siteListIsEmptyValid = true;
 
 	sc->m_siteListIsEmptyValid = true;
 

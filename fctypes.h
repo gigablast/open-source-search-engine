@@ -178,9 +178,9 @@ time_t getTimeSynced (); // synced with host #0's system clock
 long stripHtml( char *content, long contentLen, long version, long strip );
 
 extern const char g_map_is_vowel[];
-extern const char g_map_to_lower[];
-extern const char g_map_to_upper[];
-extern const char g_map_to_ascii[];
+extern const unsigned char g_map_to_lower[];
+extern const unsigned char g_map_to_upper[];
+extern const unsigned char g_map_to_ascii[];
 extern const char g_map_is_upper[];
 extern const char g_map_canBeInTagName[];
 extern const char g_map_is_control[];

@@ -466,16 +466,30 @@ Msg6a.o:
 geo_ip_table.o: geo_ip_table.cpp geo_ip_table.h
 	$(CC) $(DEFS) -m32 -Wall -pipe -c $*.cpp 
 
+# move this tarball into ~/rpmbuild/?????
+# then run rpmbuild -ba gb-1.0.spec to build the rpms
+# rpm -ivh gb-1.0-...  to install the pkg
+tarball-testing:
+#	git archive --format=tar master | gzip > gb.tar
+	git archive --format=tar --prefix=gb-1.0/ testing > gb-1.0.tar
+
+master-rpm:
+#	git archive --format=tar master | gzip > gb.tar
+	git archive --format=tar --prefix=gb-1.0/ master > gb-1.0.tar
+	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
+	rpmbuild -ba gb-1.0.spec
+	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
+
 install:
 # gigablast will copy over the necessary files. it has a list of the
 # necessary files and that list changes over time so it is better to let gb
 # deal with it.
 	mkdir -p /var/gigablast/data0/
 	./gb copyfiles /var/gigablast/data0/
-# if user types 'gb' it will use the binary in /var/gigablast/data0/
+# if user types 'gb' it will use the binary in /var/gigablast/data0/gb
 	rm -f /usr/bin/gb
 	ln -s /var/gigablast/data0/gb /usr/bin/gb
-# if machine restarts
+# if machine restarts...
 # the new way that does not use run-levels anymore
 	rm -f /etc/init.d/gb
 	ln -s /lib/init/upstart-job /etc/init.d/gb

@@ -660,7 +660,7 @@ UChar32 utf8Decode2(const char *p, const char **next){
 	};
 }
 */
-
+/*
 // starting at 0xc3 0x80  ending at 0xc3 0xbf
 static char ascii_c3[] = {
 	'A', // 80
@@ -933,11 +933,154 @@ static char ascii_c6[] = {
 	'z', // be
 	'p'  // bf
 };
-	
 
+class bichar {
+public:
+	char m_c0;
+	char m_c1;
+};
 
-long utf8ToAscii(char *outbuf, long outbufsize,
-		 unsigned char *p, long inbuflen) { // inbuf
+// maps utf8 chars starting with 0xce into utf8 char w/o the accent mark
+static bichar utf_ce[] = {
+	{0xce,0x00}, // 80
+	{0xce,0x00}, // 81
+	{0xce,0x00}, // 82
+	{0xce,0x00}, // 83
+	{0xce,0x00}, // 84
+	{0xce,0x00}, // 85
+	{0xce,0x91}, // 86 Ά to Α
+	{0xce,0x00}, // 87
+	{0xce,0x95}, // 88 Έ to Ε
+	{0xce,0x00}, // 89 Ή to Η
+	{0xce,0x99}, // 8a Ί to I
+	{0xce,0x00}, // 8b
+	{0xce,0x9f}, // 8c Ό to O
+	{0xce,0x00}, // 8d
+	{0xce,0xa5}, // 8e Ύ to Y
+	{0xce,0xa9}, // 8f Ώ to Ω
+	{0xce,0xb9}, // 90 ΐ to ι
+	{0xce,0x91}, // 91 A to A
+	{0xce,0x92}, // 92 B to B
+	{0xce,0x93}, // 93 Γ to Γ
+	{0xce,0x94}, // 94 Δ to Δ
+	{0xce,0x95}, // 95 hv
+	{0xce,0x96}, // 96
+	{0xce,0x97}, // 97
+	{0xce,0x98}, // 98
+	{0xce,0x99}, // 99
+	{0xce,0x9a}, // 9a
+	{0xce,0x9b}, // 9b
+	{0xce,0x9c}, // 9c
+	{0xce,0x9d}, // 9d
+	{0xce,0x9e}, // 9e
+	{0xce,0x9f}, // 9f
+	{0xce,0xa0}, // a0
+	{0xce,0xa1}, // a1
+	{0xce,0x00}, // a2
+	{0xce,0xa3}, // a3
+	{0xce,0xa4}, // a4
+	{0xce,0xa5}, // a5
+	{0xce,0xa6}, // a6 YR
+	{0xce,0xa7}, // a7
+	{0xce,0xa8}, // a8
+	{0xce,0xa9}, // a9
+	{0xce,0x99}, // aa Ϊ to I
+	{0xce,0xa5}, // ab Ϋ to Y
+	{0xce,0xb1}, // ac ά to α
+	{0xce,0xb5}, // ad έ to ε
+	{0xce,0xb7}, // ae ή
+	{0xce,0xb9}, // af ί
+	{0xcf,0x85}, // b0 ΰ
+	{0xce,0xb1}, // b1
+	{0xce,0xb2}, // b2
+	{0xce,0xb3}, // b3
+	{0xce,0xb4}, // b4
+	{0xce,0xb5}, // b5
+	{0xce,0xb6}, // b6
+	{0xce,0xb7}, // b7
+	{0xce,0xb8}, // b8
+	{0xce,0xb9}, // b9
+	{0xce,0xba}, // ba
+	{0xce,0xbb}, // bb
+	{0xce,0xbc}, // bc
+	{0xce,0xbd}, // bd
+	{0xce,0xbe}, // be
+	{0xce,0xbf}  // bf
+};
+
+// maps utf8 chars starting with 0xcf into utf8 char w/o the accent mark
+static bichar utf_cf[] = {
+	{0xcf,0x80}, // 80
+	{0xcf,0x81}, // 81
+	{0xcf,0x82}, // 82
+	{0xcf,0x83}, // 83
+	{0xcf,0x84}, // 84
+	{0xcf,0x85}, // 85
+	{0xcf,0x86}, // 86
+	{0xcf,0x87}, // 87
+	{0xcf,0x88}, // 88
+	{0xcf,0x89}, // 89
+	{0xce,0xb9}, // 8a ϊ to ι
+	{0xcf,0x85}, // 8b ϋ
+	{0xce,0xbf}, // 8c ό
+	{0xcf,0x85}, // 8d ύ
+	{0xcf,0x89}, // 8e ώ
+	{0xcf,0x8f}, // 8f
+	{0xcf,0x90}, // 90
+	{0xcf,0x91}, // 91
+	{0xce,0x85}, // 92 ϒ to Y
+	{0xce,0x85}, // 93 ϓ to Y
+	{0xce,0x85}, // 94 ϔ to Y
+	{0xcf,0x95}, // 95
+	{0xcf,0x89}, // 96 ϖ to ω (is this right? - mdw)
+	{0xcf,0x97}, // 97
+	{0xcf,0x98}, // 98
+	{0xcf,0x99}, // 99
+	{0xcf,0x9a}, // 9a
+	{0xcf,0x9b}, // 9b
+	{0xcf,0x9c}, // 9c
+	{0xcf,0x9d}, // 9d
+	{0xcf,0x9e}, // 9e
+	{0xcf,0x9f}, // 9f
+	{0xcf,0xa0}, // a0
+	{0xcf,0xa1}, // a1
+	{0xcf,0xa2}, // a2
+	{0xcf,0xa3}, // a3
+	{0xcf,0xa4}, // a4
+	{0xcf,0xa5}, // a5
+	{0xcf,0xa6}, // a6
+	{0xcf,0xa7}, // a7
+	{0xcf,0xa8}, // a8
+	{0xcf,0xa9}, // a9
+	{0xcf,0xaa}, // aa
+	{0xcf,0xab}, // ab
+	{0xcf,0xac}, // ac
+	{0xcf,0xad}, // ad
+	{0xcf,0xae}, // ae
+	{0xcf,0xaf}, // af
+	{0xcf,0xb0}, // b0
+	{0xcf,0xb1}, // b1
+	{0xcf,0xb2}, // b2
+	{0xcf,0xb3}, // b3
+	{0xcf,0xb4}, // b4
+	{0xcf,0xb5}, // b5
+	{0xcf,0xb6}, // b6
+	{0xcf,0xb7}, // b7
+	{0xcf,0xb8}, // b8
+	{0xcf,0xb9}, // b9
+	{0xcf,0xba}, // ba
+	{0xcf,0xbb}, // bb
+	{0xcf,0xbc}, // bc
+	{0xcf,0xbd}, // bd
+	{0xcf,0xb9}, // be Ͼ
+	{0xcf,0xbd}  // bf Ͽ
+};
+*/	
+
+/*
+//long utf8ToAscii(char *outbuf, long outbufsize,
+long stripAccentMarks (char *outbuf, long outbufsize,
+		       unsigned char *p, long inbuflen) { // inbuf
 
 	char *dst = outbuf;
 	unsigned char *pend = p + inbuflen;
@@ -961,6 +1104,20 @@ long utf8ToAscii(char *outbuf, long outbufsize,
 		else if ( *p == 0xc4 ) table = ascii_c4;
 		else if ( *p == 0xc5 ) table = ascii_c5;
 		else if ( *p == 0xc6 ) table = ascii_c6;
+		else if ( *p == 0xce ) {
+			bichar *btab  = utf_ce;
+			if ( p[1] < 0x80 ) return -1;
+			*dst++ = btab[p[1]-0x80].m_c0;
+			*dst++ = btab[p[1]-0x80].m_c1;
+			continue;
+		}
+		else if ( *p == 0xcf ) {
+			bichar *btab = utf_cf;
+			if ( p[1] < 0x80 ) return -1;
+			*dst++ = btab[p[1]-0x80].m_c0;
+			*dst++ = btab[p[1]-0x80].m_c1;
+			continue;
+		}
 		else return -1;
 
 		if ( p[1] < 0x80 ) return -1;
@@ -968,6 +1125,46 @@ long utf8ToAscii(char *outbuf, long outbufsize,
 
 		*dst++ = table[p[1]-0x80];
 	}
+	// null term just in case
+	*dst = '\0';
+	return dst - outbuf;
+}
+*/
+
+
+long stripAccentMarks (char *outbuf, long outbufsize,
+		       unsigned char *p, long inbuflen) {
+	char *s = (char *)p;
+	char *send = (char *)p + inbuflen;
+	long cs;
+	char *dst = outbuf;
+	for ( ; s < send ; s += cs ) {
+		// how big is this character?
+		cs = getUtf8CharSize(s);
+		// convert the utf8 character to UChar32
+		UChar32 uc = utf8Decode ( s );
+		// break "uc" into decomposition of UChar32s
+		UChar32 ttt[32];
+		long klen = recursiveKDExpand(uc,ttt,32);
+		if(klen>32){char *xx=NULL;*xx=0;}
+		// sanity
+		if ( dst + 5 > outbuf+outbufsize ) return -1;
+		// if the same, leave it! it had no accent marks or other
+		// modifiers...
+		if ( klen <= 1 ) {
+			memcpy ( dst , s , cs );
+			dst += cs;
+			continue;
+		}
+		// take the first one as the stripped
+		// convert back to utf8
+		long stored = utf8Encode ( ttt[0] , dst );
+		// skip over the stored utf8 char
+		dst += stored;
+	}
+	// sanity. breach check
+	if ( dst > outbuf+outbufsize ) { char *xx=NULL;*xx=0; }
+	// return # of bytes stored into outbuf
 	return dst - outbuf;
 }
 

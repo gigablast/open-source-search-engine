@@ -72,7 +72,8 @@ enum {
 	langMalgasy        = 52,
 	langKurdish        = 53,
 	langLuxembourgish  = 54,
-	langEstonian       = 55
+	langEstonian       = 55,
+	langLast           = 56
 };
 
 uint8_t getLanguageFromName(uint8_t *name);

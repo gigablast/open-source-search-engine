@@ -189,6 +189,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		// 	goto retry;
 		// }
 		// now we generate one if that is not there
+	createFile:
 		if ( ! m_created ) {
 			m_created = true;
 			g_errno = 0;
@@ -282,9 +283,9 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 
 	// set g_errno, log and return false if no hosts found in the file
 	if ( i == 0 ) { 
-		log(
-		    "conf: No host entries found in %s.",filename);
 		g_errno = ENOHOSTS; 
+		log("conf: No host entries found in %s.",filename);
+		goto createFile;
 		return false; 
 	}
 	// alloc space for this many Hosts structures
@@ -776,7 +777,7 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		// take off slash if there
 		if ( wdir[wdirlen-1]=='/' ) wdir[--wdirlen]='\0';
 
-		// get real path
+		// get real path (no symlinks symbolic links)
 		char tmp[256];
 		long tlen = readlink ( wdir , tmp , 250 );
 		// if we got the actual path, copy that over
@@ -2537,6 +2538,7 @@ long Hostdb::getCRC ( ) {
 
 
 bool Hostdb::createHostsConf( char *cwd ) {
+  fprintf(stderr,"Creating %shosts.conf\n",cwd);
 	SafeBuf sb;
 	sb.safePrintf("# The Gigablast host configuration file.\n");
 	sb.safePrintf("# Tells us what hosts are participating in the distributed search engine.\n");

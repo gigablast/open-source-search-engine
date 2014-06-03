@@ -1367,8 +1367,13 @@ int main2 ( int argc , char *argv[] ) {
 	//
 	//if ( ! workingDir ) workingDir = getcwd2 ( argv[0] );
 	char *workingDir = getcwd2 ( argv[0] );
+	if ( ! workingDir ) {
+		fprintf(stderr,"could not get working dir. Exiting.\n");
+		return 1;
+	}
 
 	//log("host: working directory is %s",workingDir);
+
 
 	// load up hosts.conf
 	// . it will determine our hostid based on the directory path of this
@@ -2895,6 +2900,73 @@ int main2 ( int argc , char *argv[] ) {
 		log("Unicode initialization failed!");
 		return 1;
 	}
+
+	// some tests. the greek letter alpha with an accent mark (decompose)
+	/*
+	{
+		char us[] = {0xe1,0xbe,0x80};
+		UChar32 uc = utf8Decode(us);//,&next);
+		UChar32 ttt[32];
+		long klen = recursiveKDExpand(uc,ttt,256);
+		char obuf[64];
+		for ( long i = 0 ; i < klen ; i++ ) {
+			UChar32 ui = ttt[i];
+			long blen = utf8Encode(ui,obuf);
+			obuf[blen]=0;
+			long an = ucIsAlpha(ui);
+			
+			fprintf(stderr,"#%li=%s (alnum=%li)\n",i,obuf,an);
+		}
+		fprintf(stderr,"hey\n");
+		exit(0);
+	}
+	*/
+
+	/*
+
+	  PRINT OUT all Unicode characters and their decompositions
+
+	{
+		for ( long uc = 0 ; uc < 0xe01ef ; uc++ ) {
+			//if ( ! ucIsAlnum(uc) ) continue;
+			UChar32 ttt[32];
+			long klen = recursiveKDExpand(uc,ttt,256);
+			char obuf[64];
+			long clen = utf8Encode(uc,obuf);
+			obuf[clen]=0;
+			// print utf8 char we are decomposing
+			fprintf(stderr,"%lx) %s --> ",uc,obuf);
+			// sanity
+			if ( klen > 1 && ttt[0] == (UChar32)uc ) {
+				fprintf(stderr,"SAME\n");
+				continue;
+			}
+			// print decomposition
+			for ( long i = 0 ; i < klen ; i++ ) {
+				UChar32 ui = ttt[i];
+				char qbuf[64];
+				long blen = utf8Encode(ui,qbuf);
+				qbuf[blen]=0;
+				fprintf(stderr,"%s",qbuf);
+				// show the #
+				fprintf(stderr,"{%lx}",(long)ui);
+				if ( i+1<klen ) fprintf(stderr,", ");
+			}
+			// show utf8 rep
+			fprintf(stderr," [");
+			for ( long i = 0 ; i < clen ; i++ ) {
+				fprintf(stderr,"0x%hhx",(int)obuf[i]);
+				if ( i+1<clen) fprintf(stderr," ");
+			}
+			fprintf(stderr,"]");
+			fprintf(stderr,"\n");
+		}
+		exit(0);
+	}
+	*/			
+
+
+	
 
 	// the wiktionary for lang identification and alternate word forms/
 	// synonyms
@@ -16932,50 +17004,162 @@ bool isRecoveryFutile ( ) {
 	return true;
 }
 
-char *getcwd2 ( char *arg ) {
+char *getcwd2 ( char *arg2 ) {
+
+	// get full absolute non-symlink path from /proc/<pid>
+	/*
+	pid_t pid = getpid();
+	char ff[128];
+	sprintf(ff,"/proc/%lli/cmdline",(long long)pid);
+
+	int fd = open ( ff , O_RDONLY, 0 );
+	if ( ! fd ) return NULL;
+
+	static char s_cmdline[1024];
+	long len = read ( fd , s_cmdline, 990 );
+	if ( len<=0 || len > 1000 ) return NULL;
+
+	// take the /gb off the end
+	char *cend = s_cmdline + gbstrlen(s_cmdline)-1;
+	while ( cend>s_cmdline && *cend!='/' ) cend--;
+	if ( cend > s_cmdline ) end[1] = '\0';
+
+	return s_cmdline;
+	*/
+
+
+	// test it
+	//arg2 = "/bin/gb";
+
+	//fprintf(stderr,"arg2=%s\n",arg2);
+
+
+	char argBuf[1026];
+	char *arg = argBuf;
+
+	//
+	// arg2 examples:
+	// ./gb
+	// /bin/gb (symlink to ../../var/gigablast/data0/gb)
+	// /usr/bin/gb (symlink to ../../var/gigablast/data0/gb)
+	//
+
+	// 
+	// if it is a symbolic link...
+	// get real path (no symlinks symbolic links)
+	char tmp[1026];
+	long tlen = readlink ( arg2 , tmp , 1020 );
+	// if we got the actual path, copy that over
+	if ( tlen != -1 ) {
+		//fprintf(stderr,"tmp=%s\n",tmp);
+		// if symbolic link is relative...
+		if ( tmp[0]=='.' && tmp[1]=='.') {
+			// store original path (/bin/gb --> ../../var/gigablast/data/gb)
+			strcpy(arg,arg2); // /bin/gb
+			// back up to /
+			while(arg[gbstrlen(arg)-1] != '/' ) arg[gbstrlen(arg)-1] = '\0';
+			long len2 = gbstrlen(arg);
+			strcpy(arg+len2,tmp);
+		}
+		else {
+			strcpy(arg,tmp);
+		}
+	}
+	else {
+		strcpy(arg,arg2);
+	}
+
+ again:
+	// now remove ..'s from path
+	char *p = arg;
+	// char *start = arg;
+	for ( ; *p ; p++ ) {
+		if (p[0] != '.' || p[1] !='.' ) continue;
+		// if .. is at start of string
+		if ( p == arg ) {
+			memcpy ( arg , p+2,gbstrlen(p+2)+1);
+			goto again;
+		}
+		// find previous /
+		char *slash = p-1;
+		if ( *slash !='/' ) { char *xx=NULL;*xx=0; }
+		slash--;
+		for ( ; slash > arg && *slash != '/' ; slash-- );
+		if ( slash<arg) slash=arg;
+		memcpy(slash,p+2,gbstrlen(p+2)+1);
+		goto again;
+		// if can't back up anymore...
+	}
+
+
+
+
+	//fprintf(stderr,"arg=%s\n",arg);
+
 
 	// skip initial . and /
-	if ( arg[0] == '.' && arg[1] == '/' ) arg += 1;
+	//if ( arg[0] == '.' && arg[1] == '/' ) arg += 1;
 
 	char *a = arg;
 
-	// store path part before "/gb" or "/gigablast"
+	// remove "gb" from the end
 	long alen = 0;
 	for ( ; *a ; a++ ) {
 		if ( *a != '/' ) continue;
 		alen = a - arg + 1;
 	}
-
 	if ( alen > 512 ) {
 		log("db: path is too long");
 		g_errno = EBADENGINEER;
 		return NULL;
 	}
+	// hack off the "gb"
+	*a = '\0';
 
-	// store the relative path of gb in there now
+	// get cwd which is only relevant to us if arg starts 
+	// with . at this point
 	static char s_cwdBuf[1025];
 	getcwd ( s_cwdBuf , 1020 );
 	char *end = s_cwdBuf + gbstrlen(s_cwdBuf);
+	// make sure that shit ends in /
+	if ( s_cwdBuf[gbstrlen(s_cwdBuf)-1] != '/' ) {
+		long len = gbstrlen(s_cwdBuf);
+		s_cwdBuf[len] = '/';
+		s_cwdBuf[len+1] = '\0';
+		end++;
+	}
+
+	//fprintf(stderr,"cwdBuf=%s\n",s_cwdBuf);
+	//fprintf(stderr,"arg=%s\n",arg);
+		
 
 	// if "arg" is a RELATIVE path then append it
 	if ( arg && arg[0]!='/' ) {
-		memcpy ( end , arg , alen );
-		end += alen;
+		if ( arg[0]=='.' && arg[1]=='/' ) {
+			memcpy ( end , arg+2 , alen -2 );
+			end += alen - 2;
+		}
+		else {
+			memcpy ( end , arg , alen );
+			end += alen;
+		}
 		*end = '\0';
 	}
 	// if our path started with / then it was absolute...
 	else {
 		strncpy(s_cwdBuf,arg,alen);
+		s_cwdBuf[alen]='\0';
 	}
 
 	// make sure it ends in / for consistency
 	long clen = gbstrlen(s_cwdBuf);
 	if ( s_cwdBuf[clen-1] != '/' ) {
-		s_cwdBuf[clen++] = '/';
-		s_cwdBuf[clen++] = '\0';
+		s_cwdBuf[clen-1] = '/';
+		s_cwdBuf[clen] = '\0';
+		clen--;
 	}
 
-
+	//fprintf(stderr,"cwdBuf is %s\n",s_cwdBuf);
 	// size of the whole thing
 	//long clen = gbstrlen(s_cwdBuf);
 	// store terminating /
@@ -16985,6 +17169,16 @@ char *getcwd2 ( char *arg ) {
 	//}
 
 	//log("hey: hey %s",s_cwdBuf);
+
+	// ensure 'gb' binary exists in that dir. 
+	// binaryCmd is usually gb but use this just in case
+	char *binaryCmd = arg2 + gbstrlen(arg2) - 1;
+	for ( ; binaryCmd[-1] && binaryCmd[-1] != '/' ; binaryCmd-- );
+	File fff;
+	fff.set (s_cwdBuf,binaryCmd);
+	// if user just enters 'gb' in cmdline and it is not in cwd
+	// assume it is in the usual spot
+	if ( ! fff.doesExist() ) return "/var/gigablast/data0/";
 
 	return s_cwdBuf;
 }

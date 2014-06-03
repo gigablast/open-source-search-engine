@@ -10167,7 +10167,8 @@ void Parms::init ( ) {
 	m->m_cgi   = "isr";
 	m->m_off   = (char *)&cr.m_indexSpiderReplies - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	// default off for now until we fix it better. 5/26/14 mdw
+	m->m_def   = "0";
 	m++;
 
 	// i put this in here so i can save disk space for my global
