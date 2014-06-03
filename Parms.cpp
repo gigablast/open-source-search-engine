@@ -1127,8 +1127,13 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	// this must be outside of table, submit button follows
 	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "<br>\n" );
 
-	if ( page == PAGE_SPIDERPROXIES ) 
+	if ( page == PAGE_SPIDERPROXIES ) {
+		// wrap up the form, print a submit button
+		g_pages.printSubmit ( sb );
 		printSpiderProxyTable ( sb );
+		// do not print another submit button
+		return true;
+	}
 
 	// url filter page has a test table
 	if ( page == PAGE_FILTERS && fmt == FORMAT_HTML ) {
