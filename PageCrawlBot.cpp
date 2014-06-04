@@ -2375,6 +2375,15 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx, int version ) {
 		//nomen = "job";
 	}
 
+	// don't print completed time if spidering is going on
+	time_t completed = cx->m_diffbotCrawlEndTime;
+	// if not yet done, make this zero
+	if ( crawlStatus == SP_INITIALIZING ) completed = 0;
+	if ( crawlStatus == SP_NOURLS ) completed = 0;
+	//if ( crawlStatus == SP_PAUSED ) completed = 0;
+	//if ( crawlStatus == SP_ADMIN_PAUSED ) completed = 0;
+	if ( crawlStatus == SP_INPROGRESS ) completed = 0;
+
 	sb->safePrintf("\n\n{"
 		      "\"name\":\"%s\",\n"
 		      "\"type\":\"%s\",\n"
@@ -2410,7 +2419,7 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx, int version ) {
 
 		       , cx->m_diffbotCrawlStartTime
 		       // this is 0 if not over yet
-		       , cx->m_diffbotCrawlEndTime
+		       , completed
 
 		      //, alias
 		      //, (long)cx->m_spideringEnabled
