@@ -2148,8 +2148,17 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		}
 	}
 
-	// if restart flag is on and the file with bulk urls exists, get spots from there
-	if ( !spots && restartColl && cr && cr->m_isCustomCrawl ) {
+	// if restart flag is on and the file with bulk urls exists, 
+	// get spots from there
+	SafeBuf bb;
+	if ( !spots && restartColl && cr && cr->m_isCustomCrawl == 2 ) {
+		bb.load(bulkurlsfile);
+		bb.nullTerm();
+		spots = bb.getBufStart();
+		log("crawlbot: restarting bulk job bufsize=%li for %s",
+		    bb.length(), cr->m_coll);
+	}
+	/*
 	    FILE *f = fopen(bulkurlsfile, "r");
 	    if (f != NULL) {
 	        fseek(f, 0, SEEK_END);
@@ -2166,6 +2175,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		fclose(f);
 	    }
 	}
+	*/
 
 	///////
 	// 
