@@ -5744,11 +5744,12 @@ void PosdbTable::intersectLists10_r ( ) {
 	if ( m_q->m_isBoolean ) {
 		minScore = 1.0;
 		// since we are jumping, we need to set m_docId here
-		m_docId = *(unsigned long *)(docIdPtr+1);
-		m_docId <<= 8;
-		m_docId |= (unsigned char)docIdPtr[0];
-		m_docId >>= 2;
-		goto boolJump;
+		//m_docId = *(unsigned long *)(docIdPtr+1);
+		//m_docId <<= 8;
+		//m_docId |= (unsigned char)docIdPtr[0];
+		//m_docId >>= 2;
+		// we can't jump over setting of miniMergeList. do that.
+		goto boolJump1;
 	}
 
 	// TODO: consider skipping this pre-filter if it sucks, as it does
@@ -5945,6 +5946,8 @@ void PosdbTable::intersectLists10_r ( ) {
 	pass++;
 
  skipPreAdvance:
+
+ boolJump1:
 
 	// we need to do this for seo hacks to merge the synonyms together
 	// into one list
@@ -6234,6 +6237,8 @@ void PosdbTable::intersectLists10_r ( ) {
 	}
 
 
+	if ( m_q->m_isBoolean )
+		goto boolJump2;
 
 	//
 	//
@@ -6601,7 +6606,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		goto advance;
 
 
- boolJump:
+ boolJump2:
 
 	// try dividing it by 3! (or multiply by .33333 faster)
 	score = minScore * (((float)siteRank)*SITERANKMULTIPLIER+1.0);
