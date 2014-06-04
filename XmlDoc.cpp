@@ -23335,7 +23335,7 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 	if ( m_sreqValid && 
 	     // we create a new spiderrequest if injecting with a fake firstip
 	     // so it will fail this test...
-	     ! m_isInjecting ) {
+	     ! m_sreq.m_isInjecting ) {
 		long long lock1 = makeLockTableKey(&m_sreq);
 		long long lock2 = makeLockTableKey(&m_srep);
 		if ( lock1 != lock2 ) { 
