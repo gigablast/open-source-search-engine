@@ -128,6 +128,9 @@ bool Msg13::registerHandler ( ) {
 bool Msg13::getDoc ( Msg13Request *r,
 		     bool isTestColl , 
 		     void *state,void(*callback)(void *state)){
+
+	// reset in case we are being reused
+	reset();
 	
 	/*
 	char buf[1024];
@@ -319,12 +322,18 @@ bool Msg13::gotForwardedReply ( UdpSlot *slot ) {
 
 bool Msg13::gotFinalReply ( char *reply, long replySize, long replyAllocSize ){
 
+	// how is this happening? ah from image downloads...
+	if ( m_replyBuf ) { char *xx=NULL;*xx=0; }
+		
 	// assume none
 	m_replyBuf     = NULL;
 	m_replyBufSize = 0;
 
 	// shortcut
 	Msg13Request *r = m_request;
+
+	//log("msg13: reply=%lx replysize=%li g_errno=%s",
+	//    (long)reply,(long)replySize,mstrerror(g_errno));
 
 	if ( g_conf.m_logDebugRobots || g_conf.m_logDebugDownloads )
 		logf(LOG_DEBUG,"spider: FINALIZED %s firstIp=%s",

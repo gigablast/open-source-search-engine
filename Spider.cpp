@@ -1132,6 +1132,7 @@ SpiderColl::SpiderColl () {
 	m_numAdded = 0;
 	m_numBytesScanned = 0;
 	m_lastPrintCount = 0;
+	m_siteListIsEmptyValid = false;
 	//m_lastSpiderAttempt = 0;
 	//m_lastSpiderCouldLaunch = 0;
 	//m_numRoundsDone = 0;
@@ -10308,7 +10309,8 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			// if there is no domain or url explicitly listed
 			// then assume user is spidering the whole internet
 			// and we basically ignore "insitelist"
-			if ( sc->m_siteListIsEmpty ) {
+			if ( sc->m_siteListIsEmpty &&
+			     sc->m_siteListIsEmptyValid ) {
 				// use a dummy row match
 				row = (char *)1;
 			}
