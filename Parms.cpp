@@ -11086,13 +11086,14 @@ void Parms::init ( ) {
 	m->m_desc  = "Default language to use for ranking results. "
 		//"This should only be used on limited collections. "
 		"Value should be any language abbreviation, for example "
-		"\"en\" for English.";
+		"\"en\" for English. Use <i>xx</i> to give ranking "
+		"boosts to no language in particular.";
 	m->m_cgi   = "qlang";
 	m->m_off   = (char *)&cr.m_defaultSortLanguage - x;
 	m->m_soff  = (char *)&si.m_defaultSortLanguage - y;
 	m->m_type  = TYPE_STRING;
 	m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
-	m->m_def   = "en";//_US";
+	m->m_def   = "xx";//_US";
 	m->m_group = 0;
 	m->m_sparm = 1;
 	m->m_scgi  = "qlang";
