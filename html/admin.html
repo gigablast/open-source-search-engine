@@ -30,9 +30,19 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 
 <!--<a href=#weighting>Weighting Query Terms</a> - how to pass in your own query term weights<br><br>-->
 
-<a href=#requirements>Hardware Requirements</a> - what is required to run gigablast<br><br><a href=#perf>Performance Specifications</a> - various statistics.
+<a href=#requirements>Hardware Requirements</a> - what is required to run gigablast
 <br>
 <br>
+
+<a href=#perf>Performance Specifications</a> - various statistics.
+<br>
+<br>
+
+<a href=#scaling>Scaling the Cluster</a> - how to add more gb instances.
+<br>
+<br>
+
+
 <!--<a href=#files>List of Files</a> - the necessary files to run Gigablast
 <br>
 <br>-->
@@ -248,6 +258,10 @@ Also, keep in mind not to use these weighting operators between another query op
 At least one computer with 4GB RAM, 10GB of hard drive space and any distribution of Linux with the 2.4.25 kernel or higher. For decent performance invest in Intel Solid State Drives. I tested other brands around 2010 and found that they would freeze for up for 500ms every hour or so to do "garbage collection". That is unacceptable in general for a search engine. 
 Plus, Gigablast, reads and writes a lot of data at the same time under heavy spider and query loads, therefore disk will probably be your MAJOR bottleneck.<br><br>
 <br>
+
+
+
+
 <a name=perf></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Performance Specifications</td></tr></table>
@@ -296,6 +310,36 @@ Each directory should have the following files and subdirectories:<br><br>
 <br><br>
 <br>
 -->
+
+
+
+<a name=scaling></a>
+<table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
+<tr><td><center><b><font color=#ffffff size=+1>Scaling the Cluster</td></tr></table>
+<br>
+&lt;<i>Last Updated May 2014</i>&gt;
+<br>
+<br>
+1. Turn off spidering in the <a href=/admin/master>master controls</a>.
+<br>
+2. Shut down the clustering by doing a <b>gb stop</b> command on the command line OR by clicking on "save & exit" in the <a href=/admin/master>master controls</a>
+<br>
+3. Edit the hosts.conf file in the working directory to add the new hosts. (<a href=/hosts.conf.txt>sample hosts.conf</a>)
+<br>
+4. Ensure you can do passwordless ssh from host #0 to each new IP address you added. This generally requires running <b>ssh-keygen -t dsa</b> on host #0 to create the files <i>~/.ssh/id_dsa</i> and <i>~/.ssh/id_dsa.pub</i>. Then you need to insert the key in <i>~/.ssh/id_dsa.pub</i> into the <i>~/.ssh/authorized_keys2</i> file on every host, including host #0, in your cluster. Furthermore, you must do a <b>chmod 700 ~/.ssh/authorized_keys2</b> on each one otherwise the passwordless ssh will not work.
+<br>
+5. Run <b>gb install &lt;hostid&gt;</b> on host #0 for each new hostid to copy the required files from host #0 to the new hosts. This will do an <i>scp</i> which requires the passwordless ssh. &lt;hostid&gt; can be a range of hostids like <i>5-12</i> as well.
+<br>
+6. Run <b>gb start</b> on the command line to start up all gb instances/processes in the cluster.
+<br>
+7. Click on <b>rebalance shards</b> in the <a href=/admin/master>master controls</a> to begin moving data from the old shards to the new shards. The <a href=/admin/hosts>hosts table</a> will let you know when the rebalance operation is complete. It should be able to serve queries during the rebalancing, but spidering can not resume until it is completed.
+<br>
+<br>
+<br>
+
+
+
+
 
 <a name=clustermaint></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
