@@ -12143,10 +12143,14 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 		//bool has = cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider;
 		if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider &&
-		     ! cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider )
+		     ! cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider ) {
 			log("spider: all %li hosts report %s (%li) has no "
 			    "more urls ready to spider",
 			    s_replies,cr->m_coll,(long)cr->m_collnum);
+			// set crawl end time
+			cr->m_diffbotCrawlEndTime = getTimeGlobalNoCore();
+		}
+
 
 		// now copy over to global crawl info so things are not
 		// half ass should we try to read globalcrawlinfo
@@ -12362,8 +12366,6 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 			ci->m_hasUrlsReadyToSpider = 0;
 			// save that!
 			cr->m_needsSave = true;
-			// set the time that this happens
-			cr->m_diffbotCrawlEndTime = getTimeGlobalNoCore();
 		}
 		
 		// save it
