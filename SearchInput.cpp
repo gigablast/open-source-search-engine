@@ -904,7 +904,8 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 
 	log("query: using default lang of %s",getLangAbbr(m_queryLang));
 
-	if ( qs1 && qs1[0] && ! m_queryLang )
+	// allow for 'xx', which means langUnknown
+	if ( qs1 && qs1[0] && ! m_queryLang && qs1[0]!='x' )
 		log("query: qlang of \"%s\" is NOT SUPPORTED",qs1);
 
 
