@@ -2953,6 +2953,13 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].purge();
 		m_spiderPriorities[i] = 0;
 		m_maxSpidersPerRule [i] = 100;
+
+		// when someone has a bulk job of thousands of different
+		// domains it slows diffbot back-end down, so change this
+		// from 100 to 7 if doing a bulk job
+		if ( m_isCustomCrawl == 2 )
+			m_maxSpidersPerRule[i] = 7;
+
 		m_spiderIpWaits     [i] = wait;
 		m_spiderIpMaxSpiders[i] = 7; // keep it respectful
 		// ethan wants some speed
