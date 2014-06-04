@@ -13407,13 +13407,17 @@ void Parms::init ( ) {
 	m->m_xml   = "urlFiltersProfile";
 	m->m_desc  = "Rather than editing the table below, you can select "
 		"a predefined set of url instructions in this drop down menu "
-		"that will update the table for you. Selecting <i>None</i> "
+		"that will update the table for you. Selecting <i>custom</i> "
 		"allows you to make custom changes to the table. "
-		"Selecting <i>Web</i> configures the table for spidering "
+		"Selecting <i>web</i> configures the table for spidering "
 		"the web in general. "
-		"Selcting <i>News</i> configures the table for spidering "
-		"new sites."
-		"If you select a profile other than None then your changes "
+		"Selcting <i>news</i> configures the table for spidering "
+		"new sites. "
+		"Selecting <i>chinese</i> makes the spider prioritize the "
+		"spidering of chinese pages, etc. "
+		"Important: "
+		"If you select a profile other than <i>custom</i> "
+		"then your changes "
 		"to the table will be lost.";
 	m->m_off   = (char *)&cr.m_urlFiltersProfile - x;
 	m->m_colspan = 3;
