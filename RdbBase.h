@@ -272,7 +272,7 @@ class RdbBase {
 	long addFile     ( long fileId, bool isNew, long mergeNum, long id2 ,
 			   bool converting = false ) ;
 	long addNewFile  ( long id2 ) ;
-	long getAvailId2 ( ); // used only by titledb
+	//long getAvailId2 ( ); // used only by titledb
 
 	// used by the high priority udp server to suspend merging for ALL
 	// rdb's since we share a common merge class, s_merge

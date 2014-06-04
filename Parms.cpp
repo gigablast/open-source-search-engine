@@ -11164,13 +11164,14 @@ void Parms::init ( ) {
 	m->m_desc  = "Default language to use for ranking results. "
 		//"This should only be used on limited collections. "
 		"Value should be any language abbreviation, for example "
-		"\"en\" for English.";
+		"\"en\" for English. Use <i>xx</i> to give ranking "
+		"boosts to no language in particular.";
 	m->m_cgi   = "qlang";
 	m->m_off   = (char *)&cr.m_defaultSortLanguage - x;
 	m->m_soff  = (char *)&si.m_defaultSortLanguage - y;
 	m->m_type  = TYPE_STRING;
 	m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
-	m->m_def   = "en";//_US";
+	m->m_def   = "xx";//_US";
 	m->m_group = 0;
 	m->m_sparm = 1;
 	m->m_scgi  = "qlang";
@@ -13486,13 +13487,17 @@ void Parms::init ( ) {
 	m->m_xml   = "urlFiltersProfile";
 	m->m_desc  = "Rather than editing the table below, you can select "
 		"a predefined set of url instructions in this drop down menu "
-		"that will update the table for you. Selecting <i>None</i> "
+		"that will update the table for you. Selecting <i>custom</i> "
 		"allows you to make custom changes to the table. "
-		"Selecting <i>Web</i> configures the table for spidering "
+		"Selecting <i>web</i> configures the table for spidering "
 		"the web in general. "
-		"Selcting <i>News</i> configures the table for spidering "
-		"new sites."
-		"If you select a profile other than None then your changes "
+		"Selcting <i>news</i> configures the table for spidering "
+		"new sites. "
+		"Selecting <i>chinese</i> makes the spider prioritize the "
+		"spidering of chinese pages, etc. "
+		"Important: "
+		"If you select a profile other than <i>custom</i> "
+		"then your changes "
 		"to the table will be lost.";
 	m->m_off   = (char *)&cr.m_urlFiltersProfile - x;
 	m->m_colspan = 3;

@@ -2148,8 +2148,17 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		}
 	}
 
-	// if restart flag is on and the file with bulk urls exists, get spots from there
-	if ( !spots && restartColl && cr && cr->m_isCustomCrawl ) {
+	// if restart flag is on and the file with bulk urls exists, 
+	// get spots from there
+	SafeBuf bb;
+	if ( !spots && restartColl && cr && cr->m_isCustomCrawl == 2 ) {
+		bb.load(bulkurlsfile);
+		bb.nullTerm();
+		spots = bb.getBufStart();
+		log("crawlbot: restarting bulk job bufsize=%li for %s",
+		    bb.length(), cr->m_coll);
+	}
+	/*
 	    FILE *f = fopen(bulkurlsfile, "r");
 	    if (f != NULL) {
 	        fseek(f, 0, SEEK_END);
@@ -2166,6 +2175,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		fclose(f);
 	    }
 	}
+	*/
 
 	///////
 	// 
@@ -2375,6 +2385,15 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx, int version ) {
 		//nomen = "job";
 	}
 
+	// don't print completed time if spidering is going on
+	time_t completed = cx->m_diffbotCrawlEndTime;
+	// if not yet done, make this zero
+	if ( crawlStatus == SP_INITIALIZING ) completed = 0;
+	if ( crawlStatus == SP_NOURLS ) completed = 0;
+	//if ( crawlStatus == SP_PAUSED ) completed = 0;
+	//if ( crawlStatus == SP_ADMIN_PAUSED ) completed = 0;
+	if ( crawlStatus == SP_INPROGRESS ) completed = 0;
+
 	sb->safePrintf("\n\n{"
 		      "\"name\":\"%s\",\n"
 		      "\"type\":\"%s\",\n"
@@ -2410,7 +2429,7 @@ bool printCrawlDetailsInJson ( SafeBuf *sb , CollectionRec *cx, int version ) {
 
 		       , cx->m_diffbotCrawlStartTime
 		       // this is 0 if not over yet
-		       , cx->m_diffbotCrawlEndTime
+		       , completed
 
 		      //, alias
 		      //, (long)cx->m_spideringEnabled

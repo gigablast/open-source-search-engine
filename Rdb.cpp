@@ -1428,7 +1428,9 @@ bool Rdb::dumpCollLoop ( ) {
 	// . get the biggest fileId
 	long id2 = -1;
 	if ( m_isTitledb ) {
-		id2 = base->getAvailId2 ( );
+		//id2 = base->getAvailId2 ( );
+		// this is obsolete, make it always 000 now
+		id2 = 000;
 		// only allow 254 for the merge routine so we can merge into
 		// another file...
 		if ( id2 < 0 || id2 >= 254 ) 
@@ -1436,12 +1438,14 @@ bool Rdb::dumpCollLoop ( ) {
 				   "available secondary id for titledb: %s." , 
 				   mstrerror(g_errno) );
 	}
+	// this file must not exist already, we are dumping the tree into it
 	m_fn = base->addNewFile ( id2 ) ;
 	if ( m_fn < 0 ) return log(LOG_LOGIC,"db: rdb: Failed to add new file "
 				"to dump %s: %s." , 
 				m_dbname,mstrerror(g_errno) );
 
-	log(LOG_INFO,"build: Dumping to %s for coll \"%s\".",
+	log(LOG_INFO,"build: Dumping to %s/%s for coll \"%s\".",
+	    base->m_files[m_fn]->m_dir,
 	    base->m_files[m_fn]->getFilename() , 
 	    g_collectiondb.getCollName ( m_dumpCollnum ) );
 	// . append it to "sync" state we have in memory

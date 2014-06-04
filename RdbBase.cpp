@@ -764,6 +764,19 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 		sprintf ( name , "%s%04li.%03li.dat", m_dbname, id , mergeNum);
 	f->set ( getDir() , name , NULL ); // getStripeDir() );
 
+	// if new insure does not exist
+	if ( isNew && f->doesExist() ) {
+		log("rdb: creating NEW file %s/%s which already exists!",
+		    f->m_dir,
+		    f->getFilename());
+		char *xx=NULL;*xx=0;
+	}
+
+	// debug help
+	if ( isNew )
+		log("rdb: adding new file %s/%s m_numFiles=%li",
+		    f->m_dir,f->getFilename(),m_numFiles);
+
 	// rename bug fix?
 	/*
 	if ( ! isNew && id != 1 && m_isTitledb && m_rdb->m_rdbId == RDB_TITLEDB ) {
@@ -883,6 +896,8 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 	return i;
 }
 
+/*
+// this is obsolete now
 // returns -1 and sets g_errno if none available
 long RdbBase::getAvailId2 ( ) {
 	// . otherwise we're titledb, find an available second id
@@ -910,6 +925,7 @@ long RdbBase::getAvailId2 ( ) {
 	}
 	return i;
 }
+*/
 
 long RdbBase::addNewFile ( long id2 ) {
 
@@ -2010,7 +2026,9 @@ void RdbBase::gotTokenForMerge ( ) {
 	// get new id, -1 on error
 	id2 = -1;
 	if ( m_isTitledb ) {
-		id2 = getAvailId2 ( );
+		//id2 = getAvailId2 ( );
+		// this is obsolete, make 000 for now
+		id2 = 000;
 		if ( id2 < 0 ) {
 			log(LOG_LOGIC,"merge: attemptMerge: could not add "
 			    "new file for titledb. No avail ids."); 
@@ -2058,9 +2076,14 @@ void RdbBase::gotTokenForMerge ( ) {
 	m_numFilesToMerge   = n  ; // numFiles - 1;
 	m_mergeStartFileNum = mergeFileNum + 1; // 1
 
+	CollectionRec *cr = g_collectiondb.getRec ( m_collnum );
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+
 	// log merge parms
-	log(LOG_INFO,"merge: Merging %li %s files to file id %li now.",
-	    n,m_dbname,mergeFileId);
+	log(LOG_INFO,"merge: Merging %li %s files to file id %li now. "
+	    "collnum=%li coll=%s",
+	    n,m_dbname,mergeFileId,(long)m_collnum,coll);
 
 	// print out file info
 	m_numPos = 0;
