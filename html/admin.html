@@ -46,7 +46,12 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 <!--<a href=#files>List of Files</a> - the necessary files to run Gigablast
 <br>
 <br>-->
-<a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br><a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems
+<a href=#cmdline>Command Line Options</a> - various command line options (coming soon)<br><br>
+
+<!--
+<a href=#clustermaint>Cluster Maintenance</a> - running Gigablast on a cluster of computers.<br><br><a href=#trouble>Troubleshooting</a> - how to fix problems
+-->
+
 <!--<br><br><a href=#disaster>Disaster Recovery</a> - dealing with a crashed host-->
 <!--<br><br>
 <a href=#security>The Security System</a> - how to control access-->
@@ -340,7 +345,7 @@ Each directory should have the following files and subdirectories:<br><br>
 
 
 
-
+<!--
 <a name=clustermaint></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Cluster Maintenance</td></tr></table>
@@ -394,6 +399,10 @@ For the purposes of this section, we assume the name of the cluster is gf and al
 <li>Copy the new executable onto gf0<br>   <b>$ scp gb user@gf0:/a/</b><li>Install the executable on all machines.<br>   <b>$ gb installgb</b><br><li>This will copy the gb executable to all hosts.  You must wait until all of the scp processes have completed before starting the gb process.  Run ps to verify that all of the scp processes have finished.<br>   <b>$ ps auxww</b><li>Run gb start<br>   <b>$ gb start </b><li>As soon as all of the hosts have started, you can use the web interface to gigablast.<br></ul>
 <b>To switch the live cluster from the current (cluster1) to another (cluster2):</b><ul>
 <li>Ensure that the gb.conf of cluster2 matches that of cluster1, excluding any desired changes.<br><li>Ensure that the coll.conf for each collection on cluster2 matches those of cluster1, excluding any desired changes.<br><li>Thoroughly test cluster2 using the blaster program.<br><li>Test duplicate queries between cluster1 and cluster2 and ensure results properly match, with the exception of any known new changes.<br><li>Make sure port 80 on cluster2 is directing to the correct port for gb.<br>    <b>$ iptables -t nat -A PREROUTING -i eth0 -p tcp -m tcp --dport 80 -j DNAT --to-destination 2.2.2.2:8000</b><br><li>Test that cluster2 works correctly by accessing it from a browser using only it's IP in the address.<br><li>For both primary and secondary DNS servers, perform the following:<br><ul><li>Edit /etc/bind/db.&lt;hostname&gt; (i.e. db.gigablast.com)<br>        <b>$ vi /etc/bind/db.gigablast.com</b><br>    <li>Change lines using cluster1's ip to have cluster2's ip. It is recommended that comment out the old line with a ; at the front.<br>        <b>i.e.: "www&nbsp;&nbsp;IN&nbsp;&nbsp;A&nbsp;&nbsp;1.1.1.1" >>                 "www&nbsp;&nbsp;IN&nbsp;&nbsp;A&nbsp;&nbsp;2.2.2.2"</b><br>    <li>Edit /etc/bind/db.64<br>        <b>$ vi /etc/bind/db.64</b><br>    <li>Change lines with cluster1's last IP number to have cluster2's last IP number.<br>        <b>i.e.: "1&nbsp;&nbsp;IN&nbsp;&nbsp;PTR&nbsp;&nbsp;www.gigablast.com" >> "2&nbsp;&nbsp;IN&nbsp;&nbsp;PTR&nbsp;&nbsp;www.gigablast.com"</b><br>    <li>Restart named.<br>        <b>$ /etc/rc3.d/S15bind9 restart</b><br></ul><li>Again, test that cluster2 works correctly by accessing it from a browser using only it's IP in the address.<br><li>Check log0 of cluster2 to make sure it is recieving queries.<br>    <b>$ tail -f /a/log0</b><br><li>Allow cluster1 to remain active until all users have switched over to cluster2.<br></ul><br>
+-->
+
+
+
 <a name=trouble></a>
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Troubleshooting</td></tr></table>
