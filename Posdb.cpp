@@ -4115,6 +4115,7 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		// get one
 		QueryTermInfo *qti = &qip[nrg];
 		// and set it
+		qti->m_qt            = qt;
 		qti->m_qtermNum      = i;
 		qti->m_qpos          = wordNum;
 		qti->m_wikiPhraseId  = qw->m_wikiPhraseId;
@@ -4629,9 +4630,46 @@ void PosdbTable::rmDocIdVotes ( QueryTermInfo *qti ) {
 	// shrink the buffer size now
 	m_docIdVoteBuf.setLength ( dst - bufStart );
 	return;
+
 }
+// for boolean queries containing terms like gbmin:offerprice:190
+inline bool isInRange( char *p , QueryTerm *qt ) {
 
+	// return false if outside of range
+	if ( qt->m_fieldCode == FIELD_GBNUMBERMIN ) {
+		float score2 = g_posdb.getFloat ( p );
+		return ( score2 >= qt->m_qword->m_float );
+	}
 
+	if ( qt->m_fieldCode == FIELD_GBNUMBERMAX ) {
+		float score2 = g_posdb.getFloat ( p );
+		return ( score2 <= qt->m_qword->m_float );
+	}
+
+	if ( qt->m_fieldCode == FIELD_GBNUMBERMININT ) {
+		long score2 = g_posdb.getInt ( p );
+		return ( score2 >= qt->m_qword->m_int );
+	}
+
+	if ( qt->m_fieldCode == FIELD_GBNUMBERMAXINT ) {
+		long score2 = g_posdb.getInt ( p );
+		return ( score2 <= qt->m_qword->m_int );
+	}
+
+	// how did this happen?
+	char *xx=NULL;*xx=0;
+	return true;
+}
+		
+inline bool isInRange2 ( char *recPtr , char *subListEnd, QueryTerm *qt ) {
+	// if we got a range term see if in range.
+	if ( isInRange(recPtr,qt) ) return true;
+	recPtr += 12;
+	for(;recPtr<subListEnd&&((*recPtr)&0x04);recPtr +=6) {
+		if ( isInRange(recPtr,qt) ) return true;
+	}
+	return false;
+}
 
 // . add a QueryTermInfo for a term (synonym lists,etc) to the docid vote buf
 //   "m_docIdVoteBuf"
@@ -4648,6 +4686,19 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 	register char *dpEnd;
 	register char *recPtr     ;
 	char          *subListEnd ;
+
+	// range terms tend to disappear if the docid's value falls outside
+	// of the specified range... gbmin:offerprice:190
+	bool isRangeTerm = false;
+	QueryTerm *qt = qti->m_qt;
+	if ( qt->m_fieldCode == FIELD_GBNUMBERMIN ) 
+		isRangeTerm = true;
+	if ( qt->m_fieldCode == FIELD_GBNUMBERMAX ) 
+		isRangeTerm = true;
+	if ( qt->m_fieldCode == FIELD_GBNUMBERMININT ) 
+		isRangeTerm = true;
+	if ( qt->m_fieldCode == FIELD_GBNUMBERMAXINT ) 
+		isRangeTerm = true;
 
 	// . just scan each sublist vs. the docid list
 	// . a sublist is a termlist for a particular query term, for instance
@@ -4688,6 +4739,15 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 			if ( *(unsigned char *)(dp) <
 			     (*(unsigned char *)(recPtr+7) ) ) // & 0xfc ) )
 				continue;
+
+			// if we are a range term, does this subtermlist
+			// for this docid meet the min/max requirements
+			// of the range term, i.e. gbmin:offprice:190.
+			// if it doesn't then do not add this docid to the
+			// docidVoteBuf, "dp"
+			if ( isRangeTerm && ! isInRange2(recPtr,subListEnd,qt))
+				break;
+
 			// . equal! record our vote!
 			// . we start at zero for the
 			//   first termlist, and go to 1, etc.
@@ -4697,11 +4757,16 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 			// advance recPtr now
 			break;
 		}
+
 		// if we've exhausted this docid list go to next sublist
+		// since this docid is NOT in the current/ongoing intersection
+		// of the docids for each queryterm
 		if ( dp >= dpEnd ) continue;
+
 		// skip that docid record in our termlist. it MUST have been
 		// 12 bytes, a docid heading record.
 		recPtr += 12;
+
 		// skip any following keys that are 6 bytes, that means they
 		// share the same docid
 		for ( ; recPtr < subListEnd && ((*recPtr)&0x04); recPtr += 6 );
@@ -6640,6 +6705,13 @@ void PosdbTable::intersectLists10_r ( ) {
 		//score = (float)intScore;
 	}
 
+	/*
+
+	  // this logic now moved into isInRange2() when we fill up
+	  // the docidVoteBuf. we won't add the docid if it fails one
+	  // of these range terms. But if we are a boolean query then
+	  // we handle it in makeDocIdVoteBufForBoolQuery_r() below.
+
 	// skip docid if outside of range
 	if ( m_minScoreTermNum >= 0 ) {
 		// no term?
@@ -6675,6 +6747,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		score3= g_posdb.getInt ( miniMergedList[m_maxScoreTermNumInt]);
 		if ( score3 > m_maxScoreValInt ) goto advance;
 	}
+	*/
 
 	// now we have a maxscore/maxdocid upper range so the widget
 	// can append only new results to an older result set.
@@ -7143,6 +7216,19 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 		// just use the word # now
 		//long opNum = qw->m_wordNum;//opNum;
 
+		// if this query term # is a gbmin:offprice:190 type
+		// of thing, then we may end up ignoring it based on the
+		// score contained within!
+		bool isRangeTerm = false;
+		if ( qt->m_fieldCode == FIELD_GBNUMBERMIN ) 
+			isRangeTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBNUMBERMAX ) 
+			isRangeTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBNUMBERMININT ) 
+			isRangeTerm = true;
+		if ( qt->m_fieldCode == FIELD_GBNUMBERMAXINT ) 
+			isRangeTerm = true;
+
 		// . make it consistent with Query::isTruth()
 		// . m_bitNum is set above to the QueryTermInfo #
 		long bitNum = qt->m_bitNum;
@@ -7152,12 +7238,14 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 
 		// set all to zeroes
 		memset ( bitVec , 0 , m_vecSize );
-		// set bitvec for him
+
+		// set bitvec for this query term #
 		long byte = bitNum / 8;
 		unsigned char mask = 1<<(bitNum % 8);
 		bitVec[byte] |= mask;
 
-		// each query term can have synonym lists etc. scan those
+		// each query term can have synonym lists etc. scan those.
+		// this includes the original query termlist as well.
 		for ( long j = 0 ; j < qti->m_numSubLists ; j++ ) {
 
 			// scan all docids in this list
@@ -7166,9 +7254,14 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 
 			//long long lastDocId = 0LL;
 
+			// scan the sub termlist #j
 			for ( ; p < pend ; ) {
 				// place holder
 				long long docId = g_posdb.getDocId(p);
+
+				// assume this docid is not in range if we
+				// had a range term like gbmin:offerprice:190
+				bool inRange = false;
 
 				// sanity
 				//if ( d < lastDocId ) { char *xx=NULL;*xx=0; }
@@ -7176,6 +7269,11 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 
 				// point to it
 				//char *dp = p + 8;
+
+				// check each posdb key for compliance
+				// for gbmin:offprice:190 bool terms
+				if ( isRangeTerm && isInRange(p,qt) )
+					inRange = true;
 
 				// this was the first key for this docid for 
 				// this termid and possible the first key for 
@@ -7188,7 +7286,20 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 				// then only 6 byte keys would follow from the
 				// same docid, so skip those as well
 			subloop:
-				if((((char *)p)[0])&0x04){p += 6;goto subloop;}
+				if((((char *)p)[0])&0x04){
+					// check each posdb key for compliance
+					// for gbmin:offprice:190 bool terms
+					if ( isRangeTerm && isInRange(p,qt) )
+						inRange = true;
+					p += 6;
+					goto subloop;
+				}
+
+				// if we had gbmin:offprice:190 and it
+				// was not satisfied, then do not OR in this
+				// bit in the bitvector for the docid
+				if ( isRangeTerm && ! inRange )
+					continue;
 
 				// convert docid into hash key
 				//long long docId = *(long long *)dp;
