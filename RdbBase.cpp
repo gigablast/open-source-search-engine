@@ -886,6 +886,9 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 
 	// inc # of files we have
 	m_numFiles++;
+	// debug note
+	log("rdb: numFiles=%li for collnum=%li db=%s",
+	    m_numFiles,(long)m_collnum,m_dbname);
 	// keep it NULL terminated
 	m_files [ m_numFiles ] = NULL;
 	// if we added a merge file, mark it
@@ -1293,6 +1296,9 @@ void RdbBase::buryFiles ( long a , long b ) {
 	memcpy (&m_fileIds2[a], &m_fileIds2[b], n*sizeof(long     ));
 	// decrement the file count appropriately
 	m_numFiles -= (b-a);
+	// sanity
+	log("rdb: bury files: numFiles now %li (b=%li a=%li collnum=%li)",
+	    m_numFiles,b,a,(long)m_collnum);
 	// ensure last file is NULL (so BigFile knows the end of m_files)
 	m_files [ m_numFiles ] = NULL;
 }
