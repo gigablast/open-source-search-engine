@@ -1182,6 +1182,8 @@ void RdbBase::doneWrapper2 ( ) {
 
 void doneWrapper3 ( void *state ) {
 	RdbBase *THIS = (RdbBase *)state;
+	log("rdb: thread completed rename operation for collnum=%li "
+	    "#threads=%li",(long)THIS->m_collnum,THIS->m_numThreads);
 	THIS->doneWrapper4 ( );
 }
 
@@ -1967,10 +1969,12 @@ void RdbBase::gotTokenForMerge ( ) {
 		if ( i > 0 && prevSize < total/4 ) tooBig = 1;
 		log(LOG_INFO,"merge: i=%li n=%li ratio=%.2f adjratio=%.2f "
 		    "minr=%.2f mint=%lli mini=%li prevFileSize=%lli "
-		    "mergeFileSize=%lli tooBig=%li oldestfile=%.02fdays",
+		    "mergeFileSize=%lli tooBig=%li oldestfile=%.02fdays "
+		    "collnum=%li",
 		    i,n,ratio,adjratio,minr,mint,mini,
 		    prevSize , total ,(long)tooBig,
-		    ((float)nowLocal-date)/(24*3600.0) );
+		    ((float)nowLocal-date)/(24*3600.0) ,
+		    (long)m_collnum);
 
 		// . if we are merging the last file, penalize it
 		// . otherwise, we dump little files out and almost always
