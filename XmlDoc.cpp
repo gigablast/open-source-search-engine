@@ -2080,6 +2080,9 @@ void XmlDoc::getRevisedSpiderRequest ( SpiderRequest *revisedReq ) {
 	// this must be valid for us of course
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
 
+	// wtf?
+	if ( m_firstIp == 0 || m_firstIp == -1 ) { char *xx=NULL;*xx=0; }
+
 	// store the real ip in there now
 	revisedReq->m_firstIp = m_firstIp;
 
@@ -2226,6 +2229,16 @@ bool XmlDoc::indexDoc ( ) {
 			m_indexCodeValid = true;
 			goto logErr;
 		}
+		// sanity log
+		if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+		// sanity log
+		if ( *fip == 0 || *fip == -1 ) {
+			char *url = "unknown";
+			if ( m_sreqValid ) url = m_sreq.m_url;
+			log("build: error2 getting real firstip of %li for "
+			    "%s. Not adding new spider req", (long)*fip,url);
+			goto skipNewAdd1;
+		}
 		// store the new request (store reply for this below)
 		m_metaList2.pushChar(RDB_SPIDERDB);
 		// store it here
@@ -2238,6 +2251,7 @@ bool XmlDoc::indexDoc ( ) {
 			return true;
 	}
 
+ skipNewAdd1:
 
 	////
 	//
@@ -22086,6 +22100,19 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		SpiderRequest revisedReq;
 		// this fills it in
 		getRevisedSpiderRequest ( &revisedReq );
+
+		// sanity log
+		if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+
+		// sanity log
+		if ( m_firstIp == 0 || m_firstIp == -1 ) {
+			char *url = "unknown";
+			if ( m_sreqValid ) url = m_sreq.m_url;
+			log("build: error3 getting real firstip of %li for "
+			    "%s. not adding new request.",(long)m_firstIp,url);
+			goto skipNewAdd2;
+		}
+
 		// store it back
 		memcpy ( m_p , &revisedReq , revisedReq.getRecSize() );
 		// skip over it
@@ -22093,6 +22120,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// sanity check
 		if ( m_p - saved > needSpiderdb3 ) { char *xx=NULL;*xx=0; }
 	}
+
+ skipNewAdd2:
 
 	// 
 	// ADD SPIDERDB RECORDS of outlinks
