@@ -4866,6 +4866,22 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 		return;
 	}
 
+	bool inRange;
+
+	// if we are a range term, does this subtermlist
+	// for this docid meet the min/max requirements
+	// of the range term, i.e. gbmin:offprice:190.
+	// if it doesn't then do not add this docid to the
+	// docidVoteBuf, "dp"
+	if ( isRangeTerm ) {
+		// a new docid i guess
+		inRange = false;
+		// no longer in range
+		if ( isInRange2(cursor[mini],cursorEnd[mini],qt))
+			inRange = true;
+	}
+		
+
 	// advance that guy over that docid
 	cursor[mini] += 12;
 	// 6 byte keys follow?
@@ -4878,6 +4894,11 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 		}
 		// if we hit a new 12 byte key for a new docid, stop
 		if ( ! ( cursor[mini][0] & 0x04 ) ) break;
+
+		// check range again
+		if (isRangeTerm && isInRange2(cursor[mini],cursorEnd[mini],qt))
+			inRange = true;
+
 		// otherwise, skip this 6 byte key
 		cursor[mini] += 6;
 	}
@@ -4890,9 +4911,6 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 	   *(unsigned char *)(minRecPtr+7))
 		goto getMin;
 
-	// update
-	lastMinRecPtr = minRecPtr;
-
 	// . do not store the docid if not in the whitelist
 	// . FIX: two lower bits, what are they? at minRecPtrs[7].
 	// . well the lowest bit is the siterank upper bit and the
@@ -4903,6 +4921,13 @@ void PosdbTable::addDocIdVotes ( QueryTermInfo *qti , long   listGroupNum ) {
 	if ( m_useWhiteTable && ! m_whiteListTable.isInTable(minRecPtr+7) )
 		goto getMin;
 		
+	if ( isRangeTerm && ! inRange )
+		goto getMin;
+
+	// only update this if we add the docid... that way there can be
+	// a winning "inRange" term in another sublist and the docid will
+	// get added.
+	lastMinRecPtr = minRecPtr;
 
 	// store our docid. actually it contains two lower bits not
 	// part of the docid, so we'll have to shift and mask to get
