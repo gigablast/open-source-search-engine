@@ -111,6 +111,7 @@ struct SafeBuf {
 	bool  csvEncode ( char *s , long len , long niceness = 0 );
 
 	bool  base64Encode ( char *s , long len , long niceness = 0 );
+	bool  base64Decode ( char *src , long srcLen , long niceness = 0 ) ;
 
 	//bool  pushLong ( long val ) { return safeMemcpy((char *)&val,4); }
 	bool  cat(SafeBuf& c);

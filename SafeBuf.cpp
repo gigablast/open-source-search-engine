@@ -3377,6 +3377,79 @@ bool SafeBuf::base64Encode ( char *sx , long len , long niceness ) {
 	return true;
 }
 
+
+bool SafeBuf::base64Decode ( char *src , long srcLen , long niceness ) {
+
+	// make the map
+	static unsigned char s_bmap[256];
+	static bool s_init = false;
+	if ( ! s_init ) {
+		s_init = true;
+		memset ( s_bmap , 0 , 256 );
+		unsigned char val = 0;
+		for ( unsigned char c = 'A' ; c <= 'Z'; c++ ) 
+			s_bmap[c] = val++;
+		for ( unsigned char c = 'a' ; c <= 'z'; c++ ) 
+			s_bmap[c] = val++;
+		for ( unsigned char c = '0' ; c <= '9'; c++ ) 
+			s_bmap[c] = val++;
+		if ( val != 62 ) { char *xx=NULL;*xx=0; }
+		s_bmap['+'] = 62;
+		s_bmap['/'] = 63;
+	}
+
+	// reserve twice as much space i guess
+	if ( ! reserve ( srcLen * 2 + 1 ) ) return false;
+		
+	// leave room for \0
+	char *dst = getBuf();
+	char *dstEnd = getBufEnd(); // dst + dstSize - 5;
+	nullTerm();
+	unsigned char *p    = (unsigned char *)src;
+	unsigned char val;
+	for ( ; ; ) {
+		QUICKPOLL(niceness);
+		if ( *p ) {val = s_bmap[*p]; p++; } else val = 0;
+		// copy 6 bits
+		*dst <<= 6;
+		*dst |= val;
+		if ( *p ) {val = s_bmap[*p]; p++; } else val = 0;
+		// copy 2 bits
+		*dst <<= 2;
+		*dst |= (val>>4);
+		dst++;
+		// copy 4 bits
+		*dst = val & 0xf;
+		if ( *p ) {val = s_bmap[*p]; p++; } else val = 0;
+		// copy 4 bits
+		*dst <<= 4;
+		*dst |= (val>>2);
+		dst++;
+		// copy 2 bits
+		*dst = (val&0x3);
+		if ( *p ) {val = s_bmap[*p]; p++; } else val = 0;
+		// copy 6 bits
+		*dst <<= 6;
+		*dst |= val;
+		dst++;
+		// sanity
+		if ( dst >= dstEnd ) {
+			log("safebuf: bas64decode breach");
+			//char *xx=NULL;*xx=0;
+			*dst = '\0';
+			return false;
+		}
+		if ( ! *p ) break;
+	}
+	// update
+	m_length = dst - m_buf;
+	// null term just in case
+	//dst[1] = '\0';
+	nullTerm();
+	return true;
+}
+
+
 // "ts" is a delta-t in seconds
 bool SafeBuf::printTimeAgo ( long ago , long now ) {
 	// Jul 23, 1971
