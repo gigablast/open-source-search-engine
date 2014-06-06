@@ -18981,9 +18981,11 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	}
 
 
-
-	if ( m_sreqValid && m_sreq.m_errCount )
-		sb->safePrintf("olderrcount=%li ",(long)m_sreq.m_errCount );
+	// Spider.cpp sets m_sreq.m_errCount before adding it to doledb
+	if ( m_sreqValid ) // && m_sreq.m_errCount )
+		sb->safePrintf("errcnt=%li ",(long)m_sreq.m_errCount );
+	else
+		sb->safePrintf("errcnt=? ");
 
 	if ( ptr_redirUrl ) { // m_redirUrlValid && m_redirUrlPtr ) {
 		sb->safePrintf("redir=%s ",ptr_redirUrl);//m_redirUrl.getUrl());
