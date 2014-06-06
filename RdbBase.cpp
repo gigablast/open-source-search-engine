@@ -1372,7 +1372,9 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	long numFiles = m_numFiles;
 	if ( numFiles > 0 && m_dump->isDumping() ) numFiles--;
 	// need at least 1 file to merge, stupid (& don't forget: u r stooopid)
-	if ( numFiles <= 1 ) return;
+	// crap, we need to recover those tagdb0000.002.dat files, so
+	// comment this out so we can do a resume on it
+	//if ( numFiles <= 1 ) return;
 	// . wait for all unlinking and renaming activity to flush out
 	// . otherwise, a rename or unlink might still be waiting to happen
 	//   and it will mess up our merge
@@ -1544,6 +1546,10 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		resuming = true;
 		break;
 	}
+
+	// this triggers the negative rec concentration msg below and
+	// tries to merge on one file...
+	if ( ! resuming && m_numFiles <= 1 ) return;
 
 	// what percent of recs in the collections' rdb are negative?
 	// the rdbmaps hold this info
@@ -1808,7 +1814,12 @@ void RdbBase::gotTokenForMerge ( ) {
 			log("merge: Only merging %li instead of the "
 			    "original %li files.",mm,n);
 			// cause the "if (mm==0)" to kick in below
-			//if ( mm == 1 ) mm = 0;
+			if ( mm == 1 || mm == 0 ) {
+				mm = 0;
+				// fix renaming final merged file tagdb-001.dat
+				mergeFileId = 2;
+				m_fileIds[j] = 1;
+			}
 		}
 		// how many files to merge?
 		n = mm;
@@ -1830,6 +1841,7 @@ void RdbBase::gotTokenForMerge ( ) {
 				sprintf(fbuf,"%s%04li-%03li.dat",
 					m_dbname,mergeFileId-1,id2);
 			log("merge: renaming final merged file %s",fbuf);
+			// this does not use a thread...
 			m_files[j]->rename(fbuf);
 			sprintf(fbuf,"%s%04li.map",m_dbname,mergeFileId-1);
 			//File *mf = m_maps[j]->getFile();
