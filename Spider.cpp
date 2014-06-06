@@ -3837,11 +3837,19 @@ bool SpiderColl::scanListForWinners ( ) {
 		// for a url, then bail if respidering is disabled
 		if ( m_cr->m_isCustomCrawl && 
 		     srep && 
+
 		     // no! for bulk jobs and crawl jobs we ALWAYS retry
 		     // on errors... tmp errors, but this is just a shortcut
 		     // so only take this shortcut if there is no error
 		     // and repeat is 0.0
-		     srep->m_errCode == 0 &&
+		     ( srep->m_errCode == 0 || 
+		       // BUT skip this url if the job is not in progress
+		       // even if the errCode is NON-zero, THUS we prevent
+		       // a job from flip flopping from in progress to
+		       // not in progress and sending out alerts. so once
+		       // it goes to NOT in progress, that's it...
+		       m_cr->m_spiderStatus != SP_INPROGRESS ) &&
+
 		     m_cr->m_collectiveRespiderFrequency <= 0.0 ) {
 			if ( g_conf.m_logDebugSpider )
 				log("spider: skipping0 %s",sreq->m_url);
