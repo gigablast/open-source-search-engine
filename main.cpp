@@ -6622,6 +6622,8 @@ long dumpSpiderdb ( char *coll,
 	long long offset = 0LL;
 	long now;
 	static long long s_lastRepUh48 = 0LL;
+	static long s_lastErrCode = 0;
+	static long s_lastErrCount = 0;
 	CollectionRec *cr = g_collectiondb.getRec(coll);
 
  loop:
@@ -6674,6 +6676,8 @@ long dumpSpiderdb ( char *coll,
 			SpiderReply *srep = (SpiderReply *)srec;
 			// store it
 			s_lastRepUh48 = srep->getUrlHash48();
+			s_lastErrCode = srep->m_errCode;
+			s_lastErrCount = srep->m_errCount;
 			countReplies++;
 			// get firstip
 			if ( printStats == 1 ) addUStat2 ( srep , now );
@@ -6698,6 +6702,15 @@ long dumpSpiderdb ( char *coll,
 			g_spiderdb.print ( srec );
 			printf(" age=%lis",now-sreq->m_addedTime);
 			printf(" hadReply=%li",(long)hadReply);
+
+			printf(" errcount=%li",(long)s_lastErrCount);
+
+			if ( s_lastErrCode )
+				printf(" errcode=%li(%s)",(long)s_lastErrCode,
+				       mstrerror(s_lastErrCode));
+			else
+				printf(" errcode=%li",(long)s_lastErrCode);
+
 			// we haven't loaded hosts.conf so g_hostdb.m_map
 			// is not set right... so this is useless
 			//printf(" shard=%li\n",

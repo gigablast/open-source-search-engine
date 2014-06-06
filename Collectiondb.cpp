@@ -3002,7 +3002,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 
 	m_regExs[i].set("errorcount>=1 && !hastmperror");
 	m_spiderPriorities   [i] = 15;
-	m_spiderFreqs        [i] = 0.00; // 86 seconds
+	m_spiderFreqs        [i] = 0.0;
 	m_maxSpidersPerRule  [i] = 0; // turn off spiders if not tmp error
 	i++;
 
@@ -3015,13 +3015,15 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	// and for docs that have errors respider once every 5 hours
 	m_regExs[i].set("errorcount==2 && hastmperror");
 	m_spiderPriorities   [i] = 40;
-	m_spiderFreqs        [i] = 0.1; // 2.4 hrs
+	m_spiderFreqs        [i] = 0.003; // 3*86 seconds (was 24 hrs)
 	i++;
 
 	// excessive errors? (tcp/dns timed out, etc.) retry once per month?
 	m_regExs[i].set("errorcount>=3 && hastmperror");
 	m_spiderPriorities   [i] = 30;
 	m_spiderFreqs        [i] = 30; // 30 days
+	// if bulk job, do not download a url more than 3 times
+	if ( m_isCustomCrawl == 2 ) m_maxSpidersPerRule [i] = 0;
 	i++;
 
 	// 3rd rule for respidering

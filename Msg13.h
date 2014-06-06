@@ -13,6 +13,8 @@
 
 void resetMsg13Caches ( ) ;
 
+extern char *g_fakeReply;
+
 class Msg13Request {
 public:
 

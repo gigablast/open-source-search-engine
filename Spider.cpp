@@ -3837,6 +3837,19 @@ bool SpiderColl::scanListForWinners ( ) {
 		// for a url, then bail if respidering is disabled
 		if ( m_cr->m_isCustomCrawl && 
 		     srep && 
+
+		     // no! for bulk jobs and crawl jobs we ALWAYS retry
+		     // on errors... tmp errors, but this is just a shortcut
+		     // so only take this shortcut if there is no error
+		     // and repeat is 0.0
+		     ( srep->m_errCode == 0 || 
+		       // BUT skip this url if the job is not in progress
+		       // even if the errCode is NON-zero, THUS we prevent
+		       // a job from flip flopping from in progress to
+		       // not in progress and sending out alerts. so once
+		       // it goes to NOT in progress, that's it...
+		       m_cr->m_spiderStatus != SP_INPROGRESS ) &&
+
 		     m_cr->m_collectiveRespiderFrequency <= 0.0 ) {
 			if ( g_conf.m_logDebugSpider )
 				log("spider: skipping0 %s",sreq->m_url);
@@ -12143,10 +12156,14 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 
 		//bool has = cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider;
 		if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider &&
-		     ! cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider )
+		     ! cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider ) {
 			log("spider: all %li hosts report %s (%li) has no "
 			    "more urls ready to spider",
 			    s_replies,cr->m_coll,(long)cr->m_collnum);
+			// set crawl end time
+			cr->m_diffbotCrawlEndTime = getTimeGlobalNoCore();
+		}
+
 
 		// now copy over to global crawl info so things are not
 		// half ass should we try to read globalcrawlinfo
@@ -12362,8 +12379,6 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 			ci->m_hasUrlsReadyToSpider = 0;
 			// save that!
 			cr->m_needsSave = true;
-			// set the time that this happens
-			cr->m_diffbotCrawlEndTime = getTimeGlobalNoCore();
 		}
 		
 		// save it

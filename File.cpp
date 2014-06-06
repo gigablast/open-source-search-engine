@@ -277,7 +277,7 @@ void File::close1_r ( ) {
 		// -1 just means it was already closed, probably this is
 		// from unlinking and RdbMap file which is closed after we
 		// read it in at startup.
-		log(LOG_INFO,"disk: close1_r: m_vfd=%i < 0",m_vfd);
+		log(LOG_DEBUG,"disk: close1_r: m_vfd=%i < 0",m_vfd);
 		return ;
 	}
 	// panic!
@@ -292,8 +292,8 @@ void File::close1_r ( ) {
 	}
 	// this is < 0 if invalid
 	int fd = s_fds [ m_vfd ];
-	// debug
-	log(LOG_INFO,"disk: close1_r: Closing  fd=%i for %s after "
+	// debug. don't log in thread - might hurt us
+	log(LOG_DEBUG,"disk: close1_r: Closing  fd=%i for %s after "
 	    "unlink/rename.",fd,m_filename);
 
 	if ( fd < 0 ) return ;
