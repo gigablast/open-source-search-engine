@@ -15,13 +15,37 @@ void resetMsg13Caches ( ) ;
 
 class Msg13Request {
 public:
-	long long m_urlHash48;
-	long  m_urlIp;
-	long  m_firstIp;
 
+	// the top portion of Msg13Request is sent to handleRequest54()
+	// in SpiderProxy.cpp to get and return proxies, as well as to
+	// ban proxies.
+	long getProxyRequestSize() { return (char *)&m_lastHack-(char *)this;};
+	long  m_urlIp;
 	long  m_lbId; // loadbucket id
-	long  m_httpProxyIp;
-	short m_httpProxyPort;
+	// the http proxy to use to download
+	long  m_proxyIp;
+	short m_proxyPort;
+	long  m_banProxyIp;
+	short m_banProxyPort;
+	char  m_opCode;
+	char  m_lastHack;
+
+	// not part of the proxy request, but set from ProxyReply:
+	long  m_numBannedProxies;
+	// . if using proxies, how many proxies have we tried to download 
+	//   this url through
+	// . used internally in Msg13.cpp
+	long m_proxyTries;
+	// if using proxies, did host #0 tell us there were more to try if
+	// this one did not work out?
+	bool m_hasMoreProxiesToTry;
+
+	// we call this function after the imposed crawl-delay is over
+	void (*m_hammerCallback)(class Msg13Request *r);
+
+
+	long long m_urlHash48;
+	long  m_firstIp;
 
 	char  m_niceness;
 	long  m_ifModifiedSince;
