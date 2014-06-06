@@ -1907,8 +1907,11 @@ long getMsgSize ( char *buf, long bufSize, TcpSocket *s ) {
 		// if post is a /cgi/12.cgi (tagdb) allow 10 megs
 		//if ( pp + 11 < ppend && strncmp ( pp ,"/cgi/12.cgi",11)==0)
 		if ( pp + 12 < ppend && strncmp ( pp ,"/admin/tagdb",12)==0)
-			max = 10*1024*1024;
+			max = 0x7fffffff;;//10*1024*1024;
 		if ( pp + 4 < ppend && strncmp ( pp ,"/vec",4)==0)
+			max = 0x7fffffff;
+		// /admin/basic etc
+		if ( pp + 7 < ppend && strncmp ( pp ,"/admin/",7)==0)
 			max = 0x7fffffff;
 		// bulk job. /v2/bulk
 		if ( pp + 4 < ppend && strncmp ( pp ,"/v",2)==0 &&
