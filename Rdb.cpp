@@ -1661,6 +1661,11 @@ void Rdb::attemptMerge ( long niceness , bool forced , bool doLog ) {
 		RdbBase *base = getBase(i);
 		if ( ! base ) continue;
 		base->attemptMerge(niceness,forced,doLog);
+		// stop if we got unlink/rename threads out from a merge
+		// in RdbBase.cpp beause the merge can't go until this is 0
+		// lest we have 2000 collections all trying to merge tagdb
+		// at the same time!!!! this happened once...
+		if ( g_numThreads > 0 ) break;
 	}
 }
 

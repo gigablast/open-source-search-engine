@@ -1059,8 +1059,8 @@ bool RdbBase::incorporateMerge ( ) {
 		// linkdb0001.003.dat file and not the stuff we merged
 		if ( ! m_files[i] ) continue;
 		// debug msg
-		log(LOG_INFO,"merge: Unlinking merged file %s (#%li).",
-		     m_files[i]->getFilename(),i);
+		log(LOG_INFO,"merge: Unlinking merged file %s/%s (#%li).",
+		    m_files[i]->m_dir,m_files[i]->getFilename(),i);
 		// . append it to "sync" state we have in memory
 		// . when host #0 sends a OP_SYNCTIME signal we dump to disk
 		//g_sync.addOp ( OP_UNLINK , m_files[i] , 0 );
@@ -1110,6 +1110,7 @@ bool RdbBase::incorporateMerge ( ) {
 
 void doneWrapper ( void *state ) {
 	RdbBase *THIS = (RdbBase *)state;
+	log("merge: done unlinking file. #threads=%li",THIS->m_numThreads);
 	THIS->doneWrapper2 ( );
 }
 
@@ -1380,9 +1381,20 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		if ( doLog )
 			log(LOG_INFO,"merge: Waiting for unlink/rename "
 			    "operations to finish before attempting merge "
-			    "for %s.",m_dbname);
+			    "for %s. (collnum=%li)",m_dbname,(long)m_collnum);
 		return;
 	}
+
+	if ( g_numThreads > 0 ) {
+		if ( doLog )
+			log(LOG_INFO,"merge: Waiting for another "
+			    "collection's unlink/rename "
+			    "operations to finish before attempting merge "
+			    "for %s (collnum=%li).",m_dbname,(long)m_collnum);
+		return;
+	}
+
+
 	// set m_minToMerge from coll rec if we're indexdb
 	CollectionRec *cr = g_collectiondb.m_recs [ m_collnum ];
 	// now see if collection rec is there to override us
@@ -1697,6 +1709,10 @@ void RdbBase::gotTokenForMerge ( ) {
 			//"in order to merge %s.",m_dbname);
 		return;
 	}
+
+	// or if # threads out is positive
+	if ( m_numThreads > 0 ) return;
+
 	// clear for take-off
 	//m_inWaiting = false;
 	//	log(0,"RdbBase::attemptMerge: someone else merging"); return; }
@@ -1728,6 +1744,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	//	i = -1;
 	//	goto skip;
 	//}
+
+	char rdbId = getIdFromRdb ( m_rdb );
 
 	// if one file is even #'ed then we were merging into that, but
 	// got interrupted and restarted. maybe the power went off or maybe
@@ -1786,8 +1804,12 @@ void RdbBase::gotTokenForMerge ( ) {
 			if ( i > j ) mm++;
 			mint += m_files[i]->getFileSize();
 		}
-		if ( mm != n ) log("merge: Only merging %li instead of the "
-				   "original %li files.",mm,n);
+		if ( mm != n ) {
+			log("merge: Only merging %li instead of the "
+			    "original %li files.",mm,n);
+			// cause the "if (mm==0)" to kick in below
+			//if ( mm == 1 ) mm = 0;
+		}
 		// how many files to merge?
 		n = mm;
 		// allow a single file to continue merging if the other
@@ -1797,7 +1819,7 @@ void RdbBase::gotTokenForMerge ( ) {
 		// if we've already merged and already unlinked, then the
 		// process exited, now we restart with just the final 
 		// merge final and we need to do the rename
-		if ( mm == 0 ) {
+		if ( mm == 0 && rdbId != RDB_TITLEDB ) {
 			m_isMerging = false;
 			// make a fake file before us that we were merging
 			// since it got nuked on disk
@@ -2117,7 +2139,7 @@ void RdbBase::gotTokenForMerge ( ) {
 
 	m_rdb->m_numMergesOut++;
 
-	char rdbId = getIdFromRdb ( m_rdb );
+	//char rdbId = getIdFromRdb ( m_rdb );
 
 	// sanity check
 	if ( m_niceness == 0 ) { char *xx=NULL;*xx=0 ; }
