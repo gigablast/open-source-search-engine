@@ -3022,6 +3022,8 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	m_regExs[i].set("errorcount>=3 && hastmperror");
 	m_spiderPriorities   [i] = 30;
 	m_spiderFreqs        [i] = 30; // 30 days
+	// if bulk job, do not download a url more than 3 times
+	if ( m_isCustomCrawl == 2 ) m_maxSpidersPerRule [i] = 0;
 	i++;
 
 	// 3rd rule for respidering
