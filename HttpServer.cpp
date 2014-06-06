@@ -1914,8 +1914,12 @@ long getMsgSize ( char *buf, long bufSize, TcpSocket *s ) {
 		if ( pp + 4 < ppend && strncmp ( pp ,"/v",2)==0 &&
 		     // /v2/bulk
 		     ( ( pp[4] == 'b' && pp[5] == 'u' ) ||
-		     // /v19/bulk
-		       ( pp[5] == 'b' && pp[6] == 'u' ) )   )
+		       // /v19/bulk
+		       ( pp[5] == 'b' && pp[6] == 'u' ) ||
+		       // /vN/crawl
+		       ( pp[4] == 'c' && pp[5] == 'r' ) ||
+		       // /vNN/crawl
+		       ( pp[5] == 'c' && pp[6] == 'r' ) ) )
 			max = 0x7fffffff;
 		// flag it as a post
 		isPost = true;
