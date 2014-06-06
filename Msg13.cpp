@@ -889,12 +889,18 @@ void gotHttpReply2 ( void *state ,
 	// DO NOT do this if savedErr is set because we end up calling
 	// sendErorrReply() below for that!
 	if ( replySize>0 && r->m_compressReply && ! savedErr ) {
-		// exclude the \0 i guess. use NULL for url.
-		mime.set ( reply , replySize - 1, NULL );
-		// no, its on the content only, NOT including mime
-		mimeLen = mime.getMimeLen();
-		// get this
-		httpStatus = mime.getHttpStatus();
+		// assume fake reply
+		if ( reply == g_fakeReply ) {
+			httpStatus = 200;
+		}
+		else {
+			// exclude the \0 i guess. use NULL for url.
+			mime.set ( reply , replySize - 1, NULL );
+			// no, its on the content only, NOT including mime
+			mimeLen = mime.getMimeLen();
+			// get this
+			httpStatus = mime.getHttpStatus();
+		}
 		// if it's -1, unknown i guess, then force to 505
 		// server side error. we get an EBADMIME for our g_errno
 		// when we enter this loop sometimes, so in that case...
@@ -947,6 +953,9 @@ void gotHttpReply2 ( void *state ,
 	long contentLen = replySize - 1 - mimeLen;
 	// fix bad crap
 	if ( contentLen < 0 ) contentLen = 0;
+
+	// fake http 200 reply?
+	if ( reply == g_fakeReply ) { content = NULL; contentLen = 0; }
 
 	/*
 	if ( replySize > 0 && 
