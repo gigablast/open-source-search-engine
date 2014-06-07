@@ -2976,6 +2976,8 @@ void UdpServer::destroySlot ( UdpSlot *slot ) {
 	if ( rbuf == slot->m_tmpBuf ) rbuf = NULL;
 	// sometimes handlers will use our slots m_tmpBuf to store the reply
 	if ( sbuf == slot->m_tmpBuf ) sbuf = NULL;
+	// nothing allocated. used by Msg13.cpp g_fakeBuf
+	if ( sbufSize == 0 ) sbuf = NULL;
 	// NULLify here now just in case
 	slot->m_readBuf      = NULL;
 	slot->m_sendBuf      = NULL;

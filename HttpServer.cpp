@@ -1907,15 +1907,22 @@ long getMsgSize ( char *buf, long bufSize, TcpSocket *s ) {
 		// if post is a /cgi/12.cgi (tagdb) allow 10 megs
 		//if ( pp + 11 < ppend && strncmp ( pp ,"/cgi/12.cgi",11)==0)
 		if ( pp + 12 < ppend && strncmp ( pp ,"/admin/tagdb",12)==0)
-			max = 10*1024*1024;
+			max = 0x7fffffff;;//10*1024*1024;
 		if ( pp + 4 < ppend && strncmp ( pp ,"/vec",4)==0)
+			max = 0x7fffffff;
+		// /admin/basic etc
+		if ( pp + 7 < ppend && strncmp ( pp ,"/admin/",7)==0)
 			max = 0x7fffffff;
 		// bulk job. /v2/bulk
 		if ( pp + 4 < ppend && strncmp ( pp ,"/v",2)==0 &&
 		     // /v2/bulk
 		     ( ( pp[4] == 'b' && pp[5] == 'u' ) ||
-		     // /v19/bulk
-		       ( pp[5] == 'b' && pp[6] == 'u' ) )   )
+		       // /v19/bulk
+		       ( pp[5] == 'b' && pp[6] == 'u' ) ||
+		       // /vN/crawl
+		       ( pp[4] == 'c' && pp[5] == 'r' ) ||
+		       // /vNN/crawl
+		       ( pp[5] == 'c' && pp[6] == 'r' ) ) )
 			max = 0x7fffffff;
 		// flag it as a post
 		isPost = true;

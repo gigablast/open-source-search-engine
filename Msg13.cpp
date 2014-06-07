@@ -9,6 +9,12 @@
 #include "Test.h"
 #include "Speller.h"
 
+char *g_fakeReply = 
+	"HTTP/1.0 200 (OK)\r\n"
+	"Content-Length: 0\r\n"
+	"Connection: Close\r\n"
+	"Content-Type: text/html\r\n\r\n\0";
+
 long convertIntoLinks ( char *reply , long replySize ) ;
 long filterRobotsTxt ( char *reply , long replySize , HttpMime *mime ,
 		       long niceness , char *userAgent , long uaLen ) ;
@@ -730,16 +736,15 @@ void downloadTheDocForReals ( Msg13Request *r ) {
 			"(compatible; MSIE 6.0; Windows 98; "
 			"Win 9x 4.90)" ;
 
-	// for bulk jobs avoid actual downloads of the page for efficiency
+	// . for bulk jobs avoid actual downloads of the page for efficiency
+	// . g_fakeReply is just a simple mostly empty 200 http reply
 	if ( r->m_isCustomCrawl == 2 ) {
-		char *s = 
-			"HTTP/1.0 200 (OK)\r\n"
-			"Content-Length: 0\r\n"
-			"Connection: Close\r\n"
-			"Content-Type: text/html\r\n\r\n";
-		long slen = gbstrlen(s);
+		long slen = gbstrlen(g_fakeReply);
 		long fakeBufSize = slen + 1;
-		char *fakeBuf = mdup ( s , fakeBufSize , "fkblk");
+		// try to fix memleak
+		char *fakeBuf = g_fakeReply;//mdup ( s, fakeBufSize , "fkblk");
+		//r->m_freeMe = fakeBuf;
+		//r->m_freeMeSize = fakeBufSize;
 		gotHttpReply2 ( r , 
 				fakeBuf,
 				fakeBufSize, // include \0
@@ -884,12 +889,18 @@ void gotHttpReply2 ( void *state ,
 	// DO NOT do this if savedErr is set because we end up calling
 	// sendErorrReply() below for that!
 	if ( replySize>0 && r->m_compressReply && ! savedErr ) {
-		// exclude the \0 i guess. use NULL for url.
-		mime.set ( reply , replySize - 1, NULL );
-		// no, its on the content only, NOT including mime
-		mimeLen = mime.getMimeLen();
-		// get this
-		httpStatus = mime.getHttpStatus();
+		// assume fake reply
+		if ( reply == g_fakeReply ) {
+			httpStatus = 200;
+		}
+		else {
+			// exclude the \0 i guess. use NULL for url.
+			mime.set ( reply , replySize - 1, NULL );
+			// no, its on the content only, NOT including mime
+			mimeLen = mime.getMimeLen();
+			// get this
+			httpStatus = mime.getHttpStatus();
+		}
 		// if it's -1, unknown i guess, then force to 505
 		// server side error. we get an EBADMIME for our g_errno
 		// when we enter this loop sometimes, so in that case...
@@ -942,6 +953,9 @@ void gotHttpReply2 ( void *state ,
 	long contentLen = replySize - 1 - mimeLen;
 	// fix bad crap
 	if ( contentLen < 0 ) contentLen = 0;
+
+	// fake http 200 reply?
+	if ( reply == g_fakeReply ) { content = NULL; contentLen = 0; }
 
 	/*
 	if ( replySize > 0 && 
@@ -1337,6 +1351,8 @@ void gotHttpReply2 ( void *state ,
 			copy          = (char *)mdup(reply,replySize,"msg13d");
 			copyAllocSize = replySize;
 		}
+		// this is not freeable
+		if ( copy == g_fakeReply ) copyAllocSize = 0;
 		// get request
 		Msg13Request *r2;
 		r2 = *(Msg13Request **)s_rt.getValueFromSlot(tableSlot);
@@ -1409,6 +1425,8 @@ void passOnReply ( void *state , UdpSlot *slot ) {
 	// as the send buf for "udpSlot"
 	slot->m_readBuf     = NULL;
 	slot->m_readBufSize = 0;
+	// prevent udpserver from trying to free g_fakeReply
+	if ( reply == g_fakeReply ) replyAllocSize = 0;
 	//long  replyAllocSize = slot->m_readBufSize;
 	// just forward it on
 	g_udpServer.sendReply_ass (reply,replySize,

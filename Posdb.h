@@ -401,6 +401,7 @@ class Posdb {
 // . these should be 1-1 with query terms, Query::m_qterms[]
 class QueryTermInfo {
 public:
+	class QueryTerm *m_qt;
 	// the required lists for this query term, synonym lists, etc.
 	RdbList  *m_subLists        [MAX_SUBLISTS];
 	// flags to indicate if bigram list should be scored higher

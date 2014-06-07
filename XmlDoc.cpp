@@ -1315,7 +1315,9 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	}
 	else {
 		// add www is now REQUIRED for all!
-		setFirstUrl ( sreq->m_url , true ); // false );
+		// crap, injection of tmblr.co/ZHw5yo1E5TAaW fails because
+		// www.tmblr.co has no IP
+		setFirstUrl ( sreq->m_url , false );//true ); // false );
 		// you can't call this from a docid based url until you
 		// know the uh48
 		//setSpideredTime();
@@ -1934,7 +1936,9 @@ bool XmlDoc::injectDoc ( char *url ,
 
 	// normalize url
 	Url uu;
-	uu.set(url,gbstrlen(url),true);
+	// do not add www to fix tmblr.co/ZHw5yo1E5TAaW injection
+	// which has no www.tmblr.co IP!
+	uu.set(url,gbstrlen(url),false);//true);
 
 	// remove >'s i guess and store in st1->m_url[] buffer
 	char cleanUrl[MAX_URL_LEN+1];
@@ -2079,6 +2083,9 @@ void XmlDoc::getRevisedSpiderRequest ( SpiderRequest *revisedReq ) {
 
 	// this must be valid for us of course
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+
+	// wtf?
+	if ( m_firstIp == 0 || m_firstIp == -1 ) { char *xx=NULL;*xx=0; }
 
 	// store the real ip in there now
 	revisedReq->m_firstIp = m_firstIp;
@@ -2226,6 +2233,16 @@ bool XmlDoc::indexDoc ( ) {
 			m_indexCodeValid = true;
 			goto logErr;
 		}
+		// sanity log
+		if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+		// sanity log
+		if ( *fip == 0 || *fip == -1 ) {
+			char *url = "unknown";
+			if ( m_sreqValid ) url = m_sreq.m_url;
+			log("build: error2 getting real firstip of %li for "
+			    "%s. Not adding new spider req", (long)*fip,url);
+			goto skipNewAdd1;
+		}
 		// store the new request (store reply for this below)
 		m_metaList2.pushChar(RDB_SPIDERDB);
 		// store it here
@@ -2238,6 +2255,7 @@ bool XmlDoc::indexDoc ( ) {
 			return true;
 	}
 
+ skipNewAdd1:
 
 	////
 	//
@@ -12286,6 +12304,7 @@ long *XmlDoc::getIp ( ) {
 	if ( m_sreqValid && m_sreq.m_isInjecting  ) delay = 0;
 	if ( m_sreqValid && m_sreq.m_isPageParser ) delay = 0;
 	if ( m_sreqValid && m_sreq.m_isScraping   ) delay = 0;
+	if ( m_sreqValid && m_sreq.m_fakeFirstIp  ) delay = 0;
 	// . don't do the delay when downloading extra doc, robots.txt etc.
 	// . this also reports a status msg of "getting new doc" when it
 	//   really means "delaying spider"
@@ -12349,13 +12368,17 @@ long *XmlDoc::gotIp ( bool save ) {
 	if ( g_errno ) return NULL;
 	// this is bad too
 	//if ( m_ip == 0 || m_ip == -1 ) m_indexCode = EBADIP;
-	// note it
 	//log("db: got ip %s for %s",iptoa(m_ip),getCurrentUrl()->getUrl());
 
 	setStatus ("got ip");
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
+
+	// note it for crawlbot
+	if ( cr->m_isCustomCrawl && ( m_ip == 0 || m_ip == -1 ) )
+		log("db: got ip %li for %s",
+		    m_ip,getCurrentUrl()->getUrl());
 
 	bool useTestCache = false;
 	if ( ! strcmp(cr->m_coll,"qatest123") ) useTestCache = true;
@@ -18958,9 +18981,11 @@ bool XmlDoc::logIt ( SafeBuf *bb ) {
 	}
 
 
-
-	if ( m_sreqValid && m_sreq.m_errCount )
-		sb->safePrintf("olderrcount=%li ",(long)m_sreq.m_errCount );
+	// Spider.cpp sets m_sreq.m_errCount before adding it to doledb
+	if ( m_sreqValid ) // && m_sreq.m_errCount )
+		sb->safePrintf("errcnt=%li ",(long)m_sreq.m_errCount );
+	else
+		sb->safePrintf("errcnt=? ");
 
 	if ( ptr_redirUrl ) { // m_redirUrlValid && m_redirUrlPtr ) {
 		sb->safePrintf("redir=%s ",ptr_redirUrl);//m_redirUrl.getUrl());
@@ -22086,6 +22111,19 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		SpiderRequest revisedReq;
 		// this fills it in
 		getRevisedSpiderRequest ( &revisedReq );
+
+		// sanity log
+		if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
+
+		// sanity log
+		if ( m_firstIp == 0 || m_firstIp == -1 ) {
+			char *url = "unknown";
+			if ( m_sreqValid ) url = m_sreq.m_url;
+			log("build: error3 getting real firstip of %li for "
+			    "%s. not adding new request.",(long)m_firstIp,url);
+			goto skipNewAdd2;
+		}
+
 		// store it back
 		memcpy ( m_p , &revisedReq , revisedReq.getRecSize() );
 		// skip over it
@@ -22093,6 +22131,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// sanity check
 		if ( m_p - saved > needSpiderdb3 ) { char *xx=NULL;*xx=0; }
 	}
+
+ skipNewAdd2:
 
 	// 
 	// ADD SPIDERDB RECORDS of outlinks
@@ -23687,8 +23727,10 @@ char *XmlDoc::addOutlinkSpiderRecsToMetaList ( ) {
 		//   before it was not!
 		//if ( flags & LF_OLDLINK ) continue;
 
-		// set it. addWWW = true!
-		Url url; url.set ( s , slen , true );
+		// set it. addWWW = true! no.. make it false because of issues
+		// like tmblr.co/ZHw5yo1E5TAaW injection where 
+		// www.tmblr.co has no IP
+		Url url; url.set ( s , slen , false ); // true );
 
 		// if hostname length is <= 2 then SILENTLY reject it
 		if ( url.getHostLen() <= 2 ) continue;
@@ -24850,6 +24892,7 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 		Url iu;
 		// use "pageUrl" as the baseUrl
 		Url *cu = getCurrentUrl();
+		// we can addwww to normalize since this is for deduping kinda
 		iu.set ( cu , src , srcLen , true );  // addWWW? yes...
 		char *u    = iu.getUrl   ();
 		long  ulen = iu.getUrlLen();
@@ -25756,6 +25799,8 @@ bool XmlDoc::hashLinks ( HashTableX *tt ) {
 		// it's to cnn.com or www.cnn.com.
 		// Every now and then we add new session ids to our list in
 		// Url.cpp, too, so we have to version that.
+		// Since this is just for hashing, it shouldn't matter that
+		// www.tmblr.co has no IP whereas only tmblr.co does.
 		link.set ( m_links.m_linkPtrs[i] , 
 			   m_links.m_linkLens[i] ,
 			   true          , // addWWW? 
@@ -27421,8 +27466,9 @@ Url *XmlDoc::getBaseUrl ( ) {
 	if ( ! xml || xml == (Xml *)-1 ) return (Url *)xml;
 	Url *cu = getCurrentUrl();
 	if ( ! cu || cu == (void *)-1 ) return (Url *)cu;
-	// set it
-	m_baseUrl.set ( cu , true ); // addWWW = true
+	// no longer set addWWW to true since tmblr.co has an IP but
+	// www.tmblr.co does not
+	m_baseUrl.set ( cu , false ); // addWWW = true
 	// look for base url
 	for ( long i=0 ; i < xml->getNumNodes() ; i++ ) {
 		// 12 is the <base href> tag id
@@ -28117,6 +28163,11 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		m_checkedUrlFilters = true;
 
 		// a non-www url?
+		/*
+
+		  now we allow domain-only urls in the index, so this is 
+		  hurting us...
+
 		if ( ! m_req->m_getLinkText ) {
 			Url tmp;
 			tmp.set ( ptr_firstUrl );
@@ -28137,6 +28188,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 				return reply;
 			}
 		}
+		*/
 
 		// get this
 		//time_t nowGlobal = getTimeGlobal();

@@ -886,6 +886,9 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 
 	// inc # of files we have
 	m_numFiles++;
+	// debug note
+	log("rdb: numFiles=%li for collnum=%li db=%s",
+	    m_numFiles,(long)m_collnum,m_dbname);
 	// keep it NULL terminated
 	m_files [ m_numFiles ] = NULL;
 	// if we added a merge file, mark it
@@ -1056,8 +1059,8 @@ bool RdbBase::incorporateMerge ( ) {
 		// linkdb0001.003.dat file and not the stuff we merged
 		if ( ! m_files[i] ) continue;
 		// debug msg
-		log(LOG_INFO,"merge: Unlinking merged file %s (#%li).",
-		     m_files[i]->getFilename(),i);
+		log(LOG_INFO,"merge: Unlinking merged file %s/%s (#%li).",
+		    m_files[i]->m_dir,m_files[i]->getFilename(),i);
 		// . append it to "sync" state we have in memory
 		// . when host #0 sends a OP_SYNCTIME signal we dump to disk
 		//g_sync.addOp ( OP_UNLINK , m_files[i] , 0 );
@@ -1107,6 +1110,7 @@ bool RdbBase::incorporateMerge ( ) {
 
 void doneWrapper ( void *state ) {
 	RdbBase *THIS = (RdbBase *)state;
+	log("merge: done unlinking file. #threads=%li",THIS->m_numThreads);
 	THIS->doneWrapper2 ( );
 }
 
@@ -1179,6 +1183,8 @@ void RdbBase::doneWrapper2 ( ) {
 
 void doneWrapper3 ( void *state ) {
 	RdbBase *THIS = (RdbBase *)state;
+	log("rdb: thread completed rename operation for collnum=%li "
+	    "#threads=%li",(long)THIS->m_collnum,THIS->m_numThreads);
 	THIS->doneWrapper4 ( );
 }
 
@@ -1293,6 +1299,9 @@ void RdbBase::buryFiles ( long a , long b ) {
 	memcpy (&m_fileIds2[a], &m_fileIds2[b], n*sizeof(long     ));
 	// decrement the file count appropriately
 	m_numFiles -= (b-a);
+	// sanity
+	log("rdb: bury files: numFiles now %li (b=%li a=%li collnum=%li)",
+	    m_numFiles,b,a,(long)m_collnum);
 	// ensure last file is NULL (so BigFile knows the end of m_files)
 	m_files [ m_numFiles ] = NULL;
 }
@@ -1363,7 +1372,9 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 	long numFiles = m_numFiles;
 	if ( numFiles > 0 && m_dump->isDumping() ) numFiles--;
 	// need at least 1 file to merge, stupid (& don't forget: u r stooopid)
-	if ( numFiles <= 1 ) return;
+	// crap, we need to recover those tagdb0000.002.dat files, so
+	// comment this out so we can do a resume on it
+	//if ( numFiles <= 1 ) return;
 	// . wait for all unlinking and renaming activity to flush out
 	// . otherwise, a rename or unlink might still be waiting to happen
 	//   and it will mess up our merge
@@ -1372,9 +1383,20 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		if ( doLog )
 			log(LOG_INFO,"merge: Waiting for unlink/rename "
 			    "operations to finish before attempting merge "
-			    "for %s.",m_dbname);
+			    "for %s. (collnum=%li)",m_dbname,(long)m_collnum);
 		return;
 	}
+
+	if ( g_numThreads > 0 ) {
+		if ( doLog )
+			log(LOG_INFO,"merge: Waiting for another "
+			    "collection's unlink/rename "
+			    "operations to finish before attempting merge "
+			    "for %s (collnum=%li).",m_dbname,(long)m_collnum);
+		return;
+	}
+
+
 	// set m_minToMerge from coll rec if we're indexdb
 	CollectionRec *cr = g_collectiondb.m_recs [ m_collnum ];
 	// now see if collection rec is there to override us
@@ -1524,6 +1546,10 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 		resuming = true;
 		break;
 	}
+
+	// this triggers the negative rec concentration msg below and
+	// tries to merge on one file...
+	if ( ! resuming && m_numFiles <= 1 ) return;
 
 	// what percent of recs in the collections' rdb are negative?
 	// the rdbmaps hold this info
@@ -1689,6 +1715,10 @@ void RdbBase::gotTokenForMerge ( ) {
 			//"in order to merge %s.",m_dbname);
 		return;
 	}
+
+	// or if # threads out is positive
+	if ( m_numThreads > 0 ) return;
+
 	// clear for take-off
 	//m_inWaiting = false;
 	//	log(0,"RdbBase::attemptMerge: someone else merging"); return; }
@@ -1720,6 +1750,8 @@ void RdbBase::gotTokenForMerge ( ) {
 	//	i = -1;
 	//	goto skip;
 	//}
+
+	char rdbId = getIdFromRdb ( m_rdb );
 
 	// if one file is even #'ed then we were merging into that, but
 	// got interrupted and restarted. maybe the power went off or maybe
@@ -1778,8 +1810,17 @@ void RdbBase::gotTokenForMerge ( ) {
 			if ( i > j ) mm++;
 			mint += m_files[i]->getFileSize();
 		}
-		if ( mm != n ) log("merge: Only merging %li instead of the "
-				   "original %li files.",mm,n);
+		if ( mm != n ) {
+			log("merge: Only merging %li instead of the "
+			    "original %li files.",mm,n);
+			// cause the "if (mm==0)" to kick in below
+			if ( mm == 1 || mm == 0 ) {
+				mm = 0;
+				// fix renaming final merged file tagdb-001.dat
+				mergeFileId = 2;
+				m_fileIds[j] = 1;
+			}
+		}
 		// how many files to merge?
 		n = mm;
 		// allow a single file to continue merging if the other
@@ -1789,7 +1830,7 @@ void RdbBase::gotTokenForMerge ( ) {
 		// if we've already merged and already unlinked, then the
 		// process exited, now we restart with just the final 
 		// merge final and we need to do the rename
-		if ( mm == 0 ) {
+		if ( mm == 0 && rdbId != RDB_TITLEDB ) {
 			m_isMerging = false;
 			// make a fake file before us that we were merging
 			// since it got nuked on disk
@@ -1800,6 +1841,7 @@ void RdbBase::gotTokenForMerge ( ) {
 				sprintf(fbuf,"%s%04li-%03li.dat",
 					m_dbname,mergeFileId-1,id2);
 			log("merge: renaming final merged file %s",fbuf);
+			// this does not use a thread...
 			m_files[j]->rename(fbuf);
 			sprintf(fbuf,"%s%04li.map",m_dbname,mergeFileId-1);
 			//File *mf = m_maps[j]->getFile();
@@ -1961,10 +2003,12 @@ void RdbBase::gotTokenForMerge ( ) {
 		if ( i > 0 && prevSize < total/4 ) tooBig = 1;
 		log(LOG_INFO,"merge: i=%li n=%li ratio=%.2f adjratio=%.2f "
 		    "minr=%.2f mint=%lli mini=%li prevFileSize=%lli "
-		    "mergeFileSize=%lli tooBig=%li oldestfile=%.02fdays",
+		    "mergeFileSize=%lli tooBig=%li oldestfile=%.02fdays "
+		    "collnum=%li",
 		    i,n,ratio,adjratio,minr,mint,mini,
 		    prevSize , total ,(long)tooBig,
-		    ((float)nowLocal-date)/(24*3600.0) );
+		    ((float)nowLocal-date)/(24*3600.0) ,
+		    (long)m_collnum);
 
 		// . if we are merging the last file, penalize it
 		// . otherwise, we dump little files out and almost always
@@ -2107,7 +2151,7 @@ void RdbBase::gotTokenForMerge ( ) {
 
 	m_rdb->m_numMergesOut++;
 
-	char rdbId = getIdFromRdb ( m_rdb );
+	//char rdbId = getIdFromRdb ( m_rdb );
 
 	// sanity check
 	if ( m_niceness == 0 ) { char *xx=NULL;*xx=0 ; }
