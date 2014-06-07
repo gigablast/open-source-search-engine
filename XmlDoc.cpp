@@ -16024,7 +16024,7 @@ void *filterStartWrapper_r ( void *state , ThreadEntry *te ) {
 	return NULL;
 }
 
-int my_system_r ( char *cmd , long timeout ) ;
+//int my_system_r ( char *cmd , long timeout ) ;
 
 // sets m_errno on error
 void XmlDoc::filterStart_r ( bool amThread ) {
@@ -16200,13 +16200,15 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	//m_filteredContentAllocSize = 0;
 }
 
+pid_t g_pid    = -1;
+long  g_ticker = 0;
+long  g_filterTimeout = -1;
+
+/*
 static int startUp ( void *cmd ) ;
 #include <sys/types.h>    // waitpid()
 #include <sys/wait.h>     // waitpid()
 #include <sched.h>        // clone()
-pid_t g_pid    = -1;
-long  g_ticker = 0;
-long  g_filterTimeout = -1;
 
 static char cloneStack[250000];
 
@@ -16263,7 +16265,6 @@ int my_system_r ( char *cmd , long timeout ) {
 	return status;
 }
 
-
 int startUp ( void *cmd ) {
 	char *argv[4];
 	argv[0] = "sh";
@@ -16281,6 +16282,7 @@ int startUp ( void *cmd ) {
 	//exit(127);
 	return 1;
 }
+*/
 
 
 
