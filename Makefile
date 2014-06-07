@@ -121,7 +121,7 @@ g8: gb
 utils: addtest blaster dump hashtest makeclusterdb makespiderdb membustest monitor seektest urlinfo treetest dnstest dmozparse gbtitletest
 
 gb: $(OBJS) main.o $(LIBFILES)
-	$(CC) $(DEFS) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
+	$(CC) $(DEFS) $(DEFS2) $(CPPFLAGS) -o $@ main.o $(OBJS) $(LIBS)
 
 
 #iana_charset.cpp: parse_iana_charsets.pl character-sets supported_charsets.txt
