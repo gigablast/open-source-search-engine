@@ -92,6 +92,10 @@ else
 #
 CPPFLAGS = -m32 -g -Wall -pipe -Wno-write-strings -Wstrict-aliasing=0 -Wno-uninitialized -static -DPTHREADS -Wno-unused-but-set-variable
 LIBS= -L. ./libz.a ./libssl.a ./libcrypto.a ./libiconv.a ./libm.a ./libstdc++.a -lpthread
+# use this for compiling on CYGWIN: (only for 32bit cygwin right now and
+# you have to install the packages that have these libs.
+#LIBS= -lz -lm -lpthread -lssl -lcrypto -iconv -lz
+
 endif
 
 # if you have seo.cpp link that in. This is not part of the open source
