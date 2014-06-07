@@ -28163,6 +28163,11 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		m_checkedUrlFilters = true;
 
 		// a non-www url?
+		/*
+
+		  now we allow domain-only urls in the index, so this is 
+		  hurting us...
+
 		if ( ! m_req->m_getLinkText ) {
 			Url tmp;
 			tmp.set ( ptr_firstUrl );
@@ -28183,6 +28188,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 				return reply;
 			}
 		}
+		*/
 
 		// get this
 		//time_t nowGlobal = getTimeGlobal();
