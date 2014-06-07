@@ -7,6 +7,8 @@
 #include "Users.h"
 Profiler g_profiler;
 
+#ifndef CYGWIN
+
 static int decend_cmpUll ( const void *h1 , const void *h2 );
 static int decend_cmpF ( const void *h1 , const void *h2 );
 unsigned long *indexTable;
@@ -1750,3 +1752,4 @@ Profiler::getNewFrameTrace(const uint32_t addr) {
 	return m_frameTraces[m_numUsedFrameTraces++].set(addr);
 }
 
+#endif

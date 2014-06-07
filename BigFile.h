@@ -28,7 +28,10 @@ ssize_t gbpwrite(int fd, const void *buf, size_t count, off_t offset);
 //#define MAX_PART_FILES 100
 
 // use this state class for doing non-blocking reads/writes
+#ifdef ASYNCIO
 #include <aio.h> // TODO: use kaio, uses only 4 threads
+#endif
+
 class FileState {
 public:
 	// this is where we go after the thread has exited

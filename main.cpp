@@ -379,10 +379,12 @@ int main2 ( int argc , char *argv[] ) {
 
 	g_conf.m_runAsDaemon = false;
 
+#ifndef CYGWIN
 	// appears that linux 2.4.17 kernel would crash with this?
 	// let's try again on gk127 to make sure
 	// YES! gk0 cluster has run for months with this just fine!!
 	mlockall(MCL_CURRENT|MCL_FUTURE);
+#endif
 
 	//g_timedb.makeStartKey ( 0 );
 
@@ -13736,7 +13738,7 @@ bool pingTest ( long hid , unsigned short clientPort ) {
 	int n;
 	struct sockaddr_in to;
 	sockaddr_in from;
-	unsigned int fromLen;
+	socklen_t fromLen;
 	long long startTime;
 
 	// make the dgram

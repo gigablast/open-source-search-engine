@@ -1171,9 +1171,10 @@ int CountryCode::fillRegexTable(void) {
 				log( "init: Country regex: %d: Unknown character class name.", x);
 				break;
 
-			case REG_EEND:
-				log( "init: Country regex: %d: Non specific error.", x);
-				break;
+				// cygwin doesn't like this one
+			// case REG_EEND:
+			// 	log( "init: Country regex: %d: Non specific error.", x);
+			// 	break;
 
 			case REG_EESCAPE:
 				log( "init: Country regex: %d: Trailing backslash.", x);
@@ -1187,9 +1188,10 @@ int CountryCode::fillRegexTable(void) {
 				log( "init: Country regex: %d: Invalid use of the range operator.", x);
 				break;
 
-			case REG_ESIZE:
-				log( "init: Country regex: %d: Compiled regular expression requires a pattern buffer larger than 64Kb.", x);
-				break;
+				// cygwin doesn't like this one
+			// case REG_ESIZE:
+			// 	log( "init: Country regex: %d: Compiled regular expression requires a pattern buffer larger than 64Kb.", x);
+			// 	break;
 
 			case REG_ESPACE:
 				log( "init: Country regex: %d: The regex routines ran out of memory.", x);

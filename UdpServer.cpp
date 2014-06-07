@@ -1178,7 +1178,7 @@ long UdpServer::readSock_ass ( UdpSlot **slotPtr , long long now ) {
 	// now peek at the first few bytes of the dgram to get some info
 	char        peek[32]; 
 	sockaddr_in from;
-	unsigned    fromLen = sizeof ( struct sockaddr );
+	socklen_t fromLen = sizeof ( struct sockaddr );
 	// how many bytes should we peek at to get basic info about the msg
 	long maxPeekSize = m_proto->getMaxPeekSize();
 	// watch out for overflow

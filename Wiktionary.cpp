@@ -1,7 +1,7 @@
 #undef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 500
 #include "gb-include.h"
-#include "strings.h"
+//#include "strings.h"
 
 #include "Wiktionary.h"
 
