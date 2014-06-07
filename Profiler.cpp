@@ -1,3 +1,5 @@
+#ifndef CYGWIN
+
 #include <execinfo.h>
 #include <assert.h>
 #include "gb-include.h"
@@ -7,7 +9,6 @@
 #include "Users.h"
 Profiler g_profiler;
 
-#ifndef CYGWIN
 
 static int decend_cmpUll ( const void *h1 , const void *h2 );
 static int decend_cmpF ( const void *h1 , const void *h2 );
