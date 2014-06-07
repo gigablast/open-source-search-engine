@@ -232,7 +232,7 @@ gbtitletest: gbtitletest.o
 	$(CC) $(DEFS) $(CPPFLAGS) -o $@ $@.o $(OBJS) $(LIBS)
 
 
-
+# comment this out for faster deb package building
 clean:
 	-rm -f *.o gb *.bz2 blaster udptest memtest hashtest membustest mergetest seektest addtest monitor reindex convert maketestindex makespiderdb makeclusterdb urlinfo gbfilter dnstest thunder dmozparse gbtitletest gmon.* GBVersion.cpp quarantine core core.*
 
@@ -480,21 +480,28 @@ master-rpm:
 	rpmbuild -ba gb-1.0.spec
 	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
 
+# dpkg-buildpackage calls 'make binary' to create the files for the deb pkg
+# which must all be stored in ./debian/gb/
+
 install:
 # gigablast will copy over the necessary files. it has a list of the
 # necessary files and that list changes over time so it is better to let gb
 # deal with it.
-	mkdir -p /var/gigablast/data0/
-	./gb copyfiles /var/gigablast/data0/
+	mkdir -p $(DESTDIR)/var/gigablast/data0/
+	mkdir -p $(DESTDIR)/usr/bin/
+	mkdir -p $(DESTDIR)/etc/init.d/
+	mkdir -p $(DESTDIR)/etc/init/
+	mkdir -p $(DESTDIR)/lib/init/
+	./gb copyfiles $(DESTDIR)/var/gigablast/data0/
 # if user types 'gb' it will use the binary in /var/gigablast/data0/gb
-	rm -f /usr/bin/gb
-	ln -s /var/gigablast/data0/gb /usr/bin/gb
+	rm -f $(DESTDIR)/usr/bin/gb
+	ln -s /var/gigablast/data0/gb $(DESTDIR)/usr/bin/gb
 # if machine restarts...
 # the new way that does not use run-levels anymore
-	rm -f /etc/init.d/gb
-	ln -s /lib/init/upstart-job /etc/init.d/gb
+	rm -f $(DESTDIR)/etc/init.d/gb
+	ln -s /lib/init/upstart-job $(DESTDIR)/etc/init.d/gb
 # initctl upstart-job conf file (gb stop|start|reload)
-	cp init.gb.conf /etc/init/gb.conf
+	cp init.gb.conf $(DESTDIR)/etc/init/gb.conf
 
 .cpp.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -c $*.cpp 
@@ -520,3 +527,19 @@ depend:
 
 -include Make.depend
 
+# DEBIAN PACKAGE SECTION BEGIN
+
+testing-deb:
+	git archive --format=tar --prefix=gb-1.0/ testing > ../gb_1.0.orig.tar
+# change "-p gb_1.0" to "-p gb_1.1" to update version for example
+	dh_make -e gigablast@mail.com -p gb_1.0 -f ../gb_1.0.orig.tar
+# zero this out, it is just filed with the .txt files erroneously
+	rm debian/docs
+	touch debian/docs
+# fix dh_shlibdeps from bitching about dependencies on shared libs
+	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
+# build the package now
+# turn on the debug flag in debian/rules to debug this (export DH_VERBOSE=1)
+	dpkg-buildpackage -b -uc -rfakeroot
+
+# DEBIAN PACKAGE SECTION END
