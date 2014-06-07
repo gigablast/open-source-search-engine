@@ -30206,9 +30206,12 @@ int gbcompress ( unsigned char *dest      ,
 						      method, windowBits,
 						      memLevel, strategy);
 	if (err != Z_OK) return err;
-	
+
+	// cygwin uses the system libz.a which is not hacked for our quickpoll
+#ifndef CYGWIN	
 	// tell deflat() to call quickpoll
 	setQuickPoll ( (char *)&g_loop.m_needsToQuickPoll , deflateQuickPoll );
+#endif
 
 	err = deflate(&stream, Z_FINISH);
 	if (err != Z_STREAM_END) {
