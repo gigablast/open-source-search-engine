@@ -1,4 +1,18 @@
-#ifndef CYGWIN
+#ifdef CYGWIN
+
+#include "Profiler.h"
+Profiler::Profiler(){return;}
+Profiler::~Profiler(){return;}
+bool Profiler::reset(){return true;}
+bool Profiler::init(){return true;}
+char *Profiler::getFnName(unsigned long address,long *nameLen){return NULL;}
+void Profiler::stopRealTimeProfiler(const bool keepData){return;}
+void Profiler::cleanup(){return;}
+bool Profiler:: readSymbolTable(){return true;}
+bool sendPageProfiler ( class TcpSocket *s,class HttpRequest *r){return true;}
+Profiler g_profiler;	
+
+#else
 
 #include <execinfo.h>
 #include <assert.h>
