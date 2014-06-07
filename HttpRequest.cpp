@@ -408,6 +408,70 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 		 else log("http: Got POST request without \\r\\n\\r\\n.");
 	 }
 
+
+	 // is it a proxy request?
+	 m_isProxyRequest = false;
+	 if ( strncmp ( &req[i], "http://",7) == 0 ||
+	      strncmp ( &req[i], "https://",8) == 0 ) 
+		 m_isProxyRequest = true;
+
+	 // check authentication
+	 char *auth = NULL;
+	 if ( m_isProxyRequest )
+		 auth = strstr(req+i,"Proxy-authorization: Basic ");
+
+	 if ( m_isProxyRequest && ! auth ) {
+		 log("http: no auth in proxy request %s",req);
+		 g_errno = EBADREQUEST; 
+		 return false; 
+	 }
+
+	 bool matched = false;
+
+	 // verify username/passwd
+	 if ( auth ) {
+		 // find end of it
+		 char *p = auth;
+		 for ( ; *p && *p != '\r' && *p != '\n' ; p++ );
+		 SafeBuf tmp;
+		 tmp.base64Decode ( auth , p - auth );
+		 // now try to match in g_conf.m_proxyAuth safebuf of
+		 // username:password space-separated list
+		 char *p = g_conf.m_proxyAuth.getBufStart();
+		 // assume incorrect username/password
+		 bool matched = false;
+		 // loop over those
+		 for ( ; p && *p ; ) {
+			 // skip initial white space
+			 for ( ; *p && is_wspace(*p); p++ );
+			 // skip to end of username:password thing
+			 char *end = p;
+			 for ( ; *end && !is_wspace(*end); end++);
+			 // save
+			 char *start = p;
+			 // advance
+			 p = end;
+			 // compare now
+			 if ( tmp.length() != end-start ) 
+				 continue;
+			 if ( strncmp(tmp.getBufStart(),start,end-start))
+				 continue;
+			 // we got a match
+			 matched = true;
+			 break;
+		 }
+	 }
+
+	 // incorrect username:passwrod?
+	 if ( auth && ! matched ) {
+		 log("http: bad username:password in proxy request %s",req);
+		 g_errno = EPERMDENIED;
+		 return false; 
+	 }
+
+	 // if proxy request to download a url through us, we are done
+	 if ( auth ) return true;
+
 	 // . point to the file path 
 	 // . skip over the "GET "
 	 long filenameStart = 4 ;

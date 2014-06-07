@@ -673,6 +673,13 @@ void HttpServer::requestHandler ( TcpSocket *s ) {
 		sendErrorReply ( s , 400, "Bad Request" );
 		return;
 	}
+
+	// ok, we got an authenticated proxy request
+	if ( r.m_isProxyRequest ) {
+		processProxyRequest ( s , r );
+		return;
+	}
+
 	// log the request iff filename does not end in .gif .jpg .
 	char *f     = r.getFilename();
 	long  flen  = r.getFilenameLen();
@@ -2948,3 +2955,151 @@ bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
 				       charset    );
 	return true;
 }
+
+////////////////////
+//
+// support for Gigablast acting like a squid proxy
+//
+// handle requests like:
+//
+// GET http://www.xyz.com/
+// Proxy-Authentication: Basic xxxxxx
+//
+/////////////////////
+
+#define PADDING_SIZE 3000
+
+// in honor of squid
+class StateSquid {
+public:
+	TcpSocket *m_socket;
+	// store the ip here
+	long m_ip;
+	// not really needed but saves a malloc
+	DnsState m_dnsState;
+
+	Msg13Request m_request;
+	// padding for large requests with cookies and shit so we can store
+	// the request into m_request.m_url and have it overflow some
+	char m_padding[PADDING_SIZE];
+};
+
+bool processProxyRequest ( TcpSocket *sock , HttpRequest *hr ) {
+
+	// we need the actual ip of the requested url so we know
+	// which host to send the msg13 request to. that way it can ensure
+	// that we do not flood a particular IP with too many requests at once.
+
+	// sanity
+	if ( hr->m_proxiedUrlLen > MAX_URL_LEN )
+		// what is ip lookup failure for proxy?
+		return sendErrorReply ( sock,500,"Url too long (via Proxy)" );
+
+	long maxRequestLen = MAX_URL_LEN + PADDING_SIZE;
+	if ( sock->m_readOffset >= maxRequestLen )
+		// what is ip lookup failure for proxy?
+		return sendErrorReply(sock,500,"Request too long (via Proxy)");
+
+	// normalize the url. MAX_URL_LEN is an issue...
+	Url url;
+	url.set ( hr->m_proxiedUrl , hr->m_proxiedUrlLen );
+
+	// get hostname for ip lookup
+	char *host = url.getHost();
+	long hlen = url.getHostLen();
+
+	// . return false if this blocked
+	// . this returns true and sets g_errno on error
+	if ( ! g_dns.getIp ( host,
+			     hlen,
+			     &sqc->m_ip,
+			     sqc,
+			     gotProxiedUrlIp,
+			     &sqc->m_dnsState) )
+		return false;
+
+	// error?
+	if ( g_errno ) {
+		mdelete ( sqc, sizeof(SquidState), "sqc");
+		delete (sqc);
+		// what is ip lookup failure for proxy?
+		return sendErrorReply ( sock , 404 , "Not Found (via Proxy)" );
+	}
+	
+	// must have been in cache using sqc->m_ip
+	gotProxiedUrlIp ( sqc , sqc->m_ip );
+	
+	// assume maybe incorrectly that this blocked! might have had the
+	// page in cache as well...
+	return false;
+}
+
+void gotProxiedUrlIp ( void *state , long ip ) {
+	SquidState *sqc = (SquidState *)state;
+
+	// pick the host to send the msg13 to now based on the ip
+	Msg13Request *r = &sqc->m_request;
+	
+	// clear everything
+	r->reset();
+
+	r->m_urlIp = ip;
+
+	// let msg13 know to just send the request in m_url
+	r->m_isProxiedUrl = true;
+
+	// send the exact request. hide in the url buf i guess.
+	TcpSocket *sock = sqc->m_sock;
+
+	char *proxiedReqBuf = r->m_url;
+
+	// store into there
+	r->m_urlLen = memcpy(proxiedReqBuf,sock->m_readBuf,sock->m_readOffset);
+
+	// strip out the authentication shit here i guess...
+	// will NULL term as well
+	stripAuthentication ( proxiedReqBuf );
+
+	// . use our own NON-ZERO cache key
+	// . avoid certain mime headers i guess, maybe just hash the url
+	r->m_cacheKey = computeProxiedCacheKey64 ( proxiedReqBuf );
+
+	// use urlip for this, it determines what host downloads it
+	r->m_firstIp                = r->m_urlIp;
+	// other stuff
+	r->m_maxCacheAge            = 3600; // for page cache. 1hr.
+	r->m_urlHash48              = 0LL;
+	r->m_maxTextDocLen          = -1;//maxDownload;
+	r->m_maxOtherDocLen         = -1;//maxDownload;
+	r->m_forwardDownloadRequest = false;
+	r->m_useTestCache           = false;
+	r->m_spideredTime           = 0;
+	r->m_ifModifiedSince        = 0;
+	r->m_skipHammerCheck        = 0;
+	// . this is -1 if unknown. none found in robots.txt or provided
+	//   in the custom crawl parms.
+	// . it should also be 0 for the robots.txt file itself
+	// . since we are a proxy and have no idea, let's default to 0ms
+	r->m_crawlDelayMS = 0;
+	// let's time our crawl delay from the initiation of the download
+	// not from the end of the download. this will make things a little
+	// faster but could slam servers more.
+	r->m_crawlDelayFromEnd = false;
+	// new stuff
+	r->m_contentHash32 = 0;
+	// turn this off too
+	r->m_attemptedIframeExpansion = false;
+	// turn off
+	r->m_useCompressionProxy = false;
+	r->m_compressReply       = false;
+	r->m_isCustomCrawl       = 0;
+
+	// isTestColl = false. return if blocked.
+	if ( ! m_msg13.getDoc ( r , false ,sqc , gotProxiedContent ) ) return;
+
+	// we did not block, send back the content
+	gotProxiedContent ( sqc );
+}
+
+
+
