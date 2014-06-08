@@ -470,20 +470,6 @@ Msg6a.o:
 geo_ip_table.o: geo_ip_table.cpp geo_ip_table.h
 	$(CC) $(DEFS) $(DEFS2) -m32 -Wall -pipe -c $*.cpp 
 
-# move this tarball into ~/rpmbuild/?????
-# then run rpmbuild -ba gb-1.0.spec to build the rpms
-# rpm -ivh gb-1.0-...  to install the pkg
-tarball-testing:
-#	git archive --format=tar master | gzip > gb.tar
-	git archive --format=tar --prefix=gb-1.0/ testing > gb-1.0.tar
-
-master-rpm:
-#	git archive --format=tar master | gzip > gb.tar
-	git archive --format=tar --prefix=gb-1.0/ master > gb-1.0.tar
-	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
-	rpmbuild -ba gb-1.0.spec
-	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
-
 # dpkg-buildpackage calls 'make binary' to create the files for the deb pkg
 # which must all be stored in ./debian/gb/
 
@@ -549,6 +535,30 @@ testing-deb:
 #	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
 # build the package now
 	dpkg-buildpackage -nc -ai386 -ti386 -b -uc -rfakeroot
-
+# upload to main gigablast server
+	scp ../gb*.deb www.gigablast.com:/w/html/
 
 # DEBIAN PACKAGE SECTION END
+
+
+# REDHAT PACKAGE SECTION BEGIN
+
+# try building the .deb and then running 'alien --to-rpm gb_1.0-1_i386.deb'
+# to build the .rpm
+
+# move this tarball into ~/rpmbuild/?????
+# then run rpmbuild -ba gb-1.0.spec to build the rpms
+# rpm -ivh gb-1.0-...  to install the pkg
+testing-rpm:
+	git archive --format=tar --prefix=gb-1.0/ testing > gb-1.0.tar
+	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
+	rpmbuild -bb gb-1.0.spec
+	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
+
+master-rpm:
+	git archive --format=tar --prefix=gb-1.0/ master > gb-1.0.tar
+	mv gb-1.0.tar /home/mwells/rpmbuild/SOURCES/
+	rpmbuild -bb gb-1.0.spec
+	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
+
+# REDHAT PACKAGE SECTION END
