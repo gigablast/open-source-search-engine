@@ -17201,6 +17201,16 @@ int copyFiles ( char *dstDir ) {
 	SafeBuf fileListBuf;
 	g_process.getFilesToCopy ( srcDir , &fileListBuf );
 
+	// include data files so when building a debian/redhat
+	// package 'make install' we copy those as well.
+	// no let's just build it the first time gb runs, but gb should
+	// bind to port 8000 before building and just return a msg
+	// that says "pls wait while building data files for the first time"
+	//File f;
+	//f.set ( srcDir ,"wikititles2.dat");
+	//if ( f.doesExist() ) 
+	//	fileListBuf.safePrintf(" %s",f.getFilename());
+
 	SafeBuf tmp;
 	tmp.safePrintf(
 		       "cp -r %s %s"

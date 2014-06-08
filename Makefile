@@ -517,30 +517,6 @@ depend:
 
 -include Make.depend
 
-# DEBIAN PACKAGE SECTION BEGIN
-
-testing-deb:
-	git archive --format=tar --prefix=gb-1.0/ testing > ../gb_1.0.orig.tar
-	rm -rf debian
-# change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -e gigablast@mail.com -p gb_1.0 -f ../gb_1.0.orig.tar
-# zero this out, it is just filed with the .txt files erroneously and it'll
-# try to automatiicaly install in /usr/docs/
-	rm debian/docs
-	touch debian/docs
-# try to use our own rules so we can override dh_shlibdeps and others
-	cp gb.deb.rules debian/rules
-# fix dh_shlibdeps from bitching about dependencies on shared libs
-# YOU HAVE TO RUN THIS before you run 'make'
-#	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
-# build the package now
-	dpkg-buildpackage -nc -ai386 -ti386 -b -uc -rfakeroot
-# upload to main gigablast server
-	scp ../gb*.deb www.gigablast.com:/w/html/
-
-# DEBIAN PACKAGE SECTION END
-
-
 # REDHAT PACKAGE SECTION BEGIN
 
 # try building the .deb and then running 'alien --to-rpm gb_1.0-1_i386.deb'
@@ -562,3 +538,28 @@ master-rpm:
 	scp /home/mwells/rpmbuild/RPMS/x86_64/gb-*rpm www.gigablast.com:/w/html/
 
 # REDHAT PACKAGE SECTION END
+
+# DEBIAN PACKAGE SECTION BEGIN
+
+testing-deb:
+	git archive --format=tar --prefix=gb-1.0/ testing > ../gb_1.0.orig.tar
+	rm -rf debian
+# change "-p gb_1.0" to "-p gb_1.1" to update version for example
+	dh_make -e gigablast@mail.com -p gb_1.0 -f ../gb_1.0.orig.tar
+# zero this out, it is just filed with the .txt files erroneously and it'll
+# try to automatiicaly install in /usr/docs/
+	rm debian/docs
+	touch debian/docs
+# try to use our own rules so we can override dh_shlibdeps and others
+	cp gb.deb.rules debian/rules
+# fix dh_shlibdeps from bitching about dependencies on shared libs
+# YOU HAVE TO RUN THIS before you run 'make'
+#	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
+# build the package now
+	dpkg-buildpackage -nc -ai386 -ti386 -b -uc -rfakeroot
+# upload to main gigablast server
+#	scp ../gb*.deb www.gigablast.com:/w/html/
+
+# DEBIAN PACKAGE SECTION END
+
+
