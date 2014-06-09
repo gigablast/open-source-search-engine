@@ -1,7 +1,7 @@
 #undef _XOPEN_SOURCE
 #define _XOPEN_SOURCE 500
 #include "gb-include.h"
-#include "strings.h"
+//#include "strings.h"
 
 #include "Wiktionary.h"
 
@@ -284,7 +284,8 @@ bool Wiktionary::load() {
 		h = hash64 ( tail1 , 1000 , h );
 		h = hash64 ( tail2 , 1000 , h );
 		long long nn = -662959013613045013LL;//-6197041242898026762LL;
-		if ( h != nn ) {
+		long long nn2 = -2511412928924361809;
+		if ( h != nn && h != nn2 ) {
 			log("gb: %s or %s checksum is not approved for "
 			    "live service (%lli != %lli)", ff3, ff4,
 			    h,nn);

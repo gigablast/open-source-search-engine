@@ -1,0 +1,44 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+
+#overide_dh_strip:
+#	echo "shit"
+
+#binary:
+#	echo "shit"
+
+%:
+	dh $@ 
+
+# it calls i386-objdump which does not exist
+# we override dh_shlibdeps below so this is not need either
+override_dh_makeshlibs:
+	echo "skipping dh_makeshlibs call! MDW"
+
+# it calls i386-strip which does not exist
+# most binaries are already stripped anyway i think, so not important...
+override_dh_strip:
+	echo "skipping dh_strip call! MDW"
+
+# skip this step, it puts "shlibs:Depends=libc6 (>= 2.3)" into
+# debian/gb.substvars and makes dpkg -i bitch about dependencies not being met
+override_dh_shlibdeps:
+	echo "skipping dh_shlibdeps call! MDW"
+
+# override_dh_shlibdeps-indep:
+# 	echo "shit"
+
+# override_dh_shlibdeps-i386:
+# 	echo "shit"
+
+# override_shlibdeps:
+# 	echo "shit"
+

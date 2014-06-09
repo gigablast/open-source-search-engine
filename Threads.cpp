@@ -116,13 +116,13 @@ int *__errno_location (void) {
 #define MAX_STACKS 20
 
 // stack must be page aligned for mprotect
-#define PAGESIZE 8192
+#define THRPAGESIZE 8192
 
 // how much of stack to use as guard space
 #define GUARDSIZE (32*1024)
 
 // . crashed in saving with 800k, so try 1M
-// . must be multiple of PAGESIZE
+// . must be multiple of THRPAGESIZE
 #define STACK_SIZE ((512+256) * 1024)
 
 // jeta was having some problems, but i don't think they were related to
@@ -181,7 +181,7 @@ Threads::Threads ( ) {
 void Threads::setPid ( ) {
 	// set s_pid to the main process id
 #ifdef PTHREADS
-	s_pid = pthread_self();
+	s_pid = (pid_t)pthread_self();
 	//log(LOG_INFO,
 	//    "threads: main process THREAD id = %lu",(long unsigned)s_pid);
 	pthread_t tid = pthread_self();
@@ -343,7 +343,7 @@ bool Threads::init ( ) {
 	// limit to stack we got
 	if ( maxThreads > MAX_STACKS ) maxThreads = MAX_STACKS;
 	// allocate the stack space
-	s_stackAllocSize = STACK_SIZE * maxThreads + PAGESIZE ;
+	s_stackAllocSize = STACK_SIZE * maxThreads + THRPAGESIZE ;
 	// clear stack to help check for overwrites
 	s_stackAlloc = (char *) mcalloc ( s_stackAllocSize , "ThreadStack" );
 	if ( ! s_stackAlloc ) 
@@ -352,7 +352,7 @@ bool Threads::init ( ) {
 	log(LOG_INIT,"thread: Using %li bytes for %li thread stacks.",
 	    s_stackAllocSize,maxThreads);
 	// align
-	s_stack = (char *)(((int) s_stackAlloc + PAGESIZE-1) & ~(PAGESIZE-1));
+	s_stack = (char *)(((int)s_stackAlloc+THRPAGESIZE-1)&~(THRPAGESIZE-1));
 	// new size
 	s_stackSize = s_stackAllocSize - (s_stack - s_stackAlloc);
 	// protect the whole stack while not in use

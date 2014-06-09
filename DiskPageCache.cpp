@@ -10,8 +10,10 @@
 // types.h uses key_t type that shmget uses
 #undef key_t
 
+#ifdef GBUSESHM
 #include <sys/ipc.h>  // shmget()
 #include <sys/shm.h>  // shmget()
+#endif
 
 #define OFF_SIZE 0
 #define OFF_SKIP 4
@@ -36,8 +38,10 @@ DiskPageCache::~DiskPageCache() {
 	reset();
 }
 
+#ifdef GBUSESHM
 static char *s_mem = NULL;
 static int   s_shmid = -1;
+#endif
 
 void DiskPageCache::reset() {
 	if ( m_numPageSets > 0 ) 
@@ -60,6 +64,7 @@ void DiskPageCache::reset() {
 		long size = m_maxAvailMemOffs * sizeof(long);
 		mfree ( m_availMemOff , size , "DiskPageCache" );
 	}
+#ifdef GBUSESHM
 	// free current one, if exists
 	if ( s_shmid >= 0 && s_mem ) {
 		if ( shmdt ( s_mem ) == -1 )
@@ -76,6 +81,7 @@ void DiskPageCache::reset() {
 		else
 			log("db: shmctl freed shmid=%li",(long)shmid);
 	}
+#endif
 	m_numPageSets     = 0;
 	m_nextMemOff      = 0;
 	m_upperMemOff     = 0;
@@ -166,6 +172,8 @@ bool DiskPageCache::init ( const char *dbname ,
 	long max = 33554432/2;
 	// make sure it is "pageSize" aligned so we don't split pages
 	m_maxAllocSize = (max / m_spageSize) * m_spageSize;
+
+#ifdef GBUSESHM
 	// set it up
 	if ( m_useSHM ) {
 		// we can only use like 30MB shared mem pieces
@@ -204,6 +212,7 @@ bool DiskPageCache::init ( const char *dbname ,
 		// get more
 		if ( need > 0 ) goto shmloop;
 	}
+#endif
 
 	// a malloc tag, must be LESS THAN 16 bytes including the NULL
 	char *p = m_memTag;
@@ -1110,6 +1119,7 @@ bool DiskPageCache::verify ( BigFile *f ) {
 void DiskPageCache::writeToCache( long bigOff, long smallOff,  void *inBuf, 
 				  long size ){
 
+#ifdef GBUSESHM
 	if ( m_useSHM ) {
 		// what page are we on?
 		long page = ( bigOff + smallOff ) / m_maxAllocSize;
@@ -1159,6 +1169,7 @@ void DiskPageCache::writeToCache( long bigOff, long smallOff,  void *inBuf,
 		memcpy ( mem + poff , inBuf , size );
 		return;
 	}
+#endif
 
 	if ( m_useRAMDisk ){
 		long numBytesWritten = pwrite( m_ramfd, inBuf, size, 
@@ -1175,6 +1186,7 @@ void DiskPageCache::writeToCache( long bigOff, long smallOff,  void *inBuf,
 
 void DiskPageCache::readFromCache( void *outBuf, long bigOff, long smallOff,
 				   long size ){
+#ifdef GBUSESHM
 	if ( m_useSHM ) {
 		// what page are we on?
 		long page = ( bigOff + smallOff ) / m_maxAllocSize;
@@ -1222,6 +1234,7 @@ void DiskPageCache::readFromCache( void *outBuf, long bigOff, long smallOff,
 		memcpy ( outBuf , mem + poff , size );
 		return;
 	}
+#endif
 
 	if ( m_useRAMDisk ) {
 		long numBytesRead = pread( m_ramfd, outBuf, size, 
@@ -1272,6 +1285,7 @@ void freeAllSharedMem ( long max ) {
 	//shmctl ( 0 , SHM_STAT , &buf );
 	//int shmctl(int shmid, int cmd, struct shmid_ds *buf);
 
+#ifdef GBUSESHM
 	// types.h uses key_t type that shmget uses
 	// try to nuke it all
 	for ( long i = 0 ; i < max ; i++ ) {
@@ -1284,6 +1298,7 @@ void freeAllSharedMem ( long max ) {
 		else
 			log("db: Removed shmid %li",i);
 	}
+#endif
 }
 
 // types.h uses key_t type that shmget uses

@@ -1633,6 +1633,12 @@ void sigHandlerRT ( int x , siginfo_t *info , void *v ) {
 
 // come here when we get a GB_SIGRTMIN+X signal
 void sigHandler_r ( int x , siginfo_t *info , void *v ) {
+
+	// cygwin lacks the si_fd and si_band members
+#ifdef CYGWIN
+	g_loop.doPoll();
+#else
+
 	// extract the file descriptor that needs attention
 	int fd   = info->si_fd;
 	// debug note
@@ -1735,6 +1741,8 @@ void sigHandler_r ( int x , siginfo_t *info , void *v ) {
 		g_errno = ESOCKETCLOSED; 
 		g_loop.callCallbacks_ass ( false , fd );
 	}
+// end ifdef CYGWIN
+#endif
 }
 
 

@@ -16024,7 +16024,7 @@ void *filterStartWrapper_r ( void *state , ThreadEntry *te ) {
 	return NULL;
 }
 
-int my_system_r ( char *cmd , long timeout ) ;
+//int my_system_r ( char *cmd , long timeout ) ;
 
 // sets m_errno on error
 void XmlDoc::filterStart_r ( bool amThread ) {
@@ -16200,13 +16200,15 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	//m_filteredContentAllocSize = 0;
 }
 
+pid_t g_pid    = -1;
+long  g_ticker = 0;
+long  g_filterTimeout = -1;
+
+/*
 static int startUp ( void *cmd ) ;
 #include <sys/types.h>    // waitpid()
 #include <sys/wait.h>     // waitpid()
 #include <sched.h>        // clone()
-pid_t g_pid    = -1;
-long  g_ticker = 0;
-long  g_filterTimeout = -1;
 
 static char cloneStack[250000];
 
@@ -16263,7 +16265,6 @@ int my_system_r ( char *cmd , long timeout ) {
 	return status;
 }
 
-
 int startUp ( void *cmd ) {
 	char *argv[4];
 	argv[0] = "sh";
@@ -16281,6 +16282,7 @@ int startUp ( void *cmd ) {
 	//exit(127);
 	return 1;
 }
+*/
 
 
 
@@ -28163,6 +28165,11 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		m_checkedUrlFilters = true;
 
 		// a non-www url?
+		/*
+
+		  now we allow domain-only urls in the index, so this is 
+		  hurting us...
+
 		if ( ! m_req->m_getLinkText ) {
 			Url tmp;
 			tmp.set ( ptr_firstUrl );
@@ -28183,6 +28190,7 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 				return reply;
 			}
 		}
+		*/
 
 		// get this
 		//time_t nowGlobal = getTimeGlobal();
@@ -30198,9 +30206,12 @@ int gbcompress ( unsigned char *dest      ,
 						      method, windowBits,
 						      memLevel, strategy);
 	if (err != Z_OK) return err;
-	
+
+	// cygwin uses the system libz.a which is not hacked for our quickpoll
+#ifndef CYGWIN	
 	// tell deflat() to call quickpoll
 	setQuickPoll ( (char *)&g_loop.m_needsToQuickPoll , deflateQuickPoll );
+#endif
 
 	err = deflate(&stream, Z_FINISH);
 	if (err != Z_STREAM_END) {

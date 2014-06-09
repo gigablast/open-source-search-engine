@@ -1277,7 +1277,7 @@ void *syncStartWrapper_r ( void *state , ThreadEntry *te ) {
 	return NULL;
 }
 
-int my_system_r ( char *cmd , long timeout );
+//int my_system_r ( char *cmd , long timeout );
 int startUp ( void *cmd );
 
 void Syncdb::syncStart_r ( bool amThread ) {
@@ -1339,7 +1339,8 @@ void Syncdb::syncStart_r ( bool amThread ) {
 	sprintf ( cmd , "rcp %s %s:%scoll.%s.%li/'",
 		  map->getFilename(),ips,dir,coll,collnum);
 	log ( LOG_INFO, "sync: %s", cmd );
-	if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
+	// MDW: take out for now
+	//if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
 	
 	// get the file
 	BigFile *f = base->m_files[k];
@@ -1354,7 +1355,8 @@ void Syncdb::syncStart_r ( bool amThread ) {
 		  p->m_filename,ips,dir,coll,collnum);
 	// excecute
 	log ( LOG_INFO, "sync: %s", cmd );
-	if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
+	// MDW: take out for now
+	//if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
 
 	}
 	}
@@ -1376,7 +1378,8 @@ void Syncdb::syncStart_r ( bool amThread ) {
 		  );
 	// excecute
 	log ( LOG_INFO, "sync: %s", cmd );
-	if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
+	// MDW: take out for now
+	//if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
 
 
 	// loop over the files in Process.cpp
@@ -1387,26 +1390,29 @@ void Syncdb::syncStart_r ( bool amThread ) {
 			  mydir,g_files[i],ips,dir);
 		// excecute
 		log ( LOG_INFO, "sync: %s", cmd );
-		if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
+		// MDW: take out for now
+		//if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
 	}
 
 	// new guy is NOT in sync
 	sprintf ( cmd , "ssh %s 'echo 0 > %sinsync.dat", ips,dir);
 	// excecute
 	log ( LOG_INFO, "sync: %s", cmd );
-	if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
+	// MDW: take out for now
+	//if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
 
 	// saved files
 	sprintf ( cmd , "rcp %s*-saved.dat %s:%sinsync.dat", 
 		  mydir,ips,dir);
 	// excecute
 	log ( LOG_INFO, "sync: %s", cmd );
-	if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
+	// MDW: take out for now
+	//if ( ( err = my_system_r ( cmd, 3600*24 ) ) ) goto hadError;
 	
 	// completed!
 	return;
 
- hadError:
+	// hadError:
 	log ( "sync: Call to system(\"%s\") had error %s.",cmd,strerror(err));
 	g_hostdb.m_syncHost->m_doingSync = 0;
 	g_hostdb.m_syncHost              = NULL;

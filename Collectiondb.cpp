@@ -231,6 +231,13 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 			   (long)sizeof(CollectionRec),coll);
 	mnew ( cr , sizeof(CollectionRec) , "CollectionRec" ); 
 
+	// set collnum right for g_parms.setToDefault() call just in case
+	// because before it was calling CollectionRec::reset() which
+	// was resetting the RdbBases for the m_collnum which was garbage
+	// and ended up resetting random collections' rdb. but now
+	// CollectionRec::CollectionRec() sets m_collnum to -1 so we should
+	// not need this!
+	//cr->m_collnum = oldCollnum;
 
 	// get the default.conf from working dir if there
 	g_parms.setToDefault( (char *)cr );
@@ -365,12 +372,18 @@ bool Collectiondb::addNewColl ( char *coll ,
 	mnew ( cr , sizeof(CollectionRec) , "CollectionRec" ); 
 
 	// get copy collection
-	CollectionRec *cpcrec = NULL;
-	if ( cpc && cpc[0] ) cpcrec = getRec ( cpc , cpclen );
-	if ( cpc && cpc[0] && ! cpcrec )
-		log("admin: Collection \"%s\" to copy config from does not "
-		    "exist.",cpc);
-	// get the default.conf from working dir if there
+	//CollectionRec *cpcrec = NULL;
+	//if ( cpc && cpc[0] ) cpcrec = getRec ( cpc , cpclen );
+	//if ( cpc && cpc[0] && ! cpcrec )
+	//	log("admin: Collection \"%s\" to copy config from does not "
+	//	    "exist.",cpc);
+
+	// set collnum right for g_parms.setToDefault() call
+	//cr->m_collnum = newCollnum;
+
+	// . get the default.conf from working dir if there
+	// . i think this calls CollectionRec::reset() which resets all of its
+	//   rdbbase classes for its collnum so m_collnum needs to be right
 	g_parms.setToDefault( (char *)cr );
 
 	/*
@@ -383,13 +396,13 @@ bool Collectiondb::addNewColl ( char *coll ,
 	*/
 
 	// this will override all
-	if ( cpcrec ) {
-		// copy it, but not the timedb hashtable, etc.
-		long size = (char *)&(cpcrec->m_END_COPY) - (char *)cpcrec;
-		// JAB: bad memcpy - no donut!
-		// this is not how objects are supposed to be copied!!!
-		memcpy ( cr , cpcrec , size);
-	}
+	// if ( cpcrec ) {
+	// 	// copy it, but not the timedb hashtable, etc.
+	// 	long size = (char *)&(cpcrec->m_END_COPY) - (char *)cpcrec;
+	// 	// JAB: bad memcpy - no donut!
+	// 	// this is not how objects are supposed to be copied!!!
+	// 	memcpy ( cr , cpcrec , size);
+	// }
 
 	// set coll id and coll name for coll id #i
 	strcpy ( cr->m_coll , coll );
@@ -1051,7 +1064,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 		return true;
 	}
 
-	log("admin: resetting collnum %li",(long)oldCollnum);
+	//log("admin: resetting collnum %li",(long)oldCollnum);
 
 	// CAUTION: tree might be in the middle of saving
 	// we deal with this in Process.cpp now
@@ -1493,6 +1506,8 @@ static CollectionRec g_default;
 
 
 CollectionRec::CollectionRec() {
+	m_collnum = -1;
+	m_coll[0] = '\0';
 	//m_numSearchPwds = 0;
 	//m_numBanIps     = 0;
 	//m_numSearchIps  = 0;
@@ -1578,6 +1593,8 @@ void CollectionRec::setToDefaults ( ) {
 }
 
 void CollectionRec::reset() {
+
+	//log("coll: resetting collnum=%li",(long)m_collnum);
 
 	// . grows dynamically
 	// . setting to 0 buckets should never have error

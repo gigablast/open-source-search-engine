@@ -399,8 +399,8 @@ long SafeBuf::dumpToFile(char *filename ) {
 	if ( fd < 0 ) {
 		// valgrind
 		if ( errno == EINTR ) goto retry22;
-		log("safebuf: Failed to open %s for writing: ", 
-		    filename);
+		log("safebuf: Failed to open %s for writing: %s", 
+		    filename,mstrerror(errno));
 		return -1;
 	}
 	//logf(LOG_DEBUG, "test: safebuf %li bytes written to %s",m_length,

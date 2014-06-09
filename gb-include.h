@@ -6,6 +6,7 @@
 
 #include <ctype.h>	// Log.h
 #include <errno.h>	// Errno.h
+#include <sys/errno.h>	// Errno.h
 #include <stdarg.h>	// Log.h
 #include <stdint.h>	// commonly included in include files
 #include <stdio.h>	// commonly included in include files
@@ -19,5 +20,10 @@
 
 #include "Errno.h"	// commonly included in include files
 #include "Log.h"	// commonly included in include files
+
+// cygwin fix
+#ifndef O_ASYNC
+#define O_ASYNC 0
+#endif
 
 #endif

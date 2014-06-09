@@ -2136,7 +2136,8 @@ bool Hostdb::syncHost ( long syncHostId, bool useSecondaryIps ) {
 		     "host. Aborting." );
 }
 
-int my_system_r ( char *cmd , long timeout );
+// MDW: take out for now
+//int my_system_r ( char *cmd , long timeout );
 int startUp ( void *cmd );
 
 void Hostdb::syncStart_r ( bool amThread ) {
@@ -2201,6 +2202,8 @@ void Hostdb::syncStart_r ( bool amThread ) {
 		  m_syncHost->m_dir );
 
 	log ( LOG_INFO, "init: %s", cmd );
+	/*
+	  MDW: take out for now
 	int err = my_system_r ( cmd, 3600*24 );
 	if ( err != 0 ) {
 		log ( "conf: Call to system(\"%s\") had error %s.", cmd ,
@@ -2209,6 +2212,7 @@ void Hostdb::syncStart_r ( bool amThread ) {
 		m_syncHost = NULL;
 		return;
 	}
+	*/
 }
 
 void Hostdb::syncDone ( ) {

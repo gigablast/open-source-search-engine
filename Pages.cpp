@@ -267,9 +267,15 @@ static WebPage s_pages[] = {
 	//  "get queries a url matches",
 	//  sendPageMatchingQueries   , 2 } ,
 
+#ifndef CYGWIN
 	{ PAGE_SEO, "seo",0,"seo" ,  0 , 0 ,
 	  "SEO info",
 	  sendPageSEO   , 2 } ,
+#else
+	{ PAGE_SEO, "seo",0,"seo" ,  0 , 0 ,
+	  "SEO info",
+	  sendPageResults  , 0 } ,
+#endif
 
 	{ PAGE_ACCESS    , "admin/access" , 0 , "access" ,  1 , 1 , // usepost
 	  //USER_ADMIN | USER_MASTER   , 

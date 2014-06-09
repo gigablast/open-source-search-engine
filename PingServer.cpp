@@ -1,6 +1,13 @@
 #include "gb-include.h"
 
+#ifdef CYGWIN
+// use a stub
+long klogctl( int, char *,int ) { return 0; }
+#else
+// otherwise, use the real one
 #include <sys/klog.h> // for klogctl
+#endif
+
 #include "PingServer.h"
 #include "UdpServer.h"
 //#include "Sync.h"
