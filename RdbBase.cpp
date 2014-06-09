@@ -45,11 +45,20 @@ RdbBase::RdbBase ( ) {
 	m_numFiles  = 0;
 	m_rdb = NULL;
 	m_nextMergeForced = false;
+	m_dbname[0] = '\0';
+	m_dbnameLen = 0;
+	// use bogus collnum just in case
+	m_collnum = -1;
 	//m_dummy = NULL;
 	reset();
 }
 
 void RdbBase::reset ( ) {
+
+	char *db = "";
+	if ( m_rdb  ) db = m_dbname;
+	//log("debug: base resetting db=%s collnum=%li",db,(long)m_collnum);
+
 	for ( long i = 0 ; i < m_numFiles ; i++ ) {
 		mdelete ( m_files[i] , sizeof(BigFile),"RdbBFile");
 		delete (m_files[i]);
@@ -774,8 +783,8 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 
 	// debug help
 	if ( isNew )
-		log("rdb: adding new file %s/%s m_numFiles=%li",
-		    f->m_dir,f->getFilename(),m_numFiles);
+		log("rdb: adding new file %s/%s",// m_numFiles=%li",
+		    f->m_dir,f->getFilename());//,m_numFiles);
 
 	// rename bug fix?
 	/*
@@ -887,8 +896,8 @@ long RdbBase::addFile ( long id , bool isNew , long mergeNum , long id2 ,
 	// inc # of files we have
 	m_numFiles++;
 	// debug note
-	log("rdb: numFiles=%li for collnum=%li db=%s",
-	    m_numFiles,(long)m_collnum,m_dbname);
+	//log("rdb: numFiles=%li for collnum=%li db=%s",
+	//    m_numFiles,(long)m_collnum,m_dbname);
 	// keep it NULL terminated
 	m_files [ m_numFiles ] = NULL;
 	// if we added a merge file, mark it
@@ -1553,25 +1562,29 @@ void RdbBase::attemptMerge ( long niceness, bool forceMergeAll, bool doLog ,
 
 	// what percent of recs in the collections' rdb are negative?
 	// the rdbmaps hold this info
-	float percentNegativeRecs = getPercentNegativeRecsOnDisk ( );
+	long long totalRecs = 0LL;
+	float percentNegativeRecs = getPercentNegativeRecsOnDisk ( &totalRecs);
 	// 1. if disk space is tight and >20% negative recs, force it
 	if ( g_process.m_diskAvail >= 0 && 
 	     g_process.m_diskAvail < 10000000000LL && // 10GB
 	     percentNegativeRecs > .20 ) {
 		m_nextMergeForced = true;
 		forceMergeAll = true;
-		log("rdb: hit negative rec concentration of %.01f for "
+		log("rdb: hit negative rec concentration of %f "
+		    "(total=%lli) for "
 		    "collnum %li on db %s when diskAvail=%lli bytes",
-		    percentNegativeRecs,(long)m_collnum,m_rdb->m_dbname,
-		    g_process.m_diskAvail);
+		    percentNegativeRecs,totalRecs,(long)m_collnum,
+		    m_rdb->m_dbname,g_process.m_diskAvail);
 	}
 	// 2. if >40% negative recs force it
 	if ( percentNegativeRecs > .40 ) {
 		m_nextMergeForced = true;
 		forceMergeAll = true;
-		log("rdb: hit negative rec concentration of %.01f for "
+		log("rdb: hit negative rec concentration of %f "
+		    "(total=%lli) for "
 		    "collnum %li on db %s",
-		    percentNegativeRecs,(long)m_collnum,m_rdb->m_dbname);
+		    percentNegativeRecs,totalRecs,(long)m_collnum,
+		    m_rdb->m_dbname);
 	}
 
 
@@ -2508,7 +2521,7 @@ bool RdbBase::verifyFileSharding ( ) {
 	//return true;
 }
 
-float RdbBase::getPercentNegativeRecsOnDisk ( ) {
+float RdbBase::getPercentNegativeRecsOnDisk ( long long *totalArg ) {
 	// scan the maps
 	long long numPos = 0LL;
 	long long numNeg = 0LL;
@@ -2517,6 +2530,7 @@ float RdbBase::getPercentNegativeRecsOnDisk ( ) {
 		numNeg += m_maps[i]->getNumNegativeRecs();
 	}
 	long long total = numPos + numNeg;
+	*totalArg = total;
 	float percent = (float)numNeg / (float)total;
 	return percent;
 }

@@ -325,8 +325,10 @@ RdbList.o:
 Rdb.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
-RdbBase.o:
-	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
+# take this out. seems to not trigger merges when percent of
+# negative titlerecs is over 40.
+#RdbBase.o:
+#	$(CC) $(DEFS) $(CPPFLAGS) -O2 -c $*.cpp 
 
 # RdbCache.cpp gets "corrupted" with -O2... like RdbTree.cpp
 #RdbCache.o:

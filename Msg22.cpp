@@ -1022,7 +1022,8 @@ void gotTitleList ( void *state , RdbList *list , Msg5 *msg5 ) {
 	}
 
 	// not found! and it was a docid based request...
-	log("msg22: could not find title rec for docid %llu",r->m_docId);
+	log("msg22: could not find title rec for docid %llu collnum=%li",
+	    r->m_docId,(long)r->m_collnum);
 	g_errno = ENOTFOUND;
 	goto hadError;
 }
