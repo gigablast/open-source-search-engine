@@ -58,6 +58,10 @@ long convertIntoLinks    ( char *reply, long replySize , Xml *xml ,
 			   long niceness ) ;
 
 
+static void stripProxyAuthorization ( char *squidProxiedReqBuf ) ;
+static void fixGETorPOST ( char *squidProxiedReqBuf ) ;
+static long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) ;
+
 // cache for robots.txt pages
 static RdbCache s_httpCacheRobots;
 // cache for other pages
@@ -96,7 +100,8 @@ bool Msg13::registerHandler ( ) {
 
 	// use 3MB per cache
 	long memRobots = 3000000;
-	long memOthers = 2000000;
+	// make 10MB now that we have proxied url (i.e. squid) capabilities
+	long memOthers = 10000000;
 	// assume 15k avg cache file
 	long maxCacheNodesRobots = memRobots / 106;
 	long maxCacheNodesOthers = memOthers / (10*1024);
@@ -211,6 +216,16 @@ bool Msg13::getDoc ( Msg13Request *r,
 	r->m_cacheKey  = r->m_urlHash64;
 	// a compressed reply is different than a non-compressed reply
 	if ( r->m_compressReply ) r->m_cacheKey ^= 0xff;
+
+
+	// . if gigablast is acting like a squid proxy, then r->m_url
+	//   is a COMPLETE http mime request, so hash the following fields in 
+	//   the http mime request to make the cache key
+	//   * url
+	//   * cookie
+	if ( r->m_isSquidProxiedUrl )
+		r->m_cacheKey = computeProxiedCacheKey64 ( r->m_url );
+
 
 	// always forward these so we can use the robots.txt cache
 	if ( r->m_isRobotsTxt ) r->m_forwardDownloadRequest = true;
@@ -876,8 +891,26 @@ void downloadTheDocForReals3 ( Msg13Request *r ) {
 	    agent,
 	    r->m_url);
 
+	char *exactRequest = NULL;
 
-	// download it
+	// if simulating squid just pass the proxied request on
+	// to the webserver as it is, but without the secret
+	// Proxy-Authorization: Basic abcdefgh base64 encoded
+	// username/password info.
+	if ( r->m_isSquidProxiedUrl ) {
+		exactRequest = r->m_url;
+		stripProxyAuthorization ( exactRequest );
+	}
+
+	// convert "GET http://xyz.com/abc" to "GET /abc" if not sending
+	// to another proxy... and sending to the actual webserver
+	if ( r->m_isSquidProxiedUrl && ! r->m_proxyIp )
+		fixGETorPOST ( exactRequest );
+
+
+	// . download it
+	// . if m_proxyIp is non-zero it will make requests like:
+	//   GET http://xyz.com/abc
 	if ( ! g_httpServer.getDoc ( r->m_url             ,
 				     r->m_urlIp           ,
 				     0                    , // offset
@@ -890,7 +923,12 @@ void downloadTheDocForReals3 ( Msg13Request *r ) {
 				     r->m_proxyPort   ,
 				     r->m_maxTextDocLen   ,
 				     r->m_maxOtherDocLen  ,
-				     agent                ) )
+				     agent                ,
+				     DEFAULT_HTTP_PROTO , // "HTTP/1.0"
+				     false , // doPost?
+				     NULL , // cookie
+				     NULL , // additionalHeader
+				     exactRequest ) ) // our own mime!
 		// return false if blocked
 		return;
 	// . log this so i know about it
@@ -2638,6 +2676,101 @@ void scanHammerQueue ( int fd , void *state ) {
 		// try to download some more i guess...
 	}
 }
+
+// When the Msg13Request::m_isSquidProxiedUrl bit then request we got is
+// using us like a proxy, so Msg13Request::m_url is in reality a complete
+// HTTP request mime. so in that case we have to call this code to
+// fix the HTTP request before sending it to its final destination.
+//
+// Remove "Proxy-authorization: Basic abcdefghij\r\n"
+void stripProxyAuthorization ( char *squidProxiedReqBuf ) {
+	//
+	// remove the proxy authorization that has the username/pwd
+	// so the websites we download the url from do not see it in the
+	// http request mime
+	//
+ loop:
+	// include space so it won't match anything in url
+	char *needle = "Proxy-Authorization: ";
+	char *s = strcasestr ( squidProxiedReqBuf , needle );
+	if ( ! s ) return;
+	// find next \r\n
+	char *end = strstr ( s , "\r\n");
+	if ( ! end ) return;
+	// bury the \r\n as well
+	end += 2;
+	// bury that string
+	long reqLen = gbstrlen(squidProxiedReqBuf);
+	char *reqEnd = squidProxiedReqBuf + reqLen;
+	// include \0, so add +1
+	memcpy ( s ,end , reqEnd-end + 1);
+	// bury more of them
+	goto loop;
+}
+
+
+// . convert "GET http://xyz.com/abc" to "GET /abc"
+// . TODO: add "Host:xyz.con\r\n" ?
+void fixGETorPOST ( char *squidProxiedReqBuf ) {
+	char *s = strstr ( squidProxiedReqBuf , "GET http" );
+	long slen = 8;
+	if ( ! s ) {
+		s = strstr ( squidProxiedReqBuf , "POST http");
+		slen = 9;
+	}
+	if ( ! s ) return;
+	// point to start of http://...
+	char *httpStart = s - 4;
+	// https?
+	s += slen;
+	if ( *s ) s++;
+	// skip ://
+	if ( *s++ != ':' ) return;
+	if ( *s++ != '/' ) return;
+	if ( *s++ != '/' ) return;
+	// skip until / or space or \r or \n or \0
+	for ( ; *s && ! is_wspace_a(*s) && *s != '/' ; s++ );
+	// bury the http://xyz.com part now
+	char *reqEnd = squidProxiedReqBuf + gbstrlen(squidProxiedReqBuf);
+	// include the terminating \0, so add +1
+	memcpy ( httpStart , s , reqEnd - s + 1 );
+}
+
+// . for the page cache we hash the url and the cookie to make the cache key
+// . also the GET/POST method i guess
+// . returns 0 on issues
+long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) {
+	char *s = strstr ( squidProxiedReqBuf , "GET http" );
+	long slen = 8;
+	if ( ! s ) {
+		s = strstr ( squidProxiedReqBuf , "POST http");
+		slen = 9;
+	}
+	if ( ! s ) return 0LL;
+
+	// hash the url
+	char *start = s;
+	// skip forward
+	s += slen;
+	// skip till we hit end of url
+	// skip until / or space or \r or \n or \0
+	for ( ; *s && ! is_wspace_a(*s) && *s != '/' ; s++ );
+	// hash the url
+	long long h64 = hash64 ( start , s - start );
+
+	// now for cookie
+	s = strstr ( squidProxiedReqBuf , "Cookie: ");
+	// if not there, just return url hash
+	if ( ! s ) return h64;
+	// save start
+	start = s + 8;
+	// skip till we hit end of cookie line
+	for ( ; *s && *s != '\r' && *s != '\n' ; s++ );
+	// incorporate cookie hash
+	h64 = hash64 ( start , s - start , h64 );
+	return h64;
+}
+
 
 static char *s_agentList[] = {
 	"Mozilla/5.0 (compatible; U; ABrowse 0.6; Syllable) AppleWebKit/420+ (KHTML, like Gecko)",

@@ -33,6 +33,8 @@
 #include "HttpRequest.h"          // for parsing/forming HTTP requests
 #include "HttpMime.h"
 
+#define DEFAULT_HTTP_PROTO "HTTP/1.0"
+
 //this is for low priority requests which come in while we are
 //in a quickpoll
 #define MAX_REQUEST_QUEUE 128
@@ -93,7 +95,7 @@ class HttpServer {
 		      //   with room alert...
 		      // . we do not support 1.1 that is why you should always
 		      //   use 1.0
-		      char   *proto = "HTTP/1.0" ,
+		      char   *proto = DEFAULT_HTTP_PROTO , // "HTTP/1.0" ,
 		      bool    doPost = false ,
 		      char   *cookie = NULL ,
 		      char *additionalHeader = NULL , // does not include \r\n
@@ -194,7 +196,7 @@ class HttpServer {
 	bool addToQueue(TcpSocket *s, HttpRequest *r, long page);
 	bool callQueuedPages();
 
-
+	bool processSquidProxyRequest ( TcpSocket *sock, HttpRequest *hr);
 
 	// private:
 

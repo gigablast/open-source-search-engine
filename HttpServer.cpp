@@ -675,8 +675,8 @@ void HttpServer::requestHandler ( TcpSocket *s ) {
 	}
 
 	// ok, we got an authenticated proxy request
-	if ( r.m_isProxyRequest ) {
-		processProxyRequest ( s , r );
+	if ( r.m_isSquidProxyRequest ) {
+		processSquidProxyRequest ( s , &r );
 		return;
 	}
 
@@ -2970,28 +2970,42 @@ bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
 #define PADDING_SIZE 3000
 
 // in honor of squid
-class StateSquid {
+class SquidState {
 public:
-	TcpSocket *m_socket;
+	TcpSocket *m_sock;
 	// store the ip here
 	long m_ip;
 	// not really needed but saves a malloc
 	DnsState m_dnsState;
 
+	Msg13 m_msg13;
 	Msg13Request m_request;
 	// padding for large requests with cookies and shit so we can store
-	// the request into m_request.m_url and have it overflow some
+	// the request into m_request.m_url and have it overflow some.
+	// IMPORTANT: this array declaration must directly follow m_request.
 	char m_padding[PADDING_SIZE];
 };
 
-bool processProxyRequest ( TcpSocket *sock , HttpRequest *hr ) {
+static void gotSquidProxiedUrlIp ( void *state , long ip );
+
+// did gigablast receive a request like:
+// GET http://www.xyz.com/
+// Proxy-authorization: Basic abcdefghij
+//
+// so we want to fetch that document using msg13 which will send the
+// request to the appropriate host in the cluster based on the url's ip.
+// that host will check its document cache for it and return that if there.
+// otherwise, that host will download it.
+// that host will also use the spider proxies (floaters) if specified,
+// to route the request through the appropriate spider proxy.
+bool HttpServer::processSquidProxyRequest ( TcpSocket *sock, HttpRequest *hr) {
 
 	// we need the actual ip of the requested url so we know
 	// which host to send the msg13 request to. that way it can ensure
 	// that we do not flood a particular IP with too many requests at once.
 
 	// sanity
-	if ( hr->m_proxiedUrlLen > MAX_URL_LEN )
+	if ( hr->m_squidProxiedUrlLen > MAX_URL_LEN )
 		// what is ip lookup failure for proxy?
 		return sendErrorReply ( sock,500,"Url too long (via Proxy)" );
 
@@ -3000,9 +3014,24 @@ bool processProxyRequest ( TcpSocket *sock , HttpRequest *hr ) {
 		// what is ip lookup failure for proxy?
 		return sendErrorReply(sock,500,"Request too long (via Proxy)");
 
+	SquidState *sqs;
+	try { sqs = new (SquidState) ; }
+	// return true and set g_errno if couldn't make a new File class
+	catch ( ... ) { 
+		g_errno = ENOMEM;
+		log("squid: new(%i): %s",
+		    sizeof(SquidState),mstrerror(g_errno));
+		return sendErrorReply(sock,500,mstrerror(g_errno)); 
+	}
+	mnew ( sqs, sizeof(SquidState), "squidst");
+
+	// init
+	sqs->m_ip = 0;
+	sqs->m_sock = sock;
+
 	// normalize the url. MAX_URL_LEN is an issue...
 	Url url;
-	url.set ( hr->m_proxiedUrl , hr->m_proxiedUrlLen );
+	url.set ( hr->m_squidProxiedUrl , hr->m_squidProxiedUrlLen );
 
 	// get hostname for ip lookup
 	char *host = url.getHost();
@@ -3012,33 +3041,35 @@ bool processProxyRequest ( TcpSocket *sock , HttpRequest *hr ) {
 	// . this returns true and sets g_errno on error
 	if ( ! g_dns.getIp ( host,
 			     hlen,
-			     &sqc->m_ip,
-			     sqc,
-			     gotProxiedUrlIp,
-			     &sqc->m_dnsState) )
+			     &sqs->m_ip,
+			     sqs,
+			     gotSquidProxiedUrlIp,
+			     &sqs->m_dnsState) )
 		return false;
 
 	// error?
 	if ( g_errno ) {
-		mdelete ( sqc, sizeof(SquidState), "sqc");
-		delete (sqc);
+		mdelete ( sqs, sizeof(SquidState), "sqs");
+		delete (sqs);
 		// what is ip lookup failure for proxy?
 		return sendErrorReply ( sock , 404 , "Not Found (via Proxy)" );
 	}
 	
-	// must have been in cache using sqc->m_ip
-	gotProxiedUrlIp ( sqc , sqc->m_ip );
+	// must have been in cache using sqs->m_ip
+	gotSquidProxiedUrlIp ( sqs , sqs->m_ip );
 	
 	// assume maybe incorrectly that this blocked! might have had the
 	// page in cache as well...
 	return false;
 }
 
-void gotProxiedUrlIp ( void *state , long ip ) {
-	SquidState *sqc = (SquidState *)state;
+static void gotSquidProxiedContent ( void *state ) ;
+
+void gotSquidProxiedUrlIp ( void *state , long ip ) {
+	SquidState *sqs = (SquidState *)state;
 
 	// pick the host to send the msg13 to now based on the ip
-	Msg13Request *r = &sqc->m_request;
+	Msg13Request *r = &sqs->m_request;
 	
 	// clear everything
 	r->reset();
@@ -3046,23 +3077,21 @@ void gotProxiedUrlIp ( void *state , long ip ) {
 	r->m_urlIp = ip;
 
 	// let msg13 know to just send the request in m_url
-	r->m_isProxiedUrl = true;
+	r->m_isSquidProxiedUrl = true;
 
 	// send the exact request. hide in the url buf i guess.
-	TcpSocket *sock = sqc->m_sock;
+	//TcpSocket *sock = sqs->m_sock;
 
 	char *proxiedReqBuf = r->m_url;
 
 	// store into there
-	r->m_urlLen = memcpy(proxiedReqBuf,sock->m_readBuf,sock->m_readOffset);
+	memcpy ( proxiedReqBuf,
+		 sqs->m_sock->m_readBuf,
+		 sqs->m_sock->m_readOffset );
 
-	// strip out the authentication shit here i guess...
-	// will NULL term as well
-	stripAuthentication ( proxiedReqBuf );
-
-	// . use our own NON-ZERO cache key
-	// . avoid certain mime headers i guess, maybe just hash the url
-	r->m_cacheKey = computeProxiedCacheKey64 ( proxiedReqBuf );
+	// include terminating \0. well it is already i think. see
+	// Msg13Request::getSize(), so no need to add +1
+	r->m_urlLen = sqs->m_sock->m_readOffset;
 
 	// use urlip for this, it determines what host downloads it
 	r->m_firstIp                = r->m_urlIp;
@@ -3095,11 +3124,40 @@ void gotProxiedUrlIp ( void *state , long ip ) {
 	r->m_isCustomCrawl       = 0;
 
 	// isTestColl = false. return if blocked.
-	if ( ! m_msg13.getDoc ( r , false ,sqc , gotProxiedContent ) ) return;
+	if ( ! sqs->m_msg13.getDoc ( r, false ,sqs, gotSquidProxiedContent ) ) 
+		return;
 
 	// we did not block, send back the content
-	gotProxiedContent ( sqc );
+	gotSquidProxiedContent ( sqs );
 }
 
+void gotSquidProxiedContent ( void *state ) {
+	SquidState *sqs = (SquidState *)state;
 
+	// send back the reply
+	char *reply = sqs->m_msg13.m_replyBuf;
+	long  replySize = sqs->m_msg13.m_replyBufSize;
+	long replyAllocSize = sqs->m_msg13.m_replyBufAllocSize;
 
+	// don't let Msg13::reset() free it
+	sqs->m_msg13.m_replyBuf = NULL;
+
+	TcpSocket *sock = sqs->m_sock;
+
+	// sanity, this should be exact... since TcpServer.cpp needs that
+	//if ( replySize != replyAllocSize ) { char *xx=NULL;*xx=0; }
+
+	mdelete ( sqs, sizeof(SquidState), "sqs");
+	delete (sqs);
+
+	// the reply should already have a mime at the top since we are
+	// acting like a squid proxy, send it back...
+	TcpServer *tcp = &g_httpServer.m_tcp;
+	tcp->sendMsg ( sock ,
+		       reply ,  // sendbuf
+		       replyAllocSize ,  // bufsize
+		       replySize , // used
+		       replySize , // msgtotalsize
+		       NULL , // state
+		       NULL ); // donesendingcallback
+}

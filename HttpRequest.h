@@ -98,6 +98,11 @@ class HttpRequest {
 	// . may alloc mem for m_cgiBuf to hold cgi vars from GET or POST op
 	bool set ( char *req , long reqSize , TcpSocket *s );
 
+	// for gigablast's own rendering of squid
+	bool m_isSquidProxyRequest;
+	char *m_squidProxiedUrl;
+	long m_squidProxiedUrlLen;
+
 	// is it this type of request?
 	bool isGETRequest  () { return (m_requestType == 0); };
 	bool isHEADRequest () { return (m_requestType == 1); };

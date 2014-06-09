@@ -7605,6 +7605,22 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SPIDERPROXIES;
 	m++;
 
+	m->m_title = "squid proxy authorized users";
+	m->m_desc  = "Gigablast can also simulate a squid proxy, "
+		"complete with "
+		"caching. It will forward your request to the proxies you "
+		"list above, if any. This list consists of space-separated "
+		"<i>username:password</i> items. Leave this list empty "
+		"to disable squid caching behaviour. The default cache "
+		"size for this is 10MB per shard.";
+	m->m_xml   = "proxyAuth";
+	m->m_cgi   = "proxyAuth";
+	m->m_off   = (char *)&g_conf.m_proxyAuth - g;
+	m->m_type  = TYPE_SAFEBUF;
+	m->m_def   = "";
+	m->m_flags = 0;
+	m++;
+
 
 	///////////////////////////////////////////
 	//  AUTOBAN CONTROLS

@@ -410,17 +410,27 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 
 
 	 // is it a proxy request?
-	 m_isProxyRequest = false;
+	 m_isSquidProxyRequest = false;
 	 if ( strncmp ( &req[i], "http://",7) == 0 ||
-	      strncmp ( &req[i], "https://",8) == 0 ) 
-		 m_isProxyRequest = true;
+	      strncmp ( &req[i], "https://",8) == 0 ) {
+		 m_isSquidProxyRequest = true;
+		 // set url parms for it
+		 m_squidProxiedUrl = &req[i];
+		 char *p = req+i+7;
+		 if ( *p == '/' ) p++; // https:// ?
+		 // stop at whitespace or \0
+		 for ( ; *p && ! is_wspace_a(*p) ; p++ );
+		 // that's the length of it
+		 m_squidProxiedUrlLen = p - m_squidProxiedUrl;
+	 }
+		 
 
 	 // check authentication
 	 char *auth = NULL;
-	 if ( m_isProxyRequest )
+	 if ( m_isSquidProxyRequest )
 		 auth = strstr(req+i,"Proxy-authorization: Basic ");
 
-	 if ( m_isProxyRequest && ! auth ) {
+	 if ( m_isSquidProxyRequest && ! auth ) {
 		 log("http: no auth in proxy request %s",req);
 		 g_errno = EBADREQUEST; 
 		 return false; 
@@ -437,16 +447,16 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 		 tmp.base64Decode ( auth , p - auth );
 		 // now try to match in g_conf.m_proxyAuth safebuf of
 		 // username:password space-separated list
-		 char *p = g_conf.m_proxyAuth.getBufStart();
+		 p = g_conf.m_proxyAuth.getBufStart();
 		 // assume incorrect username/password
 		 bool matched = false;
 		 // loop over those
 		 for ( ; p && *p ; ) {
 			 // skip initial white space
-			 for ( ; *p && is_wspace(*p); p++ );
+			 for ( ; *p && is_wspace_a(*p); p++ );
 			 // skip to end of username:password thing
 			 char *end = p;
-			 for ( ; *end && !is_wspace(*end); end++);
+			 for ( ; *end && !is_wspace_a(*end); end++);
 			 // save
 			 char *start = p;
 			 // advance
