@@ -89,23 +89,70 @@ A work-in-progress <a href=/compare.html>comparison to SOLR</a>.
 
 <br><br><a name=quickstart></a>
 <h1>Quick Start</h1>
-&lt;<i>Last Updated May 2014</i>&gt;
+&lt;<i>Last Updated June 2014</i>&gt;
 <br>
 <br>
+
+<b><font color=red>Requirements:</font></b>
+<br><br>
 
 <!--Until I get the binary packages ready, <a href=#src>build from the source code</a>, it should only take about 30 seconds to type the three commands.-->
 
-Requirements: You will need an Intel or AMD system running Linux and at least 4GB of RAM to run one instance/host of gb.<br><br>
-
-Install the <a href=http://www.gigablast.com/gb-1.0-0.i686.rpm>Gigablast package for RedHat</a>. This package is beta. Ubuntu package is coming soon, <a href=#src>build from source code</a> for that for now.
+You will need an Intel or AMD system with at least 4GB of RAM for every gigablast shard you want to run.
 
 <br><br>
-If it does not start by itself type 'gb -d' (as root) to run it in the background as a daemon.
+
+<b><font color=red>For Linux:</font></b>
+<br><br>
+
+1. Download the <a href=http://www.gigablast.com/gb-1.0-0.i686.rpm>Gigablast package for <b>RedHat</b> Linux</a> or the <a href=http://www.gigablast.com/gb_1.0-1_i386.deb>Gigablast package for <b>Ubuntu</b>/Debian Linux</a>. 
 
 <br><br>
-Once installed visit your <a href=http://127.0.0.1:8000/>local port 8000</a> to access the search engine controls and begin configuration. It could take up to 20 seconds to start the search engine for the first time. 
+
+2. After downloading, install the package by entering <b>sudo dpkg -i <i>&lt;filename&gt;</i></b> where filename is the file you just downloaded.
 
 <br><br>
+3. Type <b>sudo gb -d</b> to run it in the background as a daemon.
+
+<br><br>
+4. If running for the first time, it could take up to 20 seconds to build some preliminary files.
+
+<br><br>
+5. Once running, visit <a href=http://127.0.0.1:8000/>port 8000</a> with your browser to access the Gigablast controls.
+
+<br><br>
+
+
+<b><font color=red>For Microsoft Windows:</font></b>
+<br><br>
+1. If you are running Microsoft Windows, then you will need to install Oracle's <a href=http://www.virtualbox.org/wiki/Downloads><b>VirtualBox for Windows hosts</b></a> software. That will allow you to run Linux in its own window on your Microsoft Windows desktop.
+
+<br><br>
+
+2. When configuring a new Linux virtual machine in VirtualBox, make sure you select at least 4GB of RAM. 
+
+<br><br>
+
+3. Once VirtualBox is installed you can download either an 
+<!--<a href=http://virtualboxes.org/images/ubuntu/>Ubuntu</a> or <a href=http://virtualboxes.org/images/fedora/>RedHat Fedora</a>-->
+<a href="http://www.ubuntu.com/download/desktop">Ubuntu CD-ROM Image (.iso file)</a> or a <a href="http://fedoraproject.org/get-fedora">Red Hat Fedora CD-ROM Image (.iso file)</a>.
+ The CD-ROM Images represent Linux installation CDs.
+
+<br><br>
+
+4. When you boot up Ubuntu or Fedora under VirtualBox for the first time, it will prompt you for the CD-ROM drive, and it will allow you to enter your .iso filename there. 
+
+<br><br>
+
+5. Once you finish the Linux installation process 
+ and then boot into Linux through VirtualBox, you can follow the Linux Quick Start instructions above.
+
+<br><br>
+<br>
+
+<hr>
+
+<br>
 
 <table><tr><td colspan=2><b>Installed Files</b></td></tr>
 <tr><td><nobr>/var/gigablast/data0/</nobr></td><td>Directory of Gigablast binary and data files</td></tr>
@@ -150,17 +197,17 @@ For RedHat do a <b>yum install gcc-c++</b>
 -->
 
 <b>1.</b> For <u>Ubuntu</u> do <b>apt-get install make g++ gcc-multilib lib32stdc++6</b>
-<br>
+<br><br>
 <b>2.</b> For <u>RedHat</u> do <b>yum install gcc-c++</b>
-<br>
+<br><br>
 <b>3.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine>Gigablast source code</a> using <b>wget --no-check-certificate "https://github.com/gigablast/open-source-search-engine/archive/master.zip"</b>, unzip it and cd into it. (optionally use <b>git clone https://github.com/gigablast/open-source-search-engine.git ./github</b> if you have <i>git</i> installed.)
-<br>
+<br><br>
 <b>4.</b> Run <b>make</b> to compile. (e.g. use 'make -j 4' to compile on four cores)
-<br>
+<br><br>
 <b>5.</b> Run <b>./gb -d</b>  to start a single gigablast node which listens on port 8000 running in daemon mode (-d).
-<br>
+<br><br>
 <b>6.</b> The first time you run gb, wait about 30 seconds for it to build some files. Check the log file to see when it completes.
-<br>
+<br><br>
 <b>7.</b> Go to the <a href=http://127.0.0.1:8000/>root page</a> to begin.
 
 <br>
@@ -326,17 +373,17 @@ Each directory should have the following files and subdirectories:<br><br>
 <br>
 <br>
 1. Turn off spidering in the <a href=/admin/master>master controls</a>.
-<br>
+<br><br>
 2. Shut down the clustering by doing a <b>gb stop</b> command on the command line OR by clicking on "save & exit" in the <a href=/admin/master>master controls</a>
-<br>
+<br><br>
 3. Edit the hosts.conf file in the working directory to add the new hosts. (<a href=/hosts.conf.txt>sample hosts.conf</a>)
-<br>
+<br><br>
 4. Ensure you can do passwordless ssh from host #0 to each new IP address you added. This generally requires running <b>ssh-keygen -t dsa</b> on host #0 to create the files <i>~/.ssh/id_dsa</i> and <i>~/.ssh/id_dsa.pub</i>. Then you need to insert the key in <i>~/.ssh/id_dsa.pub</i> into the <i>~/.ssh/authorized_keys2</i> file on every host, including host #0, in your cluster. Furthermore, you must do a <b>chmod 700 ~/.ssh/authorized_keys2</b> on each one otherwise the passwordless ssh will not work.
-<br>
+<br><br>
 5. Run <b>gb install &lt;hostid&gt;</b> on host #0 for each new hostid to copy the required files from host #0 to the new hosts. This will do an <i>scp</i> which requires the passwordless ssh. &lt;hostid&gt; can be a range of hostids like <i>5-12</i> as well.
-<br>
+<br><br>
 6. Run <b>gb start</b> on the command line to start up all gb instances/processes in the cluster.
-<br>
+<br><br>
 7. Click on <b>rebalance shards</b> in the <a href=/admin/master>master controls</a> to begin moving data from the old shards to the new shards. The <a href=/admin/hosts>hosts table</a> will let you know when the rebalance operation is complete. It should be able to serve queries during the rebalancing, but spidering can not resume until it is completed.
 <br>
 <br>

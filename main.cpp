@@ -379,10 +379,12 @@ int main2 ( int argc , char *argv[] ) {
 
 	g_conf.m_runAsDaemon = false;
 
+#ifndef CYGWIN
 	// appears that linux 2.4.17 kernel would crash with this?
 	// let's try again on gk127 to make sure
 	// YES! gk0 cluster has run for months with this just fine!!
 	mlockall(MCL_CURRENT|MCL_FUTURE);
+#endif
 
 	//g_timedb.makeStartKey ( 0 );
 
@@ -13736,7 +13738,7 @@ bool pingTest ( long hid , unsigned short clientPort ) {
 	int n;
 	struct sockaddr_in to;
 	sockaddr_in from;
-	unsigned int fromLen;
+	socklen_t fromLen;
 	long long startTime;
 
 	// make the dgram
@@ -17198,6 +17200,16 @@ int copyFiles ( char *dstDir ) {
 	char *srcDir = "./";
 	SafeBuf fileListBuf;
 	g_process.getFilesToCopy ( srcDir , &fileListBuf );
+
+	// include data files so when building a debian/redhat
+	// package 'make install' we copy those as well.
+	// no let's just build it the first time gb runs, but gb should
+	// bind to port 8000 before building and just return a msg
+	// that says "pls wait while building data files for the first time"
+	//File f;
+	//f.set ( srcDir ,"wikititles2.dat");
+	//if ( f.doesExist() ) 
+	//	fileListBuf.safePrintf(" %s",f.getFilename());
 
 	SafeBuf tmp;
 	tmp.safePrintf(

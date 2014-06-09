@@ -1948,8 +1948,8 @@ long Mem::findPtr ( void *target ) {
 	return 0;
 }
 
-//#include <limits.h>    /* for PAGESIZE */
-#define PAGESIZE ((unsigned long)(8*1024))
+//#include <limits.h>    /* for MEMPAGESIZE */
+#define MEMPAGESIZE ((unsigned long)(8*1024))
 
 void *getElecMem ( long size ) {
 	// a page above OR a page below
@@ -1958,14 +1958,14 @@ void *getElecMem ( long size ) {
 #ifdef _CHECKUNDERFLOW_
 	// how much to alloc
 	// . assume sysmalloc returs one byte above a page, so we need
-	//   PAGESIZE-1 bytes to move p up to page boundary, another
-	//   PAGESIZE bytes for protected page, then the actual mem,
-	//   THEN possibly another PAGESIZE-1 bytes to hit the next page
+	//   MEMPAGESIZE-1 bytes to move p up to page boundary, another
+	//   MEMPAGESIZE bytes for protected page, then the actual mem,
+	//   THEN possibly another MEMPAGESIZE-1 bytes to hit the next page
 	//   boundary for protecting the "freed" mem below, but can get
-	//   by with (PAGESIZE-(size%PAGESIZE)) more
-	long need = size + 8 + PAGESIZE + PAGESIZE ;
+	//   by with (MEMPAGESIZE-(size%MEMPAGESIZE)) more
+	long need = size + 8 + MEMPAGESIZE + MEMPAGESIZE ;
 	// want to end on a page boundary too!
-	need += (PAGESIZE-(size%PAGESIZE));
+	need += (MEMPAGESIZE-(size%MEMPAGESIZE));
 	// get that
 	char *realMem = (char *)sysmalloc ( need );	
 	if ( ! realMem ) return NULL;
@@ -1976,32 +1976,32 @@ void *getElecMem ( long size ) {
 	// parser
 	char *p = realMem;
 	// align p DOWN to nearest 8k boundary
-	long remainder = (uint32_t)realMem % PAGESIZE;
+	long remainder = (uint32_t)realMem % MEMPAGESIZE;
 	// complement
-	remainder = PAGESIZE - remainder;
+	remainder = MEMPAGESIZE - remainder;
 	// and add to ptr to be aligned on 8k boundary
 	p += remainder;
 	// save that
 	char *protMem = p;
 	// skip that
-	p += PAGESIZE;
+	p += MEMPAGESIZE;
 	// save this
 	char *returnMem = p;
 	// store the ptrs
 	*(char **)(returnMem- 4) = realMem;
 	*(char **)(returnMem- 8) = realMemEnd;
 	// protect that after we wrote our ptr
-	if ( mprotect ( protMem , PAGESIZE , PROT_NONE) < 0 )
+	if ( mprotect ( protMem , MEMPAGESIZE , PROT_NONE) < 0 )
 		log("mem: mprotect failed: %s",mstrerror(errno));
 	// advance over user data
 	p += size;
 	// now when we free this it should all be protected, so make sure
 	// we have enough room on top
-	long leftover = PAGESIZE  - ((uint32_t)p % PAGESIZE);
+	long leftover = MEMPAGESIZE  - ((uint32_t)p % MEMPAGESIZE);
 	// skip that
 	p += leftover;
 	// inefficient?
-	if ( realMemEnd - p > (long)PAGESIZE ) { char *xx=NULL;*xx=0;}
+	if ( realMemEnd - p > (long)MEMPAGESIZE ) { char *xx=NULL;*xx=0;}
 	// ensure we do not breach
 	if ( p > realMemEnd ) { char *xx=NULL;*xx=0; }
 	// test it, this should core
@@ -2010,7 +2010,7 @@ void *getElecMem ( long size ) {
 	return returnMem;
 #else
 	// how much to alloc
-	long need = size + 8 + PAGESIZE + PAGESIZE + PAGESIZE;
+	long need = size + 8 + MEMPAGESIZE + MEMPAGESIZE + MEMPAGESIZE;
 	// get that
 	char *realMem = (char *)sysmalloc ( need );	
 	if ( ! realMem ) return NULL;
@@ -2021,15 +2021,15 @@ void *getElecMem ( long size ) {
 	// get the end of it
 	char *end = realMemEnd;
 	// back down from what we need
-	end -= PAGESIZE;
+	end -= MEMPAGESIZE;
 	// get remainder from that
-	long remainder = (uint32_t)end % PAGESIZE;
+	long remainder = (uint32_t)end % MEMPAGESIZE;
 	// back down to that
 	char *protMem = end - remainder;
 	// get return mem
 	char *returnMem = protMem - size;
 	// back beyond that
-	long leftover = (uint32_t)returnMem % PAGESIZE;
+	long leftover = (uint32_t)returnMem % MEMPAGESIZE;
 	// back up
 	char *p = returnMem - leftover;
 	// we are now on a page boundary, so we can protect this mem
@@ -2041,7 +2041,7 @@ void *getElecMem ( long size ) {
 	// sanity
 	if ( returnMem - 8 < realMem ) { char *xx=NULL;*xx=0; }
 	// protect that after we wrote our ptr
-	if ( mprotect ( protMem , PAGESIZE , PROT_NONE) < 0 )
+	if ( mprotect ( protMem , MEMPAGESIZE , PROT_NONE) < 0 )
 		log("mem: mprotect failed: %s",mstrerror(errno));
 	// test it, this should core
 	//protmem[0] = 32;
@@ -2087,13 +2087,13 @@ void freeElecMem ( void *fakeMem ) {
 	long  fakeSize =  s_sizes[h];
 
 #ifdef _CHECKUNDERFLOW_
-	char *oldProtMem = cp - PAGESIZE;
+	char *oldProtMem = cp - MEMPAGESIZE;
 #else
 	char *oldProtMem = cp + fakeSize;
 #endif
 
 	// unprotect it
-	if ( mprotect ( oldProtMem , PAGESIZE, PROT_READ|PROT_WRITE) < 0 )
+	if ( mprotect ( oldProtMem , MEMPAGESIZE, PROT_READ|PROT_WRITE) < 0 )
 		log("mem: munprotect failed: %s",mstrerror(errno));
 
 	// now original memptr is right before "p" and we can
@@ -2106,13 +2106,13 @@ void freeElecMem ( void *fakeMem ) {
 	memset ( realMem , 0x99 , realMemEnd - realMem );
 
 	// ok, back up to page boundary before us
-	char *protMem = realMem + (PAGESIZE - 
-				   (((unsigned long)realMem) % PAGESIZE));
+	char *protMem = realMem + (MEMPAGESIZE - 
+				   (((unsigned long)realMem) % MEMPAGESIZE));
 	// get end point
-	char *protEnd = realMemEnd - ((unsigned long)realMemEnd % PAGESIZE);
+	char *protEnd = realMemEnd - ((unsigned long)realMemEnd % MEMPAGESIZE);
 	// sanity
 	if ( protMem < realMem ) { char *xx=NULL;*xx=0; }
-	if ( protMem - realMem > (long)PAGESIZE ) { char *xx=NULL;*xx=0; }
+	if ( protMem - realMem > (long)MEMPAGESIZE ) { char *xx=NULL;*xx=0; }
 	// before adding it into the ring, protect it
 	if ( mprotect ( protMem , protEnd-protMem, PROT_NONE) < 0 )
 		log("mem: mprotect2 failed: %s",mstrerror(errno));

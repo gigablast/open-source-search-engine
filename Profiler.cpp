@@ -1,3 +1,19 @@
+#ifdef CYGWIN
+
+#include "Profiler.h"
+Profiler::Profiler(){return;}
+Profiler::~Profiler(){return;}
+bool Profiler::reset(){return true;}
+bool Profiler::init(){return true;}
+char *Profiler::getFnName(unsigned long address,long *nameLen){return NULL;}
+void Profiler::stopRealTimeProfiler(const bool keepData){return;}
+void Profiler::cleanup(){return;}
+bool Profiler:: readSymbolTable(){return true;}
+bool sendPageProfiler ( class TcpSocket *s,class HttpRequest *r){return true;}
+Profiler g_profiler;	
+
+#else
+
 #include <execinfo.h>
 #include <assert.h>
 #include "gb-include.h"
@@ -6,6 +22,7 @@
 #include "sort.h"
 #include "Users.h"
 Profiler g_profiler;
+
 
 static int decend_cmpUll ( const void *h1 , const void *h2 );
 static int decend_cmpF ( const void *h1 , const void *h2 );
@@ -1750,3 +1767,4 @@ Profiler::getNewFrameTrace(const uint32_t addr) {
 	return m_frameTraces[m_numUsedFrameTraces++].set(addr);
 }
 
+#endif

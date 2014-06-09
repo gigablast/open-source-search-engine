@@ -935,7 +935,7 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 	// (Msg3b) that take like an hour.
 	s->m_timeout = 1000*60*1000;
 	// a temp thang
-	int parm;
+	//int parm;
 	// . TODO: make sure this sd will NEVER exist!!
 	// . throw our TcpSocket into the array
 	// . this returns -1 on error, otherwise >= 0 of the node #
@@ -947,6 +947,8 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 	// . we should also set TCP_CORK
 	// . NOTE: we must unset this when we've written out the last bytes
 	//         to the send buffer
+	/*
+	  cygwin doesn't recognize TCP_CORK
  retry:
 	parm = 1;
 	if ( setsockopt ( sd , SOL_TCP , TCP_CORK , &parm , sizeof(int)) < 0) {
@@ -958,6 +960,7 @@ TcpSocket *TcpServer::wrapSocket ( int sd , long niceness , bool isIncoming ) {
 		    mstrerror(g_errno));
 		goto hadError;
 	}
+	*/
 	// try this to fix bug of not sending all data to browser
 	//struct linger ggg;
 	//ggg.l_onoff = 1; // non-zero to linger on close
@@ -1598,6 +1601,7 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 	// . uncork sd so write buf gets flushed
 	// . return false and set g_errno on error
 	// . sd should be destroyed
+	/* cygwin doesn't recognize tcp_cork
 	int parm = 0;
  retry11:
 	if ( setsockopt (s->m_sd,SOL_TCP,TCP_CORK,&parm,sizeof(int)) < 0) {
@@ -1609,6 +1613,7 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 		    strerror(g_errno));
 		return -1;
 	}
+	*/
 	// if we completed sending a REQUEST then change state to 
 	// "reading" and return true
 	if ( s->isSendingRequest() ) {
@@ -2080,7 +2085,7 @@ void acceptSocketWrapper ( int sd , void *state ) {
 TcpSocket *TcpServer::acceptSocket ( ) {
 	// get the new socket descriptor, "newsd"
 	struct sockaddr_in name; 
-	unsigned int       nameLen = sizeof(sockaddr);
+	socklen_t  nameLen = sizeof(sockaddr);
  retry12:
 	int newsd = accept ( m_sock , (sockaddr *)&name , &nameLen );
 	// valgrind

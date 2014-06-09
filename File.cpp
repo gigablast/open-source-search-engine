@@ -84,7 +84,10 @@ File::~File ( ) {
 void File::set ( char *dir , char *filename ) {
 	if ( ! dir ) { set ( filename ); return; }
 	char buf[1024];
-	sprintf ( buf , "%s/%s" , dir , filename );
+	if ( dir[gbstrlen(dir)-1] == '/' )
+		snprintf ( buf , 1020, "%s%s" , dir , filename );
+	else
+		snprintf ( buf , 1020, "%s/%s" , dir , filename );
 	set ( buf );
 }
 
