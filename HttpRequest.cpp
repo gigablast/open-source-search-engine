@@ -397,6 +397,10 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 // . shit, but it fucks up POST requests
 	 if ( m_requestType != 2 ) { req [ reqLen - 1 ] = '\0'; reqLen--; }
 
+	 long cmdLen = 0;
+	 if ( m_requestType == 0 ) cmdLen = 3;
+	 if ( m_requestType >= 1 ) cmdLen = 4;
+
 	 // POST requests can be absolutely huge if you are injecting a 100MB
 	 // file, so limit our strstrs to the end of the mime
 	 char *d = NULL;
@@ -411,12 +415,12 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 
 	 // is it a proxy request?
 	 m_isSquidProxyRequest = false;
-	 if ( strncmp ( &req[i], "http://",7) == 0 ||
-	      strncmp ( &req[i], "https://",8) == 0 ) {
+	 if ( strncmp ( req + cmdLen + 1, "http://" ,7) == 0 ||
+	      strncmp ( req + cmdLen + 1, "https://",8) == 0 ) {
 		 m_isSquidProxyRequest = true;
 		 // set url parms for it
-		 m_squidProxiedUrl = &req[i];
-		 char *p = req+i+7;
+		 m_squidProxiedUrl = req + cmdLen + 1;
+		 char *p = m_squidProxiedUrl + 7;
 		 if ( *p == '/' ) p++; // https:// ?
 		 // stop at whitespace or \0
 		 for ( ; *p && ! is_wspace_a(*p) ; p++ );
@@ -430,26 +434,26 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 if ( m_isSquidProxyRequest )
 		 auth = strstr(req+i,"Proxy-authorization: Basic ");
 
-	 if ( m_isSquidProxyRequest && ! auth ) {
-		 log("http: no auth in proxy request %s",req);
-		 g_errno = EBADREQUEST; 
-		 return false; 
-	 }
+	 //if ( m_isSquidProxyRequest && ! auth ) {
+	 //	 log("http: no auth in proxy request %s",req);
+	 //	 g_errno = EBADREQUEST; 
+	 //	 return false; 
+	 //}
 
-	 bool matched = false;
-
-	 // verify username/passwd
+	 SafeBuf tmp;
 	 if ( auth ) {
 		 // find end of it
 		 char *p = auth;
 		 for ( ; *p && *p != '\r' && *p != '\n' ; p++ );
-		 SafeBuf tmp;
 		 tmp.base64Decode ( auth , p - auth );
+	 }
+
+	 // assume incorrect username/password
+	 bool matched = false;
+	 if ( m_isSquidProxyRequest ) {
 		 // now try to match in g_conf.m_proxyAuth safebuf of
 		 // username:password space-separated list
-		 p = g_conf.m_proxyAuth.getBufStart();
-		 // assume incorrect username/password
-		 bool matched = false;
+		 char *p = g_conf.m_proxyAuth.getBufStart();
 		 // loop over those
 		 for ( ; p && *p ; ) {
 			 // skip initial white space
@@ -461,6 +465,11 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 			 char *start = p;
 			 // advance
 			 p = end;
+			 // this is always a match
+			 if ( end-start == 3 && strncmp(start,"*:*",3)==0 ) {
+				 matched = true;
+				 break;
+			 }
 			 // compare now
 			 if ( tmp.length() != end-start ) 
 				 continue;
@@ -473,14 +482,14 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 }
 
 	 // incorrect username:passwrod?
-	 if ( auth && ! matched ) {
+	 if ( m_isSquidProxyRequest && ! matched ) {
 		 log("http: bad username:password in proxy request %s",req);
 		 g_errno = EPERMDENIED;
 		 return false; 
 	 }
 
 	 // if proxy request to download a url through us, we are done
-	 if ( auth ) return true;
+	 if ( m_isSquidProxyRequest ) return true;
 
 	 // . point to the file path 
 	 // . skip over the "GET "

@@ -7612,13 +7612,14 @@ void Parms::init ( ) {
 		"list above, if any. This list consists of space-separated "
 		"<i>username:password</i> items. Leave this list empty "
 		"to disable squid caching behaviour. The default cache "
-		"size for this is 10MB per shard.";
+		"size for this is 10MB per shard. Use item *:* to allow "
+		"anyone access.";
 	m->m_xml   = "proxyAuth";
 	m->m_cgi   = "proxyAuth";
 	m->m_off   = (char *)&g_conf.m_proxyAuth - g;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_def   = "";
-	m->m_flags = 0;
+	m->m_flags = PF_TEXTAREA;
 	m++;
 
 

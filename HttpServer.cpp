@@ -196,7 +196,8 @@ bool HttpServer::getDoc ( char   *url      ,
 
 	long  hostLen ;
 	long  port = defPort;
-	char *host = getHostFast ( url , &hostLen , &port );
+	char *host = NULL;
+	if ( ! ip ) host = getHostFast ( url , &hostLen , &port );
 	
 
 	//if ( g_conf.m_logDebugSpider )
@@ -3094,7 +3095,8 @@ void gotSquidProxiedUrlIp ( void *state , long ip ) {
 	// store into there
 	memcpy ( proxiedReqBuf,
 		 sqs->m_sock->m_readBuf,
-		 sqs->m_sock->m_readOffset );
+		 // include +1 for the terminating \0
+		 sqs->m_sock->m_readOffset + 1);
 
 	// include terminating \0. well it is already i think. see
 	// Msg13Request::getSize(), so no need to add +1

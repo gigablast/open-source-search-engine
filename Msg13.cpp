@@ -885,11 +885,12 @@ void downloadTheDocForReals3 ( Msg13Request *r ) {
 		callback = gotHttpReply;
 
 	// debug note
-	log("sproxy: got proxy %s:%li and agent=\"%s\" to spider %s",
-	    iptoa(r->m_proxyIp),
-	    (long)r->m_proxyPort,
-	    agent,
-	    r->m_url);
+	if ( r->m_proxyIp )
+		log("sproxy: got proxy %s:%li and agent=\"%s\" to spider %s",
+		    iptoa(r->m_proxyIp),
+		    (long)r->m_proxyPort,
+		    agent,
+		    r->m_url);
 
 	char *exactRequest = NULL;
 
@@ -2720,10 +2721,10 @@ void fixGETorPOST ( char *squidProxiedReqBuf ) {
 	}
 	if ( ! s ) return;
 	// point to start of http://...
-	char *httpStart = s - 4;
+	char *httpStart = s + slen - 4;
 	// https?
 	s += slen;
-	if ( *s ) s++;
+	if ( *s == 's' ) s++;
 	// skip ://
 	if ( *s++ != ':' ) return;
 	if ( *s++ != '/' ) return;
