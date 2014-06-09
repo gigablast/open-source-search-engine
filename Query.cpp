@@ -1953,6 +1953,7 @@ bool Query::setQWords ( char boolFlag ,
 		// assume QueryWord is ignored by default
 		qw->m_ignoreWord   = IGNORE_DEFAULT;
 		qw->m_ignorePhrase = IGNORE_DEFAULT;
+		qw->m_ignoreWordInBoolQuery = false;
 		qw->m_wordNum = i;
 		// get word as a string
 		//char *w    = words.getWord(i);
@@ -2307,8 +2308,15 @@ bool Query::setQWords ( char boolFlag ,
 			if ( fieldCode == FIELD_GBSORTBY ||
 			     fieldCode == FIELD_GBREVSORTBY ||
 			     fieldCode == FIELD_GBSORTBYINT ||
-			     fieldCode == FIELD_GBREVSORTBYINT )
+			     fieldCode == FIELD_GBREVSORTBYINT ) {
 				wid = hash64Lower_utf8 ( w , wlen , 0LL );
+				// do not include this word as part of
+				// any boolean expression, so
+				// Expression::isTruth() will ignore it and we
+				// fix '(A OR B) gbsortby:offperice' query
+				qw->m_ignoreWordInBoolQuery = true;
+			}
+
 
 			// gbmin:price:1.23
 			if ( firstColonLen>0 &&
@@ -3764,6 +3772,9 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 			// for regular word operands
 			// ignore it like a space?
 			if ( qw->m_ignoreWord ) continue;
+			// ignore gbsortby:offerprice in bool queries
+			// at least for evaluating them
+			if ( qw->m_ignoreWordInBoolQuery ) continue;
 			// save old one
 			prevResult = opResult;
 			// convert word to term #

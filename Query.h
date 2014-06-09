@@ -308,6 +308,10 @@ class QueryWord {
 	// . see #define'd IGNORE_* codes above
 	char        m_ignoreWord   ;
 	char        m_ignorePhrase ;
+
+	// so we ignore gbsortby:offerprice in bool expressions
+	char        m_ignoreWordInBoolQuery;
+
 	// is this query single word in quotes?
 	bool        m_inQuotes ; 
 	// is this word in a phrase that is quoted?
