@@ -520,6 +520,9 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	// . an empty rec is a cached not found (no robot.txt file)
 	// . therefore it's allowed, so set *reply to 1 (true)
 	if ( inCache ) {
+		// log debug?
+		if ( r->m_isSquidProxiedUrl )
+			log("proxy: found %li bytes in cache",recSize);
 		// helpful for debugging. even though you may see a robots.txt
 		// redirect and think we are downloading that each time,
 		// we are not... the redirect is cached here as well.
@@ -2739,6 +2742,10 @@ void fixGETorPOST ( char *squidProxiedReqBuf ) {
 	char *reqEnd = squidProxiedReqBuf + gbstrlen(squidProxiedReqBuf);
 	// include the terminating \0, so add +1
 	memcpy ( httpStart , s , reqEnd - s + 1 );
+	// now make HTTP/1.1 into HTTP/1.0
+	char *hs = strstr ( httpStart , "HTTP/1.1" );
+	if ( ! hs ) return;
+	hs[7] = '0';
 }
 
 // . for the page cache we hash the url and the cookie to make the cache key
@@ -2763,9 +2770,27 @@ long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) {
 	s += slen;
 	// skip till we hit end of url
 	// skip until / or space or \r or \n or \0
-	for ( ; *s && ! is_wspace_a(*s)  ; s++ );
+	char *cgi = NULL;
+	for ( ; *s && ! is_wspace_a(*s)  ; s++ ) {
+		if ( *s == '?' && ! cgi ) cgi = s; }
 	// hash the url
 	long long h64 = hash64 ( start , s - start );
+
+	//
+	// if file extension implies it is an image, do not hash cookie
+	//
+	char *extEnd = NULL;
+	if ( cgi ) extEnd = cgi;
+	else       extEnd = s;
+	char *ext = extEnd;
+	for ( ; ext>extEnd-6 && ext>start && *ext!='.' && *ext!='/' ; ext-- );
+	if ( *ext == '.' && ext+1 < extEnd ) {
+		HttpMime mime;
+		const char *cts;
+		ext++; // skip over .
+		cts = mime.getContentTypeFromExtension ( ext , extEnd-ext );
+		if ( strncmp(cts,"image/",6) == 0 ) return h64;
+	}
 
 	// now for cookie
 	s = strstr ( squidProxiedReqBuf , "Cookie: ");
@@ -2777,6 +2802,9 @@ long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) {
 	for ( ; *s && *s != '\r' && *s != '\n' ; s++ );
 	// incorporate cookie hash
 	h64 = hash64 ( start , s - start , h64 );
+
+	//log("debug: cookiehash=%lli",hash64(start,s-start));
+
 	return h64;
 }
 

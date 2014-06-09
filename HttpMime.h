@@ -136,6 +136,7 @@ class HttpMime {
 
 	// convert a file extension like "gif" to "images/gif"
 	const char *getContentTypeFromExtension ( char *ext ) ;
+	const char *getContentTypeFromExtension ( char *ext , long elen ) ;
 
 	// used for bz2, gz files
 	const char *getContentEncodingFromExtension ( char *ext ) ;

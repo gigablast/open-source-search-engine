@@ -3076,6 +3076,20 @@ static void gotSquidProxiedContent ( void *state ) ;
 void gotSquidProxiedUrlIp ( void *state , long ip ) {
 	SquidState *sqs = (SquidState *)state;
 
+	// send the exact request. hide in the url buf i guess.
+	TcpSocket *sock = sqs->m_sock;
+
+
+	// if ip lookup failed... return 
+	if ( ip == 0 || ip == -1 ) {
+		mdelete ( sqs, sizeof(SquidState), "sqs");
+		delete (sqs);
+		// what is ip lookup failure for proxy?
+		g_httpServer.sendErrorReply(sock,404,"Not Found (via Proxy)");
+		return;
+	}
+
+
 	// pick the host to send the msg13 to now based on the ip
 	Msg13Request *r = &sqs->m_request;
 	
@@ -3086,9 +3100,6 @@ void gotSquidProxiedUrlIp ( void *state , long ip ) {
 
 	// let msg13 know to just send the request in m_url
 	r->m_isSquidProxiedUrl = true;
-
-	// send the exact request. hide in the url buf i guess.
-	//TcpSocket *sock = sqs->m_sock;
 
 	char *proxiedReqBuf = r->m_url;
 
@@ -3132,6 +3143,9 @@ void gotSquidProxiedUrlIp ( void *state , long ip ) {
 	r->m_compressReply       = false;
 	r->m_isCustomCrawl       = 0;
 
+	// log for now
+	log("proxy: getting proxied content for req=%s",r->m_url);
+
 	// isTestColl = false. return if blocked.
 	if ( ! sqs->m_msg13.getDoc ( r, false ,sqs, gotSquidProxiedContent ) ) 
 		return;
@@ -3148,10 +3162,30 @@ void gotSquidProxiedContent ( void *state ) {
 	long  replySize = sqs->m_msg13.m_replyBufSize;
 	long replyAllocSize = sqs->m_msg13.m_replyBufAllocSize;
 
+	TcpSocket *sock = sqs->m_sock;
+
+	// if it timed out or something...
+	if ( g_errno ) {
+		log("proxy: proxy reply had error=%s",mstrerror(g_errno));
+		mdelete ( sqs, sizeof(SquidState), "sqs");
+		delete (sqs);
+		// what is ip lookup failure for proxy?
+		g_httpServer.sendErrorReply(sock,505,"Timed Out (via Proxy)");
+		return;
+	}
+
+
+	// another debg log
+	long clen = 500;
+	if ( clen > replySize ) clen = replySize -1;
+	if ( clen < 0 ) clen = 0;
+	char c = reply[clen];
+	reply[clen]=0;
+	log("proxy: got proxied reply=%s",reply);
+	reply[clen]=c;
+
 	// don't let Msg13::reset() free it
 	sqs->m_msg13.m_replyBuf = NULL;
-
-	TcpSocket *sock = sqs->m_sock;
 
 	// sanity, this should be exact... since TcpServer.cpp needs that
 	//if ( replySize != replyAllocSize ) { char *xx=NULL;*xx=0; }

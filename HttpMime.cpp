@@ -559,6 +559,19 @@ void resetHttpMime ( ) {
 	s_mimeTable.reset();
 }
 
+const char *HttpMime::getContentTypeFromExtension ( char *ext , long elen) {
+	// assume text/html if no extension provided
+	if ( ! ext || ! ext[0] ) return "text/html";
+	if ( elen <= 0 ) return "text/html";
+	// get hash for table look up
+	long key = hash32 ( ext , elen );
+	char *ptr = (char *)s_mimeTable.getValue ( key );
+	if ( ptr ) return ptr;
+	// if not found in table, assume text/html
+	return "text/html";
+}
+
+
 // . list of types is on: http://www.duke.edu/websrv/file-extensions.html
 // . i copied it to the bottom of this file though
 const char *HttpMime::getContentTypeFromExtension ( char *ext ) {
