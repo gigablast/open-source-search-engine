@@ -2719,6 +2719,10 @@ void fixGETorPOST ( char *squidProxiedReqBuf ) {
 		s = strstr ( squidProxiedReqBuf , "POST http");
 		slen = 9;
 	}
+	if ( ! s ) {
+		s = strstr ( squidProxiedReqBuf , "HEAD http");
+		slen = 9;
+	}
 	if ( ! s ) return;
 	// point to start of http://...
 	char *httpStart = s + slen - 4;
@@ -2747,6 +2751,10 @@ long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) {
 		s = strstr ( squidProxiedReqBuf , "POST http");
 		slen = 9;
 	}
+	if ( ! s ) {
+		s = strstr ( squidProxiedReqBuf , "HEAD http");
+		slen = 9;
+	}
 	if ( ! s ) return 0LL;
 
 	// hash the url
@@ -2755,7 +2763,7 @@ long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) {
 	s += slen;
 	// skip till we hit end of url
 	// skip until / or space or \r or \n or \0
-	for ( ; *s && ! is_wspace_a(*s) && *s != '/' ; s++ );
+	for ( ; *s && ! is_wspace_a(*s)  ; s++ );
 	// hash the url
 	long long h64 = hash64 ( start , s - start );
 
