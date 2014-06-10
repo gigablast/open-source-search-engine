@@ -9130,7 +9130,11 @@ void Parms::init ( ) {
 	m++;*/
 
 	m->m_title = "spider round start time";
-	m->m_desc  = "When the spider round started";
+	m->m_desc  = "When the next spider round starts. If you force this to "
+		"zero it sets it to the current time. That way you can "
+		"respider all the urls that were already spidered, and urls "
+		"that were not yet spidered in the round will still be "
+		"spidered.";
 	m->m_cgi   = "spiderRoundStart";
 	m->m_off   = (char *)&cr.m_spiderRoundStartTime - x;
 	m->m_type  = TYPE_LONG;
@@ -17263,6 +17267,17 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 
 		if ( m->m_obj == OBJ_NONE ) continue;
 		if ( m->m_obj == OBJ_SI ) continue;
+
+		// convert spiderRoundStartTime=0 to
+		// spiderRoundStartTime=<currenttime>+30secs
+		// so that will force the next spider round to kick in
+		char tmp[24];
+		if ( strcmp(field,"spiderRoundStart")==0 && 
+		     val && (val[0]=='0'||val[0]=='1') && val[1]==0 ) {
+			sprintf(tmp,"%lu",(long)getTimeGlobalNoCore()+0);
+			val = tmp;
+		}
+
 
 		// add it to a list now
 		if ( ! addNewParmToList2 ( parmList ,

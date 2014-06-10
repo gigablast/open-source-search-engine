@@ -3094,6 +3094,11 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// do not crawl anything else
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		// this needs to be zero so &spiderRoundStart=0
+		// functionality which sets it to current time works
+		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
+		// in the future and we can't force the rounce
+		m_spiderFreqs[i] = 0.0;
 		i++;
 	}
 
@@ -3107,6 +3112,11 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// do not crawl anything else
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		// this needs to be zero so &spiderRoundStart=0
+		// functionality which sets it to current time works
+		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
+		// in the future and we can't force the rounce
+		m_spiderFreqs[i] = 0.0;
 		i++;
 	}
 
@@ -3120,6 +3130,11 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// crawl everything by default, no processing
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = 50;
+		// this needs to be zero so &spiderRoundStart=0
+		// functionality which sets it to current time works
+		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
+		// in the future and we can't force the rounce
+		m_spiderFreqs[i] = 0.0;
 		i++;
 	}
 
@@ -3128,6 +3143,11 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// crawl everything by default, no processing
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = 50;
+		// this needs to be zero so &spiderRoundStart=0
+		// functionality which sets it to current time works
+		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
+		// in the future and we can't force the rounce
+		m_spiderFreqs[i] = 0.0;
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 	}
