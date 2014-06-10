@@ -18,7 +18,7 @@
 #include "Spider.h"
 #include "Revdb.h"
 #include "XmlDoc.h"
-#include "PageInject.h" // Msg7
+#include "Inject.h" // Msg7
 #include "PageReindex.h"
 
 static bool printInterface ( SafeBuf *sb , char *q ,//long user ,

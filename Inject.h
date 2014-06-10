@@ -1,5 +1,5 @@
-#ifndef _PAGEINJECT_H_
-#define _PAGEINJECT_H_    
+#ifndef GBINJECT_H
+#define GBINJECT_H    
 
 #include "XmlDoc.h"
 #include "Users.h"

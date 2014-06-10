@@ -1,6 +1,6 @@
 #include "gb-include.h"
 
-#include "PageInject.h"
+#include "Inject.h"
 #include "HttpServer.h"
 #include "Pages.h"
 #include "Users.h"
@@ -204,9 +204,11 @@ bool sendReply ( void *state ) {
 	sb.safePrintf (
 		  "<center>"
 		  "<b>%s</b>\n\n" // the url msg
-		  //"<FORM method=POST action=/inject>\n\n" 
 
-		  "<FORM method=GET action=/inject>\n\n" 
+		  // now that we have file upload ability for content, use post
+		  "<FORM method=POST action=/inject>\n\n" 
+
+		  //"<FORM method=GET action=/inject>\n\n" 
 
 		  //"<input type=hidden name=pwd value=\"%s\">\n"
 		  //"<input type=hidden name=username value=\"%s\">\n"
@@ -427,6 +429,27 @@ bool sendReply ( void *state ) {
 		  "<input type=radio name=hasmime value=0 checked>no &nbsp; "
 		  "<input type=radio name=hasmime value=1>yes "
 		  "</td></tr>\n\n" 
+
+
+		  "<tr class=poo><td><b>content delimeter</b><br>"
+		  "<font size=1>If content consists of multiple documents "
+		  "then what is the delimeter separating them. Possible "
+		  "examples: <i>========</i> or <i>&lt;doc&gt;</i>"
+		  "</font>"
+		  "</td>"
+		  "<td>\n"
+		  "<input type=text name=delim>"
+		  "</td></tr>\n\n" 
+
+
+		  "<tr class=poo><td><b>upload content file</b><br>"
+		  "<font size=1>IP address of the url.</font>"
+		  "</td>"
+		  "<td>\n"
+		  "<input type=file name=contentfile>"
+		  "</td></tr>\n\n" 
+
+
 
 		  "<tr class=poo><td colspan=2>"
 		  "<center>"

@@ -870,6 +870,7 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 		return log("query: setQueryBuffers: %s",mstrerror(g_errno));
 
 	/* --- Virtual host language detection --- */
+	/*
 	if(r->getHost()) {
 		bool langset = getLanguageFromAbbr(m_defaultSortLanguage);
 		char *cp;
@@ -886,6 +887,7 @@ m	if (! cr->hasSearchPermission ( sock, encapIp ) ) {
 			}
 		}
 	}
+	*/
 	/* --- End Virtual host language detection --- */
 
 

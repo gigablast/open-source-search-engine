@@ -152,7 +152,7 @@ static WebPage s_pages[] = {
 	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" ,  0 , 1 ,
 	  //USER_ADMIN | USER_MASTER   ,
 	  "inject url in the index here",
-	  sendPageInject   , 2 } ,
+	  sendPageGeneric   , 2 } ,
 	// this is the addurl page the the admin!
 	{ PAGE_ADDURL2   , "admin/addurl"   , 0 , "add urls" ,  0 , 0 ,
 	  "add url page for admin",
@@ -228,10 +228,10 @@ static WebPage s_pages[] = {
 	//  //USER_MASTER | USER_ADMIN ,
 	//  "overview page",
 	//  sendPageOverview  , 0 } ,
-	{ PAGE_CGIPARMS , "admin/api"         , 0 , "api" , 0 , 0 ,
+	{ PAGE_API , "admin/api"         , 0 , "api" , 0 , 0 ,
 	  //USER_MASTER | USER_ADMIN , 
-	  "cgi params page",
-	  sendPageCgiParms , 0 } ,
+	  "cgi parms page",
+	  sendPageAPI , 0 } ,
 	{ PAGE_RULES  , "admin/siterules", 0 , "site rules", 1, 1,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "site rules page",
@@ -2414,7 +2414,7 @@ bool sendPageReportSpam ( TcpSocket *s , HttpRequest *r ) {
 	return 	retval;
 }
 
-bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
+bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	char pbuf[32768];
 	SafeBuf p(pbuf, 32768);
 
@@ -2429,48 +2429,73 @@ bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
 	// 	}
 
 	p.safePrintf ( "<table %s>"
-		       "<tr class=hdrow><td colspan=8>"
+		       "<tr class=hdrow><td colspan=9>"
 		       "<center><b>CGI Parameters</b></tr></tr>"
 		       "<tr bgcolor=#%s><td><b>CGI</b></td>"
 		       "<td><b>Page</b></td>"
 		       "<td><b>Type</b></td>"
-		       "<td><b>Name</b></td>"
+		       "<td><b>Title</b></td>"
+		       "<td><b>Default Value</b></td>"
 		       "<td><b>Description</b></td></tr>\n",
 		       TABLE_STYLE , DARK_BLUE);
+
+	const char *blue = LIGHT_BLUE;
+
 	for ( long i = 0; i < g_parms.m_numParms; i++ ) {
 		Parm *parm = &g_parms.m_parms[i];
-		if ( !parm->m_sparm ) continue;
+		// skip if hidden
+		if ( parm->m_flags & PF_HIDDEN ) continue;
+		//if ( !parm->m_sparm ) continue;
+		if ( ! (parm->m_flags & PF_API) ) continue;
 		// use m_cgi if no m_scgi
 		char *cgi = parm->m_cgi;
 		if ( parm->m_scgi ) cgi = parm->m_scgi;
 
-		// skip if hidden
-		if ( parm->m_flags & PF_HIDDEN ) continue;
+		//char *page = parm->m_scmd;
+		char *page = "???";
+		if ( parm->m_page == PAGE_INJECT  ) page = "/admin/inject";
+		if ( parm->m_page == PAGE_ADDURL2 ) page = "/admin/addurl";
+		if ( parm->m_page == PAGE_GET     ) page = "/admin/get";
 
-		char *page = parm->m_scmd;
-		if ( ! page ) page = "";
+		// these parms are on search results page and in SearchInput
+		if ( parm->m_page == PAGE_SEARCH && parm->m_scmd ) 
+			page = "/search";
+
+		// these are just in SearchInput
+		if ( parm->m_page == PAGE_NONE && parm->m_obj == OBJ_SI  ) 
+			page = "/search";
 
 		// print the parm
 		p.safePrintf ( "<tr bgcolor=#%s><td><b>%s</b></td>", 
-			       LIGHT_BLUE , cgi );
-		p.safePrintf("<td>%s</td>",page);
+			       blue, cgi );
+
+		if ( blue == (const char *)LIGHT_BLUE ) blue = DARK_BLUE;
+		else                      blue = LIGHT_BLUE;
+
+		p.safePrintf("<td><nobr>%s</nobr></td>",page);
 		p.safePrintf("<td nowrap=1>");
 		switch ( parm->m_type ) {
-		case TYPE_BOOL: p.safePrintf ( "BOOL" ); break;
-		case TYPE_BOOL2: p.safePrintf ( "BOOL" ); break;
+		case TYPE_BOOL: p.safePrintf ( "BOOL (0 or 1)" ); break;
+		case TYPE_BOOL2: p.safePrintf ( "BOOL (0 or 1)" ); break;
+		case TYPE_CHECKBOX: p.safePrintf ( "BOOL (0 or 1)" ); break;
 		case TYPE_CHAR: p.safePrintf ( "CHAR" ); break;
 		case TYPE_CHAR2: p.safePrintf ( "CHAR" ); break;
-		case TYPE_FLOAT: p.safePrintf ( "FLOAT" ); break;
+		case TYPE_FLOAT: p.safePrintf ( "FLOAT32" ); break;
+		case TYPE_DOUBLE: p.safePrintf ( "FLOAT64" ); break;
 		case TYPE_IP: p.safePrintf ( "IP" ); break;
-		case TYPE_LONG: p.safePrintf ( "LONG" ); break;
-		case TYPE_LONG_LONG: p.safePrintf ( "LONG LONG" ); break;
+		case TYPE_LONG: p.safePrintf ( "INT32" ); break;
+		case TYPE_LONG_LONG: p.safePrintf ( "INT64" ); break;
 		case TYPE_STRING: p.safePrintf ( "STRING" ); break;
 		case TYPE_STRINGBOX: p.safePrintf ( "STRING" ); break;
+		case TYPE_SAFEBUF: p.safePrintf ( "STRING" ); break;
 		default: p.safePrintf ( "OTHER" );
 		}
-		p.safePrintf ( "</td><td nowrap=1>%s</td>"
-			       "<td>%s</td></tr>\n",
-			       parm->m_title, parm->m_desc );
+		p.safePrintf ( "</td><td nowrap=1>%s</td>",parm->m_title);
+		char *def = parm->m_def;
+		if ( ! def ) def = "";
+		p.safePrintf ( "<td>%s</td>",  def );
+		p.safePrintf ( "<td>%s</td>",  parm->m_desc );
+		p.safePrintf ( "</tr>\n" );
 	}
 	p.safePrintf ( "</table><br><br>" );
 

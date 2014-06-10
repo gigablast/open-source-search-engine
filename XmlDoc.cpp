@@ -37,7 +37,7 @@
 #ifdef _USETURKS_
 //#include "PageTurk.h"
 #endif
-#include "PageInject.h"
+#include "Inject.h"
 #include "HttpServer.h"
 #include "Facebook.h"
 #include "Posdb.h"

@@ -312,6 +312,8 @@ class SearchInput {
 	// first collection # listed in m_collnumBuf
 	collnum_t m_firstCollnum;
 
+	SafeBuf m_coll;
+
 	// . "special query"
 	// . list of docids to restrict results to, i.e. "124+4564+6752+..."
 	// . NULL terminated

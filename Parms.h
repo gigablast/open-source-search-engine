@@ -37,6 +37,7 @@ enum {
 	OBJ_CONF    = 1 ,
 	OBJ_COLL        ,
 	OBJ_SI          , // SearchInput class
+	OBJ_GBREQUEST   , // for GigablastRequest class of parms
 	OBJ_NONE
 };
 
@@ -87,6 +88,49 @@ class Page {
 	char *m_title;    // browser title bar
 };
 
+// generic gigablast request. for all requests except search i guess for now.
+// TODO: include search parms in here too
+class GigablastRequest {
+ public:
+
+	//
+	// /admin/inject parms
+	//
+	SafeBuf m_url; // also for /get
+	SafeBuf m_queryToScrape;
+	SafeBuf m_coll; // used by ALL!
+	SafeBuf m_contentDelim;
+	SafeBuf m_contentTypeStr;
+	SafeBuf m_contentFile;
+	SafeBuf m_content;
+
+	char m_injectLinks;
+	char m_spiderLinks;
+	char m_shortReply;
+	char m_newOnly;
+	char m_deleteUrl;
+	char m_recycle;
+	char m_dedup;
+	char m_hasMime;
+
+	//
+	// /get parms (for getting cached web pages)
+	//
+	long long m_docId;
+	long      m_strip;
+	char      m_includeHeader;
+
+	//
+	// /admin/addurl parms
+	//
+	SafeBuf m_urlsBuf;
+	char    m_stripBox;
+	char    m_harvestLinksBox;
+	char    m_forceRespiderBox;
+
+};
+
+
 // values for Parm::m_subMenu
 #define SUBMENU_DISPLAY     1
 #define SUBMENU_MAP         2
@@ -115,6 +159,7 @@ class Page {
 #define PF_NOSAVE   0x0200
 #define PF_DUP      0x0400
 #define PF_TEXTAREA 0x0800
+#define PF_COLLDEFAULT 0x1000
 
 class Parm {
  public:
@@ -281,15 +326,16 @@ class Parms {
 	void setParm ( char *THIS, Parm *m, long mm, long j, char *s,
 		       bool isHtmlEncoded , bool fromRequest ) ;
 	
-	void setToDefault ( char *THIS ) ;
+	void setToDefault ( char *THIS , char objType ) ;
 
 	bool setFromFile ( void *THIS        , 
 			   char *filename    , 
-			   char *filenameDef ) ;
+			   char *filenameDef ,
+			   char  objType ) ;
 
 	bool setXmlFromFile(Xml *xml, char *filename, char *buf, long bufSize);
 
-	bool saveToXml ( char *THIS , char *f ) ;
+	bool saveToXml ( char *THIS , char *f , char objType ) ;
 
 	// get the parm with the associated cgi name. must be NULL terminated.
 	Parm *getParm ( char *cgi ) ;
