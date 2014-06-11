@@ -503,7 +503,7 @@ class QueryTerm {
 
 //#define MAX_OPSLOTS 256
 
-#define MAX_EXPRESSIONS 10
+#define MAX_EXPRESSIONS 100
 
 // operand1 AND operand2 OR  ...
 // operand1 OR  operand2 AND ...
