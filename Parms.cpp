@@ -1541,6 +1541,9 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 	if ( page == PAGE_BASIC_SECURITY )
 		page = PAGE_SECURITY;
 
+	GigablastRequest gr;
+	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST );
+
 	// find in parms list
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		// get it
@@ -1566,6 +1569,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			THIS = (char *)cr;
 			if ( ! THIS ) continue;
 		}
+		if ( m->m_obj == OBJ_GBREQUEST )
+			THIS = (char *)&gr;
 		// might have an array, do not exceed the array size
 		long  jend = m->m_max;
 		long  size = jend ;
@@ -2178,6 +2183,28 @@ bool Parms::printParm ( SafeBuf* sb,
 			printDiffbotDropDown ( sb , cgi , THIS , sx );
 	}
 	*/
+	else if ( t == TYPE_CHARPTR ) {
+		long size = m->m_size;
+		char *sp = NULL;
+		if ( s && *s ) sp = *(char **)s;
+		if ( m->m_flags & PF_TEXTAREA ) {
+			sb->safePrintf ("<textarea name=%s rows=10 cols=80>",
+					cgi);
+			if ( m->m_obj != OBJ_NONE )
+				sb->htmlEncode(sp,gbstrlen(sp),false);
+			sb->safePrintf ("</textarea>");
+		}
+		else {
+			sb->safePrintf ("<input type=text name=%s size=%li "
+					"value=\"",cgi,size);
+			// if it has PF_DEFAULTCOLL flag set then use the coll
+			if ( m->m_flags & PF_COLLDEFAULT )
+				sb->safePrintf("%s",cr->m_coll);
+			else if ( sp )
+				sb->dequote ( sp , gbstrlen(sp) );
+			sb->safePrintf ("\">");
+		}
+	}
 	else if ( t == TYPE_SAFEBUF ) {
 		long size = m->m_size;
 		// give regular expression box on url filters page more room
@@ -3123,12 +3150,12 @@ void Parms::setToDefault ( char *THIS , char objType ) {
 		if ( m->m_type == TYPE_CMD     ) continue;
 		if (THIS == (char *)&g_conf && m->m_obj != OBJ_CONF ) continue;
 		if (THIS != (char *)&g_conf && m->m_obj == OBJ_CONF ) continue;
-		if ( THIS != (char *)&g_conf ) {
+		if ( m->m_obj == OBJ_CONF ) {
 			CollectionRec *cr = (CollectionRec *)THIS;
 			if ( cr->m_bases[1] ) { char *xx=NULL;*xx=0; }
 		}
 		// sanity check, make sure it does not overflow
-		if ( m->m_obj != OBJ_CONF && 
+		if ( m->m_obj == OBJ_COLL &&
 		     m->m_off > (long)sizeof(CollectionRec)){
 			log(LOG_LOGIC,"admin: Parm in Parms.cpp should use "
 			    "OBJ_COLL not OBJ_CONF");
@@ -17786,7 +17813,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "0";
-	m->m_flags = PF_API;
+	m->m_flags = PF_HIDDEN; // | PF_API
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_doConsistencyTesting - (char *)&gr;
 	m++;
@@ -17797,7 +17824,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
-	m->m_flags = PF_API;
+	m->m_flags = PF_HIDDEN; // | PF_API
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_hopCount - (char *)&gr;
 	m++;
@@ -17890,7 +17917,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = "";
-	m->m_flags = PF_API|PF_TEXTAREA; // do not show in our api
+	m->m_flags = PF_API|PF_TEXTAREA|PF_HIDDEN; // do not show in our api
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_diffbotReply - (char *)&gr;
 	m++;
@@ -18063,6 +18090,7 @@ void Parms::init ( ) {
 		     t != TYPE_SAFEBUF  &&
 		     t != TYPE_FILEUPLOADBUTTON &&
 		     t != TYPE_CONSTANT &&
+		     t != TYPE_CHARPTR &&
 		     t != TYPE_MONOD2   &&
 		     t != TYPE_MONOM2     ) {
 			log(LOG_LOGIC,"conf: Size of parm #%li \"%s\" "
@@ -20113,6 +20141,11 @@ bool Parm::printVal ( SafeBuf *sb , collnum_t collnum , long occNum ) {
 
 	if ( m_type == TYPE_LONG_LONG ) 
 		return sb->safePrintf("%lli",*(long long *)val);
+
+	if ( m_type == TYPE_CHARPTR ) {
+		if ( val ) return sb->safePrintf("%s",val);
+		return true;
+	}
 
 	if ( m_type == TYPE_BOOL ||
 	     m_type == TYPE_BOOL2 ||
