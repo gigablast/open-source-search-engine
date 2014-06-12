@@ -2447,23 +2447,29 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		if ( parm->m_flags & PF_HIDDEN ) continue;
 		//if ( !parm->m_sparm ) continue;
 		if ( ! (parm->m_flags & PF_API) ) continue;
+
 		// use m_cgi if no m_scgi
 		char *cgi = parm->m_cgi;
 		if ( parm->m_scgi ) cgi = parm->m_scgi;
 
 		//char *page = parm->m_scmd;
-		char *page = "???";
+		char *page = NULL;
 		if ( parm->m_page == PAGE_INJECT  ) page = "/admin/inject";
 		if ( parm->m_page == PAGE_ADDURL2 ) page = "/admin/addurl";
 		if ( parm->m_page == PAGE_GET     ) page = "/admin/get";
 
-		// these parms are on search results page and in SearchInput
-		if ( parm->m_page == PAGE_SEARCH && parm->m_scmd ) 
-			page = "/search";
+		if ( ! page && parm->m_page == PAGE_SEARCH )
+			page = "/admin/search";
 
+		// these parms are on search results page and in SearchInput
+		if ( parm->m_page == PAGE_SEARCH && parm->m_scgi )
+			page = "/search";
+	
 		// these are just in SearchInput
 		if ( parm->m_page == PAGE_NONE && parm->m_obj == OBJ_SI  ) 
 			page = "/search";
+
+		if ( ! page ) page = "???";
 
 		// print the parm
 		p.safePrintf ( "<tr bgcolor=#%s><td><b>%s</b></td>", 
@@ -2485,6 +2491,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		case TYPE_IP: p.safePrintf ( "IP" ); break;
 		case TYPE_LONG: p.safePrintf ( "INT32" ); break;
 		case TYPE_LONG_LONG: p.safePrintf ( "INT64" ); break;
+		case TYPE_CHARPTR: p.safePrintf ( "STRING" ); break;
 		case TYPE_STRING: p.safePrintf ( "STRING" ); break;
 		case TYPE_STRINGBOX: p.safePrintf ( "STRING" ); break;
 		case TYPE_SAFEBUF: p.safePrintf ( "STRING" ); break;

@@ -4513,7 +4513,7 @@ void Parms::init ( ) {
 		m_parms[i].m_min    = -1 ; // min value (for long parms)
 		// search fields
 		m_parms[i].m_sparm  = 0;
-		m_parms[i].m_scmd   = "/search";
+		m_parms[i].m_scmd   = NULL;//"/search";
 		m_parms[i].m_scgi   = NULL;// defaults to m_cgi
 		m_parms[i].m_flags  = 0;
 		m_parms[i].m_icon   = NULL;
@@ -11567,8 +11567,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "number of results per query";
-	m->m_desc  = "The number of results to return for the "
-		"query.";
+	m->m_desc  = "The number of results returned per page.";
 	// make it 25 not 50 since we only have like 26 balloons
 	m->m_def   = "10";
 	m->m_page  = PAGE_NONE;
@@ -11586,7 +11585,8 @@ void Parms::init ( ) {
 
 	m->m_title = "collection";
 	m->m_desc  = "Search this collection. Use multiple collection names "
-		"separated by a space to search multiple collections at once.";
+		"separated by a whitespace to search multiple collections at "
+		"once.";
 	m->m_cgi   = "c";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
@@ -11618,7 +11618,8 @@ void Parms::init ( ) {
 	m->m_title = "stream search results";
 	m->m_desc  = "Stream search results back on socket as they arrive. "
 		"Useful when thousands/millions of search results are "
-		"requested.";
+		"requested. Required when doing such things otherwise "
+		"Gigablast could run out of memory.";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m->m_soff  = (char *)&si.m_streamResults - y;
@@ -11632,7 +11633,7 @@ void Parms::init ( ) {
 
 	m->m_title = "get docid scoring info";
 	m->m_desc  = "Get scoring information for each result so you "
-		"can see how each result is scored? You must explicitly "
+		"can see how each result is scored. You must explicitly "
 		"request this using &scores=1 for the XML feed because it "
 		"is not included by default.";
 	m->m_cgi   = "scores"; // dedupResultsByDefault";
@@ -11649,7 +11650,7 @@ void Parms::init ( ) {
 
 	m->m_title = "do query expansion";
 	m->m_desc  = "If enabled, query expansion will expand your query "
-		"to include word stems and "
+		"to include the various forms and "
 		"synonyms of the query terms.";
 	m->m_def   = "1";
 	m->m_off   = (char *)&cr.m_queryExpansion - x;
@@ -11748,7 +11749,10 @@ void Parms::init ( ) {
 
 
 	m->m_title = "site cluster";
-	m->m_desc  = "Should search results be site clustered?";
+	m->m_desc  = "Should search results be site clustered? This "
+		"limits each site to appearing at most twice in the "
+		"search results. Sites are subdomains for the most part, "
+		"like abc.xyz.com.";
 	m->m_cgi   = "scd";
 	m->m_off   = (char *)&cr.m_siteClusterByDefault - x;
 	m->m_soff  = (char *)&si.m_doSiteClustering - y;
@@ -11845,7 +11849,9 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "dedup results";
-	m->m_desc  = "Should duplicate search results be removed?";
+	m->m_desc  = "Should duplicate search results be removed? This is "
+		"based on a content hash of the entire document. "
+		"So documents must be exactly the same for the most part.";
 	m->m_cgi   = "drd"; // dedupResultsByDefault";
 	m->m_off   = (char *)&cr.m_dedupResultsByDefault - x;
 	m->m_soff  = (char *)&si.m_doDupContentRemoval - y;
@@ -11854,22 +11860,6 @@ void Parms::init ( ) {
 	m->m_group = 1;
 	m->m_sparm = 1;
 	m->m_scgi  = "dr";
-	m->m_flags = PF_API;
-	m->m_page  = PAGE_SEARCH;
-	m->m_obj   = OBJ_COLL;
-	m++;
-
-	m->m_title = "dedup URLs";
-	m->m_desc  = "Should we dedup URLs with case insensitivity? This is "
-                     "mainly to correct duplicate wiki pages.";
-	m->m_cgi   = "ddu";
-	m->m_off   = (char *)&cr.m_dedupURLDefault - x;
-	m->m_soff  = (char *)&si.m_dedupURL - y;
-	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "ddu";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -11896,10 +11886,11 @@ void Parms::init ( ) {
 	m++;       
 
 	m->m_title = "number of lines to use in summary to dedup";
-	m->m_desc  = "Sets the number of lines to generate for summary deduping."
-		" This is to help the deduping process not thorw out valid "
-		"summaries when normally displayed summaries are smaller values."
-		" Requires percent similar dedup summary to be enabled.";
+	m->m_desc  = "Sets the number of lines to generate for summary "
+		"deduping. This is to help the deduping process not throw "
+		"out valid summaries when normally displayed summaries are "
+		"smaller values. Requires percent similar dedup summary to "
+		"be non-zero.";
 	m->m_cgi   = "msld";
 	m->m_off   = (char *)&cr.m_summDedupNumLines - x;
 	m->m_type  = TYPE_LONG;
@@ -11910,6 +11901,22 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;       
 	
+
+	m->m_title = "dedup URLs";
+	m->m_desc  = "Should we dedup URLs with case insensitivity? This is "
+                     "mainly to correct duplicate wiki pages.";
+	m->m_cgi   = "ddu";
+	m->m_off   = (char *)&cr.m_dedupURLDefault - x;
+	m->m_soff  = (char *)&si.m_dedupURL - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_sparm = 1;
+	m->m_scgi  = "ddu";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m++;
 
 
 	m->m_title = "use vhost language detection";
@@ -11964,7 +11971,9 @@ void Parms::init ( ) {
 		//"This should only be used on limited collections. "
 		"Value should be any language abbreviation, for example "
 		"\"en\" for English. Use <i>xx</i> to give ranking "
-		"boosts to no language in particular.";
+		"boosts to no language in particular. See the language "
+		"abbreviations at the bottom of the "
+		"<a href=/admin/filters>url filters</a> page.";
 	m->m_cgi   = "qlang";
 	m->m_off   = (char *)&cr.m_defaultSortLanguage - x;
 	m->m_soff  = (char *)&si.m_defaultSortLanguage - y;
@@ -11983,7 +11992,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Default country to use for ranking results. "
 		//"This should only be used on limited collections. "
 		"Value should be any country code abbreviation, for example "
-		"\"us\" for United States.";
+		"\"us\" for United States. This is currently not working.";
 	m->m_cgi   = "qcountry";
 	m->m_off   = (char *)&cr.m_defaultSortCountry - x;
 	m->m_soff  = (char *)&si.m_defaultSortCountry - y;
@@ -17458,7 +17467,6 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_page  = PAGE_GET;
 	m->m_obj   = OBJ_GBREQUEST; // generic request class
-	m->m_scmd  = "/get";
 	m->m_def   = "0";
 	m->m_scgi  = "d";
 	m->m_flags = PF_API;
@@ -17472,7 +17480,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_GET;
 	m->m_obj   = OBJ_GBREQUEST; // generic request class
 	m->m_def   = "0";
-	m->m_scgi  = "d";
+	m->m_scgi  = "url";
 	m->m_flags = PF_API;
 	m++;
 
@@ -17505,7 +17513,6 @@ void Parms::init ( ) {
 	m->m_title = "query highlighting query";
 	m->m_desc  = "X is 1 to highlight query terms in the cached page.";
 	m->m_sparm = 1;
-	m->m_scmd  = "/get";
 	m->m_def   = "1";
 	m->m_type  = TYPE_BOOL;
 	m->m_scgi  = "qh";
@@ -17518,7 +17525,6 @@ void Parms::init ( ) {
 	m->m_title = "url to add";
 	m->m_desc  = "Used by add url page.";
 	m->m_sparm = 1;
-	m->m_scmd  = "/addurl";
 	m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_URL_LEN;
 	m->m_scgi  = "u";
@@ -17594,7 +17600,7 @@ void Parms::init ( ) {
 
 	m->m_title = "harvest links";
 	m->m_desc  = "Harvest links of added urls so we can spider them?.";
-	m->m_cgi   = "spiderLinks";
+	m->m_cgi   = "spiderlinks";
 	m->m_page  = PAGE_ADDURL2;
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_off   = (char *)&gr.m_harvestLinksBox - (char *)&gr;
@@ -17974,9 +17980,9 @@ void Parms::init ( ) {
 		if ( ! m_parms[i].m_cgi ) continue;
 		if ( ! m_parms[j].m_cgi ) continue;
 		// a different m_scmd means a different cgi parm really...
-		if ( m_parms[i].m_sparm && m_parms[j].m_sparm &&
-		     strcmp ( m_parms[i].m_scmd, m_parms[j].m_scmd) != 0 )
-			continue;
+		//if ( m_parms[i].m_sparm && m_parms[j].m_sparm &&
+		//     strcmp ( m_parms[i].m_scmd, m_parms[j].m_scmd) != 0 )
+		//	continue;
 		if ( strcmp ( m_parms[i].m_cgi , m_parms[j].m_cgi ) != 0 &&
 		     // ensure cgi hashes are different as well!
 		     m_parms[i].m_cgiHash != m_parms[j].m_cgiHash )
