@@ -1384,8 +1384,8 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			mr.size_singleScoreBuf = 0;
 		}
 		// and now the sitehash list if it exists
-		mr.ptr_siteHashList  = pt->m_siteHashList.getBufStart();
-		mr.size_siteHashList = pt->m_siteHashList.length();
+		mr.ptr_sentHashList  = pt->m_sentHashList.getBufStart();
+		mr.size_sentHashList = pt->m_sentHashList.length();
 		mr.m_sectionStats    = pt->m_sectionStats;
 		// reserve space for these guys, we fill them in below
 		mr.ptr_docIds       = NULL;

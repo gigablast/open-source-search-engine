@@ -12890,7 +12890,7 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			       "densrank=%02li "
 			       //"outlnktxt=%01li "
 			       "mult=%02li "
-			       "sh32=0x%08lx "
+			       "senth32=0x%08lx "
 			       "recSize=%li "
 			       "dh=0x%02lx%s%s\n" , 
 			       KEYSTR(&k,sizeof(key144_t)),
@@ -12906,7 +12906,7 @@ void dumpPosdb (char *coll,long startFileNum,long numFiles,bool includeTree,
 			       (long)g_posdb.getDensityRank(&k),
 			       //(long)g_posdb.getIsOutlinkText(&k),
 			       (long)g_posdb.getMultiplier(&k),
-			       (long)g_posdb.getSectionSiteHash32(&k),
+			       (long)g_posdb.getSectionSentHash32(&k),
 			       recSize,
 			       
 			       (long)dh, 

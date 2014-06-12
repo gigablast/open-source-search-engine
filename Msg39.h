@@ -174,7 +174,7 @@ public:
 	char  *ptr_scoreInfo      ; // transparency info
 	char  *ptr_pairScoreBuf   ; // transparency info
 	char  *ptr_singleScoreBuf ; // transparency info
-	char  *ptr_siteHashList   ; // for m_getSectionStats
+	char  *ptr_sentHashList   ; // for m_getSectionStats
 	char  *ptr_clusterRecs    ; // key_t (might be empty)
 	
 	long   size_docIds;
@@ -182,7 +182,7 @@ public:
 	long   size_scoreInfo;
 	long   size_pairScoreBuf  ;
 	long   size_singleScoreBuf;
-	long   size_siteHashList;
+	long   size_sentHashList;
 	long   size_clusterRecs;
 
 	// . this is the "string buffer" and it is a variable size

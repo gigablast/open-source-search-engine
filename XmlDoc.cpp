@@ -6622,6 +6622,9 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 	// set query for msg3a. queryExpansion=false
 	qq->set2 ( r->ptr_query , langUnknown , false );
 
+	// TODO: ensure this just hits the one host since it is sharded
+	// by termid...
+
 	// . get the docIds
 	// . this sets m_msg3a.m_clusterLevels[] for us
 	if ( ! msg3a->getDocIds ( r,  qq , msg3a , gotDocIdsWrapper)) {
@@ -26453,7 +26456,8 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_tt        = tt;
 	hi.m_prefix    = "gbsectionhash";
-	hi.m_siteHash32 = siteHash32;
+	// put all guys with the same xpath/site on the same shard
+	hi.m_shardByTermId = true;
 
 	Section *si = ss->m_rootSection;
 
@@ -26465,9 +26469,21 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 		//   big enought!
 		uint64_t ch64 = si->m_sentenceContentHash64;
 		if ( ! ch64 ) continue;
+
+		// the termid is now the xpath and the sitehash, the "value"
+		// will be the hash of the innerhtml, m_sentenceContentHash64
+		uint64_t thash64 = si->m_turkTagHash32;
+		// combine with site hash
+		thash64 ^= (unsigned long)siteHash32;
+
+		// this is a special hack we need to make it the
+		// hash of the inner html
+		hi.m_sentHash32 = (unsigned long)ch64;
+
 		// get section CONTENT hash
 		char sbuf[64];
-		sprintf(sbuf,"%llu",ch64);
+		sprintf(sbuf,"%llu",thash64);
+
 		if ( ! hashSingleTerm(sbuf,gbstrlen(sbuf),&hi) ) 
 			return false;
 	}
@@ -30511,6 +30527,9 @@ bool storeTerm ( char       *s        ,
 	ti.m_wordPos   = wordPos;
 	ti.m_langId = langId;
 
+	// was sitehash32
+	ti.m_sentHash32 = hi->m_sentHash32;
+
 	// save for printing out an asterisk
 	ti.m_synSrc = synSrc; // isSynonym = isSynonym;
 
@@ -30615,11 +30634,12 @@ bool XmlDoc::hashSingleTerm ( char       *s         ,
 
 	//
 	// HACK: mangle the key if its a gbsitehash:xxxx term
+	// used for doing "facets" like stuff on section xpaths.
 	//
 	static long long s_gbsectionhash = 0LL;
 	if ( ! s_gbsectionhash ) s_gbsectionhash = hash64b("gbsectionhash");
 	if ( prefixHash == s_gbsectionhash ) 
-		g_posdb.setSectionSiteHash32 ( &k, hi->m_siteHash32 );
+		g_posdb.setSectionSentHash32 ( &k, hi->m_sentHash32 );
 
 	// . otherwise, add a new slot
 	// . key should NEVER collide since we are always 
@@ -32685,6 +32705,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 
 
 	// print out the rules in Weights.cpp
+	/*
 	sb->safePrintf ("<br>"
 			"<table border=1 cellpadding=0>"
 
@@ -32762,7 +32783,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 			"</table>\n"
 			"<br>"
 			);
-
+	*/
 
 
 	//
@@ -32800,7 +32821,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 	// set this for cmptp
 	s_wbuf = &m_wbuf;
 
-	// sort them alphabetically
+	// sort them alphabetically by Term
 	gbsort ( tp , nt , sizeof(TermDebugInfo *), cmptp , m_niceness );
 
 	// determine how many non 1.0 weight fields we got in the vectors
@@ -32839,8 +32860,9 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		//"<td><b>Spam</b></td>"
 		
 		"<td><b>Desc</b></td>"
-		"<td><b>TermId</b></td>"
+		"<td><b>TermId/TermHash48</b></td>"
 		"<td><b>ShardByTermId?</b></td>"
+		"<td><b>Note</b></td>"
 		"</tr>\n"
 		//,fbuf
 		);
@@ -32860,13 +32882,18 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		char *prefix = "&nbsp;";
 		if ( tp[i]->m_prefixOff >= 0 ) 
 			prefix = start + tp[i]->m_prefixOff;
+
+
 		sb->safePrintf ( "<tr>"
 				 //"<td><b>%li</b></td>" 
 				 "<td>%s</td>" 
-				 "<td>%li</td>" 
 				 //i ,
 				 , prefix
-				 , tp[i]->m_wordNum );
+				 );
+
+		sb->safePrintf( "<td>%li</td>" 
+				, tp[i]->m_wordNum );
+
 
 		// print lang
 		//char langId = tp[i]->m_langId;
@@ -32971,6 +32998,22 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 
 		if ( tp[i]->m_shardByTermId ) sb->safePrintf("<td><b>1</b></td>" );
 		else                    sb->safePrintf("<td>0</td>" );
+
+
+		sb->safePrintf("<td>");
+		if ( strcmp(prefix,"gbsectionhash")==0)
+			sb->safePrintf("<b>Term</b> is a 32-bit hash of the "
+				       "X-path of "
+				       "a section XOR'ed with the 32-bit "
+				       "hash of this document's subdomain. "
+				       "[%lu] is the 32-bit hash of the "
+				       "Inner HTML of this section stored "
+				       "in the posdb key instead of "
+				       "the usual stuff.",
+				       (long)tp[i]->m_sentHash32
+				       );
+		sb->safePrintf("</td>");
+
 
 		sb->safePrintf("</tr>\n");
 	}
@@ -33621,23 +33664,21 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 		//long off1 = byte1 - words->m_words[0];
 		long size = byte2 - byte1;
 		// if a tag then insert the info at end
-		bool isTag = false;
-		if ( *byte1 == '<' ) isTag = true;
-		// only tags that have stats really
-		if ( si->m_stats.m_totalEntries ) isTag = false;
-		// do not print the last <
-		if ( isTag ) size--;
+		if ( si->m_stats.m_totalEntries ) {
+			sb->safePrintf("<!--");
+			// # docs from our site had the same innerHTML?
+			sb->safePrintf(" _d=%li",
+				       (long)si->m_stats.m_totalMatches);
+			// # total docs from our site had the same X-path?
+			sb->safePrintf(" _n=%li",
+				       (long)si->m_stats.m_totalEntries);
+			// unique values in the xpath innerhtml
+			sb->safePrintf(" _u=%li",
+				       (long)si->m_stats.m_numUniqueVals);
+			sb->safePrintf("-->");
+		}
 		// print it here
 		sb->safeMemcpy ( byte1 , size );
-		// insert info if tag
-		if ( ! isTag ) continue;
-		// how many other docs from our site had the same innerHTML?
-		sb->safePrintf(" _d=%li",(long)si->m_stats.m_totalMatches);
-		// how many total docs from our site had the same X-path?
-		sb->safePrintf(" _n=%li",(long)si->m_stats.m_totalEntries);
-		// unique values in the xpath innerhtml
-		sb->safePrintf(" _u=%li",(long)si->m_stats.m_numUniqueVals);
-		sb->pushChar('>');
 	}
 	m_inlineSectionVotingBufValid = true;
 	return &m_inlineSectionVotingBuf;

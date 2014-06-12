@@ -82,8 +82,8 @@ bool Posdb::init ( ) {
 	if ( g_posdb.getMultiplier ( &k ) !=multiplier){char *xx=NULL;*xx=0; }
 	if ( g_posdb.getIsSynonym ( &k ) != isSynonym) { char *xx=NULL;*xx=0; }
 
-	setSectionSiteHash32 ( &k,45678 );
-	if ( getSectionSiteHash32 ( &k ) != 45678 ) { char *xx=NULL;*xx=0;}
+	setSectionSentHash32 ( &k,45678 );
+	if ( getSectionSentHash32 ( &k ) != 45678 ) { char *xx=NULL;*xx=0;}
 
 	/*
 	// more tests
@@ -811,7 +811,7 @@ bool PosdbTable::allocTopTree ( ) {
 			slots = 20000000;
 		}
 		// each site hash is 4 bytes
-		if ( ! m_siteHashList.reserve ( slots ,"shshbuf" ) )
+		if ( ! m_sentHashList.reserve ( slots ,"shshbuf" ) )
 			return false;
 		// quad # of sites to have space in between
 		if ( ! m_dt.set(4,0,slots,NULL,0,false,0,"pdtdt"))
@@ -1305,7 +1305,7 @@ void PosdbTable::intersectLists9_r ( ) {
 		for ( ; p < pend ; ) {
 			// . first key is the full size
 			// . uses the w,G,s,v and F bits to hold this
-			long sh32 = g_posdb.getSectionSiteHash32 ( p );
+			long sh32 = g_posdb.getSectionSentHash32 ( p );
 			//long long d = g_posdb.getDocId(p);
 			//long rs = list->getRecSize(p);
 			// this will not update listptrlo, watch out!
@@ -1328,8 +1328,8 @@ void PosdbTable::intersectLists9_r ( ) {
 			if ( m_dt.m_numSlotsUsed >= 1000000 ) break;
 		}
 		// and return the list of merging
-		long *s    = (long *)m_siteHashList.getBufStart();
-		long *send = (long *)m_siteHashList.getBufEnd();
+		long *s    = (long *)m_sentHashList.getBufStart();
+		long *send = (long *)m_sentHashList.getBufEnd();
 		//if ( m_sectionStats.m_numUniqueSites == 17 ) { 
 		//	log("q=%s",m_r->ptr_query);
 		//	log("hey");
@@ -1343,7 +1343,7 @@ void PosdbTable::intersectLists9_r ( ) {
 			*s++ = *(long *)m_dt.getKeyFromSlot(i);
 			if ( s >= send ) break;
 		}
-		m_siteHashList.setLength((char *)s-(char *)orig);
+		m_sentHashList.setLength((char *)s-(char *)orig);
 		return;
 	}
 
@@ -5101,7 +5101,7 @@ void PosdbTable::intersectLists10_r ( ) {
 			// . this is no longer necessarily sitehash, but
 			//   can be any val, like now SectionStats is using
 			//   it for the innerHtml sentence content hash32
-			long sh32 = g_posdb.getSectionSiteHash32 ( p );
+			long sh32 = g_posdb.getSectionSentHash32 ( p );
 			//long long d = g_posdb.getDocId(p);
 			//long rs = list->getRecSize(p);
 			// this will not update listptrlo, watch out!
@@ -5125,8 +5125,8 @@ void PosdbTable::intersectLists10_r ( ) {
 			if ( m_dt.m_numSlotsUsed >= 1000000 ) break;
 		}
 		// and return the list of merging
-		long *s    = (long *)m_siteHashList.getBufStart();
-		long *send = (long *)m_siteHashList.getBufEnd();
+		long *s    = (long *)m_sentHashList.getBufStart();
+		long *send = (long *)m_sentHashList.getBufEnd();
 		//if ( m_sectionStats.m_numUniqueSites == 17 ) { 
 		//	log("q=%s",m_r->ptr_query);
 		//	log("hey");
@@ -5140,7 +5140,7 @@ void PosdbTable::intersectLists10_r ( ) {
 			*s++ = *(long *)m_dt.getKeyFromSlot(i);
 			if ( s >= send ) break;
 		}
-		m_siteHashList.setLength((char *)s-(char *)orig);
+		m_sentHashList.setLength((char *)s-(char *)orig);
 		return;
 	}
 

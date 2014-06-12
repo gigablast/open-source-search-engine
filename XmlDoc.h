@@ -2357,6 +2357,9 @@ class TermDebugInfo {
 	// 0 = not a syn, 1 = syn from presets,2=wikt,3=generated
 	char      m_synSrc;
 	long long  m_langBitVec64;
+	// used for gbsectionhash:xxxx terms to hack in the inner content
+	// hash, aka sentHash32 for doing xpath histograms on a site
+	long m_sentHash32;
 	// this is copied from Weights::m_rvw or m_rvp
 	//float     m_rv[MAX_RULES];
 };
@@ -2380,7 +2383,8 @@ public:
 		m_useCountTable = true;
 		m_useSections = true;
 		m_startDist = 0;
-		m_siteHash32 = 0;
+		// used for sectiondb stuff, but stored in posdb
+		m_sentHash32 = 0;
 	};
 	class HashTableX *m_tt;
 	char             *m_prefix;
@@ -2393,7 +2397,7 @@ public:
 	char              m_useSynonyms;
 	char              m_hashGroup;
 	long              m_startDist;
-	long              m_siteHash32;
+	long              m_sentHash32;
 	bool              m_useCountTable;
 	bool              m_useSections;
 };

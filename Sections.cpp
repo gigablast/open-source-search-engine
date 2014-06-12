@@ -15614,11 +15614,23 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 				   (long)sk->m_turkTagHash32);
 		
 		if ( sk->m_contentHash64 )
-			m_sbuf->safePrintf("ch=%llu ",sk->m_contentHash64);
+			m_sbuf->safePrintf("ch64=%llu ",sk->m_contentHash64);
 		if ( sk->m_sentenceContentHash64 && 
 		     sk->m_sentenceContentHash64 != sk->m_contentHash64 )
 			m_sbuf->safePrintf("sch=%llu ",
 					   sk->m_sentenceContentHash64);
+
+		// for the gbsectionhash:xxxxx terms we index
+		if ( sk->m_sentenceContentHash64 ) {
+			unsigned long mod = (unsigned long)sk->m_turkTagHash32;
+			mod ^= (unsigned long)m_siteHash64;
+			m_sbuf->safePrintf("<font color=red>"
+					   "gbsectionhash32=%lu</font> ",mod);
+		}
+		if ( sk->m_contentHash64 )
+			m_sbuf->safePrintf("<font color=red>ch32=%lu</font> ",
+					   (unsigned long)sk->m_contentHash64);
+					   
 		
 		if ( sk->m_lastLinkContentHash32 )
 			m_sbuf->safePrintf("llch=%lu ",

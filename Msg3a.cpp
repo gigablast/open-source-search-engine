@@ -888,7 +888,7 @@ bool Msg3a::mergeLists ( ) {
 	for ( long j = 0; j < m_numHosts ; j++ ) {
 		Msg39Reply *mr = m_reply[j];
 		if ( ! mr ) continue;
-		sneed += mr->size_siteHashList/4;
+		sneed += mr->size_sentHashList/4;
 	}
 	HashTableX dt;
 	//char tmpBuf[5000];
@@ -907,8 +907,8 @@ bool Msg3a::mergeLists ( ) {
 		// now the list should be the unique site hashes that
 		// had the section hash. we need to uniquify them again
 		// here.
-		long *p = (long *)mr->ptr_siteHashList;
-		long np = mr->size_siteHashList / 4;
+		long *p = (long *)mr->ptr_sentHashList;
+		long np = mr->size_sentHashList / 4;
 		for ( long k = 0 ; k < np ; k++ )
 			// hash it up, no dups!
 			dt.addKey(&p[k]);

@@ -2926,7 +2926,7 @@ bool markupServerReply ( Msg13Request *r , TcpSocket *ts ) {
 
 	// try to use the global index for this
 	CollectionRec *cr = g_collectiondb.getRec ( "GLOBAL-INDEX" );
-	if ( ! cr ) cr = g_collectiondb.getRec ( "test" ); // tmp hack
+	//if ( ! cr ) cr = g_collectiondb.getRec ( "test" ); // tmp hack
 	if ( ! cr ) cr = g_collectiondb.getRec ( "main" );
 	if ( cr ) {
 		xd->m_collnum = cr->m_collnum;
