@@ -5080,8 +5080,8 @@ void PosdbTable::intersectLists10_r ( ) {
 	// can print out how many page/sites duplicate your section's content.
 	if ( m_r->m_getSectionStats ) {
 		// reset
-		m_sectionStats.m_onSiteDocIds  = 0;
-		m_sectionStats.m_offSiteDocIds = 0;
+		m_sectionStats.m_totalMatches = 0;
+		m_sectionStats.m_totalEntries = 0;
 		m_dt.clear();
 		// scan the posdb keys
 		//for ( long i = 0 ; i < m_msg2->getNumListsInGroup(0); i++) {
@@ -5098,20 +5098,23 @@ void PosdbTable::intersectLists10_r ( ) {
 		for ( ; p < pend ; ) {
 			// . first key is the full size
 			// . uses the w,G,s,v and F bits to hold this
+			// . this is no longer necessarily sitehash, but
+			//   can be any val, like now SectionStats is using
+			//   it for the innerHtml sentence content hash32
 			long sh32 = g_posdb.getSectionSiteHash32 ( p );
 			//long long d = g_posdb.getDocId(p);
 			//long rs = list->getRecSize(p);
 			// this will not update listptrlo, watch out!
 			p += list->getRecSize ( p );
 			// onsite or off?
-			if ( sh32 == m_r->m_siteHash32 ) 
-				m_sectionStats.m_onSiteDocIds++;
-			else            
-				m_sectionStats.m_offSiteDocIds++;
+			if ( sh32 == m_r->m_myVal32 ) // m_siteHash32 ) 
+				m_sectionStats.m_totalMatches++;
+			// always this
+			m_sectionStats.m_totalEntries++;
 			// unique site count
 			if ( m_dt.isInTable ( &sh32 ) ) continue;
 			// count it
-			m_sectionStats.m_numUniqueSites++;
+			m_sectionStats.m_numUniqueVals++;
 			// only once
 			m_dt.addKey ( &sh32 );
 			// log it

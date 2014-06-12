@@ -6291,12 +6291,13 @@ Sections *XmlDoc::getSections ( ) {
 		if ( ! si->m_sentenceContentHash64 ) { char *xx=NULL;*xx=0; }
 		// how many pages from this site have this taghash for
 		// a sentence
-		float nt=osvt->getNumSampled(si->m_turkTagHash,SV_TURKTAGHASH);
+		float nt;
+		nt = osvt->getNumSampled(si->m_turkTagHash32,SV_TURKTAGHASH);
 		// skip if nobody! (except us)
 		if ( nt <= 0.0 ) continue;
 		// . get out tag content hash
 		// . for some reason m_contentHash is 0 for like menu-y sectns
-		long modified = si->m_turkTagHash ^ si->m_sentenceContentHash64;
+		long modified =si->m_turkTagHash32^si->m_sentenceContentHash64;
 		// . now how many pages also had same content in that tag?
 		// . TODO: make sure numsampled only counts a docid once!
 		//   and this is not each time it occurs on that page.
@@ -6344,6 +6345,8 @@ SectionVotingTable *XmlDoc::getNewSectionVotingTable ( ) {
 	//   from the root, since we add those from the root voting table
 	//   into m_osvt directly!
 	// . we no longer have root voting table!
+	// . this adds keys of the hash of each tag xpath
+	// . and it adds keys of the hash of each tag path PLUS its innerhtml
 	if ( ! ss->addVotes ( &m_nsvt , *tph ) ) return NULL;
 	// tally the section votes from the dates
 	if ( ! dp->addVotes ( &m_nsvt ) ) return NULL;
@@ -6374,7 +6377,8 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 
 	// if this is -1, we are called for the first time
 	if ( m_si == (void *)-1 ) {
-		m_si = ss->m_rootSection;
+		m_si  = ss->m_rootSection;
+		m_si2 = ss->m_rootSection;
 		m_msg3aRequestsIn = 0;
 		m_msg3aRequestsOut = 0;
 	}
@@ -6384,15 +6388,22 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 	for ( ; m_si ; m_si = m_si->m_next ) { 
 		// breathe
 		QUICKPOLL(m_niceness);
-		// get section CONTENT hash
-		uint64_t secHash64 = m_si->m_sentenceContentHash64;
-		// save in case we need to read more than 5MB
-		//m_lastSection = si;
+
 		// skip if no content to hash
-		if ( ! secHash64 ) continue;
+		if ( ! m_si->m_sentenceContentHash64 ) continue;
+
 		// skip if menu!
 		if ( m_si->m_flags & menuFlags ) continue;
-		// use our new msg class
+
+		// get section xpath hash combined with sitehash
+		uint64_t secHash64 = m_si->m_turkTagHash32 ^ siteHash32;
+
+		// save in case we need to read more than 5MB
+		//m_lastSection = si;
+		// . this does a gbsectionhash:xxxxxx query on secHash64
+		// . we hack the "sentContentHash32" into each posdb key 
+		//   as the "value" so we can do a facet-like histogram
+		//   over all the possible values this xpath has for this site
 		SectionStats *stats = getSectionStats ( secHash64 );
 		// count it
 		if ( stats == (void *)-1 ) {
@@ -6424,18 +6435,23 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 		return (Sections *) -1;
 
 	// now scan the sections and copy the stats from the table
-	// into Section::m_stats of each sentence section
+	// into Section::m_stats of each sentence section.
+	// use the key hash as the the hash of the tag/xpath and the innerhtml
+	// and the val instead of being site hash will be hash of the
+	// content. then we can get the histogram of our content hash
+	// for this xpath on our site.
 	Section *si = ss->m_rootSection;
 	for ( ; si ; si = si->m_next ) { 
 		// breathe
 		QUICKPOLL(m_niceness);
-		// get section CONTENT hash
-		uint64_t secHash64 = si->m_sentenceContentHash64;
 		// skip if no content to hash
-		if ( ! secHash64 ) continue;
+		if ( ! si->m_sentenceContentHash64 ) continue;
 		// skip if menu!
 		if ( si->m_flags & menuFlags ) continue;
-		// use our new msg class
+		// get section xpath hash combined with sitehash
+		uint64_t secHash64 = m_si->m_turkTagHash32 ^ siteHash32;
+		// the "stats" class should be in the table from
+		// the lookups above!!
 		SectionStats *stats = getSectionStats ( secHash64 );
 		// sanity
 		if ( ! stats || stats == (void *)-1 ) { char *xx=NULL;*xx=0; }
@@ -6450,43 +6466,9 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 	return ss;
 }
 
-static void gotDocIdsWrapper ( void *state ) {
-	//XmlDoc *THIS = (XmlDoc *)state;
-	Msg3a *msg3a = (Msg3a *)state;
-	XmlDoc *THIS = (XmlDoc *)msg3a->m_hack;
-	THIS->gotSectionStats ( msg3a );
-	THIS->m_masterLoop ( THIS->m_masterState );
-}
+static void gotDocIdsWrapper ( void *state ) ;
 
-bool XmlDoc::gotSectionStats ( Msg3a *msg3a ) {
-	SectionStats *stats = &msg3a->m_sectionStats;
-	// count it as returned
-	m_msg3aRequestsIn++;
-	// mark it as available now
-	long num = msg3a - m_msg3aArray;
-	// sanity
-	if ( ! m_inUse[num] ) { char *xx=NULL;*xx=0; }
-	// grab the section hash
-	long long secHash64 = m_secHash64Array[num];
-	// cache them
-	if ( ! m_sectionStatsTable.addKey ( &secHash64 , stats ) )
-		log("xmldoc: failed to add sections stats: %s",
-		    mstrerror(g_errno));
-	// reset that msg3a to free its data
-	//msg3a->reset();
-	// free query Query::m_qwords array etc. to stop mem leaks
-	m_msg3aArray       [num].reset();
-	m_msg39RequestArray[num].reset();
-	m_queryArray       [num].reset();
-	// . make it available again
-	// . do this after all in case we were in quickpoll interruptting
-	//   the getSectionStats() function below
-	m_inUse[num] = 0;
-	// now when the master loop calls getSectionsWithDupStats() it
-	// should find the stats class in the cache!
-	return true;
-}
-
+// . launch a single msg3a::getDocIds() for a section hash, secHash64
 SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
 
 	// init cache?
@@ -6637,6 +6619,47 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
 	// i guess did not block...
 	return &msg3a->m_sectionStats;
 }
+
+void gotDocIdsWrapper ( void *state ) {
+	//XmlDoc *THIS = (XmlDoc *)state;
+	Msg3a *msg3a = (Msg3a *)state;
+	XmlDoc *THIS = (XmlDoc *)msg3a->m_hack;
+	THIS->gotSectionStats ( msg3a );
+	// this will end up calling getSectionsWithDupStats() again
+	// which will call getSectionStats() some more on new sections
+	// until m_gotDupStats is set to true.
+	THIS->m_masterLoop ( THIS->m_masterState );
+}
+
+bool XmlDoc::gotSectionStats ( Msg3a *msg3a ) {
+	SectionStats *stats = &msg3a->m_sectionStats;
+	// count it as returned
+	m_msg3aRequestsIn++;
+	// mark it as available now
+	long num = msg3a - m_msg3aArray;
+	// sanity
+	if ( ! m_inUse[num] ) { char *xx=NULL;*xx=0; }
+	// grab the section hash
+	long long secHash64 = m_secHash64Array[num];
+	// cache them
+	if ( ! m_sectionStatsTable.addKey ( &secHash64 , stats ) )
+		log("xmldoc: failed to add sections stats: %s",
+		    mstrerror(g_errno));
+	// reset that msg3a to free its data
+	//msg3a->reset();
+	// free query Query::m_qwords array etc. to stop mem leaks
+	m_msg3aArray       [num].reset();
+	m_msg39RequestArray[num].reset();
+	m_queryArray       [num].reset();
+	// . make it available again
+	// . do this after all in case we were in quickpoll interruptting
+	//   the getSectionStats() function below
+	m_inUse[num] = 0;
+	// now when the master loop calls getSectionsWithDupStats() it
+	// should find the stats class in the cache!
+	return true;
+}
+
 
 // . for all urls from this subdomain...
 // . EXCEPT root url since we use msg17 to cache that, etc.
@@ -33507,6 +33530,75 @@ bool XmlDoc::printPageInlinks ( SafeBuf *sb , HttpRequest *hr ) {
 	if ( isXml )
 		sb->safePrintf ("</response>\n"	);
 
+	return true;
+}
+
+static getInlineSectionVotingInfoWrapper ( void *state ) {
+	XmlDoc *xd = (XmlDoc *)state;
+	if ( ! xd->getInlineSectionVotingInfo() ) return;
+	// all done then. call original entry callback
+	xd->m_callback ( xd->m_state );
+}
+
+// . returns false if blocked, true otherwise
+// . returns true with g_errno set on error
+// . this actually returns the page content with inserted information
+//   based on sectiondb data
+// . for example, <div id=poo> --> <div id=poo d=5 n=20> 
+//   means that the section is repeated on 20 pages from this site and 5 of
+//   which have the same innerHtml as us
+bool XmlDoc::getInlineSectionVotingInfo ( ) {
+	// if we block anywhere below we want to come back here until done
+	if ( ! m_masterCallback ) {
+		m_masterCallback = getInlineSectionVotingInfoWrapper;
+		m_masterState    = this;
+	}
+
+	if ( m_inlineSectionVotingInfoBufValid )
+		return &m_inlineSectionVotingInfoBuf;
+
+	Sections *sections = getSectionsWithDupStats();
+	if ( ! sections) return true;
+	if (sections==(Sections *)-1)return false;
+	Words *words = getWords();
+	if ( ! words ) return true; if ( words == (Words *)-1 ) return false;
+
+
+	long nw = words->getNumWords();
+	long long *wids = words->getWordIds();
+
+	SafeBuf *sb = &m_inlineSectionVotingInfoBuf;
+
+	//sec_t mflags = SEC_SENTENCE | SEC_MENU;
+
+	Section *si = sections->m_rootSection;
+	for ( ; si ; si = si->m_next ) {
+		// breathe
+		QUICKPOLL(m_niceness);
+		// print it out
+		char *byte1 = words->m_words[si->m_a];
+		char *byte2 = words->m_words[si->m_b-1] + 
+			words->m_wordLens[si->m_b-1];
+		long off1 = byte1 - words->m_words[0];
+		long size = byte2 - byte1;
+		// if a tag then insert the info at end
+		bool isTag = false;
+		if ( byte1 == '<' ) isTag = true;
+		// only tags that have stats really
+		if ( ! si->m_stats ) isTag = false;
+		// do not print the last <
+		if ( isTag ) size1--;
+		// print it here
+		sb->safeMemcpy ( byte1 , size1 );
+		// insert info if tag
+		if ( ! isTag ) continue;
+		// how many other docs from our site had the same innerHTML?
+		sb->safePrintf(" _d=%li",(long)si->m_stats.m_totalMatches);
+		// how many total docs from our site had the same X-path?
+		sb->safePrintf(" _n=%li",(long)si->m_stats.m_onSiteSameTag);
+		sb->pushChar('>');
+	}
+	m_inlineSectionVotingInfoBufValid = true;
 	return true;
 }
 

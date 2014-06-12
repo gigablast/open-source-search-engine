@@ -1077,7 +1077,32 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 }
 
 
+static bool markupServerReply ( Msg13Request *r , TcpSocket *ts );
+
 void gotHttpReply ( void *state , TcpSocket *ts ) {
+
+ 	// cast it
+	Msg13Request *r = (Msg13Request *)state;
+
+	// now markup the reply with the sectiondb info
+	// . it can block reading the disk
+	// . returns false if blocked
+	// . only do markup if its a proxied request
+	// . our squid proxy simulator is only a markup simulator
+	if ( ! r->m_isSquidProxiedUrl ) {
+		// . now transform the html to include sectiondb data
+		// . this will also send the reply back so no need to
+		//   have a callback here
+		// . it returns false if it did nothing because the
+		//   content type was not html or http status was not 200
+		// . if it returns false then just pass through it
+		// . if it returns true, then it will be responsible for
+		//   sending back the udp reply of the marked up page
+		if ( markupServerReply ( r , ts ) )
+			return;
+	}
+
+
 	// if we had no error, TcpSocket should be legit
 	if ( ts ) {
 		gotHttpReply2 ( state , 
@@ -2806,6 +2831,91 @@ long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) {
 	//log("debug: cookiehash=%lli",hash64(start,s-start));
 
 	return h64;
+}
+
+static void sendBackInlineSectionVotingBuf ( XmlDoc *xd ) ;
+
+// . insert sectiondb data into various html tags
+// . <div id=poop> --> <div id=poop a=10 n=100> 
+//   where "n" is the # of times the tag occurred on other pages from this site
+//   and "a" is the # of those times that it had the same inner content.
+bool markupServerReply ( Msg13Request *r , TcpSocket *ts ) {
+
+	char *httpReply = ts->m_readBuf;
+
+	HttpMime mime;
+	mime.set ( httpReply );
+
+	// return NULL if we did nothing
+	if ( mime.getHttpStatus() != 200 ) 
+		return false;
+
+	if ( mime.getContentType() != CT_HTML )
+		return false;
+
+	char *content = mime.getContent();
+
+	long niceness = MAX_NICENESS;
+
+	XmlDoc *xd = mnew (XmlDoc);
+
+	char *content = mime.getContent();
+
+	// if this doesn't copy the content we need to
+	xd->set ( content , niceness );
+
+	// hack stash this for use by sendBackInlineSectionVotingBuf
+	r->m_hrs = r;
+
+	// when it has the final output, it calls this
+	st->m_xd.m_callback = sendBackInlineSectionVotingBuf;
+	st->m_xd.m_state    = &st->m_xd;
+
+	// . xd uses this callback internally to get the markup
+	//   but when done it calls xt->m_xd.m_callback.
+	//   actually this function should set these. so comment out here.
+	// . returns false if blocked
+	if ( ! xd->getInlineSectionVotingInfo() )
+		// we blocked, return true
+		return true;
+
+	sendBackInlineSectionVotingBuf ( xd );
+	return true;
+}
+
+void sendBackInlineSectionVotingBuf ( XmlDoc *xd ) {
+
+	// error?
+	long saved = g_errno;
+
+	// steal it
+	char *reply = xd->m_inlineSectionVotingBuf.getBufStart();
+	long  replySize = xd->m_inlineSectionVotingBuf.length() + 1;
+	long  replyAllocSize = xd->m_inlineSectionVotingBuf.capacity();
+	xd->m_inlineSectionVotingBuf.detachBuf();
+
+	// we hack stashed this. is just the original udpslot readbuf
+	Msg13Request *r = xd->m_hsr;
+
+	mdelete ( xd , sizeof(XmlDoc) , "msg13xd" );
+	delete  ( xd );
+
+	// did we have some error?
+	if ( saved ) {
+		log("msg13: error making inline section voting buf: %s",
+		    mstrerror(g_errno));
+		g_udpServer.sendErrorReply(r->m_udpSlot, saved);
+		return;
+	}
+
+
+	// it didn't block, send back the html with the inlined section
+	// voting info
+	g_udpServer.sendReply_ass (reply,
+				   replySize,
+				   reply,
+				   replyAllocSize,
+				   r->m_udpSlot);
 }
 
 

@@ -302,13 +302,13 @@ class SectionStats {
 public:
 	SectionStats() { reset(); }
 	void reset ( ) {
-		m_onSiteDocIds   = 0;
-		m_offSiteDocIds  = 0;
-		m_numUniqueSites = 0;
+		m_totalMatches = 0; // posdb key "val" matches ours
+		m_totalEntries = 0; // total posdb keys
+		m_numUniqueVals = 0; // # of unique "vals"
 	};
-	long long m_onSiteDocIds;
-	long long m_offSiteDocIds;
-	long long m_numUniqueSites;
+	long long m_totalMatches;
+	long long m_totalEntries;
+	long long m_numUniqueVals;
 };
 
 class Section {
@@ -429,7 +429,7 @@ public:
 	uint32_t  m_tagHash;
 
 	// like above but for turk voting
-	unsigned long m_turkTagHash;
+	unsigned long m_turkTagHash32;
 
 	// for debug output display of color coded nested sections
 	unsigned long m_colorHash;

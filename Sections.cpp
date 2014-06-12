@@ -1517,9 +1517,9 @@ bool Sections::set ( Words     *w                       ,
 			p += 6;
 		}
 		// if root section has no tag this is zero and will core
-		// in Dates.cpp where it checks m_turkTagHash to be zero
+		// in Dates.cpp where it checks m_turkTagHash32 to be zero
 		if ( ctid == 0 ) ctid = 999999;
-		// set it for setting m_turkTagHash
+		// set it for setting m_turkTagHash32
 		sn->m_turkBaseHash = ctid;
 		// always make root turkbasehash be 999999.
 		// if root section did not start with tag it's turkBaseHash
@@ -11855,7 +11855,7 @@ bool Sections::addVotes ( SectionVotingTable *nsvt , uint32_t tagPairHash ) {
 		// sanity check
 		if ( ! sn->m_sentenceContentHash64 ) { char *xx=NULL;*xx=0; }
 		// add the tag hash too!
-		if ( ! nsvt->addVote3 ( sn->m_turkTagHash     ,
+		if ( ! nsvt->addVote3 ( sn->m_turkTagHash32   ,
 					SV_TURKTAGHASH        , 
 					1.0               ,   // score
 					1.0               ,
@@ -11865,9 +11865,10 @@ bool Sections::addVotes ( SectionVotingTable *nsvt , uint32_t tagPairHash ) {
 		//if ( sn->m_flags & SEC_NOTEXT ) continue;
 		// . combine the tag hash with the content hash #2
 		// . for some reason m_contentHash is 0 for like menu-y sectns
-		long modified = sn->m_turkTagHash^sn->m_sentenceContentHash64;
+		long modified = sn->m_turkTagHash32;
+		modified ^= sn->m_sentenceContentHash64;
 		// now we use votehash32 which ignores dates and numbers
-		//long modified = sn->m_turkTagHash ^ sn->m_voteHash32;
+		//long modified = sn->m_turkTagHash32 ^ sn->m_voteHash32;
 		// . update m_nsvt voting table now
 		// . the tagHash is the content hash for this one
 		// . this will return false with g_errno set
@@ -11989,7 +11990,7 @@ bool SectionVotingTable::addListOfVotes ( RdbList *list,
 		float numSampled = sv->m_numSampled;
 
 		// incorporate this vote into m_osvt. the "old" voting table.
-		if ( ! addVote3 ( turkTagHash      ,
+		if ( ! addVote3 ( turkTagHash32    ,
 				  secType          ,
 				  avg              ,  // score
 				  numSampled       )) // numSampled
@@ -14611,8 +14612,8 @@ void Sections::setTagHashes ( ) {
 		if ( ! sn->m_parent ) {
 			sn->m_depth   = 0;
 			sn->m_tagHash = bh;
-			sn->m_turkTagHash = sn->m_turkBaseHash;//m_tagId;
-			//sn->m_turkTagHash = bh;
+			sn->m_turkTagHash32 = sn->m_turkBaseHash;//m_tagId;
+			//sn->m_turkTagHash32 = bh;
 			//sn->m_formatHash = fh;
 			// sanity check
 			if ( bh == 0 ) { char *xx=NULL;*xx=0; }
@@ -14628,10 +14629,10 @@ void Sections::setTagHashes ( ) {
 		// now use this for setting Date::m_dateTagHash instead
 		// of using Section::m_tagHash since often the dates like
 		// for zvents.org are in a <tr id=xxxx> where xxxx changes
-		sn->m_turkTagHash = 
+		sn->m_turkTagHash32 = 
 			//hash32h ( sn->m_tagId, sn->m_parent->m_turkTagHash );
 			hash32h ( sn->m_turkBaseHash,
-				  sn->m_parent->m_turkTagHash );
+				  sn->m_parent->m_turkTagHash32 );
 
 		sn->m_colorHash = hash32h ( bh , sn->m_parent->m_colorHash );
 
@@ -14644,7 +14645,7 @@ void Sections::setTagHashes ( ) {
 		// the section voting should still match up
 		if ( bh == BH_IMPLIED ) {
 			sn->m_tagHash     = sn->m_parent->m_tagHash;
-			sn->m_turkTagHash = sn->m_parent->m_turkTagHash;
+			sn->m_turkTagHash32 = sn->m_parent->m_turkTagHash32;
 		}
 
 		// sanity check
@@ -15606,7 +15607,8 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 		// print tag hash now
 		m_sbuf->safePrintf("taghash=%lu ",(long)sk->m_tagHash);
 		
-		m_sbuf->safePrintf("turktaghash=%lu ",(long)sk->m_turkTagHash);
+		m_sbuf->safePrintf("turktaghash=%lu ",
+				   (long)sk->m_turkTagHash32);
 		
 		if ( sk->m_contentHash64 )
 			m_sbuf->safePrintf("ch=%llu ",sk->m_contentHash64);

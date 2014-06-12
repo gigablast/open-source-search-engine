@@ -1037,6 +1037,8 @@ class XmlDoc {
 	long m_sectiondbRecall;
 	SafeBuf m_tmpBuf3;
 
+	SafeBuf m_inlineSectionVotingInfoBuf;
+
 	//HashTableX m_rvt;
 	//Msg17 m_msg17;
 	//char *m_cachedRootVoteRec;
@@ -1109,6 +1111,7 @@ class XmlDoc {
 	char     m_filteredRootTitleBufValid;
 	char     m_titleBufValid;
 	char     m_fragBufValid;
+	char     m_inlineSectionVotingInfoBufValid;
 	char     m_wordSpamBufValid;
 	char     m_finalSummaryBufValid;
 	char     m_matchingQueryBufValid;
