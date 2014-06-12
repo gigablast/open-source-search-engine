@@ -58,9 +58,10 @@ long convertIntoLinks    ( char *reply, long replySize , Xml *xml ,
 			   long niceness ) ;
 
 
+static bool setProxiedUrlFromSquidProxiedRequest ( Msg13Request *r );
 static void stripProxyAuthorization ( char *squidProxiedReqBuf ) ;
 static void fixGETorPOST ( char *squidProxiedReqBuf ) ;
-static long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) ;
+static long long computeProxiedCacheKey64 ( Msg13Request *r ) ;
 
 // cache for robots.txt pages
 static RdbCache s_httpCacheRobots;
@@ -218,13 +219,19 @@ bool Msg13::getDoc ( Msg13Request *r,
 	if ( r->m_compressReply ) r->m_cacheKey ^= 0xff;
 
 
+
+	if ( r->m_isSquidProxiedUrl )
+		// sets r->m_proxiedUrl that we use a few times below
+		setProxiedUrlFromSquidProxiedRequest ( r );
+
 	// . if gigablast is acting like a squid proxy, then r->m_url
 	//   is a COMPLETE http mime request, so hash the following fields in 
 	//   the http mime request to make the cache key
 	//   * url
 	//   * cookie
+	// . this is r->m_proxiedUrl which we set above
 	if ( r->m_isSquidProxiedUrl )
-		r->m_cacheKey = computeProxiedCacheKey64 ( r->m_url );
+		r->m_cacheKey = computeProxiedCacheKey64 ( r );
 
 
 	// always forward these so we can use the robots.txt cache
@@ -1089,7 +1096,7 @@ void gotHttpReply ( void *state , TcpSocket *ts ) {
 	// . returns false if blocked
 	// . only do markup if its a proxied request
 	// . our squid proxy simulator is only a markup simulator
-	if ( ! r->m_isSquidProxiedUrl ) {
+	if ( r->m_isSquidProxiedUrl ) {
 		// . now transform the html to include sectiondb data
 		// . this will also send the reply back so no need to
 		//   have a callback here
@@ -2778,10 +2785,12 @@ void fixGETorPOST ( char *squidProxiedReqBuf ) {
 	hs[7] = '0';
 }
 
-// . for the page cache we hash the url and the cookie to make the cache key
-// . also the GET/POST method i guess
-// . returns 0 on issues
-long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) {
+// . sets Msg13Request m_proxiedUrl and m_proxiedUrlLen
+bool setProxiedUrlFromSquidProxiedRequest ( Msg13Request *r ) {
+
+	// this is actually the entire http request mime, not a url
+	char *squidProxiedReqBuf = r->m_url;
+
 	char *s = strstr ( squidProxiedReqBuf , "GET http" );
 	long slen = 8;
 	if ( ! s ) {
@@ -2792,12 +2801,29 @@ long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) {
 		s = strstr ( squidProxiedReqBuf , "HEAD http");
 		slen = 9;
 	}
-	if ( ! s ) return 0LL;
+	if ( ! s ) return false;
+
+	r->m_proxiedUrl = s + slen - 4;
+
+	// find end of it
+	char *p = r->m_proxiedUrl;
+	for ( ; *p && !is_wspace_a(*p) ; p++ );
+
+	r->m_proxiedUrlLen = p - r->m_proxiedUrl;
+
+	return true;
+}
+
+// . for the page cache we hash the url and the cookie to make the cache key
+// . also the GET/POST method i guess
+// . returns 0 on issues
+long long computeProxiedCacheKey64 ( Msg13Request *r ) {
 
 	// hash the url
-	char *start = s;
+	char *start = r->m_proxiedUrl;
+	// skip http:// or https://
 	// skip forward
-	s += slen;
+	char *s = start + 8;
 	// skip till we hit end of url
 	// skip until / or space or \r or \n or \0
 	char *cgi = NULL;
@@ -2805,6 +2831,7 @@ long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) {
 		if ( *s == '?' && ! cgi ) cgi = s; }
 	// hash the url
 	long long h64 = hash64 ( start , s - start );
+
 
 	//
 	// if file extension implies it is an image, do not hash cookie
@@ -2822,6 +2849,8 @@ long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) {
 		if ( strncmp(cts,"image/",6) == 0 ) return h64;
 	}
 
+	// this is actually the entire http request mime, not a url
+	char *squidProxiedReqBuf = r->m_url;
 	// now for cookie
 	s = strstr ( squidProxiedReqBuf , "Cookie: ");
 	// if not there, just return url hash
@@ -2868,13 +2897,49 @@ bool markupServerReply ( Msg13Request *r , TcpSocket *ts ) {
 	}
 	mnew ( xd , sizeof(XmlDoc),"msg13xd");
 
-	char *content = mime.getContent();
+	//char *content = mime.getContent();
 
 	// if this doesn't copy the content we need to
-	xd->m_content = content;
-	xd->m_contentValid = true;
-	xd->m_niceness = 0;
+	xd->m_httpReply = httpReply;
+	xd->m_httpReplySize = ts->m_readOffset + 1;
+	xd->m_httpReplyAllocSize = ts->m_readBufSize;
+	xd->m_httpReplyValid = true;
+
+	// tell ts not to free it now! xmldoc will do that.
+	ts->m_readBuf = NULL;
+
+	xd->m_redirError = 0;
+	xd->m_redirErrorValid = true;
+
+	xd->m_redirUrlPtr = NULL;
+	xd->m_redirUrlValid = true;
 	
+	xd->m_niceness = 0;
+
+	xd->m_firstUrl.set ( r->m_proxiedUrl , r->m_proxiedUrlLen );
+	xd->m_firstUrlValid = true;
+	xd->ptr_firstUrl = xd->m_firstUrl.getUrl();
+	xd->m_ip = r->m_urlIp;
+	xd->m_ipValid = true;
+
+	xd->m_skipIframeExpansion = true;
+
+	// try to use the global index for this
+	CollectionRec *cr = g_collectiondb.getRec ( "GLOBAL-INDEX" );
+	if ( ! cr ) cr = g_collectiondb.getRec ( "test" ); // tmp hack
+	if ( ! cr ) cr = g_collectiondb.getRec ( "main" );
+	if ( cr ) {
+		xd->m_collnum = cr->m_collnum;
+		xd->m_collnumValid = true;
+	}
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
+		mdelete ( xd , sizeof(XmlDoc) , "msg13xd" );
+		delete  ( xd );
+		return false;
+	}
+
+
 	// hack stash this for use by sendBackInlineSectionVotingBuf
 	xd->m_hsr = r;
 
@@ -2906,11 +2971,19 @@ void sendBackInlineSectionVotingBuf ( void *state ) {
 	long  replySize = xd->m_inlineSectionVotingBuf.length() + 1;
 	long  replyAllocSize = xd->m_inlineSectionVotingBuf.getCapacity();
 
-	// only steal the buf if no error happened
-	if ( ! saved ) xd->m_inlineSectionVotingBuf.detachBuf();
-
 	// we hack stashed this. is just the original udpslot readbuf
 	Msg13Request *r = xd->m_hsr;
+
+	// totally empty?
+	if ( replySize <= 1 ) {
+		log("msg13: got empty inline section votingbuf for %s",
+		    r->m_url);
+		reply = "\0";
+		replySize = 1;
+	}
+
+	// only steal the buf if no error happened
+	if ( ! saved ) xd->m_inlineSectionVotingBuf.detachBuf();
 
 	mdelete ( xd , sizeof(XmlDoc) , "msg13xd" );
 	delete  ( xd );

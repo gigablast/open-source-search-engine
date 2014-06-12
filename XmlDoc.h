@@ -2147,6 +2147,8 @@ class XmlDoc {
 	//bool m_forceDelete;
 	bool m_didDelete;
 
+	bool m_skipIframeExpansion;
+
 	// this is non-zero if we decided not to index the doc
 	long m_indexCode;
 

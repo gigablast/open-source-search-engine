@@ -49,6 +49,10 @@ public:
 	long long m_urlHash48;
 	long  m_firstIp;
 
+	// a tmp hack var referencing into m_url[] below
+	char *m_proxiedUrl;
+	long  m_proxiedUrlLen;
+
 	char  m_niceness;
 	long  m_ifModifiedSince;
 	long  m_maxCacheAge;

@@ -186,6 +186,8 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_skipIframeExpansion = false;
+
 	m_didDelete = false;
 
 	m_metaList2.purge();
@@ -6458,7 +6460,7 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 		// skip if menu!
 		if ( si->m_flags & menuFlags ) continue;
 		// get section xpath hash combined with sitehash
-		uint64_t secHash64 = m_si->m_turkTagHash32 ^ siteHash32;
+		uint64_t secHash64 = si->m_turkTagHash32 ^ siteHash32;
 
 		// convert this to 32 bits
 		unsigned long sentHash32 ;
@@ -16553,6 +16555,15 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		m_expandedUtf8ContentValid = true;
 		return &m_expandedUtf8Content;
 	}
+
+	// or if this is set to true
+	if ( m_skipIframeExpansion ) {
+		m_expandedUtf8Content     = m_rawUtf8Content;
+		m_expandedUtf8ContentSize = m_rawUtf8ContentSize;
+		m_expandedUtf8ContentValid = true;
+		return &m_expandedUtf8Content;
+	}
+
 
 	uint8_t *ct = getContentType();
 	if ( ! ct || ct == (void *)-1 ) return (char **)ct;
@@ -33552,8 +33563,14 @@ bool XmlDoc::printPageInlinks ( SafeBuf *sb , HttpRequest *hr ) {
 
 static void getInlineSectionVotingBufWrapper ( void *state ) {
 	XmlDoc *xd = (XmlDoc *)state;
-	if ( ! xd->getInlineSectionVotingBuf() ) return;
+	SafeBuf *vb = xd->getInlineSectionVotingBuf();
+	// return if blocked
+	if ( vb == (void *)-1 ) return;
+	// error?
+	if ( ! vb ) log("xmldoc: error getting inline section votes: %s",
+			mstrerror(g_errno));
 	// all done then. call original entry callback
+	log("xmldoc: returning control to original caller");
 	xd->m_callback1 ( xd->m_state );
 }
 
@@ -33565,11 +33582,17 @@ static void getInlineSectionVotingBufWrapper ( void *state ) {
 //   means that the section is repeated on 20 pages from this site and 5 of
 //   which have the same innerHtml as us
 SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return NULL;
+
 	// . if we block anywhere below we want to come back here until done
 	// . this can be a main entry point, so set m_masterLoop
 	if ( ! m_masterLoop ) {
 		m_masterLoop  = getInlineSectionVotingBufWrapper;
 		m_masterState = this;
+		log("xmldoc: getting section voting info from coll=%s",
+		    cr->m_coll);
 	}
 
 	if ( m_inlineSectionVotingBufValid )
