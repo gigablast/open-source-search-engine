@@ -2962,6 +2962,18 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	bool isEthan = false;
 	if (m_coll)isEthan=strstr(m_coll,"2b44a0e0bb91bbec920f7efd29ce3d5b");
 
+	// it looks like we are assuming all crawls are repeating so that
+	// &rountStart=<currenttime> or &roundStart=0 which is the same
+	// thing, will trigger a re-crawl. so if collectiveRespiderFreq
+	// is 0 assume it is like 999999.0 days. so that stuff works.
+	// also i had to make the "default" rule below always have a respider
+	// freq of 0.0 so it will respider right away if we make it past the
+	// "lastspidertime>={roundstart}" rule which we will if they
+	// set the roundstart time to the current time using &roundstart=0
+	float respiderFreq = m_collectiveRespiderFrequency;
+	if ( respiderFreq <= 0.0 ) respiderFreq = 3652.5;
+
+
 	// make the gigablast regex table just "default" so it does not
 	// filtering, but accepts all urls. we will add code to pass the urls
 	// through m_diffbotUrlCrawlPattern alternatively. if that itself
@@ -2983,7 +2995,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		if ( isEthan )
 			m_spiderIpMaxSpiders[i] = 30;
 		//m_spidersEnabled    [i] = 1;
-		m_spiderFreqs       [i] =m_collectiveRespiderFrequency;
+		m_spiderFreqs       [i] = respiderFreq;
 		//m_spiderDiffbotApiUrl[i].purge();
 		m_harvestLinks[i] = true;
 	}
@@ -3044,7 +3056,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	i++;
 
 	// 3rd rule for respidering
-	if ( m_collectiveRespiderFrequency > 0.0 ) {
+	if ( respiderFreq > 0.0 ) {
 		m_regExs[i].set("lastspidertime>={roundstart}");
 		// do not "remove" from index
 		m_spiderPriorities   [i] = 10;
@@ -3095,7 +3107,8 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
 		// this needs to be zero so &spiderRoundStart=0
-		// functionality which sets it to current time works
+		// functionality which sets m_spiderRoundStartTime
+		// to the current time works
 		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
 		// in the future and we can't force the rounce
 		m_spiderFreqs[i] = 0.0;
@@ -3113,7 +3126,8 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
 		// this needs to be zero so &spiderRoundStart=0
-		// functionality which sets it to current time works
+		// functionality which sets m_spiderRoundStartTime
+		// to the current time works
 		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
 		// in the future and we can't force the rounce
 		m_spiderFreqs[i] = 0.0;
@@ -3131,7 +3145,8 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = 50;
 		// this needs to be zero so &spiderRoundStart=0
-		// functionality which sets it to current time works
+		// functionality which sets m_spiderRoundStartTime
+		// to the current time works
 		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
 		// in the future and we can't force the rounce
 		m_spiderFreqs[i] = 0.0;
@@ -3144,7 +3159,8 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = 50;
 		// this needs to be zero so &spiderRoundStart=0
-		// functionality which sets it to current time works
+		// functionality which sets m_spiderRoundStartTime
+		// to the current time works
 		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
 		// in the future and we can't force the rounce
 		m_spiderFreqs[i] = 0.0;

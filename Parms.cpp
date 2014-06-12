@@ -9135,7 +9135,7 @@ void Parms::init ( ) {
 		"respider all the urls that were already spidered, and urls "
 		"that were not yet spidered in the round will still be "
 		"spidered.";
-	m->m_cgi   = "spiderRoundStart";
+	m->m_cgi   = "roundStart";
 	m->m_off   = (char *)&cr.m_spiderRoundStartTime - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
@@ -17272,7 +17272,7 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// spiderRoundStartTime=<currenttime>+30secs
 		// so that will force the next spider round to kick in
 		char tmp[24];
-		if ( strcmp(field,"spiderRoundStart")==0 && 
+		if ( strcmp(field,"roundStart")==0 && 
 		     val && (val[0]=='0'||val[0]=='1') && val[1]==0 ) {
 			sprintf(tmp,"%lu",(long)getTimeGlobalNoCore()+0);
 			val = tmp;
