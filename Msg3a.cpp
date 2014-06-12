@@ -900,8 +900,10 @@ bool Msg3a::mergeLists ( ) {
 		if ( ! mr ) continue;
 		SectionStats *src = &mr->m_sectionStats;
 		SectionStats *dst = &m_sectionStats;
-		dst->m_onSiteDocIds      += src->m_onSiteDocIds;
-		dst->m_offSiteDocIds     += src->m_offSiteDocIds;
+		//dst->m_onSiteDocIds      += src->m_onSiteDocIds;
+		//dst->m_offSiteDocIds     += src->m_offSiteDocIds;
+		dst->m_totalMatches      += src->m_totalMatches;
+		dst->m_totalEntries      += src->m_totalEntries;
 		// now the list should be the unique site hashes that
 		// had the section hash. we need to uniquify them again
 		// here.
@@ -911,7 +913,7 @@ bool Msg3a::mergeLists ( ) {
 			// hash it up, no dups!
 			dt.addKey(&p[k]);
 		// update our count based on that
-		dst->m_numUniqueSites = dt.getNumSlotsUsed();
+		dst->m_numUniqueVals = dt.getNumSlotsUsed();
 	}
 	if ( m_r->m_getSectionStats ) return true;
 	//

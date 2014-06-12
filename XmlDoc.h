@@ -536,8 +536,10 @@ class XmlDoc {
 	class Sections *getImpliedSections ( ) ;
 	class Sections *getSections ( ) ;
 	class Sections *getSectionsWithDupStats ( );
+	class SafeBuf  *getInlineSectionVotingBuf();
 	bool gotSectionStats( class Msg3a *msg3a );
-	class SectionStats *getSectionStats ( long long secHash64 );
+	class SectionStats *getSectionStats(long long secHash64,
+					    long sentHash32);
 	class SectionVotingTable *getOldSectionVotingTable();
 	class SectionVotingTable *getNewSectionVotingTable();
 	char **getSectionsReply ( ) ;
@@ -998,6 +1000,9 @@ class XmlDoc {
 	//Weights    m_weights;
 	Sections   m_sections;
 
+	// a hack storage thing used by Msg13.cpp
+	class Msg13Request *m_hsr;
+
 	Section *m_si;
 	//Section *m_nextSection;
 	//Section *m_lastSection;
@@ -1037,7 +1042,7 @@ class XmlDoc {
 	long m_sectiondbRecall;
 	SafeBuf m_tmpBuf3;
 
-	SafeBuf m_inlineSectionVotingInfoBuf;
+	SafeBuf m_inlineSectionVotingBuf;
 
 	//HashTableX m_rvt;
 	//Msg17 m_msg17;
@@ -1111,7 +1116,7 @@ class XmlDoc {
 	char     m_filteredRootTitleBufValid;
 	char     m_titleBufValid;
 	char     m_fragBufValid;
-	char     m_inlineSectionVotingInfoBufValid;
+	char     m_inlineSectionVotingBufValid;
 	char     m_wordSpamBufValid;
 	char     m_finalSummaryBufValid;
 	char     m_matchingQueryBufValid;

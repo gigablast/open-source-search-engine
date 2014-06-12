@@ -1098,10 +1098,15 @@ void gotHttpReply ( void *state , TcpSocket *ts ) {
 		// . if it returns false then just pass through it
 		// . if it returns true, then it will be responsible for
 		//   sending back the udp reply of the marked up page
+		// . returns false and sets g_errno on error
 		if ( markupServerReply ( r , ts ) )
 			return;
+		// oom error? force ts to NULL so it will be sent below
+		if ( g_errno ) {
+			log("msg13: markupserverply: %s",mstrerror(g_errno));
+			ts = NULL;
+		}
 	}
-
 
 	// if we had no error, TcpSocket should be legit
 	if ( ts ) {
@@ -2833,7 +2838,7 @@ long long computeProxiedCacheKey64 ( char *squidProxiedReqBuf ) {
 	return h64;
 }
 
-static void sendBackInlineSectionVotingBuf ( XmlDoc *xd ) ;
+static void sendBackInlineSectionVotingBuf ( void *xd ) ;
 
 // . insert sectiondb data into various html tags
 // . <div id=poop> --> <div id=poop a=10 n=100> 
@@ -2842,9 +2847,10 @@ static void sendBackInlineSectionVotingBuf ( XmlDoc *xd ) ;
 bool markupServerReply ( Msg13Request *r , TcpSocket *ts ) {
 
 	char *httpReply = ts->m_readBuf;
+	long  httpReplyLen = ts->m_readOffset;
 
 	HttpMime mime;
-	mime.set ( httpReply );
+	mime.set ( httpReply , httpReplyLen , NULL );
 
 	// return NULL if we did nothing
 	if ( mime.getHttpStatus() != 200 ) 
@@ -2853,37 +2859,44 @@ bool markupServerReply ( Msg13Request *r , TcpSocket *ts ) {
 	if ( mime.getContentType() != CT_HTML )
 		return false;
 
-	char *content = mime.getContent();
-
-	long niceness = MAX_NICENESS;
-
-	XmlDoc *xd = mnew (XmlDoc);
+	// make a new xmldoc class to handle the heavy lifting
+	XmlDoc *xd;
+	try { xd = new ( XmlDoc ); }
+	catch ( ... ) {
+		g_errno = ENOMEM;
+		return false;
+	}
+	mnew ( xd , sizeof(XmlDoc),"msg13xd");
 
 	char *content = mime.getContent();
 
 	// if this doesn't copy the content we need to
-	xd->set ( content , niceness );
-
+	xd->m_content = content;
+	xd->m_contentValid = true;
+	xd->m_niceness = 0;
+	
 	// hack stash this for use by sendBackInlineSectionVotingBuf
-	r->m_hrs = r;
+	xd->m_hsr = r;
 
 	// when it has the final output, it calls this
-	st->m_xd.m_callback = sendBackInlineSectionVotingBuf;
-	st->m_xd.m_state    = &st->m_xd;
+	xd->m_callback1 = sendBackInlineSectionVotingBuf;
+	xd->m_state     = xd;
 
 	// . xd uses this callback internally to get the markup
 	//   but when done it calls xt->m_xd.m_callback.
 	//   actually this function should set these. so comment out here.
 	// . returns false if blocked
-	if ( ! xd->getInlineSectionVotingInfo() )
-		// we blocked, return true
-		return true;
+	SafeBuf *vb = xd->getInlineSectionVotingBuf();
+	// we blocked, return true. vb is NULL with g_errno set on error.
+	if ( vb == (void *)-1 ) return true;
 
 	sendBackInlineSectionVotingBuf ( xd );
 	return true;
 }
 
-void sendBackInlineSectionVotingBuf ( XmlDoc *xd ) {
+void sendBackInlineSectionVotingBuf ( void *state ) {
+
+	XmlDoc *xd = (XmlDoc *)state;
 
 	// error?
 	long saved = g_errno;
@@ -2891,8 +2904,10 @@ void sendBackInlineSectionVotingBuf ( XmlDoc *xd ) {
 	// steal it
 	char *reply = xd->m_inlineSectionVotingBuf.getBufStart();
 	long  replySize = xd->m_inlineSectionVotingBuf.length() + 1;
-	long  replyAllocSize = xd->m_inlineSectionVotingBuf.capacity();
-	xd->m_inlineSectionVotingBuf.detachBuf();
+	long  replyAllocSize = xd->m_inlineSectionVotingBuf.getCapacity();
+
+	// only steal the buf if no error happened
+	if ( ! saved ) xd->m_inlineSectionVotingBuf.detachBuf();
 
 	// we hack stashed this. is just the original udpslot readbuf
 	Msg13Request *r = xd->m_hsr;

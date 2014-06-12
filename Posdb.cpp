@@ -5106,8 +5106,9 @@ void PosdbTable::intersectLists10_r ( ) {
 			//long rs = list->getRecSize(p);
 			// this will not update listptrlo, watch out!
 			p += list->getRecSize ( p );
-			// onsite or off?
-			if ( sh32 == m_r->m_myVal32 ) // m_siteHash32 ) 
+			// does this xpath from another docid have the
+			// same inner html as us?
+			if ( sh32 == m_r->m_sentHash32 ) // m_siteHash32 ) 
 				m_sectionStats.m_totalMatches++;
 			// always this
 			m_sectionStats.m_totalEntries++;

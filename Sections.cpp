@@ -11921,7 +11921,7 @@ bool SectionVotingTable::addListOfVotes ( RdbList *list,
 		// for that docid
 		long secType = g_indexdb.getScore ( (char *)key );
 		// treat key like a datedb key and get the taghash
-		uint32_t turkTagHash = g_datedb.getDate ( key );
+		uint32_t turkTagHash32 = g_datedb.getDate ( key );
 		// get this
 		long long d = g_datedb.getDocId(key);
 		// skip this vote if from an old titlerec of ourselves!
@@ -11935,7 +11935,7 @@ bool SectionVotingTable::addListOfVotes ( RdbList *list,
 		// tagHash of zero so we can keep tabs on how many section
 		// voters we have. we need to limit the # of voters per site
 		// otherwise we have a huge sectiondb explosion.
-		if ( turkTagHash == 0 ) {
+		if ( turkTagHash32 == 0 ) {
 			// now that we do compression we strip these votes
 			// in Msg0.cppp
 			//char *xx=NULL;*xx=0; 
@@ -15555,6 +15555,8 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 	//	m_sbuf->safePrintf("A=%li ",sk->m_a);
 
 
+	/*
+	  take out for now since we changed the stats class around
 	if ( format == FORMAT_PROCOG && sk->m_stats.m_numUniqueSites >= 2 ) {
 		// do not count our own site!
 		m_sbuf->safePrintf("<i>"
@@ -15572,6 +15574,7 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 				   , sk->m_sentenceContentHash64
 				   ,(long)sk->m_stats.m_numUniqueSites-1);
 	}
+	*/
 
 	m_sbuf->safePrintf("<i>");
 

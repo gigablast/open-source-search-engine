@@ -2190,7 +2190,7 @@ void Date::addPtr ( Date *ptr , long i , class Dates *parent ) {
 		m_section     = ptr->m_section;
 		m_hardSection = ptr->m_hardSection;
 		m_tagHash     = ptr->m_section->m_tagHash;
-		m_turkTagHash= ptr->m_section->m_turkTagHash;
+		m_turkTagHash= ptr->m_section->m_turkTagHash32;
 		if ( ! m_section     ) { char *xx=NULL;*xx=0; }
 		// no! i've seen a text only doc that actually has NO hard
 		// sections, so let NULL imply that the hard section is the
@@ -2634,7 +2634,7 @@ bool Dates::setPart1 ( //char       *u        ,
 		di->m_section = sa;
 		// set tag hash
 		di->m_tagHash = sa->m_tagHash;
-		di->m_turkTagHash = sa->m_turkTagHash;
+		di->m_turkTagHash = sa->m_turkTagHash32;
 		// telescope until we hit a "real" section
 		for ( ; sa ; sa = sa->m_parent ) {
 			// get parent

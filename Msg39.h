@@ -115,7 +115,8 @@ class Msg39Request {
 	char    m_doMaxScoreAlgo;
 
 	char    m_getSectionStats;
-	long    m_siteHash32;// for m_getSectionStats
+	//long    m_siteHash32;// for m_getSectionStats
+	long    m_sentHash32; // for getSectionStats
 
 	char    m_useMinAlgo;
 	char    m_fastIntersection;

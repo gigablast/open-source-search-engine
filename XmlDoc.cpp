@@ -6368,6 +6368,10 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 
 	if ( m_gotDupStats ) return ss;
 
+	long *sh32 = getSiteHash32();
+	if ( ! sh32 || sh32 == (long *)-1 ) return (Sections *)sh32;
+	long siteHash32 = *sh32;
+
 	//long long *shp64 = getSiteHash64();
 	//if ( ! shp64 || shp64 == (void *)-1 ) return (Sections *)shp64;
 	//long long siteHash48 = *shp64 & 0x0000ffffffffffffLL;
@@ -6378,10 +6382,10 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 	// if this is -1, we are called for the first time
 	if ( m_si == (void *)-1 ) {
 		m_si  = ss->m_rootSection;
-		m_si2 = ss->m_rootSection;
 		m_msg3aRequestsIn = 0;
 		m_msg3aRequestsOut = 0;
 	}
+
 
 	sec_t menuFlags = SEC_MENU | SEC_MENU_SENTENCE | SEC_MENU_HEADER   ;
 
@@ -6398,13 +6402,18 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 		// get section xpath hash combined with sitehash
 		uint64_t secHash64 = m_si->m_turkTagHash32 ^ siteHash32;
 
+		// convert this to 32 bits
+		unsigned long sentHash32 ;
+		sentHash32 = (unsigned long)m_si->m_sentenceContentHash64;
+		
+
 		// save in case we need to read more than 5MB
 		//m_lastSection = si;
 		// . this does a gbsectionhash:xxxxxx query on secHash64
 		// . we hack the "sentContentHash32" into each posdb key 
 		//   as the "value" so we can do a facet-like histogram
 		//   over all the possible values this xpath has for this site
-		SectionStats *stats = getSectionStats ( secHash64 );
+		SectionStats *stats = getSectionStats ( secHash64, sentHash32);
 		// count it
 		if ( stats == (void *)-1 ) {
 			// count it as outstanding
@@ -6450,9 +6459,14 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 		if ( si->m_flags & menuFlags ) continue;
 		// get section xpath hash combined with sitehash
 		uint64_t secHash64 = m_si->m_turkTagHash32 ^ siteHash32;
+
+		// convert this to 32 bits
+		unsigned long sentHash32 ;
+		sentHash32 = (unsigned long)si->m_sentenceContentHash64;
+
 		// the "stats" class should be in the table from
 		// the lookups above!!
-		SectionStats *stats = getSectionStats ( secHash64 );
+		SectionStats *stats = getSectionStats ( secHash64, sentHash32);
 		// sanity
 		if ( ! stats || stats == (void *)-1 ) { char *xx=NULL;*xx=0; }
 		// copy
@@ -6469,7 +6483,7 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 static void gotDocIdsWrapper ( void *state ) ;
 
 // . launch a single msg3a::getDocIds() for a section hash, secHash64
-SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
+SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 
 	// init cache?
 	if ( m_sectionStatsTable.m_numSlots == 0 &&
@@ -6492,8 +6506,8 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
 	// save it
 	//m_secHash64 = secHash64;
 
-	long *sh32 = getSiteHash32();
-	if ( ! sh32 || sh32 == (long *)-1 ) return (SectionStats *)sh32;
+	//long *sh32 = getSiteHash32();
+	//if ( ! sh32 || sh32 == (long *)-1 ) return (SectionStats *)sh32;
 
 	long maxOut = 32;
 
@@ -6596,7 +6610,10 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
 	r->m_getSectionStats     = true;
 	// we need to know what site is the base site so the section stats
 	// can set m_onSiteDocIds and m_offSiteDocIds correctly
-	r->m_siteHash32          = *sh32;
+	//r->m_siteHash32          = *sh32;
+
+	// now we use the hash of the innerHtml of the xpath
+	r->m_sentHash32 = sentHash32;
 
 
 	Query *qq = &m_queryArray[i];
@@ -33533,11 +33550,11 @@ bool XmlDoc::printPageInlinks ( SafeBuf *sb , HttpRequest *hr ) {
 	return true;
 }
 
-static getInlineSectionVotingInfoWrapper ( void *state ) {
+static void getInlineSectionVotingBufWrapper ( void *state ) {
 	XmlDoc *xd = (XmlDoc *)state;
-	if ( ! xd->getInlineSectionVotingInfo() ) return;
+	if ( ! xd->getInlineSectionVotingBuf() ) return;
 	// all done then. call original entry callback
-	xd->m_callback ( xd->m_state );
+	xd->m_callback1 ( xd->m_state );
 }
 
 // . returns false if blocked, true otherwise
@@ -33547,27 +33564,26 @@ static getInlineSectionVotingInfoWrapper ( void *state ) {
 // . for example, <div id=poo> --> <div id=poo d=5 n=20> 
 //   means that the section is repeated on 20 pages from this site and 5 of
 //   which have the same innerHtml as us
-bool XmlDoc::getInlineSectionVotingInfo ( ) {
-	// if we block anywhere below we want to come back here until done
-	if ( ! m_masterCallback ) {
-		m_masterCallback = getInlineSectionVotingInfoWrapper;
-		m_masterState    = this;
+SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
+	// . if we block anywhere below we want to come back here until done
+	// . this can be a main entry point, so set m_masterLoop
+	if ( ! m_masterLoop ) {
+		m_masterLoop  = getInlineSectionVotingBufWrapper;
+		m_masterState = this;
 	}
 
-	if ( m_inlineSectionVotingInfoBufValid )
-		return &m_inlineSectionVotingInfoBuf;
+	if ( m_inlineSectionVotingBufValid )
+		return &m_inlineSectionVotingBuf;
 
 	Sections *sections = getSectionsWithDupStats();
-	if ( ! sections) return true;
-	if (sections==(Sections *)-1)return false;
+	if ( ! sections || sections == (void *)-1 ) return (SafeBuf *)sections;
 	Words *words = getWords();
-	if ( ! words ) return true; if ( words == (Words *)-1 ) return false;
+	if ( ! words || words == (void *)-1 ) return (SafeBuf *)words;
 
+	//long nw = words->getNumWords();
+	//long long *wids = words->getWordIds();
 
-	long nw = words->getNumWords();
-	long long *wids = words->getWordIds();
-
-	SafeBuf *sb = &m_inlineSectionVotingInfoBuf;
+	SafeBuf *sb = &m_inlineSectionVotingBuf;
 
 	//sec_t mflags = SEC_SENTENCE | SEC_MENU;
 
@@ -33579,27 +33595,29 @@ bool XmlDoc::getInlineSectionVotingInfo ( ) {
 		char *byte1 = words->m_words[si->m_a];
 		char *byte2 = words->m_words[si->m_b-1] + 
 			words->m_wordLens[si->m_b-1];
-		long off1 = byte1 - words->m_words[0];
+		//long off1 = byte1 - words->m_words[0];
 		long size = byte2 - byte1;
 		// if a tag then insert the info at end
 		bool isTag = false;
-		if ( byte1 == '<' ) isTag = true;
+		if ( *byte1 == '<' ) isTag = true;
 		// only tags that have stats really
-		if ( ! si->m_stats ) isTag = false;
+		if ( si->m_stats.m_totalEntries ) isTag = false;
 		// do not print the last <
-		if ( isTag ) size1--;
+		if ( isTag ) size--;
 		// print it here
-		sb->safeMemcpy ( byte1 , size1 );
+		sb->safeMemcpy ( byte1 , size );
 		// insert info if tag
 		if ( ! isTag ) continue;
 		// how many other docs from our site had the same innerHTML?
 		sb->safePrintf(" _d=%li",(long)si->m_stats.m_totalMatches);
 		// how many total docs from our site had the same X-path?
-		sb->safePrintf(" _n=%li",(long)si->m_stats.m_onSiteSameTag);
+		sb->safePrintf(" _n=%li",(long)si->m_stats.m_totalEntries);
+		// unique values in the xpath innerhtml
+		sb->safePrintf(" _u=%li",(long)si->m_stats.m_numUniqueVals);
 		sb->pushChar('>');
 	}
-	m_inlineSectionVotingInfoBufValid = true;
-	return true;
+	m_inlineSectionVotingBufValid = true;
+	return &m_inlineSectionVotingBuf;
 }
 
 bool XmlDoc::printRainbowSections ( SafeBuf *sb , HttpRequest *hr ) {
@@ -33791,6 +33809,9 @@ bool XmlDoc::printRainbowSections ( SafeBuf *sb , HttpRequest *hr ) {
 			sb->safePrintf("\t</section>\n");
 			continue;
 		}
+		/* take this out for now it is not quite right any more.
+		   we now use the xpath hash and site hash as the key
+		   and the "value" is the sentence/innerHtml hash
 		sb->safePrintf("\t\t<numOnSitePagesThatDuplicateContent>%li"
 			       "</numOnSitePagesThatDuplicateContent>\n",
 			       (long)si->m_stats.m_onSiteDocIds);
@@ -33800,6 +33821,7 @@ bool XmlDoc::printRainbowSections ( SafeBuf *sb , HttpRequest *hr ) {
 		sb->safePrintf("\t\t<numSitesThatDuplicateContent>%li"
 			       "</numSitesThatDuplicateContent>\n",
 			       (long)si->m_stats.m_numUniqueSites);
+		*/
 		// you can do a sitehash:xxxxx this number to see who the
 		// dups are!
 		sb->safePrintf("\t\t<innerContentHash64>%llu"
