@@ -1105,8 +1105,10 @@ void gotHttpReply ( void *state , TcpSocket *ts ) {
 		// . if it returns false then just pass through it
 		// . if it returns true, then it will be responsible for
 		//   sending back the udp reply of the marked up page
-		// . returns false and sets g_errno on error
-		if ( markupServerReply ( r , ts ) )
+		// . returns false if blocked, true otherwise
+		// . returns true and sets g_errno on error
+		// . when done it just calls gotHttpReply2() on its own
+		if ( ! markupServerReply ( r , ts ) ) 
 			return;
 		// oom error? force ts to NULL so it will be sent below
 		if ( g_errno ) {
@@ -1398,7 +1400,9 @@ void gotHttpReply2 ( void *state ,
 	if ( reply && replySize>0 && reply[replySize-1]!='\0') {
 		char *xx=NULL;*xx=0; }
 
-	if ( hasIframe2 && ! r->m_attemptedIframeExpansion ) {
+	if ( hasIframe2 && 
+	     ! r->m_attemptedIframeExpansion &&
+	     ! r->m_isSquidProxiedUrl ) {
 		// must have ts i think
 		if ( ! ts ) { char *xx=NULL; *xx=0; }
 		// sanity
@@ -1461,6 +1465,7 @@ void gotHttpReply2 ( void *state ,
 	if ( r->m_url &&
 	     replySize>0 &&
 	     goodStatus &&
+	     ! r->m_isSquidProxiedUrl &&
 	     strstr ( r->m_url,"flurbit.com/" ) ) {
 		// note it in log
 		log("msg13: got flurbit url: %s",r->m_url);
@@ -2869,6 +2874,9 @@ long long computeProxiedCacheKey64 ( Msg13Request *r ) {
 
 static void sendBackInlineSectionVotingBuf ( void *xd ) ;
 
+// . returns false if blocks and will call gotHttpReply2() when done
+// . returns true if does not block
+// . returns true and sets g_errno on error
 // . insert sectiondb data into various html tags
 // . <div id=poop> --> <div id=poop a=10 n=100> 
 //   where "n" is the # of times the tag occurred on other pages from this site
@@ -2883,17 +2891,17 @@ bool markupServerReply ( Msg13Request *r , TcpSocket *ts ) {
 
 	// return NULL if we did nothing
 	if ( mime.getHttpStatus() != 200 ) 
-		return false;
+		return true;
 
 	if ( mime.getContentType() != CT_HTML )
-		return false;
+		return true;
 
 	// make a new xmldoc class to handle the heavy lifting
 	XmlDoc *xd;
 	try { xd = new ( XmlDoc ); }
 	catch ( ... ) {
 		g_errno = ENOMEM;
-		return false;
+		return true;
 	}
 	mnew ( xd , sizeof(XmlDoc),"msg13xd");
 
@@ -2936,7 +2944,7 @@ bool markupServerReply ( Msg13Request *r , TcpSocket *ts ) {
 		g_errno = ENOCOLLREC;
 		mdelete ( xd , sizeof(XmlDoc) , "msg13xd" );
 		delete  ( xd );
-		return false;
+		return true;
 	}
 
 
@@ -2953,10 +2961,12 @@ bool markupServerReply ( Msg13Request *r , TcpSocket *ts ) {
 	// . returns false if blocked
 	SafeBuf *vb = xd->getInlineSectionVotingBuf();
 	// we blocked, return true. vb is NULL with g_errno set on error.
-	if ( vb == (void *)-1 ) return true;
+	if ( vb == (void *)-1 ) return false;
 
 	sendBackInlineSectionVotingBuf ( xd );
-	return true;
+
+	// so gotHttpReply2() is not called again by our parent caller
+	return false;
 }
 
 void sendBackInlineSectionVotingBuf ( void *state ) {
@@ -2966,21 +2976,23 @@ void sendBackInlineSectionVotingBuf ( void *state ) {
 	// error?
 	long saved = g_errno;
 
-	// steal it
-	char *reply = xd->m_inlineSectionVotingBuf.getBufStart();
-	long  replySize = xd->m_inlineSectionVotingBuf.length() + 1;
-	long  replyAllocSize = xd->m_inlineSectionVotingBuf.getCapacity();
+	SafeBuf *buf = &xd->m_inlineSectionVotingBuf;
+
+	// steal it. this should now start with the original http mime
+	char *reply          = buf->getBufStart();
+	long  replySize      = buf->length() + 1; // include \0
+	long  replyAllocSize = buf->getCapacity();
 
 	// we hack stashed this. is just the original udpslot readbuf
 	Msg13Request *r = xd->m_hsr;
 
 	// totally empty?
-	if ( replySize <= 1 ) {
-		log("msg13: got empty inline section votingbuf for %s",
-		    r->m_url);
-		reply = "\0";
-		replySize = 1;
-	}
+	//if ( replySize <= 1 ) {
+	// 	log("msg13: got empty inline section votingbuf for %s",
+	// 	    r->m_url);
+	// 	reply = "\0";
+	// 	replySize = 1;
+	// }
 
 	// only steal the buf if no error happened
 	if ( ! saved ) xd->m_inlineSectionVotingBuf.detachBuf();
@@ -2992,18 +3004,27 @@ void sendBackInlineSectionVotingBuf ( void *state ) {
 	if ( saved ) {
 		log("msg13: error making inline section voting buf: %s",
 		    mstrerror(g_errno));
-		g_udpServer.sendErrorReply(r->m_udpSlot, saved);
 		return;
 	}
 
+	// and resume just like we got the reply from the webserver
+	//mfree ( ts->m_alloc , ts->m_allocSize , "mkupts");
+
+	// reinstate error
+	g_errno = saved;
+
+	// we set ts to NULL, i guess it was probably already freed up
+	// any how by now since the sectiondb lookups probably blocked in the
+	// call the XmlDoc::getInlineSectionVotingBuf()
+	gotHttpReply2 ( r, reply, replySize , replyAllocSize , NULL ); // ts
 
 	// it didn't block, send back the html with the inlined section
 	// voting info
-	g_udpServer.sendReply_ass (reply,
-				   replySize,
-				   reply,
-				   replyAllocSize,
-				   r->m_udpSlot);
+	// g_udpServer.sendReply_ass (reply,
+	// 			   replySize,
+	// 			   reply,
+	// 			   replyAllocSize,
+	// 			   r->m_udpSlot);
 }
 
 

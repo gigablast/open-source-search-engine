@@ -33645,11 +33645,17 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 	if ( ! sections || sections == (void *)-1 ) return (SafeBuf *)sections;
 	Words *words = getWords();
 	if ( ! words || words == (void *)-1 ) return (SafeBuf *)words;
+	HttpMime *mime = getMime();
+	if ( ! mime || mime == (void *)-1 ) return (SafeBuf *)mime;
 
 	//long nw = words->getNumWords();
 	//long long *wids = words->getWordIds();
 
 	SafeBuf *sb = &m_inlineSectionVotingBuf;
+
+	// store mime first then content
+	if ( ! m_httpReplyValid ) { char *xx=NULL;*xx=0; }
+	sb->safeMemcpy ( m_httpReply , mime->getMimeLen() );
 
 	//sec_t mflags = SEC_SENTENCE | SEC_MENU;
 
@@ -33659,15 +33665,17 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 		QUICKPOLL(m_niceness);
 		// print it out
 		char *byte1 = words->m_words[si->m_a];
-		char *byte2 = words->m_words[si->m_b-1] + 
-			words->m_wordLens[si->m_b-1];
+		long b = words->m_numWords;
+		// start of next section
+		if ( si->m_next ) b = si->m_next->m_a;
+		char *byte2 = words->m_words[b-1] + words->m_wordLens[b-1];
 		//long off1 = byte1 - words->m_words[0];
 		long size = byte2 - byte1;
 		// if a tag then insert the info at end
 		if ( si->m_stats.m_totalEntries ) {
 			sb->safePrintf("<!--");
 			// # docs from our site had the same innerHTML?
-			sb->safePrintf(" _d=%li",
+			sb->safePrintf(" _m=%li",
 				       (long)si->m_stats.m_totalMatches);
 			// # total docs from our site had the same X-path?
 			sb->safePrintf(" _n=%li",
