@@ -452,49 +452,10 @@ void getTime ( char *s , int *sec , int *min , int *hour ) {
 	*sec  = atol ( s );
 }
 
-// . s is a NULL terminated string like "text/html"
-long HttpMime::getContentTypePrivate ( char *s ) {
-	char *send = NULL;
-	char c;
-	long ct;
-	// skip spaces
-	while ( *s==' ' || *s=='\t' ) s++;
-	// find end of s
-	send = s;
-	// they can have "text/plain;charset=UTF-8" too
-	for ( ; *send && *send !=';' && *send !='\r' && *send !='\n' ; send++);
-
-	//
-	// point to possible charset desgination
-	//
-	char *t = send ;
-	// charset follows the semicolon
-	if ( *t == ';' ) {
-		// skip semicolon
-		t++;
-		// skip spaces
-		while ( *t==' ' || *t=='\t' ) t++;
-		// get charset name "charset=euc-jp"
-		if ( strncasecmp ( t , "charset" , 7 ) != 0 ) goto next;
-		// skip it
-		t += 7;
-		// skip spaces, equal, spaces
-		while ( *t==' ' || *t=='\t' ) t++;
-		if    ( *t=='='             ) t++;
-		while ( *t==' ' || *t=='\t' ) t++;
-		// get charset
-		m_charset = t;
-		// get length
-		while ( *t && *t!='\r' && *t!='\n' && *t!=' ' && *t!='\t') t++;
-		m_charsetLen = t - m_charset;
-	}
-
- next:
-	// temp term it for the strcmp() function
-	c = *send; *send = '\0';
-	// set this
-	ct = -1;
-
+long getContentTypeFromStr ( char *s ) {
+	// -1 means unknown
+	//long ct = -1;
+	long ct = CT_UNKNOWN;
 	// html
 	if      (!strcasecmp(s,"text/html"               ) ) ct = CT_HTML;
 	else if (!strcasecmp(s,"text/plain"              ) ) ct = CT_TEXT;
@@ -539,10 +500,59 @@ long HttpMime::getContentTypePrivate ( char *s ) {
 	// . these might have an address in them...
 	else if (!strcasecmp(s,"text/x-vcard" )  ) ct = CT_HTML;
 
+	return ct;
+}
+
+// . s is a NULL terminated string like "text/html"
+long HttpMime::getContentTypePrivate ( char *s ) {
+	char *send = NULL;
+	char c;
+	long ct;
+	// skip spaces
+	while ( *s==' ' || *s=='\t' ) s++;
+	// find end of s
+	send = s;
+	// they can have "text/plain;charset=UTF-8" too
+	for ( ; *send && *send !=';' && *send !='\r' && *send !='\n' ; send++);
+
+	//
+	// point to possible charset desgination
+	//
+	char *t = send ;
+	// charset follows the semicolon
+	if ( *t == ';' ) {
+		// skip semicolon
+		t++;
+		// skip spaces
+		while ( *t==' ' || *t=='\t' ) t++;
+		// get charset name "charset=euc-jp"
+		if ( strncasecmp ( t , "charset" , 7 ) != 0 ) goto next;
+		// skip it
+		t += 7;
+		// skip spaces, equal, spaces
+		while ( *t==' ' || *t=='\t' ) t++;
+		if    ( *t=='='             ) t++;
+		while ( *t==' ' || *t=='\t' ) t++;
+		// get charset
+		m_charset = t;
+		// get length
+		while ( *t && *t!='\r' && *t!='\n' && *t!=' ' && *t!='\t') t++;
+		m_charsetLen = t - m_charset;
+	}
+
+ next:
+	// temp term it for the strcmp() function
+	c = *send; *send = '\0';
+	// set this
+	//ct = -1;
+
+	// returns CT_UNKNOWN if unknown
+	ct = getContentTypeFromStr  ( s );
+
 	// log it for reference
 	//if ( ct == -1 ) { char *xx=NULL;*xx=0; }
-	if ( ct == -1 ) { 
-		ct = CT_UNKNOWN;
+	if ( ct == CT_UNKNOWN ) { 
+		//ct = CT_UNKNOWN;
 		log("http: unrecognized content type \"%s\"",s);
 	}
 	// unterm it

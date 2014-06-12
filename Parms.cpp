@@ -959,17 +959,134 @@ unsigned long Parms::calcChecksum() {
 }
 */
 
+// returns false and sets g_errno on error
+bool Parms::setGigablastRequest ( TcpSocket *socket ,
+				  HttpRequest *hrArg ,
+				  GigablastRequest *gr ) {
+	// get the page from the path... like /sockets --> PAGE_SOCKETS
+	long page = g_pages.getDynamicPageNumber ( hrArg );
+	// is it a collection?
+	char *THIS = (char *)gr;
+	// ensure valid
+	if ( ! THIS ) {
+		// it is null when no collection explicitly specified...
+		log("admin: THIS is null for page %li.",page);
+		return false;
+	}
+
+	// make a copy of the httprequest because the original is on the stack
+	// in HttpServer::requestHandler()
+	if ( ! gr->m_hr.copy ( hrArg ) ) {
+		log("admin: failed to copy httprequest: %s",
+		    mstrerror(g_errno));
+		return false;
+	}
+
+	// use the one we copied which won't disappear/beFreed on us
+	HttpRequest *hr = &gr->m_hr;
+
+	gr->m_socket = socket;
+
+	// need this
+	long obj = OBJ_GBREQUEST;
+
+	//
+	// reset THIS to defaults
+	//
+	setToDefault ( THIS , obj );
+
+	// loop through cgi parms
+	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
+		// get cgi parm name
+		char *field = hr->getField    ( i );
+		//long  flen  = hr->getFieldLen ( i );
+		// find in parms list
+		long  j;
+		Parm *m;
+		for ( j = 0 ; j < m_numParms ; j++ ) {
+			// get it
+			m = &m_parms[j];
+			// must be of this type
+			if ( m->m_obj != obj ) continue;
+			// page must match
+			if ( m->m_page != page ) continue;
+			// skip if no cgi parm, may not be configurable now
+			if ( ! m->m_cgi ) continue;
+			// otherwise, must match the cgi name exactly
+			if ( strcmp ( field,m->m_cgi ) == 0 ) break;
+			//if ( ! m->m_cgi2 ) continue; // alias check
+			//if ( strcmp ( field,m->m_cgi2 ) == 0 ) break;
+			//if ( ! m->m_cgi2 ) continue; // alias check
+			//if ( strcmp ( field,m->m_cgi3 ) == 0 ) break;
+			//if ( ! m->m_cgi3 ) continue; // alias check
+			//if ( strcmp ( field,m->m_cgi4 ) == 0 ) break;
+		}
+		// bail if the cgi field is not in the parms list
+		if ( j >= m_numParms ) {
+			log("parms: missing cgi parm %s",field);
+			continue;
+		}
+		// value of cgi parm (null terminated)
+		char *v = hr->getValue ( i );
+		// . skip if no value was provided
+		// . unless it was a string! so we can make them empty.
+		if ( v[0] == '\0' && 
+		     m->m_type != TYPE_CHARPTR &&
+		     m->m_type != TYPE_STRING && 
+		     m->m_type != TYPE_STRINGBOX ) continue;
+		// skip if offset is negative, that means none
+		if ( m->m_off < 0 ) continue;
+		// skip if no permission
+		//if ( (m->m_perms & user) == 0 ) continue;
+		// set it. now our TYPE_CHARPTR will just be set to it directly
+		// to save memory...
+		setParm ( (char *)THIS , m, j, 0, v, false,//not html enc
+			  true );
+		// need to save it
+		//if ( THIS != (char *)&g_conf ) 
+		//	((CollectionRec *)THIS)->m_needsSave = true;
+	}
+	
+	return true;
+}
+
 bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr );
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
 // . must ultimately send reply back on "s"
+// . called by Pages.cpp's sendDynamicReply() when it calls pg->function()
+//   which is called by HttpServer::sendReply(s,r) when it gets an http request
 bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 	char  buf [ 128000 ];
 	SafeBuf stackBuf(buf,128000);
 
 	SafeBuf *sb = &stackBuf;
+
+	long page = g_pages.getDynamicPageNumber ( r );
+
+	//
+	// some "generic" pages do additional processing on the provided input
+	// so we need to call those functions here...
+	//
+
+	// if we were an injection page..
+	if ( page == PAGE_INJECT ) {
+		// this returns false if blocked and it should re-call
+		// sendPageGeneric when completed. this will call
+		// setGigablastRequest()
+		if ( ! sendPageInject ( s , r ) )
+			return false;
+	}
+
+	// if we were an addurl page..
+	//if ( page == PAGE_ADDURL2 ) {
+	//	// this returns false if blocked and it should re-call
+	//	// sendPageGeneric when completed
+	//	if ( ! processAddUrlRequest ( s , r ) )
+	//		return false;
+	//}
 
 	// print standard header
 	char fmt = r->getReplyFormat();
@@ -979,7 +1096,6 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 	printParmTable ( sb , s , r );
 
-	long page = g_pages.getDynamicPageNumber ( r );
 	bool POSTReply = g_pages.getPage ( page )->m_usePost;
 
 	return g_httpServer.sendDynamicPage ( s                , 
@@ -1036,7 +1152,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	char *tt = "None";
 	if ( page == PAGE_LOG        ) tt = "Log Controls";
 	if ( page == PAGE_MASTER     ) tt = "Master Controls";
-	if ( page == PAGE_INJECT     ) tt = "Inject Urls";
+	if ( page == PAGE_INJECT     ) tt = "Inject Url";
 	if ( page == PAGE_SECURITY   ) tt = "Security";
 	if ( page == PAGE_ADDURL2    ) tt = "Add Urls";
 	if ( page == PAGE_SPIDER     ) tt = "Spider Controls";
@@ -2714,7 +2830,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	float oldVal = 0;
 	float newVal = 0;
 
-	if ( ! s ) {
+	if ( ! s && m->m_type != TYPE_CHARPTR) {
 		s = "0";
 		char *tit = m->m_title;
 		if ( ! tit || ! tit[0] ) tit = m->m_xml;
@@ -2791,6 +2907,10 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		*(char *)(THIS + m->m_off + j) = atol ( s );
  		newVal = (float)*(char *)(THIS + m->m_off + j);
 		goto changed; }
+	else if ( t == TYPE_CHARPTR ) {
+		// "s" might be NULL or m->m_def...
+		*(char **)(THIS + m->m_off + j) = s;
+	}
 	else if ( t == TYPE_CMD ) {
 		log(LOG_LOGIC, "conf: Parms: TYPE_CMD is not a cgi var.");
 		return;	}
@@ -17321,7 +17441,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Instead of specifying a docid, you can get the "
 		"cached webpage by url as well.";
 	m->m_off   = (char *)&gr.m_url - (char *)&gr;
-	m->m_type  = TYPE_SAFEBUF;
+	m->m_type  = TYPE_CHARPTR; // reference into the HttpRequest
 	m->m_page  = PAGE_GET;
 	m->m_obj   = OBJ_GBREQUEST; // generic request class
 	m->m_def   = "0";
@@ -17418,7 +17538,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_ADDURL2;
 	m->m_obj   = OBJ_GBREQUEST; // do not store in g_conf or collectionrec
 	m->m_off   = (char *)&gr.m_urlsBuf - (char *)&gr;
-	m->m_type  = TYPE_SAFEBUF;
+	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = "";
 	m->m_flags = PF_TEXTAREA | PF_NOSAVE | PF_API;
 	m++;
@@ -17474,7 +17594,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_ADDURL2;
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
-	m->m_type  = TYPE_SAFEBUF;
+	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = "";
 	m->m_flags = PF_API|PF_COLLDEFAULT; // so it gets set to default coll
 	m++;
@@ -17497,10 +17617,10 @@ void Parms::init ( ) {
 		"actually indexed in realtime. "
 
 		"By default, injected urls "
-		"take precedence over the \"insitelist\" directive in the "
+		"take precedence over the \"insitelist\" expression in the "
 		"<a href=/admin/filters>url filters</a> "
-		"so injected urls need not match the "
-		"<a href=/admin/sites>spider sites</a> patterns. You can "
+		"so injected urls need not match the patterns in your "
+		"<a href=/admin/sites>site list</a>. You can "
 		"change that behavior in the <a href=/admin/filters>url "
 		"filters</a> if you want. "
 		"Injected urls will have a "
@@ -17508,10 +17628,46 @@ void Parms::init ( ) {
 		"The injection api is described on the "
 		"<a href=/admin/api>api</a> page.";
 	m->m_cgi   = "url";
+	//m->m_cgi2  = "u";
+	//m->m_cgi3  = "seed"; // pagerawlbot
+	//m->m_cgi4  = "injecturl";
 	m->m_obj   = OBJ_GBREQUEST;
-	m->m_type  = TYPE_SAFEBUF;
+	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = "";
 	m->m_flags = PF_API;
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_url - (char *)&gr;
+	m++;
+
+	// alias #1
+	m->m_title = "url";
+	m->m_cgi   = "u";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = "";
+	m->m_flags = PF_API | PF_HIDDEN;
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_url - (char *)&gr;
+	m++;
+
+	// alias #2
+	m->m_title = "url";
+	m->m_cgi   = "seed";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = "";
+	m->m_flags = PF_API | PF_HIDDEN;
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_url - (char *)&gr;
+	m++;
+
+	// alias #3
+	m->m_title = "url";
+	m->m_cgi   = "injecturl";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = "";
+	m->m_flags = PF_API | PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_url - (char *)&gr;
 	m++;
@@ -17522,7 +17678,7 @@ void Parms::init ( ) {
 		"and inject their links.";
 	m->m_cgi   = "qts";
 	m->m_obj   = OBJ_GBREQUEST;
-	m->m_type  = TYPE_SAFEBUF;
+	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = "";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
@@ -17558,7 +17714,7 @@ void Parms::init ( ) {
 	m->m_desc  = "Inject into this collection.";
 	m->m_cgi   = "c";
 	m->m_obj   = OBJ_GBREQUEST;
-	m->m_type  = TYPE_SAFEBUF;
+	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = "";
 	m->m_flags = PF_API|PF_COLLDEFAULT; // so it gets set to default coll
 	m->m_page  = PAGE_INJECT;
@@ -17624,6 +17780,29 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&gr.m_dedup - (char *)&gr;
 	m++;
 
+	m->m_title = "do consistency checking";
+	m->m_desc  = "Turn this on for debugging.";
+	m->m_cgi   = "consist";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_def   = "0";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_doConsistencyTesting - (char *)&gr;
+	m++;
+
+	m->m_title = "hop count";
+	m->m_desc  = "Use this hop count when injecting the page.";
+	m->m_cgi   = "hopcount";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_hopCount - (char *)&gr;
+	m++;
+
+
 	m->m_title = "content has mime";
 	m->m_desc  = "If the content of the url is provided below, does "
 		"it begin with an HTTP mime header?";
@@ -17644,7 +17823,7 @@ void Parms::init ( ) {
 		"<i>========</i> or <i>&lt;doc&gt;</i>";
 	m->m_cgi   = "delim";
 	m->m_obj   = OBJ_GBREQUEST;
-	m->m_type  = TYPE_SAFEBUF;
+	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = "";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
@@ -17656,11 +17835,25 @@ void Parms::init ( ) {
 	m->m_desc  = "Is the content below HTML? XML? JSON?";
 	m->m_cgi   = "contenttype";
 	m->m_obj   = OBJ_GBREQUEST;
-	m->m_type  = TYPE_SAFEBUF;
+	m->m_type  = TYPE_CHARPTR; //text/html application/json application/xml
 	m->m_def   = "";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_contentTypeStr - (char *)&gr;
+	m++;
+
+	m->m_title = "content charset";
+	m->m_desc  = "A number representing the charset of the content "
+		"if provided below and no mime is given. Defaults to utf8 "
+		"which is 106. "
+		"See iana_charset.h for the numeric values.";
+	m->m_cgi   = "charset";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "106";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_charset - (char *)&gr;
 	m++;
 
 	m->m_title = "upload content file";
@@ -17684,11 +17877,22 @@ void Parms::init ( ) {
 		"Separate MIME from actual content with two returns.";
 	m->m_cgi   = "content";
 	m->m_obj   = OBJ_GBREQUEST;
-	m->m_type  = TYPE_SAFEBUF;
+	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = "";
 	m->m_flags = PF_API|PF_TEXTAREA;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_content - (char *)&gr;
+	m++;
+
+	m->m_title = "diffbot reply";
+	m->m_desc = "Used exclusively by diffbot. Do not use.";
+	m->m_cgi   = "diffbotreply";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = "";
+	m->m_flags = PF_API|PF_TEXTAREA; // do not show in our api
+	m->m_page  = PAGE_INJECT;
+	m->m_off   = (char *)&gr.m_diffbotReply - (char *)&gr;
 	m++;
 
 

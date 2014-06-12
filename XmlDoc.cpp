@@ -1927,7 +1927,7 @@ bool XmlDoc::injectDoc ( char *url ,
 			 long charset,
 
 			 bool deleteUrl,
-			 char contentType, // CT_HTML, CT_XML
+			 char *contentTypeStr, // text/html application/json
 			 bool spiderLinks ,
 			 bool newOnly, // index iff new
 
@@ -1947,6 +1947,12 @@ bool XmlDoc::injectDoc ( char *url ,
 		     uu.getUrl(),
 		     uu.getUrlLen() );
 
+
+	long contentType = getContentTypeFromStr(contentTypeStr);
+
+	// use CT_HTML if contentTypeStr is empty or blank. default
+	if ( ! contentTypeStr || ! contentTypeStr[0] )
+		contentType = CT_HTML;
 
 	// this can go on the stack since set4() copies it
 	SpiderRequest sreq;

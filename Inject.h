@@ -1,68 +1,38 @@
 #ifndef GBINJECT_H
 #define GBINJECT_H    
 
+bool sendPageInject ( class TcpSocket *s, class HttpRequest *hr );
+
 #include "XmlDoc.h"
 #include "Users.h"
+#include "Parms.h" // GigablastRequest
 
 class Msg7 {
 
 public:
 
+	GigablastRequest m_gr;
+
 	bool       m_needsSet;
 	XmlDoc     m_xd;
 	TcpSocket *m_socket;
-	char       m_coll[MAX_COLL_LEN+1];
-	char       m_pwd[32];
-	bool       m_quickReply;
-	char       m_username[MAX_USER_SIZE];
-	char       m_url[MAX_URL_LEN];
 	SafeBuf    m_sb;
-	bool       m_isScrape;
-	char *m_content;
-	long  m_contentAllocSize;
-	SafeBuf m_qbuf;
 	char m_round;
 	char m_useAhrefs;
-	char m_injectLinks;
 	HashTableX m_linkDedupTable;
-	HttpRequest m_hr;
-	long m_crawlbotAPI;
+
+	void *m_state;
+	void (* m_callback )(void *state);
+
+	//long m_crawlbotAPI;
 
 	Msg7 ();
 	~Msg7 ();
 
 	bool scrapeQuery ( );
 
-	bool inject ( TcpSocket *s , 
-		      HttpRequest *r ,
-		      void *state ,
-		      void (*callback)(void *state),
-		      long spiderLinksDefault = 0 ,
-		      char *collOveride = NULL );
-
-	bool inject ( char *url ,
-		      long  forcedIp ,
-		      char *content ,
-		      long  contentLen ,
-		      char *diffbotReply,
-		      bool  recycleContent,
-		      uint8_t contentType,
-		      char *coll ,
-		      bool  quickReply ,
-		      char *username ,
-		      char *pwd ,
-		      long  niceness,
-		      void *state ,
-		      void (*callback)(void *state),
-		      //long firstIndexedDate = 0,
-		      //long spiderDate = 0,
-		      long hopCount = -1 ,
-		      char newOnly = 0 ,
-		      short charset = -1 ,
-		      char spiderLinks = 0 ,
-		      char deleteIt = false ,
-		      char hasMime = false ,
-		      bool doConsistencyTesting = false );
+	bool inject ( void *state ,
+		      void (*callback)(void *state) );
 
 };
 

@@ -74,7 +74,8 @@ enum {
 	TYPE_SAFEBUF        ,
 	TYPE_UFP            ,
 	TYPE_FILEUPLOADBUTTON,
-	TYPE_DOUBLE
+	TYPE_DOUBLE,
+	TYPE_CHARPTR
 };
 
 //forward decls to make compiler happy:
@@ -94,15 +95,27 @@ class GigablastRequest {
  public:
 
 	//
+	// make a copy of the http request because the original is
+	// on the stack. AND the "char *" types below will reference into
+	// this because they are listed as TYPE_CHARPTR in Parms.cpp.
+	// that saves us memory as opposed to making them all SafeBufs.
+	//
+	HttpRequest m_hr;
+
+	// ptr to socket to send reply back on
+	TcpSocket *m_socket;
+
+	//
 	// /admin/inject parms
 	//
-	SafeBuf m_url; // also for /get
-	SafeBuf m_queryToScrape;
-	SafeBuf m_coll; // used by ALL!
-	SafeBuf m_contentDelim;
-	SafeBuf m_contentTypeStr;
-	SafeBuf m_contentFile;
-	SafeBuf m_content;
+	// these all reference into m_hr or into the Parm::m_def string!
+	char *m_url; // also for /get
+	char *m_queryToScrape;
+	char *m_coll; // used by ALL!
+	char *m_contentDelim;
+	char *m_contentTypeStr;
+	char *m_contentFile;
+	char *m_content;
 
 	char m_injectLinks;
 	char m_spiderLinks;
@@ -112,6 +125,11 @@ class GigablastRequest {
 	char m_recycle;
 	char m_dedup;
 	char m_hasMime;
+
+	long m_charset;
+	long m_hopCount;
+	char m_doConsistencyTesting;
+	char *m_diffbotReply; // secret thing from dan
 
 	//
 	// /get parms (for getting cached web pages)
@@ -123,7 +141,7 @@ class GigablastRequest {
 	//
 	// /admin/addurl parms
 	//
-	SafeBuf m_urlsBuf;
+	char *m_urlsBuf;
 	char    m_stripBox;
 	char    m_harvestLinksBox;
 	char    m_forceRespiderBox;
@@ -166,6 +184,9 @@ class Parm {
 	char *m_title; // displayed above m_desc on admin gui page
 	char *m_desc;  // description of variable displayed on admin gui page
 	char *m_cgi;   // cgi name, contains %i if an array
+	char *m_cgi2;  // alias
+	char *m_cgi3;  // alias
+	char *m_cgi4;  // alias
 	char *m_xml;   // default to rendition of m_title if NULL
 	long  m_off;   // this variable's offset into the CollectionRec class
 	char  m_colspan;
@@ -341,6 +362,10 @@ class Parms {
 	Parm *getParm ( char *cgi ) ;
 
 	char *getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s );
+
+	bool setGigablastRequest ( class TcpSocket *s ,
+				   class HttpRequest *hr ,
+				   class GigablastRequest *gr );
 
 	// . make it so a collectionrec can be copied in Collectiondb.cpp
 	// . so the rec can be copied and the old one deleted without
