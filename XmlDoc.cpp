@@ -33648,6 +33648,8 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 	HttpMime *mime = getMime();
 	if ( ! mime || mime == (void *)-1 ) return (SafeBuf *)mime;
 
+	long siteHash32 = *getSiteHash32();
+
 	//long nw = words->getNumWords();
 	//long long *wids = words->getWordIds();
 
@@ -33673,17 +33675,20 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 		long size = byte2 - byte1;
 		// if a tag then insert the info at end
 		if ( si->m_stats.m_totalEntries ) {
-			sb->safePrintf("<!--");
+			//sb->safePrintf("<!--");
+			sb->safePrintf("<font color=red>");
+			SectionStats *sx = &si->m_stats;
 			// # docs from our site had the same innerHTML?
-			sb->safePrintf(" _m=%li",
-				       (long)si->m_stats.m_totalMatches);
+			sb->safePrintf(" _m=%li",(long)sx->m_totalMatches);
 			// # total docs from our site had the same X-path?
-			sb->safePrintf(" _n=%li",
-				       (long)si->m_stats.m_totalEntries);
+			sb->safePrintf(" _n=%li",(long)sx->m_totalEntries);
 			// unique values in the xpath innerhtml
-			sb->safePrintf(" _u=%li",
-				       (long)si->m_stats.m_numUniqueVals);
-			sb->safePrintf("-->");
+			sb->safePrintf(" _u=%li",(long)sx->m_numUniqueVals);
+			// the hash of the turktaghash and sitehash32 combined
+			unsigned long h32 = si->m_turkTagHash32 ^ siteHash32;
+			sb->safePrintf(" _h=%lu",h32);
+			//sb->safePrintf("-->");
+			sb->safePrintf("</font>");
 		}
 		// print it here
 		sb->safeMemcpy ( byte1 , size );

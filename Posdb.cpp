@@ -5846,6 +5846,10 @@ void PosdbTable::intersectLists10_r ( ) {
 		goto boolJump1;
 	}
 
+	// or if term is gbsectionhash:
+	//minScore = 1.0;
+	//goto boolJump1;
+
 	// TODO: consider skipping this pre-filter if it sucks, as it does
 	// for 'time enough for love'. it might save time!
 
@@ -6696,6 +6700,8 @@ void PosdbTable::intersectLists10_r ( ) {
 	//score = -1.0;
 	//log("score: minPairScore=%f",minPairScore);
 	// fix "Recently I posted a question about how"
+
+	// comment out for gbsectionhash: debug:
 	if ( minScore <= 0.0 ) 
 		goto advance;
 

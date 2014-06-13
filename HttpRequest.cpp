@@ -431,7 +431,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 
 	 // check authentication
 	 char *auth = NULL;
-	 if ( m_isSquidProxyRequest )
+	 if ( m_isSquidProxyRequest && req )
 		 auth = strstr(req+i,"Proxy-authorization: Basic ");
 
 	 //if ( m_isSquidProxyRequest && ! auth ) {

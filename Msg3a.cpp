@@ -909,9 +909,12 @@ bool Msg3a::mergeLists ( ) {
 		// here.
 		long *p = (long *)mr->ptr_sentHashList;
 		long np = mr->size_sentHashList / 4;
-		for ( long k = 0 ; k < np ; k++ )
+		for ( long k = 0 ; k < np ; k++ ) {
+			// debug
+			//log("msg3a: got senthash %li) %lu",k,p[k]);
 			// hash it up, no dups!
 			dt.addKey(&p[k]);
+		}
 		// update our count based on that
 		dst->m_numUniqueVals = dt.getNumSlotsUsed();
 	}
