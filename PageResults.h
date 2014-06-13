@@ -27,7 +27,7 @@ public:
 	bool         m_header;
 
 	collnum_t    m_collnum;
-        Query        m_q;
+	//Query        m_q;
 	SearchInput  m_si;
 	Msg40        m_msg40;
 	TcpSocket   *m_socket;

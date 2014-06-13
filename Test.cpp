@@ -257,7 +257,7 @@ void Test::initTestRun ( ) {
 	// print our global parms into a file called run.%li.start.txt
 	sprintf(fbuf,"%s/%s/run.%li.confparms.txt",g_hostdb.m_dir,testDir,i);
 	// this saves it as xml i think
-	g_parms.saveToXml ( (char *)&g_conf , fbuf );
+	g_parms.saveToXml ( (char *)&g_conf , fbuf , OBJ_CONF);
 
 	//
 	// log out the coll specific parms
@@ -265,7 +265,7 @@ void Test::initTestRun ( ) {
 	// update name
 	sprintf(fbuf,"%s/%s/run.%li.collparms.txt",g_hostdb.m_dir,testDir,i);
 	// save that
-	g_parms.saveToXml ( (char *)cr , fbuf );
+	g_parms.saveToXml ( (char *)cr , fbuf , OBJ_COLL);
 
 	// get the list of urls to download and inject in order
 	sprintf(fbuf,"%s/%s/urls.txt",g_hostdb.m_dir,testDir);

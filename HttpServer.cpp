@@ -16,7 +16,7 @@ HttpServer g_httpServer;
 
 // this is defined in PageEvents.cpp
 //bool sendPageSiteMap ( TcpSocket *s , HttpRequest *r ) ;
-bool sendPageApi ( TcpSocket *s , HttpRequest *r ) ;
+//bool sendPageApi ( TcpSocket *s , HttpRequest *r ) ;
 bool sendPageAnalyze ( TcpSocket *s , HttpRequest *r ) ;
 
 // we get like 100k submissions a day!!!
@@ -855,6 +855,8 @@ bool endsWith(char *haystack, int haystackLen, char *needle, int needleLen) {
     return haystackLen >= needleLen && !strncmp(haystack + haystackLen - needleLen, needle, needleLen);
 }
 
+#include "Pages.h" // sendPageAPI
+
 // . reply to a GET (including partial get) or HEAD request
 // . HEAD just returns the MIME header for the file requested
 // . returns false if blocked, true otherwise
@@ -1082,8 +1084,11 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// comment out for old flurbit layout
 	//if ( ! strncmp ( path ,"/help.html", pathLen ) )
 	//	return sendPageAbout ( s , r , path );
+
 	if ( ! strncmp ( path ,"/api.html", pathLen ) )
-		return sendPageApi ( s , r  );
+		return sendPageAPI ( s , r  );
+	if ( ! strncmp ( path ,"/api", pathLen ) )
+		return sendPageAPI ( s , r  );
 
 	if ( ! strncmp ( path ,"/print", pathLen ) )
 		return sendPageAnalyze ( s , r  );
@@ -2530,6 +2535,7 @@ TcpSocket *HttpServer::unzipReply(TcpSocket* s) {
 	return s;
 }
 
+/*
 bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
 
 	SafeBuf sb;
@@ -2571,14 +2577,15 @@ bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
 	
 	long count = 0;
 	// from SearchInput.cpp:
-	for ( long i = 0 ; i < g_parms.m_numSearchParms ; i++ ) {
-		Parm *parm = g_parms.m_searchParms[i];
+	for ( long i = 0 ; i < g_parms.m_numParms ; i++ ) {
+		//Parm *parm = g_parms.m_searchParms[i];
+		Parm *parm = &g_parms.m_parms[i];
 		// check if we should print it...
 		if ( ! ( parm->m_flags & PF_API ) ) continue;
 		//if ( parm->m_flags & PF_SUBMENU_HEADER ) continue;
 		//if ( ! parm->m_flags ) continue;
 		// print it
-		if ( ! parm->m_sparm ) continue;
+		//if ( ! parm->m_sparm ) continue;
 		// use m_cgi if no m_scgi
 		char *cgi = parm->m_cgi;
 		if ( parm->m_scgi ) cgi = parm->m_scgi;
@@ -2963,6 +2970,7 @@ bool sendPageApi ( TcpSocket *s , HttpRequest *r ) {
 				       charset    );
 	return true;
 }
+*/
 
 ////////////////////
 //
@@ -3204,3 +3212,4 @@ void gotSquidProxiedContent ( void *state ) {
 		       NULL , // state
 		       NULL ); // donesendingcallback
 }
+

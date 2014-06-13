@@ -56,11 +56,15 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 		      " &nbsp; &nbsp; "
 		      "<a href=%s/contact.html>Contact</a>"
 		      " &nbsp; &nbsp; "
-		      "<a href=%s/help.html>Help</a>"
+		      "<a href=%s/help.html>Query Syntax</a>"
 		      " &nbsp; &nbsp; "
 		      "<a href=%s/privacy.html>Privacy Policy</a>"
 		      " &nbsp; &nbsp; "
-		      "<a href=%s/searchfeed.html>Search API</a>"
+
+		      // TODO: API page must also provide a description
+		      // of the output... like searchfeed.html does already.
+		      // put that in the api page as well.
+		      "<a href=%s/api>API</a>"
 		      , root
 		      , root
 		      , root
@@ -1235,7 +1239,7 @@ bool printTopDirectory ( SafeBuf& sb ) {
 //
 /////////////////
 
-#include "PageInject.h"
+#include "Inject.h"
 #include "TuringTest.h"
 #include "AutoBan.h"
 //#include "CollectionRec.h"
@@ -1559,8 +1563,8 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 
 	// . pass in the cleaned url
 	// . returns false if blocked, true otherwise
-	if ( ! st1->m_msg7.inject ( s ,
-				    r ,
+	if ( ! st1->m_msg7.inject ( //s ,
+				    //r ,
 				    st1 ,
 				    doneInjectingWrapper3 ) )
 		return false;
@@ -1584,7 +1588,7 @@ void doneInjectingWrapper3 ( void *st ) {
 	char *url = st1->m_msg7.m_xd.m_firstUrl.m_url;
 	log(LOG_INFO,"http: add url %s (%s)",url ,mstrerror(g_errno));
 	// extract info from state
-	TcpSocket *s       = st1->m_socket;
+	TcpSocket *sock    = st1->m_socket;
 	//bool       isAdmin = st1->m_isAdmin;
 	//char      *url     = NULL;
 	//if ( st1->m_urlLen ) url = st1->m_url;
@@ -1631,7 +1635,7 @@ void doneInjectingWrapper3 ( void *st ) {
 			"this IP address for the last 24 hours. "
 			"<a href=/addurlerror.html>Explanation</a>.";
 			log("addurls: Failed for user at %s: "
-			    "quota breeched.", iptoa(s->m_ip));
+			    "quota breeched.", iptoa(sock->m_ip));
 
 			//rb.safePrintf("Error. %li urls have "
 			//	      "already been submitted by "
@@ -1661,7 +1665,7 @@ void doneInjectingWrapper3 ( void *st ) {
 				    "Master Controls page and "
 				    "on the Spider Controls page for "
 				    "this collection.", 
-				    iptoa(s->m_ip));
+				    iptoa(sock->m_ip));
 
 			sb.safePrintf("%s",pm);
 			//rb.safePrintf("Sorry, this feature is temporarily "
@@ -1670,7 +1674,7 @@ void doneInjectingWrapper3 ( void *st ) {
 		else if ( s_inprogress ) {
 			pm = "Add url busy. Try again later.";
 			log("addurls: Failed for user at %s: "
-			    "busy adding another.", iptoa(s->m_ip));
+			    "busy adding another.", iptoa(sock->m_ip));
 			//rb.safePrintf("Add url busy. Try again later.");
 			sb.safePrintf("%s",pm);
 		}
@@ -1747,7 +1751,7 @@ void doneInjectingWrapper3 ( void *st ) {
 	// this reply should be loaded from the ajax loader so use a cache
 	// time of 1 hour so it does not re-inject the url if you hit the
 	// back button
-	g_httpServer.sendDynamicPage (s, 
+	g_httpServer.sendDynamicPage (sock, 
 				      sb.getBufStart(), 
 				      sb.length(),
 				      3600, // cachetime

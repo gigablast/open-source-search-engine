@@ -94,7 +94,7 @@ bool sendReply ( State0 *st , char *reply ) {
 			    "query",
 			    st->m_startTime,
 			    nowms,
-			    st->m_q.m_numTerms);
+			    si->m_q.m_numTerms);
 
 	// . log the time
 	// . do not do this if g_errno is set lest m_sbuf1 be bogus b/c
@@ -527,8 +527,8 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 			 // so do not use the "hr" on the stack. SearchInput::
 			 // m_hr points to the hr we pass into
 			 // SearchInput::set
-			 &st->m_hr, 
-			 &st->m_q ) ) {
+			 &st->m_hr ) ) {
+			 //&st->m_q ) ) {
 		log("query: set search input: %s",mstrerror(g_errno));
 		if ( ! g_errno ) g_errno = EBADENGINEER;
 		return sendReply ( st, NULL );
@@ -554,7 +554,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
         st->m_numDocIds = si->m_docsWanted;
 
 	// watch out for cowboys
-	if ( si->m_firstResultNum>=si->m_maxResults) return sendReply(st,NULL);
+	//if(si->m_firstResultNum>=si->m_maxResults) return sendReply(st,NULL);
 
 	// save state in TcpSocket's m_tmp ptr for debugging. in case 
 	// we lose our string of control and Msg40::getResults() never 
@@ -1571,11 +1571,13 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 	//Highlight h;
 
+	st->m_qe[0] = '\0';
+
 	// encode query buf
 	//char qe[MAX_QUERY_LEN+1];
 	char *dq    = si->m_displayQuery;
-	long  dqlen = si->m_displayQueryLen;
-	urlEncode(st->m_qe,MAX_QUERY_LEN*2,dq,dqlen);
+	//long  dqlen = si->m_displayQueryLen;
+	if ( dq ) urlEncode(st->m_qe,MAX_QUERY_LEN*2,dq,gbstrlen(dq));
 
 	// how many results were requested?
 	long docsWanted = msg40->getDocsWanted();
@@ -1691,8 +1693,8 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf (" in collection <b>%s</b>",coll);
 
 
-	char *pwd = si->m_pwd;
-	if ( ! pwd ) pwd = "";
+	//char *pwd = si->m_pwd;
+	//if ( ! pwd ) pwd = "";
 
 	/*
 	if ( si->m_format == FORMAT_HTML )
@@ -1724,7 +1726,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 			      "</a></b></font>",coll);
 		// print reindex link
 		// get the filename directly
-		char *langStr = getLangAbbr ( si->m_queryLang );
+		char *langStr = si->m_defaultSortLang;
 		if ( numResults>0 )
 			sb->safePrintf (" &nbsp; "
 					"<font color=red><b>"
@@ -1829,7 +1831,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 	// mention ignored query terms
 	// we need to set another Query with "keepAllSingles" set to false
-	qq2 = si->m_q;
+	qq2 = &si->m_q;
 	//qq2.set ( q , qlen , NULL , 0 , si->m_boolFlag , false );
 	firstIgnored = true;
 	for ( long i = 0 ; i < qq2->m_numWords ; i++ ) {
@@ -2054,8 +2056,9 @@ bool printSearchResultsTail ( State0 *st ) {
 	}
 
 	// carry over the sites we are restricting the search results to
-	if ( si->m_whiteListBuf.length() )
-		args.safePrintf("&sites=%s",si->m_whiteListBuf.getBufStart());
+	if ( si->m_sites )
+		//whiteListBuf.getBufStart());
+		args.safePrintf("&sites=%s",si->m_sites);
 
 
 	if ( firstNum > 0 && 
@@ -2444,12 +2447,13 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 					   long catid ,
 					   State0 *st ) {
 
-	uint8_t queryLanguage = langUnknown;
+	//uint8_t queryLanguage = langUnknown;
+	uint8_t queryLanguage = si->m_queryLangId;
 	// Don't print category if not in native language category
 	// Note that this only trims out "World" cats, not all
 	// of them. Some of them may still sneak in.
-	if(si->m_langHint)
-		queryLanguage = si->m_langHint;
+	//if(si->m_langHint)
+	//	queryLanguage = si->m_langHint;
 	if(queryLanguage != langUnknown) {
 		char tmpbuf[1024];
 		SafeBuf langsb(tmpbuf, 1024);
@@ -3312,7 +3316,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				"cached</a>", 
 				st->m_qe , 
 				// "qlang" parm
-				si->m_defaultSortLanguage,
+				si->m_defaultSortLang,
 				coll , 
 				mr->m_docId ); 
 
@@ -3677,7 +3681,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf("<div id=bl%li style=display:none;>\n", ix );
 
 	// print xml and html inlinks
-	long numInlinks;
+	long numInlinks = 0;
 	printInlinkText ( sb , mr , si , &numInlinks );
 
 
@@ -3717,7 +3721,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			if ( ps->m_finalScore == 0.0 ) continue;
 			// first time?
 			if ( firstTime && si->m_format == FORMAT_HTML ) {
-				Query *q = si->m_q;
+				Query *q = &si->m_q;
 				printTermPairs ( sb , q , ps );
 				printScoresHeader ( sb );
 				firstTime = false;
@@ -3802,7 +3806,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			if ( ss->m_finalScore == 0.0 ) continue;
 			// first time?
 			if ( firstTime && si->m_format == FORMAT_HTML ) {
-				Query *q = si->m_q;
+				Query *q = &si->m_q;
 				printSingleTerm ( sb , q , ss );
 				printScoresHeader ( sb );
 				firstTime = false;
@@ -3917,9 +3921,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       //, ff
 			       );
 		// then language weight
-		if ( si->m_queryLang == 0 || 
-		     mr->m_language == 0 ||
-		     si->m_queryLang == mr->m_language )
+		if ( si->m_queryLangId == 0 || 
+		     mr->m_language    == 0 ||
+		     si->m_queryLangId == mr->m_language )
 			sb->safePrintf(" * %.01f",
 				      SAMELANGMULT);//FOREIGNLANGDIVISOR);
 		// the actual min then
@@ -3991,9 +3995,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		      );
 
 	// if lang is different
-	if ( si->m_queryLang == 0 || 
-	     mr->m_language == 0 ||
-	     si->m_queryLang == mr->m_language )
+	if ( si->m_queryLangId == 0 || 
+	     mr->m_language    == 0 ||
+	     si->m_queryLangId == mr->m_language )
 		sb->safePrintf(" * <font color=green><b>%.01f</b></font>",
 			      SAMELANGMULT);//FOREIGNLANGDIVISOR);
 
@@ -4064,7 +4068,7 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 		      Msg20Reply *mr , Msg40 *msg40 , bool first ) {
 
 	// shortcut
-	Query *q = si->m_q;
+	Query *q = &si->m_q;
 
 	//SafeBuf ft;
 
@@ -4827,7 +4831,7 @@ bool printSingleScore ( SafeBuf *sb ,
 			Msg20Reply *mr , Msg40 *msg40 ) {
 
 	// shortcut
-	Query *q = si->m_q;
+	Query *q = &si->m_q;
 
 	//SafeBuf ft;
 	// store in final score calc

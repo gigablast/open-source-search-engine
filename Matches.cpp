@@ -323,7 +323,7 @@ bool Matches::set ( XmlDoc   *xd         ,
 	long  b     = tt->m_titleTagEnd;
 	char *start = NULL;
 	char *end   = NULL;
-	if ( a >= 0 && b >= 0 ) {
+	if ( a >= 0 && b >= 0 && b>a ) {
 		start = bodyWords->getWord(a);
 		end   = bodyWords->getWord(b-1) + bodyWords->getWordLen(b-1);
 		if ( ! addMatches ( start           ,

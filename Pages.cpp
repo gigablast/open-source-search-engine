@@ -114,7 +114,7 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_PROXY ,
 	  "master controls page",
 	  sendPageGeneric  , 0 } ,
-	{ PAGE_SEARCH    , "admin"   , 0 , "search controls" ,  1 , 1,
+	{ PAGE_SEARCH    , "admin/search"   , 0 , "search controls" ,  1 , 1,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "search controls page",
 	  sendPageGeneric  , 0 } ,
@@ -146,9 +146,9 @@ static WebPage s_pages[] = {
 	  //USER_MASTER ,
 	  "repair page",
 	  sendPageGeneric   , 0 },
-	{ PAGE_SITES   , "admin/sites", 0 , "site list" ,  1 , 1,
-	  "what sites can be spidered",
-	  sendPageGeneric , 0 } , // sendPageBasicSettings
+	// { PAGE_SITES   , "admin/sites", 0 , "site list" ,  1 , 1,
+	//   "what sites can be spidered",
+	//   sendPageGeneric , 0 } , // sendPageBasicSettings
 	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 , 1,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "prioritize urls for spidering",
@@ -156,7 +156,7 @@ static WebPage s_pages[] = {
 	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" ,  0 , 1 ,
 	  //USER_ADMIN | USER_MASTER   ,
 	  "inject url in the index here",
-	  sendPageInject   , 2 } ,
+	  sendPageGeneric   , 2 } ,
 	// this is the addurl page the the admin!
 	{ PAGE_ADDURL2   , "admin/addurl"   , 0 , "add urls" ,  0 , 0 ,
 	  "add url page for admin",
@@ -232,10 +232,10 @@ static WebPage s_pages[] = {
 	//  //USER_MASTER | USER_ADMIN ,
 	//  "overview page",
 	//  sendPageOverview  , 0 } ,
-	{ PAGE_CGIPARMS , "admin/api"         , 0 , "api" , 0 , 0 ,
+	{ PAGE_API , "admin/api"         , 0 , "api" , 0 , 0 ,
 	  //USER_MASTER | USER_ADMIN , 
-	  "cgi params page",
-	  sendPageCgiParms , 0 } ,
+	  "api page",
+	  sendPageAPI , 0 } ,
 	{ PAGE_RULES  , "admin/siterules", 0 , "site rules", 1, 1,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "site rules page",
@@ -1920,10 +1920,14 @@ bool  Pages::printAdminLinks ( SafeBuf *sb,
 			       "<b>"
 			       "admin guide"
 			       "</b></a> "
+
 			       "&nbsp; "
+
 			       " <a style=text-decoration:none; "
 			       "href=/developer.html>"
-			       "<b>dev guide</b></a>" );
+			       "<b>dev guide</b></a>" 
+
+			       );
 	
 	sb->safePrintf("</div>");
 
@@ -2418,66 +2422,176 @@ bool sendPageReportSpam ( TcpSocket *s , HttpRequest *r ) {
 	return 	retval;
 }
 
-bool sendPageCgiParms ( TcpSocket *s , HttpRequest *r ) {
+// have the smallest twids on top!
+int parmcmp ( const void *a, const void *b ) {
+	Parm *pa = (Parm *)a;
+	Parm *pb = (Parm *)b;
+	return strcmp(pa->m_pstr,pb->m_pstr);
+}
+
+#define DARK_YELLOW "ffaaaa"
+#define LIGHT_YELLOW "ffcccc"
+
+bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	char pbuf[32768];
 	SafeBuf p(pbuf, 32768);
 
-	//p.safePrintf("<html><head><title>CGI Parameters</title></head><body>");
+	CollectionRec *cr = g_collectiondb.getRec ( r , true );
+	char *coll = "";
+	if ( cr ) coll = cr->m_coll;
+
+	p.safePrintf("<html><head><title>Gigablast API</title></head><body>");
+
+	p.safePrintf("<style>body,td,p,.h{font-family:arial,helvetica-neue; "
+		     "font-size: 15px;} </style>");
 
 	// print standard header
 	// 	char *pp    = p.getBuf();
 	// 	char *ppend = p.getBufEnd();
 	// 	if ( pp ) {
-	g_pages.printAdminTop ( &p , s , r );
+	//g_pages.printAdminTop ( &p , s , r );
+
 	// 	p.incrementLength ( pp - p.getBuf() );
 	// 	}
 
-	p.safePrintf ( "<table %s>"
-		       "<tr class=hdrow><td colspan=8>"
-		       "<center><b>CGI Parameters</b></tr></tr>"
-		       "<tr bgcolor=#%s><td><b>CGI</b></td>"
+	p.safePrintf ( "<center>"
+		       "<table style=max-width:80%%; %s>"
+		       "<tr class=hdrow><td colspan=9>"
+		       "<center><b>Gigablast API</b></tr></tr>"
+		       "<tr bgcolor=#%s>"
+		       "<td><b>#</b></td>"
+		       "<td><b>CGI</b></td>"
 		       "<td><b>Page</b></td>"
 		       "<td><b>Type</b></td>"
-		       "<td><b>Name</b></td>"
+		       "<td><b>Title</b></td>"
+		       "<td><b>Default Value</b></td>"
 		       "<td><b>Description</b></td></tr>\n",
 		       TABLE_STYLE , DARK_BLUE);
+
+	const char *blue = LIGHT_BLUE;
+	long count = 1;
+
+	long lastPage = -1;
+
 	for ( long i = 0; i < g_parms.m_numParms; i++ ) {
 		Parm *parm = &g_parms.m_parms[i];
-		if ( !parm->m_sparm ) continue;
-		// use m_cgi if no m_scgi
-		char *cgi = parm->m_cgi;
-		if ( parm->m_scgi ) cgi = parm->m_scgi;
-
+		// assume do not print
+		parm->m_pstr = NULL;
 		// skip if hidden
 		if ( parm->m_flags & PF_HIDDEN ) continue;
+		if ( parm->m_type == TYPE_CMD ) continue;
+		if ( parm->m_type == TYPE_COMMENT ) continue;
 
-		char *page = parm->m_scmd;
-		if ( ! page ) page = "";
+		if ( parm->m_flags & PF_DUP ) continue;
+		if ( parm->m_flags & PF_NOAPI ) continue;
+		if ( parm->m_flags & PF_DIFFBOT ) continue;
+
+		//if ( ! (parm->m_flags & PF_API) ) continue;
+
+		// use m_cgi if no m_scgi
+		char *cgi = parm->m_cgi;
+
+		if ( parm->m_page == PAGE_FILTERS ) continue;
+
+		//char *page = parm->m_scmd;
+		char *page = NULL;
+		if ( parm->m_page >= 0 && parm->m_page != PAGE_NONE ) 
+			page = s_pages[parm->m_page].m_filename;
+
+		if ( parm->m_page == PAGE_NONE && parm->m_obj == OBJ_SI )
+			page = "search";
+
+		// unknown?
+		if ( ! page ) 
+			page = "???";
+
+		if ( blue == (const char *)LIGHT_BLUE ) blue = DARK_BLUE;
+		else if(blue==(const char *)DARK_BLUE ) blue = LIGHT_BLUE;
+
+		if ( blue == (const char *)LIGHT_YELLOW ) blue = DARK_YELLOW;
+		else if ( blue == (const char *)DARK_YELLOW )blue=LIGHT_YELLOW;
+
+		// if we change page go to yellow
+		if ( parm->m_page != lastPage && lastPage != -1 ) {
+			if ( blue == (const char *)LIGHT_BLUE ||
+			     blue == (const char *)DARK_BLUE )
+				blue = LIGHT_YELLOW;
+			else
+				blue = LIGHT_BLUE;
+		}
+
+		lastPage = parm->m_page;
+
+		SafeBuf tmp;
+		char diff = 0;
+		bool printVal = false;
+		if ( (parm->m_obj == OBJ_COLL && cr) ||parm->m_obj==OBJ_CONF) {
+			printVal = true;
+			parm->printVal ( &tmp , cr->m_collnum , 0 );
+			char *def = parm->m_def;
+			if ( ! def && parm->m_type == TYPE_IP) 
+				def = "0.0.0.0";
+			if ( ! def ) def = "";
+			if ( strcmp(tmp.getBufStart(),def) ) diff=1;
+		}
 
 		// print the parm
-		p.safePrintf ( "<tr bgcolor=#%s><td><b>%s</b></td>", 
-			       LIGHT_BLUE , cgi );
-		p.safePrintf("<td>%s</td>",page);
+		if ( diff == 1 ) 
+			p.safePrintf ( "<tr bgcolor=orange>");
+		else
+			p.safePrintf ( "<tr bgcolor=#%s>",blue);
+
+		p.safePrintf("<td>%li</td>",count++);
+
+
+		p.safePrintf("<td><b>%s</b></td>", cgi);
+
+		p.safePrintf("<td><nobr><a href=/%s?c=%s>/%s</a></nobr></td>",
+			     page,coll,page);
 		p.safePrintf("<td nowrap=1>");
 		switch ( parm->m_type ) {
-		case TYPE_BOOL: p.safePrintf ( "BOOL" ); break;
-		case TYPE_BOOL2: p.safePrintf ( "BOOL" ); break;
+		case TYPE_BOOL: p.safePrintf ( "BOOL (0 or 1)" ); break;
+		case TYPE_BOOL2: p.safePrintf ( "BOOL (0 or 1)" ); break;
+		case TYPE_CHECKBOX: p.safePrintf ( "BOOL (0 or 1)" ); break;
 		case TYPE_CHAR: p.safePrintf ( "CHAR" ); break;
 		case TYPE_CHAR2: p.safePrintf ( "CHAR" ); break;
-		case TYPE_FLOAT: p.safePrintf ( "FLOAT" ); break;
+		case TYPE_FLOAT: p.safePrintf ( "FLOAT32" ); break;
+		case TYPE_DOUBLE: p.safePrintf ( "FLOAT64" ); break;
 		case TYPE_IP: p.safePrintf ( "IP" ); break;
-		case TYPE_LONG: p.safePrintf ( "LONG" ); break;
-		case TYPE_LONG_LONG: p.safePrintf ( "LONG LONG" ); break;
+		case TYPE_LONG: p.safePrintf ( "INT32" ); break;
+		case TYPE_LONG_LONG: p.safePrintf ( "INT64" ); break;
+		case TYPE_CHARPTR: p.safePrintf ( "STRING" ); break;
 		case TYPE_STRING: p.safePrintf ( "STRING" ); break;
 		case TYPE_STRINGBOX: p.safePrintf ( "STRING" ); break;
-		default: p.safePrintf ( "OTHER" );
+		case TYPE_STRINGNONEMPTY:p.safePrintf ( "STRING" ); break;
+		case TYPE_SAFEBUF: p.safePrintf ( "STRING" ); break;
+		case TYPE_FILEUPLOADBUTTON: p.safePrintf ( "STRING" ); break;
+		default: p.safePrintf("<b><font color=red>UNKNOWN</font></b>");
 		}
-		p.safePrintf ( "</td><td nowrap=1>%s</td>"
-			       "<td>%s</td></tr>\n",
-			       parm->m_title, parm->m_desc );
+		p.safePrintf ( "</td><td>%s</td>",parm->m_title);
+		char *def = parm->m_def;
+		if ( ! def ) def = "";
+		p.safePrintf ( "<td>%s</td>",  def );
+		p.safePrintf ( "<td>%s",  parm->m_desc );
+		if ( parm->m_flags & PF_REQUIRED )
+			p.safePrintf(" <b><font color=green>REQUIRED"
+				     "</font></b>");
+		if ( printVal ) {
+			p.safePrintf("<br><b><nobr>Current value: ");
+			// print in red if not default value
+			if ( diff ) p.safePrintf("<font color=red>");
+			p.safePrintf("%s",tmp.getBufStart());
+			if ( diff ) p.safePrintf("</font></nobr>");
+			p.safePrintf("</b>");
+		}
+		p.safePrintf("</td>");
+		p.safePrintf ( "</tr>\n" );
 	}
 	p.safePrintf ( "</table><br><br>" );
 
+	//
+	// PRINT QUERY OPERATORS TABLE NOW
+	//
 	p.safePrintf ( "<table %s>"
 		       "<tr class=hdrow><td colspan=2>"
 		       "<center><b>Query Operators</b></td></tr>"

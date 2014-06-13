@@ -45,7 +45,8 @@ void HttpRequest::reset() {
 	m_cgiBuf2Size = 0;
 }
 
-bool HttpRequest::copy ( class HttpRequest *r ) {
+// returns false with g_errno set on error
+bool HttpRequest::copy ( class HttpRequest *r , bool stealBuf ) {
 	memcpy ( this , r , sizeof(HttpRequest) );
 	// do not copy this over though in that way
 	m_reqBuf.m_capacity = 0;
@@ -53,8 +54,22 @@ bool HttpRequest::copy ( class HttpRequest *r ) {
 	//m_reqBuf.m_buf = NULL;
 	m_reqBuf.m_usingStack = false;
 	m_reqBuf.m_encoding = csUTF8;
+
+	if ( stealBuf ) {
+		// if he's on the stack, that's a problem!
+		if ( r->m_reqBuf.m_usingStack ) { char *xx=NULL;*xx=0; }
+		// copy the safebuf member var directly
+		memcpy ( &m_reqBuf , &r->m_reqBuf , sizeof(SafeBuf) );
+		// do not let it free anything
+	        r->m_reqBuf.m_usingStack = true;
+		// that's it!
+		return true;
+	}
+
+	// otherwise we copy it and update the ptrs below
 	if ( ! m_reqBuf.safeMemcpy ( &r->m_reqBuf ) )
 		return false;
+
 	// fix ptrs
 	char *sbuf = r->m_reqBuf.getBufStart();
 	char *dbuf =    m_reqBuf.getBufStart();

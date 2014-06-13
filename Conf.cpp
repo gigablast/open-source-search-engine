@@ -165,12 +165,12 @@ bool Conf::isConnectIp ( unsigned long ip ) {
 
 // . set all member vars to their default values
 void Conf::reset ( ) {
-	g_parms.setToDefault ( (char *)this );
+	g_parms.setToDefault ( (char *)this , OBJ_CONF );
 	m_save = true;
 }
 
 bool Conf::init ( char *dir ) { // , long hostId ) {
-	g_parms.setToDefault ( (char *)this );
+	g_parms.setToDefault ( (char *)this , OBJ_CONF );
 	m_save = true;
 	char fname[1024];
 	if ( dir ) sprintf ( fname , "%slocalgb.conf", dir );
@@ -186,7 +186,7 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 
 	// make sure g_mem.maxMem is big enough temporarily
 	if ( g_mem.m_maxMem < 10000000 ) g_mem.m_maxMem = 10000000;
-	bool status = g_parms.setFromFile ( this , fname , NULL );
+	bool status = g_parms.setFromFile ( this , fname , NULL , OBJ_CONF );
 
 	// ignore if yippy
 	if ( g_isYippy ) {
@@ -406,7 +406,7 @@ bool Conf::save ( ) {
 	g_conf.m_testMem = false;
 	char fname[1024];
 	sprintf ( fname , "%sgb.conf.saving", g_hostdb.m_dir );
-	bool status = g_parms.saveToXml ( (char *)this , fname );
+	bool status = g_parms.saveToXml ( (char *)this , fname ,OBJ_CONF);
 	if ( status ) {
 		char fname2[1024];
 		char *local = "";

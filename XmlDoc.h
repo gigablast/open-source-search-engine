@@ -2299,7 +2299,8 @@ class XmlDoc {
 			 long charset,
 
 			 bool deleteUrl,
-			 char contentType, // CT_HTML, CT_XML
+			 //char contentType, // CT_HTML, CT_XML
+			 char *contentTypeStr, // text/html, text/xml etc.
 			 bool spiderLinks ,
 			 bool newOnly, // index iff new
 

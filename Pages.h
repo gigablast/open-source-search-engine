@@ -81,7 +81,7 @@ bool sendPageReportSpam ( TcpSocket *s , HttpRequest *r );
 bool sendPageSpam       ( TcpSocket *s , HttpRequest *r );
 bool sendPageThreads    ( TcpSocket *s , HttpRequest *r );
 bool sendPageNetTest    ( TcpSocket *s , HttpRequest *r );
-bool sendPageCgiParms   ( TcpSocket *s , HttpRequest *r );
+bool sendPageAPI        ( TcpSocket *s , HttpRequest *r );
 bool sendPageWordVec   ( TcpSocket *s , HttpRequest *r );
 bool sendPageQualityAgent   ( TcpSocket *s , HttpRequest *r );
 bool sendPageThesaurus  ( TcpSocket *s , HttpRequest *r );
@@ -321,7 +321,7 @@ enum {
 	PAGE_ADDCOLL     ,	
 	PAGE_DELCOLL     , 
 	PAGE_REPAIR      ,
-	PAGE_SITES , // site filters
+	//PAGE_SITES , // site filters
 	PAGE_FILTERS     ,
 	PAGE_INJECT      , 
 	PAGE_ADDURL2     ,
@@ -345,7 +345,7 @@ enum {
 	// . non master-admin pages (collection controls)
 	// . PAGE_OVERVIEW acts as a cutoff point (search Parms.cpp for it)
 	//PAGE_OVERVIEW    ,  //25
-	PAGE_CGIPARMS    ,  
+	PAGE_API ,
 
 	PAGE_RULES       ,
 	PAGE_INDEXDB     ,  //30

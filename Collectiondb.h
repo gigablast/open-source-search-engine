@@ -801,6 +801,8 @@ class CollectionRec {
 	long  m_pq_sameDomainWait          [ MAX_PRIORITY_QUEUES ];
 	*/
 
+	char m_doQueryHighlighting;
+
 	char  m_summaryFrontHighlightTag[SUMMARYHIGHLIGHTTAGMAXSIZE] ;
 	char  m_summaryBackHighlightTag [SUMMARYHIGHLIGHTTAGMAXSIZE] ;
 

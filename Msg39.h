@@ -32,26 +32,26 @@ class Msg39Request {
 		m_niceness                = MAX_NICENESS;
 		m_maxAge                  = 0;
 		m_maxQueryTerms           = 9999;
-		m_compoundListMaxSize     = 20000000;
+		//m_compoundListMaxSize     = 20000000;
 		m_boolFlag                = 2;
 		m_language                = 0;
 		m_queryExpansion          = false;
 		m_debug                   = 0;
 		m_getDocIdScoringInfo     = true;
 		m_doSiteClustering        = true;
-		m_doIpClustering          = true;
+		//m_doIpClustering          = true;
 		m_doDupContentRemoval     = true;
 		m_restrictPosdbForQuery   = false;
 		m_addToCache              = false;
 		m_familyFilter            = false;
 		m_timeout                 = -1; // -1 means auto-compute
 		m_getSectionStats         = false;
-		m_useMinAlgo              = false;
-		m_fastIntersection        = -1;
+		//m_useMinAlgo              = false;
+		//m_fastIntersection        = -1;
 		m_stripe                  = 0;
 		m_collnum                 = -1;
 		m_useQueryStopWords       = true;
-		m_useNewAlgo              = true;
+		//m_useNewAlgo              = true;
 		m_doMaxScoreAlgo          = true;
 		m_seoDebug                = false;
 		m_useSeoResultsCache      = false;
@@ -92,7 +92,7 @@ class Msg39Request {
 	char    m_niceness;
 	long    m_maxAge;
 	long    m_maxQueryTerms;
-	long    m_compoundListMaxSize;
+	//long    m_compoundListMaxSize;
 	char    m_boolFlag;
 	uint8_t m_language;
 
@@ -102,7 +102,7 @@ class Msg39Request {
 	char    m_seoDebug;
 	char    m_useSeoResultsCache;
 	char    m_doSiteClustering;
-	char    m_doIpClustering;
+	//char    m_doIpClustering;
 	char    m_doDupContentRemoval;
 	char    m_restrictPosdbForQuery;
 	char    m_addToCache;
@@ -111,15 +111,15 @@ class Msg39Request {
 	char    m_realMaxTop;
 	char    m_stripe;
 	char    m_useQueryStopWords;
-	char    m_useNewAlgo;
+	//char    m_useNewAlgo;
 	char    m_doMaxScoreAlgo;
 
 	char    m_getSectionStats;
 	//long    m_siteHash32;// for m_getSectionStats
 	long    m_sentHash32; // for getSectionStats
 
-	char    m_useMinAlgo;
-	char    m_fastIntersection;
+	//char    m_useMinAlgo;
+	//char    m_fastIntersection;
 
 	collnum_t m_collnum;
 

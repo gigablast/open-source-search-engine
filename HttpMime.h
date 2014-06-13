@@ -5,6 +5,10 @@
 #ifndef _HTTPMIME_H_
 #define _HTTPMIME_H_
 
+// convert text/html to CT_HTML for instance
+// convert application/json to CT_JSON for instance
+long getContentTypeFromStr ( char *s ) ;
+
 #include <time.h>
 
 void   getTime    ( char *s , int *sec , int *min , int *hour ) ;

@@ -37,6 +37,7 @@ enum {
 	OBJ_CONF    = 1 ,
 	OBJ_COLL        ,
 	OBJ_SI          , // SearchInput class
+	OBJ_GBREQUEST   , // for GigablastRequest class of parms
 	OBJ_NONE
 };
 
@@ -73,7 +74,8 @@ enum {
 	TYPE_SAFEBUF        ,
 	TYPE_UFP            ,
 	TYPE_FILEUPLOADBUTTON,
-	TYPE_DOUBLE
+	TYPE_DOUBLE,
+	TYPE_CHARPTR
 };
 
 //forward decls to make compiler happy:
@@ -86,6 +88,71 @@ class Page {
 	char *m_topcolor; // color of the table's first row
 	char *m_title;    // browser title bar
 };
+
+// generic gigablast request. for all apis offered.
+class GigablastRequest {
+ public:
+
+	//
+	// make a copy of the http request because the original is
+	// on the stack. AND the "char *" types below will reference into
+	// this because they are listed as TYPE_CHARPTR in Parms.cpp.
+	// that saves us memory as opposed to making them all SafeBufs.
+	//
+	HttpRequest m_hr;
+
+	// ptr to socket to send reply back on
+	TcpSocket *m_socket;
+
+	// TYPE_CHARPTR
+	char *m_coll;
+
+	////////////
+	//
+	// /admin/inject parms
+	//
+	////////////
+	// these all reference into m_hr or into the Parm::m_def string!
+	char *m_url; // also for /get
+	char *m_queryToScrape;
+	char *m_contentDelim;
+	char *m_contentTypeStr;
+	char *m_contentFile;
+	char *m_content;
+	char *m_diffbotReply; // secret thing from dan
+	char  m_injectLinks;
+	char  m_spiderLinks;
+	char  m_shortReply;
+	char  m_newOnly;
+	char  m_deleteUrl;
+	char  m_recycle;
+	char  m_dedup;
+	char  m_hasMime;
+	char  m_doConsistencyTesting;
+	long  m_charset;
+	long  m_hopCount;
+
+	///////////
+	//
+	// /get parms (for getting cached web pages)
+	//
+	///////////
+	long long m_docId;
+	long      m_strip;
+	char      m_includeHeader;
+
+	///////////
+	//
+	// /admin/addurl parms
+	//
+	///////////
+	char *m_urlsBuf;
+	char  m_stripBox;
+	char  m_harvestLinksBox;
+	char  m_forceRespiderBox;
+
+};
+
 
 // values for Parm::m_subMenu
 #define SUBMENU_DISPLAY     1
@@ -115,13 +182,19 @@ class Page {
 #define PF_NOSAVE   0x0200
 #define PF_DUP      0x0400
 #define PF_TEXTAREA 0x0800
-#define PF_REBUILDPROXYTABLE 0x1000
+#define PF_COLLDEFAULT 0x1000
+#define PF_NOAPI       0x2000
+#define PF_REQUIRED    0x4000
+#define PF_REBUILDPROXYTABLE 0x8000
 
 class Parm {
  public:
 	char *m_title; // displayed above m_desc on admin gui page
 	char *m_desc;  // description of variable displayed on admin gui page
 	char *m_cgi;   // cgi name, contains %i if an array
+	char *m_cgi2;  // alias
+	char *m_cgi3;  // alias
+	char *m_cgi4;  // alias
 	char *m_xml;   // default to rendition of m_title if NULL
 	long  m_off;   // this variable's offset into the CollectionRec class
 	char  m_colspan;
@@ -142,6 +215,7 @@ class Parm {
 	long  m_fixed; 
 	long  m_size;  // max string size
 	char *m_def;   // default value of this variable if not in either conf
+	long  m_defOff; // if default value points to a collectionrec parm!
 	char  m_cast;  // true if we should broadcast to all hosts (default)
 	char *m_units;
 	char  m_addin; // add "insert above" link to gui when displaying array
@@ -154,6 +228,7 @@ class Parm {
 	char *m_class;
 	char *m_icon;
 	char *m_qterm;
+	char *m_pstr; // for sorting by in sendPageAPI()
 	long  m_parmNum; // slot # in the m_parms[] array that we are
 	//bool (*m_func)(TcpSocket *s , HttpRequest *r,
 	//	       bool (*cb)(TcpSocket *s , HttpRequest *r));
@@ -174,16 +249,16 @@ class Parm {
 	char  m_save;  // save to xml file? almost always true
 	long  m_min;
 	// these are used for search parms in PageResults.cpp
-	char  m_sparm; // is this a search parm? for passing to PageResults.cpp
-	char *m_scgi;  // parm in the search url
+	//char m_sparm;// is this a search parm? for passing to PageResults.cpp
+	//char *m_scgi;  // parm in the search url
 	char  m_spriv; // is it private? only admins can see/use private parms
-	char *m_scmd;  // the url path for this m_scgi variable
+	//char *m_scmd;  // the url path for this m_scgi variable
 	//long  m_sdefo; // offset of default into CollectionRec (use m_off)
 	long  m_sminc ;// offset of min in CollectionRec (-1 for none)
 	long  m_smaxc ;// offset of max in CollectionRec (-1 for none)
 	long  m_smin;  // absolute min
 	long  m_smax;  // absolute max
-	long  m_soff;  // offset into SearchInput to store value in
+	//long  m_soff;  // offset into SearchInput to store value in
 	char  m_sprpg; // propagate the cgi variable to other pages via GET?
 	char  m_sprpp; // propagate the cgi variable to other pages via POST?
 	bool  m_sync;  // this parm should be synced
@@ -273,8 +348,9 @@ class Parms {
 
 	bool setFromRequest ( HttpRequest *r , //long user,
 			      TcpSocket* s,
-			      bool (*callback)(TcpSocket *s , HttpRequest *r),
-			      class CollectionRec *newcr = NULL );
+			      class CollectionRec *newcr ,
+			      char *THIS ,
+			      long objType );
 	
 	bool insertParm ( long i , long an , char *THIS ) ;
 	bool removeParm ( long i , long an , char *THIS ) ;
@@ -282,20 +358,26 @@ class Parms {
 	void setParm ( char *THIS, Parm *m, long mm, long j, char *s,
 		       bool isHtmlEncoded , bool fromRequest ) ;
 	
-	void setToDefault ( char *THIS ) ;
+	void setToDefault ( char *THIS , char objType ,
+			    CollectionRec *argcr = NULL ) ;
 
 	bool setFromFile ( void *THIS        , 
 			   char *filename    , 
-			   char *filenameDef ) ;
+			   char *filenameDef ,
+			   char  objType ) ;
 
 	bool setXmlFromFile(Xml *xml, char *filename, char *buf, long bufSize);
 
-	bool saveToXml ( char *THIS , char *f ) ;
+	bool saveToXml ( char *THIS , char *f , char objType ) ;
 
 	// get the parm with the associated cgi name. must be NULL terminated.
 	Parm *getParm ( char *cgi ) ;
 
 	char *getParmHtmlEncoded ( char *p , char *pend , Parm *m , char *s );
+
+	bool setGigablastRequest ( class TcpSocket *s ,
+				   class HttpRequest *hr ,
+				   class GigablastRequest *gr );
 
 	// . make it so a collectionrec can be copied in Collectiondb.cpp
 	// . so the rec can be copied and the old one deleted without

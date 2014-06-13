@@ -763,7 +763,7 @@ rscore_t PostQueryRerank::rerankLanguageAndCountry ( rscore_t score,
 	//   language (si->m_language)
 	// . if both are 0, don't rerank by language
 	uint8_t langWanted = m_si->m_langHint;
-	if ( langWanted == langUnknown ) langWanted = m_si->m_queryLang;//language;
+	if ( langWanted == langUnknown ) langWanted = m_si->m_queryLangId;
 	if ( langWanted == langUnknown ) return score;
 
 	// . apply score factors for unknown languages, iff reranking unknown

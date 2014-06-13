@@ -240,7 +240,7 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 	//cr->m_collnum = oldCollnum;
 
 	// get the default.conf from working dir if there
-	g_parms.setToDefault( (char *)cr );
+	g_parms.setToDefault( (char *)cr , OBJ_COLL );
 
 	strcpy ( cr->m_coll , coll );
 	cr->m_collLen = gbstrlen ( coll );
@@ -384,7 +384,9 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// . get the default.conf from working dir if there
 	// . i think this calls CollectionRec::reset() which resets all of its
 	//   rdbbase classes for its collnum so m_collnum needs to be right
-	g_parms.setToDefault( (char *)cr );
+	//g_parms.setToDefault( (char *)cr );
+	// get the default.conf from working dir if there
+	g_parms.setToDefault( (char *)cr , OBJ_COLL );
 
 	/*
 	// the default conf file
@@ -1586,7 +1588,7 @@ CollectionRec::~CollectionRec() {
 
 // new collection recs get this called on them
 void CollectionRec::setToDefaults ( ) {
-	g_parms.setFromFile ( this , NULL , NULL  );
+	g_parms.setFromFile ( this , NULL , NULL  , OBJ_COLL );
 	// add default reg ex
 	//setUrlFiltersToDefaults();
 	rebuildUrlFilters();
@@ -1658,7 +1660,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// also reset some counts not included in parms list
 	reset();
 	// before we load, set to defaults in case some are not in xml file
-	g_parms.setToDefault ( (char *)this );
+	g_parms.setToDefault ( (char *)this , OBJ_COLL );
 	// get the filename with that id
 	File f;
 	char tmp2[1024];
@@ -1687,7 +1689,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 
 	// . set our parms from the file.
 	// . accepts OBJ_COLLECTIONREC or OBJ_CONF
-	g_parms.setFromFile ( this , tmp2 , tmp1 );
+	g_parms.setFromFile ( this , tmp2 , tmp1 , OBJ_COLL );
 
 	// add default reg ex IFF there are no url filters there now
 	//if(m_numRegExs == 0) rebuildUrlFilters();//setUrlFiltersToDefaults();
@@ -2601,7 +2603,7 @@ bool CollectionRec::save ( ) {
 	//else
 	snprintf ( tmp , 1023, "%scoll.%s.%li/coll.conf", 
 		  g_hostdb.m_dir , m_coll , (long)m_collnum );
-	if ( ! g_parms.saveToXml ( (char *)this , tmp ) ) return false;
+	if ( ! g_parms.saveToXml ( (char *)this , tmp ,OBJ_COLL)) return false;
 	// log msg
 	//log (LOG_INFO,"db: Saved %s.",tmp);//f.getFilename());
 

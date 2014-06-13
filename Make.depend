@@ -24,11 +24,11 @@ Accessdb.o: Accessdb.cpp Accessdb.h Rdb.h RdbBase.h Conf.h Xml.h \
  Summary.h matches2.h Words.h StopWords.h Bits.h Pos.h Matches.h \
  HashTableT.h Domains.h CountryCode.h Events.h Sections.h IndexList.h \
  Dates.h Msg22.h CatRec.h Categories.h HashTable.h Catdb.h Datedb.h \
- PageInject.h XmlDoc.h Phrases.h LangList.h Images.h Msg36.h Msg13.h \
- Msge0.h Msge1.h Msg8b.h SearchInput.h Msg40.h Msg39.h Msg37.h Posdb.h \
- TopTree.h Msg51.h Msg17.h IndexReadInfo.h Msg3a.h Stats.h \
- PostQueryRerank.h Sanity.h SiteGetter.h Title.h Address.h zlib.h zconf.h \
- Spider.h Json.h Users.h Pages.h PageCrawlBot.h
+ Inject.h XmlDoc.h Phrases.h LangList.h Images.h Msg36.h Msg13.h Msge0.h \
+ Msge1.h Msg8b.h SearchInput.h Msg40.h Msg39.h Msg37.h Posdb.h TopTree.h \
+ Msg51.h Msg17.h IndexReadInfo.h Msg3a.h Stats.h PostQueryRerank.h \
+ Sanity.h SiteGetter.h Title.h Address.h zlib.h zconf.h Spider.h Json.h \
+ Users.h Pages.h PageCrawlBot.h Parms.h
 Address.o: Address.cpp Proxy.h UdpServer.h Mem.h Conf.h Xml.h XmlNode.h \
  gb-include.h types.h fctypes.h Unicode.h UnicodeProperties.h \
  UCPropTable.h iconv.h hash.h Errno.h Log.h Lang.h Iso8859.h \
@@ -620,13 +620,13 @@ Facebook.o: Facebook.cpp Facebook.h Conf.h Xml.h XmlNode.h gb-include.h \
  Clusterdb.h Linkdb.h Msg2.h Query.h Msg20.h Summary.h matches2.h Words.h \
  StopWords.h Bits.h Pos.h Matches.h HashTableT.h Domains.h CountryCode.h \
  Events.h Sections.h IndexList.h Dates.h Msg22.h CatRec.h Categories.h \
- HashTable.h Catdb.h Datedb.h PageInject.h XmlDoc.h Phrases.h LangList.h \
+ HashTable.h Catdb.h Datedb.h Inject.h XmlDoc.h Phrases.h LangList.h \
  Images.h Msg36.h Msg13.h MsgC.h Dns.h DnsProtocol.h Msge0.h Msge1.h \
  Msg8b.h SearchInput.h Msg40.h Msg39.h Msg37.h Posdb.h TopTree.h Msg51.h \
  Msg17.h IndexReadInfo.h Msg3a.h Stats.h PostQueryRerank.h Sanity.h \
  SiteGetter.h Title.h Address.h zlib.h zconf.h Spider.h HttpMime.h Json.h \
  Users.h Pages.h HttpServer.h TcpServer.h openssl/err.h PageCrawlBot.h \
- sort.h Repair.h Process.h Speller.h Language.h
+ Parms.h sort.h Repair.h Process.h Speller.h Language.h
 fastIndexTable.o: fastIndexTable.cpp IndexTable.h Query.h SafeBuf.h \
  gb-include.h types.h fctypes.h Unicode.h UnicodeProperties.h \
  UCPropTable.h iconv.h hash.h Errno.h Log.h Mem.h Conf.h Xml.h XmlNode.h \
@@ -854,13 +854,13 @@ HttpRequest.o: HttpRequest.cpp gb-include.h types.h fctypes.h Unicode.h \
  Titledb.h Msg1.h Clusterdb.h Linkdb.h Msg2.h Query.h Msg20.h Summary.h \
  matches2.h Words.h StopWords.h Bits.h Pos.h Matches.h HashTableT.h \
  Domains.h CountryCode.h Events.h Sections.h IndexList.h Dates.h Msg22.h \
- CatRec.h Categories.h HashTable.h Catdb.h Datedb.h PageInject.h XmlDoc.h \
+ CatRec.h Categories.h HashTable.h Catdb.h Datedb.h Inject.h XmlDoc.h \
  Phrases.h LangList.h Images.h Msg36.h Msg13.h MsgC.h Dns.h DnsProtocol.h \
  Msge0.h Msge1.h Msg8b.h SearchInput.h Msg40.h Msg39.h Msg37.h Posdb.h \
  TopTree.h Msg51.h Msg17.h IndexReadInfo.h Msg3a.h Stats.h \
  PostQueryRerank.h Sanity.h SiteGetter.h Title.h Address.h zlib.h zconf.h \
  Spider.h HttpMime.h Json.h Users.h Pages.h HttpServer.h TcpServer.h \
- openssl/err.h PageCrawlBot.h
+ openssl/err.h PageCrawlBot.h Parms.h
 HttpServer.o: HttpServer.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h \
  HttpServer.h TcpServer.h openssl/ssl.h openssl/e_os2.h \
@@ -1022,6 +1022,34 @@ IndexTable.o: IndexTable.cpp gb-include.h types.h fctypes.h Unicode.h \
  RdbMap.h RdbList.h RdbDump.h RdbTree.h RdbMem.h RdbBuckets.h RdbCache.h \
  Msg5.h Msg3.h RdbMerge.h Dir.h DiskPageCache.h Titledb.h IndexList.h \
  IndexReadInfo.h Stats.h UdpProtocol.h TopTree.h Clusterdb.h sort.h
+Inject.o: Inject.cpp gb-include.h types.h fctypes.h Unicode.h \
+ UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h Inject.h \
+ XmlDoc.h Lang.h Iso8859.h iana_charset.h Words.h Xml.h XmlNode.h \
+ SafeBuf.h StopWords.h Titledb.h Rdb.h RdbBase.h Conf.h File.h Mem.h \
+ Loop.h ip.h Hostdb.h HttpRequest.h Url.h TcpSocket.h openssl/ssl.h \
+ openssl/e_os2.h openssl/opensslconf.h openssl/comp.h openssl/crypto.h \
+ openssl/stack.h openssl/safestack.h openssl/opensslv.h \
+ openssl/ossl_typ.h openssl/symhacks.h openssl/bio.h openssl/x509.h \
+ openssl/buffer.h openssl/evp.h openssl/objects.h openssl/obj_mac.h \
+ openssl/asn1.h openssl/bn.h openssl/ec.h openssl/ecdsa.h openssl/ecdh.h \
+ openssl/rsa.h openssl/dsa.h openssl/dh.h openssl/sha.h \
+ openssl/x509_vfy.h openssl/lhash.h openssl/pkcs7.h openssl/pem.h \
+ openssl/pem2.h openssl/hmac.h openssl/kssl.h openssl/ssl2.h \
+ openssl/ssl3.h openssl/tls1.h openssl/dtls1.h openssl/pqueue.h \
+ openssl/ssl23.h openssl/srtp.h Collectiondb.h HashTableX.h PingServer.h \
+ RdbScan.h BigFile.h RdbMap.h RdbList.h RdbDump.h RdbTree.h RdbMem.h \
+ RdbBuckets.h RdbCache.h Msg5.h Msg3.h RdbMerge.h Dir.h DiskPageCache.h \
+ Bits.h Pos.h Phrases.h LangList.h Images.h Msg0.h UdpServer.h UdpSlot.h \
+ UdpProtocol.h Multicast.h Threads.h Indexdb.h Msg36.h Msg13.h \
+ IndexList.h MsgC.h Dns.h DnsProtocol.h Sections.h Dates.h Msge0.h \
+ Tagdb.h Linkdb.h Msg2.h Query.h Msg20.h Summary.h matches2.h Matches.h \
+ HashTableT.h Domains.h CountryCode.h Events.h Msg22.h CatRec.h \
+ Categories.h HashTable.h Catdb.h Msge1.h Msg4.h Msg8b.h SearchInput.h \
+ Msg40.h Msg39.h Msg37.h Posdb.h TopTree.h Clusterdb.h Msg51.h Msg17.h \
+ IndexReadInfo.h Msg3a.h Stats.h PostQueryRerank.h Sanity.h Msg1.h \
+ Datedb.h SiteGetter.h Title.h Address.h zlib.h zconf.h Spider.h \
+ HttpMime.h Json.h Users.h Pages.h HttpServer.h TcpServer.h openssl/err.h \
+ PageCrawlBot.h Parms.h PageParser.h Repair.h
 injector.o: injector.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h
 ipconfig.o: ipconfig.cpp
@@ -2261,7 +2289,7 @@ PageCrawlBot.o: PageCrawlBot.cpp Errno.h PageCrawlBot.h TcpServer.h \
  Msg40.h Msg39.h Msg37.h Posdb.h TopTree.h Clusterdb.h Msg51.h Msg17.h \
  IndexReadInfo.h Msg3a.h Stats.h PostQueryRerank.h Sanity.h Msg1.h \
  Datedb.h SiteGetter.h Title.h Address.h zlib.h zconf.h Spider.h Json.h \
- PageInject.h Users.h Repair.h Parms.h
+ Inject.h Users.h Parms.h Repair.h
 PageDirectory.o: PageDirectory.cpp gb-include.h types.h fctypes.h \
  Unicode.h UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h \
  Pages.h TcpSocket.h openssl/ssl.h openssl/e_os2.h openssl/opensslconf.h \
@@ -2317,7 +2345,7 @@ PageEvents.o: PageEvents.cpp gb-include.h types.h fctypes.h Unicode.h \
  Highlight.h AutoBan.h Parms.h TuringTest.h sort.h LanguageIdentifier.h \
  LanguagePages.h LangList.h XmlDoc.h Phrases.h Images.h Msg13.h Msge0.h \
  Msge1.h Msg8b.h SiteGetter.h Title.h Address.h Spider.h Json.h \
- PageTurk.h Facebook.h PageInject.h Users.h Repair.h
+ PageTurk.h Facebook.h Inject.h Users.h Repair.h
 PageGet.o: PageGet.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h SafeBuf.h \
  Collectiondb.h Url.h ip.h HashTableX.h PingServer.h Hostdb.h Xml.h \
@@ -2389,34 +2417,6 @@ PageIndexdb.o: PageIndexdb.cpp gb-include.h types.h fctypes.h Unicode.h \
  Sections.h IndexList.h Dates.h Msg22.h CatRec.h Categories.h HashTable.h \
  Catdb.h Datedb.h Msg36.h HttpServer.h TcpServer.h openssl/err.h MsgC.h \
  Dns.h DnsProtocol.h HttpMime.h Pages.h PageCrawlBot.h Users.h
-PageInject.o: PageInject.cpp gb-include.h types.h fctypes.h Unicode.h \
- UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h \
- PageInject.h XmlDoc.h Lang.h Iso8859.h iana_charset.h Words.h Xml.h \
- XmlNode.h SafeBuf.h StopWords.h Titledb.h Rdb.h RdbBase.h Conf.h File.h \
- Mem.h Loop.h ip.h Hostdb.h HttpRequest.h Url.h TcpSocket.h openssl/ssl.h \
- openssl/e_os2.h openssl/opensslconf.h openssl/comp.h openssl/crypto.h \
- openssl/stack.h openssl/safestack.h openssl/opensslv.h \
- openssl/ossl_typ.h openssl/symhacks.h openssl/bio.h openssl/x509.h \
- openssl/buffer.h openssl/evp.h openssl/objects.h openssl/obj_mac.h \
- openssl/asn1.h openssl/bn.h openssl/ec.h openssl/ecdsa.h openssl/ecdh.h \
- openssl/rsa.h openssl/dsa.h openssl/dh.h openssl/sha.h \
- openssl/x509_vfy.h openssl/lhash.h openssl/pkcs7.h openssl/pem.h \
- openssl/pem2.h openssl/hmac.h openssl/kssl.h openssl/ssl2.h \
- openssl/ssl3.h openssl/tls1.h openssl/dtls1.h openssl/pqueue.h \
- openssl/ssl23.h openssl/srtp.h Collectiondb.h HashTableX.h PingServer.h \
- RdbScan.h BigFile.h RdbMap.h RdbList.h RdbDump.h RdbTree.h RdbMem.h \
- RdbBuckets.h RdbCache.h Msg5.h Msg3.h RdbMerge.h Dir.h DiskPageCache.h \
- Bits.h Pos.h Phrases.h LangList.h Images.h Msg0.h UdpServer.h UdpSlot.h \
- UdpProtocol.h Multicast.h Threads.h Indexdb.h Msg36.h Msg13.h \
- IndexList.h MsgC.h Dns.h DnsProtocol.h Sections.h Dates.h Msge0.h \
- Tagdb.h Linkdb.h Msg2.h Query.h Msg20.h Summary.h matches2.h Matches.h \
- HashTableT.h Domains.h CountryCode.h Events.h Msg22.h CatRec.h \
- Categories.h HashTable.h Catdb.h Msge1.h Msg4.h Msg8b.h SearchInput.h \
- Msg40.h Msg39.h Msg37.h Posdb.h TopTree.h Clusterdb.h Msg51.h Msg17.h \
- IndexReadInfo.h Msg3a.h Stats.h PostQueryRerank.h Sanity.h Msg1.h \
- Datedb.h SiteGetter.h Title.h Address.h zlib.h zconf.h Spider.h \
- HttpMime.h Json.h Users.h Pages.h HttpServer.h TcpServer.h openssl/err.h \
- PageCrawlBot.h PageParser.h Repair.h
 PageLogView.o: PageLogView.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h \
  Collectiondb.h SafeBuf.h Url.h ip.h HashTableX.h PingServer.h Hostdb.h \
@@ -2555,7 +2555,7 @@ PageReindex.o: PageReindex.cpp gb-include.h types.h fctypes.h Unicode.h \
  Stats.h IndexReadInfo.h PostQueryRerank.h Sanity.h SearchInput.h Msg40.h \
  Msg17.h sort.h Users.h Spider.h Msg4.h Revdb.h XmlDoc.h Phrases.h \
  LangList.h Images.h Msg13.h Msge0.h Msge1.h Msg8b.h SiteGetter.h Title.h \
- Address.h zlib.h zconf.h Json.h PageInject.h PageReindex.h
+ Address.h zlib.h zconf.h Json.h Inject.h Parms.h PageReindex.h
 PageResults.o: PageResults.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h \
  Collectiondb.h SafeBuf.h Url.h ip.h HashTableX.h PingServer.h Hostdb.h \
@@ -2610,7 +2610,7 @@ PageRoot.o: PageRoot.cpp gb-include.h types.h fctypes.h Unicode.h \
  Categories.h HashTable.h Catdb.h Datedb.h Dns.h DnsProtocol.h Pages.h \
  HttpServer.h TcpServer.h openssl/err.h MsgC.h HttpMime.h PageCrawlBot.h \
  LanguageIdentifier.h LanguagePages.h Users.h Address.h Proxy.h Stats.h \
- IndexReadInfo.h AutoBan.h Parms.h TuringTest.h PageInject.h XmlDoc.h \
+ IndexReadInfo.h AutoBan.h Parms.h TuringTest.h Inject.h XmlDoc.h \
  Phrases.h LangList.h Images.h Msg36.h Msg13.h Msge0.h Msge1.h Msg8b.h \
  SearchInput.h Msg40.h Msg39.h Msg37.h Posdb.h TopTree.h Msg51.h Msg17.h \
  Msg3a.h PostQueryRerank.h Sanity.h SiteGetter.h Title.h zlib.h zconf.h \
@@ -2850,10 +2850,10 @@ PageTurk.o: PageTurk.cpp gb-include.h types.h fctypes.h Unicode.h \
  Msg22.h CatRec.h Categories.h HashTable.h Catdb.h Datedb.h Pages.h \
  PageCrawlBot.h Msg40.h SearchInput.h Msg39.h Msg37.h Msg36.h Posdb.h \
  TopTree.h Msg51.h Msg17.h IndexReadInfo.h Msg3a.h Stats.h \
- PostQueryRerank.h Sanity.h PageReindex.h Msg4.h PageInject.h XmlDoc.h \
+ PostQueryRerank.h Sanity.h PageReindex.h Msg4.h Inject.h XmlDoc.h \
  Phrases.h LangList.h Images.h Msg13.h Msge0.h Msge1.h Msg8b.h \
  SiteGetter.h Title.h Address.h zlib.h zconf.h Spider.h Json.h Users.h \
- sort.h PageTurk.h Repair.h
+ Parms.h sort.h PageTurk.h Repair.h
 Parms.o: Parms.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h Parms.h \
  Rdb.h RdbBase.h Conf.h Xml.h XmlNode.h Lang.h Iso8859.h iana_charset.h \
@@ -2882,7 +2882,7 @@ Parms.o: Parms.cpp gb-include.h types.h fctypes.h Unicode.h \
  Msg36.h Msg13.h Msge0.h Msge1.h Msg8b.h Msg40.h Msg39.h Msg37.h Posdb.h \
  TopTree.h Msg51.h Msg3a.h PostQueryRerank.h Sanity.h SiteGetter.h \
  Title.h Address.h Json.h Ads.h LanguagePages.h Users.h Proxy.h AutoBan.h \
- TuringTest.h Test.h Rebalance.h SpiderProxy.h
+ TuringTest.h Test.h Rebalance.h SpiderProxy.h Inject.h
 Phrases.o: Phrases.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h Phrases.h \
  Bits.h Words.h Xml.h XmlNode.h Lang.h Iso8859.h iana_charset.h SafeBuf.h \
@@ -4585,9 +4585,9 @@ XmlDoc.o: XmlDoc.cpp gb-include.h types.h fctypes.h Unicode.h \
  PostQueryRerank.h Sanity.h Msg1.h Datedb.h SiteGetter.h Title.h \
  Address.h zlib.h zconf.h Spider.h HttpMime.h Json.h Speller.h Language.h \
  linkspam.h Repair.h LanguageIdentifier.h sort.h Wiki.h Placedb.h Test.h \
- Synonyms.h Timedb.h PageInject.h Users.h Pages.h HttpServer.h \
- TcpServer.h openssl/err.h PageCrawlBot.h Facebook.h Highlight.h \
- Wiktionary.h seo.h Parms.h Mime.h Cachedb.h
+ Synonyms.h Timedb.h Inject.h Users.h Pages.h HttpServer.h TcpServer.h \
+ openssl/err.h PageCrawlBot.h Parms.h Facebook.h Highlight.h Wiktionary.h \
+ seo.h Mime.h Cachedb.h
 XmlNode.o: XmlNode.cpp gb-include.h types.h fctypes.h Unicode.h \
  UnicodeProperties.h UCPropTable.h iconv.h hash.h Errno.h Log.h XmlNode.h \
  Mem.h Conf.h Xml.h Lang.h Iso8859.h iana_charset.h File.h Loop.h ip.h \

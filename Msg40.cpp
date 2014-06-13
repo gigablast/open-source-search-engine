@@ -535,22 +535,25 @@ bool Msg40::getDocIds ( bool recall ) {
 	mr.m_getDocIdScoringInfo       = m_si->m_getDocIdScoringInfo;
 	mr.m_doSiteClustering          = m_si->m_doSiteClustering    ;
 	mr.m_familyFilter              = m_si->m_familyFilter;
-	mr.m_useMinAlgo                = m_si->m_useMinAlgo;
-	mr.m_useNewAlgo                = m_si->m_useNewAlgo;
+	//mr.m_useMinAlgo                = m_si->m_useMinAlgo;
+	//mr.m_useNewAlgo                = m_si->m_useNewAlgo;
 	mr.m_doMaxScoreAlgo            = m_si->m_doMaxScoreAlgo;
-	mr.m_fastIntersection          = m_si->m_fastIntersection;
-	mr.m_doIpClustering            = m_si->m_doIpClustering      ;
+	//mr.m_fastIntersection          = m_si->m_fastIntersection;
+	//mr.m_doIpClustering            = m_si->m_doIpClustering      ;
 	mr.m_doDupContentRemoval       = m_si->m_doDupContentRemoval ;
 	//mr.m_restrictIndexdbForQuery   = m_si->m_restrictIndexdbForQuery ;
 	mr.m_queryExpansion            = m_si->m_queryExpansion; 
-	mr.m_compoundListMaxSize       = m_si->m_compoundListMaxSize ;
+	//mr.m_compoundListMaxSize       = m_si->m_compoundListMaxSize ;
 	mr.m_boolFlag                  = m_si->m_boolFlag            ;
 	mr.m_familyFilter              = m_si->m_familyFilter        ;
-	mr.m_language                  = (unsigned char)m_si->m_queryLang;
-	mr.ptr_query                   = m_si->m_q->m_orig;
-	mr.size_query                  = m_si->m_q->m_origLen+1;
-	mr.ptr_whiteList               = m_si->m_whiteListBuf.getBufStart();
-	mr.size_whiteList              = m_si->m_whiteListBuf.length()+1;
+	mr.m_language                  = (unsigned char)m_si->m_queryLangId;
+	mr.ptr_query                   = m_si->m_q.m_orig;
+	mr.size_query                  = m_si->m_q.m_origLen+1;
+	//mr.ptr_whiteList               = m_si->m_whiteListBuf.getBufStart();
+	//mr.size_whiteList              = m_si->m_whiteListBuf.length()+1;
+	long slen = 0; if ( m_si->m_sites ) slen = gbstrlen(m_si->m_sites);
+	mr.ptr_whiteList               = m_si->m_sites;
+	mr.size_whiteList              = slen + 1;
 	mr.m_timeout                   = -1; // auto-determine based on #terms
 	// make sure query term counts match in msg39
 	mr.m_maxQueryTerms             = m_si->m_maxQueryTerms; 
@@ -617,7 +620,7 @@ bool Msg40::getDocIds ( bool recall ) {
 		// launch a search request
 		m_num3aRequests++;
 		// this returns false if it would block and will call callback
-		if(!mp->getDocIds(&mp->m_rrr,m_si->m_q,this,gotDocIdsWrapper))
+		if(!mp->getDocIds(&mp->m_rrr,&m_si->m_q,this,gotDocIdsWrapper))
 			continue;
 		if ( g_errno && ! m_errno ) 
 			m_errno = g_errno;
@@ -1303,10 +1306,10 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 
 		// set the summary request then get it!
 		Msg20Request req;
-		Query *q = m_si->m_q;
+		Query *q = &m_si->m_q;
 		req.ptr_qbuf             = q->getQuery();
 		req.size_qbuf            = q->getQueryLen()+1;
-		req.m_langId             = m_si->m_queryLang;
+		req.m_langId             = m_si->m_queryLangId;
 
 		// set highlight query
 		if ( m_si->m_highlightQuery &&
@@ -1324,21 +1327,23 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 
 		//req.m_rulesetFilter      = m_si->m_ruleset;
 
-		req.m_getTitleRec         = m_si->m_getTitleRec;
+		//req.m_getTitleRec         = m_si->m_getTitleRec;
 
 		//req.m_isSuperTurk       = m_si->m_isSuperTurk;
 
 
 		req.m_highlightQueryTerms = m_si->m_doQueryHighlighting;
-		req.m_highlightDates      = m_si->m_doDateHighlighting;
+		//req.m_highlightDates      = m_si->m_doDateHighlighting;
 
 		//req.ptr_coll             = m_si->m_coll2;
 		//req.size_coll            = m_si->m_collLen2+1;
 
 		req.m_isDebug            = (bool)m_si->m_debug;
-		if ( m_si->m_displayMetasLen > 0 ) {
+
+		if ( m_si->m_displayMetas && m_si->m_displayMetas[0] ) {
+			long dlen = gbstrlen(m_si->m_displayMetas);
 			req.ptr_displayMetas     = m_si->m_displayMetas;
-			req.size_displayMetas    = m_si->m_displayMetasLen+1;
+			req.size_displayMetas    = dlen+1;
 		}
 
 		req.m_docId              = m_msg3a.m_docIds[i];
@@ -1410,8 +1415,8 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// buzz still wants the SitePop, computed fresh from Msg25,
 		// even if they do not say "&inlinks=4" ... but they do
 		// seem to specify getsitepops, so use that too
-		if ( m_si->m_getSitePops )
-			req.m_computeLinkInfo = true;
+		//if ( m_si->m_getSitePops )
+		//	req.m_computeLinkInfo = true;
 
 		if (m_si->m_queryMatchOffsets)
 			req.m_getMatches = true;
@@ -1958,7 +1963,7 @@ bool Msg40::gotSummary ( ) {
 
 	// shortcut
 	//Query *q = m_msg3a.m_q;
-	Query *q = m_si->m_q;
+	Query *q = &m_si->m_q;
         
 	//log(LOG_DEBUG, "query: msg40: deduping from %ld to %ld", 
 	//oldNumContiguous, m_numContiguous);
@@ -2426,7 +2431,7 @@ bool Msg40::gotSummary ( ) {
 	//long nqt = 0;
 	//Query *q = m_si->m_q;
 	// english? TEST!
-	unsigned char lang = m_si->m_queryLang;
+	unsigned char lang = m_si->m_queryLangId;
 	// just print warning i guess
 	if ( lang == 0 ) { 
 		log("query: queryLang is 0 for q=%s",q->m_orig);
@@ -3073,7 +3078,7 @@ bool Msg40::computeGigabits( TopicGroup *tg ) {
 
 	long niceness = 0;
 
-	Query *q = m_si->m_q;
+	Query *q = &m_si->m_q;
 
 	// for every sample estimate the number of words so we know how big
 	// to make our repeat hash table
@@ -5015,7 +5020,7 @@ bool Msg40::computeFastFacts ( ) {
 	//
 	// hash the query terms we need to match into table as well
 	//
-	Query *q = m_si->m_q;
+	Query *q = &m_si->m_q;
 	HashTableX queryTable;
 	char qbuf[10000];
 	if ( ! queryTable.set(8,4,512,qbuf,10000,false,0,"qrttbl") )

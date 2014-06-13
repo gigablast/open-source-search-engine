@@ -37,7 +37,7 @@
 #ifdef _USETURKS_
 //#include "PageTurk.h"
 #endif
-#include "PageInject.h"
+#include "Inject.h"
 #include "HttpServer.h"
 #include "Facebook.h"
 #include "Posdb.h"
@@ -1929,7 +1929,7 @@ bool XmlDoc::injectDoc ( char *url ,
 			 long charset,
 
 			 bool deleteUrl,
-			 char contentType, // CT_HTML, CT_XML
+			 char *contentTypeStr, // text/html application/json
 			 bool spiderLinks ,
 			 bool newOnly, // index iff new
 
@@ -1949,6 +1949,12 @@ bool XmlDoc::injectDoc ( char *url ,
 		     uu.getUrl(),
 		     uu.getUrlLen() );
 
+
+	long contentType = getContentTypeFromStr(contentTypeStr);
+
+	// use CT_HTML if contentTypeStr is empty or blank. default
+	if ( ! contentTypeStr || ! contentTypeStr[0] )
+		contentType = CT_HTML;
 
 	// this can go on the stack since set4() copies it
 	SpiderRequest sreq;
@@ -6597,7 +6603,7 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 	r->m_niceness            = m_niceness;
 	r->m_debug               = 0;
 	r->m_doSiteClustering    = false;
-	r->m_doIpClustering      = false;
+	//r->m_doIpClustering      = false;
 	r->m_doDupContentRemoval = false;
 	r->m_boolFlag            = 2;
 	r->m_familyFilter        = 0;
