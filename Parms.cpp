@@ -2938,7 +2938,7 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		if ( m->m_type == TYPE_CMD     ) continue;
 		if (THIS == (char *)&g_conf && m->m_obj != OBJ_CONF ) continue;
 		if (THIS != (char *)&g_conf && m->m_obj == OBJ_CONF ) continue;
-		if ( m->m_obj == OBJ_CONF ) {
+		if ( m->m_obj == OBJ_COLL ) {
 			CollectionRec *cr = (CollectionRec *)THIS;
 			if ( cr->m_bases[1] ) { char *xx=NULL;*xx=0; }
 		}
@@ -7858,6 +7858,8 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF; // TYPE_IP;
 	m->m_def   = "";
 	m->m_flags = PF_TEXTAREA | PF_REBUILDPROXYTABLE;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
 	m++;
 
 	m->m_title = "spider proxy test url";
@@ -7871,6 +7873,8 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_def   = "http://www.gigablast.com/";
 	m->m_flags = 0;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
 	m++;
 
 	m->m_title = "mix up user agents";
@@ -7886,6 +7890,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_flags = 0;
 	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
 	m++;
 
 	m->m_title = "squid proxy authorized users";
@@ -7903,6 +7908,8 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_def   = "";
 	m->m_flags = PF_TEXTAREA;
+	m->m_page  = PAGE_SPIDERPROXIES;
+	m->m_obj   = OBJ_CONF;
 	m++;
 
 
