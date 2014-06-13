@@ -1041,7 +1041,7 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 		// set it. now our TYPE_CHARPTR will just be set to it directly
 		// to save memory...
 		setParm ( (char *)THIS , m, j, 0, v, false,//not html enc
-			  true );
+			  false ); // true );
 		// need to save it
 		//if ( THIS != (char *)&g_conf ) 
 		//	((CollectionRec *)THIS)->m_needsSave = true;
@@ -1916,8 +1916,9 @@ bool Parms::printParm ( SafeBuf* sb,
 				//			  false);
 
 			// and cgi parm if it exists
-			if ( m->m_def && m->m_scgi )
-				sb->safePrintf(" CGI override: %s.",m->m_scgi);
+			//if ( m->m_def && m->m_scgi )
+			//	sb->safePrintf(" CGI override: %s.",m->m_scgi);
+			sb->safePrintf(" CGI: %s.",m->m_cgi);
 			// and default value if it exists
 			if ( m->m_def && m->m_def[0] && t != TYPE_CMD ) {
 				char *d = m->m_def;
@@ -2187,6 +2188,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		long size = m->m_size;
 		char *sp = NULL;
 		if ( s && *s ) sp = *(char **)s;
+		if ( ! sp ) sp = "";
 		if ( m->m_flags & PF_TEXTAREA ) {
 			sb->safePrintf ("<textarea name=%s rows=10 cols=80>",
 					cgi);
@@ -2473,304 +2475,72 @@ char *Parms::getTHIS ( HttpRequest *r , long page ) {
 }
 */
 
-/*
 
-//because this can do commands which block, now we pass a callback
-//with the request and socket in case they want to block until
-//it completes.
+// now we use this to set SearchInput and GigablastRequest
 bool Parms::setFromRequest ( HttpRequest *r , 
-			     //long user ,
 			     TcpSocket* s,
-			     bool (*callback)(TcpSocket *s , HttpRequest *r),
-			     CollectionRec *newcr ) {
-	bool retval = true;
+			     CollectionRec *newcr ,
+			     char *THIS ,
+			     long objType ) {
+
 	// get the page from the path... like /sockets --> PAGE_SOCKETS
-	long page = g_pages.getDynamicPageNumber ( r );
-	// is it a collection?
-	char *THIS = getTHIS ( r , page );
-	// override? THIS will point to default main coll, so override it
-	if ( newcr ) THIS = (char *)newcr;
+	//long page = g_pages.getDynamicPageNumber ( r );
+
+	// use convertHttpRequestToParmList() for these because they
+	// are persistent records that are updated on every shard.
+	if ( objType == OBJ_COLL ) { char *xx=NULL;*xx=0; }
+	if ( objType == OBJ_CONF ) { char *xx=NULL;*xx=0; }
+
 	// ensure valid
 	if ( ! THIS ) {
 		// it is null when no collection explicitly specified...
-		log(LOG_LOGIC,"admin: THIS is null for page %li.",page);
-		return retval;
+		log(LOG_LOGIC,"admin: THIS is null for setFromRequest");
+		char *xx=NULL;*xx=0; 
 	}
-	// . clear all the checkbox parms for this page
-	// . if they are unchecked, no cgi parm is provided by the browser!!
-	char *action =  r->getString ( "action" );
-	if ( action && strcmp(action,"submit" )==0 && 
-	     (page == PAGE_SPIDER || page==PAGE_FILTERS) ) {
-		// || page == PAGE_PRIORITIES) ) {
-		for ( long i = 0 ; i < m_numParms ; i++ ) {
-			Parm *m = &m_parms[i];
-			if ( m->m_page != page                ) continue;
-			if ( m->m_type != TYPE_PRIORITY_BOXES &&
-			     m->m_type != TYPE_CHECKBOX         ) continue;
-			// clear it
-			for ( long j = 0 ; j < m->m_max ; j++ ) // m_fixed
-				*(THIS + m->m_off + j) = 0;
-		}
-	}
-	// JAB - invalidate the regex if URL FILTER submit is pressed
-	//if ( action && strcmp(action,"submit" )==0 && page == PAGE_FILTERS) {
-	//	if ( THIS != (char *)&g_conf )
-	//		((CollectionRec*) THIS)->invalidateRegEx ();
-	//}
 
-	// reset the sitedb filters table if submitted changes
-	//if ( action && strcmp(action,"submit" )==0 && page == PAGE_RULES ) {
-	//	if ( THIS != (char *)&g_conf )
-	//		((CollectionRec*) THIS)->m_updateSiteRulesTable=1;
-	//}
+	// need this for searchInput which takes default from "cr"
+	CollectionRec *cr = g_collectiondb.getRec ( r , true );
 
-	bool changedUrlFilters = false;
+	setToDefault ( THIS , objType , cr );
 
 	// loop through cgi parms
 	for ( long i = 0 ; i < r->getNumFields() ; i++ ) {
 		// get cgi parm name
 		char *field = r->getField    ( i );
-		long  flen  = r->getFieldLen ( i );
-		// get index into array, if it is an array, otherwise, an = -1
-		char *d = field + flen ;
-		while ( d > field && is_digit ( *(d-1) ) ) d--;
-		long an = 0;
-		if ( is_digit ( *d ) ) an = atol ( d );
-		// ensure we are valid
-		if ( an < 0 ) {
-			log("admin: Invalid removal of element"
-			    "%li in array.", an);
-			continue;
-		}
-		char cc = *d;
-		*d = '\0';
-		bool insert = false;
-		if ( strncmp ( field , "ins_" , 4 ) == 0 ) {
-			insert = true;
-			field += 4;
-		}
-		bool remove = false;
-		// if it begins with "rm_" it is an array removal request
-		if ( strncmp ( field , "rm_" , 3 ) == 0 ) {
-			remove = true;
-			field +=3 ;
-		}
 		// find in parms list
 		long  j;
 		Parm *m;
 		for ( j = 0 ; j < m_numParms ; j++ ) {
 			// get it
 			m = &m_parms[j];
-			// . skip if offset is negative, that means none
-			// . no, could be a command
-			//if ( m->m_off < 0 ) continue;
+			// skip if not our type
+			if ( m->m_obj != objType ) continue;
+			// skip if offset is negative, that means none
+			if ( m->m_off < 0 ) continue;
 			// skip if no cgi parm, may not be configurable now
 			if ( ! m->m_cgi ) continue;
-			if ( m->m_type == TYPE_TIME ){
-				char *cgi = m->m_cgi;
-				long  len = gbstrlen(cgi);
-				if (strncmp(field,cgi,len)) continue;
-				// if not the hour skip it
-				if (flen != len + 2 ) continue;
-				if (field[flen-2] != 'h' ) continue;
-				if (field[flen-1] != 'r' ) continue;
-				// we got a match
-			}
-				
-			// . compare up to first parm's cgi field name
-			// . date parms append letters to their base for 
-			//   the year,month,day,hour,minute
-			else if ( m->m_type==TYPE_DATE || 
-				  m->m_type==TYPE_DATE2 ) {
-				char *cgi = m->m_cgi;
-				long  len = gbstrlen(cgi);
-				if (strncmp(field,cgi,len)) continue;
-				// if not the year skip it
-				if (flen != len + 2 ) continue;
-				if (field[flen-2] != 'y' ) continue;
-				if (field[flen-1] != 'r' ) continue;
-				// we got a match
-			}
 			// otherwise, must match the cgi name exactly
-			else if ( strcmp ( field,m->m_cgi ) != 0 ) continue;
-			// make sure we got the right parms for what we want
-			if (THIS == (char *)&g_conf && m->m_obj != OBJ_CONF ) 
-				continue;
-			if (THIS != (char *)&g_conf && m->m_obj == OBJ_CONF ) 
-				continue;
-			// got it
-			break;
+			if ( strcmp ( field,m->m_cgi ) == 0 ) break;
 		}
-		// restore the field name in the cgi part of the url
-		*d = cc;
 		// bail if the cgi field is not in the parms list
 		if ( j >= m_numParms ) continue;
-		// parm "m" must be from the same page as the page we are on
-		// UNLESS parm is PAGE_NONE. that way CommandPowerNotice()
-		// will work.
-		bool onPage = true;
-		if ( m->m_page != page && m->m_page != PAGE_NONE ) 
-			onPage = false;
-		// if showing the url filters page on the crawlbot/diffbot page
-		// then allow this to go through!
-		if ( ! onPage && 
-		     m->m_page == PAGE_FILTERS &&
-		     page      == PAGE_CRAWLBOT )
-			onPage = true;
-		// if parm is not on the page we are viewing, skip it!
-		if ( ! onPage ) continue;
-		// if they provided a url filters parm, then assume they
-		// are changing the url filters and reset waiting tree
-		if ( m->m_page == PAGE_FILTERS ) changedUrlFilters = true;
-		// insert row above it if we should (only applicable to 
-		// non-fixed arrays)
-		if ( insert && m->m_max > 1 ) {
-			// get everyone in his row
-			long a = j;
-			long b = j;
-			long rowid = m_parms[j].m_rowid;
-			while ( rowid>=0 && a-1>=0 && 
-				m_parms[a-1].m_rowid==rowid ) a--;
-			while ( rowid>=0 && b+1<m_numParms && 
-				m_parms[b+1].m_rowid==rowid ) b++;
-			for ( long k = a ; k <= b ; k++ )
-				insertParm ( k , an , THIS );
-			// need to save it
-			if ( THIS != (char *)&g_conf ) 
-				((CollectionRec *)THIS)->m_needsSave = true;
-			continue;			
-		}
-		// remove it if we should (only applicable to non-fixed arrays)
-		if ( remove && m->m_max > 1 ) {
-			// get everyone in his row
-			long a = j;
-			long b = j;
-			long rowid = m_parms[j].m_rowid;
-			while ( rowid>=0 && a-1>=0 && 
-				m_parms[a-1].m_rowid==rowid ) a--;
-			while ( rowid>=0 && b+1<m_numParms && 
-				m_parms[b+1].m_rowid==rowid ) b++;
-			for ( long k = a ; k <= b ; k++ )
-				removeParm ( k , an , THIS );
-			// need to save it
-			if ( THIS != (char *)&g_conf ) 
-				((CollectionRec *)THIS)->m_needsSave = true;
-			continue;
-		}
-		// value of cgi parm
-		char *v;
-		// used to build a proper date or time from various cgi vars
-		char ddd[64];
-		if ( m->m_type == TYPE_TIME ) {
-			char *cgi = m->m_cgi;
-			// set the value
-			char cgihr  [10];
-			char cgimin [10];
-			sprintf ( cgihr  , "%shr"  , cgi );
-			sprintf ( cgimin , "%smin" , cgi );
-			long hr  = r->getLong  (cgihr  , 0    ) ;
-			long min = r->getLong  (cgimin , 0    ) ;
-
-			if ( hr < 0 || hr > 23 ) hr = 0;
-			if ( min < 0 || min > 59 ) min = 0;
-			sprintf ( ddd , "%02li:%02li", hr, min );
-			v = ddd;
-		}
-
-		// if we matched a date parm, set the value special
-		else if ( m->m_type == TYPE_DATE || m->m_type == TYPE_DATE2 ) {
-			char *cgi = m->m_cgi;
-			// set the value
-			char cgiyr  [10];
-			char cgimon [10];
-			char cgiday [10];
-			char cgihr  [10];
-			char cgimin [10];
-			char cgisec [10];
-			sprintf ( cgiyr  , "%syr"  , cgi );
-			sprintf ( cgimon , "%smon" , cgi );
-			sprintf ( cgiday , "%sday" , cgi );
-			sprintf ( cgihr  , "%shr"  , cgi );
-			sprintf ( cgimin , "%smin" , cgi );
-			sprintf ( cgisec , "%ssec" , cgi );
-			static char *mnames[] = {
-				"Jan","Feb","Mar","Apr","May","Jun",
-				"Jul","Aug","Sep","Oct","Nov","Dec"};
-			long mm = r->getLong(cgimon , 0);
-			if ( mm < 0 || mm > 11 ) mm = 0;
-			sprintf ( ddd , "%li %s %li %li:%li:%li",
-				  r->getLong  (cgiday , 0    ) ,
-				  mnames[mm],
-				  r->getLong  (cgiyr  , 2004 ) ,
-				  r->getLong  (cgihr  , 0    ) ,
-				  r->getLong  (cgimin , 0    ) ,
-				  r->getLong  (cgisec , 0    ) );
-			v = ddd;
-		}
-		// get the new value (null terminated)
-		else v = r->getValue ( i );
+		// get the value of cgi parm (null terminated)
+		char *v = r->getValue ( i );
+		// empty?
+		if ( ! v ) continue;
 		// . skip if no value was provided
 		// . unless it was a string! so we can make them empty.
 		if ( v[0] == '\0' && 
 		     m->m_type != TYPE_STRING && 
 		     m->m_type != TYPE_STRINGBOX ) continue;
-		// if a command, do it
-		if ( m->m_type == TYPE_CMD ) {
-			if(! m->m_func (s, r, callback) ) {
-				//sanity check
-				if(!retval) {
-					//this means that we are trying to 
-					//do two commands which block, who
-					//calls the callback?
-					log(LOG_LOGIC,"admin: two blocking"
-					    "commands issued at the same"
-					    "time.");
-					char *xx = NULL; *xx = 0;
-				}
-				retval = false;
-			}
-			continue;
-		}
-		// skip if offset is negative, that means none
-		if ( m->m_off < 0 ) continue;
-		// skip if no permission
-		//if ( (m->m_perms & user) == 0 ) continue;
-		//if (m->m_type == TYPE_PRIORITY_BOXES)
-		//	log("PRIORITY BOX");
 		// set it
-		setParm ( (char *)THIS , m, j, an, v, false,//not html enc
-			  true );
-		// need to save it
-		if ( THIS != (char *)&g_conf ) 
-			((CollectionRec *)THIS)->m_needsSave = true;
-		// . ensure our array element count is at least that
-		// . do we have an array? skip if not.
-		//if ( m->m_max <= 0 ) continue;
-		// . is this element we're adding bumping up the count?
-		// . array count is 4 bytes before the array
-		//char *pos =  (char *)THIS + m->m_off - 4 ;
-		// set the count to it if it is bigger than current count
-		//if ( an + 1 > *(long *)pos ) *(long *)pos = an + 1; mdw
+		setParm ( (char *)THIS , m, j, 0, v, false,//not html enc
+			  false );//true );
 	}
 
-	// have to reset and recompute "waitingtree" if url filters change
-	if ( changedUrlFilters && THIS != (char *)&g_conf ) {
-		// cast it
-		CollectionRec *cr = (CollectionRec *)THIS;
-		// to prevent us having to rebuild doledb/waitingtree at startup
-		// we need to make the spidercoll here so it is not null
-		SpiderColl *sc = g_spiderCache.getSpiderColl(cr->m_collnum);
-		// get it
-		//SpiderColl *sc = cr->m_spiderColl;
-		// this will rebuild the waiting tree
-		if ( sc ) sc->urlFiltersChanged();
-	}
-
-	// so g_spiderCache can reload if sameDomainWait, etc. have changed
-	g_collectiondb.updateTime();
-	return retval;
+	return true;
 }
-*/
+
 
 bool Parms::insertParm ( long i , long an ,  char *THIS ) {
 	Parm *m = &m_parms[i];
@@ -2848,6 +2618,9 @@ bool Parms::removeParm ( long i , long an , char *THIS ) {
 
 void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 		      bool isHtmlEncoded , bool fromRequest ) {
+
+	if ( fromRequest ) { char *xx=NULL;*xx=0; }
+
 	// . this is just for setting CollectionRecs, so skip if offset < 0
 	// . some parms are just for SearchInput (search parms)
 	if ( m->m_off < 0 ) return;
@@ -3125,7 +2898,7 @@ Parm *Parms::getParmFromParmHash ( long parmHash ) {
 }
 
 
-void Parms::setToDefault ( char *THIS , char objType ) {
+void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 	// init if we should
 	init();
 
@@ -3171,6 +2944,15 @@ void Parms::setToDefault ( char *THIS , char objType ) {
 			    "g_conf and be declared AFTER PAGE_CGIPARMS in "
 			    "Pages.h. Title=%s",m->m_title);
 			char *xx = NULL; *xx = 0;
+		}
+		// if defOff >= 0 get from cr like for searchInput vals
+		// whose default is from the collectionRec...
+		if ( m->m_defOff >= 0 && argcr ) {
+			if ( ! argcr ) { char *xx=NULL;*xx=0; }
+			char *def = m->m_defOff+(char *)argcr;
+			char *dst = (char *)THIS + m->m_off;
+			memcpy ( dst , def , m->m_size );
+			continue;
 		}
 		// leave arrays empty, set everything else to default
 		if ( m->m_max <= 1 ) {
@@ -3378,10 +3160,10 @@ bool Parms::setFromFile ( void *THIS        ,
 			// if it was ONLY a search input parm, with no
 			// default value that can be changed in the 
 			// CollectionRec then skip it
-			if ( m->m_soff  != -1 && 
-			     m->m_off   == -1 &&
-			     m->m_smaxc == -1 ) 
-				continue;
+			// if ( m->m_soff  != -1 && 
+			//      m->m_off   == -1 &&
+			//      m->m_smaxc == -1 ) 
+			// 	continue;
 			// . if it is a string, like <adminIp> and default is 
 			//   NULL then don't worry about reporting it
 			// . no, just make the default "" then
@@ -4494,6 +4276,7 @@ void Parms::init ( ) {
 		// filter profile parm above the url filters table rows.
 		m_parms[i].m_colspan= -1; 
 		m_parms[i].m_def    = NULL       ; // for detecting if not set
+		m_parms[i].m_defOff = -1; // if default pts to collrec parm
 		m_parms[i].m_type   = TYPE_NONE  ; // for detecting if not set
 		m_parms[i].m_page   = -1         ; // for detecting if not set
 		m_parms[i].m_obj    = -1         ; // for detecting if not set
@@ -4512,9 +4295,9 @@ void Parms::init ( ) {
 		m_parms[i].m_save   =  1 ; // save to xml file?
 		m_parms[i].m_min    = -1 ; // min value (for long parms)
 		// search fields
-		m_parms[i].m_sparm  = 0;
-		m_parms[i].m_scmd   = NULL;//"/search";
-		m_parms[i].m_scgi   = NULL;// defaults to m_cgi
+		//m_parms[i].m_sparm  = 0;
+		//m_parms[i].m_scmd   = NULL;//"/search";
+		//m_parms[i].m_scgi   = NULL;// defaults to m_cgi
 		m_parms[i].m_flags  = 0;
 		m_parms[i].m_icon   = NULL;
 		m_parms[i].m_class  = NULL;
@@ -4526,7 +4309,7 @@ void Parms::init ( ) {
 		m_parms[i].m_smaxc  = -1;  // max in collection rec
 		m_parms[i].m_smin   = 0x80000000; // 0xffffffff;
 		m_parms[i].m_smax   = 0x7fffffff;
-		m_parms[i].m_soff   = -1; // offset into SearchInput
+		//m_parms[i].m_soff   = -1; // offset into SearchInput
 		m_parms[i].m_sprpg  =  1; // propagate to other pages via GET
 		m_parms[i].m_sprpp  =  1; // propagate to other pages via POST
 		m_parms[i].m_sync   = true;
@@ -5268,8 +5051,10 @@ void Parms::init ( ) {
 	m++;
 	*/
 
+	/*
 	m->m_title = "do spell checking";
-	m->m_desc  = "Spell check using the dictionary.";
+	m->m_desc  = "Spell check using the dictionary. Will be available "
+		"again soon.";
 	m->m_off   = (char *)&g_conf.m_doSpellChecking - g;
 	m->m_cgi   = "dospellchecking";
 	m->m_def   = "1"; 
@@ -5278,6 +5063,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_CONF;
 	m++;
+	*/
 
 	m->m_title = "do narrow search";
 	m->m_desc  = "give narrow search suggestions.";
@@ -8066,7 +7852,6 @@ void Parms::init ( ) {
 	m->m_size  = AUTOBAN_TEXT_SIZE;
 	m->m_group = 1;
 	m->m_def   = "";
-	m->m_sparm = 0;
 	m->m_plen  = (char *)&g_conf.m_banIpsLen - g; // length of string
 	m++;
 
@@ -8079,7 +7864,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_AUTOBAN;
 	m->m_size  = AUTOBAN_TEXT_SIZE;
 	m->m_group = 1;
-	m->m_sparm = 0;
 	m->m_def   = "";
 	m->m_plen  = (char *)&g_conf.m_allowIpsLen - g; // length of string
 	m->m_obj   = OBJ_CONF;
@@ -8098,7 +7882,6 @@ void Parms::init ( ) {
 	m->m_size  = AUTOBAN_TEXT_SIZE;
 	m->m_group = 1;
 	m->m_def   = "";
-	m->m_sparm = 0;
 	m->m_plen  = (char *)&g_conf.m_validCodesLen - g; // length of string
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -8117,7 +7900,6 @@ void Parms::init ( ) {
 	m->m_size  = AUTOBAN_TEXT_SIZE;
 	m->m_group = 1;
 	m->m_def   = "";
-	m->m_sparm = 0;
 	m->m_plen  = (char *)&g_conf.m_extraParmsLen - g; // length of string
 	m->m_obj   = OBJ_CONF;
 	m++;
@@ -8133,7 +7915,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_AUTOBAN;
 	m->m_size  = AUTOBAN_TEXT_SIZE;
 	m->m_group = 1;
-	m->m_sparm = 0;
 	m->m_def   = "";
 	m->m_plen  = (char *)&g_conf.m_banRegexLen - g; // length of string
 	m->m_obj   = OBJ_CONF;
@@ -9902,7 +9683,7 @@ void Parms::init ( ) {
 		"last received error is a time out? "
 		"If your internet connection is flaky you may say "
 		"no here to ensure you do not lose important docs.";
-	m->m_cgi   = "dt";
+	m->m_cgi   = "dtod";
 	m->m_off   = (char *)&cr.m_deleteTimeouts - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
@@ -11478,9 +11259,9 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "0";
-	m->m_sparm = 1;
-	m->m_scgi  = "ri";
-	m->m_soff  = (char *)&si.m_restrictIndexdbForQuery - y;
+	//m->m_sparm = 1;
+	//m->m_scgi  = "ri";
+	//m->m_soff  = (char *)&si.m_restrictIndexdbForQuery - y;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
@@ -11510,61 +11291,103 @@ void Parms::init ( ) {
 		"to false to fix dmoz bug.";
 	m->m_cgi   = "rcd";
 	m->m_off   = (char *)&cr.m_rcache - x;
-	m->m_soff  = (char *)&si.m_rcache - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_sparm = 1;
-	m->m_scgi  = "rcache";
-	m->m_sprpg = 0;
-	m->m_sprpp = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "do spell checking";
+
+	m->m_title = "read from cache";
+	m->m_desc  = "Should we read search results from the cache? Set "
+		"to false to fix dmoz bug.";
+	m->m_cgi   = "rcache";
+	m->m_off   = (char *)&si.m_rcache - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_sprpg = 0;
+	m->m_sprpp = 0;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+	m->m_title = "use cache";
+	m->m_desc  = "Use 0 if Gigablast should not read or write from "
+		"any caches at any level.";
+	m->m_def   = "-1";
+	m->m_off   = (char *)&si.m_useCache - y;
+	m->m_type  = TYPE_CHAR;
+	m->m_cgi   = "usecache";
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+	m->m_title = "write to cache";
+	m->m_desc  = "Use 0 if Gigablast should not write to "
+		"any caches at any level.";
+	m->m_def   = "-1";
+	m->m_off   = (char *)&si.m_wcache - y;
+	m->m_type  = TYPE_CHAR;
+	m->m_cgi   = "wcache";
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+	m->m_title = "do spell checking by default";
 	m->m_desc  = "If enabled while using the XML feed, "
 		"when Gigablast finds a spelling recommendation it will be "
 		"included in the XML <spell> tag. Default is 0 if using an "
 		"XML feed, 1 otherwise.";
 	m->m_cgi   = "spell";
 	m->m_off   = (char *)&cr.m_spellCheck - x;
-	m->m_soff  = (char *)&si.m_spellCheck - y;
+	//m->m_soff  = (char *)&si.m_spellCheck - y;
+	//m->m_sparm = 1;
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "1";
-	m->m_sparm = 1;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_flags = PF_API | PF_NOSAVE;
+	m++;
+
+	m->m_title = "do spell checking";
+	m->m_desc  = "If enabled while using the XML feed, "
+		"when Gigablast finds a spelling recommendation it will be "
+		"included in the XML <spell> tag. Default is 0 if using an "
+		"XML feed, 1 otherwise. Will be availble again soon.";
+	m->m_cgi   = "spell";
+	m->m_off   = (char *)&si.m_spellCheck - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m->m_def   = "1";
+	m->m_flags = PF_API;
 	m++;
 
 	m->m_title = "query";
 	m->m_desc  = "The query to perform. See <a href=/help.html>help</a>.";
 	m->m_obj   = OBJ_SI;
 	m->m_page  = PAGE_NONE;
-	m->m_soff  = (char *)&si.m_query - y;
-	m->m_type  = TYPE_STRING;
-	m->m_sparm = 1;
-	m->m_scgi  = "q";
-	m->m_size  = MAX_QUERY_LEN;
-	//m->m_sprpg = 0; // do not store query, needs to be last so related 
-	//m->m_sprpp = 0; // topics can append to it
+	m->m_off   = (char *)&si.m_query - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_cgi   = "q";
+	//m->m_size  = MAX_QUERY_LEN;
 	m->m_flags = PF_COOKIE | PF_WIDGET_PARM | PF_API;
 	m++;
 
-	m->m_title = "query2";
-	m->m_desc  = "X is the query on which to score inlinkers.";
-	m->m_obj   = OBJ_SI;
-	m->m_page  = PAGE_NONE;
-	m->m_soff  = (char *)&si.m_query2 - y;
-	m->m_type  = TYPE_STRING;
-	m->m_sparm = 1;
-	m->m_scgi  = "q2";
-	m->m_size  = MAX_QUERY_LEN;
-	m->m_sprpg = 0; // do not store query, needs to be last so related 
-        m->m_sprpp = 0; // topics can append to it
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m++;
+	// m->m_title = "query2";
+	// m->m_desc  = "The query on which to score inlinkers.";
+	// m->m_obj   = OBJ_SI;
+	// m->m_page  = PAGE_NONE;
+	// m->m_off   = (char *)&si.m_query2 - y;
+	// m->m_type  = TYPE_CHARPTR;//STRING;
+	// m->m_cgi   = "qq";
+	// m->m_size  = MAX_QUERY_LEN;
+	// m->m_sprpg = 0; // do not store query, needs to be last so related 
+        // m->m_sprpp = 0; // topics can append to it
+	// m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	// m++;
 
 	m->m_title = "number of results per query";
 	m->m_desc  = "The number of results returned per page.";
@@ -11572,12 +11395,9 @@ void Parms::init ( ) {
 	m->m_def   = "10";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
-	// paying clients should have no max necessarily
-	//m->m_smaxc = (char *)&cr.m_maxSearchResultsPerQuery - x;
-	m->m_soff  = (char *)&si.m_docsWanted - y;
+	m->m_off   = (char *)&si.m_docsWanted - y;
 	m->m_type  = TYPE_LONG;
-	m->m_sparm = 1;
-	m->m_scgi  = "n";
+	m->m_cgi   = "n";
 	m->m_flags = PF_WIDGET_PARM | PF_API;
 	m->m_smin  = 0;
 	m++;
@@ -11590,25 +11410,20 @@ void Parms::init ( ) {
 	m->m_cgi   = "c";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
-	m->m_type  = TYPE_SAFEBUF;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
 	m->m_def   = NULL;
 	m->m_flags = PF_API;
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_coll - y;
+	m->m_off   = (char *)&si.m_coll - y;
 	m++;
 
 	m->m_title = "first result num";
 	m->m_desc  = "Start displaying at search result #X. Starts at 0.";
 	m->m_def   = "0";
-	// paying clients should have no max necessarily
-	//this gets enforced elsewhere
-	//m->m_smaxc = (char *)&cr.m_maxSearchResults - x;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
-	m->m_soff  = (char *)&si.m_firstResultNum - y;
+	m->m_off   = (char *)&si.m_firstResultNum - y;
 	m->m_type  = TYPE_LONG;
-	m->m_sparm = 1;
-	m->m_scgi  = "s";
+	m->m_cgi   = "s";
 	m->m_smin  = 0;
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
@@ -11622,14 +11437,29 @@ void Parms::init ( ) {
 		"Gigablast could run out of memory.";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
-	m->m_soff  = (char *)&si.m_streamResults - y;
+	m->m_off   = (char *)&si.m_streamResults - y;
 	m->m_type  = TYPE_CHAR;
 	m->m_def   = "0";
-	m->m_sparm = 1;
-	m->m_scgi  = "stream";
+	m->m_cgi   = "stream";
 	m->m_flags = PF_API;
+	m->m_sprpg = 0; // propagate to next 10
+	m->m_sprpp = 0;
 	m++;
 
+
+	m->m_title = "get docid scoring info by default";
+	m->m_desc  = "Get scoring information for each result so you "
+		"can see how each result is scored. You must explicitly "
+		"request this using &scores=1 for the XML feed because it "
+		"is not included by default.";
+	m->m_cgi   = "scores"; // dedupResultsByDefault";
+	m->m_off   = (char *)&cr.m_getDocIdScoringInfo - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m->m_def   = "1";
+	m->m_flags = PF_API;
+	m++;
 
 	m->m_title = "get docid scoring info";
 	m->m_desc  = "Get scoring information for each result so you "
@@ -11637,15 +11467,27 @@ void Parms::init ( ) {
 		"request this using &scores=1 for the XML feed because it "
 		"is not included by default.";
 	m->m_cgi   = "scores"; // dedupResultsByDefault";
-	m->m_off   = (char *)&cr.m_getDocIdScoringInfo - x;
-	m->m_soff  = (char *)&si.m_getDocIdScoringInfo - y;
+	m->m_off   = (char *)&si.m_getDocIdScoringInfo - y;
 	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m->m_def   = NULL;
+	m->m_flags = PF_API;
+	// get default from collectionrec item
+	m->m_defOff= (char *)&cr.m_getDocIdScoringInfo - x;
+	m++;
+
+	m->m_title = "do query expansion by default";
+	m->m_desc  = "If enabled, query expansion will expand your query "
+		"to include the various forms and "
+		"synonyms of the query terms.";
+	m->m_def   = "1";
+	m->m_off   = (char *)&cr.m_queryExpansion - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_cgi  = "qe";
+	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
-	m->m_def   = "1";
-	m->m_sparm = 1;
-	m->m_flags = PF_API;
-	m->m_scgi  = "scores";
 	m++;
 
 	m->m_title = "do query expansion";
@@ -11653,15 +11495,12 @@ void Parms::init ( ) {
 		"to include the various forms and "
 		"synonyms of the query terms.";
 	m->m_def   = "1";
-	m->m_off   = (char *)&cr.m_queryExpansion - x;
-	m->m_soff  = (char *)&si.m_queryExpansion - y;
+	m->m_off   = (char *)&si.m_queryExpansion - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_sparm = 1;
 	m->m_cgi  = "qe";
-	m->m_scgi  = "qe";
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_SEARCH;
-	m->m_obj   = OBJ_COLL;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
 	m++;
 
 	// more general parameters
@@ -11717,6 +11556,18 @@ void Parms::init ( ) {
 	m++;
 
 
+	m->m_title = "user ip";
+	m->m_desc  = "The ip address of the searcher. We can pass back "
+		"for use in the autoban technology which bans abusive IPs.";
+	m->m_obj   = OBJ_SI;
+	m->m_page  = PAGE_NONE;
+	m->m_off   = (char *)&si.m_userIpStr - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_cgi   = "uip";
+	m->m_flags = PF_COOKIE | PF_WIDGET_PARM | PF_API;
+	m++;
+
+
 
 	m->m_title = "max title len";
 	m->m_desc  = "What is the maximum number of "
@@ -11740,43 +11591,52 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_considerTitlesFromBody - y;
+	//m->m_soff  = (char *)&si.m_considerTitlesFromBody - y;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
 
-	m->m_title = "site cluster";
+	m->m_title = "site cluster by default";
 	m->m_desc  = "Should search results be site clustered? This "
 		"limits each site to appearing at most twice in the "
 		"search results. Sites are subdomains for the most part, "
 		"like abc.xyz.com.";
 	m->m_cgi   = "scd";
 	m->m_off   = (char *)&cr.m_siteClusterByDefault - x;
-	m->m_soff  = (char *)&si.m_doSiteClustering - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_sparm = 1;
-	m->m_scgi  = "sc";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
+	m++;
+
+	m->m_title = "site cluster";
+	m->m_desc  = "Should search results be site clustered? This "
+		"limits each site to appearing at most twice in the "
+		"search results. Sites are subdomains for the most part, "
+		"like abc.xyz.com.";
+	m->m_cgi   = "sc";
+	m->m_off   = (char *)&si.m_doSiteClustering - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "use min ranking algo";
 	m->m_desc  = "Should search results be ranked using this algo?";
 	//m->m_cgi   = "uma";
 	//m->m_off   = (char *)&cr.m_siteClusterByDefault - x;
-	m->m_soff  = (char *)&si.m_useMinAlgo - y;
+	m->m_off   = (char *)&si.m_useMinAlgo - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	// seems, good, default it on
 	m->m_def   = "1";
-	m->m_sparm = 1;
-	m->m_scgi  = "uma";
+	m->m_cgi  = "uma";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
@@ -11785,52 +11645,48 @@ void Parms::init ( ) {
 	// score is accumulated
 	m->m_title = "real max top";
 	m->m_desc  = "Only score up to this many inlink text term pairs";
-	m->m_soff  = (char *)&si.m_realMaxTop - y;
+	m->m_off   = (char *)&si.m_realMaxTop - y;
 	m->m_type  = TYPE_LONG;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "10";
-	m->m_sparm = 1;
-	m->m_scgi  = "mit";
+	m->m_cgi   = "rmt";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "use new ranking algo";
 	m->m_desc  = "Should search results be ranked using this new algo?";
-	m->m_soff  = (char *)&si.m_useNewAlgo - y;
+	m->m_off   = (char *)&si.m_useNewAlgo - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	// seems, good, default it on
 	m->m_def   = "1";
-	m->m_sparm = 1;
-	m->m_scgi  = "una";
+	m->m_cgi   = "una";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 	m->m_title = "do max score algo";
 	m->m_desc  = "Quickly eliminated docids using max score algo";
-	m->m_soff  = (char *)&si.m_doMaxScoreAlgo - y;
+	m->m_off   = (char *)&si.m_doMaxScoreAlgo - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m->m_def   = "1";
-	m->m_sparm = 1;
-	m->m_scgi  = "dmsa";
+	m->m_cgi   = "dmsa";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
 
 	m->m_title = "use fast intersection algo";
 	m->m_desc  = "Should we try to speed up search results generation?";
-	m->m_soff  = (char *)&si.m_fastIntersection - y;
+	m->m_off   = (char *)&si.m_fastIntersection - y;
 	m->m_type  = TYPE_CHAR;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	// turn off until we debug
 	m->m_def   = "-1";
-	m->m_sparm = 1;
-	m->m_scgi  = "fi";
+	m->m_cgi   = "fi";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m++;
 
@@ -11848,42 +11704,69 @@ void Parms::init ( ) {
 	m->m_flags = PF_API;
 	m++;
 
-	m->m_title = "dedup results";
+	m->m_title = "dedup results by default";
 	m->m_desc  = "Should duplicate search results be removed? This is "
 		"based on a content hash of the entire document. "
 		"So documents must be exactly the same for the most part.";
 	m->m_cgi   = "drd"; // dedupResultsByDefault";
 	m->m_off   = (char *)&cr.m_dedupResultsByDefault - x;
-	m->m_soff  = (char *)&si.m_doDupContentRemoval - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 1;
-	m->m_sparm = 1;
-	m->m_scgi  = "dr";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "percent similar dedup summary";
+	m->m_title = "dedup results";
+	m->m_desc  = "Should duplicate search results be removed? This is "
+		"based on a content hash of the entire document. "
+		"So documents must be exactly the same for the most part.";
+	m->m_cgi   = "dr"; // dedupResultsByDefault";
+	m->m_off   = (char *)&si.m_doDupContentRemoval - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_group = 1;
+	m->m_cgi   = "dr";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+	m->m_title = "percent similar dedup summary default value";
 	m->m_desc  = "If document summary is this percent similar "
 		"to a document summary above it, then remove it from the "
 		"search results. 100 means only to remove if exactly the "
 		"same. 0 means no summary deduping.";
 	m->m_cgi   = "psds";
 	m->m_off   = (char *)&cr.m_percentSimilarSummary - x;
-	m->m_soff  = (char *)&si.m_percentSimilarSummary - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "90";
 	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "pss";
 	m->m_smin  = 0;
 	m->m_smax  = 100;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;       
+
+	m->m_title = "percent similar dedup summary";
+	m->m_desc  = "If document summary is this percent similar "
+		"to a document summary above it, then remove it from the "
+		"search results. 100 means only to remove if exactly the "
+		"same. 0 means no summary deduping.";
+	m->m_cgi   = "pss";
+	m->m_off   = (char *)&si.m_percentSimilarSummary - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "90";
+	m->m_group = 0;
+	m->m_smin  = 0;
+	m->m_smax  = 100;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;       
+
 
 	m->m_title = "number of lines to use in summary to dedup";
 	m->m_desc  = "Sets the number of lines to generate for summary "
@@ -11902,20 +11785,30 @@ void Parms::init ( ) {
 	m++;       
 	
 
-	m->m_title = "dedup URLs";
+	m->m_title = "dedup URLs by default";
 	m->m_desc  = "Should we dedup URLs with case insensitivity? This is "
                      "mainly to correct duplicate wiki pages.";
 	m->m_cgi   = "ddu";
 	m->m_off   = (char *)&cr.m_dedupURLDefault - x;
-	m->m_soff  = (char *)&si.m_dedupURL - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "ddu";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
+	m++;
+
+	m->m_title = "dedup URLs";
+	m->m_desc  = "Should we dedup URLs with case insensitivity? This is "
+                     "mainly to correct duplicate wiki pages.";
+	m->m_cgi   = "ddu";
+	m->m_off   = (char *)&si.m_dedupURL - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
 	m++;
 
 
@@ -11923,30 +11816,43 @@ void Parms::init ( ) {
 	m->m_desc  = "Use language specific pages for home, etc.";
 	m->m_cgi   = "vhost";
 	m->m_off   = (char *)&cr.m_useLanguagePages - x;
-	m->m_soff  = (char *)&si.m_useLanguagePages - y;
+	//m->m_soff  = (char *)&si.m_useLanguagePages - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_sparm = 1;
-	m->m_scgi  = "vhost";
+	//m->m_scgi  = "vhost";
 	m->m_smin  = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	/*
-	m->m_title = "special query";
-	m->m_desc  = "List of docids to restrain results to.";
-	m->m_cgi   = "sq";
-	m->m_soff  = (char *)&si.m_sq - y;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
-	m->m_def   = "en_US";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "sq";
-	m++;
-	*/
+	// m->m_title = "special query";
+	// m->m_desc  = "List of docids to restrain results to.";
+	// m->m_cgi   = "sq";
+	// m->m_off   = (char *)&si.m_sq - y;
+	// m->m_type  = TYPE_CHARPTR;
+	// m->m_def   = NULL;
+	// m->m_group = 0;
+	// m++;
+
+	// m->m_title = "negative docids";
+	// m->m_desc  = "List of docids to ignore.";
+	// m->m_cgi   = "nodocids";
+	// m->m_off   = (char *)&si.m_noDocIds - y;
+	// m->m_type  = TYPE_CHARPTR;
+	// m->m_def   = NULL;
+	// m->m_group = 0;
+	// m++;
+
+	// m->m_title = "negative siteids";
+	// m->m_desc  = "Whitespace-separated list of 32-bit sitehashes "
+	//"to ignore.";
+	// m->m_cgi   = "nositeids";
+	// m->m_off   = (char *)&si.m_noSiteIds - y;
+	// m->m_type  = TYPE_CHARPTR;
+	// m->m_def   = NULL;
+	// m->m_group = 0;
+	// m++;
 
 	m->m_title = "use language weights";
 	m->m_desc  = "Use Language weights to sort query results. "
@@ -11954,17 +11860,36 @@ void Parms::init ( ) {
 		"higher ranking.";
 	m->m_cgi   = "lsort";
 	m->m_off   = (char *)&cr.m_enableLanguageSorting - x;
-	m->m_soff  = (char *)&si.m_enableLanguageSorting - y;
+	//m->m_soff  = (char *)&si.m_enableLanguageSorting - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 1;
-	m->m_sparm = 1;
-	m->m_scgi  = "lsort";
+	//m->m_scgi  = "lsort";
 	m->m_smin  = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
+
+	m->m_title = "sort language preference default";
+	m->m_desc  = "Default language to use for ranking results. "
+		//"This should only be used on limited collections. "
+		"Value should be any language abbreviation, for example "
+		"\"en\" for English. Use <i>xx</i> to give ranking "
+		"boosts to no language in particular. See the language "
+		"abbreviations at the bottom of the "
+		"<a href=/admin/filters>url filters</a> page.";
+	m->m_cgi   = "qlang";
+	m->m_off   = (char *)&cr.m_defaultSortLanguage - x;
+	m->m_type  = TYPE_STRING;
+	m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
+	m->m_def   = "xx";//_US";
+	m->m_group = 0;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
 
 	m->m_title = "sort language preference";
 	m->m_desc  = "Default language to use for ranking results. "
@@ -11975,18 +11900,34 @@ void Parms::init ( ) {
 		"abbreviations at the bottom of the "
 		"<a href=/admin/filters>url filters</a> page.";
 	m->m_cgi   = "qlang";
-	m->m_off   = (char *)&cr.m_defaultSortLanguage - x;
-	m->m_soff  = (char *)&si.m_defaultSortLanguage - y;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
+	m->m_off   = (char *)&si.m_defaultSortLang - y;
+	m->m_type  = TYPE_CHARPTR;
+	//m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
 	m->m_def   = "xx";//_US";
 	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "qlang";
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+
+
+	m->m_title = "sort country preference default";
+	m->m_desc  = "Default country to use for ranking results. "
+		//"This should only be used on limited collections. "
+		"Value should be any country code abbreviation, for example "
+		"\"us\" for United States. This is currently not working.";
+	m->m_cgi   = "qcountry";
+	m->m_off   = (char *)&cr.m_defaultSortCountry - x;
+	m->m_type  = TYPE_STRING;
+	m->m_size  = 2+1;
+	m->m_def   = "us";
+	m->m_group = 0;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
+
 
 	m->m_title = "sort country preference";
 	m->m_desc  = "Default country to use for ranking results. "
@@ -11994,17 +11935,14 @@ void Parms::init ( ) {
 		"Value should be any country code abbreviation, for example "
 		"\"us\" for United States. This is currently not working.";
 	m->m_cgi   = "qcountry";
-	m->m_off   = (char *)&cr.m_defaultSortCountry - x;
-	m->m_soff  = (char *)&si.m_defaultSortCountry - y;
-	m->m_type  = TYPE_STRING;
+	m->m_off   = (char *)&si.m_defaultSortCountry - y;
+	m->m_type  = TYPE_CHARPTR;
 	m->m_size  = 2+1;
 	m->m_def   = "us";
 	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "qcountry";
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_SEARCH;
-	m->m_obj   = OBJ_COLL;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
 	m++;
 
 	/*
@@ -12072,21 +12010,34 @@ void Parms::init ( ) {
 	*/
 
 	// for post query reranking 
-	m->m_title = "docs to check for post query demotion";
+	m->m_title = "docs to check for post query demotion by default";
 	m->m_desc  = "How many search results should we "
 		"scan for post query demotion? "
 		"0 disables all post query reranking. ";
 	m->m_cgi   = "pqrds";
 	m->m_off   = (char *)&cr.m_pqr_docsToScan - x;
-	m->m_soff  = (char *)&si.m_docsToScanForReranking - y;
+	//m->m_soff  = (char *)&si.m_docsToScanForReranking - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 1;
-	m->m_sparm = 1;
-	m->m_scgi  = "pqrds";
+	//m->m_scgi  = "pqrds";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
+	m++;
+
+	m->m_title = "docs to check for post query";
+	m->m_desc  = "How many search results should we "
+		"scan for post query demotion? "
+		"0 disables all post query reranking. ";
+	m->m_cgi   = "pqrds";
+	m->m_off   = (char *)&si.m_docsToScanForReranking - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_group = 1;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "demotion for foreign languages";
@@ -12096,12 +12047,11 @@ void Parms::init ( ) {
 		"A safe value is probably anywhere from 0.5 to 1. ";
 	m->m_cgi   = "pqrlang";
 	m->m_off   = (char *)&cr.m_languageWeightFactor - x;
-	m->m_soff  = (char *)&si.m_languageWeightFactor - y;
+	//m->m_soff  = (char *)&si.m_languageWeightFactor - y;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.999";
 	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "pqrlang";
+	//m->m_scgi  = "pqrlang";
 	m->m_smin  = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
@@ -12117,12 +12067,11 @@ void Parms::init ( ) {
 		"0 means no demotion.";
 	m->m_cgi   = "pqrlangunk";
 	m->m_off   = (char *)&cr.m_languageUnknownWeight- x;
-	m->m_soff  = (char *)&si.m_languageUnknownWeight- y;
+	//m->m_soff  = (char *)&si.m_languageUnknownWeight- y;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.0";
 	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "pqrlangunk";
+	//m->m_scgi  = "pqrlangunk";
 	m->m_smin  = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
@@ -12371,9 +12320,8 @@ void Parms::init ( ) {
 		"0 means no demotion. ";
 	m->m_cgi   = "pqrloct";
 	m->m_off   = (char *)&cr.m_pqr_demFactLocTitle - x;
-	m->m_sparm = 1;
-	m->m_scgi  = "pqrloct";
-	m->m_soff  = (char *)&si.m_pqr_demFactLocTitle - y;
+	//m->m_scgi  = "pqrloct";
+	//m->m_soff  = (char *)&si.m_pqr_demFactLocTitle - y;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.99";
 	m->m_group = 0;
@@ -12395,9 +12343,8 @@ void Parms::init ( ) {
 		"0 means no demotion. ";
 	m->m_cgi   = "pqrlocs";
 	m->m_off   = (char *)&cr.m_pqr_demFactLocSummary - x;
-	m->m_sparm = 1;
-	m->m_scgi  = "pqrlocs";
-	m->m_soff  = (char *)&si.m_pqr_demFactLocSummary - y;
+	//m->m_scgi  = "pqrlocs";
+	//m->m_soff  = (char *)&si.m_pqr_demFactLocSummary - y;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.95";
 	m->m_group = 0;
@@ -12419,9 +12366,8 @@ void Parms::init ( ) {
 		"0 means no demotion. ";
 	m->m_cgi   = "pqrlocd";
 	m->m_off   = (char *)&cr.m_pqr_demFactLocDmoz - x;
-	m->m_sparm = 1;
-	m->m_scgi  = "pqrlocd";
-	m->m_soff  = (char *)&si.m_pqr_demFactLocDmoz - y;
+	//m->m_scgi  = "pqrlocd";
+	//m->m_soff  = (char *)&si.m_pqr_demFactLocDmoz - y;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0.95";
 	m->m_group = 0;
@@ -12434,9 +12380,8 @@ void Parms::init ( ) {
 	m->m_desc  = "Demote locations that appear in gigabits.";
 	m->m_cgi   = "pqrlocg";
 	m->m_off   = (char *)&cr.m_pqr_demInTopics - x;
-	m->m_sparm = 1;
-	m->m_scgi  = "pqrlocg";
-	m->m_soff  = (char *)&si.m_pqr_demInTopics - y;
+	//m->m_scgi  = "pqrlocg";
+	//m->m_soff  = (char *)&si.m_pqr_demInTopics - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
@@ -12732,10 +12677,9 @@ void Parms::init ( ) {
 		"document, the higher it will score."
 		"0 means no demotion. ";
 	m->m_cgi   = "pqrprox";
-	m->m_scgi  = "pqrprox";
-	m->m_sparm = 1;
 	m->m_off   = (char *)&cr.m_pqr_demFactProximity - x;
-	m->m_soff  = (char *)&si.m_pqr_demFactProximity - y;
+	//m->m_scgi  = "pqrprox";
+	//m->m_soff  = (char *)&si.m_pqr_demFactProximity - y;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
@@ -12750,10 +12694,9 @@ void Parms::init ( ) {
 		"a link, or a list, the document will be punished."
 		"0 means no demotion. ";
 	m->m_cgi   = "pqrinsec";
-	m->m_scgi  = "pqrinsec";
-	m->m_sparm = 1;
+	//m->m_scgi  = "pqrinsec";
 	m->m_off   = (char *)&cr.m_pqr_demFactInSection - x;
-	m->m_soff  = (char *)&si.m_pqr_demFactInSection - y;
+	//m->m_soff  = (char *)&si.m_pqr_demFactInSection - y;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
@@ -12768,10 +12711,9 @@ void Parms::init ( ) {
 		"the original score, 0 will only use the indexed "
 		"score to break ties.";
 	m->m_cgi   = "pqrorig";
-	m->m_scgi  = "pqrorig";
-	m->m_sparm = 1;
+	//m->m_scgi  = "pqrorig";
 	m->m_off   = (char *)&cr.m_pqr_demFactOrigScore - x;
-	m->m_soff  = (char *)&si.m_pqr_demFactOrigScore - y;
+	//m->m_soff  = (char *)&si.m_pqr_demFactOrigScore - y;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "1";
 	m->m_group = 0;
@@ -12803,9 +12745,8 @@ void Parms::init ( ) {
 		" reduced by this percent.";
 	m->m_cgi   = "pqrspd";
 	m->m_off   = (char *)&cr.m_pqr_demFactSubPhrase - x;
-	m->m_soff  = (char *)&si.m_pqr_demFactSubPhrase - y;
-	m->m_sparm = 1;
-	m->m_scgi  = "pqrspd";
+	//m->m_soff  = (char *)&si.m_pqr_demFactSubPhrase - y;
+	//m->m_scgi  = "pqrspd";
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "0";
 	m->m_group = 0;
@@ -12819,9 +12760,8 @@ void Parms::init ( ) {
 		"which are in common with another search result.";
 	m->m_cgi   = "pqrcid";
 	m->m_off   = (char *)&cr.m_pqr_demFactCommonInlinks - x;
-	m->m_soff  = (char *)&si.m_pqr_demFactCommonInlinks - y;
-	m->m_sparm = 1;
-	m->m_scgi  = "pqrcid";
+	//m->m_soff  = (char *)&si.m_pqr_demFactCommonInlinks - y;
+	//m->m_scgi  = "pqrcid";
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = ".5";
 	m->m_group = 0;
@@ -12860,12 +12800,11 @@ void Parms::init ( ) {
 	m->m_desc  = "Limit number of linksdb inlinks requested per result.";
 	m->m_cgi   = "mrti";
 	m->m_off   = (char *)&cr.m_maxRealTimeInlinks - x;
-	m->m_soff  = (char *)&si.m_maxRealTimeInlinks - y;
+	//m->m_soff  = (char *)&si.m_maxRealTimeInlinks - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "10000";
 	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "mrti";
+	//m->m_scgi  = "mrti";
 	m->m_smin  = 0;
 	m->m_smax  = 100000;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
@@ -12928,12 +12867,11 @@ void Parms::init ( ) {
 		"CPU time.";
 	m->m_cgi   = "nrp";
 	m->m_off   = (char *)&cr.m_refs_numToGenerate - x;
-	m->m_soff  = (char *)&si.m_refs_numToGenerate - y;
+	//m->m_soff  = (char *)&si.m_refs_numToGenerate - y;
 	m->m_smaxc = (char *)&cr.m_refs_numToGenerateCeiling - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_priv  = 0;
-	m->m_sparm = 1;
 	m->m_smin  = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
@@ -12945,12 +12883,11 @@ void Parms::init ( ) {
 		"reference pages to display per query?";
 	m->m_cgi   = "nrpdd";
 	m->m_off   = (char *)&cr.m_refs_numToDisplay - x;
-	m->m_soff  = (char *)&si.m_refs_numToDisplay - y;
+	//m->m_soff  = (char *)&si.m_refs_numToDisplay - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 0;
 	m->m_priv  = 0; // allow the (more) link
-	m->m_sparm = 1;
 	m->m_sprpg = 0; // do not propagate
         m->m_sprpp = 0; // do not propagate
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
@@ -12963,13 +12900,12 @@ void Parms::init ( ) {
 		"scan for reference pages per query?";
 	m->m_cgi   = "dsrp";
 	m->m_off   = (char *)&cr.m_refs_docsToScan - x;
-	m->m_soff  = (char *)&si.m_refs_docsToScan - y;
+	//m->m_soff  = (char *)&si.m_refs_docsToScan - y;
 	m->m_smaxc = (char *)&cr.m_refs_docsToScanCeiling - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "30";
 	m->m_group = 0;
 	m->m_priv  = 0;
-	m->m_sparm = 1;
 	m->m_smin  = 0;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -12982,12 +12918,11 @@ void Parms::init ( ) {
 		"still generating related pages.";
 	m->m_cgi   = "mrpq";
 	m->m_off   = (char *)&cr.m_refs_minQuality - x;
-	m->m_soff  = (char *)&si.m_refs_minQuality - y;
+	//m->m_soff  = (char *)&si.m_refs_minQuality - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -12998,12 +12933,11 @@ void Parms::init ( ) {
 		"be included.";
 	m->m_cgi   = "mlpr";
 	m->m_off   = (char *)&cr.m_refs_minLinksPerReference - x;
-	m->m_soff  = (char *)&si.m_refs_minLinksPerReference - y;
+	//m->m_soff  = (char *)&si.m_refs_minLinksPerReference - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "2";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13014,13 +12948,12 @@ void Parms::init ( ) {
 		"limit.";
 	m->m_cgi   = "mrpl";
 	m->m_off   = (char *)&cr.m_refs_maxLinkers - x;
-	m->m_soff  = (char *)&si.m_refs_maxLinkers - y;
+	//m->m_soff  = (char *)&si.m_refs_maxLinkers - y;
 	m->m_smaxc = (char *)&cr.m_refs_maxLinkersCeiling - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "500";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_smin  = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
@@ -13033,13 +12966,12 @@ void Parms::init ( ) {
 		"references and displays the top scoring N.";
 	m->m_cgi   = "ptrfr";
 	m->m_off   = (char *)&cr.m_refs_additionalTRFetch - x;
-	m->m_soff  = (char *)&si.m_refs_additionalTRFetch - y;
+	//m->m_soff  = (char *)&si.m_refs_additionalTRFetch - y;
 	m->m_smaxc = (char *)&cr.m_refs_additionalTRFetchCeiling - x;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = "1.5";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13050,12 +12982,11 @@ void Parms::init ( ) {
 		"numLinks/totalLinks.";
         m->m_cgi   = "nlc";
 	m->m_off   = (char *)&cr.m_refs_numLinksCoefficient - x;
-	m->m_soff  = (char *)&si.m_refs_numLinksCoefficient - y;
+	//m->m_soff  = (char *)&si.m_refs_numLinksCoefficient - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13066,12 +12997,11 @@ void Parms::init ( ) {
 		"numLinks/totalLinks.";
 	m->m_cgi   = "qc";
 	m->m_off   = (char *)&cr.m_refs_qualityCoefficient - x;
-	m->m_soff  = (char *)&si.m_refs_qualityCoefficient - y;
+	//m->m_soff  = (char *)&si.m_refs_qualityCoefficient - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13082,12 +13012,12 @@ void Parms::init ( ) {
 		"numLinks/totalLinks.";
 	m->m_cgi   = "ldc";
 	m->m_off   = (char *)&cr.m_refs_linkDensityCoefficient - x;
-	m->m_soff  = (char *)&si.m_refs_linkDensityCoefficient - y;
+	//m->m_soff  = (char *)&si.m_refs_linkDensityCoefficient - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1000";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
+	//m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13098,12 +13028,11 @@ void Parms::init ( ) {
 		" C * numLinks/totalLinks.";
 	m->m_cgi   = "mrs";
 	m->m_off   = (char *)&cr.m_refs_multiplyRefScore - x;
-	m->m_soff  = (char *)&si.m_refs_multiplyRefScore - y;
+	//m->m_soff  = (char *)&si.m_refs_multiplyRefScore - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13175,12 +13104,11 @@ void Parms::init ( ) {
 	m->m_desc  = "number of related pages to generate.";
 	m->m_cgi   = "nrpg";
 	m->m_off   = (char *)&cr.m_rp_numToGenerate - x;
-	m->m_soff  = (char *)&si.m_rp_numToGenerate - y;
+	//m->m_soff  = (char *)&si.m_rp_numToGenerate - y;
 	m->m_smaxc = (char *)&cr.m_rp_numToGenerateCeiling - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_priv  = 0;
-	m->m_sparm = 1;
 	m->m_smin  = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
@@ -13191,12 +13119,11 @@ void Parms::init ( ) {
 	m->m_desc  = "number of related pages to display.";
 	m->m_cgi   = "nrpd";
 	m->m_off   = (char *)&cr.m_rp_numToDisplay - x;
-	m->m_soff  = (char *)&si.m_rp_numToDisplay - y;
+	//m->m_soff  = (char *)&si.m_rp_numToDisplay - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_group = 0;
 	m->m_priv  = 0; // allow the (more) link
-	m->m_sparm = 1;
 	m->m_sprpg = 0; // do not propagate
         m->m_sprpp = 0; // do not propagate
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
@@ -13209,13 +13136,12 @@ void Parms::init ( ) {
 		"pages.";
 	m->m_cgi   = "nlpd";
 	m->m_off   = (char *)&cr.m_rp_numLinksPerDoc - x;
-	m->m_soff  = (char *)&si.m_rp_numLinksPerDoc - y;
+	//m->m_soff  = (char *)&si.m_rp_numLinksPerDoc - y;
 	m->m_smaxc = (char *)&cr.m_rp_numLinksPerDocCeiling - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1024";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_smin  = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
@@ -13227,12 +13153,11 @@ void Parms::init ( ) {
 		"ignored.";
 	m->m_cgi   = "merpq";
 	m->m_off   = (char *)&cr.m_rp_minQuality - x;
-	m->m_soff  = (char *)&si.m_rp_minQuality - y;
+	//m->m_soff  = (char *)&si.m_rp_minQuality - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "30";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13243,12 +13168,11 @@ void Parms::init ( ) {
 		"will be ignored.";
 	m->m_cgi   = "merps";
 	m->m_off   = (char *)&cr.m_rp_minScore - x;
-	m->m_soff  = (char *)&si.m_rp_minScore - y;
+	//m->m_soff  = (char *)&si.m_rp_minScore - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13259,12 +13183,11 @@ void Parms::init ( ) {
 		" will be ignored.";
 	m->m_cgi   = "merpl";
 	m->m_off   = (char *)&cr.m_rp_minLinks - x;
-	m->m_soff  = (char *)&si.m_rp_minLinks - y;
+	//m->m_soff  = (char *)&si.m_rp_minLinks - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "2";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13276,12 +13199,11 @@ void Parms::init ( ) {
 		" + D * numSRPLinks.";
 	m->m_cgi   = "nrplc";
 	m->m_off   = (char *)&cr.m_rp_numLinksCoeff - x;
-	m->m_soff  = (char *)&si.m_rp_numLinksCoeff - y;
+	//m->m_soff  = (char *)&si.m_rp_numLinksCoeff - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "10";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13293,12 +13215,11 @@ void Parms::init ( ) {
 		" + D * numSRPLinks.";
 	m->m_cgi   = "arplqc";
 	m->m_off   = (char *)&cr.m_rp_avgLnkrQualCoeff - x;
-	m->m_soff  = (char *)&si.m_rp_avgLnkrQualCoeff - y;
+	//m->m_soff  = (char *)&si.m_rp_avgLnkrQualCoeff - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13310,12 +13231,11 @@ void Parms::init ( ) {
 		" + D * numSRPLinks";
 	m->m_cgi   = "qrpc";
 	m->m_off   = (char *)&cr.m_rp_qualCoeff - x;
-	m->m_soff  = (char *)&si.m_rp_qualCoeff - y;
+	//m->m_soff  = (char *)&si.m_rp_qualCoeff - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13327,12 +13247,11 @@ void Parms::init ( ) {
 		" + D * numSRPLinks.";
 	m->m_cgi   = "srprpc";
 	m->m_off   = (char *)&cr.m_rp_srpLinkCoeff - x;
-	m->m_soff  = (char *)&si.m_rp_srpLinkCoeff - y;
+	//m->m_soff  = (char *)&si.m_rp_srpLinkCoeff - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13343,13 +13262,12 @@ void Parms::init ( ) {
 		"excerpts displayed in the summary of a related page?";
 	m->m_cgi   = "nrps";
 	m->m_off   = (char *)&cr.m_rp_numSummaryLines - x;
-	m->m_soff  = (char *)&si.m_rp_numSummaryLines - y;
+	//m->m_soff  = (char *)&si.m_rp_numSummaryLines - y;
 	m->m_smaxc = (char *)&cr.m_rp_numSummaryLinesCeiling - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "1";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_smin  = 0;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
@@ -13377,12 +13295,11 @@ void Parms::init ( ) {
 		"charaters and adds ...";
 	m->m_cgi   = "ttl";
 	m->m_off   = (char *)&cr.m_rp_titleTruncateLimit - x;
-	m->m_soff  = (char *)&si.m_rp_titleTruncateLimit - y;
+	//m->m_soff  = (char *)&si.m_rp_titleTruncateLimit - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "50";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13393,12 +13310,11 @@ void Parms::init ( ) {
 		"related pages.";
 	m->m_cgi   = "urar"; 
 	m->m_off   = (char *)&cr.m_rp_useResultsAsReferences - x;
-	m->m_soff  = (char *)&si.m_rp_useResultsAsReferences - y;
+	//m->m_soff  = (char *)&si.m_rp_useResultsAsReferences - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13411,12 +13327,11 @@ void Parms::init ( ) {
 		"tell it what hosts belong to the other cluster.";
 	m->m_cgi   = "erp"; // external related pages
 	m->m_off   = (char *)&cr.m_rp_getExternalPages - x;
-	m->m_soff  = (char *)&si.m_rp_getExternalPages - y;
+	//m->m_soff  = (char *)&si.m_rp_getExternalPages - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13427,13 +13342,12 @@ void Parms::init ( ) {
 		"from this collection in the other cluster.";
 	m->m_cgi   = "erpc"; // external related pages collection
 	m->m_off   = (char *)&cr.m_rp_externalColl - x;
-	m->m_soff  = (char *)&si.m_rp_externalColl - y;
+	//m->m_soff  = (char *)&si.m_rp_externalColl - y;
 	m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_COLL_LEN;
 	m->m_def   = "main";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13487,11 +13401,10 @@ void Parms::init ( ) {
 		"Set to 0 to disable.";
 	m->m_cgi   = "imp";
 	m->m_off   = (char *)&cr.m_numResultsToImport - x;
-	m->m_soff  = (char *)&si.m_numResultsToImport - y;
+	//m->m_soff  = (char *)&si.m_numResultsToImport - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13505,12 +13418,11 @@ void Parms::init ( ) {
 		"down a bit to put it on par with the integrating collection.";
 	m->m_cgi   = "impw";
 	m->m_off   = (char *)&cr.m_importWeight - x;
-	m->m_soff  = (char *)&si.m_importWeight - y;
+	//m->m_soff  = (char *)&si.m_importWeight - y;
 	m->m_type  = TYPE_FLOAT;
 	m->m_def   = ".80";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13521,12 +13433,11 @@ void Parms::init ( ) {
 		"by at least this many documents in the primary collection.";
 	m->m_cgi   = "impl";
 	m->m_off   = (char *)&cr.m_minLinkersPerImportedResult - x;
-	m->m_soff  = (char *)&si.m_minLinkersPerImportedResult - y;
+	//m->m_soff  = (char *)&si.m_minLinkersPerImportedResult - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "3";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13540,12 +13451,11 @@ void Parms::init ( ) {
 		"Currently, 100 is the max number of linkers permitted.";
 	m->m_cgi   = "impnlw";
 	m->m_off   = (char *)&cr.m_numLinkerWeight - x;
-	m->m_soff  = (char *)&si.m_numLinkerWeight - y;
+	//m->m_soff  = (char *)&si.m_numLinkerWeight - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "50";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13557,13 +13467,12 @@ void Parms::init ( ) {
 		"results.";
 	m->m_cgi   = "impc";
 	m->m_off   = (char *)&cr.m_importColl - x;
-	m->m_soff  = (char *)&si.m_importColl - y;
+	//m->m_soff  = (char *)&si.m_importColl - y;
 	m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_COLL_LEN;
 	m->m_def   = "main";
 	m->m_group = 0;
 	m->m_priv  = 2;
-	m->m_sparm = 1;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13576,9 +13485,8 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "10";
 	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "ncbt";
-	m->m_soff  = (char *)&si.m_maxClusterByTopicResults - y;
+	//m->m_scgi  = "ncbt";
+	//m->m_soff  = (char *)&si.m_maxClusterByTopicResults - y;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13591,9 +13499,8 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "100";
 	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "ntwo";
-	m->m_soff  = (char *)&si.m_numExtraClusterByTopicResults - y;
+	//m->m_scgi  = "ntwo";
+	//m->m_soff  = (char *)&si.m_numExtraClusterByTopicResults - y;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13649,9 +13556,8 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_summaryMode - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
-	m->m_sparm = 1;
-	m->m_scgi  = "smd";
-	m->m_soff  = (char*) &si.m_summaryMode - y;
+	//m->m_scgi  = "smd";
+	//m->m_soff  = (char*) &si.m_summaryMode - y;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -13695,7 +13601,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "default number of summary excerpts";
+	m->m_title = "default number of summary excerpts by default";
 	m->m_desc  = "What is the default number of "
 		"summary excerpts displayed per search result?";
 	m->m_cgi   = "sdnl";
@@ -13703,15 +13609,28 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "3";
 	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "ns";
-	m->m_soff  = (char *)&si.m_numLinesInSummary - y;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "max summary line width";
+
+	m->m_title = "default number of summary excerpts";
+	m->m_desc  = "What is the default number of "
+		"summary excerpts displayed per search result?";
+	m->m_cgi   = "ns";
+	m->m_type  = TYPE_LONG;
+	m->m_defOff= (char *)&cr.m_summaryDefaultNumLines - x;
+	m->m_group = 0;
+	m->m_off   = (char *)&si.m_numLinesInSummary - y;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+
+
+	m->m_title = "max summary line width by default";
 	m->m_desc  = "&lt;br&gt; tags are inserted to keep the number "
 		"of chars in the summary per line at or below this width. "
 		"Strings without spaces that exceed this "
@@ -13721,13 +13640,27 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "80";
 	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_scgi  = "sw";
-	m->m_soff  = (char *)&si.m_summaryMaxWidth - y;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
+
+
+	m->m_title = "max summary line width";
+	m->m_desc  = "&lt;br&gt; tags are inserted to keep the number "
+		"of chars in the summary per line at or below this width. "
+		"Strings without spaces that exceed this "
+		"width are not split.";
+	m->m_cgi   = "sw";
+	m->m_off   = (char *)&cr.m_summaryMaxWidth - x;
+	m->m_type  = TYPE_LONG;
+	m->m_defOff= (char *)&cr.m_summaryMaxWidth - x;
+	m->m_group = 0;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 
 	m->m_title = "bytes of doc to scan for summary generation";
 	m->m_desc  = "Truncating this will miss out on good summaries, but "
@@ -13794,35 +13727,63 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	m->m_title = "docs to scan for topics";
+	m->m_title = "results to scan for gigabits generation by default";
 	m->m_desc  = "How many search results should we "
-		"scan for related topics (gigabits) per query?";
+		"scan for gigabit (related topics) generation. Set this to "
+		"zero to disable gigabits generation by default.";
 	m->m_cgi   = "dsrt";
 	m->m_off   = (char *)&cr.m_docsToScanForTopics - x;
-	m->m_soff  = (char *)&si.m_docsToScanForTopics - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "300";
-	m->m_sparm = 1;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "ip restriction for topics";
+
+	m->m_title = "results to scan for gigabits generation";
+	m->m_desc  = "How many search results should we "
+		"scan for gigabit (related topics) generation. Set this to "
+		"zero to disable gigabits!";
+	m->m_cgi   = "dsrt";
+	m->m_off   = (char *)&si.m_docsToScanForTopics - y;
+	m->m_type  = TYPE_LONG;
+	m->m_defOff= (char *)&cr.m_docsToScanForTopics - x;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+
+	m->m_title = "ip restriction for gigabits by default";
 	m->m_desc  = "Should Gigablast only get one document per IP domain "
-		"and per domain for topic (gigabit) generation?";
+		"and per domain for gigabits (related topics) generation?";
 	m->m_cgi   = "ipr";
 	m->m_off   = (char *)&cr.m_ipRestrict - x;
-	m->m_soff  = (char *)&si.m_ipRestrictForTopics - y;
 	m->m_type  = TYPE_BOOL;
 	// default to 0 since newspaperarchive only has docs from same IP dom
 	m->m_def   = "0";
-	m->m_sparm = 1;
 	m->m_group = 0;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
+
+
+	m->m_title = "ip restriction for gigabits";
+	m->m_desc  = "Should Gigablast only get one document per IP domain "
+		"and per domain for gigabits (related topics) generation?";
+	m->m_cgi   = "ipr";
+	m->m_off   = (char *)&si.m_ipRestrictForTopics - y;
+	m->m_defOff= (char *)&cr.m_ipRestrict - x;
+	m->m_type  = TYPE_BOOL;
+	m->m_group = 0;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+
 
 	m->m_title = "remove overlapping topics";
 	m->m_desc  = "Should Gigablast remove overlapping topics (gigabits)?";
@@ -13836,18 +13797,16 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "number of related topics";
+	m->m_title = "number of gigabits to show by default";
 	m->m_desc  = "What is the number of "
 		"related topics (gigabits) "
 		"displayed per query? Set to 0 to save "
 		"CPU time.";
 	m->m_cgi   = "nrt";
 	m->m_off   = (char *)&cr.m_numTopics - x;
-	m->m_soff  = (char *)&si.m_numTopicsToDisplay - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "11";
 	m->m_group = 0;
-	m->m_sparm = 1;
 	m->m_sprpg = 0; // do not propagate
         m->m_sprpp = 0; // do not propagate
 	m->m_flags = PF_API;
@@ -13855,71 +13814,145 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "min topics score";
-	m->m_desc  = "Related topics (gigabits) with scores below this "
+
+	m->m_title = "number of gigabits to show";
+	m->m_desc  = "What is the number of gigabits (related topics) "
+		"displayed per query? Set to 0 to save a little CPU time.";
+	m->m_cgi   = "nrt";
+	m->m_defOff= (char *)&cr.m_numTopics - x;
+	m->m_off   = (char *)&si.m_numTopicsToDisplay - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "11";
+	m->m_group = 0;
+	m->m_sprpg = 0; // do not propagate
+        m->m_sprpp = 0; // do not propagate
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+
+
+	m->m_title = "min gigabit score by default";
+	m->m_desc  = "Gigabits (related topics) with scores below this "
 		"will be excluded. Scores range from 0% to over 100%.";
 	m->m_cgi   = "mts";
 	m->m_off   = (char *)&cr.m_minTopicScore - x;
-	m->m_soff  = (char *)&si.m_minTopicScore - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "5";
 	m->m_group = 0;
-	m->m_sparm = 1;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "min topic doc count";
-	m->m_desc  = "How many documents must contain the topic (gigabit) "
-		"for it to be displayed.";
+	m->m_title = "min topics score";
+	m->m_desc  = "Gigabits (related topics) with scores below this "
+		"will be excluded. Scores range from 0% to over 100%.";
+	m->m_cgi   = "mts";
+	m->m_defOff= (char *)&cr.m_minTopicScore - x;
+	m->m_off   = (char *)&si.m_minTopicScore - y;
+	m->m_type  = TYPE_LONG;
+	m->m_group = 0;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+
+
+	m->m_title = "min gigabit doc count by default";
+	m->m_desc  = "How many documents must contain the gigabit "
+		"(related topic) in order for it to be displayed.";
 	m->m_cgi   = "mdc";
 	m->m_off   = (char *)&cr.m_minDocCount - x;
-	m->m_soff  = (char *)&si.m_minDocCount - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "2";
 	m->m_group = 0;
-	m->m_sparm = 1;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "dedup doc percent for topics";
+	m->m_title = "min gigabit doc count by default";
+	m->m_desc  = "How many documents must contain the gigabit "
+		"(related topic) in order for it to be displayed.";
+	m->m_cgi   = "mdc";
+	m->m_defOff= (char *)&cr.m_minDocCount - x;
+	m->m_off   = (char *)&si.m_minDocCount - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "2";
+	m->m_group = 0;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+
+
+	m->m_title = "dedup doc percent for gigabits (related topics)";
 	m->m_desc  = "If a document is this percent similar to another "
 		"document with a higher score, then it will not contribute "
-		"to the topic (gigabit) generation.";
+		"to the gigabit generation.";
 	m->m_cgi   = "dsp";
 	m->m_off   = (char *)&cr.m_dedupSamplePercent - x;
-	m->m_soff  = (char *)&si.m_dedupSamplePercent - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "80";
 	m->m_group = 0;
-	m->m_sparm = 1;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "max words per topic";
-	m->m_desc  = "Maximum number of words a topic (gigabit) can have. "
-		"Affects "
-		"raw feeds, too.";
+	m->m_title = "dedup doc percent for gigabits (related topics)";
+	m->m_desc  = "If a document is this percent similar to another "
+		"document with a higher score, then it will not contribute "
+		"to the gigabit generation.";
+	m->m_cgi   = "dsp";
+	m->m_defOff= (char *)&cr.m_dedupSamplePercent - x;
+	m->m_off   = (char *)&si.m_dedupSamplePercent - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "80";
+	m->m_group = 0;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+
+
+	m->m_title = "max words per gigabit (related topic) by default";
+	m->m_desc  = "Maximum number of words a gigabit (related topic) "
+		"can have. Affects xml feeds, too.";
 	m->m_cgi   = "mwpt";
 	m->m_off   = (char *)&cr.m_maxWordsPerTopic - x;
-	m->m_soff  = (char *)&si.m_maxWordsPerTopic - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "6";
 	m->m_group = 0;
-	m->m_sparm = 1;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "topic max sample size";
-	m->m_desc  = "Max chars to sample from each doc for topics "
-		"(gigabits).";
+	m->m_title = "max words per gigabit (related topic) by default";
+	m->m_desc  = "Maximum number of words a gigabit (related topic) "
+		"can have. Affects xml feeds, too.";
+	m->m_cgi   = "mwpt";
+	m->m_defOff= (char *)&cr.m_maxWordsPerTopic - x;
+	m->m_off   = (char *)&si.m_maxWordsPerTopic - y;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "6";
+	m->m_group = 0;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+
+
+	m->m_title = "gigabit max sample size";
+	m->m_desc  = "Max chars to sample from each doc for gigabits "
+		"(related topics).";
 	m->m_cgi   = "tmss";
 	m->m_off   = (char *)&cr.m_topicSampleSize - x;
 	m->m_type  = TYPE_LONG;
@@ -13930,8 +13963,9 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "topic max punct len";
-	m->m_desc  = "Max sequential punct chars allowed in a topic (gigabit)."
+	m->m_title = "gigabit max punct len";
+	m->m_desc  = "Max sequential punct chars allowed in a gigabit "
+		"(related topic). "
 		" Set to 1 for speed, 5 or more for best topics but twice as "
 		"slow.";
 	m->m_cgi   = "tmpl";
@@ -15533,7 +15567,6 @@ void Parms::init ( ) {
 // 	m->m_page  = PAGE_SPAM;
 // 	m->m_def   = "300";
 // 	m->m_group = 0;
-// 	m->m_sparm = 0;
 // 	m++;
 
 // 	m->m_title = "max points for percent text in links";
@@ -15544,7 +15577,6 @@ void Parms::init ( ) {
 // 	m->m_page  = PAGE_SPAM;
 // 	m->m_def   = "300";
 // 	m->m_group = 0;
-// 	m->m_sparm = 0;
 // 	m++;
 // 	m->m_title = "max points for links have - or _";
 // 	m->m_desc  = "Max points for links have - or _";
@@ -15554,7 +15586,6 @@ void Parms::init ( ) {
 // 	m->m_page  = PAGE_SPAM;
 // 	m->m_def   = "300";
 // 	m->m_group = 0;
-// 	m->m_sparm = 0;
 // 	m++;
 // 	m->m_title = "max points for links to .info or .biz";
 // 	m->m_desc  = "Max points for links to .info or .biz ";
@@ -15564,7 +15595,6 @@ void Parms::init ( ) {
 // 	m->m_page  = PAGE_SPAM;
 // 	m->m_def   = "300";
 // 	m->m_group = 0;
-// 	m->m_sparm = 0;
 // 	m++;
 
 // 	m->m_title = "max points for links to a dmoz category";
@@ -15575,7 +15605,6 @@ void Parms::init ( ) {
 // 	m->m_page  = PAGE_SPAM;
 // 	m->m_def   = "300";
 // 	m->m_group = 0;
-// 	m->m_sparm = 0;
 // 	m++;
 
 // 	m->m_title = "max points for consecutive bold text";
@@ -15587,7 +15616,6 @@ void Parms::init ( ) {
 // 	m->m_page  = PAGE_SPAM;
 // 	m->m_def   = "300";
 // 	m->m_group = 0;
-// 	m->m_sparm = 0;
 // 	m++;
 
 // 	m->m_title = "max points for link text doesn't match domain";
@@ -15598,7 +15626,6 @@ void Parms::init ( ) {
 // 	m->m_page  = PAGE_SPAM;
 // 	m->m_def   = "300";
 // 	m->m_group = 0;
-// 	m->m_sparm = 0;
 // 	m++;
 
 
@@ -15624,7 +15651,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "0";
-	m->m_sparm = 0;
 	m->m_sync  = false;  // do not sync this parm
 	m++;
 
@@ -15639,7 +15665,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "memory to use for repair";
@@ -15652,7 +15677,6 @@ void Parms::init ( ) {
 	m->m_def   = "200000000";
 	m->m_units = "bytes";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "max repair spiders";
@@ -15665,7 +15689,6 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "2";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "full rebuild";
@@ -15679,7 +15702,6 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "keep new spiderdb recs";
@@ -15693,7 +15715,6 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "recycle link info";
@@ -15706,7 +15727,6 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	/*
@@ -15719,7 +15739,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 	*/
 
@@ -15734,7 +15753,6 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "0";
-	m->m_sparm = 0;
 	m++;
 	*/
 
@@ -15746,7 +15764,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "0";
-	m->m_sparm = 0;
 	m++;
 
 	/*
@@ -15758,7 +15775,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "rebuild indexdb";
@@ -15769,7 +15785,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 	*/
 
@@ -15782,7 +15797,6 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	/*
@@ -15795,7 +15809,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "rebuild datedb";
@@ -15806,7 +15819,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "rebuild checksumdb";
@@ -15817,7 +15829,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 	*/
 
@@ -15830,7 +15841,6 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "rebuild spiderdb";
@@ -15842,7 +15852,6 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	/*
@@ -15854,7 +15863,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 	*/
 
@@ -15867,7 +15875,6 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	/*
@@ -15879,7 +15886,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "rebuild placedb";
@@ -15890,7 +15896,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "rebuild timedb";
@@ -15901,7 +15906,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "rebuild sectiondb";
@@ -15912,7 +15916,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "rebuild revdb";
@@ -15923,7 +15926,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 	*/
 
@@ -15935,7 +15937,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "1";
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "rebuild non-root urls";
@@ -15947,7 +15948,6 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "skip tagdb lookup";
@@ -15962,7 +15962,6 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_CONF;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_sparm = 0;
 	m++;
 
 	///////////////////////////////////////////
@@ -16002,7 +16001,6 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cast  = 0;
 	m->m_page  = PAGE_QAGENT;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "quality agent continuous loop";
@@ -16014,7 +16012,6 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "ban subsites";
@@ -16028,7 +16025,6 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "start document";
@@ -16040,7 +16036,6 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_cast  = 1;
 	m->m_page  = PAGE_QAGENT;
-	m->m_sparm = 0;
 	m->m_sync  = false;  // do not sync this parm
 	m++;
 
@@ -16054,7 +16049,6 @@ void Parms::init ( ) {
 	m->m_group = 1;
 	m->m_cast  = 1;
 	m->m_def   = "2592000";
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "link samples to get";
@@ -16065,7 +16059,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "256";
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "min pages to evaluate";
@@ -16077,7 +16070,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "1";
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "link bonus divisor";
@@ -16091,7 +16083,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "20";
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "points per banned link";
@@ -16102,7 +16093,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "3";
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "points per link to different sites on the same IP";
@@ -16116,7 +16106,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "0";
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "number of sites on an ip to sample";
@@ -16127,7 +16116,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "100";
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "points per banned site on ip";
@@ -16139,7 +16127,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "2";
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "max penalty from being on a bad IP";
@@ -16151,7 +16138,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "-30";
-	m->m_sparm = 0;
 	m++;
 
 
@@ -16164,7 +16150,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "99999.0";
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "site agent banned ruleset";
@@ -16176,7 +16161,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "30";
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "ban quality theshold";
@@ -16188,7 +16172,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "-100";
-	m->m_sparm = 0;
 	m++;
 
 	m->m_title = "theshold to trigger site reindex";
@@ -16200,7 +16183,6 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_QAGENT;
 	m->m_cast  = 1;
 	m->m_def   = "-100";
-	m->m_sparm = 0;
 	m++;
 
 
@@ -16212,7 +16194,6 @@ void Parms::init ( ) {
 // 	m->m_type  = TYPE_LONG;
 // 	m->m_page  = PAGE_QAGENT;
 // 	m->m_def   = "";
-// 	m->m_sparm = 0;
 // 	m++;
 
 	*/
@@ -16678,10 +16659,9 @@ void Parms::init ( ) {
 		"Used by widget to append results to end when index is "
 		"volatile.";
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_minSerpDocId - y;
+	m->m_off   = (char *)&si.m_minSerpDocId - y;
 	m->m_type  = TYPE_LONG_LONG;
-	m->m_sparm = 1;
-	m->m_scgi  = "minserpdocid";
+	m->m_cgi   = "minserpdocid";
 	m->m_flags = PF_API;
 	m->m_smin  = 0;
 	m->m_sprpg = 0;
@@ -16695,10 +16675,9 @@ void Parms::init ( ) {
 		"Used by widget to append results to end when index is "
 		"volatile.";
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_maxSerpScore - y;
+	m->m_off   = (char *)&si.m_maxSerpScore - y;
 	m->m_type  = TYPE_DOUBLE;
-	m->m_sparm = 1;
-	m->m_scgi  = "maxserpscore";
+	m->m_cgi   = "maxserpscore";
 	m->m_flags = PF_API;
 	m->m_smin  = 0;
 	m->m_sprpg = 0;
@@ -16708,12 +16687,11 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "restrict search to this url";
-	m->m_desc  = "X is the url.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_url - y;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = MAX_URL_LEN;
-	m->m_scgi  = "url";
+	m->m_desc  = "Does a url: query.";
+	m->m_off   = (char *)&si.m_url - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	//m->m_size  = MAX_URL_LEN;
+	m->m_cgi   = "url";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_NONE;
@@ -16721,12 +16699,11 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "restrict search to pages that link to this url";
-	m->m_desc  = "X is the url which the pages must link to.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_link - y;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = MAX_URL_LEN;
-	m->m_scgi  = "link";
+	m->m_desc  = "The url which the pages must link to.";
+	m->m_off   = (char *)&si.m_link - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	//m->m_size  = MAX_URL_LEN;
+	m->m_cgi   = "link";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_NONE;
@@ -16734,12 +16711,11 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "search for this phrase quoted";
-	m->m_desc  = "X is the phrase which will be quoted.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_quote1 - y;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 512;
-	m->m_scgi  = "quote1";
+	m->m_desc  = "The phrase which will be quoted.";
+	m->m_off   = (char *)&si.m_quote1 - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	//m->m_size  = 512;
+	m->m_cgi   = "quotea";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_NONE;
@@ -16747,54 +16723,53 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "search for this second phrase quoted";
-	m->m_desc  = "X is the phrase which will be quoted.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_quote2 - y;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 512;
-	m->m_scgi  = "quote2";
+	m->m_desc  = "The phrase which will be quoted.";
+	m->m_off   = (char *)&si.m_quote2 - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	//m->m_size  = 512;
+	m->m_cgi   = "quoteb";
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
+	/*
 	m->m_title = "restrict results to this site";
 	m->m_desc  = "Returned results will have URLs from this site, X.";
-	m->m_soff  = (char *)&si.m_site - y;
-	m->m_type  = TYPE_STRING;
-	m->m_sparm = 1;
-	m->m_scgi  = "site";
+	m->m_off   = (char *)&si.m_site - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_cgi   = "site";
 	m->m_size  = 1024; // MAX_SITE_LEN;
 	m->m_sprpg = 1;
 	m->m_sprpp = 1;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
+	*/
 
-	/*
 	m->m_title = "restrict results to these sites";
-	m->m_desc  = "Returned results will have URLs from the "
-		"space-separated list of sites, X. X can be up to 200 sites. "
+	m->m_desc  = "Returned results will have URLs from these "
+		"space-separated list of sites. Can have up to 200 sites. "
 		"A site can include sub folders. This is allows you to build "
 		"a <a href=\"/cts.html\">Custom Topic Search Engine</a>.";
-	m->m_soff  = (char *)&si.m_sites - y;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 32*1024; // MAX_SITES_LEN;
-	m->m_sparm = 1;
-	m->m_scgi  = "sites";
+	m->m_off   = (char *)&si.m_sites - y;
+	m->m_type  = TYPE_CHARPTR;
+	//m->m_size  = 32*1024; // MAX_SITES_LEN;
+	m->m_cgi   = "sites";
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
 	m->m_sprpg = 1;
 	m->m_sprpp = 1;
 	m++;
-	*/
 
 	m->m_title = "require these query terms";
 	m->m_desc  = "Returned results will have all the words in X.";
-	m->m_soff  = (char *)&si.m_plus - y;
-	m->m_type  = TYPE_STRING;
-	m->m_sparm = 1;
-	m->m_scgi  = "plus";
-	m->m_size  = 500;
+	m->m_off   = (char *)&si.m_plus - y;
+	m->m_def   = NULL;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_cgi   = "plus";
+	//m->m_size  = 500;
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_NONE;
@@ -16803,40 +16778,62 @@ void Parms::init ( ) {
 
 	m->m_title = "avoid these query terms";
 	m->m_desc  = "Returned results will NOT have any of the words in X.";
-	m->m_soff  = (char *)&si.m_minus - y;
-	m->m_type  = TYPE_STRING;
-	m->m_sparm = 1;
-	m->m_scgi  = "minus";
-	m->m_size  = 500;
+	m->m_off   = (char *)&si.m_minus - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_cgi   = "minus";
+	//m->m_size  = 500;
 	m->m_sprpg = 0;
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
-	/*
 	m->m_title = "format of the returned search results";
-	m->m_desc  = "X is 0 to get back results in regular html, 1 to "
-		"get back results in XML, 2 for JSON.";
-	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_formatStr - y;
-	m->m_type  = TYPE_STRING;//CHAR;
-	m->m_sparm = 1;
-	m->m_scgi  = "format";
-	m->m_smin  = 0;
-	m->m_smax  = 12;
+	m->m_desc  = "Can be html, xml or json to get results back in that "
+		"format.";
+	m->m_def   = "html";
+	m->m_off   = (char *)&si.m_formatStr - y;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m->m_cgi   = "format";
 	m++;
-	*/
 
-	m->m_title = "highlight query terms in summaries.";
+	m->m_title = "family filter";
+	m->m_desc  = "Remove objectionable results if this is enabled.";
+	m->m_def   = "0";
+	m->m_off   = (char *)&si.m_familyFilter - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m->m_cgi   = "ff";
+	m++;
+
+
+	m->m_title = "highlight query terms in summaries by default";
 	m->m_desc  = "Use to disable or enable "
 		"highlighting of the query terms in the summaries.";
 	m->m_def   = "1";
-	m->m_soff  = (char *)&si.m_doQueryHighlighting - y;
+	m->m_off   = (char *)&cr.m_doQueryHighlighting - x;
 	m->m_type  = TYPE_BOOL;
-	m->m_sparm = 1;
 	m->m_cgi   = "qh";
-	m->m_scgi  = "qh";
+	m->m_smin  = 0;
+	m->m_smax  = 8;
+	m->m_sprpg = 1; // turn off for now
+	m->m_sprpp = 1;
+	m->m_flags = PF_API;
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
+
+	m->m_title = "highlight query terms in summaries";
+	m->m_desc  = "Use to disable or enable "
+		"highlighting of the query terms in the summaries.";
+	m->m_def   = "1";
+	m->m_off   = (char *)&si.m_doQueryHighlighting - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_cgi   = "qh";
 	m->m_smin  = 0;
 	m->m_smax  = 8;
 	m->m_sprpg = 1; // turn off for now
@@ -16846,44 +16843,45 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_SI;
 	m++;
 
+
+
 	m->m_title = "cached page highlight query";
 	m->m_desc  = "Highlight the terms in this query instead. For "
 		"display of the cached page.";
-	m->m_def   = "";
-	m->m_soff  = (char *)&si.m_highlightQuery - y;
-	m->m_type  = TYPE_STRING;
-	m->m_sparm = 1;
-	m->m_scgi  = "hq";
-	m->m_size  = 1000;
+	m->m_def   = NULL;
+	m->m_off   = (char *)&si.m_highlightQuery - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_cgi   = "hq";
+	//m->m_size  = 1000;
 	m->m_sprpg = 0; // no need to propagate this one
 	m->m_sprpp = 0;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
+	/*
 	m->m_title = "highlight event date in summaries.";
-	m->m_desc  = "X can be 0 or 1 to respectively disable or enable "
+	m->m_desc  = "Can be 0 or 1 to respectively disable or enable "
 		"highlighting of the event date terms in the summaries.";
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_doDateHighlighting - y;
+	m->m_off   = (char *)&si.m_doDateHighlighting - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_sparm = 1;
-	m->m_scgi  = "dh";
+	m->m_cgi   = "dh";
 	m->m_smin  = 0;
 	m->m_smax  = 8;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
+	*/
 
 	/*
 	m->m_title = "limit search results to this ruleset";
 	m->m_desc  = "limit search results to this ruleset";
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_ruleset - y;
+	m->m_off   = (char *)&si.m_ruleset - y;
 	m->m_type  = TYPE_LONG;
-	m->m_sparm = 1;
-	m->m_scgi  = "ruleset";
+	m->m_cgi   = "ruleset";
 	m->m_smin  = 0;
 	m++;
 	*/
@@ -16893,10 +16891,9 @@ void Parms::init ( ) {
 		"actually matched in the document.  1 means byte offset,"
 		"and 2 means word offset.";
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_queryMatchOffsets - y;
+	m->m_off   = (char *)&si.m_queryMatchOffsets - y;
 	m->m_type  = TYPE_LONG;
-	m->m_sparm = 1;
-	m->m_scgi  = "qmo";
+	m->m_cgi   = "qmo";
 	m->m_smin  = 0;
 	m->m_smax  = 2;
 	m->m_page  = PAGE_NONE;
@@ -16904,13 +16901,12 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "boolean status";
-	m->m_desc  = "X can be 0 or 1 or 2. 0 means the query is NOT boolean, "
+	m->m_desc  = "Can be 0 or 1 or 2. 0 means the query is NOT boolean, "
 		"1 means the query is boolean and 2 means to auto-detect.";
-	m->m_sparm = 1;
 	m->m_def   = "2";
-	m->m_soff  = (char *)&si.m_boolFlag - y;
+	m->m_off   = (char *)&si.m_boolFlag - y;
 	m->m_type  = TYPE_LONG;
-	m->m_scgi  = "bq";
+	m->m_cgi   = "bq";
 	m->m_smin  = 0;
 	m->m_smax  = 2;
 	m->m_page  = PAGE_NONE;
@@ -16918,7 +16914,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "meta tags to display";
-	m->m_desc  = "X is a space-separated string of <b>meta tag names</b>. "
+	m->m_desc  = "A space-separated string of <b>meta tag names</b>. "
 		"Do not forget to url-encode the spaces to +'s or %%20's. "
 		"Gigablast will extract the contents of these specified meta "
 		"tags out of the pages listed in the search results and "
@@ -16931,39 +16927,14 @@ void Parms::init ( ) {
 		"name=\"meta_tag_name\"&gt;meta_tag_content&lt;/&gt;</i> XML "
 		"tag will be used to convey each requested meta tag's "
 		"content.";
-	m->m_soff  = (char *)&si.m_displayMetas - y;
-	m->m_type  = TYPE_STRING;
-	m->m_sparm = 1;
-	m->m_scgi  = "dt";
-	m->m_size  = 3000;
+	m->m_off   = (char *)&si.m_displayMetas - y;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_cgi   = "dt";
+	//m->m_size  = 3000;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 	
-	m->m_title = "use cache";
-	m->m_desc  = "X is 0 if Gigablast should not read or write from "
-		"any caches at any level.";
-	m->m_def   = "-1";
-	m->m_soff  = (char *)&si.m_useCache - y;
-	m->m_type  = TYPE_LONG;
-	m->m_sparm = 1;
-	m->m_scgi  = "usecache";
-	m->m_page  = PAGE_NONE;
-	m->m_obj   = OBJ_SI;
-	m++;
-
-	m->m_title = "write to cache";
-	m->m_desc  = "X is 0 if Gigablast should not write to "
-		"any caches at any level.";
-	m->m_def   = "-1";
-	m->m_soff  = (char *)&si.m_wcache - y;
-	m->m_type  = TYPE_LONG;
-	m->m_sparm = 1;
-	m->m_scgi  = "wcache";
-	m->m_page  = PAGE_NONE;
-	m->m_obj   = OBJ_SI;
-	m++;
-
 	/*
 	// . you can have multiple topics= parms in you query url...
 	// . this is used to set the TopicGroups array in SearchInput
@@ -17024,63 +16995,58 @@ void Parms::init ( ) {
 		"<br><br>\n"
 		"Performance will decrease if you increase the MAX, SCAN or "
 		"MAXW.";
-	m->m_sparm = 1;
 	m->m_type  = TYPE_STRING;
 	m->m_size  = 512;
-	m->m_scgi  = "topics";
+	m->m_cgi   = "topics";
 	m->m_size  = 100;
 	// MDW: NO NO NO... was causing a write breach!!! -- take this all out
-	m->m_soff  = -2; // bogus offset
-	//m->m_soff  = (char *)&si.m_topics - y;
+	m->m_off   = -2; // bogus offset
+	//m->m_off   = (char *)&si.m_topics - y;
 	m++;
 	*/
 
 	m->m_title = "return number of docs per topic";
-	m->m_desc  = "X is 1 if you want Gigablast to return the number of "
+	m->m_desc  = "Use 1 if you want Gigablast to return the number of "
 		"documents in the search results that contained each topic.";
 	m->m_def   = "1";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_returnDocIdCount - y;
+	m->m_off   = (char *)&si.m_returnDocIdCount - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_scgi  = "rdc";
+	m->m_cgi   = "rdc";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "return docids per topic";
-	m->m_desc  = "X is 1 if you want Gigablast to return the list of "
+	m->m_desc  = "Use 1 if you want Gigablast to return the list of "
 		"docIds from the search results that contained each topic.";
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_returnDocIds - y;
+	m->m_off   = (char *)&si.m_returnDocIds - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_sparm = 1;
-	m->m_scgi  = "rd";
+	m->m_cgi   = "rd";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "return popularity per topic";
-	m->m_desc  = "X is 1 if you want Gigablast to return the popularity "
+	m->m_desc  = "Use 1 if you want Gigablast to return the popularity "
 		"of each topic.";
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_returnPops - y;
+	m->m_off   = (char *)&si.m_returnPops - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_sparm = 1;
-	m->m_scgi  = "rp";
+	m->m_cgi   = "rp";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "niceness";
-	m->m_desc  = "X can be 0 or 1. 0 is usually a faster, high-priority "
+	m->m_desc  = "Can be 0 or 1. 0 is usually a faster, high-priority "
 		"query, 1 is a slower, lower-priority query.";
-	m->m_sparm = 1;
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_niceness - y;
+	m->m_off   = (char *)&si.m_niceness - y;
 	m->m_type  = TYPE_LONG;
-	m->m_scgi  = "niceness";
+	m->m_cgi   = "niceness";
 	m->m_smin  = 0;
 	m->m_smax  = 1;
 	m->m_page  = PAGE_NONE;
@@ -17088,105 +17054,106 @@ void Parms::init ( ) {
 	m++;
 
 	//m->m_title = "compound list max size";
-	//m->m_desc  = "X is the max size in bytes of the compound termlist. "
+	//m->m_desc  = "Is the max size in bytes of the compound termlist. "
 	//	"Each document id is 6 bytes.";
-	//m->m_sparm = 1;
 	//m->m_def   = "-1";
-	//m->m_soff  = (char *)&si.m_compoundListMaxSize - y;
+	//m->m_off   = (char *)&si.m_compoundListMaxSize - y;
 	//m->m_type  = TYPE_LONG;
-	//m->m_scgi  = "clms";
+	//m->m_cgi   = "clms";
 	//m->m_smin  = 0;
 	//m->m_priv  = 1;
 	//m++;
 
 
 	m->m_title = "debug flag";
-	m->m_desc  = "X is 1 to log debug information, 0 otherwise.";
-	m->m_sparm = 1;
+	m->m_desc  = "Is 1 to log debug information, 0 otherwise.";
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_debug - y;
+	m->m_off   = (char *)&si.m_debug - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_scgi  = "debug";
+	m->m_cgi   = "debug";
 	//m->m_priv  = 1;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
-	m->m_title = "return docids only";
-	m->m_desc  = "X is 1 to return only docids as query results.";
-	m->m_sparm = 1;
+	m->m_title = "debug gigabits flag";
+	m->m_desc  = "Is 1 to log gigabits debug information, 0 otherwise.";
 	m->m_def   = "0";
-	m->m_soff  = (char *)&si.m_docIdsOnly - y;
+	m->m_off   = (char *)&si.m_debugGigabits - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_scgi  = "dio";
+	m->m_cgi   = "debug";
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+	m->m_title = "return docids only";
+	m->m_desc  = "Is 1 to return only docids as query results.";
+	m->m_def   = "0";
+	m->m_off   = (char *)&si.m_docIdsOnly - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_cgi   = "dio";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "image url";
-	m->m_desc  = "X is the url of an image to co-brand on the search "
+	m->m_desc  = "The url of an image to co-brand on the search "
 		"results page.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_imgUrl - y;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 512;
-	m->m_scgi  = "iu";
+	m->m_off   = (char *)&si.m_imgUrl - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	//m->m_size  = 512;
+	m->m_cgi   = "iu";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "image link";
-	m->m_desc  = "X is the hyperlink to use on the image to co-brand on "
+	m->m_desc  = "The hyperlink to use on the image to co-brand on "
 		"the search results page.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_imgLink - y;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 512;
-	m->m_scgi  = "ix";
+	m->m_off   = (char *)&si.m_imgLink - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	//m->m_size  = 512;
+	m->m_cgi   = "ix";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "image width";
-	m->m_desc  = "X is the width of the image on the search results page.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_imgWidth - y;
+	m->m_desc  = "The width of the image on the search results page.";
+	m->m_off   = (char *)&si.m_imgWidth - y;
 	m->m_type  = TYPE_LONG;
-	m->m_scgi  = "iw";
+	m->m_cgi   = "iw";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "image height";
-	m->m_desc  = "X is the height of the image on the search results "
+	m->m_desc  = "The height of the image on the search results "
 		"page.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_imgHeight - y;
+	m->m_off   = (char *)&si.m_imgHeight - y;
 	m->m_type  = TYPE_LONG;
-	m->m_scgi  = "ih";
+	m->m_cgi   = "ih";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
-	m->m_title = "password";
-	m->m_desc  = "X is the password.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_pwd - y;
-	m->m_type  = TYPE_STRING;
-	m->m_scgi  = "pwd";
-	m->m_size  = 32;
-	m->m_flags = PF_HIDDEN | PF_NOSAVE;
-	m->m_page  = PAGE_NONE;
-	m->m_obj   = OBJ_SI;
-	m++;
+	// m->m_title = "password";
+	// m->m_desc  = "The password.";
+	// m->m_off   = (char *)&si.m_pwd - y;
+	// m->m_type  = TYPE_CHARPTR;//STRING;
+	// m->m_cgi   = "pwd";
+	// m->m_size  = 32;
+	// m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	// m->m_page  = PAGE_NONE;
+	// m->m_obj   = OBJ_SI;
+	// m++;
 
 	m->m_title = "admin override";
 	m->m_desc  = "admin override";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_isAdmin - y;
+	m->m_off   = (char *)&si.m_isAdmin - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "0";
-	m->m_scgi  = "admin";
+	m->m_def   = "1";
+	m->m_cgi   = "admin";
 	m->m_sprpg = 1; // propagate on GET request
         m->m_sprpp = 1; // propagate on POST request
 	m->m_page  = PAGE_NONE;
@@ -17198,51 +17165,49 @@ void Parms::init ( ) {
 	m->m_desc  = "Language code to restrict search. 0 = All. Uses "
 		"Clusterdb to filter languages. This is being phased out "
 		"please do not use much, use gblang instead.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_languageCode - y;
+	m->m_off   = (char *)&si.m_languageCode - y;
 	m->m_type  = TYPE_STRING;
 	m->m_size  = 5+1;
 	m->m_def   = "none";
 	// our google gadget gets &lang=en passed to it from google, so
 	// change this!!
-	m->m_scgi  = "clang";
+	m->m_cgi   = "clang";
 	m++;
 	*/
 
+	/* 
+	   this should be a hash on the lang abbr line gblang:en
 	m->m_title = "GB language";
 	m->m_desc  = "Language code to restrict search. 0 = All. Uses "
 		"the gblang: keyword to filter languages.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_gblang - y;
+	m->m_off   = (char *)&si.m_gblang - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
-	m->m_scgi  = "gblang";
+	m->m_cgi   = "gblang";
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+	*/
+
+	// prepend to query
+	m->m_title = "prepend";
+	m->m_desc  = "prepend this to the supplied query followed by a |.";
+	m->m_off   = (char *)&si.m_prepend - y;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = NULL;
+	m->m_cgi   = "prepend";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
-	// prepend to query
-	/*
-	m->m_title = "prepend";
-	m->m_desc  = "prepend this to the supplied query";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_queryPrepend - y;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 40;
-	m->m_def   = NULL;
-	m->m_scgi  = "prepend";
-	m++;
-	*/
-
 	m->m_title = "GB Country";
 	m->m_desc  = "Country code to restrict search";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_gbcountry - y;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 4+1;
+	m->m_off   = (char *)&si.m_gbcountry - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	//m->m_size  = 4+1;
 	m->m_def   = NULL;
 	//m->m_def   = "iso-8859-1";
-	m->m_scgi  = "gbcountry";
+	m->m_cgi   = "gbcountry";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
@@ -17253,11 +17218,10 @@ void Parms::init ( ) {
  		"rerank at least the first X results specified with &amp;n=X. "
 		"And be sure to say &amp;recycle=0 to recompute the quality "
 		"of each page in the search results.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_rerankRuleset - y;
+	m->m_off   = (char *)&si.m_rerankRuleset - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "-1";
-	m->m_scgi  = "rerank";
+	m->m_cgi   = "rerank";
 	m++;
 
 	m->m_title = "apply ruleset to roots";
@@ -17265,87 +17229,86 @@ void Parms::init ( ) {
 		"search result in order to compute the quality of that "
 		"search result, since it depends on its root quality. This "
 		"can take a lot longer when enabled.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_artr - y;
+	m->m_off   = (char *)&si.m_artr - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
-	m->m_scgi  = "artr";
+	m->m_cgi   = "artr";
 	m++;
 	*/
 
 	m->m_title = "show banned pages";
 	m->m_desc  = "show banned pages";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_showBanned - y;
+	m->m_off   = (char *)&si.m_showBanned - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_scgi  = "sb";
+	m->m_cgi   = "sb";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "allow punctuation in query phrases";
 	m->m_desc  = "allow punctuation in query phrases";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_allowPunctInPhrase - y;
+	m->m_off   = (char *)&si.m_allowPunctInPhrase - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_scgi  = "apip";
+	m->m_cgi   = "apip";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
 
+	/*
 	m->m_title = "use ad feed num";
 	m->m_desc  = "use ad feed num";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_useAdFeedNum - y;
+	m->m_off   = (char *)&si.m_useAdFeedNum - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
-	m->m_scgi  = "uafn";
+	m->m_cgi   = "uafn";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
+	*/
 
+	/*
 	m->m_title = "do bot detection";
 	m->m_desc  = "Passed in for raw feeds that want bot detection cgi "
 		     "parameters passed back in the XML.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_doBotDetection - y;
+	m->m_off   = (char *)&si.m_doBotDetection - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_scgi  = "bd";
+	m->m_cgi   = "bd";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
+	*/
 
+	/*
 	m->m_title = "bot detection query";
 	m->m_desc  = "Passed in for raw feeds that want bot detection cgi "
 		     "parameters passed back in the XML. Use this variable "
 		     "when an actual query against gigablast is not needed "
                      "(i.e. - image/video/news searches).";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_botDetectionQuery - y;
-	m->m_type  = TYPE_STRING;
-	m->m_scgi  = "bdq";
-        m->m_def   = "";
+	m->m_off   = (char *)&si.m_botDetectionQuery - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_cgi   = "bdq";
+        m->m_def   = NULL;
 	m->m_size  = MAX_QUERY_LEN;
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
+	*/
 
 	m->m_title = "queryCharset";
 	m->m_desc  = "Charset in which the query is encoded";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_queryCharset - y;
-	m->m_type  = TYPE_STRING;
-	m->m_size  = 32+1;
+	m->m_off   = (char *)&si.m_queryCharset - y;
+	m->m_type  = TYPE_CHARPTR;//STRING;
+	//m->m_size  = 32+1;
 	m->m_def   = "utf-8";
 	//m->m_def   = "iso-8859-1";
-	m->m_scgi  = "qcs";
+	m->m_cgi   = "qcs";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
@@ -17353,11 +17316,10 @@ void Parms::init ( ) {
 	// buzz
 	m->m_title = "display inlinks";
 	m->m_desc  = "Display all inlinks of each result.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_displayInlinks - y;
+	m->m_off   = (char *)&si.m_displayInlinks - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
-	m->m_scgi  = "inlinks";
+	m->m_cgi   = "inlinks";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
@@ -17367,11 +17329,10 @@ void Parms::init ( ) {
 	m->m_desc  = "Display all outlinks of each result. outlinks=1 "
 		"displays only external outlinks. outlinks=2 displays "
 		"external and internal outlinks.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_displayOutlinks - y;
+	m->m_off   = (char *)&si.m_displayOutlinks - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
-	m->m_scgi  = "outlinks";
+	m->m_cgi   = "outlinks";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
@@ -17379,11 +17340,10 @@ void Parms::init ( ) {
 	// buzz
 	m->m_title = "display term frequencies";
 	m->m_desc  = "Display Terms and Frequencies in results.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_displayTermFreqs - y;
+	m->m_off   = (char *)&si.m_displayTermFreqs - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_scgi  = "tf";
+	m->m_cgi   = "tf";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
@@ -17392,13 +17352,11 @@ void Parms::init ( ) {
 	// buzz
 	m->m_title = "spider results";
 	m->m_desc  = "Results of this query will be forced into the spider "
-		"queue for reindexing. Usage: spiderresults=X where X is the "
-		"priority to spider the results.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_spiderResults - y;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "-1";
-	m->m_scgi  = "spiderresults";
+		"queue for reindexing.";
+	m->m_off   = (char *)&si.m_spiderResults - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_cgi   = "spiderresults";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
@@ -17407,13 +17365,11 @@ void Parms::init ( ) {
 	// buzz
 	m->m_title = "spider result roots";
 	m->m_desc  = "Root urls of the results of this query will be forced "
-		"into the spider queue for reindexing. Usage: spiderresults=X "
-		"where X is the priority to spider the results.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_spiderResultRoots - y;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "-1";
-	m->m_scgi  = "spiderresultroots";
+		"into the spider queue for reindexing.";
+	m->m_off   = (char *)&si.m_spiderResultRoots - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "0";
+	m->m_cgi   = "spiderresultroots";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
@@ -17423,11 +17379,10 @@ void Parms::init ( ) {
 	m->m_title = "just mark clusterlevels";
 	m->m_desc  = "Check for deduping, but just mark the cluster levels "
 		"and the doc deduped against, don't remove the result.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_justMarkClusterLevels - y;
+	m->m_off   = (char *)&si.m_justMarkClusterLevels - y;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_scgi  = "jmcl";
+	m->m_cgi   = "jmcl";
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
@@ -17436,11 +17391,10 @@ void Parms::init ( ) {
 	m->m_title = "include cached copy of page";
 	m->m_desc  = "Will cause a cached copy of content to be returned "
 		"instead of summary.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_includeCachedCopy - y;
+	m->m_off   = (char *)&si.m_includeCachedCopy - y;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
-	m->m_scgi  = "icc";
+	m->m_cgi   = "icc";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m->m_flags = PF_API;
@@ -17448,11 +17402,10 @@ void Parms::init ( ) {
 
 	m->m_title = "get section voting info in json";
 	m->m_desc  = "Will cause section voting info to be returned.";
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_getSectionVotingInfo - y;
+	m->m_off   = (char *)&si.m_getSectionVotingInfo - y;
 	m->m_type  = TYPE_CHAR;
 	m->m_def   = "0";
-	m->m_scgi  = "sectionvotes";
+	m->m_cgi   = "sectionvotes";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m->m_flags = PF_API;
@@ -17462,13 +17415,13 @@ void Parms::init ( ) {
 	// parms for /get requests (cached web pages)
 	//
 	m->m_title = "docId";
-	m->m_desc  = "X is the docid of the cached page to view.";
+	m->m_desc  = "The docid of the cached page to view.";
 	m->m_off   = (char *)&gr.m_docId - (char *)&gr;
 	m->m_type  = TYPE_LONG_LONG;
 	m->m_page  = PAGE_GET;
 	m->m_obj   = OBJ_GBREQUEST; // generic request class
 	m->m_def   = "0";
-	m->m_scgi  = "d";
+	m->m_cgi   = "d";
 	m->m_flags = PF_API;
 	m++;
 
@@ -17479,13 +17432,13 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR; // reference into the HttpRequest
 	m->m_page  = PAGE_GET;
 	m->m_obj   = OBJ_GBREQUEST; // generic request class
-	m->m_def   = "0";
-	m->m_scgi  = "url";
+	m->m_def   = NULL;
+	m->m_cgi   = "url";
 	m->m_flags = PF_API;
 	m++;
 
 	m->m_title = "strip";
-	m->m_desc  = "X is 1 or 2 two strip various tags from the "
+	m->m_desc  = "Is 1 or 2 two strip various tags from the "
 		"cached content.";
 	m->m_off   = (char *)&gr.m_strip - (char *)&gr;
 	m->m_page  = PAGE_GET;
@@ -17497,7 +17450,7 @@ void Parms::init ( ) {
 	m++;
 
 	m->m_title = "include header";
-	m->m_desc  = "X is 1 to include the Gigablast header at the top of "
+	m->m_desc  = "Is 1 to include the Gigablast header at the top of "
 		"the cached page, 0 to exclude the header.";
 	m->m_def   = "1";
 	m->m_type  = TYPE_BOOL;
@@ -17511,12 +17464,11 @@ void Parms::init ( ) {
 	/*
 	// for /get
 	m->m_title = "query highlighting query";
-	m->m_desc  = "X is 1 to highlight query terms in the cached page.";
-	m->m_sparm = 1;
+	m->m_desc  = "Is 1 to highlight query terms in the cached page.";
 	m->m_def   = "1";
 	m->m_type  = TYPE_BOOL;
-	m->m_scgi  = "qh";
-	m->m_soff  = (char *)&si.m_queryHighlighting - y;
+	m->m_cgi   = "qh";
+	m->m_off   = (char *)&si.m_queryHighlighting - y;
 	m++;
 	*/
 
@@ -17524,11 +17476,10 @@ void Parms::init ( ) {
 	/*
 	m->m_title = "url to add";
 	m->m_desc  = "Used by add url page.";
-	m->m_sparm = 1;
 	m->m_type  = TYPE_STRING;
 	m->m_size  = MAX_URL_LEN;
-	m->m_scgi  = "u";
-	m->m_soff  = (char *)&si.m_url2 - y;
+	m->m_cgi   = "u";
+	m->m_off   = (char *)&si.m_url2 - y;
 	m++;
 	*/
 
@@ -17572,7 +17523,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST; // do not store in g_conf or collectionrec
 	m->m_off   = (char *)&gr.m_urlsBuf - (char *)&gr;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = "";
+	m->m_def   = NULL;
 	m->m_flags = PF_TEXTAREA | PF_NOSAVE | PF_API;
 	m++;
 
@@ -17628,7 +17579,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = "";
+	m->m_def   = NULL;
 	m->m_flags = PF_API|PF_COLLDEFAULT; // so it gets set to default coll
 	m++;
 
@@ -17666,7 +17617,7 @@ void Parms::init ( ) {
 	//m->m_cgi4  = "injecturl";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = "";
+	m->m_def   = NULL;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_url - (char *)&gr;
@@ -17677,7 +17628,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "u";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = "";
+	m->m_def   = NULL;
 	m->m_flags = PF_API | PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_url - (char *)&gr;
@@ -17688,7 +17639,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "seed";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = "";
+	m->m_def   = NULL;
 	m->m_flags = PF_API | PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_url - (char *)&gr;
@@ -17699,7 +17650,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "injecturl";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = "";
+	m->m_def   = NULL;
 	m->m_flags = PF_API | PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_url - (char *)&gr;
@@ -17712,7 +17663,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "qts";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = "";
+	m->m_def   = NULL;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_queryToScrape - (char *)&gr;
@@ -17748,7 +17699,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "c";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = "";
+	m->m_def   = NULL;
 	m->m_flags = PF_API|PF_COLLDEFAULT; // so it gets set to default coll
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
@@ -17857,7 +17808,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "delim";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = "";
+	m->m_def   = NULL;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_contentDelim - (char *)&gr;
@@ -17869,7 +17820,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "contenttype";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR; //text/html application/json application/xml
-	m->m_def   = "";
+	m->m_def   = NULL;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_contentTypeStr - (char *)&gr;
@@ -17911,7 +17862,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "content";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = "";
+	m->m_def   = NULL;
 	m->m_flags = PF_API|PF_TEXTAREA;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_content - (char *)&gr;
@@ -17922,7 +17873,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "diffbotreply";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = "";
+	m->m_def   = NULL;
 	m->m_flags = PF_API|PF_TEXTAREA|PF_HIDDEN; // do not show in our api
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_diffbotReply - (char *)&gr;
@@ -17979,6 +17930,12 @@ void Parms::init ( ) {
 			continue;
 		if ( ! m_parms[i].m_cgi ) continue;
 		if ( ! m_parms[j].m_cgi ) continue;
+		// gotta be on same page now i guess
+		long obj1 = m_parms[i].m_obj;
+		long obj2 = m_parms[j].m_obj;
+		if ( obj1 != OBJ_COLL && obj1 != OBJ_CONF ) continue;
+		if ( obj2 != OBJ_COLL && obj2 != OBJ_CONF ) continue;
+		//if ( m_parms[i].m_page != m_parms[j].m_page ) continue;
 		// a different m_scmd means a different cgi parm really...
 		//if ( m_parms[i].m_sparm && m_parms[j].m_sparm &&
 		//     strcmp ( m_parms[i].m_scmd, m_parms[j].m_scmd) != 0 )
@@ -18006,16 +17963,16 @@ void Parms::init ( ) {
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
 		// sanity check
 		if ( m_parms[i].m_off   > mm ||
-		     m_parms[i].m_soff  > mm ||
+		     //m_parms[i].m_soff  > mm ||
 		     m_parms[i].m_smaxc > mm   ) {
 			log(LOG_LOGIC,"conf: Bad offset in parm #%li %s."
-			    " (%li,%li,%li,%li). Did you FORGET to include "
+			    " (%li,%li,%li). Did you FORGET to include "
 			    "an & before the cr.myVariable when setting "
 			    "m_off for this parm?",
 			    i,m_parms[i].m_title,
 			    mm,
 			    m_parms[i].m_off,
-			    m_parms[i].m_soff,
+			    //m_parms[i].m_soff,
 			    m_parms[i].m_smaxc);
 			exit(-1);
 		}
@@ -18115,7 +18072,7 @@ void Parms::init ( ) {
 		if ( t == TYPE_MONOM2   ) continue;
 		if ( t == TYPE_SAFEBUF  ) continue;
 		// search parms do not need an offset
-		if ( m_parms[i].m_off == -1 && m_parms[i].m_sparm == 0 ) {
+		if ( m_parms[i].m_off == -1 ){//&& m_parms[i].m_sparm == 0 ) {
 			log(LOG_LOGIC,"conf: Parm #%li \"%s\" has no offset.",
 			    i,m_parms[i].m_title);
 			exit(-1);
@@ -18133,7 +18090,9 @@ void Parms::init ( ) {
 			log("admin: Parm %s has bad m_off value.",m->m_title);
 			char *xx = NULL; *xx = 0;
 		}
-		if ( m->m_soff >= 0 && m->m_soff >= (long)sizeof(SearchInput)){
+		if ( m->m_off >= 0 && 
+		     m->m_obj == OBJ_SI && 
+		     m->m_off >= (long)sizeof(SearchInput)){
 			log("admin: Parm %s has bad m_off value.",m->m_title);
 			char *xx = NULL; *xx = 0;
 		}
@@ -18174,12 +18133,13 @@ void Parms::init ( ) {
 	// set m_searchParms
 	long n = 0;
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
-		if ( ! m_parms[i].m_sparm ) continue;
+		//if ( ! m_parms[i].m_sparm ) continue;
+		if ( m_parms[i].m_obj != OBJ_SI ) continue;
 		m_searchParms[n++] = &m_parms[i];
 		// sanity check
-		if ( m_parms[i].m_soff == -1 ) {
+		if ( m_parms[i].m_off == -1 ) {
 			log(LOG_LOGIC,"conf: SEARCH Parm #%li \"%s\" has "
-			    "m_soff < 0 (offset into SearchInput).",
+			    "m_off < 0 (offset into SearchInput).",
 			    i,m_parms[i].m_title);
 			exit(-1);
 		}
@@ -18209,6 +18169,7 @@ void Parms::overlapTest ( char step ) {
 	//log("conf: Using step=%li",(long)step);
 
 	SearchInput   tmpsi;
+	GigablastRequest tmpgr;
 	CollectionRec tmpcr;
 	Conf          tmpconf;
 	char          b;
@@ -18232,10 +18193,10 @@ void Parms::overlapTest ( char step ) {
 		p1 = NULL;
 		if ( m_parms[i].m_obj == OBJ_COLL ) p1 = (char *)&tmpcr;
 		if ( m_parms[i].m_obj == OBJ_CONF ) p1 = (char *)&tmpconf;
+		if ( m_parms[i].m_obj == OBJ_SI   ) p1 = (char *)&tmpsi;
+		if ( m_parms[i].m_obj == OBJ_GBREQUEST   ) p1 = (char *)&tmpgr;
 		if ( p1 ) p1 += m_parms[i].m_off;
 		p2 = NULL;
-		if ( m_parms[i].m_soff >= 0 ) 
-			p2 = (char *)&tmpsi + m_parms[i].m_soff;
 		long size = m_parms[i].m_size;
 		// use i now
 		b = (char)i;
@@ -18260,6 +18221,8 @@ void Parms::overlapTest ( char step ) {
 	char *objStr = "none";
 	long  obj;
 	char  infringerB;
+	long  j;
+	long savedi = -1;
 
 	for ( i = 0 ; i < m_numParms ; i++ ) {
 
@@ -18278,12 +18241,11 @@ void Parms::overlapTest ( char step ) {
 		p1 = NULL;
 		if ( m_parms[i].m_obj == OBJ_COLL ) p1 = (char *)&tmpcr;
 		if ( m_parms[i].m_obj == OBJ_CONF ) p1 = (char *)&tmpconf;
+		if ( m_parms[i].m_obj == OBJ_SI   ) p1 = (char *)&tmpsi;
+		if ( m_parms[i].m_obj == OBJ_GBREQUEST ) p1 = (char *)&tmpgr;
 		if ( p1 ) p1 += m_parms[i].m_off;
 		p2 = NULL;
-		if ( m_parms[i].m_soff >= 0 ) 
-			p2 = (char *)&tmpsi + m_parms[i].m_soff;
 		long size = m_parms[i].m_size;
-		long j ;
 		b = (char) i;
 		// save it
 		obj = m_parms[i].m_obj;
@@ -18299,11 +18261,18 @@ void Parms::overlapTest ( char step ) {
 			//if ( p1 == (char *)&tmpconf.m_spideringEnabled ) 
 			//	continue;
 			// set object type
-			objStr = "Conf.h";
-			if ( m_parms[i].m_type == OBJ_COLL )
+			objStr = "??????";
+			if ( m_parms[i].m_obj == OBJ_COLL )
 				objStr = "CollectionRec.h";
+			if ( m_parms[i].m_obj == OBJ_CONF )
+				objStr = "Conf.h";
+			if ( m_parms[i].m_obj == OBJ_SI )
+				objStr = "SearchInput.h";
+			if ( m_parms[i].m_obj == OBJ_GBREQUEST )
+				objStr = "GigablastRequest/Parms.h";
 			// save it
 			infringerB = p1[j];
+			savedi = i;
 			goto error;
 		}
 		// search input uses character ptrs!!
@@ -18319,6 +18288,7 @@ void Parms::overlapTest ( char step ) {
 			if ( p2[j] == b ) continue;
 			// save it
 			infringerB = p2[j];
+			savedi = i;
 			log("conf: got b=0x%hhx when it should have been "
 			    "b=0x%hhx",p2[j],b);
 			goto error;
@@ -18328,22 +18298,23 @@ void Parms::overlapTest ( char step ) {
 	return;
 
  error:
-	log("conf: Had a parm value collision. Parm #%li. "
-	    "\"%s\" in %s has overlapped with another parm. "
+	log("conf: Had a parm value collision. Parm #%li "
+	    "\"%s\" (size=%li) in %s has overlapped with another parm. "
 	    "Your TYPE_* for this parm or a neighbor of it "
 	    "does not agree with what you have declared it as in the *.h "
-	    "file.",i,m_parms[i].m_title,objStr);
+	    "file.",i,m_parms[i].m_title,m_parms[i].m_size,objStr);
 	if ( step == -1 ) b--;
 	else              b = 0;
 	// show possible parms that could have overwritten it!
 	for ( i = start ; i < m_numParms && i >= 0 ; i += step ) {
-		char *p1 = NULL;
-		if ( m_parms[i].m_obj == OBJ_COLL ) p1 = (char *)&tmpcr;
-		if ( m_parms[i].m_obj == OBJ_CONF ) p1 = (char *)&tmpconf;
+		//char *p1 = NULL;
+		//if ( m_parms[i].m_obj == OBJ_COLL ) p1 = (char *)&tmpcr;
+		//if ( m_parms[i].m_obj == OBJ_CONF ) p1 = (char *)&tmpconf;
 		// skip if comment
 		if ( m_parms[i].m_type == TYPE_COMMENT ) continue;
 		if ( m_parms[i].m_type == TYPE_FILEUPLOADBUTTON ) continue;
 		if ( m_parms[i].m_flags & PF_DUP ) continue;
+		if ( m_parms[i].m_obj != m_parms[savedi].m_obj ) continue;
 		// skip if no match
 		//bool match = false;
 		//if ( m_parms[i].m_obj == obj ) match = true;
@@ -18352,10 +18323,11 @@ void Parms::overlapTest ( char step ) {
 		b = (char) i;
 		if ( b == infringerB )
 			log("conf: possible overlap with parm #%li in %s "
-			    "\"%s\" "
+			    "\"%s\" (size=%li) "
 			    "xml=%s "
 			    "desc=\"%s\"",
 			    i,objStr,m_parms[i].m_title,
+			    m_parms[i].m_size,
 			    m_parms[i].m_xml,
 			    m_parms[i].m_desc);
 	}
@@ -18369,17 +18341,20 @@ void Parms::overlapTest ( char step ) {
 
 
 bool Parm::getValueAsBool ( SearchInput *si ) {
-	char *p = (char *)si + m_soff;
+	if ( m_obj != OBJ_SI ) { char *xx=NULL;*xx=0; }
+	char *p = (char *)si + m_off;
 	return *(bool *)p;
 }
 
 long Parm::getValueAsLong ( SearchInput *si ) {
-	char *p = (char *)si + m_soff;
+	if ( m_obj != OBJ_SI ) { char *xx=NULL;*xx=0; }
+	char *p = (char *)si + m_off;
 	return *(long *)p;
 }
 
 char *Parm::getValueAsString ( SearchInput *si ) {
-	char *p = (char *)si + m_soff;
+	if ( m_obj != OBJ_SI ) { char *xx=NULL;*xx=0; }
+	char *p = (char *)si + m_off;
 	return *(char **)p;
 }
 

@@ -6605,7 +6605,7 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ){
 	r->m_niceness            = m_niceness;
 	r->m_debug               = 0;
 	r->m_doSiteClustering    = false;
-	r->m_doIpClustering      = false;
+	//r->m_doIpClustering      = false;
 	r->m_doDupContentRemoval = false;
 	r->m_boolFlag            = 2;
 	r->m_familyFilter        = 0;

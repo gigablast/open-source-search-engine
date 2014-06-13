@@ -509,7 +509,7 @@ bool Msg1c::reindexQuery ( char *query ,
 	m_req.m_niceness                  = 0,
 	m_req.m_getDocIdScoringInfo       = false;
 	m_req.m_doSiteClustering          = false;
-	m_req.m_doIpClustering            = false;
+	//m_req.m_doIpClustering            = false;
 	m_req.m_doDupContentRemoval       = false;
 	m_req.ptr_query                   = m_qq.m_orig;
 	m_req.size_query                  = m_qq.m_origLen+1;

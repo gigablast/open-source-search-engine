@@ -838,6 +838,8 @@ bool endsWith(char *haystack, int haystackLen, char *needle, int needleLen) {
     return haystackLen >= needleLen && !strncmp(haystack + haystackLen - needleLen, needle, needleLen);
 }
 
+#include "Pages.h" // sendPageAPI
+
 // . reply to a GET (including partial get) or HEAD request
 // . HEAD just returns the MIME header for the file requested
 // . returns false if blocked, true otherwise
@@ -1065,8 +1067,11 @@ bool HttpServer::sendReply ( TcpSocket  *s , HttpRequest *r , bool isAdmin) {
 	// comment out for old flurbit layout
 	//if ( ! strncmp ( path ,"/help.html", pathLen ) )
 	//	return sendPageAbout ( s , r , path );
-	//if ( ! strncmp ( path ,"/api.html", pathLen ) )
-	//	return sendPageApi ( s , r  );
+
+	if ( ! strncmp ( path ,"/api.html", pathLen ) )
+		return sendPageAPI ( s , r  );
+	if ( ! strncmp ( path ,"/api", pathLen ) )
+		return sendPageAPI ( s , r  );
 
 	if ( ! strncmp ( path ,"/print", pathLen ) )
 		return sendPageAnalyze ( s , r  );

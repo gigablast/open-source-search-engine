@@ -56,11 +56,15 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 		      " &nbsp; &nbsp; "
 		      "<a href=%s/contact.html>Contact</a>"
 		      " &nbsp; &nbsp; "
-		      "<a href=%s/help.html>Help</a>"
+		      "<a href=%s/help.html>Query Syntax</a>"
 		      " &nbsp; &nbsp; "
 		      "<a href=%s/privacy.html>Privacy Policy</a>"
 		      " &nbsp; &nbsp; "
-		      "<a href=%s/searchfeed.html>Search API</a>"
+
+		      // TODO: API page must also provide a description
+		      // of the output... like searchfeed.html does already.
+		      // put that in the api page as well.
+		      "<a href=%s/api>API</a>"
 		      , root
 		      , root
 		      , root

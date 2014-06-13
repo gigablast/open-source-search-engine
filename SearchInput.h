@@ -22,7 +22,7 @@
 
 #define MAX_TOPIC_GROUPS 10
 
-char getFormatFromRequest ( class HttpRequest *r ) ;
+char getFormatFromRequest ( class HttpRequest *hr ) ;
 
 // . parameters used to generate a set of related topics (gigabits)
 // . you can have Msg24 generate multiple sets of related topics in one call
@@ -49,7 +49,8 @@ class SearchInput {
 
  public:
 
-	bool set ( class TcpSocket *s , class HttpRequest *r , Query *q );
+	// why provide query here, it is in "hr"
+	bool set ( class TcpSocket *s , class HttpRequest *hr );
 
 	void  test    ( );
 	key_t makeKey ( ) ;
@@ -74,14 +75,144 @@ class SearchInput {
 	// Language support for Msg40
 	uint8_t detectQueryLanguage(void);
 
-	bool addFacebookInterests ( char *list ) ;
-	bool addInterests ( char *list , char delim, bool hasNums ) ;
-	bool addInterest (char *s, long slen, char valc, bool overwrite );
+	//bool addFacebookInterests ( char *list ) ;
+	//bool addInterests ( char *list , char delim, bool hasNums ) ;
+	//bool addInterest (char *s, long slen, char valc, bool overwrite );
 
+	///////////
+	//
+	// BEGIN COMPUTED THINGS
+	//
+	///////////
+
+	// we basically steal the original HttpRequest buffer and keep
+	// here since the original one is on the stack
+	HttpRequest  m_hr;
+
+	TcpSocket   *m_sock;
+
+	long   m_niceness;                   // msg40
+
+	// array of collnum_t's to search... usually just one
+	SafeBuf m_collnumBuf;
+	// first collection # listed in m_collnumBuf
+	collnum_t m_firstCollnum;
+
+	// reset this
+	long      m_numTopicGroups;   // msg40
+
+	char          *m_displayQuery;     // pts into m_qbuf1
+	//class Hostdb  *m_hostdb;
+
+	// urlencoded display query
+	//char m_qe [ MAX_QUERY_LEN *2 + 1 ];
+
+	// urlencoded display query. everything is compiled into this.
+	SafeBuf m_qe;
+
+	CollectionRec *m_cr;
+
+	// the final compiled query goes here
+	Query          m_q;
+
+	Query         *m_q2;
+
+	char           m_isAdmin;
+
+
+	// these are set from things above
+	TopicGroup     m_topicGroups [ MAX_TOPIC_GROUPS ];// msg40
+	SafeBuf m_sbuf1;
+	SafeBuf m_sbuf2;
+	SafeBuf m_sbuf3;
+
+	long m_catId;
+	bool m_isRTL;
+
+	// make a cookie from parms with m_flags of PF_COOKIE set
+	SafeBuf m_cookieBuf;
+
+	// we convert m_defaultSortLang to this number, like langEnglish
+	// or langFrench or langUnknown...
+	long m_queryLangId;
+
+	// can be 1 for FORMAT_HTML, 2 = FORMAT_XML, 3=FORMAT_JSON, 4=csv
+	long m_format;
 
 	// used as indicator by SearchInput::makeKey() for generating a
 	// key by hashing the parms between m_START and m_END
 	long   m_START;
+
+
+	//////
+	//
+	// BEGIN USER PARMS set from HttpRequest, m_hr
+	//
+	//////
+
+	char *m_coll;
+	char *m_query;
+	
+	char *m_prepend;
+
+	// ip address of searcher used for banning abusive IPs "uip"
+	char *m_userIpStr;
+
+	// general parms, not part of makeKey(), but should be serialized
+	char   m_useCache;                   // msg40
+	char   m_rcache;                     // msg40
+	char   m_wcache;                     // msg40
+
+	char   m_debug;                      // msg40
+	char   m_debugGigabits;
+
+	char   m_spiderResults;
+	char   m_spiderResultRoots;
+
+	char   m_spellCheck;
+
+	char  *m_displayMetas;               // msg40
+
+
+	// do not include these in makeKey()
+	long   m_numTopicsToDisplay;
+	long   m_refs_numToDisplay;
+	long   m_rp_numToDisplay;  
+
+	// these should all be hashed in makeKey()
+	//char  *m_rp_externalColl;            // msg40
+	//char  *m_importColl;                 // msg40
+
+	char  *m_queryCharset;
+
+	char  *m_gbcountry;
+	uint8_t m_country;
+
+	//char  *m_query2;                      
+
+	// advanced query parms
+	char  *m_url; // for url: search
+	char  *m_sites;
+	char  *m_plus;
+	char  *m_minus;
+	char  *m_link;
+	char  *m_quote1;
+	char  *m_quote2;
+
+	// co-branding parms
+	char  *m_imgUrl;
+	char  *m_imgLink;
+	long   m_imgWidth;
+	long   m_imgHeight;
+
+	// for limiting results by score in the widget
+	double    m_maxSerpScore;
+	long long m_minSerpDocId;
+
+	// prefer what lang in the results. it gets a 20x boost. "en" "xx" "fr"
+	char 	      *m_defaultSortLang;
+	// prefer what country in the results. currently unused. support later.
+	char 	      *m_defaultSortCountry;
 
 	// general parameters
         char   m_dedupURL;
@@ -94,7 +225,7 @@ class SearchInput {
 	long   m_includeCachedCopy;
 	char   m_getSectionVotingInfo;
 	char   m_familyFilter;            // msg40
-	char   m_restrictIndexdbForQuery; // msg40
+	//char   m_restrictIndexdbForQuery; // msg40
 	char   m_doSiteClustering;        // msg40
 	char   m_doDupContentRemoval;     // msg40
 	char   m_getDocIdScoringInfo;
@@ -109,8 +240,8 @@ class SearchInput {
 	// intersection speed up shortcut? "&fi=1", defaults to on
 	char   m_fastIntersection;
 
-	// stream results back on socket in streaming mode, usefule when thousands
-	// of results are requested
+	// stream results back on socket in streaming mode, usefule when 
+	// thousands of results are requested
 	char   m_streamResults;
 
 	// . related topic (gigabits) parameters
@@ -154,10 +285,18 @@ class SearchInput {
 	char   m_rp_useResultsAsReferences;   // msg40
 	char   m_rp_getExternalPages;         // msg40
 
-	char   m_getTitleRec;
+	// unused pqr stuff
+	int8_t			m_langHint;
+	float			m_languageUnknownWeight;
+	float			m_languageWeightFactor;
+	char			m_enableLanguageSorting;
+	uint8_t                 m_countryHint;
+	char                    m_useLanguagePages;
 
+
+	//char   m_getTitleRec;
 	// buzz uses this
-	char   m_getSitePops;
+	//char   m_getSitePops;
 
 	// search result knobs
 	long   m_realMaxTop;
@@ -173,7 +312,6 @@ class SearchInput {
 	long   m_numLinkerWeight;
 	long   m_minLinkersPerImportedResult; // msg40
 	char   m_doQueryHighlighting;         // msg40
-	long   m_highlightQueryLen;
 	char  *m_highlightQuery;
 	Query  m_hqq;
 	long   m_queryMatchOffsets;
@@ -182,6 +320,7 @@ class SearchInput {
 	// are we doing a QA query for quality assurance consistency
 	char   m_qa;
 
+	long   m_docsToScanForReranking;
 	float  m_pqr_demFactSubPhrase;
 	float  m_pqr_demFactCommonInlinks;
 	float  m_pqr_demFactLocTitle;
@@ -201,11 +340,6 @@ class SearchInput {
 
 	//char   m_queryPrepend[41];
 
-	// for selecting a language
-	//long   m_languageCodeLen;
-	char   m_queryLang;
-	long   m_gblang;
-
 	// new sort/constrain by date stuff
 	char   m_useDateLists;
 
@@ -219,241 +353,66 @@ class SearchInput {
 	// we do not do summary deduping, and other filtering with docids
 	// only, so can change the result and should be part of the key
 	char   m_docIdsOnly;                 // msg40
-	
-	// tier sizes can change with different "raw" values, therefore,
-	// so can search results
-	//long   m_xml;                        // msg40
-	// can be 0 for FORMAT_HTML, 1 = FORMAT_XML, 2=FORMAT_JSON
-	//long  m_formatStrLen;
-	//char *m_formatStr;
 
-	char m_formatTmp[11];
 
-	// can be 0 for FORMAT_HTML, 1 = FORMAT_XML, 2=FORMAT_JSON, 3=csv
-	long m_format;
+	char  *m_formatStr;
 
 	// this should be part of the key because it will affect the results!
 	char   m_queryExpansion;
 
 	long   m_maxRealTimeInlinks;
-	//char   m_hideAllClustered;
 
-	// Language stuff
-	int8_t			m_langHint;
-	float			m_languageUnknownWeight;
-	float			m_languageWeightFactor;
-	char			m_enableLanguageSorting;
-	uint8_t                 m_countryHint;
-	char                    m_useLanguagePages;
+	////////
+	//
+	// END USER PARMS
+	//
+	////////
 
 	// . end the section we hash in SearchInput::makeKey()
 	// . we also hash displayMetas, TopicGroups and Query into the key
 	long   m_END_HASH;
 
-	time_t m_nowUTC;
 
-	char   m_fromProxy;
-	char  *m_languageCode;
-	char  *m_botDetectionQuery;                      
 
-	// general parms, not part of makeKey(), but should be serialized
-	long   m_useCache;                   // msg40
-	long   m_rcache;                     // msg40
-	long   m_wcache;                     // msg40
-	long   m_niceness;                   // msg40
-	long   m_compoundListMaxSize;        // msg40
-	char   m_debug;                      // msg40
-	char   m_debugGigabits;
-	char   m_useTopTree;                 // msg40
-	//char   m_restrictTitledbForQuery;    // msg40 (obsolete)
-	char   m_doIpClustering;             // msg40 (obsolete)
-	//double m_dpf;                        // msg40 (obsolete)
+	//////
+	//
+	// STUFF NOT REALLY USED NWO
+	//
+	//////
 
-	// source IP for language sorting
-	long m_queryIP;
+	// for selecting a language
+	//char   m_queryLang;
+	//long   m_gblang;
 
-	//long   m_END_SERIALIZE;
+	// post query reranking
+	//long          m_docsToScanForReranking;
 
-	long   m_spiderResults;
-	long   m_spiderResultRoots;
-
-	char   m_spellCheck;
-
-	// do not include these in makeKey()
-	long   m_numTopicsToDisplay;
-	long   m_refs_numToDisplay;
-	long   m_rp_numToDisplay;  
-
-	// these should all be hashed in makeKey()
-	long   m_displayMetasLen;            // msg40
-	char  *m_displayMetas;               // msg40
-	long   m_rp_externalCollLen;         // msg40
-	char  *m_rp_externalColl;            // msg40
-	long   m_importCollLen;              // msg40
-	char  *m_importColl;                 // msg40
-
-	long   m_queryCharsetLen;
-	char  *m_queryCharset;
-
-	long   m_gbcountryLen;
-	char  *m_gbcountry;
-	uint8_t m_country;
-
-	// general string parms
-	long   m_queryLen;                   
-	char  *m_query;                      
-	long   m_query2Len;                   
-	char  *m_query2;                      
-	//long   m_collLen2;                    // msg40
-	//char  *m_coll2;                       // msg40
-
-	// array of collnum_t's to search... usually just one
-	SafeBuf m_collnumBuf;
-	// first collection # listed in m_collnumBuf
-	collnum_t m_firstCollnum;
-
-	SafeBuf m_coll;
-
-	// . "special query"
-	// . list of docids to restrict results to, i.e. "124+4564+6752+..."
-	// . NULL terminated
-	long   m_sqLen;
-	char  *m_sq;
-	// exclude these docids
-	long   m_noDocIdsLen;
-	char  *m_noDocIds;
-	// exclude these 32-bit site hashes (site ids)
-	long   m_noSiteIdsLen;
-	char  *m_noSiteIds;
-
-	long   m_htmlHeadLen;
-	char  *m_htmlHead;
-	long   m_htmlTailLen;
-	char  *m_htmlTail;
-	long   m_siteLen;
-	char  *m_site;
-	//long   m_sitesLen;
-	//char  *m_sites;
-	long   m_plusLen;
-	char  *m_plus;
-	long   m_minusLen;
-	char  *m_minus;
-	long   m_linkLen;
-	char  *m_link;
-	long   m_quoteLen1;
-	char  *m_quote1;
-	long   m_quoteLen2;
-	char  *m_quote2;
-	long   m_imgUrlLen;
-	char  *m_imgUrl;
-	long   m_imgLinkLen;
-	char  *m_imgLink;
-	long   m_urlLen;
-	char  *m_url;
-	long   m_imgWidth;
-	long   m_imgHeight;
-	//long   m_sitesQueryLen;
-
-	SafeBuf m_whiteListBuf;
-
+	//char  *m_url;
+	//SafeBuf m_whiteListBuf;
 	// password is for all
-	long   m_pwdLen;
-	char  *m_pwd;
-
+	//char  *m_pwd;
 	// for /addurl?u=www.foo.com
-	long   m_urlLen2;
-	char  *m_url2;
+	//char  *m_url2;
 
-	double    m_maxSerpScore;
-	long long m_minSerpDocId;
 
 	// for /get?d=xxxxx&strip=0&ih=1&qh=1
-	long long m_docId;
-	long      m_strip;
-	char      m_includeHeader;
-	char      m_queryHighlighting; 
-	char      m_doDateHighlighting;
-        long      m_useAdFeedNum;
+	//long long m_docId;
+	//long      m_strip;
+	//char      m_includeHeader;
+	//char      m_queryHighlighting; 
+	//char      m_doDateHighlighting;
+        //long      m_useAdFeedNum;
 
-	// reset this
-	long      m_numTopicGroups;   // msg40
-
-	//long           m_qbufLen1;         // msg40
-	//long           m_qbufLen2;
-	//long           m_qbufLen3;
-	long           m_displayQueryLen;
-	long           m_urlParmsLen;
-	long           m_postParmsLen;
-	// post query reranking
-	long          m_docsToScanForReranking;
-
-	// Language stuff
-	long           m_defaultSortLanguageLen;
-	char 	      *m_defaultSortLanguage;
-	long           m_defaultSortCountryLen;
-	char 	      *m_defaultSortCountry;
-
-	char          *m_username;
-	char          *m_displayQuery;     // pts into m_qbuf1
-	class Hostdb  *m_hostdb;
-
-	// urlencoded display query
-	char m_qe [ MAX_QUERY_LEN *2 + 1 ];
-
-	CollectionRec *m_cr;
-	Query         *m_q;
-	Query         *m_q2;
-
-	char           m_isAdmin;
-	//char           m_isAdminOverride;
-	//char           m_isFriend;
-	//char           m_isAssassin;
-
-	// Saved pointer to httpRequest for lang detection
-	HttpRequest * m_hr;
+	//char          *m_username;
 
 	// true if query is directly from an end-user
-	char m_endUser;
+	//char m_endUser;
 
-	long           m_maxResults;       // msg40
+	//long           m_maxResults;       // msg40
 
 	// a marker for SearchInput::test()
 	long      m_END_TEST;
 
-	// these are set from things above
-	TopicGroup     m_topicGroups [ MAX_TOPIC_GROUPS ];// msg40
-	//long           m_user;             // USER_ADMIN, ...
-	//char           m_qbuf1     [ MAX_QUERY_LEN ];
-	//char           m_qbuf2     [ MAX_QUERY_LEN ];
-	// qbuf3 is for q2, strangly
-	//char           m_qbuf3     [ MAX_QUERY_LEN ];
-	SafeBuf m_sbuf1;
-	SafeBuf m_sbuf2;
-	SafeBuf m_sbuf3;
-
-	long m_catId;
-	bool m_isRTL;
-
-	// make a cookie from parms with m_flags of PF_COOKIE set
-	SafeBuf m_cookieBuf;
-
-	TcpSocket *m_socket;
-
-	//char           m_urlParms  [ MAX_URLPARMS_LEN ];
-	//char           m_postParms [ MAX_URLPARMS_LEN ];
-
-	
-	//long  m_turkUserLen;
-	//char *m_turkUser;//[128];
-
-	//char          *m_buf;
-	//char          *m_ptr; // into m_buf
-	//long           m_bufSize;
-	//char           m_stack [ SI_STACK_SIZE ]; // may pt'ed to by m_buf
-
-	// . all the parms serialized...
-	// . we own this buf
-	//char  m_tmpBuf [ SI_TMPBUF_SIZE ];
 };
 
 #endif

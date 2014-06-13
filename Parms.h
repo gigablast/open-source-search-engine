@@ -89,8 +89,7 @@ class Page {
 	char *m_title;    // browser title bar
 };
 
-// generic gigablast request. for all requests except search i guess for now.
-// TODO: include search parms in here too
+// generic gigablast request. for all apis offered.
 class GigablastRequest {
  public:
 
@@ -105,9 +104,12 @@ class GigablastRequest {
 	// ptr to socket to send reply back on
 	TcpSocket *m_socket;
 
+
+	////////////
 	//
 	// /admin/inject parms
 	//
+	////////////
 	// these all reference into m_hr or into the Parm::m_def string!
 	char *m_url; // also for /get
 	char *m_queryToScrape;
@@ -116,35 +118,37 @@ class GigablastRequest {
 	char *m_contentTypeStr;
 	char *m_contentFile;
 	char *m_content;
-
-	char m_injectLinks;
-	char m_spiderLinks;
-	char m_shortReply;
-	char m_newOnly;
-	char m_deleteUrl;
-	char m_recycle;
-	char m_dedup;
-	char m_hasMime;
-
-	long m_charset;
-	long m_hopCount;
-	char m_doConsistencyTesting;
 	char *m_diffbotReply; // secret thing from dan
+	char  m_injectLinks;
+	char  m_spiderLinks;
+	char  m_shortReply;
+	char  m_newOnly;
+	char  m_deleteUrl;
+	char  m_recycle;
+	char  m_dedup;
+	char  m_hasMime;
+	char  m_doConsistencyTesting;
+	long  m_charset;
+	long  m_hopCount;
 
+	///////////
 	//
 	// /get parms (for getting cached web pages)
 	//
+	///////////
 	long long m_docId;
 	long      m_strip;
 	char      m_includeHeader;
 
+	///////////
 	//
 	// /admin/addurl parms
 	//
+	///////////
 	char *m_urlsBuf;
-	char    m_stripBox;
-	char    m_harvestLinksBox;
-	char    m_forceRespiderBox;
+	char  m_stripBox;
+	char  m_harvestLinksBox;
+	char  m_forceRespiderBox;
 
 };
 
@@ -207,6 +211,7 @@ class Parm {
 	long  m_fixed; 
 	long  m_size;  // max string size
 	char *m_def;   // default value of this variable if not in either conf
+	long  m_defOff; // if default value points to a collectionrec parm!
 	char  m_cast;  // true if we should broadcast to all hosts (default)
 	char *m_units;
 	char  m_addin; // add "insert above" link to gui when displaying array
@@ -239,16 +244,16 @@ class Parm {
 	char  m_save;  // save to xml file? almost always true
 	long  m_min;
 	// these are used for search parms in PageResults.cpp
-	char  m_sparm; // is this a search parm? for passing to PageResults.cpp
-	char *m_scgi;  // parm in the search url
+	//char m_sparm;// is this a search parm? for passing to PageResults.cpp
+	//char *m_scgi;  // parm in the search url
 	char  m_spriv; // is it private? only admins can see/use private parms
-	char *m_scmd;  // the url path for this m_scgi variable
+	//char *m_scmd;  // the url path for this m_scgi variable
 	//long  m_sdefo; // offset of default into CollectionRec (use m_off)
 	long  m_sminc ;// offset of min in CollectionRec (-1 for none)
 	long  m_smaxc ;// offset of max in CollectionRec (-1 for none)
 	long  m_smin;  // absolute min
 	long  m_smax;  // absolute max
-	long  m_soff;  // offset into SearchInput to store value in
+	//long  m_soff;  // offset into SearchInput to store value in
 	char  m_sprpg; // propagate the cgi variable to other pages via GET?
 	char  m_sprpp; // propagate the cgi variable to other pages via POST?
 	bool  m_sync;  // this parm should be synced
@@ -338,8 +343,9 @@ class Parms {
 
 	bool setFromRequest ( HttpRequest *r , //long user,
 			      TcpSocket* s,
-			      bool (*callback)(TcpSocket *s , HttpRequest *r),
-			      class CollectionRec *newcr = NULL );
+			      class CollectionRec *newcr ,
+			      char *THIS ,
+			      long objType );
 	
 	bool insertParm ( long i , long an , char *THIS ) ;
 	bool removeParm ( long i , long an , char *THIS ) ;
@@ -347,7 +353,8 @@ class Parms {
 	void setParm ( char *THIS, Parm *m, long mm, long j, char *s,
 		       bool isHtmlEncoded , bool fromRequest ) ;
 	
-	void setToDefault ( char *THIS , char objType ) ;
+	void setToDefault ( char *THIS , char objType ,
+			    CollectionRec *argcr = NULL ) ;
 
 	bool setFromFile ( void *THIS        , 
 			   char *filename    , 

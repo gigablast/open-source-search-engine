@@ -2450,26 +2450,19 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 
 		// use m_cgi if no m_scgi
 		char *cgi = parm->m_cgi;
-		if ( parm->m_scgi ) cgi = parm->m_scgi;
 
 		//char *page = parm->m_scmd;
 		char *page = NULL;
 		if ( parm->m_page == PAGE_INJECT  ) page = "/admin/inject";
 		if ( parm->m_page == PAGE_ADDURL2 ) page = "/admin/addurl";
 		if ( parm->m_page == PAGE_GET     ) page = "/admin/get";
-
-		if ( ! page && parm->m_page == PAGE_SEARCH )
-			page = "/admin/search";
-
-		// these parms are on search results page and in SearchInput
-		if ( parm->m_page == PAGE_SEARCH && parm->m_scgi )
-			page = "/search";
-	
+		if ( parm->m_page == PAGE_SEARCH  ) page = "/admin/search";
 		// these are just in SearchInput
-		if ( parm->m_page == PAGE_NONE && parm->m_obj == OBJ_SI  ) 
+		if ( parm->m_page == PAGE_NONE && parm->m_obj == OBJ_SI )
 			page = "/search";
-
-		if ( ! page ) page = "???";
+		// unknown?
+		if ( ! page ) 
+			page = "???";
 
 		// print the parm
 		p.safePrintf ( "<tr bgcolor=#%s><td><b>%s</b></td>", 

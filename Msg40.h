@@ -157,8 +157,8 @@ class Msg40 {
 
 	// . we copy query and coll to our own local buffer
 	// . these routines give us back our inputted parameters we saved
-	char *getQuery              ( ) { return m_si->m_q->getQuery(); };
-	long  getQueryLen           ( ) { return m_si->m_q->getQueryLen(); };
+	char *getQuery              ( ) { return m_si->m_q.getQuery(); };
+	long  getQueryLen           ( ) { return m_si->m_q.getQueryLen(); };
 	//char *getColl               ( ) { return m_si->m_coll2; };
 	//long  getCollLen            ( ) { return m_si->m_collLen2; };
 	long  getDocsWanted         ( ) { return m_si->m_docsWanted; };
