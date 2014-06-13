@@ -320,7 +320,7 @@ enum {
 	PAGE_ADDCOLL     ,	
 	PAGE_DELCOLL     , 
 	PAGE_REPAIR      ,
-	PAGE_SITES , // site filters
+	//PAGE_SITES , // site filters
 	PAGE_FILTERS     ,
 	PAGE_INJECT      , 
 	PAGE_ADDURL2     ,

@@ -182,6 +182,7 @@ class GigablastRequest {
 #define PF_DUP      0x0400
 #define PF_TEXTAREA 0x0800
 #define PF_COLLDEFAULT 0x1000
+#define PF_NOAPI       0x2000
 
 class Parm {
  public:
@@ -224,6 +225,7 @@ class Parm {
 	char *m_class;
 	char *m_icon;
 	char *m_qterm;
+	char *m_pstr; // for sorting by in sendPageAPI()
 	long  m_parmNum; // slot # in the m_parms[] array that we are
 	//bool (*m_func)(TcpSocket *s , HttpRequest *r,
 	//	       bool (*cb)(TcpSocket *s , HttpRequest *r));
