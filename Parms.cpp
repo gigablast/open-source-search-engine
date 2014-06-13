@@ -5686,7 +5686,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;//STRING;
 	m->m_cgi   = "q";
 	//m->m_size  = MAX_QUERY_LEN;
-	m->m_flags = PF_COOKIE | PF_WIDGET_PARM | PF_API;
+	m->m_flags = PF_REQUIRED | PF_COOKIE | PF_WIDGET_PARM | PF_API;
 	m++;
 
 	// m->m_title = "query2";
@@ -8623,8 +8623,9 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST; // generic request class
 	m->m_def   = "0";
 	m->m_cgi   = "d";
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m++;
+
 
 	m->m_title = "url";
 	m->m_desc  = "Instead of specifying a docid, you can get the "
@@ -8635,7 +8636,18 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST; // generic request class
 	m->m_def   = NULL;
 	m->m_cgi   = "url";
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_REQUIRED;
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Get the cached page from this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_GET;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_REQUIRED | PF_API;
 	m++;
 
 	m->m_title = "strip";
@@ -13382,7 +13394,8 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
-	m->m_flags = PF_API|PF_COLLDEFAULT; // so it gets set to default coll
+	// PF_COLLDEFAULT: so it gets set to default coll on html page
+	m->m_flags = PF_API|PF_COLLDEFAULT|PF_REQUIRED; 
 	m++;
 
 
@@ -13420,7 +13433,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_url - (char *)&gr;
 	m++;
@@ -13502,7 +13515,8 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
-	m->m_flags = PF_API|PF_COLLDEFAULT; // so it gets set to default coll
+	// PF_COLLDEFAULT: so it gets set to default coll on html page
+	m->m_flags = PF_API|PF_COLLDEFAULT|PF_REQUIRED; 
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
@@ -13649,7 +13663,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m->m_def   = NULL;
-	m->m_flags = 0;//PF_API;
+	m->m_flags = PF_NOAPI;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_contentFile - (char *)&gr;
 	m++;

@@ -2425,6 +2425,9 @@ int parmcmp ( const void *a, const void *b ) {
 	return strcmp(pa->m_pstr,pb->m_pstr);
 }
 
+#define DARK_YELLOW "ffaaaa"
+#define LIGHT_YELLOW "ffcccc"
+
 bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	char pbuf[32768];
 	SafeBuf p(pbuf, 32768);
@@ -2464,6 +2467,8 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	const char *blue = LIGHT_BLUE;
 	long count = 1;
 
+	long lastPage = -1;
+
 	for ( long i = 0; i < g_parms.m_numParms; i++ ) {
 		Parm *parm = &g_parms.m_parms[i];
 		// assume do not print
@@ -2496,6 +2501,23 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		if ( ! page ) 
 			page = "???";
 
+		if ( blue == (const char *)LIGHT_BLUE ) blue = DARK_BLUE;
+		else if(blue==(const char *)DARK_BLUE ) blue = LIGHT_BLUE;
+
+		if ( blue == (const char *)LIGHT_YELLOW ) blue = DARK_YELLOW;
+		else if ( blue == (const char *)DARK_YELLOW )blue=LIGHT_YELLOW;
+
+		// if we change page go to yellow
+		if ( parm->m_page != lastPage && lastPage != -1 ) {
+			if ( blue == (const char *)LIGHT_BLUE ||
+			     blue == (const char *)DARK_BLUE )
+				blue = LIGHT_YELLOW;
+			else
+				blue = LIGHT_BLUE;
+		}
+
+		lastPage = parm->m_page;
+
 		SafeBuf tmp;
 		char diff = 0;
 		bool printVal = false;
@@ -2519,9 +2541,6 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 
 
 		p.safePrintf("<td><b>%s</b></td>", cgi);
-
-		if ( blue == (const char *)LIGHT_BLUE ) blue = DARK_BLUE;
-		else                      blue = LIGHT_BLUE;
 
 		p.safePrintf("<td><nobr><a href=/%s?c=%s>/%s</a></nobr></td>",
 			     page,coll,page);
@@ -2550,6 +2569,9 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		if ( ! def ) def = "";
 		p.safePrintf ( "<td>%s</td>",  def );
 		p.safePrintf ( "<td>%s",  parm->m_desc );
+		if ( parm->m_flags & PF_REQUIRED )
+			p.safePrintf(" <b><font color=green>REQUIRED"
+				     "</font></b>");
 		if ( printVal ) {
 			p.safePrintf("<br><b><nobr>Current value: ");
 			// print in red if not default value

@@ -104,6 +104,8 @@ class GigablastRequest {
 	// ptr to socket to send reply back on
 	TcpSocket *m_socket;
 
+	// TYPE_CHARPTR
+	char *m_coll;
 
 	////////////
 	//
@@ -113,7 +115,6 @@ class GigablastRequest {
 	// these all reference into m_hr or into the Parm::m_def string!
 	char *m_url; // also for /get
 	char *m_queryToScrape;
-	char *m_coll; // used by ALL!
 	char *m_contentDelim;
 	char *m_contentTypeStr;
 	char *m_contentFile;
@@ -183,6 +184,7 @@ class GigablastRequest {
 #define PF_TEXTAREA 0x0800
 #define PF_COLLDEFAULT 0x1000
 #define PF_NOAPI       0x2000
+#define PF_REQUIRED    0x4000
 
 class Parm {
  public:
