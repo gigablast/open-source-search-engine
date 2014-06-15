@@ -383,7 +383,7 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// . get the default.conf from working dir if there
 	// . i think this calls CollectionRec::reset() which resets all of its
 	//   rdbbase classes for its collnum so m_collnum needs to be right
-	g_parms.setToDefault( (char *)cr );
+	g_parms.setToDefault( (char *)cr , OBJ_COLL );
 
 	/*
 	// the default conf file
