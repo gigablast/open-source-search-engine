@@ -12,6 +12,11 @@ class Msg7 {
 public:
 
 	GigablastRequest m_gr;
+	SafeBuf m_injectUrlBuf;
+	bool m_firstTime;
+	char *m_start;
+	bool  m_fixMe;
+
 
 	bool       m_needsSet;
 	XmlDoc     m_xd;

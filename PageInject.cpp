@@ -214,6 +214,8 @@ bool sendReply ( void *state ) {
 
 Msg7::Msg7 () {
 	m_round = 0;
+	m_firstTime = true;
+	m_fixMe = false;
 }
 
 Msg7::~Msg7 () {
@@ -221,8 +223,25 @@ Msg7::~Msg7 () {
 
 // when XmlDoc::inject() complets it calls this
 void doneInjectingWrapper9 ( void *state ) {
-	// and we call the original caller
+
+	
 	Msg7 *msg7 = (Msg7 *)state;
+
+ loop:
+
+	// if we were injecting delimterized documents...
+	GigablastRequest *gr = &msg7->m_gr;
+	char *delim = gr->m_contentDelim;
+	if ( delim && ! delim[0] ) delim = NULL;
+	if ( delim && msg7->m_start ) {
+		// do another injection. returns false if it blocks
+		if ( ! msg7->inject ( msg7->m_state , msg7->m_callback ) )
+			return;
+	}
+
+	goto loop;
+
+	// and we call the original caller
 	msg7->m_callback ( msg7->m_state );
 }
 
@@ -263,9 +282,68 @@ bool Msg7::inject ( void *state ,
 	if ( ! content ) content = gr->m_contentFile;
 	if ( content && content[0] == '\0' ) content = NULL;
 
-	if ( ! xd->injectDoc ( gr->m_url ,
+
+	if ( m_firstTime ) {
+		m_firstTime = false;
+		m_start = content;
+	}
+
+	// save current start since we update it next
+	char *start = m_start;
+
+	char *delim = gr->m_contentDelim;
+	if ( delim && ! delim[0] ) delim = NULL;
+
+	if ( m_fixMe ) {
+		// we had made the first delim char a \0 to index the
+		// previous document, now put it back to what it was
+		*m_start = *delim;
+		// i guess unset this
+		m_fixMe = false;
+	}
+
+	// if we had a delimeter...
+	if ( delim ) {
+		// we've saved m_start as "start" above, 
+		// so find the next delimeter after it and set that to m_start
+		m_start = strstr(m_start,delim);
+		// for injecting "start" set this to \0
+		if ( m_start ) {
+			// null term it
+			*m_start = '\0';
+			// put back the original char on next round...?
+			m_fixMe = true;
+		}
+	}
+
+	// this is the url of the injected content
+	m_injectUrlBuf.safeStrcpy ( gr->m_url );
+
+	bool modifiedUrl = false;
+
+	// if we had a delimeter we must make a fake url
+	// if ( delim ) {
+	//  	// if user had a <url> or <doc> or <docid> field use that
+	//  	char *hint = strcasestr ( start , "<url>" );
+	//  	if ( hint ) {
+	// 		modifiedUrl = true;
+	// 		...
+	// 	}
+	// }
+
+	// if we had a delimeter thus denoting multiple items/documents to
+	// be injected, we must create unique urls for each item.
+	if ( delim && ! modifiedUrl ) {
+		// use hash of the content
+		long long ch64 = hash64n ( start , 0LL );
+		// by default append a .<ch64> to the provided url
+		m_injectUrlBuf.safePrintf(".%llu",ch64);
+	}
+
+
+	if ( ! xd->injectDoc ( m_injectUrlBuf.getBufStart() ,
 			       cr ,
-			       content ,
+			       start , // content ,
 			       gr->m_diffbotReply,
 			       gr->m_hasMime, // content starts with http mime?
 			       gr->m_hopCount,
