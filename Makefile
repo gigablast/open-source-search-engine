@@ -5,7 +5,7 @@ CC=g++
 OBJS =  UdpSlot.o Rebalance.o \
 	Msg13.o Mime.o IndexReadInfo.o \
 	PageGet.o PageHosts.o PageIndexdb.o \
-	PageParser.o Inject.o PagePerf.o PageReindex.o PageResults.o \
+	PageParser.o PageInject.o PagePerf.o PageReindex.o PageResults.o \
 	PageAddUrl.o PageRoot.o PageSockets.o PageStats.o \
 	PageTitledb.o \
 	PageAddColl.o \

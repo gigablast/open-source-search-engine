@@ -31,7 +31,7 @@
 #include "hash.h"
 #include "Test.h"
 #include "Rebalance.h"
-#include "Inject.h"
+#include "PageInject.h"
 
 // width of input box in characters for url filter expression
 #define REGEX_TXT_MAX 80
@@ -1071,15 +1071,6 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	// so we need to call those functions here...
 	//
 
-	// process the injection parms of doing a query reindex
-	if ( page == PAGE_INJECT ) {
-		// this returns false if blocked and it should re-call
-		// sendPageGeneric when completed. this will call
-		// setGigablastRequest()
-		if ( ! sendPageInject ( s , r ) )
-			return false;
-	}
-
 	// if we were an addurl page..
 	//if ( page == PAGE_ADDURL2 ) {
 	//	// this returns false if blocked and it should re-call
@@ -1918,7 +1909,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			// and cgi parm if it exists
 			//if ( m->m_def && m->m_scgi )
 			//	sb->safePrintf(" CGI override: %s.",m->m_scgi);
-			sb->safePrintf(" CGI: %s.",m->m_cgi);
+			// just let them see the api page for this...
+			//sb->safePrintf(" CGI: %s.",m->m_cgi);
 			// and default value if it exists
 			if ( m->m_def && m->m_def[0] && t != TYPE_CMD ) {
 				char *d = m->m_def;
@@ -13632,11 +13624,14 @@ void Parms::init ( ) {
 
 
 	m->m_title = "content type";
-	m->m_desc  = "Is the content below HTML? XML? JSON?";
+	m->m_desc  = "If you supply content in the text box below without "
+		"an HTTP mime, then you need to enter the content type. "
+		"Possible values: text/html text/plain text/xml "
+		"application/json";
 	m->m_cgi   = "contenttype";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR; //text/html application/json application/xml
-	m->m_def   = NULL;
+	m->m_def   = "text/html";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_contentTypeStr - (char *)&gr;
@@ -13674,7 +13669,10 @@ void Parms::init ( ) {
 		"enter the content here. "
 		"Enter MIME header "
 		"first if \"content has mime\" is set to true above. "
-		"Separate MIME from actual content with two returns.";
+		"Separate MIME from actual content with two returns. "
+		"At least put a single space in here if you want to "
+		"inject empty content, otherwise the content will "
+		"be downloaded from the url.";
 	m->m_cgi   = "content";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;

@@ -8,7 +8,7 @@
 #include "Tagdb.h"
 #include "Msg0.h"
 #include "Msg1.h"
-#include "Inject.h" // msg7
+#include "PageInject.h" // msg7
 
 // likedb flags
 #define LF_DELBIT        0x0001 // reserved internal use

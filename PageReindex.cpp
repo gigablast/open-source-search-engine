@@ -18,12 +18,12 @@
 #include "Spider.h"
 #include "Revdb.h"
 #include "XmlDoc.h"
-#include "Inject.h" // Msg7
+#include "PageInject.h" // Msg7
 #include "PageReindex.h"
 
-static bool printInterface ( SafeBuf *sb , char *q ,//long user ,
-                              char *username, char *c , char *errmsg ,
-			      char *qlangStr ) ;
+//static bool printInterface ( SafeBuf *sb , char *q ,//long user ,
+//                              char *username, char *c , char *errmsg ,
+//			      char *qlangStr ) ;
 
 
 class State13 {

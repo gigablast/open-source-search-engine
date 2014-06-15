@@ -1,6 +1,6 @@
 #include "gb-include.h"
 
-#include "Inject.h"
+#include "PageInject.h"
 #include "HttpServer.h"
 #include "Pages.h"
 #include "Users.h"
@@ -49,6 +49,13 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	// this will fill in GigablastRequest so all the parms we need are set
 	g_parms.setGigablastRequest ( sock , hr , gr );
 
+	// if content is "" make it NULL so XmlDoc will download it
+	// if user really wants empty content they can put a space in there
+	// TODO: update help then...
+	if ( gr->m_content && gr->m_content[0] == '\0' )
+		gr->m_content = NULL;
+	
+
 	// get collection rec
 	CollectionRec *cr = g_collectiondb.getRec ( gr->m_coll );
 	// bitch if no collection rec found
@@ -69,6 +76,10 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 		if ( ! msg7->scrapeQuery ( ) ) return false;
 		return sendReply ( msg7 );
 	}
+
+	// if no url do not inject
+	if ( ! gr->m_url || gr->m_url[0] == '\0' ) 
+		return sendReply ( msg7 );
 
 	// call sendReply() when inject completes
 	if ( ! msg7->inject ( msg7 , sendReplyWrapper ) )
@@ -130,10 +141,12 @@ bool sendReply ( void *state ) {
 	//
 	// end debug
 	//
+
+	char *url = gr->m_url;
 	
 	// . if we're talking w/ a robot he doesn't care about this crap
 	// . send him back the error code (0 means success)
-	if ( gr->m_shortReply ) {
+	if ( url && gr->m_shortReply ) {
 		char buf[1024*32];
 		char *p = buf;
 		// set g_errno to index code
@@ -167,7 +180,10 @@ bool sendReply ( void *state ) {
 				mstrerror(g_errno) , g_errno);
 	else if ( (gr->m_url&&gr->m_url[0]) ||
 		  (gr->m_queryToScrape&&gr->m_queryToScrape[0]) )
-		sb.safePrintf ( "<center>Success</center><br><br>");
+		sb.safePrintf ( "<center><b>Sucessfully injected %s"
+				"</center><br>"
+				, xd->m_firstUrl.m_url
+				);
 
 
 	// print the table of injection parms
@@ -240,9 +256,16 @@ bool Msg7::inject ( void *state ,
 	// shortcut
 	XmlDoc *xd = &m_xd;
 
+	char *content = gr->m_content;
+	if ( content && content[0] == '\0' ) content = NULL;
+
+	// try the uploaded file if nothing in the text area
+	if ( ! content ) content = gr->m_contentFile;
+	if ( content && content[0] == '\0' ) content = NULL;
+
 	if ( ! xd->injectDoc ( gr->m_url ,
 			       cr ,
-			       gr->m_content ,
+			       content ,
 			       gr->m_diffbotReply,
 			       gr->m_hasMime, // content starts with http mime?
 			       gr->m_hopCount,
