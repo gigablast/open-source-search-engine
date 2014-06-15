@@ -1071,7 +1071,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	// so we need to call those functions here...
 	//
 
-	// if we were an injection page..
+	// process the injection parms of doing a query reindex
 	if ( page == PAGE_INJECT ) {
 		// this returns false if blocked and it should re-call
 		// sendPageGeneric when completed. this will call
@@ -13694,6 +13694,83 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_diffbotReply - (char *)&gr;
 	m++;
+
+
+	///////////////////
+	//
+	// QUERY REINDEX
+	//
+	///////////////////
+
+	m->m_title = "query to reindex or delete";
+	m->m_desc  = "We either reindex or delete the search results of "
+		"this query. Reindexing them will redownload them and "
+		"possible update the siterank, which is based on the "
+		"number of links to the site.";
+	m->m_cgi   = "q";
+	m->m_off   = (char *)&gr.m_query - (char *)&gr;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_page  = PAGE_REINDEX;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_def   = NULL;
+	m->m_flags = PF_API ;
+	m++;
+
+	m->m_title = "start result number";
+	m->m_desc  = "Starting with this result #. Starts at 0.";
+	m->m_cgi   = "srn";
+	m->m_off   = (char *)&gr.m_srn - (char *)&gr;
+	m->m_type  = TYPE_LONG;
+	m->m_page  = PAGE_REINDEX;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_def   = "0";
+	m->m_flags = PF_API ;
+	m++;
+
+	m->m_title = "end result number";
+	m->m_desc  = "Ending with this result #. 0 is the first result #.";
+	m->m_cgi   = "ern";
+	m->m_off   = (char *)&gr.m_ern - (char *)&gr;
+	m->m_type  = TYPE_LONG;
+	m->m_page  = PAGE_REINDEX;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_def   = "99999999";
+	m->m_flags = PF_API ;
+	m++;
+
+	m->m_title = "query language";
+	m->m_desc  = "The language the query is in. Used to rank results. "
+		"Just use xx to indicate no language in particular. But "
+		"you should use the same qlang value you used for doing "
+		"the query if you want consistency.";
+	m->m_cgi   = "qlang";
+	m->m_off   = (char *)&gr.m_qlang - (char *)&gr;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_page  = PAGE_REINDEX;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_def   = "xx";
+	m->m_flags = PF_API ;
+	m++;
+
+	m->m_title = "FORCE DELETE";
+	m->m_desc  = "Check this checkbox to delete the results, not just "
+		"reindex them.";
+	m->m_cgi   = "delete";
+	m->m_off   = (char *)&gr.m_forceDel - (char *)&gr;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_page  = PAGE_REINDEX;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_def   = "0";
+	m->m_flags = PF_API ;
+	m++;
+
+
+	///////////////////
+	//
+	// SEARCH CONTROLS
+	//
+	///////////////////
+
 
 	m->m_title = "do spell checking by default";
 	m->m_desc  = "If enabled while using the XML feed, "

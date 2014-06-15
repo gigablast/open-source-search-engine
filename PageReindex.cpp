@@ -28,21 +28,8 @@ static bool printInterface ( SafeBuf *sb , char *q ,//long user ,
 
 class State13 {
 public:
-	char       m_query [ MAX_QUERY_LEN + 1];
-	//char       m_isAdmin;
 	Msg1c      m_msg1c;
-	//Msg1d      m_msg1d;
-	//char       m_coll [ MAX_COLL_LEN + 1];
-	//long       m_collLen;
-	collnum_t m_collnum;
-	TcpSocket *m_socket;
-	//char       m_replyBuf[64*1024];
-	//long       m_replyBufSize;
-	SafeBuf m_replyBuf;
-	//char      *m_place;
-	long m_placeOff;
-	char       m_updateTags;
-	//Query      m_qq;
+	GigablastRequest m_gr;
 };
 
 static void doneReindexing ( void *state ) ;
@@ -53,73 +40,20 @@ static void doneReindexing ( void *state ) ;
 // . call g_httpServer.sendDynamicPage() to send it
 bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 
-	// store password into "pwd" 
-	char pwd[32];
-	long len ;
-	char *t = r->getString ( "pwd" , &len );
-	if ( len > 31 ) len = 31;
-	memcpy ( pwd , t , len );
-	pwd [ len ] = '\0';
-
-	// are we the admin?
-	//bool isAdmin = g_collectiondb.isAdmin ( r , s );
-	//long user    = g_pages.getUserType ( s , r );
-	char *username = g_users.getUsername ( r );
-	char *errmsg = NULL;
-
-	// get the collection record
-	CollectionRec *cr = g_collectiondb.getRec ( r );
-	if ( ! cr ) {
-		log("admin: no collection record found "
-		    "for supplied collection name. Query reindex failed. "
-		    "Returning HTTP status of 500.");
-		return g_httpServer.sendErrorReply ( s , 500 ,
-						"Collection does not exist.");
-	}
-	/*
-	bool isAssassin = cr->isAssassin ( s->m_ip );
-	if ( isAdmin ) isAssassin = true;
-
-	// bail if permission denied
-	if ( ! isAssassin && ! cr->hasPermission ( r , s ) ) {
-		log("admin: Bad collection name "
-		    "or password. Query reindex failed. Permission denied.");
-		return sendPagexxxx ( s , r , 
-				       "Collection name or "
-				       "password is incorrect.");
-	}
-	*/
-	// get collection name and its length
-	char *coll    = cr->m_coll;
-	//long  collLen = gbstrlen ( coll );
-
-	//char buf[64*1024];
-	//char *p    = buf;
-	//char *pend = buf + 64*1024;
-	SafeBuf sb;
-
-	long  qlen;
-	char *q = r->getString ("q",&qlen);
-
-	// PageResults.cpp has a [query reindex] link that propagates this lang
-	char *qlangStr = r->getString("qlang",NULL);
-	long  langId = langEnglish;
-	if ( qlangStr ) langId = getLangIdFromAbbr ( qlangStr );
-
 	// if they are NOT submitting a request print the interface
 	// and we're not running, just print the interface
-	t = r->getString ("action" , &len );
-	if ( len < 2 ) { // && ! s_isRunning ) {
-		//p = g_pages.printAdminTop ( p , pend , s , r );
-		//p = printInterface ( p , pend,q,username,coll,NULL,qlangStr);
-		g_pages.printAdminTop ( &sb , s , r );
-		printInterface ( &sb,q,username,coll,NULL,qlangStr);
-		return g_httpServer.sendDynamicPage (s,
-						     sb.getBufStart(),
-						     sb.length(),
-						     -1,
-						     false);
-	}		
+	// t = r->getString ("action" , &len );
+	// if ( len < 2 ) { // && ! s_isRunning ) {
+	// 	//p = g_pages.printAdminTop ( p , pend , s , r );
+	// 	//p = printInterface ( p , pend,q,username,coll,NULL,qlangStr);
+	// 	//g_pages.printAdminTop ( &sb , s , r );
+	// 	//printInterface ( &sb,q,username,coll,NULL,qlangStr);
+	// 	return g_httpServer.sendDynamicPage (s,
+	// 					     sb.getBufStart(),
+	// 					     sb.length(),
+	// 					     -1,
+	// 					     false);
+	// }		
 
 	// make a state
 	State13 *st ;
@@ -131,98 +65,60 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));}
 	mnew ( st , sizeof(State13) , "PageReindex" );
 
-	// set stuff now
-	//st->m_isAdmin    = isAdmin;
-	
+	// set this. also sets gr->m_hr
+	GigablastRequest *gr = &st->m_gr;
+	// this will fill in GigablastRequest so all the parms we need are set
+	g_parms.setGigablastRequest ( s , r , gr );
 
-	// save the query to static buffer
-	t  = r->getString ( "q"  , &len );
-	if ( len > MAX_QUERY_LEN ) len = MAX_QUERY_LEN;
-	memcpy ( st->m_query , t , len );
-	st->m_query[len] = '\0';
+	TcpSocket *sock = gr->m_socket;
 
-	st->m_collnum = cr->m_collnum;
+	// get collection rec
+	CollectionRec *cr = g_collectiondb.getRec ( gr->m_coll );
+	// bitch if no collection rec found
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
+		//log("build: Injection from %s failed. "
+		//    "Collection \"%s\" does not exist.",
+		//    iptoa(s->m_ip),coll);
+		// g_errno should be set so it will return an error response
+		g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno));
+		mdelete ( st , sizeof(State13) , "PageTagdb" );
+		delete (st);
+		return true;
 
-	// save start and end numbers
-	long startNum = r->getLong   ( "srn" , 0 );
-	long endNum   = r->getLong   ( "ern" , 0 );
-	long forceDel = r->getLong   ( "forcedel", 0 );
-
-	//st->m_spiderPriority  = r->getLong   ( "sp" , 7 );
-	// get time offset to add to spider time for urls to be reindexed
-	//float days  = r->getFloat  ( "sto" , 0.0 );
-	//st->m_spiderTimeOffset  = (long)(days * 24.0*60.0*60.0);
-	bool updateTags = r->getLong ( "updatetags", 0 );
-
-	// copy collection
-	//memcpy ( st->m_coll , coll , collLen );
-	//st->m_coll [ collLen ] = '\0';
-	//st->m_collLen=collLen;
-
-	// fix parms
-	if ( startNum <  0 ) startNum = 0 ;
-	if ( endNum   <  0 ) endNum   = 0 ;
-	//if ( st->m_spiderPriority  < 0 ) st->m_spiderPriority  = 0 ;
-	//if ( st->m_spiderPriority  > MAX_SPIDER_PRIORITIES ) 
-	//	st->m_spiderPriority  = MAX_SPIDER_PRIORITIES-1 ;
-
-
-	// . get the query terms
-	// . a boolFlag of 0 means query is not boolean
-	//	Query qq;
-	//st->m_qq.set ( st->m_query , 0 /*boolFlag*/ );
-
-	// . get first query term 
-	// . will be the first phrase segment if 2 or more words in a phrase
-	//long n = st->m_qq.getNumTerms();
-	// if no query send back a bitch
-	if ( ! st->m_query[0] ) {
-		log("admin: Query reindex was given no query terms.");
-		errmsg = "Empty Query. You must supply a query.";
- 		//p = g_pages.printAdminTop ( p , pend , s , r );
- 		//p = printInterface ( p,pend , q , username ,coll, errmsg,"");
-		g_pages.printAdminTop ( &sb , s , r );
-		printInterface ( &sb,q,username,coll,errmsg,"");
- 		return g_httpServer.sendDynamicPage (s,
-						     sb.getBufStart(),
-						     sb.length(),
-						     -1,
-						     false);
 	}
 
-	// now lets get the index list, loop through each docId, getting the
-	// titleRec to get the URL and add the URL to the spider queue
 
-	// save socket for retuning a page when we're done
-	st->m_socket = s;
-	// save the reply page, for when add is done
-	//char *rp    = st->m_replyBuf;
-	SafeBuf *rp = &st->m_replyBuf;
-	//char *rpend = rp + 64*1024;
-	//rp = g_pages.printAdminTop ( rp , rpend , s , r );
-	g_pages.printAdminTop ( rp , s , r );
+	collnum_t collnum = cr->m_collnum;
 
-	// place holder, for holding response when we're done adding
-	// all these docids to the spider queue
-	st->m_placeOff = rp->length() ;
-	for ( long i = 0 ; i < 200 ; i++ )
-		rp->pushChar(' ');
-	//memset ( rp , ' ' , 100 );
-	//rp += 100;
+	SafeBuf sb;
 
-	printInterface ( rp,q,username , coll , errmsg ,qlangStr );
+	// if no query send back the page blanked out i guess
+	if ( ! gr->m_query || ! gr->m_query[0] ) {
+		doneReindexing ( st );
+		return true;
+	}
 
-	// save length
-	//st->m_replyBufSize = rp - st->m_replyBuf;
+	long langId = getLangIdFromAbbr ( gr->m_qlang );
 
-	// log it
-	log(LOG_INFO,"admin: Performing query reindex for query: "
-	    "%s",st->m_query);
+	// let msg1d do all the work now
+	if ( ! st->m_msg1c.reindexQuery ( gr->m_query ,
+					  collnum,
+					  gr->m_srn , // startNum ,
+					  gr->m_ern , // endNum   ,
+					  (bool)gr->m_forceDel,
+					  langId,
+					  st ,
+					  doneReindexing ) )
+		return false;
 
-
-	st->m_updateTags = updateTags;
+	// no waiting
+	doneReindexing ( st );
+	return true;
 
 	/*
+
+	st->m_updateTags = updateTags;
 
 	  take this our for now. we are using likedb...
 
@@ -240,40 +136,22 @@ bool sendPageReindex ( TcpSocket *s , HttpRequest *r ) {
 	}
 	else {
 	*/
-		// let msg1d do all the work now
-		if ( ! st->m_msg1c.reindexQuery ( st->m_query ,
-						  st->m_collnum,
-						  startNum ,
-						  endNum   ,
-						  (bool)forceDel ,
-						  langId,
-						  st ,
-						  doneReindexing ) )
-			return false;
-	//}
-
-	// no waiting
-	doneReindexing ( st );
-	return true;
 }
 
 void doneReindexing ( void *state ) {
 	// cast it
 	State13 *st = (State13 *)state;
+
+	GigablastRequest *gr = &st->m_gr;
+
 	// note it
-	log(LOG_INFO,"admin: Done with query reindex. %s",mstrerror(g_errno));
-	// note it
-	TcpSocket *sock = st->m_socket;
-	// error?
-	if ( g_errno ) {
-		g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno));
-		mdelete ( st , sizeof(State13) , "PageTagdb" );
-		delete (st);
-		return;
-	}	
+	if ( gr->m_query && gr->m_query[0] )
+		log(LOG_INFO,"admin: Done with query reindex. %s",
+		    mstrerror(g_errno));
+
 	// if no error, send the pre-generated page
 	// this must be under 100 chars or it messes our reply buf up
-	char mesg[200];
+	//char mesg[200];
 	//
 	// if we used msg1d, then WHY ARE WE USING m_msg1c.m_numDocIdsAdded 
 	// here?
@@ -286,20 +164,46 @@ void doneReindexing ( void *state ) {
 			  st->m_msg1d.m_numDocIds );
 	else
 	*/
-	sprintf ( mesg , "<center><font color=red><b>Success. "
-		  "Added %li docid(s) to "
-		  "spider queue.</b></font></center><br>" , 
-		  st->m_msg1c.m_numDocIdsAdded );
 
-	SafeBuf *rp = &st->m_replyBuf;
-	char *p = rp->getBufStart() + st->m_placeOff;
+	////
+	//
+	// print the html page
+	//
+	/////
 
-	// insert the reply there
-	memcpy ( p , mesg , gbstrlen(mesg) );
+	SafeBuf sb;
 
-	g_httpServer.sendDynamicPage ( sock,
-				       st->m_replyBuf.getBufStart(),
-				       st->m_replyBuf.length(),
+	g_pages.printAdminTop ( &sb , gr->m_socket , &gr->m_hr );
+
+	sb.safePrintf("<style>"
+		       ".poo { background-color:#%s;}\n"
+		       "</style>\n" ,
+		       LIGHT_BLUE );
+
+
+	//
+	// print error msg if any
+	//
+
+	if ( gr->m_query && gr->m_query[0] && ! g_errno )
+		sb.safePrintf ( "<center><font color=red><b>Success. "
+			  "Added %li docid(s) to "
+			  "spider queue.</b></font></center><br>" , 
+			  st->m_msg1c.m_numDocIdsAdded );
+
+	if ( gr->m_query && gr->m_query[0] && g_errno )
+		sb.safePrintf ( "<center><font color=red><b>Error. "
+				 "%s</b></font></center><br>" , 
+				 mstrerror(g_errno));
+
+
+	// print the reindex interface
+	g_parms.printParmTable ( &sb , gr->m_socket , &gr->m_hr  );
+
+
+	g_httpServer.sendDynamicPage ( gr->m_socket,
+				       sb.getBufStart(),
+				       sb.length(),
 				       -1,
 				       false);
 
@@ -307,152 +211,7 @@ void doneReindexing ( void *state ) {
 	delete (st);
 }
 
-bool printInterface (SafeBuf *sb, char *q , //long user , 
-                      char *username, char *c , char *errmsg ,
-		      char *qlangStr ) {
-	if ( ! q ) q = "";
 
-	// print error msg if any
-	if ( errmsg ) {
-		sb->safePrintf("<br><center><b><font color=red>%s"
-			"</font></b></center><br>",
-			errmsg );
-	}
-
-	sb->safePrintf(
-		       "<style>"
-		       ".poo { background-color:#%s;}\n"
-		       "</style>\n" ,
-		       LIGHT_BLUE );
-
-	char bb [ MAX_COLL_LEN + 60 ];
-	bb[0]='\0';
-	//if ( user == USER_MASTER && c && c[0] ) sprintf ( bb , " (%s)", c);
-
-	SafeBuf qe;
-	qe.htmlEncode(q);
-
-	// print the reindex interface
-	sb->safePrintf (
-		  "<table %s>"
-		  "<tr><td colspan=3><center>"
-		  //"<font size=+1>"
-		  "<b>"
-		  "Reindex Urls"
-		  "</b>%s</td></tr>"
-		  "<tr bgcolor=#%s><td colspan=3>"
-		  "<font size=1>"
-		  "Reindex the URLs that match this query. If URLs are "
-		  "banned in tagdb they will be removed from the index. "
-		  "If URLs are filtered or banned according to the "
-		  "URL Filters table they will be removed as well. "
-		  "You must have an 'isdocidbased' rule in the URL "
-		  "Filters table so these requested reindexes can match that "
-		  "if you want to prioritize them, otherwise they will match "
-		  "whatever rule they match in the URL Filters table."
-		  "</td></tr>"
-
-		  "<tr class=poo><td><b>query</b>"
-		  "<br><font size=1>"
-		  "URLs matching this query will be added to the spider "
-		  "queue for re-spidering."
-		  "</td>"
-		  "<td><input type=text value=\"%s\" "
-		  "name=q size=30></td></tr>"
-
-		  /*
-		  "<tr><td><b>update event tags</b>"
-		  "<br><font size=1>Just update the tags for each event "
-		  "in the search results. For each docid in the search "
-		  "results we look it up in tagdb, get its tags, and "
-		  "add the terms directly into datedb/indexdb. We also have "
-		  "to update the reverse index record so they will be "
-		  "deleted if the doc gets deleted.</td>"
-		  "<td><input type=checkbox value=1 "
-		  "name=updatetags>"
-		  "</td></tr>"
-		  */
-		  , TABLE_STYLE , bb , DARK_BLUE , qe.getBufStart() );
-
-	if ( ! qlangStr ) qlangStr = "";
-
-	sb->safePrintf (
-
-		  "<tr class=poo><td><b>start result number</b>"
-		  "<font size=1>"
-		  "<br>Start at this search result number. Default 0.</td>"
-		  "<td><input type=text name=srn value=0 size=10>"
-		  "</td></tr>"
-
-		  "<tr class=poo><td><b>end result number</b>"
-		  "<font size=1>"
-		  "<br>Stop at this search result number. "
-		  "Default 2000000. (2M)</td>"
-		  "<td><input type=text name=ern size=10 value=2000000>"
-		  "</td></tr>" 
-
-		  "<tr class=poo><td><b>query language</b>"
-		  "<font size=1>"
-		  "<br>Language that helps determine sort result ranking.</td>"
-		  "<td><input type=text name=qlang size=6 value=\"%s\">"
-		  "</td></tr>"
-
-		  "<tr class=poo><td><b>FORCE DELETE</b>"
-		  "<font size=1>"
-		  "<br>Check this checkbox to "
-		  "delete every search result matching the above "
-		  "query from the index.</td>"
-		  "<td><input type=checkbox name=forcedel value=1>"
-		  "</td></tr>"
-
-		  , qlangStr
-
-		  );
-
-	/*
-		  //"<tr><td><b>just list results</b>"
-		  //"<br>will list results so you can hand pick which ones "
-		  //"get reindexed by selecting the checkbox.</td>"
-		  //"<td><input type=checkbox name=jlr value=1 checked>"
-		  //"</td></tr>"
-
-		  "<tr><td><b>spider time offset</b>"
-		  "<br><font size=1>Specify number of days relative to "
-		  "today. URLs will be assigned this spider date.</td>"
-		  "<td><input type=text name=sto size=10 value=0> days"
-		  "</td></tr>"
-
-		  "<tr><td><b>spider priority</b>"
-		  "<br><font size=1>URLs will be added with this spider "
-		  "priority.</td>"
-		  "<td>" );
-
-	// spider priority
-	sprintf ( p , "<select name=sp>");
-	p += gbstrlen ( p );
-	for (long i=0;i<MAX_SPIDER_PRIORITIES;i++){
-		if ( i == MAX_SPIDER_PRIORITIES-1 )
-			sprintf(p,"<option value=%li selected>%li",i,i);
-		else
-			sprintf(p,"<option value=%li>%li",i,i);
-		p+=gbstrlen(p);
-	}
-	sprintf(p,"</select>"
-		  "</td></tr>");
-	p += gbstrlen ( p );
-	  */
-
-	sb->safePrintf("</table><br>" );
-
-	// submit button
-	sb->safePrintf(
-		  "<center>"
-		  "<input type=submit name=action value=Submit>" 
-		  "</center>"
-		  "</form></html>");
-	
-	return true;
-}
 
 
 ////////////////////////////////////////////////////////

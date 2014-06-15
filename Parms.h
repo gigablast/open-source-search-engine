@@ -151,6 +151,16 @@ class GigablastRequest {
 	char  m_harvestLinksBox;
 	char  m_forceRespiderBox;
 
+	/////////////
+	//
+	// /admin/reindex parms
+	//
+	////////////
+	char *m_query;
+	long  m_srn;
+	long  m_ern;
+	char *m_qlang;
+        bool  m_forceDel;
 };
 
 
