@@ -9384,6 +9384,17 @@ void Parms::init ( ) {
 // 	m->m_group = 0;
 // 	m++;
 
+	/*	m->m_title = "maximum hops from parent page";
+	m->m_desc  = "Only index pages that are within a particular number "
+		"of hops from the parent page given in Page Add Url. -1 means "
+		"that max hops is infinite.";
+	m->m_cgi   = "mnh";
+	m->m_off   = (char *)&cr.m_maxNumHops - x;
+	m->m_type  = TYPE_CHAR2;
+	m->m_def   = "-1";
+	m->m_group = 0;
+	m++;*/
+
 	m->m_title = "cluster name";
 	m->m_desc  = "Email alerts will include the cluster name";
 	m->m_cgi   = "cn";
@@ -15169,7 +15180,7 @@ void Parms::init ( ) {
 
 	m->m_title = "spider round start time";
 	m->m_desc  = "When the spider round started";
-	m->m_cgi   = "spiderRoundStart";
+	m->m_cgi   = "roundStart";
 	m->m_off   = (char *)&cr.m_spiderRoundStartTime - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
@@ -18970,6 +18981,17 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 
 		if ( m->m_obj == OBJ_NONE ) continue;
 		if ( m->m_obj == OBJ_SI ) continue;
+
+		// convert spiderRoundStartTime=0 to
+		// spiderRoundStartTime=<currenttime>+30secs
+		// so that will force the next spider round to kick in
+		char tmp[24];
+		if ( strcmp(field,"roundStart")==0 && 
+		     val && (val[0]=='0'||val[0]=='1') && val[1]==0 ) {
+			sprintf(tmp,"%lu",(long)getTimeGlobalNoCore()+0);
+			val = tmp;
+		}
+
 
 		// add it to a list now
 		if ( ! addNewParmToList2 ( parmList ,

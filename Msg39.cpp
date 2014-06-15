@@ -204,11 +204,14 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 			     m_r->m_language ,
 			     m_r->m_queryExpansion ,
 			     m_r->m_useQueryStopWords ) ) {
-		log(LOG_LOGIC,"query: msg39: setQuery: %s." , 
+		log("query: msg39: setQuery: %s." , 
 		    mstrerror(g_errno) );
 		sendReply ( m_slot , this , NULL , 0 , 0 , true );
 		return ; 
 	}
+
+	// wtf?
+	if ( g_errno ) { char *xx=NULL;*xx=0; }
 
 	QUICKPOLL ( m_r->m_niceness );
 

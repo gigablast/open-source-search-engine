@@ -231,6 +231,13 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 			   (long)sizeof(CollectionRec),coll);
 	mnew ( cr , sizeof(CollectionRec) , "CollectionRec" ); 
 
+	// set collnum right for g_parms.setToDefault() call just in case
+	// because before it was calling CollectionRec::reset() which
+	// was resetting the RdbBases for the m_collnum which was garbage
+	// and ended up resetting random collections' rdb. but now
+	// CollectionRec::CollectionRec() sets m_collnum to -1 so we should
+	// not need this!
+	//cr->m_collnum = oldCollnum;
 
 	// get the default.conf from working dir if there
 	g_parms.setToDefault( (char *)cr , OBJ_COLL );
@@ -364,14 +371,19 @@ bool Collectiondb::addNewColl ( char *coll ,
 	// register the mem
 	mnew ( cr , sizeof(CollectionRec) , "CollectionRec" ); 
 
-	// get copy collection
-	CollectionRec *cpcrec = NULL;
-	if ( cpc && cpc[0] ) cpcrec = getRec ( cpc , cpclen );
-	if ( cpc && cpc[0] && ! cpcrec )
-		log("admin: Collection \"%s\" to copy config from does not "
-		    "exist.",cpc);
-	// get the default.conf from working dir if there
-	g_parms.setToDefault( (char *)cr , OBJ_COLL );
+	//CollectionRec *cpcrec = NULL;
+	//if ( cpc && cpc[0] ) cpcrec = getRec ( cpc , cpclen );
+	//if ( cpc && cpc[0] && ! cpcrec )
+	//	log("admin: Collection \"%s\" to copy config from does not "
+	//	    "exist.",cpc);
+
+	// set collnum right for g_parms.setToDefault() call
+	//cr->m_collnum = newCollnum;
+
+	// . get the default.conf from working dir if there
+	// . i think this calls CollectionRec::reset() which resets all of its
+	//   rdbbase classes for its collnum so m_collnum needs to be right
+	g_parms.setToDefault( (char *)cr );
 
 	/*
 	// the default conf file
@@ -383,13 +395,13 @@ bool Collectiondb::addNewColl ( char *coll ,
 	*/
 
 	// this will override all
-	if ( cpcrec ) {
-		// copy it, but not the timedb hashtable, etc.
-		long size = (char *)&(cpcrec->m_END_COPY) - (char *)cpcrec;
-		// JAB: bad memcpy - no donut!
-		// this is not how objects are supposed to be copied!!!
-		memcpy ( cr , cpcrec , size);
-	}
+	// if ( cpcrec ) {
+	// 	// copy it, but not the timedb hashtable, etc.
+	// 	long size = (char *)&(cpcrec->m_END_COPY) - (char *)cpcrec;
+	// 	// JAB: bad memcpy - no donut!
+	// 	// this is not how objects are supposed to be copied!!!
+	// 	memcpy ( cr , cpcrec , size);
+	// }
 
 	// set coll id and coll name for coll id #i
 	strcpy ( cr->m_coll , coll );
@@ -1051,7 +1063,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 		return true;
 	}
 
-	log("admin: resetting collnum %li",(long)oldCollnum);
+	//log("admin: resetting collnum %li",(long)oldCollnum);
 
 	// CAUTION: tree might be in the middle of saving
 	// we deal with this in Process.cpp now
@@ -1493,6 +1505,8 @@ static CollectionRec g_default;
 
 
 CollectionRec::CollectionRec() {
+	m_collnum = -1;
+	m_coll[0] = '\0';
 	//m_numSearchPwds = 0;
 	//m_numBanIps     = 0;
 	//m_numSearchIps  = 0;
@@ -1578,6 +1592,8 @@ void CollectionRec::setToDefaults ( ) {
 }
 
 void CollectionRec::reset() {
+
+	//log("coll: resetting collnum=%li",(long)m_collnum);
 
 	// . grows dynamically
 	// . setting to 0 buckets should never have error
@@ -2945,6 +2961,18 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	bool isEthan = false;
 	if (m_coll)isEthan=strstr(m_coll,"2b44a0e0bb91bbec920f7efd29ce3d5b");
 
+	// it looks like we are assuming all crawls are repeating so that
+	// &rountStart=<currenttime> or &roundStart=0 which is the same
+	// thing, will trigger a re-crawl. so if collectiveRespiderFreq
+	// is 0 assume it is like 999999.0 days. so that stuff works.
+	// also i had to make the "default" rule below always have a respider
+	// freq of 0.0 so it will respider right away if we make it past the
+	// "lastspidertime>={roundstart}" rule which we will if they
+	// set the roundstart time to the current time using &roundstart=0
+	float respiderFreq = m_collectiveRespiderFrequency;
+	if ( respiderFreq <= 0.0 ) respiderFreq = 3652.5;
+
+
 	// make the gigablast regex table just "default" so it does not
 	// filtering, but accepts all urls. we will add code to pass the urls
 	// through m_diffbotUrlCrawlPattern alternatively. if that itself
@@ -2966,7 +2994,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		if ( isEthan )
 			m_spiderIpMaxSpiders[i] = 30;
 		//m_spidersEnabled    [i] = 1;
-		m_spiderFreqs       [i] =m_collectiveRespiderFrequency;
+		m_spiderFreqs       [i] = respiderFreq;
 		//m_spiderDiffbotApiUrl[i].purge();
 		m_harvestLinks[i] = true;
 	}
@@ -3027,7 +3055,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	i++;
 
 	// 3rd rule for respidering
-	if ( m_collectiveRespiderFrequency > 0.0 ) {
+	if ( respiderFreq > 0.0 ) {
 		m_regExs[i].set("lastspidertime>={roundstart}");
 		// do not "remove" from index
 		m_spiderPriorities   [i] = 10;
@@ -3077,6 +3105,12 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// do not crawl anything else
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		// this needs to be zero so &spiderRoundStart=0
+		// functionality which sets m_spiderRoundStartTime
+		// to the current time works
+		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
+		// in the future and we can't force the rounce
+		m_spiderFreqs[i] = 0.0;
 		i++;
 	}
 
@@ -3090,6 +3124,12 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// do not crawl anything else
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = SPIDER_PRIORITY_FILTERED;
+		// this needs to be zero so &spiderRoundStart=0
+		// functionality which sets m_spiderRoundStartTime
+		// to the current time works
+		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
+		// in the future and we can't force the rounce
+		m_spiderFreqs[i] = 0.0;
 		i++;
 	}
 
@@ -3103,6 +3143,12 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// crawl everything by default, no processing
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = 50;
+		// this needs to be zero so &spiderRoundStart=0
+		// functionality which sets m_spiderRoundStartTime
+		// to the current time works
+		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
+		// in the future and we can't force the rounce
+		m_spiderFreqs[i] = 0.0;
 		i++;
 	}
 
@@ -3111,6 +3157,12 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 		// crawl everything by default, no processing
 		m_regExs[i].set("default");
 		m_spiderPriorities   [i] = 50;
+		// this needs to be zero so &spiderRoundStart=0
+		// functionality which sets m_spiderRoundStartTime
+		// to the current time works
+		// otherwise Spider.cpp's getSpiderTimeMS() returns a time
+		// in the future and we can't force the rounce
+		m_spiderFreqs[i] = 0.0;
 		//m_spiderDiffbotApiUrl[i].set ( api );
 		i++;
 	}

@@ -402,10 +402,12 @@ bool Query::set2 ( char *query        ,
 	// . we limit to MAX_EXRESSIONS to like 10 now i guess
 	if ( m_isBoolean ) {
 		m_numExpressions = 1;
-		m_expressions[0].add ( 0 , 
-				       m_numWords ,
-				       this , // Query
-				       0 ); // level
+		if ( ! m_expressions[0].addExpression ( 0 , 
+						      m_numWords ,
+						      this , // Query
+						      0 ) ) // level
+			// return false with g_errno set on error
+			return false;
 	}
 
 
@@ -1953,6 +1955,7 @@ bool Query::setQWords ( char boolFlag ,
 		// assume QueryWord is ignored by default
 		qw->m_ignoreWord   = IGNORE_DEFAULT;
 		qw->m_ignorePhrase = IGNORE_DEFAULT;
+		qw->m_ignoreWordInBoolQuery = false;
 		qw->m_wordNum = i;
 		// get word as a string
 		//char *w    = words.getWord(i);
@@ -2307,8 +2310,15 @@ bool Query::setQWords ( char boolFlag ,
 			if ( fieldCode == FIELD_GBSORTBY ||
 			     fieldCode == FIELD_GBREVSORTBY ||
 			     fieldCode == FIELD_GBSORTBYINT ||
-			     fieldCode == FIELD_GBREVSORTBYINT )
+			     fieldCode == FIELD_GBREVSORTBYINT ) {
 				wid = hash64Lower_utf8 ( w , wlen , 0LL );
+				// do not include this word as part of
+				// any boolean expression, so
+				// Expression::isTruth() will ignore it and we
+				// fix '(A OR B) gbsortby:offperice' query
+				qw->m_ignoreWordInBoolQuery = true;
+			}
+
 
 			// gbmin:price:1.23
 			if ( firstColonLen>0 &&
@@ -3595,15 +3605,18 @@ unsigned char precedence[] = {
 //#define TYPE_EXPRESSION 3
 
 
-// return -1 and set g_errno on error
+// return false and set g_errno on error
 // returns how many words expression was
-bool Expression::add (long start, 
-		      long end, 
-		      class Query      *q,
-		      long              level
-		      ) {
+bool Expression::addExpression (long start, 
+				long end, 
+				class Query      *q,
+				long              level
+				) {
 
-	if ( level >= MAX_EXPRESSIONS ) { g_errno = EBADENGINEER; return -1;}
+	if ( level >= MAX_EXPRESSIONS ) { 
+		g_errno = ETOOMANYPARENS;
+		return false;
+	}
 
 	// the # of the first alnumpunct word in the expression
 	m_expressionStartWord = start;
@@ -3650,10 +3663,11 @@ bool Expression::add (long start,
 			// make a new one:
 			Expression *e=&q->m_expressions[q->m_numExpressions-1];
 			// now set it
-			e->add ( i+1, // skip over (
-				 end ,
-				 q ,
-				 level + 1);
+			if ( ! e->addExpression ( i+1, // skip over (
+						  end ,
+						  q ,
+						  level + 1)  )
+				return false;
 			// skip over it. pt to ')'
 			i += e->m_numWordsInExpression;
 			qw->m_expressionPtr = e;
@@ -3664,7 +3678,7 @@ bool Expression::add (long start,
 		else if (qw->m_opcode == OP_RIGHTPAREN){
 			// return size i guess, include )
 			m_numWordsInExpression = i - m_expressionStartWord+1;
-			return i;
+			return true;
 		}
 		else if (qw->m_opcode) {
 			// add that mdw
@@ -3764,6 +3778,9 @@ bool Expression::isTruth ( unsigned char *bitVec ,long vecSize ) {
 			// for regular word operands
 			// ignore it like a space?
 			if ( qw->m_ignoreWord ) continue;
+			// ignore gbsortby:offerprice in bool queries
+			// at least for evaluating them
+			if ( qw->m_ignoreWordInBoolQuery ) continue;
 			// save old one
 			prevResult = opResult;
 			// convert word to term #

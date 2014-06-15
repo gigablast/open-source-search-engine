@@ -17441,6 +17441,15 @@ long *XmlDoc::getContentHashJson32 ( ) {
 		     strcmp(ji->m_name,"url") == 0 )
 			continue;
 
+		if ( ji->m_name && numNames==1 && 
+		     strcmp(ji->m_name,"pageUrl") == 0 )
+			continue;
+
+		// mike will track down how the hash works in article|3|123456
+		//if ( ji->m_name && numNames==1 && 
+		//     strcmp(ji->m_name,"diffbotUri") == 0 )
+		//	continue;
+
 		if ( ji->m_name && numNames==1 &&
 		     strcmp(ji->m_name,"resolved_url") == 0 )
 			continue;

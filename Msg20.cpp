@@ -507,7 +507,7 @@ bool Msg20Reply::sendReply ( XmlDoc *xd ) {
 	if ( g_errno ) {
 		// extract titleRec ptr
 		log("query: Had error generating msg20 reply for d=%lli: "
-		    "%s",m_docId, mstrerror(g_errno));
+		    "%s",xd->m_docId, mstrerror(g_errno));
 		// don't forget to delete this list
 	haderror:
 		mdelete ( xd, sizeof(XmlDoc) , "Msg20" );

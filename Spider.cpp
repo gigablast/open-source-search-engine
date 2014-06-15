@@ -3841,15 +3841,19 @@ bool SpiderColl::scanListForWinners ( ) {
 		     // no! for bulk jobs and crawl jobs we ALWAYS retry
 		     // on errors... tmp errors, but this is just a shortcut
 		     // so only take this shortcut if there is no error
-		     // and repeat is 0.0
-		     ( srep->m_errCode == 0 || 
+		     // and repeat is 0.0.
+		     // ... CRAP we do not want error'ed urls to resuscitate
+		     // and job that is not already in progress if it is not
+		     // supposed to be a repeat crawl.
+		     ( srep->m_errCode && 
 		       // BUT skip this url if the job is not in progress
 		       // even if the errCode is NON-zero, THUS we prevent
 		       // a job from flip flopping from in progress to
 		       // not in progress and sending out alerts. so once
 		       // it goes to NOT in progress, that's it...
 		       m_cr->m_spiderStatus != SP_INPROGRESS ) &&
-
+		     // this means "repeat" is set to 0, to not repeat but
+		     // if we get a &roundStart=1 request we do a round anyway.
 		     m_cr->m_collectiveRespiderFrequency <= 0.0 ) {
 			if ( g_conf.m_logDebugSpider )
 				log("spider: skipping0 %s",sreq->m_url);
@@ -5373,7 +5377,7 @@ void doneSendingNotification ( void *state ) {
 	// waiting tree will usually be empty for this coll since no
 	// spider requests had a valid spider priority, so let's rebuild!
 	// this is not necessary because PF_REBUILD is set for the
-	// "spiderRoundStart" parm in Parms.cpp so it will rebuild if that parm
+	// "roundStart" parm in Parms.cpp so it will rebuild if that parm
 	// changes already.
 	//if ( cr->m_spiderColl )
 	//	cr->m_spiderColl->m_waitingTreeNeedsRebuild = true;
@@ -5385,10 +5389,10 @@ void doneSendingNotification ( void *state ) {
 	g_parms.addNewParmToList1 ( &parmList,cr->m_collnum,roundStr,-1 ,
 				    "spiderRoundNum");
 	g_parms.addNewParmToList1 ( &parmList,cr->m_collnum,roundTime, -1 ,
-				    "spiderRoundStart");
+				    "roundStart");
 
 	//g_parms.addParmToList1 ( &parmList , cr , "spiderRoundNum" ); 
-	//g_parms.addParmToList1 ( &parmList , cr , "spiderRoundStart" ); 
+	//g_parms.addParmToList1 ( &parmList , cr , "roundStart" ); 
 	// this uses msg4 so parm ordering is guaranteed
 	g_parms.broadcastParmList ( &parmList , NULL , NULL );
 
