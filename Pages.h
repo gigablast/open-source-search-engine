@@ -87,6 +87,11 @@ bool sendPageQualityAgent   ( TcpSocket *s , HttpRequest *r );
 bool sendPageThesaurus  ( TcpSocket *s , HttpRequest *r );
 bool sendPageStatsdb   ( TcpSocket *s , HttpRequest *r );
 
+// values for m_usePost:
+#define M_GET   0x00
+#define M_POST  0x01
+#define M_MULTI 0x02
+
 // . description of a dynamic page
 // . we have a static array of these in Pages.cpp
 class WebPage {
@@ -96,7 +101,7 @@ class WebPage {
 	long  m_flen;
 	char *m_name;     // for printing the links to the pages in admin sect.
 	bool  m_cast;     // broadcast input to all hosts?
-	bool  m_usePost;  // use a POST request/reply instead of GET?
+	char  m_usePost;  // use a POST request/reply instead of GET?
 	                  // used because GET's input is limited to a few k.
 	//char  m_perm;     // permissions, see USER_* #define's below
 	char *m_desc; // page description

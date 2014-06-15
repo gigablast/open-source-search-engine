@@ -149,7 +149,7 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER   , 
 	  "prioritize urls for spidering",
 	  sendPageGeneric  , 0 } ,
-	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" ,  0 , 1 ,
+	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" , 0,M_MULTI ,
 	  //USER_ADMIN | USER_MASTER   ,
 	  "inject url in the index here",
 	  sendPageInject   , 2 } ,
@@ -201,7 +201,7 @@ static WebPage s_pages[] = {
 //	  "sync page",
 //	  sendPageGeneric  , 0 } ,
 
-	{ PAGE_AUTOBAN    ,"admin/autoban" , 0 , "autoban" ,  1 , 1 ,
+	{ PAGE_AUTOBAN    ,"admin/autoban" , 0 , "autoban" ,  1 , M_POST ,
 	  //USER_MASTER | USER_PROXY , 
 	  "autobanned ips",
 	  sendPageAutoban   , 0 },
@@ -209,7 +209,7 @@ static WebPage s_pages[] = {
 	{ PAGE_SPIDERLOCKS,"admin/spiderlocks" , 0 , "spider locks" ,  0 , 0 ,
 	  USER_MASTER , sendPageSpiderLocks , 0 },
 	  */
-	{ PAGE_PROFILER    , "admin/profiler"   , 0 , "profiler" ,  0 , 1 ,
+	{ PAGE_PROFILER    , "admin/profiler"   , 0 , "profiler" ,  0 ,M_POST,
 	  //USER_MASTER , 
 	  "profiler page",
 	  sendPageProfiler   , 0 } ,
@@ -232,7 +232,7 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_ADMIN , 
 	  "api page",
 	  sendPageAPI , 0 } ,
-	{ PAGE_RULES  , "admin/siterules", 0 , "site rules", 1, 1,
+	{ PAGE_RULES  , "admin/siterules", 0 , "site rules", 1, M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "site rules page",
 	  sendPageGeneric , 0} ,
@@ -273,7 +273,7 @@ static WebPage s_pages[] = {
 	  sendPageResults  , 0 } ,
 #endif
 
-	{ PAGE_ACCESS    , "admin/access" , 0 , "access" ,  1 , 1 , // usepost
+	{ PAGE_ACCESS    , "admin/access" , 0 , "access" ,  1 , M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "access password, ip, admin ips etc. all goes in here",
 	  sendPageGeneric  , 0 } ,
@@ -281,15 +281,15 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER   , 
 	  "search box",
 	  sendPageResults  , 0 } ,
-	{ PAGE_PARSER    , "admin/parser"  , 0 , "parser"          ,  0 , 1,
+	{ PAGE_PARSER    , "admin/parser"  , 0 , "parser"          , 0,M_POST,
 	  //USER_MASTER ,
 	  "page parser page",
 	  sendPageParser   , 2 } ,
-	{ PAGE_SITEDB    , "admin/tagdb"  , 0 , "tagdb"  ,  0 , 1,
+	{ PAGE_SITEDB    , "admin/tagdb"  , 0 , "tagdb"  ,  0 , M_POST,
 	  //USER_MASTER | USER_ADMIN,
 	  "tagdb page to add/remove/get tags",
 	  sendPageTagdb ,  0} ,	  
-	{ PAGE_CATDB     , "admin/catdb"   , 0 , "catdb"           ,  0 , 1,
+	{ PAGE_CATDB     , "admin/catdb"   , 0 , "catdb"           ,  0,M_POST,
 	  //USER_MASTER | USER_ADMIN,
 	  "catdb page",
 	  sendPageCatdb    , 0 } ,
@@ -955,7 +955,13 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	// . we cannot use the GET method if there is more than a few k of
 	//   parameters, like in the case of the Search Controls page. The
 	//   browser simply will not send the request if it is that big.
-	if ( s_pages[page].m_usePost )
+	if ( s_pages[page].m_usePost == M_MULTI )
+		sb->safePrintf ("<form name=\"SubmitInput\" method=\"post\" "
+				// we need this for <input type=file> tags
+				"ENCTYPE=\"multipart/form-data\" "
+				"action=\"/%s\">\n",
+				s_pages[page].m_filename);
+	else if ( s_pages[page].m_usePost == M_POST )
 		sb->safePrintf ("<form name=\"SubmitInput\" method=\"post\" "
 				"action=\"/%s\">\n",
 				s_pages[page].m_filename);

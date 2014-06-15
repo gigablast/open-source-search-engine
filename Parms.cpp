@@ -2085,7 +2085,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	else if ( t == TYPE_RETRIES    ) 
 		printDropDown ( 4 , sb , cgi , *s , false , false );
 	else if ( t == TYPE_FILEUPLOADBUTTON    ) {
-		sb->safePrintf("<input type=file name=urls>");
+		sb->safePrintf("<input type=file name=%s>",cgi);
 	}
 	else if ( t == TYPE_PRIORITY_BOXES ) {
 		// print ALL the checkboxes when we get the first parm
@@ -2685,8 +2685,6 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 
 	char  t   = m->m_type;
 
-	if ( t == TYPE_FILEUPLOADBUTTON ) { char *xx=NULL;*xx=0; }
-
 	if      ( t == TYPE_CHAR           || 
 		  t == TYPE_CHAR2          || 
 		  t == TYPE_CHECKBOX       ||
@@ -2706,6 +2704,10 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
  		newVal = (float)*(char *)(THIS + m->m_off + j);
 		goto changed; }
 	else if ( t == TYPE_CHARPTR ) {
+		// "s" might be NULL or m->m_def...
+		*(char **)(THIS + m->m_off + j) = s;
+	}
+	else if ( t == 	TYPE_FILEUPLOADBUTTON ) {
 		// "s" might be NULL or m->m_def...
 		*(char **)(THIS + m->m_off + j) = s;
 	}

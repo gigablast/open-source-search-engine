@@ -52,9 +52,19 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	// if content is "" make it NULL so XmlDoc will download it
 	// if user really wants empty content they can put a space in there
 	// TODO: update help then...
-	if ( gr->m_content && gr->m_content[0] == '\0' )
+	if ( gr->m_content && ! gr->m_content[0]  )
 		gr->m_content = NULL;
-	
+
+	if ( gr->m_contentFile && ! gr->m_contentFile[0]  )
+		gr->m_contentFile = NULL;
+
+	if ( gr->m_contentDelim && ! gr->m_contentDelim[0] )
+		gr->m_contentDelim = NULL;
+
+	// if we had a delimeter but not content, zero it out...
+	char *content = gr->m_content;
+	if ( ! content ) content = gr->m_contentFile;
+	if ( ! content ) gr->m_contentDelim = NULL;
 
 	// get collection rec
 	CollectionRec *cr = g_collectiondb.getRec ( gr->m_coll );
@@ -216,6 +226,7 @@ Msg7::Msg7 () {
 	m_round = 0;
 	m_firstTime = true;
 	m_fixMe = false;
+	m_injectCount = 0;
 }
 
 Msg7::~Msg7 () {
@@ -276,13 +287,12 @@ bool Msg7::inject ( void *state ,
 	// shortcut
 	XmlDoc *xd = &m_xd;
 
+	// this will be NULL if the "content" was empty or not given
 	char *content = gr->m_content;
-	if ( content && content[0] == '\0' ) content = NULL;
 
-	// try the uploaded file if nothing in the text area
+	// . try the uploaded file if nothing in the text area
+	// . this will be NULL if the "content" was empty or not given
 	if ( ! content ) content = gr->m_contentFile;
-	if ( content && content[0] == '\0' ) content = NULL;
-
 
 	if ( m_firstTime ) {
 		m_firstTime = false;
@@ -312,7 +322,7 @@ bool Msg7::inject ( void *state ,
 		// we've saved m_start as "start" above, 
 		// so find the next delimeter after it and set that to m_start
 		// add +1 to avoid infinite loop
-		m_start = strstr(m_start+1,delim);
+		m_start = strstr(start+1,delim);
 		// for injecting "start" set this to \0
 		if ( m_start ) {
 			// null term it
@@ -346,9 +356,12 @@ bool Msg7::inject ( void *state ,
 		Url u; u.set ( gr->m_url );
 		// reset it
 		m_injectUrlBuf.reset();
-		// by default append a .<ch64> to the provided url
-		m_injectUrlBuf.safePrintf("%s.%llu",u.getUrl(),ch64);
+		// by default append a -<ch64> to the provided url
+		m_injectUrlBuf.safePrintf("%s-%llu",u.getUrl(),ch64);
 	}
+
+	// count them
+	m_injectCount++;
 
 
 	if ( ! xd->injectDoc ( m_injectUrlBuf.getBufStart() ,

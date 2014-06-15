@@ -16,7 +16,7 @@ public:
 	bool m_firstTime;
 	char *m_start;
 	bool  m_fixMe;
-
+	long  m_injectCount;
 
 	bool       m_needsSet;
 	XmlDoc     m_xd;
