@@ -239,7 +239,8 @@ void doneInjectingWrapper9 ( void *state ) {
 			return;
 	}
 
-	goto loop;
+	if ( msg7->m_start ) 
+		goto loop;
 
 	// and we call the original caller
 	msg7->m_callback ( msg7->m_state );
@@ -291,6 +292,10 @@ bool Msg7::inject ( void *state ,
 	// save current start since we update it next
 	char *start = m_start;
 
+	// if this is empty we are done
+	//if ( ! start ) 
+	//	return true;
+
 	char *delim = gr->m_contentDelim;
 	if ( delim && ! delim[0] ) delim = NULL;
 
@@ -306,7 +311,8 @@ bool Msg7::inject ( void *state ,
 	if ( delim ) {
 		// we've saved m_start as "start" above, 
 		// so find the next delimeter after it and set that to m_start
-		m_start = strstr(m_start,delim);
+		// add +1 to avoid infinite loop
+		m_start = strstr(m_start+1,delim);
 		// for injecting "start" set this to \0
 		if ( m_start ) {
 			// null term it
@@ -336,8 +342,12 @@ bool Msg7::inject ( void *state ,
 	if ( delim && ! modifiedUrl ) {
 		// use hash of the content
 		long long ch64 = hash64n ( start , 0LL );
+		// normalize it
+		Url u; u.set ( gr->m_url );
+		// reset it
+		m_injectUrlBuf.reset();
 		// by default append a .<ch64> to the provided url
-		m_injectUrlBuf.safePrintf(".%llu",ch64);
+		m_injectUrlBuf.safePrintf("%s.%llu",u.getUrl(),ch64);
 	}
 
 
