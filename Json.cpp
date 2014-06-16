@@ -221,6 +221,15 @@ JsonItem *Json::parseJsonStringIntoJsonItems ( char *json , long niceness ) {
 			long  slen = end - str;
 			// . if a colon follows, it was a field
 			if ( *x == ':' ) {
+
+				// we can't be the first thing in the safebuf
+				// json must start with { or [ i guess
+				// otherwise getFirstItem() won't work!
+				if ( m_sb.m_length==0 ) {
+					g_errno = EBADJSONPARSER;
+					return NULL;
+				}
+
 				// let's push this now so we can \0 term
 				char *savedStr = m_sb.getBuf();
 				m_sb.safeMemcpy ( str , slen );
