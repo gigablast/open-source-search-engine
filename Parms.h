@@ -233,7 +233,7 @@ class Parm {
 	char  m_hdrs;  // print headers for row or print title/desc for single?
 	char  m_perms; // 0 means same as WebPages' m_perms
 	char  m_subMenu;
-	short m_flags;
+	long  m_flags;
 	char *m_class;
 	char *m_icon;
 	char *m_qterm;

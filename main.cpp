@@ -4013,7 +4013,7 @@ int collcopy ( char *newHostsConf , char *coll , long collnum ) {
 		//fprintf(stderr,"rcp %s:%s*db*.dat* ",
 		//	iptoa( h->m_ip), h->m_dir  );
 		fprintf(stderr,"nohup ssh %s '",iptoa(h->m_ip));
-		fprintf(stderr,"rcp -pr ");
+		fprintf(stderr,"rcp -r ");
 		fprintf(stderr,"%s:%scoll.%s.%li ",
 			iptoa(h2->m_ip), h2->m_dir , coll, collnum );
 		fprintf(stderr,"%s' &\n", h->m_dir  );
@@ -4264,7 +4264,7 @@ int scale ( char *newHostsConf , bool useShotgunIp) {
 		//fprintf(stderr,"rcp %s:%s*db*.dat* ",
 		//	iptoa( h->m_ip), h->m_dir  );
 		// if same ip then do a 'cp' not rcp
-		char *cmd = "rcp -pr";
+		char *cmd = "rcp -r";
 		if ( h->m_ip == h2->m_ip ) cmd = "cp -pr";
 
 		fprintf(stderr,"%s %s*db*.dat* ", cmd, h->m_dir  );
@@ -4655,7 +4655,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 			SafeBuf tmpBuf;
 			tmpBuf.safePrintf(
-					  "rcp -pr %s %s:%s"
+					  "rcp -r %s %s:%s"
 					  , fileListBuf.getBufStart()
 					  , iptoa(h2->m_ip)
 					  , h2->m_dir
@@ -4669,7 +4669,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"rcp -pr "
+				"rcp -r "
 				"%sgb "
 				//"%sgbfilter "
 				"%shosts.conf "

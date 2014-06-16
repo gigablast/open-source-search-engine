@@ -4638,10 +4638,9 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_maxVectorCacheMem - g;
 	m->m_def   = "10000000";
 	m->m_type  = TYPE_LONG;
-	m->m_flags = PF_NOSYNC;
+	m->m_flags = PF_NOSYNC|PF_NOAPI;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_CONF;
-	m->m_flags = PF_NOAPI;
 	m++;
 
 	/*
