@@ -1211,6 +1211,21 @@ int main2 ( int argc , char *argv[] ) {
 		return 0;
 		
 	}
+
+	/*
+	  test json parser error with bad json
+	Json jp;
+	char xxx[1024];
+	sprintf(xxx,"\"categories\":[\"shop\"");
+	jp.parseJsonStringIntoJsonItems(xxx,0);
+	JsonItem *ji = jp.getFirstItem();
+	for ( ; ji ; ji = ji->m_next ) {
+		if ( ji->m_type != JT_NUMBER && ji->m_type != JT_STRING )
+			continue;
+	}
+	*/
+
+
 	/*
 	if ( strcmp ( cmd , "querytest" ) == 0){
 		if ( ! g_hostdb.init(hostsConf, hostId) ) {
