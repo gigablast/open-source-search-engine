@@ -284,7 +284,7 @@ bool Wiktionary::load() {
 		h = hash64 ( tail1 , 1000 , h );
 		h = hash64 ( tail2 , 1000 , h );
 		long long nn = -662959013613045013LL;//-6197041242898026762LL;
-		long long nn2 = -2511412928924361809;
+		long long nn2 = -2511412928924361809LL;
 		if ( h != nn && h != nn2 ) {
 			log("gb: %s or %s checksum is not approved for "
 			    "live service (%lli != %lli)", ff3, ff4,
