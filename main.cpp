@@ -1114,6 +1114,26 @@ int main2 ( int argc , char *argv[] ) {
 		return 0;
 	}
 	*/
+
+	/*
+	char cmd3[2048];
+	snprintf(cmd3,2047, 
+		 "ulimit -v 25000  ; "
+		 "ulimit -t 30 ; "
+		 "ulimit -a; "
+		 "export ANTIWORDHOME=%s/antiword-dir ; "
+		 "rm poo.txt ; "
+		 "timeout 10s nice -n 19 %s/antiword %s> %s" , 
+		 "/home/mwells/master-testing/" , 
+		 "/home/mwells/master-testing/" , 
+		 "/home/mwells/testing/poo.doc",
+		 "/home/mwells/master-testing/poo.txt ; " 
+		 "cat poo.txt"
+		 );
+	system(cmd3);
+	exit(-1);
+	*/
+
 	if ( strcmp ( cmd , "bucketstest" ) == 0 ) {
 		if ( argc > cmdarg+1 ) bucketstest(argv[cmdarg+1]);
 		else if( argc == cmdarg+1 ) bucketstest(NULL);
