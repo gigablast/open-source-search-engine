@@ -1401,14 +1401,32 @@ void HttpRequest::parseFieldsMultipart ( char *s , long slen ) {
 
 	// point to = sign, use this for multiparts though
 	char *equal = strstr ( s , "\"\r\n\r\n" );
+	// for uploading a file it looks like
+	// Content-Disposition: form-data; name=\"file\"; filename=\"poo.txt\"\r\nContent-Type: text/plain\r\n\r\nsomething here\n=====\nagain we do it...
+	char *equal2 = strstr ( s , "\"" );
+	// debug point 
+	if ( strncmp(s,"file",4) == 0 )
+		log("hey");
+	// so if we had that then we had an uploaded file
+	bool uploadedFile = false;
+	if ( equal2 && equal && equal2 <  equal ) {
+		uploadedFile = true;
+		equal = equal2;
+	}
 	// try next field if none here
 	if ( ! equal ) goto loop;
 	// set field len
 	m_fieldLens [ n ] = equal - s;
-	// set = to \0 so getField() returns NULL terminated field name
-	*equal = '\0';
 	// point to field value
 	s = equal + 5;
+	// unless we had an uploaded file, then skip more
+	if ( uploadedFile ) {
+		char *fileStart = strstr(equal,"\r\n\r\n");
+		if ( fileStart ) fileStart += 4;
+		s = fileStart;
+	}
+	// set = to \0 so getField() returns NULL terminated field name
+	*equal = '\0';
 	// set value (may be \0)
 	m_fieldValues [ n ] = s;
 	// force to \0 at end

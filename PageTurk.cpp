@@ -12,7 +12,7 @@
 #include "Msg40.h"
 #include "SearchInput.h"
 #include "PageReindex.h"
-#include "Inject.h"
+#include "PageInject.h"
 #include "Spider.h"
 #include "sort.h"
 #include "PageTurk.h"

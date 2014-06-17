@@ -1544,9 +1544,10 @@ void Mem::gbfree ( void *ptr , int size , const char *note ) {
 	long slot = g_mem.getMemSlot ( ptr );
 	if ( slot < 0 ) {
 		log(LOG_LOGIC,"mem: could not find slot (note=%s)",note);
+		log(LOG_LOGIC,"mem: FIXME!!!");
 		// return for now so procog does not core all the time!
-		//return;
-		char *xx = NULL; *xx = 0;
+		return;
+		//char *xx = NULL; *xx = 0;
 	}
 
 	bool isnew = s_isnew[slot];

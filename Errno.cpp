@@ -171,6 +171,7 @@ case    ECUSTOMCRAWLMISMATCH: return "Job name/type mismatch. Job name has alrea
 case    ENOTOKEN: return "Missing token";
 case    EBADIMG: return "Bad image";
 case	EREINDEXREDIR: return "Not parent url to reindex";
+case	ETOOMANYPARENS: return "Too many nested parentheses in boolean query";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );

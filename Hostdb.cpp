@@ -782,13 +782,23 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 		long tlen = readlink ( wdir , tmp , 250 );
 		// if we got the actual path, copy that over
 		if ( tlen != -1 ) {
-			strncpy(wdir,tmp,tlen);
+			// wdir currently references into the hosts.conf buf
+			// so don't store the expanded directory into there
+			wdir = tmp;
+			//strncpy(wdir,tmp,tlen);
 			wdirlen = tlen;
 		}
 
 		// add slash if none there
 		if ( wdir[wdirlen-1] !='/' ) wdir[wdirlen++] = '/';
 			
+		// don't breach Host::m_dir[128] buffer
+		if ( wdirlen >= 128 ) {
+			log("conf: working dir %s is too long, >= 128 chars.",
+			    wdir);
+			return false;
+		}
+
 		// copy it over
 		//strcpy ( m_hosts[i].m_dir , wdir );
 		memcpy(m_hosts[i].m_dir, wdir, wdirlen);
