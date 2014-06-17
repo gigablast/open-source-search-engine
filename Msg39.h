@@ -45,7 +45,6 @@ class Msg39Request {
 		m_addToCache              = false;
 		m_familyFilter            = false;
 		m_timeout                 = -1; // -1 means auto-compute
-		m_getFacetStats         = false;
 		//m_useMinAlgo              = false;
 		//m_fastIntersection        = -1;
 		m_stripe                  = 0;
@@ -114,9 +113,8 @@ class Msg39Request {
 	//char    m_useNewAlgo;
 	char    m_doMaxScoreAlgo;
 
-	//char    m_getFacetStats;
-	//long    m_siteHash32;// for m_getFacetStats
-	long    m_myFacetVal32; // for getFacetStats
+	// Msg3a still uses this
+	long      m_myFacetVal32; // for gbfacet:xpathsite really sectionstats
 
 	//char    m_useMinAlgo;
 	//char    m_fastIntersection;
@@ -164,9 +162,6 @@ public:
 	long   m_nqt;
 	// # of estimated hits we had
 	long   m_estimatedHits;
-	// for when m_getSectionStats is true
-	//SectionStats m_sectionStats;
-	FacetStats m_facetStats;
 	// error code
 	long   m_errno;
 
@@ -175,7 +170,8 @@ public:
 	char  *ptr_scoreInfo      ; // transparency info
 	char  *ptr_pairScoreBuf   ; // transparency info
 	char  *ptr_singleScoreBuf ; // transparency info
-	char  *ptr_facetHashList   ; // for m_getFacetStats
+	// this is now 1-1 with # of query terms!
+	char  *ptr_facetHashList   ; // list of all the facet values in serps
 	char  *ptr_clusterRecs    ; // key_t (might be empty)
 	
 	long   size_docIds;

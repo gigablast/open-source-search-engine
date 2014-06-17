@@ -537,7 +537,7 @@ class XmlDoc {
 	class Sections *getSections ( ) ;
 	class Sections *getSectionsWithDupStats ( );
 	class SafeBuf  *getInlineSectionVotingBuf();
-	bool gotSectionStats( class Msg3a *msg3a );
+	bool gotSectionFacets( class Msg3a *msg3a );
 	class SectionStats *getSectionStats(long long secHash64,
 					    long sentHash32);
 	class SectionVotingTable *getOldSectionVotingTable();
@@ -1025,6 +1025,7 @@ class XmlDoc {
 	//Msg3a    m_msg3a;
 	//Msg39Request m_r39;
 	Msg39Request m_mr2;
+	SectionStats m_sectionStats;
 	HashTableX m_sectionStatsTable;
 	//char m_sectionHashQueryBuf[128];
 
@@ -2364,7 +2365,8 @@ class TermDebugInfo {
 	long long  m_langBitVec64;
 	// used for gbsectionhash:xxxx terms to hack in the inner content
 	// hash, aka sentHash32 for doing xpath histograms on a site
-	long m_sentHash32;
+	//long m_sentHash32;
+	//long m_facetVal32;
 	// this is copied from Weights::m_rvw or m_rvp
 	//float     m_rv[MAX_RULES];
 };
@@ -2388,6 +2390,7 @@ public:
 		m_useCountTable = true;
 		m_useSections = true;
 		m_startDist = 0;
+		//	m_facetVal32 = 0;
 		// used for sectiondb stuff, but stored in posdb
 		//m_sentHash32 = 0;
 	};
@@ -2402,7 +2405,7 @@ public:
 	char              m_useSynonyms;
 	char              m_hashGroup;
 	long              m_startDist;
-	//long              m_sentHash32;
+	//long              m_facetVal32;
 	bool              m_useCountTable;
 	bool              m_useSections;
 };

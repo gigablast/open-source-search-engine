@@ -380,6 +380,7 @@ class HashTableX {
 	};
 
 	void *getValueFromSlot ( long n ) { return m_vals + n * m_ds; };
+	void *getValFromSlot   ( long n ) { return m_vals + n * m_ds; };
 	void *getDataFromSlot  ( long n ) { return m_vals + n * m_ds; };
 
 	// frees the used memory, etc.

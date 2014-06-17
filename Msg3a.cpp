@@ -845,6 +845,55 @@ bool Msg3a::mergeLists ( ) {
 	//m_totalDocCount = 0; // long docCount = 0;
 	m_moreDocIdsAvail = true;
 
+	//
+	// compile facet stats
+	//
+	for ( long j = 0; j < m_numHosts ; j++ ) {
+		Msg39Reply *mr =m_reply[j];
+		// one table for each query term
+		char *p = mr->ptr_facetHashTables;
+		// loop over all query terms
+		long n = m_q->getNumTerms();
+		// use this
+		HashTableX tmp;
+		// do the loop
+		for ( long i = 0 ; i < n ; i++ ) {
+			// size of it
+			long psize = *(long *)p; 
+			p += 4;
+			tmp.deserialize ( p , psize );
+			p += psize;
+			// now compile the stats into a master table
+			for ( long k = 0 ; k < tmp.m_numSlots ; k++ ) {
+				if ( ! tmp.m_flags[k] ) continue;
+				// get the vlaue
+				long v32 = *(long *)tmp.getKeyFromSlot(k);
+				// and how many of them there where
+				long count = *(long *)tmp.getValueFromSlot(k);
+				// add to master
+				master.addScore32 ( v32 , count );
+			}
+		}
+	}
+	////////
+	//
+	// now set m_facetStats
+	//
+	////////
+	// add up all counts
+	long long count = 0LL;
+	for ( long i = 0 ; i < master.getNumSlots() ; i++ ) {
+		if ( ! master.m_flags[i] ) continue;
+		long long slotCount = *(long *)master.getValueFromSlot(i);
+		long h32 = *(long *)master.getKeyFromSlot(i);
+		if ( h32 == m_r->m_myFacetVal32 ) 
+			m_facetStats.m_myValCount = slotCount;
+		count += slotCount;
+	}
+	m_facetStats.m_totalUniqueValues = master.getNumUsedSlots();
+	m_facetStats.m_totalValues = count;
+	
+		
 
 	// shortcut
 	//long numSplits = m_numHosts;//indexdbSplit;
@@ -898,6 +947,7 @@ bool Msg3a::mergeLists ( ) {
 	for ( long j = 0; sneed && j < m_numHosts ; j++ ) {
 		Msg39Reply *mr =m_reply[j];
 		if ( ! mr ) continue;
+mdw left off here...
 		SectionStats *src = &mr->m_sectionStats;
 		SectionStats *dst = &m_sectionStats;
 		//dst->m_onSiteDocIds      += src->m_onSiteDocIds;

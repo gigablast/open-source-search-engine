@@ -6644,7 +6644,7 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 	// . this is our value for the facet field of gbxpathsitehash12345678
 	//   which is the hash of the innerHTML for that xpath on this site.
 	//   12345678 is the hash of the xpath and the site.
-	r->m_myFacetHash32 = sentHash32;
+	r->m_myFacetVal32 = sentHash32;
 
 
 	Query *qq = &m_queryArray[i];
@@ -6661,29 +6661,30 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 		return (SectionStats *)-1;
 	}
 
-	// back!
-	m_inUse[i] = 0;
-
 	// error?
-	if ( g_errno ) return NULL;
+	if ( g_errno ) { m_inUse[i] = 0; return NULL; }
+
+	// sets &m_sectionStats and adds to the table
+	gotSectionFacets ( msg3a );
 
 	// i guess did not block...
-	return &msg3a->m_sectionStats;
+	//return &msg3a->m_sectionStats;
+	return &m_sectionStats;
 }
 
 void gotDocIdsWrapper ( void *state ) {
 	//XmlDoc *THIS = (XmlDoc *)state;
 	Msg3a *msg3a = (Msg3a *)state;
 	XmlDoc *THIS = (XmlDoc *)msg3a->m_hack;
-	THIS->gotSectionStats ( msg3a );
+	THIS->gotSectionFacets ( msg3a );
 	// this will end up calling getSectionsWithDupStats() again
 	// which will call getSectionStats() some more on new sections
 	// until m_gotDupStats is set to true.
 	THIS->m_masterLoop ( THIS->m_masterState );
 }
 
-bool XmlDoc::gotSectionStats ( Msg3a *msg3a ) {
-	SectionStats *stats = &msg3a->m_sectionStats;
+bool XmlDoc::gotSectionFacets ( Msg3a *msg3a ) {
+	//SectionStats *stats = &msg3a->m_sectionStats;
 	// count it as returned
 	m_msg3aRequestsIn++;
 	// mark it as available now
@@ -6692,8 +6693,16 @@ bool XmlDoc::gotSectionStats ( Msg3a *msg3a ) {
 	if ( ! m_inUse[num] ) { char *xx=NULL;*xx=0; }
 	// grab the section hash
 	long long secHash64 = m_secHash64Array[num];
-	// cache them
-	if ( ! m_sectionStatsTable.addKey ( &secHash64 , stats ) )
+
+	// set m_sectionStats from the list of facet values for this
+	// gbfacet:xpathsitehash term...
+	compileSectionStats ( msg3a->ptr_facetHashTable ,
+			      msg3a->size_facetHashTable ,
+			      m_r->m_myFacetVal32,
+			      &m_sectionStats );
+
+	// cache them. this does a copy of m_sectionStats
+	if ( ! m_sectionStatsTable.addKey ( &secHash64 , &m_sectionStats ) )
 		log("xmldoc: failed to add sections stats: %s",
 		    mstrerror(g_errno));
 	// reset that msg3a to free its data
@@ -30573,7 +30582,7 @@ bool storeTerm ( char       *s        ,
 	ti.m_langId = langId;
 
 	// was sitehash32
-	ti.m_sentHash32 = hi->m_sentHash32;
+	//ti.m_facetVal32 = hi->m_facetVal32;//sentHash32 = hi->m_sentHash32;
 
 	// save for printing out an asterisk
 	ti.m_synSrc = synSrc; // isSynonym = isSynonym;
@@ -31543,7 +31552,7 @@ bool XmlDoc::hashSectionTerm ( char *term , HashInfo *hi , long sentHash32 ) {
 	//	log("hey: got offer price");
 
 	// now set the float in that key
-	g_posdb.setFloat ( &k , f );
+	g_posdb.setInt ( &k , sentHash32 );
 
 	// HACK: this bit is ALWAYS set by Posdb::makeKey() to 1
 	// so that we can b-step into a posdb list and make sure
@@ -31556,8 +31565,8 @@ bool XmlDoc::hashSectionTerm ( char *term , HashInfo *hi , long sentHash32 ) {
 	g_posdb.setAlignmentBit ( &k , 0 );
 
 	// sanity
-	float t = g_posdb.getFloat ( &k );
-	if ( t != f ) { char *xx=NULL;*xx=0; }
+	int t = g_posdb.getInt ( &k );
+	if ( t != sentHash32 ) { char *xx=NULL;*xx=0; }
 
 	HashTableX *dt = hi->m_tt;
 
@@ -31576,7 +31585,7 @@ bool XmlDoc::hashSectionTerm ( char *term , HashInfo *hi , long sentHash32 ) {
 	// store it
 	if ( ! storeTerm ( buf,
 			   bufLen,
-			   truePrefix64,
+			   0LL,//truePrefix64,
 			   hi,
 			   0, // word#, i,
 			   0, // wordPos
@@ -33147,7 +33156,13 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 
 
 		sb->safePrintf("<td>");
+
 		// there is no prefix for such terms now
+		// TODO: store actual key in there i guess?? or just this bit.
+		long val32 = 0;
+		if ( g_posdb.getAlignmentBit ( &k ) == 0 )
+			val32 = g_posdb.getInt(&k);
+
 		if ( strncmp(term,"gbxpathsitehash",15)==0)
 			sb->safePrintf("<b>Term</b> is a 32-bit hash of the "
 				       "X-path of "
@@ -33157,8 +33172,9 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 				       "Inner HTML of this section stored "
 				       "in the posdb key instead of "
 				       "the usual stuff.",
-				       (long)tp[i]->m_sentHash32
+				       val32//(long)tp[i]->m_sentHash32
 				       );
+
 		sb->safePrintf("</td>");
 
 

@@ -2,9 +2,9 @@
 #define _MSG3A_H_
 
 #include "Msg39.h"
-#include "Stats.h"
+//#include "Stats.h"
 //#include "Thesaurus.h"
-#include "PostQueryRerank.h" // rscore_t
+//#include "PostQueryRerank.h" // rscore_t
 #include "Msg0.h"
 #include "Msg1.h"
 
@@ -193,7 +193,7 @@ public:
 	RdbList         m_seoCacheList;
 
 
-	SectionStats    m_sectionStats;
+	//SectionStats    m_sectionStats;
 };
 
 #endif

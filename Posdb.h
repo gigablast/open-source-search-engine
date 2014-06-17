@@ -105,6 +105,7 @@ float getTermFreqWeight  ( long long termFreq , long long numDocsInColl );
 #define BF_NEGATIVE           0x08  // query word has a negative sign before it
 #define BF_BIGRAM             0x10  // query word has a negative sign before it
 #define BF_NUMBER             0x20  // is it like gbsortby:price? numeric?
+#define BF_FACET              0x40  // gbfacet:price
 
 void printTermList ( long i, char *list, long listSize ) ;
 
@@ -577,6 +578,8 @@ class PosdbTable {
 
 	unsigned long long m_docIdHack;
 
+	bool m_hasFacetTerm;
+
 	bool m_hasMaxSerpScore;
 
 	// hack for seo.cpp:
@@ -617,9 +620,9 @@ class PosdbTable {
 	// how many docs in the collection?
 	long long m_docsInColl;
 
-	SectionStats m_sectionStats;
-	SafeBuf m_facetHashList;
-	HashTableX m_dt;
+	//SectionStats m_sectionStats;
+	//SafeBuf m_facetHashList;
+	//HashTableX m_dt;
 
 	class Msg2 *m_msg2;
 

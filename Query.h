@@ -116,6 +116,7 @@ typedef unsigned long long qvec_t;
 #define FIELD_GBREVSORTBYINT   60
 #define FIELD_GBNUMBERMININT   61
 #define FIELD_GBNUMBERMAXINT   62
+#define FIELD_GBFACET          63
 
 
 #define FIELD_GBOTHER 92
@@ -490,6 +491,11 @@ class QueryTerm {
 	class QueryTerm *m_rightPhraseTerm;
 	// for scoring summary sentences from XmlDoc::getEventSummary()
 	float m_score;
+
+	// facet support in Posdb.cpp for compiling the data and we'll
+	// send this back via Msg39Reply::ptr_facetHashList which will be
+	// 1-1 with the query terms.
+	HashTableX m_facetHashTable;
 
 	char m_startKey[MAX_KEY_BYTES];
 	char m_endKey  [MAX_KEY_BYTES];
