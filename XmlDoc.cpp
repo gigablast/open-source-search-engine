@@ -31581,11 +31581,14 @@ bool XmlDoc::hashSectionTerm ( char *term , HashInfo *hi , long sentHash32 ) {
 	char buf[128];
 	long bufLen = sprintf(buf,"%lu",sentHash32);
 
+	// if no gbmin or gbmax or gbsorty or gbrevsortby we need gbfacet
+	long long truePrefix64 = hash64n ( "gbfacet" );
+
 	// add to wts for PageParser.cpp display
 	// store it
 	if ( ! storeTerm ( buf,
 			   bufLen,
-			   0LL,//truePrefix64,
+			   truePrefix64,
 			   hi,
 			   0, // word#, i,
 			   0, // wordPos
@@ -33160,7 +33163,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		// there is no prefix for such terms now
 		// TODO: store actual key in there i guess?? or just this bit.
 		long val32 = 0;
-		if ( g_posdb.getAlignmentBit ( &k ) == 0 )
+		if ( strcmp(prefix == "gbfacet" )
 			val32 = g_posdb.getInt(&k);
 
 		if ( strncmp(term,"gbxpathsitehash",15)==0)
