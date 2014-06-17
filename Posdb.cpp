@@ -82,8 +82,8 @@ bool Posdb::init ( ) {
 	if ( g_posdb.getMultiplier ( &k ) !=multiplier){char *xx=NULL;*xx=0; }
 	if ( g_posdb.getIsSynonym ( &k ) != isSynonym) { char *xx=NULL;*xx=0; }
 
-	setSectionSentHash32 ( &k,45678 );
-	if ( getSectionSentHash32 ( &k ) != 45678 ) { char *xx=NULL;*xx=0;}
+	setFacetVal32 ( &k,45678 );
+	if ( getFacetVal32 ( &k ) != 45678 ) { char *xx=NULL;*xx=0;}
 
 	/*
 	// more tests
@@ -788,7 +788,11 @@ bool PosdbTable::allocTopTree ( ) {
 	if ( ! m_mergeBuf.reserve ( total + 12 ) ) return false;
 	*/
 
-	if ( m_r->m_getSectionStats ) {
+	// MDW: how to do this with multiple gbfacets:xyz queries.
+	// we'll need to attach an m_dt hashtable to each such QueryTerm.
+	// and it will have to be sent back to msg3a for merging.
+
+	if ( m_r->m_getFacetStats ) {
 		// fill up listGroup[]
 		//RdbList **listGroup = m_msg2->getListGroup (0);
 		//long numLists = m_msg2->getNumListsInGroup(0);
@@ -798,9 +802,9 @@ bool PosdbTable::allocTopTree ( ) {
 		//		total += listGroup[i]->getListSize();
 		total += list->getListSize();
 		// assume list is a unique site for section hash dup
-		long maxSites = total / 6;
+		long maxRecs = total / 6;
 		// slot
-		long slots = maxSites * 4;
+		long slots = maxRecs * 4;
 		// min of at least 20 otherwise m_dt re-allocs in thread and
 		// causes a core!
 		if ( slots  < 32 ) slots = 32;
@@ -811,7 +815,7 @@ bool PosdbTable::allocTopTree ( ) {
 			slots = 20000000;
 		}
 		// each site hash is 4 bytes
-		if ( ! m_sentHashList.reserve ( slots ,"shshbuf" ) )
+		if ( ! m_facetHashList.reserve ( slots ,"shshbuf" ) )
 			return false;
 		// quad # of sites to have space in between
 		if ( ! m_dt.set(4,0,slots,NULL,0,false,0,"pdtdt"))
@@ -5078,10 +5082,16 @@ void PosdbTable::intersectLists10_r ( ) {
 	// m_r->m_sectionSiteHash32 to determine if the posdb key is
 	// onsite or offsite. then XmlDoc::printRainbowSections()
 	// can print out how many page/sites duplicate your section's content.
-	if ( m_r->m_getSectionStats ) {
+	
+	// MDW: TODO: for the facet terms just compile the stats and do not
+	// send to intersecting. they are ignored for those purposes. send
+	// the hashtable back so msg3a can integrate the stats. keep in mind
+	// we have multiple docid ranges sometimes for one query!!!!
+
+	if ( m_r->m_getFacetStats ) {
 		// reset
-		m_sectionStats.m_totalMatches = 0;
-		m_sectionStats.m_totalEntries = 0;
+		m_facetStats.m_totalMatches = 0;
+		m_facetStats.m_totalEntries = 0;
 		m_dt.clear();
 		// scan the posdb keys
 		//for ( long i = 0 ; i < m_msg2->getNumListsInGroup(0); i++) {
@@ -5099,23 +5109,23 @@ void PosdbTable::intersectLists10_r ( ) {
 			// . first key is the full size
 			// . uses the w,G,s,v and F bits to hold this
 			// . this is no longer necessarily sitehash, but
-			//   can be any val, like now SectionStats is using
+			//   can be any val, like now FacetStats is using
 			//   it for the innerHtml sentence content hash32
-			long sh32 = g_posdb.getSectionSentHash32 ( p );
+			long sh32 = g_posdb.getFacetVal32 ( p );
 			//long long d = g_posdb.getDocId(p);
 			//long rs = list->getRecSize(p);
 			// this will not update listptrlo, watch out!
 			p += list->getRecSize ( p );
 			// does this xpath from another docid have the
 			// same inner html as us?
-			if ( sh32 == m_r->m_sentHash32 ) // m_siteHash32 ) 
-				m_sectionStats.m_totalMatches++;
+			if ( sh32 == m_r->m_myFacetVal32 ) // m_siteHash32 ) 
+				m_facetStats.m_totalMatches++;
 			// always this
-			m_sectionStats.m_totalEntries++;
+			m_facetStats.m_totalEntries++;
 			// unique site count
 			if ( m_dt.isInTable ( &sh32 ) ) continue;
 			// count it
-			m_sectionStats.m_numUniqueVals++;
+			m_facetStats.m_numUniqueVals++;
 			// only once
 			m_dt.addKey ( &sh32 );
 			// log it
@@ -5125,9 +5135,9 @@ void PosdbTable::intersectLists10_r ( ) {
 			if ( m_dt.m_numSlotsUsed >= 1000000 ) break;
 		}
 		// and return the list of merging
-		long *s    = (long *)m_sentHashList.getBufStart();
-		long *send = (long *)m_sentHashList.getBufEnd();
-		//if ( m_sectionStats.m_numUniqueSites == 17 ) { 
+		long *s    = (long *)m_facetHashList.getBufStart();
+		long *send = (long *)m_facetHashList.getBufEnd();
+		//if ( m_facetStats.m_numUniqueSites == 17 ) { 
 		//	log("q=%s",m_r->ptr_query);
 		//	log("hey");
 		//	//char *xx = NULL;*xx=0; 
@@ -5140,7 +5150,7 @@ void PosdbTable::intersectLists10_r ( ) {
 			*s++ = *(long *)m_dt.getKeyFromSlot(i);
 			if ( s >= send ) break;
 		}
-		m_sentHashList.setLength((char *)s-(char *)orig);
+		m_facetHashList.setLength((char *)s-(char *)orig);
 		return;
 	}
 

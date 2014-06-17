@@ -6417,7 +6417,7 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 
 		// save in case we need to read more than 5MB
 		//m_lastSection = si;
-		// . this does a gbsectionhash:xxxxxx query on secHash64
+		// . does a gbfacets:gbxpathsitehashxxxxxx query on secHash64
 		// . we hack the "sentContentHash32" into each posdb key 
 		//   as the "value" so we can do a facet-like histogram
 		//   over all the possible values this xpath has for this site
@@ -6589,7 +6589,14 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 
 	m_secHash64Array[i] = secHash64;
 
-	sprintf(qbuf,"gbsectionhash:%llu",secHash64);
+	// . hash this special term (was gbsectionhash)
+	// . the wordbits etc will be a number though, the hash of the content
+	//   of the xpath, the inner html hash
+	// . preceeding this term with gbfacet: will make gigablast return
+	//   the statistics for all the values in the posdb keys of this 
+	//   termlist, which happen to be innerHTML hashes for all pages
+	//   with this same xpath and on this same site.
+	sprintf(qbuf,"gbfacet:gbxpathsitehash%llu",secHash64);
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -6613,15 +6620,31 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 	r->m_timeout             = 3600; //-1;// auto-determine based on #terms
 	r->m_maxQueryTerms       = 10;
 
+	///////////////////////
+	//
 	// this tells msg3a/msg39/posdbtable its a hack! no need to do this
-	// because it's implied by the query
-	r->m_getSectionStats     = true;
+	// because it's implied by the query.
+	// BUT REALLY let's eliminate this and just make our queries like
+	// gbfacets:gbxpathsitehash1234567 where 1234567 is the hash of
+	// the section's xpath with the site. the values of that term in
+	// the posdb key will be 32-bit hashes of the innerHtml for such
+	// sections from all pages with the same xpath on the same site.
+	// so no need for this now, comment out.
+	//
+	//r->m_getFacetStats     = true;
+	//
+	/////////////////////////
+
+
 	// we need to know what site is the base site so the section stats
 	// can set m_onSiteDocIds and m_offSiteDocIds correctly
 	//r->m_siteHash32          = *sh32;
 
-	// now we use the hash of the innerHtml of the xpath
-	r->m_sentHash32 = sentHash32;
+	// . now we use the hash of the innerHtml of the xpath
+	// . this is our value for the facet field of gbxpathsitehash12345678
+	//   which is the hash of the innerHTML for that xpath on this site.
+	//   12345678 is the hash of the xpath and the site.
+	r->m_myFacetHash32 = sentHash32;
 
 
 	Query *qq = &m_queryArray[i];
@@ -26473,8 +26496,8 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 		// . skip if empty
 		// . this needs to be like 48 bits because 32 bits is not
 		//   big enought!
-		uint64_t ch64 = si->m_sentenceContentHash64;
-		if ( ! ch64 ) continue;
+		uint64_t ih64 = si->m_sentenceContentHash64;
+		if ( ! ih64 ) continue;
 
 		// the termid is now the xpath and the sitehash, the "value"
 		// will be the hash of the innerhtml, m_sentenceContentHash64
@@ -26484,13 +26507,20 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 
 		// this is a special hack we need to make it the
 		// hash of the inner html
-		hi.m_sentHash32 = (unsigned long)ch64;
+		//hi.m_sentHash32 = (unsigned long)ih64;
 
-		// get section CONTENT hash
-		char sbuf[64];
-		sprintf(sbuf,"%llu",thash64);
+		// . get section xpath & site hash
+		// . now if user does a gbfacets:gbxpathsitehashxxxxxx query
+		//   he will get back a histogram of the values it hash,
+		//   which are 32-bit hashes of the innerhtml for that 
+		//   xpath on this site.
+		char term[96];
+		sprintf(term,"gbxpathsitehash%llu",thash64);
 
-		if ( ! hashSingleTerm(sbuf,gbstrlen(sbuf),&hi) ) 
+		// like a normal key but we store "ih64" the innerHTML hash
+		// of the section into the key instead of wordbits etc.
+		// similar to hashNumber*() functions.
+		if ( ! hashSectionTerm ( term , &hi, (unsigned long)ih64 ) ) 
 			return false;
 	}
 
@@ -30642,10 +30672,14 @@ bool XmlDoc::hashSingleTerm ( char       *s         ,
 	// HACK: mangle the key if its a gbsitehash:xxxx term
 	// used for doing "facets" like stuff on section xpaths.
 	//
-	static long long s_gbsectionhash = 0LL;
-	if ( ! s_gbsectionhash ) s_gbsectionhash = hash64b("gbsectionhash");
-	if ( prefixHash == s_gbsectionhash ) 
-		g_posdb.setSectionSentHash32 ( &k, hi->m_sentHash32 );
+	// no longer do this because we just hash the term 
+	// gbxpathsitehash1234567 where 1234567 is that hash.
+	// but
+	//
+	//static long long s_gbsectionhash = 0LL;
+	//if ( ! s_gbsectionhash ) s_gbsectionhash = hash64b("gbsectionhash");
+	//if ( prefixHash == s_gbsectionhash ) 
+	//	g_posdb.setSectionSentHash32 ( &k, hi->m_sentHash32 );
 
 	// . otherwise, add a new slot
 	// . key should NEVER collide since we are always 
@@ -31457,6 +31491,103 @@ bool XmlDoc::hashNumber ( char *beginBuf ,
 
 	return true;
 }
+
+// . CHROME DETECTION
+// . hash a special gbxpathsitehash12345678 term which has the hash of the
+//   innerHTML content embedded in it.
+// . we do this for doing gbfacets:gbxpathsitehash12345678 etc. on every
+//   section with innerHTML so we can figure out the histogram of each
+//   section on this page relative to its subdomain. like the distriubtion
+//   of the innerHTML for this section as it appears on other pages from
+//   this site. this allows killer CHROME DETECTION!!!!
+bool XmlDoc::hashSectionTerm ( char *term , HashInfo *hi , long sentHash32 ) {
+
+        long long termId = hash64 ( term , gbstrlen(term) );
+	key144_t k;
+	g_posdb.makeKey ( &k ,
+			  termId,
+			  0,//docid
+			  0,// word pos #
+			  0,// densityRank , // 0-15
+			  0 , // MAXDIVERSITYRANK
+			  0 , // wordSpamRank ,
+			  0 , //siterank
+			  0 , // hashGroup,
+			  // we set to docLang final hash loop
+			  //langUnknown, // langid
+			  // unless already set. so set to english here
+			  // so it will not be set to something else
+			  // otherwise our floats would be ordered by langid!
+			  // somehow we have to indicate that this is a float
+			  // termlist so it will not be mangled any more.
+			  //langEnglish,
+			  langUnknown,
+			  0 , // multiplier
+			  false, // syn?
+			  false , // delkey?
+			  hi->m_shardByTermId );
+
+	//long long final = hash64n("products.offerprice",0);
+	//long long prefix = hash64n("gbsortby",0);
+	//long long h64 = hash64 ( final , prefix);
+	//if ( ph2 == h64 )
+	//	log("hey: got offer price");
+
+	// now set the float in that key
+	g_posdb.setFloat ( &k , f );
+
+	// HACK: this bit is ALWAYS set by Posdb::makeKey() to 1
+	// so that we can b-step into a posdb list and make sure
+	// we are aligned on a 6 byte or 12 byte key, since they come
+	// in both sizes. but for this, hack it off to tell
+	// addTable144() that we are a special posdb key, a "numeric"
+	// key that has a float stored in it. then it will NOT
+	// set the siterank and langid bits which throw our sorting
+	// off!!
+	g_posdb.setAlignmentBit ( &k , 0 );
+
+	// sanity
+	float t = g_posdb.getFloat ( &k );
+	if ( t != f ) { char *xx=NULL;*xx=0; }
+
+	HashTableX *dt = hi->m_tt;
+
+	// the key may indeed collide, but that's ok for this application
+	if ( ! dt->addTerm144 ( &k ) ) 
+		return false;
+
+	if ( ! m_wts ) 
+		return true;
+
+	// store in buffer
+	char buf[128];
+	long bufLen = sprintf(buf,"%lu",sentHash32);
+
+	// add to wts for PageParser.cpp display
+	// store it
+	if ( ! storeTerm ( buf,
+			   bufLen,
+			   truePrefix64,
+			   hi,
+			   0, // word#, i,
+			   0, // wordPos
+			   0,// densityRank , // 0-15
+			   0, // MAXDIVERSITYRANK,//phrase
+			   0, // ws,
+			   0, // hashGroup,
+			   //true,
+			   &m_wbuf,
+			   m_wts,
+			   // a hack for display in wts:
+			   SOURCE_NUMBER, // SOURCE_BIGRAM, // synsrc
+			   langUnknown ) )
+		return false;
+
+	return true;
+}
+
+
+
 
 bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 
@@ -33007,7 +33138,8 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 
 
 		sb->safePrintf("<td>");
-		if ( strcmp(prefix,"gbsectionhash")==0)
+		// there is no prefix for such terms now
+		if ( strncmp(term,"gbxpathsitehash",15)==0)
 			sb->safePrintf("<b>Term</b> is a 32-bit hash of the "
 				       "X-path of "
 				       "a section XOR'ed with the 32-bit "

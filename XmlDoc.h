@@ -877,6 +877,10 @@ class XmlDoc {
 			  long              niceness       );
 
 
+	bool hashSectionTerm ( char *term , 
+			       class HashInfo *hi , 
+			       long sentHash32 ) ;
+
 	bool hashNumber ( char *beginBuf ,
 			  char *buf , 
 			  long bufLen , 
@@ -2385,7 +2389,7 @@ public:
 		m_useSections = true;
 		m_startDist = 0;
 		// used for sectiondb stuff, but stored in posdb
-		m_sentHash32 = 0;
+		//m_sentHash32 = 0;
 	};
 	class HashTableX *m_tt;
 	char             *m_prefix;
@@ -2398,7 +2402,7 @@ public:
 	char              m_useSynonyms;
 	char              m_hashGroup;
 	long              m_startDist;
-	long              m_sentHash32;
+	//long              m_sentHash32;
 	bool              m_useCountTable;
 	bool              m_useSections;
 };

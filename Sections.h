@@ -294,16 +294,22 @@ class Sectiondb {
 extern class Sectiondb g_sectiondb;
 extern class Sectiondb g_sectiondb2;
 
-// . for sectionhash:xxxx posdb query stats compilation to
-//   show how many sites/pages duplicate your section's content
+// . for gbfacet:gbxpathsite1234567 posdb query stats compilation to
+//   show how many pages duplicate your section's content on your site
+//   at the same xpath. the hash of the innerHTML for that xpath is 
+//   embedded into the posdb key like a number in a number key, so the
+//   wordpos bits etc are sacrificed to hold that 32-bit number.
 // . used by XmlDoc::getSectionsWithDupStats() for display in
 //   XmlDoc::printRainbowSections()
-class SectionStats {
+class FacetStats {
 public:
-	SectionStats() { reset(); }
+	FacetStats() { reset(); }
 	void reset ( ) {
-		m_totalMatches = 0; // posdb key "val" matches ours
-		m_totalEntries = 0; // total posdb keys
+		// total # of pages that have the same facet value as us
+		m_totalMatches = 0; // posdb key "val" matches ours(innherhtml)
+		// total # of pages that have this "facet"
+		m_totalEntries = 0; // total posdb keys 
+		// total # of unique "values" for the "facet"
 		m_numUniqueVals = 0; // # of unique "vals"
 	};
 	long long m_totalMatches;
@@ -354,7 +360,7 @@ public:
 	// are a sentence section then this points to itself.
 	class Section *m_sentenceSection;
 
-	SectionStats m_stats;
+	FacetStats m_stats;
 
 	// this (minus -1) references into Addresses::m_sorted[] which is
 	// a list of Places. so we can quickly scan that list for the Places

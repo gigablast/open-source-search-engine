@@ -378,10 +378,10 @@ class Posdb {
 
 	// . HACK: for sectionhash:xxxxx posdb keys
 	// . we use the w,G,s,v and F bits
-	unsigned long getSectionSentHash32 ( void *key ) {
+	unsigned long getFacetVal32 ( void *key ) {
 		return *(unsigned long *)(((char *)key)+2); };
-	void setSectionSentHash32 ( void *key , long sentHash32 ) {
-		*(unsigned long *)(((char *)key)+2) = sentHash32; };
+	void setFacetVal32 ( void *key , long facetVal32 ) {
+		*(unsigned long *)(((char *)key)+2) = facetVal32; };
 
 	long long getTermFreq ( collnum_t collnum, long long termId ) ;
 
@@ -618,7 +618,7 @@ class PosdbTable {
 	long long m_docsInColl;
 
 	SectionStats m_sectionStats;
-	SafeBuf m_sentHashList;
+	SafeBuf m_facetHashList;
 	HashTableX m_dt;
 
 	class Msg2 *m_msg2;
