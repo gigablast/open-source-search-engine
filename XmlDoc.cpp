@@ -28530,15 +28530,15 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		reply->size_content = size_utf8Content;
 	}
 
-	if ( m_req->m_getSectionVotingInfo && m_tmpBuf3.getCapacity() <= 0 ) {
-		Sections *ss = getSections();
-		if ( ! ss || ss == (void *)-1) return (Msg20Reply *)ss;
-		// will at least store a \0 in there, but will not count
-		// as part of the m_tmpBuf.length()
-	        ss->printVotingInfoInJSON ( &m_tmpBuf3 );
-		reply-> ptr_sectionVotingInfo = m_tmpBuf3.getBufStart();
-		reply->size_sectionVotingInfo = m_tmpBuf3.length() + 1;
-	}
+	// if ( m_req->m_getSectionVotingInfo && m_tmpBuf3.getCapacity() <=0) {
+	// 	Sections *ss = getSections();
+	// 	if ( ! ss || ss == (void *)-1) return (Msg20Reply *)ss;
+	// 	// will at least store a \0 in there, but will not count
+	// 	// as part of the m_tmpBuf.length()
+	//         ss->printVotingInfoInJSON ( &m_tmpBuf3 );
+	// 	reply-> ptr_sectionVotingInfo = m_tmpBuf3.getBufStart();
+	// 	reply->size_sectionVotingInfo = m_tmpBuf3.length() + 1;
+	// }
 
 	// breathe
 	QUICKPOLL ( m_niceness );
