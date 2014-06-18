@@ -2628,11 +2628,15 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	float oldVal = 0;
 	float newVal = 0;
 
-	if ( ! s && m->m_type != TYPE_CHARPTR && m->m_defOff==-1) {
+	if ( ! s && 
+	     m->m_type != TYPE_CHARPTR && 
+	     m->m_type != TYPE_FILEUPLOADBUTTON && 
+	     m->m_defOff==-1) {
 		s = "0";
 		char *tit = m->m_title;
 		if ( ! tit || ! tit[0] ) tit = m->m_xml;
-		log(LOG_LOGIC,"admin: Parm \"%s\" had NULL default value.",
+		log(LOG_LOGIC,"admin: Parm \"%s\" had NULL default value. "
+		    "Forcing to 0.",
 		    tit);
 		//char *xx = NULL; *xx = 0;
 	}
@@ -2916,8 +2920,9 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		if ( m->m_obj != objType ) continue;
 		if ( m->m_obj == OBJ_NONE ) continue;
 		if ( m->m_type == TYPE_COMMENT ) continue;
-		if ( m->m_type == TYPE_FILEUPLOADBUTTON ) 
-			continue;
+		// no, we gotta set GigablastRequest::m_contentFile to NULL
+		//if ( m->m_type == TYPE_FILEUPLOADBUTTON ) 
+		//	continue;
 		if ( m->m_type == TYPE_MONOD2  ) continue;
 		if ( m->m_type == TYPE_MONOM2  ) continue;
 		if ( m->m_type == TYPE_CMD     ) continue;
@@ -5151,6 +5156,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
 	m->m_off   = 0;
+	m->m_def   = NULL;
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m->m_flags = PF_NOSAVE | PF_DUP;
 	m++;
@@ -13355,6 +13361,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "urls";
 	m->m_page  = PAGE_ADDURL2;
 	m->m_obj   = OBJ_NONE;
+	m->m_def   = NULL;
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m++;
 	*/
