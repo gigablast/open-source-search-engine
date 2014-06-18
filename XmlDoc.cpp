@@ -2090,8 +2090,8 @@ void XmlDoc::getRevisedSpiderRequest ( SpiderRequest *revisedReq ) {
 	// this must be valid for us of course
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
 
-	// wtf?
-	if ( m_firstIp == 0 || m_firstIp == -1 ) { char *xx=NULL;*xx=0; }
+	// wtf? it might be invalid!!! parent caller will handle it...
+	//if ( m_firstIp == 0 || m_firstIp == -1 ) { char *xx=NULL;*xx=0; }
 
 	// store the real ip in there now
 	revisedReq->m_firstIp = m_firstIp;
@@ -22122,8 +22122,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		setStatus("adding spider request");
 		// checkpoint
 		saved = m_p;
-		// copy it
-		*m_p++ = RDB_SPIDERDB;
 		// store it here
 		SpiderRequest revisedReq;
 		// this fills it in
@@ -22141,6 +22139,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			goto skipNewAdd2;
 		}
 
+		// copy it
+		*m_p++ = RDB_SPIDERDB;
 		// store it back
 		memcpy ( m_p , &revisedReq , revisedReq.getRecSize() );
 		// skip over it
