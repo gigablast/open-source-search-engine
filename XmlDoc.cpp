@@ -1295,6 +1295,12 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	m_conceptWeightValid          = true;
 	*/
 
+	// fix some corruption i've seen
+	if ( ! is_digit(sreq->m_url[0]) ) {
+		log("xmldoc: fixing sreq %s to non docid",sreq->m_url);
+		sreq->m_urlIsDocId = 0;
+	}
+
 	// if url is a docid... we are from pagereindex.cpp
 	//if ( sreq->m_isPageReindex ) {
 	// now we can have url-based page reindex requests because
@@ -20333,6 +20339,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		ksr.m_avoidSpiderLinks = 1;
 		// avoid EDOCUNCHANGED
 		ksr.m_ignoreDocUnchangedError = 1;
+		// no longer docid based we set it to parentUrl
+		ksr.m_isUrlDocId = 0;
 		// but it is not docid based, so overwrite the docid
 		// in ksr.m_url with the parent multidoc url. it \0 terms it.
 		strcpy(ksr.m_url , parentUrl );//, MAX_URL_LEN-1);
