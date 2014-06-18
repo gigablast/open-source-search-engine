@@ -368,7 +368,7 @@ class Parms {
 		       bool isHtmlEncoded , bool fromRequest ) ;
 	
 	void setToDefault ( char *THIS , char objType ,
-			    CollectionRec *argcr = NULL ) ;
+			    CollectionRec *argcr );//= NULL ) ;
 
 	bool setFromFile ( void *THIS        , 
 			   char *filename    , 

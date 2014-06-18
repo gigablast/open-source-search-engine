@@ -991,9 +991,9 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	long obj = OBJ_GBREQUEST;
 
 	//
-	// reset THIS to defaults
+	// reset THIS to defaults. use NULL for cr since mostly for SearchInput
 	//
-	setToDefault ( THIS , obj );
+	setToDefault ( THIS , obj , NULL);
 
 	// loop through cgi parms
 	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
@@ -1533,7 +1533,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		page = PAGE_SECURITY;
 
 	GigablastRequest gr;
-	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST );
+	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST , NULL);
 
 	// find in parms list
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
@@ -2628,7 +2628,7 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	float oldVal = 0;
 	float newVal = 0;
 
-	if ( ! s && m->m_type != TYPE_CHARPTR) {
+	if ( ! s && m->m_type != TYPE_CHARPTR && m->m_defOff==-1) {
 		s = "0";
 		char *tit = m->m_title;
 		if ( ! tit || ! tit[0] ) tit = m->m_xml;
@@ -2958,6 +2958,7 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		if ( m->m_max <= 1 ) {
 			//if ( i == 282 )  // "query" parm
 			//	log("hey");
+			//if ( ! m->m_def ) { char *xx=NULL;*xx=0; }
 			setParm ( THIS , m, i, 0, m->m_def, false/*not enc.*/,
 				  false );
 			//((CollectionRec *)THIS)->m_orig[i] = 1;

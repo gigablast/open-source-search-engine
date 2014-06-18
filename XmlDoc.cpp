@@ -29734,8 +29734,9 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 		*pc = '\0';
 
 		// debug
-		char *x = reply.getBufStart() + off;
-		log("fastfact: %s",x);
+		//char *x = reply.getBufStart() + off;
+		// turn off fast fact debug for now
+		//log("fastfact: fastfact: %s",x);
 		// revert back to |
 		*pc = '|';
 
