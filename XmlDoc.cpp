@@ -29697,7 +29697,7 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 		      e[-2] == '!' ) )
 			endsInPeriod = true;
 
-		long off = reply.length();
+		//long off = reply.length();
 
 		if ( ! reply.safePrintFilterTagsAndLines ( p , e-p ,false ) )
 			return NULL;
