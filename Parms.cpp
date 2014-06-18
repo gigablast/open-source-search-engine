@@ -6994,6 +6994,21 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
+	m->m_title = "number of reference pages to generate";
+	m->m_desc  = "What is the number of "
+		"reference pages to generate per query? Set to 0 to save "
+		"CPU time.";
+	m->m_cgi   = "snrp";
+	m->m_off  = (char *)&si.m_refs_numToGenerate - y;
+	m->m_type  = TYPE_LONG;
+	m->m_defOff =(char *)&cr.m_refs_numToGenerate - x;
+	m->m_priv  = 0;
+	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 	m->m_title = "number of reference pages to display";
 	m->m_desc  = "What is the number of "
 		"reference pages to display per query?";
@@ -14162,7 +14177,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "dsrt";
 	m->m_off   = (char *)&cr.m_docsToScanForTopics - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "300";
+	m->m_def   = "30";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;

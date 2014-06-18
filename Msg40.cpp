@@ -245,10 +245,10 @@ bool Msg40::getResults ( SearchInput *si      ,
 	if ( /*m_si->m_firstResultNum == 0 && */get < m_docsToScanForTopics ) 
 		get = m_docsToScanForTopics;
 	// for alden's reranking. often this is 50!
-	if ( get < m_si->m_docsToScanForReranking  ) 
-		get = m_si->m_docsToScanForReranking;
+	//if ( get < m_si->m_docsToScanForReranking  ) 
+	//	get = m_si->m_docsToScanForReranking;
 	// for zak's reference pages
-        if ( get < m_si->m_refs_numToGenerate ) get=m_si->m_refs_numToGenerate;
+	// if(get<m_si->m_refs_numToGenerate ) get=m_si->m_refs_numToGenerate;
 	// limit to this ceiling though for peformance reasons
 	//if ( get > m_maxDocIdsToCompute ) get = m_maxDocIdsToCompute;
 	// ok, need some sane limit though to prevent malloc from 
@@ -561,6 +561,43 @@ bool Msg40::getDocIds ( bool recall ) {
 
 	mr.m_minSerpDocId              = m_si->m_minSerpDocId;
 	mr.m_maxSerpScore              = m_si->m_maxSerpScore;
+
+	//
+	// how many docid splits should we do to avoid going OOM?
+	//
+	CollectionRec *cr = g_collectiondb.getRec(m_firstCollnum);
+	RdbBase *base = NULL;
+	if ( cr ) g_titledb.getRdb()->getBase(cr->m_collnum);
+	long long numDocs = 0;
+	if ( base ) numDocs = base->getNumTotalRecs();
+	// for every 5M docids per host, lets split up the docid range
+	// to avoid going OOM
+	long mult = numDocs / 5000000;
+        if ( mult <= 0 ) mult = 1;
+	// . do not do splits if caller is already specifying a docid range
+	//   like for gbdocid: queries i guess.
+	// . make sure m_msg2 is non-NULL, because if it is NULL we are
+	//   evaluating a query for a single docid for seo tools
+	//if ( m_r->m_minDocId == -1 ) { // && m_msg2 ) {
+	long nt = m_si->m_q.getNumTerms();
+	long numDocIdSplits = nt / 2; // ;/// 2;
+	if ( numDocIdSplits <= 0 ) numDocIdSplits = 1;
+	// and mult based on index size
+	numDocIdSplits *= mult;
+	//if ( numDocIdSplits < 5 ) numDocIdSplits = 5;
+	//}
+	// for testing
+	//m_numDocIdSplits = 3;
+	//if ( ! g_conf.m_doDocIdRangeSplitting )
+	//	m_numDocIdSplits = 1;
+	// limit to 10
+	if ( numDocIdSplits > 15 ) 
+		numDocIdSplits = 15;
+	// store it in the reuquest now
+	mr.m_numDocIdSplits = numDocIdSplits;
+
+	
+
 
 	// . get the docIds
 	// . this sets m_msg3a.m_clusterLevels[] for us
@@ -1240,6 +1277,18 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		if ( m_si->m_streamResults &&
 		     i >= m_printi + MAX_OUTSTANDING_MSG20S - 1 )
 			break;
+
+		// if we have printed enough summaries then do not launch
+		// any more, wait for them to come back in
+		if ( m_printi >= m_docsToGetVisible ) {
+			logf(LOG_DEBUG,"query: got %li summaries. done. "
+			     "waiting on remaining "
+			     "%li to return."
+			     , m_printi
+			     , m_numRequests-m_numReplies);
+			break;
+		}
+
 		// do not double count!
 		//if ( i <= m_lastProcessedi ) continue;
 		// do not repeat for this i
@@ -1552,6 +1601,9 @@ bool Msg40::gotSummary ( ) {
 	State0 *st = (State0 *)m_state;
 
 	// keep socket alive if not streaming. like downloading csv...
+	// this fucks up HTTP replies by inserting a space before the "HTTP"
+	// it does not render properly on the browser...
+	/*
 	long now2 = getTimeLocal();
 	if ( now2 - m_lastHeartbeat >= 10 && ! m_si->m_streamResults &&
 	     // incase socket is closed and recycled for another connection
@@ -1561,7 +1613,7 @@ bool Msg40::gotSummary ( ) {
 		log("msg40: sent heartbeat of %li bytes on sd=%li",
 		    (long)n,(long)st->m_socket->m_sd);
 	}
-
+	*/
 
 
 	/*
