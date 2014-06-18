@@ -8313,6 +8313,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "iw";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
+	m->m_def   = "200";
 	m++;
 
 	m->m_title = "image height";
@@ -8323,6 +8324,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "ih";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
+	m->m_def   = "200";
 	m++;
 
 	// m->m_title = "password";
