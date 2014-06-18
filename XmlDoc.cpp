@@ -20340,7 +20340,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// avoid EDOCUNCHANGED
 		ksr.m_ignoreDocUnchangedError = 1;
 		// no longer docid based we set it to parentUrl
-		ksr.m_isUrlDocId = 0;
+		ksr.m_urlIsDocId = 0;
 		// but it is not docid based, so overwrite the docid
 		// in ksr.m_url with the parent multidoc url. it \0 terms it.
 		strcpy(ksr.m_url , parentUrl );//, MAX_URL_LEN-1);
