@@ -1296,9 +1296,9 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	*/
 
 	// fix some corruption i've seen
-	if ( m_sreq->m_urlIsDocId && ! is_digit(m_sreq->m_url[0]) ) {
-		log("xmldoc: fixing sreq %s to non docid",m_sreq->m_url);
-		m_sreq->m_urlIsDocId = 0;
+	if ( m_sreq.m_urlIsDocId && ! is_digit(m_sreq.m_url[0]) ) {
+		log("xmldoc: fixing sreq %s to non docid",m_sreq.m_url);
+		m_sreq.m_urlIsDocId = 0;
 	}
 
 	// if url is a docid... we are from pagereindex.cpp
@@ -1308,8 +1308,8 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	// we add a spider request of the PARENT url for it as page reindex
 	//if ( is_digit ( sreq->m_url[0] ) ) {
 	// watch out for 0.r.msn.com!!
-	if ( m_sreq->m_urlIsDocId ) {
-		m_docId          = atoll(m_sreq->m_url);
+	if ( m_sreq.m_urlIsDocId ) {
+		m_docId          = atoll(m_sreq.m_url);
 		// assume its good
 		m_docIdValid     = true;
 		// similar to set3() above
@@ -1323,7 +1323,7 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		// add www is now REQUIRED for all!
 		// crap, injection of tmblr.co/ZHw5yo1E5TAaW fails because
 		// www.tmblr.co has no IP
-		setFirstUrl ( m_sreq->m_url , false );//true ); // false );
+		setFirstUrl ( m_sreq.m_url , false );//true ); // false );
 		// you can't call this from a docid based url until you
 		// know the uh48
 		//setSpideredTime();
