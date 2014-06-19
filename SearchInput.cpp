@@ -287,7 +287,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	}
 
 	// and set from the http request. will set m_coll, etc.
-	g_parms.setToDefault ( (char *)this , OBJ_SI );
+	g_parms.setToDefault ( (char *)this , OBJ_SI , cr );
 
 
 	///////

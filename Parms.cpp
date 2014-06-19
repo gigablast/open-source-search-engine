@@ -991,9 +991,9 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	long obj = OBJ_GBREQUEST;
 
 	//
-	// reset THIS to defaults
+	// reset THIS to defaults. use NULL for cr since mostly for SearchInput
 	//
-	setToDefault ( THIS , obj );
+	setToDefault ( THIS , obj , NULL);
 
 	// loop through cgi parms
 	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
@@ -1533,7 +1533,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		page = PAGE_SECURITY;
 
 	GigablastRequest gr;
-	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST );
+	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST , NULL);
 
 	// find in parms list
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
@@ -2628,11 +2628,15 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	float oldVal = 0;
 	float newVal = 0;
 
-	if ( ! s && m->m_type != TYPE_CHARPTR) {
+	if ( ! s && 
+	     m->m_type != TYPE_CHARPTR && 
+	     m->m_type != TYPE_FILEUPLOADBUTTON && 
+	     m->m_defOff==-1) {
 		s = "0";
 		char *tit = m->m_title;
 		if ( ! tit || ! tit[0] ) tit = m->m_xml;
-		log(LOG_LOGIC,"admin: Parm \"%s\" had NULL default value.",
+		log(LOG_LOGIC,"admin: Parm \"%s\" had NULL default value. "
+		    "Forcing to 0.",
 		    tit);
 		//char *xx = NULL; *xx = 0;
 	}
@@ -2916,8 +2920,9 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		if ( m->m_obj != objType ) continue;
 		if ( m->m_obj == OBJ_NONE ) continue;
 		if ( m->m_type == TYPE_COMMENT ) continue;
-		if ( m->m_type == TYPE_FILEUPLOADBUTTON ) 
-			continue;
+		// no, we gotta set GigablastRequest::m_contentFile to NULL
+		//if ( m->m_type == TYPE_FILEUPLOADBUTTON ) 
+		//	continue;
 		if ( m->m_type == TYPE_MONOD2  ) continue;
 		if ( m->m_type == TYPE_MONOM2  ) continue;
 		if ( m->m_type == TYPE_CMD     ) continue;
@@ -2958,6 +2963,7 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		if ( m->m_max <= 1 ) {
 			//if ( i == 282 )  // "query" parm
 			//	log("hey");
+			//if ( ! m->m_def ) { char *xx=NULL;*xx=0; }
 			setParm ( THIS , m, i, 0, m->m_def, false/*not enc.*/,
 				  false );
 			//((CollectionRec *)THIS)->m_orig[i] = 1;
@@ -5150,6 +5156,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
 	m->m_off   = 0;
+	m->m_def   = NULL;
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m->m_flags = PF_NOSAVE | PF_DUP;
 	m++;
@@ -6987,6 +6994,21 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
+	m->m_title = "number of reference pages to generate";
+	m->m_desc  = "What is the number of "
+		"reference pages to generate per query? Set to 0 to save "
+		"CPU time.";
+	m->m_cgi   = "snrp";
+	m->m_off  = (char *)&si.m_refs_numToGenerate - y;
+	m->m_type  = TYPE_LONG;
+	m->m_defOff =(char *)&cr.m_refs_numToGenerate - x;
+	m->m_priv  = 0;
+	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
 	m->m_title = "number of reference pages to display";
 	m->m_desc  = "What is the number of "
 		"reference pages to display per query?";
@@ -8312,6 +8334,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "iw";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
+	m->m_def   = "200";
 	m++;
 
 	m->m_title = "image height";
@@ -8322,6 +8345,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "ih";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
+	m->m_def   = "200";
 	m++;
 
 	// m->m_title = "password";
@@ -13352,6 +13376,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "urls";
 	m->m_page  = PAGE_ADDURL2;
 	m->m_obj   = OBJ_NONE;
+	m->m_def   = NULL;
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m++;
 	*/
@@ -14152,7 +14177,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "dsrt";
 	m->m_off   = (char *)&cr.m_docsToScanForTopics - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "300";
+	m->m_def   = "30";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;

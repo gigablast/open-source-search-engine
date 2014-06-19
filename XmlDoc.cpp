@@ -2090,8 +2090,8 @@ void XmlDoc::getRevisedSpiderRequest ( SpiderRequest *revisedReq ) {
 	// this must be valid for us of course
 	if ( ! m_firstIpValid ) { char *xx=NULL;*xx=0; }
 
-	// wtf?
-	if ( m_firstIp == 0 || m_firstIp == -1 ) { char *xx=NULL;*xx=0; }
+	// wtf? it might be invalid!!! parent caller will handle it...
+	//if ( m_firstIp == 0 || m_firstIp == -1 ) { char *xx=NULL;*xx=0; }
 
 	// store the real ip in there now
 	revisedReq->m_firstIp = m_firstIp;
@@ -22122,8 +22122,6 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		setStatus("adding spider request");
 		// checkpoint
 		saved = m_p;
-		// copy it
-		*m_p++ = RDB_SPIDERDB;
 		// store it here
 		SpiderRequest revisedReq;
 		// this fills it in
@@ -22141,6 +22139,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 			goto skipNewAdd2;
 		}
 
+		// copy it
+		*m_p++ = RDB_SPIDERDB;
 		// store it back
 		memcpy ( m_p , &revisedReq , revisedReq.getRecSize() );
 		// skip over it
@@ -28530,15 +28530,15 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		reply->size_content = size_utf8Content;
 	}
 
-	if ( m_req->m_getSectionVotingInfo && m_tmpBuf3.getCapacity() <= 0 ) {
-		Sections *ss = getSections();
-		if ( ! ss || ss == (void *)-1) return (Msg20Reply *)ss;
-		// will at least store a \0 in there, but will not count
-		// as part of the m_tmpBuf.length()
-	        ss->printVotingInfoInJSON ( &m_tmpBuf3 );
-		reply-> ptr_sectionVotingInfo = m_tmpBuf3.getBufStart();
-		reply->size_sectionVotingInfo = m_tmpBuf3.length() + 1;
-	}
+	// if ( m_req->m_getSectionVotingInfo && m_tmpBuf3.getCapacity() <=0) {
+	// 	Sections *ss = getSections();
+	// 	if ( ! ss || ss == (void *)-1) return (Msg20Reply *)ss;
+	// 	// will at least store a \0 in there, but will not count
+	// 	// as part of the m_tmpBuf.length()
+	//         ss->printVotingInfoInJSON ( &m_tmpBuf3 );
+	// 	reply-> ptr_sectionVotingInfo = m_tmpBuf3.getBufStart();
+	// 	reply->size_sectionVotingInfo = m_tmpBuf3.length() + 1;
+	// }
 
 	// breathe
 	QUICKPOLL ( m_niceness );
@@ -29697,7 +29697,7 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 		      e[-2] == '!' ) )
 			endsInPeriod = true;
 
-		long off = reply.length();
+		//long off = reply.length();
 
 		if ( ! reply.safePrintFilterTagsAndLines ( p , e-p ,false ) )
 			return NULL;
@@ -29734,8 +29734,9 @@ SafeBuf *XmlDoc::getSampleForGigabits ( ) {
 		*pc = '\0';
 
 		// debug
-		char *x = reply.getBufStart() + off;
-		log("fastfact: %s",x);
+		//char *x = reply.getBufStart() + off;
+		// turn off fast fact debug for now
+		//log("fastfact: fastfact: %s",x);
 		// revert back to |
 		*pc = '|';
 

@@ -546,8 +546,8 @@ master-rpm:
 # DEBIAN PACKAGE SECTION BEGIN
 
 # need to do 'apt-get intall dh-make'
-testing-deb:
-	git archive --format=tar --prefix=gb-1.0/ testing > ../gb_1.0.orig.tar
+master-deb:
+	git archive --format=tar --prefix=gb-1.0/ master > ../gb_1.0.orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
 	dh_make -e gigablast@mail.com -p gb_1.0 -f ../gb_1.0.orig.tar

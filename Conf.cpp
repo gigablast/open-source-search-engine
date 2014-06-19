@@ -165,12 +165,12 @@ bool Conf::isConnectIp ( unsigned long ip ) {
 
 // . set all member vars to their default values
 void Conf::reset ( ) {
-	g_parms.setToDefault ( (char *)this , OBJ_CONF );
+	g_parms.setToDefault ( (char *)this , OBJ_CONF ,NULL);
 	m_save = true;
 }
 
 bool Conf::init ( char *dir ) { // , long hostId ) {
-	g_parms.setToDefault ( (char *)this , OBJ_CONF );
+	g_parms.setToDefault ( (char *)this , OBJ_CONF ,NULL);
 	m_save = true;
 	char fname[1024];
 	if ( dir ) sprintf ( fname , "%slocalgb.conf", dir );
