@@ -186,6 +186,8 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_indexedTime = 0;
+
 	m_didDelete = false;
 
 	m_metaList2.purge();
@@ -950,8 +952,8 @@ long XmlDoc::getSpideredTime ( ) {
 	m_spideredTime      = date;
 	// hack for test coll which has fake vals for these because
 	// the SpiderRequest::m_addedTime and m_parentPrevSpiderTime
-	m_minPubDate = m_spideredTime - 48*3600;
-	m_maxPubDate = m_spideredTime - 24*3600;
+	//m_minPubDate = m_spideredTime - 48*3600;
+	//m_maxPubDate = m_spideredTime - 24*3600;
 
 	return m_spideredTime;
 }
@@ -1231,7 +1233,8 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	m_niceness  = niceness;
 	m_version   = TITLEREC_CURRENT_VERSION;
 	m_versionValid = true;
-
+	
+	/*
 	// set min/max pub dates right away
 	m_minPubDate = -1;
 	m_maxPubDate = -1;
@@ -1245,6 +1248,7 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		m_minPubDate = sreq->m_parentPrevSpiderTime;
 		m_maxPubDate = sreq->m_addedTime;
 	}
+	*/
 
 	// this is used to removing the rec from doledb after we spider it
 	m_doledbKey.setMin();
@@ -5000,8 +5004,21 @@ Dates *XmlDoc::getDates ( ) {
 	if ( *isRSS ) isXml = true;
 	if ( *ctype == CT_XML ) isXml = true;
 
+	long minPubDate = -1;
+	long maxPubDate = -1;
+	// parentPrevSpiderTime is 0 if that was the first time that the
+	// parent was spidered, in which case isNewOutlink will always be set
+	// for every outlink it had!
+	if ( m_sreqValid &&
+	     m_sreq.m_isNewOutlink && 
+	     m_sreq.m_parentPrevSpiderTime ) {
+		// pub date is somewhere between these two times
+		minPubDate = m_sreq.m_parentPrevSpiderTime;
+		maxPubDate = m_sreq.m_addedTime;
+	}
+
 	// now set part2 , returns false and sets g_errno on error
-	if ( ! m_dates.setPart2 ( aa , m_minPubDate, m_maxPubDate,//osvt,
+	if ( ! m_dates.setPart2 ( aa , minPubDate, maxPubDate,//osvt,
 				  isXml , *isRoot )) {
 		if ( ! g_errno ) { char *xx=NULL;*xx=0; }
 		// note it
@@ -25130,7 +25147,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 		if ( ! hashCountry       ( table ) ) return NULL;
 		if ( ! hashTagRec        ( table ) ) return NULL;
 		// hash for gbsortby:gbspiderdate
-		if ( ! hashDateNumbers   ( table ) ) return NULL;
+		if ( ! hashDateNumbers   ( table , true ) ) return NULL;
 		// has gbhasthumbnail:1 or 0
 		if ( ! hashImageStuff    ( table ) ) return NULL;
 		// and the json itself
@@ -25203,7 +25220,7 @@ char *XmlDoc::hashAll ( HashTableX *table ) {
 
 
 	if ( ! hashLinks         ( table ) ) return NULL;
-	if ( ! hashDateNumbers   ( table ) ) return NULL;
+	if ( ! hashDateNumbers   ( table , true ) ) return NULL;
 	if ( ! hashMetaTags      ( table ) ) return NULL;
 	if ( ! hashMetaZip       ( table ) ) return NULL;
 	if ( ! hashDMOZCategories( table ) ) return NULL;
@@ -25427,26 +25444,18 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList2 ( SpiderReply *reply ) {
 	hi.m_desc   = "spider error msg";
 	if ( ! hashString( mstrerror(m_indexCode) , &hi ) ) return NULL;
 
-	hi.m_prefix = "gbdocid";
-	hi.m_desc   = "docid";
-	bufLen = sprintf ( buf , "%llu", *uqd ) ;
-	if ( ! hashString( buf , &hi ) ) return NULL;
+	//hi.m_prefix = "gbdocid";
+	//hi.m_desc   = "docid";
+	//bufLen = sprintf ( buf , "%llu", *uqd ) ;
+	//if ( ! hashString( buf , &hi ) ) return NULL;
 
 	// . then the url. url: site: ip: etc. terms
 	// . do NOT hash non-fielded terms so we do not get "status" 
 	//   results poluting the serps => false
 	if ( ! hashUrl ( &tt4 , false ) ) return NULL;
 
-	// hash the last spidered date, very useful!
-	hi.m_hashGroup = 0;// this doesn't matter, it's a numeric field
-	hi.m_desc      = "last spidered date";
-	// make this different so it doesn't coexist with regular results
-	// when someone does a gbsortby:gbspiderdate query
-	//hi.m_prefix    = "gbreplyspiderdate";
-	hi.m_prefix    = "gbspiderdate";
-	if ( reply->m_spideredTime <= 0 ) { char *xx=NULL;*xx=0; }
-	bufLen = sprintf ( buf , "%lu", reply->m_spideredTime );
-	if ( ! hashNumber ( buf , buf , bufLen , &hi ) ) return NULL;
+	// false --> do not hash the gbdoc* terms
+	hashDateNumbers ( &tt4 , false );
 
 	// store keys in safebuf then to make our own meta list
 	addTable144 ( &tt4 , *uqd , &m_spiderReplyMetaList );
@@ -25654,13 +25663,24 @@ bool XmlDoc::hashMetaTags ( HashTableX *tt ) {
 	return true;
 }
 
+// slightly greater than m_spideredTime, which is the download time.
+// we use this for sorting as well, like for the widget so things
+// don't really get added out of order and not show up in the top spot
+// of the widget list.
+long XmlDoc::getIndexedTime() {
+	if ( m_indexedTimeValid ) return m_indexedTime;
+	m_indexedTime = getTimeGlobal();
+	return m_indexedTime;
+}
+
 // . hash dates for sorting by using gbsortby: and gbrevsortby:
 // . do 'gbsortby:gbspiderdate' as your query to see this in action
-bool XmlDoc::hashDateNumbers ( HashTableX *tt ) {
+bool XmlDoc::hashDateNumbers ( HashTableX *tt , bool hashgbdocTerms) {
 
 	// stop if already set
 	if ( ! m_spideredTimeValid ) return true;
 
+	long indexedTime = getIndexedTime();
 
 	// first the last spidered date
 	HashInfo hi;
@@ -25671,9 +25691,37 @@ bool XmlDoc::hashDateNumbers ( HashTableX *tt ) {
 
 	char buf[64];
 	long bufLen = sprintf ( buf , "%lu", m_spideredTime );
-
 	if ( ! hashNumber ( buf , buf , bufLen , &hi ) )
 		return false;
+
+	// and index time is >= spider time, so you want to sort by that for
+	// the widget for instance
+ 	hi.m_desc      = "last indexed date";
+ 	hi.m_prefix    = "gbindexdate";
+ 	bufLen = sprintf ( buf , "%lu", indexedTime );
+ 	if ( ! hashNumber ( buf , buf , bufLen , &hi ) )
+ 		return false;
+
+	// do not index the rest if we are a "spider reply" document
+	// which is like a fake document for seeing spider statuses
+	if ( ! hashgbdocTerms ) return true;
+
+	// now for CT_STATUS spider status "documents" we also index
+	// gbspiderdate so index this so we can just do a 
+	// gbsortby:gbdocspiderdate and only get real DOCUMENTS not the
+	// spider status "documents"
+	hi.m_desc      = "doc last spidered date";
+	hi.m_prefix    = "gbdocspiderdate";
+	bufLen = sprintf ( buf , "%lu", m_spideredTime );
+	if ( ! hashNumber ( buf , buf , bufLen , &hi ) )
+		return false;
+
+ 	hi.m_desc      = "doc last indexed date";
+ 	hi.m_prefix    = "gbdocindexdate";
+ 	bufLen = sprintf ( buf , "%lu", indexedTime );
+ 	if ( ! hashNumber ( buf , buf , bufLen , &hi ) )
+ 		return false;
+
 
 	// all done
 	return true;
@@ -26285,34 +26333,32 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	if ( ! hashSingleTerm(ext,elen,&hi ) ) return false;
 
 
+	setStatus ( "hashing gbdocid" );
+	hi.m_prefix = "gbdocid";
+	char buf2[32];
+	sprintf(buf2,"%llu",(m_docId) );
+	if ( ! hashSingleTerm(buf2,gbstrlen(buf2),&hi) ) return false;
+
+	// if indexing a json diffbot object, index 
+	// gbparenturl:xxxx of the original url from which the json was
+	// datamined. we use this so we can act as a diffbot json cache.
+	if ( m_isDiffbotJSONObject ) {
+		setStatus ( "hashing gbparenturl term");
+		char *p = fu->getUrl() + fu->getUrlLen() - 1;
+		// back up to - as in "http://xyz.com/foo-diffbotxyz123456"
+		for ( ; *p && *p != '-' ; p-- );
+		// set up the hashing parms
+		hi.m_hashGroup = HASHGROUP_INTAG;
+		hi.m_tt        = tt;
+		hi.m_desc      = "diffbot parent url";
+		// append a "www." as part of normalization
+		uw.set ( fu->getUrl() , p - fu->getUrl() , true );
+		hi.m_prefix    = "gbparenturl";
+		if ( ! hashSingleTerm(uw.getUrl(),uw.getUrlLen(),&hi) ) 
+			return false;
+	}
+
 	if ( ! hashNonFieldTerms ) return true;
-
-
-	setStatus ( "hashing url mid domain");
-	// the final score
-	//long plainScore = (long)(256.0 * boost1 * boost2 * fw);
-	// update parms
-	hi.m_prefix    = NULL;
-	hi.m_desc      = "middle domain";//tmp3;
-	hi.m_hashGroup = HASHGROUP_INURL;
-	// if parm "index article content only" is true, do not index this!
-	//if ( m_eliminateMenus ) plainScore = 0;
-	//char *mid  = fu->getMidDomain   ();
-	//long  mlen = fu->getMidDomainLen();
-	//hi.m_desc = "url mid dom";
-	//if ( ! hashString ( mid,mlen ,&hi ) ) return false;
-	//hi.m_desc = "url host";
-	char *host = fu->getHost        ();
-	long  hlen = fu->getHostLen     ();
-	if ( ! hashString ( host,hlen,&hi)) return false;
-
-
-	setStatus ( "hashing url path");
-
-	// hash the path plain
-	if ( ! hashString (path,plen,&hi) ) return false;
-
-
 
 	setStatus ( "hashing SiteGetter terms");
 
@@ -26337,6 +26383,10 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	// . that way we do not confuse all the pages in dictionary.com or
 	//   wikipedia.org as subsites!!
 	if ( ! m_links.hasSubdirOutlink() ) add = false;
+
+	char *host = fu->getHost        ();
+	long  hlen = fu->getHostLen     ();
+
 	// tags from here out
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_shardByTermId = true;
@@ -26371,30 +26421,28 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 	hi.m_prefix = "urlhashdiv100";
 	if ( ! hashString(buf,blen,&hi) ) return false;
 
-	setStatus ( "hashing gbdocid" );
-	hi.m_prefix = "gbdocid";
-	char buf2[32];
-	sprintf(buf2,"%llu",(m_docId) );
-	if ( ! hashSingleTerm(buf2,gbstrlen(buf2),&hi) ) return false;
 
-	// if indexing a json diffbot object, index 
-	// gbparenturl:xxxx of the original url from which the json was
-	// datamined. we use this so we can act as a diffbot json cache.
-	if ( m_isDiffbotJSONObject ) {
-		setStatus ( "hashing gbparenturl term");
-		char *p = fu->getUrl() + fu->getUrlLen() - 1;
-		// back up to - as in "http://xyz.com/foo-diffbotxyz123456"
-		for ( ; *p && *p != '-' ; p-- );
-		// set up the hashing parms
-		hi.m_hashGroup = HASHGROUP_INTAG;
-		hi.m_tt        = tt;
-		hi.m_desc      = "diffbot parent url";
-		// append a "www." as part of normalization
-		uw.set ( fu->getUrl() , p - fu->getUrl() , true );
-		hi.m_prefix    = "gbparenturl";
-		if ( ! hashSingleTerm(uw.getUrl(),uw.getUrlLen(),&hi) ) 
-			return false;
-	}
+	setStatus ( "hashing url mid domain");
+	// the final score
+	//long plainScore = (long)(256.0 * boost1 * boost2 * fw);
+	// update parms
+	hi.m_prefix    = NULL;
+	hi.m_desc      = "middle domain";//tmp3;
+	hi.m_hashGroup = HASHGROUP_INURL;
+	// if parm "index article content only" is true, do not index this!
+	//if ( m_eliminateMenus ) plainScore = 0;
+	//char *mid  = fu->getMidDomain   ();
+	//long  mlen = fu->getMidDomainLen();
+	//hi.m_desc = "url mid dom";
+	//if ( ! hashString ( mid,mlen ,&hi ) ) return false;
+	//hi.m_desc = "url host";
+	if ( ! hashString ( host,hlen,&hi)) return false;
+
+
+	setStatus ( "hashing url path");
+
+	// hash the path plain
+	if ( ! hashString (path,plen,&hi) ) return false;
 
 	return true;
 }
@@ -32081,7 +32129,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 			);
 
 
-
+	/*
 	char *ms = "-1";
 	if ( m_minPubDate != -1 ) ms = asctime(gmtime ( &m_minPubDate ));
 	sb->safePrintf ( 
@@ -32097,7 +32145,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 			"<td>max pub date</td>"
 			"<td>%s UTC</td>"
 			"</tr>\n" , ms );
-
+	*/
 
 	// our html template fingerprint
 	sb->safePrintf ("<tr><td>tag pair hash 32</td><td>");

@@ -1572,7 +1572,9 @@ int main2 ( int argc , char *argv[] ) {
 			log("db: HttpServer init failed. Another gb "
 			    "already running? If not, try editing "
 			    "./hosts.conf to "
-			    "change the port from %li to something bigger"
+			    "change the port from %li to something bigger. "
+			    "Or stop gb by running 'gb stop' or by "
+			    "clicking 'save & exit' in the master controls."
 			    , (long)httpPort ); 
 			// this is dangerous!!! do not do the shutdown thing
 			return 1;
