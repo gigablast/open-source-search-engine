@@ -17162,6 +17162,11 @@ bool Sectiondb::init ( ) {
 	// . just hard-code 5MB for now
 	long pcmem = 5000000; // = g_conf.m_sectiondbMaxDiskPageCacheMem;
 
+	// do not use for now i think we use posdb and store the 32bit
+	// val in the key for facet type stuff
+	pcmem = 0;
+	maxTreeMem = 100000;
+	maxTreeNodes = 1000;
 
 	/*
 	key128_t k;
