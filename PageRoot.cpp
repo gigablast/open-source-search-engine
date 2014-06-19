@@ -198,7 +198,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("<tr valign=top>\n");
 
 	//sb.safePrintf("<td align=center><div style=width:50px;height:50px;display:inline-block;background-color:red;></div></td>\n");
-	sb.safePrintf("<td><img height=71px width=50px "
+	sb.safePrintf("<td align=center><img height=71px width=50px "
 		      "src=%s/opensource.png></td>\n"
 		      , root );
 
@@ -238,6 +238,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 		  "with embroidered logo while quantities last. "
 		  "State your address and size "
 		  "in an <a href=/contact.html>email</a>. "
+		  "PayPal accepted. "
 		  "Help Gigablast continue "
 		  "to grow and add new features."
 		  , 80
