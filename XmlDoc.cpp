@@ -13737,6 +13737,12 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 		bool  inQuotes = false;
 		// scan now
 		for (  ; *x ; x++ ) {
+			// escaping a backslash?
+			if ( *x == '\\' && x[1] == '\\' ) {
+				// skip two bytes then..
+				x++;
+				continue;
+			}
 			// escaping a quote? ignore quote then.
 			if ( *x == '\\' && x[1] == '\"' ) {
 				// skip two bytes then..
