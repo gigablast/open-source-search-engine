@@ -949,7 +949,7 @@ char getFormatFromRequest ( HttpRequest *r ) {
 
 	char *formatStr = r->getString("format");
 
-	if ( ! formatStr ) return FORMAT_HTML;
+	//if ( ! formatStr ) return FORMAT_HTML;
 
 	char format = FORMAT_HTML;
 
