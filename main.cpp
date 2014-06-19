@@ -17160,8 +17160,10 @@ char *getcwd2 ( char *arg2 ) {
 		g_errno = EBADENGINEER;
 		return NULL;
 	}
-	// hack off the "gb"
-	*a = '\0';
+	// hack off the "gb" (seems to hack off the "/gb")
+	//*a = '\0';
+	// don't hack off the "/gb" just the "gb"
+	arg[alen] = '\0';
 
 	// get cwd which is only relevant to us if arg starts 
 	// with . at this point
@@ -17223,11 +17225,16 @@ char *getcwd2 ( char *arg2 ) {
 	for ( ; binaryCmd[-1] && binaryCmd[-1] != '/' ; binaryCmd-- );
 	File fff;
 	fff.set (s_cwdBuf,binaryCmd);
-	// if user just enters 'gb' in cmdline and it is not in cwd
-	// assume it is in the usual spot
-	if ( ! fff.doesExist() ) return "/var/gigablast/data0/";
 
-	return s_cwdBuf;
+	// assume it is in the usual spot
+	if ( fff.doesExist() ) return s_cwdBuf;
+
+	// try just "gb" as binary
+	fff.set(s_cwdBuf,"gb");
+	if ( fff.doesExist() ) return s_cwdBuf;
+
+	// if nothing is found resort to the default location
+	return "/var/gigablast/data0/";
 }
 
 int copyFiles ( char *dstDir ) {
