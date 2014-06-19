@@ -3827,12 +3827,12 @@ long checkDirPerms ( char *dir ) {
 	File f;
 	f.set ( dir , "tmpfile" );
 	if ( ! f.open ( O_RDWR | O_CREAT | O_TRUNC ) ) {
-		log("disk: Unable to create %s/tmpfile. Need write permission "
+		log("disk: Unable to create %stmpfile. Need write permission "
 		    "in this directory.",dir);
 		return -1;
 	}
 	if ( ! f.unlink() ) {
-		log("disk: Unable to delete %s/tmpfile. Need write permission "
+		log("disk: Unable to delete %stmpfile. Need write permission "
 		    "in this directory.",dir);
 		return -1;
 	}

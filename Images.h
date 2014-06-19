@@ -9,6 +9,7 @@
 #include "IndexList.h"
 #include "MsgC.h"
 #include "SafeBuf.h"
+#include "HttpRequest.h" // FORMAT_HTML
 
 #define MAX_IMAGES 500
 
@@ -33,7 +34,8 @@ class ThumbnailInfo {
 				    long maxHeight,
 				    bool printLink ,
 				    long *newdx ,
-				    char *style = NULL ) ;
+				    char *style = NULL ,
+				    char format = FORMAT_HTML ) ;
 };
 
 // XmlDoc::ptr_imgData is a ThumbnailArray

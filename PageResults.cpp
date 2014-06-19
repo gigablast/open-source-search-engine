@@ -2990,18 +2990,28 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf ("<a href=%s><img src=%s></a>",
 				   url,mr->ptr_imgUrl);
 
-	// if we have a thumbnail show it next to the search result
-	if ( si->m_format == FORMAT_HTML &&
+	// if we have a thumbnail show it next to the search result,
+	// base64 encoded
+	if ( //si->m_format == FORMAT_HTML &&
 	     //! mr->ptr_imgUrl &&
 	     mr->ptr_imgData ) {
 		ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 		ThumbnailInfo *ti = ta->getThumbnailInfo(0);
+		if ( si->m_format == FORMAT_XML )
+			sb->safePrintf("\t\t");
 		ti->printThumbnailInHtml ( sb , 
 					   100 ,  // max width
 					   100 ,  // max height
 					   true ,  // add <a href>
 					   NULL ,
-					   " style=\"margin:10px;\" ");
+					   " style=\"margin:10px;\" ",
+					   si->m_format );
+		if ( si->m_format == FORMAT_XML ) {
+			sb->safePrintf("\t\t<imageHeight>%li</imageHeight>\n",
+				       ti->m_dx);
+			sb->safePrintf("\t\t<imageWidth>%li</imageWidth>\n",
+				       ti->m_dy);
+		}
 	}
 
 	// print image for widget
