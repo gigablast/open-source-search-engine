@@ -107,6 +107,8 @@ class WebPage {
 	char *m_desc; // page description
 	bool (* m_function)(TcpSocket *s , HttpRequest *r);
 	long  m_niceness;
+	char *m_xmlOutputDesc;
+	char *m_jsonOutputDesc;
 };
 
 
