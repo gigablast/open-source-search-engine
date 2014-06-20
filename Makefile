@@ -555,6 +555,13 @@ master-deb:
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
 	touch debian/docs
+# make the debian/copyright file contain the license
+	cp copyright.head  debian/copyright
+#	cat LICENSE | awk -Fxvcty '{print " "$1}' >> debian/copyright
+	cat LICENSE >> debian/copyright
+	cat copyright.tail >> debian/copyright
+# the control file describes the package
+	cp control.deb debian/control
 # try to use our own rules so we can override dh_shlibdeps and others
 	cp gb.deb.rules debian/rules
 # fix dh_shlibdeps from bitching about dependencies on shared libs
@@ -562,8 +569,14 @@ master-deb:
 #	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
 # build the package now
 	dpkg-buildpackage -nc -ai386 -ti386 -b -uc -rfakeroot
-# upload to main gigablast server
-#	scp ../gb*.deb www.gigablast.com:/w/html/
+# move to current dur
+	mv ../gb_*.deb .	
+# upload den
+	scp gb*.deb gk268:/w/html/	
+# alien it
+	sudo alien --to-rpm gb_1.0-1_i386.deb
+# upload rpm
+	scp gb*.rpm gk268:/w/html/	
 
 
 testing-deb:
