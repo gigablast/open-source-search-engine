@@ -993,7 +993,7 @@ bool sendPageBasicStatus ( TcpSocket *socket , HttpRequest *hr ) {
 			      //"format=ajax"
 			      "?c=%s"
 			      //"&prepend=gbsortbyint%%3Agbspiderdate"
-			      "&q=-gbstatus:0+gbsortbyint%%3Agbspiderdate"
+			      "&q=-gbstatus:0+gbsortbyint%%3Agbindexdate"
 			      "&sc=0" // no site clustering
 			      "&dr=0" // no deduping
 			      // 10 results at a time
