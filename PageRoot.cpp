@@ -212,7 +212,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
 	// donate with paypal
 	sb.safePrintf("<tr valign=top>\n");
-	sb.safePrintf("<td align=center><center>"
+	sb.safePrintf("<td align=center style=padding-right:20px;><center>"
 
 		      // BEGIN PAYPAL DONATE BUTTON
 		      "<form action=\"https://www.paypal.com/cgi-bin/webscr\" method=\"post\" target=\"_top\">"

@@ -2435,6 +2435,8 @@ int parmcmp ( const void *a, const void *b ) {
 #define LIGHT_YELLOW "ffcccc"
 
 
+bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) ;
+
 // let's use a separate section for each "page"
 // then have 3 tables, the input parms,
 // the xml output table and the json output table
@@ -2452,261 +2454,27 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		     "font-size: 15px;} </style>");
 
 
-	// parms should be grouped by pages so loop over parms
+	p.safePrintf("<h2>API by pages</h2>"
+		     "<ul>"
+		     );
+
+	for ( long i = 0 ; i < s_numPages ; i++ )
+		p.safePrintf("<li> <a href=#%li>/%s</a></li>\n",
+			     i,s_pages[i].m_filename);
+
+	p.safePrintf("</ul>\n");
 
 
-
-	// print standard header
-	// 	char *pp    = p.getBuf();
-	// 	char *ppend = p.getBufEnd();
-	// 	if ( pp ) {
-	//g_pages.printAdminTop ( &p , s , r );
-
-	// 	p.incrementLength ( pp - p.getBuf() );
-	// 	}
-
-	const char *blue = LIGHT_BLUE;
-	long count = 1;
-
-	//char *lastPage = NULL;
-	Parm *lastParm = NULL;
-
-	for ( long i = 0; i < g_parms.m_numParms; i++ ) {
-		Parm *parm = &g_parms.m_parms[i];
-		// assume do not print
-		parm->m_pstr = NULL;
-		// skip if hidden
-		if ( parm->m_flags & PF_HIDDEN ) continue;
-		if ( parm->m_type == TYPE_CMD ) continue;
-		if ( parm->m_type == TYPE_COMMENT ) continue;
-
-		if ( parm->m_flags & PF_DUP ) continue;
-		if ( parm->m_flags & PF_NOAPI ) continue;
-		if ( parm->m_flags & PF_DIFFBOT ) continue;
-
-		//if ( ! (parm->m_flags & PF_API) ) continue;
-
-		// use m_cgi if no m_scgi
-		char *cgi = parm->m_cgi;
-
-		if ( parm->m_page == PAGE_FILTERS ) continue;
-
-		//char *page = parm->m_scmd;
-		char *page = NULL;
-		if ( parm->m_page >= 0 && parm->m_page != PAGE_NONE ) 
-			page = s_pages[parm->m_page].m_filename;
-
-		if ( parm->m_page == PAGE_NONE && parm->m_obj == OBJ_SI )
-			page = "search";
-
-		// unknown?
-		if ( ! page ) 
-			page = "???";
-
-		if ( blue == (const char *)LIGHT_BLUE ) blue = DARK_BLUE;
-		else if(blue==(const char *)DARK_BLUE ) blue = LIGHT_BLUE;
-
-		
-
-		//if ( blue == (const char *)LIGHT_YELLOW ) blue = DARK_YELLOW;
-		//else if(blue == (const char *)DARK_YELLOW )blue=LIGHT_YELLOW;
-
-		// if we change page go to yellow
-		//if ( parm->m_page != lastPage && lastPage != -1 ) {
-		//	if ( blue == (const char *)LIGHT_BLUE ||
-		//	     blue == (const char *)DARK_BLUE )
-		//		blue = LIGHT_YELLOW;
-		//	else
-		//		blue = LIGHT_BLUE;
-		//}
-
-
-		//
-		// end with output for prev page
-		//
-		if ( lastParm && lastParm->m_page != parm->m_page ) {
-			// end input parm table we started below
-			p.safePrintf("</table><br>\n\n");
-		}
-
-
-
-		if ( lastParm && lastParm->m_page != parm->m_page ) {
-
-			// wrap up the output examples of last page
-			long pageNum = lastParm->m_page;
-
-			if ( lastParm->m_obj == OBJ_SI ) 
-				pageNum = PAGE_RESULTS;
-
-			//
-			// print output in xml
-			//
-			p.safePrintf ( 
-				       "<table style=max-width:80%%; %s>"
-				       "<tr class=hdrow><td colspan=9>"
-				       "<center><b>XML Output</b></tr></tr>"
-				       "<tr><td>"
-				       , TABLE_STYLE
-				       );
-			p.safePrintf("<pre>\n");
-			char *desc = s_pages[pageNum].m_xmlOutputDesc;
-			if ( ! desc )
-				desc = "<response>\n"
-					"\t<status>N</status> "
-					"# 0 on success, otherwise an "
-					"error code\n"
-					"\t<statusMsg>S</statusMsg> "
-					"# \"Success\" on success, "
-					"otherwise the error message."
-					"</response>";
-			p.htmlEncode ( desc);
-			p.safePrintf("</pre>");
-			p.safePrintf ( "</td></tr></table><br>\n\n" );
-
-			//
-			// print output in json
-			//
-			p.safePrintf ( 
-				       "<table style=max-width:80%%; %s>"
-				       "<tr class=hdrow><td colspan=9>"
-				       "<center><b>JSON Output</b></tr></tr>"
-				       "<tr><td>"
-				       , TABLE_STYLE
-				       );
-			p.safePrintf("<pre>\n");
-			desc = s_pages[pageNum].m_jsonOutputDesc;
-			if ( ! desc )
-				desc = "{ \"response:\"{\n"
-					"\t\"status\":N, "
-					"# 0 on success, otherwise an "
-					"error code\n"
-					"\t\"statusMsg\":\"xxx\" "
-					"# xxx is \"Success\" on success, "
-					"otherwise the error message.\n"
-					"\t}\n"
-					"}";
-			p.htmlEncode ( desc);
-			p.safePrintf("</pre>");
-			p.safePrintf ( "</td></tr></table><br>\n\n" );
-
-		}
-
-
-		// begin a new header?
-		if ( ! lastParm ||
-		     lastParm && parm->m_page != lastParm->m_page ) {
-
-			// end last centered list of tables
-			if ( lastParm ) p.safePrintf("</center>");
-
-			// begin new list of centered tables
-			p.safePrintf("<center>");
-
-			p.safePrintf("<h2>/%s</h2>",page);
-
-
-			// and the start of the input parms table
-			p.safePrintf ( 
-				       "<table style=max-width:80%%; %s>"
-				       "<tr class=hdrow><td colspan=9>"
-				       "<center><b>Parms</b></tr></tr>"
-				       "<tr bgcolor=#%s>"
-				       "<td><b>#</b></td>"
-				       "<td><b>parm</b></td>"
-				       //"<td><b>Page</b></td>"
-				       "<td><b>Type</b></td>"
-				       "<td><b>Title</b></td>"
-				       "<td><b>Default Value</b></td>"
-				       "<td><b>Description</b></td></tr>\n"
-				       , TABLE_STYLE
-				       , DARK_BLUE );
-		}
-
-		SafeBuf tmp;
-		char diff = 0;
-		bool printVal = false;
-		if ( (parm->m_obj == OBJ_COLL && cr) ||parm->m_obj==OBJ_CONF) {
-			printVal = true;
-			parm->printVal ( &tmp , cr->m_collnum , 0 );
-			char *def = parm->m_def;
-			if ( ! def && parm->m_type == TYPE_IP) 
-				def = "0.0.0.0";
-			if ( ! def ) def = "";
-			if ( strcmp(tmp.getBufStart(),def) ) diff=1;
-		}
-
-		// print the parm
-		if ( diff == 1 ) 
-			p.safePrintf ( "<tr bgcolor=orange>");
-		else
-			p.safePrintf ( "<tr bgcolor=#%s>",blue);
-
-		p.safePrintf("<td>%li</td>",count++);
-
-
-		p.safePrintf("<td><b>%s</b></td>", cgi);
-
-		//p.safePrintf("<td><nobr><a href=/%s?c=%s>/%s"
-		//"</a></nobr></td>",
-		//page,coll,page);
-
-		p.safePrintf("<td nowrap=1>");
-		switch ( parm->m_type ) {
-		case TYPE_BOOL: p.safePrintf ( "BOOL (0 or 1)" ); break;
-		case TYPE_BOOL2: p.safePrintf ( "BOOL (0 or 1)" ); break;
-		case TYPE_CHECKBOX: p.safePrintf ( "BOOL (0 or 1)" ); break;
-		case TYPE_CHAR: p.safePrintf ( "CHAR" ); break;
-		case TYPE_CHAR2: p.safePrintf ( "CHAR" ); break;
-		case TYPE_FLOAT: p.safePrintf ( "FLOAT32" ); break;
-		case TYPE_DOUBLE: p.safePrintf ( "FLOAT64" ); break;
-		case TYPE_IP: p.safePrintf ( "IP" ); break;
-		case TYPE_LONG: p.safePrintf ( "INT32" ); break;
-		case TYPE_LONG_LONG: p.safePrintf ( "INT64" ); break;
-		case TYPE_CHARPTR: p.safePrintf ( "STRING" ); break;
-		case TYPE_STRING: p.safePrintf ( "STRING" ); break;
-		case TYPE_STRINGBOX: p.safePrintf ( "STRING" ); break;
-		case TYPE_STRINGNONEMPTY:p.safePrintf ( "STRING" ); break;
-		case TYPE_SAFEBUF: p.safePrintf ( "STRING" ); break;
-		case TYPE_FILEUPLOADBUTTON: p.safePrintf ( "STRING" ); break;
-		default: p.safePrintf("<b><font color=red>UNKNOWN</font></b>");
-		}
-		p.safePrintf ( "</td><td>%s</td>",parm->m_title);
-		char *def = parm->m_def;
-		if ( ! def ) def = "";
-		p.safePrintf ( "<td>%s</td>",  def );
-		p.safePrintf ( "<td>%s",  parm->m_desc );
-		if ( parm->m_flags & PF_REQUIRED )
-			p.safePrintf(" <b><font color=green>REQUIRED"
-				     "</font></b>");
-		if ( printVal ) {
-			p.safePrintf("<br><b><nobr>Current value: ");
-			// print in red if not default value
-			if ( diff ) p.safePrintf("<font color=red>");
-			p.safeTruncateEllipsis(tmp.getBufStart(),80);
-			if ( diff ) p.safePrintf("</font></nobr>");
-			p.safePrintf("</b>");
-		}
-		p.safePrintf("</td>");
-		p.safePrintf ( "</tr>\n" );
-
-		//
-		// done printing parm
-		//
-
-
-		//
-		// see when page changes
-		//
-		lastParm = parm;
-
+	for ( long i = 0 ; i < s_numPages ; i++ ) {
+		if ( i == PAGE_NONE ) continue;
+		printApiForPage ( &p , i , cr );
 	}
-	p.safePrintf ( "</table><br><br>" );
 
 	//
 	// PRINT QUERY OPERATORS TABLE NOW
 	//
-	p.safePrintf ( "<table style=max-width:80%%; %s>"
+	p.safePrintf ( "<center>"
+		       "<table style=max-width:80%%; %s>"
 		       "<tr class=hdrow><td colspan=2>"
 		       "<center><b>Query Operators</b></td></tr>"
 		       "<tr><td><b>Operator</b></td>"
@@ -2727,7 +2495,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 			     LIGHT_BLUE,f->text,d);
 	}
 	
-	p.safePrintf("</body></html>");
+	p.safePrintf("</table></center></body></html>");
 
 	char* sbuf = p.getBufStart();
 	long sbufLen = p.length();
@@ -2737,6 +2505,216 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 						   sbufLen,
 						   -1/*cachetime*/);
 	return 	retval;
+}
+
+
+bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
+
+	// print standard header
+	// 	char *pp    = sb->getBuf();
+	// 	char *ppend = sb->getBufEnd();
+	// 	if ( pp ) {
+	//g_pages.printAdminTop ( &p , s , r );
+
+	// 	sb->incrementLength ( pp - sb->getBuf() );
+	// 	}
+
+	if ( PAGENUM == PAGE_NONE ) return true;
+
+	sb->safePrintf("<a name=%li>",PAGENUM);
+	
+	char *pageStr = s_pages[PAGENUM].m_filename;
+	
+	// unknown?
+	if ( ! pageStr ) pageStr = "???";
+
+	sb->safePrintf("<h2 style=padding-left:20%%>/%s</h2>",pageStr);
+	
+	sb->safePrintf("</a>");
+	
+	// begin new list of centered tables
+	sb->safePrintf("<center>");
+	
+	// and the start of the input parms table
+	sb->safePrintf ( 
+			"<table style=max-width:80%%; %s>"
+			"<tr class=hdrow><td colspan=9>"
+			"<center><b>Parms</b></tr></tr>"
+			"<tr bgcolor=#%s>"
+			"<td><b>#</b></td>"
+			"<td><b>parm</b></td>"
+			//"<td><b>Page</b></td>"
+			"<td><b>Type</b></td>"
+			"<td><b>Title</b></td>"
+			"<td><b>Default Value</b></td>"
+			"<td><b>Description</b></td></tr>\n"
+			, TABLE_STYLE
+			, DARK_BLUE );
+	
+	const char *blue = LIGHT_BLUE;
+	long count = 1;
+
+	//char *lastPage = NULL;
+	//Parm *lastParm = NULL;
+
+	for ( long i = 0; i < g_parms.m_numParms; i++ ) {
+		Parm *parm = &g_parms.m_parms[i];
+		// assume do not print
+		//parm->m_pstr = NULL;
+		// skip if hidden
+		if ( parm->m_flags & PF_HIDDEN ) continue;
+		if ( parm->m_type == TYPE_CMD ) continue;
+		if ( parm->m_type == TYPE_COMMENT ) continue;
+
+		if ( parm->m_flags & PF_DUP ) continue;
+		if ( parm->m_flags & PF_NOAPI ) continue;
+		if ( parm->m_flags & PF_DIFFBOT ) continue;
+		//if ( ! (parm->m_flags & PF_API) ) continue;
+		//if ( parm->m_page == PAGE_FILTERS ) continue;
+
+		long pageNum = parm->m_page;
+
+		// these have PAGE_NONE for some reason
+		if ( parm->m_obj == OBJ_SI ) pageNum = PAGE_RESULTS;
+
+		if ( pageNum != PAGENUM ) continue;
+
+		if ( blue == (const char *)LIGHT_BLUE ) blue = DARK_BLUE;
+		else if(blue==(const char *)DARK_BLUE ) blue = LIGHT_BLUE;
+
+
+		SafeBuf tmp;
+		char diff = 0;
+		bool printVal = false;
+		if ( (parm->m_obj == OBJ_COLL && cr) ||parm->m_obj==OBJ_CONF) {
+			printVal = true;
+			parm->printVal ( &tmp , cr->m_collnum , 0 );
+			char *def = parm->m_def;
+			if ( ! def && parm->m_type == TYPE_IP) 
+				def = "0.0.0.0";
+			if ( ! def ) def = "";
+			if ( strcmp(tmp.getBufStart(),def) ) diff=1;
+		}
+
+		// print the parm
+		if ( diff == 1 ) 
+			sb->safePrintf ( "<tr bgcolor=orange>");
+		else
+			sb->safePrintf ( "<tr bgcolor=#%s>",blue);
+
+		sb->safePrintf("<td>%li</td>",count++);
+
+		// use m_cgi if no m_scgi
+		char *cgi = parm->m_cgi;
+
+		sb->safePrintf("<td><b>%s</b></td>", cgi);
+
+		//sb->safePrintf("<td><nobr><a href=/%s?c=%s>/%s"
+		//"</a></nobr></td>",
+		//page,coll,page);
+
+		sb->safePrintf("<td nowrap=1>");
+		switch ( parm->m_type ) {
+		case TYPE_BOOL: sb->safePrintf ( "BOOL (0 or 1)" ); break;
+		case TYPE_BOOL2: sb->safePrintf ( "BOOL (0 or 1)" ); break;
+		case TYPE_CHECKBOX: sb->safePrintf ( "BOOL (0 or 1)" ); break;
+		case TYPE_CHAR: sb->safePrintf ( "CHAR" ); break;
+		case TYPE_CHAR2: sb->safePrintf ( "CHAR" ); break;
+		case TYPE_FLOAT: sb->safePrintf ( "FLOAT32" ); break;
+		case TYPE_DOUBLE: sb->safePrintf ( "FLOAT64" ); break;
+		case TYPE_IP: sb->safePrintf ( "IP" ); break;
+		case TYPE_LONG: sb->safePrintf ( "INT32" ); break;
+		case TYPE_LONG_LONG: sb->safePrintf ( "INT64" ); break;
+		case TYPE_CHARPTR: sb->safePrintf ( "STRING" ); break;
+		case TYPE_STRING: sb->safePrintf ( "STRING" ); break;
+		case TYPE_STRINGBOX: sb->safePrintf ( "STRING" ); break;
+		case TYPE_STRINGNONEMPTY:sb->safePrintf ( "STRING" ); break;
+		case TYPE_SAFEBUF: sb->safePrintf ( "STRING" ); break;
+		case TYPE_FILEUPLOADBUTTON: sb->safePrintf ( "STRING" ); break;
+		default: sb->safePrintf("<b><font color=red>UNKNOWN</font></b>");
+		}
+		sb->safePrintf ( "</td><td>%s</td>",parm->m_title);
+		char *def = parm->m_def;
+		if ( ! def ) def = "";
+		sb->safePrintf ( "<td>%s</td>",  def );
+		sb->safePrintf ( "<td>%s",  parm->m_desc );
+		if ( parm->m_flags & PF_REQUIRED )
+			sb->safePrintf(" <b><font color=green>REQUIRED"
+				     "</font></b>");
+		if ( printVal ) {
+			sb->safePrintf("<br><b><nobr>Current value:</nobr> ");
+			// print in red if not default value
+			if ( diff ) sb->safePrintf("<font color=red>");
+			sb->safeTruncateEllipsis(tmp.getBufStart(),80);
+			if ( diff ) sb->safePrintf("</font>");
+			sb->safePrintf("</b>");
+		}
+		sb->safePrintf("</td>");
+		sb->safePrintf ( "</tr>\n" );
+
+	}
+	
+	// end input parm table we started below
+	sb->safePrintf("</table><br>\n\n");
+
+	//
+	// done printing parm table
+	//
+
+	//
+	// print output in xml
+	//
+	sb->safePrintf ( 
+			"<table style=max-width:80%%; %s>"
+			"<tr class=hdrow><td colspan=9>"
+			"<center><b>XML Output</b></tr></tr>"
+			"<tr><td>"
+			, TABLE_STYLE
+			);
+	sb->safePrintf("<pre>\n");
+	char *desc = s_pages[PAGENUM].m_xmlOutputDesc;
+	if ( ! desc )
+		desc = "<response>\n"
+			"\t<status>N</status> "
+			"# 0 on success, otherwise an "
+			"error code\n"
+			"\t<statusMsg>S</statusMsg> "
+			"# \"Success\" on success, "
+			"otherwise the error message."
+			"</response>";
+	sb->htmlEncode ( desc);
+	sb->safePrintf("</pre>");
+	sb->safePrintf ( "</td></tr></table><br>\n\n" );
+	
+	//
+	// print output in json
+	//
+	sb->safePrintf ( 
+			"<table style=max-width:80%%; %s>"
+			"<tr class=hdrow><td colspan=9>"
+			"<center><b>JSON Output</b></tr></tr>"
+			"<tr><td>"
+			, TABLE_STYLE
+			);
+	sb->safePrintf("<pre>\n");
+	desc = s_pages[PAGENUM].m_jsonOutputDesc;
+	if ( ! desc )
+		desc = "{ \"response:\"{\n"
+			"\t\"status\":N, "
+			"# 0 on success, otherwise an "
+			"error code\n"
+			"\t\"statusMsg\":\"xxx\" "
+			"# xxx is \"Success\" on success, "
+			"otherwise the error message.\n"
+			"\t}\n"
+			"}";
+	sb->htmlEncode ( desc);
+	sb->safePrintf("</pre>");
+	sb->safePrintf ( "</td></tr></table><br>\n\n" );
+	
+	sb->safePrintf("</center>");
+	
+	return true;
 }
 
 
