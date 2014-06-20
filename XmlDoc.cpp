@@ -1299,6 +1299,12 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	m_conceptWeightValid          = true;
 	*/
 
+	// fix some corruption i've seen
+	if ( m_sreq.m_urlIsDocId && ! is_digit(m_sreq.m_url[0]) ) {
+		log("xmldoc: fixing sreq %s to non docid",m_sreq.m_url);
+		m_sreq.m_urlIsDocId = 0;
+	}
+
 	// if url is a docid... we are from pagereindex.cpp
 	//if ( sreq->m_isPageReindex ) {
 	// now we can have url-based page reindex requests because
@@ -1306,8 +1312,8 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 	// we add a spider request of the PARENT url for it as page reindex
 	//if ( is_digit ( sreq->m_url[0] ) ) {
 	// watch out for 0.r.msn.com!!
-	if ( sreq->m_urlIsDocId ) {
-		m_docId          = atoll(sreq->m_url);
+	if ( m_sreq.m_urlIsDocId ) {
+		m_docId          = atoll(m_sreq.m_url);
 		// assume its good
 		m_docIdValid     = true;
 		// similar to set3() above
@@ -1321,7 +1327,7 @@ bool XmlDoc::set4 ( SpiderRequest *sreq      ,
 		// add www is now REQUIRED for all!
 		// crap, injection of tmblr.co/ZHw5yo1E5TAaW fails because
 		// www.tmblr.co has no IP
-		setFirstUrl ( sreq->m_url , false );//true ); // false );
+		setFirstUrl ( m_sreq.m_url , false );//true ); // false );
 		// you can't call this from a docid based url until you
 		// know the uh48
 		//setSpideredTime();
@@ -13754,6 +13760,12 @@ SafeBuf *XmlDoc::getTokenizedDiffbotReply ( ) {
 		bool  inQuotes = false;
 		// scan now
 		for (  ; *x ; x++ ) {
+			// escaping a backslash?
+			if ( *x == '\\' && x[1] == '\\' ) {
+				// skip two bytes then..
+				x++;
+				continue;
+			}
 			// escaping a quote? ignore quote then.
 			if ( *x == '\\' && x[1] == '\"' ) {
 				// skip two bytes then..
@@ -16125,7 +16137,7 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 		snprintf(cmd,2047 ,"ulimit -v 25000 ; ulimit -t 30 ; nice -n 19 %s/pdftohtml -q -i -noframes -stdout %s > %s", wdir , in ,out );
 	else if ( ctype == CT_DOC ) 
 		// "wdir" include trailing '/'? not sure
-		snprintf(cmd,2047, "ulimit -v 25000 ; ulimit -t 30 ; ANTIWORDHOME=%s/antiword-dir ; nice -n 19 %s/antiword %s> %s" , wdir , wdir , in , out );
+		snprintf(cmd,2047, "ulimit -v 25000 ; ulimit -t 30 ; export ANTIWORDHOME=%s/antiword-dir ; nice -n 19 %s/antiword %s> %s" , wdir , wdir , in , out );
 	else if ( ctype == CT_XLS )
 		snprintf(cmd,2047, "ulimit -v 25000 ; ulimit -t 30 ; timeout 10s nice -n 19 %s/xlhtml %s > %s" , wdir , in , out );
 	// this is too buggy for now... causes hanging threads because it
@@ -20356,6 +20368,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		ksr.m_avoidSpiderLinks = 1;
 		// avoid EDOCUNCHANGED
 		ksr.m_ignoreDocUnchangedError = 1;
+		// no longer docid based we set it to parentUrl
+		ksr.m_urlIsDocId = 0;
 		// but it is not docid based, so overwrite the docid
 		// in ksr.m_url with the parent multidoc url. it \0 terms it.
 		strcpy(ksr.m_url , parentUrl );//, MAX_URL_LEN-1);

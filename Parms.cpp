@@ -397,6 +397,44 @@ bool CommandDeleteColl2 ( char *rec , WaitEntry *we ) {
 	return true;
 }
 
+bool CommandForceNextSpiderRound ( char *rec ) {
+
+	// caller must specify collnum
+	collnum_t collnum = getCollnumFromParmRec ( rec );
+	// need this
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
+		log("parms: bad collnum %li for restart spider round",
+		    (long)collnum);
+		return true;
+	}
+
+	// seems like parmlist is an rdblist, so we have a key_t followed
+	// by 4 bytes of datasize then the data... which is an ascii string
+	// in our case...
+	char *data = getDataFromParmRec ( rec );
+	long roundStartTime;
+	long newRoundNum;
+	// see the HACK: in Parms::convertHttpRequestToParmList() where we
+	// construct this data in response to a "roundStart" cmd. we used
+	// sprintf() so it's natural to use sscanf() to parse it out.
+	sscanf ( data , "%lu,%li", &roundStartTime,&newRoundNum);
+
+	cr->m_spiderRoundStartTime = roundStartTime;
+	cr->m_spiderRoundNum = newRoundNum;
+
+	// reset the round counts. this will log a msg. resetting the
+	// round counts will prevent maxToProcess/maxToCrawl from holding
+	// us back...
+	spiderRoundIncremented ( cr );
+
+	// yeah, if we don't nuke doledb then it doesn't work...
+	cr->rebuildUrlFilters();
+
+	return true;
+}
+
 // . returns true and sets g_errno on error
 // . returns false if would block
 bool CommandRestartColl ( char *rec , WaitEntry *we ) {
@@ -9429,6 +9467,67 @@ void Parms::init ( ) {
 	m->m_def   = "unspecified";
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+
+	m->m_title = "spider round start time";
+	m->m_desc  = "When the next spider round starts. If you force this to "
+		"zero it sets it to the current time. That way you can "
+		"respider all the urls that were already spidered, and urls "
+		"that were not yet spidered in the round will still be "
+		"spidered.";
+	m->m_cgi   = "spiderRoundStart";
+	m->m_size  = 0;
+	m->m_off   = (char *)&cr.m_spiderRoundStartTime - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_HIDDEN | PF_REBUILDURLFILTERS ;
+	m++;
+
+	// DIFFBOT:
+	// this http parm actually ads the "forceround" parm to the parmlist
+	// below with the appropriate args.
+	m->m_title = "manually restart a spider round";
+	m->m_desc  = "Updates round number and resets local processed "
+		"and crawled counts to 0.";
+	m->m_cgi   = "roundStart";
+	m->m_type  = TYPE_CMD;
+	m->m_func  = NULL;
+	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_HIDDEN;
+	m++;
+
+	// DIFFBOT:
+	// . this is sent to each shard by issuing a "restartRound=" cmd
+	// . similar to the "addcoll" cmd we add args to it and make it
+	//   the "forceround" cmd parm and add THAT to the parmlist.
+	//   so "roundStart=1" is really an alias for us.
+	m->m_title = "manually restart a spider round on shard";
+	m->m_desc  = "Updates round number and resets local processed "
+		"and crawled counts to 0.";
+	m->m_cgi   = "forceround";
+	//m->m_off   = (char *)&cr.m_spiderRoundStartTime - x;
+	m->m_type  = TYPE_CMD;
+	m->m_func  = CommandForceNextSpiderRound;
+	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_HIDDEN | PF_REBUILDURLFILTERS ;
+	m++;
+
+	m->m_title = "spider round num";
+	m->m_desc  = "The spider round number.";
+	m->m_cgi   = "spiderRoundNum";
+	m->m_off   = (char *)&cr.m_spiderRoundNum - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_HIDDEN ;
 	m++;
 
 	m->m_title = "send email alerts to sysadmin";
@@ -15204,30 +15303,6 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m++;*/
 
-	m->m_title = "spider round start time";
-	m->m_desc  = "When the spider round started";
-	m->m_cgi   = "roundStart";
-	m->m_off   = (char *)&cr.m_spiderRoundStartTime - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "0";
-	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_REBUILDURLFILTERS ;
-	m->m_page  = PAGE_SPIDER;
-	m->m_obj   = OBJ_COLL;
-	m++;
-
-	m->m_title = "spider round num";
-	m->m_desc  = "The spider round number.";
-	m->m_cgi   = "spiderRoundNum";
-	m->m_off   = (char *)&cr.m_spiderRoundNum - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "0";
-	m->m_group = 0;
-	m->m_flags = PF_HIDDEN ;
-	m->m_page  = PAGE_SPIDER;
-	m->m_obj   = OBJ_COLL;
-	m++;
-
 	m->m_title = "scraping enabled procog";
 	m->m_desc  = "Do searches for queries in this hosts part of the "
 		"query log.";
@@ -18937,6 +19012,38 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 			}
 		}
 
+		// . DIFFBOT HACK: so ppl can manually restart a spider round
+		// . val can be 0 or 1 or anything. i.e. roundStart=0 works.
+		// . map this parm to another parm with the round start
+		//   time (current time) and the new round # as the args.
+		// . this will call CommandForceNextSpiderRound() function
+		//   on every shard with these args, "tmpVal".
+		if ( strcmp(m->m_cgi,"roundStart") == 0 ) {
+			// use the current time so anything spidered before
+			// this time (the round start time) will be respidered
+			//sprintf(tmp,"%lu",getTimeGlobalNoCore());
+			//val = tmp;
+			char tmpVal[64];
+			// use the same round start time for all shards
+			sprintf(tmpVal,
+				"%lu,%li"
+				,getTimeGlobalNoCore()
+				,cr->m_spiderRoundNum+1
+				);
+			// . also add command to reset crawl/process counts
+			//   so if you hit maxToProcess/maxToCrawl it will
+			//   not stop the round from restarting
+			// . CommandResetCrawlCounts()
+			if ( ! addNewParmToList1 ( parmList ,
+						   parmCollnum ,
+						   tmpVal, // a string
+						   0 , // occNum (for arrays)
+						   "forceround" ) )
+				return false;
+			// don't bother going below
+			continue;
+		}
+
 		// if a collection name was also provided, assume that is
 		// the target of the reset/delete/restart. we still
 		// need PageAddDelete.cpp to work...
@@ -19023,16 +19130,18 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		if ( m->m_obj == OBJ_NONE ) continue;
 		if ( m->m_obj == OBJ_SI ) continue;
 
-		// convert spiderRoundStartTime=0 to
-		// spiderRoundStartTime=<currenttime>+30secs
+		// convert spiderRoundStartTime=0 (roundStart=0 roundStart=1) 
+		// to spiderRoundStartTime=<currenttime>+30secs
 		// so that will force the next spider round to kick in
+		/*
+		bool restartRound = false;
 		char tmp[24];
 		if ( strcmp(field,"roundStart")==0 && 
-		     val && (val[0]=='0'||val[0]=='1') && val[1]==0 ) {
+		     val && (val[0]=='0'||val[0]=='1') && val[1]==0 ) 
 			sprintf(tmp,"%lu",(long)getTimeGlobalNoCore()+0);
 			val = tmp;
 		}
-
+		*/
 
 		// add it to a list now
 		if ( ! addNewParmToList2 ( parmList ,
