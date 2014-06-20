@@ -2465,23 +2465,37 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		     "font-size: 15px;} </style>");
 
 
-	p.safePrintf("<h2>API by pages</h2>"
+	p.safePrintf("<div style=padding-left:10%%>"
+		     "<font size=+2><b>API by pages</b></font>"
 		     "<ul>"
 		     );
 
 	for ( long i = 0 ; i < s_numPages ; i++ ) {
 		if ( s_pages[i].m_pgflags & PG_NOAPI ) continue;
-		p.safePrintf("<li> <a href=#%li>/%s</a></li>\n",
-			     i,s_pages[i].m_filename);
+		p.safePrintf("<li> <a href=#%li>/%s</a>"
+			     " - %s"
+			     "</li>\n",
+			     i,
+			     s_pages[i].m_filename,
+			     // description of page
+			     s_pages[i].m_desc
+			     );
 	}
 
-	p.safePrintf("</ul>\n");
+	p.safePrintf("</ul></div>\n");
+
+	p.safePrintf("<div style=padding-left:10%%;><hr></div>\n");
 
 
+	bool printed = false;
 	for ( long i = 0 ; i < s_numPages ; i++ ) {
 		if ( i == PAGE_NONE ) continue;
 		if ( s_pages[i].m_pgflags & PG_NOAPI ) continue;
+		if ( printed )
+			p.safePrintf("<div style=padding-left:10%%;>"
+				     "<hr></div>\n");
 		printApiForPage ( &p , i , cr );
+		printed = true;
 	}
 
 	//
@@ -2534,13 +2548,14 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	if ( ! pageStr ) pageStr = "???";
 
 	sb->safePrintf("<div style=padding-left:10%%>"
-		       "<h2 style=padding-left:20%%>/%s</h2>",pageStr);
+		       "<font size=+2><b><a href=/%s>/%s</a></b></font>"
+		       ,pageStr,pageStr);
 	sb->safePrintf("</a>");
 
 	// description of page
-	sb->safePrintf("<font size=-1>%s</font><br>",s_pages[PAGENUM].m_desc);
-	sb->safePrintf("</div>");
-	
+	sb->safePrintf("<font size=-0> - %s</font><br>",
+		       s_pages[PAGENUM].m_desc);
+	sb->safePrintf("</div><br>");
 	
 	// begin new list of centered tables
 	sb->safePrintf("<center>");

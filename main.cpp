@@ -4651,7 +4651,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			g_process.getFilesToCopy ( srcDir , &fileListBuf );
 
 			// include this one as well for install
-			fileListBuf.safePrintf(" %shosts.conf",srcDir);
+			//fileListBuf.safePrintf(" %shosts.conf",srcDir);
 			// the dmoz data dir if there
 			fileListBuf.safePrintf(" %scat",srcDir);
 

@@ -73,7 +73,7 @@ Process g_process;
 static long s_nextTime = 0;
 
 char *g_files[] = {
-	"gb.conf",
+	//"gb.conf",
 
 	// might have localhosts.conf
 	//"hosts.conf",
@@ -216,10 +216,16 @@ bool Process::getFilesToCopy ( char *srcDir , SafeBuf *buf ) {
 				, srcDir
 				, g_files[i] );
 	}
+
+	// these are no longer required since we generate them
+	buf->safePrintf(" %shosts.conf",srcDir);
+	buf->safePrintf(" %sgb.conf",srcDir);
+
 	// and the required runtime subdirs
 	buf->safePrintf(" %santiword-dir",srcDir);
 	buf->safePrintf(" %sucdata",srcDir);
 	buf->safePrintf(" %shtml",srcDir);
+
 	return true;
 }
 
