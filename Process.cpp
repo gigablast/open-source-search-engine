@@ -198,6 +198,12 @@ char *g_files[] = {
 };
 
 
+///////
+//
+// used to make package to install files for the package.
+// so do not include hosts.conf or gb.conf
+//
+///////
 bool Process::getFilesToCopy ( char *srcDir , SafeBuf *buf ) {
 
 	// sanirty
@@ -216,10 +222,6 @@ bool Process::getFilesToCopy ( char *srcDir , SafeBuf *buf ) {
 				, srcDir
 				, g_files[i] );
 	}
-
-	// these are no longer required since we generate them
-	buf->safePrintf(" %shosts.conf",srcDir);
-	buf->safePrintf(" %sgb.conf",srcDir);
 
 	// and the required runtime subdirs
 	buf->safePrintf(" %santiword-dir",srcDir);

@@ -4654,6 +4654,9 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			//fileListBuf.safePrintf(" %shosts.conf",srcDir);
 			// the dmoz data dir if there
 			fileListBuf.safePrintf(" %scat",srcDir);
+			fileListBuf.safePrintf(" %shosts.conf",srcDir);
+			fileListBuf.safePrintf(" %sgb.conf",srcDir);
+
 
 			SafeBuf tmpBuf;
 			tmpBuf.safePrintf(
@@ -17239,6 +17242,11 @@ char *getcwd2 ( char *arg2 ) {
 	return "/var/gigablast/data0/";
 }
 
+///////
+//
+// used to make package to install files for the package
+//
+///////
 int copyFiles ( char *dstDir ) {
 
 	char *srcDir = "./";
