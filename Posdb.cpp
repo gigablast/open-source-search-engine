@@ -790,36 +790,21 @@ bool PosdbTable::allocTopTree ( ) {
 	*/
 
 	m_hasFacetTerm = false;
-	// set QueryTerm::m_totalFaceListSizes so we can allocate mem for
-	// each gbfacet:xyz term for their QueryTerm::m_dt and m_facetHashTable
-	for ( long k = 0 ; k < m_msg2->getNumLists() ; k++ ) {
-		// count
-		RdbList *list = m_msg2->getList(k);
-		// skip if null
-		if ( ! list ) continue;
-		// skip if list is empty, too
-		//if ( list->isEmpty() ) continue;
-		// get associated query term
-		QueryTerm *qt = msg2->getQueryTerm(k);
-		// skip if not facet
-		if ( qt->m_fieldCode != FIELD_FACET ) continue;
-		// see how much space we need
-		qt->m_totalFacetListSizes += list->getListSize();
-		// note it
-		m_hasFacetTerm = true;
-	}
-
 	//
 	// allocate space for QueryTerm::m_facetHashList and QueryTerm::m_dt
 	//
-	for ( long i = 0 ; i < m_numQueryTerms ; i++ ) {
-		QueryTerm *qt = m_q->getQueryTerm(i);
+	for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
+		QueryTerm *qt = &m_q->m_qterms[i];
 		// skip if not facet
-		if ( qt->m_fieldCode != FIELD_FACET ) continue;
-		//
-		long long total = qt->m_totalFaceListSizes;
+		if ( qt->m_fieldCode != FIELD_GBFACET ) continue;
+		// how big?
+		long long total = m_msg2->m_lists[i].getListSize();
+		// skip if empty
+		if ( total == 0 ) continue;
+		// we got facet terms
+		m_hasFacetTerm = true;
 		// assume list is a unique site for section hash dup
-		long maxRecs = total / 6;
+		long maxRecs = total / 6 + 1;
 		// slot
 		long slots = maxRecs * 4;
 		// min of at least 20 otherwise m_dt re-allocs in thread and
@@ -828,7 +813,7 @@ bool PosdbTable::allocTopTree ( ) {
 		// limit this bitch to 10 million otherwise this gets huge!
 		// like over 28 million i've seen and it goes oom
 		if ( slots > 2000000 ) {
-			log("posdb: limiting FACET stats list to 2M docids "
+			log("posdb: limiting FACET list to 2M docids "
 			    "for query term %s",qt->m_term);
 			slots = 20000000;
 		}
@@ -837,11 +822,8 @@ bool PosdbTable::allocTopTree ( ) {
 		//   back to msg3a so it can merge them and compute the final
 		//   stats. it really makes no sense for a shard to compute
 		//   stats. it has to be done at the aggregator node.
-		if ( ! qt->m_facetHashList.reserve ( slots ,"shshbuf" ) )
-			return false;
-		// . quad # of sites to have space in between
-		// . this is the facet dedup table so we know what vals r uniq
-		if ( ! qt->m_dt.set(4,0,slots,NULL,0,false,0,"pdtdt"))
+		if ( ! qt->m_facetHashTable.set ( 4,4,128,NULL,0,false,
+						  0,"qfht" ) )
 			return false;
 	}
 	return true;
@@ -5190,7 +5172,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		m_facetHashList.setLength((char *)s-(char *)orig);
 		return;
 	}
-
+	*/
 
 
 	//
@@ -6880,14 +6862,14 @@ void PosdbTable::intersectLists10_r ( ) {
 	// gbfacet:<xpathsitehash> and the values is the innerhtml content hash
 	// of that xpath/site so we won't have to do buckets for that.
 	//
-	if ( m_hasFacetTerms ) {
+	if ( m_hasFacetTerm ) {
 		// scan each facet termlist and update
 		// QueryTerm::m_facetHashTable/m_dt
 		for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
 			QueryTerm *qt = &m_q->m_qterms[i];
 			if ( qt->m_fieldCode != FIELD_GBFACET ) continue;
 			char *p    = miniMergedList[i];
-			char *pend = miniMergedEnd [i];
+			//char *pend = miniMergedEnd [i];
 			//
 			// just grab the first value i guess...
 			//
@@ -6898,7 +6880,7 @@ void PosdbTable::intersectLists10_r ( ) {
 			//   it for the innerHtml sentence content hash32
 			long val32 = g_posdb.getFacetVal32 ( p );
 			// add it. count occurences of it per docid
-			qt->m_facetHashTable.addScore32 ( &val32 );
+			qt->m_facetHashTable.addTerm32 ( &val32 );
 		}
 	}
 

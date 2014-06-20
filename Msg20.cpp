@@ -497,6 +497,8 @@ void Msg20Reply::destructor ( ) {
 	//m_tmp = 0;
 }
 
+#include "Stats.h"
+
 // . return ptr to the buffer we serialize into
 // . return NULL and set g_errno on error
 bool Msg20Reply::sendReply ( XmlDoc *xd ) {

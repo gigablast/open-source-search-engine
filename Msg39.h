@@ -117,7 +117,7 @@ class Msg39Request {
 	char    m_doMaxScoreAlgo;
 
 	// Msg3a still uses this
-	long      m_myFacetVal32; // for gbfacet:xpathsite really sectionstats
+	//long    m_myFacetVal32; // for gbfacet:xpathsite really sectionstats
 
 	//char    m_useMinAlgo;
 	//char    m_fastIntersection;

@@ -334,6 +334,9 @@ class HashTableX {
 	long long getKey64FromSlot ( long n ) {
 		return *(long long *)(m_keys+n*m_ks); }
 
+	long getKey32FromSlot ( long n ) {
+		return *(long *)(m_keys+n*m_ks); }
+
 	long getSlot ( void *key ) { return getOccupiedSlotNum ( key ); };
 
 	// . specialized for 64-bit keys for speed
@@ -382,6 +385,9 @@ class HashTableX {
 	void *getValueFromSlot ( long n ) { return m_vals + n * m_ds; };
 	void *getValFromSlot   ( long n ) { return m_vals + n * m_ds; };
 	void *getDataFromSlot  ( long n ) { return m_vals + n * m_ds; };
+
+	long getVal32FromSlot ( long n ){return *(long *)(m_vals+n*m_ds);};
+	long getValue32FromSlot ( long n ){return *(long *)(m_vals+n*m_ds);};
 
 	// frees the used memory, etc.
 	void  reset  ( );

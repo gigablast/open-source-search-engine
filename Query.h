@@ -811,6 +811,14 @@ class Query {
 
 	bool isCompoundTerm ( long i ) ;
 
+	class QueryTerm *getQueryTermByTermId64 ( long long termId ) {
+		for ( long i = 0 ; i < m_numTerms ; i++ ) {
+			if ( m_qterms[i].m_termId == termId ) 
+				return &m_qterms[i];
+		}
+		return NULL;
+	};
+
 	// silly little functions that support the BIG HACK
 	//long getNumNonFieldedSingletonTerms() { return m_numTermsSpecial; };
 	//long getTermsFound ( Query *q , char *foundTermVector ) ;

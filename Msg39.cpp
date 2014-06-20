@@ -418,6 +418,7 @@ bool Msg39::controlLoop ( ) {
 	// . all done! set stats and send back reply
 	// . only sends back the cluster recs if m_gotClusterRecs is true
 	estimateHitsAndSendReply();
+
 	return true;
 }
 
@@ -754,6 +755,7 @@ bool Msg39::getLists () {
 				 // how much of each termlist to read in bytes
 				 (long *)m_r->ptr_readSizes ,
 				 //m_tmpq.getNumTerms()       , // numLists
+				 // 1-1 with query terms
 				 m_lists                    ,
 				 this                       ,
 				 controlLoopWrapper,//gotListsWrapper      ,
@@ -1363,10 +1365,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			mr.size_pairScoreBuf   = 0;
 			mr.size_singleScoreBuf = 0;
 		}
-		// and now the sitehash list if it exists
-		mr.ptr_sentHashList  = pt->m_sentHashList.getBufStart();
-		mr.size_sentHashList = pt->m_sentHashList.length();
-		mr.m_sectionStats    = pt->m_sectionStats;
+		//mr.m_sectionStats    = pt->m_sectionStats;
 		// reserve space for these guys, we fill them in below
 		mr.ptr_docIds       = NULL;
 		mr.ptr_scores       = NULL;
@@ -1379,6 +1378,97 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			mr.size_clusterRecs = sizeof(key_t) *numDocIds;
 		else    
 			mr.size_clusterRecs = 0;
+
+		#define MAX_FACETS 20000
+
+		/////////////////
+		//
+		// FACETS
+		//
+		/////////////////
+
+		// We can have multiple gbfacet: terms in a query so
+		// serialize all the QueryTerm::m_facetHashTables into
+		// Msg39Reply::ptr_facetHashList.
+		//
+		// combine the facet hash lists of each query term into
+		// a list of lists. each lsit is preceeded by the query term
+		// id of the query term (like gbfacet:xpathsitehash12345)
+		// followed by a 4 byte length of the following 32-bit
+		// facet values
+		long need = 0;
+		for ( long i = 0 ; i < m_tmpq.m_numTerms; i++ ) {
+			QueryTerm *qt = &m_tmpq.m_qterms[i];
+			// skip if not facet
+			if ( qt->m_fieldCode != FIELD_GBFACET ) continue;
+			HashTableX *ft = &qt->m_facetHashTable;
+			if ( ft->m_numSlotsUsed == 0 ) continue;
+			long used = ft->m_numSlotsUsed;
+			// limit for memory
+			if ( used > (long)MAX_FACETS ) {
+				log("msg39: truncating facet list to 20000 "
+				    "from %li for %s",used,qt->m_term);
+				used = (long)MAX_FACETS;
+			}
+			// store query term id 64 bit
+			need += 8;
+			// then size
+			need += 4;
+			// then buckets. keys and counts
+			need += (4+4) * used;
+		}
+		// allocate
+		SafeBuf tmp;
+		if ( ! tmp.reserve ( need ) ) {
+			log("query: Could not allocate memory "
+			    "to hold reply facets");
+			sendReply(m_slot,this,NULL,0,0,true);
+			return;
+		}
+		// point to there
+		char *p = tmp.getBufStart();
+		for ( long i = 0 ; i < m_tmpq.m_numTerms ; i++ ) {
+			QueryTerm *qt = &m_tmpq.m_qterms[i];
+			// skip if not facet
+			if ( qt->m_fieldCode != FIELD_GBFACET ) continue;
+			// get all the facet hashes and their counts
+			HashTableX *ft = &qt->m_facetHashTable;
+			// skip if none
+			if ( ft->m_numSlotsUsed == 0 ) continue;
+			// store query term id 64 bit
+			*(long long *)p = qt->m_termId;
+			p += 8;
+			long used = ft->getNumSlotsUsed();
+			if ( used > (long)MAX_FACETS ) used = (long)MAX_FACETS;
+			long count = 0;
+			// for sanity check
+			char *pend = p + (used * 8);
+			// serialize the key/val pairs
+			for ( long k = 0 ; k < ft->m_numSlots ; k++ ) {
+				// skip empty buckets
+				if ( ! ft->m_flags[k] ) continue;
+				// store key
+				*(long *)p = ft->getKey32FromSlot(k); p += 4;
+				// then store count
+				*(long *)p = ft->getVal32FromSlot(k); p += 4;
+				// do not breach
+				if ( ++count >= (long)MAX_FACETS ) break;
+			}
+			// sanity check
+			if ( p != pend ) { char *xx=NULL;*xx=0; }
+			// do the next query term
+		}
+		// now point to that so it can be serialized below
+		mr.ptr_facetHashList  = tmp.getBufStart();
+		mr.size_facetHashList = tmp.length();
+
+		/////////////
+		//
+		// END FACETS
+		//
+		/////////////
+
+
 		// . that is pretty much it,so serialize it into buffer,"reply"
 		// . mr.ptr_docIds, etc., will point into the buffer so we can
 		//   re-serialize into it below from the tree
@@ -1398,7 +1488,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			log("query: Could not allocated memory "
 			    "to hold reply of docids to send back.");
 			sendReply(m_slot,this,NULL,0,0,true);
-			return ; 
+			return;
 		}
 		topDocIds    = (long long *) mr.ptr_docIds;
 		topScores    = (double    *) mr.ptr_scores;

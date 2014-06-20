@@ -185,7 +185,8 @@ bool storeTerm ( char             *s        ,
                  class SafeBuf    *wbuf     ,
                  class HashTableX *wts      ,
 		 char              synSrc   ,
-		 char              langId   ) ;
+		 char              langId   ,
+		 POSDBKEY key ) ;
 
 // tell zlib to use our malloc/free functions
 int gbuncompress ( unsigned char *dest      ,
@@ -1024,9 +1025,9 @@ class XmlDoc {
 	Msg39Request *m_msg39RequestArray;
 	SafeBuf m_msg3aBuf;
 	Msg3a *m_msg3aArray;
-	char  *m_inUse;
+	//char  *m_inUse;
 	Query *m_queryArray;
-	long long *m_secHash64Array;
+	//long long *m_secHash64Array;
 	bool     m_gotDupStats;
 	//long     m_secHash64;
 	//Query    m_q4;
@@ -2368,6 +2369,7 @@ class TermDebugInfo {
 	char      m_hashGroup;
 	long      m_wordNum;
 	long      m_wordPos;
+	POSDBKEY  m_key; // key144_t
 	//bool      m_isSynonym;
 	// 0 = not a syn, 1 = syn from presets,2=wikt,3=generated
 	char      m_synSrc;
