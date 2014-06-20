@@ -5679,7 +5679,9 @@ void Parms::init ( ) {
 
 
 	m->m_title = "query";
-	m->m_desc  = "The query to perform. See <a href=/help.html>help</a>.";
+	m->m_desc  = "The query to perform. See <a href=/help.html>help</a>. "
+		"See the <a href=#qops>query operators</a> below for "
+		"more info.";
 	m->m_obj   = OBJ_SI;
 	m->m_page  = PAGE_NONE;
 	m->m_off   = (char *)&si.m_query - y;

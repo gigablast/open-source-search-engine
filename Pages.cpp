@@ -129,7 +129,7 @@ static WebPage s_pages[] = {
 	{ PAGE_SECURITY, "admin/security2", 0 , "security"     ,  1 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
 	  "advanced security page",
-	  sendPageGeneric , 0 ,NULL,NULL,0},
+	  sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_ADDCOLL   , "admin/addcoll" , 0 , "add collection"  ,  1 , 0 ,
 	  //USER_MASTER , 
 	  "add a new collection using this page",
@@ -2465,6 +2465,16 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		     "font-size: 15px;} </style>");
 
 
+	// print colors
+	g_pages.printColors ( &p );
+	// start table
+	p.safePrintf( "<table><tr><td>");
+	// print logo
+	g_pages.printLogo   ( &p , coll );
+	p.safePrintf("</td></tr></table><br><br>");
+
+
+
 	p.safePrintf("<div style=padding-left:10%%>"
 		     "<font size=+2><b>API by pages</b></font>"
 		     "<ul>"
@@ -2484,6 +2494,18 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 
 	p.safePrintf("</ul></div>\n");
 
+
+	p.safePrintf("<div style=padding-left:10%%>"
+		     "<font size=+2><b>Other Information</b></font>"
+		     "<ul>"
+		     "<li> <a href=#qops>Query Operators</a></li>\n"
+		     "</ul>"
+		     "</div>"
+		     "<br>"
+		     );
+
+
+
 	p.safePrintf("<div style=padding-left:10%%;><hr></div>\n");
 
 
@@ -2493,7 +2515,7 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		if ( s_pages[i].m_pgflags & PG_NOAPI ) continue;
 		if ( printed )
 			p.safePrintf("<div style=padding-left:10%%;>"
-				     "<hr></div>\n");
+				     "<hr></div><br>\n");
 		printApiForPage ( &p , i , cr );
 		printed = true;
 	}
@@ -2502,6 +2524,13 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	// PRINT QUERY OPERATORS TABLE NOW
 	//
 	p.safePrintf ( "<center>"
+		       "<br>"
+		       "<a name=qops>"
+		       "<div style=padding-left:10%%;>"
+		       "<hr></div><br>\n"
+		       "</a>"
+
+
 		       "<table style=max-width:80%%; %s>"
 		       "<tr class=hdrow><td colspan=2>"
 		       "<center><b>Query Operators</b></td></tr>"
