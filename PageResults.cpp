@@ -2992,7 +2992,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// if we have a thumbnail show it next to the search result,
 	// base64 encoded
-	if ( //si->m_format == FORMAT_HTML &&
+	if ( (si->m_format == FORMAT_HTML || si->m_format == FORMAT_XML ) &&
 	     //! mr->ptr_imgUrl &&
 	     mr->ptr_imgData ) {
 		ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
@@ -3628,7 +3628,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// unhide the divs on click
 	long placeHolder = -1;
-	long placeHolderLen;
+	long placeHolderLen = 0;
 	if ( si->m_format == FORMAT_HTML ) {
 		// place holder for backlink table link
 		placeHolder = sb->length();
@@ -4203,6 +4203,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf ("\t</result>\n\n");
 		return true;
 	}
+
+	if ( si->m_format != FORMAT_HTML ) return true;
 
 	char *cc = getCountryCode ( mr->m_country );
 	if ( mr->m_country == 0 ) cc = "Unknown";

@@ -2535,9 +2535,11 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 	}
 
 	// need this for searchInput which takes default from "cr"
-	CollectionRec *cr = g_collectiondb.getRec ( r , true );
+	//CollectionRec *cr = g_collectiondb.getRec ( r , true );
 
-	setToDefault ( THIS , objType , cr );
+	// no SearchInput.cpp does this and then overrides if xml feed
+	// to set m_docsToScanForTopics
+	//setToDefault ( THIS , objType , cr );
 
 	// loop through cgi parms
 	for ( long i = 0 ; i < r->getNumFields() ; i++ ) {
@@ -5804,7 +5806,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "dr"; // dedupResultsByDefault";
 	m->m_off   = (char *)&si.m_doDupContentRemoval - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_group = 1;
 	m->m_cgi   = "dr";
 	m->m_flags = PF_API;
@@ -5816,11 +5818,12 @@ void Parms::init ( ) {
 	m->m_desc  = "If document summary is this percent similar "
 		"to a document summary above it, then remove it from the "
 		"search results. 100 means only to remove if exactly the "
-		"same. 0 means no summary deduping.";
+		"same. 0 means no summary deduping. You must also supply "
+		"dr=1 for this to work.";
 	m->m_cgi   = "pss";
 	m->m_off   = (char *)&si.m_percentSimilarSummary - y;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "90";
+	m->m_def   = "0"; //90
 	m->m_group = 0;
 	m->m_smin  = 0;
 	m->m_smax  = 100;
