@@ -18050,6 +18050,21 @@ void Parms::init ( ) {
 	/////
 
 
+	// most pages that are status pages take a "format"
+	m->m_title = "format of the response";
+	m->m_desc  = "Can be \"xml\" or \"json\".";
+	m->m_def   = "xml";
+	m->m_off   = (char *)&gr.m_formatStr - (char *)&gr;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_page  = PAGE_HOSTS;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_cgi   = "format";
+	m++;
+
+
+
+
+
 	// END PARMS PARM END PARMS END
 
 
