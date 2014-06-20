@@ -1572,7 +1572,9 @@ int main2 ( int argc , char *argv[] ) {
 			log("db: HttpServer init failed. Another gb "
 			    "already running? If not, try editing "
 			    "./hosts.conf to "
-			    "change the port from %li to something bigger"
+			    "change the port from %li to something bigger. "
+			    "Or stop gb by running 'gb stop' or by "
+			    "clicking 'save & exit' in the master controls."
 			    , (long)httpPort ); 
 			// this is dangerous!!! do not do the shutdown thing
 			return 1;
@@ -3827,12 +3829,12 @@ long checkDirPerms ( char *dir ) {
 	File f;
 	f.set ( dir , "tmpfile" );
 	if ( ! f.open ( O_RDWR | O_CREAT | O_TRUNC ) ) {
-		log("disk: Unable to create %s/tmpfile. Need write permission "
+		log("disk: Unable to create %stmpfile. Need write permission "
 		    "in this directory.",dir);
 		return -1;
 	}
 	if ( ! f.unlink() ) {
-		log("disk: Unable to delete %s/tmpfile. Need write permission "
+		log("disk: Unable to delete %stmpfile. Need write permission "
 		    "in this directory.",dir);
 		return -1;
 	}
@@ -4649,7 +4651,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			g_process.getFilesToCopy ( srcDir , &fileListBuf );
 
 			// include this one as well for install
-			fileListBuf.safePrintf(" %shosts.conf",srcDir);
+			//fileListBuf.safePrintf(" %shosts.conf",srcDir);
 			// the dmoz data dir if there
 			fileListBuf.safePrintf(" %scat",srcDir);
 
@@ -17160,8 +17162,10 @@ char *getcwd2 ( char *arg2 ) {
 		g_errno = EBADENGINEER;
 		return NULL;
 	}
-	// hack off the "gb"
-	*a = '\0';
+	// hack off the "gb" (seems to hack off the "/gb")
+	//*a = '\0';
+	// don't hack off the "/gb" just the "gb"
+	arg[alen] = '\0';
 
 	// get cwd which is only relevant to us if arg starts 
 	// with . at this point
@@ -17223,11 +17227,16 @@ char *getcwd2 ( char *arg2 ) {
 	for ( ; binaryCmd[-1] && binaryCmd[-1] != '/' ; binaryCmd-- );
 	File fff;
 	fff.set (s_cwdBuf,binaryCmd);
-	// if user just enters 'gb' in cmdline and it is not in cwd
-	// assume it is in the usual spot
-	if ( ! fff.doesExist() ) return "/var/gigablast/data0/";
 
-	return s_cwdBuf;
+	// assume it is in the usual spot
+	if ( fff.doesExist() ) return s_cwdBuf;
+
+	// try just "gb" as binary
+	fff.set(s_cwdBuf,"gb");
+	if ( fff.doesExist() ) return s_cwdBuf;
+
+	// if nothing is found resort to the default location
+	return "/var/gigablast/data0/";
 }
 
 int copyFiles ( char *dstDir ) {

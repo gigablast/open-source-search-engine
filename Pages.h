@@ -92,6 +92,9 @@ bool sendPageStatsdb   ( TcpSocket *s , HttpRequest *r );
 #define M_POST  0x01
 #define M_MULTI 0x02
 
+// values for WebPage::m_flags
+#define PG_NOAPI 0x01
+
 // . description of a dynamic page
 // . we have a static array of these in Pages.cpp
 class WebPage {
@@ -107,6 +110,9 @@ class WebPage {
 	char *m_desc; // page description
 	bool (* m_function)(TcpSocket *s , HttpRequest *r);
 	long  m_niceness;
+	char *m_xmlOutputDesc;
+	char *m_jsonOutputDesc;
+	char  m_pgflags;
 };
 
 

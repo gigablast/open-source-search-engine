@@ -220,6 +220,9 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		long dr = 1;
 		// do not dedup bulk jobs
 		if ( cr->m_isCustomCrawl == 2 ) dr = 0;
+		// do not dedup for crawls either it is too confusing!!!!
+		// ppl wonder where the results are!
+		dr = 0;
 		sb2.safePrintf("GET /search.csv?icc=1&format=csv&sc=0&"
 			       // dedup. since stream=1 and pss=0 below
 			       // this will dedup on page content hash only
@@ -254,12 +257,15 @@ bool sendBackDump ( TcpSocket *sock, HttpRequest *hr ) {
 		long dr = 1;
 		// do not dedup bulk jobs
 		if ( cr->m_isCustomCrawl == 2 ) dr = 0;
+		// do not dedup for crawls either it is too confusing!!!!
+		// ppl wonder where the results are!
+		dr = 0;
 		sb2.safePrintf("GET /search.csv?icc=1&format=json&sc=0&"
 			       // dedup. since stream=1 and pss=0 below
 			       // this will dedup on page content hash only
 			       // which is super fast.
 			       "dr=%li&"
-			      "c=%s&n=1000000&"
+			       "c=%s&n=1000000&"
 			       // we can stream this because unlink csv it
 			       // has no header row that needs to be 
 			       // computed from all results.
@@ -3245,8 +3251,8 @@ bool printCrawlBotPage2 ( TcpSocket *socket ,
 			      "<a href=/search?icc=1&format=json&"
 			      // disable site clustering
 			      "sc=0&"
-			      // dodupcontentremoval:
-			      "dr=1&"
+			      // doNOTdupcontentremoval:
+			      "dr=0&"
 			      "c=%s&n=10000000&rand=%llu&scores=0&id=1&"
 			      "stream=1&" // stream results back as we get them
 			      "q="

@@ -305,6 +305,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		m_doQueryHighlighting     = 0;
 		m_spellCheck              = 0;
 		m_getDocIdScoringInfo = false;
+		// turn gigabits off by default if not html
+		m_docsToScanForTopics = 0;
 	}
 	// if they have a list of sites...
 	else if ( m_sites && m_sites[0] ) {

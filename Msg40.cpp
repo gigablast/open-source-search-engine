@@ -5031,12 +5031,14 @@ static int factCmp ( const void *a, const void *b ) {
 	return 0;
 }
 
+// . aka NUGGABITS
 // . now make the fast facts from the gigabits and the samples. 
 // . these are sentences containing the query and a gigabit.
+// . sets m_factBuf
 bool Msg40::computeFastFacts ( ) {
 
 	// skip for now
-	return true;
+	//return true;
 
 	bool debugGigabits = m_si->m_debugGigabits;
 
@@ -5089,7 +5091,7 @@ bool Msg40::computeFastFacts ( ) {
 
 
 	//
-	// store Facts (sentences) into this safebuf (nuggets)
+	// store Facts (sentences) into this safebuf (nuggets)(nuggabits)
 	//
 	char ftmp[100000];
 	SafeBuf factBuf(ftmp,100000);
