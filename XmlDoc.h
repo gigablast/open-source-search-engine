@@ -280,8 +280,12 @@ class XmlDoc {
 	long      m_siteNumInlinksUniqueIp; // m_siteNumInlinksFresh
 	long      m_siteNumInlinksUniqueCBlock; // m_sitePop;
 	time_t    m_spideredTime;
-	time_t    m_minPubDate;
-	time_t    m_maxPubDate;
+	// just don't throw away any relevant SpiderRequests and we have
+	// the data that m_minPubDate and m_maxPubDate provided
+	//time_t    m_minPubDate;
+	//time_t    m_maxPubDate;
+	time_t    m_indexedTime; // slightly > m_spideredTime
+	uint32_t  m_reserved32;
 	time_t    m_pubDate;    // aka m_datedbDate
 	//time_t  m_nextSpiderTime;
 	time_t    m_firstIndexedDate;
@@ -472,6 +476,10 @@ class XmlDoc {
 
 	// we now call this right away rather than at download time!
 	long getSpideredTime();
+
+	// time right before adding the termlists to the index, etc.
+	// whereas spider time is the download time
+	long getIndexedTime();
 
 	// another entry point, like set3() kinda
 	bool loadFromOldTitleRec ();
@@ -775,7 +783,7 @@ class XmlDoc {
 	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
 	bool hashUrl ( class HashTableX *table , bool hashNonFieldTerms=true) ;
-	bool hashDateNumbers ( class HashTableX *tt ) ;
+	bool hashDateNumbers ( class HashTableX *tt , bool hashAll ) ;
 	bool hashSections ( class HashTableX *table ) ;
 	bool hashIncomingLinkText ( class HashTableX *table            ,
 				    bool       hashAnomalies    ,
@@ -1206,6 +1214,7 @@ class XmlDoc {
 	bool m_firstIpValid;
 	bool m_spideredTimeValid;
 	//bool m_nextSpiderTimeValid;
+	bool m_indexedTimeValid;
 	bool m_firstIndexedValid;
 	bool m_isInIndexValid;
 	bool m_wasInIndexValid;

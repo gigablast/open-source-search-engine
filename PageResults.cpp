@@ -718,6 +718,219 @@ void gotState ( void *state ){
 }
 
 
+// print all sentences containing this gigabit (fast facts) (nuggabits)
+static bool printGigabitContainingSentences ( State0 *st,
+					      SafeBuf *sb , 
+					      Msg40 *msg40 , 
+					      Gigabit *gi , 
+					      SearchInput *si ,
+					      Query *gigabitQuery ) {
+
+	static long s_gigabitCount = 0;
+
+	sb->safePrintf("<nobr><b>");
+	//"<img src=http://search.yippy.com/"
+	//"images/new/button-closed.gif><b>");
+
+	HttpRequest *hr = &st->m_hr;
+
+	// make a new query
+	sb->safePrintf("<a href=\"/search?gigabits=1&q=");
+	sb->urlEncode(gi->m_term,gi->m_termLen);
+	sb->safeMemcpy("+|+",3);
+	char *q = hr->getString("q",NULL,"");
+	sb->urlEncode(q);
+	sb->safePrintf("\">");
+	sb->safeMemcpy(gi->m_term,gi->m_termLen);
+	sb->safePrintf("</a></b>");
+	sb->safePrintf(" <font color=gray size=-1>");
+	long numOff = sb->m_length;
+	sb->safePrintf("      ");//,gi->m_numPages);
+	sb->safePrintf("</font>");
+	sb->safePrintf("</b>");
+	if ( si->m_isAdmin ) 
+		sb->safePrintf("[%.0f]{%li}",
+			      gi->m_gbscore,
+			      gi->m_minPop);
+
+	long revert = sb->length();
+
+	sb->safePrintf("<font color=blue style=align:right;>"
+		      "<a onclick=ccc(%li);>"
+		      , s_gigabitCount 
+		      );
+	long spaceOutOff = sb->length();
+	sb->safePrintf( "%c%c%c",
+		      0xe2,
+		      0x87,
+		      0x93);
+	sb->safePrintf(//"[more]"
+		      "</a></font>");
+	
+
+	sb->safePrintf("</nobr>"); // <br>
+
+	// get facts
+	long numNuggets = 0;
+	long numFacts = msg40->m_factBuf.length() / sizeof(Fact);
+	Fact *facts = (Fact *)msg40->m_factBuf.getBufStart();
+	bool first = true;
+	bool second = false;
+	bool printedSecond = false;
+	//long long lastDocId = -1LL;
+	long saveOffset = 0;
+	for ( long i = 0 ; i < numFacts ; i++ ) {
+		Fact *fi = &facts[i];
+
+		// if printed for a higher scoring gigabit, skip
+		if ( fi->m_printed ) continue;
+
+		// check gigabit match
+		long k; for ( k = 0 ; k < fi->m_numGigabits ; k++ ) 
+			if ( fi->m_gigabitPtrs[k] == gi ) break;
+		// skip this fact/sentence if does not contain gigabit
+		if ( k >= fi->m_numGigabits ) continue;
+
+		// do not print if no period at end
+		char *s = fi->m_fact;
+		char *e = s + fi->m_factLen;
+		if ( e[-1] != '*' ) continue;
+		e--;
+
+	again:
+
+		// first time, print in the single fact div
+		if ( first ) {
+			sb->safePrintf("<div "
+				      "style=\"border:1px lightgray solid;\" "
+				      "id=fd%li>",s_gigabitCount);
+		}
+
+		if ( second ) {
+			sb->safePrintf("<div style=\"max-height:300px;"
+				      "display:none;"
+				      "overflow-x:hidden;"
+				      "overflow-y:auto;"//scroll;"
+				      "border:1px lightgray solid;\" "
+				      "id=sd%li>",s_gigabitCount);
+			printedSecond = true;
+		}
+
+		Msg20Reply *reply = fi->m_reply;
+
+		// ok, print it out
+		if ( ! first && ! second ) {
+			//if ( reply->m_docId != lastDocId ) 
+			sb->safePrintf("<br><br>\n");
+			//else {
+			//	sb->setLength ( saveOffset );
+			//	sb->safePrintf("<br><br>\n");
+			//}
+		}
+		else {
+			sb->safePrintf("<br>");
+		}
+
+
+		numNuggets++;
+
+		// print the fast fact (sentence)
+		//sb->safeMemcpy ( s , e-s );
+
+		// let's highlight with gigabits and query terms
+		SafeBuf tmpBuf;
+		Highlight h;
+		h.set ( &tmpBuf , // print it out here
+			s , // content
+			e - s , // len
+			si->m_queryLangId , // from m_defaultSortLang
+			gigabitQuery , // the gigabit "query" in quotes
+			true , // stemming? -- unused
+			false , // use anchors?
+			NULL , // baseurl
+			"<u>", // front tag
+			"</u>", // back tag
+			0 , // fieldCode
+			0  ); // niceness
+		// now highlight the original query as well but in black bold
+		h.set ( sb , // print it out here
+			tmpBuf.getBufStart() , // content
+			tmpBuf.length() , // len
+			si->m_queryLangId , // from m_defaultSortLang
+			&si->m_q , // the regular query
+			true , // stemming? -- unused
+			false , // use anchors?
+			NULL , // baseurl
+			"<b>" , // front tag
+			"</b>", // back tag
+			0 , // fieldCode
+			0  ); // niceness
+		
+
+		fi->m_printed = 1;
+		saveOffset = sb->length();
+		sb->safePrintf(" <a href=/get?cnsp=0&"
+			      "strip=1&d=%lli>",reply->m_docId);
+		long dlen; char *dom = getDomFast(reply->ptr_ubuf,&dlen);
+		sb->safeMemcpy(dom,dlen);
+		sb->safePrintf("</a>\n");
+		//lastDocId = reply->m_docId;
+
+		if ( first ) {
+			sb->safePrintf("</div>");
+		}
+
+		if ( second ) {
+			second = false;
+		}
+
+		if ( first ) {
+			first = false;
+			second = true;
+			// print first gigabit all over again but in 2nd div
+			goto again;
+		}
+	}
+
+	// we counted the first one twice since we had to throw it into
+	// the hidden div too!
+	if ( numNuggets > 1 ) numNuggets--;
+
+	// do not print the double down arrow if no nuggets printed
+	if ( numNuggets <= 0 ) {
+		sb->m_length = revert;
+		sb->safePrintf("</nobr>");
+	}
+	// just remove down arrow if only 1...
+	else if ( numNuggets == 1 ) {
+		char *dst = sb->getBufStart()+spaceOutOff;
+		dst[0] = ' ';
+		dst[1] = ' ';
+		dst[2] = ' ';
+	}
+	// store the # of nuggets in ()'s like (10 )
+	else {
+		char tmp[10];
+		sprintf(tmp,"(%li)",numNuggets);
+		char *src = tmp;
+		// starting storing digits after "( "
+		char *dst = sb->getBufStart()+numOff;
+		long srcLen = gbstrlen(tmp);
+		if ( srcLen > 5 ) srcLen = 5;
+		for ( long k = 0 ; k < srcLen ; k++ ) 
+			dst[k] = src[k];
+	}
+
+	s_gigabitCount++;
+
+	if ( printedSecond ) {
+		sb->safePrintf("</div>");
+	}
+
+	return true;
+}
+
+/*
 // print all sentences containing this gigabit
 static bool printGigabit ( State0 *st,
 			   SafeBuf *sb , 
@@ -757,6 +970,7 @@ static bool printGigabit ( State0 *st,
 
 	return true;
 }
+*/
 
 class StateAU {
 public:
@@ -1946,9 +2160,49 @@ bool printSearchResultsHeader ( State0 *st ) {
 	Gigabit *gigabits = (Gigabit *)gbuf->getBufStart();
 	//long numCols = 5;
 	//long perRow = numGigabits / numCols;
+
+	if ( numGigabits && si->m_format == FORMAT_HTML )
+		// gigabit unhide function
+		sb->safePrintf (
+				"<script>"
+				"function ccc ( gn ) {\n"
+				"var e = document.getElementById('fd'+gn);\n"
+				"var f = document.getElementById('sd'+gn);\n"
+				"if ( e.style.display == 'none' ){\n"
+				"e.style.display = '';\n"
+				"f.style.display = 'none';\n"
+				"}\n"
+				"else {\n"
+				"e.style.display = 'none';\n"
+				"f.style.display = '';\n"
+				"}\n"
+				"}\n"
+				"</script>\n"
+			       );
+	
 	if ( numGigabits && si->m_format == FORMAT_HTML )
 		sb->safePrintf("<table cellspacing=7 bgcolor=lightgray>"
 			      "<tr><td width=200px; valign=top>");
+
+	Query gigabitQuery;
+	SafeBuf ttt;
+	// limit it to 40 gigabits for now
+	for ( long i = 0 ; i < numGigabits && i < 40 ; i++ ) {
+		Gigabit *gi = &gigabits[i];
+		ttt.pushChar('\"');
+		ttt.safeMemcpy(gi->m_term,gi->m_termLen);
+		ttt.pushChar('\"');
+		ttt.pushChar(' ');
+	}
+	if ( numGigabits > 0 ) 
+		gigabitQuery.set2 ( ttt.getBufStart() ,
+				    si->m_queryLangId ,
+				    true , // queryexpansion?
+				    true );  // usestopwords?
+
+
+
+
 	for ( long i = 0 ; i < numGigabits ; i++ ) {
 		if ( i > 0 && si->m_format == FORMAT_HTML ) 
 			sb->safePrintf("<hr>");
@@ -1956,8 +2210,11 @@ bool printSearchResultsHeader ( State0 *st ) {
 		//	sb->safePrintf("</td><td valign=top>");
 		// print all sentences containing this gigabit
 		Gigabit *gi = &gigabits[i];
-		printGigabit ( st,sb , msg40 , gi , si );
-		sb->safePrintf("<br>");
+		//printGigabit ( st,sb , msg40 , gi , si );
+		//sb->safePrintf("<br>");
+		printGigabitContainingSentences(st,sb,msg40,gi,si,
+						&gigabitQuery);
+		sb->safePrintf("<br><br>");
 	}
 	if ( numGigabits && si->m_format == FORMAT_HTML )
 		sb->safePrintf("</td></tr></table>");
@@ -2796,18 +3053,28 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf ("<a href=%s><img src=%s></a>",
 				   url,mr->ptr_imgUrl);
 
-	// if we have a thumbnail show it next to the search result
-	if ( si->m_format == FORMAT_HTML &&
+	// if we have a thumbnail show it next to the search result,
+	// base64 encoded
+	if ( (si->m_format == FORMAT_HTML || si->m_format == FORMAT_XML ) &&
 	     //! mr->ptr_imgUrl &&
 	     mr->ptr_imgData ) {
 		ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 		ThumbnailInfo *ti = ta->getThumbnailInfo(0);
+		if ( si->m_format == FORMAT_XML )
+			sb->safePrintf("\t\t");
 		ti->printThumbnailInHtml ( sb , 
 					   100 ,  // max width
 					   100 ,  // max height
 					   true ,  // add <a href>
 					   NULL ,
-					   " style=\"margin:10px;\" ");
+					   " style=\"margin:10px;\" ",
+					   si->m_format );
+		if ( si->m_format == FORMAT_XML ) {
+			sb->safePrintf("\t\t<imageHeight>%li</imageHeight>\n",
+				       ti->m_dx);
+			sb->safePrintf("\t\t<imageWidth>%li</imageWidth>\n",
+				       ti->m_dy);
+		}
 	}
 
 	// print image for widget
@@ -3424,7 +3691,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// unhide the divs on click
 	long placeHolder = -1;
-	long placeHolderLen;
+	long placeHolderLen = 0;
 	if ( si->m_format == FORMAT_HTML ) {
 		// place holder for backlink table link
 		placeHolder = sb->length();
@@ -3999,6 +4266,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf ("\t</result>\n\n");
 		return true;
 	}
+
+	if ( si->m_format != FORMAT_HTML ) return true;
 
 	char *cc = getCountryCode ( mr->m_country );
 	if ( mr->m_country == 0 ) cc = "Unknown";

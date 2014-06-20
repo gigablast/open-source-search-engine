@@ -28,7 +28,10 @@ DiskPageCache::DiskPageCache () {
 	// sometimes db may pass an unitialized DiskPageCache to a BigFile
 	// so make sure when BigFile::close calls DiskPageCache::rmVfd() our
 	// m_memOff vector is all NULLed out, otherwise it will core
-	memset ( m_memOff , 0 , 4 * MAX_NUM_VFDS2 );
+	//memset ( m_memOff , 0 , sizeof(long *) * MAX_NUM_VFDS2 );
+	for ( long i = 0 ; i < MAX_NUM_VFDS2 ; i++ )
+		m_memOff[i] = NULL;
+
 	m_availMemOff = NULL;
 	//m_isOverriden = false;
 	reset();

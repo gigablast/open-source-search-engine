@@ -68,8 +68,10 @@ class Msg39Request {
 		m_getDocIdScoringInfo = 1;
 
 		// -1 means to not to docid range restriction
-		m_minDocId = -1;
-		m_maxDocId = -1;
+		m_minDocId = -1LL;
+		m_maxDocId = -1LL;
+
+		m_numDocIdSplits = 1;
 
 		// for widget, to only get results to append to last docid
 		m_maxSerpScore = 0.0;
@@ -91,6 +93,7 @@ class Msg39Request {
 	char    m_niceness;
 	long    m_maxAge;
 	long    m_maxQueryTerms;
+	long    m_numDocIdSplits;
 	//long    m_compoundListMaxSize;
 	char    m_boolFlag;
 	uint8_t m_language;
@@ -236,7 +239,7 @@ class Msg39 {
 
 	char       m_debug;
 
-	long m_numDocIdSplits;
+	//long m_numDocIdSplits;
 	bool m_allocedTree;
 	long long m_ddd;
 	long long m_dddEnd;

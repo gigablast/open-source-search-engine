@@ -165,12 +165,12 @@ bool Conf::isConnectIp ( unsigned long ip ) {
 
 // . set all member vars to their default values
 void Conf::reset ( ) {
-	g_parms.setToDefault ( (char *)this , OBJ_CONF );
+	g_parms.setToDefault ( (char *)this , OBJ_CONF ,NULL);
 	m_save = true;
 }
 
 bool Conf::init ( char *dir ) { // , long hostId ) {
-	g_parms.setToDefault ( (char *)this , OBJ_CONF );
+	g_parms.setToDefault ( (char *)this , OBJ_CONF ,NULL);
 	m_save = true;
 	char fname[1024];
 	if ( dir ) sprintf ( fname , "%slocalgb.conf", dir );
@@ -182,11 +182,29 @@ bool Conf::init ( char *dir ) { // , long hostId ) {
 		m_isLocal = false;
 		if ( dir ) sprintf ( fname , "%sgb.conf", dir );
 		else       sprintf ( fname , "./gb.conf" );
+		// try regular gb.conf then
+		f.set ( fname );
 	}
 
 	// make sure g_mem.maxMem is big enough temporarily
 	if ( g_mem.m_maxMem < 10000000 ) g_mem.m_maxMem = 10000000;
 	bool status = g_parms.setFromFile ( this , fname , NULL , OBJ_CONF );
+
+	// if not there, create it!
+	if ( ! status ) {
+		log("gb: Creating %s from defaults.",fname);
+		g_errno = 0;
+		// set to defaults
+		g_conf.reset();
+		// and save it
+		//log("gb: Saving %s",fname);
+		m_save = true;
+		save();
+		// clear errors
+		g_errno = 0;
+		status = true;
+	}
+		
 
 	// ignore if yippy
 	if ( g_isYippy ) {
@@ -415,7 +433,7 @@ bool Conf::save ( ) {
 		if(access(fname2, F_OK) == 0) unlink(fname2);
 		if(link(fname, fname2) == 0) {
 			unlink(fname);
-			log(LOG_INFO,"admin: Saved %s.",fname);
+			log(LOG_INFO,"admin: Saved %s.",fname2);
 		} else {
 			log(LOG_INFO,"admin: Unable to save %s:%s",
 					fname, strerror(errno));

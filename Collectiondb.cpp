@@ -240,7 +240,7 @@ bool Collectiondb::addExistingColl ( char *coll, collnum_t collnum ) {
 	//cr->m_collnum = oldCollnum;
 
 	// get the default.conf from working dir if there
-	g_parms.setToDefault( (char *)cr , OBJ_COLL );
+	g_parms.setToDefault( (char *)cr , OBJ_COLL , cr );
 
 	strcpy ( cr->m_coll , coll );
 	cr->m_collLen = gbstrlen ( coll );
@@ -387,7 +387,8 @@ bool Collectiondb::addNewColl ( char *coll ,
 
 	//g_parms.setToDefault( (char *)cr );
 	// get the default.conf from working dir if there
-	g_parms.setToDefault( (char *)cr , OBJ_COLL );
+	//g_parms.setToDefault( (char *)cr , OBJ_COLL );
+	g_parms.setToDefault( (char *)cr , OBJ_COLL , cr );
 
 	/*
 	// the default conf file
@@ -1661,7 +1662,7 @@ bool CollectionRec::load ( char *coll , long i ) {
 	// also reset some counts not included in parms list
 	reset();
 	// before we load, set to defaults in case some are not in xml file
-	g_parms.setToDefault ( (char *)this , OBJ_COLL );
+	g_parms.setToDefault ( (char *)this , OBJ_COLL , this );
 	// get the filename with that id
 	File f;
 	char tmp2[1024];

@@ -37,7 +37,7 @@ Msg39::Msg39 () {
 void Msg39::reset() {
 	if ( m_inUse ) { char *xx=NULL;*xx=0; }
 	m_allocedTree = false;
-	m_numDocIdSplits = 1;
+	//m_numDocIdSplits = 1;
 	m_tmpq.reset();
 	m_numTotalHits = 0;
 	m_gotClusterRecs = 0;
@@ -241,29 +241,6 @@ void Msg39::getDocIds2 ( Msg39Request *req ) {
 
 	QUICKPOLL ( m_r->m_niceness );
 
-	// assume not doing special docid splitting
-	m_numDocIdSplits = 1;
-
-	// . do not do splits if caller is already specifying a docid range
-	//   like for gbdocid: queries i guess.
-	// . make sure m_msg2 is non-NULL, because if it is NULL we are
-	//   evaluating a query for a single docid for seo tools
-	if ( m_r->m_minDocId == -1 ) { // && m_msg2 ) {
-		long nt = m_tmpq.getNumTerms();
-		m_numDocIdSplits = nt / 2;
-		if ( m_numDocIdSplits == 0 ) m_numDocIdSplits = 1;
-	}
-
-	// for testing
-	//m_numDocIdSplits = 3;
-
-	//if ( ! g_conf.m_doDocIdRangeSplitting )
-	//	m_numDocIdSplits = 1;
-
-	// limit to 10
-	if ( m_numDocIdSplits > 10 ) 
-		m_numDocIdSplits = 10;
-
 	// . if caller already specified a docid range, then be loyal to that!
 	// . or if we do not have enough query terms to warrant splitting
 	//if ( m_numDocIdSplits == 1 ) {
@@ -351,7 +328,7 @@ bool Msg39::controlLoop ( ) {
 		// the starting docid...
 		long long d0 = m_ddd;
 		// shortcut
-		long long delta = MAX_DOCID / (long long)m_numDocIdSplits;
+		long long delta = MAX_DOCID / (long long)m_r->m_numDocIdSplits;
 		// advance to point to the exclusive endpoint
 		m_ddd += delta;
 		// ensure this is exclusive of ddd since it will be
