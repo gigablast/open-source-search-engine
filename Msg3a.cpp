@@ -983,6 +983,8 @@ bool Msg3a::mergeLists ( ) {
 		// here.
 		char *p = (char *)mr->ptr_facetHashList;
 		char *last = p + mr->size_facetHashList;
+		// skip if empty
+		if ( ! p ) continue;
 		// come back up here for another gbfacet:xxx term
 	ploop:
 		// first is the termid
