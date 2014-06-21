@@ -1920,10 +1920,16 @@ bool Parms::printParm ( SafeBuf* sb,
 		if ( t == TYPE_STRINGBOX ) {
 			sb->safePrintf ( "<td colspan=2><center>"
 				  "<b>%s</b><br><font size=-1>",m->m_title );
-			if ( pd ) 
+			if ( pd ) {
 				status &= sb->htmlEncode (m->m_desc,
 							  gbstrlen(m->m_desc),
 							  false);
+				// is it required?
+				if ( m->m_flags & PF_REQUIRED )
+					sb->safePrintf(" <b><font color=green>"
+						       "REQUIRED</font></b>");
+			}
+
 			sb->safePrintf ( "</font><br>\n" );
 		}
 		else {
@@ -1938,11 +1944,16 @@ bool Parms::printParm ( SafeBuf* sb,
 					 3*100/nc/2/4, m->m_title );
 
 			// the "site list" parm has html in description
-			if ( pd ) 
+			if ( pd ) {
 				status &= sb->safeStrcpy(m->m_desc);
 				//status &= sb->htmlEncode (m->m_desc,
 				//			  gbstrlen(m->m_desc),
 				//			  false);
+				// is it required?
+				if ( m->m_flags & PF_REQUIRED )
+					sb->safePrintf(" <b><font color=green>"
+						       "REQUIRED</font></b>");
+			}
 
 			// and cgi parm if it exists
 			//if ( m->m_def && m->m_scgi )
@@ -13558,7 +13569,9 @@ void Parms::init ( ) {
 		"Injected urls will have a "
 		"<a href=/admin/filters#hopcount>hopcount</a> of 0. "
 		"The injection api is described on the "
-		"<a href=/admin/api>api</a> page.";
+		"<a href=/admin/api>api</a> page. "
+		"Make up a fake url if you are injecting content that "
+		"does not have one.";
 	m->m_cgi   = "url";
 	//m->m_cgi2  = "u";
 	//m->m_cgi3  = "seed"; // pagerawlbot
@@ -13636,7 +13649,8 @@ void Parms::init ( ) {
 	m->m_cgi   = "spiderlinks";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHECKBOX;
-	m->m_def   = "1";
+	// leave off because could start spidering whole web unintentionally
+	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_spiderLinks - (char *)&gr;
@@ -13766,9 +13780,10 @@ void Parms::init ( ) {
 
 	m->m_title = "content type";
 	m->m_desc  = "If you supply content in the text box below without "
-		"an HTTP mime, then you need to enter the content type. "
-		"Possible values: text/html text/plain text/xml "
-		"application/json";
+		"an HTTP mime header, "
+		"then you need to enter the content type. "
+		"Possible values: <b>text/html text/plain text/xml "
+		"application/json</b>";
 	m->m_cgi   = "contenttype";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR; //text/html application/json application/xml
@@ -13780,7 +13795,8 @@ void Parms::init ( ) {
 
 	m->m_title = "content charset";
 	m->m_desc  = "A number representing the charset of the content "
-		"if provided below and no mime is given. Defaults to utf8 "
+		"if provided below and no HTTP mime header "
+		"is given. Defaults to utf8 "
 		"which is 106. "
 		"See iana_charset.h for the numeric values.";
 	m->m_cgi   = "charset";
@@ -16337,7 +16353,11 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_indexSpiderReplies - x;
 	m->m_type  = TYPE_BOOL;
 	// default off for now until we fix it better. 5/26/14 mdw
-	m->m_def   = "0";
+	// turn back on 6/21 now that we do not index plain text terms
+	// and we add gbdocspidertime and gbdocindextime terms so you
+	// can use those to sort regular docs and not have spider reply
+	// status docs in the serps.
+	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m++;
