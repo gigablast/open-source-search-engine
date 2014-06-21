@@ -3240,3 +3240,8 @@ void testRegex ( ) {
 	exit(0);
 }
 
+long long CollectionRec::getNumDocsIndexed() {
+	RdbBase *base = m_bases[RDB_TITLEDB];
+	if ( ! base ) return 0LL;
+	return base->getNumGlobalRecs();
+}

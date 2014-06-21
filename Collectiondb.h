@@ -330,6 +330,8 @@ class CollectionRec {
 	// is this ip from a spam assassin?
 	bool isAssassin ( long ip );
 
+	long long getNumDocsIndexed();
+
 	// . can this ip perform a search or add url on this collection?
 	// . mamma.com provides encapsulated ips of their queriers so we
 	//   can ban them by ip
@@ -813,6 +815,8 @@ class CollectionRec {
 	//long  m_htmlHeadLen;
 	//long  m_htmlTailLen;
 	//long  m_htmlRootLen;
+
+	SafeBuf m_htmlRoot;
 
 	// . some users allowed to access this collection parameters
 	// . TODO: have permission bits for various levels of access

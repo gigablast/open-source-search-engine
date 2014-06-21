@@ -2979,10 +2979,11 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		if ( m->m_type == TYPE_CMD     ) continue;
 		if (THIS == (char *)&g_conf && m->m_obj != OBJ_CONF ) continue;
 		if (THIS != (char *)&g_conf && m->m_obj == OBJ_CONF ) continue;
-		if ( m->m_obj == OBJ_CONF ) {
-			CollectionRec *cr = (CollectionRec *)THIS;
-			if ( cr->m_bases[1] ) { char *xx=NULL;*xx=0; }
-		}
+		// what is this?
+		//if ( m->m_obj == OBJ_CONF ) {
+		//	CollectionRec *cr = (CollectionRec *)THIS;
+		//	if ( cr->m_bases[1] ) { char *xx=NULL;*xx=0; }
+		//}
 		// sanity check, make sure it does not overflow
 		if ( m->m_obj == OBJ_COLL &&
 		     m->m_off > (long)sizeof(CollectionRec)){
@@ -14830,117 +14831,83 @@ void Parms::init ( ) {
 	m->m_sparm = 1;
 	m->m_soff  = (char *)&si.m_htmlTail - y;
 	m++;
+	*/
 
 	m->m_title = "home page";
-	m->m_desc  = "Html to display for the home page. Use %N for total "
-		"number of pages indexed. Use %n for number of pages indexed "
-		"for the current collection. "
-		"Use %H so Gigablast knows where to insert "
-		"the hidden form input tags, which must be there. Use %T to "
-		"display the standard footer and %q to display the query in "
-		"a text box. Use %t to display the directory TOP.";
+	static SafeBuf s_tmpBuf;
+	s_tmpBuf.safePrintf (
+			  "Html to display for the home page. "
+			  "Leave empty for default home page. "
+			  "Use %%N for total "
+			  "number of pages indexed. Use %%n for number of "
+			  "pages indexed "
+			  "for the current collection. "
+			  //"Use %%H so Gigablast knows where to insert "
+			  //"the hidden form input tags, which must be there. "
+			  "Use %%c to insert the current collection name. "
+			  //"Use %T to display the standard footer. "
+			  "Use %%q to display the query in "
+			  "a text box. "
+			  "Use %%t to display the directory TOP. Example "
+			  "to paste into textbox: "
+			  "<br><i>"
+			  );
+	s_tmpBuf.htmlEncode (
+			      "<html>"
+			      "<title>My Gigablast Search Engine</title>"
+			      "<script>\n"
+			      "<!--"
+			      "function x(){document.f.q.focus();}"
+			      "// -->"
+			      "\n</script>"
+			      "<body onload=\"x()\">"
+			      "<br><br>"
+			      "<center>"
+			      "<a href=/>"
+			      "<img border=0 width=500 height=122 "
+			      "src=http://www.gigablast.com/logo-med.jpg></a>"
+			      "<br><br>"
+			      "<b>My Search Engine</b>"
+			      "<br><br>"
+			      // "<br><br><br>"
+			      // "<b>web</b> "
+			      // "&nbsp;&nbsp;&nbsp;&nbsp; "
+			      // "<a href=\"/Top\">directory</a> "
+			      // "&nbsp;&nbsp;&nbsp;&nbsp; "
+			      // "<a href=/adv.html>advanced search</a> "
+			      // "&nbsp;&nbsp;&nbsp;&nbsp; "
+			      // "<a href=/addurl "
+			      // "title=\"Instantly add your url to "
+			      //"the index\">"
+			      // "add url</a>"
+			      // "<br><br>"
+			      "<form method=get action=/search name=f>"
+			      "<input type=hidden name=c value=\"%c\">"
+			      "<input name=q type=text size=60 value=\"\">"
+			      "&nbsp;"
+			      "<input type=\"submit\" value=\"Search\">"
+			      "</form>"
+			      "<br>"
+			      "<center>"
+			      "Searching the <b>%c</b> collection of %n "
+			      "documents."
+			      "</center>"
+			      "<br>"
+			      "</body></html>")  ;
+	s_tmpBuf.safePrintf("</i>");
+	m->m_desc = s_tmpBuf.getBufStart();
+	m->m_xml  = "homePageHtml";
 	m->m_cgi   = "hp";
-	m->m_off   = (char *)cr.m_htmlRoot - x;
-	m->m_plen  = (char *)&cr.m_htmlRootLen - x; // length of string
-	m->m_type  = TYPE_STRINGBOX;
-	m->m_size  = MAX_HTML_LEN + 1;
-	m->m_def   = 
-		"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 "
-		"Transitional//EN\">\n"
-		"<html>\n"
-		"<head>\n"
-		"<title>Gigablast</title>\n"
-		"<meta http-equiv=\"Content-Type\" content=\"text/html; "
-		"charset=utf-8\">\n"
-		"<meta name=\"description\" content=\"A powerful, new "
-		"search engine that does real-time indexing.\">\n"
-		"<meta name=\"keywords\" content=\"search, search engine, "
-		"search engines, search the web, fresh index\">\n"
-		"<style type=\"text/css\">\n"
-		"<!--\n"
-		"body {\n"
-		"font-family: Arial, Helvetica, sans-serif;\n"
-		"background: #FFFFFF;\n"
-		"font-size: 16px;\n"
-		"color: #000000;\n"
-		"text-align: center;\n"
-		"margin: 20px 5px 20px;\n"
-		"}\n"
-		"a.search {\n"
-		"font-weight: bold;\n"
-		"color: #FFFFFF;\n"
-		"text-decoration: underline;\n"
-		"font-size: small;\n"
-		"}\n"
-		".redtop {\n"
-		"color: #c62939;\n"
-		"font-weight: bold;\n"
-		"margin-top: 1.25em;\n"
-		"margin-bottom: 1.15em;\n"
-		"}\n"
-		".red, .red a {\n"
-		"color: #c62939;\n"
-		"font-weight: bold;\n"
-		"margin-top: 1.5em;\n"
-		"margin-bottom: 2em;\n"
-		"}\n"
-		".nav, .nav a {\n"
-		"color: #000000;\n"
-		"font-weight: bold;\n"
-		"margin-top: 3em;\n"
-		"font-size: 96%;\n"
-		"}\n"
-		"-->\n"
-		"</style>\n"
-		"</head>\n"
-		
-		"<script>\n"
-		"<!--\n"
-		"function x(){document.f.q.focus();}\n"
-		"// --></script>\n"
-		"<body onload=\"x()\">\n"
-		"<a href=\"/\"><img src=\"logo.gif\" "
-		"alt=\"Gigablast\" border=0></a>\n"
-		"<p class=\"redtop\">Information Acceleration.</p>\n"
-
-		"<form method=\"get\" action=\"/search\" name=\"f\">\n"
-		"%H\n"
-		"<table bgcolor=\"#0079ba\" border=0 cellpadding=6 "
-		"width=100%>\n"
-		"<tbody>\n"
-		"<tr>\n"
-
-		"<td width=50%>&nbsp;</td>\n"
-		"<td width=60> <div align=\"center\">\n"
-		"<input name=\"q\" value=\"%q\" size=60 type=\"text\"> \n" 
-		"</td><td width=50%>\n"
-
-		// %D is the drop down menu for # of search results
-		"%%D &nbsp; "
-		"<input value=\"Blast It!\" border=0 type=\"submit\"> <a "
-		"href=\"/adv.html\" class=\"search\">"
-		"<nobr>Advanced Search</nobr></a>\n"
-		"</td>\n"
-		"</tr>\n"
-		"</tbody>\n"
-		"</table>\n"
-		"</form>\n"
-		"<p style=\"margin-top: 1.5em;margin-bottom: 2.5em;\"><b>"
-		"%N pages indexed</b></p>\n"
-		"<p class=\"red\"><a href=\"/"
-		"searchfeed.html\">XML Search Feed (new)</a></p>\n"
-		
-		"<p class=\"red\"><a href=\"http://sitesearch.gigablast.com/"
-		"sitesearch.html\">Dedicated Site Search (new)</a></p>\n"
-		"<p class=\"red\"><a href=\"/cts."
-		"html\">Custom Topic Search (new)</a></p>\n"
-		"<p class=\"red\"><a href=\"/ask."
-		"html\">Gigablast Answers Questions</a></p>\n"
-		"%T\n"
-		"</body>\n"
-		"</html>\n";
+	m->m_off   = (char *)&cr.m_htmlRoot - x;
+	//m->m_plen  = (char *)&cr.m_htmlRootLen - x; // length of string
+	m->m_type  = TYPE_SAFEBUF;//STRINGBOX;
+	//m->m_size  = MAX_HTML_LEN + 1;
+	m->m_def   = "";
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_TEXTAREA;
 	m++;
-	*/
+
 
 	///////////////////////////////////////////
 	// PAGE SPIDER CONTROLS
