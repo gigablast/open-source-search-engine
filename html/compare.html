@@ -92,6 +92,24 @@ Yes.
 </td>
 <!--solr-->
 <td>
+???
+</td>
+</tr>
+
+
+<tr>
+<td>
+<b>File Layout</b>
+</td>
+<!--gigablast-->
+<td>
+<font color=green><b>
+A single binary containing web server, database, spider logic, etc.
+</b></font>
+</td>
+<!--solr-->
+<td>
+Many different packages quilted together.
 </td>
 </tr>
 
@@ -103,7 +121,9 @@ Yes.
 </td>
 <!--gigablast-->
 <td>
-Use curl using args listed <a href=/api.html#/admin/inject>here</a>
+<font color=green><b>
+Use curl using args (including <i>delim</i>) listed <a href=/api.html#/admin/inject>here</a>
+</b></font>
 <br>
 </td>
 <!--solr-->
@@ -145,6 +165,7 @@ Use curl to inject the url with args listed
 </td>
 <!--solr-->
 <td>
+???
 </td>
 </tr>
 
@@ -160,6 +181,7 @@ Use one curl command for each url, using the interface described
 </td>
 <!--solr-->
 <td>
+???
 </td>
 </tr>
 
@@ -192,17 +214,32 @@ Use curl command to do a search, using the interface described
 <a href=/api.html#/search>here</a></b>
 </td>
 <td>
+???
 </td>
 </tr>
 
 
 <tr>
-<td><b>Faceted Search</b></td>
+<td><b>Facets</b></td>
 <td>
 Coming soon.
 </td>
 <td>
+<font color=green><b>
 Yes.
+</b></font>
+</td>
+</tr>
+
+<tr>
+<td><b>Search Result Limitations Based on Facet Value Counts</b></td>
+<td>
+Coming soon.
+</td>
+<td>
+<font color=green><b>
+Yes.
+</b></font>
 </td>
 </tr>
 
@@ -235,6 +272,7 @@ Fully nested boolean search with AND OR NOT.
 Yes. Any meta tag, or if indexing JSON or XML.
 </td>
 <td>
+???
 </td>
 </tr>
 
@@ -242,9 +280,10 @@ Yes. Any meta tag, or if indexing JSON or XML.
 <tr>
 <td><b>Site Restricted Searches</b></td>
 <td>
-Yes. Using the site: query operator.
+Yes. Using the site: query operator. Or use &sites=... to constrain your search up to 500 sites.
 </td>
 <td>
+???
 </td>
 </tr>
 
@@ -254,19 +293,50 @@ Yes. Using the site: query operator.
 Yes. But currently disabled until improved.
 </td>
 <td>
+<font color=green><b>
 Yes.
+</b></font>
 </td>
 </tr>
 
 <tr>
 <td><b>Language Identification</b></td>
 <td>
-Yes.
+<font color=green><b>
+Yes. On a per word level for searching purposes.
+</b></font>
 </td>
 <td>
-Yes.
+Yes. Not on a per word level for searching purposes.
 </td>
 </tr>
+
+
+<tr>
+<td><b>Index Multiple Languages</b></td>
+<td>
+Yes. Can expand words in many languages to all their different forms. More forms coming soon, too.
+</td>
+<td>
+Yes, but stemming/expansion may be limited.
+</td>
+</tr>
+
+<tr>
+<td><b>Show Images in Search Results</b></td>
+<td>
+<font color=green><b>
+Yes.
+</b></font>
+</td>
+<td>
+No.
+</td>
+</tr>
+
+
+
+
 
 <!-- gigabits -->
 <tr>
@@ -288,6 +358,7 @@ No.
 Yes. Uses mysynonyms.txt file to add your own expansion terms.
 </td>
 <td>
+???
 </td>
 </tr>
 
@@ -305,9 +376,10 @@ Yes.
 <tr>
 <td><b>RESTful/XML/JSON APIs</b></td>
 <td>
-Yes, JSON and XML.
+Yes, XML. JSON coming soon.
 </td>
 <td>
+???
 </td>
 </tr>
 
@@ -329,11 +401,11 @@ You have to define annoying schemas.
 <td><b>Spidering</b></td>
 <td>
 <font color=green><b>
-Gigablast has a complete web spider.
+Gigablast has a complete distributed web spider with powerful controls.
 </b></font>
 </td>
 <td>
-SOLR has no spider.
+SOLR has no spider. You can try to integrate Nutch.
 </td>
 </tr>
 
@@ -357,13 +429,30 @@ uses Apache Tika for several formats.
 <font color=green><b>
 Highly scalable. Has scaled to over
 12 billion pages while server millions
-of queries per day.
+of queries per day. Can easily add new servers to the
+hosts.conf file and click <i>rebalance shards</i> to
+rebalance the data.
 </b></font>
 </td>
 <td>
-Has not scaled nearly as high to our knowledge.
+Has not scaled nearly as high to our knowledge. Not originally built for more than one server.
 </td>
 </tr>
+
+
+<tr>
+<td><b>Cluster Administration</b></td>
+<td>
+<font color=green><b>
+Built into the web GUI.
+</b></font>
+</td>
+<td>
+Requires separate Zookeeper package installation.
+</td>
+</tr>
+
+
 
 <tr>
 <td><b>Performance</b></td>
@@ -492,7 +581,9 @@ None. Not geared for web search.
 <tr>
 <td><b>On-Page Spam</b></td>
 <td>
+<font color=green><b>
 Demotes terms deemed spammy on a page.
+</b></font>
 </td>
 <td>
 None.
@@ -599,7 +690,9 @@ Yes.
 Coming soon.
 </td>
 <td>
+<font color=green><b>
 Yes.
+</b></font>
 </td>
 </tr>
 
@@ -614,6 +707,7 @@ Yes.
 
 </td>
 <td>
+???
 </td>
 </tr>
 
@@ -623,7 +717,9 @@ Yes.
 Coming soon.
 </td>
 <td>
+<font color=green><b>
 Available with additional module.
+</b></font>
 </td>
 </tr>
 
@@ -636,6 +732,7 @@ and federated search across them.
 </b></font>
 </td>
 <td>
+???
 </td>
 </tr>
 
