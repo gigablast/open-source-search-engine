@@ -817,6 +817,8 @@ class CollectionRec {
 	//long  m_htmlRootLen;
 
 	SafeBuf m_htmlRoot;
+	SafeBuf m_htmlHead;
+	SafeBuf m_htmlTail;
 
 	// . some users allowed to access this collection parameters
 	// . TODO: have permission bits for various levels of access

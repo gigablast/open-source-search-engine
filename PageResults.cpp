@@ -1385,6 +1385,17 @@ bool gotResults ( void *state ) {
 	return true;
 }
 
+// defined in PageRoot.cpp
+bool expandRootHtml (  SafeBuf& sb,
+		       char *head , 
+		       long hlen ,
+		       char *q    , 
+		       long qlen ,
+		       HttpRequest *r ,
+		       //TcpSocket   *s ,
+		       long long docsInCollArg ,
+		       CollectionRec *cr ) ;
+
 bool printSearchResultsHeader ( State0 *st ) {
 
 	SearchInput *si = &st->m_si;
@@ -1409,6 +1420,23 @@ bool printSearchResultsHeader ( State0 *st ) {
 		else                sb->safePrintf("[\n");
 	}
 
+	CollectionRec *cr = si->m_cr;
+	HttpRequest *hr = &st->m_hr;
+
+	if ( si->m_format == FORMAT_HTML &&
+	     cr->m_htmlHead.length() ) {
+		return expandRootHtml ( *sb ,
+					cr->m_htmlHead.getBufStart(),
+					cr->m_htmlHead.length(),
+					q,
+					qlen,
+					hr,
+					0,
+					cr);
+	}
+				 
+
+
 	// . if not matt wells we do not do ajax
 	// . the ajax is just there to prevent bots from slamming me 
 	//   with queries.
@@ -1421,8 +1449,6 @@ bool printSearchResultsHeader ( State0 *st ) {
 		printCSSHead ( sb ,si->m_format );
 		sb->safePrintf("<body style=padding:0px;margin:0px;>");
 	}
-
-	HttpRequest *hr = &st->m_hr;
 
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ) {
 		long refresh = hr->getLong("refresh",0);
@@ -1444,7 +1470,6 @@ bool printSearchResultsHeader ( State0 *st ) {
 	}
 
 	// the calling function checked this so it should be non-null
-	CollectionRec *cr = si->m_cr;
 	char *coll = cr->m_coll;
 	long collLen = gbstrlen(coll);
 

@@ -14688,151 +14688,6 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	/*
-	m->m_title = "html head";
-	m->m_desc  = "Html to display before the search results. Convenient "
-		"for changing colors and displaying logos. Use the variable, "
-		"%q, to represent the query to display in a text box. "
-		"Use %e to display it in a url.  "
-		"Use %e to print the page encoding.Use %D to print a drop down "
-		"menu for the number of search results to return. Use %S "
-		"to print sort by date or relevance link. Use %L to "
-		"display the logo. Use %R to display radio buttons for site "
-		"search. Use %F to begin the form. and use %H to insert "
-		"hidden text "
-		"boxes of parameters, both %F and %H are necessary. "
-		"Use %f to display "
-		"the family filter radio buttons. "
-		"Directory: Use %s to display the directory "
-		"search type options. Use %l to specify the location of "
-		"dir=rtl in the body tag for RTL pages. "
-		"Use %where and %when to substitute the where and when of "
-		"the query. These values may be set based on the cookie if "
-		"none was explicitly given. "
-		"IMPORTANT: In the xml configuration file, this html "
-		"must be encoded (less thans mapped to &lt;, etc.).";
-	m->m_cgi   = "hh";
-	m->m_off   = (char *)cr.m_htmlHead - x;
-	m->m_plen  = (char *)&cr.m_htmlHeadLen - x; // length of string
-	m->m_type  = TYPE_STRINGBOX;
-	m->m_size  = MAX_HTML_LEN + 1;
-	m->m_def   = 
-		"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 "
-		"Transitional//EN\">\n"
-		"<html>\n"
-		"<head>\n"
-		"<title>Gigablast Search Results</title>\n"
-		"<meta http-equiv=\"Content-Type\" "
-		"content=\"text/html; charset=utf-8\">\n"
-		"<style><!--\n"
-		"body {\n"
-		"font-family:Arial, Helvetica, sans-serif;\n"
-		"color: #000000;\n"
-		"font-size: 12px;\n"
-		"margin: 20px 5px;\n"
-		"}\n"
-		"a:link {color:#00c}\n"
-		"a:visited {color:#551a8b}\n"
-		"a:active {color:#f00}\n"
-		".bold {font-weight: bold;}\n"
-		".bluetable {background:#d1e1ff;margin-bottom:15px;"
-		"font-size:12px;}\n"
-		".url {color:#008000;}\n"
-		".cached, .cached a {font-size: 10px;color: #666666;\n"
-		"}\n"
-		"table {\n"
-		"font-family:Arial, Helvetica, sans-serif;\n"
-		"color: #000000;\n"
-		"font-size: 12px;\n"
-		"}\n"
-		".directory {font-size: 16px;}\n"
-		"-->\n"
-		"</style>\n"
-		"</head>\n"
-		"<body%l>\n"
-
-		//"<form method=\"get\" action=\"/search\" name=\"f\">\n"
-		// . %F prints the <form method=...> tag
-		// . method will be GET or POST depending on the size of the
-		//   input data. MSIE can't handle sending large GETs requests
-		//   that are more than like 1k or so, which happens a lot with
-		//   our CTS technology (the sites= cgi parm can be very large)
-		"%F"
-		"<table cellpadding=\"2\" cellspacing=\"0\" border=\"0\">\n"
-		"<tr>\n"
-		"<td valign=top>"
-		// this prints the Logo
-		"%L"
-		//"<a href=\"/\">"
-		//"<img src=\"logo2.gif\" alt=\"Gigablast Logo\" "
-		//"width=\"210\" height=\"25\" border=\"0\" valign=\"top\">"
-		//"</a>"
-		"</td>\n"
-
-		"<td valign=top>\n"
-		"<nobr>\n"
-		"<input type=\"text\" name=\"q\" size=\"60\" value=\"\%q\"> " 
-		// %D is the number of results drop down menu
-		"\%D" 
-		"<input type=\"submit\" value=\"Blast It!\" border=\"0\">\n"
-		"</nobr>\n"
-		// family filter
-		// %R radio button for site(s) search
-		"<br>%f %R\n"
-		// directory search options
-		"</td><td>%s</td>\n"
-		"</tr>\n"
-		"</table>\n"
-		// %H prints the hidden for vars. Print them *after* the input 
-		// text boxes, radio buttons, etc. so these hidden vars can be 
-		// overriden as they should be.
-		"%H"; 
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_htmlHead - y;
-	m++;
-
-	m->m_title = "html tail";
-	m->m_desc  = "Html to display after the search results.";
-	m->m_cgi   = "ht";
-	m->m_off   = (char *)cr.m_htmlTail - x;
-	m->m_plen  = (char *)&cr.m_htmlTailLen - x; // length of string
-	m->m_type  = TYPE_STRINGBOX;
-	m->m_size  = MAX_HTML_LEN + 1;
-	m->m_def   = 
-		"<br>\n"
-		"%F<table cellpadding=2 cellspacing=0 border=0>\n"
-		"<tr><td></td>\n"
-		"<td valign=top align=center>\n"
-		"<nobr>"
-		"<input type=text name=q size=60 value=\"%q\"> %D\n"
-		"<input type=submit value=\"Blast It!\" border=0>\n"
-		"</nobr>"
-		// family filter
-		"<br>%f %R\n"
-		"</td><td>%s</td>\n"
-		"</tr>\n"
-		"</table>\n"
-		"Try your search on  \n"
-		"<a href=http://www.google.com/search?q=%e>google</a> &nbsp;\n"
-		"<a href=http://search.yahoo.com/bin/search?p=%e>yahoo</a> "
-		"&nbsp;\n"
-		//"<a href=http://www.alltheweb.com/search?query=%e>alltheweb"
-		//"</a>\n"
-		"<a href=http://search.dmoz.org/cgi-bin/search?search=%e>"
-		"dmoz</a> &nbsp;\n"
-		//"<a href=http://search01.altavista.com/web/results?q=%e>"
-		//"alta vista</a>\n"
-		"<a href=http://s.teoma.com/search?q=%e>teoma</a> &nbsp;\n"
-		"<a href=http://wisenut.com/search/query.dll?q=%e>wisenut"
-		"</a>\n"
-		"</font></body>\n";
-	//m->m_def   = "</font></body></html>";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_htmlTail - y;
-	m++;
-	*/
-
 	m->m_title = "home page";
 	static SafeBuf s_tmpBuf;
 	s_tmpBuf.safePrintf (
@@ -14903,6 +14758,156 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_SAFEBUF;//STRINGBOX;
 	//m->m_size  = MAX_HTML_LEN + 1;
 	m->m_def   = "";
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_TEXTAREA;
+	m++;
+
+
+	m->m_title = "html head";
+        static SafeBuf s_tmpBuf2;
+	s_tmpBuf2.safePrintf("Html to display before the search results. ");
+	char *fff = "Leave empty for default. "
+		"Convenient "
+		"for changing colors and displaying logos. Use "
+		"the variable, "
+		"%q, to represent the query to display in a "
+		"text box. "
+		"Use %e to display it in a url.  "
+		"Use %e to print the page encoding.Use %D to "
+		"print a drop down "
+		"menu for the number of search results to return."
+		" Use %S "
+		"to print sort by date or relevance link. Use "
+		"%L to "
+		"display the logo. Use %R to display radio "
+		"buttons for site "
+		"search. Use %F to begin the form. and use %H to "
+		"insert "
+		"hidden text "
+		"boxes of parameters, both %F and %H are "
+		"necessary. "
+		"Use %f to display "
+		"the family filter radio buttons. "
+		"Directory: Use %s to display the directory "
+		"search type options. Use %l to specify the "
+		"location of "
+		"dir=rtl in the body tag for RTL pages. "
+		//"Use %where and %when to substitute the where "
+		//"and when of "
+		//"the query. "
+		//"These values may be set based on the cookie "
+		//"if "
+		//"none was explicitly given. "
+		//"IMPORTANT: In the xml configuration file, "
+		//"this html "
+		//"must be encoded (less thans mapped to &lt;, "
+		//"etc.).";
+		"Example to paste: <br><i>";
+	s_tmpBuf2.safeStrcpy(fff);
+	s_tmpBuf2.htmlEncode(
+		"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 "
+		"Transitional//EN\">\n"
+		"<html>\n"
+		"<head>\n"
+		"<title>My Gigablast Search Results</title>\n"
+		"<meta http-equiv=\"Content-Type\" "
+		"content=\"text/html; charset=utf-8\">\n"
+		"</head>\n"
+		"<body%l>\n"
+
+		//"<form method=\"get\" action=\"/search\" name=\"f\">\n"
+		// . %F prints the <form method=...> tag
+		// . method will be GET or POST depending on the size of the
+		//   input data. MSIE can't handle sending large GETs requests
+		//   that are more than like 1k or so, which happens a lot with
+		//   our CTS technology (the sites= cgi parm can be very large)
+		"%F"
+		"<table cellpadding=\"2\" cellspacing=\"0\" border=\"0\">\n"
+		"<tr>\n"
+		"<td valign=top>"
+		// this prints the Logo
+		"%L"
+		//"<a href=\"/\">"
+		//"<img src=\"logo2.gif\" alt=\"Gigablast Logo\" "
+		//"width=\"210\" height=\"25\" border=\"0\" valign=\"top\">"
+		//"</a>"
+		"</td>\n"
+
+		"<td valign=top>\n"
+		"<nobr>\n"
+		"<input type=\"text\" name=\"q\" size=\"60\" value=\"\%q\"> " 
+		// %D is the number of results drop down menu
+		"\%D" 
+		"<input type=\"submit\" value=\"Blast It!\" border=\"0\">\n"
+		"</nobr>\n"
+		// family filter
+		// %R radio button for site(s) search
+		"<br>%f %R\n"
+		// directory search options
+		"</td><td>%s</td>\n"
+		"</tr>\n"
+		"</table>\n"
+		// %H prints the hidden for vars. Print them *after* the input 
+		// text boxes, radio buttons, etc. so these hidden vars can be 
+		// overriden as they should be.
+		"%H"); 
+	s_tmpBuf2.safePrintf("</i>");
+	m->m_desc  = s_tmpBuf2.getBufStart();
+	m->m_xml   = "htmlHead";
+	m->m_cgi   = "hh";
+	m->m_off   = (char *)&cr.m_htmlHead - x;
+	m->m_type  = TYPE_SAFEBUF;//STRINGBOX;
+	m->m_def   = "";
+	//m->m_sparm = 1;
+	//m->m_soff  = (char *)&si.m_htmlHead - y;
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_TEXTAREA;
+	m++;
+
+
+	m->m_title = "html tail";
+        static SafeBuf s_tmpBuf3;
+	s_tmpBuf3.safePrintf("Html to display before the search results. ");
+	s_tmpBuf3.safeStrcpy(fff);
+	s_tmpBuf3.htmlEncode (
+		"<br>\n"
+		"%F<table cellpadding=2 cellspacing=0 border=0>\n"
+		"<tr><td></td>\n"
+		"<td valign=top align=center>\n"
+		"<nobr>"
+		"<input type=text name=q size=60 value=\"%q\"> %D\n"
+		"<input type=submit value=\"Blast It!\" border=0>\n"
+		"</nobr>"
+		// family filter
+		"<br>%f %R\n"
+		"</td><td>%s</td>\n"
+		"</tr>\n"
+		"</table>\n"
+		"Try your search on  \n"
+		"<a href=http://www.google.com/search?q=%e>google</a> &nbsp;\n"
+		"<a href=http://search.yahoo.com/bin/search?p=%e>yahoo</a> "
+		"&nbsp;\n"
+		//"<a href=http://www.alltheweb.com/search?query=%e>alltheweb"
+		//"</a>\n"
+		"<a href=http://search.dmoz.org/cgi-bin/search?search=%e>"
+		"dmoz</a> &nbsp;\n"
+		//"<a href=http://search01.altavista.com/web/results?q=%e>"
+		//"alta vista</a>\n"
+		"<a href=http://s.teoma.com/search?q=%e>teoma</a> &nbsp;\n"
+		"<a href=http://wisenut.com/search/query.dll?q=%e>wisenut"
+		"</a>\n"
+		"</font></body>\n");
+	s_tmpBuf3.safePrintf("</i>");
+	m->m_desc  = s_tmpBuf3.getBufStart();
+	m->m_xml   = "htmlTail";
+	m->m_cgi   = "ht";
+	m->m_off   = (char *)&cr.m_htmlTail - x;
+	m->m_type  = TYPE_SAFEBUF;//STRINGBOX;
+	m->m_def   = "";
+	//m->m_sparm = 1;
+	//m->m_soff  = (char *)&si.m_htmlHead - y;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m->m_flags = PF_TEXTAREA;
