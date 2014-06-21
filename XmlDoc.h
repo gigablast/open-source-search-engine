@@ -886,9 +886,14 @@ class XmlDoc {
 			  long              niceness       );
 
 
-	bool hashSectionTerm ( char *term , 
-			       class HashInfo *hi , 
-			       long sentHash32 ) ;
+	//bool hashSectionTerm ( char *term , 
+	//		       class HashInfo *hi , 
+	//		       long sentHash32 ) ;
+
+	bool hashFacet1 ( class Words *words , HashInfo *hi ) ;
+
+	bool hashFacet2 ( long val32 , HashInfo *hi ) ;
+
 
 	bool hashNumber ( char *beginBuf ,
 			  char *buf , 

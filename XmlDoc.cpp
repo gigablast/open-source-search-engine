@@ -26597,6 +26597,14 @@ bool XmlDoc::hashUrl ( HashTableX *tt , bool hashNonFieldTerms ) {
 
 	return true;
 }
+/////////////
+// 
+// CHROME DETECTION
+//
+// we search for these terms we hash here in getSectionsWithDupStats()
+// so we can remove chrome.
+//
+/////////////
 
 // . returns false and sets g_errno on error
 // . copied Url2.cpp into here basically, so we can now dump Url2.cpp
@@ -26615,7 +26623,8 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 	HashInfo hi;
 	hi.m_hashGroup = HASHGROUP_INTAG;
 	hi.m_tt        = tt;
-	hi.m_prefix    = "gbsectionhash";
+	// the prefix is custom set for each section below
+	//hi.m_prefix    = "gbsectionhash";
 	// put all guys with the same xpath/site on the same shard
 	hi.m_shardByTermId = true;
 
@@ -26645,14 +26654,20 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 		//   he will get back a histogram of the values it hash,
 		//   which are 32-bit hashes of the innerhtml for that 
 		//   xpath on this site.
-		char term[96];
-		sprintf(term,"gbxpathsitehash%llu",thash64);
+		char prefix[96];
+		sprintf(prefix,"gbxpathsitehash%llu",thash64);
 
 		// like a normal key but we store "ih64" the innerHTML hash
 		// of the section into the key instead of wordbits etc.
 		// similar to hashNumber*() functions.
-		if ( ! hashSectionTerm ( term , &hi, (unsigned long)ih64 ) ) 
-			return false;
+		//if ( ! hashSectionTerm ( term , &hi, (unsigned long)ih64 ) ) 
+		//	return false;
+
+		// i guess use facets
+		hi.m_prefix = prefix;
+
+		// we already have the hash of the inner html of the section
+		hashFacet2 ( (long)(unsigned long)ih64 , &hi );
 	}
 
 	return true;
@@ -31561,12 +31576,139 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 			return false;
 	}
 
+	// hash a single term so they can do gbfacet:ext or
+	// gbfacet:siterank or gbfacet:price. a field on a field.
+	if ( prefixHash && words->m_numWords )
+		hashFacet1 ( words , hi );
+
 	// between calls? i.e. hashTitle() and hashBody()
 	//if ( wc > 0 ) m_dist = wposvec[wc-1] + 100;
 	if ( i > 0 ) m_dist = wposvec[i-1] + 100;
 
 	return true;
 }
+
+// just like hashNumber*() functions but we use "gbfacet" as the
+// primary prefix, NOT gbminint, gbmin, gbmax, gbmaxint, gbsortby,
+// gbsortbyint, gbrevsortby, gbrevsortbyint
+bool XmlDoc::hashFacet1 ( Words *words , HashInfo *hi ) {
+
+	// need a prefix
+	if ( ! hi->m_prefix ) return true;
+
+	// hash the ENTIRE content, all words as one blob
+	long nw = words->getNumWords();
+	char *a = words->m_words[0];
+	char *b = words->m_words[nw-1]+words->m_wordLens[nw-1];
+	long val32 = hash32 ( a , b - a );
+	return hashFacet2 ( val32 , hi );
+}
+
+bool XmlDoc::hashFacet2 ( long val32 , HashInfo *hi ) {
+
+	// need a prefix
+	if ( ! hi->m_prefix ) return true;
+	long plen = gbstrlen ( hi->m_prefix );
+	if ( plen <= 0 ) return true;
+	// we gotta make this case insensitive, and skip spaces
+	// because if it is 'focal length' we can't search
+	// 'focal length:10' because that comes across as TWO terms.
+	long long prefixHash = hash64Lower_utf8_nospaces ( hi->m_prefix,plen);
+
+	// now any field has to support gbfacet:thatfield
+	// and store the 32-bit termid into where we normally put
+	// the word position bits, etc.
+	static long long s_facetPrefixHash = 0LL;
+	if ( ! s_facetPrefixHash )
+		s_facetPrefixHash = hash64n ( "gbfacet" );
+
+	// combine with the "gbfacet" prefix. old prefix hash on right.
+	long long ph2 = hash64 ( s_facetPrefixHash , prefixHash );
+
+	// . now store it
+	// . use field hash as the termid. normally this would just be
+	//   a prefix hash
+	// . use mostly fake value otherwise
+	key144_t k;
+	g_posdb.makeKey ( &k ,
+			  ph2 ,
+			  0,//docid
+			  0,// word pos #
+			  0,// densityRank , // 0-15
+			  0 , // MAXDIVERSITYRANK
+			  0 , // wordSpamRank ,
+			  0 , //siterank
+			  0 , // hashGroup,
+			  // we set to docLang final hash loop
+			  //langUnknown, // langid
+			  // unless already set. so set to english here
+			  // so it will not be set to something else
+			  // otherwise our floats would be ordered by langid!
+			  // somehow we have to indicate that this is a float
+			  // termlist so it will not be mangled any more.
+			  //langEnglish,
+			  langUnknown,
+			  0 , // multiplier
+			  false, // syn?
+			  false , // delkey?
+			  hi->m_shardByTermId );
+
+	//long long final = hash64n("products.offerprice",0);
+	//long long prefix = hash64n("gbsortby",0);
+	//long long h64 = hash64 ( final , prefix);
+	//if ( ph2 == h64 )
+	//	log("hey: got offer price");
+
+	// now set the float in that key
+	g_posdb.setInt ( &k , val32 );
+
+	// HACK: this bit is ALWAYS set by Posdb::makeKey() to 1
+	// so that we can b-step into a posdb list and make sure
+	// we are aligned on a 6 byte or 12 byte key, since they come
+	// in both sizes. but for this, hack it off to tell
+	// addTable144() that we are a special posdb key, a "numeric"
+	// key that has a float stored in it. then it will NOT
+	// set the siterank and langid bits which throw our sorting
+	// off!!
+	g_posdb.setAlignmentBit ( &k , 0 );
+
+	HashTableX *dt = hi->m_tt;
+
+	// the key may indeed collide, but that's ok for this application
+	if ( ! dt->addTerm144 ( &k ) ) 
+		return false;
+
+	if ( ! m_wts ) 
+		return true;
+
+	// store in buffer
+	char buf[128];
+	long bufLen = sprintf(buf,"%li",val32);
+
+	// add to wts for PageParser.cpp display
+	// store it
+	if ( ! storeTerm ( buf,
+			   bufLen,
+			   s_facetPrefixHash,
+			   hi,
+			   0, // word#, i,
+			   0, // wordPos
+			   0,// densityRank , // 0-15
+			   0, // MAXDIVERSITYRANK,//phrase
+			   0, // ws,
+			   0, // hashGroup,
+			   //true,
+			   &m_wbuf,
+			   m_wts,
+			   // a hack for display in wts:
+			   SOURCE_NUMBER, // SOURCE_BIGRAM, // synsrc
+			   langUnknown ,
+			   k) )
+		return false;
+
+	return true;
+}
+
 
 // . we store numbers as floats in the top 4 bytes of the lower 6 bytes of the 
 //   posdb key
@@ -31630,6 +31772,12 @@ bool XmlDoc::hashNumber ( char *beginBuf ,
 	return true;
 }
 
+// . THIS IS NOW replaced by ::hashFacet2() being called by hashSections()
+//   above. it is a more generic, faceted approch.
+// . the term is gbxpathsite123456 the prefix is gbfacet the val32 
+//   stored in the posdb key is the inner html hash of the section, and
+//   the "123456" is the hash of the xpath and site. so the field names
+//   are very custom, not your typical "ext" or "title"
 // . CHROME DETECTION
 // . hash a special "gbxpathsitehash12345678" term which has the hash of the
 //   innerHTML content embedded in it.
@@ -31638,6 +31786,7 @@ bool XmlDoc::hashNumber ( char *beginBuf ,
 //   section on this page relative to its subdomain. like the distriubtion
 //   of the innerHTML for this section as it appears on other pages from
 //   this site. this allows killer CHROME DETECTION!!!!
+/*
 bool XmlDoc::hashSectionTerm ( char *term , HashInfo *hi , long sentHash32 ) {
 
         long long termId = hash64 ( term , gbstrlen(term) );
@@ -31727,7 +31876,7 @@ bool XmlDoc::hashSectionTerm ( char *term , HashInfo *hi , long sentHash32 ) {
 
 	return true;
 }
-
+*/
 
 
 

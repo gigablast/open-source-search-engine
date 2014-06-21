@@ -3186,6 +3186,10 @@ struct QueryField g_fields[] = {
 	 "Example: gbspiderdate:1400081479 will return results that have "
 	 "that spider date timestamp (UTC)"},
 
+	{"gbindexdate",FIELD_GENERIC,false,
+	 "Example: gbindexdate:1400081479 will return results that have "
+	 "that spider date timestamp (UTC)"},
+
 	// {"gbreplyspiderdate",FIELD_GENERIC,false,
 	//  "Example: gbspiderdate:1400081479 will return spider log "
 	//  "results that have "
@@ -3223,7 +3227,8 @@ struct QueryField g_fields[] = {
 
 	{"gbfacet", FIELD_GBFACET, false,
 	 "Example: 'gbfacet:price' will return facets in the search results "
-	 "with the # of documents that have certain price ranges."
+	 "with the # of documents that have certain price ranges. Any other "
+	 "field name can follow the gbfacet: operator."
 	},
 
 
@@ -3231,8 +3236,7 @@ struct QueryField g_fields[] = {
 	{"gbad",FIELD_GBAD,false,""},
 
 
-	{"gbsectionhash"            ,FIELD_GBSECTIONHASH,false,"Internal use only."},
-
+	//{"gbsectionhash"            ,FIELD_GBSECTIONHASH,false,"Internal use only."},
 
 	{"gbduphash"                ,FIELD_GBOTHER,false,"Internal use only."},
 	{"gbsitetemplate"           ,FIELD_GBOTHER,false,"Internal use only."},
