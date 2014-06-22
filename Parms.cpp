@@ -14853,7 +14853,8 @@ void Parms::init ( ) {
 		// %R radio button for site(s) search
 		"<br>%f %R\n"
 		// directory search options
-		"</td><td>%s</td>\n"
+		// MDW: i guess this is out for now
+		//"</td><td>%s</td>\n"
 		"</tr>\n"
 		"</table>\n"
 		// %H prints the hidden for vars. Print them *after* the input 
@@ -14889,7 +14890,8 @@ void Parms::init ( ) {
 		"<input type=submit value=\"Blast It!\" border=0>\n"
 		"</nobr>"
 		// family filter
-		"<br>%f %R\n"
+		//"<br>%f %R\n"
+		"<br>%R\n"
 		"</td><td>%s</td>\n"
 		"</tr>\n"
 		"</table>\n"
@@ -14903,9 +14905,9 @@ void Parms::init ( ) {
 		"dmoz</a> &nbsp;\n"
 		//"<a href=http://search01.altavista.com/web/results?q=%e>"
 		//"alta vista</a>\n"
-		"<a href=http://s.teoma.com/search?q=%e>teoma</a> &nbsp;\n"
-		"<a href=http://wisenut.com/search/query.dll?q=%e>wisenut"
-		"</a>\n"
+		//"<a href=http://s.teoma.com/search?q=%e>teoma</a> &nbsp;\n"
+		//"<a href=http://wisenut.com/search/query.dll?q=%e>wisenut"
+		//"</a>\n"
 		"</font></body>\n");
 	s_tmpBuf3.safePrintf("</i>");
 	m->m_desc  = s_tmpBuf3.getBufStart();
