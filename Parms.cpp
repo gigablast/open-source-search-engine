@@ -8365,6 +8365,7 @@ void Parms::init ( ) {
 		"results page.";
 	m->m_off   = (char *)&si.m_imgUrl - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_def   = NULL;
 	//m->m_size  = 512;
 	m->m_cgi   = "iu";
 	m->m_page  = PAGE_NONE;
@@ -8376,6 +8377,7 @@ void Parms::init ( ) {
 		"the search results page.";
 	m->m_off   = (char *)&si.m_imgLink - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_def   = NULL;
 	//m->m_size  = 512;
 	m->m_cgi   = "ix";
 	m->m_page  = PAGE_NONE;
@@ -14773,11 +14775,13 @@ void Parms::init ( ) {
 		"the variable, "
 		"%q, to represent the query to display in a "
 		"text box. "
-		"Use %e to display it in a url.  "
-		"Use %e to print the page encoding.Use %D to "
-		"print a drop down "
-		"menu for the number of search results to return."
-		" Use %S "
+		"Use %e to print the url encoded query.  "
+		//"Use %e to print the page encoding. "
+		// i guess this is out for now
+		//"Use %D to "
+		//"print a drop down "
+		//"menu for the number of search results to return. "
+		"Use %S "
 		"to print sort by date or relevance link. Use "
 		"%L to "
 		"display the logo. Use %R to display radio "
@@ -14785,14 +14789,18 @@ void Parms::init ( ) {
 		"search. Use %F to begin the form. and use %H to "
 		"insert "
 		"hidden text "
-		"boxes of parameters, both %F and %H are "
-		"necessary. "
+		"boxes of parameters like the current search result "
+		"page number. "
+		"BOTH %F and %H are necessary for the html head, but do "
+		"not duplicate them in the html tail. "
 		"Use %f to display "
 		"the family filter radio buttons. "
-		"Directory: Use %s to display the directory "
-		"search type options. Use %l to specify the "
-		"location of "
-		"dir=rtl in the body tag for RTL pages. "
+		// take this out for now
+		//"Directory: Use %s to display the directory "
+		//"search type options. "
+		//"Use %l to specify the "
+		//"location of "
+		//"dir=rtl in the body tag for RTL pages. "
 		//"Use %where and %when to substitute the where "
 		//"and when of "
 		//"the query. "

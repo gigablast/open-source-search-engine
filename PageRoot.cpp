@@ -89,17 +89,224 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 	return true;
 }
 
+//////////////
+//
+// BEGIN expandHtml() helper functions
+//
+//////////////
 
-//char *expandRootHtml ( char *p    , long plen ,
-bool expandRootHtml (  SafeBuf& sb,
-		       char *head , 
-		       long hlen ,
-		       char *q    , 
-		       long qlen ,
-		       HttpRequest *r ,
-		       //TcpSocket   *s ,
-		       long long docsInCollArg ,
-		       CollectionRec *cr ) {
+bool printFamilyFilter ( SafeBuf& sb , bool familyFilterOn ) {
+	char *s1 = "";
+	char *s2 = "";
+	if ( familyFilterOn ) s1 = " checked";
+	else                  s2 = " checked";
+	//p += sprintf ( p ,
+	return sb.safePrintf (
+		       "Family filter: "
+		       "<input type=radio name=ff value=1%s>On &nbsp; "
+		       "<input type=radio name=ff value=0%s>Off &nbsp; " ,
+		       s1 , s2 );
+	//return p;
+}
+
+//char *printNumResultsDropDown ( char *p , long n , bool *printedDropDown ) {
+bool printNumResultsDropDown ( SafeBuf& sb , long n , bool *printedDropDown ) {
+	if ( n!=10 && n!=20 && n!=30 && n!=50 && n!=100 )
+		//return p;
+		return true;
+	*printedDropDown = true;
+	char *d1 = "";
+	char *d2 = "";
+	char *d3 = "";
+	char *d4 = "";
+	char *d5 = "";
+	if ( n == 10 ) d1 = " selected";
+	if ( n == 20 ) d2 = " selected";
+	if ( n == 30 ) d3 = " selected";
+	if ( n == 50 ) d4 = " selected";
+	if ( n ==100 ) d5 = " selected";
+	//p += sprintf ( p , 
+	return sb.safePrintf (
+		       "<select name=n>\n"
+		       "<option value=10%s>10\n"
+		       "<option value=20%s>20\n"
+		       "<option value=30%s>30\n"
+		       "<option value=50%s>50\n"
+		       "<option value=100%s>100\n"
+		       "</select>",
+		       d1,d2,d3,d4,d5);
+	//return p;
+}
+
+//char *printDirectorySearchType ( char *p, long sdirt ) {
+bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
+	// default to entire directory
+	if (sdirt < 1 || sdirt > 4)
+		sdirt = 3;
+
+	// by default search the whole thing
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"3\"");
+	if (sdirt == 3) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Entire Directory<br>\n");
+	// entire category
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"1\"");
+	if (sdirt == 1) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Entire Category<br>\n");
+	// base category only
+	sb.safePrintf("<nobr><input type=\"radio\" name=\"sdirt\" value=\"2\"");
+	if (sdirt == 2) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">"); 
+	sb.safePrintf("Pages in Base Category</nobr><br>\n");
+	// sites in base category
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"7\"");
+	if (sdirt == 7) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Sites in Base Category<br>\n");
+	// sites in entire category
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"6\"");
+	if (sdirt == 6) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Sites in Entire Category<br>\n");
+	// end it
+	return true;
+}
+
+
+#include "SearchInput.h"
+
+bool printRadioButtons ( SafeBuf& sb , SearchInput *si ) {
+	// don't display this for directory search
+	// look it up. returns catId <= 0 if dmoz not setup yet.
+	// From PageDirectory.cpp
+	//long catId= g_categories->getIdFromPath(decodedPath, decodedPathLen);
+	// if /Top print the directory homepage
+	//if ( catId == 1 || catId <= 0 ) 
+	//	return true;
+
+	// site
+	/*
+	if ( si->m_siteLen > 0 ) {
+		// . print rest of search box etc.
+		// . print cobranding radio buttons
+		//if ( p + si->m_siteLen + 1 >= pend ) return p;
+		//p += sprintf ( p , 
+		return sb.safePrintf (
+			  //" &nbsp; "
+			  //"<font size=-1>"
+			  //"<b><a href=\"/\"><font color=red>"
+			  //"Powered by Gigablast</font></a></b>"
+			  //"<br>"
+			  //"<tr align=center><td></td><td>"
+			  "<input type=radio name=site value=\"\">"
+			  "Search the Web "
+			  "<input type=radio name=site "
+			  "value=\"%s\"  checked>Search %s" ,
+			  //"</td></tr></table><br>"
+			  //"</td></tr>"
+			  //"<font size=-1>" ,
+			  si->m_site , si->m_site );
+	}
+	else if ( si->m_sitesLen > 0 ) {
+	*/
+	if ( si->m_sites && si->m_sites[0] ) {
+		// . print rest of search box etc.
+		// . print cobranding radio buttons
+		//if ( p + si->m_sitesLen + 1 >= pend ) return p;
+		// if not explicitly instructed to print all sites
+		// and they are a long list, do not print all
+		/*
+		char tmp[1000];
+		char *x = si->m_sites;
+		if ( si->m_sitesLen > 255){//&&!st->m_printAllSites){
+			// copy what's there
+			strncpy ( tmp , si->m_sites , 255 );
+			x = tmp + 254 ;
+			// do not hack off in the middle of a site
+			while ( is_alnum(*x) && x > tmp ) x--;
+			// overwrite it with [more] link
+			//x += sprintf ( x , "<a href=\"/search?" );
+			// our current query parameters
+			//if ( x + uclen + 10 >= xend ) goto skipit;
+			sprintf ( x , " ..." );
+			x = tmp;
+		}
+		*/
+		//p += sprintf ( p , 
+		sb.safePrintf (
+			  //" &nbsp; "
+			  //"<font size=-1>"
+			  //"<b><a href=\"/\"><font color=red>"
+			  //"Powered by Gigablast</font></a></b>"
+			  //"<br>"
+			  //"<tr align=center><td></td><td>"
+			  "<input type=radio name=sites value=\"\">"
+			  "Search the Web "
+			  "<input type=radio name=sites "
+			  "value=\"%s\"  checked>Search ",
+			  //"</td></tr></table><br>"
+			  //"</td></tr>"
+			  //"<font size=-1>" ,
+			  si->m_sites );
+		sb.safeTruncateEllipsis ( si->m_sites, 255 );
+	}
+	return true;
+}
+
+bool printLogo ( SafeBuf& sb , SearchInput *si ) {
+	// if an image was provided...
+	if ( ! si->m_imgUrl || ! si->m_imgUrl[0] ) {
+		// no, now we default to our logo
+		//return true;
+		//p += sprintf ( p ,
+		return sb.safePrintf (
+			  "<a href=\"/\">"
+			  "<img valign=top width=310 height=75 border=0 "
+			  // avoid https for this, so make it absolute
+			  "src=\"http://www.gigablast.com/logo.gif\"></a>" );
+		//return p;
+	}
+	// do we have a link?
+	if ( si->m_imgLink && si->m_imgLink[0])
+		//p += sprintf ( p , "<a href=\"%s\">",si->m_imgLink);
+		sb.safePrintf ( "<a href=\"%s\">", si->m_imgLink );
+	// print image width and length
+	if ( si->m_imgWidth >= 0 && si->m_imgHeight >= 0 ) 
+		//p += sprintf ( p , "<img width=%li height=%li ",
+		sb.safePrintf( "<img width=%li height=%li ",
+			       si->m_imgWidth , si->m_imgHeight );
+	else
+		//p += sprintf ( p , "<img " );
+		sb.safePrintf ( "<img " );
+
+	//p += sprintf ( p , "border=0 src=\"%s\">",
+	sb.safePrintf( "border=0 src=\"%s\">",
+		       si->m_imgUrl );
+	// end the link if we had one
+	if ( si->m_imgLink && si->m_imgLink[0] ) 
+		//p += sprintf ( p , "</a>");
+		sb.safePrintf ( "</a>");
+
+	return true;
+}
+
+/////////////
+//
+// END expandHtml() helper functions
+//
+/////////////
+
+
+bool expandHtml (  SafeBuf& sb,
+		   char *head , 
+		   long hlen ,
+		   char *q    , 
+		   long qlen ,
+		   HttpRequest *r ,
+		   SearchInput *si,
+		   char *method ,
+		   CollectionRec *cr ) {
 	//char *pend = p + plen;
 	// store custom header into buf now
 	//for ( long i = 0 ; i < hlen && p+10 < pend ; i++ ) {
@@ -263,6 +470,7 @@ bool expandRootHtml (  SafeBuf& sb,
 			i += 1;
 			continue;
 		}
+		/*
 		if ( head[i+1] == 'E' ) { 
 			// now each host tells us how many docs it has in its
 			// ping request
@@ -275,6 +483,7 @@ bool expandRootHtml (  SafeBuf& sb,
 			i += 1;
 			continue;
 		}
+		*/
 		if ( head[i+1] == 'n' ) { 
 			// now we got the %n, insert the collection doc count
 			//p+=ulltoa(p,docsInColl);
@@ -377,6 +586,40 @@ bool expandRootHtml (  SafeBuf& sb,
 			continue;
 		}
 
+		// MDW
+
+		if ( head[i+1] == 'F' ) {
+			i += 1;
+			//p = printTopDirectory ( p, pend );
+			if ( ! method ) method = "GET";
+			sb.safePrintf("<form method=%s action=\"/search\" "
+				      "name=\"f\">\n",method);
+			continue;
+		}
+
+		if ( head[i+1] == 'L' ) {
+			i += 1;
+			//p = printTopDirectory ( p, pend );
+			printLogo ( sb , si );
+			continue;
+		}
+
+		if ( head[i+1] == 'f' ) {
+			i += 1;
+			//p = printTopDirectory ( p, pend );
+			printFamilyFilter ( sb , si->m_familyFilter );
+			continue;
+		}
+
+		if ( head[i+1] == 'R' ) {
+			i += 1;
+			//p = printTopDirectory ( p, pend );
+			printRadioButtons ( sb , si );
+			continue;
+		}
+
+		// MDW
+
 		// *p++ = head[i];
 		sb.safeMemcpy((char*)&head[i], 1);
 		continue;
@@ -386,20 +629,30 @@ bool expandRootHtml (  SafeBuf& sb,
 }
 
 
-bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
+bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
+
+	SearchInput si;
+	si.set ( sock , r );
+
+	// if there's a ton of sites use the post method otherwise
+	// they won't fit into the http request, the browser will reject
+	// sending such a large request with "GET"
+	char *method = "GET";
+	if ( si.m_sites && gbstrlen(si.m_sites)>800 ) method = "POST";
 
 	// if the provided their own
 	CollectionRec *cr = g_collectiondb.getRec ( r );
 	if ( cr && cr->m_htmlRoot.length() ) {
-		return expandRootHtml (  sb ,
-					 cr->m_htmlRoot.getBufStart(),
-					 cr->m_htmlRoot.length(),
-					 NULL,
-					 0,
-					 r ,
-					 //TcpSocket   *s ,
-					 0,//long long docsInColl ,
-					 cr );//CollectionRec *cr ) {
+		return expandHtml (  sb ,
+				     cr->m_htmlRoot.getBufStart(),
+				     cr->m_htmlRoot.length(),
+				     NULL,
+				     0,
+				     r ,
+				     &si,
+				     //TcpSocket   *s ,
+				     method , // "GET" or "POST"
+				     cr );//CollectionRec *cr ) {
 	}
 
 
@@ -470,8 +723,8 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("\n");
 	sb.safePrintf("<br><br>\n");
 	// submit to https now
-	sb.safePrintf("<form method=get "
-		      "action=/search name=f>\n");
+	sb.safePrintf("<form method=%s "
+		      "action=/search name=f>\n", method);
 
 	if ( cr )
 		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
@@ -1047,7 +1300,7 @@ bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 	//if ( ! strcmp(coll,"dmoz" ) )
 	//	printDirHomePage(sb,r);
 	//else
-	printWebHomePage(sb,r);
+	printWebHomePage(sb,r,s);
 
 
 	// . print last 5 queries

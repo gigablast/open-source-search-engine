@@ -403,7 +403,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// 
 		// logo header
 		//
-		printLogoAndSearchBox ( &sb , hr , -1 ); // catId = -1
+		printLogoAndSearchBox ( &sb , hr , -1,NULL ); // catId = -1
 		//
 		// script to populate search results
 		//
@@ -1386,15 +1386,15 @@ bool gotResults ( void *state ) {
 }
 
 // defined in PageRoot.cpp
-bool expandRootHtml (  SafeBuf& sb,
-		       char *head , 
-		       long hlen ,
-		       char *q    , 
-		       long qlen ,
-		       HttpRequest *r ,
-		       //TcpSocket   *s ,
-		       long long docsInCollArg ,
-		       CollectionRec *cr ) ;
+bool expandHtml (  SafeBuf& sb,
+		   char *head , 
+		   long hlen ,
+		   char *q    , 
+		   long qlen ,
+		   HttpRequest *r ,
+		   SearchInput *si,
+		   char *method ,
+		   CollectionRec *cr ) ;
 
 bool printSearchResultsHeader ( State0 *st ) {
 
@@ -1423,20 +1423,26 @@ bool printSearchResultsHeader ( State0 *st ) {
 	CollectionRec *cr = si->m_cr;
 	HttpRequest *hr = &st->m_hr;
 
+	// if there's a ton of sites use the post method otherwise
+	// they won't fit into the http request, the browser will reject
+	// sending such a large request with "GET"
+	char *method = "GET";
+	if ( si->m_sites && gbstrlen(si->m_sites)>800 ) method = "POST";
+
+
 	if ( si->m_format == FORMAT_HTML &&
 	     cr->m_htmlHead.length() ) {
-		return expandRootHtml ( *sb ,
-					cr->m_htmlHead.getBufStart(),
-					cr->m_htmlHead.length(),
-					q,
-					qlen,
-					hr,
-					0,
-					cr);
+		return expandHtml ( *sb ,
+				    cr->m_htmlHead.getBufStart(),
+				    cr->m_htmlHead.length(),
+				    q,
+				    qlen,
+				    hr,
+				    si,
+				    method,
+				    cr);
 	}
 				 
-
-
 	// . if not matt wells we do not do ajax
 	// . the ajax is just there to prevent bots from slamming me 
 	//   with queries.
@@ -1466,7 +1472,7 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 
 	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
-		printLogoAndSearchBox ( sb , &st->m_hr , -1 ); // catId = -1
+		printLogoAndSearchBox ( sb,&st->m_hr,-1,si); // catId = -1
 	}
 
 	// the calling function checked this so it should be non-null
@@ -2291,6 +2297,26 @@ bool printSearchResultsTail ( State0 *st ) {
 		// all done for json
 		return true;
 	}
+
+	// grab the query
+	char  *q    = msg40->getQuery();
+	long   qlen = msg40->getQueryLen();
+
+	HttpRequest *hr = &st->m_hr;
+
+	if ( si->m_format == FORMAT_HTML &&
+	     cr->m_htmlTail.length() ) {
+		return expandHtml ( *sb ,
+				    cr->m_htmlTail.getBufStart(),
+				    cr->m_htmlTail.length(),
+				    q,
+				    qlen,
+				    hr,
+				    si,
+				    NULL, // method,
+				    cr);
+	}
+
 
 	// get some result info from msg40
 	long firstNum   = msg40->getFirstResultNum() ;
@@ -5913,7 +5939,8 @@ bool printDMOZCrumb ( SafeBuf *sb , long catId , bool xml ) {
 bool printDmozRadioButtons ( SafeBuf *sb , long catId ) ;
 
 // if catId >= 1 then print the dmoz radio button
-bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ) {
+bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
+			     SearchInput *si ) {
 
 	char *root = "";
 	if ( g_conf.m_isMattWells )
@@ -5981,6 +6008,13 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ) {
 	char *coll = hr->getString("c");
 	if ( ! coll ) coll = "";
 
+	// if there's a ton of sites use the post method otherwise
+	// they won't fit into the http request, the browser will reject
+	// sending such a large request with "GET"
+	char *method = "GET";
+	if ( si && si->m_sites && gbstrlen(si->m_sites)>800 ) method = "POST";
+
+
 	sb->safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; "
 		      
 		      // i'm not sure why this was removed. perhaps
@@ -6017,10 +6051,11 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ) {
 		      //
 		      // search box
 		      //
-		      "<form name=f method=GET action=/search>\n\n" 
+		      "<form name=f method=%s action=/search>\n\n" 
 
 		      // propagate the collection if they re-search
 		      "<input name=c type=hidden value=\"%s\">"
+		       , method
 		      , coll
 		      );
 

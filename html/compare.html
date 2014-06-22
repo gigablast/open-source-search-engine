@@ -1,5 +1,7 @@
 <html>
-<title>LIVE Interactive Comparison of Gigablast vs SOLR Open Source Search Engine</title>
+<!--TODO: make interactive comparison-->
+
+<title>Comparison of Gigablast vs SOLR Open Source Search Engine</title>
 
 
 <h2>Comparing Gigablast to SOLR</h2>
@@ -12,7 +14,7 @@
 
 <td style=min-width:30%><b><a href=http://www.gigablast.com/>Gigablast</a></b></td>
 
-<td style=min-width:30%><b><a href=http://lucene.apache.org/solr/>SOLR</a></b></td>
+<td style=min-width:30%><b><a href=http://lucene.apache.org/solr/>Solr</a></b></td>
 <!--
 <td><b><a href=http://www.elasticsearch.org/>ElasticSearch</a></b></td>-->
 </tr>
@@ -52,15 +54,123 @@
 
 
 <tr valign=top>
+<td><b>Source Language</b></td>
+<!-- gb install -->
+<td>
+<font color=green><b>
+C/C++
+</b></font>
+</td>
+<!-- solr install-->
+<td>
+Java
+</td>
+</tr>
+
+
+<tr valign=top>
+<td><b>Runs on Linux</b></td>
+<!-- gb install -->
+<td>
+Yes.
+</td>
+<!-- solr install-->
+<td>
+Yes.
+</td>
+</tr>
+
+<tr valign=top>
+<td><b>Runs on Windows</b></td>
+<!-- gb install -->
+<td>
+Yes with Virtual Box. Soon natively.
+</td>
+<!-- solr install-->
+<td>
+Yes.
+</td>
+</tr>
+
+
+<tr valign=top>
+<td><b>License</b></td>
+<!-- gb install -->
+<td>
+Apache Open Source License 2
+</td>
+<!-- solr install-->
+<td>
+Apache Open Source License 2
+</td>
+</tr>
+
+<tr valign=top>
+<td><b>Release Date</b></td>
+<!-- gb install -->
+<td>
+2000
+</td>
+<!-- solr install-->
+<td>
+2007
+</td>
+</tr>
+
+<tr valign=top>
+<td><b>HTTP API</b></td>
+<!-- gb install -->
+<td>
+<a href=/api>here</a>
+</td>
+<!-- solr install-->
+<td>
+<a href=http://wiki.apache.org/solr/SchemaRESTAPI>here</a>
+</td>
+</tr>
+
+
+
+<tr valign=top>
+<td><b>Search Results</b></td>
+<!-- gb install -->
+<td>
+<a href=http://www.google.com/search?q=gigablast>here</a>
+</td>
+<!-- solr install-->
+<td>
+<a href=http://www.google.com/search?q=solr>here</a>
+</td>
+</tr>
+
+<tr valign=top>
+<td><b>Source Repository</b></td>
+<!-- gb install -->
+<td>
+<a href=https://github.com/gigablast/open-source-search-engine>github</a>
+</td>
+<!-- solr install-->
+<td>
+<a href=https://github.com/apache/lucene-solr>github</a>
+</td>
+</tr>
+
+
+
+
+
+<tr valign=top>
 <td><b>Source Installation</b></td>
 <!-- gb install -->
 <td>
+<font color=green><b>
 Just a <a href=/admin.html#src>few simple steps</a>
+</b></font>
 </td>
 <!-- solr install-->
 <td>
 
-<a href=http://lucene.apache.org/solr/downloads.html>Source download</a>
+<a href=http://lucene.apache.org/solr/downloads.html>Source download instructions</a>
 
 </td>
 <!-- elastic search install-->
@@ -99,17 +209,17 @@ Yes.
 
 <tr>
 <td>
-<b>File Layout</b>
+<b>Operating Layout</b>
 </td>
 <!--gigablast-->
 <td>
 <font color=green><b>
-A single binary containing web server, database, spider logic, etc.
+A single binary containing web server, database, admin tools, spider logic, etc.
 </b></font>
 </td>
 <!--solr-->
 <td>
-Many different packages quilted together.
+Many different packages quilted together. Apache, MySQL, Lucene, Tika, Zookeeper, Solr, Nutch, ...
 </td>
 </tr>
 
@@ -355,7 +465,7 @@ No.
 <tr>
 <td><b>Query Expansion (Synonyms)</b></td>
 <td>
-Yes. Uses mysynonyms.txt file to add your own expansion terms.
+Yes. And also uses mysynonyms.txt file to add your own expansion terms.
 </td>
 <td>
 ???
@@ -428,7 +538,7 @@ uses Apache Tika for several formats.
 <td>
 <font color=green><b>
 Highly scalable. Has scaled to over
-12 billion pages while server millions
+12 billion pages while serving millions
 of queries per day. Can easily add new servers to the
 hosts.conf file and click <i>rebalance shards</i> to
 rebalance the data.
