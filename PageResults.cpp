@@ -2304,20 +2304,6 @@ bool printSearchResultsTail ( State0 *st ) {
 
 	HttpRequest *hr = &st->m_hr;
 
-	if ( si->m_format == FORMAT_HTML &&
-	     cr->m_htmlTail.length() ) {
-		return expandHtml ( *sb ,
-				    cr->m_htmlTail.getBufStart(),
-				    cr->m_htmlTail.length(),
-				    q,
-				    qlen,
-				    hr,
-				    si,
-				    NULL, // method,
-				    cr);
-	}
-
-
 	// get some result info from msg40
 	long firstNum   = msg40->getFirstResultNum() ;
 
@@ -2527,6 +2513,19 @@ bool printSearchResultsTail ( State0 *st ) {
 		sb->pushChar('\n');
 		sb->nullTerm();
 	}
+
+	if ( si->m_format == FORMAT_HTML &&
+	     cr->m_htmlTail.length() &&
+	     ! expandHtml ( *sb ,
+			    cr->m_htmlTail.getBufStart(),
+			    cr->m_htmlTail.length(),
+			    q,
+			    qlen,
+			    hr,
+			    si,
+			    NULL, // method,
+			    cr) )
+			return false;
 
 	return true;
 }

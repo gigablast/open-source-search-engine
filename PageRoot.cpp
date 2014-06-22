@@ -262,9 +262,9 @@ bool printLogo ( SafeBuf& sb , SearchInput *si ) {
 		//p += sprintf ( p ,
 		return sb.safePrintf (
 			  "<a href=\"/\">"
-			  "<img valign=top width=310 height=75 border=0 "
+			  "<img valign=top width=250 height=61 border=0 "
 			  // avoid https for this, so make it absolute
-			  "src=\"http://www.gigablast.com/logo.gif\"></a>" );
+			  "src=\"/logo-med.jpg\"></a>" );
 		//return p;
 	}
 	// do we have a link?
@@ -533,19 +533,22 @@ bool expandHtml (  SafeBuf& sb,
 			// . TODO: randomize its position to make parsing more 
 			//         difficult
 			// . this secret key is for submitting a new query
-			long key;
-			char kname[4];
-			g_httpServer.getKey (&key,kname,NULL,0,time(NULL),0,
-					     10);
-			//sprintf ( p , "<input type=hidden name=%s value=%li>",
+			// long key;
+			// char kname[4];
+			// g_httpServer.getKey (&key,kname,NULL,0,time(NULL),0,
+			// 		     10);
+			//sprintf (p , "<input type=hidden name=%s value=%li>",
 			//	  kname,key);
 			//p += gbstrlen ( p );
-			sb.safePrintf( "<input type=hidden name=%s value=%li>",
-				       kname,key);
+			// sb.safePrintf( "<input type=hidden name=%s "
+			//"value=%li>",
+			// 	       kname,key);
 
 			//adds param for default screen size
 			//if(cr)
-			//	sb.safePrintf("<input type=hidden id='screenWidth' name='ws' value=%li>", cr->m_screenWidth);
+			//	sb.safePrintf("<input type=hidden "
+			//"id='screenWidth' name='ws' value=%li>", 
+			//cr->m_screenWidth);
 
 			// insert collection name too
 			long collLen;
@@ -565,14 +568,15 @@ bool expandHtml (  SafeBuf& sb,
 			}
 
 			// pass this crap on so zak can do searches
-			char *username = g_users.getUsername(r);
+			//char *username = g_users.getUsername(r);
 			// this is null because not in the cookie and we are
 			// logged in
 			//char *pwd  = r->getString ( "pwd" );
-			//sb.safePrintf("<input type=hidden name=pwd value=\"%s\">\n",
+			//sb.safePrintf("<input type=hidden name=pwd "
+			//"value=\"%s\">\n",
 			//pwd);
-			sb.safePrintf("<input type=hidden name=username "
-				      "value=\"%s\">\n",username);
+			//sb.safePrintf("<input type=hidden name=username "
+			//	      "value=\"%s\">\n",username);
 
 			// skip over %H
 			i += 1;
