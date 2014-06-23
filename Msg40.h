@@ -291,6 +291,8 @@ class Msg40 {
 
 	long m_lastProcessedi;
 
+	bool m_didSummarySkip;
+
 	// a multicast class to send the request
 	Multicast  m_mcast;
 

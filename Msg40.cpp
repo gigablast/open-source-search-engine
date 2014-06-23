@@ -102,6 +102,7 @@ Msg40::Msg40() {
 	m_numDisplayed  = 0;
 	m_numPrintedSoFar = 0;
 	m_lastChunk     = false;
+	m_didSummarySkip = false;
 	//m_numGigabitInfos = 0;
 }
 
@@ -155,6 +156,7 @@ bool Msg40::getResults ( SearchInput *si      ,
 
 
 	m_lastProcessedi = -1;
+	m_didSummarySkip = false;
 
 	m_si             = si;
 	m_state          = state;
@@ -270,7 +272,18 @@ bool Msg40::getResults ( SearchInput *si      ,
 	if ( m_si->m_doDupContentRemoval ) get = (get*120LL)/100LL;
 	// . get 30% more for what reason? i dunno, just cuz...
 	// . well, for "missing query terms" filtering... errors (not founds)
-	get = (get*130LL)/100LL;
+	//get = (get*130LL)/100LL;
+	// make it 10% because we are getting too many summaries some times
+	// no, this is bad when not doing site clustering or dup removal
+	// we need to skip directly to the 1000th result sometimes to show
+	// those results and we do not want to lookup the first 1000
+	// summaries, so we don't, and this makes us end up looking up 100
+	// more summaries. well, leave this in, just limit the max out
+	// for summaries below then to what we want to show.
+	// crap, Msg40::gotSummary() has a m_numRequests < m_numDocIds
+	// condition, so take this out...
+	//get = (get*110LL)/100LL;
+
 	// get at least 50 since we need a good sample that explicitly has all 
 	// query terms in order to calculate reliable affinities
 	//if ( get < MIN_AFFINITY_SAMPLE ) get = MIN_AFFINITY_SAMPLE;
@@ -1258,6 +1271,39 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 	if ( g_udpServer.getNumUsedSlots() > 500 ) maxOut = 10;
 	if ( g_udpServer.getNumUsedSlots() > 800 ) maxOut = 1;
 
+	// if not deduping or site clustering or getting gigabits, then
+	// just skip over docids for speed.
+	// don't bother with summaries we do not need
+	if ( m_si && 
+	     ! m_si->m_doDupContentRemoval &&
+	     ! m_si->m_doSiteClustering &&
+	     // gigabits required the first X summaries to be computed
+	     m_docsToScanForTopics <= 0 &&
+	     m_lastProcessedi == -1 ) {
+		// start getting summaries with the result # they want
+		m_lastProcessedi = m_si->m_firstResultNum-1;
+		// assume we printed the summaries before
+		m_printi = m_si->m_firstResultNum;
+		m_numDisplayed = m_si->m_firstResultNum;
+		// fake this so Msg40::gotSummary() can let us finish
+		// because it checks m_numRequests <  m_msg3a.m_numDocIds
+		m_numRequests = m_si->m_firstResultNum;
+		m_numReplies  = m_si->m_firstResultNum;
+		m_didSummarySkip = true;
+		log("query: skipping summary generation of first %li docs",
+		    m_si->m_firstResultNum);
+	}
+
+	// if not doing deduping or site clustering, let's not get like
+	// 100 summaries at a time when we only wanted 10 results
+	// for performance reasons
+	// if ( m_si && 
+	//      ! m_si->m_doDupContentRemoval &&
+	//      ! m_si->m_doSiteClustering &&
+	//       maxOut > m_si->m_docsWanted ) 
+	// 	maxOut = m_si->m_docsWanted;
+
+
 	// . launch a msg20 getSummary() for each docid
 	// . m_numContiguous should preceed any gap, see below
 	for ( long i = m_lastProcessedi+1 ; i < m_msg3a.m_numDocIds ; i++ ) {
@@ -1281,10 +1327,12 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// if we have printed enough summaries then do not launch
 		// any more, wait for them to come back in
 		if ( m_printi >= m_docsToGetVisible ) {
-			logf(LOG_DEBUG,"query: got %li summaries. done. "
+			logf(LOG_DEBUG,"query: got %li >= %li "
+			     "summaries. done. "
 			     "waiting on remaining "
 			     "%li to return."
 			     , m_printi
+			     , m_docsToGetVisible
 			     , m_numRequests-m_numReplies);
 			break;
 		}
@@ -1489,7 +1537,8 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 	// do not re-call gotSummary() to avoid a possible recursive stack
 	// explosion. this is only true if we are being called from 
 	// gotSummary() already, so do not call it again!!
-	if ( recalled ) return true;
+	if ( recalled ) 
+		return true;
 	// if we got nothing, that's it
 	if ( m_msg3a.m_numDocIds <= 0 ) {
 		// but if in streaming mode we still have to stream the
@@ -2025,6 +2074,10 @@ bool Msg40::gotSummary ( ) {
 
 	// loop over each clusterLevel and set it
 	for ( long i = 0 ; i < m_numReplies ; i++ ) {
+		// did we skip the first X summaries because we were
+		// not deduping/siteclustering/gettingGigabits?
+		if ( m_didSummarySkip && i < m_si->m_firstResultNum )
+			continue;
 		// get current cluster level
 		char *level = &m_msg3a.m_clusterLevels[i];
 		// sanity check -- this is a transistional value msg3a should 
@@ -3125,6 +3178,9 @@ static int gigabitCmp ( const void *a, const void *b ) {
 //
 
 bool Msg40::computeGigabits( TopicGroup *tg ) {
+
+	// not if we skipped the first X summariest
+	if ( m_didSummarySkip ) { char *xx=NULL;*xx=0; }return true;
 
 	//long long start = gettimeofdayInMilliseconds();
 

@@ -479,6 +479,8 @@ bool Collectiondb::addNewColl ( char *coll ,
 		cr->m_collectiveRespiderFrequency = 0.0;
 		//cr->m_restrictDomain = true;
 		// reset the crawl stats
+		// always turn off gigabits so &s=1000 can do summary skipping
+		cr->m_docsToScanForTopics = 0;
 	}
 
 	// . this will core if a host was dead and then when it came
@@ -1783,8 +1785,11 @@ bool CollectionRec::load ( char *coll , long i ) {
 	g_errno = 0;
 
 
-	// fix for diffbot
+	// fix for diffbot, spider time deduping
 	if ( m_isCustomCrawl ) m_dedupingEnabled = true;
+
+	// always turn off gigabits so &s=1000 can do summary skipping
+	if ( m_isCustomCrawl ) m_docsToScanForTopics = 0;
 
 	// always turn on distributed spider locking because otherwise
 	// we end up calling Msg50 which calls Msg25 for the same root url

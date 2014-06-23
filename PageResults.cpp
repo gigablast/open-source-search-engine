@@ -2975,7 +2975,10 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf("<blockquote>"); 
 
 	// print the rank. it starts at 0 so add 1
-	if ( si->m_format == FORMAT_HTML )
+	if ( si->m_format == FORMAT_HTML && si->m_streamResults )
+		sb->safePrintf("<table><tr><td valign=top>%li.</td><td>",
+			       ix+1 );
+	else if ( si->m_format == FORMAT_HTML )
 		sb->safePrintf("<table><tr><td valign=top>%li.</td><td>",
 			      ix+1 + si->m_firstResultNum );
 
