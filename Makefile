@@ -492,10 +492,12 @@ install:
 	ln -s /var/gigablast/data0/gb $(DESTDIR)/usr/bin/gb
 # if machine restarts...
 # the new way that does not use run-levels anymore
-	rm -f $(DESTDIR)/etc/init.d/gb
-	ln -s /lib/init/upstart-job $(DESTDIR)/etc/init.d/gb
+#	rm -f $(DESTDIR)/etc/init.d/gb
+#	ln -s /lib/init/upstart-job $(DESTDIR)/etc/init.d/gb
 # initctl upstart-job conf file (gb stop|start|reload)
-	cp init.gb.conf $(DESTDIR)/etc/init/gb.conf
+#	cp init.gb.conf $(DESTDIR)/etc/init/gb.conf
+	cp S99gb /etc/init.d/gb
+	ln -s /etc/init.d/gb /etc/rc3.d/S99gb
 
 .cpp.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -c $*.cpp 
