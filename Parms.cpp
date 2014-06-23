@@ -13636,7 +13636,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "spiderlinks";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHECKBOX;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_spiderLinks - (char *)&gr;
