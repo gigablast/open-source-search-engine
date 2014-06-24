@@ -227,6 +227,7 @@ Msg7::Msg7 () {
 	m_firstTime = true;
 	m_fixMe = false;
 	m_injectCount = 0;
+	m_start = NULL;
 }
 
 Msg7::~Msg7 () {
@@ -250,7 +251,7 @@ void doneInjectingWrapper9 ( void *state ) {
 			return;
 	}
 
-	if ( msg7->m_start ) 
+	if ( delim && msg7->m_start ) 
 		goto loop;
 
 	// and we call the original caller
