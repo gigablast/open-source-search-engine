@@ -25792,6 +25792,10 @@ bool XmlDoc::hashMetaZip ( HashTableX *tt ) {
 
 // returns false and sets g_errno on error
 bool XmlDoc::hashContentType ( HashTableX *tt ) {
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return false;
+
 	uint8_t ctype = *getContentType();
 	char *s = NULL;
 
@@ -25813,6 +25817,11 @@ bool XmlDoc::hashContentType ( HashTableX *tt ) {
 	}
 	// bail if unrecognized content type
 	if ( ! s ) return true;
+
+	// hack for diffbot. do not hash type:json because diffbot uses
+	// that for searching diffbot json objects
+	if ( cr->m_isCustomCrawl && ctype==CT_JSON && !m_isDiffbotJSONObject )
+		return true;
 
 	// set up the hashing parms
 	HashInfo hi;

@@ -472,8 +472,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	}
 
 	if ( m_q.m_truncated && m_q.m_isBoolean ) {
-		g_errno = ETOOMANYOPERANDS;
-		g_msg = " (error: query has too many operands)";
+		g_errno = EQUERYTOOBIG;
+		g_msg = " (error: query is too long)";
 		return false;
 	}
 
