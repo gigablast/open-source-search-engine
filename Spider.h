@@ -1134,6 +1134,10 @@ class SpiderColl {
 	long      m_tailHopCount;
 	long long m_minFutureTimeMS;
 
+	// . do not re-send CrawlInfoLocal for a coll if not update
+	// . we store the flags in here as true if we should send our
+	//   CrawlInfoLocal for this coll to this hostId
+	char m_sendLocalCrawlInfoToHost[MAX_HOSTS];
 
 	Msg4 m_msg4x;
 	Msg4 m_msg4;

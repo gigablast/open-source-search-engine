@@ -1147,6 +1147,9 @@ SpiderColl::SpiderColl () {
 	reset();
 	// reset this
 	memset ( m_outstandingSpiders , 0 , 4 * MAX_SPIDER_PRIORITIES );
+	// start off sending all colls local crawl info to all hosts to
+	// be sure we are in sync
+	memset ( m_sendLocalCrawlInfoToHost , 1 , MAX_HOSTS );
 }
 
 long SpiderColl::getTotalOutstandingSpiders ( ) {
@@ -5576,6 +5579,10 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		if ( cr->m_maxCrawlRounds > 0 &&
 		     cr->m_isCustomCrawl &&
 		     cr->m_spiderRoundNum >= cr->m_maxCrawlRounds ) {
+			// should we resend our local crawl info to all hosts?
+			if ( cr->m_localCrawlInfo.m_hasUrlsReadyToSpider )
+				cr->localCrawlInfoUpdate();
+			// mark it has false
 			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
 			// prevent having to save all the time
 			if ( cr->m_spiderStatus != SP_MAXROUNDS ) {
@@ -5590,6 +5597,9 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		     cr->m_isCustomCrawl == 1 && // bulk jobs exempt!
 		     cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound >=
 		     cr->m_maxToCrawl ) {
+			// should we resend our local crawl info to all hosts?
+			if ( cr->m_localCrawlInfo.m_hasUrlsReadyToSpider )
+				cr->localCrawlInfoUpdate();
 			// now once all hosts have no urls ready to spider
 			// then the send email code will be called.
 			// do it this way for code simplicity.
@@ -5607,6 +5617,10 @@ void SpiderLoop::spiderDoledUrls ( ) {
 		     cr->m_isCustomCrawl == 1 && // bulk jobs exempt!
 		     cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound >=
 		     cr->m_maxToProcess ) {
+			// should we resend our local crawl info to all hosts?
+			if ( cr->m_localCrawlInfo.m_hasUrlsReadyToSpider )
+				cr->localCrawlInfoUpdate();
+			// now we can update it
 			cr->m_localCrawlInfo.m_hasUrlsReadyToSpider = false;
 			// prevent having to save all the time
 			if ( cr->m_spiderStatus != SP_MAXTOPROCESS ) {
@@ -6460,6 +6474,10 @@ bool SpiderLoop::gotDoledbList2 ( ) {
 	if ( ! ci->m_hasUrlsReadyToSpider ) 
 		log("spider: got a reviving url for coll %s (%li) to crawl %s",
 		    cr->m_coll,(long)cr->m_collnum,sreq->m_url);
+
+	// if changing status, resend our local crawl info to all hosts?
+	if ( ! ci->m_hasUrlsReadyToSpider )
+		cr->localCrawlInfoUpdate();
 
 	// there are urls ready to spider
 	ci->m_hasUrlsReadyToSpider = true;
@@ -11997,6 +12015,8 @@ void spiderRoundIncremented ( CollectionRec *cr ) {
 	cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound = 0;
 	cr->m_globalCrawlInfo.m_pageProcessSuccessesThisRound  = 0;
 
+	cr->localCrawlInfoUpdate();
+
 	cr->m_needsSave = true;
 }
 
@@ -12381,12 +12401,27 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 			    cr->m_coll);
 			// assume our crawl on this host is completed i guess
 			ci->m_hasUrlsReadyToSpider = 0;
+			// if changing status, resend local crawl info to all
+			cr->localCrawlInfoUpdate();
 			// save that!
 			cr->m_needsSave = true;
 		}
+
+
+		long hostId = slot->m_hostId;
+
+		// . if not sent to host yet, send
+		// . this will be true on startup
+		// . but once we send it we set flag to false
+		// . and if we update anything we send we set flag to true
+		//   again for all hosts
+		if ( ! cr->shouldSendLocalCrawlInfoToHost(hostId) ) continue;
 		
 		// save it
 		replyBuf.safeMemcpy ( ci , sizeof(CrawlInfo) );
+
+		// do not re-do it unless it gets update here or in XmlDoc.cpp
+		cr->sentLocalCrawlInfoToHost ( hostId );
 	}
 
 	g_udpServer.sendReply_ass ( replyBuf.getBufStart() , 

@@ -332,6 +332,12 @@ class CollectionRec {
 
 	long long getNumDocsIndexed();
 
+	// messes with m_spiderColl->m_sendLocalCrawlInfoToHost[MAX_HOSTS]
+	// so we do not have to keep sending this huge msg!
+	bool shouldSendLocalCrawlInfoToHost ( long hostId );
+	void sentLocalCrawlInfoToHost ( long hostId );
+	void localCrawlInfoUpdate();
+
 	// . can this ip perform a search or add url on this collection?
 	// . mamma.com provides encapsulated ips of their queriers so we
 	//   can ban them by ip

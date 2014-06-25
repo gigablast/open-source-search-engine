@@ -2164,6 +2164,8 @@ bool XmlDoc::indexDoc ( ) {
 		if ( countIt ) {
 			cr->m_localCrawlInfo.m_pageDownloadAttempts++;
 			cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
+			// changing status, resend local crawl info to all
+			cr->localCrawlInfoUpdate();
 		}
 		// need to save collection rec now during auto save
 		cr->m_needsSave = true;
@@ -13513,6 +13515,8 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		log("build: processed page %s (pageLen=%li)",
 		    THIS->m_firstUrl.m_url,
 		    pageLen);
+		// changing status, resend local crawl info to all
+		cr->localCrawlInfoUpdate();
 		// sanity!
 		// crap, this can happen if we try to get the metalist
 		// of an old page for purposes of incremental indexing or
@@ -14345,6 +14349,10 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// count it for stats
 	cr->m_localCrawlInfo.m_pageProcessAttempts++;
 	cr->m_globalCrawlInfo.m_pageProcessAttempts++;
+
+	// changing status, resend local crawl info to all
+	cr->localCrawlInfoUpdate();
+
 	cr->m_needsSave = true;
 
 	char *additionalHeaders = NULL;
@@ -14868,6 +14876,8 @@ char **XmlDoc::gotHttpReply ( ) {
 		cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound++;
 		m_incrementedDownloadCount = true;
 		cr->m_needsSave = true;
+		// changing status, resend local crawl info to all
+		cr->localCrawlInfoUpdate();
 	}
 
 	// this means the spider compression proxy's reply got corrupted
