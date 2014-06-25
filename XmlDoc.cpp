@@ -14410,6 +14410,9 @@ char **XmlDoc::getHttpReply ( ) {
 		// otherwise, assume reply is valid
 		return &m_httpReply;
 	}
+
+	setStatus("getting http reply");
+
 	// come back up here if a redirect invalidates it
  loop:
 	// sanity test -- only if not the test collection (NO, might be EBADIP)
@@ -14496,6 +14499,8 @@ void gotHttpReplyWrapper ( void *state ) {
 // "NULL" can be a valid http reply (empty page) so we need to use "char **"
 char **XmlDoc::getHttpReply2 ( ) {
 	if ( m_httpReplyValid ) return &m_httpReply;
+
+	setStatus("getting http reply2");
 
 	// get ip
 	long *ip = getIp();
@@ -15069,6 +15074,9 @@ int16_t *XmlDoc::getHttpStatus ( ) {
 HttpMime *XmlDoc::getMime () {
 	if ( m_mimeValid ) return &m_mime;
 
+	// log debug
+	setStatus("getting http mime");
+
 	Url *cu = getCurrentUrl();
 	if ( ! cu || cu == (void *)-1) return (HttpMime *)cu;
 
@@ -15267,6 +15275,8 @@ char getContentTypeFromContent ( char *p , long niceness ) {
 
 uint8_t *XmlDoc::getContentType ( ) {
 	if ( m_contentTypeValid ) return &m_contentType;
+	// log debug
+	setStatus("getting content type");
 	// get the mime first
 	HttpMime *mime = getMime();
 	if ( ! mime || mime == (HttpMime *)-1 ) return (uint8_t *)mime;
