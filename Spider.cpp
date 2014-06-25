@@ -12408,7 +12408,7 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		}
 
 
-		long hostId = slot->m_hostId;
+		long hostId = slot->m_host->m_hostId;
 
 		// . if not sent to host yet, send
 		// . this will be true on startup
