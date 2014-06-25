@@ -3250,3 +3250,26 @@ long long CollectionRec::getNumDocsIndexed() {
 	if ( ! base ) return 0LL;
 	return base->getNumGlobalRecs();
 }
+
+// messes with m_spiderColl->m_sendLocalCrawlInfoToHost[MAX_HOSTS]
+// so we do not have to keep sending this huge msg!
+bool CollectionRec::shouldSendLocalCrawlInfoToHost ( long hostId ) {
+	if ( ! m_spiderColl ) return false;
+	if ( hostId < 0 ) { char *xx=NULL;*xx=0; }
+	if ( hostId >= g_hostdb.m_numHosts ) { char *xx=NULL;*xx=0; }
+	// sanity
+	return m_spiderColl->m_sendLocalCrawlInfoToHost[hostId];
+}
+
+void CollectionRec::localCrawlInfoUpdate() {
+	if ( ! m_spiderColl ) return;
+	// turn on all the flags
+	memset(m_spiderColl->m_sendLocalCrawlInfoToHost,1,g_hostdb.m_numHosts);
+}
+
+// right after we send copy it for sending we set this so we do not send
+// again unless localCrawlInfoUpdate() is called
+void CollectionRec::sentLocalCrawlInfoToHost ( long hostId ) {
+	if ( ! m_spiderColl ) return;
+	m_spiderColl->m_sendLocalCrawlInfoToHost[hostId] = 0;
+}
