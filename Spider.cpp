@@ -12126,11 +12126,11 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			memcpy ( &cia[h->m_hostId] , ptr , sizeof(CrawlInfo));
 		
 		// debug
-		log("spdr: got ci from host %li downloads=%lli, replies=%li",
-		    h->m_hostId,
-		    ptr->m_pageDownloadSuccessesThisRound,
-		    s_replies
-		    );
+		// log("spd: got ci from host %li downloads=%lli, replies=%li",
+		//     h->m_hostId,
+		//     ptr->m_pageDownloadSuccessesThisRound,
+		//     s_replies
+		//     );
 
 		// mark it for computation once we got all replies
 		cr->m_updateRoundNum = s_updateRoundNum;
@@ -12164,7 +12164,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// must be in need of computation
 		if ( cr->m_updateRoundNum != s_updateRoundNum ) continue;
 
-		log("spider: processing c=%s",cr->m_coll);
+		//log("spider: processing c=%s",cr->m_coll);
 
 		CrawlInfo *gi = &cr->m_globalCrawlInfo;
 
@@ -12231,10 +12231,10 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		} // end loop over hosts
 
 
-		log("spider: %lli (%lli) total downloads for c=%s",
-		    gi->m_pageDownloadSuccessesThisRound,
-		    gi->m_pageDownloadSuccesses,
-		    cr->m_coll);
+		// log("spider: %lli (%lli) total downloads for c=%s",
+		//     gi->m_pageDownloadSuccessesThisRound,
+		//     gi->m_pageDownloadSuccesses,
+		//     cr->m_coll);
 
 		// revival?
 		//if ( cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider &&
@@ -12485,8 +12485,8 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		if ( ! cr->shouldSendLocalCrawlInfoToHost(hostId) ) continue;
 
 		// note it
-		log("spider: sending ci for coll %s to host %li",
-		    cr->m_coll,hostId);
+		// log("spider: sending ci for coll %s to host %li",
+		//     cr->m_coll,hostId);
 		
 		// save it
 		replyBuf.safeMemcpy ( ci , sizeof(CrawlInfo) );
