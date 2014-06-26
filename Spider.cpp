@@ -12040,8 +12040,9 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// reply is error? then use the last known good reply we had from him
 	// assuming udp reply timed out. empty buf just means no update now!
 	if ( ! slot->m_readBuf && g_errno ) {
-		log("spider: got crawlinfo reply error: %s",
-		    mstrerror(g_errno));
+		log("spider: got crawlinfo reply error from host %li: %s. "
+		    "spidering will be paused.",
+		    h->m_hostId,mstrerror(g_errno));
 		// just clear it
 		g_errno = 0;
 		// if never had any reply... can't be valid then
@@ -12152,6 +12153,12 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// might as well stop the loop here since we are
 		// not updating our crawlinfo states.
 		//break;
+	}
+	else {
+		if ( ! s_countsAreValid )
+			log("spider: got all crawlinfo replies. all shards "
+			    "up. spidering back on.");
+		s_countsAreValid = true;
 	}
 
 
