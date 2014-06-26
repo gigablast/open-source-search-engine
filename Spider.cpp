@@ -33,7 +33,9 @@ void testWinnerTreeKey ( ) ;
 //   maybe because of the empty doledb logic taking too long?
 //#define SPIDER_DONE_TIMER 30
 // try 45 to prevent false revivals
-#define SPIDER_DONE_TIMER 45
+//#define SPIDER_DONE_TIMER 45
+// try 30 again since we have new localcrawlinfo update logic much faster
+#define SPIDER_DONE_TIMER 30
 
 // seems like timecity.com as gigabytes of spiderdb data so up from 40 to 400
 #define MAX_WINNER_NODES 400
@@ -11911,7 +11913,7 @@ static long s_requests = 0;
 static long s_replies  = 0;
 static long s_validReplies  = 0;
 static bool s_inUse = false;
-
+static long s_updateRoundNum = 0;
 // . just call this once per second for all collections
 // . figure out how to backoff on collections that don't need it so much
 // . ask every host for their crawl infos for each collection rec
@@ -11936,11 +11938,11 @@ void updateAllCrawlInfosSleepWrapper ( int fd , void *state ) {
 	s_inUse = true;
 
 	// reset tmp crawlinfo classes to hold the ones returned to us
-	for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
-		CollectionRec *cr = g_collectiondb.m_recs[i];
-		if ( ! cr ) continue;
-		cr->m_tmpCrawlInfo.reset();
-	}
+	//for ( long i = 0 ; i < g_collectiondb.m_numRecs ; i++ ) {
+	//	CollectionRec *cr = g_collectiondb.m_recs[i];
+	//	if ( ! cr ) continue;
+	//	cr->m_tmpCrawlInfo.reset();
+	//}
 
 	// send out the msg request
 	for ( long i = 0 ; i < g_hostdb.m_numHosts ; i++ ) {
@@ -12027,7 +12029,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// loop over each LOCAL crawlinfo we received from this host
 	CrawlInfo *ptr   = (CrawlInfo *)(slot->m_readBuf);
 	CrawlInfo *end   = (CrawlInfo *)(slot->m_readBuf+ slot->m_readBufSize);
-	long       allocSize           = slot->m_readBufMaxSize;
+	//long       allocSize           = slot->m_readBufMaxSize;
 
 	// host sending us this reply
 	Host *h = slot->m_host;
@@ -12036,19 +12038,24 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	s_validReplies++;
 
 	// reply is error? then use the last known good reply we had from him
-	if ( ! slot->m_readBuf || g_errno ) {
+	// assuming udp reply timed out. empty buf just means no update now!
+	if ( ! slot->m_readBuf && g_errno ) {
 		log("spider: got crawlinfo reply error: %s",
 		    mstrerror(g_errno));
 		// just clear it
 		g_errno = 0;
+		// if never had any reply... can't be valid then
+		if ( ! ptr ) s_validReplies--;
+		/*
 		// just use his last known good reply
 		ptr = (CrawlInfo *)h->m_lastKnownGoodCrawlInfoReply;
 		end = (CrawlInfo *)h->m_lastKnownGoodCrawlInfoReplyEnd;
-		// if never had any reply... can't be valid then
-		if ( ! ptr ) s_validReplies--;
+		*/
 	}
 	// otherwise, if reply was good it is the last known good now!
+	/*
 	else {
+		
 		// free the old good one and replace it with the new one
 		if ( h->m_lastKnownGoodCrawlInfoReply ) {
 			//log("spider: skiipping possible bad free!!!! until we fix");
@@ -12064,6 +12071,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// if valid, don't let him free it now!
 		slot->m_readBuf = NULL;
 	}
+	*/
 
 	// inc it
 	s_replies++;
@@ -12104,33 +12112,101 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			continue;
 		}
 		
-		CrawlInfo *stats = ptr;
+		//CrawlInfo *stats = ptr;
 
-		long long *gs = (long long *)&cr->m_tmpCrawlInfo;
-
-		long long *ss = (long long *)stats;
-		for ( long i = 0 ; i < NUMCRAWLSTATS ; i++ ) {
-			*gs = *gs + *ss;
-			gs++;
-			ss++;
+		// just copy into the stats buf
+		if ( ! cr->m_crawlInfoBuf.getBufStart() ) {
+			long need = sizeof(CrawlInfo) * g_hostdb.m_numHosts;
+			cr->m_crawlInfoBuf.reserve(need);
 		}
 
-		// . special counts
-		// . assume round #'s match!
-		//if ( ss->m_spiderRoundNum == 
-		//     cr->m_localCrawlInfo.m_spiderRoundNum ) {
-		cr->m_tmpCrawlInfo.m_pageDownloadSuccessesThisRound +=
-			stats->m_pageDownloadSuccessesThisRound;
-		cr->m_tmpCrawlInfo.m_pageProcessSuccessesThisRound +=
-			stats->m_pageProcessSuccessesThisRound;
-		//}
+		CrawlInfo *cia = (CrawlInfo *)cr->m_crawlInfoBuf.getBufStart();
 
-		if ( stats->m_hasUrlsReadyToSpider ) {
+		if ( cia )
+			memcpy ( &cia[h->m_hostId] , ptr , sizeof(CrawlInfo));
+		
+		// debug
+		log("spdr: got ci from host %li downloads=%lli, replies=%li",
+		    h->m_hostId,
+		    ptr->m_pageDownloadSuccessesThisRound,
+		    s_replies
+		    );
+
+		// mark it for computation once we got all replies
+		cr->m_updateRoundNum = s_updateRoundNum;
+	}
+
+	// keep going until we get all replies
+	if ( s_replies < s_requests ) return;
+	
+	// if it's the last reply we are to receive, and 1 or more 
+	// hosts did not have a valid reply, and not even a
+	// "last known good reply" then then we can't do
+	// much, so do not spider then because our counts could be
+	// way off and cause us to start spidering again even though
+	// we hit a maxtocrawl limit!!!!!
+	if ( s_validReplies < s_replies ) {
+		// this will tell us to halt all spidering
+		// because a host is essentially down!
+		s_countsAreValid = false;
+		// might as well stop the loop here since we are
+		// not updating our crawlinfo states.
+		//break;
+	}
+
+
+	// loop over 
+	for ( long x = 0 ; x < g_collectiondb.m_numRecs ; x++ ) {
+
+		CollectionRec *cr = g_collectiondb.m_recs[x];
+		if ( ! cr ) continue;
+
+		// must be in need of computation
+		if ( cr->m_updateRoundNum != s_updateRoundNum ) continue;
+
+		log("spider: processing c=%s",cr->m_coll);
+
+		CrawlInfo *gi = &cr->m_globalCrawlInfo;
+
+		long hadUrlsReady = gi->m_hasUrlsReadyToSpider;
+
+		// clear it out
+		gi->reset();
+
+		// retrieve stats for this collection and scan all hosts
+		CrawlInfo *cia = (CrawlInfo *)cr->m_crawlInfoBuf.getBufStart();
+
+		// if empty for all hosts, i guess no stats...
+		if ( ! cia ) continue;
+
+		for ( long k = 0 ; k < g_hostdb.m_numHosts; k++ ) {
+			// get the CrawlInfo for the ith host
+			CrawlInfo *stats = &cia[k];
+			// point to the stats for that host
+			long long *ss = (long long *)stats;
+			long long *gs = (long long *)gi;
+			// add each hosts counts into the global accumulators
+			for ( long j = 0 ; j < NUMCRAWLSTATS ; j++ ) {
+				*gs = *gs + *ss;
+				gs++;
+				ss++;
+			}
+			// . special counts
+			// . assume round #'s match!
+			//if ( ss->m_spiderRoundNum == 
+			//     cr->m_localCrawlInfo.m_spiderRoundNum ) {
+			gi->m_pageDownloadSuccessesThisRound +=
+				stats->m_pageDownloadSuccessesThisRound;
+			gi->m_pageProcessSuccessesThisRound +=
+				stats->m_pageProcessSuccessesThisRound;
+			//}
+
+			if ( ! stats->m_hasUrlsReadyToSpider ) continue;
 			// inc the count otherwise
-			cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider++;
+			gi->m_hasUrlsReadyToSpider++;
 			// . no longer initializing?
-			// . sometimes other shards get the spider requests
-			//   and not us!!!
+			// . sometimes other shards get the spider 
+			//  requests and not us!!!
 			if ( cr->m_spiderStatus == SP_INITIALIZING )
 				cr->m_spiderStatus = SP_INPROGRESS;
 			// i guess we are back in business even if
@@ -12150,28 +12226,15 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			//cr->m_localCrawlInfo.m_sentCrawlDoneAlert=0;
 			// revival?
 			if ( ! cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider )
-				log("spider: reviving crawl %s from host %li",
-				    cr->m_coll,slot->m_host->m_hostId);
-		}
-		
-		// if not the last reply, skip this part
-		if ( s_replies < s_requests ) continue;
+				log("spider: reviving crawl %s "
+				    "from host %li", cr->m_coll,k);
+		} // end loop over hosts
 
-		// if it's the last reply we are to receive, and 1 or more 
-		// hosts did not have a valid reply, and not even a
-		// "last known good reply" then then we can't do
-		// much, so do not spider then because our counts could be
-		// way off and cause us to start spidering again even though
-		// we hit a maxtocrawl limit!!!!!
-		if ( s_validReplies < s_replies ) {
-			// this will tell us to halt all spidering
-			// because a host is essentially down!
-			s_countsAreValid = false;
-			// might as well stop the loop here since we are
-			// not updating our crawlinfo states.
-			break;
-		}
 
+		log("spider: %lli (%lli) total downloads for c=%s",
+		    gi->m_pageDownloadSuccessesThisRound,
+		    gi->m_pageDownloadSuccesses,
+		    cr->m_coll);
 
 		// revival?
 		//if ( cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider &&
@@ -12181,8 +12244,9 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		//}
 
 		//bool has = cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider;
-		if ( cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider &&
-		     ! cr->m_tmpCrawlInfo.m_hasUrlsReadyToSpider ) {
+		if ( hadUrlsReady &&
+		     // and it no longer does now...
+		     ! cr->m_globalCrawlInfo.m_hasUrlsReadyToSpider ) {
 			log("spider: all %li hosts report %s (%li) has no "
 			    "more urls ready to spider",
 			    s_replies,cr->m_coll,(long)cr->m_collnum);
@@ -12194,9 +12258,9 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// now copy over to global crawl info so things are not
 		// half ass should we try to read globalcrawlinfo
 		// in between packets received.
-		memcpy ( &cr->m_globalCrawlInfo , 
-			 &cr->m_tmpCrawlInfo ,
-			 sizeof(CrawlInfo) );
+		//memcpy ( &cr->m_globalCrawlInfo , 
+		//	 &cr->m_tmpCrawlInfo ,
+		//	 sizeof(CrawlInfo) );
 
 		// turn not assume we are out of urls just yet if a host
 		// in the network has not reported...
@@ -12287,13 +12351,14 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	}
 
 	// wait for more replies to come in
-	if ( s_replies < s_requests ) return;
+	//if ( s_replies < s_requests ) return;
 
 	// initialize
 	s_replies  = 0;
 	s_requests = 0;
 	s_validReplies = 0;
 	s_inUse    = false;
+	s_updateRoundNum++;
 }
 
 void handleRequestc1 ( UdpSlot *slot , long niceness ) {
@@ -12418,6 +12483,10 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 		// . and if we update anything we send we set flag to true
 		//   again for all hosts
 		if ( ! cr->shouldSendLocalCrawlInfoToHost(hostId) ) continue;
+
+		// note it
+		log("spider: sending ci for coll %s to host %li",
+		    cr->m_coll,hostId);
 		
 		// save it
 		replyBuf.safeMemcpy ( ci , sizeof(CrawlInfo) );
