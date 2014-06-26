@@ -269,6 +269,19 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		if ( *p ) goto loop;
 	}
 
+	// use default collection if none provided
+	if ( ! p && ! token && m_collnumBuf.length() <= 0 ) {
+		// get default collection rec
+		CollectionRec *dr = g_collectiondb.getRec (coll);
+		// add to our list
+		if ( dr &&
+		     !m_collnumBuf.safeMemcpy(&dr->m_collnum,
+					      sizeof(collnum_t)))
+			return false;
+	}
+		
+
+
 	/////
 	//
 	// END BUILDING m_collnumBuf
