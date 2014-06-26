@@ -731,6 +731,7 @@ void Collectiondb::deleteSpiderColl ( SpiderColl *sc ) {
 }
 */
 
+/// this deletes the collection, not just part of a reset.
 bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 	// do not allow this if in repair mode
 	if ( g_repair.isRepairActive() && g_repair.m_collnum == collnum ) {
@@ -833,6 +834,18 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		//delete ( sc );
 		cr->m_spiderColl = NULL;
 	}
+
+
+	// the bulk urls file too i guess
+	if ( cr->m_isCustomCrawl == 2 ) {
+		SafeBuf bu;
+		bu.safePrintf("%sbulkurls-%s.txt", 
+			      g_hostdb.m_dir , cr->m_coll );
+		File bf;
+		bf.set ( bu.getBufStart() );
+		if ( bf.doesExist() ) bf.unlink();
+	}
+	
 
 	//////
 	//
@@ -1085,6 +1098,8 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 
 	// in case of bulk job, be sure to save list of spots
 	// copy existing list to a /tmp, where they will later be transferred back to the new folder
+	// now i just store in the root working dir... MDW
+	/*
 	char oldbulkurlsname[1036];
 	snprintf(oldbulkurlsname, 1036, "%scoll.%s.%li/bulkurls.txt",g_hostdb.m_dir,cr->m_coll,(long)oldCollnum);
 	char newbulkurlsname[1036];
@@ -1094,6 +1109,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 
 	if (cr->m_isCustomCrawl == 2)
 	    mv( oldbulkurlsname , tmpbulkurlsname );
+	*/
 
 	// reset spider info
 	SpiderColl *sc = g_spiderCache.getSpiderCollIffNonNull(oldCollnum);
@@ -1184,9 +1200,10 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 		    "%s.", dname,mstrerror(g_errno));
 	}
 
-    // be sure to copy back the bulk urls for bulk jobs
-    if (cr->m_isCustomCrawl == 2)
-        mv( tmpbulkurlsname, newbulkurlsname );
+	// be sure to copy back the bulk urls for bulk jobs
+	// MDW: now i just store that file in the root working dir
+	//if (cr->m_isCustomCrawl == 2)
+	//	mv( tmpbulkurlsname, newbulkurlsname );
 
 	// . unlink all the *.dat and *.map files for this coll in its subdir
 	// . remove all recs from this collnum from m_tree/m_buckets
@@ -3249,4 +3266,27 @@ long long CollectionRec::getNumDocsIndexed() {
 	RdbBase *base = m_bases[RDB_TITLEDB];
 	if ( ! base ) return 0LL;
 	return base->getNumGlobalRecs();
+}
+
+// messes with m_spiderColl->m_sendLocalCrawlInfoToHost[MAX_HOSTS]
+// so we do not have to keep sending this huge msg!
+bool CollectionRec::shouldSendLocalCrawlInfoToHost ( long hostId ) {
+	if ( ! m_spiderColl ) return false;
+	if ( hostId < 0 ) { char *xx=NULL;*xx=0; }
+	if ( hostId >= g_hostdb.m_numHosts ) { char *xx=NULL;*xx=0; }
+	// sanity
+	return m_spiderColl->m_sendLocalCrawlInfoToHost[hostId];
+}
+
+void CollectionRec::localCrawlInfoUpdate() {
+	if ( ! m_spiderColl ) return;
+	// turn on all the flags
+	memset(m_spiderColl->m_sendLocalCrawlInfoToHost,1,g_hostdb.m_numHosts);
+}
+
+// right after we send copy it for sending we set this so we do not send
+// again unless localCrawlInfoUpdate() is called
+void CollectionRec::sentLocalCrawlInfoToHost ( long hostId ) {
+	if ( ! m_spiderColl ) return;
+	m_spiderColl->m_sendLocalCrawlInfoToHost[hostId] = 0;
 }

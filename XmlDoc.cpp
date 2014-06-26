@@ -2164,6 +2164,8 @@ bool XmlDoc::indexDoc ( ) {
 		if ( countIt ) {
 			cr->m_localCrawlInfo.m_pageDownloadAttempts++;
 			cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
+			// changing status, resend local crawl info to all
+			cr->localCrawlInfoUpdate();
 		}
 		// need to save collection rec now during auto save
 		cr->m_needsSave = true;
@@ -13513,6 +13515,8 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		log("build: processed page %s (pageLen=%li)",
 		    THIS->m_firstUrl.m_url,
 		    pageLen);
+		// changing status, resend local crawl info to all
+		cr->localCrawlInfoUpdate();
 		// sanity!
 		// crap, this can happen if we try to get the metalist
 		// of an old page for purposes of incremental indexing or
@@ -14345,6 +14349,10 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// count it for stats
 	cr->m_localCrawlInfo.m_pageProcessAttempts++;
 	cr->m_globalCrawlInfo.m_pageProcessAttempts++;
+
+	// changing status, resend local crawl info to all
+	cr->localCrawlInfoUpdate();
+
 	cr->m_needsSave = true;
 
 	char *additionalHeaders = NULL;
@@ -14402,6 +14410,9 @@ char **XmlDoc::getHttpReply ( ) {
 		// otherwise, assume reply is valid
 		return &m_httpReply;
 	}
+
+	setStatus("getting http reply");
+
 	// come back up here if a redirect invalidates it
  loop:
 	// sanity test -- only if not the test collection (NO, might be EBADIP)
@@ -14488,6 +14499,8 @@ void gotHttpReplyWrapper ( void *state ) {
 // "NULL" can be a valid http reply (empty page) so we need to use "char **"
 char **XmlDoc::getHttpReply2 ( ) {
 	if ( m_httpReplyValid ) return &m_httpReply;
+
+	setStatus("getting http reply2");
 
 	// get ip
 	long *ip = getIp();
@@ -14868,6 +14881,8 @@ char **XmlDoc::gotHttpReply ( ) {
 		cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound++;
 		m_incrementedDownloadCount = true;
 		cr->m_needsSave = true;
+		// changing status, resend local crawl info to all
+		cr->localCrawlInfoUpdate();
 	}
 
 	// this means the spider compression proxy's reply got corrupted
@@ -15058,6 +15073,9 @@ int16_t *XmlDoc::getHttpStatus ( ) {
 
 HttpMime *XmlDoc::getMime () {
 	if ( m_mimeValid ) return &m_mime;
+
+	// log debug
+	setStatus("getting http mime");
 
 	Url *cu = getCurrentUrl();
 	if ( ! cu || cu == (void *)-1) return (HttpMime *)cu;
@@ -15257,6 +15275,8 @@ char getContentTypeFromContent ( char *p , long niceness ) {
 
 uint8_t *XmlDoc::getContentType ( ) {
 	if ( m_contentTypeValid ) return &m_contentType;
+	// log debug
+	setStatus("getting content type");
 	// get the mime first
 	HttpMime *mime = getMime();
 	if ( ! mime || mime == (HttpMime *)-1 ) return (uint8_t *)mime;
@@ -25792,6 +25812,10 @@ bool XmlDoc::hashMetaZip ( HashTableX *tt ) {
 
 // returns false and sets g_errno on error
 bool XmlDoc::hashContentType ( HashTableX *tt ) {
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return false;
+
 	uint8_t ctype = *getContentType();
 	char *s = NULL;
 
@@ -25813,6 +25837,11 @@ bool XmlDoc::hashContentType ( HashTableX *tt ) {
 	}
 	// bail if unrecognized content type
 	if ( ! s ) return true;
+
+	// hack for diffbot. do not hash type:json because diffbot uses
+	// that for searching diffbot json objects
+	if ( cr->m_isCustomCrawl && ctype==CT_JSON && !m_isDiffbotJSONObject )
+		return true;
 
 	// set up the hashing parms
 	HashInfo hi;

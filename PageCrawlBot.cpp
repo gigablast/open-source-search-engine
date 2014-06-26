@@ -2127,7 +2127,11 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		    seeds,coll,(long)st->m_collnum);
 
 	char bulkurlsfile[1024];
-	snprintf(bulkurlsfile, 1024, "%scoll.%s.%li/bulkurls.txt", g_hostdb.m_dir , coll , (long)st->m_collnum );
+	// when a collection is restarted the collnum changes to avoid
+	// adding any records destined for that collnum that might be on 
+	// the wire. so just put these in the root dir
+	snprintf(bulkurlsfile, 1024, "%sbulkurls-%s.txt", 
+		 g_hostdb.m_dir , coll );//, (long)st->m_collnum );
 	if ( spots && cr && cr->m_isCustomCrawl == 2 ) {
 	    long spotsLen = (long)gbstrlen(spots);
 		log("crawlbot: got spots (len=%li) to add coll=%s (%li)",
@@ -2162,8 +2166,8 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 		bb.load(bulkurlsfile);
 		bb.nullTerm();
 		spots = bb.getBufStart();
-		log("crawlbot: restarting bulk job bufsize=%li for %s",
-		    bb.length(), cr->m_coll);
+		log("crawlbot: restarting bulk job file=%s bufsize=%li for %s",
+		    bulkurlsfile,bb.length(), cr->m_coll);
 	}
 	/*
 	    FILE *f = fopen(bulkurlsfile, "r");

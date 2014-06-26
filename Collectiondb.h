@@ -332,6 +332,12 @@ class CollectionRec {
 
 	long long getNumDocsIndexed();
 
+	// messes with m_spiderColl->m_sendLocalCrawlInfoToHost[MAX_HOSTS]
+	// so we do not have to keep sending this huge msg!
+	bool shouldSendLocalCrawlInfoToHost ( long hostId );
+	void sentLocalCrawlInfoToHost ( long hostId );
+	void localCrawlInfoUpdate();
+
 	// . can this ip perform a search or add url on this collection?
 	// . mamma.com provides encapsulated ips of their queriers so we
 	//   can ban them by ip
@@ -528,6 +534,9 @@ class CollectionRec {
 
 	long  m_filterTimeout;                // kill filter pid after X secs
 
+	// for Spider.cpp
+	long m_updateRoundNum;
+
 	// from Conf.h
 	long m_posdbMinFilesToMerge ;
 	long m_titledbMinFilesToMerge ;
@@ -683,7 +692,10 @@ class CollectionRec {
 	// total crawling stats summed up from all hosts in network
 	CrawlInfo m_globalCrawlInfo;
 
-	CrawlInfo m_tmpCrawlInfo;
+	//CrawlInfo m_tmpCrawlInfo;
+
+	// holds the latest CrawlInfo for each host for this collrec
+	SafeBuf m_crawlInfoBuf;
 
 	// last time we computed global crawl info
 	//time_t m_globalCrawlInfoUpdateTime;

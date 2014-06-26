@@ -16,7 +16,12 @@
 //#define MAX_QUERY_WORDS 5000 
 //#define MAX_QUERY_WORDS 32000 
 // not any more!
-#define MAX_QUERY_WORDS 320 
+//#define MAX_QUERY_WORDS 320 
+// raise for crazy bool query on diffbot
+// seems like we alloc just enough to hold our words now so that this
+// is really a performance capper but it is used in Summary.cpp
+// and Matches.h so don't go too big just yet
+#define MAX_QUERY_WORDS 800
 
 // . how many IndexLists might we get/intersect
 // . we now use a long long to hold the query term bits for non-boolean queries

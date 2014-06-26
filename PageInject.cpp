@@ -251,7 +251,7 @@ void doneInjectingWrapper9 ( void *state ) {
 			return;
 	}
 
-	if ( delim && msg7->m_start ) 
+	if ( msg7->m_start && delim ) 
 		goto loop;
 
 	// and we call the original caller
