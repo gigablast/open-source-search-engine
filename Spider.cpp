@@ -11942,8 +11942,16 @@ void updateAllCrawlInfosSleepWrapper ( int fd , void *state ) {
 
 	if ( s_inUse ) return;
 
-	char *request = "";
-	long requestSize = 0;
+	// "i" means to get incremental updates since last round
+	// "f" means to get all stats
+	char *request = "i";
+	long requestSize = 1;
+
+	static bool s_firstCall = true;
+	if ( s_firstCall ) {
+		s_firstCall = false;
+		request = "f";
+	}
 
 	s_inUse = true;
 
@@ -12101,6 +12109,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// just not allow spidering if a host is dead 
 
 	// the sendbuf should never be freed! it points into collrec
+	// it is 'i' or 'f' right now
 	slot->m_sendBufAlloc = NULL;
 
 	/////
@@ -12129,6 +12138,8 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		if ( ! cr->m_crawlInfoBuf.getBufStart() ) {
 			long need = sizeof(CrawlInfo) * g_hostdb.m_numHosts;
 			cr->m_crawlInfoBuf.reserve(need);
+			// in case one was udp server timed out or something
+			cr->m_crawlInfoBuf.zeroOut();
 		}
 
 		CrawlInfo *cia = (CrawlInfo *)cr->m_crawlInfoBuf.getBufStart();
@@ -12381,7 +12392,9 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	//char *request = slot->m_readBuf;
 	// just a single collnum
-	if ( slot->m_readBufSize != 0 ) { char *xx=NULL;*xx=0;}
+	if ( slot->m_readBufSize != 1 ) { char *xx=NULL;*xx=0;}
+
+	char *req = slot->m_readBuf;
 
 	//if ( ! isClockSynced() ) {
 	//}
@@ -12494,12 +12507,26 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 
 		long hostId = slot->m_host->m_hostId;
 
+		bool sendIt = false;
+
 		// . if not sent to host yet, send
-		// . this will be true on startup
+		// . this will be true when WE startup, not them...
 		// . but once we send it we set flag to false
 		// . and if we update anything we send we set flag to true
 		//   again for all hosts
-		if ( ! cr->shouldSendLocalCrawlInfoToHost(hostId) ) continue;
+		if ( cr->shouldSendLocalCrawlInfoToHost(hostId) ) 
+			sendIt = true;
+
+		// they can override. if host crashed and came back up
+		// it might not have saved the global crawl info for a coll
+		// perhaps, at the very least it does not have
+		// the correct CollectionRec::m_crawlInfoBuf because we do
+		// not save the array of crawlinfos for each host for
+		// all collections.
+		if ( req && req[0] == 'f' )
+			sendIt = true;
+
+		if ( ! sendIt ) continue;
 
 		// note it
 		// log("spider: sending ci for coll %s to host %li",
