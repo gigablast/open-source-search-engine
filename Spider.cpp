@@ -1011,7 +1011,7 @@ SpiderColl *SpiderCache::getSpiderCollIffNonNull ( collnum_t collnum ) {
 	return cr->m_spiderColl;
 }
 
-bool tryToDeleteSpiderColl ( SpiderColl *sc ) {
+bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) {
 	// if not being deleted return false
 	if ( ! sc->m_deleteMyself ) return false;
 	// otherwise always return true
@@ -1036,11 +1036,21 @@ bool tryToDeleteSpiderColl ( SpiderColl *sc ) {
 		    (long)sc,(long)sc->m_collnum);
 		return true;
 	}
+	// if ( sc->m_gettingList1 ) {
+	// 	log("spider: deleting sc=0x%lx for collnum=%li waiting5",
+	// 	    (long)sc,(long)sc->m_collnum);
+	// 	return true;
+	// }
+	// if ( sc->m_gettingList2 ) {
+	// 	log("spider: deleting sc=0x%lx for collnum=%li waiting6",
+	// 	    (long)sc,(long)sc->m_collnum);
+	// 	return true;
+	// }
 	// there's still a core of someone trying to write to someting
 	// in "sc" so we have to try to fix that. somewhere in xmldoc.cpp
 	// or spider.cpp. everyone should get sc from cr everytime i'd think
-	log("spider: deleting sc=0x%lx for collnum=%li",
-	    (long)sc,(long)sc->m_collnum);
+	log("spider: deleting sc=0x%lx for collnum=%li (msg=%s)",
+	    (long)sc,(long)sc->m_collnum,msg);
 	// . make sure nobody has it
 	// . cr might be NULL because Collectiondb.cpp::deleteRec2() might
 	//   have nuked it
@@ -1110,7 +1120,7 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	// set this
 	sc->m_cr = cr;
 	// did crawlbottesting delete it right away?
-	if ( tryToDeleteSpiderColl( sc ) ) return NULL;
+	if ( tryToDeleteSpiderColl( sc ,"1") ) return NULL;
 	// sanity check
 	if ( ! cr ) { char *xx=NULL;*xx=0; }
 	// note it!
@@ -2667,7 +2677,7 @@ static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 	// did our collection rec get deleted? since we were doing a read
 	// the SpiderColl will have been preserved in that case but its
 	// m_deleteMyself flag will have been set.
-	if ( tryToDeleteSpiderColl ( THIS ) ) return;
+	if ( tryToDeleteSpiderColl ( THIS ,"2") ) return;
 
 	THIS->populateWaitingTreeFromSpiderdb ( true );
 }
@@ -3172,7 +3182,7 @@ static void doledWrapper ( void *state ) {
 	THIS->m_isPopulating = false;
 
 	// did collection get nuked while we were waiting for msg1 reply?
-	if ( tryToDeleteSpiderColl ( THIS ) ) return;
+	if ( tryToDeleteSpiderColl ( THIS ,"3") ) return;
 
 	// . we added a rec to doledb for the firstIp in m_waitingTreeKey, so
 	//   now go to the next node in the wait tree.
@@ -3323,7 +3333,7 @@ bool SpiderColl::evalIpLoop ( ) {
 	// did our collection rec get deleted? since we were doing a read
 	// the SpiderColl will have been preserved in that case but its
 	// m_deleteMyself flag will have been set.
-	if ( tryToDeleteSpiderColl ( this ) ) return false;
+	if ( tryToDeleteSpiderColl ( this ,"4") ) return false;
 
 	// if first time here, let's do a read first
 	if ( ! m_didRead ) {
@@ -3342,7 +3352,7 @@ bool SpiderColl::evalIpLoop ( ) {
 	// did our collection rec get deleted? since we were doing a read
 	// the SpiderColl will have been preserved in that case but its
 	// m_deleteMyself flag will have been set.
-	if ( tryToDeleteSpiderColl ( this ) )
+	if ( tryToDeleteSpiderColl ( this ,"5") )
 		// pretend to block since we got deleted!!!
 		return false;
 
