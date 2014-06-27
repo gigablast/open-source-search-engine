@@ -442,10 +442,11 @@ bool gotReplyWrapperxd ( void *state ) {
 	// and can take a long time.
 	if ( (req->m_isDebug || took > 100) && req->m_niceness == 0 )
 		log("query: Took %lli ms to compute summary for d=%lli u=%s "
-		    "niceness=%li",
+		    "niceness=%li status=%s",
 		    took,
 		    xd->m_docId,xd->m_firstUrl.m_url,
-		    xd->m_niceness );
+		    xd->m_niceness ,
+		    mstrerror(g_errno));
 	if ( (req->m_isDebug || took2 > 100) &&
 	     xd->m_cpuSummaryStartTime &&
 	     req->m_niceness == 0 )
