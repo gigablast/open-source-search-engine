@@ -198,9 +198,11 @@ For RedHat do a <b>yum install gcc-c++</b>
 </ul>
 -->
 
-<b>1.</b> For <u>Ubuntu</u> do <b>apt-get install make g++ gcc-multilib lib32stdc++6</b>
+<b>1.</b> For <u>Ubuntu</u> do <b>sudo apt-get install make g++ gcc-multilib lib32stdc++6</b>
 <br><br>
-<b>2.</b> For <u>RedHat</u> do <b>yum install gcc-c++</b>
+<b>1.5</b> For Ubuntu 14.04 LTS (released in Apr 17, 2014) gcc-multilib is broken so do a <b>sudo ln -s /usr/include/x86_64-linux-gnu/c++/4.8/bits/ /usr/local/include/</b>
+<br><br>
+<b>2.</b> For <u>RedHat</u> do <b>sudo yum install gcc-c++</b>
 <br><br>
 <b>3.</b> Download the <a href=https://github.com/gigablast/open-source-search-engine>Gigablast source code</a> using <b>wget --no-check-certificate "https://github.com/gigablast/open-source-search-engine/archive/master.zip"</b>, unzip it and cd into it. (optionally use <b>git clone https://github.com/gigablast/open-source-search-engine.git ./github</b> if you have <i>git</i> installed.)
 <br><br>

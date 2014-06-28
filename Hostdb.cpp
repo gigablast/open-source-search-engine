@@ -71,16 +71,16 @@ Hostdb::~Hostdb () {
 
 void Hostdb::reset ( ) {
 
-	for ( long i = 0 ; m_hosts && i < m_numHosts ; i++ ) {
-		Host *h = &m_hosts[i];
-		// if nothing do not try to free it
-		if ( ! h->m_lastKnownGoodCrawlInfoReply ) continue;
-		mfree ( h->m_lastKnownGoodCrawlInfoReply ,
-			h->m_replyAllocSize , 
-			"lknown" );
-		// do not re-free
-		h->m_lastKnownGoodCrawlInfoReply = NULL;
-	}
+	// for ( long i = 0 ; m_hosts && i < m_numHosts ; i++ ) {
+	// 	Host *h = &m_hosts[i];
+	// 	// if nothing do not try to free it
+	// 	if ( ! h->m_lastKnownGoodCrawlInfoReply ) continue;
+	// 	mfree ( h->m_lastKnownGoodCrawlInfoReply ,
+	// 		h->m_replyAllocSize , 
+	// 		"lknown" );
+	// 	// do not re-free
+	// 	h->m_lastKnownGoodCrawlInfoReply = NULL;
+	// }
 
 	if ( m_hosts ) 
 		mfree ( m_hosts, m_allocSize,"Hostdb" );

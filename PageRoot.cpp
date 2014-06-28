@@ -89,7 +89,576 @@ bool printNav ( SafeBuf &sb , HttpRequest *r ) {
 	return true;
 }
 
-bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
+//////////////
+//
+// BEGIN expandHtml() helper functions
+//
+//////////////
+
+bool printFamilyFilter ( SafeBuf& sb , bool familyFilterOn ) {
+	char *s1 = "";
+	char *s2 = "";
+	if ( familyFilterOn ) s1 = " checked";
+	else                  s2 = " checked";
+	//p += sprintf ( p ,
+	return sb.safePrintf (
+		       "Family filter: "
+		       "<input type=radio name=ff value=1%s>On &nbsp; "
+		       "<input type=radio name=ff value=0%s>Off &nbsp; " ,
+		       s1 , s2 );
+	//return p;
+}
+
+//char *printNumResultsDropDown ( char *p , long n , bool *printedDropDown ) {
+bool printNumResultsDropDown ( SafeBuf& sb , long n , bool *printedDropDown ) {
+	if ( n!=10 && n!=20 && n!=30 && n!=50 && n!=100 )
+		//return p;
+		return true;
+	*printedDropDown = true;
+	char *d1 = "";
+	char *d2 = "";
+	char *d3 = "";
+	char *d4 = "";
+	char *d5 = "";
+	if ( n == 10 ) d1 = " selected";
+	if ( n == 20 ) d2 = " selected";
+	if ( n == 30 ) d3 = " selected";
+	if ( n == 50 ) d4 = " selected";
+	if ( n ==100 ) d5 = " selected";
+	//p += sprintf ( p , 
+	return sb.safePrintf (
+		       "<select name=n>\n"
+		       "<option value=10%s>10\n"
+		       "<option value=20%s>20\n"
+		       "<option value=30%s>30\n"
+		       "<option value=50%s>50\n"
+		       "<option value=100%s>100\n"
+		       "</select>",
+		       d1,d2,d3,d4,d5);
+	//return p;
+}
+
+//char *printDirectorySearchType ( char *p, long sdirt ) {
+bool printDirectorySearchType ( SafeBuf& sb, long sdirt ) {
+	// default to entire directory
+	if (sdirt < 1 || sdirt > 4)
+		sdirt = 3;
+
+	// by default search the whole thing
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"3\"");
+	if (sdirt == 3) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Entire Directory<br>\n");
+	// entire category
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"1\"");
+	if (sdirt == 1) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Entire Category<br>\n");
+	// base category only
+	sb.safePrintf("<nobr><input type=\"radio\" name=\"sdirt\" value=\"2\"");
+	if (sdirt == 2) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">"); 
+	sb.safePrintf("Pages in Base Category</nobr><br>\n");
+	// sites in base category
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"7\"");
+	if (sdirt == 7) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Sites in Base Category<br>\n");
+	// sites in entire category
+	sb.safePrintf("<input type=\"radio\" name=\"sdirt\" value=\"6\"");
+	if (sdirt == 6) sb.safePrintf(" checked>");
+	else            sb.safePrintf(">");
+	sb.safePrintf("Sites in Entire Category<br>\n");
+	// end it
+	return true;
+}
+
+
+#include "SearchInput.h"
+
+bool printRadioButtons ( SafeBuf& sb , SearchInput *si ) {
+	// don't display this for directory search
+	// look it up. returns catId <= 0 if dmoz not setup yet.
+	// From PageDirectory.cpp
+	//long catId= g_categories->getIdFromPath(decodedPath, decodedPathLen);
+	// if /Top print the directory homepage
+	//if ( catId == 1 || catId <= 0 ) 
+	//	return true;
+
+	// site
+	/*
+	if ( si->m_siteLen > 0 ) {
+		// . print rest of search box etc.
+		// . print cobranding radio buttons
+		//if ( p + si->m_siteLen + 1 >= pend ) return p;
+		//p += sprintf ( p , 
+		return sb.safePrintf (
+			  //" &nbsp; "
+			  //"<font size=-1>"
+			  //"<b><a href=\"/\"><font color=red>"
+			  //"Powered by Gigablast</font></a></b>"
+			  //"<br>"
+			  //"<tr align=center><td></td><td>"
+			  "<input type=radio name=site value=\"\">"
+			  "Search the Web "
+			  "<input type=radio name=site "
+			  "value=\"%s\"  checked>Search %s" ,
+			  //"</td></tr></table><br>"
+			  //"</td></tr>"
+			  //"<font size=-1>" ,
+			  si->m_site , si->m_site );
+	}
+	else if ( si->m_sitesLen > 0 ) {
+	*/
+	if ( si->m_sites && si->m_sites[0] ) {
+		// . print rest of search box etc.
+		// . print cobranding radio buttons
+		//if ( p + si->m_sitesLen + 1 >= pend ) return p;
+		// if not explicitly instructed to print all sites
+		// and they are a long list, do not print all
+		/*
+		char tmp[1000];
+		char *x = si->m_sites;
+		if ( si->m_sitesLen > 255){//&&!st->m_printAllSites){
+			// copy what's there
+			strncpy ( tmp , si->m_sites , 255 );
+			x = tmp + 254 ;
+			// do not hack off in the middle of a site
+			while ( is_alnum(*x) && x > tmp ) x--;
+			// overwrite it with [more] link
+			//x += sprintf ( x , "<a href=\"/search?" );
+			// our current query parameters
+			//if ( x + uclen + 10 >= xend ) goto skipit;
+			sprintf ( x , " ..." );
+			x = tmp;
+		}
+		*/
+		//p += sprintf ( p , 
+		sb.safePrintf (
+			  //" &nbsp; "
+			  //"<font size=-1>"
+			  //"<b><a href=\"/\"><font color=red>"
+			  //"Powered by Gigablast</font></a></b>"
+			  //"<br>"
+			  //"<tr align=center><td></td><td>"
+			  "<input type=radio name=sites value=\"\">"
+			  "Search the Web "
+			  "<input type=radio name=sites "
+			  "value=\"%s\"  checked>Search ",
+			  //"</td></tr></table><br>"
+			  //"</td></tr>"
+			  //"<font size=-1>" ,
+			  si->m_sites );
+		sb.safeTruncateEllipsis ( si->m_sites, 255 );
+	}
+	return true;
+}
+
+bool printLogo ( SafeBuf& sb , SearchInput *si ) {
+	// if an image was provided...
+	if ( ! si->m_imgUrl || ! si->m_imgUrl[0] ) {
+		// no, now we default to our logo
+		//return true;
+		//p += sprintf ( p ,
+		return sb.safePrintf (
+			  "<a href=\"/\">"
+			  "<img valign=top width=250 height=61 border=0 "
+			  // avoid https for this, so make it absolute
+			  "src=\"/logo-med.jpg\"></a>" );
+		//return p;
+	}
+	// do we have a link?
+	if ( si->m_imgLink && si->m_imgLink[0])
+		//p += sprintf ( p , "<a href=\"%s\">",si->m_imgLink);
+		sb.safePrintf ( "<a href=\"%s\">", si->m_imgLink );
+	// print image width and length
+	if ( si->m_imgWidth >= 0 && si->m_imgHeight >= 0 ) 
+		//p += sprintf ( p , "<img width=%li height=%li ",
+		sb.safePrintf( "<img width=%li height=%li ",
+			       si->m_imgWidth , si->m_imgHeight );
+	else
+		//p += sprintf ( p , "<img " );
+		sb.safePrintf ( "<img " );
+
+	//p += sprintf ( p , "border=0 src=\"%s\">",
+	sb.safePrintf( "border=0 src=\"%s\">",
+		       si->m_imgUrl );
+	// end the link if we had one
+	if ( si->m_imgLink && si->m_imgLink[0] ) 
+		//p += sprintf ( p , "</a>");
+		sb.safePrintf ( "</a>");
+
+	return true;
+}
+
+/////////////
+//
+// END expandHtml() helper functions
+//
+/////////////
+
+
+bool expandHtml (  SafeBuf& sb,
+		   char *head , 
+		   long hlen ,
+		   char *q    , 
+		   long qlen ,
+		   HttpRequest *r ,
+		   SearchInput *si,
+		   char *method ,
+		   CollectionRec *cr ) {
+	//char *pend = p + plen;
+	// store custom header into buf now
+	//for ( long i = 0 ; i < hlen && p+10 < pend ; i++ ) {
+	for ( long i = 0 ; i < hlen; i++ ) {
+		if ( head[i] != '%'   ) {
+			// *p++ = head[i];
+			sb.safeMemcpy((char*)&head[i], 1);
+			continue;
+		}
+		if ( i + 1 >= hlen    ) {
+			// *p++ = head[i];
+			sb.safeMemcpy((char*)&head[i], 1);
+			continue;
+		}
+		if ( head[i+1] == 'S' ) { 
+			// now we got the %S, insert "spiders are [on/off]"
+			bool spidersOn = true;
+			if ( ! g_conf.m_spideringEnabled ) spidersOn = false;
+			if ( ! cr->m_spideringEnabled ) spidersOn = false;
+			if ( spidersOn ) 
+				sb.safePrintf("Spiders are on");
+			else
+				sb.safePrintf("Spiders are off");
+			// skip over %S
+			i += 1;
+			continue;
+		}
+
+		if ( head[i+1] == 'q' ) { 
+			// now we got the %q, insert the query
+			char *p    = (char*) sb.getBuf();
+			char *pend = (char*) sb.getBufEnd();
+			long eqlen = dequote ( p , pend , q , qlen );
+			//p += eqlen;
+			sb.incrementLength(eqlen);
+			// skip over %q
+			i += 1;
+			continue;
+		}
+
+		if ( head[i+1] == 'c' ) { 
+			// now we got the %q, insert the query
+			if ( cr ) sb.safeStrcpy(cr->m_coll);
+			// skip over %c
+			i += 1;
+			continue;
+		}
+
+		if ( head[i+1] == 'w' &&
+		     head[i+2] == 'h' &&
+		     head[i+3] == 'e' &&
+		     head[i+4] == 'r' &&
+		     head[i+5] == 'e' ) {
+			// insert the location
+			long whereLen;
+			char *where = r->getString("where",&whereLen);
+			// get it from cookie as well!
+			if ( ! where ) 
+				where = r->getStringFromCookie("where",
+							       &whereLen);
+			// fix for getStringFromCookie
+			if ( where && ! where[0] ) where = NULL;
+			// skip over the %where
+			i += 5;
+			// if empty, base it on IP
+			if ( ! where ) {
+				double lat;
+				double lon;
+				double radius;
+				char *city,*state,*ctry;
+				// use this by default
+				long ip = r->m_userIP;
+				// ip for testing?
+				long iplen;
+				char *ips = r->getString("uip",&iplen);
+				if ( ips ) ip = atoip(ips);
+				// returns true if found in db
+				char buf[128];
+				getIPLocation ( ip ,
+						&lat , 
+						&lon , 
+						&radius,
+						&city ,
+						&state ,
+						&ctry  ,
+						buf    ,
+						128    ) ;
+				if ( city && state )
+					sb.safePrintf("%s, %s",city,state);
+			}
+			else
+				sb.dequote (where,whereLen);
+			continue;
+		}
+		if ( head[i+1] == 'w' &&
+		     head[i+2] == 'h' &&
+		     head[i+3] == 'e' &&
+		     head[i+4] == 'n' ) {
+			// insert the location
+			long whenLen;
+			char *when = r->getString("when",&whenLen);
+			// skip over the %when
+			i += 4;
+			if ( ! when ) continue;
+			sb.dequote (when,whenLen);
+			continue;
+		}
+		// %sortby
+		if ( head[i+1] == 's' &&
+		     head[i+2] == 'o' &&
+		     head[i+3] == 'r' &&
+		     head[i+4] == 't' &&
+		     head[i+5] == 'b' &&
+		     head[i+6] == 'y' ) {
+			// insert the location
+			long sortBy = r->getLong("sortby",1);
+			// print the radio buttons
+			char *cs[5];
+			cs[0]="";
+			cs[1]="";
+			cs[2]="";
+			cs[3]="";
+			cs[4]="";
+			if ( sortBy >=1 && sortBy <=4 )
+				cs[sortBy] = " checked";
+			sb.safePrintf(
+			 "<input type=radio name=sortby value=1%s>date "
+			 "<input type=radio name=sortby value=2%s>distance "
+			 "<input type=radio name=sortby value=3%s>relevancy "
+			 "<input type=radio name=sortby value=4%s>popularity",
+			 cs[1],cs[2],cs[3],cs[4]);
+			// skip over the %sortby
+			i += 6;
+			continue;
+		}
+		if ( head[i+1] == 'e' ) { 
+			// now we got the %e, insert the query
+			char *p    = (char*) sb.getBuf();
+			long  plen = sb.getAvail();
+			long eqlen = urlEncode ( p , plen , q , qlen );
+			//p += eqlen;
+			sb.incrementLength(eqlen);
+			// skip over %e
+			i += 1;
+			continue;
+		}
+		if ( head[i+1] == 'N' ) { 
+			// now we got the %N, insert the global doc count
+			//long long c=g_checksumdb.getRdb()->getNumGlobalRecs();
+			//now each host tells us how many docs it has in itsping
+			long long c = g_hostdb.getNumGlobalRecs();
+			c += g_conf.m_docCountAdjustment;
+			// never allow to go negative
+			if ( c < 0 ) c = 0;
+			//p+=ulltoa(p,c);
+			char *p = (char*) sb.getBuf();
+			sb.reserve2x(16);
+			long len = ulltoa(p, c);
+			sb.incrementLength(len);
+			// skip over %N
+			i += 1;
+			continue;
+		}
+		/*
+		if ( head[i+1] == 'E' ) { 
+			// now each host tells us how many docs it has in its
+			// ping request
+			long long c = g_hostdb.getNumGlobalEvents();
+			char *p = (char*) sb.getBuf();
+			sb.reserve2x(16);
+			long len = ulltoa(p, c);
+			sb.incrementLength(len);
+			// skip over %E
+			i += 1;
+			continue;
+		}
+		*/
+		if ( head[i+1] == 'n' ) { 
+			// now we got the %n, insert the collection doc count
+			//p+=ulltoa(p,docsInColl);
+			char *p = (char*) sb.getBuf();
+			sb.reserve2x(16);
+			long long docsInColl = 0;
+			if ( cr ) docsInColl = cr->getNumDocsIndexed();
+			long len = ulltoa(p, docsInColl);
+			sb.incrementLength(len);
+			// skip over %n
+			i += 1;
+			continue;
+		}
+		/*
+		if ( head[i+1] == 'T' ) { 
+			// . print the final tail
+			// . only print admin link if we're local
+			//long  user = g_pages.getUserType ( s , r );
+			//char *username = g_users.getUsername(r);
+			//char *pwd  = r->getString ( "pwd" );
+			char *p    = (char*) sb.getBuf();
+			long  plen = sb.getAvail();
+			//p = g_pages.printTail ( p , p + plen , user , pwd );
+			char *n = g_pages.printTail(p , p + plen ,
+						    r->isLocal());
+			sb.incrementLength(n - p);
+			// skip over %T
+			i += 1;
+			continue;
+		}
+		*/
+		// print the drop down menu for selecting the # of reslts
+		if ( head[i+1] == 'D' ) {
+			// skip over %D
+			i += 1;
+			// skip if not enough buffer
+			//if ( p + 1000 >= pend ) continue; 
+			// # results
+			//long n = r->getLong("n",10);
+			//bool printedDropDown;
+			//p = printNumResultsDropDown(p,n,&printedDropDown);
+			//printNumResultsDropDown(sb,n,&printedDropDown);
+			continue;
+		}
+		if ( head[i+1] == 'H' ) { 
+			// . insert the secret key here, to stop seo bots
+			// . TODO: randomize its position to make parsing more 
+			//         difficult
+			// . this secret key is for submitting a new query
+			// long key;
+			// char kname[4];
+			// g_httpServer.getKey (&key,kname,NULL,0,time(NULL),0,
+			// 		     10);
+			//sprintf (p , "<input type=hidden name=%s value=%li>",
+			//	  kname,key);
+			//p += gbstrlen ( p );
+			// sb.safePrintf( "<input type=hidden name=%s "
+			//"value=%li>",
+			// 	       kname,key);
+
+			//adds param for default screen size
+			//if(cr)
+			//	sb.safePrintf("<input type=hidden "
+			//"id='screenWidth' name='ws' value=%li>", 
+			//cr->m_screenWidth);
+
+			// insert collection name too
+			long collLen;
+			char *coll = r->getString ( "c" , &collLen );
+			if ( collLen > 0 && collLen < MAX_COLL_LEN ) {
+			        //sprintf (p,"<input type=hidden name=c "
+				//	 "value=\"");
+				//p += gbstrlen ( p );	
+				sb.safePrintf("<input type=hidden name=c "
+					      "value=\"");
+				//memcpy ( p , coll , collLen );
+				//p += collLen;
+				sb.safeMemcpy(coll, collLen);
+				//sprintf ( p , "\">\n");
+				//p += gbstrlen ( p );	
+				sb.safePrintf("\">\n");
+			}
+
+			// pass this crap on so zak can do searches
+			//char *username = g_users.getUsername(r);
+			// this is null because not in the cookie and we are
+			// logged in
+			//char *pwd  = r->getString ( "pwd" );
+			//sb.safePrintf("<input type=hidden name=pwd "
+			//"value=\"%s\">\n",
+			//pwd);
+			//sb.safePrintf("<input type=hidden name=username "
+			//	      "value=\"%s\">\n",username);
+
+			// skip over %H
+			i += 1;
+			continue;
+		}
+		// %t, print Top Directory section
+		if ( head[i+1] == 't' ) {
+			i += 1;
+			//p = printTopDirectory ( p, pend );
+			printTopDirectory ( sb );
+			continue;
+		}
+
+		// MDW
+
+		if ( head[i+1] == 'F' ) {
+			i += 1;
+			//p = printTopDirectory ( p, pend );
+			if ( ! method ) method = "GET";
+			sb.safePrintf("<form method=%s action=\"/search\" "
+				      "name=\"f\">\n",method);
+			continue;
+		}
+
+		if ( head[i+1] == 'L' ) {
+			i += 1;
+			//p = printTopDirectory ( p, pend );
+			printLogo ( sb , si );
+			continue;
+		}
+
+		if ( head[i+1] == 'f' ) {
+			i += 1;
+			//p = printTopDirectory ( p, pend );
+			printFamilyFilter ( sb , si->m_familyFilter );
+			continue;
+		}
+
+		if ( head[i+1] == 'R' ) {
+			i += 1;
+			//p = printTopDirectory ( p, pend );
+			printRadioButtons ( sb , si );
+			continue;
+		}
+
+		// MDW
+
+		// *p++ = head[i];
+		sb.safeMemcpy((char*)&head[i], 1);
+		continue;
+	}
+	//return p;
+	return true;
+}
+
+
+bool printWebHomePage ( SafeBuf &sb , HttpRequest *r , TcpSocket *sock ) {
+
+	SearchInput si;
+	si.set ( sock , r );
+
+	// if there's a ton of sites use the post method otherwise
+	// they won't fit into the http request, the browser will reject
+	// sending such a large request with "GET"
+	char *method = "GET";
+	if ( si.m_sites && gbstrlen(si.m_sites)>800 ) method = "POST";
+
+	// if the provided their own
+	CollectionRec *cr = g_collectiondb.getRec ( r );
+	if ( cr && cr->m_htmlRoot.length() ) {
+		return expandHtml (  sb ,
+				     cr->m_htmlRoot.getBufStart(),
+				     cr->m_htmlRoot.length(),
+				     NULL,
+				     0,
+				     r ,
+				     &si,
+				     //TcpSocket   *s ,
+				     method , // "GET" or "POST"
+				     cr );//CollectionRec *cr ) {
+	}
+
 
 	sb.safePrintf("<html>\n");
 	sb.safePrintf("<head>\n");
@@ -158,10 +727,9 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("\n");
 	sb.safePrintf("<br><br>\n");
 	// submit to https now
-	sb.safePrintf("<form method=get "
-		      "action=/search name=f>\n");
+	sb.safePrintf("<form method=%s "
+		      "action=/search name=f>\n", method);
 
-	CollectionRec *cr = g_collectiondb.getRec ( r );
 	if ( cr )
 		sb.safePrintf("<input type=hidden name=c value=\"%s\">",
 			      cr->m_coll);
@@ -736,7 +1304,7 @@ bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 	//if ( ! strcmp(coll,"dmoz" ) )
 	//	printDirHomePage(sb,r);
 	//else
-	printWebHomePage(sb,r);
+	printWebHomePage(sb,r,s);
 
 
 	// . print last 5 queries
@@ -769,288 +1337,6 @@ bool sendPageRoot ( TcpSocket *s , HttpRequest *r, char *cookie ) {
 					      "UTF-8",
 					      r);
 }
-
-/*
-//char *expandRootHtml ( char *p    , long plen ,
-bool expandRootHtml (  SafeBuf& sb,
-		       uint8_t *head , long hlen ,
-		       char *q    , long qlen ,
-		       HttpRequest *r ,
-		       TcpSocket   *s ,
-		       long long docsInColl ,
-		       CollectionRec *cr ) {
-	//char *pend = p + plen;
-	// store custom header into buf now
-	//for ( long i = 0 ; i < hlen && p+10 < pend ; i++ ) {
-	for ( long i = 0 ; i < hlen; i++ ) {
-		if ( head[i] != '%'   ) {
-			// *p++ = head[i];
-			sb.safeMemcpy((char*)&head[i], 1);
-			continue;
-		}
-		if ( i + 1 >= hlen    ) {
-			// *p++ = head[i];
-			sb.safeMemcpy((char*)&head[i], 1);
-			continue;
-		}
-		if ( head[i+1] == 'S' ) { 
-			// now we got the %S, insert "spiders are [on/off]"
-			bool spidersOn = true;
-			if ( ! g_conf.m_spideringEnabled ) spidersOn = false;
-			if ( ! cr->m_spideringEnabled ) spidersOn = false;
-			if ( spidersOn ) 
-				sb.safePrintf("Spiders are on");
-			else
-				sb.safePrintf("Spiders are off");
-			// skip over %S
-			i += 1;
-			continue;
-		}
-
-		if ( head[i+1] == 'q' ) { 
-			// now we got the %q, insert the query
-			char *p    = (char*) sb.getBuf();
-			char *pend = (char*) sb.getBufEnd();
-			long eqlen = dequote ( p , pend , q , qlen );
-			//p += eqlen;
-			sb.incrementLength(eqlen);
-			// skip over %q
-			i += 1;
-			continue;
-		}
-		if ( head[i+1] == 'w' &&
-		     head[i+2] == 'h' &&
-		     head[i+3] == 'e' &&
-		     head[i+4] == 'r' &&
-		     head[i+5] == 'e' ) {
-			// insert the location
-			long whereLen;
-			char *where = r->getString("where",&whereLen);
-			// get it from cookie as well!
-			if ( ! where ) 
-				where = r->getStringFromCookie("where",
-							       &whereLen);
-			// fix for getStringFromCookie
-			if ( where && ! where[0] ) where = NULL;
-			// skip over the %where
-			i += 5;
-			// if empty, base it on IP
-			if ( ! where ) {
-				double lat;
-				double lon;
-				double radius;
-				char *city,*state,*ctry;
-				// use this by default
-				long ip = r->m_userIP;
-				// ip for testing?
-				long iplen;
-				char *ips = r->getString("uip",&iplen);
-				if ( ips ) ip = atoip(ips);
-				// returns true if found in db
-				char buf[128];
-				getIPLocation ( ip ,
-						&lat , 
-						&lon , 
-						&radius,
-						&city ,
-						&state ,
-						&ctry  ,
-						buf    ,
-						128    ) ;
-				if ( city && state )
-					sb.safePrintf("%s, %s",city,state);
-			}
-			else
-				sb.dequote (where,whereLen);
-			continue;
-		}
-		if ( head[i+1] == 'w' &&
-		     head[i+2] == 'h' &&
-		     head[i+3] == 'e' &&
-		     head[i+4] == 'n' ) {
-			// insert the location
-			long whenLen;
-			char *when = r->getString("when",&whenLen);
-			// skip over the %when
-			i += 4;
-			if ( ! when ) continue;
-			sb.dequote (when,whenLen);
-			continue;
-		}
-		// %sortby
-		if ( head[i+1] == 's' &&
-		     head[i+2] == 'o' &&
-		     head[i+3] == 'r' &&
-		     head[i+4] == 't' &&
-		     head[i+5] == 'b' &&
-		     head[i+6] == 'y' ) {
-			// insert the location
-			long sortBy = r->getLong("sortby",1);
-			// print the radio buttons
-			char *cs[5];
-			cs[0]="";
-			cs[1]="";
-			cs[2]="";
-			cs[3]="";
-			cs[4]="";
-			if ( sortBy >=1 && sortBy <=4 )
-				cs[sortBy] = " checked";
-			sb.safePrintf(
-			 "<input type=radio name=sortby value=1%s>date "
-			 "<input type=radio name=sortby value=2%s>distance "
-			 "<input type=radio name=sortby value=3%s>relevancy "
-			 "<input type=radio name=sortby value=4%s>popularity",
-			 cs[1],cs[2],cs[3],cs[4]);
-			// skip over the %sortby
-			i += 6;
-			continue;
-		}
-		if ( head[i+1] == 'e' ) { 
-			// now we got the %e, insert the query
-			char *p    = (char*) sb.getBuf();
-			long  plen = sb.getAvail();
-			long eqlen = urlEncode ( p , plen , q , qlen );
-			//p += eqlen;
-			sb.incrementLength(eqlen);
-			// skip over %e
-			i += 1;
-			continue;
-		}
-		if ( head[i+1] == 'N' ) { 
-			// now we got the %N, insert the global doc count
-			//long long c=g_checksumdb.getRdb()->getNumGlobalRecs();
-			//now each host tells us how many docs it has in itsping
-			long long c = g_hostdb.getNumGlobalRecs();
-			c += g_conf.m_docCountAdjustment;
-			// never allow to go negative
-			if ( c < 0 ) c = 0;
-			//p+=ulltoa(p,c);
-			char *p = (char*) sb.getBuf();
-			sb.reserve2x(16);
-			long len = ulltoa(p, c);
-			sb.incrementLength(len);
-			// skip over %N
-			i += 1;
-			continue;
-		}
-		if ( head[i+1] == 'E' ) { 
-			// now each host tells us how many docs it has in its
-			// ping request
-			long long c = g_hostdb.getNumGlobalEvents();
-			char *p = (char*) sb.getBuf();
-			sb.reserve2x(16);
-			long len = ulltoa(p, c);
-			sb.incrementLength(len);
-			// skip over %E
-			i += 1;
-			continue;
-		}
-		if ( head[i+1] == 'n' ) { 
-			// now we got the %n, insert the collection doc count
-			//p+=ulltoa(p,docsInColl);
-			char *p = (char*) sb.getBuf();
-			sb.reserve2x(16);
-			long len = ulltoa(p, docsInColl);
-			sb.incrementLength(len);
-			// skip over %n
-			i += 1;
-			continue;
-		}
-		if ( head[i+1] == 'T' ) { 
-			// . print the final tail
-			// . only print admin link if we're local
-			//long  user = g_pages.getUserType ( s , r );
-			//char *username = g_users.getUsername(r);
-			//char *pwd  = r->getString ( "pwd" );
-			char *p    = (char*) sb.getBuf();
-			long  plen = sb.getAvail();
-			//p = g_pages.printTail ( p , p + plen , user , pwd );
-			char *n = g_pages.printTail(p , p + plen ,
-						    r->isLocal());
-			sb.incrementLength(n - p);
-			// skip over %T
-			i += 1;
-			continue;
-		}
-		// print the drop down menu for selecting the # of reslts
-		if ( head[i+1] == 'D' ) {
-			// skip over %D
-			i += 1;
-			// skip if not enough buffer
-			//if ( p + 1000 >= pend ) continue; 
-			// # results
-			//long n = r->getLong("n",10);
-			//bool printedDropDown;
-			//p = printNumResultsDropDown(p,n,&printedDropDown);
-			//printNumResultsDropDown(sb,n,&printedDropDown);
-			continue;
-		}
-		if ( head[i+1] == 'H' ) { 
-			// . insert the secret key here, to stop seo bots
-			// . TODO: randomize its position to make parsing more 
-			//         difficult
-			// . this secret key is for submitting a new query
-			long key;
-			char kname[4];
-			g_httpServer.getKey (&key,kname,NULL,0,time(NULL),0,
-					     10);
-			//sprintf ( p , "<input type=hidden name=%s value=%li>",
-			//	  kname,key);
-			//p += gbstrlen ( p );
-			sb.safePrintf( "<input type=hidden name=%s value=%li>",
-				       kname,key);
-
-			//adds param for default screen size
-			//if(cr)
-			//	sb.safePrintf("<input type=hidden id='screenWidth' name='ws' value=%li>", cr->m_screenWidth);
-
-			// insert collection name too
-			long collLen;
-			char *coll = r->getString ( "c" , &collLen );
-			if ( collLen > 0 && collLen < MAX_COLL_LEN ) {
-			        //sprintf (p,"<input type=hidden name=c "
-				//	 "value=\"");
-				//p += gbstrlen ( p );	
-				sb.safePrintf("<input type=hidden name=c "
-					      "value=\"");
-				//memcpy ( p , coll , collLen );
-				//p += collLen;
-				sb.safeMemcpy(coll, collLen);
-				//sprintf ( p , "\">\n");
-				//p += gbstrlen ( p );	
-				sb.safePrintf("\">\n");
-			}
-
-			// pass this crap on so zak can do searches
-			char *username = g_users.getUsername(r);
-			// this is null because not in the cookie and we are
-			// logged in
-			//char *pwd  = r->getString ( "pwd" );
-			//sb.safePrintf("<input type=hidden name=pwd value=\"%s\">\n",
-			//pwd);
-			sb.safePrintf("<input type=hidden name=username "
-				      "value=\"%s\">\n",username);
-
-			// skip over %H
-			i += 1;
-			continue;
-		}
-		// %t, print Top Directory section
-		if ( head[i+1] == 't' ) {
-			i += 1;
-			//p = printTopDirectory ( p, pend );
-			printTopDirectory ( sb );
-			continue;
-		}
-
-		// *p++ = head[i];
-		sb.safeMemcpy((char*)&head[i], 1);
-		continue;
-	}
-	//return p;
-	return true;
-}
-*/
 
 // . store into "p"
 // . returns bytes stored into "p"
@@ -1538,7 +1824,6 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 		}
 	}
 
-
 	st1->m_strip = r->getLong("strip",0);
 	// . Remember, for cgi, if the box is not checked, then it is not 
 	//   reported in the request, so set default return value to 0
@@ -1586,7 +1871,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 		// log note so we know it didn't make it
 		g_msg = " (error: bad answer)";
 		//log("PageAddUrl:: addurl failed for %s : bad answer",
-		//    iptoa(s->m_ip));
+		//    iptoa(sock->m_ip));
 		st1->m_goodAnswer = false;
 		return sendReply ( st1 , true ); // addUrl enabled?
 	}

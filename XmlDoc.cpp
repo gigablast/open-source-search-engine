@@ -2165,6 +2165,8 @@ bool XmlDoc::indexDoc ( ) {
 		if ( countIt ) {
 			cr->m_localCrawlInfo.m_pageDownloadAttempts++;
 			cr->m_globalCrawlInfo.m_pageDownloadAttempts++;
+			// changing status, resend local crawl info to all
+			cr->localCrawlInfoUpdate();
 		}
 		// need to save collection rec now during auto save
 		cr->m_needsSave = true;
@@ -7632,28 +7634,39 @@ long *XmlDoc::getSummaryVector ( ) {
 	Title *ti = getTitle();
 	if ( ! ti || ti == (Title *)-1 ) return (long *)ti;
 	// store title and summary into "buf" so we can call words.set()
-	char buf[5000];
-	char *p = buf;
-	long avail = 5000;
-	long len;
+	//char buf[5000];
+	SafeBuf sb;
+	//char *p = buf;
+	//long avail = 5000;
+	//long len;
 	// put title into there
-	len = ti->m_titleBytes - 1;
-	if ( len > avail ) len = avail - 10;
-	if ( len < 0 ) len = 0;
-	memcpy ( p , ti->m_title , len );
-	p += len;
-	// space separting the title from summary
-	if ( len > 0 ) *p++ = ' ';
+	long tlen = ti->m_titleBytes - 1;
+	//if ( len > avail ) len = avail - 10;
+	if ( tlen < 0 ) tlen = 0;
+
 	// put summary into there
-	len = s->m_summaryLen;
-	if ( len > avail ) len = avail - 10;
-	memcpy ( p , s->m_summary , len );
-	p += len;
+	long slen = s->m_summaryLen;
+
+	// allocate space
+	long need = tlen + 1 + slen + 1;
+	if ( ! sb.reserve ( need ) ) return NULL;
+
+	//memcpy ( p , ti->m_title , len );
+	//p += len;
+	sb.safeMemcpy ( ti->m_title , tlen );
+	// space separting the title from summary
+	if ( tlen > 0 ) sb.pushChar(' ');
+
+	//if ( len > avail ) len = avail - 10;
+	//memcpy ( p , s->m_summary , len );
+	//p += len;
+	sb.safeMemcpy ( s->m_summary , slen );
 	// null terminate it
-	*p = '\0';
+	//*p = '\0';
+	sb.nullTerm();
 	// word-ify it
 	Words words;
-	if ( ! words.set9 ( buf , m_niceness ) ) return NULL;
+	if ( ! words.set9 ( sb.getBufStart() , m_niceness ) ) return NULL;
 	// . now set the dedup vector from big summary and title
 	// . store sample vector in here
 	// . returns size in bytes including null terminating long
@@ -13641,6 +13654,8 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 		log("build: processed page %s (pageLen=%li)",
 		    THIS->m_firstUrl.m_url,
 		    pageLen);
+		// changing status, resend local crawl info to all
+		cr->localCrawlInfoUpdate();
 		// sanity!
 		// crap, this can happen if we try to get the metalist
 		// of an old page for purposes of incremental indexing or
@@ -14473,6 +14488,10 @@ SafeBuf *XmlDoc::getDiffbotReply ( ) {
 	// count it for stats
 	cr->m_localCrawlInfo.m_pageProcessAttempts++;
 	cr->m_globalCrawlInfo.m_pageProcessAttempts++;
+
+	// changing status, resend local crawl info to all
+	cr->localCrawlInfoUpdate();
+
 	cr->m_needsSave = true;
 
 	char *additionalHeaders = NULL;
@@ -14530,6 +14549,9 @@ char **XmlDoc::getHttpReply ( ) {
 		// otherwise, assume reply is valid
 		return &m_httpReply;
 	}
+
+	setStatus("getting http reply");
+
 	// come back up here if a redirect invalidates it
  loop:
 	// sanity test -- only if not the test collection (NO, might be EBADIP)
@@ -14616,6 +14638,8 @@ void gotHttpReplyWrapper ( void *state ) {
 // "NULL" can be a valid http reply (empty page) so we need to use "char **"
 char **XmlDoc::getHttpReply2 ( ) {
 	if ( m_httpReplyValid ) return &m_httpReply;
+
+	setStatus("getting http reply2");
 
 	// get ip
 	long *ip = getIp();
@@ -14996,6 +15020,8 @@ char **XmlDoc::gotHttpReply ( ) {
 		cr->m_globalCrawlInfo.m_pageDownloadSuccessesThisRound++;
 		m_incrementedDownloadCount = true;
 		cr->m_needsSave = true;
+		// changing status, resend local crawl info to all
+		cr->localCrawlInfoUpdate();
 	}
 
 	// this means the spider compression proxy's reply got corrupted
@@ -15186,6 +15212,9 @@ int16_t *XmlDoc::getHttpStatus ( ) {
 
 HttpMime *XmlDoc::getMime () {
 	if ( m_mimeValid ) return &m_mime;
+
+	// log debug
+	setStatus("getting http mime");
 
 	Url *cu = getCurrentUrl();
 	if ( ! cu || cu == (void *)-1) return (HttpMime *)cu;
@@ -15385,6 +15414,8 @@ char getContentTypeFromContent ( char *p , long niceness ) {
 
 uint8_t *XmlDoc::getContentType ( ) {
 	if ( m_contentTypeValid ) return &m_contentType;
+	// log debug
+	setStatus("getting content type");
 	// get the mime first
 	HttpMime *mime = getMime();
 	if ( ! mime || mime == (HttpMime *)-1 ) return (uint8_t *)mime;
@@ -25929,6 +25960,10 @@ bool XmlDoc::hashMetaZip ( HashTableX *tt ) {
 
 // returns false and sets g_errno on error
 bool XmlDoc::hashContentType ( HashTableX *tt ) {
+
+	CollectionRec *cr = getCollRec();
+	if ( ! cr ) return false;
+
 	uint8_t ctype = *getContentType();
 	char *s = NULL;
 
@@ -25950,6 +25985,11 @@ bool XmlDoc::hashContentType ( HashTableX *tt ) {
 	}
 	// bail if unrecognized content type
 	if ( ! s ) return true;
+
+	// hack for diffbot. do not hash type:json because diffbot uses
+	// that for searching diffbot json objects
+	if ( cr->m_isCustomCrawl && ctype==CT_JSON && !m_isDiffbotJSONObject )
+		return true;
 
 	// set up the hashing parms
 	HashInfo hi;
@@ -28652,7 +28692,6 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	long nowUTC2 = m_req->m_nowUTC;
 	if ( m_req->m_clockSet ) nowUTC2 = m_req->m_clockSet;
 
-	
 	// . summary vector for deduping
 	// . does not compute anything if we should not! (svSize will be 0)
 	if ( ! reply->ptr_vbuf &&

@@ -485,6 +485,7 @@ install:
 	mkdir -p $(DESTDIR)/usr/bin/
 	mkdir -p $(DESTDIR)/etc/init.d/
 	mkdir -p $(DESTDIR)/etc/init/
+	mkdir -p $(DESTDIR)/etc/rc3.d/
 	mkdir -p $(DESTDIR)/lib/init/
 	./gb copyfiles $(DESTDIR)/var/gigablast/data0/
 # if user types 'gb' it will use the binary in /var/gigablast/data0/gb
@@ -492,10 +493,12 @@ install:
 	ln -s /var/gigablast/data0/gb $(DESTDIR)/usr/bin/gb
 # if machine restarts...
 # the new way that does not use run-levels anymore
-	rm -f $(DESTDIR)/etc/init.d/gb
-	ln -s /lib/init/upstart-job $(DESTDIR)/etc/init.d/gb
+#	rm -f $(DESTDIR)/etc/init.d/gb
+#	ln -s /lib/init/upstart-job $(DESTDIR)/etc/init.d/gb
 # initctl upstart-job conf file (gb stop|start|reload)
-	cp init.gb.conf $(DESTDIR)/etc/init/gb.conf
+#	cp init.gb.conf $(DESTDIR)/etc/init/gb.conf
+	cp S99gb $(DESTDIR)/etc/init.d/gb
+	ln -s /etc/init.d/gb $(DESTDIR)/etc/rc3.d/S99gb
 
 .cpp.o:
 	$(CC) $(DEFS) $(CPPFLAGS) -c $*.cpp 

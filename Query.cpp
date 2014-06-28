@@ -3182,13 +3182,20 @@ struct QueryField g_fields[] = {
 	{"gbmax", FIELD_GBNUMBERMAX, false,"Usage: gbmax:price:1.99"},
 
 
-	{"gbspiderdate",FIELD_GENERIC,false,
+	{"gbdocspiderdate",FIELD_GENERIC,false,
 	 "Example: gbspiderdate:1400081479 will return results that have "
 	 "that spider date timestamp (UTC)"},
 
+	{"gbspiderdate",FIELD_GENERIC,false,
+	 "Similar to above but includes spider reply \"documents\"."},
+
+
+	{"gbdocindexdate",FIELD_GENERIC,false,
+	 "Similar to above but when document was indexed. Time is "
+	 "slightly greater than or equal to the spider date."},
+
 	{"gbindexdate",FIELD_GENERIC,false,
-	 "Example: gbindexdate:1400081479 will return results that have "
-	 "that spider date timestamp (UTC)"},
+	 "Similar to above but includes spider reply \"documents\"."},
 
 	// {"gbreplyspiderdate",FIELD_GENERIC,false,
 	//  "Example: gbspiderdate:1400081479 will return spider log "

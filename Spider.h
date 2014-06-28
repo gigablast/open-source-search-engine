@@ -40,7 +40,7 @@
 #define SP_ADMIN_PAUSED 8 // g_conf.m_spideringEnabled = false
 #define SP_COMPLETED    9 // crawl is done, and no repeatCrawl is scheduled
 
-bool tryToDeleteSpiderColl ( SpiderColl *sc ) ;
+bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) ;
 void spiderRoundIncremented ( class CollectionRec *cr ) ;
 bool testPatterns ( ) ;
 bool doesStringContainPattern ( char *content , char *pattern ) ;
@@ -1134,6 +1134,10 @@ class SpiderColl {
 	long      m_tailHopCount;
 	long long m_minFutureTimeMS;
 
+	// . do not re-send CrawlInfoLocal for a coll if not update
+	// . we store the flags in here as true if we should send our
+	//   CrawlInfoLocal for this coll to this hostId
+	char m_sendLocalCrawlInfoToHost[MAX_HOSTS];
 
 	Msg4 m_msg4x;
 	Msg4 m_msg4;

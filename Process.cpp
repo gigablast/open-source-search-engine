@@ -955,6 +955,7 @@ float getDiskUsage ( long long *diskAvail ) {
 		 "awk '{print $4\" \"$5}' > %s",
 		 g_hostdb.m_dir,
 		 out);
+	errno = 0;
 	int err = system ( cmd );
 	if ( err == 127 ) {
 		log("build: /bin/sh does not exist. can not get disk usage.");
@@ -962,7 +963,8 @@ float getDiskUsage ( long long *diskAvail ) {
 	}
 	// this will happen if you don't upgrade glibc to 2.2.4-32 or above
 	if ( err != 0 ) {
-		log("build: Call to system(\"%s\") had error.",cmd);
+		log("build: Call to system(\"%s\") had error: %s",
+		    cmd,mstrerror(errno));
 		return -1.0; // unknown
 	}
 

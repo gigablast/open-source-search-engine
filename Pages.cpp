@@ -2486,11 +2486,14 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 
 	for ( long i = 0 ; i < s_numPages ; i++ ) {
 		if ( s_pages[i].m_pgflags & PG_NOAPI ) continue;
-		p.safePrintf("<li> <a href=#%li>/%s</a>"
+		char *pageStr = s_pages[i].m_filename;
+		// unknown?
+		if ( ! pageStr ) pageStr = "???";
+		p.safePrintf("<li> <a href=#/%s>/%s</a>"
 			     " - %s"
 			     "</li>\n",
-			     i,
-			     s_pages[i].m_filename,
+			     pageStr,
+			     pageStr,
 			     // description of page
 			     s_pages[i].m_desc
 			     );
@@ -2573,12 +2576,13 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 	if ( PAGENUM == PAGE_NONE ) return true;
 
-	sb->safePrintf("<a name=%li>",PAGENUM);
-
 	char *pageStr = s_pages[PAGENUM].m_filename;
 	
 	// unknown?
 	if ( ! pageStr ) pageStr = "???";
+
+	sb->safePrintf("<a name=/%s>",pageStr);//PAGENUM);
+
 
 	sb->safePrintf("<div style=padding-left:10%%>"
 		       "<font size=+2><b><a href=/%s>/%s</a></b></font>"

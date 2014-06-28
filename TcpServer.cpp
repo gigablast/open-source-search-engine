@@ -328,8 +328,10 @@ retry19:
 			"\n"
 			"Are you already running gb?\n"
 			"If not, try editing ./hosts.conf to\n"
-			"change the port from %li to something bigger.\n",
-		   	(long)port,mstrerror(g_errno),(long)port);
+			"change the port from %li to something bigger.\n"
+			"Or stop gb by running 'gb stop' or by "
+			"clicking\n'save & exit' in the master controls.\n"
+		   	,(long)port,mstrerror(g_errno),(long)port);
 		return false;
 	}
 	close ( m_sock );

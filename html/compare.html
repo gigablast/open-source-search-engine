@@ -1,10 +1,20 @@
 <html>
-<title>LIVE Interactive Comparison of Gigablast vs SOLR Open Source Search Engine</title>
+<!--TODO: make interactive comparison-->
+
+<title>Comparison of Gigablast vs SOLR Open Source Search Engine</title>
 
 
+<h2>Comparing Gigablast to SOLR</h2>
 
-<table cellspacing=10 border=1 width=1000px>
-<tr><td></td><td><b><a href=http://www.gigablast.com/>Gigablast</a></b></td><td><b><a href=http://lucene.apache.org/solr/>SOLR</a></b></td>
+
+<table cellspacing=10 border=1>
+<tr>
+
+<td style=max-width:100px;min-width:10%;></td>
+
+<td style=min-width:30%><b><a href=http://www.gigablast.com/>Gigablast</a></b></td>
+
+<td style=min-width:30%><b><a href=http://lucene.apache.org/solr/>Solr</a></b></td>
 <!--
 <td><b><a href=http://www.elasticsearch.org/>ElasticSearch</a></b></td>-->
 </tr>
@@ -13,17 +23,15 @@
 <td><b>Package Installation</b></td>
 
 <!-- gb install -->
-<td>Not currently available.
+<td>
+<a href=/admin.html#quickstart>Download packages for Ubuntu or RedHat</a>
 </td>
 
 <!-- solr install-->
 <td>
-<ul>
-<li>sudo apt-get install solr-tomcat <i>(188MB of additional space)</i>
-<li>sudo service tomcat6 start
-<li>point browser to <a href=http://127.0.0.1:8080/solr>http://127.0.0.1:8080/solr</a>
-<li>configuration files and the index are stored in /usr/share/solr
-</ul>
+
+<a href=http://wiki.apache.org/solr/SolrInstall>Instructions</a>
+
 </td>
 
 <!-- elastic search install-->
@@ -46,38 +54,124 @@
 
 
 <tr valign=top>
-<td><b>Source Installation</b></td>
+<td><b>Source Language</b></td>
 <!-- gb install -->
 <td>
-<ul>
-<li>apt-get install make
-<li>apt-get install g++
-<li>apt-get install git
-<li>git clone https://github.com/gigablast/open-source-search-engine.git ./gb
-<li>cd gb
-<li>make
-<li>edit hosts.conf to set <i>working-dir</i> to your current working directory
-<li>./gb 0
-<li>wait for binary data files to build
-<li>./gb 0 >& log0 &
-<li>If your web browser resides on a different machine than the gb process, then, on the browser machine, do an ssh tunnel like <i>ssh -L 8001:127.0.0.1:8000 1.2.3.4</i> where 1.2.3.4 is the IP address of the machine running gb. Then any request sent to port 8001 on your local machine will be port-forwarded over ssh to the machine running gb on port 8000.
-<li>point browser to <a href=http://127.0.0.1:8000/>http://127.0.0.1:8000/</a> 
-<li>the two configuration files, gb.conf and hosts.conf, and the index itself are stored in <i>working-dir</i> or sub directories thereof.
-</ul>
+<font color=green><b>
+C/C++
+</b></font>
 </td>
 <!-- solr install-->
 <td>
-<ul>
-<li>select a mirror from <a href=http://www.apache.org/dyn/closer.cgi/lucene/solr>here</a>
-<li>example: <b>wget "http://apache.cs.utah.edu/lucene/solr/4.4.0/solr-4.4.0-src.tgz"</b>
-<li>gunzip solr-4.4.0-src.tgz
-<li>tar -xvf solr-4.4.0-src.tar
-<li>cd solr-4.4.0
-<li>hack your system so <i>ant</i> can find <i>lib/tools.jar</i>: <b>ln -s /usr/lib/jvm/java-1.5.0-gcj-4.6/lib/ /usr/lib/jvm/java-6-openjdk-i386/</b> (or make sure that <i>ant test</i> can find tools.jar.
-<li>ant ivy-bootstrap
-<li>ant compile
-<li>etc. etc.
-</ul>
+Java
+</td>
+</tr>
+
+
+<tr valign=top>
+<td><b>Runs on Linux</b></td>
+<!-- gb install -->
+<td>
+Yes.
+</td>
+<!-- solr install-->
+<td>
+Yes.
+</td>
+</tr>
+
+<tr valign=top>
+<td><b>Runs on Windows</b></td>
+<!-- gb install -->
+<td>
+Yes with Virtual Box. Soon natively.
+</td>
+<!-- solr install-->
+<td>
+Yes.
+</td>
+</tr>
+
+
+<tr valign=top>
+<td><b>License</b></td>
+<!-- gb install -->
+<td>
+Apache Open Source License 2
+</td>
+<!-- solr install-->
+<td>
+Apache Open Source License 2
+</td>
+</tr>
+
+<tr valign=top>
+<td><b>Release Date</b></td>
+<!-- gb install -->
+<td>
+2000
+</td>
+<!-- solr install-->
+<td>
+2007
+</td>
+</tr>
+
+<tr valign=top>
+<td><b>HTTP API</b></td>
+<!-- gb install -->
+<td>
+<a href=/api>here</a>
+</td>
+<!-- solr install-->
+<td>
+<a href=http://wiki.apache.org/solr/SchemaRESTAPI>here</a>
+</td>
+</tr>
+
+
+
+<tr valign=top>
+<td><b>Search Results</b></td>
+<!-- gb install -->
+<td>
+<a href=http://www.google.com/search?q=gigablast>here</a>
+</td>
+<!-- solr install-->
+<td>
+<a href=http://www.google.com/search?q=solr>here</a>
+</td>
+</tr>
+
+<tr valign=top>
+<td><b>Source Repository</b></td>
+<!-- gb install -->
+<td>
+<a href=https://github.com/gigablast/open-source-search-engine>github</a>
+</td>
+<!-- solr install-->
+<td>
+<a href=https://github.com/apache/lucene-solr>github</a>
+</td>
+</tr>
+
+
+
+
+
+<tr valign=top>
+<td><b>Source Installation</b></td>
+<!-- gb install -->
+<td>
+<font color=green><b>
+Just a <a href=/admin.html#src>few simple steps</a>
+</b></font>
+</td>
+<!-- solr install-->
+<td>
+
+<a href=http://lucene.apache.org/solr/downloads.html>Source download instructions</a>
+
 </td>
 <!-- elastic search install-->
 <!--
@@ -96,16 +190,51 @@
 
 
 
-
 <tr>
 <td>
-<b>Indexing Spider Logs via cmdline</b>
+<b>Complete Web GUI</b>
 </td>
 <!--gigablast-->
 <td>
-<b>./gb inject &lt;filename&gt; 127.0.0.1:8000</b>
+<font color=green><b>
+Yes.
+</b></font>
+</td>
+<!--solr-->
+<td>
+???
+</td>
+</tr>
+
+
+<tr>
+<td>
+<b>Operating Layout</b>
+</td>
+<!--gigablast-->
+<td>
+<font color=green><b>
+A single binary containing web server, database, admin tools, spider logic, etc.
+</b></font>
+</td>
+<!--solr-->
+<td>
+Many different packages quilted together. Apache, MySQL, Lucene, Tika, Zookeeper, Solr, Nutch, ...
+</td>
+</tr>
+
+
+
+<tr>
+<td>
+<b>Indexing a Single File Containing Multiple Documents via cmdline</b>
+</td>
+<!--gigablast-->
+<td>
+<font color=green><b>
+Use curl using args (including <i>delim</i>) listed <a href=/api.html#/admin/inject>here</a>
+</b></font>
 <br>
-Each HTML page in the file must be preceeded by <u><b>+++URL:http://myurl.com/xxx\n</b></u>. Use the supplied file <i>injectme3</i> which has 454 HTML docs in it for testing. i.e. Start up a gigablast instance and then type <b>./gb inject injectme3 127.0.0.1:8000</b> to see it in action. It currently just injects into the collection named <i>main</i>. It currently only reads up to 1MB at a time so you will have to change doInject() in main.cpp if you have larger html documents than that in the file. It took me 23.8 seconds to inject all 454 documents on a single core Xeon @2400MHz and everything in memory.
 </td>
 <!--solr-->
 <td>
@@ -114,13 +243,16 @@ unsupported
 </tr>
 
 
+
+
 <tr>
 <td>
 <b>Indexing an Individual File via cmdline</b>
 </td>
 <!--gigablast-->
 <td>
-unsupported
+Use curl to post the content of the file with args listed
+<a href=/api.html#/admin/inject>here</a>
 </td>
 <!--solr-->
 <td>
@@ -137,11 +269,13 @@ You can index individual local files as such:
 </td>
 <!--gigablast-->
 <td>
-You can inject an individual url into the collection <i>main</i> like:
-<b>curl "http://127.0.0.1:8000/inject?u=www.somedomain.com/somepath&c=main"</b> . You must be coming from an internal IP address for permission purposes.
+Use curl to inject the url with args listed 
+<a href=/api.html#/admin/inject>here</a>
+
 </td>
 <!--solr-->
 <td>
+???
 </td>
 </tr>
 
@@ -152,11 +286,12 @@ You can inject an individual url into the collection <i>main</i> like:
 </td>
 <!--gigablast-->
 <td>
-You can inject a file of URLs into the collection <i>main</i> like:
-<b>./gb blaster -u <filename> <maxThreadsToUse></b> . You must be coming from an internal IP address for permission purposes. The file of URLs is just a \n separated list of URLs you want to index. It will basically use the the same "inject" HTML interface you can see <a href=/admin/inject>here</a>. If you use <b>-i<b> instead of -u then it will add the outlinks from each URL to spiderdb for spidering. This will cause it to be a little slower because it will do a DNS lookup on the subdomain of each outlink if not already in the DNS cache. Look for <i>spiderlinks</i> in the Blaster.cpp file to find that code.
+Use one curl command for each url, using the interface described
+<a href=/api.html#/admin/inject>here</a></b>
 </td>
 <!--solr-->
 <td>
+???
 </td>
 </tr>
 
@@ -169,7 +304,8 @@ You can inject a file of URLs into the collection <i>main</i> like:
 </td>
 <!--gigablast-->
 <td>
-This is the same procedure as the above cmdline injection, but use the command <i>reject</i> instead of <i>inject</i>: <b>./gb reject injectme3 127.0.0.1:8000</b>. It will suffice that the provided file is a simple \n delimited list of URLs to delete. Deleting by query is covered below.
+Use curl command to delete a url, using the interface described
+<a href=/api.html#/admin/inject>here</a></b>
 </td>
 <!--solr-->
 <td>
@@ -184,18 +320,36 @@ You can delete individual documents by specifying queries that match just those 
 <tr>
 <td><b>Getting Results via cmdline</b></td>
 <td>
-In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/search?q=test&xml=1">show</a>). More details at <a href="/searchfeed.html">searchfeed.html</a>.
+Use curl command to do a search, using the interface described
+<a href=/api.html#/search>here</a></b>
 </td>
 <td>
+???
 </td>
 </tr>
 
 
 <tr>
-<td><b>Faceted Search</b></td>
+<td><b>Facets</b></td>
 <td>
+Coming soon.
 </td>
 <td>
+<font color=green><b>
+Yes.
+</b></font>
+</td>
+</tr>
+
+<tr>
+<td><b>Search Result Limitations Based on Facet Value Counts</b></td>
+<td>
+Coming soon.
+</td>
+<td>
+<font color=green><b>
+Yes.
+</b></font>
 </td>
 </tr>
 
@@ -203,8 +357,10 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <tr>
 <td><b>Numeric Fields</b></td>
 <td>
+You can forward/reverse sort by and constrain by numeric fields.
 </td>
 <td>
+You can forward/reverse sort by and constrain by numeric fields.
 </td>
 </tr>
 
@@ -212,8 +368,10 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <tr>
 <td><b>Boolean Search</b></td>
 <td>
+Fully nested boolean search with AND OR NOT.
 </td>
 <td>
+Fully nested boolean search with AND OR NOT.
 </td>
 </tr>
 
@@ -221,8 +379,10 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <tr>
 <td><b>Searchable Fields</b></td>
 <td>
+Yes. Any meta tag, or if indexing JSON or XML.
 </td>
 <td>
+???
 </td>
 </tr>
 
@@ -230,75 +390,118 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <tr>
 <td><b>Site Restricted Searches</b></td>
 <td>
+Yes. Using the site: query operator. Or use &sites=... to constrain your search up to 500 sites.
 </td>
 <td>
+???
 </td>
 </tr>
 
 <tr>
 <td><b>Spell Checker</b></td>
 <td>
+Yes. But currently disabled until improved.
 </td>
 <td>
+<font color=green><b>
+Yes.
+</b></font>
 </td>
 </tr>
 
 <tr>
 <td><b>Language Identification</b></td>
 <td>
+<font color=green><b>
+Yes. On a per word level for searching purposes.
+</b></font>
 </td>
 <td>
+Yes. Not on a per word level for searching purposes.
 </td>
 </tr>
+
+
+<tr>
+<td><b>Index Multiple Languages</b></td>
+<td>
+Yes. Can expand words in many languages to all their different forms. More forms coming soon, too.
+</td>
+<td>
+Yes, but stemming/expansion may be limited.
+</td>
+</tr>
+
+<tr>
+<td><b>Show Images in Search Results</b></td>
+<td>
+<font color=green><b>
+Yes.
+</b></font>
+</td>
+<td>
+No.
+</td>
+</tr>
+
+
+
+
 
 <!-- gigabits -->
 <tr>
 <td><b>Related Concepts</b></td>
 <td>
+<font color=green><b>
+Yes. Called <i>Gigabits</i>.
+</b></font>
 </td>
 <td>
+No.
 </td>
 </tr>
 
 
 <tr>
-<td><b>Synonyms</b></td>
+<td><b>Query Expansion (Synonyms)</b></td>
 <td>
+Yes. And also uses mysynonyms.txt file to add your own expansion terms.
 </td>
 <td>
-</td>
-</tr>
-
-<tr>
-<td><b>Query Expansion</b></td>
-<td>
-</td>
-<td>
+???
 </td>
 </tr>
 
 <tr>
 <td><b>Cached Pages</b></td>
 <td>
+Yes.
 </td>
 <td>
+???
 </td>
 </tr>
 
 
 <tr>
-<td><b>RESTful/XML APIs</b></td>
+<td><b>RESTful/XML/JSON APIs</b></td>
 <td>
+Yes, XML. JSON coming soon.
 </td>
 <td>
+???
 </td>
 </tr>
 
 <tr>
-<td><b>Schema Handling</b></td>
-<td>Gigablast finds schemas confusing and unnecessary.
+<td><b>Schemas</b></td>
+<td>
+<font color=green><b>
+You do not need to define schemas to begin indexing files and urls.
+</b></font>
 </td>
 <td>
+You have to define annoying schemas.
 </td>
 </tr>
 
@@ -307,35 +510,73 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <tr>
 <td><b>Spidering</b></td>
 <td>
+<font color=green><b>
+Gigablast has a complete distributed web spider with powerful controls.
+</b></font>
 </td>
 <td>
+SOLR has no spider. You can try to integrate Nutch.
 </td>
 </tr>
 
 <tr>
 <td><b>Document Filters</b></td>
 <td>
+antiword (for Microsoft Word)<br>
+pdftohtml (for PDF)
+xlstohtml (for Excel)
+ppthtml (for power point)
+pstotext (for PostScript)
 </td>
 <td>
+uses Apache Tika for several formats.
 </td>
 </tr>
 
 <tr>
 <td><b>Scalability</b></td>
 <td>
+<font color=green><b>
+Highly scalable. Has scaled to over
+12 billion pages while serving millions
+of queries per day. Can easily add new servers to the
+hosts.conf file and click <i>rebalance shards</i> to
+rebalance the data.
+</b></font>
 </td>
 <td>
+Has not scaled nearly as high to our knowledge. Not originally built for more than one server.
 </td>
 </tr>
+
+
+<tr>
+<td><b>Cluster Administration</b></td>
+<td>
+<font color=green><b>
+Built into the web GUI.
+</b></font>
+</td>
+<td>
+Requires separate Zookeeper package installation.
+</td>
+</tr>
+
+
 
 <tr>
 <td><b>Performance</b></td>
 <td>
+<font color=green><b>
+High performance. Written in C/C++.
+</b></font>
 </td>
 <td>
+Slower. Written in Java. Has garbage collection, etc.
 </td>
 </tr>
 
+<!--
 <tr>
 <td><b>Configuration Files and Descriptions</b></td>
 <td>
@@ -355,12 +596,13 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <tr>
 <td><b>Duplicate Sections</b></td>
 <td>
+Can remove duplicate content at spider time
+or query time.
 </td>
 <td>
 </td>
 </tr>
 
-<!-- fancy bits -->
 <tr>
 <td><b>Section Classification</b></td>
 <td>
@@ -368,7 +610,8 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <td>
 </td>
 </tr>
-
+-->
+<!--
 <tr>
 <td><b>Phrases</b></td>
 <td>
@@ -384,7 +627,9 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <td>
 </td>
 </tr>
+-->
 
+<!--
 <tr>
 <td><b>Index Layout</b></td>
 <td>
@@ -392,20 +637,27 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <td>
 </td>
 </tr>
+-->
 
 <tr>
 <td><b>Ranking Alogrithm</b></td>
 <td>
+<font color=green><b>
+Custom query term proximity based algorithm. Superior to TF/IDF or Cosine methods.
+</b></font>
 </td>
 <td>
+Old school TF/IDF based on simple statistics.
 </td>
 </tr>
 
 <tr>
 <td><b>Scoring Explanations</b></td>
 <td>
+Complete scoring information provided.
 </td>
 <td>
+Complete scoring information provided.
 </td>
 </tr>
 
@@ -413,8 +665,12 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <tr>
 <td><b>Inlink Text</b></td>
 <td>
+<font color=green><b>
+Indexed incoming link text, compensates for link spam.
+</b></font>
 </td>
 <td>
+None. Not geared for web search.
 </td>
 </tr>
 
@@ -422,35 +678,50 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <tr>
 <td><b>Page Rank</b></td>
 <td>
+<font color=green><b>
+Uses <i>Site Rank</i> based on number of incoming links to a site
+from other sites. Detects link spam and compensates accordingly.
+</b></font>
 </td>
 <td>
+None. Not geared for web search.
 </td>
 </tr>
 
 <tr>
-<td><b>On Page Spam</b></td>
+<td><b>On-Page Spam</b></td>
 <td>
+<font color=green><b>
+Demotes terms deemed spammy on a page.
+</b></font>
 </td>
 <td>
+None.
 </td>
 </tr>
 
 <tr>
 <td><b>Reliability</b></td>
 <td>
+Pretty good.
 </td>
 <td>
+Pretty good.
 </td>
 </tr>
 
+<!--
 <tr>
 <td><b>Administration</b></td>
 <td>
+Simple web-based GUI and API.
 </td>
 <td>
 </td>
 </tr>
+-->
 
+<!--
 <tr>
 <td><b>File Descriptions</b></td>
 <td>
@@ -458,44 +729,57 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <td>
 </td>
 </tr>
+-->
 
 <tr>
 <td><b>Developer Documentation</b></td>
 <td>
+Yes. <a href=/developer.html>Here</a>.
 </td>
 <td>
+Yes. Lots of documentation.
 </td>
 </tr>
 
 <tr>
 <td><b>Graphing</b></td>
 <td>
+Graphs performance of various subroutines and query times.
 </td>
 <td>
+Unknown.
 </td>
 </tr>
 
 <tr>
 <td><b>Monitoring</b></td>
 <td>
+<font color=green><b>
+Monitors drive temperature, disk space, query latency and shard uptime. Sends email alerts.
+</b></font>
 </td>
 <td>
+None known.
 </td>
 </tr>
 
 <tr>
 <td><b>Geospatial</b></td>
 <td>
+Can use with numeric gbminint: gbmaxint: query operators on lat/lon fields.
 </td>
 <td>
+Yes.
 </td>
 </tr>
 
 <tr>
-<td><b>Summaries</b></td>
+<td><b>Dynamic Summaries</b></td>
 <td>
+Yes. Contain query terms.
 </td>
 <td>
+Yes. Contain query terms.
 </td>
 </tr>
 
@@ -503,40 +787,62 @@ In xml: <b>curl "http://127.0.0.1:8000/search?q=test&xml=1"</b> (<a href="/searc
 <tr>
 <td><b>Site Clustering</b></td>
 <td>
+Yes.
 </td>
 <td>
+???
 </td>
 </tr>
 
 <tr>
 <td><b>More Like This</b></td>
 <td>
+Coming soon.
 </td>
 <td>
+<font color=green><b>
+Yes.
+</b></font>
 </td>
 </tr>
 
 <tr>
 <td><b>Sort by Date</b></td>
 <td>
+<i>gbsortbyint:gbspiderdate</i><br>
+<i>gbsortbyint:gbindexdate</i><br>
+<i>gbrevsortbyint:gbspiderdate</i><br> 
+<i>gbrevsortbyint:gbindexdate</i>
+
+
 </td>
 <td>
+???
 </td>
 </tr>
 
 <tr>
 <td><b>Query Completion</b></td>
 <td>
+Coming soon.
 </td>
 <td>
+<font color=green><b>
+Available with additional module.
+</b></font>
 </td>
 </tr>
 
 <tr>
 <td><b>Document Collections</b></td>
 <td>
+<font color=green><b>
+Supports tens of thousands of separate collections,
+and federated search across them.
+</b></font>
 </td>
 <td>
+???
 </td>
 </tr>
 

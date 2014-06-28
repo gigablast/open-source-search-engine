@@ -403,7 +403,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 		// 
 		// logo header
 		//
-		printLogoAndSearchBox ( &sb , hr , -1 ); // catId = -1
+		printLogoAndSearchBox ( &sb , hr , -1,NULL ); // catId = -1
 		//
 		// script to populate search results
 		//
@@ -1385,6 +1385,17 @@ bool gotResults ( void *state ) {
 	return true;
 }
 
+// defined in PageRoot.cpp
+bool expandHtml (  SafeBuf& sb,
+		   char *head , 
+		   long hlen ,
+		   char *q    , 
+		   long qlen ,
+		   HttpRequest *r ,
+		   SearchInput *si,
+		   char *method ,
+		   CollectionRec *cr ) ;
+
 bool printSearchResultsHeader ( State0 *st ) {
 
 	SearchInput *si = &st->m_si;
@@ -1409,6 +1420,29 @@ bool printSearchResultsHeader ( State0 *st ) {
 		else                sb->safePrintf("[\n");
 	}
 
+	CollectionRec *cr = si->m_cr;
+	HttpRequest *hr = &st->m_hr;
+
+	// if there's a ton of sites use the post method otherwise
+	// they won't fit into the http request, the browser will reject
+	// sending such a large request with "GET"
+	char *method = "GET";
+	if ( si->m_sites && gbstrlen(si->m_sites)>800 ) method = "POST";
+
+
+	if ( si->m_format == FORMAT_HTML &&
+	     cr->m_htmlHead.length() ) {
+		return expandHtml ( *sb ,
+				    cr->m_htmlHead.getBufStart(),
+				    cr->m_htmlHead.length(),
+				    q,
+				    qlen,
+				    hr,
+				    si,
+				    method,
+				    cr);
+	}
+				 
 	// . if not matt wells we do not do ajax
 	// . the ajax is just there to prevent bots from slamming me 
 	//   with queries.
@@ -1421,8 +1455,6 @@ bool printSearchResultsHeader ( State0 *st ) {
 		printCSSHead ( sb ,si->m_format );
 		sb->safePrintf("<body style=padding:0px;margin:0px;>");
 	}
-
-	HttpRequest *hr = &st->m_hr;
 
 	if ( si->m_format == FORMAT_WIDGET_IFRAME ) {
 		long refresh = hr->getLong("refresh",0);
@@ -1440,11 +1472,10 @@ bool printSearchResultsHeader ( State0 *st ) {
 
 
 	if ( ! g_conf.m_isMattWells && si->m_format == FORMAT_HTML ) {
-		printLogoAndSearchBox ( sb , &st->m_hr , -1 ); // catId = -1
+		printLogoAndSearchBox ( sb,&st->m_hr,-1,si); // catId = -1
 	}
 
 	// the calling function checked this so it should be non-null
-	CollectionRec *cr = si->m_cr;
 	char *coll = cr->m_coll;
 	long collLen = gbstrlen(coll);
 
@@ -2330,6 +2361,12 @@ bool printSearchResultsTail ( State0 *st ) {
 		return true;
 	}
 
+	// grab the query
+	char  *q    = msg40->getQuery();
+	long   qlen = msg40->getQueryLen();
+
+	HttpRequest *hr = &st->m_hr;
+
 	// get some result info from msg40
 	long firstNum   = msg40->getFirstResultNum() ;
 
@@ -2539,6 +2576,19 @@ bool printSearchResultsTail ( State0 *st ) {
 		sb->pushChar('\n');
 		sb->nullTerm();
 	}
+
+	if ( si->m_format == FORMAT_HTML &&
+	     cr->m_htmlTail.length() &&
+	     ! expandHtml ( *sb ,
+			    cr->m_htmlTail.getBufStart(),
+			    cr->m_htmlTail.length(),
+			    q,
+			    qlen,
+			    hr,
+			    si,
+			    NULL, // method,
+			    cr) )
+			return false;
 
 	return true;
 }
@@ -2988,7 +3038,10 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf("<blockquote>"); 
 
 	// print the rank. it starts at 0 so add 1
-	if ( si->m_format == FORMAT_HTML )
+	if ( si->m_format == FORMAT_HTML && si->m_streamResults )
+		sb->safePrintf("<table><tr><td valign=top>%li.</td><td>",
+			       ix+1 );
+	else if ( si->m_format == FORMAT_HTML )
 		sb->safePrintf("<table><tr><td valign=top>%li.</td><td>",
 			      ix+1 + si->m_firstResultNum );
 
@@ -5951,7 +6004,8 @@ bool printDMOZCrumb ( SafeBuf *sb , long catId , bool xml ) {
 bool printDmozRadioButtons ( SafeBuf *sb , long catId ) ;
 
 // if catId >= 1 then print the dmoz radio button
-bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ) {
+bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ,
+			     SearchInput *si ) {
 
 	char *root = "";
 	if ( g_conf.m_isMattWells )
@@ -6019,6 +6073,13 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ) {
 	char *coll = hr->getString("c");
 	if ( ! coll ) coll = "";
 
+	// if there's a ton of sites use the post method otherwise
+	// they won't fit into the http request, the browser will reject
+	// sending such a large request with "GET"
+	char *method = "GET";
+	if ( si && si->m_sites && gbstrlen(si->m_sites)>800 ) method = "POST";
+
+
 	sb->safePrintf(" &nbsp;&nbsp;&nbsp;&nbsp; "
 		      
 		      // i'm not sure why this was removed. perhaps
@@ -6055,10 +6116,11 @@ bool printLogoAndSearchBox ( SafeBuf *sb , HttpRequest *hr , long catId ) {
 		      //
 		      // search box
 		      //
-		      "<form name=f method=GET action=/search>\n\n" 
+		      "<form name=f method=%s action=/search>\n\n" 
 
 		      // propagate the collection if they re-search
 		      "<input name=c type=hidden value=\"%s\">"
+		       , method
 		      , coll
 		      );
 

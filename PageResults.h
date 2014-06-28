@@ -65,7 +65,8 @@ bool printSearchResultsTail ( class State0 *st ) ;
 
 
 bool printDmozRadioButtons ( SafeBuf *sb , long catId ) ;
-bool printLogoAndSearchBox ( SafeBuf *sb , class HttpRequest *hr, long catId );
+bool printLogoAndSearchBox ( SafeBuf *sb , class HttpRequest *hr, long catId ,
+			     SearchInput *si );
 
 bool printTermPairs ( SafeBuf *sb , class Query *q , class PairScore *ps ) ;
 bool printSingleTerm ( SafeBuf *sb , class Query *q , class SingleScore *ss );

@@ -1929,10 +1929,16 @@ bool Parms::printParm ( SafeBuf* sb,
 		if ( t == TYPE_STRINGBOX ) {
 			sb->safePrintf ( "<td colspan=2><center>"
 				  "<b>%s</b><br><font size=-1>",m->m_title );
-			if ( pd ) 
+			if ( pd ) {
 				status &= sb->htmlEncode (m->m_desc,
 							  gbstrlen(m->m_desc),
 							  false);
+				// is it required?
+				if ( m->m_flags & PF_REQUIRED )
+					sb->safePrintf(" <b><font color=green>"
+						       "REQUIRED</font></b>");
+			}
+
 			sb->safePrintf ( "</font><br>\n" );
 		}
 		else {
@@ -1947,11 +1953,16 @@ bool Parms::printParm ( SafeBuf* sb,
 					 3*100/nc/2/4, m->m_title );
 
 			// the "site list" parm has html in description
-			if ( pd ) 
+			if ( pd ) {
 				status &= sb->safeStrcpy(m->m_desc);
 				//status &= sb->htmlEncode (m->m_desc,
 				//			  gbstrlen(m->m_desc),
 				//			  false);
+				// is it required?
+				if ( m->m_flags & PF_REQUIRED )
+					sb->safePrintf(" <b><font color=green>"
+						       "REQUIRED</font></b>");
+			}
 
 			// and cgi parm if it exists
 			//if ( m->m_def && m->m_scgi )
@@ -2977,10 +2988,11 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		if ( m->m_type == TYPE_CMD     ) continue;
 		if (THIS == (char *)&g_conf && m->m_obj != OBJ_CONF ) continue;
 		if (THIS != (char *)&g_conf && m->m_obj == OBJ_CONF ) continue;
-		if ( m->m_obj == OBJ_COLL ) {
-			CollectionRec *cr = (CollectionRec *)THIS;
-			if ( cr->m_bases[1] ) { char *xx=NULL;*xx=0; }
-		}
+		// what is this?
+		//if ( m->m_obj == OBJ_COLL ) {
+		//	CollectionRec *cr = (CollectionRec *)THIS;
+		//	if ( cr->m_bases[1] ) { char *xx=NULL;*xx=0; }
+		//}
 		// sanity check, make sure it does not overflow
 		if ( m->m_obj == OBJ_COLL &&
 		     m->m_off > (long)sizeof(CollectionRec)){
@@ -8452,6 +8464,7 @@ void Parms::init ( ) {
 		"results page.";
 	m->m_off   = (char *)&si.m_imgUrl - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_def   = NULL;
 	//m->m_size  = 512;
 	m->m_cgi   = "iu";
 	m->m_page  = PAGE_NONE;
@@ -8463,6 +8476,7 @@ void Parms::init ( ) {
 		"the search results page.";
 	m->m_off   = (char *)&si.m_imgLink - y;
 	m->m_type  = TYPE_CHARPTR;//STRING;
+	m->m_def   = NULL;
 	//m->m_size  = 512;
 	m->m_cgi   = "ix";
 	m->m_page  = PAGE_NONE;
@@ -13666,7 +13680,9 @@ void Parms::init ( ) {
 		"Injected urls will have a "
 		"<a href=/admin/filters#hopcount>hopcount</a> of 0. "
 		"The injection api is described on the "
-		"<a href=/admin/api>api</a> page.";
+		"<a href=/admin/api>api</a> page. "
+		"Make up a fake url if you are injecting content that "
+		"does not have one.";
 	m->m_cgi   = "url";
 	//m->m_cgi2  = "u";
 	//m->m_cgi3  = "seed"; // pagerawlbot
@@ -13744,7 +13760,8 @@ void Parms::init ( ) {
 	m->m_cgi   = "spiderlinks";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHECKBOX;
-	m->m_def   = "1";
+	// leave off because could start spidering whole web unintentionally
+	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_spiderLinks - (char *)&gr;
@@ -13874,9 +13891,10 @@ void Parms::init ( ) {
 
 	m->m_title = "content type";
 	m->m_desc  = "If you supply content in the text box below without "
-		"an HTTP mime, then you need to enter the content type. "
-		"Possible values: text/html text/plain text/xml "
-		"application/json";
+		"an HTTP mime header, "
+		"then you need to enter the content type. "
+		"Possible values: <b>text/html text/plain text/xml "
+		"application/json</b>";
 	m->m_cgi   = "contenttype";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR; //text/html application/json application/xml
@@ -13888,7 +13906,8 @@ void Parms::init ( ) {
 
 	m->m_title = "content charset";
 	m->m_desc  = "A number representing the charset of the content "
-		"if provided below and no mime is given. Defaults to utf8 "
+		"if provided below and no HTTP mime header "
+		"is given. Defaults to utf8 "
 		"which is 106. "
 		"See iana_charset.h for the numeric values.";
 	m->m_cgi   = "charset";
@@ -14779,66 +14798,137 @@ void Parms::init ( ) {
 	m++;
 	*/
 
-	/*
+	m->m_title = "home page";
+	static SafeBuf s_tmpBuf;
+	s_tmpBuf.safePrintf (
+			  "Html to display for the home page. "
+			  "Leave empty for default home page. "
+			  "Use %%N for total "
+			  "number of pages indexed. Use %%n for number of "
+			  "pages indexed "
+			  "for the current collection. "
+			  //"Use %%H so Gigablast knows where to insert "
+			  //"the hidden form input tags, which must be there. "
+			  "Use %%c to insert the current collection name. "
+			  //"Use %T to display the standard footer. "
+			  "Use %%q to display the query in "
+			  "a text box. "
+			  "Use %%t to display the directory TOP. Example "
+			  "to paste into textbox: "
+			  "<br><i>"
+			  );
+	s_tmpBuf.htmlEncode (
+			      "<html>"
+			      "<title>My Gigablast Search Engine</title>"
+			      "<script>\n"
+			      //"<!--"
+			      "function x(){document.f.q.focus();}"
+			      //"// -->"
+			      "\n</script>"
+			      "<body onload=\"x()\">"
+			      "<br><br>"
+			      "<center>"
+			      "<a href=/>"
+			      "<img border=0 width=500 height=122 "
+			      "src=/logo-med.jpg></a>"
+			      "<br><br>"
+			      "<b>My Search Engine</b>"
+			      "<br><br>"
+			      // "<br><br><br>"
+			      // "<b>web</b> "
+			      // "&nbsp;&nbsp;&nbsp;&nbsp; "
+			      // "<a href=\"/Top\">directory</a> "
+			      // "&nbsp;&nbsp;&nbsp;&nbsp; "
+			      // "<a href=/adv.html>advanced search</a> "
+			      // "&nbsp;&nbsp;&nbsp;&nbsp; "
+			      // "<a href=/addurl "
+			      // "title=\"Instantly add your url to "
+			      //"the index\">"
+			      // "add url</a>"
+			      // "<br><br>"
+			      "<form method=get action=/search name=f>"
+			      "<input type=hidden name=c value=\"%c\">"
+			      "<input name=q type=text size=60 value=\"\">"
+			      "&nbsp;"
+			      "<input type=\"submit\" value=\"Search\">"
+			      "</form>"
+			      "<br>"
+			      "<center>"
+			      "Searching the <b>%c</b> collection of %n "
+			      "documents."
+			      "</center>"
+			      "<br>"
+			      "</body></html>")  ;
+	s_tmpBuf.safePrintf("</i>");
+	m->m_desc = s_tmpBuf.getBufStart();
+	m->m_xml  = "homePageHtml";
+	m->m_cgi   = "hp";
+	m->m_off   = (char *)&cr.m_htmlRoot - x;
+	//m->m_plen  = (char *)&cr.m_htmlRootLen - x; // length of string
+	m->m_type  = TYPE_SAFEBUF;//STRINGBOX;
+	//m->m_size  = MAX_HTML_LEN + 1;
+	m->m_def   = "";
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_TEXTAREA;
+	m++;
+
+
 	m->m_title = "html head";
-	m->m_desc  = "Html to display before the search results. Convenient "
-		"for changing colors and displaying logos. Use the variable, "
-		"%q, to represent the query to display in a text box. "
-		"Use %e to display it in a url.  "
-		"Use %e to print the page encoding.Use %D to print a drop down "
-		"menu for the number of search results to return. Use %S "
-		"to print sort by date or relevance link. Use %L to "
-		"display the logo. Use %R to display radio buttons for site "
-		"search. Use %F to begin the form. and use %H to insert "
+        static SafeBuf s_tmpBuf2;
+	s_tmpBuf2.safePrintf("Html to display before the search results. ");
+	char *fff = "Leave empty for default. "
+		"Convenient "
+		"for changing colors and displaying logos. Use "
+		"the variable, "
+		"%q, to represent the query to display in a "
+		"text box. "
+		"Use %e to print the url encoded query.  "
+		//"Use %e to print the page encoding. "
+		// i guess this is out for now
+		//"Use %D to "
+		//"print a drop down "
+		//"menu for the number of search results to return. "
+		"Use %S "
+		"to print sort by date or relevance link. Use "
+		"%L to "
+		"display the logo. Use %R to display radio "
+		"buttons for site "
+		"search. Use %F to begin the form. and use %H to "
+		"insert "
 		"hidden text "
-		"boxes of parameters, both %F and %H are necessary. "
+		"boxes of parameters like the current search result "
+		"page number. "
+		"BOTH %F and %H are necessary for the html head, but do "
+		"not duplicate them in the html tail. "
 		"Use %f to display "
 		"the family filter radio buttons. "
-		"Directory: Use %s to display the directory "
-		"search type options. Use %l to specify the location of "
-		"dir=rtl in the body tag for RTL pages. "
-		"Use %where and %when to substitute the where and when of "
-		"the query. These values may be set based on the cookie if "
-		"none was explicitly given. "
-		"IMPORTANT: In the xml configuration file, this html "
-		"must be encoded (less thans mapped to &lt;, etc.).";
-	m->m_cgi   = "hh";
-	m->m_off   = (char *)cr.m_htmlHead - x;
-	m->m_plen  = (char *)&cr.m_htmlHeadLen - x; // length of string
-	m->m_type  = TYPE_STRINGBOX;
-	m->m_size  = MAX_HTML_LEN + 1;
-	m->m_def   = 
+		// take this out for now
+		//"Directory: Use %s to display the directory "
+		//"search type options. "
+		//"Use %l to specify the "
+		//"location of "
+		//"dir=rtl in the body tag for RTL pages. "
+		//"Use %where and %when to substitute the where "
+		//"and when of "
+		//"the query. "
+		//"These values may be set based on the cookie "
+		//"if "
+		//"none was explicitly given. "
+		//"IMPORTANT: In the xml configuration file, "
+		//"this html "
+		//"must be encoded (less thans mapped to &lt;, "
+		//"etc.).";
+		"Example to paste: <br><i>";
+	s_tmpBuf2.safeStrcpy(fff);
+	s_tmpBuf2.htmlEncode(
 		"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 "
 		"Transitional//EN\">\n"
 		"<html>\n"
 		"<head>\n"
-		"<title>Gigablast Search Results</title>\n"
+		"<title>My Gigablast Search Results</title>\n"
 		"<meta http-equiv=\"Content-Type\" "
 		"content=\"text/html; charset=utf-8\">\n"
-		"<style><!--\n"
-		"body {\n"
-		"font-family:Arial, Helvetica, sans-serif;\n"
-		"color: #000000;\n"
-		"font-size: 12px;\n"
-		"margin: 20px 5px;\n"
-		"}\n"
-		"a:link {color:#00c}\n"
-		"a:visited {color:#551a8b}\n"
-		"a:active {color:#f00}\n"
-		".bold {font-weight: bold;}\n"
-		".bluetable {background:#d1e1ff;margin-bottom:15px;"
-		"font-size:12px;}\n"
-		".url {color:#008000;}\n"
-		".cached, .cached a {font-size: 10px;color: #666666;\n"
-		"}\n"
-		"table {\n"
-		"font-family:Arial, Helvetica, sans-serif;\n"
-		"color: #000000;\n"
-		"font-size: 12px;\n"
-		"}\n"
-		".directory {font-size: 16px;}\n"
-		"-->\n"
-		"</style>\n"
 		"</head>\n"
 		"<body%l>\n"
 
@@ -14871,35 +14961,47 @@ void Parms::init ( ) {
 		// %R radio button for site(s) search
 		"<br>%f %R\n"
 		// directory search options
-		"</td><td>%s</td>\n"
+		// MDW: i guess this is out for now
+		//"</td><td>%s</td>\n"
 		"</tr>\n"
 		"</table>\n"
 		// %H prints the hidden for vars. Print them *after* the input 
 		// text boxes, radio buttons, etc. so these hidden vars can be 
 		// overriden as they should be.
-		"%H"; 
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_htmlHead - y;
+		"%H"); 
+	s_tmpBuf2.safePrintf("</i>");
+	m->m_desc  = s_tmpBuf2.getBufStart();
+	m->m_xml   = "htmlHead";
+	m->m_cgi   = "hh";
+	m->m_off   = (char *)&cr.m_htmlHead - x;
+	m->m_type  = TYPE_SAFEBUF;//STRINGBOX;
+	m->m_def   = "";
+	//m->m_sparm = 1;
+	//m->m_soff  = (char *)&si.m_htmlHead - y;
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_TEXTAREA;
 	m++;
 
+
 	m->m_title = "html tail";
-	m->m_desc  = "Html to display after the search results.";
-	m->m_cgi   = "ht";
-	m->m_off   = (char *)cr.m_htmlTail - x;
-	m->m_plen  = (char *)&cr.m_htmlTailLen - x; // length of string
-	m->m_type  = TYPE_STRINGBOX;
-	m->m_size  = MAX_HTML_LEN + 1;
-	m->m_def   = 
+        static SafeBuf s_tmpBuf3;
+	s_tmpBuf3.safePrintf("Html to display before the search results. ");
+	s_tmpBuf3.safeStrcpy(fff);
+	s_tmpBuf3.htmlEncode (
 		"<br>\n"
 		"%F<table cellpadding=2 cellspacing=0 border=0>\n"
 		"<tr><td></td>\n"
 		"<td valign=top align=center>\n"
-		"<nobr>"
-		"<input type=text name=q size=60 value=\"%q\"> %D\n"
-		"<input type=submit value=\"Blast It!\" border=0>\n"
-		"</nobr>"
+		// this old query is overriding a newer query above so
+		// i commented out. mfd 6/2014
+		//"<nobr>"
+		//"<input type=text name=q size=60 value=\"%q\"> %D\n"
+		//"<input type=submit value=\"Blast It!\" border=0>\n"
+		//"</nobr>"
 		// family filter
-		"<br>%f %R\n"
+		//"<br>%f %R\n"
+		"<br>%R\n"
 		"</td><td>%s</td>\n"
 		"</tr>\n"
 		"</table>\n"
@@ -14913,126 +15015,24 @@ void Parms::init ( ) {
 		"dmoz</a> &nbsp;\n"
 		//"<a href=http://search01.altavista.com/web/results?q=%e>"
 		//"alta vista</a>\n"
-		"<a href=http://s.teoma.com/search?q=%e>teoma</a> &nbsp;\n"
-		"<a href=http://wisenut.com/search/query.dll?q=%e>wisenut"
-		"</a>\n"
-		"</font></body>\n";
-	//m->m_def   = "</font></body></html>";
-	m->m_group = 0;
-	m->m_sparm = 1;
-	m->m_soff  = (char *)&si.m_htmlTail - y;
+		//"<a href=http://s.teoma.com/search?q=%e>teoma</a> &nbsp;\n"
+		//"<a href=http://wisenut.com/search/query.dll?q=%e>wisenut"
+		//"</a>\n"
+		"</font></body>\n");
+	s_tmpBuf3.safePrintf("</i>");
+	m->m_desc  = s_tmpBuf3.getBufStart();
+	m->m_xml   = "htmlTail";
+	m->m_cgi   = "ht";
+	m->m_off   = (char *)&cr.m_htmlTail - x;
+	m->m_type  = TYPE_SAFEBUF;//STRINGBOX;
+	m->m_def   = "";
+	//m->m_sparm = 1;
+	//m->m_soff  = (char *)&si.m_htmlHead - y;
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_TEXTAREA;
 	m++;
 
-	m->m_title = "home page";
-	m->m_desc  = "Html to display for the home page. Use %N for total "
-		"number of pages indexed. Use %n for number of pages indexed "
-		"for the current collection. "
-		"Use %H so Gigablast knows where to insert "
-		"the hidden form input tags, which must be there. Use %T to "
-		"display the standard footer and %q to display the query in "
-		"a text box. Use %t to display the directory TOP.";
-	m->m_cgi   = "hp";
-	m->m_off   = (char *)cr.m_htmlRoot - x;
-	m->m_plen  = (char *)&cr.m_htmlRootLen - x; // length of string
-	m->m_type  = TYPE_STRINGBOX;
-	m->m_size  = MAX_HTML_LEN + 1;
-	m->m_def   = 
-		"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 "
-		"Transitional//EN\">\n"
-		"<html>\n"
-		"<head>\n"
-		"<title>Gigablast</title>\n"
-		"<meta http-equiv=\"Content-Type\" content=\"text/html; "
-		"charset=utf-8\">\n"
-		"<meta name=\"description\" content=\"A powerful, new "
-		"search engine that does real-time indexing.\">\n"
-		"<meta name=\"keywords\" content=\"search, search engine, "
-		"search engines, search the web, fresh index\">\n"
-		"<style type=\"text/css\">\n"
-		"<!--\n"
-		"body {\n"
-		"font-family: Arial, Helvetica, sans-serif;\n"
-		"background: #FFFFFF;\n"
-		"font-size: 16px;\n"
-		"color: #000000;\n"
-		"text-align: center;\n"
-		"margin: 20px 5px 20px;\n"
-		"}\n"
-		"a.search {\n"
-		"font-weight: bold;\n"
-		"color: #FFFFFF;\n"
-		"text-decoration: underline;\n"
-		"font-size: small;\n"
-		"}\n"
-		".redtop {\n"
-		"color: #c62939;\n"
-		"font-weight: bold;\n"
-		"margin-top: 1.25em;\n"
-		"margin-bottom: 1.15em;\n"
-		"}\n"
-		".red, .red a {\n"
-		"color: #c62939;\n"
-		"font-weight: bold;\n"
-		"margin-top: 1.5em;\n"
-		"margin-bottom: 2em;\n"
-		"}\n"
-		".nav, .nav a {\n"
-		"color: #000000;\n"
-		"font-weight: bold;\n"
-		"margin-top: 3em;\n"
-		"font-size: 96%;\n"
-		"}\n"
-		"-->\n"
-		"</style>\n"
-		"</head>\n"
-		
-		"<script>\n"
-		"<!--\n"
-		"function x(){document.f.q.focus();}\n"
-		"// --></script>\n"
-		"<body onload=\"x()\">\n"
-		"<a href=\"/\"><img src=\"logo.gif\" "
-		"alt=\"Gigablast\" border=0></a>\n"
-		"<p class=\"redtop\">Information Acceleration.</p>\n"
-
-		"<form method=\"get\" action=\"/search\" name=\"f\">\n"
-		"%H\n"
-		"<table bgcolor=\"#0079ba\" border=0 cellpadding=6 "
-		"width=100%>\n"
-		"<tbody>\n"
-		"<tr>\n"
-
-		"<td width=50%>&nbsp;</td>\n"
-		"<td width=60> <div align=\"center\">\n"
-		"<input name=\"q\" value=\"%q\" size=60 type=\"text\"> \n" 
-		"</td><td width=50%>\n"
-
-		// %D is the drop down menu for # of search results
-		"%%D &nbsp; "
-		"<input value=\"Blast It!\" border=0 type=\"submit\"> <a "
-		"href=\"/adv.html\" class=\"search\">"
-		"<nobr>Advanced Search</nobr></a>\n"
-		"</td>\n"
-		"</tr>\n"
-		"</tbody>\n"
-		"</table>\n"
-		"</form>\n"
-		"<p style=\"margin-top: 1.5em;margin-bottom: 2.5em;\"><b>"
-		"%N pages indexed</b></p>\n"
-		"<p class=\"red\"><a href=\"/"
-		"searchfeed.html\">XML Search Feed (new)</a></p>\n"
-		
-		"<p class=\"red\"><a href=\"http://sitesearch.gigablast.com/"
-		"sitesearch.html\">Dedicated Site Search (new)</a></p>\n"
-		"<p class=\"red\"><a href=\"/cts."
-		"html\">Custom Topic Search (new)</a></p>\n"
-		"<p class=\"red\"><a href=\"/ask."
-		"html\">Gigablast Answers Questions</a></p>\n"
-		"%T\n"
-		"</body>\n"
-		"</html>\n";
-	m++;
-	*/
 
 	///////////////////////////////////////////
 	// PAGE SPIDER CONTROLS
@@ -16447,7 +16447,11 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_indexSpiderReplies - x;
 	m->m_type  = TYPE_BOOL;
 	// default off for now until we fix it better. 5/26/14 mdw
-	m->m_def   = "0";
+	// turn back on 6/21 now that we do not index plain text terms
+	// and we add gbdocspidertime and gbdocindextime terms so you
+	// can use those to sort regular docs and not have spider reply
+	// status docs in the serps.
+	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
 	m++;
