@@ -796,7 +796,10 @@ bool PosdbTable::allocTopTree ( ) {
 	for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
 		QueryTerm *qt = &m_q->m_qterms[i];
 		// skip if not facet
-		if ( qt->m_fieldCode != FIELD_GBFACET ) continue;
+		if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
+		     qt->m_fieldCode != FIELD_GBFACETINT &&
+		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
+			continue;
 		// how big?
 		long long total = m_msg2->m_lists[i].getListSize();
 		// skip if empty
@@ -4309,7 +4312,11 @@ bool PosdbTable::setQueryTermInfo ( ) {
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
 
 
-		if (qt->m_fieldCode == FIELD_GBFACET )
+		if (qt->m_fieldCode == FIELD_GBFACETSTR )
+			qti->m_bigramFlags[nn]|=BF_FACET;
+		if (qt->m_fieldCode == FIELD_GBFACETINT )
+			qti->m_bigramFlags[nn]|=BF_FACET;
+		if (qt->m_fieldCode == FIELD_GBFACETFLOAT )
 			qti->m_bigramFlags[nn]|=BF_FACET;
 
 		// add list of member terms
@@ -6867,7 +6874,10 @@ void PosdbTable::intersectLists10_r ( ) {
 		// QueryTerm::m_facetHashTable/m_dt
 		for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
 			QueryTerm *qt = &m_q->m_qterms[i];
-			if ( qt->m_fieldCode != FIELD_GBFACET ) continue;
+			if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
+			     qt->m_fieldCode != FIELD_GBFACETINT &&
+			     qt->m_fieldCode != FIELD_GBFACETFLOAT )
+				continue;
 			char *p    = miniMergedList[i];
 			//char *pend = miniMergedEnd [i];
 			//

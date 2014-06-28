@@ -121,7 +121,9 @@ typedef unsigned long long qvec_t;
 #define FIELD_GBREVSORTBYINT   60
 #define FIELD_GBNUMBERMININT   61
 #define FIELD_GBNUMBERMAXINT   62
-#define FIELD_GBFACET          63
+#define FIELD_GBFACETSTR       63
+#define FIELD_GBFACETINT       64
+#define FIELD_GBFACETFLOAT     65
 
 
 #define FIELD_GBOTHER 92

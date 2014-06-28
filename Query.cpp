@@ -2280,7 +2280,9 @@ bool Query::setQWords ( char boolFlag ,
 		     fieldCode == FIELD_GBREVSORTBYINT ||
 		     fieldCode == FIELD_GBNUMBERMININT ||
 		     fieldCode == FIELD_GBNUMBERMAXINT ||
-		     fieldCode == FIELD_GBFACET ||
+		     fieldCode == FIELD_GBFACETSTR ||
+		     fieldCode == FIELD_GBFACETINT ||
+		     fieldCode == FIELD_GBFACETFLOAT ||
 
 		     fieldCode == FIELD_GBAD  ) {
 			// . find 1st space -- that terminates the field value
@@ -3232,8 +3234,22 @@ struct QueryField g_fields[] = {
 	 "spidered in seconds since the epoch in UTC."
 	},
 
-	{"gbfacet", FIELD_GBFACET, false,
-	 "Example: 'gbfacet:price' will return facets in the search results "
+	{"gbfacetstr", FIELD_GBFACETSTR, false,
+	 "Example: 'gbfacet:color' will return facets in the search results "
+	 "by their color field. Any other "
+	 "field name can follow the gbfacet: operator."
+	},
+
+	{"gbfacetint", FIELD_GBFACETINT, false,
+	 "Example: 'gbfacet:numReviews' will return "
+	 "facets in the search results "
+	 "with the # of documents for each number of reviews. Any other "
+	 "field name can follow the gbfacet: operator."
+	},
+
+	{"gbfacetfloat", FIELD_GBFACETFLOAT, false,
+	 "Example: 'gbfacetfloat:price' will return facets in the "
+	 "search results "
 	 "with the # of documents that have certain price ranges. Any other "
 	 "field name can follow the gbfacet: operator."
 	},

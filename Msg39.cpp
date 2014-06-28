@@ -1400,7 +1400,10 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		for ( long i = 0 ; i < m_tmpq.m_numTerms; i++ ) {
 			QueryTerm *qt = &m_tmpq.m_qterms[i];
 			// skip if not facet
-			if ( qt->m_fieldCode != FIELD_GBFACET ) continue;
+			if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
+			     qt->m_fieldCode != FIELD_GBFACETINT &&
+			     qt->m_fieldCode != FIELD_GBFACETFLOAT )
+				continue;
 			HashTableX *ft = &qt->m_facetHashTable;
 			if ( ft->m_numSlotsUsed == 0 ) continue;
 			long used = ft->m_numSlotsUsed;
@@ -1430,7 +1433,10 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		for ( long i = 0 ; i < m_tmpq.m_numTerms ; i++ ) {
 			QueryTerm *qt = &m_tmpq.m_qterms[i];
 			// skip if not facet
-			if ( qt->m_fieldCode != FIELD_GBFACET ) continue;
+			if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
+			     qt->m_fieldCode != FIELD_GBFACETINT &&
+			     qt->m_fieldCode != FIELD_GBFACETFLOAT )
+				continue;
 			// get all the facet hashes and their counts
 			HashTableX *ft = &qt->m_facetHashTable;
 			// skip if none
@@ -1440,6 +1446,9 @@ void Msg39::estimateHitsAndSendReply ( ) {
 			p += 8;
 			long used = ft->getNumSlotsUsed();
 			if ( used > (long)MAX_FACETS ) used = (long)MAX_FACETS;
+			// store count
+			*(long *)p = used;
+			p += 4;
 			long count = 0;
 			// for sanity check
 			char *pend = p + (used * 8);
@@ -1460,7 +1469,7 @@ void Msg39::estimateHitsAndSendReply ( ) {
 		}
 		// now point to that so it can be serialized below
 		mr.ptr_facetHashList  = tmp.getBufStart();
-		mr.size_facetHashList = tmp.length();
+		mr.size_facetHashList = p - tmp.getBufStart();//tmp.length();
 
 		/////////////
 		//

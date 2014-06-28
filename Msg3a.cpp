@@ -963,9 +963,14 @@ bool Msg3a::mergeLists ( ) {
 		// facethashlists from each shard into
 		//long long tid  = m_q->m_qterms[i].m_termId;
 		// we hold all the facet values
-		if ( ! qt->m_facetHashTable.set(4,0,128,NULL,0,false,
-						m_r->m_niceness,"fhtqt")) 
+		HashTableX *ht = &qt->m_facetHashTable;
+		// we have to manually cal this
+		ht->constructor();
+		// 4 byte key, 4 byte score for counting facet values
+		if ( ! ht->set(4,4,128,NULL,0,false,m_r->m_niceness,"fhtqt")) 
 			return true;
+		// sanity
+		if ( ! ht->m_isWritable ) {char *xx=NULL;*xx=0;}
 	}
 
 	// now scan each facethashlist from each shard and compile into 
@@ -996,6 +1001,12 @@ bool Msg3a::mergeLists ( ) {
 		p += 4;
 		// get that query term
 		QueryTerm *qt = m_q->getQueryTermByTermId64 ( termId );
+		// sanity
+		if ( ! qt ) {
+			log("msg3a: query: could not find query term with "
+			    "termid %llu for facet",termId);
+			break;
+		}
 		// the end point
 		char *pend = p + 4 * nh;
 		// now compile the facet hash list into there
@@ -1003,7 +1014,7 @@ bool Msg3a::mergeLists ( ) {
 			// debug
 			//log("msg3a: got facethash %li) %lu",k,p[k]);
 			// hash it up, no dups!
-			if ( ! qt->m_facetHashTable.addScore((long *)p) )
+			if ( ! qt->m_facetHashTable.addScore((long *)p,1) )
 				return true;
 		}
 		// now get the next gbfacet: term if there was one

@@ -6620,7 +6620,7 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 	//   the statistics for all the values in the posdb keys of this 
 	//   termlist, which happen to be innerHTML hashes for all pages
 	//   with this same xpath and on this same site.
-	sprintf(qbuf,"gbfacet:gbxpathsitehash%llu",secHash64);
+	sprintf(qbuf,"gbfacetstr:gbxpathsitehash%llu",secHash64);
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -26707,7 +26707,9 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 		hi.m_prefix = prefix;
 
 		// we already have the hash of the inner html of the section
-		hashFacet2 ( prefix, (long)(unsigned long)ih64 , hi.m_tt );
+		hashFacet2 ( "gbfacetstr",
+			     prefix, 
+			     (long)(unsigned long)ih64 , hi.m_tt );
 	}
 
 	return true;
@@ -31645,10 +31647,27 @@ bool XmlDoc::hashFacet1 ( char *term ,
 	// hash the whole string as one value, the value of the facet
 	long val32 = hash32 ( a , b - a );
 
-	return hashFacet2 ( term, val32 , tt );
+	if ( ! hashFacet2 ( "gbfacetstr",term, val32 , tt ) ) return false;
+
+	// if it's a number hash as float and int
+	if ( nw != 1 ) return true;
+	char **wptrs = words->m_words;
+	if ( ! is_digit ( wptrs[0][0] ) ) return true;
+
+	// hash with a float val
+	float f = atof(wptrs[0]);
+	long vf32 = *(long *)&f;
+	if ( ! hashFacet2 ( "gbfacetfloat",term, vf32 , tt ) ) return false;
+
+	// and an int val
+	long vi32 = atoi(wptrs[0]);
+	if ( ! hashFacet2 ( "gbfacetint",term, vi32 , tt ) ) return false;
+
+	return true;
 }
 
-bool XmlDoc::hashFacet2 ( char *term ,
+bool XmlDoc::hashFacet2 ( char *prefix,
+			  char *term ,
 			  long val32 ,
 			  HashTableX *tt ) {
 
@@ -31664,15 +31683,16 @@ bool XmlDoc::hashFacet2 ( char *term ,
 	// now any field has to support gbfacet:thatfield
 	// and store the 32-bit termid into where we normally put
 	// the word position bits, etc.
-	static long long s_facetPrefixHash = 0LL;
-	if ( ! s_facetPrefixHash )
-		s_facetPrefixHash = hash64n ( "gbfacet" );
+	//static long long s_facetPrefixHash = 0LL;
+	//if ( ! s_facetPrefixHash )
+	//	s_facetPrefixHash = hash64n ( "gbfacet" );
+	long long prefixHash = hash64n ( prefix );
 
 	long long termId64 = hash64n ( term );
 
 	// combine with the "gbfacet" prefix. old prefix hash on right.
-	// like "price" on right.
-	long long ph2 = hash64 ( s_facetPrefixHash , termId64);//prefixHash );
+	// like "price" on left and "gbfacetfloat" on left... see Query.cpp
+	long long ph2 = hash64 ( termId64, prefixHash );
 
 	// . now store it
 	// . use field hash as the termid. normally this would just be
@@ -31730,21 +31750,28 @@ bool XmlDoc::hashFacet2 ( char *term ,
 	if ( ! m_wts ) 
 		return true;
 
-	// store in buffer
+	bool isFloat = false;
+	if ( strcmp(prefix,"gbfacetfloat")==0 ) isFloat = true;
+
+	// store in buffer for display on pageparser.cpp output
 	char buf[128];
-	long bufLen = sprintf(buf,"facetField=%s facetVal32=%lu",
-			      term,val32);
+	long bufLen;
+	if ( isFloat )
+		bufLen=sprintf(buf,"facetField=%s facetVal32=%f",term,
+			       *(float *)&val32);
+	else
+		bufLen=sprintf(buf,"facetField=%s facetVal32=%lu",term,val32);
 
 	// make a special hashinfo for this facet
 	HashInfo hi;
 	hi.m_tt = tt;
-	hi.m_prefix = "gbfacet";
+	hi.m_prefix = prefix;//"gbfacet";
 
 	// add to wts for PageParser.cpp display
 	// store it
 	if ( ! storeTerm ( buf,
 			   bufLen,
-			   s_facetPrefixHash,
+			   prefixHash, // s_facetPrefixHash,
 			   &hi,
 			   0, // word#, i,
 			   0, // wordPos
@@ -31836,7 +31863,7 @@ bool XmlDoc::hashNumber ( char *beginBuf ,
 // . CHROME DETECTION
 // . hash a special "gbxpathsitehash12345678" term which has the hash of the
 //   innerHTML content embedded in it.
-// . we do this for doing gbfacet:gbxpathsitehash12345678 etc. on every
+// . we do this for doing gbfacetstr:gbxpathsitehash12345678 etc. on every
 //   section with innerHTML so we can figure out the histogram of each
 //   section on this page relative to its subdomain. like the distriubtion
 //   of the innerHTML for this section as it appears on other pages from
@@ -33369,7 +33396,9 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 			prefix = start + tp[i]->m_prefixOff;
 
 		bool isFacet = false;
-		if ( prefix && prefix[0]=='g' && strcmp(prefix,"gbfacet")== 0 )
+		if ( prefix && 
+		     prefix[0]=='g' && 
+		     strncmp(prefix,"gbfacet",7)== 0 )
 			isFacet = true;
 
 		sb->safePrintf ( "<tr>"
@@ -33501,7 +33530,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		// there is no prefix for such terms now
 		// TODO: store actual key in there i guess?? or just this bit.
 		long val32 = 0;
-		if ( strcmp(prefix,"gbfacet") == 0 )
+		if ( strncmp(prefix,"gbfacet",7) == 0 )
 			val32 = g_posdb.getInt(&tp[i]->m_key);
 
 		// . this is like gbxpathsitehash1234567

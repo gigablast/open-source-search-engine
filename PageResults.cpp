@@ -2131,7 +2131,11 @@ bool printSearchResultsHeader ( State0 *st ) {
 		// only for html for now i guess
 		if ( si->m_format != FORMAT_HTML ) break;
 		QueryTerm *qt = &si->m_q.m_qterms[i];
-		if ( qt->m_fieldCode != FIELD_GBFACET ) continue;
+		// skip if not facet
+		if ( qt->m_fieldCode != FIELD_GBFACETSTR &&
+		     qt->m_fieldCode != FIELD_GBFACETINT &&
+		     qt->m_fieldCode != FIELD_GBFACETFLOAT )
+			continue;
 		HashTableX *fht = &qt->m_facetHashTable;
 		// a new table for each facet query term
 		bool needTable = true;
