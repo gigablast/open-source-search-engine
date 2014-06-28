@@ -21,7 +21,7 @@
 #include "HttpServer.h"
 #include "Pages.h" // g_msg
 #include "XmlDoc.h" // for checkRegex()
-#include "Inject.h" // Msg7
+#include "PageInject.h" // Msg7
 #include "Repair.h"
 #include "Parms.h"
 

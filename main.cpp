@@ -1115,6 +1115,26 @@ int main2 ( int argc , char *argv[] ) {
 		return 0;
 	}
 	*/
+
+	/*
+	char cmd3[2048];
+	snprintf(cmd3,2047, 
+		 "ulimit -v 25000  ; "
+		 "ulimit -t 30 ; "
+		 "ulimit -a; "
+		 "export ANTIWORDHOME=%s/antiword-dir ; "
+		 "rm poo.txt ; "
+		 "timeout 10s nice -n 19 %s/antiword %s> %s" , 
+		 "/home/mwells/master-testing/" , 
+		 "/home/mwells/master-testing/" , 
+		 "/home/mwells/testing/poo.doc",
+		 "/home/mwells/master-testing/poo.txt ; " 
+		 "cat poo.txt"
+		 );
+	system(cmd3);
+	exit(-1);
+	*/
+
 	if ( strcmp ( cmd , "bucketstest" ) == 0 ) {
 		if ( argc > cmdarg+1 ) bucketstest(argv[cmdarg+1]);
 		else if( argc == cmdarg+1 ) bucketstest(NULL);
@@ -1212,6 +1232,21 @@ int main2 ( int argc , char *argv[] ) {
 		return 0;
 		
 	}
+
+	/*
+	  test json parser error with bad json
+	Json jp;
+	char xxx[1024];
+	sprintf(xxx,"\"categories\":[\"shop\"");
+	jp.parseJsonStringIntoJsonItems(xxx,0);
+	JsonItem *ji = jp.getFirstItem();
+	for ( ; ji ; ji = ji->m_next ) {
+		if ( ji->m_type != JT_NUMBER && ji->m_type != JT_STRING )
+			continue;
+	}
+	*/
+
+
 	/*
 	if ( strcmp ( cmd , "querytest" ) == 0){
 		if ( ! g_hostdb.init(hostsConf, hostId) ) {
@@ -3979,7 +4014,7 @@ int collcopy ( char *newHostsConf , char *coll , long collnum ) {
 		//fprintf(stderr,"rcp %s:%s*db*.dat* ",
 		//	iptoa( h->m_ip), h->m_dir  );
 		fprintf(stderr,"nohup ssh %s '",iptoa(h->m_ip));
-		fprintf(stderr,"rcp -pr ");
+		fprintf(stderr,"rcp -r ");
 		fprintf(stderr,"%s:%scoll.%s.%li ",
 			iptoa(h2->m_ip), h2->m_dir , coll, collnum );
 		fprintf(stderr,"%s' &\n", h->m_dir  );
@@ -4230,7 +4265,7 @@ int scale ( char *newHostsConf , bool useShotgunIp) {
 		//fprintf(stderr,"rcp %s:%s*db*.dat* ",
 		//	iptoa( h->m_ip), h->m_dir  );
 		// if same ip then do a 'cp' not rcp
-		char *cmd = "rcp -pr";
+		char *cmd = "rcp -r";
 		if ( h->m_ip == h2->m_ip ) cmd = "cp -pr";
 
 		fprintf(stderr,"%s %s*db*.dat* ", cmd, h->m_dir  );
@@ -4621,7 +4656,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 			SafeBuf tmpBuf;
 			tmpBuf.safePrintf(
-					  "rcp -pr %s %s:%s"
+					  "rcp -r %s %s:%s"
 					  , fileListBuf.getBufStart()
 					  , iptoa(h2->m_ip)
 					  , h2->m_dir
@@ -4635,7 +4670,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 			// don't copy to ourselves
 			//if ( h2->m_hostId == h->m_hostId ) continue;
 			sprintf(tmp,
-				"rcp -pr "
+				"rcp -r "
 				"%sgb "
 				//"%sgbfilter "
 				"%shosts.conf "

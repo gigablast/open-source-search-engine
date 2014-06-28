@@ -1239,7 +1239,7 @@ bool printTopDirectory ( SafeBuf& sb ) {
 //
 /////////////////
 
-#include "Inject.h"
+#include "PageInject.h"
 #include "TuringTest.h"
 #include "AutoBan.h"
 //#include "CollectionRec.h"

@@ -37,7 +37,7 @@
 #ifdef _USETURKS_
 //#include "PageTurk.h"
 #endif
-#include "Inject.h"
+#include "PageInject.h"
 #include "HttpServer.h"
 #include "Facebook.h"
 #include "Posdb.h"
@@ -16150,19 +16150,19 @@ void XmlDoc::filterStart_r ( bool amThread ) {
 	// These ulimit sizes are max virtual memory in kilobytes. let's
 	// keep them to 25 Megabytes
 	if      ( ctype == CT_PDF ) 
-		snprintf(cmd,2047 ,"ulimit -v 25000 -t 30 ; nice -n 19 %s/pdftohtml -q -i -noframes -stdout %s > %s", wdir , in ,out );
+		snprintf(cmd,2047 ,"ulimit -v 25000 ; ulimit -t 30 ; nice -n 19 %s/pdftohtml -q -i -noframes -stdout %s > %s", wdir , in ,out );
 	else if ( ctype == CT_DOC ) 
 		// "wdir" include trailing '/'? not sure
-		snprintf(cmd,2047, "ulimit -v 25000 -t 30 ; ANTIWORDHOME=%s/antiword-dir ; nice -n 19 %s/antiword %s> %s" , wdir , wdir , in , out );
+		snprintf(cmd,2047, "ulimit -v 25000 ; ulimit -t 30 ; ANTIWORDHOME=%s/antiword-dir ; nice -n 19 %s/antiword %s> %s" , wdir , wdir , in , out );
 	else if ( ctype == CT_XLS )
-		snprintf(cmd,2047, "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/xlhtml %s > %s" , wdir , in , out );
+		snprintf(cmd,2047, "ulimit -v 25000 ; ulimit -t 30 ; timeout 10s nice -n 19 %s/xlhtml %s > %s" , wdir , in , out );
 	// this is too buggy for now... causes hanging threads because it
 	// hangs, so i added 'timeout 10s' but that only works on newer
 	// linux version, so it'll just error out otherwise.
 	else if ( ctype == CT_PPT )
-		snprintf(cmd,2047, "ulimit -v 25000 -t 30 ; timeout 10s nice -n 19 %s/ppthtml %s > %s" , wdir , in , out );
+		snprintf(cmd,2047, "ulimit -v 25000 ; ulimit -t 30 ; timeout 10s nice -n 19 %s/ppthtml %s > %s" , wdir , in , out );
 	else if ( ctype == CT_PS  )
-		snprintf(cmd,2047, "ulimit -v 25000 -t 30; timeout 10s nice -n 19 %s/pstotext %s > %s" , wdir , in , out );
+		snprintf(cmd,2047, "ulimit -v 25000 ; ulimit -t 30; timeout 10s nice -n 19 %s/pstotext %s > %s" , wdir , in , out );
 	else { char *xx=NULL;*xx=0; }
 
 	// breach sanity check
@@ -17494,6 +17494,15 @@ long *XmlDoc::getContentHashJson32 ( ) {
 		if ( ji->m_name && numNames==1 && 
 		     strcmp(ji->m_name,"url") == 0 )
 			continue;
+
+		if ( ji->m_name && numNames==1 && 
+		     strcmp(ji->m_name,"pageUrl") == 0 )
+			continue;
+
+		// mike will track down how the hash works in article|3|123456
+		//if ( ji->m_name && numNames==1 && 
+		//     strcmp(ji->m_name,"diffbotUri") == 0 )
+		//	continue;
 
 		if ( ji->m_name && numNames==1 &&
 		     strcmp(ji->m_name,"resolved_url") == 0 )

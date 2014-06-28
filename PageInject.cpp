@@ -1,6 +1,6 @@
 #include "gb-include.h"
 
-#include "Inject.h"
+#include "PageInject.h"
 #include "HttpServer.h"
 #include "Pages.h"
 #include "Users.h"
@@ -49,6 +49,23 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	// this will fill in GigablastRequest so all the parms we need are set
 	g_parms.setGigablastRequest ( sock , hr , gr );
 
+	// if content is "" make it NULL so XmlDoc will download it
+	// if user really wants empty content they can put a space in there
+	// TODO: update help then...
+	if ( gr->m_content && ! gr->m_content[0]  )
+		gr->m_content = NULL;
+
+	if ( gr->m_contentFile && ! gr->m_contentFile[0]  )
+		gr->m_contentFile = NULL;
+
+	if ( gr->m_contentDelim && ! gr->m_contentDelim[0] )
+		gr->m_contentDelim = NULL;
+
+	// if we had a delimeter but not content, zero it out...
+	char *content = gr->m_content;
+	if ( ! content ) content = gr->m_contentFile;
+	if ( ! content ) gr->m_contentDelim = NULL;
+
 	// get collection rec
 	CollectionRec *cr = g_collectiondb.getRec ( gr->m_coll );
 	// bitch if no collection rec found
@@ -69,6 +86,10 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 		if ( ! msg7->scrapeQuery ( ) ) return false;
 		return sendReply ( msg7 );
 	}
+
+	// if no url do not inject
+	if ( ! gr->m_url || gr->m_url[0] == '\0' ) 
+		return sendReply ( msg7 );
 
 	// call sendReply() when inject completes
 	if ( ! msg7->inject ( msg7 , sendReplyWrapper ) )
@@ -130,10 +151,12 @@ bool sendReply ( void *state ) {
 	//
 	// end debug
 	//
+
+	char *url = gr->m_url;
 	
 	// . if we're talking w/ a robot he doesn't care about this crap
 	// . send him back the error code (0 means success)
-	if ( gr->m_shortReply ) {
+	if ( url && gr->m_shortReply ) {
 		char buf[1024*32];
 		char *p = buf;
 		// set g_errno to index code
@@ -167,7 +190,10 @@ bool sendReply ( void *state ) {
 				mstrerror(g_errno) , g_errno);
 	else if ( (gr->m_url&&gr->m_url[0]) ||
 		  (gr->m_queryToScrape&&gr->m_queryToScrape[0]) )
-		sb.safePrintf ( "<center>Success</center><br><br>");
+		sb.safePrintf ( "<center><b>Sucessfully injected %s"
+				"</center><br>"
+				, xd->m_firstUrl.m_url
+				);
 
 
 	// print the table of injection parms
@@ -198,6 +224,9 @@ bool sendReply ( void *state ) {
 
 Msg7::Msg7 () {
 	m_round = 0;
+	m_firstTime = true;
+	m_fixMe = false;
+	m_injectCount = 0;
 }
 
 Msg7::~Msg7 () {
@@ -205,8 +234,26 @@ Msg7::~Msg7 () {
 
 // when XmlDoc::inject() complets it calls this
 void doneInjectingWrapper9 ( void *state ) {
-	// and we call the original caller
+
+	
 	Msg7 *msg7 = (Msg7 *)state;
+
+ loop:
+
+	// if we were injecting delimterized documents...
+	GigablastRequest *gr = &msg7->m_gr;
+	char *delim = gr->m_contentDelim;
+	if ( delim && ! delim[0] ) delim = NULL;
+	if ( delim && msg7->m_start ) {
+		// do another injection. returns false if it blocks
+		if ( ! msg7->inject ( msg7->m_state , msg7->m_callback ) )
+			return;
+	}
+
+	if ( msg7->m_start ) 
+		goto loop;
+
+	// and we call the original caller
 	msg7->m_callback ( msg7->m_state );
 }
 
@@ -240,9 +287,86 @@ bool Msg7::inject ( void *state ,
 	// shortcut
 	XmlDoc *xd = &m_xd;
 
-	if ( ! xd->injectDoc ( gr->m_url ,
+	// this will be NULL if the "content" was empty or not given
+	char *content = gr->m_content;
+
+	// . try the uploaded file if nothing in the text area
+	// . this will be NULL if the "content" was empty or not given
+	if ( ! content ) content = gr->m_contentFile;
+
+	if ( m_firstTime ) {
+		m_firstTime = false;
+		m_start = content;
+	}
+
+	// save current start since we update it next
+	char *start = m_start;
+
+	// if this is empty we are done
+	//if ( ! start ) 
+	//	return true;
+
+	char *delim = gr->m_contentDelim;
+	if ( delim && ! delim[0] ) delim = NULL;
+
+	if ( m_fixMe ) {
+		// we had made the first delim char a \0 to index the
+		// previous document, now put it back to what it was
+		*m_start = *delim;
+		// i guess unset this
+		m_fixMe = false;
+	}
+
+	// if we had a delimeter...
+	if ( delim ) {
+		// we've saved m_start as "start" above, 
+		// so find the next delimeter after it and set that to m_start
+		// add +1 to avoid infinite loop
+		m_start = strstr(start+1,delim);
+		// for injecting "start" set this to \0
+		if ( m_start ) {
+			// null term it
+			*m_start = '\0';
+			// put back the original char on next round...?
+			m_fixMe = true;
+		}
+	}
+
+	// this is the url of the injected content
+	m_injectUrlBuf.safeStrcpy ( gr->m_url );
+
+	bool modifiedUrl = false;
+
+	// if we had a delimeter we must make a fake url
+	// if ( delim ) {
+	//  	// if user had a <url> or <doc> or <docid> field use that
+	//  	char *hint = strcasestr ( start , "<url>" );
+	//  	if ( hint ) {
+	// 		modifiedUrl = true;
+	// 		...
+	// 	}
+	// }
+
+	// if we had a delimeter thus denoting multiple items/documents to
+	// be injected, we must create unique urls for each item.
+	if ( delim && ! modifiedUrl ) {
+		// use hash of the content
+		long long ch64 = hash64n ( start , 0LL );
+		// normalize it
+		Url u; u.set ( gr->m_url );
+		// reset it
+		m_injectUrlBuf.reset();
+		// by default append a -<ch64> to the provided url
+		m_injectUrlBuf.safePrintf("%s-%llu",u.getUrl(),ch64);
+	}
+
+	// count them
+	m_injectCount++;
+
+
+	if ( ! xd->injectDoc ( m_injectUrlBuf.getBufStart() ,
 			       cr ,
-			       gr->m_content ,
+			       start , // content ,
 			       gr->m_diffbotReply,
 			       gr->m_hasMime, // content starts with http mime?
 			       gr->m_hopCount,

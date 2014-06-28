@@ -17161,7 +17161,7 @@ bool sendPageSiteMap ( TcpSocket *s , HttpRequest *r ) {
 #include "Users.h"
 #include "HashTableT.h"
 #include "Spider.h"
-#include "Inject.h"
+#include "PageInject.h"
 #include "PageTurk.h"
 #include "Repair.h"
 

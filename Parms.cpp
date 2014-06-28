@@ -32,7 +32,7 @@
 #include "Test.h"
 #include "Rebalance.h"
 #include "SpiderProxy.h" // buildProxyTable()
-#include "Inject.h"
+#include "PageInject.h"
 
 // width of input box in characters for url filter expression
 #define REGEX_TXT_MAX 80
@@ -1072,15 +1072,6 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	// so we need to call those functions here...
 	//
 
-	// if we were an injection page..
-	if ( page == PAGE_INJECT ) {
-		// this returns false if blocked and it should re-call
-		// sendPageGeneric when completed. this will call
-		// setGigablastRequest()
-		if ( ! sendPageInject ( s , r ) )
-			return false;
-	}
-
 	// if we were an addurl page..
 	//if ( page == PAGE_ADDURL2 ) {
 	//	// this returns false if blocked and it should re-call
@@ -1927,7 +1918,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			// and cgi parm if it exists
 			//if ( m->m_def && m->m_scgi )
 			//	sb->safePrintf(" CGI override: %s.",m->m_scgi);
-			sb->safePrintf(" CGI: %s.",m->m_cgi);
+			// just let them see the api page for this...
+			//sb->safePrintf(" CGI: %s.",m->m_cgi);
 			// and default value if it exists
 			if ( m->m_def && m->m_def[0] && t != TYPE_CMD ) {
 				char *d = m->m_def;
@@ -2102,7 +2094,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	else if ( t == TYPE_RETRIES    ) 
 		printDropDown ( 4 , sb , cgi , *s , false , false );
 	else if ( t == TYPE_FILEUPLOADBUTTON    ) {
-		sb->safePrintf("<input type=file name=urls>");
+		sb->safePrintf("<input type=file name=%s>",cgi);
 	}
 	else if ( t == TYPE_PRIORITY_BOXES ) {
 		// print ALL the checkboxes when we get the first parm
@@ -2702,8 +2694,6 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 
 	char  t   = m->m_type;
 
-	if ( t == TYPE_FILEUPLOADBUTTON ) { char *xx=NULL;*xx=0; }
-
 	if      ( t == TYPE_CHAR           || 
 		  t == TYPE_CHAR2          || 
 		  t == TYPE_CHECKBOX       ||
@@ -2723,6 +2713,10 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
  		newVal = (float)*(char *)(THIS + m->m_off + j);
 		goto changed; }
 	else if ( t == TYPE_CHARPTR ) {
+		// "s" might be NULL or m->m_def...
+		*(char **)(THIS + m->m_off + j) = s;
+	}
+	else if ( t == 	TYPE_FILEUPLOADBUTTON ) {
 		// "s" might be NULL or m->m_def...
 		*(char **)(THIS + m->m_off + j) = s;
 	}
@@ -4653,10 +4647,9 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&g_conf.m_maxVectorCacheMem - g;
 	m->m_def   = "10000000";
 	m->m_type  = TYPE_LONG;
-	m->m_flags = PF_NOSYNC;
+	m->m_flags = PF_NOSYNC|PF_NOAPI;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_CONF;
-	m->m_flags = PF_NOAPI;
 	m++;
 
 	/*
@@ -9489,6 +9482,17 @@ void Parms::init ( ) {
 // 	m->m_group = 0;
 // 	m++;
 
+	/*	m->m_title = "maximum hops from parent page";
+	m->m_desc  = "Only index pages that are within a particular number "
+		"of hops from the parent page given in Page Add Url. -1 means "
+		"that max hops is infinite.";
+	m->m_cgi   = "mnh";
+	m->m_off   = (char *)&cr.m_maxNumHops - x;
+	m->m_type  = TYPE_CHAR2;
+	m->m_def   = "-1";
+	m->m_group = 0;
+	m++;*/
+
 	m->m_title = "cluster name";
 	m->m_desc  = "Email alerts will include the cluster name";
 	m->m_cgi   = "cn";
@@ -13740,11 +13744,14 @@ void Parms::init ( ) {
 
 
 	m->m_title = "content type";
-	m->m_desc  = "Is the content below HTML? XML? JSON?";
+	m->m_desc  = "If you supply content in the text box below without "
+		"an HTTP mime, then you need to enter the content type. "
+		"Possible values: text/html text/plain text/xml "
+		"application/json";
 	m->m_cgi   = "contenttype";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR; //text/html application/json application/xml
-	m->m_def   = NULL;
+	m->m_def   = "text/html";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_contentTypeStr - (char *)&gr;
@@ -13782,7 +13789,10 @@ void Parms::init ( ) {
 		"enter the content here. "
 		"Enter MIME header "
 		"first if \"content has mime\" is set to true above. "
-		"Separate MIME from actual content with two returns.";
+		"Separate MIME from actual content with two returns. "
+		"At least put a single space in here if you want to "
+		"inject empty content, otherwise the content will "
+		"be downloaded from the url.";
 	m->m_cgi   = "content";
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;
@@ -13802,6 +13812,83 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_diffbotReply - (char *)&gr;
 	m++;
+
+
+	///////////////////
+	//
+	// QUERY REINDEX
+	//
+	///////////////////
+
+	m->m_title = "query to reindex or delete";
+	m->m_desc  = "We either reindex or delete the search results of "
+		"this query. Reindexing them will redownload them and "
+		"possible update the siterank, which is based on the "
+		"number of links to the site.";
+	m->m_cgi   = "q";
+	m->m_off   = (char *)&gr.m_query - (char *)&gr;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_page  = PAGE_REINDEX;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_def   = NULL;
+	m->m_flags = PF_API ;
+	m++;
+
+	m->m_title = "start result number";
+	m->m_desc  = "Starting with this result #. Starts at 0.";
+	m->m_cgi   = "srn";
+	m->m_off   = (char *)&gr.m_srn - (char *)&gr;
+	m->m_type  = TYPE_LONG;
+	m->m_page  = PAGE_REINDEX;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_def   = "0";
+	m->m_flags = PF_API ;
+	m++;
+
+	m->m_title = "end result number";
+	m->m_desc  = "Ending with this result #. 0 is the first result #.";
+	m->m_cgi   = "ern";
+	m->m_off   = (char *)&gr.m_ern - (char *)&gr;
+	m->m_type  = TYPE_LONG;
+	m->m_page  = PAGE_REINDEX;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_def   = "99999999";
+	m->m_flags = PF_API ;
+	m++;
+
+	m->m_title = "query language";
+	m->m_desc  = "The language the query is in. Used to rank results. "
+		"Just use xx to indicate no language in particular. But "
+		"you should use the same qlang value you used for doing "
+		"the query if you want consistency.";
+	m->m_cgi   = "qlang";
+	m->m_off   = (char *)&gr.m_qlang - (char *)&gr;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_page  = PAGE_REINDEX;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_def   = "xx";
+	m->m_flags = PF_API ;
+	m++;
+
+	m->m_title = "FORCE DELETE";
+	m->m_desc  = "Check this checkbox to delete the results, not just "
+		"reindex them.";
+	m->m_cgi   = "delete";
+	m->m_off   = (char *)&gr.m_forceDel - (char *)&gr;
+	m->m_type  = TYPE_CHECKBOX;
+	m->m_page  = PAGE_REINDEX;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_def   = "0";
+	m->m_flags = PF_API ;
+	m++;
+
+
+	///////////////////
+	//
+	// SEARCH CONTROLS
+	//
+	///////////////////
+
 
 	m->m_title = "do spell checking by default";
 	m->m_desc  = "If enabled while using the XML feed, "
@@ -15200,7 +15287,7 @@ void Parms::init ( ) {
 
 	m->m_title = "spider round start time";
 	m->m_desc  = "When the spider round started";
-	m->m_cgi   = "spiderRoundStart";
+	m->m_cgi   = "roundStart";
 	m->m_off   = (char *)&cr.m_spiderRoundStartTime - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "0";
@@ -19014,6 +19101,17 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 
 		if ( m->m_obj == OBJ_NONE ) continue;
 		if ( m->m_obj == OBJ_SI ) continue;
+
+		// convert spiderRoundStartTime=0 to
+		// spiderRoundStartTime=<currenttime>+30secs
+		// so that will force the next spider round to kick in
+		char tmp[24];
+		if ( strcmp(field,"roundStart")==0 && 
+		     val && (val[0]=='0'||val[0]=='1') && val[1]==0 ) {
+			sprintf(tmp,"%lu",(long)getTimeGlobalNoCore()+0);
+			val = tmp;
+		}
+
 
 		// add it to a list now
 		if ( ! addNewParmToList2 ( parmList ,

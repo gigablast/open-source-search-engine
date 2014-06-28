@@ -503,16 +503,16 @@ class QueryTerm {
 
 //#define MAX_OPSLOTS 256
 
-#define MAX_EXPRESSIONS 10
+#define MAX_EXPRESSIONS 100
 
 // operand1 AND operand2 OR  ...
 // operand1 OR  operand2 AND ...
 class Expression {
 public:
-	bool add (long start, 
-		  long end, 
-		  class Query      *q,
-		  long    level );
+	bool addExpression (long start, 
+			    long end, 
+			    class Query      *q,
+			    long    level );
 	bool isTruth ( unsigned char *bitVec , long vecSize );
 	// . what QueryTerms are UNDER the influence of the NOT opcode?
 	// . we read in the WHOLE termlist of those that are (like '-' sign)
