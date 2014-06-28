@@ -1188,7 +1188,8 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 					   long maxHeight,
 					   bool printLink ,
 					   long *retNewdx ,
-					   char *style )  {
+					   char *style ,
+					   char format )  {
 	if ( ! style ) style = "";
 	// account for scrollbar on the right
 	//maxSide -= (long)SCROLLBAR_WIDTH;
@@ -1206,19 +1207,33 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 	if ( yscale < min ) min = yscale;
 	long newdx = (long)((float)m_dx * min);
 	long newdy = (long)((float)m_dy * min);
-	if ( printLink ) sb->safePrintf("<a href=%s>", getUrl() );
-	sb->safePrintf("<img width=%li height=%li align=left "
-		       "%s"
-		       "src=\"data:image/"
-		       "jpg;base64,"
-		       , newdx
-		       , newdy
-		       , style
-		       );
+
+	if ( printLink && format==FORMAT_HTML ) 
+		sb->safePrintf("<a href=%s>", getUrl() );
+
+	if ( format == FORMAT_HTML )
+		sb->safePrintf("<img width=%li height=%li align=left "
+			       "%s"
+			       "src=\"data:image/"
+			       "jpg;base64,"
+			       , newdx
+			       , newdy
+			       , style
+			       );
+
+	if ( format == FORMAT_XML )
+		sb->safePrintf("<imageBase64>");
+
 	// encode image in base 64
 	sb->base64Encode ( getData(), m_dataSize , 0 ); // 0 niceness
-	sb->safePrintf("\">");
-	if ( printLink ) sb->safePrintf ("</a>");
+	if ( format == FORMAT_HTML ) {
+		sb->safePrintf("\">");
+		if ( printLink ) sb->safePrintf ("</a>");
+	}
+
+	if ( format == FORMAT_XML )
+		sb->safePrintf("</imageBase64>");
+
 	// widget needs to know the width of the thumb for formatting
 	// the text either on top of the thumb or to the right of it
 	if ( retNewdx ) *retNewdx = newdx;

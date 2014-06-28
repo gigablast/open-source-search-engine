@@ -2,9 +2,9 @@
 #define _MSG3A_H_
 
 #include "Msg39.h"
-#include "Stats.h"
+//#include "Stats.h"
 //#include "Thesaurus.h"
-#include "PostQueryRerank.h" // rscore_t
+//#include "PostQueryRerank.h" // rscore_t
 #include "Msg0.h"
 #include "Msg1.h"
 
@@ -114,8 +114,10 @@ public:
 	void      *m_hack;
 	long       m_hackQNum;
 	char      *m_hackQPtr;
+	long       m_hack32; // used by XmlDoc.cpp for gbfacet: stuff
+	long long  m_hack64; // used by XmlDoc.cpp for gbfacet: stuff
 	//void      *m_hackHost;
-	//char       m_inUse;
+	char       m_inUse;
 
 	bool m_moreDocIdsAvail;
 	long m_totalDocCount;
@@ -192,8 +194,13 @@ public:
 	Msg1            m_msg1;
 	RdbList         m_seoCacheList;
 
-
-	SectionStats    m_sectionStats;
+	// we don't have FacetStats because we have the actual 
+	// Msg39Reply::ptr_facetHashList from each shard which contains
+	// all the facet hash lists for each gbfacet: query term we had
+	// and the query "Msg3a::m_q.m_qterms[].m_dt" is the hash table
+	// where each key is a facethash for that gbfacet:xxxx term and
+	// the value if the # of occurences.
+	//SectionStats    m_sectionStats;
 };
 
 #endif

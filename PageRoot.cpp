@@ -198,7 +198,7 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("<tr valign=top>\n");
 
 	//sb.safePrintf("<td align=center><div style=width:50px;height:50px;display:inline-block;background-color:red;></div></td>\n");
-	sb.safePrintf("<td><img height=71px width=50px "
+	sb.safePrintf("<td align=center><img height=71px width=50px "
 		      "src=%s/opensource.png></td>\n"
 		      , root );
 
@@ -207,6 +207,42 @@ bool printWebHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.brify2("Gigablast is now available as an <a href=https://github.com/gigablast/open-source-search-engine>open source search engine</a> on github.com. Download it today. Finally a robust, scalable search solution in C/C++ that has been in development and used commercially since 2000. <a href=http://www.gigablast.com/admin.html#features>Features</a>. Limited support available for free."
 		  ,80);
 	sb.safePrintf("<br><br>");
+	sb.safePrintf("</td></tr>\n");
+
+
+	// donate with paypal
+	sb.safePrintf("<tr valign=top>\n");
+	sb.safePrintf("<td align=center style=padding-right:20px;><center>"
+
+		      // BEGIN PAYPAL DONATE BUTTON
+		      "<form action=\"https://www.paypal.com/cgi-bin/webscr\" method=\"post\" target=\"_top\">"
+		      "<input type=\"hidden\" name=\"cmd\" value=\"_donations\">"
+		      "<input type=\"hidden\" name=\"business\" value=\"2SFSFLUY3KS9Y\">"
+		      "<input type=\"hidden\" name=\"lc\" value=\"US\">"
+		      "<input type=\"hidden\" name=\"item_name\" value=\"Gigablast, Inc.\">"
+		      "<input type=\"hidden\" name=\"currency_code\" value=\"USD\">"
+		      "<input type=\"hidden\" name=\"bn\" value=\"PP-DonationsBF:btn_donateCC_LG.gif:NonHosted\">"
+		      "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif\" border=\"0\" name=\"submit\" alt=\"PayPal - The safer, easier way to pay online!\" height=47 width=147>"
+		      "<img alt=\"\" border=\"0\" src=\"https://www.paypalobjects.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\">"
+		      "</form>"
+		      // END PAYPAY BUTTON
+		      "</center></div></center></td>\n"
+		      );
+	sb.safePrintf("<td><font size=+1><b>"
+		      "Support Gigablast"
+		      "</b></font><br>\n"
+		      );
+	sb.brify2(
+		  "Donations of $100 or more receive a black "
+		  "Gigablast T-shirt "
+		  "with embroidered logo while quantities last. "
+		  "State your address and size "
+		  "in an <a href=/contact.html>email</a>. "
+		  "PayPal accepted. "
+		  "Help Gigablast continue "
+		  "to grow and add new features."
+		  , 80
+		  );
 	sb.safePrintf("</td></tr>\n");
 
 

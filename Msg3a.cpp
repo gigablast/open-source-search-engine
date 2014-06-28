@@ -21,6 +21,7 @@ void Msg3a::constructor ( ) {
 	m_docsToGet    = 0;
 	m_numDocIds    = 0;
 	m_collnums     = NULL;
+	m_inUse        = false;
 
 	// need to call all safebuf constructors now to set m_label
 	m_rbuf2.constructor();
@@ -42,6 +43,8 @@ Msg3a::~Msg3a ( ) {
 }
 
 void Msg3a::reset ( ) {
+
+	if ( m_inUse ) { log("msg3a: msg3a in use!"); }
 
 	m_seoCacheList.freeList();
 
@@ -171,8 +174,8 @@ bool Msg3a::getDocIds ( Msg39Request *r          ,
 	if ( m_q->getNumTerms() <= 0 ) return true;
 	// sometimes we want to get section stats from the hacked
 	// sectionhash: posdb termlists
-	if ( m_docsToGet <= 0 && ! m_r->m_getSectionStats ) 
-		return true;
+	//if ( m_docsToGet <= 0 && ! m_r->m_getSectionStats ) 
+	//	return true;
 	// . set g_errno if not found and return true
 	// . coll is null terminated
 	CollectionRec *cr = g_collectiondb.getRec(r->m_collnum);
@@ -369,7 +372,7 @@ bool Msg3a::gotCacheReply ( ) {
 		//rs = 50000000;
 		rs = DEFAULT_POSDB_READSIZE;//90000000; // 90MB!
 		// if section stats, limit to 1MB
-		if ( m_r->m_getSectionStats ) rs = 1000000;
+		//if ( m_r->m_getSectionStats ) rs = 1000000;
 		// get the jth query term
 		QueryTerm *qt = &m_q->m_qterms[j];
 		// if query term is ignored, skip it
@@ -845,6 +848,61 @@ bool Msg3a::mergeLists ( ) {
 	//m_totalDocCount = 0; // long docCount = 0;
 	m_moreDocIdsAvail = true;
 
+	/*
+
+	  this version is too simple. now each query term can be a
+	  gbfacet:price or gbfacet:type term and each has a
+	  list in the Msg39Reply::ptr_facetHashList for its termid
+
+	//
+	// compile facet stats
+	//
+	for ( long j = 0; j < m_numHosts ; j++ ) {
+		Msg39Reply *mr =m_reply[j];
+		// one table for each query term
+		char *p = mr->ptr_facetHashList;
+		// loop over all query terms
+		long n = m_q->getNumTerms();
+		// use this
+		HashTableX tmp;
+		// do the loop
+		for ( long i = 0 ; i < n ; i++ ) {
+			// size of it
+			long psize = *(long *)p; 
+			p += 4;
+			tmp.deserialize ( p , psize );
+			p += psize;
+			// now compile the stats into a master table
+			for ( long k = 0 ; k < tmp.m_numSlots ; k++ ) {
+				if ( ! tmp.m_flags[k] ) continue;
+				// get the vlaue
+				long v32 = *(long *)tmp.getKeyFromSlot(k);
+				// and how many of them there where
+				long count = *(long *)tmp.getValueFromSlot(k);
+				// add to master
+				master.addScore32 ( v32 , count );
+			}
+		}
+	}
+	////////
+	//
+	// now set m_facetStats
+	//
+	////////
+	// add up all counts
+	long long count = 0LL;
+	for ( long i = 0 ; i < master.getNumSlots() ; i++ ) {
+		if ( ! master.m_flags[i] ) continue;
+		long long slotCount = *(long *)master.getValueFromSlot(i);
+		long h32 = *(long *)master.getKeyFromSlot(i);
+		if ( h32 == m_r->m_myFacetVal32 ) 
+			m_facetStats.m_myValCount = slotCount;
+		count += slotCount;
+	}
+	m_facetStats.m_totalUniqueValues = master.getNumUsedSlots();
+	m_facetStats.m_totalValues = count;
+	*/	
+		
 
 	// shortcut
 	//long numSplits = m_numHosts;//indexdbSplit;
@@ -881,44 +939,80 @@ bool Msg3a::mergeLists ( ) {
 	}
 
 	//
-	// HACK: START section stats merge
+	// HACK: START FACET stats merge
 	//
-	m_sectionStats.reset();
 	long sneed = 0;
 	for ( long j = 0; j < m_numHosts ; j++ ) {
 		Msg39Reply *mr = m_reply[j];
 		if ( ! mr ) continue;
-		sneed += mr->size_sentHashList/4;
+		sneed += mr->size_facetHashList/4;
 	}
-	HashTableX dt;
-	//char tmpBuf[5000];
-	if (sneed&&!dt.set(4,0,sneed,NULL,0,false,
-			   m_r->m_niceness,"uniqsit")) 
-		return true;
-	for ( long j = 0; sneed && j < m_numHosts ; j++ ) {
+
+	//
+	// each mr->ptr_facetHashList can contain the values of
+	// MULTIPLE facets, so the first is the 64-bit termid of the query
+	// term, like the gbfacet:type or gbfacet:price. so
+	// we want to compute the FacetStats for EACH such query term.
+
+	// so first we scan for facet query terms and reset their
+	// FacetStats arrays.
+	for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
+		QueryTerm *qt = &m_q->m_qterms[i];
+		//qt->m_facetStats.reset();
+		// now make a hashtable to compile all of the
+		// facethashlists from each shard into
+		//long long tid  = m_q->m_qterms[i].m_termId;
+		// we hold all the facet values
+		if ( ! qt->m_facetHashTable.set(4,0,128,NULL,0,false,
+						m_r->m_niceness,"fhtqt")) 
+			return true;
+	}
+
+	// now scan each facethashlist from each shard and compile into 
+	// the appropriate query term qt->m_facetHashTable
+	for ( long j = 0; j < m_numHosts ; j++ ) {
 		Msg39Reply *mr =m_reply[j];
 		if ( ! mr ) continue;
-		SectionStats *src = &mr->m_sectionStats;
-		SectionStats *dst = &m_sectionStats;
+		//SectionStats *src = &mr->m_sectionStats;
 		//dst->m_onSiteDocIds      += src->m_onSiteDocIds;
 		//dst->m_offSiteDocIds     += src->m_offSiteDocIds;
-		dst->m_totalMatches      += src->m_totalMatches;
-		dst->m_totalEntries      += src->m_totalEntries;
+		//dst->m_totalMatches      += src->m_totalMatches;
+		//dst->m_totalEntries      += src->m_totalEntries;
 		// now the list should be the unique site hashes that
 		// had the section hash. we need to uniquify them again
 		// here.
-		long *p = (long *)mr->ptr_sentHashList;
-		long np = mr->size_sentHashList / 4;
-		for ( long k = 0 ; k < np ; k++ ) {
+		char *p = (char *)mr->ptr_facetHashList;
+		char *last = p + mr->size_facetHashList;
+		// skip if empty
+		if ( ! p ) continue;
+		// come back up here for another gbfacet:xxx term
+	ploop:
+		// first is the termid
+		long long termId = *(long long *)p;
+		// skip that
+		p += 8;
+		// the # of 32-bit facet hashest
+		long nh = *(long *)p;
+		p += 4;
+		// get that query term
+		QueryTerm *qt = m_q->getQueryTermByTermId64 ( termId );
+		// the end point
+		char *pend = p + 4 * nh;
+		// now compile the facet hash list into there
+		for ( ; p < pend ; p += 4 ) {
 			// debug
-			//log("msg3a: got senthash %li) %lu",k,p[k]);
+			//log("msg3a: got facethash %li) %lu",k,p[k]);
 			// hash it up, no dups!
-			dt.addKey(&p[k]);
+			if ( ! qt->m_facetHashTable.addScore((long *)p) )
+				return true;
 		}
-		// update our count based on that
-		dst->m_numUniqueVals = dt.getNumSlotsUsed();
+		// now get the next gbfacet: term if there was one
+		if ( p < last ) goto ploop;
 	}
-	if ( m_r->m_getSectionStats ) return true;
+
+
+
+	//if ( m_r->m_getSectionStats ) return true;
 	//
 	// HACK: END section stats merge
 	//

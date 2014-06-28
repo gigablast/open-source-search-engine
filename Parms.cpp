@@ -398,6 +398,44 @@ bool CommandDeleteColl2 ( char *rec , WaitEntry *we ) {
 	return true;
 }
 
+bool CommandForceNextSpiderRound ( char *rec ) {
+
+	// caller must specify collnum
+	collnum_t collnum = getCollnumFromParmRec ( rec );
+	// need this
+	CollectionRec *cr = g_collectiondb.getRec ( collnum );
+	if ( ! cr ) {
+		g_errno = ENOCOLLREC;
+		log("parms: bad collnum %li for restart spider round",
+		    (long)collnum);
+		return true;
+	}
+
+	// seems like parmlist is an rdblist, so we have a key_t followed
+	// by 4 bytes of datasize then the data... which is an ascii string
+	// in our case...
+	char *data = getDataFromParmRec ( rec );
+	long roundStartTime;
+	long newRoundNum;
+	// see the HACK: in Parms::convertHttpRequestToParmList() where we
+	// construct this data in response to a "roundStart" cmd. we used
+	// sprintf() so it's natural to use sscanf() to parse it out.
+	sscanf ( data , "%lu,%li", &roundStartTime,&newRoundNum);
+
+	cr->m_spiderRoundStartTime = roundStartTime;
+	cr->m_spiderRoundNum = newRoundNum;
+
+	// reset the round counts. this will log a msg. resetting the
+	// round counts will prevent maxToProcess/maxToCrawl from holding
+	// us back...
+	spiderRoundIncremented ( cr );
+
+	// yeah, if we don't nuke doledb then it doesn't work...
+	cr->rebuildUrlFilters();
+
+	return true;
+}
+
 // . returns true and sets g_errno on error
 // . returns false if would block
 bool CommandRestartColl ( char *rec , WaitEntry *we ) {
@@ -992,9 +1030,9 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	long obj = OBJ_GBREQUEST;
 
 	//
-	// reset THIS to defaults
+	// reset THIS to defaults. use NULL for cr since mostly for SearchInput
 	//
-	setToDefault ( THIS , obj );
+	setToDefault ( THIS , obj , NULL);
 
 	// loop through cgi parms
 	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
@@ -1542,7 +1580,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		page = PAGE_SECURITY;
 
 	GigablastRequest gr;
-	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST );
+	g_parms.setToDefault ( (char *)&gr , OBJ_GBREQUEST , NULL);
 
 	// find in parms list
 	for ( long i = 0 ; i < m_numParms ; i++ ) {
@@ -2506,9 +2544,11 @@ bool Parms::setFromRequest ( HttpRequest *r ,
 	}
 
 	// need this for searchInput which takes default from "cr"
-	CollectionRec *cr = g_collectiondb.getRec ( r , true );
+	//CollectionRec *cr = g_collectiondb.getRec ( r , true );
 
-	setToDefault ( THIS , objType , cr );
+	// no SearchInput.cpp does this and then overrides if xml feed
+	// to set m_docsToScanForTopics
+	//setToDefault ( THIS , objType , cr );
 
 	// loop through cgi parms
 	for ( long i = 0 ; i < r->getNumFields() ; i++ ) {
@@ -2637,11 +2677,15 @@ void Parms::setParm ( char *THIS , Parm *m , long mm , long j , char *s ,
 	float oldVal = 0;
 	float newVal = 0;
 
-	if ( ! s && m->m_type != TYPE_CHARPTR) {
+	if ( ! s && 
+	     m->m_type != TYPE_CHARPTR && 
+	     m->m_type != TYPE_FILEUPLOADBUTTON && 
+	     m->m_defOff==-1) {
 		s = "0";
 		char *tit = m->m_title;
 		if ( ! tit || ! tit[0] ) tit = m->m_xml;
-		log(LOG_LOGIC,"admin: Parm \"%s\" had NULL default value.",
+		log(LOG_LOGIC,"admin: Parm \"%s\" had NULL default value. "
+		    "Forcing to 0.",
 		    tit);
 		//char *xx = NULL; *xx = 0;
 	}
@@ -2925,8 +2969,9 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		if ( m->m_obj != objType ) continue;
 		if ( m->m_obj == OBJ_NONE ) continue;
 		if ( m->m_type == TYPE_COMMENT ) continue;
-		if ( m->m_type == TYPE_FILEUPLOADBUTTON ) 
-			continue;
+		// no, we gotta set GigablastRequest::m_contentFile to NULL
+		//if ( m->m_type == TYPE_FILEUPLOADBUTTON ) 
+		//	continue;
 		if ( m->m_type == TYPE_MONOD2  ) continue;
 		if ( m->m_type == TYPE_MONOM2  ) continue;
 		if ( m->m_type == TYPE_CMD     ) continue;
@@ -2967,6 +3012,7 @@ void Parms::setToDefault ( char *THIS , char objType , CollectionRec *argcr ) {
 		if ( m->m_max <= 1 ) {
 			//if ( i == 282 )  // "query" parm
 			//	log("hey");
+			//if ( ! m->m_def ) { char *xx=NULL;*xx=0; }
 			setParm ( THIS , m, i, 0, m->m_def, false/*not enc.*/,
 				  false );
 			//((CollectionRec *)THIS)->m_orig[i] = 1;
@@ -5159,6 +5205,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_BASIC_SETTINGS;
 	m->m_obj   = OBJ_COLL;
 	m->m_off   = 0;
+	m->m_def   = NULL;
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m->m_flags = PF_NOSAVE | PF_DUP;
 	m++;
@@ -5681,7 +5728,9 @@ void Parms::init ( ) {
 
 
 	m->m_title = "query";
-	m->m_desc  = "The query to perform. See <a href=/help.html>help</a>.";
+	m->m_desc  = "The query to perform. See <a href=/help.html>help</a>. "
+		"See the <a href=#qops>query operators</a> below for "
+		"more info.";
 	m->m_obj   = OBJ_SI;
 	m->m_page  = PAGE_NONE;
 	m->m_off   = (char *)&si.m_query - y;
@@ -5766,7 +5815,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "dr"; // dedupResultsByDefault";
 	m->m_off   = (char *)&si.m_doDupContentRemoval - y;
 	m->m_type  = TYPE_BOOL;
-	m->m_def   = "1";
+	m->m_def   = "0";
 	m->m_group = 1;
 	m->m_cgi   = "dr";
 	m->m_flags = PF_API;
@@ -5778,11 +5827,12 @@ void Parms::init ( ) {
 	m->m_desc  = "If document summary is this percent similar "
 		"to a document summary above it, then remove it from the "
 		"search results. 100 means only to remove if exactly the "
-		"same. 0 means no summary deduping.";
+		"same. 0 means no summary deduping. You must also supply "
+		"dr=1 for this to work.";
 	m->m_cgi   = "pss";
 	m->m_off   = (char *)&si.m_percentSimilarSummary - y;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "90";
+	m->m_def   = "0"; //90
 	m->m_group = 0;
 	m->m_smin  = 0;
 	m->m_smax  = 100;
@@ -6994,6 +7044,21 @@ void Parms::init ( ) {
 	m->m_flags = PF_HIDDEN | PF_NOSAVE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
+	m++;
+
+	m->m_title = "number of reference pages to generate";
+	m->m_desc  = "What is the number of "
+		"reference pages to generate per query? Set to 0 to save "
+		"CPU time.";
+	m->m_cgi   = "snrp";
+	m->m_off  = (char *)&si.m_refs_numToGenerate - y;
+	m->m_type  = TYPE_LONG;
+	m->m_defOff =(char *)&cr.m_refs_numToGenerate - x;
+	m->m_priv  = 0;
+	m->m_smin  = 0;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
 	m++;
 
 	m->m_title = "number of reference pages to display";
@@ -8411,6 +8476,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "iw";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
+	m->m_def   = "200";
 	m++;
 
 	m->m_title = "image height";
@@ -8421,6 +8487,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "ih";
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
+	m->m_def   = "200";
 	m++;
 
 	// m->m_title = "password";
@@ -9502,6 +9569,67 @@ void Parms::init ( ) {
 	m->m_def   = "unspecified";
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
+
+	m->m_title = "spider round start time";
+	m->m_desc  = "When the next spider round starts. If you force this to "
+		"zero it sets it to the current time. That way you can "
+		"respider all the urls that were already spidered, and urls "
+		"that were not yet spidered in the round will still be "
+		"spidered.";
+	m->m_cgi   = "spiderRoundStart";
+	m->m_size  = 0;
+	m->m_off   = (char *)&cr.m_spiderRoundStartTime - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_HIDDEN | PF_REBUILDURLFILTERS ;
+	m++;
+
+	// DIFFBOT:
+	// this http parm actually ads the "forceround" parm to the parmlist
+	// below with the appropriate args.
+	m->m_title = "manually restart a spider round";
+	m->m_desc  = "Updates round number and resets local processed "
+		"and crawled counts to 0.";
+	m->m_cgi   = "roundStart";
+	m->m_type  = TYPE_CMD;
+	m->m_func  = NULL;
+	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_HIDDEN;
+	m++;
+
+	// DIFFBOT:
+	// . this is sent to each shard by issuing a "restartRound=" cmd
+	// . similar to the "addcoll" cmd we add args to it and make it
+	//   the "forceround" cmd parm and add THAT to the parmlist.
+	//   so "roundStart=1" is really an alias for us.
+	m->m_title = "manually restart a spider round on shard";
+	m->m_desc  = "Updates round number and resets local processed "
+		"and crawled counts to 0.";
+	m->m_cgi   = "forceround";
+	//m->m_off   = (char *)&cr.m_spiderRoundStartTime - x;
+	m->m_type  = TYPE_CMD;
+	m->m_func  = CommandForceNextSpiderRound;
+	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_HIDDEN | PF_REBUILDURLFILTERS ;
+	m++;
+
+	m->m_title = "spider round num";
+	m->m_desc  = "The spider round number.";
+	m->m_cgi   = "spiderRoundNum";
+	m->m_off   = (char *)&cr.m_spiderRoundNum - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "0";
+	m->m_group = 0;
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_HIDDEN ;
 	m++;
 
 	m->m_title = "send email alerts to sysadmin";
@@ -13460,6 +13588,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "urls";
 	m->m_page  = PAGE_ADDURL2;
 	m->m_obj   = OBJ_NONE;
+	m->m_def   = NULL;
 	m->m_type  = TYPE_FILEUPLOADBUTTON;
 	m++;
 	*/
@@ -14260,7 +14389,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "dsrt";
 	m->m_off   = (char *)&cr.m_docsToScanForTopics - x;
 	m->m_type  = TYPE_LONG;
-	m->m_def   = "300";
+	m->m_def   = "30";
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -15284,30 +15413,6 @@ void Parms::init ( ) {
 	m->m_def   = "-1";
 	m->m_group = 0;
 	m++;*/
-
-	m->m_title = "spider round start time";
-	m->m_desc  = "When the spider round started";
-	m->m_cgi   = "roundStart";
-	m->m_off   = (char *)&cr.m_spiderRoundStartTime - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "0";
-	m->m_group = 0;
-	m->m_flags = PF_HIDDEN | PF_REBUILDURLFILTERS ;
-	m->m_page  = PAGE_SPIDER;
-	m->m_obj   = OBJ_COLL;
-	m++;
-
-	m->m_title = "spider round num";
-	m->m_desc  = "The spider round number.";
-	m->m_cgi   = "spiderRoundNum";
-	m->m_off   = (char *)&cr.m_spiderRoundNum - x;
-	m->m_type  = TYPE_LONG;
-	m->m_def   = "0";
-	m->m_group = 0;
-	m->m_flags = PF_HIDDEN ;
-	m->m_page  = PAGE_SPIDER;
-	m->m_obj   = OBJ_COLL;
-	m++;
 
 	m->m_title = "scraping enabled procog";
 	m->m_desc  = "Do searches for queries in this hosts part of the "
@@ -18145,6 +18250,21 @@ void Parms::init ( ) {
 	/////
 
 
+	// most pages that are status pages take a "format"
+	m->m_title = "format of the response";
+	m->m_desc  = "Can be \"xml\" or \"json\".";
+	m->m_def   = "xml";
+	m->m_off   = (char *)&gr.m_formatStr - (char *)&gr;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_page  = PAGE_HOSTS;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_cgi   = "format";
+	m++;
+
+
+
+
+
 	// END PARMS PARM END PARMS END
 
 
@@ -19016,6 +19136,38 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 			}
 		}
 
+		// . DIFFBOT HACK: so ppl can manually restart a spider round
+		// . val can be 0 or 1 or anything. i.e. roundStart=0 works.
+		// . map this parm to another parm with the round start
+		//   time (current time) and the new round # as the args.
+		// . this will call CommandForceNextSpiderRound() function
+		//   on every shard with these args, "tmpVal".
+		if ( strcmp(m->m_cgi,"roundStart") == 0 ) {
+			// use the current time so anything spidered before
+			// this time (the round start time) will be respidered
+			//sprintf(tmp,"%lu",getTimeGlobalNoCore());
+			//val = tmp;
+			char tmpVal[64];
+			// use the same round start time for all shards
+			sprintf(tmpVal,
+				"%lu,%li"
+				,getTimeGlobalNoCore()
+				,cr->m_spiderRoundNum+1
+				);
+			// . also add command to reset crawl/process counts
+			//   so if you hit maxToProcess/maxToCrawl it will
+			//   not stop the round from restarting
+			// . CommandResetCrawlCounts()
+			if ( ! addNewParmToList1 ( parmList ,
+						   parmCollnum ,
+						   tmpVal, // a string
+						   0 , // occNum (for arrays)
+						   "forceround" ) )
+				return false;
+			// don't bother going below
+			continue;
+		}
+
 		// if a collection name was also provided, assume that is
 		// the target of the reset/delete/restart. we still
 		// need PageAddDelete.cpp to work...
@@ -19102,16 +19254,18 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		if ( m->m_obj == OBJ_NONE ) continue;
 		if ( m->m_obj == OBJ_SI ) continue;
 
-		// convert spiderRoundStartTime=0 to
-		// spiderRoundStartTime=<currenttime>+30secs
+		// convert spiderRoundStartTime=0 (roundStart=0 roundStart=1) 
+		// to spiderRoundStartTime=<currenttime>+30secs
 		// so that will force the next spider round to kick in
+		/*
+		bool restartRound = false;
 		char tmp[24];
 		if ( strcmp(field,"roundStart")==0 && 
-		     val && (val[0]=='0'||val[0]=='1') && val[1]==0 ) {
+		     val && (val[0]=='0'||val[0]=='1') && val[1]==0 ) 
 			sprintf(tmp,"%lu",(long)getTimeGlobalNoCore()+0);
 			val = tmp;
 		}
-
+		*/
 
 		// add it to a list now
 		if ( ! addNewParmToList2 ( parmList ,

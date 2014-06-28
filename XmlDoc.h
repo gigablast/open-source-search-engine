@@ -185,7 +185,8 @@ bool storeTerm ( char             *s        ,
                  class SafeBuf    *wbuf     ,
                  class HashTableX *wts      ,
 		 char              synSrc   ,
-		 char              langId   ) ;
+		 char              langId   ,
+		 POSDBKEY key ) ;
 
 // tell zlib to use our malloc/free functions
 int gbuncompress ( unsigned char *dest      ,
@@ -280,8 +281,12 @@ class XmlDoc {
 	long      m_siteNumInlinksUniqueIp; // m_siteNumInlinksFresh
 	long      m_siteNumInlinksUniqueCBlock; // m_sitePop;
 	time_t    m_spideredTime;
-	time_t    m_minPubDate;
-	time_t    m_maxPubDate;
+	// just don't throw away any relevant SpiderRequests and we have
+	// the data that m_minPubDate and m_maxPubDate provided
+	//time_t    m_minPubDate;
+	//time_t    m_maxPubDate;
+	time_t    m_indexedTime; // slightly > m_spideredTime
+	uint32_t  m_reserved32;
 	time_t    m_pubDate;    // aka m_datedbDate
 	//time_t  m_nextSpiderTime;
 	time_t    m_firstIndexedDate;
@@ -473,6 +478,10 @@ class XmlDoc {
 	// we now call this right away rather than at download time!
 	long getSpideredTime();
 
+	// time right before adding the termlists to the index, etc.
+	// whereas spider time is the download time
+	long getIndexedTime();
+
 	// another entry point, like set3() kinda
 	bool loadFromOldTitleRec ();
 
@@ -537,7 +546,7 @@ class XmlDoc {
 	class Sections *getSections ( ) ;
 	class Sections *getSectionsWithDupStats ( );
 	class SafeBuf  *getInlineSectionVotingBuf();
-	bool gotSectionStats( class Msg3a *msg3a );
+	bool gotSectionFacets( class Msg3a *msg3a );
 	class SectionStats *getSectionStats(long long secHash64,
 					    long sentHash32);
 	class SectionVotingTable *getOldSectionVotingTable();
@@ -775,7 +784,7 @@ class XmlDoc {
 	bool hashDMOZCategories ( class HashTableX *table ) ;
 	bool hashLinks ( class HashTableX *table ) ;
 	bool hashUrl ( class HashTableX *table , bool hashNonFieldTerms=true) ;
-	bool hashDateNumbers ( class HashTableX *tt ) ;
+	bool hashDateNumbers ( class HashTableX *tt , bool hashAll ) ;
 	bool hashSections ( class HashTableX *table ) ;
 	bool hashIncomingLinkText ( class HashTableX *table            ,
 				    bool       hashAnomalies    ,
@@ -875,6 +884,15 @@ class XmlDoc {
 			  long              version        ,
 			  long              siteNumInlinks ,
 			  long              niceness       );
+
+
+	//bool hashSectionTerm ( char *term , 
+	//		       class HashInfo *hi , 
+	//		       long sentHash32 ) ;
+
+	bool hashFacet1 ( class Words *words , HashInfo *hi ) ;
+
+	bool hashFacet2 ( long val32 , HashInfo *hi ) ;
 
 
 	bool hashNumber ( char *beginBuf ,
@@ -1012,15 +1030,16 @@ class XmlDoc {
 	Msg39Request *m_msg39RequestArray;
 	SafeBuf m_msg3aBuf;
 	Msg3a *m_msg3aArray;
-	char  *m_inUse;
+	//char  *m_inUse;
 	Query *m_queryArray;
-	long long *m_secHash64Array;
+	//long long *m_secHash64Array;
 	bool     m_gotDupStats;
 	//long     m_secHash64;
 	//Query    m_q4;
 	//Msg3a    m_msg3a;
 	//Msg39Request m_r39;
 	Msg39Request m_mr2;
+	SectionStats m_sectionStats;
 	HashTableX m_sectionStatsTable;
 	//char m_sectionHashQueryBuf[128];
 
@@ -1201,6 +1220,7 @@ class XmlDoc {
 	bool m_firstIpValid;
 	bool m_spideredTimeValid;
 	//bool m_nextSpiderTimeValid;
+	bool m_indexedTimeValid;
 	bool m_firstIndexedValid;
 	bool m_isInIndexValid;
 	bool m_wasInIndexValid;
@@ -2354,13 +2374,15 @@ class TermDebugInfo {
 	char      m_hashGroup;
 	long      m_wordNum;
 	long      m_wordPos;
+	POSDBKEY  m_key; // key144_t
 	//bool      m_isSynonym;
 	// 0 = not a syn, 1 = syn from presets,2=wikt,3=generated
 	char      m_synSrc;
 	long long  m_langBitVec64;
 	// used for gbsectionhash:xxxx terms to hack in the inner content
 	// hash, aka sentHash32 for doing xpath histograms on a site
-	long m_sentHash32;
+	//long m_sentHash32;
+	//long m_facetVal32;
 	// this is copied from Weights::m_rvw or m_rvp
 	//float     m_rv[MAX_RULES];
 };
@@ -2384,8 +2406,9 @@ public:
 		m_useCountTable = true;
 		m_useSections = true;
 		m_startDist = 0;
+		//	m_facetVal32 = 0;
 		// used for sectiondb stuff, but stored in posdb
-		m_sentHash32 = 0;
+		//m_sentHash32 = 0;
 	};
 	class HashTableX *m_tt;
 	char             *m_prefix;
@@ -2398,7 +2421,7 @@ public:
 	char              m_useSynonyms;
 	char              m_hashGroup;
 	long              m_startDist;
-	long              m_sentHash32;
+	//long              m_facetVal32;
 	bool              m_useCountTable;
 	bool              m_useSections;
 };

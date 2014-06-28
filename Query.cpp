@@ -8,6 +8,8 @@
 #include "Url.h"
 #include "Clusterdb.h" // g_clusterdb.getNumGlobalRecs()
 #include "StopWords.h" // isQueryStopWord()
+#include "Sections.h"
+#include "Msg1.h"
 #include "Speller.h"
 //#include "Thesaurus.h"
 #include "Mem.h"
@@ -2278,6 +2280,7 @@ bool Query::setQWords ( char boolFlag ,
 		     fieldCode == FIELD_GBREVSORTBYINT ||
 		     fieldCode == FIELD_GBNUMBERMININT ||
 		     fieldCode == FIELD_GBNUMBERMAXINT ||
+		     fieldCode == FIELD_GBFACET ||
 
 		     fieldCode == FIELD_GBAD  ) {
 			// . find 1st space -- that terminates the field value
@@ -3183,6 +3186,10 @@ struct QueryField g_fields[] = {
 	 "Example: gbspiderdate:1400081479 will return results that have "
 	 "that spider date timestamp (UTC)"},
 
+	{"gbindexdate",FIELD_GENERIC,false,
+	 "Example: gbindexdate:1400081479 will return results that have "
+	 "that spider date timestamp (UTC)"},
+
 	// {"gbreplyspiderdate",FIELD_GENERIC,false,
 	//  "Example: gbspiderdate:1400081479 will return spider log "
 	//  "results that have "
@@ -3218,13 +3225,18 @@ struct QueryField g_fields[] = {
 	 "spidered in seconds since the epoch in UTC."
 	},
 
+	{"gbfacet", FIELD_GBFACET, false,
+	 "Example: 'gbfacet:price' will return facets in the search results "
+	 "with the # of documents that have certain price ranges. Any other "
+	 "field name can follow the gbfacet: operator."
+	},
+
 
 	{"gbcountry",FIELD_GBCOUNTRY,false,""},
 	{"gbad",FIELD_GBAD,false,""},
 
 
-	{"gbsectionhash"            ,FIELD_GBSECTIONHASH,false,"Internal use only."},
-
+	//{"gbsectionhash"            ,FIELD_GBSECTIONHASH,false,"Internal use only."},
 
 	{"gbduphash"                ,FIELD_GBOTHER,false,"Internal use only."},
 	{"gbsitetemplate"           ,FIELD_GBOTHER,false,"Internal use only."},

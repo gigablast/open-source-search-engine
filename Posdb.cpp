@@ -82,8 +82,8 @@ bool Posdb::init ( ) {
 	if ( g_posdb.getMultiplier ( &k ) !=multiplier){char *xx=NULL;*xx=0; }
 	if ( g_posdb.getIsSynonym ( &k ) != isSynonym) { char *xx=NULL;*xx=0; }
 
-	setSectionSentHash32 ( &k,45678 );
-	if ( getSectionSentHash32 ( &k ) != 45678 ) { char *xx=NULL;*xx=0;}
+	setFacetVal32 ( &k,45678 );
+	if ( getFacetVal32 ( &k ) != 45678 ) { char *xx=NULL;*xx=0;}
 
 	/*
 	// more tests
@@ -570,6 +570,7 @@ PosdbTable::~PosdbTable() {
 
 void PosdbTable::reset() {
 	// has init() been called?
+	m_hasFacetTerm = false;
 	m_initialized          = false;
 	m_estimatedTotalHits   = -1;
 	m_errno                   = 0;
@@ -788,33 +789,41 @@ bool PosdbTable::allocTopTree ( ) {
 	if ( ! m_mergeBuf.reserve ( total + 12 ) ) return false;
 	*/
 
-	if ( m_r->m_getSectionStats ) {
-		// fill up listGroup[]
-		//RdbList **listGroup = m_msg2->getListGroup (0);
-		//long numLists = m_msg2->getNumListsInGroup(0);
-		long long total = 0LL;
-		RdbList *list = m_msg2->getList(0);
-		//for ( long i = 0; i < numLists ; i++ )
-		//		total += listGroup[i]->getListSize();
-		total += list->getListSize();
+	m_hasFacetTerm = false;
+	//
+	// allocate space for QueryTerm::m_facetHashList and QueryTerm::m_dt
+	//
+	for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
+		QueryTerm *qt = &m_q->m_qterms[i];
+		// skip if not facet
+		if ( qt->m_fieldCode != FIELD_GBFACET ) continue;
+		// how big?
+		long long total = m_msg2->m_lists[i].getListSize();
+		// skip if empty
+		if ( total == 0 ) continue;
+		// we got facet terms
+		m_hasFacetTerm = true;
 		// assume list is a unique site for section hash dup
-		long maxSites = total / 6;
+		long maxRecs = total / 6 + 1;
 		// slot
-		long slots = maxSites * 4;
+		long slots = maxRecs * 4;
 		// min of at least 20 otherwise m_dt re-allocs in thread and
 		// causes a core!
 		if ( slots  < 32 ) slots = 32;
 		// limit this bitch to 10 million otherwise this gets huge!
 		// like over 28 million i've seen and it goes oom
 		if ( slots > 2000000 ) {
-			log("posdb: limiting section stats list to 2M docids");
+			log("posdb: limiting FACET list to 2M docids "
+			    "for query term %s",qt->m_term);
 			slots = 20000000;
 		}
-		// each site hash is 4 bytes
-		if ( ! m_sentHashList.reserve ( slots ,"shshbuf" ) )
-			return false;
-		// quad # of sites to have space in between
-		if ( ! m_dt.set(4,0,slots,NULL,0,false,0,"pdtdt"))
+		// . each site hash is 4 bytes
+		// . we have to store each unique val in here for transmitting
+		//   back to msg3a so it can merge them and compute the final
+		//   stats. it really makes no sense for a shard to compute
+		//   stats. it has to be done at the aggregator node.
+		if ( ! qt->m_facetHashTable.set ( 4,4,128,NULL,0,false,
+						  0,"qfht" ) )
 			return false;
 	}
 	return true;
@@ -1030,7 +1039,8 @@ void PosdbTable::evalSlidingWindow ( char **ptrs ,
 	for ( long i = 0 ; i < maxi ; i++ ) {
 
 		// skip if to the left of a pipe operator
-		if ( m_bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
+		if ( m_bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) )
+			continue;
 
 		//if ( ptrs[i] ) wpi = ptrs[i];
 		// if term does not occur in body, sub-in the best term
@@ -1052,7 +1062,8 @@ void PosdbTable::evalSlidingWindow ( char **ptrs ,
 	for ( ; j < maxj ; j++ ) {
 
 		// skip if to the left of a pipe operator
-		if ( m_bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
+		if ( m_bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) )
+			continue;
 
 		// TODO: use a cache using wpi/wpj as the key. 
 		//if ( ptrs[j] ) wpj = ptrs[j];
@@ -4297,6 +4308,10 @@ bool PosdbTable::setQueryTermInfo ( ) {
 		if (qt->m_fieldCode == FIELD_GBNUMBERMAXINT )
 			qti->m_bigramFlags[nn]|=BF_NUMBER;
 
+
+		if (qt->m_fieldCode == FIELD_GBFACET )
+			qti->m_bigramFlags[nn]|=BF_FACET;
+
 		// add list of member terms
 		//qti->m_qtermList[nn] = qt;
 		qt->m_bitNum = nrg;
@@ -5078,10 +5093,24 @@ void PosdbTable::intersectLists10_r ( ) {
 	// m_r->m_sectionSiteHash32 to determine if the posdb key is
 	// onsite or offsite. then XmlDoc::printRainbowSections()
 	// can print out how many page/sites duplicate your section's content.
-	if ( m_r->m_getSectionStats ) {
+	
+	// MDW: TODO: for the facet terms just compile the stats and do not
+	// send to intersecting. they are ignored for those purposes. send
+	// the hashtable back so msg3a can integrate the stats. keep in mind
+	// we have multiple docid ranges sometimes for one query!!!!
+
+	/*
+
+	  MDW: take this out. now treat as a normal termlist but
+	  do not use for scoring. so it is kinda like gbmin: gbmax:
+	  query operators but it will just add the facet values to
+	  QueryTerm::m_facetHashList for transmission back to the aggregator
+	  node. however, it is only for docids in the final result set!
+	
+	if ( m_r->m_getFacetStats ) {
 		// reset
-		m_sectionStats.m_totalMatches = 0;
-		m_sectionStats.m_totalEntries = 0;
+		m_facetStats.m_totalMatches = 0;
+		m_facetStats.m_totalEntries = 0;
 		m_dt.clear();
 		// scan the posdb keys
 		//for ( long i = 0 ; i < m_msg2->getNumListsInGroup(0); i++) {
@@ -5099,23 +5128,23 @@ void PosdbTable::intersectLists10_r ( ) {
 			// . first key is the full size
 			// . uses the w,G,s,v and F bits to hold this
 			// . this is no longer necessarily sitehash, but
-			//   can be any val, like now SectionStats is using
+			//   can be any val, like now FacetStats is using
 			//   it for the innerHtml sentence content hash32
-			long sh32 = g_posdb.getSectionSentHash32 ( p );
+			long sh32 = g_posdb.getFacetVal32 ( p );
 			//long long d = g_posdb.getDocId(p);
 			//long rs = list->getRecSize(p);
 			// this will not update listptrlo, watch out!
 			p += list->getRecSize ( p );
 			// does this xpath from another docid have the
 			// same inner html as us?
-			if ( sh32 == m_r->m_sentHash32 ) // m_siteHash32 ) 
-				m_sectionStats.m_totalMatches++;
+			if ( sh32 == m_r->m_myFacetVal32 ) // m_siteHash32 ) 
+				m_facetStats.m_totalMatches++;
 			// always this
-			m_sectionStats.m_totalEntries++;
+			m_facetStats.m_totalEntries++;
 			// unique site count
 			if ( m_dt.isInTable ( &sh32 ) ) continue;
 			// count it
-			m_sectionStats.m_numUniqueVals++;
+			m_facetStats.m_numUniqueVals++;
 			// only once
 			m_dt.addKey ( &sh32 );
 			// log it
@@ -5125,9 +5154,9 @@ void PosdbTable::intersectLists10_r ( ) {
 			if ( m_dt.m_numSlotsUsed >= 1000000 ) break;
 		}
 		// and return the list of merging
-		long *s    = (long *)m_sentHashList.getBufStart();
-		long *send = (long *)m_sentHashList.getBufEnd();
-		//if ( m_sectionStats.m_numUniqueSites == 17 ) { 
+		long *s    = (long *)m_facetHashList.getBufStart();
+		long *send = (long *)m_facetHashList.getBufEnd();
+		//if ( m_facetStats.m_numUniqueSites == 17 ) { 
 		//	log("q=%s",m_r->ptr_query);
 		//	log("hey");
 		//	//char *xx = NULL;*xx=0; 
@@ -5140,10 +5169,10 @@ void PosdbTable::intersectLists10_r ( ) {
 			*s++ = *(long *)m_dt.getKeyFromSlot(i);
 			if ( s >= send ) break;
 		}
-		m_sentHashList.setLength((char *)s-(char *)orig);
+		m_facetHashList.setLength((char *)s-(char *)orig);
 		return;
 	}
-
+	*/
 
 
 	//
@@ -5306,6 +5335,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		if ( qti->m_bigramFlags[0] & BF_NEGATIVE ) continue;
 		// skip if numeric field like gbsortby:price gbmin:price:1.23
 		if ( qti->m_bigramFlags[0] & BF_NUMBER ) continue;
+		if ( qti->m_bigramFlags[0] & BF_FACET  ) continue;
 		// set it
 		if ( qti->m_wikiPhraseId == 1 ) continue;
 		// stop
@@ -5856,8 +5886,9 @@ void PosdbTable::intersectLists10_r ( ) {
 	// . if there's no way we can break into the winner's circle, give up!
 	// . this computes an upper bound for each query term
 	for ( long i = 0 ; i < nnn ; i++ ) { // m_numQueryTermInfos ; i++ ) {
-		// skip negative termlists
-		if ( qip[i].m_bigramFlags[0] & BF_NEGATIVE ) continue;
+		// skip negative termlists.
+		// now also skip gbfacet: operator terms
+		if ( qip[i].m_bigramFlags[0]&(BF_NEGATIVE|BF_FACET) ) continue;
 		// an upper bound on the score we could get
 		float maxScore = getMaxPossibleScore ( &qip[i], 0, 0, NULL );
 		// -1 means it has inlink text so do not apply this constraint
@@ -5879,6 +5910,11 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	if ( m_sortByTermNum >= 0 ) goto skipScoringFilter;
 	if ( m_sortByTermNumInt >= 0 ) goto skipScoringFilter;
+
+	// we can't filter out a docid based on a low score if we are
+	// computing facet stats... because they are based on ALL the results
+	// of a query.
+	if ( m_hasFacetTerm ) goto skipScoringFilter;
 
 	// test why we are slow
 	//if ( (s_sss++ % 8) != 0 ) { docIdPtr += 6; fail0++; goto docIdLoop;}
@@ -5947,7 +5983,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		// get the query term info
 		QueryTermInfo *qti = &qip[i];
 		// if we have a negative term, skip it
-		if ( qti->m_bigramFlags[0] & BF_NEGATIVE )
+		if ( qti->m_bigramFlags[0] & (BF_NEGATIVE|BF_FACET) )
 			// if its empty, that's good!
 			continue;
 		// store all his word positions into ring buffer AS WELL
@@ -6315,7 +6351,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	//
 	for ( long i = 0   ; i < m_numQueryTermInfos ; i++ ) {
 		// skip if not part of score
-		if ( bflags[i] & (BF_PIPED|BF_NEGATIVE) ) continue;
+		if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_FACET) ) continue;
 		// get list
 		char *plist    = miniMergedList[i];
 		char *plistEnd = miniMergedEnd[i];
@@ -6352,12 +6388,13 @@ void PosdbTable::intersectLists10_r ( ) {
 	for ( long i = 0   ; i < m_numQueryTermInfos ; i++ ) {
 
 	// skip if not part of score
-	if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
+	if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) continue;
 
 	// and pair it with each other possible query term
 	for ( long j = i+1 ; j < m_numQueryTermInfos ; j++ ) {
 		// skip if not part of score
-		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
+		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) 
+			continue;
 		// but if they are in the same wikipedia phrase
 		// then try to keep their positions as in the query.
 		// so for 'time enough for love' ideally we want
@@ -6433,7 +6470,8 @@ void PosdbTable::intersectLists10_r ( ) {
 	for ( long i = 0 ; i < m_numQueryTermInfos ; i++ ) {
 		float sts;
 		// skip if to the left of a pipe operator
-		if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
+		if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) 
+			continue;
 		// sometimes there is no wordpos subtermlist for this docid
 		// because it just has the bigram, like "streetlight" and not
 		// the word "light" by itself for the query 'street light'
@@ -6525,7 +6563,8 @@ void PosdbTable::intersectLists10_r ( ) {
 	//
 	for ( long i = 0 ; i < m_numQueryTermInfos ; i++ ) {
 		// skip if to the left of a pipe operator
-		if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
+		if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) 
+			continue;
 		// skip wordposition until it in the body
 		while ( xpos[i] &&!s_inBody[g_posdb.getHashGroup(xpos[i])]) {
 			// advance
@@ -6578,7 +6617,8 @@ void PosdbTable::intersectLists10_r ( ) {
 		// skip if to the left of a pipe operator
 		// and numeric posdb termlists do not have word positions,
 		// they store a float there.
-		if ( bflags[x] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
+		if ( bflags[x] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) 
+			continue;
 		if ( ! xpos[x] ) continue;
 		if ( xpos[x] && minx == -1 ) {
 			minx = x;
@@ -6607,7 +6647,7 @@ void PosdbTable::intersectLists10_r ( ) {
 		long k; 
 		for ( k = 0 ; k < m_numQueryTermInfos ; k++ ) {
 			// skip if to the left of a pipe operator
-			if ( bflags[k] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) 
+			if(bflags[k]&(BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET))
 				continue;
 			if ( xpos[k] ) break;
 		}
@@ -6647,12 +6687,13 @@ void PosdbTable::intersectLists10_r ( ) {
 	for ( long i = 0   ; i < m_numQueryTermInfos ; i++ ) {
 
 	// skip if to the left of a pipe operator
-	if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
+	if ( bflags[i] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) continue;
 
 	for ( long j = i+1 ; j < m_numQueryTermInfos ; j++ ) {
 
 		// skip if to the left of a pipe operator
-		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER) ) continue;
+		if ( bflags[j] & (BF_PIPED|BF_NEGATIVE|BF_NUMBER|BF_FACET) ) 
+			continue;
 
 		//
 		// get score for term pair from non-body occuring terms
@@ -6807,6 +6848,43 @@ void PosdbTable::intersectLists10_r ( ) {
 
 	// we did not get filtered out
 	if ( ! secondPass ) m_filtered--;
+
+	//
+	// even if docid did not have a score high enough to be in the
+	// winner's list, still add its facet stats, it still is in the
+	// search results, just not in the top X.
+	//
+	// TODO: use limiters like gbfacetmaxvalcount:gbsitehash,2 to limit
+	// to just the top 2 results per site. like a generalized way of
+	// doing site clustering. i thinkg this is called buckets.
+	//
+	// for our section stuff we do a query like 
+	// gbfacet:<xpathsitehash> and the values is the innerhtml content hash
+	// of that xpath/site so we won't have to do buckets for that.
+	//
+	if ( m_hasFacetTerm ) {
+		// scan each facet termlist and update
+		// QueryTerm::m_facetHashTable/m_dt
+		for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
+			QueryTerm *qt = &m_q->m_qterms[i];
+			if ( qt->m_fieldCode != FIELD_GBFACET ) continue;
+			char *p    = miniMergedList[i];
+			//char *pend = miniMergedEnd [i];
+			//
+			// just grab the first value i guess...
+			//
+			// . first key is the full size
+			// . uses the w,G,s,v and F bits to hold this
+			// . this is no longer necessarily sitehash, but
+			//   can be any val, like now SectionStats is using
+			//   it for the innerHtml sentence content hash32
+			long val32 = g_posdb.getFacetVal32 ( p );
+			// add it. count occurences of it per docid
+			qt->m_facetHashTable.addTerm32 ( &val32 );
+		}
+	}
+
+
 
 	// . seoDebug hack so we can set "dcs"
 	// . we only come here if we actually made it into m_topTree

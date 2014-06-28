@@ -1055,6 +1055,8 @@ bool Hostdb::init ( long hostIdArg , char *netName ,
 
 	// get IPs of this server. last entry is 0.
 	long *localIps = getLocalIps();
+	if ( ! localIps )
+		return log("conf: Failed to get local IP address. Exiting.");
 
 	// now get host based on cwd and ip
 	Host *host = getHost2 ( cwd , localIps );
@@ -2691,14 +2693,18 @@ long *getLocalIps ( ) {
 	if ( s_valid ) return s_localIps;
 	s_valid = true;
 	struct ifaddrs *ifap = NULL;
-	getifaddrs( &ifap );
+	if ( getifaddrs( &ifap ) < 0 ) {
+		log("hostdb: getifaddrs: %s.",mstrerror(errno));
+		return NULL;
+	}
 	ifaddrs *p = ifap;
 	long ni = 0;
 	// store loopback just in case
 	long loopback = atoip("127.0.0.1");
 	s_localIps[ni++] = loopback;
 	for ( ; p && ni < 18 ; p = p->ifa_next ) {
-		
+		// avoid possible core dump
+		if ( ! p->ifa_addr ) continue;
 		long ip = ((struct sockaddr_in*)p->ifa_addr)->sin_addr.s_addr;
 		// skip if loopback we stored above
 		if ( ip == loopback ) continue;

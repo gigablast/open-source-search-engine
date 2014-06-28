@@ -45,7 +45,6 @@ class Msg39Request {
 		m_addToCache              = false;
 		m_familyFilter            = false;
 		m_timeout                 = -1; // -1 means auto-compute
-		m_getSectionStats         = false;
 		//m_useMinAlgo              = false;
 		//m_fastIntersection        = -1;
 		m_stripe                  = 0;
@@ -69,8 +68,10 @@ class Msg39Request {
 		m_getDocIdScoringInfo = 1;
 
 		// -1 means to not to docid range restriction
-		m_minDocId = -1;
-		m_maxDocId = -1;
+		m_minDocId = -1LL;
+		m_maxDocId = -1LL;
+
+		m_numDocIdSplits = 1;
 
 		// for widget, to only get results to append to last docid
 		m_maxSerpScore = 0.0;
@@ -92,6 +93,7 @@ class Msg39Request {
 	char    m_niceness;
 	long    m_maxAge;
 	long    m_maxQueryTerms;
+	long    m_numDocIdSplits;
 	//long    m_compoundListMaxSize;
 	char    m_boolFlag;
 	uint8_t m_language;
@@ -114,9 +116,8 @@ class Msg39Request {
 	//char    m_useNewAlgo;
 	char    m_doMaxScoreAlgo;
 
-	char    m_getSectionStats;
-	//long    m_siteHash32;// for m_getSectionStats
-	long    m_sentHash32; // for getSectionStats
+	// Msg3a still uses this
+	//long    m_myFacetVal32; // for gbfacet:xpathsite really sectionstats
 
 	//char    m_useMinAlgo;
 	//char    m_fastIntersection;
@@ -164,8 +165,6 @@ public:
 	long   m_nqt;
 	// # of estimated hits we had
 	long   m_estimatedHits;
-	// for when m_getSectionStats is true
-	SectionStats m_sectionStats;
 	// error code
 	long   m_errno;
 
@@ -174,7 +173,8 @@ public:
 	char  *ptr_scoreInfo      ; // transparency info
 	char  *ptr_pairScoreBuf   ; // transparency info
 	char  *ptr_singleScoreBuf ; // transparency info
-	char  *ptr_sentHashList   ; // for m_getSectionStats
+	// this is now 1-1 with # of query terms!
+	char  *ptr_facetHashList   ; // list of all the facet values in serps
 	char  *ptr_clusterRecs    ; // key_t (might be empty)
 	
 	long   size_docIds;
@@ -182,7 +182,7 @@ public:
 	long   size_scoreInfo;
 	long   size_pairScoreBuf  ;
 	long   size_singleScoreBuf;
-	long   size_sentHashList;
+	long   size_facetHashList;
 	long   size_clusterRecs;
 
 	// . this is the "string buffer" and it is a variable size
@@ -239,7 +239,7 @@ class Msg39 {
 
 	char       m_debug;
 
-	long m_numDocIdSplits;
+	//long m_numDocIdSplits;
 	bool m_allocedTree;
 	long long m_ddd;
 	long long m_dddEnd;

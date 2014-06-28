@@ -294,12 +294,21 @@ class Sectiondb {
 extern class Sectiondb g_sectiondb;
 extern class Sectiondb g_sectiondb2;
 
-// . for sectionhash:xxxx posdb query stats compilation to
-//   show how many sites/pages duplicate your section's content
+
+// this is only needed for sections, not facets in general i don think.
+// facets has the whole QueryTerm::m_facetHashTable array with more info
+//
+// . for gbfacet:gbxpathsite1234567 posdb query stats compilation to
+//   show how many pages duplicate your section's content on your site
+//   at the same xpath. the hash of the innerHTML for that xpath is 
+//   embedded into the posdb key like a number in a number key, so the
+//   wordpos bits etc are sacrificed to hold that 32-bit number.
 // . used by XmlDoc::getSectionsWithDupStats() for display in
 //   XmlDoc::printRainbowSections()
+// . these are in QueryTerm::m_facetStats and computed from
+//   QueryTerm::m_facetHashTable
 class SectionStats {
-public:
+ public:
 	SectionStats() { reset(); }
 	void reset ( ) {
 		m_totalMatches = 0; // posdb key "val" matches ours
@@ -310,6 +319,7 @@ public:
 	long long m_totalEntries;
 	long long m_numUniqueVals;
 };
+
 
 class Section {
 public:

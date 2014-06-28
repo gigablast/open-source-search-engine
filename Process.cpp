@@ -74,7 +74,7 @@ Process g_process;
 static long s_nextTime = 0;
 
 char *g_files[] = {
-	"gb.conf",
+	//"gb.conf",
 
 	// might have localhosts.conf
 	//"hosts.conf",
@@ -199,6 +199,12 @@ char *g_files[] = {
 };
 
 
+///////
+//
+// used to make package to install files for the package.
+// so do not include hosts.conf or gb.conf
+//
+///////
 bool Process::getFilesToCopy ( char *srcDir , SafeBuf *buf ) {
 
 	// sanirty
@@ -217,10 +223,12 @@ bool Process::getFilesToCopy ( char *srcDir , SafeBuf *buf ) {
 				, srcDir
 				, g_files[i] );
 	}
+
 	// and the required runtime subdirs
 	buf->safePrintf(" %santiword-dir",srcDir);
 	buf->safePrintf(" %sucdata",srcDir);
 	buf->safePrintf(" %shtml",srcDir);
+
 	return true;
 }
 
