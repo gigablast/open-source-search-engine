@@ -890,9 +890,9 @@ class XmlDoc {
 	//		       class HashInfo *hi , 
 	//		       long sentHash32 ) ;
 
-	bool hashFacet1 ( class Words *words , HashInfo *hi ) ;
+	bool hashFacet1 ( char *prefix, class Words *words , HashTableX *dt) ;
 
-	bool hashFacet2 ( long val32 , HashInfo *hi ) ;
+	bool hashFacet2 ( char *prefix, long val32 , HashTableX *dt) ;
 
 
 	bool hashNumber ( char *beginBuf ,

@@ -26707,7 +26707,7 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 		hi.m_prefix = prefix;
 
 		// we already have the hash of the inner html of the section
-		hashFacet2 ( (long)(unsigned long)ih64 , &hi );
+		hashFacet2 ( prefix, (long)(unsigned long)ih64 , hi.m_tt );
 	}
 
 	return true;
@@ -31618,7 +31618,8 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 	// hash a single term so they can do gbfacet:ext or
 	// gbfacet:siterank or gbfacet:price. a field on a field.
 	if ( prefixHash && words->m_numWords )
-		hashFacet1 ( words , hi );
+		// hash gbfacet:price with and store the price in the key
+		hashFacet1 ( hi->m_prefix, words ,hi->m_tt);//, hi );
 
 	// between calls? i.e. hashTitle() and hashBody()
 	//if ( wc > 0 ) m_dist = wposvec[wc-1] + 100;
@@ -31630,29 +31631,35 @@ bool XmlDoc::hashWords3 ( //long        wordStart ,
 // just like hashNumber*() functions but we use "gbfacet" as the
 // primary prefix, NOT gbminint, gbmin, gbmax, gbmaxint, gbsortby,
 // gbsortbyint, gbrevsortby, gbrevsortbyint
-bool XmlDoc::hashFacet1 ( Words *words , HashInfo *hi ) {
+bool XmlDoc::hashFacet1 ( char *term , 
+			  Words *words ,
+			  HashTableX *tt ) {
 
 	// need a prefix
-	if ( ! hi->m_prefix ) return true;
+	//if ( ! hi->m_prefix ) return true;
 
 	// hash the ENTIRE content, all words as one blob
 	long nw = words->getNumWords();
 	char *a = words->m_words[0];
 	char *b = words->m_words[nw-1]+words->m_wordLens[nw-1];
+	// hash the whole string as one value, the value of the facet
 	long val32 = hash32 ( a , b - a );
-	return hashFacet2 ( val32 , hi );
+
+	return hashFacet2 ( term, val32 , tt );
 }
 
-bool XmlDoc::hashFacet2 ( long val32 , HashInfo *hi ) {
+bool XmlDoc::hashFacet2 ( char *term ,
+			  long val32 ,
+			  HashTableX *tt ) {
 
 	// need a prefix
-	if ( ! hi->m_prefix ) return true;
-	long plen = gbstrlen ( hi->m_prefix );
-	if ( plen <= 0 ) return true;
+	//if ( ! hi->m_prefix ) return true;
+	//long plen = gbstrlen ( hi->m_prefix );
+	//if ( plen <= 0 ) return true;
 	// we gotta make this case insensitive, and skip spaces
 	// because if it is 'focal length' we can't search
 	// 'focal length:10' because that comes across as TWO terms.
-	long long prefixHash = hash64Lower_utf8_nospaces ( hi->m_prefix,plen);
+	//long long prefixHash =hash64Lower_utf8_nospaces ( hi->m_prefix,plen);
 
 	// now any field has to support gbfacet:thatfield
 	// and store the 32-bit termid into where we normally put
@@ -31661,8 +31668,11 @@ bool XmlDoc::hashFacet2 ( long val32 , HashInfo *hi ) {
 	if ( ! s_facetPrefixHash )
 		s_facetPrefixHash = hash64n ( "gbfacet" );
 
+	long long termId64 = hash64n ( term );
+
 	// combine with the "gbfacet" prefix. old prefix hash on right.
-	long long ph2 = hash64 ( s_facetPrefixHash , prefixHash );
+	// like "price" on right.
+	long long ph2 = hash64 ( s_facetPrefixHash , termId64);//prefixHash );
 
 	// . now store it
 	// . use field hash as the termid. normally this would just be
@@ -31690,7 +31700,7 @@ bool XmlDoc::hashFacet2 ( long val32 , HashInfo *hi ) {
 			  0 , // multiplier
 			  false, // syn?
 			  false , // delkey?
-			  hi->m_shardByTermId );
+			  false );//hi->m_shardByTermId );
 
 	//long long final = hash64n("products.offerprice",0);
 	//long long prefix = hash64n("gbsortby",0);
@@ -31711,7 +31721,7 @@ bool XmlDoc::hashFacet2 ( long val32 , HashInfo *hi ) {
 	// off!!
 	g_posdb.setAlignmentBit ( &k , 0 );
 
-	HashTableX *dt = hi->m_tt;
+	HashTableX *dt = tt;//hi->m_tt;
 
 	// the key may indeed collide, but that's ok for this application
 	if ( ! dt->addTerm144 ( &k ) ) 
@@ -31722,14 +31732,20 @@ bool XmlDoc::hashFacet2 ( long val32 , HashInfo *hi ) {
 
 	// store in buffer
 	char buf[128];
-	long bufLen = sprintf(buf,"%li",val32);
+	long bufLen = sprintf(buf,"facetField=%s facetVal32=%lu",
+			      term,val32);
+
+	// make a special hashinfo for this facet
+	HashInfo hi;
+	hi.m_tt = tt;
+	hi.m_prefix = "gbfacet";
 
 	// add to wts for PageParser.cpp display
 	// store it
 	if ( ! storeTerm ( buf,
 			   bufLen,
 			   s_facetPrefixHash,
-			   hi,
+			   &hi,
 			   0, // word#, i,
 			   0, // wordPos
 			   0,// densityRank , // 0-15
@@ -31999,7 +32015,7 @@ bool XmlDoc::hashNumber2 ( float f , HashInfo *hi , char *sortByStr ) {
 
 	// store in buffer
 	char buf[128];
-	long bufLen = sprintf(buf,"%f",f);
+	long bufLen = sprintf(buf,"%s:%s float32=%f",sortByStr,hi->m_prefix,f);
 
 	// add to wts for PageParser.cpp display
 	// store it
@@ -32107,7 +32123,7 @@ bool XmlDoc::hashNumber3 ( long n , HashInfo *hi , char *sortByStr ) {
 
 	// store in buffer
 	char buf[128];
-	long bufLen = sprintf(buf,"%li",n);
+	long bufLen = sprintf(buf,"%s:%s int32=%li",sortByStr,hi->m_prefix,n);
 
 	// add to wts for PageParser.cpp display
 	// store it
@@ -33352,6 +33368,9 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		if ( tp[i]->m_prefixOff >= 0 ) 
 			prefix = start + tp[i]->m_prefixOff;
 
+		bool isFacet = false;
+		if ( prefix && prefix[0]=='g' && strcmp(prefix,"gbfacet")== 0 )
+			isFacet = true;
 
 		sb->safePrintf ( "<tr>"
 				 //"<td><b>%li</b></td>" 
@@ -33360,8 +33379,11 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 				 , prefix
 				 );
 
-		sb->safePrintf( "<td>%li</td>" 
-				, tp[i]->m_wordNum );
+		if ( isFacet )
+			sb->safePrintf("<td>--</td>");
+		else
+			sb->safePrintf( "<td>%li</td>" 
+					, tp[i]->m_wordNum );
 
 
 		// print lang
@@ -33372,7 +33394,10 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		// resolve some ambiguity, but not all, so print out
 		// the possible langs here
 		sb->safePrintf("<td>");
-		printLangBits ( sb , tp[i] );
+		if ( isFacet )
+			sb->safePrintf("--");
+		else
+			printLangBits ( sb , tp[i] );
 		sb->safePrintf("</td>");
 
 
@@ -33483,7 +33508,7 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 		// . the number following it is the hash
 		// . the value stored in the posdb key is the hash of the
 		//   inner html content of that xpath/site for this page
-		if ( strncmp(term,"gbxpathsitehash",15)==0)
+		if ( strncmp(term,"facetField=gbxpathsitehash",26)==0)
 			sb->safePrintf("<b>Term</b> is a 32-bit hash of the "
 				       "X-path of "
 				       "a section XOR'ed with the 32-bit "
