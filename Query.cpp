@@ -3235,23 +3235,24 @@ struct QueryField g_fields[] = {
 	},
 
 	{"gbfacetstr", FIELD_GBFACETSTR, false,
-	 "Example: 'gbfacet:color' will return facets in the search results "
+	 "Example: 'gbfacetstr:color' will return facets in "
+	 "the search results "
 	 "by their color field. Any other "
-	 "field name can follow the gbfacet: operator."
+	 "field name can follow the gbfacetstr: operator."
 	},
 
 	{"gbfacetint", FIELD_GBFACETINT, false,
-	 "Example: 'gbfacet:numReviews' will return "
+	 "Example: 'gbfacetint:numReviews' will return "
 	 "facets in the search results "
 	 "with the # of documents for each number of reviews. Any other "
-	 "field name can follow the gbfacet: operator."
+	 "field name can follow the gbfacetint: operator."
 	},
 
 	{"gbfacetfloat", FIELD_GBFACETFLOAT, false,
 	 "Example: 'gbfacetfloat:price' will return facets in the "
 	 "search results "
 	 "with the # of documents that have certain price ranges. Any other "
-	 "field name can follow the gbfacet: operator."
+	 "field name can follow the gbfacetfloat: operator."
 	},
 
 
