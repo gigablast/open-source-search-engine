@@ -1526,6 +1526,7 @@ static CollectionRec g_default;
 CollectionRec::CollectionRec() {
 	m_collnum = -1;
 	m_coll[0] = '\0';
+	m_updateRoundNum = 0;
 	//m_numSearchPwds = 0;
 	//m_numBanIps     = 0;
 	//m_numSearchIps  = 0;
