@@ -11923,7 +11923,9 @@ static long s_requests = 0;
 static long s_replies  = 0;
 static long s_validReplies  = 0;
 static bool s_inUse = false;
-static long s_updateRoundNum = 0;
+// we initialize CollectionRec::m_updateRoundNum to 0 so make this 1
+static long s_updateRoundNum = 1;
+
 // . just call this once per second for all collections
 // . figure out how to backoff on collections that don't need it so much
 // . ask every host for their crawl infos for each collection rec
@@ -12216,6 +12218,12 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			// add each hosts counts into the global accumulators
 			for ( long j = 0 ; j < NUMCRAWLSTATS ; j++ ) {
 				*gs = *gs + *ss;
+				// crazy stat?
+				if ( *ss > 1000000000LL ||
+				     *ss < -1000000000LL ) 
+					log("spider: crazy stats %lli "
+					    "from host #%li coll=%s",
+					    *ss,k,cr->m_coll);
 				gs++;
 				ss++;
 			}
