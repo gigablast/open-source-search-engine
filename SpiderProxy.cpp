@@ -733,6 +733,9 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 	// add it now
 	s_loadTable.addKey ( &urlIp , &bb );
 
+	// sanity
+	if ( (long)sizeof(ProxyReply) > TMPBUFSIZE ){char *xx=NULL;*xx=0;}
+
 	// and give proxy ip/port back to the requester so they can
 	// use that to download their url
 	ProxyReply *prep = (ProxyReply *)udpSlot->m_tmpBuf;
@@ -779,9 +782,9 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 
 	// send the proxy ip/port/LBid back to user
 	g_udpServer.sendReply_ass ( udpSlot->m_tmpBuf , // msg
-				    10 , // msgSize
+				    sizeof(ProxyReply) , // msgSize
 				    udpSlot->m_tmpBuf , // alloc
-				    10 , 
+				    sizeof(ProxyReply) , 
 				    udpSlot , 
 				    60 ) ; // 60s timeout
 }
