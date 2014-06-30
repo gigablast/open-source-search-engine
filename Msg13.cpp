@@ -25,7 +25,7 @@ void gotIframeExpandedContent ( void *state ) ;
 bool addToHammerQueue ( Msg13Request *r ) ;
 void scanHammerQueue ( int fd , void *state );
 void downloadTheDocForReals ( Msg13Request *r ) ;
-char *getUserAgent ( long urlIp , long proxyIp , long proxyPort ) ;
+char *getRandUserAgent ( long urlIp , long proxyIp , long proxyPort ) ;
 
 // utility functions
 bool getTestSpideredDate ( Url *u , long *origSpiderDate , char *testDir ) ;
@@ -528,8 +528,9 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	// . therefore it's allowed, so set *reply to 1 (true)
 	if ( inCache ) {
 		// log debug?
-		if ( r->m_isSquidProxiedUrl )
-			log("proxy: found %li bytes in cache",recSize);
+		//if ( r->m_isSquidProxiedUrl )
+			log("proxy: found %li bytes in cache for %s",
+			    recSize,r->m_url);
 		// helpful for debugging. even though you may see a robots.txt
 		// redirect and think we are downloading that each time,
 		// we are not... the redirect is cached here as well.
@@ -635,13 +636,13 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	// we skip it if its a frame page, robots.txt, root doc or some other
 	// page that is a "child" page of the main page we are spidering.
 	// MDW: i moved this AFTER sending to the compression proxy...
-	if ( ! r->m_skipHammerCheck ) {
-		// if addToHammerQueue() returns true and queues this url for
-		// download later, when ready to download call this function
-		r->m_hammerCallback = downloadTheDocForReals;
-		// this returns true if added to the queue for later
-		if ( addToHammerQueue ( r ) ) return;
-	}
+	// if ( ! r->m_skipHammerCheck ) {
+	// 	// if addToHammerQueue() returns true and queues this url for
+	// 	// download later, when ready to download call this function
+	// 	r->m_hammerCallback = downloadTheDocForReals;
+	// 	// this returns true if added to the queue for later
+	// 	if ( addToHammerQueue ( r ) ) return;
+	// }
 
 	// do not get .google.com/ crap
 	//if ( strstr(r->m_url,".google.com/") ) { char *xx=NULL;*xx=0; }
@@ -649,8 +650,9 @@ void handleRequest13 ( UdpSlot *slot , long niceness  ) {
 	downloadTheDocForReals ( r );
 }
 
-static void downloadTheDocForReals2 ( Msg13Request *r ) ;
-static void downloadTheDocForReals3 ( Msg13Request *r ) ;
+static void downloadTheDocForReals2  ( Msg13Request *r ) ;
+static void downloadTheDocForReals3a ( Msg13Request *r ) ;
+static void downloadTheDocForReals3b ( Msg13Request *r ) ;
 
 static void gotHttpReply9 ( void *state , TcpSocket *ts ) ;
 
@@ -690,7 +692,7 @@ void downloadTheDocForReals2 ( Msg13Request *r ) {
 	// we did not need a spider proxy ip so send this reuest to a host
 	// to download the url
 	if ( ! useProxies ) {
-		downloadTheDocForReals3 ( r );
+		downloadTheDocForReals3a ( r );
 		return;
 	}
 
@@ -797,11 +799,11 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 
 	// if addToHammerQueue() returns true and queues this url for
 	// download later, when ready to download call this function
-	r->m_hammerCallback = downloadTheDocForReals3;
+	//r->m_hammerCallback = downloadTheDocForReals3;
 
 	// . returns true if we queued it for trying later
 	// . scanHammerQueue() will call downloadTheDocForReals3(r) for us
-	if ( addToHammerQueue ( r ) ) return;
+	//if ( addToHammerQueue ( r ) ) return;
 
 	// now forward the request
 	// now the reply should have the proxy host to use
@@ -809,10 +811,27 @@ void gotProxyHostReplyWrapper ( void *state , UdpSlot *slot ) {
 	//if ( ! THIS->forwardRequest() ) return;
 	// it did not block...
 	//THIS->m_callback ( THIS->m_state );
-	downloadTheDocForReals3 ( r );
+	downloadTheDocForReals3a ( r );
 }
 
-void downloadTheDocForReals3 ( Msg13Request *r ) {
+//
+// we need r->m_numBannedProxies to be valid for hammer queueing
+// so we have to do the hammer queue stuff after getting the proxy reply
+//
+void downloadTheDocForReals3a ( Msg13Request *r ) {
+
+	// if addToHammerQueue() returns true and queues this url for
+	// download later, when ready to download call this function
+	r->m_hammerCallback = downloadTheDocForReals3b;
+
+	// . returns true if we queued it for trying later
+	// . scanHammerQueue() will call downloadTheDocForReals3(r) for us
+	if ( addToHammerQueue ( r ) ) return;
+
+	downloadTheDocForReals3b( r );
+}
+
+void downloadTheDocForReals3b ( Msg13Request *r ) {
 
 	// . store time now
 	// . no, now we store 0 to indicate in progress, then we
@@ -823,11 +842,19 @@ void downloadTheDocForReals3 ( Msg13Request *r ) {
 	//   which should have skipHammerCheck set to true
 	if ( r->m_crawlDelayFromEnd && ! r->m_skipHammerCheck ) {
 		s_hammerCache.addLongLong(0,r->m_firstIp, 0LL);//nowms);
+		log("spider: delay from end for %s %s",iptoa(r->m_firstIp),
+		    r->m_url);
 	}
 	else if ( ! r->m_skipHammerCheck ) {
 		// get time now
 		long long nowms = gettimeofdayInMilliseconds();
 		s_hammerCache.addLongLong(0,r->m_firstIp, nowms);
+		log("spider: adding new time for %s %s = %lli",
+		    iptoa(r->m_firstIp),r->m_url,nowms);
+	}
+	else {
+		log("spider: not adding new time for %s %s",
+		    iptoa(r->m_firstIp),r->m_url);
 	}
 
 	// note it
@@ -839,10 +866,11 @@ void downloadTheDocForReals3 ( Msg13Request *r ) {
 		    -1LL,iptoa(r->m_firstIp),r->m_url);
 
 
+
 	// flag this
 	r->m_addToTestCache = true;
 	// note it here
-	if ( g_conf.m_logDebugSpider )
+	//if ( g_conf.m_logDebugSpider )
 		log("spider: downloading %s (%s) (skiphammercheck=%li)",
 		    r->m_url,iptoa(r->m_urlIp) ,
 		    (long)r->m_skipHammerCheck);
@@ -860,9 +888,9 @@ void downloadTheDocForReals3 ( Msg13Request *r ) {
 	// if sending to a proxy use random user agent
 	if ( g_conf.m_useRandAgents && r->m_proxyIp ) {
 		// use that
-		agent = getUserAgent ( r->m_urlIp , 
-				       r->m_proxyIp ,
-				       r->m_proxyPort );
+		agent = getRandUserAgent ( r->m_urlIp , 
+					   r->m_proxyIp ,
+					   r->m_proxyPort );
 	}
 
 	// . for bulk jobs avoid actual downloads of the page for efficiency
@@ -895,12 +923,18 @@ void downloadTheDocForReals3 ( Msg13Request *r ) {
 		callback = gotHttpReply;
 
 	// debug note
-	if ( r->m_proxyIp )
-		log("sproxy: got proxy %s:%li and agent=\"%s\" to spider %s",
+	if ( r->m_proxyIp ) {
+		char tmpIp[64];
+		sprintf(tmpIp,"%s",iptoa(r->m_urlIp));
+		log("sproxy: got proxy %s:%li and agent=\"%s\" to spider "
+		    "%s %s (numBannedProxies=%li)",
 		    iptoa(r->m_proxyIp),
 		    (long)r->m_proxyPort,
 		    agent,
-		    r->m_url);
+		    tmpIp,
+		    r->m_url,
+		    r->m_numBannedProxies);
+	}
 
 	char *exactRequest = NULL;
 
@@ -967,24 +1001,31 @@ void doneReportingStatsWrapper ( void *state, UdpSlot *slot ) {
 	//slot->m_sendBuf = NULL;
 	// clear g_errno i guess
 	g_errno = 0;
+	// don't let udpserver free the request, it's our m_urlIp
+	slot->m_sendBufAlloc = NULL;
 	// resume on our way down the normal pipeline
 	//gotHttpReply ( state , r->m_tcpSocket );
 	s_55Out--;
 }
 
-bool ipWasBanned ( TcpSocket *ts ) {
+bool ipWasBanned ( TcpSocket *ts , const char **msg ) {
 
 	// if they closed the socket on us we read 0 bytes, assumed
 	// we were banned...
-	if ( ts->m_readOffset == 0 ) return true;
+	if ( ts->m_readOffset == 0 ) {
+		*msg = "empty reply";
+		return true;
+	}
 
 	// check the http mime for 403 Forbidden
 	HttpMime mime;
 	mime.set ( ts->m_readBuf , ts->m_readOffset , NULL );
 
 	long httpStatus = mime.getHttpStatus();
-	if ( httpStatus == 403 )
+	if ( httpStatus == 403 ) {
+		*msg = "status 403 forbidden";
 		return true;
+	}
 
 	// TODO: compare a simple checksum of the page content to what
 	// we have downloaded previously from this domain or ip. if it 
@@ -992,6 +1033,8 @@ bool ipWasBanned ( TcpSocket *ts ) {
 	// are banned as well.
 
 	// otherwise assume not.
+	*msg = NULL;
+
 	return false;
 }
 
@@ -1005,7 +1048,8 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 
 	// if we got a 403 Forbidden or an empty reply
 	// then assume the proxy ip got banned so try another.
-	bool banned = ipWasBanned ( ts );
+	const char *banMsg = NULL;
+	bool banned = ipWasBanned ( ts , &banMsg );
 
 	// inc this every time we try
 	r->m_proxyTries++;
@@ -1014,11 +1058,15 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 	if ( banned ) {
 		char *msg = "No more proxies to try. Using reply as is.";
 		if ( r->m_hasMoreProxiesToTry )  msg = "Trying another proxy.";
+		char tmpIp[64];
+		sprintf(tmpIp,"%s",iptoa(r->m_urlIp));
 		log("msg13: detected that proxy %s is banned (tries=%li) by "
-		    "url %s. %s"
-		    , iptoa(r->m_banProxyIp)
+		    "url %s %s [%s]. %s"
+		    , iptoa(r->m_proxyIp) // r->m_banProxyIp
 		    , r->m_proxyTries
+		    , tmpIp
 		    , r->m_url 
+		    , banMsg
 		    , msg );
 	}
 
@@ -1037,7 +1085,9 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 		// . re-download but using a different proxy
 		// . handleRequest54 should not increment the outstanding
 		//   count beause we should give it the same m_lbId
-		downloadTheDocForReals ( r );
+		// . skip s_rt table since we are already first in line and
+		//   others may be waiting for us...
+		downloadTheDocForReals2 ( r );
 		return;
 	}
 
@@ -1057,7 +1107,8 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 	//r->m_blocked = false;
 
 	Host *h = g_hostdb.getFirstAliveHost();
-	// now ask that host for the best spider proxy to send to
+	// now return the proxy. this will decrement the load count on
+	// host "h" for this proxy.
 	if ( g_udpServer.sendRequest ( (char *)r,
 				       r->getProxyRequestSize(),
 				       0x54 ,
@@ -2438,7 +2489,7 @@ bool getIframeExpandedContent ( Msg13Request *r , TcpSocket *ts ) {
 
 	xd->m_downloadEndTimeValid = true;
 	xd->m_downloadEndTime = gettimeofdayInMillisecondsLocal();
-	
+
 	// now get the expanded content
 	char **ec = xd->getExpandedUtf8Content();
 	// this means it blocked
@@ -2591,7 +2642,9 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	// . try to be more sensitive for more sensitive website policies
 	// . we don't know why this proxy was banned, or if we were 
 	//   responsible, or who banned it, but be more sensitive anyway
-	if ( r->m_hammerCallback == downloadTheDocForReals3 ) 
+	if ( //r->m_hammerCallback == downloadTheDocForReals3b &&
+	     r->m_numBannedProxies &&
+	     r->m_numBannedProxies * 2000 > crawlDelayMS )
 		crawlDelayMS = r->m_numBannedProxies * 2000;
 
 	bool queueIt = false;
@@ -2600,6 +2653,8 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	if ( crawlDelayMS > 0 && last == 0LL ) queueIt = true;
 	// a last of -1 means not found. so first time i guess.
 	if ( last == -1 ) queueIt = false;
+	// ignore it if from iframe expansion etc.
+	if ( r->m_skipHammerCheck ) queueIt = false;
 
 	// . queue it up if we haven't waited long enough
 	// . then the functionr, scanHammerQueue(), will re-eval all
@@ -2608,7 +2663,8 @@ bool addToHammerQueue ( Msg13Request *r ) {
 	//   which will store maybe a -1 if currently downloading...
 	if ( queueIt ) {
 		// debug
-		//log("spider: adding %s to crawldelayqueue",r->m_url);
+		log("spider: adding %s to crawldelayqueue cd=%lims",
+		    r->m_url,crawlDelayMS);
 		// save this
 		//r->m_udpSlot = slot; // this is already saved!
 		r->m_nextLink = NULL;
@@ -2680,11 +2736,22 @@ void scanHammerQueue ( int fd , void *state ) {
 		last = s_hammerCache.getLongLong(0,r->m_firstIp,30,true);
 		// is one from this ip outstanding?
 		if ( last == 0LL && r->m_crawlDelayFromEnd ) continue;
+
+
+		long crawlDelayMS = r->m_crawlDelayMS;
+
+		// . if we got a proxybackoff base it on # of banned proxies 
+		// . try to be more sensitive for more sensitive website policy
+		// . we don't know why this proxy was banned, or if we were 
+		//   responsible, or who banned it, but be more sensitive
+		if ( r->m_hammerCallback == downloadTheDocForReals3b )
+			crawlDelayMS = r->m_numBannedProxies * 2000;
+
 		// download finished? 
 		if ( last > 0 ) {
 		        waited = nowms - last;
 			// but skip if haven't waited long enough
-			if ( waited < r->m_crawlDelayMS ) continue;
+			if ( waited < crawlDelayMS ) continue;
 		}
 		// debug
 		//log("spider: downloading %s from crawldelay queue "
@@ -2698,8 +2765,11 @@ void scanHammerQueue ( int fd , void *state ) {
 		if ( ! r->m_hammerCallback ) { char *xx=NULL;*xx=0; }
 
 		// callback can now be either downloadTheDocForReals(r)
-		// or downloadTheDocForReals3(r) if it is waiting after 
+		// or downloadTheDocForReals3b(r) if it is waiting after 
 		// getting a ProxyReply that had a m_proxyBackoff set
+		//
+		// it should also add the current time to the hammer cache
+		// for r->m_firstIp
 		r->m_hammerCallback ( r );
 
 		//
@@ -11471,15 +11541,18 @@ static char *s_agentList[] = {
 	"Mozilla/4.0 (compatible; MSIE 7.0; AOL 9.1; AOLBuild 4334.27; Windows NT 5.1; .NET CLR 1.1.4322; .NET CLR 2.0.50727; .NET CLR 3.0.04506.30; InfoPath.1); UnAuth-State"
 };
 
-char *getUserAgent ( long urlIp , long proxyIp , long proxyPort ) {
+char *getRandUserAgent ( long urlIp , long proxyIp , long proxyPort ) {
 	// it is a function of the website ip and the proxy ip
-	unsigned long x = (unsigned long)urlIp;
-	x = hash32h ( x , proxyIp );
-	x = hash32h ( x , proxyPort );
-	// get count
+	// unsigned long x = (unsigned long)urlIp;
+	// x = hash32h ( x , proxyIp );
+	// x = hash32h ( x , proxyPort );
+	// // get count
 	long numAgents = sizeof(s_agentList)/sizeof(char *);
-	// select from the list then
-	long n = x % numAgents;
+	// // select from the list then
+	// long n = x % numAgents;
+
+	// just make it random all the time
+	long n = rand() % numAgents;
 
 	//log("urlip=%lu proxyip=%lu proxyport=%lu n=%li",
 	//    urlIp,proxyIp,proxyPort,n);

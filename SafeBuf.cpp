@@ -3451,7 +3451,7 @@ bool SafeBuf::base64Decode ( char *src , long srcLen , long niceness ) {
 
 
 // "ts" is a delta-t in seconds
-bool SafeBuf::printTimeAgo ( long ago , long now ) {
+bool SafeBuf::printTimeAgo ( long ago , long now , bool shorthand ) {
 	// Jul 23, 1971
 	if ( ! reserve2x(200) ) return false;
 	// for printing
@@ -3468,17 +3468,31 @@ bool SafeBuf::printTimeAgo ( long ago , long now ) {
 		if ( hrs  < 0 ) hrs  = 0;
 		if ( days < 0 ) days = 0;
 	}
+	bool printed = false;
 	// print the time ago
-	if ( mins==0 ) safePrintf("%li seconds ago",secs);
-	else if ( mins ==1)safePrintf("%li minute ago",mins);
-	else if (mins<60)safePrintf ( "%li minutes ago",mins);
-	else if ( hrs == 1 )safePrintf ( "%li hour ago",hrs);
-	else if ( hrs < 24 )safePrintf ( "%li hours ago",hrs);
-	else if ( days == 1 )safePrintf ( "%li day ago",days);
-	else if (days< 7 )safePrintf ( "%li days ago",days);
+	if ( shorthand ) {
+		if ( mins==0 ) safePrintf("%li secs ago",secs);
+		else if ( mins ==1)safePrintf("%li min ago",mins);
+		else if (mins<60)safePrintf ( "%li mins ago",mins);
+		else if ( hrs == 1 )safePrintf ( "%li hr ago",hrs);
+		else if ( hrs < 24 )safePrintf ( "%li hrs ago",hrs);
+		else if ( days == 1 )safePrintf ( "%li day ago",days);
+		else if (days< 7 )safePrintf ( "%li days ago",days);
+		printed = true;
+	}
+	else {
+		if ( mins==0 ) safePrintf("%li seconds ago",secs);
+		else if ( mins ==1)safePrintf("%li minute ago",mins);
+		else if (mins<60)safePrintf ( "%li minutes ago",mins);
+		else if ( hrs == 1 )safePrintf ( "%li hour ago",hrs);
+		else if ( hrs < 24 )safePrintf ( "%li hours ago",hrs);
+		else if ( days == 1 )safePrintf ( "%li day ago",days);
+		else if (days< 7 )safePrintf ( "%li days ago",days);
+		printed = true;
+	}
 	// do not show if more than 1 wk old! we want to seem as
 	// fresh as possible
-	else if ( ago > 0 ) { // && si->m_isAdmin ) {
+	if ( ! printed && ago > 0 ) { // && si->m_isAdmin ) {
 		long ts = now - ago;
 		struct tm *timeStruct = localtime ( &ts );
 		char tmp[100];

@@ -186,7 +186,7 @@ struct SafeBuf {
 
 	// . like "1 minute ago" "5 hours ago" "3 days ago" etc.
 	// . "ts" is the delta-t in seconds
-	bool printTimeAgo ( long ts , long now ) ;
+	bool printTimeAgo ( long ts , long now , bool shorthand = false ) ;
 
 	// . a function for adding Tags to buffer, like from Tagdb.cpp
 	// . if safebuf is a buffer of Tags from Tagdb.cpp

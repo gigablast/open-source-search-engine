@@ -6535,6 +6535,13 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 	// if there, return it
 	if ( stats ) return stats;
 
+	//
+	// TODO: shard gbxpathsitehashxxxxx by termid
+	// and make sure msg3a only sends to that single shard and sends
+	// the stats back. should make us much faster to sectionize
+	// a web page. but for now try without it...
+	//
+
 	// save it
 	//m_secHash64 = secHash64;
 
@@ -12827,8 +12834,8 @@ bool *XmlDoc::getIsAllowed ( ) {
 		m_isAllowedValid = true;
 		m_crawlDelayValid = true;
 		m_crawlDelay      = -1;
-		log("xmldoc: skipping robots.txt lookup for %s",
-		    m_firstUrl.m_url);
+		//log("xmldoc: skipping robots.txt lookup for %s",
+		//    m_firstUrl.m_url);
 		return &m_isAllowed;
 	}
 
@@ -14881,6 +14888,9 @@ char **XmlDoc::getHttpReply2 ( ) {
 	if ( strncmp(cu->m_url,"http://api.ahrefs.com/",22) == 0 )
 		r->m_skipHammerCheck = 1;		
 
+	if ( r->m_skipHammerCheck )
+		log("skipping hammer check");
+
 	// if we had already spidered it... try to save bandwidth and time
 	if ( od ) {
 		// sanity check
@@ -14904,6 +14914,8 @@ char **XmlDoc::getHttpReply2 ( ) {
 		//r->m_requireGoodDate = false;
 		// no frames within frames
 		r->m_attemptedIframeExpansion = 1;
+		log("skipping hammer check 2");
+
 	}
 
 	// . use msg13 to download the file, robots.txt
@@ -16834,6 +16846,7 @@ char **XmlDoc::getExpandedUtf8Content ( ) {
 		// . no, use 5 seconds since we often have the same iframe
 		//   in the root doc that we have in the  main doc, like a
 		//   facebook iframe or something.
+		// . use a m_maxCacheAge of 5 seconds now!
 		ped = getExtraDoc ( furl.m_url , 5 );
 		// should never block
 		if ( ! ped ) { 

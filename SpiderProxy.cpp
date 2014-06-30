@@ -217,6 +217,16 @@ bool buildProxyTable ( ) {
 
 static bool s_init = true;
 HashTableX s_proxyBannedTable;
+HashTableX s_banCountTable;
+
+bool initProxyTables ( ) {
+	// initialize proxy/urlip ban table?
+	if ( ! s_init ) return true;
+	s_init = false;
+	s_proxyBannedTable.set(8,0,0,NULL,0,false,1,"proxban");
+	s_banCountTable.set(4,4,0,NULL,0,false,1,"bancnt");
+	return true;
+}
 
 // save the stats
 bool saveSpiderProxyStats ( ) {
@@ -224,14 +234,20 @@ bool saveSpiderProxyStats ( ) {
 	// save hashtable
 	s_proxyBannedTable.save(g_hostdb.m_dir,"proxybantable.dat");
 
+	s_banCountTable.save(g_hostdb.m_dir,"proxybancounttable.dat");
+
 	// save hash table
 	return s_iptab.save(g_hostdb.m_dir,"spiderproxystats.dat");
 }
 
 bool loadSpiderProxyStats ( ) {
 
+	initProxyTables();
+
 	// save hashtable
 	s_proxyBannedTable.load(g_hostdb.m_dir,"proxybantable.dat");
+
+	s_banCountTable.load(g_hostdb.m_dir,"proxybancounttable.dat");
 
 	// save hash table. this also returns false if does not exist.
 	if ( ! s_iptab.load(g_hostdb.m_dir,"spiderproxystats.dat") ) 
@@ -309,6 +325,8 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 
 		       "<td><b>times used</b></td>"
 
+		       "<td><b># website IPs banning</b></td>"
+
 		       "<td><b>load points</b></td>"
 
 		       "<td><b>currently out</b></td>"
@@ -364,6 +382,10 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 
 		sb->safePrintf("<td>%lli</td>",sp->m_timesUsed);
 
+		long banCount = s_banCountTable.getScore32 ( &sp->m_ip );
+		if ( banCount < 0 ) banCount = 0;
+		sb->safePrintf("<td>%li</td>",banCount);
+
 		long currentLoad;
 
 		// get # times it appears in loadtable
@@ -380,7 +402,7 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 		if ( sp->m_lastSuccessfulTestMS <= 0 )
 			sb->safePrintf("none");
 		else
-			sb->printTimeAgo ( ago , now );
+			sb->printTimeAgo ( ago , now , true );
 		sb->safePrintf("</td>");
 
 		// last download time ago
@@ -390,7 +412,7 @@ bool printSpiderProxyTable ( SafeBuf *sb ) {
 		if ( sp->m_lastDownloadTestAttemptMS<= 0 )
 			sb->safePrintf("none");
 		else
-			sb->printTimeAgo ( ago , now );
+			sb->printTimeAgo ( ago , now , true );
 		sb->safePrintf("</td>");
 
 		// how long to download the test url?
@@ -578,12 +600,6 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		return;
 	}
 
-	// initialize proxy/urlip ban table?
-	if ( s_init ) {
-		s_init = false;
-		s_proxyBannedTable.set(8,0,0,NULL,0,false,1,"proxban");
-	}
-
 	// if sender is asking for a new proxy and wants us to ban
 	// the previous proxy we sent for this urlIp...
 	if ( preq->m_banProxyIp ) {
@@ -597,7 +613,12 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		long long uip = preq->m_urlIp;
 		long long pip = preq->m_banProxyIp;
 		long long h64 = hash64h ( uip , pip );
-		s_proxyBannedTable.addKey ( &h64 );
+		if ( ! s_proxyBannedTable.isInTable ( &h64 ) ) {
+			s_proxyBannedTable.addKey ( &h64 );
+			// for stats counting. each proxy ip maps to #
+			// of unique website IPs that have banned it.
+			s_banCountTable.addTerm32 ( (long *)&pip );
+		}
 	}
 	
 
@@ -701,6 +722,14 @@ void handleRequest54 ( UdpSlot *udpSlot , long niceness ) {
 		if ( sp->m_countForThisIp > minCount ) continue;
 		// then go by last download time for this ip
 		if ( sp->m_lastTimeUsedForThisIp >= oldest ) continue;
+		// if this proxy was banned by the url's ip... skip it. it is
+		// not a candidate...
+		if ( skipDead ) {
+			long long uip = preq->m_urlIp;
+			long long pip = sp->m_ip;
+			long long h64 = hash64h ( uip , pip );
+			if ( s_proxyBannedTable.isInTable ( &h64 ) ) continue;
+		}
 		// pick the spider proxy used longest ago
 		oldest = sp->m_lastTimeUsedForThisIp;
 		// got a new winner
