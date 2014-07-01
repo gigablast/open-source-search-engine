@@ -97,7 +97,8 @@ static WebPage s_pages[] = {
 	//  "word vectors page",
 	//  sendPageWordVec , 0 ,NULL,NULL,PG_NOAPI},
 
-	{ PAGE_BASIC_SETTINGS, "admin/settings", 0 , "settings",1, 0 , 
+	// use post now for the "site list" which can be big
+	{ PAGE_BASIC_SETTINGS, "admin/settings", 0 , "settings",1, M_POST , 
 	  "Basic settings page.", sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_BASIC_STATUS, "admin/status", 0 , "status",1, 0 , 
 	  "Basic status page.", sendPageBasicStatus  , 0 ,NULL,NULL,0},
@@ -118,7 +119,8 @@ static WebPage s_pages[] = {
 	  //USER_ADMIN | USER_MASTER   , 
 	  "search controls page",
 	  sendPageGeneric  , 0 ,NULL,NULL,0},
-	{ PAGE_SPIDER    , "admin/spider"   , 0 , "spider controls" ,  1 , 0,
+	// use post now for the "site list" which can be big
+	{ PAGE_SPIDER    , "admin/spider"   , 0 , "spider controls" ,1,M_POST,
 	  //USER_ADMIN | USER_MASTER | USER_PROXY   ,
 	  "spider controls page",
 	  sendPageGeneric  , 0 ,NULL,NULL,0},
