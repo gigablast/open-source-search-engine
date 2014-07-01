@@ -894,7 +894,7 @@ void Images::thumbStart_r ( bool amThread ) {
 	makeTrashDir();
 
 	// get thread id
-	long id = getpid();
+	long id = getpidtid();
 
 	// pass the input to the program through this file
 	// rather than a pipe, since popen() seems broken
@@ -1019,6 +1019,7 @@ void Images::thumbStart_r ( bool amThread ) {
 		log( "image: Seek of file, %s, returned invalid size: %ld",
 		     out, m_thumbnailSize );
 		m_stopDownloading = true;
+		close(fhndl);
 		return;
 	}
 
@@ -1029,6 +1030,7 @@ void Images::thumbStart_r ( bool amThread ) {
 		log(LOG_DEBUG,"image: -----------------------" );
 		log(LOG_DEBUG,"image: Diff           : %ld", 
 		     m_imgReplyMaxLen-m_thumbnailSize );
+		close(fhndl);
 		return;
 
 	}
@@ -1036,6 +1038,7 @@ void Images::thumbStart_r ( bool amThread ) {
 	if( lseek( fhndl, 0, SEEK_SET ) < 0 ) {
 		log( "image: Seek couldn't rewind file, %s.", out );
 		m_stopDownloading = true;
+		close(fhndl);
 		return;
 	}
 
