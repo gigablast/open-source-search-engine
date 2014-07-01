@@ -389,7 +389,7 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 // m_bufLen = urlNormCode ( m_buf , MAX_REQ_LEN - 1 , req , i );
 	 // ensure it's big enough to be a valid request
 	 if ( reqLen < 5 ) { 
-		 log("http: got reqlen<5 = %s",req);
+		 log("http: got reqlen %li<5 = %s",reqLen,req);
 		 g_errno = EBADREQUEST; 
 		 return false; 
 	 }

@@ -1235,6 +1235,9 @@ void readSocketWrapper ( int sd , void *state ) {
 			THIS->destroySocket ( s );		
 			return;
 		}
+		// note it
+		log("tcp: established http tunnel for https url of sd=%li",
+		    (long)s->m_sd);
 		// and call ourselves mode 2, the ssl tunnel phase
 		s->m_tunnelMode = 2;
 		// reset these anew for sending/reading the actual http stuff
@@ -1243,7 +1246,10 @@ void readSocketWrapper ( int sd , void *state ) {
 		s->m_totalSent  = 0;
 		s->m_totalRead  = 0;
 		// go back into writing mode to write the actual http
-		// request encrypted and sent to the http proxy
+		// request encrypted and sent to the http proxy.
+		s->m_sockState = ST_WRITING;
+		// that's it
+		return;
 	}
 
 	// set the socket's state to writing now (how about WAITINGTOWRITE?)
@@ -1306,19 +1312,19 @@ long TcpServer::readSocket ( TcpSocket *s ) {
 	// . see HttpServer.cpp::sendDynamicPage()
 	long avail = s->m_readBufSize  - s->m_readOffset - 1 - 4;
 
-	bool useSSL = m_useSSL;
-
 	// but if going through an http proxy...
-	if ( useSSL && s->m_tunnelMode == 1 ) {
-		// read the connection response from proxy. should be like:
-		// "HTTP/1.0 200 Connection established"
-		useSSL = false;
-	}
+	// if ( s->m_tunnelMode >= 1 ) {
+	// 	// read the connection response from proxy. should be like:
+	// 	// "HTTP/1.0 200 Connection established"
+	// }
 
+	if ( g_conf.m_logDebugTcp )
+		logf(LOG_DEBUG,"tcp: readSocket: reading on sd=%li",
+		     (long)s->m_sd);
 
 	// do the read
 	int n;
-	if ( useSSL ) {
+	if ( m_useSSL ) {
 		//long long now1 = gettimeofdayInMilliseconds();
 		n = SSL_read(s->m_ssl, s->m_readBuf + s->m_readOffset, avail );
 		//long long now2 = gettimeofdayInMilliseconds();
@@ -1339,6 +1345,13 @@ long TcpServer::readSocket ( TcpSocket *s ) {
 		log("tcp: Failed to read on socket: %s.", mstrerror(g_errno));
 		return -1;
 	}
+
+	// debug msg
+	if ( g_conf.m_logDebugTcp )
+		logf(LOG_DEBUG,"tcp: readSocket: read %li bytes on sd=%li",
+		     (long)n,(long)s->m_sd);
+
+
 	// debug msg
 	//log(".......... TcpServer read %i bytes on %i\n",n,s->m_sd);
 	// . if we read 0 bytes then that signals the end of the connection
@@ -1354,8 +1367,8 @@ long TcpServer::readSocket ( TcpSocket *s ) {
 	// update last action time stamp
 	s->m_lastActionTime = gettimeofdayInMilliseconds();
 	// debug point
-	if ( s->m_tunnelMode == 1 )
-		log("hey");
+	//if ( s->m_tunnelMode == 1 )
+	//	log("hey");
 	// . if we don't know yet, try to determine the total msg size
 	// . it will try to set s->m_totalToRead
 	// . it will look for the end of the mime on requests and look for
@@ -1581,10 +1594,8 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 	// send this piece
 	int n;
 
-	bool useSSL = m_useSSL;
-
 	// but if going through an http proxy...
-	if ( useSSL && s->m_tunnelMode == 1 ) {
+	if ( s->m_tunnelMode == 1 ) {
 		// find end of the "CONNECT abc.com:443\r\n\r\n" request
 		// which is TUNNEL HEADER for the actual http request
 		// just send the CONNECT request first
@@ -1592,11 +1603,10 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 		long tunnelRequestSize = end - s->m_sendBuf + 4;
 		s->m_totalToSend = tunnelRequestSize;
 		toSend = tunnelRequestSize - s->m_sendOffset;
-		useSSL = false;
 	}
 
 	// if tunnel is established
-	if ( useSSL && s->m_tunnelMode == 2 ) {
+	if ( s->m_tunnelMode == 2 ) {
 		char *end = strstr(s->m_sendBuf,"\r\n\r\n");
 		long tunnelRequestSize = end - s->m_sendBuf + 4;
 		// point to the actual http request, not tunnel connect stuff
@@ -1607,10 +1617,12 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 
 	// debug msg
 	if ( g_conf.m_logDebugTcp )
-		logf(LOG_DEBUG,"tcp: writeSocket: writing %li bytes",toSend);
+		logf(LOG_DEBUG,"tcp: writeSocket: writing %li bytes on %li",
+		     toSend,(long)s->m_sd);
+
  retry10:
 
-	if ( useSSL ) {
+	if ( m_useSSL ) {
 		//long long now1 = gettimeofdayInMilliseconds();
 		n = SSL_write ( s->m_ssl, msg + s->m_sendOffset, toSend );
 		//long long now2 = gettimeofdayInMilliseconds();
@@ -1631,7 +1643,7 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 		// and then calling THIS->writeSocket() and thereby causing
 		// a core... so check g_errno here.
 		// actually for m_useSSL it does not set errno...
-		if ( ! g_errno && useSSL ) g_errno = ESSLERROR;
+		if ( ! g_errno && m_useSSL ) g_errno = ESSLERROR;
 		if ( g_errno != EAGAIN ) return -1;
 		g_errno = 0; 
 		// debug msg
@@ -1759,14 +1771,17 @@ long TcpServer::connectSocket ( TcpSocket *s ) {
 connected:
 	// change state so this doesn't get called again
 	s->m_sockState = ST_WRITING;
+
 	// connect ssl
-	if (m_useSSL) {
+	if ( m_useSSL ) {
 		int r;
 		s->m_ssl = SSL_new(m_ctx);
 		SSL_set_fd(s->m_ssl, s->m_sd);
 		//long long now1 = gettimeofdayInMilliseconds();
 		SSL_set_connect_state(s->m_ssl);
 		r = SSL_connect(s->m_ssl);
+		if ( g_conf.m_logDebugTcp )
+			log("tcp: connecting with ssl");
 		//long long now2 = gettimeofdayInMilliseconds();
 		//long long took = now2 - now1 ;
 		//if ( took >= 2 ) log("tcp: ssl_connect took %llims", took);
@@ -2336,6 +2351,9 @@ void TcpServer::makeCallback ( TcpSocket * s ) {
 // 		statStart=gettimeofdayInMilliseconds();
 	//	g_profiler.startTimer(address, __PRETTY_FUNCTION__);
 	//}
+
+	if ( g_conf.m_logDebugTcp )
+		log("tcp: calling callback for sd=%li",(long)s->m_sd);
 	//g_loop.startBlockedCpuTimer();	
 	s->m_callback ( s->m_state , s );
 	//if ( g_conf.m_profilingEnabled ) {

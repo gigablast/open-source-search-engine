@@ -147,7 +147,17 @@ bool HttpServer::getDoc ( char   *url      ,
 	long defPort = 80;
 	// check for a secured site
 	TcpServer *tcp = &m_tcp;
+	bool urlIsHttps = false;
 	if ( url && strncasecmp(url, "https://", 8) == 0 ) {
+		urlIsHttps = true;
+		defPort = 443;
+	}
+
+	// if going through a proxy do not use the ssl server, it will
+	// handle the encryption from itself to the host website. unfortunately
+	// then the http requests/responses are unencrypted from the
+	// proxy to us here.
+	if ( urlIsHttps && ! proxyIp ) {
 		if (!m_ssltcp.m_ready) {
 			// TODO: set an error here
 			log("https: Trying to get HTTPS site when SSL "
@@ -156,7 +166,6 @@ bool HttpServer::getDoc ( char   *url      ,
 			return true;
 		}
 		tcp = &m_ssltcp;
-		defPort = 443;
 	}
 
 	long pcLen = 0;
@@ -165,11 +174,11 @@ bool HttpServer::getDoc ( char   *url      ,
 	char *req = NULL;
 	long reqSize;
 
-	// if downloading an https url we have to send a 
+	// if downloading an *httpS* url we have to send a 
 	// CONNECT www.abc.com:443 HTTP/1.0\r\n\r\n request first
 	// and get back a connection established reply, before we can
 	// send the actual encrypted http stuff.
-	bool useHttpTunnel = ( proxyIp && tcp == &m_ssltcp );
+	bool useHttpTunnel = ( proxyIp && urlIsHttps );
 
 	long  hostLen ;
 	long  port = defPort;
@@ -203,7 +212,11 @@ bool HttpServer::getDoc ( char   *url      ,
 		if ( useHttpTunnel ) {
 			sb.safePrintf("CONNECT ");
 			sb.safeMemcpy ( host, hostLen );
-			sb.safePrintf(":%li HTTP/1.0\r\n\r\n",port);
+			sb.safePrintf(":%li HTTP/1.0\r\n",port);
+			sb.safePrintf("Host: ");
+			sb.safeMemcpy ( host, hostLen );
+			sb.safePrintf("\r\n");
+			sb.safePrintf("\r\n");
 			sb.nullTerm();
 			need += sb.length();
 		}
