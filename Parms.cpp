@@ -7779,7 +7779,8 @@ void Parms::init ( ) {
 		"Strings without spaces that exceed this "
 		"width are not split.";
 	m->m_cgi   = "sw";
-	m->m_off   = (char *)&cr.m_summaryMaxWidth - x;
+	//m->m_off   = (char *)&cr.m_summaryMaxWidth - x;
+	m->m_off   = (char *)&si.m_summaryMaxWidth - x;
 	m->m_type  = TYPE_LONG;
 	m->m_defOff= (char *)&cr.m_summaryMaxWidth - x;
 	m->m_group = 0;

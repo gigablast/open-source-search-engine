@@ -227,6 +227,7 @@ Msg7::Msg7 () {
 	m_firstTime = true;
 	m_fixMe = false;
 	m_injectCount = 0;
+	m_start = NULL;
 }
 
 Msg7::~Msg7 () {
