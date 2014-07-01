@@ -1238,6 +1238,12 @@ void readSocketWrapper ( int sd , void *state ) {
 		// note it
 		log("tcp: established http tunnel for https url of sd=%li",
 		    (long)s->m_sd);
+		// free current read buffer if we should
+		if ( s->m_readBuf )
+			mfree ( s->m_readBuf , s->m_readBufSize,"tcprbuf");
+		// make it NULL so we think we haven't read a reply and
+		// we won't call makeCallback() from writeSocketWrapper()
+		s->m_readBuf = NULL;
 		// and call ourselves mode 2, the ssl tunnel phase
 		s->m_tunnelMode = 2;
 		// reset these anew for sending/reading the actual http stuff

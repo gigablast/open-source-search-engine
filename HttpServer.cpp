@@ -213,9 +213,9 @@ bool HttpServer::getDoc ( char   *url      ,
 			sb.safePrintf("CONNECT ");
 			sb.safeMemcpy ( host, hostLen );
 			sb.safePrintf(":%li HTTP/1.0\r\n",port);
-			sb.safePrintf("Host: ");
-			sb.safeMemcpy ( host, hostLen );
-			sb.safePrintf("\r\n");
+			// sb.safePrintf("Host: ");
+			// sb.safeMemcpy ( host, hostLen );
+			// sb.safePrintf("\r\n");
 			sb.safePrintf("\r\n");
 			sb.nullTerm();
 			need += sb.length();
