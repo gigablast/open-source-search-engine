@@ -114,8 +114,11 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	char *hptr = getHostFast ( url , &hlen , &port );
 	char *path = getPathFast ( url );
 
-	// use the full url if sending to an http proxy
-	if ( proxyIp ) path = url;
+	// . use the full url if sending to an http proxy
+	// . HACK: do NOT do this if it is httpS because we end up
+	//   using the http tunnel using the CONNECT cmd and the squid proxy
+	//   will just forward/proxy just the entire tcp packets.
+	if ( proxyIp && strncmp(url,"https://",8) != 0 ) path = url;
 
 	char *pathEnd  = NULL;
 	char *postData = NULL;
@@ -342,13 +345,13 @@ bool HttpRequest::set (char *url,long offset,long size,time_t ifModifiedSince,
 	 return true;
  }
 
- // . parse an incoming request
- // . return false and set g_errno on error
- // . CAUTION: we destroy "req" by replacing it's last char with a \0
- // . last char must be \n or \r for it to be a proper request anyway
- bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
-	 // reset number of cgi field terms
-	 reset();
+// . parse an incoming request
+// . return false and set g_errno on error
+// . CAUTION: we destroy "req" by replacing it's last char with a \0
+// . last char must be \n or \r for it to be a proper request anyway
+bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
+	// reset number of cgi field terms
+	reset();
 
 	 if ( ! m_reqBuf.reserve ( origReqLen + 1 ) ) {
 		 log("http: failed to copy request: %s",mstrerror(g_errno));

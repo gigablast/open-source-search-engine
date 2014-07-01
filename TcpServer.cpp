@@ -1330,7 +1330,7 @@ long TcpServer::readSocket ( TcpSocket *s ) {
 
 	// do the read
 	int n;
-	if ( m_useSSL ) {
+	if ( m_useSSL || s->m_tunnelMode == 3 ) {
 		//long long now1 = gettimeofdayInMilliseconds();
 		n = SSL_read(s->m_ssl, s->m_readBuf + s->m_readOffset, avail );
 		//long long now2 = gettimeofdayInMilliseconds();
@@ -1611,8 +1611,24 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 		toSend = tunnelRequestSize - s->m_sendOffset;
 	}
 
-	// if tunnel is established
+	// if tunnel is established, send ssl handshake
 	if ( s->m_tunnelMode == 2 ) {
+		char *end = strstr(s->m_sendBuf,"\r\n\r\n");
+		long tunnelRequestSize = end - s->m_sendBuf + 4;
+		// point to the actual http request, not tunnel connect stuff
+		msg = s->m_sendBuf + tunnelRequestSize;
+		s->m_totalToSend = s->m_sendBufUsed - tunnelRequestSize;
+		toSend = s->m_sendBufUsed - tunnelRequestSize -s->m_sendOffset;
+		// enter write mode after this
+		s->m_tunnelMode = 3;
+		//
+		// use ssl now
+		//
+		int r = sslHandshake ( s );
+		if ( r == -1 ) return -1;
+	}
+
+	if ( s->m_tunnelMode == 3 ) {
 		char *end = strstr(s->m_sendBuf,"\r\n\r\n");
 		long tunnelRequestSize = end - s->m_sendBuf + 4;
 		// point to the actual http request, not tunnel connect stuff
@@ -1621,6 +1637,7 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 		toSend = s->m_sendBufUsed - tunnelRequestSize -s->m_sendOffset;
 	}
 
+
 	// debug msg
 	if ( g_conf.m_logDebugTcp )
 		logf(LOG_DEBUG,"tcp: writeSocket: writing %li bytes on %li",
@@ -1628,7 +1645,7 @@ long TcpServer::writeSocket ( TcpSocket *s ) {
 
  retry10:
 
-	if ( m_useSSL ) {
+	if ( m_useSSL || s->m_tunnelMode == 3 ) {
 		//long long now1 = gettimeofdayInMilliseconds();
 		n = SSL_write ( s->m_ssl, msg + s->m_sendOffset, toSend );
 		//long long now2 = gettimeofdayInMilliseconds();
@@ -1780,36 +1797,8 @@ connected:
 
 	// connect ssl
 	if ( m_useSSL ) {
-		int r;
-		s->m_ssl = SSL_new(m_ctx);
-		SSL_set_fd(s->m_ssl, s->m_sd);
-		//long long now1 = gettimeofdayInMilliseconds();
-		SSL_set_connect_state(s->m_ssl);
-		r = SSL_connect(s->m_ssl);
-		if ( g_conf.m_logDebugTcp )
-			log("tcp: connecting with ssl");
-		//long long now2 = gettimeofdayInMilliseconds();
-		//long long took = now2 - now1 ;
-		//if ( took >= 2 ) log("tcp: ssl_connect took %llims", took);
-		if (!s->m_ssl) {
-			log("ssl: SSL is NULL after connect.");
-			char *xx = NULL; *xx = 0;
-		}
-		if (r <= 0) {
-			int sslError = SSL_get_error(s->m_ssl, r);
-			if ( sslError != SSL_ERROR_WANT_READ &&
-			     sslError != SSL_ERROR_WANT_WRITE &&
-			     sslError != SSL_ERROR_NONE ) {
-				logSSLError(s->m_ssl, r);
-				log("net: ssl: Error on Connect. ip=%s",
-				    iptoa(s->m_ip));
-				g_errno = ESSLERROR;
-				// crap, if we return 1 here then
-				// it will call THIS->writeSocket() which
-				// will return -1 and not set g_errno
-				return -1;
-			}
-		}
+		int r = sslHandshake ( s );
+		if (r == -1 ) return -1;
 	}
 	return 1;
 }
@@ -1877,8 +1866,10 @@ void TcpServer::destroySocket ( TcpSocket *s ) {
 	//fcntl ( sd , F_SETFL , flags );
 	if ( sd == 0 ) log("tcp: closing3 sd of 0");
 
-	// remove all queued signals from Loop for this fd
-	if (m_useSSL && s->m_ssl) {
+	// . remove all queued signals from Loop for this fd
+	// . now that we do http tunneling to the proxy using the non-ssl
+	//   tcp server, we do ssl handshakes on "s" so free it up here...
+	if ( s->m_ssl ) { // m_useSSL && s->m_ssl) {
 		/*
 	retry23:
 		errno = 0;
@@ -2461,3 +2452,46 @@ bool TcpServer::sendChunk ( TcpSocket *s ,
 
 	return true;
 }
+
+
+// returns -1 on error with g_errno set
+int TcpServer::sslHandshake ( TcpSocket *s ) {
+
+	// steal from ssl tcp server i guess in case we are not it
+	s->m_ssl = SSL_new(g_httpServer.m_ssltcp.m_ctx);
+
+	SSL_set_fd(s->m_ssl, s->m_sd);
+
+	//long long now1 = gettimeofdayInMilliseconds();
+	SSL_set_connect_state(s->m_ssl);
+	int r = SSL_connect(s->m_ssl);
+
+	if ( g_conf.m_logDebugTcp )
+		log("tcp: connecting with ssl on sd=%li",(long)s->m_sd);
+	//long long now2 = gettimeofdayInMilliseconds();
+	//long long took = now2 - now1 ;
+	//if ( took >= 2 ) log("tcp: ssl_connect took %llims", took);
+	if (!s->m_ssl) {
+		log("ssl: SSL is NULL after connect.");
+		char *xx = NULL; *xx = 0;
+	}
+	if ( r > 0 ) return r;
+
+	int sslError = SSL_get_error(s->m_ssl, r);
+
+	if ( sslError != SSL_ERROR_WANT_READ &&
+	     sslError != SSL_ERROR_WANT_WRITE &&
+	     sslError != SSL_ERROR_NONE ) {
+		logSSLError(s->m_ssl, r);
+		log("net: ssl: Error on Connect (%li). ip=%s",
+		    (long)sslError,iptoa(s->m_ip));
+		g_errno = ESSLERROR;
+		// crap, if we return 1 here then
+		// it will call THIS->writeSocket() which
+		// will return -1 and not set g_errno
+		return -1;
+	}
+
+	return 0;
+}
+

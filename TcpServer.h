@@ -188,6 +188,8 @@ class TcpServer {
 	bool       closeLeastUsed     ( long maxIdleTime = -1 ) ;
 	bool       setTotalToRead     ( TcpSocket *s ) ;
 
+	int sslHandshake ( TcpSocket *s ) ;
+
 	// . we call this to try to figure out the size of the WHOLE msg
 	//   being read so that we might pre-allocate memory for it
 	// . overriden for different protocols
