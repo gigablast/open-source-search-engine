@@ -1868,6 +1868,7 @@ bool sendPageCrawlbot ( TcpSocket *socket , HttpRequest *hr ) {
 
 	// i guess bail if not there?
 	if ( ! cr ) {
+		log("crawlbot: missing coll rec for coll %s",collName);
 		char *msg = "invalid or missing collection rec";
 		return sendErrorReply2 (socket,fmt,msg);
 	}
