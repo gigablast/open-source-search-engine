@@ -7506,28 +7506,39 @@ long *XmlDoc::getSummaryVector ( ) {
 	Title *ti = getTitle();
 	if ( ! ti || ti == (Title *)-1 ) return (long *)ti;
 	// store title and summary into "buf" so we can call words.set()
-	char buf[5000];
-	char *p = buf;
-	long avail = 5000;
-	long len;
+	//char buf[5000];
+	SafeBuf sb;
+	//char *p = buf;
+	//long avail = 5000;
+	//long len;
 	// put title into there
-	len = ti->m_titleBytes - 1;
-	if ( len > avail ) len = avail - 10;
-	if ( len < 0 ) len = 0;
-	memcpy ( p , ti->m_title , len );
-	p += len;
-	// space separting the title from summary
-	if ( len > 0 ) *p++ = ' ';
+	long tlen = ti->m_titleBytes - 1;
+	//if ( len > avail ) len = avail - 10;
+	if ( tlen < 0 ) tlen = 0;
+
 	// put summary into there
-	len = s->m_summaryLen;
-	if ( len > avail ) len = avail - 10;
-	memcpy ( p , s->m_summary , len );
-	p += len;
+	long slen = s->m_summaryLen;
+
+	// allocate space
+	long need = tlen + 1 + slen + 1;
+	if ( ! sb.reserve ( need ) ) return NULL;
+
+	//memcpy ( p , ti->m_title , len );
+	//p += len;
+	sb.safeMemcpy ( ti->m_title , tlen );
+	// space separting the title from summary
+	if ( tlen > 0 ) sb.pushChar(' ');
+
+	//if ( len > avail ) len = avail - 10;
+	//memcpy ( p , s->m_summary , len );
+	//p += len;
+	sb.safeMemcpy ( s->m_summary , slen );
 	// null terminate it
-	*p = '\0';
+	//*p = '\0';
+	sb.nullTerm();
 	// word-ify it
 	Words words;
-	if ( ! words.set9 ( buf , m_niceness ) ) return NULL;
+	if ( ! words.set9 ( sb.getBufStart() , m_niceness ) ) return NULL;
 	// . now set the dedup vector from big summary and title
 	// . store sample vector in here
 	// . returns size in bytes including null terminating long
@@ -28509,7 +28520,6 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	long nowUTC2 = m_req->m_nowUTC;
 	if ( m_req->m_clockSet ) nowUTC2 = m_req->m_clockSet;
 
-	
 	// . summary vector for deduping
 	// . does not compute anything if we should not! (svSize will be 0)
 	if ( ! reply->ptr_vbuf &&

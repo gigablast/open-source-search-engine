@@ -1011,7 +1011,7 @@ SpiderColl *SpiderCache::getSpiderCollIffNonNull ( collnum_t collnum ) {
 	return cr->m_spiderColl;
 }
 
-bool tryToDeleteSpiderColl ( SpiderColl *sc ) {
+bool tryToDeleteSpiderColl ( SpiderColl *sc , char *msg ) {
 	// if not being deleted return false
 	if ( ! sc->m_deleteMyself ) return false;
 	// otherwise always return true
@@ -1036,11 +1036,21 @@ bool tryToDeleteSpiderColl ( SpiderColl *sc ) {
 		    (long)sc,(long)sc->m_collnum);
 		return true;
 	}
+	// if ( sc->m_gettingList1 ) {
+	// 	log("spider: deleting sc=0x%lx for collnum=%li waiting5",
+	// 	    (long)sc,(long)sc->m_collnum);
+	// 	return true;
+	// }
+	// if ( sc->m_gettingList2 ) {
+	// 	log("spider: deleting sc=0x%lx for collnum=%li waiting6",
+	// 	    (long)sc,(long)sc->m_collnum);
+	// 	return true;
+	// }
 	// there's still a core of someone trying to write to someting
 	// in "sc" so we have to try to fix that. somewhere in xmldoc.cpp
 	// or spider.cpp. everyone should get sc from cr everytime i'd think
-	log("spider: deleting sc=0x%lx for collnum=%li",
-	    (long)sc,(long)sc->m_collnum);
+	log("spider: deleting sc=0x%lx for collnum=%li (msg=%s)",
+	    (long)sc,(long)sc->m_collnum,msg);
 	// . make sure nobody has it
 	// . cr might be NULL because Collectiondb.cpp::deleteRec2() might
 	//   have nuked it
@@ -1110,7 +1120,7 @@ SpiderColl *SpiderCache::getSpiderColl ( collnum_t collnum ) {
 	// set this
 	sc->m_cr = cr;
 	// did crawlbottesting delete it right away?
-	if ( tryToDeleteSpiderColl( sc ) ) return NULL;
+	if ( tryToDeleteSpiderColl( sc ,"1") ) return NULL;
 	// sanity check
 	if ( ! cr ) { char *xx=NULL;*xx=0; }
 	// note it!
@@ -2667,7 +2677,7 @@ static void gotSpiderdbListWrapper2( void *state , RdbList *list,Msg5 *msg5) {
 	// did our collection rec get deleted? since we were doing a read
 	// the SpiderColl will have been preserved in that case but its
 	// m_deleteMyself flag will have been set.
-	if ( tryToDeleteSpiderColl ( THIS ) ) return;
+	if ( tryToDeleteSpiderColl ( THIS ,"2") ) return;
 
 	THIS->populateWaitingTreeFromSpiderdb ( true );
 }
@@ -3172,7 +3182,7 @@ static void doledWrapper ( void *state ) {
 	THIS->m_isPopulating = false;
 
 	// did collection get nuked while we were waiting for msg1 reply?
-	if ( tryToDeleteSpiderColl ( THIS ) ) return;
+	if ( tryToDeleteSpiderColl ( THIS ,"3") ) return;
 
 	// . we added a rec to doledb for the firstIp in m_waitingTreeKey, so
 	//   now go to the next node in the wait tree.
@@ -3323,7 +3333,7 @@ bool SpiderColl::evalIpLoop ( ) {
 	// did our collection rec get deleted? since we were doing a read
 	// the SpiderColl will have been preserved in that case but its
 	// m_deleteMyself flag will have been set.
-	if ( tryToDeleteSpiderColl ( this ) ) return false;
+	if ( tryToDeleteSpiderColl ( this ,"4") ) return false;
 
 	// if first time here, let's do a read first
 	if ( ! m_didRead ) {
@@ -3342,7 +3352,7 @@ bool SpiderColl::evalIpLoop ( ) {
 	// did our collection rec get deleted? since we were doing a read
 	// the SpiderColl will have been preserved in that case but its
 	// m_deleteMyself flag will have been set.
-	if ( tryToDeleteSpiderColl ( this ) )
+	if ( tryToDeleteSpiderColl ( this ,"5") )
 		// pretend to block since we got deleted!!!
 		return false;
 
@@ -11913,7 +11923,9 @@ static long s_requests = 0;
 static long s_replies  = 0;
 static long s_validReplies  = 0;
 static bool s_inUse = false;
-static long s_updateRoundNum = 0;
+// we initialize CollectionRec::m_updateRoundNum to 0 so make this 1
+static long s_updateRoundNum = 1;
+
 // . just call this once per second for all collections
 // . figure out how to backoff on collections that don't need it so much
 // . ask every host for their crawl infos for each collection rec
@@ -11932,8 +11944,16 @@ void updateAllCrawlInfosSleepWrapper ( int fd , void *state ) {
 
 	if ( s_inUse ) return;
 
-	char *request = "";
-	long requestSize = 0;
+	// "i" means to get incremental updates since last round
+	// "f" means to get all stats
+	char *request = "i";
+	long requestSize = 1;
+
+	static bool s_firstCall = true;
+	if ( s_firstCall ) {
+		s_firstCall = false;
+		request = "f";
+	}
 
 	s_inUse = true;
 
@@ -12040,8 +12060,9 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// reply is error? then use the last known good reply we had from him
 	// assuming udp reply timed out. empty buf just means no update now!
 	if ( ! slot->m_readBuf && g_errno ) {
-		log("spider: got crawlinfo reply error: %s",
-		    mstrerror(g_errno));
+		log("spider: got crawlinfo reply error from host %li: %s. "
+		    "spidering will be paused.",
+		    h->m_hostId,mstrerror(g_errno));
 		// just clear it
 		g_errno = 0;
 		// if never had any reply... can't be valid then
@@ -12090,6 +12111,7 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 	// just not allow spidering if a host is dead 
 
 	// the sendbuf should never be freed! it points into collrec
+	// it is 'i' or 'f' right now
 	slot->m_sendBufAlloc = NULL;
 
 	/////
@@ -12118,6 +12140,8 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		if ( ! cr->m_crawlInfoBuf.getBufStart() ) {
 			long need = sizeof(CrawlInfo) * g_hostdb.m_numHosts;
 			cr->m_crawlInfoBuf.reserve(need);
+			// in case one was udp server timed out or something
+			cr->m_crawlInfoBuf.zeroOut();
 		}
 
 		CrawlInfo *cia = (CrawlInfo *)cr->m_crawlInfoBuf.getBufStart();
@@ -12152,6 +12176,12 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 		// might as well stop the loop here since we are
 		// not updating our crawlinfo states.
 		//break;
+	}
+	else {
+		if ( ! s_countsAreValid )
+			log("spider: got all crawlinfo replies. all shards "
+			    "up. spidering back on.");
+		s_countsAreValid = true;
 	}
 
 
@@ -12188,6 +12218,12 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 			// add each hosts counts into the global accumulators
 			for ( long j = 0 ; j < NUMCRAWLSTATS ; j++ ) {
 				*gs = *gs + *ss;
+				// crazy stat?
+				if ( *ss > 1000000000LL ||
+				     *ss < -1000000000LL ) 
+					log("spider: crazy stats %lli "
+					    "from host #%li coll=%s",
+					    *ss,k,cr->m_coll);
 				gs++;
 				ss++;
 			}
@@ -12364,7 +12400,9 @@ void gotCrawlInfoReply ( void *state , UdpSlot *slot ) {
 void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 	//char *request = slot->m_readBuf;
 	// just a single collnum
-	if ( slot->m_readBufSize != 0 ) { char *xx=NULL;*xx=0;}
+	if ( slot->m_readBufSize != 1 ) { char *xx=NULL;*xx=0;}
+
+	char *req = slot->m_readBuf;
 
 	//if ( ! isClockSynced() ) {
 	//}
@@ -12477,12 +12515,26 @@ void handleRequestc1 ( UdpSlot *slot , long niceness ) {
 
 		long hostId = slot->m_host->m_hostId;
 
+		bool sendIt = false;
+
 		// . if not sent to host yet, send
-		// . this will be true on startup
+		// . this will be true when WE startup, not them...
 		// . but once we send it we set flag to false
 		// . and if we update anything we send we set flag to true
 		//   again for all hosts
-		if ( ! cr->shouldSendLocalCrawlInfoToHost(hostId) ) continue;
+		if ( cr->shouldSendLocalCrawlInfoToHost(hostId) ) 
+			sendIt = true;
+
+		// they can override. if host crashed and came back up
+		// it might not have saved the global crawl info for a coll
+		// perhaps, at the very least it does not have
+		// the correct CollectionRec::m_crawlInfoBuf because we do
+		// not save the array of crawlinfos for each host for
+		// all collections.
+		if ( req && req[0] == 'f' )
+			sendIt = true;
+
+		if ( ! sendIt ) continue;
 
 		// note it
 		// log("spider: sending ci for coll %s to host %li",

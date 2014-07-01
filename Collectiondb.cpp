@@ -829,7 +829,7 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 		sc->m_cr = NULL;
 		// this will put it on "death row" so it will be deleted
 		// once Msg5::m_waitingForList/Merge is NULL
-		tryToDeleteSpiderColl ( sc );
+		tryToDeleteSpiderColl ( sc ,"10");
 		//mdelete ( sc, sizeof(SpiderColl),"nukecr2");
 		//delete ( sc );
 		cr->m_spiderColl = NULL;
@@ -837,7 +837,7 @@ bool Collectiondb::deleteRec2 ( collnum_t collnum ) { //, WaitEntry *we ) {
 
 
 	// the bulk urls file too i guess
-	if ( cr->m_isCustomCrawl == 2 ) {
+	if ( cr->m_isCustomCrawl == 2 && g_hostdb.m_hostId == 0 ) {
 		SafeBuf bu;
 		bu.safePrintf("%sbulkurls-%s.txt", 
 			      g_hostdb.m_dir , cr->m_coll );
@@ -1123,7 +1123,7 @@ bool Collectiondb::resetColl2( collnum_t oldCollnum,
 		//sc->reset();
 		// this will put it on "death row" so it will be deleted
 		// once Msg5::m_waitingForList/Merge is NULL
-		tryToDeleteSpiderColl ( sc );
+		tryToDeleteSpiderColl ( sc,"11" );
 		//mdelete ( sc, sizeof(SpiderColl),"nukecr2");
 		//delete ( sc );
 		cr->m_spiderColl = NULL;
@@ -1526,6 +1526,7 @@ static CollectionRec g_default;
 CollectionRec::CollectionRec() {
 	m_collnum = -1;
 	m_coll[0] = '\0';
+	m_updateRoundNum = 0;
 	//m_numSearchPwds = 0;
 	//m_numBanIps     = 0;
 	//m_numSearchIps  = 0;
@@ -1655,7 +1656,7 @@ void CollectionRec::reset() {
 	sc->m_deleteMyself = true;
 
 	// if not currently being accessed nuke it now
-	tryToDeleteSpiderColl ( sc );
+	tryToDeleteSpiderColl ( sc ,"12");
 
 	// if ( ! sc->m_msg5.m_waitingForList &&
 	//      ! sc->m_msg5b.m_waitingForList &&

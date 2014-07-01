@@ -208,7 +208,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	// set this to the collrec of the first valid collnum we encounter
 	CollectionRec *cr = NULL;
 	// now convert list of space-separated coll names into list of collnums
-	char *p = coll;
+	char *p = r->getString("c",NULL);
 	// if no collection list was specified look for "token=" and
 	// use those to make collections. hack for diffbot.
 	char *token = r->getString("token",NULL);
@@ -268,6 +268,19 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		// now add it's collection # to m_collnumBuf if there
 		if ( *p ) goto loop;
 	}
+
+	// use default collection if none provided
+	if ( ! p && ! token && m_collnumBuf.length() <= 0 ) {
+		// get default collection rec
+		CollectionRec *dr = g_collectiondb.getRec (coll);
+		// add to our list
+		if ( dr &&
+		     !m_collnumBuf.safeMemcpy(&dr->m_collnum,
+					      sizeof(collnum_t)))
+			return false;
+	}
+		
+
 
 	/////
 	//
