@@ -1325,7 +1325,11 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 			break;
 
 		// if we have printed enough summaries then do not launch
-		// any more, wait for them to come back in
+		// any more, wait for them to come back in.
+		/// this is causing problems because we have a bunch of
+		// m_printi < m_msg3a.m_numDocIds checks that kinda expect
+		// us to get all summaries for every docid. but when we
+		// do federated search we can get a ton of docids.
 		if ( m_printi >= m_docsToGetVisible ) {
 			logf(LOG_DEBUG,"query: got %li >= %li "
 			     "summaries. done. "
@@ -1334,6 +1338,15 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 			     , m_printi
 			     , m_docsToGetVisible
 			     , m_numRequests-m_numReplies);
+			// wait for all msg20 replies to come in
+			if ( m_numRequests != m_numReplies ) break;
+			// then let's hack fix this then so we can call
+			// printSearchResultsTail()
+			m_printi   = m_msg3a.m_numDocIds;
+			// set these to max so they do not launch another
+			// summary request, just in case, below
+			m_numRequests = m_msg3a.m_numDocIds;
+			m_numReplies  = m_msg3a.m_numDocIds;
 			break;
 		}
 
@@ -1947,7 +1960,10 @@ bool Msg40::gotSummary ( ) {
 		if ( ! launchMsg20s ( true ) ) return false; 
 		// it won't launch now if we are bottlnecked waiting for
 		// m_printi's summary to come in
-		if ( m_si->m_streamResults ) return false;
+		if ( m_si->m_streamResults )
+			// it won't launch any if we printed out enough as well
+			// and it printed "waiting on remaining 0 to return"
+			goto complete;
 		// maybe some were cached?
 		//goto refilter;
 		// it returned true, so m_numRequests == m_numReplies and
@@ -1960,6 +1976,8 @@ bool Msg40::gotSummary ( ) {
 		goto doAgain;
 		//char *xx=NULL; *xx=0;
 	}
+
+ complete:
 
 	// . ok, now i wait for everybody.
 	// . TODO: evaluate if this hurts us
