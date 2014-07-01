@@ -172,6 +172,7 @@ case    ENOTOKEN: return "Missing token";
 case    EBADIMG: return "Bad image";
 case	EREINDEXREDIR: return "Not parent url to reindex";
 case	ETOOMANYPARENS: return "Too many nested parentheses in boolean query";
+case	EPROXYSSLCONNECTFAILED: return "SSL tunnel through HTTP proxy failed";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );

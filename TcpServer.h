@@ -126,7 +126,8 @@ class TcpServer {
 		       void  (* callback )( void *state , TcpSocket *s ) ,
 		       long   timeout   , // 60*1000 
 		       long   maxTextDocLen ,  // -1 for no max
-		       long   maxOtherDocLen );
+		       long   maxOtherDocLen ,
+		       bool   useHttpTunnel = false );
 
 	// . send request over an available (pre-connected) TcpSocket
 	// . destroys the socket on error

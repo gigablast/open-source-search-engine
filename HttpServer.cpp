@@ -165,6 +165,19 @@ bool HttpServer::getDoc ( char   *url      ,
 	char *req = NULL;
 	long reqSize;
 
+	// if downloading an https url we have to send a 
+	// CONNECT www.abc.com:443 HTTP/1.0\r\n\r\n request first
+	// and get back a connection established reply, before we can
+	// send the actual encrypted http stuff.
+	bool useHttpTunnel = ( proxyIp && tcp == &m_ssltcp );
+
+	long  hostLen ;
+	long  port = defPort;
+	char *host = NULL;
+	if ( ! ip || useHttpTunnel ) 
+		host = getHostFast ( url , &hostLen , &port );
+
+
 	// this returns false and sets g_errno on error
 	if ( ! fullRequest ) {
 		if ( ! r.set ( url , offset , size , ifModifiedSince ,
@@ -176,13 +189,39 @@ bool HttpServer::getDoc ( char   *url      ,
 			       additionalHeader , pcLen , proxyIp ) ) 
 			return true;
 		reqSize = r.getRequestLen();
-		req = (char *) mmalloc( reqSize + pcLen ,"HttpServer");
-		if ( req ) 
-			memcpy ( req , r.getRequest() , reqSize );
-		if ( req && pcLen ) {
-			memcpy ( req + reqSize, postContent , pcLen );
-			reqSize += pcLen;
+		long need = reqSize + pcLen;
+		// if we are requesting an HTTPS url through a proxy then
+		// this will prepend a
+		// CONNECT www.abc.com:443 HTTP/1.0\r\n\r\n
+		// CONNECT www.gigablast.com:443 HTTP/1.0\r\n\r\n
+		// to the actual mime and we have to detect that
+		// below and just send that to the proxy. when the proxy
+		// sends back "HTTP/1.0 200 Connection established\r\n\r\n"
+		// we use ssl_write in tcpserver.cpp to send the original
+		// encrypted http request.
+		SafeBuf sb;
+		if ( useHttpTunnel ) {
+			sb.safePrintf("CONNECT ");
+			sb.safeMemcpy ( host, hostLen );
+			sb.safePrintf(":%li HTTP/1.0\r\n\r\n",port);
+			sb.nullTerm();
+			need += sb.length();
 		}
+		req = (char *) mmalloc( need ,"HttpServer");
+		char *p = req;
+		if ( req && sb.length() ) {
+			memcpy ( p , sb.getBufStart() , sb.length() );
+			p += sb.length();
+		}
+		if ( req ) {
+			memcpy ( p , r.getRequest() , reqSize );
+			p += reqSize;
+		}
+		if ( req && pcLen ) {
+			memcpy ( p , postContent , pcLen );
+			p += pcLen;
+		}
+		reqSize = p - req;
 	}
 	else {
 		// does not contain \0 i guess
@@ -194,11 +233,6 @@ bool HttpServer::getDoc ( char   *url      ,
 	// . return true and set g_errno on error
 	if ( ! req ) return true;
 
-	long  hostLen ;
-	long  port = defPort;
-	char *host = NULL;
-	if ( ! ip ) host = getHostFast ( url , &hostLen , &port );
-	
 
 	//if ( g_conf.m_logDebugSpider )
 	//	log("spider: httprequest = %s", req );
@@ -206,6 +240,7 @@ bool HttpServer::getDoc ( char   *url      ,
 
 	// do we have an ip to send to? assume not
 	if ( proxyIp ) { ip = proxyIp ; port = proxyPort; }
+
 	// special NULL case
 	if ( !state || !callback ) {
 		// . send it away
@@ -266,9 +301,11 @@ bool HttpServer::getDoc ( char   *url      ,
 	// debug
 	log(LOG_DEBUG,"http: Getting doc with ip=%s state=%lu url=%s.",
 	    iptoa(ip),(unsigned long)state,url);
+
 	// . send it away
 	// . callback will be called on completion of transaction
 	// . be sure to free "req/reqSize" in callback() somewhere
+	// . if using an http proxy, then ip should be valid here...
 	if ( ip ) {
 		if ( ! tcp->sendMsg (  ip             ,
 				       port           ,
@@ -280,7 +317,8 @@ bool HttpServer::getDoc ( char   *url      ,
 				       gotDocWrapper  ,
 				       timeout        ,
 				       maxTextDocLen  ,
-				       maxOtherDocLen ) )
+				       maxOtherDocLen ,
+				       useHttpTunnel  ) )
 			return false;
 		// otherwise we didn't block
 		states[n]    = NULL;
@@ -1902,6 +1940,14 @@ long getMsgSize ( char *buf, long bufSize, TcpSocket *s ) {
 		     bufSize);
 		return bufSize;
 	}
+
+	// if it is "HTTP/1.0 200 Connetion established\r\n\r\n" we are done
+	// it is just a mime reply and no content. then we need to send
+	// the https request, encrypted, to the proxy... because our tunnel
+	// is now established
+	if ( s->m_tunnelMode == 1 )
+		return mimeSize;
+
 	// . don't read more than this many bytes!
 	// . this may change if we detect a Content-Type: field in the MIME
 	long max = s->m_maxTextDocLen + 10*1024;

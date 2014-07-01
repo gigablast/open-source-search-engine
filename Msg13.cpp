@@ -1049,7 +1049,12 @@ void gotHttpReply9 ( void *state , TcpSocket *ts ) {
 	// if we got a 403 Forbidden or an empty reply
 	// then assume the proxy ip got banned so try another.
 	const char *banMsg = NULL;
-	bool banned = ipWasBanned ( ts , &banMsg );
+	bool banned = false;
+	if ( ! g_errno ) 
+		banned = ipWasBanned ( ts , &banMsg );
+
+	if ( g_errno )
+		log("msg13: got error from proxy: %s",mstrerror(g_errno));
 
 	// inc this every time we try
 	r->m_proxyTries++;
@@ -1714,6 +1719,8 @@ void gotHttpReply2 ( void *state ,
 			     // is corrupt... we don't even request
 			     // gzipped http replies but they send it anyway
 			     err != ECORRUPTHTTPGZIP &&
+			     // for proxied https urls
+			     err != EPROXYSSLCONNECTFAILED &&
 			     // now httpserver::gotDoc's call to
 			     // unzipReply() can also set g_errno to
 			     // EBADMIME
@@ -11543,16 +11550,16 @@ static char *s_agentList[] = {
 
 char *getRandUserAgent ( long urlIp , long proxyIp , long proxyPort ) {
 	// it is a function of the website ip and the proxy ip
-	// unsigned long x = (unsigned long)urlIp;
-	// x = hash32h ( x , proxyIp );
-	// x = hash32h ( x , proxyPort );
+	unsigned long x = (unsigned long)urlIp;
+	x = hash32h ( x , proxyIp );
+	x = hash32h ( x , proxyPort );
 	// // get count
 	long numAgents = sizeof(s_agentList)/sizeof(char *);
 	// // select from the list then
-	// long n = x % numAgents;
+	long n = x % numAgents;
 
 	// just make it random all the time
-	long n = rand() % numAgents;
+	//long n = rand() % numAgents;
 
 	//log("urlip=%lu proxyip=%lu proxyport=%lu n=%li",
 	//    urlIp,proxyIp,proxyPort,n);
