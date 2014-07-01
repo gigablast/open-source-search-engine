@@ -7311,7 +7311,7 @@ bool PosdbTable::makeDocIdVoteBufForBoolQuery_r ( ) {
 				// then only 6 byte keys would follow from the
 				// same docid, so skip those as well
 			subloop:
-				if((((char *)p)[0])&0x04){
+				if( p<pend && (((char *)p)[0])&0x04){
 					// check each posdb key for compliance
 					// for gbmin:offprice:190 bool terms
 					if ( isRangeTerm && isInRange(p,qt) )
