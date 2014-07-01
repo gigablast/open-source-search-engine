@@ -1818,12 +1818,9 @@ bool Msg40::gotSummary ( ) {
 			continue;
 		}
 
-		log("msg40: printing #%li (%lu)(d=%lli)",
-		    m_printi,mr->m_contentHash32,mr->m_docId);
-
 		// . ok, we got it, so print it and stream it
 		// . this might set m_hadPrintError to true
-		printSearchResult9 ( m_printi , &m_numPrintedSoFar );
+		printSearchResult9 ( m_printi , &m_numPrintedSoFar , mr );
 
 		//m_numPrintedSoFar++;
 		//log("msg40: printedsofar=%li",m_numPrintedSoFar);
@@ -5386,7 +5383,8 @@ bool Msg40::addFacts ( HashTableX *queryTable,
 
 
 // . printSearchResult into "sb"
-bool Msg40::printSearchResult9 ( long ix , long *numPrintedSoFar ) {
+bool Msg40::printSearchResult9 ( long ix , long *numPrintedSoFar ,
+				 Msg20Reply *mr ) {
 
 	// . we stream results right onto the socket
 	// . useful for thousands of results... and saving mem
@@ -5406,6 +5404,9 @@ bool Msg40::printSearchResult9 ( long ix , long *numPrintedSoFar ) {
 	if ( m_numPrinted >= msg40->getDocsWanted() ) {
 		// i guess we can print "Next 10" link
 		m_moreToCome = true;
+		// hide if above limit
+		log("msg40: hiding above docsWanted #%li (%lu)(d=%lli)",
+		    m_printi,mr->m_contentHash32,mr->m_docId);
 		// do not exceed what the user asked for
 		return true;
 	}
@@ -5422,6 +5423,10 @@ bool Msg40::printSearchResult9 ( long ix , long *numPrintedSoFar ) {
 		log("query: had error: %s",mstrerror(g_errno));
 		m_hadPrintError = true;
 	}
+
+
+	log("msg40: printing #%li (%lu)(d=%lli)",
+	    m_printi,mr->m_contentHash32,mr->m_docId);
 
 	// count it
 	m_numPrinted++;
