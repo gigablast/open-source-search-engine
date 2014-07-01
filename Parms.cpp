@@ -7780,9 +7780,9 @@ void Parms::init ( ) {
 		"width are not split.";
 	m->m_cgi   = "sw";
 	//m->m_off   = (char *)&cr.m_summaryMaxWidth - x;
-	m->m_off   = (char *)&si.m_summaryMaxWidth - x;
-	m->m_type  = TYPE_LONG;
+	m->m_off   = (char *)&si.m_summaryMaxWidth - y;
 	m->m_defOff= (char *)&cr.m_summaryMaxWidth - x;
+	m->m_type  = TYPE_LONG;
 	m->m_group = 0;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_NONE;

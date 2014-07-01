@@ -208,7 +208,8 @@ class Msg40 {
 
 	long m_lastHeartbeat;
 
-	bool printSearchResult9 ( long ix , long *numPrintedSoFar ) ;
+	bool printSearchResult9 ( long ix , long *numPrintedSoFar ,
+				  class Msg20Reply *mr ) ;
 	HashTableX m_columnTable;
 	bool printCSVHeaderRow ( class SafeBuf *sb );
 	bool printJsonItemInCSV ( class State0 *st , long ix );
