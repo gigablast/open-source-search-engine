@@ -514,6 +514,9 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	if ( ! publicPage && ! isAdmin )
 		return sendPageLogin ( s , r );
 
+	if ( page == PAGE_CRAWLBOT && ! isAdmin )
+		log("pages: accessing a crawlbot page without admin privs. "
+		    "no parms can be changed.");
 
 	/*
 	// is request coming from a local ip?
