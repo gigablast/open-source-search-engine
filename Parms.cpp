@@ -13914,7 +13914,7 @@ void Parms::init ( ) {
 	m->m_title = "FORCE DELETE";
 	m->m_desc  = "Check this checkbox to delete the results, not just "
 		"reindex them.";
-	m->m_cgi   = "delete";
+	m->m_cgi   = "fdel";
 	m->m_off   = (char *)&gr.m_forceDel - (char *)&gr;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_page  = PAGE_REINDEX;
