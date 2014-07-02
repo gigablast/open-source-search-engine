@@ -2281,6 +2281,9 @@ bool XmlDoc::indexDoc ( ) {
 	//
 	////
 	SpiderReply *nsr = getFakeSpiderReply (  );
+	// this can be NULL and g_errno set to ENOCOLLREC or something
+	if ( ! nsr )
+		return true;
 
 	//SafeBuf metaList;
 	if ( ! m_metaList2.pushChar(RDB_SPIDERDB) )
