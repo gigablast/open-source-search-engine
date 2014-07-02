@@ -804,6 +804,14 @@ void StateCD::printSpiderdbList ( RdbList *list,SafeBuf *sb,char **lastKeyPtr){
 		if ( srep && srep->m_hadDiffbotError )
 			msg = "Diffbot processing error";
 
+		// indicate specific diffbot error if we have it
+		if ( srep && 
+		     srep->m_hadDiffbotError && 
+		     srep->m_errCode &&
+		     // stick with "diffbot processing error" for these...
+		     srep->m_errCode != EDIFFBOTINTERNALERROR )
+			msg = mstrerror(srep->m_errCode);
+
 		// matching url filter, print out the expression
 		long ufn ;
 		ufn = ::getUrlFilterNum(sreq,

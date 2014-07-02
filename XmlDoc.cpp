@@ -3274,17 +3274,23 @@ long *XmlDoc::getIndexCode2 ( ) {
 		return &m_indexCode;
 	}
 
-	// if using diffbot and the diffbot reply had a time out error
-	// or otherwise... diffbot failure demands a re-try always i guess.
-	// put this above getSpiderPriority() call otherwise we end up in
-	// a recursive loop with getIndexCode() and getNewSpiderReply()
-	SafeBuf *dbr = getDiffbotReply();
-	if ( ! dbr || dbr == (void *)-1 ) return (long *)dbr;
-	if ( m_diffbotReplyValid && m_diffbotReplyError ) {
-		m_indexCode= m_diffbotReplyError;
-		m_indexCodeValid = true;
-		return &m_indexCode;
-	}
+	// . if using diffbot and the diffbot reply had a time out error
+	//   or otherwise... diffbot failure demands a re-try always i guess.
+	//   put this above getSpiderPriority() call otherwise we end up in
+	//   a recursive loop with getIndexCode() and getNewSpiderReply()
+	// . NO, don't do this anymore, however, if there is a diffbot
+	//   reply error then record it in the spider reply BUT only if it is
+	//   a diffbot reply error that warrants a retry. for instance,
+	//   EDIFFBOTCOULDNOTDOWNLOAD happens when diffbot got a 404 or 500
+	//   error trying to download the page so it probably should not
+	//   retry. but EDIFFBOTREQUESTTIMEDOUT should retry.
+	// SafeBuf *dbr = getDiffbotReply();
+	// if ( ! dbr || dbr == (void *)-1 ) return (long *)dbr;
+	// if ( m_diffbotReplyValid && m_diffbotReplyError ) {
+	// 	m_indexCode= m_diffbotReplyError;
+	// 	m_indexCodeValid = true;
+	// 	return &m_indexCode;
+	// }
 
 	// no error otherwise
 	m_indexCode      = 0;
@@ -13489,7 +13495,35 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 			    THIS->m_diffbotUrl.getBufStart(),
 			    page 
 			    );
-			THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
+			// try to get the right error code
+			char *err = strstr(page,"\"error\":\"");
+			if ( err ) err += 9;
+			long code = EDIFFBOTUNKNOWNERROR;
+			if ( err && !strncmp(err,"Unable to apply rules",21))
+				code = EDIFFBOTUNABLETOAPPLYRULES;
+			// like .pdf pages get this error
+			if ( err && !strncmp(err,"Could not parse page",20))
+				code = EDIFFBOTCOULDNOTPARSE;
+			// if it is 404... 502, etc. any http status code
+			if ( err && !strncmp(err,"Could not download page",23))
+				code = EDIFFBOTCOULDNOTDOWNLOAD;
+			// custom api does not apply to the url
+			if ( err && !strncmp(err,"Invalid API",11))
+				code = EDIFFBOTINVALIDAPI;
+			if ( err && !strncmp(err,"Version required",16))
+				code = EDIFFBOTVERSIONREQ;
+			if ( err && !strncmp(err,"Empty content",13))
+				code = EDIFFBOTEMPTYCONTENT;
+			if ( err && !strncmp(err,"No content received",19))
+				code = EDIFFBOTEMPTYCONTENT;
+			if ( err && !strncmp(err,"Request timed",13))
+				code = EDIFFBOTREQUESTTIMEDOUT;
+			// error processing url
+			if ( err && !strncmp(err,"Error processing",16))
+				code = EDIFFBOTURLPROCESSERROR;
+			if ( err && !strncmp(err,"Your token has exp",18))
+				code = EDIFFBOTTOKENEXPIRED;
+			THIS->m_diffbotReplyError = code;
 		}
 		// a hack for detecting if token is expired
 		if ( ! ttt && cr && strstr ( page , ":429}" ) ) {
@@ -23160,6 +23194,10 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 		m_srep.m_hadDiffbotError = true;
 	else
 		m_srep.m_hadDiffbotError = false;
+
+	// if we only had an error code in the diffbot reply, record that
+	if ( ! m_indexCode && m_diffbotReplyError )
+		m_srep.m_errCode = m_diffbotReplyError;
 
 	// sanity. if being called directly from indexDoc() because of
 	// an error like out of memory, then we do not know if it is

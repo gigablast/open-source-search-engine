@@ -172,6 +172,16 @@ case    ENOTOKEN: return "Missing token";
 case    EBADIMG: return "Bad image";
 case	EREINDEXREDIR: return "Not parent url to reindex";
 case	ETOOMANYPARENS: return "Too many nested parentheses in boolean query";
+case EDIFFBOTUNABLETOAPPLYRULES: return "Diffbot unable to apply rules";
+case EDIFFBOTCOULDNOTPARSE: return "Diffbot could not parse page";
+case EDIFFBOTCOULDNOTDOWNLOAD: return "Diffbot could not download page";
+case EDIFFBOTINVALIDAPI: return "Diffbot invalid API";
+case EDIFFBOTVERSIONREQ: return "Diffbot version required";
+case EDIFFBOTEMPTYCONTENT: return "Diffbot empty content";
+case EDIFFBOTREQUESTTIMEDOUT: return "Diffbot request timed out";
+case EDIFFBOTURLPROCESSERROR: return "Diffbot error processing url";
+case EDIFFBOTTOKENEXPIRED: return "Diffbot token expired";
+case EDIFFBOTUNKNOWNERROR: return "Diffbot unknown error";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );
