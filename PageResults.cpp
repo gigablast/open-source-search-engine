@@ -1009,6 +1009,11 @@ bool gotResults ( void *state ) {
 
 	// if already printed from Msg40.cpp, bail out now
 	if ( si->m_streamResults ) {
+		// this will be our final send
+		if ( st->m_socket->m_streamingMode ) {
+			log("res: socket still in streaming mode. wtf?");
+			st->m_socket->m_streamingMode = false;
+		}
 		log("msg40: done streaming. nuking state.");
 		mdelete(st, sizeof(State0), "PageResults2");
 		delete st;
