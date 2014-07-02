@@ -1330,30 +1330,51 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		// m_printi < m_msg3a.m_numDocIds checks that kinda expect
 		// us to get all summaries for every docid. but when we
 		// do federated search we can get a ton of docids.
-		if ( m_printi >= m_docsToGetVisible ) {
-			logf(LOG_DEBUG,"query: got %li >= %li "
-			     "summaries. done. "
-			     "waiting on remaining "
-			     "%li to return."
-			     , m_printi
-			     , m_docsToGetVisible
-			     , m_numRequests-m_numReplies);
-			// wait for all msg20 replies to come in
-			if ( m_numRequests != m_numReplies ) break;
-			// then let's hack fix this then so we can call
-			// printSearchResultsTail()
-			m_printi   = m_msg3a.m_numDocIds;
-			// set these to max so they do not launch another
-			// summary request, just in case, below
-			m_numRequests = m_msg3a.m_numDocIds;
-			m_numReplies  = m_msg3a.m_numDocIds;
-			break;
-		}
+		// if ( m_printi >= m_docsToGetVisible ) {
+		// 	logf(LOG_DEBUG,"query: got %li >= %li "
+		// 	     "summaries. done. "
+		// 	     "waiting on remaining "
+		// 	     "%li to return."
+		// 	     , m_printi
+		// 	     , m_docsToGetVisible
+		// 	     , m_numRequests-m_numReplies);
+		// 	// wait for all msg20 replies to come in
+		// 	if ( m_numRequests != m_numReplies ) break;
+		// 	// then let's hack fix this then so we can call
+		// 	// printSearchResultsTail()
+		// 	m_printi   = m_msg3a.m_numDocIds;
+		// 	// set these to max so they do not launch another
+		// 	// summary request, just in case, below
+		// 	m_numRequests = m_msg3a.m_numDocIds;
+		// 	m_numReplies  = m_msg3a.m_numDocIds;
+		// 	break;
+		// }
 
 		// do not double count!
 		//if ( i <= m_lastProcessedi ) continue;
 		// do not repeat for this i
 		m_lastProcessedi = i;
+
+
+		// if we have printed enough summaries then do not launch
+		// any more, wait for them to come back in.
+		/// this is causing problems because we have a bunch of
+		// m_printi < m_msg3a.m_numDocIds checks that kinda expect
+		// us to get all summaries for every docid. but when we
+		// do federated search we can get a ton of docids.
+		// if ( m_printi >= m_docsToGetVisible ) {
+		// 	logf(LOG_DEBUG,"query: got %li >= %li "
+		// 	     "summaries. done. "
+		// 	     "waiting on remaining "
+		// 	     "%li to return."
+		// 	     , m_printi
+		// 	     , m_docsToGetVisible
+		// 	     , m_numRequests-m_numReplies);
+		// 	m_numRequests++;
+		// 	m_numReplies++;
+		// 	continue;
+		// }
+
 
 		// start up a Msg20 to get the summary
 		Msg20 *m = NULL;
@@ -1909,7 +1930,9 @@ bool Msg40::gotSummary ( ) {
 
 	// . wrap it up with Next 10 etc.
 	// . this is in PageResults.cpp
-	if ( m_si && m_si->m_streamResults && ! m_printedTail &&
+	if ( m_si && 
+	     m_si->m_streamResults && 
+	     ! m_printedTail &&
 	     m_printi >= m_msg3a.m_numDocIds ) {
 		m_printedTail = true;
 		printSearchResultsTail ( st );
@@ -1960,10 +1983,19 @@ bool Msg40::gotSummary ( ) {
 		if ( ! launchMsg20s ( true ) ) return false; 
 		// it won't launch now if we are bottlnecked waiting for
 		// m_printi's summary to come in
-		if ( m_si->m_streamResults )
+		if ( m_si->m_streamResults ) {
 			// it won't launch any if we printed out enough as well
-			// and it printed "waiting on remaining 0 to return"
+			// and it printed "waiting on remaining 0 to return".
+			// we shouldn't be waiting for more to come in b/c
+			// we are in gotSummart() so one just came in 
+			// freeing up a msg20 to launch another, so assume
+			// this means we are basically done. and it
+			// set m_numRequests=m_msg3a.m_numDocIds etc.
+			//if ( m_numRequests == m_msg3a.m_numDocIds )
+			//	goto printTail;
+			// otherwise, keep chugging
 			goto complete;
+		}
 		// maybe some were cached?
 		//goto refilter;
 		// it returned true, so m_numRequests == m_numReplies and
