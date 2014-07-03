@@ -1493,7 +1493,9 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		req.m_titleMaxLen        = 256;
 		req.m_titleMaxLen = cr->m_titleMaxLen;
 		req.m_summaryMaxLen = cr->m_summaryMaxLen;
-		req.m_numSummaryLines = cr->m_summaryMaxNumLines;
+		//req.m_numSummaryLines = cr->m_summaryMaxNumLines;
+		// let "ns" parm override
+		req.m_numSummaryLines    = m_si->m_numLinesInSummary;
 		if(m_si->m_isAdmin && m_si->m_format == FORMAT_HTML )
 			req.m_getGigabitVector   = true;
 		else    req.m_getGigabitVector   = false;

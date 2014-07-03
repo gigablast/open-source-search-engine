@@ -7749,19 +7749,17 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "default number of summary excerpts";
-	m->m_desc  = "What is the default number of "
-		"summary excerpts displayed per search result?";
+	m->m_title = "number of summary excerpts";
+	m->m_desc  = "How many summary excerpts to display per search result?";
 	m->m_cgi   = "ns";
 	m->m_type  = TYPE_LONG;
-	m->m_defOff= (char *)&cr.m_summaryDefaultNumLines - x;
+	m->m_defOff= (char *)&cr.m_summaryMaxNumLines - x;
 	m->m_group = 0;
 	m->m_off   = (char *)&si.m_numLinesInSummary - y;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
-
 
 
 	m->m_title = "max summary line width";
@@ -14211,6 +14209,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
+	/*
 	m->m_title = "default number of summary excerpts by default";
 	m->m_desc  = "What is the default number of "
 		"summary excerpts displayed per search result?";
@@ -14223,7 +14222,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
-
+	*/
 
 	m->m_title = "max summary line width by default";
 	m->m_desc  = "&lt;br&gt; tags are inserted to keep the number "

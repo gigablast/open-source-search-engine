@@ -3399,13 +3399,12 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// . "s" is a string of null terminated strings
 	char *send;
 	// do the normal summary
-	str    = mr->ptr_sum;
+	str    = mr->ptr_displaySum;
 	// sometimes the summary is longer than requested because for
 	// summary deduping purposes (see "pss" parm in Parms.cpp) we do not
 	// get it as short as request. so use mr->m_sumPrintSize here
 	// not mr->size_sum
-	strLen = mr->size_sum-1;
-	//strLen = mr->m_sumPrintSize-1;
+	strLen = mr->size_displaySum-1;
 
 	// this includes the terminating \0 or \0\0 so back up
 	if ( strLen < 0 ) strLen  = 0;

@@ -615,7 +615,6 @@ class CollectionRec {
 	long m_summaryMaxLen;
 	long m_summaryMaxNumLines;
 	long m_summaryMaxNumCharsPerLine;
-	long m_summaryDefaultNumLines;
 	char m_useNewSummaries;
 
 	char m_getDocIdScoringInfo;

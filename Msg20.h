@@ -418,7 +418,8 @@ public:
 	char       *ptr_tbuf                 ; // title buffer
 	char       *ptr_ubuf                 ; // url buffer
 	char       *ptr_rubuf                ; // redirect url buffer
-	char       *ptr_sum                  ; // summary
+	char       *ptr_displaySum           ; // summary for displaying
+	char       *ptr_dedupSum             ; // summary for deduping
 	char       *ptr_dbuf                 ; // display metas \0 separated
 	//char     *ptr_sbuf                 ; // big sample buf for gigabits
 	char       *ptr_gigabitSample        ;
@@ -514,7 +515,8 @@ public:
 	long       size_tbuf                 ;
 	long       size_ubuf                 ;
 	long       size_rubuf                ;
-	long       size_sum                  ;
+	long       size_displaySum           ;
+	long       size_dedupSum             ;
 	long       size_dbuf                 ;
 	//long     size_sbuf                 ;
 	long       size_gigabitSample        ; // includes \0
