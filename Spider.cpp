@@ -8584,7 +8584,16 @@ bool sendPage ( State11 *st ) {
 		     g_stats.m_allErrorsOld[i] == 0 &&
 		     bucketsNew[i] == 0 && bucketsOld[i] == 0 ) continue;
 		sb.safePrintf (
-			       "<tr bgcolor=#%s><td><b>%s</b></td>"
+			       "<tr bgcolor=#%s>"
+			       "<td><b><a href=/search?c=%s&q=gbstatusmsg%%3A"
+			       "%%22"
+			       ,
+			       LIGHT_BLUE , cr->m_coll );
+		sb.urlEncode(mstrerror(i));
+		sb.safePrintf ("%%22>"
+			       "%s"
+			       "</a>"
+			       "</b></td>"
 			       "<td>%lli</td>"
 			       "<td>%lli</td>"
 			       "<td>%lli</td>"
@@ -8592,7 +8601,6 @@ bool sendPage ( State11 *st ) {
 			       "<td>%li</td>"
 			       "<td>%li</td>"
 			       "</tr>\n" ,
-			       LIGHT_BLUE,
 			       mstrerror(i),
 			       g_stats.m_allErrorsNew[i] +
 			       g_stats.m_allErrorsOld[i],
