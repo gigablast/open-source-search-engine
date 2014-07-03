@@ -3231,6 +3231,10 @@ long *XmlDoc::getIndexCode2 ( ) {
 	if ( gr->getLong("deep",0) ) spamCheck = false;
 	// not for crawlbot
 	if ( cr->m_isCustomCrawl ) spamCheck = false;
+	// only html for now
+	if ( m_contentTypeValid && m_contentType != CT_HTML ) spamCheck =false;
+	// turn this off for now
+	spamCheck = false;
 	// otherwise, check the weights
 	if ( spamCheck ) {
 		char *ws = getWordSpamVec();
