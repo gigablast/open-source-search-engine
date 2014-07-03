@@ -897,16 +897,18 @@ void Images::thumbStart_r ( bool amThread ) {
 	long id = getpidtid();
 
 	// pass the input to the program through this file
-	// rather than a pipe, since popen() seems broken
+	// rather than a pipe, since popen() seems broken.
+	// m_dir ends in / so this should work.
 	char in[364];
-	snprintf ( in , 363,"%strash/in.%li", g_hostdb.m_dir, id );
+	snprintf ( in , 363,"%strashin.%li", g_hostdb.m_dir, id );
 	unlink ( in );
 
 	log( LOG_DEBUG, "image: thumbStart_r create in file." );
 
 	// collect the output from the filter from this file
+	// m_dir ends in / so this should work.
 	char out[364];
-	snprintf ( out , 363,"%strash/out.%li", g_hostdb.m_dir, id );
+	snprintf ( out , 363,"%strashout.%li", g_hostdb.m_dir, id );
         unlink ( out );
 
 	log( LOG_DEBUG, "image: thumbStart_r create out file." );
@@ -973,10 +975,11 @@ void Images::thumbStart_r ( bool amThread ) {
 
 	//sprintf( cmd, scmd, ext, in, out);
 	char *wdir = g_hostdb.m_dir;
+	// wdir ends in / so this should work.
 	snprintf( cmd, 2500 ,
-		 "LD_LIBRARY_PATH=%s %s/%stopnm %s | "
-		 "LD_LIBRARY_PATH=%s %s/pnmscale -xysize %li %li - | "
-		 "LD_LIBRARY_PATH=%s %s/ppmtojpeg - > %s"
+		 "LD_LIBRARY_PATH=%s %s%stopnm %s | "
+		 "LD_LIBRARY_PATH=%s %spnmscale -xysize %li %li - | "
+		 "LD_LIBRARY_PATH=%s %sppmtojpeg - > %s"
 		 , wdir , wdir , ext , in
 		 , wdir , wdir , xysize , xysize
 		 , wdir , wdir , out
