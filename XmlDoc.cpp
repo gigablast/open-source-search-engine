@@ -9513,8 +9513,10 @@ Url **XmlDoc::getRedirUrl() {
 		if ( ! keep ) m_redirError = EDOCTOOMANYREDIRECTS;
 		return &m_redirUrlPtr;
 	}
-	// if we followed too many then bail
-	if ( ++m_numRedirects >= 4 ) {
+	// . if we followed too many then bail
+	// . www.motorolamobility.com www.outlook.com ... failed when we 
+	//   had >= 4 here
+	if ( ++m_numRedirects >= 5 ) {
 		if ( ! keep ) m_redirError = EDOCTOOMANYREDIRECTS;
 		return &m_redirUrlPtr;
 	}
