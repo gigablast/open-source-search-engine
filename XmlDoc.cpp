@@ -20433,7 +20433,9 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		SpiderRequest ksr;
 		long long pd;
 
-		// skip if doc is a spider status "document"
+		// skip if doc is a spider status "document". their docids
+		// often get added during a query reindex but we should ignore
+		// them completely.
 		if ( od->m_contentType == CT_STATUS )
 			goto returnList;
 
