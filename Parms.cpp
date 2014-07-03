@@ -20772,7 +20772,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "<a href=/admin/inject>inject page</a> or API."
 			  "</td></tr>"
 
-			  "<tr class=poo><td>isdocidbased | !isdocidbased</td>"
+			  "<tr class=poo><td>isreindex | !isreindex</td>"
 			  "<td>"
 			  "This is true if the url was added from the "
 			  "<a href=/admin/reindex>query reindex</a> "
@@ -20792,7 +20792,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "<td>"
 			  "This is true if the url was added manually. "
 			  "Which means it matches isaddurl, isinjected, "
-			  " or isdocidbased. as opposed to only "
+			  " or isreindex. as opposed to only "
 			  "being discovered from the spider. "
 			  "</td></tr>"
 

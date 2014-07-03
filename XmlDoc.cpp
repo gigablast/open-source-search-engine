@@ -10576,6 +10576,8 @@ char *XmlDoc::getIsIndexed ( ) {
 	// note it
 	if ( ! m_calledMsg22e )
 		setStatus ( "checking titledb for old title rec");
+	else
+		setStatus ( "back from msg22e call");
 
 	// . consult the title rec tree!
 	// . "justCheckTfndb" is set to true here!
@@ -16908,7 +16910,8 @@ char **XmlDoc::getUtf8Content ( ) {
 		     // it should be there if trying to delete as well!
 		     m_deleteFromIndex ) {
 			log("xmldoc: null utf8 content for docid-based "
-			    "titlerec lookup which was not found");
+			    "titlerec (d=%lli) lookup which was not found",
+			    m_docId);
 			ptr_utf8Content = NULL;
 			size_utf8Content = 0;
 			m_utf8ContentValid = true;
@@ -20372,7 +20375,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// if we are indexing a subdoc piece of a multidoc url 
 		// then parentUrl should return non-NULL
 		char *parentUrl = getDiffbotParentUrl(od->m_firstUrl.m_url);
-		if ( ! parentUrl ) goto skip9;
+		if ( ! parentUrl && od->m_contentType != CT_STATUS ) 
+			goto skip9;
 		// in that case we need to reindex the parent url not the
 		// subdoc url, so make the spider reply gen quick
 		//SpiderReply *newsr = od->getFakeSpiderReply();
@@ -20424,12 +20428,21 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// been fulfilled!
 		if( ! m_zbuf.safeMemcpy (&srep, srep.getRecSize()))
 			return NULL;
-		// complain
-		if ( ! cr->m_diffbotApiUrl.length()<1 && !cr->m_isCustomCrawl )
-			log("build: doing query reindex but diffbot api "
-			    "url is not set in spider controls");
+
 		// but also store a new spider request for the parent url
 		SpiderRequest ksr;
+		long long pd;
+
+		// skip if doc is a spider status "document"
+		if ( od->m_contentType == CT_STATUS )
+			goto returnList;
+
+		//goto returnList;
+
+		// complain
+		if ( cr->m_diffbotApiUrl.length()<1 && !cr->m_isCustomCrawl )
+			log("build: doing query reindex but diffbot api "
+			    "url is not set in spider controls");
 		// just copy original request
 		memcpy ( &ksr , &m_sreq , m_sreq.getRecSize() );
 		// do not spider links, it's a page reindex of a multidoc url
@@ -20438,6 +20451,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		ksr.m_ignoreDocUnchangedError = 1;
 		// no longer docid based we set it to parentUrl
 		ksr.m_urlIsDocId = 0;
+		// but consider it a manual add. this should already be set.
+		ksr.m_isPageReindex = 1;
 		// but it is not docid based, so overwrite the docid
 		// in ksr.m_url with the parent multidoc url. it \0 terms it.
 		strcpy(ksr.m_url , parentUrl );//, MAX_URL_LEN-1);
@@ -20445,7 +20460,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		//if ( ! od->m_firstIpValid ) { char *xx=NULL;*xx=0; }
 		// set the key, ksr.m_key. isDel = false
 		// fake docid
-		long long pd = g_titledb.getProbableDocId(parentUrl);
+		pd = g_titledb.getProbableDocId(parentUrl);
 		ksr.setKey ( m_sreq.m_firstIp, pd , false );
 		// store this
 		if ( ! m_zbuf.pushChar(RDB_SPIDERDB) ) 
@@ -20453,6 +20468,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// then the request
 		if ( ! m_zbuf.safeMemcpy(&ksr,ksr.getRecSize() ) )
 			return NULL;
+	returnList:
 		// prevent cores in indexDoc()
 		m_indexCode = EREINDEXREDIR;
 		m_indexCodeValid = true;
@@ -20847,7 +20863,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// if recycling json objects, leave them there!
 	if ( *recycle ) nukeJson = false;
 	// you have to be a diffbot crawl to do this
-	if ( ! cr->m_isCustomCrawl ) nukeJson = false;
+	// no, not if you have th diffbot api url set... so take this out
+	//if ( ! cr->m_isCustomCrawl ) nukeJson = false;
 	// do not remove old json objects if pageparser.cpp test
 	// because that can not change the index, etc.
 	if ( getIsPageParser() ) nukeJson = false;
@@ -25375,6 +25392,17 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// do not do for diffbot subdocuments either, usespiderdb should be
 	// false for those.
 	if ( m_setFromDocId || ! m_useSpiderdb ) {
+		m_spiderReplyMetaListValid = true;
+		return &m_spiderReplyMetaList;
+	}
+
+	// we double add regular html urls in a query reindex because the
+	// json url adds the parent, so the parent gets added twice sometimes,
+	// and for some reason it is adding a spider status doc the 2nd time
+	// so cut that out. this is kinda a hack b/c i'm not sure what's 
+	// going on. but you can set a break point here and see what's up if
+	// you want.
+	if ( m_indexCodeValid && m_indexCode == EDOCFORCEDELETE ) {
 		m_spiderReplyMetaListValid = true;
 		return &m_spiderReplyMetaList;
 	}

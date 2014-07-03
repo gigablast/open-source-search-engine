@@ -1958,7 +1958,7 @@ bool CollectionRec::rebuildUrlFilters2 ( ) {
 	m_harvestLinks[n] = 1;
 	*/
 
-	m_regExs[n].set("isdocidbased");
+	m_regExs[n].set("isreindex");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 0; // 30 days default
 	m_maxSpidersPerRule  [n] = 99; // max spiders
@@ -2194,7 +2194,7 @@ bool CollectionRec::rebuildChineseRules ( ) {
 
 	long n = 0;
 
-	m_regExs[n].set("isdocidbased");
+	m_regExs[n].set("isreindex");
 	m_harvestLinks       [n] = 1;
 	m_spiderFreqs        [n] = 0; // 30 days default
 	m_maxSpidersPerRule  [n] = 99; // max spiders
@@ -3025,7 +3025,7 @@ bool CollectionRec::rebuildUrlFilters ( ) {
 	long i = 0;
 
 	// 1st one! for query reindex/ query delete
-	m_regExs[i].set("isdocidbased");
+	m_regExs[i].set("isreindex");
 	m_spiderIpMaxSpiders [i] = 10;
 	m_spiderPriorities   [i] = 70;
 	i++;

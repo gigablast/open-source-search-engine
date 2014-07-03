@@ -170,7 +170,7 @@ case	EDOCNONCANONICAL: return "Url was dup of canonical page";
 case    ECUSTOMCRAWLMISMATCH: return "Job name/type mismatch. Job name has already been used for a crawl or bulk job.";
 case    ENOTOKEN: return "Missing token";
 case    EBADIMG: return "Bad image";
-case	EREINDEXREDIR: return "Not parent url to reindex";
+case	EREINDEXREDIR: return "Not a reindexable doc";
 case	ETOOMANYPARENS: return "Too many nested parentheses in boolean query";
 case EDIFFBOTUNABLETOAPPLYRULES: return "Diffbot unable to apply rules";
 case EDIFFBOTCOULDNOTPARSE: return "Diffbot could not parse page";

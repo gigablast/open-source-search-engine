@@ -10340,6 +10340,22 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			goto checkNextRule;
 		}
 
+		if ( strncmp(p,"isreindex",9) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// if no match continue
+			//if ( (bool)sreq->m_urlIsDocId==val ) continue;
+			if ( (bool)sreq->m_isPageReindex==val ) continue;
+			// skip
+			p += 10;
+			// skip to next constraint
+			p = strstr(p, "&&");
+			// all done?
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
 		if ( strncmp(p,"iscontacty",10) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) continue;
