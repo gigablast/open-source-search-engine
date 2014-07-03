@@ -13873,6 +13873,18 @@ void Parms::init ( ) {
 	m->m_flags = PF_API ;
 	m++;
 
+	m->m_title = "collection";
+	m->m_desc  = "query reindex in this collection.";
+	m->m_cgi   = "c";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = NULL;
+	// PF_COLLDEFAULT: so it gets set to default coll on html page
+	m->m_flags = PF_API|PF_COLLDEFAULT|PF_REQUIRED; 
+	m->m_page  = PAGE_REINDEX;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
 	m->m_title = "start result number";
 	m->m_desc  = "Starting with this result #. Starts at 0.";
 	m->m_cgi   = "srn";
@@ -13912,7 +13924,7 @@ void Parms::init ( ) {
 	m->m_title = "FORCE DELETE";
 	m->m_desc  = "Check this checkbox to delete the results, not just "
 		"reindex them.";
-	m->m_cgi   = "delete";
+	m->m_cgi   = "fdel";
 	m->m_off   = (char *)&gr.m_forceDel - (char *)&gr;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_page  = PAGE_REINDEX;

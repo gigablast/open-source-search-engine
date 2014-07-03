@@ -272,10 +272,10 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	// use default collection if none provided
 	if ( ! p && ! token && m_collnumBuf.length() <= 0 ) {
 		// get default collection rec
-		CollectionRec *dr = g_collectiondb.getRec (coll);
+		cr = g_collectiondb.getRec (coll);
 		// add to our list
-		if ( dr &&
-		     !m_collnumBuf.safeMemcpy(&dr->m_collnum,
+		if ( cr &&
+		     !m_collnumBuf.safeMemcpy(&cr->m_collnum,
 					      sizeof(collnum_t)))
 			return false;
 	}
@@ -294,9 +294,9 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 
 	// must have had one
 	if ( ! cr ) {
-		log("si: collection does not exist");
-		g_errno = ENOCOLLREC;
-		return false;
+		log("si: si. collection does not exist");
+		//g_errno = ENOCOLLREC;
+		//return false;
 	}
 
 	// and set from the http request. will set m_coll, etc.

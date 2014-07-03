@@ -1024,12 +1024,12 @@ bool gotResults ( void *state ) {
 	//char        *coll    = si->m_coll2;
 	//long         collLen = si->m_collLen2;
 
-	collnum_t collnum = si->m_firstCollnum;
+	//collnum_t collnum = si->m_firstCollnum;
 
 	// collection rec must still be there since SearchInput references 
 	// into it, and it must be the SAME ptr too!
-	CollectionRec *cr = g_collectiondb.getRec ( collnum );
-	if ( ! cr || cr != si->m_cr ) {
+	CollectionRec *cr = si->m_cr;//g_collectiondb.getRec ( collnum );
+	if ( ! cr ) { // || cr != si->m_cr ) {
 	       g_errno = ENOCOLLREC;
 	       return sendReply(st,NULL);
 	}
