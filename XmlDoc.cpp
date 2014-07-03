@@ -28470,9 +28470,11 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	*/
 
 	// does they want a summary?
-	if ( m_req->m_numSummaryLines>0 && ! reply->ptr_sum ) {
+	if ( m_req->m_numSummaryLines>0 && ! reply->ptr_displaySum ) {
 		char *sum = getHighlightedSummary();
 		if ( ! sum || sum == (void *)-1 ) return (Msg20Reply *)sum;
+		Summary *s = getSummary();
+		if ( ! s || s == (void *)-1 ) return (Msg20Reply *)s;
 		//long sumLen = m_finalSummaryBuf.length();
 		// is it size and not length?
 		long sumLen = 0;
@@ -28490,8 +28492,14 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		//long max = m_req->m_numSummaryLines;
 		// grab stuff from it!
 		//reply->m_proximityScore = s->getProximityScore();
-		reply-> ptr_sum         = sum;//s->getSummary();
-		reply->size_sum         = sumSize;//s->getSummaryLen(max)+1;
+		reply-> ptr_displaySum = sum;//s->getSummary();
+		reply->size_displaySum = sumSize;//s->getSummaryLen(max)+1;
+		// this is unhighlighted for deduping, and it might be longer
+		// . seems like we are not using this for deduping but using
+		//   the gigabit vector in Msg40.cpp, so take out for now
+		//reply-> ptr_dedupSum = s->m_summary;
+		//reply->size_dedupSum = s->m_summaryLen+1;
+		//if ( s->m_summaryLen == 0 ) reply->size_dedupSum = 0;
 		//reply->m_diversity      = s->getDiversity();
 	}
 
@@ -29659,6 +29667,10 @@ Summary *XmlDoc::getSummary () {
 			  false                            , // doStemming
 			  m_req->m_summaryMaxLen           ,
 			  numLines                         ,
+			  // . displayLines, # lines we are displaying
+			  // . Summary::getDisplayLen() will return the
+			  //   length of the summary to display
+			  m_req->m_numSummaryLines         ,
 			  cr->m_summaryMaxNumCharsPerLine,
 			  m_req->m_ratInSummary            ,
 			  getFirstUrl()                    ,
@@ -29691,7 +29703,10 @@ char *XmlDoc::getHighlightedSummary ( ) {
 
 	// get the summary
 	char *sum    = s->getSummary();
-	long  sumLen = s->getSummaryLen();
+	//long  sumLen = s->getSummaryLen();
+	long sumLen = s->getSummaryDisplayLen();
+
+	//sum[sumLen] = 0;
 
 	// assume no highlighting?
 	if ( ! m_req->m_highlightQueryTerms || sumLen == 0 ) {

@@ -58,6 +58,7 @@ bool Summary::set2 ( Xml      *xml                ,
 		     bool      doStemming         ,
 		     long      maxSummaryLen      , 
 		     long      maxNumLines        ,
+		     long      numDisplayLines    ,
 		     long      maxNumCharsPerLine ,
 		     //long      bigSampleRadius    ,
 		     //long      bigSampleMaxLen    ,
@@ -80,6 +81,9 @@ bool Summary::set2 ( Xml      *xml                ,
 	// Msg20Request::m_computeLinkInfo or m_setLinkInfo. NO! we need
 	// to see if it has all the query terms...
 	//if ( maxNumLines <= 0 ) return true;
+
+	m_numDisplayLines = numDisplayLines;
+	m_displayLen      = 0;
 
 	//m_useDateLists   = useDateLists;
 	//m_exclDateList   = exclDateList;
@@ -232,7 +236,12 @@ bool Summary::set2 ( Xml      *xml                ,
 	// highest scoring window around each term. And then find the highest
 	// of those over all the matching terms.
 	//
-	for ( long numFinal = 0; numFinal < maxNumLines; numFinal++ ){
+	long numFinal;
+	for ( numFinal = 0; numFinal < maxNumLines; numFinal++ ){
+
+		if ( numFinal == m_numDisplayLines )
+			m_displayLen = p - m_summary;
+
 		// reset these at the top of each loop
 		Match     *maxm;
 		long long  maxScore = 0;
@@ -508,6 +517,9 @@ bool Summary::set2 ( Xml      *xml                ,
 			bb[j] |= D_USED;
 	}
 
+	if ( numFinal <= m_numDisplayLines )
+		m_displayLen = p - m_summary;
+
 	/*end = gettimeofdayInMilliseconds();
 	if ( end - start > 10 )
 		log ( LOG_WARN,"summary: took %llims to finish doing summary "
@@ -530,18 +542,25 @@ bool Summary::set2 ( Xml      *xml                ,
 			m_summaryExcerptLen[0] = p - m_summary;
 			m_numExcerpts = 1;
 		}
+		// in this case we only have one summary line
+		if ( m_numDisplayLines > 0 )
+			m_displayLen = p - m_summary;
 	}
 
 
 	// If we still didn't find a summary, get the default summary
-	if ( p == m_summary )
+	if ( p == m_summary ) {
 		// then return the default summary
-		return getDefaultSummary ( xml,
-					   words,
-					   sections,
-					   pos,
-					   //bigSampleRadius,
-					   maxSummaryLen );
+		bool status = getDefaultSummary ( xml,
+						  words,
+						  sections,
+						  pos,
+						  //bigSampleRadius,
+						  maxSummaryLen );
+		if ( m_numDisplayLines > 0 )
+			m_displayLen = m_summaryLen;
+		return status;
+	}
 
 	// if we don't find a summary, theres no need to NULL terminate
 	if ( p != m_summary ) *p++ = '\0';

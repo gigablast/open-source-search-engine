@@ -78,6 +78,7 @@ class Summary {
 		    //long            collLen            ,
 		    bool            doStemming         ,
 		    long            maxSummaryLen      , 
+		    long            numDisplayLines    ,
 		    long            maxNumLines        ,
 		    long            maxNumCharsPerLine ,
 		    //long            bigSampleRadius    ,
@@ -236,6 +237,12 @@ class Summary {
 	//long  m_bufLen;
 	//bool  m_freeBuf;
         //char  m_localBuf[10032];
+
+	// if getting more lines for deduping than we need for displaying,
+	// how big is that part of the summary to display?
+	long m_numDisplayLines;
+	long m_displayLen;
+	long getSummaryDisplayLen() { return m_displayLen; }
 
 	long  m_maxNumCharsPerLine;
 
