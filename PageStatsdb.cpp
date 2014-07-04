@@ -201,12 +201,20 @@ void sendReply ( void *state ) {
 	strncpy( startTimeStr, ctime( &st->m_startDate ), 30 );
 	strncpy( endTimeStr, ctime( &st->m_endDate ), 30 );
 
+	buf.safePrintf(
+		       "<b>Graph of various query performance statistics.</b>"
+		       "<br>"
+		       "<br>"
+		       );
+
+
 	buf.safePrintf("<center>\n");
 
 	if ( ! g_conf.m_useStatsdb ) 
 		buf.safePrintf("<font color=red><b>Statsdb disabled. "
 			       "Turn on in the master controls.</b>"
 			       "</font>\n" );
+
 
 	buf.safePrintf("<table %s>\n",TABLE_STYLE);
 
