@@ -257,7 +257,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 			return false;
 		}
 		// add to our list
-		if (!m_collnumBuf.safeMemcpy(&cr->m_collnum,sizeof(collnum_t)))
+		if (!m_collnumBuf.safeMemcpy(&tmpcr->m_collnum,
+					     sizeof(collnum_t)))
 			return false;
 		// restore the \0 character we wrote in there
 		*end = c;
