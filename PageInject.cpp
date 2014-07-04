@@ -275,6 +275,12 @@ bool Msg7::inject ( void *state ,
 		return true;
 	}
 
+	if ( ! gr->m_url ) {
+		log("inject: no url provied to inject");
+		g_errno = EBADURL;
+		return true;
+	}
+
 	//char *coll = cr->m_coll;
 
 	m_state = state;

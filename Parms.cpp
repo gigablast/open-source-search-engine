@@ -1033,6 +1033,12 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	//
 	setToDefault ( THIS , obj , NULL);
 
+
+	// map PAGE_ADDURL to PAGE_ADDURL2 so 
+	// /addurl is same as /admin/addurl as far as parms.
+	if ( page == PAGE_ADDURL ) 
+		page = PAGE_ADDURL2;
+
 	// loop through cgi parms
 	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
 		// get cgi parm name
