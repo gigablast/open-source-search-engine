@@ -13475,6 +13475,9 @@ void Parms::init ( ) {
 		"can check it's history. " // (spiderdb lookup)
 		"Added urls will have a "
 		"<a href=/admin/filters#hopcount>hopcount</a> of 0. "
+		"Added urls will match the <i><a href=/admin/filters#isaddurl>"
+		"isaddurl</a></i> directive on "
+		"the url filters page. "
 		"The add url api is described on the "
 		"<a href=/admin/api>api</a> page.";
 	m->m_cgi   = "urls";
@@ -13520,6 +13523,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_API;
 	m++;
 
+	/*
 	m->m_title = "force respider";
 	m->m_desc  = "Force an immediate respider even if the url "
 		"is already indexed.";
@@ -13531,6 +13535,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m++;
+	*/
 
 	m->m_title = "collection";
 	m->m_desc  = "Add urls into this collection.";
@@ -20757,11 +20762,16 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "fine level of control."
 			  "</td></tr>"
 
-			  "<tr class=poo><td>isaddurl | !isaddurl</td>"
+			  "<tr class=poo><td>"
+			  "<a name=isaddurl>"
+			  "isaddurl | !isaddurl"
+			  "</a>"
+			  "</td>"
 			  "<td>"
 			  "This is true if the url was added from the add "
-			  "url interface. This replaces the add url priority "
-			  "parm."
+			  "url interface or API."
+			  //"This replaces the add url priority "
+			  //"parm."
 			  "</td></tr>"
 
 			  "<tr class=poo><td>isinjected | !isinjected</td>"
@@ -20783,7 +20793,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "feature. "
 			  "You can set max spiders to 0 "
 			  "for non "
-			  "docidbased requests while you reindex or delete "
+			  "isreindex requests while you reindex or delete "
 			  "the results of a query for extra speed."
 			  "</td></tr>"
 

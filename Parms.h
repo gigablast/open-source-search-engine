@@ -152,7 +152,6 @@ class GigablastRequest {
 	char *m_urlsBuf;
 	char  m_stripBox;
 	char  m_harvestLinksBox;
-	char  m_forceRespiderBox;
 
 	/////////////
 	//
