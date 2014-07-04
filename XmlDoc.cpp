@@ -28477,20 +28477,20 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 
 	// does they want a summary?
 	if ( m_req->m_numSummaryLines>0 && ! reply->ptr_displaySum ) {
-		char *sum = getHighlightedSummary();
-		if ( ! sum || sum == (void *)-1 ) return (Msg20Reply *)sum;
-		Summary *s = getSummary();
-		if ( ! s || s == (void *)-1 ) return (Msg20Reply *)s;
+		char *hsum = getHighlightedSummary();
+		if ( ! hsum || hsum == (void *)-1 ) return (Msg20Reply *)hsum;
+		//Summary *s = getSummary();
+		//if ( ! s || s == (void *)-1 ) return (Msg20Reply *)s;
 		//long sumLen = m_finalSummaryBuf.length();
 		// is it size and not length?
-		long sumLen = 0;
+		long hsumLen = 0;
 		// seems like it can return 0x01 if none...
-		//if ( sum == (char *)0x01 ) sum = NULL;
-		// get len
-		if ( sum ) sumLen = s->m_displayLen;//gbstrlen(sum);
+		if ( hsum == (char *)0x01 ) hsum = NULL;
+		// get len. this is the HIGHLIGHTED summary so it is ok.
+		if ( hsum ) hsumLen = gbstrlen(hsum);
 		// must be \0 terminated. not any more, it can be a subset
 		// of a larger summary used for deduping
-		//if ( sumLen > 0 && sum[sumLen] ) { char *xx=NULL;*xx=0; }
+		if ( hsumLen > 0 && hsum[hsumLen] ) { char *xx=NULL;*xx=0; }
 		// assume size is 0
 		//long sumSize = 0;
 		// include the \0 in size
@@ -28499,8 +28499,8 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		//long max = m_req->m_numSummaryLines;
 		// grab stuff from it!
 		//reply->m_proximityScore = s->getProximityScore();
-		reply-> ptr_displaySum = sum;//s->getSummary();
-		reply->size_displaySum = sumLen;//sumSize;//s->getSummaryLen(ma
+		reply-> ptr_displaySum = hsum;//s->getSummary();
+		reply->size_displaySum = hsumLen+1;//sumSize;//s->getSummaryLen
 		// this is unhighlighted for deduping, and it might be longer
 		// . seems like we are not using this for deduping but using
 		//   the gigabit vector in Msg40.cpp, so take out for now
@@ -29717,7 +29717,8 @@ char *XmlDoc::getHighlightedSummary ( ) {
 
 	// assume no highlighting?
 	if ( ! m_req->m_highlightQueryTerms || sumLen == 0 ) {
-		m_finalSummaryBuf.safeMemcpy ( sum , sumLen + 1 );
+		m_finalSummaryBuf.safeMemcpy ( sum , sumLen );
+		m_finalSummaryBuf.nullTerm();
 		m_finalSummaryBufValid = true;
 		return m_finalSummaryBuf.getBufStart();
 		//char *fsum = m_finalSummaryBuf.getBufStart();
