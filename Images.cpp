@@ -975,14 +975,18 @@ void Images::thumbStart_r ( bool amThread ) {
 
 	//sprintf( cmd, scmd, ext, in, out);
 	char *wdir = g_hostdb.m_dir;
+	// can be /dev/stderr or like /var/gigablast/data/log000 etc.
+	char *logFile = g_log.getFilename();
 	// wdir ends in / so this should work.
 	snprintf( cmd, 2500 ,
-		 "LD_LIBRARY_PATH=%s %s%stopnm %s | "
-		 "LD_LIBRARY_PATH=%s %spnmscale -xysize %li %li - | "
-		 "LD_LIBRARY_PATH=%s %sppmtojpeg - > %s"
-		 , wdir , wdir , ext , in
-		 , wdir , wdir , xysize , xysize
-		 , wdir , wdir , out
+		 "LD_LIBRARY_PATH=%s %s%stopnm %s 2>> %s | "
+		 "LD_LIBRARY_PATH=%s %spnmscale -xysize %li %li - 2>> %s | "
+		  // put all its stderr msgs into /dev/null
+		  // so "jpegtopnm: WRITING PPM FILE" doesn't clog console
+		 "LD_LIBRARY_PATH=%s %sppmtojpeg - > %s 2>> %s"
+		  , wdir , wdir , ext , in , logFile
+		  , wdir , wdir , xysize , xysize , logFile
+		  , wdir , wdir , out , logFile
 		 );
         
         // Call clone function for the shell to execute command
