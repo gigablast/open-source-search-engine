@@ -446,6 +446,38 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 				      pd->m_pathLen ) )
 				continue;
 		}
+
+		// for entries like http://domain.com/ we have to match
+		// protocol and url can NOT be like www.domain.com to match.
+		// this is really like a regex like ^http://xyz.com/poo/boo/
+		if ( (pd->m_patternStr[0]=='h' ||
+		      pd->m_patternStr[0]=='H') &&
+		     ( pd->m_patternStr[1]=='t' ||
+		       pd->m_patternStr[1]=='T' ) &&
+		     ( pd->m_patternStr[2]=='t' ||
+		       pd->m_patternStr[2]=='T' ) &&
+		     ( pd->m_patternStr[3]=='p' ||
+		       pd->m_patternStr[3]=='P' ) ) {
+			char *x = pd->m_patternStr+4;
+			// is it https:// ?
+			if ( *x == 's' || *x == 'S' ) x++;
+			// watch out for subdomains like http.foo.com
+			if ( *x != ':' ) goto nomatch;
+			// ok, we have to substring match exactly. like 
+			// ^http://xyssds.com/foobar/
+			char *a = pd->m_patternStr;
+			char *b = sreq->m_url;
+			for ( ; ; a++, b++ ) {
+				// stop matching when pattern is exhausted
+				if ( is_wspace_a(*a) || ! *a ) 
+					return pd->m_patternStr;
+				if ( *a != *b ) break;
+			}
+			// we failed to match "pd" so try next line
+			continue;
+		}
+ nomatch:		
+
 		// was the line just a domain and not a subdomain?
 		if ( pd->m_thingHash32 == sreq->m_domHash32 )
 			// this will be false if negative pattern i guess
@@ -572,6 +604,20 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "<i>http://www.goodstuff.com/</i> and spider "
 		      "any links we harvest that start with "
 		      "<i>http://www.goodstuff.com/</i>"
+		      "</td>"
+		      "</tr>"
+
+		      // protocol and subdomain match
+		      "<tr>"
+		      "<td>http://justdomain.com/foo/</td>"
+		      "<td>"
+		      "Spider the url "
+		      "<i>http://justdomain.com/foo/</i> and spider "
+		      "any links we harvest that start with "
+		      "<i>http://justdomain.com/foo/</i>. "
+		      "Urls that start with "
+		      "<i>http://<b>www.</b>justdomain.com/</i>, for example, "
+		      "will NOT match this."
 		      "</td>"
 		      "</tr>"
 
