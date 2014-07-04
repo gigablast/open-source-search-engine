@@ -2478,6 +2478,10 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	g_pages.printLogo   ( &p , coll );
 	p.safePrintf("</td></tr></table><br><br>");
 
+	p.safePrintf("NOTE: All APIs support both GET and POST method. "
+		     "If the size of your request is more than 2K you "
+		     "should use POST.");
+	p.safePrintf("<br><br>");
 
 
 	p.safePrintf("<div style=padding-left:10%%>"
