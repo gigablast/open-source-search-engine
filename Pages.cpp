@@ -115,7 +115,8 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_PROXY ,
 	  "master controls page",
 	  sendPageGeneric  , 0 ,NULL,NULL,0},
-	{ PAGE_SEARCH    , "admin/search"   , 0 , "search controls" ,  1 , 1,
+	// use POST for html head/tail and page root html. might be large.
+	{ PAGE_SEARCH    , "admin/search"   , 0 , "search controls" ,1,M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "search controls page",
 	  sendPageGeneric  , 0 ,NULL,NULL,0},
@@ -147,7 +148,7 @@ static WebPage s_pages[] = {
 	// { PAGE_SITES   , "admin/sites", 0 , "site list" ,  1 , 1,
 	//   "what sites can be spidered",
 	//   sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI}, // sendPageBasicSettings
-	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 , 1,
+	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 ,M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "prioritize urls for spidering",
 	  sendPageGeneric  , 0 ,NULL,NULL,0},

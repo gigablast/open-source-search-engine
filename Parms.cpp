@@ -14728,8 +14728,8 @@ void Parms::init ( ) {
 			  //"Use %T to display the standard footer. "
 			  "Use %%q to display the query in "
 			  "a text box. "
-			  "Use %%t to display the directory TOP. Example "
-			  "to paste into textbox: "
+			  "Use %%t to display the directory TOP. "
+			  "Example to paste into textbox: "
 			  "<br><i>"
 			  );
 	s_tmpBuf.htmlEncode (
@@ -14834,7 +14834,7 @@ void Parms::init ( ) {
 		//"this html "
 		//"must be encoded (less thans mapped to &lt;, "
 		//"etc.).";
-		"Example to paste: <br><i>";
+		"Example to paste into textbox: <br><i>";
 	s_tmpBuf2.safeStrcpy(fff);
 	s_tmpBuf2.htmlEncode(
 		"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 "
@@ -14901,13 +14901,14 @@ void Parms::init ( ) {
 
 	m->m_title = "html tail";
         static SafeBuf s_tmpBuf3;
-	s_tmpBuf3.safePrintf("Html to display before the search results. ");
+	s_tmpBuf3.safePrintf("Html to display after the search results. ");
 	s_tmpBuf3.safeStrcpy(fff);
 	s_tmpBuf3.htmlEncode (
 		"<br>\n"
-		"%F<table cellpadding=2 cellspacing=0 border=0>\n"
+		//"%F"
+		"<table cellpadding=2 cellspacing=0 border=0>\n"
 		"<tr><td></td>\n"
-		"<td valign=top align=center>\n"
+		//"<td valign=top align=center>\n"
 		// this old query is overriding a newer query above so
 		// i commented out. mfd 6/2014
 		//"<nobr>"
@@ -14916,8 +14917,10 @@ void Parms::init ( ) {
 		//"</nobr>"
 		// family filter
 		//"<br>%f %R\n"
-		"<br>%R\n"
-		"</td><td>%s</td>\n"
+		//"<br>"
+		//"%R\n"
+		//"</td>"
+		"<td>%s</td>\n"
 		"</tr>\n"
 		"</table>\n"
 		"Try your search on  \n"
