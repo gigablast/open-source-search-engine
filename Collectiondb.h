@@ -425,6 +425,9 @@ class CollectionRec {
 	long   m_spiderRoundNum;
 
 	char  m_makeImageThumbnails;
+
+	long m_thumbnailMaxWidthHeight ;
+
 	char  m_indexSpiderReplies;
 	char  m_indexBody;
 

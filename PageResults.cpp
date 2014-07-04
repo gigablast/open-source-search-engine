@@ -3070,6 +3070,14 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			sb->safePrintf("\t\t<imageWidth>%li</imageWidth>\n",
 				       ti->m_dy);
 		}
+		if ( si->m_format == FORMAT_XML ) {
+			sb->safePrintf("\t\t<origImageHeight>%li"
+				       "</origImageHeight>\n",
+				       ti->m_origDX);
+			sb->safePrintf("\t\t<origImageWidth>%li"
+				       "</origImageWidth>\n",
+				       ti->m_origDY);
+		}
 	}
 
 	// print image for widget
@@ -3404,7 +3412,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// summary deduping purposes (see "pss" parm in Parms.cpp) we do not
 	// get it as short as request. so use mr->m_sumPrintSize here
 	// not mr->size_sum
-	strLen = mr->size_displaySum-1;
+	strLen = mr->size_displaySum;//-1;
 
 	// this includes the terminating \0 or \0\0 so back up
 	if ( strLen < 0 ) strLen  = 0;

@@ -25028,11 +25028,11 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 	// hash gbimage: for permalinks only for Images.cpp
 	for ( long i = 0 ; i < m_images.m_numImages ; i++ ) {
 		// get the node number
-		long nn = m_images.m_imageNodes[i];
+		//long nn = m_images.m_imageNodes[i];
 		// get the url of the image
-		XmlNode *xn = m_xml.getNodePtr(nn);
+		//XmlNode *xn = m_xml.getNodePtr(nn);
 		long  srcLen;
-		char *src = xn->getFieldValue("src",&srcLen);
+		char *src = m_images.getImageUrl(i,&srcLen);
 		// set it to the full url
 		Url iu;
 		// use "pageUrl" as the baseUrl
@@ -28487,19 +28487,20 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		// seems like it can return 0x01 if none...
 		//if ( sum == (char *)0x01 ) sum = NULL;
 		// get len
-		if ( sum ) sumLen = gbstrlen(sum);
-		// must be \0 terminated
-		if ( sumLen > 0 && sum[sumLen] ) { char *xx=NULL;*xx=0; }
+		if ( sum ) sumLen = s->m_displayLen;//gbstrlen(sum);
+		// must be \0 terminated. not any more, it can be a subset
+		// of a larger summary used for deduping
+		//if ( sumLen > 0 && sum[sumLen] ) { char *xx=NULL;*xx=0; }
 		// assume size is 0
-		long sumSize = 0;
+		//long sumSize = 0;
 		// include the \0 in size
-		if ( sum ) sumSize = sumLen + 1;
+		//if ( sum ) sumSize = sumLen + 1;
 		// do not get any more than "me" lines/excerpts of summary
 		//long max = m_req->m_numSummaryLines;
 		// grab stuff from it!
 		//reply->m_proximityScore = s->getProximityScore();
 		reply-> ptr_displaySum = sum;//s->getSummary();
-		reply->size_displaySum = sumSize;//s->getSummaryLen(max)+1;
+		reply->size_displaySum = sumLen;//sumSize;//s->getSummaryLen(ma
 		// this is unhighlighted for deduping, and it might be longer
 		// . seems like we are not using this for deduping but using
 		//   the gigabit vector in Msg40.cpp, so take out for now

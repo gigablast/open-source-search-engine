@@ -16351,6 +16351,19 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
+	m->m_title = "max thumbnail width or height";
+	m->m_desc  = "This is in pixels and limits the size of the thumbnail. "
+		"Gigablast tries to make at least the width or the height "
+		"equal to this maximum, but, unless the thumbnail is sqaure, "
+		"one side will be longer than the other.";
+	m->m_cgi   = "mtwh";
+	m->m_off   = (char *)&cr.m_thumbnailMaxWidthHeight - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "250";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
 	m->m_title = "index spider replies";
 	m->m_desc  = "Index the spider replies of every url the spider "
 		"attempts to spider. Search for them using special "
