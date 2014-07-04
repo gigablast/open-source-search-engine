@@ -603,7 +603,11 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "Spider the url "
 		      "<i>http://www.goodstuff.com/</i> and spider "
 		      "any links we harvest that start with "
-		      "<i>http://www.goodstuff.com/</i>"
+		      "<i>http://www.goodstuff.com/</i>. NOTE: if the url "
+		      "www.goodstuff.com redirects to foo.goodstuff.com then "
+		      "foo.goodstuff.com still gets spidered "
+		      "because it is considered to be manually added, but "
+		      "no other urls from foo.goodstuff.com will be spidered."
 		      "</td>"
 		      "</tr>"
 
