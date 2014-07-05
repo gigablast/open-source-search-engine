@@ -1514,6 +1514,8 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		req.m_titleMaxLen        = 256;
 		req.m_titleMaxLen = cr->m_titleMaxLen;
 		req.m_summaryMaxLen = cr->m_summaryMaxLen;
+		// a special undocumented thing for getting <h1> tag
+		req.m_getHeaderTag       = m_si->m_hr.getLong("geth1tag",0);
 		//req.m_numSummaryLines = cr->m_summaryMaxNumLines;
 		// let "ns" parm override
 		req.m_numSummaryLines    = m_si->m_numLinesInSummary;

@@ -28574,6 +28574,15 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 		}
 	}
 
+	// this is not documented because i don't think it will be popular
+	if ( m_req->m_getHeaderTag ) {
+		SafeBuf *htb = getHeaderTagBuf();
+		if ( ! htb || htb == (SafeBuf *)-1 ) return (Msg20Reply *)htb;
+		// it should be null terminated
+		reply->ptr_htag = htb->getBufStart();
+		reply->size_htag = htb->getLength() + 1;
+	}
+
 	// breathe
 	QUICKPOLL ( m_niceness );
 
@@ -29572,6 +29581,18 @@ char *XmlDoc::getDescriptionBuf ( char *displayMetas , long *dlen ) {
 	m_dbufValid = true;
 	return m_dbuf;
 }
+
+SafeBuf *XmlDoc::getHeaderTagBuf() {
+	if ( m_htbValid ) return &m_htb;
+	// get it. true = skip leading spaces
+	long h1len = 0;
+	char *h1 = m_xml.getTextForXmlTag ( 0, 999999,"h1",&h1len,true);
+	if ( h1 && h1len ) m_htb.safeMemcpy(h1,h1len);
+	m_htb.nullTerm();
+	m_htbValid = true;
+	return &m_htb;
+}
+	
 
 Title *XmlDoc::getTitle ( ) {
 	if ( m_titleValid ) return &m_title;

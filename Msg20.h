@@ -75,6 +75,7 @@ class Msg20Request {
 	char       m_numSummaryLines           ; // non-zero default
 	char       m_expected                  ; // non-zero default
 	char       m_allowPunctInPhrase        ; // non-zero default
+	bool       m_getHeaderTag              ;
 	void      *m_state                     ;
 	void      *m_state2                    ; // used by Msg25.cpp
 	long       m_j                         ; // used by Msg25.cpp
@@ -416,6 +417,7 @@ public:
 	//   methods must be changed
 	// . also, all ptr_* should be char* and all size_* should be in bytes
 	char       *ptr_tbuf                 ; // title buffer
+	char       *ptr_htag                 ; // h1 tag buf
 	char       *ptr_ubuf                 ; // url buffer
 	char       *ptr_rubuf                ; // redirect url buffer
 	char       *ptr_displaySum           ; // summary for displaying
@@ -513,6 +515,7 @@ public:
 	// . string sizes of the strings we store into m_buf[]
 	// . wordCountBuf is an exact word count 1-1 with each "range"
 	long       size_tbuf                 ;
+	long       size_htag                 ;
 	long       size_ubuf                 ;
 	long       size_rubuf                ;
 	long       size_displaySum           ;
