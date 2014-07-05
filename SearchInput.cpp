@@ -12,7 +12,7 @@
 #include "Timedb.h"
 #include "PageResults.h"
 
-char getFormatFromRequest ( class HttpRequest *hr ) ;
+//char getFormatFromRequest ( class HttpRequest *hr ) ;
 
 SearchInput::SearchInput() {
 	reset();
@@ -311,7 +311,7 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 	//////
 
 	// get the format. "xml" "html" "json" --> FORMAT_HTML, FORMAT_CSV ...
-	char tmpFormat = getFormatFromRequest ( &m_hr );
+	char tmpFormat = m_hr.getReplyFormat();//getFormatFromRequest ( &m_hr);
 	// now override automatic defaults for special cases
 	if ( tmpFormat != FORMAT_HTML ) {
 		m_familyFilter            = 0;
@@ -961,51 +961,6 @@ uint8_t SearchInput::detectQueryLanguage(void) {
 }
 */
 
-char getFormatFromRequest ( HttpRequest *r ) {
-
-	char *formatStr = r->getString("format");
-
-	//if ( ! formatStr ) return FORMAT_HTML;
-
-	char format = FORMAT_HTML;
-
-	// what format should search results be in? default is html
-	if ( formatStr && strcmp(formatStr,"html") == 0 ) format = FORMAT_HTML;
-	if ( formatStr && strcmp(formatStr,"json") == 0 ) format = FORMAT_JSON;
-	if ( formatStr && strcmp(formatStr,"xml") == 0 ) format = FORMAT_XML;
-	if ( formatStr && strcmp(formatStr,"csv") == 0 ) format = FORMAT_CSV;
-	if ( formatStr && strcmp(formatStr,"iframe")==0)
-		format=FORMAT_WIDGET_IFRAME;
-	if ( formatStr && strcmp(formatStr,"ajax")==0)
-		format=FORMAT_WIDGET_AJAX;
-	if ( formatStr && strcmp(formatStr,"append")==0)
-		format=FORMAT_WIDGET_APPEND;
-
-	// support old api &xml=1 to mean &format=1
-	if ( r->getLong("xml",0) ) {
-		format = FORMAT_XML;
-	}
-
-	// also support &json=1
-	if ( r->getLong("json",0) ) {
-		format = FORMAT_JSON;
-	}
-
-	if ( r->getLong("csv",0) ) {
-		format = FORMAT_CSV;
-	}
-
-	if ( r->getLong("iframe",0) ) {
-		format = FORMAT_WIDGET_IFRAME;
-	}
-
-	if ( r->getLong("ajax",0) ) {
-		format = FORMAT_WIDGET_AJAX;
-	}
-
-	if ( r->getLong("append",0) ) {
-		format = FORMAT_WIDGET_APPEND;
-	}
-
-	return format;
-}
+//char getFormatFromRequest ( HttpRequest *r ) {
+//
+//}

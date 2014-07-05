@@ -246,7 +246,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	//long xml = hr->getLong("xml",0);
 
 	// what format should search results be in? default is html
-	char format = getFormatFromRequest ( hr );
+	char format = hr->getReplyFormat();//getFormatFromRequest ( hr );
 
 	// get the dmoz catid if given
 	//long searchingDmoz = hr->getLong("dmoz",0);

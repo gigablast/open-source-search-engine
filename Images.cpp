@@ -1279,10 +1279,11 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 	long newdx = (long)((float)m_dx * min);
 	long newdy = (long)((float)m_dy * min);
 
-	if ( printLink && format==FORMAT_HTML ) 
+	// might be FORMAT_AJAX!
+	if ( printLink && format !=FORMAT_XML && format != FORMAT_JSON )
 		sb->safePrintf("<a href=%s>", getUrl() );
 
-	if ( format == FORMAT_HTML )
+	if ( format !=FORMAT_XML && format != FORMAT_JSON )
 		sb->safePrintf("<img width=%li height=%li align=left "
 			       "%s"
 			       "src=\"data:image/"
@@ -1300,7 +1301,7 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 
 	// encode image in base 64
 	sb->base64Encode ( getData(), m_dataSize , 0 ); // 0 niceness
-	if ( format == FORMAT_HTML ) {
+	if ( format !=FORMAT_XML && format != FORMAT_JSON ) {
 		sb->safePrintf("\">");
 		if ( printLink ) sb->safePrintf ("</a>");
 	}
