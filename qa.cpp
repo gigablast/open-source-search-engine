@@ -8,11 +8,12 @@ bool getUrl( char *path , void (* callback) (void *state, TcpSocket *sock) ) {
 	SafeBuf sb;
 	sb.safePrintf ( "http://%s:%li%s"
 			, iptoa(g_hostdb.m_myHost->m_ip)
-			, (long)g_hostdb.m_myHost->m_port
+			, (long)g_hostdb.m_myHost->m_httpPort
 			, path
 			);
 	Url u;
 	u.set ( sb.getBufStart() );
+	log("GET %s",sb.getBufStart());
 	if ( ! g_httpServer.getDoc ( u.getUrl() ,
 				     0 , // ip
 				     0 , // offset
@@ -34,14 +35,19 @@ bool getUrl( char *path , void (* callback) (void *state, TcpSocket *sock) ) {
 
 bool qatest ( ) ;
 
-void qatestWrapper ( void *state , TcpSocket *sock ) { qatest(); }	
+void qatestWrapper ( void *state , TcpSocket *sock ) { 
+	log("qa: got reply(%li)=%s",sock->m_readOffset,sock->m_readBuf);
+	qatest(); 
+
+}	
 
 // return false if blocked, true otherwise
 bool addColl ( ) {
 	static bool s_flag = false;
 	if ( s_flag ) return true;
 	s_flag = true;
-	return getUrl ( "/admin/addcoll?c=qatest123" , qatestWrapper );
+	return getUrl ( "/admin/addcoll?c=qatest123&xml=1" , 
+			qatestWrapper );
 }
 
 
@@ -86,8 +92,10 @@ bool injectUrls ( ) {
 		s_ii++;
 		// inject using html api
 		SafeBuf sb;
-		sb.safePrintf("/admin/inject?c=qatest123&delete=0&u=");
+		sb.safePrintf("/admin/inject?c=qatest123&delete=0&"
+			      "format=xml&u=");
 		sb.urlEncode ( s_urlPtrs[s_ii] );
+		sb.nullTerm();
 		return getUrl ( sb.getBufStart() , qatestWrapper );
 	}
 	return true;
@@ -155,8 +163,9 @@ bool searchTest1 () {
 		SafeBuf sb;
 		// qa=1 tell gb to exclude "variable" or "random" things
 		// from the serps so we can checksum it consistently
-		sb.safePrintf ( "/search?c=qatest123&qa=1&q=" );
+		sb.safePrintf ( "/search?c=qatest123&qa=1&format=xml&q=" );
 		sb.urlEncode ( s_queries[s_qi1] );
+		sb.nullTerm();
 		return getUrl ( sb.getBufStart() , doneSearching1 );
 	}
 	return true;
@@ -196,8 +205,9 @@ bool searchTest2 () {
 		SafeBuf sb;
 		// qa=1 tell gb to exclude "variable" or "random" things
 		// from the serps so we can checksum it consistently
-		sb.safePrintf ( "/search?c=qatest123&qa=1&q=" );
+		sb.safePrintf ( "/search?c=qatest123&qa=1&format=xml&q=" );
 		sb.urlEncode ( s_queries[s_qi2] );
+		sb.nullTerm();
 		return getUrl ( sb.getBufStart() , doneSearching2 );
 	}
 	return true;
@@ -210,8 +220,10 @@ bool deleteUrls ( ) {
 		s_ii2++;
 		// reject using html api
 		SafeBuf sb;
-		sb.safePrintf( "/admin/inject?c=qatest123&delete=1&u=");
+		sb.safePrintf( "/admin/inject?c=qatest123&delete=1&"
+			       "format=xml&u=");
 		sb.urlEncode ( s_urlPtrs[s_ii2] );
+		sb.nullTerm();
 		return getUrl ( sb.getBufStart() , qatestWrapper );
 	}
 	return true;
