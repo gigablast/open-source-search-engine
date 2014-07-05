@@ -3390,7 +3390,13 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		strLen = gbstrlen(str);
 	}
 
-	if ( str && strLen && si->m_format == FORMAT_HTML ) {
+	if ( str && 
+	     strLen && 
+	     ( si->m_format == FORMAT_HTML ||
+	       si->m_format == FORMAT_WIDGET_IFRAME ||
+	       si->m_format == FORMAT_WIDGET_APPEND ||
+	       si->m_format == FORMAT_WIDGET_AJAX ) 
+	     ) {
 		// determine if TiTle wraps, if it does add a <br> count for
 		// each wrap
 		//if (!sb->utf8Encode2(str , strLen )) return false;
