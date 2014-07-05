@@ -1092,9 +1092,17 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	if ( isBasic ) menu = "basic";
 	sb->safePrintf("<br>");
 	sb->safePrintf("<b><font color=gray size=+2>"
-		       "%s &gt; %s &gt; %s</font></b>"
+		       "%s &gt; %s &gt; %s "
+		       "&nbsp; "
+		       "</font>"
+		       "</b>"
+		       //"<a href=/%s?c=%s&showparms=1&format=xml>xml</a> "
+		       //"<a href=/%s?c=%s&showparms=1&format=json>json</a> "
 		       "<br><br>\n", 
-		       coll, menu, s_pages[page].m_name);
+		       coll, menu, s_pages[page].m_name
+		       //,s_pages[page].m_filename , coll
+		       //,s_pages[page].m_filename , coll
+		       );
 
 
 
@@ -2487,7 +2495,6 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 		     "If the size of your request is more than 2K you "
 		     "should use POST.");
 	p.safePrintf("<br><br>");
-
 
 	p.safePrintf("<div style=padding-left:10%%>"
 		     "<font size=+2><b>API by pages</b></font>"

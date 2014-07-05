@@ -1681,8 +1681,9 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		//   cluster together onto one row
 		// . only add if not in a row of controls
 		if ( m->m_max > 1 && m->m_type != TYPE_PRIORITY_BOXES &&
-		     m->m_rowid == -1 ) {
-		     //format == FORMAT_HTML ) { // ! isJSON ) {
+		     m->m_rowid == -1 &&
+		     format != FORMAT_JSON &&
+		     format != FORMAT_XML ) { // ! isJSON ) {
 			//
 			// make a separate table for array of parms
 			sb->safePrintf (
