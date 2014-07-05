@@ -51,7 +51,7 @@ static void   sendReply ( void *st ) ;
 
 // . returns false if blocked, otherwise true
 // . sets g_errno on error
-bool sendPageStatsdb ( TcpSocket *s, HttpRequest *r ) {
+bool sendPageGraph ( TcpSocket *s, HttpRequest *r ) {
 	
 	char *cgi;
 	long cgiLen;

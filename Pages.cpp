@@ -81,7 +81,7 @@ static WebPage s_pages[] = {
 
 	{ PAGE_GET       , "get"           , 0 , "get" ,  0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_CLIENT, 
-	  "gets cached url",
+	  "gets cached web page",
 	  sendPageGet  , 0 ,NULL,NULL,0},
 	{ PAGE_LOGIN     , "login"         , 0 , "login" ,  0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
@@ -102,15 +102,15 @@ static WebPage s_pages[] = {
 
 	// use post now for the "site list" which can be big
 	{ PAGE_BASIC_SETTINGS, "admin/settings", 0 , "settings",1, M_POST , 
-	  "Basic settings page.", sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
+	  "basic settings page", sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_BASIC_STATUS, "admin/status", 0 , "status",1, 0 , 
-	  "Basic status page.", sendPageBasicStatus  , 0 ,NULL,NULL,0},
+	  "basic status page", sendPageBasicStatus  , 0 ,NULL,NULL,0},
 	//{ PAGE_BASIC_DIFFBOT, "admin/diffbot", 0 , "diffbot",1, 0 , 
 	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_BASIC_SECURITY, "admin/security", 0 , "security",1, 0 , 
-	  "Basic security page.", sendPageGeneric  , 0 ,NULL,NULL,0},
+	  "basic security page", sendPageGeneric  , 0 ,NULL,NULL,0},
 	{ PAGE_BASIC_SEARCH, "", 0 , "search",1, 0 , 
-	  "Basic search page.", sendPageRoot  , 0 ,NULL,NULL,PG_NOAPI},
+	  "basic search page", sendPageRoot  , 0 ,NULL,NULL,PG_NOAPI},
 
 
 
@@ -154,7 +154,8 @@ static WebPage s_pages[] = {
 	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 ,M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "prioritize urls for spidering",
-	  sendPageGeneric  , 0 ,NULL,NULL,0},
+	  // until we get this working, set PG_NOAPI
+	  sendPageGeneric  , 0 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" , 0,M_MULTI ,
 	  //USER_ADMIN | USER_MASTER   ,
 	  "inject url in the index here",
@@ -180,17 +181,17 @@ static WebPage s_pages[] = {
 	// master admin pages
 	{ PAGE_STATS     , "admin/stats"   , 0 , "stats" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY , 
-	  "statistics page",
+	  "general statistics",
 	  sendPageStats    , 0 ,NULL,NULL,0},
 
-	{ PAGE_STATSDB , "admin/statsdb"  , 0 , "graph"  ,  0 , 0 ,
+	{ PAGE_GRAPH , "admin/graph"  , 0 , "graph"  ,  0 , 0 ,
 	  //USER_MASTER , 
-	  "statistics page",
-	  sendPageStatsdb  , 2 /*niceness*/ ,NULL,NULL,0},
+	  "query stats graph page",
+	  sendPageGraph  , 2 /*niceness*/ ,NULL,NULL,0},
 
 	{ PAGE_PERF      , "admin/perf"    , 0 , "performance"     ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
-	  "master performance page",
+	  "function performance graph",
 	  sendPagePerf     , 0 ,NULL,NULL,0},
 
 	{ PAGE_SOCKETS   , "admin/sockets" , 0 , "sockets" ,  0 , 0 ,
@@ -237,7 +238,7 @@ static WebPage s_pages[] = {
 	{ PAGE_API , "admin/api"         , 0 , "api" , 0 , 0 ,
 	  //USER_MASTER | USER_ADMIN , 
 	  "api page",
-	  sendPageAPI , 0 ,NULL,NULL,0},
+	  sendPageAPI , 0 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_RULES  , "admin/siterules", 0 , "site rules", 1, M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "site rules page",
@@ -258,7 +259,7 @@ static WebPage s_pages[] = {
 
 	{ PAGE_SPIDERDB  , "admin/spiderdb" , 0 , "spider queue" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER   , 
-	  "spiderdb page",
+	  "spider queue",
 	  sendPageSpiderdb , 0 ,NULL,NULL,0},
 	//{ PAGE_PRIORITIES, "admin/priorities"  , 0 , "priority controls",1,1,
 	//  //USER_ADMIN | USER_MASTER   , 
@@ -293,7 +294,7 @@ static WebPage s_pages[] = {
 	  sendPageParser   , 2 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_SITEDB    , "admin/tagdb"  , 0 , "tagdb"  ,  0 , M_POST,
 	  //USER_MASTER | USER_ADMIN,
-	  "tagdb page to add/remove/get tags",
+	  "add/remove/get tags for sites/urls",
 	  sendPageTagdb ,  0 ,NULL,NULL,0},	  
 	{ PAGE_CATDB     , "admin/catdb"   , 0 , "catdb"           ,  0,M_POST,
 	  //USER_MASTER | USER_ADMIN,
@@ -2600,9 +2601,11 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 	// description of page
 	sb->safePrintf("<font size=-0> - %s "
-		       "[in <a href=/%s?showParms=1&format=xml>xml</a> "
-		       "or <a href=/%s?showParms=1&format=json>json</a>] "
-		       "or <a href=/%s>html</a>] "
+		       " &nbsp; "
+		       "[ <b>output response in</b> "
+		       "<a href=/%s?showparms=1&format=xml>xml</a> "
+		       "or <a href=/%s?showparms=1&format=json>json</a> "
+		       "or <a href=/%s>html</a> ] "
 		       "</font><br>",
 		       s_pages[PAGENUM].m_desc,
 		       pageStr,
@@ -2617,7 +2620,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf ( 
 			"<table style=max-width:80%%; %s>"
 			"<tr class=hdrow><td colspan=9>"
-			"<center><b>Parms</b></tr></tr>"
+			"<center><b>Input</b></tr></tr>"
 			"<tr bgcolor=#%s>"
 			"<td><b>#</b></td>"
 			"<td><b>parm</b></td>"
@@ -2629,8 +2632,74 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			, TABLE_STYLE
 			, DARK_BLUE );
 	
-	const char *blue = LIGHT_BLUE;
+	const char *blues[] = {DARK_BLUE,LIGHT_BLUE};
 	long count = 1;
+
+	//
+	// every page supports the:
+	// 1) &format=xml|html|json 
+	// 2) &showparms=0|1
+	// 3) &c=<collectionName>
+	// parms. we support them in sendPageGeneric() for pages like
+	// /admin/master /admin/search /admin/spider so you can see
+	// the settings.
+	// put these in Parms.cpp, but use PF_DISPLAY flag so we ignore them
+	// in convertHttpRequestToParmList() and we do not show them on the
+	// page itself.
+	//
+
+	// page display/output parms
+	sb->safePrintf("<tr bgcolor=%s>"
+		       "<td>%li</td>\n"
+		       "<td><b>format</b></td>"
+		       "<td>STRING</td>"
+		       "<td>output format</td>"
+		       "<td>html</td>"
+		       "<td>Display output in this format.</td>"
+		       "</tr>"
+		       , blues[count%2]
+		       , count
+		       );
+	count++;
+
+	// for pages that have settings...
+	if ( PAGENUM == PAGE_MASTER ||
+	     PAGENUM == PAGE_SEARCH ||
+	     PAGENUM == PAGE_SPIDER ) {
+		sb->safePrintf("<tr bgcolor=%s>"
+			       "<td>%li</td>\n"
+			       "<td><b>showparms</b></td>"
+			       "<td>BOOL (0 or 1)</td>"
+			       "<td>show parms</td>"
+			       "<td></td>"
+			       "<td>Display the values of all settings.</td>"
+			       "</tr>"
+			       , blues[count%2]
+			       , count
+			       );
+		count++;
+	}
+
+
+	// . master controls are for all collections so no need for this
+	// . we already have this in the parms list for some pages so only
+	//   show for selected pages here
+	// if ( PAGENUM != PAGE_MASTER ) {
+	// 	sb->safePrintf("<tr bgcolor=%s>"
+	// 		       "<td>%li</td>\n"
+	// 		       "<td><b>c</b></td>"
+	// 		       "<td>STRING</td>"
+	// 		       "<td>Collection</td>"
+	// 		       "<td></td>"
+	// 		       "<td>The name of the collection. "
+	// 		       "<font color=green><b>REQUIRED</b></font>"
+	// 		       "</td>"
+	// 		       "</tr>"
+	// 		       , blues[count%2]
+	// 		       , count
+	// 		       );
+	// 	count++;
+	// }
 
 	//char *lastPage = NULL;
 	//Parm *lastParm = NULL;
@@ -2657,10 +2726,6 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 		if ( pageNum != PAGENUM ) continue;
 
-		if ( blue == (const char *)LIGHT_BLUE ) blue = DARK_BLUE;
-		else if(blue==(const char *)DARK_BLUE ) blue = LIGHT_BLUE;
-
-
 		SafeBuf tmp;
 		char diff = 0;
 		bool printVal = false;
@@ -2678,7 +2743,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		if ( diff == 1 ) 
 			sb->safePrintf ( "<tr bgcolor=orange>");
 		else
-			sb->safePrintf ( "<tr bgcolor=#%s>",blue);
+			sb->safePrintf ( "<tr bgcolor=#%s>",blues[count%2]);
 
 		sb->safePrintf("<td>%li</td>",count++);
 
@@ -2735,6 +2800,14 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	// end input parm table we started below
 	sb->safePrintf("</table><br>\n\n");
 
+	// do not print the tables below now,
+	// we provide output links for xml, json and html
+	sb->safePrintf("</center>");
+	return true;
+
+
+	sb->safePrintf("<center>");
+
 	//
 	// done printing parm table
 	//
@@ -2745,7 +2818,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf ( 
 			"<table style=max-width:80%%; %s>"
 			"<tr class=hdrow><td colspan=9>"
-			"<center><b>XML Output</b></tr></tr>"
+			"<center><b>XML Output</b> (&format=xml)</tr></tr>"
 			"<tr><td bgcolor=%s>"
 			, TABLE_STYLE
 			, LIGHT_BLUE
@@ -2791,10 +2864,10 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		desc = "<response>\n"
 			"\n"
 			"\t# a numeric status code. 0 means success.\n"
-			"\t<statusCode>0</>\n"
+			"\t<statusCode>0</statusCode>\n"
 			"\n"
 			"\t# the status as a string\n"
-			"\t<statusMsg>Success</>\n"
+			"\t<statusMsg>Success</statusMsg>\n"
 			"\n"
 			"</response>\n";
 
@@ -2813,7 +2886,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf ( 
 			"<table style=max-width:80%%; %s>"
 			"<tr class=hdrow><td colspan=9>"
-			"<center><b>JSON Output</b></tr></tr>"
+			"<center><b>JSON Output</b> (&format=json)</tr></tr>"
 			"<tr><td bgcolor=%s>"
 			, TABLE_STYLE
 			, LIGHT_BLUE

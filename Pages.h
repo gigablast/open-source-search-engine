@@ -85,7 +85,7 @@ bool sendPageAPI        ( TcpSocket *s , HttpRequest *r );
 bool sendPageWordVec   ( TcpSocket *s , HttpRequest *r );
 bool sendPageQualityAgent   ( TcpSocket *s , HttpRequest *r );
 bool sendPageThesaurus  ( TcpSocket *s , HttpRequest *r );
-bool sendPageStatsdb   ( TcpSocket *s , HttpRequest *r );
+bool sendPageGraph      ( TcpSocket *s , HttpRequest *r );
 
 // values for m_usePost:
 #define M_GET   0x00
@@ -339,7 +339,7 @@ enum {
 
 	PAGE_HOSTS       ,
 	PAGE_STATS       , // 10
-	PAGE_STATSDB	 ,
+	PAGE_GRAPH       , // PAGE_STATSDB	 ,
 	PAGE_PERF        ,
 	PAGE_SOCKETS     ,
 

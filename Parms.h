@@ -197,6 +197,7 @@ class GigablastRequest {
 #define PF_COLLDEFAULT 0x1000
 #define PF_NOAPI       0x2000
 #define PF_REQUIRED    0x4000
+#define PF_NOHTML      0x8000
 
 class Parm {
  public:
