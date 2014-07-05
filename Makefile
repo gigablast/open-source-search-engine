@@ -585,10 +585,10 @@ master-deb:
 
 
 testing-deb:
-	git archive --format=tar --prefix=gb-1.0/ testing > ../gb_1.0.orig.tar
+	git archive --format=tar --prefix=gb-1.1/ testing > ../gb_1.1.orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -e gigablast@mail.com -p gb_1.0 -f ../gb_1.0.orig.tar
+	dh_make -e gigablast@mail.com -p gb_1.1 -f ../gb_1.1.orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -611,7 +611,7 @@ testing-deb:
 	mv ../gb_*.deb .	
 
 install-pkgs-local:
-	sudo alien --to-rpm gb_1.0-1_i386.deb
+	sudo alien --to-rpm gb_1.1-1_i386.deb
 # upload
 	scp gb*.deb gb*.rpm gk268:/w/html/
 
