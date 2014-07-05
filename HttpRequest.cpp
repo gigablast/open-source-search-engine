@@ -9,10 +9,22 @@ HttpRequest::~HttpRequest() { reset();      }
 char HttpRequest::getReplyFormat() {
 	if ( m_replyFormatValid ) return m_replyFormat;
 	char *fs = getString("format",NULL,NULL);
-	char fmt = FORMAT_HTML;
+	char fmt = -1;//FORMAT_HTML;
 	if ( fs && strcmp(fs,"html") == 0 ) fmt = FORMAT_HTML;
 	if ( fs && strcmp(fs,"json") == 0 ) fmt = FORMAT_JSON;
 	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
+	// support &xml=1 &json=1 still
+	if ( fmt == -1 ) {
+		long xv = getLong("xml",0);
+		if ( xv ) fmt = FORMAT_XML;
+	}
+	if ( fmt == -1 ) {
+		long jv = getLong("json",0);
+		if ( jv ) fmt = FORMAT_JSON;
+	}
+	// default to html
+	if ( fmt == -1 ) 
+		fmt = FORMAT_HTML;
 	m_replyFormat = fmt;
 	m_replyFormatValid = true;
 	return m_replyFormat;

@@ -1510,9 +1510,16 @@ bool HttpServer::sendErrorReply ( TcpSocket *s , long error , char *errmsg ,
 	time_t now ;//= getTimeGlobal();
 	if ( isClockInSync() ) now = getTimeGlobal();
 	else                   now = getTimeLocal();
+
+	// this kinda sucks that we have to do it twice...
+	HttpRequest hr;
+	hr.set ( s->m_readBuf , s->m_readOffset , s ) ;
+	char format = hr.getReplyFormat();
+
 	// . buffer for the MIME request and brief html err msg
 	// . NOTE: ctime appends a \n to the time, so we don't need to
 	char msg[1024];
+	SafeBuf sb(msg,1024,0,false);
 	// if it's a 404, redirect to home page
 	/*
 	if ( error == 404 ) 
@@ -1527,26 +1534,57 @@ bool HttpServer::sendErrorReply ( TcpSocket *s , long error , char *errmsg ,
 	*/
 	char *tt = asctime(gmtime ( &now ));
 	tt [ gbstrlen(tt) - 1 ] = '\0';
-	sprintf ( msg , 
-		  "HTTP/1.0 %li (%s)\r\n"
-		  "Content-Length: %li\r\n"
-		  "Connection: Close\r\n"
-		  "Date: %s UTC\r\n\r\n"
-		  "<html><b>Error = %s</b></html>",
-		  error  ,
-		  errmsg ,
-		  (long)(gbstrlen("<html><b>Error = </b></html>")+
-			 gbstrlen(errmsg)),
-		  tt , // ctime ( &now ) ,
-                  errmsg );
+
+	char *ct = "text/html";
+	if ( format == FORMAT_XML  ) ct = "text/xml";
+	if ( format == FORMAT_JSON ) ct = "application/json";
+
+	sb.safePrintf(
+		      "HTTP/1.0 %li (%s)\r\n"
+		      "Content-Length: %li\r\n"
+		      "Connection: Close\r\n"
+		      "Content-Type: %s\r\n"
+		      "Date: %s UTC\r\n\r\n"
+		      ,
+		      error  ,
+		      errmsg ,
+		      (long)(gbstrlen("<html><b>Error = </b></html>")+
+			     gbstrlen(errmsg)),
+		      ct ,
+		      tt ); // ctime ( &now ) ,
+
+
+	if ( format != FORMAT_XML && format != FORMAT_JSON )
+		sb.safePrintf("<html><b>Error = %s</b></html>",errmsg );
+
+	if ( format == FORMAT_XML ) {
+		sb.safePrintf("<response>\n"
+			      "\t<statusCode>%li</statusCode>\n"
+			      "\t<statusMsg>", error );
+		sb.htmlEncode(errmsg );
+		sb.safePrintf("</statusMsg>\n"
+			      "</response>\n");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		sb.safePrintf("{\"response\":{\n"
+			      "\t\"statusCode\":%li,\n"
+			      "\t\"statusMsg\":", error );
+		sb.jsonEncode(errmsg );
+		sb.safePrintf("\",\n"
+			      "}\n"
+			      "}\n");
+	}
+
+
 	// . move the reply to a send buffer
 	// . don't make sendBuf bigger than g_conf.m_httpMaxSendBufSize
-	long msgSize    = gbstrlen ( msg );
+	//long msgSize    = gbstrlen ( msg );
 	// record it
-	if ( bytesSent ) *bytesSent = msgSize;//sendBufSize;
+	if ( bytesSent ) *bytesSent = sb.length();//sendBufSize;
 	// use this new function that will compress the reply now if the
 	// request was a ZET instead of a GET
-	return sendReply2 ( msg , msgSize , NULL , 0 , s );
+	return sendReply2 ( msg , sb.length() , NULL , 0 , s );
 
 	/*
 	// . this returns false if blocked, true otherwise
@@ -1572,6 +1610,11 @@ bool HttpServer::sendQueryErrorReply( TcpSocket *s , long error ,
 				      //long  rawFormat, 
 				      char format ,
 				      int errnum, char *content) {
+
+	// just use this for now. it detects the format already...
+	return sendErrorReply ( s,error,errmsg,NULL);
+
+	/*
 	// clear g_errno so the send goes through
 	g_errno = 0;
 	// get time in secs since epoch
@@ -1639,6 +1682,7 @@ bool HttpServer::sendQueryErrorReply( TcpSocket *s , long error ,
 	long msgSize    = gbstrlen ( msg );
 
 	return sendReply2 ( msg , msgSize , NULL , 0 , s );
+	*/
 
 	/*
 	long sendBufSize = msgSize;

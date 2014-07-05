@@ -2785,6 +2785,14 @@ bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
 }
 */
 
+bool SafeBuf::jsonEncode ( char *src , long srcLen ) {
+	char c = src[srcLen];
+	src[srcLen] = 0;
+	bool status = jsonEncode ( src );
+	src[srcLen] = c;
+	return status;
+}
+
 // encode into json
 bool SafeBuf::safeUtf8ToJSON ( char *utf8 ) {
 

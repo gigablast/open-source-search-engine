@@ -182,6 +182,7 @@ case EDIFFBOTREQUESTTIMEDOUT: return "Diffbot request timed out";
 case EDIFFBOTURLPROCESSERROR: return "Diffbot error processing url";
 case EDIFFBOTTOKENEXPIRED: return "Diffbot token expired";
 case EDIFFBOTUNKNOWNERROR: return "Diffbot unknown error";
+case EMISSINGINPUT: return "Missing required input parms";
 	}
 	// if the remote error bit is clear it must be a regulare errno
 	//if ( ! ( errnum & REMOTE_ERROR_BIT ) ) return strerror ( errnum );

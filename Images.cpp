@@ -1293,7 +1293,10 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 			       );
 
 	if ( format == FORMAT_XML )
-		sb->safePrintf("<imageBase64>");
+		sb->safePrintf("\t<imageBase64>");
+
+	if ( format == FORMAT_JSON )
+		sb->safePrintf("\t\"imageBase64\":\"");
 
 	// encode image in base 64
 	sb->base64Encode ( getData(), m_dataSize , 0 ); // 0 niceness
@@ -1304,6 +1307,9 @@ bool ThumbnailInfo::printThumbnailInHtml ( SafeBuf *sb ,
 
 	if ( format == FORMAT_XML )
 		sb->safePrintf("</imageBase64>\n");
+
+	if ( format == FORMAT_JSON )
+		sb->safePrintf("\",\n");
 
 	// widget needs to know the width of the thumb for formatting
 	// the text either on top of the thumb or to the right of it

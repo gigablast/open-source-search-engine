@@ -2803,7 +2803,10 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	// do not print the tables below now,
 	// we provide output links for xml, json and html
 	sb->safePrintf("</center>");
-	return true;
+
+	if ( PAGENUM != PAGE_GET &&
+	     PAGENUM != PAGE_RESULTS )
+		return true;
 
 
 	sb->safePrintf("<center>");
@@ -2818,7 +2821,8 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf ( 
 			"<table style=max-width:80%%; %s>"
 			"<tr class=hdrow><td colspan=9>"
-			"<center><b>XML Output</b> (&format=xml)</tr></tr>"
+			"<center><b>Example XML Output</b> "
+			"(&format=xml)</tr></tr>"
 			"<tr><td bgcolor=%s>"
 			, TABLE_STYLE
 			, LIGHT_BLUE
@@ -2834,46 +2838,62 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 
 	sb->safePrintf("<pre style=max-width:500px;>\n");
-	char *desc = NULL;
-	bool printed = false;
 
-	// for /admin/master /admin/spider /admin/search you can say
-	// ?showparms=1 and get this listing
-	// if ( showParms ) {
-	// 	printed = true;
-	// 	// print the page out but in xml
-	// 	SafeBuf xb;
-	// 	g_parms.printParms2 ( &xb ,
-	// 			      PAGENUM ,
-	// 			      cr ,
-	// 			      1, // long nc , # cols?
-	// 			      1, // long pd , printDesc?
-	// 			      false , // isCrawlbot
-	// 			      FORMAT_XML,
-	// 			      NULL ); // TcpSocket *sock
-	// 	// convert < to &lt; etc.
-	// 	sb->htmlEncode ( xb.getBufStart() );
-	// 	//SafeBuf hb;
-	// 	//hb.htmlEncode ( xb.getBufStart() );
-	// 	// then brify it
-	// 	//sb->brify2 ( hb.getBufStart() , 80 );
-	// }
+	char *get = "<html><title>Some web page title</title>"
+		"<head>My first web page</head></html>";
 
 	// example output in xml
-	if ( ! desc )
-		desc = "<response>\n"
-			"\n"
-			"\t# a numeric status code. 0 means success.\n"
-			"\t<statusCode>0</statusCode>\n"
-			"\n"
-			"\t# the status as a string\n"
-			"\t<statusMsg>Success</statusMsg>\n"
-			"\n"
-			"</response>\n";
+	if ( PAGENUM == PAGE_GET ) {
+		SafeBuf xb;
+		xb.safePrintf("<response>\n"
+			      "\t<statusCode>0</statusCode>\n"
+			      "\t<statusMsg>Success</statusMsg>\n"
+			      "\t<url><![CDATA[http://www.doi.gov/]]></url>\n"
+			      "\t<docId>34111603247</docId>\n"
+			      "\t<cachedTimeUTC>1404512549</cachedTimeUTC>\n"
+			      "\t<cachedTimeStr>Jul 04, 2014 UTC"
+			      "</cachedTimeStr>\n"
+			      "\t<content><![CDATA[");
+		xb.cdataEncode(get);
+		xb.safePrintf("]]></content>\n");
+		xb.safePrintf("</response>\n");
+		sb->htmlEncode ( xb.getBufStart() );
+	}
 
-	if ( ! printed ) {
-		printed = true;
-		sb->htmlEncode ( desc);
+	if ( PAGENUM == PAGE_RESULTS ) {
+		SafeBuf xb;
+		xb.safePrintf("<response>\n"
+			      "\t<statusCode>0</statusCode>\n"
+			      "\t<statusMsg>Success</statusMsg>\n"
+			      "\t<currentTimeUTC>1404513734</currentTimeUTC>\n"
+			      "\t<responseTimeMS>284</responseTimeMS>\n"
+			      "\t<docsInCollection>226</docsInCollection>\n"
+			      "\t<hits>193</hits>\n"
+			      "\t<moreResultsFollow>1</moreResultsFollow>\n"
+
+			      "\t<result>\n"
+			      "\t\t<imageBase64>/9j/4AAQSkZJRgABAQAAAQABA..."
+			      "</imageBase64>\n"
+			      "\t\t<imageHeight>350</imageHeight>\n"
+			      "\t\t<imageWidth>223</imageWidth>\n"
+			      "\t\t<origImageHeight>470</origImageHeight>\n"
+			      "\t\t<origImageWidth>300</origImageWidth>\n"
+			      "\t\t<title><![CDATA[U.S....]]></title>\n"
+			      "\t\t<sum>Department of the Interior protects "
+			      "America's natural resources and</sum>\n"
+			      "\t\t<url><![CDATA[www.doi.gov]]></url>\n"
+			      "\t\t<size>  64k</size>\n"
+			      "\t\t<docId>34111603247</docId>\n"
+			      "\t\t<site>www.doi.gov</site>\n"
+			      "\t\t<spidered>1404512549</spidered>\n"
+			      "\t\t<firstIndexedDateUTC>1404512549"
+			      "</firstIndexedDateUTC>\n"
+			      "\t\t<contentHash32>2680492249</contentHash32>\n"
+			      "\t\t<language>English</language>\n"
+			      "\t</result>\n"
+
+			      "</response>\n");
+		sb->htmlEncode ( xb.getBufStart() );
 	}
 
 
@@ -2886,48 +2906,73 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf ( 
 			"<table style=max-width:80%%; %s>"
 			"<tr class=hdrow><td colspan=9>"
-			"<center><b>JSON Output</b> (&format=json)</tr></tr>"
+			"<center><b>Example JSON Output</b> "
+			"(&format=json)</tr></tr>"
 			"<tr><td bgcolor=%s>"
 			, TABLE_STYLE
 			, LIGHT_BLUE
 			);
 	sb->safePrintf("<pre>\n");
 
-	desc = NULL;
-	printed = false;
 
-	// for /admin/master /admin/spider /admin/search you can say
-	// ?showparms=1 and get this listing
-	// if ( showParms ) {
-	// 	printed = true;
-	// 	// print the page out but in json
-	// 	g_parms.printParms2 ( sb ,
-	// 			      PAGENUM,
-	// 	 		      cr ,
-	// 	 		      1 , // long nc , # cols?
-	// 	 		      1 , // long pd , print desc?
-	// 	 		      false , // isCrawlbot
-	// 	 		      FORMAT_JSON,
-	// 	 		      NULL ); // TcpSocket *sock
-	// }
+	// example output in xml
+	if ( PAGENUM == PAGE_GET ) {
+		sb->safePrintf(
+			       "{ \"response:\"{\n"
+			       "\t\"statusCode\":0,\n"
+			       "\t\"statusMsg\":\"Success\",\n"
+			       "\t\"url\":\"http://www.doi.gov/\",\n"
+			       "\t\"docId\":34111603247,\n"
+			       "\t\"cachedTimeUTC\":1404512549,\n"
+			       "\t\"cachedTimeStr\":\"Jul 04, 2014 UTC\",\n"
+			       "\t\"content\":\"");
+		SafeBuf js;
+		js.jsonEncode(get);
+		sb->htmlEncode(js.getBufStart());
+		sb->safePrintf("\"\n"
+			       "}\n"
+			       "}\n");
+	}
 
-	if ( ! desc )
-		desc = "{ \"response:\"{\n"
-			"\n"
-			"\t# a numeric status code. "
-			"0 means success.\n"
-			"\t\"statusCode\":0,\n"
-			"\n"
-			"\t# the status as a string\n"
-			"\t\"statusMsg\":\"Success\"\n"
-			"\t}\n"
-			"}\n";
+	if ( PAGENUM == PAGE_RESULTS ) {
+		sb->safePrintf(
+			       "{ \"response:\"{\n"
+			       "\t\"statusCode\":0,\n"
+			       "\t\"statusMsg\":\"Success\",\n"
 
-	//if ( ! printed )
-	//	sb->htmlEncode ( desc);
+			       "\t\"currentTimeUTC\":1404588231,\n"
+			       "\t\"responseTimeMS\":312,\n"
+			       "\t\"docsInCollection\":226,\n"
+			       "\t\"hits\":193,\n"
+			       "\t\"moreResultsFollow\":1,\n"
+			       "\t\"results\":[\n"
 
-	if ( ! printed )
-		sb->safeStrcpy ( desc);
+			       "\t{\n"
+			       "\t\t\"imageBase64\":\"/9j/4AAQSkZJR...\",\n"
+			       "\t\t\"imageHeight\":223,\n"
+			       "\t\t\"imageWidth\":350,\n"
+			       "\t\t\"origImageHeight\":300,\n"
+			       "\t\t\"origImageWidth\":470,\n"
+			       "\t\t\"title\":\"U.S....\",\n"
+			       "\t\t\"sum\":\"Department of the Interior "
+			       "protects America's natural resources.\",\n"
+			       "\t\t\"url\":\"www.doi.gov\",\n"
+			       "\t\t\"size\":\"  64k\",\n"
+			       "\t\t\"docId\":34111603247,\n"
+			       "\t\t\"site\":\"www.doi.gov\",\n"
+			       "\t\t\"spidered\":1404512549,\n"
+			       "\t\t\"firstIndexedDateUTC\":1404512549,\n"
+			       "\t\t\"contentHash32\":2680492249,\n"
+			       "\t\t\"language\":\"English\"\n"
+			       "\t}\n"
+			       "\t,\n"
+			       "\t...\n"
+
+			       "]\n"
+			       "}\n"
+			       );
+	}
+
 
 	sb->safePrintf("</pre>");
 	sb->safePrintf ( "</td></tr></table><br>\n\n" );
