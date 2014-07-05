@@ -13,7 +13,7 @@ bool getUrl( char *path , void (* callback) (void *state, TcpSocket *sock) ) {
 			);
 	Url u;
 	u.set ( sb.getBufStart() );
-	log("GET %s",sb.getBufStart());
+	log("qa: getting %s",sb.getBufStart());
 	if ( ! g_httpServer.getDoc ( u.getUrl() ,
 				     0 , // ip
 				     0 , // offset
