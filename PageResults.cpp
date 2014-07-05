@@ -3885,10 +3885,10 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       ,ix
 			       );
 		// reindex
-		sb->safePrintf(" - <a style=color:red; href=\"/addurl?u=");
+		sb->safePrintf(" - <a style=color:red; href=\"/addurl?urls=");
 		sb->urlEncode ( url , gbstrlen(url) , false );
 		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		sb->safePrintf("&rand64=%llu&force=1\">respider</a>",rand64);
+		sb->safePrintf("&rand64=%llu\">respider</a>",rand64);
 	}
 
 
