@@ -5207,6 +5207,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	// if spidering disabled then do not do this crap
 	if ( ! g_conf.m_spideringEnabled )  return;
 	//if ( ! g_conf.m_webSpideringEnabled )  return;
+	// or if trying to exit
+	if ( g_process.m_mode == EXIT_MODE ) return;	
 
 	// wait for clock to sync with host #0
 	if ( ! isClockInSync() ) { 
@@ -5517,6 +5519,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 	// must be spidering to dole out
 	if ( ! g_conf.m_spideringEnabled ) return;
+	// or if trying to exit
+	if ( g_process.m_mode == EXIT_MODE ) return;	
 	// if we don't have all the url counts from all hosts, then wait.
 	// one host is probably down and was never up to begin with
 	if ( ! s_countsAreValid ) return;
@@ -6617,7 +6621,9 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 		return true;
 	}
 	// turned off?
-	if ( ( (! g_conf.m_spideringEnabled 
+	if ( ( (! g_conf.m_spideringEnabled ||
+		// or if trying to exit
+		g_process.m_mode == EXIT_MODE
 		) && // ! g_conf.m_webSpideringEnabled ) &&
 	       ! sreq->m_isInjecting ) || 
 	     // repairing the collection's rdbs?
