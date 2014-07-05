@@ -1125,7 +1125,7 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 
 	// print standard header
 	char format = r->getReplyFormat();
-	if ( format == FORMAT_HTML )
+	if ( format != FORMAT_XML && format != FORMAT_JSON )
 		g_pages.printAdminTop ( sb , s , r );
 
 	// xml/json header
@@ -1247,7 +1247,7 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 			"Add url is temporarily disabled in Master Controls."
 			"</font></td></tr>\n";
 
-	if ( format != FORMAT_HTML ) {
+	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
 		char *coll = g_collectiondb.getDefaultColl(r);
 		CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
 	 	g_parms.printParms2 ( sb ,
@@ -1681,8 +1681,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		//   cluster together onto one row
 		// . only add if not in a row of controls
 		if ( m->m_max > 1 && m->m_type != TYPE_PRIORITY_BOXES &&
-		     m->m_rowid == -1 &&
-		     format == FORMAT_HTML ) { // ! isJSON ) {
+		     m->m_rowid == -1 ) {
+		     //format == FORMAT_HTML ) { // ! isJSON ) {
 			//
 			// make a separate table for array of parms
 			sb->safePrintf (
@@ -2100,7 +2100,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		//if ( format != FORMAT_HTML );//isJSON ) ;
 		// but if it is in same row as previous, do not repeat it
 		// for this same row, silly
-		else if ( firstInRow ) // && m->m_page != PAGE_PRIORITIES ) 
+		if ( firstInRow ) // && m->m_page != PAGE_PRIORITIES ) 
 			sb->safePrintf ( "<tr bgcolor=#%s>"
 					 "<td>%li</td>\n<td>", 
 					 bgc,
@@ -2552,7 +2552,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 
 	// end the input cell
-	if ( format == FORMAT_HTML ) sb->safePrintf ( "</td>\n");
+	sb->safePrintf ( "</td>\n");
 
 	// "insert above" link? used for arrays only, where order matters
 	if ( m->m_addin && j < jend ) {//! isJSON ) {
@@ -2597,7 +2597,7 @@ bool Parms::printParm ( SafeBuf* sb,
 					//"rm_%s=1\">"
 					// remove=<rownum>
 					"remove%s=%li\">"
-					"remove</td>\n",coll,//cgi );
+					"remove</a></td>\n",coll,//cgi );
 					suffix,
 					j); // j is row #
 					
@@ -2605,7 +2605,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ( "<td></td>\n");
 	}
 
-	if ( lastInRow && format == FORMAT_JSON ) sb->safePrintf ("</tr>\n");
+	if ( lastInRow ) sb->safePrintf ("</tr>\n");
 	return status;
 }
 
