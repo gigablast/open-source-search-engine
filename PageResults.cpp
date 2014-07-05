@@ -3430,7 +3430,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	//
 	// print <h1> tag contents. hack for client.
 	//
-	if ( mr->ptr_htag && mr->size_htag ) {
+	if ( mr->ptr_htag && mr->size_htag > 1 ) {
 		if ( si->m_format == FORMAT_XML ) {
 			sb->safePrintf("\t\t<h1Tag><![CDATA[");
 			sb->cdataEncode(mr->ptr_htag);
