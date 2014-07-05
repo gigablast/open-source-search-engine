@@ -72,9 +72,12 @@ static WebPage s_pages[] = {
 	//{ PAGE_WIDGET   , "widget"        , 0 , "widget" , 0 , 0 ,
 	//  "widget page",
 	//  sendPageWidget, 0 ,NULL,NULL,PG_NOAPI},
+
+	// this is the public addurl, /addurl, if you are using the 
+	// api use PAGE_ADDURL2 which is /admin/addurl. so we set PG_NOAPI here
 	{ PAGE_ADDURL    , "addurl"       , 0 , "add url" , 0 , 0 ,
 	  "Page where you can add url for spidering",
-	  sendPageAddUrl, 0 ,NULL,NULL,0},
+	  sendPageAddUrl, 0 ,NULL,NULL,PG_NOAPI},
 
 	{ PAGE_GET       , "get"           , 0 , "get" ,  0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_CLIENT, 
@@ -2596,8 +2599,15 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf("</a>");
 
 	// description of page
-	sb->safePrintf("<font size=-0> - %s</font><br>",
-		       s_pages[PAGENUM].m_desc);
+	sb->safePrintf("<font size=-0> - %s "
+		       "[in <a href=/%s?showParms=1&format=xml>xml</a> "
+		       "or <a href=/%s?showParms=1&format=json>json</a>] "
+		       "or <a href=/%s>html</a>] "
+		       "</font><br>",
+		       s_pages[PAGENUM].m_desc,
+		       pageStr,
+		       pageStr,
+		       pageStr);
 	sb->safePrintf("</div><br>");
 	
 	// begin new list of centered tables
@@ -2736,21 +2746,64 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			"<table style=max-width:80%%; %s>"
 			"<tr class=hdrow><td colspan=9>"
 			"<center><b>XML Output</b></tr></tr>"
-			"<tr><td>"
+			"<tr><td bgcolor=%s>"
 			, TABLE_STYLE
+			, LIGHT_BLUE
 			);
-	sb->safePrintf("<pre>\n");
-	char *desc = s_pages[PAGENUM].m_xmlOutputDesc;
+
+
+	// bool showParms = false;
+	// if ( PAGENUM == PAGE_MASTER ||
+	//      PAGENUM == PAGE_SPIDER ||
+	//      PAGENUM == PAGE_SEARCH 
+	//      ) 
+	// 	showParms = true;
+
+
+	sb->safePrintf("<pre style=max-width:500px;>\n");
+	char *desc = NULL;
+	bool printed = false;
+
+	// for /admin/master /admin/spider /admin/search you can say
+	// ?showparms=1 and get this listing
+	// if ( showParms ) {
+	// 	printed = true;
+	// 	// print the page out but in xml
+	// 	SafeBuf xb;
+	// 	g_parms.printParms2 ( &xb ,
+	// 			      PAGENUM ,
+	// 			      cr ,
+	// 			      1, // long nc , # cols?
+	// 			      1, // long pd , printDesc?
+	// 			      false , // isCrawlbot
+	// 			      FORMAT_XML,
+	// 			      NULL ); // TcpSocket *sock
+	// 	// convert < to &lt; etc.
+	// 	sb->htmlEncode ( xb.getBufStart() );
+	// 	//SafeBuf hb;
+	// 	//hb.htmlEncode ( xb.getBufStart() );
+	// 	// then brify it
+	// 	//sb->brify2 ( hb.getBufStart() , 80 );
+	// }
+
+	// example output in xml
 	if ( ! desc )
 		desc = "<response>\n"
-			"\t<status>N</status> "
-			"# 0 on success, otherwise an "
-			"error code\n"
-			"\t<statusMsg>S</statusMsg> "
-			"# \"Success\" on success, "
-			"otherwise the error message."
-			"</response>";
-	sb->htmlEncode ( desc);
+			"\n"
+			"\t# a numeric status code. 0 means success.\n"
+			"\t<statusCode>0</>\n"
+			"\n"
+			"\t# the status as a string\n"
+			"\t<statusMsg>Success</>\n"
+			"\n"
+			"</response>\n";
+
+	if ( ! printed ) {
+		printed = true;
+		sb->htmlEncode ( desc);
+	}
+
+
 	sb->safePrintf("</pre>");
 	sb->safePrintf ( "</td></tr></table><br>\n\n" );
 	
@@ -2761,22 +2814,48 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			"<table style=max-width:80%%; %s>"
 			"<tr class=hdrow><td colspan=9>"
 			"<center><b>JSON Output</b></tr></tr>"
-			"<tr><td>"
+			"<tr><td bgcolor=%s>"
 			, TABLE_STYLE
+			, LIGHT_BLUE
 			);
 	sb->safePrintf("<pre>\n");
-	desc = s_pages[PAGENUM].m_jsonOutputDesc;
+
+	desc = NULL;
+	printed = false;
+
+	// for /admin/master /admin/spider /admin/search you can say
+	// ?showparms=1 and get this listing
+	// if ( showParms ) {
+	// 	printed = true;
+	// 	// print the page out but in json
+	// 	g_parms.printParms2 ( sb ,
+	// 			      PAGENUM,
+	// 	 		      cr ,
+	// 	 		      1 , // long nc , # cols?
+	// 	 		      1 , // long pd , print desc?
+	// 	 		      false , // isCrawlbot
+	// 	 		      FORMAT_JSON,
+	// 	 		      NULL ); // TcpSocket *sock
+	// }
+
 	if ( ! desc )
 		desc = "{ \"response:\"{\n"
-			"\t\"status\":N, "
-			"# 0 on success, otherwise an "
-			"error code\n"
-			"\t\"statusMsg\":\"xxx\" "
-			"# xxx is \"Success\" on success, "
-			"otherwise the error message.\n"
+			"\n"
+			"\t# a numeric status code. "
+			"0 means success.\n"
+			"\t\"statusCode\":0,\n"
+			"\n"
+			"\t# the status as a string\n"
+			"\t\"statusMsg\":\"Success\"\n"
 			"\t}\n"
-			"}";
-	sb->htmlEncode ( desc);
+			"}\n";
+
+	//if ( ! printed )
+	//	sb->htmlEncode ( desc);
+
+	if ( ! printed )
+		sb->safeStrcpy ( desc);
+
 	sb->safePrintf("</pre>");
 	sb->safePrintf ( "</td></tr></table><br>\n\n" );
 	

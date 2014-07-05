@@ -315,7 +315,7 @@ class Parms {
 			  long nc , 
 			  long pd ,
 			  bool isCrawlbot ,
-			  bool isJSON,
+			  char format, //bool isJSON,
 			  TcpSocket *sock
 			  );
 
@@ -351,7 +351,7 @@ class Parms {
 			 long  pd   ,
 			 bool lastRow ,
 			 bool isCrawlbot = false,
-			 bool isJSON = false ) ;
+			 char format = FORMAT_HTML);//bool isJSON = false ) ;
 
 	char *getTHIS ( HttpRequest *r , long page );
 

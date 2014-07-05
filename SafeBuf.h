@@ -107,6 +107,7 @@ struct SafeBuf {
 	bool  safeStrcpy ( char *s ) ;
 	//bool  safeStrcpyPrettyJSON ( char *decodedJson ) ;
 	bool  safeUtf8ToJSON ( char *utf8 ) ;
+	bool jsonEncode ( char *utf8 ) { return safeUtf8ToJSON(utf8); };
 
 	bool  csvEncode ( char *s , long len , long niceness = 0 );
 

@@ -2785,6 +2785,7 @@ bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
 }
 */
 
+// encode into json
 bool SafeBuf::safeUtf8ToJSON ( char *utf8 ) {
 
 	if ( ! utf8 ) return true;

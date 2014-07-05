@@ -1559,7 +1559,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			  long nc ,
 			  long pd , 
 			  bool isCrawlbot , 
-			  bool isJSON ,
+			  char format , // bool isJSON ,
 			  TcpSocket *sock ) {
 	bool status = true;
 	s_count = 0;
@@ -1630,7 +1630,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		// . only add if not in a row of controls
 		if ( m->m_max > 1 && m->m_type != TYPE_PRIORITY_BOXES &&
 		     m->m_rowid == -1 &&
-		     ! isJSON ) {
+		     format == FORMAT_HTML ) { // ! isJSON ) {
 			//
 			// make a separate table for array of parms
 			sb->safePrintf (
@@ -1650,6 +1650,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			// print users current ip if showing the list
 			// of "Master IPs" for admin access
 			if ( m->m_page == PAGE_SECURITY &&
+			     sock &&
 			     m->m_title &&
 			     strstr(m->m_title,"IP") )
 				sb->safePrintf(" <b>Your current IP is "
@@ -1676,7 +1677,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 						     bg,nc,pd,
 						     false,
 						     isCrawlbot,
-						     isJSON);
+						     format);//isJSON);
 			continue;
 		}
 		// if not first in a row, skip it, we printed it already
@@ -1696,7 +1697,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 				status &=printParm(sb,NULL,&m_parms[k],k,
 					    newj,jend,(char *)THIS,coll,NULL,
 						   bg,nc,pd, j==size-1,
-						   isCrawlbot,isJSON);
+						   isCrawlbot,format);//isJSON)
 			}
 		}
 		// end array table
@@ -1720,11 +1721,12 @@ bool Parms::printParm ( SafeBuf* sb,
 			char *coll ,
 			char *pwd  ,
 			char *bg   ,
-			long  nc   ,
-			long  pd   ,
+			long  nc   , // # column?
+			long  pd   , // print description
 			bool lastRow ,
 			bool isCrawlbot ,
-			bool isJSON ) {
+			//bool isJSON ) {
+			char format ) {
 	bool status = true;
 	// do not print if no permissions
 	//if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
@@ -1747,6 +1749,54 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( m->m_type == TYPE_COMMENT ) return true;
 
 	if ( m->m_flags & PF_HIDDEN ) return true;
+
+	CollectionRec *cr = NULL;
+	collnum_t collnum = -1;
+	if ( coll ) {
+		cr = g_collectiondb.getRec ( coll );
+		if ( cr ) collnum = cr->m_collnum;
+	}
+
+
+	if ( format == FORMAT_XML ) {
+		sb->safePrintf ( "\t<parm>\n");
+		sb->safePrintf ( "\t\t<title>%s</>\n",m->m_title);
+		sb->safePrintf ( "\t\t<desc>");
+		sb->htmlEncode ( m->m_desc );
+		sb->safePrintf("</desc>\n");
+		sb->safePrintf ( "\t\t<cgi>%s</>\n",m->m_cgi);
+		// and default value if it exists
+		char *def = m->m_def;
+		if ( ! def ) def = "";
+		sb->safePrintf ( "\t\t<defaultValue>%s</>\n",def);
+		sb->safePrintf ( "\t\t<currentValue>");
+		m->printVal ( sb , collnum , 0 );//occNum );
+		sb->safePrintf("</>\n");
+		sb->safePrintf("\t</parm>\n");
+		return true;
+	}
+
+	if ( format == FORMAT_JSON ) {
+		sb->safePrintf ( "\t\"parm\":{\n");
+		sb->safePrintf ( "\t\t\"title\":\"%s\",\n",m->m_title);
+		sb->safePrintf ( "\t\t\"desc\":\"");
+		sb->jsonEncode ( m->m_desc );
+		sb->safePrintf("\",\n");
+		sb->safePrintf ( "\t\t\"cgi\":\"%s\",\n",m->m_cgi);
+		// and default value if it exists
+		char *def = m->m_def;
+		if ( ! def ) def = "";
+		sb->safePrintf ( "\t\t\"defaultValue\":\"");
+		sb->jsonEncode(def);
+		sb->safePrintf("\",\n");
+		sb->safePrintf ( "\t\t\"currentValue\":\"");
+		SafeBuf js;
+		m->printVal ( &js , collnum , 0 );//occNum );
+		sb->jsonEncode(js.getBufStart());
+		sb->safePrintf("\"\n");
+		sb->safePrintf("\t}\n");
+		return true;
+	}
 
 	// . if printing on crawlbot page hide these
 	// . we repeat this logic below when printing parm titles
@@ -1808,13 +1858,6 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( mm > 0 && m->m_rowid >= 0 && m_parms[mm-1].m_rowid == m->m_rowid )
 		firstInRow = false;
 
-	CollectionRec *cr = NULL;
-	collnum_t collnum = -1;
-	if ( coll ) {
-		cr = g_collectiondb.getRec ( coll );
-		if ( cr ) collnum = cr->m_collnum;
-	}
-
 	long firstRow = 0;
 	//if ( m->m_page==PAGE_PRIORITIES ) firstRow = MAX_PRIORITY_QUEUES - 1;
 	// . use a separate table for arrays
@@ -1823,7 +1866,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	//   default line in the url filters table
 	if ( j == firstRow && m->m_rowid >= 0 && firstInRow && m->m_hdrs ) {
 		// print description as big comment
-		if ( m->m_desc && pd == 1 && ! isJSON ) {
+		if ( m->m_desc && pd == 1 ) {
 			// url FILTERS table description row
 			sb->safePrintf ( "<td colspan=20 bgcolor=#%s>"
 					 "<font size=-1>\n" , DARK_BLUE);
@@ -1838,7 +1881,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		}
 		// # column
 		// do not show this for PAGE_PRIORITIES it is confusing
-		if ( m->m_max > 1 && ! isJSON ) {
+		if ( m->m_max > 1 ) {
 		     //m->m_page != PAGE_PRIORITIES ) {
 			sb->safePrintf (  "<td><b>#</b></td>\n" );
 		}
@@ -1848,8 +1891,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			// parm shortcut
 			Parm *mk = &m_parms[k];
 			// not if printing json
-			if ( isJSON ) continue;
-
+			//if ( format != FORMAT_HTML )continue;//isJSON )
 			// skip if hidden
 			if ( cr && ! cr->m_isCustomCrawl &&
 			     (mk->m_flags & PF_DIFFBOT) )
@@ -1890,7 +1932,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			*/
 			sb->safePrintf ("</td>\n");
 		}
-		if ( ! isJSON ) sb->safePrintf ( "</tr>\n" ); // mdw added
+		//if ( format == FORMAT_HTML ) 
+		sb->safePrintf ( "</tr>\n" ); // mdw added
 	}
 
 	// skip if hidden. diffbot api url only for custom crawls.
@@ -1923,6 +1966,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( m->m_max <= 1 && m->m_hdrs ) { // j == 0 && m->m_rowid < 0 ) {
 		if ( firstInRow )
 			sb->safePrintf ( "<tr bgcolor=#%s>",bg);
+
 		if ( t == TYPE_STRINGBOX ) {
 			sb->safePrintf ( "<td colspan=2><center>"
 				  "<b>%s</b><br><font size=-1>",m->m_title );
@@ -1938,7 +1982,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 			sb->safePrintf ( "</font><br>\n" );
 		}
-		else {
+		if ( t != TYPE_STRINGBOX ) {
 			// this td will be invisible if isCrawlbot and the
 			// parm is too advanced to display
 			sb->safePrintf ( "<td " );
@@ -1995,7 +2039,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		char *bgc = LIGHT_BLUE;
 		if ( j % 2 ) bgc = DARK_BLUE;
 		// do not print this if doing json
-		if ( isJSON ) ;
+		//if ( format != FORMAT_HTML );//isJSON ) ;
 		// but if it is in same row as previous, do not repeat it
 		// for this same row, silly
 		else if ( firstInRow ) // && m->m_page != PAGE_PRIORITIES ) 
@@ -2047,69 +2091,67 @@ bool Parms::printParm ( SafeBuf* sb,
 		//if ( *s ) ddd1 = " checked";
 		//else      ddd2 = " checked";
 		// just show the parm name and value if printing in json
-		if ( isJSON ) {
-			if ( ! lastRow ) {
-				long val = 0;
-				if ( *s ) val = 1;
-				sb->safePrintf("\"%s\":%li,\n",cgi,val);
-			}
-		}
-		else {
-			//sb->safePrintf("<center><nobr>");
-			sb->safePrintf("<nobr>");
-			// this is part of the "HACK" fix below. you have to
-			// specify the cgi parm in the POST request, and 
-			// unchecked checkboxes are not included in the POST 
-			// request.
-			//if ( lastRow && m->m_page == PAGE_FILTERS ) 
-			//	sb->safePrintf("<input type=hidden ");
-			//char *val = "Y";
-			//if ( ! *s ) val = "N";
-			char *val = "";
-			// "s" is invalid of parm has no "object"
-			if ( m->m_obj == OBJ_NONE && m->m_def[0] != '0' )
-				val = " checked";
-			if ( m->m_obj != OBJ_NONE && s && *s ) 
-				val = " checked";
-			// s is NULL for GigablastRequest parms
-			if ( ! s && m->m_def && m->m_def[0]=='1' )
-				val = " checked";
-			// in case it is not checked, submit that!
-			// if it gets checked this should be overridden then
-			sb->safePrintf("<input type=hidden name=%s value=0>"
-				       , cgi );
-			//else
-			sb->safePrintf("<input type=checkbox value=1 ");
-				       //"<nobr><input type=button ");
-			if ( m->m_page == PAGE_FILTERS)
-				sb->safePrintf("id=id_%s ",cgi);
+		// if ( format == FORMAT_JSON ) { // isJSON ) {
+		// 	if ( ! lastRow ) {
+		// 		long val = 0;
+		// 		if ( *s ) val = 1;
+		// 		sb->safePrintf("\"%s\":%li,\n",cgi,val);
+		// 	}
+		// }
+		//sb->safePrintf("<center><nobr>");
+		sb->safePrintf("<nobr>");
+		// this is part of the "HACK" fix below. you have to
+		// specify the cgi parm in the POST request, and 
+		// unchecked checkboxes are not included in the POST 
+		// request.
+		//if ( lastRow && m->m_page == PAGE_FILTERS ) 
+		//	sb->safePrintf("<input type=hidden ");
+		//char *val = "Y";
+		//if ( ! *s ) val = "N";
+		char *val = "";
+		// "s" is invalid of parm has no "object"
+		if ( m->m_obj == OBJ_NONE && m->m_def[0] != '0' )
+			val = " checked";
+		if ( m->m_obj != OBJ_NONE && s && *s ) 
+			val = " checked";
+		// s is NULL for GigablastRequest parms
+		if ( ! s && m->m_def && m->m_def[0]=='1' )
+			val = " checked";
+		// in case it is not checked, submit that!
+		// if it gets checked this should be overridden then
+		sb->safePrintf("<input type=hidden name=%s value=0>"
+			       , cgi );
+		//else
+		sb->safePrintf("<input type=checkbox value=1 ");
+		//"<nobr><input type=button ");
+		if ( m->m_page == PAGE_FILTERS)
+			sb->safePrintf("id=id_%s ",cgi);
 			
-			sb->safePrintf("name=%s%s"
-				       //" onmouseup=\""
-				       //"if ( this.value=='N' ) {"
-				       //"this.value='Y';"
-				       //"} "
-				       //"else if ( this.value=='Y' ) {"
-				       //"this.value='N';"
-				       //"}"
-				       //"\" "
-				       ">"
-				       ,cgi
-				       ,val);//,ddd);
-			//
-			// repeat for off position
-			//
-			//if ( ! lastRow || m->m_page != PAGE_FILTERS )  {
-			//	sb->safePrintf(" Off:<input type=radio ");
-			//	if ( m->m_page == PAGE_FILTERS)
-			//		sb->safePrintf("id=id_%s ",cgi);
-			//	sb->safePrintf("value=0 name=%s%s>",
-			//		       cgi,ddd2);
-			//}
-			sb->safePrintf("</nobr>"
-				       //"</center>"
-				       );
-		}
+		sb->safePrintf("name=%s%s"
+			       //" onmouseup=\""
+			       //"if ( this.value=='N' ) {"
+			       //"this.value='Y';"
+			       //"} "
+			       //"else if ( this.value=='Y' ) {"
+			       //"this.value='N';"
+			       //"}"
+			       //"\" "
+			       ">"
+			       ,cgi
+			       ,val);//,ddd);
+		//
+		// repeat for off position
+		//
+		//if ( ! lastRow || m->m_page != PAGE_FILTERS )  {
+		//	sb->safePrintf(" Off:<input type=radio ");
+		//	if ( m->m_page == PAGE_FILTERS)
+		//		sb->safePrintf("id=id_%s ",cgi);
+		//	sb->safePrintf("value=0 name=%s%s>",
+		//		       cgi,ddd2);
+		//}
+		sb->safePrintf("</nobr>"
+			       //"</center>"
+			       );
 	}
 	else if ( t == TYPE_CHAR )
 		sb->safePrintf ("<input type=text name=%s value=\"%li\" "
@@ -2122,11 +2164,11 @@ bool Parms::printParm ( SafeBuf* sb,
 				false , false );
 	else if ( t == TYPE_PRIORITY2 ) {
 		// just show the parm name and value if printing in json
-		if ( isJSON )
-			sb->safePrintf("\"%s\":%li,\n",cgi,(long)*(char *)s);
-		else
-			printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s ,
-					true , true );
+		// if ( format==FORMAT_JSON) // isJSON )
+		// 	sb->safePrintf("\"%s\":%li,\n",cgi,(long)*(char *)s);
+		// else
+		printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s ,
+				true , true );
 	}
 	// this url filters parm is an array of SAFEBUFs now, so each is
 	// a string and that string is the diffbot api url to use. 
@@ -2157,14 +2199,14 @@ bool Parms::printParm ( SafeBuf* sb,
 			  cgi,m->m_title);
 	else if ( t == TYPE_FLOAT ) {
 		// just show the parm name and value if printing in json
-		if ( isJSON )
-			sb->safePrintf("\"%s\":%f,\n",cgi,*(float *)s);
-		else
-			sb->safePrintf ("<input type=text name=%s "
-					"value=\"%f\" "
-					// 3 was ok on firefox but need 6
-					// on chrome
-					"size=7>",cgi,*(float *)s);
+		// if ( format == FORMAT_JSON )//isJSON )
+		// 	sb->safePrintf("\"%s\":%f,\n",cgi,*(float *)s);
+		// else
+		sb->safePrintf ("<input type=text name=%s "
+				"value=\"%f\" "
+				// 3 was ok on firefox but need 6
+				// on chrome
+				"size=7>",cgi,*(float *)s);
 	}
 	else if ( t == TYPE_IP ) {
 		if ( m->m_max > 0 && j == jend ) 
@@ -2176,14 +2218,14 @@ bool Parms::printParm ( SafeBuf* sb,
 	}
 	else if ( t == TYPE_LONG ) {
 		// just show the parm name and value if printing in json
-		if ( isJSON )
-			sb->safePrintf("\"%s\":%li,\n",cgi,*(long *)s);
-		else
-			sb->safePrintf ("<input type=text name=%s "
-					"value=\"%li\" "
-					// 3 was ok on firefox but need 6
-					// on chrome
-					"size=6>",cgi,*(long *)s);
+		// if ( format == FORMAT_JSON ) // isJSON )
+		// 	sb->safePrintf("\"%s\":%li,\n",cgi,*(long *)s);
+		// else
+		sb->safePrintf ("<input type=text name=%s "
+				"value=\"%li\" "
+				// 3 was ok on firefox but need 6
+				// on chrome
+				"size=6>",cgi,*(long *)s);
 	}
 	else if ( t == TYPE_LONG_CONST ) 
 		sb->safePrintf ("%li",*(long *)s);
@@ -2284,17 +2326,17 @@ bool Parms::printParm ( SafeBuf* sb,
 		}
 
 		// just show the parm name and value if printing in json
-		if ( isJSON ) {
-			// this can be empty for the empty row i guess
-			if ( sx->length() ) {
-				// convert diffbot # to string
-				sb->safePrintf("\"%s\":\"",cgi);
-				if ( m->m_obj != OBJ_NONE )
-					sb->safeUtf8ToJSON (sx->getBufStart());
-				sb->safePrintf("\",\n");
-			}
-		}
-		else if ( m->m_flags & PF_TEXTAREA ) {
+		// if ( format == FORMAT_JSON ) { // isJSON ) {
+		// 	// this can be empty for the empty row i guess
+		// 	if ( sx->length() ) {
+		// 		// convert diffbot # to string
+		// 		sb->safePrintf("\"%s\":\"",cgi);
+		// 		if ( m->m_obj != OBJ_NONE )
+		// 			sb->safeUtf8ToJSON (sx->getBufStart());
+		// 		sb->safePrintf("\",\n");
+		// 	}
+		// }
+		if ( m->m_flags & PF_TEXTAREA ) {
 			sb->safePrintf ("<textarea name=%s rows=10 cols=80>",
 					cgi);
 			//sb->dequote ( s , gbstrlen(s) );
@@ -2452,10 +2494,10 @@ bool Parms::printParm ( SafeBuf* sb,
 
 
 	// end the input cell
-	if ( ! isJSON ) sb->safePrintf ( "</td>\n");
+	if ( format == FORMAT_HTML ) sb->safePrintf ( "</td>\n");
 
 	// "insert above" link? used for arrays only, where order matters
-	if ( m->m_addin && j < jend && ! isJSON ) {
+	if ( m->m_addin && j < jend ) {//! isJSON ) {
 		sb->safePrintf ( "<td><a href=\"?c=%s&" // cast=1&"
 				 //"ins_%s=1\">insert</td>\n",coll,cgi );
 				 // insert=<rowNum>
@@ -2472,7 +2514,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	// . display the remove link for arrays if we need to
 	// . but don't display if next guy does NOT start a new row
 	//if ( m->m_max > 1 && lastInRow && ! isJSON ) {
-	if ( m->m_addin && j < jend && ! isJSON ) {
+	if ( m->m_addin && j < jend ) { //! isJSON ) {
 	//     m->m_page != PAGE_PRIORITIES ) {
 		// show remove link?
 		bool show = true;
@@ -2505,7 +2547,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ( "<td></td>\n");
 	}
 
-	if ( lastInRow && ! isJSON ) sb->safePrintf ("</tr>\n");
+	if ( lastInRow && format == FORMAT_JSON ) sb->safePrintf ("</tr>\n");
 	return status;
 }
 
@@ -8816,6 +8858,18 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
+	
+	// show the settings from this page
+	m->m_title = "show parms";
+	m->m_desc  = "Show the settings of this page.";
+	m->m_cgi   = "showparms";
+	m->m_off   = -1;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_page  = PAGE_MASTER;
+	m->m_obj   = OBJ_NONE;//CONF;
+	m->m_flags = PF_HIDDEN | PF_NOSAVE;
+	m++;
 
 	m->m_title = "max total spiders";
 	m->m_desc  = "What is the maximum number of web "
@@ -13478,7 +13532,7 @@ void Parms::init ( ) {
 	m->m_title = "urls to add";
 	m->m_desc  = "List of urls to index. One per line or space separated. "
 		"If your url does not index as you expect you "
-		"can check it's history. " // (spiderdb lookup)
+		"can check it's spider history by doing a url: search on it. "
 		"Added urls will have a "
 		"<a href=/admin/filters#hopcount>hopcount</a> of 0. "
 		"Added urls will match the <i><a href=/admin/filters#isaddurl>"
