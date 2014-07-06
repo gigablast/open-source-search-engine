@@ -569,6 +569,7 @@ master-deb:
 	cp control.deb debian/control
 # try to use our own rules so we can override dh_shlibdeps and others
 	cp gb.deb.rules debian/rules
+	cp changelog debian/changelog
 # fix dh_shlibdeps from bitching about dependencies on shared libs
 # YOU HAVE TO RUN THIS before you run 'make'
 #	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
@@ -602,6 +603,7 @@ testing-deb:
 	cp control.deb debian/control
 # try to use our own rules so we can override dh_shlibdeps and others
 	cp gb.deb.rules debian/rules
+	cp changelog debian/changelog
 # fix dh_shlibdeps from bitching about dependencies on shared libs
 # YOU HAVE TO RUN THIS before you run 'make'
 #	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
