@@ -1494,6 +1494,77 @@ void cleanUp ( void *state , TcpSocket *s ) {
 	if ( s && s->m_state == f ) s->m_state = NULL;
 }
 
+bool HttpServer::sendSuccessReply ( TcpSocket *s , char format, char *addMsg) {
+	// get time in secs since epoch
+	time_t now ;
+	if ( isClockInSync() ) now = getTimeGlobal();
+	else                   now = getTimeLocal();
+	// . buffer for the MIME request and brief html err msg
+	// . NOTE: ctime appends a \n to the time, so we don't need to
+	char msg[1024];
+	SafeBuf sb(msg,1024,0,false);
+
+	char *tt = asctime(gmtime ( &now ));
+	tt [ gbstrlen(tt) - 1 ] = '\0';
+
+	char *ct = "text/html";
+	if ( format == FORMAT_XML  ) ct = "text/xml";
+	if ( format == FORMAT_JSON ) ct = "application/json";
+
+	char cbuf[1024];
+	SafeBuf cb(cbuf,1024,0,false);
+
+	if ( format != FORMAT_XML && format != FORMAT_JSON )
+		cb.safePrintf("<html><b>Success</b></html>");
+
+	if ( format == FORMAT_XML ) {
+		cb.safePrintf("<response>\n"
+			      "\t<statusCode>0</statusCode>\n"
+			      "\t<statusMsg><![CDATA[Success]]>"
+			      "</statusMsg>\n");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		cb.safePrintf("{\"response\":{\n"
+			      "\t\"statusCode\":0,\n"
+			      "\t\"statusMsg\":\"Success\",\n" );
+	}
+
+	if ( addMsg )
+		cb.safeStrcpy(addMsg);
+
+
+	if ( format == FORMAT_XML ) {
+		cb.safePrintf("</response>\n");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		// erase trailing ,\n
+		cb.m_length -= 2;
+		cb.safePrintf("\n"
+			      "}\n"
+			      "}\n");
+	}
+
+
+	sb.safePrintf(
+		      "HTTP/1.0 200 (OK)\r\n"
+		      "Content-Length: %li\r\n"
+		      "Connection: Close\r\n"
+		      "Content-Type: %s\r\n"
+		      "Date: %s UTC\r\n\r\n"
+		      , cb.length()
+		      , ct
+		      , tt );
+
+	sb.safeMemcpy ( &cb );
+
+	// use this new function that will compress the reply now if the
+	// request was a ZET instead of a GET
+	return sendReply2 ( msg , sb.length() , NULL , 0 , s );
+}
+
+
 // . send an error reply, like "HTTP/1.1 404 Not Found"
 // . returns false if blocked, true otherwise
 // . sets g_errno on error

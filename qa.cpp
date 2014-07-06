@@ -35,25 +35,25 @@ bool getUrl( char *path , void (* callback) (void *state, TcpSocket *sock) ) {
 
 bool qatest ( ) ;
 
+long s_replyCRC = 0;
+
 void qatestWrapper ( void *state , TcpSocket *sock ) { 
 	log("qa: got reply(%li)=%s",sock->m_readOffset,sock->m_readBuf);
+	// get mime
+	HttpMime mime;
+	mime.set ( sock->m_readBuf , sock->m_readOffset , NULL );
+	// only hash content since mime has a timestamp in it
+	char *content = mime.getContent();
+	long  contentLen = mime.getContentLen();
+	// make checksum
+	s_replyCRC = hash32 ( content , contentLen );
+	// continue qa loop
 	qatest(); 
 
 }	
 
-// return false if blocked, true otherwise
-bool addColl ( ) {
-	static bool s_flag = false;
-	if ( s_flag ) return true;
-	s_flag = true;
-	return getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
-			qatestWrapper );
-}
-
-
 // first inject a set list of urls
 static char  **s_urlPtrs = NULL;
-static long    s_numUrls = 0;
 static SafeBuf s_ubuf1;
 static SafeBuf s_ubuf2;
 
@@ -81,23 +81,6 @@ bool loadUrls ( ) {
 	}
 	// make array of url ptrs
 	s_urlPtrs = (char **)s_ubuf2.getBufStart();
-	return true;
-}
-
-bool injectUrls ( ) {
-	loadUrls();
-	static long s_ii = 0;
-	for ( ; s_ii < s_numUrls ; ) {
-		// pre-inc it
-		s_ii++;
-		// inject using html api
-		SafeBuf sb;
-		sb.safePrintf("/admin/inject?c=qatest123&delete=0&"
-			      "format=xml&u=");
-		sb.urlEncode ( s_urlPtrs[s_ii] );
-		sb.nullTerm();
-		return getUrl ( sb.getBufStart() , qatestWrapper );
-	}
 	return true;
 }
 
@@ -215,7 +198,7 @@ bool searchTest2 () {
 
 bool deleteUrls ( ) {
 	static long s_ii2 = 0;
-	for ( ; s_ii2 < s_numUrls ; ) {
+	for ( ; s_ii2 < s_ubuf2.length()/(long)sizeof(char *) ; ) {
 		// pre-inc it
 		s_ii2++;
 		// reject using html api
@@ -403,11 +386,52 @@ static long s_rdbId2 = 0;
 //   replay later. store up to 100,000 pages in there.
 bool qatest ( ) {
 
-	// add the 'qatest123' collection
-	if ( ! addColl () ) return false;
+	static long s_phase = 0;
 
+	const char *emsg = "qa: bad replyCRC of %li phase=%li\n";
+
+	//
+	// add the 'qatest123' collection
+	//
+	if ( s_phase == 0 ) {
+		s_phase++;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				qatestWrapper ) )
+			return false;
+	}
+
+	//
+	// check addcoll reply
+	//
+	if ( s_phase == 1 ) {
+		s_phase++;
+		if ( s_replyCRC != 238170006 ) {
+			fprintf(stderr,emsg,s_replyCRC,s_phase-1);
+			exit(1);
+		}
+	}
+	
+	//
 	// inject urls, return false if not done yet
-	if ( ! injectUrls ( ) ) return false;
+	//
+	if ( s_phase == 2 ) {
+		// TODO: try delimeter based injection too
+		loadUrls();
+		static long s_ii = 0;
+		for ( ; s_ii < s_ubuf2.length()/(long)sizeof(char *) ; ) {
+			// pre-inc it
+			s_ii++;
+			// inject using html api
+			SafeBuf sb;
+			sb.safePrintf("/admin/inject?c=qatest123&deleteurl=0&"
+				      "format=xml&u=");
+			sb.urlEncode ( s_urlPtrs[s_ii] );
+			sb.nullTerm();
+			return getUrl ( sb.getBufStart() , qatestWrapper );
+		}
+		s_phase++;
+	}
+
 
 	// test search results
 	if ( ! searchTest1 () ) return false;

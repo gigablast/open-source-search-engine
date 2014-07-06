@@ -44,6 +44,15 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 	mnew ( msg7, sizeof(Msg7) , "PageInject" );
 
 
+	char format = hr->getReplyFormat();
+
+	// no url parm?
+	if ( format != FORMAT_HTML && ! hr->getString("c",NULL) ) {
+		g_errno = ENOCOLLREC;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(sock,g_errno,msg,NULL);
+	}
+
 	// set this. also sets gr->m_hr
 	GigablastRequest *gr = &msg7->m_gr;
 	// this will fill in GigablastRequest so all the parms we need are set
@@ -77,6 +86,9 @@ bool sendPageInject ( TcpSocket *sock , HttpRequest *hr ) {
 		// g_errno should be set so it will return an error response
 		return sendReply ( msg7 );
 	}
+
+
+
 
 	// a scrape request?
 	if ( gr->m_queryToScrape && gr->m_queryToScrape[0] ) {
@@ -117,7 +129,41 @@ bool sendReply ( void *state ) {
 	//long      hostId = msg7->m_msg7.m_hostId;
 	long long docId  = xd->m_docId;
 	long      hostId = 0;//msg7->m_msg7.m_hostId;
-	
+
+	// set g_errno to index code
+	if ( xd->m_indexCodeValid && xd->m_indexCode && ! g_errno )
+		g_errno = xd->m_indexCode;
+
+	char format = gr->m_hr.getReplyFormat();
+
+	// no url parm?
+	if ( ! g_errno && ! gr->m_url && format != FORMAT_HTML )
+		g_errno = EMISSINGINPUT;
+
+	if ( g_errno ) {
+		long save = g_errno;
+		mdelete ( msg7, sizeof(Msg7) , "PageInject" );
+		delete (msg7);
+		g_errno = save;
+		char *msg = mstrerror(g_errno);
+		return g_httpServer.sendErrorReply(sock,save,msg,NULL);
+	}
+
+	char abuf[32];
+	SafeBuf am(abuf,32,0,false);
+
+	// a success reply, include docid and url i guess
+	if ( format == FORMAT_XML ) {
+		am.safePrintf("\t<docId>%lli</docId>\n",xd->m_docId);
+		char *addMsg = am.getBufStart();
+		return g_httpServer.sendSuccessReply(sock,format,addMsg);
+	}
+
+	if ( format == FORMAT_JSON ) {
+		am.safePrintf("\t\"docId\":%lli,\n",xd->m_docId);
+		char *addMsg = am.getBufStart();
+		return g_httpServer.sendSuccessReply(sock,format,addMsg);
+	}
 
 	//
 	// debug
@@ -159,11 +205,6 @@ bool sendReply ( void *state ) {
 	if ( url && gr->m_shortReply ) {
 		char buf[1024*32];
 		char *p = buf;
-		// set g_errno to index code
-		if ( xd->m_indexCodeValid &&
-		     xd->m_indexCode &&
-		     ! g_errno )
-			g_errno = xd->m_indexCode;
 		// return docid and hostid
 		if ( ! g_errno ) p += sprintf ( p , 
 					   "0,docId=%lli,hostId=%li," , 

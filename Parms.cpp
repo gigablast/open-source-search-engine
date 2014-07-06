@@ -1810,6 +1810,10 @@ bool Parms::printParm ( SafeBuf* sb,
 		if ( cr ) collnum = cr->m_collnum;
 	}
 
+	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
+		// the upload button has no val, cmds too
+		if ( m->m_type == TYPE_FILEUPLOADBUTTON ) return true;
+	}
 
 	if ( format == FORMAT_XML ) {
 		sb->safePrintf ( "\t<parm>\n");
@@ -2304,7 +2308,7 @@ bool Parms::printParm ( SafeBuf* sb,
 				cgi,size);
 
 		// if it has PF_DEFAULTCOLL flag set then use the coll
-		if ( m->m_flags & PF_COLLDEFAULT )
+		if ( cr && (m->m_flags & PF_COLLDEFAULT) )
 			sb->safePrintf("%s",cr->m_coll);
 		else
 			sb->dequote ( s , gbstrlen(s) );
@@ -2354,7 +2358,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ("<input type=text name=%s size=%li "
 					"value=\"",cgi,size);
 			// if it has PF_DEFAULTCOLL flag set then use the coll
-			if ( m->m_flags & PF_COLLDEFAULT )
+			if ( cr && (m->m_flags & PF_COLLDEFAULT) )
 				sb->safePrintf("%s",cr->m_coll);
 			else if ( sp )
 				sb->dequote ( sp , gbstrlen(sp) );
@@ -2380,7 +2384,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			sx = &tmp;
 			char *def = m->m_def;
 			// if it has PF_DEFAULTCOLL flag set then use the coll
-			if ( m->m_flags & PF_COLLDEFAULT ) def = cr->m_coll;
+			if ( cr && (m->m_flags & PF_COLLDEFAULT) ) 
+				def = cr->m_coll;
 			tmp.safePrintf("%s",def);
 		}
 
@@ -13734,7 +13739,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	// PF_COLLDEFAULT: so it gets set to default coll on html page
-	m->m_flags = PF_API|PF_COLLDEFAULT|PF_REQUIRED|PF_NOHTML; 
+	m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
 	m++;
 
 	m->m_title = "urls to add";
@@ -13927,7 +13932,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	// PF_COLLDEFAULT: so it gets set to default coll on html page
-	m->m_flags = PF_API|PF_COLLDEFAULT|PF_REQUIRED; 
+	m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
@@ -13938,7 +13943,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "0";
-	m->m_flags = PF_API;
+	m->m_flags = PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_shortReply - (char *)&gr;
 	m++;
@@ -14128,7 +14133,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	// PF_COLLDEFAULT: so it gets set to default coll on html page
-	m->m_flags = PF_API|PF_COLLDEFAULT|PF_REQUIRED|PF_NOHTML; 
+	m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
 	m->m_page  = PAGE_REINDEX;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
@@ -17279,7 +17284,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
-	m->m_flags = PF_COLLDEFAULT | PF_REQUIRED;
+	m->m_flags = PF_REQUIRED | PF_NOHTML;
 	m++;
 
 	m->m_title = "memory to use for repair";
@@ -19014,6 +19019,14 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	else if ( m->m_type == TYPE_CMD ) {
 		val = parmValString;
 		if ( val ) valSize = gbstrlen(val)+1;
+		// . addcoll collection can not be too long
+		// . TODO: supply a Parm::m_checkValFunc to ensure val is
+		//   legitimate, and set g_errno on error
+		if ( strcmp(m->m_cgi,"addcoll") == 0 &&valSize-1>MAX_COLL_LEN){
+			log("admin: addcoll coll too long");
+			g_errno = ECOLLTOOBIG;
+			return false;
+		}
 		// scan for holes if we hit the limit
 		//if ( g_collectiondb.m_numRecs >= 1LL>>sizeof(collnum_t) )
 	}
