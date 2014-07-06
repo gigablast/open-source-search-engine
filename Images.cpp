@@ -1049,6 +1049,26 @@ void Images::thumbStart_r ( bool amThread ) {
 		  , wdir , wdir , m_xysize , m_xysize , logFile
 		  , wdir , wdir , out , logFile
 		 );
+
+	// if they already have netpbm package installed use that then
+	static bool s_checked = false;
+	static bool s_hasNetpbm = false;
+	if ( ! s_checked ) {
+		s_checked = true;
+		File f;
+		f.set("/usr/bin/pnmscale");
+		s_hasNetpbm = f.doesExist() ;
+	}
+	if ( s_hasNetpbm )
+		snprintf( cmd, 2500 ,
+			  "%stopnm %s 2>> %s | "
+			  "pnmscale -xysize %li %li - 2>> %s | "
+			  "ppmtojpeg - > %s 2>> %s"
+			  , ext , in , logFile
+			  , m_xysize , m_xysize , logFile
+			  , out , logFile
+			  );
+		
         
         // Call clone function for the shell to execute command
         // This call WILL BLOCK	. timeout is 30 seconds.
