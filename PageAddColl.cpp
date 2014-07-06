@@ -93,7 +93,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		p.safePrintf (
 			  "<tr bgcolor=#%s>"
 			  "<td><b>name of new collection to add</td>\n"
-			  "<td><input type=text name=addColl size=30>"
+			  "<td><input type=text name=addcoll size=30>"
 			  "</td></tr>\n"
 			  , LIGHT_BLUE
 			      );
@@ -142,7 +142,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		if ( ! cr ) continue;
 		p.safePrintf (
 			  "<tr bgcolor=#%s><td>"
-			  "<input type=checkbox name=delColl value=\"%s\"> "
+			  "<input type=checkbox name=delcoll value=\"%s\"> "
 			  "%s</td></tr>\n",
 			  DARK_BLUE,
 			  cr->m_coll,cr->m_coll);

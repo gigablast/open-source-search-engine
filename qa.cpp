@@ -46,7 +46,7 @@ bool addColl ( ) {
 	static bool s_flag = false;
 	if ( s_flag ) return true;
 	s_flag = true;
-	return getUrl ( "/admin/addcoll?c=qatest123&xml=1" , 
+	return getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
 			qatestWrapper );
 }
 

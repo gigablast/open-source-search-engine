@@ -4521,14 +4521,41 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
 
+	m->m_title = "delete collection";
+	m->m_desc  = "A collection name to delete. You can specify multiple "
+		"&delColl= parms in the request to delete multiple "
+		"collections.";
+	// camelcase as opposed to above lowercase
+	m->m_cgi   = "delcoll";
+	m->m_page  = PAGE_DELCOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_HIDDEN;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
 	m->m_title = "add collection";
 	m->m_desc  = "A collection name to add.";
+	// camelcase support
 	m->m_cgi   = "addColl";
 	m->m_page  = PAGE_ADDCOLL;
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
 	m->m_def   = NULL;
 	m->m_flags = PF_API | PF_REQUIRED;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "add collection";
+	m->m_desc  = "A collection name to add.";
+	// lowercase support
+	m->m_cgi   = "addcoll";
+	m->m_page  = PAGE_ADDCOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_HIDDEN;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
 
@@ -5802,9 +5829,32 @@ void Parms::init ( ) {
 	m->m_cast  = 1;
 	m++;
 
+	m->m_title = "delete collection 2";
+	m->m_desc  = "delete the specified collection";
+	// lowercase as opposed to camelcase above
+	m->m_cgi   = "delcoll";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_COLL;
+	m->m_func2 = CommandDeleteColl2;
+	m->m_cast  = 1;
+	m++;
+
 	m->m_title = "add collection";
 	m->m_desc  = "add a new collection";
+	// camelcase support
 	m->m_cgi   = "addColl";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_COLL;
+	m->m_func  = CommandAddColl0;
+	m->m_cast  = 1;
+	m++;
+
+	m->m_title = "add collection";
+	m->m_desc  = "add a new collection";
+	// lower case support
+	m->m_cgi   = "addcoll";
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
@@ -19221,6 +19271,8 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// get the next available collnum and use that for setting
 		// any additional parms. that is the coll it will act on.
 		if ( strcmp(m->m_cgi,"addColl") == 0 ||
+		     // lowercase support. camelcase is obsolete.
+		     strcmp(m->m_cgi,"addcoll") == 0 ||
 		     strcmp(m->m_cgi,"addCrawl") == 0 ||
 		     strcmp(m->m_cgi,"addBulk" ) == 0 ||
 		     strcmp(m->m_cgi,"reset" ) == 0 ||
@@ -20240,7 +20292,9 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		if ( ! cr ) continue;
 		// clear flag
 		if ( cr->m_hackFlag ) continue;
-		char *cmdStr = "addColl";
+		//char *cmdStr = "addColl";
+		// now use lowercase, not camelcase
+		char *cmdStr = "addcoll";
 		if ( cr->m_isCustomCrawl == 1 ) cmdStr = "addCrawl";
 		if ( cr->m_isCustomCrawl == 2 ) cmdStr = "addBulk";
 		// note in log
