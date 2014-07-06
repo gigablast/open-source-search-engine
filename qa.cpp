@@ -35,6 +35,17 @@ bool getUrl( char *path , void (* callback) (void *state, TcpSocket *sock) ) {
 
 bool qatest ( ) ;
 
+void markOut ( char *reply , char *needle ) {
+
+	char *s = strstr ( reply , needle );
+	if ( ! s ) return;
+
+	for ( ; *s && ! is_digit(*s); s++ );
+
+	// 0 out digits
+	for ( ; *s && is_digit(*s); s++ ) *s = '0';
+}
+
 long s_replyCRC = 0;
 
 void qatestWrapper ( void *state , TcpSocket *sock ) { 
@@ -45,6 +56,14 @@ void qatestWrapper ( void *state , TcpSocket *sock ) {
 	// only hash content since mime has a timestamp in it
 	char *content = mime.getContent();
 	long  contentLen = mime.getContentLen();
+
+	char *reply = sock->m_readBuf;
+
+	// take out <responseTimeMS>
+	markOut ( reply , "<currentTimeUTC>");
+
+	markOut ( reply , "<responseTimeMS>");
+
 	// make checksum
 	s_replyCRC = hash32 ( content , contentLen );
 	// continue qa loop
@@ -92,6 +111,7 @@ bool loadUrls ( ) {
 	return true;
 }
 
+/*
 static char *s_queries[] = {
 	"the",
 	"+the",
@@ -105,104 +125,7 @@ static char *s_queries[] = {
 	"cat -dog",
 	"site:wisc.edu"
 };
-
-static long s_checksums[] = {
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0
-};
-
-static long s_qi1 = 0;
-
-void doneSearching1 ( void *state , TcpSocket *sock ) {
-	//loadQueries1();
-	long ii = s_qi1 - 1;
-	// get checksum of it
-	HttpMime hm;
-	hm.set ( sock->m_readBuf , sock->m_readOffset , NULL );
-	char *page = sock->m_readBuf + hm.getMimeLen() ;
-	// we will need to ignore fields like the latency etc.
-	// perhaps pass that in as a cgi parm. &qa=1
-	long crc = hash32n ( page );
-	if ( crc != s_checksums[ii] ) {
-		log("qatest: query '%s' checksum %lu != %lu",
-		    s_queries[ii],
-		    s_checksums[ii],
-		    crc);
-		s_failures++;
-	}
-	// resume the qa loop
-	qatest();
-}
-		
-
-// ensure search results are consistent
-bool searchTest1 () {
-	long nq = sizeof(s_queries)/sizeof(char *);
-	for ( ; s_qi1 < nq ; ) {
-		// pre-inc it
-		s_qi1++;
-		// inject using html api
-		SafeBuf sb;
-		// qa=1 tell gb to exclude "variable" or "random" things
-		// from the serps so we can checksum it consistently
-		sb.safePrintf ( "/search?c=qatest123&qa=1&format=xml&q=" );
-		sb.urlEncode ( s_queries[s_qi1] );
-		sb.nullTerm();
-		return getUrl ( sb.getBufStart() , doneSearching1 );
-	}
-	return true;
-}	
-
-static long s_qi2 = 0;
-
-void doneSearching2 ( void *state , TcpSocket *sock ) {
-	//loadQueries1();
-	long ii = s_qi2 - 1;
-	// get checksum of it
-	HttpMime hm;
-	hm.set ( sock->m_readBuf , sock->m_readOffset , NULL );
-	char *page = sock->m_readBuf + hm.getMimeLen() ;
-	// we will need to ignore fields like the latency etc.
-	// perhaps pass that in as a cgi parm. &qa=1
-	long crc = hash32n ( page );
-	if ( crc != s_checksums[ii] ) {
-		log("qatest: query '%s' checksum %lu != %lu",
-		    s_queries[ii],
-		    s_checksums[ii],
-		    crc);
-		s_failures++;
-	}
-	// resume the qa loop
-	qatest();
-}
-		
-
-// ensure search results are consistent
-bool searchTest2 () {
-	long nq = sizeof(s_queries)/sizeof(char *);
-	for ( ; s_qi2 < nq ; ) {
-		// pre-inc it
-		s_qi2++;
-		// inject using html api
-		SafeBuf sb;
-		// qa=1 tell gb to exclude "variable" or "random" things
-		// from the serps so we can checksum it consistently
-		sb.safePrintf ( "/search?c=qatest123&qa=1&format=xml&q=" );
-		sb.urlEncode ( s_queries[s_qi2] );
-		sb.nullTerm();
-		return getUrl ( sb.getBufStart() , doneSearching2 );
-	}
-	return true;
-}	
+*/
 
 bool deleteUrls ( ) {
 	static long s_ii2 = 0;
@@ -211,7 +134,7 @@ bool deleteUrls ( ) {
 		s_ii2++;
 		// reject using html api
 		SafeBuf sb;
-		sb.safePrintf( "/admin/inject?c=qatest123&delete=1&"
+		sb.safePrintf( "/admin/inject?c=qatest123&deleteurl=1&"
 			       "format=xml&u=");
 		sb.urlEncode ( s_urlPtrs[s_ii2] );
 		sb.nullTerm();
@@ -381,6 +304,16 @@ bool delColl ( ) {
 	return getUrl ( "/admin/delcoll?c=qatest123" , qatestWrapper );
 }
 
+static long s_phase = 0;
+
+void checkCRC ( long needCRC ) {
+	if ( s_replyCRC == needCRC ) return;
+	const char *emsg = "qa: bad replyCRC of %li should be %li phase=%li\n";
+	fprintf(stderr,emsg,s_replyCRC,needCRC,s_phase-1);
+	exit(1);
+}
+
+
 
 static long s_rdbId1 = 0;
 static long s_rdbId2 = 0;
@@ -393,10 +326,6 @@ static long s_rdbId2 = 0;
 // . while initially spidering store pages in pagearchive1.txt so we can
 //   replay later. store up to 100,000 pages in there.
 bool qatest ( ) {
-
-	static long s_phase = 0;
-
-	const char *emsg = "qa: bad replyCRC of %li phase=%li\n";
 
 	//
 	// add the 'qatest123' collection
@@ -413,10 +342,7 @@ bool qatest ( ) {
 	//
 	if ( s_phase == 1 ) {
 		s_phase++;
-		if ( s_replyCRC != 238170006 ) {
-			fprintf(stderr,emsg,s_replyCRC,s_phase-1);
-			exit(1);
-		}
+		checkCRC ( 238170006 );
 	}
 	
 	//
@@ -439,14 +365,33 @@ bool qatest ( ) {
 			sb.nullTerm();
 			// pre-inc it in case getUrl() blocks
 			s_ii++;
-			return getUrl ( sb.getBufStart() , qatestWrapper );
+			getUrl ( sb.getBufStart() , qatestWrapper );
+			return false;
 		}
 		s_phase++;
 	}
 
+	// +the
+	if ( s_phase == 3 ) {
+		s_phase++;
+		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
+			 qatestWrapper );
+		return false;
+	}
+	if ( s_phase == 4 ) {s_phase++;checkCRC ( 1702485380 );}
 
-	// test search results
-	if ( ! searchTest1 () ) return false;
+
+	// sports news
+	if ( s_phase == 5 ) {
+		s_phase++;
+		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports+news",
+			 qatestWrapper );
+		return false;
+	}
+	if ( s_phase == 6 ) {s_phase++;checkCRC ( -1239741543 ); }
+
+
+
 
 	// delete all urls cleanly now
 	if ( ! deleteUrls ( ) ) return false;
@@ -479,7 +424,7 @@ bool qatest ( ) {
 	// . now search again on the large collection most likely
 	// . store search queries and checksum into queries2.txt
 	// . a 0 (or no) checksum means we should fill it in
-	if ( ! searchTest2 () ) return false;
+	//if ( ! searchTest2 () ) return false;
 
 	// try a query delete
 	//if ( ! queryDeleteTest() ) return false;

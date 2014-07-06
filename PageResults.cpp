@@ -3419,7 +3419,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// . use "UNTITLED" if no title
 	// . msg20 should supply the dmoz title if it can
-	if ( strLen == 0 ) {
+	if ( strLen == 0 && 
+	     si->m_format != FORMAT_XML && 
+	     si->m_format != FORMAT_JSON ) {
 		str = "<i>UNTITLED</i>";
 		strLen = gbstrlen(str);
 	}
@@ -3440,13 +3442,13 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// close up the title tag
 	if ( si->m_format == FORMAT_XML ) {
 		sb->safePrintf("\t\t<title><![CDATA[");
-		sb->cdataEncode(str);
+		if ( str ) sb->cdataEncode(str);
 		sb->safePrintf("]]></title>\n");
 	}
 
 	if ( si->m_format == FORMAT_JSON ) {
 		sb->safePrintf("\t\t\"title\":\"");
-		sb->jsonEncode(str);
+		if ( str ) sb->jsonEncode(str);
 		sb->safePrintf("\",\n");
 	}
 
