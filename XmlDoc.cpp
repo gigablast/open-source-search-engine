@@ -889,9 +889,10 @@ char *XmlDoc::getTestDir ( ) {
 	// if Test.cpp explicitly set SpiderRequest::m_useTestSpiderDir bit
 	// then return "test-spider" otherwise...
 	if ( m_sreqValid && m_sreq.m_useTestSpiderDir ) 
-		return "test-spider";
+		return "qa";//"test-spider";
 	// ... default to "test-parser"
-	return "test-parser";
+	//return "test-parser";
+	return "qa";
 	/*
 	if ( getIsPageParser() )
 		return "test-page-parser";

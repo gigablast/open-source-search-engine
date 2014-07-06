@@ -1533,7 +1533,7 @@ bool getTestSpideredDate ( Url *u , long *origSpideredDate , char *testDir ) {
 	// hash the url into 64 bits
 	long long uh64 = hash64(u->getUrl(),u->getUrlLen());
 	// read the spider date file first
-	char fn[300]; 
+	char fn[2000]; 
 	File f;
 	// get the spider date then
 	sprintf(fn,"%s/%s/doc.%llu.spiderdate.txt",
@@ -1566,6 +1566,10 @@ bool getTestSpideredDate ( Url *u , long *origSpideredDate , char *testDir ) {
 }
 
 bool addTestSpideredDate ( Url *u , long spideredTime , char *testDir ) {
+
+	// ensure dir exists
+	::mkdir(testDir,S_IRWXU);
+
 	// set this
 	long long uh64 = hash64(u->getUrl(),u->getUrlLen());
 	// make that into a filename

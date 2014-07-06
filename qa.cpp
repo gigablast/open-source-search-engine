@@ -54,13 +54,16 @@ void qatestWrapper ( void *state , TcpSocket *sock ) {
 
 // first inject a set list of urls
 static char  **s_urlPtrs = NULL;
+static char  **s_contentPtrs = NULL;
 static SafeBuf s_ubuf1;
 static SafeBuf s_ubuf2;
+static SafeBuf s_cbuf2;
 
 
 bool loadUrls ( ) {
 	static bool s_loaded = false;
 	if ( s_loaded ) return true;
+	s_loaded = true;
 	// use injectme3 file
 	s_ubuf1.load("./injectme3");
 	// scan for +++URL: xxxxx
@@ -68,6 +71,8 @@ bool loadUrls ( ) {
 	for ( ; *s ; s++ ) {
 		if ( strncmp(s,"+++URL: ",8) ) continue;
 		// got one
+		// \0 term it for s_contentPtrs below
+		*s = '\0';
 		// find end of it
 		s += 8;
 		char *e = s;
@@ -78,9 +83,12 @@ bool loadUrls ( ) {
 		s_ubuf2.pushLong((long)s);
 		// skip past that
 		s = e;
+		// point to content
+		s_cbuf2.pushLong((long)(s+1));
 	}
 	// make array of url ptrs
 	s_urlPtrs = (char **)s_ubuf2.getBufStart();
+	s_contentPtrs= (char **)s_cbuf2.getBufStart();
 	return true;
 }
 
@@ -419,14 +427,18 @@ bool qatest ( ) {
 		loadUrls();
 		static long s_ii = 0;
 		for ( ; s_ii < s_ubuf2.length()/(long)sizeof(char *) ; ) {
-			// pre-inc it
-			s_ii++;
 			// inject using html api
 			SafeBuf sb;
 			sb.safePrintf("/admin/inject?c=qatest123&deleteurl=0&"
 				      "format=xml&u=");
 			sb.urlEncode ( s_urlPtrs[s_ii] );
+			// the content
+			sb.safePrintf("&hasmime=1");
+			sb.safePrintf("&content=");
+			sb.urlEncode(s_contentPtrs[s_ii] );
 			sb.nullTerm();
+			// pre-inc it in case getUrl() blocks
+			s_ii++;
 			return getUrl ( sb.getBufStart() , qatestWrapper );
 		}
 		s_phase++;

@@ -2780,6 +2780,40 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 					   long catid ,
 					   State0 *st ) {
 
+	char format = si->m_format;
+
+	if ( format == FORMAT_XML ) {
+		sb->safePrintf("\t\t<dmozCat>\n"
+			       "\t\t\t<dmozCatId>%li</dmozCatId>\n"
+			       "\t\t\t<dmozCatStr><![CDATA["
+			       ,catid);
+		// print the name of the dmoz category
+		char xbuf[256];
+		SafeBuf xb(xbuf,256,0,false);
+		g_categories->printPathFromId(&xb, catid, false,si->m_isRTL);
+		sb->cdataEncode(xb.getBufStart());
+		sb->safePrintf("]]></dmozCatStr>\n"
+			       "\t\t</dmozCat>\n");
+		return true;
+	}
+
+	if ( format == FORMAT_JSON ) {
+		sb->safePrintf("\t\t\"dmozCat\":{\n"
+			       "\t\t\t\"dmozCatId\":%li,\n"
+			       "\t\t\t\"dmozCatStr\":\""
+			       ,catid);
+		// print the name of the dmoz category
+		char xbuf[256];
+		SafeBuf xb(xbuf,256,0,false);
+		g_categories->printPathFromId(&xb, catid, false,si->m_isRTL);
+		sb->jsonEncode(xb.getBufStart());
+		sb->safePrintf("\"\n"
+			       "\t\t},\n");
+
+
+		return true;
+	}
+
 	//uint8_t queryLanguage = langUnknown;
 	uint8_t queryLanguage = si->m_queryLangId;
 	// Don't print category if not in native language category
