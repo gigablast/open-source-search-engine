@@ -22,7 +22,7 @@
 //char *printNumResultsDropDown ( char *p, long n, bool *printedDropDown);
 bool printNumResultsDropDown ( SafeBuf& sb, long n, bool *printedDropDown);
 //static char *printTopDirectory ( char *p, char *pend );
-static bool printTopDirectory ( SafeBuf& sb );
+static bool printTopDirectory ( SafeBuf& sb , char format );
 
 // this prints the last five queries
 //static long printLastQueries ( char *p , char *pend ) ;
@@ -586,7 +586,7 @@ bool expandHtml (  SafeBuf& sb,
 		if ( head[i+1] == 't' ) {
 			i += 1;
 			//p = printTopDirectory ( p, pend );
-			printTopDirectory ( sb );
+			printTopDirectory ( sb , FORMAT_HTML );
 			continue;
 		}
 
@@ -1128,6 +1128,11 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 
+	char format = r->getReplyFormat();
+	if ( format != FORMAT_HTML )
+		return printTopDirectory ( sb , format );
+
+
 	sb.safePrintf("<html>\n");
 	sb.safePrintf("<head>\n");
 	//sb.safePrintf("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\">");
@@ -1216,7 +1221,7 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("\n");
 
 
-	printTopDirectory ( sb );
+	printTopDirectory ( sb , FORMAT_HTML );
 
 	sb.safePrintf("<br><br>\n");
 
@@ -1395,10 +1400,12 @@ long printLastQueries ( char *p , char *pend ) {
 
 
 //char *printTopDirectory ( char *p, char *pend ) {
-bool printTopDirectory ( SafeBuf& sb ) {
+bool printTopDirectory ( SafeBuf& sb , char format ) {
+
+	long nr = g_catdb.getRdb()->getNumTotalRecs();
 
 	// if no recs in catdb, print instructions
-	if ( g_catdb.getRdb()->getNumTotalRecs() == 0 )
+	if ( nr == 0 && format == FORMAT_HTML)
 		return sb.safePrintf("<center>"
 				     "<b>DMOZ functionality is not set up.</b>"
 				     "<br>"
@@ -1410,6 +1417,12 @@ bool printTopDirectory ( SafeBuf& sb ) {
 				     "</a>."
 				     "</b>"
 				     "</center>");
+
+	// send back an xml/json error reply
+	if ( nr == 0 && format != FORMAT_HTML ) {
+		g_errno = EDMOZNOTREADY;
+		return false;
+	}
 
 	//char topList[4096];
 	//sprintf(topList, 

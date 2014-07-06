@@ -5110,7 +5110,19 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 		else if ( installFlag == ifk_installcat ) {
 			// . copy catdb files to all hosts
 			// don't copy to ourselves
-			if ( h2->m_hostId == 0 ) continue;
+			if ( h2->m_hostId == 0 ) {
+				sprintf(tmp,
+					"cp "
+					"content.rdf.u8 "
+					"structure.rdf.u8 "
+					"gbdmoz.structure.dat "
+					"gbdmoz.content.dat "
+					"%scatdb/",
+					h2->m_dir);
+				log(LOG_INIT,"admin: %s", tmp);
+				system ( tmp );
+				continue;
+			}
 			sprintf(tmp,
 				"rcp "
 				"%scatdb/content.rdf.u8 "

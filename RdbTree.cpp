@@ -1212,6 +1212,12 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 	long hkp = 0;
 	char useHalfKeys = false;
 
+	// these guy always use a collnum of 0
+	bool doCollRecCheck = true;
+	if ( !strcmp(m_dbname,"catdb") ) doCollRecCheck = false;
+	if ( !strcmp(m_dbname,"statsdb") ) doCollRecCheck = false;
+
+
 	if ( !strcmp(m_dbname,"indexdb") ) useHalfKeys = true;
 	if ( !strcmp(m_dbname,"datedb" ) ) useHalfKeys = true;
 	if ( !strcmp(m_dbname,"tfndb"  ) ) useHalfKeys = true;
@@ -1232,12 +1238,17 @@ bool RdbTree::checkTree2 ( bool printMsgs , bool doChainTest ) {
 		// for posdb
 		if ( m_ks == 18 &&(m_keys[i*m_ks] & 0x06) ) {
 			char *xx=NULL;*xx=0; }
+
 		// bad collnum?
-		collnum_t cn = m_collnums[i];
-		if ( m_rdbId>=0 && (cn >= g_collectiondb.m_numRecs || cn < 0) )
-			return log("db: bad collnum in tree");
-		if ( m_rdbId>=0 && ! g_collectiondb.m_recs[cn] )
-			return log("db: collnum is obsolete in tree");
+		if ( doCollRecCheck ) {
+			collnum_t cn = m_collnums[i];
+			if ( m_rdbId>=0 && 
+			     (cn >= g_collectiondb.m_numRecs || cn < 0) )
+				return log("db: bad collnum in tree");
+			if ( m_rdbId>=0 && ! g_collectiondb.m_recs[cn] )
+				return log("db: collnum is obsolete in tree");
+		}
+
 		// if no left/right kid it MUST be -1
 		if ( m_left[i] < -1 )
 			return log(

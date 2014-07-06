@@ -183,6 +183,8 @@ class RdbDump {
 	//char      m_coll [ MAX_COLL_LEN + 1 ];
 	collnum_t m_collnum;
 
+	bool m_doCollCheck;
+
 	bool m_tried;
 
 	bool m_isSuspended;

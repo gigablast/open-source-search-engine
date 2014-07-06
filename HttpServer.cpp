@@ -1560,18 +1560,18 @@ bool HttpServer::sendErrorReply ( TcpSocket *s , long error , char *errmsg ,
 	if ( format == FORMAT_XML ) {
 		sb.safePrintf("<response>\n"
 			      "\t<statusCode>%li</statusCode>\n"
-			      "\t<statusMsg>", error );
-		sb.htmlEncode(errmsg );
-		sb.safePrintf("</statusMsg>\n"
+			      "\t<statusMsg><![CDATA[", error );
+		sb.cdataEncode(errmsg );
+		sb.safePrintf("]]></statusMsg>\n"
 			      "</response>\n");
 	}
 
 	if ( format == FORMAT_JSON ) {
 		sb.safePrintf("{\"response\":{\n"
 			      "\t\"statusCode\":%li,\n"
-			      "\t\"statusMsg\":", error );
+			      "\t\"statusMsg\":\"", error );
 		sb.jsonEncode(errmsg );
-		sb.safePrintf("\",\n"
+		sb.safePrintf("\"\n"
 			      "}\n"
 			      "}\n");
 	}
