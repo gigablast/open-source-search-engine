@@ -435,7 +435,7 @@ bool qainject () {
 	// +the
 	static bool s_x5 = false;
 	if ( ! s_x5 ) {
-		usleep(500000);
+		usleep(1500000);
 		s_x5 = true;
 		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
 			 qatestWrapper );
@@ -480,7 +480,7 @@ bool qainject () {
 	//
 	static bool s_x9 = false;
 	if ( ! s_x9 ) {
-		usleep(500000);
+		usleep(1500000);
 		s_x9 = true;
 		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
 			 qatestWrapper );
@@ -517,7 +517,7 @@ bool qainject () {
 	// now query check
 	static bool s_y4 = false;
 	if ( ! s_y4 ) {
-		usleep(500000);
+		usleep(1500000);
 		s_y4 = true;
 		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
 			 qatestWrapper );
