@@ -241,6 +241,10 @@ class Multicast {
 	// when the request was launched to the m_replyingHost
 	long long  m_replyLaunchTime;
 
+	// used by XmlDoc.cpp for gbfacet: stuff
+	long       m_hack32; 
+	long long  m_hack64;
+
 	// hacky crunk use by seo pipeline in xmldoc.cpp
 	//void *m_hackxd;
 	//void *m_hackHost;

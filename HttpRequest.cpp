@@ -422,7 +422,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 if ( req[reqLen] != '\0' ) { char *xx = NULL; *xx = 0; }
 	 
 	 // how long is the first line, the primary request
-	 long i;
+	 // long i;
 	 // for ( i = 0 ; i<reqLen && i<MAX_REQ_LEN && 
 	 //	       req[i]!='\n' && req[i]!='\r'; i++);
 	 // . now fill up m_buf, used to log the request
@@ -495,7 +495,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 // check authentication
 	 char *auth = NULL;
 	 if ( m_isSquidProxyRequest && req )
-		 auth = strstr(req+i,"Proxy-authorization: Basic ");
+		 auth = strstr(req,"Proxy-authorization: Basic ");
 
 	 //if ( m_isSquidProxyRequest && ! auth ) {
 	 //	 log("http: no auth in proxy request %s",req);
@@ -561,7 +561,7 @@ bool HttpRequest::set ( char *origReq , long origReqLen , TcpSocket *sock ) {
 	 if ( m_requestType == 1 || m_requestType == 2 ) filenameStart++;
 
 	 // are we a redirect?
-	 i = filenameStart;
+	 long i = filenameStart;
 	 m_redirLen = 0;
 	 if ( strncmp ( &req[i] , "/?redir=" , 8 ) == 0 ) {
 		 for ( long k = i+8; k<reqLen && m_redirLen<126 ; k++) {

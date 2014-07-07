@@ -1736,6 +1736,7 @@ void gotHttpReply2 ( void *state ,
 			     err != ECORRUPTHTTPGZIP &&
 			     // broken pipe
 			     err != EPIPE &&
+			     err != EINLINESECTIONS &&
 			     // connection reset by peer
 			     err != ECONNRESET ) {
 				char*xx=NULL;*xx=0;}
@@ -3090,7 +3091,9 @@ void sendBackInlineSectionVotingBuf ( void *state ) {
 	if ( saved ) {
 		log("msg13: error making inline section voting buf: %s",
 		    mstrerror(g_errno));
-		return;
+		// re-write the error for sending back to client
+		saved = EINLINESECTIONS;
+		//return;
 	}
 
 	// and resume just like we got the reply from the webserver

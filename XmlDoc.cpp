@@ -144,7 +144,7 @@ XmlDoc::XmlDoc() {
 	m_ahrefsDoc = NULL;
 	m_wikiqbuf = NULL;
 	//m_cr = NULL;
-	m_msg3aArray = NULL;
+	//m_msg3aArray = NULL;
 	m_msg3a = NULL;
 	m_query3a = NULL;
 	//m_numMsg99Replies = 0;
@@ -185,6 +185,8 @@ XmlDoc::~XmlDoc() {
 static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
+
+	m_mcastArray = NULL;
 
 	m_skipIframeExpansion = false;
 	m_indexedTime = 0;
@@ -617,7 +619,7 @@ void XmlDoc::reset ( ) {
 
 	m_hashedMetas = false;
 
-	m_msg3aBuf.purge();
+	m_mcastBuf.purge();
 	m_serpBuf.purge();
 
 	// Doc.cpp:
@@ -6430,8 +6432,9 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 	// if this is -1, we are called for the first time
 	if ( m_si == (void *)-1 ) {
 		m_si  = ss->m_rootSection;
-		m_msg3aRequestsIn = 0;
-		m_msg3aRequestsOut = 0;
+		m_mcastRequestsIn = 0;
+		m_mcastRequestsOut = 0;
+		m_secStatsErrno = 0;
 	}
 
 
@@ -6461,26 +6464,32 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 		// . we hack the "sentContentHash32" into each posdb key 
 		//   as the "value" so we can do a facet-like histogram
 		//   over all the possible values this xpath has for this site
-		SectionStats *stats = getSectionStats ( secHash64, sentHash32);
-		// count it
+		SectionStats *stats = getSectionStats ( secHash64, 
+							sentHash32,
+							false ); // cache only?
+		// it returns -1 if would block
 		if ( stats == (void *)-1 ) {
 			// count it as outstanding
-			m_msg3aRequestsOut++;
+			//m_mcastRequestsOut++;
 			// launch more if we have room
-			if ( m_msg3aRequestsOut - m_msg3aRequestsIn < 32)
+			if ( m_mcastRequestsOut - m_mcastRequestsIn < 32)
 				continue;
 			// advance m_si so we do not repeat
 			m_si = m_si->m_next;
 			// otherwise, return -1 to indicate blocked
 			return (Sections *)-1;
 		}
-		// return -1 if this blocked
+		// NULL means g_errno
 		if ( ! stats ) {
-			// if still waiting though return -1
-			if ( m_msg3aRequestsOut > m_msg3aRequestsIn )
-				return (Sections *)-1;
 			// ensure g_errno is set
 			if ( ! g_errno ) { char *xx=NULL;*xx=0; }
+			// save it
+			m_secStatsErrno = g_errno;
+			// clear it
+			g_errno = 0;
+			// if still waiting though return -1
+			if ( m_mcastRequestsOut > m_mcastRequestsIn )
+				return (Sections *)-1;
 			// otherwise, all done i guess
 			return NULL;
 		}
@@ -6488,7 +6497,7 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 	}
 
 	// waiting for more replies to come back?
-	if ( m_msg3aRequestsOut > m_msg3aRequestsIn )
+	if ( m_mcastRequestsOut > m_mcastRequestsIn )
 		return (Sections *) -1;
 
 	// now scan the sections and copy the stats from the table
@@ -6514,9 +6523,13 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 
 		// the "stats" class should be in the table from
 		// the lookups above!!
-		SectionStats *stats = getSectionStats ( secHash64, sentHash32);
+		SectionStats *stats = getSectionStats ( secHash64, 
+							sentHash32,
+							true ); // cache only?
 		// sanity
-		if ( ! stats || stats == (void *)-1 ) { char *xx=NULL;*xx=0; }
+		//if ( ! stats || stats == (void *)-1 ) { char *xx=NULL;*xx=0;}
+		// must have had a network error or something
+		if ( ! stats ) continue;
 		// copy
 		memcpy ( &si->m_stats , stats, sizeof(SectionStats) );
 	}
@@ -6528,10 +6541,22 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 	return ss;
 }
 
-static void gotDocIdsWrapper ( void *state ) ;
+static void gotReplyWrapper39 ( void *state1 , void *state2 ) {
+	//XmlDoc *THIS = (XmlDoc *)state;
+	XmlDoc *THIS = (XmlDoc *)state1;
+	Multicast *mcast = (Multicast *)state2;
+	THIS->gotSectionFacets ( mcast );
+	// this will end up calling getSectionsWithDupStats() again
+	// which will call getSectionStats() some more on new sections
+	// until m_gotDupStats is set to true.
+	THIS->m_masterLoop ( THIS->m_masterState );
+}
+
 
 // . launch a single msg3a::getDocIds() for a section hash, secHash64
-SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
+SectionStats *XmlDoc::getSectionStats ( long long secHash64 , 
+					long sentHash32 ,
+					bool cacheOnly ) {
 
 	// init cache?
 	if ( m_sectionStatsTable.m_numSlots == 0 &&
@@ -6551,6 +6576,9 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 	// if there, return it
 	if ( stats ) return stats;
 
+	// if cache only do not launch
+	if ( cacheOnly ) return NULL;
+
 	//
 	// TODO: shard gbxpathsitehashxxxxx by termid
 	// and make sure msg3a only sends to that single shard and sends
@@ -6566,28 +6594,36 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 
 	long maxOut = 32;
 
-	// need to make new msg39Request and a new Msg3a arrays
-	if ( ! m_msg3aArray ) {
+	// . need to make new msg39Request and a new Multicast arrays
+	// . only need multicast since these gbfacetstr:gbxpathsitehash123456
+	//   terms are sharded by termid, otherwise we'd have to use msg3a
+	if ( ! m_mcastArray ) {
 		// how much mem to alloc?
 		long need = 0;
-		need += sizeof(Msg3a);
+		need += sizeof(Multicast);
 		need += sizeof(Msg39Request);
-		need += sizeof(Query);
+		// query buf str
+		need += 100;
 		//need += 1; // m_inUse
 		//need += 8; // secHash64
-		need += 100; // query str
 		need *= maxOut;
+		// a single query now to be shared
+		//need += sizeof(Query);
+		// just in case we are being re-used
+		m_mcastBuf.reset();
 		// alloc space
-		if ( ! m_msg3aBuf.reserve(need) ) return NULL;
+		if ( ! m_mcastBuf.reserve(need) ) return NULL;
 		// point to buf
-		char *p = m_msg3aBuf.getBufStart();
+		char *p = m_mcastBuf.getBufStart();
 		// set them up
-		m_msg3aArray = (Msg3a *)p;
-		p += sizeof(Msg3a) * maxOut;
+		m_mcastArray = (Multicast *)p;
+		p += sizeof(Multicast) * maxOut;
 		m_msg39RequestArray = (Msg39Request *)p;
 		p += sizeof(Msg39Request) * maxOut;
-		m_queryArray = (Query *)p;
-		p += sizeof(Query) * maxOut;
+		//m_queryArray = (Query *)p;
+		//p += sizeof(Query) * maxOut;
+		//m_sharedQuery = (Query *)p;
+		//p += sizeof(Query);
 		// for holding the query string
 		// assume query will not exceed 100 bytes incuding \0
 		m_queryBuf = p;
@@ -6595,14 +6631,14 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 		// for the section hashes
 		//m_secHash64Array = (long long *)p;
 		//p += 8 * maxOut;
-		// is 1 if msg3a is in use
+		// is 1 if multicast is in use
 		//m_inUse = p;
 		//p += maxOut;
 		// initialize all!
 		for ( long i = 0 ; i < maxOut ; i++ ) {
-			m_msg3aArray       [i].constructor();
+			m_mcastArray       [i].constructor();
 			m_msg39RequestArray[i].reset();//constructor();
-			m_queryArray       [i].constructor();
+			//m_queryArray       [i].constructor();
 			m_queryBuf[100*i] = '\0';
 			//m_inUse[i] = 0;
 		}
@@ -6611,26 +6647,20 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 	// get first available
 	long i; 
 	for ( i = 0 ; i < maxOut ; i++ ) 
-		if ( ! m_msg3aArray[i].m_inUse ) break;
+		if ( ! m_mcastArray[i].m_inUse ) break;
 
 	// wtf?
 	if ( i >= maxOut ) { char *xx=NULL;*xx=0; }
 
 	// and our vehicle
-	Msg3a *msg3a = &m_msg3aArray[i];
+	Multicast *mcast = &m_mcastArray[i];
 
 	// mark as in use up here in case we quickpoll into this same code?!
 	// yeah, i guess set2() calls quickpoll?
-	msg3a->m_inUse = 1;
-
-	// set the msg39 request
-	Msg39Request *r = &m_msg39RequestArray[i];
-
-	// reset all to defaults
-	r->reset();
+	//mcast->m_inUse = 1;
 
 	// save this for reply
-	msg3a->m_hack = this;
+	//mcast->m_hack = this;
 
 	char *qbuf = m_queryBuf + 100 * i;
 
@@ -6647,6 +6677,12 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
+
+	// set the msg39 request
+	Msg39Request *r = &m_msg39RequestArray[i];
+
+	// reset all to defaults
+	r->reset();
 
 	//r-> ptr_coll             = cr->m_coll;
 	//r->size_coll             = gbstrlen(cr->m_coll)+1;
@@ -6666,6 +6702,22 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 	r->size_query            = gbstrlen(r->ptr_query)+1;
 	r->m_timeout             = 3600; //-1;// auto-determine based on #terms
 	r->m_maxQueryTerms       = 10;
+
+	// how much of each termlist to read in bytes
+	long readList     = 10000;
+	r-> ptr_readSizes = (char *)&readList;
+	r->size_readSizes = 4;
+
+	// term freqs
+	float tfw = 1.0;
+	r-> ptr_termFreqWeights = (char *)&tfw;
+	r->size_termFreqWeights = 4;
+
+	// speed it up some with this flag
+	r->m_forSectionStats = true;
+
+	// 1 query term
+	r->m_nqt = 1;
 
 	///////////////////////
 	//
@@ -6694,65 +6746,113 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 , long sentHash32){
 	//r->m_myFacetVal32 = sentHash32;
 
 
-	Query *qq = &m_queryArray[i];
+	//Query *qq = &m_queryArray[i];
 	// set query for msg3a. queryExpansion=false
-	qq->set2 ( r->ptr_query , langUnknown , false );
+	//qq->set2 ( r->ptr_query , langUnknown , false );
 
-	// hack in our inner html content hash for this xpath
-	msg3a->m_hack32 = sentHash32;
-	msg3a->m_hack64 = secHash64;
+	Query qq;
+	qq.set2 ( r->ptr_query , langUnknown , false );
 
 	// TODO: ensure this just hits the one host since it is sharded
 	// by termid...
 
-	// . get the docIds
-	// . this sets m_msg3a.m_clusterLevels[] for us
-	if ( ! msg3a->getDocIds ( r,  qq , msg3a , gotDocIdsWrapper)) {
-		// we blocked?
-		return (SectionStats *)-1;
-	}
+	// what shard owns this termlist. we shard these 
+	// gbfacetstr:gbxpathsitehash123456 terms by termid.
+	long long termId = qq.getTermId(0);
+	long shardNum = getShardNumFromTermId ( termId );
+
+	// hack in our inner html content hash for this xpath
+	mcast->m_hack32 = sentHash32;
+	mcast->m_hack64 = secHash64;
+
+	// malloc and store the request. mcast will free it when done.
+	long reqSize;
+	char *req = serializeMsg ( sizeof(Msg39Request),
+				   &r->size_readSizes,
+				   &r->size_whiteList,
+				   &r->ptr_readSizes,
+				   r,
+				   &reqSize,
+				   NULL,
+				   0,
+				   false);
+
+	// . send out a msg39 request to each shard
+	// . multicasts to a host in group "groupId"
+	// . we always block waiting for the reply with a multicast
+	// . returns false and sets g_errno on error
+	// . sends the request to fastest host in group "groupId"
+	// . if that host takes more than about 5 secs then sends to
+	//   next host
+	// . key should be largest termId in group we're sending to
+	bool status;
+	status = mcast->send ( req               , // m_rbufPtr         ,
+			       reqSize           , // request size
+			       0x39              , // msgType 0x39
+			       true              , // mcast owns m_request?
+			       shardNum          , // group to send to
+			       false             , // send to whole group?
+			       0,//(long)qh          , // 0 // startKey.n1
+			       this              , // state1 data
+			       mcast             , // state2 data
+			       gotReplyWrapper39 ,
+			       30                , //timeout in secs
+			       m_niceness,//m_r->m_niceness   ,
+			       false             , // realtime?
+			       -1, // firstHostId, // -1// bestHandlingHostId ,
+			       NULL              , // m_replyBuf   ,
+			       0                 , // MSG39REPLYSIZE,
+			       // this is true if multicast should free the
+			       // reply, otherwise caller is responsible
+			       // for freeing it after calling
+			       // getBestReply().
+			       // actually, this should always be false,
+			       // there is a bug in Multicast.cpp.
+			       // no, if we error out and never steal
+			       // the buffers then they will go unfreed
+			       // so they are freed by multicast by default
+			       // then we steal control explicitly
+			       true             );
+
+	m_mcastRequestsOut++;
+
+	// if successfully launch, wait...
+	if ( status ) return (SectionStats *) -1;
 
 	// error?
-	if ( g_errno ) { msg3a->m_inUse = 0; return NULL; }
+	if ( g_errno ) return NULL;//{ mcast->m_inUse = 0; return NULL; }
 
 	// sets &m_sectionStats and adds to the table
-	gotSectionFacets ( msg3a );
+	gotSectionFacets ( mcast );
 
 	// i guess did not block...
 	//return &msg3a->m_sectionStats;
 	return &m_sectionStats;
 }
 
-void gotDocIdsWrapper ( void *state ) {
-	//XmlDoc *THIS = (XmlDoc *)state;
-	Msg3a *msg3a = (Msg3a *)state;
-	XmlDoc *THIS = (XmlDoc *)msg3a->m_hack;
-	THIS->gotSectionFacets ( msg3a );
-	// this will end up calling getSectionsWithDupStats() again
-	// which will call getSectionStats() some more on new sections
-	// until m_gotDupStats is set to true.
-	THIS->m_masterLoop ( THIS->m_masterState );
-}
+// . come here when msg39 got the ptr_faceHashList for our single
+//   gbfacet:gbxpathsitehash
+// . returns false and sets g_errno on error
+bool XmlDoc::gotSectionFacets ( Multicast *mcast ) {
+	//SectionStats *stats = &msg39->m_sectionStats;
 
-// come here when msg3a got the ptr_faceHashList for our single
-// gbfacet:gbxpathsitehash
-bool XmlDoc::gotSectionFacets ( Msg3a *msg3a ) {
-	//SectionStats *stats = &msg3a->m_sectionStats;
+	if ( mcast->m_inUse ) { char *xx=NULL;*xx=0;}
+
 	// count it as returned
-	m_msg3aRequestsIn++;
+	m_mcastRequestsIn++;
 	// mark it as available now
-	long num = msg3a - m_msg3aArray;
+	long num = mcast - m_mcastArray;
 	// sanity
-	if ( ! msg3a->m_inUse ) { char *xx=NULL;*xx=0; }
+	//if ( ! msg39->m_inUse ) { char *xx=NULL;*xx=0; }
 
 	// grab the xpath/site hash
-	long long secHash64 = msg3a->m_hack64;//m_secHash64Array[num];
+	long long secHash64 = mcast->m_hack64;//m_secHash64Array[num];
 
 	// and our innher html for that xpath
-	long myFacetVal32 = msg3a->m_hack32;
+	long myFacetVal32 = mcast->m_hack32;
 
 	// sanity. should only be a gbfacet:gbxpathsitehash12345567 term.
-	if ( msg3a->m_q->m_numTerms != 1 ) { char *xx=NULL;*xx=0; }
+	//if ( mcast->m_q->m_numTerms != 1 ) { char *xx=NULL;*xx=0; }
 
 	// reset all counts to 0
 	m_sectionStats.reset();
@@ -6768,26 +6868,70 @@ bool XmlDoc::gotSectionFacets ( Msg3a *msg3a ) {
 	// Query::m_queryTerm.m_facetHashTable has the facets merged
 	// from all the shards. so now compute the stats from them.
 	// set the section stats.
-	QueryTerm *qt = &msg3a->m_q->m_qterms[0];
-	HashTableX *ft = &qt->m_facetHashTable;
-	// how many unique inner html content hashes for this xpath/site
-	// hash were there?
-	m_sectionStats.m_numUniqueVals = ft->m_numSlotsUsed;
-	// compute total facet values
-	for ( long i = 0 ; i < ft->m_numSlots ; i++ ) {
-		QUICKPOLL(m_niceness);
-		if ( ! ft->m_flags[0] ) continue;
-		// . key is the inner html content hash for this xpath/site
-		// . how many docids had this inner html content hash
-		long score32 = ft->getScoreFromSlot(i);
-		m_sectionStats.m_totalEntries += score32;
-		// how many had the same inner html content hash for
-		// this xpath/site as we did? add to "m_totalMatches"
-		long val = ft->getKey32FromSlot(i);
-		if ( val != myFacetVal32 ) continue;
-		m_sectionStats.m_totalMatches = score32;
+	//QueryTerm *qt = &msg3a->m_q->m_qterms[0];
+	//HashTableX *ft = &qt->m_facetHashTable;
+
+	// . get the list of facet field/value pairs.
+	// . see how Msg3a.cpp merges these to see how they are stored
+	Msg39Reply *mr = (Msg39Reply *)mcast->m_readBuf;//getBestReply();
+
+	// this is NULL with g_errno set on error
+	if ( ! mr ) {
+		log("xmldoc: got error from sec stats mcast: %s",
+		    mstrerror(g_errno));
+		return false;
 	}
 
+	deserializeMsg ( sizeof(Msg39Reply) ,
+			 &mr->size_docIds,
+			 &mr->size_clusterRecs,
+			 &mr->ptr_docIds,
+			 mr->m_buf );
+
+	char *p = (char *)(mr->ptr_facetHashList);
+	//char *pfinal = p + mr->size_facetHashList;
+
+	//
+	// should only be one termid of facets in here, so no need to re-loop
+	//
+	long nh = 0;
+	// "matches" is how many docids with this facet field had our facet val
+	long matches = 0;
+	// "totalDocIds" is how many docids had this facet field
+	long totalDocIds = 0;
+
+	if ( p ) {
+		// first is the termid
+		//long long termId = *(long long *)p;
+		// skip that
+		p += 8;
+		// the # of unique 32-bit facet values
+		nh = *(long *)p;
+		p += 4;
+		// the end point 
+		char *pend = p + (8 * nh);
+		// now compile the facet hash list into there 
+		for ( ; p < pend ; ) {
+			// does this facet value match ours? 
+			// (i.e. same inner html?)
+			if ( *(long *)p == myFacetVal32 ) matches++;
+			p += 4;
+			// now how many docids had this facet value?
+			totalDocIds += *(long *)p;
+			p += 4;
+		}
+	}
+
+	// how many unique inner html content hashes for this xpath/site
+	// hash were there?
+	m_sectionStats.m_numUniqueVals = nh;//ft->m_numSlotsUsed;
+
+	// how many docids had this same facet field?
+	m_sectionStats.m_totalEntries = totalDocIds;
+
+	// how many had the same inner html content hash for
+	// this xpath/site as we did? 
+	m_sectionStats.m_totalMatches = matches;
 
 	////////
 	//
@@ -6800,20 +6944,20 @@ bool XmlDoc::gotSectionFacets ( Msg3a *msg3a ) {
 		log("xmldoc: failed to add sections stats: %s",
 		    mstrerror(g_errno));
 
-	// reset that msg3a to free its data
-	//msg3a->reset();
+	// reset that msg39 to free its data
+	//msg39->reset();
 
-	if ( msg3a != &m_msg3aArray[num] ) { char *xx=NULL;*xx=0; }
+	if ( mcast != &m_mcastArray[num] ) { char *xx=NULL;*xx=0; }
 
 	// . make it available again
 	// . do this after all in case we were in quickpoll interruptting
 	//   the getSectionStats() function below
-	msg3a->m_inUse = 0;
+	//mcast->m_inUse = 0;
 
 	// free query Query::m_qwords array etc. to stop mem leaks
-	m_msg3aArray       [num].reset();
+	m_mcastArray       [num].reset();
 	m_msg39RequestArray[num].reset();
-	m_queryArray       [num].reset();
+	//m_queryArray       [num].reset();
 	// now when the master loop calls getSectionsWithDupStats() it
 	// should find the stats class in the cache!
 	return true;
@@ -26806,7 +26950,10 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 		// we already have the hash of the inner html of the section
 		hashFacet2 ( "gbfacetstr",
 			     prefix, 
-			     (long)(unsigned long)ih64 , hi.m_tt );
+			     (long)(unsigned long)ih64 , 
+			     hi.m_tt ,
+			     // shard by termId?
+			     true );
 	}
 
 	return true;
@@ -31824,7 +31971,9 @@ bool XmlDoc::hashFacet1 ( char *term ,
 bool XmlDoc::hashFacet2 ( char *prefix,
 			  char *term ,
 			  long val32 ,
-			  HashTableX *tt ) {
+			  HashTableX *tt ,
+			  // we only use this for gbxpathsitehash terms:
+			  bool shardByTermId ) {
 
 	// need a prefix
 	//if ( ! hi->m_prefix ) return true;
@@ -31875,7 +32024,7 @@ bool XmlDoc::hashFacet2 ( char *prefix,
 			  0 , // multiplier
 			  false, // syn?
 			  false , // delkey?
-			  false );//hi->m_shardByTermId );
+			  shardByTermId );
 
 	//long long final = hash64n("products.offerprice",0);
 	//long long prefix = hash64n("gbsortby",0);
@@ -33700,7 +33849,8 @@ bool XmlDoc::printDoc ( SafeBuf *sb ) {
 				       "[%lu] is the 32-bit hash of the "
 				       "Inner HTML of this section stored "
 				       "in the posdb key instead of "
-				       "the usual stuff.",
+				       "the usual stuff. This is also "
+				       "sharded by termId!",
 				       val32//(long)tp[i]->m_sentHash32
 				       );
 

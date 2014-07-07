@@ -114,9 +114,6 @@ public:
 	void      *m_hack;
 	long       m_hackQNum;
 	char      *m_hackQPtr;
-	long       m_hack32; // used by XmlDoc.cpp for gbfacet: stuff
-	long long  m_hack64; // used by XmlDoc.cpp for gbfacet: stuff
-	//void      *m_hackHost;
 	char       m_inUse;
 
 	bool m_moreDocIdsAvail;

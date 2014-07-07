@@ -59,7 +59,7 @@ class Msg39Request {
 		ptr_query                 = NULL; // in utf8?
 		ptr_whiteList             = NULL;
 		//ptr_coll                  = NULL;
-
+		m_forSectionStats         = false;
 		size_readSizes            = 0;
 		size_query                = 0;
 		size_whiteList            = 0;
@@ -116,6 +116,8 @@ class Msg39Request {
 	//char    m_useNewAlgo;
 	char    m_doMaxScoreAlgo;
 
+	char    m_forSectionStats;
+
 	// Msg3a still uses this
 	//long    m_myFacetVal32; // for gbfacet:xpathsite really sectionstats
 
@@ -137,12 +139,16 @@ class Msg39Request {
 
 	time_t  m_nowUTC;
 
+	// do not add new string parms before ptr_readSizes or
+	// after ptr_whiteList so serializeMsg() calls still work
 	char   *ptr_readSizes;
 	char   *ptr_termFreqWeights;
 	char   *ptr_query; // in utf8?
 	char   *ptr_whiteList;
 	//char   *ptr_coll;
 	
+	// do not add new string parms before size_readSizes or
+	// after size_whiteList so serializeMsg() calls still work
 	long    size_readSizes;
 	long    size_termFreqWeights;
 	long    size_query;
@@ -168,6 +174,8 @@ public:
 	// error code
 	long   m_errno;
 
+	// do not add new string parms before ptr_docIds or
+	// after ptr_clusterRecs so serializeMsg() calls still work
 	char  *ptr_docIds         ; // the results, long long
 	char  *ptr_scores;        ; // now doubles! so we can have intScores
 	char  *ptr_scoreInfo      ; // transparency info
@@ -177,6 +185,8 @@ public:
 	char  *ptr_facetHashList   ; // list of all the facet values in serps
 	char  *ptr_clusterRecs    ; // key_t (might be empty)
 	
+	// do not add new string parms before size_docIds or
+	// after size_clusterRecs so serializeMsg() calls still work
 	long   size_docIds;
 	long   size_scores;
 	long   size_scoreInfo;

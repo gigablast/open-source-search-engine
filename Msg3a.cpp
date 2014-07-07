@@ -1008,13 +1008,19 @@ bool Msg3a::mergeLists ( ) {
 			break;
 		}
 		// the end point
-		char *pend = p + 4 * nh;
+		char *pend = p + (8 * nh);
 		// now compile the facet hash list into there
-		for ( ; p < pend ; p += 4 ) {
+		for ( ; p < pend ; ) {
+			long facetValue = *(long *)p;
+			p += 4;
+			// how many docids had this facetValue?
+			long facetCount = *(long *)p;
+			p += 4;
 			// debug
 			//log("msg3a: got facethash %li) %lu",k,p[k]);
-			// hash it up, no dups!
-			if ( ! qt->m_facetHashTable.addScore((long *)p,1) )
+			// accumulate scores from all shards
+			if ( ! qt->m_facetHashTable.addScore(&facetValue,
+							     facetCount) )
 				return true;
 		}
 		// now get the next gbfacet: term if there was one

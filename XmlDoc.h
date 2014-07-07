@@ -546,9 +546,10 @@ class XmlDoc {
 	class Sections *getSections ( ) ;
 	class Sections *getSectionsWithDupStats ( );
 	class SafeBuf  *getInlineSectionVotingBuf();
-	bool gotSectionFacets( class Msg3a *msg3a );
-	class SectionStats *getSectionStats(long long secHash64,
-					    long sentHash32);
+	bool gotSectionFacets( class Multicast *mcast );
+	class SectionStats *getSectionStats ( long long secHash64 ,
+					      long sentHash32 ,
+					      bool cacheOnly );
 	class SectionVotingTable *getOldSectionVotingTable();
 	class SectionVotingTable *getNewSectionVotingTable();
 	char **getSectionsReply ( ) ;
@@ -893,7 +894,8 @@ class XmlDoc {
 
 	bool hashFacet1 ( char *term, class Words *words , HashTableX *dt) ;
 
-	bool hashFacet2 ( char *prefix,char *term,long val32, HashTableX *dt) ;
+	bool hashFacet2 ( char *prefix,char *term,long val32, HashTableX *dt,
+			  bool shardByTermId = false ) ;
 
 
 	bool hashNumber ( char *beginBuf ,
@@ -1025,14 +1027,16 @@ class XmlDoc {
 	Section *m_si;
 	//Section *m_nextSection;
 	//Section *m_lastSection;
-	long m_msg3aRequestsOut;
-	long m_msg3aRequestsIn;
+	long m_mcastRequestsOut;
+	long m_mcastRequestsIn;
+	long m_secStatsErrno;
 	char *m_queryBuf;
 	Msg39Request *m_msg39RequestArray;
-	SafeBuf m_msg3aBuf;
-	Msg3a *m_msg3aArray;
+	SafeBuf m_mcastBuf;
+	Multicast *m_mcastArray;
 	//char  *m_inUse;
-	Query *m_queryArray;
+	//Query *m_queryArray;
+	//Query *m_sharedQuery;
 	//long long *m_secHash64Array;
 	bool     m_gotDupStats;
 	//long     m_secHash64;

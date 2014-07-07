@@ -6892,6 +6892,9 @@ void PosdbTable::intersectLists10_r ( ) {
 			// add it. count occurences of it per docid
 			qt->m_facetHashTable.addTerm32 ( &val32 );
 		}
+		// if only one term like gbfacetstr:gbxpathsitehash123456
+		// then do not bother adding to top tree
+		if ( m_r->m_forSectionStats ) goto advance;
 	}
 
 

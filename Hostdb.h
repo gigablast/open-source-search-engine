@@ -686,7 +686,7 @@ inline uint32_t getShardNumFromDocId ( long long d ) {
 	return g_hostdb.getShardNumFromDocId ( d );
 };
 
-//inline uint32_t getShardNumFromTermId ( long long termId );
+long getShardNumFromTermId ( long long termId );
 
 //inline uint32_t getGroupId ( char rdbId, void *key,bool split = true) {
 //	return g_hostdb.getGroupId ( rdbId , key , split );
