@@ -42,8 +42,28 @@ void markOut ( char *reply , char *needle ) {
 
 	for ( ; *s && ! is_digit(*s); s++ );
 
-	// 0 out digits
-	for ( ; *s && is_digit(*s); s++ ) *s = '0';
+	// find end of digit stream
+	//char *end = s;
+	//while ( ; *end && is_digit(*s); end++ );
+	// just bury the digit stream now, zeroing out was not
+	// a consistent LENGTH if we had 10 hits vs 9... making the hash 
+	// different
+
+	// space out digits
+	for ( ; *s && is_digit(*s); s++ ) *s = ' ';
+}
+
+// do not hash 
+long qahash32 ( char *s ) {
+	unsigned long h = 0;
+	long k = 0;
+	for ( long i = 0 ; s[i] ; i++ ) {
+		// skip if not first space and back to back spaces
+		if ( s[i] == ' ' &&i>0 && s[i-1]==' ') continue;
+		h ^= g_hashtab [(unsigned char)k] [(unsigned char)s[i]];
+		k++;
+	}
+	return h;
 }
 
 long s_replyCRC = 0;
@@ -68,7 +88,8 @@ void qatestWrapper ( void *state , TcpSocket *sock ) {
 	// until i figure this one out, take it out
 	markOut ( reply , "<docsInCollection>");
 
-	// make checksum
+	// make checksum. we ignore back to back spaces so this
+	// hash works for <docsInCollection>10 vs <docsInCollection>9
 	s_replyCRC = hash32 ( content , contentLen );
 
 	// this too is used for recording the reply into a file on disk
@@ -401,7 +422,7 @@ bool qatest ( ) {
 			 qatestWrapper );
 		return false;
 	}
-	if ( s_phase == 4 ) {s_phase++;checkCRC ( -1677850793 );}
+	if ( s_phase == 4 ) {s_phase++;checkCRC ( 922722309 );}
 
 
 	// sports news
@@ -411,7 +432,7 @@ bool qatest ( ) {
 			 qatestWrapper );
 		return false;
 	}
-	if ( s_phase == 6 ) {s_phase++;checkCRC ( 1218236746 ); }
+	if ( s_phase == 6 ) {s_phase++;checkCRC ( -442665448 ); }
 
 	//
 	// eject/delete the urls
@@ -441,7 +462,7 @@ bool qatest ( ) {
 		return false;
 	}
 	// seems to have <docsInCollection>2</>
-	if ( s_phase == 9 ) { s_phase++ ; checkCRC ( -145719708 ); }
+	if ( s_phase == 9 ) { s_phase++ ; checkCRC ( 1515313462 ); }
 
 
 
