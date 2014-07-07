@@ -6420,7 +6420,7 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 
 	long *sh32 = getSiteHash32();
 	if ( ! sh32 || sh32 == (long *)-1 ) return (Sections *)sh32;
-	long siteHash32 = *sh32;
+	unsigned long siteHash32 = (unsigned long)*sh32;
 
 	//long long *shp64 = getSiteHash64();
 	//if ( ! shp64 || shp64 == (void *)-1 ) return (Sections *)shp64;
@@ -6438,34 +6438,40 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 	}
 
 
-	sec_t menuFlags = SEC_MENU | SEC_MENU_SENTENCE | SEC_MENU_HEADER   ;
+	//sec_t menuFlags = SEC_MENU | SEC_MENU_SENTENCE | SEC_MENU_HEADER   ;
 
 	for ( ; m_si ; m_si = m_si->m_next ) { 
 		// breathe
 		QUICKPOLL(m_niceness);
 
-		// skip if no content to hash
-		if ( ! m_si->m_sentenceContentHash64 ) continue;
+		// skip if sentence, only hash tags now i guess for diffbot
+		if ( m_si->m_sentenceContentHash64 ) 
+			continue;
+
+		// get hash of sentences this tag contains indirectly
+		uint32_t val32 = (unsigned long)m_si->m_indirectSentHash64;
+		if ( ! val32 ) 
+			continue;
 
 		// skip if menu!
-		if ( m_si->m_flags & menuFlags ) continue;
+		//if ( m_si->m_flags & menuFlags ) continue;
 
 		// get section xpath hash combined with sitehash
-		uint64_t secHash64 = m_si->m_turkTagHash32 ^ siteHash32;
+		uint32_t secHash32 = m_si->m_turkTagHash32 ^ siteHash32;
 
 		// convert this to 32 bits
-		unsigned long sentHash32 ;
-		sentHash32 = (unsigned long)m_si->m_sentenceContentHash64;
-		
+		unsigned long innerHash32 ;
+		//sentHash32 = (unsigned long)m_si->m_sentenceContentHash64;
+		innerHash32 = (unsigned long)m_si->m_indirectSentHash64;
 
 		// save in case we need to read more than 5MB
 		//m_lastSection = si;
-		// . does a gbfacets:gbxpathsitehashxxxxxx query on secHash64
+		// . does a gbfacets:gbxpathsitehashxxxxxx query on secHash32
 		// . we hack the "sentContentHash32" into each posdb key 
 		//   as the "value" so we can do a facet-like histogram
 		//   over all the possible values this xpath has for this site
-		SectionStats *stats = getSectionStats ( secHash64, 
-							sentHash32,
+		SectionStats *stats = getSectionStats ( secHash32, 
+							innerHash32,
 							false ); // cache only?
 		// it returns -1 if would block
 		if ( stats == (void *)-1 ) {
@@ -6511,20 +6517,32 @@ Sections *XmlDoc::getSectionsWithDupStats ( ) {
 		// breathe
 		QUICKPOLL(m_niceness);
 		// skip if no content to hash
-		if ( ! si->m_sentenceContentHash64 ) continue;
+		//if ( ! si->m_sentenceContentHash64 ) continue;
+
+		// skip if sentence, only hash tags now i guess for diffbot
+		if ( si->m_sentenceContentHash64 ) 
+			continue;
+
+		// get hash of sentences this tag contains indirectly
+		uint32_t val32 = (unsigned long)si->m_indirectSentHash64;
+		if ( ! val32 ) 
+			continue;
+
 		// skip if menu!
-		if ( si->m_flags & menuFlags ) continue;
+		//if ( si->m_flags & menuFlags ) continue;
+
+
 		// get section xpath hash combined with sitehash
-		uint64_t secHash64 = si->m_turkTagHash32 ^ siteHash32;
+		uint32_t secHash32 = si->m_turkTagHash32 ^ siteHash32;
 
 		// convert this to 32 bits
-		unsigned long sentHash32 ;
-		sentHash32 = (unsigned long)si->m_sentenceContentHash64;
+		unsigned long innerHash32 ;
+		innerHash32 = (unsigned long)si->m_indirectSentHash64;
 
 		// the "stats" class should be in the table from
 		// the lookups above!!
-		SectionStats *stats = getSectionStats ( secHash64, 
-							sentHash32,
+		SectionStats *stats = getSectionStats ( secHash32, 
+							innerHash32,
 							true ); // cache only?
 		// sanity
 		//if ( ! stats || stats == (void *)-1 ) { char *xx=NULL;*xx=0;}
@@ -6553,9 +6571,9 @@ static void gotReplyWrapper39 ( void *state1 , void *state2 ) {
 }
 
 
-// . launch a single msg3a::getDocIds() for a section hash, secHash64
-SectionStats *XmlDoc::getSectionStats ( long long secHash64 , 
-					long sentHash32 ,
+// . launch a single msg3a::getDocIds() for a section hash, secHash32
+SectionStats *XmlDoc::getSectionStats ( unsigned long secHash32 , 
+					unsigned long innerHash32 ,
 					bool cacheOnly ) {
 
 	// init cache?
@@ -6572,7 +6590,7 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ,
 
 	// check in cache...
 	SectionStats *stats ;
-	stats = (SectionStats *)m_sectionStatsTable.getValue ( &secHash64 );
+	stats = (SectionStats *)m_sectionStatsTable.getValue ( &secHash32 );
 	// if there, return it
 	if ( stats ) return stats;
 
@@ -6585,9 +6603,6 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ,
 	// the stats back. should make us much faster to sectionize
 	// a web page. but for now try without it...
 	//
-
-	// save it
-	//m_secHash64 = secHash64;
 
 	//long *sh32 = getSiteHash32();
 	//if ( ! sh32 || sh32 == (long *)-1 ) return (SectionStats *)sh32;
@@ -6604,8 +6619,6 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ,
 		need += sizeof(Msg39Request);
 		// query buf str
 		need += 100;
-		//need += 1; // m_inUse
-		//need += 8; // secHash64
 		need *= maxOut;
 		// a single query now to be shared
 		//need += sizeof(Query);
@@ -6628,12 +6641,6 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ,
 		// assume query will not exceed 100 bytes incuding \0
 		m_queryBuf = p;
 		p += 100 * maxOut;
-		// for the section hashes
-		//m_secHash64Array = (long long *)p;
-		//p += 8 * maxOut;
-		// is 1 if multicast is in use
-		//m_inUse = p;
-		//p += maxOut;
 		// initialize all!
 		for ( long i = 0 ; i < maxOut ; i++ ) {
 			m_mcastArray       [i].constructor();
@@ -6664,8 +6671,6 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ,
 
 	char *qbuf = m_queryBuf + 100 * i;
 
-	//m_secHash64Array[i] = secHash64;
-
 	// . hash this special term (was gbsectionhash)
 	// . the wordbits etc will be a number though, the hash of the content
 	//   of the xpath, the inner html hash
@@ -6673,7 +6678,7 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ,
 	//   the statistics for all the values in the posdb keys of this 
 	//   termlist, which happen to be innerHTML hashes for all pages
 	//   with this same xpath and on this same site.
-	sprintf(qbuf,"gbfacetstr:gbxpathsitehash%llu",secHash64);
+	sprintf(qbuf,"gbfacetstr:gbxpathsitehash%lu",secHash32);
 
 	CollectionRec *cr = getCollRec();
 	if ( ! cr ) return NULL;
@@ -6762,8 +6767,8 @@ SectionStats *XmlDoc::getSectionStats ( long long secHash64 ,
 	long shardNum = getShardNumFromTermId ( termId );
 
 	// hack in our inner html content hash for this xpath
-	mcast->m_hack32 = sentHash32;
-	mcast->m_hack64 = secHash64;
+	mcast->m_hack32 = innerHash32;
+	mcast->m_hack64 = secHash32;
 
 	// malloc and store the request. mcast will free it when done.
 	long reqSize;
@@ -6846,7 +6851,7 @@ bool XmlDoc::gotSectionFacets ( Multicast *mcast ) {
 	//if ( ! msg39->m_inUse ) { char *xx=NULL;*xx=0; }
 
 	// grab the xpath/site hash
-	long long secHash64 = mcast->m_hack64;//m_secHash64Array[num];
+	uint32_t secHash32 = mcast->m_hack64;
 
 	// and our innher html for that xpath
 	long myFacetVal32 = mcast->m_hack32;
@@ -6914,7 +6919,8 @@ bool XmlDoc::gotSectionFacets ( Multicast *mcast ) {
 		for ( ; p < pend ; ) {
 			// does this facet value match ours? 
 			// (i.e. same inner html?)
-			if ( *(long *)p == myFacetVal32 ) matches++;
+			if ( *(long *)p == myFacetVal32 )
+				matches += *(long *)(p+4);
 			p += 4;
 			// now how many docids had this facet value?
 			totalDocIds += *(long *)p;
@@ -6940,7 +6946,7 @@ bool XmlDoc::gotSectionFacets ( Multicast *mcast ) {
 	////////
 
 	// cache them. this does a copy of m_sectionStats
-	if ( ! m_sectionStatsTable.addKey ( &secHash64 , &m_sectionStats ) )
+	if ( ! m_sectionStatsTable.addKey ( &secHash32 , &m_sectionStats ) )
 		log("xmldoc: failed to add sections stats: %s",
 		    mstrerror(g_errno));
 
@@ -26917,12 +26923,20 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 		// . skip if empty
 		// . this needs to be like 48 bits because 32 bits is not
 		//   big enought!
-		uint64_t ih64 = si->m_sentenceContentHash64;
-		if ( ! ih64 ) continue;
+		//uint64_t ih64 = si->m_sentenceContentHash64;
+
+		// skip if sentence, only hash tags now i guess for diffbot
+		if ( si->m_sentenceContentHash64 ) 
+			continue;
+
+		// get hash of sentences this tag contains indirectly
+		uint32_t val32 = (unsigned long)si->m_indirectSentHash64;
+		if ( ! val32 ) 
+			continue;
 
 		// the termid is now the xpath and the sitehash, the "value"
 		// will be the hash of the innerhtml, m_sentenceContentHash64
-		uint64_t thash64 = si->m_turkTagHash32;
+		uint64_t thash64 = (unsigned long)si->m_turkTagHash32;
 		// combine with site hash
 		thash64 ^= (unsigned long)siteHash32;
 
@@ -26950,7 +26964,8 @@ bool XmlDoc::hashSections ( HashTableX *tt ) {
 		// we already have the hash of the inner html of the section
 		hashFacet2 ( "gbfacetstr",
 			     prefix, 
-			     (long)(unsigned long)ih64 , 
+			     //(long)(unsigned long)ih64 , 
+			     val32,
 			     hi.m_tt ,
 			     // shard by termId?
 			     true );
@@ -34527,6 +34542,8 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 			// unique values in the xpath innerhtml
 			sb->safePrintf(" _u=%li",(long)sx->m_numUniqueVals);
 			// the hash of the turktaghash and sitehash32 combined
+			// so you can do gbfacetstr:gbxpathsitehash12345
+			// where the 12345 is this h32 value.
 			unsigned long h32 = si->m_turkTagHash32 ^ siteHash32;
 			sb->safePrintf(" _h=%lu",h32);
 			//sb->safePrintf("-->");

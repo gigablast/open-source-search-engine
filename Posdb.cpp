@@ -6869,7 +6869,7 @@ void PosdbTable::intersectLists10_r ( ) {
 	// gbfacet:<xpathsitehash> and the values is the innerhtml content hash
 	// of that xpath/site so we won't have to do buckets for that.
 	//
-	if ( m_hasFacetTerm ) {
+	if ( m_hasFacetTerm && ! secondPass ) {
 		// scan each facet termlist and update
 		// QueryTerm::m_facetHashTable/m_dt
 		for ( long i = 0 ; i < m_q->m_numTerms ; i++ ) {
@@ -6883,14 +6883,31 @@ void PosdbTable::intersectLists10_r ( ) {
 			//
 			// just grab the first value i guess...
 			//
-			// . first key is the full size
-			// . uses the w,G,s,v and F bits to hold this
-			// . this is no longer necessarily sitehash, but
-			//   can be any val, like now SectionStats is using
-			//   it for the innerHtml sentence content hash32
-			long val32 = g_posdb.getFacetVal32 ( p );
+			//long val32 = g_posdb.getFacetVal32 ( p );
 			// add it. count occurences of it per docid
-			qt->m_facetHashTable.addTerm32 ( &val32 );
+			//qt->m_facetHashTable.addTerm32 ( &val32 );
+			// it might have multiple sections that have
+			// the same gbxpathsitehash...
+			bool firstTime = true;
+			for ( ; ; ) {
+				// do not breach sublist
+				if ( p >= miniMergedEnd[i] ) break;
+				// break if 12 byte key: another docid!
+				if ( ! firstTime && !(p[0] & 0x04) ) break;
+				// . first key is the full size
+				// . uses the w,G,s,v and F bits to hold this
+				// . this is no longer necessarily sitehash,but
+				//   can be any val, like now SectionStats is 
+				//   using it for the innerHtml sentence 
+				//   content hash32
+				long val32 = g_posdb.getFacetVal32 ( p );
+				// add it. count occurences of it per docid
+				qt->m_facetHashTable.addTerm32 ( &val32 );
+				// skip over 6 or 12 byte key
+				if ( firstTime ) p += 12;
+				else             p += 6;
+				firstTime = false;
+			}
 		}
 		// if only one term like gbfacetstr:gbxpathsitehash123456
 		// then do not bother adding to top tree

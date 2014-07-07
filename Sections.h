@@ -364,6 +364,8 @@ public:
 	// are a sentence section then this points to itself.
 	class Section *m_sentenceSection;
 
+	// . set in XmlDoc::getSectionsWithDupStats()
+	// . voting info for this section over all indexed pages from this site
 	SectionStats m_stats;
 
 	// this (minus -1) references into Addresses::m_sorted[] which is
@@ -438,7 +440,8 @@ public:
 	// hash of this tag's baseHash and all its parents baseHashes combined
 	uint32_t  m_tagHash;
 
-	// like above but for turk voting
+	// like above but for turk voting. includes hash of the class tag attr
+	// from m_turkBaseHash, whereas m_tagHash uses m_baseHash of parent.
 	unsigned long m_turkTagHash32;
 
 	// for debug output display of color coded nested sections
@@ -509,6 +512,10 @@ public:
 	// . sometimes the "(more)" link is combined into the last sentence
 	//   so we have to treat the last link kinda like its own sentence too!
 	uint32_t  m_lastLinkContentHash32;
+
+	// hash of all sentences contained indirectly or directly.
+	// uses m_sentenceContentHash64 (for sentences)
+	uint64_t m_indirectSentHash64;
 
 	// for voting! we basically ignore numbers and dates, months, etc.
 	// for doing this hash so that if the date changes from page to page

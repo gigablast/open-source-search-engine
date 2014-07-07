@@ -4001,6 +4001,26 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safePrintf("&rand64=%llu\">respider</a>",rand64);
 	}
 
+	//
+	// show rainbow sections link
+	//
+	if ( si->m_format == FORMAT_HTML ) {
+		sb->safePrintf ( " - <a href=\""
+				 "/get?"
+				 // show rainbow sections
+				 "page=4&"
+				 "q=%s&"
+				 "qlang=%s&"
+				 "c=%s&"
+				 "d=%lli&"
+				 "cnsp=0\">"
+				 "sections</a>", 
+				 st->m_qe , 
+				 // "qlang" parm
+				 si->m_defaultSortLang,
+				 coll , 
+				 mr->m_docId ); 
+	}
 
 	// this stuff is secret just for local guys!
 	if ( si->m_format == FORMAT_HTML && ( isAdmin || cr->m_isCustomCrawl)){

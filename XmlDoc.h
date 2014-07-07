@@ -547,8 +547,8 @@ class XmlDoc {
 	class Sections *getSectionsWithDupStats ( );
 	class SafeBuf  *getInlineSectionVotingBuf();
 	bool gotSectionFacets( class Multicast *mcast );
-	class SectionStats *getSectionStats ( long long secHash64 ,
-					      long sentHash32 ,
+	class SectionStats *getSectionStats ( unsigned long secHash32 ,
+					      unsigned long sentHash32 ,
 					      bool cacheOnly );
 	class SectionVotingTable *getOldSectionVotingTable();
 	class SectionVotingTable *getNewSectionVotingTable();
@@ -1037,9 +1037,7 @@ class XmlDoc {
 	//char  *m_inUse;
 	//Query *m_queryArray;
 	//Query *m_sharedQuery;
-	//long long *m_secHash64Array;
 	bool     m_gotDupStats;
-	//long     m_secHash64;
 	//Query    m_q4;
 	//Msg3a    m_msg3a;
 	//Msg39Request m_r39;

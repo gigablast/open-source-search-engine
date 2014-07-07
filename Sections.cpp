@@ -2000,6 +2000,27 @@ bool Sections::set ( Words     *w                       ,
 		}
 	}
 
+
+	////////
+	//
+	// set Section::m_indirectSentHash64
+	//
+	////////
+	for ( Section *sn = m_firstSent ; sn ; sn = sn->m_nextSent ) {
+		// breathe
+		QUICKPOLL ( m_niceness );
+		// sanity check
+		long long sc64 = sn->m_sentenceContentHash64;
+		if ( ! sc64 ) { char *xx=NULL;*xx=0; }
+		// propagate it upwards
+		Section *p = sn;
+		// TODO: because we use XOR for speed we might end up with
+		// a 0 if two sentence are repeated, they cancel out..
+		for ( ; p ; p = p->m_parent )
+			p->m_indirectSentHash64 ^= sc64;
+	}
+
+
 	//
 	// set Section::m_alnumPosA/m_alnumPosB
 	//
@@ -15620,16 +15641,57 @@ bool Sections::printSectionDiv ( Section *sk , char format ) { // bool forProCog
 			m_sbuf->safePrintf("sch=%llu ",
 					   sk->m_sentenceContentHash64);
 
-		// for the gbsectionhash:xxxxx terms we index
-		if ( sk->m_sentenceContentHash64 ) {
-			unsigned long mod = (unsigned long)sk->m_turkTagHash32;
-			mod ^= (unsigned long)m_siteHash64;
-			m_sbuf->safePrintf("<font color=red>"
-					   "gbsectionhash32=%lu</font> ",mod);
+
+		// show this stuff for tags that contain sentences indirectly,
+		// that is what we hash in XmlDoc::hashSections()
+		if ( sk->m_indirectSentHash64 && sk->m_tagId != TAG_TEXTNODE) {
+			uint64_t mod;
+			mod = (unsigned long)sk->m_turkTagHash32;
+			mod ^= (unsigned long)(unsigned long long)m_siteHash64;
+			m_sbuf->safePrintf("<a style=decoration:none; "
+					   "href=/search?c=%s&"
+					   "q=gbfacetstr%%3A"
+					   "gbxpathsitehash%llu>"
+					   //"<u>"
+					   "xpathsitehash=%llu"
+					   //"</u>"
+					   "</a> "
+					   //"</font> "
+					   ,m_coll
+					   ,mod
+					   ,mod);
+			// also the value of the inner html hashed
+			unsigned long val ;
+			val = (unsigned long) sk->m_indirectSentHash64 ;
+			m_sbuf->safePrintf("xpathsitehashval=%lu ", val );
 		}
-		if ( sk->m_contentHash64 )
-			m_sbuf->safePrintf("<font color=red>ch32=%lu</font> ",
-					   (unsigned long)sk->m_contentHash64);
+
+		// some voting stats
+		SectionStats *ss = &sk->m_stats;
+		if ( ss->m_totalMatches )
+			m_sbuf->safePrintf("_m=%li _n=%li _u=%li "
+					   ,(long)ss->m_totalMatches
+					   ,(long)ss->m_totalEntries
+					   ,(long)ss->m_numUniqueVals
+					   );
+
+		// take this out for now... MDW 7/7/2014
+
+		// // for the gbsectionhash:xxxxx terms we index
+		// if ( sk->m_sentenceContentHash64 ) {
+		// 	unsigned long mod = (unsigned long)sk->m_turkTagHash32;
+		// 	mod ^= (unsigned long)m_siteHash64;
+		// 	m_sbuf->safePrintf(//"<font color=red>"
+		// 			   "gbsectionhash32=%lu "
+		// 			   //"</font> "
+		// 			   ,mod);
+		// }
+		// if ( sk->m_contentHash64 )
+		// 	m_sbuf->safePrintf(//"<font color=red>"
+		// 			   "ch32=%lu"
+		// 			   //"</font> "
+		// 			   ,
+		// 			   (unsigned long)sk->m_contentHash64);
 					   
 		
 		if ( sk->m_lastLinkContentHash32 )
