@@ -156,12 +156,16 @@ bool sendReply ( void *state ) {
 	if ( format == FORMAT_XML ) {
 		am.safePrintf("\t<docId>%lli</docId>\n",xd->m_docId);
 		char *addMsg = am.getBufStart();
+		mdelete ( msg7, sizeof(Msg7) , "PageInject" );
+		delete (msg7);
 		return g_httpServer.sendSuccessReply(sock,format,addMsg);
 	}
 
 	if ( format == FORMAT_JSON ) {
 		am.safePrintf("\t\"docId\":%lli,\n",xd->m_docId);
 		char *addMsg = am.getBufStart();
+		mdelete ( msg7, sizeof(Msg7) , "PageInject" );
+		delete (msg7);
 		return g_httpServer.sendSuccessReply(sock,format,addMsg);
 	}
 

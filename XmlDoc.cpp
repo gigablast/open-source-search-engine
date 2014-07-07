@@ -1969,6 +1969,8 @@ bool XmlDoc::injectDoc ( char *url ,
 	SpiderRequest sreq;
 	sreq.setFromInject ( cleanUrl );
 
+	if ( deleteUrl )
+		sreq.m_forceDelete = 1;
 
 	//static char s_dummy[3];
 	// sometims the content is indeed NULL...
@@ -15089,6 +15091,7 @@ long long *XmlDoc::getDownloadEndTime ( ) {
 	if ( m_deleteFromIndex ) {
 		m_downloadEndTime = 0;
 		m_downloadEndTimeValid = true;
+		return &m_downloadEndTime;
 	}
 
 	// if recycling content use its download end time
@@ -15105,7 +15108,7 @@ long long *XmlDoc::getDownloadEndTime ( ) {
 			return &m_downloadEndTime;
 		}
 	}
-		
+
 	// need a valid reply
 	char **reply = getHttpReply ();
 	if ( ! reply || reply == (void *)-1 ) return (long long *)reply;
@@ -19701,7 +19704,9 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		if ( *p & 0x01 ) del = false;
 		else             del = true;
 		// must always be negative if deleteing
-		if ( m_deleteFromIndex && ! del ) {
+		// spiderdb is exempt because we add a spiderreply that is
+		// positive and a spiderdoc
+		if ( m_deleteFromIndex && ! del && rdbId != RDB_SPIDERDB) {
 			char *xx=NULL;*xx=0; }
 		// get the key size. a table lookup in Rdb.cpp.
 		long ks ;
@@ -21731,7 +21736,12 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// but don't do this if it is pagereindex. why is pagereindex
 	// setting the injecting flag anyway?
 	long needSpiderdb3 = 0;
-	if ( m_sreqValid && m_sreq.m_isInjecting )//&&!m_sreq.m_isPageReindex) 
+	if ( m_sreqValid && 
+	     m_sreq.m_isInjecting &&
+	     m_sreq.m_fakeFirstIp &&
+	     ! m_sreq.m_forceDelete &&
+	     /// don't add requests like http://xyz.com/xxx-diffbotxyz0 though
+	     ! m_isDiffbotJSONObject )
 		needSpiderdb3 = m_sreq.getRecSize() + 1;
 	need += needSpiderdb3;
 
@@ -22238,11 +22248,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// if we are injecting we must add the spider request
 	// we are injecting from so the url can be scheduled to be
 	// spidered again
-	if ( m_sreqValid && 
-	     m_sreq.m_isInjecting &&
-	     m_sreq.m_fakeFirstIp &&
-	     /// don't add requests like http://xyz.com/xxx-diffbotxyz0 though
-	     ! m_isDiffbotJSONObject ) {
+	if ( needSpiderdb3 ) {
 		// note it
 		setStatus("adding spider request");
 		// checkpoint

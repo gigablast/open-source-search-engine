@@ -56,6 +56,7 @@ struct SafeBuf {
 	long saveToFile ( char *dir , char *filename ) ;
 	long dumpToFile(char *filename);
 	long save ( char *dir, char *fname){return saveToFile(dir,fname); };
+	long save ( char *fullFilename ) ;
 
 	long  fillFromFile(char *filename);
 	long  fillFromFile(char *dir,char *filename);

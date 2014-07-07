@@ -392,6 +392,10 @@ long SafeBuf::saveToFile ( char *dir , char *filename ) {
 	return dumpToFile ( buf );
 }
 
+long SafeBuf::save ( char *fullFilename ) {
+	return dumpToFile ( fullFilename );
+}
+
 long SafeBuf::dumpToFile(char *filename ) {
  retry22:
 	long fd = open ( filename , O_CREAT | O_WRONLY | O_TRUNC,
