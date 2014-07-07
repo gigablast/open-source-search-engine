@@ -29591,10 +29591,30 @@ char *XmlDoc::getDescriptionBuf ( char *displayMetas , long *dlen ) {
 
 SafeBuf *XmlDoc::getHeaderTagBuf() {
 	if ( m_htbValid ) return &m_htb;
-	// get it. true = skip leading spaces
-	long h1len = 0;
-	char *h1 = m_xml.getTextForXmlTag ( 0, 999999,"h1",&h1len,true);
-	if ( h1 && h1len ) m_htb.safeMemcpy(h1,h1len);
+
+	Sections *ss = getSections();
+	if ( ! ss || ss == (void *)-1) return (SafeBuf *)ss;
+
+	// scan sections
+	Section *si = ss->m_rootSection;
+	for ( ; si ; si = si->m_next ) {
+		// breathe
+		QUICKPOLL(m_niceness);
+		if ( si->m_tagId == TAG_H1 ) break;
+	}
+	// if no h1 tag then make buf empty
+	if ( ! si ) {
+		m_htb.nullTerm();
+		m_htbValid = true;
+		return &m_htb;
+	}
+	// otherwise, set it
+	char *a = m_words.m_words[si->m_firstWordPos];
+	char *b = m_words.m_words[si->m_lastWordPos] ;
+	b += m_words.m_wordLens[si->m_lastWordPos];
+
+	// copy it
+	m_htb.safeMemcpy ( a , b - a );
 	m_htb.nullTerm();
 	m_htbValid = true;
 	return &m_htb;

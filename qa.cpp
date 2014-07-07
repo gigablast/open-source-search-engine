@@ -364,27 +364,19 @@ void checkCRC ( long needCRC ) {
 	sprintf(cmd,"diff %s %s",fn1,fn2);
 	fprintf(stderr,"%s\n",cmd);
 	system(cmd);
+	// if this is zero allow it to slide by. it is learning mode i guess.
+	// so we can learn what crc we need to use.
+	if ( needCRC == 0 ) return;
+	// otherwise, stop right there for debugging
 	exit(1);
 }
 
-
-
-//static long s_rdbId1 = 0;
-//static long s_rdbId2 = 0;
-//static long s_rdbId3 = 0;
-
 #undef usleep
 
-// . run a series of tests to ensure that gb is functioning properly
-// . use s_urls[] array of urls for injecting and spider seeding
-// . contain an archive copy of all webpages in the injectme3 file and
-//   in pagearchive1.txt file
-// . while initially spidering store pages in pagearchive1.txt so we can
-//   replay later. store up to 100,000 pages in there.
-bool qatest ( ) {
-
-	// hack
-	//goto checkdelim;
+//
+// the injection qa test suite
+//
+bool qainject () {
 
 	static bool s_x1 = false;
 	if ( ! s_x1 ) {
@@ -413,9 +405,6 @@ bool qatest ( ) {
 		checkCRC ( 238170006 );
 	}
 
-	// hack
-	//goto deliminject;
-	
 	//
 	// inject urls, return false if not done yet
 	//
@@ -502,8 +491,6 @@ bool qatest ( ) {
 	static bool s_y1 = false;
 	if ( ! s_y1 ) { s_y1 = true; checkCRC ( -1672870556 ); }
 
-	// deliminject:
-
 	//
 	// try delimeter based injecting
 	//
@@ -526,8 +513,6 @@ bool qatest ( ) {
 	// check the reply, seems to have only a single docid in it...
 	static bool s_y3 = false;
 	if ( ! s_y3 ) { s_y3 = true; checkCRC ( -1970198487 ); }
-
-	// checkdelim:
 
 	// now query check
 	static bool s_y4 = false;
@@ -597,3 +582,13 @@ bool qatest ( ) {
 
 	return true;
 }
+
+// . run a series of tests to ensure that gb is functioning properly
+// . uses the ./qa subdirectory to hold archive pages, ips, spider dates to
+//   ensure consistency between tests for exact replays
+bool qatest ( ) {
+
+	return qainject();
+
+}
+

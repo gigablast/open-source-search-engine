@@ -3472,6 +3472,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			sb->cdataEncode(mr->ptr_htag);
 			sb->safePrintf("]]></h1Tag>\n");
 		}
+		if ( si->m_format == FORMAT_JSON ) {
+			sb->safePrintf("\t\t\"h1Tag\":\"");
+			sb->jsonEncode(mr->ptr_htag);
+			sb->safePrintf("\",\n");
+		}
 	}
 
 
@@ -3490,6 +3495,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				      "]]>"
 				      "</contentType>\n",
 				      cs);
+		else if ( si->m_format == FORMAT_JSON )
+			sb->safePrintf("\t\t\"contentType\":\"%s\",\n",cs);
 		else if ( si->m_format == FORMAT_HTML && ctype != CT_HTML ) {
 			sb->safePrintf(" <b><font style=color:white;"
 				      "background-color:maroon;>");
