@@ -1026,6 +1026,11 @@ bool ipWasBanned ( TcpSocket *ts , const char **msg ) {
 		*msg = "status 403 forbidden";
 		return true;
 	}
+	if ( httpStatus == 999 ) {
+		*msg = "status 999 request denied";
+		return true;
+	}
+
 
 	// TODO: compare a simple checksum of the page content to what
 	// we have downloaded previously from this domain or ip. if it 
