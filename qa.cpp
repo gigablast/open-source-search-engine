@@ -4,7 +4,9 @@
 
 static long s_failures = 0;
 
-bool getUrl( char *path , void (* callback) (void *state, TcpSocket *sock) ) {
+bool getUrl( char *path , 
+	     void (* callback) (void *state, TcpSocket *sock) ,
+	     char *post = NULL ) {
 	SafeBuf sb;
 	sb.safePrintf ( "http://%s:%li%s"
 			, iptoa(g_hostdb.m_myHost->m_ip)
@@ -26,7 +28,13 @@ bool getUrl( char *path , void (* callback) (void *state, TcpSocket *sock) ) {
 				     0, // proxyport
 				     -1, // maxtextdoclen
 				     -1, // maxotherdoclen
-				     NULL ) ) // useragent
+				     NULL , // useragent
+				     "HTTP/1.0" , // protocol
+				     true , // doPost
+				     NULL , // cookie
+				     NULL , // additionalHeader
+				     NULL , // fullRequest
+				     post ) )
 		return false;
 	// error?
 	log("qa: getUrl error: %s",mstrerror(g_errno));
@@ -36,6 +44,8 @@ bool getUrl( char *path , void (* callback) (void *state, TcpSocket *sock) ) {
 bool qatest ( ) ;
 
 void markOut ( char *reply , char *needle ) {
+
+	if ( ! reply ) return;
 
 	char *s = strstr ( reply , needle );
 	if ( ! s ) return;
@@ -54,7 +64,7 @@ void markOut ( char *reply , char *needle ) {
 }
 
 // do not hash 
-long qahash32 ( char *s ) {
+long qa_hash32 ( char *s ) {
 	unsigned long h = 0;
 	long k = 0;
 	for ( long i = 0 ; s[i] ; i++ ) {
@@ -71,12 +81,14 @@ TcpSocket *s_sock = NULL;
 
 void qatestWrapper ( void *state , TcpSocket *sock ) { 
 	log("qa: got reply(%li)=%s",sock->m_readOffset,sock->m_readBuf);
+
 	// get mime
 	HttpMime mime;
 	mime.set ( sock->m_readBuf , sock->m_readOffset , NULL );
 	// only hash content since mime has a timestamp in it
 	char *content = mime.getContent();
 	long  contentLen = mime.getContentLen();
+	if ( content[contentLen] ) { char *xx=NULL;*xx=0; }
 
 	char *reply = sock->m_readBuf;
 
@@ -88,9 +100,12 @@ void qatestWrapper ( void *state , TcpSocket *sock ) {
 	// until i figure this one out, take it out
 	markOut ( reply , "<docsInCollection>");
 
+	// until i figure this one out, take it out
+	markOut ( reply , "<hits>");
+
 	// make checksum. we ignore back to back spaces so this
 	// hash works for <docsInCollection>10 vs <docsInCollection>9
-	s_replyCRC = hash32 ( content , contentLen );
+	s_replyCRC = qa_hash32 ( content );
 
 	// this too is used for recording the reply into a file on disk
 	s_sock = sock;
@@ -310,7 +325,7 @@ bool checkSpidersDone ( ) {
 	return false;
 }
 
-static long s_phase = -1;
+//static long s_phase = -1;
 
 void checkCRC ( long needCRC ) {
 
@@ -330,8 +345,9 @@ void checkCRC ( long needCRC ) {
 		return;
 	}
 
-	const char *emsg = "qa: bad replyCRC of %li should be %li phase=%li\n";
-	fprintf(stderr,emsg,s_replyCRC,needCRC,s_phase-1);
+	const char *emsg = "qa: bad replyCRC of %li should be %li "
+		"\n";//"phase=%li\n";
+	fprintf(stderr,emsg,s_replyCRC,needCRC);//,s_phase-1);
 	// get response on file
 	SafeBuf fb1;
 	char fn1[1024];
@@ -357,6 +373,8 @@ void checkCRC ( long needCRC ) {
 //static long s_rdbId2 = 0;
 //static long s_rdbId3 = 0;
 
+#undef usleep
+
 // . run a series of tests to ensure that gb is functioning properly
 // . use s_urls[] array of urls for injecting and spider seeding
 // . contain an archive copy of all webpages in the injectme3 file and
@@ -365,8 +383,12 @@ void checkCRC ( long needCRC ) {
 //   replay later. store up to 100,000 pages in there.
 bool qatest ( ) {
 
-	if ( s_phase == -1 ) {
-		s_phase++;
+	// hack
+	//goto checkdelim;
+
+	static bool s_x1 = false;
+	if ( ! s_x1 ) {
+		s_x1 = true;
 		return getUrl ( "/admin/delcoll?delcoll=qatest123" , 
 				qatestWrapper );
 	}
@@ -374,8 +396,9 @@ bool qatest ( ) {
 	//
 	// add the 'qatest123' collection
 	//
-	if ( s_phase == 0 ) {
-		s_phase++;
+	static bool s_x2 = false;
+	if ( ! s_x2 ) {
+		s_x2 = true;
 		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
 				qatestWrapper ) )
 			return false;
@@ -384,22 +407,27 @@ bool qatest ( ) {
 	//
 	// check addcoll reply
 	//
-	if ( s_phase == 1 ) {
-		s_phase++;
+	static bool s_x3 = false;
+	if ( ! s_x3 ) {
+		s_x3 = true;
 		checkCRC ( 238170006 );
 	}
+
+	// hack
+	//goto deliminject;
 	
 	//
 	// inject urls, return false if not done yet
 	//
-	if ( s_phase == 2 ) {
+	static bool s_x4 = false;
+	if ( ! s_x4 ) {
 		// TODO: try delimeter based injection too
 		loadUrls();
 		static long s_ii = 0;
 		for ( ; s_ii < s_ubuf2.length()/(long)sizeof(char *) ; ) {
 			// inject using html api
 			SafeBuf sb;
-			sb.safePrintf("/admin/inject?c=qatest123&deleteurl=0&"
+			sb.safePrintf("&c=qatest123&deleteurl=0&"
 				      "format=xml&u=");
 			sb.urlEncode ( s_urlPtrs[s_ii] );
 			// the content
@@ -409,36 +437,43 @@ bool qatest ( ) {
 			sb.nullTerm();
 			// pre-inc it in case getUrl() blocks
 			s_ii++;
-			getUrl ( sb.getBufStart() , qatestWrapper );
+			getUrl("/admin/inject",qatestWrapper,sb.getBufStart());
 			return false;
 		}
-		s_phase++;
+		s_x4 = true;
 	}
 
 	// +the
-	if ( s_phase == 3 ) {
-		s_phase++;
+	static bool s_x5 = false;
+	if ( ! s_x5 ) {
+		usleep(500000);
+		s_x5 = true;
 		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
 			 qatestWrapper );
 		return false;
 	}
-	if ( s_phase == 4 ) {s_phase++;checkCRC ( 922722309 );}
+
+	static bool s_x6 = false;
+	if ( ! s_x6 ) { s_x6 = true ; checkCRC ( -1452050577 ); }
 
 
 	// sports news
-	if ( s_phase == 5 ) {
-		s_phase++;
+	static bool s_x7 = false;
+	if ( ! s_x7 ) {
+		s_x7 = true;
 		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports+news",
 			 qatestWrapper );
 		return false;
 	}
-	if ( s_phase == 6 ) {s_phase++;checkCRC ( -442665448 ); }
+
+	static bool s_x8 = false;
+	if ( ! s_x8 ) { s_x8 = true; checkCRC ( -1586622518 ); }
 
 	//
 	// eject/delete the urls
 	//
 	static long s_ii2 = 0;
-	for ( ; s_phase==7&&s_ii2 < s_ubuf2.length()/(long)sizeof(char *) ; ) {
+	for ( ; s_ii2 < s_ubuf2.length()/(long)sizeof(char *) ; ) {
 		// reject using html api
 		SafeBuf sb;
 		sb.safePrintf( "/admin/inject?c=qatest123&deleteurl=1&"
@@ -450,19 +485,66 @@ bool qatest ( ) {
 		getUrl ( sb.getBufStart() , qatestWrapper );
 		return false;
 	}
-	if ( s_phase == 7 ) s_phase++;
 
 	//
 	// make sure no results left, +the
 	//
-	if ( s_phase == 8 ) {
-		s_phase++;
+	static bool s_x9 = false;
+	if ( ! s_x9 ) {
+		usleep(500000);
+		s_x9 = true;
 		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
 			 qatestWrapper );
 		return false;
 	}
+
 	// seems to have <docsInCollection>2</>
-	if ( s_phase == 9 ) { s_phase++ ; checkCRC ( 1515313462 ); }
+	static bool s_y1 = false;
+	if ( ! s_y1 ) { s_y1 = true; checkCRC ( -1672870556 ); }
+
+	// deliminject:
+
+	//
+	// try delimeter based injecting
+	//
+	static bool s_y2 = false;
+	if ( ! s_y2 ) {
+		s_y2 = true;
+		SafeBuf sb;
+		// delim=+++URL:
+		sb.safePrintf("&c=qatest123&deleteurl=0&"
+			      "delim=%%2B%%2B%%2BURL%%3A&format=xml&u=xyz.com&"
+			      "hasmime=1&content=");
+		// use injectme3 file
+		SafeBuf ubuf;
+		ubuf.load("./injectme3");
+		sb.urlEncode(ubuf.getBufStart());
+		getUrl ( "/admin/inject",qatestWrapper,sb.getBufStart());
+		return false;
+	}
+
+	// check the reply, seems to have only a single docid in it...
+	static bool s_y3 = false;
+	if ( ! s_y3 ) { s_y3 = true; checkCRC ( -1970198487 ); }
+
+	// checkdelim:
+
+	// now query check
+	static bool s_y4 = false;
+	if ( ! s_y4 ) {
+		usleep(500000);
+		s_y4 = true;
+		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
+			 qatestWrapper );
+		return false;
+	}
+
+	// check search results crc
+	static bool s_y5 = false;
+	if ( ! s_y5 ) { s_y5 = true; checkCRC ( -480078278 ); }
+
+
+
 
 
 
@@ -498,13 +580,16 @@ bool qatest ( ) {
 	//if ( ! checkRdbLists ( &s_rdbId3 ) ) return false;
 
 	// delete the collection
-	if ( s_phase == 10 ) {
-		s_phase++;
+	static bool s_fee = false;
+	if ( ! s_fee ) {
+		s_fee = true;
 		return getUrl ( "/admin/delcoll?delcoll=qatest123" , 
 				qatestWrapper );
 	}
 
-	if ( s_phase == 11 ) {
+	static bool s_fee2 = false;
+	if ( ! s_fee2 ) {
+		s_fee2 = true;
 		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED QA TEST\n\n\n");
 		exit(0);
 	}

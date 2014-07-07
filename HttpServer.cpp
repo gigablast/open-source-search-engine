@@ -1610,6 +1610,30 @@ bool HttpServer::sendErrorReply ( TcpSocket *s , long error , char *errmsg ,
 	if ( format == FORMAT_XML  ) ct = "text/xml";
 	if ( format == FORMAT_JSON ) ct = "application/json";
 
+	SafeBuf xb;
+
+	if ( format != FORMAT_XML && format != FORMAT_JSON )
+		xb.safePrintf("<html><b>Error = %s</b></html>",errmsg );
+
+	if ( format == FORMAT_XML ) {
+		xb.safePrintf("<response>\n"
+			      "\t<statusCode>%li</statusCode>\n"
+			      "\t<statusMsg><![CDATA[", error );
+		xb.cdataEncode(errmsg );
+		xb.safePrintf("]]></statusMsg>\n"
+			      "</response>\n");
+	}
+
+	if ( format == FORMAT_JSON ) {
+		xb.safePrintf("{\"response\":{\n"
+			      "\t\"statusCode\":%li,\n"
+			      "\t\"statusMsg\":\"", error );
+		xb.jsonEncode(errmsg );
+		xb.safePrintf("\"\n"
+			      "}\n"
+			      "}\n");
+	}
+
 	sb.safePrintf(
 		      "HTTP/1.0 %li (%s)\r\n"
 		      "Content-Length: %li\r\n"
@@ -1619,34 +1643,14 @@ bool HttpServer::sendErrorReply ( TcpSocket *s , long error , char *errmsg ,
 		      ,
 		      error  ,
 		      errmsg ,
-		      (long)(gbstrlen("<html><b>Error = </b></html>")+
-			     gbstrlen(errmsg)),
+
+		      xb.length(),
+
 		      ct ,
 		      tt ); // ctime ( &now ) ,
 
 
-	if ( format != FORMAT_XML && format != FORMAT_JSON )
-		sb.safePrintf("<html><b>Error = %s</b></html>",errmsg );
-
-	if ( format == FORMAT_XML ) {
-		sb.safePrintf("<response>\n"
-			      "\t<statusCode>%li</statusCode>\n"
-			      "\t<statusMsg><![CDATA[", error );
-		sb.cdataEncode(errmsg );
-		sb.safePrintf("]]></statusMsg>\n"
-			      "</response>\n");
-	}
-
-	if ( format == FORMAT_JSON ) {
-		sb.safePrintf("{\"response\":{\n"
-			      "\t\"statusCode\":%li,\n"
-			      "\t\"statusMsg\":\"", error );
-		sb.jsonEncode(errmsg );
-		sb.safePrintf("\"\n"
-			      "}\n"
-			      "}\n");
-	}
-
+	sb.safeMemcpy ( &xb );
 
 	// . move the reply to a send buffer
 	// . don't make sendBuf bigger than g_conf.m_httpMaxSendBufSize
