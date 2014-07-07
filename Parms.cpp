@@ -1034,6 +1034,12 @@ bool Parms::setGigablastRequest ( TcpSocket *socket ,
 	//
 	setToDefault ( THIS , obj , NULL);
 
+
+	// map PAGE_ADDURL to PAGE_ADDURL2 so 
+	// /addurl is same as /admin/addurl as far as parms.
+	if ( page == PAGE_ADDURL ) 
+		page = PAGE_ADDURL2;
+
 	// loop through cgi parms
 	for ( long i = 0 ; i < hr->getNumFields() ; i++ ) {
 		// get cgi parm name
@@ -1119,21 +1125,53 @@ bool Parms::sendPageGeneric ( TcpSocket *s , HttpRequest *r ) {
 	//}
 
 	// print standard header
-	char fmt = r->getReplyFormat();
-	if ( fmt == FORMAT_HTML )
+	char format = r->getReplyFormat();
+	if ( format != FORMAT_XML && format != FORMAT_JSON )
 		g_pages.printAdminTop ( sb , s , r );
 
+	// xml/json header
+	char *res = NULL;
+	if ( format == FORMAT_XML )
+		res = "<response>\n"
+			"\t<statusCode>0</statusCode>\n"
+			"\t<statusMsg>Success</statusMsg>\n";
+	if ( format == FORMAT_JSON )
+		res = "{ \"response:\"{\n"
+			"\t\"statusCode\":0,\n"
+			"\t\"statusMsg\":\"Success\"\n";
+	if ( res )
+		sb->safeStrcpy ( res );
+	
+	// do not show the parms and their current values unless showparms=1
+	// was explicitly given for the xml/json feeds
+	long showParms = 1;
+	if ( format != FORMAT_HTML )
+		showParms = r->getLong("showparms",0);
 
-	printParmTable ( sb , s , r );
+	if ( showParms )
+		printParmTable ( sb , s , r );
+
+	// xml/json tail
+	if ( format == FORMAT_XML )
+		res = "</response>\n";
+	if ( format == FORMAT_JSON )
+		res = "\t}\n}\n";
+	if ( res )
+		sb->safeStrcpy ( res );
+
 
 	bool POSTReply = g_pages.getPage ( page )->m_usePost;
+
+	char *ct = "text/html";
+	if ( format == FORMAT_XML ) ct = "text/xml";
+	if ( format == FORMAT_JSON ) ct = "application/json";
 
 	return g_httpServer.sendDynamicPage ( s                , 
 					      sb->getBufStart() ,
 					      sb->length()      , 
 					      -1               ,
 					      POSTReply        ,
-					      NULL             , // contType
+					      ct             , // contType
 					      -1               , // httpstatus
 					      NULL,//cookie           ,
 					      NULL             );// charset
@@ -1146,9 +1184,9 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 
 	long  fromIp   = s->m_ip;
 
-	char fmt = r->getReplyFormat();
+	char format = r->getReplyFormat();
 	/*
-	if ( fmt == FORMAT_HTML )
+	if ( format == FORMAT_HTML )
 		sb->safePrintf (  
 				"<script type=\"text/javascript\">"
 				"function filterRow(str) {"
@@ -1210,6 +1248,21 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 			"Add url is temporarily disabled in Master Controls."
 			"</font></td></tr>\n";
 
+	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
+		char *coll = g_collectiondb.getDefaultColl(r);
+		CollectionRec *cr = g_collectiondb.getRec(coll);//2(r,true);
+	 	g_parms.printParms2 ( sb ,
+				      page ,
+	 	 		      cr ,
+	 	 		      1 , // long nc , # cols?
+	 	 		      1 , // long pd , print desc?
+	 	 		      false , // isCrawlbot
+	 	 		      format ,
+	 	 		      NULL ); // TcpSocket *sock
+		return true;
+	}
+
+
 	// . page repair (PageRepair.cpp) has a status table BEFORE the parms
 	//   iff we are doing a repair
 	// . only one page for all collections, we have a parm that is
@@ -1219,47 +1272,45 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 		g_repair.printRepairStatus ( sb , fromIp );
 	
 	// start the table
-	if ( fmt == FORMAT_HTML ) {
-		sb->safePrintf( 
-			       "\n"
-			       "<table %s "
-			       //"style=\"border-radius:15px;"
-			       //"border:#6060f0 2px solid;"
-			       //"\" "
-			       //"width=100%% bgcolor=#%s "
-			       //"bgcolor=black "
-			       //"cellpadding=4 "
-			       //"border=0 "//border=1 "
-			       "id=\"parmtable\">"
-			       "<tr><td colspan=20>"// bgcolor=#%s>"
-			       ,TABLE_STYLE
-			       //,DARKER_BLUE
-			       //,DARK_BLUE
-				);
+	sb->safePrintf( 
+		       "\n"
+		       "<table %s "
+		       //"style=\"border-radius:15px;"
+		       //"border:#6060f0 2px solid;"
+		       //"\" "
+		       //"width=100%% bgcolor=#%s "
+		       //"bgcolor=black "
+		       //"cellpadding=4 "
+		       //"border=0 "//border=1 "
+		       "id=\"parmtable\">"
+		       "<tr><td colspan=20>"// bgcolor=#%s>"
+		       ,TABLE_STYLE
+		       //,DARKER_BLUE
+		       //,DARK_BLUE
+			);
 
-		/*
+	/*
 
-		  take this out since we took out a ton of parms for
-		  simplicties sake
+	  take this out since we took out a ton of parms for
+	  simplicties sake
 
-		if ( page != PAGE_FILTERS )
-			sb->safePrintf("<div style=\"float:left;\">" 
-				       "filter:<input type=\"text\" "
-				       "onkeyup=\"filterRow(this.value)\" "
-				       "value=\"\"></div>"
-				       );
-		*/
+	  if ( page != PAGE_FILTERS )
+	  sb->safePrintf("<div style=\"float:left;\">" 
+	  "filter:<input type=\"text\" "
+	  "onkeyup=\"filterRow(this.value)\" "
+	  "value=\"\"></div>"
+	  );
+	*/
 
-		sb->safePrintf(//"<div style=\"margin-left:45%%;\">"
-			       //"<font size=+1>"
-			       "<center>"
-			       "<b>%s</b>"
-			       //"</font>"
-			       "</center>"
-			       //"</div>"
-			       "</td></tr>%s%s\n",
-			       tt,e1,e2);
-	}
+	sb->safePrintf(//"<div style=\"margin-left:45%%;\">"
+		       //"<font size=+1>"
+		       "<center>"
+		       "<b>%s</b>"
+		       //"</font>"
+		       "</center>"
+		       //"</div>"
+		       "</td></tr>%s%s\n",
+		       tt,e1,e2);
 
 	//bool isCrawlbot = false;
 	//if ( collOveride ) isCrawlbot = true;
@@ -1269,10 +1320,10 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	g_parms.printParms ( sb , s , r );
 
 	// end the table
-	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "</table>\n" );
+	sb->safePrintf ( "</table>\n" );
 
 	// this must be outside of table, submit button follows
-	if ( fmt == FORMAT_HTML ) sb->safePrintf ( "<br>\n" );
+	sb->safePrintf ( "<br>\n" );
 
 	if ( page == PAGE_SPIDERPROXIES ) {
 		// wrap up the form, print a submit button
@@ -1283,22 +1334,22 @@ bool Parms::printParmTable ( SafeBuf *sb , TcpSocket *s , HttpRequest *r ) {
 	}
 
 	// url filter page has a test table
-	if ( page == PAGE_FILTERS && fmt == FORMAT_HTML ) {
+	if ( page == PAGE_FILTERS ) {
 		// wrap up the form, print a submit button
 		g_pages.printSubmit ( sb );
 		printUrlExpressionExamples ( sb );
 	}
-	else if ( page == PAGE_BASIC_SETTINGS && fmt == FORMAT_HTML ) {
+	else if ( page == PAGE_BASIC_SETTINGS ) {
 		// wrap up the form, print a submit button
 		g_pages.printSubmit ( sb );
 		printSitePatternExamples ( sb , r );
 	}
-	else if ( page == PAGE_SPIDER && fmt == FORMAT_HTML ) { // PAGE_SITES
+	else if ( page == PAGE_SPIDER ) { // PAGE_SITES
 		// wrap up the form, print a submit button
 		g_pages.printSubmit ( sb );
 		printSitePatternExamples ( sb , r );
 	}
-	else if ( fmt == FORMAT_HTML ) {
+	else {
 		// wrap up the form, print a submit button
 		g_pages.printAdminBottom ( sb );
 	}
@@ -1562,7 +1613,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			  long nc ,
 			  long pd , 
 			  bool isCrawlbot , 
-			  bool isJSON ,
+			  char format , // bool isJSON ,
 			  TcpSocket *sock ) {
 	bool status = true;
 	s_count = 0;
@@ -1599,6 +1650,13 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		//     m->m_type != TYPE_CMD     ) continue;
 		// skip if hidden
 		if ( m->m_flags & PF_HIDDEN ) continue;
+
+		// or if should not show in html, like the 
+		// name of the collection, the "c" parm we do not show
+		// generally on the html page even though it is a required parm
+		// we have it in a hidden html input tag in Pages.cpp.
+		if ( m->m_flags & PF_NOHTML ) continue;
+
 		// get right ptr
 		char *THIS = NULL;
 		if ( m->m_obj == OBJ_CONF ) 
@@ -1633,7 +1691,8 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 		// . only add if not in a row of controls
 		if ( m->m_max > 1 && m->m_type != TYPE_PRIORITY_BOXES &&
 		     m->m_rowid == -1 &&
-		     ! isJSON ) {
+		     format != FORMAT_JSON &&
+		     format != FORMAT_XML ) { // ! isJSON ) {
 			//
 			// make a separate table for array of parms
 			sb->safePrintf (
@@ -1653,6 +1712,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 			// print users current ip if showing the list
 			// of "Master IPs" for admin access
 			if ( m->m_page == PAGE_SECURITY &&
+			     sock &&
 			     m->m_title &&
 			     strstr(m->m_title,"IP") )
 				sb->safePrintf(" <b>Your current IP is "
@@ -1679,7 +1739,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 						     bg,nc,pd,
 						     false,
 						     isCrawlbot,
-						     isJSON);
+						     format);//isJSON);
 			continue;
 		}
 		// if not first in a row, skip it, we printed it already
@@ -1699,7 +1759,7 @@ bool Parms::printParms2 ( SafeBuf* sb ,
 				status &=printParm(sb,NULL,&m_parms[k],k,
 					    newj,jend,(char *)THIS,coll,NULL,
 						   bg,nc,pd, j==size-1,
-						   isCrawlbot,isJSON);
+						   isCrawlbot,format);//isJSON)
 			}
 		}
 		// end array table
@@ -1723,11 +1783,12 @@ bool Parms::printParm ( SafeBuf* sb,
 			char *coll ,
 			char *pwd  ,
 			char *bg   ,
-			long  nc   ,
-			long  pd   ,
+			long  nc   , // # column?
+			long  pd   , // print description
 			bool lastRow ,
 			bool isCrawlbot ,
-			bool isJSON ) {
+			//bool isJSON ) {
+			char format ) {
 	bool status = true;
 	// do not print if no permissions
 	//if ( m->m_perms != 0 && !g_users.hasPermission(username,m->m_perms) )
@@ -1750,6 +1811,64 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( m->m_type == TYPE_COMMENT ) return true;
 
 	if ( m->m_flags & PF_HIDDEN ) return true;
+
+	CollectionRec *cr = NULL;
+	collnum_t collnum = -1;
+	if ( coll ) {
+		cr = g_collectiondb.getRec ( coll );
+		if ( cr ) collnum = cr->m_collnum;
+	}
+
+	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
+		// the upload button has no val, cmds too
+		if ( m->m_type == TYPE_FILEUPLOADBUTTON ) return true;
+	}
+
+	if ( format == FORMAT_XML ) {
+		sb->safePrintf ( "\t<parm>\n");
+		sb->safePrintf ( "\t\t<title>");
+		sb->htmlEncode ( m->m_title );
+		sb->safePrintf ( "</title>\n");
+		sb->safePrintf ( "\t\t<desc>");
+		sb->htmlEncode ( m->m_desc );
+		sb->safePrintf ( "</desc>\n");
+		sb->safePrintf ( "\t\t<cgi>%s</cgi>\n",m->m_cgi);
+		// and default value if it exists
+		char *def = m->m_def;
+		if ( ! def ) def = "";
+		sb->safePrintf ( "\t\t<defaultValue>");
+		sb->htmlEncode ( def );
+		sb->safePrintf ( "</defaultValue>\n");
+		sb->safePrintf ( "\t\t<currentValue>");
+		SafeBuf xb;
+		m->printVal ( &xb , collnum , 0 );//occNum
+		sb->htmlEncode ( xb.getBufStart() );
+		sb->safePrintf ( "</currentValue>\n");
+		sb->safePrintf ( "\t</parm>\n");
+		return true;
+	}
+
+	if ( format == FORMAT_JSON ) {
+		sb->safePrintf ( "\t\"parm\":{\n");
+		sb->safePrintf ( "\t\t\"title\":\"%s\",\n",m->m_title);
+		sb->safePrintf ( "\t\t\"desc\":\"");
+		sb->jsonEncode ( m->m_desc );
+		sb->safePrintf("\",\n");
+		sb->safePrintf ( "\t\t\"cgi\":\"%s\",\n",m->m_cgi);
+		// and default value if it exists
+		char *def = m->m_def;
+		if ( ! def ) def = "";
+		sb->safePrintf ( "\t\t\"defaultValue\":\"");
+		sb->jsonEncode(def);
+		sb->safePrintf("\",\n");
+		sb->safePrintf ( "\t\t\"currentValue\":\"");
+		SafeBuf js;
+		m->printVal ( &js , collnum , 0 );//occNum );
+		sb->jsonEncode(js.getBufStart());
+		sb->safePrintf("\"\n");
+		sb->safePrintf("\t}\n");
+		return true;
+	}
 
 	// . if printing on crawlbot page hide these
 	// . we repeat this logic below when printing parm titles
@@ -1811,13 +1930,6 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( mm > 0 && m->m_rowid >= 0 && m_parms[mm-1].m_rowid == m->m_rowid )
 		firstInRow = false;
 
-	CollectionRec *cr = NULL;
-	collnum_t collnum = -1;
-	if ( coll ) {
-		cr = g_collectiondb.getRec ( coll );
-		if ( cr ) collnum = cr->m_collnum;
-	}
-
 	long firstRow = 0;
 	//if ( m->m_page==PAGE_PRIORITIES ) firstRow = MAX_PRIORITY_QUEUES - 1;
 	// . use a separate table for arrays
@@ -1826,7 +1938,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	//   default line in the url filters table
 	if ( j == firstRow && m->m_rowid >= 0 && firstInRow && m->m_hdrs ) {
 		// print description as big comment
-		if ( m->m_desc && pd == 1 && ! isJSON ) {
+		if ( m->m_desc && pd == 1 ) {
 			// url FILTERS table description row
 			sb->safePrintf ( "<td colspan=20 bgcolor=#%s>"
 					 "<font size=-1>\n" , DARK_BLUE);
@@ -1841,7 +1953,7 @@ bool Parms::printParm ( SafeBuf* sb,
 		}
 		// # column
 		// do not show this for PAGE_PRIORITIES it is confusing
-		if ( m->m_max > 1 && ! isJSON ) {
+		if ( m->m_max > 1 ) {
 		     //m->m_page != PAGE_PRIORITIES ) {
 			sb->safePrintf (  "<td><b>#</b></td>\n" );
 		}
@@ -1851,8 +1963,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			// parm shortcut
 			Parm *mk = &m_parms[k];
 			// not if printing json
-			if ( isJSON ) continue;
-
+			//if ( format != FORMAT_HTML )continue;//isJSON )
 			// skip if hidden
 			if ( cr && ! cr->m_isCustomCrawl &&
 			     (mk->m_flags & PF_DIFFBOT) )
@@ -1893,7 +2004,8 @@ bool Parms::printParm ( SafeBuf* sb,
 			*/
 			sb->safePrintf ("</td>\n");
 		}
-		if ( ! isJSON ) sb->safePrintf ( "</tr>\n" ); // mdw added
+		//if ( format == FORMAT_HTML ) 
+		sb->safePrintf ( "</tr>\n" ); // mdw added
 	}
 
 	// skip if hidden. diffbot api url only for custom crawls.
@@ -1926,6 +2038,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	if ( m->m_max <= 1 && m->m_hdrs ) { // j == 0 && m->m_rowid < 0 ) {
 		if ( firstInRow )
 			sb->safePrintf ( "<tr bgcolor=#%s>",bg);
+
 		if ( t == TYPE_STRINGBOX ) {
 			sb->safePrintf ( "<td colspan=2><center>"
 				  "<b>%s</b><br><font size=-1>",m->m_title );
@@ -1941,7 +2054,7 @@ bool Parms::printParm ( SafeBuf* sb,
 
 			sb->safePrintf ( "</font><br>\n" );
 		}
-		else {
+		if ( t != TYPE_STRINGBOX ) {
 			// this td will be invisible if isCrawlbot and the
 			// parm is too advanced to display
 			sb->safePrintf ( "<td " );
@@ -1998,10 +2111,10 @@ bool Parms::printParm ( SafeBuf* sb,
 		char *bgc = LIGHT_BLUE;
 		if ( j % 2 ) bgc = DARK_BLUE;
 		// do not print this if doing json
-		if ( isJSON ) ;
+		//if ( format != FORMAT_HTML );//isJSON ) ;
 		// but if it is in same row as previous, do not repeat it
 		// for this same row, silly
-		else if ( firstInRow ) // && m->m_page != PAGE_PRIORITIES ) 
+		if ( firstInRow ) // && m->m_page != PAGE_PRIORITIES ) 
 			sb->safePrintf ( "<tr bgcolor=#%s>"
 					 "<td>%li</td>\n<td>", 
 					 bgc,
@@ -2050,69 +2163,67 @@ bool Parms::printParm ( SafeBuf* sb,
 		//if ( *s ) ddd1 = " checked";
 		//else      ddd2 = " checked";
 		// just show the parm name and value if printing in json
-		if ( isJSON ) {
-			if ( ! lastRow ) {
-				long val = 0;
-				if ( *s ) val = 1;
-				sb->safePrintf("\"%s\":%li,\n",cgi,val);
-			}
-		}
-		else {
-			//sb->safePrintf("<center><nobr>");
-			sb->safePrintf("<nobr>");
-			// this is part of the "HACK" fix below. you have to
-			// specify the cgi parm in the POST request, and 
-			// unchecked checkboxes are not included in the POST 
-			// request.
-			//if ( lastRow && m->m_page == PAGE_FILTERS ) 
-			//	sb->safePrintf("<input type=hidden ");
-			//char *val = "Y";
-			//if ( ! *s ) val = "N";
-			char *val = "";
-			// "s" is invalid of parm has no "object"
-			if ( m->m_obj == OBJ_NONE && m->m_def[0] != '0' )
-				val = " checked";
-			if ( m->m_obj != OBJ_NONE && s && *s ) 
-				val = " checked";
-			// s is NULL for GigablastRequest parms
-			if ( ! s && m->m_def && m->m_def[0]=='1' )
-				val = " checked";
-			// in case it is not checked, submit that!
-			// if it gets checked this should be overridden then
-			sb->safePrintf("<input type=hidden name=%s value=0>"
-				       , cgi );
-			//else
-			sb->safePrintf("<input type=checkbox value=1 ");
-				       //"<nobr><input type=button ");
-			if ( m->m_page == PAGE_FILTERS)
-				sb->safePrintf("id=id_%s ",cgi);
+		// if ( format == FORMAT_JSON ) { // isJSON ) {
+		// 	if ( ! lastRow ) {
+		// 		long val = 0;
+		// 		if ( *s ) val = 1;
+		// 		sb->safePrintf("\"%s\":%li,\n",cgi,val);
+		// 	}
+		// }
+		//sb->safePrintf("<center><nobr>");
+		sb->safePrintf("<nobr>");
+		// this is part of the "HACK" fix below. you have to
+		// specify the cgi parm in the POST request, and 
+		// unchecked checkboxes are not included in the POST 
+		// request.
+		//if ( lastRow && m->m_page == PAGE_FILTERS ) 
+		//	sb->safePrintf("<input type=hidden ");
+		//char *val = "Y";
+		//if ( ! *s ) val = "N";
+		char *val = "";
+		// "s" is invalid of parm has no "object"
+		if ( m->m_obj == OBJ_NONE && m->m_def[0] != '0' )
+			val = " checked";
+		if ( m->m_obj != OBJ_NONE && s && *s ) 
+			val = " checked";
+		// s is NULL for GigablastRequest parms
+		if ( ! s && m->m_def && m->m_def[0]=='1' )
+			val = " checked";
+		// in case it is not checked, submit that!
+		// if it gets checked this should be overridden then
+		sb->safePrintf("<input type=hidden name=%s value=0>"
+			       , cgi );
+		//else
+		sb->safePrintf("<input type=checkbox value=1 ");
+		//"<nobr><input type=button ");
+		if ( m->m_page == PAGE_FILTERS)
+			sb->safePrintf("id=id_%s ",cgi);
 			
-			sb->safePrintf("name=%s%s"
-				       //" onmouseup=\""
-				       //"if ( this.value=='N' ) {"
-				       //"this.value='Y';"
-				       //"} "
-				       //"else if ( this.value=='Y' ) {"
-				       //"this.value='N';"
-				       //"}"
-				       //"\" "
-				       ">"
-				       ,cgi
-				       ,val);//,ddd);
-			//
-			// repeat for off position
-			//
-			//if ( ! lastRow || m->m_page != PAGE_FILTERS )  {
-			//	sb->safePrintf(" Off:<input type=radio ");
-			//	if ( m->m_page == PAGE_FILTERS)
-			//		sb->safePrintf("id=id_%s ",cgi);
-			//	sb->safePrintf("value=0 name=%s%s>",
-			//		       cgi,ddd2);
-			//}
-			sb->safePrintf("</nobr>"
-				       //"</center>"
-				       );
-		}
+		sb->safePrintf("name=%s%s"
+			       //" onmouseup=\""
+			       //"if ( this.value=='N' ) {"
+			       //"this.value='Y';"
+			       //"} "
+			       //"else if ( this.value=='Y' ) {"
+			       //"this.value='N';"
+			       //"}"
+			       //"\" "
+			       ">"
+			       ,cgi
+			       ,val);//,ddd);
+		//
+		// repeat for off position
+		//
+		//if ( ! lastRow || m->m_page != PAGE_FILTERS )  {
+		//	sb->safePrintf(" Off:<input type=radio ");
+		//	if ( m->m_page == PAGE_FILTERS)
+		//		sb->safePrintf("id=id_%s ",cgi);
+		//	sb->safePrintf("value=0 name=%s%s>",
+		//		       cgi,ddd2);
+		//}
+		sb->safePrintf("</nobr>"
+			       //"</center>"
+			       );
 	}
 	else if ( t == TYPE_CHAR )
 		sb->safePrintf ("<input type=text name=%s value=\"%li\" "
@@ -2125,11 +2236,11 @@ bool Parms::printParm ( SafeBuf* sb,
 				false , false );
 	else if ( t == TYPE_PRIORITY2 ) {
 		// just show the parm name and value if printing in json
-		if ( isJSON )
-			sb->safePrintf("\"%s\":%li,\n",cgi,(long)*(char *)s);
-		else
-			printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s ,
-					true , true );
+		// if ( format==FORMAT_JSON) // isJSON )
+		// 	sb->safePrintf("\"%s\":%li,\n",cgi,(long)*(char *)s);
+		// else
+		printDropDown ( MAX_SPIDER_PRIORITIES , sb , cgi , *s ,
+				true , true );
 	}
 	// this url filters parm is an array of SAFEBUFs now, so each is
 	// a string and that string is the diffbot api url to use. 
@@ -2160,14 +2271,14 @@ bool Parms::printParm ( SafeBuf* sb,
 			  cgi,m->m_title);
 	else if ( t == TYPE_FLOAT ) {
 		// just show the parm name and value if printing in json
-		if ( isJSON )
-			sb->safePrintf("\"%s\":%f,\n",cgi,*(float *)s);
-		else
-			sb->safePrintf ("<input type=text name=%s "
-					"value=\"%f\" "
-					// 3 was ok on firefox but need 6
-					// on chrome
-					"size=7>",cgi,*(float *)s);
+		// if ( format == FORMAT_JSON )//isJSON )
+		// 	sb->safePrintf("\"%s\":%f,\n",cgi,*(float *)s);
+		// else
+		sb->safePrintf ("<input type=text name=%s "
+				"value=\"%f\" "
+				// 3 was ok on firefox but need 6
+				// on chrome
+				"size=7>",cgi,*(float *)s);
 	}
 	else if ( t == TYPE_IP ) {
 		if ( m->m_max > 0 && j == jend ) 
@@ -2179,14 +2290,14 @@ bool Parms::printParm ( SafeBuf* sb,
 	}
 	else if ( t == TYPE_LONG ) {
 		// just show the parm name and value if printing in json
-		if ( isJSON )
-			sb->safePrintf("\"%s\":%li,\n",cgi,*(long *)s);
-		else
-			sb->safePrintf ("<input type=text name=%s "
-					"value=\"%li\" "
-					// 3 was ok on firefox but need 6
-					// on chrome
-					"size=6>",cgi,*(long *)s);
+		// if ( format == FORMAT_JSON ) // isJSON )
+		// 	sb->safePrintf("\"%s\":%li,\n",cgi,*(long *)s);
+		// else
+		sb->safePrintf ("<input type=text name=%s "
+				"value=\"%li\" "
+				// 3 was ok on firefox but need 6
+				// on chrome
+				"size=6>",cgi,*(long *)s);
 	}
 	else if ( t == TYPE_LONG_CONST ) 
 		sb->safePrintf ("%li",*(long *)s);
@@ -2206,7 +2317,7 @@ bool Parms::printParm ( SafeBuf* sb,
 				cgi,size);
 
 		// if it has PF_DEFAULTCOLL flag set then use the coll
-		if ( m->m_flags & PF_COLLDEFAULT )
+		if ( cr && (m->m_flags & PF_COLLDEFAULT) )
 			sb->safePrintf("%s",cr->m_coll);
 		else
 			sb->dequote ( s , gbstrlen(s) );
@@ -2256,7 +2367,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ("<input type=text name=%s size=%li "
 					"value=\"",cgi,size);
 			// if it has PF_DEFAULTCOLL flag set then use the coll
-			if ( m->m_flags & PF_COLLDEFAULT )
+			if ( cr && (m->m_flags & PF_COLLDEFAULT) )
 				sb->safePrintf("%s",cr->m_coll);
 			else if ( sp )
 				sb->dequote ( sp , gbstrlen(sp) );
@@ -2282,22 +2393,23 @@ bool Parms::printParm ( SafeBuf* sb,
 			sx = &tmp;
 			char *def = m->m_def;
 			// if it has PF_DEFAULTCOLL flag set then use the coll
-			if ( m->m_flags & PF_COLLDEFAULT ) def = cr->m_coll;
+			if ( cr && (m->m_flags & PF_COLLDEFAULT) ) 
+				def = cr->m_coll;
 			tmp.safePrintf("%s",def);
 		}
 
 		// just show the parm name and value if printing in json
-		if ( isJSON ) {
-			// this can be empty for the empty row i guess
-			if ( sx->length() ) {
-				// convert diffbot # to string
-				sb->safePrintf("\"%s\":\"",cgi);
-				if ( m->m_obj != OBJ_NONE )
-					sb->safeUtf8ToJSON (sx->getBufStart());
-				sb->safePrintf("\",\n");
-			}
-		}
-		else if ( m->m_flags & PF_TEXTAREA ) {
+		// if ( format == FORMAT_JSON ) { // isJSON ) {
+		// 	// this can be empty for the empty row i guess
+		// 	if ( sx->length() ) {
+		// 		// convert diffbot # to string
+		// 		sb->safePrintf("\"%s\":\"",cgi);
+		// 		if ( m->m_obj != OBJ_NONE )
+		// 			sb->safeUtf8ToJSON (sx->getBufStart());
+		// 		sb->safePrintf("\",\n");
+		// 	}
+		// }
+		if ( m->m_flags & PF_TEXTAREA ) {
 			sb->safePrintf ("<textarea name=%s rows=10 cols=80>",
 					cgi);
 			//sb->dequote ( s , gbstrlen(s) );
@@ -2455,10 +2567,10 @@ bool Parms::printParm ( SafeBuf* sb,
 
 
 	// end the input cell
-	if ( ! isJSON ) sb->safePrintf ( "</td>\n");
+	sb->safePrintf ( "</td>\n");
 
 	// "insert above" link? used for arrays only, where order matters
-	if ( m->m_addin && j < jend && ! isJSON ) {
+	if ( m->m_addin && j < jend ) {//! isJSON ) {
 		sb->safePrintf ( "<td><a href=\"?c=%s&" // cast=1&"
 				 //"ins_%s=1\">insert</td>\n",coll,cgi );
 				 // insert=<rowNum>
@@ -2475,7 +2587,7 @@ bool Parms::printParm ( SafeBuf* sb,
 	// . display the remove link for arrays if we need to
 	// . but don't display if next guy does NOT start a new row
 	//if ( m->m_max > 1 && lastInRow && ! isJSON ) {
-	if ( m->m_addin && j < jend && ! isJSON ) {
+	if ( m->m_addin && j < jend ) { //! isJSON ) {
 	//     m->m_page != PAGE_PRIORITIES ) {
 		// show remove link?
 		bool show = true;
@@ -2500,7 +2612,7 @@ bool Parms::printParm ( SafeBuf* sb,
 					//"rm_%s=1\">"
 					// remove=<rownum>
 					"remove%s=%li\">"
-					"remove</td>\n",coll,//cgi );
+					"remove</a></td>\n",coll,//cgi );
 					suffix,
 					j); // j is row #
 					
@@ -2508,7 +2620,7 @@ bool Parms::printParm ( SafeBuf* sb,
 			sb->safePrintf ( "<td></td>\n");
 	}
 
-	if ( lastInRow && ! isJSON ) sb->safePrintf ("</tr>\n");
+	if ( lastInRow ) sb->safePrintf ("</tr>\n");
 	return status;
 }
 
@@ -4400,6 +4512,133 @@ void Parms::init ( ) {
 	char *x = (char *)&cr;
 	char *y = (char *)&si;
 
+
+	//////////////
+	// 
+	// now for Pages.cpp printApiForPage() we need these
+	//
+	//////////////
+
+
+	GigablastRequest gr;
+
+	m->m_title = "delete collection";
+	m->m_desc  = "A collection name to delete. You can specify multiple "
+		"&delColl= parms in the request to delete multiple "
+		"collections.";
+	m->m_cgi   = "delColl";
+	m->m_page  = PAGE_DELCOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_API | PF_REQUIRED;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "delete collection";
+	m->m_desc  = "A collection name to delete. You can specify multiple "
+		"&delColl= parms in the request to delete multiple "
+		"collections.";
+	// camelcase as opposed to above lowercase
+	m->m_cgi   = "delcoll";
+	m->m_page  = PAGE_DELCOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_HIDDEN;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "add collection";
+	m->m_desc  = "A collection name to add.";
+	// camelcase support
+	m->m_cgi   = "addColl";
+	m->m_page  = PAGE_ADDCOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_API | PF_REQUIRED;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "add collection";
+	m->m_desc  = "A collection name to add.";
+	// lowercase support
+	m->m_cgi   = "addcoll";
+	m->m_page  = PAGE_ADDCOLL;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_HIDDEN;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Use this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_BASIC_STATUS;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	m->m_flags = PF_API | PF_REQUIRED;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Use this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_SEARCH;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	// do not show in html controls
+	m->m_flags = PF_API | PF_REQUIRED | PF_NOHTML;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Use this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	// do not show in html controls
+	m->m_flags = PF_API | PF_REQUIRED | PF_NOHTML;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Use this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_SPIDERDB;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	// do not show in html controls
+	m->m_flags = PF_API | PF_REQUIRED | PF_NOHTML;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+	m->m_title = "collection";
+	m->m_desc  = "Use this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_SITEDB;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
+	m->m_def   = NULL;
+	// do not show in html controls
+	m->m_flags = PF_API | PF_REQUIRED | PF_NOHTML;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
+
+	////////////
+	//
+	// end stuff for printApiForPage()
+	//
+	////////////
+
 	// just a comment in the conf file
 	m->m_desc  = 
 		"All <, >, \" and # characters that are values for a field "
@@ -5604,9 +5843,32 @@ void Parms::init ( ) {
 	m->m_cast  = 1;
 	m++;
 
+	m->m_title = "delete collection 2";
+	m->m_desc  = "delete the specified collection";
+	// lowercase as opposed to camelcase above
+	m->m_cgi   = "delcoll";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_COLL;
+	m->m_func2 = CommandDeleteColl2;
+	m->m_cast  = 1;
+	m++;
+
 	m->m_title = "add collection";
 	m->m_desc  = "add a new collection";
+	// camelcase support
 	m->m_cgi   = "addColl";
+	m->m_type  = TYPE_CMD;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_COLL;
+	m->m_func  = CommandAddColl0;
+	m->m_cast  = 1;
+	m++;
+
+	m->m_title = "add collection";
+	m->m_desc  = "add a new collection";
+	// lower case support
+	m->m_cgi   = "addcoll";
 	m->m_type  = TYPE_CMD;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_COLL;
@@ -5788,7 +6050,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_SI;
 	m->m_type  = TYPE_CHARPTR;//SAFEBUF;
 	m->m_def   = NULL;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_REQUIRED;
 	m->m_off   = (char *)&si.m_coll - y;
 	m++;
 
@@ -7758,19 +8020,17 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
-	m->m_title = "default number of summary excerpts";
-	m->m_desc  = "What is the default number of "
-		"summary excerpts displayed per search result?";
+	m->m_title = "number of summary excerpts";
+	m->m_desc  = "How many summary excerpts to display per search result?";
 	m->m_cgi   = "ns";
 	m->m_type  = TYPE_LONG;
-	m->m_defOff= (char *)&cr.m_summaryDefaultNumLines - x;
+	m->m_defOff= (char *)&cr.m_summaryMaxNumLines - x;
 	m->m_group = 0;
 	m->m_off   = (char *)&si.m_numLinesInSummary - y;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_NONE;
 	m->m_obj   = OBJ_SI;
 	m++;
-
 
 
 	m->m_title = "max summary line width";
@@ -8784,8 +9044,6 @@ void Parms::init ( ) {
 	//////////////
 
 
-	GigablastRequest gr;
-
 	//////////
 	// PAGE GET (cached web pages)
 	///////////
@@ -8911,7 +9169,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_MASTER;
 	m->m_obj   = OBJ_CONF;
 	m++;
-
+	
 	m->m_title = "max total spiders";
 	m->m_desc  = "What is the maximum number of web "
 		"pages the spider is allowed to download "
@@ -13579,12 +13837,28 @@ void Parms::init ( ) {
 	// ADD URL PARMS
 	//
 	///////////
+
+	m->m_title = "collection";
+	m->m_desc  = "Add urls into this collection.";
+	m->m_cgi   = "c";
+	m->m_page  = PAGE_ADDURL2;
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = NULL;
+	// PF_COLLDEFAULT: so it gets set to default coll on html page
+	m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
+	m++;
+
 	m->m_title = "urls to add";
 	m->m_desc  = "List of urls to index. One per line or space separated. "
 		"If your url does not index as you expect you "
-		"can check it's history. " // (spiderdb lookup)
+		"can check it's spider history by doing a url: search on it. "
 		"Added urls will have a "
 		"<a href=/admin/filters#hopcount>hopcount</a> of 0. "
+		"Added urls will match the <i><a href=/admin/filters#isaddurl>"
+		"isaddurl</a></i> directive on "
+		"the url filters page. "
 		"The add url api is described on the "
 		"<a href=/admin/api>api</a> page.";
 	m->m_cgi   = "urls";
@@ -13593,7 +13867,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&gr.m_urlsBuf - (char *)&gr;
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
-	m->m_flags = PF_TEXTAREA | PF_NOSAVE | PF_API;
+	m->m_flags = PF_TEXTAREA | PF_NOSAVE | PF_API|PF_REQUIRED;
 	m++;
 
 	/*
@@ -13630,6 +13904,7 @@ void Parms::init ( ) {
 	m->m_flags = PF_API;
 	m++;
 
+	/*
 	m->m_title = "force respider";
 	m->m_desc  = "Force an immediate respider even if the url "
 		"is already indexed.";
@@ -13641,18 +13916,8 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_flags = PF_API;
 	m++;
+	*/
 
-	m->m_title = "collection";
-	m->m_desc  = "Add urls into this collection.";
-	m->m_cgi   = "c";
-	m->m_page  = PAGE_ADDURL2;
-	m->m_obj   = OBJ_GBREQUEST;
-	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
-	m->m_type  = TYPE_CHARPTR;
-	m->m_def   = NULL;
-	// PF_COLLDEFAULT: so it gets set to default coll on html page
-	m->m_flags = PF_API|PF_COLLDEFAULT|PF_REQUIRED; 
-	m++;
 
 
 	////////
@@ -13775,7 +14040,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_CHARPTR;
 	m->m_def   = NULL;
 	// PF_COLLDEFAULT: so it gets set to default coll on html page
-	m->m_flags = PF_API|PF_COLLDEFAULT|PF_REQUIRED; 
+	m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
 	m++;
@@ -13786,7 +14051,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_def   = "0";
-	m->m_flags = PF_API;
+	m->m_flags = PF_HIDDEN;
 	m->m_page  = PAGE_INJECT;
 	m->m_off   = (char *)&gr.m_shortReply - (char *)&gr;
 	m++;
@@ -13969,6 +14234,18 @@ void Parms::init ( ) {
 	//
 	///////////////////
 
+	m->m_title = "collection";
+	m->m_desc  = "query reindex in this collection.";
+	m->m_cgi   = "c";
+	m->m_obj   = OBJ_GBREQUEST;
+	m->m_type  = TYPE_CHARPTR;
+	m->m_def   = NULL;
+	// PF_COLLDEFAULT: so it gets set to default coll on html page
+	m->m_flags = PF_API|PF_REQUIRED|PF_NOHTML; 
+	m->m_page  = PAGE_REINDEX;
+	m->m_off   = (char *)&gr.m_coll - (char *)&gr;
+	m++;
+
 	m->m_title = "query to reindex or delete";
 	m->m_desc  = "We either reindex or delete the search results of "
 		"this query. Reindexing them will redownload them and "
@@ -13980,7 +14257,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REINDEX;
 	m->m_obj   = OBJ_GBREQUEST;
 	m->m_def   = NULL;
-	m->m_flags = PF_API ;
+	m->m_flags = PF_API |PF_REQUIRED;
 	m++;
 
 	m->m_title = "start result number";
@@ -14022,7 +14299,7 @@ void Parms::init ( ) {
 	m->m_title = "FORCE DELETE";
 	m->m_desc  = "Check this checkbox to delete the results, not just "
 		"reindex them.";
-	m->m_cgi   = "delete";
+	m->m_cgi   = "forcedel";
 	m->m_off   = (char *)&gr.m_forceDel - (char *)&gr;
 	m->m_type  = TYPE_CHECKBOX;
 	m->m_page  = PAGE_REINDEX;
@@ -14241,7 +14518,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_STRING;
 	m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
 	m->m_def   = "xx";//_US";
-	m->m_group = 0;
+	//m->m_group = 0;
 	m->m_flags = PF_API;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -14319,6 +14596,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
+	/*
 	m->m_title = "default number of summary excerpts by default";
 	m->m_desc  = "What is the default number of "
 		"summary excerpts displayed per search result?";
@@ -14331,7 +14609,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
-
+	*/
 
 	m->m_title = "max summary line width by default";
 	m->m_desc  = "&lt;br&gt; tags are inserted to keep the number "
@@ -14814,8 +15092,8 @@ void Parms::init ( ) {
 			  //"Use %T to display the standard footer. "
 			  "Use %%q to display the query in "
 			  "a text box. "
-			  "Use %%t to display the directory TOP. Example "
-			  "to paste into textbox: "
+			  "Use %%t to display the directory TOP. "
+			  "Example to paste into textbox: "
 			  "<br><i>"
 			  );
 	s_tmpBuf.htmlEncode (
@@ -14920,7 +15198,7 @@ void Parms::init ( ) {
 		//"this html "
 		//"must be encoded (less thans mapped to &lt;, "
 		//"etc.).";
-		"Example to paste: <br><i>";
+		"Example to paste into textbox: <br><i>";
 	s_tmpBuf2.safeStrcpy(fff);
 	s_tmpBuf2.htmlEncode(
 		"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 "
@@ -14987,13 +15265,14 @@ void Parms::init ( ) {
 
 	m->m_title = "html tail";
         static SafeBuf s_tmpBuf3;
-	s_tmpBuf3.safePrintf("Html to display before the search results. ");
+	s_tmpBuf3.safePrintf("Html to display after the search results. ");
 	s_tmpBuf3.safeStrcpy(fff);
 	s_tmpBuf3.htmlEncode (
 		"<br>\n"
-		"%F<table cellpadding=2 cellspacing=0 border=0>\n"
+		//"%F"
+		"<table cellpadding=2 cellspacing=0 border=0>\n"
 		"<tr><td></td>\n"
-		"<td valign=top align=center>\n"
+		//"<td valign=top align=center>\n"
 		// this old query is overriding a newer query above so
 		// i commented out. mfd 6/2014
 		//"<nobr>"
@@ -15002,8 +15281,10 @@ void Parms::init ( ) {
 		//"</nobr>"
 		// family filter
 		//"<br>%f %R\n"
-		"<br>%R\n"
-		"</td><td>%s</td>\n"
+		//"<br>"
+		//"%R\n"
+		//"</td>"
+		"<td>%s</td>\n"
 		"</tr>\n"
 		"</table>\n"
 		"Try your search on  \n"
@@ -16436,6 +16717,19 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m++;
 
+	m->m_title = "max thumbnail width or height";
+	m->m_desc  = "This is in pixels and limits the size of the thumbnail. "
+		"Gigablast tries to make at least the width or the height "
+		"equal to this maximum, but, unless the thumbnail is sqaure, "
+		"one side will be longer than the other.";
+	m->m_cgi   = "mtwh";
+	m->m_off   = (char *)&cr.m_thumbnailMaxWidthHeight - x;
+	m->m_type  = TYPE_LONG;
+	m->m_def   = "250";
+	m->m_page  = PAGE_SPIDER;
+	m->m_obj   = OBJ_COLL;
+	m++;
+
 	m->m_title = "index spider replies";
 	m->m_desc  = "Index the spider replies of every url the spider "
 		"attempts to spider. Search for them using special "
@@ -17100,7 +17394,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_REPAIR;
 	m->m_obj   = OBJ_CONF;
 	m->m_group = 0;
-	m->m_flags = PF_COLLDEFAULT;
+	m->m_flags = PF_REQUIRED | PF_NOHTML;
 	m++;
 
 	m->m_title = "memory to use for repair";
@@ -18255,21 +18549,6 @@ void Parms::init ( ) {
 	/////
 
 
-	// most pages that are status pages take a "format"
-	m->m_title = "format of the response";
-	m->m_desc  = "Can be \"xml\" or \"json\".";
-	m->m_def   = "xml";
-	m->m_off   = (char *)&gr.m_formatStr - (char *)&gr;
-	m->m_type  = TYPE_CHARPTR;
-	m->m_page  = PAGE_HOSTS;
-	m->m_obj   = OBJ_GBREQUEST;
-	m->m_cgi   = "format";
-	m++;
-
-
-
-
-
 	// END PARMS PARM END PARMS END
 
 
@@ -18861,6 +19140,14 @@ bool Parms::addNewParmToList2 ( SafeBuf *parmList ,
 	else if ( m->m_type == TYPE_CMD ) {
 		val = parmValString;
 		if ( val ) valSize = gbstrlen(val)+1;
+		// . addcoll collection can not be too long
+		// . TODO: supply a Parm::m_checkValFunc to ensure val is
+		//   legitimate, and set g_errno on error
+		if ( strcmp(m->m_cgi,"addcoll") == 0 &&valSize-1>MAX_COLL_LEN){
+			log("admin: addcoll coll too long");
+			g_errno = ECOLLTOOBIG;
+			return false;
+		}
 		// scan for holes if we hit the limit
 		//if ( g_collectiondb.m_numRecs >= 1LL>>sizeof(collnum_t) )
 	}
@@ -19118,6 +19405,8 @@ bool Parms::convertHttpRequestToParmList (HttpRequest *hr, SafeBuf *parmList,
 		// get the next available collnum and use that for setting
 		// any additional parms. that is the coll it will act on.
 		if ( strcmp(m->m_cgi,"addColl") == 0 ||
+		     // lowercase support. camelcase is obsolete.
+		     strcmp(m->m_cgi,"addcoll") == 0 ||
 		     strcmp(m->m_cgi,"addCrawl") == 0 ||
 		     strcmp(m->m_cgi,"addBulk" ) == 0 ||
 		     strcmp(m->m_cgi,"reset" ) == 0 ||
@@ -20146,7 +20435,9 @@ void handleRequest3e ( UdpSlot *slot , long niceness ) {
 		if ( ! cr ) continue;
 		// clear flag
 		if ( cr->m_hackFlag ) continue;
-		char *cmdStr = "addColl";
+		//char *cmdStr = "addColl";
+		// now use lowercase, not camelcase
+		char *cmdStr = "addcoll";
 		if ( cr->m_isCustomCrawl == 1 ) cmdStr = "addCrawl";
 		if ( cr->m_isCustomCrawl == 2 ) cmdStr = "addBulk";
 		// note in log
@@ -20876,11 +21167,16 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "fine level of control."
 			  "</td></tr>"
 
-			  "<tr class=poo><td>isaddurl | !isaddurl</td>"
+			  "<tr class=poo><td>"
+			  "<a name=isaddurl>"
+			  "isaddurl | !isaddurl"
+			  "</a>"
+			  "</td>"
 			  "<td>"
 			  "This is true if the url was added from the add "
-			  "url interface. This replaces the add url priority "
-			  "parm."
+			  "url interface or API."
+			  //"This replaces the add url priority "
+			  //"parm."
 			  "</td></tr>"
 
 			  "<tr class=poo><td>isinjected | !isinjected</td>"
@@ -20890,7 +21186,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "<a href=/admin/inject>inject page</a> or API."
 			  "</td></tr>"
 
-			  "<tr class=poo><td>isdocidbased | !isdocidbased</td>"
+			  "<tr class=poo><td>isreindex | !isreindex</td>"
 			  "<td>"
 			  "This is true if the url was added from the "
 			  "<a href=/admin/reindex>query reindex</a> "
@@ -20902,7 +21198,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "feature. "
 			  "You can set max spiders to 0 "
 			  "for non "
-			  "docidbased requests while you reindex or delete "
+			  "isreindex requests while you reindex or delete "
 			  "the results of a query for extra speed."
 			  "</td></tr>"
 
@@ -20910,7 +21206,7 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 			  "<td>"
 			  "This is true if the url was added manually. "
 			  "Which means it matches isaddurl, isinjected, "
-			  " or isdocidbased. as opposed to only "
+			  " or isreindex. as opposed to only "
 			  "being discovered from the spider. "
 			  "</td></tr>"
 

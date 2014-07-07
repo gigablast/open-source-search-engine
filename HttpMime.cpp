@@ -237,6 +237,8 @@ time_t atotime ( char *s ) {
 	return atotime3 ( s );
 }
 
+#include "Dates.h" // for getTimeZone()
+
 // #1: Sun, 06 Nov 1994 08:49:37 GMT  ;RFC 822, updated by RFC 1123
 time_t atotime1 ( char *s ) {
 	// this time structure, once filled, will help yield a time_t
@@ -258,8 +260,20 @@ time_t atotime1 ( char *s ) {
 	getTime ( s , &t.tm_sec , &t.tm_min , &t.tm_hour );
 	// unknown if we're in  daylight savings time
 	t.tm_isdst = -1;
+
 	// translate using mktime
-	time_t local = mktime ( &t );
+	time_t global = timegm ( &t );
+
+	// skip HH:MM:SS
+	while ( ! isspace (*s) ) s++;	
+	// skip spaces
+	while ( isspace (*s) ) s++;
+	// convert local time to "utc" or whatever timezone "s" points to,
+	// which is usually gmt or utc
+	long tzoff = getTimeZone ( s ) ;
+	if ( tzoff != BADTIMEZONE ) global += tzoff;
+	return global;
+
 	// now, convert to utc
 	//time_t utc  = time(NULL);
 	// get time here locally
@@ -268,7 +282,6 @@ time_t atotime1 ( char *s ) {
 	//long delta = here - utc;
 	// modify our time to make it into utc
 	//return local - delta;
-	return local;
 }
 
 // #2: Sunday, 06-Nov-94 08:49:37 GMT ;RFC 850,obsoleted by RFC1036
@@ -293,7 +306,17 @@ time_t atotime2 ( char *s ) {
 	// unknown if we're in  daylight savings time
 	t.tm_isdst = -1;
 	// translate using mktime
-	return mktime ( &t );
+	time_t global = timegm ( &t );
+
+	// skip HH:MM:SS
+	while ( ! isspace (*s) ) s++;	
+	// skip spaces
+	while ( isspace (*s) ) s++;
+	// convert local time to "utc" or whatever timezone "s" points to,
+	// which is usually gmt or utc
+	long tzoff = getTimeZone ( s ) ;
+	if ( tzoff != BADTIMEZONE ) global += tzoff;
+	return global;
 }
 
 // #3: Sun Nov  6 08:49:37 1994       ;ANSI C's asctime() format
@@ -319,7 +342,7 @@ time_t atotime3 ( char *s ) {
 	// unknown if we're in  daylight savings time
 	t.tm_isdst = -1;
 	// translate using mktime
-	time_t tt = mktime ( &t );
+	time_t tt = timegm ( &t );
 	return tt;
 }
 
@@ -346,7 +369,17 @@ time_t atotime4 ( char *s ) {
 	// unknown if we're in  daylight savings time
 	t.tm_isdst = -1;
 	// translate using mktime
-	return mktime ( &t );
+	time_t global = timegm ( &t );
+
+	// skip HH:MM:SS
+	while ( ! isspace (*s) ) s++;	
+	// skip spaces
+	while ( isspace (*s) ) s++;
+	// convert local time to "utc" or whatever timezone "s" points to,
+	// which is usually gmt or utc
+	long tzoff = getTimeZone ( s ) ;
+	if ( tzoff != BADTIMEZONE ) global += tzoff;
+	return global;
 }
 
 // 2007-12-31
@@ -387,7 +420,7 @@ time_t atotime5 ( char *s ) {
 	// unknown if we're in  daylight savings time
 	t.tm_isdst = -1;
 	// translate using mktime
-	return mktime ( &t );
+	return timegm ( &t );
 }
 
 

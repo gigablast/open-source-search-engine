@@ -22,7 +22,7 @@
 //char *printNumResultsDropDown ( char *p, long n, bool *printedDropDown);
 bool printNumResultsDropDown ( SafeBuf& sb, long n, bool *printedDropDown);
 //static char *printTopDirectory ( char *p, char *pend );
-static bool printTopDirectory ( SafeBuf& sb );
+static bool printTopDirectory ( SafeBuf& sb , char format );
 
 // this prints the last five queries
 //static long printLastQueries ( char *p , char *pend ) ;
@@ -586,7 +586,7 @@ bool expandHtml (  SafeBuf& sb,
 		if ( head[i+1] == 't' ) {
 			i += 1;
 			//p = printTopDirectory ( p, pend );
-			printTopDirectory ( sb );
+			printTopDirectory ( sb , FORMAT_HTML );
 			continue;
 		}
 
@@ -963,7 +963,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 			      "onLoad=\""
 			      "var client = new XMLHttpRequest();\n"
 			      "client.onreadystatechange = handler;\n"
-			      "var url='/addurl?u="
+			      "var url='/addurl?urls="
 			      );
 		sb.urlEncode ( url );
 		// propagate "admin" if set
@@ -1042,7 +1042,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 	if ( ! coll ) 
 		coll = "";
 
-	sb.safePrintf("<input name=u type=text size=60 value=\"");
+	sb.safePrintf("<input name=urls type=text size=60 value=\"");
 	if ( url ) {
 		SafeBuf tmp;
 		tmp.safePrintf("%s",url);
@@ -1092,7 +1092,7 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 			      //"alert('shit');"
 			      "var client = new XMLHttpRequest();\n"
 			      "client.onreadystatechange = handler;\n"
-			      "var url='/addurl?u="
+			      "var url='/addurl?urls="
 			      , root );
 		sb.urlEncode ( url );
 		// propagate "admin" if set
@@ -1127,6 +1127,11 @@ bool printAddUrlHomePage ( SafeBuf &sb , char *url , HttpRequest *r ) {
 
 
 bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
+
+	char format = r->getReplyFormat();
+	if ( format != FORMAT_HTML )
+		return printTopDirectory ( sb , format );
+
 
 	sb.safePrintf("<html>\n");
 	sb.safePrintf("<head>\n");
@@ -1216,7 +1221,7 @@ bool printDirHomePage ( SafeBuf &sb , HttpRequest *r ) {
 	sb.safePrintf("\n");
 
 
-	printTopDirectory ( sb );
+	printTopDirectory ( sb , FORMAT_HTML );
 
 	sb.safePrintf("<br><br>\n");
 
@@ -1395,10 +1400,12 @@ long printLastQueries ( char *p , char *pend ) {
 
 
 //char *printTopDirectory ( char *p, char *pend ) {
-bool printTopDirectory ( SafeBuf& sb ) {
+bool printTopDirectory ( SafeBuf& sb , char format ) {
+
+	long nr = g_catdb.getRdb()->getNumTotalRecs();
 
 	// if no recs in catdb, print instructions
-	if ( g_catdb.getRdb()->getNumTotalRecs() == 0 )
+	if ( nr == 0 && format == FORMAT_HTML)
 		return sb.safePrintf("<center>"
 				     "<b>DMOZ functionality is not set up.</b>"
 				     "<br>"
@@ -1410,6 +1417,12 @@ bool printTopDirectory ( SafeBuf& sb ) {
 				     "</a>."
 				     "</b>"
 				     "</center>");
+
+	// send back an xml/json error reply
+	if ( nr == 0 && format != FORMAT_HTML ) {
+		g_errno = EDMOZNOTREADY;
+		return false;
+	}
 
 	//char topList[4096];
 	//sprintf(topList, 
@@ -1619,26 +1632,26 @@ static bool s_inprogress = false;
 
 // . returns false if blocked, true otherwise
 // . sets g_errno on error
-bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
+bool sendPageAddUrl ( TcpSocket *sock , HttpRequest *hr ) {
 	// . get fields from cgi field of the requested url
 	// . get the search query
 	long  urlLen = 0;
-	char *url = r->getString ( "u" , &urlLen , NULL /*default*/);
+	char *url = hr->getString ( "urls" , &urlLen , NULL /*default*/);
 
 	// see if they provided a url of a file of urls if they did not
 	// provide a url to add directly
-	bool isAdmin = g_conf.isCollAdmin ( s , r );
+	bool isAdmin = g_conf.isCollAdmin ( sock , hr );
 	long  ufuLen = 0;
 	char *ufu = NULL;
-	if ( isAdmin )
-		// get the url of a file of urls (ufu)
-		ufu = r->getString ( "ufu" , &ufuLen , NULL );
+	//if ( isAdmin )
+	//	// get the url of a file of urls (ufu)
+	//	ufu = hr->getString ( "ufu" , &ufuLen , NULL );
 
 	// can't be too long, that's obnoxious
 	if ( urlLen > MAX_URL_LEN || ufuLen > MAX_URL_LEN ) {
 		g_errno = EBUFTOOSMALL;
 		g_msg = " (error: url too long)";
-		return g_httpServer.sendErrorReply(s,500,"url too long");
+		return g_httpServer.sendErrorReply(sock,500,"url too long");
 	}
 	// get the collection
 	//long  collLen = 0;
@@ -1650,20 +1663,20 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	//}
 	// get collection rec
 
-	CollectionRec *cr = g_collectiondb.getRec ( r );
+	CollectionRec *cr = g_collectiondb.getRec ( hr );
 
 	// bitch if no collection rec found
 	if ( ! cr ) {
 		g_errno = ENOCOLLREC;
 		g_msg = " (error: no collection)";
-		return g_httpServer.sendErrorReply(s,500,"no coll rec");
+		return g_httpServer.sendErrorReply(sock,500,"no coll rec");
 	}
 	// . make sure the ip is not banned
 	// . we may also have an exclusive list of IPs for private collections
-	if ( ! cr->hasSearchPermission ( s ) ) {
+	if ( ! cr->hasSearchPermission ( sock ) ) {
 		g_errno = ENOPERM;
 		g_msg = " (error: permission denied)";
-		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno));
+	       return g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno));
 	}
 
 
@@ -1672,8 +1685,8 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	//
 	if ( ! url ) {
 		SafeBuf sb;
-		printAddUrlHomePage ( sb , NULL , r );
-		return g_httpServer.sendDynamicPage(s, 
+		printAddUrlHomePage ( sb , NULL , hr );
+		return g_httpServer.sendDynamicPage(sock, 
 						    sb.getBufStart(), 
 						    sb.length(),
 						    // 120 secs cachetime
@@ -1686,19 +1699,19 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 						    200,
 						    NULL, // cookie
 						    "UTF-8",
-						    r);
+						    hr);
 	}
 
 	//
 	// run the ajax script on load to submit the url now 
 	//
-	long id = r->getLong("id",0);
+	long id = hr->getLong("id",0);
 	// if we are not being called by the ajax loader, the put the
 	// ajax loader script into the html now
 	if ( id == 0 ) {
 		SafeBuf sb;
-		printAddUrlHomePage ( sb , url , r );
-		return g_httpServer.sendDynamicPage ( s, 
+		printAddUrlHomePage ( sb , url , hr );
+		return g_httpServer.sendDynamicPage ( sock, 
 						      sb.getBufStart(), 
 						      sb.length(),
 						      // don't cache any more
@@ -1711,7 +1724,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 						      200,
 						      NULL, // cookie
 						      "UTF-8",
-						      r);
+						      hr);
 	}
 
 	//
@@ -1742,7 +1755,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	if  ( msg ) {
 		SafeBuf sb;
 		sb.safePrintf("%s",msg);
-		g_httpServer.sendDynamicPage (s, 
+		g_httpServer.sendDynamicPage (sock, 
 					      sb.getBufStart(), 
 					      sb.length(),
 					      3600,//-1, // cachetime
@@ -1764,10 +1777,10 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 		g_errno = ENOMEM;
 		log("PageAddUrl: new(%i): %s", 
 		    sizeof(State1i),mstrerror(g_errno));
-		return g_httpServer.sendErrorReply(s,500,mstrerror(g_errno)); }
+	    return g_httpServer.sendErrorReply(sock,500,mstrerror(g_errno)); }
 	mnew ( st1 , sizeof(State1i) , "PageAddUrl" );
 	// save socket and isAdmin
-	st1->m_socket  = s;
+	st1->m_socket  = sock;
 	st1->m_isAdmin = isAdmin;
 
 	/*
@@ -1809,12 +1822,12 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	//unsigned long h = ipdom ( s->m_ip );
 	// . use top 2 bytes now, some isps have large blocks
 	// . if this causes problems, then they can do pay for inclusion
-	unsigned long h = iptop ( s->m_ip );
+	unsigned long h = iptop ( sock->m_ip );
 	long codeLen;
-	char* code = r->getString("code", &codeLen);
-	if(g_autoBan.hasCode(code, codeLen, s->m_ip)) {
+	char* code = hr->getString("code", &codeLen);
+	if(g_autoBan.hasCode(code, codeLen, sock->m_ip)) {
 		long uipLen = 0;
-		char* uip = r->getString("uip",&uipLen);
+		char* uip = hr->getString("uip",&uipLen);
 		long hip = 0;
 		//use the uip when we have a raw query to test if 
 		//we can submit
@@ -1824,18 +1837,18 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 		}
 	}
 
-	st1->m_strip = r->getLong("strip",0);
+	st1->m_strip = hr->getLong("strip",0);
 	// . Remember, for cgi, if the box is not checked, then it is not 
 	//   reported in the request, so set default return value to 0
 	// . support both camel case and all lower-cases
-	st1->m_spiderLinks = r->getLong("spiderLinks",0);
-	st1->m_spiderLinks = r->getLong("spiderlinks",st1->m_spiderLinks);
+	st1->m_spiderLinks = hr->getLong("spiderLinks",0);
+	st1->m_spiderLinks = hr->getLong("spiderlinks",st1->m_spiderLinks);
 
 	// . should we force it into spiderdb even if already in there
 	// . use to manually update spider times for a url
 	// . however, will not remove old scheduled spider times
 	// . mdw: made force on the default
-	st1->m_forceRespider = r->getLong("force",1); // 0);
+	st1->m_forceRespider = hr->getLong("force",1); // 0);
 
 	long now = getTimeGlobal();
 	// . allow 1 submit every 1 hour
@@ -1850,7 +1863,7 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 		delete (st1);
 		// use cachetime of 3600 so it does not re-inject if you hit 
 		// the back button!
-		g_httpServer.sendDynamicPage (s, 
+		g_httpServer.sendDynamicPage (sock, 
 					      sb.getBufStart(), 
 					      sb.length(),
 					      3600,//-1, // cachetime
@@ -1877,6 +1890,17 @@ bool sendPageAddUrl ( TcpSocket *s , HttpRequest *r ) {
 	}
 	*/
 
+
+	// set this. also sets gr->m_hr
+	GigablastRequest *gr = &st1->m_msg7.m_gr;
+	// this will fill in GigablastRequest so all the parms we need are set
+	g_parms.setGigablastRequest ( sock , hr , gr );
+
+	// this is really an injection, not add url, so make
+	// GigablastRequest::m_url point to Gigablast::m_urlsBuf because
+	// the PAGE_ADDURLS2 parms in Parms.cpp fill in the m_urlsBuf.
+	// HACK!
+	gr->m_url = gr->m_urlsBuf;
 
 	//
 	// inject using msg7

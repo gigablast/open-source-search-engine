@@ -117,6 +117,9 @@ bool sendPageAddUrl2 ( TcpSocket *s , HttpRequest *r ) {
 	// . use to manually update spider times for a url
 	// . however, will not remove old scheduled spider times
 	// . mdw: made force on the default
+	// . mdw: don't use this anymore, use url filters, it has
+	//   a "isaddurl" directive you can use where you can set the
+	//   respider frequency to basically 0 to simulate this parm.
 	//st1->m_forceRespider = r->getLong("force",1); // 0);
 
 	// if no url given, just print a blank page
@@ -135,7 +138,10 @@ bool sendPageAddUrl2 ( TcpSocket *s , HttpRequest *r ) {
 		return sendReply ( st1 , true );
 	}
 
-
+	if ( spiderLinks )
+		sreq->m_avoidSpiderLinks = 0;
+	else
+		sreq->m_avoidSpiderLinks = 1;
 
 	// shortcut
 	Msg4 *m = &st1->m_msg4;

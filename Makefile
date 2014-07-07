@@ -551,6 +551,7 @@ master-rpm:
 # DEBIAN PACKAGE SECTION BEGIN
 
 # need to do 'apt-get intall dh-make'
+# deb-master
 master-deb:
 	git archive --format=tar --prefix=gb-1.0/ master > ../gb_1.0.orig.tar
 	rm -rf debian
@@ -569,6 +570,7 @@ master-deb:
 	cp control.deb debian/control
 # try to use our own rules so we can override dh_shlibdeps and others
 	cp gb.deb.rules debian/rules
+	cp changelog debian/changelog
 # fix dh_shlibdeps from bitching about dependencies on shared libs
 # YOU HAVE TO RUN THIS before you run 'make'
 #	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
@@ -583,12 +585,12 @@ master-deb:
 # upload rpm
 	scp gb*.rpm gk268:/w/html/	
 
-
+#deb-testing
 testing-deb:
-	git archive --format=tar --prefix=gb-1.0/ testing > ../gb_1.0.orig.tar
+	git archive --format=tar --prefix=gb-1.1/ testing > ../gb_1.1.orig.tar
 	rm -rf debian
 # change "-p gb_1.0" to "-p gb_1.1" to update version for example
-	dh_make -e gigablast@mail.com -p gb_1.0 -f ../gb_1.0.orig.tar
+	dh_make -e gigablast@mail.com -p gb_1.1 -f ../gb_1.1.orig.tar
 # zero this out, it is just filed with the .txt files erroneously and it'll
 # try to automatiicaly install in /usr/docs/
 	rm debian/docs
@@ -602,16 +604,24 @@ testing-deb:
 	cp control.deb debian/control
 # try to use our own rules so we can override dh_shlibdeps and others
 	cp gb.deb.rules debian/rules
+	cp changelog debian/changelog
+# make the pkg dependencies file ourselves since we overrode dh_shlibdeps
+# with our own debian/rules file. see that file for more info.
+#	echo  "shlibs:Depends=libc6 (>= 2.3)" > debian/gb.substvars 
+#	echo  "shlibs:Depends=netpbm (>= 0.0)" > debian/gb.substvars 
+#	echo  "misc:Depends=netpbm (>= 0.0)" > debian/gb.substvars 
 # fix dh_shlibdeps from bitching about dependencies on shared libs
 # YOU HAVE TO RUN THIS before you run 'make'
 #	export LD_LIBRARY_PATH=./debian/gb/var/gigablast/data0
-# build the package now
+# build the package now. if we don't specify -ai386 -ti386 then some users
+# get a wrong architecture msg and 'dpkg -i' fails
 	dpkg-buildpackage -nc -ai386 -ti386 -b -uc -rfakeroot
+#	dpkg-buildpackage -nc -b -uc -rfakeroot
 # move to current dur
 	mv ../gb_*.deb .	
 
 install-pkgs-local:
-	sudo alien --to-rpm gb_1.0-1_i386.deb
+	sudo alien --to-rpm gb_1.1-1_i386.deb
 # upload
 	scp gb*.deb gb*.rpm gk268:/w/html/
 

@@ -56,6 +56,7 @@ struct SafeBuf {
 	long saveToFile ( char *dir , char *filename ) ;
 	long dumpToFile(char *filename);
 	long save ( char *dir, char *fname){return saveToFile(dir,fname); };
+	long save ( char *fullFilename ) ;
 
 	long  fillFromFile(char *filename);
 	long  fillFromFile(char *dir,char *filename);
@@ -107,6 +108,8 @@ struct SafeBuf {
 	bool  safeStrcpy ( char *s ) ;
 	//bool  safeStrcpyPrettyJSON ( char *decodedJson ) ;
 	bool  safeUtf8ToJSON ( char *utf8 ) ;
+	bool jsonEncode ( char *utf8 ) { return safeUtf8ToJSON(utf8); };
+	bool jsonEncode ( char *utf8 , long utf8Len );
 
 	bool  csvEncode ( char *s , long len , long niceness = 0 );
 

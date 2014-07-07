@@ -72,13 +72,16 @@ static WebPage s_pages[] = {
 	//{ PAGE_WIDGET   , "widget"        , 0 , "widget" , 0 , 0 ,
 	//  "widget page",
 	//  sendPageWidget, 0 ,NULL,NULL,PG_NOAPI},
+
+	// this is the public addurl, /addurl, if you are using the 
+	// api use PAGE_ADDURL2 which is /admin/addurl. so we set PG_NOAPI here
 	{ PAGE_ADDURL    , "addurl"       , 0 , "add url" , 0 , 0 ,
 	  "Page where you can add url for spidering",
-	  sendPageAddUrl, 0 ,NULL,NULL,0},
+	  sendPageAddUrl, 0 ,NULL,NULL,PG_NOAPI},
 
 	{ PAGE_GET       , "get"           , 0 , "get" ,  0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_CLIENT, 
-	  "gets cached url",
+	  "gets cached web page",
 	  sendPageGet  , 0 ,NULL,NULL,0},
 	{ PAGE_LOGIN     , "login"         , 0 , "login" ,  0 , 0 ,
 	  //USER_PUBLIC | USER_MASTER | USER_ADMIN | USER_SPAM | USER_CLIENT, 
@@ -99,15 +102,15 @@ static WebPage s_pages[] = {
 
 	// use post now for the "site list" which can be big
 	{ PAGE_BASIC_SETTINGS, "admin/settings", 0 , "settings",1, M_POST , 
-	  "Basic settings page.", sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
+	  "basic settings page", sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_BASIC_STATUS, "admin/status", 0 , "status",1, 0 , 
-	  "Basic status page.", sendPageBasicStatus  , 0 ,NULL,NULL,0},
+	  "basic status page", sendPageBasicStatus  , 0 ,NULL,NULL,0},
 	//{ PAGE_BASIC_DIFFBOT, "admin/diffbot", 0 , "diffbot",1, 0 , 
 	//  "Basic diffbot page.",  sendPageBasicDiffbot  , 0 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_BASIC_SECURITY, "admin/security", 0 , "security",1, 0 , 
-	  "Basic security page.", sendPageGeneric  , 0 ,NULL,NULL,0},
+	  "basic security page", sendPageGeneric  , 0 ,NULL,NULL,0},
 	{ PAGE_BASIC_SEARCH, "", 0 , "search",1, 0 , 
-	  "Basic search page.", sendPageRoot  , 0 ,NULL,NULL,PG_NOAPI},
+	  "basic search page", sendPageRoot  , 0 ,NULL,NULL,PG_NOAPI},
 
 
 
@@ -115,7 +118,8 @@ static WebPage s_pages[] = {
 	  //USER_MASTER | USER_PROXY ,
 	  "master controls page",
 	  sendPageGeneric  , 0 ,NULL,NULL,0},
-	{ PAGE_SEARCH    , "admin/search"   , 0 , "search controls" ,  1 , 1,
+	// use POST for html head/tail and page root html. might be large.
+	{ PAGE_SEARCH    , "admin/search"   , 0 , "search controls" ,1,M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "search controls page",
 	  sendPageGeneric  , 0 ,NULL,NULL,0},
@@ -151,10 +155,11 @@ static WebPage s_pages[] = {
 	// { PAGE_SITES   , "admin/sites", 0 , "site list" ,  1 , 1,
 	//   "what sites can be spidered",
 	//   sendPageGeneric , 0 ,NULL,NULL,PG_NOAPI}, // sendPageBasicSettings
-	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 , 1,
+	{ PAGE_FILTERS   , "admin/filters", 0 , "url filters" ,  1 ,M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "prioritize urls for spidering",
-	  sendPageGeneric  , 0 ,NULL,NULL,0},
+	  // until we get this working, set PG_NOAPI
+	  sendPageGeneric  , 0 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_INJECT    , "admin/inject"   , 0 , "inject url" , 0,M_MULTI ,
 	  //USER_ADMIN | USER_MASTER   ,
 	  "inject url in the index here",
@@ -180,17 +185,17 @@ static WebPage s_pages[] = {
 	// master admin pages
 	{ PAGE_STATS     , "admin/stats"   , 0 , "stats" ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY , 
-	  "statistics page",
+	  "general statistics",
 	  sendPageStats    , 0 ,NULL,NULL,0},
 
-	{ PAGE_STATSDB , "admin/statsdb"  , 0 , "graph"  ,  0 , 0 ,
+	{ PAGE_GRAPH , "admin/graph"  , 0 , "graph"  ,  0 , 0 ,
 	  //USER_MASTER , 
-	  "statistics page",
-	  sendPageStatsdb  , 2 /*niceness*/ ,NULL,NULL,0},
+	  "query stats graph page",
+	  sendPageGraph  , 2 /*niceness*/ ,NULL,NULL,0},
 
 	{ PAGE_PERF      , "admin/perf"    , 0 , "performance"     ,  0 , 0 ,
 	  //USER_MASTER | USER_PROXY ,
-	  "master performance page",
+	  "function performance graph",
 	  sendPagePerf     , 0 ,NULL,NULL,0},
 
 	{ PAGE_SOCKETS   , "admin/sockets" , 0 , "sockets" ,  0 , 0 ,
@@ -237,7 +242,7 @@ static WebPage s_pages[] = {
 	{ PAGE_API , "admin/api"         , 0 , "api" , 0 , 0 ,
 	  //USER_MASTER | USER_ADMIN , 
 	  "api page",
-	  sendPageAPI , 0 ,NULL,NULL,0},
+	  sendPageAPI , 0 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_RULES  , "admin/siterules", 0 , "site rules", 1, M_POST,
 	  //USER_ADMIN | USER_MASTER   , 
 	  "site rules page",
@@ -258,7 +263,7 @@ static WebPage s_pages[] = {
 
 	{ PAGE_SPIDERDB  , "admin/spiderdb" , 0 , "spider queue" ,  0 , 0 ,
 	  //USER_ADMIN | USER_MASTER   , 
-	  "spiderdb page",
+	  "spider queue",
 	  sendPageSpiderdb , 0 ,NULL,NULL,0},
 	//{ PAGE_PRIORITIES, "admin/priorities"  , 0 , "priority controls",1,1,
 	//  //USER_ADMIN | USER_MASTER   , 
@@ -293,7 +298,7 @@ static WebPage s_pages[] = {
 	  sendPageParser   , 2 ,NULL,NULL,PG_NOAPI},
 	{ PAGE_SITEDB    , "admin/tagdb"  , 0 , "tagdb"  ,  0 , M_POST,
 	  //USER_MASTER | USER_ADMIN,
-	  "tagdb page to add/remove/get tags",
+	  "add/remove/get tags for sites/urls",
 	  sendPageTagdb ,  0 ,NULL,NULL,0},	  
 	{ PAGE_CATDB     , "admin/catdb"   , 0 , "catdb"           ,  0,M_POST,
 	  //USER_MASTER | USER_ADMIN,
@@ -518,6 +523,9 @@ bool Pages::sendDynamicReply ( TcpSocket *s , HttpRequest *r , long page ) {
 	if ( ! publicPage && ! isAdmin )
 		return sendPageLogin ( s , r );
 
+	if ( page == PAGE_CRAWLBOT && ! isAdmin )
+		log("pages: accessing a crawlbot page without admin privs. "
+		    "no parms can be changed.");
 
 	/*
 	// is request coming from a local ip?
@@ -1088,9 +1096,17 @@ bool Pages::printAdminTop (SafeBuf     *sb   ,
 	if ( isBasic ) menu = "basic";
 	sb->safePrintf("<br>");
 	sb->safePrintf("<b><font color=gray size=+2>"
-		       "%s &gt; %s &gt; %s</font></b>"
+		       "%s &gt; %s &gt; %s "
+		       "&nbsp; "
+		       "</font>"
+		       "</b>"
+		       //"<a href=/%s?c=%s&showparms=1&format=xml>xml</a> "
+		       //"<a href=/%s?c=%s&showparms=1&format=json>json</a> "
 		       "<br><br>\n", 
-		       coll, menu, s_pages[page].m_name);
+		       coll, menu, s_pages[page].m_name
+		       //,s_pages[page].m_filename , coll
+		       //,s_pages[page].m_filename , coll
+		       );
 
 
 
@@ -2479,7 +2495,10 @@ bool sendPageAPI ( TcpSocket *s , HttpRequest *r ) {
 	g_pages.printLogo   ( &p , coll );
 	p.safePrintf("</td></tr></table><br><br>");
 
-
+	p.safePrintf("NOTE: All APIs support both GET and POST method. "
+		     "If the size of your request is more than 2K you "
+		     "should use POST.");
+	p.safePrintf("<br><br>");
 
 	p.safePrintf("<div style=padding-left:10%%>"
 		     "<font size=+2><b>API by pages</b></font>"
@@ -2592,8 +2611,17 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf("</a>");
 
 	// description of page
-	sb->safePrintf("<font size=-0> - %s</font><br>",
-		       s_pages[PAGENUM].m_desc);
+	sb->safePrintf("<font size=-0> - %s "
+		       " &nbsp; "
+		       "[ <b>output response in</b> "
+		       "<a href=/%s?showparms=1&format=xml>xml</a> "
+		       "or <a href=/%s?showparms=1&format=json>json</a> "
+		       "or <a href=/%s>html</a> ] "
+		       "</font><br>",
+		       s_pages[PAGENUM].m_desc,
+		       pageStr,
+		       pageStr,
+		       pageStr);
 	sb->safePrintf("</div><br>");
 	
 	// begin new list of centered tables
@@ -2603,7 +2631,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf ( 
 			"<table style=max-width:80%%; %s>"
 			"<tr class=hdrow><td colspan=9>"
-			"<center><b>Parms</b></tr></tr>"
+			"<center><b>Input</b></tr></tr>"
 			"<tr bgcolor=#%s>"
 			"<td><b>#</b></td>"
 			"<td><b>parm</b></td>"
@@ -2615,8 +2643,74 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 			, TABLE_STYLE
 			, DARK_BLUE );
 	
-	const char *blue = LIGHT_BLUE;
+	const char *blues[] = {DARK_BLUE,LIGHT_BLUE};
 	long count = 1;
+
+	//
+	// every page supports the:
+	// 1) &format=xml|html|json 
+	// 2) &showparms=0|1
+	// 3) &c=<collectionName>
+	// parms. we support them in sendPageGeneric() for pages like
+	// /admin/master /admin/search /admin/spider so you can see
+	// the settings.
+	// put these in Parms.cpp, but use PF_DISPLAY flag so we ignore them
+	// in convertHttpRequestToParmList() and we do not show them on the
+	// page itself.
+	//
+
+	// page display/output parms
+	sb->safePrintf("<tr bgcolor=%s>"
+		       "<td>%li</td>\n"
+		       "<td><b>format</b></td>"
+		       "<td>STRING</td>"
+		       "<td>output format</td>"
+		       "<td>html</td>"
+		       "<td>Display output in this format.</td>"
+		       "</tr>"
+		       , blues[count%2]
+		       , count
+		       );
+	count++;
+
+	// for pages that have settings...
+	if ( PAGENUM == PAGE_MASTER ||
+	     PAGENUM == PAGE_SEARCH ||
+	     PAGENUM == PAGE_SPIDER ) {
+		sb->safePrintf("<tr bgcolor=%s>"
+			       "<td>%li</td>\n"
+			       "<td><b>showparms</b></td>"
+			       "<td>BOOL (0 or 1)</td>"
+			       "<td>show parms</td>"
+			       "<td></td>"
+			       "<td>Display the values of all settings.</td>"
+			       "</tr>"
+			       , blues[count%2]
+			       , count
+			       );
+		count++;
+	}
+
+
+	// . master controls are for all collections so no need for this
+	// . we already have this in the parms list for some pages so only
+	//   show for selected pages here
+	// if ( PAGENUM != PAGE_MASTER ) {
+	// 	sb->safePrintf("<tr bgcolor=%s>"
+	// 		       "<td>%li</td>\n"
+	// 		       "<td><b>c</b></td>"
+	// 		       "<td>STRING</td>"
+	// 		       "<td>Collection</td>"
+	// 		       "<td></td>"
+	// 		       "<td>The name of the collection. "
+	// 		       "<font color=green><b>REQUIRED</b></font>"
+	// 		       "</td>"
+	// 		       "</tr>"
+	// 		       , blues[count%2]
+	// 		       , count
+	// 		       );
+	// 	count++;
+	// }
 
 	//char *lastPage = NULL;
 	//Parm *lastParm = NULL;
@@ -2643,10 +2737,6 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 
 		if ( pageNum != PAGENUM ) continue;
 
-		if ( blue == (const char *)LIGHT_BLUE ) blue = DARK_BLUE;
-		else if(blue==(const char *)DARK_BLUE ) blue = LIGHT_BLUE;
-
-
 		SafeBuf tmp;
 		char diff = 0;
 		bool printVal = false;
@@ -2664,7 +2754,7 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 		if ( diff == 1 ) 
 			sb->safePrintf ( "<tr bgcolor=orange>");
 		else
-			sb->safePrintf ( "<tr bgcolor=#%s>",blue);
+			sb->safePrintf ( "<tr bgcolor=#%s>",blues[count%2]);
 
 		sb->safePrintf("<td>%li</td>",count++);
 
@@ -2721,6 +2811,17 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	// end input parm table we started below
 	sb->safePrintf("</table><br>\n\n");
 
+	// do not print the tables below now,
+	// we provide output links for xml, json and html
+	sb->safePrintf("</center>");
+
+	if ( PAGENUM != PAGE_GET &&
+	     PAGENUM != PAGE_RESULTS )
+		return true;
+
+
+	sb->safePrintf("<center>");
+
 	//
 	// done printing parm table
 	//
@@ -2731,22 +2832,82 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf ( 
 			"<table style=max-width:80%%; %s>"
 			"<tr class=hdrow><td colspan=9>"
-			"<center><b>XML Output</b></tr></tr>"
-			"<tr><td>"
+			"<center><b>Example XML Output</b> "
+			"(&format=xml)</tr></tr>"
+			"<tr><td bgcolor=%s>"
 			, TABLE_STYLE
+			, LIGHT_BLUE
 			);
-	sb->safePrintf("<pre>\n");
-	char *desc = s_pages[PAGENUM].m_xmlOutputDesc;
-	if ( ! desc )
-		desc = "<response>\n"
-			"\t<status>N</status> "
-			"# 0 on success, otherwise an "
-			"error code\n"
-			"\t<statusMsg>S</statusMsg> "
-			"# \"Success\" on success, "
-			"otherwise the error message."
-			"</response>";
-	sb->htmlEncode ( desc);
+
+
+	// bool showParms = false;
+	// if ( PAGENUM == PAGE_MASTER ||
+	//      PAGENUM == PAGE_SPIDER ||
+	//      PAGENUM == PAGE_SEARCH 
+	//      ) 
+	// 	showParms = true;
+
+
+	sb->safePrintf("<pre style=max-width:500px;>\n");
+
+	char *get = "<html><title>Some web page title</title>"
+		"<head>My first web page</head></html>";
+
+	// example output in xml
+	if ( PAGENUM == PAGE_GET ) {
+		SafeBuf xb;
+		xb.safePrintf("<response>\n"
+			      "\t<statusCode>0</statusCode>\n"
+			      "\t<statusMsg>Success</statusMsg>\n"
+			      "\t<url><![CDATA[http://www.doi.gov/]]></url>\n"
+			      "\t<docId>34111603247</docId>\n"
+			      "\t<cachedTimeUTC>1404512549</cachedTimeUTC>\n"
+			      "\t<cachedTimeStr>Jul 04, 2014 UTC"
+			      "</cachedTimeStr>\n"
+			      "\t<content><![CDATA[");
+		xb.cdataEncode(get);
+		xb.safePrintf("]]></content>\n");
+		xb.safePrintf("</response>\n");
+		sb->htmlEncode ( xb.getBufStart() );
+	}
+
+	if ( PAGENUM == PAGE_RESULTS ) {
+		SafeBuf xb;
+		xb.safePrintf("<response>\n"
+			      "\t<statusCode>0</statusCode>\n"
+			      "\t<statusMsg>Success</statusMsg>\n"
+			      "\t<currentTimeUTC>1404513734</currentTimeUTC>\n"
+			      "\t<responseTimeMS>284</responseTimeMS>\n"
+			      "\t<docsInCollection>226</docsInCollection>\n"
+			      "\t<hits>193</hits>\n"
+			      "\t<moreResultsFollow>1</moreResultsFollow>\n"
+
+			      "\t<result>\n"
+			      "\t\t<imageBase64>/9j/4AAQSkZJRgABAQAAAQABA..."
+			      "</imageBase64>\n"
+			      "\t\t<imageHeight>350</imageHeight>\n"
+			      "\t\t<imageWidth>223</imageWidth>\n"
+			      "\t\t<origImageHeight>470</origImageHeight>\n"
+			      "\t\t<origImageWidth>300</origImageWidth>\n"
+			      "\t\t<title><![CDATA[U.S....]]></title>\n"
+			      "\t\t<sum>Department of the Interior protects "
+			      "America's natural resources and</sum>\n"
+			      "\t\t<url><![CDATA[www.doi.gov]]></url>\n"
+			      "\t\t<size>  64k</size>\n"
+			      "\t\t<docId>34111603247</docId>\n"
+			      "\t\t<site>www.doi.gov</site>\n"
+			      "\t\t<spidered>1404512549</spidered>\n"
+			      "\t\t<firstIndexedDateUTC>1404512549"
+			      "</firstIndexedDateUTC>\n"
+			      "\t\t<contentHash32>2680492249</contentHash32>\n"
+			      "\t\t<language>English</language>\n"
+			      "\t</result>\n"
+
+			      "</response>\n");
+		sb->htmlEncode ( xb.getBufStart() );
+	}
+
+
 	sb->safePrintf("</pre>");
 	sb->safePrintf ( "</td></tr></table><br>\n\n" );
 	
@@ -2756,23 +2917,74 @@ bool printApiForPage ( SafeBuf *sb , long PAGENUM , CollectionRec *cr ) {
 	sb->safePrintf ( 
 			"<table style=max-width:80%%; %s>"
 			"<tr class=hdrow><td colspan=9>"
-			"<center><b>JSON Output</b></tr></tr>"
-			"<tr><td>"
+			"<center><b>Example JSON Output</b> "
+			"(&format=json)</tr></tr>"
+			"<tr><td bgcolor=%s>"
 			, TABLE_STYLE
+			, LIGHT_BLUE
 			);
 	sb->safePrintf("<pre>\n");
-	desc = s_pages[PAGENUM].m_jsonOutputDesc;
-	if ( ! desc )
-		desc = "{ \"response:\"{\n"
-			"\t\"status\":N, "
-			"# 0 on success, otherwise an "
-			"error code\n"
-			"\t\"statusMsg\":\"xxx\" "
-			"# xxx is \"Success\" on success, "
-			"otherwise the error message.\n"
-			"\t}\n"
-			"}";
-	sb->htmlEncode ( desc);
+
+
+	// example output in xml
+	if ( PAGENUM == PAGE_GET ) {
+		sb->safePrintf(
+			       "{ \"response:\"{\n"
+			       "\t\"statusCode\":0,\n"
+			       "\t\"statusMsg\":\"Success\",\n"
+			       "\t\"url\":\"http://www.doi.gov/\",\n"
+			       "\t\"docId\":34111603247,\n"
+			       "\t\"cachedTimeUTC\":1404512549,\n"
+			       "\t\"cachedTimeStr\":\"Jul 04, 2014 UTC\",\n"
+			       "\t\"content\":\"");
+		SafeBuf js;
+		js.jsonEncode(get);
+		sb->htmlEncode(js.getBufStart());
+		sb->safePrintf("\"\n"
+			       "}\n"
+			       "}\n");
+	}
+
+	if ( PAGENUM == PAGE_RESULTS ) {
+		sb->safePrintf(
+			       "{ \"response:\"{\n"
+			       "\t\"statusCode\":0,\n"
+			       "\t\"statusMsg\":\"Success\",\n"
+
+			       "\t\"currentTimeUTC\":1404588231,\n"
+			       "\t\"responseTimeMS\":312,\n"
+			       "\t\"docsInCollection\":226,\n"
+			       "\t\"hits\":193,\n"
+			       "\t\"moreResultsFollow\":1,\n"
+			       "\t\"results\":[\n"
+
+			       "\t{\n"
+			       "\t\t\"imageBase64\":\"/9j/4AAQSkZJR...\",\n"
+			       "\t\t\"imageHeight\":223,\n"
+			       "\t\t\"imageWidth\":350,\n"
+			       "\t\t\"origImageHeight\":300,\n"
+			       "\t\t\"origImageWidth\":470,\n"
+			       "\t\t\"title\":\"U.S....\",\n"
+			       "\t\t\"sum\":\"Department of the Interior "
+			       "protects America's natural resources.\",\n"
+			       "\t\t\"url\":\"www.doi.gov\",\n"
+			       "\t\t\"size\":\"  64k\",\n"
+			       "\t\t\"docId\":34111603247,\n"
+			       "\t\t\"site\":\"www.doi.gov\",\n"
+			       "\t\t\"spidered\":1404512549,\n"
+			       "\t\t\"firstIndexedDateUTC\":1404512549,\n"
+			       "\t\t\"contentHash32\":2680492249,\n"
+			       "\t\t\"language\":\"English\"\n"
+			       "\t}\n"
+			       "\t,\n"
+			       "\t...\n"
+
+			       "]\n"
+			       "}\n"
+			       );
+	}
+
+
 	sb->safePrintf("</pre>");
 	sb->safePrintf ( "</td></tr></table><br>\n\n" );
 	

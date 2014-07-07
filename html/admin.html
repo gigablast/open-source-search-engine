@@ -835,7 +835,7 @@ Now if you are <a href=#input>interfacing to Gigablast</a> from another program 
 <table cellpadding=1 border=0 width=100% bgcolor=#0079ba>
 <tr><td><center><b><font color=#ffffff size=+1>Building a DMOZ Based Directory</td></tr></table>
 <br>
-&lt;<i>Last Updated October 2013</i>&gt;
+&lt;<i>Last Updated July 2014</i>&gt;
 <br>
 <br>
 
@@ -849,9 +849,9 @@ Now if you are <a href=#input>interfacing to Gigablast</a> from another program 
 <br>           $ wget http://rdf.dmoz.org/rdf/structure.rdf.u8.gz
 <br>           $ gunzip structure.rdf.u8.gz</b>
 <br>    
-<li>Execute <i>dmozparse</i> in its directory with the <i>new</i> option to generate the catdb dat files.<br>        <b>$ dmozparse new</b><br>    
+<li>Execute <i>dmozparse</i> in its directory with the <i>new</i> option to generate the catdb dat files.<br>        <b>$ ./dmozparse new</b><br>    
 
-<li>Execute the installcat script command on host 0 to distribute the catdb files to all the hosts.<br>This just does an scp/rcp from host 0 to the other hosts listed in <a href=#hosts>hosts.conf</a>.<br>        <b>$ gb installcat</b><br>
+<li>Execute the installcat script command on host 0 to distribute the catdb files to all the hosts.<br>This just does an scp/rcp from host 0 to the other hosts listed in <a href=#hosts>hosts.conf</a>.<br>        <b>$ ./gb installcat</b><br>
 
     <li>Make sure all spiders are stopped and inactive.<br>
 
@@ -865,7 +865,7 @@ Now if you are <a href=#input>interfacing to Gigablast</a> from another program 
 <li>Gigablast provides the unique ability to search the content of the pages in the DMOZ directory. But in order to search the pages in DMOZ we have to index them. 
 So execute <i>dmozparse</i> with the <i>urldump -s</i> option to create the html/gbdmoz.urls.txt.* files which contain all the URLs in DMOZ. (Excluding URLs that contained hashtags, '#'.)
 
-<br><b>$ dmozparse urldump -s</b>
+<br><b>$ ./dmozparse urldump -s</b>
 
 <br><li>Now tell Gigablast to index each URL listed in each gbdmoz.urls.txt.* file. Make sure you specify the collection you are using for DMOZ, in the example below it uses <i>main</i>. You can use the <a href=/addurl>add url</a> page to add the gbdmoz.urls.txt.* files or you can use curl (or wget) like:
 <br>

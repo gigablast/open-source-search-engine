@@ -17781,6 +17781,65 @@ TimeZone tzs[] = {
 // hash table of timezone information
 static HashTableX s_tzt;
 
+static long long h_mountain;
+static long long h_eastern;
+static long long h_central;
+static long long h_pacific;
+static long long h_time2;
+static long long h_mdt;
+static long long h_at2;
+
+bool initTimeZoneTable ( ) {
+
+	// if already initalized return true
+	if ( s_tzt.m_numSlotsUsed ) return true;
+
+	// init static wids
+	h_mountain = hash64n("mountain");
+	h_eastern  = hash64n("eastern");
+	h_central  = hash64n("central");
+	h_pacific  = hash64n("pacific");
+	h_time2    = hash64n("time");
+	h_mdt      = hash64n("mdt");
+	h_at2      = hash64n("at");
+	// set up the time zone hashtable
+	if ( ! s_tzt.set( 8,4, 300,NULL,0,false,0,"tzts"))
+		return false;
+	// load time zone names and their modifiers into hashtable
+	for ( long i = 0 ; *tzs[i].m_name ; i++ ) {
+		char *t    = tzs[i].m_name;
+		long  tlen = gbstrlen(t);
+		// hash like Words.cpp computeWordIds
+		uint64_t h    = hash64Lower_utf8( t , tlen );
+		// use the ptr as the value
+		if ( ! s_tzt.addKey ( &h, &tzs[i] ) )
+			return false;
+	}
+	return true;
+}
+
+// return what we have to add to UTC to get time in locale specified by "s"
+// where "s" is like "PDT" "MST" "EST" etc. if unknown return 999999
+long getTimeZone ( char *s ) {
+	if ( ! s ) return BADTIMEZONE;
+	char *send = s;
+	// point to end of the potential timezone
+	for ( ; *send && isalnum(*send) ; send++ );
+	// hash it
+	uint64_t h = hash64Lower_utf8( s , send -s );
+	// make sure table is ready
+	initTimeZoneTable();
+	// look it up
+	long slot = s_tzt.getSlot( &h );
+	if ( slot < 0 ) return 999999;
+	// did we find it in the table?
+	TimeZone *tzptr = (TimeZone *)s_tzt.getValueFromSlot ( slot );
+	// no error, return true
+	long secs = tzptr->m_hourMod * 3600;
+	secs += tzptr->m_minMod * 60;
+	return secs;
+}
+
 // . returns how many words starting at i are in the time zone
 // . 0 means not a timezone
 long getTimeZoneWord ( long i ,
@@ -17793,40 +17852,14 @@ long getTimeZoneWord ( long i ,
 	*tzptr = NULL;
 	// only init table once
 	bool s_init16 = false;
-	static long long h_mountain;
-	static long long h_eastern;
-	static long long h_central;
-	static long long h_pacific;
-	static long long h_time;
-	static long long h_mdt;
-	static long long h_at;
 	// init the hash table of month names
 	if ( ! s_init16 ) {
-		// init static wids
-		h_mountain = hash64n("mountain");
-		h_eastern  = hash64n("eastern");
-		h_central  = hash64n("central");
-		h_pacific  = hash64n("pacific");
-		h_time     = hash64n("time");
-		h_mdt      = hash64n("mdt");
-		h_at       = hash64n("at");
-		// set up the time zone hashtable
-		if ( ! s_tzt.set( 8,4, 300,NULL,0,false,niceness,"tzts"))
-			return -1;
-		// load time zone names and their modifiers into hashtable
-		for ( long i = 0 ; *tzs[i].m_name ; i++ ) {
-			char *t    = tzs[i].m_name;
-			long  tlen = gbstrlen(t);
-			// hash like Words.cpp computeWordIds
-			uint64_t h    = hash64Lower_utf8( t , tlen );
-			// use the ptr as the value
-			if ( ! s_tzt.addKey ( &h, &tzs[i] ) )
-				return -1;
-		}
+		// on error we return -1 from here
+		if ( ! initTimeZoneTable() ) return -1;
 		s_init16 = true;
 	}
 	// this is too common of a word!
-	if ( wids[i] == h_at ) return 0;
+	if ( wids[i] == h_at2 ) return 0;
 
 	long slot = s_tzt.getSlot( &wids[i] );
 	// return this, assume just one word
@@ -17834,7 +17867,7 @@ long getTimeZoneWord ( long i ,
 	// . "mountain time"
 	// . this removes the event title "M-F 8:30 AM-5:30 PM Mountain Time"
 	//   from the event (horus) on http://www.sfreporter.com/contact_us/
-	if ( slot<0 && i+2<nw && wids[i+2] == h_time ) {
+	if ( slot<0 && i+2<nw && wids[i+2] == h_time2 ) {
 		if ( wids[i] == h_mountain ) {
 			slot = s_tzt.getSlot (&h_mdt);
 			tznw = 3;

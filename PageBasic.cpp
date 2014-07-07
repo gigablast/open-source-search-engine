@@ -63,7 +63,7 @@ public:
 	// hash of the subdomain or domain for this line in sitelist
 	long m_thingHash32;
 	// ptr to the line in CollectionRec::m_siteListBuf
-	char *m_patternStr;
+	long m_patternStrOff;
 	// offset of the url path in the pattern, 0 means none
 	short m_pathOff; 
 	short m_pathLen;
@@ -315,7 +315,10 @@ bool updateSiteListBuf ( collnum_t collnum ,
 		pd.m_thingHash32 = u.getHostHash32();
 		// . ptr to the line in CollectionRec::m_siteListBuf. 
 		// . includes pointing to "exact:" too i guess and tag: later.
-		pd.m_patternStr = start;
+		// . store offset since CommandUpdateSiteList() passes us
+		//   a temp buf that will be freed before copying the buf
+		//   over to its permanent place at cr->m_siteListBuf
+		pd.m_patternStrOff = start - siteListArg;
 		// offset of the url path in the pattern, 0 means none
 		pd.m_pathOff = 0;
 		// scan url pattern, it should start at "s"
@@ -432,30 +435,66 @@ char *getMatchingUrlPattern ( SpiderColl *sc , SpiderRequest *sreq ) {
 	// we handle.
 	long slot = dt->getSlot ( &sreq->m_domHash32 );
 
+	char *buf = cr->m_siteListBuf.getBufStart();
+
 	// loop over all the patterns that contain this domain and see
 	// the first one we match, and if we match a negative one.
 	for ( ; slot >= 0 ; slot = dt->getNextSlot(slot,&sreq->m_domHash32)) {
 		// get pattern
 		PatternData *pd = (PatternData *)dt->getValueFromSlot ( slot );
+		// point to string
+		char *patternStr = buf + pd->m_patternStrOff;
 		// is it negative? return NULL if so so url will be ignored
-		//if ( pd->m_patternStr[0] == '-' ) 
+		//if ( patternStr[0] == '-' ) 
 		//	return NULL;
 		// otherwise, it has a path. skip if we don't match path ptrn
 		if ( pd->m_pathOff ) {
 			if ( ! myPath ) myPath = sreq->getUrlPath();
 			if ( strncmp (myPath,
-				      pd->m_patternStr + pd->m_pathOff,
+				      patternStr + pd->m_pathOff,
 				      pd->m_pathLen ) )
 				continue;
 		}
+
+		// for entries like http://domain.com/ we have to match
+		// protocol and url can NOT be like www.domain.com to match.
+		// this is really like a regex like ^http://xyz.com/poo/boo/
+		if ( (patternStr[0]=='h' ||
+		      patternStr[0]=='H') &&
+		     ( patternStr[1]=='t' ||
+		       patternStr[1]=='T' ) &&
+		     ( patternStr[2]=='t' ||
+		       patternStr[2]=='T' ) &&
+		     ( patternStr[3]=='p' ||
+		       patternStr[3]=='P' ) ) {
+			char *x = patternStr+4;
+			// is it https:// ?
+			if ( *x == 's' || *x == 'S' ) x++;
+			// watch out for subdomains like http.foo.com
+			if ( *x != ':' ) goto nomatch;
+			// ok, we have to substring match exactly. like 
+			// ^http://xyssds.com/foobar/
+			char *a = patternStr;
+			char *b = sreq->m_url;
+			for ( ; ; a++, b++ ) {
+				// stop matching when pattern is exhausted
+				if ( is_wspace_a(*a) || ! *a ) 
+					return patternStr;
+				if ( *a != *b ) break;
+			}
+			// we failed to match "pd" so try next line
+			continue;
+		}
+ nomatch:		
+
 		// was the line just a domain and not a subdomain?
 		if ( pd->m_thingHash32 == sreq->m_domHash32 )
 			// this will be false if negative pattern i guess
-			return pd->m_patternStr;
+			return patternStr;
 		// was it just a subdomain?
 		if ( pd->m_thingHash32 == sreq->m_hostHash32 )
 			// this will be false if negative pattern i guess
-			return pd->m_patternStr;
+			return patternStr;
 	}
 
 
@@ -573,7 +612,25 @@ bool printSitePatternExamples ( SafeBuf *sb , HttpRequest *hr ) {
 		      "Spider the url "
 		      "<i>http://www.goodstuff.com/</i> and spider "
 		      "any links we harvest that start with "
-		      "<i>http://www.goodstuff.com/</i>"
+		      "<i>http://www.goodstuff.com/</i>. NOTE: if the url "
+		      "www.goodstuff.com redirects to foo.goodstuff.com then "
+		      "foo.goodstuff.com still gets spidered "
+		      "because it is considered to be manually added, but "
+		      "no other urls from foo.goodstuff.com will be spidered."
+		      "</td>"
+		      "</tr>"
+
+		      // protocol and subdomain match
+		      "<tr>"
+		      "<td>http://justdomain.com/foo/</td>"
+		      "<td>"
+		      "Spider the url "
+		      "<i>http://justdomain.com/foo/</i> and spider "
+		      "any links we harvest that start with "
+		      "<i>http://justdomain.com/foo/</i>. "
+		      "Urls that start with "
+		      "<i>http://<b>www.</b>justdomain.com/</i>, for example, "
+		      "will NOT match this."
 		      "</td>"
 		      "</tr>"
 

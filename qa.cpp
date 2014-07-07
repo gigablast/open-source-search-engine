@@ -4,15 +4,18 @@
 
 static long s_failures = 0;
 
-bool getUrl( char *path , void (* callback) (void *state, TcpSocket *sock) ) {
+bool getUrl( char *path , 
+	     void (* callback) (void *state, TcpSocket *sock) ,
+	     char *post = NULL ) {
 	SafeBuf sb;
 	sb.safePrintf ( "http://%s:%li%s"
 			, iptoa(g_hostdb.m_myHost->m_ip)
-			, (long)g_hostdb.m_myHost->m_port
+			, (long)g_hostdb.m_myHost->m_httpPort
 			, path
 			);
 	Url u;
 	u.set ( sb.getBufStart() );
+	log("qa: getting %s",sb.getBufStart());
 	if ( ! g_httpServer.getDoc ( u.getUrl() ,
 				     0 , // ip
 				     0 , // offset
@@ -25,7 +28,13 @@ bool getUrl( char *path , void (* callback) (void *state, TcpSocket *sock) ) {
 				     0, // proxyport
 				     -1, // maxtextdoclen
 				     -1, // maxotherdoclen
-				     NULL ) ) // useragent
+				     NULL , // useragent
+				     "HTTP/1.0" , // protocol
+				     true , // doPost
+				     NULL , // cookie
+				     NULL , // additionalHeader
+				     NULL , // fullRequest
+				     post ) )
 		return false;
 	// error?
 	log("qa: getUrl error: %s",mstrerror(g_errno));
@@ -34,27 +43,90 @@ bool getUrl( char *path , void (* callback) (void *state, TcpSocket *sock) ) {
 
 bool qatest ( ) ;
 
-void qatestWrapper ( void *state , TcpSocket *sock ) { qatest(); }	
+void markOut ( char *reply , char *needle ) {
 
-// return false if blocked, true otherwise
-bool addColl ( ) {
-	static bool s_flag = false;
-	if ( s_flag ) return true;
-	s_flag = true;
-	return getUrl ( "/admin/addcoll?c=qatest123" , qatestWrapper );
+	if ( ! reply ) return;
+
+	char *s = strstr ( reply , needle );
+	if ( ! s ) return;
+
+	for ( ; *s && ! is_digit(*s); s++ );
+
+	// find end of digit stream
+	//char *end = s;
+	//while ( ; *end && is_digit(*s); end++ );
+	// just bury the digit stream now, zeroing out was not
+	// a consistent LENGTH if we had 10 hits vs 9... making the hash 
+	// different
+
+	// space out digits
+	for ( ; *s && is_digit(*s); s++ ) *s = ' ';
 }
 
+// do not hash 
+long qa_hash32 ( char *s ) {
+	unsigned long h = 0;
+	long k = 0;
+	for ( long i = 0 ; s[i] ; i++ ) {
+		// skip if not first space and back to back spaces
+		if ( s[i] == ' ' &&i>0 && s[i-1]==' ') continue;
+		h ^= g_hashtab [(unsigned char)k] [(unsigned char)s[i]];
+		k++;
+	}
+	return h;
+}
+
+long s_replyCRC = 0;
+TcpSocket *s_sock = NULL;
+
+void qatestWrapper ( void *state , TcpSocket *sock ) { 
+	log("qa: got reply(%li)=%s",sock->m_readOffset,sock->m_readBuf);
+
+	// get mime
+	HttpMime mime;
+	mime.set ( sock->m_readBuf , sock->m_readOffset , NULL );
+	// only hash content since mime has a timestamp in it
+	char *content = mime.getContent();
+	long  contentLen = mime.getContentLen();
+	if ( content[contentLen] ) { char *xx=NULL;*xx=0; }
+
+	char *reply = sock->m_readBuf;
+
+	// take out <responseTimeMS>
+	markOut ( reply , "<currentTimeUTC>");
+
+	markOut ( reply , "<responseTimeMS>");
+
+	// until i figure this one out, take it out
+	markOut ( reply , "<docsInCollection>");
+
+	// until i figure this one out, take it out
+	markOut ( reply , "<hits>");
+
+	// make checksum. we ignore back to back spaces so this
+	// hash works for <docsInCollection>10 vs <docsInCollection>9
+	s_replyCRC = qa_hash32 ( content );
+
+	// this too is used for recording the reply into a file on disk
+	s_sock = sock;
+
+	// continue qa loop
+	qatest(); 
+
+}	
 
 // first inject a set list of urls
 static char  **s_urlPtrs = NULL;
-static long    s_numUrls = 0;
+static char  **s_contentPtrs = NULL;
 static SafeBuf s_ubuf1;
 static SafeBuf s_ubuf2;
+static SafeBuf s_cbuf2;
 
 
 bool loadUrls ( ) {
 	static bool s_loaded = false;
 	if ( s_loaded ) return true;
+	s_loaded = true;
 	// use injectme3 file
 	s_ubuf1.load("./injectme3");
 	// scan for +++URL: xxxxx
@@ -62,6 +134,8 @@ bool loadUrls ( ) {
 	for ( ; *s ; s++ ) {
 		if ( strncmp(s,"+++URL: ",8) ) continue;
 		// got one
+		// \0 term it for s_contentPtrs below
+		*s = '\0';
 		// find end of it
 		s += 8;
 		char *e = s;
@@ -72,27 +146,16 @@ bool loadUrls ( ) {
 		s_ubuf2.pushLong((long)s);
 		// skip past that
 		s = e;
+		// point to content
+		s_cbuf2.pushLong((long)(s+1));
 	}
 	// make array of url ptrs
 	s_urlPtrs = (char **)s_ubuf2.getBufStart();
+	s_contentPtrs= (char **)s_cbuf2.getBufStart();
 	return true;
 }
 
-bool injectUrls ( ) {
-	loadUrls();
-	static long s_ii = 0;
-	for ( ; s_ii < s_numUrls ; ) {
-		// pre-inc it
-		s_ii++;
-		// inject using html api
-		SafeBuf sb;
-		sb.safePrintf("/admin/inject?c=qatest123&delete=0&u=");
-		sb.urlEncode ( s_urlPtrs[s_ii] );
-		return getUrl ( sb.getBufStart() , qatestWrapper );
-	}
-	return true;
-}
-
+/*
 static char *s_queries[] = {
 	"the",
 	"+the",
@@ -106,116 +169,7 @@ static char *s_queries[] = {
 	"cat -dog",
 	"site:wisc.edu"
 };
-
-static long s_checksums[] = {
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0
-};
-
-static long s_qi1 = 0;
-
-void doneSearching1 ( void *state , TcpSocket *sock ) {
-	//loadQueries1();
-	long ii = s_qi1 - 1;
-	// get checksum of it
-	HttpMime hm;
-	hm.set ( sock->m_readBuf , sock->m_readOffset , NULL );
-	char *page = sock->m_readBuf + hm.getMimeLen() ;
-	// we will need to ignore fields like the latency etc.
-	// perhaps pass that in as a cgi parm. &qa=1
-	long crc = hash32n ( page );
-	if ( crc != s_checksums[ii] ) {
-		log("qatest: query '%s' checksum %lu != %lu",
-		    s_queries[ii],
-		    s_checksums[ii],
-		    crc);
-		s_failures++;
-	}
-	// resume the qa loop
-	qatest();
-}
-		
-
-// ensure search results are consistent
-bool searchTest1 () {
-	long nq = sizeof(s_queries)/sizeof(char *);
-	for ( ; s_qi1 < nq ; ) {
-		// pre-inc it
-		s_qi1++;
-		// inject using html api
-		SafeBuf sb;
-		// qa=1 tell gb to exclude "variable" or "random" things
-		// from the serps so we can checksum it consistently
-		sb.safePrintf ( "/search?c=qatest123&qa=1&q=" );
-		sb.urlEncode ( s_queries[s_qi1] );
-		return getUrl ( sb.getBufStart() , doneSearching1 );
-	}
-	return true;
-}	
-
-static long s_qi2 = 0;
-
-void doneSearching2 ( void *state , TcpSocket *sock ) {
-	//loadQueries1();
-	long ii = s_qi2 - 1;
-	// get checksum of it
-	HttpMime hm;
-	hm.set ( sock->m_readBuf , sock->m_readOffset , NULL );
-	char *page = sock->m_readBuf + hm.getMimeLen() ;
-	// we will need to ignore fields like the latency etc.
-	// perhaps pass that in as a cgi parm. &qa=1
-	long crc = hash32n ( page );
-	if ( crc != s_checksums[ii] ) {
-		log("qatest: query '%s' checksum %lu != %lu",
-		    s_queries[ii],
-		    s_checksums[ii],
-		    crc);
-		s_failures++;
-	}
-	// resume the qa loop
-	qatest();
-}
-		
-
-// ensure search results are consistent
-bool searchTest2 () {
-	long nq = sizeof(s_queries)/sizeof(char *);
-	for ( ; s_qi2 < nq ; ) {
-		// pre-inc it
-		s_qi2++;
-		// inject using html api
-		SafeBuf sb;
-		// qa=1 tell gb to exclude "variable" or "random" things
-		// from the serps so we can checksum it consistently
-		sb.safePrintf ( "/search?c=qatest123&qa=1&q=" );
-		sb.urlEncode ( s_queries[s_qi2] );
-		return getUrl ( sb.getBufStart() , doneSearching2 );
-	}
-	return true;
-}	
-
-bool deleteUrls ( ) {
-	static long s_ii2 = 0;
-	for ( ; s_ii2 < s_numUrls ; ) {
-		// pre-inc it
-		s_ii2++;
-		// reject using html api
-		SafeBuf sb;
-		sb.safePrintf( "/admin/inject?c=qatest123&delete=1&u=");
-		sb.urlEncode ( s_urlPtrs[s_ii2] );
-		return getUrl ( sb.getBufStart() , qatestWrapper );
-	}
-	return true;
-}
+*/
 
 #include "Msg0.h"
 static Msg0 s_msg0;
@@ -371,67 +325,238 @@ bool checkSpidersDone ( ) {
 	return false;
 }
 
-bool delColl ( ) {
-	static bool s_flag = false;
-	if ( s_flag ) return true;
-	s_flag = true;
-	return getUrl ( "/admin/delcoll?c=qatest123" , qatestWrapper );
+//static long s_phase = -1;
+
+void checkCRC ( long needCRC ) {
+
+	// and our current reply
+	SafeBuf fb2;
+	fb2.safeMemcpy(s_sock->m_readBuf,s_sock->m_readOffset);
+	fb2.nullTerm();
+
+	if ( s_replyCRC == needCRC ) {
+		// save reply if good
+		char fn3[1024];
+		sprintf(fn3,"%sqa/reply.%li",g_hostdb.m_dir,needCRC);
+		File ff; ff.set ( fn3 );
+		if ( ff.doesExist() ) return;
+		// if not there yet then save it
+		fb2.save(fn3);
+		return;
+	}
+
+	const char *emsg = "qa: bad replyCRC of %li should be %li "
+		"\n";//"phase=%li\n";
+	fprintf(stderr,emsg,s_replyCRC,needCRC);//,s_phase-1);
+	// get response on file
+	SafeBuf fb1;
+	char fn1[1024];
+	sprintf(fn1,"%sqa/reply.%li",g_hostdb.m_dir,needCRC);
+	fb1.load(fn1);
+	fb1.nullTerm();
+	// break up into lines
+	char fn2[1024];
+	sprintf(fn2,"/tmp/reply.%li",s_replyCRC);
+	fb2.save ( fn2 );
+
+	// do the diff between the two replies so we can see what changed
+	char cmd[1024];
+	sprintf(cmd,"diff %s %s",fn1,fn2);
+	fprintf(stderr,"%s\n",cmd);
+	system(cmd);
+	// if this is zero allow it to slide by. it is learning mode i guess.
+	// so we can learn what crc we need to use.
+	if ( needCRC == 0 ) return;
+	// otherwise, stop right there for debugging
+	exit(1);
 }
 
+#undef usleep
 
-static long s_rdbId1 = 0;
-static long s_rdbId2 = 0;
-//static long s_rdbId3 = 0;
+//
+// the injection qa test suite
+//
+bool qainject () {
 
-// . run a series of tests to ensure that gb is functioning properly
-// . use s_urls[] array of urls for injecting and spider seeding
-// . contain an archive copy of all webpages in the injectme3 file and
-//   in pagearchive1.txt file
-// . while initially spidering store pages in pagearchive1.txt so we can
-//   replay later. store up to 100,000 pages in there.
-bool qatest ( ) {
+	static bool s_x1 = false;
+	if ( ! s_x1 ) {
+		s_x1 = true;
+		return getUrl ( "/admin/delcoll?delcoll=qatest123" , 
+				qatestWrapper );
+	}
 
+	//
 	// add the 'qatest123' collection
-	if ( ! addColl () ) return false;
+	//
+	static bool s_x2 = false;
+	if ( ! s_x2 ) {
+		s_x2 = true;
+		if ( ! getUrl ( "/admin/addcoll?addcoll=qatest123&xml=1" , 
+				qatestWrapper ) )
+			return false;
+	}
 
+	//
+	// check addcoll reply
+	//
+	static bool s_x3 = false;
+	if ( ! s_x3 ) {
+		s_x3 = true;
+		checkCRC ( 238170006 );
+	}
+
+	//
 	// inject urls, return false if not done yet
-	if ( ! injectUrls ( ) ) return false;
+	//
+	static bool s_x4 = false;
+	if ( ! s_x4 ) {
+		// TODO: try delimeter based injection too
+		loadUrls();
+		static long s_ii = 0;
+		for ( ; s_ii < s_ubuf2.length()/(long)sizeof(char *) ; ) {
+			// inject using html api
+			SafeBuf sb;
+			sb.safePrintf("&c=qatest123&deleteurl=0&"
+				      "format=xml&u=");
+			sb.urlEncode ( s_urlPtrs[s_ii] );
+			// the content
+			sb.safePrintf("&hasmime=1");
+			sb.safePrintf("&content=");
+			sb.urlEncode(s_contentPtrs[s_ii] );
+			sb.nullTerm();
+			// pre-inc it in case getUrl() blocks
+			s_ii++;
+			getUrl("/admin/inject",qatestWrapper,sb.getBufStart());
+			return false;
+		}
+		s_x4 = true;
+	}
 
-	// test search results
-	if ( ! searchTest1 () ) return false;
+	// +the
+	static bool s_x5 = false;
+	if ( ! s_x5 ) {
+		usleep(500000);
+		s_x5 = true;
+		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
+			 qatestWrapper );
+		return false;
+	}
 
-	// delete all urls cleanly now
-	if ( ! deleteUrls ( ) ) return false;
+	static bool s_x6 = false;
+	if ( ! s_x6 ) { s_x6 = true ; checkCRC ( -1452050577 ); }
+
+
+	// sports news
+	static bool s_x7 = false;
+	if ( ! s_x7 ) {
+		s_x7 = true;
+		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=sports+news",
+			 qatestWrapper );
+		return false;
+	}
+
+	static bool s_x8 = false;
+	if ( ! s_x8 ) { s_x8 = true; checkCRC ( -1586622518 ); }
+
+	//
+	// eject/delete the urls
+	//
+	static long s_ii2 = 0;
+	for ( ; s_ii2 < s_ubuf2.length()/(long)sizeof(char *) ; ) {
+		// reject using html api
+		SafeBuf sb;
+		sb.safePrintf( "/admin/inject?c=qatest123&deleteurl=1&"
+			       "format=xml&u=");
+		sb.urlEncode ( s_urlPtrs[s_ii2] );
+		sb.nullTerm();
+		// pre-inc it in case getUrl() blocks
+		s_ii2++;
+		getUrl ( sb.getBufStart() , qatestWrapper );
+		return false;
+	}
+
+	//
+	// make sure no results left, +the
+	//
+	static bool s_x9 = false;
+	if ( ! s_x9 ) {
+		usleep(500000);
+		s_x9 = true;
+		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
+			 qatestWrapper );
+		return false;
+	}
+
+	// seems to have <docsInCollection>2</>
+	static bool s_y1 = false;
+	if ( ! s_y1 ) { s_y1 = true; checkCRC ( -1672870556 ); }
+
+	//
+	// try delimeter based injecting
+	//
+	static bool s_y2 = false;
+	if ( ! s_y2 ) {
+		s_y2 = true;
+		SafeBuf sb;
+		// delim=+++URL:
+		sb.safePrintf("&c=qatest123&deleteurl=0&"
+			      "delim=%%2B%%2B%%2BURL%%3A&format=xml&u=xyz.com&"
+			      "hasmime=1&content=");
+		// use injectme3 file
+		SafeBuf ubuf;
+		ubuf.load("./injectme3");
+		sb.urlEncode(ubuf.getBufStart());
+		getUrl ( "/admin/inject",qatestWrapper,sb.getBufStart());
+		return false;
+	}
+
+	// check the reply, seems to have only a single docid in it...
+	static bool s_y3 = false;
+	if ( ! s_y3 ) { s_y3 = true; checkCRC ( -1970198487 ); }
+
+	// now query check
+	static bool s_y4 = false;
+	if ( ! s_y4 ) {
+		usleep(500000);
+		s_y4 = true;
+		getUrl ( "/search?c=qatest123&qa=1&format=xml&q=%2Bthe",
+			 qatestWrapper );
+		return false;
+	}
+
+	// check search results crc
+	static bool s_y5 = false;
+	if ( ! s_y5 ) { s_y5 = true; checkCRC ( -480078278 ); }
+
+
+
+
+
 
 	// now get rdblist for every rdb for this coll and make sure all zero!
-	if ( ! checkRdbLists ( &s_rdbId1 ) ) return false;
+	//if ( ! checkRdbLists ( &s_rdbId1 ) ) return false;
 
 	// dump, tight merge and ensure no data in our rdbs for this coll
-	if ( ! dumpTreesToDisk() ) return false;
+	//if ( ! dumpTreesToDisk() ) return false;
 
 	// wait for tight merge to complete
-	if ( ! waitForMergeToFinish() ) return false;
+	//if ( ! waitForMergeToFinish() ) return false;
 
 	// now get rdblist for every rdb for this coll and make sure all zero!
-	if ( ! checkRdbLists ( &s_rdbId2 ) ) return false;
+	//if ( ! checkRdbLists ( &s_rdbId2 ) ) return false;
 
 	// reset the collection so we can test spidering
-	if ( ! resetColl ( ) ) return false;
+	//if ( ! resetColl ( ) ) return false;
 
 	// add urls to seed spider with. make msg13.cpp recognize qatest123
 	// collection and return 404 on urls not in our official list so
 	// we can ensure search result consistency. msg13.cpp will initially
 	// store the pages in a file, like the first 1,000 or so pages.
-	if ( ! addUrlTest () ) return false;
+	//if ( ! addUrlTest () ) return false;
 
 	// wait for spidering to complete. sleep callback. # of spidered urls
 	// will be x, so we know when to stop
-	if ( ! checkSpidersDone() ) return false;
-
-	// . now search again on the large collection most likely
-	// . store search queries and checksum into queries2.txt
-	// . a 0 (or no) checksum means we should fill it in
-	if ( ! searchTest2 () ) return false;
+	//if ( ! checkSpidersDone() ) return false;
 
 	// try a query delete
 	//if ( ! queryDeleteTest() ) return false;
@@ -440,7 +565,30 @@ bool qatest ( ) {
 	//if ( ! checkRdbLists ( &s_rdbId3 ) ) return false;
 
 	// delete the collection
-	if ( ! delColl() ) return false;
+	static bool s_fee = false;
+	if ( ! s_fee ) {
+		s_fee = true;
+		return getUrl ( "/admin/delcoll?delcoll=qatest123" , 
+				qatestWrapper );
+	}
+
+	static bool s_fee2 = false;
+	if ( ! s_fee2 ) {
+		s_fee2 = true;
+		fprintf(stderr,"\n\n\nSUCCESSFULLY COMPLETED QA TEST\n\n\n");
+		exit(0);
+	}
+
 
 	return true;
 }
+
+// . run a series of tests to ensure that gb is functioning properly
+// . uses the ./qa subdirectory to hold archive pages, ips, spider dates to
+//   ensure consistency between tests for exact replays
+bool qatest ( ) {
+
+	return qainject();
+
+}
+

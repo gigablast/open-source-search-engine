@@ -135,6 +135,8 @@ class HttpServer {
 	// send an error reply, like "HTTP/1.1 404 Not Found"
 	bool sendErrorReply ( TcpSocket *s , long error , char *errmsg ,
 			      long *bytesSent = NULL ); 
+	// xml and json uses this
+	bool sendSuccessReply (TcpSocket *s , char format , char *addMsg=NULL);
 	// send a "prettier" error reply, formatted in XML if necessary
 	bool sendQueryErrorReply ( TcpSocket *s , long error , char *errmsg,
 				   // FORMAT_HTML=0,FORMAT_XML,FORMAT_JSON

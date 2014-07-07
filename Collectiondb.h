@@ -426,6 +426,9 @@ class CollectionRec {
 	long   m_spiderRoundNum;
 
 	char  m_makeImageThumbnails;
+
+	long m_thumbnailMaxWidthHeight ;
+
 	char  m_indexSpiderReplies;
 	char  m_indexBody;
 
@@ -616,7 +619,6 @@ class CollectionRec {
 	long m_summaryMaxLen;
 	long m_summaryMaxNumLines;
 	long m_summaryMaxNumCharsPerLine;
-	long m_summaryDefaultNumLines;
 	char m_useNewSummaries;
 
 	char m_getDocIdScoringInfo;

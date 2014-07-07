@@ -890,9 +890,10 @@ char *XmlDoc::getTestDir ( ) {
 	// if Test.cpp explicitly set SpiderRequest::m_useTestSpiderDir bit
 	// then return "test-spider" otherwise...
 	if ( m_sreqValid && m_sreq.m_useTestSpiderDir ) 
-		return "test-spider";
+		return "qa";//"test-spider";
 	// ... default to "test-parser"
-	return "test-parser";
+	//return "test-parser";
+	return "qa";
 	/*
 	if ( getIsPageParser() )
 		return "test-page-parser";
@@ -1969,6 +1970,8 @@ bool XmlDoc::injectDoc ( char *url ,
 	SpiderRequest sreq;
 	sreq.setFromInject ( cleanUrl );
 
+	if ( deleteUrl )
+		sreq.m_forceDelete = 1;
 
 	//static char s_dummy[3];
 	// sometims the content is indeed NULL...
@@ -2282,6 +2285,9 @@ bool XmlDoc::indexDoc ( ) {
 	//
 	////
 	SpiderReply *nsr = getFakeSpiderReply (  );
+	// this can be NULL and g_errno set to ENOCOLLREC or something
+	if ( ! nsr )
+		return true;
 
 	//SafeBuf metaList;
 	if ( ! m_metaList2.pushChar(RDB_SPIDERDB) )
@@ -3229,6 +3235,10 @@ long *XmlDoc::getIndexCode2 ( ) {
 	if ( gr->getLong("deep",0) ) spamCheck = false;
 	// not for crawlbot
 	if ( cr->m_isCustomCrawl ) spamCheck = false;
+	// only html for now
+	if ( m_contentTypeValid && m_contentType != CT_HTML ) spamCheck =false;
+	// turn this off for now
+	spamCheck = false;
 	// otherwise, check the weights
 	if ( spamCheck ) {
 		char *ws = getWordSpamVec();
@@ -3272,17 +3282,23 @@ long *XmlDoc::getIndexCode2 ( ) {
 		return &m_indexCode;
 	}
 
-	// if using diffbot and the diffbot reply had a time out error
-	// or otherwise... diffbot failure demands a re-try always i guess.
-	// put this above getSpiderPriority() call otherwise we end up in
-	// a recursive loop with getIndexCode() and getNewSpiderReply()
-	SafeBuf *dbr = getDiffbotReply();
-	if ( ! dbr || dbr == (void *)-1 ) return (long *)dbr;
-	if ( m_diffbotReplyValid && m_diffbotReplyError ) {
-		m_indexCode= m_diffbotReplyError;
-		m_indexCodeValid = true;
-		return &m_indexCode;
-	}
+	// . if using diffbot and the diffbot reply had a time out error
+	//   or otherwise... diffbot failure demands a re-try always i guess.
+	//   put this above getSpiderPriority() call otherwise we end up in
+	//   a recursive loop with getIndexCode() and getNewSpiderReply()
+	// . NO, don't do this anymore, however, if there is a diffbot
+	//   reply error then record it in the spider reply BUT only if it is
+	//   a diffbot reply error that warrants a retry. for instance,
+	//   EDIFFBOTCOULDNOTDOWNLOAD happens when diffbot got a 404 or 500
+	//   error trying to download the page so it probably should not
+	//   retry. but EDIFFBOTREQUESTTIMEDOUT should retry.
+	// SafeBuf *dbr = getDiffbotReply();
+	// if ( ! dbr || dbr == (void *)-1 ) return (long *)dbr;
+	// if ( m_diffbotReplyValid && m_diffbotReplyError ) {
+	// 	m_indexCode= m_diffbotReplyError;
+	// 	m_indexCodeValid = true;
+	// 	return &m_indexCode;
+	// }
 
 	// no error otherwise
 	m_indexCode      = 0;
@@ -9639,8 +9655,10 @@ Url **XmlDoc::getRedirUrl() {
 		if ( ! keep ) m_redirError = EDOCTOOMANYREDIRECTS;
 		return &m_redirUrlPtr;
 	}
-	// if we followed too many then bail
-	if ( ++m_numRedirects >= 4 ) {
+	// . if we followed too many then bail
+	// . www.motorolamobility.com www.outlook.com ... failed when we 
+	//   had >= 4 here
+	if ( ++m_numRedirects >= 5 ) {
 		if ( ! keep ) m_redirError = EDOCTOOMANYREDIRECTS;
 		return &m_redirUrlPtr;
 	}
@@ -10702,6 +10720,8 @@ char *XmlDoc::getIsIndexed ( ) {
 	// note it
 	if ( ! m_calledMsg22e )
 		setStatus ( "checking titledb for old title rec");
+	else
+		setStatus ( "back from msg22e call");
 
 	// . consult the title rec tree!
 	// . "justCheckTfndb" is set to true here!
@@ -13621,7 +13641,35 @@ void gotDiffbotReplyWrapper ( void *state , TcpSocket *s ) {
 			    THIS->m_diffbotUrl.getBufStart(),
 			    page 
 			    );
-			THIS->m_diffbotReplyError = EDIFFBOTINTERNALERROR;
+			// try to get the right error code
+			char *err = strstr(page,"\"error\":\"");
+			if ( err ) err += 9;
+			long code = EDIFFBOTUNKNOWNERROR;
+			if ( err && !strncmp(err,"Unable to apply rules",21))
+				code = EDIFFBOTUNABLETOAPPLYRULES;
+			// like .pdf pages get this error
+			if ( err && !strncmp(err,"Could not parse page",20))
+				code = EDIFFBOTCOULDNOTPARSE;
+			// if it is 404... 502, etc. any http status code
+			if ( err && !strncmp(err,"Could not download page",23))
+				code = EDIFFBOTCOULDNOTDOWNLOAD;
+			// custom api does not apply to the url
+			if ( err && !strncmp(err,"Invalid API",11))
+				code = EDIFFBOTINVALIDAPI;
+			if ( err && !strncmp(err,"Version required",16))
+				code = EDIFFBOTVERSIONREQ;
+			if ( err && !strncmp(err,"Empty content",13))
+				code = EDIFFBOTEMPTYCONTENT;
+			if ( err && !strncmp(err,"No content received",19))
+				code = EDIFFBOTEMPTYCONTENT;
+			if ( err && !strncmp(err,"Request timed",13))
+				code = EDIFFBOTREQUESTTIMEDOUT;
+			// error processing url
+			if ( err && !strncmp(err,"Error processing",16))
+				code = EDIFFBOTURLPROCESSERROR;
+			if ( err && !strncmp(err,"Your token has exp",18))
+				code = EDIFFBOTTOKENEXPIRED;
+			THIS->m_diffbotReplyError = code;
 		}
 		// a hack for detecting if token is expired
 		if ( ! ttt && cr && strstr ( page , ":429}" ) ) {
@@ -15183,6 +15231,7 @@ long long *XmlDoc::getDownloadEndTime ( ) {
 	if ( m_deleteFromIndex ) {
 		m_downloadEndTime = 0;
 		m_downloadEndTimeValid = true;
+		return &m_downloadEndTime;
 	}
 
 	// if recycling content use its download end time
@@ -15199,7 +15248,7 @@ long long *XmlDoc::getDownloadEndTime ( ) {
 			return &m_downloadEndTime;
 		}
 	}
-		
+
 	// need a valid reply
 	char **reply = getHttpReply ();
 	if ( ! reply || reply == (void *)-1 ) return (long long *)reply;
@@ -17021,7 +17070,8 @@ char **XmlDoc::getUtf8Content ( ) {
 		     // it should be there if trying to delete as well!
 		     m_deleteFromIndex ) {
 			log("xmldoc: null utf8 content for docid-based "
-			    "titlerec lookup which was not found");
+			    "titlerec (d=%lli) lookup which was not found",
+			    m_docId);
 			ptr_utf8Content = NULL;
 			size_utf8Content = 0;
 			m_utf8ContentValid = true;
@@ -19804,7 +19854,9 @@ bool XmlDoc::verifyMetaList ( char *p , char *pend , bool forDelete ) {
 		if ( *p & 0x01 ) del = false;
 		else             del = true;
 		// must always be negative if deleteing
-		if ( m_deleteFromIndex && ! del ) {
+		// spiderdb is exempt because we add a spiderreply that is
+		// positive and a spiderdoc
+		if ( m_deleteFromIndex && ! del && rdbId != RDB_SPIDERDB) {
 			char *xx=NULL;*xx=0; }
 		// get the key size. a table lookup in Rdb.cpp.
 		long ks ;
@@ -20485,7 +20537,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// if we are indexing a subdoc piece of a multidoc url 
 		// then parentUrl should return non-NULL
 		char *parentUrl = getDiffbotParentUrl(od->m_firstUrl.m_url);
-		if ( ! parentUrl ) goto skip9;
+		if ( ! parentUrl && od->m_contentType != CT_STATUS ) 
+			goto skip9;
 		// in that case we need to reindex the parent url not the
 		// subdoc url, so make the spider reply gen quick
 		//SpiderReply *newsr = od->getFakeSpiderReply();
@@ -20537,12 +20590,23 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// been fulfilled!
 		if( ! m_zbuf.safeMemcpy (&srep, srep.getRecSize()))
 			return NULL;
-		// complain
-		if ( ! cr->m_diffbotApiUrl.length()<1 && !cr->m_isCustomCrawl )
-			log("build: doing query reindex but diffbot api "
-			    "url is not set in spider controls");
+
 		// but also store a new spider request for the parent url
 		SpiderRequest ksr;
+		long long pd;
+
+		// skip if doc is a spider status "document". their docids
+		// often get added during a query reindex but we should ignore
+		// them completely.
+		if ( od->m_contentType == CT_STATUS )
+			goto returnList;
+
+		//goto returnList;
+
+		// complain
+		if ( cr->m_diffbotApiUrl.length()<1 && !cr->m_isCustomCrawl )
+			log("build: doing query reindex but diffbot api "
+			    "url is not set in spider controls");
 		// just copy original request
 		memcpy ( &ksr , &m_sreq , m_sreq.getRecSize() );
 		// do not spider links, it's a page reindex of a multidoc url
@@ -20551,6 +20615,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		ksr.m_ignoreDocUnchangedError = 1;
 		// no longer docid based we set it to parentUrl
 		ksr.m_urlIsDocId = 0;
+		// but consider it a manual add. this should already be set.
+		ksr.m_isPageReindex = 1;
 		// but it is not docid based, so overwrite the docid
 		// in ksr.m_url with the parent multidoc url. it \0 terms it.
 		strcpy(ksr.m_url , parentUrl );//, MAX_URL_LEN-1);
@@ -20558,7 +20624,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		//if ( ! od->m_firstIpValid ) { char *xx=NULL;*xx=0; }
 		// set the key, ksr.m_key. isDel = false
 		// fake docid
-		long long pd = g_titledb.getProbableDocId(parentUrl);
+		pd = g_titledb.getProbableDocId(parentUrl);
 		ksr.setKey ( m_sreq.m_firstIp, pd , false );
 		// store this
 		if ( ! m_zbuf.pushChar(RDB_SPIDERDB) ) 
@@ -20566,6 +20632,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 		// then the request
 		if ( ! m_zbuf.safeMemcpy(&ksr,ksr.getRecSize() ) )
 			return NULL;
+	returnList:
 		// prevent cores in indexDoc()
 		m_indexCode = EREINDEXREDIR;
 		m_indexCodeValid = true;
@@ -20960,7 +21027,8 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// if recycling json objects, leave them there!
 	if ( *recycle ) nukeJson = false;
 	// you have to be a diffbot crawl to do this
-	if ( ! cr->m_isCustomCrawl ) nukeJson = false;
+	// no, not if you have th diffbot api url set... so take this out
+	//if ( ! cr->m_isCustomCrawl ) nukeJson = false;
 	// do not remove old json objects if pageparser.cpp test
 	// because that can not change the index, etc.
 	if ( getIsPageParser() ) nukeJson = false;
@@ -21818,7 +21886,12 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// but don't do this if it is pagereindex. why is pagereindex
 	// setting the injecting flag anyway?
 	long needSpiderdb3 = 0;
-	if ( m_sreqValid && m_sreq.m_isInjecting )//&&!m_sreq.m_isPageReindex) 
+	if ( m_sreqValid && 
+	     m_sreq.m_isInjecting &&
+	     m_sreq.m_fakeFirstIp &&
+	     ! m_sreq.m_forceDelete &&
+	     /// don't add requests like http://xyz.com/xxx-diffbotxyz0 though
+	     ! m_isDiffbotJSONObject )
 		needSpiderdb3 = m_sreq.getRecSize() + 1;
 	need += needSpiderdb3;
 
@@ -22325,11 +22398,7 @@ char *XmlDoc::getMetaList ( bool forDelete ) {
 	// if we are injecting we must add the spider request
 	// we are injecting from so the url can be scheduled to be
 	// spidered again
-	if ( m_sreqValid && 
-	     m_sreq.m_isInjecting &&
-	     m_sreq.m_fakeFirstIp &&
-	     /// don't add requests like http://xyz.com/xxx-diffbotxyz0 though
-	     ! m_isDiffbotJSONObject ) {
+	if ( needSpiderdb3 ) {
 		// note it
 		setStatus("adding spider request");
 		// checkpoint
@@ -23307,6 +23376,10 @@ SpiderReply *XmlDoc::getNewSpiderReply ( ) {
 		m_srep.m_hadDiffbotError = true;
 	else
 		m_srep.m_hadDiffbotError = false;
+
+	// if we only had an error code in the diffbot reply, record that
+	if ( ! m_indexCode && m_diffbotReplyError )
+		m_srep.m_errCode = m_diffbotReplyError;
 
 	// sanity. if being called directly from indexDoc() because of
 	// an error like out of memory, then we do not know if it is
@@ -25112,11 +25185,11 @@ bool XmlDoc::hashNoSplit ( HashTableX *tt ) {
 	// hash gbimage: for permalinks only for Images.cpp
 	for ( long i = 0 ; i < m_images.m_numImages ; i++ ) {
 		// get the node number
-		long nn = m_images.m_imageNodes[i];
+		//long nn = m_images.m_imageNodes[i];
 		// get the url of the image
-		XmlNode *xn = m_xml.getNodePtr(nn);
+		//XmlNode *xn = m_xml.getNodePtr(nn);
 		long  srcLen;
-		char *src = xn->getFieldValue("src",&srcLen);
+		char *src = m_images.getImageUrl(i,&srcLen);
 		// set it to the full url
 		Url iu;
 		// use "pageUrl" as the baseUrl
@@ -25484,6 +25557,17 @@ SafeBuf *XmlDoc::getSpiderReplyMetaList ( SpiderReply *reply ) {
 	// do not do for diffbot subdocuments either, usespiderdb should be
 	// false for those.
 	if ( m_setFromDocId || ! m_useSpiderdb ) {
+		m_spiderReplyMetaListValid = true;
+		return &m_spiderReplyMetaList;
+	}
+
+	// we double add regular html urls in a query reindex because the
+	// json url adds the parent, so the parent gets added twice sometimes,
+	// and for some reason it is adding a spider status doc the 2nd time
+	// so cut that out. this is kinda a hack b/c i'm not sure what's 
+	// going on. but you can set a break point here and see what's up if
+	// you want.
+	if ( m_indexCodeValid && m_indexCode == EDOCFORCEDELETE ) {
 		m_spiderReplyMetaListValid = true;
 		return &m_spiderReplyMetaList;
 	}
@@ -28586,28 +28670,37 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	*/
 
 	// does they want a summary?
-	if ( m_req->m_numSummaryLines>0 && ! reply->ptr_sum ) {
-		char *sum = getHighlightedSummary();
-		if ( ! sum || sum == (void *)-1 ) return (Msg20Reply *)sum;
+	if ( m_req->m_numSummaryLines>0 && ! reply->ptr_displaySum ) {
+		char *hsum = getHighlightedSummary();
+		if ( ! hsum || hsum == (void *)-1 ) return (Msg20Reply *)hsum;
+		//Summary *s = getSummary();
+		//if ( ! s || s == (void *)-1 ) return (Msg20Reply *)s;
 		//long sumLen = m_finalSummaryBuf.length();
 		// is it size and not length?
-		long sumLen = 0;
+		long hsumLen = 0;
 		// seems like it can return 0x01 if none...
-		//if ( sum == (char *)0x01 ) sum = NULL;
-		// get len
-		if ( sum ) sumLen = gbstrlen(sum);
-		// must be \0 terminated
-		if ( sumLen > 0 && sum[sumLen] ) { char *xx=NULL;*xx=0; }
+		if ( hsum == (char *)0x01 ) hsum = NULL;
+		// get len. this is the HIGHLIGHTED summary so it is ok.
+		if ( hsum ) hsumLen = gbstrlen(hsum);
+		// must be \0 terminated. not any more, it can be a subset
+		// of a larger summary used for deduping
+		if ( hsumLen > 0 && hsum[hsumLen] ) { char *xx=NULL;*xx=0; }
 		// assume size is 0
-		long sumSize = 0;
+		//long sumSize = 0;
 		// include the \0 in size
-		if ( sum ) sumSize = sumLen + 1;
+		//if ( sum ) sumSize = sumLen + 1;
 		// do not get any more than "me" lines/excerpts of summary
 		//long max = m_req->m_numSummaryLines;
 		// grab stuff from it!
 		//reply->m_proximityScore = s->getProximityScore();
-		reply-> ptr_sum         = sum;//s->getSummary();
-		reply->size_sum         = sumSize;//s->getSummaryLen(max)+1;
+		reply-> ptr_displaySum = hsum;//s->getSummary();
+		reply->size_displaySum = hsumLen+1;//sumSize;//s->getSummaryLen
+		// this is unhighlighted for deduping, and it might be longer
+		// . seems like we are not using this for deduping but using
+		//   the gigabit vector in Msg40.cpp, so take out for now
+		//reply-> ptr_dedupSum = s->m_summary;
+		//reply->size_dedupSum = s->m_summaryLen+1;
+		//if ( s->m_summaryLen == 0 ) reply->size_dedupSum = 0;
 		//reply->m_diversity      = s->getDiversity();
 	}
 
@@ -28673,6 +28766,15 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 			reply->ptr_tbuf = NULL;
 			reply->size_tbuf = 0;
 		}
+	}
+
+	// this is not documented because i don't think it will be popular
+	if ( m_req->m_getHeaderTag ) {
+		SafeBuf *htb = getHeaderTagBuf();
+		if ( ! htb || htb == (SafeBuf *)-1 ) return (Msg20Reply *)htb;
+		// it should be null terminated
+		reply->ptr_htag = htb->getBufStart();
+		reply->size_htag = htb->getLength() + 1;
 	}
 
 	// breathe
@@ -29674,6 +29776,38 @@ char *XmlDoc::getDescriptionBuf ( char *displayMetas , long *dlen ) {
 	return m_dbuf;
 }
 
+SafeBuf *XmlDoc::getHeaderTagBuf() {
+	if ( m_htbValid ) return &m_htb;
+
+	Sections *ss = getSections();
+	if ( ! ss || ss == (void *)-1) return (SafeBuf *)ss;
+
+	// scan sections
+	Section *si = ss->m_rootSection;
+	for ( ; si ; si = si->m_next ) {
+		// breathe
+		QUICKPOLL(m_niceness);
+		if ( si->m_tagId == TAG_H1 ) break;
+	}
+	// if no h1 tag then make buf empty
+	if ( ! si ) {
+		m_htb.nullTerm();
+		m_htbValid = true;
+		return &m_htb;
+	}
+	// otherwise, set it
+	char *a = m_words.m_words[si->m_firstWordPos];
+	char *b = m_words.m_words[si->m_lastWordPos] ;
+	b += m_words.m_wordLens[si->m_lastWordPos];
+
+	// copy it
+	m_htb.safeMemcpy ( a , b - a );
+	m_htb.nullTerm();
+	m_htbValid = true;
+	return &m_htb;
+}
+	
+
 Title *XmlDoc::getTitle ( ) {
 	if ( m_titleValid ) return &m_title;
 	// need a buncha crap
@@ -29775,6 +29909,10 @@ Summary *XmlDoc::getSummary () {
 			  false                            , // doStemming
 			  m_req->m_summaryMaxLen           ,
 			  numLines                         ,
+			  // . displayLines, # lines we are displaying
+			  // . Summary::getDisplayLen() will return the
+			  //   length of the summary to display
+			  m_req->m_numSummaryLines         ,
 			  cr->m_summaryMaxNumCharsPerLine,
 			  m_req->m_ratInSummary            ,
 			  getFirstUrl()                    ,
@@ -29807,11 +29945,15 @@ char *XmlDoc::getHighlightedSummary ( ) {
 
 	// get the summary
 	char *sum    = s->getSummary();
-	long  sumLen = s->getSummaryLen();
+	//long  sumLen = s->getSummaryLen();
+	long sumLen = s->getSummaryDisplayLen();
+
+	//sum[sumLen] = 0;
 
 	// assume no highlighting?
 	if ( ! m_req->m_highlightQueryTerms || sumLen == 0 ) {
-		m_finalSummaryBuf.safeMemcpy ( sum , sumLen + 1 );
+		m_finalSummaryBuf.safeMemcpy ( sum , sumLen );
+		m_finalSummaryBuf.nullTerm();
 		m_finalSummaryBufValid = true;
 		return m_finalSummaryBuf.getBufStart();
 		//char *fsum = m_finalSummaryBuf.getBufStart();

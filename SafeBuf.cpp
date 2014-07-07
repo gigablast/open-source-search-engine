@@ -392,6 +392,10 @@ long SafeBuf::saveToFile ( char *dir , char *filename ) {
 	return dumpToFile ( buf );
 }
 
+long SafeBuf::save ( char *fullFilename ) {
+	return dumpToFile ( fullFilename );
+}
+
 long SafeBuf::dumpToFile(char *filename ) {
  retry22:
 	long fd = open ( filename , O_CREAT | O_WRONLY | O_TRUNC,
@@ -2785,6 +2789,15 @@ bool SafeBuf::safeStrcpyPrettyJSON ( char *decodedJson ) {
 }
 */
 
+bool SafeBuf::jsonEncode ( char *src , long srcLen ) {
+	char c = src[srcLen];
+	src[srcLen] = 0;
+	bool status = jsonEncode ( src );
+	src[srcLen] = c;
+	return status;
+}
+
+// encode into json
 bool SafeBuf::safeUtf8ToJSON ( char *utf8 ) {
 
 	if ( ! utf8 ) return true;

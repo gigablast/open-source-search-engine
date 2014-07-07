@@ -53,6 +53,29 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 	if ( ! add && ! cast ) g_collectiondb.deleteRecs ( r )   ;
 	*/
 
+	char format = r->getReplyFormat();
+
+
+	if ( format == FORMAT_XML || format == FORMAT_JSON ) {
+		// no addcoll given?
+		long  page = g_pages.getDynamicPageNumber ( r );
+		char *addcoll = r->getString("addcoll",NULL);
+		char *delcoll = r->getString("delcoll",NULL);
+		if ( ! addcoll ) addcoll = r->getString("addColl",NULL);
+		if ( ! delcoll ) delcoll = r->getString("delColl",NULL);
+		if ( page == PAGE_ADDCOLL && ! addcoll ) {
+			g_errno = EBADENGINEER;
+			char *msg = "no addcoll parm provided";
+			return g_httpServer.sendErrorReply(s,g_errno,msg,NULL);
+		}
+		if ( page == PAGE_DELCOLL && ! delcoll ) {
+			g_errno = EBADENGINEER;
+			char *msg = "no delcoll parm provided";
+			return g_httpServer.sendErrorReply(s,g_errno,msg,NULL);
+		}
+		return g_httpServer.sendSuccessReply(s,format);
+	}
+
 	char  buf [ 64*1024 ];
 	SafeBuf p(buf, 64*1024);
 	// print standard header
@@ -93,7 +116,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		p.safePrintf (
 			  "<tr bgcolor=#%s>"
 			  "<td><b>name of new collection to add</td>\n"
-			  "<td><input type=text name=addColl size=30>"
+			  "<td><input type=text name=addcoll size=30>"
 			  "</td></tr>\n"
 			  , LIGHT_BLUE
 			      );
@@ -142,7 +165,7 @@ bool sendPageAddDelColl ( TcpSocket *s , HttpRequest *r , bool add ) {
 		if ( ! cr ) continue;
 		p.safePrintf (
 			  "<tr bgcolor=#%s><td>"
-			  "<input type=checkbox name=delColl value=\"%s\"> "
+			  "<input type=checkbox name=delcoll value=\"%s\"> "
 			  "%s</td></tr>\n",
 			  DARK_BLUE,
 			  cr->m_coll,cr->m_coll);

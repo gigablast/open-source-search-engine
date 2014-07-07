@@ -5207,6 +5207,8 @@ void doneSleepingWrapperSL ( int fd , void *state ) {
 	// if spidering disabled then do not do this crap
 	if ( ! g_conf.m_spideringEnabled )  return;
 	//if ( ! g_conf.m_webSpideringEnabled )  return;
+	// or if trying to exit
+	if ( g_process.m_mode == EXIT_MODE ) return;	
 
 	// wait for clock to sync with host #0
 	if ( ! isClockInSync() ) { 
@@ -5517,6 +5519,8 @@ void SpiderLoop::spiderDoledUrls ( ) {
 
 	// must be spidering to dole out
 	if ( ! g_conf.m_spideringEnabled ) return;
+	// or if trying to exit
+	if ( g_process.m_mode == EXIT_MODE ) return;	
 	// if we don't have all the url counts from all hosts, then wait.
 	// one host is probably down and was never up to begin with
 	if ( ! s_countsAreValid ) return;
@@ -6617,7 +6621,9 @@ bool SpiderLoop::spiderUrl9 ( SpiderRequest *sreq ,
 		return true;
 	}
 	// turned off?
-	if ( ( (! g_conf.m_spideringEnabled 
+	if ( ( (! g_conf.m_spideringEnabled ||
+		// or if trying to exit
+		g_process.m_mode == EXIT_MODE
 		) && // ! g_conf.m_webSpideringEnabled ) &&
 	       ! sreq->m_isInjecting ) || 
 	     // repairing the collection's rdbs?
@@ -8584,7 +8590,16 @@ bool sendPage ( State11 *st ) {
 		     g_stats.m_allErrorsOld[i] == 0 &&
 		     bucketsNew[i] == 0 && bucketsOld[i] == 0 ) continue;
 		sb.safePrintf (
-			       "<tr bgcolor=#%s><td><b>%s</b></td>"
+			       "<tr bgcolor=#%s>"
+			       "<td><b><a href=/search?c=%s&q=gbstatusmsg%%3A"
+			       "%%22"
+			       ,
+			       LIGHT_BLUE , cr->m_coll );
+		sb.urlEncode(mstrerror(i));
+		sb.safePrintf ("%%22>"
+			       "%s"
+			       "</a>"
+			       "</b></td>"
 			       "<td>%lli</td>"
 			       "<td>%lli</td>"
 			       "<td>%lli</td>"
@@ -8592,7 +8607,6 @@ bool sendPage ( State11 *st ) {
 			       "<td>%li</td>"
 			       "<td>%li</td>"
 			       "</tr>\n" ,
-			       LIGHT_BLUE,
 			       mstrerror(i),
 			       g_stats.m_allErrorsNew[i] +
 			       g_stats.m_allErrorsOld[i],
@@ -10259,6 +10273,14 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 			     errCode != EDNSDEAD &&
 			     // assume diffbot is temporarily experiencing errs
 			     errCode != EDIFFBOTINTERNALERROR &&
+			     // if diffbot received empty content when d'lding
+			     errCode != EDIFFBOTEMPTYCONTENT &&
+			     // or diffbot tcp timed out when d'lding the url
+			     errCode != EDIFFBOTREQUESTTIMEDOUT &&
+			     // if diffbot closed the socket on us...
+			     errCode != EDIFFBOTMIMEERROR &&
+			     // of the diffbot reply itself was not 200 (OK)
+			     errCode != EDIFFBOTBADHTTPSTATUS &&
 			     // out of memory while crawling?
 			     errCode != ENOMEM &&
 			     errCode != ENETUNREACH &&
@@ -10317,6 +10339,22 @@ long getUrlFilterNum2 ( SpiderRequest *sreq       ,
 		}
 
 		if ( strncmp(p,"isdocidbased",12) == 0 ) {
+			// skip for msg20
+			if ( isForMsg20 ) continue;
+			// if no match continue
+			//if ( (bool)sreq->m_urlIsDocId==val ) continue;
+			if ( (bool)sreq->m_isPageReindex==val ) continue;
+			// skip
+			p += 10;
+			// skip to next constraint
+			p = strstr(p, "&&");
+			// all done?
+			if ( ! p ) return i;
+			p += 2;
+			goto checkNextRule;
+		}
+
+		if ( strncmp(p,"isreindex",9) == 0 ) {
 			// skip for msg20
 			if ( isForMsg20 ) continue;
 			// if no match continue

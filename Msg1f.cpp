@@ -51,8 +51,11 @@ void handleRequest ( UdpSlot *slot , long netnice ) {
 	char *filename = g_hostdb.m_logFilename;
 
 	// running just ./gb will log to stderr...
-	if ( strcmp(filename ,"/dev/stderr") == 0 )
+	if ( strcmp(filename ,"/dev/stderr") == 0 ) {
+		g_errno = EBADFILE;
+		g_udpServer.sendErrorReply ( slot, g_errno ); 
 		return;
+	}
 
 	long fd = open ( filename , O_RDONLY,
 			 S_IRUSR |S_IWUSR |S_IRGRP |S_IWGRP| S_IROTH );

@@ -152,7 +152,6 @@ class GigablastRequest {
 	char *m_urlsBuf;
 	char  m_stripBox;
 	char  m_harvestLinksBox;
-	char  m_forceRespiderBox;
 
 	/////////////
 	//
@@ -199,6 +198,9 @@ class GigablastRequest {
 #define PF_NOAPI       0x2000
 #define PF_REQUIRED    0x4000
 #define PF_REBUILDPROXYTABLE 0x8000
+
+#define PF_NOHTML      0x10000
+
 
 class Parm {
  public:
@@ -317,7 +319,7 @@ class Parms {
 			  long nc , 
 			  long pd ,
 			  bool isCrawlbot ,
-			  bool isJSON,
+			  char format, //bool isJSON,
 			  TcpSocket *sock
 			  );
 
@@ -353,7 +355,7 @@ class Parms {
 			 long  pd   ,
 			 bool lastRow ,
 			 bool isCrawlbot = false,
-			 bool isJSON = false ) ;
+			 char format = FORMAT_HTML);//bool isJSON = false ) ;
 
 	char *getTHIS ( HttpRequest *r , long page );
 

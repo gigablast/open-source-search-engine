@@ -136,7 +136,9 @@ bool TcpServer::init ( void (* requestHandler)(TcpSocket *s) ,
 	struct sockaddr_in name; 
 	// parm
 	int options;
-	// if port is -1 don't set up a listening socket
+	// if port is -1 don't set up a listening socket, this is used
+	// for things like blaster that are clients only. or the qatest()
+	// function.
 	if ( m_port == -1 || m_port == 0 ) goto skipServer;
 	// . set up our connection listening socket
 	// . sets g_errno and returns -1 on error
@@ -756,7 +758,7 @@ static long s_lastTime = 0;
 TcpSocket *TcpServer::getNewSocket ( ) {
 	// . if outta sd's we close least used socket first
 	// . if they're all in use set g_errno and return NULL
-	if ( m_numIncomingUsed >= *m_maxSocketsPtr ) 
+	if ( m_maxSocketsPtr && m_numIncomingUsed >= *m_maxSocketsPtr ) 
 		if ( ! closeLeastUsed () ){
 			// note it in the log
 			long now = getTimeLocal();

@@ -149,6 +149,7 @@ bool sendReply ( State0 *st , char *reply ) {
 	mdelete(st, sizeof(State0), "PageResults2");
 	delete st;
 
+	/*
 	if ( format == FORMAT_XML ) {
 		SafeBuf sb;
 		sb.safePrintf("<?xml version=\"1.0\" "
@@ -174,6 +175,7 @@ bool sendReply ( State0 *st , char *reply ) {
 					     charset );
 		return true;
 	}
+	*/
 
 	long status = 500;
 	if (savedErr == ETOOMANYOPERANDS ||
@@ -244,7 +246,7 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	//long xml = hr->getLong("xml",0);
 
 	// what format should search results be in? default is html
-	char format = getFormatFromRequest ( hr );
+	char format = hr->getReplyFormat();//getFormatFromRequest ( hr );
 
 	// get the dmoz catid if given
 	//long searchingDmoz = hr->getLong("dmoz",0);
@@ -542,6 +544,10 @@ bool sendPageResults ( TcpSocket *s , HttpRequest *hr ) {
 	// save collnum now
 	if ( cr ) st->m_collnum = cr->m_collnum;
 	else      st->m_collnum = -1;
+
+	// turn this on for json output, unless diffbot collection
+	if ( format == FORMAT_JSON && ! cr->m_isCustomCrawl )
+		st->m_header = 1;
 
 	// take this out here as well!
 	// limit here
@@ -1009,6 +1015,11 @@ bool gotResults ( void *state ) {
 
 	// if already printed from Msg40.cpp, bail out now
 	if ( si->m_streamResults ) {
+		// this will be our final send
+		if ( st->m_socket->m_streamingMode ) {
+			log("res: socket still in streaming mode. wtf?");
+			st->m_socket->m_streamingMode = false;
+		}
 		log("msg40: done streaming. nuking state.");
 		mdelete(st, sizeof(State0), "PageResults2");
 		delete st;
@@ -1019,12 +1030,12 @@ bool gotResults ( void *state ) {
 	//char        *coll    = si->m_coll2;
 	//long         collLen = si->m_collLen2;
 
-	collnum_t collnum = si->m_firstCollnum;
+	//collnum_t collnum = si->m_firstCollnum;
 
 	// collection rec must still be there since SearchInput references 
 	// into it, and it must be the SAME ptr too!
-	CollectionRec *cr = g_collectiondb.getRec ( collnum );
-	if ( ! cr || cr != si->m_cr ) {
+	CollectionRec *cr = si->m_cr;//g_collectiondb.getRec ( collnum );
+	if ( ! cr ) { // || cr != si->m_cr ) {
 	       g_errno = ENOCOLLREC;
 	       return sendReply(st,NULL);
 	}
@@ -1705,12 +1716,6 @@ bool printSearchResultsHeader ( State0 *st ) {
 				       (long)moreFollow);
 	}
 
-
-	if ( st->m_header && si->m_format == FORMAT_JSON ) {
-		sb->safePrintf("\"objects\":[\n");
-		return true;
-	}
-
 	// . did he get a spelling recommendation?
 	// . do not use htmlEncode() on this anymore since receiver
 	//   of the XML feed usually does not want that.
@@ -1718,6 +1723,27 @@ bool printSearchResultsHeader ( State0 *st ) {
 		sb->safePrintf ("\t<spell><![CDATA[");
 		sb->safeStrcpy(st->m_spell);
 		sb->safePrintf ("]]></spell>\n");
+	}
+
+	if ( si->m_format == FORMAT_JSON && st->m_spell[0] ) {
+		sb->safePrintf ("\t\"spell\":\"");
+		sb->jsonEncode(st->m_spell);
+		sb->safePrintf ("\"\n,");
+	}
+
+
+	// for diffbot collections only...
+	if ( st->m_header && 
+	     si->m_format == FORMAT_JSON &&
+	     cr->m_isCustomCrawl ) {
+		sb->safePrintf("\"objects\":[\n");
+		return true;
+	}
+
+	if ( si->m_format == FORMAT_JSON &&
+	     ! cr->m_isCustomCrawl ) {
+		sb->safePrintf("\"results\":[\n");
+		return true;
 	}
 
 	// debug
@@ -2821,6 +2847,40 @@ static bool printDMOZCategoryUnderResult ( SafeBuf *sb ,
 					   long catid ,
 					   State0 *st ) {
 
+	char format = si->m_format;
+
+	if ( format == FORMAT_XML ) {
+		sb->safePrintf("\t\t<dmozCat>\n"
+			       "\t\t\t<dmozCatId>%li</dmozCatId>\n"
+			       "\t\t\t<dmozCatStr><![CDATA["
+			       ,catid);
+		// print the name of the dmoz category
+		char xbuf[256];
+		SafeBuf xb(xbuf,256,0,false);
+		g_categories->printPathFromId(&xb, catid, false,si->m_isRTL);
+		sb->cdataEncode(xb.getBufStart());
+		sb->safePrintf("]]></dmozCatStr>\n"
+			       "\t\t</dmozCat>\n");
+		return true;
+	}
+
+	if ( format == FORMAT_JSON ) {
+		sb->safePrintf("\t\t\"dmozCat\":{\n"
+			       "\t\t\t\"dmozCatId\":%li,\n"
+			       "\t\t\t\"dmozCatStr\":\""
+			       ,catid);
+		// print the name of the dmoz category
+		char xbuf[256];
+		SafeBuf xb(xbuf,256,0,false);
+		g_categories->printPathFromId(&xb, catid, false,si->m_isRTL);
+		sb->jsonEncode(xb.getBufStart());
+		sb->safePrintf("\"\n"
+			       "\t\t},\n");
+
+
+		return true;
+	}
+
 	//uint8_t queryLanguage = langUnknown;
 	uint8_t queryLanguage = si->m_queryLangId;
 	// Don't print category if not in native language category
@@ -3011,7 +3071,13 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 
 
-	if ( si->m_format == FORMAT_XML ) sb->safePrintf("\t<result>\n" );
+	if ( si->m_format == FORMAT_XML ) 
+		sb->safePrintf("\t<result>\n" );
+
+	if ( si->m_format == FORMAT_JSON ) {
+		if ( *numPrintedSoFar != 0 ) sb->safePrintf(",\n");
+		sb->safePrintf("\t{\n" );
+	}
 
 	Highlight hi;
 
@@ -3112,7 +3178,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// if we have a thumbnail show it next to the search result,
 	// base64 encoded
-	if ( (si->m_format == FORMAT_HTML || si->m_format == FORMAT_XML ) &&
+	if ( //(si->m_format == FORMAT_HTML || si->m_format == FORMAT_XML ) &&
 	     //! mr->ptr_imgUrl &&
 	     mr->ptr_imgData ) {
 		ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
@@ -3128,9 +3194,25 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 					   si->m_format );
 		if ( si->m_format == FORMAT_XML ) {
 			sb->safePrintf("\t\t<imageHeight>%li</imageHeight>\n",
-				       ti->m_dx);
-			sb->safePrintf("\t\t<imageWidth>%li</imageWidth>\n",
 				       ti->m_dy);
+			sb->safePrintf("\t\t<imageWidth>%li</imageWidth>\n",
+				       ti->m_dx);
+			sb->safePrintf("\t\t<origImageHeight>%li"
+				       "</origImageHeight>\n",
+				       ti->m_origDY);
+			sb->safePrintf("\t\t<origImageWidth>%li"
+				       "</origImageWidth>\n",
+				       ti->m_origDX);
+		}
+		if ( si->m_format == FORMAT_JSON ) {
+			sb->safePrintf("\t\t\"imageHeight\":%li,\n",
+				       ti->m_dy);
+			sb->safePrintf("\t\t\"imageWidth\":%li,\n",
+				       ti->m_dx);
+			sb->safePrintf("\t\t\"origImageHeight\":%li,\n",
+				       ti->m_origDY);
+			sb->safePrintf("\t\t\"origImageWidth\":%li,\n",
+				       ti->m_origDX);
 		}
 	}
 
@@ -3357,7 +3439,6 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	}
 	
 
-
 	long hlen;
 	//copy all summary and title excerpts for this result into here
 	//char tt[1024*32];
@@ -3375,8 +3456,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		frontTag = "<font style=\"background-color:yellow\">" ;
 	}
 	long cols = 80;
-	if ( si->m_format == FORMAT_XML ) 
-		sb->safePrintf("\t\t<title><![CDATA[");
+
 	SafeBuf hb;
 	if ( str && strLen && si->m_doQueryHighlighting ) {
 		hlen = hi.set ( &hb,
@@ -3393,29 +3473,55 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				backTag,
 				0,
 				0 ); // niceness
+		// reassign!
+		str = hb.getBufStart();
+		strLen = hb.getLength();
 		//if (!sb->utf8Encode2(tt, hlen)) return false;
-		if ( ! sb->brify ( hb.getBufStart(),
-				  hb.getLength(),
-				  0,
-				  cols) ) return false;
+		// if ( si->m_format != FORMAT_JSON )
+		// 	if ( ! sb->brify ( hb.getBufStart(),
+		// 			   hb.getLength(),
+		// 			   0,
+		// 			   cols) ) return false;
 	}
-	else if ( str && strLen ) {
+
+	// . use "UNTITLED" if no title
+	// . msg20 should supply the dmoz title if it can
+	if ( strLen == 0 && 
+	     si->m_format != FORMAT_XML && 
+	     si->m_format != FORMAT_JSON ) {
+		str = "<i>UNTITLED</i>";
+		strLen = gbstrlen(str);
+	}
+
+	if ( str && 
+	     strLen && 
+	     ( si->m_format == FORMAT_HTML ||
+	       si->m_format == FORMAT_WIDGET_IFRAME ||
+	       si->m_format == FORMAT_WIDGET_APPEND ||
+	       si->m_format == FORMAT_WIDGET_AJAX ) 
+	     ) {
 		// determine if TiTle wraps, if it does add a <br> count for
 		// each wrap
 		//if (!sb->utf8Encode2(str , strLen )) return false;
 		if ( ! sb->brify ( str,strLen,0,cols) ) return false;
 	}
-	// . use "UNTITLED" if no title
-	// . msg20 should supply the dmoz title if it can
-	if ( strLen == 0 ) {
-		if(!sb->safePrintf("<i>UNTITLED</i>"))
-			return false;
-	}
+
 	// close up the title tag
-	if ( si->m_format == FORMAT_XML ) sb->safePrintf("]]></title>\n");
+	if ( si->m_format == FORMAT_XML ) {
+		sb->safePrintf("\t\t<title><![CDATA[");
+		if ( str ) sb->cdataEncode(str);
+		sb->safePrintf("]]></title>\n");
+	}
+
+	if ( si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("\t\t\"title\":\"");
+		if ( str ) sb->jsonEncode(str);
+		sb->safePrintf("\",\n");
+	}
 
 
-	if ( si->m_format == FORMAT_HTML ) sb->safePrintf ("</a><br>\n" ) ;
+	if ( si->m_format == FORMAT_HTML ) 
+		sb->safePrintf ("</a><br>\n" ) ;
 
 
 	// close the title tag stuf
@@ -3423,6 +3529,22 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	     si->m_format == FORMAT_WIDGET_APPEND ||
 	     si->m_format == FORMAT_WIDGET_AJAX ) 
 		sb->safePrintf("</b></a>\n");
+
+	//
+	// print <h1> tag contents. hack for client.
+	//
+	if ( mr->ptr_htag && mr->size_htag > 1 ) {
+		if ( si->m_format == FORMAT_XML ) {
+			sb->safePrintf("\t\t<h1Tag><![CDATA[");
+			sb->cdataEncode(mr->ptr_htag);
+			sb->safePrintf("]]></h1Tag>\n");
+		}
+		if ( si->m_format == FORMAT_JSON ) {
+			sb->safePrintf("\t\t\"h1Tag\":\"");
+			sb->jsonEncode(mr->ptr_htag);
+			sb->safePrintf("\",\n");
+		}
+	}
 
 
 	/////
@@ -3440,6 +3562,8 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				      "]]>"
 				      "</contentType>\n",
 				      cs);
+		else if ( si->m_format == FORMAT_JSON )
+			sb->safePrintf("\t\t\"contentType\":\"%s\",\n",cs);
 		else if ( si->m_format == FORMAT_HTML && ctype != CT_HTML ) {
 			sb->safePrintf(" <b><font style=color:white;"
 				      "background-color:maroon;>");
@@ -3460,21 +3584,24 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 
 	// . then the summary
 	// . "s" is a string of null terminated strings
-	char *send;
+	//char *send;
 	// do the normal summary
-	str    = mr->ptr_sum;
-	strLen = mr->size_sum-1;
+	str    = mr->ptr_displaySum;
+	// sometimes the summary is longer than requested because for
+	// summary deduping purposes (see "pss" parm in Parms.cpp) we do not
+	// get it as short as request. so use mr->m_sumPrintSize here
+	// not mr->size_sum
+	strLen = mr->size_displaySum - 1;//-1;
+
 	// this includes the terminating \0 or \0\0 so back up
 	if ( strLen < 0 ) strLen  = 0;
-	send = str + strLen;
+	//send = str + strLen;
 
 	// dmoz summary might override if we are showing a dmoz topic page
 	if ( dmozSummary ) {
 		str = dmozSummary;
 		strLen = gbstrlen(dmozSummary);
 	}
-
-	if ( si->m_format == FORMAT_XML ) sb->safePrintf("\t\t<sum><![CDATA[");
 
 	bool printSummary = true;
 	// do not print summaries for widgets by default unless overridden
@@ -3485,13 +3612,25 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	     hr->getLong("summaries",0) == 0 )
 		printSummary = false;
 
-	if ( printSummary )
+	if ( printSummary && si->m_format == FORMAT_HTML )
 		sb->brify ( str , strLen, 0 , cols ); // niceness = 0
 
-	// close xml tag
-	if ( si->m_format == FORMAT_XML ) sb->safePrintf("]]></sum>\n");
+	if ( si->m_format == FORMAT_XML ) {
+		sb->safePrintf("\t\t<sum><![CDATA[");
+		sb->cdataEncode(str);
+		sb->safePrintf("]]></sum>\n");
+	}
+
+	if ( si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("\t\t\"sum\":\"");
+		sb->jsonEncode(str);
+		sb->safePrintf("\",\n");
+	}
+
+
 	// new line if not xml
-	else if ( strLen ) sb->safePrintf("<br>\n");
+	if ( si->m_format == FORMAT_HTML && strLen ) 
+		sb->safePrintf("<br>\n");
 
 	////////////
 	//
@@ -3557,6 +3696,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		sb->safeMemcpy ( url , urlLen );
 		sb->safePrintf("]]></url>\n");
 	}
+	if ( si->m_format == FORMAT_JSON ) {
+		sb->safePrintf("\t\t\"url\":\"");
+		sb->jsonEncode ( url , urlLen );
+		sb->safePrintf("\",\n");
+	}
 
 
 	// now the last spidered date of the document
@@ -3617,6 +3761,49 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 					datedbDate);
 	}
 
+	if ( si->m_format == FORMAT_JSON ) {
+		// doc size in Kilobytes
+		sb->safePrintf ( "\t\t\"size\":\"%4.0fk\",\n",
+				(float)mr->m_contentLen/1024.0);
+		// . docId for possible cached link
+		// . might have merged a bunch together
+		sb->safePrintf("\t\t\"docId\":%lli,\n",mr->m_docId );
+		// . show the site root
+		// . for hompages.com/users/fred/mypage.html this will be
+		//   homepages.com/users/fred/
+		// . for www.xyz.edu/~foo/burp/ this will be
+		//   www.xyz.edu/~foo/ etc.
+		long  siteLen = 0;
+		char *site = NULL;
+		// seems like this isn't the way to do it, cuz Tagdb.cpp
+		// adds the "site" tag itself and we do not always have it
+		// in the XmlDoc::ptr_tagRec... so do it this way:
+		site    = mr->ptr_site;
+		siteLen = mr->size_site-1;
+		//char *site=uu.getSite( &siteLen , si->m_coll, false, tagRec);
+		sb->safePrintf("\t\t\"site\":\"");
+		if ( site && siteLen > 0 ) sb->safeMemcpy ( site , siteLen );
+		sb->safePrintf("\",\n");
+		//long sh = hash32 ( site , siteLen );
+		//sb->safePrintf ("\t\t<siteHash32>%lu</siteHash32>\n",sh);
+		//long dh = uu.getDomainHash32 ();
+		//sb->safePrintf ("\t\t<domainHash32>%lu</domainHash32>\n",dh);
+		// spider date
+		sb->safePrintf ( "\t\t\"spidered\":%lu,\n",
+				mr->m_lastSpidered);
+		// backwards compatibility for buzz
+		sb->safePrintf ( "\t\t\"firstIndexedDateUTC\":%lu,\n"
+				 , mr->m_firstIndexedDate);
+		sb->safePrintf( "\t\t\"contentHash32\":%lu,\n"
+				, mr->m_contentHash32);
+		// pub date
+		long datedbDate = mr->m_datedbDate;
+		// show the datedb date as "<pubDate>" for now
+		if ( datedbDate != -1 )
+			sb->safePrintf ( "\t\t\"pubdate\":%lu,\n",
+					datedbDate);
+	}
+
 
 
 	// . we also store the outlinks in a linkInfo structure
@@ -3642,6 +3829,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			      k->m_ip, // hostHash, but use ip for now
 			      (long)k->m_firstIndexedDate ,
 			      (long)k->m_datedbDate );
+
 	if ( si->m_format == FORMAT_XML ) {
 		// result
 		sb->safePrintf("\t\t<language><![CDATA[%s]]>"
@@ -3652,6 +3840,16 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		if(charset)
 			sb->safePrintf("\t\t<charset><![CDATA[%s]]>"
 				      "</charset>\n", charset);
+	}
+
+	if ( si->m_format == FORMAT_JSON ) {
+		// result
+		sb->safePrintf("\t\t\"language\":\"%s\",\n",
+			      getLanguageString(mr->m_language));
+		
+		char *charset = get_charset_str(mr->m_charset);
+		if(charset)
+			sb->safePrintf("\t\t\"charset\":\"%s\",\n",charset);
 	}
 
 	//
@@ -3797,10 +3995,10 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			       ,ix
 			       );
 		// reindex
-		sb->safePrintf(" - <a style=color:red; href=\"/addurl?u=");
+		sb->safePrintf(" - <a style=color:red; href=\"/addurl?urls=");
 		sb->urlEncode ( url , gbstrlen(url) , false );
 		unsigned long long rand64 = gettimeofdayInMillisecondsLocal();
-		sb->safePrintf("&rand64=%llu&force=1\">respider</a>",rand64);
+		sb->safePrintf("&rand64=%llu\">respider</a>",rand64);
 	}
 
 
@@ -4041,6 +4239,11 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	if ( ! dp ) {
 		if ( si->m_format == FORMAT_XML ) 
 			sb->safePrintf ("\t</result>\n\n");
+		if ( si->m_format == FORMAT_JSON ) {
+			// remove last ,\n
+			sb->m_length -= 2;
+			sb->safePrintf ("\n\t}\n\n");
+		}
 		// wtf?
 		//char *xx=NULL;*xx=0;
 		// at least close up the table
@@ -4126,7 +4329,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		if ( minScore < 0.0 || totalPairScore < minScore )
 			minScore = totalPairScore;
 		// we need to set "ft" for xml stuff below
-		if ( si->m_format == FORMAT_XML ) continue;
+		if ( si->m_format != FORMAT_HTML ) continue;
 		//sb->safePrintf("<table border=1><tr><td><center><b>");
 		// print pair text
 		//long qtn1 = fps->m_qtermNum1;
@@ -4209,7 +4412,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 		if ( minScore < 0.0 || totalSingleScore < minScore )
 			minScore = totalSingleScore;
 		// we need to set "ft" for xml stuff below
-		if ( si->m_format == FORMAT_XML ) continue;
+		if ( si->m_format != FORMAT_HTML ) continue;
 		//sb->safePrintf("<table border=1><tr><td><center><b>");
 		// print pair text
 		//long qtn = fss->m_qtermNum;

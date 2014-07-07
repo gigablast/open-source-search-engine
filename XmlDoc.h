@@ -821,6 +821,7 @@ class XmlDoc {
 	Query *getQuery() ;
 	Matches *getMatches () ;
 	char *getDescriptionBuf ( char *displayMetas , long *dlen ) ;
+	SafeBuf *getHeaderTagBuf();
 	class Title *getTitle ();
 	class Summary *getSummary () ;
 	char *getHighlightedSummary ();
@@ -1377,6 +1378,7 @@ class XmlDoc {
 	bool m_matchesValid;
 	bool m_dbufValid;
 	bool m_titleValid;
+	bool m_htbValid;
 	bool m_collnumValid;
 	//bool m_twidsValid;
 	bool m_termId32BufValid;
@@ -2010,6 +2012,7 @@ class XmlDoc {
 	// meta description buf
 	long m_dbufLen;
 	char m_dbuf[1024];
+	SafeBuf m_htb;
 	Title m_title;
 	Summary m_summary;
 	char m_isCompromised;

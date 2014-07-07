@@ -6,17 +6,62 @@
 HttpRequest::HttpRequest () { m_cgiBuf = NULL; m_cgiBuf2 = NULL; reset(); }
 HttpRequest::~HttpRequest() { reset();      }
 
+
 char HttpRequest::getReplyFormat() {
 	if ( m_replyFormatValid ) return m_replyFormat;
-	char *fs = getString("format",NULL,NULL);
-	char fmt = FORMAT_HTML;
-	if ( fs && strcmp(fs,"html") == 0 ) fmt = FORMAT_HTML;
-	if ( fs && strcmp(fs,"json") == 0 ) fmt = FORMAT_JSON;
-	if ( fs && strcmp(fs,"xml") == 0 ) fmt = FORMAT_XML;
-	m_replyFormat = fmt;
+
+	char *formatStr = getString("format");
+
+	char format = -1;//FORMAT_HTML;
+
+	// what format should search results be in? default is html
+	if ( formatStr && strcmp(formatStr,"html") == 0 ) format = FORMAT_HTML;
+	if ( formatStr && strcmp(formatStr,"json") == 0 ) format = FORMAT_JSON;
+	if ( formatStr && strcmp(formatStr,"xml") == 0 ) format = FORMAT_XML;
+	if ( formatStr && strcmp(formatStr,"csv") == 0 ) format = FORMAT_CSV;
+	if ( formatStr && strcmp(formatStr,"iframe")==0)
+		format=FORMAT_WIDGET_IFRAME;
+	if ( formatStr && strcmp(formatStr,"ajax")==0)
+		format=FORMAT_WIDGET_AJAX;
+	if ( formatStr && strcmp(formatStr,"append")==0)
+		format=FORMAT_WIDGET_APPEND;
+
+	// support old api &xml=1 to mean &format=1
+	if ( getLong("xml",0) ) {
+		format = FORMAT_XML;
+	}
+
+	// also support &json=1
+	if ( getLong("json",0) ) {
+		format = FORMAT_JSON;
+	}
+
+	if ( getLong("csv",0) ) {
+		format = FORMAT_CSV;
+	}
+
+	if ( getLong("iframe",0) ) {
+		format = FORMAT_WIDGET_IFRAME;
+	}
+
+	if ( getLong("ajax",0) ) {
+		format = FORMAT_WIDGET_AJAX;
+	}
+
+	if ( getLong("append",0) ) {
+		format = FORMAT_WIDGET_APPEND;
+	}
+
+	// default to html
+	if ( format == -1 ) 
+		format = FORMAT_HTML;
+
+	m_replyFormat = format;
 	m_replyFormatValid = true;
-	return m_replyFormat;
+
+	return format;
 }
+
 
 void HttpRequest::reset() {
 	m_numFields = 0;
