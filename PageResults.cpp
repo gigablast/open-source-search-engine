@@ -3113,7 +3113,7 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	// base64 encoded
 	if ( //(si->m_format == FORMAT_HTML || si->m_format == FORMAT_XML ) &&
 	     //! mr->ptr_imgUrl &&
-	     mr->ptr_imgData ) {
+	    si->m_showImages && mr->ptr_imgData ) {
 		ThumbnailArray *ta = (ThumbnailArray *)mr->ptr_imgData;
 		ThumbnailInfo *ti = ta->getThumbnailInfo(0);
 		if ( si->m_format == FORMAT_XML )
@@ -3136,6 +3136,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 			sb->safePrintf("\t\t<origImageWidth>%li"
 				       "</origImageWidth>\n",
 				       ti->m_origDX);
+			sb->safePrintf("\t\t<imageUrl><![CDATA[");
+			sb->cdataEncode(ti->getUrl());
+			sb->safePrintf("]]></imageUrl>\n");
 		}
 		if ( si->m_format == FORMAT_JSON ) {
 			sb->safePrintf("\t\t\"imageHeight\":%li,\n",
@@ -3146,6 +3149,9 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 				       ti->m_origDY);
 			sb->safePrintf("\t\t\"origImageWidth\":%li,\n",
 				       ti->m_origDX);
+			sb->safePrintf("\t\t\"imageUrl\":\"");
+			sb->jsonEncode(ti->getUrl());
+			sb->safePrintf("\",\n");
 		}
 	}
 

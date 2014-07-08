@@ -158,6 +158,8 @@ class SearchInput {
 	// ip address of searcher used for banning abusive IPs "uip"
 	char *m_userIpStr;
 
+	char  m_showImages;
+
 	// general parms, not part of makeKey(), but should be serialized
 	char   m_useCache;                   // msg40
 	char   m_rcache;                     // msg40

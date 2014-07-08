@@ -8160,6 +8160,21 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_SI;
 	m++;
 
+	m->m_title = "show images";
+	m->m_desc  = "Should we return or show the images in the search "
+		"results?";
+	m->m_cgi   = "showimages";
+	m->m_off   = (char *)&si.m_showImages - y;
+	m->m_type  = TYPE_BOOL;
+	m->m_def   = "1";
+	m->m_sprpg = 0;
+	m->m_sprpp = 0;
+	m->m_flags = PF_NOSAVE;
+	m->m_page  = PAGE_NONE;
+	m->m_obj   = OBJ_SI;
+	m++;
+
+
 	m->m_title = "read from cache";
 	m->m_desc  = "Should we read search results from the cache? Set "
 		"to false to fix dmoz bug.";
