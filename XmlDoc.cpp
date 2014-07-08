@@ -6723,6 +6723,9 @@ SectionStats *XmlDoc::getSectionStats ( unsigned long secHash32 ,
 	// speed it up some with this flag
 	r->m_forSectionStats = true;
 
+	// only do a single read of docids... do not split up
+	r->m_numDocIdSplits  = 1;
+
 	// 1 query term
 	r->m_nqt = 1;
 
@@ -34550,27 +34553,39 @@ SafeBuf *XmlDoc::getInlineSectionVotingBuf ( ) {
 		char *byte2 = words->m_words[b-1] + words->m_wordLens[b-1];
 		//long off1 = byte1 - words->m_words[0];
 		long size = byte2 - byte1;
-		// if a tag then insert the info at end
-		if ( si->m_stats.m_totalEntries ) {
-			//sb->safePrintf("<!--");
-			sb->safePrintf("<font color=red>");
-			SectionStats *sx = &si->m_stats;
-			// # docs from our site had the same innerHTML?
-			sb->safePrintf(" _m=%li",(long)sx->m_totalMatches);
-			// # total docs from our site had the same X-path?
-			sb->safePrintf(" _n=%li",(long)sx->m_totalEntries);
-			// unique values in the xpath innerhtml
-			sb->safePrintf(" _u=%li",(long)sx->m_numUniqueVals);
-			// the hash of the turktaghash and sitehash32 combined
-			// so you can do gbfacetstr:gbxpathsitehash12345
-			// where the 12345 is this h32 value.
-			unsigned long h32 = si->m_turkTagHash32 ^ siteHash32;
-			sb->safePrintf(" _h=%lu",h32);
-			//sb->safePrintf("-->");
-			sb->safePrintf("</font>");
+		// straight copy if no stats
+		if ( ! si->m_stats.m_totalEntries ) {
+			sb->safeMemcpy ( byte1 , size );
+			continue;
 		}
+		// skip if not tag
+		if ( ! si->m_tagId ) continue;
+		// should be tag then
+		char *t = byte1;
+		char *e = t;
+		for ( ; *e && *e != '>' && ! is_wspace_a(*e) ; e++);
+		// copy that
+		sb->safeMemcpy ( t , e-t);
+		// insert our stuff into the tag
+		//sb->safePrintf("<!--");
+		//sb->safePrintf("<font color=red>");
+		SectionStats *sx = &si->m_stats;
+		// # docs from our site had the same innerHTML?
+		sb->safePrintf(" _s=%lim",(long)sx->m_totalMatches);
+		// # total docs from our site had the same X-path?
+		sb->safePrintf("%lin",(long)sx->m_totalEntries);
+		// unique values in the xpath innerhtml
+		sb->safePrintf("%liu",(long)sx->m_numUniqueVals);
+		// the hash of the turktaghash and sitehash32 combined
+		// so you can do gbfacetstr:gbxpathsitehash12345
+		// where the 12345 is this h32 value.
+		unsigned long h32 = si->m_turkTagHash32 ^ siteHash32;
+		sb->safePrintf("%luh",h32);
+		// copy the rest of the tag
+		sb->safeMemcpy( e, size-(e-t) );
+		//sb->safePrintf("-->");
+		//sb->safePrintf("</font>");
 		// print it here
-		sb->safeMemcpy ( byte1 , size );
 	}
 	m_inlineSectionVotingBufValid = true;
 	return &m_inlineSectionVotingBuf;
