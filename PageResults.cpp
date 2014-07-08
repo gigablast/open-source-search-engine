@@ -2189,13 +2189,14 @@ bool printSearchResultsHeader ( State0 *st ) {
 				       // make a search to just show those
 				       // docs from this facet with that
 				       // value. actually gbmin/max would work
-				       "<a href=/search?q="
+				       "<a href=/search?c=%s&q="
 				       "gbequalint%%3A%s:%lu"
 				       //"+gbmaxint%%3A%s:%lu>"
 				       ">"
 				       "%lu (%lu)"
 				       "</a>"
 				       "</td></tr>\n"
+				       ,coll
 				       ,qt->m_term // for query
 				       ,val32 // for query
 				       //,qt->m_term // for query
