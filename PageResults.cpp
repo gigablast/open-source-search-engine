@@ -3466,17 +3466,22 @@ bool printResult ( State0 *st, long ix , long *numPrintedSoFar ) {
 	//
 	// print <h1> tag contents. hack for client.
 	//
-	if ( mr->ptr_htag && mr->size_htag > 1 ) {
+	char *hp = mr->ptr_htag;
+	char *hpend = hp + mr->size_htag;
+	for ( ; hp && hp < hpend ; ) {
 		if ( si->m_format == FORMAT_XML ) {
 			sb->safePrintf("\t\t<h1Tag><![CDATA[");
-			sb->cdataEncode(mr->ptr_htag);
+			sb->cdataEncode(hp);
 			sb->safePrintf("]]></h1Tag>\n");
 		}
 		if ( si->m_format == FORMAT_JSON ) {
 			sb->safePrintf("\t\t\"h1Tag\":\"");
-			sb->jsonEncode(mr->ptr_htag);
+			sb->jsonEncode(hp);
 			sb->safePrintf("\",\n");
 		}
+		// it is a \0 separated list of headers generated from
+		// XmlDoc::getHeaderTagBuf()
+		hp += gbstrlen(hp) + 1;
 	}
 
 

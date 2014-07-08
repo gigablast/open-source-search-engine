@@ -28585,9 +28585,12 @@ Msg20Reply *XmlDoc::getMsg20Reply ( ) {
 	if ( m_req->m_getHeaderTag ) {
 		SafeBuf *htb = getHeaderTagBuf();
 		if ( ! htb || htb == (SafeBuf *)-1 ) return (Msg20Reply *)htb;
-		// it should be null terminated
+		// . it should be null terminated
+		// . actually now it is a \0 separated list of the first
+		//   few h1 tags
+		// . we call SafeBuf::pushChar(0) to add each one
 		reply->ptr_htag = htb->getBufStart();
-		reply->size_htag = htb->getLength() + 1;
+		reply->size_htag = htb->getLength();
 	}
 
 	// breathe
@@ -29595,8 +29598,13 @@ SafeBuf *XmlDoc::getHeaderTagBuf() {
 	Sections *ss = getSections();
 	if ( ! ss || ss == (void *)-1) return (SafeBuf *)ss;
 
+	long count = 0;
+
 	// scan sections
 	Section *si = ss->m_rootSection;
+
+ moreloop:
+
 	for ( ; si ; si = si->m_next ) {
 		// breathe
 		QUICKPOLL(m_niceness);
@@ -29615,7 +29623,13 @@ SafeBuf *XmlDoc::getHeaderTagBuf() {
 
 	// copy it
 	m_htb.safeMemcpy ( a , b - a );
-	m_htb.nullTerm();
+	m_htb.pushChar('\0');
+
+	si = si->m_next;
+
+	// add more?
+	if ( count++ < 3 ) goto moreloop;
+
 	m_htbValid = true;
 	return &m_htb;
 }
