@@ -4806,7 +4806,7 @@ int install ( install_flag_konst_t installFlag , long hostId , char *dir ,
 
 			File f;
 			char *target = "gb.new";
-			f.set(h2->m_dir,target);
+			f.set(g_hostdb.m_myHost->m_dir,target);
 			if ( ! f.doesExist() ) target = "gb";
 
 			sprintf(tmp,
