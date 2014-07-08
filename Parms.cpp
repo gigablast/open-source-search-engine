@@ -5391,7 +5391,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_DUP;
+	m->m_flags = PF_DUP|PF_CLONE;
 	m++;
 
 	m->m_title = "site list";
@@ -12068,7 +12068,7 @@ void Parms::init ( ) {
 	m->m_colspan = 3;
 	m->m_type  = TYPE_UFP;// 1 byte dropdown menu
 	m->m_def   = "1"; // UFP_WEB
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_page  = PAGE_FILTERS;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -12169,7 +12169,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1; // if we START a new row
 	m->m_def   = "";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_page  = PAGE_FILTERS;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -12183,7 +12183,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_FILTERS;
 	m->m_rowid = 1;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
@@ -12213,7 +12213,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_units = "days";
 	m->m_rowid = 1;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
 	m->m_title = "max spiders";
@@ -12228,7 +12228,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_FILTERS;
 	m->m_obj   = OBJ_COLL;
 	m->m_rowid = 1;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
 	m->m_title = "max spiders per ip";
@@ -12242,7 +12242,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_FILTERS;
 	m->m_obj   = OBJ_COLL;
 	m->m_rowid = 1;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
 	m->m_title = "same ip wait (ms)";
@@ -12259,7 +12259,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_units = "milliseconds";
 	m->m_rowid = 1;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
 	/*
@@ -12286,7 +12286,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_rowid = 1;
 	m->m_def   = "50";
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_addin = 1; // "insert" follows?
 	m++;
 
@@ -14275,7 +14275,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "1";
-	m->m_flags = PF_API | PF_NOSAVE;
+	m->m_flags = PF_API | PF_NOSAVE | PF_CLONE;
 	m++;
 
 	m->m_title = "get scoring info by default";
@@ -14289,7 +14289,7 @@ void Parms::init ( ) {
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "1";
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m++;
 
 	m->m_title = "do query expansion by default";
@@ -14301,7 +14301,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_cgi  = "qe";
 	m->m_flags = PF_API;
-	m->m_page  = PAGE_SEARCH;
+	m->m_page  = PAGE_SEARCH | PF_CLONE;
 	m->m_obj   = OBJ_COLL;
 	m++;
 
@@ -14316,7 +14316,7 @@ void Parms::init ( ) {
 	m->m_smax  = 8;
 	m->m_sprpg = 1; // turn off for now
 	m->m_sprpp = 1;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14328,7 +14328,7 @@ void Parms::init ( ) {
 	m->m_cgi   = "tml";
 	m->m_off   = (char *)&cr.m_titleMaxLen - x;
 	m->m_type  = TYPE_LONG;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_def   = "80";
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
@@ -14358,7 +14358,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_siteClusterByDefault - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14373,7 +14373,7 @@ void Parms::init ( ) {
 	m->m_obj   = OBJ_COLL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m++;
 
 	m->m_title = "dedup results by default";
@@ -14385,7 +14385,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 1;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14402,7 +14402,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_smin  = 0;
 	m->m_smax  = 100;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;       
@@ -14418,7 +14418,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "4";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;       
@@ -14432,7 +14432,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14465,7 +14465,7 @@ void Parms::init ( ) {
 	m->m_size  = 6; // up to 5 chars + NULL, e.g. "en_US"
 	m->m_def   = "xx";//_US";
 	//m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14482,7 +14482,7 @@ void Parms::init ( ) {
 	m->m_size  = 2+1;
 	m->m_def   = "us";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14511,7 +14511,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_summaryMaxLen - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "512";
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14524,7 +14524,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "4";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14537,7 +14537,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "90";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14567,7 +14567,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "80";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14580,7 +14580,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "70000";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;       
@@ -14607,7 +14607,7 @@ void Parms::init ( ) {
 	m->m_size  = SUMMARYHIGHLIGHTTAGMAXSIZE ;
 	m->m_def   = "<b style=\"color:black;background-color:#ffff66\">";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14621,7 +14621,7 @@ void Parms::init ( ) {
 	m->m_size  = SUMMARYHIGHLIGHTTAGMAXSIZE ;
 	m->m_def   = "</b>";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14634,7 +14634,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_docsToScanForTopics - x;
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "30";
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14648,7 +14648,7 @@ void Parms::init ( ) {
 	// default to 0 since newspaperarchive only has docs from same IP dom
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14661,7 +14661,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14678,7 +14678,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_sprpg = 0; // do not propagate
         m->m_sprpp = 0; // do not propagate
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14693,7 +14693,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "5";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14706,7 +14706,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "2";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14720,7 +14720,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "80";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14733,7 +14733,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "6";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14747,7 +14747,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_LONG;
 	m->m_def   = "4096";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14775,7 +14775,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_displayDmozCategories - x;
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14788,7 +14788,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14802,7 +14802,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14815,7 +14815,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14828,7 +14828,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "1";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -14840,7 +14840,7 @@ void Parms::init ( ) {
 	m->m_type  = TYPE_BOOL;
 	m->m_def   = "0";
 	m->m_group = 0;
-	m->m_flags = PF_API;
+	m->m_flags = PF_API | PF_CLONE;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
 	m++;
@@ -15095,7 +15095,7 @@ void Parms::init ( ) {
 	m->m_def   = "";
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
-	m->m_flags = PF_TEXTAREA;
+	m->m_flags = PF_TEXTAREA | PF_CLONE;
 	m++;
 
 
@@ -15205,7 +15205,7 @@ void Parms::init ( ) {
 	//m->m_soff  = (char *)&si.m_htmlHead - y;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
-	m->m_flags = PF_TEXTAREA;
+	m->m_flags = PF_TEXTAREA | PF_CLONE;
 	m++;
 
 
@@ -15258,7 +15258,7 @@ void Parms::init ( ) {
 	//m->m_soff  = (char *)&si.m_htmlHead - y;
 	m->m_page  = PAGE_SEARCH;
 	m->m_obj   = OBJ_COLL;
-	m->m_flags = PF_TEXTAREA;
+	m->m_flags = PF_TEXTAREA | PF_CLONE;
 	m++;
 
 
@@ -15284,6 +15284,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "site list";
@@ -15309,7 +15310,7 @@ void Parms::init ( ) {
 	m->m_func  = CommandUpdateSiteList;
 	m->m_def   = "";
 	// rebuild urlfilters now will nuke doledb and call updateSiteList()
-	m->m_flags = PF_TEXTAREA | PF_REBUILDURLFILTERS;
+	m->m_flags = PF_TEXTAREA | PF_REBUILDURLFILTERS | PF_CLONE;
 	m++;
 
 
@@ -15377,6 +15378,7 @@ void Parms::init ( ) {
 	m->m_def   = "100";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "spider delay in milliseconds";
@@ -15389,6 +15391,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++; 
 
 
@@ -15401,6 +15404,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "max robots.txt cache age";
@@ -15418,6 +15422,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 
@@ -15448,6 +15453,7 @@ void Parms::init ( ) {
 	m->m_units = "minutes";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "daily merge days";
@@ -15464,6 +15470,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "daily merge last started";
@@ -15535,6 +15542,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "max add urls";
@@ -15549,6 +15557,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 
@@ -15721,6 +15730,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "deduping enabled for www";
@@ -15734,6 +15744,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "detect custom error pages";
@@ -15745,6 +15756,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "delete 404s";
@@ -15756,6 +15768,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_HIDDEN;
 	m++;
 
 	m->m_title = "delete timed out docs";
@@ -15785,6 +15798,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "use ifModifiedSince";
@@ -15801,6 +15815,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "build similarity vector from content only";
@@ -16103,6 +16118,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "restrict link voting by ip";
@@ -16121,6 +16137,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "use new link algo";
@@ -16171,6 +16188,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	/*
@@ -16426,6 +16444,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 
@@ -16600,6 +16619,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "filter name";
@@ -16613,6 +16633,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "filter timeout";
@@ -16625,6 +16646,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "proxy ip";
@@ -16635,6 +16657,7 @@ void Parms::init ( ) {
 	m->m_def   = "0.0.0.0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "proxy port";
@@ -16647,6 +16670,7 @@ void Parms::init ( ) {
 	m->m_group = 0;
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "make image thumbnails";
@@ -16659,6 +16683,7 @@ void Parms::init ( ) {
 	m->m_def   = "0";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "max thumbnail width or height";
@@ -16672,6 +16697,7 @@ void Parms::init ( ) {
 	m->m_def   = "250";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_title = "index spider replies";
@@ -16693,6 +16719,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	// i put this in here so i can save disk space for my global
@@ -16708,6 +16735,7 @@ void Parms::init ( ) {
 	m->m_def   = "1";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
+	m->m_flags = PF_CLONE;
 	m++;
 
 	m->m_cgi   = "apiUrl";
@@ -16725,7 +16753,7 @@ void Parms::init ( ) {
 	m->m_off   = (char *)&cr.m_diffbotApiUrl - x;
 	m->m_type  = TYPE_SAFEBUF;
 	m->m_page  = PAGE_SPIDER;
-	m->m_flags = PF_REBUILDURLFILTERS;
+	m->m_flags = PF_REBUILDURLFILTERS | PF_CLONE;
 	m->m_def   = "";
 	m->m_page  = PAGE_SPIDER;
 	m->m_obj   = OBJ_COLL;
@@ -21401,4 +21429,41 @@ bool printUrlExpressionExamples ( SafeBuf *sb ) {
 		// wrap it up
 		sb->safePrintf("</table><br><br>");
 		return true;
+}
+
+// . copy/clone parms from one collrec to another
+// . returns false and sets g_errno on error
+// . if doing this after creating a new collection on host #0 we have to call
+//   syncParmsWithHost0() to get all the shards in sync.
+bool Parms::copyCollRec ( char *srcCR , char *dstCR ) {
+
+	// now set THIS based on the parameters in the xml file
+	for ( long i = 0 ; i < m_numParms ; i++ ) {
+
+		// get it
+		Parm *m = &m_parms[i];
+		if ( m->m_obj != OBJ_COLL ) continue;
+
+		//log(LOG_DEBUG, "Parms: %s: parm: %s", filename, m->m_xml);
+		// . there are 2 object types, coll recs and g_conf, aka
+		//   OBJ_COLL and OBJ_CONF.
+
+		// skip comments and command
+		if ( !(m->m_flags & PF_CLONE) ) continue;
+
+		// get parm data ptr
+		char *src = srcCR + m->m_off;
+		char *dst = dstCR + m->m_off;
+
+		if ( m->m_type == TYPE_SAFEBUF ) {
+			SafeBuf *a = (SafeBuf *)src;
+			SafeBuf *b = (SafeBuf *)dst;
+			b->safeMemcpy ( a );
+			continue;
+		}
+
+		// this should work for most types
+		memcpy ( dst , src , m->m_size );
+	}
+	return true;
 }
