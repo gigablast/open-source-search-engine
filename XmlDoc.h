@@ -299,7 +299,7 @@ class XmlDoc {
 	//uint16_t  m_reserved3;//urlPathWeight;
 	uint8_t   m_metaListCheckSum8; // bring it back!!
 	char      m_reserved3b;
-	uint16_t  m_reserved4;//externalLinkTextWeight;
+	uint16_t  m_bodyStartPos;//m_reserved4;//externalLinkTextWeight;
 	uint16_t  m_reserved5;//internalLinkTextWeight;
 
 	// a new parm from reserved6. need to know the count so we can
@@ -1229,6 +1229,7 @@ class XmlDoc {
 	bool m_wasInIndexValid;
 	bool m_outlinksAddedDateValid;
 	bool m_countryIdValid;
+	bool m_bodyStartPosValid;
 	/*
 	bool m_titleWeightValid;
 	bool m_headerWeightValid;

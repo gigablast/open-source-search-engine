@@ -186,6 +186,8 @@ static long long s_lastTimeStart = 0LL;
 
 void XmlDoc::reset ( ) {
 
+	m_bodyStartPos = 0;
+
 	m_mcastArray = NULL;
 
 	m_skipIframeExpansion = false;
@@ -27462,6 +27464,10 @@ bool XmlDoc::hashBody2 ( HashTableX *tt ) {
 
 	//long nw = m_words.getNumWords();
 
+	// record this
+	m_bodyStartPos = m_dist;
+	m_bodyStartPosValid = true;
+
 	HashInfo hi;
 	hi.m_tt         = tt;
 	hi.m_desc       = "body";
@@ -34641,12 +34647,18 @@ bool XmlDoc::printRainbowSections ( SafeBuf *sb , HttpRequest *hr ) {
 	if(!getDiversityVec(words,phrases,cnt,&dwbuf,m_niceness))return true;
 	char *diversityVec = dwbuf.getBufStart();
 
+	// hack fack debug
+	//m_bodyStartPos =2136;
+
 	SafeBuf wpos;
 	if ( ! getWordPosVec ( words , 
 			       sections,
 			       //wordStart,
 			       //wordEnd,
-			       0, // hi->m_startDist,
+			       // we save this in the titlerec, when we
+			       // start hashing the body. we have the url
+			       // terms before the body, so this is necessary.
+			       m_bodyStartPos,//0, // hi->m_startDist,
 			       fragVec,
 			       m_niceness,
 			       &wpos) ) return true;

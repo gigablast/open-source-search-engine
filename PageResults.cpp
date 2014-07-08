@@ -5164,17 +5164,19 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	if ( g_conf.m_isMattWells )
 		sb->safePrintf("<a href=\"/seo?d=");
 	else
-		sb->safePrintf("<a href=\"https://www.gigablast.com/seo?d=");
+		sb->safePrintf("<a href=\"/get?d=");
 
 	sb->safePrintf("%lli"
-		      "&page=sections&"
-		      "hipos=%li&c=%s\">"
-		      "%li</a></td>"
-		      "</a></td>"
-		      ,mr->m_docId
-		      ,(long)ps->m_wordPos1
-		      ,si->m_cr->m_coll
-		      ,(long)ps->m_wordPos1);
+		       "&page=4"
+		       //"&page=sections&"
+		       "&hipos=%li"
+		       "&c=%s#hipos\">"
+		       "%li</a></td>"
+		       "</a></td>"
+		       ,mr->m_docId
+		       ,(long)ps->m_wordPos1
+		       ,si->m_cr->m_coll
+		       ,(long)ps->m_wordPos1);
 	// is synonym?
 	//if ( sw1 != 1.00 )
 		sb->safePrintf("<td>%s <font color=blue>%.02f"
@@ -5247,11 +5249,11 @@ bool printPairScore ( SafeBuf *sb , SearchInput *si , PairScore *ps ,
 	if ( g_conf.m_isMattWells )
 		sb->safePrintf("<a href=\"/seo?d=");
 	else
-		sb->safePrintf("<a href=\"https://www.gigablast.com/seo?d=");
+		sb->safePrintf("<a href=\"/get?d=");
 
 	sb->safePrintf("%lli"
-		      "&page=sections&"
-		      "hipos=%li&c=%s\">"
+		      "&page=4&"
+		      "hipos=%li&c=%s#hipos\">"
 		      "%li</a></td>"
 		      "</a></td>"
 		      ,mr->m_docId
@@ -5674,15 +5676,15 @@ bool printSingleScore ( SafeBuf *sb ,
 		      "</font></td>"
 		      // wordpos
 		      "<td>"
-		      "<a href=\"https://www.gigablast.com/seo?d=" 
+		      "<a href=\"/get?d=" 
 		      , ss->m_finalScore
 		      , getHashGroupString(ss->m_hashGroup)
 		      , hgw
 		      );
 	//sb->urlEncode( mr->ptr_ubuf );
 	sb->safePrintf("%lli",mr->m_docId );
-	sb->safePrintf("&page=sections&"
-		      "hipos=%li&c=%s\">"
+	sb->safePrintf("&page=4&"
+		      "hipos=%li&c=%s#hipos\">"
 		      ,(long)ss->m_wordPos
 		      ,si->m_cr->m_coll);
 	sb->safePrintf("%li</a></td>"
