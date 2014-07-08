@@ -202,6 +202,8 @@ class GigablastRequest {
 #define PF_NOHTML      0x10000
 
 
+#define PF_CLONE       0x20000
+
 class Parm {
  public:
 	char *m_title; // displayed above m_desc on admin gui page
@@ -381,9 +383,13 @@ class Parms {
 			   char *filenameDef ,
 			   char  objType ) ;
 
+	bool setParmsFromXml ( Xml &xml , void *THIS, char objType ) ;
+
 	bool setXmlFromFile(Xml *xml, char *filename, char *buf, long bufSize);
 
 	bool saveToXml ( char *THIS , char *f , char objType ) ;
+
+	bool convertToXml ( char *buf , char *THIS , char objType ) ;
 
 	// get the parm with the associated cgi name. must be NULL terminated.
 	Parm *getParm ( char *cgi ) ;
@@ -460,6 +466,8 @@ class Parms {
 	long getNumInArray ( collnum_t collnum ) ;
 	bool addAllParmsToList ( SafeBuf *parmList, collnum_t collnum ) ;
 	bool updateParm ( char *rec , class WaitEntry *we ) ;
+
+	bool copyCollRec ( char *srcCR , char *dstCR ) ;
 
 	//
 	// end new functions

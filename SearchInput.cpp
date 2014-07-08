@@ -491,6 +491,10 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		return false;
 	}
 
+
+	if ( m_hideAllClustered )
+		m_doSiteClustering = true;
+
 	// turn off some parms
 	if ( m_q.m_hasUrlField  ) 
 		m_ipRestrictForTopics = false;
@@ -505,6 +509,8 @@ bool SearchInput::set ( TcpSocket *sock , HttpRequest *r ) { //, Query *q ) {
 		m_doDupContentRemoval = false;
 	}
 
+	if ( ! m_doSiteClustering )
+		m_hideAllClustered = false;
 
 	// sanity check
 	if(m_firstResultNum < 0) m_firstResultNum = 0;

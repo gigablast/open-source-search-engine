@@ -1128,6 +1128,9 @@ bool Msg3a::mergeLists ( ) {
 			//   algo above, we don't know for sure... cluster recs
 			//   are set to 0 in the Msg39.cpp clustering.
 			if ( sh && val >= 2 ) goto skip;
+			// if only allowing one...
+			if ( sh && val >= 1 && m_r->m_hideAllClustered ) 
+				goto skip;
 			// inc the count
 			val++;
 			// store it

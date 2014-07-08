@@ -547,6 +547,7 @@ bool Msg40::getDocIds ( bool recall ) {
 	mr.m_debug                     = m_si->m_debug          ;
 	mr.m_getDocIdScoringInfo       = m_si->m_getDocIdScoringInfo;
 	mr.m_doSiteClustering          = m_si->m_doSiteClustering    ;
+	mr.m_hideAllClustered          = m_si->m_hideAllClustered;
 	mr.m_familyFilter              = m_si->m_familyFilter;
 	//mr.m_useMinAlgo                = m_si->m_useMinAlgo;
 	//mr.m_useNewAlgo                = m_si->m_useNewAlgo;
@@ -1511,14 +1512,20 @@ bool Msg40::launchMsg20s ( bool recalled ) {
 		req.m_getSummaryVector   = true;
 		req.m_bigSampleRadius    = bigSampleRadius;
 		req.m_bigSampleMaxLen    = bigSampleMaxLen;
-		req.m_titleMaxLen        = 256;
-		req.m_titleMaxLen = cr->m_titleMaxLen;
+		//req.m_titleMaxLen        = 256;
+		req.m_titleMaxLen = m_si->m_titleMaxLen; // cr->
 		req.m_summaryMaxLen = cr->m_summaryMaxLen;
+
+		// Line means excerpt 
+		req.m_summaryMaxNumCharsPerLine = 
+			m_si->m_summaryMaxNumCharsPerLine;
+
 		// a special undocumented thing for getting <h1> tag
 		req.m_getHeaderTag       = m_si->m_hr.getLong("geth1tag",0);
 		//req.m_numSummaryLines = cr->m_summaryMaxNumLines;
 		// let "ns" parm override
 		req.m_numSummaryLines    = m_si->m_numLinesInSummary;
+
 		if(m_si->m_isAdmin && m_si->m_format == FORMAT_HTML )
 			req.m_getGigabitVector   = true;
 		else    req.m_getGigabitVector   = false;
